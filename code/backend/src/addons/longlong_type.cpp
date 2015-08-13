@@ -45,37 +45,30 @@ namespace insieme {
 namespace backend {
 namespace addons {
 
-namespace {
+	namespace {
 
-const TypeInfo* LongLongTypeHandler(const Converter& converter, const core::TypePtr& type) {
-	const TypeInfo* skip = nullptr;
-	
-	// intercept 128-bit types and convert them to the long-long type
-	const auto& base = type->getNodeManager().getLangBasic();
-	
-	// get the c-node manager
-	c_ast::CNodeManager& manager = *converter.getCNodeManager();
-	
-	// check for the two special types
-	if(base.isInt16(type)) {
-		return type_info_utils::createInfo(manager, c_ast::PrimitiveType::LongLong);
+		const TypeInfo* LongLongTypeHandler(const Converter& converter, const core::TypePtr& type) {
+			const TypeInfo* skip = nullptr;
+
+			// intercept 128-bit types and convert them to the long-long type
+			const auto& base = type->getNodeManager().getLangBasic();
+
+			// get the c-node manager
+			c_ast::CNodeManager& manager = *converter.getCNodeManager();
+
+			// check for the two special types
+			if(base.isInt16(type)) { return type_info_utils::createInfo(manager, c_ast::PrimitiveType::LongLong); }
+			if(base.isUInt16(type)) { return type_info_utils::createInfo(manager, c_ast::PrimitiveType::ULongLong); }
+
+			// otherwise use default handling
+			return skip;
+		}
 	}
-	if(base.isUInt16(type)) {
-		return type_info_utils::createInfo(manager, c_ast::PrimitiveType::ULongLong);
+
+	void LongLongType::installOn(Converter& converter) const {
+		// registers type handler
+		converter.getTypeManager().addTypeHandler(LongLongTypeHandler);
 	}
-	
-	// otherwise use default handling
-	return skip;
-}
-
-}
-
-void LongLongType::installOn(Converter& converter) const {
-
-	// registers type handler
-	converter.getTypeManager().addTypeHandler(LongLongTypeHandler);
-	
-}
 
 } // end namespace addons
 } // end namespace backend

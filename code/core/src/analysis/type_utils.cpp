@@ -48,81 +48,64 @@ namespace insieme {
 namespace core {
 namespace analysis {
 
-bool hasFreeTypeVariables(const TypePtr& type) {
+	bool hasFreeTypeVariables(const TypePtr& type) {
+		// if it is not a type, there are no type variables
+		if(!type) { return false; }
 
-	// if it is not a type, there are no type variables
-	if(!type) {
-		return false;
-	}
-	
-	struct HasFreeTypeVariableVisitor : public IRVisitor<bool, Pointer, NodeSet&> {
-	
-		HasFreeTypeVariableVisitor() : IRVisitor<bool, Pointer, NodeSet&>(true) {}
-		
-		bool visitTypeVariable(const TypeVariablePtr& cur, NodeSet& knownVariables) {
-			return !contains(knownVariables, cur);
-		}
-		
-		bool visitRecTypeDefinition(const RecTypeDefinitionPtr& def, NodeSet& knownVariables) {
-			NodeSet local = knownVariables;
-			for(const RecTypeBindingPtr& binding : def) {
-				local.insert(binding->getVariable());
+		struct HasFreeTypeVariableVisitor : public IRVisitor<bool, Pointer, NodeSet&> {
+			HasFreeTypeVariableVisitor() : IRVisitor<bool, Pointer, NodeSet&>(true) {}
+
+			bool visitTypeVariable(const TypeVariablePtr& cur, NodeSet& knownVariables) {
+				return !contains(knownVariables, cur);
 			}
-			return visitNode(def, local);
-		}
-		
-		bool visitFunctionType(const FunctionTypePtr& cur, NodeSet& knownVariables) {
-			return false;	// function types are binding their free type variables
-		}
-		
-		bool visitRecType(const RecTypePtr& cur, NodeSet& knownVariables) {
-			return visit(cur->getDefinition(), knownVariables);
-		}
-		
-		bool visitNode(const NodePtr& cur, NodeSet& knownVariables) {
-			return any(cur.getChildList(), [&](const NodePtr& cur)->bool {
-				return this->visit(cur, knownVariables);
-			});
-		}
-		
-	};
-	
-	NodeSet tmp;
-	return HasFreeTypeVariableVisitor().visit(type, tmp);
-}
 
-insieme::core::TypePtr autoReturnType(NodeManager& nodeMan, const CompoundStmtPtr& body) {
-	auto debug = false;
-	if(debug) {
-		std::cout << "{{{{{{ autoReturnType ----\n";
+			bool visitRecTypeDefinition(const RecTypeDefinitionPtr& def, NodeSet& knownVariables) {
+				NodeSet local = knownVariables;
+				for(const RecTypeBindingPtr& binding : def) {
+					local.insert(binding->getVariable());
+				}
+				return visitNode(def, local);
+			}
+
+			bool visitFunctionType(const FunctionTypePtr& cur, NodeSet& knownVariables) {
+				return false; // function types are binding their free type variables
+			}
+
+			bool visitRecType(const RecTypePtr& cur, NodeSet& knownVariables) {
+				return visit(cur->getDefinition(), knownVariables);
+			}
+
+			bool visitNode(const NodePtr& cur, NodeSet& knownVariables) {
+				return any(cur.getChildList(), [&](const NodePtr& cur) -> bool { return this->visit(cur, knownVariables); });
+			}
+		};
+
+		NodeSet tmp;
+		return HasFreeTypeVariableVisitor().visit(type, tmp);
 	}
-	
-	// find all returns
-	TypePtr newReturnType = nodeMan.getLangBasic().getUnit();
-	auto returns = analysis::getFreeNodes(body, NT_ReturnStmt, toVector(NT_LambdaExpr, NT_JobExpr, NT_ReturnStmt));
-	if(debug) {
-		std::cout << "{{{{{{{{{{{{{ Returns: " << returns << "\n";
-	}
-	
-	// if no returns, unit is fine
-	if(!returns.empty()) {
-		auto typeList = ::transform(returns, [](const NodePtr& ret) {
-			return ret.as<ReturnStmtPtr>()->getReturnExpr()->getType();
-		});
-		if(debug) {
-			std::cout << "{{{{{{{{{{{{{ typeList: " << typeList << "\n";
+
+	insieme::core::TypePtr autoReturnType(NodeManager& nodeMan, const CompoundStmtPtr& body) {
+		auto debug = false;
+		if(debug) { std::cout << "{{{{{{ autoReturnType ----\n"; }
+
+		// find all returns
+		TypePtr newReturnType = nodeMan.getLangBasic().getUnit();
+		auto returns = analysis::getFreeNodes(body, NT_ReturnStmt, toVector(NT_LambdaExpr, NT_JobExpr, NT_ReturnStmt));
+		if(debug) { std::cout << "{{{{{{{{{{{{{ Returns: " << returns << "\n"; }
+
+		// if no returns, unit is fine
+		if(!returns.empty()) {
+			auto typeList = ::transform(returns, [](const NodePtr& ret) { return ret.as<ReturnStmtPtr>()->getReturnExpr()->getType(); });
+			if(debug) { std::cout << "{{{{{{{{{{{{{ typeList: " << typeList << "\n"; }
+
+			newReturnType = types::getSmallestCommonSuperType(typeList);
+			if(debug) { std::cout << "{{{{{{{{{{{{{ returnType: " << newReturnType << "\n"; }
+
+			assert_true(newReturnType) << "Return type deduction, multiple return types have no common supertype.";
 		}
-		
-		newReturnType = types::getSmallestCommonSuperType(typeList);
-		if(debug) {
-			std::cout << "{{{{{{{{{{{{{ returnType: " << newReturnType << "\n";
-		}
-		
-		assert_true(newReturnType) << "Return type deduction, multiple return types have no common supertype.";
+
+		return newReturnType;
 	}
-	
-	return newReturnType;
-}
 
 
 } // end namespace analysis

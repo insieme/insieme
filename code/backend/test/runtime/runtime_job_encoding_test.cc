@@ -50,56 +50,50 @@ namespace insieme {
 namespace backend {
 namespace runtime {
 
-using namespace core;
+	using namespace core;
 
-TEST(JobSupport, Simple) {
+	TEST(JobSupport, Simple) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+		auto& basic = mgr.getLangBasic();
 
-	NodeManager mgr;
-	IRBuilder builder(mgr);
-	auto& basic = mgr.getLangBasic();
-	
-	// ------------------- Constructions ---------------------
-	
-	// create a code snippet consisting of a job with a local declaration
-	
-	// step 1: create the job
-	ExpressionPtr range = builder.getThreadNumRange(1);
-	VariablePtr localVar = builder.variable(basic.getInt4(), 1);
-	ExpressionPtr jobBody = builder.wrapLazy(builder.add(localVar, localVar));
-	JobExprPtr job = builder.jobExpr(basic.getJob().as<GenericTypePtr>(), range, jobBody);
-	
-	
-	// step 2: execute job
-	ExpressionPtr run = builder.callExpr(basic.getMerge(), builder.callExpr(basic.getParallel(), job));
-	
-	// step 3: create surrounding body
-	StatementPtr body = builder.compoundStmt(
-	                        builder.declarationStmt(localVar, builder.intLit(4)),
-	                        run
-	                    );
-	                    
-	// step 4: encapsulate it into a function
-	NodePtr code = builder.program(toVector<ExpressionPtr>(builder.lambdaExpr(body)));
-	
-	
-	// -------------------- Testing ---------------------------
-	
-	EXPECT_TRUE(core::checks::check(code).empty()) << core::checks::check(code);
-	
-	// convert the code
-	auto c_code = RuntimeBackend::getDefault()->convert(code);
-	EXPECT_TRUE(!!c_code);
-	
-	// try to compile the code
-	EXPECT_TRUE(utils::compiler::compile(*c_code, utils::compiler::Compiler::getRuntimeCompiler()));
-	
-//	std::cout << printer::PrettyPrinter(code) << "\n";
-//	std::cout << *c_code << "\n";
+		// ------------------- Constructions ---------------------
 
-}
+		// create a code snippet consisting of a job with a local declaration
+
+		// step 1: create the job
+		ExpressionPtr range = builder.getThreadNumRange(1);
+		VariablePtr localVar = builder.variable(basic.getInt4(), 1);
+		ExpressionPtr jobBody = builder.wrapLazy(builder.add(localVar, localVar));
+		JobExprPtr job = builder.jobExpr(basic.getJob().as<GenericTypePtr>(), range, jobBody);
+
+
+		// step 2: execute job
+		ExpressionPtr run = builder.callExpr(basic.getMerge(), builder.callExpr(basic.getParallel(), job));
+
+		// step 3: create surrounding body
+		StatementPtr body = builder.compoundStmt(builder.declarationStmt(localVar, builder.intLit(4)), run);
+
+		// step 4: encapsulate it into a function
+		NodePtr code = builder.program(toVector<ExpressionPtr>(builder.lambdaExpr(body)));
+
+
+		// -------------------- Testing ---------------------------
+
+		EXPECT_TRUE(core::checks::check(code).empty()) << core::checks::check(code);
+
+		// convert the code
+		auto c_code = RuntimeBackend::getDefault()->convert(code);
+		EXPECT_TRUE(!!c_code);
+
+		// try to compile the code
+		EXPECT_TRUE(utils::compiler::compile(*c_code, utils::compiler::Compiler::getRuntimeCompiler()));
+
+		//	std::cout << printer::PrettyPrinter(code) << "\n";
+		//	std::cout << *c_code << "\n";
+	}
 
 
 } // end namespace runtime
 } // end namespace backend
 } // end namespace insieme
-

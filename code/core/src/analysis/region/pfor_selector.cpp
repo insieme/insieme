@@ -45,41 +45,31 @@ namespace core {
 namespace analysis {
 namespace region {
 
-RegionList PForBodySelector::getRegions(const core::NodePtr& node) const {
+	RegionList PForBodySelector::getRegions(const core::NodePtr& node) const {
+		RegionList res;
+		auto pfor = node->getNodeManager().getLangBasic().getPFor();
+		core::visitDepthFirstPrunable(core::NodeAddress(node), [&](const core::CallExprAddress& cur) -> bool {
+			if(*cur.getAddressedNode()->getFunctionExpr() != *pfor) { return false; }
+			core::ExpressionAddress body = cur->getArgument(4);
+			if(body->getNodeType() == core::NT_BindExpr) { body = body.as<core::BindExprAddress>()->getCall()->getFunctionExpr(); }
+			if(body->getNodeType() == core::NT_LambdaExpr) { res.push_back(body.as<core::LambdaExprAddress>()->getBody()); }
+			return true;
+		}, false);
 
-	RegionList res;
-	auto pfor = node->getNodeManager().getLangBasic().getPFor();
-	core::visitDepthFirstPrunable(core::NodeAddress(node), [&](const core::CallExprAddress& cur)->bool {
-		if(*cur.getAddressedNode()->getFunctionExpr() != *pfor) {
-			return false;
-		}
-		core::ExpressionAddress body = cur->getArgument(4);
-		if(body->getNodeType() == core::NT_BindExpr) {
-			body = body.as<core::BindExprAddress>()->getCall()->getFunctionExpr();
-		}
-		if(body->getNodeType() == core::NT_LambdaExpr) {
-			res.push_back(body.as<core::LambdaExprAddress>()->getBody());
-		}
-		return true;
-	}, false);
-	
-	return res;
-}
+		return res;
+	}
 
-RegionList PForSelector::getRegions(const core::NodePtr& node) const {
+	RegionList PForSelector::getRegions(const core::NodePtr& node) const {
+		RegionList res;
+		auto pfor = node->getNodeManager().getLangBasic().getPFor();
+		core::visitDepthFirstPrunable(core::NodeAddress(node), [&](const core::CallExprAddress& cur) -> bool {
+			if(*cur.getAddressedNode()->getFunctionExpr() != *pfor) { return false; }
+			res.push_back(cur);
+			return true;
+		}, false);
 
-	RegionList res;
-	auto pfor = node->getNodeManager().getLangBasic().getPFor();
-	core::visitDepthFirstPrunable(core::NodeAddress(node), [&](const core::CallExprAddress& cur)->bool {
-		if(*cur.getAddressedNode()->getFunctionExpr() != *pfor) {
-			return false;
-		}
-		res.push_back(cur);
-		return true;
-	}, false);
-	
-	return res;
-}
+		return res;
+	}
 
 } // end namespace region
 } // end namespace analysis

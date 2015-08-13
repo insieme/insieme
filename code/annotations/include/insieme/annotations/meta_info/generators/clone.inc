@@ -29,20 +29,21 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
 #include "clear.inc"
 
-#define INFO_STRUCT_BEGIN(_name) \
-	namespace _name ## _ns { \
-	inline void info_type::cloneTo(const insieme::core::NodePtr& target) const { \
-		info_type data;
+#define INFO_STRUCT_BEGIN(_name)                                                                                                                               \
+	namespace _name##_ns {                                                                                                                                     \
+		inline void info_type::cloneTo(const insieme::core::NodePtr& target) const {                                                                           \
+			info_type data;
 
-#define INFO_FIELD_EXT(_name, _a, _b, _type, _def) \
-		data._name = insieme::annotations::detail::field_cloner<decltype(_name)>()(target.getNodeManager(), _name);
+#define INFO_FIELD_EXT(_name, _a, _b, _type, _def) data._name = insieme::annotations::detail::field_cloner<decltype(_name)>()(target.getNodeManager(), _name);
 
-#define INFO_STRUCT_END() \
-		target.attachValue(data); } }
+#define INFO_STRUCT_END()                                                                                                                                      \
+	target.attachValue(data);                                                                                                                                  \
+	}                                                                                                                                                          \
+	}

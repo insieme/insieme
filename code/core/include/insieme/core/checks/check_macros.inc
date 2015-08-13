@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -40,13 +40,13 @@
  * @param Name the name of the new check (without the tailing Check)
  * @param NodeType the type the check should be applied on
  */
-#define SIMPLE_CHECK(Name, NodeType, visitTypes) \
-	class Name ## Check : public IRCheck { \
-		public: \
-		Name ## Check() : IRCheck(visitTypes) {}; \
-		virtual OptionalMessageList visit(const NodeAddress& address) { \
-			if (NodeType##Address adr = dynamic_address_cast<const NodeType>(address)) return visit ## NodeType (adr); \
-			return OptionalMessageList(); \
-		} \
-		virtual OptionalMessageList visit ## NodeType (const NodeType ## Address& address); \
+#define SIMPLE_CHECK(Name, NodeType, visitTypes)                                                                                                               \
+	class Name##Check : public IRCheck {                                                                                                                       \
+	  public:                                                                                                                                                  \
+		Name##Check() : IRCheck(visitTypes){};                                                                                                                 \
+		virtual OptionalMessageList visit(const NodeAddress& address) {                                                                                        \
+			if(NodeType##Address adr = dynamic_address_cast<const NodeType>(address)) return visit##NodeType(adr);                                             \
+			return OptionalMessageList();                                                                                                                      \
+		}                                                                                                                                                      \
+		virtual OptionalMessageList visit##NodeType(const NodeType##Address& address);                                                                         \
 	}

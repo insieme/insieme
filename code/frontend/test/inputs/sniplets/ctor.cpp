@@ -1,11 +1,9 @@
 
 class Obj {
-public:
+  public:
 	int a;
-	
-	Obj(int a) {
-	}
-	
+
+	Obj(int a) {}
 };
 
 

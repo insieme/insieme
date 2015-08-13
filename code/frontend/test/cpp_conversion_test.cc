@@ -71,55 +71,48 @@ void checkSemanticErrors(const NodePtr& node) {
 std::string getPrettyPrinted(const NodePtr& node) {
 	std::ostringstream ss;
 	ss << insieme::core::printer::PrettyPrinter(node,
-	        insieme::core::printer::PrettyPrinter::OPTIONS_DETAIL |
-	        insieme::core::printer::PrettyPrinter::NO_LET_BINDINGS
-	                                           );
-	                                           
+	                                            insieme::core::printer::PrettyPrinter::OPTIONS_DETAIL | insieme::core::printer::PrettyPrinter::NO_LET_BINDINGS);
+
 	// Remove new lines and leading spaces
 	std::vector<char> res;
 	std::string prettyPrint = ss.str();
 	for(auto it = prettyPrint.begin(), end = prettyPrint.end(); it != end; ++it)
-		if(!(*it == '\n' || (it + 1 != end && *it == ' ' && *(it+1) == ' '))) {
-			res.push_back(*it);
-		}
-		
+		if(!(*it == '\n' || (it + 1 != end && *it == ' ' && *(it + 1) == ' '))) { res.push_back(*it); }
+
 	return std::string(res.begin(), res.end());
 }
 
 TEST(CppConversion, FileTest) {
-
 	NodeManager manager;
-	
+
 	fe::TranslationUnit tu(manager, FRONTEND_TEST_DIR "/inputs/cpp.cpp");
-	
-	auto filter = [](const fe::pragma::Pragma& curr) {
-		return curr.getType() == "test";
-	};
-	
+
+	auto filter = [](const fe::pragma::Pragma& curr) { return curr.getType() == "test"; };
+
 	for(auto it = tu.pragmas_begin(filter), end = tu.pragmas_end(); it != end; ++it) {
-//		const fe::TestPragmaExtension& tp = static_cast<const fe::TestPragmaExtension&>(*(*it).first);
+		//		const fe::TestPragmaExtension& tp = static_cast<const fe::TestPragmaExtension&>(*(*it).first);
 		// we use an internal manager to have private counter for variables so we can write independent tests
 		NodeManager mgr;
-		
-//		fe::conversion::ConversionFactory convFact( mgr, tu, true/*=isCXX*/ );
-//		convFact.setTranslationUnit(&tu);
+
+		//		fe::conversion::ConversionFactory convFact( mgr, tu, true/*=isCXX*/ );
+		//		convFact.setTranslationUnit(&tu);
 		/*
-				if(tp.isStatement()){
-					const clang::Stmt* td = tp.getStatement();
-					const clang::DeclStmt* declStmt = llvm::dyn_cast<clang::DeclStmt>(td);
-		
-					EXPECT_TRUE(declStmt);
-					declStmt->dump();
-		
-					if (declStmt->isSingleDecl() && llvm::isa<clang::VarDecl>(declStmt->getSingleDecl())) {
-						stmtutils::StmtWrapper retList;
-						const clang::VarDecl* varDecl = llvm::dyn_cast<clang::VarDecl>(declStmt->getSingleDecl());
-						auto retStmt = convFact.convertVarDecl(varDecl);
-						EXPECT_EQ(tp.getExpected(), '\"' + getPrettyPrinted(retStmt) + '\"' );
-						// do semantics checking
-						checkSemanticErrors(retStmt);
-					}
-				}
-				*/
+		        if(tp.isStatement()){
+		            const clang::Stmt* td = tp.getStatement();
+		            const clang::DeclStmt* declStmt = llvm::dyn_cast<clang::DeclStmt>(td);
+
+		            EXPECT_TRUE(declStmt);
+		            declStmt->dump();
+
+		            if (declStmt->isSingleDecl() && llvm::isa<clang::VarDecl>(declStmt->getSingleDecl())) {
+		                stmtutils::StmtWrapper retList;
+		                const clang::VarDecl* varDecl = llvm::dyn_cast<clang::VarDecl>(declStmt->getSingleDecl());
+		                auto retStmt = convFact.convertVarDecl(varDecl);
+		                EXPECT_EQ(tp.getExpected(), '\"' + getPrettyPrinted(retStmt) + '\"' );
+		                // do semantics checking
+		                checkSemanticErrors(retStmt);
+		            }
+		        }
+		        */
 	}
 }

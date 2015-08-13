@@ -48,12 +48,12 @@ namespace insieme {
 namespace annotations {
 namespace omp {
 
-const string RegionAnnotation::NAME = "omp::RegionAnnotation";
-const utils::StringKey<RegionAnnotation> RegionAnnotation::KEY("OMP::REGION");
+	const string RegionAnnotation::NAME = "omp::RegionAnnotation";
+	const utils::StringKey<RegionAnnotation> RegionAnnotation::KEY("OMP::REGION");
 
-void RegionAnnotation::attach(const core::NodePtr& node) {
-	node->addAnnotation(std::make_shared<RegionAnnotation>());
-}
+	void RegionAnnotation::attach(const core::NodePtr& node) {
+		node->addAnnotation(std::make_shared<RegionAnnotation>());
+	}
 
 } // namespace omp
 } // namespace annotations
@@ -61,9 +61,9 @@ void RegionAnnotation::attach(const core::NodePtr& node) {
 
 namespace std {
 
-std::ostream& operator<<(std::ostream& out, const insieme::annotations::omp::RegionAnnotation& lAnnot) {
-	out << "OmpRegionAnnotation ()" << std::endl;
-	return out;
-}
+	std::ostream& operator<<(std::ostream& out, const insieme::annotations::omp::RegionAnnotation& lAnnot) {
+		out << "OmpRegionAnnotation ()" << std::endl;
+		return out;
+	}
 
 } // end namespace std

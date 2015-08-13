@@ -43,11 +43,11 @@
 TEST(affinity, fill) {
 	_irt_hw_set_num_cpus(8);
 	irt_g_worker_count = 8;
-	
+
 	irt_affinity_policy pol;
 	pol.type = IRT_AFFINITY_FILL;
-	
-	for(int i=0; i<8; ++i) {
+
+	for(int i = 0; i < 8; ++i) {
 		EXPECT_TRUE(irt_affinity_mask_is_single_cpu(irt_get_affinity(i, pol), i));
 	}
 }
@@ -55,10 +55,10 @@ TEST(affinity, fill) {
 TEST(affinity, skip) {
 	_irt_hw_set_num_cpus(8);
 	irt_g_worker_count = 8;
-	
+
 	irt_affinity_policy pol;
 	pol.type = IRT_AFFINITY_SKIP;
-	
+
 	pol.skip_count = 1;
 	EXPECT_TRUE(irt_affinity_mask_is_single_cpu(irt_get_affinity(0, pol), 0));
 	EXPECT_TRUE(irt_affinity_mask_is_single_cpu(irt_get_affinity(1, pol), 2));
@@ -68,7 +68,7 @@ TEST(affinity, skip) {
 	EXPECT_TRUE(irt_affinity_mask_is_single_cpu(irt_get_affinity(5, pol), 3));
 	EXPECT_TRUE(irt_affinity_mask_is_single_cpu(irt_get_affinity(6, pol), 5));
 	EXPECT_TRUE(irt_affinity_mask_is_single_cpu(irt_get_affinity(7, pol), 7));
-	
+
 	pol.skip_count = 2;
 	EXPECT_TRUE(irt_affinity_mask_is_single_cpu(irt_get_affinity(0, pol), 0));
 	EXPECT_TRUE(irt_affinity_mask_is_single_cpu(irt_get_affinity(1, pol), 3));
@@ -78,7 +78,7 @@ TEST(affinity, skip) {
 	EXPECT_TRUE(irt_affinity_mask_is_single_cpu(irt_get_affinity(5, pol), 1));
 	EXPECT_TRUE(irt_affinity_mask_is_single_cpu(irt_get_affinity(6, pol), 4));
 	EXPECT_TRUE(irt_affinity_mask_is_single_cpu(irt_get_affinity(7, pol), 7));
-	
+
 	pol.skip_count = 3;
 	EXPECT_TRUE(irt_affinity_mask_is_single_cpu(irt_get_affinity(0, pol), 0));
 	EXPECT_TRUE(irt_affinity_mask_is_single_cpu(irt_get_affinity(1, pol), 4));
@@ -93,20 +93,20 @@ TEST(affinity, skip) {
 
 TEST(affinity, maxdist) {
 	_irt_hw_set_num_cpus(8);
-	
+
 	irt_affinity_policy pol;
 	pol.type = IRT_AFFINITY_MAX_DISTANCE;
-	
+
 	irt_g_worker_count = 2;
 	EXPECT_TRUE(irt_affinity_mask_is_single_cpu(irt_get_affinity(0, pol), 4));
 	EXPECT_TRUE(irt_affinity_mask_is_single_cpu(irt_get_affinity(1, pol), 0));
-	
+
 	irt_g_worker_count = 4;
 	EXPECT_TRUE(irt_affinity_mask_is_single_cpu(irt_get_affinity(0, pol), 2));
 	EXPECT_TRUE(irt_affinity_mask_is_single_cpu(irt_get_affinity(1, pol), 6));
 	EXPECT_TRUE(irt_affinity_mask_is_single_cpu(irt_get_affinity(2, pol), 0));
 	EXPECT_TRUE(irt_affinity_mask_is_single_cpu(irt_get_affinity(3, pol), 4));
-	
+
 	irt_g_worker_count = 8;
 	EXPECT_TRUE(irt_affinity_mask_is_single_cpu(irt_get_affinity(0, pol), 1));
 	EXPECT_TRUE(irt_affinity_mask_is_single_cpu(irt_get_affinity(1, pol), 3));
@@ -129,15 +129,15 @@ TEST(affinity, manual) {
 	irt_affinity_init_physical_mapping(&irt_g_affinity_physical_mapping);
 	_irt_print_native_affinity_mask(irt_g_affinity_base_mask);
 	uint32 num_cores = irt_affinity_cores_available();
-	
+
 	// create a thread and set affinity
 	irt_thread t;
 	irt_thread_create(dummy_func, NULL, &t);
-	irt_affinity_mask m = { { 1 } };
+	irt_affinity_mask m = {{1}};
 	irt_set_affinity(m, t);
 	// this is to check if mask has been set correctly
 	irt_set_affinity(m, t);
-	
+
 	// set affinity for main thread
 	irt_thread myself;
 	irt_thread_get_current(&myself);

@@ -41,10 +41,9 @@
 namespace insieme {
 namespace backend {
 
-const string IRExtensions::GLOBAL_ID = "__GLOBAL__";
+	const string IRExtensions::GLOBAL_ID = "__GLOBAL__";
 
-IRExtensions::IRExtensions(core::NodeManager& manager) :
-	core::lang::Extension(manager) { }
-	
+	IRExtensions::IRExtensions(core::NodeManager& manager) : core::lang::Extension(manager) {}
+
 } // end namespace simple_backend
 } // end namespace insieme

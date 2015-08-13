@@ -39,7 +39,7 @@
 namespace insieme {
 namespace core {
 
-const IteratorValue IteratorValue::STAR(std::numeric_limits<int>::max());
+	const IteratorValue IteratorValue::STAR(std::numeric_limits<int>::max());
 
 } // end namespace core
 } // end namespace insieme

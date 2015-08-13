@@ -56,42 +56,38 @@
 #include "insieme/core/lang/varargs_extension.h"
 
 
-
 namespace insieme {
 namespace backend {
 namespace addons {
 
-namespace {
+	namespace {
 
-OperatorConverterTable getVarArgsOperatorTable(core::NodeManager& manager) {
-	OperatorConverterTable res;
-	const auto& ext = manager.getLangExtension<insieme::core::lang::VarArgsExtension>();
-	
-#include "insieme/backend/operator_converter_begin.inc"
-	
-	res[ext.getVaarg()] 	  = OP_CONVERTER({
-	
-		//const FunctionInfo& info = getInfo(static_pointer_cast<const core::Literal>(fun));
-		c_ast::CallPtr res = c_ast::call(C_NODE_MANAGER->create("va_arg"));
-		
-		res->arguments.push_back(CONVERT_ARG(0));
-		res->arguments.push_back(CONVERT_TYPE(core::analysis::getRepresentedType(ARG(1))));
-		
-		return res;
-	});
-	
-#include "insieme/backend/operator_converter_end.inc"
-	return res;
-}
+		OperatorConverterTable getVarArgsOperatorTable(core::NodeManager& manager) {
+			OperatorConverterTable res;
+			const auto& ext = manager.getLangExtension<insieme::core::lang::VarArgsExtension>();
 
-}
+			#include "insieme/backend/operator_converter_begin.inc"
 
-void VarArgs::installOn(Converter& converter) const {
+			res[ext.getVaarg()] = OP_CONVERTER({
 
-	// register additional operators
-	converter.getFunctionManager().getOperatorConverterTable().insertAll(getVarArgsOperatorTable(converter.getNodeManager()));
-	
-}
+				// const FunctionInfo& info = getInfo(static_pointer_cast<const core::Literal>(fun));
+				c_ast::CallPtr res = c_ast::call(C_NODE_MANAGER->create("va_arg"));
+
+				res->arguments.push_back(CONVERT_ARG(0));
+				res->arguments.push_back(CONVERT_TYPE(core::analysis::getRepresentedType(ARG(1))));
+
+				return res;
+			});
+
+			#include "insieme/backend/operator_converter_end.inc"
+			return res;
+		}
+	}
+
+	void VarArgs::installOn(Converter& converter) const {
+		// register additional operators
+		converter.getFunctionManager().getOperatorConverterTable().insertAll(getVarArgsOperatorTable(converter.getNodeManager()));
+	}
 
 } // end namespace addons
 } // end namespace backend

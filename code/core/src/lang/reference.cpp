@@ -49,23 +49,18 @@ namespace lang {
 
 
 	ReferenceType::ReferenceType(const NodePtr& node) {
-
 		// check given node type
 		assert_true(node) << "Given node is null!";
 		assert_true(isReferenceType(node)) << "Given node " << *node << " is not a reference type!";
 
 		// process node type
 		GenericTypePtr type = node.as<GenericTypePtr>();
-		*this = ReferenceType(
-				type->getTypeParameter(0),
-				isTrueMarker(type->getTypeParameter(1)),
-				isTrueMarker(type->getTypeParameter(2))
-		);
+		*this = ReferenceType(type->getTypeParameter(0), isTrueMarker(type->getTypeParameter(1)), isTrueMarker(type->getTypeParameter(2)));
 	}
 
 	bool ReferenceType::isReferenceType(const NodePtr& node) {
 		auto type = node.isa<GenericTypePtr>();
-		if (!type) return false;
+		if(!type) return false;
 
 		// simple approach: use unification
 		NodeManager& mgr = node.getNodeManager();
@@ -74,12 +69,11 @@ namespace lang {
 		// unify given type with template type
 		auto ref = ext.getGenRef().as<GenericTypePtr>();
 		auto sub = types::match(mgr, type, ref);
-		if (!sub) return false;
+		if(!sub) return false;
 
 		// check instantiation
 		const types::Substitution& map = *sub;
-		return isValidBooleanMarker(map.applyTo(ref->getTypeParameter(1))) &&
-			isValidBooleanMarker(map.applyTo(ref->getTypeParameter(2)));
+		return isValidBooleanMarker(map.applyTo(ref->getTypeParameter(1))) && isValidBooleanMarker(map.applyTo(ref->getTypeParameter(2)));
 	}
 
 	GenericTypePtr ReferenceType::create(const TypePtr& elementType, bool _const, bool _volatile) {
@@ -88,17 +82,11 @@ namespace lang {
 	}
 
 	ReferenceType::operator GenericTypePtr() const {
-
 		NodeManager& mgr = elementType.getNodeManager();
 		auto& ext = mgr.getLangExtension<BooleanMarkerExtension>();
 
 		return GenericType::get(mgr, "ref", ParentList(),
-				toVector(
-						elementType,
-						(mConst    ? ext.getTrue() : ext.getFalse()),
-						(mVolatile ? ext.getTrue() : ext.getFalse())
-				)
-		);
+		                        toVector(elementType, (mConst ? ext.getTrue() : ext.getFalse()), (mVolatile ? ext.getTrue() : ext.getFalse())));
 	}
 
 

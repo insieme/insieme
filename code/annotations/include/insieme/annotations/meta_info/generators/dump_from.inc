@@ -29,23 +29,24 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
 #include "clear.inc"
 
-#define INFO_STRUCT_BEGIN(_name) \
-	namespace _name ## _ns { \
-	inline insieme::core::NodeAnnotationPtr info_typeAnnotationConverter::toAnnotation(const insieme::core::ExpressionPtr& expr) const { \
-				assert(insieme::core::encoder::isEncodingOf<tuple_type>(expr) && "Invalid encoding encountered!"); \
-				auto tuple = insieme::core::encoder::toValue<tuple_type>(expr); \
-				info_type data;
-				
+#define INFO_STRUCT_BEGIN(_name)                                                                                                                               \
+	namespace _name##_ns {                                                                                                                                     \
+		inline insieme::core::NodeAnnotationPtr info_typeAnnotationConverter::toAnnotation(const insieme::core::ExpressionPtr& expr) const {                   \
+			assert(insieme::core::encoder::isEncodingOf<tuple_type>(expr) && "Invalid encoding encountered!");                                                 \
+			auto tuple = insieme::core::encoder::toValue<tuple_type>(expr);                                                                                    \
+			info_type data;
 
-#define INFO_FIELD_EXT(_name, _a, _b, _type, _def) \
-	data._name = std::get<_name ## Idx>(tuple);
 
-#define INFO_STRUCT_END() \
-	return std::make_shared<annotation_type>(data); } }
+#define INFO_FIELD_EXT(_name, _a, _b, _type, _def) data._name = std::get<_name##Idx>(tuple);
+
+#define INFO_STRUCT_END()                                                                                                                                      \
+	return std::make_shared<annotation_type>(data);                                                                                                            \
+	}                                                                                                                                                          \
+	}

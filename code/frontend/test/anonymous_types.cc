@@ -53,19 +53,18 @@ using namespace insieme::driver;
 namespace insieme {
 namespace frontend {
 
-#define RUN_SEMA(irCode) \
-		auto msg = insieme::core::checks::check(irCode);\
-		if(!msg.empty()) {\
-			for(auto m: msg.getErrors()) {\
-				std::cout << m.getMessage() << "\n\t" << m.getLocation() << " code: " << m.getErrorCode() << std::endl;\
-			}\
-		}\
-		EXPECT_TRUE(msg.empty());
+#define RUN_SEMA(irCode)                                                                                                                                       \
+	auto msg = insieme::core::checks::check(irCode);                                                                                                           \
+	if(!msg.empty()) {                                                                                                                                         \
+		for(auto m : msg.getErrors()) {                                                                                                                        \
+			std::cout << m.getMessage() << "\n\t" << m.getLocation() << " code: " << m.getErrorCode() << std::endl;                                            \
+		}                                                                                                                                                      \
+	}                                                                                                                                                          \
+	EXPECT_TRUE(msg.empty());
 
-TEST(AnonymousTypes, StructTypedef) {
-
-	Source src(
-	    R"(
+	TEST(AnonymousTypes, StructTypedef) {
+		Source src(
+		    R"(
 
 					typedef struct {
 					} A;
@@ -74,28 +73,27 @@ TEST(AnonymousTypes, StructTypedef) {
 						A x;
 					}
 
-				)"
-	);
-	
-	core::NodeManager mgr;
-	core::IRBuilder builder(mgr);
-	const boost::filesystem::path& fileName = src;
-	std::vector<std::string> argv = { "compiler",  fileName.string() };
-	cmd::Options options = cmd::Options::parse(argv);
-	
-	auto res = builder.normalize(options.job.execute(mgr));
-	
-//		dumpPretty(res);
-	RUN_SEMA(res);
-}
+				)");
 
-TEST(AnonymousTypes, StructArray) {
-	// TRACK THIS ERROR
-	//struct<_const_cpp_refrc<vector<struct __mpz_struct <_mp_alloc:int<4>,_mp_size:int<4>,_mp_d:ref<array<uint<8>,1>>>,1>>>
-	//struct<_const_cpp_refrc<vector<struct              <_mp_alloc:int<4>,_mp_size:int<4>,_mp_d:ref<array<uint<8>,1>>>,1>>>
-	
-	Source src(
-	    R"(
+		core::NodeManager mgr;
+		core::IRBuilder builder(mgr);
+		const boost::filesystem::path& fileName = src;
+		std::vector<std::string> argv = {"compiler", fileName.string()};
+		cmd::Options options = cmd::Options::parse(argv);
+
+		auto res = builder.normalize(options.job.execute(mgr));
+
+		//		dumpPretty(res);
+		RUN_SEMA(res);
+	}
+
+	TEST(AnonymousTypes, StructArray) {
+		// TRACK THIS ERROR
+		// struct<_const_cpp_refrc<vector<struct __mpz_struct <_mp_alloc:int<4>,_mp_size:int<4>,_mp_d:ref<array<uint<8>,1>>>,1>>>
+		// struct<_const_cpp_refrc<vector<struct              <_mp_alloc:int<4>,_mp_size:int<4>,_mp_d:ref<array<uint<8>,1>>>,1>>>
+
+		Source src(
+		    R"(
 					typedef struct {
 						int a;
 						int b;
@@ -141,33 +139,32 @@ TEST(AnonymousTypes, StructArray) {
 						constRef(byRef());
 						constRef(byConstRef());
 					}
-				)"
-	);
-	
-	core::NodeManager mgr;
-	core::IRBuilder builder(mgr);
-	const boost::filesystem::path& fileName = src;
-	std::vector<std::string> argv = { "compiler",  fileName.string(), "--std=c++03" };
-	cmd::Options options = cmd::Options::parse(argv);
-	
-	auto res = builder.normalize(options.job.execute(mgr));
-	
-//		dumpPretty(res);
-	RUN_SEMA(res);
-}
+				)");
 
-TEST(AnonymousTypes, Tempalated) {
-	// TRACK THIS ERROR
-	//struct<_const_cpp_refrc<vector<struct __mpz_struct <_mp_alloc:int<4>,_mp_size:int<4>,_mp_d:ref<array<uint<8>,1>>>,1>>>
-	//struct<_const_cpp_refrc<vector<struct              <_mp_alloc:int<4>,_mp_size:int<4>,_mp_d:ref<array<uint<8>,1>>>,1>>>
-	//
-	//return RefIRToConstCpp(fun000(scalar.to.array(ref.narrow(scalar.to.array(v1)&[0], dp.root.as<type<type003>>, type<type003>))&[0])&[0]->mpZ);
-	//return RefIRToConstCpp(fun001(scalar.to.array(ref.narrow(scalar.to.array(v1)&[0], dp.root.as<type<type001>>, type<type001>))&[0])&[0]->a);
-	//
-	
-	
-	Source src(
-	    R"(
+		core::NodeManager mgr;
+		core::IRBuilder builder(mgr);
+		const boost::filesystem::path& fileName = src;
+		std::vector<std::string> argv = {"compiler", fileName.string(), "--std=c++03"};
+		cmd::Options options = cmd::Options::parse(argv);
+
+		auto res = builder.normalize(options.job.execute(mgr));
+
+		//		dumpPretty(res);
+		RUN_SEMA(res);
+	}
+
+	TEST(AnonymousTypes, Tempalated) {
+		// TRACK THIS ERROR
+		// struct<_const_cpp_refrc<vector<struct __mpz_struct <_mp_alloc:int<4>,_mp_size:int<4>,_mp_d:ref<array<uint<8>,1>>>,1>>>
+		// struct<_const_cpp_refrc<vector<struct              <_mp_alloc:int<4>,_mp_size:int<4>,_mp_d:ref<array<uint<8>,1>>>,1>>>
+		//
+		// return RefIRToConstCpp(fun000(scalar.to.array(ref.narrow(scalar.to.array(v1)&[0], dp.root.as<type<type003>>, type<type003>))&[0])&[0]->mpZ);
+		// return RefIRToConstCpp(fun001(scalar.to.array(ref.narrow(scalar.to.array(v1)&[0], dp.root.as<type<type001>>, type<type001>))&[0])&[0]->a);
+		//
+
+
+		Source src(
+		    R"(
 
 					template <typename T>
 					struct handle {
@@ -207,30 +204,29 @@ TEST(AnonymousTypes, Tempalated) {
 						C obj;
 						f(obj.getConstRef());
 					}
-				)"
-	);
-	
-	core::NodeManager mgr;
-	core::IRBuilder builder(mgr);
-	const boost::filesystem::path& fileName = src;
-	std::vector<std::string> argv = { "compiler",  fileName.string(), "--std=c++03" };
-	cmd::Options options = cmd::Options::parse(argv);
-	
-	auto res = builder.normalize(options.job.execute(mgr));
-	
-	//	dumpPretty(res);
-	auto msg = insieme::core::checks::check(res);
-	if(!msg.empty()) {
-		for(auto m: msg.getErrors()) {
-			std::cout << m.getMessage() << "\n\t" << m.getLocation() << " code: " << m.getErrorCode() << std::endl;
-		}
-	}
-	EXPECT_TRUE(msg.empty());
-}
+				)");
 
-TEST(AnonymousTypes, Union) {
-	Source src(
-	    R"(
+		core::NodeManager mgr;
+		core::IRBuilder builder(mgr);
+		const boost::filesystem::path& fileName = src;
+		std::vector<std::string> argv = {"compiler", fileName.string(), "--std=c++03"};
+		cmd::Options options = cmd::Options::parse(argv);
+
+		auto res = builder.normalize(options.job.execute(mgr));
+
+		//	dumpPretty(res);
+		auto msg = insieme::core::checks::check(res);
+		if(!msg.empty()) {
+			for(auto m : msg.getErrors()) {
+				std::cout << m.getMessage() << "\n\t" << m.getLocation() << " code: " << m.getErrorCode() << std::endl;
+			}
+		}
+		EXPECT_TRUE(msg.empty());
+	}
+
+	TEST(AnonymousTypes, Union) {
+		Source src(
+		    R"(
 
 					typedef union{
 						int a;
@@ -243,30 +239,29 @@ TEST(AnonymousTypes, Union) {
 						mytype n;
 						a.b = 1.0;
 					}
-				)"
-	);
-	
-	core::NodeManager mgr;
-	core::IRBuilder builder(mgr);
-	const boost::filesystem::path& fileName = src;
-	std::vector<std::string> argv = { "compiler",  fileName.string(), "--std=c++03" };
-	cmd::Options options = cmd::Options::parse(argv);
-	
-	auto res = builder.normalize(options.job.execute(mgr));
-	
-	//	dumpPretty(res);
-	auto msg = insieme::core::checks::check(res);
-	if(!msg.empty()) {
-		for(auto m: msg.getErrors()) {
-			std::cout << m.getMessage() << "\n\t" << m.getLocation() << " code: " << m.getErrorCode() << std::endl;
-		}
-	}
-	EXPECT_TRUE(msg.empty());
-}
+				)");
 
-TEST(AnonymousTypes, Nested) {
-	Source src(
-	    R"(
+		core::NodeManager mgr;
+		core::IRBuilder builder(mgr);
+		const boost::filesystem::path& fileName = src;
+		std::vector<std::string> argv = {"compiler", fileName.string(), "--std=c++03"};
+		cmd::Options options = cmd::Options::parse(argv);
+
+		auto res = builder.normalize(options.job.execute(mgr));
+
+		//	dumpPretty(res);
+		auto msg = insieme::core::checks::check(res);
+		if(!msg.empty()) {
+			for(auto m : msg.getErrors()) {
+				std::cout << m.getMessage() << "\n\t" << m.getLocation() << " code: " << m.getErrorCode() << std::endl;
+			}
+		}
+		EXPECT_TRUE(msg.empty());
+	}
+
+	TEST(AnonymousTypes, Nested) {
+		Source src(
+		    R"(
 
 					typedef struct{
 						int a;
@@ -279,25 +274,24 @@ TEST(AnonymousTypes, Nested) {
 					int main() {
 						A var;
 					}
-				)"
-	);
-	
-	core::NodeManager mgr;
-	core::IRBuilder builder(mgr);
-	const boost::filesystem::path& fileName = src;
-	std::vector<std::string> argv = { "compiler",  fileName.string(), "--std=c++03" };
-	cmd::Options options = cmd::Options::parse(argv);
-	
-	auto res = builder.normalize(options.job.execute(mgr));
-	
-	dumpPretty(res);
-	auto msg = insieme::core::checks::check(res);
-	if(!msg.empty()) {
-		for(auto m: msg.getErrors()) {
-			std::cout << m.getMessage() << "\n\t" << m.getLocation() << " code: " << m.getErrorCode() << std::endl;
+				)");
+
+		core::NodeManager mgr;
+		core::IRBuilder builder(mgr);
+		const boost::filesystem::path& fileName = src;
+		std::vector<std::string> argv = {"compiler", fileName.string(), "--std=c++03"};
+		cmd::Options options = cmd::Options::parse(argv);
+
+		auto res = builder.normalize(options.job.execute(mgr));
+
+		dumpPretty(res);
+		auto msg = insieme::core::checks::check(res);
+		if(!msg.empty()) {
+			for(auto m : msg.getErrors()) {
+				std::cout << m.getMessage() << "\n\t" << m.getLocation() << " code: " << m.getErrorCode() << std::endl;
+			}
 		}
+		EXPECT_TRUE(msg.empty());
 	}
-	EXPECT_TRUE(msg.empty());
-}
 } // end namespace frontend
 } // end namespace insieme

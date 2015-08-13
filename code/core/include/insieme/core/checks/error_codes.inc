@@ -37,9 +37,9 @@
 /**
  * This macro file allows to define error codes for the semantic checks.
  * The following macro-definition is supported:
- * 
+ *
  * 		CODE(KIND,NAME)
- * 		
+ *
  * where
  * 		KIND ... one of TYPE, IMPERATIVE, SEMANTIC, ...
  * 		NAME ... the name of the error
@@ -110,7 +110,7 @@ CODE(TYPE, INVALID_GENERIC_OPERATOR_APPLICATION)
 
 // ------------------------------ Imperative ERRORS ---------------------------
 
-CODE(IMPERATIVE, UNDECLARED_VARIABLE_USAGE) 
+CODE(IMPERATIVE, UNDECLARED_VARIABLE_USAGE)
 CODE(IMPERATIVE, ILLEGAL_VARIABLE_REUSE)
 
 // ------------------------------- Semantic ERRORS ----------------------------

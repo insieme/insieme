@@ -48,94 +48,92 @@ namespace insieme {
 namespace core {
 namespace lang {
 
-TEST(Lang, DerivedTagBasic) {
-	NodeManager mgr;
-	IRBuilder builder(mgr);
-	auto A = builder.genericType("A");
-	auto B = builder.genericType("B", toVector<TypePtr>(A));
-	
-	// should not be considered a derived node by default
-	EXPECT_FALSE(isDerived(A));
-	EXPECT_FALSE(isDerived(B));
-	
-	// mark as derived
-	markAsDerived(B, "B");
-	EXPECT_FALSE(isDerived(A));
-	EXPECT_TRUE(isDerived(B));
-	
-	EXPECT_EQ("B", getConstructName(B));
-}
+	TEST(Lang, DerivedTagBasic) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+		auto A = builder.genericType("A");
+		auto B = builder.genericType("B", toVector<TypePtr>(A));
 
-TEST(Lang, DerivedTagCloning) {
-	NodeManager mgr;
-	IRBuilder builder(mgr);
-	auto A = builder.genericType("A");
-	auto B = builder.genericType("B", toVector<TypePtr>(A));
-	
-	// mark B as being derived
-	markAsDerived(B, "B");
-	EXPECT_FALSE(isDerived(A));
-	EXPECT_TRUE(isDerived(B));
-	
-	// clone nodes to other node manager
-	NodeManager mgrB;
-	EXPECT_FALSE(isDerived(mgrB.get(A)));
-	EXPECT_TRUE(isDerived(mgrB.get(B)));
-	EXPECT_EQ("B", getConstructName(mgrB.get(B)));
-}
+		// should not be considered a derived node by default
+		EXPECT_FALSE(isDerived(A));
+		EXPECT_FALSE(isDerived(B));
 
-TEST(Lang, DerivedTagManipulation) {
-	NodeManager mgr;
-	IRBuilder builder(mgr);
-	auto A = builder.genericType("A");
-	auto B = builder.genericType("B", toVector<TypePtr>(A));
-	
-	// mark B as being derived
-	markAsDerived(B, "B");
-	EXPECT_FALSE(isDerived(A));
-	EXPECT_TRUE(isDerived(B));
-	
-	// alter B - derived flag should be gone
-	auto C = builder.genericType("C");
-	
-	auto B2 = transform::replaceNode(mgr, GenericTypeAddress(B)->getTypeParameter(0), C);
-	EXPECT_EQ("B<C>", toString(*B2));
-	EXPECT_FALSE(isDerived(B2));
-}
+		// mark as derived
+		markAsDerived(B, "B");
+		EXPECT_FALSE(isDerived(A));
+		EXPECT_TRUE(isDerived(B));
 
-TEST(Lang, DerivedTagDumping) {
+		EXPECT_EQ("B", getConstructName(B));
+	}
 
-	// the tag should survive to be dumped and restored again ...
-	
-	NodeManager mgr;
-	IRBuilder builder(mgr);
-	auto A = builder.genericType("A");
-	auto B = builder.genericType("B", toVector<TypePtr>(A));
-	
-	// mark as derived
-	markAsDerived(B, "B");
-	EXPECT_FALSE(isDerived(A));
-	EXPECT_TRUE(isDerived(B));
-	
-	
-	// create a in-memory stream
-	std::stringstream buffer(std::ios_base::out | std::ios_base::in | std::ios_base::binary);
-	
-	// dump IR using a binary format
-	dump::binary::dumpIR(buffer, B);
-	
-	// reload IR using a different node manager
-	NodeManager managerB;
-	NodePtr B2 = dump::binary::loadIR(buffer, managerB);
-	
-	EXPECT_NE(B, B2);
-	EXPECT_EQ(*B, *B2);
-	
-	// annotation should still be available
-	EXPECT_TRUE(isDerived(B2));
-	EXPECT_EQ("B", getConstructName(B2));
-	
-}
+	TEST(Lang, DerivedTagCloning) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+		auto A = builder.genericType("A");
+		auto B = builder.genericType("B", toVector<TypePtr>(A));
+
+		// mark B as being derived
+		markAsDerived(B, "B");
+		EXPECT_FALSE(isDerived(A));
+		EXPECT_TRUE(isDerived(B));
+
+		// clone nodes to other node manager
+		NodeManager mgrB;
+		EXPECT_FALSE(isDerived(mgrB.get(A)));
+		EXPECT_TRUE(isDerived(mgrB.get(B)));
+		EXPECT_EQ("B", getConstructName(mgrB.get(B)));
+	}
+
+	TEST(Lang, DerivedTagManipulation) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+		auto A = builder.genericType("A");
+		auto B = builder.genericType("B", toVector<TypePtr>(A));
+
+		// mark B as being derived
+		markAsDerived(B, "B");
+		EXPECT_FALSE(isDerived(A));
+		EXPECT_TRUE(isDerived(B));
+
+		// alter B - derived flag should be gone
+		auto C = builder.genericType("C");
+
+		auto B2 = transform::replaceNode(mgr, GenericTypeAddress(B)->getTypeParameter(0), C);
+		EXPECT_EQ("B<C>", toString(*B2));
+		EXPECT_FALSE(isDerived(B2));
+	}
+
+	TEST(Lang, DerivedTagDumping) {
+		// the tag should survive to be dumped and restored again ...
+
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+		auto A = builder.genericType("A");
+		auto B = builder.genericType("B", toVector<TypePtr>(A));
+
+		// mark as derived
+		markAsDerived(B, "B");
+		EXPECT_FALSE(isDerived(A));
+		EXPECT_TRUE(isDerived(B));
+
+
+		// create a in-memory stream
+		std::stringstream buffer(std::ios_base::out | std::ios_base::in | std::ios_base::binary);
+
+		// dump IR using a binary format
+		dump::binary::dumpIR(buffer, B);
+
+		// reload IR using a different node manager
+		NodeManager managerB;
+		NodePtr B2 = dump::binary::loadIR(buffer, managerB);
+
+		EXPECT_NE(B, B2);
+		EXPECT_EQ(*B, *B2);
+
+		// annotation should still be available
+		EXPECT_TRUE(isDerived(B2));
+		EXPECT_EQ("B", getConstructName(B2));
+	}
 
 } // end namespace lang
 } // end namespace core

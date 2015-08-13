@@ -85,27 +85,25 @@ CmdOptions parseCommandLine(int argc, char** argv);
  */
 int main(int argc, char** argv) {
 	cout << " --- Insieme Inspire Parser, Version 0.0..01beta ---- \n";
-	
+
 	CmdOptions options = parseCommandLine(argc, argv);
-	if(!options.valid) {
-		return 1;
-	}
-	
+	if(!options.valid) { return 1; }
+
 	// check file name
 	if(options.inputFile == "") {
 		std::cout << "No input file specified!\n";
 		return 1;
 	}
-	
+
 	// load input file
 	std::stringstream ss;
 	ss << fstream(options.inputFile).rdbuf();
-	
-//		std::cout << "Code: \n" << ss.str() << "\n";
+
+	//		std::cout << "Code: \n" << ss.str() << "\n";
 
 	// parse input
 	NodeManager manager;
-	
+
 	NodePtr res;
 	insieme::utils::Timer timer;
 	try {
@@ -114,31 +112,30 @@ int main(int argc, char** argv) {
 			std::cout << "Unknown parsing error!\n";
 			return 1;
 		}
-	}
-	catch(const core::parser3::IRParserException& pe) {
+	} catch(const core::parser3::IRParserException& pe) {
 		std::cout << "Parsing error encountered: " << pe.what() << "\n";
 		return 1;
 	}
 	double time = timer.stop();
-	
+
 	if(!options.dumpFile.empty()) {
 		std::ofstream out(options.dumpFile);
 		out << dumpPretty(res) << std::endl;
 	}
-	
-//std::cout << core::printer::PrettyPrinter(res) << "\n";
+
+	// std::cout << core::printer::PrettyPrinter(res) << "\n";
 	std::cout << "Parsing took " << time << "sec.\n";
-	
+
 	auto msg = checks::check(res);
 	if(msg.size() > 0) {
 		std::cout << "Encountered issues:\n" << msg << "\n";
 		return 1;
 	}
-	
+
 	// convert to target code and compile code
 	auto code = backend::sequential::SequentialBackend().convert(res);
 	std::cout << *code;
-	
+
 	// pick C / C++ compiler depending on IR
 	utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
 	compiler = utils::compiler::Compiler::getOptimizedCompiler(compiler);
@@ -146,58 +143,53 @@ int main(int argc, char** argv) {
 		std::cout << "Compiling using C++ compiler ...\n";
 		compiler = utils::compiler::Compiler::getDefaultCppCompiler();
 		compiler = utils::compiler::Compiler::getOptimizedCompiler(compiler);
-	}
-	else {
+	} else {
 		std::cout << "Compiling using C compiler ...\n";
 	}
-	
+
 	bool success = utils::compiler::compileToBinary(*code, options.outFile, compiler);
-	
+
 	// works fine
-	return (success)?0:1;
+	return (success) ? 0 : 1;
 }
 
 
 CmdOptions parseCommandLine(int argc, char** argv) {
 	CmdOptions fail;
 	fail.valid = false;
-	
+
 	// -- parsing -------------------------------------------
-	
+
 	// define options
 	bpo::options_description desc("Supported Parameters");
-	desc.add_options()
-	("help,h", "produce help message")
-	("input,i", 			bpo::value<string>()->default_value(""), 		"the code file to be parsed")
-	("output,o", 			bpo::value<string>()->default_value("a.out"), 	"the binary build from the code")
-	("dump-ir,d", 			bpo::value<string>()->default_value(""), 	"file to dump the IR to")
-	;
-	
+	desc.add_options()("help,h", "produce help message")("input,i", bpo::value<string>()->default_value(""), "the code file to be parsed")(
+	    "output,o", bpo::value<string>()->default_value("a.out"), "the binary build from the code")("dump-ir,d", bpo::value<string>()->default_value(""),
+	                                                                                                "file to dump the IR to");
+
 	// define positional options (all options not being named)
 	bpo::positional_options_description pos;
 	pos.add("input", -1);
-	
+
 	// parse parameters
 	bpo::variables_map map;
 	bpo::store(bpo::command_line_parser(argc, argv).options(desc).positional(pos).run(), map);
 	bpo::notify(map);
-	
-	
+
+
 	// -- processing -----------------------------------------
-	
+
 	// check whether help was requested
 	if(map.count("help")) {
 		cout << desc << "\n";
 		return fail;
 	}
-	
+
 	CmdOptions res;
 	res.valid = true;
 	res.inputFile = map["input"].as<string>();
 	res.outFile = map["output"].as<string>();
 	res.dumpFile = map["dump-ir"].as<string>();
-	
+
 	// accumulation complete
 	return res;
 }
-

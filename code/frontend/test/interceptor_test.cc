@@ -82,18 +82,14 @@ void checkSemanticErrors(const NodePtr& node) {
 std::string getPrettyPrinted(const NodePtr& node) {
 	std::ostringstream ss;
 	ss << insieme::core::printer::PrettyPrinter(node,
-	        insieme::core::printer::PrettyPrinter::OPTIONS_DETAIL |
-	        insieme::core::printer::PrettyPrinter::NO_LET_BINDINGS
-	                                           );
-	                                           
+	                                            insieme::core::printer::PrettyPrinter::OPTIONS_DETAIL | insieme::core::printer::PrettyPrinter::NO_LET_BINDINGS);
+
 	// Remove new lines and leading spaces
 	std::vector<char> res;
 	std::string prettyPrint = ss.str();
 	for(auto it = prettyPrint.begin(), end = prettyPrint.end(); it != end; ++it)
-		if(!(*it == '\n' || (it + 1 != end && *it == ' ' && *(it+1) == ' '))) {
-			res.push_back(*it);
-		}
-		
+		if(!(*it == '\n' || (it + 1 != end && *it == ' ' && *(it + 1) == ' '))) { res.push_back(*it); }
+
 	return std::string(res.begin(), res.end());
 }
 
@@ -125,43 +121,43 @@ TEST(Interception, SimpleInterception) {
 				intercept_memFunc1();
 				intercept_memFunc2();
 			};
-		)"
-	    ,fe::CPP);
-	    
+		)",
+	    fe::CPP);
+
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 	const boost::filesystem::path& fileName = src;
 	std::string include = "-I" FRONTEND_TEST_DIR "inputs/interceptor/";
 	std::string interception = "--intercept=ns::.*";
-	std::vector<std::string> argv = { "compiler",  fileName.string(), include, "--std=c++03", interception };
+	std::vector<std::string> argv = {"compiler", fileName.string(), include, "--std=c++03", interception};
 	cmd::Options options = cmd::Options::parse(argv);
-	
+
 	auto tu = options.job.toIRTranslationUnit(mgr);
-	//LOG(INFO) << tu;
-	
+	// LOG(INFO) << tu;
+
 	auto retTy = builder.getLangBasic().getUnit();
 	auto funcTy = builder.functionType(TypeList(), retTy);
-	
-	//intercept_simpleFunc
+
+	// intercept_simpleFunc
 	auto sf = builder.literal("intercept_simpleFunc", funcTy);
 	auto sf_expected = "fun() -> unit { decl ref<int<4>> v1 = ( var(0)); ns::simpleFunc(1); ns::simpleFunc(( *v1));}";
-	
+
 	auto res = analysis::normalize(tu[sf]);
 	auto code = toString(getPrettyPrinted(res));
 	EXPECT_EQ(sf_expected, code);
-	
-	//intercept_memFunc1
+
+	// intercept_memFunc1
 	auto mf1 = builder.literal("intercept_memFunc1", funcTy);
 	auto mf1_expected = "fun() -> unit { decl ref<int<4>> v1 = ( var(0)); decl ref<ns::S> v2 = ns::S(( var(undefined(type<ns::S>)))); memberFunc(v2, ( *v1));}";
-	
+
 	res = analysis::normalize(tu[mf1]);
 	code = toString(getPrettyPrinted(res));
-	
+
 	EXPECT_EQ(mf1_expected, code);
-	//intercept_memFunc2
+	// intercept_memFunc2
 	auto mf2 = builder.literal("intercept_memFunc2", funcTy);
 	auto mf2_expected = "fun() -> unit { decl ref<int<4>> v1 = ( var(0)); decl ref<ns::S> v2 = ns::S(( var(undefined(type<ns::S>)))); memberFunc(v2, ( *v1));}";
-	
+
 	res = analysis::normalize(tu[mf2]);
 	code = toString(getPrettyPrinted(res));
 	EXPECT_EQ(mf2_expected, code);
@@ -180,28 +176,26 @@ TEST(Interception, SimpleFunction1) {
 			int main() {
 				ns::intercept_simpleFunc();
 			};
-		)"
-	    ,fe::CPP);
-	    
+		)",
+	    fe::CPP);
+
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 	const boost::filesystem::path& fileName = src;
 	std::string include = "-I" FRONTEND_TEST_DIR "inputs/interceptor/";
-	std::vector<std::string> argv = { "compiler",  fileName.string(), include, "--std=c++03" };
+	std::vector<std::string> argv = {"compiler", fileName.string(), include, "--std=c++03"};
 	cmd::Options option = cmd::Options::parse(argv);
-	
+
 	auto tu = option.job.toIRTranslationUnit(mgr);
-	
+
 	auto retTy = builder.getLangBasic().getUnit();
 	auto funcTy = builder.functionType(TypeList(), retTy);
-	
-	
-	//intercept_simpleFunc
+
+
+	// intercept_simpleFunc
 	auto sf = builder.literal("ns_intercept_simpleFunc", funcTy);
 	EXPECT_TRUE(tu[sf]);
-	if(!tu[sf]) {
-		std::cout << "the translation unit contains: \n" << tu;
-	}
+	if(!tu[sf]) { std::cout << "the translation unit contains: \n" << tu; }
 }
 
 TEST(Interception, SimpleFunction2) {
@@ -217,24 +211,24 @@ TEST(Interception, SimpleFunction2) {
 			int main() {
 				ns::intercept_simpleFunc();
 			};
-		)"
-	    ,fe::CPP);
-	    
+		)",
+	    fe::CPP);
+
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 	const boost::filesystem::path& fileName = src;
 	std::string include = "-I" FRONTEND_TEST_DIR "inputs/interceptor/";
 	std::string interception = "--intercept=ns::.*";
-	std::vector<std::string> argv = { "compiler",  fileName.string(), include, interception, "--std=c++03" };
+	std::vector<std::string> argv = {"compiler", fileName.string(), include, interception, "--std=c++03"};
 	cmd::Options option = cmd::Options::parse(argv);
-	
+
 	auto tu = option.job.toIRTranslationUnit(mgr);
-	//LOG(INFO) << tu;
-	
+	// LOG(INFO) << tu;
+
 	auto retTy = builder.getLangBasic().getUnit();
 	auto funcTy = builder.functionType(TypeList(), retTy);
-	
-	//intercept_simpleFunc
+
+	// intercept_simpleFunc
 	auto sf = builder.literal("intercept_simpleFunc", funcTy);
 	EXPECT_FALSE(tu[sf]);
 }
@@ -269,38 +263,32 @@ TEST(Interception, Types) {
 				typedef int BuiltinAllias;
 			}
 
-		)"
-	    ,fe::CPP);
-	    
+		)",
+	    fe::CPP);
+
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 	const boost::filesystem::path& fileName = src;
 	std::string include = "-I" FRONTEND_TEST_DIR "inputs/interceptor/";
-	std::vector<std::string> argv = { "compiler",  fileName.string(), include, "--std=c++03" };
+	std::vector<std::string> argv = {"compiler", fileName.string(), include, "--std=c++03"};
 	cmd::Options option = cmd::Options::parse(argv);
-	
+
 	auto tu = option.job.toIRTranslationUnit(mgr);
-	
+
 	{
 		auto t = builder.genericType("ns_SomeStruct");
 		EXPECT_TRUE(tu[t]);
-		if(!tu[t]) {
-			std::cout << "the translation unit contains: \n" << tu;
-		}
+		if(!tu[t]) { std::cout << "the translation unit contains: \n" << tu; }
 	}
 	{
 		auto t = builder.genericType("ns_SomeUnion");
 		EXPECT_TRUE(tu[t]);
-		if(!tu[t]) {
-			std::cout << "the translation unit contains: \n" << tu;
-		}
+		if(!tu[t]) { std::cout << "the translation unit contains: \n" << tu; }
 	}
 	{
 		auto t = builder.genericType("ns_SomeClass");
 		EXPECT_TRUE(tu[t]);
-		if(!tu[t]) {
-			std::cout << "the translation unit contains: \n" << tu;
-		}
+		if(!tu[t]) { std::cout << "the translation unit contains: \n" << tu; }
 	}
 	{
 		auto owner = builder.genericType("ns_SomeClass");
@@ -309,11 +297,9 @@ TEST(Interception, Types) {
 		auto retTy = builder.getLangBasic().getInt4();
 		auto funcTy = builder.functionType(list, retTy, FK_MEMBER_FUNCTION);
 		auto func = builder.literal("ns_SomeClass_sum", funcTy);
-		
+
 		EXPECT_TRUE(tu[func]);
-		if(!tu[func]) {
-			std::cout << "the translation unit contains: \n" << tu;
-		}
+		if(!tu[func]) { std::cout << "the translation unit contains: \n" << tu; }
 	}
 }
 
@@ -351,39 +337,33 @@ TEST(Interception, TypesIntercepted) {
 				ns::SomeUnion c;
 			}
 
-		)"
-	    ,fe::CPP);
-	    
+		)",
+	    fe::CPP);
+
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 	const boost::filesystem::path& fileName = src;
 	std::string include = "-I" FRONTEND_TEST_DIR "inputs/interceptor/";
 	std::string interception = "--intercept=ns::.*";
-	std::vector<std::string> argv = { "compiler",  fileName.string(), include, interception, "--std=c++03" };
+	std::vector<std::string> argv = {"compiler", fileName.string(), include, interception, "--std=c++03"};
 	cmd::Options option = cmd::Options::parse(argv);
-	
+
 	auto tu = option.job.toIRTranslationUnit(mgr);
-	
+
 	{
 		auto t = builder.genericType("ns_SomeStruct");
 		EXPECT_FALSE(tu[t]);
-		if(tu[t]) {
-			std::cout << "the translation unit contains: \n" << tu;
-		}
+		if(tu[t]) { std::cout << "the translation unit contains: \n" << tu; }
 	}
 	{
 		auto t = builder.genericType("ns_SomeUnion");
 		EXPECT_FALSE(tu[t]);
-		if(tu[t]) {
-			std::cout << "the translation unit contains: \n" << tu;
-		}
+		if(tu[t]) { std::cout << "the translation unit contains: \n" << tu; }
 	}
 	{
 		auto t = builder.genericType("ns_SomeClass");
 		EXPECT_FALSE(tu[t]);
-		if(tu[t]) {
-			std::cout << "the translation unit contains: \n" << tu;
-		}
+		if(tu[t]) { std::cout << "the translation unit contains: \n" << tu; }
 	}
 	{
 		auto owner = builder.genericType("ns_SomeClass");
@@ -392,21 +372,19 @@ TEST(Interception, TypesIntercepted) {
 		auto retTy = builder.getLangBasic().getInt4();
 		auto funcTy = builder.functionType(list, retTy, FK_MEMBER_FUNCTION);
 		auto func = builder.literal("ns_SomeClass_sum", funcTy);
-		
+
 		EXPECT_FALSE(tu[func]);
-		if(tu[func]) {
-			std::cout << "the translation unit contains: \n" << tu;
-		}
+		if(tu[func]) { std::cout << "the translation unit contains: \n" << tu; }
 	}
-	
+
 	// ok, now check who do the ussages look like:
 	auto retTy = builder.getLangBasic().getUnit();
 	auto funcTy = builder.functionType(TypeList(), retTy);
-	
-	//intercept_simpleFunc
+
+	// intercept_simpleFunc
 	auto func = tu[builder.literal("function", funcTy)];
 	EXPECT_TRUE(func);
-	
+
 	auto IRcode = getPrettyPrinted(func);
 	EXPECT_TRUE(IRcode.find("ref<__insieme_enum<ns::SomeEnum>>") != std::string::npos);
 	EXPECT_TRUE(IRcode.find("ns::One") != std::string::npos);
@@ -425,44 +403,42 @@ TEST(Interception, AttachedHeader) {
 			void func() {
 				ns::S obj;
 			};
-		)"
-	    ,fe::CPP);
-	    
+		)",
+	    fe::CPP);
+
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 	const boost::filesystem::path& fileName = src;
 	std::string include = "-I" FRONTEND_TEST_DIR "inputs/interceptor/";
 	std::string interception = "--intercept=ns::.*";
-	std::vector<std::string> argv = { "compiler",  fileName.string(), include, interception, "--std=c++03" };
+	std::vector<std::string> argv = {"compiler", fileName.string(), include, interception, "--std=c++03"};
 	cmd::Options option = cmd::Options::parse(argv);
-	
+
 	auto tu = option.job.toIRTranslationUnit(mgr);
-	//LOG(INFO) << tu;
-	
+	// LOG(INFO) << tu;
+
 	auto retTy = builder.getLangBasic().getUnit();
 	auto funcTy = builder.functionType(TypeList(), retTy);
-	
-	//intercept_simpleFunc
+
+	// intercept_simpleFunc
 	auto symb = builder.literal("func", funcTy);
-	
+
 	auto node = tu[symb];
 	auto checkDecl = [&](const NodePtr& node) {
-		if(node.isa<LambdaExprPtr>()) {
-			return true;
-		}
-		if(auto var  = node.isa<VariablePtr>()) {
+		if(node.isa<LambdaExprPtr>()) { return true; }
+		if(auto var = node.isa<VariablePtr>()) {
 			auto inTy = var->getType().as<RefTypePtr>()->getElementType();
-			EXPECT_TRUE(hasIncludeAttached(inTy)) << "var: "<< inTy<<" has no header annotation when used in var: "<<var<< std::endl;
+			EXPECT_TRUE(hasIncludeAttached(inTy)) << "var: " << inTy << " has no header annotation when used in var: " << var << std::endl;
 		}
 		return false;
 	};
-	
+
 	visitDepthFirstPrunable(node.as<LambdaExprPtr>()->getBody(), checkDecl);
-	
+
 	std::cout << tu << std::endl;
 }
 
-//TODO:
+// TODO:
 //    initialization
 //    templates
 //

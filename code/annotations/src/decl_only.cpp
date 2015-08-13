@@ -45,44 +45,34 @@ namespace insieme {
 namespace annotations {
 namespace c {
 
-using namespace insieme::core;
+	using namespace insieme::core;
 
-// ---------------- Support Dump ----------------------
+	// ---------------- Support Dump ----------------------
 
-VALUE_ANNOTATION_CONVERTER(DeclOnlyTag)
+	VALUE_ANNOTATION_CONVERTER(DeclOnlyTag)
 
-typedef core::value_node_annotation<DeclOnlyTag>::type annotation_type;
+	typedef core::value_node_annotation<DeclOnlyTag>::type annotation_type;
 
-virtual ExpressionPtr toIR(NodeManager& manager, const NodeAnnotationPtr& annotation) const {
-	assert_true(dynamic_pointer_cast<annotation_type>(annotation)) << "Only DeclOnly annotations supported!";
-	return encoder::toIR(manager, (unsigned)(static_pointer_cast<annotation_type>(annotation)->getValue().kind));
-}
-
-virtual NodeAnnotationPtr toAnnotation(const ExpressionPtr& node) const {
-	assert_true(encoder::isEncodingOf<unsigned>(node.as<ExpressionPtr>())) << "Invalid encoding encountered!";
-	unsigned value = encoder::toValue<unsigned>(node);
-	
-	DeclOnlyTag::Kind kind = DeclOnlyTag::Kind::Struct;
-	switch(value) {
-	case 0:
-		kind = DeclOnlyTag::Struct;
-		break;
-	case 1:
-		kind = DeclOnlyTag::Class;
-		break;
-	case 2:
-		kind = DeclOnlyTag::Enum;
-		break;
-	case 3:
-		kind = DeclOnlyTag::Union;
-		break;
-	default:
-		assert_fail() << "what DeclOnlyTag::Kind is it then?";
-		break;
+	virtual ExpressionPtr toIR(NodeManager& manager, const NodeAnnotationPtr& annotation) const {
+		assert_true(dynamic_pointer_cast<annotation_type>(annotation)) << "Only DeclOnly annotations supported!";
+		return encoder::toIR(manager, (unsigned)(static_pointer_cast<annotation_type>(annotation)->getValue().kind));
 	}
-	
-	return std::make_shared<annotation_type>(DeclOnlyTag(kind));
-}
+
+	virtual NodeAnnotationPtr toAnnotation(const ExpressionPtr& node) const {
+		assert_true(encoder::isEncodingOf<unsigned>(node.as<ExpressionPtr>())) << "Invalid encoding encountered!";
+		unsigned value = encoder::toValue<unsigned>(node);
+
+		DeclOnlyTag::Kind kind = DeclOnlyTag::Kind::Struct;
+		switch(value) {
+		case 0: kind = DeclOnlyTag::Struct; break;
+		case 1: kind = DeclOnlyTag::Class; break;
+		case 2: kind = DeclOnlyTag::Enum; break;
+		case 3: kind = DeclOnlyTag::Union; break;
+		default: assert_fail() << "what DeclOnlyTag::Kind is it then?"; break;
+		}
+
+		return std::make_shared<annotation_type>(DeclOnlyTag(kind));
+	}
 };
 
 // ----------------------------------------------------

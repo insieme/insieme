@@ -54,152 +54,129 @@ namespace insieme {
 namespace frontend {
 namespace extensions {
 
-namespace {
-typedef std::map<core::LambdaExprPtr, core::LambdaExprPtr> memberReplace_t;
-typedef std::map<core::TypePtr, memberReplace_t> memberFunctionReplacement_t;
+	namespace {
+		typedef std::map<core::LambdaExprPtr, core::LambdaExprPtr> memberReplace_t;
+		typedef std::map<core::TypePtr, memberReplace_t> memberFunctionReplacement_t;
 
-core::TypePtr lookupTypeDetails(const core::TypePtr& type, insieme::frontend::tu::IRTranslationUnit& tu) {
-	if(!type.isa<core::GenericTypePtr>()) {
-		return type;
-	}
-	core::TypePtr res = tu[type.as<core::GenericTypePtr>()];
-	if(!res) {
-		return type;
-	}
-	if(res.isa<core::GenericTypePtr>() && type != res) {
-		return lookupTypeDetails(res,tu);
-	}
-	return res;
-}
-}  // empty namespace
+		core::TypePtr lookupTypeDetails(const core::TypePtr& type, insieme::frontend::tu::IRTranslationUnit& tu) {
+			if(!type.isa<core::GenericTypePtr>()) { return type; }
+			core::TypePtr res = tu[type.as<core::GenericTypePtr>()];
+			if(!res) { return type; }
+			if(res.isa<core::GenericTypePtr>() && type != res) { return lookupTypeDetails(res, tu); }
+			return res;
+		}
+	} // empty namespace
 
-insieme::frontend::tu::IRTranslationUnit CppRefsCleanupExtension::IRVisit(insieme::frontend::tu::IRTranslationUnit& tu) {
+	insieme::frontend::tu::IRTranslationUnit CppRefsCleanupExtension::IRVisit(insieme::frontend::tu::IRTranslationUnit& tu) {
+		// only cpp
+		if(!tu.isCXX()) { return tu; }
 
-	// only cpp
-	if(!tu.isCXX()) {
+		memberFunctionReplacement_t memberMap;
+
+		// for each of the functions
+		for(auto& pair : tu.getFunctions()) {
+			core::ExpressionPtr lit = pair.first;
+			core::LambdaExprPtr func = pair.second;
+			core::LambdaExprPtr oldFunc = pair.second;
+			core::TypePtr retType = lit->getType().as<core::FunctionTypePtr>()->getReturnType();
+			assert(retType == func->getType().as<core::FunctionTypePtr>()->getReturnType());
+
+			core::FrontendIRBuilder builder(func->getNodeManager());
+			const core::lang::BasicGenerator& gen = builder.getNodeManager().getLangBasic();
+			const core::lang::IRppExtensions& ext = func->getNodeManager().getLangExtension<core::lang::IRppExtensions>();
+
+			// filter to filter out the recursive transition to another called function
+			auto filter = [&func](const core::NodePtr& node) -> bool {
+				if(core::LambdaExprPtr call = node.isa<core::LambdaExprPtr>()) {
+					if(call == func) {
+						return true;
+					} else {
+						return false;
+					}
+				}
+				return true;
+			};
+
+			// if return type is a cpp ref
+			if(core::analysis::isAnyCppRef(retType)) {
+				// wrap all returns with a cpp ref conversion
+				auto fixer = [&](const core::NodePtr& node) -> core::NodePtr {
+					if(core::ReturnStmtPtr retStmt = node.isa<core::ReturnStmtPtr>()) {
+						core::ExpressionPtr expr = retStmt->getReturnExpr();
+
+						// sometimes is easyer to return by value, ammend this
+						if(core::analysis::isCallOf(expr, gen.getRefDeref())) { expr = expr.as<core::CallExprPtr>()[0]; }
+
+						// wrap the return into the righful type
+						if(core::analysis::isConstCppRef(retType)) {
+							// convert from cpp ref to const cpp ref
+							if(core::analysis::isCppRef(expr->getType())) {
+								expr = builder.callExpr(retType, ext.getRefCppToConstCpp(), expr);
+							}
+							// convert form non ref to const ref
+							else if(!core::analysis::isConstCppRef(expr->getType())) {
+								expr = builder.toConstCppRef(expr);
+							}
+						} else {
+							if(!core::analysis::isCppRef(expr->getType())) { expr = builder.callExpr(retType, ext.getRefIRToCpp(), expr); }
+						}
+
+						return builder.returnStmt(expr);
+					}
+					return node;
+				};
+
+				// modify all returns at once!
+				auto returnFixer = core::transform::makeCachedLambdaMapper(fixer, filter);
+				func = returnFixer.map(func);
+			}
+			// but it could be also that we return a cppref and the return type is not cppref
+			else {
+				// unwrap all returns of cppref exprs
+				auto fixer = [&](const core::NodePtr& node) -> core::NodePtr {
+					if(core::ReturnStmtPtr retStmt = node.isa<core::ReturnStmtPtr>()) {
+						core::ExpressionPtr expr = retStmt->getReturnExpr();
+
+						// we are returning a non cpp ref, uwrap it
+						if(core::analysis::isAnyCppRef(expr->getType())) { expr = core::analysis::unwrapCppRef(expr); }
+
+						// are we returning by value? deref
+						if(!retType.isa<core::RefTypePtr>() && retType.isa<core::RefTypePtr>()) { expr = builder.deref(expr); }
+
+						return builder.returnStmt(expr);
+					}
+					return node;
+				};
+
+				// modify all returns at once!
+				auto returnFixer = core::transform::makeCachedLambdaMapper(fixer, filter);
+				func = returnFixer.map(func);
+			}
+
+			// fix the function
+			tu.replaceFunction(lit.as<core::LiteralPtr>(), func);
+
+
+			// now a little problem for the brave souls:
+			// 	the metainfo class has not being modified, and still holds pointers to functions that no longer exist
+			//	we need to update those, store them in a map, and well do it later on
+			if(func->getType().as<core::FunctionTypePtr>()->isMemberFunction()) {
+				auto& memberReplacements = memberMap[func->getType().as<core::FunctionTypePtr>()->getObjectType()];
+				memberReplacements[builder.normalize(oldFunc)] = func;
+			}
+		}
 		return tu;
 	}
-	
-	memberFunctionReplacement_t memberMap;
-	
-	// for each of the functions
-	for(auto& pair : tu.getFunctions()) {
-		core::ExpressionPtr lit = pair.first;
-		core::LambdaExprPtr func = pair.second;
-		core::LambdaExprPtr oldFunc = pair.second;
-		core::TypePtr retType = lit->getType().as<core::FunctionTypePtr>()->getReturnType();
-		assert(retType == func->getType().as<core::FunctionTypePtr>()->getReturnType());
-		
-		core::FrontendIRBuilder builder(func->getNodeManager());
-		const core::lang::BasicGenerator& gen = builder.getNodeManager().getLangBasic();
-		const core::lang::IRppExtensions& ext = func->getNodeManager().getLangExtension<core::lang::IRppExtensions>();
-		
-		// filter to filter out the recursive transition to another called function
-		auto filter = [&func](const core::NodePtr& node) ->bool{
-			if(core::LambdaExprPtr call = node.isa<core::LambdaExprPtr>()) {
-				if(call == func) {
-					return true;
-				}
-				else {
-					return false;
-				}
-			}
-			return true;
-		};
-		
-		// if return type is a cpp ref
-		if(core::analysis::isAnyCppRef(retType)) {
-		
-			// wrap all returns with a cpp ref conversion
-			auto fixer = [&](const core::NodePtr& node)-> core::NodePtr{
-				if(core::ReturnStmtPtr retStmt = node.isa<core::ReturnStmtPtr>()) {
-					core::ExpressionPtr expr = retStmt->getReturnExpr();
-					
-					// sometimes is easyer to return by value, ammend this
-					if(core::analysis::isCallOf(expr, gen.getRefDeref())) {
-						expr = expr.as<core::CallExprPtr>()[0];
-					}
-					
-					// wrap the return into the righful type
-					if(core::analysis::isConstCppRef(retType)) {
-						// convert from cpp ref to const cpp ref
-						if(core::analysis::isCppRef(expr->getType())) {
-							expr = builder.callExpr(retType, ext.getRefCppToConstCpp(), expr);
-						}
-						// convert form non ref to const ref
-						else if(!core::analysis::isConstCppRef(expr->getType())) {
-							expr = builder.toConstCppRef(expr);
-						}
-					}
-					else {
-						if(!core::analysis::isCppRef(expr->getType())) {
-							expr = builder.callExpr(retType, ext.getRefIRToCpp(), expr);
-						}
-					}
-					
-					return builder.returnStmt(expr);
-				}
-				return node;
-			};
-			
-			// modify all returns at once!
-			auto returnFixer = core::transform::makeCachedLambdaMapper(fixer, filter);
-			func = returnFixer.map(func);
-		}
-		// but it could be also that we return a cppref and the return type is not cppref
-		else {
-		
-			// unwrap all returns of cppref exprs
-			auto fixer = [&](const core::NodePtr& node)-> core::NodePtr{
-				if(core::ReturnStmtPtr retStmt = node.isa<core::ReturnStmtPtr>()) {
-					core::ExpressionPtr expr = retStmt->getReturnExpr();
-					
-					// we are returning a non cpp ref, uwrap it
-					if(core::analysis::isAnyCppRef(expr->getType())) {
-						expr = core::analysis::unwrapCppRef(expr);
-					}
-					
-					// are we returning by value? deref
-					if(!retType.isa<core::RefTypePtr>() && retType.isa<core::RefTypePtr>()) {
-						expr = builder.deref(expr);
-					}
-					
-					return builder.returnStmt(expr);
-				}
-				return node;
-			};
-			
-			// modify all returns at once!
-			auto returnFixer = core::transform::makeCachedLambdaMapper(fixer, filter);
-			func = returnFixer.map(func);
-		}
-		
-		// fix the function
-		tu.replaceFunction(lit.as<core::LiteralPtr>(), func);
-		
-		
-		// now a little problem for the brave souls:
-		// 	the metainfo class has not being modified, and still holds pointers to functions that no longer exist
-		//	we need to update those, store them in a map, and well do it later on
-		if(func->getType().as<core::FunctionTypePtr>()->isMemberFunction()) {
-			auto& memberReplacements = memberMap[func->getType().as<core::FunctionTypePtr>()->getObjectType()];
-			memberReplacements [builder.normalize(oldFunc)]  = func;
-		}
-	}
-	return tu;
-}
 
-FrontendExtension::flagHandler CppRefsCleanupExtension::registerFlag(boost::program_options::options_description& options) {
-	//create lambda
-	auto lambda = [&](const ConversionJob& job) {
-		//check if the default activated plugins have been deactivated manually
-		if(job.hasOption(frontend::ConversionJob::NoDefaultExtensions)) {
-			return false;
-		}
-		return job.isCxx();
-	};
-	return lambda;
-}
+	FrontendExtension::flagHandler CppRefsCleanupExtension::registerFlag(boost::program_options::options_description& options) {
+		// create lambda
+		auto lambda = [&](const ConversionJob& job) {
+			// check if the default activated plugins have been deactivated manually
+			if(job.hasOption(frontend::ConversionJob::NoDefaultExtensions)) { return false; }
+			return job.isCxx();
+		};
+		return lambda;
+	}
 
 
 } // extensions

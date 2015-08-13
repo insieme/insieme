@@ -29,23 +29,23 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
 #ifdef INFO_STRUCT_BEGIN
-	#undef INFO_STRUCT_BEGIN
+#undef INFO_STRUCT_BEGIN
 #endif
 
 #ifdef INFO_FIELD
-	#undef INFO_FIELD
+#undef INFO_FIELD
 #endif
 
 #ifdef INFO_FIELD_EXT
-	#undef INFO_FIELD_EXT
+#undef INFO_FIELD_EXT
 #endif
 
 #ifdef INFO_STRUCT_END
-	#undef INFO_STRUCT_END
+#undef INFO_STRUCT_END
 #endif

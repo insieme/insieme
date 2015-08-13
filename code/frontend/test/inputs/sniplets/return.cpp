@@ -1,7 +1,7 @@
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
 int value() {
-	int a =1;
+	int a = 1;
 	return a;
 }
 
@@ -16,7 +16,7 @@ const int& constRef() {
 }
 
 int* pointer() {
-	int a =1;
+	int a = 1;
 	return &a;
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -24,10 +24,9 @@ int* pointer() {
 
 class Obj {
 	int a;
-public:
-	Obj(int v=3)
-		: a(v) {
-	}
+
+  public:
+	Obj(int v = 3) : a(v) {}
 	Obj value() {
 		return *this;
 	}
@@ -40,7 +39,7 @@ public:
 	Obj* pointer() {
 		return this;
 	}
-	
+
 	Obj value2() {
 		Obj& o = *this;
 		return o;
@@ -57,8 +56,8 @@ public:
 		Obj& o = *this;
 		return &o;
 	}
-	
-	
+
+
 	Obj value3() {
 		const Obj& o = *this;
 		return o;
@@ -88,24 +87,23 @@ Obj* Objpointer() {
 }
 
 int main() {
-
-// primitives
+	// primitives
 	{
 		value();
 		ref();
 		constRef();
 		pointer();
 	}
-	
-// objects
+
+	// objects
 	{
 		Objvalue();
 		Objref();
 		ObjconstRef();
 		Objpointer();
 	}
-	
-// members
+
+	// members
 	{
 		Obj o;
 		o.value();
@@ -113,8 +111,8 @@ int main() {
 		o.constRef();
 		o.pointer();
 	}
-	
-// members 2
+
+	// members 2
 	{
 		Obj o;
 		o.value2();
@@ -122,8 +120,8 @@ int main() {
 		o.constRef2();
 		o.pointer2();
 	}
-	
-// members 3
+
+	// members 3
 	{
 		Obj o;
 		o.value3();

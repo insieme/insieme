@@ -45,32 +45,25 @@ namespace core {
 namespace analysis {
 namespace region {
 
-RegionList ParallelSelector::getRegions(const core::NodePtr& node) const {
+	RegionList ParallelSelector::getRegions(const core::NodePtr& node) const {
+		RegionList res;
+		auto parallel = node->getNodeManager().getLangBasic().getParallel();
+		core::visitDepthFirst(core::NodeAddress(node), [&](const core::CallExprAddress& cur) -> bool {
+			if(*cur.getAddressedNode()->getFunctionExpr() != *parallel) { return false; }
 
-	RegionList res;
-	auto parallel = node->getNodeManager().getLangBasic().getParallel();
-	core::visitDepthFirst(core::NodeAddress(node), [&](const core::CallExprAddress& cur)->bool {
-		if(*cur.getAddressedNode()->getFunctionExpr() != *parallel) {
-			return false;
-		}
-		
-		core::JobExprAddress job = cur->getArgument(0).as<core::JobExprAddress>();
-		core::ExpressionAddress addr = job->getBody();
-		
-		if(addr->getNodeType() == core::NT_BindExpr) {
-			addr = addr.as<core::BindExprAddress>()->getCall()->getFunctionExpr();
-		}
-		
-		if(addr->getNodeType() == core::NT_LambdaExpr) {
-			res.push_back(addr.as<core::LambdaExprAddress>()->getBody());
-		}
-		
-		return true;
-		
-	}, false);
-	
-	return res;
-}
+			core::JobExprAddress job = cur->getArgument(0).as<core::JobExprAddress>();
+			core::ExpressionAddress addr = job->getBody();
+
+			if(addr->getNodeType() == core::NT_BindExpr) { addr = addr.as<core::BindExprAddress>()->getCall()->getFunctionExpr(); }
+
+			if(addr->getNodeType() == core::NT_LambdaExpr) { res.push_back(addr.as<core::LambdaExprAddress>()->getBody()); }
+
+			return true;
+
+		}, false);
+
+		return res;
+	}
 
 } // end namespace region
 } // end namespace analysis

@@ -51,89 +51,80 @@ namespace insieme {
 namespace backend {
 namespace addons {
 
-namespace {
+	namespace {
 
-OperatorConverterTable getOperatorTable(core::NodeManager& manager) {
-	OperatorConverterTable res;
-	const auto& ext = manager.getLangExtension<core::lang::AsmStmtExtension>();
-	
-#include "insieme/backend/operator_converter_begin.inc"
-	
-	res[ext.getAsmStmt()] 	  = OP_CONVERTER({
-	
-		std::string value("asm");
-		
-		///  syntax:     asm [volatile] ( ASMSTRING [ : [ OUTPUTS ] : [INPUTS] [ : CLOBBERS ] ] )
-		//
-		//	ASMSTRING: just a string with the asm to execute
-		//	OUTPUTS:    STRING(EXPR) [ , STRING(EXPR) ]*
-		//	INPUTS :    STRING(EXPR) [ , STRING(EXPR) ]*
-		//	CLOBBERS:   STRING [ , STRING ]*
-		
-		insieme::core::lang::AsmStmtWrapper wrapper = insieme::core::lang::fromIr(ARG(0));
-		
-		if(wrapper._volatile) {
-			value.append(" volatile");
-		}
-		
-		value.append("(\"");
-		value.append(wrapper.asmString);
-		value.append("\"");
-		
-		// if simple (only asm string) asm("text");
-		if(wrapper.inputs.empty() && wrapper.outputs.empty() && wrapper.clobbers.empty()) {
-			value.append(")");
-			return C_NODE_MANAGER->create<c_ast::OpaqueExpr>(value);
-		}
-		
-		
-		value.append(":");
-		std::stringstream ss;
-		if(wrapper.outputs.empty()) {
-			ss << " /* no output */ ";
-		}
-		else{
-			ss << join(",", wrapper.outputs, [&](std::ostream& out, const std::pair<std::string, core::ExpressionPtr>& item) {
-				out << "\"" << item.first << "\"(" << c_ast::toC(CONVERT_EXPR(item.second)) << ")";
+		OperatorConverterTable getOperatorTable(core::NodeManager& manager) {
+			OperatorConverterTable res;
+			const auto& ext = manager.getLangExtension<core::lang::AsmStmtExtension>();
+
+			#include "insieme/backend/operator_converter_begin.inc"
+
+			res[ext.getAsmStmt()] = OP_CONVERTER({
+
+				std::string value("asm");
+
+				///  syntax:     asm [volatile] ( ASMSTRING [ : [ OUTPUTS ] : [INPUTS] [ : CLOBBERS ] ] )
+				//
+				//	ASMSTRING: just a string with the asm to execute
+				//	OUTPUTS:    STRING(EXPR) [ , STRING(EXPR) ]*
+				//	INPUTS :    STRING(EXPR) [ , STRING(EXPR) ]*
+				//	CLOBBERS:   STRING [ , STRING ]*
+
+				insieme::core::lang::AsmStmtWrapper wrapper = insieme::core::lang::fromIr(ARG(0));
+
+				if(wrapper._volatile) { value.append(" volatile"); }
+
+				value.append("(\"");
+				value.append(wrapper.asmString);
+				value.append("\"");
+
+				// if simple (only asm string) asm("text");
+				if(wrapper.inputs.empty() && wrapper.outputs.empty() && wrapper.clobbers.empty()) {
+					value.append(")");
+					return C_NODE_MANAGER->create<c_ast::OpaqueExpr>(value);
+				}
+
+
+				value.append(":");
+				std::stringstream ss;
+				if(wrapper.outputs.empty()) {
+					ss << " /* no output */ ";
+				} else {
+					ss << join(",", wrapper.outputs, [&](std::ostream& out, const std::pair<std::string, core::ExpressionPtr>& item) {
+						out << "\"" << item.first << "\"(" << c_ast::toC(CONVERT_EXPR(item.second)) << ")";
+					});
+				}
+
+
+				ss << ":";
+				if(wrapper.inputs.empty()) {
+					ss << " /* no inputs */ ";
+				} else {
+					ss << join(",", wrapper.inputs, [&](std::ostream& out, const std::pair<std::string, core::ExpressionPtr>& item) {
+						out << "\"" << item.first << "\"(" << c_ast::toC(CONVERT_EXPR(item.second)) << ")";
+					});
+				}
+
+				if(!wrapper.clobbers.empty()) {
+					ss << ":";
+					ss << join(",", wrapper.clobbers, [&](std::ostream& out, const std::string& item) { out << "\"" << item << "\""; });
+				}
+
+				value.append(ss.str());
+				value.append(")");
+				return C_NODE_MANAGER->create<c_ast::OpaqueExpr>(value);
 			});
-		}
-		
-		
-		ss << ":";
-		if(wrapper.inputs.empty()) {
-			ss << " /* no inputs */ ";
-		}
-		else{
-			ss << join(",", wrapper.inputs, [&](std::ostream& out, const std::pair<std::string, core::ExpressionPtr>& item) {
-				out << "\"" << item.first << "\"(" << c_ast::toC(CONVERT_EXPR(item.second)) << ")";
-			});
-		}
-		
-		if(!wrapper.clobbers.empty()) {
-			ss << ":";
-			ss << join(",", wrapper.clobbers, [&](std::ostream& out, const std::string& item) {
-				out << "\"" << item << "\"";
-			});
-		}
-		
-		value.append(ss.str());
-		value.append(")");
-		return C_NODE_MANAGER->create<c_ast::OpaqueExpr>(value);
-	});
-	
-#include "insieme/backend/operator_converter_end.inc"
 
-	return res;
-}
+			#include "insieme/backend/operator_converter_end.inc"
 
-}
+			return res;
+		}
+	}
 
-void AsmStmt::installOn(Converter& converter) const {
-
-	// register additional operators
-	converter.getFunctionManager().getOperatorConverterTable().insertAll(getOperatorTable(converter.getNodeManager()));
-	
-}
+	void AsmStmt::installOn(Converter& converter) const {
+		// register additional operators
+		converter.getFunctionManager().getOperatorConverterTable().insertAll(getOperatorTable(converter.getNodeManager()));
+	}
 
 } // end namespace addons
 } // end namespace backend

@@ -46,21 +46,20 @@ namespace core {
 namespace analysis {
 namespace region {
 
-TEST(DummyRegionSelector, Basic) {
+	TEST(DummyRegionSelector, Basic) {
+		// the test is mainly focusing on the interface, not the actual selector
 
-	// the test is mainly focusing on the interface, not the actual selector
-	
-	core::NodeManager manager;
-	core::IRBuilder builder(manager);
-	
-	// create some IR structure
-	const core::CompoundStmtPtr stmt = builder.compoundStmt(builder.breakStmt());
-	
-	DummyRegionSelector selector;
-	vector<Region> regions = selector.getRegions(stmt);
-	
-	EXPECT_EQ(toVector(Region(stmt)), regions);
-}
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+
+		// create some IR structure
+		const core::CompoundStmtPtr stmt = builder.compoundStmt(builder.breakStmt());
+
+		DummyRegionSelector selector;
+		vector<Region> regions = selector.getRegions(stmt);
+
+		EXPECT_EQ(toVector(Region(stmt)), regions);
+	}
 
 } // end namespace region
 } // end namespace analysis

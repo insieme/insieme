@@ -51,10 +51,9 @@
 namespace insieme {
 namespace frontend {
 
-TEST(StmtConversion, NoMaterialization) {
-
-	Source src(
-	    R"(
+	TEST(StmtConversion, NoMaterialization) {
+		Source src(
+		    R"(
 
 					int main() {
 
@@ -65,26 +64,23 @@ TEST(StmtConversion, NoMaterialization) {
 
 					}
 
-				)"
-	);
-	
-	core::NodeManager mgr;
-	core::IRBuilder builder(mgr);
-	
-	auto res = builder.normalize(ConversionJob(src).execute(mgr));
-	
-//		dump(res);
+				)");
 
-	// check that there is no materialization
-	auto code = toString(core::printer::PrettyPrinter(res));
-	EXPECT_PRED2(notContainsSubString, code, "decl ref<int<4>>");
-	
-}
+		core::NodeManager mgr;
+		core::IRBuilder builder(mgr);
 
-TEST(StmtConversion, ForToWhileLoop1) {
+		auto res = builder.normalize(ConversionJob(src).execute(mgr));
 
-	Source src(
-	    R"(
+		//		dump(res);
+
+		// check that there is no materialization
+		auto code = toString(core::printer::PrettyPrinter(res));
+		EXPECT_PRED2(notContainsSubString, code, "decl ref<int<4>>");
+	}
+
+	TEST(StmtConversion, ForToWhileLoop1) {
+		Source src(
+		    R"(
 
 					int main() {
 
@@ -94,25 +90,23 @@ TEST(StmtConversion, ForToWhileLoop1) {
 
 					}
 
-				)"
-	);
-	
-	core::NodeManager mgr;
-	core::IRBuilder builder(mgr);
-	
-	auto res = builder.normalize(ConversionJob(src).execute(mgr));
-	
-	//dump(res);
-	
-	// check that there is no materialization
-	auto code = toString(core::printer::PrettyPrinter(res));
-	EXPECT_PRED2(containsSubString, code, "while");
-}
+				)");
 
-TEST(StmtConversion, ForToWhileLoop2) {
+		core::NodeManager mgr;
+		core::IRBuilder builder(mgr);
 
-	Source src(
-	    R"(
+		auto res = builder.normalize(ConversionJob(src).execute(mgr));
+
+		// dump(res);
+
+		// check that there is no materialization
+		auto code = toString(core::printer::PrettyPrinter(res));
+		EXPECT_PRED2(containsSubString, code, "while");
+	}
+
+	TEST(StmtConversion, ForToWhileLoop2) {
+		Source src(
+		    R"(
 
 					void f(int* x) { *x++; };
 
@@ -124,27 +118,24 @@ TEST(StmtConversion, ForToWhileLoop2) {
 
 					}
 
-				)"
-	);
-	
-	core::NodeManager mgr;
-	core::IRBuilder builder(mgr);
-	
-	auto res = builder.normalize(ConversionJob(src).execute(mgr));
-	
-	//dump(res);
-	
-	// check that there is no materialization
-	auto code = toString(core::printer::PrettyPrinter(res));
-	EXPECT_PRED2(containsSubString, code, "while");
-}
+				)");
+
+		core::NodeManager mgr;
+		core::IRBuilder builder(mgr);
+
+		auto res = builder.normalize(ConversionJob(src).execute(mgr));
+
+		// dump(res);
+
+		// check that there is no materialization
+		auto code = toString(core::printer::PrettyPrinter(res));
+		EXPECT_PRED2(containsSubString, code, "while");
+	}
 
 
-
-TEST(StmtConversion, Materialization) {
-
-	Source src(
-	    R"(
+	TEST(StmtConversion, Materialization) {
+		Source src(
+		    R"(
 
 					void f(int* x) { };
 
@@ -156,62 +147,55 @@ TEST(StmtConversion, Materialization) {
 
 					}
 
-				)"
-	);
-	
-	core::NodeManager mgr;
-	core::IRBuilder builder(mgr);
-	
-	auto res = builder.normalize(ConversionJob(src).execute(mgr));
-	
-//		dump(res);
+				)");
 
-	// check that there is no materialization
-	auto code = toString(core::printer::PrettyPrinter(res));
-	EXPECT_PRED2(containsSubString, code, "decl ref<int<4>>");
-	
-}
+		core::NodeManager mgr;
+		core::IRBuilder builder(mgr);
 
-TEST(StmtConversion, IntInfBug) {
+		auto res = builder.normalize(ConversionJob(src).execute(mgr));
 
-	Source src(
-	    R"(
+		//		dump(res);
+
+		// check that there is no materialization
+		auto code = toString(core::printer::PrettyPrinter(res));
+		EXPECT_PRED2(containsSubString, code, "decl ref<int<4>>");
+	}
+
+	TEST(StmtConversion, IntInfBug) {
+		Source src(
+		    R"(
 					void main() {
 						for(unsigned long i=10; i>0; i--);
 					}
-				)"
-	);
-	
-	core::NodeManager mgr;
-	core::IRBuilder builder(mgr);
-	
-	core::ProgramPtr res = ConversionJob(src).execute(mgr);
-	//dump(res);
-	EXPECT_TRUE(core::checks::check(res).empty()) << core::checks::check(res);
-}
+				)");
 
-TEST(StmtConversion, NotIntegralTypeIterator) {
+		core::NodeManager mgr;
+		core::IRBuilder builder(mgr);
 
-	Source src(
-	    R"(
+		core::ProgramPtr res = ConversionJob(src).execute(mgr);
+		// dump(res);
+		EXPECT_TRUE(core::checks::check(res).empty()) << core::checks::check(res);
+	}
+
+	TEST(StmtConversion, NotIntegralTypeIterator) {
+		Source src(
+		    R"(
 					void main() {
 						for(double d=0;d<0; d++) {}
 					}
-				)"
-	);
-	
-	core::NodeManager mgr;
-	core::IRBuilder builder(mgr);
-	
-	core::ProgramPtr res = ConversionJob(src).execute(mgr);
-	//dump(res);
-	EXPECT_TRUE(core::checks::check(res).empty()) << core::checks::check(res);
-}
+				)");
 
-TEST(StmtConversion, ForLoopIteratorMaterializationThreadPrivate) {
+		core::NodeManager mgr;
+		core::IRBuilder builder(mgr);
 
-	Source src(
-	    R"(
+		core::ProgramPtr res = ConversionJob(src).execute(mgr);
+		// dump(res);
+		EXPECT_TRUE(core::checks::check(res).empty()) << core::checks::check(res);
+	}
+
+	TEST(StmtConversion, ForLoopIteratorMaterializationThreadPrivate) {
+		Source src(
+		    R"(
 
 					float x;
 
@@ -227,29 +211,27 @@ TEST(StmtConversion, ForLoopIteratorMaterializationThreadPrivate) {
 
 					}
 
-				)"
-	);
-	
-	core::NodeManager mgr;
-	core::IRBuilder builder(mgr);
-	
-	const boost::filesystem::path& file = src;
-	std::vector<std::string> args = {"compiler", file.string(), "-fopenmp"};
-	insieme::driver::cmd::Options options = insieme::driver::cmd::Options::parse(args);
-	
-	auto res = builder.normalize(options.job.execute(mgr));
-	
-	//dump(res);
-	
-	// check that there is no materialization
-	auto code = toString(core::printer::PrettyPrinter(res));
-	EXPECT_PRED2(notContainsSubString, code, "decl ref<int<4>>");
-}
+				)");
 
-TEST(StmtConversion, SimplePostCondition) {
+		core::NodeManager mgr;
+		core::IRBuilder builder(mgr);
 
-	Source src(
-	    R"(
+		const boost::filesystem::path& file = src;
+		std::vector<std::string> args = {"compiler", file.string(), "-fopenmp"};
+		insieme::driver::cmd::Options options = insieme::driver::cmd::Options::parse(args);
+
+		auto res = builder.normalize(options.job.execute(mgr));
+
+		// dump(res);
+
+		// check that there is no materialization
+		auto code = toString(core::printer::PrettyPrinter(res));
+		EXPECT_PRED2(notContainsSubString, code, "decl ref<int<4>>");
+	}
+
+	TEST(StmtConversion, SimplePostCondition) {
+		Source src(
+		    R"(
 					int main() {
 						int array[10][10];
 						 int i, j, k;
@@ -261,28 +243,27 @@ TEST(StmtConversion, SimplePostCondition) {
 						}
 						return 0;
 					}
-				)"
-	);
-	
-	core::NodeManager mgr;
-	core::IRBuilder builder(mgr);
-	
-	const boost::filesystem::path& file = src;
-	std::vector<std::string> args = {"compiler", file.string()};
-	insieme::driver::cmd::Options options = insieme::driver::cmd::Options::parse(args);
-	
-	auto res = builder.normalize(options.job.execute(mgr));
-	
-	dump(res);
-	
-	// check that there is no materialization
-	auto code = toString(core::printer::PrettyPrinter(res));
-	EXPECT_PRED2(notContainsSubString, code, "if");
-	EXPECT_PRED2(notContainsSubString, code, "20+1-20-v52-20-v3/1*1");
-	EXPECT_PRED2(containsSubString, code, "v3 := 20");
-	EXPECT_PRED2(notContainsSubString, code, "11-v2-11-v2/3*3");
-	EXPECT_PRED2(containsSubString, code, "v2 := 13");
-}
+				)");
+
+		core::NodeManager mgr;
+		core::IRBuilder builder(mgr);
+
+		const boost::filesystem::path& file = src;
+		std::vector<std::string> args = {"compiler", file.string()};
+		insieme::driver::cmd::Options options = insieme::driver::cmd::Options::parse(args);
+
+		auto res = builder.normalize(options.job.execute(mgr));
+
+		dump(res);
+
+		// check that there is no materialization
+		auto code = toString(core::printer::PrettyPrinter(res));
+		EXPECT_PRED2(notContainsSubString, code, "if");
+		EXPECT_PRED2(notContainsSubString, code, "20+1-20-v52-20-v3/1*1");
+		EXPECT_PRED2(containsSubString, code, "v3 := 20");
+		EXPECT_PRED2(notContainsSubString, code, "11-v2-11-v2/3*3");
+		EXPECT_PRED2(containsSubString, code, "v2 := 13");
+	}
 
 } // end namespace frontend
 } // end namespace insieme

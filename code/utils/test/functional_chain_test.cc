@@ -47,47 +47,36 @@
 namespace insieme {
 namespace utils {
 
-using namespace std;
+	using namespace std;
 
-TEST(FunctionChain, Basic) {
+	TEST(FunctionChain, Basic) {
+		vector<int> data;
 
-	vector<int> data;
-	
-	auto f1 = [&]() {
-		data.push_back(1);
-	};
-	auto f2 = [&]() {
-		data.push_back(2);
-	};
-	
-	auto f = chain(f1, f2);
-	f();
-	EXPECT_EQ("[1,2]", toString(data));
-	
-	data.clear();
-	chain(f2,f1,f1,f2)();
-	EXPECT_EQ("[2,1,1,2]", toString(data));
-	
-}
+		auto f1 = [&]() { data.push_back(1); };
+		auto f2 = [&]() { data.push_back(2); };
 
-TEST(FunctionChain, Advanced) {
+		auto f = chain(f1, f2);
+		f();
+		EXPECT_EQ("[1,2]", toString(data));
 
-	vector<int> data;
-	
-	auto f1 = [&](int x) {
-		data.push_back(x+1);
-	};
-	auto f2 = [&](int x) {
-		data.push_back(x+2);
-	};
-	
-	chain(f1, f2)(3);
-	EXPECT_EQ("[4,5]", toString(data));
-	
-	data.clear();
-	chain(f2,f1,f1,f2)(10);
-	EXPECT_EQ("[12,11,11,12]", toString(data));
-}
+		data.clear();
+		chain(f2, f1, f1, f2)();
+		EXPECT_EQ("[2,1,1,2]", toString(data));
+	}
+
+	TEST(FunctionChain, Advanced) {
+		vector<int> data;
+
+		auto f1 = [&](int x) { data.push_back(x + 1); };
+		auto f2 = [&](int x) { data.push_back(x + 2); };
+
+		chain(f1, f2)(3);
+		EXPECT_EQ("[4,5]", toString(data));
+
+		data.clear();
+		chain(f2, f1, f1, f2)(10);
+		EXPECT_EQ("[12,11,11,12]", toString(data));
+	}
 
 } // end namespace utils
 } // end namespace insieme

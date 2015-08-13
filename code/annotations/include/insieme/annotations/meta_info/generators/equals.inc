@@ -29,19 +29,21 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
 #include "clear.inc"
 
-#define INFO_STRUCT_BEGIN(_name) \
-	namespace _name ## _ns { \
-	inline bool info_type::operator==(const info_type& other) const { return true
+#define INFO_STRUCT_BEGIN(_name)                                                                                                                               \
+	namespace _name##_ns {                                                                                                                                     \
+		inline bool info_type::operator==(const info_type& other) const {                                                                                      \
+		return true
 
-#define INFO_FIELD_EXT(_name, _a, _b, _type, _def) \
-		&& insieme::annotations::detail::field_comperator<decltype(_name)>()(_name, other._name)
+#define INFO_FIELD_EXT(_name, _a, _b, _type, _def) &&insieme::annotations::detail::field_comperator<decltype(_name)>()(_name, other._name)
 
-#define INFO_STRUCT_END() \
-	; } }
+#define INFO_STRUCT_END()                                                                                                                                      \
+	;                                                                                                                                                          \
+	}                                                                                                                                                          \
+	}

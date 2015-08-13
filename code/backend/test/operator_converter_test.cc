@@ -47,13 +47,13 @@
 namespace insieme {
 namespace backend {
 
-using namespace core;
+	using namespace core;
 
-TEST(OperatorTest, NarrowTest) {
-	NodeManager mgr;
-	IRBuilder builder(mgr);
-	
-	ProgramPtr prog = builder.parseProgram(R"(
+	TEST(OperatorTest, NarrowTest) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		ProgramPtr prog = builder.parseProgram(R"(
 			
 			let int = int<4>;
 			
@@ -115,20 +115,20 @@ TEST(OperatorTest, NarrowTest) {
 			}
 		)").as<core::ProgramPtr>();
 
-	// check whether parsing was successful
-	ASSERT_TRUE(prog);
-	
-	// print program using pretty printer
-	std::cout << core::printer::PrettyPrinter(prog);
-	
-	// build it using the sequential backend
-	auto targetCode = sequential::SequentialBackend::getDefault()->convert(prog);
-	
-	std::cout << "Converted Code: \n" << *targetCode << "\n";
-	
-	// try compiling code
-	EXPECT_TRUE(utils::compiler::compile(*targetCode));
-}
+		// check whether parsing was successful
+		ASSERT_TRUE(prog);
+
+		// print program using pretty printer
+		std::cout << core::printer::PrettyPrinter(prog);
+
+		// build it using the sequential backend
+		auto targetCode = sequential::SequentialBackend::getDefault()->convert(prog);
+
+		std::cout << "Converted Code: \n" << *targetCode << "\n";
+
+		// try compiling code
+		EXPECT_TRUE(utils::compiler::compile(*targetCode));
+	}
 
 
 } // end namespace backend

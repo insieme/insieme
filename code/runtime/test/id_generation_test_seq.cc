@@ -48,14 +48,14 @@ irt_id_gen_test_id gen_id;
 TEST(id_generation, sequential_ops) {
 	gen_id.thread = 7;
 	gen_id.node = 4;
-	
+
 	irt_id_gen_test_id test1 = irt_generate_id_gen_test_id(&gen_id);
 	EXPECT_EQ(test1.thread, gen_id.thread);
 	EXPECT_EQ(test1.node, gen_id.node);
-	EXPECT_EQ(test1.index, gen_id.index-1);
-	
+	EXPECT_EQ(test1.index, gen_id.index - 1);
+
 	irt_id_gen_test_id test2 = irt_generate_id_gen_test_id(&gen_id);
 	EXPECT_EQ(test2.thread, gen_id.thread);
 	EXPECT_EQ(test2.node, gen_id.node);
-	EXPECT_EQ(test2.index, test1.index+1);
+	EXPECT_EQ(test2.index, test1.index + 1);
 }

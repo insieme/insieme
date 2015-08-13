@@ -59,21 +59,18 @@ namespace types {
 			boost::optional<Substitution> unmatchable;
 
 			while(!list.empty()) {
-
 				// get current element
 				Pair cur = list.front();
 				list.pop_front();
 
-				TypePtr a = cur.first;			// the value
-				TypePtr b = cur.second;			// the pattern
+				TypePtr a = cur.first;  // the value
+				TypePtr b = cur.second; // the pattern
 
 				const NodeType typeOfA = a->getNodeType();
 				const NodeType typeOfB = b->getNodeType();
 
 				// 1) if (a == b) ignore pair ..
-				if(*a==*b) {
-					continue;
-				}
+				if(*a == *b) { continue; }
 
 				// 2) test whether on the B side there is a variable
 				if(typeOfB == NT_TypeVariable) {
@@ -111,15 +108,10 @@ namespace types {
 					const GenericTypePtr& genericTypeB = static_pointer_cast<const GenericType>(b);
 
 					// check family names
-					if(*genericTypeA->getName() != *genericTypeB->getName()) {
-						return unmatchable;
-					}
+					if(*genericTypeA->getName() != *genericTypeB->getName()) { return unmatchable; }
 
 					// check same number of type parameters
-					if(genericTypeA->getTypeParameter().size() != genericTypeB->getTypeParameter().size()) {
-						return unmatchable;
-					}
-
+					if(genericTypeA->getTypeParameter().size() != genericTypeB->getTypeParameter().size()) { return unmatchable; }
 				}
 
 				// => check all child nodes
@@ -131,10 +123,8 @@ namespace types {
 				}
 
 				// add pairs of children to list to be processed
-				list.insert(list.end(),
-					make_paired_iterator(typeParamsA.begin(), typeParamsB.begin()),
-					make_paired_iterator(typeParamsA.end(), typeParamsB.end())
-				);
+				list.insert(list.end(), make_paired_iterator(typeParamsA.begin(), typeParamsB.begin()),
+				            make_paired_iterator(typeParamsA.end(), typeParamsB.end()));
 			}
 
 			// done
@@ -145,8 +135,8 @@ namespace types {
 
 
 	SubstitutionOpt match(NodeManager& manager, const TypePtr& type, const TypePtr& pattern) {
-		std::list<std::pair<TypePtr,TypePtr>> list;
-		list.push_back(std::make_pair(type,pattern));
+		std::list<std::pair<TypePtr, TypePtr>> list;
+		list.push_back(std::make_pair(type, pattern));
 		return computeMapping(manager, list);
 	}
 

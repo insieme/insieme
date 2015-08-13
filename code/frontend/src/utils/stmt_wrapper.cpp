@@ -39,40 +39,30 @@
 #include "insieme/core/ir_builder.h"
 
 
-
 namespace insieme {
 namespace frontend {
 namespace stmtutils {
 
-using namespace insieme::core;
+	using namespace insieme::core;
 
-// Tried to aggregate statements into a compound statement (if more than 1 statement is present)
-StatementPtr tryAggregateStmts(const IRBuilder& builder, const StatementList& stmtVect) {
-	if(stmtVect.empty()) {
-		return builder.compoundStmt();
+	// Tried to aggregate statements into a compound statement (if more than 1 statement is present)
+	StatementPtr tryAggregateStmts(const IRBuilder& builder, const StatementList& stmtVect) {
+		if(stmtVect.empty()) { return builder.compoundStmt(); }
+		if(stmtVect.size() == 1) { return tryAggregateStmt(builder, stmtVect[0]); }
+		return builder.compoundStmt(stmtVect);
 	}
-	if(stmtVect.size() == 1) {
-		return tryAggregateStmt(builder, stmtVect[0]);
-	}
-	return  builder.compoundStmt(stmtVect);
-}
 
-StatementPtr tryAggregateStmt(const IRBuilder& builder, const StatementPtr& stmt) {
-	if(stmt.isa<CompoundStmtPtr>()) {
-		return tryAggregateStmts(builder,  stmt.as<CompoundStmtPtr>()->getStatements());
+	StatementPtr tryAggregateStmt(const IRBuilder& builder, const StatementPtr& stmt) {
+		if(stmt.isa<CompoundStmtPtr>()) { return tryAggregateStmts(builder, stmt.as<CompoundStmtPtr>()->getStatements()); }
+		return stmt;
 	}
-	return stmt;
-}
 
-ExpressionPtr makeOperation(const IRBuilder& builder, const ExpressionPtr& lhs,
-                            const ExpressionPtr& rhs, const lang::BasicGenerator::Operator& op) {
-	return builder.callExpr(lhs->getType(), // return type
-	                        builder.getLangBasic().getOperator(lhs->getType(), op), // get the operator
-	                        lhs, rhs);         // LHS and RHS of the operation
-}
+	ExpressionPtr makeOperation(const IRBuilder& builder, const ExpressionPtr& lhs, const ExpressionPtr& rhs, const lang::BasicGenerator::Operator& op) {
+		return builder.callExpr(lhs->getType(),                                         // return type
+		                        builder.getLangBasic().getOperator(lhs->getType(), op), // get the operator
+		                        lhs, rhs);                                              // LHS and RHS of the operation
+	}
 
 } // end namespace stmtutils
 } // end namespace frontend
 } // end namespace insieme
-
-

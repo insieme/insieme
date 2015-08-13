@@ -45,25 +45,21 @@ namespace insieme {
 namespace backend {
 namespace sequential {
 
-namespace {
+	namespace {
 
-const TypeInfo* handleType(const Converter& converter, const core::TypePtr& type) {
+		const TypeInfo* handleType(const Converter& converter, const core::TypePtr& type) {
+			// handle jobs
+			const core::lang::BasicGenerator& basic = converter.getNodeManager().getLangBasic();
 
-	// handle jobs
-	const core::lang::BasicGenerator& basic = converter.getNodeManager().getLangBasic();
-	
-	// handle lock types
-	if(basic.isLock(type)) {
-		return type_info_utils::createInfo(converter.getFragmentManager(), "int32_t", "stdint.h");
+			// handle lock types
+			if(basic.isLock(type)) { return type_info_utils::createInfo(converter.getFragmentManager(), "int32_t", "stdint.h"); }
+
+			// it is not a special runtime type => let somebody else try
+			return 0;
+		}
 	}
-	
-	// it is not a special runtime type => let somebody else try
-	return 0;
-}
 
-}
-
-TypeHandler SequentialTypeHandler = &handleType;
+	TypeHandler SequentialTypeHandler = &handleType;
 
 } // end namespace ocl_standalone
 } // end namespace backend

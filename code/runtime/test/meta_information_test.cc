@@ -42,9 +42,7 @@
 // --- compiler generated ---
 
 irt_meta_info_table_entry irt_g_meta_info[] = {
-	{ { true, NULL, 8 } },
-	{ { true, NULL, 3 } },
-	{ { false, NULL, 0 } },
+    {{true, NULL, 8}}, {{true, NULL, 3}}, {{false, NULL, 0}},
 };
 
 // --- compiler generated - end ---
@@ -59,4 +57,3 @@ TEST(meta_information, basic) {
 	EXPECT_EQ(irt_meta_info_get_effort_estimation(&(irt_g_meta_info[1]))->fallback_estimate, 3);
 	EXPECT_EQ((void*)irt_meta_info_get_effort_estimation(&(irt_g_meta_info[1]))->estimation_function, (void*)NULL);
 }
-

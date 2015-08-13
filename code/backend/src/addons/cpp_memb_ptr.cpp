@@ -55,93 +55,90 @@ namespace insieme {
 namespace backend {
 namespace addons {
 
-namespace {
+	namespace {
 
-const TypeInfo* CppMembPtrHandler(const Converter& converter, const core::TypePtr& type) {
-	static const TypeInfo* NOT_HANDLED = NULL;
-	
-	// check whether it is a cpp reference
-	if(!(core::analysis::isMemberPointer(type))) {
-		return NOT_HANDLED;	// not handled by this handler
+		const TypeInfo* CppMembPtrHandler(const Converter& converter, const core::TypePtr& type) {
+			static const TypeInfo* NOT_HANDLED = NULL;
+
+			// check whether it is a cpp reference
+			if(!(core::analysis::isMemberPointer(type))) {
+				return NOT_HANDLED; // not handled by this handler
+			}
+
+			// build up TypeInfo for C++ member pointer
+			TypeManager& typeManager = converter.getTypeManager();
+			auto manager = converter.getCNodeManager();
+
+			core::StructTypePtr structType = type.isa<core::StructTypePtr>();
+
+			// get information regarding base type
+			// const TypeInfo& baseInfo = typeManager.getTypeInfo();
+			// std::cout << "name of 0 " << structType[0]->getName().getValue() << std::endl;
+			// std::cout << "type of 0 " << structType[0]->getType() << std::endl;
+
+			// std::cout << "name of 2 " << structType[2]->getName().getValue() << std::endl;
+			// std::cout << "type of 2 " << structType[2]->getType() << std::endl;
+
+			TypeInfo baseInfo = typeManager.getTypeInfo(core::analysis::getRepresentedType(structType[0]->getType()));
+			TypeInfo fieldType = typeManager.getTypeInfo(core::analysis::getRepresentedType(structType[2]->getType()));
+
+			c_ast::IdentifierPtr typeName = manager->create(converter.getNameManager().getName(type));
+			c_ast::MemberFieldPointerPtr memberPtrType = manager->create<c_ast::MemberFieldPointer>(baseInfo.rValueType, fieldType.rValueType);
+			c_ast::TypeDefinitionPtr def = manager->create<c_ast::TypeDefinition>(memberPtrType, typeName);
+
+			TypeInfo* res = new TypeInfo();
+
+			// construct decl and def
+			res->declaration = c_ast::CCodeFragment::createNew(converter.getFragmentManager(), def);
+			res->definition = res->declaration;
+
+			// dependencies
+			res->declaration->addDependency(baseInfo.declaration);
+			res->declaration->addDependency(fieldType.declaration);
+
+			// R / L value names
+			res->rValueType = manager->create<c_ast::NamedType>(typeName);
+			res->lValueType = res->rValueType;
+
+			// external type handling
+			res->externalType = res->rValueType;
+			res->externalize = &type_info_utils::NoOp;
+			res->internalize = &type_info_utils::NoOp;
+
+			// done
+			return res;
+		}
+
+
+		OperatorConverterTable getLocalOperatorTable(core::NodeManager& manager) {
+			OperatorConverterTable res;
+			const auto& ext = manager.getLangExtension<core::lang::IRppExtensions>();
+
+			#include "insieme/backend/operator_converter_begin.inc"
+
+			res[ext.getMemberPointerCtor()] = OP_CONVERTER({
+				c_ast::NodePtr objTy = CONVERT_TYPE(core::analysis::getRepresentedType(ARG(0)->getType()));
+				c_ast::NodePtr lit = C_NODE_MANAGER->create(ARG(1).as<core::LiteralPtr>()->getStringValue());
+				return c_ast::ref(c_ast::scope(objTy, lit));
+			});
+
+			res[ext.getMemberPointerAccess()] = OP_CONVERTER({
+				// FIXME: is this right?
+				return c_ast::ref(pointerToMember(CONVERT_ARG(0), CONVERT_ARG(1)));
+			});
+
+			#include "insieme/backend/operator_converter_end.inc"
+			return res;
+		}
 	}
-	
-	// build up TypeInfo for C++ member pointer
-	TypeManager& typeManager = converter.getTypeManager();
-	auto manager = converter.getCNodeManager();
-	
-	core::StructTypePtr structType = type.isa<core::StructTypePtr>();
-	
-	// get information regarding base type
-	//const TypeInfo& baseInfo = typeManager.getTypeInfo();
-	//std::cout << "name of 0 " << structType[0]->getName().getValue() << std::endl;
-	//std::cout << "type of 0 " << structType[0]->getType() << std::endl;
-	
-	//std::cout << "name of 2 " << structType[2]->getName().getValue() << std::endl;
-	//std::cout << "type of 2 " << structType[2]->getType() << std::endl;
-	
-	TypeInfo baseInfo  = typeManager.getTypeInfo(core::analysis::getRepresentedType(structType[0]->getType()));
-	TypeInfo fieldType = typeManager.getTypeInfo(core::analysis::getRepresentedType(structType[2]->getType()));
-	
-	c_ast::IdentifierPtr typeName = manager->create(converter.getNameManager().getName(type));
-	c_ast::MemberFieldPointerPtr memberPtrType = manager->create<c_ast::MemberFieldPointer>(baseInfo.rValueType, fieldType.rValueType);
-	c_ast::TypeDefinitionPtr def = manager->create<c_ast::TypeDefinition>(memberPtrType, typeName);
-	
-	TypeInfo* res = new TypeInfo();
-	
-	// construct decl and def
-	res->declaration = c_ast::CCodeFragment::createNew(converter.getFragmentManager(), def);
-	res->definition = res->declaration;
-	
-	// dependencies
-	res->declaration->addDependency(baseInfo.declaration);
-	res->declaration->addDependency(fieldType.declaration);
-	
-	// R / L value names
-	res->rValueType = manager->create<c_ast::NamedType>(typeName);
-	res->lValueType = res->rValueType;
-	
-	// external type handling
-	res->externalType = res->rValueType;
-	res->externalize = &type_info_utils::NoOp;
-	res->internalize = &type_info_utils::NoOp;
-	
-	// done
-	return res;
-}
 
+	void CppMembAddon::installOn(Converter& converter) const {
+		// registers type handler
+		converter.getTypeManager().addTypeHandler(CppMembPtrHandler);
 
-OperatorConverterTable getLocalOperatorTable(core::NodeManager& manager) {
-	OperatorConverterTable res;
-	const auto& ext = manager.getLangExtension<core::lang::IRppExtensions>();
-	
-#include "insieme/backend/operator_converter_begin.inc"
-	
-	res[ext.getMemberPointerCtor()] 	  = OP_CONVERTER({
-		c_ast::NodePtr objTy = CONVERT_TYPE(core::analysis::getRepresentedType(ARG(0)->getType()));
-		c_ast::NodePtr lit  =  C_NODE_MANAGER->create(ARG(1).as<core::LiteralPtr>()->getStringValue());
-		return c_ast::ref(c_ast::scope(objTy, lit));
-	});
-	
-	res[ext.getMemberPointerAccess()] 	  = OP_CONVERTER({
-		// FIXME: is this right?
-		return c_ast::ref(pointerToMember(CONVERT_ARG(0), CONVERT_ARG(1)));
-	});
-	
-#include "insieme/backend/operator_converter_end.inc"
-	return res;
-}
-
-}
-
-void CppMembAddon::installOn(Converter& converter) const {
-
-	// registers type handler
-	converter.getTypeManager().addTypeHandler(CppMembPtrHandler);
-	
-	// register additional operators
-	converter.getFunctionManager().getOperatorConverterTable().insertAll(getLocalOperatorTable(converter.getNodeManager()));
-	
-}
+		// register additional operators
+		converter.getFunctionManager().getOperatorConverterTable().insertAll(getLocalOperatorTable(converter.getNodeManager()));
+	}
 
 } // end namespace addons
 } // end namespace backend

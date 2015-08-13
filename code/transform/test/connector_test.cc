@@ -54,115 +54,96 @@ namespace irp = core::pattern::irp;
 
 
 TEST(ForAll, Basic) {
-
 	// create something to transform
 	core::NodeManager manager;
 	core::IRBuilder builder(manager);
 	core::NodePtr lit = builder.intLit(42);
-	
+
 	// build a transformation
-	TransformationPtr replacer = makeLambdaTransformation([&](const core::NodePtr& cur) {
-		return lit;
-	});
-//		filter::TargetFilter filter = filter::pattern(p::var("x", irp::forStmt()), "x");
+	TransformationPtr replacer = makeLambdaTransformation([&](const core::NodePtr& cur) { return lit; });
+	//		filter::TargetFilter filter = filter::pattern(p::var("x", irp::forStmt()), "x");
 
 	auto forStmt = p::aT(p::var("x", irp::forStmt()));
-	filter::TargetFilter filter = filter::pattern(p::node(*(forStmt | !forStmt)), "x");;
-	
+	filter::TargetFilter filter = filter::pattern(p::node(*(forStmt | !forStmt)), "x");
+	;
+
 	TransformationPtr transform = makeForAll(filter, replacer);
-	
-	core::NodePtr in = builder.parseStmt(
-	                       "{"
-	                       "	for(uint<4> i = 6u .. 12u : 3u) {"
-	                       "		for(uint<4> k = 6u .. 12u : 3u) {"
-	                       "			i+1u;"
-	                       "		}"
-	                       "	}"
-	                       "	for(uint<4> j = 3u .. 25u : 1u) {"
-	                       "		j+1u;"
-	                       "	}"
-	                       "}");
+
+	core::NodePtr in = builder.parseStmt("{"
+	                                     "	for(uint<4> i = 6u .. 12u : 3u) {"
+	                                     "		for(uint<4> k = 6u .. 12u : 3u) {"
+	                                     "			i+1u;"
+	                                     "		}"
+	                                     "	}"
+	                                     "	for(uint<4> j = 3u .. 25u : 1u) {"
+	                                     "		j+1u;"
+	                                     "	}"
+	                                     "}");
 	EXPECT_TRUE(in);
-	
+
 	core::NodePtr out = transform->apply(in);
 	EXPECT_EQ("{42; 42;}", toString(*out));
-	
 }
 
 
 TEST(ForAll, ExtractParameters) {
-
 	// create something to transform
 	core::NodeManager manager;
 	core::IRBuilder builder(manager);
 	core::NodePtr lit = builder.intLit(42);
-	
+
 	// build a transformation
-	TransformationPtr replacer = makeLambdaTransformation([&](const core::NodePtr& cur) {
-		return lit;
-	});
-//		filter::TargetFilter filter = filter::pattern(p::var("x", irp::forStmt()), "x");
+	TransformationPtr replacer = makeLambdaTransformation([&](const core::NodePtr& cur) { return lit; });
+	//		filter::TargetFilter filter = filter::pattern(p::var("x", irp::forStmt()), "x");
 
 	auto forStmt = p::aT(p::var("x", irp::forStmt()));
-	filter::TargetFilter filter = filter::pattern(p::node(*(forStmt | !forStmt)), "x");;
-	
+	filter::TargetFilter filter = filter::pattern(p::node(*(forStmt | !forStmt)), "x");
+	;
+
 	TransformationPtr transform = makeForAll(filter, replacer);
-	
-	parameter::Value should = parameter::combineValues(
-	                              parameter::makeValue(filter),
-	                              parameter::makeValue(replacer)
-	                          );
+
+	parameter::Value should = parameter::combineValues(parameter::makeValue(filter), parameter::makeValue(replacer));
 	parameter::Value is = transform->getParameters();
-	
+
 	EXPECT_EQ(should, is);
 }
 
 TEST(ForAll, Clone) {
-
 	// create something to transform
 	core::NodeManager manager;
 	core::IRBuilder builder(manager);
 	core::NodePtr lit = builder.intLit(42);
-	
+
 	// build a transformation
-	TransformationPtr replacer = makeLambdaTransformation([&](const core::NodePtr& cur) {
-		return lit;
-	});
-//		filter::TargetFilter filter = filter::pattern(p::var("x", irp::forStmt()), "x");
+	TransformationPtr replacer = makeLambdaTransformation([&](const core::NodePtr& cur) { return lit; });
+	//		filter::TargetFilter filter = filter::pattern(p::var("x", irp::forStmt()), "x");
 
 	auto forStmt = p::aT(p::var("x", irp::forStmt()));
-	filter::TargetFilter filter = filter::pattern(p::node(*(forStmt | !forStmt)), "x");;
-	
+	filter::TargetFilter filter = filter::pattern(p::node(*(forStmt | !forStmt)), "x");
+	;
+
 	TransformationPtr transform = makeForAll(filter, replacer);
-	
+
 	// clone transformation
 	TransformationPtr clone = transform->getInstanceUsing(transform->getParameters());
-	
+
 	EXPECT_NE(transform, clone);
 	EXPECT_EQ(*transform, *clone);
-	
-	
+
+
 	// create modified version
-	parameter::Value modValue = parameter::combineValues(
-	                                parameter::makeValue(filter::empty),
-	                                parameter::makeValue(replacer)
-	                            );
-	                            
+	parameter::Value modValue = parameter::combineValues(parameter::makeValue(filter::empty), parameter::makeValue(replacer));
+
 	TransformationPtr mod = transform->getInstanceUsing(modValue);
 	EXPECT_NE(*transform, *mod);
-	
-	
+
+
 	// test whether an exception is raised if the type is wrong
-	modValue = parameter::combineValues(
-	               parameter::makeValue(filter::all),  // wrong type of filter
-	               parameter::makeValue(replacer)
-	           );
-	           
+	modValue = parameter::combineValues(parameter::makeValue(filter::all), // wrong type of filter
+	                                    parameter::makeValue(replacer));
+
 	EXPECT_ANY_THROW(transform->getInstanceUsing(modValue));
-	
 }
 
 } // end namespace transform
 } // end namespace insieme
-
-

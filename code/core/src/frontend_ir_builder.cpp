@@ -46,33 +46,32 @@
 namespace insieme {
 namespace core {
 
-ExpressionPtr FrontendIRBuilder::getPureVirtual(const FunctionTypePtr& type) const {
-	assert_true(type->isMemberFunction());
-	const auto& ext = getNodeManager().getLangExtension<lang::IRppExtensions>();
-	return callExpr(type, ext.getPureVirtual(), getTypeLiteral(type));
-}
-
-
-ExpressionPtr FrontendIRBuilder::initStaticVariable(const LiteralPtr& staticVariable, const ExpressionPtr& initValue, bool constant) const {
-	const lang::StaticVariableExtension& ext = getNodeManager().getLangExtension<lang::StaticVariableExtension>();
-	
-	assert_true(analysis::isRefType(staticVariable.getType()));
-	assert_true(ext.isStaticType(analysis::getReferencedType(staticVariable->getType())));
-	
-	if(constant) {
-		return callExpr(refType(initValue->getType()), ext.getInitStaticConst(), staticVariable, initValue);
+	ExpressionPtr FrontendIRBuilder::getPureVirtual(const FunctionTypePtr& type) const {
+		assert_true(type->isMemberFunction());
+		const auto& ext = getNodeManager().getLangExtension<lang::IRppExtensions>();
+		return callExpr(type, ext.getPureVirtual(), getTypeLiteral(type));
 	}
-	else {
-		return callExpr(refType(initValue->getType()), ext.getInitStaticLazy(), staticVariable, wrapLazy(initValue));
+
+
+	ExpressionPtr FrontendIRBuilder::initStaticVariable(const LiteralPtr& staticVariable, const ExpressionPtr& initValue, bool constant) const {
+		const lang::StaticVariableExtension& ext = getNodeManager().getLangExtension<lang::StaticVariableExtension>();
+
+		assert_true(analysis::isRefType(staticVariable.getType()));
+		assert_true(ext.isStaticType(analysis::getReferencedType(staticVariable->getType())));
+
+		if(constant) {
+			return callExpr(refType(initValue->getType()), ext.getInitStaticConst(), staticVariable, initValue);
+		} else {
+			return callExpr(refType(initValue->getType()), ext.getInitStaticLazy(), staticVariable, wrapLazy(initValue));
+		}
 	}
-}
 
-StatementPtr FrontendIRBuilder::createStaticVariable(const LiteralPtr& staticVariable) const {
-	const lang::StaticVariableExtension& ext = getNodeManager().getLangExtension<lang::StaticVariableExtension>();
-	
-	return callExpr(ext.getCreateStatic(), staticVariable);
-}
+	StatementPtr FrontendIRBuilder::createStaticVariable(const LiteralPtr& staticVariable) const {
+		const lang::StaticVariableExtension& ext = getNodeManager().getLangExtension<lang::StaticVariableExtension>();
+
+		return callExpr(ext.getCreateStatic(), staticVariable);
+	}
 
 
-}   //namespace core
-}   //namespace insieme
+} // namespace core
+} // namespace insieme

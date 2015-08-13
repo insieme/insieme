@@ -50,218 +50,174 @@ namespace insieme {
 namespace core {
 namespace analysis {
 
-bool isIRpp(const NodePtr& node) {
-	return visitDepthFirstOnceInterruptible(node, [](const NodePtr& cur)->bool {
-	
-		// check whether there are structs using inheritance
-		if(StructTypePtr structType = cur.isa<StructTypePtr>()) {
-		
-			// if not empty => it is a IR++ code
-			if(!structType->getParents().empty()) {
-				return true;
+	bool isIRpp(const NodePtr& node) {
+		return visitDepthFirstOnceInterruptible(node, [](const NodePtr& cur) -> bool {
+
+			// check whether there are structs using inheritance
+			if(StructTypePtr structType = cur.isa<StructTypePtr>()) {
+				// if not empty => it is a IR++ code
+				if(!structType->getParents().empty()) { return true; }
+
+				// if there is meta-info => it is a IR++ code
+				if(hasMetaInfo(structType)) { return true; }
 			}
-			
-			// if there is meta-info => it is a IR++ code
-			if(hasMetaInfo(structType)) {
-				return true;
+
+			// check function types
+			if(FunctionTypePtr funType = cur.isa<FunctionTypePtr>()) {
+				return funType->isConstructor() || funType->isDestructor() || funType->isMemberFunction();
 			}
+
+			// if there are exceptions, it is IR++
+			if(cur->getNodeType() == NT_ThrowStmt || cur->getNodeType() == NT_TryCatchStmt) { return true; }
+
+			// no IR++ content found
+			return false;
+		}, true);
+	}
+
+	bool isObjectType(const TypePtr& type) {
+		// decide whether something is an object type based on the node type
+		switch(type->getNodeType()) {
+		case NT_GenericType:
+			// no built-in type is an object type
+			return !type->getNodeManager().getLangBasic().isPrimitive(type);
+		case NT_StructType:
+		case NT_TypeVariable:
+		case NT_UnionType: return true; // all this types are always object types
+		case NT_RecType: return isObjectType(type.as<RecTypePtr>()->getTypeDefinition());
+		default: break;
 		}
-		
-		// check function types
-		if(FunctionTypePtr funType = cur.isa<FunctionTypePtr>()) {
-			return funType->isConstructor() || funType->isDestructor() || funType->isMemberFunction();
-		}
-		
-		// if there are exceptions, it is IR++
-		if(cur->getNodeType() == NT_ThrowStmt || cur->getNodeType() == NT_TryCatchStmt) {
-			return true;
-		}
-		
-		// no IR++ content found
-		return false;
-	}, true);
-}
 
-bool isObjectType(const TypePtr& type) {
-
-
-	// decide whether something is an object type based on the node type
-	switch(type->getNodeType()) {
-	case NT_GenericType:
-		// no built-in type is an object type
-		return !type->getNodeManager().getLangBasic().isPrimitive(type);
-	case NT_StructType:
-	case NT_TypeVariable:
-	case NT_UnionType:
-		return true;			// all this types are always object types
-	case NT_RecType:
-		return isObjectType(type.as<RecTypePtr>()->getTypeDefinition());
-	default:
-		break;
-	}
-	
-	// everything else is not an object type
-	return false;
-}
-
-bool isObjectReferenceType(const TypePtr& type) {
-	return isRefType(type) && isObjectType(getReferencedType(type));
-}
-
-bool isObjectReferenceType(const GenericTypePtr& type) {
-	return isRefType(type) && isObjectType(getReferencedType(type));
-}
-
-bool isPureVirtual(const CallExprPtr& call) {
-	// check for null
-	if(!call) {
+		// everything else is not an object type
 		return false;
 	}
-	
-	// check whether it is a call to the pure-virtual literal
-	const auto& ext = call->getNodeManager().getLangExtension<lang::IRppExtensions>();
-	return isCallOf(call, ext.getPureVirtual());
-}
 
-bool isPureVirtual(const NodePtr& node) {
-	return node && isPureVirtual(node.isa<CallExprPtr>());
-}
-
-
-
-// --------------------------- data member pointer -----------------------------------
-
-bool isMemberPointer(const TypePtr& type) {
-
-	// filter out null-pointer
-	if(!type) {
-		return false;
+	bool isObjectReferenceType(const TypePtr& type) {
+		return isRefType(type) && isObjectType(getReferencedType(type));
 	}
-	
-	// must be a struct type
-	StructTypePtr structType = type.isa<StructTypePtr>();
-	if(!structType) {
-		return false;
+
+	bool isObjectReferenceType(const GenericTypePtr& type) {
+		return isRefType(type) && isObjectType(getReferencedType(type));
 	}
-	
-	// has 3 elements
-	if(structType.size() != 3u) {
-		return false;
+
+	bool isPureVirtual(const CallExprPtr& call) {
+		// check for null
+		if(!call) { return false; }
+
+		// check whether it is a call to the pure-virtual literal
+		const auto& ext = call->getNodeManager().getLangExtension<lang::IRppExtensions>();
+		return isCallOf(call, ext.getPureVirtual());
 	}
-	
-	NamedTypePtr element = structType[0];
-	if(!isTypeLiteralType(element->getType())) {
-		return false;
+
+	bool isPureVirtual(const NodePtr& node) {
+		return node && isPureVirtual(node.isa<CallExprPtr>());
 	}
-	if(element->getName().getValue() != "objType") {
-		return false;
+
+
+	// --------------------------- data member pointer -----------------------------------
+
+	bool isMemberPointer(const TypePtr& type) {
+		// filter out null-pointer
+		if(!type) { return false; }
+
+		// must be a struct type
+		StructTypePtr structType = type.isa<StructTypePtr>();
+		if(!structType) { return false; }
+
+		// has 3 elements
+		if(structType.size() != 3u) { return false; }
+
+		NamedTypePtr element = structType[0];
+		if(!isTypeLiteralType(element->getType())) { return false; }
+		if(element->getName().getValue() != "objType") { return false; }
+
+		element = structType[1];
+		// if ( !isId(element->getType()))	return false; // TODO: ask if is an identifier
+		if(element->getName().getValue() != "id") { return false; }
+
+		element = structType[2];
+		if(!isTypeLiteralType(element->getType())) { return false; }
+		if(element->getName().getValue() != "membType") { return false; }
+
+		return true;
 	}
-	
-	element = structType[1];
-	//if ( !isId(element->getType()))	return false; // TODO: ask if is an identifier
-	if(element->getName().getValue() != "id") {
-		return false;
+
+	TypePtr getMemberPointer(const TypePtr& classType, const TypePtr& membTy) {
+		NodeManager& manager = classType.getNodeManager();
+		IRBuilder builder(manager);
+		return builder.structType(toVector(builder.namedType(builder.stringValue("objType"), builder.getTypeLiteralType(classType)),
+		                                   builder.namedType(builder.stringValue("id"), builder.getLangBasic().getIdentifier()),
+		                                   builder.namedType(builder.stringValue("membType"), builder.getTypeLiteralType(membTy))));
 	}
-	
-	element = structType[2];
-	if(!isTypeLiteralType(element->getType())) {
-		return false;
+
+	ExpressionPtr getMemberPointerValue(const TypePtr& classType, const std::string& fieldName, const TypePtr& membType) {
+		NodeManager& manager = classType.getNodeManager();
+		IRBuilder builder(manager);
+
+		// retrieve the name and the field type to build the desired member pointer struct
+		core::ExpressionPtr access = manager.getLangExtension<lang::IRppExtensions>().getMemberPointerCtor();
+		return builder.callExpr(access, toVector<core::ExpressionPtr>(builder.getTypeLiteral(classType), builder.getIdentifierLiteral(fieldName),
+		                                                              builder.getTypeLiteral(membType)));
 	}
-	if(element->getName().getValue() != "membType") {
-		return false;
+
+	ExpressionPtr getMemberPointerAccess(const ExpressionPtr& base, const ExpressionPtr& expr) {
+		NodeManager& manager = base.getNodeManager();
+		IRBuilder builder(manager);
+
+		// retrieve the name and the field type to build the desired access
+		core::ExpressionPtr access = manager.getLangExtension<lang::IRppExtensions>().getMemberPointerAccess();
+		return builder.callExpr(access, toVector(base, expr));
 	}
-	
-	return true;
-}
 
-TypePtr getMemberPointer(const TypePtr& classType, const TypePtr& membTy) {
-	NodeManager& manager = classType.getNodeManager();
-	IRBuilder builder(manager);
-	return builder.structType(toVector(
-	                              builder.namedType(builder.stringValue("objType"), builder.getTypeLiteralType(classType)),
-	                              builder.namedType(builder.stringValue("id"), builder.getLangBasic().getIdentifier()),
-	                              builder.namedType(builder.stringValue("membType"), builder.getTypeLiteralType(membTy))
-	                          ));
-}
+	ExpressionPtr getMemberPointerCheck(const ExpressionPtr& expr) {
+		NodeManager& manager = expr.getNodeManager();
+		IRBuilder builder(manager);
 
-ExpressionPtr getMemberPointerValue(const TypePtr& classType, const std::string& fieldName, const TypePtr& membType) {
-	NodeManager& manager = classType.getNodeManager();
-	IRBuilder builder(manager);
-	
-	// retrieve the name and the field type to build the desired member pointer struct
-	core::ExpressionPtr access = manager.getLangExtension<lang::IRppExtensions>().getMemberPointerCtor();
-	return builder.callExpr(access, toVector<core::ExpressionPtr>(builder.getTypeLiteral(classType), builder.getIdentifierLiteral(fieldName),
-	                        builder.getTypeLiteral(membType)));
-}
-
-ExpressionPtr getMemberPointerAccess(const ExpressionPtr& base, const ExpressionPtr& expr) {
-	NodeManager& manager = base.getNodeManager();
-	IRBuilder builder(manager);
-	
-	// retrieve the name and the field type to build the desired access
-	core::ExpressionPtr access = manager.getLangExtension<lang::IRppExtensions>().getMemberPointerAccess();
-	return builder.callExpr(access,  toVector(base, expr));
-}
-
-ExpressionPtr getMemberPointerCheck(const ExpressionPtr& expr) {
-	NodeManager& manager = expr.getNodeManager();
-	IRBuilder builder(manager);
-	
-	// retrieve the name and the field type to build the desired access
-	core::ExpressionPtr access = manager.getLangExtension<lang::IRppExtensions>().getMemberPointerCheck();
-	return builder.callExpr(access, expr);
-}
-
-
-
-// --------------------------- C++ calls ---------------------------------------------
-
-bool isConstructorCall(const core::ExpressionPtr& expr) {
-	core::CallExprPtr call = expr.isa<core::CallExprPtr>();
-	return call && call->getFunctionExpr()->getType().as<FunctionTypePtr>()->isConstructor();
-}
-
-
-LambdaExprPtr createDefaultConstructor(const TypePtr& type) {
-	assert_true(isObjectType(type)) << "to create DefaultCtor a objectType is needed";
-	NodeManager& manager = type.getNodeManager();
-	IRBuilder builder(manager);
-	
-	// the type of the reference to be initialized by constructor (this type)
-	TypePtr refType = builder.refType(type);
-	
-	// create the type of the resulting function
-	FunctionTypePtr ctorType = builder.functionType(
-	                               toVector(refType), refType, FK_CONSTRUCTOR
-	                           );
-	                           
-	// build the constructor
-	VariablePtr thisVar = builder.variable(refType, 1);
-	return builder.lambdaExpr(ctorType, toVector(thisVar), builder.compoundStmt());
-}
-
-
-bool isDefaultConstructor(const LambdaExprPtr& lambda) {
-
-	// it has to be a lambda
-	if(!lambda) {
-		return false;
+		// retrieve the name and the field type to build the desired access
+		core::ExpressionPtr access = manager.getLangExtension<lang::IRppExtensions>().getMemberPointerCheck();
+		return builder.callExpr(access, expr);
 	}
-	
-	// it has to be a constructor
-	if(lambda->getFunctionType()->getKind() != FK_CONSTRUCTOR) {
-		return false;
+
+
+	// --------------------------- C++ calls ---------------------------------------------
+
+	bool isConstructorCall(const core::ExpressionPtr& expr) {
+		core::CallExprPtr call = expr.isa<core::CallExprPtr>();
+		return call && call->getFunctionExpr()->getType().as<FunctionTypePtr>()->isConstructor();
 	}
-	
-	// it has to have a single parameter
-	if(lambda->getParameterList()->size() != 1u) {
-		return false;
+
+
+	LambdaExprPtr createDefaultConstructor(const TypePtr& type) {
+		assert_true(isObjectType(type)) << "to create DefaultCtor a objectType is needed";
+		NodeManager& manager = type.getNodeManager();
+		IRBuilder builder(manager);
+
+		// the type of the reference to be initialized by constructor (this type)
+		TypePtr refType = builder.refType(type);
+
+		// create the type of the resulting function
+		FunctionTypePtr ctorType = builder.functionType(toVector(refType), refType, FK_CONSTRUCTOR);
+
+		// build the constructor
+		VariablePtr thisVar = builder.variable(refType, 1);
+		return builder.lambdaExpr(ctorType, toVector(thisVar), builder.compoundStmt());
 	}
-	
-	// TODO: check the actual initialization of the members and parent types
-	// if the body is empty, be fine
-	return lambda->getBody() == IRBuilder(lambda->getNodeManager()).compoundStmt();
-}
+
+
+	bool isDefaultConstructor(const LambdaExprPtr& lambda) {
+		// it has to be a lambda
+		if(!lambda) { return false; }
+
+		// it has to be a constructor
+		if(lambda->getFunctionType()->getKind() != FK_CONSTRUCTOR) { return false; }
+
+		// it has to have a single parameter
+		if(lambda->getParameterList()->size() != 1u) { return false; }
+
+		// TODO: check the actual initialization of the members and parent types
+		// if the body is empty, be fine
+		return lambda->getBody() == IRBuilder(lambda->getNodeManager()).compoundStmt();
+	}
 
 
 } // end namespace analysis

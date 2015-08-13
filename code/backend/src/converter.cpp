@@ -56,134 +56,117 @@
 namespace insieme {
 namespace backend {
 
-Converter::Converter(core::NodeManager& nodeManager, const std::string& name, const BackendConfig& config)
-	: nodeManager(nodeManager),
-	  fragmentManager(c_ast::CodeFragmentManager::createShared()),
-	  converterName(name),
-	  config(config),
-	  preProcessor(makePreProcessor<NoPreProcessing>()),
-	  postProcessor(makePostProcessor<NoPostProcessing>()),
-	  nameManager(std::make_shared<SimpleNameManager>()),
-	  typeManager(std::make_shared<TypeManager>(*this)),
-	  stmtConverter(std::make_shared<StmtConverter>(*this)),
-	  functionManager(std::make_shared<FunctionManager>(*this)) {}
-	  
-	  
-backend::TargetCodePtr Converter::convert(const core::NodePtr& source) {
-	// -------------------------- PRE-PROCESSING ---------------------
-	
-	utils::Timer timer = insieme::utils::Timer(getConverterName() + " Preprocessing");
-	
-//		assert_true(core::checks::check(source).empty())
-//			<< "Invalid IR passed to backend: " << core::checks::check(source);
+	Converter::Converter(core::NodeManager& nodeManager, const std::string& name, const BackendConfig& config)
+	    : nodeManager(nodeManager), fragmentManager(c_ast::CodeFragmentManager::createShared()), converterName(name), config(config),
+	      preProcessor(makePreProcessor<NoPreProcessing>()), postProcessor(makePostProcessor<NoPostProcessing>()),
+	      nameManager(std::make_shared<SimpleNameManager>()), typeManager(std::make_shared<TypeManager>(*this)),
+	      stmtConverter(std::make_shared<StmtConverter>(*this)), functionManager(std::make_shared<FunctionManager>(*this)) {}
 
-	// pre-process program
-	core::NodePtr processed = getPreProcessor()->process(*this, source);
-	
-//		assert_true(core::checks::check(processed).empty())
-//			<< "Errors introduced by pre-processors: " << core::checks::check(processed);
 
-	timer.stop();
-	LOG(INFO) << timer;
-	
-	// -------------------------- CONVERSION -------------------------
-	
-	timer = insieme::utils::Timer(getConverterName() + " Conversions");
-	
-	// create a context
-	ConversionContext context(*this, core::LambdaPtr());
-	
-	// register global names
-	getNameManager().registerGlobalNames(processed);
-	
-	// convert IR node target code
-	auto code = getStmtConverter().convert(context, processed);
-	
-	// create a code fragment out of it
-	c_ast::CodeFragmentPtr fragment = c_ast::CCodeFragment::createNew(fragmentManager, code);
-	fragment->addDependencies(context.getDependencies());
-	fragment->addRequirements(context.getRequirements());
-	fragment->addIncludes(context.getIncludes());
-	if(!config.additionalHeaderFiles.empty()) {
-		fragment->addIncludes(config.additionalHeaderFiles);
+	backend::TargetCodePtr Converter::convert(const core::NodePtr& source) {
+		// -------------------------- PRE-PROCESSING ---------------------
+
+		utils::Timer timer = insieme::utils::Timer(getConverterName() + " Preprocessing");
+
+		//		assert_true(core::checks::check(source).empty())
+		//			<< "Invalid IR passed to backend: " << core::checks::check(source);
+
+		// pre-process program
+		core::NodePtr processed = getPreProcessor()->process(*this, source);
+
+		//		assert_true(core::checks::check(processed).empty())
+		//			<< "Errors introduced by pre-processors: " << core::checks::check(processed);
+
+		timer.stop();
+		LOG(INFO) << timer;
+
+		// -------------------------- CONVERSION -------------------------
+
+		timer = insieme::utils::Timer(getConverterName() + " Conversions");
+
+		// create a context
+		ConversionContext context(*this, core::LambdaPtr());
+
+		// register global names
+		getNameManager().registerGlobalNames(processed);
+
+		// convert IR node target code
+		auto code = getStmtConverter().convert(context, processed);
+
+		// create a code fragment out of it
+		c_ast::CodeFragmentPtr fragment = c_ast::CCodeFragment::createNew(fragmentManager, code);
+		fragment->addDependencies(context.getDependencies());
+		fragment->addRequirements(context.getRequirements());
+		fragment->addIncludes(context.getIncludes());
+		if(!config.additionalHeaderFiles.empty()) { fragment->addIncludes(config.additionalHeaderFiles); }
+
+		vector<c_ast::CodeFragmentPtr> fragments = c_ast::getOrderedClosure(toVector(fragment));
+
+		timer.stop();
+		LOG(INFO) << timer;
+
+		// ------------------------ POST-PROCESSING ----------------------
+
+		timer = insieme::utils::Timer(getConverterName() + " Postprocessing");
+
+		// apply post-processing passes
+		applyToAll(getPostProcessor(), fragments);
+
+		timer.stop();
+		LOG(INFO) << timer;
+
+		// --------------------------- Finalize --------------------------
+
+		// create resulting code fragment
+		return c_ast::CCode::createNew(fragmentManager, source, fragments);
 	}
-	
-	vector<c_ast::CodeFragmentPtr> fragments = c_ast::getOrderedClosure(toVector(fragment));
-	
-	timer.stop();
-	LOG(INFO) << timer;
-	
-	// ------------------------ POST-PROCESSING ----------------------
-	
-	timer = insieme::utils::Timer(getConverterName() + " Postprocessing");
-	
-	// apply post-processing passes
-	applyToAll(getPostProcessor(), fragments);
-	
-	timer.stop();
-	LOG(INFO) << timer;
-	
-	// --------------------------- Finalize --------------------------
-	
-	// create resulting code fragment
-	return c_ast::CCode::createNew(fragmentManager, source, fragments);
-}
 
-namespace {
+	namespace {
 
-struct PrettyPrinterPlugin : public core::printer::PrinterPlugin {
+		struct PrettyPrinterPlugin : public core::printer::PrinterPlugin {
+			// requires a reference to a name manager
+			NameManager& nameManager;
 
-	// requires a reference to a name manager
-	NameManager& nameManager;
-	
-	/**
-	 * Create a new instance based on the content of the given name manager.
-	 */
-	PrettyPrinterPlugin(NameManager& nameManager) : nameManager(nameManager) {}
-	
-	
-	virtual bool covers(const core::NodePtr& node) const {
-		// it is covered if it is of a certain type
-		return node.isa<core::LambdaExprPtr>() || node.isa<core::StructTypePtr>();
+			/**
+			 * Create a new instance based on the content of the given name manager.
+			 */
+			PrettyPrinterPlugin(NameManager& nameManager) : nameManager(nameManager) {}
+
+
+			virtual bool covers(const core::NodePtr& node) const {
+				// it is covered if it is of a certain type
+				return node.isa<core::LambdaExprPtr>() || node.isa<core::StructTypePtr>();
+			}
+
+			/**
+			 * A function triggered to print the given node to the given stream.
+			 */
+			virtual std::ostream& print(std::ostream& out, const core::NodePtr& node, const std::function<void(const core::NodePtr&)>&) const {
+				return out << nameManager.getName(node);
+			}
+		};
 	}
-	
-	/**
-	 * A function triggered to print the given node to the given stream.
-	 */
-	virtual std::ostream& print(std::ostream& out,const core::NodePtr& node,const std::function<void(const core::NodePtr&)>&) const {
-		return out << nameManager.getName(node);
+
+
+	c_ast::CommentPtr Converter::convertToComment(const core::NodePtr& node) const {
+		// if not enabled, return no comment
+		if(!getBackendConfig().addIRCodeAsComment) { return c_ast::CommentPtr(); }
+
+		auto setup = core::printer::PrettyPrinter::OPTIONS_DEFAULT | core::printer::PrettyPrinter::Option::NO_LET_BINDINGS;
+
+		// if enabled, create comment using the pretty printer infrastructure
+		PrettyPrinterPlugin plugin(getNameManager());
+		auto comment = toString(core::printer::PrettyPrinter(node, plugin, setup));
+
+		// build comment
+		return getCNodeManager()->create<c_ast::Comment>("\n" + comment + "\n");
 	}
-};
-
-}
 
 
-c_ast::CommentPtr Converter::convertToComment(const core::NodePtr& node) const {
-
-	// if not enabled, return no comment
-	if(!getBackendConfig().addIRCodeAsComment) {
-		return c_ast::CommentPtr();
+	const c_ast::SharedCNodeManager& Converter::getCNodeManager() const {
+		assert_true(fragmentManager);
+		return fragmentManager->getNodeManager();
 	}
-	
-	auto setup =
-	    core::printer::PrettyPrinter::OPTIONS_DEFAULT |
-	    core::printer::PrettyPrinter::Option::NO_LET_BINDINGS;
-	    
-	// if enabled, create comment using the pretty printer infrastructure
-	PrettyPrinterPlugin plugin(getNameManager());
-	auto comment = toString(
-	                   core::printer::PrettyPrinter(node, plugin, setup)
-	               );
-	               
-	// build comment
-	return getCNodeManager()->create<c_ast::Comment>("\n" + comment + "\n");
-}
-
-
-const c_ast::SharedCNodeManager& Converter::getCNodeManager() const {
-	assert_true(fragmentManager);
-	return fragmentManager->getNodeManager();
-}
 
 
 } // end namespace backend

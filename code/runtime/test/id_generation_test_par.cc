@@ -52,9 +52,8 @@ irt_id_gen_test_id gen_id;
 #pragma omp threadprivate(gen_id)
 
 TEST(id_generation, parallel_ops) {
-
 	irt_id_gen_test_id ids[TEST_COUNT];
-	
+
 	#pragma omp parallel
 	{
 		gen_id.node = 4;
@@ -64,16 +63,14 @@ TEST(id_generation, parallel_ops) {
 		gen_id.thread = 0;
 		#endif
 		#pragma omp parallel
-		for(int i=0; i<TEST_COUNT; ++i) {
+		for(int i = 0; i < TEST_COUNT; ++i) {
 			ids[i] = irt_generate_id_gen_test_id(&gen_id);
 		}
 	}
-	
-	for(int i=0; i<TEST_COUNT; ++i) {
-		for(int j=0; j<TEST_COUNT; ++j) {
-			if(i == j) {
-				continue;
-			}
+
+	for(int i = 0; i < TEST_COUNT; ++i) {
+		for(int j = 0; j < TEST_COUNT; ++j) {
+			if(i == j) { continue; }
 			EXPECT_NE(ids[i].full, ids[j].full);
 		}
 		EXPECT_EQ(ids[i].node, gen_id.node);

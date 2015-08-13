@@ -51,130 +51,118 @@ using namespace insieme::driver;
 namespace insieme {
 namespace frontend {
 
-using namespace core;
+	using namespace core;
 
-TEST(EntryPointReturn, Apply1) {
-	NodeManager man;
-	IRBuilder builder(man);
-	
-	fs::path tmpFile;
-	{
-	
-		// create a temporary source file
-		Source file(
-		    R"(
+	TEST(EntryPointReturn, Apply1) {
+		NodeManager man;
+		IRBuilder builder(man);
+
+		fs::path tmpFile;
+		{
+			// create a temporary source file
+			Source file(
+			    R"(
 			#include <stdio.h>
 
 			int main() {
 			}
-			)"
-		);
-		
-		// check whether there is a temporary file
-		tmpFile = file.getPath();
-		EXPECT_TRUE(fs::exists(tmpFile));
-		
-		// parse temporary file
-		core::NodeManager manager;
-		const boost::filesystem::path& fileName = file;
-		std::vector<std::string> argv = { "compiler",  fileName.string() };
-		cmd::Options options = cmd::Options::parse(argv);
-		
-		auto code = options.job.execute(manager);
-		EXPECT_TRUE(code);
-		
-		auto lambdaExp = code->getEntryPoints()[0].as<LambdaExprPtr>();
-		
-		int numReturns = 0;
-		visitDepthFirst(lambdaExp, [&](const core::ReturnStmtPtr& ret) {
-			++numReturns;
-		});
-		EXPECT_EQ(numReturns, 1);
-	}
-}
+			)");
 
-TEST(EntryPointReturn, Apply2) {
-	NodeManager man;
-	IRBuilder builder(man);
-	
-	fs::path tmpFile;
-	{
-	
-		// create a temporary source file
-		Source file(
-		    R"(
+			// check whether there is a temporary file
+			tmpFile = file.getPath();
+			EXPECT_TRUE(fs::exists(tmpFile));
+
+			// parse temporary file
+			core::NodeManager manager;
+			const boost::filesystem::path& fileName = file;
+			std::vector<std::string> argv = {"compiler", fileName.string()};
+			cmd::Options options = cmd::Options::parse(argv);
+
+			auto code = options.job.execute(manager);
+			EXPECT_TRUE(code);
+
+			auto lambdaExp = code->getEntryPoints()[0].as<LambdaExprPtr>();
+
+			int numReturns = 0;
+			visitDepthFirst(lambdaExp, [&](const core::ReturnStmtPtr& ret) { ++numReturns; });
+			EXPECT_EQ(numReturns, 1);
+		}
+	}
+
+	TEST(EntryPointReturn, Apply2) {
+		NodeManager man;
+		IRBuilder builder(man);
+
+		fs::path tmpFile;
+		{
+			// create a temporary source file
+			Source file(
+			    R"(
 			#include <stdio.h>
 
 			int main() {
 				5 + 4;
 			}
-			)"
-		);
-		
-		// check whether there is a temporary file
-		tmpFile = file.getPath();
-		EXPECT_TRUE(fs::exists(tmpFile));
-		
-		// parse temporary file
-		core::NodeManager manager;
-		const boost::filesystem::path& fileName = file;
-		std::vector<std::string> argv = { "compiler",  fileName.string() };
-		cmd::Options options = cmd::Options::parse(argv);
-		
-		auto code = options.job.execute(manager);
-		EXPECT_TRUE(code);
-		
-		auto lambdaExp = code->getEntryPoints()[0].as<LambdaExprPtr>();
-		
-		int numReturns = 0;
-		visitDepthFirst(lambdaExp, [&](const core::ReturnStmtPtr& ret) {
-			++numReturns;
-		});
-		EXPECT_EQ(numReturns, 1);
+			)");
+
+			// check whether there is a temporary file
+			tmpFile = file.getPath();
+			EXPECT_TRUE(fs::exists(tmpFile));
+
+			// parse temporary file
+			core::NodeManager manager;
+			const boost::filesystem::path& fileName = file;
+			std::vector<std::string> argv = {"compiler", fileName.string()};
+			cmd::Options options = cmd::Options::parse(argv);
+
+			auto code = options.job.execute(manager);
+			EXPECT_TRUE(code);
+
+			auto lambdaExp = code->getEntryPoints()[0].as<LambdaExprPtr>();
+
+			int numReturns = 0;
+			visitDepthFirst(lambdaExp, [&](const core::ReturnStmtPtr& ret) { ++numReturns; });
+			EXPECT_EQ(numReturns, 1);
+		}
 	}
-}
 
 
-TEST(EntryPointReturn, Dont) {
-	NodeManager man;
-	IRBuilder builder(man);
-	
-	fs::path tmpFile;
-	{
-	
-		// create a temporary source file
-		Source file(
-		    R"(
+	TEST(EntryPointReturn, Dont) {
+		NodeManager man;
+		IRBuilder builder(man);
+
+		fs::path tmpFile;
+		{
+			// create a temporary source file
+			Source file(
+			    R"(
 			#include <stdio.h>
 
 			int main() {
 				return 1;
 			}
-			)"
-		);
-		
-		// check whether there is a temporary file
-		tmpFile = file.getPath();
-		EXPECT_TRUE(fs::exists(tmpFile));
-		
-		// parse temporary file
-		core::NodeManager manager;
-		const boost::filesystem::path& fileName = file;
-		std::vector<std::string> argv = { "compiler",  fileName.string() };
-		cmd::Options options = cmd::Options::parse(argv);
-		
-		auto code = options.job.execute(manager);
-		EXPECT_TRUE(code);
-		
-		auto lambdaExp = code->getEntryPoints()[0].as<LambdaExprPtr>();
-		
-		int numReturns = 0;
-		visitDepthFirst(lambdaExp, [&](const core::ReturnStmtPtr& ret) {
-			++numReturns;
-		});
-		EXPECT_EQ(numReturns, 1);
+			)");
+
+			// check whether there is a temporary file
+			tmpFile = file.getPath();
+			EXPECT_TRUE(fs::exists(tmpFile));
+
+			// parse temporary file
+			core::NodeManager manager;
+			const boost::filesystem::path& fileName = file;
+			std::vector<std::string> argv = {"compiler", fileName.string()};
+			cmd::Options options = cmd::Options::parse(argv);
+
+			auto code = options.job.execute(manager);
+			EXPECT_TRUE(code);
+
+			auto lambdaExp = code->getEntryPoints()[0].as<LambdaExprPtr>();
+
+			int numReturns = 0;
+			visitDepthFirst(lambdaExp, [&](const core::ReturnStmtPtr& ret) { ++numReturns; });
+			EXPECT_EQ(numReturns, 1);
+		}
 	}
-}
 
 } // namespace frontend
 } // namespace insieme

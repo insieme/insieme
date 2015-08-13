@@ -36,14 +36,14 @@
 
 
 // Types --------------------------------------------------------------------------------------------------------------
-TYPE(Unit,   "unit")
+TYPE(Unit, "unit")
 
 TYPE(Any, "any")
 TYPE(AnyRef, "ref<any>")
 
-TYPE(Char,   "char")
-TYPE(WChar16,  "wchar<16>")
-TYPE(WChar32,  "wchar<32>")
+TYPE(Char, "char")
+TYPE(WChar16, "wchar<16>")
+TYPE(WChar32, "wchar<32>")
 TYPE(String, "ref<array<char,1>>")
 TYPE(Identifier, "identifier")
 
@@ -56,19 +56,19 @@ GROUP(Primitive, Any, Bool, Char, WChar, Int, Real)
 GROUP(IRBuiltin, Primitive, Unit)
 
 TYPE(IntGen, "int<'a>")
-TYPE(UIntGen,"uint<'a>")
+TYPE(UIntGen, "uint<'a>")
 
-TYPE(Int1,    "int<1>")
-TYPE(UInt1,   "uint<1>")
-TYPE(Int2,    "int<2>")
-TYPE(UInt2,   "uint<2>")
-TYPE(Int4,    "int<4>")
-TYPE(UInt4,   "uint<4>")
-TYPE(Int8,    "int<8>")
-TYPE(UInt8,   "uint<8>")
-TYPE(Int16,   "int<16>")
-TYPE(UInt16,  "uint<16>")
-TYPE(IntInf,  "int<inf>")
+TYPE(Int1, "int<1>")
+TYPE(UInt1, "uint<1>")
+TYPE(Int2, "int<2>")
+TYPE(UInt2, "uint<2>")
+TYPE(Int4, "int<4>")
+TYPE(UInt4, "uint<4>")
+TYPE(Int8, "int<8>")
+TYPE(UInt8, "uint<8>")
+TYPE(Int16, "int<16>")
+TYPE(UInt16, "uint<16>")
+TYPE(IntInf, "int<inf>")
 TYPE(UIntInf, "uint<inf>")
 
 SUB_TYPE(Int1, Int2)
@@ -94,14 +94,14 @@ GROUP(Real, RealGen, RealInf, Float, Double, LongDouble)
 
 TYPE(RealGen, "real<'a>")
 TYPE(RealInf, "real<inf>")
-TYPE(Real4,   "real<4>")
-TYPE(Real8,   "real<8>")
-TYPE(Real16,   "real<16>")
+TYPE(Real4, "real<4>")
+TYPE(Real8, "real<8>")
+TYPE(Real16, "real<16>")
 
 // aliases:
-TYPE(Float,   "real<4>")
-TYPE(Double,  "real<8>")
-TYPE(LongDouble,  "real<16>")
+TYPE(Float, "real<4>")
+TYPE(Double, "real<8>")
+TYPE(LongDouble, "real<16>")
 
 SUB_TYPE(Float, Double)
 SUB_TYPE(Double, RealInf)
@@ -111,7 +111,7 @@ GROUP(ScalarType, Int, Real)
 GROUP(BoolLiteral, True, False)
 
 TYPE(Bool, "bool")
-LITERAL(True,  "true",  "bool")
+LITERAL(True, "true", "bool")
 LITERAL(False, "false", "bool")
 
 TYPE(VarList, "var_list")
@@ -132,111 +132,110 @@ TYPE(NoArgsOpType, "() -> unit")
 // Operators ----------------------------------------------------------------------------------------------------------
 
 // binary
-OPERATOR(Add, 	 "+")  //  0
-OPERATOR(Sub,	 "-")  //  1
-OPERATOR(Mul, 	 "*")  //  2
-OPERATOR(Div, 	 "/")  //  3
-OPERATOR(Mod, 	 "%")  //  4
-OPERATOR(And, 	 "&")  //  5
-OPERATOR(Or, 	 "|")  //  6
-OPERATOR(Xor, 	 "^")  //  7
+OPERATOR(Add, "+")     //  0
+OPERATOR(Sub, "-")     //  1
+OPERATOR(Mul, "*")     //  2
+OPERATOR(Div, "/")     //  3
+OPERATOR(Mod, "%")     //  4
+OPERATOR(And, "&")     //  5
+OPERATOR(Or, "|")      //  6
+OPERATOR(Xor, "^")     //  7
 OPERATOR(LShift, "<<") //  8
 OPERATOR(RShift, ">>") //  9
 
 // unary
-OPERATOR(Not,	"~")   // 10
-OPERATOR(Plus,	"+")   // 11
-OPERATOR(Minus,	"-")   // 12
+OPERATOR(Not, "~")   // 10
+OPERATOR(Plus, "+")  // 11
+OPERATOR(Minus, "-") // 12
 
-OPERATOR(PreInc,  "++")// 13
-OPERATOR(PostInc, "++")// 14
-OPERATOR(PreDec,  "--")// 15
-OPERATOR(PostDec, "--")// 16
+OPERATOR(PreInc, "++")  // 13
+OPERATOR(PostInc, "++") // 14
+OPERATOR(PreDec, "--")  // 15
+OPERATOR(PostDec, "--") // 16
 
 // logical
-OPERATOR(LAnd, 	"&&")  // 17
-OPERATOR(LOr, 	"||")  // 18
-OPERATOR(LNot, 	"!")   // 19
-OPERATOR(Eq, 	"==")  // 20
-OPERATOR(Ne,	"!=")  // 21
-OPERATOR(Lt, 	"<")   // 22
-OPERATOR(Le,	"<=")  // 23
-OPERATOR(Gt, 	">")   // 24
-OPERATOR(Ge,	">=")  // 25
+OPERATOR(LAnd, "&&") // 17
+OPERATOR(LOr, "||")  // 18
+OPERATOR(LNot, "!")  // 19
+OPERATOR(Eq, "==")   // 20
+OPERATOR(Ne, "!=")   // 21
+OPERATOR(Lt, "<")    // 22
+OPERATOR(Le, "<=")   // 23
+OPERATOR(Gt, ">")    // 24
+OPERATOR(Ge, ">=")   // 25
 
 // Logical Operations -------------------------------------------------------------------------------------------------
 
 GROUP(LogicOp, BoolLAnd, BoolLOr, BoolEq, BoolNe, BoolLNot)
 
-OPERATION(Bool, Eq,   "bool_eq",  "(bool,bool) -> bool")
-OPERATION(Bool, Ne,   "bool_ne",  "(bool,bool) -> bool")
+OPERATION(Bool, Eq, "bool_eq", "(bool,bool) -> bool")
+OPERATION(Bool, Ne, "bool_ne", "(bool,bool) -> bool")
 OPERATION(Bool, LNot, "bool_not", "(bool) -> bool")
-OPERATION(Bool, And,  "bool_band", "(bool,bool) -> bool")
-OPERATION(Bool, Or,   "bool_bor", "(bool,bool) -> bool")
-OPERATION(Bool, Xor,  "bool_bxor", "(bool,bool) -> bool")
-OPERATION(Bool, Not,  "bool_bnot", "(bool) -> bool")
+OPERATION(Bool, And, "bool_band", "(bool,bool) -> bool")
+OPERATION(Bool, Or, "bool_bor", "(bool,bool) -> bool")
+OPERATION(Bool, Xor, "bool_bxor", "(bool,bool) -> bool")
+OPERATION(Bool, Not, "bool_bnot", "(bool) -> bool")
 
 DERIVED_OP(Bool, LAnd, "bool_and", "lambda (bool a, ()=>bool b)->bool { if (a) return b(); return false; }")
-DERIVED_OP(Bool, LOr,  "bool_or",  "lambda (bool a, ()=>bool b)->bool { if (a) return true; return b(); }")
+DERIVED_OP(Bool, LOr, "bool_or", "lambda (bool a, ()=>bool b)->bool { if (a) return true; return b(); }")
 
 // Arithmetic operations ----------------------------------------------------------------------------------------------
 
 GROUP(IntArithOp, SignedIntAdd, SignedIntSub, SignedIntMul, SignedIntDiv, SignedIntMod, IncrementOp)
 //      SignedIntPreInc, SignedIntPostInc, SignedIntPreDec, SignedIntPostDec)
 
-OPERATION(SignedInt, Add,  "int_add", "(int<'a>,int<'a>) -> int<'a>")
-OPERATION(SignedInt, Sub,  "int_sub", "(int<'a>,int<'a>) -> int<'a>")
-OPERATION(SignedInt, Mul,  "int_mul", "(int<'a>,int<'a>) -> int<'a>")
-OPERATION(SignedInt, Div,  "int_div", "(int<'a>,int<'a>) -> int<'a>")
-OPERATION(SignedInt, Mod,  "int_mod", "(int<'a>,int<'a>) -> int<'a>")
+OPERATION(SignedInt, Add, "int_add", "(int<'a>,int<'a>) -> int<'a>")
+OPERATION(SignedInt, Sub, "int_sub", "(int<'a>,int<'a>) -> int<'a>")
+OPERATION(SignedInt, Mul, "int_mul", "(int<'a>,int<'a>) -> int<'a>")
+OPERATION(SignedInt, Div, "int_div", "(int<'a>,int<'a>) -> int<'a>")
+OPERATION(SignedInt, Mod, "int_mod", "(int<'a>,int<'a>) -> int<'a>")
 
 // OPERATION(SignedInt, PreInc,  "int_preInc",  "(ref<int<'a>>) -> int<'a>")
 // OPERATION(SignedInt, PostInc, "int_postInc", "(ref<int<'a>>) -> int<'a>")
-OPERATION(SignedInt, PreDec,  "int_preDec",  "(ref<int<'a>>) -> int<'a>")
+OPERATION(SignedInt, PreDec, "int_preDec", "(ref<int<'a>>) -> int<'a>")
 OPERATION(SignedInt, PostDec, "int_postDec", "(ref<int<'a>>) -> int<'a>")
 
 GROUP(CharArithOp, CharAdd, CharSub, CharMul, CharDiv, CharMod, IncrementOp)
 
-OPERATION(Char, Add,  "char_add", "(char,char) -> char")
-OPERATION(Char, Sub,  "char_sub", "(char,char) -> char")
-OPERATION(Char, Mul,  "char_mul", "(char,char) -> char")
-OPERATION(Char, Div,  "char_div", "(char,char) -> char")
-OPERATION(Char, Mod,  "char_mod", "(char,char) -> char")
+OPERATION(Char, Add, "char_add", "(char,char) -> char")
+OPERATION(Char, Sub, "char_sub", "(char,char) -> char")
+OPERATION(Char, Mul, "char_mul", "(char,char) -> char")
+OPERATION(Char, Div, "char_div", "(char,char) -> char")
+OPERATION(Char, Mod, "char_mod", "(char,char) -> char")
 
 // OPERATION(Char, PreInc,  "char_preInc",  "(ref<char>) -> char")
 // OPERATION(Char, PostInc, "char_postInc", "(ref<char>) -> char")
-OPERATION(Char, PreDec,  "char_preDec",  "(ref<char>) -> char")
+OPERATION(Char, PreDec, "char_preDec", "(ref<char>) -> char")
 OPERATION(Char, PostDec, "char_postDec", "(ref<char>) -> char")
 
-GROUP(UIntArithOp, UnsignedIntAdd, UnsignedIntSub, UnsignedIntMul, UnsignedIntDiv, UnsignedIntMod,
-IncrementOp)
+GROUP(UIntArithOp, UnsignedIntAdd, UnsignedIntSub, UnsignedIntMul, UnsignedIntDiv, UnsignedIntMod, IncrementOp)
 //        UnsignedIntPreInc, UnsignedIntPostInc, UnsignedIntPreDec, UnsignedIntPostDec)
 
-OPERATION(UnsignedInt, Add,  "uint_add", "(uint<'a>,uint<'a>) -> uint<'a>")
-OPERATION(UnsignedInt, Sub,  "uint_sub", "(uint<'a>,uint<'a>) -> uint<'a>")
-OPERATION(UnsignedInt, Mul,  "uint_mul", "(uint<'a>,uint<'a>) -> uint<'a>")
-OPERATION(UnsignedInt, Div,  "uint_div", "(uint<'a>,uint<'a>) -> uint<'a>")
-OPERATION(UnsignedInt, Mod,  "uint_mod", "(uint<'a>,uint<'a>) -> uint<'a>")
+OPERATION(UnsignedInt, Add, "uint_add", "(uint<'a>,uint<'a>) -> uint<'a>")
+OPERATION(UnsignedInt, Sub, "uint_sub", "(uint<'a>,uint<'a>) -> uint<'a>")
+OPERATION(UnsignedInt, Mul, "uint_mul", "(uint<'a>,uint<'a>) -> uint<'a>")
+OPERATION(UnsignedInt, Div, "uint_div", "(uint<'a>,uint<'a>) -> uint<'a>")
+OPERATION(UnsignedInt, Mod, "uint_mod", "(uint<'a>,uint<'a>) -> uint<'a>")
 
 // OPERATION(UnsignedInt, PreInc,  "uint_preInc",  "(ref<uint<'a>>) -> uint<'a>")
 // OPERATION(UnsignedInt, PostInc, "uint_postInc", "(ref<uint<'a>>) -> uint<'a>")
-OPERATION(UnsignedInt, PreDec,  "uint_preDec",  "(ref<uint<'a>>) -> uint<'a>")
+OPERATION(UnsignedInt, PreDec, "uint_preDec", "(ref<uint<'a>>) -> uint<'a>")
 OPERATION(UnsignedInt, PostDec, "uint_postDec", "(ref<uint<'a>>) -> uint<'a>")
 
 
 GROUP(RealArithOp, RealAdd, RealSub, RealMul, RealDiv)
 
-OPERATION(Real, Add,  "real_add", "(real<'a>,real<'a>) -> real<'a>")
-OPERATION(Real, Sub,  "real_sub", "(real<'a>,real<'a>) -> real<'a>")
-OPERATION(Real, Mul,  "real_mul", "(real<'a>,real<'a>) -> real<'a>")
-OPERATION(Real, Div,  "real_div", "(real<'a>,real<'a>) -> real<'a>")
+OPERATION(Real, Add, "real_add", "(real<'a>,real<'a>) -> real<'a>")
+OPERATION(Real, Sub, "real_sub", "(real<'a>,real<'a>) -> real<'a>")
+OPERATION(Real, Mul, "real_mul", "(real<'a>,real<'a>) -> real<'a>")
+OPERATION(Real, Div, "real_div", "(real<'a>,real<'a>) -> real<'a>")
 
 GROUP(ArithOp, IntArithOp, UIntArithOp, RealArithOp)
 
-DERIVED(GenPreInc, 		"gen_pre_inc",		"lambda (ref<'a> v)->'a { v=*v+lit(\"1\":'a); return *v; }")
-DERIVED(GenPostInc, 	"gen_post_inc",		"lambda (ref<'a> v)->'a { decl auto tmp=*v; v=*v+lit(\"1\":'a); return tmp; }")
-DERIVED(GenPreDec, 		"gen_pre_dec",		"lambda (ref<'a> v)->'a { v=*v-lit(\"1\":'a); return *v; }")
-DERIVED(GenPostDec, 	"gen_post_dec",		"lambda (ref<'a> v)->'a { decl auto tmp=*v; v=*v-lit(\"1\":'a); return tmp; }")
+DERIVED(GenPreInc, "gen_pre_inc", "lambda (ref<'a> v)->'a { v=*v+lit(\"1\":'a); return *v; }")
+DERIVED(GenPostInc, "gen_post_inc", "lambda (ref<'a> v)->'a { decl auto tmp=*v; v=*v+lit(\"1\":'a); return tmp; }")
+DERIVED(GenPreDec, "gen_pre_dec", "lambda (ref<'a> v)->'a { v=*v-lit(\"1\":'a); return *v; }")
+DERIVED(GenPostDec, "gen_post_dec", "lambda (ref<'a> v)->'a { decl auto tmp=*v; v=*v-lit(\"1\":'a); return tmp; }")
 
 GROUP(IncrementOp, GenPreInc, GenPostInc, GenPreDec, GenPostDec)
 // SignedIntPreInc, SignedIntPostInc, SignedIntPreDec, SignedIntPostDec,
@@ -286,72 +285,72 @@ OPERATION(Real, Ge, "real_ge", "(real<'a>,real<'a>) -> bool")
 
 GROUP(ScalarCast, ToInt, ToUint, ToReal, ToChar, ToBool)
 
-      // TO INT
-GROUP( ToInt, UnsignedToInt, WCharToInt, RealToInt, CharToInt, BoolToInt, IntPrecisionFix)
-LITERAL (UnsignedToInt,	"uint_to_int",    "(uint<'a>,intTypeParam<'b>) -> int<'b>")
-LITERAL (RealToInt,		"real_to_int",    "(real<'a>,intTypeParam<'b>) -> int<'b>")
-LITERAL (WCharToInt,	"wchar_to_int",   "(wchar<'a>,intTypeParam<'b>) -> int<'b>")
-LITERAL (CharToInt,		"char_to_int",    "(char,intTypeParam<'b>) -> int<'b>")
-LITERAL (IntPrecisionFix,"int_precision",    "(int<'a>,intTypeParam<'b>) -> int<'b>")
-DERIVED (BoolToInt,		"bool_to_int",    "lambda (bool b,intTypeParam<'b> t) -> int<'b> { return (b)?(int_precision(1,param('b))):(int_precision(0,param('b))); }")
+// TO INT
+GROUP(ToInt, UnsignedToInt, WCharToInt, RealToInt, CharToInt, BoolToInt, IntPrecisionFix)
+LITERAL(UnsignedToInt, "uint_to_int", "(uint<'a>,intTypeParam<'b>) -> int<'b>")
+LITERAL(RealToInt, "real_to_int", "(real<'a>,intTypeParam<'b>) -> int<'b>")
+LITERAL(WCharToInt, "wchar_to_int", "(wchar<'a>,intTypeParam<'b>) -> int<'b>")
+LITERAL(CharToInt, "char_to_int", "(char,intTypeParam<'b>) -> int<'b>")
+LITERAL(IntPrecisionFix, "int_precision", "(int<'a>,intTypeParam<'b>) -> int<'b>")
+DERIVED(BoolToInt, "bool_to_int", "lambda (bool b,intTypeParam<'b> t) -> int<'b> { return (b)?(int_precision(1,param('b))):(int_precision(0,param('b))); }")
 
-      // TO UINT
-GROUP( ToUint, SignedToUnsigned, WCharToUnsigned, RealToUnsigned, CharToUnsigned, BoolToUnsigned, UintPrecisionFix)
-LITERAL (SignedToUnsigned,	"int_to_uint" ,	"(int<'a>,intTypeParam<'b>) -> uint<'b>")
-LITERAL (RealToUnsigned,	"real_to_uint",	"(real<'a>,intTypeParam<'b>) -> uint<'b>")
-LITERAL (WCharToUnsigned,	"wchar_to_uint","(wchar<'a>,intTypeParam<'b>) -> uint<'b>")
-LITERAL (CharToUnsigned,	"char_to_uint",	"(char,intTypeParam<'b>) -> uint<'b>")
-LITERAL (BoolToUnsigned,	"bool_to_uint",	"(bool,intTypeParam<'b>) -> uint<'b>")
-LITERAL (UintPrecisionFix,"uint_precision",    "(uint<'a>,intTypeParam<'b>) -> uint<'b>")
+// TO UINT
+GROUP(ToUint, SignedToUnsigned, WCharToUnsigned, RealToUnsigned, CharToUnsigned, BoolToUnsigned, UintPrecisionFix)
+LITERAL(SignedToUnsigned, "int_to_uint", "(int<'a>,intTypeParam<'b>) -> uint<'b>")
+LITERAL(RealToUnsigned, "real_to_uint", "(real<'a>,intTypeParam<'b>) -> uint<'b>")
+LITERAL(WCharToUnsigned, "wchar_to_uint", "(wchar<'a>,intTypeParam<'b>) -> uint<'b>")
+LITERAL(CharToUnsigned, "char_to_uint", "(char,intTypeParam<'b>) -> uint<'b>")
+LITERAL(BoolToUnsigned, "bool_to_uint", "(bool,intTypeParam<'b>) -> uint<'b>")
+LITERAL(UintPrecisionFix, "uint_precision", "(uint<'a>,intTypeParam<'b>) -> uint<'b>")
 
-	  // TO WCHAR
-GROUP( ToWChar, SignedToWChar, UnsignedToWChar, RealToWChar, CharToWChar, BoolToWChar, WCharPrecisionFix)
-LITERAL (SignedToWChar,	    "int_to_wchar" ,	"(int<'a>,intTypeParam<'b>) -> wchar<'b>")
-LITERAL (UnsignedToWChar,	"uint_to_wchar",    "(uint<'a>,intTypeParam<'b>) -> wchar<'b>")
-LITERAL (RealToWChar,		"real_to_wchar",    "(real<'a>,intTypeParam<'b>) -> wchar<'b>")
-LITERAL (CharToWChar,		"char_to_wchar",    "(char,intTypeParam<'b>) -> wchar<'b>")
-LITERAL (BoolToWChar,		"bool_to_wchar",    "(bool,intTypeParam<'b>) -> wchar<'b>")
-LITERAL (WCharPrecisionFix, "wchar_precision",  "(wchar<'a>,intTypeParam<'b>) -> wchar<'b>")
+// TO WCHAR
+GROUP(ToWChar, SignedToWChar, UnsignedToWChar, RealToWChar, CharToWChar, BoolToWChar, WCharPrecisionFix)
+LITERAL(SignedToWChar, "int_to_wchar", "(int<'a>,intTypeParam<'b>) -> wchar<'b>")
+LITERAL(UnsignedToWChar, "uint_to_wchar", "(uint<'a>,intTypeParam<'b>) -> wchar<'b>")
+LITERAL(RealToWChar, "real_to_wchar", "(real<'a>,intTypeParam<'b>) -> wchar<'b>")
+LITERAL(CharToWChar, "char_to_wchar", "(char,intTypeParam<'b>) -> wchar<'b>")
+LITERAL(BoolToWChar, "bool_to_wchar", "(bool,intTypeParam<'b>) -> wchar<'b>")
+LITERAL(WCharPrecisionFix, "wchar_precision", "(wchar<'a>,intTypeParam<'b>) -> wchar<'b>")
 
-      // TO REAL
-GROUP( ToReal, SignedToReal, UnsignedToReal, CharToReal, BoolToReal, RealPrecisionFix)
-LITERAL (SignedToReal,		"int_to_real",	"(int<'a>,intTypeParam<'b>) -> real<'b>")
-LITERAL (UnsignedToReal,	"uint_to_real",	"(uint<'a>,intTypeParam<'b>) -> real<'b>")
-LITERAL (CharToReal,		"char_to_real",	"(char,intTypeParam<'b>) -> real<'b>")
-LITERAL (BoolToReal,		"bool_to_real",	"(bool,intTypeParam<'b>) -> real<'b>")
-LITERAL (RealPrecisionFix,"real_precision",    "(real<'a>,intTypeParam<'b>) -> real<'b>")
+// TO REAL
+GROUP(ToReal, SignedToReal, UnsignedToReal, CharToReal, BoolToReal, RealPrecisionFix)
+LITERAL(SignedToReal, "int_to_real", "(int<'a>,intTypeParam<'b>) -> real<'b>")
+LITERAL(UnsignedToReal, "uint_to_real", "(uint<'a>,intTypeParam<'b>) -> real<'b>")
+LITERAL(CharToReal, "char_to_real", "(char,intTypeParam<'b>) -> real<'b>")
+LITERAL(BoolToReal, "bool_to_real", "(bool,intTypeParam<'b>) -> real<'b>")
+LITERAL(RealPrecisionFix, "real_precision", "(real<'a>,intTypeParam<'b>) -> real<'b>")
 
-      // TO CHAR
-GROUP( ToChar, SignedToChar, UnsignedToChar, RealToChar, BoolToChar)
-LITERAL (SignedToChar,    	"int_to_char" ,	"(int<'a>) -> char")
-LITERAL (UnsignedToChar,	"uint_to_char",	"(uint<'a>) -> char")
-LITERAL (RealToChar,		"real_to_char",	"(real<'a>) -> char")
-LITERAL (BoolToChar,		"bool_to_char",	"(bool) -> char")
+// TO CHAR
+GROUP(ToChar, SignedToChar, UnsignedToChar, RealToChar, BoolToChar)
+LITERAL(SignedToChar, "int_to_char", "(int<'a>) -> char")
+LITERAL(UnsignedToChar, "uint_to_char", "(uint<'a>) -> char")
+LITERAL(RealToChar, "real_to_char", "(real<'a>) -> char")
+LITERAL(BoolToChar, "bool_to_char", "(bool) -> char")
 
-      // TO Bool
-GROUP( ToBool, SignedToBool, UnsignedToBool, RealToBool, CharToBool)
-DERIVED (SignedToBool,		"int_to_bool" ,	"lambda (int<'a> a) -> bool { return a != int_precision(0,param('a)); }")
-DERIVED (UnsignedToBool,	"uint_to_bool",	"lambda (uint<'a> a) -> bool { return a != uint_precision(0u,param('a)); }")
-DERIVED (RealToBool,		"real_to_bool",	"lambda (real<'a> a) -> bool { return a != real_precision(0.0f, param('a)); }")
-DERIVED (CharToBool,		"char_to_bool",	R"(lambda(char a) -> bool { return a != '\0'; })")
+// TO Bool
+GROUP(ToBool, SignedToBool, UnsignedToBool, RealToBool, CharToBool)
+DERIVED(SignedToBool, "int_to_bool", "lambda (int<'a> a) -> bool { return a != int_precision(0,param('a)); }")
+DERIVED(UnsignedToBool, "uint_to_bool", "lambda (uint<'a> a) -> bool { return a != uint_precision(0u,param('a)); }")
+DERIVED(RealToBool, "real_to_bool", "lambda (real<'a> a) -> bool { return a != real_precision(0.0f, param('a)); }")
+DERIVED(CharToBool, "char_to_bool", R"(lambda(char a) -> bool { return a != '\0'; })")
 
 // Bitwise Operations -------------------------------------------------------------------------------------------------
 
 GROUP(BitwiseIntOp, SignedIntNot, SignedIntAnd, SignedIntOr, SignedIntXor, SignedIntLShift, SignedIntRShift)
 
-OPERATION(SignedInt, Not,    "int_not",    "(int<'a>) -> int<'a>")
-OPERATION(SignedInt, And,    "int_and",    "(int<'a>,int<'a>) -> int<'a>")
-OPERATION(SignedInt, Or,     "int_or",     "(int<'a>,int<'a>) -> int<'a>")
-OPERATION(SignedInt, Xor,    "int_xor",    "(int<'a>,int<'a>) -> int<'a>")
+OPERATION(SignedInt, Not, "int_not", "(int<'a>) -> int<'a>")
+OPERATION(SignedInt, And, "int_and", "(int<'a>,int<'a>) -> int<'a>")
+OPERATION(SignedInt, Or, "int_or", "(int<'a>,int<'a>) -> int<'a>")
+OPERATION(SignedInt, Xor, "int_xor", "(int<'a>,int<'a>) -> int<'a>")
 OPERATION(SignedInt, LShift, "int_lshift", "(int<'a>,int<4>) -> int<'a>")
 OPERATION(SignedInt, RShift, "int_rshift", "(int<'a>,int<4>) -> int<'a>")
 
 GROUP(BitwiseUIntOp, UnsignedIntNot, UnsignedIntAnd, UnsignedIntOr, UnsignedIntXor, UnsignedIntLShift, UnsignedIntRShift)
 
-OPERATION(UnsignedInt, Not,    "uint_not",    "(uint<'a>) -> uint<'a>")
-OPERATION(UnsignedInt, And,    "uint_and",    "(uint<'a>,uint<'a>) -> uint<'a>")
-OPERATION(UnsignedInt, Or,     "uint_or",     "(uint<'a>,uint<'a>) -> uint<'a>")
-OPERATION(UnsignedInt, Xor,    "uint_xor",    "(uint<'a>,uint<'a>) -> uint<'a>")
+OPERATION(UnsignedInt, Not, "uint_not", "(uint<'a>) -> uint<'a>")
+OPERATION(UnsignedInt, And, "uint_and", "(uint<'a>,uint<'a>) -> uint<'a>")
+OPERATION(UnsignedInt, Or, "uint_or", "(uint<'a>,uint<'a>) -> uint<'a>")
+OPERATION(UnsignedInt, Xor, "uint_xor", "(uint<'a>,uint<'a>) -> uint<'a>")
 OPERATION(UnsignedInt, LShift, "uint_lshift", "(uint<'a>,int<4>) -> uint<'a>")
 OPERATION(UnsignedInt, RShift, "uint_rshift", "(uint<'a>,int<4>) -> uint<'a>")
 
@@ -360,11 +359,11 @@ GROUP(BitwiseOp, BitwiseIntOp, BitwiseUIntOp)
 
 // Type Operations ----------------------------------------------------------------------------------------------------
 
-DERIVED(TypeOf,			"type_of",				"lambda ('a x)->type<'a> { return lit('a); }")
-DERIVED(TypeCast,		"type_cast",			"lambda ('a x,type<'b> t)->'b { return CAST('b)x; }")
-LITERAL(TypeIsSubtype,	"type_is_subtype",		"(type<'a>, type<'b>)->bool")
+DERIVED(TypeOf, "type_of", "lambda ('a x)->type<'a> { return lit('a); }")
+DERIVED(TypeCast, "type_cast", "lambda ('a x,type<'b> t)->'b { return CAST('b)x; }")
+LITERAL(TypeIsSubtype, "type_is_subtype", "(type<'a>, type<'b>)->bool")
 
-OPERATION(Type, Eq, 	"type_eq", "(type<'a>,type<'a>) -> bool")
+OPERATION(Type, Eq, "type_eq", "(type<'a>,type<'a>) -> bool")
 
 GROUP(TypeCompOp, TypeEq)
 
@@ -372,17 +371,17 @@ GROUP(TypeCompOp, TypeEq)
 // Generic Operations -------------------------------------------------------------------------------------------------
 
 // binary generic operators
-OPERATION(Gen, Add, 	 "gen_add", "('a,'a)->'a")
-OPERATION(Gen, Sub, 	 "gen_sub", "('a,'a)->'a")
-OPERATION(Gen, Mul, 	 "gen_mul", "('a,'a)->'a")
-OPERATION(Gen, Div, 	 "gen_div", "('a,'a)->'a")
-OPERATION(Gen, Mod, 	 "gen_mod", "('a,'a)->'a")
+OPERATION(Gen, Add, "gen_add", "('a,'a)->'a")
+OPERATION(Gen, Sub, "gen_sub", "('a,'a)->'a")
+OPERATION(Gen, Mul, "gen_mul", "('a,'a)->'a")
+OPERATION(Gen, Div, "gen_div", "('a,'a)->'a")
+OPERATION(Gen, Mod, "gen_mod", "('a,'a)->'a")
 
-OPERATION(Gen, And, 	 "gen_and", "('a,'b)->'a")
-OPERATION(Gen, Or, 	 	 "gen_or",  "('a,'b)->'a")
-OPERATION(Gen, Xor, 	 "gen_xor", "('a,'b)->'a")
-OPERATION(Gen, LShift, 	 "gen_lshift", "('a,'b)->'a")
-OPERATION(Gen, RShift, 	 "gen_rshift", "('a,'b)->'a")
+OPERATION(Gen, And, "gen_and", "('a,'b)->'a")
+OPERATION(Gen, Or, "gen_or", "('a,'b)->'a")
+OPERATION(Gen, Xor, "gen_xor", "('a,'b)->'a")
+OPERATION(Gen, LShift, "gen_lshift", "('a,'b)->'a")
+OPERATION(Gen, RShift, "gen_rshift", "('a,'b)->'a")
 
 OPERATION(Gen, Eq, "gen_eq", "('a,'a) -> bool")
 OPERATION(Gen, Ne, "gen_ne", "('a,'a) -> bool")
@@ -392,12 +391,12 @@ OPERATION(Gen, Le, "gen_le", "('a,'a) -> bool")
 OPERATION(Gen, Ge, "gen_ge", "('a,'a) -> bool")
 
 // generic unary ops
-OPERATION(Gen, Not,      "gen_not",    "('a) -> 'a")
+OPERATION(Gen, Not, "gen_not", "('a) -> 'a")
 
 GROUP(GenArithmeticOp, GenAdd, GenSub, GenMul, GenDiv, GenMod)
 GROUP(GenBitwiseOp, GenNot, GenAnd, GenOr, GenXor, GenLShift, GenRShift)
 GROUP(GenCompOp, GenEq, GenNe, GenLt, GenGt, GenLe, GenGe)
-GROUP(GenOp, GenArithmeticOp, GenBitwiseOp, GenCompOp, IncrementOp )
+GROUP(GenOp, GenArithmeticOp, GenBitwiseOp, GenCompOp, IncrementOp)
 
 GROUP(AddOp, GenAdd, SignedIntAdd, UnsignedIntAdd, RealAdd)
 GROUP(SubOp, GenSub, SignedIntSub, UnsignedIntSub, RealSub)
@@ -414,12 +413,12 @@ LITERAL(Flush, "flush", "(ref<'a>) -> unit")
 
 GROUP(GeneralOp, Undefined, Sizeof, IntTypeParamToInt)
 
-DERIVED(Id, 				"id", "lambda ('a x)->'a { return x; }")
+DERIVED(Id, "id", "lambda ('a x)->'a { return x; }")
 
-LITERAL(Undefined, 			"undefined", 				"(type<'a>) -> 'a")
-LITERAL(Zero, 				"zero", 					"(type<'a>) -> 'a")
-LITERAL(Sizeof, 			"sizeof", 					"(type<'a>) -> uint<8>")
-LITERAL(IntTypeParamToInt, 	"to_uint", 					"(intTypeParam<'n>)->uint<8>")
+LITERAL(Undefined, "undefined", "(type<'a>) -> 'a")
+LITERAL(Zero, "zero", "(type<'a>) -> 'a")
+LITERAL(Sizeof, "sizeof", "(type<'a>) -> uint<8>")
+LITERAL(IntTypeParamToInt, "to_uint", "(intTypeParam<'n>)->uint<8>")
 
 
 // Struct and Unions --------------------------------------------------------------------------------------------------
@@ -450,5 +449,4 @@ DERIVED(IfThenElse, "ite", "lambda (bool c, () => 'b a, () => 'b b) -> 'b { if (
 
 GROUP(CompOp, IntCompOp, UIntCompOp, RealCompOp, TypeCompOp, GenCompOp)
 
-GROUP(Pure, IfThenElse, VarlistPack, CloogMath, MemberAccess, 
-	CompOp, BitwiseOp, CompOp, ArithOp, GeneralOp)
+GROUP(Pure, IfThenElse, VarlistPack, CloogMath, MemberAccess, CompOp, BitwiseOp, CompOp, ArithOp, GeneralOp)

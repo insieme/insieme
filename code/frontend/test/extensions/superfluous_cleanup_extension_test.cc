@@ -48,15 +48,15 @@
 namespace insieme {
 namespace frontend {
 
-using namespace core;
-using namespace driver;
+	using namespace core;
+	using namespace driver;
 
-TEST(SuperfluousCleanup, Simple) {
-	NodeManager man;
-	IRBuilder builder(man);
-	
-	core::ProgramPtr program = builder.parseProgram(
-	                               R"(
+	TEST(SuperfluousCleanup, Simple) {
+		NodeManager man;
+		IRBuilder builder(man);
+
+		core::ProgramPtr program = builder.parseProgram(
+		    R"(
 				int<4> main() {
 					decl ref<int<4>> i = ref_var(0);
 					decl ref<int<4>> j = ref_var(4);
@@ -69,30 +69,27 @@ TEST(SuperfluousCleanup, Simple) {
 					}
 					return j;
 				}
-				)"
-	                           );
-	                           
-	ASSERT_TRUE(program);
-	
-	auto lambdaExp = program->getEntryPoints()[0].as<LambdaExprPtr>();
-	auto cleaned = extensions::cleanup::removeObviouslySuperfluousCode(lambdaExp);
-	//dumpPretty(lambdaExp);
-	//dumpPretty(cleaned);
-	
-	// check if superfluous decl got removed
-	int declCount = 0;
-	visitDepthFirstOnce(cleaned, [&](const DeclarationStmtPtr& d) {
-		declCount++;
-	});
-	EXPECT_EQ(declCount, 3);
-}
+				)");
 
-TEST(SuperfluousCleanup, EnclosingLoops) {
-	NodeManager man;
-	IRBuilder builder(man);
-	
-	core::ProgramPtr program = builder.parseProgram(
-	                               R"(
+		ASSERT_TRUE(program);
+
+		auto lambdaExp = program->getEntryPoints()[0].as<LambdaExprPtr>();
+		auto cleaned = extensions::cleanup::removeObviouslySuperfluousCode(lambdaExp);
+		// dumpPretty(lambdaExp);
+		// dumpPretty(cleaned);
+
+		// check if superfluous decl got removed
+		int declCount = 0;
+		visitDepthFirstOnce(cleaned, [&](const DeclarationStmtPtr& d) { declCount++; });
+		EXPECT_EQ(declCount, 3);
+	}
+
+	TEST(SuperfluousCleanup, EnclosingLoops) {
+		NodeManager man;
+		IRBuilder builder(man);
+
+		core::ProgramPtr program = builder.parseProgram(
+		    R"(
 		int<4> main() {
 			decl ref<int<4>> i = ref_var(0);
 			decl ref<int<4>> j = ref_var(4);
@@ -104,30 +101,28 @@ TEST(SuperfluousCleanup, EnclosingLoops) {
 			}
 			return j;
 		}
-		)"
-	                           );
-	                           
-	ASSERT_TRUE(program);
-	
-	auto lambdaExp = program->getEntryPoints()[0].as<LambdaExprPtr>();
-	auto cleaned = extensions::cleanup::removeObviouslySuperfluousCode(lambdaExp);
-	//dumpPretty(lambdaExp);
-	//dumpPretty(cleaned);
-	
-	// check if we didn't remove anything we shouldn't have
-	EXPECT_EQ(*lambdaExp, *cleaned);
-}
+		)");
 
-TEST(SuperfluousCleanup, MMul) {
-	NodeManager man;
-	IRBuilder builder(man);
-	
-	fs::path tmpFile;
-	{
-	
-// create a temporary source file
-		Source file(
-		    R"(
+		ASSERT_TRUE(program);
+
+		auto lambdaExp = program->getEntryPoints()[0].as<LambdaExprPtr>();
+		auto cleaned = extensions::cleanup::removeObviouslySuperfluousCode(lambdaExp);
+		// dumpPretty(lambdaExp);
+		// dumpPretty(cleaned);
+
+		// check if we didn't remove anything we shouldn't have
+		EXPECT_EQ(*lambdaExp, *cleaned);
+	}
+
+	TEST(SuperfluousCleanup, MMul) {
+		NodeManager man;
+		IRBuilder builder(man);
+
+		fs::path tmpFile;
+		{
+			// create a temporary source file
+			Source file(
+			    R"(
 #include <stdio.h>
 #define N 1000
 #define M N
@@ -169,37 +164,36 @@ int main() {
 		}
 	}
 }
-)"
-);
+)");
 
-		// check whether there is a temporary file
-		tmpFile = file.getPath();
-		EXPECT_TRUE(fs::exists(tmpFile));
+			// check whether there is a temporary file
+			tmpFile = file.getPath();
+			EXPECT_TRUE(fs::exists(tmpFile));
 
-		// parse temporary file
-		core::NodeManager manager;
-        const boost::filesystem::path& fileName = file;
-        std::vector<std::string> argv = { "compiler",  fileName.string() };
-        cmd::Options options = cmd::Options::parse(argv);
+			// parse temporary file
+			core::NodeManager manager;
+			const boost::filesystem::path& fileName = file;
+			std::vector<std::string> argv = {"compiler", fileName.string()};
+			cmd::Options options = cmd::Options::parse(argv);
 
-		auto code = options.job.execute(manager);
-		EXPECT_TRUE(code);
+			auto code = options.job.execute(manager);
+			EXPECT_TRUE(code);
 
-		auto lambdaExp = code->getEntryPoints()[0].as<LambdaExprPtr>();
-		auto cleaned = extensions::cleanup::removeObviouslySuperfluousCode(lambdaExp);
-		//dumpPretty(lambdaExp);
-		//dumpPretty(cleaned);
+			auto lambdaExp = code->getEntryPoints()[0].as<LambdaExprPtr>();
+			auto cleaned = extensions::cleanup::removeObviouslySuperfluousCode(lambdaExp);
+			// dumpPretty(lambdaExp);
+			// dumpPretty(cleaned);
 
-		// check if all superfluous "if"s got removed
-		int ifCount = 0;
-		visitDepthFirstOnce(cleaned, [&](const IfStmtPtr& f) { ifCount++;});
-		EXPECT_EQ(ifCount, 1);
-		// check if we still got all our "for"s
-		int forCount = 0;
-		visitDepthFirstOnce(cleaned, [&](const ForStmtPtr& f) { forCount++;});
-		EXPECT_EQ(forCount, 7);
+			// check if all superfluous "if"s got removed
+			int ifCount = 0;
+			visitDepthFirstOnce(cleaned, [&](const IfStmtPtr& f) { ifCount++; });
+			EXPECT_EQ(ifCount, 1);
+			// check if we still got all our "for"s
+			int forCount = 0;
+			visitDepthFirstOnce(cleaned, [&](const ForStmtPtr& f) { forCount++; });
+			EXPECT_EQ(forCount, 7);
+		}
 	}
-}
 
 } // namespace frontend
 } // namespace insieme

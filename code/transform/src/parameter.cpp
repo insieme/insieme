@@ -42,9 +42,8 @@ namespace insieme {
 namespace transform {
 namespace parameter {
 
-const Value emptyValue = combineValues();
+	const Value emptyValue = combineValues();
 
 } // end namespace parameter
 } // end namespace transform
 } // end namespace insieme
-

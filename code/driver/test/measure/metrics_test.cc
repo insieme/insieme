@@ -55,55 +55,53 @@ namespace insieme {
 namespace driver {
 namespace measure {
 
-using namespace std;
-using namespace core;
+	using namespace std;
+	using namespace core;
 
-TEST(Measuring, Metrics) {
-	// play a little using units
-	auto time = Metric::CPU_TIME;
-	
-	EXPECT_EQ(time, Metric::CPU_TIME);
-	
-	EXPECT_EQ("cpu_time", toString(time));
-	
-	stringstream stream;
-	stream << Metric::CPU_TIME->getName() << "(" << *(Metric::CPU_TIME->getUnit()) << ")";
-	
-	EXPECT_EQ(Metric::CPU_TIME, Metric::getForNameAndUnit(stream.str()));
-}
+	TEST(Measuring, Metrics) {
+		// play a little using units
+		auto time = Metric::CPU_TIME;
 
-TEST(Measuring, MetricsDependencies) {
-	// test some parameter without dependency
-	EXPECT_TRUE(Metric::PAPI_L1_DCM->getDependencies().empty());
-	
-	// check something with a single dependency
-	//std::set<MetricPtr> dep;
-	//dep.insert(Metric::PAPI_L3_TCM);
-	//EXPECT_EQ(dep, Metric::TOTAL_L3_CACHE_MISS->getDependencies());
-	
-}
+		EXPECT_EQ(time, Metric::CPU_TIME);
+
+		EXPECT_EQ("cpu_time", toString(time));
+
+		stringstream stream;
+		stream << Metric::CPU_TIME->getName() << "(" << *(Metric::CPU_TIME->getUnit()) << ")";
+
+		EXPECT_EQ(Metric::CPU_TIME, Metric::getForNameAndUnit(stream.str()));
+	}
+
+	TEST(Measuring, MetricsDependencies) {
+		// test some parameter without dependency
+		EXPECT_TRUE(Metric::PAPI_L1_DCM->getDependencies().empty());
+
+		// check something with a single dependency
+		// std::set<MetricPtr> dep;
+		// dep.insert(Metric::PAPI_L3_TCM);
+		// EXPECT_EQ(dep, Metric::TOTAL_L3_CACHE_MISS->getDependencies());
+	}
 
 
-TEST(Measuring, MetricsDependencyClosure) {
-	// the set of dependencies to compare with
-	std::set<MetricPtr> dep;
-	
-	// check empty list
-	EXPECT_EQ(dep, getDependencyClosureLeafs(toVector<MetricPtr>()));
-	
-	// check a leaf metric itself
-	dep.insert(Metric::PAPI_L3_TCM);
-	EXPECT_EQ(dep, getDependencyClosureLeafs(toVector(Metric::PAPI_L3_TCM)));
-	
-	// check a derived metric
-	//EXPECT_EQ(dep, getDependencyClosureLeafs(toVector(Metric::TOTAL_L3_CACHE_MISS)));
-	
-	// check multiple metrics
-	dep.insert(Metric::PAPI_L3_TCM);
-	dep.insert(Metric::CPU_TIME);
-	EXPECT_EQ(dep, getDependencyClosureLeafs(toVector(Metric::CPU_TIME, Metric::PAPI_L3_TCM)));
-	
-}
+	TEST(Measuring, MetricsDependencyClosure) {
+		// the set of dependencies to compare with
+		std::set<MetricPtr> dep;
+
+		// check empty list
+		EXPECT_EQ(dep, getDependencyClosureLeafs(toVector<MetricPtr>()));
+
+		// check a leaf metric itself
+		dep.insert(Metric::PAPI_L3_TCM);
+		EXPECT_EQ(dep, getDependencyClosureLeafs(toVector(Metric::PAPI_L3_TCM)));
+
+		// check a derived metric
+		// EXPECT_EQ(dep, getDependencyClosureLeafs(toVector(Metric::TOTAL_L3_CACHE_MISS)));
+
+		// check multiple metrics
+		dep.insert(Metric::PAPI_L3_TCM);
+		dep.insert(Metric::CPU_TIME);
+		EXPECT_EQ(dep, getDependencyClosureLeafs(toVector(Metric::CPU_TIME, Metric::PAPI_L3_TCM)));
+	}
 
 } // end namespace measure
 } // end namespace driver

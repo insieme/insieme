@@ -47,14 +47,13 @@ using std::cout;
 using std::endl;
 
 TEST(Ptr, NullTest) {
-
 	Ptr<int> null = Ptr<int>(NULL);
-	
+
 	Ptr<int> ptrN(0);
 	EXPECT_TRUE(ptrN == null);
 	EXPECT_TRUE(ptrN == ptrN);
 	EXPECT_FALSE(ptrN);
-	
+
 	int a = 10;
 	Ptr<int> ptrA(&a);
 	EXPECT_FALSE(ptrA == null);
@@ -62,11 +61,11 @@ TEST(Ptr, NullTest) {
 	EXPECT_FALSE(ptrA == ptrN);
 	EXPECT_FALSE(ptrN == ptrA);
 	EXPECT_TRUE(!!ptrA);
-	
+
 	Ptr<int> ptrA2(&a);
 	EXPECT_TRUE(ptrA == ptrA2);
 	EXPECT_TRUE(ptrA2 == ptrA);
-	
+
 	int b = 12;
 	Ptr<int> ptrB(&b);
 	EXPECT_FALSE(ptrB == null);
@@ -74,16 +73,15 @@ TEST(Ptr, NullTest) {
 	EXPECT_FALSE(ptrB == ptrN);
 	EXPECT_FALSE(ptrN == ptrB);
 	EXPECT_TRUE(!!ptrB);
-	
+
 	EXPECT_FALSE(ptrA == ptrB);
 	EXPECT_FALSE(ptrB == ptrA);
-	
 }
 
 
 TEST(Ptr, Size) {
 	// just ensures
-	EXPECT_LE(sizeof(Ptr<int>), 2*sizeof(int*));
+	EXPECT_LE(sizeof(Ptr<int>), 2 * sizeof(int*));
 }
 
 TEST(Ptr, Print) {
@@ -91,7 +89,7 @@ TEST(Ptr, Print) {
 	int a = 10;
 	Ptr<int> ptrA(&a);
 	EXPECT_EQ("P(10)", toString(ptrA));
-	
+
 	Ptr<int> ptrN = Ptr<int>(NULL);
 	EXPECT_EQ("P(NULL)", toString(ptrN));
 }
@@ -109,23 +107,22 @@ class C : public A {};
 
 
 TEST(Ptr, Casts) {
-
 	A a;
 	B b;
 	C c;
-	
+
 	Ptr<const A> refA(&a);
 	Ptr<const B> refB(&b);
 	Ptr<const C> refC(&c);
-	
+
 	refA = refB;
 	// refB = refA;
 	refB = dynamic_pointer_cast<const B>(refA);
 	EXPECT_FALSE(refB == Ptr<B>(NULL));
-	
+
 	// should not compile ...
-//	refC = dynamic_pointer_cast<const C >(refA);
-//	EXPECT_TRUE( refC == Ptr<C>(NULL) );
+	//	refC = dynamic_pointer_cast<const C >(refA);
+	//	EXPECT_TRUE( refC == Ptr<C>(NULL) );
 
 	refA = refC;
 	refB = dynamic_pointer_cast<const B>(refA);
@@ -133,20 +130,19 @@ TEST(Ptr, Casts) {
 }
 
 TEST(Ptr, CastShortcuts) {
-
 	A a;
 	B b;
 	C c;
-	
+
 	Ptr<A> refA(&a);
 	Ptr<B> refB(&b);
 	Ptr<C> refC(&c);
-	
+
 	EXPECT_TRUE(refB == refB.as<Ptr<B>>());
 	EXPECT_TRUE(refB == refB.as<Ptr<A>>());
-	
+
 	// should not compile
-//	refC.as<Ptr<B>>();
+	//	refC.as<Ptr<B>>();
 
 	refA = refC;
 	refB = refA.isa<Ptr<B>>();

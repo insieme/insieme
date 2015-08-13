@@ -44,153 +44,124 @@ namespace insieme {
 namespace core {
 namespace pattern {
 
-const char Tree::VALUE_ID = 'v';
+	const char Tree::VALUE_ID = 'v';
 
-namespace {
+	namespace {
 
-struct ValuePrinter {
-	typedef string result_type;
-	
-	string operator()(bool value) const {
-		return (value)?"true":"false";
-	}
-	
-	string operator()(const string& value) const {
-		return "\"" + value + "\"";
-	}
-	
-	template<typename T>
-	string operator()(const T& value) const {
-		return boost::lexical_cast<string>(value);
-	}
-};
+		struct ValuePrinter {
+			typedef string result_type;
 
-}
-
-
-std::ostream& Tree::printTo(std::ostream& out) const {
-
-	// handle values differently
-	if(id == VALUE_ID) {
-		return out << boost::apply_visitor(ValuePrinter(), value);
-	}
-	
-	// print symbol if present
-	if(id) {
-		out << (char)id;
-	}
-	
-	// add sub-trees
-	if(!subTrees.empty()) {
-		out << "(" << join(",", subTrees, print<deref<TreePtr>>()) << ")";
-	}
-	
-	// in case neither a symbol nor subtrees are given
-	if(!id && subTrees.empty()) {
-		out << "()";
-	}
-	return out;
-}
-
-bool Tree::operator==(const Tree& other) const {
-	if(this == &other) {
-		return true;
-	}
-	return id == other.id && equals(getSubTrees(), other.getSubTrees(), equal_target<TreePtr>()) && value == other.value;
-}
-
-std::ostream& operator<<(std::ostream& out, const Tree& tree) {
-	return tree.printTo(out);
-}
-
-std::ostream& operator<<(std::ostream& out, const TreePtr& tree) {
-	return out << *tree;
-}
-
-namespace {
-
-struct InvalidTreeException : public std::exception {
-	virtual const char* what() const throw() {
-		return "Unable to parse input tree!";
-	}
-};
-
-typedef string::iterator iter;
-
-TreePtr parseTree(const iter begin, const iter end);
-
-TreeList parseList(const iter begin, const iter end) {
-	TreeList res;
-	
-	// shortcut
-	if(begin == end) {
-		return res;
-	}
-	
-	// search commas and create trees
-	iter cur = begin;
-	while(true) {
-	
-		// find next comma
-		int nesting = 0;
-		iter it = cur;
-		while(it != end && (nesting != 0 || *it != ',')) {
-			if(*it == '(') {
-				nesting++;
+			string operator()(bool value) const {
+				return (value) ? "true" : "false";
 			}
-			if(*it == ')') {
-				nesting--;
+
+			string operator()(const string& value) const {
+				return "\"" + value + "\"";
 			}
-			it++;
-		}
-		
-		// nesting level has to 0!
-		if(nesting != 0) {
-			throw InvalidTreeException();
-		}
-		
-		res.push_back(parseTree(cur, it));
-		
-		if(it == end) {
-			break;
-		}
-		cur = it+1;
+
+			template <typename T>
+			string operator()(const T& value) const {
+				return boost::lexical_cast<string>(value);
+			}
+		};
 	}
-	
-	
-	return res;
-}
 
-TreePtr parseTree(const iter begin, const iter end) {
-	auto length = end - begin;
-	
-	// if there is only one character left => done
-	if(length == 1) {
-		return makeTree(*begin);
+
+	std::ostream& Tree::printTo(std::ostream& out) const {
+		// handle values differently
+		if(id == VALUE_ID) { return out << boost::apply_visitor(ValuePrinter(), value); }
+
+		// print symbol if present
+		if(id) { out << (char)id; }
+
+		// add sub-trees
+		if(!subTrees.empty()) { out << "(" << join(",", subTrees, print<deref<TreePtr>>()) << ")"; }
+
+		// in case neither a symbol nor subtrees are given
+		if(!id && subTrees.empty()) { out << "()"; }
+		return out;
 	}
-	
-	// it has to end with a parentheses
-	if(length < 3 || *(begin+1) != '(' || *(end-1) != ')') {
-		throw InvalidTreeException();
+
+	bool Tree::operator==(const Tree& other) const {
+		if(this == &other) { return true; }
+		return id == other.id && equals(getSubTrees(), other.getSubTrees(), equal_target<TreePtr>()) && value == other.value;
 	}
-	
-	// create resulting tree
-	return makeTree(*begin, parseList(begin+2, end-1));
-}
 
-}
+	std::ostream& operator<<(std::ostream& out, const Tree& tree) {
+		return tree.printTo(out);
+	}
 
-TreePtr parseTree(const string& tree) {
+	std::ostream& operator<<(std::ostream& out, const TreePtr& tree) {
+		return out << *tree;
+	}
 
-	// replace all blanks
-	string normalized = tree;
-	
-	auto a = normalized.begin();
-	auto b = std::remove(a, normalized.end(), ' ');
-	
-	// parse tree
-	return parseTree(a,b);
-}
+	namespace {
+
+		struct InvalidTreeException : public std::exception {
+			virtual const char* what() const throw() {
+				return "Unable to parse input tree!";
+			}
+		};
+
+		typedef string::iterator iter;
+
+		TreePtr parseTree(const iter begin, const iter end);
+
+		TreeList parseList(const iter begin, const iter end) {
+			TreeList res;
+
+			// shortcut
+			if(begin == end) { return res; }
+
+			// search commas and create trees
+			iter cur = begin;
+			while(true) {
+				// find next comma
+				int nesting = 0;
+				iter it = cur;
+				while(it != end && (nesting != 0 || *it != ',')) {
+					if(*it == '(') { nesting++; }
+					if(*it == ')') { nesting--; }
+					it++;
+				}
+
+				// nesting level has to 0!
+				if(nesting != 0) { throw InvalidTreeException(); }
+
+				res.push_back(parseTree(cur, it));
+
+				if(it == end) { break; }
+				cur = it + 1;
+			}
+
+
+			return res;
+		}
+
+		TreePtr parseTree(const iter begin, const iter end) {
+			auto length = end - begin;
+
+			// if there is only one character left => done
+			if(length == 1) { return makeTree(*begin); }
+
+			// it has to end with a parentheses
+			if(length < 3 || *(begin + 1) != '(' || *(end - 1) != ')') { throw InvalidTreeException(); }
+
+			// create resulting tree
+			return makeTree(*begin, parseList(begin + 2, end - 1));
+		}
+	}
+
+	TreePtr parseTree(const string& tree) {
+		// replace all blanks
+		string normalized = tree;
+
+		auto a = normalized.begin();
+		auto b = std::remove(a, normalized.end(), ' ');
+
+		// parse tree
+		return parseTree(a, b);
+	}
 
 } // end namespace pattern
 } // end namespace core

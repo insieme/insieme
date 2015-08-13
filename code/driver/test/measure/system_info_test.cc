@@ -44,45 +44,41 @@ namespace insieme {
 namespace driver {
 namespace measure {
 
-using namespace std;
+	using namespace std;
 
-TEST(SystemInfo, HardwareSpecs) {
-	SystemInfo sysInfo;
-	
-	ASSERT_TRUE(sysInfo.isValid());
-	
-	const unsigned numberOfCPUsTotal = sysInfo.getNumberOfCPUsTotal();
-	EXPECT_GT(numberOfCPUsTotal, 0);
-	EXPECT_LT(numberOfCPUsTotal, 4096);
-	
-	const unsigned numberOfCoresPerSocket = sysInfo.getNumberOfCoresPerSocket();
-	EXPECT_GT(numberOfCoresPerSocket, 0);
-	EXPECT_LE(numberOfCoresPerSocket, 128);
-	
-	const unsigned numberOfHWThreadsPerCore = sysInfo.getNumberOfHWThreadsPerCore();
-	EXPECT_GT(numberOfHWThreadsPerCore, 0);
-	EXPECT_LE(numberOfHWThreadsPerCore, 8);
-	
-	const unsigned numberOfSockets = sysInfo.getNumberOfSockets();
-	EXPECT_GT(numberOfSockets, 0);
-	EXPECT_LE(numberOfSockets, 8);
-	
-	// some generic queries
-	const string CPUVendor = sysInfo.queryGenericStringSingle("CPU vendor:\\s*(\\w+)");
-	EXPECT_FALSE(CPUVendor.empty());
-	
-	const string CPUModel = sysInfo.queryGenericStringSingle("CPU model:\\s*(\\w+)");
-	EXPECT_FALSE(CPUModel.empty());
-	
-	std::cout << "target system info: " <<
-	          "CPU vendor: " << CPUVendor <<
-	          ", CPU model: " << CPUModel <<
-	          ", total logical cpus: " << numberOfCPUsTotal <<
-	          ", sockets: " << numberOfSockets <<
-	          ", cores per socket: " << numberOfCoresPerSocket <<
-	          ", HW threads per core: " << numberOfHWThreadsPerCore <<
-	          "\n";
-}
+	TEST(SystemInfo, HardwareSpecs) {
+		SystemInfo sysInfo;
+
+		ASSERT_TRUE(sysInfo.isValid());
+
+		const unsigned numberOfCPUsTotal = sysInfo.getNumberOfCPUsTotal();
+		EXPECT_GT(numberOfCPUsTotal, 0);
+		EXPECT_LT(numberOfCPUsTotal, 4096);
+
+		const unsigned numberOfCoresPerSocket = sysInfo.getNumberOfCoresPerSocket();
+		EXPECT_GT(numberOfCoresPerSocket, 0);
+		EXPECT_LE(numberOfCoresPerSocket, 128);
+
+		const unsigned numberOfHWThreadsPerCore = sysInfo.getNumberOfHWThreadsPerCore();
+		EXPECT_GT(numberOfHWThreadsPerCore, 0);
+		EXPECT_LE(numberOfHWThreadsPerCore, 8);
+
+		const unsigned numberOfSockets = sysInfo.getNumberOfSockets();
+		EXPECT_GT(numberOfSockets, 0);
+		EXPECT_LE(numberOfSockets, 8);
+
+		// some generic queries
+		const string CPUVendor = sysInfo.queryGenericStringSingle("CPU vendor:\\s*(\\w+)");
+		EXPECT_FALSE(CPUVendor.empty());
+
+		const string CPUModel = sysInfo.queryGenericStringSingle("CPU model:\\s*(\\w+)");
+		EXPECT_FALSE(CPUModel.empty());
+
+		std::cout << "target system info: "
+		          << "CPU vendor: " << CPUVendor << ", CPU model: " << CPUModel << ", total logical cpus: " << numberOfCPUsTotal
+		          << ", sockets: " << numberOfSockets << ", cores per socket: " << numberOfCoresPerSocket
+		          << ", HW threads per core: " << numberOfHWThreadsPerCore << "\n";
+	}
 
 
 } // end namespace measure

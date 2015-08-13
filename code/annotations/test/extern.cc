@@ -46,105 +46,97 @@ namespace insieme {
 namespace annotations {
 namespace c {
 
-TEST(Extern, Basic) {
+	TEST(Extern, Basic) {
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
 
-	core::NodeManager manager;
-	core::IRBuilder builder(manager);
-	
-	// just add and remove some name tagging
-	auto lit = builder.stringLit("test");
-	
-	
-	EXPECT_FALSE(isExtern(lit));
-	
-	// attach the flag
-	markExtern(lit);
-	EXPECT_TRUE(isExtern(lit));
-	
-	// remove it again
-	markExtern(lit, false);
-	EXPECT_FALSE(isExtern(lit));
-	
-}
+		// just add and remove some name tagging
+		auto lit = builder.stringLit("test");
 
 
-TEST(Extern, Migration) {
+		EXPECT_FALSE(isExtern(lit));
 
-	core::NodeManager mgrA;
-	core::IRBuilder builder(mgrA);
-	
-	// just add and remove some name tagging
-	auto litA = builder.stringLit("testA");
-	auto litB = builder.stringLit("testB");
-	
-	EXPECT_NE(litA, litB);
-	
-	markExtern(litB);
-	
-	EXPECT_FALSE(isExtern(litA));
-	EXPECT_TRUE(isExtern(litB));
-	
-	core::NodeManager mgrB;
-	
-	EXPECT_FALSE(isExtern(mgrB.get(litA)));
-	EXPECT_TRUE(isExtern(mgrB.get(litB)));
-	
-}
+		// attach the flag
+		markExtern(lit);
+		EXPECT_TRUE(isExtern(lit));
 
-TEST(Extern, Dump) {
-
-	core::NodeManager mgrA;
-	core::IRBuilder builder(mgrA);
-	
-	// just add and remove some name tagging
-	auto litA = builder.stringLit("testA");
-	auto litB = builder.stringLit("testB");
-	
-	EXPECT_NE(litA, litB);
-	markExtern(litB);
-	
-	EXPECT_FALSE(isExtern(litA));
-	EXPECT_TRUE(isExtern(litB));
-	
-	
-	// ---- dump and restore both literals -----
-	
-	using std::ios_base;
-	using std::stringstream;
-	
-	{
-		// create a in-memory stream
-		stringstream buffer(ios_base::out | ios_base::in | ios_base::binary);
-		
-		// dump IR using a binary format
-		core::dump::binary::dumpIR(buffer, litA);
-		
-		// reload IR using a different node manager
-		core::NodeManager mgr;
-		core::NodePtr restored = core::dump::binary::loadIR(buffer, mgr);
-		
-		ASSERT_TRUE(restored.isa<core::LiteralPtr>());
-		EXPECT_FALSE(isExtern(restored.as<core::LiteralPtr>()));
-		
+		// remove it again
+		markExtern(lit, false);
+		EXPECT_FALSE(isExtern(lit));
 	}
-	
-	{
-		// create a in-memory stream
-		stringstream buffer(ios_base::out | ios_base::in | ios_base::binary);
-		
-		// dump IR using a binary format
-		core::dump::binary::dumpIR(buffer, litB);
-		
-		// reload IR using a different node manager
-		core::NodeManager mgr;
-		core::NodePtr restored = core::dump::binary::loadIR(buffer, mgr);
-		
-		ASSERT_TRUE(restored.isa<core::LiteralPtr>());
-		EXPECT_TRUE(isExtern(restored.as<core::LiteralPtr>()));
-		
+
+
+	TEST(Extern, Migration) {
+		core::NodeManager mgrA;
+		core::IRBuilder builder(mgrA);
+
+		// just add and remove some name tagging
+		auto litA = builder.stringLit("testA");
+		auto litB = builder.stringLit("testB");
+
+		EXPECT_NE(litA, litB);
+
+		markExtern(litB);
+
+		EXPECT_FALSE(isExtern(litA));
+		EXPECT_TRUE(isExtern(litB));
+
+		core::NodeManager mgrB;
+
+		EXPECT_FALSE(isExtern(mgrB.get(litA)));
+		EXPECT_TRUE(isExtern(mgrB.get(litB)));
 	}
-	
-}
+
+	TEST(Extern, Dump) {
+		core::NodeManager mgrA;
+		core::IRBuilder builder(mgrA);
+
+		// just add and remove some name tagging
+		auto litA = builder.stringLit("testA");
+		auto litB = builder.stringLit("testB");
+
+		EXPECT_NE(litA, litB);
+		markExtern(litB);
+
+		EXPECT_FALSE(isExtern(litA));
+		EXPECT_TRUE(isExtern(litB));
+
+
+		// ---- dump and restore both literals -----
+
+		using std::ios_base;
+		using std::stringstream;
+
+		{
+			// create a in-memory stream
+			stringstream buffer(ios_base::out | ios_base::in | ios_base::binary);
+
+			// dump IR using a binary format
+			core::dump::binary::dumpIR(buffer, litA);
+
+			// reload IR using a different node manager
+			core::NodeManager mgr;
+			core::NodePtr restored = core::dump::binary::loadIR(buffer, mgr);
+
+			ASSERT_TRUE(restored.isa<core::LiteralPtr>());
+			EXPECT_FALSE(isExtern(restored.as<core::LiteralPtr>()));
+		}
+
+		{
+			// create a in-memory stream
+			stringstream buffer(ios_base::out | ios_base::in | ios_base::binary);
+
+			// dump IR using a binary format
+			core::dump::binary::dumpIR(buffer, litB);
+
+			// reload IR using a different node manager
+			core::NodeManager mgr;
+			core::NodePtr restored = core::dump::binary::loadIR(buffer, mgr);
+
+			ASSERT_TRUE(restored.isa<core::LiteralPtr>());
+			EXPECT_TRUE(isExtern(restored.as<core::LiteralPtr>()));
+		}
+	}
 
 } // end namespace c
 } // end namespace annotations

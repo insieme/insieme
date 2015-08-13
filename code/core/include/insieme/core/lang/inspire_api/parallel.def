@@ -75,121 +75,107 @@ DERIVED(PReduce, "preduce", "lambda (threadgroup g, 'a v, ('b,'a)->'b op, 'b ini
 
 // Channels -----------------------------------------------------------------------------------------------------------
 
-LITERAL(ChannelCreate, 		"channel_create", 		"(type<'a>, intTypeParam<#n>) -> channel<'a,#n>")
-LITERAL(ChannelRelease, 	"channel_release", 		"(channel<'a,#n>) -> unit")
+LITERAL(ChannelCreate, "channel_create", "(type<'a>, intTypeParam<#n>) -> channel<'a,#n>")
+LITERAL(ChannelRelease, "channel_release", "(channel<'a,#n>) -> unit")
 
-LITERAL(ChannelSend, 		"channel_send", 		"(channel<'a,#n>, 'a) -> unit")
-LITERAL(ChannelRecv, 		"channel_recv", 		"(channel<'a,#n>) -> 'a")
-LITERAL(ChannelProbe, 		"channel_probe", 		"(channel<'a,#n>) -> bool")
+LITERAL(ChannelSend, "channel_send", "(channel<'a,#n>, 'a) -> unit")
+LITERAL(ChannelRecv, "channel_recv", "(channel<'a,#n>) -> 'a")
+LITERAL(ChannelProbe, "channel_probe", "(channel<'a,#n>) -> bool")
 
 // Atomics ------------------------------------------------------------------------------------------------------------
 
-DERIVED(Atomic, "atomic",
-		"lambda (ref<'a> v, ('a)=>bool p, ('a)=>'a f)->'a { "
-		"	decl auto res = *v; "
-		"	if (p(*v)) { "
-		"		v = f(*v); "
-		"	} "
-		"	return res; "
-		"} ")
+DERIVED(Atomic, "atomic", "lambda (ref<'a> v, ('a)=>bool p, ('a)=>'a f)->'a { "
+                          "	decl auto res = *v; "
+                          "	if (p(*v)) { "
+                          "		v = f(*v); "
+                          "	} "
+                          "	return res; "
+                          "} ")
 
 // arithmetic
 
-DERIVED(AtomicFetchAndAdd, "atomic_fetch_and_add",
-		"lambda (ref<'a> v, 'a exp) -> 'a { "
-		"	let test = lambda ('a _)=>true; "
-		"	let apply = lambda ('a x)=>x+exp; "
-		"	return atomic(v, test, apply); "
-		"}  ")
+DERIVED(AtomicFetchAndAdd, "atomic_fetch_and_add", "lambda (ref<'a> v, 'a exp) -> 'a { "
+                                                   "	let test = lambda ('a _)=>true; "
+                                                   "	let apply = lambda ('a x)=>x+exp; "
+                                                   "	return atomic(v, test, apply); "
+                                                   "}  ")
 
-DERIVED(AtomicAddAndFetch, "atomic_add_and_fetch",
-		"lambda (ref<'a> v, 'a exp) -> 'a { "
-		"	return atomic_fetch_and_add(v, exp) + exp; "
-		"}  ")
+DERIVED(AtomicAddAndFetch, "atomic_add_and_fetch", "lambda (ref<'a> v, 'a exp) -> 'a { "
+                                                   "	return atomic_fetch_and_add(v, exp) + exp; "
+                                                   "}  ")
 
-DERIVED(AtomicFetchAndSub, "atomic_fetch_and_sub",
-		"lambda (ref<'a> v, 'a exp) -> 'a { "
-		"	let test = lambda ('a _)=>true; "
-		"	let apply = lambda ('a x)=>x-exp; "
-		"	return atomic(v, test, apply); "
-		"}  ")
+DERIVED(AtomicFetchAndSub, "atomic_fetch_and_sub", "lambda (ref<'a> v, 'a exp) -> 'a { "
+                                                   "	let test = lambda ('a _)=>true; "
+                                                   "	let apply = lambda ('a x)=>x-exp; "
+                                                   "	return atomic(v, test, apply); "
+                                                   "}  ")
 
-DERIVED(AtomicSubAndFetch, "atomic_sub_and_fetch",
-		"lambda (ref<'a> v, 'a exp) -> 'a { "
-		"	return atomic_fetch_and_sub(v, exp) - exp; "
-		"}  ")
+DERIVED(AtomicSubAndFetch, "atomic_sub_and_fetch", "lambda (ref<'a> v, 'a exp) -> 'a { "
+                                                   "	return atomic_fetch_and_sub(v, exp) - exp; "
+                                                   "}  ")
 
 // bitwise
 
-DERIVED(AtomicFetchAndAnd, "atomic_fetch_and_and",
-		"lambda (ref<'a> v, 'a exp) -> 'a { "
-		"	let test = lambda ('a _) => true; "
-		"	let apply = lambda ('a x) => x & exp; "
-		"	return atomic(v, test, apply); "
-		"}  ")
+DERIVED(AtomicFetchAndAnd, "atomic_fetch_and_and", "lambda (ref<'a> v, 'a exp) -> 'a { "
+                                                   "	let test = lambda ('a _) => true; "
+                                                   "	let apply = lambda ('a x) => x & exp; "
+                                                   "	return atomic(v, test, apply); "
+                                                   "}  ")
 
-DERIVED(AtomicAndAndFetch, "atomic_and_and_fetch",
-		"lambda (ref<'a> v, 'a exp) -> 'a { "
-		"	return atomic_fetch_and_and(v, exp) & exp; "
-		"}  ")
+DERIVED(AtomicAndAndFetch, "atomic_and_and_fetch", "lambda (ref<'a> v, 'a exp) -> 'a { "
+                                                   "	return atomic_fetch_and_and(v, exp) & exp; "
+                                                   "}  ")
 
-DERIVED(AtomicFetchAndOr, "atomic_fetch_and_or",
-		"lambda (ref<'a> v, 'a exp) -> 'a { "
-		"	let test = lambda ('a _) => true; "
-		"	let apply = lambda ('a x) => x | exp; "
-		"	return atomic(v, test, apply); "
-		"}  ")
+DERIVED(AtomicFetchAndOr, "atomic_fetch_and_or", "lambda (ref<'a> v, 'a exp) -> 'a { "
+                                                 "	let test = lambda ('a _) => true; "
+                                                 "	let apply = lambda ('a x) => x | exp; "
+                                                 "	return atomic(v, test, apply); "
+                                                 "}  ")
 
-DERIVED(AtomicOrAndFetch, "atomic_or_and_fetch",
-		"lambda (ref<'a> v, 'a exp) -> 'a { "
-		"	return atomic_fetch_and_or(v, exp) | exp; "
-		"}  ")
+DERIVED(AtomicOrAndFetch, "atomic_or_and_fetch", "lambda (ref<'a> v, 'a exp) -> 'a { "
+                                                 "	return atomic_fetch_and_or(v, exp) | exp; "
+                                                 "}  ")
 
-DERIVED(AtomicFetchAndXor, "atomic_fetch_and_xor",
-		"lambda (ref<'a> v, 'a exp) -> 'a { "
-		"	let test = lambda ('a _) => true; "
-		"	let apply = lambda ('a x) => x ^ exp; "
-		"	return atomic(v, test, apply); "
-		"}  ")
+DERIVED(AtomicFetchAndXor, "atomic_fetch_and_xor", "lambda (ref<'a> v, 'a exp) -> 'a { "
+                                                   "	let test = lambda ('a _) => true; "
+                                                   "	let apply = lambda ('a x) => x ^ exp; "
+                                                   "	return atomic(v, test, apply); "
+                                                   "}  ")
 
-DERIVED(AtomicXorAndFetch, "atomic_xor_and_fetch",
-		"lambda (ref<'a> v, 'a exp) -> 'a { "
-		"	return atomic_fetch_and_xor(v, exp) ^ exp; "
-		"}  ")
+DERIVED(AtomicXorAndFetch, "atomic_xor_and_fetch", "lambda (ref<'a> v, 'a exp) -> 'a { "
+                                                   "	return atomic_fetch_and_xor(v, exp) ^ exp; "
+                                                   "}  ")
 
 // test and set
 
-DERIVED(AtomicValCompareAndSwap, "atomic_val_compare_and_swap",
-		"lambda (ref<'a> v, 'a _old, 'a _new) -> 'a { "
-		"	let test = lambda ('a x) => x == _old; "
-		"	let apply = lambda ('a _) => _new; "
-		"	return atomic(v, test, apply); "
-		"}  ")
+DERIVED(AtomicValCompareAndSwap, "atomic_val_compare_and_swap", "lambda (ref<'a> v, 'a _old, 'a _new) -> 'a { "
+                                                                "	let test = lambda ('a x) => x == _old; "
+                                                                "	let apply = lambda ('a _) => _new; "
+                                                                "	return atomic(v, test, apply); "
+                                                                "}  ")
 
-DERIVED(AtomicBoolCompareAndSwap, "atomic_bool_compare_and_swap",
-		"lambda (ref<'a> v, 'a _old, 'a _new) -> bool { "
-		"	let test = lambda ('a x) => x == _old; "
-		"	let apply = lambda ('a _) => _new; "
-		"	return atomic(v, test, apply) == _new; "
-		"}  ")
-
+DERIVED(AtomicBoolCompareAndSwap, "atomic_bool_compare_and_swap", "lambda (ref<'a> v, 'a _old, 'a _new) -> bool { "
+                                                                  "	let test = lambda ('a x) => x == _old; "
+                                                                  "	let apply = lambda ('a _) => _new; "
+                                                                  "	return atomic(v, test, apply) == _new; "
+                                                                  "}  ")
 
 
 // Range Handling -----------------------------------------------------------------------------------------------------
 
 TYPE(JobRange, "JobRange")
 
-LITERAL(CreateMinRange,     "MinRange",    		"(uint<8>)->JobRange")						// lower boundery only
-LITERAL(CreateBoundRange,   "BoundRange",    	"(uint<8>, uint<8>)->JobRange")				// lower and upper bound
-LITERAL(CreateBoundRangeMod,"BoundRangeMod",    "(uint<8>, uint<8>, uint<8>)->JobRange")	// lower, upper and modula bound
+LITERAL(CreateMinRange, "MinRange", "(uint<8>)->JobRange")                             // lower boundery only
+LITERAL(CreateBoundRange, "BoundRange", "(uint<8>, uint<8>)->JobRange")                // lower and upper bound
+LITERAL(CreateBoundRangeMod, "BoundRangeMod", "(uint<8>, uint<8>, uint<8>)->JobRange") // lower, upper and modula bound
 
 
 // Locks -----------------------------------------------------------
 
 TYPE(Lock, "lock")
 
-LITERAL(LockAcquire,  "lock_acquire", "(ref<lock>)->unit")
+LITERAL(LockAcquire, "lock_acquire", "(ref<lock>)->unit")
 LITERAL(LockRelease, "lock_release", "(ref<lock>)->unit")
-LITERAL(LockInit,  "lock_init", "(ref<lock>)->unit")
+LITERAL(LockInit, "lock_init", "(ref<lock>)->unit")
 
 // --------------------------------------------------------------------------------------------------------------------

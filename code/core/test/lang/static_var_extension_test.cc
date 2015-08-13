@@ -47,50 +47,49 @@ namespace insieme {
 namespace core {
 namespace lang {
 
-TEST(StaticVarExtensionTest, CreateStatic) {
-	NodeManager nm;
-	
-	const StaticVariableExtension& ext = nm.getLangExtension<StaticVariableExtension>();
-	auto element = ext.getCreateStatic();
-	dump(element);
-	
-	// just check whether the code is not exhibiting errors
-	EXPECT_TRUE(checks::check(element).empty()) << checks::check(element);
-}
+	TEST(StaticVarExtensionTest, CreateStatic) {
+		NodeManager nm;
 
-TEST(StaticVarExtensionTest, InitStaticConst) {
-	NodeManager nm;
-	
-	const StaticVariableExtension& ext = nm.getLangExtension<StaticVariableExtension>();
-	auto element = ext.getInitStaticConst();
-	dump(element);
-	
-	// just check whether the code is not exhibiting errors
-	EXPECT_TRUE(checks::check(element).empty()) << checks::check(element);
-}
+		const StaticVariableExtension& ext = nm.getLangExtension<StaticVariableExtension>();
+		auto element = ext.getCreateStatic();
+		dump(element);
 
-TEST(StaticVarExtensionTest, InitStaticLazy) {
-	NodeManager nm;
-	
-	const StaticVariableExtension& ext = nm.getLangExtension<StaticVariableExtension>();
-	auto element = ext.getInitStaticLazy();
-	dump(element);
-	
-	// just check whether the code is not exhibiting errors
-	EXPECT_TRUE(checks::check(element).empty()) << checks::check(element);
-}
+		// just check whether the code is not exhibiting errors
+		EXPECT_TRUE(checks::check(element).empty()) << checks::check(element);
+	}
+
+	TEST(StaticVarExtensionTest, InitStaticConst) {
+		NodeManager nm;
+
+		const StaticVariableExtension& ext = nm.getLangExtension<StaticVariableExtension>();
+		auto element = ext.getInitStaticConst();
+		dump(element);
+
+		// just check whether the code is not exhibiting errors
+		EXPECT_TRUE(checks::check(element).empty()) << checks::check(element);
+	}
+
+	TEST(StaticVarExtensionTest, InitStaticLazy) {
+		NodeManager nm;
+
+		const StaticVariableExtension& ext = nm.getLangExtension<StaticVariableExtension>();
+		auto element = ext.getInitStaticLazy();
+		dump(element);
+
+		// just check whether the code is not exhibiting errors
+		EXPECT_TRUE(checks::check(element).empty()) << checks::check(element);
+	}
 
 
-TEST(StaticVarExtensionTest, Semantic) {
-	NodeManager nm;
-	
-	const StaticVariableExtension& ext = nm.getLangExtension<StaticVariableExtension>();
-	
-	semanticCheckSecond(ext.getNamedIrExtensions());
-}
+	TEST(StaticVarExtensionTest, Semantic) {
+		NodeManager nm;
+
+		const StaticVariableExtension& ext = nm.getLangExtension<StaticVariableExtension>();
+
+		semanticCheckSecond(ext.getNamedIrExtensions());
+	}
 
 
 } // end namespace lang
 } // end namespace core
 } // end namespace insieme
-

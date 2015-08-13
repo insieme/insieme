@@ -58,38 +58,38 @@ IRT_DECLARE_DEQUE(deque_test);
 IRT_DEFINE_DEQUE(deque_test, next_q, prev_q);
 
 irt_deque_test* make_item(float val) {
-	irt_deque_test* item = (irt_deque_test*)calloc(1,sizeof(irt_deque_test));
+	irt_deque_test* item = (irt_deque_test*)calloc(1, sizeof(irt_deque_test));
 	item->data = val;
 	return item;
 }
 
 
 TEST(deques, mass_parallel_ops) {
-	for(int j=0; j<PARALLEL_ITERATIONS; ++j) {
+	for(int j = 0; j < PARALLEL_ITERATIONS; ++j) {
 		irt_deque_test_deque q;
 		irt_deque_test_deque_init(&q);
-		
+
 		irt_deque_test* elems[TEST_ELEMS];
-		
+
 		#pragma omp parallel
 		{
-			#pragma omp for schedule(dynamic,1)
-			for(int i=0; i<TEST_ELEMS; ++i) {
-				elems[i] = make_item(i/10.0f);
+		#pragma omp for schedule(dynamic, 1)
+			for(int i = 0; i < TEST_ELEMS; ++i) {
+				elems[i] = make_item(i / 10.0f);
 				irt_deque_test_deque_insert_back(&q, elems[i]);
 			}
-			#pragma omp for schedule(dynamic,1)
-			for(int i=0; i<TEST_ELEMS; ++i) {
+			#pragma omp for schedule(dynamic, 1)
+			for(int i = 0; i < TEST_ELEMS; ++i) {
 				irt_deque_test_deque_pop_back(&q);
 			}
-			
+
 			EXPECT_EQ(0 /* NULL */, q.start);
 			EXPECT_EQ(0 /* NULL */, q.end);
 		}
-		
+
 		// cleanup
 		irt_deque_test_deque_cleanup(&q);
-		for(int i=0; i<TEST_ELEMS; ++i) {
+		for(int i = 0; i < TEST_ELEMS; ++i) {
 			free(elems[i]);
 		}
 	}

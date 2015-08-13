@@ -42,49 +42,44 @@ namespace insieme {
 namespace core {
 
 
-ProgramPtr Program::get(NodeManager& manager, const ExpressionList& entryPoints) {
-	return manager.get(Program(entryPoints));
-}
+	ProgramPtr Program::get(NodeManager& manager, const ExpressionList& entryPoints) {
+		return manager.get(Program(entryPoints));
+	}
 
-ProgramPtr Program::addEntryPoint(NodeManager& manager, const ProgramPtr& program, const ExpressionPtr& entryPoint) {
-	return addEntryPoints(manager, program, toVector<ExpressionPtr>(entryPoint));
-}
+	ProgramPtr Program::addEntryPoint(NodeManager& manager, const ProgramPtr& program, const ExpressionPtr& entryPoint) {
+		return addEntryPoints(manager, program, toVector<ExpressionPtr>(entryPoint));
+	}
 
-ProgramPtr Program::addEntryPoints(NodeManager& manager, const ProgramPtr& program, const ExpressionList& entryPoints) {
-	ExpressionList list(program->getEntryPoints());
-	for_each(entryPoints, [&](const ExpressionPtr& cur) {
-		if(!contains(list, cur, equal_target<ExpressionPtr>())) {
-			list.push_back(cur);
-		}
-	});
-	return manager.get(Program(list));
-}
+	ProgramPtr Program::addEntryPoints(NodeManager& manager, const ProgramPtr& program, const ExpressionList& entryPoints) {
+		ExpressionList list(program->getEntryPoints());
+		for_each(entryPoints, [&](const ExpressionPtr& cur) {
+			if(!contains(list, cur, equal_target<ExpressionPtr>())) { list.push_back(cur); }
+		});
+		return manager.get(Program(list));
+	}
 
-ProgramPtr Program::remEntryPoint(NodeManager& manager, const ProgramPtr& program, const ExpressionPtr& entryPoint) {
-	return remEntryPoints(manager, program, toVector<ExpressionPtr>(entryPoint));
-}
+	ProgramPtr Program::remEntryPoint(NodeManager& manager, const ProgramPtr& program, const ExpressionPtr& entryPoint) {
+		return remEntryPoints(manager, program, toVector<ExpressionPtr>(entryPoint));
+	}
 
-ProgramPtr Program::remEntryPoints(NodeManager& manager, const ProgramPtr& program, const ExpressionList& entryPoints) {
-	ExpressionList list;
-	for_each(program->getEntryPoints(), [&list, &entryPoints](const ExpressionPtr& cur) {
-		if(!contains(entryPoints, cur, equal_target<ExpressionPtr>())) {
-			list.push_back(cur);
-		}
-	});
-	return manager.get(Program(list));
-}
+	ProgramPtr Program::remEntryPoints(NodeManager& manager, const ProgramPtr& program, const ExpressionList& entryPoints) {
+		ExpressionList list;
+		for_each(program->getEntryPoints(), [&list, &entryPoints](const ExpressionPtr& cur) {
+			if(!contains(entryPoints, cur, equal_target<ExpressionPtr>())) { list.push_back(cur); }
+		});
+		return manager.get(Program(list));
+	}
 
 
-std::ostream& Program::printTo(std::ostream& out) const {
+	std::ostream& Program::printTo(std::ostream& out) const {
+		out << "PROGRAM { \n";
 
-	out << "PROGRAM { \n";
-	
-	// print entry points
-	out << "// Entry Points: \n\t";
-	out << join("\n\t", getEntryPoints(), print<deref<NodePtr>>());
-	out << "\n";
-	
-	return out;
-}
+		// print entry points
+		out << "// Entry Points: \n\t";
+		out << join("\n\t", getEntryPoints(), print<deref<NodePtr>>());
+		out << "\n";
+
+		return out;
+	}
 } // end namespace core
 } // end namespace insieme

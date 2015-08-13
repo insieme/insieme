@@ -51,26 +51,19 @@ namespace bfs = boost::filesystem;
 int runCommand(const std::string& cmd) {
 	LOG(DEBUG) << "Running " << cmd << "\n";
 	return system((cmd + "> /dev/null").c_str());
-//		return system(cmd.c_str());
+	//		return system(cmd.c_str());
 }
 
-NetworkPath::NetworkPath(const bfs::path& path)
-	: hostname(""), username(""), path(path) {}
-	
-NetworkPath::NetworkPath(const string& hostname, const bfs::path& path)
-	: hostname(hostname), username(""), path(path) {}
-	
-NetworkPath::NetworkPath(const string& hostname, const string& username, const bfs::path& path)
-	: hostname(hostname), username(username), path(path) {}
-	
+NetworkPath::NetworkPath(const bfs::path& path) : hostname(""), username(""), path(path) {}
+
+NetworkPath::NetworkPath(const string& hostname, const bfs::path& path) : hostname(hostname), username(""), path(path) {}
+
+NetworkPath::NetworkPath(const string& hostname, const string& username, const bfs::path& path) : hostname(hostname), username(username), path(path) {}
+
 string NetworkPath::getUserHostnamePrefix() const {
-	if(isLocal()) {
-		return "";
-	}
+	if(isLocal()) { return ""; }
 	std::stringstream res;
-	if(!username.empty()) {
-		res << username << "@";
-	}
+	if(!username.empty()) { res << username << "@"; }
 	res << hostname;
 	return res.str();
 }
@@ -80,7 +73,7 @@ NetworkPath NetworkPath::parent_path() const {
 }
 
 bool NetworkPath::operator==(const NetworkPath& other) const {
-	return hostname==other.hostname && username==other.username && path==other.path;
+	return hostname == other.hostname && username == other.username && path == other.path;
 }
 
 NetworkPath& NetworkPath::operator/=(const bfs::path& ext) {
@@ -95,52 +88,38 @@ NetworkPath NetworkPath::operator/(const bfs::path& ext) const {
 }
 
 std::ostream& NetworkPath::printTo(std::ostream& out) const {
-	if(!username.empty()) {
-		return out << username << "@" << hostname << ":" << path.string();
-	}
-	if(!hostname.empty()) {
-		return out << hostname << ":" << path.string();
-	}
+	if(!username.empty()) { return out << username << "@" << hostname << ":" << path.string(); }
+	if(!hostname.empty()) { return out << hostname << ":" << path.string(); }
 	return out << path.string();
 }
 
 
 bool exists(const NetworkPath& path) {
-	if(path.isLocal()) {
-		return bfs::exists(path.path);
-	}
-	
+	if(path.isLocal()) { return bfs::exists(path.path); }
+
 	// check remotely using an ssh connection
 	return runCommand("ssh " + path.getUserHostnamePrefix() + " test -e " + toString(path.path)) == 0;
 }
 
 bool is_directory(const NetworkPath& path) {
-	if(path.isLocal()) {
-		return bfs::is_directory(path.path);
-	}
+	if(path.isLocal()) { return bfs::is_directory(path.path); }
 	return runCommand("ssh " + path.getUserHostnamePrefix() + " test -d " + toString(path.path)) == 0;
 }
 
 bool create_directories(const NetworkPath& path) {
-	if(path.isLocal()) {
-		return bfs::create_directories(path.path);
-	}
+	if(path.isLocal()) { return bfs::create_directories(path.path); }
 	string dir = toString(path.path);
 	return runCommand("ssh " + path.getUserHostnamePrefix() + " \"test ! -e " + dir + " && mkdir -p " + dir + "\"") == 0;
 }
 
 bool remove(const NetworkPath& path) {
-	if(path.isLocal()) {
-		return bfs::remove(path.path);
-	}
+	if(path.isLocal()) { return bfs::remove(path.path); }
 	string file = toString(path.path);
 	return runCommand("ssh " + path.getUserHostnamePrefix() + " \"test -f " + file + " && rm " + file + "\"") == 0;
 }
 
 bool remove_all(const NetworkPath& path) {
-	if(path.isLocal()) {
-		return bfs::remove_all(path.path);
-	}
+	if(path.isLocal()) { return bfs::remove_all(path.path); }
 	string dir = toString(path.path);
 	return runCommand("ssh " + path.getUserHostnamePrefix() + " \"test -e " + dir + " && rm -rf " + dir + "\"") == 0;
 }

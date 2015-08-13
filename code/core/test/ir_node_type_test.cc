@@ -42,18 +42,14 @@ namespace insieme {
 namespace core {
 
 
-TEST(NodeType, IsCategory) {
+	TEST(NodeType, IsCategory) {
+		EXPECT_TRUE(isA<NC_Expression>(NT_Literal));
+		EXPECT_TRUE(isA<NC_Statement>(NT_Literal));
 
-	EXPECT_TRUE(isA<NC_Expression>(NT_Literal));
-	EXPECT_TRUE(isA<NC_Statement>(NT_Literal));
-	
-	EXPECT_FALSE(isA<NC_Statement>(NT_GenericType));
-	EXPECT_FALSE(isA<NC_Program>(NT_CallExpr));
-	
-}
+		EXPECT_FALSE(isA<NC_Statement>(NT_GenericType));
+		EXPECT_FALSE(isA<NC_Program>(NT_CallExpr));
+	}
 
 
 } // end namespace core
 } // end namespace insieme
-
-

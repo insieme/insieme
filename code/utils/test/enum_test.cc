@@ -45,18 +45,17 @@ using std::vector;
 /* The following enums need to be defined outside of any function.
 */
 
-//Normal, 'long' one
+// Normal, 'long' one
 MAKE_ENUM(testCard, EINS, ZWEI, DREI, VIER, FUENF, SECHS, SIEBEN, ACHT, NEUN, ZEHN, BUBE, DAME, KOENIG, AS)
 
-//Two elements
+// Two elements
 MAKE_ENUM(testInt, ZERO, ONE)
 
-//One element
-//MAKE_ENUM(testItalianInt, UNO)
+// One element
+// MAKE_ENUM(testItalianInt, UNO)
 
-//Long word and underscore
-MAKE_ENUM(testLongElement, VERDORRE_IN_DIE_KISTEUNDZUGENAEHT_nochmal,     _KILLEM)
-
+// Long word and underscore
+MAKE_ENUM(testLongElement, VERDORRE_IN_DIE_KISTEUNDZUGENAEHT_nochmal, _KILLEM)
 
 
 TEST(Enums, LongString) {
@@ -64,22 +63,22 @@ TEST(Enums, LongString) {
 	testCard zwei = ZWEI;
 	testCard koenig = KOENIG;
 	testCard as = AS;
-	
-	//The strings should be the identifier and the ord should be counting
-	//Note: Though tested here, it could be considered as implementation detail
+
+	// The strings should be the identifier and the ord should be counting
+	// Note: Though tested here, it could be considered as implementation detail
 	EXPECT_EQ("EINS", name(eins));
 	EXPECT_EQ(static_cast<unsigned>(0), ord(eins));
-	
+
 	EXPECT_EQ("ZWEI", name(zwei));
 	EXPECT_EQ(static_cast<unsigned>(1), ord(zwei));
-	
+
 	EXPECT_EQ("KOENIG", name(koenig));
 	EXPECT_EQ(static_cast<unsigned>(12), ord(koenig));
-	
+
 	EXPECT_EQ("AS", name(as));
 	EXPECT_EQ(static_cast<unsigned>(13), ord(as));
-	
-	//Those values should be seperate!
+
+	// Those values should be seperate!
 	EXPECT_NE(eins, zwei);
 	EXPECT_NE(eins, koenig);
 	EXPECT_NE(eins, as);
@@ -88,21 +87,21 @@ TEST(Enums, LongString) {
 	EXPECT_NE(koenig, as);
 }
 
-//Tests wether a two-elements enum has two different elements and the string-things are working.
+// Tests wether a two-elements enum has two different elements and the string-things are working.
 TEST(Enums, TwoElements) {
 	testInt z = ZERO;
 	testInt o = ONE;
-	
+
 	EXPECT_EQ("ZERO", name(z));
 	EXPECT_EQ(static_cast<unsigned>(0), ord(z));
-	
+
 	EXPECT_EQ("ONE", name(o));
 	EXPECT_EQ(static_cast<unsigned>(1), ord(o));
-	
+
 	EXPECT_NE(z, o);
 }
 
-//Would test for an one-element enum.
+// Would test for an one-element enum.
 /*TEST(Enums, OneElement) {
 
     testItalianInt u1 = UNO;
@@ -117,25 +116,25 @@ TEST(Enums, TwoElements) {
     EXPECT_EQ(u1, u2);
 }*/
 
-//Tests a long enum word. Just for being sure. :-)
+// Tests a long enum word. Just for being sure. :-)
 TEST(Enums, LongWord) {
-	testLongElement t = (testLongElement) 0;
+	testLongElement t = (testLongElement)0;
 	EXPECT_EQ("VERDORRE_IN_DIE_KISTEUNDZUGENAEHT_nochmal", name(t));
 }
 
-//Tests wether the first character may be underscore and may have prefix whitespaces
+// Tests wether the first character may be underscore and may have prefix whitespaces
 TEST(Enums, UnderScore) {
 	testLongElement t = _KILLEM;
 	EXPECT_EQ("_KILLEM", name(t));
 }
 
-//Tests the counting
+// Tests the counting
 TEST(Enums, Counting) {
 	testCard tc;
 	EXPECT_EQ(static_cast<unsigned>(14), count(tc));
 }
 
-//Tests the tc++
+// Tests the tc++
 TEST(Enums, ForLoopPP) {
 	std::size_t j = 0;
 	for(testCard tc = min(tc); tc != max(tc); tc++) {
@@ -144,7 +143,7 @@ TEST(Enums, ForLoopPP) {
 	EXPECT_EQ(static_cast<unsigned>(14), j);
 }
 
-//Tests the ++tc
+// Tests the ++tc
 TEST(Enums, PPForLoop) {
 	std::size_t j = 0;
 	for(testCard tc = min(tc); tc != max(tc); ++tc) {
@@ -153,7 +152,7 @@ TEST(Enums, PPForLoop) {
 	EXPECT_EQ(static_cast<unsigned>(14), j);
 }
 
-//Tests the tc--
+// Tests the tc--
 TEST(Enums, ForLoopMM) {
 	std::size_t j = 0;
 	for(testCard tc = max(tc); tc-- != min(tc);) {
@@ -162,7 +161,7 @@ TEST(Enums, ForLoopMM) {
 	EXPECT_EQ(static_cast<unsigned>(14), j);
 }
 
-//Tests the --tc
+// Tests the --tc
 TEST(Enums, MMForLoop) {
 	std::size_t j = 0;
 	for(testCard tc = max(tc); --tc >= min(tc);) {
@@ -171,21 +170,21 @@ TEST(Enums, MMForLoop) {
 	EXPECT_EQ(static_cast<unsigned>(14), j);
 }
 
-//Tests the function fromName
+// Tests the function fromName
 TEST(Enums, FromName) {
-	//Should find
+	// Should find
 	testCard tc1 = fromName<testCard>("KOENIG");
 	EXPECT_EQ(KOENIG, tc1);
-	
-	//Should not find
-	//TODO: Should it better throw an exception?
+
+	// Should not find
+	// TODO: Should it better throw an exception?
 	testCard tc2 = fromName<testCard>("KNIGGE");
 	EXPECT_EQ(max(tc2), tc2);
-	
+
 	testInt z = fromName<testInt>("KOENIG");
 	testInt o = fromName<testInt>("ONE");
 	EXPECT_NE(z, o);
-	//EXPECT_EQ(z, testIntMIN); //WTF: '0' breaked the gTest Suite!
+	// EXPECT_EQ(z, testIntMIN); //WTF: '0' breaked the gTest Suite!
 	EXPECT_EQ(z, max(z));
 	EXPECT_EQ(static_cast<unsigned>(1), o);
 }

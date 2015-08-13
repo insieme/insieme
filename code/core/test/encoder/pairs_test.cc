@@ -47,43 +47,38 @@ namespace insieme {
 namespace core {
 namespace encoder {
 
-TEST(Pairs, LanguageExtension) {
+	TEST(Pairs, LanguageExtension) {
+		NodeManager manager;
+		const PairExtension& ext = manager.getLangExtension<PairExtension>();
 
-	NodeManager manager;
-	const PairExtension& ext = manager.getLangExtension<PairExtension>();
-	
-	EXPECT_EQ("(('a,'b)->pair<'a,'b>)", toString(*ext.pair->getType()));
-	
-}
+		EXPECT_EQ("(('a,'b)->pair<'a,'b>)", toString(*ext.pair->getType()));
+	}
 
 
-TEST(Pairs, PairConversion) {
+	TEST(Pairs, PairConversion) {
+		NodeManager manager;
 
-	NodeManager manager;
-	
-	// create a pair
-	
-	auto value = std::make_pair(1,2);
-	core::ExpressionPtr ir = toIR(manager, value);
-	auto back = toValue<pair<int,int>>(ir);
-	
-	EXPECT_EQ("(1,2)", toString(value));
-	EXPECT_EQ("pair(1, 2)", toString(*ir));
-	
-	EXPECT_TRUE((isEncodingOf<pair<int,int>>(ir)));
-	EXPECT_EQ(value, back);
-	
-	EXPECT_EQ("[]", toString(check(ir, checks::getFullCheck())));
-	
-	
-	// test another type
-	EXPECT_EQ("pair(12, 1.47)", toString(*toIR(manager, std::make_pair(12, 1.47))));
-	EXPECT_EQ("pair(12, pair(1.47, hello))", toString(*toIR(manager, std::make_pair(12, std::make_pair(1.47, string("hello"))))));
-	
-}
+		// create a pair
+
+		auto value = std::make_pair(1, 2);
+		core::ExpressionPtr ir = toIR(manager, value);
+		auto back = toValue<pair<int, int>>(ir);
+
+		EXPECT_EQ("(1,2)", toString(value));
+		EXPECT_EQ("pair(1, 2)", toString(*ir));
+
+		EXPECT_TRUE((isEncodingOf<pair<int, int>>(ir)));
+		EXPECT_EQ(value, back);
+
+		EXPECT_EQ("[]", toString(check(ir, checks::getFullCheck())));
+
+
+		// test another type
+		EXPECT_EQ("pair(12, 1.47)", toString(*toIR(manager, std::make_pair(12, 1.47))));
+		EXPECT_EQ("pair(12, pair(1.47, hello))", toString(*toIR(manager, std::make_pair(12, std::make_pair(1.47, string("hello"))))));
+	}
 
 
 } // end namespace lists
 } // end namespace core
 } // end namespace insieme
-

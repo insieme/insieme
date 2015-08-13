@@ -42,9 +42,9 @@ namespace insieme {
 namespace backend {
 namespace sequential {
 
-core::NodePtr Sequentializer::process(const backend::Converter& converter, const core::NodePtr& code) {
-	return core::transform::sequentialize(converter.getNodeManager(), code);
-}
+	core::NodePtr Sequentializer::process(const backend::Converter& converter, const core::NodePtr& code) {
+		return core::transform::sequentialize(converter.getNodeManager(), code);
+	}
 
 } // end namespace runtime
 } // end namespace backend

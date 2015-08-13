@@ -52,52 +52,48 @@ namespace insieme {
 namespace transform {
 namespace dump {
 
-using namespace std;
+	using namespace std;
 
 
-TEST(TextDump, SimpleStoreLoad) {
+	TEST(TextDump, SimpleStoreLoad) {
+		// create a (simple) transformation
+		TransformationPtr transform = makePipeline(makeNoOp());
 
-	// create a (simple) transformation
-	TransformationPtr transform = makePipeline(makeNoOp());
-	
-	// save transformation within stream
-	stringstream buffer(ios_base::out | ios_base::in | ios_base::binary);
-	
-	// add some comment
-	buffer << "# some comment \n";
-	
-	// dump IR using a text format
-	dumpTransformation(buffer, transform);
-	
-	// restore the transformation
-	const Catalog& catalog = getStandardCatalog();
-	
-	TransformationPtr restored = loadTransformation(buffer, catalog);
-	
-	EXPECT_EQ(*transform, *restored);
-	
-}
+		// save transformation within stream
+		stringstream buffer(ios_base::out | ios_base::in | ios_base::binary);
 
-TEST(TextDump, EmptyListStoreLoad) {
+		// add some comment
+		buffer << "# some comment \n";
 
-	vector<TransformationPtr> transformations;
-	
-	// save transformation within stream
-	stringstream buffer(ios_base::out | ios_base::in | ios_base::binary);
-	
-	// dump IR using a text format
-	dumpTransformations(buffer, transformations);
-	
-	// restore the transformation
-	const Catalog& catalog = getStandardCatalog();
-	
-	vector<TransformationPtr> restored = loadTransformations(buffer, catalog);
-	
-	EXPECT_TRUE(restored.empty());
-}
+		// dump IR using a text format
+		dumpTransformation(buffer, transform);
+
+		// restore the transformation
+		const Catalog& catalog = getStandardCatalog();
+
+		TransformationPtr restored = loadTransformation(buffer, catalog);
+
+		EXPECT_EQ(*transform, *restored);
+	}
+
+	TEST(TextDump, EmptyListStoreLoad) {
+		vector<TransformationPtr> transformations;
+
+		// save transformation within stream
+		stringstream buffer(ios_base::out | ios_base::in | ios_base::binary);
+
+		// dump IR using a text format
+		dumpTransformations(buffer, transformations);
+
+		// restore the transformation
+		const Catalog& catalog = getStandardCatalog();
+
+		vector<TransformationPtr> restored = loadTransformations(buffer, catalog);
+
+		EXPECT_TRUE(restored.empty());
+	}
 
 
 } // end namespace dump
 } // end namespace transform
 } // end namespace insieme
-

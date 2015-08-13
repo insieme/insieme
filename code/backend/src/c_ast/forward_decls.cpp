@@ -38,15 +38,17 @@
 
 namespace std {
 
-std::ostream& operator<<(std::ostream& out, const insieme::backend::c_ast::NodeType& type) {
-	switch(type) {
-#define CONCRETE(NAME) case insieme::backend::c_ast::NT_ ## NAME : return out << #NAME;
-#include "insieme/backend/c_ast/c_nodes.def"
-#undef CONCRETE
+	std::ostream& operator<<(std::ostream& out, const insieme::backend::c_ast::NodeType& type) {
+		switch(type) {
+		#define CONCRETE(NAME)                                                                                                                                 \
+			case insieme::backend::c_ast::NT_##NAME:                                                                                                           \
+				return out << #NAME;
+		#include "insieme/backend/c_ast/c_nodes.def"
+		#undef CONCRETE
+		}
+
+		assert_fail() << "Unsupported node type encountered!";
+		return out << "UnknownType";
 	}
-	
-	assert_fail() << "Unsupported node type encountered!";
-	return out << "UnknownType";
-}
 
 } // end namespace std

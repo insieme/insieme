@@ -57,23 +57,23 @@ using namespace insieme::backend::sequential;
 using namespace insieme::utils::log;
 
 TEST(DriverTest, HelloWorldTest) {
-
 	core::NodeManager manager;
-	
-	LOG(INFO) << "Converting input program '" << std::string(DRIVER_TEST_DIR) << "/inputs/hello_world.c" << "' to IR...";
+
+	LOG(INFO) << "Converting input program '" << std::string(DRIVER_TEST_DIR) << "/inputs/hello_world.c"
+	          << "' to IR...";
 	fe::ConversionJob job(DRIVER_TEST_DIR "/inputs/hello_world.c");
 	core::ProgramPtr program = job.execute(manager);
 	LOG(INFO) << "Done.";
-	
+
 	LOG(INFO) << "Printing the IR: " << core::printer::PrettyPrinter(program);
-	
+
 	LOG(INFO) << "Converting IR to C...";
 	auto converted = SequentialBackend::getDefault()->convert(program);
 	LOG(INFO) << "Printing converted code: " << *converted;
-	
+
 	std::ofstream out(std::string(DRIVER_TEST_DIR) + "/inputs/hello_world.insieme.c");
 	out << *converted;
 	out.close();
-	
+
 	LOG(INFO) << "Wrote source to " << DRIVER_TEST_DIR << "/inputs/hello_world.insieme.c" << std::endl;
 }

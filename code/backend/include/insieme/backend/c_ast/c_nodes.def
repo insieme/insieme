@@ -51,39 +51,39 @@
 //
 
 // This macro is used to announce a node type.
-#if ! defined NODE
-	#define NODE(name)
-	#define __INTERNAL_NODE_DEFINITION
+#if !defined NODE
+#define NODE(name)
+#define __INTERNAL_NODE_DEFINITION
 #endif /* NODE definition */
 
 // This macro will be added for each node without a sub-type
-#if ! defined TERMINAL
-	#define TERMINAL(name)
-	#define __INTERNAL_TERMINAL_DEFINITION
+#if !defined TERMINAL
+#define TERMINAL(name)
+#define __INTERNAL_TERMINAL_DEFINITION
 #endif /* TERMINAL definition */
 
 // This macro will be added for each node wich is not a terminal (has sub-types
-#if ! defined NON_TERMINAL
-	#define NON_TERMINAL(name)
-	#define __INTERNAL_NON_TERMINAL_DEFINITION
+#if !defined NON_TERMINAL
+#define NON_TERMINAL(name)
+#define __INTERNAL_NON_TERMINAL_DEFINITION
 #endif /* NON_TERMINAL definition */
 
 // A macro to mark abstract nodes
-#if ! defined ABSTRACT
-	#define ABSTRACT(name)
-	#define __INTERNAL_ABSTRACT_DEFINITION
+#if !defined ABSTRACT
+#define ABSTRACT(name)
+#define __INTERNAL_ABSTRACT_DEFINITION
 #endif /* ABSTRACT definition */
 
 // A macro to mark concrete nodes (non-abstract nodes)
-#if ! defined CONCRETE
-	#define CONCRETE(name)
-	#define __INTERNAL_CONCRETE_DEFINITION
+#if !defined CONCRETE
+#define CONCRETE(name)
+#define __INTERNAL_CONCRETE_DEFINITION
 #endif /* CONCRETE definition */
 
 // This macro is used to describe an IS_A relation between node types
-#if ! defined IS_A
-	#define IS_A(type,base)
-	#define __INTERNAL_IS_A_DEFINITION
+#if !defined IS_A
+#define IS_A(type, base)
+#define __INTERNAL_IS_A_DEFINITION
 #endif /* IS_A definition */
 
 
@@ -95,37 +95,37 @@
  * The AST_BASE macro is used to define the BASE node of the AST.
  * (It should only be used once)
  */
-#if ! defined AST_BASE
-	#define AST_BASE(name) \
-		NODE(name) \
-		NON_TERMINAL(name) \
-		ABSTRACT(name)
-	#define __INTERNAL_AST_BASE_DEFINITON
+#if !defined AST_BASE
+#define AST_BASE(name)                                                                                                                                         \
+	NODE(name)                                                                                                                                                 \
+	NON_TERMINAL(name)                                                                                                                                         \
+	ABSTRACT(name)
+#define __INTERNAL_AST_BASE_DEFINITON
 #endif
 
 /**
  * The AST_NODE macro adds a new node which is derived from another
  * node type and still has further sub-types.
  */
-#if ! defined AST_NODE
-	#define AST_NODE(name, baseType) \
-		NODE(name) \
-		IS_A(name, baseType) \
-		NON_TERMINAL(name)
-	#define __INTERNAL_AST_NODE_DEFINITON
+#if !defined AST_NODE
+#define AST_NODE(name, baseType)                                                                                                                               \
+	NODE(name)                                                                                                                                                 \
+	IS_A(name, baseType)                                                                                                                                       \
+	NON_TERMINAL(name)
+#define __INTERNAL_AST_NODE_DEFINITON
 #endif
 
 /**
  * The AST_TERMINAL macro defines a new node type which is derived from
  * the given base type and does not have any further sub-types.
  */
-#if ! defined AST_TERMINAL
-	#define AST_TERMINAL(name, baseType) \
-		NODE(name) \
-		IS_A(name, baseType) \
-		TERMINAL(name) \
-		CONCRETE(name)
-	#define __INTERNAL_AST_TERMINAL_DEFINITON
+#if !defined AST_TERMINAL
+#define AST_TERMINAL(name, baseType)                                                                                                                           \
+	NODE(name)                                                                                                                                                 \
+	IS_A(name, baseType)                                                                                                                                       \
+	TERMINAL(name)                                                                                                                                             \
+	CONCRETE(name)
+#define __INTERNAL_AST_TERMINAL_DEFINITON
 #endif
 
 
@@ -284,46 +284,46 @@ AST_TERMINAL(MemberFieldPointer, Type)
 // --- Cleaning up Macro definitions ---
 
 #ifdef __INTERNAL_NODE_DEFINITION
-	#undef __INTERNAL_NODE_DEFINITION
-	#undef NODE
+#undef __INTERNAL_NODE_DEFINITION
+#undef NODE
 #endif
 
 #ifdef __INTERNAL_IS_A_DEFINITION
-	#undef __INTERNAL_IS_A_DEFINITION
-	#undef IS_A
+#undef __INTERNAL_IS_A_DEFINITION
+#undef IS_A
 #endif
 
 #ifdef __INTERNAL_TERMINAL_DEFINITION
-	#undef __INTERNAL_TERMINAL_DEFINITION
-	#undef TERMINAL
+#undef __INTERNAL_TERMINAL_DEFINITION
+#undef TERMINAL
 #endif
 
 #ifdef __INTERNAL_NON_TERMINAL_DEFINITION
-	#undef __INTERNAL_NON_TERMINAL_DEFINITION
-	#undef NON_TERMINAL
+#undef __INTERNAL_NON_TERMINAL_DEFINITION
+#undef NON_TERMINAL
 #endif
 
 #ifdef __INTERNAL_ABSTRACT_DEFINITION
-	#undef __INTERNAL_ABSTRACT_DEFINITION
-	#undef ABSTRACT
+#undef __INTERNAL_ABSTRACT_DEFINITION
+#undef ABSTRACT
 #endif
 
 #ifdef __INTERNAL_CONCRETE_DEFINITION
-	#undef __INTERNAL_CONCRETE_DEFINITION
-	#undef CONCRETE
+#undef __INTERNAL_CONCRETE_DEFINITION
+#undef CONCRETE
 #endif
 
 #ifdef __INTERNAL_AST_BASE_DEFINITON
-	#undef __INTERNAL_AST_BASE_DEFINITON
-	#undef AST_BASE
+#undef __INTERNAL_AST_BASE_DEFINITON
+#undef AST_BASE
 #endif
 
 #ifdef __INTERNAL_AST_NODE_DEFINITON
-	#undef __INTERNAL_AST_NODE_DEFINITON
-	#undef AST_NODE
+#undef __INTERNAL_AST_NODE_DEFINITON
+#undef AST_NODE
 #endif
 
 #ifdef __INTERNAL_AST_TERMINAL_DEFINITON
-	#undef __INTERNAL_AST_TERMINAL_DEFINITON
-	#undef AST_TERMINAL
+#undef __INTERNAL_AST_TERMINAL_DEFINITON
+#undef AST_TERMINAL
 #endif

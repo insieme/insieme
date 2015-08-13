@@ -47,64 +47,63 @@ namespace insieme {
 namespace core {
 namespace analysis {
 
-bool hasNoFreeTypeVariables(const core::TypePtr& type) {
-	return !hasFreeTypeVariables(type);
-}
+	bool hasNoFreeTypeVariables(const core::TypePtr& type) {
+		return !hasFreeTypeVariables(type);
+	}
 
-TEST(FreeTypeVariables, Basic) {
-	NodeManager manager;
-	IRBuilder builder(manager);
-	
-	// test some cases with free variables
-	EXPECT_PRED1(hasFreeTypeVariables, builder.parseType("'a"));
-	EXPECT_PRED1(hasFreeTypeVariables, builder.parseType("set<'a>"));
-	EXPECT_PRED1(hasFreeTypeVariables, builder.parseType("array<'a,1>"));
-	EXPECT_PRED1(hasFreeTypeVariables, builder.parseType("struct { 'a data; }"));
-	EXPECT_PRED1(hasFreeTypeVariables, builder.parseType("struct { struct { 'a data; } x }"));
-	
-	EXPECT_PRED1(hasNoFreeTypeVariables, builder.parseType("int<4>"));
-	EXPECT_PRED1(hasNoFreeTypeVariables, builder.parseType("set<int<4>>"));
-	EXPECT_PRED1(hasNoFreeTypeVariables, builder.parseType("array<int<4>,1>"));
-	EXPECT_PRED1(hasNoFreeTypeVariables, builder.parseType("struct { int<4> data; }"));
-	EXPECT_PRED1(hasNoFreeTypeVariables, builder.parseType("struct { struct { int<4> data; } x }"));
-	EXPECT_PRED1(hasNoFreeTypeVariables, builder.parseType("('a)->'a"));
-	
-}
+	TEST(FreeTypeVariables, Basic) {
+		NodeManager manager;
+		IRBuilder builder(manager);
 
-/*
-TEST(GlobalRec, InitBug) {
-	NodeManager manager;
-	IRBuilder builder(manager);
-	std::map<string, NodePtr> symbols;
-	auto recType = builder.parseType("let type0 = struct { ref<array<type0,1>> s; } in type0");
-	symbols["recTy"] = recType;
+		// test some cases with free variables
+		EXPECT_PRED1(hasFreeTypeVariables, builder.parseType("'a"));
+		EXPECT_PRED1(hasFreeTypeVariables, builder.parseType("set<'a>"));
+		EXPECT_PRED1(hasFreeTypeVariables, builder.parseType("array<'a,1>"));
+		EXPECT_PRED1(hasFreeTypeVariables, builder.parseType("struct { 'a data; }"));
+		EXPECT_PRED1(hasFreeTypeVariables, builder.parseType("struct { struct { 'a data; } x }"));
 
-	auto init = builder.parseExpr("ref_reinterpret(ref_null, lit(type<array<recTy,1>>))",symbols);
-	//std::cout << init << std::endl;
+		EXPECT_PRED1(hasNoFreeTypeVariables, builder.parseType("int<4>"));
+		EXPECT_PRED1(hasNoFreeTypeVariables, builder.parseType("set<int<4>>"));
+		EXPECT_PRED1(hasNoFreeTypeVariables, builder.parseType("array<int<4>,1>"));
+		EXPECT_PRED1(hasNoFreeTypeVariables, builder.parseType("struct { int<4> data; }"));
+		EXPECT_PRED1(hasNoFreeTypeVariables, builder.parseType("struct { struct { int<4> data; } x }"));
+		EXPECT_PRED1(hasNoFreeTypeVariables, builder.parseType("('a)->'a"));
+	}
 
-	auto structExpr = builder.structExpr(toVector(builder.namedValue("s",init)));
-	//std::cout << structExpr << std::endl;
+	/*
+	TEST(GlobalRec, InitBug) {
+	    NodeManager manager;
+	    IRBuilder builder(manager);
+	    std::map<string, NodePtr> symbols;
+	    auto recType = builder.parseType("let type0 = struct { ref<array<type0,1>> s; } in type0");
+	    symbols["recTy"] = recType;
 
-	ExpressionList elements;
-	elements.push_back(structExpr);
+	    auto init = builder.parseExpr("ref_reinterpret(ref_null, lit(type<array<recTy,1>>))",symbols);
+	    //std::cout << init << std::endl;
 
-	auto vecPartialInit = builder.callExpr(
-		builder.getLangBasic().getVectorInitPartial(),
-		core::encoder::toIR(manager, elements),
-		builder.getIntParamLiteral(3));
-	//std::cout << vecPartialInit<< std::endl;
+	    auto structExpr = builder.structExpr(toVector(builder.namedValue("s",init)));
+	    //std::cout << structExpr << std::endl;
 
-	auto global = builder.literal("global", builder.parseType("ref<vector<recTy,3>>", symbols));
-	//std::cout << global << std::endl;
+	    ExpressionList elements;
+	    elements.push_back(structExpr);
 
-	auto assign= builder.assign(global,vecPartialInit);
-	//std::cout << assign << std::endl;
+	    auto vecPartialInit = builder.callExpr(
+	        builder.getLangBasic().getVectorInitPartial(),
+	        core::encoder::toIR(manager, elements),
+	        builder.getIntParamLiteral(3));
+	    //std::cout << vecPartialInit<< std::endl;
 
-	auto semanticErrors = insieme::core::checks::check(assign);
-	std::cout << semanticErrors << std::endl;
-	EXPECT_TRUE(semanticErrors.empty());
-}
-*/
+	    auto global = builder.literal("global", builder.parseType("ref<vector<recTy,3>>", symbols));
+	    //std::cout << global << std::endl;
+
+	    auto assign= builder.assign(global,vecPartialInit);
+	    //std::cout << assign << std::endl;
+
+	    auto semanticErrors = insieme::core::checks::check(assign);
+	    std::cout << semanticErrors << std::endl;
+	    EXPECT_TRUE(semanticErrors.empty());
+	}
+	*/
 
 
 } // end namespace analysis

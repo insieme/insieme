@@ -37,7 +37,7 @@
 /**
  * A simple definition file for the IR extensions introduced
  * types and operators of the runtime.
- * 
+ *
  * Available constructs:
  * 		TYPE(name, type)		 		 ... introduces a type name with IR type type
  * 		NTYPE(name, type, cname) 		 ... introduces a type name with IR type type and the given C name
@@ -56,42 +56,42 @@
 #endif
 
 // -- Runtime entities ------
-TYPE(contextType, 				"irt_context")
+TYPE(contextType, "irt_context")
 
-TYPE(workItemType, 					"irt_wi")
-TYPE(workItemImplType, 				"irt_wi_implementation_id")
-TYPE(workItemVariantType, 			"irt_wi_variant")
-TYPE(workItemVariantImplType, 		"(ref<irt_wi>)->unit")
+TYPE(workItemType, "irt_wi")
+TYPE(workItemImplType, "irt_wi_implementation_id")
+TYPE(workItemVariantType, "irt_wi_variant")
+TYPE(workItemVariantImplType, "(ref<irt_wi>)->unit")
 
-LITERAL(workItemVariantCtr, 		"WorkItemVariant", 	"((ref<irt_wi>)->unit)->irt_wi_variant")
-LITERAL(workItemImplCtr, 			"WorkItemImpl", 	"(list<irt_wi_variant>)->irt_wi_implementation_id")
-LITERAL(unknownEffort, 				"unknownEffort", 	"(int<8>,int<8>)->uint<8>")
+LITERAL(workItemVariantCtr, "WorkItemVariant", "((ref<irt_wi>)->unit)->irt_wi_variant")
+LITERAL(workItemImplCtr, "WorkItemImpl", "(list<irt_wi_variant>)->irt_wi_implementation_id")
+LITERAL(unknownEffort, "unknownEffort", "(int<8>,int<8>)->uint<8>")
 
 
 /**
  * Used to force the registration of work item implementations within the implementation table.
  * The given work item implementation will not be executed
  */
-LITERAL(registerWorkItemImpl, 	"registerImpl",	"(irt_wi_implementation_id)->unit")
-LITERAL(joinWorkItem, 			"irt_wi_join", 	"(ref<irt_wi>)->unit")
-LITERAL(exitWorkItem, 			"irt_wi_end", 	"(ref<irt_wi>)->unit")
+LITERAL(registerWorkItemImpl, "registerImpl", "(irt_wi_implementation_id)->unit")
+LITERAL(joinWorkItem, "irt_wi_join", "(ref<irt_wi>)->unit")
+LITERAL(exitWorkItem, "irt_wi_end", "(ref<irt_wi>)->unit")
 
 // -- Data Item types and literals ------
-TYPE(typeID, 			"irt_type_id")
-LITERAL(wrapLWData,   	"wrap",   "('a)->irt_lwdi<'a>")
-LITERAL(unwrapLWData, 	"unwrap", "(irt_lwdi<'a>)->'a")
+TYPE(typeID, "irt_type_id")
+LITERAL(wrapLWData, "wrap", "('a)->irt_lwdi<'a>")
+LITERAL(unwrapLWData, "unwrap", "(irt_lwdi<'a>)->'a")
 
 
 // -- IR interface ---------
-TYPE(jobType, 	"irt_parallel_job")
+TYPE(jobType, "irt_parallel_job")
 
-LITERAL(createJob, 	"createJob", 	"(uint<8>,uint<8>,uint<8>,irt_wi_implementation_id,irt_lwdi<'a>)->irt_parallel_job")
-LITERAL(parallel, 	"irt_parallel", "(irt_parallel_job)->ref<irt_wi>")
-LITERAL(task, 	    "irt_task", "(irt_parallel_job)->ref<irt_wi>")
-LITERAL(region, 	"irt_region", "(irt_parallel_job)->ref<irt_wi>")
+LITERAL(createJob, "createJob", "(uint<8>,uint<8>,uint<8>,irt_wi_implementation_id,irt_lwdi<'a>)->irt_parallel_job")
+LITERAL(parallel, "irt_parallel", "(irt_parallel_job)->ref<irt_wi>")
+LITERAL(task, "irt_task", "(irt_parallel_job)->ref<irt_wi>")
+LITERAL(region, "irt_region", "(irt_parallel_job)->ref<irt_wi>")
 
-LITERAL(pfor, 		"irt_pfor", 	"(threadgroup,int<4>,int<4>,int<4>,irt_wi_implementation_id,irt_lwdi<'a>)->ref<irt_wi>")
-LITERAL(merge, 		"irt_merge", 	"(ref<irt_wi>)->unit")
+LITERAL(pfor, "irt_pfor", "(threadgroup,int<4>,int<4>,int<4>,irt_wi_implementation_id,irt_lwdi<'a>)->ref<irt_wi>")
+LITERAL(merge, "irt_merge", "(ref<irt_wi>)->unit")
 
 
 /*
@@ -105,10 +105,10 @@ LITERAL(regionAttribute, "region", "(uint<8>)->attribute")
 LITERAL(runStandalone, "runStandalone", "(irt_wi_implementation_id, irt_lwdi<'a>)->unit")
 
 // -- Code Utilities ------
-NTYPE(workItemRange, 			"struct { int<4> begin; int<4> end; int<4> step; }", "irt_work_item_range")
+NTYPE(workItemRange, "struct { int<4> begin; int<4> end; int<4> step; }", "irt_work_item_range")
 
-LITERAL(getWorkItemRange, 		"getRange", 	"(ref<irt_wi>)->struct { int<4> begin; int<4> end; int<4> step; }")
-LITERAL(getWorkItemArgument, 	"getArg", 		"(ref<irt_wi>, uint<#a>, type<irt_lwdi<'p>>, type<'a>)->'a")
+LITERAL(getWorkItemRange, "getRange", "(ref<irt_wi>)->struct { int<4> begin; int<4> end; int<4> step; }")
+LITERAL(getWorkItemArgument, "getArg", "(ref<irt_wi>, uint<#a>, type<irt_lwdi<'p>>, type<'a>)->'a")
 
 
 #ifdef __OWN_NTYPE

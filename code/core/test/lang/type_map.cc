@@ -42,44 +42,42 @@ namespace insieme {
 namespace core {
 namespace lang {
 
-template<typename T>
-bool isSigned() {
-	T x = 0;
-	return ((T)(x - 1)) < x;
-}
+	template <typename T>
+	bool isSigned() {
+		T x = 0;
+		return ((T)(x - 1)) < x;
+	}
 
-TEST(LangBasic, Generation) {
+	TEST(LangBasic, Generation) {
+		EXPECT_EQ(1, (type_map<INT, 1>::bits));
 
-	EXPECT_EQ(1, (type_map<INT, 1>::bits));
-	
-	EXPECT_EQ(static_cast<std::size_t>(1), sizeof(type_map<INT,1>::value_type));
-	EXPECT_EQ(static_cast<std::size_t>(2), sizeof(type_map<INT,2>::value_type));
-	EXPECT_EQ(static_cast<std::size_t>(4), sizeof(type_map<INT,4>::value_type));
-	EXPECT_EQ(static_cast<std::size_t>(8), sizeof(type_map<INT,8>::value_type));
-	
-	EXPECT_EQ(static_cast<std::size_t>(1), sizeof(type_map<UINT,1>::value_type));
-	EXPECT_EQ(static_cast<std::size_t>(2), sizeof(type_map<UINT,2>::value_type));
-	EXPECT_EQ(static_cast<std::size_t>(4), sizeof(type_map<UINT,4>::value_type));
-	EXPECT_EQ(static_cast<std::size_t>(8), sizeof(type_map<UINT,8>::value_type));
-	
-	EXPECT_EQ(static_cast<std::size_t>(4), sizeof(type_map<REAL,4>::value_type));
-	EXPECT_EQ(static_cast<std::size_t>(8), sizeof(type_map<REAL,8>::value_type));
-	
-	EXPECT_TRUE((isSigned<type_map<INT,1>::value_type>()));
-	EXPECT_TRUE((isSigned<type_map<INT,2>::value_type>()));
-	EXPECT_TRUE((isSigned<type_map<INT,4>::value_type>()));
-	EXPECT_TRUE((isSigned<type_map<INT,8>::value_type>()));
-	
-	EXPECT_FALSE((isSigned<type_map<UINT,1>::value_type>()));
-	EXPECT_FALSE((isSigned<type_map<UINT,2>::value_type>()));
-	EXPECT_FALSE((isSigned<type_map<UINT,4>::value_type>()));
-	EXPECT_FALSE((isSigned<type_map<UINT,8>::value_type>()));
-	
-	EXPECT_TRUE((isSigned<type_map<REAL,4>::value_type>()));
-	EXPECT_TRUE((isSigned<type_map<REAL,8>::value_type>()));
-}
+		EXPECT_EQ(static_cast<std::size_t>(1), sizeof(type_map<INT, 1>::value_type));
+		EXPECT_EQ(static_cast<std::size_t>(2), sizeof(type_map<INT, 2>::value_type));
+		EXPECT_EQ(static_cast<std::size_t>(4), sizeof(type_map<INT, 4>::value_type));
+		EXPECT_EQ(static_cast<std::size_t>(8), sizeof(type_map<INT, 8>::value_type));
+
+		EXPECT_EQ(static_cast<std::size_t>(1), sizeof(type_map<UINT, 1>::value_type));
+		EXPECT_EQ(static_cast<std::size_t>(2), sizeof(type_map<UINT, 2>::value_type));
+		EXPECT_EQ(static_cast<std::size_t>(4), sizeof(type_map<UINT, 4>::value_type));
+		EXPECT_EQ(static_cast<std::size_t>(8), sizeof(type_map<UINT, 8>::value_type));
+
+		EXPECT_EQ(static_cast<std::size_t>(4), sizeof(type_map<REAL, 4>::value_type));
+		EXPECT_EQ(static_cast<std::size_t>(8), sizeof(type_map<REAL, 8>::value_type));
+
+		EXPECT_TRUE((isSigned<type_map<INT, 1>::value_type>()));
+		EXPECT_TRUE((isSigned<type_map<INT, 2>::value_type>()));
+		EXPECT_TRUE((isSigned<type_map<INT, 4>::value_type>()));
+		EXPECT_TRUE((isSigned<type_map<INT, 8>::value_type>()));
+
+		EXPECT_FALSE((isSigned<type_map<UINT, 1>::value_type>()));
+		EXPECT_FALSE((isSigned<type_map<UINT, 2>::value_type>()));
+		EXPECT_FALSE((isSigned<type_map<UINT, 4>::value_type>()));
+		EXPECT_FALSE((isSigned<type_map<UINT, 8>::value_type>()));
+
+		EXPECT_TRUE((isSigned<type_map<REAL, 4>::value_type>()));
+		EXPECT_TRUE((isSigned<type_map<REAL, 8>::value_type>()));
+	}
 
 } // end namespace lang
 } // end namespace core
 } // end namespace insieme
-

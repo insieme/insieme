@@ -29,19 +29,19 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
 #include "clear.inc"
 
-#define INFO_STRUCT_BEGIN(_name) \
-	namespace _name ## _ns { \
-	typedef std::tuple<
+#define INFO_STRUCT_BEGIN(_name)                                                                                                                               \
+	namespace _name##_ns {                                                                                                                                     \
+	typedef std::tuple <
 
-#define INFO_FIELD_EXT(_name, _a, _b, _type, _def) \
-	typename insieme::annotations::detail::compiler_type<_type>::type,
+#define INFO_FIELD_EXT(_name, _a, _b, _type, _def) typename insieme::annotations::detail::compiler_type<_type>::type,
 
-#define INFO_STRUCT_END() \
-	std::string> tuple_type; }
+#define INFO_STRUCT_END()                                                                                                                                      \
+	std::string > tuple_type;                                                                                                                                  \
+	}

@@ -43,31 +43,31 @@ namespace insieme {
 namespace core {
 namespace lang {
 
-bool isSIMDVector(const TypePtr& type) {
-	assert_not_implemented();
+	bool isSIMDVector(const TypePtr& type) {
+		assert_not_implemented();
 
-	// TODO: fix this
-//	core::GenericTypePtr gt;
-//	return type->getNodeType() == core::NT_GenericType &&
-//	       (gt = static_pointer_cast<const core::GenericType>(type),
-//	        gt->getName()->getValue() == "simd" &&
-//	        gt->getTypeParameter().size() == 1u &&
-//	        gt->getTypeParameter()[0].isa<core::VectorTypePtr>() &&
-//	        gt->getIntTypeParameter().empty()
-//	       );
-	return false;
-}
+		// TODO: fix this
+		//	core::GenericTypePtr gt;
+		//	return type->getNodeType() == core::NT_GenericType &&
+		//	       (gt = static_pointer_cast<const core::GenericType>(type),
+		//	        gt->getName()->getValue() == "simd" &&
+		//	        gt->getTypeParameter().size() == 1u &&
+		//	        gt->getTypeParameter()[0].isa<core::VectorTypePtr>() &&
+		//	        gt->getIntTypeParameter().empty()
+		//	       );
+		return false;
+	}
 
-ArrayType getSIMDVectorType(const TypePtr& type) {
-	assert_true(core::lang::isSIMDVector(type));
-	return ArrayType(type.as<GenericTypePtr>()->getTypeParameter(0));
-}
+	ArrayType getSIMDVectorType(const TypePtr& type) {
+		assert_true(core::lang::isSIMDVector(type));
+		return ArrayType(type.as<GenericTypePtr>()->getTypeParameter(0));
+	}
 
-GenericTypePtr toSIMDVector(const GenericTypePtr& type) {
-	assert_true(ArrayType::isFixedSizedArrayType(type));
-	insieme::core::IRBuilder builder(type.getNodeManager());
-	return builder.genericType("simd", toVector<TypePtr>(type));
-}
+	GenericTypePtr toSIMDVector(const GenericTypePtr& type) {
+		assert_true(ArrayType::isFixedSizedArrayType(type));
+		insieme::core::IRBuilder builder(type.getNodeManager());
+		return builder.genericType("simd", toVector<TypePtr>(type));
+	}
 } // end namespace lang
 } // end namespace core
 } // end namespace insieme

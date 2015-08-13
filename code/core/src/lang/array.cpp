@@ -41,17 +41,13 @@ namespace core {
 namespace lang {
 
 	ArrayType::ArrayType(const NodePtr& node) {
-
 		// check given node type
 		assert_true(node) << "Given node is null!";
 		assert_true(isArrayType(node)) << "Given node " << *node << " is not a array type!";
 
 		// process node type
 		GenericTypePtr type = node.as<GenericTypePtr>();
-		*this = ArrayType(
-				type->getTypeParameter(0),
-				type->getTypeParameter(1).as<NumericTypePtr>()->getValue()
-		);
+		*this = ArrayType(type->getTypeParameter(0), type->getTypeParameter(1).as<NumericTypePtr>()->getValue());
 	}
 
 	bool ArrayType::isArrayType(const NodePtr& node) {
@@ -84,16 +80,14 @@ namespace lang {
 		NodeManager& nm = elementType.getNodeManager();
 
 		NumericTypePtr num;
-		if (auto lit = size.isa<LiteralPtr>()) {
+		if(auto lit = size.isa<LiteralPtr>()) {
 			num = NumericType::get(nm, lit);
 		} else {
 			assert_true(size.isa<VariablePtr>());
 			num = NumericType::get(nm, size.as<VariablePtr>());
 		}
 
-		return GenericType::get(nm, "array", ParentList(),
-			toVector(elementType, num)
-		);
+		return GenericType::get(nm, "array", ParentList(), toVector(elementType, num));
 	}
 
 } // end namespace lang

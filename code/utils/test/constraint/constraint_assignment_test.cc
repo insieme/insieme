@@ -42,25 +42,23 @@ namespace insieme {
 namespace utils {
 namespace constraint {
 
-TEST(Assignment, Check) {
+	TEST(Assignment, Check) {
+		Assignment a;
 
-	Assignment a;
-	
-	TypedSetVariable<int> i1(1);
-	TypedSetVariable<float> i2(2);
-	
-	EXPECT_EQ("{}", toString(a));
-	
-	a[i1].insert(1);
-	a[i2].insert(2.3f);
-	
-	EXPECT_EQ("{v2={2.3},v1={1}}", toString(a));
-	
-	a[i1] = { 1, 2, 3 };
-	a[i2] = { 1, 3 };
-	EXPECT_EQ("{v2={1,3},v1={1,2,3}}", toString(a));
-	
-}
+		TypedSetVariable<int> i1(1);
+		TypedSetVariable<float> i2(2);
+
+		EXPECT_EQ("{}", toString(a));
+
+		a[i1].insert(1);
+		a[i2].insert(2.3f);
+
+		EXPECT_EQ("{v2={2.3},v1={1}}", toString(a));
+
+		a[i1] = {1, 2, 3};
+		a[i2] = {1, 3};
+		EXPECT_EQ("{v2={1,3},v1={1,2,3}}", toString(a));
+	}
 
 } // end namespace set_constraint
 } // end namespace utils

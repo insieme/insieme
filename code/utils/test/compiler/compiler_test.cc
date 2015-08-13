@@ -52,66 +52,58 @@ namespace utils {
 namespace compiler {
 
 
-TEST(TargetCodeCompilerTest, helloWorldTest) {
+	TEST(TargetCodeCompilerTest, helloWorldTest) {
+		namespace fs = boost::filesystem;
 
-	namespace fs = boost::filesystem;
-	
-	// create a dummy code file to be compiled
-	fs::path dir = "./";
-	fs::path srcFile = dir / "_ut_hello_world.c";
-	fs::path binFile = dir / "_ut_hello_world";
-	
-	// ensure file does not exist yet
-	ASSERT_FALSE(fs::exists(srcFile)) << "File " << srcFile << " should not exist!";
-	ASSERT_FALSE(fs::exists(binFile)) << "File " << binFile << " should not exist!";
-	
-	
-	// write hello world code into the source file
-	fs::ofstream code;
-	code.open(srcFile);
-	ASSERT_TRUE(code.is_open()) << "Unable to open source file!";
-	code << "#include <stdio.h>\n\n";
-	code << "int main() {\n";
-	code << "	printf(\"Hello World!\\n\");\n";
-	code << "}\n\n";
-	code.close();
-	
-	// file should exist now
-	ASSERT_TRUE(fs::exists(srcFile));
-	
-	// compile the example code using the default compiler
-	EXPECT_TRUE(compile(srcFile.string(), binFile.string()));
-	
-	
-	// delete both files
-	if(fs::exists(srcFile)) {
-		fs::remove(srcFile);
+		// create a dummy code file to be compiled
+		fs::path dir = "./";
+		fs::path srcFile = dir / "_ut_hello_world.c";
+		fs::path binFile = dir / "_ut_hello_world";
+
+		// ensure file does not exist yet
+		ASSERT_FALSE(fs::exists(srcFile)) << "File " << srcFile << " should not exist!";
+		ASSERT_FALSE(fs::exists(binFile)) << "File " << binFile << " should not exist!";
+
+
+		// write hello world code into the source file
+		fs::ofstream code;
+		code.open(srcFile);
+		ASSERT_TRUE(code.is_open()) << "Unable to open source file!";
+		code << "#include <stdio.h>\n\n";
+		code << "int main() {\n";
+		code << "	printf(\"Hello World!\\n\");\n";
+		code << "}\n\n";
+		code.close();
+
+		// file should exist now
+		ASSERT_TRUE(fs::exists(srcFile));
+
+		// compile the example code using the default compiler
+		EXPECT_TRUE(compile(srcFile.string(), binFile.string()));
+
+
+		// delete both files
+		if(fs::exists(srcFile)) { fs::remove(srcFile); }
+
+		if(fs::exists(binFile)) { fs::remove(binFile); }
 	}
-	
-	if(fs::exists(binFile)) {
-		fs::remove(binFile);
+
+
+	TEST(TargetCodeCompilerTest, DirectHelloWorldTest) {
+		// write some code
+		string code = "#include <stdio.h>\n\n"
+		              "int main() {\n"
+		              "	printf(\"Hello World!\\n\");\n"
+		              "}\n\n";
+
+		// compile using direct signature
+		EXPECT_TRUE(compile(code));
 	}
-}
 
-
-TEST(TargetCodeCompilerTest, DirectHelloWorldTest) {
-
-	// write some code
-	string code =
-	    "#include <stdio.h>\n\n"
-	    "int main() {\n"
-	    "	printf(\"Hello World!\\n\");\n"
-	    "}\n\n";
-	    
-	// compile using direct signature
-	EXPECT_TRUE(compile(code));
-	
-}
-
-TEST(TargetCodeCompiler, GetIncludePaths) {
-	EXPECT_FALSE(getDefaultCIncludePaths().empty());
-	EXPECT_FALSE(getDefaultCIncludePaths().empty());
-}
+	TEST(TargetCodeCompiler, GetIncludePaths) {
+		EXPECT_FALSE(getDefaultCIncludePaths().empty());
+		EXPECT_FALSE(getDefaultCIncludePaths().empty());
+	}
 
 
 } // end namespace test

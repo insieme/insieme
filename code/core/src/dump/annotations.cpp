@@ -41,43 +41,37 @@ namespace core {
 namespace dump {
 
 
+	// ------------- Annotation Converter Register -----------------
 
-
-// ------------- Annotation Converter Register -----------------
-
-AnnotationConverterRegister& AnnotationConverterRegister::getDefault() {
-	static AnnotationConverterRegister registry;
-	return registry;
-}
-
-bool AnnotationConverterRegister::registerConverter(const AnnotationConverterPtr& converter, const std::type_index& type) {
-	name_index[converter->getName()] = converter;
-	type_index[type] = converter;
-	return true;
-}
-
-const AnnotationConverterPtr& AnnotationConverterRegister::getConverterFor(const std::string& name) const {
-	static AnnotationConverterPtr notFound;
-	
-	// look-up converter within name-based index
-	auto pos = name_index.find(name);
-	if(pos != name_index.end()) {
-		return pos->second;
+	AnnotationConverterRegister& AnnotationConverterRegister::getDefault() {
+		static AnnotationConverterRegister registry;
+		return registry;
 	}
-	return notFound;
-}
 
-const AnnotationConverterPtr& AnnotationConverterRegister::getConverterFor(const NodeAnnotationPtr& annotation) const {
-	static AnnotationConverterPtr notFound;
-	
-	// look-up converter within index#
-	auto&& anno = *annotation;
-	auto pos = type_index.find(typeid(anno));
-	if(pos != type_index.end()) {
-		return pos->second;
+	bool AnnotationConverterRegister::registerConverter(const AnnotationConverterPtr& converter, const std::type_index& type) {
+		name_index[converter->getName()] = converter;
+		type_index[type] = converter;
+		return true;
 	}
-	return notFound;
-}
+
+	const AnnotationConverterPtr& AnnotationConverterRegister::getConverterFor(const std::string& name) const {
+		static AnnotationConverterPtr notFound;
+
+		// look-up converter within name-based index
+		auto pos = name_index.find(name);
+		if(pos != name_index.end()) { return pos->second; }
+		return notFound;
+	}
+
+	const AnnotationConverterPtr& AnnotationConverterRegister::getConverterFor(const NodeAnnotationPtr& annotation) const {
+		static AnnotationConverterPtr notFound;
+
+		// look-up converter within index#
+		auto&& anno = *annotation;
+		auto pos = type_index.find(typeid(anno));
+		if(pos != type_index.end()) { return pos->second; }
+		return notFound;
+	}
 
 
 } // end namespace dump

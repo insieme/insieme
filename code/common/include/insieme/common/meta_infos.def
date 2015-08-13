@@ -60,14 +60,14 @@
 
 /**
  * A struct providing information about the estimated relative effort of the associated loop.
- * If an estimation function can be computed, its parameters are the loop boundaries of the 
+ * If an estimation function can be computed, its parameters are the loop boundaries of the
  * segment of the loop information is requested for.
  * In any case, a fallback per-iteration estimate is provided.
  */
 INFO_DECL(typedef void (*estimation_function_type)(int, int))
 INFO_STRUCT_BEGIN(effort_estimation)
-	INFO_FIELD(estimation_function, 	estimation_function_type, 	0)
-	INFO_FIELD(fallback_estimate, 		int,						0)
+INFO_FIELD(estimation_function, estimation_function_type, 0)
+INFO_FIELD(fallback_estimate, int, 0)
 INFO_STRUCT_END()
 
 /**
@@ -75,54 +75,51 @@ INFO_STRUCT_END()
  */
 
 INFO_STRUCT_BEGIN(ompp_objective)
-    INFO_FIELD(energy_weight,   float,      0)
-    INFO_FIELD(energy_min,      float,      -1)
-    INFO_FIELD(energy_max,      float,      -1)
-    INFO_FIELD(power_weight,    float,      0)
-    INFO_FIELD(power_min,       float,      -1)
-    INFO_FIELD(power_max,       float,      -1)
-    INFO_FIELD(quality_weight,    float,      0)
-    INFO_FIELD(quality_min,       float,      -1)
-    INFO_FIELD(quality_max,       float,      -1)
-    INFO_FIELD(time_weight,     float,      0)
-    INFO_FIELD(time_min,        float,      -1)
-    INFO_FIELD(time_max,        float,      -1)
-    INFO_FIELD(param_count,     unsigned,   UINT_MAX)
-    INFO_FIELD(region_id,       unsigned,   UINT_MAX)
+INFO_FIELD(energy_weight, float, 0)
+INFO_FIELD(energy_min, float, -1)
+INFO_FIELD(energy_max, float, -1)
+INFO_FIELD(power_weight, float, 0)
+INFO_FIELD(power_min, float, -1)
+INFO_FIELD(power_max, float, -1)
+INFO_FIELD(quality_weight, float, 0)
+INFO_FIELD(quality_min, float, -1)
+INFO_FIELD(quality_max, float, -1)
+INFO_FIELD(time_weight, float, 0)
+INFO_FIELD(time_min, float, -1)
+INFO_FIELD(time_max, float, -1)
+INFO_FIELD(param_count, unsigned, UINT_MAX)
+INFO_FIELD(region_id, unsigned, UINT_MAX)
 INFO_STRUCT_END()
 
 /**
  * A st...
  */
 INFO_STRUCT_BEGIN(opencl)
-	INFO_FIELD(opencl, 	bool,	false)
+INFO_FIELD(opencl, bool, false)
 INFO_STRUCT_END()
 
 /*
  * A struct providing information about region-based autotuning settings
  */
 INFO_STRUCT_BEGIN(autotuning)
-	INFO_FIELD_EXT(frequencies,
-			struct { unsigned size; unsigned* data; },								{ 0 },
-			vector<unsigned>,														toVector(0u)
-	)
-	INFO_FIELD_EXT(map,		
-			struct { unsigned size; unsigned* data; },		 						{ 0 }, 		
-			vector<unsigned>,														toVector(0u)
-	)
-	INFO_FIELD(number_of_workers,													unsigned,			0)
-	INFO_FIELD(loop_scheduling,														int,				0)
-	INFO_FIELD(loop_scheduling_chunk_size,											unsigned,			0)
+INFO_FIELD_EXT(frequencies, struct {
+	unsigned size;
+	unsigned* data;
+}, {0}, vector<unsigned>, toVector(0u))
+INFO_FIELD_EXT(map, struct {
+	unsigned size;
+	unsigned* data;
+}, {0}, vector<unsigned>, toVector(0u))
+INFO_FIELD(number_of_workers, unsigned, 0)
+INFO_FIELD(loop_scheduling, int, 0)
+INFO_FIELD(loop_scheduling_chunk_size, unsigned, 0)
 INFO_STRUCT_END()
 
 /*
  * A struct providing information about region-based significance settings
  */
 INFO_STRUCT_BEGIN(significance)
-	INFO_FIELD_EXT(label,		
-			const char*,		 						"", 		
-			string,										string()
-	)
+INFO_FIELD_EXT(label, const char*, "", string, string())
 INFO_STRUCT_END()
 
 // ------------ clear definitions ------------------

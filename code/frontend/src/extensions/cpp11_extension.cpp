@@ -56,286 +56,265 @@ namespace insieme {
 namespace frontend {
 namespace extensions {
 
-//////////////////////////////////////////////////////////////////////////////////////
-//               C++11 expressions
+	//////////////////////////////////////////////////////////////////////////////////////
+	//               C++11 expressions
 
-/**
- *			Cxx11 null pointer
- */
-insieme::core::ExpressionPtr Cpp11Extension::VisitCXXNullPtrLiteralExpr(const clang::CXXNullPtrLiteralExpr* nullPtrExpr,
-        insieme::frontend::conversion::Converter& convFact) {
-	auto builder = convFact.getIRBuilder();
-	insieme::core::ExpressionPtr retIr;
-	insieme::core::TypePtr type = convFact.convertType(nullPtrExpr->getType());
-	assert_ne(type->getNodeType(), insieme::core::NT_ArrayType) << "C pointer type must of type array<'a,1>";
-	return (retIr = builder.refReinterpret(convFact.getNodeManager().getLangBasic().getRefNull(), type));
-}
-
-/**
- *  			Cxx11 lambda expression
- */
-insieme::core::ExpressionPtr Cpp11Extension::VisitLambdaExpr(const clang::LambdaExpr* lambdaExpr, insieme::frontend::conversion::Converter& convFact) {
-	auto& mgr = convFact.getNodeManager();
-	auto builder = convFact.getIRBuilder();
-	insieme::core::ExpressionPtr retIr;
-	
-	// convert the enclosing class
-	const clang::CXXRecordDecl* decl = llvm::cast<clang::CXXRecordDecl>(lambdaExpr->getLambdaClass());
-	insieme::core::TypePtr lambdaClassIR = convFact.convertType(decl->getTypeForDecl()->getCanonicalTypeInternal());
-	
-	// convert the captures
-	auto captureIt  = lambdaExpr->capture_init_begin();
-	auto captureEnd = lambdaExpr->capture_init_end();
-	std::vector<insieme::core::ExpressionPtr> captures;
-	for(; captureIt != captureEnd; ++captureIt) {
-		captures.push_back(convFact.convertExpr(*captureIt));
+	/**
+	 *			Cxx11 null pointer
+	 */
+	insieme::core::ExpressionPtr Cpp11Extension::VisitCXXNullPtrLiteralExpr(const clang::CXXNullPtrLiteralExpr* nullPtrExpr,
+	                                                                        insieme::frontend::conversion::Converter& convFact) {
+		auto builder = convFact.getIRBuilder();
+		insieme::core::ExpressionPtr retIr;
+		insieme::core::TypePtr type = convFact.convertType(nullPtrExpr->getType());
+		assert_ne(type->getNodeType(), insieme::core::NT_ArrayType) << "C pointer type must of type array<'a,1>";
+		return (retIr = builder.refReinterpret(convFact.getNodeManager().getLangBasic().getRefNull(), type));
 	}
-	
-	core::ExpressionPtr symb = convFact.getCallableExpression(lambdaExpr->getCallOperator());
-	
-	// is it a simple lambda without any captures?
-	// if so, lets create a trivial function.
-	// the function will be used whenever we want to
-	// use a function pointer instead of the lambda.
-	if(captures.empty()) {
-		auto returnType = symb->getType().as<core::FunctionTypePtr>()->getReturnType();
-		core::ExpressionPtr fun =	builder.createCallExprFromBody(
-		                                convFact.convertStmt(lambdaExpr->getBody()),
-		                                returnType
-		                            );
-		core::LambdaExprPtr lambda = fun.as<core::CallExprPtr>()->getFunctionExpr().as<core::LambdaExprPtr>();
-		auto symbol = builder.literal(
-		                  utils::buildNameForFunction(lambdaExpr->getCallOperator()),
-		                  lambda->getType()
-		              );
-		convFact.getIRTranslationUnit().addFunction(symbol, lambda);
-		simpleLambdaReplacementMap.insert({lambdaExpr->getLambdaClass(), symbol});
-	}
-	
-	frontend_assert(symb.isa<core::LiteralPtr>()) << "no literal?";
-	lambdaMap.insert({lambdaExpr->getCallOperator(), lambdaExpr});
-	
-	
-	insieme::core::ExpressionPtr init = insieme::core::encoder::toIR<ExpressionList, core::encoder::DirectExprListConverter>(mgr, captures);
-	return retIr = convFact.getInitExpr(lambdaClassIR, init);
-}
 
+	/**
+	 *  			Cxx11 lambda expression
+	 */
+	insieme::core::ExpressionPtr Cpp11Extension::VisitLambdaExpr(const clang::LambdaExpr* lambdaExpr, insieme::frontend::conversion::Converter& convFact) {
+		auto& mgr = convFact.getNodeManager();
+		auto builder = convFact.getIRBuilder();
+		insieme::core::ExpressionPtr retIr;
 
-/**
- *  			Cxx11 size of pack expression
- */
-insieme::core::ExpressionPtr Cpp11Extension::VisitSizeOfPackExpr(const clang::SizeOfPackExpr* sizeOfPackExpr,
-        insieme::frontend::conversion::Converter& convFact) {
-	//sizeOf... returns size_t --> use unsigned int
-	core::ExpressionPtr retExpr = convFact.getIRBuilder().uintLit(sizeOfPackExpr->getPackLength());
-	return retExpr;
-}
+		// convert the enclosing class
+		const clang::CXXRecordDecl* decl = llvm::cast<clang::CXXRecordDecl>(lambdaExpr->getLambdaClass());
+		insieme::core::TypePtr lambdaClassIR = convFact.convertType(decl->getTypeForDecl()->getCanonicalTypeInternal());
 
-
-/**
- *  			Cxx11 init list expression
- */
-insieme::core::ExpressionPtr Cpp11Extension::VisitInitListExpr(const clang::CXXStdInitializerListExpr* initList,
-        insieme::frontend::conversion::Converter& convFact) {
-	//get the sub expression of the std init list expression
-	auto expr = initList->getSubExpr();
-	auto builder = convFact.getIRBuilder();
-	auto& mgr = convFact.getNodeManager();
-	auto& ext = mgr.getLangExtension<insieme::core::lang::IRppExtensions>();
-	
-	//we must have a materialize below the cxxstdinitlistexpr
-	if(llvm::dyn_cast<clang::MaterializeTemporaryExpr>(expr)) {
-		//get the materialize
-		auto materialize = llvm::cast<clang::MaterializeTemporaryExpr>(expr);
-		//if we have an non builtin element type there might be a cxxbindtemporaryexpr below
-		//but at least we know that a initlistexpr is somewhere. either directly after the materializeexpr
-		//or after the cxxbindtemporary
-		const clang::InitListExpr* innerInitList;
-		//if we have a bind temporary, extract the inner init list expression
-		//else get it directly from the materialize expression
-		if(llvm::dyn_cast<clang::CXXBindTemporaryExpr>(materialize->GetTemporaryExpr())) {
-			auto bindExpr = llvm::cast<clang::CXXBindTemporaryExpr>(materialize->GetTemporaryExpr());
-			innerInitList = llvm::cast<clang::InitListExpr>(bindExpr->getSubExpr());
+		// convert the captures
+		auto captureIt = lambdaExpr->capture_init_begin();
+		auto captureEnd = lambdaExpr->capture_init_end();
+		std::vector<insieme::core::ExpressionPtr> captures;
+		for(; captureIt != captureEnd; ++captureIt) {
+			captures.push_back(convFact.convertExpr(*captureIt));
 		}
-		else {
-			innerInitList = llvm::cast<clang::InitListExpr>(materialize->GetTemporaryExpr());
+
+		core::ExpressionPtr symb = convFact.getCallableExpression(lambdaExpr->getCallOperator());
+
+		// is it a simple lambda without any captures?
+		// if so, lets create a trivial function.
+		// the function will be used whenever we want to
+		// use a function pointer instead of the lambda.
+		if(captures.empty()) {
+			auto returnType = symb->getType().as<core::FunctionTypePtr>()->getReturnType();
+			core::ExpressionPtr fun = builder.createCallExprFromBody(convFact.convertStmt(lambdaExpr->getBody()), returnType);
+			core::LambdaExprPtr lambda = fun.as<core::CallExprPtr>()->getFunctionExpr().as<core::LambdaExprPtr>();
+			auto symbol = builder.literal(utils::buildNameForFunction(lambdaExpr->getCallOperator()), lambda->getType());
+			convFact.getIRTranslationUnit().addFunction(symbol, lambda);
+			simpleLambdaReplacementMap.insert({lambdaExpr->getLambdaClass(), symbol});
 		}
-		//perfect, convert the inner list, create a literal out of it and return
-		auto retExpr = convFact.convertExpr(innerInitList);
-		return builder.callExpr(ext.getStdInitListExpr(), retExpr, builder.getTypeLiteral(convFact.convertType(initList->getType())));
+
+		frontend_assert(symb.isa<core::LiteralPtr>()) << "no literal?";
+		lambdaMap.insert({lambdaExpr->getCallOperator(), lambdaExpr});
+
+
+		insieme::core::ExpressionPtr init = insieme::core::encoder::toIR<ExpressionList, core::encoder::DirectExprListConverter>(mgr, captures);
+		return retIr = convFact.getInitExpr(lambdaClassIR, init);
 	}
-	assert_fail() << "failed to convert a CXXStdInitializerListExpr";
-	return nullptr;
-}
 
 
-//////////////////////////////////////////////////////////////////////////////////////
-//               C++11 types
-
-/**
- * auto type
- */
-insieme::core::TypePtr Cpp11Extension::VisitAutoType(const clang::AutoType* autoTy, insieme::frontend::conversion::Converter& convFact) {
-	return convFact.convertType(autoTy->getDeducedType());
-}
-
-/**
- * decltype(E) is the type ("declared type") of the name or expression E and can be used in declarations.
- */
-insieme::core::TypePtr Cpp11Extension::VisitDecltypeType(const clang::DecltypeType* declTy, insieme::frontend::conversion::Converter& convFact) {
-	insieme::core::TypePtr retTy;
-	assert_true(declTy->getUnderlyingType().getTypePtr());
-	retTy = convFact.convertType(declTy->getUnderlyingType());
-	return retTy;
-}
-
-insieme::core::TypePtr Cpp11Extension::VisitRValueReferenceType(const clang::RValueReferenceType* rvalref, insieme::frontend::conversion::Converter& convFact) {
-	core::TypePtr innerTy = convFact.convertType(rvalref->getPointeeType());
-	bool isConst = rvalref->getPointeeType().isConstQualified();
-	core::TypePtr ret;
-	if(isConst) {
-		ret = core::analysis::getConstRValCppRef(innerTy);
+	/**
+	 *  			Cxx11 size of pack expression
+	 */
+	insieme::core::ExpressionPtr Cpp11Extension::VisitSizeOfPackExpr(const clang::SizeOfPackExpr* sizeOfPackExpr,
+	                                                                 insieme::frontend::conversion::Converter& convFact) {
+		// sizeOf... returns size_t --> use unsigned int
+		core::ExpressionPtr retExpr = convFact.getIRBuilder().uintLit(sizeOfPackExpr->getPackLength());
+		return retExpr;
 	}
-	else {
-		ret = core::analysis::getRValCppRef(innerTy);
+
+
+	/**
+	 *  			Cxx11 init list expression
+	 */
+	insieme::core::ExpressionPtr Cpp11Extension::VisitInitListExpr(const clang::CXXStdInitializerListExpr* initList,
+	                                                               insieme::frontend::conversion::Converter& convFact) {
+		// get the sub expression of the std init list expression
+		auto expr = initList->getSubExpr();
+		auto builder = convFact.getIRBuilder();
+		auto& mgr = convFact.getNodeManager();
+		auto& ext = mgr.getLangExtension<insieme::core::lang::IRppExtensions>();
+
+		// we must have a materialize below the cxxstdinitlistexpr
+		if(llvm::dyn_cast<clang::MaterializeTemporaryExpr>(expr)) {
+			// get the materialize
+			auto materialize = llvm::cast<clang::MaterializeTemporaryExpr>(expr);
+			// if we have an non builtin element type there might be a cxxbindtemporaryexpr below
+			// but at least we know that a initlistexpr is somewhere. either directly after the materializeexpr
+			// or after the cxxbindtemporary
+			const clang::InitListExpr* innerInitList;
+			// if we have a bind temporary, extract the inner init list expression
+			// else get it directly from the materialize expression
+			if(llvm::dyn_cast<clang::CXXBindTemporaryExpr>(materialize->GetTemporaryExpr())) {
+				auto bindExpr = llvm::cast<clang::CXXBindTemporaryExpr>(materialize->GetTemporaryExpr());
+				innerInitList = llvm::cast<clang::InitListExpr>(bindExpr->getSubExpr());
+			} else {
+				innerInitList = llvm::cast<clang::InitListExpr>(materialize->GetTemporaryExpr());
+			}
+			// perfect, convert the inner list, create a literal out of it and return
+			auto retExpr = convFact.convertExpr(innerInitList);
+			return builder.callExpr(ext.getStdInitListExpr(), retExpr, builder.getTypeLiteral(convFact.convertType(initList->getType())));
+		}
+		assert_fail() << "failed to convert a CXXStdInitializerListExpr";
+		return nullptr;
 	}
-	return ret;
-}
 
 
-///////////////////////////////////////////////////////////////////////////////////////
-//  Decls post visit
-core::ExpressionPtr Cpp11Extension::FuncDeclPostVisit(const clang::FunctionDecl* decl, core::ExpressionPtr expr, frontend::conversion::Converter& convFact,
-        bool symbolic) {
-	if(!symbolic) {
-		if(const clang::CXXMethodDecl* method= llvm::dyn_cast<clang::CXXMethodDecl>(decl)) {
-			// we need to substitute any captured usage name by the reference to the local copy
-			// 		- retrieve the operator() (.. )  func
-			// 		- create this->_mX access for captured vars
-			// 		- substitute every usage by member access
-			
-			// if is the declaration of a lambda that has being processed before
-			auto fit = lambdaMap.find(method);
-			if(fit != lambdaMap.end()) {
-				auto builder = convFact.getIRBuilder();
-				
-				// retrieve temporal implementation
-				//core::ExpressionPtr symb = expr.as<core::LiteralPtr>();
-				core::ExpressionPtr symb = convFact.getCallableExpression(method);
-				assert(symb.isa<core::LiteralPtr>());
-				core::ExpressionPtr irFunc = convFact.lookupFunctionImpl(symb);
-				assert(irFunc.isa<core::LambdaExprPtr>());
-				insieme::core::ExpressionPtr thisExpr = irFunc.as<core::LambdaExprPtr>()->getParameterList()[0];
-				
-				// build replacements for captured vars
-				insieme::core::NodeMap replacements;
-				clang::LambdaExpr::capture_iterator cap_it = fit->second->capture_begin();
-				clang::LambdaExpr::capture_iterator cap_end= fit->second->capture_end();
-				unsigned id(0);
-				for(; cap_it != cap_end; ++cap_it) {
-					auto var = convFact.lookUpVariable(cap_it->getCapturedVar());
-					if(llvm::dyn_cast<clang::ParmVarDecl>(cap_it->getCapturedVar())) {
-						var = convFact.lookUpVariableInWrapRefMap(var);
-						if(core::analysis::isCppRef(var->getType())) {
-							var = core::analysis::unwrapCppRef(var);
+	//////////////////////////////////////////////////////////////////////////////////////
+	//               C++11 types
+
+	/**
+	 * auto type
+	 */
+	insieme::core::TypePtr Cpp11Extension::VisitAutoType(const clang::AutoType* autoTy, insieme::frontend::conversion::Converter& convFact) {
+		return convFact.convertType(autoTy->getDeducedType());
+	}
+
+	/**
+	 * decltype(E) is the type ("declared type") of the name or expression E and can be used in declarations.
+	 */
+	insieme::core::TypePtr Cpp11Extension::VisitDecltypeType(const clang::DecltypeType* declTy, insieme::frontend::conversion::Converter& convFact) {
+		insieme::core::TypePtr retTy;
+		assert_true(declTy->getUnderlyingType().getTypePtr());
+		retTy = convFact.convertType(declTy->getUnderlyingType());
+		return retTy;
+	}
+
+	insieme::core::TypePtr Cpp11Extension::VisitRValueReferenceType(const clang::RValueReferenceType* rvalref,
+	                                                                insieme::frontend::conversion::Converter& convFact) {
+		core::TypePtr innerTy = convFact.convertType(rvalref->getPointeeType());
+		bool isConst = rvalref->getPointeeType().isConstQualified();
+		core::TypePtr ret;
+		if(isConst) {
+			ret = core::analysis::getConstRValCppRef(innerTy);
+		} else {
+			ret = core::analysis::getRValCppRef(innerTy);
+		}
+		return ret;
+	}
+
+
+	///////////////////////////////////////////////////////////////////////////////////////
+	//  Decls post visit
+	core::ExpressionPtr Cpp11Extension::FuncDeclPostVisit(const clang::FunctionDecl* decl, core::ExpressionPtr expr, frontend::conversion::Converter& convFact,
+	                                                      bool symbolic) {
+		if(!symbolic) {
+			if(const clang::CXXMethodDecl* method = llvm::dyn_cast<clang::CXXMethodDecl>(decl)) {
+				// we need to substitute any captured usage name by the reference to the local copy
+				// 		- retrieve the operator() (.. )  func
+				// 		- create this->_mX access for captured vars
+				// 		- substitute every usage by member access
+
+				// if is the declaration of a lambda that has being processed before
+				auto fit = lambdaMap.find(method);
+				if(fit != lambdaMap.end()) {
+					auto builder = convFact.getIRBuilder();
+
+					// retrieve temporal implementation
+					// core::ExpressionPtr symb = expr.as<core::LiteralPtr>();
+					core::ExpressionPtr symb = convFact.getCallableExpression(method);
+					assert(symb.isa<core::LiteralPtr>());
+					core::ExpressionPtr irFunc = convFact.lookupFunctionImpl(symb);
+					assert(irFunc.isa<core::LambdaExprPtr>());
+					insieme::core::ExpressionPtr thisExpr = irFunc.as<core::LambdaExprPtr>()->getParameterList()[0];
+
+					// build replacements for captured vars
+					insieme::core::NodeMap replacements;
+					clang::LambdaExpr::capture_iterator cap_it = fit->second->capture_begin();
+					clang::LambdaExpr::capture_iterator cap_end = fit->second->capture_end();
+					unsigned id(0);
+					for(; cap_it != cap_end; ++cap_it) {
+						auto var = convFact.lookUpVariable(cap_it->getCapturedVar());
+						if(llvm::dyn_cast<clang::ParmVarDecl>(cap_it->getCapturedVar())) {
+							var = convFact.lookUpVariableInWrapRefMap(var);
+							if(core::analysis::isCppRef(var->getType())) { var = core::analysis::unwrapCppRef(var); }
 						}
-					}
-					
-					
-					
-					core::StringValuePtr ident = builder.stringValue("__m"+insieme::utils::numeric_cast<std::string>(id));
-					core::ExpressionPtr access;
-					//now we have to create the access to the lambda struct
-					//if thisExpr is not a struct type use the fallback method
-					//otherwise call the builder accessMember method to create the call
-					auto typeCheck = [](const core::TypePtr ty)->bool {
-						if(ty.isa<core::RefTypePtr>())
-							if(core::analysis::getReferencedType(ty).isa<core::NamedCompositeTypePtr>()) {
-								return true;
-							}
-						if(ty.isa<core::NamedCompositeTypePtr>()) {
-							return true;
+
+
+						core::StringValuePtr ident = builder.stringValue("__m" + insieme::utils::numeric_cast<std::string>(id));
+						core::ExpressionPtr access;
+						// now we have to create the access to the lambda struct
+						// if thisExpr is not a struct type use the fallback method
+						// otherwise call the builder accessMember method to create the call
+						auto typeCheck = [](const core::TypePtr ty) -> bool {
+							if(ty.isa<core::RefTypePtr>())
+								if(core::analysis::getReferencedType(ty).isa<core::NamedCompositeTypePtr>()) { return true; }
+							if(ty.isa<core::NamedCompositeTypePtr>()) { return true; }
+							return false;
+						};
+						if(!typeCheck(thisExpr->getType())) {
+							access = builder.callExpr(var->getType(), builder.getLangBasic().getCompositeRefElem(), thisExpr,
+							                          builder.getIdentifierLiteral(ident), builder.getTypeLiteral(var->getType()));
+
+						} else {
+							access = builder.accessMember(thisExpr, ident);
 						}
-						return false;
-					};
-					if(!typeCheck(thisExpr->getType())) {
-						access =  builder.callExpr(var->getType(),
-						                           builder.getLangBasic().getCompositeRefElem(), thisExpr,
-						                           builder.getIdentifierLiteral(ident),
-						                           builder.getTypeLiteral(var->getType()));
-						                           
+						// check if we have a cpp ref or a ref<cpp ref> internally
+						// if true we have to replace the uses of the old
+						// variable (e.g., *v1) with (e.g., *RefCppToIR(*v_new))
+						if(core::analysis::isCppRef(access->getType()) || (core::analysis::isRefType(access->getType())
+						                                                   && core::analysis::isCppRef(core::analysis::getReferencedType(access->getType())))) {
+							access = core::analysis::unwrapCppRef(access);
+						}
+						replacements[var] = access;
+						id++;
 					}
-					else {
-						access = builder.accessMember(thisExpr, ident);
-					}
-					//check if we have a cpp ref or a ref<cpp ref> internally
-					//if true we have to replace the uses of the old
-					//variable (e.g., *v1) with (e.g., *RefCppToIR(*v_new))
-					if(core::analysis::isCppRef(access->getType()) ||
-					        (core::analysis::isRefType(access->getType()) &&
-					         core::analysis::isCppRef(core::analysis::getReferencedType(access->getType())))) {
-						access = core::analysis::unwrapCppRef(access);
-					}
-					replacements[var] = access;
-					id++;
+
+					// update implementation
+					irFunc = insieme::core::transform::replaceAllGen(builder.getNodeManager(), irFunc, replacements, core::transform::globalReplacement);
+					convFact.getIRTranslationUnit().replaceFunction(symb.as<insieme::core::LiteralPtr>(), irFunc.as<core::LambdaExprPtr>());
+
+					// clean map
+					lambdaMap.erase(method);
 				}
-				
-				// update implementation
-				irFunc = insieme::core::transform::replaceAllGen(
-				             builder.getNodeManager(), irFunc, replacements, core::transform::globalReplacement);
-				convFact.getIRTranslationUnit().replaceFunction(symb.as<insieme::core::LiteralPtr>(), irFunc.as<core::LambdaExprPtr>());
-				
-				// clean map
-				lambdaMap.erase(method);
 			}
 		}
+		return nullptr;
 	}
-	return nullptr;
-}
 
 
-stmtutils::StmtWrapper Cpp11Extension::VisitCXXForRangeStmt(const clang::CXXForRangeStmt* frStmt, frontend::conversion::Converter& convFact) {
-	auto builder = convFact.getIRBuilder();
-	
-	const clang::DeclStmt* rangeStmt 		= frStmt->getRangeStmt();
-	const clang::DeclStmt* beginStmt 		= frStmt->getBeginEndStmt();
-	const clang::Expr* cond				= frStmt->getCond();
-	const clang::Expr* inc 				= frStmt->getInc();
-	const clang::DeclStmt* loopVarStmt	= frStmt->getLoopVarStmt();
-	const clang::Stmt* body 				= frStmt->getBody();
-	
-	core::StatementPtr range = convFact.convertStmt(rangeStmt);
-	core::StatementPtr begin = convFact.convertStmt(beginStmt);
-	core::ExpressionPtr condIr = convFact.convertExpr(cond);
-	core::ExpressionPtr incIr = convFact.convertExpr(inc);
-	core::StatementPtr loopVarStmtIr = convFact.convertStmt(loopVarStmt);
-	core::StatementPtr  bodyIr = convFact.convertStmt(body);
-	
-	StatementList stmts;
-	stmts.push_back(loopVarStmtIr);
-	stmts.push_back(bodyIr);
-	stmts.push_back(incIr);
-	core::CompoundStmtPtr fullBody = builder.compoundStmt(stmts);
-	core::StatementPtr whileStmt = builder.whileStmt(condIr, fullBody.as<core::StatementPtr>());
-	
-	
-	stmtutils::StmtWrapper res;
-	assert(begin.isa<core::CompoundStmtPtr>());
-	res.push_back(range);
-	res.push_back(begin.as<core::CompoundStmtPtr>()[0]);
-	res.push_back(begin.as<core::CompoundStmtPtr>()[1]);
-	res.push_back(whileStmt);
-	return res;
-}
+	stmtutils::StmtWrapper Cpp11Extension::VisitCXXForRangeStmt(const clang::CXXForRangeStmt* frStmt, frontend::conversion::Converter& convFact) {
+		auto builder = convFact.getIRBuilder();
 
-FrontendExtension::flagHandler Cpp11Extension::registerFlag(boost::program_options::options_description& options) {
-	//create lambda
-	auto lambda = [&](const ConversionJob& job) {
-		return (job.getStandard() == ConversionSetup::Standard::Cxx11);
-	};
-	return lambda;
-}
+		const clang::DeclStmt* rangeStmt = frStmt->getRangeStmt();
+		const clang::DeclStmt* beginStmt = frStmt->getBeginEndStmt();
+		const clang::Expr* cond = frStmt->getCond();
+		const clang::Expr* inc = frStmt->getInc();
+		const clang::DeclStmt* loopVarStmt = frStmt->getLoopVarStmt();
+		const clang::Stmt* body = frStmt->getBody();
 
-} //namespace extension
-} //namespace frontend
-} //namespace insieme
+		core::StatementPtr range = convFact.convertStmt(rangeStmt);
+		core::StatementPtr begin = convFact.convertStmt(beginStmt);
+		core::ExpressionPtr condIr = convFact.convertExpr(cond);
+		core::ExpressionPtr incIr = convFact.convertExpr(inc);
+		core::StatementPtr loopVarStmtIr = convFact.convertStmt(loopVarStmt);
+		core::StatementPtr bodyIr = convFact.convertStmt(body);
+
+		StatementList stmts;
+		stmts.push_back(loopVarStmtIr);
+		stmts.push_back(bodyIr);
+		stmts.push_back(incIr);
+		core::CompoundStmtPtr fullBody = builder.compoundStmt(stmts);
+		core::StatementPtr whileStmt = builder.whileStmt(condIr, fullBody.as<core::StatementPtr>());
+
+
+		stmtutils::StmtWrapper res;
+		assert(begin.isa<core::CompoundStmtPtr>());
+		res.push_back(range);
+		res.push_back(begin.as<core::CompoundStmtPtr>()[0]);
+		res.push_back(begin.as<core::CompoundStmtPtr>()[1]);
+		res.push_back(whileStmt);
+		return res;
+	}
+
+	FrontendExtension::flagHandler Cpp11Extension::registerFlag(boost::program_options::options_description& options) {
+		// create lambda
+		auto lambda = [&](const ConversionJob& job) { return (job.getStandard() == ConversionSetup::Standard::Cxx11); };
+		return lambda;
+	}
+
+} // namespace extension
+} // namespace frontend
+} // namespace insieme

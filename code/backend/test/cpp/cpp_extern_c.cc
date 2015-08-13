@@ -44,30 +44,29 @@
 namespace insieme {
 namespace backend {
 
-TEST(CppCode, ExternC) {
+	TEST(CppCode, ExternC) {
+		core::NodeManager mgr;
+		core::IRBuilder builder(mgr);
 
-	core::NodeManager mgr;
-	core::IRBuilder builder(mgr);
-	
-	// create two external literals
-	auto type = builder.parseType("()->unit");
-	auto litA = builder.literal("funA", type);
-	auto litB = builder.literal("funB", type);
-	
-	// the second shell be an extern "C" function
-	annotations::c::markAsExternC(litB);
-	
-	// convert codes
-	auto targetCodeA = sequential::SequentialBackend::getDefault()->convert(litA);
-	ASSERT_TRUE((bool)targetCodeA);
-	
-	auto targetCodeB = sequential::SequentialBackend::getDefault()->convert(litB);
-	ASSERT_TRUE((bool)targetCodeB);
-	
-	
-	EXPECT_PRED2(containsSubString, toString(*targetCodeA), "void funA();\n\n&funA");
-	EXPECT_PRED2(containsSubString, toString(*targetCodeB), "extern \"C\" {\n    void funB();\n}\n\n&funB");
-}
+		// create two external literals
+		auto type = builder.parseType("()->unit");
+		auto litA = builder.literal("funA", type);
+		auto litB = builder.literal("funB", type);
+
+		// the second shell be an extern "C" function
+		annotations::c::markAsExternC(litB);
+
+		// convert codes
+		auto targetCodeA = sequential::SequentialBackend::getDefault()->convert(litA);
+		ASSERT_TRUE((bool)targetCodeA);
+
+		auto targetCodeB = sequential::SequentialBackend::getDefault()->convert(litB);
+		ASSERT_TRUE((bool)targetCodeB);
+
+
+		EXPECT_PRED2(containsSubString, toString(*targetCodeA), "void funA();\n\n&funA");
+		EXPECT_PRED2(containsSubString, toString(*targetCodeB), "extern \"C\" {\n    void funB();\n}\n\n&funB");
+	}
 
 } // namespace backend
 } // namespace insieme

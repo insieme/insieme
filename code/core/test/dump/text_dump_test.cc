@@ -48,98 +48,93 @@ namespace insieme {
 namespace core {
 namespace dump {
 
-using namespace std;
+	using namespace std;
 
 
-TEST(TextDump, StoreLoad) {
+	TEST(TextDump, StoreLoad) {
+		// create a code fragment using manager A
+		NodeManager managerA;
+		IRBuilder builder(managerA);
 
-	// create a code fragment using manager A
-	NodeManager managerA;
-	IRBuilder builder(managerA);
-	
-	std::map<std::string, NodePtr> symbols;
-	symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
-	
-	NodePtr code = builder.parseStmt(
-	                   "{ "
-	                   "	for(uint<4> i = 10u .. 50u) { "
-	                   "		v[i]; "
-	                   "	} "
-	                   "	for(uint<4> j = 5u .. 25u) { "
-	                   "		v[j]; "
-	                   "	} "
-	                   "}", symbols);
-	                   
-	EXPECT_TRUE(code) << *code;
-	
-	// create a in-memory stream
-	stringstream buffer(ios_base::out | ios_base::in | ios_base::binary);
-	
-	// dump IR using a text format
-	text::dumpIR(buffer, code);
-	
-	// reload IR using a different node manager
-	NodeManager managerB;
-	NodePtr restored = text::loadIR(buffer, managerB);
-	
-	EXPECT_NE(code, restored);
-	EXPECT_EQ(*code, *restored);
-	
-	buffer.seekg(0); // reset stream
-	
-	NodePtr restored2 = text::loadIR(buffer, managerA);
-	EXPECT_EQ(code, restored2);
-	
-}
+		std::map<std::string, NodePtr> symbols;
+		symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
 
-TEST(TextDump, StoreLoadAddress) {
+		NodePtr code = builder.parseStmt("{ "
+		                                 "	for(uint<4> i = 10u .. 50u) { "
+		                                 "		v[i]; "
+		                                 "	} "
+		                                 "	for(uint<4> j = 5u .. 25u) { "
+		                                 "		v[j]; "
+		                                 "	} "
+		                                 "}",
+		                                 symbols);
 
-	// create a code fragment using manager A
-	NodeManager managerA;
-	IRBuilder builder(managerA);
-	
-	std::map<std::string, NodePtr> symbols;
-	symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
-	
-	NodePtr code = builder.parseStmt(
-	                   "{ "
-	                   "	for(uint<4> i = 10u .. 50u) { "
-	                   "		v[i]; "
-	                   "	} "
-	                   "	for(uint<4> j = 5u .. 25u) { "
-	                   "		v[j]; "
-	                   "	} "
-	                   "}", symbols);
-	                   
-	EXPECT_TRUE(code) << *code;
-	
-	// create a in-memory stream
-	stringstream buffer(ios_base::out | ios_base::in | ios_base::binary);
-	
-	NodeAddress adr(code);
-	adr = adr.getAddressOfChild(1,3);
-	
-	// dump IR using a binary format
-	text::dumpAddress(buffer, adr);
-	
-	// reload IR using a different node manager
-	NodeManager managerB;
-	NodeAddress restored = text::loadAddress(buffer, managerB);
-	
-	EXPECT_EQ(adr, restored);
-	EXPECT_NE(adr.getAddressedNode(), restored.getAddressedNode());
-	EXPECT_EQ(*adr, *restored);
-	EXPECT_EQ(*adr.getRootNode(), *restored.getRootNode());
-	
-	buffer.seekg(0); // reset stream
-	
-	NodePtr restored2 = text::loadAddress(buffer, managerA);
-	EXPECT_EQ(adr, restored2);
-	
-}
+		EXPECT_TRUE(code) << *code;
+
+		// create a in-memory stream
+		stringstream buffer(ios_base::out | ios_base::in | ios_base::binary);
+
+		// dump IR using a text format
+		text::dumpIR(buffer, code);
+
+		// reload IR using a different node manager
+		NodeManager managerB;
+		NodePtr restored = text::loadIR(buffer, managerB);
+
+		EXPECT_NE(code, restored);
+		EXPECT_EQ(*code, *restored);
+
+		buffer.seekg(0); // reset stream
+
+		NodePtr restored2 = text::loadIR(buffer, managerA);
+		EXPECT_EQ(code, restored2);
+	}
+
+	TEST(TextDump, StoreLoadAddress) {
+		// create a code fragment using manager A
+		NodeManager managerA;
+		IRBuilder builder(managerA);
+
+		std::map<std::string, NodePtr> symbols;
+		symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
+
+		NodePtr code = builder.parseStmt("{ "
+		                                 "	for(uint<4> i = 10u .. 50u) { "
+		                                 "		v[i]; "
+		                                 "	} "
+		                                 "	for(uint<4> j = 5u .. 25u) { "
+		                                 "		v[j]; "
+		                                 "	} "
+		                                 "}",
+		                                 symbols);
+
+		EXPECT_TRUE(code) << *code;
+
+		// create a in-memory stream
+		stringstream buffer(ios_base::out | ios_base::in | ios_base::binary);
+
+		NodeAddress adr(code);
+		adr = adr.getAddressOfChild(1, 3);
+
+		// dump IR using a binary format
+		text::dumpAddress(buffer, adr);
+
+		// reload IR using a different node manager
+		NodeManager managerB;
+		NodeAddress restored = text::loadAddress(buffer, managerB);
+
+		EXPECT_EQ(adr, restored);
+		EXPECT_NE(adr.getAddressedNode(), restored.getAddressedNode());
+		EXPECT_EQ(*adr, *restored);
+		EXPECT_EQ(*adr.getRootNode(), *restored.getRootNode());
+
+		buffer.seekg(0); // reset stream
+
+		NodePtr restored2 = text::loadAddress(buffer, managerA);
+		EXPECT_EQ(adr, restored2);
+	}
 
 
 } // end namespace dump
 } // end namespace core
 } // end namespace insieme
-

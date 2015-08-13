@@ -48,48 +48,45 @@
 namespace insieme {
 namespace backend {
 
-const VariableInfo& VariableManager::getInfo(const core::VariablePtr& var) const {
-	// find requested variable within info
-	auto pos = infos.find(var);
-	if(pos != infos.end()) {
+	const VariableInfo& VariableManager::getInfo(const core::VariablePtr& var) const {
+		// find requested variable within info
+		auto pos = infos.find(var);
+		if(pos != infos.end()) { return pos->second; }
+
+		LOG(FATAL) << "Requesting info for unknown variable " << *var << " of type " << *var->getType() << "!!!";
+
+		assert(pos != infos.end() && "Requested variable infos for unknown variable!");
 		return pos->second;
 	}
-	
-	LOG(FATAL) << "Requesting info for unknown variable " << *var << " of type " << *var->getType() << "!!!";
-	
-	assert(pos != infos.end() && "Requested variable infos for unknown variable!");
-	return pos->second;
-}
 
-const VariableInfo& VariableManager::addInfo(const Converter& converter, const core::VariablePtr& var, VariableInfo::MemoryLocation location) {
-	// forward call more detailed implementation
-	return addInfo(converter, var, location, converter.getTypeManager().getTypeInfo(var->getType()));
-}
+	const VariableInfo& VariableManager::addInfo(const Converter& converter, const core::VariablePtr& var, VariableInfo::MemoryLocation location) {
+		// forward call more detailed implementation
+		return addInfo(converter, var, location, converter.getTypeManager().getTypeInfo(var->getType()));
+	}
 
-const VariableInfo& VariableManager::addInfo(const Converter& converter, const core::VariablePtr& var, VariableInfo::MemoryLocation location,
-        const TypeInfo& typeInfo) {
-        
-	// create new variable info instance (implicit)
-	VariableInfo& info = infos[var];
-	
-	// obtain type info
-	info.typeInfo = &typeInfo;
-	
-	// obtain name and type of the variable
-	c_ast::TypePtr type = (location == VariableInfo::DIRECT)?info.typeInfo->lValueType:info.typeInfo->rValueType;
-	c_ast::IdentifierPtr name = converter.getCNodeManager()->create(converter.getNameManager().getName(var));
-	
-	info.var = c_ast::var(type, name);
-	info.location = location;
-	
-	return info;
-}
+	const VariableInfo& VariableManager::addInfo(const Converter& converter, const core::VariablePtr& var, VariableInfo::MemoryLocation location,
+	                                             const TypeInfo& typeInfo) {
+		// create new variable info instance (implicit)
+		VariableInfo& info = infos[var];
+
+		// obtain type info
+		info.typeInfo = &typeInfo;
+
+		// obtain name and type of the variable
+		c_ast::TypePtr type = (location == VariableInfo::DIRECT) ? info.typeInfo->lValueType : info.typeInfo->rValueType;
+		c_ast::IdentifierPtr name = converter.getCNodeManager()->create(converter.getNameManager().getName(var));
+
+		info.var = c_ast::var(type, name);
+		info.location = location;
+
+		return info;
+	}
 
 
-void VariableManager::remInfo(const core::VariablePtr& var) {
-	// just delete from internal map
-	infos.erase(var);
-}
+	void VariableManager::remInfo(const core::VariablePtr& var) {
+		// just delete from internal map
+		infos.erase(var);
+	}
 
 } // end namespace backend
 } // end namespace insieme

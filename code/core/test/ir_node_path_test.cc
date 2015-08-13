@@ -43,14 +43,12 @@
 namespace insieme {
 namespace core {
 
-TEST(NodePathTest, Basic) {
-	NodeManager manager;
-	IRBuilder builder(manager);
-	
-	NodePath<empty> path;
-	
-}
+	TEST(NodePathTest, Basic) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		NodePath<empty> path;
+	}
 
 } // end namespace core
 } // end namespace insieme
-

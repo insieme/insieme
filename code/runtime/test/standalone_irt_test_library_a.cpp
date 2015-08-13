@@ -42,11 +42,9 @@
 
 void different_translation_unit();
 
-int main(int argc, char **argv) {
-	auto x = irt::parallel(2, [argc]() {
-		std::cout << "Hello From main\n";
-	});
+int main(int argc, char** argv) {
+	auto x = irt::parallel(2, [argc]() { std::cout << "Hello From main\n"; });
 	irt::merge(x);
-	
+
 	different_translation_unit();
 }

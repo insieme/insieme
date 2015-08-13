@@ -45,27 +45,23 @@
 using namespace std;
 
 TEST(IteratorUtils, PairedIterator) {
-
 	vector<int> testInt;
 	testInt.push_back(15);
 	testInt.push_back(26);
 	vector<string> testString;
 	testString.push_back("A");
 	testString.push_back("B");
-	
+
 	auto start = make_paired_iterator(testInt.begin(), testString.begin());
 	auto end = make_paired_iterator(testInt.end(), testString.end());
-	
+
 	stringstream ss;
-	for_each(start, end, [&ss](pair<int, string> elem) {
-		ss << elem.first << ":" << elem.second << "--";
-	});
-	
+	for_each(start, end, [&ss](pair<int, string> elem) { ss << elem.first << ":" << elem.second << "--"; });
+
 	EXPECT_EQ(ss.str(), "15:A--26:B--");
 }
 
 TEST(IteratorUtils, ProductIterator) {
-
 	vector<int> testInt;
 	testInt.push_back(15);
 	testInt.push_back(26);
@@ -73,59 +69,50 @@ TEST(IteratorUtils, ProductIterator) {
 	testString.push_back("A");
 	testString.push_back("B");
 	testString.push_back("C");
-	
+
 	auto range = make_product_range(testInt, testString);
-	
+
 	stringstream ss;
-	for_each(range.first, range.second, [&ss](const pair<int, string>& elem) {
-		ss << elem.first << ":" << elem.second << "--";
-	});
-	
+	for_each(range.first, range.second, [&ss](const pair<int, string>& elem) { ss << elem.first << ":" << elem.second << "--"; });
+
 	EXPECT_EQ(ss.str(), "15:A--26:A--15:B--26:B--15:C--26:C--");
 }
 
 TEST(IteratorUtils, EmptyProductIterator) {
-
 	vector<int> testInt;
 	vector<string> testString;
 	testString.push_back("A");
 	testString.push_back("B");
 	testString.push_back("C");
-	
+
 	auto range = make_product_range(testInt, testString);
-	
+
 	EXPECT_TRUE(range.first == range.second);
-	
+
 	stringstream ss;
-	for_each(range.first, range.second, [&ss](const pair<int, string>& elem) {
-		ss << elem.first << ":" << elem.second << "--";
-	});
-	
+	for_each(range.first, range.second, [&ss](const pair<int, string>& elem) { ss << elem.first << ":" << elem.second << "--"; });
+
 	EXPECT_EQ(ss.str(), "");
 }
 
 TEST(IteratorUtils, IteratorFilter) {
-
-	vector<int> a{ 10, 0, 20, 0, 30, 0, 40 };
+	vector<int> a{10, 0, 20, 0, 30, 0, 40};
 	auto twin = filterIterator(a.begin(), a.end(), [](const int& cur) -> bool { return !cur; });
-	
+
 	vector<int> fa(twin.first, twin.second);
 	EXPECT_EQ(static_cast<size_t>(4), fa.size());
-	
+
 	EXPECT_EQ(10, fa[0]);
 	EXPECT_EQ(20, fa[1]);
 	EXPECT_EQ(30, fa[2]);
 	EXPECT_EQ(40, fa[3]);
-	
 }
 
 TEST(IteratorUtils, IteratorFilter2) {
-
-	int a,b,c;
-	vector<const int*> v{ NULL, &a, &b, &c};
+	int a, b, c;
+	vector<const int*> v{NULL, &a, &b, &c};
 	auto twin = filterIterator(v.begin(), v.end(), [](const int* const& cur) -> bool { return !cur; });
-	
+
 	std::set<const int*> fv(twin.first, twin.second);
 	EXPECT_EQ(static_cast<size_t>(3), fv.size());
-	
 }

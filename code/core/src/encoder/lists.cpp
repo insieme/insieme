@@ -45,74 +45,69 @@ namespace insieme {
 namespace core {
 namespace encoder {
 
-namespace {
+	namespace {
 
-/**
- * A helper function constructing a generic list type instance.
- */
-core::TypePtr getListType(core::NodeManager& manager) {
-	core::IRBuilder builder(manager);
-	core::TypePtr alpha = builder.typeVariable("a");
-	auto ret = GenericType::get(manager, ListExtension::LIST_TYPE_NAME, toVector(alpha));
-	lang::markAsBuiltIn(ret);
-	return ret;
-}
+		/**
+		 * A helper function constructing a generic list type instance.
+		 */
+		core::TypePtr getListType(core::NodeManager& manager) {
+			core::IRBuilder builder(manager);
+			core::TypePtr alpha = builder.typeVariable("a");
+			auto ret = GenericType::get(manager, ListExtension::LIST_TYPE_NAME, toVector(alpha));
+			lang::markAsBuiltIn(ret);
+			return ret;
+		}
 
-/**
- * A helper function constructing the empty literal used for encoding lists.
- */
-core::LiteralPtr getEmptyLiteral(core::NodeManager& manager) {
-	core::IRBuilder builder(manager);
-	core::TypePtr list = getListType(manager);
-	core::TypePtr alpha = builder.typeVariable("a");
-	core::TypePtr typeArgType = builder.genericType("type", toVector(alpha));
-	core::TypePtr emptyType = builder.functionType(typeArgType, list);
-	auto ret = builder.literal(emptyType, "empty");
-	lang::markAsBuiltIn(ret);
-	return ret;
-}
+		/**
+		 * A helper function constructing the empty literal used for encoding lists.
+		 */
+		core::LiteralPtr getEmptyLiteral(core::NodeManager& manager) {
+			core::IRBuilder builder(manager);
+			core::TypePtr list = getListType(manager);
+			core::TypePtr alpha = builder.typeVariable("a");
+			core::TypePtr typeArgType = builder.genericType("type", toVector(alpha));
+			core::TypePtr emptyType = builder.functionType(typeArgType, list);
+			auto ret = builder.literal(emptyType, "empty");
+			lang::markAsBuiltIn(ret);
+			return ret;
+		}
 
-/**
- * A helper function constructing the cons literal used for encoding lists.
- */
-core::LiteralPtr getConsLiteral(core::NodeManager& manager) {
-	core::IRBuilder builder(manager);
-	core::TypePtr list = getListType(manager);
-	core::TypePtr alpha = builder.typeVariable("a");
-	core::TypePtr consType = builder.functionType(toVector(alpha, list), list);
-	auto ret = builder.literal(consType, "cons");
-	lang::markAsBuiltIn(ret);
-	return ret;
-}
-
-}
-
-string ListExtension::LIST_TYPE_NAME = "list";
-
-ListExtension::ListExtension(core::NodeManager& manager)
-	: Extension(manager), empty(getEmptyLiteral(manager)), cons(getConsLiteral(manager)) {}
-	
-	
-bool isListType(const core::TypePtr& type) {
-	if(type->getNodeType() != NT_GenericType) {
-		return false;
+		/**
+		 * A helper function constructing the cons literal used for encoding lists.
+		 */
+		core::LiteralPtr getConsLiteral(core::NodeManager& manager) {
+			core::IRBuilder builder(manager);
+			core::TypePtr list = getListType(manager);
+			core::TypePtr alpha = builder.typeVariable("a");
+			core::TypePtr consType = builder.functionType(toVector(alpha, list), list);
+			auto ret = builder.literal(consType, "cons");
+			lang::markAsBuiltIn(ret);
+			return ret;
+		}
 	}
-	
-	// check generic type properties
-	core::GenericTypePtr genType = static_pointer_cast<const GenericType>(type);
-	return genType->getName()->getValue() == ListExtension::LIST_TYPE_NAME &&
-	       genType->getTypeParameter().size() == static_cast<std::size_t>(1);
-}
 
-const core::TypePtr getElementType(const core::TypePtr& listType) {
-	assert_true(isListType(listType)) << "Not applicable to non-list type!";
-	return static_pointer_cast<const core::GenericType>(listType)->getTypeParameter()->getElement(0);
-}
+	string ListExtension::LIST_TYPE_NAME = "list";
 
-const core::TypePtr getListType(const core::TypePtr& elementType) {
-	IRBuilder builder(elementType->getNodeManager());
-	return builder.genericType(ListExtension::LIST_TYPE_NAME, toVector(elementType));
-}
+	ListExtension::ListExtension(core::NodeManager& manager) : Extension(manager), empty(getEmptyLiteral(manager)), cons(getConsLiteral(manager)) {}
+
+
+	bool isListType(const core::TypePtr& type) {
+		if(type->getNodeType() != NT_GenericType) { return false; }
+
+		// check generic type properties
+		core::GenericTypePtr genType = static_pointer_cast<const GenericType>(type);
+		return genType->getName()->getValue() == ListExtension::LIST_TYPE_NAME && genType->getTypeParameter().size() == static_cast<std::size_t>(1);
+	}
+
+	const core::TypePtr getElementType(const core::TypePtr& listType) {
+		assert_true(isListType(listType)) << "Not applicable to non-list type!";
+		return static_pointer_cast<const core::GenericType>(listType)->getTypeParameter()->getElement(0);
+	}
+
+	const core::TypePtr getListType(const core::TypePtr& elementType) {
+		IRBuilder builder(elementType->getNodeManager());
+		return builder.genericType(ListExtension::LIST_TYPE_NAME, toVector(elementType));
+	}
 
 
 } // end namespace lists

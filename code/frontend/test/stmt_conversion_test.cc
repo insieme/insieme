@@ -82,18 +82,14 @@ void checkSemanticErrors(const NodePtr& node) {
 std::string getPrettyPrinted(const NodePtr& node) {
 	std::ostringstream ss;
 	ss << insieme::core::printer::PrettyPrinter(node,
-	        insieme::core::printer::PrettyPrinter::OPTIONS_DETAIL |
-	        insieme::core::printer::PrettyPrinter::NO_LET_BINDINGS
-	                                           );
-	                                           
+	                                            insieme::core::printer::PrettyPrinter::OPTIONS_DETAIL | insieme::core::printer::PrettyPrinter::NO_LET_BINDINGS);
+
 	// Remove new lines and leading spaces
 	std::vector<char> res;
 	std::string prettyPrint = ss.str();
 	for(auto it = prettyPrint.begin(), end = prettyPrint.end(); it != end; ++it)
-		if(!(*it == '\n' || (it + 1 != end && *it == ' ' && *(it+1) == ' '))) {
-			res.push_back(*it);
-		}
-		
+		if(!(*it == '\n' || (it + 1 != end && *it == ' ' && *(it + 1) == ' '))) { res.push_back(*it); }
+
 	return std::string(res.begin(), res.end());
 }
 
@@ -101,49 +97,44 @@ std::string getPrettyPrinted(const NodePtr& node) {
 TEST(StmtConversion, FileTest) {
 	NodeManager manager;
 	const std::string filename = FRONTEND_TEST_DIR "/inputs/stmt.c";
-	std::vector<std::string> argv = { "compiler", filename };
+	std::vector<std::string> argv = {"compiler", filename};
 	cmd::Options options = cmd::Options::parse(argv);
 	options.job.frontendExtensionInit();
 	insieme::frontend::TranslationUnit tu(manager, filename, options.job);
-	
-	auto filter = [](const insieme::frontend::pragma::Pragma& curr) {
-		return curr.getType() == "test::expected";
-	};
-	
+
+	auto filter = [](const insieme::frontend::pragma::Pragma& curr) { return curr.getType() == "test::expected"; };
+
 	const auto begin = tu.pragmas_begin(filter);
 	const auto end = tu.pragmas_end();
-	
+
 	EXPECT_NE(begin, end);
-	
+
 	NodeManager mgr;
 	insieme::frontend::conversion::Converter convFactory(mgr, tu, options.job);
 	convFactory.convert();
-	
-	auto resolve = [&](const NodePtr& cur) {
-		return convFactory.getIRTranslationUnit().resolve(cur);
-	};
-	
+
+	auto resolve = [&](const NodePtr& cur) { return convFactory.getIRTranslationUnit().resolve(cur); };
+
 	for(auto it = begin; it != end; ++it) {
 		const auto pragma = *it;
-		
+
 		if(pragma->isStatement()) {
 			NodePtr node = insieme::frontend::fixVariableIDs(resolve(convFactory.convertStmt(pragma->getStatement())));
 			EXPECT_TRUE(node->hasAnnotation(ia::ExpectedIRAnnotation::KEY));
 			EXPECT_EQ(ia::ExpectedIRAnnotation::getValue(node), '\"' + getPrettyPrinted(node) + '\"');
 			// do semantics checking
 			checkSemanticErrors(node);
-			
-		}
-		else {
+
+		} else {
 			if(const clang::TypeDecl* td = dyn_cast<const clang::TypeDecl>(pragma->getDecl())) {
 				TypePtr type = resolve(convFactory.convertType(td->getTypeForDecl()->getCanonicalTypeInternal())).as<TypePtr>();
 				EXPECT_TRUE(type->hasAnnotation(ia::ExpectedIRAnnotation::KEY));
 				EXPECT_EQ(ia::ExpectedIRAnnotation::getValue(type), '\"' + getPrettyPrinted(type) + '\"');
 				// do semantics checking
 				checkSemanticErrors(type);
-			}
-			else if(const clang::FunctionDecl* fd = dyn_cast<const clang::FunctionDecl>(pragma->getDecl())) {
-				LambdaExprPtr expr = insieme::core::dynamic_pointer_cast<const insieme::core::LambdaExpr>(resolve(convFactory.convertFunctionDecl(fd)).as<LambdaExprPtr>());
+			} else if(const clang::FunctionDecl* fd = dyn_cast<const clang::FunctionDecl>(pragma->getDecl())) {
+				LambdaExprPtr expr =
+				    insieme::core::dynamic_pointer_cast<const insieme::core::LambdaExpr>(resolve(convFactory.convertFunctionDecl(fd)).as<LambdaExprPtr>());
 				ASSERT_TRUE(expr);
 				EXPECT_TRUE(expr->hasAnnotation(ia::ExpectedIRAnnotation::KEY));
 				EXPECT_EQ(ia::ExpectedIRAnnotation::getValue(expr), '\"' + getPrettyPrinted(analysis::normalize(expr)) + '\"');

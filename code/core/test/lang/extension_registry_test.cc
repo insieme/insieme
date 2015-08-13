@@ -47,17 +47,16 @@ namespace insieme {
 namespace core {
 namespace lang {
 
-TEST(ExtensionRegistry, Semantics) {
-	NodeManager nm;
-	
-	const ExtensionRegistry& registry = ExtensionRegistry::getInstance();
-	auto extensions = registry.getExtensionFactories();
-	for(auto extFactPair : extensions) {
-		auto extFact = extFactPair.second;
-		semanticCheckSecond(extFact(nm).getNamedIrExtensions());
+	TEST(ExtensionRegistry, Semantics) {
+		NodeManager nm;
+
+		const ExtensionRegistry& registry = ExtensionRegistry::getInstance();
+		auto extensions = registry.getExtensionFactories();
+		for(auto extFactPair : extensions) {
+			auto extFact = extFactPair.second;
+			semanticCheckSecond(extFact(nm).getNamedIrExtensions());
+		}
 	}
-}
 } // end namespace lang
 } // end namespace core
 } // end namespace insieme
-

@@ -45,82 +45,78 @@
 namespace insieme {
 namespace annotations {
 
-using namespace std;
+	using namespace std;
 
-TEST(LoopAnnotation, BinaryDumpTest) {
+	TEST(LoopAnnotation, BinaryDumpTest) {
+		// create a code fragment using manager A
+		NodeManager managerA;
+		IRBuilder builder(managerA);
 
-	// create a code fragment using manager A
-	NodeManager managerA;
-	IRBuilder builder(managerA);
-	
-	NodePtr loop = builder.parseStmt(
-	                   "for(int<4> i = 0 .. 10 : 1) { }"
-	               );
-	               
-	EXPECT_TRUE(loop);
-	
-	
-	// check some basic loop annotation values
-	EXPECT_FALSE(LoopAnnotation::hasAttachedValue(loop));
-	
-	LoopAnnotation::attach(loop, 123);
-	EXPECT_TRUE(LoopAnnotation::hasAttachedValue(loop));
-	EXPECT_EQ(123u, LoopAnnotation::getValue(loop));
-	
-	
-	// dump to binary ..
-	stringstream buffer(ios_base::out | ios_base::in | ios_base::binary);
-	core::dump::binary::dumpIR(buffer, loop);
-	
-	// restore within different manager
-	NodeManager managerB;
-	NodePtr restored = core::dump::binary::loadIR(buffer, managerB);
-	
-	EXPECT_NE(loop, restored);
-	EXPECT_EQ(*loop, *restored);
-	
-	ASSERT_TRUE(LoopAnnotation::hasAttachedValue(restored));
-	EXPECT_EQ(123u, LoopAnnotation::getValue(restored));
-	
-//
-//		// create conversion register
-//		AnnotationConverterRegister registry;
-//		registry.registerConverter<DummyAnnotationConverter, core::value_node_annotation<DummyAnnotation>::type>();
-//
-//		NodePtr code = builder.genericType("A");
-//		EXPECT_TRUE(code) << *code;
-//
-//		// add annotation
-//		code->attachValue(DummyAnnotation(12));
-//		EXPECT_TRUE(code->hasAttachedValue<DummyAnnotation>());
-//
-//		// create a in-memory stream
-//		stringstream buffer(ios_base::out | ios_base::in | ios_base::binary);
-//
-//		// dump IR using a binary format
-//		binary::dumpIR(buffer, code, registry);
-//
-//		// reload IR using a different node manager
-//		NodeManager managerB;
-//		NodePtr restored = binary::loadIR(buffer, managerB, registry);
-//
-//		EXPECT_NE(code, restored);
-//		EXPECT_EQ(*code, *restored);
-//
-//		// annotation should still be available
-//		EXPECT_TRUE(restored->hasAttachedValue<DummyAnnotation>());
-//
-//		buffer.seekg(0); // reset stream
-//
-//		NodeManager managerC;
-//		auto restored3 = binary::loadIR(buffer, managerC);
-//		EXPECT_NE(code, restored);
-//		EXPECT_EQ(*code, *restored3);
-//
-//		// annotation should not be available
-//		EXPECT_FALSE(restored3->hasAttachedValue<DummyAnnotation>());
+		NodePtr loop = builder.parseStmt("for(int<4> i = 0 .. 10 : 1) { }");
 
-}
+		EXPECT_TRUE(loop);
+
+
+		// check some basic loop annotation values
+		EXPECT_FALSE(LoopAnnotation::hasAttachedValue(loop));
+
+		LoopAnnotation::attach(loop, 123);
+		EXPECT_TRUE(LoopAnnotation::hasAttachedValue(loop));
+		EXPECT_EQ(123u, LoopAnnotation::getValue(loop));
+
+
+		// dump to binary ..
+		stringstream buffer(ios_base::out | ios_base::in | ios_base::binary);
+		core::dump::binary::dumpIR(buffer, loop);
+
+		// restore within different manager
+		NodeManager managerB;
+		NodePtr restored = core::dump::binary::loadIR(buffer, managerB);
+
+		EXPECT_NE(loop, restored);
+		EXPECT_EQ(*loop, *restored);
+
+		ASSERT_TRUE(LoopAnnotation::hasAttachedValue(restored));
+		EXPECT_EQ(123u, LoopAnnotation::getValue(restored));
+
+		//
+		//		// create conversion register
+		//		AnnotationConverterRegister registry;
+		//		registry.registerConverter<DummyAnnotationConverter, core::value_node_annotation<DummyAnnotation>::type>();
+		//
+		//		NodePtr code = builder.genericType("A");
+		//		EXPECT_TRUE(code) << *code;
+		//
+		//		// add annotation
+		//		code->attachValue(DummyAnnotation(12));
+		//		EXPECT_TRUE(code->hasAttachedValue<DummyAnnotation>());
+		//
+		//		// create a in-memory stream
+		//		stringstream buffer(ios_base::out | ios_base::in | ios_base::binary);
+		//
+		//		// dump IR using a binary format
+		//		binary::dumpIR(buffer, code, registry);
+		//
+		//		// reload IR using a different node manager
+		//		NodeManager managerB;
+		//		NodePtr restored = binary::loadIR(buffer, managerB, registry);
+		//
+		//		EXPECT_NE(code, restored);
+		//		EXPECT_EQ(*code, *restored);
+		//
+		//		// annotation should still be available
+		//		EXPECT_TRUE(restored->hasAttachedValue<DummyAnnotation>());
+		//
+		//		buffer.seekg(0); // reset stream
+		//
+		//		NodeManager managerC;
+		//		auto restored3 = binary::loadIR(buffer, managerC);
+		//		EXPECT_NE(code, restored);
+		//		EXPECT_EQ(*code, *restored3);
+		//
+		//		// annotation should not be available
+		//		EXPECT_FALSE(restored3->hasAttachedValue<DummyAnnotation>());
+	}
 
 
 } // end namespace annotations

@@ -50,141 +50,133 @@ namespace insieme {
 namespace core {
 namespace encoder {
 
-TEST(PrimitiveTypes, Base) {
+	TEST(PrimitiveTypes, Base) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+		const auto& basic = manager.getLangBasic();
 
-	NodeManager manager;
-	IRBuilder builder(manager);
-	const auto& basic = manager.getLangBasic();
-	
-	core::ExpressionPtr expr = toIR(manager, 12);
-	
-	EXPECT_EQ(basic.getInt4(), expr->getType());
-	EXPECT_EQ("12", toString(*expr));
-	EXPECT_EQ(12, toValue<int>(expr));
-	EXPECT_TRUE(isEncodingOf<int>(expr));
-	EXPECT_FALSE(isEncodingOf<short>(expr));
-	
-	expr = toIR(manager, false);
-	EXPECT_EQ(basic.getBool(), expr->getType());
-	EXPECT_TRUE(basic.isFalse(expr));
-	EXPECT_EQ("false", toString(*expr));
-	EXPECT_FALSE(toValue<bool>(expr));
-	
-	expr = toIR(manager, true);
-	EXPECT_EQ(basic.getBool(), expr->getType());
-	EXPECT_TRUE(basic.isTrue(expr));
-	EXPECT_EQ("true", toString(*expr));
-	EXPECT_TRUE(toValue<bool>(expr));
-	
-	EXPECT_TRUE(isEncodingOf<bool>(expr));
-	EXPECT_FALSE(isEncodingOf<int>(expr));
-	EXPECT_FALSE(isEncodingOf<short>(expr));
-	
-	EXPECT_TRUE(isEncodingOf<bool>(toIR(manager, true)));
-	EXPECT_TRUE(isEncodingOf<bool>(toIR(manager, false)));
-	
-	
-	expr = toIR(manager, (short)4);
-	EXPECT_EQ("int<2>", toString(*expr->getType()));
-	EXPECT_EQ("4", toString(*expr));
-	EXPECT_TRUE(checks::check(expr).empty()) << checks::check(expr);
-	
-	expr = toIR(manager, (unsigned)14);
-	EXPECT_EQ("uint<4>", toString(*expr->getType()));
-	EXPECT_EQ("14", toString(*expr));
-	EXPECT_TRUE(checks::check(expr).empty()) << checks::check(expr);
-	
-	float y = 1.5f;
-	expr = toIR(manager, y);
-	EXPECT_EQ("real<4>", toString(*expr->getType()));
-	EXPECT_EQ("1.5f", toString(*expr));
-	EXPECT_TRUE(checks::check(expr).empty()) << checks::check(expr);
-	
-	double x = 123.123;
-	expr = toIR(manager, x);
-	EXPECT_EQ("real<8>", toString(*expr->getType()));
-	EXPECT_EQ("123.123", toString(*expr));
-	EXPECT_TRUE(checks::check(expr).empty()) << checks::check(expr);
-	
-	
-	// check strings
-	string test = "Hello";
-	expr = toIR(manager, test);
-	EXPECT_EQ("ref<array<char,1>>", toString(*expr->getType()));
-	EXPECT_EQ("Hello", toString(*expr));
-	EXPECT_EQ(test, toValue<string>(expr));
-	EXPECT_TRUE(checks::check(expr).empty()) << checks::check(expr);
-	
-	// check exceptions
-	expr = builder.variable(basic.getInt4());
-	EXPECT_THROW(toValue<double>(expr), InvalidExpression); // wrong type
-	EXPECT_THROW(toValue<int>(expr), InvalidExpression); // wrong node type
-	EXPECT_TRUE(checks::check(expr).empty()) << checks::check(expr);
-	
-	
-	// check types
-	EXPECT_EQ(basic.getInt4(), getTypeFor<int>(manager));
-	EXPECT_EQ(basic.getDouble(), getTypeFor<double>(manager));
-	
-}
+		core::ExpressionPtr expr = toIR(manager, 12);
 
-TEST(PrimitiveTypes, SubTypeSupport) {
+		EXPECT_EQ(basic.getInt4(), expr->getType());
+		EXPECT_EQ("12", toString(*expr));
+		EXPECT_EQ(12, toValue<int>(expr));
+		EXPECT_TRUE(isEncodingOf<int>(expr));
+		EXPECT_FALSE(isEncodingOf<short>(expr));
 
-	NodeManager manager;
-	IRBuilder builder(manager);
-	const auto& basic = manager.getLangBasic();
-	
-	core::TypePtr uint4 = basic.getUInt4();
-	core::TypePtr uint8 = basic.getUInt8();
-	
-	core::ExpressionPtr exprA = builder.literal(uint4, "12");
-	core::ExpressionPtr exprB = builder.literal(uint8, "14");
-	
-	EXPECT_EQ(uint4, getTypeFor<uint32_t>(manager));
-	EXPECT_EQ(uint8, getTypeFor<uint64_t>(manager));
-	
-	EXPECT_TRUE(isEncodingOf<uint32_t>(exprA));
-	EXPECT_FALSE(isEncodingOf<uint32_t>(exprB));
-	EXPECT_TRUE(isEncodingOf<uint64_t>(exprA));
-	EXPECT_TRUE(isEncodingOf<uint64_t>(exprB));
-	
-	EXPECT_EQ(12u, toValue<uint32_t>(exprA));
-	EXPECT_EQ(12u, toValue<uint64_t>(exprA));
-	EXPECT_EQ(14u, toValue<uint64_t>(exprB));
-}
+		expr = toIR(manager, false);
+		EXPECT_EQ(basic.getBool(), expr->getType());
+		EXPECT_TRUE(basic.isFalse(expr));
+		EXPECT_EQ("false", toString(*expr));
+		EXPECT_FALSE(toValue<bool>(expr));
+
+		expr = toIR(manager, true);
+		EXPECT_EQ(basic.getBool(), expr->getType());
+		EXPECT_TRUE(basic.isTrue(expr));
+		EXPECT_EQ("true", toString(*expr));
+		EXPECT_TRUE(toValue<bool>(expr));
+
+		EXPECT_TRUE(isEncodingOf<bool>(expr));
+		EXPECT_FALSE(isEncodingOf<int>(expr));
+		EXPECT_FALSE(isEncodingOf<short>(expr));
+
+		EXPECT_TRUE(isEncodingOf<bool>(toIR(manager, true)));
+		EXPECT_TRUE(isEncodingOf<bool>(toIR(manager, false)));
 
 
-TEST(Expressions, Basic) {
+		expr = toIR(manager, (short)4);
+		EXPECT_EQ("int<2>", toString(*expr->getType()));
+		EXPECT_EQ("4", toString(*expr));
+		EXPECT_TRUE(checks::check(expr).empty()) << checks::check(expr);
 
-	// tests the encoding of expressions
-	NodeManager manager;
-	IRBuilder builder(manager);
-	
-	ExpressionPtr exp = builder.boolLit(true);
-	
-	EXPECT_TRUE(exp);
-	
-	
-	EXPECT_EQ("AP(wrap_ExpressionPtr(true))", toString(toIR(manager, exp)));
-	EXPECT_EQ(exp, toValue<ExpressionPtr>(toIR(manager, exp)));
-	
-}
+		expr = toIR(manager, (unsigned)14);
+		EXPECT_EQ("uint<4>", toString(*expr->getType()));
+		EXPECT_EQ("14", toString(*expr));
+		EXPECT_TRUE(checks::check(expr).empty()) << checks::check(expr);
 
-TEST(Expressions, NullPointer) {
+		float y = 1.5f;
+		expr = toIR(manager, y);
+		EXPECT_EQ("real<4>", toString(*expr->getType()));
+		EXPECT_EQ("1.5f", toString(*expr));
+		EXPECT_TRUE(checks::check(expr).empty()) << checks::check(expr);
 
-	// test the encoding of null pointer
-	NodeManager mgr;
-	
-	ExpressionPtr nothing;
-	
-	EXPECT_FALSE(nothing);
-	EXPECT_EQ("AP(null_ExpressionPtr())", toString(toIR(mgr, nothing)));
-	EXPECT_EQ(nothing, toValue<ExpressionPtr>(toIR(mgr, nothing)));
-	
-}
+		double x = 123.123;
+		expr = toIR(manager, x);
+		EXPECT_EQ("real<8>", toString(*expr->getType()));
+		EXPECT_EQ("123.123", toString(*expr));
+		EXPECT_TRUE(checks::check(expr).empty()) << checks::check(expr);
+
+
+		// check strings
+		string test = "Hello";
+		expr = toIR(manager, test);
+		EXPECT_EQ("ref<array<char,1>>", toString(*expr->getType()));
+		EXPECT_EQ("Hello", toString(*expr));
+		EXPECT_EQ(test, toValue<string>(expr));
+		EXPECT_TRUE(checks::check(expr).empty()) << checks::check(expr);
+
+		// check exceptions
+		expr = builder.variable(basic.getInt4());
+		EXPECT_THROW(toValue<double>(expr), InvalidExpression); // wrong type
+		EXPECT_THROW(toValue<int>(expr), InvalidExpression);    // wrong node type
+		EXPECT_TRUE(checks::check(expr).empty()) << checks::check(expr);
+
+
+		// check types
+		EXPECT_EQ(basic.getInt4(), getTypeFor<int>(manager));
+		EXPECT_EQ(basic.getDouble(), getTypeFor<double>(manager));
+	}
+
+	TEST(PrimitiveTypes, SubTypeSupport) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+		const auto& basic = manager.getLangBasic();
+
+		core::TypePtr uint4 = basic.getUInt4();
+		core::TypePtr uint8 = basic.getUInt8();
+
+		core::ExpressionPtr exprA = builder.literal(uint4, "12");
+		core::ExpressionPtr exprB = builder.literal(uint8, "14");
+
+		EXPECT_EQ(uint4, getTypeFor<uint32_t>(manager));
+		EXPECT_EQ(uint8, getTypeFor<uint64_t>(manager));
+
+		EXPECT_TRUE(isEncodingOf<uint32_t>(exprA));
+		EXPECT_FALSE(isEncodingOf<uint32_t>(exprB));
+		EXPECT_TRUE(isEncodingOf<uint64_t>(exprA));
+		EXPECT_TRUE(isEncodingOf<uint64_t>(exprB));
+
+		EXPECT_EQ(12u, toValue<uint32_t>(exprA));
+		EXPECT_EQ(12u, toValue<uint64_t>(exprA));
+		EXPECT_EQ(14u, toValue<uint64_t>(exprB));
+	}
+
+
+	TEST(Expressions, Basic) {
+		// tests the encoding of expressions
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		ExpressionPtr exp = builder.boolLit(true);
+
+		EXPECT_TRUE(exp);
+
+
+		EXPECT_EQ("AP(wrap_ExpressionPtr(true))", toString(toIR(manager, exp)));
+		EXPECT_EQ(exp, toValue<ExpressionPtr>(toIR(manager, exp)));
+	}
+
+	TEST(Expressions, NullPointer) {
+		// test the encoding of null pointer
+		NodeManager mgr;
+
+		ExpressionPtr nothing;
+
+		EXPECT_FALSE(nothing);
+		EXPECT_EQ("AP(null_ExpressionPtr())", toString(toIR(mgr, nothing)));
+		EXPECT_EQ(nothing, toValue<ExpressionPtr>(toIR(mgr, nothing)));
+	}
 
 
 } // end namespace lists
 } // end namespace core
 } // end namespace insieme
-

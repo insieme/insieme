@@ -43,14 +43,14 @@
  */
 
 // -----------------------------------
-#if ! defined FUN
-	#define FUN(X,Y)
-	#define __INTERNAL_FUN_DEFINITION
+#if !defined FUN
+#define FUN(X, Y)
+#define __INTERNAL_FUN_DEFINITION
 #endif /* NODE definition */
 
-#if ! defined TYPE
-	#define TYPE(X,Y)
-	#define __INTERNAL_TYPE_DEFINITION
+#if !defined TYPE
+#define TYPE(X, Y)
+#define __INTERNAL_TYPE_DEFINITION
 #endif /* NODE definition */
 // -----------------------------------
 
@@ -182,12 +182,12 @@ TYPE("mpi.h", "struct ompi_predefined_op_t")
 
 // -----------------------------------
 #ifdef __INTERNAL_FUN_DEFINITION
-	#undef __INTERNAL_FUN_DEFINITION
-	#undef FUN
+#undef __INTERNAL_FUN_DEFINITION
+#undef FUN
 #endif
 
 #ifdef __INTERNAL_TYPE_DEFINITION
-	#undef __INTERNAL_TYPE_DEFINITION
-	#undef TYPE
+#undef __INTERNAL_TYPE_DEFINITION
+#undef TYPE
 #endif
 // -----------------------------------

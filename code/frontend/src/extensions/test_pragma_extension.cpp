@@ -55,48 +55,45 @@ namespace insieme {
 namespace frontend {
 namespace extensions {
 
-using namespace insieme::frontend::pragma;
-using namespace insieme::frontend::pragma::tok;
-using namespace insieme::annotations;
+	using namespace insieme::frontend::pragma;
+	using namespace insieme::frontend::pragma::tok;
+	using namespace insieme::annotations;
 
-#define ARG_LABEL "arg"
+	#define ARG_LABEL "arg"
 
-TestPragmaExtension::TestPragmaExtension() : expected(""), dummyArguments(std::vector<string>()) {
-	pragmaHandlers.push_back(std::make_shared<PragmaHandler>(
-	PragmaHandler("test", "expected", string_literal[ARG_LABEL] >> tok::eod, [&](const pragma::MatchObject& object, core::NodeList nodes) {
-	
-		assert_eq(1, object.getStrings(ARG_LABEL).size()) << "Test expected pragma expects exactly one string argument!";
-		
-		NodePtr node;
-		// if we are dealing with more than one node, construct a compound statement
-		if(nodes.size() > 1) {
-			stmtutils::StmtWrapper wrapper;
-			for(const auto& e : nodes) {
-				wrapper.push_back(e.as<core::StatementPtr>());
-			}
-			IRBuilder builder(nodes[0].getNodeManager());
-			node = stmtutils::tryAggregateStmts(builder, wrapper);
-		}
-		else {
-			node = nodes[0];
-		}
-		
-		ExpectedIRAnnotation expectedIRAnnotation(object.getString(ARG_LABEL));
-		ExpectedIRAnnotationPtr annot = std::make_shared<ExpectedIRAnnotation>(expectedIRAnnotation);
-		node->addAnnotation(annot);
-		
-		return nodes;
-	})
-	                         ));
-	                         
-	pragmaHandlers.push_back(std::make_shared<PragmaHandler>(
-	PragmaHandler("test", "dummy", string_literal[ARG_LABEL] >> tok::eod, [&](const pragma::MatchObject& object, core::NodeList nodes) {
-		assert_eq(1, object.getStrings(ARG_LABEL).size()) << "Test dummy pragma expects exactly one string argument!";
-		dummyArguments.push_back(object.getString(ARG_LABEL));
-		return nodes;
-	})
-	                         ));
-}
+	TestPragmaExtension::TestPragmaExtension() : expected(""), dummyArguments(std::vector<string>()) {
+		pragmaHandlers.push_back(std::make_shared<PragmaHandler>(
+		    PragmaHandler("test", "expected", string_literal[ARG_LABEL] >> tok::eod, [&](const pragma::MatchObject& object, core::NodeList nodes) {
+
+			    assert_eq(1, object.getStrings(ARG_LABEL).size()) << "Test expected pragma expects exactly one string argument!";
+
+			    NodePtr node;
+			    // if we are dealing with more than one node, construct a compound statement
+			    if(nodes.size() > 1) {
+				    stmtutils::StmtWrapper wrapper;
+				    for(const auto& e : nodes) {
+					    wrapper.push_back(e.as<core::StatementPtr>());
+				    }
+				    IRBuilder builder(nodes[0].getNodeManager());
+				    node = stmtutils::tryAggregateStmts(builder, wrapper);
+			    } else {
+				    node = nodes[0];
+			    }
+
+			    ExpectedIRAnnotation expectedIRAnnotation(object.getString(ARG_LABEL));
+			    ExpectedIRAnnotationPtr annot = std::make_shared<ExpectedIRAnnotation>(expectedIRAnnotation);
+			    node->addAnnotation(annot);
+
+			    return nodes;
+			})));
+
+		pragmaHandlers.push_back(std::make_shared<PragmaHandler>(
+		    PragmaHandler("test", "dummy", string_literal[ARG_LABEL] >> tok::eod, [&](const pragma::MatchObject& object, core::NodeList nodes) {
+			    assert_eq(1, object.getStrings(ARG_LABEL).size()) << "Test dummy pragma expects exactly one string argument!";
+			    dummyArguments.push_back(object.getString(ARG_LABEL));
+			    return nodes;
+			})));
+	}
 
 } // extensions
 } // frontend

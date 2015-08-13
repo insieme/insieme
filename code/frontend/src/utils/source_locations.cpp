@@ -49,121 +49,116 @@ namespace insieme {
 namespace frontend {
 namespace utils {
 
-string FileName(SourceLocation const& l, SourceManager const& sm) {
-	if(l.isValid()) {
-		return l.printToString(sm);
-		//	if (l.isMacroID()){
-		//		PresumedLoc pl = sm.getPresumedLoc(l);
-		//		if (pl.isValid()){
-		//			return string(pl.getFilename());
-		//		}
-		//	}
-		//	return string(l.getFilename());
-	}
-	return string("UNKNOWN FILE");
-}
-
-string FileId(SourceLocation const& l, SourceManager const& sm) {
-	string fn = FileName(l, sm);
-	for(size_t i=0; i<fn.length(); ++i)
-		switch(fn[i]) {
-		case '/':
-		case '\\':
-		case '>':
-		case '.':
-			fn[i] = '_';
-		}
-	return fn;
-}
-
-unsigned Line(SourceLocation const& l, SourceManager const& sm) {
-	PresumedLoc pl = sm.getPresumedLoc(l);
-	return pl.getLine();
-}
-
-std::pair<unsigned, unsigned> Line(clang::SourceRange const& r, SourceManager const& sm) {
-	return std::make_pair(Line(r.getBegin(), sm), Line(r.getEnd(), sm));
-}
-
-unsigned Column(SourceLocation const& l, SourceManager const& sm) {
-	PresumedLoc pl = sm.getPresumedLoc(l);
-	return pl.getColumn();
-}
-
-std::pair<unsigned, unsigned> Column(clang::SourceRange const& r, SourceManager const& sm) {
-	return std::make_pair(Column(r.getBegin(), sm), Column(r.getEnd(), sm));
-}
-
-std::string location(clang::SourceLocation const& l, clang::SourceManager const& sm) {
-	if(l.isValid()) {
-		if(l.isFileID()) {
-			//if (sm.isLoadedFileID (sm.getFileID(l))) return "PRELOADED MODULE";
-			if(sm.isLoadedSourceLocation(l)) {
-				return "PRELOADED MODULE";
-			}
-			
+	string FileName(SourceLocation const& l, SourceManager const& sm) {
+		if(l.isValid()) {
 			return l.printToString(sm);
-		}
-		
-		if(l.isMacroID()) {
-			//FIXME: what do we do here? somehow clang fails
-			/*
-			std::cout << "SLoc isMacroID\n";
-			
-			auto sl = sm.getSpellingLoc(l);
-			if (sm.isLoadedSourceLocation(sl) ) { return "PRELOADED MODULE"; }
-			if(sl.isValid()) {
-				return sl.printToString(sm);
-			}
-			
-			PresumedLoc pl = sm.getPresumedLoc(l);
-			if (pl.isValid()){
-				return string(pl.getFilename());
-			}
-			*/
+			//	if (l.isMacroID()){
+			//		PresumedLoc pl = sm.getPresumedLoc(l);
+			//		if (pl.isValid()){
+			//			return string(pl.getFilename());
+			//		}
+			//	}
+			//	return string(l.getFilename());
 		}
 		return string("UNKNOWN FILE");
 	}
-	return string("INVALID LOC");
-}
 
-clang::SourceLocation getExpansionLoc(const clang::SourceManager& sm, clang::SourceLocation loc) {
-	if(sm.isMacroArgExpansion(loc)) {
-		loc = sm.getExpansionLoc(loc);
+	string FileId(SourceLocation const& l, SourceManager const& sm) {
+		string fn = FileName(l, sm);
+		for(size_t i = 0; i < fn.length(); ++i)
+			switch(fn[i]) {
+			case '/':
+			case '\\':
+			case '>':
+			case '.': fn[i] = '_';
+			}
+		return fn;
 	}
-	return loc;
-}
 
-core::annotations::Location convertClangSrcLoc(core::NodeManager& man, const clang::SourceManager& sm, clang::SourceLocation start, clang::SourceLocation end) {
-	// check file validity
-	FileID&& fileId = sm.getFileID(start);
-	assert_false(fileId.isInvalid()) << "File is not valid!";
-	const clang::FileEntry* fileEntry = sm.getFileEntryForID(fileId);
-	//if we cannot get the file entry, lets try to get the source filename directly
-	std::string filename;
-	if(!fileEntry) {
-		StringRef s = sm.getFilename(start);
-		filename = s.str();
+	unsigned Line(SourceLocation const& l, SourceManager const& sm) {
+		PresumedLoc pl = sm.getPresumedLoc(l);
+		return pl.getLine();
 	}
-	else {
-		assert_true(fileEntry);
-		filename = fileEntry->getName();
-	}
-	// update macro locations, if required
-	start = getExpansionLoc(sm, start);
-	end = getExpansionLoc(sm, end);
-	// generate location object
-	core::IRBuilder builder(man);
-	return core::annotations::Location(builder.stringValue(filename.c_str()),
-	                                   core::annotations::TextPosition(sm.getSpellingLineNumber(start), sm.getSpellingColumnNumber(start)),
-	                                   core::annotations::TextPosition(sm.getSpellingLineNumber(end), sm.getSpellingColumnNumber(end)));
-}
 
-const core::NodePtr& attachLocationFromClang(const core::NodePtr& node, const clang::SourceManager& sm, clang::SourceLocation start,
-        clang::SourceLocation end) {
-	core::annotations::Location l = convertClangSrcLoc(node.getNodeManager(), sm, start, end);
-	return core::annotations::attachLocation(node, l);
-}
+	std::pair<unsigned, unsigned> Line(clang::SourceRange const& r, SourceManager const& sm) {
+		return std::make_pair(Line(r.getBegin(), sm), Line(r.getEnd(), sm));
+	}
+
+	unsigned Column(SourceLocation const& l, SourceManager const& sm) {
+		PresumedLoc pl = sm.getPresumedLoc(l);
+		return pl.getColumn();
+	}
+
+	std::pair<unsigned, unsigned> Column(clang::SourceRange const& r, SourceManager const& sm) {
+		return std::make_pair(Column(r.getBegin(), sm), Column(r.getEnd(), sm));
+	}
+
+	std::string location(clang::SourceLocation const& l, clang::SourceManager const& sm) {
+		if(l.isValid()) {
+			if(l.isFileID()) {
+				// if (sm.isLoadedFileID (sm.getFileID(l))) return "PRELOADED MODULE";
+				if(sm.isLoadedSourceLocation(l)) { return "PRELOADED MODULE"; }
+
+				return l.printToString(sm);
+			}
+
+			if(l.isMacroID()) {
+				// FIXME: what do we do here? somehow clang fails
+				/*
+				std::cout << "SLoc isMacroID\n";
+
+				auto sl = sm.getSpellingLoc(l);
+				if (sm.isLoadedSourceLocation(sl) ) { return "PRELOADED MODULE"; }
+				if(sl.isValid()) {
+				    return sl.printToString(sm);
+				}
+
+				PresumedLoc pl = sm.getPresumedLoc(l);
+				if (pl.isValid()){
+				    return string(pl.getFilename());
+				}
+				*/
+			}
+			return string("UNKNOWN FILE");
+		}
+		return string("INVALID LOC");
+	}
+
+	clang::SourceLocation getExpansionLoc(const clang::SourceManager& sm, clang::SourceLocation loc) {
+		if(sm.isMacroArgExpansion(loc)) { loc = sm.getExpansionLoc(loc); }
+		return loc;
+	}
+
+	core::annotations::Location convertClangSrcLoc(core::NodeManager& man, const clang::SourceManager& sm, clang::SourceLocation start,
+	                                               clang::SourceLocation end) {
+		// check file validity
+		FileID&& fileId = sm.getFileID(start);
+		assert_false(fileId.isInvalid()) << "File is not valid!";
+		const clang::FileEntry* fileEntry = sm.getFileEntryForID(fileId);
+		// if we cannot get the file entry, lets try to get the source filename directly
+		std::string filename;
+		if(!fileEntry) {
+			StringRef s = sm.getFilename(start);
+			filename = s.str();
+		} else {
+			assert_true(fileEntry);
+			filename = fileEntry->getName();
+		}
+		// update macro locations, if required
+		start = getExpansionLoc(sm, start);
+		end = getExpansionLoc(sm, end);
+		// generate location object
+		core::IRBuilder builder(man);
+		return core::annotations::Location(builder.stringValue(filename.c_str()),
+		                                   core::annotations::TextPosition(sm.getSpellingLineNumber(start), sm.getSpellingColumnNumber(start)),
+		                                   core::annotations::TextPosition(sm.getSpellingLineNumber(end), sm.getSpellingColumnNumber(end)));
+	}
+
+	const core::NodePtr& attachLocationFromClang(const core::NodePtr& node, const clang::SourceManager& sm, clang::SourceLocation start,
+	                                             clang::SourceLocation end) {
+		core::annotations::Location l = convertClangSrcLoc(node.getNodeManager(), sm, start, end);
+		return core::annotations::attachLocation(node, l);
+	}
 
 } // End util namespace
 } // End frontend namespace

@@ -34,5 +34,4 @@
  * regarding third party software licenses.
  */
 
-#define INFO_STRUCT_BEGIN(__name) \
-	__name##_info __name;
+#define INFO_STRUCT_BEGIN(__name) __name##_info __name;

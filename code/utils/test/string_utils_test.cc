@@ -48,10 +48,9 @@ TEST(StringUtilsTest, Format) {
 }
 
 TEST(StringUtilsTest, FormatStrings) {
-
 	string hello = "Hello";
 	string world = "World";
-	
+
 	EXPECT_EQ("Hello World - 42", format("%s %s - %d", hello, world, 42));
 }
 
@@ -83,21 +82,20 @@ TEST(StringUtilsTest, camelcaseToUnderscore) {
 }
 
 TEST(EscapeTest, escape) {
-
 	std::stringstream out;
-	
+
 	// use the escape utility to stream stuff in an escaping encoding
-	escape(out) << "Hello \n \"" << " some \\ test ...  \" \' ";
-	
+	escape(out) << "Hello \n \""
+	            << " some \\ test ...  \" \' ";
+
 	// check the result
 	EXPECT_EQ("Hello \\n \\\" some \\\\ test ...  \\\" \\\' ", out.str());
 }
 
 TEST(Join, overloads) {
-	vector<int> data({1,3,4,2});
+	vector<int> data({1, 3, 4, 2});
 	EXPECT_EQ("1,3,4,2", toString(join(",", data)));
-	
-	std::set<int> data2({1,3,4,2});
+
+	std::set<int> data2({1, 3, 4, 2});
 	EXPECT_EQ("1,2,3,4", toString(join(",", data2)));
 }
-

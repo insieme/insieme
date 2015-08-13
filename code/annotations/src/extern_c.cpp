@@ -44,33 +44,33 @@ namespace insieme {
 namespace annotations {
 namespace c {
 
-using namespace insieme::core;
+	using namespace insieme::core;
 
-/**
- * The value annotation type to be attached to nodes to mark it as
- * something to be ignored by the name mangling (extern "C").
- */
-struct ExternCTag : public core::value_annotation::copy_on_migration {
-	bool operator==(const ExternCTag& other) const {
-		return true;
+	/**
+	 * The value annotation type to be attached to nodes to mark it as
+	 * something to be ignored by the name mangling (extern "C").
+	 */
+	struct ExternCTag : public core::value_annotation::copy_on_migration {
+		bool operator==(const ExternCTag& other) const {
+			return true;
+		}
+	};
+
+	// ---------------- Support Dump ----------------------
+
+	VALUE_ANNOTATION_CONVERTER(ExternCTag)
+
+	typedef core::value_node_annotation<ExternCTag>::type annotation_type;
+
+	virtual ExpressionPtr toIR(NodeManager& manager, const NodeAnnotationPtr& annotation) const {
+		assert_true(dynamic_pointer_cast<annotation_type>(annotation)) << "Only include annotations supported!";
+		return encoder::toIR(manager, string("externC"));
 	}
-};
 
-// ---------------- Support Dump ----------------------
-
-VALUE_ANNOTATION_CONVERTER(ExternCTag)
-
-typedef core::value_node_annotation<ExternCTag>::type annotation_type;
-
-virtual ExpressionPtr toIR(NodeManager& manager, const NodeAnnotationPtr& annotation) const {
-	assert_true(dynamic_pointer_cast<annotation_type>(annotation)) << "Only include annotations supported!";
-	return encoder::toIR(manager, string("externC"));
-}
-
-virtual NodeAnnotationPtr toAnnotation(const ExpressionPtr& node) const {
-	assert_true(encoder::isEncodingOf<string>(node.as<ExpressionPtr>())) << "Invalid encoding encountered!";
-	return std::make_shared<annotation_type>(ExternCTag());
-}
+	virtual NodeAnnotationPtr toAnnotation(const ExpressionPtr& node) const {
+		assert_true(encoder::isEncodingOf<string>(node.as<ExpressionPtr>())) << "Invalid encoding encountered!";
+		return std::make_shared<annotation_type>(ExternCTag());
+	}
 };
 
 // ----------------------------------------------------
@@ -83,8 +83,7 @@ bool isExternC(const insieme::core::LiteralPtr& literal) {
 void markAsExternC(const insieme::core::LiteralPtr& literal, bool value) {
 	if(value) {
 		literal->attachValue(ExternCTag());
-	}
-	else {
+	} else {
 		literal->detachValue<ExternCTag>();
 	}
 }

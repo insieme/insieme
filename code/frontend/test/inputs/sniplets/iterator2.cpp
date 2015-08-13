@@ -1,7 +1,6 @@
 #include <vector>
 
 
-
 using namespace std;
 
 
@@ -9,7 +8,7 @@ using namespace std;
 //
 void checkResult(vector<int>& v) {
 	vector<int>::iterator it;
-	for(it = v.begin()+1; it != v.end(); it ++) {
+	for(it = v.begin() + 1; it != v.end(); it++) {
 	}
 }
 

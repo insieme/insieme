@@ -43,19 +43,13 @@
 namespace insieme {
 namespace utils {
 
-TEST(Version, TestSetup) {
+	TEST(Version, TestSetup) {
+		// for the human reader
+		std::cout << "Running Version " << getVersion() << "\n";
 
-	// for the human reader
-	std::cout << "Running Version " << getVersion() << "\n";
-	
-	// just check that it is not undefined
-	EXPECT_NE("unknown", getVersion());
-	
-}
+		// just check that it is not undefined
+		EXPECT_NE("unknown", getVersion());
+	}
 
 } // end utils
 } // end insieme
-
-
-
-

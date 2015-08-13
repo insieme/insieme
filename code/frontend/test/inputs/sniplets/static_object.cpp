@@ -1,10 +1,10 @@
 class K {
-public:
-	K() {};
+  public:
+	K(){};
 };
 
 void check() {
-	//create a static object, ctor of K will be called
+	// create a static object, ctor of K will be called
 	static K s;
 }
 

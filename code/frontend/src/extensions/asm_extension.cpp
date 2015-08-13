@@ -48,78 +48,78 @@ namespace insieme {
 namespace frontend {
 namespace extensions {
 
-//
-//	To IR:
-//	the idea is to create a literal function call which reproduces the generic variadic asm function call
-//
-//		the asm stmt has the following form:
-//		asm (
-//			TEMPLATE
-//			: [ OUTPUTS ]
-//			: [ INPUTS ]
-//			: [ CLOBBERS ]
-//			)
-//
-//		where:
-//
-//		TEMPLATE:  is a string containing the assembler templated instructions list
-//		OUTPUTS, INPUTS: are a comma separated list of pairs string - variable:    "some text"(VAR) ,  ...
-//		CLOBBLER: are a list of registers which will be modified by the asm execution (comma separated list of strings)
-//
+	//
+	//	To IR:
+	//	the idea is to create a literal function call which reproduces the generic variadic asm function call
+	//
+	//		the asm stmt has the following form:
+	//		asm (
+	//			TEMPLATE
+	//			: [ OUTPUTS ]
+	//			: [ INPUTS ]
+	//			: [ CLOBBERS ]
+	//			)
+	//
+	//		where:
+	//
+	//		TEMPLATE:  is a string containing the assembler templated instructions list
+	//		OUTPUTS, INPUTS: are a comma separated list of pairs string - variable:    "some text"(VAR) ,  ...
+	//		CLOBBLER: are a list of registers which will be modified by the asm execution (comma separated list of strings)
+	//
 
 
-stmtutils::StmtWrapper ASMExtension::Visit(const clang::Stmt* stmt, frontend::conversion::Converter& convFact) {
-	stmtutils::StmtWrapper ret;
-	
-	if(const clang::AsmStmt*  asmStmt = llvm::dyn_cast<clang::AsmStmt>(stmt)) {
-		core::IRBuilder builder = convFact.getIRBuilder();
-		
-		std::string assemblerString = asmStmt->generateAsmString(convFact.getCompiler().getASTContext());
-		
-		auto expand = [&](char lookup, const char *replacement) {
-			int last = 0;
-			unsigned it;
-			string rep = replacement;
-			while((it = assemblerString.find(lookup, last)) < assemblerString.length()) {
-				last = it + rep.length();
-				assemblerString.replace(it, 1, rep);
+	stmtutils::StmtWrapper ASMExtension::Visit(const clang::Stmt* stmt, frontend::conversion::Converter& convFact) {
+		stmtutils::StmtWrapper ret;
+
+		if(const clang::AsmStmt* asmStmt = llvm::dyn_cast<clang::AsmStmt>(stmt)) {
+			core::IRBuilder builder = convFact.getIRBuilder();
+
+			std::string assemblerString = asmStmt->generateAsmString(convFact.getCompiler().getASTContext());
+
+			auto expand = [&](char lookup, const char* replacement) {
+				int last = 0;
+				unsigned it;
+				string rep = replacement;
+				while((it = assemblerString.find(lookup, last)) < assemblerString.length()) {
+					last = it + rep.length();
+					assemblerString.replace(it, 1, rep);
+				}
+			};
+
+			expand('\\', "\\\\");
+			expand('\n', "\\n");
+			expand('\t', "\\t");
+			expand('\b', "\\b");
+			expand('\a', "\\a");
+			expand('\v', "\\v");
+			expand('\r', "\\r");
+			expand('\f', "\\f");
+			expand('\?', "\\\?");
+			expand('\'', "\\\'");
+			expand('\"', "\\\"");
+			expand('\0', "\\0");
+
+
+			insieme::core::lang::AsmStmtWrapper wrap(assemblerString, asmStmt->isVolatile());
+
+			for(unsigned i = 0; i < asmStmt->getNumOutputs(); ++i) {
+				wrap.addOutput(asmStmt->getOutputConstraint(i).str(), builder.deref(convFact.convertExpr(asmStmt->begin_outputs()[i])));
 			}
-		};
-		
-		expand('\\', "\\\\");
-		expand('\n', "\\n");
-		expand('\t', "\\t");
-		expand('\b', "\\b");
-		expand('\a', "\\a");
-		expand('\v', "\\v");
-		expand('\r', "\\r");
-		expand('\f', "\\f");
-		expand('\?', "\\\?");
-		expand('\'', "\\\'");
-		expand('\"', "\\\"");
-		expand('\0', "\\0");
-		
-		
-		insieme::core::lang::AsmStmtWrapper wrap(assemblerString, asmStmt->isVolatile());
-		
-		for(unsigned i=0 ; i< 	asmStmt->getNumOutputs(); ++i) {
-			wrap.addOutput(asmStmt->getOutputConstraint(i).str() , builder.deref(convFact.convertExpr(asmStmt->begin_outputs()[i])));
-		}
-		
-		for(unsigned i=0 ; i< 	asmStmt->getNumInputs(); ++i) {
-			wrap.addInput(asmStmt->getInputConstraint(i).str() , convFact.convertExpr(asmStmt->begin_inputs()[i]));
-		}
-		
-		for(unsigned i=0 ; i< 	asmStmt->getNumClobbers(); ++i) {
-			wrap.addClobber(asmStmt->getClobber(i).str());
-		}
-		
-		ret.push_back(insieme::core::lang::toIR(convFact.getNodeManager(), wrap));
-	}
-	
-	return ret;
-}
 
-} //namespace extension
-} //namespace frontend
-} //namespace insieme
+			for(unsigned i = 0; i < asmStmt->getNumInputs(); ++i) {
+				wrap.addInput(asmStmt->getInputConstraint(i).str(), convFact.convertExpr(asmStmt->begin_inputs()[i]));
+			}
+
+			for(unsigned i = 0; i < asmStmt->getNumClobbers(); ++i) {
+				wrap.addClobber(asmStmt->getClobber(i).str());
+			}
+
+			ret.push_back(insieme::core::lang::toIR(convFact.getNodeManager(), wrap));
+		}
+
+		return ret;
+	}
+
+} // namespace extension
+} // namespace frontend
+} // namespace insieme

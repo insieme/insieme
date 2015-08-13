@@ -45,36 +45,31 @@ namespace core {
 namespace pattern {
 namespace generator {
 
-TEST(IRGenerator, StringValue) {
+	TEST(IRGenerator, StringValue) {
+		core::NodeManager manager;
 
-	core::NodeManager manager;
-	
-	// create some dummy match
-	Match<ptr_target> match(core::IntValue::get(manager, 1));
-	
-	TreeGenerator gen = irg::stringValue("Hello");
-	core::NodePtr res = gen.generate(match);
-	
-	EXPECT_EQ(*core::StringValue::get(manager, "Hello"), *res);
-	
-}
+		// create some dummy match
+		Match<ptr_target> match(core::IntValue::get(manager, 1));
 
-TEST(IRGenerator, IntType) {
+		TreeGenerator gen = irg::stringValue("Hello");
+		core::NodePtr res = gen.generate(match);
 
-	core::NodeManager manager;
-	
-	// create some dummy match
-	Match<ptr_target> match(core::IntValue::get(manager, 1));
-	
-	TreeGenerator gen = irg::int4();
-	core::NodePtr res = gen.generate(match);
-	
-	EXPECT_EQ(*manager.getLangBasic().getInt4(), *res);
-	
-}
+		EXPECT_EQ(*core::StringValue::get(manager, "Hello"), *res);
+	}
+
+	TEST(IRGenerator, IntType) {
+		core::NodeManager manager;
+
+		// create some dummy match
+		Match<ptr_target> match(core::IntValue::get(manager, 1));
+
+		TreeGenerator gen = irg::int4();
+		core::NodePtr res = gen.generate(match);
+
+		EXPECT_EQ(*manager.getLangBasic().getInt4(), *res);
+	}
 
 } // end namespace generator
 } // end namespace pattern
 } // end namespace core
 } // end namespace insieme
-

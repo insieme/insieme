@@ -43,108 +43,105 @@ namespace insieme {
 namespace core {
 namespace types {
 
-TEST(Substitution, Basic) {
-	NodeManager manager;
-	IRBuilder builder(manager);
-	
-	TypeVariablePtr varA = builder.typeVariable("A");
-	TypeVariablePtr varB = builder.typeVariable("B");
-	
-	TypePtr constType = builder.genericType("constType");
-	
-	TypePtr typeA = builder.genericType("type", toVector<TypePtr>(varA));
-	TypePtr typeB = builder.genericType("type", toVector<TypePtr>(varA, varB));
-	TypePtr typeC = builder.genericType("type", toVector<TypePtr>(typeB, varB));
-	
-	
-	EXPECT_EQ("'A", toString(*varA));
-	EXPECT_EQ("'B", toString(*varB));
-	
-	EXPECT_EQ("constType", toString(*constType));
-	
-	EXPECT_EQ("type<'A>", toString(*typeA));
-	EXPECT_EQ("type<'A,'B>", toString(*typeB));
-	EXPECT_EQ("type<type<'A,'B>,'B>", toString(*typeC));
-	
-	// test empty substitution
-	auto all = toVector<TypePtr>(varA, varB, typeA, typeB, typeC);
-	Substitution identity;
-	for_each(all, [&](const TypePtr& cur) {
-		EXPECT_EQ(cur, identity.applyTo(manager, cur));
-	});
-	
-	// test one variable replacement
-	Substitution substitution(varA, varB);
-	EXPECT_EQ(varB, substitution.applyTo(manager, varA));
-	EXPECT_EQ(varB, substitution.applyTo(manager, varB));
-	
-	EXPECT_EQ("'B", toString(*substitution.applyTo(manager, varA)));
-	EXPECT_EQ("'B", toString(*substitution.applyTo(manager, varB)));
-	EXPECT_EQ("constType", toString(*substitution.applyTo(manager, constType)));
-	EXPECT_EQ("type<'B,#x>", toString(*substitution.applyTo(manager, typeA)));
-	EXPECT_EQ("type<'B,'B,#x,#y>", toString(*substitution.applyTo(manager, typeB)));
-	EXPECT_EQ("type<type<'B,'B,#x,#y>,'B,#y,#y>", toString(*substitution.applyTo(manager, typeC)));
-	
-	// test one variable replacement
-	substitution = Substitution(varA, constType);
-	EXPECT_EQ("constType", toString(*substitution.applyTo(manager, varA)));
-	EXPECT_EQ("'B", toString(*substitution.applyTo(manager, varB)));
-	EXPECT_EQ("constType", toString(*substitution.applyTo(manager, constType)));
-	EXPECT_EQ("type<constType,#x>", toString(*substitution.applyTo(manager, typeA)));
-	EXPECT_EQ("type<constType,'B,#x,#y>", toString(*substitution.applyTo(manager, typeB)));
-	EXPECT_EQ("type<type<constType,'B,#x,#y>,'B,#y,#y>", toString(*substitution.applyTo(manager, typeC)));
-	
-	// add replacement for variable B
-	substitution = Substitution(varA, constType);
-	substitution.addMapping(varB, typeA);
-	EXPECT_EQ("constType", toString(*substitution.applyTo(manager, varA)));
-	EXPECT_EQ("type<'A,#x>", toString(*substitution.applyTo(manager, varB)));
-	EXPECT_EQ("constType", toString(*substitution.applyTo(manager, constType)));
-	EXPECT_EQ("type<constType,#x>", toString(*substitution.applyTo(manager, typeA)));
-	EXPECT_EQ("type<constType,type<'A,#x>,#x,#y>", toString(*substitution.applyTo(manager, typeB)));
-	EXPECT_EQ("type<type<constType,type<'A,#x>,#x,#y>,type<'A,#x>,#y,#y>", toString(*substitution.applyTo(manager, typeC)));
-	
-	// override replacement for second variable
-	substitution.addMapping(varB, typeB);
-	EXPECT_EQ("constType", toString(*substitution.applyTo(manager, varA)));
-	EXPECT_EQ("type<'A,'B,#x,#y>", toString(*substitution.applyTo(manager, varB)));
-	EXPECT_EQ("constType", toString(*substitution.applyTo(manager, constType)));
-	EXPECT_EQ("type<constType,#x>", toString(*substitution.applyTo(manager, typeA)));
-	EXPECT_EQ("type<constType,type<'A,'B,#x,#y>,#x,#y>", toString(*substitution.applyTo(manager, typeB)));
-	EXPECT_EQ("type<type<constType,type<'A,'B,#x,#y>,#x,#y>,type<'A,'B,#x,#y>,#y,#y>", toString(*substitution.applyTo(manager, typeC)));
-	
-	
-	// remove one mapping
-	substitution.remMappingOf(varA);
-	EXPECT_EQ("'A", toString(*substitution.applyTo(manager, varA)));
-	EXPECT_EQ("type<'A,'B,#x,#y>", toString(*substitution.applyTo(manager, varB)));
-	EXPECT_EQ("constType", toString(*substitution.applyTo(manager, constType)));
-	EXPECT_EQ("type<'A,#x>", toString(*substitution.applyTo(manager, typeA)));
-	EXPECT_EQ("type<'A,type<'A,'B,#x,#y>,#x,#y>", toString(*substitution.applyTo(manager, typeB)));
-	EXPECT_EQ("type<type<'A,type<'A,'B,#x,#y>,#x,#y>,type<'A,'B,#x,#y>,#y,#y>", toString(*substitution.applyTo(manager, typeC)));
-	
-	
-	// test substitution composition
-	Substitution subA(varA, typeB);
-	
-	Substitution subB(varB, constType);
-	
-	
-	EXPECT_EQ("{AP('A)=AP(type<'A,'B,#x,#y>)}", toString(subA.getMapping()));
-	EXPECT_EQ("{AP('B)=AP(constType)}", toString(subB.getMapping()));
-	
-	Substitution combinedAA = Substitution::compose(manager, subA, subA);
-	Substitution combinedAB = Substitution::compose(manager, subA, subB);
-	Substitution combinedBA = Substitution::compose(manager, subB, subA);
-	Substitution combinedBB = Substitution::compose(manager, subB, subB);
-	
-	EXPECT_PRED2(containsSubString, toString(combinedAB.getMapping()), "AP('A)=AP(type<'A,constType,15,#y>)");
-	EXPECT_PRED2(containsSubString, toString(combinedAB.getMapping()), "AP('B)=AP(constType)");
-	EXPECT_PRED2(containsSubString, toString(combinedBA.getMapping()), "AP('A)=AP(type<'A,'B,#x,#y>)");
-	EXPECT_PRED2(containsSubString, toString(combinedBA.getMapping()), "AP('B)=AP(constType)");
-	EXPECT_EQ("{AP('B)=AP(constType)}", toString(combinedBB.getMapping()));
-	
-}
+	TEST(Substitution, Basic) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		TypeVariablePtr varA = builder.typeVariable("A");
+		TypeVariablePtr varB = builder.typeVariable("B");
+
+		TypePtr constType = builder.genericType("constType");
+
+		TypePtr typeA = builder.genericType("type", toVector<TypePtr>(varA));
+		TypePtr typeB = builder.genericType("type", toVector<TypePtr>(varA, varB));
+		TypePtr typeC = builder.genericType("type", toVector<TypePtr>(typeB, varB));
+
+
+		EXPECT_EQ("'A", toString(*varA));
+		EXPECT_EQ("'B", toString(*varB));
+
+		EXPECT_EQ("constType", toString(*constType));
+
+		EXPECT_EQ("type<'A>", toString(*typeA));
+		EXPECT_EQ("type<'A,'B>", toString(*typeB));
+		EXPECT_EQ("type<type<'A,'B>,'B>", toString(*typeC));
+
+		// test empty substitution
+		auto all = toVector<TypePtr>(varA, varB, typeA, typeB, typeC);
+		Substitution identity;
+		for_each(all, [&](const TypePtr& cur) { EXPECT_EQ(cur, identity.applyTo(manager, cur)); });
+
+		// test one variable replacement
+		Substitution substitution(varA, varB);
+		EXPECT_EQ(varB, substitution.applyTo(manager, varA));
+		EXPECT_EQ(varB, substitution.applyTo(manager, varB));
+
+		EXPECT_EQ("'B", toString(*substitution.applyTo(manager, varA)));
+		EXPECT_EQ("'B", toString(*substitution.applyTo(manager, varB)));
+		EXPECT_EQ("constType", toString(*substitution.applyTo(manager, constType)));
+		EXPECT_EQ("type<'B,#x>", toString(*substitution.applyTo(manager, typeA)));
+		EXPECT_EQ("type<'B,'B,#x,#y>", toString(*substitution.applyTo(manager, typeB)));
+		EXPECT_EQ("type<type<'B,'B,#x,#y>,'B,#y,#y>", toString(*substitution.applyTo(manager, typeC)));
+
+		// test one variable replacement
+		substitution = Substitution(varA, constType);
+		EXPECT_EQ("constType", toString(*substitution.applyTo(manager, varA)));
+		EXPECT_EQ("'B", toString(*substitution.applyTo(manager, varB)));
+		EXPECT_EQ("constType", toString(*substitution.applyTo(manager, constType)));
+		EXPECT_EQ("type<constType,#x>", toString(*substitution.applyTo(manager, typeA)));
+		EXPECT_EQ("type<constType,'B,#x,#y>", toString(*substitution.applyTo(manager, typeB)));
+		EXPECT_EQ("type<type<constType,'B,#x,#y>,'B,#y,#y>", toString(*substitution.applyTo(manager, typeC)));
+
+		// add replacement for variable B
+		substitution = Substitution(varA, constType);
+		substitution.addMapping(varB, typeA);
+		EXPECT_EQ("constType", toString(*substitution.applyTo(manager, varA)));
+		EXPECT_EQ("type<'A,#x>", toString(*substitution.applyTo(manager, varB)));
+		EXPECT_EQ("constType", toString(*substitution.applyTo(manager, constType)));
+		EXPECT_EQ("type<constType,#x>", toString(*substitution.applyTo(manager, typeA)));
+		EXPECT_EQ("type<constType,type<'A,#x>,#x,#y>", toString(*substitution.applyTo(manager, typeB)));
+		EXPECT_EQ("type<type<constType,type<'A,#x>,#x,#y>,type<'A,#x>,#y,#y>", toString(*substitution.applyTo(manager, typeC)));
+
+		// override replacement for second variable
+		substitution.addMapping(varB, typeB);
+		EXPECT_EQ("constType", toString(*substitution.applyTo(manager, varA)));
+		EXPECT_EQ("type<'A,'B,#x,#y>", toString(*substitution.applyTo(manager, varB)));
+		EXPECT_EQ("constType", toString(*substitution.applyTo(manager, constType)));
+		EXPECT_EQ("type<constType,#x>", toString(*substitution.applyTo(manager, typeA)));
+		EXPECT_EQ("type<constType,type<'A,'B,#x,#y>,#x,#y>", toString(*substitution.applyTo(manager, typeB)));
+		EXPECT_EQ("type<type<constType,type<'A,'B,#x,#y>,#x,#y>,type<'A,'B,#x,#y>,#y,#y>", toString(*substitution.applyTo(manager, typeC)));
+
+
+		// remove one mapping
+		substitution.remMappingOf(varA);
+		EXPECT_EQ("'A", toString(*substitution.applyTo(manager, varA)));
+		EXPECT_EQ("type<'A,'B,#x,#y>", toString(*substitution.applyTo(manager, varB)));
+		EXPECT_EQ("constType", toString(*substitution.applyTo(manager, constType)));
+		EXPECT_EQ("type<'A,#x>", toString(*substitution.applyTo(manager, typeA)));
+		EXPECT_EQ("type<'A,type<'A,'B,#x,#y>,#x,#y>", toString(*substitution.applyTo(manager, typeB)));
+		EXPECT_EQ("type<type<'A,type<'A,'B,#x,#y>,#x,#y>,type<'A,'B,#x,#y>,#y,#y>", toString(*substitution.applyTo(manager, typeC)));
+
+
+		// test substitution composition
+		Substitution subA(varA, typeB);
+
+		Substitution subB(varB, constType);
+
+
+		EXPECT_EQ("{AP('A)=AP(type<'A,'B,#x,#y>)}", toString(subA.getMapping()));
+		EXPECT_EQ("{AP('B)=AP(constType)}", toString(subB.getMapping()));
+
+		Substitution combinedAA = Substitution::compose(manager, subA, subA);
+		Substitution combinedAB = Substitution::compose(manager, subA, subB);
+		Substitution combinedBA = Substitution::compose(manager, subB, subA);
+		Substitution combinedBB = Substitution::compose(manager, subB, subB);
+
+		EXPECT_PRED2(containsSubString, toString(combinedAB.getMapping()), "AP('A)=AP(type<'A,constType,15,#y>)");
+		EXPECT_PRED2(containsSubString, toString(combinedAB.getMapping()), "AP('B)=AP(constType)");
+		EXPECT_PRED2(containsSubString, toString(combinedBA.getMapping()), "AP('A)=AP(type<'A,'B,#x,#y>)");
+		EXPECT_PRED2(containsSubString, toString(combinedBA.getMapping()), "AP('B)=AP(constType)");
+		EXPECT_EQ("{AP('B)=AP(constType)}", toString(combinedBB.getMapping()));
+	}
 
 } // end namespace types
 } // end namespace core

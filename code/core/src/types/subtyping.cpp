@@ -46,302 +46,263 @@ namespace core {
 namespace types {
 
 
-// -------------------------------------------------------------------------------------------------------------------------
-//                                                    SubTyping
-// -------------------------------------------------------------------------------------------------------------------------
+	// -------------------------------------------------------------------------------------------------------------------------
+	//                                                    SubTyping
+	// -------------------------------------------------------------------------------------------------------------------------
 
-namespace {
+	namespace {
 
-void addParents(const ParentsPtr& parents, TypeSet& res) {
-	for(auto cur : parents) {
-		res.insert(cur->getType());
-		if(auto recType = cur->getType().isa<RecTypePtr>()) {
-			res.insert(recType->unroll());
+		void addParents(const ParentsPtr& parents, TypeSet& res) {
+			for(auto cur : parents) {
+				res.insert(cur->getType());
+				if(auto recType = cur->getType().isa<RecTypePtr>()) { res.insert(recType->unroll()); }
+			}
+		}
+
+		void addParents(const TypePtr& type, TypeSet& res) {
+			if(StructTypePtr cur = type.isa<StructTypePtr>()) { addParents(cur->getParents(), res); }
+			if(GenericTypePtr cur = type.isa<GenericTypePtr>()) { addParents(cur->getParents(), res); }
+			if(RecTypePtr cur = type.isa<RecTypePtr>()) { addParents(cur->unroll(), res); }
+		}
+
+		const TypeSet getSuperTypes(const TypePtr& type) {
+			TypeSet res = type->getNodeManager().getLangBasic().getDirectSuperTypesOf(type);
+			addParents(type, res);
+			return res;
+		}
+
+		const TypeSet getSubTypes(const TypePtr& type) {
+			return type->getNodeManager().getLangBasic().getDirectSubTypesOf(type);
+		}
+
+		template <typename Extractor>
+		inline TypeSet getAllFor(const TypeSet& set, const Extractor& src) {
+			TypeSet res;
+			for_each(set, [&](const TypePtr& cur) { utils::set::insertAll(res, src(cur)); });
+			return res;
+		}
+
+		bool isSubTypeOfInternal(const TypePtr& subType, const TypePtr& superType) {
+			// start from the sub-type and work toward the top.
+			// As soon as the super type is included, the procedure can stop.
+
+			// compute the closure using the delta algorithm
+			TypeSet delta = utils::set::toSet<TypeSet>(subType);
+			TypeSet superTypes = delta;
+			while(!utils::set::contains(superTypes, superType) && !delta.empty()) {
+				// get super-types of delta types
+				delta = getAllFor(delta, &getSuperTypes);
+				utils::set::insertAll(superTypes, delta);
+			}
+
+			// check whether the given super type is within the closure
+			return utils::set::contains(superTypes, superType);
+		}
+
+		template <typename Extractor>
+		TypePtr getJoinMeetType(const GenericTypePtr& typeA, const GenericTypePtr& typeB, const Extractor& extract) {
+			// from both sides, the sets of super-types are computed step by step
+			// when the sets are intersecting, the JOIN type has been found
+
+			// super-type closure is computed using the delta algorithm
+			TypeSet deltaA = utils::set::toSet<TypeSet>(typeA);
+			TypeSet deltaB = utils::set::toSet<TypeSet>(typeB);
+			TypeSet superTypesA = deltaA;
+			TypeSet superTypesB = deltaB;
+			TypeSet intersect = utils::set::intersect(superTypesA, superTypesB);
+			while(intersect.empty() && !(deltaA.empty() && deltaB.empty())) {
+				// get super-types of delta types
+				deltaA = extract(deltaA);
+				deltaB = extract(deltaB);
+				utils::set::insertAll(superTypesA, deltaA);
+				utils::set::insertAll(superTypesB, deltaB);
+				intersect = utils::set::intersect(superTypesA, superTypesB);
+			}
+
+			// check result
+			assert(intersect.size() <= static_cast<std::size_t>(1) && "More than one JOIN type detected!");
+
+			// use result
+			if(intersect.empty()) {
+				// no Join type detected
+				return TypePtr();
+			}
+			return *intersect.begin();
+		}
+
+		TypePtr getJoinType(const GenericTypePtr& typeA, const GenericTypePtr& typeB) {
+			return getJoinMeetType(typeA, typeB, [](const TypeSet& set) { return getAllFor(set, &getSuperTypes); });
+		}
+
+		TypePtr getMeetType(const GenericTypePtr& typeA, const GenericTypePtr& typeB) {
+			return getJoinMeetType(typeA, typeB, [](const TypeSet& set) { return getAllFor(set, &getSubTypes); });
 		}
 	}
-}
 
-void addParents(const TypePtr& type, TypeSet& res) {
-	if(StructTypePtr cur = type.isa<StructTypePtr>()) {
-		addParents(cur->getParents(), res);
-	}
-	if(GenericTypePtr cur = type.isa<GenericTypePtr>()) {
-		addParents(cur->getParents(), res);
-	}
-	if(RecTypePtr cur = type.isa<RecTypePtr>()) {
-		addParents(cur->unroll(), res);
-	}
-}
+	bool isSubTypeOf(const TypePtr& subType, const TypePtr& superType) {
+		// quick check - reflexivity
+		if(*subType == *superType) { return true; }
 
-const TypeSet getSuperTypes(const TypePtr& type) {
-	TypeSet res = type->getNodeManager().getLangBasic().getDirectSuperTypesOf(type);
-	addParents(type, res);
-	return res;
-}
+		// check for recursive types
+		if(subType->getNodeType() == NT_RecType || superType->getNodeType() == NT_RecType) {
+			// since they are not equivalent we have to compare the unrolled version of the sub with the super type
+			if(subType->getNodeType() == NT_RecType) { return isSubTypeOf(subType.as<RecTypePtr>()->unroll(), superType); }
 
-const TypeSet getSubTypes(const TypePtr& type) {
-	return type->getNodeManager().getLangBasic().getDirectSubTypesOf(type);
-}
+			if(superType->getNodeType() == NT_RecType) {
+				assert_ne(subType->getNodeType(), NT_RecType);
+				return isSubTypeOf(subType, superType.as<RecTypePtr>()->unroll());
+			}
 
-template<typename Extractor>
-inline TypeSet getAllFor(const TypeSet& set, const Extractor& src) {
-	TypeSet res;
-	for_each(set, [&](const TypePtr& cur) {
-		utils::set::insertAll(res, src(cur));
-	});
-	return res;
-}
-
-bool isSubTypeOfInternal(const TypePtr& subType, const TypePtr& superType) {
-	// start from the sub-type and work toward the top.
-	// As soon as the super type is included, the procedure can stop.
-	
-	// compute the closure using the delta algorithm
-	TypeSet delta = utils::set::toSet<TypeSet>(subType);
-	TypeSet superTypes = delta;
-	while(!utils::set::contains(superTypes, superType) && !delta.empty()) {
-		// get super-types of delta types
-		delta = getAllFor(delta, &getSuperTypes);
-		utils::set::insertAll(superTypes, delta);
-	}
-	
-	// check whether the given super type is within the closure
-	return utils::set::contains(superTypes, superType);
-}
-
-template<typename Extractor>
-TypePtr getJoinMeetType(const GenericTypePtr& typeA, const GenericTypePtr& typeB, const Extractor& extract) {
-	// from both sides, the sets of super-types are computed step by step
-	// when the sets are intersecting, the JOIN type has been found
-	
-	// super-type closure is computed using the delta algorithm
-	TypeSet deltaA = utils::set::toSet<TypeSet>(typeA);
-	TypeSet deltaB = utils::set::toSet<TypeSet>(typeB);
-	TypeSet superTypesA = deltaA;
-	TypeSet superTypesB = deltaB;
-	TypeSet intersect = utils::set::intersect(superTypesA, superTypesB);
-	while(intersect.empty() && !(deltaA.empty() && deltaB.empty())) {
-	
-		// get super-types of delta types
-		deltaA = extract(deltaA);
-		deltaB = extract(deltaB);
-		utils::set::insertAll(superTypesA, deltaA);
-		utils::set::insertAll(superTypesB, deltaB);
-		intersect = utils::set::intersect(superTypesA, superTypesB);
-	}
-	
-	// check result
-	assert(intersect.size() <= static_cast<std::size_t>(1) && "More than one JOIN type detected!");
-	
-	// use result
-	if(intersect.empty()) {
-		// no Join type detected
-		return TypePtr();
-	}
-	return *intersect.begin();
-}
-
-TypePtr getJoinType(const GenericTypePtr& typeA, const GenericTypePtr& typeB) {
-	return getJoinMeetType(typeA, typeB, [](const TypeSet& set) {
-		return getAllFor(set, &getSuperTypes);
-	});
-}
-
-TypePtr getMeetType(const GenericTypePtr& typeA, const GenericTypePtr& typeB) {
-	return getJoinMeetType(typeA, typeB, [](const TypeSet& set) {
-		return getAllFor(set, &getSubTypes);
-	});
-}
-}
-
-bool isSubTypeOf(const TypePtr& subType, const TypePtr& superType) {
-
-	// quick check - reflexivity
-	if(*subType == *superType) {
-		return true;
-	}
-	
-	// check for recursive types
-	if(subType->getNodeType() == NT_RecType || superType->getNodeType() == NT_RecType) {
-	
-		// since they are not equivalent we have to compare the unrolled version of the sub with the super type
-		if(subType->getNodeType() == NT_RecType) {
-			return isSubTypeOf(subType.as<RecTypePtr>()->unroll(), superType);
+			assert_fail() << "How could you get here?";
 		}
-		
-		if(superType->getNodeType() == NT_RecType) {
-			assert_ne(subType->getNodeType(), NT_RecType);
-			return isSubTypeOf(subType, superType.as<RecTypePtr>()->unroll());
+
+		// check whether the sub-type is generic
+		if(subType->getNodeType() == NT_GenericType || subType->getNodeType() == NT_StructType) {
+			// use the delta algorithm for computing all the super-types of the given sub-type
+			return isSubTypeOfInternal(subType, superType);
 		}
-		
-		assert_fail() << "How could you get here?";
-	}
-	
-	// check whether the sub-type is generic
-	if(subType->getNodeType() == NT_GenericType || subType->getNodeType() == NT_StructType) {
-		// use the delta algorithm for computing all the super-types of the given sub-type
-		return isSubTypeOfInternal(subType, superType);
-	}
-	
-	// for all other relations, the node type has to be the same
-	if(subType->getNodeType() != superType->getNodeType()) {
+
+		// for all other relations, the node type has to be the same
+		if(subType->getNodeType() != superType->getNodeType()) { return false; }
+
+		// check function types
+		if(subType->getNodeType() == NT_FunctionType) {
+			FunctionTypePtr funTypeA = static_pointer_cast<const FunctionType>(subType);
+			FunctionTypePtr funTypeB = static_pointer_cast<const FunctionType>(superType);
+
+			// check kind of functions
+			if(funTypeA->getKind() != funTypeB->getKind()) {
+				// only closure to plain conversion is allowed
+				if(!(funTypeB->isClosure() && funTypeA->isPlain())) { return false; }
+			}
+
+			bool res = true;
+			res = res && funTypeA->getParameterTypes().size() == funTypeB->getParameterTypes().size();
+			res = res && isSubTypeOf(funTypeA->getReturnType(), funTypeB->getReturnType());
+			for(std::size_t i = 0; res && i < funTypeB->getParameterTypes().size(); i++) {
+				res = res && isSubTypeOf(funTypeB->getParameterTypes()[i], funTypeA->getParameterTypes()[i]);
+			}
+			return res;
+		}
+
+		// check reference types
+		if(analysis::isRefType(subType) && analysis::isRefType(superType)) {
+			const auto& basic = subType->getNodeManager().getLangBasic();
+
+			// check element type
+			auto srcElement = analysis::getReferencedType(subType);
+			auto trgElement = analysis::getReferencedType(superType);
+
+			// if element types are identical => it is fine
+			// if (srcElement == trgElement) return true;
+			if(core::analysis::compareTypes(srcElement, trgElement)) { return true; }
+
+			// if sub-type is ref<any> it is ok
+			if(basic.isAny(trgElement)) { return true; }
+
+			// support nested references
+			if(analysis::isRefType(srcElement) && analysis::isRefType(trgElement)) { return isSubTypeOf(srcElement, trgElement); }
+
+			// also support references of derived classes being passed to base-type pointer
+			if(core::analysis::isObjectType(srcElement) && core::analysis::isObjectType(trgElement)) {
+				if(isSubTypeOf(srcElement, trgElement)) { return true; }
+			}
+		}
+
+		// no other relations are supported
 		return false;
 	}
-	
-	// check function types
-	if(subType->getNodeType() == NT_FunctionType) {
-		FunctionTypePtr funTypeA = static_pointer_cast<const FunctionType>(subType);
-		FunctionTypePtr funTypeB = static_pointer_cast<const FunctionType>(superType);
-		
-		// check kind of functions
-		if(funTypeA->getKind() != funTypeB->getKind()) {
-			// only closure to plain conversion is allowed
-			if(!(funTypeB->isClosure() && funTypeA->isPlain())) {
-				return false;
-			}
-		}
-		
-		bool res = true;
-		res = res && funTypeA->getParameterTypes().size() == funTypeB->getParameterTypes().size();
-		res = res && isSubTypeOf(funTypeA->getReturnType(), funTypeB->getReturnType());
-		for(std::size_t i = 0; res && i<funTypeB->getParameterTypes().size(); i++) {
-			res = res && isSubTypeOf(funTypeB->getParameterTypes()[i], funTypeA->getParameterTypes()[i]);
-		}
-		return res;
-	}
-	
-	// check reference types
-	if (analysis::isRefType(subType) && analysis::isRefType(superType)) {
-		const auto& basic = subType->getNodeManager().getLangBasic();
-		
-		// check element type
-		auto srcElement = analysis::getReferencedType(subType);
-		auto trgElement = analysis::getReferencedType(superType);
-		
-		// if element types are identical => it is fine
-		//if (srcElement == trgElement) return true;
-		if(core::analysis::compareTypes(srcElement, trgElement)) {
-			return true;
-		}
-		
-		// if sub-type is ref<any> it is ok
-		if(basic.isAny(trgElement)) {
-			return true;
-		}
-		
-		// support nested references
-		if (analysis::isRefType(srcElement) && analysis::isRefType(trgElement)) {
-			return isSubTypeOf(srcElement, trgElement);
-		}
-		
-		// also support references of derived classes being passed to base-type pointer
-		if(core::analysis::isObjectType(srcElement) && core::analysis::isObjectType(trgElement)) {
-			if(isSubTypeOf(srcElement, trgElement)) {
-				return true;
-			}
-		}
-		
-	}
-	
-	// no other relations are supported
-	return false;
-}
 
-/**
- * Computes a join or meet type for the given pair of types. The join flag allows to determine
- * whether the join or meet type is computed.
- */
-TypePtr getJoinMeetType(const TypePtr& typeA, const TypePtr& typeB, bool join) {
-	static const TypePtr fail = 0;
-	
-	// add a structure based algorithm for computing the Join-Type
-	
-	// shortcut for equal types
-	if(*typeA == *typeB) {
-		return typeA;
-	}
-	
-	// the rest depends on the node types
-	NodeType nodeTypeA = typeA->getNodeType();
-	NodeType nodeTypeB = typeB->getNodeType();
-	
-	// handle generic types
-	if(nodeTypeA == NT_GenericType && nodeTypeB == NT_GenericType) {
-		// let the join computation handle the case
-		const GenericTypePtr& genTypeA = static_pointer_cast<const GenericType>(typeA);
-		const GenericTypePtr& genTypeB = static_pointer_cast<const GenericType>(typeB);
-		return (join) ? getJoinType(genTypeA, genTypeB) : getMeetType(genTypeA, genTypeB);
-	}
+	/**
+	 * Computes a join or meet type for the given pair of types. The join flag allows to determine
+	 * whether the join or meet type is computed.
+	 */
+	TypePtr getJoinMeetType(const TypePtr& typeA, const TypePtr& typeB, bool join) {
+		static const TypePtr fail = 0;
 
-	// the rest can only work if it is of the same kind
-	if(nodeTypeA != nodeTypeB) {
-		// => no common super type
-		return fail;
-	}
-	
-	// check for functions
-	if(nodeTypeA == NT_FunctionType) {
-		FunctionTypePtr funTypeA = static_pointer_cast<const FunctionType>(typeA);
-		FunctionTypePtr funTypeB = static_pointer_cast<const FunctionType>(typeB);
-		
-		// check number of arguments
-		auto paramsA = funTypeA->getParameterTypes();
-		auto paramsB = funTypeB->getParameterTypes();
-		if(paramsA.size() != paramsB.size()) {
-			// not matching
+		// add a structure based algorithm for computing the Join-Type
+
+		// shortcut for equal types
+		if(*typeA == *typeB) { return typeA; }
+
+		// the rest depends on the node types
+		NodeType nodeTypeA = typeA->getNodeType();
+		NodeType nodeTypeB = typeB->getNodeType();
+
+		// handle generic types
+		if(nodeTypeA == NT_GenericType && nodeTypeB == NT_GenericType) {
+			// let the join computation handle the case
+			const GenericTypePtr& genTypeA = static_pointer_cast<const GenericType>(typeA);
+			const GenericTypePtr& genTypeB = static_pointer_cast<const GenericType>(typeB);
+			return (join) ? getJoinType(genTypeA, genTypeB) : getMeetType(genTypeA, genTypeB);
+		}
+
+		// the rest can only work if it is of the same kind
+		if(nodeTypeA != nodeTypeB) {
+			// => no common super type
 			return fail;
 		}
-		
-		// check function kind
-		FunctionKind resKind = funTypeA->getKind();
-		if(funTypeA->getKind() != funTypeB->getKind()) {
-			// differences are only allowed when going from plain to closure type
-			if((funTypeA->isPlain() && funTypeB->isClosure()) || (funTypeA->isClosure() && funTypeB->isPlain())) {
-				resKind = FK_CLOSURE;
-			}
-			else {
+
+		// check for functions
+		if(nodeTypeA == NT_FunctionType) {
+			FunctionTypePtr funTypeA = static_pointer_cast<const FunctionType>(typeA);
+			FunctionTypePtr funTypeB = static_pointer_cast<const FunctionType>(typeB);
+
+			// check number of arguments
+			auto paramsA = funTypeA->getParameterTypes();
+			auto paramsB = funTypeB->getParameterTypes();
+			if(paramsA.size() != paramsB.size()) {
+				// not matching
 				return fail;
 			}
-		}
-		
-		// compute join type
-		// JOIN/MEET result and argument types - if possible
-		TypePtr cur = getJoinMeetType(funTypeA->getReturnType(), funTypeB->getReturnType(), join);
-		TypePtr resType = cur;
-		
-		// continue with parameters
-		TypeList params;
-		for(std::size_t i=0; i<paramsA.size(); i++) {
-			// ATTENTION: this goes in the reverse direction
-			cur = getJoinMeetType(paramsA[i], paramsB[i], !join);
-			
-			// if a pair can not be matched => fail
-			if(!cur) {
-				return fail;
+
+			// check function kind
+			FunctionKind resKind = funTypeA->getKind();
+			if(funTypeA->getKind() != funTypeB->getKind()) {
+				// differences are only allowed when going from plain to closure type
+				if((funTypeA->isPlain() && funTypeB->isClosure()) || (funTypeA->isClosure() && funTypeB->isPlain())) {
+					resKind = FK_CLOSURE;
+				} else {
+					return fail;
+				}
 			}
-			
-			params.push_back(cur);
+
+			// compute join type
+			// JOIN/MEET result and argument types - if possible
+			TypePtr cur = getJoinMeetType(funTypeA->getReturnType(), funTypeB->getReturnType(), join);
+			TypePtr resType = cur;
+
+			// continue with parameters
+			TypeList params;
+			for(std::size_t i = 0; i < paramsA.size(); i++) {
+				// ATTENTION: this goes in the reverse direction
+				cur = getJoinMeetType(paramsA[i], paramsB[i], !join);
+
+				// if a pair can not be matched => fail
+				if(!cur) { return fail; }
+
+				params.push_back(cur);
+			}
+
+			// construct resulting type
+			IRBuilder builder(funTypeA->getNodeManager());
+			return builder.functionType(params, resType, resKind);
 		}
-		
-		// construct resulting type
-		IRBuilder builder(funTypeA->getNodeManager());
-		return builder.functionType(params, resType, resKind);
+
+		// everything else does not have a common join/meet type
+		return fail;
 	}
-	
-	// everything else does not have a common join/meet type
-	return fail;
-}
 
 
-TypePtr getSmallestCommonSuperType(const TypePtr& typeA, const TypePtr& typeB) {
-	// use common implementation for Join and Meet type computation
-	return getJoinMeetType(typeA, typeB, true);
-}
+	TypePtr getSmallestCommonSuperType(const TypePtr& typeA, const TypePtr& typeB) {
+		// use common implementation for Join and Meet type computation
+		return getJoinMeetType(typeA, typeB, true);
+	}
 
-TypePtr getBiggestCommonSubType(const TypePtr& typeA, const TypePtr& typeB) {
-	// use common implementation for Join and Meet type computation
-	return getJoinMeetType(typeA, typeB, false);
-}
+	TypePtr getBiggestCommonSubType(const TypePtr& typeA, const TypePtr& typeB) {
+		// use common implementation for Join and Meet type computation
+		return getJoinMeetType(typeA, typeB, false);
+	}
 
 } // end namespace types
 } // end namespace core

@@ -57,165 +57,154 @@ namespace insieme {
 namespace frontend {
 namespace conversion {
 
-//---------------------------------------------------------------------------------------------------------------------
-//							CXX STMT CONVERTER -- takes care of CXX nodes and C nodes with CXX code mixed in
-//---------------------------------------------------------------------------------------------------------------------
+	//---------------------------------------------------------------------------------------------------------------------
+	//							CXX STMT CONVERTER -- takes care of CXX nodes and C nodes with CXX code mixed in
+	//---------------------------------------------------------------------------------------------------------------------
 
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//							DECLARATION STATEMENT
-// 			In clang a declstmt is represented as a list of VarDecl
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitDeclStmt(clang::DeclStmt* declStmt) {
-	return StmtConverter::VisitDeclStmt(declStmt);
-}
-
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//							RETURN STATEMENT
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitReturnStmt(clang::ReturnStmt* retStmt) {
-
-	stmtutils::StmtWrapper stmt = StmtConverter::VisitReturnStmt(retStmt);
-	LOG_STMT_CONVERSION(retStmt, stmt);
-	
-	if(!retStmt->getRetValue()) {
-		//if there is no return value its an empty return "return;"
-		return stmt;
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//							DECLARATION STATEMENT
+	// 			In clang a declstmt is represented as a list of VarDecl
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitDeclStmt(clang::DeclStmt* declStmt) {
+		return StmtConverter::VisitDeclStmt(declStmt);
 	}
-	
-	core::ExpressionPtr retExpr = stmt.getSingleStmt().as<core::ReturnStmtPtr>().getReturnExpr();
-	
-	// check if the return must be converted or not to a reference,
-	// is easy to check if the value has being derefed or not
-	if(gen.isPrimitive(retExpr->getType())) {
-		return stmt;
-	}
-	
-	// return by value ALWAYS, will fix this in a second pass (check cpp_ref extension)
-	//   - var(undefined (Obj))
-	//   - ctor(undefined(Obj))
-	//   - vx (where type is ref<Obj<..>>)
-	//   		all this casses, by value!
-	//   all of those cases result in an expression typed ref<obj>
-	if(retExpr->getType().isa<core::RefTypePtr>()) {
-		if(core::analysis::isObjectType(retExpr->getType().as<core::RefTypePtr>()->getElementType())) {
-			vector<core::StatementPtr> stmtList;
-			stmtList.push_back(builder.returnStmt(builder.deref(retExpr)));
-			core::StatementPtr retStatement = builder.compoundStmt(stmtList);
-			stmt = stmtutils::tryAggregateStmts(builder,stmtList);
+
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//							RETURN STATEMENT
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitReturnStmt(clang::ReturnStmt* retStmt) {
+		stmtutils::StmtWrapper stmt = StmtConverter::VisitReturnStmt(retStmt);
+		LOG_STMT_CONVERSION(retStmt, stmt);
+
+		if(!retStmt->getRetValue()) {
+			// if there is no return value its an empty return "return;"
+			return stmt;
 		}
-	}
-	
-	return stmt;
-}
 
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//							COMPOUND STATEMENT
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitCompoundStmt(clang::CompoundStmt* compStmt) {
+		core::ExpressionPtr retExpr = stmt.getSingleStmt().as<core::ReturnStmtPtr>().getReturnExpr();
 
-	return StmtConverter::VisitCompoundStmt(compStmt);
-}
+		// check if the return must be converted or not to a reference,
+		// is easy to check if the value has being derefed or not
+		if(gen.isPrimitive(retExpr->getType())) { return stmt; }
 
-
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitCXXCatchStmt(clang::CXXCatchStmt* catchStmt) {
-	frontend_assert(false && "Catch -- Taken care of inside of TryStmt!");
-	return stmtutils::StmtWrapper();
-}
-
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitCXXTryStmt(clang::CXXTryStmt* tryStmt) {
-
-	//frontend_assert(false && "Try -- Currently not supported!");
-	core::CompoundStmtPtr body = builder.wrapBody(stmtutils::tryAggregateStmts(builder, Visit(tryStmt->getTryBlock())));
-	
-	vector<core::CatchClausePtr> catchClauses;
-	unsigned numCatch = tryStmt->getNumHandlers();
-	for(unsigned i=0; i<numCatch; i++) {
-		clang::CXXCatchStmt* catchStmt = tryStmt->getHandler(i);
-		
-		core::VariablePtr var;
-		if(const clang::VarDecl* exceptionVarDecl = catchStmt->getExceptionDecl()) {
-			core::TypePtr exceptionTy = convFact.convertType(catchStmt->getCaughtType());
-			
-			if(convFact.varDeclMap.find(exceptionVarDecl) != convFact.varDeclMap.end()) {
-				//static cast allowed here, because the insertion of
-				//exceptionVarDecls is exclusively done here
-				var = (convFact.varDeclMap[exceptionVarDecl]).as<core::VariablePtr>();
-				VLOG(2) << convFact.lookUpVariable(catchStmt->getExceptionDecl()).as<core::VariablePtr>();
-			}
-			else {
-				var = builder.variable(exceptionTy);
-				
-				//we assume that exceptionVarDecl is not in the varDeclMap
-				frontend_assert(convFact.varDeclMap.find(exceptionVarDecl) == convFact.varDeclMap.end()
-				                && "excepionVarDecl already in vardeclmap");
-				//insert var to be used in conversion of handlerBlock
-				convFact.varDeclMap.insert({ exceptionVarDecl, var });
-				VLOG(2) << convFact.lookUpVariable(catchStmt->getExceptionDecl()).as<core::VariablePtr>();
+		// return by value ALWAYS, will fix this in a second pass (check cpp_ref extension)
+		//   - var(undefined (Obj))
+		//   - ctor(undefined(Obj))
+		//   - vx (where type is ref<Obj<..>>)
+		//   		all this casses, by value!
+		//   all of those cases result in an expression typed ref<obj>
+		if(retExpr->getType().isa<core::RefTypePtr>()) {
+			if(core::analysis::isObjectType(retExpr->getType().as<core::RefTypePtr>()->getElementType())) {
+				vector<core::StatementPtr> stmtList;
+				stmtList.push_back(builder.returnStmt(builder.deref(retExpr)));
+				core::StatementPtr retStatement = builder.compoundStmt(stmtList);
+				stmt = stmtutils::tryAggregateStmts(builder, stmtList);
 			}
 		}
-		else {
-			//no exceptiondecl indicates a catch-all (...)
-			var = builder.variable(gen.getAny());
+
+		return stmt;
+	}
+
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//							COMPOUND STATEMENT
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitCompoundStmt(clang::CompoundStmt* compStmt) {
+		return StmtConverter::VisitCompoundStmt(compStmt);
+	}
+
+
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitCXXCatchStmt(clang::CXXCatchStmt* catchStmt) {
+		frontend_assert(false && "Catch -- Taken care of inside of TryStmt!");
+		return stmtutils::StmtWrapper();
+	}
+
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitCXXTryStmt(clang::CXXTryStmt* tryStmt) {
+		// frontend_assert(false && "Try -- Currently not supported!");
+		core::CompoundStmtPtr body = builder.wrapBody(stmtutils::tryAggregateStmts(builder, Visit(tryStmt->getTryBlock())));
+
+		vector<core::CatchClausePtr> catchClauses;
+		unsigned numCatch = tryStmt->getNumHandlers();
+		for(unsigned i = 0; i < numCatch; i++) {
+			clang::CXXCatchStmt* catchStmt = tryStmt->getHandler(i);
+
+			core::VariablePtr var;
+			if(const clang::VarDecl* exceptionVarDecl = catchStmt->getExceptionDecl()) {
+				core::TypePtr exceptionTy = convFact.convertType(catchStmt->getCaughtType());
+
+				if(convFact.varDeclMap.find(exceptionVarDecl) != convFact.varDeclMap.end()) {
+					// static cast allowed here, because the insertion of
+					// exceptionVarDecls is exclusively done here
+					var = (convFact.varDeclMap[exceptionVarDecl]).as<core::VariablePtr>();
+					VLOG(2) << convFact.lookUpVariable(catchStmt->getExceptionDecl()).as<core::VariablePtr>();
+				} else {
+					var = builder.variable(exceptionTy);
+
+					// we assume that exceptionVarDecl is not in the varDeclMap
+					frontend_assert(convFact.varDeclMap.find(exceptionVarDecl) == convFact.varDeclMap.end() && "excepionVarDecl already in vardeclmap");
+					// insert var to be used in conversion of handlerBlock
+					convFact.varDeclMap.insert({exceptionVarDecl, var});
+					VLOG(2) << convFact.lookUpVariable(catchStmt->getExceptionDecl()).as<core::VariablePtr>();
+				}
+			} else {
+				// no exceptiondecl indicates a catch-all (...)
+				var = builder.variable(gen.getAny());
+			}
+
+			core::CompoundStmtPtr body = builder.wrapBody(stmtutils::tryAggregateStmts(builder, Visit(catchStmt->getHandlerBlock())));
+			catchClauses.push_back(builder.catchClause(var, body));
 		}
-		
-		core::CompoundStmtPtr body = builder.wrapBody(stmtutils::tryAggregateStmts(builder, Visit(catchStmt->getHandlerBlock())));
-		catchClauses.push_back(builder.catchClause(var, body));
+
+		return stmtutils::tryAggregateStmt(builder, builder.tryCatchStmt(body, catchClauses));
 	}
-	
-	return stmtutils::tryAggregateStmt(builder, builder.tryCatchStmt(body, catchClauses));
-}
 
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitCXXForRangeStmt(clang::CXXForRangeStmt* frStmt) {
-	frontend_assert(false && "ForRange -- Currently not supported!");
-	return stmtutils::StmtWrapper();
-}
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitCXXForRangeStmt(clang::CXXForRangeStmt* frStmt) {
+		frontend_assert(false && "ForRange -- Currently not supported!");
+		return stmtutils::StmtWrapper();
+	}
 
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// Overwrite the basic visit method for expression in order to automatically
-// and transparently attach annotations to node which are annotated
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-stmtutils::StmtWrapper Converter::CXXStmtConverter::Visit(clang::Stmt* stmt) {
-	VLOG(2) << "CXX";
-	
-	//iterate clang handler list and check if a handler wants to convert the stmt
-	stmtutils::StmtWrapper retStmt;
-	for(auto extension : convFact.getConversionSetup().getExtensions()) {
-		retStmt = extension->Visit(stmt, convFact);
-		if(retStmt.size()) {
-			break;
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	// Overwrite the basic visit method for expression in order to automatically
+	// and transparently attach annotations to node which are annotated
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	stmtutils::StmtWrapper Converter::CXXStmtConverter::Visit(clang::Stmt* stmt) {
+		VLOG(2) << "CXX";
+
+		// iterate clang handler list and check if a handler wants to convert the stmt
+		stmtutils::StmtWrapper retStmt;
+		for(auto extension : convFact.getConversionSetup().getExtensions()) {
+			retStmt = extension->Visit(stmt, convFact);
+			if(retStmt.size()) { break; }
 		}
-	}
-	if(retStmt.size()==0) {
-		convFact.trackSourceLocation(stmt);
-		retStmt = StmtVisitor<CXXStmtConverter, stmtutils::StmtWrapper>::Visit(stmt);
-		convFact.untrackSourceLocation();
-	}
-	
-	// print diagnosis messages
-	convFact.printDiagnosis(stmt->getLocStart());
-	
-	// Deal with transformation pragmas
-	core::NodeList list(retStmt.begin(), retStmt.end());
-	list = pragma::attachPragma(list, stmt, convFact);
-	retStmt.clear();
-	for(const auto& e : list) {
-		retStmt.push_back(e.as<core::StatementPtr>());
-	}
-	
-	// call frontend extension post visitors
-	for(auto extension : convFact.getConversionSetup().getExtensions()) {
-		retStmt = extension->PostVisit(stmt, retStmt, convFact);
-	}
-	
-	return  retStmt;
-}
+		if(retStmt.size() == 0) {
+			convFact.trackSourceLocation(stmt);
+			retStmt = StmtVisitor<CXXStmtConverter, stmtutils::StmtWrapper>::Visit(stmt);
+			convFact.untrackSourceLocation();
+		}
 
+		// print diagnosis messages
+		convFact.printDiagnosis(stmt->getLocStart());
+
+		// Deal with transformation pragmas
+		core::NodeList list(retStmt.begin(), retStmt.end());
+		list = pragma::attachPragma(list, stmt, convFact);
+		retStmt.clear();
+		for(const auto& e : list) {
+			retStmt.push_back(e.as<core::StatementPtr>());
+		}
+
+		// call frontend extension post visitors
+		for(auto extension : convFact.getConversionSetup().getExtensions()) {
+			retStmt = extension->PostVisit(stmt, retStmt, convFact);
+		}
+
+		return retStmt;
+	}
 }
 }
 }

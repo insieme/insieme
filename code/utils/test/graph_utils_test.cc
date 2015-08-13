@@ -51,204 +51,190 @@ namespace utils {
 namespace graph {
 
 
-TEST(GraphUtils, SimpleGraph) {
+	TEST(GraphUtils, SimpleGraph) {
+		// create a graph
+		Graph<int> graph;
+		EXPECT_EQ("({},{})", toString(graph));
 
-	// create a graph
-	Graph<int> graph;
-	EXPECT_EQ("({},{})", toString(graph));
-	
-	EXPECT_FALSE(graph.containsVertex(10));
-	EXPECT_FALSE(graph.containsVertex(12));
-	EXPECT_FALSE(graph.containsVertex(14));
-	
-	// add a node
-	EXPECT_TRUE(graph.addVertex(12));
-	EXPECT_FALSE(graph.containsVertex(10));
-	EXPECT_TRUE(graph.containsVertex(12));
-	EXPECT_FALSE(graph.containsVertex(14));
-	
-	// add a duplicate
-	EXPECT_FALSE(graph.addVertex(12));
-	EXPECT_FALSE(graph.containsVertex(10));
-	EXPECT_TRUE(graph.containsVertex(12));
-	EXPECT_FALSE(graph.containsVertex(14));
-	
-	// add another node
-	EXPECT_TRUE(graph.addVertex(14));
-	EXPECT_FALSE(graph.containsVertex(10));
-	EXPECT_TRUE(graph.containsVertex(12));
-	EXPECT_TRUE(graph.containsVertex(14));
-	
-	// add an edge
-	EXPECT_TRUE(graph.addEdge(10,12));
-	EXPECT_TRUE(graph.containsVertex(10));
-	EXPECT_TRUE(graph.containsVertex(12));
-	EXPECT_TRUE(graph.containsVertex(14));
-	
-	// add same edge again
-	EXPECT_FALSE(graph.addEdge(10,12));
-	
-	// but the reverse should be allowed - once
-	EXPECT_TRUE(graph.addEdge(12,10));
-	EXPECT_FALSE(graph.addEdge(12,10));
-	
-	EXPECT_FALSE(graph.containsVertex(1));
-	EXPECT_FALSE(graph.containsVertex(2));
-	graph.addEdge(1,2);
-	EXPECT_TRUE(graph.containsVertex(1));
-	EXPECT_TRUE(graph.containsVertex(2));
-	
-}
+		EXPECT_FALSE(graph.containsVertex(10));
+		EXPECT_FALSE(graph.containsVertex(12));
+		EXPECT_FALSE(graph.containsVertex(14));
 
-TEST(GraphUtils, LabeledGraph) {
+		// add a node
+		EXPECT_TRUE(graph.addVertex(12));
+		EXPECT_FALSE(graph.containsVertex(10));
+		EXPECT_TRUE(graph.containsVertex(12));
+		EXPECT_FALSE(graph.containsVertex(14));
 
-	Graph<int, char> graph;
-	
-	// check printing of a small graph (dot plot)
-	EXPECT_TRUE(graph.addEdge(1, 2, '+'));
-	
-	std::stringstream buffer;
-	graph.printGraphViz(buffer);
-	EXPECT_EQ("digraph G {\n0[label=\"1\" ];\n1[label=\"2\" ];\n0->1 [label=\"+\" ];\n}\n", buffer.str());
-	
-	EXPECT_TRUE(graph.addEdge(2, 4, '+'));
-	EXPECT_TRUE(graph.addEdge(4, 8, '+'));
-	
-	EXPECT_EQ(static_cast<std::size_t>(4), graph.getNumVertices());
-	EXPECT_EQ(static_cast<std::size_t>(3), graph.getNumEdges());
-	
-	EXPECT_TRUE(graph.addEdge(1, 8, '-'));
-	
-	EXPECT_EQ(static_cast<std::size_t>(4), graph.getNumVertices());
-	EXPECT_EQ(static_cast<std::size_t>(4), graph.getNumEdges());
-	
-	// check labels
-	auto res = graph.getLabel(2,4);
-	EXPECT_TRUE(res);
-	if(res) {
-		EXPECT_EQ('+', *res);
+		// add a duplicate
+		EXPECT_FALSE(graph.addVertex(12));
+		EXPECT_FALSE(graph.containsVertex(10));
+		EXPECT_TRUE(graph.containsVertex(12));
+		EXPECT_FALSE(graph.containsVertex(14));
+
+		// add another node
+		EXPECT_TRUE(graph.addVertex(14));
+		EXPECT_FALSE(graph.containsVertex(10));
+		EXPECT_TRUE(graph.containsVertex(12));
+		EXPECT_TRUE(graph.containsVertex(14));
+
+		// add an edge
+		EXPECT_TRUE(graph.addEdge(10, 12));
+		EXPECT_TRUE(graph.containsVertex(10));
+		EXPECT_TRUE(graph.containsVertex(12));
+		EXPECT_TRUE(graph.containsVertex(14));
+
+		// add same edge again
+		EXPECT_FALSE(graph.addEdge(10, 12));
+
+		// but the reverse should be allowed - once
+		EXPECT_TRUE(graph.addEdge(12, 10));
+		EXPECT_FALSE(graph.addEdge(12, 10));
+
+		EXPECT_FALSE(graph.containsVertex(1));
+		EXPECT_FALSE(graph.containsVertex(2));
+		graph.addEdge(1, 2);
+		EXPECT_TRUE(graph.containsVertex(1));
+		EXPECT_TRUE(graph.containsVertex(2));
 	}
-	
-	res = graph.getLabel(1,8);
-	EXPECT_TRUE(res);
-	if(res) {
-		EXPECT_EQ('-', *res);
+
+	TEST(GraphUtils, LabeledGraph) {
+		Graph<int, char> graph;
+
+		// check printing of a small graph (dot plot)
+		EXPECT_TRUE(graph.addEdge(1, 2, '+'));
+
+		std::stringstream buffer;
+		graph.printGraphViz(buffer);
+		EXPECT_EQ("digraph G {\n0[label=\"1\" ];\n1[label=\"2\" ];\n0->1 [label=\"+\" ];\n}\n", buffer.str());
+
+		EXPECT_TRUE(graph.addEdge(2, 4, '+'));
+		EXPECT_TRUE(graph.addEdge(4, 8, '+'));
+
+		EXPECT_EQ(static_cast<std::size_t>(4), graph.getNumVertices());
+		EXPECT_EQ(static_cast<std::size_t>(3), graph.getNumEdges());
+
+		EXPECT_TRUE(graph.addEdge(1, 8, '-'));
+
+		EXPECT_EQ(static_cast<std::size_t>(4), graph.getNumVertices());
+		EXPECT_EQ(static_cast<std::size_t>(4), graph.getNumEdges());
+
+		// check labels
+		auto res = graph.getLabel(2, 4);
+		EXPECT_TRUE(res);
+		if(res) { EXPECT_EQ('+', *res); }
+
+		res = graph.getLabel(1, 8);
+		EXPECT_TRUE(res);
+		if(res) { EXPECT_EQ('-', *res); }
+
+		EXPECT_FALSE(graph.getLabel(2, 8));
+		EXPECT_FALSE(graph.getLabel(4, 2));
 	}
-	
-	EXPECT_FALSE(graph.getLabel(2,8));
-	EXPECT_FALSE(graph.getLabel(4,2));
-	
-}
 
-TEST(GraphUtils, PointerGraph) {
+	TEST(GraphUtils, PointerGraph) {
+		int a = 1;
+		int b = 2;
+		int c = 2; // c == b
 
-	int a = 1;
-	int b = 2;
-	int c = 2;  // c == b
-	
-	int* p1 = &a;
-	int* p2 = &b;
-	int* p3 = &c;
-	
-	PointerGraph<int*> graph;
-	
-	// first two should be fine
-	EXPECT_TRUE(graph.addVertex(p1));
-	EXPECT_TRUE(graph.addVertex(p2));
-	
-	// this should not work since *p3 = *p2 => same value
-	EXPECT_FALSE(graph.addVertex(p3));
-	
-}
+		int* p1 = &a;
+		int* p2 = &b;
+		int* p3 = &c;
+
+		PointerGraph<int*> graph;
+
+		// first two should be fine
+		EXPECT_TRUE(graph.addVertex(p1));
+		EXPECT_TRUE(graph.addVertex(p2));
+
+		// this should not work since *p3 = *p2 => same value
+		EXPECT_FALSE(graph.addVertex(p3));
+	}
 
 
-TEST(GraphUtils, CycleDetection) {
+	TEST(GraphUtils, CycleDetection) {
+		// build a dummy graph including a cycle
+		Graph<int> graph;
 
-	// build a dummy graph including a cycle
-	Graph<int> graph;
-	
-	auto cycle = detectCycle(graph.asBoostGraph());
-	EXPECT_TRUE(cycle.empty()) << cycle;
-	
-	// start with no cycle
-	graph.addEdge(1,2);
-	graph.addEdge(2,3);
-	graph.addEdge(3,4);
-	
-	cycle = detectCycle(graph.asBoostGraph());
-	EXPECT_TRUE(cycle.empty()) << cycle;
-	
-	// close the cycle
-	graph.addEdge(4,1);
-	
-	cycle = detectCycle(graph.asBoostGraph());
-	EXPECT_FALSE(cycle.empty()) << cycle;
-	EXPECT_EQ(4, cycle.size());
-	
-	
-	// create something with extra nodes
-	graph = Graph<int>();
-	
-	graph.addEdge(1,2);
-	graph.addEdge(1,3);
-	graph.addEdge(1,4);
-	graph.addEdge(2,3);
-	graph.addEdge(3,4);
-	graph.addEdge(4,5);
-	graph.addEdge(5,3);
-	
-	cycle = detectCycle(graph.asBoostGraph());
-	EXPECT_FALSE(cycle.empty()) << cycle;
-	EXPECT_EQ(3,cycle.size());
-}
+		auto cycle = detectCycle(graph.asBoostGraph());
+		EXPECT_TRUE(cycle.empty()) << cycle;
 
-TEST(GraphUtils, SCCComputation) {
+		// start with no cycle
+		graph.addEdge(1, 2);
+		graph.addEdge(2, 3);
+		graph.addEdge(3, 4);
 
-	// build a dummy graph
-	Graph<int> graph;
-	
-	auto res = computeSCCGraph(graph.asBoostGraph());
-	EXPECT_EQ(0,res.getNumVertices()) << res;
-	EXPECT_EQ(0,res.getNumEdges()) << res;
-	
-	// add a node pair
-	graph.addEdge(1,2);
-	res = computeSCCGraph(graph.asBoostGraph());
-	EXPECT_EQ(2,res.getNumVertices()) << res;
-	EXPECT_EQ(1,res.getNumEdges()) << res;
-	EXPECT_EQ("({{1},{2}},{({1},{2})})", toString(res));
-	
-	// close the cycle
-	graph.addEdge(2,1);
-	res = computeSCCGraph(graph.asBoostGraph());
-	EXPECT_EQ(1,res.getNumVertices()) << res;
-	EXPECT_EQ(0,res.getNumEdges()) << res;
-	EXPECT_EQ("({{1,2}},{})", toString(res));
-	
-	// add two more edges
-	graph.addEdge(1,3);
-	graph.addEdge(1,4);
-	res = computeSCCGraph(graph.asBoostGraph());
-	EXPECT_EQ(3,res.getNumVertices()) << res;
-	EXPECT_EQ(2,res.getNumEdges()) << res;
-	EXPECT_EQ("({{1,2},{3},{4}},{({1,2},{3}),({1,2},{4})})", toString(res));
-	
-}
+		cycle = detectCycle(graph.asBoostGraph());
+		EXPECT_TRUE(cycle.empty()) << cycle;
 
-TEST(GraphUtils, TopologicalOrder) {
+		// close the cycle
+		graph.addEdge(4, 1);
 
-	// build a dummy graph
-	Graph<int> graph;
-	
-	EXPECT_EQ("[]",toString(getTopologicalOrder(graph)));
-	
-	// add a nodes
-	graph.addEdge(1,2);
-	EXPECT_EQ("[1,2]",toString(getTopologicalOrder(graph)));
-	
-	graph.addEdge(2,3);
-	EXPECT_EQ("[1,2,3]",toString(getTopologicalOrder(graph)));
-}
+		cycle = detectCycle(graph.asBoostGraph());
+		EXPECT_FALSE(cycle.empty()) << cycle;
+		EXPECT_EQ(4, cycle.size());
+
+
+		// create something with extra nodes
+		graph = Graph<int>();
+
+		graph.addEdge(1, 2);
+		graph.addEdge(1, 3);
+		graph.addEdge(1, 4);
+		graph.addEdge(2, 3);
+		graph.addEdge(3, 4);
+		graph.addEdge(4, 5);
+		graph.addEdge(5, 3);
+
+		cycle = detectCycle(graph.asBoostGraph());
+		EXPECT_FALSE(cycle.empty()) << cycle;
+		EXPECT_EQ(3, cycle.size());
+	}
+
+	TEST(GraphUtils, SCCComputation) {
+		// build a dummy graph
+		Graph<int> graph;
+
+		auto res = computeSCCGraph(graph.asBoostGraph());
+		EXPECT_EQ(0, res.getNumVertices()) << res;
+		EXPECT_EQ(0, res.getNumEdges()) << res;
+
+		// add a node pair
+		graph.addEdge(1, 2);
+		res = computeSCCGraph(graph.asBoostGraph());
+		EXPECT_EQ(2, res.getNumVertices()) << res;
+		EXPECT_EQ(1, res.getNumEdges()) << res;
+		EXPECT_EQ("({{1},{2}},{({1},{2})})", toString(res));
+
+		// close the cycle
+		graph.addEdge(2, 1);
+		res = computeSCCGraph(graph.asBoostGraph());
+		EXPECT_EQ(1, res.getNumVertices()) << res;
+		EXPECT_EQ(0, res.getNumEdges()) << res;
+		EXPECT_EQ("({{1,2}},{})", toString(res));
+
+		// add two more edges
+		graph.addEdge(1, 3);
+		graph.addEdge(1, 4);
+		res = computeSCCGraph(graph.asBoostGraph());
+		EXPECT_EQ(3, res.getNumVertices()) << res;
+		EXPECT_EQ(2, res.getNumEdges()) << res;
+		EXPECT_EQ("({{1,2},{3},{4}},{({1,2},{3}),({1,2},{4})})", toString(res));
+	}
+
+	TEST(GraphUtils, TopologicalOrder) {
+		// build a dummy graph
+		Graph<int> graph;
+
+		EXPECT_EQ("[]", toString(getTopologicalOrder(graph)));
+
+		// add a nodes
+		graph.addEdge(1, 2);
+		EXPECT_EQ("[1,2]", toString(getTopologicalOrder(graph)));
+
+		graph.addEdge(2, 3);
+		EXPECT_EQ("[1,2,3]", toString(getTopologicalOrder(graph)));
+	}
 
 } // end namespace graph
 } // end namespace utils

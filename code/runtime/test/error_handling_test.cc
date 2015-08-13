@@ -45,19 +45,10 @@ extern "C" {
 };
 
 TEST(ErrorHandlingTest, Trivial) {
-	ASSERT_EXIT(
-	    irt_throw_string_error(IRT_ERR_INIT, "Blably")
-	    , ::testing::ExitedWithCode(254), "Blably");
+	ASSERT_EXIT(irt_throw_string_error(IRT_ERR_INIT, "Blably"), ::testing::ExitedWithCode(254), "Blably");
 }
 
 TEST(ErrorHandlingTest, Simple) {
-	ASSERT_EXIT(
-	    irt::init(36);
-	irt::run([]() {
-		irt::merge(irt::parallel([] {
-			irt_throw_string_error(IRT_ERR_INSTRUMENTATION, "Njet");
-		}));
-	});
-	irt::shutdown();
-	, ::testing::ExitedWithCode(249), "Njet");
+	ASSERT_EXIT(irt::init(36); irt::run([]() { irt::merge(irt::parallel([] { irt_throw_string_error(IRT_ERR_INSTRUMENTATION, "Njet"); })); }); irt::shutdown();
+	            , ::testing::ExitedWithCode(249), "Njet");
 }

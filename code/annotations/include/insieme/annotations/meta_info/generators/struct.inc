@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -38,26 +38,26 @@
 
 #define INFO_DECL(_text) _text;
 
-#define INFO_STRUCT_BEGIN(_name) \
-	namespace _name ## _ns { struct info_type; } \
-	typedef typename _name ## _ns::info_type _name ## _info; \
-	namespace _name ## _ns { \
-	struct info_type; \
-	VALUE_ANNOTATION_CONVERTER(info_type) \
-		typedef typename insieme::core::value_node_annotation<info_type>::type annotation_type;\
-		virtual insieme::core::ExpressionPtr toIR(insieme::core::NodeManager& manager, const insieme::core::NodeAnnotationPtr& annotation) const; \
-		virtual insieme::core::NodeAnnotationPtr toAnnotation(const insieme::core::ExpressionPtr& node) const; \
-	}; \
-	\
-	struct info_type : \
-			public insieme::core::value_annotation::copy_on_migration, \
-			public insieme::core::value_annotation::cloneable \
-	{ \
-		void cloneTo(const insieme::core::NodePtr& target) const; \
-		bool operator==(const info_type& other) const; \
+#define INFO_STRUCT_BEGIN(_name)                                                                                                                               \
+	namespace _name##_ns {                                                                                                                                     \
+		struct info_type;                                                                                                                                      \
+	}                                                                                                                                                          \
+	typedef typename _name##_ns::info_type _name##_info;                                                                                                       \
+	namespace _name##_ns {                                                                                                                                     \
+		struct info_type;                                                                                                                                      \
+		VALUE_ANNOTATION_CONVERTER(info_type)                                                                                                                  \
+		typedef typename insieme::core::value_node_annotation<info_type>::type annotation_type;                                                                \
+		virtual insieme::core::ExpressionPtr toIR(insieme::core::NodeManager& manager, const insieme::core::NodeAnnotationPtr& annotation) const;              \
+		virtual insieme::core::NodeAnnotationPtr toAnnotation(const insieme::core::ExpressionPtr& node) const;                                                 \
+	};                                                                                                                                                         \
+                                                                                                                                                               \
+	struct info_type : public insieme::core::value_annotation::copy_on_migration, public insieme::core::value_annotation::cloneable {                          \
+		void cloneTo(const insieme::core::NodePtr& target) const;                                                                                              \
+		bool operator==(const info_type& other) const;
 
-#define INFO_FIELD_EXT(_name, _a, _b, _type, _def) \
-		typename detail::compiler_type<_type>::type _name;
+#define INFO_FIELD_EXT(_name, _a, _b, _type, _def) typename detail::compiler_type<_type>::type _name;
 
-#define INFO_STRUCT_END() \
-	}; }
+#define INFO_STRUCT_END()                                                                                                                                      \
+	}                                                                                                                                                          \
+	;                                                                                                                                                          \
+	}

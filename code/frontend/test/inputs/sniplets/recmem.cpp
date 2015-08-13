@@ -1,9 +1,8 @@
 
 class o {
-public:
+  public:
 	int a();
 	int b();
-	
 };
 
 int o::a() {

@@ -47,32 +47,31 @@ namespace insieme {
 namespace core {
 namespace lang {
 
-TEST(ConstTypeExtensionTest, Basic) {
-	NodeManager nm;
-	IRBuilder builder(nm);
-	
-	auto& ext = nm.getLangExtension<ConstExtension>();
-	
-	auto type = builder.parseType("A");
-	
-	auto wrapped = ext.getConstType(type);
-	
-	EXPECT_EQ("A", toString(*type));
-	EXPECT_EQ("const<A>", toString(*wrapped));
-	
-	EXPECT_TRUE(ext.isConstType(wrapped));
-	EXPECT_FALSE(ext.isConstType(type));
-	EXPECT_EQ(type, ext.getWrappedConstType(wrapped));
-}
+	TEST(ConstTypeExtensionTest, Basic) {
+		NodeManager nm;
+		IRBuilder builder(nm);
 
-TEST(ConstTypeExtensionTest, Semantic) {
-	NodeManager nm;
-	
-	const ConstExtension& ext = nm.getLangExtension<ConstExtension>();
-	
-	semanticCheckSecond(ext.getNamedIrExtensions());
-}
+		auto& ext = nm.getLangExtension<ConstExtension>();
+
+		auto type = builder.parseType("A");
+
+		auto wrapped = ext.getConstType(type);
+
+		EXPECT_EQ("A", toString(*type));
+		EXPECT_EQ("const<A>", toString(*wrapped));
+
+		EXPECT_TRUE(ext.isConstType(wrapped));
+		EXPECT_FALSE(ext.isConstType(type));
+		EXPECT_EQ(type, ext.getWrappedConstType(wrapped));
+	}
+
+	TEST(ConstTypeExtensionTest, Semantic) {
+		NodeManager nm;
+
+		const ConstExtension& ext = nm.getLangExtension<ConstExtension>();
+
+		semanticCheckSecond(ext.getNamedIrExtensions());
+	}
 } // end namespace lang
 } // end namespace core
 } // end namespace insieme
-

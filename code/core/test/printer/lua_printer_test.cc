@@ -47,39 +47,38 @@ namespace insieme {
 namespace core {
 namespace printer {
 
-TEST(LuaPrinter, SimpleExpr) {
+	TEST(LuaPrinter, SimpleExpr) {
+		// sum up two values
+		NodeManager manager;
+		IRBuilder builder(manager);
 
-	// sum up two values
-	NodeManager manager;
-	IRBuilder builder(manager);
-	
-	TypePtr intType = manager.getLangBasic().getInt4();
-	VariablePtr a = builder.variable(intType, 1);
-	VariablePtr b = builder.variable(intType, 2);
-	ExpressionPtr t = builder.add(a, b);
-	
-	EXPECT_EQ("int_add(v1, v2)", toString(*t));
-	EXPECT_EQ("v1 + v2", toLuaScript(t));
-	
-	t = builder.mul(t,builder.sub(t,a));
-	EXPECT_EQ("int_mul(int_add(v1, v2), int_sub(int_add(v1, v2), v1))", toString(*t));
-	EXPECT_EQ("(v1 + v2) * ((v1 + v2) - v1)", toLuaScript(t));
-	
-	// test whether script is syntactically correct
-	utils::lua::Lua lua;
-	lua.run("v1 = 1 ; v2 = 2");
-	EXPECT_EQ(6, lua.eval<int>(toLuaScript(t)));
-}
+		TypePtr intType = manager.getLangBasic().getInt4();
+		VariablePtr a = builder.variable(intType, 1);
+		VariablePtr b = builder.variable(intType, 2);
+		ExpressionPtr t = builder.add(a, b);
 
-TEST(LuaPrinter, ControlFlow) {
-	NodeManager mgr;
-	IRBuilder builder(mgr);
-	
-	std::map<std::string, core::NodePtr> symbols;
-	symbols["v"] = builder.variable(builder.parseType("ref<vector<int<4>,10>>"));
-	symbols["x"] = builder.variable(builder.parseType("ref<int<4>>"));
-	
-	auto forStmt = analysis::normalize(builder.parseStmt(R"(
+		EXPECT_EQ("int_add(v1, v2)", toString(*t));
+		EXPECT_EQ("v1 + v2", toLuaScript(t));
+
+		t = builder.mul(t, builder.sub(t, a));
+		EXPECT_EQ("int_mul(int_add(v1, v2), int_sub(int_add(v1, v2), v1))", toString(*t));
+		EXPECT_EQ("(v1 + v2) * ((v1 + v2) - v1)", toLuaScript(t));
+
+		// test whether script is syntactically correct
+		utils::lua::Lua lua;
+		lua.run("v1 = 1 ; v2 = 2");
+		EXPECT_EQ(6, lua.eval<int>(toLuaScript(t)));
+	}
+
+	TEST(LuaPrinter, ControlFlow) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		std::map<std::string, core::NodePtr> symbols;
+		symbols["v"] = builder.variable(builder.parseType("ref<vector<int<4>,10>>"));
+		symbols["x"] = builder.variable(builder.parseType("ref<int<4>>"));
+
+		auto forStmt = analysis::normalize(builder.parseStmt(R"(
 			for(int<4> k = 0 .. 10) {
 				for(int<4> i = 0 .. 20) {
 					decl ref<int<4>> m = var(10);
@@ -88,20 +87,22 @@ TEST(LuaPrinter, ControlFlow) {
 			           x = x + 1;
 					}
 				}
-			})", symbols).as<ForStmtPtr>());
+			})",
+		                                                     symbols)
+		                                       .as<ForStmtPtr>());
 
 
-	string script = toLuaScript(forStmt);
-	EXPECT_PRED2(containsSubString, script, "(10 - 1)");
-	EXPECT_PRED2(containsSubString, script, "v1[v3] = (v4)");
-	EXPECT_PRED2(containsSubString, script, "v2 = (v2) + 1");
-	
-	// test whether script is syntactically correct
-	utils::lua::Lua lua;
-	lua.run("v1 = {}; v2 = 0");
-	lua.run(toLuaScript(forStmt));
-	EXPECT_EQ(10*20*30, lua.eval<int>("v2"));
-}
+		string script = toLuaScript(forStmt);
+		EXPECT_PRED2(containsSubString, script, "(10 - 1)");
+		EXPECT_PRED2(containsSubString, script, "v1[v3] = (v4)");
+		EXPECT_PRED2(containsSubString, script, "v2 = (v2) + 1");
+
+		// test whether script is syntactically correct
+		utils::lua::Lua lua;
+		lua.run("v1 = {}; v2 = 0");
+		lua.run(toLuaScript(forStmt));
+		EXPECT_EQ(10 * 20 * 30, lua.eval<int>("v2"));
+	}
 
 
 } // end namespace printer

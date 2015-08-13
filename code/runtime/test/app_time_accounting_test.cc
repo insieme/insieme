@@ -54,8 +54,8 @@ TEST(AppTimeAccounting, Simple) {
 	irt::run([]() {
 		irt::merge(irt::parallel([] {
 			double x = 0.0, last_app_t = 0.0;
-			for(int i=0; i<N; i++) {
-				for(int j=0; j<N; j++) {
+			for(int i = 0; i < N; i++) {
+				for(int j = 0; j < N; j++) {
 					x += 0.1;
 				}
 				irt::master([&] {
@@ -64,9 +64,7 @@ TEST(AppTimeAccounting, Simple) {
 					EXPECT_GT(app_t, last_app_t);
 				});
 			}
-			irt::master([x] {
-				std::cout << "x: " << x << "\n";
-			});
+			irt::master([x] { std::cout << "x: " << x << "\n"; });
 		}));
 	});
 	double wi_t = irt_time_wis_get_total();
@@ -92,24 +90,22 @@ TEST(AppTimeAccounting, AppProgress) {
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		}
 	});
-	
+
 	irt::init(4);
 	irt::run([]() {
 		irt::merge(irt::parallel([] {
 			double x = 0.0, last_app_t = 0.0;
-			for(int i=0; i<N; i++) {
-				for(int j=0; j<N; j++) {
+			for(int i = 0; i < N; i++) {
+				for(int j = 0; j < N; j++) {
 					x += 0.1;
 				}
 				irt::barrier();
 			}
-			irt::master([x] {
-				std::cout << "x: " << x << "\n";
-			});
+			irt::master([x] { std::cout << "x: " << x << "\n"; });
 		}));
 	});
 	irt::shutdown();
-	
+
 	run = false;
 	extThread.wait();
 }

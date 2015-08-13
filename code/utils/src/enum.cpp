@@ -38,17 +38,15 @@
 
 std::vector<std::string> getListOutOfCommaSeperated(std::string str, std::size_t enumMax) {
 	std::vector<std::string> res;
-	if(str.empty()) {
-		return res;
-	}
+	if(str.empty()) { return res; }
 	std::size_t oldFound = 0;
 	std::size_t found;
-	while((found = str.find(',', oldFound+1)) != std::string::npos) {
-		res.push_back(enumTrimName(str.substr(oldFound, found-oldFound)));
+	while((found = str.find(',', oldFound + 1)) != std::string::npos) {
+		res.push_back(enumTrimName(str.substr(oldFound, found - oldFound)));
 		oldFound = found;
 	}
 	res.push_back(enumTrimName(str.substr(oldFound)));
-	assert(res.size() == (size_t) enumMax);
+	assert(res.size() == (size_t)enumMax);
 	return res;
 }
 
@@ -61,5 +59,5 @@ std::string enumTrimName(std::string s) {
 	while((ENUM_BAD_CHARS.find(s.at(i))) != std::string::npos) {
 		i--;
 	}
-	return s.substr(j, i+1-j);
+	return s.substr(j, i + 1 - j);
 }

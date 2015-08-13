@@ -43,53 +43,48 @@ namespace insieme {
 namespace utils {
 namespace automata {
 
-using namespace set;
+	using namespace set;
 
-typedef Automata<>::state_type State;
-typedef RegularLanguage<> Lang;
+	typedef Automata<>::state_type State;
+	typedef RegularLanguage<> Lang;
 
-bool match(Lang l, const char* str) {
-	return accepts(l.getAutomata(), string(str));
-}
+	bool match(Lang l, const char* str) {
+		return accepts(l.getAutomata(), string(str));
+	}
 
-TEST(RegLang, Composition) {
+	TEST(RegLang, Composition) {
+		// a larger example
+		Lang a('a');
+		Lang b('b');
+		Lang c('c');
+		Lang d('d');
 
+		// pattern a(b|c)*d
 
-	// a larger example
-	Lang a('a');
-	Lang b('b');
-	Lang c('c');
-	Lang d('d');
-	
-	// pattern a(b|c)*d
-	
-	Lang x= sequence(a, repetition(alternativ(b,c)), d);
-	
-	// EXPECT_EQ("", toDotGraph(x.getAutomata()));
-	
-	EXPECT_TRUE(match(x, "ad"));
-	EXPECT_TRUE(match(x, "abd"));
-	EXPECT_TRUE(match(x, "abcd"));
-	EXPECT_TRUE(match(x, "acbbcccbbcbcd"));
-	
-	EXPECT_FALSE(match(x, "abc"));
-	
-	// compress it to a NFA
-	auto n = toNFA(x.getAutomata());
-	// EXPECT_EQ("", toDotGraph(n));
-	
-	EXPECT_TRUE(accepts(n, string("ad")));
-	EXPECT_TRUE(accepts(n, string("abd")));
-	EXPECT_TRUE(accepts(n, string("abcd")));
-	EXPECT_TRUE(accepts(n, string("acbbcccbbcbcd")));
-	
-	EXPECT_FALSE(accepts(n, string("abc")));
-	
-}
+		Lang x = sequence(a, repetition(alternativ(b, c)), d);
 
+		// EXPECT_EQ("", toDotGraph(x.getAutomata()));
+
+		EXPECT_TRUE(match(x, "ad"));
+		EXPECT_TRUE(match(x, "abd"));
+		EXPECT_TRUE(match(x, "abcd"));
+		EXPECT_TRUE(match(x, "acbbcccbbcbcd"));
+
+		EXPECT_FALSE(match(x, "abc"));
+
+		// compress it to a NFA
+		auto n = toNFA(x.getAutomata());
+		// EXPECT_EQ("", toDotGraph(n));
+
+		EXPECT_TRUE(accepts(n, string("ad")));
+		EXPECT_TRUE(accepts(n, string("abd")));
+		EXPECT_TRUE(accepts(n, string("abcd")));
+		EXPECT_TRUE(accepts(n, string("acbbcccbbcbcd")));
+
+		EXPECT_FALSE(accepts(n, string("abc")));
+	}
 
 
 } // end namespace automata
 } // end namespace core
 } // end namespace insieme
-

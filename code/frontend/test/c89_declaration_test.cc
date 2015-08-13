@@ -45,18 +45,17 @@
 namespace insieme {
 namespace frontend {
 
-using namespace core;
+	using namespace core;
 
-TEST(C89Declarations, Basic) {
-	NodeManager man;
-	IRBuilder builder(man);
-	
-	fs::path tmpFile;
-	{
-	
-// create a temporary source file
-		Source file(
-		    R"(
+	TEST(C89Declarations, Basic) {
+		NodeManager man;
+		IRBuilder builder(man);
+
+		fs::path tmpFile;
+		{
+			// create a temporary source file
+			Source file(
+			    R"(
 #include <stdio.h>
 
 // C89 / K&R style declarations
@@ -74,24 +73,23 @@ int main() {
 	foo(y,x,z);
 	return 0;
 }
-)"
-);
+)");
 
-		// check whether there is a temporary file
-		tmpFile = file.getPath();
-		EXPECT_TRUE(fs::exists(tmpFile));
+			// check whether there is a temporary file
+			tmpFile = file.getPath();
+			EXPECT_TRUE(fs::exists(tmpFile));
 
-		// parse temporary file
-		core::NodeManager manager;
-		ConversionJob job(file);
-		auto code = job.execute(manager);
-		EXPECT_TRUE(code);
+			// parse temporary file
+			core::NodeManager manager;
+			ConversionJob job(file);
+			auto code = job.execute(manager);
+			EXPECT_TRUE(code);
 
-		// check that we adjusted the function types correctly
-		auto msg = insieme::core::checks::check(code);
-		EXPECT_EQ(msg.size(), 0);
+			// check that we adjusted the function types correctly
+			auto msg = insieme::core::checks::check(code);
+			EXPECT_EQ(msg.size(), 0);
+		}
 	}
-}
 
 } // namespace frontend
 } // namespace insieme

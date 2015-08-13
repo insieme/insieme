@@ -54,14 +54,16 @@ using namespace insieme::frontend::conversion;
 
 namespace fe = insieme::frontend;
 
-#define CHECK_BUILTIN_TYPE(TypeName, InsiemeTypeDesc) \
-	{ CXXConversionFactory convFactory( manager, prog );\
-	clang::BuiltinType builtin(clang::BuiltinType::TypeName); \
-	TypePtr convType = convFactory.convertType( &builtin ); \
-	EXPECT_TRUE(convType); \
-	EXPECT_EQ(InsiemeTypeDesc, toString(*convType)); }
+#define CHECK_BUILTIN_TYPE(TypeName, InsiemeTypeDesc)                                                                                                          \
+	{                                                                                                                                                          \
+		CXXConversionFactory convFactory(manager, prog);                                                                                                       \
+		clang::BuiltinType builtin(clang::BuiltinType::TypeName);                                                                                              \
+		TypePtr convType = convFactory.convertType(&builtin);                                                                                                  \
+		EXPECT_TRUE(convType);                                                                                                                                 \
+		EXPECT_EQ(InsiemeTypeDesc, toString(*convType));                                                                                                       \
+	}
 
-//TEST(TypeConversion, HandleBuildinType) {
+// TEST(TypeConversion, HandleBuildinType) {
 //
 //	NodeManager manager;
 //	fe::Program prog(manager);
@@ -110,7 +112,7 @@ namespace fe = insieme::frontend;
 //
 //}
 //
-//TEST(TypeConversion, HandlePointerType) {
+// TEST(TypeConversion, HandlePointerType) {
 //	using namespace clang;
 //
 //	NodeManager manager;
@@ -129,7 +131,7 @@ namespace fe = insieme::frontend;
 //	operator delete (intTy);
 //}
 //
-//TEST(TypeConversion, HandleReferenceType) {
+// TEST(TypeConversion, HandleReferenceType) {
 //	using namespace clang;
 //
 //	NodeManager manager;
@@ -148,7 +150,7 @@ namespace fe = insieme::frontend;
 //	operator delete (intTy);
 //}
 //
-//TEST(TypeConversion, HandleStructType) {
+// TEST(TypeConversion, HandleStructType) {
 //	using namespace clang;
 //
 //	NodeManager manager;
@@ -195,7 +197,7 @@ namespace fe = insieme::frontend;
 //	operator delete (ushortTy);
 //}
 
-//TEST(TypeConversion, HandleRecursiveStructType) {
+// TEST(TypeConversion, HandleRecursiveStructType) {
 //
 //	NodeManager manager;
 //	fe::Program prog(manager);
@@ -231,7 +233,7 @@ namespace fe = insieme::frontend;
 //	operator delete (longTy);
 //}
 
-//TEST(TypeConversion, HandleMutualRecursiveStructType) {
+// TEST(TypeConversion, HandleMutualRecursiveStructType) {
 //	using namespace clang;
 //
 //	NodeManager manager;
@@ -304,50 +306,50 @@ namespace fe = insieme::frontend;
 
 
 TEST(TypeConversion, HandleFunctionType) {
-//	using namespace clang;
-//
-//	NodeManager manager;
-//	fe::Program prog(manager);
-//	fe::TranslationUnit& tu = prog.createEmptyTranslationUnit();
-//	const fe::ClangCompiler& clang = tu.getCompiler();
-//	CXXConversionFactory convFactory( manager, prog );
-//
-//	ASTContext& ctx = clang.getASTContext();
-//	// Defines a function with the following prototype:
-//	// int f(double a, float* b)
-//	// cppcheck-suppress exceptNew
-//	BuiltinType* intTy = new BuiltinType(BuiltinType::Int);
-//	// cppcheck-suppress exceptNew
-//	BuiltinType* doubleTy = new BuiltinType(BuiltinType::Double);
-//	// cppcheck-suppress exceptNew
-//	BuiltinType* floatTy = new BuiltinType(BuiltinType::Float);
-//	{
-//		QualType argTy[] = { QualType(doubleTy, 0), ctx.getPointerType(QualType(floatTy, 0)) };
-//		QualType funcTy = ctx.getFunctionType(QualType(intTy, 0), argTy, 2, false, 0, false, false, 0, NULL,
-//				clang::FunctionType::ExtInfo(false, 0, CallingConv::CC_Default));
-//
-//		// convert into IR type
-//		TypePtr insiemeTy = convFactory.convertType( funcTy.getTypePtr() );
-//		EXPECT_TRUE(insiemeTy);
-//		EXPECT_EQ("((real<8>,ref<array<real<4>,1>>)->int<4>)", insiemeTy->toString());
-//	}
-//	// check conversion of function with no prototype
-//	// int f()
-//	{
-//		QualType funcTy = ctx.getFunctionNoProtoType(QualType(intTy, 0));
-//
-//		// convert into IR type
-//		TypePtr insiemeTy = convFactory.convertType( funcTy.getTypePtr() );
-//		EXPECT_TRUE(insiemeTy);
-//		EXPECT_EQ("(()->int<4>)", insiemeTy->toString());
-//	}
-//
-//	operator delete (intTy);
-//	operator delete (doubleTy);
-//	operator delete (floatTy);
+	//	using namespace clang;
+	//
+	//	NodeManager manager;
+	//	fe::Program prog(manager);
+	//	fe::TranslationUnit& tu = prog.createEmptyTranslationUnit();
+	//	const fe::ClangCompiler& clang = tu.getCompiler();
+	//	CXXConversionFactory convFactory( manager, prog );
+	//
+	//	ASTContext& ctx = clang.getASTContext();
+	//	// Defines a function with the following prototype:
+	//	// int f(double a, float* b)
+	//	// cppcheck-suppress exceptNew
+	//	BuiltinType* intTy = new BuiltinType(BuiltinType::Int);
+	//	// cppcheck-suppress exceptNew
+	//	BuiltinType* doubleTy = new BuiltinType(BuiltinType::Double);
+	//	// cppcheck-suppress exceptNew
+	//	BuiltinType* floatTy = new BuiltinType(BuiltinType::Float);
+	//	{
+	//		QualType argTy[] = { QualType(doubleTy, 0), ctx.getPointerType(QualType(floatTy, 0)) };
+	//		QualType funcTy = ctx.getFunctionType(QualType(intTy, 0), argTy, 2, false, 0, false, false, 0, NULL,
+	//				clang::FunctionType::ExtInfo(false, 0, CallingConv::CC_Default));
+	//
+	//		// convert into IR type
+	//		TypePtr insiemeTy = convFactory.convertType( funcTy.getTypePtr() );
+	//		EXPECT_TRUE(insiemeTy);
+	//		EXPECT_EQ("((real<8>,ref<array<real<4>,1>>)->int<4>)", insiemeTy->toString());
+	//	}
+	//	// check conversion of function with no prototype
+	//	// int f()
+	//	{
+	//		QualType funcTy = ctx.getFunctionNoProtoType(QualType(intTy, 0));
+	//
+	//		// convert into IR type
+	//		TypePtr insiemeTy = convFactory.convertType( funcTy.getTypePtr() );
+	//		EXPECT_TRUE(insiemeTy);
+	//		EXPECT_EQ("(()->int<4>)", insiemeTy->toString());
+	//	}
+	//
+	//	operator delete (intTy);
+	//	operator delete (doubleTy);
+	//	operator delete (floatTy);
 }
 
-//TEST(TypeConversion, HandleArrayType) {
+// TEST(TypeConversion, HandleArrayType) {
 //	using namespace clang;
 //
 //	NodeManager manager;
@@ -384,29 +386,29 @@ TEST(TypeConversion, HandleFunctionType) {
 
 
 TEST(TypeConversion, FileTest) {
-// 	NodeManager manager;
-// 	fe::Program prog(manager);
-// 	fe::TranslationUnit& tu = prog.addTranslationUnit( std::string(SRC_DIR) + "/inputs/cxx_types.cpp" );
-//
-// 	auto filter = [](const fe::pragma::Pragma& curr){ return curr.getType() == "test"; };
-//
-// 	for(auto it = prog.pragmas_begin(filter), end = prog.pragmas_end(); it != end; ++it) {
-// 		// we use an internal manager to have private counter for variables so we can write independent tests
-// 		NodeManager mgr;
-//
-// 		CXXConversionFactory convFactory( mgr, prog );
-// 		convFactory.setTranslationUnit(tu);
-//
-// 		const fe::TestPragmaExtension& tp = static_cast<const fe::TestPragmaExtension&>(*(*it).first);
-//
-// 		if(tp.isStatement())
-// 			EXPECT_EQ(tp.getExpected(), '\"' + convFactory.convertStmt( tp.getStatement() )->toString() + '\"' );
-// 		else {
-// 			if(const clang::TypeDecl* td = llvm::dyn_cast<const clang::TypeDecl>( tp.getDecl() )) {
-// 				EXPECT_EQ(tp.getExpected(), '\"' + convFactory.convertType( td->getTypeForDecl() )->toString() + '\"' );
-// 			} else if(const clang::VarDecl* vd = llvm::dyn_cast<const clang::VarDecl>( tp.getDecl() )) {
-// 				EXPECT_EQ(tp.getExpected(), '\"' + convFactory.convertVarDecl( vd )->toString() + '\"' );
-// 			}
-// 		}
-// 	}
+	// 	NodeManager manager;
+	// 	fe::Program prog(manager);
+	// 	fe::TranslationUnit& tu = prog.addTranslationUnit( std::string(SRC_DIR) + "/inputs/cxx_types.cpp" );
+	//
+	// 	auto filter = [](const fe::pragma::Pragma& curr){ return curr.getType() == "test"; };
+	//
+	// 	for(auto it = prog.pragmas_begin(filter), end = prog.pragmas_end(); it != end; ++it) {
+	// 		// we use an internal manager to have private counter for variables so we can write independent tests
+	// 		NodeManager mgr;
+	//
+	// 		CXXConversionFactory convFactory( mgr, prog );
+	// 		convFactory.setTranslationUnit(tu);
+	//
+	// 		const fe::TestPragmaExtension& tp = static_cast<const fe::TestPragmaExtension&>(*(*it).first);
+	//
+	// 		if(tp.isStatement())
+	// 			EXPECT_EQ(tp.getExpected(), '\"' + convFactory.convertStmt( tp.getStatement() )->toString() + '\"' );
+	// 		else {
+	// 			if(const clang::TypeDecl* td = llvm::dyn_cast<const clang::TypeDecl>( tp.getDecl() )) {
+	// 				EXPECT_EQ(tp.getExpected(), '\"' + convFactory.convertType( td->getTypeForDecl() )->toString() + '\"' );
+	// 			} else if(const clang::VarDecl* vd = llvm::dyn_cast<const clang::VarDecl>( tp.getDecl() )) {
+	// 				EXPECT_EQ(tp.getExpected(), '\"' + convFactory.convertVarDecl( vd )->toString() + '\"' );
+	// 			}
+	// 		}
+	// 	}
 }

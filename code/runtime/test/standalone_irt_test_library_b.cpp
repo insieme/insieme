@@ -40,7 +40,5 @@
 #include <vector>
 
 void different_translation_unit() {
-	irt::parallel(2, []() {
-		std::cout << "Hello from different_translation_unit\n";
-	});
+	irt::parallel(2, []() { std::cout << "Hello from different_translation_unit\n"; });
 }

@@ -44,8 +44,8 @@ namespace pattern {
 
 namespace generator {
 
-const TreeGenerator root = TreeGenerator(std::make_shared<impl::tree::Root>());
-const ListGenerator empty = ListGenerator(std::make_shared<impl::list::Empty>());
+	const TreeGenerator root = TreeGenerator(std::make_shared<impl::tree::Root>());
+	const ListGenerator empty = ListGenerator(std::make_shared<impl::list::Empty>());
 
 
 } // end namespace generator
@@ -63,4 +63,3 @@ std::ostream& ListGenerator::printTo(std::ostream& out) const {
 } // end namespace pattern
 } // end namespace core
 } // end namespace insieme
-

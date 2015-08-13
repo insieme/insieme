@@ -48,8 +48,7 @@ namespace lang {
 		auto& ext = nm.getLangExtension<ReferenceExtension>();
 		semanticCheckSecond(ext.getNamedIrExtensions());
 	}
-	
+
 } // end namespace lang
 } // end namespace core
 } // end namespace insieme
-

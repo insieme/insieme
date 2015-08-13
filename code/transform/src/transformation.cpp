@@ -41,36 +41,31 @@
 namespace insieme {
 namespace transform {
 
-TransformationPtr TransformationType::createTransformation(const parameter::Value& value) const {
-	// check the types of the handed in values
-	if(!getParameterInfo()->isValid(value)) {
-		std::stringstream msg;
-		msg << "Handed in value not valid for this type of transformation! ";
-		msg << "Expected value of type " << *getParameterInfo() << ", passed " << value;
-		throw InvalidParametersException(msg.str());
+	TransformationPtr TransformationType::createTransformation(const parameter::Value& value) const {
+		// check the types of the handed in values
+		if(!getParameterInfo()->isValid(value)) {
+			std::stringstream msg;
+			msg << "Handed in value not valid for this type of transformation! ";
+			msg << "Expected value of type " << *getParameterInfo() << ", passed " << value;
+			throw InvalidParametersException(msg.str());
+		}
+		// use internal builder to produce result
+		return buildTransformation(value);
 	}
-	// use internal builder to produce result
-	return buildTransformation(value);
-}
 
-bool Transformation::operator<(const Transformation& other) const {
+	bool Transformation::operator<(const Transformation& other) const {
+		// short-cut for equivalent transformations
+		if(*this == other) { return false; }
 
-	// short-cut for equivalent transformations
-	if(*this == other) {
-		return false;
+		// start with type - use address of type to distinguish transformations
+		if(&type != &other.type) { return &type < &other.type; }
+
+		// so, the type is the same => check parameters
+		return parameters < other.parameters;
 	}
-	
-	// start with type - use address of type to distinguish transformations
-	if(&type != &other.type) {
-		return &type < &other.type;
-	}
-	
-	// so, the type is the same => check parameters
-	return parameters < other.parameters;
-}
 
-InvalidTargetException::InvalidTargetException(const core::NodePtr& node)
-	: invalid_argument(format("Transformation could not be applied on node %s", toString(node).c_str())) {};
-	
+	InvalidTargetException::InvalidTargetException(const core::NodePtr& node)
+	    : invalid_argument(format("Transformation could not be applied on node %s", toString(node).c_str())){};
+
 } // end namespace transform
 } // end namespace insieme

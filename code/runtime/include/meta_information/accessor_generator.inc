@@ -34,11 +34,11 @@
  * regarding third party software licenses.
  */
 
-#define INFO_STRUCT_BEGIN(__name) \
-__name##_info* irt_meta_info_get_##__name(irt_meta_info_table_entry* entry) { \
-	IRT_ASSERT(entry && entry->__name.available, IRT_ERR_INTERNAL, "Accessing invalid or unavailable meta info table entry!"); \
-	return &(entry->__name); \
-} \
-bool irt_meta_info_is_##__name##_available(irt_meta_info_table_entry* entry) { \
-	return entry && entry->__name.available; \
-}
+#define INFO_STRUCT_BEGIN(__name)                                                                                                                              \
+	__name##_info* irt_meta_info_get_##__name(irt_meta_info_table_entry* entry) {                                                                              \
+		IRT_ASSERT(entry && entry->__name.available, IRT_ERR_INTERNAL, "Accessing invalid or unavailable meta info table entry!");                             \
+		return &(entry->__name);                                                                                                                               \
+	}                                                                                                                                                          \
+	bool irt_meta_info_is_##__name##_available(irt_meta_info_table_entry* entry) {                                                                             \
+		return entry && entry->__name.available;                                                                                                               \
+	}

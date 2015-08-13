@@ -42,21 +42,17 @@ namespace insieme {
 namespace core {
 namespace pattern {
 
-TEST(Rule, Identity) {
+	TEST(Rule, Identity) {
+		Variable a;
+		Variable b;
 
-	Variable a;
-	Variable b;
-	
-	Variable x1 = "x";
-	Variable x2 = "x";
-	
-	EXPECT_NE(a,b);
-	EXPECT_EQ(x1,x2);
-	
-}
+		Variable x1 = "x";
+		Variable x2 = "x";
+
+		EXPECT_NE(a, b);
+		EXPECT_EQ(x1, x2);
+	}
 
 } // end namespace pattern
 } // end namespace core
 } // end namespace insieme
-
-

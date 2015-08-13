@@ -40,20 +40,16 @@ struct c {
 
 int counter = 10;
 
-typedef struct {
-	int a;
-} X;
+typedef struct { int a; } X;
 
-typedef struct {
-	int j;
-} Y;
+typedef struct { int j; } Y;
 
 namespace {
-struct A {};
+	struct A {};
 }
 
 namespace x {
-struct B {};
+	struct B {};
 }
 
 class List {
@@ -79,34 +75,28 @@ int sum(int* l, int s);
 
 int sum(int* l, int s) {
 	int res = 0;
-	for(int i=0; i<s; i++) {
+	for(int i = 0; i < s; i++) {
 		res += l[i];
 	}
 	return res;
 }
 
 int fib(int x) {
-	if(x <= 0) {
-		return 1;
-	}
-	return x * fib(x-1);
+	if(x <= 0) { return 1; }
+	return x * fib(x - 1);
 }
 
 int even(int);
 int odd(int);
 
 int even(int x) {
-	if(x == 0) {
-		return true;
-	}
-	return odd(x-1);
+	if(x == 0) { return true; }
+	return odd(x - 1);
 }
 
 int odd(int x) {
-	if(x == 0) {
-		return false;
-	}
-	return even(x-1);
+	if(x == 0) { return false; }
+	return even(x - 1);
 }
 
 int a(int);
@@ -124,33 +114,29 @@ int c(int x) {
 }
 
 int main() {
-
 	static double PI = 3;
-	
+
 	counter++;
-	
+
 	struct C {
-	
 		X x;
 		A a;
 		x::B b;
-		
 	};
-	
+
 	int a = 1 + 2;
-	
-	double x = PI+2;
-	
+
+	double x = PI + 2;
+
 	List l;
 	Even e;
 	Odd o;
-	
+
 	even(2);
 	odd(2);
-	
+
 	b(12);
 	c(12);
-	
+
 	return 0;
 }
-

@@ -44,20 +44,20 @@
 using namespace insieme::utils;
 using namespace insieme::utils::map;
 
-template<typename Map> void testMap();
+template <typename Map>
+void testMap();
 
 TEST(MapUtilsTest, Printing) {
-
 	typedef std::unordered_map<int, int> Map;
-	
+
 	Map map;
 	EXPECT_EQ("{}", toString(map));
-	
-	map.insert(std::make_pair(1,2));
+
+	map.insert(std::make_pair(1, 2));
 	EXPECT_EQ("{1=2}", toString(map));
-	
-	map.insert(std::make_pair(3,4));
-	EXPECT_TRUE(toString(map)=="{1=2, 3=4}" || toString(map)=="{3=4, 1=2}");
+
+	map.insert(std::make_pair(3, 4));
+	EXPECT_TRUE(toString(map) == "{1=2, 3=4}" || toString(map) == "{3=4, 1=2}");
 }
 
 TEST(MapUtilsTest, HashEquals) {
@@ -67,46 +67,45 @@ TEST(MapUtilsTest, HashEquals) {
 	testMap<boost::unordered_map<int, int, boost::hash<int>>>();
 }
 
-template<typename Map>
+template <typename Map>
 void testMap() {
-
 	Map mapA;
 	Map mapB;
 	EXPECT_EQ(static_cast<size_t>(0), computeHash(mapA));
 	EXPECT_EQ(static_cast<size_t>(0), computeHash(mapB));
 	EXPECT_TRUE(insieme::utils::map::equal(mapA, mapB));
-	
-	mapA.insert(std::make_pair(1,2));
+
+	mapA.insert(std::make_pair(1, 2));
 	EXPECT_NE(static_cast<size_t>(0), computeHash(mapA));
 	EXPECT_EQ(static_cast<size_t>(0), computeHash(mapB));
 	EXPECT_FALSE(insieme::utils::map::equal(mapA, mapB));
-	
-	mapB.insert(std::make_pair(2,4));
+
+	mapB.insert(std::make_pair(2, 4));
 	EXPECT_NE(static_cast<size_t>(0), computeHash(mapA));
 	EXPECT_NE(static_cast<size_t>(0), computeHash(mapB));
 	EXPECT_NE(computeHash(mapA), computeHash(mapB));
 	EXPECT_FALSE(insieme::utils::map::equal(mapA, mapB));
-	
+
 	mapB.erase(2);
 	EXPECT_NE(static_cast<size_t>(0), computeHash(mapA));
 	EXPECT_EQ(static_cast<size_t>(0), computeHash(mapB));
 	EXPECT_FALSE(insieme::utils::map::equal(mapA, mapB));
-	
-	mapB.insert(std::make_pair(1,2));
+
+	mapB.insert(std::make_pair(1, 2));
 	EXPECT_NE(static_cast<size_t>(0), computeHash(mapA));
 	EXPECT_NE(static_cast<size_t>(0), computeHash(mapB));
 	EXPECT_EQ(computeHash(mapA), computeHash(mapB));
 	EXPECT_TRUE(insieme::utils::map::equal(mapA, mapB));
-	
-	mapA.insert(std::make_pair(2,3));
-	mapB.insert(std::make_pair(2,3));
+
+	mapA.insert(std::make_pair(2, 3));
+	mapB.insert(std::make_pair(2, 3));
 	EXPECT_NE(static_cast<size_t>(0), computeHash(mapA));
 	EXPECT_NE(static_cast<size_t>(0), computeHash(mapB));
 	EXPECT_EQ(computeHash(mapA), computeHash(mapB));
 	EXPECT_TRUE(insieme::utils::map::equal(mapA, mapB));
-	
+
 	mapA.erase(2);
-	mapA.insert(std::make_pair(2,2));
+	mapA.insert(std::make_pair(2, 2));
 	EXPECT_NE(static_cast<size_t>(0), computeHash(mapA));
 	EXPECT_NE(static_cast<size_t>(0), computeHash(mapB));
 	EXPECT_NE(computeHash(mapA), computeHash(mapB));
@@ -115,36 +114,26 @@ void testMap() {
 
 
 TEST(MapUtilsTest, toPointerMap) {
-
 	int a = 2;
 	int b = 3;
 	int c = 2;
-	
+
 	auto map = toPointerMap<int*, string>(&a, "Hello");
-	
+
 	EXPECT_EQ("Hello", map[&a]);
 	EXPECT_EQ("Hello", map[&c]);
-	
-	map = toPointerMap<int*, string>(
-	          &a, "Hello",
-	          &b, "World",
-	          &c, "Under");
-	          
+
+	map = toPointerMap<int*, string>(&a, "Hello", &b, "World", &c, "Under");
+
 	EXPECT_EQ("Under", map[&a]);
 	EXPECT_EQ("World", map[&b]);
-	
+
 	a = 3;
 	EXPECT_EQ("World", map[&a]);
-	
 }
 
 TEST(MapUtilsTest, toMap) {
+	typedef std::pair<int, string> entry;
 
-	typedef std::pair<int,string> entry;
-	
-	EXPECT_EQ("{1=Hello, 2=World}", toString(toMap(
-	              entry(1,"Hello"),
-	              entry(2,"World")
-	          )));
-	          
+	EXPECT_EQ("{1=Hello, 2=World}", toString(toMap(entry(1, "Hello"), entry(2, "World"))));
 }

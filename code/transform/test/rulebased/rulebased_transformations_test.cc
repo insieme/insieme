@@ -48,33 +48,25 @@ namespace insieme {
 namespace transform {
 namespace rulebased {
 
-TEST(Transformations, CompoundElimination) {
+	TEST(Transformations, CompoundElimination) {
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
 
-	core::NodeManager manager;
-	core::IRBuilder builder(manager);
-	
-	core::StatementPtr one = builder.intLit(1);
-	core::StatementPtr two = builder.intLit(2);
-	
-	CompoundElimination trans(parameter::emptyValue);
-	
-	core::StatementPtr stmt = builder.compoundStmt(builder.compoundStmt(one));
-	EXPECT_EQ("{{1;};}", toString(*stmt));
-	EXPECT_EQ("{1;}", toString(*trans.apply(core::NodeAddress(stmt))));
-	
-	stmt = builder.compoundStmt(
-	           one, two,
-	           builder.compoundStmt(),
-	           two
-	       );
-	       
-	EXPECT_EQ("{1; 2; {}; 2;}", toString(*stmt));
-	EXPECT_EQ("{1; 2; 2;}", toString(*trans.apply(core::NodeAddress(stmt))));
-	
-}
+		core::StatementPtr one = builder.intLit(1);
+		core::StatementPtr two = builder.intLit(2);
+
+		CompoundElimination trans(parameter::emptyValue);
+
+		core::StatementPtr stmt = builder.compoundStmt(builder.compoundStmt(one));
+		EXPECT_EQ("{{1;};}", toString(*stmt));
+		EXPECT_EQ("{1;}", toString(*trans.apply(core::NodeAddress(stmt))));
+
+		stmt = builder.compoundStmt(one, two, builder.compoundStmt(), two);
+
+		EXPECT_EQ("{1; 2; {}; 2;}", toString(*stmt));
+		EXPECT_EQ("{1; 2; 2;}", toString(*trans.apply(core::NodeAddress(stmt))));
+	}
 
 } // end namespace rulebased
 } // end namespace transform
 } // end namespace insieme
-
-

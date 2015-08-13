@@ -46,266 +46,242 @@ namespace transform {
 namespace filter {
 
 
-TEST(TargetFilter, OutermostLoops) {
+	TEST(TargetFilter, OutermostLoops) {
+		core::NodeManager manager;
 
-	core::NodeManager manager;
-	
-	core::IRBuilder builder(manager);
-	
-	std::map<std::string, core::NodePtr> symbols;
-	symbols["v"] = builder.variable(builder.parseType("ref<vector<int<4>,10>>"));
-	
-	auto node = builder.parseStmt(
-	                "for(uint<4> i = 10u .. 50u) {"
-	                "	for(uint<4> j = 3u .. 25u) {"
-	                "		for(uint<4> k = 2u .. 100u) {"
-	                "			v[i+j];"
-	                "		}"
-	                "	}"
-	                "}", symbols);
-	                
-	EXPECT_TRUE(node);
-	
-	auto isFor = [](const core::NodeAddress& cur) {
-		return cur->getNodeType() == core::NT_ForStmt;
-	};
-	
-	// get outermost loop filter
-	TargetFilter filter = outermostLoops();
-	
-	auto res = filter(node);
-	EXPECT_TRUE(::all(res, isFor));
-	EXPECT_EQ(toVector(core::NodeAddress(node)), res);
-	
-	
-	// try multiple outermost for loops
-	node = builder.parseStmt(
-	           "{"
-	           "10;"
-	           "for(uint<4> i = 10u .. 50u) {"
-	           "	for(uint<4> j = 3u .. 25u) {"
-	           "		for(uint<4> k = 2u .. 100u) {"
-	           "			v[i+j];"
-	           "		}"
-	           "	}"
-	           "};"
-	           "12;"
-	           "for(uint<4> i = 10u .. 50u) {"
-	           "	for(uint<4> j = 3u .. 25u) {"
-	           "		for(uint<4> k = 2u .. 100u) {"
-	           "			v[i+j];"
-	           "		}"
-	           "	}"
-	           "};"
-	           "}", symbols);
-	           
-	res = filter(node);
-	EXPECT_TRUE(::all(res, isFor));
-	auto root = core::NodeAddress(node);
-	EXPECT_EQ(toVector(root.getAddressOfChild(1), root.getAddressOfChild(3)), res);
-	
-}
+		core::IRBuilder builder(manager);
+
+		std::map<std::string, core::NodePtr> symbols;
+		symbols["v"] = builder.variable(builder.parseType("ref<vector<int<4>,10>>"));
+
+		auto node = builder.parseStmt("for(uint<4> i = 10u .. 50u) {"
+		                              "	for(uint<4> j = 3u .. 25u) {"
+		                              "		for(uint<4> k = 2u .. 100u) {"
+		                              "			v[i+j];"
+		                              "		}"
+		                              "	}"
+		                              "}",
+		                              symbols);
+
+		EXPECT_TRUE(node);
+
+		auto isFor = [](const core::NodeAddress& cur) { return cur->getNodeType() == core::NT_ForStmt; };
+
+		// get outermost loop filter
+		TargetFilter filter = outermostLoops();
+
+		auto res = filter(node);
+		EXPECT_TRUE(::all(res, isFor));
+		EXPECT_EQ(toVector(core::NodeAddress(node)), res);
 
 
-TEST(TargetFilter, InnermostLoops) {
+		// try multiple outermost for loops
+		node = builder.parseStmt("{"
+		                         "10;"
+		                         "for(uint<4> i = 10u .. 50u) {"
+		                         "	for(uint<4> j = 3u .. 25u) {"
+		                         "		for(uint<4> k = 2u .. 100u) {"
+		                         "			v[i+j];"
+		                         "		}"
+		                         "	}"
+		                         "};"
+		                         "12;"
+		                         "for(uint<4> i = 10u .. 50u) {"
+		                         "	for(uint<4> j = 3u .. 25u) {"
+		                         "		for(uint<4> k = 2u .. 100u) {"
+		                         "			v[i+j];"
+		                         "		}"
+		                         "	}"
+		                         "};"
+		                         "}",
+		                         symbols);
 
-	core::NodeManager manager;
-	core::IRBuilder builder(manager);
-	
-	std::map<std::string, core::NodePtr> symbols;
-	symbols["v"] = builder.variable(builder.parseType("ref<vector<int<4>,10>>"));
-	
-	auto node = builder.parseStmt(
-	                "{"
-	                "10;"
-	                "for(uint<4> i = 10u .. 50u) {"
-	                "	for(uint<4> j = 3u .. 25u) {"
-	                "		for(uint<4> k = 2u .. 100u) {"
-	                "			v[i+j];"
-	                "		}"
-	                "	}"
-	                "	for(uint<4> k = 2u .. 100u) {"
-	                "		v[i+k];"
-	                "	}"
-	                "}"
-	                "12;"
-	                "for(uint<4> i = 10u .. 50u) {"
-	                "	for(uint<4> j = 3u .. 25u) {"
-	                "		for(uint<4> k = 2u .. 100u) {"
-	                "			v[i+j];"
-	                "		}"
-	                "	}"
-	                "}"
-	                "}", symbols);
-	                
-	EXPECT_TRUE(node);
-	
-	auto root = core::NodeAddress(node);
-	auto isFor = [](const core::NodeAddress& cur) {
-		return cur->getNodeType() == core::NT_ForStmt;
-	};
-	
-	// try various innermost loop levels
-	TargetFilter filter = innermostLoops();
-	auto res = filter(node);
-	EXPECT_TRUE(::all(res, isFor));
-	EXPECT_EQ(toVector(
-	              root.getAddressOfChild(1,3,0,3,0),
-	              root.getAddressOfChild(1,3,1),
-	              root.getAddressOfChild(3,3,0,3,0)
-	          ), res);
-	          
-	// try various innermost loop levels
-	filter = innermostLoops(2);
-	res = filter(node);
-	EXPECT_TRUE(::all(res, isFor));
-	EXPECT_EQ(toVector(
-	              root.getAddressOfChild(1,3,0),
-	              root.getAddressOfChild(3,3,0)
-	          ), res);
-	          
-	// try various innermost loop levels
-	filter = innermostLoops(3);
-	res = filter(node);
-	EXPECT_TRUE(::all(res, isFor));
-	EXPECT_EQ(toVector(
-	              root.getAddressOfChild(1),
-	              root.getAddressOfChild(3)
-	          ), res);
-	          
-	// try various innermost loop levels
-	filter = innermostLoops(4);
-	res = filter(node);
-	EXPECT_TRUE(::all(res, isFor));
-	EXPECT_EQ(toVector<core::NodeAddress>(), res);
-	
-}
+		res = filter(node);
+		EXPECT_TRUE(::all(res, isFor));
+		auto root = core::NodeAddress(node);
+		EXPECT_EQ(toVector(root.getAddressOfChild(1), root.getAddressOfChild(3)), res);
+	}
 
 
-TEST(TargetFilter, LoopPicker) {
+	TEST(TargetFilter, InnermostLoops) {
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
 
-	core::NodeManager manager;
-	core::IRBuilder builder(manager);
-	
-	std::map<std::string, core::NodePtr> symbols;
-	symbols["v"] = builder.variable(builder.parseType("ref<vector<int<4>,10>>"));
-	
-	auto node = builder.parseStmt(
-	                "{"
-	                "10;"
-	                "for(uint<4> i = 10u .. 50u) {"
-	                "	for(uint<4> j = 3u .. 25u) {"
-	                "		for(uint<4> k = 2u .. 100u) {"
-	                "			v[i+j];"
-	                "		}"
-	                "	}"
-	                "	for(uint<4> k = 2u .. 100u) {"
-	                "		v[i+k];"
-	                "	}"
-	                "}"
-	                "12;"
-	                "for(uint<4> i = 10u .. 50u) {"
-	                "	for(uint<4> j = 3u .. 25u) {"
-	                "		for(uint<4> k = 2u .. 100u) {"
-	                "			v[i+j];"
-	                "		}"
-	                "	}"
-	                "}"
-	                "}", symbols);
-	                
-	auto root = core::NodeAddress(node);
-	
-	// extract addresses of loops
-	auto for0   = root.getAddressOfChild(1);
-	auto for00  = root.getAddressOfChild(1,3,0);
-	auto for000 = root.getAddressOfChild(1,3,0,3,0);
-	auto for01  = root.getAddressOfChild(1,3,1);
-	auto for1   = root.getAddressOfChild(3);
-	auto for10  = root.getAddressOfChild(3,3,0);
-	auto for100 = root.getAddressOfChild(3,3,0,3,0);
-	
-	
-	// check loop picker
-	EXPECT_EQ(toVector(for0),   pickLoop(0)(root));
-	EXPECT_EQ(toVector(for00),  pickLoop(0,0)(root));
-	EXPECT_EQ(toVector(for000), pickLoop(0,0,0)(root));
-	EXPECT_EQ(toVector(for01),  pickLoop(0,1)(root));
-	EXPECT_EQ(toVector(for1),   pickLoop(1)(root));
-	EXPECT_EQ(toVector(for10),  pickLoop(1,0)(root));
-	EXPECT_EQ(toVector(for100), pickLoop(1,0,0)(root));
-	
-	EXPECT_TRUE(pickLoop(0,0,1)(root).empty());
-	EXPECT_TRUE(pickLoop(1,0,1)(root).empty());
-	
-}
+		std::map<std::string, core::NodePtr> symbols;
+		symbols["v"] = builder.variable(builder.parseType("ref<vector<int<4>,10>>"));
 
-TEST(TargetFilter, AddressPicker) {
+		auto node = builder.parseStmt("{"
+		                              "10;"
+		                              "for(uint<4> i = 10u .. 50u) {"
+		                              "	for(uint<4> j = 3u .. 25u) {"
+		                              "		for(uint<4> k = 2u .. 100u) {"
+		                              "			v[i+j];"
+		                              "		}"
+		                              "	}"
+		                              "	for(uint<4> k = 2u .. 100u) {"
+		                              "		v[i+k];"
+		                              "	}"
+		                              "}"
+		                              "12;"
+		                              "for(uint<4> i = 10u .. 50u) {"
+		                              "	for(uint<4> j = 3u .. 25u) {"
+		                              "		for(uint<4> k = 2u .. 100u) {"
+		                              "			v[i+j];"
+		                              "		}"
+		                              "	}"
+		                              "}"
+		                              "}",
+		                              symbols);
 
-	core::NodeManager manager;
-	core::IRBuilder builder(manager);
-	
-	std::map<std::string, core::NodePtr> symbols;
-	symbols["v"] = builder.variable(builder.parseType("ref<vector<int<4>,10>>"));
-	
-	auto node = builder.parseStmt(
-	                "{"
-	                "10;"
-	                "for(uint<4> i = 10u .. 50u) {"
-	                "	for(uint<4> j = 3u .. 25u) {"
-	                "		for(uint<4> k = 2u .. 100u) {"
-	                "			v[i+j];"
-	                "		}"
-	                "	}"
-	                "	for(uint<4> k = 2u .. 100u) {"
-	                "		v[i+k];"
-	                "	}"
-	                "}"
-	                "12;"
-	                "for(uint<4> i = 10u .. 50u) {"
-	                "	for(uint<4> j = 3u .. 25u) {"
-	                "		for(uint<4> k = 2u .. 100u) {"
-	                "			v[i+j];"
-	                "		}"
-	                "	}"
-	                "}"
-	                "}", symbols);
-	                
-	EXPECT_TRUE(node);
-	
-	auto root = core::NodeAddress(node);
-	
-	// extract addresses of loops
-	auto for0   = root.getAddressOfChild(1);
-	auto for00  = root.getAddressOfChild(1,3,0);
-	auto for000 = root.getAddressOfChild(1,3,0,3,0);
-	auto for01  = root.getAddressOfChild(1,3,1);
-	auto for1   = root.getAddressOfChild(3);
-	auto for10  = root.getAddressOfChild(3,3,0);
-	auto for100 = root.getAddressOfChild(3,3,0,3,0);
-	
-	core::NodeAddress decl0  = for0.as<core::ForStmtAddress>()->getDeclaration();
-	core::NodeAddress decl100  = for100.as<core::ForStmtAddress>()->getDeclaration();
-	
-	
-	// check loop picker
-	EXPECT_EQ(toVector(for0),   pickRelative(for0)(root));
-	EXPECT_EQ(toVector(for00),  pickRelative(for00)(root));
-	EXPECT_EQ(toVector(for000), pickRelative(for000)(root));
-	EXPECT_EQ(toVector(for01),  pickRelative(for01)(root));
-	EXPECT_EQ(toVector(for1),   pickRelative(for1)(root));
-	EXPECT_EQ(toVector(for10),  pickRelative(for10)(root));
-	EXPECT_EQ(toVector(for100), pickRelative(for100)(root));
-	EXPECT_EQ(toVector(decl0), pickRelative(decl0)(root));
-	EXPECT_EQ(toVector(decl100), pickRelative(decl100)(root));
-	
-	// some applications which should not find anything
-	EXPECT_TRUE(pickLoop(for0)(for0).empty());
-	EXPECT_TRUE(pickLoop(for00)(for1).empty());
-	
-}
+		EXPECT_TRUE(node);
+
+		auto root = core::NodeAddress(node);
+		auto isFor = [](const core::NodeAddress& cur) { return cur->getNodeType() == core::NT_ForStmt; };
+
+		// try various innermost loop levels
+		TargetFilter filter = innermostLoops();
+		auto res = filter(node);
+		EXPECT_TRUE(::all(res, isFor));
+		EXPECT_EQ(toVector(root.getAddressOfChild(1, 3, 0, 3, 0), root.getAddressOfChild(1, 3, 1), root.getAddressOfChild(3, 3, 0, 3, 0)), res);
+
+		// try various innermost loop levels
+		filter = innermostLoops(2);
+		res = filter(node);
+		EXPECT_TRUE(::all(res, isFor));
+		EXPECT_EQ(toVector(root.getAddressOfChild(1, 3, 0), root.getAddressOfChild(3, 3, 0)), res);
+
+		// try various innermost loop levels
+		filter = innermostLoops(3);
+		res = filter(node);
+		EXPECT_TRUE(::all(res, isFor));
+		EXPECT_EQ(toVector(root.getAddressOfChild(1), root.getAddressOfChild(3)), res);
+
+		// try various innermost loop levels
+		filter = innermostLoops(4);
+		res = filter(node);
+		EXPECT_TRUE(::all(res, isFor));
+		EXPECT_EQ(toVector<core::NodeAddress>(), res);
+	}
+
+
+	TEST(TargetFilter, LoopPicker) {
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+
+		std::map<std::string, core::NodePtr> symbols;
+		symbols["v"] = builder.variable(builder.parseType("ref<vector<int<4>,10>>"));
+
+		auto node = builder.parseStmt("{"
+		                              "10;"
+		                              "for(uint<4> i = 10u .. 50u) {"
+		                              "	for(uint<4> j = 3u .. 25u) {"
+		                              "		for(uint<4> k = 2u .. 100u) {"
+		                              "			v[i+j];"
+		                              "		}"
+		                              "	}"
+		                              "	for(uint<4> k = 2u .. 100u) {"
+		                              "		v[i+k];"
+		                              "	}"
+		                              "}"
+		                              "12;"
+		                              "for(uint<4> i = 10u .. 50u) {"
+		                              "	for(uint<4> j = 3u .. 25u) {"
+		                              "		for(uint<4> k = 2u .. 100u) {"
+		                              "			v[i+j];"
+		                              "		}"
+		                              "	}"
+		                              "}"
+		                              "}",
+		                              symbols);
+
+		auto root = core::NodeAddress(node);
+
+		// extract addresses of loops
+		auto for0 = root.getAddressOfChild(1);
+		auto for00 = root.getAddressOfChild(1, 3, 0);
+		auto for000 = root.getAddressOfChild(1, 3, 0, 3, 0);
+		auto for01 = root.getAddressOfChild(1, 3, 1);
+		auto for1 = root.getAddressOfChild(3);
+		auto for10 = root.getAddressOfChild(3, 3, 0);
+		auto for100 = root.getAddressOfChild(3, 3, 0, 3, 0);
+
+
+		// check loop picker
+		EXPECT_EQ(toVector(for0), pickLoop(0)(root));
+		EXPECT_EQ(toVector(for00), pickLoop(0, 0)(root));
+		EXPECT_EQ(toVector(for000), pickLoop(0, 0, 0)(root));
+		EXPECT_EQ(toVector(for01), pickLoop(0, 1)(root));
+		EXPECT_EQ(toVector(for1), pickLoop(1)(root));
+		EXPECT_EQ(toVector(for10), pickLoop(1, 0)(root));
+		EXPECT_EQ(toVector(for100), pickLoop(1, 0, 0)(root));
+
+		EXPECT_TRUE(pickLoop(0, 0, 1)(root).empty());
+		EXPECT_TRUE(pickLoop(1, 0, 1)(root).empty());
+	}
+
+	TEST(TargetFilter, AddressPicker) {
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+
+		std::map<std::string, core::NodePtr> symbols;
+		symbols["v"] = builder.variable(builder.parseType("ref<vector<int<4>,10>>"));
+
+		auto node = builder.parseStmt("{"
+		                              "10;"
+		                              "for(uint<4> i = 10u .. 50u) {"
+		                              "	for(uint<4> j = 3u .. 25u) {"
+		                              "		for(uint<4> k = 2u .. 100u) {"
+		                              "			v[i+j];"
+		                              "		}"
+		                              "	}"
+		                              "	for(uint<4> k = 2u .. 100u) {"
+		                              "		v[i+k];"
+		                              "	}"
+		                              "}"
+		                              "12;"
+		                              "for(uint<4> i = 10u .. 50u) {"
+		                              "	for(uint<4> j = 3u .. 25u) {"
+		                              "		for(uint<4> k = 2u .. 100u) {"
+		                              "			v[i+j];"
+		                              "		}"
+		                              "	}"
+		                              "}"
+		                              "}",
+		                              symbols);
+
+		EXPECT_TRUE(node);
+
+		auto root = core::NodeAddress(node);
+
+		// extract addresses of loops
+		auto for0 = root.getAddressOfChild(1);
+		auto for00 = root.getAddressOfChild(1, 3, 0);
+		auto for000 = root.getAddressOfChild(1, 3, 0, 3, 0);
+		auto for01 = root.getAddressOfChild(1, 3, 1);
+		auto for1 = root.getAddressOfChild(3);
+		auto for10 = root.getAddressOfChild(3, 3, 0);
+		auto for100 = root.getAddressOfChild(3, 3, 0, 3, 0);
+
+		core::NodeAddress decl0 = for0.as<core::ForStmtAddress>()->getDeclaration();
+		core::NodeAddress decl100 = for100.as<core::ForStmtAddress>()->getDeclaration();
+
+
+		// check loop picker
+		EXPECT_EQ(toVector(for0), pickRelative(for0)(root));
+		EXPECT_EQ(toVector(for00), pickRelative(for00)(root));
+		EXPECT_EQ(toVector(for000), pickRelative(for000)(root));
+		EXPECT_EQ(toVector(for01), pickRelative(for01)(root));
+		EXPECT_EQ(toVector(for1), pickRelative(for1)(root));
+		EXPECT_EQ(toVector(for10), pickRelative(for10)(root));
+		EXPECT_EQ(toVector(for100), pickRelative(for100)(root));
+		EXPECT_EQ(toVector(decl0), pickRelative(decl0)(root));
+		EXPECT_EQ(toVector(decl100), pickRelative(decl100)(root));
+
+		// some applications which should not find anything
+		EXPECT_TRUE(pickLoop(for0)(for0).empty());
+		EXPECT_TRUE(pickLoop(for00)(for1).empty());
+	}
 
 } // end namespace filter
 } // end namespace transform
 } // end namespace insieme
-
-

@@ -49,42 +49,41 @@
 namespace insieme {
 namespace annotations {
 
-const string ExpectedIRAnnotation::NAME = "ExpectedIRAnnotation";
-const utils::StringKey<ExpectedIRAnnotation> ExpectedIRAnnotation::KEY("ExpectedIRAnnotation");
+	const string ExpectedIRAnnotation::NAME = "ExpectedIRAnnotation";
+	const utils::StringKey<ExpectedIRAnnotation> ExpectedIRAnnotation::KEY("ExpectedIRAnnotation");
 
-string ExpectedIRAnnotation::getExpected() const {
-	return expected;
-}
+	string ExpectedIRAnnotation::getExpected() const {
+		return expected;
+	}
 
 
-void ExpectedIRAnnotation::attach(const core::NodePtr& node, string expected) {
-	node->addAnnotation(std::make_shared<ExpectedIRAnnotation>(expected));
-}
+	void ExpectedIRAnnotation::attach(const core::NodePtr& node, string expected) {
+		node->addAnnotation(std::make_shared<ExpectedIRAnnotation>(expected));
+	}
 
-bool ExpectedIRAnnotation::hasAttachedValue(const core::NodePtr& node) {
-	return node->hasAnnotation(ExpectedIRAnnotation::KEY);
-}
+	bool ExpectedIRAnnotation::hasAttachedValue(const core::NodePtr& node) {
+		return node->hasAnnotation(ExpectedIRAnnotation::KEY);
+	}
 
-string ExpectedIRAnnotation::getValue(const core::NodePtr& node) {
-	assert_true(hasAttachedValue(node)) << "Expected IR string has to be attached!";
-	return node->getAnnotation(ExpectedIRAnnotation::KEY)->getExpected();
-}
+	string ExpectedIRAnnotation::getValue(const core::NodePtr& node) {
+		assert_true(hasAttachedValue(node)) << "Expected IR string has to be attached!";
+		return node->getAnnotation(ExpectedIRAnnotation::KEY)->getExpected();
+	}
 
-namespace {
+	namespace {
 
-ANNOTATION_CONVERTER(ExpectedIRAnnotation)
+		ANNOTATION_CONVERTER(ExpectedIRAnnotation)
 
-core::ExpressionPtr toIR(core::NodeManager& manager, const core::NodeAnnotationPtr& annotation) const {
-	assert(dynamic_pointer_cast<ExpectedIRAnnotation>(annotation) && "Only supports the conversion of ExpectedIRAnnotation Annotations!");
-	return core::encoder::toIR<string>(manager, static_pointer_cast<ExpectedIRAnnotation>(annotation)->getExpected());
-};
+		core::ExpressionPtr toIR(core::NodeManager& manager, const core::NodeAnnotationPtr& annotation) const {
+			assert(dynamic_pointer_cast<ExpectedIRAnnotation>(annotation) && "Only supports the conversion of ExpectedIRAnnotation Annotations!");
+			return core::encoder::toIR<string>(manager, static_pointer_cast<ExpectedIRAnnotation>(annotation)->getExpected());
+		};
 
-core::NodeAnnotationPtr toAnnotation(const core::ExpressionPtr& node) const {
-	assert(core::encoder::isEncodingOf<size_t>(node) && "Invalid Encoding!");
-	return std::make_shared<ExpectedIRAnnotation>(core::encoder::toValue<string>(node));
-};
-};
-
+		core::NodeAnnotationPtr toAnnotation(const core::ExpressionPtr& node) const {
+			assert(core::encoder::isEncodingOf<size_t>(node) && "Invalid Encoding!");
+			return std::make_shared<ExpectedIRAnnotation>(core::encoder::toValue<string>(node));
+		};
+	};
 }
 
 } // namespace annotations
@@ -92,10 +91,10 @@ core::NodeAnnotationPtr toAnnotation(const core::ExpressionPtr& node) const {
 
 namespace std {
 
-std::ostream& operator<<(std::ostream& out, const insieme::annotations::ExpectedIRAnnotation& lAnnot) {
-	out << "ExpectedIRAnnotation:\n";
-	out << "Expected IR: " << lAnnot.getExpected() << std::endl;
-	return out;
-}
+	std::ostream& operator<<(std::ostream& out, const insieme::annotations::ExpectedIRAnnotation& lAnnot) {
+		out << "ExpectedIRAnnotation:\n";
+		out << "Expected IR: " << lAnnot.getExpected() << std::endl;
+		return out;
+	}
 
 } // end namespace std

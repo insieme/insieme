@@ -55,157 +55,150 @@ namespace insieme {
 namespace backend {
 namespace addons {
 
-namespace {
+	namespace {
 
-const TypeInfo* CppRefTypeHandler(const Converter& converter, const core::TypePtr& type) {
-	static const TypeInfo* NOT_HANDLED = NULL;
-	
-	// check whether it is a cpp reference
-	if(!(core::analysis::isCppRef(type) || core::analysis::isConstCppRef(type) ||
-	        core::analysis::isRValCppRef(type) || core::analysis::isConstRValCppRef(type))) {
-		return NOT_HANDLED;	// not handled by this handler
-	}
-	
-	TypeManager& typeManager = converter.getTypeManager();
-	auto manager = converter.getCNodeManager();
-	
-	// build up TypeInfo for C++ reference
-	
-	// determine const flag
-	bool isConst = core::analysis::isConstCppRef(type) || core::analysis::isConstRValCppRef(type);
-	
-	// determine if we have an rvalue reference
-	bool isRValRef = core::analysis::isRValCppRef(type) || core::analysis::isConstRValCppRef(type);
-	
-	// get information regarding base type
-	core::TypePtr innType = core::analysis::getCppRefElementType(type);
-	const TypeInfo& baseInfo = typeManager.getTypeInfo(innType);
-	
-	// if the inner type is somehow complex, we extract it in a typedef
-	if((innType.isa<core::RefTypePtr>()) && (innType.as<core::RefTypePtr>()->getElementType()->getNodeType() == core::NT_ArrayType)) {
-		c_ast::IdentifierPtr typeName = manager->create(converter.getNameManager().getName(type));
-		// construct a typedef for the inner type, this saves us from pains
-		TypeInfo* res = new TypeInfo(baseInfo);
-		c_ast::TypeDefinitionPtr def = manager->create<c_ast::TypeDefinition>(baseInfo.rValueType, typeName);
-		
-		// construct decl and def
-		res->declaration = c_ast::CCodeFragment::createNew(converter.getFragmentManager(), def);
-		res->definition = res->declaration;
-		
-		// dependencies
-		res->declaration->addDependency(baseInfo.declaration);
-		
-		// R / L value names
-		if(isRValRef) {
-			res->rValueType = c_ast::ref(manager->create<c_ast::NamedType>(typeName));
-			res->rValueType = c_ast::ref(res->rValueType, isConst);
-		}
-		else {
-			res->rValueType = c_ast::ref(manager->create<c_ast::NamedType>(typeName), isConst);
-		}
-		
-		res->lValueType = 	res->rValueType;
-		
-		// external type handling
-		res->externalType = res->rValueType;
-		res->externalize = &type_info_utils::NoOp;
-		res->internalize = &type_info_utils::NoOp;
-		return res;
-		
-		// otherwise we proceed as ususal
-	}
-	else {
-		// copy base information
-		TypeInfo* refInfo = new TypeInfo(baseInfo);
-		
-		// alter r / l / external C type
-		if(isRValRef) {
-			refInfo->lValueType = c_ast::ref(refInfo->lValueType);
-			refInfo->rValueType = c_ast::ref(refInfo->rValueType);
-			refInfo->externalType = c_ast::ref(refInfo->externalType);
-		}
-		refInfo->lValueType = c_ast::ref(refInfo->lValueType, isConst);
-		
-		refInfo->rValueType = c_ast::ref(refInfo->rValueType, isConst);
-		refInfo->externalType = c_ast::ref(refInfo->externalType, isConst);
-		
-		return refInfo;
-	}
-}
+		const TypeInfo* CppRefTypeHandler(const Converter& converter, const core::TypePtr& type) {
+			static const TypeInfo* NOT_HANDLED = NULL;
 
+			// check whether it is a cpp reference
+			if(!(core::analysis::isCppRef(type) || core::analysis::isConstCppRef(type) || core::analysis::isRValCppRef(type)
+			     || core::analysis::isConstRValCppRef(type))) {
+				return NOT_HANDLED; // not handled by this handler
+			}
 
-OperatorConverterTable getCppRefOperatorTable(core::NodeManager& manager) {
-	OperatorConverterTable res;
-	const auto& ext = manager.getLangExtension<core::lang::IRppExtensions>();
-	
-#include "insieme/backend/operator_converter_begin.inc"
-	
-	res[ext.getRefCppToIR()] 	  = OP_CONVERTER({ return c_ast::ref(CONVERT_ARG(0)); });
-	res[ext.getRefConstCppToIR()] = OP_CONVERTER({ return c_ast::ref(CONVERT_ARG(0)); });
-	res[ext.getRefIRToCpp()] 	  = OP_CONVERTER({
-		if(core::analysis::isCallOf(ARG(0), LANG_BASIC.getRefVar())) {
-			auto innerCall = ARG(0).as<core::CallExprPtr>()->getArgument(0);
-			if(innerCall->getType().isa<core::FunctionTypePtr>()) {
-				return CONVERT_EXPR(innerCall);
+			TypeManager& typeManager = converter.getTypeManager();
+			auto manager = converter.getCNodeManager();
+
+			// build up TypeInfo for C++ reference
+
+			// determine const flag
+			bool isConst = core::analysis::isConstCppRef(type) || core::analysis::isConstRValCppRef(type);
+
+			// determine if we have an rvalue reference
+			bool isRValRef = core::analysis::isRValCppRef(type) || core::analysis::isConstRValCppRef(type);
+
+			// get information regarding base type
+			core::TypePtr innType = core::analysis::getCppRefElementType(type);
+			const TypeInfo& baseInfo = typeManager.getTypeInfo(innType);
+
+			// if the inner type is somehow complex, we extract it in a typedef
+			if((innType.isa<core::RefTypePtr>()) && (innType.as<core::RefTypePtr>()->getElementType()->getNodeType() == core::NT_ArrayType)) {
+				c_ast::IdentifierPtr typeName = manager->create(converter.getNameManager().getName(type));
+				// construct a typedef for the inner type, this saves us from pains
+				TypeInfo* res = new TypeInfo(baseInfo);
+				c_ast::TypeDefinitionPtr def = manager->create<c_ast::TypeDefinition>(baseInfo.rValueType, typeName);
+
+				// construct decl and def
+				res->declaration = c_ast::CCodeFragment::createNew(converter.getFragmentManager(), def);
+				res->definition = res->declaration;
+
+				// dependencies
+				res->declaration->addDependency(baseInfo.declaration);
+
+				// R / L value names
+				if(isRValRef) {
+					res->rValueType = c_ast::ref(manager->create<c_ast::NamedType>(typeName));
+					res->rValueType = c_ast::ref(res->rValueType, isConst);
+				} else {
+					res->rValueType = c_ast::ref(manager->create<c_ast::NamedType>(typeName), isConst);
+				}
+
+				res->lValueType = res->rValueType;
+
+				// external type handling
+				res->externalType = res->rValueType;
+				res->externalize = &type_info_utils::NoOp;
+				res->internalize = &type_info_utils::NoOp;
+				return res;
+
+				// otherwise we proceed as ususal
+			} else {
+				// copy base information
+				TypeInfo* refInfo = new TypeInfo(baseInfo);
+
+				// alter r / l / external C type
+				if(isRValRef) {
+					refInfo->lValueType = c_ast::ref(refInfo->lValueType);
+					refInfo->rValueType = c_ast::ref(refInfo->rValueType);
+					refInfo->externalType = c_ast::ref(refInfo->externalType);
+				}
+				refInfo->lValueType = c_ast::ref(refInfo->lValueType, isConst);
+
+				refInfo->rValueType = c_ast::ref(refInfo->rValueType, isConst);
+				refInfo->externalType = c_ast::ref(refInfo->externalType, isConst);
+
+				return refInfo;
 			}
 		}
-		return c_ast::deref(CONVERT_ARG(0));
-	});
-	res[ext.getRefIRToConstCpp()] = OP_CONVERTER({
-	
-		// the conversion from a value to a constcpp is implicit in C++
-		// 	if we have being wrappin it into a stack variable, avoid both nodes
-		if(core::analysis::isCallOf(ARG(0), LANG_BASIC.getRefVar())) {
-			auto refVar = ARG(0).as<core::CallExprPtr>();
-			return CONVERT_EXPR(refVar[0]);
-		}
-		
-		return c_ast::deref(CONVERT_ARG(0));
-	});
-	res[ext.getRefCppToConstCpp()] = OP_CONVERTER({ return CONVERT_ARG(0); });
-	
-	res[ext.getRefRValCppToIR()]        = OP_CONVERTER({ return c_ast::ref(CONVERT_ARG(0)); });
-	res[ext.getRefConstRValCppToIR()]   = OP_CONVERTER({ return c_ast::ref(CONVERT_ARG(0)); });
-	res[ext.getRefIRToRValCpp()]        = OP_CONVERTER({
-	
-		// the conversion from a value to a right side ref is implicit in C++
-		// 	if we have being wrappin it into a stack variable, avoid both nodes
-		if(core::analysis::isCallOf(ARG(0), LANG_BASIC.getRefVar())) {
-			auto refVar = ARG(0).as<core::CallExprPtr>();
-			return CONVERT_EXPR(refVar[0]);
-		}
-		
-		return c_ast::deref(CONVERT_ARG(0));
-	});
-	res[ext.getRefIRToConstRValCpp()]   = OP_CONVERTER({
-	
-		// the conversion from a value to a right side ref is implicit in C++
-		// 	if we have being wrappin it into a stack variable, avoid both nodes
-		if(core::analysis::isCallOf(ARG(0), LANG_BASIC.getRefVar())) {
-			auto refVar = ARG(0).as<core::CallExprPtr>();
-			return CONVERT_EXPR(refVar[0]);
-		}
-		
-		return c_ast::deref(CONVERT_ARG(0));
-	});
-	res[ext.getRefRValCppToCpp()]       = OP_CONVERTER({ return CONVERT_ARG(0); });
-	res[ext.getRefRValCppToConstCpp()]  = OP_CONVERTER({ return CONVERT_ARG(0); });
-	res[ext.getRefConstRValCppToConstCpp()]  = OP_CONVERTER({ return CONVERT_ARG(0); });
-#include "insieme/backend/operator_converter_end.inc"
-	return res;
-}
 
-}
 
-void CppReferences::installOn(Converter& converter) const {
+		OperatorConverterTable getCppRefOperatorTable(core::NodeManager& manager) {
+			OperatorConverterTable res;
+			const auto& ext = manager.getLangExtension<core::lang::IRppExtensions>();
 
-	// registers type handler
-	converter.getTypeManager().addTypeHandler(CppRefTypeHandler);
-	
-	// register additional operators
-	converter.getFunctionManager().getOperatorConverterTable().insertAll(getCppRefOperatorTable(converter.getNodeManager()));
-	
-}
+			#include "insieme/backend/operator_converter_begin.inc"
+
+			res[ext.getRefCppToIR()] = OP_CONVERTER({ return c_ast::ref(CONVERT_ARG(0)); });
+			res[ext.getRefConstCppToIR()] = OP_CONVERTER({ return c_ast::ref(CONVERT_ARG(0)); });
+			res[ext.getRefIRToCpp()] = OP_CONVERTER({
+				if(core::analysis::isCallOf(ARG(0), LANG_BASIC.getRefVar())) {
+					auto innerCall = ARG(0).as<core::CallExprPtr>()->getArgument(0);
+					if(innerCall->getType().isa<core::FunctionTypePtr>()) { return CONVERT_EXPR(innerCall); }
+				}
+				return c_ast::deref(CONVERT_ARG(0));
+			});
+			res[ext.getRefIRToConstCpp()] = OP_CONVERTER({
+
+				// the conversion from a value to a constcpp is implicit in C++
+				// 	if we have being wrappin it into a stack variable, avoid both nodes
+				if(core::analysis::isCallOf(ARG(0), LANG_BASIC.getRefVar())) {
+					auto refVar = ARG(0).as<core::CallExprPtr>();
+					return CONVERT_EXPR(refVar[0]);
+				}
+
+				return c_ast::deref(CONVERT_ARG(0));
+			});
+			res[ext.getRefCppToConstCpp()] = OP_CONVERTER({ return CONVERT_ARG(0); });
+
+			res[ext.getRefRValCppToIR()] = OP_CONVERTER({ return c_ast::ref(CONVERT_ARG(0)); });
+			res[ext.getRefConstRValCppToIR()] = OP_CONVERTER({ return c_ast::ref(CONVERT_ARG(0)); });
+			res[ext.getRefIRToRValCpp()] = OP_CONVERTER({
+
+				// the conversion from a value to a right side ref is implicit in C++
+				// 	if we have being wrappin it into a stack variable, avoid both nodes
+				if(core::analysis::isCallOf(ARG(0), LANG_BASIC.getRefVar())) {
+					auto refVar = ARG(0).as<core::CallExprPtr>();
+					return CONVERT_EXPR(refVar[0]);
+				}
+
+				return c_ast::deref(CONVERT_ARG(0));
+			});
+			res[ext.getRefIRToConstRValCpp()] = OP_CONVERTER({
+
+				// the conversion from a value to a right side ref is implicit in C++
+				// 	if we have being wrappin it into a stack variable, avoid both nodes
+				if(core::analysis::isCallOf(ARG(0), LANG_BASIC.getRefVar())) {
+					auto refVar = ARG(0).as<core::CallExprPtr>();
+					return CONVERT_EXPR(refVar[0]);
+				}
+
+				return c_ast::deref(CONVERT_ARG(0));
+			});
+			res[ext.getRefRValCppToCpp()] = OP_CONVERTER({ return CONVERT_ARG(0); });
+			res[ext.getRefRValCppToConstCpp()] = OP_CONVERTER({ return CONVERT_ARG(0); });
+			res[ext.getRefConstRValCppToConstCpp()] = OP_CONVERTER({ return CONVERT_ARG(0); });
+			#include "insieme/backend/operator_converter_end.inc"
+			return res;
+		}
+	}
+
+	void CppReferences::installOn(Converter& converter) const {
+		// registers type handler
+		converter.getTypeManager().addTypeHandler(CppRefTypeHandler);
+
+		// register additional operators
+		converter.getFunctionManager().getOperatorConverterTable().insertAll(getCppRefOperatorTable(converter.getNodeManager()));
+	}
 
 } // end namespace addons
 } // end namespace backend

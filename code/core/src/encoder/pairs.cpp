@@ -45,66 +45,61 @@ namespace insieme {
 namespace core {
 namespace encoder {
 
-namespace {
+	namespace {
 
-/**
- * A helper function constructing a generic pair type instance.
- */
-core::GenericTypePtr getPairType(core::NodeManager& manager) {
-	core::TypePtr alpha = TypeVariable::get(manager, "a");
-	core::TypePtr beta  = TypeVariable::get(manager, "b");
-	auto ret = GenericType::get(manager, PairExtension::PAIR_TYPE_NAME, toVector(alpha, beta));
-	lang::markAsBuiltIn(ret);
-	return ret;
-}
+		/**
+		 * A helper function constructing a generic pair type instance.
+		 */
+		core::GenericTypePtr getPairType(core::NodeManager& manager) {
+			core::TypePtr alpha = TypeVariable::get(manager, "a");
+			core::TypePtr beta = TypeVariable::get(manager, "b");
+			auto ret = GenericType::get(manager, PairExtension::PAIR_TYPE_NAME, toVector(alpha, beta));
+			lang::markAsBuiltIn(ret);
+			return ret;
+		}
 
-/**
- * A helper function constructing the pair literal used for encoding pairs.
- */
-core::LiteralPtr getPairLiteral(core::NodeManager& manager) {
-	core::IRBuilder builder(manager);
-	core::GenericTypePtr pair = getPairType(manager);
-	core::TypePtr alpha = pair->getTypeParameter(0);
-	core::TypePtr beta = pair->getTypeParameter(1);
-	core::TypePtr pairType = builder.functionType(toVector(alpha, beta), pair);
-	auto ret =  builder.literal(pairType, "pair");
-	lang::markAsBuiltIn(ret);
-	return ret;
-}
-
-}
-
-string PairExtension::PAIR_TYPE_NAME = "pair";
-
-PairExtension::PairExtension(core::NodeManager& manager)
-	: Extension(manager), pair(getPairLiteral(manager)) {}
-	
-	
-bool isPairType(const core::TypePtr& type) {
-	if(type->getNodeType() != NT_GenericType) {
-		return false;
+		/**
+		 * A helper function constructing the pair literal used for encoding pairs.
+		 */
+		core::LiteralPtr getPairLiteral(core::NodeManager& manager) {
+			core::IRBuilder builder(manager);
+			core::GenericTypePtr pair = getPairType(manager);
+			core::TypePtr alpha = pair->getTypeParameter(0);
+			core::TypePtr beta = pair->getTypeParameter(1);
+			core::TypePtr pairType = builder.functionType(toVector(alpha, beta), pair);
+			auto ret = builder.literal(pairType, "pair");
+			lang::markAsBuiltIn(ret);
+			return ret;
+		}
 	}
-	
-	// check generic type properties
-	core::GenericTypePtr genType = type.as<GenericTypePtr>();
-	return genType->getName()->getValue() == PairExtension::PAIR_TYPE_NAME &&
-	       genType->getTypeParameter().size() == static_cast<std::size_t>(2);
-}
 
-const core::TypePtr getFirstElementType(const core::TypePtr& pairType) {
-	assert_true(isPairType(pairType)) << "Not applicable to non-pair type!";
-	return pairType.as<GenericTypePtr>()->getTypeParameter(0);
-}
+	string PairExtension::PAIR_TYPE_NAME = "pair";
 
-const core::TypePtr getSecondElementType(const core::TypePtr& pairType) {
-	assert_true(isPairType(pairType)) << "Not applicable to non-pair type!";
-	return pairType.as<GenericTypePtr>()->getTypeParameter(1);
-}
+	PairExtension::PairExtension(core::NodeManager& manager) : Extension(manager), pair(getPairLiteral(manager)) {}
 
-const core::TypePtr getPairType(const core::TypePtr& first, const core::TypePtr& second) {
-	IRBuilder builder(first->getNodeManager());
-	return builder.genericType(PairExtension::PAIR_TYPE_NAME, toVector(first, second));
-}
+
+	bool isPairType(const core::TypePtr& type) {
+		if(type->getNodeType() != NT_GenericType) { return false; }
+
+		// check generic type properties
+		core::GenericTypePtr genType = type.as<GenericTypePtr>();
+		return genType->getName()->getValue() == PairExtension::PAIR_TYPE_NAME && genType->getTypeParameter().size() == static_cast<std::size_t>(2);
+	}
+
+	const core::TypePtr getFirstElementType(const core::TypePtr& pairType) {
+		assert_true(isPairType(pairType)) << "Not applicable to non-pair type!";
+		return pairType.as<GenericTypePtr>()->getTypeParameter(0);
+	}
+
+	const core::TypePtr getSecondElementType(const core::TypePtr& pairType) {
+		assert_true(isPairType(pairType)) << "Not applicable to non-pair type!";
+		return pairType.as<GenericTypePtr>()->getTypeParameter(1);
+	}
+
+	const core::TypePtr getPairType(const core::TypePtr& first, const core::TypePtr& second) {
+		IRBuilder builder(first->getNodeManager());
+		return builder.genericType(PairExtension::PAIR_TYPE_NAME, toVector(first, second));
+	}
 
 } // end namespace lists
 } // end namespace core

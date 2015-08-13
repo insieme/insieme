@@ -42,15 +42,15 @@ namespace insieme {
 namespace core {
 namespace types {
 
-const TypeMapping VariableRenamer::emptyMapping;
+	const TypeMapping VariableRenamer::emptyMapping;
 
-TypePtr TypeMapping::applyForward(NodeManager& manager, const TypePtr& type) const {
-	return dynamic_pointer_cast<const Type>(transform::replaceAll(manager, type, forward));
-}
+	TypePtr TypeMapping::applyForward(NodeManager& manager, const TypePtr& type) const {
+		return dynamic_pointer_cast<const Type>(transform::replaceAll(manager, type, forward));
+	}
 
-TypePtr TypeMapping::applyBackward(NodeManager& manager, const TypePtr& type) const {
-	return dynamic_pointer_cast<const Type>(transform::replaceAll(manager, type, backward));
-}
+	TypePtr TypeMapping::applyBackward(NodeManager& manager, const TypePtr& type) const {
+		return dynamic_pointer_cast<const Type>(transform::replaceAll(manager, type, backward));
+	}
 
 
 } // end namespace types

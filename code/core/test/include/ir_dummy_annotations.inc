@@ -40,40 +40,40 @@ namespace insieme {
 namespace core {
 
 	class DummyAnnotation : public NodeAnnotation {
-	public:
+	  public:
 		static const string NAME;
 		static const utils::StringKey<DummyAnnotation> DummyKey;
 		int value;
-		DummyAnnotation(int value) : value(value) { };
+		DummyAnnotation(int value) : value(value){};
 
 		virtual const utils::AnnotationKeyPtr getKey() const {
 			return &DummyKey;
 		}
 
 		const std::string& getAnnotationName() const {
-			 return NAME;
+			return NAME;
 		}
-		
+
 		virtual bool migrate(const NodeAnnotationPtr& ptr, const NodePtr& before, const NodePtr& after) const {
 			return false;
 		}
 	};
 
 	class DummyAnnotation2 : public NodeAnnotation {
-	public:
-		static const string NAME; 
+	  public:
+		static const string NAME;
 		static const utils::StringKey<DummyAnnotation2> DummyKey;
 		int value;
-		DummyAnnotation2(int value) : value(value) { };
+		DummyAnnotation2(int value) : value(value){};
 
 		virtual const utils::AnnotationKeyPtr getKey() const {
 			return &DummyKey;
 		}
 
 		const std::string& getAnnotationName() const {
-			 return NAME;
+			return NAME;
 		}
-		
+
 		virtual bool migrate(const NodeAnnotationPtr& ptr, const NodePtr& before, const NodePtr& after) const {
 			assert(&*ptr == this && "Annotation pointer should reference this annotation.");
 			after->addAnnotation(ptr);

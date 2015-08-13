@@ -57,10 +57,9 @@ namespace p = insieme::core::pattern;
 namespace irp = insieme::core::pattern::irp;
 
 TEST(MultiVersionJob, Generation) {
-
 	core::NodeManager manager;
 	core::IRBuilder builder(manager);
-	
+
 	// create a multi-version job
 	auto code = builder.parseProgram(R"(
 			unit main() {
@@ -77,34 +76,31 @@ TEST(MultiVersionJob, Generation) {
 		)").as<core::ProgramPtr>();
 
 	ASSERT_TRUE(code);
-	
+
 	auto res = core::checks::check(code);
 	EXPECT_TRUE(res.empty()) << res;
-	
+
 	// generate code using the runtime backend
 	auto targetCode = RuntimeBackend::getDefault()->convert(code);
-	
+
 	// print results if interested
 	// std::cout << core::printer::PrettyPrinter(code) << "\n";
 	// std::cout << *targetCode << "\n";
-	
+
 	auto compiler = utils::compiler::Compiler::getRuntimeCompiler();
 	compiler.addFlag("-Werror");
-	
+
 	EXPECT_TRUE(utils::compiler::compile(*targetCode, compiler));
 }
 
 void setMultiversionImplHint(core::NodePtr code, backend::runtime::PickImplementationHint hint) {
-	irp::matchAllPairs(irp::pick(), code, [&](const core::NodePtr& match, p::NodeMatch m) {
-		match.as<core::CallExprPtr>().attachValue(hint);
-	});
+	irp::matchAllPairs(irp::pick(), code, [&](const core::NodePtr& match, p::NodeMatch m) { match.as<core::CallExprPtr>().attachValue(hint); });
 }
 
 TEST(MultiVersion, ImplementationHints) {
-
 	core::NodeManager manager;
 	core::IRBuilder builder(manager);
-	
+
 	// create a multi-version job
 	auto code = builder.parseProgram(R"(
 			int<4> main() {
@@ -119,34 +115,34 @@ TEST(MultiVersion, ImplementationHints) {
 		)").as<core::ProgramPtr>();
 
 	ASSERT_TRUE(code);
-	
+
 	auto res = core::checks::check(code);
 	EXPECT_TRUE(res.empty()) << res;
-	
+
 	auto compiler = utils::compiler::Compiler::getRuntimeCompiler();
 	compiler.addFlag("-Werror");
-	
+
 	/////////////////////////////////// Test backend::runtime::PickImplementationHint::CALL
-	
+
 	setMultiversionImplHint(code, backend::runtime::PickImplementationHint::CALL);
-	//dumpDetailColored(code);
-	
+	// dumpDetailColored(code);
+
 	auto targetCode = RuntimeBackend::getDefault()->convert(code);
 	string targetCodeString = toString(*targetCode);
-	//std::cout << "\n===============================================\n\n" << targetCodeString << "\n";
-	
+	// std::cout << "\n===============================================\n\n" << targetCodeString << "\n";
+
 	EXPECT_TRUE(targetCodeString.find("switch") == string::npos);
 	EXPECT_TRUE(utils::compiler::compile(*targetCode, compiler));
-	
+
 	/////////////////////////////////// Test backend::runtime::PickImplementationHint::SWITCH
-	
+
 	setMultiversionImplHint(code, backend::runtime::PickImplementationHint::SWITCH);
-	//dumpDetailColored(code);
-	
+	// dumpDetailColored(code);
+
 	auto targetCodeSwitch = RuntimeBackend::getDefault()->convert(code);
 	string targetCodeSwitchString = toString(*targetCodeSwitch);
-	//std::cout << "\n===============================================\n\n" << targetCodeSwitchString << "\n";
-	
+	// std::cout << "\n===============================================\n\n" << targetCodeSwitchString << "\n";
+
 	EXPECT_TRUE(targetCodeSwitchString.find("switch") != string::npos);
 	EXPECT_TRUE(utils::compiler::compile(*targetCodeSwitch, compiler));
 }
@@ -154,4 +150,3 @@ TEST(MultiVersion, ImplementationHints) {
 } // end namespace runtime
 } // end namespace backend
 } // end namespace insieme
-

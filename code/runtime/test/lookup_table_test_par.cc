@@ -59,7 +59,7 @@ typedef struct _irt_lookup_test {
 IRT_DEFINE_LOCKED_LOOKUP_TABLE(lookup_test, next_lt, IRT_ID_HASH, TEST_BUCKETS)
 IRT_CREATE_LOCKED_LOOKUP_TABLE(lookup_test, next_lt, IRT_ID_HASH, TEST_BUCKETS)
 
-//void lock_check() {
+// void lock_check() {
 //	printf("\n=================\n");
 //	for(int i=0; i<TEST_BUCKETS; ++i) {
 //		int res = pthread_spin_trylock(&irt_g_lookup_test_table_locks[i]);
@@ -74,81 +74,78 @@ uint32 num = 0;
 irt_lookup_test_id dummy_id_generator() {
 	irt_lookup_test_id id;
 	id.node = 1;
-#ifdef _OPENMP
+	#ifdef _OPENMP
 	id.thread = omp_get_thread_num();
-#else
+	#else
 	id.thread = 0;
-#endif // _OPENMP
+	#endif // _OPENMP
 	id.index = num++;
 	id.cached = NULL;
 	return id;
 }
 
 irt_lookup_test* make_item(float val) {
-	irt_lookup_test* item = (irt_lookup_test*)calloc(1,sizeof(irt_lookup_test));
+	irt_lookup_test* item = (irt_lookup_test*)calloc(1, sizeof(irt_lookup_test));
 	item->id = dummy_id_generator();
 	item->data = val;
 	return item;
 }
 
 TEST(lookup_tables, parallel_ops) {
-	for(int j=0; j<PARALLEL_ITERATIONS; ++j) {
+	for(int j = 0; j < PARALLEL_ITERATIONS; ++j) {
 		irt_lookup_test_table_init();
-		
-		irt_lookup_test* elems[TEST_ELEMS*100];
-		
+
+		irt_lookup_test* elems[TEST_ELEMS * 100];
+
 		#pragma omp parallel
 		{
-			#pragma omp for schedule(dynamic,1)
-			for(int i=0; i<TEST_ELEMS*50; ++i) {
-				elems[i] = make_item(i/10.0f);
+		#pragma omp for schedule(dynamic, 1)
+			for(int i = 0; i < TEST_ELEMS * 50; ++i) {
+				elems[i] = make_item(i / 10.0f);
 				irt_lookup_test_table_insert(elems[i]);
 			}
-			#pragma omp for schedule(dynamic,1)
-			for(int i=0; i<TEST_ELEMS*50; ++i) {
+			#pragma omp for schedule(dynamic, 1)
+			for(int i = 0; i < TEST_ELEMS * 50; ++i) {
 				EXPECT_EQ(elems[i], irt_lookup_test_table_lookup(elems[i]->id));
 			}
-			
+
 			// remove every second element and check all afterwards
-			#pragma omp for schedule(dynamic,1)
-			for(int i=0; i<TEST_ELEMS*50; i+=2) {
+			#pragma omp for schedule(dynamic, 1)
+			for(int i = 0; i < TEST_ELEMS * 50; i += 2) {
 				irt_lookup_test_table_remove(elems[i]->id);
 			}
-			#pragma omp for schedule(dynamic,1)
-			for(int i=0; i<TEST_ELEMS*50; ++i) {
-				if(i%2 == 0) {
+			#pragma omp for schedule(dynamic, 1)
+			for(int i = 0; i < TEST_ELEMS * 50; ++i) {
+				if(i % 2 == 0) {
 					EXPECT_EQ(0 /* NULL */, irt_lookup_test_table_lookup(elems[i]->id));
-				}
-				else {
-					EXPECT_EQ(elems[i]    , irt_lookup_test_table_lookup(elems[i]->id));
+				} else {
+					EXPECT_EQ(elems[i], irt_lookup_test_table_lookup(elems[i]->id));
 				}
 			}
-			
+
 			// add more and check all again
-			#pragma omp for schedule(dynamic,1)
-			for(int i=TEST_ELEMS*50; i<TEST_ELEMS*100; ++i) {
-				elems[i] = make_item(i/10.0f);
+			#pragma omp for schedule(dynamic, 1)
+			for(int i = TEST_ELEMS * 50; i < TEST_ELEMS * 100; ++i) {
+				elems[i] = make_item(i / 10.0f);
 				irt_lookup_test_table_insert(elems[i]);
 			}
-			#pragma omp for schedule(dynamic,1)
-			for(int i=0; i<TEST_ELEMS*100; ++i) {
-				if(i<TEST_ELEMS*50) {
-					if(i%2 == 0) {
+			#pragma omp for schedule(dynamic, 1)
+			for(int i = 0; i < TEST_ELEMS * 100; ++i) {
+				if(i < TEST_ELEMS * 50) {
+					if(i % 2 == 0) {
 						EXPECT_EQ(0 /* NULL */, irt_lookup_test_table_lookup(elems[i]->id));
+					} else {
+						EXPECT_EQ(elems[i], irt_lookup_test_table_lookup(elems[i]->id));
 					}
-					else {
-						EXPECT_EQ(elems[i]    , irt_lookup_test_table_lookup(elems[i]->id));
-					}
-				}
-				else {
+				} else {
 					EXPECT_EQ(elems[i], irt_lookup_test_table_lookup(elems[i]->id));
 				}
 			}
 		}
-		
+
 		// cleanup
 		irt_lookup_test_table_cleanup();
-		for(int i=0; i<TEST_ELEMS*100; ++i) {
+		for(int i = 0; i < TEST_ELEMS * 100; ++i) {
 			free(elems[i]);
 		}
 	}

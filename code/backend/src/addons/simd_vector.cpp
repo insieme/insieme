@@ -55,111 +55,106 @@
 #include "insieme/core/encoder/lists.h"
 
 
-
 namespace insieme {
 namespace backend {
 namespace addons {
 
-namespace {
+	namespace {
 
-const TypeInfo* SIMDVectorTypeHandler(const Converter& converter, const core::TypePtr& type) {
-	static const TypeInfo* NOT_HANDLED = NULL;
-	auto manager = converter.getCNodeManager();
-	
-	//get VECTORTYPE (== vector<elemTy, #l>) and produce "elemTy __attribute__(vector_size(#l * sizeof(elemTy)))"
-	//std::cout << " convert type: " << type << std::endl;
-	
-	// check whether it is a SIMDVectorType
-	if(!(core::lang::isSIMDVector(type))) {
-		return NOT_HANDLED;	// not handled by this handler
+		const TypeInfo* SIMDVectorTypeHandler(const Converter& converter, const core::TypePtr& type) {
+			static const TypeInfo* NOT_HANDLED = NULL;
+			auto manager = converter.getCNodeManager();
+
+			// get VECTORTYPE (== vector<elemTy, #l>) and produce "elemTy __attribute__(vector_size(#l * sizeof(elemTy)))"
+			// std::cout << " convert type: " << type << std::endl;
+
+			// check whether it is a SIMDVectorType
+			if(!(core::lang::isSIMDVector(type))) {
+				return NOT_HANDLED; // not handled by this handler
+			}
+
+
+			const core::VectorTypePtr& ptr = core::lang::getSIMDVectorType(type);
+
+			// get the size of the vector
+			unsigned size = 0;
+			const core::IntTypeParamPtr& sizePtr = ptr->getSize();
+			if(sizePtr->getNodeType() != core::NT_ConcreteIntTypeParam) {
+				// non-concrete array types are not supported
+				return type_info_utils::createUnsupportedInfo<TypeInfo>(*manager);
+			} else {
+				size = static_pointer_cast<const core::ConcreteIntTypeParam>(sizePtr)->getValue();
+			}
+
+			TypeManager& typeManager = converter.getTypeManager();
+
+			// get the elementtype of the vector
+			const TypeInfo* elementTypeInfo = &typeManager.getTypeInfo(ptr->getElementType());
+			assert_true(elementTypeInfo);
+
+			//__attribute__((vector_size(n)) where n specifies the size in bytes
+			string elementTypeName = toString(insieme::backend::c_ast::CPrint(elementTypeInfo->rValueType));
+			string str = elementTypeName + " __attribute__((vector_size(" + toString(size) + "*sizeof(" + elementTypeName + "))))";
+			auto res = type_info_utils::createInfo<TypeInfo>(*manager, str);
+			return res;
+		}
+
+
+		OperatorConverterTable getSIMDVectorOperatorTable(core::NodeManager& manager) {
+			OperatorConverterTable res;
+			const auto& ext = manager.getLangExtension<insieme::core::lang::SIMDVectorExtension>();
+
+			#include "insieme/backend/operator_converter_begin.inc"
+
+			res[ext.getSIMDAdd()] = OP_CONVERTER({ return c_ast::add(CONVERT_ARG(0), CONVERT_ARG(1)); });
+			res[ext.getSIMDSub()] = OP_CONVERTER({ return c_ast::sub(CONVERT_ARG(0), CONVERT_ARG(1)); });
+			res[ext.getSIMDMul()] = OP_CONVERTER({ return c_ast::mul(CONVERT_ARG(0), CONVERT_ARG(1)); });
+			res[ext.getSIMDDiv()] = OP_CONVERTER({ return c_ast::div(CONVERT_ARG(0), CONVERT_ARG(1)); });
+			res[ext.getSIMDMod()] = OP_CONVERTER({ return c_ast::mod(CONVERT_ARG(0), CONVERT_ARG(1)); });
+			res[ext.getSIMDAnd()] = OP_CONVERTER({ return c_ast::bitwiseAnd(CONVERT_ARG(0), CONVERT_ARG(1)); });
+			res[ext.getSIMDOr()] = OP_CONVERTER({ return c_ast::bitwiseOr(CONVERT_ARG(0), CONVERT_ARG(1)); });
+			res[ext.getSIMDXor()] = OP_CONVERTER({ return c_ast::bitwiseXor(CONVERT_ARG(0), CONVERT_ARG(1)); });
+			res[ext.getSIMDLShift()] = OP_CONVERTER({ return c_ast::lShift(CONVERT_ARG(0), CONVERT_ARG(1)); });
+			res[ext.getSIMDRShift()] = OP_CONVERTER({ return c_ast::rShift(CONVERT_ARG(0), CONVERT_ARG(1)); });
+
+			res[ext.getSIMDEq()] = OP_CONVERTER({ return c_ast::eq(CONVERT_ARG(0), CONVERT_ARG(1)); });
+			res[ext.getSIMDNe()] = OP_CONVERTER({ return c_ast::ne(CONVERT_ARG(0), CONVERT_ARG(1)); });
+			res[ext.getSIMDLt()] = OP_CONVERTER({ return c_ast::lt(CONVERT_ARG(0), CONVERT_ARG(1)); });
+			res[ext.getSIMDLe()] = OP_CONVERTER({ return c_ast::le(CONVERT_ARG(0), CONVERT_ARG(1)); });
+			res[ext.getSIMDGt()] = OP_CONVERTER({ return c_ast::gt(CONVERT_ARG(0), CONVERT_ARG(1)); });
+			res[ext.getSIMDGe()] = OP_CONVERTER({ return c_ast::ge(CONVERT_ARG(0), CONVERT_ARG(1)); });
+
+			res[ext.getSIMDNot()] = OP_CONVERTER({ return c_ast::bitwiseNot(CONVERT_ARG(0)); });
+			res[ext.getSIMDMinus()] = OP_CONVERTER({ return c_ast::minus(CONVERT_ARG(0)); });
+
+			// res[ext.getSIMDInitUniform()] 	= OP_CONVERTER({ return CONVERT_ARG(0); });
+			res[ext.getSIMDInitUndefined()] = OP_CONVERTER({ return CONVERT_ARG(0); });
+			res[ext.getSIMDInitPartial()] = OP_CONVERTER({
+				const core::TypePtr type = call->getType();
+				const TypeInfo& info = GET_TYPE_INFO(type);
+
+				auto values = (insieme::core::encoder::toValue<vector<insieme::core::ExpressionPtr>, core::encoder::DirectExprListConverter>(ARG(0)));
+				auto converted = ::transform(values, [&](const core::ExpressionPtr& cur) -> c_ast::NodePtr { return CONVERT_EXPR(cur); });
+
+				return c_ast::init(info.rValueType, converted);
+			});
+
+			/*
+			res[ext.getVectorToSIMD()] 	  = OP_CONVERTER({ return CONVERT_ARG(0); });
+			res[ext.getSIMDToVector()] 	  = OP_CONVERTER({ return CONVERT_ARG(0); });
+			*/
+			#include "insieme/backend/operator_converter_end.inc"
+			return res;
+		}
 	}
-	
-	
-	const core::VectorTypePtr& ptr = core::lang::getSIMDVectorType(type);
-	
-	// get the size of the vector
-	unsigned size = 0;
-	const core::IntTypeParamPtr& sizePtr = ptr->getSize();
-	if(sizePtr->getNodeType() != core::NT_ConcreteIntTypeParam) {
-		// non-concrete array types are not supported
-		return type_info_utils::createUnsupportedInfo<TypeInfo>(*manager);
+
+	void SIMDVector::installOn(Converter& converter) const {
+		// registers type handler
+		converter.getTypeManager().addTypeHandler(SIMDVectorTypeHandler);
+
+		// register additional operators
+		converter.getFunctionManager().getOperatorConverterTable().insertAll(getSIMDVectorOperatorTable(converter.getNodeManager()));
 	}
-	else {
-		size = static_pointer_cast<const core::ConcreteIntTypeParam>(sizePtr)->getValue();
-	}
-	
-	TypeManager& typeManager = converter.getTypeManager();
-	
-	// get the elementtype of the vector
-	const TypeInfo* elementTypeInfo = &typeManager.getTypeInfo(ptr->getElementType());
-	assert_true(elementTypeInfo);
-	
-	//__attribute__((vector_size(n)) where n specifies the size in bytes
-	string elementTypeName = toString(insieme::backend::c_ast::CPrint(elementTypeInfo->rValueType));
-	string str = elementTypeName + " __attribute__((vector_size(" + toString(size) + "*sizeof("+ elementTypeName+"))))";
-	auto res = type_info_utils::createInfo<TypeInfo>(*manager, str);
-	return res;
-}
-
-
-OperatorConverterTable getSIMDVectorOperatorTable(core::NodeManager& manager) {
-	OperatorConverterTable res;
-	const auto& ext = manager.getLangExtension<insieme::core::lang::SIMDVectorExtension>();
-	
-#include "insieme/backend/operator_converter_begin.inc"
-	
-	res[ext.getSIMDAdd()] 	  = OP_CONVERTER({ return c_ast::add(CONVERT_ARG(0), CONVERT_ARG(1)); });
-	res[ext.getSIMDSub()] 	  = OP_CONVERTER({ return c_ast::sub(CONVERT_ARG(0), CONVERT_ARG(1)); });
-	res[ext.getSIMDMul()] 	  = OP_CONVERTER({ return c_ast::mul(CONVERT_ARG(0), CONVERT_ARG(1)); });
-	res[ext.getSIMDDiv()] 	  = OP_CONVERTER({ return c_ast::div(CONVERT_ARG(0), CONVERT_ARG(1)); });
-	res[ext.getSIMDMod()] 	  = OP_CONVERTER({ return c_ast::mod(CONVERT_ARG(0), CONVERT_ARG(1)); });
-	res[ext.getSIMDAnd()] 	  = OP_CONVERTER({ return c_ast::bitwiseAnd(CONVERT_ARG(0), CONVERT_ARG(1)); });
-	res[ext.getSIMDOr()] 	  = OP_CONVERTER({ return c_ast::bitwiseOr(CONVERT_ARG(0), CONVERT_ARG(1)); });
-	res[ext.getSIMDXor()] 	  = OP_CONVERTER({ return c_ast::bitwiseXor(CONVERT_ARG(0), CONVERT_ARG(1)); });
-	res[ext.getSIMDLShift()] 	  = OP_CONVERTER({ return c_ast::lShift(CONVERT_ARG(0), CONVERT_ARG(1)); });
-	res[ext.getSIMDRShift()] 	  = OP_CONVERTER({ return c_ast::rShift(CONVERT_ARG(0), CONVERT_ARG(1)); });
-	
-	res[ext.getSIMDEq()] 	  = OP_CONVERTER({ return c_ast::eq(CONVERT_ARG(0), CONVERT_ARG(1)); });
-	res[ext.getSIMDNe()] 	  = OP_CONVERTER({ return c_ast::ne(CONVERT_ARG(0), CONVERT_ARG(1)); });
-	res[ext.getSIMDLt()] 	  = OP_CONVERTER({ return c_ast::lt(CONVERT_ARG(0), CONVERT_ARG(1)); });
-	res[ext.getSIMDLe()] 	  = OP_CONVERTER({ return c_ast::le(CONVERT_ARG(0), CONVERT_ARG(1)); });
-	res[ext.getSIMDGt()] 	  = OP_CONVERTER({ return c_ast::gt(CONVERT_ARG(0), CONVERT_ARG(1)); });
-	res[ext.getSIMDGe()] 	  = OP_CONVERTER({ return c_ast::ge(CONVERT_ARG(0), CONVERT_ARG(1)); });
-	
-	res[ext.getSIMDNot()] 	  = OP_CONVERTER({ return c_ast::bitwiseNot(CONVERT_ARG(0)); });
-	res[ext.getSIMDMinus()]		= OP_CONVERTER({ return c_ast::minus(CONVERT_ARG(0)); });
-	
-	//res[ext.getSIMDInitUniform()] 	= OP_CONVERTER({ return CONVERT_ARG(0); });
-	res[ext.getSIMDInitUndefined()] = OP_CONVERTER({ return CONVERT_ARG(0); });
-	res[ext.getSIMDInitPartial()] 	= OP_CONVERTER({
-		const core::TypePtr type = call->getType();
-		const TypeInfo& info = GET_TYPE_INFO(type);
-		
-		auto values = (insieme::core::encoder::toValue<vector<insieme::core::ExpressionPtr>,core::encoder::DirectExprListConverter>(ARG(0)));
-		auto converted = ::transform(values, [&](const core::ExpressionPtr& cur)->c_ast::NodePtr { return CONVERT_EXPR(cur); });
-		
-		return c_ast::init(info.rValueType , converted);
-	});
-	
-	/*
-	res[ext.getVectorToSIMD()] 	  = OP_CONVERTER({ return CONVERT_ARG(0); });
-	res[ext.getSIMDToVector()] 	  = OP_CONVERTER({ return CONVERT_ARG(0); });
-	*/
-#include "insieme/backend/operator_converter_end.inc"
-	return res;
-}
-
-}
-
-void SIMDVector::installOn(Converter& converter) const {
-
-	// registers type handler
-	converter.getTypeManager().addTypeHandler(SIMDVectorTypeHandler);
-	
-	// register additional operators
-	converter.getFunctionManager().getOperatorConverterTable().insertAll(getSIMDVectorOperatorTable(converter.getNodeManager()));
-	
-}
 
 } // end namespace addons
 } // end namespace backend

@@ -45,236 +45,218 @@
 namespace insieme {
 namespace core {
 
-bool hasHash(const Node& a, std::size_t hash) {
-	return a.hash() == hash;
-}
-
-std::size_t computeHash(const NodePtr& cur) {
-	std::size_t seed = 0;
-	boost::hash_combine(seed, cur->getNodeType());
-	
-	if (cur->isValue()) {
-		// just believe the hash
-		return (*cur).hash();
+	bool hasHash(const Node& a, std::size_t hash) {
+		return a.hash() == hash;
 	}
-	
-	for_each(cur->getChildList(), [&](const NodePtr& cur) {
-		utils::appendHash(seed, *cur);
-	});
-	return seed;
-}
 
+	std::size_t computeHash(const NodePtr& cur) {
+		std::size_t seed = 0;
+		boost::hash_combine(seed, cur->getNodeType());
 
-template<typename T>
-NodeList toList(const vector<T>& list) {
-	return NodeList(list.begin(), list.end());
-}
-
-template<typename T>
-NodeList toList(const NodeRange<T>& list) {
-	return NodeList(list.begin(), list.end());
-}
-
-template<typename ... E>
-NodeList toList(const Pointer<E>& ... node) {
-	return toVector<NodePtr>(node...);
-}
-
-bool equalChildLists(const NodeList& listA, const NodeList& listB) {
-	return equals(listA, listB, equal_target<NodePtr>());
-}
-
-
-template<typename NP>
-void basicNodeTests(NP node, const NodeList& children = NodeList()) {
-
-	typedef typename NP::element_type T;
-
-	SCOPED_TRACE( typeid(NP).name() );
-
-	// ------------ Node Ptr based tests -------------
-
-	// check children
-	EXPECT_PRED2(equalChildLists, children, node->getChildList());
-
-	// ------------ Annotation Tests -------------
-
-	// check for shared annotations
-	NodeList listA = node->getChildList();
-	NodeList listB = node->getChildList();
-
-	EXPECT_TRUE ( equals( listA, listB ) );
-	EXPECT_TRUE ( equals( listA, listB, equal_target<NodePtr>()) );
-
-	// ------------ Hash Code Tests -------------
-
-	EXPECT_PRED2(hasHash, *node, computeHash(node));
-
-	// ------------ Type Token based tests -------------
-
-	// copy and clone the type
-	NodeManager manager;
-	NodeManager manager2;
-	T copy = T(*node);
-	T* clone = &*manager.get(node);
-	T* clone2 = &*manager2.get(node);
-
-	EXPECT_EQ(&clone->getNodeManager(), &manager);
-	EXPECT_EQ(&clone2->getNodeManager(), &manager2);
-	EXPECT_NE(&node->getNodeManager(), &manager);
-
-	// cloning had to be successful
-	EXPECT_TRUE(clone);
-	EXPECT_TRUE(clone2);
-
-	// and all children have to be in the new manager
-	const NodeList& list = clone->getChildList();
-	std::for_each(list.begin(), list.end(), [&manager](const NodePtr& cur) {
-		EXPECT_TRUE(manager.addressesLocal(cur));
-	});
-
-	const NodeList& list2 = clone2->getChildList();
-	std::for_each(list2.begin(), list2.end(), [&manager2](const NodePtr& cur) {
-		EXPECT_TRUE(manager2.addressesLocal(cur));
-	});
-
-	// check whether all are equal
-	T* all[] = { &*node, &copy, clone, clone2 };
-	for (int i=0; i<4; i++) {
-		for (int j=0; j<4; j++) {
-
-			T* a = all[i];
-			T* b = all[j];
-
-			EXPECT_EQ ( *a , *b );
-			EXPECT_EQ ( a->hash(), b->hash() );
-			EXPECT_EQ ( a->toString(), b->toString() );
-
+		if(cur->isValue()) {
+			// just believe the hash
+			return (*cur).hash();
 		}
+
+		for_each(cur->getChildList(), [&](const NodePtr& cur) { utils::appendHash(seed, *cur); });
+		return seed;
 	}
 
-	// check type properties
-	for (int i=0; i<4; i++) {
 
-		T* cur = all[i];
+	template <typename T>
+	NodeList toList(const vector<T>& list) {
+		return NodeList(list.begin(), list.end());
+	}
+
+	template <typename T>
+	NodeList toList(const NodeRange<T>& list) {
+		return NodeList(list.begin(), list.end());
+	}
+
+	template <typename... E>
+	NodeList toList(const Pointer<E>&... node) {
+		return toVector<NodePtr>(node...);
+	}
+
+	bool equalChildLists(const NodeList& listA, const NodeList& listB) {
+		return equals(listA, listB, equal_target<NodePtr>());
+	}
+
+
+	template <typename NP>
+	void basicNodeTests(NP node, const NodeList& children = NodeList()) {
+		typedef typename NP::element_type T;
+
+		SCOPED_TRACE(typeid(NP).name());
+
+		// ------------ Node Ptr based tests -------------
 
 		// check children
-		EXPECT_TRUE( equals(children, cur->getChildList(), equal_target<NodePtr>()) );
-	}
+		EXPECT_PRED2(equalChildLists, children, node->getChildList());
 
-	// --------------- Annotations -------------
+		// ------------ Annotation Tests -------------
 
-	// check whether annotations become isolated when migrating nodes between managers
+		// check for shared annotations
+		NodeList listA = node->getChildList();
+		NodeList listB = node->getChildList();
 
-	EXPECT_TRUE(node->getAnnotations().empty());
+		EXPECT_TRUE(equals(listA, listB));
+		EXPECT_TRUE(equals(listA, listB, equal_target<NodePtr>()));
 
-	node->addAnnotation(std::make_shared<DummyAnnotation>(12));
-	EXPECT_TRUE(node->hasAnnotation(DummyAnnotation::DummyKey));
-	EXPECT_FALSE(node->hasAnnotation(DummyAnnotation2::DummyKey));
+		// ------------ Hash Code Tests -------------
 
-	NodeManager managerA;
-	NodeManager managerB;
+		EXPECT_PRED2(hasHash, *node, computeHash(node));
 
-	NP nodeInA = managerA.get(node);
-	EXPECT_TRUE(nodeInA->hasAnnotation(DummyAnnotation::DummyKey));
-	EXPECT_FALSE(nodeInA->hasAnnotation(DummyAnnotation2::DummyKey));
+		// ------------ Type Token based tests -------------
 
+		// copy and clone the type
+		NodeManager manager;
+		NodeManager manager2;
+		T copy = T(*node);
+		T* clone = &*manager.get(node);
+		T* clone2 = &*manager2.get(node);
 
-	EXPECT_NE(&nodeInA->getAnnotations(), &node->getAnnotations());
-	EXPECT_EQ(*node, *nodeInA);
+		EXPECT_EQ(&clone->getNodeManager(), &manager);
+		EXPECT_EQ(&clone2->getNodeManager(), &manager2);
+		EXPECT_NE(&node->getNodeManager(), &manager);
 
-	nodeInA->addAnnotation(std::make_shared<DummyAnnotation2>(14));
-	EXPECT_TRUE(node->hasAnnotation(DummyAnnotation::DummyKey));
-	EXPECT_FALSE(node->hasAnnotation(DummyAnnotation2::DummyKey));
-	EXPECT_TRUE(nodeInA->hasAnnotation(DummyAnnotation::DummyKey));
-	EXPECT_TRUE(nodeInA->hasAnnotation(DummyAnnotation2::DummyKey));
+		// cloning had to be successful
+		EXPECT_TRUE(clone);
+		EXPECT_TRUE(clone2);
 
-	NP nodeInB = managerB.get(node);
-	EXPECT_EQ(*node, *nodeInA);
-	EXPECT_EQ(*node, *nodeInB);
-	EXPECT_EQ(*nodeInA, *nodeInB);
+		// and all children have to be in the new manager
+		const NodeList& list = clone->getChildList();
+		std::for_each(list.begin(), list.end(), [&manager](const NodePtr& cur) { EXPECT_TRUE(manager.addressesLocal(cur)); });
 
-	EXPECT_TRUE(nodeInB->hasAnnotation(DummyAnnotation::DummyKey));
-	EXPECT_FALSE(nodeInB->hasAnnotation(DummyAnnotation2::DummyKey));
-	EXPECT_NE(&nodeInA->getAnnotations(), &node->getAnnotations());
-	EXPECT_NE(&nodeInA->getAnnotations(), &nodeInB->getAnnotations());
-	EXPECT_NE(&node->getAnnotations(), &nodeInB->getAnnotations());
+		const NodeList& list2 = clone2->getChildList();
+		std::for_each(list2.begin(), list2.end(), [&manager2](const NodePtr& cur) { EXPECT_TRUE(manager2.addressesLocal(cur)); });
 
-	// remove all annotations
-	node->remAnnotation(DummyAnnotation::DummyKey);
-	node->remAnnotation(DummyAnnotation2::DummyKey);
+		// check whether all are equal
+		T* all[] = {&*node, &copy, clone, clone2};
+		for(int i = 0; i < 4; i++) {
+			for(int j = 0; j < 4; j++) {
+				T* a = all[i];
+				T* b = all[j];
 
-	// check children isolation
-	NP allPtr[] = { node, nodeInA, nodeInB };
-	for (int i=0; i<3; i++) {
-		for (int j=0; j<3; j++) {
-			if (i==j) {
-				continue;
+				EXPECT_EQ(*a, *b);
+				EXPECT_EQ(a->hash(), b->hash());
+				EXPECT_EQ(a->toString(), b->toString());
 			}
-
-			auto a = allPtr[i]->getChildList();
-			auto b = allPtr[j]->getChildList();
-
-			std::for_each(
-					make_paired_iterator(a.begin(), b.begin()),
-					make_paired_iterator(a.end(), b.end()),
-					[](const std::pair<NodePtr, NodePtr>& cur) {
-
-				EXPECT_NE(cur.first, cur.second);
-				EXPECT_EQ(*cur.first, *cur.second);
-			});
 		}
+
+		// check type properties
+		for(int i = 0; i < 4; i++) {
+			T* cur = all[i];
+
+			// check children
+			EXPECT_TRUE(equals(children, cur->getChildList(), equal_target<NodePtr>()));
+		}
+
+		// --------------- Annotations -------------
+
+		// check whether annotations become isolated when migrating nodes between managers
+
+		EXPECT_TRUE(node->getAnnotations().empty());
+
+		node->addAnnotation(std::make_shared<DummyAnnotation>(12));
+		EXPECT_TRUE(node->hasAnnotation(DummyAnnotation::DummyKey));
+		EXPECT_FALSE(node->hasAnnotation(DummyAnnotation2::DummyKey));
+
+		NodeManager managerA;
+		NodeManager managerB;
+
+		NP nodeInA = managerA.get(node);
+		EXPECT_TRUE(nodeInA->hasAnnotation(DummyAnnotation::DummyKey));
+		EXPECT_FALSE(nodeInA->hasAnnotation(DummyAnnotation2::DummyKey));
+
+
+		EXPECT_NE(&nodeInA->getAnnotations(), &node->getAnnotations());
+		EXPECT_EQ(*node, *nodeInA);
+
+		nodeInA->addAnnotation(std::make_shared<DummyAnnotation2>(14));
+		EXPECT_TRUE(node->hasAnnotation(DummyAnnotation::DummyKey));
+		EXPECT_FALSE(node->hasAnnotation(DummyAnnotation2::DummyKey));
+		EXPECT_TRUE(nodeInA->hasAnnotation(DummyAnnotation::DummyKey));
+		EXPECT_TRUE(nodeInA->hasAnnotation(DummyAnnotation2::DummyKey));
+
+		NP nodeInB = managerB.get(node);
+		EXPECT_EQ(*node, *nodeInA);
+		EXPECT_EQ(*node, *nodeInB);
+		EXPECT_EQ(*nodeInA, *nodeInB);
+
+		EXPECT_TRUE(nodeInB->hasAnnotation(DummyAnnotation::DummyKey));
+		EXPECT_FALSE(nodeInB->hasAnnotation(DummyAnnotation2::DummyKey));
+		EXPECT_NE(&nodeInA->getAnnotations(), &node->getAnnotations());
+		EXPECT_NE(&nodeInA->getAnnotations(), &nodeInB->getAnnotations());
+		EXPECT_NE(&node->getAnnotations(), &nodeInB->getAnnotations());
+
+		// remove all annotations
+		node->remAnnotation(DummyAnnotation::DummyKey);
+		node->remAnnotation(DummyAnnotation2::DummyKey);
+
+		// check children isolation
+		NP allPtr[] = {node, nodeInA, nodeInB};
+		for(int i = 0; i < 3; i++) {
+			for(int j = 0; j < 3; j++) {
+				if(i == j) { continue; }
+
+				auto a = allPtr[i]->getChildList();
+				auto b = allPtr[j]->getChildList();
+
+				std::for_each(make_paired_iterator(a.begin(), b.begin()), make_paired_iterator(a.end(), b.end()), [](const std::pair<NodePtr, NodePtr>& cur) {
+
+					EXPECT_NE(cur.first, cur.second);
+					EXPECT_EQ(*cur.first, *cur.second);
+				});
+			}
+		}
+
+		// TODO: check child list vs. node mapper argument
+		for(int i = 0; i < 3; i++) {
+			NP cur = allPtr[i];
+
+			int count = 0;
+			unsigned mask = 0;
+			auto mapper = makeLambdaMapper([&](unsigned pos, const NodePtr& ptr) -> const NodePtr {
+				count++;
+				EXPECT_EQ(ptr, cur->getChildList()[pos]);
+				EXPECT_EQ(*ptr, *(node->getChildList()[pos]));
+				EXPECT_FALSE(mask & (1 << pos));
+				mask |= 1 << pos;
+				return ptr;
+			});
+
+			cur->substitute(manager, mapper);
+
+			// check number of visited children
+			EXPECT_EQ(cur->getChildList().size(), static_cast<size_t>(count));
+
+			// all children have to be visited (mask should have all 1s)
+			EXPECT_EQ(static_cast<unsigned>((1 << count) - 1), mask);
+		}
+
+		// check whether annotation is preservered during copy process
+
+		EXPECT_TRUE(node->getAnnotations().empty());
+
+		node->addAnnotation(std::make_shared<DummyAnnotation>(12));
+		EXPECT_TRUE(node->hasAnnotation(DummyAnnotation::DummyKey));
+		EXPECT_FALSE(node->hasAnnotation(DummyAnnotation2::DummyKey));
+
+		// clone node
+		NodeManager manager3;
+		NP other = manager3.get(node);
+
+		EXPECT_TRUE(node->hasAnnotation(DummyAnnotation::DummyKey));
+		EXPECT_FALSE(node->hasAnnotation(DummyAnnotation2::DummyKey));
+
+		EXPECT_TRUE(other->hasAnnotation(DummyAnnotation::DummyKey));
+		EXPECT_FALSE(other->hasAnnotation(DummyAnnotation2::DummyKey));
+
+		EXPECT_EQ(node->getAnnotation(DummyAnnotation::DummyKey)->value, other->getAnnotation(DummyAnnotation::DummyKey)->value);
+
+		node->remAnnotation(DummyAnnotation::DummyKey);
 	}
-
-	// TODO: check child list vs. node mapper argument
-	for (int i=0; i<3; i++) {
-
-		NP cur = allPtr[i];
-
-		int count = 0;
-		unsigned mask = 0;
-		auto mapper = makeLambdaMapper([&](unsigned pos, const NodePtr& ptr)-> const NodePtr {
-			count++;
-			EXPECT_EQ(ptr, cur->getChildList()[pos]);
-			EXPECT_EQ(*ptr, *(node->getChildList()[pos]));
-			EXPECT_FALSE(mask & (1<<pos));
-			mask |= 1<<pos;
-			return ptr;
-		});
-
-		cur->substitute(manager, mapper);
-
-		// check number of visited children
-		EXPECT_EQ(cur->getChildList().size(), static_cast<size_t>(count));
-
-		// all children have to be visited (mask should have all 1s)
-		EXPECT_EQ(static_cast<unsigned>((1<<count) - 1), mask);
-	}
-
-	// check whether annotation is preservered during copy process
-
-	EXPECT_TRUE(node->getAnnotations().empty());
-
-	node->addAnnotation(std::make_shared<DummyAnnotation>(12));
-	EXPECT_TRUE(node->hasAnnotation(DummyAnnotation::DummyKey));
-	EXPECT_FALSE(node->hasAnnotation(DummyAnnotation2::DummyKey));
-
-	// clone node
-	NodeManager manager3;
-	NP other = manager3.get(node);
-
-	EXPECT_TRUE(node->hasAnnotation(DummyAnnotation::DummyKey));
-	EXPECT_FALSE(node->hasAnnotation(DummyAnnotation2::DummyKey));
-
-	EXPECT_TRUE(other->hasAnnotation(DummyAnnotation::DummyKey));
-	EXPECT_FALSE(other->hasAnnotation(DummyAnnotation2::DummyKey));
-
-	EXPECT_EQ(node->getAnnotation(DummyAnnotation::DummyKey)->value,
-			  other->getAnnotation(DummyAnnotation::DummyKey)->value);
-
-	node->remAnnotation(DummyAnnotation::DummyKey);
-}
 
 } // end namespace core
 } // end namespace insieme
-

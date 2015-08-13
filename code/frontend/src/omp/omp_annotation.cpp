@@ -43,234 +43,172 @@ namespace insieme {
 namespace frontend {
 namespace omp {
 
-const string BaseAnnotation::NAME = "OmpAnnotation";
-const utils::StringKey<BaseAnnotation> BaseAnnotation::KEY("OpenMP");
+	const string BaseAnnotation::NAME = "OmpAnnotation";
+	const utils::StringKey<BaseAnnotation> BaseAnnotation::KEY("OpenMP");
 
-const std::string BaseAnnotation::toString() const {
-	std::ostringstream ss;
-	for(AnnotationList::const_iterator it = getAnnotationListBegin(), end = getAnnotationListEnd(); it != end; ++it) {
-		(*it)->dump(ss);
-		if(it+1 != end) {
-			ss << "\\n";
+	const std::string BaseAnnotation::toString() const {
+		std::ostringstream ss;
+		for(AnnotationList::const_iterator it = getAnnotationListBegin(), end = getAnnotationListEnd(); it != end; ++it) {
+			(*it)->dump(ss);
+			if(it + 1 != end) { ss << "\\n"; }
+		}
+		return ss.str();
+	};
+
+	///----- ForClause -----
+	std::ostream& ForClause::dump(std::ostream& out) const {
+		if(hasLastPrivate()) { out << "lastprivate(" << join(",", *lastPrivateClause) << "), "; }
+		if(hasLastLocal()) { out << "lastlocal(" << join(",", *lastLocalClause) << "), "; }
+		if(hasSchedule()) { scheduleClause->dump(out) << ", "; }
+		if(hasCollapse()) { out << "collapse(" << *collapseExpr << "), "; }
+		if(hasNoWait()) { out << "nowait, "; }
+		SharedOMPP::dump(out);
+		return out;
+	}
+
+	///----- SharedOMPP -----
+	std::ostream& SharedOMPP::dump(std::ostream& out) const {
+		if(hasTarget()) { targetClause->dump(out) << ", "; }
+		if(hasObjective()) { objectiveClause->dump(out) << ", "; }
+		if(hasParam()) { paramClause->dump(out) << ", "; }
+		return out;
+	}
+
+	///----- SharedParallelAndTaskClause -----
+	std::ostream& SharedParallelAndTaskClause::dump(std::ostream& out) const {
+		if(hasIf()) { out << "if(" << *ifClause << "), "; }
+		if(hasDefault()) { defaultClause->dump(out) << ", "; }
+		if(hasShared()) { out << "shared(" << join(",", *sharedClause) << "), "; }
+		return out;
+	}
+
+	///----- ParallelClause -----
+	std::ostream& ParallelClause::dump(std::ostream& out) const {
+		SharedParallelAndTaskClause::dump(out) << ",";
+		if(hasNumThreads()) { out << "num_threads(" << *numThreadClause << "), "; }
+		if(hasCopyin()) { out << "copyin(" << join(",", *copyinClause) << "), "; }
+		return out;
+	}
+
+	///----- CommonClause -----
+	std::ostream& CommonClause::dump(std::ostream& out) const {
+		if(hasPrivate()) { out << "private(" << join(",", *privateClause) << "), "; }
+		if(hasFirstPrivate()) { out << "firstprivate(" << join(",", *firstPrivateClause) << "), "; }
+		if(hasLocal()) { out << "local(" << join(",", *localClause) << "), "; }
+		if(hasFirstLocal()) { out << "firstlocal(" << join(",", *firstLocalClause) << "), "; }
+		return out;
+	}
+
+	///----- Region -----
+	std::ostream& Region::dump(std::ostream& out) const {
+		out << "region(";
+		SharedOMPP::dump(out);
+		return out << ")";
+	}
+
+	///----- Parallel -----
+	std::ostream& Parallel::dump(std::ostream& out) const {
+		out << "parallel(";
+		CommonClause::dump(out);
+		ParallelClause::dump(out);
+		if(hasReduction()) { reductionClause->dump(out) << ", "; }
+		return out << ")";
+	}
+
+	///----- For -----
+	std::ostream& For::dump(std::ostream& out) const {
+		out << "for(";
+		CommonClause::dump(out);
+		ForClause::dump(out);
+		if(hasReduction()) { reductionClause->dump(out) << ", "; }
+		return out << ")";
+	}
+
+	///----- ParallelFor -----
+	std::ostream& ParallelFor::dump(std::ostream& out) const {
+		out << "parallel for(";
+		CommonClause::dump(out);
+		ParallelClause::dump(out);
+		ForClause::dump(out);
+		if(hasReduction()) { reductionClause->dump(out) << ", "; }
+		return out << ")";
+	}
+
+	///----- SectionClause -----
+	std::ostream& SectionClause::dump(std::ostream& out) const {
+		if(hasLastPrivate()) { out << "lastprivate(" << join(",", *lastPrivateClause) << "), "; }
+		if(hasReduction()) { reductionClause->dump(out) << ", "; }
+		if(hasNoWait()) { out << "nowait, "; }
+		return out;
+	}
+
+	///----- Sections -----
+	std::ostream& Sections::dump(std::ostream& out) const {
+		out << "sections(";
+		CommonClause::dump(out);
+		return SectionClause::dump(out) << ")";
+	}
+
+	///----- ParallelSections -----
+	std::ostream& ParallelSections::dump(std::ostream& out) const {
+		out << "parallel sections(";
+		CommonClause::dump(out);
+		ParallelClause::dump(out);
+		SectionClause::dump(out);
+		return out << ")";
+	}
+
+	///----- Single -----
+	std::ostream& Single::dump(std::ostream& out) const {
+		out << "single(";
+		CommonClause::dump(out);
+		if(hasCopyPrivate()) { out << "copyprivate(" << join(",", *copyPrivateClause) << "), "; }
+		if(hasNoWait()) { out << "nowait"; }
+		return out << ")";
+	}
+
+	///----- Task -----
+	std::ostream& Task::dump(std::ostream& out) const {
+		out << "task(";
+		CommonClause::dump(out);
+		SharedParallelAndTaskClause::dump(out);
+		if(hasUntied()) { out << "untied"; }
+		return out << ")";
+	}
+
+	///----- Critical -----
+	std::ostream& Critical::dump(std::ostream& out) const {
+		out << "critical";
+		if(hasName()) { out << "(" << name << ")"; }
+		return out;
+	}
+
+	///----- Flush -----
+	std::ostream& Flush::dump(std::ostream& out) const {
+		out << "flush";
+		if(hasVarList()) { out << "(" << join(",", *varList) << ")"; }
+		return out;
+	}
+
+	///----- ThreadPrivate -----
+	std::ostream& ThreadPrivate::dump(std::ostream& out) const {
+		return out << "threadprivate";
+	}
+
+
+	void replaceVars(core::ExpressionPtr& expr, core::NodeMap map) {
+		if(!expr) { return; }
+		core::NodeManager& mgr = expr->getNodeManager();
+		expr = core::transform::replaceAll(mgr, expr, map, core::transform::globalReplacement).as<core::ExpressionPtr>();
+	}
+
+	void replaceVars(VarListPtr& list, core::NodeMap map) {
+		if(!list) { return; }
+		for(core::ExpressionPtr& cur : *list) {
+			core::NodeManager& mgr = cur->getNodeManager();
+			cur = core::transform::replaceAll(mgr, cur, map, core::transform::globalReplacement).as<core::ExpressionPtr>();
 		}
 	}
-	return ss.str();
-};
-
-///----- ForClause -----
-std::ostream& ForClause::dump(std::ostream& out) const {
-	if(hasLastPrivate()) {
-		out << "lastprivate(" << join(",", *lastPrivateClause) << "), ";
-	}
-	if(hasLastLocal()) {
-		out << "lastlocal("   << join(",", *lastLocalClause)   << "), ";
-	}
-	if(hasSchedule()) {
-		scheduleClause->dump(out) << ", ";
-	}
-	if(hasCollapse()) {
-		out << "collapse(" << *collapseExpr << "), ";
-	}
-	if(hasNoWait()) {
-		out << "nowait, ";
-	}
-	SharedOMPP::dump(out);
-	return out;
-}
-
-///----- SharedOMPP -----
-std::ostream& SharedOMPP::dump(std::ostream& out) const {
-	if(hasTarget()) {
-		targetClause->dump(out) << ", ";
-	}
-	if(hasObjective()) {
-		objectiveClause->dump(out) << ", ";
-	}
-	if(hasParam()) {
-		paramClause->dump(out) << ", ";
-	}
-	return out;
-}
-
-///----- SharedParallelAndTaskClause -----
-std::ostream& SharedParallelAndTaskClause::dump(std::ostream& out) const {
-	if(hasIf()) {
-		out << "if(" << *ifClause << "), ";
-	}
-	if(hasDefault()) {
-		defaultClause->dump(out) << ", ";
-	}
-	if(hasShared()) {
-		out << "shared(" << join(",", *sharedClause) << "), ";
-	}
-	return out;
-}
-
-///----- ParallelClause -----
-std::ostream& ParallelClause::dump(std::ostream& out) const {
-	SharedParallelAndTaskClause::dump(out) << ",";
-	if(hasNumThreads()) {
-		out << "num_threads(" << *numThreadClause << "), ";
-	}
-	if(hasCopyin()) {
-		out << "copyin(" << join(",", *copyinClause) << "), ";
-	}
-	return out;
-}
-
-///----- CommonClause -----
-std::ostream& CommonClause::dump(std::ostream& out) const {
-	if(hasPrivate()) {
-		out << "private(" << join(",", *privateClause) << "), ";
-	}
-	if(hasFirstPrivate()) {
-		out << "firstprivate(" << join(",", *firstPrivateClause) << "), ";
-	}
-	if(hasLocal()) {
-		out << "local(" << join(",", *localClause) << "), ";
-	}
-	if(hasFirstLocal()) {
-		out << "firstlocal(" << join(",", *firstLocalClause) << "), ";
-	}
-	return out;
-}
-
-///----- Region -----
-std::ostream& Region::dump(std::ostream& out) const {
-	out << "region(";
-	SharedOMPP::dump(out);
-	return out << ")";
-}
-
-///----- Parallel -----
-std::ostream& Parallel::dump(std::ostream& out) const {
-	out << "parallel(";
-	CommonClause::dump(out);
-	ParallelClause::dump(out);
-	if(hasReduction()) {
-		reductionClause->dump(out) << ", ";
-	}
-	return out << ")";
-}
-
-///----- For -----
-std::ostream& For::dump(std::ostream& out) const {
-	out << "for(";
-	CommonClause::dump(out);
-	ForClause::dump(out);
-	if(hasReduction()) {
-		reductionClause->dump(out) << ", ";
-	}
-	return out << ")";
-}
-
-///----- ParallelFor -----
-std::ostream& ParallelFor::dump(std::ostream& out) const {
-	out << "parallel for(";
-	CommonClause::dump(out);
-	ParallelClause::dump(out);
-	ForClause::dump(out);
-	if(hasReduction()) {
-		reductionClause->dump(out) << ", ";
-	}
-	return out << ")";
-}
-
-///----- SectionClause -----
-std::ostream& SectionClause::dump(std::ostream& out) const {
-	if(hasLastPrivate()) {
-		out << "lastprivate(" << join(",", *lastPrivateClause) << "), ";
-	}
-	if(hasReduction()) {
-		reductionClause->dump(out) << ", ";
-	}
-	if(hasNoWait()) {
-		out << "nowait, ";
-	}
-	return out;
-}
-
-///----- Sections -----
-std::ostream& Sections::dump(std::ostream& out) const {
-	out << "sections(";
-	CommonClause::dump(out);
-	return SectionClause::dump(out) << ")";
-}
-
-///----- ParallelSections -----
-std::ostream& ParallelSections::dump(std::ostream& out) const {
-	out << "parallel sections(";
-	CommonClause::dump(out);
-	ParallelClause::dump(out);
-	SectionClause::dump(out);
-	return out << ")";
-}
-
-///----- Single -----
-std::ostream& Single::dump(std::ostream& out) const {
-	out << "single(";
-	CommonClause::dump(out);
-	if(hasCopyPrivate()) {
-		out << "copyprivate(" << join(",", *copyPrivateClause) << "), ";
-	}
-	if(hasNoWait()) {
-		out << "nowait";
-	}
-	return out << ")";
-}
-
-///----- Task -----
-std::ostream& Task::dump(std::ostream& out) const {
-	out << "task(";
-	CommonClause::dump(out);
-	SharedParallelAndTaskClause::dump(out);
-	if(hasUntied()) {
-		out << "untied";
-	}
-	return out << ")";
-}
-
-///----- Critical -----
-std::ostream& Critical::dump(std::ostream& out) const {
-	out << "critical";
-	if(hasName()) {
-		out << "(" << name << ")";
-	}
-	return out;
-}
-
-///----- Flush -----
-std::ostream& Flush::dump(std::ostream& out) const {
-	out << "flush";
-	if(hasVarList()) {
-		out << "(" << join(",", *varList) << ")";
-	}
-	return out;
-}
-
-///----- ThreadPrivate -----
-std::ostream& ThreadPrivate::dump(std::ostream& out) const {
-	return out << "threadprivate";
-}
-
-
-void replaceVars(core::ExpressionPtr& expr, core::NodeMap map) {
-	if(!expr) {
-		return;
-	}
-	core::NodeManager& mgr =  expr->getNodeManager();
-	expr = core::transform::replaceAll(mgr, expr, map, core::transform::globalReplacement).as<core::ExpressionPtr>();
-}
-
-void replaceVars(VarListPtr& list, core::NodeMap map) {
-	if(!list) {
-		return;
-	}
-	for(core::ExpressionPtr& cur : *list) {
-		core::NodeManager& mgr =  cur->getNodeManager();
-		cur = core::transform::replaceAll(mgr, cur, map, core::transform::globalReplacement).as<core::ExpressionPtr>();
-	}
-}
 
 
 } // End omp namespace
@@ -278,8 +216,8 @@ void replaceVars(VarListPtr& list, core::NodeMap map) {
 } // End insieme namespace
 
 namespace std {
-ostream& operator<<(ostream& os, const insieme::frontend::omp::Annotation& ann) {
-	ann.dump(os);
-	return os;
-}
+	ostream& operator<<(ostream& os, const insieme::frontend::omp::Annotation& ann) {
+		ann.dump(os);
+		return os;
+	}
 }

@@ -42,30 +42,31 @@ namespace insieme {
 namespace core {
 
 
-std::ostream& DeclarationStmt::printTo(std::ostream& out) const {
-	return out << *getVariable()->getType() << " " << *getVariable() << " = " << *getInitialization();
-}
+	std::ostream& DeclarationStmt::printTo(std::ostream& out) const {
+		return out << *getVariable()->getType() << " " << *getVariable() << " = " << *getInitialization();
+	}
 
-std::ostream& ForStmt::printTo(std::ostream& out) const {
-	return out << "for(" << *getIterator()->getType() << " " << *getIterator() << " = " << *getStart() << " .. " << *getEnd() << " : " << *getStep() << ") " <<
-	       *getBody();
-}
+	std::ostream& ForStmt::printTo(std::ostream& out) const {
+		return out << "for(" << *getIterator()->getType() << " " << *getIterator() << " = " << *getStart() << " .. " << *getEnd() << " : " << *getStep() << ") "
+		           << *getBody();
+	}
 
-std::ostream& SwitchCase::printTo(std::ostream& out) const {
-	return out << "case " << *getGuard() << ": " << *getBody();
-}
+	std::ostream& SwitchCase::printTo(std::ostream& out) const {
+		return out << "case " << *getGuard() << ": " << *getBody();
+	}
 
-std::ostream& SwitchStmt::printTo(std::ostream& out) const {
-	return out << "switch(" << *getSwitchExpr() << ") [ " << *getCases() << ((getCases()->empty())?" ":" | ") << "default: " << *getDefaultCase() << " ]";
-}
+	std::ostream& SwitchStmt::printTo(std::ostream& out) const {
+		return out << "switch(" << *getSwitchExpr() << ") [ " << *getCases() << ((getCases()->empty()) ? " " : " | ") << "default: " << *getDefaultCase()
+		           << " ]";
+	}
 
-std::ostream& CatchClause::printTo(std::ostream& out) const {
-	return out << "catch (" << *getVariable()->getType() << " " << *getVariable() << ") " << *getBody();
-}
+	std::ostream& CatchClause::printTo(std::ostream& out) const {
+		return out << "catch (" << *getVariable()->getType() << " " << *getVariable() << ") " << *getBody();
+	}
 
-std::ostream& TryCatchStmt::printTo(std::ostream& out) const {
-	return out << "try " << *getBody() << " " << join(" ", getClauses(), print<deref<CatchClausePtr>>());
-}
+	std::ostream& TryCatchStmt::printTo(std::ostream& out) const {
+		return out << "try " << *getBody() << " " << join(" ", getClauses(), print<deref<CatchClausePtr>>());
+	}
 
 } // end namespace core
 } // end namespace insieme

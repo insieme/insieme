@@ -59,7 +59,7 @@ using namespace insieme::core::printer;
 TEST(ErrorPrinter, address) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
-	
+
 	auto addrs = builder.parseAddressesStatement(R"1N5P1RE(
 		{
 			let fun = lambda (int<4> arg)->int<4> { return arg + 1; };
@@ -85,53 +85,47 @@ TEST(ErrorPrinter, address) {
 		}
 	)1N5P1RE");
 	EXPECT_EQ(5, addrs.size());
-	
+
 	auto stmt = addrs[0].getRootNode();
-	
+
 	struct AddressPlug : public PrinterPlugin {
-	
 		const NodePtr& root;
 		const std::vector<NodeAddress>& addresses;
 		mutable std::vector<std::string> nextLineMessages;
-		
-		AddressPlug(const NodePtr& root, const std::vector<NodeAddress>& addresses)
-			:root(root), addresses(addresses) {
-			
+
+		AddressPlug(const NodePtr& root, const std::vector<NodeAddress>& addresses) : root(root), addresses(addresses) {
 			// add annotations for every node in the error list
 			visitDepthFirst(NodeAddress(root), [&](const NodeAddress& cur) {
 				if(std::find(addresses.begin(), addresses.end(), cur) != addresses.end()) {
-					annotations::attachError(cur.getAddressedNode(),"Addressed Node");
+					annotations::attachError(cur.getAddressedNode(), "Addressed Node");
 				}
 			});
 		}
-		
+
 		bool covers(const NodePtr& n) const {
-		
-			if(annotations::hasAttachedError(n)) {
-				return true;
-			}
-			
+			if(annotations::hasAttachedError(n)) { return true; }
+
 			return false;
 		}
-		
+
 		std::ostream& print(std::ostream& out, const NodePtr& n, const std::function<void(const NodePtr&)>& f) const {
-			static const std::string RED	="\033[31m";
-			static const std::string RESET	="\033[0m";
-			static const std::string GREY	="\033[37m";
-			
+			static const std::string RED = "\033[31m";
+			static const std::string RESET = "\033[0m";
+			static const std::string GREY = "\033[37m";
+
 			assert_true(annotations::hasAttachedError(n));
-			
+
 			// get and attach next line error
 			auto error = annotations::getAttachedError(n);
-			
-			nextLineMessages.push_back(GREY + error  + RESET);
-			
+
+			nextLineMessages.push_back(GREY + error + RESET);
+
 			out << RED;
 			out << PrettyPrinter(n);
 			out << RESET;
 			return out;
 		}
-		
+
 		virtual std::ostream& afterNewLine(std::ostream& out) const {
 			for(unsigned i = 0; i < nextLineMessages.size(); ++i) {
 				out << format("%s\n", nextLineMessages[i]);
@@ -140,30 +134,29 @@ TEST(ErrorPrinter, address) {
 			return out;
 		}
 	};
-	
+
 	AddressPlug plug(stmt, addrs);
-	
+
 	PrettyPrinter p(stmt, plug);
 	std::cout << p << std::endl;
-	
 }
 
 TEST(ErrorPrinter, error) {
-
 	NodeManager mgr;
 	IRBuilder builder(mgr);
-	
+
 	auto valueType = builder.getLangBasic().getInt4();
-	auto var       = builder.variable(valueType);
-	auto expr      = builder.literal("1", valueType);
-	auto stmt      = builder.callExpr(mgr.getLangBasic().getUnit(), mgr.getLangExtension<lang::ReferenceExtension>().getRefAssign(), var, expr);
-	
+	auto var = builder.variable(valueType);
+	auto expr = builder.literal("1", valueType);
+	auto stmt = builder.callExpr(mgr.getLangBasic().getUnit(), mgr.getLangExtension<lang::ReferenceExtension>().getRefAssign(), var, expr);
+
 	auto msgs = checks::check(stmt);
-	
+
 	std::stringstream ss;
-	dumpErrors(msgs,ss);
-	EXPECT_EQ("\x1B[33m(v1 := 1)\x1B[0m\n\x1B[31mERROR: \x1B[37mInvalid argument type(s) \nexpected: \n\t(sink<'a>,'a)\nactual: \n\t(int<4>,int<4>)\nfunction type: \n\t((sink<'a>,'a)->unit)\x1B[0m\n\n\n\n",
+	dumpErrors(msgs, ss);
+	EXPECT_EQ("\x1B[33m(v1 := 1)\x1B[0m\n\x1B[31mERROR: \x1B[37mInvalid argument type(s) \nexpected: \n\t(sink<'a>,'a)\nactual: \n\t(int<4>,int<4>)\nfunction "
+	          "type: \n\t((sink<'a>,'a)->unit)\x1B[0m\n\n\n\n",
 	          ss.str());
-	          
-	std::cout << ss.str() <<std::endl;
+
+	std::cout << ss.str() << std::endl;
 }

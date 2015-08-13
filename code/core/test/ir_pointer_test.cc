@@ -43,29 +43,26 @@
 namespace insieme {
 namespace core {
 
-TEST(NodePointer, DynamicCast) {
+	TEST(NodePointer, DynamicCast) {
+		NodeManager manager;
+		IRBuilder builder(manager);
 
-	NodeManager manager;
-	IRBuilder builder(manager);
-	
-	NodePtr a = builder.intLit(12);
-	
-	// this should work
-	EXPECT_TRUE(a.isa<ExpressionPtr>());
-	a.as<ExpressionPtr>();
-	
-	// this should also work
-	EXPECT_TRUE(a.isa<LiteralPtr>());
-	a.as<LiteralPtr>();
-	
-	EXPECT_EQ("Literal", toString(node_type<Literal>::getName()));
-	
-	// this should not work
-	// a.as<CallExprPtr>();
-	
-}
+		NodePtr a = builder.intLit(12);
+
+		// this should work
+		EXPECT_TRUE(a.isa<ExpressionPtr>());
+		a.as<ExpressionPtr>();
+
+		// this should also work
+		EXPECT_TRUE(a.isa<LiteralPtr>());
+		a.as<LiteralPtr>();
+
+		EXPECT_EQ("Literal", toString(node_type<Literal>::getName()));
+
+		// this should not work
+		// a.as<CallExprPtr>();
+	}
 
 
 } // end namespace core
 } // end namespace insieme
-

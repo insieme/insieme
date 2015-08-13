@@ -43,196 +43,188 @@ namespace insieme {
 namespace core {
 namespace checks {
 
-bool containsMSG(const MessageList& list, const Message& msg) {
-	return contains(list.getAll(), msg);
-}
-
-TEST(UndeclaredVariableCheck, Basic) {
-	NodeManager manager;
-	IRBuilder builder(manager);
-	
-	// OK ... create a function literal
-	TypePtr type = builder.genericType("int");
-	VariablePtr varA = builder.variable(type);
-	VariablePtr varB = builder.variable(type);
-	
-	ExpressionPtr init = builder.literal(type, "4");
-	
-	FunctionTypePtr funType = builder.functionType(TypeList(), type);
-	
-	NodePtr ok = builder.lambdaExpr(funType, toVector<VariablePtr>(), builder.declarationStmt(varA, init));
-	NodePtr err = builder.lambdaExpr(funType, toVector<VariablePtr>(), builder.declarationStmt(varA, varB));
-	
-	
-	CheckPtr typeCheck = makeRecursive(make_check<UndeclaredVariableCheck>());
-	EXPECT_TRUE(check(ok, typeCheck).empty());
-	ASSERT_FALSE(check(err, typeCheck).empty());
-	
-	NodeAddress errorAdr = NodeAddress(err).getAddressOfChild(2,0,1,2,0,1);
-	EXPECT_PRED2(containsMSG, check(err,typeCheck), Message(errorAdr, EC_IMPERATIVE_UNDECLARED_VARIABLE_USAGE, "", Message::ERROR));
-}
-
-
-namespace {
-
-LambdaDefinitionPtr wrap(StatementPtr body) {
-	NodeManager& manager = body->getNodeManager();
-	IRBuilder builder(manager);
-	
-	// construct lambda
-	FunctionTypePtr funType = builder.functionType(toVector<TypePtr>(), manager.getLangBasic().getUnit());
-	VariablePtr var = builder.variable(funType);
-	LambdaPtr lambda = builder.lambda(funType, toVector<VariablePtr>(), body);
-	
-	// create and lambda definitions
-	return LambdaDefinition::get(manager, toVector(LambdaBinding::get(manager, var, lambda)));
-}
-
-bool isUndeclaredVariableError(const MessageList& msgs, const NodePtr& target) {
-
-	bool res = true;
-	res = res && static_cast<std::size_t>(1) == msgs.size();
-	if(!res) {
-		return res;
+	bool containsMSG(const MessageList& list, const Message& msg) {
+		return contains(list.getAll(), msg);
 	}
-	
-	EXPECT_EQ(EC_IMPERATIVE_UNDECLARED_VARIABLE_USAGE, msgs[0].getErrorCode());
-	res = res && msgs[0].getErrorCode() == EC_IMPERATIVE_UNDECLARED_VARIABLE_USAGE;
-	
-	EXPECT_EQ(*target, *msgs[0].getOrigin());
-	res = res && *msgs[0].getOrigin() == *target;
-	return res;
-}
 
-}
+	TEST(UndeclaredVariableCheck, Basic) {
+		NodeManager manager;
+		IRBuilder builder(manager);
 
-TEST(UndeclaredVariableCheck, CompoundStmt) {
-	NodeManager manager;
-	IRBuilder builder(manager);
-	
-	TypePtr type = builder.genericType("A");
-	VariablePtr varA = builder.variable(type, 1);
-	VariablePtr varB = builder.variable(type, 2);
-	
-	DeclarationStmtPtr declA = builder.declarationStmt(varA, builder.literal(type, "X"));
-	DeclarationStmtPtr declB = builder.declarationStmt(varB, builder.literal(type, "X"));
-	
-	StatementPtr useA = varA;
-	StatementPtr useB = varB;
-	
-	CheckPtr scopeChecker = makeRecursive(make_check<UndeclaredVariableCheck>());
-	
-	// create compound statement combinations
-	StatementPtr ok1 = builder.compoundStmt(declA, varA);
-	StatementPtr ok2 = builder.compoundStmt(declB, varB);
-	StatementPtr ok3 = builder.compoundStmt(declA, ok2, varA);
-	
-	EXPECT_EQ("{A v1 = X; v1;}", toString(*ok1));
-	EXPECT_EQ("{A v2 = X; v2;}", toString(*ok2));
-	EXPECT_EQ("{A v1 = X; {A v2 = X; v2;}; v1;}", toString(*ok3));
-	
-	EXPECT_TRUE(check(wrap(ok1), scopeChecker).empty());
-	EXPECT_TRUE(check(wrap(ok2), scopeChecker).empty());
-	EXPECT_TRUE(check(wrap(ok3), scopeChecker).empty());
-	
-	
-	// create some illegal setups
-	StatementPtr err = builder.compoundStmt(declA, varB);
-	EXPECT_EQ("{A v1 = X; v2;}", toString(*err));
-	EXPECT_FALSE(check(wrap(err), scopeChecker).empty());
-	EXPECT_PRED2(isUndeclaredVariableError, check(wrap(err),scopeChecker), varB);
-	
-	err = builder.compoundStmt(builder.compoundStmt(declA, varA), varB);
-	EXPECT_EQ("{{A v1 = X; v1;}; v2;}", toString(*err));
-	EXPECT_FALSE(check(wrap(err), scopeChecker).empty());
-	EXPECT_PRED2(isUndeclaredVariableError, check(wrap(err),scopeChecker), varB);
-	
-	err = builder.compoundStmt(builder.compoundStmt(declA, varB));
-	EXPECT_EQ("{{A v1 = X; v2;};}", toString(*err));
-	EXPECT_FALSE(check(wrap(err), scopeChecker).empty());
-	EXPECT_PRED2(isUndeclaredVariableError, check(wrap(err),scopeChecker), varB);
-	
-	err = builder.compoundStmt(builder.compoundStmt(declA), varA);
-	EXPECT_EQ("{{A v1 = X;}; v1;}", toString(*err));
-	EXPECT_FALSE(check(wrap(err), scopeChecker).empty());
-	EXPECT_PRED2(isUndeclaredVariableError, check(wrap(err),scopeChecker), varA);
-}
+		// OK ... create a function literal
+		TypePtr type = builder.genericType("int");
+		VariablePtr varA = builder.variable(type);
+		VariablePtr varB = builder.variable(type);
 
-TEST(UndeclaredVariableCheck, BindExpr) {
-	NodeManager manager;
-	IRBuilder builder(manager);
-	
-	TypePtr type = builder.genericType("A");
-	VariablePtr varA = builder.variable(type, 1);
-	VariablePtr varB = builder.variable(type, 2);
-	
-	DeclarationStmtPtr declA = builder.declarationStmt(varA, builder.literal(type, "X"));
-	DeclarationStmtPtr declB = builder.declarationStmt(varB, builder.literal(type, "X"));
-	
-	LiteralPtr fun0 = builder.literal(builder.functionType(toVector<TypePtr>(), type), "f");
-	LiteralPtr fun1 = builder.literal(builder.functionType(toVector(type), type), "f");
-	LiteralPtr fun2 = builder.literal(builder.functionType(toVector(type, type), type), "f");
-	
-	StatementPtr useA = varA;
-	StatementPtr useB = varB;
-	
-	BindExprPtr bind00 = builder.bindExpr(toVector<VariablePtr>(), builder.callExpr(fun0, toVector<ExpressionPtr>()));
-	BindExprPtr bind01 = builder.bindExpr(toVector<VariablePtr>(), builder.callExpr(fun1, toVector<ExpressionPtr>(builder.literal(type, "12"))));
-	BindExprPtr bind11a = builder.bindExpr(toVector<VariablePtr>(varA), builder.callExpr(fun1, toVector<ExpressionPtr>(varA)));
-	BindExprPtr bind11b = builder.bindExpr(toVector<VariablePtr>(varA), builder.callExpr(fun1, toVector<ExpressionPtr>(varB)));
-	BindExprPtr bind11c = builder.bindExpr(toVector<VariablePtr>(varA), builder.callExpr(fun1, toVector<ExpressionPtr>(builder.callExpr(fun1, varA))));
-	BindExprPtr bind21 = builder.bindExpr(toVector<VariablePtr>(varA), builder.callExpr(fun2, toVector<ExpressionPtr>(varA, varB)));
-	
-	
-	CheckPtr scopeChecker = makeRecursive(make_check<UndeclaredVariableCheck>());
-	
-	StatementPtr cur;
-	cur = builder.compoundStmt(bind00);
-	EXPECT_EQ("{bind(){f()};}", toString(*cur));
-	EXPECT_TRUE(check(wrap(cur), scopeChecker).empty());
-	
-	cur = builder.compoundStmt(bind01);
-	EXPECT_EQ("{bind(){f(12)};}", toString(*cur));
-	EXPECT_TRUE(check(wrap(cur), scopeChecker).empty());
-	
-	cur = builder.compoundStmt(bind11a);
-	EXPECT_EQ("{bind(v1){f(v1)};}", toString(*cur));
-	EXPECT_TRUE(check(wrap(cur), scopeChecker).empty());
-	
-	cur = builder.compoundStmt(bind11b);
-	EXPECT_EQ("{bind(v1){f(v2)};}", toString(*cur));
-	EXPECT_FALSE(check(wrap(cur), scopeChecker).empty());
-	EXPECT_PRED2(isUndeclaredVariableError, check(wrap(cur),scopeChecker), varB);
-	
-	cur = builder.compoundStmt(bind11c);
-	EXPECT_EQ("{bind(v1){f(f(v1))};}", toString(*cur));
-	EXPECT_FALSE(check(wrap(cur), scopeChecker).empty());
-	EXPECT_PRED2(isUndeclaredVariableError, check(wrap(cur),scopeChecker), varA);
-	
-	cur = builder.compoundStmt(bind21);
-	EXPECT_EQ("{bind(v1){f(v1, v2)};}", toString(*cur));
-	EXPECT_FALSE(check(wrap(cur), scopeChecker).empty());
-	EXPECT_PRED2(isUndeclaredVariableError, check(wrap(cur),scopeChecker), varB);
-	
-	cur = builder.compoundStmt(declB, bind21);
-	EXPECT_EQ("{A v2 = X; bind(v1){f(v1, v2)};}", toString(*cur));
-	EXPECT_TRUE(check(wrap(cur), scopeChecker).empty());
-	
-}
+		ExpressionPtr init = builder.literal(type, "4");
 
-TEST(UndeclaredVariableCheck, JobExpr) {
+		FunctionTypePtr funType = builder.functionType(TypeList(), type);
 
-	// TODO: implement these checks!
-	
-}
+		NodePtr ok = builder.lambdaExpr(funType, toVector<VariablePtr>(), builder.declarationStmt(varA, init));
+		NodePtr err = builder.lambdaExpr(funType, toVector<VariablePtr>(), builder.declarationStmt(varA, varB));
 
-TEST(UndeclaredVariableCheck, Exceptions) {
 
-	NodeManager manager;
-	IRBuilder builder(manager);
-	
-	auto code = builder.normalize(builder.parseStmt(
-	                                  R"(
+		CheckPtr typeCheck = makeRecursive(make_check<UndeclaredVariableCheck>());
+		EXPECT_TRUE(check(ok, typeCheck).empty());
+		ASSERT_FALSE(check(err, typeCheck).empty());
+
+		NodeAddress errorAdr = NodeAddress(err).getAddressOfChild(2, 0, 1, 2, 0, 1);
+		EXPECT_PRED2(containsMSG, check(err, typeCheck), Message(errorAdr, EC_IMPERATIVE_UNDECLARED_VARIABLE_USAGE, "", Message::ERROR));
+	}
+
+
+	namespace {
+
+		LambdaDefinitionPtr wrap(StatementPtr body) {
+			NodeManager& manager = body->getNodeManager();
+			IRBuilder builder(manager);
+
+			// construct lambda
+			FunctionTypePtr funType = builder.functionType(toVector<TypePtr>(), manager.getLangBasic().getUnit());
+			VariablePtr var = builder.variable(funType);
+			LambdaPtr lambda = builder.lambda(funType, toVector<VariablePtr>(), body);
+
+			// create and lambda definitions
+			return LambdaDefinition::get(manager, toVector(LambdaBinding::get(manager, var, lambda)));
+		}
+
+		bool isUndeclaredVariableError(const MessageList& msgs, const NodePtr& target) {
+			bool res = true;
+			res = res && static_cast<std::size_t>(1) == msgs.size();
+			if(!res) { return res; }
+
+			EXPECT_EQ(EC_IMPERATIVE_UNDECLARED_VARIABLE_USAGE, msgs[0].getErrorCode());
+			res = res && msgs[0].getErrorCode() == EC_IMPERATIVE_UNDECLARED_VARIABLE_USAGE;
+
+			EXPECT_EQ(*target, *msgs[0].getOrigin());
+			res = res && *msgs[0].getOrigin() == *target;
+			return res;
+		}
+	}
+
+	TEST(UndeclaredVariableCheck, CompoundStmt) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		TypePtr type = builder.genericType("A");
+		VariablePtr varA = builder.variable(type, 1);
+		VariablePtr varB = builder.variable(type, 2);
+
+		DeclarationStmtPtr declA = builder.declarationStmt(varA, builder.literal(type, "X"));
+		DeclarationStmtPtr declB = builder.declarationStmt(varB, builder.literal(type, "X"));
+
+		StatementPtr useA = varA;
+		StatementPtr useB = varB;
+
+		CheckPtr scopeChecker = makeRecursive(make_check<UndeclaredVariableCheck>());
+
+		// create compound statement combinations
+		StatementPtr ok1 = builder.compoundStmt(declA, varA);
+		StatementPtr ok2 = builder.compoundStmt(declB, varB);
+		StatementPtr ok3 = builder.compoundStmt(declA, ok2, varA);
+
+		EXPECT_EQ("{A v1 = X; v1;}", toString(*ok1));
+		EXPECT_EQ("{A v2 = X; v2;}", toString(*ok2));
+		EXPECT_EQ("{A v1 = X; {A v2 = X; v2;}; v1;}", toString(*ok3));
+
+		EXPECT_TRUE(check(wrap(ok1), scopeChecker).empty());
+		EXPECT_TRUE(check(wrap(ok2), scopeChecker).empty());
+		EXPECT_TRUE(check(wrap(ok3), scopeChecker).empty());
+
+
+		// create some illegal setups
+		StatementPtr err = builder.compoundStmt(declA, varB);
+		EXPECT_EQ("{A v1 = X; v2;}", toString(*err));
+		EXPECT_FALSE(check(wrap(err), scopeChecker).empty());
+		EXPECT_PRED2(isUndeclaredVariableError, check(wrap(err), scopeChecker), varB);
+
+		err = builder.compoundStmt(builder.compoundStmt(declA, varA), varB);
+		EXPECT_EQ("{{A v1 = X; v1;}; v2;}", toString(*err));
+		EXPECT_FALSE(check(wrap(err), scopeChecker).empty());
+		EXPECT_PRED2(isUndeclaredVariableError, check(wrap(err), scopeChecker), varB);
+
+		err = builder.compoundStmt(builder.compoundStmt(declA, varB));
+		EXPECT_EQ("{{A v1 = X; v2;};}", toString(*err));
+		EXPECT_FALSE(check(wrap(err), scopeChecker).empty());
+		EXPECT_PRED2(isUndeclaredVariableError, check(wrap(err), scopeChecker), varB);
+
+		err = builder.compoundStmt(builder.compoundStmt(declA), varA);
+		EXPECT_EQ("{{A v1 = X;}; v1;}", toString(*err));
+		EXPECT_FALSE(check(wrap(err), scopeChecker).empty());
+		EXPECT_PRED2(isUndeclaredVariableError, check(wrap(err), scopeChecker), varA);
+	}
+
+	TEST(UndeclaredVariableCheck, BindExpr) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		TypePtr type = builder.genericType("A");
+		VariablePtr varA = builder.variable(type, 1);
+		VariablePtr varB = builder.variable(type, 2);
+
+		DeclarationStmtPtr declA = builder.declarationStmt(varA, builder.literal(type, "X"));
+		DeclarationStmtPtr declB = builder.declarationStmt(varB, builder.literal(type, "X"));
+
+		LiteralPtr fun0 = builder.literal(builder.functionType(toVector<TypePtr>(), type), "f");
+		LiteralPtr fun1 = builder.literal(builder.functionType(toVector(type), type), "f");
+		LiteralPtr fun2 = builder.literal(builder.functionType(toVector(type, type), type), "f");
+
+		StatementPtr useA = varA;
+		StatementPtr useB = varB;
+
+		BindExprPtr bind00 = builder.bindExpr(toVector<VariablePtr>(), builder.callExpr(fun0, toVector<ExpressionPtr>()));
+		BindExprPtr bind01 = builder.bindExpr(toVector<VariablePtr>(), builder.callExpr(fun1, toVector<ExpressionPtr>(builder.literal(type, "12"))));
+		BindExprPtr bind11a = builder.bindExpr(toVector<VariablePtr>(varA), builder.callExpr(fun1, toVector<ExpressionPtr>(varA)));
+		BindExprPtr bind11b = builder.bindExpr(toVector<VariablePtr>(varA), builder.callExpr(fun1, toVector<ExpressionPtr>(varB)));
+		BindExprPtr bind11c = builder.bindExpr(toVector<VariablePtr>(varA), builder.callExpr(fun1, toVector<ExpressionPtr>(builder.callExpr(fun1, varA))));
+		BindExprPtr bind21 = builder.bindExpr(toVector<VariablePtr>(varA), builder.callExpr(fun2, toVector<ExpressionPtr>(varA, varB)));
+
+
+		CheckPtr scopeChecker = makeRecursive(make_check<UndeclaredVariableCheck>());
+
+		StatementPtr cur;
+		cur = builder.compoundStmt(bind00);
+		EXPECT_EQ("{bind(){f()};}", toString(*cur));
+		EXPECT_TRUE(check(wrap(cur), scopeChecker).empty());
+
+		cur = builder.compoundStmt(bind01);
+		EXPECT_EQ("{bind(){f(12)};}", toString(*cur));
+		EXPECT_TRUE(check(wrap(cur), scopeChecker).empty());
+
+		cur = builder.compoundStmt(bind11a);
+		EXPECT_EQ("{bind(v1){f(v1)};}", toString(*cur));
+		EXPECT_TRUE(check(wrap(cur), scopeChecker).empty());
+
+		cur = builder.compoundStmt(bind11b);
+		EXPECT_EQ("{bind(v1){f(v2)};}", toString(*cur));
+		EXPECT_FALSE(check(wrap(cur), scopeChecker).empty());
+		EXPECT_PRED2(isUndeclaredVariableError, check(wrap(cur), scopeChecker), varB);
+
+		cur = builder.compoundStmt(bind11c);
+		EXPECT_EQ("{bind(v1){f(f(v1))};}", toString(*cur));
+		EXPECT_FALSE(check(wrap(cur), scopeChecker).empty());
+		EXPECT_PRED2(isUndeclaredVariableError, check(wrap(cur), scopeChecker), varA);
+
+		cur = builder.compoundStmt(bind21);
+		EXPECT_EQ("{bind(v1){f(v1, v2)};}", toString(*cur));
+		EXPECT_FALSE(check(wrap(cur), scopeChecker).empty());
+		EXPECT_PRED2(isUndeclaredVariableError, check(wrap(cur), scopeChecker), varB);
+
+		cur = builder.compoundStmt(declB, bind21);
+		EXPECT_EQ("{A v2 = X; bind(v1){f(v1, v2)};}", toString(*cur));
+		EXPECT_TRUE(check(wrap(cur), scopeChecker).empty());
+	}
+
+	TEST(UndeclaredVariableCheck, JobExpr) {
+		// TODO: implement these checks!
+	}
+
+	TEST(UndeclaredVariableCheck, Exceptions) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		auto code = builder.normalize(builder.parseStmt(
+		    R"(
 			
 			try {
 
@@ -242,15 +234,13 @@ TEST(UndeclaredVariableCheck, Exceptions) {
 			
 			)"));
 
-	ASSERT_TRUE(code);
-	
-	CheckPtr scopeChecker = makeRecursive(make_check<UndeclaredVariableCheck>());
-	
-	EXPECT_TRUE(check(wrap(code), scopeChecker).empty()) << check(wrap(code), scopeChecker);
-	
-}
+		ASSERT_TRUE(code);
+
+		CheckPtr scopeChecker = makeRecursive(make_check<UndeclaredVariableCheck>());
+
+		EXPECT_TRUE(check(wrap(code), scopeChecker).empty()) << check(wrap(code), scopeChecker);
+	}
 
 } // end namespace checks
 } // end namespace core
 } // end namespace insieme
-

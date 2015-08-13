@@ -42,18 +42,15 @@ namespace insieme {
 namespace backend {
 namespace runtime {
 
-namespace {
+	namespace {
 
-c_ast::NodePtr handleStmts(ConversionContext& context, const core::NodePtr& node) {
+		c_ast::NodePtr handleStmts(ConversionContext& context, const core::NodePtr& node) {
+			// let somebody else resolve this node
+			return 0;
+		}
+	}
 
-	// let somebody else resolve this node
-	return 0;
-	
-}
-
-}
-
-StmtHandler RuntimeStmtHandler = &handleStmts;
+	StmtHandler RuntimeStmtHandler = &handleStmts;
 
 } // end namespace runtime
 } // end namespace backend

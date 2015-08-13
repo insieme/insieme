@@ -3,5 +3,5 @@
 
 
 int main() {
-	std::string input ="Hello, this is a weird traits dependent constructor";
+	std::string input = "Hello, this is a weird traits dependent constructor";
 }

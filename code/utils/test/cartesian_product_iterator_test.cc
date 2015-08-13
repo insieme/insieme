@@ -46,132 +46,97 @@
 namespace insieme {
 namespace utils {
 
-using namespace std;
+	using namespace std;
 
-TEST(CartesianProductIterator, Simple) {
+	TEST(CartesianProductIterator, Simple) {
+		// create some input data
+		vector<vector<int>> data = {{1, 2}, {3, 4}};
 
-	// create some input data
-	vector<vector<int>> data = {
-		{1,2},
-		{3,4}
-	};
-	
-	auto start = cartesian_product_begin(data);
-	auto end = cartesian_product_end(data);
-	
-	
-	auto cur = start;
-	EXPECT_EQ("[1,3]", toString(*cur));
-	cur++;
-	EXPECT_NE(cur, end);
-	
-	EXPECT_EQ("[2,3]", toString(*cur));
-	cur++;
-	EXPECT_NE(cur, end);
-	
-	EXPECT_EQ("[1,4]", toString(*cur));
-	cur++;
-	EXPECT_NE(cur, end);
-	
-	EXPECT_EQ("[2,4]", toString(*cur));
-	cur++;
-	EXPECT_EQ(cur, end);
-	
-	EXPECT_EQ(start, start);
-	EXPECT_EQ(end, end);
-	EXPECT_NE(start, end);
-	
-}
+		auto start = cartesian_product_begin(data);
+		auto end = cartesian_product_end(data);
 
-TEST(CartesianProductIterator, Range) {
 
-	// create some input data
-	vector<vector<int>> data = {
-		{1,2},
-		{3,4},
-		{5,6,7}
-	};
-	
-	set<vector<int>> product;
-	for(auto cur : cartesian_product(data)) {
-		product.insert(cur);
+		auto cur = start;
+		EXPECT_EQ("[1,3]", toString(*cur));
+		cur++;
+		EXPECT_NE(cur, end);
+
+		EXPECT_EQ("[2,3]", toString(*cur));
+		cur++;
+		EXPECT_NE(cur, end);
+
+		EXPECT_EQ("[1,4]", toString(*cur));
+		cur++;
+		EXPECT_NE(cur, end);
+
+		EXPECT_EQ("[2,4]", toString(*cur));
+		cur++;
+		EXPECT_EQ(cur, end);
+
+		EXPECT_EQ(start, start);
+		EXPECT_EQ(end, end);
+		EXPECT_NE(start, end);
 	}
-	
-	EXPECT_EQ(12u, product.size());
-	
-}
 
-TEST(CartesianProductIterator, Range2) {
+	TEST(CartesianProductIterator, Range) {
+		// create some input data
+		vector<vector<int>> data = {{1, 2}, {3, 4}, {5, 6, 7}};
 
-	// create some input data
-	set<set<int>> data = {
-		{1,2},
-		{3,4},
-		{5,6,7}
-	};
-	
-	set<vector<int>> product;
-	for(auto cur : cartesian_product(data)) {
-		product.insert(cur);
+		set<vector<int>> product;
+		for(auto cur : cartesian_product(data)) {
+			product.insert(cur);
+		}
+
+		EXPECT_EQ(12u, product.size());
 	}
-	
-	EXPECT_EQ(12u, product.size());
-	
-}
 
-TEST(CartesianProductIterator, Range3) {
+	TEST(CartesianProductIterator, Range2) {
+		// create some input data
+		set<set<int>> data = {{1, 2}, {3, 4}, {5, 6, 7}};
 
-	// create some input data
-	vector<set<int>> data = {
-		{1,2},
-		{3,4},
-		{5,6,7}
-	};
-	
-	set<vector<int>> product;
-	for(auto cur : cartesian_product(data)) {
-		product.insert(cur);
+		set<vector<int>> product;
+		for(auto cur : cartesian_product(data)) {
+			product.insert(cur);
+		}
+
+		EXPECT_EQ(12u, product.size());
 	}
-	
-	EXPECT_EQ(12u, product.size());
-	
-}
 
-TEST(CartesianProductIterator, EmptyList) {
+	TEST(CartesianProductIterator, Range3) {
+		// create some input data
+		vector<set<int>> data = {{1, 2}, {3, 4}, {5, 6, 7}};
 
-	// create some input data
-	vector<vector<int>> data = {
-		{1,2},
-		{},
-		{5,6,7}
-	};
-	
-	set<vector<int>> product;
-	for(auto cur : cartesian_product(data)) {
-		product.insert(cur);
+		set<vector<int>> product;
+		for(auto cur : cartesian_product(data)) {
+			product.insert(cur);
+		}
+
+		EXPECT_EQ(12u, product.size());
 	}
-	
-	EXPECT_EQ(0u, product.size());
-	
-}
 
-TEST(CartesianProductIterator, EmptyList2) {
+	TEST(CartesianProductIterator, EmptyList) {
+		// create some input data
+		vector<vector<int>> data = {{1, 2}, {}, {5, 6, 7}};
 
-	// create some input data
-	vector<vector<int>> data = {
-		{1,2},
-		{5,6,7},
-		{}
-	};
-	
-	set<vector<int>> product;
-	for(auto cur : cartesian_product(data)) {
-		product.insert(cur);
+		set<vector<int>> product;
+		for(auto cur : cartesian_product(data)) {
+			product.insert(cur);
+		}
+
+		EXPECT_EQ(0u, product.size());
 	}
-	
-	EXPECT_EQ(0u, product.size());
-	
-}
+
+	TEST(CartesianProductIterator, EmptyList2) {
+		// create some input data
+		vector<vector<int>> data = {{1, 2}, {5, 6, 7}, {}};
+
+		set<vector<int>> product;
+		for(auto cur : cartesian_product(data)) {
+			product.insert(cur);
+		}
+
+		EXPECT_EQ(0u, product.size());
+	}
 
 } // end namespace utils
 } // end namespace insieme

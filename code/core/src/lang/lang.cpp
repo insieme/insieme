@@ -44,32 +44,32 @@ namespace insieme {
 namespace core {
 namespace lang {
 
-/**
- * The value annotation type to be attached to all derived constructs.
- */
-struct DerivedTag {
-	string name;
-	DerivedTag(const string& name) : name(name) {}
-	bool operator==(const DerivedTag& other) const {
-		return name == other.name;
+	/**
+	 * The value annotation type to be attached to all derived constructs.
+	 */
+	struct DerivedTag {
+		string name;
+		DerivedTag(const string& name) : name(name) {}
+		bool operator==(const DerivedTag& other) const {
+			return name == other.name;
+		}
+	};
+
+	// ---------------- Support Dump ----------------------
+
+	VALUE_ANNOTATION_CONVERTER(DerivedTag)
+
+	typedef core::value_node_annotation<DerivedTag>::type annotation_type;
+
+	virtual ExpressionPtr toIR(NodeManager& manager, const NodeAnnotationPtr& annotation) const {
+		assert(dynamic_pointer_cast<annotation_type>(annotation) && "Only derived-tag annotations supported!");
+		return encoder::toIR(manager, static_pointer_cast<annotation_type>(annotation)->getValue().name);
 	}
-};
 
-// ---------------- Support Dump ----------------------
-
-VALUE_ANNOTATION_CONVERTER(DerivedTag)
-
-typedef core::value_node_annotation<DerivedTag>::type annotation_type;
-
-virtual ExpressionPtr toIR(NodeManager& manager, const NodeAnnotationPtr& annotation) const {
-	assert(dynamic_pointer_cast<annotation_type>(annotation) && "Only derived-tag annotations supported!");
-	return encoder::toIR(manager, static_pointer_cast<annotation_type>(annotation)->getValue().name);
-}
-
-virtual NodeAnnotationPtr toAnnotation(const ExpressionPtr& node) const {
-	assert_true(encoder::isEncodingOf<string>(node.as<ExpressionPtr>())) << "Invalid encoding encountered!";
-	return std::make_shared<annotation_type>(DerivedTag(encoder::toValue<string>(node)));
-}
+	virtual NodeAnnotationPtr toAnnotation(const ExpressionPtr& node) const {
+		assert_true(encoder::isEncodingOf<string>(node.as<ExpressionPtr>())) << "Invalid encoding encountered!";
+		return std::make_shared<annotation_type>(DerivedTag(encoder::toValue<string>(node)));
+	}
 };
 
 // ----------------------------------------------------
@@ -107,14 +107,12 @@ VALUE_ANNOTATION_CONVERTER(BuiltInTag)
 typedef core::value_node_annotation<BuiltInTag>::type annotation_type;
 
 virtual ExpressionPtr toIR(NodeManager& manager, const NodeAnnotationPtr& annotation) const {
-	assert_true(dynamic_pointer_cast<annotation_type>(annotation))
-	        << "Only BuiltInTag annotations supported!";
+	assert_true(dynamic_pointer_cast<annotation_type>(annotation)) << "Only BuiltInTag annotations supported!";
 	return encoder::toIR(manager, string("builtin_tag"));
 }
 
 virtual NodeAnnotationPtr toAnnotation(const ExpressionPtr& node) const {
-	assert_true(encoder::isEncodingOf<string>(node.as<ExpressionPtr>()))
-	        << "Invalid encoding of BuiltInTag encountered!";
+	assert_true(encoder::isEncodingOf<string>(node.as<ExpressionPtr>())) << "Invalid encoding of BuiltInTag encountered!";
 	return std::make_shared<annotation_type>(BuiltInTag());
 }
 };

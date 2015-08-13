@@ -39,24 +39,21 @@
 
 
 class Obj {
-
 	int val;
-	
-public:
-	Obj(int b,int a =1) {
+
+  public:
+	Obj(int b, int a = 1) {
 		val = a;
 	}
 };
 
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
+	Obj* a = new Obj(9);
 
-	Obj *a = new Obj(9);
-	
-#pragma test \
-	"decl ref<struct<val:int<4>>> v122 = rec v124.{v124=fun(ref<struct<val:int<4>>> v123, int<4> v4, int<4> v5) {ref.assign(composite.ref.elem(v123, val, int<4>), v5);}}(ref.var(undefined(struct<val:int<4>>)), 3, 1)"
+	#pragma test                                                                                                                                               \
+	    "decl ref<struct<val:int<4>>> v122 = rec v124.{v124=fun(ref<struct<val:int<4>>> v123, int<4> v4, int<4> v5) {ref.assign(composite.ref.elem(v123, val, int<4>), v5);}}(ref.var(undefined(struct<val:int<4>>)), 3, 1)"
 	Obj b(3);
-	
+
 	return 0;
 }
-

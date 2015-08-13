@@ -36,128 +36,83 @@
 
 #include "platforms/odroid/rapmi.h"
 /*
- * #define METRIC( NAME, ID, UNIT, DATA_TYPE, FORMAT_STRING, SCOPE, AGGREGATION_METHOD, GROUP, WI_START_CODE, WI_END_CODE, REGION_EARLY_START_CODE, REGION_LATE_END_CODE, OUTPUT_CONVERSION_CODE ) 
- * #define GROUP( NAME, GLOBAL_VAR_DECLARATIONS, LOCAL_VAR_DECLARATIONS, INIT_CODE_GLOBAL, INIT_CODE_WORKER, FINALIZE_CODE_GLOBAL, FINALIZE_CODE_WORKER, WI_START_CODE, WI_END_CODE, REGION_EARLY_START_CODE, REGION_LATE_END_CODE )
+ * #define METRIC( NAME, ID, UNIT, DATA_TYPE, FORMAT_STRING, SCOPE, AGGREGATION_METHOD, GROUP, WI_START_CODE, WI_END_CODE, REGION_EARLY_START_CODE,
+ * REGION_LATE_END_CODE, OUTPUT_CONVERSION_CODE )
+ * #define GROUP( NAME, GLOBAL_VAR_DECLARATIONS, LOCAL_VAR_DECLARATIONS, INIT_CODE_GLOBAL, INIT_CODE_WORKER, FINALIZE_CODE_GLOBAL, FINALIZE_CODE_WORKER,
+ * WI_START_CODE, WI_END_CODE, REGION_EARLY_START_CODE, REGION_LATE_END_CODE )
 */
 
-GROUP(energy_group, rapmi_t global_rapmi_data, rapmi_t rapmi_data, 
-    { memset(&(context->inst_region_metric_group_support_data.global_rapmi_data), 0, sizeof(rapmi_t)); init_rapmi(); /*rapmi_ctrl(LEM_SENS_MODE_ACC, 0, 0);*/ }, \
-    {}, \
-    { shutdown_rapmi(); }, \
-    {}, {}, {}, \
-    { rapmi_start(); }, \
-    { rapmi_stop(); rapmi_read(&rapmi_data); context->inst_region_metric_group_support_data.global_rapmi_data.n += rapmi_data.n; })
+GROUP(energy_group, rapmi_t global_rapmi_data, rapmi_t rapmi_data,
+      {
+	      memset(&(context->inst_region_metric_group_support_data.global_rapmi_data), 0, sizeof(rapmi_t));
+	      init_rapmi(); /*rapmi_ctrl(LEM_SENS_MODE_ACC, 0, 0);*/
+	  },
+      {}, { shutdown_rapmi(); }, {}, {}, {}, { rapmi_start(); }, {
+	      rapmi_stop();
+	      rapmi_read(&rapmi_data);
+	      context->inst_region_metric_group_support_data.global_rapmi_data.n += rapmi_data.n;
+	  })
 
 #if !defined(ISOLATE_METRIC) || defined(ISOLATE_A15_AVGPOW)
-METRIC(a15_avgpow,  50,      W,      float,      "%f",        IRT_HW_SCOPE_SOCKET,     IRT_METRIC_AGGREGATOR_NONE,   energy_group, \
-    {}, \
-    {}, \
-    {}, \
-    { \
-        context->inst_region_metric_group_support_data.global_rapmi_data.avg_a15_p += rapmi_data.avg_a15_p * rapmi_data.n; \
-        rg->aggregated_a15_avgpow = context->inst_region_metric_group_support_data.global_rapmi_data.avg_a15_p / context->inst_region_metric_group_support_data.global_rapmi_data.n; \
-    }, \
-    1 \
-)
+METRIC(a15_avgpow, 50, W, float, "%f", IRT_HW_SCOPE_SOCKET, IRT_METRIC_AGGREGATOR_NONE, energy_group, {}, {}, {}, {
+	context->inst_region_metric_group_support_data.global_rapmi_data.avg_a15_p += rapmi_data.avg_a15_p * rapmi_data.n;
+	rg->aggregated_a15_avgpow =
+	    context->inst_region_metric_group_support_data.global_rapmi_data.avg_a15_p / context->inst_region_metric_group_support_data.global_rapmi_data.n;
+}, 1)
 #endif
 
 #if !defined(ISOLATE_METRIC) || defined(ISOLATE_A7_AVGPOW)
-METRIC(a07_avgpow,   51,      W,      float,      "%f",        IRT_HW_SCOPE_SOCKET,     IRT_METRIC_AGGREGATOR_NONE,   energy_group, \
-    {}, \
-    {}, \
-    {}, \
-    { \
-        context->inst_region_metric_group_support_data.global_rapmi_data.avg_a07_p += rapmi_data.avg_a07_p * rapmi_data.n; \
-        rg->aggregated_a07_avgpow = context->inst_region_metric_group_support_data.global_rapmi_data.avg_a07_p / context->inst_region_metric_group_support_data.global_rapmi_data.n; \
-    }, \
-    1 \
-)
+METRIC(a07_avgpow, 51, W, float, "%f", IRT_HW_SCOPE_SOCKET, IRT_METRIC_AGGREGATOR_NONE, energy_group, {}, {}, {}, {
+	context->inst_region_metric_group_support_data.global_rapmi_data.avg_a07_p += rapmi_data.avg_a07_p * rapmi_data.n;
+	rg->aggregated_a07_avgpow =
+	    context->inst_region_metric_group_support_data.global_rapmi_data.avg_a07_p / context->inst_region_metric_group_support_data.global_rapmi_data.n;
+}, 1)
 #endif
 
 #if !defined(ISOLATE_METRIC) || defined(ISOLATE_MEM_AVGPOW)
-METRIC(mem_avgpow,  52,      W,      float,      "%f",        IRT_HW_SCOPE_SOCKET,     IRT_METRIC_AGGREGATOR_NONE,   energy_group, \
-    {}, \
-    {}, \
-    {}, \
-    { \
-        context->inst_region_metric_group_support_data.global_rapmi_data.avg_mem_p += rapmi_data.avg_mem_p * rapmi_data.n; \
-        rg->aggregated_mem_avgpow = context->inst_region_metric_group_support_data.global_rapmi_data.avg_mem_p / context->inst_region_metric_group_support_data.global_rapmi_data.n; \
-    }, \
-    1 \
-)
+METRIC(mem_avgpow, 52, W, float, "%f", IRT_HW_SCOPE_SOCKET, IRT_METRIC_AGGREGATOR_NONE, energy_group, {}, {}, {}, {
+	context->inst_region_metric_group_support_data.global_rapmi_data.avg_mem_p += rapmi_data.avg_mem_p * rapmi_data.n;
+	rg->aggregated_mem_avgpow =
+	    context->inst_region_metric_group_support_data.global_rapmi_data.avg_mem_p / context->inst_region_metric_group_support_data.global_rapmi_data.n;
+}, 1)
 #endif
 
 #if !defined(ISOLATE_METRIC) || defined(ISOLATE_GPU_AVGPOW)
-METRIC(gpu_avgpow,  53,      W,      float,      "%f",        IRT_HW_SCOPE_SOCKET,     IRT_METRIC_AGGREGATOR_NONE,   energy_group, \
-    {}, \
-    {}, \
-    {}, \
-    { \
-        context->inst_region_metric_group_support_data.global_rapmi_data.avg_gpu_p += rapmi_data.avg_gpu_p * rapmi_data.n; \
-        rg->aggregated_gpu_avgpow = context->inst_region_metric_group_support_data.global_rapmi_data.avg_gpu_p / context->inst_region_metric_group_support_data.global_rapmi_data.n; \
-    }, \
-    1 \
-)
+METRIC(gpu_avgpow, 53, W, float, "%f", IRT_HW_SCOPE_SOCKET, IRT_METRIC_AGGREGATOR_NONE, energy_group, {}, {}, {}, {
+	context->inst_region_metric_group_support_data.global_rapmi_data.avg_gpu_p += rapmi_data.avg_gpu_p * rapmi_data.n;
+	rg->aggregated_gpu_avgpow =
+	    context->inst_region_metric_group_support_data.global_rapmi_data.avg_gpu_p / context->inst_region_metric_group_support_data.global_rapmi_data.n;
+}, 1)
 #endif
 
 #if !defined(ISOLATE_METRIC) || defined(ISOLATE_CPU_AVGPOW)
-METRIC(cpu_avgpow,  54,      W,      float,      "%f",        IRT_HW_SCOPE_SOCKET,     IRT_METRIC_AGGREGATOR_NONE,   energy_group, \
-    {}, \
-    {}, \
-    {}, \
-    { rg->aggregated_cpu_avgpow = (rg->aggregated_a15_avgpow + rg->aggregated_a07_avgpow) / 2; }, \
-    1 \
-)
+METRIC(cpu_avgpow, 54, W, float, "%f", IRT_HW_SCOPE_SOCKET, IRT_METRIC_AGGREGATOR_NONE, energy_group, {}, {}, {},
+       { rg->aggregated_cpu_avgpow = (rg->aggregated_a15_avgpow + rg->aggregated_a07_avgpow) / 2; }, 1)
 #endif
 
 #if !defined(ISOLATE_METRIC) || defined(ISOLATE_A15_ENERGY)
-METRIC(a15_energy,  55,      J,      float,      "%f",        IRT_HW_SCOPE_SOCKET,     IRT_METRIC_AGGREGATOR_SUM,   energy_group, \
-    {}, \
-    {}, \
-    {}, \
-    { rg->aggregated_a15_energy += rapmi_data.a15_e; }, \
-    1 \
-)
+METRIC(a15_energy, 55, J, float, "%f", IRT_HW_SCOPE_SOCKET, IRT_METRIC_AGGREGATOR_SUM, energy_group, {}, {}, {},
+       { rg->aggregated_a15_energy += rapmi_data.a15_e; }, 1)
 #endif
 
 #if !defined(ISOLATE_METRIC) || defined(ISOLATE_A7_ENERGY)
-METRIC(a07_energy,   56,      J,      float,      "%f",        IRT_HW_SCOPE_SOCKET,     IRT_METRIC_AGGREGATOR_SUM,   energy_group, \
-    {}, \
-    {}, \
-    {}, \
-    { rg->aggregated_a07_energy += rapmi_data.a07_e; }, \
-    1 \
-)
+METRIC(a07_energy, 56, J, float, "%f", IRT_HW_SCOPE_SOCKET, IRT_METRIC_AGGREGATOR_SUM, energy_group, {}, {}, {},
+       { rg->aggregated_a07_energy += rapmi_data.a07_e; }, 1)
 #endif
 
 #if !defined(ISOLATE_METRIC) || defined(ISOLATE_MEM_ENERGY)
-METRIC(mem_energy,  57,      J,      float,      "%f",        IRT_HW_SCOPE_SOCKET,     IRT_METRIC_AGGREGATOR_SUM,   energy_group, \
-    {}, \
-    {}, \
-    {}, \
-    { rg->aggregated_mem_energy += rapmi_data.mem_e; }, \
-    1 \
-)
+METRIC(mem_energy, 57, J, float, "%f", IRT_HW_SCOPE_SOCKET, IRT_METRIC_AGGREGATOR_SUM, energy_group, {}, {}, {},
+       { rg->aggregated_mem_energy += rapmi_data.mem_e; }, 1)
 #endif
 
 #if !defined(ISOLATE_METRIC) || defined(ISOLATE_GPU_ENERGY)
-METRIC(gpu_energy,  58,      J,      float,      "%f",        IRT_HW_SCOPE_SOCKET,     IRT_METRIC_AGGREGATOR_SUM,   energy_group, \
-    {}, \
-    {}, \
-    {}, \
-    { rg->aggregated_gpu_energy += rapmi_data.gpu_e; }, \
-    1 \
-)
+METRIC(gpu_energy, 58, J, float, "%f", IRT_HW_SCOPE_SOCKET, IRT_METRIC_AGGREGATOR_SUM, energy_group, {}, {}, {},
+       { rg->aggregated_gpu_energy += rapmi_data.gpu_e; }, 1)
 #endif
 
 #if !defined(ISOLATE_METRIC) || defined(ISOLATE_CPU_ENERGY)
-METRIC(cpu_energy,  59,      J,      float,      "%f",        IRT_HW_SCOPE_SOCKET,     IRT_METRIC_AGGREGATOR_SUM,   energy_group, \
-    {}, \
-    {}, \
-    {}, \
-    { rg->aggregated_cpu_energy += rapmi_data.a15_e + rapmi_data.a07_e; }, \
-    1 \
-)
+METRIC(cpu_energy, 59, J, float, "%f", IRT_HW_SCOPE_SOCKET, IRT_METRIC_AGGREGATOR_SUM, energy_group, {}, {}, {},
+       { rg->aggregated_cpu_energy += rapmi_data.a15_e + rapmi_data.a07_e; }, 1)
 #endif
 
 

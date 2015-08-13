@@ -47,7 +47,7 @@ __EXTERN irt_mutex_obj irt_g_degree_of_parallelism_mutex;
 __EXTERN uint32 irt_g_active_worker_count;
 __EXTERN irt_mutex_obj irt_g_active_worker_mutex;
 struct _irt_worker;
-__EXTERN struct _irt_worker **irt_g_workers;
+__EXTERN struct _irt_worker** irt_g_workers;
 
 __EXTERN bool irt_g_rt_is_initialized;
 __EXTERN bool irt_g_exit_handling_done;

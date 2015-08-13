@@ -62,43 +62,39 @@ using namespace insieme::frontend::extensions;
 namespace ia = insieme::annotations;
 
 TEST(TypeCast, FileTest) {
-
 	NodeManager manager;
 	const std::string filename = FRONTEND_TEST_DIR "/inputs/casts.c";
-	std::vector<std::string> argv = { "compiler", filename };
+	std::vector<std::string> argv = {"compiler", filename};
 	cmd::Options options = cmd::Options::parse(argv);
 	options.job.frontendExtensionInit();
 	insieme::frontend::TranslationUnit tu(manager, filename, options.job);
-	
-	auto filter = [](const insieme::frontend::pragma::Pragma& curr) {
-		return curr.getType() == "test::expected";
-	};
-	
+
+	auto filter = [](const insieme::frontend::pragma::Pragma& curr) { return curr.getType() == "test::expected"; };
+
 	const auto begin = tu.pragmas_begin(filter);
 	const auto end = tu.pragmas_end();
-	
+
 	EXPECT_NE(begin, end);
-	
+
 	for(auto it = begin; it != end; ++it) {
 		const auto pragma = *it;
 		// we use an internal manager to have private counter for variables so we can write independent tests
 		NodeManager mgr;
-		
+
 		Converter convFactory(mgr, tu);
 		convFactory.convert();
-		
+
 		if(pragma->isStatement()) {
 			NodePtr node = analysis::normalize(convFactory.convertStmt(pragma->getStatement()));
 			EXPECT_TRUE(node->hasAnnotation(ia::ExpectedIRAnnotation::KEY));
-			EXPECT_EQ(ia::ExpectedIRAnnotation::getValue(node), '\"' + toString(printer::PrettyPrinter(node, printer::PrettyPrinter::PRINT_SINGLE_LINE)) + '\"');
-		}
-		else {
+			EXPECT_EQ(ia::ExpectedIRAnnotation::getValue(node),
+			          '\"' + toString(printer::PrettyPrinter(node, printer::PrettyPrinter::PRINT_SINGLE_LINE)) + '\"');
+		} else {
 			if(const clang::TypeDecl* td = llvm::dyn_cast<const clang::TypeDecl>(pragma->getDecl())) {
 				NodePtr node = convFactory.convertType(td->getTypeForDecl()->getCanonicalTypeInternal());
 				EXPECT_TRUE(node->hasAnnotation(ia::ExpectedIRAnnotation::KEY));
 				EXPECT_EQ(ia::ExpectedIRAnnotation::getValue(node), '\"' + node->toString() + '\"');
-			}
-			else if(const clang::VarDecl* vd = llvm::dyn_cast<const clang::VarDecl>(pragma->getDecl())) {
+			} else if(const clang::VarDecl* vd = llvm::dyn_cast<const clang::VarDecl>(pragma->getDecl())) {
 				NodePtr node = convFactory.convertVarDecl(vd);
 				EXPECT_EQ(ia::ExpectedIRAnnotation::getValue(node), '\"' + node->toString() + '\"');
 			}

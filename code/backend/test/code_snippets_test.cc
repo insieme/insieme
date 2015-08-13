@@ -58,157 +58,148 @@
 namespace insieme {
 namespace backend {
 
-TEST(FunctionCall, Templates) {
-	core::NodeManager manager;
-	core::IRBuilder builder(manager);
-	
-	core::ProgramPtr program = builder.parseProgram(
-	                               "int<4> main() {"
-	                               "	lambda (type<'a> dtype, uint<4> size)->ref<array<'a,1>> {"
-	                               "		return ref_new(array_create_1D(dtype, size));"
-	                               "	} (lit(real<4>), 7u);"
-	                               "	return 0;"
-	                               "}"
-	                           );
-	                           
-	ASSERT_TRUE(program);
-	
-	LOG(INFO) << "Printing the IR: " << core::printer::PrettyPrinter(program);
-	
-	LOG(INFO) << "Converting IR to C...";
-	auto converted = sequential::SequentialBackend::getDefault()->convert(program);
-	LOG(INFO) << "Printing converted code: " << *converted;
-	
-	string code = toString(*converted);
-	
-	EXPECT_PRED2(notContainsSubString, code, "<?>");
-	EXPECT_PRED2(notContainsSubString, code, "<a>");
-	EXPECT_PRED2(notContainsSubString, code, "UNSUPPORTED");
-	
-	// try compiling the code fragment
-	utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
-	compiler.addFlag("-lm");
-	compiler.addFlag("-c"); // do not run the linker
-	EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
-}
+	TEST(FunctionCall, Templates) {
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+
+		core::ProgramPtr program = builder.parseProgram("int<4> main() {"
+		                                                "	lambda (type<'a> dtype, uint<4> size)->ref<array<'a,1>> {"
+		                                                "		return ref_new(array_create_1D(dtype, size));"
+		                                                "	} (lit(real<4>), 7u);"
+		                                                "	return 0;"
+		                                                "}");
+
+		ASSERT_TRUE(program);
+
+		LOG(INFO) << "Printing the IR: " << core::printer::PrettyPrinter(program);
+
+		LOG(INFO) << "Converting IR to C...";
+		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
+		LOG(INFO) << "Printing converted code: " << *converted;
+
+		string code = toString(*converted);
+
+		EXPECT_PRED2(notContainsSubString, code, "<?>");
+		EXPECT_PRED2(notContainsSubString, code, "<a>");
+		EXPECT_PRED2(notContainsSubString, code, "UNSUPPORTED");
+
+		// try compiling the code fragment
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
+		compiler.addFlag("-lm");
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+	}
 
 
-TEST(FunctionCall, VectorReduction) {
-	core::NodeManager manager;
-	core::IRBuilder builder(manager);
-	
-	// Operation: vector.reduction
-	// Type: (vector<'elem,#l>, 'res, ('elem, 'res) -> 'res) -> 'res
-	
-	std::map<string, core::NodePtr> symbols;
-	symbols["v"] = builder.vectorExpr(toVector<core::ExpressionPtr>(builder.intLit(1), builder.intLit(2),  builder.intLit(3),  builder.intLit(4)));
-	
-	core::ProgramPtr program = builder.parseProgram(
-	                               "unit main() {"
-	                               "	lambda ()->int<4> {"
-	                               "		return vector_reduction(v, 0, int_add);"
-	                               "	}();"
-	                               "}",
-	                               symbols
-	                           );
-	ASSERT_TRUE(program);
-	
-	LOG(INFO) << "Printing the IR: " << core::printer::PrettyPrinter(program);
-	
-	LOG(INFO) << "Converting IR to C...";
-	auto converted = sequential::SequentialBackend::getDefault()->convert(program);
-	LOG(INFO) << "Printing converted code: " << *converted;
-	
-	string code = toString(*converted);
-	
-	EXPECT_FALSE(code.find("<?>") != string::npos);
-	
-	// test contracted form
-	EXPECT_PRED2(containsSubString, code, "0 + 1 + 2 + 3 + 4;");
-	
-	// try compiling the code fragment
-	utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
-	compiler.addFlag("-lm");
-	compiler.addFlag("-c"); // do not run the linker
-	EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
-}
+	TEST(FunctionCall, VectorReduction) {
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+
+		// Operation: vector.reduction
+		// Type: (vector<'elem,#l>, 'res, ('elem, 'res) -> 'res) -> 'res
+
+		std::map<string, core::NodePtr> symbols;
+		symbols["v"] = builder.vectorExpr(toVector<core::ExpressionPtr>(builder.intLit(1), builder.intLit(2), builder.intLit(3), builder.intLit(4)));
+
+		core::ProgramPtr program = builder.parseProgram("unit main() {"
+		                                                "	lambda ()->int<4> {"
+		                                                "		return vector_reduction(v, 0, int_add);"
+		                                                "	}();"
+		                                                "}",
+		                                                symbols);
+		ASSERT_TRUE(program);
+
+		LOG(INFO) << "Printing the IR: " << core::printer::PrettyPrinter(program);
+
+		LOG(INFO) << "Converting IR to C...";
+		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
+		LOG(INFO) << "Printing converted code: " << *converted;
+
+		string code = toString(*converted);
+
+		EXPECT_FALSE(code.find("<?>") != string::npos);
+
+		// test contracted form
+		EXPECT_PRED2(containsSubString, code, "0 + 1 + 2 + 3 + 4;");
+
+		// try compiling the code fragment
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
+		compiler.addFlag("-lm");
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+	}
 
 
+	TEST(FunctionCall, Pointwise) {
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
 
-TEST(FunctionCall, Pointwise) {
-	core::NodeManager manager;
-	core::IRBuilder builder(manager);
-	
-	// Operation: vector.pointwise
-	// Type: (('elem, 'elem) -> 'res) -> (vector<'elem,#l>, vector<'elem,#l>) -> vector<'res, #l>
-	
-	std::map<string, core::NodePtr> symbols;
-	symbols["v1"] = builder.vectorExpr(toVector<core::ExpressionPtr>(builder.intLit(1), builder.intLit(2),  builder.intLit(3),  builder.intLit(4)));
-	symbols["v2"] = builder.vectorExpr(toVector<core::ExpressionPtr>(builder.intLit(5), builder.intLit(6),  builder.intLit(7),  builder.intLit(8)));
-	
-	core::ProgramPtr program = builder.parseProgram(
-	                               "unit main() {"
-	                               "	vector_pointwise(int_add)(v1,v2);"
-	                               "}",
-	                               symbols
-	                           );
-	ASSERT_TRUE(program);
-	
-	
-	auto converted = sequential::SequentialBackend::getDefault()->convert(program);
-	
-	string code = toString(*converted);
-	EXPECT_FALSE(code.find("<?>") != string::npos);
-	
-	// try compiling the code fragment
-	utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
-	compiler.addFlag("-lm");
-	compiler.addFlag("-I " SRC_ROOT_DIR "simple_backend/include/insieme/simple_backend/runtime/");
-	compiler.addFlag("-c"); // do not run the linker
-	EXPECT_TRUE(utils::compiler::compile(*converted, compiler)) << "Code: \n" << *converted;
-}
+		// Operation: vector.pointwise
+		// Type: (('elem, 'elem) -> 'res) -> (vector<'elem,#l>, vector<'elem,#l>) -> vector<'res, #l>
+
+		std::map<string, core::NodePtr> symbols;
+		symbols["v1"] = builder.vectorExpr(toVector<core::ExpressionPtr>(builder.intLit(1), builder.intLit(2), builder.intLit(3), builder.intLit(4)));
+		symbols["v2"] = builder.vectorExpr(toVector<core::ExpressionPtr>(builder.intLit(5), builder.intLit(6), builder.intLit(7), builder.intLit(8)));
+
+		core::ProgramPtr program = builder.parseProgram("unit main() {"
+		                                                "	vector_pointwise(int_add)(v1,v2);"
+		                                                "}",
+		                                                symbols);
+		ASSERT_TRUE(program);
 
 
-TEST(FunctionCall, TypeLiterals) {
-	core::NodeManager manager;
-	core::IRBuilder builder(manager);
-	
-	// create a function accepting a type literal
-	
-	core::ProgramPtr program = builder.parseProgram(
-	                               "int<4> main() {"
-	                               "	lambda (type<'a> dtype)->int<4> {"
-	                               "	} (lit(real<4>));"
-	                               "	return 0;"
-	                               "}"
-	                           );
-	ASSERT_TRUE(program);
-	
-	LOG(DEBUG) << "Program: " << *program << std::endl;
-	
-	auto converted = sequential::SequentialBackend::getDefault()->convert(program);
-	
-	LOG(DEBUG) << "Converted: \n" << *converted << std::endl;
-	
-	string code = toString(*converted);
-	EXPECT_PRED2(notContainsSubString, code, "<?>");
-	EXPECT_PRED2(containsSubString, code, "fun_1()");
-	
-	// try compiling the code fragment
-	utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
-	compiler.addFlag("-lm");
-	compiler.addFlag("-c"); // do not run the linker
-	EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
-}
+		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
+
+		string code = toString(*converted);
+		EXPECT_FALSE(code.find("<?>") != string::npos);
+
+		// try compiling the code fragment
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
+		compiler.addFlag("-lm");
+		compiler.addFlag("-I " SRC_ROOT_DIR "simple_backend/include/insieme/simple_backend/runtime/");
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*converted, compiler)) << "Code: \n" << *converted;
+	}
 
 
-TEST(FunctionCall, GenericFunctionAndTypeLiteral) {
-	core::NodeManager manager;
-	core::IRBuilder builder(manager);
-	
-	// create a function accepting a type literal
-	
-	core::ProgramPtr program = builder.parseProgram(R"(
+	TEST(FunctionCall, TypeLiterals) {
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+
+		// create a function accepting a type literal
+
+		core::ProgramPtr program = builder.parseProgram("int<4> main() {"
+		                                                "	lambda (type<'a> dtype)->int<4> {"
+		                                                "	} (lit(real<4>));"
+		                                                "	return 0;"
+		                                                "}");
+		ASSERT_TRUE(program);
+
+		LOG(DEBUG) << "Program: " << *program << std::endl;
+
+		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
+
+		LOG(DEBUG) << "Converted: \n" << *converted << std::endl;
+
+		string code = toString(*converted);
+		EXPECT_PRED2(notContainsSubString, code, "<?>");
+		EXPECT_PRED2(containsSubString, code, "fun_1()");
+
+		// try compiling the code fragment
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
+		compiler.addFlag("-lm");
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+	}
+
+
+	TEST(FunctionCall, GenericFunctionAndTypeLiteral) {
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+
+		// create a function accepting a type literal
+
+		core::ProgramPtr program = builder.parseProgram(R"(
     		int<4> main() {
     			lambda (ref<array<'a,1>> data)->uint<8> {
     				return sizeof(lit('a));
@@ -216,102 +207,99 @@ TEST(FunctionCall, GenericFunctionAndTypeLiteral) {
     			return 0;
     		}
     )");
-	ASSERT_TRUE(program);
-	
-	LOG(DEBUG) << "Program: " << *program << std::endl;
-	
-	auto converted = sequential::SequentialBackend::getDefault()->convert(program);
-	
-	LOG(DEBUG) << "Converted: \n" << *converted << std::endl;
-	
-	string code = toString(*converted);
-	EXPECT_PRED2(notContainsSubString, code, "<?>");
-	EXPECT_PRED2(containsSubString, code, "sizeof(float)");
-	
-	// try compiling the code fragment
-	utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
-	compiler.addFlag("-lm");
-	compiler.addFlag("-c"); // do not run the linker
-	EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
-}
+		ASSERT_TRUE(program);
+
+		LOG(DEBUG) << "Program: " << *program << std::endl;
+
+		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
+
+		LOG(DEBUG) << "Converted: \n" << *converted << std::endl;
+
+		string code = toString(*converted);
+		EXPECT_PRED2(notContainsSubString, code, "<?>");
+		EXPECT_PRED2(containsSubString, code, "sizeof(float)");
+
+		// try compiling the code fragment
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
+		compiler.addFlag("-lm");
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+	}
 
 
-TEST(FunctionCall, RefNewCalls) {
-	core::NodeManager manager;
-	core::IRBuilder builder(manager);
-	
-	// create a function accepting a type literal
-	core::TypePtr intType = manager.getLangBasic().getInt4();
-	core::TypePtr type = builder.refType(intType);
-	core::VariablePtr var = builder.variable(type, 1);
-	
-	core::ExpressionPtr init = builder.refNew(builder.undefinedNew(intType));
-	core::DeclarationStmtPtr decl = builder.declarationStmt(var, init);
-	
-	
-	auto converted = sequential::SequentialBackend::getDefault()->convert(decl);
-	
-	LOG(DEBUG) << "Converted: \n" << *converted << std::endl;
-	
-	string code = toString(*converted);
-	EXPECT_PRED2(notContainsSubString, code, "<?>");
-	EXPECT_PRED2(containsSubString, code, "int32_t* var_1 = (int32_t*)malloc(sizeof(int32_t))");
-	
-}
+	TEST(FunctionCall, RefNewCalls) {
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
 
-TEST(FunctionCall, VectorExpression) {
-	core::NodeManager manager;
-	core::IRBuilder builder(manager);
-	
-	core::ExpressionPtr zero = builder.literal(manager.getLangBasic().getUInt8(), "0");
-	core::ExpressionPtr offset = builder.refVar(builder.vectorExpr(toVector(zero, zero, zero)));
-	core::ExpressionPtr extFun = core::lang::getLiteral(manager, "(ref<vector<uint<8>,3>>)->unit", "call_vector");
-	core::ExpressionPtr call = builder.callExpr(manager.getLangBasic().getUnit(), extFun, toVector(offset));
-	
-	auto converted = sequential::SequentialBackend::getDefault()->convert(call);
-	string code = toString(*converted);
-	
-	EXPECT_PRED2(containsSubString, code, "call_vector((uint64_t*)(&(__insieme_type_1){{(uint64_t)0, (uint64_t)0, (uint64_t)0}}))");
-}
+		// create a function accepting a type literal
+		core::TypePtr intType = manager.getLangBasic().getInt4();
+		core::TypePtr type = builder.refType(intType);
+		core::VariablePtr var = builder.variable(type, 1);
+
+		core::ExpressionPtr init = builder.refNew(builder.undefinedNew(intType));
+		core::DeclarationStmtPtr decl = builder.declarationStmt(var, init);
 
 
-TEST(Literals, BoolLiterals) {
-	core::NodeManager manager;
-	core::IRBuilder builder(manager);
-	
-	// create a code fragment including the boolean constants
-	core::ProgramPtr program = builder.parseProgram(
-	                               "int<4> main() {"
-	                               "	true;"
-	                               "	false;"
-	                               "	return 0;"
-	                               "}"
-	                           );
-	ASSERT_TRUE(program);
-	
-	LOG(DEBUG) << "Program: " << *program << std::endl;
-	
-	auto converted = sequential::SequentialBackend::getDefault()->convert(program);
-	
-	LOG(DEBUG) << "Converted: \n" << *converted << std::endl;
-	
-	string code = toString(*converted);
-	EXPECT_PRED2(containsSubString, code, "true");
-	EXPECT_PRED2(containsSubString, code, "false");
-	
-	// try compiling the code fragment
-	utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
-	compiler.addFlag("-lm");
-	compiler.addFlag("-c"); // do not run the linker
-	EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
-}
+		auto converted = sequential::SequentialBackend::getDefault()->convert(decl);
 
-TEST(Parallel, NestedLambdaTypeDeduction) {
-	core::NodeManager mgr;
-	core::IRBuilder builder(mgr);
-	
-	core::ProgramPtr program = builder.parseProgram(
-	                               R"(
+		LOG(DEBUG) << "Converted: \n" << *converted << std::endl;
+
+		string code = toString(*converted);
+		EXPECT_PRED2(notContainsSubString, code, "<?>");
+		EXPECT_PRED2(containsSubString, code, "int32_t* var_1 = (int32_t*)malloc(sizeof(int32_t))");
+	}
+
+	TEST(FunctionCall, VectorExpression) {
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+
+		core::ExpressionPtr zero = builder.literal(manager.getLangBasic().getUInt8(), "0");
+		core::ExpressionPtr offset = builder.refVar(builder.vectorExpr(toVector(zero, zero, zero)));
+		core::ExpressionPtr extFun = core::lang::getLiteral(manager, "(ref<vector<uint<8>,3>>)->unit", "call_vector");
+		core::ExpressionPtr call = builder.callExpr(manager.getLangBasic().getUnit(), extFun, toVector(offset));
+
+		auto converted = sequential::SequentialBackend::getDefault()->convert(call);
+		string code = toString(*converted);
+
+		EXPECT_PRED2(containsSubString, code, "call_vector((uint64_t*)(&(__insieme_type_1){{(uint64_t)0, (uint64_t)0, (uint64_t)0}}))");
+	}
+
+
+	TEST(Literals, BoolLiterals) {
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+
+		// create a code fragment including the boolean constants
+		core::ProgramPtr program = builder.parseProgram("int<4> main() {"
+		                                                "	true;"
+		                                                "	false;"
+		                                                "	return 0;"
+		                                                "}");
+		ASSERT_TRUE(program);
+
+		LOG(DEBUG) << "Program: " << *program << std::endl;
+
+		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
+
+		LOG(DEBUG) << "Converted: \n" << *converted << std::endl;
+
+		string code = toString(*converted);
+		EXPECT_PRED2(containsSubString, code, "true");
+		EXPECT_PRED2(containsSubString, code, "false");
+
+		// try compiling the code fragment
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
+		compiler.addFlag("-lm");
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+	}
+
+	TEST(Parallel, NestedLambdaTypeDeduction) {
+		core::NodeManager mgr;
+		core::IRBuilder builder(mgr);
+
+		core::ProgramPtr program = builder.parseProgram(
+		    R"(
 			let int = int<4>;
 			let uint = uint<4>;
 
@@ -335,24 +323,23 @@ TEST(Parallel, NestedLambdaTypeDeduction) {
 				bla(x);
 				return 0;
 			}
-			)"
-	                           );
-	LOG(DEBUG) << "Program: " << *program << std::endl;
-	
-	auto converted = sequential::SequentialBackend::getDefault()->convert(program);
-	LOG(DEBUG) << "Converted Seq: \n" << *converted << std::endl;
-	auto converted_rt = runtime::RuntimeBackend::getDefault()->convert(program);
-	LOG(DEBUG) << "Converted Run: \n" << *converted_rt << std::endl;
-}
+			)");
+		LOG(DEBUG) << "Program: " << *program << std::endl;
+
+		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
+		LOG(DEBUG) << "Converted Seq: \n" << *converted << std::endl;
+		auto converted_rt = runtime::RuntimeBackend::getDefault()->convert(program);
+		LOG(DEBUG) << "Converted Run: \n" << *converted_rt << std::endl;
+	}
 
 
-TEST(Arrays, Allocation) {
-	core::NodeManager manager;
-	core::IRBuilder builder(manager);
-	
-	// create a code fragment allocating an array on the stack and using it
-	core::ProgramPtr program = builder.parseProgram(
-	                               R"(
+	TEST(Arrays, Allocation) {
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+
+		// create a code fragment allocating an array on the stack and using it
+		core::ProgramPtr program = builder.parseProgram(
+		    R"(
 			let int = int<4>;
 			let uint = uint<4>;
 
@@ -368,37 +355,36 @@ TEST(Arrays, Allocation) {
 				a[2] = 123;
 				b[4] = 321;
 			}
-			)"
-	                           );
-	                           
-	ASSERT_TRUE(program);
-	
-	std::cout << "Program: " << std::endl;
-	dump(program);
-	std::cout << std::endl;
-	
-	auto converted = sequential::SequentialBackend::getDefault()->convert(program);
-	
-	std::cout << "Converted: \n" << *converted << std::endl;
-	
-	string code = toString(*converted);
-	EXPECT_PRED2(containsSubString, code, "int32_t a[size];");
-	EXPECT_PRED2(containsSubString, code, "int32_t* b = malloc(sizeof(int32_t) * size)");
-	
-	// try compiling the code fragment
-	utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
-	compiler.addFlag("-lm");
-	compiler.addFlag("-c"); // do not run the linker
-	EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
-}
+			)");
 
-TEST(PrimitiveType, LongLong) {
-	core::NodeManager manager;
-	core::IRBuilder builder(manager);
-	
-	// create a code fragment allocating an array on the stack and using it
-	core::ProgramPtr program = builder.parseProgram(
-	                               R"(
+		ASSERT_TRUE(program);
+
+		std::cout << "Program: " << std::endl;
+		dump(program);
+		std::cout << std::endl;
+
+		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
+
+		std::cout << "Converted: \n" << *converted << std::endl;
+
+		string code = toString(*converted);
+		EXPECT_PRED2(containsSubString, code, "int32_t a[size];");
+		EXPECT_PRED2(containsSubString, code, "int32_t* b = malloc(sizeof(int32_t) * size)");
+
+		// try compiling the code fragment
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
+		compiler.addFlag("-lm");
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+	}
+
+	TEST(PrimitiveType, LongLong) {
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+
+		// create a code fragment allocating an array on the stack and using it
+		core::ProgramPtr program = builder.parseProgram(
+		    R"(
 			let longlong = int<16>;
 
 			int<4> main() {
@@ -407,38 +393,37 @@ TEST(PrimitiveType, LongLong) {
 				// just create a long-long variable
 				decl uint<16> b = 10ul;
 			}
-			)"
-	                           );
-	                           
-	ASSERT_TRUE(program);
-	
-	std::cout << "Program: " << std::endl;
-	dump(program);
-	std::cout << std::endl;
-	
-	auto converted = sequential::SequentialBackend::getDefault()->convert(program);
-	
-	std::cout << "Converted: \n" << *converted << std::endl;
-	
-	string code = toString(*converted);
-	EXPECT_PRED2(containsSubString, code, "long long a = (int64_t)10l;");
-	EXPECT_PRED2(containsSubString, code, "unsigned long long b = (uint64_t)10ul;");
-	
-	// try compiling the code fragment
-	utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
-	compiler.addFlag("-lm");
-	compiler.addFlag("-c"); // do not run the linker
-	EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
-}
+			)");
+
+		ASSERT_TRUE(program);
+
+		std::cout << "Program: " << std::endl;
+		dump(program);
+		std::cout << std::endl;
+
+		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
+
+		std::cout << "Converted: \n" << *converted << std::endl;
+
+		string code = toString(*converted);
+		EXPECT_PRED2(containsSubString, code, "long long a = (int64_t)10l;");
+		EXPECT_PRED2(containsSubString, code, "unsigned long long b = (uint64_t)10ul;");
+
+		// try compiling the code fragment
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
+		compiler.addFlag("-lm");
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+	}
 
 
-TEST(References, RefAny) {
-	core::NodeManager manager;
-	core::IRBuilder builder(manager);
-	
-	// create a code fragment allocating an array on the stack and using it
-	core::ProgramPtr program = builder.parseProgram(
-	                               R"(
+	TEST(References, RefAny) {
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+
+		// create a code fragment allocating an array on the stack and using it
+		core::ProgramPtr program = builder.parseProgram(
+		    R"(
 			int<4> main() {
 				decl ref<any> x;
 				decl ref<ref<any>> y = var(x);
@@ -446,39 +431,38 @@ TEST(References, RefAny) {
 
 				lit("w":ref<ref<any>>);
 			}
-			)"
-	                           );
-	                           
-	ASSERT_TRUE(program);
-	
-	std::cout << "Program: " << std::endl;
-	dump(program);
-	std::cout << std::endl;
-	
-	auto converted = sequential::SequentialBackend::getDefault()->convert(program);
-	
-	std::cout << "Converted: \n" << *converted << std::endl;
-	
-	string code = toString(*converted);
-	EXPECT_PRED2(containsSubString, code, "void* x;");
-	EXPECT_PRED2(containsSubString, code, "void* y = &x;");
-	EXPECT_PRED2(containsSubString, code, "void** z = _ref_new___insieme_type_2(&x);");
-	EXPECT_PRED2(containsSubString, code, "void* w;");
-	EXPECT_PRED2(containsSubString, code, "&w;");
-	
-	// try compiling the code fragment
-	utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
-	compiler.addFlag("-lm");
-	compiler.addFlag("-c"); // do not run the linker
-	EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
-}
+			)");
+
+		ASSERT_TRUE(program);
+
+		std::cout << "Program: " << std::endl;
+		dump(program);
+		std::cout << std::endl;
+
+		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
+
+		std::cout << "Converted: \n" << *converted << std::endl;
+
+		string code = toString(*converted);
+		EXPECT_PRED2(containsSubString, code, "void* x;");
+		EXPECT_PRED2(containsSubString, code, "void* y = &x;");
+		EXPECT_PRED2(containsSubString, code, "void** z = _ref_new___insieme_type_2(&x);");
+		EXPECT_PRED2(containsSubString, code, "void* w;");
+		EXPECT_PRED2(containsSubString, code, "&w;");
+
+		// try compiling the code fragment
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
+		compiler.addFlag("-lm");
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+	}
 
 
-TEST(FunctionCall, GenericFunctionsWithLazy) {
-	core::NodeManager manager;
-	core::IRBuilder builder(manager);
-	
-	core::ProgramPtr program = builder.parseProgram(R"(
+	TEST(FunctionCall, GenericFunctionsWithLazy) {
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+
+		core::ProgramPtr program = builder.parseProgram(R"(
     	int<4> main() {
     		
     		let f = lambda (ref<'a> a, ('a)=>bool c, ()=>'a v)->ref<'a> {
@@ -498,144 +482,138 @@ TEST(FunctionCall, GenericFunctionsWithLazy) {
     	}
     )");
 
-	ASSERT_TRUE(program);
-	
-	// check for semantic errors
-	EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
-	
-	LOG(INFO) << "Converting IR to C...";
-	auto converted = sequential::SequentialBackend::getDefault()->convert(program);
-	LOG(INFO) << "Printing converted code: " << *converted;
-	
-	string code = toString(*converted);
-	
-	EXPECT_PRED2(notContainsSubString, code, "<?>");
-	EXPECT_PRED2(notContainsSubString, code, "<a>");
-	EXPECT_PRED2(notContainsSubString, code, "UNSUPPORTED");
-	
-	// try compiling the code fragment
-	utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
-	compiler.addFlag("-lm");
-	compiler.addFlag("-c"); // do not run the linker
-	EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
-}
+		ASSERT_TRUE(program);
 
-TEST(FunctionCall, PassLabmdaToBind) {
-	core::NodeManager manager;
-	core::IRBuilder builder(manager);
-	
-	core::ProgramPtr program = builder.parseProgram(
-	                               "int<4> main() {"
-	                               "	"
-	                               "	let f = lambda ()->int<4> { return 4; };"
-	                               "	let g = lambda (()=>'a a)->'a { return a(); };"
-	                               "	"
-	                               "	g(f);"
-	                               "	"
-	                               "	return 0;"
-	                               "}"
-	                           );
-	                           
-	ASSERT_TRUE(program);
-	
-	// check for semantic errors
-	EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
-	
-	LOG(INFO) << "Converting IR to C...";
-	auto converted = sequential::SequentialBackend::getDefault()->convert(program);
-	LOG(INFO) << "Printing converted code: " << *converted;
-	
-	string code = toString(*converted);
-	
-	EXPECT_PRED2(notContainsSubString, code, "<?>");
-	EXPECT_PRED2(notContainsSubString, code, "<a>");
-	EXPECT_PRED2(notContainsSubString, code, "UNSUPPORTED");
-	
-	// try compiling the code fragment
-	utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
-	compiler.addFlag("-lm");
-	compiler.addFlag("-c"); // do not run the linker
-	EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
-}
-
-TEST(FunctionCall, DebugCodePrinting) {
-	core::NodeManager manager;
-	core::IRBuilder builder(manager);
-	
-	core::ProgramPtr program = builder.parseProgram(
-	                               "let int = int<4>;"
-	                               ""
-	                               "let f = lambda ()->int { return 4; };"
-	                               ""
-	                               "let g = lambda (int x)->int { return x + 2; };"
-	                               ""
-	                               "int main() {"
-	                               "	return g(f());"
-	                               "}"
-	                           );
-	                           
-	ASSERT_TRUE(program);
-	
-	// without debug code
-	{
-	
 		// check for semantic errors
 		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
-		
-		// create backend instance
-		auto be = sequential::SequentialBackend::getDefault();
-		
-		// upbdate backend configuration
-		be->getConfiguration().addIRCodeAsComment = false;
-		
+
 		LOG(INFO) << "Converting IR to C...";
-		auto converted = be->convert(program);
+		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
 		LOG(INFO) << "Printing converted code: " << *converted;
-		
+
 		string code = toString(*converted);
-		
+
 		EXPECT_PRED2(notContainsSubString, code, "<?>");
 		EXPECT_PRED2(notContainsSubString, code, "<a>");
 		EXPECT_PRED2(notContainsSubString, code, "UNSUPPORTED");
-		EXPECT_PRED2(notContainsSubString, code, "{\n    v0 = fun() -> int<4> {\n        return g(f());\n    };\n}");
-		
+
+		// try compiling the code fragment
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
+		compiler.addFlag("-lm");
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+	}
+
+	TEST(FunctionCall, PassLabmdaToBind) {
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+
+		core::ProgramPtr program = builder.parseProgram("int<4> main() {"
+		                                                "	"
+		                                                "	let f = lambda ()->int<4> { return 4; };"
+		                                                "	let g = lambda (()=>'a a)->'a { return a(); };"
+		                                                "	"
+		                                                "	g(f);"
+		                                                "	"
+		                                                "	return 0;"
+		                                                "}");
+
+		ASSERT_TRUE(program);
+
+		// check for semantic errors
+		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
+
+		LOG(INFO) << "Converting IR to C...";
+		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
+		LOG(INFO) << "Printing converted code: " << *converted;
+
+		string code = toString(*converted);
+
+		EXPECT_PRED2(notContainsSubString, code, "<?>");
+		EXPECT_PRED2(notContainsSubString, code, "<a>");
+		EXPECT_PRED2(notContainsSubString, code, "UNSUPPORTED");
+
 		// try compiling the code fragment
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
 		compiler.addFlag("-lm");
 		compiler.addFlag("-c"); // do not run the linker
 		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
 	}
-	
-	// with debug code
-	{
-	
-		// check for semantic errors
-		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
-		
-		// create backend instance
-		auto be = sequential::SequentialBackend::getDefault();
-		
-		// upbdate backend configuration
-		be->getConfiguration().addIRCodeAsComment = true;
-		
-		LOG(INFO) << "Converting IR to C...";
-		auto converted = be->convert(program);
-		LOG(INFO) << "Printing converted code: " << *converted;
-		
-		string code = toString(*converted);
-		
-		EXPECT_PRED2(notContainsSubString, code, "<?>");
-		EXPECT_PRED2(notContainsSubString, code, "<a>");
-		EXPECT_PRED2(notContainsSubString, code, "UNSUPPORTED");
-		EXPECT_PRED2(containsSubString, code, "{\n    v0 = fun() -> int<4> {\n        return g(f());\n    };\n}");
-		
-		// try compiling the code fragment
-		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
-		compiler.addFlag("-lm");
-		compiler.addFlag("-c"); // do not run the linker
-		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+
+	TEST(FunctionCall, DebugCodePrinting) {
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+
+		core::ProgramPtr program = builder.parseProgram("let int = int<4>;"
+		                                                ""
+		                                                "let f = lambda ()->int { return 4; };"
+		                                                ""
+		                                                "let g = lambda (int x)->int { return x + 2; };"
+		                                                ""
+		                                                "int main() {"
+		                                                "	return g(f());"
+		                                                "}");
+
+		ASSERT_TRUE(program);
+
+		// without debug code
+		{
+			// check for semantic errors
+			EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
+
+			// create backend instance
+			auto be = sequential::SequentialBackend::getDefault();
+
+			// upbdate backend configuration
+			be->getConfiguration().addIRCodeAsComment = false;
+
+			LOG(INFO) << "Converting IR to C...";
+			auto converted = be->convert(program);
+			LOG(INFO) << "Printing converted code: " << *converted;
+
+			string code = toString(*converted);
+
+			EXPECT_PRED2(notContainsSubString, code, "<?>");
+			EXPECT_PRED2(notContainsSubString, code, "<a>");
+			EXPECT_PRED2(notContainsSubString, code, "UNSUPPORTED");
+			EXPECT_PRED2(notContainsSubString, code, "{\n    v0 = fun() -> int<4> {\n        return g(f());\n    };\n}");
+
+			// try compiling the code fragment
+			utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+			compiler.addFlag("-lm");
+			compiler.addFlag("-c"); // do not run the linker
+			EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+		}
+
+		// with debug code
+		{
+			// check for semantic errors
+			EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
+
+			// create backend instance
+			auto be = sequential::SequentialBackend::getDefault();
+
+			// upbdate backend configuration
+			be->getConfiguration().addIRCodeAsComment = true;
+
+			LOG(INFO) << "Converting IR to C...";
+			auto converted = be->convert(program);
+			LOG(INFO) << "Printing converted code: " << *converted;
+
+			string code = toString(*converted);
+
+			EXPECT_PRED2(notContainsSubString, code, "<?>");
+			EXPECT_PRED2(notContainsSubString, code, "<a>");
+			EXPECT_PRED2(notContainsSubString, code, "UNSUPPORTED");
+			EXPECT_PRED2(containsSubString, code, "{\n    v0 = fun() -> int<4> {\n        return g(f());\n    };\n}");
+
+			// try compiling the code fragment
+			utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+			compiler.addFlag("-lm");
+			compiler.addFlag("-c"); // do not run the linker
+			EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+		}
 	}
-}
 
 } // namespace backend
 } // namespace insieme

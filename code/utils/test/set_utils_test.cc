@@ -43,82 +43,77 @@
 
 #include "insieme/utils/set_utils.h"
 
-//using boost::unordered_set;
+// using boost::unordered_set;
 using namespace insieme::utils::set;
 
 typedef std::unordered_set<int, boost::hash<int>> Set;
-//typedef std::unordered_set<int> Set;
-//typedef boost::unordered_set<int> Set;
+// typedef std::unordered_set<int> Set;
+// typedef boost::unordered_set<int> Set;
 
 TEST(SetUtilsTest, toSet) {
+	Set set = toSet<Set>(1, 3, 4, 2, 1);
 
-	Set set = toSet<Set>(1,3,4,2,1);
-	
 	Set ref;
 	ref.insert(1);
 	ref.insert(3);
 	ref.insert(4);
 	ref.insert(2);
 	ref.insert(1);
-	
+
 	EXPECT_EQ(static_cast<std::size_t>(4), set.size());
 	EXPECT_EQ(static_cast<std::size_t>(4), ref.size());
 	EXPECT_EQ(set, ref);
 }
 
 TEST(SetUtilsTest, Merge) {
-
 	Set setA;
 	setA.insert(1);
 	setA.insert(2);
-	
+
 	Set setB;
 	setB.insert(3);
-	
-	Set merged = merge(setA,setB);
-	
+
+	Set merged = merge(setA, setB);
+
 	Set setRef;
 	setRef.insert(1);
 	setRef.insert(2);
 	setRef.insert(3);
-	
+
 	// NOTE: assumes that == is implemented (optional in std)
 	EXPECT_EQ(setRef, merged);
 }
 
 TEST(SetUtilsTest, Intersect) {
-
 	Set setA;
 	setA.insert(1);
 	setA.insert(2);
-	
+
 	Set setB;
 	setB.insert(1);
-	
-	Set res = intersect(setA,setB);
-	
+
+	Set res = intersect(setA, setB);
+
 	Set setRef;
 	setRef.insert(1);
-	
+
 	// NOTE: assumes that == is implemented (optional in std)
 	EXPECT_EQ(setRef, res);
 }
 
 TEST(SetUtilsTest, Difference) {
-
 	Set setA;
 	setA.insert(1);
 	setA.insert(2);
-	
+
 	Set setB;
 	setB.insert(1);
-	
-	Set res = difference(setA,setB);
-	
+
+	Set res = difference(setA, setB);
+
 	Set setRef;
 	setRef.insert(2);
-	
+
 	// NOTE: assumes that == is implemented (optional in std)
 	EXPECT_EQ(setRef, res);
 }
-

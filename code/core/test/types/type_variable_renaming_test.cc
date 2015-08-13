@@ -45,108 +45,97 @@ namespace insieme {
 namespace core {
 namespace types {
 
-TEST(TypeVariableRenamer, Basic) {
-
-	NodeManager manager;
-	IRBuilder builder(manager);
-	
-	
-	// create some types
-	TypePtr varA = builder.typeVariable("a");
-	TypePtr varB = builder.typeVariable("b");
-	
-	TypePtr genAB = builder.genericType("T", toVector(varA, varB));
-	TypePtr genABA = builder.genericType("T", toVector(varA, varB, varA));
-	
-	TypePtr genABx = builder.genericType("T", toVector(varA, varB));
-	TypePtr genABAxyx = builder.genericType("T", toVector(varA, varB, varA));
-	
-	// do some testing
-	VariableRenamer renamer;
-	
-	// rename once => should produce new names
-	auto sub = renamer.mapVariables(varA);
-	EXPECT_EQ("{'a<->'v1}", toString(sub));
-	
-	auto res = sub.applyForward(varA);
-	EXPECT_EQ("'v1", toString(*res));
-	
-	// rename another type with the same renamer => should produce a different name
-	res = renamer.rename(varB);
-	EXPECT_EQ("'v2", toString(*res));
-	
-	// rename a more complex type
-	renamer.reset();
-	EXPECT_EQ("T<'v1,'v2>", toString(*renamer.rename(genAB)));
-	
-	// rename a type with multiple occurrences of the same variable
-	renamer.reset();
-	EXPECT_EQ("T<'v1,'v2,'v1>", toString(*renamer.rename(genABA)));
-	
-	renamer.reset();
-	EXPECT_EQ("T<'v1,'v2>", toString(*renamer.rename(genABx)));
-	
-	renamer.reset();
-	EXPECT_EQ("T<'v1,'v2,'v1>", toString(*renamer.rename(genABAxyx)));
-	
-	
-	// test multiple types within a set
-	auto list = toVector(varA, genABx, genABAxyx, varB);
-	renamer.reset();
-	sub = renamer.mapVariables(manager, list);
-	vector<TypePtr> renamed;
-	::transform(list, std::back_inserter(renamed), [&](const TypePtr& cur)->TypePtr {
-		return sub.applyForward(cur);
-	});
-	EXPECT_EQ("[AP('v1),AP(T<'v1,'v2>),AP(T<'v1,'v2,'v1>),AP('v2)]", toString(renamed));
-}
-
-TEST(TypeVariableRenamer, VariableMapping) {
+	TEST(TypeVariableRenamer, Basic) {
+		NodeManager manager;
+		IRBuilder builder(manager);
 
 
-	NodeManager manager;
-	IRBuilder builder(manager);
-	
-	// create some types
-	TypeVariablePtr varA = builder.typeVariable("a");
-	TypeVariablePtr varB = builder.typeVariable("b");
-	
-	TypeMapping mapping;
-	mapping.addMapping(varA, varB);
-	EXPECT_EQ(varB, mapping.applyForward(varA));
-	EXPECT_EQ(varB, mapping.applyForward(varB));
-	EXPECT_EQ(varA, mapping.applyBackward(varA));
-	EXPECT_EQ(varA, mapping.applyBackward(varB));
-	
-	EXPECT_EQ(varB, mapping.applyForward(mapping.applyBackward(varB)));
-	EXPECT_EQ(varA, mapping.applyBackward(mapping.applyForward(varA)));
-	
-}
+		// create some types
+		TypePtr varA = builder.typeVariable("a");
+		TypePtr varB = builder.typeVariable("b");
 
-TEST(TypeVariableRenamer, RecTypeRenaming) {
+		TypePtr genAB = builder.genericType("T", toVector(varA, varB));
+		TypePtr genABA = builder.genericType("T", toVector(varA, varB, varA));
 
-	NodeManager manager;
-	IRBuilder builder(manager);
-	
-	TypeVariablePtr var = builder.typeVariable("X");
-	TypePtr type = builder.refType(var);
-	
-	vector<RecTypeBindingPtr> defs;
-	defs.push_back(builder.recTypeBinding(var, type));
-	
-	RecTypeDefinitionPtr def = builder.recTypeDefinition(defs);
-	RecTypePtr recType = builder.recType(var, def);
-	
-	EXPECT_EQ("rec 'X.{'X=ref<'X>}", toString(*recType));
-	
-	VariableRenamer renamer;
-	EXPECT_EQ("rec 'X.{'X=ref<'X>}", toString(*renamer.rename(recType)));
-	
-	
-	
-}
+		TypePtr genABx = builder.genericType("T", toVector(varA, varB));
+		TypePtr genABAxyx = builder.genericType("T", toVector(varA, varB, varA));
+
+		// do some testing
+		VariableRenamer renamer;
+
+		// rename once => should produce new names
+		auto sub = renamer.mapVariables(varA);
+		EXPECT_EQ("{'a<->'v1}", toString(sub));
+
+		auto res = sub.applyForward(varA);
+		EXPECT_EQ("'v1", toString(*res));
+
+		// rename another type with the same renamer => should produce a different name
+		res = renamer.rename(varB);
+		EXPECT_EQ("'v2", toString(*res));
+
+		// rename a more complex type
+		renamer.reset();
+		EXPECT_EQ("T<'v1,'v2>", toString(*renamer.rename(genAB)));
+
+		// rename a type with multiple occurrences of the same variable
+		renamer.reset();
+		EXPECT_EQ("T<'v1,'v2,'v1>", toString(*renamer.rename(genABA)));
+
+		renamer.reset();
+		EXPECT_EQ("T<'v1,'v2>", toString(*renamer.rename(genABx)));
+
+		renamer.reset();
+		EXPECT_EQ("T<'v1,'v2,'v1>", toString(*renamer.rename(genABAxyx)));
+
+
+		// test multiple types within a set
+		auto list = toVector(varA, genABx, genABAxyx, varB);
+		renamer.reset();
+		sub = renamer.mapVariables(manager, list);
+		vector<TypePtr> renamed;
+		::transform(list, std::back_inserter(renamed), [&](const TypePtr& cur) -> TypePtr { return sub.applyForward(cur); });
+		EXPECT_EQ("[AP('v1),AP(T<'v1,'v2>),AP(T<'v1,'v2,'v1>),AP('v2)]", toString(renamed));
+	}
+
+	TEST(TypeVariableRenamer, VariableMapping) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		// create some types
+		TypeVariablePtr varA = builder.typeVariable("a");
+		TypeVariablePtr varB = builder.typeVariable("b");
+
+		TypeMapping mapping;
+		mapping.addMapping(varA, varB);
+		EXPECT_EQ(varB, mapping.applyForward(varA));
+		EXPECT_EQ(varB, mapping.applyForward(varB));
+		EXPECT_EQ(varA, mapping.applyBackward(varA));
+		EXPECT_EQ(varA, mapping.applyBackward(varB));
+
+		EXPECT_EQ(varB, mapping.applyForward(mapping.applyBackward(varB)));
+		EXPECT_EQ(varA, mapping.applyBackward(mapping.applyForward(varA)));
+	}
+
+	TEST(TypeVariableRenamer, RecTypeRenaming) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		TypeVariablePtr var = builder.typeVariable("X");
+		TypePtr type = builder.refType(var);
+
+		vector<RecTypeBindingPtr> defs;
+		defs.push_back(builder.recTypeBinding(var, type));
+
+		RecTypeDefinitionPtr def = builder.recTypeDefinition(defs);
+		RecTypePtr recType = builder.recType(var, def);
+
+		EXPECT_EQ("rec 'X.{'X=ref<'X>}", toString(*recType));
+
+		VariableRenamer renamer;
+		EXPECT_EQ("rec 'X.{'X=ref<'X>}", toString(*renamer.rename(recType)));
+	}
 
 } // end namespace analysis
 } // end namespace core
 } // end namespace insieme
-

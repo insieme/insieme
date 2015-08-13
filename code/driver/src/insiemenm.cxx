@@ -67,114 +67,107 @@ namespace bfs = boost::filesystem;
 
 namespace {
 
-bool typeMemberCheck(const core::TypePtr& a, const core::TypePtr& b, const core::TypePtr& c = core::TypePtr()) {
-	if(a != b) {
-		std::cout << "constructor uses a different type as target\n";
-		std::cout << "it should be: " << b << "\n";
-		if(c && a == c) {
-			std::cout << "NOTE: it is bind to the expanded version: " << c << "\n";
+	bool typeMemberCheck(const core::TypePtr& a, const core::TypePtr& b, const core::TypePtr& c = core::TypePtr()) {
+		if(a != b) {
+			std::cout << "constructor uses a different type as target\n";
+			std::cout << "it should be: " << b << "\n";
+			if(c && a == c) { std::cout << "NOTE: it is bind to the expanded version: " << c << "\n"; }
+			return false;
 		}
-		return false;
+		return true;
 	}
-	return true;
-}
 
-void PerformChecks(const frontend::tu::IRTranslationUnit& tu) {
+	void PerformChecks(const frontend::tu::IRTranslationUnit& tu) {
+		unsigned count = 0;
+		std::cout << " =======================================================" << std::endl;
+		std::cout << "  checking " << tu.getTypes().size() << " types" << std::endl;
+		std::cout << " =======================================================" << std::endl;
 
-	unsigned count =  0;
-	std::cout << " =======================================================" << std::endl;
-	std::cout << "  checking " << tu.getTypes().size() << " types" << std::endl;
-	std::cout << " =======================================================" << std::endl;
-	
-	for(const auto& pair : tu.getTypes()) {
-		if(pair.second.isa<core::StructTypePtr>()) {
-		
-			// retrieve metainfo for the object.
-			//  those objects should not fail, this test does not really make sense, frontend assertion enforce the right behaviour of this,
-			//  it never failed, but i wont remove it since is not very expensive
-			if(hasMetaInfo(pair.second)) {
-				std::cout << "object: " << pair.second  << " should not have metainfo" << std::endl;
-				count++;
-			}
-			else if(hasMetaInfo(pair.first)) {
-				auto& meta = getMetaInfo(pair.first);
-				
-				// check that any ctor uses the right owner object
-				for(auto ctor : meta.getConstructors()) {
-					if(!ctor->getType().as<core::FunctionTypePtr>().isConstructor()) {
-						std::cout << "\n member function is not a constructor\n";
-						dumpPretty(ctor);
-						count++;
+		for(const auto& pair : tu.getTypes()) {
+			if(pair.second.isa<core::StructTypePtr>()) {
+				// retrieve metainfo for the object.
+				//  those objects should not fail, this test does not really make sense, frontend assertion enforce the right behaviour of this,
+				//  it never failed, but i wont remove it since is not very expensive
+				if(hasMetaInfo(pair.second)) {
+					std::cout << "object: " << pair.second << " should not have metainfo" << std::endl;
+					count++;
+				} else if(hasMetaInfo(pair.first)) {
+					auto& meta = getMetaInfo(pair.first);
+
+					// check that any ctor uses the right owner object
+					for(auto ctor : meta.getConstructors()) {
+						if(!ctor->getType().as<core::FunctionTypePtr>().isConstructor()) {
+							std::cout << "\n member function is not a constructor\n";
+							dumpPretty(ctor);
+							count++;
+						}
+
+						if(!typeMemberCheck(ctor->getType().as<core::FunctionTypePtr>()->getObjectType(), pair.first, pair.second)) {
+							dumpPretty(ctor);
+							count++;
+						}
 					}
-					
-					if(!typeMemberCheck(ctor->getType().as<core::FunctionTypePtr>()->getObjectType(), pair.first, pair.second)) {
-						dumpPretty(ctor);
-						count ++;
+
+					// check that dtor uses the right owner object
+					const auto& dtor = meta.getDestructor();
+					if(dtor) {
+						if(!dtor->getType().as<core::FunctionTypePtr>().isDestructor()) {
+							std::cout << "\n member function is not a destructor\n";
+							dumpPretty(dtor);
+							count++;
+						}
+
+						if(!typeMemberCheck(dtor->getType().as<core::FunctionTypePtr>()->getObjectType(), pair.first, pair.second)) {
+							dumpPretty(dtor);
+							count++;
+						}
 					}
-				}
-				
-				// check that dtor uses the right owner object
-				const auto& dtor = meta.getDestructor();
-				if(dtor) {
-					if(!dtor->getType().as<core::FunctionTypePtr>().isDestructor()) {
-						std::cout << "\n member function is not a destructor\n";
-						dumpPretty(dtor);
-						count++;
-					}
-					
-					if(!typeMemberCheck(dtor->getType().as<core::FunctionTypePtr>()->getObjectType(), pair.first, pair.second)) {
-						dumpPretty(dtor);
-						count ++;
-					}
-				}
-				
-				// check that any method uses the right owner object
-				for(auto member : meta.getMemberFunctions()) {
-					if(!member.getImplementation()->getType().as<core::FunctionTypePtr>().isMemberFunction()) {
-						std::cout << "\n member function is not a member function\n";
-						dumpPretty(member.getImplementation());
-						count++;
-					}
-					
-					if(!typeMemberCheck(member.getImplementation()->getType().as<core::FunctionTypePtr>()->getObjectType(), pair.first, pair.second)) {
-						dumpPretty(member.getImplementation());
-						count ++;
+
+					// check that any method uses the right owner object
+					for(auto member : meta.getMemberFunctions()) {
+						if(!member.getImplementation()->getType().as<core::FunctionTypePtr>().isMemberFunction()) {
+							std::cout << "\n member function is not a member function\n";
+							dumpPretty(member.getImplementation());
+							count++;
+						}
+
+						if(!typeMemberCheck(member.getImplementation()->getType().as<core::FunctionTypePtr>()->getObjectType(), pair.first, pair.second)) {
+							dumpPretty(member.getImplementation());
+							count++;
+						}
 					}
 				}
-			}
-			
-			// stop on 10
-			if(count > 10) {
-				std::cout << " ...  only first " << count << " errors shown " << std::endl;
-				return;
-			}
-		}
-	}
-	
-	if(count != 0) {
-		return;
-	}
-	
-	std::cout << " =======================================================" << std::endl;
-	std::cout << "  checking: " << tu.getFunctions().size() << " functions" << std::endl;
-	std::cout << " =======================================================" << std::endl;
-	count =  0;
-	for(auto cur : tu.getFunctions()) {
-		auto messages = checks::check(cur.second);
-		
-		if(!messages.empty()) {
-			std::cout << "semantic errors in:  " << cur.first->getStringValue() << std::endl;
-			dumpPretty(cur.second);
-			for(auto err : messages.getErrors()) {
-				std::cout << err << std::endl << std::endl;
-				if(count++ > 10) {
+
+				// stop on 10
+				if(count > 10) {
 					std::cout << " ...  only first " << count << " errors shown " << std::endl;
 					return;
 				}
 			}
 		}
+
+		if(count != 0) { return; }
+
+		std::cout << " =======================================================" << std::endl;
+		std::cout << "  checking: " << tu.getFunctions().size() << " functions" << std::endl;
+		std::cout << " =======================================================" << std::endl;
+		count = 0;
+		for(auto cur : tu.getFunctions()) {
+			auto messages = checks::check(cur.second);
+
+			if(!messages.empty()) {
+				std::cout << "semantic errors in:  " << cur.first->getStringValue() << std::endl;
+				dumpPretty(cur.second);
+				for(auto err : messages.getErrors()) {
+					std::cout << err << std::endl << std::endl;
+					if(count++ > 10) {
+						std::cout << " ...  only first " << count << " errors shown " << std::endl;
+						return;
+					}
+				}
+			}
+		}
 	}
-}
 
 
 } // anonymous namespace
@@ -199,38 +192,34 @@ CmdOptions parseCommandLine(int argc, char** argv);
 
 int main(int argc, char** argv) {
 	CmdOptions options = parseCommandLine(argc, argv);
-	
+
 	// check options validity
-	if(!options.valid) {
-		return 0;
-	}
-	
+	if(!options.valid) { return 0; }
+
 	// check input file
 	if(!isInsiemeLib(options.inputFile)) {
 		std::cout << "Not a proper insieme library: " << options.inputFile << "\n";
 		return 1;
 	}
-	
+
 	// load input file
 	NodeManager mgr;
 	auto tu = loadLib(mgr, options.inputFile);
-	
+
 	// perform sematic checks (do not print other output)
 	if(options.semanticChecks) {
 		PerformChecks(tu);
 		return 0;
 	}
-	
+
 	// print library content
 	std::cout << "Contained Symbols:\n";
 	std::cout << "    Types:\n";
 	for(auto cur : tu.getTypes()) {
 		std::cout << "        " << cur.first->getFamilyName();
-		if(options.printDefinitions) {
-			std::cout << " : " << *cur.second;
-		}
+		if(options.printDefinitions) { std::cout << " : " << *cur.second; }
 		std::cout << "\n";
-		
+
 		if(core::hasMetaInfo(cur.first)) {
 			std::cout << "        {" << cur.first->getFamilyName() << " hasMetaInfo: \n";
 			core::ClassMetaInfo info = core::getMetaInfo(cur.first);
@@ -238,25 +227,23 @@ int main(int argc, char** argv) {
 			std::cout << "}\n";
 		}
 	}
-	
+
 	std::cout << "    Globals:\n";
 	for(auto cur : tu.getGlobals()) {
 		std::cout << "        " << *cur.first << "\n";
 	}
-	
+
 	std::cout << "    Functions:\n";
 	for(auto cur : tu.getFunctions()) {
 		std::cout << "        " << cur.first->getStringValue();
-		if(options.printDefinitions) {
-			std::cout << " : " << *cur.second;
-		}
+		if(options.printDefinitions) { std::cout << " : " << *cur.second; }
 		std::cout << "\n";
 	}
-	
+
 	// print a line of statistical information
 	std::cout << tu.getTypes().size() << " types, " << tu.getGlobals().size() << " globals, " << tu.getFunctions().size() << " functions\n";
-	
-	
+
+
 	// done
 	return 0;
 }
@@ -265,47 +252,43 @@ int main(int argc, char** argv) {
 CmdOptions parseCommandLine(int argc, char** argv) {
 	CmdOptions fail;
 	fail.valid = false;
-	
+
 	// -- parsing -------------------------------------------
-	
+
 	// define options
 	bpo::options_description desc("Supported Parameters");
-	desc.add_options()
-	("help,h", 				"produce help message")
-	("input,i", 			bpo::value<bfs::path>(), 			"the object file to be parsed")
-	("definitions,d", 		"enables printing the included definitions")
-	("check", 				"performs semantic checks in the functions of the tu")
-	;
-	
+	desc.add_options()("help,h", "produce help message")("input,i", bpo::value<bfs::path>(), "the object file to be parsed")(
+	    "definitions,d", "enables printing the included definitions")("check", "performs semantic checks in the functions of the tu");
+
 	// define positional options (all options not being named)
 	bpo::positional_options_description pos;
 	pos.add("input", -1);
-	
+
 	// parse parameters
 	bpo::variables_map map;
 	bpo::store(bpo::command_line_parser(argc, argv).options(desc).positional(pos).run(), map);
 	bpo::notify(map);
-	
-	
+
+
 	// -- processing -----------------------------------------
-	
+
 	// check whether help was requested
 	if(map.count("help")) {
 		cout << desc << "\n";
 		return fail;
 	}
-	
+
 	if(!map.count("input")) {
 		cout << "Missing input file.\n";
 		return fail;
 	}
-	
+
 	CmdOptions res;
 	res.valid = true;
 	res.inputFile = map["input"].as<bfs::path>();
 	res.printDefinitions = map.count("definitions");
 	res.semanticChecks = map.count("check");
-	
+
 	// accumulation complete
 	return res;
 }

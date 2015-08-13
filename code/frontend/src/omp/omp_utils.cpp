@@ -52,190 +52,168 @@ namespace insieme {
 namespace frontend {
 namespace omp {
 
-using namespace std;
-using namespace core;
-using namespace utils::log;
+	using namespace std;
+	using namespace core;
+	using namespace utils::log;
 
-const string GlobalRequiredAnnotation::name = "GlobalRequiredAnnotation";
-const utils::StringKey<GlobalRequiredAnnotation> GlobalRequiredAnnotation::key("GlobalRequiredAnnotation");
+	const string GlobalRequiredAnnotation::name = "GlobalRequiredAnnotation";
+	const utils::StringKey<GlobalRequiredAnnotation> GlobalRequiredAnnotation::key("GlobalRequiredAnnotation");
 
-bool GlobalRequiredAnnotation::migrate(const NodeAnnotationPtr& ptr, const NodePtr& before, const NodePtr& after) const {
-	after->addAnnotation(ptr);
-	return true;
-}
+	bool GlobalRequiredAnnotation::migrate(const NodeAnnotationPtr& ptr, const NodePtr& before, const NodePtr& after) const {
+		after->addAnnotation(ptr);
+		return true;
+	}
 
-StructExpr::Members markGlobalUsers(const core::ProgramPtr& prog) {
-	NodeManager& nodeMan = prog->getNodeManager();
-	IRBuilder build(nodeMan);
-	boost::unordered_set<std::string> handledGlobals;
-	StructExpr::Members retval;
-	auto anno = std::make_shared<GlobalRequiredAnnotation>();
-	visitDepthFirst(ProgramAddress(prog), [&](const LiteralAddress& lit) {
-		const string& gname = lit->getStringValue();
-		if(gname.find("global_omp") == 0) {
-			// add global to set if required
-			if(handledGlobals.count(gname) == 0) {
-				ExpressionPtr initializer;
-				if(analysis::isRefOf(lit.getAddressedNode(), nodeMan.getLangBasic().getLock())) {
-					initializer = build.undefined(analysis::getReferencedType(lit->getType()));
+	StructExpr::Members markGlobalUsers(const core::ProgramPtr& prog) {
+		NodeManager& nodeMan = prog->getNodeManager();
+		IRBuilder build(nodeMan);
+		boost::unordered_set<std::string> handledGlobals;
+		StructExpr::Members retval;
+		auto anno = std::make_shared<GlobalRequiredAnnotation>();
+		visitDepthFirst(ProgramAddress(prog), [&](const LiteralAddress& lit) {
+			const string& gname = lit->getStringValue();
+			if(gname.find("global_omp") == 0) {
+				// add global to set if required
+				if(handledGlobals.count(gname) == 0) {
+					ExpressionPtr initializer;
+					if(analysis::isRefOf(lit.getAddressedNode(), nodeMan.getLangBasic().getLock())) {
+						initializer = build.undefined(analysis::getReferencedType(lit->getType()));
+					} else {
+						assert_fail() << "Unsupported OMP global type";
+					}
+					retval.push_back(build.namedValue(gname, initializer));
+					handledGlobals.insert(gname);
 				}
-				else {
-					assert_fail() << "Unsupported OMP global type";
-				}
-				retval.push_back(build.namedValue(gname, initializer));
-				handledGlobals.insert(gname);
+				// mark upward path from global as well as handle recursions
+				auto pathMarker = makeLambdaVisitor([&](const NodeAddress& node) { node->addAnnotation(anno); });
+				auto pathMarkerPlus = makeLambdaVisitor([&](const NodeAddress& node) {
+					LambdaExprAddress lam = dynamic_address_cast<LambdaExprAddress>(node);
+					if(lam && !lam->hasAnnotation(GlobalRequiredAnnotation::key) && lam->isRecursive()) {
+						visitDepthFirst(lam, [&](const CallExprAddress& call) {
+							if(*call->getFunctionExpr() == *lam->getVariable()) { visitPathBottomUp(call->getFunctionExpr(), pathMarker); }
+						});
+					}
+					node->addAnnotation(anno);
+				});
+				visitPathBottomUp(lit, pathMarkerPlus);
 			}
-			// mark upward path from global as well as handle recursions
-			auto pathMarker = makeLambdaVisitor([&](const NodeAddress& node) {
-				node->addAnnotation(anno);
-			});
-			auto pathMarkerPlus = makeLambdaVisitor([&](const NodeAddress& node) {
-				LambdaExprAddress lam = dynamic_address_cast<LambdaExprAddress>(node);
-				if(lam && !lam->hasAnnotation(GlobalRequiredAnnotation::key) && lam->isRecursive()) {
-					visitDepthFirst(lam, [&](const CallExprAddress& call) {
-						if(*call->getFunctionExpr() == *lam->getVariable()) {
-							visitPathBottomUp(call->getFunctionExpr(), pathMarker);
-						}
-					});
-				}
-				node->addAnnotation(anno);
-			});
-			visitPathBottomUp(lit, pathMarkerPlus);
-		}
-	});
-	return retval;
-}
+		});
+		return retval;
+	}
 
-const NodePtr GlobalMapper::mapElement(unsigned index, const NodePtr& ptr) {
-	// only start mapping once global is encountered
-	if(*ptr == *curVar) {
-		startedMapping = true;
-	}
-	if(!startedMapping) {
-		return ptr->substitute(nodeMan, *this);
-	}
-	if(ptr->hasAnnotation(GlobalRequiredAnnotation::key)) {
-		//LOG(INFO) << "?????? Mapping 1 T: " << getNodeTypeName(ptr->getNodeType()) << " -- N: " << *ptr;
-		// recursively forward the variable
-		switch(ptr->getNodeType()) {
-		case NT_CallExpr:
-			return mapCall(static_pointer_cast<const CallExpr>(ptr));
-			break;
-		case NT_BindExpr:
-			return mapBind(static_pointer_cast<const BindExpr>(ptr));
-			break;
-		//case NT_JobExpr:
-		//	return mapJob(static_pointer_cast<const JobExpr>(ptr));
-		//	break;
-		case NT_LambdaExpr:
-			return cache.get(static_pointer_cast<const LambdaExpr>(ptr));
-			break;
-		case NT_Literal:
-			return mapLiteral(static_pointer_cast<const Literal>(ptr));
-			break;
-		default:
-			// no changes at this node, but at child nodes
-			return ptr->substitute(nodeMan, *this);
+	const NodePtr GlobalMapper::mapElement(unsigned index, const NodePtr& ptr) {
+		// only start mapping once global is encountered
+		if(*ptr == *curVar) { startedMapping = true; }
+		if(!startedMapping) { return ptr->substitute(nodeMan, *this); }
+		if(ptr->hasAnnotation(GlobalRequiredAnnotation::key)) {
+			// LOG(INFO) << "?????? Mapping 1 T: " << getNodeTypeName(ptr->getNodeType()) << " -- N: " << *ptr;
+			// recursively forward the variable
+			switch(ptr->getNodeType()) {
+			case NT_CallExpr: return mapCall(static_pointer_cast<const CallExpr>(ptr)); break;
+			case NT_BindExpr:
+				return mapBind(static_pointer_cast<const BindExpr>(ptr));
+				break;
+			// case NT_JobExpr:
+			//	return mapJob(static_pointer_cast<const JobExpr>(ptr));
+			//	break;
+			case NT_LambdaExpr: return cache.get(static_pointer_cast<const LambdaExpr>(ptr)); break;
+			case NT_Literal: return mapLiteral(static_pointer_cast<const Literal>(ptr)); break;
+			default:
+				// no changes at this node, but at child nodes
+				return ptr->substitute(nodeMan, *this);
+			}
+		} else {
+			// LOG(INFO) << "?????? Mapping 2 " << ptr;
+			// no changes required
+			return ptr;
 		}
 	}
-	else {
-		//LOG(INFO) << "?????? Mapping 2 " << ptr;
-		// no changes required
-		return ptr;
-	}
-}
 
-const NodePtr GlobalMapper::mapCall(const CallExprPtr& call) {
-	//LOG(INFO) << "?????? Mapping call " << call;
-	auto func = call->getFunctionExpr();
-	if(func && func->hasAnnotation(GlobalRequiredAnnotation::key)) {
-		vector<ExpressionPtr> newCallArgs = call->getArguments();
-		newCallArgs.push_back(curVar);
-		// complete call
-		return build.callExpr(call->getType(), static_pointer_cast<const Expression>(map(func)), newCallArgs);
-	}
-	return call->substitute(nodeMan, *this);
-}
-
-const NodePtr GlobalMapper::mapBind(const BindExprPtr& bind) {
-	//LOG(INFO) << "?????? Mapping bind " << bind;
-	auto boundCall = bind->getCall();
-	auto boundCallFunc = boundCall->getFunctionExpr();
-	if(boundCallFunc && boundCallFunc->hasAnnotation(GlobalRequiredAnnotation::key)) {
-		vector<ExpressionPtr> newBoundCallArguments = boundCall->getArguments();
-		newBoundCallArguments.push_back(curVar);
-		auto newFunctionExpr = this->map(boundCallFunc);
-		auto newCall = build.callExpr(boundCall->getType(), newFunctionExpr, newBoundCallArguments);
-		return build.bindExpr(static_pointer_cast<FunctionTypePtr>(bind->getType()), bind->getParameters(), newCall);
-	}
-	return bind->substitute(nodeMan, *this);
-}
-
-//const core::NodePtr mapJob(const core::JobExprPtr& bind) {
-//
-//}
-
-const NodePtr GlobalMapper::mapLambdaExpr(const LambdaExprPtr& lambdaExpr) {
-	LambdaExprPtr ret;
-	//LOG(INFO) << "?????? Mapping lambda expr " << lambdaExpr;
-	auto lambda = lambdaExpr->getLambda();
-	// create new var for global struct
-	VariablePtr innerVar = build.variable(curVar->getType());
-	VariablePtr outerVar = curVar;
-	curVar = innerVar;
-	// map body
-	auto newBody = map(lambda->getBody()).as<CompoundStmtPtr>();
-	// add param
-	VariableList newParams = lambda->getParameterList();
-	newParams.push_back(curVar);
-	
-	// build new lambda type
-	TypePtr retType = lambda->getType()->getReturnType();
-	TypeList paramTypes = ::transform(newParams, [](const VariablePtr& v) {
-		return v->getType();
-	});
-	FunctionTypePtr lambdaType = build.functionType(paramTypes, retType);
-	
-	// update recursive variable
-	auto recVar = lambdaExpr->getVariable();
-	auto newRecVar = build.variable(lambdaType);
-	if(lambdaExpr->isRecursive()) {
-		// TODO: update recursive call, not only function; => arguments are missing!
-		// 		implementing this is easier when general add-parameter function is available
-		newBody = core::transform::replaceAll(
-		              build.getNodeManager(), newBody, recVar, newRecVar, core::transform::globalReplacement).as<CompoundStmtPtr>();
-	}
-	
-	auto newLambda = build.lambda(lambdaType, newParams, newBody);
-	
-	// restore previous global variable
-	curVar = outerVar;
-	
-	// build new definition block
-	vector<LambdaBindingPtr> bindings;
-	for(const LambdaBindingPtr& binding : lambdaExpr->getDefinition()) {
-		if(binding->getVariable() == recVar) {
-			bindings.push_back(build.lambdaBinding(newRecVar, newLambda));
+	const NodePtr GlobalMapper::mapCall(const CallExprPtr& call) {
+		// LOG(INFO) << "?????? Mapping call " << call;
+		auto func = call->getFunctionExpr();
+		if(func && func->hasAnnotation(GlobalRequiredAnnotation::key)) {
+			vector<ExpressionPtr> newCallArgs = call->getArguments();
+			newCallArgs.push_back(curVar);
+			// complete call
+			return build.callExpr(call->getType(), static_pointer_cast<const Expression>(map(func)), newCallArgs);
 		}
-		else {
-			bindings.push_back(binding);
-		}
+		return call->substitute(nodeMan, *this);
 	}
-	
-	// build new lambda (preserve all recursive variables)
-	ret = build.lambdaExpr(newRecVar, build.lambdaDefinition(bindings));
-	//LOG(INFO) << "!!!!!!! Mapped lambda expr " << ret;
-	return ret;
-}
 
-const NodePtr GlobalMapper::mapLiteral(const LiteralPtr& literal) {
-	const string& gname = literal->getStringValue();
-	if(gname.find("global_omp") == 0) {
-		return build.refMember(curVar, gname);
+	const NodePtr GlobalMapper::mapBind(const BindExprPtr& bind) {
+		// LOG(INFO) << "?????? Mapping bind " << bind;
+		auto boundCall = bind->getCall();
+		auto boundCallFunc = boundCall->getFunctionExpr();
+		if(boundCallFunc && boundCallFunc->hasAnnotation(GlobalRequiredAnnotation::key)) {
+			vector<ExpressionPtr> newBoundCallArguments = boundCall->getArguments();
+			newBoundCallArguments.push_back(curVar);
+			auto newFunctionExpr = this->map(boundCallFunc);
+			auto newCall = build.callExpr(boundCall->getType(), newFunctionExpr, newBoundCallArguments);
+			return build.bindExpr(static_pointer_cast<FunctionTypePtr>(bind->getType()), bind->getParameters(), newCall);
+		}
+		return bind->substitute(nodeMan, *this);
 	}
-	
-	return literal;
-}
+
+	// const core::NodePtr mapJob(const core::JobExprPtr& bind) {
+	//
+	//}
+
+	const NodePtr GlobalMapper::mapLambdaExpr(const LambdaExprPtr& lambdaExpr) {
+		LambdaExprPtr ret;
+		// LOG(INFO) << "?????? Mapping lambda expr " << lambdaExpr;
+		auto lambda = lambdaExpr->getLambda();
+		// create new var for global struct
+		VariablePtr innerVar = build.variable(curVar->getType());
+		VariablePtr outerVar = curVar;
+		curVar = innerVar;
+		// map body
+		auto newBody = map(lambda->getBody()).as<CompoundStmtPtr>();
+		// add param
+		VariableList newParams = lambda->getParameterList();
+		newParams.push_back(curVar);
+
+		// build new lambda type
+		TypePtr retType = lambda->getType()->getReturnType();
+		TypeList paramTypes = ::transform(newParams, [](const VariablePtr& v) { return v->getType(); });
+		FunctionTypePtr lambdaType = build.functionType(paramTypes, retType);
+
+		// update recursive variable
+		auto recVar = lambdaExpr->getVariable();
+		auto newRecVar = build.variable(lambdaType);
+		if(lambdaExpr->isRecursive()) {
+			// TODO: update recursive call, not only function; => arguments are missing!
+			// 		implementing this is easier when general add-parameter function is available
+			newBody = core::transform::replaceAll(build.getNodeManager(), newBody, recVar, newRecVar, core::transform::globalReplacement).as<CompoundStmtPtr>();
+		}
+
+		auto newLambda = build.lambda(lambdaType, newParams, newBody);
+
+		// restore previous global variable
+		curVar = outerVar;
+
+		// build new definition block
+		vector<LambdaBindingPtr> bindings;
+		for(const LambdaBindingPtr& binding : lambdaExpr->getDefinition()) {
+			if(binding->getVariable() == recVar) {
+				bindings.push_back(build.lambdaBinding(newRecVar, newLambda));
+			} else {
+				bindings.push_back(binding);
+			}
+		}
+
+		// build new lambda (preserve all recursive variables)
+		ret = build.lambdaExpr(newRecVar, build.lambdaDefinition(bindings));
+		// LOG(INFO) << "!!!!!!! Mapped lambda expr " << ret;
+		return ret;
+	}
+
+	const NodePtr GlobalMapper::mapLiteral(const LiteralPtr& literal) {
+		const string& gname = literal->getStringValue();
+		if(gname.find("global_omp") == 0) { return build.refMember(curVar, gname); }
+
+		return literal;
+	}
 
 } // namespace omp
 } // namespace frontend

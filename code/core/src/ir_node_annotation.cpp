@@ -41,18 +41,17 @@
 namespace insieme {
 namespace core {
 
-void NodeAnnotation::clone(const NodeAnnotationPtr& ptr, const NodePtr& copy) const {
-	copy->addAnnotation(ptr);
-};
+	void NodeAnnotation::clone(const NodeAnnotationPtr& ptr, const NodePtr& copy) const {
+		copy->addAnnotation(ptr);
+	};
 
-namespace value_annotation {
+	namespace value_annotation {
 
-void add_annotation(const NodeAnnotationPtr& annotation, const NodePtr& target) {
-	target->addAnnotation(annotation);
-}
+		void add_annotation(const NodeAnnotationPtr& annotation, const NodePtr& target) {
+			target->addAnnotation(annotation);
+		}
 
-} // end namespace value_annotation
+	} // end namespace value_annotation
 
 } // end namespace core
 } // end namespace insieme
-

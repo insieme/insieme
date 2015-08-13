@@ -50,43 +50,38 @@ namespace insieme {
 namespace core {
 namespace encoder {
 
-TEST(Lists, languageExtension) {
+	TEST(Lists, languageExtension) {
+		NodeManager manager;
+		const ListExtension& ext = manager.getLangExtension<ListExtension>();
 
-	NodeManager manager;
-	const ListExtension& ext = manager.getLangExtension<ListExtension>();
-	
-	EXPECT_EQ("(('a,list<'a>)->list<'a>)", toString(*ext.cons->getType()));
-	EXPECT_EQ("((type<'a>)->list<'a>)", toString(*ext.empty->getType()));
-	
-}
+		EXPECT_EQ("(('a,list<'a>)->list<'a>)", toString(*ext.cons->getType()));
+		EXPECT_EQ("((type<'a>)->list<'a>)", toString(*ext.empty->getType()));
+	}
 
 
-TEST(Lists, listConversion) {
+	TEST(Lists, listConversion) {
+		NodeManager manager;
 
-	NodeManager manager;
-	
-	// create a list
-	
-	vector<int> list = toVector(1,2,3);
-	core::ExpressionPtr irList = toIR(manager, list);
-	vector<int> back = toValue<vector<int>>(irList);
-	
-	EXPECT_EQ("[1,2,3]", toString(list));
-	EXPECT_EQ("cons(1, cons(2, cons(3, empty(type<int<4>>))))", toString(*irList));
-	
-	EXPECT_TRUE(isEncodingOf<vector<int>>(irList));
-	EXPECT_EQ(list, back);
-	
-	EXPECT_EQ("[]", toString(check(irList, checks::getFullCheck())));
-	
-	
-	// test another type
-	EXPECT_EQ("cons(3.75, cons(1.47, empty(type<real<8>>)))", toString(*toIR(manager, toVector<double>(3.75, 1.47))));
-	
-}
+		// create a list
+
+		vector<int> list = toVector(1, 2, 3);
+		core::ExpressionPtr irList = toIR(manager, list);
+		vector<int> back = toValue<vector<int>>(irList);
+
+		EXPECT_EQ("[1,2,3]", toString(list));
+		EXPECT_EQ("cons(1, cons(2, cons(3, empty(type<int<4>>))))", toString(*irList));
+
+		EXPECT_TRUE(isEncodingOf<vector<int>>(irList));
+		EXPECT_EQ(list, back);
+
+		EXPECT_EQ("[]", toString(check(irList, checks::getFullCheck())));
+
+
+		// test another type
+		EXPECT_EQ("cons(3.75, cons(1.47, empty(type<real<8>>)))", toString(*toIR(manager, toVector<double>(3.75, 1.47))));
+	}
 
 
 } // end namespace lists
 } // end namespace core
 } // end namespace insieme
-

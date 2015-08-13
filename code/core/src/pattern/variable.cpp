@@ -43,16 +43,16 @@
 namespace insieme {
 namespace core {
 namespace pattern {
-namespace detail {
+	namespace detail {
 
-using std::string;
+		using std::string;
 
-string getFreshVarName() {
-	static int counter = 0;
-	return format("v%d", ++counter);
-}
+		string getFreshVarName() {
+			static int counter = 0;
+			return format("v%d", ++counter);
+		}
 
-} // end namespace detail
+	} // end namespace detail
 } // end namespace pattern
 } // end namespace core
 } // end namespace insieme

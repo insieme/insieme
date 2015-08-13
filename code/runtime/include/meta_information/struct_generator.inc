@@ -36,14 +36,14 @@
 
 #define INFO_DECL(_text) _text;
 
-#define INFO_STRUCT_BEGIN(__name) \
-struct __name##_; \
-typedef struct __name##_ __name##_info; \
-struct __name##_ { \
-	bool available;
+#define INFO_STRUCT_BEGIN(__name)                                                                                                                              \
+	struct __name##_;                                                                                                                                          \
+	typedef struct __name##_ __name##_info;                                                                                                                    \
+	struct __name##_ {                                                                                                                                         \
+		bool available;
 
-#define INFO_FIELD_EXT(__id, __type, __val, _a, _b) \
-	__type __id;
+#define INFO_FIELD_EXT(__id, __type, __val, _a, _b) __type __id;
 
-#define INFO_STRUCT_END() \
-};
+#define INFO_STRUCT_END()                                                                                                                                      \
+	}                                                                                                                                                          \
+	;

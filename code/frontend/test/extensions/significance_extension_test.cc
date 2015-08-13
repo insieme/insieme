@@ -53,18 +53,17 @@ using namespace insieme::driver;
 namespace insieme {
 namespace frontend {
 
-using namespace core;
+	using namespace core;
 
-TEST(Significance, Task) {
-	NodeManager man;
-	IRBuilder builder(man);
-	
-	fs::path tmpFile;
-	{
-	
-		// create a temporary source file
-		Source file(
-		    R"(
+	TEST(Significance, Task) {
+		NodeManager man;
+		IRBuilder builder(man);
+
+		fs::path tmpFile;
+		{
+			// create a temporary source file
+			Source file(
+			    R"(
 #include <stdio.h>
 void bla() {
 	printf("Wow\n");
@@ -83,34 +82,34 @@ int main(int argc, char **argv) {
 }
 		)");
 
-		// check whether there is a temporary file
-		tmpFile = file.getPath();
-		EXPECT_TRUE(fs::exists(tmpFile));
-		
-		// parse temporary file
-		core::NodeManager manager;
-		const boost::filesystem::path& fileName = file;
-		std::vector<std::string> argv = { "muha",  fileName.string(), "--ftask-significance" };
-		cmd::Options options = cmd::Options::parse(argv);
-		
-		auto code = options.job.execute(manager);
-		EXPECT_TRUE(code);
-		
-		// create target code using the runtime backend
-		auto target = backend::runtime::RuntimeBackend::getDefault()->convert(code);
-		
-		// check for presence of expected metainfo
-		string targetString = toString(*target);
-		EXPECT_TRUE(targetString.find("\"testlabel\"") != string::npos);
-		
-		// see whether target code can be compiled
-		utils::compiler::Compiler compiler = utils::compiler::Compiler::getRuntimeCompiler();
-		
-		// build binary
-		auto fn = utils::compiler::compileToBinary(*target, compiler);
-		EXPECT_FALSE(fn.empty());
+			// check whether there is a temporary file
+			tmpFile = file.getPath();
+			EXPECT_TRUE(fs::exists(tmpFile));
+
+			// parse temporary file
+			core::NodeManager manager;
+			const boost::filesystem::path& fileName = file;
+			std::vector<std::string> argv = {"muha", fileName.string(), "--ftask-significance"};
+			cmd::Options options = cmd::Options::parse(argv);
+
+			auto code = options.job.execute(manager);
+			EXPECT_TRUE(code);
+
+			// create target code using the runtime backend
+			auto target = backend::runtime::RuntimeBackend::getDefault()->convert(code);
+
+			// check for presence of expected metainfo
+			string targetString = toString(*target);
+			EXPECT_TRUE(targetString.find("\"testlabel\"") != string::npos);
+
+			// see whether target code can be compiled
+			utils::compiler::Compiler compiler = utils::compiler::Compiler::getRuntimeCompiler();
+
+			// build binary
+			auto fn = utils::compiler::compileToBinary(*target, compiler);
+			EXPECT_FALSE(fn.empty());
+		}
 	}
-}
 
 } // namespace frontend
 } // namespace insieme

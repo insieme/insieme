@@ -42,30 +42,28 @@
 namespace insieme {
 namespace utils {
 
-TEST(ProgressBar, Basic) {
+	TEST(ProgressBar, Basic) {
+		ProgressBar bar("test", 100, 0, 40, std::cout, false);
+		EXPECT_EQ("test [>                                       ]   0.00% of 100 ", toString(bar));
 
-	ProgressBar bar("test", 100, 0, 40, std::cout, false);
-	EXPECT_EQ("test [>                                       ]   0.00% of 100 ", toString(bar));
-	
-	bar.inc(10);
-	EXPECT_EQ("test [====>                                   ]  10.00% of 100 ", toString(bar));
-	
-	bar.inc(20);
-	EXPECT_EQ("test [============>                           ]  30.00% of 100 ", toString(bar));
-	
-	bar.inc(40);
-	EXPECT_EQ("test [============================>           ]  70.00% of 100 ", toString(bar));
-	
-	bar.inc(29);
-	EXPECT_EQ("test [=======================================>]  99.00% of 100 ", toString(bar));
-	
-	bar.inc();
-	EXPECT_EQ("test [========================================] 100.00% of 100 ", toString(bar));
-	
-	bar.inc(60);
-	EXPECT_EQ("test [========================================] 160.00% of 100 ", toString(bar));
-}
+		bar.inc(10);
+		EXPECT_EQ("test [====>                                   ]  10.00% of 100 ", toString(bar));
+
+		bar.inc(20);
+		EXPECT_EQ("test [============>                           ]  30.00% of 100 ", toString(bar));
+
+		bar.inc(40);
+		EXPECT_EQ("test [============================>           ]  70.00% of 100 ", toString(bar));
+
+		bar.inc(29);
+		EXPECT_EQ("test [=======================================>]  99.00% of 100 ", toString(bar));
+
+		bar.inc();
+		EXPECT_EQ("test [========================================] 100.00% of 100 ", toString(bar));
+
+		bar.inc(60);
+		EXPECT_EQ("test [========================================] 160.00% of 100 ", toString(bar));
+	}
 
 } // end namespace utils
 } // end namespace insieme
-

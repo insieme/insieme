@@ -40,7 +40,7 @@
 // type table
 
 irt_type g_insieme_type_table[] = {
-	{ IRT_T_INT64, 8, 0, 0 },
+    {IRT_T_INT64, 8, 0, 0},
 };
 
 // work item table
@@ -57,37 +57,22 @@ void insieme_wi_startup_implementation_recursive(irt_work_item* wi);
 
 void insieme_wi_startup_implementation_recursive_child(irt_work_item* wi);
 
-irt_wi_implementation_variant g_insieme_wi_startup_variants_simple[] = {
-	{ &insieme_wi_startup_implementation_simple }
-};
+irt_wi_implementation_variant g_insieme_wi_startup_variants_simple[] = {{&insieme_wi_startup_implementation_simple}};
 
-irt_wi_implementation_variant g_insieme_wi_startup_variants_simple_child[] = {
-	{ &insieme_wi_startup_implementation_simple_child }
-};
+irt_wi_implementation_variant g_insieme_wi_startup_variants_simple_child[] = {{&insieme_wi_startup_implementation_simple_child}};
 
-irt_wi_implementation_variant g_insieme_wi_startup_variants_complex[] = {
-	{ &insieme_wi_startup_implementation_complex }
-};
+irt_wi_implementation_variant g_insieme_wi_startup_variants_complex[] = {{&insieme_wi_startup_implementation_complex}};
 
-irt_wi_implementation_variant g_insieme_wi_startup_variants_complex_child[] = {
-	{ &insieme_wi_startup_implementation_complex_child }
-};
+irt_wi_implementation_variant g_insieme_wi_startup_variants_complex_child[] = {{&insieme_wi_startup_implementation_complex_child}};
 
-irt_wi_implementation_variant g_insieme_wi_startup_variants_recursive[] = {
-	{ &insieme_wi_startup_implementation_recursive }
-};
+irt_wi_implementation_variant g_insieme_wi_startup_variants_recursive[] = {{&insieme_wi_startup_implementation_recursive}};
 
-irt_wi_implementation_variant g_insieme_wi_startup_variants_recursive_child[] = {
-	{ &insieme_wi_startup_implementation_recursive_child }
-};
+irt_wi_implementation_variant g_insieme_wi_startup_variants_recursive_child[] = {{&insieme_wi_startup_implementation_recursive_child}};
 
 irt_wi_implementation g_insieme_impl_table[] = {
-	{ 1, 1, g_insieme_wi_startup_variants_simple },
-	{ 1, 1, g_insieme_wi_startup_variants_simple_child },
-	{ 1, 1, g_insieme_wi_startup_variants_complex },
-	{ 1, 1, g_insieme_wi_startup_variants_complex_child },
-	{ 1, 1, g_insieme_wi_startup_variants_recursive },
-	{ 1, 1, g_insieme_wi_startup_variants_recursive_child },
+    {1, 1, g_insieme_wi_startup_variants_simple},    {1, 1, g_insieme_wi_startup_variants_simple_child},
+    {1, 1, g_insieme_wi_startup_variants_complex},   {1, 1, g_insieme_wi_startup_variants_complex_child},
+    {1, 1, g_insieme_wi_startup_variants_recursive}, {1, 1, g_insieme_wi_startup_variants_recursive_child},
 };
 
 // initialization
@@ -110,13 +95,13 @@ void insieme_wi_startup_implementation_simple(irt_work_item* wi) {
 		irt_parallel_job job;
 		job.max = 1;
 		job.impl = &g_insieme_impl_table[1];
-		
+
 		irt_joinable child = irt_task(&job);
-		
+
 		irt_merge(child);
 	}
-	
-	//not really much to check here - we just want to make sure we end up here eventually
+
+	// not really much to check here - we just want to make sure we end up here eventually
 	EXPECT_TRUE(true);
 }
 
@@ -132,15 +117,15 @@ void insieme_wi_startup_implementation_complex(irt_work_item* wi) {
 		irt_parallel_job job;
 		job.max = 1;
 		job.impl = &g_insieme_impl_table[3];
-		
+
 		child[i] = irt_task(&job);
 	}
-	
+
 	for(int i = 0; i < runs; i++) {
 		irt_merge(child[i]);
 	}
-	
-	//not really much to check here - we just want to make sure we end up here eventually
+
+	// not really much to check here - we just want to make sure we end up here eventually
 	EXPECT_TRUE(true);
 }
 
@@ -165,38 +150,36 @@ void insieme_wi_startup_implementation_recursive(irt_work_item* wi) {
 }
 
 void insieme_wi_startup_implementation_recursive_child(irt_work_item* wi) {
-	*((data_struct*) wi->parameters)->result = fib(((data_struct*) wi->parameters)->param);
+	*((data_struct*)wi->parameters)->result = fib(((data_struct*)wi->parameters)->param);
 }
 
 uint32 fib(const uint32 param) {
-	if(param == 1 || param == 2) {
-		return 1;
-	}
-	
+	if(param == 1 || param == 2) { return 1; }
+
 	data_struct args1;
-	args1.type_id = - ((int32) sizeof(data_struct));
+	args1.type_id = -((int32)sizeof(data_struct));
 	args1.param = param - 1;
 	args1.result = &args1.result_field;
 	irt_parallel_job job1;
 	job1.max = 1;
 	job1.impl = &g_insieme_impl_table[5];
-	job1.args = (irt_lw_data_item*) &args1;
+	job1.args = (irt_lw_data_item*)&args1;
 	irt_joinable task1 = irt_task(&job1);
-	
+
 	data_struct args2;
-	args2.type_id = - ((int32) sizeof(data_struct));
+	args2.type_id = -((int32)sizeof(data_struct));
 	args2.param = param - 2;
 	args2.result = &args2.result_field;
 	irt_parallel_job job2;
 	job2.max = 1;
 	job2.impl = &g_insieme_impl_table[5];
-	job2.args = (irt_lw_data_item*) &args2;
+	job2.args = (irt_lw_data_item*)&args2;
 	irt_joinable task2 = irt_task(&job2);
-	
+
 	irt_merge(task1);
 	irt_merge(task2);
-	//irt_wi_join_all(irt_wi_get_current());
-	
+	// irt_wi_join_all(irt_wi_get_current());
+
 	return *args1.result + *args2.result;
 }
 

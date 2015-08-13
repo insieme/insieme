@@ -41,235 +41,211 @@
 using namespace insieme::utils;
 
 TEST(Matrix, SimpleMatrix) {
-
 	Matrix<int> m(3, 3);
-	
+
 	EXPECT_EQ(3u, m.rows());
 	EXPECT_EQ(3u, m.cols());
-	
+
 	EXPECT_EQ(0, m[0][1]);
-	
+
 	m[0][1] = 1;
-	
+
 	EXPECT_EQ(1, m[0][1]);
 }
 
 TEST(Matrix, IdentityMatrix) {
-
 	auto&& m = makeIdentity<int>(3);
-	
+
 	EXPECT_EQ(3u, m.rows());
 	EXPECT_EQ(3u, m.cols());
-	
+
 	EXPECT_EQ(m[0][0], 1);
 	EXPECT_EQ(m[1][1], 1);
 	EXPECT_EQ(m[2][2], 1);
-	
+
 	EXPECT_EQ(m[0][1], 0);
 	EXPECT_EQ(m[0][2], 0);
-	
+
 	EXPECT_EQ(m[1][0], 0);
 	EXPECT_EQ(m[1][2], 0);
-	
+
 	EXPECT_EQ(m[2][0], 0);
 	EXPECT_EQ(m[2][1], 0);
 }
 
 TEST(Matrix, SwapRows) {
-
 	Matrix<int>&& m = makeIdentity<int>(4);
-	
+
 	m.swapRows(0, 2);
-	
+
 	EXPECT_EQ(m[0][0], 0);
 	EXPECT_EQ(m[0][2], 1);
-	
+
 	EXPECT_EQ(m[2][0], 1);
 	EXPECT_EQ(m[2][2], 0);
 }
 
 TEST(Matrix, SwapSwapRows) {
-
 	Matrix<int>&& m = makeIdentity<int>(4);
-	
+
 	m.swapRows(2, 3);
-	
+
 	EXPECT_EQ(1, m[3][2]);
 	EXPECT_EQ(1, m[2][3]);
-	
+
 	EXPECT_EQ(0, m[3][3]);
 	EXPECT_EQ(0, m[2][2]);
-	
+
 	m.swapRows(1, 2);
 	EXPECT_EQ(1, m[2][1]);
 	EXPECT_EQ(1, m[1][3]);
-	
 }
 
 TEST(Matrix, SwapCols) {
-
 	Matrix<int>&& m = makeIdentity<int>(4);
-	
+
 	m.swapCols(1, 3);
-	
+
 	EXPECT_EQ(m[1][1], 0);
 	EXPECT_EQ(m[1][3], 1);
-	
+
 	EXPECT_EQ(m[3][1], 1);
 	EXPECT_EQ(m[3][3], 0);
-	
 }
 
 TEST(Matrix, SwapRowsAndCols) {
+	Matrix<int> m(2, 3);
 
-	Matrix<int> m(2,3);
-	
-	m[0] = { 1,2,3 };
-	m[1] = { 4,5,6 };
-	
-	m.swapRows(0,1);
-	m.swapCols(1,2);
-	
+	m[0] = {1, 2, 3};
+	m[1] = {4, 5, 6};
+
+	m.swapRows(0, 1);
+	m.swapCols(1, 2);
+
 	EXPECT_EQ(m[0][1], 6);
 	EXPECT_EQ(m[0][2], 5);
-	
+
 	EXPECT_EQ(m[1][1], 3);
 	EXPECT_EQ(m[1][2], 2);
-	
 }
 
 TEST(Matrix, SwapColsAndRows) {
+	Matrix<int> m(2, 3);
 
-	Matrix<int> m(2,3);
-	
-	m[0] = { 1,2,3 };
-	m[1] = { 4,5,6 };
-	
-	m.swapCols(1,2);
-	m.swapRows(0,1);
-	
+	m[0] = {1, 2, 3};
+	m[1] = {4, 5, 6};
+
+	m.swapCols(1, 2);
+	m.swapRows(0, 1);
+
 	EXPECT_EQ(m[0][1], 6);
 	EXPECT_EQ(m[0][2], 5);
-	
+
 	EXPECT_EQ(m[1][1], 3);
 	EXPECT_EQ(m[1][2], 2);
-	
 }
 
 TEST(Matrix, SetRow) {
+	Matrix<double> md(2, 4);
 
-	Matrix<double> md(2,4);
-	
-	md[0] = { 2.3, 2.1, 4.5, 1 };
-	md[1] = { 3.5, 2.3, 3.3, 4.4 };
-	
+	md[0] = {2.3, 2.1, 4.5, 1};
+	md[1] = {3.5, 2.3, 3.3, 4.4};
+
 	EXPECT_EQ(md[0][0], 2.3);
 	EXPECT_EQ(md[1][3], 4.4);
 }
 
 TEST(Matrix, MatMul) {
+	Matrix<int> m1(1, 4);
+	Matrix<int> m2(4, 2);
 
-	Matrix<int> m1(1,4);
-	Matrix<int> m2(4,2);
-	
-	m1[0] = { 1, 2, 3, 4 };
-	
-	m2[0] = { 1, 2 };
-	m2[1] = { 3, 4 };
-	m2[2] = { 5, 6 };
-	m2[3] = { 7, 8 };
-	
+	m1[0] = {1, 2, 3, 4};
+
+	m2[0] = {1, 2};
+	m2[1] = {3, 4};
+	m2[2] = {5, 6};
+	m2[3] = {7, 8};
+
 	Matrix<int>&& ret = m1 * m2;
 	EXPECT_EQ(1u, ret.rows());
 	EXPECT_EQ(2u, ret.cols());
-	
-	//EXPECT_TRUE( std::equal(ret[0].begin(), ret[0].end(), (int[]) { 50, 60 }) );
+
+	// EXPECT_TRUE( std::equal(ret[0].begin(), ret[0].end(), (int[]) { 50, 60 }) );
 }
 
 TEST(Matrix, MatSum) {
+	Matrix<int> m1(3, 3);
+	m1[0] = {1, 2, 3};
+	m1[1] = {4, 5, 6};
+	m1[2] = {7, 8, 9};
 
-	Matrix<int> m1(3,3);
-	m1[0] = { 1, 2, 3 };
-	m1[1] = { 4, 5, 6 };
-	m1[2] = { 7, 8, 9 };
-	
 	Matrix<int>&& m2 = makeIdentity<int>(3);
-	
+
 	Matrix<int>&& ret = m1 + m2;
-	
+
 	EXPECT_EQ(ret[0][0], 2);
 	EXPECT_EQ(ret[1][1], 6);
 	EXPECT_EQ(ret[2][2], 10);
-	
 }
 
 TEST(Matrix, MatDiff) {
+	Matrix<int> m1(3, 3);
+	m1[0] = {1, 2, 3};
+	m1[1] = {4, 5, 6};
+	m1[2] = {7, 8, 9};
 
-	Matrix<int> m1(3,3);
-	m1[0] = { 1, 2, 3 };
-	m1[1] = { 4, 5, 6 };
-	m1[2] = { 7, 8, 9 };
-	
 	Matrix<int>&& m2 = makeIdentity<int>(3);
-	
+
 	Matrix<int>&& ret = m1 - m2;
-	
+
 	EXPECT_EQ(ret[0][0], 0);
 	EXPECT_EQ(ret[1][1], 4);
 	EXPECT_EQ(ret[2][2], 8);
-	
 }
 
 TEST(Matrix, Equal) {
-
 	Matrix<int>&& m1 = makeIdentity<int>(3);
 	Matrix<int>&& m2 = makeIdentity<int>(3);
 	EXPECT_TRUE(m1 == m2);
-	
 }
 
 TEST(Matrix, Equal2) {
+	Matrix<int> m1(2, 2);
+	m1[0] = {1, 2};
+	m1[1] = {3, 4};
 
-	Matrix<int> m1(2,2);
-	m1[0] = { 1, 2 };
-	m1[1] = { 3, 4 };
-	
-	Matrix<int> m2(2,2);
-	m2[0] = { 1, 2 };
-	m2[1] = { 3, 5 };
-	
+	Matrix<int> m2(2, 2);
+	m2[0] = {1, 2};
+	m2[1] = {3, 5};
+
 	EXPECT_FALSE(m1 == m2);
 }
 
 TEST(Matrix, Equal3) {
+	Matrix<int> m1(2, 2);
+	m1[0] = {2, 1};
+	m1[1] = {4, 3};
 
-	Matrix<int> m1(2,2);
-	m1[0] = { 2, 1 };
-	m1[1] = { 4, 3 };
-	
 	m1.swapCols(0, 1);
-	
-	Matrix<int> m2(2,2);
-	m2[0] = { 1, 2 };
-	m2[1] = { 3, 4 };
-	
+
+	Matrix<int> m2(2, 2);
+	m2[0] = {1, 2};
+	m2[1] = {3, 4};
+
 	EXPECT_TRUE(m1 == m2);
 }
 
 TEST(Matrix, FromArray) {
+	Matrix<int> m1({{1, 2, 3}, {4, 5, 6}});
 
-	Matrix<int> m1({ {1,2,3}, {4, 5, 6} });
-	
 	EXPECT_EQ(2u, m1.rows());
 	EXPECT_EQ(3u, m1.cols());
-	
+
 	EXPECT_EQ(m1[0][0], 1);
 	EXPECT_EQ(m1[0][1], 2);
 	EXPECT_EQ(m1[0][2], 3);
-	
+
 	EXPECT_EQ(m1[1][0], 4);
 	EXPECT_EQ(m1[1][1], 5);
 	EXPECT_EQ(m1[1][2], 6);
-	
 }
-

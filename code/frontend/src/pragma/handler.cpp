@@ -46,12 +46,12 @@ using namespace insieme::frontend;
 
 namespace {
 
-std::string loc2string(const clang::SourceLocation& loc, const clang::SourceManager& sm) {
-	std::string str;
-	llvm::raw_string_ostream ss(str);
-	loc.print(ss,sm);
-	return ss.str();
-}
+	std::string loc2string(const clang::SourceLocation& loc, const clang::SourceManager& sm) {
+		std::string str;
+		llvm::raw_string_ostream ss(str);
+		loc.print(ss, sm);
+		return ss.str();
+	}
 
 } // End empty namespace
 
@@ -59,83 +59,81 @@ namespace insieme {
 namespace frontend {
 namespace pragma {
 
-void Pragma::setStatement(clang::Stmt const* stmt) {
-	assert_true(mTargetNode.isNull()) << "Pragma already associated with an AST node";
-	mTargetNode = stmt;
-}
+	void Pragma::setStatement(clang::Stmt const* stmt) {
+		assert_true(mTargetNode.isNull()) << "Pragma already associated with an AST node";
+		mTargetNode = stmt;
+	}
 
-void Pragma::setDecl(clang::Decl const* decl) {
-	assert_true(mTargetNode.isNull()) << "Pragma already associated with an AST node";
-	mTargetNode = decl;
-}
+	void Pragma::setDecl(clang::Decl const* decl) {
+		assert_true(mTargetNode.isNull()) << "Pragma already associated with an AST node";
+		mTargetNode = decl;
+	}
 
-clang::Stmt const* Pragma::getStatement() const {
-	assert(!mTargetNode.isNull() && isStatement());
-	return mTargetNode.get<clang::Stmt const*> ();
-}
+	clang::Stmt const* Pragma::getStatement() const {
+		assert(!mTargetNode.isNull() && isStatement());
+		return mTargetNode.get<clang::Stmt const*>();
+	}
 
-clang::Decl const* Pragma::getDecl() const {
-	assert(!mTargetNode.isNull() && isDecl());
-	return mTargetNode.get<clang::Decl const*> ();
-}
+	clang::Decl const* Pragma::getDecl() const {
+		assert(!mTargetNode.isNull() && isDecl());
+		return mTargetNode.get<clang::Decl const*>();
+	}
 
-std::string Pragma::toStr(const clang::SourceManager& sm) const {
-	std::ostringstream ss;
-	ss << "(" << loc2string(getStartLocation(), sm) << ", " << loc2string(getEndLocation(), sm) << "),\n\t";
-	
-	ss << (isStatement() ? "Stmt -> " : "Decl -> ") << "(";
-	
-	if(isStatement() && getStatement())
-		ss << loc2string(getStatement()->getLocStart(), sm) << ", " <<
-		   loc2string(getStatement()->getLocEnd(), sm);
-	else if(isDecl() && getDecl())
-		ss << loc2string(getDecl()->getLocStart(), sm) << ", " <<
-		   loc2string(getDecl()->getLocEnd(), sm);
-	ss << ")";
-	return ss.str();
-}
+	std::string Pragma::toStr(const clang::SourceManager& sm) const {
+		std::ostringstream ss;
+		ss << "(" << loc2string(getStartLocation(), sm) << ", " << loc2string(getEndLocation(), sm) << "),\n\t";
 
-void Pragma::dump(std::ostream& out, const clang::SourceManager& sm) const {
-	out << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n" <<
-	    "|~> Pragma: " << getType() << " -> " << toStr(sm) << "\n";
-}
+		ss << (isStatement() ? "Stmt -> " : "Decl -> ") << "(";
+
+		if(isStatement() && getStatement())
+			ss << loc2string(getStatement()->getLocStart(), sm) << ", " << loc2string(getStatement()->getLocEnd(), sm);
+		else if(isDecl() && getDecl())
+			ss << loc2string(getDecl()->getLocStart(), sm) << ", " << loc2string(getDecl()->getLocEnd(), sm);
+		ss << ")";
+		return ss.str();
+	}
+
+	void Pragma::dump(std::ostream& out, const clang::SourceManager& sm) const {
+		out << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
+		    << "|~> Pragma: " << getType() << " -> " << toStr(sm) << "\n";
+	}
 
 
-core::NodeList attachPragma(const core::NodeList& nodes, const clang::Stmt* clangNode, conversion::Converter& fact) {
-	const PragmaStmtMap::StmtMap& pragmaStmtMap = fact.getPragmaMap().getStatementMap();
-	
-	typedef PragmaStmtMap::StmtMap::const_iterator PragmaStmtIter;
-	
-	// Get the list of pragmas attached to the clang node
-	std::pair<PragmaStmtIter, PragmaStmtIter>&& iter = pragmaStmtMap.equal_range(clangNode);
-	
-	core::NodeList ret = nodes;
-	std::for_each(iter.first, iter.second, [&](const PragmaStmtMap::StmtMap::value_type& curr) {
-		if(auto pragma = dynamic_cast<pragma::FrontendExtensionPragma*>(&*(curr.second))) {
-			ret = (pragma->getFunction())(pragma->getMatchObject(fact), ret);
-		}
-	});
-	
-	return ret;
-}
+	core::NodeList attachPragma(const core::NodeList& nodes, const clang::Stmt* clangNode, conversion::Converter& fact) {
+		const PragmaStmtMap::StmtMap& pragmaStmtMap = fact.getPragmaMap().getStatementMap();
 
-core::NodeList attachPragma(const core::NodeList& nodes, const clang::Decl* clangDecl, conversion::Converter& fact) {
-	const PragmaStmtMap::DeclMap& pragmaDeclMap = fact.getPragmaMap().getDeclarationMap();
-	
-	typedef PragmaStmtMap::DeclMap::const_iterator PragmaDeclIter;
-	
-	// Get the list of pragmas attached to the clang node
-	std::pair<PragmaDeclIter, PragmaDeclIter>&& iter = pragmaDeclMap.equal_range(clangDecl);
-	
-	core::NodeList ret = nodes;
-	std::for_each(iter.first, iter.second, [&](const PragmaStmtMap::DeclMap::value_type& curr) {
-		if(auto pragma = dynamic_cast<pragma::FrontendExtensionPragma*>(&*(curr.second))) {
-			ret = (pragma->getFunction())(pragma->getMatchObject(fact), ret);
-		}
-	});
-	
-	return ret;
-}
+		typedef PragmaStmtMap::StmtMap::const_iterator PragmaStmtIter;
+
+		// Get the list of pragmas attached to the clang node
+		std::pair<PragmaStmtIter, PragmaStmtIter>&& iter = pragmaStmtMap.equal_range(clangNode);
+
+		core::NodeList ret = nodes;
+		std::for_each(iter.first, iter.second, [&](const PragmaStmtMap::StmtMap::value_type& curr) {
+			if(auto pragma = dynamic_cast<pragma::FrontendExtensionPragma*>(&*(curr.second))) {
+				ret = (pragma->getFunction())(pragma->getMatchObject(fact), ret);
+			}
+		});
+
+		return ret;
+	}
+
+	core::NodeList attachPragma(const core::NodeList& nodes, const clang::Decl* clangDecl, conversion::Converter& fact) {
+		const PragmaStmtMap::DeclMap& pragmaDeclMap = fact.getPragmaMap().getDeclarationMap();
+
+		typedef PragmaStmtMap::DeclMap::const_iterator PragmaDeclIter;
+
+		// Get the list of pragmas attached to the clang node
+		std::pair<PragmaDeclIter, PragmaDeclIter>&& iter = pragmaDeclMap.equal_range(clangDecl);
+
+		core::NodeList ret = nodes;
+		std::for_each(iter.first, iter.second, [&](const PragmaStmtMap::DeclMap::value_type& curr) {
+			if(auto pragma = dynamic_cast<pragma::FrontendExtensionPragma*>(&*(curr.second))) {
+				ret = (pragma->getFunction())(pragma->getMatchObject(fact), ret);
+			}
+		});
+
+		return ret;
+	}
 
 } // End pragma namespace
 } // End frontend namespace

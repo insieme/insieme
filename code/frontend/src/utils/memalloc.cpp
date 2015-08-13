@@ -42,118 +42,90 @@ namespace insieme {
 namespace frontend {
 namespace utils {
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//
-core::CallExprPtr getSizeOfType(const core::IRBuilder& builder, const core::TypePtr& type) {
-	core::LiteralPtr size;
-	
-	const core::lang::BasicGenerator& gen = builder.getLangBasic();
-	if(core::VectorTypePtr&& vecTy = core::dynamic_pointer_cast<const core::VectorType>(type)) {
-		return builder.callExpr(gen.getUnsignedIntMul(), builder.literal(gen.getUInt8(), toString(*(vecTy->getSize()))),
-		                        getSizeOfType(builder, vecTy->getElementType()));
-	}
-	// in case of ref<'a>, recurr on 'a
-	if(core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(type)) {
-		return getSizeOfType(builder, refTy->getElementType());
-	}
-	
-	return builder.callExpr(gen.getSizeof(), builder.getTypeLiteral(type));
-}
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	//
+	core::CallExprPtr getSizeOfType(const core::IRBuilder& builder, const core::TypePtr& type) {
+		core::LiteralPtr size;
 
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//
-core::CallExprPtr getAlignOfType(const core::IRBuilder& builder, const core::TypePtr& type) {
-	core::LiteralPtr size;
-	
-	const core::lang::BasicGenerator& gen = builder.getLangBasic();
-	if(core::VectorTypePtr&& vecTy = core::dynamic_pointer_cast<const core::VectorType>(type)) {
-		return builder.callExpr(gen.getUnsignedIntMul(), builder.literal(gen.getUInt8(), toString(*(vecTy->getSize()))),
-		                        frontend::utils::getSizeOfType(builder, vecTy->getElementType()));
-	}
-	// in case of ref<'a>, recurr on 'a
-	if(core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(type)) {
-		return frontend::utils::getSizeOfType(builder, refTy->getElementType());
-	}
-	
-	return builder.callExpr(builder.getNodeManager().getLangExtension<core::lang::IRppExtensions>().getAlignof(), builder.getTypeLiteral(type));
-}
-
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Special method which handle malloc and calloc which need to be treated in a special way in the IR.
-core::ExpressionPtr handleMemAlloc(const core::IRBuilder& builder, const core::TypePtr& type,
-                                   const core::ExpressionPtr& subExpr) {
-                                   
-	if(core::CallExprPtr&& callExpr = core::dynamic_pointer_cast<const core::CallExpr>(subExpr)) {
-	
-		if(core::LiteralPtr&& lit = core::dynamic_pointer_cast<const core::Literal>(callExpr->getFunctionExpr())) {
-		
-			if(!(lit->getStringValue() == "malloc" || lit->getStringValue() == "calloc")) {
-				return core::ExpressionPtr();
-			}
-			
-			assert(((lit->getStringValue() == "malloc" && callExpr->getArguments().size() == 1) ||
-			        (lit->getStringValue() == "calloc" && callExpr->getArguments().size() == 2)) && "malloc() and calloc() takes respectively 1 and 2 arguments");
-			        
-			const core::lang::BasicGenerator& gen = builder.getLangBasic();
-			// The type of the cast should be ref<array<'a>>, and the sizeof('a) need to be derived
-			assert_eq(type->getNodeType(), core::NT_RefType);
-			assert_eq(core::analysis::getReferencedType(type)->getNodeType(), core::NT_ArrayType);
-			
-			const core::RefTypePtr& refType = core::static_pointer_cast<const core::RefType>(type);
-			const core::ArrayTypePtr& arrayType = refType->getElementType().as<core::ArrayTypePtr>();
-			const core::TypePtr& elemType = arrayType->getElementType();
-			
-			/*
-			 * The number of elements to be allocated of type 'targetType' is:
-			 * 		-> 	expr / sizeof(targetType)
-			 */
-			core::CallExprPtr size;
-			if(lit->getStringValue() == "malloc") {
-				size = builder.callExpr(
-				           gen.getUInt8(),
-				           gen.getUnsignedIntDiv(),
-				           callExpr->getArgument(0),
-				           getSizeOfType(builder, elemType)
-				       );
-			}
-			else {
-				size = builder.callExpr(
-				           gen.getUInt8(),
-				           gen.getUnsignedIntDiv(),
-				           builder.mul(callExpr->getArgument(0), callExpr->getArgument(1)),
-				           getSizeOfType(builder, elemType)
-				       );
-				       
-			}
-			
-			auto memAlloc = builder.refNew(
-			                    builder.callExpr(arrayType, gen.getArrayCreate1D(), builder.getTypeLiteral(elemType), size)
-			                );
-			                
-			if(lit->getStringValue() == "malloc") {
-				return memAlloc;
-			}
-			// this is a calloc, then we have to do a memset to initialize the memory
-			
-			auto var = builder.variable(builder.refType(arrayType));
-			auto declStmt = builder.declarationStmt(var, memAlloc);
-			
-			auto memSet = builder.callExpr(
-			                  builder.literal(builder.parseType("(ref<any>, int<4>, uint<8>) -> ref<any>"), "memset"),
-			                  var,
-			                  builder.intLit(0),
-			                  size);
-			                  
-			return builder.createCallExprFromBody(
-			           builder.compoundStmt(declStmt, memSet, builder.returnStmt(var)),
-			           var->getType()
-			       );
+		const core::lang::BasicGenerator& gen = builder.getLangBasic();
+		if(core::VectorTypePtr&& vecTy = core::dynamic_pointer_cast<const core::VectorType>(type)) {
+			return builder.callExpr(gen.getUnsignedIntMul(), builder.literal(gen.getUInt8(), toString(*(vecTy->getSize()))),
+			                        getSizeOfType(builder, vecTy->getElementType()));
 		}
+		// in case of ref<'a>, recurr on 'a
+		if(core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(type)) { return getSizeOfType(builder, refTy->getElementType()); }
+
+		return builder.callExpr(gen.getSizeof(), builder.getTypeLiteral(type));
 	}
-	return core::ExpressionPtr();
-}
+
+
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	//
+	core::CallExprPtr getAlignOfType(const core::IRBuilder& builder, const core::TypePtr& type) {
+		core::LiteralPtr size;
+
+		const core::lang::BasicGenerator& gen = builder.getLangBasic();
+		if(core::VectorTypePtr&& vecTy = core::dynamic_pointer_cast<const core::VectorType>(type)) {
+			return builder.callExpr(gen.getUnsignedIntMul(), builder.literal(gen.getUInt8(), toString(*(vecTy->getSize()))),
+			                        frontend::utils::getSizeOfType(builder, vecTy->getElementType()));
+		}
+		// in case of ref<'a>, recurr on 'a
+		if(core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(type)) {
+			return frontend::utils::getSizeOfType(builder, refTy->getElementType());
+		}
+
+		return builder.callExpr(builder.getNodeManager().getLangExtension<core::lang::IRppExtensions>().getAlignof(), builder.getTypeLiteral(type));
+	}
+
+
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// Special method which handle malloc and calloc which need to be treated in a special way in the IR.
+	core::ExpressionPtr handleMemAlloc(const core::IRBuilder& builder, const core::TypePtr& type, const core::ExpressionPtr& subExpr) {
+		if(core::CallExprPtr&& callExpr = core::dynamic_pointer_cast<const core::CallExpr>(subExpr)) {
+			if(core::LiteralPtr&& lit = core::dynamic_pointer_cast<const core::Literal>(callExpr->getFunctionExpr())) {
+				if(!(lit->getStringValue() == "malloc" || lit->getStringValue() == "calloc")) { return core::ExpressionPtr(); }
+
+				assert(((lit->getStringValue() == "malloc" && callExpr->getArguments().size() == 1)
+				        || (lit->getStringValue() == "calloc" && callExpr->getArguments().size() == 2))
+				       && "malloc() and calloc() takes respectively 1 and 2 arguments");
+
+				const core::lang::BasicGenerator& gen = builder.getLangBasic();
+				// The type of the cast should be ref<array<'a>>, and the sizeof('a) need to be derived
+				assert_eq(type->getNodeType(), core::NT_RefType);
+				assert_eq(core::analysis::getReferencedType(type)->getNodeType(), core::NT_ArrayType);
+
+				const core::RefTypePtr& refType = core::static_pointer_cast<const core::RefType>(type);
+				const core::ArrayTypePtr& arrayType = refType->getElementType().as<core::ArrayTypePtr>();
+				const core::TypePtr& elemType = arrayType->getElementType();
+
+				/*
+				 * The number of elements to be allocated of type 'targetType' is:
+				 * 		-> 	expr / sizeof(targetType)
+				 */
+				core::CallExprPtr size;
+				if(lit->getStringValue() == "malloc") {
+					size = builder.callExpr(gen.getUInt8(), gen.getUnsignedIntDiv(), callExpr->getArgument(0), getSizeOfType(builder, elemType));
+				} else {
+					size = builder.callExpr(gen.getUInt8(), gen.getUnsignedIntDiv(), builder.mul(callExpr->getArgument(0), callExpr->getArgument(1)),
+					                        getSizeOfType(builder, elemType));
+				}
+
+				auto memAlloc = builder.refNew(builder.callExpr(arrayType, gen.getArrayCreate1D(), builder.getTypeLiteral(elemType), size));
+
+				if(lit->getStringValue() == "malloc") { return memAlloc; }
+				// this is a calloc, then we have to do a memset to initialize the memory
+
+				auto var = builder.variable(builder.refType(arrayType));
+				auto declStmt = builder.declarationStmt(var, memAlloc);
+
+				auto memSet =
+				    builder.callExpr(builder.literal(builder.parseType("(ref<any>, int<4>, uint<8>) -> ref<any>"), "memset"), var, builder.intLit(0), size);
+
+				return builder.createCallExprFromBody(builder.compoundStmt(declStmt, memSet, builder.returnStmt(var)), var->getType());
+			}
+		}
+		return core::ExpressionPtr();
+	}
 }
 }
 }

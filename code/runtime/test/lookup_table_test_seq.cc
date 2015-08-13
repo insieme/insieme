@@ -67,7 +67,7 @@ irt_lookup_test_id dummy_id_generator() {
 }
 
 irt_lookup_test* make_item(float val) {
-	irt_lookup_test* item = (irt_lookup_test*)calloc(1,sizeof(irt_lookup_test));
+	irt_lookup_test* item = (irt_lookup_test*)calloc(1, sizeof(irt_lookup_test));
 	item->id = dummy_id_generator();
 	item->data = val;
 	return item;
@@ -75,55 +75,54 @@ irt_lookup_test* make_item(float val) {
 
 TEST(lookup_tables, sequential_ops) {
 	irt_lookup_test_table_init();
-	
+
 	// using 0 instead of NULL to prevent GCC warning
 	EXPECT_EQ(0 /* NULL */, irt_lookup_test_table_lookup(dummy_id_generator()));
 	EXPECT_EQ(0 /* NULL */, irt_lookup_test_table_lookup(dummy_id_generator()));
-	
+
 	irt_lookup_test* elems[TEST_ELEMS];
-	
-	for(int i=0; i<TEST_ELEMS; ++i) {
-		elems[i] = make_item(i/10.0f);
+
+	for(int i = 0; i < TEST_ELEMS; ++i) {
+		elems[i] = make_item(i / 10.0f);
 		irt_lookup_test_table_insert(elems[i]);
 	}
-	for(int i=TEST_ELEMS-1; i>=0; --i) {
+	for(int i = TEST_ELEMS - 1; i >= 0; --i) {
 		EXPECT_EQ(elems[i], irt_lookup_test_table_lookup(elems[i]->id));
 	}
-	
+
 	// remove single element, check if successful
 	irt_lookup_test_table_remove(elems[0]->id);
 	EXPECT_EQ(0 /* NULL */, irt_lookup_test_table_lookup(elems[0]->id));
-	
+
 	// remove every second element and check all afterwards
-	for(int i=1; i<TEST_ELEMS; i+=2) {
+	for(int i = 1; i < TEST_ELEMS; i += 2) {
 		irt_lookup_test_table_remove(elems[i]->id);
 	}
-	for(int i=1; i<TEST_ELEMS; ++i) {
-		if(i%2 == 1) {
+	for(int i = 1; i < TEST_ELEMS; ++i) {
+		if(i % 2 == 1) {
 			EXPECT_EQ(0 /* NULL */, irt_lookup_test_table_lookup(elems[i]->id));
-		}
-		else {
-			EXPECT_EQ(elems[i]    , irt_lookup_test_table_lookup(elems[i]->id));
+		} else {
+			EXPECT_EQ(elems[i], irt_lookup_test_table_lookup(elems[i]->id));
 		}
 	}
-	
-	irt_lookup_test* elems2[TEST_ELEMS*10];
-	
+
+	irt_lookup_test* elems2[TEST_ELEMS * 10];
+
 	// check open hashing
-	for(int i=0; i<TEST_ELEMS*10; ++i) {
-		elems2[i] = make_item(i*10.0f);
+	for(int i = 0; i < TEST_ELEMS * 10; ++i) {
+		elems2[i] = make_item(i * 10.0f);
 		irt_lookup_test_table_insert(elems2[i]);
 	}
-	for(int i=0; i<TEST_ELEMS*10; ++i) {
+	for(int i = 0; i < TEST_ELEMS * 10; ++i) {
 		EXPECT_EQ(elems2[i], irt_lookup_test_table_lookup(elems2[i]->id));
 	}
-	
+
 	// cleanup
 	irt_lookup_test_table_cleanup();
-	for(int i=0; i<TEST_ELEMS; ++i) {
+	for(int i = 0; i < TEST_ELEMS; ++i) {
 		free(elems[i]);
 	}
-	for(int i=0; i<TEST_ELEMS*10; ++i) {
+	for(int i = 0; i < TEST_ELEMS * 10; ++i) {
 		free(elems2[i]);
 	}
 }

@@ -38,27 +38,18 @@
 
 #include "insieme/utils/string_utils.h"
 
-namespace insieme {
-namespace core {
-namespace checks {
-
-
-
-} // end namespace checks
-} // end namespace core
-} // end namespace insieme
-
 namespace std {
 
-std::ostream& operator<<(std::ostream& out, const insieme::core::checks::ErrorCode& code) {
+	std::ostream& operator<<(std::ostream& out, const insieme::core::checks::ErrorCode& code) {
+		out << "[" << format("%05d", (unsigned)code) << "] - ";
+		// clang-format off
+		switch(code) {
+		#define CODE(KIND, NAME)                                                                                                                               \
+			case insieme::core::checks::EC_##KIND##_##NAME: return out << #KIND " / " #NAME; 
+		#include "insieme/core/checks/error_codes.inc"
+		}
+		// clang-format on
 
-	out << "[" << format("%05d", (unsigned)code) << "] - ";
-	switch(code) {
-#define CODE(KIND,NAME) case insieme::core::checks::EC_##KIND##_##NAME: return out << #KIND " / " #NAME;
-#include "insieme/core/checks/error_codes.inc"
+		return out << "Unknown Error CODE";
 	}
-	
-	return out << "Unknown Error CODE";
-}
-
 }

@@ -51,9 +51,9 @@ namespace lang {
 
 		auto a = builder.genericType("A");
 		auto raff = ReferenceType::create(a);
-		auto raft = ReferenceType::create(a,false,true);
-		auto ratf = ReferenceType::create(a,true,false);
-		auto ratt = ReferenceType::create(a,true,true);
+		auto raft = ReferenceType::create(a, false, true);
+		auto ratf = ReferenceType::create(a, true, false);
+		auto ratt = ReferenceType::create(a, true, true);
 
 		EXPECT_EQ("ref<A,f,f>", toString(*raff));
 		EXPECT_EQ("ref<A,f,t>", toString(*raft));
@@ -82,7 +82,6 @@ namespace lang {
 		EXPECT_EQ(ratf, (GenericTypePtr)(ReferenceType(ratf)));
 		EXPECT_EQ(raft, (GenericTypePtr)(ReferenceType(raft)));
 		EXPECT_EQ(ratt, (GenericTypePtr)(ReferenceType(ratt)));
-
 	}
 
 	TEST(Reference, IsReferenceType) {
@@ -107,11 +106,8 @@ namespace lang {
 		EXPECT_FALSE(ReferenceType::isReferenceType(builder.parseType("A")));
 		EXPECT_FALSE(ReferenceType::isReferenceType(builder.parseType("ref<A,t>")));
 		EXPECT_FALSE(ReferenceType::isReferenceType(builder.parseType("ref<A,t,t,t>")));
-
 	}
 
 } // end namespace lang
 } // end namespace core
 } // end namespace insieme
-
-

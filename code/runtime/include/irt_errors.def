@@ -34,17 +34,17 @@
  * regarding third party software licenses.
  */
 
-IRT_ERROR(IRT_ERR_NONE)				// no error
-IRT_ERROR(IRT_ERR_IO)				// I/O error
-IRT_ERROR(IRT_ERR_INIT)				// error related to initialization
-IRT_ERROR(IRT_ERR_INTERNAL)			// internal error caused by runtime system
-IRT_ERROR(IRT_ERR_OVERFLOW)			// overflow of an internal IR buffer
-IRT_ERROR(IRT_ERR_APP)				// error caused by the user application running on the IRT
-IRT_ERROR(IRT_ERR_OCL)				// error caused by the opencl runtime system
-IRT_ERROR(IRT_ERR_INSTRUMENTATION)	// error related to the instrumentation system
-IRT_ERROR(IRT_ERR_INVALIDARGUMENT)	// error caused by calls to irt functions with invalid arguments
-IRT_ERROR(IRT_ERR_HW_INFO)			// error caused by requesting hardware information that is not available
-IRT_ERROR(IRT_ERR_OMPP)			    // error caused by OpenMP+ optimizations 
-IRT_ERROR(IRT_ERR_BLOB_CONTAINER)	// error caused by the blobs container
+IRT_ERROR(IRT_ERR_NONE)            // no error
+IRT_ERROR(IRT_ERR_IO)              // I/O error
+IRT_ERROR(IRT_ERR_INIT)            // error related to initialization
+IRT_ERROR(IRT_ERR_INTERNAL)        // internal error caused by runtime system
+IRT_ERROR(IRT_ERR_OVERFLOW)        // overflow of an internal IR buffer
+IRT_ERROR(IRT_ERR_APP)             // error caused by the user application running on the IRT
+IRT_ERROR(IRT_ERR_OCL)             // error caused by the opencl runtime system
+IRT_ERROR(IRT_ERR_INSTRUMENTATION) // error related to the instrumentation system
+IRT_ERROR(IRT_ERR_INVALIDARGUMENT) // error caused by calls to irt functions with invalid arguments
+IRT_ERROR(IRT_ERR_HW_INFO)         // error caused by requesting hardware information that is not available
+IRT_ERROR(IRT_ERR_OMPP)            // error caused by OpenMP+ optimizations
+IRT_ERROR(IRT_ERR_BLOB_CONTAINER)  // error caused by the blobs container
 
 #undef IRT_ERROR

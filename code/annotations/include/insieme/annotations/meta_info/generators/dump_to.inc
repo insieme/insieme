@@ -29,24 +29,26 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
 #include "clear.inc"
 
-#define INFO_STRUCT_BEGIN(_name) \
-	namespace _name ## _ns { \
-	inline insieme::core::ExpressionPtr info_typeAnnotationConverter::toIR(insieme::core::NodeManager& manager, const insieme::core::NodeAnnotationPtr& annotation) const { \
-				static const string runtime_struct_name = #_name; \
-				typedef insieme::core::value_node_annotation<info_type>::type annotation_type; \
-				assert(dynamic_pointer_cast<annotation_type>(annotation) && "Only " #_name "_info annotations supported!"); \
-				const auto& data = static_pointer_cast<annotation_type>(annotation)->getValue();\
-				return insieme::core::encoder::toIR(manager, tuple_type ( 
+#define INFO_STRUCT_BEGIN(_name)                                                                                                                               \
+	namespace _name##_ns {                                                                                                                                     \
+		inline insieme::core::ExpressionPtr info_typeAnnotationConverter::toIR(insieme::core::NodeManager& manager,                                            \
+		                                                                       const insieme::core::NodeAnnotationPtr& annotation) const {                     \
+			static const string runtime_struct_name = #_name;                                                                                                  \
+			typedef insieme::core::value_node_annotation<info_type>::type annotation_type;                                                                     \
+			assert(dynamic_pointer_cast<annotation_type>(annotation) && "Only " #_name "_info annotations supported!");                                        \
+			const auto& data = static_pointer_cast<annotation_type>(annotation)->getValue();                                                                   \
+		        return insieme::core::encoder::toIR(manager, tuple_type (
 
-#define INFO_FIELD_EXT(_name, _a, _b, _type, _def) \
-		data._name,
+#define INFO_FIELD_EXT(_name, _a, _b, _type, _def) data._name,
 
-#define INFO_STRUCT_END() \
-		runtime_struct_name)); } }
+#define INFO_STRUCT_END()                                                                                                                                      \
+	    runtime_struct_name));                                                                                                                                 \
+	}                                                                                                                                                          \
+	}

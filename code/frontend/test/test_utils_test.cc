@@ -43,13 +43,12 @@
 namespace insieme {
 namespace frontend {
 
-TEST(SrcFileTest, HelloWorldTest) {
-
-	fs::path tmpFile;
-	{
-		// create a temporary source file
-		Source file(
-		    R"(
+	TEST(SrcFileTest, HelloWorldTest) {
+		fs::path tmpFile;
+		{
+			// create a temporary source file
+			Source file(
+			    R"(
 
 					#include <stdio.h>
 					
@@ -58,24 +57,22 @@ TEST(SrcFileTest, HelloWorldTest) {
 						return 0; 
 					}
 	
-					)"
-		);
-		
-		// check whether there is a temporary file
-		tmpFile = file.getPath();
-		EXPECT_TRUE(fs::exists(tmpFile));
-		
-		// parse temporary file
-		core::NodeManager manager;
-		ConversionJob job(file);
-		auto code = job.execute(manager);
-		EXPECT_TRUE(code);
-		
+					)");
+
+			// check whether there is a temporary file
+			tmpFile = file.getPath();
+			EXPECT_TRUE(fs::exists(tmpFile));
+
+			// parse temporary file
+			core::NodeManager manager;
+			ConversionJob job(file);
+			auto code = job.execute(manager);
+			EXPECT_TRUE(code);
+		}
+
+		// check whether temporary file has been properly removed
+		EXPECT_FALSE(fs::exists(tmpFile));
 	}
-	
-	// check whether temporary file has been properly removed
-	EXPECT_FALSE(fs::exists(tmpFile));
-}
 
 } // end namespace frontend
 } // end namespace insieme

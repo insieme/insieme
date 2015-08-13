@@ -35,13 +35,13 @@
  */
 
 #include "interceptor_header.h"
-//intercepted
+// intercepted
 namespace ns {
-int simpleFunc(int x) {
-	return x;
-}
+	int simpleFunc(int x) {
+		return x;
+	}
 
-int S::memberFunc(int x) {
-	return x;
-}
+	int S::memberFunc(int x) {
+		return x;
+	}
 }

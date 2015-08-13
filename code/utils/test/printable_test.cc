@@ -44,7 +44,8 @@ using namespace insieme::utils;
 
 class Value : public Printable {
 	int value;
-public:
+
+  public:
 	Value(int value) : value(value) {}
 	virtual std::ostream& printTo(std::ostream& out) const {
 		return out << value;
@@ -53,10 +54,9 @@ public:
 
 
 TEST(Printable, StandardPrinting) {
-
 	Value ten(10);
 	Value twelf(12);
-	
+
 	EXPECT_EQ("10", toString(ten));
 	EXPECT_EQ("12", toString(twelf));
 }

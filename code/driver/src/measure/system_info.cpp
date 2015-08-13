@@ -47,122 +47,112 @@ namespace insieme {
 namespace driver {
 namespace measure {
 
-using std::string;
+	using std::string;
 
-int SystemInfo::obtainSystemInformation() const {
+	int SystemInfo::obtainSystemInformation() const {
+		core::NodeManager manager;
+		auto testCode = insieme::driver::integration::loadIntegrationTest(manager, "hello_world", false);
+		assert_true(testCode) << "SystemInfo dummy code invalid!";
+		auto target = backend->convert(testCode);
 
-	core::NodeManager manager;
-	auto testCode = insieme::driver::integration::loadIntegrationTest(manager, "hello_world", false);
-	assert_true(testCode) << "SystemInfo dummy code invalid!";
-	auto target = backend->convert(testCode);
-	
-	auto tempCompiler = compiler;
-	for(const auto& e : backendCompilerDefs) {
-		string temp = "-D" + string(e.first) + "=" + string(e.second);
-		tempCompiler.addFlag(temp);
-	}
-	tempCompiler.addFlag("-I " PAPI_HOME "/include");
-	tempCompiler.addFlag("-L " PAPI_HOME "/lib/");
-	tempCompiler.addFlag("-Wl,-rpath," PAPI_HOME "/lib -lpapi");
-	
-	auto binary = utils::compiler::compileToBinary(*target, tempCompiler);
-	
-	const string workDir = ".";
-	
-	const int ret = executor->run(binary, env, workDir);
-	boost::filesystem::remove(binary);
-	
-	if(ret != 0) {
-		return ret;
-	}
-	
-	const string reportFile = workDir + "/insieme_runtime.report";
-	
-	if(!boost::filesystem::exists(reportFile)) {
-		return -1;
-	}
-	
-	std::ifstream in(reportFile);
-	if(!in.is_open()) {
-		return -2;
-	}
-	
-	data = string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
-	
-	in.close();
-	boost::filesystem::remove(reportFile);
-	
-	if(data.empty()) {
-		LOG(ERROR) << "Error while trying to obtain system information, result was empty\n";
-		return -3;
-	}
-	
-	return 0;
-}
-
-bool SystemInfo::isValid() const {
-	return valid;
-}
-
-const string& SystemInfo::getFullInformation() const {
-	return data;
-}
-
-unsigned SystemInfo::getNumberOfCPUsTotal() const {
-	return queryGeneric<unsigned>("Number of CPUs:\\s+(\\d+)").front();
-}
-
-unsigned SystemInfo::getNumberOfCoresPerSocket() const {
-	return queryGeneric<unsigned>("Number of cores per socket:\\s+(\\d+)").front();
-}
-
-unsigned SystemInfo::getNumberOfSockets() const {
-	return queryGeneric<unsigned>("Number of sockets:\\s+(\\d+)").front();
-}
-
-unsigned SystemInfo::getNumberOfHWThreadsPerCore() const {
-	return queryGeneric<unsigned>("Number of HW threads per core:\\s+(\\d+)").front();
-}
-
-bool SystemInfo::hasDVFSDomainPerCore() const {
-	return (queryGenericString("CPU DVFS domain:\\s+(\\w+)").front() == string("cores"));
-}
-
-string SystemInfo::queryGenericStringSingle(const string& regex) const {
-	const auto temp = queryGenericString(regex);
-	string res;
-	if(!temp.empty()) {
-		res = temp.front();
-	}
-	return res;
-}
-
-vector<string> SystemInfo::queryGenericString(const string& regexString) const {
-	vector<string> retval;
-	
-	boost::regex regex(regexString.c_str());
-	boost::match_results<string::const_iterator> matches;
-	
-	string::const_iterator start = data.begin();
-	
-	while(boost::regex_search(start, data.cend(), matches, regex)) {
-		// save all capturing groups
-		for(unsigned i = 1; i < matches.size(); ++i) {
-			retval.push_back(matches[i]);
+		auto tempCompiler = compiler;
+		for(const auto& e : backendCompilerDefs) {
+			string temp = "-D" + string(e.first) + "=" + string(e.second);
+			tempCompiler.addFlag(temp);
 		}
-		// move iterator
-		start = matches[0].second;
+		tempCompiler.addFlag("-I " PAPI_HOME "/include");
+		tempCompiler.addFlag("-L " PAPI_HOME "/lib/");
+		tempCompiler.addFlag("-Wl,-rpath," PAPI_HOME "/lib -lpapi");
+
+		auto binary = utils::compiler::compileToBinary(*target, tempCompiler);
+
+		const string workDir = ".";
+
+		const int ret = executor->run(binary, env, workDir);
+		boost::filesystem::remove(binary);
+
+		if(ret != 0) { return ret; }
+
+		const string reportFile = workDir + "/insieme_runtime.report";
+
+		if(!boost::filesystem::exists(reportFile)) { return -1; }
+
+		std::ifstream in(reportFile);
+		if(!in.is_open()) { return -2; }
+
+		data = string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+
+		in.close();
+		boost::filesystem::remove(reportFile);
+
+		if(data.empty()) {
+			LOG(ERROR) << "Error while trying to obtain system information, result was empty\n";
+			return -3;
+		}
+
+		return 0;
 	}
-	
-	/**
-	 * TODO:
-	 * systeminfo inheritance, implement a base class and move the current content to autotuning systeminfo subclass
-	 */
-	
-	return retval;
-}
+
+	bool SystemInfo::isValid() const {
+		return valid;
+	}
+
+	const string& SystemInfo::getFullInformation() const {
+		return data;
+	}
+
+	unsigned SystemInfo::getNumberOfCPUsTotal() const {
+		return queryGeneric<unsigned>("Number of CPUs:\\s+(\\d+)").front();
+	}
+
+	unsigned SystemInfo::getNumberOfCoresPerSocket() const {
+		return queryGeneric<unsigned>("Number of cores per socket:\\s+(\\d+)").front();
+	}
+
+	unsigned SystemInfo::getNumberOfSockets() const {
+		return queryGeneric<unsigned>("Number of sockets:\\s+(\\d+)").front();
+	}
+
+	unsigned SystemInfo::getNumberOfHWThreadsPerCore() const {
+		return queryGeneric<unsigned>("Number of HW threads per core:\\s+(\\d+)").front();
+	}
+
+	bool SystemInfo::hasDVFSDomainPerCore() const {
+		return (queryGenericString("CPU DVFS domain:\\s+(\\w+)").front() == string("cores"));
+	}
+
+	string SystemInfo::queryGenericStringSingle(const string& regex) const {
+		const auto temp = queryGenericString(regex);
+		string res;
+		if(!temp.empty()) { res = temp.front(); }
+		return res;
+	}
+
+	vector<string> SystemInfo::queryGenericString(const string& regexString) const {
+		vector<string> retval;
+
+		boost::regex regex(regexString.c_str());
+		boost::match_results<string::const_iterator> matches;
+
+		string::const_iterator start = data.begin();
+
+		while(boost::regex_search(start, data.cend(), matches, regex)) {
+			// save all capturing groups
+			for(unsigned i = 1; i < matches.size(); ++i) {
+				retval.push_back(matches[i]);
+			}
+			// move iterator
+			start = matches[0].second;
+		}
+
+		/**
+		 * TODO:
+		 * systeminfo inheritance, implement a base class and move the current content to autotuning systeminfo subclass
+		 */
+
+		return retval;
+	}
 
 } // end namespace measure
 } // end namespace driver
 } // end namespace insieme
-

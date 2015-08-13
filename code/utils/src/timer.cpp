@@ -45,32 +45,32 @@
 namespace insieme {
 namespace utils {
 
-double Timer::stop() {
-	mElapsed = elapsed();
-	isStopped = true;
-	return mElapsed;
-}
+	double Timer::stop() {
+		mElapsed = elapsed();
+		isStopped = true;
+		return mElapsed;
+	}
 
-double Timer::step() {
-	double cur = elapsed();
-	double res = cur - lastStep;
-	lastStep = cur;
-	return res;
-}
+	double Timer::step() {
+		double cur = elapsed();
+		double res = cur - lastStep;
+		lastStep = cur;
+		return res;
+	}
 
-double Timer::getTime() const {
-	assert_true(isStopped) << "Cannnot read time of a running timer.";
-	return mElapsed;
-}
+	double Timer::getTime() const {
+		assert_true(isStopped) << "Cannnot read time of a running timer.";
+		return mElapsed;
+	}
 
-std::ostream& operator<<(std::ostream& out, const Timer& timer) {
-	std::string&& time = format("%.3f", timer.getTime());
-	
-	std::string&& frame =  std::string(timer.mName.size() + time.size() + 14, '*');
-	out << std::endl << frame << std::endl;
-	out << "* " << timer.mName << ":    " << time << " secs *" << std::endl;
-	return out << frame << std::endl;
-}
+	std::ostream& operator<<(std::ostream& out, const Timer& timer) {
+		std::string&& time = format("%.3f", timer.getTime());
+
+		std::string&& frame = std::string(timer.mName.size() + time.size() + 14, '*');
+		out << std::endl << frame << std::endl;
+		out << "* " << timer.mName << ":    " << time << " secs *" << std::endl;
+		return out << frame << std::endl;
+	}
 
 } // end utils namespace
 } // end insieme namespace

@@ -74,7 +74,7 @@ namespace lang {
 		 * A built-in operator to convert a reference into a pointer
 		 */
 		//		LANG_EXT_DERIVED_WITH_NAME(PtrFromRef, "ptr_from_ref", "lambda (ref<'a,'v,'c> r) -> struct _ir_pointer { ref<array<'a,'v,'c>> data; int<8>
-		//offset;
+		// offset;
 		//} { return (struct _ir_pointer { ref<array<'a,'v,'c>> data; int<8> offset; }) { ref_scalar_to_ref_array(r), 0 }; }")
 		LANG_EXT_LITERAL(PtrFromRef, "ptr_from_ref", "(ref<'a,'v,'c>) -> ptr<'a,'v,'c>")
 

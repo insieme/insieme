@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -38,38 +38,36 @@
  * A macro file supporting the definition of metrics.
  * The defined list of metrics will be encoded within
  * a metric table within the "metric_table.h" header.
- * 
+ *
  * Usage:
  * 		METRIC(id, name, type, res, desc)
- * 		
+ *
  * Creates a metric using
  * 		id    - the ID of the metric
  * 		name  - the name of a global variable IRT_METRIC_name
  * 		type  - the data type of the corresponding metric
- * 		res   - the time resolution of this metric 
+ * 		res   - the time resolution of this metric
  * 		desc  - a description of the metric
- * 		
+ *
  * Note: the IDs have to be unique and should not be altered
- * 		to frequently over time. 
+ * 		to frequently over time.
  */
 
 // id=100 ... pure performance metrices
-METRIC(101, EXEC_TIME,   					IRT_VT_UINT64, IRT_SR_1_NS, "The execution time in nano-seconds")
-METRIC(102, POWER_CONSUMPTION, 				IRT_VT_UINT64, IRT_SR_1_NS, "The energy consumption in pico-joule")
+METRIC(101, EXEC_TIME, IRT_VT_UINT64, IRT_SR_1_NS, "The execution time in nano-seconds")
+METRIC(102, POWER_CONSUMPTION, IRT_VT_UINT64, IRT_SR_1_NS, "The energy consumption in pico-joule")
 
 // id=200 ... hardware counter
-METRIC(201, L1_DATA_CACHE_MISSES, 			IRT_VT_UINT64, IRT_SR_1_NS, "The number of L1 data cache misses")
-METRIC(202, L1_INSTRUCTION_CACHE_MISSES, 	IRT_VT_UINT64, IRT_SR_1_NS, "The number of L1 instruction cache misses")
-METRIC(203, L2_CACHE_MISSES, 	            IRT_VT_UINT64, IRT_SR_1_NS, "The number of L2 cache misses")
+METRIC(201, L1_DATA_CACHE_MISSES, IRT_VT_UINT64, IRT_SR_1_NS, "The number of L1 data cache misses")
+METRIC(202, L1_INSTRUCTION_CACHE_MISSES, IRT_VT_UINT64, IRT_SR_1_NS, "The number of L1 instruction cache misses")
+METRIC(203, L2_CACHE_MISSES, IRT_VT_UINT64, IRT_SR_1_NS, "The number of L2 cache misses")
 
 // id=300 ... runtime properties
-METRIC(301, NUM_ACTIVE_WORKERS, 			IRT_VT_UINT16, IRT_SR_1_SEC, "The number of active workers / threads")
-METRIC(302, NUM_ACTIVE_WORK_ITEMS, 			IRT_VT_UINT32, IRT_SR_1_SEC, "The number of active work items")
+METRIC(301, NUM_ACTIVE_WORKERS, IRT_VT_UINT16, IRT_SR_1_SEC, "The number of active workers / threads")
+METRIC(302, NUM_ACTIVE_WORK_ITEMS, IRT_VT_UINT32, IRT_SR_1_SEC, "The number of active work items")
 
 // id=400 ... system information
-METRIC(401, USED_MEMORY, 					IRT_VT_UINT64, IRT_SR_1_US,   "The total amount of used memory")
-METRIC(402, AVAILABLE_MEMORY, 				IRT_VT_UINT64, IRT_SR_STATIC, "The total amount of available memory")
-METRIC(403, NUM_CPU_SOCKETS, 				IRT_VT_UINT16, IRT_SR_STATIC, "The total amount of available memory")
-METRIC(404, HAS_ROOT_RIGHTS, 				IRT_VT_BOOL,   IRT_SR_STATIC, "A flag indicating whether some component has root rights")
-
-
+METRIC(401, USED_MEMORY, IRT_VT_UINT64, IRT_SR_1_US, "The total amount of used memory")
+METRIC(402, AVAILABLE_MEMORY, IRT_VT_UINT64, IRT_SR_STATIC, "The total amount of available memory")
+METRIC(403, NUM_CPU_SOCKETS, IRT_VT_UINT16, IRT_SR_STATIC, "The total amount of available memory")
+METRIC(404, HAS_ROOT_RIGHTS, IRT_VT_BOOL, IRT_SR_STATIC, "A flag indicating whether some component has root rights")

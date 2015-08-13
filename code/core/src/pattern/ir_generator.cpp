@@ -44,173 +44,164 @@ namespace pattern {
 namespace generator {
 namespace irg {
 
-MatchExpressionPtr range(int start, int end) {
-	return std::make_shared<impl::expression::Constructor<ptr_target>>([=](const Match<ptr_target>& match)->MatchValue<ptr_target> {
-		core::NodeManager& manager = match.getRoot()->getNodeManager();
-		core::IRBuilder builder(manager);
-		
-		vector<MatchValue<ptr_target>> res;
-		for(int i=start; i<end; i++) {
-			core::NodePtr expr = builder.stringValue(toString(i));
-			res.push_back(MatchValue<ptr_target>(expr));
-		}
-		
-		return res;
-	}, format("[%d,..,%d)", start, end));
-}
+	MatchExpressionPtr range(int start, int end) {
+		return std::make_shared<impl::expression::Constructor<ptr_target>>([=](const Match<ptr_target>& match) -> MatchValue<ptr_target> {
+			core::NodeManager& manager = match.getRoot()->getNodeManager();
+			core::IRBuilder builder(manager);
+
+			vector<MatchValue<ptr_target>> res;
+			for(int i = start; i < end; i++) {
+				core::NodePtr expr = builder.stringValue(toString(i));
+				res.push_back(MatchValue<ptr_target>(expr));
+			}
+
+			return res;
+		}, format("[%d,..,%d)", start, end));
+	}
 
 
-TreeGenerator add(const TreeGenerator& a, const TreeGenerator& b) {
+	TreeGenerator add(const TreeGenerator& a, const TreeGenerator& b) {
+		impl::NodeMatchExpressionPtr matchExpression =
+		    std::make_shared<impl::expression::Combine<ptr_target>>(toVector(a, b), [](const vector<core::NodePtr>& args) -> MatchValue<ptr_target> {
 
-	impl::NodeMatchExpressionPtr matchExpression = std::make_shared<impl::expression::Combine<ptr_target>>(
-	toVector(a,b), [](const vector<core::NodePtr>& args)->MatchValue<ptr_target> {
-	
-		assert_eq(args.size(), 2u);
-		core::ExpressionPtr a = dynamic_pointer_cast<core::ExpressionPtr>(args[0]);
-		core::ExpressionPtr b = dynamic_pointer_cast<core::ExpressionPtr>(args[1]);
-		assert(a && b);
-		
-		core::IRBuilder builder(a->getNodeManager());
-		core::NodePtr res = builder.add(a, b);
-		return MatchValue<ptr_target>(res);
-		
-	}, "add");
-	
-	return TreeGenerator(std::make_shared<impl::tree::Expression>(matchExpression));
-}
+			    assert_eq(args.size(), 2u);
+			    core::ExpressionPtr a = dynamic_pointer_cast<core::ExpressionPtr>(args[0]);
+			    core::ExpressionPtr b = dynamic_pointer_cast<core::ExpressionPtr>(args[1]);
+			    assert(a && b);
 
-TreeGenerator sub(const TreeGenerator& a, const TreeGenerator& b) {
+			    core::IRBuilder builder(a->getNodeManager());
+			    core::NodePtr res = builder.add(a, b);
+			    return MatchValue<ptr_target>(res);
 
-	impl::NodeMatchExpressionPtr matchExpression = std::make_shared<impl::expression::Combine<ptr_target>>(
-	toVector(a,b), [](const vector<core::NodePtr>& args)->MatchValue<ptr_target> {
-	
-		assert_eq(args.size(), 2u);
-		core::ExpressionPtr a = dynamic_pointer_cast<core::ExpressionPtr>(args[0]);
-		core::ExpressionPtr b = dynamic_pointer_cast<core::ExpressionPtr>(args[1]);
-		assert(a && b);
-		
-		core::IRBuilder builder(a->getNodeManager());
-		core::NodePtr res = builder.sub(a,b);
-		return MatchValue<ptr_target>(res);
-		
-	}, "sub");
-	
-	return TreeGenerator(std::make_shared<impl::tree::Expression>(matchExpression));
-}
+			}, "add");
 
-TreeGenerator mul(const TreeGenerator& a, const TreeGenerator& b) {
+		return TreeGenerator(std::make_shared<impl::tree::Expression>(matchExpression));
+	}
 
-	impl::NodeMatchExpressionPtr matchExpression = std::make_shared<impl::expression::Combine<ptr_target>>(
-	toVector(a,b), [](const vector<core::NodePtr>& args)->MatchValue<ptr_target> {
-	
-		assert_eq(args.size(), 2u);
-		core::ExpressionPtr a = dynamic_pointer_cast<core::ExpressionPtr>(args[0]);
-		core::ExpressionPtr b = dynamic_pointer_cast<core::ExpressionPtr>(args[1]);
-		assert(a && b);
-		
-		core::IRBuilder builder(a->getNodeManager());
-		core::NodePtr res = builder.mul(a, b);
-		return MatchValue<ptr_target>(res);
-		
-	}, "mul");
-	
-	return TreeGenerator(std::make_shared<impl::tree::Expression>(matchExpression));
-}
+	TreeGenerator sub(const TreeGenerator& a, const TreeGenerator& b) {
+		impl::NodeMatchExpressionPtr matchExpression =
+		    std::make_shared<impl::expression::Combine<ptr_target>>(toVector(a, b), [](const vector<core::NodePtr>& args) -> MatchValue<ptr_target> {
 
-TreeGenerator div(const TreeGenerator& a, const TreeGenerator& b) {
+			    assert_eq(args.size(), 2u);
+			    core::ExpressionPtr a = dynamic_pointer_cast<core::ExpressionPtr>(args[0]);
+			    core::ExpressionPtr b = dynamic_pointer_cast<core::ExpressionPtr>(args[1]);
+			    assert(a && b);
 
-	impl::NodeMatchExpressionPtr matchExpression = std::make_shared<impl::expression::Combine<ptr_target>>(
-	toVector(a,b), [](const vector<core::NodePtr>& args)->MatchValue<ptr_target> {
-	
-		assert_eq(args.size(), 2u);
-		core::ExpressionPtr a = dynamic_pointer_cast<core::ExpressionPtr>(args[0]);
-		core::ExpressionPtr b = dynamic_pointer_cast<core::ExpressionPtr>(args[1]);
-		assert(a && b);
-		
-		core::IRBuilder builder(a->getNodeManager());
-		core::NodePtr res = builder.div(a,b);
-		return MatchValue<ptr_target>(res);
-		
-	}, "div");
-	
-	return TreeGenerator(std::make_shared<impl::tree::Expression>(matchExpression));
-}
+			    core::IRBuilder builder(a->getNodeManager());
+			    core::NodePtr res = builder.sub(a, b);
+			    return MatchValue<ptr_target>(res);
 
-TreeGenerator mod(const TreeGenerator& a, const TreeGenerator& b) {
+			}, "sub");
 
-	impl::NodeMatchExpressionPtr matchExpression = std::make_shared<impl::expression::Combine<ptr_target>>(
-	toVector(a,b), [](const vector<core::NodePtr>& args)->MatchValue<ptr_target> {
-	
-		assert_eq(args.size(), 2u);
-		core::ExpressionPtr a = dynamic_pointer_cast<core::ExpressionPtr>(args[0]);
-		core::ExpressionPtr b = dynamic_pointer_cast<core::ExpressionPtr>(args[1]);
-		assert(a && b);
-		
-		core::IRBuilder builder(a->getNodeManager());
-		core::NodePtr res = builder.mod(a,b);
-		return MatchValue<ptr_target>(res);
-		
-	}, "mod");
-	
-	return TreeGenerator(std::make_shared<impl::tree::Expression>(matchExpression));
-}
+		return TreeGenerator(std::make_shared<impl::tree::Expression>(matchExpression));
+	}
 
-TreeGenerator min(const TreeGenerator& a, const TreeGenerator& b) {
+	TreeGenerator mul(const TreeGenerator& a, const TreeGenerator& b) {
+		impl::NodeMatchExpressionPtr matchExpression =
+		    std::make_shared<impl::expression::Combine<ptr_target>>(toVector(a, b), [](const vector<core::NodePtr>& args) -> MatchValue<ptr_target> {
 
-	impl::NodeMatchExpressionPtr matchExpression = std::make_shared<impl::expression::Combine<ptr_target>>(
-	toVector(a,b), [](const vector<core::NodePtr>& args)->MatchValue<ptr_target> {
-	
-		assert_eq(args.size(), 2u);
-		core::ExpressionPtr a = dynamic_pointer_cast<core::ExpressionPtr>(args[0]);
-		core::ExpressionPtr b = dynamic_pointer_cast<core::ExpressionPtr>(args[1]);
-		assert(a && b);
-		
-		core::IRBuilder builder(a->getNodeManager());
-		core::NodePtr res = builder.min(a,b);
-		return MatchValue<ptr_target>(res);
-		
-	}, "min");
-	
-	return TreeGenerator(std::make_shared<impl::tree::Expression>(matchExpression));
-}
+			    assert_eq(args.size(), 2u);
+			    core::ExpressionPtr a = dynamic_pointer_cast<core::ExpressionPtr>(args[0]);
+			    core::ExpressionPtr b = dynamic_pointer_cast<core::ExpressionPtr>(args[1]);
+			    assert(a && b);
 
-TreeGenerator max(const TreeGenerator& a, const TreeGenerator& b) {
+			    core::IRBuilder builder(a->getNodeManager());
+			    core::NodePtr res = builder.mul(a, b);
+			    return MatchValue<ptr_target>(res);
 
-	impl::NodeMatchExpressionPtr matchExpression = std::make_shared<impl::expression::Combine<ptr_target>>(
-	toVector(a,b), [](const vector<core::NodePtr>& args)->MatchValue<ptr_target> {
-	
-		assert_eq(args.size(), 2u);
-		core::ExpressionPtr a = dynamic_pointer_cast<core::ExpressionPtr>(args[0]);
-		core::ExpressionPtr b = dynamic_pointer_cast<core::ExpressionPtr>(args[1]);
-		assert(a && b);
-		
-		core::IRBuilder builder(a->getNodeManager());
-		core::NodePtr res = builder.max(a,b);
-		return MatchValue<ptr_target>(res);
-		
-	}, "max");
-	
-	return TreeGenerator(std::make_shared<impl::tree::Expression>(matchExpression));
-}
+			}, "mul");
+
+		return TreeGenerator(std::make_shared<impl::tree::Expression>(matchExpression));
+	}
+
+	TreeGenerator div(const TreeGenerator& a, const TreeGenerator& b) {
+		impl::NodeMatchExpressionPtr matchExpression =
+		    std::make_shared<impl::expression::Combine<ptr_target>>(toVector(a, b), [](const vector<core::NodePtr>& args) -> MatchValue<ptr_target> {
+
+			    assert_eq(args.size(), 2u);
+			    core::ExpressionPtr a = dynamic_pointer_cast<core::ExpressionPtr>(args[0]);
+			    core::ExpressionPtr b = dynamic_pointer_cast<core::ExpressionPtr>(args[1]);
+			    assert(a && b);
+
+			    core::IRBuilder builder(a->getNodeManager());
+			    core::NodePtr res = builder.div(a, b);
+			    return MatchValue<ptr_target>(res);
+
+			}, "div");
+
+		return TreeGenerator(std::make_shared<impl::tree::Expression>(matchExpression));
+	}
+
+	TreeGenerator mod(const TreeGenerator& a, const TreeGenerator& b) {
+		impl::NodeMatchExpressionPtr matchExpression =
+		    std::make_shared<impl::expression::Combine<ptr_target>>(toVector(a, b), [](const vector<core::NodePtr>& args) -> MatchValue<ptr_target> {
+
+			    assert_eq(args.size(), 2u);
+			    core::ExpressionPtr a = dynamic_pointer_cast<core::ExpressionPtr>(args[0]);
+			    core::ExpressionPtr b = dynamic_pointer_cast<core::ExpressionPtr>(args[1]);
+			    assert(a && b);
+
+			    core::IRBuilder builder(a->getNodeManager());
+			    core::NodePtr res = builder.mod(a, b);
+			    return MatchValue<ptr_target>(res);
+
+			}, "mod");
+
+		return TreeGenerator(std::make_shared<impl::tree::Expression>(matchExpression));
+	}
+
+	TreeGenerator min(const TreeGenerator& a, const TreeGenerator& b) {
+		impl::NodeMatchExpressionPtr matchExpression =
+		    std::make_shared<impl::expression::Combine<ptr_target>>(toVector(a, b), [](const vector<core::NodePtr>& args) -> MatchValue<ptr_target> {
+
+			    assert_eq(args.size(), 2u);
+			    core::ExpressionPtr a = dynamic_pointer_cast<core::ExpressionPtr>(args[0]);
+			    core::ExpressionPtr b = dynamic_pointer_cast<core::ExpressionPtr>(args[1]);
+			    assert(a && b);
+
+			    core::IRBuilder builder(a->getNodeManager());
+			    core::NodePtr res = builder.min(a, b);
+			    return MatchValue<ptr_target>(res);
+
+			}, "min");
+
+		return TreeGenerator(std::make_shared<impl::tree::Expression>(matchExpression));
+	}
+
+	TreeGenerator max(const TreeGenerator& a, const TreeGenerator& b) {
+		impl::NodeMatchExpressionPtr matchExpression =
+		    std::make_shared<impl::expression::Combine<ptr_target>>(toVector(a, b), [](const vector<core::NodePtr>& args) -> MatchValue<ptr_target> {
+
+			    assert_eq(args.size(), 2u);
+			    core::ExpressionPtr a = dynamic_pointer_cast<core::ExpressionPtr>(args[0]);
+			    core::ExpressionPtr b = dynamic_pointer_cast<core::ExpressionPtr>(args[1]);
+			    assert(a && b);
+
+			    core::IRBuilder builder(a->getNodeManager());
+			    core::NodePtr res = builder.max(a, b);
+			    return MatchValue<ptr_target>(res);
+
+			}, "max");
+
+		return TreeGenerator(std::make_shared<impl::tree::Expression>(matchExpression));
+	}
 
 
+	TreeGenerator simplify(const TreeGenerator& a) {
+		impl::NodeMatchExpressionPtr matchExpression =
+		    std::make_shared<impl::expression::Combine<ptr_target>>(toVector(a), [](const vector<core::NodePtr>& args) -> MatchValue<ptr_target> {
 
-TreeGenerator simplify(const TreeGenerator& a) {
+			    assert_eq(args.size(), 1u);
+			    core::ExpressionPtr a = dynamic_pointer_cast<core::ExpressionPtr>(args[0]);
+			    assert_true(a);
 
-	impl::NodeMatchExpressionPtr matchExpression = std::make_shared<impl::expression::Combine<ptr_target>>(
-	toVector(a), [](const vector<core::NodePtr>& args)->MatchValue<ptr_target> {
-	
-		assert_eq(args.size(), 1u);
-		core::ExpressionPtr a = dynamic_pointer_cast<core::ExpressionPtr>(args[0]);
-		assert_true(a);
-		
-		// simplify
-		return transform::simplify(a->getNodeManager(), a.as<NodePtr>());
-		
-	}, "simplify");
-	
-	return TreeGenerator(std::make_shared<impl::tree::Expression>(matchExpression));
-}
+			    // simplify
+			    return transform::simplify(a->getNodeManager(), a.as<NodePtr>());
+
+			}, "simplify");
+
+		return TreeGenerator(std::make_shared<impl::tree::Expression>(matchExpression));
+	}
 
 
 } // end namespace irg

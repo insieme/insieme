@@ -50,31 +50,28 @@ namespace insieme {
 namespace backend {
 
 
-TEST(FullBackend, HelloWorld) {
+	TEST(FullBackend, HelloWorld) {
+		core::NodeManager manager;
 
-	core::NodeManager manager;
-	
-	// load hello world test case
-	auto testCase = driver::integration::getCase("hello_world");
-	ASSERT_TRUE(testCase) << "Could not load hello world test case!";
-	
-	// convert test case into IR using the frontend
-	auto code = frontend::ConversionJob(testCase->getFiles(), testCase->getIncludeDirs()).execute(manager);
-	ASSERT_TRUE(code) << "Unable to load input code!";
-	
-	// create target code using real backend
-	auto target = backend::sequential::SequentialBackend::getDefault()->convert(code);
-	
-	// check target code
-//	EXPECT_EQ("", toString(core::printer::PrettyPrinter(code, core::printer::PrettyPrinter::OPTIONS_DETAIL)));
-//	EXPECT_EQ("", toString(*target));
+		// load hello world test case
+		auto testCase = driver::integration::getCase("hello_world");
+		ASSERT_TRUE(testCase) << "Could not load hello world test case!";
 
-	// see whether target code can be compiled
-	// TODO: compile target code => test result
-//	EXPECT_TRUE(utils::compiler::compile(*target));
+		// convert test case into IR using the frontend
+		auto code = frontend::ConversionJob(testCase->getFiles(), testCase->getIncludeDirs()).execute(manager);
+		ASSERT_TRUE(code) << "Unable to load input code!";
 
-}
+		// create target code using real backend
+		auto target = backend::sequential::SequentialBackend::getDefault()->convert(code);
+
+		// check target code
+		//	EXPECT_EQ("", toString(core::printer::PrettyPrinter(code, core::printer::PrettyPrinter::OPTIONS_DETAIL)));
+		//	EXPECT_EQ("", toString(*target));
+
+		// see whether target code can be compiled
+		// TODO: compile target code => test result
+		//	EXPECT_TRUE(utils::compiler::compile(*target));
+	}
 
 } // end namespace backend
 } // end namespace insieme
-
