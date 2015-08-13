@@ -77,7 +77,7 @@ ExprAddressStructTypeMap ParSecTransform<Baseclass>::findCandidates(const NodeAd
 //std::cout << "\nat the tuple member access " << *newRootVarIter->second << "\n";
 
 			if(newRootVarIter != varsToPropagate.end()) { // tuple has been updated, check if it was the current field
-				ExpressionPtr newRootVar = newRootVarIter->second.as<ExpressionPtr>();
+				ExpressionPtr newRootVar = newRootVarIter->second.template as<ExpressionPtr>();
 
 				TypePtr newType = getBaseType(newRootVar->getType()).as<TupleTypePtr>()->getElement(
 						call->getArgument(1).as<LiteralPtr>()->getValueAs<unsigned>());
@@ -217,7 +217,7 @@ void ParSecTransform<Baseclass>::transform() {
 
 		for(ExpressionAddress oldVar : toReplaceList.first) {
 			TypePtr newType = core::transform::replaceAll(m, oldVar->getType(), oldStructType,
-					newStructType).as<TypePtr>();
+					newStructType).template as<TypePtr>();
 //std::cout << "NT: " << newStructType << " var " << oldVar << " " << *oldVar << std::endl;
 
 			// check if local or global variable

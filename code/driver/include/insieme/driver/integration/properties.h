@@ -63,6 +63,8 @@ namespace integration {
 		template<typename T>
 		struct value_extractor {
 
+			value_extractor() {}
+
 			template<typename P>
 			static typename std::enable_if<std::is_arithmetic<P>::value,P>::type
 			convert(const string& value) {
@@ -86,6 +88,7 @@ namespace integration {
 
 		template<>
 		struct value_extractor<string> {
+			value_extractor() {}
 			const string& operator()(const string& value) const {
 				return value;		// the default operation simply utilizes the implicit conversion
 			}
@@ -93,6 +96,7 @@ namespace integration {
 
 		template<>
 		struct value_extractor<bool> {
+			value_extractor() {}
 			bool operator()(const string& value) const {
 				// special handling for bool values
 				return value == "1" || value == "true" || value == "t" || value == "yes" || value == "y";

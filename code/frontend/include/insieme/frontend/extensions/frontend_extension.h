@@ -76,8 +76,9 @@ class ConversionSetup;
 namespace extensions {
 
     class PragmaHandler {
-    protected:
+    public:
         typedef std::function<core::NodeList(const insieme::frontend::pragma::MatchObject&, core::NodeList)> pragmaHandlerFunction;
+    protected:
         pragmaHandlerFunction f;
         const std::string name;
         const std::string keyw;

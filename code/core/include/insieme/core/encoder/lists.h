@@ -134,6 +134,7 @@ namespace encoder {
 		 */
 		template<typename E, typename C = Converter<E>>
 		struct create_list_type {
+			create_list_type() {}
 			core::TypePtr operator()(NodeManager& manager) const {
 				return GenericType::get(manager, ListExtension::LIST_TYPE_NAME, toVector(typename C::type_factory()(manager)));
 			}
@@ -148,6 +149,9 @@ namespace encoder {
 		 */
 		template<typename E, typename C = Converter<E>>
 		struct is_list {
+
+			is_list() {}
+
 			bool operator()(const core::ExpressionPtr& expr) const {
 				const ListExtension& ext = expr->getNodeManager().getLangExtension<ListExtension>();
 
@@ -183,6 +187,8 @@ namespace encoder {
 		template<typename E, typename C=Converter<E>>
 		struct encode_list {
 
+			encode_list() {}
+
 			core::ExpressionPtr operator()(NodeManager& manager, const vector<E>& list) const {
 
 				// obtain some useful values
@@ -213,6 +219,8 @@ namespace encoder {
 		 */
 		template<>
 		struct encode_list<ExpressionPtr, DirectExprConverter> {
+
+			encode_list() {}
 
 			core::ExpressionPtr operator()(NodeManager& manager, const vector<ExpressionPtr>& list) const {
 
@@ -245,6 +253,8 @@ namespace encoder {
 		 */
 		template<typename E, typename C = Converter<E>>
 		struct decode_list {
+
+			decode_list() {}
 
 			/**
 			 * A end-recursive implementation of the decoding operation.
@@ -289,35 +299,45 @@ namespace encoder {
 	 * Defines a list converter functor customized to encode vectors of expressions directly into lists
 	 * of expressions within the IR without wrapping up expressions.
 	 */
-	struct DirectExprListConverter : public ListConverter<ExpressionPtr, DirectExprConverter> {};
+	struct DirectExprListConverter : public ListConverter<ExpressionPtr, DirectExprConverter> {
+		DirectExprListConverter() {};
+	};
 
 	/**
 	 * A partial template specialization for the type_factory struct to support the encoding
 	 * of vectors using default element type converters.
 	 */
 	template<typename E>
-	struct type_factory<vector<E>> : public detail::create_list_type<E> {};
+	struct type_factory<vector<E>> : public detail::create_list_type<E> {
+		type_factory() {};
+	};
 
 	/**
 	 * A partial template specialization for the value_to_ir_converter struct to support the encoding
 	 * of vectors using default element type converters.
 	 */
 	template<typename E>
-	struct value_to_ir_converter<vector<E>> : public detail::encode_list<E> {};
+	struct value_to_ir_converter<vector<E>> : public detail::encode_list<E> {
+		value_to_ir_converter() {};
+	};
 
 	/**
 	 * A partial template specialization for the ir_to_value_converter struct to support the encoding
 	 * of vectors using default element type converters.
 	 */
 	template<typename E>
-	struct ir_to_value_converter<vector<E>> : public detail::decode_list<E> {};
+	struct ir_to_value_converter<vector<E>> : public detail::decode_list<E> {
+		ir_to_value_converter() {};
+	};
 
 	/**
 	 * A partial template specialization for the is_encoding_of struct to support the encoding
 	 * of vectors using default element type converters.
 	 */
 	template<typename E>
-	struct is_encoding_of<vector<E>> : public detail::is_list<E> { };
+	struct is_encoding_of<vector<E>> : public detail::is_list<E> { 
+		is_encoding_of() {};
+	};
 
 
 } // end namespace encoder

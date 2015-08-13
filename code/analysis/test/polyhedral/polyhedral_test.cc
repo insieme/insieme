@@ -170,7 +170,7 @@ TEST(IterVec, Transform) {
 	
 	IterationVector iterVec2( { iter3, iter1, iter2 }, { param2, param } ); 
 	
-	const IndexTransMap&& transMap = transform(iterVec2, iterVec1);
+	const IndexTransMap&& transMap = polyhedral::transform(iterVec2, iterVec1);
 	EXPECT_EQ(transMap, IndexTransMap({1,4,5}));
 	
 }
@@ -337,7 +337,7 @@ TEST(AffineFunction, AFChangeBase) {
 	
 	IterationVector iterVec2( { iter3, iter1, iter2 }, { param2, param } ) ; 
 	
-	const IndexTransMap&& transMap = transform(iterVec2, iterVec1);
+	const IndexTransMap&& transMap = polyhedral::transform(iterVec2, iterVec1);
 	EXPECT_EQ(transMap, IndexTransMap( { 2,1,4,5 } ));
 	
 	AffineFunction aft = af1.toBase(iterVec2, transMap);
@@ -500,7 +500,7 @@ TEST(AffineFunction, ChangeBase) {
 	IterationVector iterVec1( { iter1, param, iter2 } ); 
 	// std::cout << iterVec1 << std::endl;
 
-	const IndexTransMap&& map = transform(iterVec1, iterVec);
+	const IndexTransMap&& map = polyhedral::transform(iterVec1, iterVec);
 	EXPECT_EQ(map, IndexTransMap( {0,2,1,3} ));
 
 	AffineFunction&& converted = af.toBase(iterVec1, map);

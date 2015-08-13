@@ -770,7 +770,7 @@ using insieme::core::pattern::anyList;
 						ExpressionPtr arrayIndex = static_pointer_cast<const Expression>(matchTupleAccess->getVarBinding("arrayIndex").getValue());
 						auto&& find = std::find_if(begin(tupleAccessVec), end(tupleAccessVec), [&](const LiteralPtr& i) { return i == index;});
 						if (find != end(tupleAccessVec)) {
-							if (matchWrapGlobal == false)
+							if (!matchWrapGlobal)
 								return;
 							LiteralPtr newMemberType = builder.getTypeLiteral(builder.refType(builder.arrayType(refBufType)));
 							newCall = builder.callExpr(kernelExt.wrapGlobal, builder.deref(

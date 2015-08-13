@@ -171,6 +171,7 @@ namespace cba {
 
 		template<typename T, int pos, int size, typename Filter>
 		struct gen_context {
+			gen_context() {}
 			void operator()(const std::vector<T>& values, std::vector<Sequence<T,size>>& res, const Filter& f, std::array<T,size>& data) const {
 				static const gen_context<T,pos-1,size,Filter> inner;
 				for(auto cur : values) {
@@ -182,6 +183,7 @@ namespace cba {
 
 		template<typename T, int size, typename Filter>
 		struct gen_context<T, 0,size, Filter> {
+			gen_context() {}
 			void operator()(const std::vector<T>& values, std::vector<Sequence<T,size>>& res, const Filter& f, std::array<T,size>& data) const {
 				if (f(data)) res.push_back(data);
 			}

@@ -61,13 +61,6 @@ namespace analysis{
 template <typename BASE, bool visitTemplates=false>
 class PrunableDeclVisitor{
 
-    /**
-     * Default converter getter method
-     */
-    frontend::conversion::Converter& getConverter() {
-        return nullptr;
-    }
-
 	/**
 	 * Default implementation, overide to add functionality
 	 */

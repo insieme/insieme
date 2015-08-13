@@ -1166,7 +1166,7 @@ namespace backend {
 
 			// special treatment for exporting vectors
 			if (elementNodeType == core::NT_VectorType) {
-				res->externalize = [res,subType](const c_ast::SharedCNodeManager& manager, const c_ast::ExpressionPtr& node) {
+				res->externalize = [res,subType](const c_ast::SharedCNodeManager& manager, const c_ast::ExpressionPtr& node)->c_ast::ExpressionPtr {
 					// special treatment for literals (e.g. string literals)
 					if (node->getNodeType() == c_ast::NT_Literal && static_pointer_cast<const c_ast::Literal>(node)->value[0] == '\"') return node;
 					// generated code: ((elementName*)X)

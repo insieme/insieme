@@ -42,6 +42,8 @@
 #include "insieme/analysis/cba/framework/generator/data_value_constraint_generator.h"
 #include "insieme/analysis/cba/framework/generator/mutable_data.h"
 
+#include "insieme/analysis/cba/framework/entities/reachable.h"
+#include "insieme/analysis/cba/framework/entities/data_index.h"
 #include "insieme/analysis/cba/framework/entities/data_index.h"
 #include "insieme/analysis/cba/framework/entities/data_value.h"
 

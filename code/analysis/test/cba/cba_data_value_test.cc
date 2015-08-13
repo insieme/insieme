@@ -322,6 +322,7 @@ namespace cba {
 		};
 
 		struct pair_meet_assign_op {
+			pair_meet_assign_op() {}
 			bool operator()(Pair& a, const Pair& b) const {
 				bool res = false;
 				if (a.first > b.first) {
@@ -337,6 +338,7 @@ namespace cba {
 		};
 
 		struct pair_less_op {
+			pair_less_op() {}
 			bool operator()(const Pair& a, const Pair& b) const {
 				return a.first >= b.first && a.second >= b.second;
 			}

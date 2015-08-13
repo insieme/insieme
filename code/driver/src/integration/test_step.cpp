@@ -965,7 +965,7 @@ namespace integration {
 			if(!s.empty())
 				argumentsForExec.push_back(const_cast<char*>(s.c_str()));
 		// terminate
-		argumentsForExec.push_back('\0');
+		argumentsForExec.push_back(nullptr);
 
 		/*
 		 * Setup environment
@@ -1017,7 +1017,7 @@ namespace integration {
 			environmentForExec.push_back(const_cast<char*>(environmentTemp.back().c_str()));
 		}
 		// terminate
-		environmentForExec.push_back('\0');
+		environmentForExec.push_back(nullptr);
 
 		/*
 		 * Fork, setup timeout, stdout and sterr redirection, execute and wait

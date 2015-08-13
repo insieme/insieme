@@ -38,6 +38,7 @@
 
 #include "insieme/analysis/cba/framework/analysis_type.h"
 #include "insieme/analysis/cba/framework/generator/basic_program_point.h"
+#include "insieme/analysis/cba/framework/entities/reachable.h"
 
 #include "insieme/utils/printable.h"
 
@@ -46,13 +47,6 @@ namespace analysis {
 namespace cba {
 
 	// ------------------- reachable code ------------------
-
-	struct Reachable : public utils::Printable {
-		bool operator<(const Reachable& other) const { return false; }
-		bool operator==(const Reachable& other) const { return true; }
-		std::ostream& printTo(std::ostream& out) const { return out << "reachable"; };
-	};
-
 
 	template<typename Context> class ReachableInConstraintGenerator;
 	template<typename Context> class ReachableTmpConstraintGenerator;

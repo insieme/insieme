@@ -424,6 +424,8 @@ namespace petri_net {
 
 	public:
 
+		StateGraph() {}
+
 		marking_idx getIndex(const marking_type& marking) {
 			auto pos = nodes.find(marking);
 			if (pos != nodes.end()) return pos->second;

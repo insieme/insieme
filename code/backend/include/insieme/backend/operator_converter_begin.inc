@@ -39,11 +39,11 @@
  */
 
 /**
- * This macro allows to access an argument of the call to be processed by the formatter. 
+ * This macro allows to access an argument of the call to be processed by the formatter.
  * The indexing starts with 0. The result will be an ExpressionPtr. If there is no such argument,
  * the pointer will be null.
- * 
- * @param N the index of the argument to be obtained 
+ *
+ * @param N the index of the argument to be obtained
  */
 #define ARG(N) call->getArgument(N)
 
@@ -63,17 +63,17 @@
 #define GET_VAR_INFO(Var) context.getVariableManager().getInfo(Var)
 #define GET_FUNCTION_INFO(expr) context.getConverter().getFunctionManager().getInfo(expr)
 
-#define GET_HEADER_FOR(Fun) ( \
-		assert(context.getConverter().getFunctionManager().getHeaderFor(Fun) && "Requested unknown header file!"), \
-		*(context.getConverter().getFunctionManager().getHeaderFor(Fun)))
+#define GET_HEADER_FOR(Fun)                                                                                                                                    \
+	(assert(context.getConverter().getFunctionManager().getHeaderFor(Fun) && "Requested unknown header file!"),                                                \
+	 *(context.getConverter().getFunctionManager().getHeaderFor(Fun)))
 #define ADD_HEADER(Header) context.getIncludes().insert(Header);
 #define ADD_HEADER_FOR(Fun) context.getIncludes().insert(GET_HEADER_FOR(Fun));
 
 /**
  * A macro triggering the deceding into an argument. This will result in the printing of the code
  * required for evaluating the corresponding argument.
- * 
- * @param N the index of the argument to be printed 
+ *
+ * @param N the index of the argument to be printed
  */
 #define CONVERT_ARG(N) CONVERT_EXPR(ARG(N))
 
@@ -84,11 +84,8 @@
 
 /**
  * Creates a new operator converter conducting the given conversion.
- * 
- * @param FORMAT the function body realizing the formatting 
+ *
+ * @param FORMAT the function body realizing the formatting
  */
-#define OP_CONVERTER(Conversion) \
-		&(((struct { \
-			int dummy; \
-			static insieme::backend::c_ast::ExpressionPtr f(insieme::backend::ConversionContext& context, const insieme::core::CallExprPtr& call) Conversion \
-		 }){0}).f)	
+#define OP_CONVERTER(Conversion)                                                                                                                               \
+	[](insieme::backend::ConversionContext & context, const insieme::core::CallExprPtr& call) -> insieme::backend::c_ast::ExpressionPtr Conversion
