@@ -36,6 +36,8 @@
 
 #include "insieme/core/lang/array.h"
 
+#include "insieme/core/types/match.h"
+
 namespace insieme {
 namespace core {
 namespace lang {
@@ -51,8 +53,22 @@ namespace lang {
 	}
 
 	bool ArrayType::isArrayType(const NodePtr& node) {
-		assert_not_implemented();
-		return false;
+		auto type = node.isa<GenericTypePtr>();
+		if(!type) return false;
+
+		// simple approach: use unification
+		NodeManager& mgr = node.getNodeManager();
+		const ArrayExtension& ext = mgr.getLangExtension<ArrayExtension>();
+
+		// unify given type with template type
+		auto ref = ext.getGenArray().as<GenericTypePtr>();
+		auto sub = types::match(mgr, type, ref);
+		if(!sub) return false;
+
+		// check instantiation
+		const types::Substitution& map = *sub;
+		auto size = map.applyTo(ref->getTypeParameter(1));
+		return size.isa<TypeVariablePtr>() || size.isa<NumericTypePtr>();
 	}
 
 	bool ArrayType::isFixedSizedArrayType(const NodePtr& node) {

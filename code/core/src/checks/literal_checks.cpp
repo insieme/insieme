@@ -133,7 +133,7 @@ namespace checks {
 			} else if(basic.isInt8(type)) {
 				min = std::numeric_limits<int64_t>::min();
 				max = std::numeric_limits<int64_t>::max();
-			} else if(basic.isInt16(type)) {
+			} else if(basic.isInt16(type) || basic.isIntInf(type)) {
 				// note int16 is used for long long, and it has same values as long for this architecture
 				min = std::numeric_limits<int64_t>::min();
 				max = std::numeric_limits<int64_t>::max();

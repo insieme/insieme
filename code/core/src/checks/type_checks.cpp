@@ -60,8 +60,8 @@ namespace checks {
 	OptionalMessageList KeywordCheck::visitGenericType(const GenericTypeAddress& address) {
 		OptionalMessageList res;
 
-		if((address->getName()->getValue() == "array" && lang::isArray(address)) || (address->getName()->getValue() == "ref" && lang::isReference(address))
-		   || (address->getName()->getValue() == "channel" && lang::isChannel(address))) {
+		if((address->getName()->getValue() == "array" && !lang::isArray(address)) || (address->getName()->getValue() == "ref" && !lang::isReference(address))
+		   || (address->getName()->getValue() == "channel" && !lang::isChannel(address))) {
 			add(res, Message(address, EC_TYPE_ILLEGAL_USE_OF_TYPE_KEYWORD, format("Name of generic type %s is a reserved keyword.", toString(*address).c_str()),
 			                 Message::WARNING));
 		}

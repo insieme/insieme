@@ -70,7 +70,7 @@ namespace lang {
 
 		const ConstExtension& ext = nm.getLangExtension<ConstExtension>();
 
-		semanticCheckSecond(ext.getNamedIrExtensions());
+		semanticCheckSecond(ext.getDefinedSymbols());
 	}
 } // end namespace lang
 } // end namespace core

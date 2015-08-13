@@ -43,7 +43,6 @@
 #include "insieme/core/forward_decls.h"
 #include "insieme/core/ir_types.h"
 #include "insieme/core/ir_expressions.h"
-#include "insieme/core/ir_builder.h"
 
 #include "insieme/core/lang/lang.h"
 
@@ -55,6 +54,23 @@ namespace core {
 namespace lang {
 
 	using std::string;
+
+
+	/**
+	 * The type utilized for producing nodes lazily.
+	 */
+	typedef std::function<NodePtr()> lazy_factory;
+
+	/**
+	 * The type utilized for providing a list of symbols defined by this extension
+	 * mapped to functions obtaining the corresponding instance.
+	 */
+	typedef std::map<string,lazy_factory> symbol_map;
+
+	/**
+	 * A map for type aliases like ref<'a> being an alias for ref<'a,f,f>
+	 */
+	typedef std::map<GenericTypePtr, TypePtr> type_alias_map;
 
 	/**
 	 * This class represents the common base class of language extensions. Such
@@ -76,14 +92,36 @@ namespace lang {
 	 * this extension in arbitrary IR code during parsing, as well as in other extensions.
 	 */
 	class Extension : private boost::noncopyable {
+
+		/**
+		 * The manager this extension is maintained by.
+		 */
 		NodeManager& manager;
 
 		/**
-		 * A map with all named types, literals and derived constructs defined within this extension
+		 * The list of all symbols visible to the definitions of the local primitives,
+		 * including the local symbols.
 		 */
-		mutable std::map<string, NodePtr> extensionIrNames;
+		mutable symbol_map symbols;
+
+		/**
+		 * A map with all named types, literals and derived constructs defined within this extension.
+		 */
+		mutable symbol_map local_symbols;
+
+		/**
+		 * A map of type alias active when parsing the definitions in this extension, including
+		 * the all locally defined and imported aliases.
+		 */
+		mutable type_alias_map type_aliases;
+
+		/**
+		 * A map of locally defined type aliases.
+		 */
+		mutable type_alias_map local_type_aliases;
 
 	  protected:
+
 		/**
 		 * Creates a new instance of this language extension being associated to the
 		 * given manager.
@@ -99,8 +137,11 @@ namespace lang {
 		/**
 		 * Adds a new mapping to the list of named mappings in this extension.
 		 */
-		void addNamedIrExtension(const string name, const NodePtr node) const {
-			if(!name.empty()) { extensionIrNames.insert(std::make_pair(name, node)); }
+		void addNamedIrExtension(const string& name, const lazy_factory& factory) const {
+			if(!name.empty()) {
+				local_symbols.insert({ name, factory });
+				symbols.insert({ name, factory });
+			}
 		}
 
 	  public:
@@ -119,37 +160,120 @@ namespace lang {
 		}
 
 		/**
-		 * Returns a map with all the named IR extensions defined by this extension
+		 * Returns a map with all the symbols defined by this and all imported extensions.
 		 */
-		const std::map<string, NodePtr>& getNamedIrExtensions() const {
-			return extensionIrNames;
+		const symbol_map& getSymbols() const {
+			return symbols;
 		}
+
+		/**
+		 * Returns all active type aliases in this extension, including the locally defined
+		 * as well as the imported definitions.
+		 */
+		const type_alias_map& getTypeAliases() const {
+			return type_aliases;
+		}
+
+		/**
+		 * Returns a map with all the symbols defined by this extension.
+		 */
+		const symbol_map& getDefinedSymbols() const {
+			return local_symbols;
+		}
+
+		/**
+		 * Obtains a list of locally defined type aliases.
+		 */
+		const type_alias_map& getDefinedTypeAliases() const {
+			return local_type_aliases;
+		}
+
+	  protected:
+
+		/**
+		 * Imports all symbols of another extension.
+		 */
+		template<typename Extension>
+		bool importExtension() {
+			// load extension
+			auto& other = manager.getLangExtension<Extension>();
+			// import symbols
+			for(const auto& cur : other.getSymbols()) {
+				symbols.insert(cur);
+			}
+			// import type aliases
+			for(const auto& cur : other.getTypeAliases()) {
+				type_aliases.insert(cur);
+			}
+			return true;	// just a dummy result
+		}
+
+		/**
+		 * Registers a type alias within this language module.
+		 */
+		bool addAlias(const GenericTypePtr& pattern, const TypePtr& full) {
+			local_type_aliases.insert({ pattern, full });
+			type_aliases.insert({ pattern, full });
+			return true;
+		}
+
+		/**
+		 * Registers a type alias within this language module.
+		 */
+		bool addAlias(const string& pattern, const string& full) {
+			return addAlias(
+					getType(manager, pattern, getSymbols()).as<GenericTypePtr>(),
+					getType(manager, pattern, getSymbols())
+			);
+		}
+
+		/**
+		 * A utility simplifying the creation of a type within language extensions. The
+		 * given type string will be parsed and returned.
+		 *
+		 * @param manager the node manager to be used for creating the type
+		 * @param type the string to be parsed
+		 * @param definitions a map of already existing named definitions used during parsing
+		 * @return the requested type
+		 */
+		static TypePtr getType(NodeManager& manager, const string& type, const symbol_map& definitions = symbol_map());
+
+		/**
+		 * A utility simplifying the creation of literals within language extensions.
+		 * The type of the literal is passed as a string which will internally be parsed.
+		 *
+		 * @param manager the node manager to be used for creating the resulting literal
+		 * @param type the type of the resulting literal, encoded as a string
+		 * @param value the value of the resulting literal
+		 * @param definitions a map of already existing named definitions used during parsing
+		 * @return the requested literal
+		 */
+		static LiteralPtr getLiteral(NodeManager& manager, const string& type, const string& value,
+							  const symbol_map& definitions = symbol_map());
+
+		/**
+		 * A utility simplifying the creation of expressions within language extensions.
+		 *
+		 * @param manager the node manager to be used for creating the resulting literal
+		 * @param spec the inspire code describing the resulting construct
+		 * @param definitions a map of already existing named definitions used during parsing
+		 * @return the requested literal
+		 */
+		static ExpressionPtr getExpression(NodeManager& manager, const string& spec, const symbol_map& definitions = symbol_map());
 	};
 
-	/**
-	 * A utility simplifying the creation of a type within language extensions. The
-	 * given type string will be parsed and returned.
-	 *
-	 * @param manager the node manager to be used for creating the type
-	 * @param type the string to be parsed
-	 * @param definitions a map of already existing named definitions used during parsing
-	 * @return the requested type
-	 */
-	TypePtr getType(NodeManager& manager, const string& type, const std::map<string, NodePtr>& definitions = std::map<string, NodePtr>());
 
 	/**
-	 * A utility simplifying the creation of literals within language extensions.
-	 * The type of the literal is passed as a string which will internally be parsed.
-	 *
-	 * @param manager the node manager to be used for creating the resulting literal
-	 * @param type the type of the resulting literal, encoded as a string
-	 * @param value the value of the resulting literal
-	 * @param definitions a map of already existing named definitions used during parsing
-	 * @return the requested literal
+	 * A macro enabling the import of symbols of other language extensions.
 	 */
-	LiteralPtr getLiteral(NodeManager& manager, const string& type, const string& value,
-	                      const std::map<string, NodePtr>& definitions = std::map<string, NodePtr>());
+	#define IMPORT_MODULE(NAME) \
+	  private: bool _module_##NAME_import = importExtension<NAME>();
 
+	/**
+	 * A macro adding a type alias definition to this extension.
+	 */
+	#define TYPE_ALIAS(PATTERN,TYPE) \
+	  private : bool _alias__LINE__ = addAlias(PATTERN,TYPE);
 
 	/**
 	 * A macro supporting the simple declaration and definition of a type within a language extension
@@ -161,18 +285,20 @@ namespace lang {
 	 */
 	#define LANG_EXT_TYPE_WITH_NAME(NAME, IR_NAME, TYPE)                                                                                                       \
 	  private:                                                                                                                                                 \
-		const insieme::core::TypePtr type_##NAME = create##NAME();                                                                                             \
-                                                                                                                                                               \
-		const insieme::core::TypePtr create##NAME() const {                                                                                                    \
+		mutable insieme::core::TypePtr type_##NAME = reg##NAME();                                                                                              \
+																																							   \
+		const insieme::core::TypePtr reg##NAME() const {                                                                                                       \
 			checkIrNameNotAlreadyInUse(IR_NAME);                                                                                                               \
-			const insieme::core::TypePtr result = insieme::core::lang::getType(getNodeManager(), TYPE, getNamedIrExtensions());                                \
-			insieme::core::lang::markAsBuiltIn(result);                                                                                                        \
-			addNamedIrExtension(IR_NAME, result);                                                                                                              \
-			return result;                                                                                                                                     \
+			addNamedIrExtension(IR_NAME, [&]()->NodePtr { return get##NAME(); });                                                                              \
+			return insieme::core::TypePtr();                                                                                                                   \
 		}                                                                                                                                                      \
                                                                                                                                                                \
 	  public:                                                                                                                                                  \
 		const insieme::core::TypePtr& get##NAME() const {                                                                                                      \
+		    if(!type_##NAME) {                                                                                                                                 \
+				type_##NAME = getType(getNodeManager(), TYPE, getSymbols());                                                              \
+				insieme::core::lang::markAsBuiltIn(type_##NAME);                                                                                               \
+			}                                                                                                                                                  \
 			return type_##NAME;                                                                                                                                \
 		}                                                                                                                                                      \
 		const bool is##NAME(const insieme::core::NodePtr& node) const {                                                                                        \
@@ -199,19 +325,21 @@ namespace lang {
 	 */
 	#define LANG_EXT_LITERAL_WITH_NAME(NAME, IR_NAME, VALUE, TYPE)                                                                                             \
 	  private:                                                                                                                                                 \
-		const insieme::core::LiteralPtr lit_##NAME = create##NAME();                                                                                           \
+		mutable insieme::core::LiteralPtr lit_##NAME = reg##NAME();                                                                                            \
                                                                                                                                                                \
-		const insieme::core::LiteralPtr create##NAME() const {                                                                                                 \
+		const insieme::core::LiteralPtr reg##NAME() const {                                                                                                    \
 			checkIrNameNotAlreadyInUse(IR_NAME);                                                                                                               \
-			const insieme::core::LiteralPtr result = insieme::core::lang::getLiteral(getNodeManager(), TYPE, VALUE, getNamedIrExtensions());                   \
-			insieme::core::lang::markAsDerived(result, VALUE);                                                                                                 \
-			insieme::core::lang::markAsBuiltIn(result);                                                                                                        \
-			addNamedIrExtension(IR_NAME, result);                                                                                                              \
-			return result;                                                                                                                                     \
+			addNamedIrExtension(IR_NAME, [&]()->NodePtr { return get##NAME(); });                                                                              \
+			return insieme::core::LiteralPtr();                                                                                                                \
 		}                                                                                                                                                      \
                                                                                                                                                                \
 	  public:                                                                                                                                                  \
 		const insieme::core::LiteralPtr& get##NAME() const {                                                                                                   \
+		    if (!lit_##NAME) {                                                                                                                                 \
+				lit_##NAME = getLiteral(getNodeManager(), TYPE, VALUE, getSymbols());                                                     \
+				insieme::core::lang::markAsDerived(lit_##NAME, VALUE);                                                                                         \
+				insieme::core::lang::markAsBuiltIn(lit_##NAME);                                                                                                \
+			}                                                                                                                                                  \
 			return lit_##NAME;                                                                                                                                 \
 		}                                                                                                                                                      \
 		const bool is##NAME(const insieme::core::NodePtr& node) const {                                                                                        \
@@ -226,7 +354,7 @@ namespace lang {
 	 * @param VALUE the value of this literal
 	 * @param TYPE the IR type of the literal
 	 */
-	#define LANG_EXT_LITERAL(NAME, VALUE, TYPE) LANG_EXT_LITERAL_WITH_NAME(NAME, camelcaseToUnderscore(#NAME), VALUE, TYPE)
+	#define LANG_EXT_LITERAL(NAME, VALUE, TYPE) LANG_EXT_LITERAL_WITH_NAME(NAME, VALUE, VALUE, TYPE)
 
 	/**
 	 * A macro supporting the simple declaration and definition of a derived language extension implementation.
@@ -237,20 +365,21 @@ namespace lang {
 	 */
 	#define LANG_EXT_DERIVED_WITH_NAME(NAME, IR_NAME, SPEC)                                                                                                    \
 	  private:                                                                                                                                                 \
-		const insieme::core::ExpressionPtr expr_##NAME = create##NAME();                                                                                       \
+		mutable insieme::core::ExpressionPtr expr_##NAME = reg##NAME();                                                                                        \
                                                                                                                                                                \
-		const insieme::core::ExpressionPtr create##NAME() const {                                                                                              \
+		const insieme::core::ExpressionPtr reg##NAME() const {                                                                                                 \
 			checkIrNameNotAlreadyInUse(IR_NAME);                                                                                                               \
-			insieme::core::IRBuilder builder(getNodeManager());                                                                                                \
-			const insieme::core::ExpressionPtr result = builder.normalize(builder.parseExpr(SPEC, getNamedIrExtensions())).as<insieme::core::ExpressionPtr>(); \
-			insieme::core::lang::markAsDerived(result, #NAME);                                                                                                 \
-			insieme::core::lang::markAsBuiltIn(result);                                                                                                        \
-			addNamedIrExtension(IR_NAME, result);                                                                                                              \
-			return result;                                                                                                                                     \
+			addNamedIrExtension(IR_NAME, [&]()->NodePtr { return get##NAME(); });                                                                              \
+			return insieme::core::ExpressionPtr();                                                                                                             \
 		}                                                                                                                                                      \
                                                                                                                                                                \
 	  public:                                                                                                                                                  \
 		const insieme::core::ExpressionPtr& get##NAME() const {                                                                                                \
+		    if (!expr_##NAME) {                                                                                                                                \
+		    	expr_##NAME = getExpression(getNodeManager(), SPEC, getSymbols()); \
+				insieme::core::lang::markAsDerived(expr_##NAME, #NAME);                                                                                        \
+				insieme::core::lang::markAsBuiltIn(expr_##NAME);                                                                                               \
+	        }                                                                                                                                                  \
 			return expr_##NAME;                                                                                                                                \
 		}                                                                                                                                                      \
 		const bool is##NAME(const insieme::core::NodePtr& node) const {                                                                                        \

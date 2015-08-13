@@ -181,7 +181,7 @@ DERIVED_OP(Bool, LOr, "bool_or", "lambda (bool a, ()=>bool b)->bool { if (a) ret
 
 // Arithmetic operations ----------------------------------------------------------------------------------------------
 
-GROUP(IntArithOp, SignedIntAdd, SignedIntSub, SignedIntMul, SignedIntDiv, SignedIntMod, IncrementOp)
+GROUP(IntArithOp, SignedIntAdd, SignedIntSub, SignedIntMul, SignedIntDiv, SignedIntMod)
 //      SignedIntPreInc, SignedIntPostInc, SignedIntPreDec, SignedIntPostDec)
 
 OPERATION(SignedInt, Add, "int_add", "(int<'a>,int<'a>) -> int<'a>")
@@ -195,7 +195,7 @@ OPERATION(SignedInt, Mod, "int_mod", "(int<'a>,int<'a>) -> int<'a>")
 OPERATION(SignedInt, PreDec, "int_preDec", "(ref<int<'a>>) -> int<'a>")
 OPERATION(SignedInt, PostDec, "int_postDec", "(ref<int<'a>>) -> int<'a>")
 
-GROUP(CharArithOp, CharAdd, CharSub, CharMul, CharDiv, CharMod, IncrementOp)
+GROUP(CharArithOp, CharAdd, CharSub, CharMul, CharDiv, CharMod)
 
 OPERATION(Char, Add, "char_add", "(char,char) -> char")
 OPERATION(Char, Sub, "char_sub", "(char,char) -> char")
@@ -208,7 +208,7 @@ OPERATION(Char, Mod, "char_mod", "(char,char) -> char")
 OPERATION(Char, PreDec, "char_preDec", "(ref<char>) -> char")
 OPERATION(Char, PostDec, "char_postDec", "(ref<char>) -> char")
 
-GROUP(UIntArithOp, UnsignedIntAdd, UnsignedIntSub, UnsignedIntMul, UnsignedIntDiv, UnsignedIntMod, IncrementOp)
+GROUP(UIntArithOp, UnsignedIntAdd, UnsignedIntSub, UnsignedIntMul, UnsignedIntDiv, UnsignedIntMod)
 //        UnsignedIntPreInc, UnsignedIntPostInc, UnsignedIntPreDec, UnsignedIntPostDec)
 
 OPERATION(UnsignedInt, Add, "uint_add", "(uint<'a>,uint<'a>) -> uint<'a>")
@@ -232,16 +232,10 @@ OPERATION(Real, Div, "real_div", "(real<'a>,real<'a>) -> real<'a>")
 
 GROUP(ArithOp, IntArithOp, UIntArithOp, RealArithOp)
 
-DERIVED(GenPreInc, "gen_pre_inc", "lambda (ref<'a> v)->'a { v=*v+lit(\"1\":'a); return *v; }")
-DERIVED(GenPostInc, "gen_post_inc", "lambda (ref<'a> v)->'a { decl auto tmp=*v; v=*v+lit(\"1\":'a); return tmp; }")
-DERIVED(GenPreDec, "gen_pre_dec", "lambda (ref<'a> v)->'a { v=*v-lit(\"1\":'a); return *v; }")
-DERIVED(GenPostDec, "gen_post_dec", "lambda (ref<'a> v)->'a { decl auto tmp=*v; v=*v-lit(\"1\":'a); return tmp; }")
-
-GROUP(IncrementOp, GenPreInc, GenPostInc, GenPreDec, GenPostDec)
 // SignedIntPreInc, SignedIntPostInc, SignedIntPreDec, SignedIntPostDec,
 //        UnsignedIntPreInc, UnsignedIntPostInc, UnsignedIntPreDec, UnsignedIntPostDec)
 
-GROUP(LinearIntOp, SignedIntAdd, SignedIntSub, SignedIntMul, SignedIntDiv, UnsignedIntAdd, UnsignedIntSub, UnsignedIntMul, UnsignedIntDiv, IncrementOp)
+GROUP(LinearIntOp, SignedIntAdd, SignedIntSub, SignedIntMul, SignedIntDiv, UnsignedIntAdd, UnsignedIntSub, UnsignedIntMul, UnsignedIntDiv)
 
 // Comparison Operations ----------------------------------------------------------------------------------------------
 
@@ -396,7 +390,7 @@ OPERATION(Gen, Not, "gen_not", "('a) -> 'a")
 GROUP(GenArithmeticOp, GenAdd, GenSub, GenMul, GenDiv, GenMod)
 GROUP(GenBitwiseOp, GenNot, GenAnd, GenOr, GenXor, GenLShift, GenRShift)
 GROUP(GenCompOp, GenEq, GenNe, GenLt, GenGt, GenLe, GenGe)
-GROUP(GenOp, GenArithmeticOp, GenBitwiseOp, GenCompOp, IncrementOp)
+GROUP(GenOp, GenArithmeticOp, GenBitwiseOp, GenCompOp)
 
 GROUP(AddOp, GenAdd, SignedIntAdd, UnsignedIntAdd, RealAdd)
 GROUP(SubOp, GenSub, SignedIntSub, UnsignedIntSub, RealSub)

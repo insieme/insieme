@@ -43,6 +43,7 @@
 
 #include "insieme/core/forward_decls.h"
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/parser3/ir_parser.h"
 #include "insieme/core/parser3/detail/scanner.h"
 
 #include "inspire_parser.hpp"
@@ -59,27 +60,29 @@ namespace parser3 {
 		 *  it is useful to keep track of the let bindings
 		 */
 		struct DeclarationContext {
-			using ctx_map_type = std::map<std::string, NodePtr>;
 
-			std::vector<ctx_map_type> scope_stack;
-			ctx_map_type global_scope;
+			struct Scope {
+				definition_map symbols;
+				type_alias_map alias;
+			};
+
+			std::vector<Scope> stack;
 
 			// public:
 
-			DeclarationContext() {}
-			DeclarationContext(const DeclarationContext& o) : global_scope(o.global_scope.begin(), o.global_scope.end()) {
-				for(const auto& scope : o.scope_stack) {
-					scope_stack.push_back(ctx_map_type(scope.begin(), scope.end()));
-				}
-			}
+			DeclarationContext() { open_scope(); /* global scope */ }
+			DeclarationContext(const DeclarationContext& o) =default;
 
 			// ~~~~~~~~~~~~~~~~~~~~~ scope ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
 
 			void open_scope(const std::string& msg = "");
 			void close_scope(const std::string& msg = "");
 
-			bool add_symb(const std::string& name, NodePtr node);
+			bool add_symb(const std::string& name, const node_factory& factory);
 			NodePtr find(const std::string& name) const;
+
+			void add_type_alias(const GenericTypePtr& pattern, const TypePtr& substitute);
+			TypePtr resolve(const TypePtr& type) const;
 		};
 
 
@@ -191,6 +194,11 @@ namespace parser3 {
 			TypePtr genFuncType(const location& l, const TypeList& params, const TypePtr& retType, const FunctionKind& fk = FK_PLAIN);
 
 			/**
+			 * check whether type alias can be applied to the given type and applies those.
+			 */
+			TypePtr resolveTypeAliases(const location& l, const TypePtr& type);
+
+			/**
 			 * generates a lambda expression
 			 */
 			ExpressionPtr genLambda(const location& l, const VariableList& params, const TypePtr& retType, const StatementPtr& body,
@@ -247,12 +255,27 @@ namespace parser3 {
 			/**
 			 * add a symbol into the scope
 			 */
-			void add_symb(const location& l, const std::string& name, NodePtr ptr);
+			void add_symb(const location& l, const std::string& name, const node_factory& factory);
+
+			/**
+			 * add a symbol into the scope
+			 */
+			void add_symb(const location& l, const std::string& name, const NodePtr& node);
 
 			/**
 			 * add a symbol into the scope (no location, used when setting up the inspire_parser)
 			 */
-			void add_symb(const std::string& name, NodePtr ptr);
+			void add_symb(const std::string& name, const node_factory& factory);
+
+			/**
+			 * add a symbol into the scope (no location, used when setting up the inspire_parser)
+			 */
+			void add_symb(const std::string& name, const NodePtr& node);
+
+			/**
+			 * add a type alias to the current scope
+			 */
+			void add_type_alias(const GenericTypePtr& pattern, const TypePtr& substitute);
 
 			/**
 			 *  Open a frame in the scope manager

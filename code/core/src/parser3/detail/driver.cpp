@@ -44,6 +44,8 @@
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/annotations/naming.h"
+
+#include "insieme/core/types/match.h"
 #include "insieme/core/types/return_type_deduction.h"
 
 #include "insieme/core/parser3/detail/scanner.h"
@@ -64,33 +66,54 @@ namespace parser3 {
 
 
 		void DeclarationContext::open_scope(const std::string& msg) {
-			//// for (unsigned i =0; i< scope_stack.size(); ++i) std::cout << " ";
-			scope_stack.push_back(ctx_map_type());
+			stack.push_back(Scope());
 		}
 		void DeclarationContext::close_scope(const std::string& msg) {
-			scope_stack.pop_back();
-			//  for (unsigned i =0; i< scope_stack.size(); ++i) std::cout << " ";
+			assert_gt(stack.size(), 1) << "Attempted to pop global scope!";
+			stack.pop_back();
 		}
 
-		bool DeclarationContext::add_symb(const std::string& name, NodePtr node) {
-			if(scope_stack.empty()) {
-				if(global_scope.find(name) != global_scope.end()) { return false; }
-
-				global_scope[name] = node;
-			} else {
-				if(scope_stack.back().find(name) != scope_stack.back().end()) { return false; }
-				scope_stack.back()[name] = node;
-			}
+		bool DeclarationContext::add_symb(const std::string& name, const node_factory& factory) {
+			auto& symbols = stack.back().symbols;
+			if (symbols.find(name) != symbols.end()) return false;
+			symbols[name] = factory;
 			return true;
 		}
 
 		NodePtr DeclarationContext::find(const std::string& name) const {
-			ctx_map_type::const_iterator mit;
-			for(auto it = scope_stack.rbegin(); it != scope_stack.rend(); ++it) {
-				if((mit = it->find(name)) != it->end()) { return mit->second; }
+			// lookup symbols throughout scopes
+			for(auto it = stack.rbegin(); it != stack.rend(); ++it) {
+				const definition_map& cur = it->symbols;
+				auto pos = cur.find(name);
+				if (pos != cur.end()) return pos->second();
 			}
-			if((mit = global_scope.find(name)) != global_scope.end()) { return mit->second; }
 			return nullptr;
+		}
+
+
+		void DeclarationContext::add_type_alias(const GenericTypePtr& pattern, const TypePtr& substitute) {
+			auto& aliases = stack.back().alias;
+			aliases[pattern] = substitute;
+		}
+
+		TypePtr DeclarationContext::resolve(const TypePtr& type) const {
+			if (!type || !type.isa<GenericTypePtr>()) return type;
+
+			NodeManager& mgr = type.getNodeManager();
+
+			// run through alias lists
+			for(auto it = stack.rbegin(); it != stack.rend(); ++it) {
+				for(const auto& cur : it->alias) {
+					// check whether pattern matches
+					if (auto sub = types::match(mgr, type, cur.first)) {
+						// apply pattern and start over again
+						return resolve((*sub).applyTo(cur.second));
+					}
+				}
+			}
+
+			// no matching alias fond => done
+			return type;
 		}
 
 		/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ inspire_driver ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -358,6 +381,10 @@ namespace parser3 {
 			return builder.functionType(params, retType, fk);
 		}
 
+		TypePtr inspire_driver::resolveTypeAliases(const location& l, const TypePtr& type) {
+			return scopes.resolve(type);
+		}
+
 		ExpressionPtr inspire_driver::genLambda(const location& l, const VariableList& params, const TypePtr& retType, const StatementPtr& body,
 		                                        const FunctionKind& fk) {
 			// TODO: cast returns to apropiate type
@@ -490,11 +517,7 @@ namespace parser3 {
 
 		// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Scope management  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-		void inspire_driver::add_symb(const location& l, const std::string& name, NodePtr ptr) {
-			if(!ptr) {
-				error(l, format("symbol %s is not well formed", name));
-				return;
-			}
+		void inspire_driver::add_symb(const location& l, const std::string& name, const node_factory&  factory) {
 
 			if(name.find(".") != std::string::npos) {
 				error(l, format("symbol names can not contain dot chars: %s", name));
@@ -504,11 +527,24 @@ namespace parser3 {
 			// ignore wildcard for unused variables
 			if(name == "_") { return; }
 
-			if(!scopes.add_symb(name, ptr)) { error(l, format("symbol %s redefined", name)); }
+			if(!scopes.add_symb(name, factory)) { error(l, format("symbol %s redefined", name)); }
 		}
 
-		void inspire_driver::add_symb(const std::string& name, NodePtr ptr) {
-			add_symb(glob_loc, name, ptr);
+		void inspire_driver::add_symb(const location& l, const std::string& name, const NodePtr& node) {
+			add_symb(l, name, [=]() { return node; });
+		}
+
+
+		void inspire_driver::add_symb(const std::string& name, const node_factory& factory) {
+			add_symb(glob_loc, name, factory);
+		}
+
+		void inspire_driver::add_symb(const std::string& name, const NodePtr& node) {
+			add_symb(name, [=]() { return node; });
+		}
+
+		void inspire_driver::add_type_alias(const GenericTypePtr& pattern, const TypePtr& substitute) {
+			scopes.add_type_alias(pattern, substitute);
 		}
 
 		namespace {
@@ -785,7 +821,7 @@ namespace parser3 {
 
 				const lang::Extension& extension = mgr.getLangExtensionByName(extensionName);
 
-				for(const std::pair<string, NodePtr>& cur : extension.getNamedIrExtensions()) {
+				for(const auto& cur : extension.getSymbols()) {
 					add_symb(l, cur.first, cur.second);
 				}
 			}

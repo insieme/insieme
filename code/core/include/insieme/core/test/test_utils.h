@@ -43,6 +43,8 @@
 #include "insieme/core/ir_node.h"
 #include "insieme/core/checks/full_check.h"
 
+#include "insieme/core/lang/extension.h"
+
 using std::string;
 
 namespace insieme {
@@ -56,12 +58,18 @@ namespace core {
 	 * @param map The map which's second element should be checked
 	 */
 	template <typename T>
-	void semanticCheckSecond(std::map<T, insieme::core::NodePtr> map) {
+	void semanticCheckSecond(const std::map<T, lang::lazy_factory>& map) {
 		for(auto cur : map) {
-			auto errors = checks::check(cur.second).empty();
+			// create node
+			auto node = cur.second();
+
+			// check node
+			auto errors = checks::check(node);
 
 			// just check whether the code is not exhibiting errors
-			EXPECT_TRUE(errors) << errors;
+			EXPECT_TRUE(errors.empty()) <<
+					"Code:   " << *node  << "\n" <<
+					"Errors: " << errors;
 		}
 	}
 }

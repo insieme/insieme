@@ -58,6 +58,21 @@ namespace core {
 namespace parser3 {
 
 	/**
+	 * A type for an entity producing a node.
+	 */
+	typedef std::function<NodePtr()> node_factory;
+
+	/**
+	 * A type defining a mapping form symbol names to factories producing the corresponding IR node.
+	 */
+	typedef std::map<std::string, node_factory> definition_map;
+
+	/**
+	 * A type defining a mapping between generic types and type aliases.
+	 */
+	typedef std::map<GenericTypePtr, TypePtr> type_alias_map;
+
+	/**
 	 * Parses an IR fragment and creates the corresponding IR DAG using the given node manager. The given
 	 * string is interpreted as an arbitrary piece of IR code (could be a statement, expression, type, ...). The
 	 * first successful match consuming the full string will be returned. If the given string can not be
@@ -73,11 +88,12 @@ namespace parser3 {
 	 * @param code the code fragment to be parsed
 	 * @param onFailThrow a flag determining whether a parsing error should result in a null-pointer (false) or a Parsing Exception (true)
 	 * @param definitions a map of pre-defined symbols
+	 * @param aliases a map of pre-defined type aliases
 	 * @return the parsed construct or null if the parsing was not successful and onFailThrow was set to false
 	 * @throw an IRParserException if the parsing failed and the onFailThrow flag was set; the Exception tries to explain the reason for the parsing error.
 	 */
 	NodePtr parse_any(NodeManager& manager, const string& code, bool onFailThrow = false,
-	                  const std::map<string, NodePtr>& definitions = std::map<string, NodePtr>());
+	                  const definition_map& definitions = definition_map(), const type_alias_map& aliases = type_alias_map());
 
 	/**
 	 * A specialized version of the general parse function focusing specifically on types.
@@ -88,11 +104,12 @@ namespace parser3 {
 	 * @param code the code fragment describing the type to be parsed
 	 * @param onFailThrow a flag determining whether a parsing error should result in a null-pointer (false) or a Parsing Exception (true)
 	 * @param definitions a map of pre-defined symbols
+	 * @param aliases a map of pre-defined type aliases
 	 * @return the parsed construct or null if the parsing was not successful and onFailThrow was set to false
 	 * @throw an IRParserException if the parsing failed and the onFailThrow flag was set; the Exception tries to explain the reason for the parsing error.
 	 */
 	TypePtr parse_type(NodeManager& manager, const string& code, bool onFailThrow = false,
-	                   const std::map<string, NodePtr>& definitions = std::map<string, NodePtr>());
+	                   const definition_map& definitions = definition_map(), const type_alias_map& aliases = type_alias_map());
 
 	/**
 	 * A specialized version of the general parse function focusing specifically on expressions. Using the specialized variant
@@ -102,11 +119,12 @@ namespace parser3 {
 	 * @param code the code fragment describing the expression to be parsed
 	 * @param onFailThrow a flag determining whether a parsing error should result in a null-pointer (false) or a Parsing Exception (true)
 	 * @param definitions a map of pre-defined symbols
+	 * @param aliases a map of pre-defined type aliases
 	 * @return the parsed construct or null if the parsing was not successful and onFailThrow was set to false
 	 * @throw an IRParserException if the parsing failed and the onFailThrow flag was set; the Exception tries to explain the reason for the parsing error.
 	 */
 	ExpressionPtr parse_expr(NodeManager& manager, const string& code, bool onFailThrow = false,
-	                         const std::map<string, NodePtr>& definitions = std::map<string, NodePtr>());
+	                         const definition_map& definitions = definition_map(), const type_alias_map& aliases = type_alias_map());
 
 	/**
 	 * A specialized version of the general parse function which is focusing specifically on statements. Using the specialized variant
@@ -116,11 +134,12 @@ namespace parser3 {
 	 * @param code the code fragment describing the statement to be parsed
 	 * @param onFailThrow a flag determining whether a parsing error should result in a null-pointer (false) or a Parsing Exception (true)
 	 * @param definitions a map of pre-defined symbols
+	 * @param aliases a map of pre-defined type aliases
 	 * @return the parsed construct or null if the parsing was not successful and onFailThrow was set to false
 	 * @throw an IRParserException if the parsing failed and the onFailThrow flag was set; the Exception tries to explain the reason for the parsing error.
 	 */
 	StatementPtr parse_stmt(NodeManager& manager, const string& code, bool onFailThrow = false,
-	                        const std::map<string, NodePtr>& definitions = std::map<string, NodePtr>());
+	                        const definition_map& definitions = definition_map(), const type_alias_map& aliases = type_alias_map());
 
 	/**
 	 * A specialized version of the general parse function which is focusing specifically on full applications. Using the specialized variant
@@ -130,11 +149,12 @@ namespace parser3 {
 	 * @param code the code fragment encoding the full program to be parsed
 	 * @param onFailThrow a flag determining whether a parsing error should result in a null-pointer (false) or a Parsing Exception (true)
 	 * @param definitions a map of pre-defined symbols
+	 * @param aliases a map of pre-defined type aliases
 	 * @return the parsed construct or null if the parsing was not successful and onFailThrow was set to false
 	 * @throw an IRParserException if the parsing failed and the onFailThrow flag was set; the Exception tries to explain the reason for the parsing error.
 	 */
 	ProgramPtr parse_program(NodeManager& manager, const string& code, bool onFailThrow = false,
-	                         const std::map<string, NodePtr>& definitions = std::map<string, NodePtr>());
+	                         const definition_map& definitions = definition_map(), const type_alias_map& aliases = type_alias_map());
 
 	/**
 	 * A specialized version of the general parse function which is considering labels within the IR marking constructs
@@ -146,17 +166,18 @@ namespace parser3 {
 	 * @param code the code fragment to be parsed, including marked locations.
 	 * @param onFailThrow a flag determining whether a parsing error should result in an empty list or a Parsing Exception
 	 * @param definitions a map of pre-defined symbols
+	 * @param aliases a map of pre-defined type aliases
 	 * @return a list of all addresses referencing marked sub-constructs within the parsed IR or an empty list of the parsing failed and onFailThrow was not set
 	 * @throw an IRParserException if the parsing failed and the onFailThrow flag was set; the Exception tries to explain the reason for the parsing error.
 	 */
 	std::vector<NodeAddress> parse_addresses_statement(NodeManager& manager, const string& code, bool onFailThrow = false,
-	                                                   const std::map<string, NodePtr>& definitions = std::map<string, NodePtr>());
+	                                                   const definition_map& definitions = definition_map(), const type_alias_map& aliases = type_alias_map());
 
 	/**
 	 * equivalent to parse_addresses_statement but parsing a program, this avoids ambiguity in the grammar, allows us to use a sympler parser
 	 */
 	std::vector<NodeAddress> parse_addresses_program(NodeManager& manager, const string& code, bool onFailThrow = false,
-	                                                 const std::map<string, NodePtr>& definitions = std::map<string, NodePtr>());
+	                                                 const definition_map& definitions = definition_map(), const type_alias_map& aliases = type_alias_map());
 
 	/**
 	 * The type of exception to be thrown by the parser in case the parsing was not successful.

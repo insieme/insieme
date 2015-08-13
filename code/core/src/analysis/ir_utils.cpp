@@ -44,6 +44,7 @@
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/ir_address.h"
 #include "insieme/core/ir_cached_visitor.h"
+#include "insieme/core/ir_builder.h"
 #include "insieme/core/analysis/attributes.h"
 
 #include "insieme/core/lang/basic.h"
