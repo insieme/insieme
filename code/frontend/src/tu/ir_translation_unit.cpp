@@ -47,6 +47,7 @@
 #include "insieme/core/frontend_ir_builder.h"
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/ir_class_info.h"
+#include "insieme/core/lang/array.h"
 #include "insieme/core/lang/ir++_extension.h"
 #include "insieme/core/lang/static_vars.h"
 #include "insieme/core/analysis/ir_utils.h"
@@ -69,7 +70,7 @@ namespace frontend {
 namespace tu {
 
 	void IRTranslationUnit::addGlobal(const Global& newGlobal) {
-		assert(newGlobal.first && newGlobal.first->getType().isa<core::RefTypePtr>());
+		assert_true(newGlobal.first && core::analysis::isRefType(newGlobal.first->getType()));
 
 		auto git = std::find_if(globals.begin(), globals.end(), [&](const Global& cur) -> bool { return *newGlobal.first == *cur.first; });
 		if(git == globals.end()) {
@@ -486,37 +487,37 @@ namespace tu {
 					}
 
 					// if this is a call to ref member access we rebuild the whole expression to return a correct reference type
-					if(core::analysis::isCallOf(res, mgr.getLangBasic().getCompositeRefElem())) {
-						auto call = res.as<CallExprPtr>();
+					//if(core::analysis::isCallOf(res, mgr.getLangExtension<core::lang::ReferenceExtension>().getRefMemberAccess())) {
+					//	auto call = res.as<CallExprPtr>();
 
-						if(call[0]->getType().as<RefTypePtr>()->getElementType().isa<StructTypePtr>()) {
-							assert_true(call[0]);
-							assert_true(call[1]);
+					//	if(core::analysis::getReferencedType(call[0]->getType()).isa<StructTypePtr>()) {
+					//		assert_true(call[0]);
+					//		assert_true(call[1]);
 
-							auto tmp = builder.refMember(call[0], call[1].as<LiteralPtr>()->getValue());
-							// type changed... do we have any cppRef to unwrap?
-							if(*(tmp->getType()) != *(call->getType()) && core::analysis::isAnyCppRef(tmp->getType().as<RefTypePtr>()->getElementType())) {
-								res = builder.toIRRef(builder.deref(tmp));
-							} else {
-								res = tmp;
-							}
-						}
-					}
+					//		auto tmp = builder.refMember(call[0], call[1].as<LiteralPtr>()->getValue());
+					//		// type changed... do we have any cppRef to unwrap?
+					//		if(*(tmp->getType()) != *(call->getType())) {
+					//			res = builder.toIRRef(builder.deref(tmp));
+					//		} else {
+					//			res = tmp;
+					//		}
+					//	}
+					//}
 
 					// also if this is a call to member access we rebuild the whole expression to return
 					// NON ref type
-					if(core::analysis::isCallOf(res, mgr.getLangBasic().getCompositeMemberAccess())) {
-						auto call = res.as<CallExprPtr>();
-						if(call[0]->getType().isa<StructTypePtr>()) {
-							auto tmp = builder.accessMember(call[0], call[1].as<LiteralPtr>()->getValue());
-							// type might changed, we have to unwrap it
-							if(core::analysis::isAnyCppRef(tmp->getType())) {
-								res = builder.deref(builder.toIRRef(tmp));
-							} else {
-								res = tmp;
-							}
-						}
-					}
+					//if(core::analysis::isCallOf(res, mgr.getLangExtension<core::lang::ReferenceExtension>().getRefMemberAccess())) {
+					//	auto call = res.as<CallExprPtr>();
+					//	if(call[0]->getType().isa<StructTypePtr>()) {
+					//		auto tmp = builder.accessMember(call[0], call[1].as<LiteralPtr>()->getValue());
+					//		// type might changed, we have to unwrap it
+					//		if(core::analysis::isAnyCppRef(tmp->getType())) {
+					//			res = builder.deref(builder.toIRRef(tmp));
+					//		} else {
+					//			res = tmp;
+					//		}
+					//	}
+					//}
 
 					// also fix type literals
 					if(core::analysis::isTypeLiteral(res)) { res = builder.getTypeLiteral(core::analysis::getRepresentedType(res.as<ExpressionPtr>())); }
@@ -561,7 +562,7 @@ namespace tu {
 				for(auto cur : unit.getGlobals()) {
 					if(contains(prevAddedLiterals, cur.first)) {
 						core::visitDepthFirstOnce(cur.second, [&](const core::LiteralPtr& literal) {
-							if(literal->getType().isa<RefTypePtr>()) {
+							if(core::analysis::isRefType(literal->getType())) {
 								currAddedLiterals.insert(literal);
 								usedLiterals.insert(literal);
 							}
@@ -592,15 +593,15 @@ namespace tu {
 				const LiteralPtr& global = resolver.apply(cur.first).as<LiteralPtr>();
 				const TypePtr& globalTy = global->getType();
 
-				if(!globalTy.isa<RefTypePtr>() || !globalTy.as<RefTypePtr>()->getElementType().isa<VectorTypePtr>()) { continue; }
+				if(!core::analysis::isRefType(globalTy)) { continue; }
 
 				auto findLit = [&](const NodePtr& node) {
 					const LiteralPtr& usedLit = resolver.apply(node).as<LiteralPtr>();
 					const TypePtr& usedLitTy = usedLit->getType();
 
-					if(!usedLitTy.isa<RefTypePtr>()) { return false; }
+					if(!core::analysis::isRefType(usedLitTy)) { return false; }
 
-					return usedLit->getStringValue() == global->getStringValue() && usedLitTy.as<RefTypePtr>()->getElementType().isa<ArrayTypePtr>()
+					return usedLit->getStringValue() == global->getStringValue() && core::lang::isArray(core::analysis::getReferencedType(usedLitTy))
 					       && types::isSubTypeOf(globalTy, usedLitTy);
 				};
 
@@ -640,7 +641,7 @@ namespace tu {
 				auto lit = cur.as<LiteralPtr>();
 				// only consider static variables
 				auto type = lit->getType();
-				if(!type.isa<RefTypePtr>() || !ext.isStaticType(type.as<RefTypePtr>()->getElementType())) { continue; }
+				if(!core::analysis::isRefType(type) || !ext.isStaticType(core::analysis::getReferencedType(type))) { continue; }
 				// add creation statement
 				inits.push_back(builder.createStaticVariable(lit));
 			}
@@ -650,8 +651,8 @@ namespace tu {
 				auto type = cur.as<LiteralPtr>()->getType();
 				insieme::annotations::c::markExtern(
 				    cur.as<LiteralPtr>(),
-				    type.isa<RefTypePtr>() && cur.as<LiteralPtr>()->getStringValue()[0] != '\"' && // not an string literal -> "hello world\n"
-				        !insieme::annotations::c::hasIncludeAttached(cur) && !ext.isStaticType(type.as<RefTypePtr>()->getElementType())
+				    core::analysis::isRefType(type) && cur.as<LiteralPtr>()->getStringValue()[0] != '\"' && // not an string literal -> "hello world\n"
+				        !insieme::annotations::c::hasIncludeAttached(cur) && !ext.isStaticType(core::analysis::getReferencedType(type))
 				        && !any(unit.getGlobals(), [&](const IRTranslationUnit::Global& global) { return *resolver.apply(global.first) == *cur; }));
 			}
 

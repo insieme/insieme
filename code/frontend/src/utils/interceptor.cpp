@@ -101,11 +101,12 @@ namespace utils {
 				break;
 			}
 			case clang::TemplateArgument::ArgKind::Integral: {
-				// the idea is to generate a generic type with a intParamList where we store
-				// the value of the init expression
-				auto Ilist = insieme::core::IntParamList();
-				Ilist.push_back(builder.concreteIntTypeParam(arg->getAsIntegral().getLimitedValue()));
-				resList.insert(resList.end(), builder.genericType("__insieme_IntTempParam", insieme::core::TypeList(), Ilist));
+				//// the idea is to generate a generic type with a intParamList where we store
+				//// the value of the init expression
+				//auto Ilist = insieme::core::IntParamList();
+				//Ilist.push_back(builder.concreteIntTypeParam(arg->getAsIntegral().getLimitedValue()));
+				//resList.insert(resList.end(), builder.genericType("__insieme_IntTempParam", insieme::core::TypeList(), Ilist));
+				assert_not_implemented();
 				break;
 			}
 			case clang::TemplateArgument::ArgKind::Template: {
@@ -170,16 +171,13 @@ namespace utils {
 
 			if(tagDecl->getTagKind() == clang::TTK_Enum) {
 				auto type = builder.getNodeManager().getLangExtension<core::lang::EnumExtension>().getEnumType(typeName);
-				convFact.getHeaderTagger().addHeaderForDecl(type, tagDecl, true);
 				return type;
 			} else {
 				// generate a type with the inner elements, and no integer literal
-				irType = builder.genericType(typeName, typeList, insieme::core::IntParamList());
+				//irType = builder.genericType(typeName, typeList, insieme::core::IntParamList());
+				assert_not_implemented();
 			}
-
-			// add header file
-			convFact.getHeaderTagger().addHeaderForDecl(irType, tagDecl, true);
-
+			
 		} else if(llvm::isa<clang::TypedefType>(type.getTypePtr())) {
 			// don't intercept typedefs -> only sugar, we can use underlying type
 			assert_fail() << "typedef is sugar -- use underlying type";
@@ -321,26 +319,29 @@ namespace utils {
 		// append eventual templateSpecializations
 		literalName.append(ss.str());
 
-		// fix the type and literal name for Cxx members / ctors / dtors
-		if(const clang::CXXMethodDecl* methodDecl = llvm::dyn_cast<clang::CXXMethodDecl>(decl)) {
-			if(const clang::CXXConstructorDecl* ctorDecl = llvm::dyn_cast<clang::CXXConstructorDecl>(decl)) {
-				literalName = ctorDecl->getParent()->getQualifiedNameAsString();
-			} else {
-				if(!methodDecl->isStatic()) { literalName = methodDecl->getNameAsString(); }
-			}
-			type = convFact.convertFunctionType(methodDecl);
-		}
+		//// fix the type and literal name for Cxx members / ctors / dtors
+		//if(const clang::CXXMethodDecl* methodDecl = llvm::dyn_cast<clang::CXXMethodDecl>(decl)) {
+		//	if(const clang::CXXConstructorDecl* ctorDecl = llvm::dyn_cast<clang::CXXConstructorDecl>(decl)) {
+		//		literalName = ctorDecl->getParent()->getQualifiedNameAsString();
+		//	} else {
+		//		if(!methodDecl->isStatic()) { literalName = methodDecl->getNameAsString(); }
+		//	}
+		//	type = convFact.convertFunctionType(methodDecl);
+		//}
 
-		literalName = fixQualifiedName(literalName);
-		core::ExpressionPtr interceptExpr = builder.literal(literalName, type);
-		convFact.getHeaderTagger().addHeaderForDecl(interceptExpr, decl, true);
+		//literalName = fixQualifiedName(literalName);
+		//core::ExpressionPtr interceptExpr = builder.literal(literalName, type);
+		//convFact.getHeaderTagger().addHeaderForDecl(interceptExpr, decl, true);
 
-		VLOG(2) << interceptExpr << " " << interceptExpr->getType();
+		//VLOG(2) << interceptExpr << " " << interceptExpr->getType();
 
-		if(insieme::annotations::c::hasIncludeAttached(interceptExpr)) {
-			VLOG(2) << "\t attached header: " << insieme::annotations::c::getAttachedInclude(interceptExpr);
-		}
-		return interceptExpr;
+		//if(insieme::annotations::c::hasIncludeAttached(interceptExpr)) {
+		//	VLOG(2) << "\t attached header: " << insieme::annotations::c::getAttachedInclude(interceptExpr);
+		//}
+		//return interceptExpr;
+
+		assert_not_implemented();
+		return core::ExpressionPtr();
 	}
 
 

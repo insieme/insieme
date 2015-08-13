@@ -166,25 +166,27 @@ namespace conversion {
 		core::TypePtr retTy;
 		LOG_TYPE_CONVERSION(refTy, retTy);
 
-		// get inner type
-		core::TypePtr inTy = convFact.convertType(refTy->getPointeeType()->getCanonicalTypeInternal());
+		//// get inner type
+		//core::TypePtr inTy = convFact.convertType(refTy->getPointeeType()->getCanonicalTypeInternal());
 
-		// find out if is a const ref or not
-		QualType qual;
-		bool isConst;
-		if(llvm::isa<clang::RValueReferenceType>(refTy)) {
-			qual = llvm::cast<clang::RValueReferenceType>(refTy)->desugar();
-			isConst = llvm::cast<clang::RValueReferenceType>(refTy)->getPointeeType().isConstQualified();
-		} else {
-			qual = llvm::cast<clang::LValueReferenceType>(refTy)->desugar();
-			isConst = llvm::cast<clang::LValueReferenceType>(refTy)->getPointeeType().isConstQualified();
-		}
+		//// find out if is a const ref or not
+		//QualType qual;
+		//bool isConst;
+		//if(llvm::isa<clang::RValueReferenceType>(refTy)) {
+		//	qual = llvm::cast<clang::RValueReferenceType>(refTy)->desugar();
+		//	isConst = llvm::cast<clang::RValueReferenceType>(refTy)->getPointeeType().isConstQualified();
+		//} else {
+		//	qual = llvm::cast<clang::LValueReferenceType>(refTy)->desugar();
+		//	isConst = llvm::cast<clang::LValueReferenceType>(refTy)->getPointeeType().isConstQualified();
+		//}
 
-		if(isConst) {
-			retTy = core::analysis::getConstCppRef(inTy);
-		} else {
-			retTy = core::analysis::getCppRef(inTy);
-		}
+		//if(isConst) {
+		//	retTy = core::analysis::getConstCppRef(inTy);
+		//} else {
+		//	retTy = core::analysis::getCppRef(inTy);
+		//}
+
+		assert_not_implemented();
 
 		return retTy;
 	}
@@ -324,23 +326,26 @@ namespace conversion {
 		core::TypePtr retTy;
 		LOG_TYPE_CONVERSION(memPointerTy, retTy);
 		retTy = convert(memPointerTy->getPointeeType());
-		core::TypePtr memTy = convFact.lookupTypeDetails(retTy);
-		core::TypePtr classTy = convert(memPointerTy->getClass()->getCanonicalTypeInternal());
+		//core::TypePtr memTy = convFact.lookupTypeDetails(retTy);
+		//core::TypePtr classTy = convert(memPointerTy->getClass()->getCanonicalTypeInternal());
 
-		if(memPointerTy->isMemberFunctionPointer()) {
-			frontend_assert(memTy.isa<core::FunctionTypePtr>()) << " no function type could be retrieved for pointed type\n";
+		//if(memPointerTy->isMemberFunctionPointer()) {
+		//	frontend_assert(memTy.isa<core::FunctionTypePtr>()) << " no function type could be retrieved for pointed type\n";
 
-			// prepend this obj to the param list
-			core::TypeList paramTypes = memTy.as<core::FunctionTypePtr>()->getParameterTypes();
-			paramTypes.insert(paramTypes.begin(), builder.refType(classTy));
-			core::TypePtr returnTy = memTy.as<core::FunctionTypePtr>()->getReturnType();
+		//	// prepend this obj to the param list
+		//	core::TypeList paramTypes = memTy.as<core::FunctionTypePtr>()->getParameterTypes();
+		//	paramTypes.insert(paramTypes.begin(), builder.refType(classTy));
+		//	core::TypePtr returnTy = memTy.as<core::FunctionTypePtr>()->getReturnType();
 
-			// generate new member function type
-			return retTy = builder.functionType(paramTypes, returnTy, core::FK_MEMBER_FUNCTION);
-		} else {
-			frontend_assert(memPointerTy->isMemberDataPointer());
-			return retTy = core::analysis::getMemberPointer(classTy, memTy);
-		}
+		//	// generate new member function type
+		//	return retTy = builder.functionType(paramTypes, returnTy, core::FK_MEMBER_FUNCTION);
+		//} else {
+		//	frontend_assert(memPointerTy->isMemberDataPointer());
+		//	return retTy = core::analysis::getMemberPointer(classTy, memTy);
+		//}
+
+		assert_not_implemented();
+		return retTy;
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

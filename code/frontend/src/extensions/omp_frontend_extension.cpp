@@ -230,7 +230,7 @@ namespace extensions {
 		/************************************/
 
 		/**
-		 *  Checks given match object for all indentifiers
+		 *  Checks given match object for all identifiers
 		 *  that are contained in the expression or variable list of
 		 *  the match object.
 		 */
@@ -340,219 +340,7 @@ namespace extensions {
 
 			return std::make_shared<omp::Reduction>(op, handleIdentifierList(mmap, "reduction"));
 		}
-
-		/**
-		 *  Checks given match object for param clauses
-		 */
-		omp::ParamPtr handleParamClause(const MatchObject& mmap) {
-			// var
-			auto vars = mmap.getVars("param_var");
-			if(vars.empty()) { return omp::ParamPtr(); }
-			assert_eq(vars.size(), 1) << "Param clause must contain one variable";
-			core::ExpressionPtr varExpr = vars.front();
-
-			// range
-			auto range = mmap.getExprs("range");
-			if(!range.empty()) { assert(range.size() == 3 && "Param clause range must contain a lower bound, an upper bound and a step!"); }
-
-			// quality range
-			auto quality_range = mmap.getExprs("quality_range");
-			if(!quality_range.empty()) {
-				assert(quality_range.size() == 3 && "Param clause quality range must contain a lower bound, an upper bound and a step!");
-			}
-
-			// enum
-			omp::VarListPtr enumList = handleIdentifierList(mmap, "enum_list");
-			if(!enumList->empty()) {
-				assert_eq(enumList->size(), 1) << "Param clause enum must contain one variable";
-				core::ExpressionPtr enumExpr = enumList->front();
-				core::ExpressionPtr enumSize = handleSingleExpression(mmap, "enum_size");
-
-				assert(((!enumExpr && !enumSize) || (enumExpr && enumSize)) && "Param clause enum must contain a list and its size!");
-
-				assert((!enumExpr
-				        || (enumExpr && (core::analysis::isRefOf(enumExpr, core::NT_VectorType) || enumExpr->getType()->getNodeType() == core::NT_VectorType)))
-				       && "Param clause enum must contain a base language array");
-
-				assert(((!enumExpr && !enumSize) || (enumExpr && enumSize)) && "Param clause enum must contain a list and its size!");
-
-				return std::make_shared<omp::Param>(varExpr, std::make_shared<std::vector<core::ExpressionPtr>>(range),
-				                                    std::make_shared<std::vector<core::ExpressionPtr>>(quality_range), enumExpr, enumSize);
-			}
-
-			return std::make_shared<omp::Param>(varExpr, std::make_shared<std::vector<core::ExpressionPtr>>(range),
-			                                    std::make_shared<std::vector<core::ExpressionPtr>>(quality_range), core::ExpressionPtr(),
-			                                    core::ExpressionPtr());
-		}
-
-		/**
-		 *  Checks given match object for approximate clauses
-		 */
-		omp::ApproximatePtr handleApproximateClause(const MatchObject& mmap) {
-			if(!mmap.stringValueExists("approximate")) { return omp::ApproximatePtr(); }
-			auto target = mmap.getSingleExpr("approx_target_expr");
-			auto replacement = mmap.getSingleExpr("approx_replacement_expr");
-			return std::make_shared<omp::Approximate>(target, replacement);
-		}
-
-		std::shared_ptr<core::ExpressionList> getCommaSeparatedExprs(const core::ExpressionPtr& expr) {
-			std::vector<core::ExpressionPtr> exprs;
-			core::visitDepthFirstPrunable(expr, [&](const core::LiteralPtr& expr) -> bool {
-				exprs.push_back(expr);
-				return true;
-			});
-
-			return std::make_shared<std::vector<core::ExpressionPtr>>(exprs);
-		}
-
-		/**
-		 *  Checks given match object for target clauses
-		 */
-		omp::TargetPtr handleTargetClause(const MatchObject& mmap) {
-			const std::string typeStr = mmap.getString("target_type");
-			if(typeStr.empty()) { return omp::TargetPtr(); }
-
-			omp::Target::Type t = omp::Target::GENERAL;
-			if(typeStr == "general") { t = omp::Target::GENERAL; }
-			if(typeStr == "accelerator") {
-				t = omp::Target::ACCELERATOR;
-			} else {
-				assert_fail() << "Unsupported target type";
-			}
-
-			// group-id
-			std::shared_ptr<core::ExpressionList> groupIds;
-			auto groupIdCommaExpr = mmap.getExprs("target_group");
-			if(groupIdCommaExpr.size() > 0) { groupIds = getCommaSeparatedExprs(groupIdCommaExpr.front()); }
-			core::ExpressionPtr groupIdsRangeUpper = handleSingleExpression(mmap, "target_group_upper");
-
-			// core-id
-			std::shared_ptr<core::ExpressionList> coreIds;
-			auto coreIdCommaExpr = mmap.getExprs("target_core");
-			if(coreIdCommaExpr.size() > 0) { coreIds = getCommaSeparatedExprs(coreIdCommaExpr.front()); }
-			core::ExpressionPtr coreIdsRangeUpper = handleSingleExpression(mmap, "target_core_upper");
-
-			return std::make_shared<omp::Target>(t, groupIds, groupIdsRangeUpper, coreIds, coreIdsRangeUpper);
-		}
-
-		std::shared_ptr<omp::Objective::ParameterList> handleObjectiveParamList(const MatchObject& mmap, const std::string& key) {
-			using namespace omp;
-
-			auto params = mmap.getStrings(key);
-			if(params.empty()) { return std::shared_ptr<Objective::ParameterList>(); }
-
-			Objective::ParameterList* paramList = new Objective::ParameterList();
-			for(auto paramStr : params) {
-				Objective::Parameter param = Objective::TIME;
-				if(paramStr == "T") {
-					param = Objective::TIME;
-				} else if(paramStr == "E") {
-					param = Objective::ENERGY;
-				} else if(paramStr == "P") {
-					param = Objective::POWER;
-				} else if(paramStr == "Q") {
-					param = Objective::QUALITY;
-				} else {
-					assert_fail() << "Objective clause constraint parameter not supported.";
-				}
-
-				paramList->push_back(param);
-			}
-
-			return std::shared_ptr<Objective::ParameterList>(paramList);
-		}
-
-		void handleObjectiveFactorList(const MatchObject& mmap, std::vector<double>& factors) {
-			using namespace omp;
-
-			auto factList = mmap.getStrings("obj_weights_factors");
-			if(factList.empty()) { return; }
-
-			for(auto numStr : factList) {
-				factors.push_back(std::atof(numStr.c_str()));
-			}
-
-			return;
-		}
-
-		std::shared_ptr<omp::Objective::OperatorList> handleObjectiveOpList(const MatchObject& mmap) {
-			using namespace omp;
-
-			auto ops = mmap.getStrings("obj_constraints_ops");
-			if(ops.empty()) { return std::shared_ptr<Objective::OperatorList>(); }
-
-			Objective::OperatorList* opList = new Objective::OperatorList();
-			for(auto opStr : ops) {
-				Objective::Operator op = Objective::LESS;
-				if(opStr == "<") {
-					op = Objective::LESS;
-				} else if(opStr == "<=") {
-					op = Objective::LESSEQUAL;
-				} else if(opStr == "==") {
-					op = Objective::EQUALEQUAL;
-				} else if(opStr == ">=") {
-					op = Objective::GREATEREQUAL;
-				} else if(opStr == ">") {
-					op = Objective::GREATER;
-				} else {
-					assert_fail() << "Objective clause constraint operator not supported.";
-				}
-
-				opList->push_back(op);
-			}
-
-			return std::shared_ptr<Objective::OperatorList>(opList);
-		}
-
-		/**
-		 *  Checks given match object for target clauses
-		 */
-		omp::ObjectivePtr handleObjectiveClause(const MatchObject& mmap) {
-			// weights
-			std::shared_ptr<omp::Objective::ParameterList> weightsParamList = handleObjectiveParamList(mmap, "obj_weights_params");
-			std::vector<double> weightsFactorList;
-			handleObjectiveFactorList(mmap, weightsFactorList);
-
-			double timeWeight = 0, energyWeight = 0, powerWeight = 0, qualityWeight = 0;
-			if(weightsParamList) {
-				assert(weightsParamList && weightsParamList->size() <= 4 && weightsFactorList.size() <= 4
-				       && weightsParamList->size() == weightsFactorList.size()
-				       && "Objective clause weights must contain time(T), energy(E), power(P) and quality(Q)");
-
-				auto facIt = weightsFactorList.begin();
-
-				for(auto it : *weightsParamList) {
-					if(it == omp::Objective::TIME) {
-						timeWeight = *facIt;
-					} else if(it == omp::Objective::ENERGY) {
-						energyWeight = *facIt;
-					} else if(it == omp::Objective::POWER) {
-						powerWeight = *facIt;
-					} else if(it == omp::Objective::QUALITY) {
-						qualityWeight = *facIt;
-					}
-					++facIt;
-				}
-
-				assert(timeWeight + energyWeight + powerWeight + qualityWeight == 1 && "Sum of Objective clause weights must be equal to 1!");
-			}
-
-			// constraints
-			std::shared_ptr<omp::Objective::ParameterList> constraintsParamList = handleObjectiveParamList(mmap, "obj_constraints_params");
-			std::shared_ptr<omp::Objective::OperatorList> constraintsOpList = handleObjectiveOpList(mmap);
-			std::shared_ptr<core::ExpressionList> constraintsExprList = handleIdentifierList(mmap, "obj_constraints_exprs");
-
-			if(!weightsParamList && !constraintsParamList) { return omp::ObjectivePtr(); }
-
-			assert(((!constraintsParamList && !constraintsOpList && constraintsExprList->empty())
-			        || (constraintsParamList && constraintsOpList && constraintsParamList->size() == constraintsOpList->size() && constraintsExprList
-			            && constraintsParamList->size() == constraintsExprList->size()))
-			       && "Objective clause constraints bad formatted");
-
-			return std::make_shared<omp::Objective>(timeWeight, energyWeight, powerWeight, qualityWeight, constraintsParamList, constraintsOpList,
-			                                        constraintsExprList);
-		}
-
+		
 		/**
 		 * Type traits used to determine the Marker type used to
 		 * attach annotations to the current IR node.
@@ -597,34 +385,7 @@ namespace extensions {
 		// Add the required header and macro definitions
 		kidnappedHeaders.push_back(FRONTEND_TEST_DIR "../include/insieme/frontend/omp/input/");
 		macros.insert(std::make_pair("_OPENMP", ""));
-
-		// Add a handler for #pragma omp region [clause[[,] clause] ...] new-line
-		pragmaHandlers.push_back(std::make_shared<insieme::frontend::extensions::PragmaHandler>(
-		    insieme::frontend::extensions::PragmaHandler("omp", "region", region_clause_list >> tok::eod, [](const MatchObject& object, core::NodeList nodes) {
-
-			    // attach annotation
-			    // check for local clause
-			    omp::VarListPtr localClause = handleIdentifierList(object, "local");
-			    // check for firstlocal clause
-			    omp::VarListPtr firstLocalClause = handleIdentifierList(object, "firstlocal");
-			    // check for target clause
-			    omp::TargetPtr targetClause = handleTargetClause(object);
-			    // check for objective clause
-			    omp::ObjectivePtr objectiveClause = handleObjectiveClause(object);
-			    // check for param clause
-			    omp::ParamPtr paramClause = handleParamClause(object);
-			    // We need to check if the
-			    frontend::omp::BaseAnnotation::AnnotationList anns;
-			    anns.push_back(std::make_shared<omp::Region>(paramClause, localClause, firstLocalClause, targetClause, objectiveClause));
-
-			    for(auto& e : nodes) {
-				    core::StatementPtr&& stmt = e.as<core::StatementPtr>();
-				    e = getMarkedNode(stmt, anns);
-			    }
-
-			    return nodes;
-			})));
-
+		
 		// Add a handler for pragma omp parallel:
 		// #pragma omp parallel [clause[ [, ]clause] ...] new-line
 		pragmaHandlers.push_back(std::make_shared<insieme::frontend::extensions::PragmaHandler>(insieme::frontend::extensions::PragmaHandler(
@@ -645,27 +406,15 @@ namespace extensions {
 			    omp::VarListPtr copyinClause = handleIdentifierList(object, "copyin");
 			    // check for reduction clause
 			    omp::ReductionPtr reductionClause = handleReductionClause(object);
-			    // check for local clause
-			    omp::VarListPtr localClause = handleIdentifierList(object, "local");
-			    // check for firstlocal clause
-			    omp::VarListPtr firstLocalClause = handleIdentifierList(object, "firstlocal");
-			    // check for target clause
-			    omp::TargetPtr targetClause = handleTargetClause(object);
-			    // check for objective clause
-			    omp::ObjectivePtr objectiveClause = handleObjectiveClause(object);
-			    // check for param clause
-			    omp::ParamPtr paramClause = handleParamClause(object);
 
 			    // check for 'for'
 			    if(object.stringValueExists("for")) {
 				    // this is a parallel for
 				    // check for last private clause
 				    omp::VarListPtr lastPrivateClause = handleIdentifierList(object, "lastprivate");
-				    // check for last local clause
-				    omp::VarListPtr lastLocalClause = handleIdentifierList(object, "lastlocal");
 				    // check for schedule clause
 				    omp::SchedulePtr scheduleClause = handleScheduleClause(object);
-				    // check for collapse cluase
+				    // check for collapse clause
 				    core::ExpressionPtr collapseClause = handleSingleExpression(object, "collapse");
 				    // check for nowait keyword
 				    bool noWait = object.stringValueExists("nowait");
@@ -675,8 +424,7 @@ namespace extensions {
 				    frontend::omp::BaseAnnotation::AnnotationList anns;
 				    anns.push_back(std::shared_ptr<omp::ParallelFor>(
 				        new omp::ParallelFor(ifClause, numThreadsClause, defaultClause, privateClause, firstPrivateClause, sharedClause, copyinClause,
-				                             reductionClause, lastPrivateClause, scheduleClause, collapseClause, localClause, firstLocalClause, lastLocalClause,
-				                             targetClause, objectiveClause, paramClause, noWait, ordered)));
+				                             reductionClause, lastPrivateClause, scheduleClause, collapseClause, noWait, ordered)));
 
 				    // get next for stmt from node list and annotate it
 				    for(auto& node : nodes) {
@@ -703,8 +451,7 @@ namespace extensions {
 				    bool noWait = object.stringValueExists("nowait");
 				    frontend::omp::BaseAnnotation::AnnotationList anns;
 				    anns.push_back(std::make_shared<omp::ParallelSections>(ifClause, numThreadsClause, defaultClause, privateClause, firstPrivateClause,
-				                                                           sharedClause, copyinClause, reductionClause, lastPrivateClause, localClause,
-				                                                           firstLocalClause, targetClause, objectiveClause, paramClause, noWait));
+				                                                           sharedClause, copyinClause, reductionClause, lastPrivateClause, noWait));
 				    for(auto& e : nodes) {
 					    core::StatementPtr&& stmt = e.as<core::StatementPtr>();
 					    e = getMarkedNode(stmt, anns);
@@ -714,8 +461,7 @@ namespace extensions {
 
 			    frontend::omp::BaseAnnotation::AnnotationList anns;
 			    anns.push_back(std::make_shared<omp::Parallel>(ifClause, numThreadsClause, defaultClause, privateClause, firstPrivateClause, sharedClause,
-			                                                   copyinClause, reductionClause, localClause, firstLocalClause, targetClause, objectiveClause,
-			                                                   paramClause));
+			                                                   copyinClause, reductionClause));
 			    for(auto& e : nodes) {
 				    core::StatementPtr&& stmt = e.as<core::StatementPtr>();
 				    e = getMarkedNode(stmt, anns);
@@ -738,29 +484,16 @@ namespace extensions {
 			    omp::ReductionPtr reductionClause = handleReductionClause(object);
 			    // check for schedule clause
 			    omp::SchedulePtr scheduleClause = handleScheduleClause(object);
-			    // check for collapse cluase
+			    // check for collapse clause
 			    core::ExpressionPtr collapseClause = handleSingleExpression(object, "collapse");
-			    // check for local clause
-			    omp::VarListPtr localClause = handleIdentifierList(object, "local");
-			    // check for firstlocal clause
-			    omp::VarListPtr firstLocalClause = handleIdentifierList(object, "firstlocal");
-			    // check for lastlocal clause
-			    omp::VarListPtr lastLocalClause = handleIdentifierList(object, "lastlocal");
-			    // check for target clause
-			    omp::TargetPtr targetClause = handleTargetClause(object);
-			    // check for objective clause
-			    omp::ObjectivePtr objectiveClause = handleObjectiveClause(object);
-			    // check for param clause
-			    omp::ParamPtr paramClause = handleParamClause(object);
 			    // check for nowait keyword
 			    bool noWait = object.stringValueExists("nowait");
 			    // check for ordered keyword
 			    bool ordered = object.stringValueExists("ordered");
 
 			    frontend::omp::BaseAnnotation::AnnotationList anns;
-			    anns.push_back(std::make_shared<omp::For>(privateClause, firstPrivateClause, lastPrivateClause, localClause, firstLocalClause, lastLocalClause,
-			                                              reductionClause, scheduleClause, collapseClause, targetClause, objectiveClause, paramClause, noWait,
-			                                              ordered));
+			    anns.push_back(std::make_shared<omp::For>(privateClause, firstPrivateClause, lastPrivateClause, reductionClause, scheduleClause, 
+				                                          collapseClause, noWait, ordered));
 
 			    // apply omp for annotation only to the for stmt
 			    // get next for stmt from node list and annotate it
@@ -850,22 +583,9 @@ namespace extensions {
 			    omp::VarListPtr firstPrivateClause = handleIdentifierList(object, "firstprivate");
 			    // check for shared clause
 			    omp::VarListPtr sharedClause = handleIdentifierList(object, "shared");
-			    // check for local clause
-			    omp::VarListPtr localClause = handleIdentifierList(object, "local");
-			    // check for firstlocal clause
-			    omp::VarListPtr firstLocalClause = handleIdentifierList(object, "firstlocal");
-			    // check for target clause
-			    omp::TargetPtr targetClause = handleTargetClause(object);
-			    // check for objective clause
-			    omp::ObjectivePtr objectiveClause = handleObjectiveClause(object);
-			    // check for param clause
-			    omp::ParamPtr paramClause = handleParamClause(object);
-			    // check for approximate clause
-			    omp::ApproximatePtr approxClause = handleApproximateClause(object);
 
 			    frontend::omp::BaseAnnotation::AnnotationList anns;
-			    anns.push_back(std::make_shared<omp::Task>(ifClause, untied, defaultClause, privateClause, firstPrivateClause, sharedClause, localClause,
-			                                               firstLocalClause, targetClause, objectiveClause, paramClause, approxClause));
+			    anns.push_back(std::make_shared<omp::Task>(ifClause, untied, defaultClause, privateClause, firstPrivateClause, sharedClause));
 
 			    for(auto& node : nodes) {
 				    core::StatementPtr&& stmt = node.as<core::StatementPtr>();

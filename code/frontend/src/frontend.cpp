@@ -49,12 +49,8 @@
 #include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/annotations/naming.h"
 
-#include "insieme/frontend/extensions/anonymous_rename_extension.h"
-#include "insieme/frontend/extensions/asm_extension.h"
 #include "insieme/frontend/extensions/builtin_function_extension.h"
 #include "insieme/frontend/extensions/cilk_extension.h"
-#include "insieme/frontend/extensions/cpp11_extension.h"
-#include "insieme/frontend/extensions/cpp_refs_extension.h"
 #include "insieme/frontend/extensions/frontend_cleanup_extension.h"
 #include "insieme/frontend/extensions/insieme_pragma_extension.h"
 #include "insieme/frontend/extensions/instrumentation_region_extension.h"
@@ -63,7 +59,6 @@
 #include "insieme/frontend/extensions/semantic_check_extension.h"
 #include "insieme/frontend/extensions/significance_frontend_extension.h"
 #include "insieme/frontend/extensions/test_pragma_extension.h"
-#include "insieme/frontend/extensions/variadic_arguments_extension.h"
 
 namespace insieme {
 namespace frontend {
@@ -216,9 +211,6 @@ namespace frontend {
 		// interceptor wants to be first
 		registerFrontendExtension<extensions::InterceptorExtension>(options);
 
-		registerFrontendExtension<extensions::VariadicArgumentsExtension>(options);
-		registerFrontendExtension<extensions::ASMExtension>(options);
-		registerFrontendExtension<extensions::CppRefsCleanupExtension>(options);
 		registerFrontendExtension<extensions::BuiltinFunctionExtension>(options);
 		registerFrontendExtension<extensions::InstrumentationRegionExtension>(options);
 		registerFrontendExtension<extensions::TestPragmaExtension>(options);
@@ -226,12 +218,9 @@ namespace frontend {
 		registerFrontendExtension<extensions::OmpFrontendExtension>(options);
 		registerFrontendExtension<extensions::SignificanceFrontendExtension>(options);
 		registerFrontendExtension<extensions::CilkFrontendExtension>(options);
-		registerFrontendExtension<extensions::Cpp11Extension>(options);
 
 		// FE cleanup wants to be second-last
 		registerFrontendExtension<extensions::FrontendCleanupExtension>(options);
-		// anonymousrename wants to be last
-		registerFrontendExtension<extensions::AnonymousRenameExtension>(options);
 	}
 
 	std::ostream& ConversionJob::printTo(std::ostream& out) const {

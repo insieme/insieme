@@ -50,7 +50,6 @@ using namespace insieme::driver;
 namespace insieme {
 namespace frontend {
 
-
 	std::vector<std::string> listSources() {
 		namespace fs = boost::filesystem;
 		fs::path someDir(FRONTEND_TEST_DIR "/inputs/sniplets");

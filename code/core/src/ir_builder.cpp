@@ -275,6 +275,10 @@ namespace core {
 		return lang::ReferenceType::create(elementType, _const, _volatile);
 	}
 
+	GenericTypePtr IRBuilder::ptrType(const TypePtr& elementType, bool _const, bool _volatile) const {
+		assert_not_implemented();
+	}
+
 	GenericTypePtr IRBuilder::arrayType(const TypePtr& elementType) const {
 		return lang::ArrayType::create(elementType);
 	}
@@ -285,6 +289,10 @@ namespace core {
 
 	GenericTypePtr IRBuilder::arrayType(const TypePtr& elementType, const VariablePtr& size) const {
 		return lang::ArrayType::create(elementType, size);
+	}
+
+	GenericTypePtr IRBuilder::arrayType(const TypePtr& elementType, size_t size) const {
+		assert_not_implemented();
 	}
 
 
@@ -417,7 +425,7 @@ namespace core {
 
 
 	LiteralPtr IRBuilder::stringLit(const string& str) const {
-		return literal(str, getLangBasic().getString());
+		return literal(str, ptrType(getLangBasic().getChar(), true));
 	}
 
 	namespace {

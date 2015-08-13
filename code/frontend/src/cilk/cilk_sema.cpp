@@ -83,17 +83,17 @@ namespace cilk {
 							auto decl = cur.as<core::DeclarationStmtPtr>();
 
 							core::TypePtr type = decl->getVariable()->getType();
-							assert_eq(type->getNodeType(), core::NT_RefType) << "can only handle reference types!";
+							assert_true(core::analysis::isRefType(type)) << "can only handle reference types!";
 
 							core::IRBuilder builder(manager);
 
 							// initialize the variable using an undefined
 							newStmts.push_back(
-							    builder.declarationStmt(decl.getVariable(), builder.refVar(builder.undefined(type.as<core::RefTypePtr>()->getElementType()))));
+							    builder.declarationStmt(decl.getVariable(), builder.refVar(builder.undefined(core::analysis::getReferencedType(type)))));
 
 							// assign the value
 							core::ExpressionPtr init = decl->getInitialization();
-							assert_true(core::analysis::isCallOf(init, manager.getLangBasic().getRefVar()));
+							assert_true(core::analysis::isCallOf(init, manager.getLangExtension<core::lang::ReferenceExtension>().getRefVar()));
 							init = init.as<core::CallExprPtr>()->getArgument(0);
 							newStmts.push_back(builder.parallel(builder.assign(decl.getVariable(), init), 1));
 

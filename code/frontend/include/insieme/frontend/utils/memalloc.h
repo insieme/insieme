@@ -36,7 +36,6 @@
 #pragma once
 
 #include "insieme/core/ir_builder.h"
-#include "insieme/core/lang/ir++_extension.h"
 
 using namespace insieme;
 
