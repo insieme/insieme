@@ -136,6 +136,7 @@ namespace types {
 
 	TypePtr deduceReturnType(const FunctionTypePtr& funType, const TypeList& argumentTypes, bool unitOnFail) {
 		try {
+
 			// try deducing the return type ...
 			return tryDeduceReturnType(funType, argumentTypes);
 

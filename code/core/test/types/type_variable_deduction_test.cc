@@ -587,8 +587,9 @@ namespace types {
 		TypePtr uint4 = basic.getUInt4();
 		TypePtr vector = builder.parseType("array<uint<4>,3>");
 
-		CallExprPtr call = builder.callExpr(basic.getVectorReduction(),
-		                                    toVector<ExpressionPtr>(builder.literal(vector, "x"), builder.literal(uint4, "1"), basic.getUnsignedIntMul()));
+		CallExprPtr call = builder.callExpr(
+				builder.literal("fun", builder.parseType("(vector<'a,#n>, 'b, ('b, 'a) -> 'b) -> 'b")),
+				toVector<ExpressionPtr>(builder.literal(vector, "x"), builder.literal(uint4, "1"), basic.getUnsignedIntMul()));
 
 		auto res = getTypeVariableInstantiation(manager, call);
 		EXPECT_TRUE(res);
@@ -906,7 +907,8 @@ namespace types {
 		const lang::BasicGenerator& basic = manager.getLangBasic();
 
 		auto op = basic.getUnsignedIntAdd();
-		auto call = builder.callExpr(basic.getVectorPointwise(), op);
+		auto fun = builder.literal("fun", builder.parseType("(('elem1, 'elem2) => 'res) -> (vector<'elem1,#l>, vector<'elem2,#l>) => vector<'res, #l>"));
+		auto call = builder.callExpr(fun, op);
 
 		EXPECT_EQ("((uint<#a>,uint<#a>)->uint<#a>)", toString(*op->getType()));
 		EXPECT_EQ("((vector<uint<#a>,#l>,vector<uint<#a>,#l>)=>vector<uint<#a>,#l>)", toString(*call->getType()));

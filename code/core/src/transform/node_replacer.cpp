@@ -541,7 +541,7 @@ namespace {
 
 			// don't act on pointwise and accuracy functions
 			if(CallExprPtr calledExpr = dynamic_pointer_cast<const CallExpr>(fun)) {
-				if(manager.getLangBasic().isPointwise(calledExpr->getFunctionExpr()) || manager.getLangBasic().isAccuracy(calledExpr->getFunctionExpr())) {
+				if(manager.getLangBasic().isAccuracy(calledExpr->getFunctionExpr())) {
 					return call->substitute(manager, *this);
 				}
 			}

@@ -1107,20 +1107,6 @@ namespace printer {
 				OUT("]");
 			});
 
-			ADD_FORMATTER(basic.getVectorSubscript(), {
-				PRINT_ARG(0);
-				OUT("[");
-				PRINT_ARG(1);
-				OUT("]");
-			});
-			ADD_FORMATTER(basic.getVectorRefElem(), {
-				PRINT_ARG(0);
-				OUT("&[");
-				PRINT_ARG(1);
-				OUT("]");
-			});
-
-
 			ADD_FORMATTER(refExt.getRefMemberAccess(), {
 				PRINT_ARG(0);
 				OUT("->");

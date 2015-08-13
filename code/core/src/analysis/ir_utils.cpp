@@ -1002,7 +1002,6 @@ namespace analysis {
 	}
 
 	bool isZero(const core::ExpressionPtr& value) {
-		const auto& base = value->getNodeManager().getLangBasic();
 		const auto& refExt = value->getNodeManager().getLangExtension<lang::ReferenceExtension>();
 		core::IRBuilder builder(value->getNodeManager());
 
@@ -1024,8 +1023,8 @@ namespace analysis {
 		// ... or the ref_null literal
 		if(refExt.isRefNull(value)) { return true; }
 
-		// ... or a vector initialization with a zero value
-		if(core::analysis::isCallOf(value, base.getVectorInitUniform())) { return isZero(core::analysis::getArgument(value, 0)); }
+//		// ... or a vector initialization with a zero value
+//		if(core::analysis::isCallOf(value, base.getVectorInitUniform())) { return isZero(core::analysis::getArgument(value, 0)); }
 
 		// TODO: remove this when frontend is fixed!!
 		// => compensate for silly stuff like var(*getNull()) or NULL aka ref_deref(ref_null)

@@ -147,7 +147,10 @@ namespace types {
 
 		TypePtr uint4 = manager.getLangBasic().getUInt4();
 		ExpressionPtr add = manager.getLangBasic().getOperator(uint4, lang::BasicGenerator::Add);
-		ExpressionPtr pointwise = builder.callExpr(manager.getLangBasic().getVectorPointwise(), add);
+		ExpressionPtr pointwise = builder.callExpr(
+				builder.literal("fun", builder.parseType("(('elem1, 'elem2) => 'res) -> (vector<'elem1,#l>, vector<'elem2,#l>) => vector<'res, #l>")),
+				add
+		);
 
 		EXPECT_EQ("((uint<#a>,uint<#a>)->uint<#a>)", toString(*add->getType()));
 		EXPECT_EQ("((vector<uint<#a>,#l>,vector<uint<#a>,#l>)=>vector<uint<#a>,#l>)", toString(*pointwise->getType()));
