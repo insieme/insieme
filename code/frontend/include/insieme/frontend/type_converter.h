@@ -42,7 +42,6 @@
 
 namespace insieme {
 namespace frontend {
-
 namespace conversion {
 
 #define DECLARE_TYPE_VISIT(Base, TypeTy) \

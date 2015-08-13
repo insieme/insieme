@@ -71,7 +71,6 @@ using namespace clang;
 using namespace insieme;
 
 namespace std {
-
 std::ostream& operator<<(std::ostream& out, const clang::TagDecl* decl) {
 	if(decl) {
 		return out << decl->getNameAsString();
@@ -80,12 +79,10 @@ std::ostream& operator<<(std::ostream& out, const clang::TagDecl* decl) {
 		return out << "[UNNAMED]";
 	}
 }
-
 } // end std namespace
 
 
 namespace {
-
 const clang::TagDecl* findDefinition(const clang::TagType* tagType) {
 
 	const clang::TagDecl* decl = tagType->getDecl();
@@ -120,7 +117,6 @@ const clang::TagDecl* findDefinition(const clang::TagType* tagType) {
 	
 	return NULL;
 }
-
 } // end anonymous namespace
 
 namespace insieme {

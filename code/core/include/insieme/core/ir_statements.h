@@ -53,7 +53,7 @@ namespace core {
  * The accessor associated to the break statement.
  */
 IR_NODE_ACCESSOR(BreakStmt, Statement)
-};
+IR_NODE_END()
 
 /**
  * The entity used to represent break statements within the IR.
@@ -80,8 +80,7 @@ public:
 static BreakStmtPtr get(NodeManager& manager) {
 	return manager.get(BreakStmt());
 }
-
-};
+IR_NODE_END()
 
 
 
@@ -91,7 +90,7 @@ static BreakStmtPtr get(NodeManager& manager) {
  * The accessor associated to the continue statement.
  */
 IR_NODE_ACCESSOR(ContinueStmt, Statement)
-};
+IR_NODE_END()
 
 /**
  * The entity used to represent continue statements within the IR.
@@ -118,8 +117,7 @@ public:
 static ContinueStmtPtr get(NodeManager& manager) {
 	return manager.get(ContinueStmt());
 }
-
-};
+IR_NODE_END()
 
 
 
@@ -134,7 +132,7 @@ IR_NODE_ACCESSOR(ReturnStmt, Statement, Expression)
  * Obtains a reference to the return-expression associated to this return statement.
  */
 IR_NODE_PROPERTY(Expression, ReturnExpr, 0);
-};
+IR_NODE_END()
 
 /**
  * The entity used to represent return statements within the IR.
@@ -162,9 +160,7 @@ public:
 static ReturnStmtPtr get(NodeManager& manager, const ExpressionPtr& expression) {
 	return manager.get(ReturnStmt(expression));
 }
-
-};
-
+IR_NODE_END()
 
 // ---------------------------------------- Goto Statement ------------------------------
 
@@ -176,7 +172,7 @@ IR_NODE_ACCESSOR(GotoStmt, Statement, StringValue)
  * Obtains a reference to the string value associated to this goto statement.
  */
 IR_NODE_PROPERTY(StringValue, Label, 0);
-};
+IR_NODE_END()
 
 /**
  * The entity used to represent goto statements within the IR.
@@ -204,8 +200,7 @@ public:
 static GotoStmtPtr get(NodeManager& manager, const StringValuePtr& label) {
 	return manager.get(GotoStmt(label));
 }
-
-};
+IR_NODE_END()
 
 
 
@@ -219,7 +214,7 @@ IR_NODE_ACCESSOR(LabelStmt, Statement, StringValue)
  * Obtains a reference to the string value associated to this label statement.
  */
 IR_NODE_PROPERTY(StringValue, Label, 0);
-};
+IR_NODE_END()
 
 /**
  * The entity used to represent label statements within the IR.
@@ -247,8 +242,7 @@ public:
 static LabelStmtPtr get(NodeManager& manager, const StringValuePtr& label) {
 	return manager.get(LabelStmt(label));
 }
-
-};
+IR_NODE_END()
 
 // ---------------------------------------- Declaration Statement ------------------------------
 
@@ -265,7 +259,7 @@ IR_NODE_PROPERTY(Variable, Variable, 0);
  * Obtains a reference to the initialization value of the new variable.
  */
 IR_NODE_PROPERTY(Expression, Initialization, 1);
-};
+IR_NODE_END()
 
 /**
  * The entity used to represent declaration statements within the IR.
@@ -292,8 +286,7 @@ public:
 static DeclarationStmtPtr get(NodeManager& manager, const VariablePtr& variable, const ExpressionPtr& initExpression) {
 	return manager.get(DeclarationStmt(variable, initExpression));
 }
-
-};
+IR_NODE_END()
 
 
 
@@ -311,8 +304,7 @@ IR_LIST_NODE_ACCESSOR(CompoundStmt, Statement, Statements, Statement)
 Ptr<const Statement> getStatement(std::size_t index) const {
 	return CompoundStmtAccessor<Derived, Ptr>::getElement(index);
 }
-
-};
+IR_NODE_END()
 
 /**
  * The entity used to represent a compound statements within the IR.
@@ -352,8 +344,7 @@ static CompoundStmtPtr get(NodeManager& manager, const StatementList& stmts = St
 static CompoundStmtPtr get(NodeManager& manager, const StatementPtr& stmt) {
 	return get(manager, toVector(stmt));
 }
-
-};
+IR_NODE_END()
 
 
 
@@ -410,7 +401,7 @@ static IfStmtPtr get(NodeManager& manager, const ExpressionPtr& condition, const
 	return manager.get(IfStmt(condition, thenStmt, elseStmt));
 }
 
-};
+IR_NODE_END()
 
 
 
@@ -429,7 +420,7 @@ IR_NODE_PROPERTY(Expression, Condition, 0);
  * Obtains a reference to the body of the represented while stmt.
  */
 IR_NODE_PROPERTY(CompoundStmt, Body, 1);
-};
+IR_NODE_END()
 
 /**
  * The entity used to represent a while statements within the IR.
@@ -459,7 +450,7 @@ static WhileStmtPtr get(NodeManager& manager, const ExpressionPtr& condition, co
 	return manager.get(WhileStmt(condition, body));
 }
 
-};
+IR_NODE_END()
 
 
 
@@ -505,7 +496,7 @@ Ptr<const Expression> getStart() const {
 	return getDeclaration()->getInitialization();
 }
 
-};
+IR_NODE_END()
 
 /**
  * The entity used to represent a for statements within the IR.
@@ -553,7 +544,7 @@ static ForStmtPtr get(NodeManager& manager, const VariablePtr& iterator, const E
 	return get(manager, DeclarationStmt::get(manager, iterator, start), end, step, body);
 }
 
-};
+IR_NODE_END()
 
 
 
@@ -574,7 +565,7 @@ IR_NODE_PROPERTY(Literal, Guard, 0);
  * Obtains a reference to the type being bound to the referenced variable.
  */
 IR_NODE_PROPERTY(CompoundStmt, Body, 1);
-};
+IR_NODE_END()
 
 /**
  * A node type used to represent cases within a switch expression.
@@ -601,13 +592,13 @@ static SwitchCasePtr get(NodeManager& manager, const LiteralPtr& guard, const Co
 	return manager.get(SwitchCase(guard, body));
 }
 
-};
+IR_NODE_END()
 
 /**
  * The accessor associated to a list of switch cases.
  */
 IR_LIST_NODE_ACCESSOR(SwitchCases, Support, Cases, SwitchCase)
-};
+IR_NODE_END()
 
 /**
  * A node type used to represent lists of cases within a switch expressions.
@@ -635,7 +626,7 @@ static SwitchCasesPtr get(NodeManager& manager, const vector<SwitchCasePtr>& cas
 	return manager.get(SwitchCases(convertList(cases)));
 }
 
-};
+IR_NODE_END()
 
 
 /**
@@ -657,7 +648,7 @@ IR_NODE_PROPERTY(SwitchCases, Cases, 1);
  */
 IR_NODE_PROPERTY(CompoundStmt, DefaultCase, 2);
 
-};
+IR_NODE_END()
 
 /**
  * The entity used to represent switch statements within the IR.
@@ -686,7 +677,7 @@ static SwitchStmtPtr get(NodeManager& manager, const ExpressionPtr& expr, const 
 	return manager.get(SwitchStmt(expr, cases, def));
 }
 
-};
+IR_NODE_END()
 
 
 
@@ -714,7 +705,7 @@ unsigned int getId() const {
 	return getID()->getValue();
 }
 
-};
+IR_NODE_END()
 
 /**
  * The entity used to represent a marker statement within the IR.
@@ -757,7 +748,7 @@ static MarkerStmtPtr get(NodeManager& manager, const StatementPtr& subStmt) {
 	return get(manager, UIntValue::get(manager, manager.getFreshID()), subStmt);
 }
 
-};
+IR_NODE_END()
 
 
 // ---------------------------------------- Throw Statement ------------------------------
@@ -770,7 +761,7 @@ IR_NODE_ACCESSOR(ThrowStmt, Statement, Expression)
  * Obtains a reference to the throw-expression associated to this return statement.
  */
 IR_NODE_PROPERTY(Expression, ThrowExpr, 0);
-};
+IR_NODE_END()
 
 /**
  * The entity used to represent throw statements within the IR.
@@ -799,7 +790,7 @@ static ThrowStmtPtr get(NodeManager& manager, const ExpressionPtr& expression) {
 	return manager.get(ThrowStmt(expression));
 }
 
-};
+IR_NODE_END()
 
 
 // ---------------------------------------- Try-Catch Statement ------------------------------
@@ -817,7 +808,7 @@ IR_NODE_PROPERTY(Variable, Variable, 0);
  * Obtains a reference to the body of this catch clause.
  */
 IR_NODE_PROPERTY(CompoundStmt, Body, 1);
-};
+IR_NODE_END()
 
 /**
  * A node type used to represent cases within a switch expression.
@@ -844,7 +835,7 @@ static CatchClausePtr get(NodeManager& manager, const VariablePtr& var, const Co
 	return manager.get(CatchClause(var, body));
 }
 
-};
+IR_NODE_END()
 
 /**
  * The accessor associated to a try-catch statement.
@@ -854,7 +845,7 @@ IR_LIST_NODE_ACCESSOR(TryCatchStmt, Statement, Clauses, CompoundStmt, CatchClaus
  * Obtains a reference the compound statement forming the body of this statement.
  */
 IR_NODE_PROPERTY(CompoundStmt, Body, 0);
-};
+IR_NODE_END()
 
 /**
  * The entity used to represent switch statements within the IR.
@@ -886,7 +877,7 @@ static TryCatchStmtPtr get(NodeManager& manager, const CompoundStmtPtr& body, co
 	return manager.get(TryCatchStmt(children));
 }
 
-};
+IR_NODE_END()
 
 } // end namespace core
 } // end namespace insieme

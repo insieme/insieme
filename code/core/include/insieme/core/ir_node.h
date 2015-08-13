@@ -1159,6 +1159,10 @@ const vector<Pointer<const ElementType>>& getList() const {
 			} \
 		private: \
 
+ /**
+ * A macro ending a node declaration, to make the auto-formatting work
+ */
+#define IR_NODE_END() };
 
 /**
  * Starts the definition of an accessor struct which is determining how fields of

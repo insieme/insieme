@@ -52,7 +52,7 @@ namespace core {
  * The accessor associated to a list of expressions.
  */
 IR_LIST_NODE_ACCESSOR(Expressions, Support, Expressions, Expression)
-};
+IR_NODE_END()
 
 /**
  * A node type representing a list of expressions.
@@ -80,7 +80,7 @@ public:
 static ExpressionsPtr get(NodeManager& manager, const ExpressionList& expressions) {
 	return manager.get(Expressions(convertList(expressions)));
 }
-};
+IR_NODE_END()
 
 
 
@@ -114,7 +114,7 @@ template <class T>
 const T getValueAs() const {
 	return utils::numeric_cast<T>(getStringValue());
 }
-};
+IR_NODE_END()
 
 /**
  * The entity used to represent literals within the IR.
@@ -169,7 +169,7 @@ static LiteralPtr get(NodeManager& manager, const TypePtr& type, const StringVal
 static LiteralPtr get(NodeManager& manager, const TypePtr& type, const string& value) {
 	return get(manager, type, StringValue::get(manager, value));
 }
-};
+IR_NODE_END()
 
 
 
@@ -191,7 +191,7 @@ IR_NODE_PROPERTY(UIntValue, ID, 1);
 unsigned int getId() const {
 	return getID()->getValue();
 }
-};
+IR_NODE_END()
 
 /**
  * The entity used to represent variables within the IR.
@@ -259,7 +259,7 @@ static VariablePtr get(NodeManager& manager, const TypePtr& type) {
 	return manager.get(Variable(type, UIntValue::get(manager,id)));
 }
 
-};
+IR_NODE_END()
 
 
 
@@ -284,7 +284,7 @@ Ptr<const Expression> getArgument(unsigned index) const {
 	return CallExprAccessor<Derived, Ptr>::getElement(index);
 }
 
-};
+IR_NODE_END()
 
 /**
  * The entity used to represent function calls within the IR.
@@ -333,7 +333,7 @@ static CallExprPtr get(NodeManager& manager, const TypePtr& type, const Expressi
 	return get(manager, type, function, NodeRange<ExpressionPtr>(arguments.begin(), arguments.end()));
 }
 
-};
+IR_NODE_END()
 
 
 
@@ -349,7 +349,7 @@ IR_NODE_ACCESSOR(CastExpr, Expression, Type, Expression)
  * Obtains a reference to the expression being casted.
  */
 IR_NODE_PROPERTY(Expression, SubExpression, 1);
-};
+IR_NODE_END()
 
 /**
  * The entity used to represent casts within the IR.
@@ -379,7 +379,7 @@ static CastExprPtr get(NodeManager& manager, const TypePtr& type, const Expressi
 	return manager.get(CastExpr(type, value));
 }
 
-};
+IR_NODE_END()
 
 
 
@@ -390,7 +390,7 @@ static CastExprPtr get(NodeManager& manager, const TypePtr& type, const Expressi
  * The accessor associated to the parameter node.
  */
 IR_LIST_NODE_ACCESSOR(Parameters, Support, Parameters, Variable)
-};
+IR_NODE_END()
 
 /**
  * A node type representing a list of parameter.
@@ -418,7 +418,7 @@ public:
 static ParametersPtr get(NodeManager& manager, const VariableList& parameter) {
 	return manager.get(Parameters(convertList(parameter)));
 }
-};
+IR_NODE_END()
 
 
 
@@ -453,7 +453,7 @@ IR_NODE_PROPERTY(CompoundStmt, Body, 2);
 vector<Ptr<const Variable>> getParameterList() const {
 	return getParameters()->getParameters();
 }
-};
+IR_NODE_END()
 
 /**
  * The entity used to represent lambda nodes.
@@ -608,7 +608,7 @@ LambdaExprPtr unroll(unsigned numTimes) const {
 LambdaExprPtr unroll(NodeManager& manager, unsigned numTimes) const {
 	return ExpressionAccessor<Derived,Ptr>::getNode().unroll(manager, numTimes);
 }
-};
+IR_NODE_END()
 
 /**
  * The entity used to represent lambda expressions.
@@ -704,7 +704,7 @@ bool isRecursiveInternal() const;
  */
 LambdaExprPtr unroll(NodeManager& manager, unsigned numTimes) const;
 
-};
+IR_NODE_END()
 
 
 
@@ -727,7 +727,7 @@ IR_NODE_PROPERTY(Variable, Variable, 0);
  */
 IR_NODE_PROPERTY(Lambda, Lambda, 1);
 
-};
+IR_NODE_END()
 
 /**
  * The entity used to represent lambda nodes.
@@ -757,7 +757,7 @@ static LambdaBindingPtr get(NodeManager& manager, const VariablePtr& var, const 
 	return manager.get(LambdaBinding(var, lambda));
 }
 
-};
+IR_NODE_END()
 
 
 
@@ -856,7 +856,7 @@ LambdaExprPtr peel(NodeManager& manager, const VariablePtr& variable, unsigned n
 LambdaDefinitionPtr unroll(NodeManager& manager, unsigned numTimes) const {
 	return SupportAccessor<Derived,Ptr>::getNode().unroll(manager, numTimes);
 }
-};
+IR_NODE_END()
 
 /**
  * The entity used to represent lambda definitions.
@@ -925,7 +925,7 @@ LambdaExprPtr peel(NodeManager& manager, const VariablePtr& variable, unsigned n
  */
 LambdaDefinitionPtr unroll(NodeManager& manager, unsigned numTimes) const;
 
-};
+IR_NODE_END()
 
 
 
@@ -993,7 +993,7 @@ bool isBoundExpression(const Ptr<const Expression>& expr) const {
 	// it is not there
 	return false;
 }
-};
+IR_NODE_END()
 
 /**
  * A bind expression allows to take a function, fix some of its parameters, reordering others and produce
@@ -1040,7 +1040,7 @@ static BindExprPtr get(NodeManager& manager, const FunctionTypePtr& type, const 
 	return get(manager, type, Parameters::get(manager, parameters), call);
 }
 
-};
+IR_NODE_END()
 
 
 
@@ -1056,7 +1056,7 @@ IR_NODE_ACCESSOR(TupleExpr, Expression, TupleType, Expressions)
  * the represented node.
  */
 IR_NODE_PROPERTY(Expressions, Expressions, 1);
-};
+IR_NODE_END()
 
 /**
  * The entity used to represent tuple expressions. A tuple expression is composing
@@ -1087,7 +1087,7 @@ static TupleExprPtr get(NodeManager& manager, const TupleTypePtr& type, const Ex
 	return manager.get(TupleExpr(type, expressions));
 }
 
-};
+IR_NODE_END()
 
 
 
@@ -1109,7 +1109,7 @@ IR_NODE_PROPERTY(StringValue, Name, 0);
  * Obtains a reference to the bound value.
  */
 IR_NODE_PROPERTY(Expression, Value, 1);
-};
+IR_NODE_END()
 
 /**
  * This type of node is used within the struct expression to represent the
@@ -1140,7 +1140,7 @@ static NamedValuePtr get(NodeManager& manager, const StringValuePtr& name, const
 	return manager.get(NamedValue(name, value));
 }
 
-};
+IR_NODE_END()
 
 
 
@@ -1151,7 +1151,7 @@ static NamedValuePtr get(NodeManager& manager, const StringValuePtr& name, const
  * The accessor associated to a list of named values.
  */
 IR_LIST_NODE_ACCESSOR(NamedValues, Support, NamedValues, NamedValue)
-};
+IR_NODE_END()
 
 /**
  * A node type representing a list of named values.
@@ -1179,7 +1179,7 @@ public:
 static NamedValuesPtr get(NodeManager& manager, const NamedValueList& values) {
 	return manager.get(NamedValues(convertList(values)));
 }
-};
+IR_NODE_END()
 
 
 
@@ -1194,7 +1194,7 @@ IR_NODE_ACCESSOR(StructExpr, Expression, Type, NamedValues)
  * the represented node.
  */
 IR_NODE_PROPERTY(NamedValues, Members, 1);
-};
+IR_NODE_END()
 
 /**
  * The entity used to represent struct expressions. A struct expression is composing
@@ -1235,7 +1235,7 @@ static StructExprPtr get(NodeManager& manager, const StructTypePtr& type, const 
 	return manager.get(StructExpr(type, values));
 }
 
-};
+IR_NODE_END()
 
 
 
@@ -1261,7 +1261,7 @@ IR_NODE_PROPERTY(StringValue, MemberName, 1);
  * Obtains a reference to the value associated to the addressed member of the resulting union.
  */
 IR_NODE_PROPERTY(Expression, Member, 2);
-};
+IR_NODE_END()
 
 /**
  * The entity used to represent union expressions. A union expression is composing
@@ -1293,7 +1293,7 @@ static UnionExprPtr get(NodeManager& manager, const UnionTypePtr& type, const St
 	return manager.get(UnionExpr(type, member, value));
 }
 
-};
+IR_NODE_END()
 
 
 
@@ -1316,7 +1316,7 @@ IR_NODE_PROPERTY(Expression, ThreadNumRange, 1);
  * Obtains a reference to the expression evaluated in parallel.
  */
 IR_NODE_PROPERTY(Expression, Body, 2);
-};
+IR_NODE_END()
 
 /**
  * The entity used to represent union expressions. A union expression is composing
@@ -1347,7 +1347,7 @@ static JobExprPtr get(NodeManager& manager, const GenericTypePtr& type,
 	return manager.get(JobExpr(type, range, def));
 }
 
-};
+IR_NODE_END()
 
 
 
@@ -1375,7 +1375,7 @@ unsigned int getId() const {
 	return getID()->getValue();
 }
 
-};
+IR_NODE_END()
 
 /**
  * The entity used to represent a marker expression within the IR.
@@ -1418,7 +1418,7 @@ static MarkerExprPtr get(NodeManager& manager, const ExpressionPtr& subExpr) {
 	return get(manager, UIntValue::get(manager, manager.getFreshID()), subExpr);
 }
 
-};
+IR_NODE_END()
 
 
 } // end namespace core

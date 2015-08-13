@@ -91,7 +91,7 @@ protected:
  * The accessor associated to an type parameter list.
  */
 IR_LIST_NODE_ACCESSOR(Types, Support, Types, Type)
-};
+IR_NODE_END()
 
 /**
  * A node type representing a list of type parameters.
@@ -119,7 +119,7 @@ public:
 static TypesPtr get(NodeManager& manager, const TypeList& types) {
 	return manager.get(Types(convertList(types)));
 }
-};
+IR_NODE_END()
 
 
 // ------------------------------------ A class representing a parent type  ------------------------------
@@ -146,7 +146,7 @@ IR_NODE_PROPERTY(Type, Type, 1);
 bool isVirtual() const {
 	return getVirtual().getValue();
 }
-};
+IR_NODE_END()
 
 /**
  * The node type used to represent a link to a parent class within a base type.
@@ -203,8 +203,7 @@ static ParentPtr get(NodeManager& manager, bool virtul, const TypePtr& type) {
 static ParentPtr get(NodeManager& manager, const TypePtr& type) {
 	return get(manager, false, type);
 }
-
-};
+IR_NODE_END()
 
 // ------------------------------------ A class representing a list of parent types  ------------------------------
 
@@ -212,7 +211,7 @@ static ParentPtr get(NodeManager& manager, const TypePtr& type) {
  * The accessor associated to a list of parent types.
  */
 IR_LIST_NODE_ACCESSOR(Parents, Support, Types, Parent)
-};
+IR_NODE_END()
 
 /**
  * A node type representing a list of parent types.
@@ -254,7 +253,7 @@ static ParentsPtr get(NodeManager& manager, const TypeList& types) {
 		return Parent::get(manager, type);
 	}));
 }
-};
+IR_NODE_END()
 
 
 // ---------------------------------------- Generic Type ------------------------------
@@ -291,7 +290,7 @@ const string& getFamilyName() const {
 Ptr<const Type> getTypeParameter(std::size_t index) const {
 	return getTypeParameter()->getElement(index);
 }
-};
+IR_NODE_END()
 
 /**
  * This type represents a generic type which can be used to represent arbitrary user defined
@@ -369,8 +368,7 @@ static GenericTypePtr get(NodeManager& manager,
                           const TypeList& typeParams = TypeList()) {
 	return get(manager, StringValue::get(manager, name),Types::get(manager, typeParams));
 }
-
-};
+IR_NODE_END()
 
 
 
@@ -387,7 +385,7 @@ IR_NODE_ACCESSOR(TypeVariable, Type, StringValue)
  * Obtains the name of this type variable.
  */
 IR_NODE_PROPERTY(StringValue, VarName, 0);
-};
+IR_NODE_END()
 
 /**
  * A node type representing concrete type variables.
@@ -427,8 +425,7 @@ static TypeVariablePtr get(NodeManager& manager, const StringValuePtr& name) {
 static TypeVariablePtr get(NodeManager& manager, const string& name) {
 	return get(manager, StringValue::get(manager, name));
 }
-
-};
+IR_NODE_END()
 
 
 
@@ -441,7 +438,7 @@ static TypeVariablePtr get(NodeManager& manager, const string& name) {
  * of type pointers.
  */
 IR_LIST_NODE_ACCESSOR(TupleType, Type, ElementTypes, Type)
-};
+IR_NODE_END()
 
 /**
  * A node type representing Tuple Type.
@@ -469,8 +466,7 @@ public:
 static TupleTypePtr get(NodeManager& manager, const TypeList& elementTypes = TypeList()) {
 	return get(manager, convertList(elementTypes));
 }
-
-};
+IR_NODE_END()
 
 
 
@@ -594,7 +590,7 @@ Ptr<const Type> getObjectType() const {
 	assert(!type->getTypeParameter().empty());
 	return type->getTypeParameter(0);
 }
-};
+IR_NODE_END()
 
 /**
  * This type corresponds to the type of a function. It specifies the argument types and the
@@ -682,11 +678,7 @@ static FunctionTypePtr get(NodeManager& manager, const TypeList& parameterTypes,
 static FunctionTypePtr get(NodeManager& manager, const TypePtr& paramType, const TypePtr& returnType, FunctionKind kind = FK_PLAIN) {
 	return get(manager, Types::get(manager, toVector(paramType)), returnType, kind);
 }
-};
-
-
-
-
+IR_NODE_END()
 
 // ---------------------------------------- Recursive Type ------------------------------
 
@@ -704,7 +696,7 @@ IR_NODE_PROPERTY(TypeVariable, Variable, 0);
  * Obtains a reference to the type being bound to the referenced variable.
  */
 IR_NODE_PROPERTY(Type, Type, 1);
-};
+IR_NODE_END()
 
 /**
  * A node type used to represent recursive type variable bindings.
@@ -733,8 +725,7 @@ public:
 static RecTypeBindingPtr get(NodeManager& manager, const TypeVariablePtr& var, const TypePtr& type) {
 	return manager.get(RecTypeBinding(var, type));
 }
-
-};
+IR_NODE_END()
 
 
 
@@ -765,8 +756,7 @@ Ptr<const Type> getDefinitionOf(const TypeVariablePtr& variable) const {
 TypePtr unrollOnce(NodeManager& manager, const TypeVariablePtr& variable) const {
 	return RecTypeDefinitionAccessor<Derived,Ptr>::getNode().unrollDefinitionOnce(manager, variable);
 }
-
-};
+IR_NODE_END()
 
 /**
  * A node type used to represent recursive type variable bindings.
@@ -803,10 +793,7 @@ static RecTypeDefinitionPtr get(NodeManager& manager, const vector<RecTypeBindin
  * @return the resulting, unrolled type
  */
 TypePtr unrollDefinitionOnce(NodeManager& manager, const TypeVariablePtr& variable) const;
-
-};
-
-
+IR_NODE_END()
 
 
 /**
@@ -847,7 +834,7 @@ TypePtr unroll(NodeManager& manager) const {
 TypePtr unroll() const {
 	return unroll(NodeAccessor<Derived,Ptr>::getNode().getNodeManager());
 }
-};
+IR_NODE_END()
 
 /**
  * This type connector allows to define recursive type within the IR language. Recursive
@@ -882,13 +869,7 @@ public:
 static RecTypePtr get(NodeManager& manager, const TypeVariablePtr& typeVariable, const RecTypeDefinitionPtr& definition) {
 	return manager.get(RecType(typeVariable, definition));
 }
-
-};
-
-
-
-
-
+IR_NODE_END()
 
 // --------------------------------- Named Composite Type ----------------------------
 
@@ -908,7 +889,7 @@ IR_NODE_PROPERTY(StringValue, Name, 0);
  * Obtains the bound type.
  */
 IR_NODE_PROPERTY(Type, Type, 1);
-};
+IR_NODE_END()
 
 /**
  * A node type used to represent a named type within a struct or an union.
@@ -937,8 +918,7 @@ public:
 static NamedTypePtr get(NodeManager& manager, const StringValuePtr& name, const TypePtr& type) {
 	return manager.get(NamedType(name, type));
 }
-
-};
+IR_NODE_END()
 
 
 
@@ -1010,8 +990,7 @@ Ptr<const Type> getTypeOfMember(const string& name) const {
 	Ptr<const NamedType> entry = getNamedTypeEntryOf(name);
 	return (entry)?(entry->getType()):Ptr<const Type>();
 }
-
-};
+IR_NODE_END()
 
 /**
  * A node type used to represent a named type within a struct or an union.
@@ -1146,8 +1125,7 @@ static StructTypePtr get(NodeManager& manager, const StringValuePtr& name, const
 static StructTypePtr get(NodeManager& manager, const vector<NamedTypePtr>& entries = vector<NamedTypePtr>()) {
 	return get(manager, Parents::get(manager), entries);
 }
-
-};
+IR_NODE_END()
 
 
 
@@ -1208,7 +1186,7 @@ static UnionTypePtr get(NodeManager& manager, const StringValuePtr& name, const 
 static UnionTypePtr get(NodeManager& manager, const vector<NamedTypePtr>& entries = vector<NamedTypePtr>()) {
 	return get(manager, StringValue::get(manager, ""), entries);
 }
-};
+IR_NODE_END()
 
 #undef IR_NAMED_COMPOSITE_TYPE
 
@@ -1242,8 +1220,7 @@ bool isConstant() const {
 bool isVariable() const {
 	return !isConstant();
 }
-
-};
+IR_NODE_END()
 
 
 /**
@@ -1251,14 +1228,12 @@ bool isVariable() const {
  */
 IR_NODE(NumericType, Type)
 protected:
-
 /**
  * Prints a string representation of this node to the given output stream.
  */
 virtual std::ostream& printTo(std::ostream& out) const;
 
 public:
-
 /**
  * This static factory method allows to construct a numeric type based on a literal constant.
  *
@@ -1276,8 +1251,7 @@ static NumericTypePtr get(NodeManager& manager, const LiteralPtr& value);
  * @return the requested type instance managed by the given manager
  */
 static NumericTypePtr get(NodeManager& manager, const VariablePtr& var);
-
-};
+IR_NODE_END()
 
 } // end namespace core
 } // end namespace insieme
