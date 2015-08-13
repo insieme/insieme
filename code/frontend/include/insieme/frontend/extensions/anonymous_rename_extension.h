@@ -46,177 +46,155 @@ namespace insieme {
 namespace frontend {
 namespace extensions {
 
-using namespace insieme;
+	using namespace insieme;
 
-/**
- *
- * This is the frontend cleanup tool.
- * it is a NON-OPTIONAL pass which removes artifacts the frontend might generate.
- * frontend might generate stuff in an "correct" but not optimal way just because is the straight forward approach.
- * instead of trying to fix this everywhere, is much more convenient to clean up afterwards, reduces complexity of code
- */
-class AnonymousRenameExtension : public insieme::frontend::extensions::FrontendExtension {
+	/**
+	 *
+	 * This is the frontend cleanup tool.
+	 * it is a NON-OPTIONAL pass which removes artifacts the frontend might generate.
+	 * frontend might generate stuff in an "correct" but not optimal way just because is the straight forward approach.
+	 * instead of trying to fix this everywhere, is much more convenient to clean up afterwards, reduces complexity of code
+	 */
+	class AnonymousRenameExtension : public insieme::frontend::extensions::FrontendExtension {
+		core::NodeMap renamedTypeDefinitions;
+		core::NodeMap renamedTypeDeclarations;
 
-	core::NodeMap renamedTypeDefinitions;
-	core::NodeMap renamedTypeDeclarations;
-	
-	std::map<core::NodePtr, std::string> nameMap;
-public:
+		std::map<core::NodePtr, std::string> nameMap;
 
-	virtual boost::optional<std::string> isPrerequisiteMissing(ConversionSetup& job) const {
-		//this should be the last
-		
-		if(job.getExtensions().back().get() != this) {
-			return boost::optional<std::string>("AnonymousRenameExtension should be the last extension int the extension list");
+	  public:
+		virtual boost::optional<std::string> isPrerequisiteMissing(ConversionSetup& job) const {
+			// this should be the last
+
+			if(job.getExtensions().back().get() != this) {
+				return boost::optional<std::string>("AnonymousRenameExtension should be the last extension int the extension list");
+			}
+
+			// prerequisites are met
+			return boost::optional<std::string>();
 		}
-		
-		//prerequisites are met
-		return boost::optional<std::string>();
-	}
-	
-	virtual core::TypePtr TypeDeclPostVisit(const clang::TypeDecl* decl, insieme::core::TypePtr res,
-	                                        insieme::frontend::conversion::Converter& convFact) {
-		core::IRBuilder builder(res->getNodeManager());
-		
-		// NOTE:
-		// it might be that a the typedef encloses an anonymous struct declaration, in that case
-		// we forward the name to the inner type. this is fuzzy but this is the last time we can do it
-		if(const clang::TypedefDecl* typedefDecl = llvm::dyn_cast<clang::TypedefDecl>(decl)) {
-			if(core::GenericTypePtr symb = res.isa<core::GenericTypePtr>()) {
-			
-				VLOG(2) << "typedef of an anonymous type, forward the name: ";
-				VLOG(2) << "    -" << res;
-				
-				core::TypePtr trgTy =  convFact.lookupTypeDetails(symb);
-				// a new generic type will point to the previous translation unit decl
-				if(core::NamedCompositeTypePtr namedType = trgTy.isa<core::NamedCompositeTypePtr>()) {
-				
-					clang::QualType typedefType = typedefDecl->getTypeForDecl()->getCanonicalTypeInternal();
-					
-					// build a name for the thing
-					std::string name = utils::getNameForRecord(typedefDecl, typedefType, convFact.getSourceManager());
-					core::GenericTypePtr gen = builder.genericType(name);
-					
-					core::TypePtr definition = symb;
-					// if target is an anonymous type, we create a new type with the name of the typedef
-					//if (namedType->getName()->getValue().substr(0,5) == "_anon"){
-					if(namedType->getName()->getValue() == "") {
-						//guarantee that the second typedef does not change the name again
-						if(nameMap.find(namedType) != nameMap.end()) {
-							return namedType;
+
+		virtual core::TypePtr TypeDeclPostVisit(const clang::TypeDecl* decl, insieme::core::TypePtr res, insieme::frontend::conversion::Converter& convFact) {
+			core::IRBuilder builder(res->getNodeManager());
+
+			// NOTE:
+			// it might be that a the typedef encloses an anonymous struct declaration, in that case
+			// we forward the name to the inner type. this is fuzzy but this is the last time we can do it
+			if(const clang::TypedefDecl* typedefDecl = llvm::dyn_cast<clang::TypedefDecl>(decl)) {
+				if(core::GenericTypePtr symb = res.isa<core::GenericTypePtr>()) {
+					VLOG(2) << "typedef of an anonymous type, forward the name: ";
+					VLOG(2) << "    -" << res;
+
+					core::TypePtr trgTy = convFact.lookupTypeDetails(symb);
+					// a new generic type will point to the previous translation unit decl
+					if(core::NamedCompositeTypePtr namedType = trgTy.isa<core::NamedCompositeTypePtr>()) {
+						clang::QualType typedefType = typedefDecl->getTypeForDecl()->getCanonicalTypeInternal();
+
+						// build a name for the thing
+						std::string name = utils::getNameForRecord(typedefDecl, typedefType, convFact.getSourceManager());
+						core::GenericTypePtr gen = builder.genericType(name);
+
+						core::TypePtr definition = symb;
+						// if target is an anonymous type, we create a new type with the name of the typedef
+						// if (namedType->getName()->getValue().substr(0,5) == "_anon"){
+						if(namedType->getName()->getValue() == "") {
+							// guarantee that the second typedef does not change the name again
+							if(nameMap.find(namedType) != nameMap.end()) { return namedType; }
+							nameMap[namedType] = name;
+
+							if(auto structTy = namedType.isa<core::StructTypePtr>()) {
+								definition = builder.structType(builder.stringValue(name), structTy->getParents(), structTy->getEntries());
+							} else if(auto unionTy = namedType.isa<core::UnionTypePtr>()) {
+								definition = builder.unionType(builder.stringValue(name), unionTy->getEntries());
+							} else {
+								assert_true(false) << "this might be pretty malformed:\n" << dumpPretty(namedType);
+							}
+
+							core::transform::utils::migrateAnnotations(namedType.as<core::TypePtr>(), definition);
+							core::annotations::attachName(definition, name);
+							convFact.getHeaderTagger().addHeaderForDecl(definition, typedefDecl);
+							core::annotations::attachName(gen, name);
+							convFact.getHeaderTagger().addHeaderForDecl(gen, typedefDecl);
+
+							// just before end, solve nested anonymous issues
+							definition = core::transform::replaceAllGen(definition->getNodeManager(), definition, renamedTypeDefinitions,
+							                                            core::transform::globalReplacement);
+							definition = core::transform::replaceAllGen(definition->getNodeManager(), definition, renamedTypeDeclarations,
+							                                            core::transform::globalReplacement);
+
+							// replace all recursive usages
+							definition =
+							    core::transform::replaceAllGen(definition->getNodeManager(), definition, trgTy, gen, core::transform::globalReplacement);
+
+							// store for a later solver
+							renamedTypeDeclarations[symb] = gen;
+							renamedTypeDefinitions[trgTy] = definition;
+							convFact.getIRTranslationUnit().addType(gen, definition);
+
+							return gen;
 						}
-						nameMap[namedType] = name;
-						
-						if(auto structTy = namedType.isa<core::StructTypePtr>()) {
-							definition = builder.structType(builder.stringValue(name), structTy->getParents(), structTy->getEntries());
-						}
-						else if(auto unionTy = namedType.isa<core::UnionTypePtr>()) {
-							definition = builder.unionType(builder.stringValue(name), unionTy->getEntries());
-						}
-						else {
-							assert_true(false) << "this might be pretty malformed:\n" << dumpPretty(namedType);
-						}
-						
-						core::transform::utils::migrateAnnotations(namedType.as<core::TypePtr>(), definition);
-						core::annotations::attachName(definition,name);
-						convFact.getHeaderTagger().addHeaderForDecl(definition, typedefDecl);
-						core::annotations::attachName(gen,name);
-						convFact.getHeaderTagger().addHeaderForDecl(gen, typedefDecl);
-						
-						// just before end, solve nested anonymous issues
-						definition = core::transform::replaceAllGen(definition->getNodeManager(),
-						             definition, renamedTypeDefinitions, core::transform::globalReplacement);
-						definition = core::transform::replaceAllGen(definition->getNodeManager(),
-						             definition, renamedTypeDeclarations, core::transform::globalReplacement);
-						             
-						// replace all recursive usages
-						definition = core::transform::replaceAllGen(definition->getNodeManager(),
-						             definition, trgTy, gen, core::transform::globalReplacement);
-						             
-						// store for a later solver
-						renamedTypeDeclarations[symb] = gen;
-						renamedTypeDefinitions[trgTy] = definition;
-						convFact.getIRTranslationUnit().addType(gen, definition);
-						
-						return gen;
 					}
 				}
 			}
+
+			return nullptr;
 		}
-		
-		return nullptr;
-	}
-	
-	
-	
-	frontend::tu::IRTranslationUnit IRVisit(insieme::frontend::tu::IRTranslationUnit& tu) {
-	
-		// correct functions
-		std::map<core::LiteralPtr, std::pair<core::LiteralPtr, core::LambdaExprPtr>> tuFuncCorrections;
-		for(auto& pair : tu.getFunctions()) {
-			core::LiteralPtr lit = pair.first.as<core::LiteralPtr>();
-			core::LambdaExprPtr func = pair.second;
-			
-			func = core::transform::replaceAllGen(
-			           lit->getNodeManager(), func, renamedTypeDefinitions, core::transform::globalReplacement);
-			func = core::transform::replaceAllGen(
-			           lit->getNodeManager(), func, renamedTypeDeclarations, core::transform::globalReplacement);
-			           
-			auto newlit  = core::transform::replaceAllGen(
-			                   lit->getNodeManager(), lit, renamedTypeDefinitions, core::transform::globalReplacement);
-			newlit  = core::transform::replaceAllGen(
-			              lit->getNodeManager(), newlit, renamedTypeDeclarations, core::transform::globalReplacement);
-			              
-			tuFuncCorrections[lit] = {newlit, func};
+
+
+		frontend::tu::IRTranslationUnit IRVisit(insieme::frontend::tu::IRTranslationUnit& tu) {
+			// correct functions
+			std::map<core::LiteralPtr, std::pair<core::LiteralPtr, core::LambdaExprPtr>> tuFuncCorrections;
+			for(auto& pair : tu.getFunctions()) {
+				core::LiteralPtr lit = pair.first.as<core::LiteralPtr>();
+				core::LambdaExprPtr func = pair.second;
+
+				func = core::transform::replaceAllGen(lit->getNodeManager(), func, renamedTypeDefinitions, core::transform::globalReplacement);
+				func = core::transform::replaceAllGen(lit->getNodeManager(), func, renamedTypeDeclarations, core::transform::globalReplacement);
+
+				auto newlit = core::transform::replaceAllGen(lit->getNodeManager(), lit, renamedTypeDefinitions, core::transform::globalReplacement);
+				newlit = core::transform::replaceAllGen(lit->getNodeManager(), newlit, renamedTypeDeclarations, core::transform::globalReplacement);
+
+				tuFuncCorrections[lit] = {newlit, func};
+			}
+			for(const auto& pair : tuFuncCorrections) {
+				tu.substituteFunction(pair.first, pair.second.first, pair.second.second);
+			}
+
+			// correct globals
+			for(auto& g : tu.getGlobals()) {
+				core::LiteralPtr symbol = g.first;
+				core::ExpressionPtr init = g.second;
+
+				symbol = core::transform::replaceAllGen(symbol->getNodeManager(), symbol, renamedTypeDefinitions, core::transform::globalReplacement);
+				symbol = core::transform::replaceAllGen(symbol->getNodeManager(), symbol, renamedTypeDeclarations, core::transform::globalReplacement);
+
+				init = core::transform::replaceAllGen(symbol->getNodeManager(), init, renamedTypeDefinitions, core::transform::globalReplacement);
+				init = core::transform::replaceAllGen(symbol->getNodeManager(), init, renamedTypeDeclarations, core::transform::globalReplacement);
+
+				auto global = std::make_pair(symbol, init);
+				tu.replaceGlobal(g, global);
+			}
+
+			// correct types
+			std::map<core::GenericTypePtr, std::pair<core::GenericTypePtr, core::TypePtr>> tuTypeCorrections;
+			for(auto& pair : tu.getTypes()) {
+				core::GenericTypePtr lit = pair.first;
+				core::TypePtr definition = pair.second;
+
+				definition = core::transform::replaceAllGen(lit->getNodeManager(), definition, renamedTypeDefinitions, core::transform::globalReplacement);
+				definition = core::transform::replaceAllGen(lit->getNodeManager(), definition, renamedTypeDeclarations, core::transform::globalReplacement);
+				core::GenericTypePtr newType =
+				    core::transform::replaceAllGen(lit->getNodeManager(), lit, renamedTypeDefinitions, core::transform::globalReplacement);
+				newType = core::transform::replaceAllGen(lit->getNodeManager(), lit, renamedTypeDeclarations, core::transform::globalReplacement);
+
+				tuTypeCorrections[lit] = {newType, definition};
+			}
+			for(const auto& pair : tuTypeCorrections) {
+				tu.substituteType(pair.first, pair.second.first, pair.second.second);
+			}
+
+			return tu;
 		}
-		for(const auto& pair : tuFuncCorrections) {
-			tu.substituteFunction(pair.first, pair.second.first, pair.second.second);
-		}
-		
-		// correct globals
-		for(auto& g : tu.getGlobals()) {
-		
-			core::LiteralPtr symbol = g.first;
-			core::ExpressionPtr init = g.second;
-			
-			symbol = core::transform::replaceAllGen(
-			             symbol->getNodeManager(), symbol, renamedTypeDefinitions, core::transform::globalReplacement);
-			symbol = core::transform::replaceAllGen(
-			             symbol->getNodeManager(), symbol, renamedTypeDeclarations, core::transform::globalReplacement);
-			             
-			init = core::transform::replaceAllGen(
-			           symbol->getNodeManager(), init, renamedTypeDefinitions, core::transform::globalReplacement);
-			init = core::transform::replaceAllGen(
-			           symbol->getNodeManager(), init, renamedTypeDeclarations, core::transform::globalReplacement);
-			           
-			auto global = std::make_pair(symbol, init);
-			tu.replaceGlobal(g,global);
-		}
-		
-		// correct types
-		std::map<core::GenericTypePtr, std::pair<core::GenericTypePtr, core::TypePtr>> tuTypeCorrections;
-		for(auto& pair : tu.getTypes()) {
-			core::GenericTypePtr lit = pair.first;
-			core::TypePtr definition = pair.second;
-			
-			definition = core::transform::replaceAllGen(
-			                 lit->getNodeManager(), definition, renamedTypeDefinitions, core::transform::globalReplacement);
-			definition = core::transform::replaceAllGen(
-			                 lit->getNodeManager(), definition, renamedTypeDeclarations, core::transform::globalReplacement);
-			core::GenericTypePtr newType = core::transform::replaceAllGen(
-			                                   lit->getNodeManager(), lit, renamedTypeDefinitions, core::transform::globalReplacement);
-			newType = core::transform::replaceAllGen(
-			              lit->getNodeManager(), lit, renamedTypeDeclarations, core::transform::globalReplacement);
-			              
-			tuTypeCorrections[lit] = {newType, definition};
-		}
-		for(const auto& pair : tuTypeCorrections) {
-			tu.substituteType(pair.first, pair.second.first, pair.second.second);
-		}
-		
-		return tu;
-	}
-};
+	};
 
 
 } // extensions

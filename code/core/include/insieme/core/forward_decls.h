@@ -45,74 +45,78 @@
 namespace insieme {
 namespace core {
 
-using std::string;
-using std::pair;
-using std::vector;
+	using std::string;
+	using std::pair;
+	using std::vector;
 
-// forward declaration of pointer and address templates
-template<typename T> class Pointer;
-template<typename T> class Address;
+	// forward declaration of pointer and address templates
+	template <typename T>
+	class Pointer;
+	template <typename T>
+	class Address;
 
-/**
- * Adds forward declarations for all AST node types. Further, for each
- * type a type definition for a corresponding annotated pointer is added.
- */
-#define NODE(NAME) \
-		class NAME; \
-		typedef Pointer<const NAME> NAME ## Ptr; \
-		typedef Address<const NAME> NAME ## Address; \
-		template<typename D, template <typename P> class P> class NAME ## Accessor;
+	/**
+	 * Adds forward declarations for all AST node types. Further, for each
+	 * type a type definition for a corresponding annotated pointer is added.
+	 */
+	#define NODE(NAME)                                                                                                                                         \
+		class NAME;                                                                                                                                            \
+		typedef Pointer<const NAME> NAME##Ptr;                                                                                                                 \
+		typedef Address<const NAME> NAME##Address;                                                                                                             \
+		template <typename D, template <typename P> class P>                                                                                                   \
+		class NAME##Accessor;
 
-// take all nodes from within the definition file
-#include "insieme/core/ir_nodes.def"
+	// take all nodes from within the definition file
+	#include "insieme/core/ir_nodes.def"
 
-#undef NODE
-
-
-/**
- * The union of all the values which can directly be represented using nodes. If
- * a node represents a value, it is representing a value of this type.
- */
-typedef boost::variant<bool,char,int,unsigned,string> NodeValue;
+	#undef NODE
 
 
-// Supporting Utilities
-class IRBuilder;
-class NodeManager;
-template<typename Context = int> class NodeMapping;
-class SimpleNodeMapping;
-class NodeAnnotation;
-
-namespace lang {
-class BasicGenerator;
-} // end namespace lang
+	/**
+	 * The union of all the values which can directly be represented using nodes. If
+	 * a node represents a value, it is representing a value of this type.
+	 */
+	typedef boost::variant<bool, char, int, unsigned, string> NodeValue;
 
 
-/**
- * Typedefs for some widely used base type collections.
- */
-typedef std::vector<NodePtr> NodeList;
-typedef std::vector<TypePtr> TypeList;
-typedef std::vector<StatementPtr> StatementList;
-typedef std::vector<ExpressionPtr> ExpressionList;
-typedef std::vector<VariablePtr> VariableList;
-typedef std::vector<NamedTypePtr> NamedTypeList;
-typedef std::vector<NamedValuePtr> NamedValueList;
-typedef std::vector<ParentPtr> ParentList;
+	// Supporting Utilities
+	class IRBuilder;
+	class NodeManager;
+	template <typename Context = int>
+	class NodeMapping;
+	class SimpleNodeMapping;
+	class NodeAnnotation;
 
-typedef utils::set::PointerSet<NodePtr> NodeSet;
-typedef utils::set::PointerSet<TypePtr> TypeSet;
-typedef utils::set::PointerSet<VariablePtr> VariableSet;
-typedef utils::set::PointerSet<StatementPtr> StatementSet;
-typedef utils::set::PointerSet<ExpressionPtr> ExpressionSet;
+	namespace lang {
+		class BasicGenerator;
+	} // end namespace lang
 
-typedef utils::map::PointerMap<NodePtr, NodePtr> NodeMap;
-typedef utils::map::PointerMap<TypePtr, TypePtr> TypeMap;
-typedef utils::map::PointerMap<ExpressionPtr, ExpressionPtr> ExpressionMap;
-typedef utils::map::PointerMap<StatementPtr, StatementPtr> StatementMap;
-typedef utils::map::PointerMap<VariablePtr, VariablePtr> VariableMap;
-typedef utils::map::PointerMap<VariablePtr, ExpressionPtr> VarExprMap;
-typedef utils::map::PointerMap<ExpressionPtr, VariablePtr> ExprVarMap;
+
+	/**
+	 * Typedefs for some widely used base type collections.
+	 */
+	typedef std::vector<NodePtr> NodeList;
+	typedef std::vector<TypePtr> TypeList;
+	typedef std::vector<StatementPtr> StatementList;
+	typedef std::vector<ExpressionPtr> ExpressionList;
+	typedef std::vector<VariablePtr> VariableList;
+	typedef std::vector<NamedTypePtr> NamedTypeList;
+	typedef std::vector<NamedValuePtr> NamedValueList;
+	typedef std::vector<ParentPtr> ParentList;
+
+	typedef utils::set::PointerSet<NodePtr> NodeSet;
+	typedef utils::set::PointerSet<TypePtr> TypeSet;
+	typedef utils::set::PointerSet<VariablePtr> VariableSet;
+	typedef utils::set::PointerSet<StatementPtr> StatementSet;
+	typedef utils::set::PointerSet<ExpressionPtr> ExpressionSet;
+
+	typedef utils::map::PointerMap<NodePtr, NodePtr> NodeMap;
+	typedef utils::map::PointerMap<TypePtr, TypePtr> TypeMap;
+	typedef utils::map::PointerMap<ExpressionPtr, ExpressionPtr> ExpressionMap;
+	typedef utils::map::PointerMap<StatementPtr, StatementPtr> StatementMap;
+	typedef utils::map::PointerMap<VariablePtr, VariablePtr> VariableMap;
+	typedef utils::map::PointerMap<VariablePtr, ExpressionPtr> VarExprMap;
+	typedef utils::map::PointerMap<ExpressionPtr, VariablePtr> ExprVarMap;
 
 } // end namespace core
 } // end namespace insieme

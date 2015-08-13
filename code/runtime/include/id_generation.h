@@ -41,9 +41,17 @@
 #include "irt_globals.h"
 
 typedef enum {
-	IRT_ID_id_gen_test, IRT_ID_lookup_test,
-	IRT_ID_channel, IRT_ID_client_app, IRT_ID_context, IRT_ID_data_item, IRT_ID_wi_event_register,
-	IRT_ID_wg_event_register, IRT_ID_work_group, IRT_ID_work_item, IRT_ID_worker,
+	IRT_ID_id_gen_test,
+	IRT_ID_lookup_test,
+	IRT_ID_channel,
+	IRT_ID_client_app,
+	IRT_ID_context,
+	IRT_ID_data_item,
+	IRT_ID_wi_event_register,
+	IRT_ID_wg_event_register,
+	IRT_ID_work_group,
+	IRT_ID_work_item,
+	IRT_ID_worker,
 } irt_id_type;
 
 #ifdef _GEMS_SIM
@@ -52,37 +60,37 @@ typedef enum {
 #define ID_TYPE_BIT_FIELD irt_id_type id_type : 8
 #endif
 
-#define IRT_DECLARE_ID_TYPE(__type) \
-struct _irt_##__type; \
-struct _irt_##__type##_id { \
-	union { \
-		uint64 full; \
-		struct { \
-			uint32 index; \
-			uint16 thread; \
-			uint8 node; \
-			ID_TYPE_BIT_FIELD; \
-		}; \
-	}; \
-	struct _irt_##__type* cached; \
-}; \
-typedef struct _irt_##__type##_id irt_##__type##_id;
+#define IRT_DECLARE_ID_TYPE(__type)                                                                                                                            \
+	struct _irt_##__type;                                                                                                                                      \
+	struct _irt_##__type##_id {                                                                                                                                \
+		union {                                                                                                                                                \
+			uint64 full;                                                                                                                                       \
+			struct {                                                                                                                                           \
+				uint32 index;                                                                                                                                  \
+				uint16 thread;                                                                                                                                 \
+				uint8 node;                                                                                                                                    \
+				ID_TYPE_BIT_FIELD;                                                                                                                             \
+			};                                                                                                                                                 \
+		};                                                                                                                                                     \
+		struct _irt_##__type* cached;                                                                                                                          \
+	};                                                                                                                                                         \
+	typedef struct _irt_##__type##_id irt_##__type##_id;
 
-#define IRT_MAKE_ID_TYPE(__type) \
-static inline irt_##__type##_id irt_generate_##__type##_id(void *generator_id_ptr) { \
-	irt_##__type##_id id; \
-	irt_##__type##_id *gen_id = (irt_##__type##_id*)generator_id_ptr; \
-	id.full = gen_id->full; \
-	gen_id->index++; \
-	id.id_type = IRT_ID_##__type; \
-	id.cached = NULL; \
-	return id; \
-} \
-static inline irt_##__type##_id irt_##__type##_null_id() { \
-	irt_##__type##_id null_id = { { 0 }, NULL }; \
-	/* Note: not setting the id_type here, since the null_id is generic for any id */ \
-	return null_id; \
-}
+#define IRT_MAKE_ID_TYPE(__type)                                                                                                                               \
+	static inline irt_##__type##_id irt_generate_##__type##_id(void* generator_id_ptr) {                                                                       \
+		irt_##__type##_id id;                                                                                                                                  \
+		irt_##__type##_id* gen_id = (irt_##__type##_id*)generator_id_ptr;                                                                                      \
+		id.full = gen_id->full;                                                                                                                                \
+		gen_id->index++;                                                                                                                                       \
+		id.id_type = IRT_ID_##__type;                                                                                                                          \
+		id.cached = NULL;                                                                                                                                      \
+		return id;                                                                                                                                             \
+	}                                                                                                                                                          \
+	static inline irt_##__type##_id irt_##__type##_null_id() {                                                                                                 \
+		irt_##__type##_id null_id = {{0}, NULL};                                                                                                               \
+		/* Note: not setting the id_type here, since the null_id is generic for any id */                                                                      \
+		return null_id;                                                                                                                                        \
+	}
 
 #define IRT_LOOKUP_GENERATOR_ID_PTR (&(irt_worker_get_current()->generator_id))
 

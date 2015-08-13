@@ -38,19 +38,14 @@
 #pragma GCC diagnostic ignored "-Wall"
 
 void decl_stmt_test() {
-
-#pragma test dummy \
-	"first"
+#pragma test dummy "first"
 	int b = 0;
-	
-#pragma test dummy \
-	"second"
+
+	#pragma test dummy "second"
 	unsigned int c;
-	
-#pragma test dummy \
-	"third"
+
+	#pragma test dummy "third"
 	float d;
-	
+
 	// ...
 }
-

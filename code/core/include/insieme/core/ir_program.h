@@ -44,131 +44,117 @@ namespace insieme {
 namespace core {
 
 
-
-// ---------------------------------------- Marker Statement ------------------------------
-
-/**
- * The accessor associated to the marker statement.
- */
-IR_LIST_NODE_ACCESSOR(Program, Node, EntryPoints, Expression)
-IR_NODE_END()
-
-
-/**
- * This class implements an IR Node which can be used to represent entire programs.
- */
-class Program :
-	public Node,
-	public ProgramAccessor<Program, Pointer>,
-	public ProgramAccessor<Program, Pointer>::node_helper {
-	
-private:
+	// ---------------------------------------- Marker Statement ------------------------------
 
 	/**
-	 * Creates a new program based on the given entry points.
-	 *
-	 * @param entryPoints the list of entry points resulting program should be consisting of.
+	 * The accessor associated to the marker statement.
 	 */
-	Program(const ExpressionList& entryPoints)
-		: Node(NT_Program, NC_Program, convertList(entryPoints)),
-		  ProgramAccessor<Program, Pointer>::node_helper(getChildNodeList()) {}
-		  
-	/**
-	 * Creates a new program node based on the given child list.
-	 *
-	 * @param children the list of children to be used within the resulting program
-	 */
-	Program(const NodeList& children)
-		: Node(NT_Program, NC_Program, children),
-		  ProgramAccessor<Program, Pointer>::node_helper(getChildNodeList()) {}
-		  
-protected:
+	IR_LIST_NODE_ACCESSOR(Program, Node, EntryPoints, Expression)
+	IR_NODE_END()
+
 
 	/**
-	 * The function required for the clone process.
+	 * This class implements an IR Node which can be used to represent entire programs.
 	 */
-	virtual Program* createInstanceUsing(const NodeList& children) const {
-		return new Program(children);
-	}
-	
-public:
-	/**
-	 * A factory method creating instances based on a child list
-	 */
-	static ProgramPtr get(NodeManager& manager, const NodeList& children) {
-		return manager.get(Program(children));
-	}
-	
-public:
+	class Program : public Node, public ProgramAccessor<Program, Pointer>, public ProgramAccessor<Program, Pointer>::node_helper {
+	  private:
+		/**
+		 * Creates a new program based on the given entry points.
+		 *
+		 * @param entryPoints the list of entry points resulting program should be consisting of.
+		 */
+		Program(const ExpressionList& entryPoints)
+		    : Node(NT_Program, NC_Program, convertList(entryPoints)), ProgramAccessor<Program, Pointer>::node_helper(getChildNodeList()) {}
 
-	/**
-	 * Creates a new program node within the given manager combining the given set of entry points.
-	 *
-	 * @param manager the manager used to create the new node and to maintain all referenced nodes
-	 * @param entryPoints the list of entry points to be included within the resulting program.
-	 * @return a ProgramPtr referencing the resulting program. The life time of the referenced node
-	 * 						will be bound to the given manager.
-	 */
-	static ProgramPtr get(NodeManager& manager, const ExpressionList& entryPoints = ExpressionList());
-	
-	/**
-	 * Creates a new program node within the given manager which is equivalent to the given program plus the
-	 * given, additional entry point.
-	 *
-	 * @param manager the manager used to create the new node and to maintain all referenced nodes
-	 * @param program the program to be extended by an additional entry point
-	 * @param point the additional entry point to be added
-	 * @return a ProgramPtr referencing the resulting program. The life time of the referenced node
-	 * 						will be bound to the given manager.
-	 */
-	static ProgramPtr addEntryPoint(NodeManager& manager, const ProgramPtr& program, const ExpressionPtr& point);
-	
-	/**
-	 * Creates a new program node within the given manager which is equivalent to the given program plus the
-	 * given, additional entry points.
-	 *
-	 * @param manager the manager used to create the new node and to maintain all referenced nodes
-	 * @param program the program to be extended by additional entry points
-	 * @param points the additional entry points to be added
-	 * @return a ProgramPtr referencing the resulting program. The life time of the referenced node
-	 * 						will be bound to the given manager.
-	 */
-	static ProgramPtr addEntryPoints(NodeManager& manager, const ProgramPtr& program, const ExpressionList& points);
-	
-	/**
-	 * Creates a new program node within the given manager which is equivalent to the given program except the
-	 * given entry point will be removed.
-	 *
-	 * @param manager the manager used to create the new node and to maintain all referenced nodes
-	 * @param program the program to be reduced by an entry point
-	 * @param point the entry point to be removed
-	 * @return a ProgramPtr referencing the resulting program. The life time of the referenced node
-	 * 						will be bound to the given manager.
-	 */
-	static ProgramPtr remEntryPoint(NodeManager& manager, const ProgramPtr& program, const ExpressionPtr& point);
-	
-	/**
-	 * Creates a new program node within the given manager which is equivalent to the given program except the
-	 * given entry points will be removed.
-	 *
-	 * @param manager the manager used to create the new node and to maintain all referenced nodes
-	 * @param program the program to be reduced by some entry points
-	 * @param points the entry points to be removed
-	 * @return a ProgramPtr referencing the resulting program. The life time of the referenced node
-	 * 						will be bound to the given manager.
-	 */
-	static ProgramPtr remEntryPoints(NodeManager& manager, const ProgramPtr& program, const ExpressionList& points);
-	
-	
-protected:
+		/**
+		 * Creates a new program node based on the given child list.
+		 *
+		 * @param children the list of children to be used within the resulting program
+		 */
+		Program(const NodeList& children) : Node(NT_Program, NC_Program, children), ProgramAccessor<Program, Pointer>::node_helper(getChildNodeList()) {}
 
-	/**
-	 * Implements the printing of this program into the given output stream.
-	 */
-	virtual std::ostream& printTo(std::ostream& out) const;
-	
-};
+	  protected:
+		/**
+		 * The function required for the clone process.
+		 */
+		virtual Program* createInstanceUsing(const NodeList& children) const {
+			return new Program(children);
+		}
+
+	  public:
+		/**
+		 * A factory method creating instances based on a child list
+		 */
+		static ProgramPtr get(NodeManager& manager, const NodeList& children) {
+			return manager.get(Program(children));
+		}
+
+	  public:
+		/**
+		 * Creates a new program node within the given manager combining the given set of entry points.
+		 *
+		 * @param manager the manager used to create the new node and to maintain all referenced nodes
+		 * @param entryPoints the list of entry points to be included within the resulting program.
+		 * @return a ProgramPtr referencing the resulting program. The life time of the referenced node
+		 * 						will be bound to the given manager.
+		 */
+		static ProgramPtr get(NodeManager& manager, const ExpressionList& entryPoints = ExpressionList());
+
+		/**
+		 * Creates a new program node within the given manager which is equivalent to the given program plus the
+		 * given, additional entry point.
+		 *
+		 * @param manager the manager used to create the new node and to maintain all referenced nodes
+		 * @param program the program to be extended by an additional entry point
+		 * @param point the additional entry point to be added
+		 * @return a ProgramPtr referencing the resulting program. The life time of the referenced node
+		 * 						will be bound to the given manager.
+		 */
+		static ProgramPtr addEntryPoint(NodeManager& manager, const ProgramPtr& program, const ExpressionPtr& point);
+
+		/**
+		 * Creates a new program node within the given manager which is equivalent to the given program plus the
+		 * given, additional entry points.
+		 *
+		 * @param manager the manager used to create the new node and to maintain all referenced nodes
+		 * @param program the program to be extended by additional entry points
+		 * @param points the additional entry points to be added
+		 * @return a ProgramPtr referencing the resulting program. The life time of the referenced node
+		 * 						will be bound to the given manager.
+		 */
+		static ProgramPtr addEntryPoints(NodeManager& manager, const ProgramPtr& program, const ExpressionList& points);
+
+		/**
+		 * Creates a new program node within the given manager which is equivalent to the given program except the
+		 * given entry point will be removed.
+		 *
+		 * @param manager the manager used to create the new node and to maintain all referenced nodes
+		 * @param program the program to be reduced by an entry point
+		 * @param point the entry point to be removed
+		 * @return a ProgramPtr referencing the resulting program. The life time of the referenced node
+		 * 						will be bound to the given manager.
+		 */
+		static ProgramPtr remEntryPoint(NodeManager& manager, const ProgramPtr& program, const ExpressionPtr& point);
+
+		/**
+		 * Creates a new program node within the given manager which is equivalent to the given program except the
+		 * given entry points will be removed.
+		 *
+		 * @param manager the manager used to create the new node and to maintain all referenced nodes
+		 * @param program the program to be reduced by some entry points
+		 * @param points the entry points to be removed
+		 * @return a ProgramPtr referencing the resulting program. The life time of the referenced node
+		 * 						will be bound to the given manager.
+		 */
+		static ProgramPtr remEntryPoints(NodeManager& manager, const ProgramPtr& program, const ExpressionList& points);
+
+
+	  protected:
+		/**
+		 * Implements the printing of this program into the given output stream.
+		 */
+		virtual std::ostream& printTo(std::ostream& out) const;
+	};
 
 } // end namespace core
 } // end namespace insieme
-

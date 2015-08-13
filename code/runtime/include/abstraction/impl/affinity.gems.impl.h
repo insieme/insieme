@@ -45,8 +45,8 @@
 void _irt_print_native_affinity_mask(irt_native_cpu_set mask) {
 #ifdef _GEMS_SIM
 #else
-	for(int i=0; i<CPU_SETSIZE; i++) {
-		IRT_INFO("%s", CPU_ISSET(i, &mask)?"1":"0");
+	for(int i = 0; i < CPU_SETSIZE; i++) {
+		IRT_INFO("%s", CPU_ISSET(i, &mask) ? "1" : "0");
 	}
 	IRT_INFO("\n");
 #endif
@@ -57,8 +57,7 @@ void irt_clear_affinity() {
 #else
 	// restore the base affinity mask
 	// printf("restoring base affinity:\n"); _irt_print_native_affinity_mask(irt_g_affinity_base_mask); printf("\n");
-	IRT_ASSERT(pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &irt_g_affinity_base_mask) == 0,
-	           IRT_ERR_INIT, "Error clearing thread affinity.");
+	IRT_ASSERT(pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &irt_g_affinity_base_mask) == 0, IRT_ERR_INIT, "Error clearing thread affinity.");
 #endif
 }
 
@@ -71,10 +70,8 @@ void irt_set_affinity(irt_affinity_mask irt_mask, irt_thread thread) {
 	}
 	cpu_set_t mask;
 	CPU_ZERO(&mask);
-	for(uint64 i=0; i<IRT_MAX_CORES; ++i)
-		if(irt_affinity_mask_is_set(irt_mask, i)) {
-			CPU_SET(irt_g_affinity_physical_mapping.map[i], &mask);
-		}
+	for(uint64 i = 0; i < IRT_MAX_CORES; ++i)
+		if(irt_affinity_mask_is_set(irt_mask, i)) { CPU_SET(irt_g_affinity_physical_mapping.map[i], &mask); }
 	IRT_ASSERT(pthread_setaffinity_np(thread, sizeof(cpu_set_t), &mask) == 0, IRT_ERR_INIT, "Error setting thread affinity.");
 #endif
 }
@@ -82,14 +79,12 @@ void irt_set_affinity(irt_affinity_mask irt_mask, irt_thread thread) {
 uint32 _irt_affinity_next_available_physical(uint32 start) {
 #ifdef _GEMS_SIM
 	return UINT_MAX;
-#else
-	for(uint32 i=start; i<CPU_SETSIZE; i++) {
-		if(CPU_ISSET(i, &irt_g_affinity_base_mask)) {
-			return i;
-		}
+	#else
+	for(uint32 i = start; i < CPU_SETSIZE; i++) {
+		if(CPU_ISSET(i, &irt_g_affinity_base_mask)) { return i; }
 	}
 	return UINT_MAX;
-#endif
+	#endif
 }
 
 // gets initial affinity mask and sets irt_g_affinity_base_mask
@@ -98,18 +93,16 @@ void _irt_affinity_init_base_mask() {
 #else
 	static bool initialized = false;
 
-	if(initialized) {
-		return;
-	}
+	if(initialized) { return; }
 
-	IRT_ASSERT(pthread_getaffinity_np(pthread_self(), sizeof(cpu_set_t), &irt_g_affinity_base_mask) == 0,
-	           IRT_ERR_INIT, "Error retrieving program base affinity mask.");
+	IRT_ASSERT(pthread_getaffinity_np(pthread_self(), sizeof(cpu_set_t), &irt_g_affinity_base_mask) == 0, IRT_ERR_INIT,
+	           "Error retrieving program base affinity mask.");
 
 	initialized = true;
 #endif
 }
 
-void irt_affinity_init_physical_mapping(irt_affinity_physical_mapping *out_mapping) {
+void irt_affinity_init_physical_mapping(irt_affinity_physical_mapping* out_mapping) {
 #ifdef _GEMS_SIM
 #else
 	uint32 cur = 0;
@@ -117,17 +110,15 @@ void irt_affinity_init_physical_mapping(irt_affinity_physical_mapping *out_mappi
 
 	_irt_affinity_init_base_mask();
 
-	for(i=0; i<IRT_MAX_CORES; ++i) {
+	for(i = 0; i < IRT_MAX_CORES; ++i) {
 		out_mapping->map[i] = _irt_affinity_next_available_physical(cur);
-		//printf("Physical affinity map: %u => %u\n", i, out_mapping->map[i]);
-		if(out_mapping->map[i] == UINT_MAX) {
-			break;
-		}
-		cur = out_mapping->map[i]+1;
+		// printf("Physical affinity map: %u => %u\n", i, out_mapping->map[i]);
+		if(out_mapping->map[i] == UINT_MAX) { break; }
+		cur = out_mapping->map[i] + 1;
 	}
-	for(i=i+1; i<IRT_MAX_CORES; ++i) { // fill remaining invalid cores, if any
+	for(i = i + 1; i < IRT_MAX_CORES; ++i) { // fill remaining invalid cores, if any
 		out_mapping->map[i] = UINT_MAX;
-		//printf("Physical affinity map: %u => %u\n", i, out_mapping->map[i]);
+		// printf("Physical affinity map: %u => %u\n", i, out_mapping->map[i]);
 	}
 #endif
 }
@@ -135,17 +126,15 @@ void irt_affinity_init_physical_mapping(irt_affinity_physical_mapping *out_mappi
 uint32 irt_affinity_cores_available() {
 #ifdef _GEMS_SIM
 	return NUM_CORES;
-#else
+	#else
 	_irt_affinity_init_base_mask();
-	
+
 	uint32 count = 0;
-	for(uint32 i=0; i<CPU_SETSIZE; ++i) {
-		if(CPU_ISSET(i, &irt_g_affinity_base_mask)) {
-			++count;
-		}
+	for(uint32 i = 0; i < CPU_SETSIZE; ++i) {
+		if(CPU_ISSET(i, &irt_g_affinity_base_mask)) { ++count; }
 	}
 	return count;
-#endif
+	#endif
 }
 
 #endif // ifndef __GUARD_ABSTRACTION_IMPL_AFFINITY_GEMS_IMPL_H

@@ -44,9 +44,7 @@
 // resolves the name of the file to be used for context capturing
 const char* irt_cap_profile_get_filename() {
 	const char* res = getenv("IRT_CONTEXT_FILE");
-	if(!res) {
-		res = "context.dat";
-	}
+	if(!res) { res = "context.dat"; }
 	return res;
 }
 
@@ -54,8 +52,8 @@ const char* irt_cap_profile_get_filename() {
 // -- the handling of the pointer substitution is also shared --
 
 typedef struct {
-	uint32 block;			// a block identifier
-	uint32 offset;			// the pointer offest within the block
+	uint32 block;  // a block identifier
+	uint32 offset; // the pointer offest within the block
 } irt_cap_pointer_substitute;
 
 

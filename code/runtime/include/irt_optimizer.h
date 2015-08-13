@@ -49,34 +49,36 @@
 #define IRT_RUNTIME_TUNING
 #endif
 
-void irt_optimizer_context_startup(irt_context *context);
-void irt_optimizer_context_destroy(irt_context *context);
+void irt_optimizer_context_startup(irt_context* context);
+void irt_optimizer_context_destroy(irt_context* context);
 
-void irt_optimizer_starting_pfor(irt_wi_implementation *impl, irt_work_item_range range, irt_work_group* group);
+void irt_optimizer_starting_pfor(irt_wi_implementation* impl, irt_work_item_range range, irt_work_group* group);
 
 #ifndef IRT_RUNTIME_TUNING_EXTENDED
-void irt_optimizer_completed_pfor(irt_wi_implementation *impl, uint64 time, irt_loop_sched_data* sched_data);
+void irt_optimizer_completed_pfor(irt_wi_implementation* impl, uint64 time, irt_loop_sched_data* sched_data);
 #else
-void irt_optimizer_completed_pfor(irt_wi_implementation *impl, irt_work_item_range range, uint64 total_time, irt_loop_sched_data *sched_data);
+void irt_optimizer_completed_pfor(irt_wi_implementation* impl, irt_work_item_range range, uint64 total_time, irt_loop_sched_data* sched_data);
 #endif
 
 /* OpenMP+ */
 
 typedef struct _irt_optimizer_resources {
-#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__, _output_conversion_code__) \
-    _data_type__ cpu_energy;
+#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__,                   \
+               _region_early_start_code__, _region_late_end_code__, _output_conversion_code__)                                                                 \
+	_data_type__ cpu_energy;
 #define ISOLATE_METRIC
 #define ISOLATE_CPU_ENERGY
 #include "irt_metrics.def"
 
-#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__, _output_conversion_code__) \
-    _data_type__ wall_time;
+#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__,                   \
+               _region_early_start_code__, _region_late_end_code__, _output_conversion_code__)                                                                 \
+	_data_type__ wall_time;
 #define ISOLATE_METRIC
 #define ISOLATE_WALL_TIME
 #include "irt_metrics.def"
 
 	int quality;
-	
+
 	int samplings;
 } irt_optimizer_resources;
 
@@ -93,7 +95,7 @@ typedef struct _irt_optimizer_wi_data_id {
 	uint64 eos;
 } irt_optimizer_wi_data_id;
 
-//uint32 irt_optimizer_hash(irt_optimizer_wi_data_id id) {
+// uint32 irt_optimizer_hash(irt_optimizer_wi_data_id id) {
 //    // Python integer tuple hash
 //    uint32 value = 0x345678;
 //
@@ -118,9 +120,9 @@ typedef struct _irt_optimizer_runtime_data {
 	irt_optimizer_resources cur_resources;
 	irt_optimizer_wi_data_id max;
 	irt_optimizer_param_qual_range param_qual_range;
-	bool hc_end;        // true if hill climbing completed
-	int16 hc_elem;      // element in irt_optimizer_wi_data_id currently hill climbed
-	int8 hc_dir;        // current hill climbing direction
+	bool hc_end;   // true if hill climbing completed
+	int16 hc_elem; // element in irt_optimizer_wi_data_id currently hill climbed
+	int8 hc_dir;   // current hill climbing direction
 	irt_spinlock spinlock;
 } irt_optimizer_runtime_data;
 
@@ -130,7 +132,7 @@ void irt_optimizer_apply_dvfs(irt_wi_implementation_variant* variant);
 void irt_optimizer_remove_dvfs(irt_wi_implementation_variant* variant);
 uint32 irt_optimizer_apply_dct(irt_wi_implementation_variant* variant);
 irt_optimizer_runtime_data* irt_optimizer_set_wrapping_optimizations(irt_wi_implementation_variant* target_variant,
-        irt_wi_implementation_variant* source_variant);
+                                                                     irt_wi_implementation_variant* source_variant);
 void irt_optimizer_reset_wrapping_optimizations(irt_wi_implementation_variant* target_variant, irt_optimizer_runtime_data* data);
 
 #endif // ifndef __GUARD_IRT_OPTIMIZER_H

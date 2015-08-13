@@ -45,22 +45,21 @@ namespace utils {
 namespace petri_net {
 
 
-template<typename Plotable>
-void plot(const Plotable& plotable, const std::string& file = "petri_net.svg") {
+	template <typename Plotable>
+	void plot(const Plotable& plotable, const std::string& file = "petri_net.svg") {
+		// write stuff to a dot file
+		{
+			// open file
+			std::ofstream out("petri_net.dot", std::ios::out);
 
-	// write stuff to a dot file
-	{
-		// open file
-		std::ofstream out("petri_net.dot", std::ios::out);
-		
-		// write file
-		plotable.dumpTo(out);
+			// write file
+			plotable.dumpTo(out);
+		}
+
+		// create svg
+		std::string command = std::string("dot -Tsvg petri_net.dot -o ") + file;
+		system(command.c_str());
 	}
-	
-	// create svg
-	std::string command = std::string("dot -Tsvg petri_net.dot -o ") + file;
-	system(command.c_str());
-}
 
 } // end namespace petri_net
 } // end namespace utils

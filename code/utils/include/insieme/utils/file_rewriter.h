@@ -46,86 +46,71 @@
 namespace insieme {
 namespace utils {
 
-class Rewriter {
+	class Rewriter {
+	  public:
+		class CodeModification : public boost::less_than_comparable<CodeModification, CodeModification>, public utils::Printable {
+		  public:
+			enum ModificationType { INSERT, REMOVE, REPLACE };
 
-public:
-	class CodeModification:
-		public boost::less_than_comparable<CodeModification, CodeModification>,
-		public utils::Printable {
-	public:
-		enum ModificationType { INSERT, REMOVE, REPLACE };
-		
-		CodeModification(const SourceLocation& locStart,
-		                 const SourceLocation& locEnd,
-		                 const std::string& code,
-		                 const ModificationType& type);
-		                 
-		CodeModification(const SourceLocation& locStart,
-		                 const std::string& code);
-		                 
-		                 
-		// this operation is needed by the sort algorithm in order to order the modification hints
-		// accordingly with the file name and their location.
-		bool operator<(const CodeModification& other) const;
-		
-		inline bool operator==(const CodeModification& other) const {
-			return fileName == other.fileName &&
-			       locStart == other.locStart &&
-			       locEnd == other.locEnd &&
-			       type == other.type;
-		}
-		
-		inline const std::string getFileName() const {
-			return fileName;
-		}
-		
-		inline const SourceLocation getStartLoc() const {
-			return locStart;
-		}
-		
-		inline const SourceLocation getEndLoc() const {
-			return locEnd;
-		}
-		
-		inline const ModificationType getType() const {
-			return type;
-		}
-		
-		inline const std::string getCode() const {
-			return code;
-		}
-		
-		static CodeModification createInsertion(const SourceLocation& locStart,
-		                                        const std::string& insertionCode) {
-			return CodeModification(locStart, SourceLocation(), insertionCode, INSERT);
-		}
-		
-		static CodeModification createRemoval(const SourceLocation& locStart,
-		                                      const SourceLocation& locEnd) {
-			return CodeModification(locStart, locEnd, std::string(), REMOVE);
-		}
-		
-		static CodeModification createReplacement(const SourceLocation& locStart,
-		        const SourceLocation& locEnd,
-		        const std::string& replacementCode) {
-			return CodeModification(locStart, locEnd, replacementCode, REPLACE);
-		}
-		
-		std::ostream& printTo(std::ostream& out) const;
-		
-	private:
-		const std::string 		fileName;
-		const SourceLocation 	locStart;
-		const SourceLocation 	locEnd;
-		const std::string 		code;
-		const ModificationType	type;
+			CodeModification(const SourceLocation& locStart, const SourceLocation& locEnd, const std::string& code, const ModificationType& type);
+
+			CodeModification(const SourceLocation& locStart, const std::string& code);
+
+
+			// this operation is needed by the sort algorithm in order to order the modification hints
+			// accordingly with the file name and their location.
+			bool operator<(const CodeModification& other) const;
+
+			inline bool operator==(const CodeModification& other) const {
+				return fileName == other.fileName && locStart == other.locStart && locEnd == other.locEnd && type == other.type;
+			}
+
+			inline const std::string getFileName() const {
+				return fileName;
+			}
+
+			inline const SourceLocation getStartLoc() const {
+				return locStart;
+			}
+
+			inline const SourceLocation getEndLoc() const {
+				return locEnd;
+			}
+
+			inline const ModificationType getType() const {
+				return type;
+			}
+
+			inline const std::string getCode() const {
+				return code;
+			}
+
+			static CodeModification createInsertion(const SourceLocation& locStart, const std::string& insertionCode) {
+				return CodeModification(locStart, SourceLocation(), insertionCode, INSERT);
+			}
+
+			static CodeModification createRemoval(const SourceLocation& locStart, const SourceLocation& locEnd) {
+				return CodeModification(locStart, locEnd, std::string(), REMOVE);
+			}
+
+			static CodeModification createReplacement(const SourceLocation& locStart, const SourceLocation& locEnd, const std::string& replacementCode) {
+				return CodeModification(locStart, locEnd, replacementCode, REPLACE);
+			}
+
+			std::ostream& printTo(std::ostream& out) const;
+
+		  private:
+			const std::string fileName;
+			const SourceLocation locStart;
+			const SourceLocation locEnd;
+			const std::string code;
+			const ModificationType type;
+		};
+
+		typedef std::set<CodeModification> CodeModificationList;
+
+		static void writeBack(const CodeModificationList& mod, const std::string& insiemeFileName = "insieme.c");
 	};
-	
-	typedef std::set<CodeModification> CodeModificationList;
-	
-	static void writeBack(const CodeModificationList& mod, const std::string& insiemeFileName = "insieme.c");
-};
-
 
 
 } // End utils namespace

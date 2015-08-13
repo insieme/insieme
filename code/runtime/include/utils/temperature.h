@@ -40,8 +40,8 @@
 
 #include "abstraction/temperature_intel.h"
 
-uint64(*irt_get_temperature_core)(const irt_worker* worker);
-uint64(*irt_get_temperature_package)(const irt_worker* worker);
+uint64 (*irt_get_temperature_core)(const irt_worker* worker);
+uint64 (*irt_get_temperature_package)(const irt_worker* worker);
 
 void irt_temperature_select_instrumentation_method();
 

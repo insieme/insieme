@@ -54,24 +54,24 @@
 
 // forward declarations
 namespace clang {
-class ASTUnit;
-class ASTContext;
-class ASTConsumer;
-class Preprocessor;
-class DiagnosticsEngine;
-class SourceManager;
-class Parser;
-class Token;
-class Scope;
-class Expr;
-class TargetInfo;
-class Sema;
-class FileSystemOptions;
+	class ASTUnit;
+	class ASTContext;
+	class ASTConsumer;
+	class Preprocessor;
+	class DiagnosticsEngine;
+	class SourceManager;
+	class Parser;
+	class Token;
+	class Scope;
+	class Expr;
+	class TargetInfo;
+	class Sema;
+	class FileSystemOptions;
 
-namespace idx {
-class Program;
-class Indexer;
-}
+	namespace idx {
+		class Program;
+		class Indexer;
+	}
 } // end clang namespace
 
 class TypeConversion_FileTest_Test;
@@ -85,19 +85,19 @@ class StmtConversion_FileTest_Test;
 class ParserProxy {
 	static ParserProxy* currParser;
 	clang::Parser* mParser;
-	
-	ParserProxy(clang::Parser* parser): mParser(parser) { }
-public:
 
+	ParserProxy(clang::Parser* parser) : mParser(parser) {}
+
+  public:
 	/**
 	 * Initialize the proxy with the parser used to parse the current translation unit,
 	 * call this method with a NULL parser causes an assertion.
 	 */
-	static void init(clang::Parser* parser=NULL) {
+	static void init(clang::Parser* parser = NULL) {
 		assert_true(parser) << "ParserProxy cannot be initialized with a NULL parser";
 		currParser = new ParserProxy(parser);
 	}
-	
+
 	/**
 	 * the discard method is called when the Parser is no longer valid.
 	 */
@@ -105,7 +105,7 @@ public:
 		delete currParser;
 		currParser = NULL;
 	}
-	
+
 	/**
 	 * Returns the current parser, if not initialized an assertion is thrown.
 	 */
@@ -113,7 +113,7 @@ public:
 		assert_true(currParser) << "Parser proxy not initialized.";
 		return *currParser;
 	}
-	
+
 	/**
 	 * Parse an expression using the clang parser starting from the current token
 	 */
@@ -136,73 +136,73 @@ public:
 namespace insieme {
 namespace frontend {
 
-class InsiemeSema;
+	class InsiemeSema;
 
-namespace pragma {
-// forward declarations for pragma
-class Pragma;
-typedef std::shared_ptr<Pragma> PragmaPtr;
-typedef std::vector<PragmaPtr> 	PragmaList;
+	namespace pragma {
+		// forward declarations for pragma
+		class Pragma;
+		typedef std::shared_ptr<Pragma> PragmaPtr;
+		typedef std::vector<PragmaPtr> PragmaList;
 
-class MatchMap;
-} // end pragma namespace
+		class MatchMap;
+	} // end pragma namespace
 
-// ------------------------------------ ClangCompiler ---------------------------
-/**
- * ClangCompiler is a wrapper class for the Clang compiler main interfaces. The main goal is to hide implementation
- * details to the client.
- */
-class ClangCompiler: boost::noncopyable {
-	struct ClangCompilerImpl;
-	
-	ClangCompilerImpl* pimpl;
-	
-	const ConversionSetup& config;
-	
-public:
+	// ------------------------------------ ClangCompiler ---------------------------
 	/**
-	 * Creates a compiler instance from the given conversion job.
+	 * ClangCompiler is a wrapper class for the Clang compiler main interfaces. The main goal is to hide implementation
+	 * details to the client.
 	 */
-	ClangCompiler(const ConversionSetup& config, const path& file);
-	
-	/**
-	 * Returns clang's ASTContext
-	 * @return
-	 */
-	clang::ASTContext& getASTContext() const;
-	
-	/**
-	 * Returns clang's SourceManager
-	 * @return
-	 */
-	clang::SourceManager& getSourceManager() const;
-	
-	/**
-	 * Returns clang's Prepocessor
-	 * @return
-	 */
-	clang::Preprocessor& getPreprocessor() const;
-	
-	/**
-	 * Returns clang's Diagnostics
-	 * @return
-	 */
-	clang::DiagnosticsEngine& getDiagnostics() const;
-	
-	/**
-	 * Returns clang's TargetInfo
-	 * @return
-	 */
-	clang::TargetInfo& getTargetInfo() const;
-	
-	/**
-	 * Determines whether the represented translation unit
-	 * is based on C or C++.
-	 */
-	bool isCXX() const;
-	
-	~ClangCompiler();
-};
+	class ClangCompiler : boost::noncopyable {
+		struct ClangCompilerImpl;
+
+		ClangCompilerImpl* pimpl;
+
+		const ConversionSetup& config;
+
+	  public:
+		/**
+		 * Creates a compiler instance from the given conversion job.
+		 */
+		ClangCompiler(const ConversionSetup& config, const path& file);
+
+		/**
+		 * Returns clang's ASTContext
+		 * @return
+		 */
+		clang::ASTContext& getASTContext() const;
+
+		/**
+		 * Returns clang's SourceManager
+		 * @return
+		 */
+		clang::SourceManager& getSourceManager() const;
+
+		/**
+		 * Returns clang's Prepocessor
+		 * @return
+		 */
+		clang::Preprocessor& getPreprocessor() const;
+
+		/**
+		 * Returns clang's Diagnostics
+		 * @return
+		 */
+		clang::DiagnosticsEngine& getDiagnostics() const;
+
+		/**
+		 * Returns clang's TargetInfo
+		 * @return
+		 */
+		clang::TargetInfo& getTargetInfo() const;
+
+		/**
+		 * Determines whether the represented translation unit
+		 * is based on C or C++.
+		 */
+		bool isCXX() const;
+
+		~ClangCompiler();
+	};
 
 } // End frontend namespace
 } // End insieme namespace

@@ -42,37 +42,34 @@ namespace insieme {
 namespace backend {
 namespace sequential {
 
-// A forward declaration of the sequential backend implementation
-class SequentialBackend;
-typedef std::shared_ptr<SequentialBackend> SequentialBackendPtr;
-
-/**
- * The sequential backend aims on generating pure sequential code without
- * any dependencies to any runtime implementation. This backend converts
- * IR into pure C99 / C++98 target code.
- */
-class SequentialBackend : public Backend {
-public:
+	// A forward declaration of the sequential backend implementation
+	class SequentialBackend;
+	typedef std::shared_ptr<SequentialBackend> SequentialBackendPtr;
 
 	/**
-	 * A factory method obtaining a smart pointer referencing a
-	 * fresh instance of the sequential backend using the default configuration.
-	 *
-	 * @return a smart pointer to a fresh instance of the sequential backend
+	 * The sequential backend aims on generating pure sequential code without
+	 * any dependencies to any runtime implementation. This backend converts
+	 * IR into pure C99 / C++98 target code.
 	 */
-	static SequentialBackendPtr getDefault();
-	
-protected:
+	class SequentialBackend : public Backend {
+	  public:
+		/**
+		 * A factory method obtaining a smart pointer referencing a
+		 * fresh instance of the sequential backend using the default configuration.
+		 *
+		 * @return a smart pointer to a fresh instance of the sequential backend
+		 */
+		static SequentialBackendPtr getDefault();
 
-	/**
-	 * Creates the converter instance realizing the sequential backend conversion job.
-	 *
-	 * @param manager the manager to be utilized for the conversion
-	 * @return a converter instance conducting the code conversion
-	 */
-	virtual Converter buildConverter(core::NodeManager& manager) const;
-	
-};
+	  protected:
+		/**
+		 * Creates the converter instance realizing the sequential backend conversion job.
+		 *
+		 * @param manager the manager to be utilized for the conversion
+		 * @return a converter instance conducting the code conversion
+		 */
+		virtual Converter buildConverter(core::NodeManager& manager) const;
+	};
 
 } // end namespace sequential
 } // end namespace backend

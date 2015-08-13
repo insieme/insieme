@@ -39,18 +39,17 @@
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/types/subtyping.h"
 
-#define DEBUG_CHECK(expr)\
-	core::checks::MessageList&& errors = core::checks::check(expr); \
-	if(!errors.empty()){\
-		std::cout << " ======================= " << std::endl; \
-		dumpPretty(expr); \
-		std::cout << errors << std::endl;\
-		std::cout << " ======================= " << std::endl; \
-		abort();\
+#define DEBUG_CHECK(expr)                                                                                                                                      \
+	core::checks::MessageList&& errors = core::checks::check(expr);                                                                                            \
+	if(!errors.empty()) {                                                                                                                                      \
+		std::cout << " ======================= " << std::endl;                                                                                                 \
+		dumpPretty(expr);                                                                                                                                      \
+		std::cout << errors << std::endl;                                                                                                                      \
+		std::cout << " ======================= " << std::endl;                                                                                                 \
+		abort();                                                                                                                                               \
 	}
 
-#define PRINTLOCATION(expr)\
-	std::cout << utils::location(expr->getLocStart(), expr->getASTContext().getSourceManager()) << std::endl;
+#define PRINTLOCATION(expr) std::cout << utils::location(expr->getLocStart(), expr->getASTContext().getSourceManager()) << std::endl;
 
 
 ////////////////////////////////////////////////////////////////////////////
@@ -59,12 +58,11 @@
 //
 #else
 
-#define DEBUG_CHECK(expr)\
-	{ }
+#define DEBUG_CHECK(expr)                                                                                                                                      \
+	{}
 
-#define PRINTLOCATION(expr)\
-	{ }
-
+#define PRINTLOCATION(expr)                                                                                                                                    \
+	{}
 
 
 #endif

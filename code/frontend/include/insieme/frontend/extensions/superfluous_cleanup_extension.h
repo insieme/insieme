@@ -43,7 +43,7 @@ namespace frontend {
 namespace extensions {
 
 namespace cleanup {
-core::LambdaExprPtr removeObviouslySuperfluousCode(core::LambdaExprPtr lambda);
+	core::LambdaExprPtr removeObviouslySuperfluousCode(core::LambdaExprPtr lambda);
 }
 
 /**

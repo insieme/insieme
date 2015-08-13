@@ -52,8 +52,7 @@ bool irt_time_ticks_available() {
 	__asm__ __volatile__("cpuid" : "=d"(d) : "a"(0x00000001) : "ebx", "ecx");
 	if((d & 0x00000010) > 0) {
 		return 1;
-	}
-	else {
+	} else {
 		return 0;
 	}
 }
@@ -63,8 +62,7 @@ bool irt_time_ticks_constant() {
 	__asm__ __volatile__("cpuid" : "=d"(d) : "a"(0x80000007) : "ebx", "ecx");
 	if((d & 0x00000100) > 0) {
 		return 1;
-	}
-	else {
+	} else {
 		return 0;
 	}
 }

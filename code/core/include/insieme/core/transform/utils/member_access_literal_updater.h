@@ -47,18 +47,17 @@ namespace transform {
 namespace utils {
 
 
-/**
- * NodeMapper which checks if the type literal argument of composite and tuple calls are aligned with the actual type of the struct/tuple.
- * If not the type literal is replaced with the appropriate one
- */
-class MemberAccessLiteralUpdater : public insieme::core::transform::CachedNodeMapping {
-	IRBuilder& builder;
-public:
-	MemberAccessLiteralUpdater(IRBuilder& build) : builder(build) {}
-	const core::NodePtr resolveElement(const core::NodePtr& element);
-	
-};
+	/**
+	 * NodeMapper which checks if the type literal argument of composite and tuple calls are aligned with the actual type of the struct/tuple.
+	 * If not the type literal is replaced with the appropriate one
+	 */
+	class MemberAccessLiteralUpdater : public insieme::core::transform::CachedNodeMapping {
+		IRBuilder& builder;
 
+	  public:
+		MemberAccessLiteralUpdater(IRBuilder& build) : builder(build) {}
+		const core::NodePtr resolveElement(const core::NodePtr& element);
+	};
 }
 }
 }

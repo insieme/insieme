@@ -69,14 +69,14 @@ void irt_scheduling_set_dop(uint32 parallelism) {
 
 void irt_scheduling_set_dop_per_socket(uint32 sockets, uint32* dops) {
 	uint32 parallelism = 0;
-	for(uint32 s = 0; s<sockets; ++s) {
+	for(uint32 s = 0; s < sockets; ++s) {
 		parallelism += dops[s];
 	}
 	irt_scheduling_set_dop(parallelism);
-	
+
 	uint32 worker_num = 0;
-	for(uint32 s = 0; s<sockets; ++s) {
-		for(uint32 c = 0; c<dops[s]; ++c) {
+	for(uint32 s = 0; s < sockets; ++s) {
+		for(uint32 c = 0; c < dops[s]; ++c) {
 			irt_worker_move_to_socket(irt_g_workers[worker_num], s);
 			worker_num++;
 		}
@@ -106,31 +106,29 @@ bool _irt_scheduling_sleep_if_dop_inactive(irt_worker* self) {
 
 void irt_scheduling_loop(irt_worker* self) {
 	while(irt_atomic_load(&self->state) != IRT_WORKER_STATE_STOP) {
-#ifdef IRT_WORKER_SLEEPING
-#endif // IRT_WORKER_SLEEPING
+	#ifdef IRT_WORKER_SLEEPING
+	#endif // IRT_WORKER_SLEEPING
 		// while there is something to do, continue scheduling
 		while(irt_scheduling_iteration(self)) {
-			IRT_DEBUG("%sWorker %3d scheduled something.\n", self->id.thread==0?"":"\t\t\t\t\t\t", self->id.thread);
+			IRT_DEBUG("%sWorker %3d scheduled something.\n", self->id.thread == 0 ? "" : "\t\t\t\t\t\t", self->id.thread);
 			irt_atomic_store(&self->cur_wi->state, IRT_WI_STATE_SUSPENDED);
 			self->cur_wi = NULL;
 			if(self->finalize_wi != NULL) {
 				irt_wi_finalize(self, self->finalize_wi);
 				self->finalize_wi = NULL;
 			}
-#ifdef IRT_ASTEROIDEA_STACKS
+			#ifdef IRT_ASTEROIDEA_STACKS
 			if(self->share_stack_wi != NULL) {
-				IRT_DEBUG(" - %p allowing stack stealing: %d children\n", (void*) self->share_stack_wi, *self->share_stack_wi->num_active_children);
+				IRT_DEBUG(" - %p allowing stack stealing: %d children\n", (void*)self->share_stack_wi, *self->share_stack_wi->num_active_children);
 				IRT_ASSERT(irt_atomic_bool_compare_and_swap(&self->share_stack_wi->stack_available, false, true, bool), IRT_ERR_INTERNAL,
 				           "Asteroidea: Could not make stack available after suspension.\n");
 				self->share_stack_wi = NULL;
 			}
-#endif //IRT_ASTEROIDEA_STACKS
-			if(_irt_scheduling_sleep_if_dop_inactive(self)) {
-				break;
-			}
+			#endif // IRT_ASTEROIDEA_STACKS
+			if(_irt_scheduling_sleep_if_dop_inactive(self)) { break; }
 		}
 		_irt_scheduling_sleep_if_dop_inactive(self);
-#ifdef IRT_WORKER_SLEEPING
+		#ifdef IRT_WORKER_SLEEPING
 		irt_mutex_lock(&irt_g_active_worker_mutex);
 		// check if self is the last worker
 		if(irt_g_active_worker_count <= 1 || self->wake_signal) {
@@ -150,7 +148,7 @@ void irt_scheduling_loop(irt_worker* self) {
 		irt_g_active_worker_count++;
 		irt_atomic_val_compare_and_swap(&self->state, IRT_WORKER_STATE_SLEEPING, IRT_WORKER_STATE_RUNNING, uint32);
 		irt_mutex_unlock(&irt_g_active_worker_mutex);
-#endif // IRT_WORKER_SLEEPING
+		#endif // IRT_WORKER_SLEEPING
 	}
 }
 
@@ -159,9 +157,9 @@ inline void _irt_signal_worker(irt_worker* target) {
 	irt_mutex_lock(&irt_g_active_worker_mutex);
 	target->wake_signal = true;
 	irt_cond_wake_one(&target->wait_cond);
-	IRT_DEBUG("%sWorker %3d signaled.\n", target->id.thread==0?"":"\t\t\t\t\t\t", target->id.thread);
+	IRT_DEBUG("%sWorker %3d signaled.\n", target->id.thread == 0 ? "" : "\t\t\t\t\t\t", target->id.thread);
 	irt_mutex_unlock(&irt_g_active_worker_mutex);
-#endif // IRT_WORKER_SLEEPING
+	#endif // IRT_WORKER_SLEEPING
 }
 
 

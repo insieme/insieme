@@ -44,11 +44,10 @@ namespace insieme {
 namespace utils {
 namespace debug {
 
-/**
- * Returns a textual representation of the current backtrace, if supported in the current compilation environment.
- */
-std::string getBacktraceString(int offset = 1);
-
+	/**
+	 * Returns a textual representation of the current backtrace, if supported in the current compilation environment.
+	 */
+	std::string getBacktraceString(int offset = 1);
 }
 }
 }

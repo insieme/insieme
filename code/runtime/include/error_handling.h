@@ -63,48 +63,62 @@ struct _irt_error {
 #ifdef _GEMS_SIM
 /* lcc does not support macro called with 0 variadic arguments. The solution is to make the last named
  * argument part of the variadic arguments in a way to have always at least one variadic argument */
-#define IRT_ASSERT(__condition, __errcode, /*__message,*/ ...) \
-		/* All following variadic macros used to have an explicit "message" parameter" which has been removed for this ^^ very reason */ \
-		if(!(__condition)) { \
-			fprintf(stderr, "IRT Assertion failure in %s#%d:\n", __FILE__, __LINE__); \
-			irt_throw_string_error(__errcode, __VA_ARGS__); \
-		}
-#define IRT_WARN(/*__message,*/ ...) { \
-			fprintf(stderr, "IRT Warning in %s#%d:\n", __FILE__, __LINE__); \
-			fprintf(stderr, __VA_ARGS__); fprintf(stderr, "\n"); fflush(stderr); \
-		}
-#define IRT_INFO(...) { \
-			printf(__VA_ARGS__); fflush(stdout); \
-		}
+#define IRT_ASSERT(__condition, __errcode, /*__message,*/...)                                                                                                  \
+	/* All following variadic macros used to have an explicit "message" parameter" which has been removed for this ^^ very reason */                           \
+	if(!(__condition)) {                                                                                                                                       \
+		fprintf(stderr, "IRT Assertion failure in %s#%d:\n", __FILE__, __LINE__);                                                                              \
+		irt_throw_string_error(__errcode, __VA_ARGS__);                                                                                                        \
+	}
+#define IRT_WARN(/*__message,*/...)                                                                                                                            \
+	{                                                                                                                                                          \
+		fprintf(stderr, "IRT Warning in %s#%d:\n", __FILE__, __LINE__);                                                                                        \
+		fprintf(stderr, __VA_ARGS__);                                                                                                                          \
+		fprintf(stderr, "\n");                                                                                                                                 \
+		fflush(stderr);                                                                                                                                        \
+	}
+#define IRT_INFO(...)                                                                                                                                          \
+	{                                                                                                                                                          \
+		printf(__VA_ARGS__);                                                                                                                                   \
+		fflush(stdout);                                                                                                                                        \
+	}
 #ifdef IRT_VERBOSE
 #define IRT_DEBUG_ONLY(__code__) __code__
-#define IRT_DEBUG(...) { \
-				printf("IRT Debug Info (%s#%d): ", __FILE__, __LINE__); \
-				printf(__VA_ARGS__); printf("\n"); fflush(stdout); \
-			}
+#define IRT_DEBUG(...)                                                                                                                                         \
+	{                                                                                                                                                          \
+		printf("IRT Debug Info (%s#%d): ", __FILE__, __LINE__);                                                                                                \
+		printf(__VA_ARGS__);                                                                                                                                   \
+		printf("\n");                                                                                                                                          \
+		fflush(stdout);                                                                                                                                        \
+	}
 #else
 #define IRT_DEBUG_ONLY(__code__)
 #define IRT_DEBUG(...)
 #endif
 #else
-#define IRT_ASSERT(__condition, __errcode, ...) \
-		if(!(__condition)) { \
-			fprintf(stderr, "IRT Assertion failure in %s#%d:\n", __FILE__, __LINE__); \
-			irt_throw_string_error(__errcode, __VA_ARGS__); \
-		}
-#define IRT_WARN(...) { \
-			fprintf(stderr, "IRT Warning in %s#%d:\n", __FILE__, __LINE__); \
-			fprintf(stderr, __VA_ARGS__); fflush(stderr); \
-		}
-#define IRT_INFO(...) { \
-			printf(__VA_ARGS__); fflush(stdout); \
-		}
+#define IRT_ASSERT(__condition, __errcode, ...)                                                                                                                \
+	if(!(__condition)) {                                                                                                                                       \
+		fprintf(stderr, "IRT Assertion failure in %s#%d:\n", __FILE__, __LINE__);                                                                              \
+		irt_throw_string_error(__errcode, __VA_ARGS__);                                                                                                        \
+	}
+#define IRT_WARN(...)                                                                                                                                          \
+	{                                                                                                                                                          \
+		fprintf(stderr, "IRT Warning in %s#%d:\n", __FILE__, __LINE__);                                                                                        \
+		fprintf(stderr, __VA_ARGS__);                                                                                                                          \
+		fflush(stderr);                                                                                                                                        \
+	}
+#define IRT_INFO(...)                                                                                                                                          \
+	{                                                                                                                                                          \
+		printf(__VA_ARGS__);                                                                                                                                   \
+		fflush(stdout);                                                                                                                                        \
+	}
 #ifdef IRT_VERBOSE
 #define IRT_DEBUG_ONLY(__code__) __code__
-#define IRT_DEBUG(...) { \
-				printf("IRT Debug Info (%s#%d): ", __FILE__, __LINE__); \
-				printf(__VA_ARGS__); fflush(stdout); \
-			}
+#define IRT_DEBUG(...)                                                                                                                                         \
+	{                                                                                                                                                          \
+		printf("IRT Debug Info (%s#%d): ", __FILE__, __LINE__);                                                                                                \
+		printf(__VA_ARGS__);                                                                                                                                   \
+		fflush(stdout);                                                                                                                                        \
+	}
 #else
 #define IRT_DEBUG_ONLY(__code__)
 #define IRT_DEBUG(...)
@@ -112,7 +126,9 @@ struct _irt_error {
 #endif
 #else
 #define IRT_DEBUG_PRINTS_OFF
-#define IRT_ASSERT(__condition, __errcode, ...) if(__condition);
+#define IRT_ASSERT(__condition, __errcode, ...)                                                                                                                \
+	if(__condition)                                                                                                                                            \
+		;
 #define IRT_WARN(...)
 #define IRT_INFO(...)
 #define IRT_DEBUG(...)

@@ -45,143 +45,142 @@ namespace insieme {
 namespace core {
 
 
-// **********************************************************************************
-// 									Node Type Traits
-// **********************************************************************************
+	// **********************************************************************************
+	// 									Node Type Traits
+	// **********************************************************************************
 
-namespace detail {
+	namespace detail {
 
-/**
- * A helper for defining node traits ...
- */
-template<
-    typename T,
-    template<typename D, template <typename P> class P> class A
-    >
-struct node_type_helper {
-	typedef T type;
-	typedef Pointer<const T> ptr_type;
-	typedef Address<const T> adr_type;
-	
-	template<template <typename P> class P> struct accessor {
-		typedef A<P<const T>, P> type;
-	};
-	
-	typedef typename accessor<Pointer>::type ptr_accessor_type;
-	typedef typename accessor<Address>::type adr_accessor_type;
-};
+		/**
+		 * A helper for defining node traits ...
+		 */
+		template <typename T, template <typename D, template <typename P> class P> class A>
+		struct node_type_helper {
+			typedef T type;
+			typedef Pointer<const T> ptr_type;
+			typedef Address<const T> adr_type;
 
-template<
-    typename T,
-    NodeType N,
-    template<typename D, template <typename P> class P> class Accessor
-    >
-struct concrete_node_type_helper : public node_type_helper<T,Accessor> {
-	BOOST_STATIC_CONSTANT(NodeType, nt_value=N);
-};
+			template <template <typename P> class P>
+			struct accessor {
+				typedef A<P<const T>, P> type;
+			};
 
-}
+			typedef typename accessor<Pointer>::type ptr_accessor_type;
+			typedef typename accessor<Address>::type adr_accessor_type;
+		};
 
-/**
- * A type trait linking node types to their properties.
- */
-template<typename T>
-struct node_type;
-
-template<typename T>
-struct concrete_node_type;
-
-/**
- * A trait struct linking node type values to the represented node's properties.
- */
-template<NodeType typ>
-struct to_node_type;
-
-#define CONCRETE(NAME) \
-		template<> struct concrete_node_type<NAME> : public detail::concrete_node_type_helper<NAME, NT_ ## NAME, NAME ## Accessor> {}; \
-		template<> struct to_node_type<NT_ ## NAME> : public concrete_node_type<NAME> {};
-#include "insieme/core/ir_nodes.def"
-#undef CONCRETE
-
-#define NODE(NAME) \
-		template<> struct node_type<NAME> : public detail::node_type_helper<NAME, NAME ## Accessor> { \
-			static const std::string& getName() { \
-				static const std::string name = #NAME; \
-				return name; \
-			} \
-		}; \
-		template<> struct node_type<const NAME> : public node_type<NAME> { };
-#include "insieme/core/ir_nodes.def"
-#undef NODE
-
-/**
- * Determines whether the given node type belongs to the requested category.
- */
-template<NodeCategory category>
-bool isA(NodeType type) {
-	switch(type) {
-#define CONCRETE(KIND) \
-			case NT_ ## KIND : return std::is_base_of<typename node_category_trait<category>::base_type, typename to_node_type<NT_##KIND>::type>::value;
-#include "insieme/core/ir_nodes.def"
-#undef CONCRETE
+		template <typename T, NodeType N, template <typename D, template <typename P> class P> class Accessor>
+		struct concrete_node_type_helper : public node_type_helper<T, Accessor> {
+			BOOST_STATIC_CONSTANT(NodeType, nt_value = N);
+		};
 	}
-	return false;
-}
 
-// **********************************************************************************
-// 									Node Child Type
-// **********************************************************************************
+	/**
+	 * A type trait linking node types to their properties.
+	 */
+	template <typename T>
+	struct node_type;
+
+	template <typename T>
+	struct concrete_node_type;
+
+	/**
+	 * A trait struct linking node type values to the represented node's properties.
+	 */
+	template <NodeType typ>
+	struct to_node_type;
+
+	#define CONCRETE(NAME)                                                                                                                                     \
+		template <>                                                                                                                                            \
+		struct concrete_node_type<NAME> : public detail::concrete_node_type_helper<NAME, NT_##NAME, NAME##Accessor> {};                                        \
+		template <>                                                                                                                                            \
+		struct to_node_type<NT_##NAME> : public concrete_node_type<NAME> {};
+	#include "insieme/core/ir_nodes.def"
+	#undef CONCRETE
+
+	#define NODE(NAME)                                                                                                                                         \
+		template <>                                                                                                                                            \
+		struct node_type<NAME> : public detail::node_type_helper<NAME, NAME##Accessor> {                                                                       \
+			static const std::string& getName() {                                                                                                              \
+				static const std::string name = #NAME;                                                                                                         \
+				return name;                                                                                                                                   \
+			}                                                                                                                                                  \
+		};                                                                                                                                                     \
+		template <>                                                                                                                                            \
+		struct node_type<const NAME> : public node_type<NAME> {};
+	#include "insieme/core/ir_nodes.def"
+	#undef NODE
+
+	/**
+	 * Determines whether the given node type belongs to the requested category.
+	 */
+	template <NodeCategory category>
+	bool isA(NodeType type) {
+		switch(type) {
+		#define CONCRETE(KIND)                                                                                                                                 \
+			case NT_##KIND:                                                                                                                                    \
+				return std::is_base_of<typename node_category_trait<category>::base_type, typename to_node_type<NT_##KIND>::type>::value;
+		#include "insieme/core/ir_nodes.def"
+		#undef CONCRETE
+		}
+		return false;
+	}
+
+	// **********************************************************************************
+	// 									Node Child Type
+	// **********************************************************************************
 
 
-namespace detail {
+	namespace detail {
 
-/**
- * A small helper struct used for defining the node_child_type type trait.
- */
-template<typename T>
-struct node_child_type_helper {
-	typedef T type;
-	typedef Pointer<const T> ptr_type;
-};
+		/**
+		 * A small helper struct used for defining the node_child_type type trait.
+		 */
+		template <typename T>
+		struct node_child_type_helper {
+			typedef T type;
+			typedef Pointer<const T> ptr_type;
+		};
 
-template<typename T>
-struct node_child_type_helper<Pointer<const T>> {
-	typedef T type;
-	typedef Pointer<const T> ptr_type;
-};
+		template <typename T>
+		struct node_child_type_helper<Pointer<const T>> {
+			typedef T type;
+			typedef Pointer<const T> ptr_type;
+		};
 
-template<typename T>
-struct node_child_type_helper<const Pointer<const T>&> {
-	typedef T type;
-	typedef Pointer<const T> ptr_type;
-};
+		template <typename T>
+		struct node_child_type_helper<const Pointer<const T>&> {
+			typedef T type;
+			typedef Pointer<const T> ptr_type;
+		};
 
-template<typename T>
-struct node_child_type_helper<const Pointer<const T>> {
-	typedef T type;
-	typedef Pointer<const T> ptr_type;
-};
-}
+		template <typename T>
+		struct node_child_type_helper<const Pointer<const T>> {
+			typedef T type;
+			typedef Pointer<const T> ptr_type;
+		};
+	}
 
-/**
- * A type trait determining the type of a node child. This is the
- * version which can handle all concrete cases. For member types of
- * abstract IR nodes specialized template specializations are provided
- * below.
- *
- * @tparam Node the node type to be queried
- * @tparam index the index of the child node to be queried
- */
-template<typename Node, unsigned index>
-struct node_child_type : public detail::node_child_type_helper<decltype(((Node*)0)->template getChildNodeReference<index>())> {};
+	/**
+	 * A type trait determining the type of a node child. This is the
+	 * version which can handle all concrete cases. For member types of
+	 * abstract IR nodes specialized template specializations are provided
+	 * below.
+	 *
+	 * @tparam Node the node type to be queried
+	 * @tparam index the index of the child node to be queried
+	 */
+	template <typename Node, unsigned index>
+	struct node_child_type : public detail::node_child_type_helper<decltype(((Node*)0)->template getChildNodeReference<index>())> {};
 
-// some special case for fixed child nodes of abstract inner nodes
-#define SET_CHILD_TYPE(CLASS,INDEX,TYPE) \
-	template<> struct node_child_type<CLASS,INDEX> : public detail::node_child_type_helper<TYPE> {}
+	// some special case for fixed child nodes of abstract inner nodes
+	#define SET_CHILD_TYPE(CLASS, INDEX, TYPE)                                                                                                                 \
+		template <>                                                                                                                                            \
+		struct node_child_type<CLASS, INDEX> : public detail::node_child_type_helper<TYPE> {}
 
-SET_CHILD_TYPE(Expression, 0, Type);
+	SET_CHILD_TYPE(Expression, 0, Type);
 
-#undef SET_CHILD_TYPE
+	#undef SET_CHILD_TYPE
 
 } // end namespace core
 } // end namespace insieme

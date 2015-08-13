@@ -41,16 +41,16 @@
 char* irt_util_to_str(irt_util_snprinter* p, ...) {
 	va_list list;
 	va_start(list, p);
-	
+
 	int size = 500;
 	char* res = 0;
 	while(!res) {
 		va_list copy;
 		va_copy(copy, list);
-		char* res = (char*) malloc(sizeof(char)*size);
+		char* res = (char*)malloc(sizeof(char) * size);
 		int num_printed = (*p)(res, size, copy);
 		va_end(copy);
-		
+
 		if(num_printed == size) {
 			free(res);
 			res = 0;

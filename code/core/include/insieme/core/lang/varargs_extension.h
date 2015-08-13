@@ -42,29 +42,26 @@ namespace insieme {
 namespace core {
 namespace lang {
 
-/**
- */
-class VarArgsExtension : public core::lang::Extension {
-
 	/**
-	 * Allow the node manager to create instances of this class.
 	 */
-	friend class core::NodeManager;
-	
-	/**
-	 * Creates a new instance based on the given node manager.
-	 */
-	VarArgsExtension(core::NodeManager& manager)
-		: core::lang::Extension(manager) {}
-		
-		
-public:
+	class VarArgsExtension : public core::lang::Extension {
+		/**
+		 * Allow the node manager to create instances of this class.
+		 */
+		friend class core::NodeManager;
 
-	LANG_EXT_TYPE(Valist, "va_list");
-	
-	LANG_EXT_LITERAL(Vaarg, "va_arg", "(va_list, type<'a>) -> 'a");
-	LANG_EXT_LITERAL(Vastart, "va_start", "(ref<va_list>, var_list) -> unit");
-};
+		/**
+		 * Creates a new instance based on the given node manager.
+		 */
+		VarArgsExtension(core::NodeManager& manager) : core::lang::Extension(manager) {}
+
+
+	  public:
+		LANG_EXT_TYPE(Valist, "va_list");
+
+		LANG_EXT_LITERAL(Vaarg, "va_arg", "(va_list, type<'a>) -> 'a");
+		LANG_EXT_LITERAL(Vastart, "va_start", "(ref<va_list>, var_list) -> unit");
+	};
 }
 }
 }

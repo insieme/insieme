@@ -50,7 +50,6 @@ namespace lang {
 	 * associated operators.
 	 */
 	class ChannelExtension : public core::lang::Extension {
-
 		/**
 		 * Allow the node manager to create instances of this class.
 		 */
@@ -59,12 +58,9 @@ namespace lang {
 		/**
 		 * Creates a new instance based on the given node manager.
 		 */
-		ChannelExtension(core::NodeManager& manager)
-			: core::lang::Extension(manager) {}
+		ChannelExtension(core::NodeManager& manager) : core::lang::Extension(manager) {}
 
-	public:
-
-
+	  public:
 	};
 
 
@@ -75,16 +71,13 @@ namespace lang {
 	 * friendly way then its raw encoding.
 	 */
 	class ChannelType {
-
 		TypePtr elementType;
 
 		ExpressionPtr size;
 
-		ChannelType(const TypePtr& elementType, const ExpressionPtr& size)
-			: elementType(elementType), size(size) {}
+		ChannelType(const TypePtr& elementType, const ExpressionPtr& size) : elementType(elementType), size(size) {}
 
-	public:
-
+	  public:
 		ChannelType(const NodePtr& node);
 
 		ChannelType(const ChannelType&) = default;
@@ -136,15 +129,12 @@ namespace lang {
 		bool isVariableSize() const {
 			return !isConstSize();
 		}
-
 	};
 
 	// --------------------- utilities -------------------
 
 	static inline bool isChannel(const NodePtr& node) {
-		if (auto expr = node.isa<ExpressionPtr>()) {
-			return isChannel(expr->getType());
-		}
+		if(auto expr = node.isa<ExpressionPtr>()) { return isChannel(expr->getType()); }
 		return node && ChannelType::isChannelType(node);
 	}
 

@@ -43,28 +43,28 @@ namespace insieme {
 namespace transform {
 namespace dump {
 
-/**
- * Writes a text-based encoding of the given transformation to the given output stream.
- *
- * @param out the stream to be writing to
- * @param transform the transformation to be written
- */
-void dumpTransformation(std::ostream& out, const TransformationPtr& transform);
+	/**
+	 * Writes a text-based encoding of the given transformation to the given output stream.
+	 *
+	 * @param out the stream to be writing to
+	 * @param transform the transformation to be written
+	 */
+	void dumpTransformation(std::ostream& out, const TransformationPtr& transform);
 
-void dumpTransformations(std::ostream& out, const vector<TransformationPtr>& transformations);
+	void dumpTransformations(std::ostream& out, const vector<TransformationPtr>& transformations);
 
-/**
- * Restores a transformation from the given input stream. The given catalog will
- * be used to resolve the names used within the text based encoding. In case the
- * stream contains an invalid encoding, an InvalidEncodingException will be thrown.
- *
- * @param in the stream to be reading from
- * @param catalog the catalog used for creating the resulting transformations
- * @return the resolved transformation
- */
-TransformationPtr loadTransformation(std::istream& in, const Catalog& catalog);
+	/**
+	 * Restores a transformation from the given input stream. The given catalog will
+	 * be used to resolve the names used within the text based encoding. In case the
+	 * stream contains an invalid encoding, an InvalidEncodingException will be thrown.
+	 *
+	 * @param in the stream to be reading from
+	 * @param catalog the catalog used for creating the resulting transformations
+	 * @return the resolved transformation
+	 */
+	TransformationPtr loadTransformation(std::istream& in, const Catalog& catalog);
 
-vector<TransformationPtr> loadTransformations(std::istream& in, const Catalog& catalog);
+	vector<TransformationPtr> loadTransformations(std::istream& in, const Catalog& catalog);
 
 } // end namespace dump
 } // end namespace transform

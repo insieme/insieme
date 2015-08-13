@@ -50,7 +50,6 @@
 #include "irt_joinable.h"
 
 
-
 typedef struct _irt_parallel_job {
 	uint32 min;
 	uint32 max;
@@ -60,7 +59,7 @@ typedef struct _irt_parallel_job {
 } irt_parallel_job;
 
 irt_joinable irt_joinable_null() {
-	static irt_joinable null_joinable = { { { 0 } } };
+	static irt_joinable null_joinable = {{{0}}};
 	return null_joinable;
 }
 
@@ -98,12 +97,15 @@ void irt_merge(irt_joinable joinable);
 
 #define IRT_FLUSH(_bla) __sync_synchronize()
 
-#define IRT_BUSYWHILE(_bla) while(_bla) { irt_scheduling_yield(irt_worker_get_current(), irt_wi_get_current()); }
+#define IRT_BUSYWHILE(_bla)                                                                                                                                    \
+	while(_bla) {                                                                                                                                              \
+		irt_scheduling_yield(irt_worker_get_current(), irt_wi_get_current());                                                                                  \
+	}
 
 #define par_printf printf
 
 static inline double irt_get_wtime() {
-	return irt_time_ns()/1000000000.0;
+	return irt_time_ns() / 1000000000.0;
 }
 
 // a wrapper for a call marking the start of a region

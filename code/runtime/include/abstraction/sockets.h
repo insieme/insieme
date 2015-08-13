@@ -66,10 +66,8 @@ static inline uint32 _irt_hwloc_get_num_entities_in_socket(uint32 s, hwloc_obj_t
 	int core_depth = hwloc_get_type_or_below_depth(irt_g_hwloc_topology, typ);
 	int num_cores = hwloc_get_nbobjs_by_depth(irt_g_hwloc_topology, core_depth);
 	uint32 ret = 0;
-	for(int i=0; i<num_cores; ++i) {
-		if(hwloc_obj_is_in_subtree(irt_g_hwloc_topology, hwloc_get_obj_by_depth(irt_g_hwloc_topology, core_depth, i), socket)) {
-			ret++;
-		}
+	for(int i = 0; i < num_cores; ++i) {
+		if(hwloc_obj_is_in_subtree(irt_g_hwloc_topology, hwloc_get_obj_by_depth(irt_g_hwloc_topology, core_depth, i), socket)) { ret++; }
 	}
 	return ret;
 }
@@ -114,6 +112,6 @@ static inline void irt_worker_move_to_socket(irt_worker* worker, uint32 socket) 
 	NO_HWLOC(irt_worker_move_to_socket);
 }
 
-#endif //IRT_USE_HWLOC
+#endif // IRT_USE_HWLOC
 
 #endif // __GUARD_ABSTRACTION_SOCKETS_H

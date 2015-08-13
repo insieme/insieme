@@ -47,14 +47,14 @@
 #include <Windows.h> // keep this or Visual Studio Compiler goes nuts
 
 struct _irt_thread {
-	DWORD thread_id; // uniquely identifies a thread
+	DWORD thread_id;      // uniquely identifies a thread
 	HANDLE thread_handle; // just a reference to the thread (multiple handles can refer to the same thread)
 };
 
 typedef struct _irt_thread irt_thread;
 
 // Vista and up will use slim reader writer mutex instead of critical section, condition variables are supported too
-#if (WINVER >= 0x0600)
+#if(WINVER >= 0x0600)
 typedef SRWLOCK irt_mutex_obj;
 typedef CONDITION_VARIABLE irt_cond_var;
 #else
@@ -80,16 +80,16 @@ typedef struct _irt_cond_bundle {
 typedef void* irt_thread_func(void*);
 
 /** create a new thread executing fun with parameter args, info about new thread will be saved in t if t is not NULL */
-inline void irt_thread_create(irt_thread_func *fun, void *args, irt_thread* t);
+inline void irt_thread_create(irt_thread_func* fun, void* args, irt_thread* t);
 
 /** saves thread information of current thread in t  */
-inline void irt_thread_get_current(irt_thread *t);
+inline void irt_thread_get_current(irt_thread* t);
 
 /** requests cancelation of the given thread */
 inline void irt_thread_cancel(irt_thread*);
 
 /** makes calling thread wait for cancellation of thread t, return value of terminated thread is returned */
-inline int irt_thread_join(irt_thread *t);
+inline int irt_thread_join(irt_thread* t);
 
 /** exit a thread with specified exit code */
 inline void irt_thread_exit(int exit_code);
@@ -98,7 +98,7 @@ inline void irt_thread_exit(int exit_code);
 inline void irt_thread_yield();
 
 /** check if two thread objects are equal */
-bool irt_thread_check_equality(irt_thread *t1, irt_thread *t2);
+bool irt_thread_check_equality(irt_thread* t1, irt_thread* t2);
 
 
 /* MUTEX FUNCTIONS ------------------------------------------------------------------- */
@@ -134,7 +134,7 @@ inline int irt_cond_wait(irt_cond_var*, irt_mutex_obj*);
 inline int irt_cond_timedwait(irt_cond_var*, irt_mutex_obj*, uint64);
 
 /** singal and wake a thread which is blocked by the condition variable cv */
-inline void irt_cond_wake_one(irt_cond_var *cv);
+inline void irt_cond_wake_one(irt_cond_var* cv);
 
 /** initialize the condition variable and associated mutex */
 inline void irt_cond_bundle_init(irt_cond_bundle*);
@@ -157,7 +157,7 @@ inline void irt_tls_key_delete(irt_tls_key k);
 inline void* irt_tls_get(irt_tls_key k);
 
 /** set the thread local value for key k */
-inline int irt_tls_set(irt_tls_key k, void *val);
+inline int irt_tls_set(irt_tls_key k, void* val);
 
 
 #endif // ifndef __GUARD_ABSTRACTION_THREADS_H

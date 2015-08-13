@@ -38,29 +38,26 @@ unsigned int localId;
 unsigned int globalId;
 
 int kernelFct(int* A) {
-#pragma insieme datarange (A = globalId-1 : globalId+1)
-	{
-		return -1;
-	}
+#pragma insieme datarange(A = globalId - 1 : globalId + 1)
+	{ return -1; }
 }
-
 
 
 int main() {
 	int* a;
 	int* b;
 	int i;
-	
-#pragma insieme iterations 10
+
+	#pragma insieme iterations 10
 	for(i = 0; i < 10; ++i) {
-#pragma insieme datarange (a = i-1 : i+1), (b = i : i)
+	#pragma insieme datarange(a = i - 1 : i + 1), (b = i : i)
 		{
 			a[i] = i;
 			b[i] = 3;
 		}
 	}
-	
+
 	kernelFct(a);
-	
+
 	return 0;
 }

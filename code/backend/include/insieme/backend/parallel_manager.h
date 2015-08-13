@@ -39,11 +39,9 @@
 namespace insieme {
 namespace backend {
 
-// TODO: think about renaming it to form a work item manager
+	// TODO: think about renaming it to form a work item manager
 
-class ParallelManager {
-
-};
+	class ParallelManager {};
 
 
 } // end namespace backend

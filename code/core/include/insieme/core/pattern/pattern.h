@@ -55,14 +55,13 @@ namespace pattern {
 
 namespace impl {
 
-// --- forward declarations (pimpl) ---
+	// --- forward declarations (pimpl) ---
 
-class TreePattern;
-typedef std::shared_ptr<TreePattern> TreePatternPtr;
+	class TreePattern;
+	typedef std::shared_ptr<TreePattern> TreePatternPtr;
 
-class ListPattern;
-typedef std::shared_ptr<ListPattern> ListPatternPtr;
-
+	class ListPattern;
+	typedef std::shared_ptr<ListPattern> ListPatternPtr;
 }
 
 // TODO: clean this up
@@ -78,70 +77,67 @@ typedef boost::optional<TreeMatch> TreeMatchOpt;
  * The type utilized to represent tree patterns matching tree structures.
  */
 class TreePattern : public utils::Printable {
-
 	/**
 	 * The internal implementation of the represented pattern.
 	 */
 	impl::TreePatternPtr pattern;
-	
-public:
 
+  public:
 	/**
 	 * A default constructed pattern matching everything -- equals the any pattern.
 	 */
 	TreePattern();
-	
+
 	/**
 	 * A copy constructor for patterns.
 	 */
 	TreePattern(const TreePattern& other) : pattern(other.pattern) {
 		assert_true(pattern) << "Pattern pointer must not be null!";
 	}
-	
+
 	/**
 	 * A r-value move constructor for patterns.
 	 */
 	TreePattern(TreePattern&& other) : pattern(other.pattern) {
 		assert_true(pattern) << "Pattern pointer must not be null!";
 	}
-	
+
 	/**
 	 * A constructor to be utilized by factories to create a pattern based on the implementation.
 	 */
 	TreePattern(const impl::TreePatternPtr& pattern) : pattern(pattern) {
 		assert_true(pattern) << "Pattern pointer must not be null!";
 	}
-	
-	
+
+
 	/**
 	 * An implicit conversion to the internal implementation structure.
 	 */
 	operator const impl::TreePatternPtr&() const {
 		return pattern;
 	}
-	
-	
+
+
 	bool match(const core::NodePtr& node) const {
 		return matchPointer(node);
 	}
-	
+
 	MatchOpt matchPointer(const core::NodePtr& node) const;
-	
+
 	AddressMatchOpt matchAddress(const core::NodeAddress& node) const;
-	
+
 	TreeMatchOpt matchTree(const TreePtr& tree) const;
-	
+
 	/**
 	 * Enable default handling of assignments.
 	 */
 	TreePattern& operator=(const TreePattern&) = default;
-	
-	
+
+
 	/**
 	 * Prints this pattern to the given output stream -- implements the Printable interface.
 	 */
 	std::ostream& printTo(std::ostream& out) const;
-	
 };
 
 
@@ -149,56 +145,52 @@ public:
  * The type utilized to represent list patterns matching list of trees (forests).
  */
 class ListPattern : public utils::Printable {
-
 	/**
 	 * The internal implementation of the represented pattern.
 	 */
 	impl::ListPatternPtr pattern;
-	
-public:
 
+  public:
 	/**
 	 * A default constructed pattern matching every list.
 	 */
 	ListPattern();
-	
+
 	/**
 	 * A copy constructor for list patterns.
 	 */
-	ListPattern(const ListPattern& other)
-		: pattern(other.pattern) {
+	ListPattern(const ListPattern& other) : pattern(other.pattern) {
 		assert_true(pattern) << "Pattern pointer must not be null!";
 	}
-	
+
 	/**
 	 * A r-value move constructor for patterns.
 	 */
-	ListPattern(ListPattern&& other)
-		: pattern(other.pattern) {
+	ListPattern(ListPattern&& other) : pattern(other.pattern) {
 		assert_true(pattern) << "Pattern pointer must not be null!";
 	}
-	
+
 	/**
 	 * A constructor to be utilized by factories to create a pattern based on the implementation.
 	 */
 	ListPattern(const impl::ListPatternPtr& pattern) : pattern(pattern) {
 		assert_true(pattern) << "Pattern pointer must not be null!";
 	}
-	
+
 	/**
 	 * Utilize default assignment operator.
 	 */
 	ListPattern& operator=(const ListPattern&) = default;
-	
+
 	/**
 	 * An implicit conversion to the internal implementation structure.
 	 */
 	operator const impl::ListPatternPtr() const {
 		return pattern;
 	}
-	
+
 	TreeMatchOpt match(const vector<TreePtr>& trees) const;
-	
+
 	/**
 	 * Prints this pattern to the given output stream -- implements the Printable interface.
 	 */
@@ -228,17 +220,15 @@ TreePattern lazyAtom(const std::function<core::NodePtr(core::NodeManager&)>& fac
 
 // The following piece of code resolves the issue of overloads on std::function being ambiguous
 namespace impl {
-insieme::core::pattern::TreePattern lambda(const std::function<bool(const core::NodePtr&)>& condition);
-insieme::core::pattern::TreePattern lambda(const std::function<bool(const core::NodeAddress&)>& condition);
+	insieme::core::pattern::TreePattern lambda(const std::function<bool(const core::NodePtr&)>& condition);
+	insieme::core::pattern::TreePattern lambda(const std::function<bool(const core::NodeAddress&)>& condition);
 }
-template<typename T>
-typename std::enable_if<std::is_same<typename lambda_traits<T>::argument_type, const core::NodePtr&>::value,
-TreePattern>::type lambda(const T& condition) {
+template <typename T>
+typename std::enable_if<std::is_same<typename lambda_traits<T>::argument_type, const core::NodePtr&>::value, TreePattern>::type lambda(const T& condition) {
 	return impl::lambda(static_cast<const std::function<bool(const core::NodePtr&)>&>(condition));
 }
-template<typename T>
-typename std::enable_if<std::is_same<typename lambda_traits<T>::argument_type, const core::NodeAddress&>::value,
-TreePattern>::type lambda(const T& condition) {
+template <typename T>
+typename std::enable_if<std::is_same<typename lambda_traits<T>::argument_type, const core::NodeAddress&>::value, TreePattern>::type lambda(const T& condition) {
 	return impl::lambda(static_cast<const std::function<bool(const core::NodeAddress&)>&>(condition));
 }
 
@@ -281,8 +271,8 @@ ListPattern listVar(const std::string& name, const ListPattern& pattern = anyLis
 
 TreePattern aT(const std::vector<TreePattern>& patterns);
 
-template<typename ... Patterns>
-inline TreePattern aT(Patterns ... patterns) {
+template <typename... Patterns>
+inline TreePattern aT(Patterns... patterns) {
 	return aT(toVector<TreePattern>(patterns...));
 }
 

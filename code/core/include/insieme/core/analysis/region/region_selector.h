@@ -49,43 +49,40 @@ namespace core {
 namespace analysis {
 namespace region {
 
-using std::vector;
+	using std::vector;
 
-
-/**
- * At the moment, no more information regarding a region is required
- * than an address pointing to it. Hence, regions are typedefed to be
- * equivalent to NodeAddresses.
- */
-typedef core::StatementAddress Region;
-typedef vector<Region> RegionList;
-
-/**
- * An abstract base class defining the interface for any kind of region selection
- * mechanism to be supported.
- */
-class RegionSelector {
-
-public:
 
 	/**
-	 * A virtual destructor for this abstract, virtual base class.
+	 * At the moment, no more information regarding a region is required
+	 * than an address pointing to it. Hence, regions are typedefed to be
+	 * equivalent to NodeAddresses.
 	 */
-	virtual ~RegionSelector() {};
-	
+	typedef core::StatementAddress Region;
+	typedef vector<Region> RegionList;
+
 	/**
-	 * This method is determining a list of regions within the given code fragment.
-	 * The method represents the sole functionality of a region extractor. Implementations
-	 * of this abstract base class have to provide corresponding implementations for
-	 * this method.
-	 *
-	 * @param code the code fragment within which regions should be determined
-	 * @return a list of addresses to the nodes forming the selected regions. The root
-	 * 		of all obtained addresses has to be equivalent to the given code region.
+	 * An abstract base class defining the interface for any kind of region selection
+	 * mechanism to be supported.
 	 */
-	virtual RegionList getRegions(const core::NodePtr& code) const =0;
-	
-};
+	class RegionSelector {
+	  public:
+		/**
+		 * A virtual destructor for this abstract, virtual base class.
+		 */
+		virtual ~RegionSelector(){};
+
+		/**
+		 * This method is determining a list of regions within the given code fragment.
+		 * The method represents the sole functionality of a region extractor. Implementations
+		 * of this abstract base class have to provide corresponding implementations for
+		 * this method.
+		 *
+		 * @param code the code fragment within which regions should be determined
+		 * @return a list of addresses to the nodes forming the selected regions. The root
+		 * 		of all obtained addresses has to be equivalent to the given code region.
+		 */
+		virtual RegionList getRegions(const core::NodePtr& code) const = 0;
+	};
 
 } // end namespace region
 } // end namespace analysis

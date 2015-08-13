@@ -51,185 +51,176 @@ namespace insieme {
 namespace driver {
 namespace integration {
 
-using std::set;
-using std::map;
-using std::string;
-using std::vector;
+	using std::set;
+	using std::map;
+	using std::string;
+	using std::vector;
 
-namespace detail {
+	namespace detail {
 
-// -- the basic value convert functor --
+		// -- the basic value convert functor --
 
-template<typename T>
-struct value_extractor {
-	value_extractor() {}
+		template <typename T>
+		struct value_extractor {
+			value_extractor() {}
 
-	template<typename P>
-	static typename std::enable_if<std::is_arithmetic<P>::value,P>::type
-	convert(const string& value) {
-		// numerical values are converted using a numeric cast
-		return insieme::utils::numeric_cast<int>(value);
+			template <typename P>
+			static typename std::enable_if<std::is_arithmetic<P>::value, P>::type convert(const string& value) {
+				// numerical values are converted using a numeric cast
+				return insieme::utils::numeric_cast<int>(value);
+			}
+
+			template <typename P>
+			static typename std::enable_if<!std::is_arithmetic<P>::value, P>::type convert(const string& value) {
+				return value; // default handling => implicit conversion
+			}
+
+			T operator()(const string& value) const {
+				// by default we use implicit conversion (e.g. by a constructor call)
+				return convert<T>(value);
+			}
+		};
+
+		// -- specializations for atomic values --
+
+		template <>
+		struct value_extractor<string> {
+			value_extractor() {}
+
+			const string& operator()(const string& value) const {
+				return value; // the default operation simply utilizes the implicit conversion
+			}
+		};
+
+		template <>
+		struct value_extractor<bool> {
+			value_extractor() {}
+
+			bool operator()(const string& value) const {
+				// special handling for bool values
+				return value == "1" || value == "true" || value == "t" || value == "yes" || value == "y";
+			}
+		};
+
+		// -- specializations for containers values --
+
+		template <typename T>
+		struct value_extractor<vector<T>> {
+			value_extractor() {}
+
+			vector<T> operator()(const string& value) const {
+				static const value_extractor<T> extract;
+				static const boost::char_separator<char> sep("\",");
+				vector<T> res;
+				boost::tokenizer<boost::char_separator<char>> tokens(value, sep);
+				for(const auto& t : tokens) {
+					res.push_back(extract(t));
+				}
+				return res;
+			}
+		};
+
+		template <typename T>
+		struct value_extractor<set<T>> {
+			value_extractor() {}
+
+			set<T> operator()(const string& value) const {
+				set<T> res;
+				for(const auto& cur : value_extractor<vector<T>>()(value)) {
+					res.insert(cur);
+				}
+				return res;
+			}
+		};
 	}
-	
-	template<typename P>
-	static typename std::enable_if<!std::is_arithmetic<P>::value,P>::type
-	convert(const string& value) {
-		return value;	// default handling => implicit conversion
-	}
-	
-	T operator()(const string& value) const {
-		// by default we use implicit conversion (e.g. by a constructor call)
-		return convert<T>(value);
-	}
-};
 
-// -- specializations for atomic values --
+	class PropertyView;
 
-template<>
-struct value_extractor<string> {
-	value_extractor() {}
+	class Properties : public utils::Printable {
+		// key / category / value
+		map<string, map<string, string>> data;
 
-	const string& operator()(const string& value) const {
-		return value;		// the default operation simply utilizes the implicit conversion
-	}
-};
+	  public:
+		const string get(const string& key, const string& category = "", const string& def = "") const;
 
-template<>
-struct value_extractor<bool> {
-	value_extractor() {}
-
-	bool operator()(const string& value) const {
-		// special handling for bool values
-		return value == "1" || value == "true" || value == "t" || value == "yes" || value == "y";
-	}
-};
-
-// -- specializations for containers values --
-
-template<typename T>
-struct value_extractor<vector<T>> {
-	value_extractor() {}
-
-	vector<T> operator()(const string& value) const {
-		static const value_extractor<T> extract;
-		static const boost::char_separator<char> sep("\",");
-		vector<T> res;
-		boost::tokenizer<boost::char_separator<char>> tokens(value, sep);
-		for(const auto& t : tokens) {
-			res.push_back(extract(t));
+		template <typename T, typename R = decltype(detail::value_extractor<T>()(""))>
+		R get(const string& key, const string& category = "", const string& def = "") const {
+			return detail::value_extractor<T>()(get(key, category, def));
 		}
-		return res;
-	}
-};
 
-template<typename T>
-struct value_extractor<set<T>> {
-	value_extractor() {}
+		std::set<string> getKeys() const;
 
-	set<T> operator()(const string& value) const {
-		set<T> res;
-		for(const auto& cur : value_extractor<vector<T>>()(value)) {
-			res.insert(cur);
+		void set(const string& key, const string& value) {
+			set(key, "", value);
 		}
-		return res;
-	}
-};
-}
 
-class PropertyView;
+		void set(const string& key, const string& category, const string& value) {
+			data[key][category] = value;
+		}
 
-class Properties : public utils::Printable {
+		const string operator[](const string& key) const {
+			return get(key);
+		}
 
-	// key / category / value
-	map<string,map<string,string>> data;
-	
-public:
+		bool empty() const {
+			return data.empty();
+		}
 
-	const string get(const string& key, const string& category = "", const string& def = "") const;
-	
-	template<typename T, typename R = decltype(detail::value_extractor<T>()(""))>
-	R get(const string& key, const string& category = "", const string& def = "") const {
-		return detail::value_extractor<T>()(get(key, category, def));
-	}
-	
-	std::set<string> getKeys() const;
-	
-	void set(const string& key, const string& value) {
-		set(key,"",value);
-	}
-	
-	void set(const string& key, const string& category, const string& value) {
-		data[key][category] = value;
-	}
-	
-	const string operator[](const string& key) const {
-		return get(key);
-	}
-	
-	bool empty() const {
-		return data.empty();
-	}
-	
-	std::size_t size() const {
-		return data.size();
-	}
-	
-	string mapVars(const string& in) const;
-	
-	PropertyView getView(const string& category) const;
-	
-	std::ostream& printTo(std::ostream& out) const;
-	
-	bool operator==(const Properties& other) const {
-		return data == other.data;
-	}
-	
-	Properties& operator<<=(const Properties& other);
-	
-	Properties operator<<(const Properties& other) {
-		return Properties(*this) <<= other;
-	}
-	
-	/**
-	 * Loads properties from the given input stream.
-	 */
-	static Properties load(std::istream& in);
-	
-	/**
-	 * Dumps this properties to the output stream.
-	 */
-	void store(std::ostream& out) const;
-	
-};
+		std::size_t size() const {
+			return data.size();
+		}
+
+		string mapVars(const string& in) const;
+
+		PropertyView getView(const string& category) const;
+
+		std::ostream& printTo(std::ostream& out) const;
+
+		bool operator==(const Properties& other) const {
+			return data == other.data;
+		}
+
+		Properties& operator<<=(const Properties& other);
+
+		Properties operator<<(const Properties& other) {
+			return Properties(*this) <<= other;
+		}
+
+		/**
+		 * Loads properties from the given input stream.
+		 */
+		static Properties load(std::istream& in);
+
+		/**
+		 * Dumps this properties to the output stream.
+		 */
+		void store(std::ostream& out) const;
+	};
 
 
-class PropertyView : public utils::Printable {
+	class PropertyView : public utils::Printable {
+		const Properties& properties;
 
-	const Properties& properties;
-	
-	const string category;
-	
-public:
+		const string category;
 
-	PropertyView(const Properties& properties, const string& category)
-		: properties(properties), category(category) {}
-		
-	string operator[](const string& key) const {
-		return properties.get(key, category);
-	}
-	
-	string get(const string& key, const string& def = "") const {
-		return properties.get(key, category, def);
-	}
-	
-	template<typename T, typename R = decltype(detail::value_extractor<T>()(""))>
-	R get(const string& key, const string& def = "") const {
-		return detail::value_extractor<T>()(get(key, def));
-	}
-	
-	std::ostream& printTo(std::ostream& out) const;
-	
-};
+	  public:
+		PropertyView(const Properties& properties, const string& category) : properties(properties), category(category) {}
+
+		string operator[](const string& key) const {
+			return properties.get(key, category);
+		}
+
+		string get(const string& key, const string& def = "") const {
+			return properties.get(key, category, def);
+		}
+
+		template <typename T, typename R = decltype(detail::value_extractor<T>()(""))>
+		R get(const string& key, const string& def = "") const {
+			return detail::value_extractor<T>()(get(key, def));
+		}
+
+		std::ostream& printTo(std::ostream& out) const;
+	};
 
 
 } // end namespace integration

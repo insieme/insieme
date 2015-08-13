@@ -48,177 +48,169 @@ namespace insieme {
 namespace core {
 namespace dump {
 
-// forward declarations
-class AnnotationConverter;
-typedef std::shared_ptr<AnnotationConverter> AnnotationConverterPtr;
+	// forward declarations
+	class AnnotationConverter;
+	typedef std::shared_ptr<AnnotationConverter> AnnotationConverterPtr;
 
 
-/**
- * A base class for all annotation converter implementations. The main
- * task of an annotation converter is to be named and to encode annotations
- * into IR data structures and to decode them again.
- */
-class AnnotationConverter {
+	/**
+	 * A base class for all annotation converter implementations. The main
+	 * task of an annotation converter is to be named and to encode annotations
+	 * into IR data structures and to decode them again.
+	 */
+	class AnnotationConverter {
+		/**
+		 * The name of this converter.
+		 */
+		const string name;
 
-	/**
-	 * The name of this converter.
-	 */
-	const string name;
-	
-public:
+	  public:
+		/**
+		 * Creates a new converter based on the given name. The given
+		 * name should be unique throughout the system. The name is used within the
+		 * binary dump-file to record the converter used to map annotations.
+		 */
+		AnnotationConverter(const string& name) : name(name) {}
 
-	/**
-	 * Creates a new converter based on the given name. The given
-	 * name should be unique throughout the system. The name is used within the
-	 * binary dump-file to record the converter used to map annotations.
-	 */
-	AnnotationConverter(const string& name) : name(name) {}
-	
-	/**
-	 * A virtual destructor doing nothing.
-	 */
-	virtual ~AnnotationConverter() {}
-	
-	/**
-	 * Obtains the unique identifier name of this converter.
-	 */
-	const string& getName() const {
-		return name;
-	}
-	
-	/**
-	 * Requests the given annotation to be encoded into an IR structure. If the
-	 * given annotation can not be converted by this converter, a NULL pointer shell be
-	 * returned.
-	 *
-	 * @param manager the node manager to be used for the conversion process
-	 * @param annotation the annotation to be encoded into an IR structure
-	 * @return the result of the encoding or NULL in case the given annotation can not
-	 * 			be encoded by this converter
-	 */
-	virtual ExpressionPtr toIR(NodeManager& manager, const NodeAnnotationPtr& annotation) const =0;
-	
-	/**
-	 * Requests the given IR to be decoded into an annotation. If the given node
-	 * does not represent a proper encoding of any supported annotation, a NULL pointer
-	 * shell be returned.
-	 *
-	 * @param node the node encoding the annotation to be decoded
-	 * @return the decoded annotation or NULL if no valid annotation has been encoded
-	 */
-	virtual NodeAnnotationPtr toAnnotation(const ExpressionPtr& node) const =0;
-	
-	/**
-	 * Requests an annotation to be decoded and attached to a given target node.
-	 *
-	 * @param target the node the decoded annotation shell be attached to
-	 * @param annotation the annotation to be decoded
-	 */
-	void attachAnnotation(const NodePtr& target, const ExpressionPtr& annotation) const {
-		if(!target) {
-			return;
+		/**
+		 * A virtual destructor doing nothing.
+		 */
+		virtual ~AnnotationConverter() {}
+
+		/**
+		 * Obtains the unique identifier name of this converter.
+		 */
+		const string& getName() const {
+			return name;
 		}
-		auto res = toAnnotation(annotation);
-		if(res) {
-			res->clone(res, target);
+
+		/**
+		 * Requests the given annotation to be encoded into an IR structure. If the
+		 * given annotation can not be converted by this converter, a NULL pointer shell be
+		 * returned.
+		 *
+		 * @param manager the node manager to be used for the conversion process
+		 * @param annotation the annotation to be encoded into an IR structure
+		 * @return the result of the encoding or NULL in case the given annotation can not
+		 * 			be encoded by this converter
+		 */
+		virtual ExpressionPtr toIR(NodeManager& manager, const NodeAnnotationPtr& annotation) const = 0;
+
+		/**
+		 * Requests the given IR to be decoded into an annotation. If the given node
+		 * does not represent a proper encoding of any supported annotation, a NULL pointer
+		 * shell be returned.
+		 *
+		 * @param node the node encoding the annotation to be decoded
+		 * @return the decoded annotation or NULL if no valid annotation has been encoded
+		 */
+		virtual NodeAnnotationPtr toAnnotation(const ExpressionPtr& node) const = 0;
+
+		/**
+		 * Requests an annotation to be decoded and attached to a given target node.
+		 *
+		 * @param target the node the decoded annotation shell be attached to
+		 * @param annotation the annotation to be decoded
+		 */
+		void attachAnnotation(const NodePtr& target, const ExpressionPtr& annotation) const {
+			if(!target) { return; }
+			auto res = toAnnotation(annotation);
+			if(res) { res->clone(res, target); }
 		}
-	}
-	
-};
-
-/**
- * A class realizing a annotation converter register. This kind of register is capable
- * of indexing annotation converter instances with names and annotation types they are
- * capable of handling.
- */
-class AnnotationConverterRegister {
+	};
 
 	/**
-	 * The index linking converters to the types they are capable of handling (required
-	 * during the store process).
+	 * A class realizing a annotation converter register. This kind of register is capable
+	 * of indexing annotation converter instances with names and annotation types they are
+	 * capable of handling.
 	 */
-	std::map<std::type_index, AnnotationConverterPtr> type_index;
-	
-	/**
-	 * The index linking converters to their names (used for obtaining converters during
-	 * the load process)
-	 */
-	std::map<std::string, AnnotationConverterPtr> name_index;
-	
-public:
+	class AnnotationConverterRegister {
+		/**
+		 * The index linking converters to the types they are capable of handling (required
+		 * during the store process).
+		 */
+		std::map<std::type_index, AnnotationConverterPtr> type_index;
+
+		/**
+		 * The index linking converters to their names (used for obtaining converters during
+		 * the load process)
+		 */
+		std::map<std::string, AnnotationConverterPtr> name_index;
+
+	  public:
+		/**
+		 * Obtains the default register (singlton) to be used by default during the conversion process.
+		 */
+		static AnnotationConverterRegister& getDefault();
+
+		/**
+		 * Registers the given converter for the given type of annotation.
+		 *
+		 * @param converter the converter instance to be registered
+		 * @param index the type index of the element to be registered
+		 * @return true if registration has been successful, false otherwise
+		 */
+		bool registerConverter(const AnnotationConverterPtr& converter, const std::type_index& index);
+
+		/**
+		 * Registers the given converter for the given type of annotation.
+		 *
+		 * @tparam C the converter instance to be registered
+		 * @tparam A the type of annotation to be handled by the given converter
+		 * @return true if registration has been successful, false otherwise
+		 */
+		template <typename C, typename A>
+		bool registerConverter() {
+			return registerConverter(std::make_shared<C>(), typeid(A));
+		}
+
+		/**
+		 * Requests the converter linked to the given name.
+		 *
+		 * @param name the name of the converter to be looking for
+		 * @return a pointer to the obtained converter, a NULL pointer if no such converter is available
+		 */
+		const AnnotationConverterPtr& getConverterFor(const std::string& name) const;
+
+		/**
+		 * Requests the converter linked to the given annotation.
+		 *
+		 * @param annotation the annotation for which a converter is requested
+		 * @return a pointer to the obtained converter, a NULL pointer if no such converter is available
+		 */
+		const AnnotationConverterPtr& getConverterFor(const NodeAnnotationPtr& annotation) const;
+	};
+
 
 	/**
-	 * Obtains the default register (singlton) to be used by default during the conversion process.
+	 * A macro to be used for registering a annotation type converter to be used by the IR dump mechanisms.
 	 */
-	static AnnotationConverterRegister& getDefault();
-	
+	#define REGISTER_ANNOTATION_CONVERTER(_CONVERTER, _ANNOTATION_TYPE)                                                                                        \
+		namespace {                                                                                                                                            \
+			bool __attribute__((unused)) _reg##_CONVERTER =                                                                                                    \
+			    insieme::core::dump::AnnotationConverterRegister::getDefault().registerConverter<_CONVERTER, _ANNOTATION_TYPE>();                              \
+		}
+
 	/**
-	 * Registers the given converter for the given type of annotation.
+	 * A macro creating the boyler-plate code for a annotation converter including the registration
+	 * within the default converter register.
+	 */
+	#define ANNOTATION_CONVERTER(_ANNOTATION_NAME)                                                                                                             \
+		struct _ANNOTATION_NAME##Converter;                                                                                                                    \
+		REGISTER_ANNOTATION_CONVERTER(_ANNOTATION_NAME##Converter, _ANNOTATION_NAME);                                                                          \
+		struct _ANNOTATION_NAME##Converter : public insieme::core::dump::AnnotationConverter {                                                                 \
+			_ANNOTATION_NAME##Converter() : insieme::core::dump::AnnotationConverter(#_ANNOTATION_NAME "Converter"){};
+
+	/**
+	 * A macro similar to the ANNOTATION_CONVERTER macro specialized for value annotations.
 	 *
-	 * @param converter the converter instance to be registered
-	 * @param index the type index of the element to be registered
-	 * @return true if registration has been successful, false otherwise
+	 * @see ANNOTATION_CONVERTER
 	 */
-	bool registerConverter(const AnnotationConverterPtr& converter, const std::type_index& index);
-	
-	/**
-	 * Registers the given converter for the given type of annotation.
-	 *
-	 * @tparam C the converter instance to be registered
-	 * @tparam A the type of annotation to be handled by the given converter
-	 * @return true if registration has been successful, false otherwise
-	 */
-	template<typename C, typename A>
-	bool registerConverter() {
-		return registerConverter(std::make_shared<C>(), typeid(A));
-	}
-	
-	/**
-	 * Requests the converter linked to the given name.
-	 *
-	 * @param name the name of the converter to be looking for
-	 * @return a pointer to the obtained converter, a NULL pointer if no such converter is available
-	 */
-	const AnnotationConverterPtr& getConverterFor(const std::string& name) const;
-	
-	/**
-	 * Requests the converter linked to the given annotation.
-	 *
-	 * @param annotation the annotation for which a converter is requested
-	 * @return a pointer to the obtained converter, a NULL pointer if no such converter is available
-	 */
-	const AnnotationConverterPtr& getConverterFor(const NodeAnnotationPtr& annotation) const;
-};
-
-
-/**
- * A macro to be used for registering a annotation type converter to be used by the IR dump mechanisms.
- */
-#define REGISTER_ANNOTATION_CONVERTER(_CONVERTER, _ANNOTATION_TYPE) \
-			namespace { \
-				bool __attribute__((unused)) _reg ## _CONVERTER = insieme::core::dump::AnnotationConverterRegister::getDefault().registerConverter<_CONVERTER,_ANNOTATION_TYPE>(); \
-			} \
-
-/**
- * A macro creating the boyler-plate code for a annotation converter including the registration
- * within the default converter register.
- */
-#define ANNOTATION_CONVERTER(_ANNOTATION_NAME) \
-		struct _ANNOTATION_NAME ## Converter; \
-		REGISTER_ANNOTATION_CONVERTER(_ANNOTATION_NAME ## Converter, _ANNOTATION_NAME); \
-		struct _ANNOTATION_NAME ## Converter : public insieme::core::dump::AnnotationConverter { \
-			_ANNOTATION_NAME ## Converter() : insieme::core::dump::AnnotationConverter(#_ANNOTATION_NAME "Converter") {}; \
-
-/**
- * A macro similar to the ANNOTATION_CONVERTER macro specialized for value annotations.
- *
- * @see ANNOTATION_CONVERTER
- */
-#define VALUE_ANNOTATION_CONVERTER(_VALUE_TYPE) \
-		struct _VALUE_TYPE ## AnnotationConverter; \
-		REGISTER_ANNOTATION_CONVERTER(_VALUE_TYPE ## AnnotationConverter, core::value_node_annotation<_VALUE_TYPE>::type); \
-		struct _VALUE_TYPE ## AnnotationConverter : public insieme::core::dump::AnnotationConverter { \
-			_VALUE_TYPE ## AnnotationConverter() : insieme::core::dump::AnnotationConverter(#_VALUE_TYPE "AnnotationConverter") {}; \
+	#define VALUE_ANNOTATION_CONVERTER(_VALUE_TYPE)                                                                                                            \
+		struct _VALUE_TYPE##AnnotationConverter;                                                                                                               \
+		REGISTER_ANNOTATION_CONVERTER(_VALUE_TYPE##AnnotationConverter, core::value_node_annotation<_VALUE_TYPE>::type);                                       \
+		struct _VALUE_TYPE##AnnotationConverter : public insieme::core::dump::AnnotationConverter {                                                            \
+			_VALUE_TYPE##AnnotationConverter() : insieme::core::dump::AnnotationConverter(#_VALUE_TYPE "AnnotationConverter"){};
 
 } // end namespace dump
 } // end namespace core

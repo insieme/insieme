@@ -45,37 +45,35 @@
 namespace insieme {
 namespace backend {
 
-/**
- * The base class for backend add-ons allowing to customize
- * the behavior of backend instances.
- */
-class AddOn {
-public:
+	/**
+	 * The base class for backend add-ons allowing to customize
+	 * the behavior of backend instances.
+	 */
+	class AddOn {
+	  public:
+		/**
+		 * A virtual destructor.
+		 */
+		virtual ~AddOn(){};
+
+		/**
+		 * Installs this add-on within the given converter.
+		 */
+		virtual void installOn(Converter& converter) const = 0;
+	};
 
 	/**
-	 * A virtual destructor.
+	 * A type definition for an AddOn-Pointer (since AddOns are polymorph).
 	 */
-	virtual ~AddOn() {};
-	
+	typedef std::shared_ptr<AddOn> AddOnPtr;
+
 	/**
-	 * Installs this add-on within the given converter.
+	 * A utility class to instantiate Add-On classes.
 	 */
-	virtual void installOn(Converter& converter) const =0;
-	
-};
-
-/**
- * A type definition for an AddOn-Pointer (since AddOns are polymorph).
- */
-typedef std::shared_ptr<AddOn> AddOnPtr;
-
-/**
- * A utility class to instantiate Add-On classes.
- */
-template<typename A, typename ... T>
-AddOnPtr makeAddOn(T ... args) {
-	return std::make_shared<A>(args...);
-}
+	template <typename A, typename... T>
+	AddOnPtr makeAddOn(T... args) {
+		return std::make_shared<A>(args...);
+	}
 
 } // end namespace backend
 } // end namespace insieme

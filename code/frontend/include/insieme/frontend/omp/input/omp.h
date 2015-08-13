@@ -41,12 +41,7 @@
 extern "C" {
 #endif
 
-typedef enum omp_sched_t {
-	omp_sched_static = 1,
-	omp_sched_dynamic = 2,
-	omp_sched_guided = 3,
-	omp_sched_auto = 4
-} omp_sched_t;
+typedef enum omp_sched_t { omp_sched_static = 1, omp_sched_dynamic = 2, omp_sched_guided = 3, omp_sched_auto = 4 } omp_sched_t;
 
 int omp_get_thread_num();
 int omp_get_num_threads();
@@ -61,7 +56,7 @@ void omp_set_nested(int nested);
 int omp_get_nested();
 
 void omp_set_schedule(omp_sched_t kind, int modifier);
-void omp_get_schedule(omp_sched_t *kind, int *modifier);
+void omp_get_schedule(omp_sched_t* kind, int* modifier);
 
 void omp_set_max_active_levels(int max_levels);
 int omp_get_max_active_levels();
@@ -83,23 +78,21 @@ double omp_get_wtime();
 
 // locks
 
-//struct _irt_lock { int d; };
+// struct _irt_lock { int d; };
 //
-//typedef struct _irt_lock irt_lock;
+// typedef struct _irt_lock irt_lock;
 //
 //#define omp_lock_t struct _irt_lock
 //
-//void irt_lock_init(irt_lock* l) {};
-//void irt_lock_acquire(irt_lock* l) {};
-//void irt_lock_release(irt_lock* l) {};
+// void irt_lock_init(irt_lock* l) {};
+// void irt_lock_acquire(irt_lock* l) {};
+// void irt_lock_release(irt_lock* l) {};
 //
 //#define omp_init_lock(_param) irt_lock_init(_param)
 //#define omp_set_lock(_param) irt_lock_acquire(_param)
 //#define omp_unset_lock(_param) irt_lock_release(_param)
 
-typedef struct _omp_lock_t {
-	int insieme_omp_lock_struct_marker;
-} omp_lock_t;
+typedef struct _omp_lock_t { int insieme_omp_lock_struct_marker; } omp_lock_t;
 
 void omp_init_lock(omp_lock_t* lock);
 void omp_set_lock(omp_lock_t* lock);

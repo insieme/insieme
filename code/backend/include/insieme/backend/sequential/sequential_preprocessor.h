@@ -43,13 +43,13 @@ namespace insieme {
 namespace backend {
 namespace sequential {
 
-/**
- * A pre-processor converting the given program into a sequential one.
- */
-class Sequentializer : public PreProcessor {
-public:
-	virtual core::NodePtr process(const backend::Converter& converter, const core::NodePtr& code);
-};
+	/**
+	 * A pre-processor converting the given program into a sequential one.
+	 */
+	class Sequentializer : public PreProcessor {
+	  public:
+		virtual core::NodePtr process(const backend::Converter& converter, const core::NodePtr& code);
+	};
 
 } // end namespace runtime
 } // end namespace backend

@@ -44,183 +44,172 @@ namespace insieme {
 namespace core {
 
 
-class IRStatistic {
+	class IRStatistic {
+	  public:
+		/**
+		 * A type definition for the information stored per node type.
+		 */
+		typedef struct {
+			std::uint64_t numShared;
+			std::uint64_t numAddressable;
+		} NodeTypeInfo;
 
-public:
+	  private:
+		/**
+		 * The number of nodes within an IR.
+		 */
+		std::uint64_t numSharedNodes;
 
-	/**
-	 * A type definition for the information stored per node type.
-	 */
-	typedef struct {
-		std::uint64_t numShared;
-		std::uint64_t numAddressable;
-	} NodeTypeInfo;
-	
-private:
+		/**
+		 * The number of addressable nodes within an IR.
+		 */
+		std::uint64_t numAddressableNodes;
 
-	/**
-	 * The number of nodes within an IR.
-	 */
-	std::uint64_t numSharedNodes;
-	
-	/**
-	 * The number of addressable nodes within an IR.
-	 */
-	std::uint64_t numAddressableNodes;
-	
-	/**
-	 * The height of the IR, hence, the maximum length of a path
-	 * from the root node to one of the leafs.
-	 */
-	unsigned height;
-	
-	/**
-	 * The statistical information stored per node type.
-	 */
-	NodeTypeInfo nodeTypeInfo[NUM_CONCRETE_NODE_TYPES];
-	
-	/**
-	 * Creates a new instance of this class, initializing all values to 0.
-	 */
-	IRStatistic();
-	
-public:
+		/**
+		 * The height of the IR, hence, the maximum length of a path
+		 * from the root node to one of the leafs.
+		 */
+		unsigned height;
 
-	/**
-	 * Creates an IR statistic summary for the given IR tree.
-	 *
-	 * @param node the root of the tree to be evaluated
-	 * @return the collected statistic information
-	 */
-	static IRStatistic evaluate(const NodePtr& node);
-	
-	/**
-	 * Obtains the number of shared nodes.
-	 *
-	 * @return the total number of shared nodes within the IR
-	 */
-	std::uint64_t getNumSharedNodes() const {
-		return numSharedNodes;
-	}
-	
-	/**
-	 * Obtains the number of addressable nodes within the IR.
-	 *
-	 * @return the total number of addressable nodes within the IR
-	 */
-	std::uint64_t getNumAddressableNodes() const {
-		return numAddressableNodes;
-	}
-	
-	/**
-	 * Obtains the height of the IR.
-	 *
-	 * @return the height of the IR.
-	 */
-	unsigned getHeight() const {
-		return height;
-	}
-	
-	/**
-	 * Returns to average number nodes are shared within an IR, hence
-	 * the ratio between the number of addressable nodes and the number
-	 * of shared nodes.
-	 *
-	 * @return the average node sharing ratio
-	 */
-	float getShareRatio() const {
-		return numAddressableNodes/(float)numSharedNodes;
-	}
-	
-	/**
-	 * Returns an array filled with the statistical data describing the
-	 * distribution of the various node types within the covered IR.
-	 *
-	 * @return the statistical data collected regarding the node types.
-	 */
-	const NodeTypeInfo& getNodeTypeInfo(NodeType nodeType) const {
-		return nodeTypeInfo[nodeType];
-	}
-	
-};
+		/**
+		 * The statistical information stored per node type.
+		 */
+		NodeTypeInfo nodeTypeInfo[NUM_CONCRETE_NODE_TYPES];
+
+		/**
+		 * Creates a new instance of this class, initializing all values to 0.
+		 */
+		IRStatistic();
+
+	  public:
+		/**
+		 * Creates an IR statistic summary for the given IR tree.
+		 *
+		 * @param node the root of the tree to be evaluated
+		 * @return the collected statistic information
+		 */
+		static IRStatistic evaluate(const NodePtr& node);
+
+		/**
+		 * Obtains the number of shared nodes.
+		 *
+		 * @return the total number of shared nodes within the IR
+		 */
+		std::uint64_t getNumSharedNodes() const {
+			return numSharedNodes;
+		}
+
+		/**
+		 * Obtains the number of addressable nodes within the IR.
+		 *
+		 * @return the total number of addressable nodes within the IR
+		 */
+		std::uint64_t getNumAddressableNodes() const {
+			return numAddressableNodes;
+		}
+
+		/**
+		 * Obtains the height of the IR.
+		 *
+		 * @return the height of the IR.
+		 */
+		unsigned getHeight() const {
+			return height;
+		}
+
+		/**
+		 * Returns to average number nodes are shared within an IR, hence
+		 * the ratio between the number of addressable nodes and the number
+		 * of shared nodes.
+		 *
+		 * @return the average node sharing ratio
+		 */
+		float getShareRatio() const {
+			return numAddressableNodes / (float)numSharedNodes;
+		}
+
+		/**
+		 * Returns an array filled with the statistical data describing the
+		 * distribution of the various node types within the covered IR.
+		 *
+		 * @return the statistical data collected regarding the node types.
+		 */
+		const NodeTypeInfo& getNodeTypeInfo(NodeType nodeType) const {
+			return nodeTypeInfo[nodeType];
+		}
+	};
 
 
-class NodeStatistic {
+	class NodeStatistic {
+	  public:
+		/**
+		 * A type definition for the information stored per node type.
+		 */
+		typedef struct {
+			unsigned num;
+			unsigned memory;
+		} NodeTypeInfo;
 
-public:
+	  private:
+		/**
+		 * The number of nodes encountered.
+		 */
+		unsigned numNodes;
 
-	/**
-	 * A type definition for the information stored per node type.
-	 */
-	typedef struct {
-		unsigned num;
-		unsigned memory;
-	} NodeTypeInfo;
-	
-private:
+		/**
+		 * The total amount of memory consumed by those nodes (not including
+		 * any annotations).
+		 */
+		unsigned totalMemory;
 
-	/**
-	 * The number of nodes encountered.
-	 */
-	unsigned numNodes;
-	
-	/**
-	 * The total amount of memory consumed by those nodes (not including
-	 * any annotations).
-	 */
-	unsigned totalMemory;
-	
-	/**
-	 * The statistical information stored per node type.
-	 */
-	NodeTypeInfo nodeTypeInfo[NUM_CONCRETE_NODE_TYPES];
-	
-	/**
-	 * Creates a new instance of this class, initializing all values to 0.
-	 */
-	NodeStatistic();
-	
-public:
+		/**
+		 * The statistical information stored per node type.
+		 */
+		NodeTypeInfo nodeTypeInfo[NUM_CONCRETE_NODE_TYPES];
 
-	/**
-	 * Creates an Node statistic summary for all the nodes managed by the given manager.
-	 *
-	 * @param manager the manager for which's content a statistic should be created.
-	 * @return the collected statistic information
-	 */
-	static NodeStatistic evaluate(const NodeManager& manager);
-	
-	/**
-	 * Obtains the total number of nodes encountered when producing this statistic.
-	 *
-	 * @return total number of nodes
-	 */
-	unsigned getNumNodes() const {
-		return numNodes;
-	}
-	
-	/**
-	 * Obtains the total amount of memory consumed by the encountered nodes. The
-	 * computation is not including any memory spend on annotations.
-	 *
-	 * @return the total amount of memory consumed by the encountered nodes.
-	 */
-	unsigned getTotalMemory() const {
-		return totalMemory;
-	}
-	
-	/**
-	 * Returns an array filled with the statistical data describing the
-	 * distribution of the various node types within the covered IR.
-	 *
-	 * @return the statistical data collected regarding the node types.
-	 */
-	const NodeTypeInfo& getNodeTypeInfo(NodeType nodeType) const {
-		return nodeTypeInfo[nodeType];
-	}
-	
-};
+		/**
+		 * Creates a new instance of this class, initializing all values to 0.
+		 */
+		NodeStatistic();
 
+	  public:
+		/**
+		 * Creates an Node statistic summary for all the nodes managed by the given manager.
+		 *
+		 * @param manager the manager for which's content a statistic should be created.
+		 * @return the collected statistic information
+		 */
+		static NodeStatistic evaluate(const NodeManager& manager);
+
+		/**
+		 * Obtains the total number of nodes encountered when producing this statistic.
+		 *
+		 * @return total number of nodes
+		 */
+		unsigned getNumNodes() const {
+			return numNodes;
+		}
+
+		/**
+		 * Obtains the total amount of memory consumed by the encountered nodes. The
+		 * computation is not including any memory spend on annotations.
+		 *
+		 * @return the total amount of memory consumed by the encountered nodes.
+		 */
+		unsigned getTotalMemory() const {
+			return totalMemory;
+		}
+
+		/**
+		 * Returns an array filled with the statistical data describing the
+		 * distribution of the various node types within the covered IR.
+		 *
+		 * @return the statistical data collected regarding the node types.
+		 */
+		const NodeTypeInfo& getNodeTypeInfo(NodeType nodeType) const {
+			return nodeTypeInfo[nodeType];
+		}
+	};
 
 
 } // end namespace core
@@ -229,14 +218,13 @@ public:
 
 namespace std {
 
-/**
- * Allows IR statistics to be directly printed into output streams.
- */
-std::ostream& operator<<(std::ostream& out, const insieme::core::IRStatistic& statistics);
+	/**
+	 * Allows IR statistics to be directly printed into output streams.
+	 */
+	std::ostream& operator<<(std::ostream& out, const insieme::core::IRStatistic& statistics);
 
-/**
- * Allows a node statistics to be directly printed into output streams.
- */
-std::ostream& operator<<(std::ostream& out, const insieme::core::NodeStatistic& statistics);
-
+	/**
+	 * Allows a node statistics to be directly printed into output streams.
+	 */
+	std::ostream& operator<<(std::ostream& out, const insieme::core::NodeStatistic& statistics);
 }

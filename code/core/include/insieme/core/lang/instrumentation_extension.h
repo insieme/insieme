@@ -42,28 +42,25 @@ namespace insieme {
 namespace core {
 namespace lang {
 
-/**
- */
-class InstrumentationExtension : public core::lang::Extension {
-
 	/**
-	 * Allow the node manager to create instances of this class.
 	 */
-	friend class core::NodeManager;
-	
-	/**
-	 * Creates a new instance based on the given node manager.
-	 */
-	InstrumentationExtension(core::NodeManager& manager)
-		: core::lang::Extension(manager) {}
-		
-		
-public:
+	class InstrumentationExtension : public core::lang::Extension {
+		/**
+		 * Allow the node manager to create instances of this class.
+		 */
+		friend class core::NodeManager;
 
-	LANG_EXT_LITERAL(InstrumentationInitRegions, "ir_init_regions", "(uint<8>)->unit")
-	LANG_EXT_LITERAL(InstrumentationRegionStart, "ir_inst_region_start", "(uint<4>)->unit")
-	LANG_EXT_LITERAL(InstrumentationRegionEnd, "ir_inst_region_end", "(uint<4>)->unit")
-};
+		/**
+		 * Creates a new instance based on the given node manager.
+		 */
+		InstrumentationExtension(core::NodeManager& manager) : core::lang::Extension(manager) {}
+
+
+	  public:
+		LANG_EXT_LITERAL(InstrumentationInitRegions, "ir_init_regions", "(uint<8>)->unit")
+		LANG_EXT_LITERAL(InstrumentationRegionStart, "ir_inst_region_start", "(uint<4>)->unit")
+		LANG_EXT_LITERAL(InstrumentationRegionEnd, "ir_inst_region_end", "(uint<4>)->unit")
+	};
 }
 }
 }

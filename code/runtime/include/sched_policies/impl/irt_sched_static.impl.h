@@ -47,7 +47,7 @@ void irt_scheduling_init_worker(irt_worker* self) {
 	irt_work_item_deque_init(&self->sched_data.pool);
 }
 
-bool irt_scheduling_worker_sleep(irt_worker *self) {
+bool irt_scheduling_worker_sleep(irt_worker* self) {
 	return true;
 }
 
@@ -69,12 +69,10 @@ int irt_scheduling_iteration(irt_worker* self) {
 		return 1;
 	}
 	// if that failed as well, look in the IPC message queue
-	if(_irt_sched_check_ipc_queue(self)) {
-		return 1;
-	}
+	if(_irt_sched_check_ipc_queue(self)) { return 1; }
 	// TODO [_GEMS]: without this yield, the execution will stuck on uniprocessor systems
 	irt_thread_yield();
-	
+
 	return 0;
 }
 
@@ -82,18 +80,17 @@ void irt_scheduling_assign_wi(irt_worker* target, irt_work_item* wi) {
 	// split wis equally among workers
 	int64 size = irt_wi_range_get_size(&wi->range);
 	if(size > 1 && size >= irt_g_worker_count) {
-		irt_work_item **split_wis = (irt_work_item**)alloca(irt_g_worker_count * sizeof(irt_work_item*));
+		irt_work_item** split_wis = (irt_work_item**)alloca(irt_g_worker_count * sizeof(irt_work_item*));
 		irt_wi_split_uniform(wi, irt_g_worker_count, split_wis);
-		for(uint32 i=0; i<irt_g_worker_count; ++i) {
+		for(uint32 i = 0; i < irt_g_worker_count; ++i) {
 			irt_work_item_cdeque_insert_back(&irt_g_workers[i]->sched_data.queue, split_wis[i]);
 			irt_signal_worker(irt_g_workers[i]);
 		}
-#ifdef _GEMS_SIM
+		#ifdef _GEMS_SIM
 		// alloca is implemented as malloc
 		free(split_wis);
-#endif
-	}
-	else {
+		#endif
+	} else {
 		irt_work_item_cdeque_insert_back(&target->sched_data.queue, wi);
 		irt_signal_worker(target);
 	}
@@ -105,9 +102,8 @@ irt_joinable irt_scheduling_optional_wi(irt_worker* target, irt_work_item* wi) {
 		joinable.wi_id = wi->id;
 		irt_worker_run_immediate_wi(target, wi);
 		return joinable;
-	}
-	else {
-		irt_work_item *real_wi = irt_wi_create(wi->range, wi->impl, wi->parameters);
+	} else {
+		irt_work_item* real_wi = irt_wi_create(wi->range, wi->impl, wi->parameters);
 		irt_joinable joinable;
 		joinable.wi_id = real_wi->id;
 		irt_scheduling_assign_wi(target, real_wi);
@@ -116,7 +112,7 @@ irt_joinable irt_scheduling_optional_wi(irt_worker* target, irt_work_item* wi) {
 }
 
 void irt_scheduling_yield(irt_worker* self, irt_work_item* yielding_wi) {
-	IRT_DEBUG("Worker yield, worker: %p,  wi: %p", (void*) self, (void*) yielding_wi);
+	IRT_DEBUG("Worker yield, worker: %p,  wi: %p", (void*)self, (void*)yielding_wi);
 	irt_work_item_deque_insert_back(&self->sched_data.pool, yielding_wi);
 	lwt_continue(&self->basestack, &yielding_wi->stack_ptr);
 }

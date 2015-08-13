@@ -58,78 +58,73 @@ namespace insieme {
 namespace core {
 namespace lang {
 
-/**
- * This class can be used to obtain factories by name which create language extensions.
- *
- * New named language extensions have to be registered in the constructor of this class.
- */
-class ExtensionRegistry {
+	/**
+	 * This class can be used to obtain factories by name which create language extensions.
+	 *
+	 * New named language extensions have to be registered in the constructor of this class.
+	 */
+	class ExtensionRegistry {
+	  private:
+		// the map storing factory functions which can be called to create a new instance of language extensions
+		std::map<const std::string, std::function<const Extension&(NodeManager&)>> extensionFactories;
 
-private:
-	//the map storing factory functions which can be called to create a new instance of language extensions
-	std::map<const std::string, std::function<const Extension&(NodeManager&)>> extensionFactories;
-	
-	//prevent external instantiation
-	ExtensionRegistry() {
-		//fill the map with named extensions in here
-		extensionFactories.insert(getExtensionFactory<AsmStmtExtension>("ext.asm"));
-		extensionFactories.insert(getExtensionFactory<EnumExtension>("ext.enum"));
-		extensionFactories.insert(getExtensionFactory<IRppExtensions>("ext.ir++"));
-		extensionFactories.insert(getExtensionFactory<ParallelExtension>("ext.parallel"));
-		extensionFactories.insert(getExtensionFactory<SIMDVectorExtension>("ext.simd"));
-		extensionFactories.insert(getExtensionFactory<StaticVariableExtension>("ext.static"));
-		extensionFactories.insert(getExtensionFactory<VarArgsExtension>("ext.varargs"));
-		extensionFactories.insert(getExtensionFactory<InstrumentationExtension>("ext.instrumentation"));
-	}
-	
-	//prevent copies
-	ExtensionRegistry(ExtensionRegistry const&) = delete;
-	
-	void operator=(ExtensionRegistry const&)    = delete;
-	
-	//returns a new std::pair which can be inserted into the map of extension factories
-	template<typename T>
-	std::pair<const std::string, std::function<const Extension&(NodeManager&)>> getExtensionFactory(const std::string& extensionName) {
-		return std::make_pair(extensionName,
-		[](NodeManager& manager) -> const Extension& {
-			return manager.getLangExtension<T>();
+		// prevent external instantiation
+		ExtensionRegistry() {
+			// fill the map with named extensions in here
+			extensionFactories.insert(getExtensionFactory<AsmStmtExtension>("ext.asm"));
+			extensionFactories.insert(getExtensionFactory<EnumExtension>("ext.enum"));
+			extensionFactories.insert(getExtensionFactory<IRppExtensions>("ext.ir++"));
+			extensionFactories.insert(getExtensionFactory<ParallelExtension>("ext.parallel"));
+			extensionFactories.insert(getExtensionFactory<SIMDVectorExtension>("ext.simd"));
+			extensionFactories.insert(getExtensionFactory<StaticVariableExtension>("ext.static"));
+			extensionFactories.insert(getExtensionFactory<VarArgsExtension>("ext.varargs"));
+			extensionFactories.insert(getExtensionFactory<InstrumentationExtension>("ext.instrumentation"));
 		}
-		                     );
-	}
-	
-public:
-	/*
-	 * Returns the singleton instance of this ExtensionRegistry
-	 *
-	 * @return the singleton instance.
-	 */
-	static ExtensionRegistry& getInstance() {
-		static ExtensionRegistry instance;
-		return instance;
-	}
-	
-	/**
-	 * Looks up an Extension factory by name
-	 *
-	 * @param name the name of the extension to look up
-	 * @return a factory which can be used to create the extension, given a NodeManager
-	 */
-	const std::function<const Extension&(NodeManager&)> getExtensionFactory(const std::string& extensionName) const {
-		const auto& result = extensionFactories.find(extensionName);
-		assert_true(result != extensionFactories.end()) << "Can't find extension with name \"" << extensionName <<
-		        "\". Please check the name and also register it in the constructor of ExtensionRegistry";
-		return result->second;
-	}
-	
-	/**
-	 * Returns all extension factories
-	 *
-	 * @return all factories and names of registered extensions which can be used to create the extension, given a NodeManager
-	 */
-	const std::map<const std::string, std::function<const Extension&(NodeManager&)>> getExtensionFactories() const {
-		return extensionFactories;
-	}
-};
+
+		// prevent copies
+		ExtensionRegistry(ExtensionRegistry const&) = delete;
+
+		void operator=(ExtensionRegistry const&) = delete;
+
+		// returns a new std::pair which can be inserted into the map of extension factories
+		template <typename T>
+		std::pair<const std::string, std::function<const Extension&(NodeManager&)>> getExtensionFactory(const std::string& extensionName) {
+			return std::make_pair(extensionName, [](NodeManager& manager) -> const Extension& { return manager.getLangExtension<T>(); });
+		}
+
+	  public:
+		/*
+		 * Returns the singleton instance of this ExtensionRegistry
+		 *
+		 * @return the singleton instance.
+		 */
+		static ExtensionRegistry& getInstance() {
+			static ExtensionRegistry instance;
+			return instance;
+		}
+
+		/**
+		 * Looks up an Extension factory by name
+		 *
+		 * @param name the name of the extension to look up
+		 * @return a factory which can be used to create the extension, given a NodeManager
+		 */
+		const std::function<const Extension&(NodeManager&)> getExtensionFactory(const std::string& extensionName) const {
+			const auto& result = extensionFactories.find(extensionName);
+			assert_true(result != extensionFactories.end()) << "Can't find extension with name \"" << extensionName
+			                                                << "\". Please check the name and also register it in the constructor of ExtensionRegistry";
+			return result->second;
+		}
+
+		/**
+		 * Returns all extension factories
+		 *
+		 * @return all factories and names of registered extensions which can be used to create the extension, given a NodeManager
+		 */
+		const std::map<const std::string, std::function<const Extension&(NodeManager&)>> getExtensionFactories() const {
+			return extensionFactories;
+		}
+	};
 
 
 } // end namespace lang

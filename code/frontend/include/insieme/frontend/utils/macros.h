@@ -41,86 +41,77 @@
  *      shortcuts to access or retrieve specific IR features
 *****************************************************************************************************/
 
-#define GET_REF_ELEM_TYPE(type) \
-	(core::static_pointer_cast<const core::RefType>(type)->getElementType())
+#define GET_REF_ELEM_TYPE(type) (core::static_pointer_cast<const core::RefType>(type)->getElementType())
 
-#define GET_VEC_ELEM_TYPE(type) \
-	(core::static_pointer_cast<const core::VectorType>(type)->getElementType())
+#define GET_VEC_ELEM_TYPE(type) (core::static_pointer_cast<const core::VectorType>(type)->getElementType())
 
-#define IS_ARRAY_TYPE(type)\
-	(type.isa<core::RefTypePtr>() && type.as<core::RefTypePtr>()->getElementType().isa<core::ArrayTypePtr>())
+#define IS_ARRAY_TYPE(type) (type.isa<core::RefTypePtr>() && type.as<core::RefTypePtr>()->getElementType().isa<core::ArrayTypePtr>())
 
-#define GET_ARRAY_ELEM_TYPE(type) \
-	(core::static_pointer_cast<const core::ArrayType>(type)->getElementType())
+#define GET_ARRAY_ELEM_TYPE(type) (core::static_pointer_cast<const core::ArrayType>(type)->getElementType())
 
-#define IS_IR_REF(type) \
-	(type->getNodeType() == core::NT_RefType)
+#define IS_IR_REF(type) (type->getNodeType() == core::NT_RefType)
 
-#define GET_REF_ELEM_TYPE(type) \
-	(core::static_pointer_cast<const core::RefType>(type)->getElementType())
+#define GET_REF_ELEM_TYPE(type) (core::static_pointer_cast<const core::RefType>(type)->getElementType())
 
 
 /*****************************************************************************************************
  *      LOG MACROS
 *****************************************************************************************************/
 
-#define LOG_EXPR_CONVERSION(parentExpr, expr) \
-	FinalActions attachLog( [&] () { \
-        VLOG(1) << "******      EXPR  [class:'"<< parentExpr->getStmtClassName() <<"'] ******"; \
-        if( VLOG_IS_ON(2) ) { \
-            VLOG(2) << "Dump of clang expression: "; \
-            parentExpr->dump(); \
-        } \
-        VLOG(1) << "-> at location: (" <<	\
-                    utils::location(parentExpr->getLocStart(), convFact.getSourceManager()) << "); "; \
-        VLOG(1) << "Converted into IR expression: "; \
-        if(expr) { \
-            VLOG(1) << "\n" << dumpOneLine(expr) <<  "\n of type:( " << *expr->getType() << " )"; \
-        } \
-		else{ \
-            VLOG(1) << "\tno expression"; \
-		} \
-        VLOG(1) << "****** DONE EXPR [class:'"<< parentExpr->getStmtClassName() <<"'] ******"; \
-    } )
+#define LOG_EXPR_CONVERSION(parentExpr, expr)                                                                                                                  \
+	FinalActions attachLog([&]() {                                                                                                                             \
+		VLOG(1) << "******      EXPR  [class:'" << parentExpr->getStmtClassName() << "'] ******";                                                              \
+		if(VLOG_IS_ON(2)) {                                                                                                                                    \
+			VLOG(2) << "Dump of clang expression: ";                                                                                                           \
+			parentExpr->dump();                                                                                                                                \
+		}                                                                                                                                                      \
+		VLOG(1) << "-> at location: (" << utils::location(parentExpr->getLocStart(), convFact.getSourceManager()) << "); ";                                    \
+		VLOG(1) << "Converted into IR expression: ";                                                                                                           \
+		if(expr) {                                                                                                                                             \
+			VLOG(1) << "\n" << dumpOneLine(expr) << "\n of type:( " << *expr->getType() << " )";                                                               \
+		} else {                                                                                                                                               \
+			VLOG(1) << "\tno expression";                                                                                                                      \
+		}                                                                                                                                                      \
+		VLOG(1) << "****** DONE EXPR [class:'" << parentExpr->getStmtClassName() << "'] ******";                                                               \
+	})
 
 
-#define LOG_STMT_CONVERSION(parentStmt, stmt) \
-	FinalActions attachLog( [&] () { \
-        VLOG(1) << "******      STMT [class:'"<< parentStmt->getStmtClassName() <<"'] ******"; \
-        if( VLOG_IS_ON(2) ) { \
-            VLOG(2) << "Dump of clang statement:"; \
-            parentStmt->dump(convFact.getSourceManager()); \
-        } \
-        VLOG(1) << "-> at location: (" \
-                << utils::location(parentStmt->getLocStart(), convFact.getSourceManager()) << "); "; \
-        VLOG(1) << "Converted 'statement' into IR stmt: "; \
-        VLOG(1) << stmt; \
-        VLOG(1) << "****** DONE STMT [class:'"<< parentStmt->getStmtClassName() <<"'] ******"; \
-    } )
+#define LOG_STMT_CONVERSION(parentStmt, stmt)                                                                                                                  \
+	FinalActions attachLog([&]() {                                                                                                                             \
+		VLOG(1) << "******      STMT [class:'" << parentStmt->getStmtClassName() << "'] ******";                                                               \
+		if(VLOG_IS_ON(2)) {                                                                                                                                    \
+			VLOG(2) << "Dump of clang statement:";                                                                                                             \
+			parentStmt->dump(convFact.getSourceManager());                                                                                                     \
+		}                                                                                                                                                      \
+		VLOG(1) << "-> at location: (" << utils::location(parentStmt->getLocStart(), convFact.getSourceManager()) << "); ";                                    \
+		VLOG(1) << "Converted 'statement' into IR stmt: ";                                                                                                     \
+		VLOG(1) << stmt;                                                                                                                                       \
+		VLOG(1) << "****** DONE STMT [class:'" << parentStmt->getStmtClassName() << "'] ******";                                                               \
+	})
 
 
-#define LOG_BUILTIN_TYPE_CONVERSION(parentType) \
-    VLOG(1) << "**********************TYPE*[class:'"<< parentType->getTypeClassName() <<"']**********************"; \
-    if( VLOG_IS_ON(2) ) { \
-        VLOG(2) << "Dump of clang type:"; \
-        parentType->dump(); \
-    } \
-    VLOG(1) << "****************************************************************************************";
+#define LOG_BUILTIN_TYPE_CONVERSION(parentType)                                                                                                                \
+	VLOG(1) << "**********************TYPE*[class:'" << parentType->getTypeClassName() << "']**********************";                                          \
+	if(VLOG_IS_ON(2)) {                                                                                                                                        \
+		VLOG(2) << "Dump of clang type:";                                                                                                                      \
+		parentType->dump();                                                                                                                                    \
+	}                                                                                                                                                          \
+	VLOG(1) << "****************************************************************************************";
 
 
-#define LOG_TYPE_CONVERSION(parentType, retType) \
-	FinalActions attachLog( [&] () { \
-        VLOG(1) << "**********************TYPE*[class:'"<< parentType->getTypeClassName() <<"']**********************"; \
-        if( VLOG_IS_ON(2) ) { \
-            VLOG(2) << "Dump of clang type:";\
-            parentType->dump(); \
-        } \
-        if(retType) { \
-            VLOG(1) << "Converted 'type' into IR type: "; \
-            VLOG(1) << "\t" << *retType; \
-        } \
-        VLOG(1) << "****************************************************************************************"; \
-    } )
+#define LOG_TYPE_CONVERSION(parentType, retType)                                                                                                               \
+	FinalActions attachLog([&]() {                                                                                                                             \
+		VLOG(1) << "**********************TYPE*[class:'" << parentType->getTypeClassName() << "']**********************";                                      \
+		if(VLOG_IS_ON(2)) {                                                                                                                                    \
+			VLOG(2) << "Dump of clang type:";                                                                                                                  \
+			parentType->dump();                                                                                                                                \
+		}                                                                                                                                                      \
+		if(retType) {                                                                                                                                          \
+			VLOG(1) << "Converted 'type' into IR type: ";                                                                                                      \
+			VLOG(1) << "\t" << *retType;                                                                                                                       \
+		}                                                                                                                                                      \
+		VLOG(1) << "****************************************************************************************";                                                 \
+	})
 
 /*****************************************************************************************************
  *      ASSERT macros
@@ -134,4 +125,3 @@
   * in the scope to able to print the current translating location
   */
 #define frontend_assert(_COND) assert_true(_COND) << " ==> last Trackable location: " << convFact.getLastTrackableLocation() << "\n"
-

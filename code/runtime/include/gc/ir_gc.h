@@ -48,16 +48,14 @@ static inline void* ir_gc_register(std::vector<void*>* list, void* ptr) {
 }
 
 static inline void* ir_gc_filter(std::vector<void*>* list, void* ptr) {
-	for(int i=0; i<list->size(); i++) {
-		if(list->at(i) == ptr) {
-			return 0;
-		}
+	for(int i = 0; i < list->size(); i++) {
+		if(list->at(i) == ptr) { return 0; }
 	}
 	return ptr;
 }
 
 static inline void ir_gc_free(std::vector<void*>* list) {
-	for(int i=0; i<list->size(); i++) {
+	for(int i = 0; i < list->size(); i++) {
 		free(list->at(i));
 	}
 }

@@ -46,46 +46,43 @@ namespace insieme {
 namespace backend {
 namespace c_ast {
 
-/**
- * A class capable of printing a C AST to some output stream.
- *
- * Usage:  out << CPrint(fragment);
- */
-class CPrint : public utils::Printable {
-
 	/**
-	 * The C code fragment to be printed.
+	 * A class capable of printing a C AST to some output stream.
+	 *
+	 * Usage:  out << CPrint(fragment);
 	 */
-	const NodePtr fragment;
-	
-public:
+	class CPrint : public utils::Printable {
+		/**
+		 * The C code fragment to be printed.
+		 */
+		const NodePtr fragment;
 
-	/**
-	 * A simple constructor allowing to specify the fragment to be printed.
-	 */
-	CPrint(const NodePtr fragment) : fragment(fragment) {}
-	
-	/**
-	 * Prints the fragment set up within the constructor to the given output stream.
-	 */
-	std::ostream& printTo(std::ostream& out) const;
-	
-};
+	  public:
+		/**
+		 * A simple constructor allowing to specify the fragment to be printed.
+		 */
+		CPrint(const NodePtr fragment) : fragment(fragment) {}
 
-string toC(const NodePtr& node);
+		/**
+		 * Prints the fragment set up within the constructor to the given output stream.
+		 */
+		std::ostream& printTo(std::ostream& out) const;
+	};
 
-string toC(const c_ast::CodeFragmentPtr& fragment);
+	string toC(const NodePtr& node);
 
-struct ParameterPrinter : public utils::Printable {
-	const vector<c_ast::VariablePtr> params;
-public:
-	ParameterPrinter(const TypePtr& type, const IdentifierPtr& name)
-		: params(toVector(type->getManager()->create<c_ast::Variable>(type, name))) {}
-	ParameterPrinter(const VariablePtr& param) : params(toVector(param)) {}
-	ParameterPrinter(const vector<VariablePtr>& params) : params(params) {}
-	
-	std::ostream& printTo(std::ostream& out) const;
-};
+	string toC(const c_ast::CodeFragmentPtr& fragment);
+
+	struct ParameterPrinter : public utils::Printable {
+		const vector<c_ast::VariablePtr> params;
+
+	  public:
+		ParameterPrinter(const TypePtr& type, const IdentifierPtr& name) : params(toVector(type->getManager()->create<c_ast::Variable>(type, name))) {}
+		ParameterPrinter(const VariablePtr& param) : params(toVector(param)) {}
+		ParameterPrinter(const vector<VariablePtr>& params) : params(params) {}
+
+		std::ostream& printTo(std::ostream& out) const;
+	};
 
 
 } // end namespace c_ast

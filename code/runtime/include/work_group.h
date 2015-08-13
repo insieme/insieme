@@ -51,8 +51,8 @@ IRT_MAKE_ID_TYPE(work_group)
 
 struct _irt_work_group {
 	irt_work_group_id id;
-	//bool distributed;	// starts at false, set to true if part of the group is not on the same shared memory node
-	//irt_worker_id coordinator;  // only set if distributed == true
+	// bool distributed;	// starts at false, set to true if part of the group is not on the same shared memory node
+	// irt_worker_id coordinator;  // only set if distributed == true
 	/* implementation stuff */
 	irt_spinlock lock;
 	volatile uint32 local_member_count;
@@ -60,18 +60,18 @@ struct _irt_work_group {
 	volatile uint32 cur_barrier_count;
 	volatile uint32 tot_barrier_count;
 	void** redistribute_data_array;
-	volatile uint32 pfor_count; // index of the most recently added pfor
+	volatile uint32 pfor_count;        // index of the most recently added pfor
 	volatile uint32 joined_pfor_count; // index of the latest joined pfor
-	irt_loop_sched_policy cur_sched; // current scheduling policy
+	irt_loop_sched_policy cur_sched;   // current scheduling policy
 	irt_loop_sched_data loop_sched_data[IRT_WG_RING_BUFFER_SIZE];
-#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
+	#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 	volatile uint64 regions_started;
 	volatile uint64 regions_ended;
 	volatile uint64* region_data_entries;
 	volatile uint64* region_data_exits;
 	volatile uint64 region_completions_required[IRT_INST_REGION_INSTRUMENTATION_RING_BUFFER_SIZE];
 	volatile irt_inst_region_wi_data** region_data; //[IRT_INST_REGION_INSTRUMENTATION_RING_BUFFER_SIZE];
-#endif //IRT_ENABLE_REGION_INSTRUMENTATION
+	#endif                                          // IRT_ENABLE_REGION_INSTRUMENTATION
 };
 
 struct _irt_wi_wg_membership {
@@ -80,7 +80,7 @@ struct _irt_wi_wg_membership {
 	uint32 pfor_count;
 };
 
-typedef void irt_wg_redistribution_function(void** collected, uint32 local_id, uint32 num_participants, void *out_result);
+typedef void irt_wg_redistribution_function(void** collected, uint32 local_id, uint32 num_participants, void* out_result);
 
 /* ------------------------------ operations ----- */
 
@@ -90,8 +90,8 @@ void irt_wg_destroy(irt_work_group* wg);
 
 static inline void _irt_wg_end_member(irt_work_group* wg);
 
-//inline void irt_wg_join(irt_work_group* wg);
-//inline void irt_wg_leave(irt_work_group* wg);
+// inline void irt_wg_join(irt_work_group* wg);
+// inline void irt_wg_leave(irt_work_group* wg);
 
 void irt_wg_insert(irt_work_group* wg, irt_work_item* wi);
 void irt_wg_remove(irt_work_group* wg, irt_work_item* wi);

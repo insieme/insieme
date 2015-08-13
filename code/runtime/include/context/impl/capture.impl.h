@@ -52,7 +52,7 @@
  *
  * It is set to 4KB.
  */
-#define IRT_CONTEXT_CAPTURE_ALIGNMENT (1<<12)
+#define IRT_CONTEXT_CAPTURE_ALIGNMENT (1 << 12)
 
 /**
  * The magic number used within profile files to provide some

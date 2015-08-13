@@ -150,7 +150,8 @@ int32 irt_cpu_freq_set_frequency_worker_env(const irt_worker* worker);
 bool irt_cpu_freq_set_frequency_socket(const uint32 socket, const uint32 frequency);
 
 /*
- * This function sets the frequencies of all cores of sockets from an environmental variable. Only actual values are supported as of now, no placeholders like MIN/MAX/OS.
+ * This function sets the frequencies of all cores of sockets from an environmental variable. Only actual values are supported as of now, no placeholders like
+ * MIN/MAX/OS.
  */
 
 int32 irt_cpu_freq_set_frequency_socket_env();

@@ -51,63 +51,70 @@ namespace core {
  * enumeration can than be used to identify the actual type of AST nodes
  * in case the exact type cannot be determined statically.
  */
-#define CONCRETE(name) NT_ ## name,
-enum NodeType {
+#define CONCRETE(name) NT_##name,
+	enum NodeType {
 	// the necessary information is obtained from the node-definition file
-#include "insieme/core/ir_nodes.def"
-};
-#undef CONCRETE
+	#include "insieme/core/ir_nodes.def"
+	};
+	#undef CONCRETE
 
-/**
- * A constant defining the number of node types.
- */
-#define CONCRETE(name) +1
-enum { NUM_CONCRETE_NODE_TYPES = 0
-                                 // the necessary information is obtained from the node-definition file
-#include "insieme/core/ir_nodes.def"
-     };
-#undef CONCRETE
-     
-     
-     
-// **********************************************************************************
-// 									Node Categories
-// **********************************************************************************
+	/**
+	 * A constant defining the number of node types.
+	 */
+	#define CONCRETE(name) +1
+	enum {
+		NUM_CONCRETE_NODE_TYPES = 0
+	// the necessary information is obtained from the node-definition file
+	#include "insieme/core/ir_nodes.def"
+	};
+	#undef CONCRETE
 
-/**
- * Defines a set of categories nodes might belong to. Every node has to belong to
- * exactly one of the enlisted categories.
- */
-enum NodeCategory {
-	NC_Value,			// < a leaf node representing a value
-	NC_IntTypeParam,	// < a node representing an int-type-param
-	NC_Type,			// < a node representing a type
-	NC_Expression,		// < a node representing an expression
-	NC_Statement,		// < a node representing a statement
-	NC_Program,			// < a node representing a program
-	NC_Support			// < a utility used to realize a complex data structure
-};
 
-// A node trait linking a the category enumeration to the base type
-template<NodeCategory category> struct node_category_trait;
-template<> struct node_category_trait<NC_Value> 		{
-	typedef Value base_type;
-};
-template<> struct node_category_trait<NC_Type> 			{
-	typedef Type base_type;
-};
-template<> struct node_category_trait<NC_Expression> 	{
-	typedef Expression base_type;
-};
-template<> struct node_category_trait<NC_Statement> 	{
-	typedef Statement base_type;
-};
-template<> struct node_category_trait<NC_Program> 		{
-	typedef Program base_type;
-};
-template<> struct node_category_trait<NC_Support> 		{
-	typedef Support base_type;
-};
+	// **********************************************************************************
+	// 									Node Categories
+	// **********************************************************************************
+
+	/**
+	 * Defines a set of categories nodes might belong to. Every node has to belong to
+	 * exactly one of the enlisted categories.
+	 */
+	enum NodeCategory {
+		NC_Value,        // < a leaf node representing a value
+		NC_IntTypeParam, // < a node representing an int-type-param
+		NC_Type,         // < a node representing a type
+		NC_Expression,   // < a node representing an expression
+		NC_Statement,    // < a node representing a statement
+		NC_Program,      // < a node representing a program
+		NC_Support       // < a utility used to realize a complex data structure
+	};
+
+	// A node trait linking a the category enumeration to the base type
+	template <NodeCategory category>
+	struct node_category_trait;
+	template <>
+	struct node_category_trait<NC_Value> {
+		typedef Value base_type;
+	};
+	template <>
+	struct node_category_trait<NC_Type> {
+		typedef Type base_type;
+	};
+	template <>
+	struct node_category_trait<NC_Expression> {
+		typedef Expression base_type;
+	};
+	template <>
+	struct node_category_trait<NC_Statement> {
+		typedef Statement base_type;
+	};
+	template <>
+	struct node_category_trait<NC_Program> {
+		typedef Program base_type;
+	};
+	template <>
+	struct node_category_trait<NC_Support> {
+		typedef Support base_type;
+	};
 
 
 } // end namespace core
@@ -116,10 +123,9 @@ template<> struct node_category_trait<NC_Support> 		{
 
 namespace std {
 
-/**
- * Allows node types to be printed using names.
- */
-std::ostream& operator<<(std::ostream& out, const insieme::core::NodeType& type);
+	/**
+	 * Allows node types to be printed using names.
+	 */
+	std::ostream& operator<<(std::ostream& out, const insieme::core::NodeType& type);
 
 } // end namespace std
-

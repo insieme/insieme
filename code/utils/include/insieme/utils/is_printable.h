@@ -39,29 +39,31 @@
 namespace insieme {
 namespace utils {
 
-/**
- * A type trait to determine whether a given type T can be printed to some output stream.
- */
-template<typename T>
-class is_printable {
-	typedef char yes;
-	typedef long no;
-	
-	template<class E> static E& lvalue_of_type();
-	template<class E> static E  rvalue_of_type();
-	
-	// two implementations of the test - as templates to utilize the SFINA mechanism
-	//   - the first one will only be supported in cases where T is printable
-	//   - the latter is always supported, yet of lower priority in the overloading
-	template <typename C> static yes test(char(*)[sizeof(lvalue_of_type<std::ostream>() << rvalue_of_type<C>())]);
-	template <typename C> static no  test(...);
-	
-public:
+	/**
+	 * A type trait to determine whether a given type T can be printed to some output stream.
+	 */
+	template <typename T>
+	class is_printable {
+		typedef char yes;
+		typedef long no;
 
-	// define the resulting constant by testing which test method is called
-	enum { value = sizeof(test<T>(0)) == sizeof(yes) };
-	
-};
+		template <class E>
+		static E& lvalue_of_type();
+		template <class E>
+		static E rvalue_of_type();
+
+		// two implementations of the test - as templates to utilize the SFINA mechanism
+		//   - the first one will only be supported in cases where T is printable
+		//   - the latter is always supported, yet of lower priority in the overloading
+		template <typename C>
+		static yes test(char (*)[sizeof(lvalue_of_type<std::ostream>() << rvalue_of_type<C>())]);
+		template <typename C>
+		static no test(...);
+
+	  public:
+		// define the resulting constant by testing which test method is called
+		enum { value = sizeof(test<T>(0)) == sizeof(yes) };
+	};
 
 } // end namespace utils
 } // end namespace insieme

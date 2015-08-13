@@ -63,20 +63,16 @@ int irt_scheduling_iteration(irt_worker* self) {
 		return 1;
 	}
 	// try to steal a work item from predecessor
-	int pred = self->id.thread-1;
-	if(pred < 0) {
-		pred = irt_g_worker_count-1;
-	}
+	int pred = self->id.thread - 1;
+	if(pred < 0) { pred = irt_g_worker_count - 1; }
 	irt_work_item* stolen_wi = irt_work_item_cdeque_pop_front(&irt_g_workers[pred]->sched_data.queue);
 	if(stolen_wi != NULL) {
-		//printf("I'm a dirty thief %d.value\n", self->id.thread);
+		// printf("I'm a dirty thief %d.value\n", self->id.thread);
 		_irt_worker_switch_to_wi(self, stolen_wi);
 		return 1;
 	}
 	// if that failed as well, look in the IPC message queue
-	if(_irt_sched_check_ipc_queue(self)) {
-		return 1;
-	}
+	if(_irt_sched_check_ipc_queue(self)) { return 1; }
 	return 0;
 }
 
@@ -85,17 +81,16 @@ void irt_scheduling_assign_wi(irt_worker* target, irt_work_item* wi) {
 		irt_work_item_cdeque_insert_back(&target->sched_data.queue, wi);
 		irt_signal_worker(target);
 		// signal successor
-		int succ = (target->id.thread+1)%irt_g_worker_count;
+		int succ = (target->id.thread + 1) % irt_g_worker_count;
 		irt_signal_worker(irt_g_workers[succ]);
-	}
-	else {
+	} else {
 		irt_work_item_cdeque_insert_back(&target->sched_data.queue, wi);
 	}
 }
 
 // linear predecessor multi stealing
 //
-//int irt_scheduling_iteration(irt_worker* self) {
+// int irt_scheduling_iteration(irt_worker* self) {
 //	// try to take a WI from the pool
 //	irt_work_item* next_wi = irt_work_item_deque_pop_back(&self->sched_data.pool);
 //	if(next_wi != NULL) {
@@ -122,7 +117,7 @@ void irt_scheduling_assign_wi(irt_worker* target, irt_work_item* wi) {
 //	return 0;
 //}
 //
-//void irt_scheduling_assign_wi(irt_worker* target, irt_work_item* wi) {
+// void irt_scheduling_assign_wi(irt_worker* target, irt_work_item* wi) {
 //	if(target->sched_data.queue.size == 0) {
 //		irt_work_item_cdeque_insert_back(&target->sched_data.queue, wi);
 //		irt_signal_worker(target);
@@ -136,7 +131,7 @@ void irt_scheduling_assign_wi(irt_worker* target, irt_work_item* wi) {
 
 //// distance halving
 //
-//int irt_scheduling_iteration(irt_worker* self) {
+// int irt_scheduling_iteration(irt_worker* self) {
 //	// try to take a WI from the pool
 //	irt_work_item* next_wi = irt_work_item_deque_pop_back(&self->sched_data.pool);
 //	if(next_wi != NULL) {
@@ -173,7 +168,7 @@ void irt_scheduling_assign_wi(irt_worker* target, irt_work_item* wi) {
 //	return 0;
 //}
 //
-//void irt_scheduling_assign_wi(irt_worker* target, irt_work_item* wi) {
+// void irt_scheduling_assign_wi(irt_worker* target, irt_work_item* wi) {
 //	// split wis equally among workers
 //	int64 size = irt_wi_range_get_size(&wi->range);
 //	if(size > 1 && size >= irt_g_worker_count) {
@@ -209,16 +204,15 @@ irt_joinable irt_scheduling_optional_wi(irt_worker* target, irt_work_item* wi) {
 		irt_work_item_id wi_id = wi->id;
 		_irt_worker_run_optional_wi(target, wi->id);
 		return wi;
-	}
-	else {
-		irt_work_item *real_wi = irt_wi_create(wi->range, wi->impl, wi->parameters);
+	} else {
+		irt_work_item* real_wi = irt_wi_create(wi->range, wi->impl, wi->parameters);
 		irt_scheduling_assign_wi(target, real_wi);
 		return real_wi;
 	}
 }
 
 void irt_scheduling_yield(irt_worker* self, irt_work_item* yielding_wi) {
-	IRT_DEBUG("Worker yield, worker: %p,  wi: %p", (void*) self, (void*) yielding_wi);
+	IRT_DEBUG("Worker yield, worker: %p,  wi: %p", (void*)self, (void*)yielding_wi);
 	irt_work_item_deque_insert_back(&self->sched_data.pool, yielding_wi);
 	_irt_worker_switch_from_wi(self, yielding_wi);
 }

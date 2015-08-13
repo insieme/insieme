@@ -44,56 +44,47 @@ namespace insieme {
 namespace core {
 namespace lang {
 
-/**
- * An extension for const-type decorators (not for const pointers or references!!)
- */
-class ConstExtension : public core::lang::Extension {
+	/**
+	 * An extension for const-type decorators (not for const pointers or references!!)
+	 */
+	class ConstExtension : public core::lang::Extension {
+		/**
+		 * Allow the node manager to create instances of this class.
+		 */
+		friend class core::NodeManager;
 
-	/**
-	 * Allow the node manager to create instances of this class.
-	 */
-	friend class core::NodeManager;
-	
-	/**
-	 * Creates a new instance based on the given node manager.
-	 */
-	ConstExtension(core::NodeManager& manager)
-		: core::lang::Extension(manager) {}
-		
-		
-public:
+		/**
+		 * Creates a new instance based on the given node manager.
+		 */
+		ConstExtension(core::NodeManager& manager) : core::lang::Extension(manager) {}
 
-	/**
-	 * Wrappes the given type into a const-type decorator.
-	 */
-	TypePtr getConstType(const TypePtr& type) const {
-		return GenericType::get(type->getNodeManager(), "const", toVector(type));
-	}
-	
-	/**
-	 * Check if a type is an const-type wrapper.
-	 */
-	bool isConstType(const TypePtr& type) const {
-		core::GenericTypePtr gt = type.isa<core::GenericTypePtr>();
-		if(!gt) {
-			return false;
+
+	  public:
+		/**
+		 * Wrappes the given type into a const-type decorator.
+		 */
+		TypePtr getConstType(const TypePtr& type) const {
+			return GenericType::get(type->getNodeManager(), "const", toVector(type));
 		}
-		
-		return (
-				gt->getName()->getValue() == "const" &&
-		        gt->getTypeParameter().size() == 1u
-		       );
-	}
-	
-	/**
-	 * Retrieve the type wrapped into the given const type.
-	 */
-	TypePtr getWrappedConstType(const TypePtr& type) const {
-		assert_true(isConstType(type)) << "Invalid type: " << type << "\n";
-		return type.as<GenericTypePtr>()->getTypeParameter()[0];
-	}
-	
-};
+
+		/**
+		 * Check if a type is an const-type wrapper.
+		 */
+		bool isConstType(const TypePtr& type) const {
+			core::GenericTypePtr gt = type.isa<core::GenericTypePtr>();
+			if(!gt) { return false; }
+
+			return (gt->getName()->getValue() == "const" && gt->getTypeParameter().size() == 1u);
+		}
+
+		/**
+		 * Retrieve the type wrapped into the given const type.
+		 */
+		TypePtr getWrappedConstType(const TypePtr& type) const {
+			assert_true(isConstType(type)) << "Invalid type: " << type << "\n";
+			return type.as<GenericTypePtr>()->getTypeParameter()[0];
+		}
+	};
 }
 }
 }

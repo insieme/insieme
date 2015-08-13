@@ -49,20 +49,17 @@ namespace backend {
 namespace addons {
 
 
-/**
- * An Add-On realizing support for enum types.
- */
-struct EnumTypes : public AddOn {
-
 	/**
-	 * Installs this Add-On within the given converter.
+	 * An Add-On realizing support for enum types.
 	 */
-	virtual void installOn(Converter& converter) const;
-	
-};
+	struct EnumTypes : public AddOn {
+		/**
+		 * Installs this Add-On within the given converter.
+		 */
+		virtual void installOn(Converter& converter) const;
+	};
 
 
 } // end namespace addons
 } // end namespace backend
 } // end namespace insieme
-

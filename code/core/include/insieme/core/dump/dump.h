@@ -42,19 +42,20 @@ namespace insieme {
 namespace core {
 namespace dump {
 
-/**
- * An exception which will be raised in case the a stream is not
- * containing a valid encoding of a dumped IR code fragment.
- */
-class InvalidEncodingException : public std::exception {
-	const string msg;
-public:
-	InvalidEncodingException(const string& msg = "Invalid encoding encountered!") : msg(msg) {}
-	virtual ~InvalidEncodingException() throw() {};
-	virtual const char* what() const throw() {
-		return msg.c_str();
-	}
-};
+	/**
+	 * An exception which will be raised in case the a stream is not
+	 * containing a valid encoding of a dumped IR code fragment.
+	 */
+	class InvalidEncodingException : public std::exception {
+		const string msg;
+
+	  public:
+		InvalidEncodingException(const string& msg = "Invalid encoding encountered!") : msg(msg) {}
+		virtual ~InvalidEncodingException() throw(){};
+		virtual const char* what() const throw() {
+			return msg.c_str();
+		}
+	};
 
 } // end namespace dump
 } // end namespace core

@@ -41,15 +41,15 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define malloc(x)	gem_malloc(x, MEM_HEAP)
-#define calloc(x, y)	gem_calloc(x * y, MEM_HEAP)
-#define free(x) 	gem_free(x)
+#define malloc(x) gem_malloc(x, MEM_HEAP)
+#define calloc(x, y) gem_calloc(x* y, MEM_HEAP)
+#define free(x) gem_free(x)
 
 void* gem_calloc(size_t sz, int mem_id) {
 	void* ptr = gem_malloc(sz, mem_id);
-	
+
 	memset(ptr, 0, sz);
-	
+
 	return ptr;
 }
 

@@ -55,142 +55,136 @@ namespace driver {
 namespace integration {
 namespace metrics {
 
-class TestOutput {
-protected:
-	map<TestCase,vector<pair<TestStep, TestResult>>> allResults;
-	TestOutput(map<TestCase,vector<pair<TestStep, TestResult>>> results) {
-		allResults=results;
-	}
-	TestOutput() {};
-public:
-	virtual void writeOutput(bool overwrite)=0;
-};
+	class TestOutput {
+	  protected:
+		map<TestCase, vector<pair<TestStep, TestResult>>> allResults;
+		TestOutput(map<TestCase, vector<pair<TestStep, TestResult>>> results) {
+			allResults = results;
+		}
+		TestOutput(){};
 
-//supported output formats
-class SQLOutput : public TestOutput {
-public:
-	SQLOutput(map<TestCase,vector<pair<TestStep, TestResult>>> results) : TestOutput(results) {};
-	
-	void writeOutput(bool overwrite) {
-		string sql=getSQLInit(true);
-		for(auto it = allResults.begin(); it != allResults.end(); it++) {
-			sql+=getSQLString(it->first,it->second,overwrite);
-		}
-		
-		ofstream sqlFile("metrics.sql");
-		if(sqlFile.is_open()) {
-			sqlFile<<sql;
-			sqlFile.close();
-		}
-		else {
-			LOG(ERROR)<<"Unable to open file metrics.sql for writing!"<<std::endl;
-		}
-	}
-};
+	  public:
+		virtual void writeOutput(bool overwrite) = 0;
+	};
 
-class CSVOutput : public TestOutput {
-public:
-	CSVOutput(map<TestCase,vector<pair<TestStep, TestResult>>> results) : TestOutput(results) {};
-	
-	void writeOutput(bool overwrite) {
-		string header("");
-		string staticheader("name,");
-		string csv;
-		
-		//generate common step/value list, necessary if some tests have more steps than others
-		//<step,map<metric (runtime,memory, etc.),value>>
-		map<string,map<string,string>> stepVals;
-		
-		//not really performant, but i've no idea how to do it better
-		for(auto it = allResults.begin(); it != allResults.end(); it++)
-			for(auto step = it->second.begin(); step != it->second.end(); step++)
-				if(step->first.getStepType()==RUN) {
-					map<string,string> metricNames;
-					map<string,float> results=step->second.getMetrics();
-					for(auto metric=results.begin(); metric!=results.end(); metric++) {
-						metricNames[metric->first]="undefined";
-					}
-					stepVals[step->first.getName()]=metricNames;
-				}
-				else if(step->first.getStepType()==STATIC_METRIC) {
-					StaticResult* statRes=(StaticResult*)&(step->second);
-					map<string,string> metricResults=statRes->getStaticMetrics();
-					map<string,string> metricNames;
-					for(auto metric=metricResults.begin(); metric!=metricResults.end(); metric++) {
-						metricNames[metric->first]="undefined";
-					}
-					stepVals["static"]=metricNames;
-				}
-				
-		//get real results and append it to the csv
-		for(auto it = allResults.begin(); it != allResults.end(); it++) {
-			map<string,map<string,string>> stepValsTest=stepVals;
-			header="";
-			csv+="\n"+it->first.getName();
-			for(auto step = it->second.begin(); step != it->second.end(); step++) {
-				if(step->first.getStepType()==RUN) {
-					map<string,float> results=step->second.getMetrics();
-					map<string,string> txtResults;
-					for(auto metric=results.begin(); metric!=results.end(); metric++) {
-						txtResults[metric->first]=std::to_string(metric->second);
-					}
-					stepValsTest[step->first.getName()]=txtResults;
-				}
-				else if(step->first.getStepType()==STATIC_METRIC) {
-					StaticResult* statRes=(StaticResult*)&(step->second);
-					map<string,string> metricResults=statRes->getStaticMetrics();
-					map<string,string> txtResults;
-					for(auto metric=metricResults.begin(); metric!=metricResults.end(); metric++) {
-						txtResults[metric->first]=metric->second;
-					}
-					stepValsTest["static"]=txtResults;
-				}
+	// supported output formats
+	class SQLOutput : public TestOutput {
+	  public:
+		SQLOutput(map<TestCase, vector<pair<TestStep, TestResult>>> results) : TestOutput(results){};
+
+		void writeOutput(bool overwrite) {
+			string sql = getSQLInit(true);
+			for(auto it = allResults.begin(); it != allResults.end(); it++) {
+				sql += getSQLString(it->first, it->second, overwrite);
 			}
-			
-			for(auto step=stepValsTest.begin(); step!=stepValsTest.end(); step++) {
-				for(auto result=step->second.begin(); result!=step->second.end(); result++) {
-					if(step->first=="static") {
-						header+=result->first+",";
-					}
-					else {
-						header+=step->first+"["+result->first+"],";
-					}
-					csv+=","+result->second;
-				}
+
+			ofstream sqlFile("metrics.sql");
+			if(sqlFile.is_open()) {
+				sqlFile << sql;
+				sqlFile.close();
+			} else {
+				LOG(ERROR) << "Unable to open file metrics.sql for writing!" << std::endl;
 			}
 		}
-		header=staticheader+header;			//add static vals
-		header=header.substr(0,header.length()-1);	//remove last ","
-		
-		ofstream csvFile("metrics.csv");
-		if(csvFile.is_open()) {
-			csvFile<<header<<csv;
-			csvFile.close();
-		}
-		else {
-			LOG(ERROR)<<"Unable to open file metrics.csv for writing";
-		}
-	}
-};
+	};
 
-class DummyOutput : public TestOutput {
-public:
-	DummyOutput() {};
-	void writeOutput(bool overwrite) {};
-};
+	class CSVOutput : public TestOutput {
+	  public:
+		CSVOutput(map<TestCase, vector<pair<TestStep, TestResult>>> results) : TestOutput(results){};
 
-TestOutput* createTestOutput(string key,map<TestCase,vector<pair<TestStep, TestResult>>> results) {
-	if(boost::to_upper_copy(key)=="SQL") {
-		return new SQLOutput(results);
+		void writeOutput(bool overwrite) {
+			string header("");
+			string staticheader("name,");
+			string csv;
+
+			// generate common step/value list, necessary if some tests have more steps than others
+			//<step,map<metric (runtime,memory, etc.),value>>
+			map<string, map<string, string>> stepVals;
+
+			// not really performant, but i've no idea how to do it better
+			for(auto it = allResults.begin(); it != allResults.end(); it++)
+				for(auto step = it->second.begin(); step != it->second.end(); step++)
+					if(step->first.getStepType() == RUN) {
+						map<string, string> metricNames;
+						map<string, float> results = step->second.getMetrics();
+						for(auto metric = results.begin(); metric != results.end(); metric++) {
+							metricNames[metric->first] = "undefined";
+						}
+						stepVals[step->first.getName()] = metricNames;
+					} else if(step->first.getStepType() == STATIC_METRIC) {
+						StaticResult* statRes = (StaticResult*)&(step->second);
+						map<string, string> metricResults = statRes->getStaticMetrics();
+						map<string, string> metricNames;
+						for(auto metric = metricResults.begin(); metric != metricResults.end(); metric++) {
+							metricNames[metric->first] = "undefined";
+						}
+						stepVals["static"] = metricNames;
+					}
+
+			// get real results and append it to the csv
+			for(auto it = allResults.begin(); it != allResults.end(); it++) {
+				map<string, map<string, string>> stepValsTest = stepVals;
+				header = "";
+				csv += "\n" + it->first.getName();
+				for(auto step = it->second.begin(); step != it->second.end(); step++) {
+					if(step->first.getStepType() == RUN) {
+						map<string, float> results = step->second.getMetrics();
+						map<string, string> txtResults;
+						for(auto metric = results.begin(); metric != results.end(); metric++) {
+							txtResults[metric->first] = std::to_string(metric->second);
+						}
+						stepValsTest[step->first.getName()] = txtResults;
+					} else if(step->first.getStepType() == STATIC_METRIC) {
+						StaticResult* statRes = (StaticResult*)&(step->second);
+						map<string, string> metricResults = statRes->getStaticMetrics();
+						map<string, string> txtResults;
+						for(auto metric = metricResults.begin(); metric != metricResults.end(); metric++) {
+							txtResults[metric->first] = metric->second;
+						}
+						stepValsTest["static"] = txtResults;
+					}
+				}
+
+				for(auto step = stepValsTest.begin(); step != stepValsTest.end(); step++) {
+					for(auto result = step->second.begin(); result != step->second.end(); result++) {
+						if(step->first == "static") {
+							header += result->first + ",";
+						} else {
+							header += step->first + "[" + result->first + "],";
+						}
+						csv += "," + result->second;
+					}
+				}
+			}
+			header = staticheader + header;                 // add static vals
+			header = header.substr(0, header.length() - 1); // remove last ","
+
+			ofstream csvFile("metrics.csv");
+			if(csvFile.is_open()) {
+				csvFile << header << csv;
+				csvFile.close();
+			} else {
+				LOG(ERROR) << "Unable to open file metrics.csv for writing";
+			}
+		}
+	};
+
+	class DummyOutput : public TestOutput {
+	  public:
+		DummyOutput(){};
+		void writeOutput(bool overwrite){};
+	};
+
+	TestOutput* createTestOutput(string key, map<TestCase, vector<pair<TestStep, TestResult>>> results) {
+		if(boost::to_upper_copy(key) == "SQL") {
+			return new SQLOutput(results);
+		} else if(boost::to_upper_copy(key) == "CSV") {
+			return new CSVOutput(results);
+		} else {
+			LOG(WARNING) << "Output format " << key << " not supported!";
+			return new DummyOutput();
+		}
 	}
-	else if(boost::to_upper_copy(key)=="CSV") {
-		return new CSVOutput(results);
-	}
-	else {
-		LOG(WARNING)<<"Output format "<<key<<" not supported!";
-		return new DummyOutput();
-	}
-}
 
 } // end namespace metrics
 } // end namespace integration

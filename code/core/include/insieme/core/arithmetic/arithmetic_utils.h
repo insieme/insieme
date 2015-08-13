@@ -45,100 +45,101 @@
 namespace insieme {
 namespace core {
 
-class Expression;
-template<typename T> class Pointer;
-typedef Pointer<const Expression> ExpressionPtr;
+	class Expression;
+	template <typename T>
+	class Pointer;
+	typedef Pointer<const Expression> ExpressionPtr;
 
-namespace arithmetic {
+	namespace arithmetic {
 
-class NotAFormulaException;
+		class NotAFormulaException;
 
-/**
- * A function converting a given expression into an equivalent formula.
- *
- * @param expr the expression to be converted
- * @return an equivalent formula
- *
- * @throws a NotAFormulaException if the given expression is not an arithmetic expression
- */
-Formula toFormula(const ExpressionPtr& expr);
+		/**
+		 * A function converting a given expression into an equivalent formula.
+		 *
+		 * @param expr the expression to be converted
+		 * @return an equivalent formula
+		 *
+		 * @throws a NotAFormulaException if the given expression is not an arithmetic expression
+		 */
+		Formula toFormula(const ExpressionPtr& expr);
 
-/**
- * A function converting a given expression into a constraint.
- */
-Constraint toConstraint(const ExpressionPtr& expr);
+		/**
+		 * A function converting a given expression into a constraint.
+		 */
+		Constraint toConstraint(const ExpressionPtr& expr);
 
-/**
- * A function converting a given expression into a piecewise
- */
-Piecewise toPiecewise(const ExpressionPtr& expr);
+		/**
+		 * A function converting a given expression into a piecewise
+		 */
+		Piecewise toPiecewise(const ExpressionPtr& expr);
 
-/**
- * A function converting a formula into an equivalent expression.
- *
- * @param manager the manager responsible for handling the IR nodes constructed by this method
- * @param formula the formula to be converted
- * @return an equivalent IR expression
- */
-ExpressionPtr toIR(NodeManager& manager, const Formula& formula);
+		/**
+		 * A function converting a formula into an equivalent expression.
+		 *
+		 * @param manager the manager responsible for handling the IR nodes constructed by this method
+		 * @param formula the formula to be converted
+		 * @return an equivalent IR expression
+		 */
+		ExpressionPtr toIR(NodeManager& manager, const Formula& formula);
 
-/**
- * A function converting a constraint into an equivalent IR expression. The constraint
- * will be encoded using a DNF format and all literals are of the f(..)<=0 form.
- *
- * @param manager the manager responsible for handling the IR nodes constructed by this method
- * @param constraint the constraint to be converted
- * @return an equivalent IR expression
- */
-ExpressionPtr toIR(NodeManager& manager, const Constraint& constraint);
+		/**
+		 * A function converting a constraint into an equivalent IR expression. The constraint
+		 * will be encoded using a DNF format and all literals are of the f(..)<=0 form.
+		 *
+		 * @param manager the manager responsible for handling the IR nodes constructed by this method
+		 * @param constraint the constraint to be converted
+		 * @return an equivalent IR expression
+		 */
+		ExpressionPtr toIR(NodeManager& manager, const Constraint& constraint);
 
-/**
- * A function converting a piecewise formula into an equivalent IR expression.
- *
- * @param manager the manager responsible for handling the IR nodes constructed by this method
- * @param piecewise the piecewise formula to be converted
- * @return an equivalent IR expression
- */
-ExpressionPtr toIR(NodeManager& manager, const Piecewise& piecewise);
+		/**
+		 * A function converting a piecewise formula into an equivalent IR expression.
+		 *
+		 * @param manager the manager responsible for handling the IR nodes constructed by this method
+		 * @param piecewise the piecewise formula to be converted
+		 * @return an equivalent IR expression
+		 */
+		ExpressionPtr toIR(NodeManager& manager, const Piecewise& piecewise);
 
-/**
- * An exception which will be raised if a expression not representing
- * a formula should be converted into one.
- */
-class NotAFormulaException : public std::exception {
-	ExpressionPtr expr;
-	std::string msg;
-	
-public:
-	NotAFormulaException(const ExpressionPtr& expr);
-	
-	virtual const char* what() const throw();
-	ExpressionPtr getCause() const {
-		return expr;
-	}
-	virtual ~NotAFormulaException() throw() { }
-};
+		/**
+		 * An exception which will be raised if a expression not representing
+		 * a formula should be converted into one.
+		 */
+		class NotAFormulaException : public std::exception {
+			ExpressionPtr expr;
+			std::string msg;
 
-/**
- * An exception which will be raised if a expression not representing
- * a constraint should be converted into one.
- */
-class NotAConstraintException : public NotAFormulaException {
-public:
-	NotAConstraintException(const ExpressionPtr& expr) : NotAFormulaException(expr) { }
-	virtual ~NotAConstraintException() throw() { }
-};
+		  public:
+			NotAFormulaException(const ExpressionPtr& expr);
 
-/**
- * An exception which will be raised if a expression not representing
- * a piecewise should be converted into one.
- */
-class NotAPiecewiseException : public NotAFormulaException {
-public:
-	NotAPiecewiseException(const ExpressionPtr& expr) : NotAFormulaException(expr) { }
-	virtual ~NotAPiecewiseException() throw() { }
-};
+			virtual const char* what() const throw();
+			ExpressionPtr getCause() const {
+				return expr;
+			}
+			virtual ~NotAFormulaException() throw() {}
+		};
 
-} // end namespace arithmetic
+		/**
+		 * An exception which will be raised if a expression not representing
+		 * a constraint should be converted into one.
+		 */
+		class NotAConstraintException : public NotAFormulaException {
+		  public:
+			NotAConstraintException(const ExpressionPtr& expr) : NotAFormulaException(expr) {}
+			virtual ~NotAConstraintException() throw() {}
+		};
+
+		/**
+		 * An exception which will be raised if a expression not representing
+		 * a piecewise should be converted into one.
+		 */
+		class NotAPiecewiseException : public NotAFormulaException {
+		  public:
+			NotAPiecewiseException(const ExpressionPtr& expr) : NotAFormulaException(expr) {}
+			virtual ~NotAPiecewiseException() throw() {}
+		};
+
+	} // end namespace arithmetic
 } // end namespace core
 } // end namespace insieme

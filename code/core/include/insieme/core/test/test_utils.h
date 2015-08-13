@@ -48,24 +48,21 @@ using std::string;
 namespace insieme {
 namespace core {
 
-// -- A set of useful functions when implementing test cases which use core classes -------------
+	// -- A set of useful functions when implementing test cases which use core classes -------------
 
-/**
- * Performs semantic checks for all second elements in a map. Uses gtest EXPECT to verify that no errors occur.
- *
- * @param map The map which's second element should be checked
- */
-template<typename T>
-void semanticCheckSecond(std::map<T, insieme::core::NodePtr> map) {
+	/**
+	 * Performs semantic checks for all second elements in a map. Uses gtest EXPECT to verify that no errors occur.
+	 *
+	 * @param map The map which's second element should be checked
+	 */
+	template <typename T>
+	void semanticCheckSecond(std::map<T, insieme::core::NodePtr> map) {
+		for(auto cur : map) {
+			auto errors = checks::check(cur.second).empty();
 
-	for(auto cur : map) {
-		auto errors = checks::check(cur.second).empty();
-		
-		// just check whether the code is not exhibiting errors
-		EXPECT_TRUE(errors) << errors;
+			// just check whether the code is not exhibiting errors
+			EXPECT_TRUE(errors) << errors;
+		}
 	}
-}
-
-
 }
 }

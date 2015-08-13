@@ -41,110 +41,107 @@
 namespace insieme {
 namespace core {
 
-template<typename D,template<typename T> class P>
-struct ValueAccessor : public NodeAccessor<D,P> {
+	template <typename D, template <typename T> class P>
+	struct ValueAccessor : public NodeAccessor<D, P> {
+		/**
+		 * Obtains a reference to the value represented by this node if
+		 * it is representing a value. This method is overloading the version
+		 * within the NodeAccessor - thereby increasing visibility.
+		 *
+		 * @return a reference to the internally maintained value
+		 */
+		const NodeValue& getValue() const {
+			// forward call to protected parent method
+			return NodeAccessor<D, P>::getNodeValue();
+		}
+	};
 
 	/**
-	 * Obtains a reference to the value represented by this node if
-	 * it is representing a value. This method is overloading the version
-	 * within the NodeAccessor - thereby increasing visibility.
-	 *
-	 * @return a reference to the internally maintained value
+	 * A node forming a common base type for all value nodes.
 	 */
-	const NodeValue& getValue() const {
-		// forward call to protected parent method
-		return NodeAccessor<D,P>::getNodeValue();
-	}
-	
-};
+	class Value : public Node {
+	  protected:
+		/**
+		 * A constructor limiting subclasses to a value-node construction.
+		 *
+		 * @param type the type of the resulting node
+		 * @param value the value to be represented
+		 */
+		Value(const NodeType type, const NodeValue& value) : Node(type, value) {}
+	};
 
-/**
- * A node forming a common base type for all value nodes.
- */
-class Value : public Node {
-
-protected:
 
 	/**
-	 * A constructor limiting subclasses to a value-node construction.
-	 *
-	 * @param type the type of the resulting node
-	 * @param value the value to be represented
+	 * A macro defining value nodes based on a name and the type of value to be presented.
 	 */
-	Value(const NodeType type, const NodeValue& value) : Node(type, value) {}
-	
-};
-
-
-/**
- * A macro defining value nodes based on a name and the type of value to be presented.
- */
-#define VALUE_NODE(NAME,TYPE) \
-		\
-		template<typename D,template<typename T> class P> \
-		struct NAME ## ValueAccessor : public ValueAccessor<D,P> { \
-			const TYPE& getValue() const { \
-				return boost::get<TYPE>(ValueAccessor<D,P>::getValue()); \
-			} \
-		}; \
-		\
-		class NAME ## Value : public Value, public NAME ## ValueAccessor<NAME ## Value, Pointer> { \
-			NAME ## Value(const TYPE value) : Value(NT_ ## NAME ## Value, value) {} \
-		public: \
-			static NAME ## ValuePtr get(NodeManager& manager, const TYPE value) { \
-				return manager.get(NAME ## Value(value)); \
-			} \
-			static NAME ## ValuePtr get(NodeManager& manager, const NodeList& children) { \
-				assert_fail() << "Value nodes must not be constructed via their child node list!"; \
-				return NAME ## ValuePtr(); \
-			} \
-			operator const TYPE&() const { \
-				return boost::get<TYPE>(Node::getNodeValue()); \
-			} \
-			const TYPE& getValue() const { \
-				return boost::get<TYPE>(Node::getNodeValue()); \
-			} \
-			bool operator<(const NAME ## Value& other) const { \
-				return getValue() < other.getValue(); \
-			} \
-		protected: \
-			virtual Node* createInstanceUsing(const NodeList& children) const { \
-				assert_true(children.empty()) << "Value nodes must no have children!"; \
-				return new NAME ## Value(*this); \
-			} \
-			virtual std::ostream& printTo(std::ostream& out) const { \
-				return out << getValue(); \
-			} \
+	#define VALUE_NODE(NAME, TYPE)                                                                                                                             \
+                                                                                                                                                               \
+		template <typename D, template <typename T> class P>                                                                                                   \
+		struct NAME##ValueAccessor : public ValueAccessor<D, P> {                                                                                              \
+			const TYPE& getValue() const {                                                                                                                     \
+				return boost::get<TYPE>(ValueAccessor<D, P>::getValue());                                                                                      \
+			}                                                                                                                                                  \
+		};                                                                                                                                                     \
+                                                                                                                                                               \
+		class NAME##Value : public Value, public NAME##ValueAccessor<NAME##Value, Pointer> {                                                                   \
+			NAME##Value(const TYPE value) : Value(NT_##NAME##Value, value) {}                                                                                  \
+                                                                                                                                                               \
+		  public:                                                                                                                                              \
+			static NAME##ValuePtr get(NodeManager& manager, const TYPE value) {                                                                                \
+				return manager.get(NAME##Value(value));                                                                                                        \
+			}                                                                                                                                                  \
+			static NAME##ValuePtr get(NodeManager& manager, const NodeList& children) {                                                                        \
+				assert_fail() << "Value nodes must not be constructed via their child node list!";                                                             \
+				return NAME##ValuePtr();                                                                                                                       \
+			}                                                                                                                                                  \
+			operator const TYPE&() const {                                                                                                                     \
+				return boost::get<TYPE>(Node::getNodeValue());                                                                                                 \
+			}                                                                                                                                                  \
+			const TYPE& getValue() const {                                                                                                                     \
+				return boost::get<TYPE>(Node::getNodeValue());                                                                                                 \
+			}                                                                                                                                                  \
+			bool operator<(const NAME##Value& other) const {                                                                                                   \
+				return getValue() < other.getValue();                                                                                                          \
+			}                                                                                                                                                  \
+                                                                                                                                                               \
+		  protected:                                                                                                                                           \
+			virtual Node* createInstanceUsing(const NodeList& children) const {                                                                                \
+				assert_true(children.empty()) << "Value nodes must no have children!";                                                                         \
+				return new NAME##Value(*this);                                                                                                                 \
+			}                                                                                                                                                  \
+			virtual std::ostream& printTo(std::ostream& out) const {                                                                                           \
+				return out << getValue();                                                                                                                      \
+			}                                                                                                                                                  \
 		};
 
-/**
- * The BoolValue node represents a single, boolean value.
- */
-VALUE_NODE(Bool, bool);
+	/**
+	 * The BoolValue node represents a single, boolean value.
+	 */
+	VALUE_NODE(Bool, bool);
 
-/**
- * The CharValue node represents a character value within the IR structure.
- */
-VALUE_NODE(Char, char);
+	/**
+	 * The CharValue node represents a character value within the IR structure.
+	 */
+	VALUE_NODE(Char, char);
 
-/**
- * The IntValue node represents an integer value within the IR structure.
- */
-VALUE_NODE(Int, int);
+	/**
+	 * The IntValue node represents an integer value within the IR structure.
+	 */
+	VALUE_NODE(Int, int);
 
-/**
- * The UIntValue node representing an unsigned integer value within the IR structure.
- */
-VALUE_NODE(UInt, unsigned);
+	/**
+	 * The UIntValue node representing an unsigned integer value within the IR structure.
+	 */
+	VALUE_NODE(UInt, unsigned);
 
-/**
- * The StringValue node represents a string value e.g. naming a type or an identifer within
- * the IR structure.
- */
-VALUE_NODE(String, string);
+	/**
+	 * The StringValue node represents a string value e.g. naming a type or an identifer within
+	 * the IR structure.
+	 */
+	VALUE_NODE(String, string);
 
 
-#undef VALUE_NODE
+	#undef VALUE_NODE
 
 } // end namespace core
 } // end namespace insieme

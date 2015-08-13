@@ -40,26 +40,26 @@
 
 #include "abstraction/spin_locks.h"
 
-#define IRT_SPIN_LOCKS_GEM_UNLOCKED	0
-#define IRT_SPIN_LOCKS_GEM_LOCKED	1
+#define IRT_SPIN_LOCKS_GEM_UNLOCKED 0
+#define IRT_SPIN_LOCKS_GEM_LOCKED 1
 
-void irt_spin_lock(irt_spinlock *lock) {
+void irt_spin_lock(irt_spinlock* lock) {
 	while(atomic_rmw_int(lock, IRT_SPIN_LOCKS_GEM_LOCKED) == IRT_SPIN_LOCKS_GEM_LOCKED) {
 		pthread_yield();
 	}
 }
 
-void irt_spin_unlock(irt_spinlock *lock) {
+void irt_spin_unlock(irt_spinlock* lock) {
 	atomic_rmw_int(lock, IRT_SPIN_LOCKS_GEM_UNLOCKED);
 }
 
-int irt_spin_init(irt_spinlock *lock) {
+int irt_spin_init(irt_spinlock* lock) {
 	atomic_rmw_int(lock, IRT_SPIN_LOCKS_GEM_UNLOCKED);
-	
+
 	return 0;
 }
 
-void irt_spin_destroy(irt_spinlock *lock) {
+void irt_spin_destroy(irt_spinlock* lock) {
 	return;
 }
 

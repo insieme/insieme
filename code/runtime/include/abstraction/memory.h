@@ -38,9 +38,8 @@
 #ifndef __GUARD_ABSTRACTION_MEMORY_H
 #define __GUARD_ABSTRACTION_MEMORY_H
 
-inline void *irt_scratchpad_alloc(size_t size);
+inline void* irt_scratchpad_alloc(size_t size);
 inline void irt_free(void* ptr);
-
 
 
 #endif // ifndef __GUARD_ABSTRACTION_MEMORY_H

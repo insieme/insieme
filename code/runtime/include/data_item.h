@@ -44,22 +44,17 @@
 
 IRT_MAKE_ID_TYPE(data_item)
 
-typedef enum _irt_data_mode {
-	IRT_DMODE_READ_ONLY,
-	IRT_DMODE_WRITE_ONLY,
-	IRT_DMODE_WRITE_FIRST,
-	IRT_DMODE_READ_WRITE
-} irt_data_mode;
+typedef enum _irt_data_mode { IRT_DMODE_READ_ONLY, IRT_DMODE_WRITE_ONLY, IRT_DMODE_WRITE_FIRST, IRT_DMODE_READ_WRITE } irt_data_mode;
 
 struct _irt_data_range {
 	int64 begin, end, step;
 };
 // data range marker value representing full range
-static const irt_data_range irt_g_data_range_all = {1,1,0};
+static const irt_data_range irt_g_data_range_all = {1, 1, 0};
 
 struct _irt_data_block {
 	uint32 use_count;
-	//irt_hw_id location;
+	// irt_hw_id location;
 	void* data;
 };
 
@@ -70,13 +65,13 @@ struct _irt_data_item {
 	irt_type_id type_id;
 	uint32 use_count;
 	uint32 dimensions;
-	//irt_data_mode mode;
+	// irt_data_mode mode;
 	// ranges has as many entries as data_item has dimensions
 	irt_data_range* ranges;
 	// can be NULL if data item is abstract
 	irt_data_block* data_block;
-//	irt_pd_table* performance_data;
-// private implementation detail
+	//	irt_pd_table* performance_data;
+	// private implementation detail
 	struct _irt_data_item* lookup_table_next;
 };
 

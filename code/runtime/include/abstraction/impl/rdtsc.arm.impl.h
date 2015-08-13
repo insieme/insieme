@@ -45,9 +45,9 @@
 // Reading from the PMU doesn't help because of the overflow rate (32 bit register)
 uint64 irt_time_ticks(void) {
 	struct timespec spec;
-	
+
 	clock_gettime(CLOCK_MONOTONIC_RAW, &spec);
-	
+
 	// Let's keep a default frequency of 1 GHz
 	return (uint64)spec.tv_sec * 1e9 + spec.tv_nsec;
 }

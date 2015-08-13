@@ -42,10 +42,10 @@ namespace insieme {
 namespace core {
 namespace checks {
 
-enum ErrorCode {
-#define CODE(KIND,NAME) EC_##KIND##_##NAME,
-#include "error_codes.inc"
-};
+	enum ErrorCode {
+	#define CODE(KIND, NAME) EC_##KIND##_##NAME,
+	#include "error_codes.inc"
+	};
 
 } // end namespace checks
 } // end namespace core
@@ -53,6 +53,5 @@ enum ErrorCode {
 
 namespace std {
 
-std::ostream& operator<<(std::ostream& out, const insieme::core::checks::ErrorCode& code);
-
+	std::ostream& operator<<(std::ostream& out, const insieme::core::checks::ErrorCode& code);
 }

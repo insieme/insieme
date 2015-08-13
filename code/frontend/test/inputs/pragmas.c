@@ -34,47 +34,40 @@
  * regarding third party software licenses.
  */
 
-#define FAKE(x) \
+#define FAKE(x)                                                                                                                                                \
 	{ x++; }
 
 
 int main() {
-
 #pragma test dummy "first"
 	int x;
-	
-#pragma test dummy "macro"
+
+	#pragma test dummy "macro"
 	FAKE(x)
-	
-#pragma test dummy "solo"
-	
-	
+
+	#pragma test dummy "solo"
 }
 
 
 #pragma test dummy "function"
 int f() {
-
 	return 0;
 }
 
 void g() {
-
 	int a;
 	int n;
-#pragma test \
-       dummy "two lines"
-	for(a=0; a<n; a++) {
+	#pragma test dummy "two lines"
+	for(a = 0; a < n; a++) {
 	}
 }
 
 
 void h(int x) {
 	FAKE(x);
-#pragma test dummy "one"
-#pragma test dummy "two"
-#pragma test dummy "three"
-	for(x =0; x < 10; x ++) {
+	#pragma test dummy "one"
+	#pragma test dummy "two"
+	#pragma test dummy "three"
+	for(x = 0; x < 10; x++) {
 	}
-	
 }

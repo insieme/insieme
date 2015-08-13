@@ -1348,7 +1348,6 @@ TEST(ExpandExpression, Parents) {
 TEST(ArrayTypeChecks, Exceptions) {
 	NodeManager manager;
 	IRBuilder builder(manager);
-	auto& basic = manager.getLangBasic();
 	auto& array = manager.getLangExtension<lang::ArrayExtension>();
 	
 	CheckPtr typeCheck = getFullCheck();

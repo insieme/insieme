@@ -55,7 +55,7 @@ typedef enum {
 	IRT_AFFINITY_FILL = 10,
 	IRT_AFFINITY_SKIP = 20,
 	IRT_AFFINITY_MAX_DISTANCE = 100
-//	IRT_AFFINITY_MAX_SPREAD = 200
+	//	IRT_AFFINITY_MAX_SPREAD = 200
 } irt_affinity_policy_type;
 
 typedef struct {
@@ -72,14 +72,14 @@ typedef struct {
 
 static irt_affinity_physical_mapping irt_g_affinity_physical_mapping;
 
-#define IRT_AFFINITY_MASK_BITS_PER_QUAD ((uint64)64)   // number of processors identifiable through a bitmask
-#define IRT_AFFINTY_MASK_NUM_QUADS (IRT_MAX_CORES/IRT_AFFINITY_MASK_BITS_PER_QUAD) // number of bitmasks required to capture every processor
+#define IRT_AFFINITY_MASK_BITS_PER_QUAD ((uint64)64)                                 // number of processors identifiable through a bitmask
+#define IRT_AFFINTY_MASK_NUM_QUADS (IRT_MAX_CORES / IRT_AFFINITY_MASK_BITS_PER_QUAD) // number of bitmasks required to capture every processor
 
 struct _irt_affinity_mask {
 	uint64 mask_quads[IRT_AFFINTY_MASK_NUM_QUADS]; // array of bitmasks to identify every single processor
 };
 
-static const irt_affinity_mask irt_g_empty_affinity_mask = { { 0 } };
+static const irt_affinity_mask irt_g_empty_affinity_mask = {{0}};
 
 // include signatures of platform dependent functions
 #include "abstraction/affinity.os_dependent.h"

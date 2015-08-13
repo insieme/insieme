@@ -1,12 +1,9 @@
 
 
-typedef struct {
-	int a;
-} t;
+typedef struct { int a; } t;
 
 
 void f(t ta) {
-
 	int b = ta.a;
 }
 

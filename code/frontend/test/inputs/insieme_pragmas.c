@@ -37,7 +37,6 @@
 // TODO: find/fix scope issue for nested pragmas!
 
 
-
 #pragma insieme mark
 int muha() {
 	return 0;
@@ -48,15 +47,15 @@ int main() {
 	unsigned array1Da[10];
 	unsigned array1Db[10];
 	unsigned array2D[10][10];
-	
+
 	int x = 0;
-	
-#pragma insieme iterations 42
+
+	#pragma insieme iterations 42
 	for(int i = 0; i < 10; ++i) {
 		x = i;
 	}
-	
-#pragma insieme fun_unroll (2)
+
+	#pragma insieme fun_unroll(2)
 	{
 		for(int i = 0; i < 10; ++i) {
 			x = i;
@@ -64,4 +63,3 @@ int main() {
 	}
 	return 0;
 }
-

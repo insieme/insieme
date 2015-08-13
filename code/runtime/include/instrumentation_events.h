@@ -50,14 +50,14 @@
 //#define IRT_ENABLE_INSTRUMENTATION
 #endif
 
-#define IRT_DECLARE_PERFORMANCE_TABLE(__type__) \
-	struct _irt_##__type__##_table { \
-	uint32 size; \
-	uint32 number_of_elements; \
-	uint32 blocksize; \
-	_irt_##__type__##_data* data; \
-}; \
-typedef struct _irt_##__type__##_table irt_##__table__##_table; \
+#define IRT_DECLARE_PERFORMANCE_TABLE(__type__)                                                                                                                \
+	struct _irt_##__type__##_table {                                                                                                                           \
+		uint32 size;                                                                                                                                           \
+		uint32 number_of_elements;                                                                                                                             \
+		uint32 blocksize;                                                                                                                                      \
+		_irt_##__type__##_data* data;                                                                                                                          \
+	};                                                                                                                                                         \
+	typedef struct _irt_##__type__##_table irt_##__table__##_table;
 
 #define IRT_INST_EVENT(event, group_label, event_label) event,
 typedef enum _irt_instrumentation_event {
@@ -80,7 +80,7 @@ const char* irt_g_instrumentation_group_names[] = {
 #define IRT_INST_EVENT(event, group_label, event_label) +1
 uint32 irt_g_inst_num_event_types = 0
 #include "instrumentation_events.def"
-                                    ;
+    ;
 #undef IRT_INST_EVENT
 
 typedef struct _irt_instrumentation_event_data {

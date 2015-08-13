@@ -39,45 +39,44 @@
 namespace insieme {
 namespace utils {
 
-namespace {
+	namespace {
 
-template<typename ... Funs> struct chain_fun;
+		template <typename... Funs>
+		struct chain_fun;
 
-template<>
-struct chain_fun<> {
-	chain_fun() {};
-	
-	template<typename ... Params>
-	void operator()(const Params& ... param) const { }
-};
+		template <>
+		struct chain_fun<> {
+			chain_fun(){};
 
-template<typename F, typename ... Funs>
-struct chain_fun<F,Funs...> {
+			template <typename... Params>
+			void operator()(const Params&... param) const {}
+		};
 
-	F f;
-	chain_fun<Funs...> rest;
-	
-	chain_fun(const F& f, const Funs& ... fs) : f(f), rest(chain_fun<Funs...>(fs...)) {}
-	
-	template<typename ... Params>
-	void operator()(const Params& ... param) const {
-		f(param...);
-		rest(param...);
+		template <typename F, typename... Funs>
+		struct chain_fun<F, Funs...> {
+			F f;
+			chain_fun<Funs...> rest;
+
+			chain_fun(const F& f, const Funs&... fs) : f(f), rest(chain_fun<Funs...>(fs...)) {}
+
+			template <typename... Params>
+			void operator()(const Params&... param) const {
+				f(param...);
+				rest(param...);
+			}
+		};
+
+		template <typename F1, typename... Fs>
+		chain_fun<F1, Fs...> make_chain(const F1& f1, const Fs&... fs) {
+			return chain_fun<F1, Fs...>(f1, fs...);
+		}
 	}
-};
-
-template<typename F1, typename ... Fs>
-chain_fun<F1,Fs...> make_chain(const F1& f1, const Fs& ... fs) {
-	return chain_fun<F1,Fs...>(f1,fs...);
-}
-
-}
 
 
-template<typename ... Funs>
-chain_fun<Funs...> chain(const Funs& ... funs) {
-	return make_chain(funs...);
-}
+	template <typename... Funs>
+	chain_fun<Funs...> chain(const Funs&... funs) {
+		return make_chain(funs...);
+	}
 
 } // end namespace utils
 } // end namespace insieme

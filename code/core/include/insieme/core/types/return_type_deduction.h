@@ -42,41 +42,42 @@ namespace insieme {
 namespace core {
 namespace types {
 
-/**
- * An exception type used if a return type could not successfully be deduced.
- */
-class ReturnTypeDeductionException : public std::exception {
-	// the message describing this type of exception
-	const string msg;
-public:
-	ReturnTypeDeductionException(const string& msg = "Unable to deduce return type.") : msg(msg) {}
-	virtual ~ReturnTypeDeductionException() throw() { }
-	virtual const char* what() const throw() {
-		return msg.c_str();
-	}
-};
+	/**
+	 * An exception type used if a return type could not successfully be deduced.
+	 */
+	class ReturnTypeDeductionException : public std::exception {
+		// the message describing this type of exception
+		const string msg;
 
-/**
- * This function is trying to deduce the type returned when calling a function having the
- * given type by passing parameters of the given types. If the type cannot be deduced,
- * an exception is raised.
- *
- * @param funType the type of the function to be invoked, for which the return type should be deduced
- * @param argumentTypes the types of arguments passed to this function
- * @return the deduced, most generic return type
- * @throws ReturnTypeDeductionException if the requested type cannot be deduced
- */
-TypePtr tryDeduceReturnType(const FunctionTypePtr& funType, const TypeList& argumentTypes);
+	  public:
+		ReturnTypeDeductionException(const string& msg = "Unable to deduce return type.") : msg(msg) {}
+		virtual ~ReturnTypeDeductionException() throw() {}
+		virtual const char* what() const throw() {
+			return msg.c_str();
+		}
+	};
 
-/**
- * This function is deducing the type returned when calling a function having the given
- * type by passing parameters of the given types.
- *
- * @param funType the type of the function to be invoked, for which the return type should be deduced
- * @param argumentTypes the types of arguments passed to this function
- * @return the deduced, most generic return type
- */
-TypePtr deduceReturnType(const FunctionTypePtr& funType, const TypeList& argumentTypes, bool unitOnFail = true);
+	/**
+	 * This function is trying to deduce the type returned when calling a function having the
+	 * given type by passing parameters of the given types. If the type cannot be deduced,
+	 * an exception is raised.
+	 *
+	 * @param funType the type of the function to be invoked, for which the return type should be deduced
+	 * @param argumentTypes the types of arguments passed to this function
+	 * @return the deduced, most generic return type
+	 * @throws ReturnTypeDeductionException if the requested type cannot be deduced
+	 */
+	TypePtr tryDeduceReturnType(const FunctionTypePtr& funType, const TypeList& argumentTypes);
+
+	/**
+	 * This function is deducing the type returned when calling a function having the given
+	 * type by passing parameters of the given types.
+	 *
+	 * @param funType the type of the function to be invoked, for which the return type should be deduced
+	 * @param argumentTypes the types of arguments passed to this function
+	 * @return the deduced, most generic return type
+	 */
+	TypePtr deduceReturnType(const FunctionTypePtr& funType, const TypeList& argumentTypes, bool unitOnFail = true);
 
 
 } // end namespace types

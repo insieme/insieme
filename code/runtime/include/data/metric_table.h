@@ -47,7 +47,7 @@
  * during compile time).
  */
 enum {
-#define METRIC(id, name, type, res, desc) IRT_METRIC_ ## name ## _INDEX,
+#define METRIC(id, name, type, res, desc) IRT_METRIC_##name##_INDEX,
 #include "metric.def"
 #undef METRIC
 };
@@ -57,7 +57,7 @@ enum {
  * A global list of instances of atomic metrics pointers. These metrics
  * can be directly used for assembling lists of metrics to be queried.
  */
-#define METRIC(id, name, type, res, desc) irt_metric IRT_METRIC_ ## name [] = {{ ATOMIC_METRIC, {{ IRT_METRIC_ ## name ## _INDEX }}}};
+#define METRIC(id, name, type, res, desc) irt_metric IRT_METRIC_##name[] = {{ATOMIC_METRIC, {{IRT_METRIC_##name##_INDEX}}}};
 #include "metric.def"
 #undef METRIC
 
@@ -65,7 +65,7 @@ enum {
  * A list of all atomic metric pointers.
  */
 const irt_metric* g_all_atomic_metrics[] = {
-#define METRIC(id, name, type, res, desc) IRT_METRIC_ ## name,
+#define METRIC(id, name, type, res, desc) IRT_METRIC_##name,
 #include "metric.def"
 #undef METRIC
 };
@@ -77,7 +77,7 @@ const uint16 g_num_atomic_metrics = 0
 #define METRIC(id, name, type, res, desc) +1
 #include "metric.def"
 #undef METRIC
-                                    ;
+    ;
 
 /**
  * The metric table listing all atomic metrics supported within the system.
@@ -85,7 +85,9 @@ const uint16 g_num_atomic_metrics = 0
  * entries within this table.
  */
 const irt_atomic_metric_info g_atomic_metric_table[] = {
-#define METRIC(id, name, type, res, desc) { id, type, res, desc },
+#define METRIC(id, name, type, res, desc)                                                                                                                      \
+	{ id, type, res, desc }                                                                                                                                    \
+	,
 #include "metric.def"
 #undef METRIC
 };

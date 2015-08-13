@@ -43,19 +43,19 @@ namespace insieme {
 namespace common {
 #endif // __cplusplus
 
-typedef enum {
-	IRT_STATIC = 0,
-	IRT_STATIC_CHUNKED = 1,
-	IRT_DYNAMIC = 10,
-	IRT_DYNAMIC_CHUNKED = 11,
-	IRT_DYNAMIC_CHUNKED_COUNTING = 15,
-	IRT_GUIDED = 20,
-	IRT_GUIDED_CHUNKED = 21,
-	IRT_FIXED = 30,
-	IRT_SHARES = 40
-} irt_loop_sched_policy_type;
+	typedef enum {
+		IRT_STATIC = 0,
+		IRT_STATIC_CHUNKED = 1,
+		IRT_DYNAMIC = 10,
+		IRT_DYNAMIC_CHUNKED = 11,
+		IRT_DYNAMIC_CHUNKED_COUNTING = 15,
+		IRT_GUIDED = 20,
+		IRT_GUIDED_CHUNKED = 21,
+		IRT_FIXED = 30,
+		IRT_SHARES = 40
+	} irt_loop_sched_policy_type;
 
-#ifdef __cplusplus
+	#ifdef __cplusplus
 }
 }
 #endif // __cplusplus

@@ -49,17 +49,15 @@ namespace backend {
 namespace addons {
 
 
-/**
- * An Add-On realizing support for C++ member pointer
- */
-struct CppMembAddon : public AddOn {
-
 	/**
-	 * Installs the this Add-On within the given converter.
+	 * An Add-On realizing support for C++ member pointer
 	 */
-	virtual void installOn(Converter& converter) const;
-	
-};
+	struct CppMembAddon : public AddOn {
+		/**
+		 * Installs the this Add-On within the given converter.
+		 */
+		virtual void installOn(Converter& converter) const;
+	};
 
 
 } // end namespace addons

@@ -39,15 +39,15 @@
 /**
  *
  */
-template<bool> struct eval;
+template <bool>
+struct eval;
 
-template<> struct eval<true> {
+template <>
+struct eval<true> {
 	typedef bool is_true;
 };
 
-template<> struct eval<false> {
+template <>
+struct eval<false> {
 	typedef bool is_false;
 };
-
-
-

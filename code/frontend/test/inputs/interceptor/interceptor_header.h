@@ -34,13 +34,13 @@
  * regarding third party software licenses.
  */
 
-//intercepted
+// intercepted
 namespace ns {
-int simpleFunc(int x);
+	int simpleFunc(int x);
 
-struct S {
-	int a,b,c;
-	S() {}
-	int memberFunc(int x);
-};
+	struct S {
+		int a, b, c;
+		S() {}
+		int memberFunc(int x);
+	};
 }

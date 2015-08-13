@@ -48,46 +48,45 @@ namespace insieme {
 namespace frontend {
 namespace omp {
 
-struct GlobalRequiredAnnotation : public core::NodeAnnotation {
-	const static string name;
-	const static utils::StringKey<GlobalRequiredAnnotation> key;
-	virtual const utils::AnnotationKeyPtr getKey() const {
-		return &key;
-	}
-	virtual const std::string& getAnnotationName() const {
-		return name;
-	}
-	virtual bool migrate(const core::NodeAnnotationPtr& ptr, const core::NodePtr& before, const core::NodePtr& after) const;
-};
+	struct GlobalRequiredAnnotation : public core::NodeAnnotation {
+		const static string name;
+		const static utils::StringKey<GlobalRequiredAnnotation> key;
+		virtual const utils::AnnotationKeyPtr getKey() const {
+			return &key;
+		}
+		virtual const std::string& getAnnotationName() const {
+			return name;
+		}
+		virtual bool migrate(const core::NodeAnnotationPtr& ptr, const core::NodePtr& before, const core::NodePtr& after) const;
+	};
 
-// Utility for marking paths that require OMP globals and gathering the required globals
-core::StructExpr::Members markGlobalUsers(const core::ProgramPtr& prog);
+	// Utility for marking paths that require OMP globals and gathering the required globals
+	core::StructExpr::Members markGlobalUsers(const core::ProgramPtr& prog);
 
-// Utility for passing global to functions that require it, and replacing literals with global accesses
-class GlobalMapper : public core::SimpleNodeMapping {
-	core::NodeManager& nodeMan;
-	core::IRBuilder build;
-	core::VariablePtr curVar;
-	bool startedMapping;
-	
-	/* Caching of generated lambdas */
-	typedef member_function_trait<const core::NodePtr(GlobalMapper::*)(const core::LambdaExprPtr&)>::type FactoryType;
-	insieme::utils::cache::PointerCache<core::LambdaExprPtr, core::NodePtr, FactoryType> cache;
-	
-public:
-	GlobalMapper(core::NodeManager& nodeMan, const core::VariablePtr& global)
-		: nodeMan(nodeMan), build(nodeMan), curVar(global), startedMapping(false), cache(fun(*this, &GlobalMapper::mapLambdaExpr)) {
-	}
-	
-protected:
-	virtual const core::NodePtr mapElement(unsigned index, const core::NodePtr& ptr);
-	
-	const core::NodePtr mapCall(const core::CallExprPtr& call);
-	const core::NodePtr mapBind(const core::BindExprPtr& bind);
-	//const core::NodePtr mapJob(const core::JobExprPtr& bind);
-	const core::NodePtr mapLambdaExpr(const core::LambdaExprPtr& lambdaExpr);
-	const core::NodePtr mapLiteral(const core::LiteralPtr& literal);
-};
+	// Utility for passing global to functions that require it, and replacing literals with global accesses
+	class GlobalMapper : public core::SimpleNodeMapping {
+		core::NodeManager& nodeMan;
+		core::IRBuilder build;
+		core::VariablePtr curVar;
+		bool startedMapping;
+
+		/* Caching of generated lambdas */
+		typedef member_function_trait<const core::NodePtr (GlobalMapper::*)(const core::LambdaExprPtr&)>::type FactoryType;
+		insieme::utils::cache::PointerCache<core::LambdaExprPtr, core::NodePtr, FactoryType> cache;
+
+	  public:
+		GlobalMapper(core::NodeManager& nodeMan, const core::VariablePtr& global)
+		    : nodeMan(nodeMan), build(nodeMan), curVar(global), startedMapping(false), cache(fun(*this, &GlobalMapper::mapLambdaExpr)) {}
+
+	  protected:
+		virtual const core::NodePtr mapElement(unsigned index, const core::NodePtr& ptr);
+
+		const core::NodePtr mapCall(const core::CallExprPtr& call);
+		const core::NodePtr mapBind(const core::BindExprPtr& bind);
+		// const core::NodePtr mapJob(const core::JobExprPtr& bind);
+		const core::NodePtr mapLambdaExpr(const core::LambdaExprPtr& lambdaExpr);
+		const core::NodePtr mapLiteral(const core::LiteralPtr& literal);
+	};
 
 } // namespace omp
 } // namespace frontend

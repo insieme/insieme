@@ -44,58 +44,63 @@
 namespace insieme {
 namespace utils {
 
-/**
- * Simple timer used to measured time.
- */
-class Timer: public boost::timer {
-	double lastStep;
-	double mElapsed;
-	std::string mName;
-	bool isStopped;
-	
-	friend std::ostream& operator<<(std::ostream& out, const Timer& timer);
-public:
-	Timer(const std::string& name = "Time"):
-		boost::timer(), lastStep(0.0), mName(name), isStopped(false) { }
 	/**
-	 * Stops the timer returning the elapsed amount of seconds
+	 * Simple timer used to measured time.
 	 */
-	double stop();
-	
-	/**
-	 * Obtains time since start or last lap time.
-	 */
-	double step();
-	
-	/**
-	 * Return the elapsed amount of seconds
-	 */
-	double getTime() const;
-};
+	class Timer : public boost::timer {
+		double lastStep;
+		double mElapsed;
+		std::string mName;
+		bool isStopped;
 
-std::ostream& operator<<(std::ostream& out, const Timer& timer);
+		friend std::ostream& operator<<(std::ostream& out, const Timer& timer);
 
-template <class Ret, log::Level L=DEBUG>
-Ret measureTimeFor(const std::string& timerName, const std::function<Ret()>& task) {
-	Timer timer(timerName);
-	Ret ret = task(); // execute the job
-	timer.stop();
-	LOG(L) << timer;
-	return ret;
-}
+	  public:
+		Timer(const std::string& name = "Time") : boost::timer(), lastStep(0.0), mName(name), isStopped(false) {}
+		/**
+		 * Stops the timer returning the elapsed amount of seconds
+		 */
+		double stop();
 
-// Specialization for void returning functions
-template <log::Level L=DEBUG>
-void measureTimeFor(const std::string& timerName, const std::function<void ()>& task) {
-	Timer timer(timerName);
-	task(); // execute the job
-	timer.stop();
-	LOG(L) << timer;
-}
+		/**
+		 * Obtains time since start or last lap time.
+		 */
+		double step();
+
+		/**
+		 * Return the elapsed amount of seconds
+		 */
+		double getTime() const;
+	};
+
+	std::ostream& operator<<(std::ostream& out, const Timer& timer);
+
+	template <class Ret, log::Level L = DEBUG>
+	Ret measureTimeFor(const std::string& timerName, const std::function<Ret()>& task) {
+		Timer timer(timerName);
+		Ret ret = task(); // execute the job
+		timer.stop();
+		LOG(L) << timer;
+		return ret;
+	}
+
+	// Specialization for void returning functions
+	template <log::Level L = DEBUG>
+	void measureTimeFor(const std::string& timerName, const std::function<void()>& task) {
+		Timer timer(timerName);
+		task(); // execute the job
+		timer.stop();
+		LOG(L) << timer;
+	}
 
 } // end utils namespace
 } // end insieme namespace
 
 // a macro capturing the time of the given command
-#define TIME(CMD) ([&]()->double { insieme::utils::Timer timer; CMD; timer.stop(); return timer.getTime(); })()
-
+#define TIME(CMD)                                                                                                                                              \
+	([&]() -> double {                                                                                                                                         \
+		insieme::utils::Timer timer;                                                                                                                           \
+		CMD;                                                                                                                                                   \
+		timer.stop();                                                                                                                                          \
+		return timer.getTime();                                                                                                                                \
+	})()

@@ -39,78 +39,76 @@
 namespace insieme {
 namespace utils {
 
-/**
- * A simple template wrapping a type into another named type. It can be used
- * to realize a type distinction although the actual value to be used is the same.
- *
- * E.g. to represent a distance between two points you might use a simple float.
- * However, in some cases you would like to use a specialized type to avoid confusing
- * distances with other float values.
- *
- * Another use case are value annotations. You can only annotate a single integer as a
- * value annotation. However, in many cases you would like to annotate a analysis result
- * that only consist of a single integer (loop nesting level, nested calls, ...). To
- * distinguish those, classes inheriting from this class can be used.
- */
-template<typename V>
-struct ValueWrapper {
-
 	/**
-	 * The value to be wrapped.
-	 */
-	V value;
-	
-	/**
-	 * Creates a new, default instance of this class representing
-	 * the default value of the underlying type.
-	 */
-	ValueWrapper() : value() {}
-	
-	/**
-	 * Creates a new instance based on the given value.
+	 * A simple template wrapping a type into another named type. It can be used
+	 * to realize a type distinction although the actual value to be used is the same.
 	 *
-	 * @param value the value to be represented.
+	 * E.g. to represent a distance between two points you might use a simple float.
+	 * However, in some cases you would like to use a specialized type to avoid confusing
+	 * distances with other float values.
+	 *
+	 * Another use case are value annotations. You can only annotate a single integer as a
+	 * value annotation. However, in many cases you would like to annotate a analysis result
+	 * that only consist of a single integer (loop nesting level, nested calls, ...). To
+	 * distinguish those, classes inheriting from this class can be used.
 	 */
-	ValueWrapper(const V& value) : value(value) {}
-	
-	/**
-	 * An implicit conversion form this value to the wrapped value.
-	 */
-	operator V() const {
-		return value;
-	}
-	
-	// some operators just forwarded to the underlying value
-	
-	bool operator==(const ValueWrapper<V>& other) const {
-		return value == other.value;
-	}
-	bool operator!=(const ValueWrapper<V>& other) const {
-		return value != other.value;
-	}
-	bool operator<=(const ValueWrapper<V>& other) const {
-		return value <= other.value;
-	}
-	bool operator>=(const ValueWrapper<V>& other) const {
-		return value >= other.value;
-	}
-	bool operator<(const ValueWrapper<V>& other) const {
-		return value < other.value;
-	}
-	bool operator>(const ValueWrapper<V>& other) const {
-		return value > other.value;
-	}
-	
-};
+	template <typename V>
+	struct ValueWrapper {
+		/**
+		 * The value to be wrapped.
+		 */
+		V value;
 
-/**
- * A macro reducing the amount code required for defining a new type derived from
- * the generic ValueWrapper by implementing the necessary constructors.
- */
-#define VALUE_TYPE(NAME,TYPE) \
-		struct NAME : public insieme::utils::ValueWrapper<TYPE> { \
-			NAME() : insieme::utils::ValueWrapper<TYPE>() {} \
-			NAME(const TYPE& value) : insieme::utils::ValueWrapper<TYPE>(value) {} \
+		/**
+		 * Creates a new, default instance of this class representing
+		 * the default value of the underlying type.
+		 */
+		ValueWrapper() : value() {}
+
+		/**
+		 * Creates a new instance based on the given value.
+		 *
+		 * @param value the value to be represented.
+		 */
+		ValueWrapper(const V& value) : value(value) {}
+
+		/**
+		 * An implicit conversion form this value to the wrapped value.
+		 */
+		operator V() const {
+			return value;
+		}
+
+		// some operators just forwarded to the underlying value
+
+		bool operator==(const ValueWrapper<V>& other) const {
+			return value == other.value;
+		}
+		bool operator!=(const ValueWrapper<V>& other) const {
+			return value != other.value;
+		}
+		bool operator<=(const ValueWrapper<V>& other) const {
+			return value <= other.value;
+		}
+		bool operator>=(const ValueWrapper<V>& other) const {
+			return value >= other.value;
+		}
+		bool operator<(const ValueWrapper<V>& other) const {
+			return value < other.value;
+		}
+		bool operator>(const ValueWrapper<V>& other) const {
+			return value > other.value;
+		}
+	};
+
+	/**
+	 * A macro reducing the amount code required for defining a new type derived from
+	 * the generic ValueWrapper by implementing the necessary constructors.
+	 */
+	#define VALUE_TYPE(NAME, TYPE)                                                                                                                             \
+		struct NAME : public insieme::utils::ValueWrapper<TYPE> {                                                                                              \
+			NAME() : insieme::utils::ValueWrapper<TYPE>() {}                                                                                                   \
+			NAME(const TYPE& value) : insieme::utils::ValueWrapper<TYPE>(value) {}                                                                             \
 		}
 
 

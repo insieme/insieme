@@ -42,53 +42,49 @@ namespace insieme {
 namespace backend {
 namespace runtime {
 
-// A forward declaration of the sequential backend implementation
-class RuntimeBackend;
-typedef std::shared_ptr<RuntimeBackend> RuntimeBackendPtr;
-
-/**
- * The facade for the backend capable of generating code to be used by the runtime backend.
- *
- * This backend converts the given IR representation into C99 / C++98 target code interacting with
- * the Insieme Runtime environment.
- */
-class RuntimeBackend : public Backend {
+	// A forward declaration of the sequential backend implementation
+	class RuntimeBackend;
+	typedef std::shared_ptr<RuntimeBackend> RuntimeBackendPtr;
 
 	/**
-	 * A flag enabling the inclusion of effort estimations within work-item tables.
-	 */
-	bool includeEffortEstimation;
-	
-public:
-
-	/**
-	 * A constructor of this kind of backend accepting an operator table extender.
-	 */
-	RuntimeBackend(bool includeEffortEstimation, const BackendConfigPtr& config = std::make_shared<BackendConfig>())
-		: Backend(std::vector<AddOnPtr>(), config), includeEffortEstimation(includeEffortEstimation) {}
-		
-		
-	/**
-	 * A factory method obtaining a smart pointer referencing a
-	 * fresh instance of the runtime backend using the default configuration.
+	 * The facade for the backend capable of generating code to be used by the runtime backend.
 	 *
-	 * @return a smart pointer to a fresh instance of the runtime backend
+	 * This backend converts the given IR representation into C99 / C++98 target code interacting with
+	 * the Insieme Runtime environment.
 	 */
-	static RuntimeBackendPtr getDefault(bool includeEffortEstimation = false, bool isGemsclaim = false);
-	
-	
-protected:
+	class RuntimeBackend : public Backend {
+		/**
+		 * A flag enabling the inclusion of effort estimations within work-item tables.
+		 */
+		bool includeEffortEstimation;
 
-	/**
-	 * Creates a converter instance capable of converting IR code into C / C++ code utilizing
-	 * the runtime for realizing parallel constructs.
-	 *
-	 * @param manager the manager to be utilized for the conversion
-	 * @return a converter instance conducting the code conversion
-	 */
-	virtual Converter buildConverter(core::NodeManager& manager) const;
-	
-};
+	  public:
+		/**
+		 * A constructor of this kind of backend accepting an operator table extender.
+		 */
+		RuntimeBackend(bool includeEffortEstimation, const BackendConfigPtr& config = std::make_shared<BackendConfig>())
+		    : Backend(std::vector<AddOnPtr>(), config), includeEffortEstimation(includeEffortEstimation) {}
+
+
+		/**
+		 * A factory method obtaining a smart pointer referencing a
+		 * fresh instance of the runtime backend using the default configuration.
+		 *
+		 * @return a smart pointer to a fresh instance of the runtime backend
+		 */
+		static RuntimeBackendPtr getDefault(bool includeEffortEstimation = false, bool isGemsclaim = false);
+
+
+	  protected:
+		/**
+		 * Creates a converter instance capable of converting IR code into C / C++ code utilizing
+		 * the runtime for realizing parallel constructs.
+		 *
+		 * @param manager the manager to be utilized for the conversion
+		 * @return a converter instance conducting the code conversion
+		 */
+		virtual Converter buildConverter(core::NodeManager& manager) const;
+	};
 
 } // end namespace runtime
 } // end namespace backend

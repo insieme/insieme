@@ -42,82 +42,74 @@ namespace insieme {
 namespace frontend {
 namespace utils {
 
-using namespace llvm;
+	using namespace llvm;
 
-/**
- * Utility function which removes eventual cast/implicit_cast/parenthesis and returns
- * the expected statement if found
- * @return
- */
-template <class ExpectedTy>
-const ExpectedTy* skipSugar(const clang::Expr* expr) {
+	/**
+	 * Utility function which removes eventual cast/implicit_cast/parenthesis and returns
+	 * the expected statement if found
+	 * @return
+	 */
+	template <class ExpectedTy>
+	const ExpectedTy* skipSugar(const clang::Expr* expr) {
+		// remove eventual parenthesis
+		if(const clang::ParenExpr* parenExpr = dyn_cast<clang::ParenExpr>(expr)) { return skipSugar<ExpectedTy>(parenExpr->getSubExpr()); }
 
-	// remove eventual parenthesis
-	if(const clang::ParenExpr* parenExpr = dyn_cast<clang::ParenExpr>(expr)) {
-		return skipSugar<ExpectedTy>(parenExpr->getSubExpr());
-	}
-	
-	// remove eventual casts
-	if(const clang::CastExpr* castExpr = dyn_cast<clang::CastExpr>(expr)) {
-		return skipSugar<ExpectedTy>(castExpr->getSubExpr());
-	}
-	
-	if(const clang::UnaryOperator* unOp = dyn_cast<clang::UnaryOperator>(expr)) {
-		if(unOp->getOpcode() == clang::UO_Minus) {
-			return skipSugar<ExpectedTy>(unOp->getSubExpr());
+		// remove eventual casts
+		if(const clang::CastExpr* castExpr = dyn_cast<clang::CastExpr>(expr)) { return skipSugar<ExpectedTy>(castExpr->getSubExpr()); }
+
+		if(const clang::UnaryOperator* unOp = dyn_cast<clang::UnaryOperator>(expr)) {
+			if(unOp->getOpcode() == clang::UO_Minus) { return skipSugar<ExpectedTy>(unOp->getSubExpr()); }
 		}
+
+		return dyn_cast<const ExpectedTy>(expr);
 	}
-	
-	return dyn_cast<const ExpectedTy>(expr);
-}
 
-/**
- * this function is used when we want to use the REMOVE_SYMBOLS macro from
- * external files. Used when inserting templated functions into the meta info.
- */
-std::string removeSymbols(std::string& s);
+	/**
+	 * this function is used when we want to use the REMOVE_SYMBOLS macro from
+	 * external files. Used when inserting templated functions into the meta info.
+	 */
+	std::string removeSymbols(std::string& s);
 
-/**
- * we build a complete name for the class,
- * qualified name does not have the specific types of the spetialization
- * the record provides que qualified name, the type the spetialization for the type
- * we merge both strings in a safe string for the output
- */
-std::string getNameForRecord(const clang::NamedDecl* decl, const clang::QualType& type, const clang::SourceManager& sm);
+	/**
+	 * we build a complete name for the class,
+	 * qualified name does not have the specific types of the spetialization
+	 * the record provides que qualified name, the type the spetialization for the type
+	 * we merge both strings in a safe string for the output
+	 */
+	std::string getNameForRecord(const clang::NamedDecl* decl, const clang::QualType& type, const clang::SourceManager& sm);
 
-/**
- * build a string to identify a function
- * the produced string will be output-compatible, this means that we can use this name
- * to name functions and they will not have qualification issues.
- * @param funcDecl: the function decl to name
- * @return unique string value
- */
-std::string buildNameForFunction(const clang::FunctionDecl* funcDecl);
+	/**
+	 * build a string to identify a function
+	 * the produced string will be output-compatible, this means that we can use this name
+	 * to name functions and they will not have qualification issues.
+	 * @param funcDecl: the function decl to name
+	 * @return unique string value
+	 */
+	std::string buildNameForFunction(const clang::FunctionDecl* funcDecl);
 
-/**
- * same story to build a suitable name for variables (spetial treatement )
- */
-std::string buildNameForVariable(const clang::VarDecl* varDecl);
+	/**
+	 * same story to build a suitable name for variables (spetial treatement )
+	 */
+	std::string buildNameForVariable(const clang::VarDecl* varDecl);
 
 
+	std::string buildNameForGlobal(const clang::VarDecl* varDecl, const clang::SourceManager& sm);
 
-std::string buildNameForGlobal(const clang::VarDecl* varDecl, const clang::SourceManager& sm);
+	/**
+	 * build names for enumerations. anonymous enumerations need a special naming,
+	 * otherwise multiple anon. enumerations cannot be distinguished anymore.
+	 * @param tagType clang TagType pointer
+	 * @return name for enumeration
+	 */
+	std::string buildNameForEnum(const clang::EnumDecl* enumDecl, const clang::SourceManager& sm);
 
-/**
- * build names for enumerations. anonymous enumerations need a special naming,
- * otherwise multiple anon. enumerations cannot be distinguished anymore.
- * @param tagType clang TagType pointer
- * @return name for enumeration
- */
-std::string buildNameForEnum(const clang::EnumDecl* enumDecl, const clang::SourceManager& sm);
-
-/**
- * build names for enumeration constants.
- * anonymous enumerationconstant will fail!
- * @param ecd enumConstantDecl pointer
- * @return name for enumeration
- */
-std::string buildNameForEnumConstant(const clang::EnumConstantDecl* ecd, const clang::SourceManager& sm);
+	/**
+	 * build names for enumeration constants.
+	 * anonymous enumerationconstant will fail!
+	 * @param ecd enumConstantDecl pointer
+	 * @return name for enumeration
+	 */
+	std::string buildNameForEnumConstant(const clang::EnumConstantDecl* ecd, const clang::SourceManager& sm);
 } // End utils namespace
 } // End frontend namespace
 } // End insieme namespace

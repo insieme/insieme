@@ -53,81 +53,81 @@ struct Buffer dev_ptr1;
 cl_event event = NULL;
 
 cl_int subfunction(cl_kernel kernel, cl_command_queue queue, size_t* globalSize, size_t* localSize, cl_context context, cl_mem buf_arg) {
-	buf_arg = clCreateBuffer(context, CL_MEM_READ_WRITE , sizeof(cl_int) * 100, NULL, NULL);
+	buf_arg = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(cl_int) * 100, NULL, NULL);
 	return clEnqueueNDRangeKernel(queue, kernel, 2, NULL, globalSize, localSize, 0, NULL, &event);
 }
 
 //#pragma insieme mark
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
 	struct Kernel kernel;
 	cl_int err;
-	cl_device_id* device;// = (cl_device_id*)malloc(sizeof(cl_device_id*));
+	cl_device_id* device; // = (cl_device_id*)malloc(sizeof(cl_device_id*));
 	cl_platform_id* platforms;
-	
+
 	cl_uint n;
 	err = clGetPlatformIDs(10, platforms, NULL);
 	clGetDeviceIDs(platforms[0], 0, 1, device, &n);
-	
+
 	context = clCreateContext(0, 1, device, NULL, NULL, &err);
 	kernel.queue = clCreateCommandQueue(context, device[0], CL_QUEUE_PROFILING_ENABLE, &err);
-	
+
 	float* host_ptr;
 	struct Buffer dev_ptr2;
 	dev_ptr2.mem = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, sizeof(cl_float) * 100, host_ptr, NULL);
 	dev_ptr2.size = 100;
 	cl_mem dev_ptr3 = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, sizeof(cl_float) * 100, host_ptr, &err);
 	struct Buffer dev_ptr4[2];
-	cl_mem dev_ptr5 = clCreateBuffer(context, CL_MEM_READ_WRITE , sizeof(cl_int) * 100, NULL, NULL);
+	cl_mem dev_ptr5 = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(cl_int) * 100, NULL, NULL);
 	clReleaseMemObject(dev_ptr5);
-	
+
 	dev_ptr1.mem = clCreateBuffer(context, CL_MEM_READ_ONLY, 100 * sizeof(cl_short), short_host_ptr, &err);
 	dev_ptr1.size = 100;
 	dev_ptr4[0].mem = clCreateBuffer(context, CL_MEM_WRITE_ONLY, 100 * sizeof(cl_float), NULL, &err);
 	dev_ptr4[1].mem = clCreateBuffer(context, CL_MEM_WRITE_ONLY, 100 * sizeof(cl_float), NULL, &err);
-	
+
 	clEnqueueWriteBuffer(kernel.queue, dev_ptr1.mem, CL_TRUE, 0, sizeof(cl_float) * 100, host_ptr, 0, NULL, NULL);
-	
+
 	size_t kernelLength = 10;
-	
+
 	char* path = "hello.cl";
-	
-	char* kernelSrc;// = oclLoadProgSource(path, "", &kernelLength);
-	
-#pragma insieme kernelFile "hello.cl"
-	program = clCreateProgramWithSource(context, 1, (const char**) &kernelSrc, &kernelLength, &err);
-	
+
+	char* kernelSrc; // = oclLoadProgSource(path, "", &kernelLength);
+
+	#pragma insieme kernelFile "hello.cl"
+	program = clCreateProgramWithSource(context, 1, (const char**)&kernelSrc, &kernelLength, &err);
+
 	kernel.fct = clCreateKernel(program, "hello", &err);
-	err = clSetKernelArg(kernel.fct, 0, sizeof(cl_mem), (void*) &dev_ptr1.mem);
+	err = clSetKernelArg(kernel.fct, 0, sizeof(cl_mem), (void*)&dev_ptr1.mem);
 	for(int i = 0; i < 1; ++i) {
-		err = clSetKernelArg(kernel.fct, 1, sizeof(cl_mem), (void*) &(dev_ptr4[i].mem));
+		err = clSetKernelArg(kernel.fct, 1, sizeof(cl_mem), (void*)&(dev_ptr4[i].mem));
 	}
 	// local memory
 	clSetKernelArg(kernel.fct, 2, sizeof(float) * n, 0);
 	// private memory
 	cl_int ta = 7;
-	clSetKernelArg(kernel.fct , 3, sizeof(cl_int), &ta);
-	cl_short2 sv = {0,1};
-	clSetKernelArg(kernel.fct , 4, sizeof(cl_short2), &sv);
-	
-	
-	size_t globalSize[] = { 8, 8 };
-	size_t localSize[] = { 3, 5, 6 };
-	
+	clSetKernelArg(kernel.fct, 3, sizeof(cl_int), &ta);
+	cl_short2 sv = {0, 1};
+	clSetKernelArg(kernel.fct, 4, sizeof(cl_short2), &sv);
+
+
+	size_t globalSize[] = {8, 8};
+	size_t localSize[] = {3, 5, 6};
+
 	for(int i = 0; i < 1; ++i) {
 		err = subfunction(kernel.fct, kernel.queue, globalSize, localSize, context, dev_ptr5);
 	}
-//		err = clEnqueueNDRangeKernel(kernel.queue, kernel, 2, NULL, globalSize, localSize, 0, NULL, &event);
+	//		err = clEnqueueNDRangeKernel(kernel.queue, kernel, 2, NULL, globalSize, localSize, 0, NULL, &event);
 
 	err = clWaitForEvents(1, &event);
-	
+
 	clEnqueueReadBuffer(kernel.queue, dev_ptr4[0].mem, CL_TRUE, 0, sizeof(cl_float) * 100, host_ptr, 0, NULL, NULL);
 	clFinish(kernel.queue);
-	
+
 	cl_ulong start, end;
 	clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_END, sizeof(cl_ulong), &end, NULL);
 	clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_START, sizeof(cl_ulong), &start, NULL);
-	
-	
+
+
 	clReleaseMemObject(dev_ptr1.mem);
 	clReleaseMemObject(dev_ptr2.mem);
 	clReleaseMemObject(dev_ptr3);
@@ -135,13 +135,13 @@ int main(int argc, char **argv) {
 		clReleaseMemObject(dev_ptr4[i].mem);
 	}
 	clReleaseMemObject(dev_ptr5);
-	
+
 	clReleaseCommandQueue(kernel.queue);
 	clReleaseContext(context);
 	clReleaseEvent(event);
 	clReleaseKernel(kernel.fct);
 	free(host_ptr);
-//	free(device);
+	//	free(device);
 
 
 	return 0;

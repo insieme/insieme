@@ -1,10 +1,8 @@
 
 int main(int argc, char** argv) {
-
-	char *line;
+	char* line;
 	while(line[0] == '#') {
 	}
-	
-	if(line[0] != '#') {
-	}
+
+	if(line[0] != '#') {}
 }

@@ -45,35 +45,32 @@ namespace insieme {
 namespace frontend {
 namespace extensions {
 
-using namespace insieme;
+	using namespace insieme;
 
-class BuiltinFunctionExtension : public insieme::frontend::extensions::FrontendExtension {
-
-public:
-	virtual insieme::core::ExpressionPtr Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& convFact) {
-		//check if it is a decl ref expr
-		if(const clang::DeclRefExpr* declRefExpr = llvm::dyn_cast<clang::DeclRefExpr>(expr)) {
-			//check if it we can get the function decl out of the decl ref
-			//if it is a builtin_constant_p we have to form it with the correct type
-			if(const clang::FunctionDecl* funcDecl = llvm::dyn_cast<clang::FunctionDecl>(declRefExpr->getDecl())) {
-				if(funcDecl->getNameAsString() == "__builtin_constant_p") {
-					auto builder = convFact.getIRBuilder();
-					auto tyList = core::TypeList();
-					tyList.push_back(builder.typeVariable("a"));
-					auto type = builder.functionType(tyList, builder.getLangBasic().getInt4());
-					auto ret = builder.literal(type, insieme::frontend::utils::buildNameForFunction(funcDecl));
-					//tell the compiler that this builtin is included somewhere else, even if it is not true
-					annotations::c::attachInclude(ret, "stdint.h");
-					return ret.as<core::ExpressionPtr>();
+	class BuiltinFunctionExtension : public insieme::frontend::extensions::FrontendExtension {
+	  public:
+		virtual insieme::core::ExpressionPtr Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& convFact) {
+			// check if it is a decl ref expr
+			if(const clang::DeclRefExpr* declRefExpr = llvm::dyn_cast<clang::DeclRefExpr>(expr)) {
+				// check if it we can get the function decl out of the decl ref
+				// if it is a builtin_constant_p we have to form it with the correct type
+				if(const clang::FunctionDecl* funcDecl = llvm::dyn_cast<clang::FunctionDecl>(declRefExpr->getDecl())) {
+					if(funcDecl->getNameAsString() == "__builtin_constant_p") {
+						auto builder = convFact.getIRBuilder();
+						auto tyList = core::TypeList();
+						tyList.push_back(builder.typeVariable("a"));
+						auto type = builder.functionType(tyList, builder.getLangBasic().getInt4());
+						auto ret = builder.literal(type, insieme::frontend::utils::buildNameForFunction(funcDecl));
+						// tell the compiler that this builtin is included somewhere else, even if it is not true
+						annotations::c::attachInclude(ret, "stdint.h");
+						return ret.as<core::ExpressionPtr>();
+					}
 				}
 			}
+			return nullptr;
 		}
-		return nullptr;
-	}
-	
-};
+	};
 
 } // extensions
 } // frontend
 } // insieme
-

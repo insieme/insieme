@@ -56,25 +56,24 @@ typedef uint32 irt_inst_region_id;
 uint32 irt_g_inst_region_metric_count = 0;
 uint32 irt_g_inst_region_metric_group_count = 0;
 
-#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__, _output_conversion_code__) \
-uint32 irt_g_region_metric_##_name__##_id;
-#define GROUP(_name__, _global_var_decls__, _local_var_decls__, _init_code__, _init_code_worker__, _finalize_code__, _finalize_code_worker__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
-uint32 irt_g_region_metric_group_##_name__##_id;
+#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__,                   \
+               _region_early_start_code__, _region_late_end_code__, _output_conversion_code__)                                                                 \
+	uint32 irt_g_region_metric_##_name__##_id;
+#define GROUP(_name__, _global_var_decls__, _local_var_decls__, _init_code__, _init_code_worker__, _finalize_code__, _finalize_code_worker__,                  \
+              _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__)                                                            \
+	uint32 irt_g_region_metric_group_##_name__##_id;
 #include "irt_metrics.def"
 
 // create metric flags and group counts for selectively enabling/disabling instrumentation
-#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__, _output_conversion_code__) \
-bool irt_g_inst_region_metric_measure_##_name__ = false;
-#define GROUP(_name__, _global_var_decls__, _local_var_decls__, _init_code__, _init_code_worker__, _finalize_code__, _finalize_code_worker__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
-uint32 irt_g_inst_region_metric_group_##_name__##membership_count = 0;
+#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__,                   \
+               _region_early_start_code__, _region_late_end_code__, _output_conversion_code__)                                                                 \
+	bool irt_g_inst_region_metric_measure_##_name__ = false;
+#define GROUP(_name__, _global_var_decls__, _local_var_decls__, _init_code__, _init_code_worker__, _finalize_code__, _finalize_code_worker__,                  \
+              _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__)                                                            \
+	uint32 irt_g_inst_region_metric_group_##_name__##membership_count = 0;
 #include "irt_metrics.def"
 
-typedef enum {
-	IRT_HW_SCOPE_CORE,
-	IRT_HW_SCOPE_SOCKET,
-	IRT_HW_SCOPE_SYSTEM,
-	IRT_HW_SCOPE_NUM_SCOPES
-} IRT_HW_SCOPES;
+typedef enum { IRT_HW_SCOPE_CORE, IRT_HW_SCOPE_SOCKET, IRT_HW_SCOPE_SYSTEM, IRT_HW_SCOPE_NUM_SCOPES } IRT_HW_SCOPES;
 
 typedef enum {
 	IRT_METRIC_AGGREGATOR_NONE,
@@ -87,23 +86,26 @@ typedef struct {
 	uint64 id;
 	uint64 num_executions;
 	irt_spinlock lock;
-#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__, _output_conversion_code__) \
-	_data_type__ last_##_name__; \
-	_data_type__ aggregated_##_name__;
-#include "irt_metrics.def"
+	#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__,               \
+	               _region_early_start_code__, _region_late_end_code__, _output_conversion_code__)                                                             \
+		_data_type__ last_##_name__;                                                                                                                           \
+		_data_type__ aggregated_##_name__;
+	#include "irt_metrics.def"
 } irt_inst_region_context_data;
 
 typedef struct {
 	volatile uint64 region_entries;
 	volatile uint64 region_exits;
-#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__, _output_conversion_code__) \
-	_data_type__ last_##_name__; \
-	_data_type__ aggregated_##_name__;
-#include "irt_metrics.def"
+	#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__,               \
+	               _region_early_start_code__, _region_late_end_code__, _output_conversion_code__)                                                             \
+		_data_type__ last_##_name__;                                                                                                                           \
+		_data_type__ aggregated_##_name__;
+	#include "irt_metrics.def"
 } irt_inst_region_wi_data;
 
 typedef struct {
-#define GROUP(_name__, _global_var_decls__, _local_var_decls__, _init_code__, _init_code_worker__, _finalize_code__, _finalize_code_worker__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__) \
+#define GROUP(_name__, _global_var_decls__, _local_var_decls__, _init_code__, _init_code_worker__, _finalize_code__, _finalize_code_worker__,                  \
+              _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__)                                                            \
 	_global_var_decls__;
 #include "irt_metrics.def"
 } irt_inst_region_context_declarations;

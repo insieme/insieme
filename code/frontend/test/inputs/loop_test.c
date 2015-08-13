@@ -36,7 +36,7 @@
 
 // exploring strange bug in loops
 
-unsigned long ulVal()  {
+unsigned long ulVal() {
 	return 10lu;
 }
 
@@ -44,22 +44,22 @@ int main() {
 	unsigned int a = 0u;
 	unsigned long b = 10lu;
 	int c = 0;
-	
+
 	// works
 	for(unsigned int i = 0; i < ulVal(); ++i) {
 		++c;
 	}
-	
+
 	// works
-	for(a = 0; a < ulVal(); a+=1) {
+	for(a = 0; a < ulVal(); a += 1) {
 		++c;
 	}
-	
+
 	// works
 	for(a = 0; a < b; a++) {
 		++c;
 	}
-	
+
 	// fails
 	for(a = 0; a < ulVal(); a++) {
 		++c;

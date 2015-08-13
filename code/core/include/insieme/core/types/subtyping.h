@@ -42,74 +42,70 @@ namespace insieme {
 namespace core {
 namespace types {
 
-// -------------------------------------------------------------------------------------------------------------------------
-//                                                    SubTyping
-// -------------------------------------------------------------------------------------------------------------------------
+	// -------------------------------------------------------------------------------------------------------------------------
+	//                                                    SubTyping
+	// -------------------------------------------------------------------------------------------------------------------------
 
-/**
- * Tests whether the given sub-type is in deed a sub-type o the given super type.
- *
- * @param subType the sub-type to be tested
- * @param superType the super type to be compared with
- * @return true if subType is in deed a sub-type of the super type
- */
-bool isSubTypeOf(const TypePtr& subType, const TypePtr& superType);
+	/**
+	 * Tests whether the given sub-type is in deed a sub-type o the given super type.
+	 *
+	 * @param subType the sub-type to be tested
+	 * @param superType the super type to be compared with
+	 * @return true if subType is in deed a sub-type of the super type
+	 */
+	bool isSubTypeOf(const TypePtr& subType, const TypePtr& superType);
 
-/**
- * Tries to obtain the smallest common super-type of the given types (Join Type in the sub-type relation).
- *
- * @param typeA the first type to be considered
- * @param typeB the second type to be considered
- * @return the smallest common super type or null, if no such type exists
- */
-TypePtr getSmallestCommonSuperType(const TypePtr& typeA, const TypePtr& typeB);
+	/**
+	 * Tries to obtain the smallest common super-type of the given types (Join Type in the sub-type relation).
+	 *
+	 * @param typeA the first type to be considered
+	 * @param typeB the second type to be considered
+	 * @return the smallest common super type or null, if no such type exists
+	 */
+	TypePtr getSmallestCommonSuperType(const TypePtr& typeA, const TypePtr& typeB);
 
-/**
- * Computes the smallest common super type of the types within the given container.
- *
- * @param types the typed to be considered
- * @return the smallest common super type or null, if no such type exists
- */
-template<typename Container>
-TypePtr getSmallestCommonSuperType(const Container& types) {
-	if(types.empty()) {
-		return 0;
+	/**
+	 * Computes the smallest common super type of the types within the given container.
+	 *
+	 * @param types the typed to be considered
+	 * @return the smallest common super type or null, if no such type exists
+	 */
+	template <typename Container>
+	TypePtr getSmallestCommonSuperType(const Container& types) {
+		if(types.empty()) { return 0; }
+		auto it = types.begin();
+		TypePtr res = *it;
+		for(++it; res && it != types.end(); ++it) {
+			res = getSmallestCommonSuperType(res, *it);
+		}
+		return res;
 	}
-	auto it = types.begin();
-	TypePtr res = *it;
-	for(++it; res && it != types.end(); ++it) {
-		res = getSmallestCommonSuperType(res, *it);
-	}
-	return res;
-}
 
-/**
- * Tries to obtain the biggest common sub-type of the given types (Meet Type in the sub-type relation).
- *
- * @param typeA the first type to be considered
- * @param typeB the second type to be considered
- * @return the biggest common sub type or null, if no such type exists
- */
-TypePtr getBiggestCommonSubType(const TypePtr& typeA, const TypePtr& typeB);
+	/**
+	 * Tries to obtain the biggest common sub-type of the given types (Meet Type in the sub-type relation).
+	 *
+	 * @param typeA the first type to be considered
+	 * @param typeB the second type to be considered
+	 * @return the biggest common sub type or null, if no such type exists
+	 */
+	TypePtr getBiggestCommonSubType(const TypePtr& typeA, const TypePtr& typeB);
 
-/**
- * Tries to obtain the biggest common sub-type of the given types (Meet Type in the sub-type relation).
- *
- * @param types the typed to be considered
- * @return the biggest common sub type or null, if no such type exists
- */
-template<typename Container>
-TypePtr getBiggestCommonSubType(const Container& types) {
-	if(types.empty()) {
-		return 0;
+	/**
+	 * Tries to obtain the biggest common sub-type of the given types (Meet Type in the sub-type relation).
+	 *
+	 * @param types the typed to be considered
+	 * @return the biggest common sub type or null, if no such type exists
+	 */
+	template <typename Container>
+	TypePtr getBiggestCommonSubType(const Container& types) {
+		if(types.empty()) { return 0; }
+		auto it = types.begin();
+		TypePtr res = *it;
+		for(++it; res && it != types.end(); ++it) {
+			res = getBiggestCommonSubType(res, *it);
+		}
+		return res;
 	}
-	auto it = types.begin();
-	TypePtr res = *it;
-	for(++it; res && it != types.end(); ++it) {
-		res = getBiggestCommonSubType(res, *it);
-	}
-	return res;
-}
 
 
 } // end namespace types

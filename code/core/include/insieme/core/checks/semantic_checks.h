@@ -45,30 +45,29 @@ namespace checks {
 // defines macros for generating CHECK declarations
 #include "insieme/core/checks/check_macros.inc"
 
-/**
- * This check verifies that array indices are in range.
- * Currently only implemented for single element arrays generated from scalars.
- */
-SIMPLE_CHECK(ScalarArrayIndexRange, CallExpr, false);
+	/**
+	 * This check verifies that array indices are in range.
+	 * Currently only implemented for single element arrays generated from scalars.
+	 */
+	SIMPLE_CHECK(ScalarArrayIndexRange, CallExpr, false);
 
-/**
- * This check verifies that undefined(...) is only called within ref.new or ref.var.
- */
-SIMPLE_CHECK(Undefined, CallExpr, false);
+	/**
+	 * This check verifies that undefined(...) is only called within ref.new or ref.var.
+	 */
+	SIMPLE_CHECK(Undefined, CallExpr, false);
 
-/**
- * This check verifies that there are no free break statements inside for loops.
- */
-SIMPLE_CHECK(FreeBreakInsideForLoop, ForStmt, false);
+	/**
+	 * This check verifies that there are no free break statements inside for loops.
+	 */
+	SIMPLE_CHECK(FreeBreakInsideForLoop, ForStmt, false);
 
-/**
- * This check verifies that functions with non-unit return type return something on every code path.
- */
-SIMPLE_CHECK(MissingReturnStmt, LambdaExpr, false);
+	/**
+	 * This check verifies that functions with non-unit return type return something on every code path.
+	 */
+	SIMPLE_CHECK(MissingReturnStmt, LambdaExpr, false);
 
-#undef SIMPLE_CHECK
+	#undef SIMPLE_CHECK
 
 } // end namespace check
 } // end namespace core
 } // end namespace insieme
-

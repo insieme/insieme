@@ -48,7 +48,7 @@
 
 static inline int _irt_sched_check_ipc_queue(irt_worker* self) {
 	int retval = 0;
-#ifndef IRT_MIN_MODE
+	#ifndef IRT_MIN_MODE
 	if(irt_g_runtime_behaviour & IRT_RT_MQUEUE) {
 		irt_mqueue_msg* received = irt_mqueue_receive();
 		if(received) {
@@ -63,7 +63,7 @@ static inline int _irt_sched_check_ipc_queue(irt_worker* self) {
 			free(received);
 		}
 	}
-#endif
+	#endif
 	return retval;
 }
 

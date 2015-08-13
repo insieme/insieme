@@ -43,5 +43,3 @@ void* alloca(size_t size) {
 }
 
 #endif //#ifndef __GUARD_INCLUDE_GEMS_ALLOCA_H
-
-

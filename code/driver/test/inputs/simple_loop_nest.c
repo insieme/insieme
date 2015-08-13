@@ -44,14 +44,12 @@
 #define N 5000
 
 int main() {
-
 	int sum = 0;
-	for(int i=0; i<N; i++) {
-		for(int j=0; j<N; j++) {
+	for(int i = 0; i < N; i++) {
+		for(int j = 0; j < N; j++) {
 			sum += i + j;
 		}
 	}
-	
+
 	printf("sum=%d\n", sum);
-	
 }

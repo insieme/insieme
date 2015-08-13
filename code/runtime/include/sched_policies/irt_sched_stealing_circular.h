@@ -48,11 +48,11 @@
 
 typedef struct _irt_cw_data {
 	irt_circular_work_buffer queue;
-	irt_work_item *overflow_stack;
+	irt_work_item* overflow_stack;
 	irt_spinlock overflow_stack_lock;
-#ifdef IRT_TASK_OPT
+	#ifdef IRT_TASK_OPT
 	int64 demand;
-#endif //IRT_TASK_OPT
+	#endif // IRT_TASK_OPT
 } irt_cw_data;
 
 #define irt_worker_scheduling_data irt_cw_data
@@ -62,7 +62,7 @@ typedef struct _irt_cw_data {
 
 #ifdef IRT_TASK_OPT
 inline uint32 irt_scheduling_select_taskopt_variant(irt_work_item* wi, irt_worker* wo);
-#endif //IRT_TASK_OPT
+#endif // IRT_TASK_OPT
 
 #if 0
 ///////////////////////////////////////////////////////////////////////////////////////////////////

@@ -49,21 +49,21 @@ namespace insieme {
 namespace annotations {
 namespace c {
 
-/**
- * Checks whether the given literal is marked to be extern.
- *
- * @param literal the literal to be tested
- * @return true if extern, false otherwise
- */
-bool isExtern(const insieme::core::LiteralPtr& literal);
+	/**
+	 * Checks whether the given literal is marked to be extern.
+	 *
+	 * @param literal the literal to be tested
+	 * @return true if extern, false otherwise
+	 */
+	bool isExtern(const insieme::core::LiteralPtr& literal);
 
-/**
- * Updates the extern flag of the given literal to fit the given value.
- *
- * @param literal the literal to be marked extern
- * @param value a flag determining whether to mark it extern or not
- */
-void markExtern(const insieme::core::LiteralPtr& literal, bool value = true);
+	/**
+	 * Updates the extern flag of the given literal to fit the given value.
+	 *
+	 * @param literal the literal to be marked extern
+	 * @param value a flag determining whether to mark it extern or not
+	 */
+	void markExtern(const insieme::core::LiteralPtr& literal, bool value = true);
 
 } // end namespace c
 } // end namespace annotations

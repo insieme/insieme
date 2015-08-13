@@ -41,15 +41,13 @@
 // function implemented via assembly code: code/runtime/asm/win64asm.asm
 // which is preassebled as code/runtime/asm/win64asm.obj
 extern "C" {
-	void _cdecl lwt_continue_impl(irt_work_item *wi /*rcx*/, wi_implementation_func* func /*rdx*/,	intptr_t *newstack /*r8*/, intptr_t *basestack /*r9*/);
+void _cdecl lwt_continue_impl(irt_work_item* wi /*rcx*/, wi_implementation_func* func /*rdx*/, intptr_t* newstack /*r8*/, intptr_t* basestack /*r9*/);
 }
 
 #elif defined(_M_IX86)
 
 // we use __fastcall calling convention to have first two parameters put into registers ecx and edx
-void __fastcall lwt_continue_impl(irt_work_item *wi /*ecx*/, wi_implementation_func* func /*edx*/,
-                                  intptr_t *newstack, intptr_t *basestack) {
-                                  
+void __fastcall lwt_continue_impl(irt_work_item* wi /*ecx*/, wi_implementation_func* func /*edx*/, intptr_t* newstack, intptr_t* basestack) {
 	__asm {
 		/* save registers on stack EBX, ESI, EDI, EBP */
 		push ebp
@@ -58,24 +56,25 @@ void __fastcall lwt_continue_impl(irt_work_item *wi /*ecx*/, wi_implementation_f
 		push esi
 		/* swap stacks */
 		
-		mov eax, basestack	// move address of basestack into eax
+		mov eax, basestack // move address of basestack into eax
 		mov dword ptr [eax], esp // write stackpointer address into memory location of basestack
 		mov eax, newstack
 		mov esp, dword ptr [eax]
-		/* call function if func != NULL */
+		    /* call function if func != NULL */
 		mov eax, ecx
 		mov ecx, edx
 		jecxz NOCALL
-		/* edx still has func, ecx needs to be restored, then call */
+		    /* edx still has func, ecx needs to be restored, then call */
 		mov ecx, eax
 		call _irt_wi_trampoline
-		/* restore registers for other coroutine */
+		    /* restore registers for other coroutine */
 		NOCALL:
 		pop esi
 		pop edi
 		pop ebx
 		pop ebp
-	};
+	}
+	;
 }
 
 #endif

@@ -42,82 +42,78 @@
 namespace insieme {
 namespace annotations {
 
-using namespace insieme;
+	using namespace insieme;
 
-struct TransformationHint {
+	struct TransformationHint {
+		typedef std::vector<unsigned> ValueVect;
 
-	typedef std::vector<unsigned> ValueVect;
-	
-	enum Type { LOOP_INTERCHANGE,
-	            LOOP_STRIP,
-	            LOOP_TILE,
-	            LOOP_UNROLL,
-	            LOOP_FUSE,
-	            LOOP_SPLIT,
-	            LOOP_STAMP,
-	            LOOP_RESCHEDULE,
-	            LOOP_PARALLELIZE,
-	            
-	            REGION_STRIP,
-	            
-	            // for recursive functions
-	            REC_FUN_UNROLL
-	            
-	            // Add here new transformations
-	          };
-	          
-	TransformationHint(const Type& type, const ValueVect& values) :
-		type(type), values(values) { }
-		
-	template <class ...Args>
-	TransformationHint(const Type& type, const Args& ... args) :
-		type(type), values( {
-		args...
-	}) { }
-	
-	const ValueVect& getValues() const {
-		return values;
-	}
-	const Type& getType() const {
-		return type;
-	}
-	
-	std::ostream& printTo(std::ostream& out) const {
-		return out << "Transformation Hint '" << type << "' (" << toString(values) << ")";
-	}
-private:
-	Type      type;
-	ValueVect values;
-};
+		enum Type {
+			LOOP_INTERCHANGE,
+			LOOP_STRIP,
+			LOOP_TILE,
+			LOOP_UNROLL,
+			LOOP_FUSE,
+			LOOP_SPLIT,
+			LOOP_STAMP,
+			LOOP_RESCHEDULE,
+			LOOP_PARALLELIZE,
 
-class TransformAnnotation : public utils::CompoundAnnotation<TransformationHint, core::NodeAnnotation> {
-public:
-	static const string NAME;
-	static const utils::StringKey<TransformAnnotation> KEY;
-	
-	TransformAnnotation(): utils::CompoundAnnotation<TransformationHint, core::NodeAnnotation>() { }
-	
-	const utils::AnnotationKeyPtr getKey() const {
-		return &KEY;
-	}
-	const std::string& getAnnotationName() const {
-		return NAME;
-	}
-	
-	const std::string toString() const;
-	
-	virtual bool migrate(const core::NodeAnnotationPtr& ptr,
-	                     const core::NodePtr& before,
-	                     const core::NodePtr& after) const {
-		// always copy the annotation
-		assert_true(&*ptr == this) << "Annotation pointer should reference this annotation!";
-		after->addAnnotation(ptr);
-		return true;
-	}
-	
-private:
-	AnnotationList annotationList;
-};
+			REGION_STRIP,
+
+			// for recursive functions
+			REC_FUN_UNROLL
+
+			// Add here new transformations
+		};
+
+		TransformationHint(const Type& type, const ValueVect& values) : type(type), values(values) {}
+
+		template <class... Args>
+		TransformationHint(const Type& type, const Args&... args)
+		    : type(type), values({args...}) {}
+
+		const ValueVect& getValues() const {
+			return values;
+		}
+		const Type& getType() const {
+			return type;
+		}
+
+		std::ostream& printTo(std::ostream& out) const {
+			return out << "Transformation Hint '" << type << "' (" << toString(values) << ")";
+		}
+
+	  private:
+		Type type;
+		ValueVect values;
+	};
+
+	class TransformAnnotation : public utils::CompoundAnnotation<TransformationHint, core::NodeAnnotation> {
+	  public:
+		static const string NAME;
+		static const utils::StringKey<TransformAnnotation> KEY;
+
+		TransformAnnotation() : utils::CompoundAnnotation<TransformationHint, core::NodeAnnotation>() {}
+
+		const utils::AnnotationKeyPtr getKey() const {
+			return &KEY;
+		}
+		const std::string& getAnnotationName() const {
+			return NAME;
+		}
+
+		const std::string toString() const;
+
+		virtual bool migrate(const core::NodeAnnotationPtr& ptr, const core::NodePtr& before, const core::NodePtr& after) const {
+			// always copy the annotation
+			assert_true(&*ptr == this) << "Annotation pointer should reference this annotation!";
+			after->addAnnotation(ptr);
+			return true;
+		}
+
+	  private:
+		AnnotationList annotationList;
+	};
 
 } // end annotations namespace
 } // end insieme namespace

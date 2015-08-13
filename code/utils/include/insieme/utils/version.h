@@ -52,13 +52,13 @@
 namespace insieme {
 namespace utils {
 
-/**
- * Obtains a reference to a string holding the Insieme Version string to be
- * used when referring to a particular version of Insieme.
- */
-inline const std::string getVersion() {
-	return std::string(INSIEME_VERSION);
-}
+	/**
+	 * Obtains a reference to a string holding the Insieme Version string to be
+	 * used when referring to a particular version of Insieme.
+	 */
+	inline const std::string getVersion() {
+		return std::string(INSIEME_VERSION);
+	}
 
 } // end namespace utils
 } // end namespace insieme

@@ -77,35 +77,35 @@ int32 irt_cpu_freq_get_available_frequencies(uint32* frequencies, uint32* length
 int32 irt_cpu_freq_get_available_frequencies_core(const uint32 coreid, uint32* frequencies, uint32* length) {
 	char path_to_cpufreq[FREQ_PATH_MAX_LENGTH];
 	uint32 counter = 1;
-	uint32 frequencies_temp[IRT_INST_MAX_CPU_FREQUENCIES] = { 0 };
-	
+	uint32 frequencies_temp[IRT_INST_MAX_CPU_FREQUENCIES] = {0};
+
 	sprintf(path_to_cpufreq, FREQ_PATH_STRING, coreid, "scaling_available_frequencies");
 	FILE* file = fopen(path_to_cpufreq, "r");
-	
+
 	if(file == NULL) {
 		IRT_DEBUG("Instrumentation: Unable to open frequency file for reading for core %u, file %s, reason: %s\n", coreid, path_to_cpufreq, strerror(errno));
 		return -2;
 	}
-	
+
 	if(fscanf(file, "%u", &frequencies_temp[0]) != 1) {
 		IRT_DEBUG("Instrumentation: Unable to read available frequencies for core %u, file %s, reason: %s\n", coreid, path_to_cpufreq, strerror(errno));
 		fclose(file);
 		return -1;
 	}
-	
+
 	while(fscanf(file, " %u", &frequencies_temp[counter]) == 1) {
 		IRT_ASSERT(counter < IRT_INST_MAX_CPU_FREQUENCIES, IRT_ERR_INSTRUMENTATION,
 		           "Instrumentation: number of available frequencies %u for core %u exceeds IRT_INST_MAX_CPU_FREQUENCIES", counter, coreid);
 		++counter;
 	}
-	
+
 	for(uint32 j = 0; j < counter; ++j) {
-		frequencies[j] = frequencies_temp[j]/1000;
+		frequencies[j] = frequencies_temp[j] / 1000;
 	}
 	*length = counter;
-	
+
 	fclose(file);
-	
+
 	return 0;
 }
 
@@ -124,21 +124,21 @@ int32 irt_cpu_freq_get_available_frequencies_worker(const irt_worker* worker, ui
 
 bool _irt_cpu_freq_write(const char* path_to_cpufreq, const uint32 frequency) {
 	FILE* file = fopen(path_to_cpufreq, "w");
-	
+
 	if(file == NULL) {
 		IRT_DEBUG("Instrumentation: Unable to open frequency file %s for writing, reason: %s\n", path_to_cpufreq, strerror(errno));
 		return false;
 	}
-	
+
 	// frequency is given in MHz, not KHz...
-	if(fprintf(file, "%u\n", frequency*1000) < 1) {
+	if(fprintf(file, "%u\n", frequency * 1000) < 1) {
 		IRT_DEBUG("Instrumentation: Unable to write frequency to file %s, reason: %s\n", path_to_cpufreq, strerror(errno));
 		fclose(file);
 		return false;
 	}
-	
+
 	fclose(file);
-	
+
 	return true;
 }
 
@@ -150,39 +150,35 @@ int32 _irt_cpu_freq_read(const char* path_to_cpufreq) {
 	uint32 temp = 0;
 	int32 retval = 0;
 	FILE* file = fopen(path_to_cpufreq, "r");
-	
+
 	if(file == NULL) {
 		IRT_DEBUG("Instrumentation: Unable to open frequency file %s for reading, reason: %s\n", path_to_cpufreq, strerror(errno));
 		return -2;
 	}
-	
+
 	if((retval = fscanf(file, "%u", &temp)) < 1) {
 		IRT_DEBUG("Instrumentation: Unable to read frequency from file %s, reason: %s\n", path_to_cpufreq, strerror(errno));
 		fclose(file);
 		return -1;
 	}
-	
+
 	fclose(file);
-	
+
 	// returning MHz here, not KHz......
-	return temp/1000;
+	return temp / 1000;
 }
 
 bool __irt_cpu_freq_set(const uint32 coreid, const uint32 frequency, irt_cpu_frequency_type freq_type) {
+	if(irt_g_cpu_freq_cur_state[coreid][freq_type] == frequency) { return true; }
 
-	if(irt_g_cpu_freq_cur_state[coreid][freq_type] == frequency) {
-		return true;
-	}
-	
 	char path_to_cpufreq[FREQ_PATH_MAX_LENGTH];
-	
+
 	if(freq_type == SCALING_MIN_FREQ) {
 		sprintf(path_to_cpufreq, FREQ_PATH_STRING, coreid, FREQ_MIN_STRING);
-	}
-	else {
+	} else {
 		sprintf(path_to_cpufreq, FREQ_PATH_STRING, coreid, FREQ_MAX_STRING);
 	}
-	
+
 	if(_irt_cpu_freq_write(path_to_cpufreq, frequency)) {
 		irt_g_cpu_freq_cur_state[coreid][freq_type] = frequency;
 		return true;
@@ -195,15 +191,12 @@ bool __irt_cpu_freq_set(const uint32 coreid, const uint32 frequency, irt_cpu_fre
  */
 
 bool _irt_cpu_freq_set(const uint32 coreid, const uint32 frequency, irt_cpu_frequency_type freq_type) {
-
 	bool ret_a = true, ret_b = true;
-	
+
 	ret_a = __irt_cpu_freq_set(coreid, frequency, freq_type);
-	
-	if(irt_hw_get_hyperthreading_enabled()) {
-		ret_b = __irt_cpu_freq_set(irt_hw_get_sibling_hyperthread(coreid), frequency, freq_type);
-	}
-	
+
+	if(irt_hw_get_hyperthreading_enabled()) { ret_b = __irt_cpu_freq_set(irt_hw_get_sibling_hyperthread(coreid), frequency, freq_type); }
+
 	// will show failure if hyperthreading is active but setting the freq for either logical CPU in the OS failed
 	return ret_a && ret_b;
 }
@@ -219,20 +212,15 @@ int32 _irt_cpu_freq_get_uncached(const uint32 coreid, const char* freq_type) {
  */
 
 int32 _irt_cpu_freq_get_cached(const uint32 coreid, irt_cpu_frequency_type freq_type) {
-
 	if(freq_type == SCALING_MIN_FREQ || freq_type == SCALING_MAX_FREQ) {
-		if(irt_g_cpu_freq_cur_state[coreid][freq_type] != 0) {
-			return irt_g_cpu_freq_cur_state[coreid][freq_type];
-		}
+		if(irt_g_cpu_freq_cur_state[coreid][freq_type] != 0) { return irt_g_cpu_freq_cur_state[coreid][freq_type]; }
 	}
-	
+
 	if(freq_type == SCALING_MIN_FREQ) {
 		return _irt_cpu_freq_get_uncached(coreid, FREQ_MIN_STRING);
-	}
-	else if(freq_type == SCALING_MAX_FREQ) {
+	} else if(freq_type == SCALING_MAX_FREQ) {
 		return _irt_cpu_freq_get_uncached(coreid, FREQ_MAX_STRING);
-	}
-	else {
+	} else {
 		IRT_ASSERT(false, IRT_ERR_INVALIDARGUMENT, "CPU frequency cache can only be used for MIN and MAX values!");
 		return -1;
 	}
@@ -302,7 +290,7 @@ bool irt_cpu_freq_reset_frequencies() {
 	bool retval = true;
 	uint32 frequency = 0;
 	uint32 total_cores = irt_hw_get_num_cpus();
-	
+
 	for(uint32 coreid = 0; coreid < total_cores; ++coreid) {
 		if(irt_g_cpu_freq_cur_state[coreid][SCALING_MIN_FREQ] != 0) {
 			frequency = _irt_cpu_freq_get_uncached(coreid, "cpuinfo_min_freq");
@@ -328,9 +316,8 @@ int32 irt_cpu_freq_reset_frequency_worker(const irt_worker* worker) {
 	uint32 length;
 	if((retval = irt_cpu_freq_get_available_frequencies_worker(worker, freqs, &length)) == 0) {
 		irt_cpu_freq_set_max_frequency_worker(worker, freqs[0]);
-		irt_cpu_freq_set_min_frequency_worker(worker, freqs[length-1]);
-	}
-	else {
+		irt_cpu_freq_set_min_frequency_worker(worker, freqs[length - 1]);
+	} else {
 		return retval;
 	}
 	return 0;
@@ -342,32 +329,30 @@ int32 irt_cpu_freq_reset_frequency_worker(const irt_worker* worker) {
 
 int32 irt_cpu_freq_set_frequency_worker(const irt_worker* worker, const uint32 frequency) {
 	int32 old_min_freq = irt_cpu_freq_get_min_frequency_worker(worker);
-	
+
 	// min always has to be >= max, so if old_min is larger than max, first set new min
 	if((uint32)old_min_freq > frequency) {
 		irt_cpu_freq_set_min_frequency_worker(worker, frequency);
 		irt_cpu_freq_set_max_frequency_worker(worker, frequency);
-	}
-	else {
+	} else {
 		irt_cpu_freq_set_max_frequency_worker(worker, frequency);
 		irt_cpu_freq_set_min_frequency_worker(worker, frequency);
 	}
-	
+
 	return 0;
 }
 
 int32 irt_cpu_freq_set_frequency_core(const uint32 coreid, const uint32 frequency) {
 	int32 old_min_freq = irt_cpu_freq_get_min_frequency_core(coreid);
-	
+
 	if((uint32)old_min_freq > frequency) {
 		_irt_cpu_freq_set(coreid, frequency, SCALING_MIN_FREQ);
 		_irt_cpu_freq_set(coreid, frequency, SCALING_MAX_FREQ);
-	}
-	else {
+	} else {
 		_irt_cpu_freq_set(coreid, frequency, SCALING_MAX_FREQ);
 		_irt_cpu_freq_set(coreid, frequency, SCALING_MIN_FREQ);
 	}
-	
+
 	return 0;
 }
 
@@ -379,52 +364,50 @@ bool irt_cpu_freq_set_frequency_socket(const uint32 socket, const uint32 frequen
 	bool retval = 0;
 	uint32 core_start = socket * irt_hw_get_num_cores_per_socket();
 	uint32 core_end = (socket + 1) * irt_hw_get_num_cores_per_socket();
-	
+
 	for(uint32 coreid = core_start; coreid < core_end; ++coreid) {
 		retval |= (irt_cpu_freq_set_frequency_core(coreid, frequency) == 0);
-		if(irt_hw_get_hyperthreading_enabled()) {
-			retval |= (irt_cpu_freq_set_frequency_core(irt_hw_get_sibling_hyperthread(coreid), frequency) == 0);
-		}
+		if(irt_hw_get_hyperthreading_enabled()) { retval |= (irt_cpu_freq_set_frequency_core(irt_hw_get_sibling_hyperthread(coreid), frequency) == 0); }
 	}
-	
+
 	return retval;
 }
 
 /*
- * This function sets the frequencies of all cores of sockets from an environmental variable. Only actual values are supported as of now, no placeholders like MIN/MAX/OS.
+ * This function sets the frequencies of all cores of sockets from an environmental variable. Only actual values are supported as of now, no placeholders like
+ * MIN/MAX/OS.
  */
 
 int32 irt_cpu_freq_set_frequency_socket_env() {
 	char* freq_str_orig = getenv(IRT_CPU_FREQUENCIES);
 	int32 retval = 0;
-	
+
 	if(freq_str_orig) {
 		uint32 socketid = 0;
-		
+
 		// get information from first core of the system, assume homogeneity
-		char *tok = strtok(freq_str_orig, ",");
-		
+		char* tok = strtok(freq_str_orig, ",");
+
 		while(tok) {
 			uint32 freq = atoi(tok);
 			irt_cpu_freq_set_frequency_socket(socketid, freq);
 			tok = strtok(NULL, ",");
 			++socketid;
 		}
-	}
-	else {
+	} else {
 		retval = 1;
 	}
-	
+
 	// the rest of this function is only runtime log file output
 	// TODO: we only output the first core of each socket for brevity, but this should be changed
-	
+
 	uint32 cpu_freq_list[IRT_HW_MAX_NUM_SOCKETS];
-	
+
 	for(uint32 socketid = 0; socketid < irt_hw_get_num_sockets(); ++socketid) {
-		cpu_freq_list[socketid] = _irt_cpu_freq_get_uncached(socketid*irt_hw_get_num_cores_per_socket(), "scaling_cur_freq");
+		cpu_freq_list[socketid] = _irt_cpu_freq_get_uncached(socketid * irt_hw_get_num_cores_per_socket(), "scaling_cur_freq");
 	}
-	
-	char cpu_freq_output[1024] = { 0 };
+
+	char cpu_freq_output[1024] = {0};
 	char* cur = cpu_freq_output;
 	bool has_been_set = false;
 	for(uint32 i = 0; i < IRT_MAX_CORES; ++i) {
@@ -435,17 +418,16 @@ int32 irt_cpu_freq_set_frequency_socket_env() {
 	}
 	if(has_been_set) {
 		cur += sprintf(cur, "set, ");
-	}
-	else {
+	} else {
 		cur += sprintf(cur, "not set, ");
 	}
-	
+
 	for(uint32 i = 0; i < irt_hw_get_num_sockets(); ++i) {
 		cur += sprintf(cur, "%u, ", cpu_freq_list[i]);
 	}
 	// cutting off the last comma and whitespace
-	*(cur-2) = '\0';
-	
+	*(cur - 2) = '\0';
+
 	irt_log_setting_s("IRT_CPU_FREQUENCIES", cpu_freq_output);
 	return retval;
 }
@@ -456,12 +438,11 @@ int32 irt_cpu_freq_set_frequency_socket_env() {
 
 int32 irt_cpu_freq_print_cur_frequency() {
 	int32 retval = 0;
-	
+
 	for(uint32 i = 0; i < irt_g_worker_count; ++i) {
 		if((retval = irt_cpu_freq_get_cur_frequency_worker(irt_g_workers[i])) > 0) {
 			printf("%u:%u ", i, retval);
-		}
-		else {
+		} else {
 			return retval;
 		}
 	}
@@ -476,9 +457,7 @@ int32 irt_cpu_freq_print_cur_frequency() {
 int32 irt_cpu_freq_set_frequency(const uint32 frequency) {
 	int32 retval = 0;
 	for(uint32 i = 0; i < irt_g_worker_count; ++i) {
-		if((retval = irt_cpu_freq_set_frequency_worker(irt_g_workers[i], frequency)) != 0) {
-			return retval;
-		}
+		if((retval = irt_cpu_freq_set_frequency_worker(irt_g_workers[i], frequency)) != 0) { return retval; }
 	}
 	return 0;
 }

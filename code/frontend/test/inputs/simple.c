@@ -37,12 +37,12 @@
 #include <stdio.h>
 
 int main() {
-	//check for macro definition
+	// check for macro definition
 	A;
-	//check for injected headers
+	// check for injected headers
 	int x = magicFunction();
-#pragma te loop x num_threads(x*2)
-#pragma te scheduling auto
+	#pragma te loop x num_threads(x * 2)
+	#pragma te scheduling auto
 	return 0;
-#pragma te barrier
+	#pragma te barrier
 }

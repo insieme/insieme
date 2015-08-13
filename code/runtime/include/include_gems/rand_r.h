@@ -38,7 +38,7 @@
 #ifndef __GUARD_INCLUDE_GEMS_RAND_R_H
 #define __GUARD_INCLUDE_GEMS_RAND_R_H
 
-//TODO [_GEMS]: missing implementation
+// TODO [_GEMS]: missing implementation
 
 #ifndef rand_r
 #define rand_r(__seed) (__seed == __seed ? rand() : rand())

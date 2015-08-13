@@ -67,12 +67,10 @@ void irt_set_affinity(irt_affinity_mask irt_mask, irt_thread thread);
 
 /** initializes irt_g_affinity_base_mask and creates a mapping from virtual cpuids (consecutive order of ids
  starting at 0) to the real, available cpuids */
-void irt_affinity_init_physical_mapping(irt_affinity_physical_mapping *out_mapping);
+void irt_affinity_init_physical_mapping(irt_affinity_physical_mapping* out_mapping);
 
 /** get the number of available cores with respect to the initial affinity (irt_g_affinity_base_mask) */
 uint32 irt_affinity_cores_available();
-
-
 
 
 #endif // ifndef __GUARD_ABSTRACTION_AFFINITY_OS_DEPENDENT_H

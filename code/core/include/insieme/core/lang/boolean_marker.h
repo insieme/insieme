@@ -49,7 +49,6 @@ namespace lang {
 	 * An extension covering two types to model boolean properties.
 	 */
 	class BooleanMarkerExtension : public core::lang::Extension {
-
 		/**
 		 * Allow the node manager to create instances of this class.
 		 */
@@ -58,15 +57,12 @@ namespace lang {
 		/**
 		 * Creates a new instance based on the given node manager.
 		 */
-		BooleanMarkerExtension(core::NodeManager& manager)
-			: core::lang::Extension(manager) {}
+		BooleanMarkerExtension(core::NodeManager& manager) : core::lang::Extension(manager) {}
 
-	public:
-
+	  public:
 		LANG_EXT_TYPE_WITH_NAME(True, "true_marker", "t");
 
 		LANG_EXT_TYPE_WITH_NAME(False, "false_marker", "f");
-
 	};
 
 	static inline bool isTrueMarker(const NodePtr& node) {

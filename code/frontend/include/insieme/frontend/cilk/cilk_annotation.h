@@ -42,9 +42,9 @@ namespace insieme {
 namespace frontend {
 namespace cilk {
 
-class CilkSpawnMarker : public core::value_annotation::copy_on_migration {};
+	class CilkSpawnMarker : public core::value_annotation::copy_on_migration {};
 
-class CilkSyncMarker : public core::value_annotation::copy_on_migration {};
+	class CilkSyncMarker : public core::value_annotation::copy_on_migration {};
 
 } // end namespace cilk
 } // end namespace frontend

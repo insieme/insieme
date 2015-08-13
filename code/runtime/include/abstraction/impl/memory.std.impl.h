@@ -41,14 +41,13 @@
 #include "abstraction/memory.h"
 #include <stdlib.h>
 
-void *irt_scratchpad_alloc(size_t size) {
+void* irt_scratchpad_alloc(size_t size) {
 	return malloc(size);
 }
 
 void irt_free(void* ptr) {
 	free(ptr);
 }
-
 
 
 #endif // ifndef __GUARD_ABSTRACTION_IMPL_MEMORY_STD_IMPL_H

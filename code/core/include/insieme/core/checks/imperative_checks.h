@@ -45,15 +45,14 @@ namespace checks {
 // defines macros for generating CHECK declarations
 #include "insieme/core/checks/check_macros.inc"
 
-/**
- * This check verifies that variables are only used within their scope.
- */
-SIMPLE_CHECK(UndeclaredVariable, LambdaDefinition, false);
+	/**
+	 * This check verifies that variables are only used within their scope.
+	 */
+	SIMPLE_CHECK(UndeclaredVariable, LambdaDefinition, false);
 
 
-#undef SIMPLE_CHECK
+	#undef SIMPLE_CHECK
 
 } // end namespace check
 } // end namespace core
 } // end namespace insieme
-

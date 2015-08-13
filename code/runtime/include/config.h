@@ -93,7 +93,7 @@
 #define IRT_INST_BINARY_OUTPUT_ENV "IRT_INST_BINARY_OUTPUT"
 #define IRT_INST_WORKER_EVENT_LOGGING_ENV "IRT_INST_WORKER_EVENT_LOGGING"
 #define IRT_INST_WORKER_EVENT_TYPES_ENV "IRT_INST_WORKER_EVENT_TYPES"
-#define IRT_INST_WORKER_PD_BLOCKSIZE	512
+#define IRT_INST_WORKER_PD_BLOCKSIZE 512
 #define IRT_INST_REGION_INSTRUMENTATION_ENV "IRT_INST_REGION_INSTRUMENTATION"
 #define IRT_INST_REGION_INSTRUMENTATION_TYPES_ENV "IRT_INST_REGION_INSTRUMENTATION_TYPES"
 #define IRT_INST_REGION_INSTRUMENTATION_RING_BUFFER_SIZE 256
@@ -144,25 +144,24 @@
 #ifdef __arm__
 #define _GEMS_TODO
 #define _GEMS_ODROID
-#define GEMS_IRT_INST_REGION_INSTRUMENTATION_TYPES \
-        "cpu_time,wall_time,a15_avgpow,a07_avgpow,mem_avgpow,gpu_avgpow,cpu_avgpow," \
-        "a15_energy,a07_energy,mem_energy,gpu_energy,cpu_energy"
+#define GEMS_IRT_INST_REGION_INSTRUMENTATION_TYPES                                                                                                             \
+	"cpu_time,wall_time,a15_avgpow,a07_avgpow,mem_avgpow,gpu_avgpow,cpu_avgpow,"                                                                               \
+	"a15_energy,a07_energy,mem_energy,gpu_energy,cpu_energy"
 #else
 #define _GEMS_SIM
-#define	GEMS_CORE_FREQ_MHZ 100
-#define GEMS_IRT_INST_REGION_INSTRUMENTATION_TYPES \
-        "energy,average_power,ticks"
+#define GEMS_CORE_FREQ_MHZ 100
+#define GEMS_IRT_INST_REGION_INSTRUMENTATION_TYPES "energy,average_power,ticks"
 #endif
 #endif
 
-//optimizer
-//enables optimizations based on openmp+ (DCT excluded)
+// optimizer
+// enables optimizations based on openmp+ (DCT excluded)
 //#define IRT_ENABLE_OMPP_OPTIMIZER
-//enables DCT optimizations based on openmp+
+// enables DCT optimizations based on openmp+
 //#define IRT_ENABLE_OMPP_OPTIMIZER_DCT
-//enables measurments of resource compsumption with different frequencies
+// enables measurments of resource compsumption with different frequencies
 //#defines IRT_ENABLE_OMPP_OPTIMIZER_DVFS_EVAL
-//defines how many times a new frequency will be picked
+// defines how many times a new frequency will be picked
 //#define IRT_OMPP_OPTIMIZER_DVFS_EVAL_STEPS
 #ifdef IRT_ENABLE_OMPP_OPTIMIZER_DVFS_EVAL
 #define IRT_ENABLE_OMPP_OPTIMIZER
@@ -178,6 +177,6 @@
 // lookup table size
 #define IRT_OPTIMIZER_LT_BUCKETS 97
 // the index of the frequency (among the vector of available ones) used by the rt
-#define IRT_OPTIMIZER_RT_FREQ   1
+#define IRT_OPTIMIZER_RT_FREQ 1
 
 #endif // ifndef __GUARD_CONFIG_H

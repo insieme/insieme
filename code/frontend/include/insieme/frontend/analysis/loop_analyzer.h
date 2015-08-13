@@ -44,8 +44,8 @@
 
 namespace clang {
 
-class VarDecl;
-class ForStmt;
+	class VarDecl;
+	class ForStmt;
 
 } // end clang namespace
 
@@ -53,7 +53,7 @@ namespace insieme {
 namespace frontend {
 namespace conversion {
 
-class Converter;
+	class Converter;
 
 } // End conversion namespace
 } // End frontend namespace
@@ -63,114 +63,112 @@ namespace insieme {
 namespace frontend {
 namespace analysis {
 
-class LoopNormalizationError: public std::exception {
-	std::string cause;
-public:
-	LoopNormalizationError(): std::exception() { }
-	LoopNormalizationError(const std::string& cause): std::exception(), cause(cause) { }
-	const char* what() const throw() {
-		return cause.c_str();
-	}
-	~LoopNormalizationError() throw() { }
-};
+	class LoopNormalizationError : public std::exception {
+		std::string cause;
 
-class InductionVariableNotFoundException: public LoopNormalizationError {
-public:
-	InductionVariableNotFoundException(): LoopNormalizationError("failed to determine loop induction variable") { }
-};
+	  public:
+		LoopNormalizationError() : std::exception() {}
+		LoopNormalizationError(const std::string& cause) : std::exception(), cause(cause) {}
+		const char* what() const throw() {
+			return cause.c_str();
+		}
+		~LoopNormalizationError() throw() {}
+	};
 
-class InductionVariableNotReadOnly: public LoopNormalizationError {
-public:
-	InductionVariableNotReadOnly(): LoopNormalizationError("it seems that the induction variable is written inside of the loop") { }
-};
+	class InductionVariableNotFoundException : public LoopNormalizationError {
+	  public:
+		InductionVariableNotFoundException() : LoopNormalizationError("failed to determine loop induction variable") {}
+	};
 
-using insieme::frontend::conversion::Converter;
+	class InductionVariableNotReadOnly : public LoopNormalizationError {
+	  public:
+		InductionVariableNotReadOnly() : LoopNormalizationError("it seems that the induction variable is written inside of the loop") {}
+	};
 
-/**
- * Implements the checks to determine loop properties, such as induction variable, increment step and condition
- * normalizes the loop.
- * there is only needed to append the previous generated statements and the post.
- * 		PRE:
- * 			...
- * 		FOR LOOP { body }
- * 		POST
- * 			...
- */
-class LoopAnalyzer {
-
-private:
-
-	Converter& 	convFact;
-	
-	insieme::core::VariableList		conditionVars;			// variables used in conditions
-	
-	insieme::core::ExpressionPtr	originalInductionExpr;  // old induction expression
-	insieme::core::VariablePtr		inductionVar;  			// New read-only induction var
-	
-	insieme::core::ExpressionPtr	newInductionExpr; 		// Expression to use as iterator (normalized)
-	
-	insieme::core::ExpressionPtr 	incrExpr;				// increment
-	insieme::core::ExpressionPtr    stepExpr; 				// step of each iteration
-	
-	insieme::core::ExpressionPtr    initValue;				// lower boundary for real iteration
-	insieme::core::ExpressionPtr    endValue;				// upper boundary
-	
-	insieme::core::StatementList	preStmts;  				// statements that need to be reproduced BEFORE the loop
-	insieme::core::StatementList	postStmts;  			// statements that need to be reproduced AFTER the loop
-	insieme::core::StatementList	firstStmts;				// statements that need to be reproduced at the BEGINNING of loop body
-	
-	bool	invertComparisonOp;			// loop up or loop down, not used
-	bool	loopToBoundary;    // whenever to loop until value is equal, or until value is less than
-	bool	whileLessThan;       // if induction variable is compared while less than
-	bool	conditionLeft;       // if induction variable is compared while less than
-	bool	restoreValue;       // if induction variable was defined outside of scope, we need to give it a final value
-	
-	
-	void findConditionVariables(const clang::ForStmt* forStmt);
-	void findInductionVariable(const clang::ForStmt* forStmt);
-	void handleIncrExpr(const clang::ForStmt* forStmt);
-	void handleCondExpr(const clang::ForStmt* forStmt);
-	
-public:
+	using insieme::frontend::conversion::Converter;
 
 	/**
-	 * generate an analyzer to convert the loop from clang
+	 * Implements the checks to determine loop properties, such as induction variable, increment step and condition
+	 * normalizes the loop.
+	 * there is only needed to append the previous generated statements and the post.
+	 * 		PRE:
+	 * 			...
+	 * 		FOR LOOP { body }
+	 * 		POST
+	 * 			...
 	 */
-	LoopAnalyzer(const clang::ForStmt* forStmt, Converter& convFact);
-	
-	/**
-	 * retrieve the original induction expression used in the original not normalized loop
-	 */
-	const insieme::core::ExpressionPtr 	getOriginalInductionExpr()  const {
-		return originalInductionExpr;
-	}
-	/**
-	 * retrieve the current induction expression used in the normalized loop
-	 */
-	const insieme::core::ExpressionPtr 	getInductionExpr() const {
-		return newInductionExpr;
-	}
-	
-	/**
-	 * retrieve the list of previous statements to be inserted BEFORE the loop
-	 */
-	const insieme::core::StatementList& getPreStmts() const {
-		return preStmts;
-	}
-	
-	/**
-	 * retrieve the list of post statements to be inserted AFTER the loop
-	 */
-	const insieme::core::StatementList& getPostStmts() const {
-		return postStmts;
-	}
-	
-	/**
-	 * creates a loop. if possible, normalized... Any for loop should be normalized but we have our
-	 * limitations
-	 */
-	insieme::core::ForStmtPtr  getLoop(const insieme::core::StatementPtr& body) const;
-};
+	class LoopAnalyzer {
+	  private:
+		Converter& convFact;
+
+		insieme::core::VariableList conditionVars; // variables used in conditions
+
+		insieme::core::ExpressionPtr originalInductionExpr; // old induction expression
+		insieme::core::VariablePtr inductionVar;            // New read-only induction var
+
+		insieme::core::ExpressionPtr newInductionExpr; // Expression to use as iterator (normalized)
+
+		insieme::core::ExpressionPtr incrExpr; // increment
+		insieme::core::ExpressionPtr stepExpr; // step of each iteration
+
+		insieme::core::ExpressionPtr initValue; // lower boundary for real iteration
+		insieme::core::ExpressionPtr endValue;  // upper boundary
+
+		insieme::core::StatementList preStmts;   // statements that need to be reproduced BEFORE the loop
+		insieme::core::StatementList postStmts;  // statements that need to be reproduced AFTER the loop
+		insieme::core::StatementList firstStmts; // statements that need to be reproduced at the BEGINNING of loop body
+
+		bool invertComparisonOp; // loop up or loop down, not used
+		bool loopToBoundary;     // whenever to loop until value is equal, or until value is less than
+		bool whileLessThan;      // if induction variable is compared while less than
+		bool conditionLeft;      // if induction variable is compared while less than
+		bool restoreValue;       // if induction variable was defined outside of scope, we need to give it a final value
+
+
+		void findConditionVariables(const clang::ForStmt* forStmt);
+		void findInductionVariable(const clang::ForStmt* forStmt);
+		void handleIncrExpr(const clang::ForStmt* forStmt);
+		void handleCondExpr(const clang::ForStmt* forStmt);
+
+	  public:
+		/**
+		 * generate an analyzer to convert the loop from clang
+		 */
+		LoopAnalyzer(const clang::ForStmt* forStmt, Converter& convFact);
+
+		/**
+		 * retrieve the original induction expression used in the original not normalized loop
+		 */
+		const insieme::core::ExpressionPtr getOriginalInductionExpr() const {
+			return originalInductionExpr;
+		}
+		/**
+		 * retrieve the current induction expression used in the normalized loop
+		 */
+		const insieme::core::ExpressionPtr getInductionExpr() const {
+			return newInductionExpr;
+		}
+
+		/**
+		 * retrieve the list of previous statements to be inserted BEFORE the loop
+		 */
+		const insieme::core::StatementList& getPreStmts() const {
+			return preStmts;
+		}
+
+		/**
+		 * retrieve the list of post statements to be inserted AFTER the loop
+		 */
+		const insieme::core::StatementList& getPostStmts() const {
+			return postStmts;
+		}
+
+		/**
+		 * creates a loop. if possible, normalized... Any for loop should be normalized but we have our
+		 * limitations
+		 */
+		insieme::core::ForStmtPtr getLoop(const insieme::core::StatementPtr& body) const;
+	};
 
 } // End analysis namespace
 } // End frontend namespace

@@ -44,24 +44,25 @@
 #define IRT_SPIN_UNLOCKED 0
 #define IRT_SPIN_DESTROYED -1 // makes lock variable unusable
 
-void irt_spin_lock(irt_spinlock *lock) {
+void irt_spin_lock(irt_spinlock* lock) {
 	// if value at destination lock == IRT_SPIN_UNLOCKED, then it will be changed to IRT_SPIN_LOCKED and the loop
 	// will exit, otherwise we loop until the condition is met and the lock can be set
 	// InterlockedCompareExchange returns the previous value of the Destination (lock) parameter.
-	while(IRT_SPIN_LOCKED == InterlockedCompareExchange(lock, IRT_SPIN_LOCKED, IRT_SPIN_UNLOCKED)) {}
+	while(IRT_SPIN_LOCKED == InterlockedCompareExchange(lock, IRT_SPIN_LOCKED, IRT_SPIN_UNLOCKED)) {
+	}
 }
 
-void irt_spin_unlock(irt_spinlock *lock) {
+void irt_spin_unlock(irt_spinlock* lock) {
 	// if lock was set to IRT_SPIN_LOCKED then it will be set to IRT_SPIN_UNLOCKED, otherwise nothing happens
 	InterlockedCompareExchange(lock, IRT_SPIN_UNLOCKED, IRT_SPIN_LOCKED);
 }
 
-int irt_spin_init(irt_spinlock *lock) {
+int irt_spin_init(irt_spinlock* lock) {
 	*lock = IRT_SPIN_UNLOCKED;
 	return 0;
 }
 
-void irt_spin_destroy(irt_spinlock *lock) {
+void irt_spin_destroy(irt_spinlock* lock) {
 	IRT_ASSERT(InterlockedCompareExchange(lock, IRT_SPIN_DESTROYED, IRT_SPIN_UNLOCKED) == IRT_SPIN_UNLOCKED, IRT_ERR_INTERNAL,
 	           "Spin lock was either locked, destroyed or uninitialized when attempting to destroy lock.");
 }

@@ -51,204 +51,189 @@ namespace driver {
 namespace integration {
 namespace testFramework {
 
-struct Options {
-	bool valid;
-	bool mockrun;
-	int num_threads;
-	int num_repetitions;
-	bool use_median;
-	bool statistics;
-	bool scheduling;
-	bool print_configs;
-#ifdef _OPENMP
-	int statThreads = omp_get_max_threads();
-#else
-	int statThreads = 0;
-#endif
-	bool panic_mode;
-	bool force;
-	bool list_only;
-	bool no_clean;
-	bool color;
-	bool overwrite;
-	vector<string> cases;
-	vector<string> steps;
-	vector<string> outputFormats;
-	bool preprocessingOnly;
-	bool postprocessingOnly;
-	
-	//perf metrics
-	bool perf;
-	string load_miss;
-	string store_miss;
-	string flops;
-	vector<string> perf_metrics;
-	
-	Options(bool valid = true)
-		: valid(valid), mockrun(false),
-		  num_threads(1), num_repetitions(1), use_median(false),statistics(false),scheduling(false), print_configs(false),
-		  panic_mode(false),force(false), list_only(false), no_clean(false), color(true),overwrite(false),preprocessingOnly(false),postprocessingOnly(false),
-		  perf(false),load_miss(""),store_miss(""),flops("") {}
-		  
-	bool operator==(Options a) const {
-		return a.mockrun==mockrun && a.num_threads==num_threads && a.num_repetitions == num_repetitions && a.use_median==use_median
-		       && a.statistics==statistics && a.scheduling==scheduling && a.statThreads==statThreads && a.force==force && a.cases==cases
-		       && a.preprocessingOnly == preprocessingOnly && a.postprocessingOnly == postprocessingOnly
-		       && a.perf==perf && a.load_miss==load_miss && a.store_miss==store_miss && a.flops == flops && a.perf_metrics==perf_metrics && a.steps==steps;
-	}
-	
-private:
-	friend class boost::serialization::access;
-	template<class Archive>
-	void serialize(Archive & ar, const unsigned int version) {
-		ar & mockrun;
-		ar & num_threads;
-		ar & num_repetitions;
-		ar & use_median;
-		ar & statistics;
-		ar & scheduling;
-		ar & statThreads;
-		ar & force;
-		ar & cases;
-		ar & perf;
-		ar & load_miss;
-		ar & store_miss;
-		ar & flops;
-		ar & perf_metrics;
-		ar & steps;
-		ar & preprocessingOnly;
-		ar & postprocessingOnly;
-	}
-};
+	struct Options {
+		bool valid;
+		bool mockrun;
+		int num_threads;
+		int num_repetitions;
+		bool use_median;
+		bool statistics;
+		bool scheduling;
+		bool print_configs;
+		#ifdef _OPENMP
+		int statThreads = omp_get_max_threads();
+		#else
+		int statThreads = 0;
+		#endif
+		bool panic_mode;
+		bool force;
+		bool list_only;
+		bool no_clean;
+		bool color;
+		bool overwrite;
+		vector<string> cases;
+		vector<string> steps;
+		vector<string> outputFormats;
+		bool preprocessingOnly;
+		bool postprocessingOnly;
 
-namespace fs = boost::filesystem;
+		// perf metrics
+		bool perf;
+		string load_miss;
+		string store_miss;
+		string flops;
+		vector<string> perf_metrics;
 
-vector<TestCase> loadCases(const Options& options);
+		Options(bool valid = true)
+		    : valid(valid), mockrun(false), num_threads(1), num_repetitions(1), use_median(false), statistics(false), scheduling(false), print_configs(false),
+		      panic_mode(false), force(false), list_only(false), no_clean(false), color(true), overwrite(false), preprocessingOnly(false),
+		      postprocessingOnly(false), perf(false), load_miss(""), store_miss(""), flops("") {}
 
-vector<TestStep> getTestSteps(const Options& options);
-
-struct Colorize {
-	enum Color { RED, YELLOW, GREEN, BLUE, BLACK, BOLD, RESET};
-	bool color;
-	Colorize(bool color) : color(color) {}
-	string getColor(Color c) const {
-		if(color) {
-			switch(c) {
-			case RED:
-				return "\033[31m";
-			case YELLOW:
-				return "\033[33m";
-			case GREEN:
-				return "\033[32m";
-			case BLUE:
-				return "\033[34m";
-			case BLACK:
-				return "\033[30m";
-			case RESET:
-				return "\033[0m";
-			case BOLD:
-				return "\033[1m";
-			}
+		bool operator==(Options a) const {
+			return a.mockrun == mockrun && a.num_threads == num_threads && a.num_repetitions == num_repetitions && a.use_median == use_median
+			       && a.statistics == statistics && a.scheduling == scheduling && a.statThreads == statThreads && a.force == force && a.cases == cases
+			       && a.preprocessingOnly == preprocessingOnly && a.postprocessingOnly == postprocessingOnly && a.perf == perf && a.load_miss == load_miss
+			       && a.store_miss == store_miss && a.flops == flops && a.perf_metrics == perf_metrics && a.steps == steps;
 		}
-		
-		return "";
-	}
-	
-	string red() const {
-		return getColor(RED);
-	}
-	string yellow() const {
-		return getColor(YELLOW);
-	}
-	string green() const {
-		return getColor(GREEN);
-	}
-	string blue() const {
-		return getColor(BLUE);
-	}
-	string black() const {
-		return getColor(BLACK);
-	}
-	string reset() const {
-		return getColor(RESET);
-	}
-	string bold() const {
-		return getColor(BOLD);
-	}
-};
 
-
-std::string getGitVersion() {
-	string getGitVersionCmd=string("cd ")+SRC_ROOT_DIR+"; git describe --dirty";
-	FILE* pipe=popen(getGitVersionCmd.c_str(),"r");
-	char buff [50];
-	fgets(buff,50,pipe);
-	pclose(pipe);
-	
-	//remove line break
-	buff[strlen(buff)-1]='\0';
-	return string(buff);
-}
-
-
-
-vector<TestCase> loadCases(const Options& options) {
-
-	// if no test is specified explicitly load all of them
-	if(options.cases.empty()) {
-		return itc::getAllCases(options.force);
-	}
-	
-	// load selected test cases
-	vector<TestCase> cases;
-	for(const auto& cur : options.cases) {
-		// load test case based on the location
-		auto curSuite = itc::getTestSuite(cur,options.force);
-		for(const auto& cur : curSuite) {
-			if(!contains(cases, cur)) {		// make sure every test is only present once
-				cases.push_back(cur);
-			}
+	  private:
+		friend class boost::serialization::access;
+		template <class Archive>
+		void serialize(Archive& ar, const unsigned int version) {
+			ar& mockrun;
+			ar& num_threads;
+			ar& num_repetitions;
+			ar& use_median;
+			ar& statistics;
+			ar& scheduling;
+			ar& statThreads;
+			ar& force;
+			ar& cases;
+			ar& perf;
+			ar& load_miss;
+			ar& store_miss;
+			ar& flops;
+			ar& perf_metrics;
+			ar& steps;
+			ar& preprocessingOnly;
+			ar& postprocessingOnly;
 		}
-	}
-	return cases;
-}
+	};
 
-vector<TestStep> getTestSteps(const Options& options) {
-	vector<TestStep> steps;
-	std::map<std::string,TestStep> all;
-	
-	if(options.statistics) {
-		all = itc::getFullStepList(options.statThreads,options.scheduling);
-	}
-	else {
-		all = itc::getFullStepList();
-	}
-	
-	
-	// load steps selected by the options
-	if(!options.steps.empty()) {
-		for(const auto& cur : options.steps) {
-			bool found=false;
-			for(auto step : all) {
-				if(step.first.find(cur)!=std::string::npos) {
-					steps.push_back(step.second);
-					found=true;
+	namespace fs = boost::filesystem;
+
+	vector<TestCase> loadCases(const Options& options);
+
+	vector<TestStep> getTestSteps(const Options& options);
+
+	struct Colorize {
+		enum Color { RED, YELLOW, GREEN, BLUE, BLACK, BOLD, RESET };
+		bool color;
+		Colorize(bool color) : color(color) {}
+		string getColor(Color c) const {
+			if(color) {
+				switch(c) {
+				case RED: return "\033[31m";
+				case YELLOW: return "\033[33m";
+				case GREEN: return "\033[32m";
+				case BLUE: return "\033[34m";
+				case BLACK: return "\033[30m";
+				case RESET: return "\033[0m";
+				case BOLD: return "\033[1m";
 				}
 			}
-			if(!found) {
-				std::cout << "WARNING: Unknown test step: " << cur << "\n";
+
+			return "";
+		}
+
+		string red() const {
+			return getColor(RED);
+		}
+		string yellow() const {
+			return getColor(YELLOW);
+		}
+		string green() const {
+			return getColor(GREEN);
+		}
+		string blue() const {
+			return getColor(BLUE);
+		}
+		string black() const {
+			return getColor(BLACK);
+		}
+		string reset() const {
+			return getColor(RESET);
+		}
+		string bold() const {
+			return getColor(BOLD);
+		}
+	};
+
+
+	std::string getGitVersion() {
+		string getGitVersionCmd = string("cd ") + SRC_ROOT_DIR + "; git describe --dirty";
+		FILE* pipe = popen(getGitVersionCmd.c_str(), "r");
+		char buff[50];
+		fgets(buff, 50, pipe);
+		pclose(pipe);
+
+		// remove line break
+		buff[strlen(buff) - 1] = '\0';
+		return string(buff);
+	}
+
+
+	vector<TestCase> loadCases(const Options& options) {
+		// if no test is specified explicitly load all of them
+		if(options.cases.empty()) { return itc::getAllCases(options.force); }
+
+		// load selected test cases
+		vector<TestCase> cases;
+		for(const auto& cur : options.cases) {
+			// load test case based on the location
+			auto curSuite = itc::getTestSuite(cur, options.force);
+			for(const auto& cur : curSuite) {
+				if(!contains(cases, cur)) { // make sure every test is only present once
+					cases.push_back(cur);
+				}
 			}
+		}
+		return cases;
+	}
+
+	vector<TestStep> getTestSteps(const Options& options) {
+		vector<TestStep> steps;
+		std::map<std::string, TestStep> all;
+
+		if(options.statistics) {
+			all = itc::getFullStepList(options.statThreads, options.scheduling);
+		} else {
+			all = itc::getFullStepList();
+		}
+
+
+		// load steps selected by the options
+		if(!options.steps.empty()) {
+			for(const auto& cur : options.steps) {
+				bool found = false;
+				for(auto step : all) {
+					if(step.first.find(cur) != std::string::npos) {
+						steps.push_back(step.second);
+						found = true;
+					}
+				}
+				if(!found) { std::cout << "WARNING: Unknown test step: " << cur << "\n"; }
+			}
+			return steps;
+		}
+
+
+		// TODO: filter them based on some options
+		for(const auto& cur : all) {
+			steps.push_back(cur.second);
 		}
 		return steps;
 	}
-	
-	
-	// TODO: filter them based on some options
-	for(const auto& cur : all) {
-		steps.push_back(cur.second);
-	}
-	return steps;
-}
 
 } // end namespace testFramework
 } // end namespace integration

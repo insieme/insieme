@@ -49,129 +49,124 @@
 
 namespace insieme {
 
-enum ACCESS_TYPE {
-	null = 0,
-	read = 1,
-	write = 2,
-	readWrite = 3
-};
+	enum ACCESS_TYPE { null = 0, read = 1, write = 2, readWrite = 3 };
 
-namespace annotations {
+	namespace annotations {
 
-using namespace insieme::core;
+		using namespace insieme::core;
 
-class Range {
-	VariablePtr variable;
-	ExpressionPtr lowerBoundary;
-	ExpressionPtr upperBoundary;
-	ACCESS_TYPE accessType;
-	bool splittable;
-	
-public:
-	// creating an empty range only needed to return an empty one on call to DataAnnotation::getRangeOf on variables for which no range is defined
-	Range() {}
-	
-	
-	Range(VariablePtr variable, ExpressionPtr lowerBoundary, ExpressionPtr upperBoundary, ACCESS_TYPE accessType = ACCESS_TYPE::readWrite,
-	      bool splittable = false) :
-		variable(variable), lowerBoundary(lowerBoundary), upperBoundary(upperBoundary), accessType(accessType), splittable(splittable) {}
-		
-	VariablePtr getVariable() const {
-		return variable;
-	};
-	ExpressionPtr getLowerBoundary() const;
-	ExpressionPtr getUpperBoundary() const;
-	ACCESS_TYPE getAccessType() const {
-		return accessType;
-	}
-	
-	void replace(core::NodeManager& mgr, NodeMap& replacements);
-	void replace(core::NodeManager& mgr, core::NodePtr oldNode, core::NodePtr newNode);
-	bool isSplittable() const {
-		return splittable;
-	};
-};
+		class Range {
+			VariablePtr variable;
+			ExpressionPtr lowerBoundary;
+			ExpressionPtr upperBoundary;
+			ACCESS_TYPE accessType;
+			bool splittable;
+
+		  public:
+			// creating an empty range only needed to return an empty one on call to DataAnnotation::getRangeOf on variables for which no range is defined
+			Range() {}
 
 
-class DataRangeAnnotation : public NodeAnnotation {
-	std::vector<Range> ranges;
-	
-public:
-	static const string NAME;
-	static const utils::StringKey<DataRangeAnnotation> KEY;
-	
-	const utils::AnnotationKeyPtr getKey() const {
-		return &KEY;
-	}
-	const std::string& getAnnotationName() const {
-		return NAME;
-	}
-	
-	DataRangeAnnotation() {}
-	DataRangeAnnotation(std::vector<Range>& ranges): ranges(ranges) {}
-	
-	void addRange(const Range& range) {
-		ranges.push_back(range);
-	}
-	const std::vector<Range>& getRanges() const {
-		return ranges;
-	}
-	Range& getRangeOf(VariablePtr var) const;
-	
-	void replace(core::NodeManager& mgr, core::VariableList& oldVars, core::VariableList& newVars);
-	void replace(core::NodeManager& mgr, core::NodePtr oldNode, core::NodePtr newNode);
-	
-	virtual bool migrate(const core::NodeAnnotationPtr& ptr, const core::NodePtr& before, const core::NodePtr& after) const {
-		// always copy the annotation
-		assert_true(&*ptr == this) << "Annotation pointer should reference this annotation!";
-		after->addAnnotation(ptr);
-		return true;
-	}
-};
+			Range(VariablePtr variable, ExpressionPtr lowerBoundary, ExpressionPtr upperBoundary, ACCESS_TYPE accessType = ACCESS_TYPE::readWrite,
+			      bool splittable = false)
+			    : variable(variable), lowerBoundary(lowerBoundary), upperBoundary(upperBoundary), accessType(accessType), splittable(splittable) {}
 
-typedef std::shared_ptr<DataRangeAnnotation> DataRangeAnnotationPtr;
+			VariablePtr getVariable() const {
+				return variable;
+			};
+			ExpressionPtr getLowerBoundary() const;
+			ExpressionPtr getUpperBoundary() const;
+			ACCESS_TYPE getAccessType() const {
+				return accessType;
+			}
 
-class DataTransformAnnotation : public NodeAnnotation {
-	unsigned tilesize;
-	
-public:
-	static const string NAME;
-	static const utils::StringKey<DataTransformAnnotation> KEY;
-	
-	const utils::AnnotationKeyPtr getKey() const {
-		return &KEY;
-	}
-	const std::string& getAnnotationName() const {
-		return NAME;
-	}
-	
-	DataTransformAnnotation() : tilesize(1) {}
-	DataTransformAnnotation(unsigned tileSize) : tilesize(tileSize) {}
-	
-	unsigned getTilesize() const {
-		return tilesize;
-	}
-	unsigned isSoa() const {
-		return tilesize == 0;
-	}
-	
-	virtual bool migrate(const core::NodeAnnotationPtr& ptr, const core::NodePtr& before, const core::NodePtr& after) const {
-		// always copy the annotation
-		assert_true(&*ptr == this) << "Annotation pointer should reference this annotation!";
-		after->addAnnotation(ptr);
-		return true;
-	}
-};
+			void replace(core::NodeManager& mgr, NodeMap& replacements);
+			void replace(core::NodeManager& mgr, core::NodePtr oldNode, core::NodePtr newNode);
+			bool isSplittable() const {
+				return splittable;
+			};
+		};
 
-typedef std::shared_ptr<DataTransformAnnotation> DataTransformAnnotationPtr;
 
-} // end namespace insieme
+		class DataRangeAnnotation : public NodeAnnotation {
+			std::vector<Range> ranges;
+
+		  public:
+			static const string NAME;
+			static const utils::StringKey<DataRangeAnnotation> KEY;
+
+			const utils::AnnotationKeyPtr getKey() const {
+				return &KEY;
+			}
+			const std::string& getAnnotationName() const {
+				return NAME;
+			}
+
+			DataRangeAnnotation() {}
+			DataRangeAnnotation(std::vector<Range>& ranges) : ranges(ranges) {}
+
+			void addRange(const Range& range) {
+				ranges.push_back(range);
+			}
+			const std::vector<Range>& getRanges() const {
+				return ranges;
+			}
+			Range& getRangeOf(VariablePtr var) const;
+
+			void replace(core::NodeManager& mgr, core::VariableList& oldVars, core::VariableList& newVars);
+			void replace(core::NodeManager& mgr, core::NodePtr oldNode, core::NodePtr newNode);
+
+			virtual bool migrate(const core::NodeAnnotationPtr& ptr, const core::NodePtr& before, const core::NodePtr& after) const {
+				// always copy the annotation
+				assert_true(&*ptr == this) << "Annotation pointer should reference this annotation!";
+				after->addAnnotation(ptr);
+				return true;
+			}
+		};
+
+		typedef std::shared_ptr<DataRangeAnnotation> DataRangeAnnotationPtr;
+
+		class DataTransformAnnotation : public NodeAnnotation {
+			unsigned tilesize;
+
+		  public:
+			static const string NAME;
+			static const utils::StringKey<DataTransformAnnotation> KEY;
+
+			const utils::AnnotationKeyPtr getKey() const {
+				return &KEY;
+			}
+			const std::string& getAnnotationName() const {
+				return NAME;
+			}
+
+			DataTransformAnnotation() : tilesize(1) {}
+			DataTransformAnnotation(unsigned tileSize) : tilesize(tileSize) {}
+
+			unsigned getTilesize() const {
+				return tilesize;
+			}
+			unsigned isSoa() const {
+				return tilesize == 0;
+			}
+
+			virtual bool migrate(const core::NodeAnnotationPtr& ptr, const core::NodePtr& before, const core::NodePtr& after) const {
+				// always copy the annotation
+				assert_true(&*ptr == this) << "Annotation pointer should reference this annotation!";
+				after->addAnnotation(ptr);
+				return true;
+			}
+		};
+
+		typedef std::shared_ptr<DataTransformAnnotation> DataTransformAnnotationPtr;
+
+	} // end namespace insieme
 } // end namespace annotations
 
 namespace std {
 
-std::ostream& operator<<(std::ostream& out, const insieme::annotations::Range& range);
-std::ostream& operator<<(std::ostream& out, const insieme::annotations::DataRangeAnnotation& rAnnot);
+	std::ostream& operator<<(std::ostream& out, const insieme::annotations::Range& range);
+	std::ostream& operator<<(std::ostream& out, const insieme::annotations::DataRangeAnnotation& rAnnot);
 
-std::ostream& operator<<(std::ostream& out, const insieme::annotations::DataTransformAnnotation& rAnnot);
+	std::ostream& operator<<(std::ostream& out, const insieme::annotations::DataTransformAnnotation& rAnnot);
 } // end namespace std

@@ -53,12 +53,12 @@ FILE* irt_g_log_file;
 const char* _irt_time_string() {
 	static char buffer[32];
 	time_t rawtime;
-	struct tm *timeinfo;
-	
+	struct tm* timeinfo;
+
 	time(&rawtime);
 	timeinfo = localtime(&rawtime);
 	strftime(buffer, 32, "%Y-%m-%d %H-%M-%S", timeinfo);
-	
+
 	return buffer;
 }
 
@@ -68,74 +68,73 @@ void irt_log_init() {
 	char buffer[1024];
 	if(output_path != NULL) {
 		sprintf(buffer, "%s/%s", output_path, fn);
-	}
-	else {
+	} else {
 		sprintf(buffer, "%s", fn);
 	}
 	irt_g_log_file = fopen(buffer, "w+");
-	
+
 	IRT_ASSERT(irt_g_log_file != NULL, IRT_ERR_IO, "Unable to create insieme_runtime.log");
-	
+
 	irt_log("# Runtime logging started on %s\n", _irt_time_string());
-	
+
 	irt_log_compiler_info();
-	
+
 	irt_log_comment("Compile-time settings:");
 	irt_log_setting_s("IRT_CODE_VERSION", IRT_CODE_VERSION);
-#if IRT_SCHED_POLICY == IRT_SCHED_POLICY_STATIC
+	#if IRT_SCHED_POLICY == IRT_SCHED_POLICY_STATIC
 	irt_log_setting_s("IRT_SCHED_POLICY", "IRT_SCHED_POLICY_STATIC");
-#elif IRT_SCHED_POLICY == IRT_SCHED_POLICY_LAZY_BINARY_SPLIT
+	#elif IRT_SCHED_POLICY == IRT_SCHED_POLICY_LAZY_BINARY_SPLIT
 	irt_log_setting_s("IRT_SCHED_POLICY", "IRT_SCHED_POLICY_LAZY_BINARY_SPLIT");
-#elif IRT_SCHED_POLICY == IRT_SCHED_POLICY_STEALING
+	#elif IRT_SCHED_POLICY == IRT_SCHED_POLICY_STEALING
 	irt_log_setting_s("IRT_SCHED_POLICY", "IRT_SCHED_POLICY_STEALING");
-#elif IRT_SCHED_POLICY == IRT_SCHED_POLICY_STEALING_CIRCULAR
+	#elif IRT_SCHED_POLICY == IRT_SCHED_POLICY_STEALING_CIRCULAR
 	irt_log_setting_s("IRT_SCHED_POLICY", "IRT_SCHED_POLICY_STEALING_CIRCULAR");
-#elif IRT_SCHED_POLICY == IRT_SCHED_POLICY_UBER
+	#elif IRT_SCHED_POLICY == IRT_SCHED_POLICY_UBER
 	irt_log_setting_s("IRT_SCHED_POLICY", "IRT_SCHED_POLICY_UBER");
-#else
+	#else
 	irt_log_setting_s("IRT_SCHED_POLICY", "IRT_SCHED_POLICY_UNKNOWN");
-#endif
-#ifdef IRT_RUNTIME_TUNING
+	#endif
+	#ifdef IRT_RUNTIME_TUNING
 	irt_log_setting_s("IRT_RUNTIME_TUNING", "enabled");
-#else
+	#else
 	irt_log_setting_s("IRT_RUNTIME_TUNING", "disabled");
-#endif
-#ifdef IRT_RUNTIME_TUNING_EXTENDED
+	#endif
+	#ifdef IRT_RUNTIME_TUNING_EXTENDED
 	irt_log_setting_s("IRT_RUNTIME_TUNING_EXTENDED", "enabled");
-#else
+	#else
 	irt_log_setting_s("IRT_RUNTIME_TUNING_EXTENDED", "disabled");
-#endif
-#ifdef USE_OPENCL
+	#endif
+	#ifdef USE_OPENCL
 	irt_log_setting_s("USE_OPENCL", "enabled");
-#else
+	#else
 	irt_log_setting_s("USE_OPENCL", "disabled");
-#endif
-#ifdef IRT_USE_PAPI
+	#endif
+	#ifdef IRT_USE_PAPI
 	irt_log_setting_s("IRT_USE_PAPI", "enabled");
-#else
+	#else
 	irt_log_setting_s("IRT_USE_PAPI", "disabled");
-#endif
-#ifdef IRT_USE_HWLOC
+	#endif
+	#ifdef IRT_USE_HWLOC
 	irt_log_setting_s("IRT_USE_HWLOC", "enabled");
-#else
+	#else
 	irt_log_setting_s("IRT_USE_HWLOC", "disabled");
-#endif
-#ifdef IRT_ENABLE_INSTRUMENTATION
+	#endif
+	#ifdef IRT_ENABLE_INSTRUMENTATION
 	irt_log_setting_s("IRT_ENABLE_INSTRUMENTATION", "enabled");
-#else
+	#else
 	irt_log_setting_s("IRT_ENABLE_INSTRUMENTATION", "disabled");
-#endif
-#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
+	#endif
+	#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 	irt_log_setting_s("IRT_ENABLE_REGION_INSTRUMENTATION", "enabled");
-#else
+	#else
 	irt_log_setting_s("IRT_ENABLE_REGION_INSTRUMENTATION", "disabled");
-#endif
-#ifdef IRT_ASTEROIDEA_STACKS
+	#endif
+	#ifdef IRT_ASTEROIDEA_STACKS
 	irt_log_setting_s("IRT_ASTEROIDEA_STACKS", "enabled");
-#else
+	#else
 	irt_log_setting_s("IRT_ASTEROIDEA_STACKS", "disabled");
-#endif
-	
+	#endif
+
 	irt_log_comment("Environment:");
 	irt_log_setting_u("cores_available", irt_affinity_cores_available());
 	irt_log_setting_u(IRT_DEFAULT_VARIANT_ENV, getenv(IRT_DEFAULT_VARIANT_ENV) ? atoi(getenv(IRT_DEFAULT_VARIANT_ENV)) : 0);
@@ -153,9 +152,7 @@ void irt_log_setting_u(const char* name, uint64 value) {
 }
 
 void irt_log(const char* format, ...) {
-	if(irt_g_log_file == NULL) {
-		return;
-	}
+	if(irt_g_log_file == NULL) { return; }
 	va_list args;
 	va_start(args, format);
 	vfprintf(irt_g_log_file, format, args);
@@ -164,16 +161,14 @@ void irt_log(const char* format, ...) {
 }
 
 void irt_log_cleanup() {
-	if(irt_g_log_file == NULL) {
-		return;
-	}
+	if(irt_g_log_file == NULL) { return; }
 	irt_log_setting_u("irt_g_time_ticks_per_sec", irt_g_time_ticks_per_sec);
 	irt_log("# Runtime logging completed on %s\n", _irt_time_string());
 	fclose(irt_g_log_file);
 }
 
 
-#else // (IRT_LOGGING)
+#else  // (IRT_LOGGING)
 void irt_log_init() {}
 void irt_log_comment(const char* comment) {}
 void irt_log_setting_s(const char* name, const char* value) {}

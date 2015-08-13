@@ -35,9 +35,9 @@
  */
 
 // currently only a 64 bit implementation exists
-#if __GNUC_PREREQ(4,8)
+#if __GNUC_PREREQ(4, 8)
 __attribute__((noinline,noclone,optimize(0),aligned(16)))
-#elif __GNUC_PREREQ(4,4)
+#elif __GNUC_PREREQ(4, 4)
 __attribute__((noinline,noclone,optimize(0)))
 #else
 __attribute__((noinline))
@@ -57,11 +57,11 @@ void lwt_continue_impl(irt_work_item *wi /*rdi*/, wi_implementation_func* func /
 	    "movq (%%rdx), %%rsp ;"
 	    /* call function if func != NULL */
 	    "movq %%rsi, %%rcx ;"
-	    "jrcxz 1f ;"			/* jump to local label 1 - forward */
+	    "jrcxz 1f ;" /* jump to local label 1 - forward */
 	    /* rdi still has wi, rsi still has func, so just call */
 	    "call *%%rax ;"
 	    /* restore registers for other coroutine */
-	    "1:"					/* the target of the jump */
+	    "1:" /* the target of the jump */
 	    "pop %%r15 ;"
 	    "pop %%r14 ;"
 	    "pop %%r13 ;"
@@ -72,10 +72,10 @@ void lwt_continue_impl(irt_work_item *wi /*rdi*/, wi_implementation_func* func /
 	    : "a"(&_irt_wi_trampoline));
 }
 
-__attribute__((noinline))
-void lwt_get_stack_ptr(intptr_t *dest /*rdi*/) {
+__attribute__((noinline)) void lwt_get_stack_ptr(intptr_t* dest /*rdi*/) {
 	__asm__(
 	    /* store sp */
 	    "movq %%rsp, (%%rdi) ;"
-	    : :);
+	    :
+	    :);
 }

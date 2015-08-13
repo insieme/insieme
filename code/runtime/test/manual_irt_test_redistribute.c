@@ -52,14 +52,11 @@
 
 typedef struct _insieme_wi_test_params {
 	irt_type_id type_id;
-	irt_work_group *wg;
+	irt_work_group* wg;
 	uint64 vals[NUM_WIS];
 } insieme_wi_test_params;
 
-irt_type g_insieme_type_table[] = {
-	{ IRT_T_INT64, 8, 0, 0 },
-	{ IRT_T_STRUCT, sizeof(insieme_wi_test_params), 0, 0 }
-};
+irt_type g_insieme_type_table[] = {{IRT_T_INT64, 8, 0, 0}, {IRT_T_STRUCT, sizeof(insieme_wi_test_params), 0, 0}};
 
 // work item table
 
@@ -67,18 +64,11 @@ void insieme_wi_startup_implementation(irt_work_item* wi);
 
 void insieme_wi_test_implementation(irt_work_item* wi);
 
-irt_wi_implementation_variant g_insieme_wi_startup_variants[] = {
-	{ &insieme_wi_startup_implementation }
-};
+irt_wi_implementation_variant g_insieme_wi_startup_variants[] = {{&insieme_wi_startup_implementation}};
 
-irt_wi_implementation_variant g_insieme_wi_test_variants[] = {
-	{ &insieme_wi_test_implementation }
-};
+irt_wi_implementation_variant g_insieme_wi_test_variants[] = {{&insieme_wi_test_implementation}};
 
-irt_wi_implementation g_insieme_impl_table[] = {
-	{ 1, 1, g_insieme_wi_startup_variants },
-	{ 2, 1, g_insieme_wi_test_variants }
-};
+irt_wi_implementation g_insieme_impl_table[] = {{1, 1, g_insieme_wi_startup_variants}, {2, 1, g_insieme_wi_test_variants}};
 
 // initialization
 void insieme_init_context(irt_context* context) {
@@ -97,57 +87,56 @@ void insieme_cleanup_context(irt_context* context) {
 
 void insieme_wi_startup_implementation(irt_work_item* wi) {
 	uint64 start_time = irt_time_ms();
-	irt_work_group *wg1 = irt_wg_create();
-	
-	insieme_wi_test_params *test_params = (insieme_wi_test_params*)malloc(sizeof(insieme_wi_test_params));
+	irt_work_group* wg1 = irt_wg_create();
+
+	insieme_wi_test_params* test_params = (insieme_wi_test_params*)malloc(sizeof(insieme_wi_test_params));
 	test_params->type_id = 1;
 	test_params->wg = wg1;
-	irt_work_item **test_wis = (irt_work_item **)malloc(NUM_WIS*sizeof(irt_work_item*));
-	irt_work_item_id *test_wi_ids = (irt_work_item_id *)malloc(NUM_WIS*sizeof(irt_work_item_id));
-	for(int i=0; i<NUM_WIS; ++i) {
+	irt_work_item** test_wis = (irt_work_item**)malloc(NUM_WIS * sizeof(irt_work_item*));
+	irt_work_item_id* test_wi_ids = (irt_work_item_id*)malloc(NUM_WIS * sizeof(irt_work_item_id));
+	for(int i = 0; i < NUM_WIS; ++i) {
 		test_wis[i] = irt_wi_create(irt_g_wi_range_one_elem, &g_insieme_impl_table[1], (irt_lw_data_item*)test_params);
 		test_wi_ids[i] = test_wis[i]->id;
 		irt_wg_insert(wg1, test_wis[i]);
 		test_params->vals[i] = 0;
 	}
-	for(int i=0; i<NUM_WIS; ++i) {
-		irt_scheduling_assign_wi(irt_g_workers[i%irt_g_worker_count], test_wis[i]);
+	for(int i = 0; i < NUM_WIS; ++i) {
+		irt_scheduling_assign_wi(irt_g_workers[i % irt_g_worker_count], test_wis[i]);
 	}
-	
-	for(int i=0; i<NUM_WIS; ++i) {
+
+	for(int i = 0; i < NUM_WIS; ++i) {
 		irt_wi_join(test_wi_ids[i]);
 	}
-	
+
 	uint64 end_time = irt_time_ms();
-	
+
 	printf("======================\n= manual irt test redistribute done\n");
 	printf("= time taken: %lu\n", end_time - start_time);
 	bool check = true;
-	for(uint64 i=0; i<NUM_WIS; ++i) {
-		if(test_params->vals[i] != NUM_WIS-1) {
+	for(uint64 i = 0; i < NUM_WIS; ++i) {
+		if(test_params->vals[i] != NUM_WIS - 1) {
 			check = false;
-			printf("= fail at %lu, expected %d / actual %lu\n", i, NUM_WIS-1, (test_params->vals[i]));
+			printf("= fail at %lu, expected %d / actual %lu\n", i, NUM_WIS - 1, (test_params->vals[i]));
 			break;
 		}
 	}
 	printf("= result check: %s\n======================\n", check ? "OK" : "FAIL");
-	
+
 	free(test_wis);
 	free(test_wi_ids);
 	free(test_params);
 }
 
-void test_redist_function(void** collected, uint32 local_id, uint32 num_participants, void *out_result) {
+void test_redist_function(void** collected, uint32 local_id, uint32 num_participants, void* out_result) {
 	uint64** collected_uint = (uint64**)collected;
-	*(uint64*)out_result = *(collected_uint[local_id]) + *(collected_uint[num_participants-1-local_id]);
+	*(uint64*)out_result = *(collected_uint[local_id]) + *(collected_uint[num_participants - 1 - local_id]);
 }
 
 void insieme_wi_test_implementation(irt_work_item* wi) {
-	insieme_wi_test_params *params = (insieme_wi_test_params*)wi->parameters;
+	insieme_wi_test_params* params = (insieme_wi_test_params*)wi->parameters;
 	uint64 thread_num = irt_wg_get_wi_num(params->wg, wi);
 	params->vals[thread_num] = thread_num;
 	uint64 output;
 	irt_wg_redistribute(params->wg, wi, &params->vals[thread_num], &output, &test_redist_function);
 	params->vals[thread_num] = output;
 }
-

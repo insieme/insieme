@@ -43,32 +43,26 @@ namespace core {
 namespace analysis {
 namespace region {
 
-/**
- * This region selector is picking outermost parallel for loop bodies. This
- * selector is only focusing on the work-sharing pfor construct, not potentially
- * parallel for loops.
- */
-class PForBodySelector : public RegionSelector {
-
-public:
-
 	/**
-	 * Selects all regions within the given code fragment.
+	 * This region selector is picking outermost parallel for loop bodies. This
+	 * selector is only focusing on the work-sharing pfor construct, not potentially
+	 * parallel for loops.
 	 */
-	virtual RegionList getRegions(const core::NodePtr& code) const;
-	
-};
+	class PForBodySelector : public RegionSelector {
+	  public:
+		/**
+		 * Selects all regions within the given code fragment.
+		 */
+		virtual RegionList getRegions(const core::NodePtr& code) const;
+	};
 
-class PForSelector : public RegionSelector {
-
-public:
-
-	/**
-	 * Selects all regions within the given code fragment.
-	 */
-	virtual RegionList getRegions(const core::NodePtr& code) const;
-	
-};
+	class PForSelector : public RegionSelector {
+	  public:
+		/**
+		 * Selects all regions within the given code fragment.
+		 */
+		virtual RegionList getRegions(const core::NodePtr& code) const;
+	};
 
 } // end namespace region
 } // end namespace analysis

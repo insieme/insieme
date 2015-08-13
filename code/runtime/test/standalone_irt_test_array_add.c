@@ -64,15 +64,13 @@ typedef struct _insieme_struct1 {
 // type table
 
 irt_type_id g_insieme_struct1_subtypes[] = {
-	INSIEME_BOOL_T_INDEX, INSIEME_INT_T_INDEX, INSIEME_INT_T_INDEX // struct with a bool and 2 32 bit integers
+    INSIEME_BOOL_T_INDEX, INSIEME_INT_T_INDEX, INSIEME_INT_T_INDEX // struct with a bool and 2 32 bit integers
 };
 
-irt_type g_insieme_type_table[] = {
-	{ IRT_T_BOOL, 4, 0, 0 },
-	{ IRT_T_INT64, 8, 0, 0 },
-	{ IRT_T_STRUCT, sizeof(insieme_struct1), 3, g_insieme_struct1_subtypes },
-	{ IRT_T_STRUCT, sizeof(insieme_wi_add_params), 0, 0 }
-};
+irt_type g_insieme_type_table[] = {{IRT_T_BOOL, 4, 0, 0},
+                                   {IRT_T_INT64, 8, 0, 0},
+                                   {IRT_T_STRUCT, sizeof(insieme_struct1), 3, g_insieme_struct1_subtypes},
+                                   {IRT_T_STRUCT, sizeof(insieme_wi_add_params), 0, 0}};
 
 // work item table
 
@@ -82,40 +80,29 @@ void insieme_wi_add_implementation1(irt_work_item* wi);
 void insieme_wi_add_implementation2(irt_work_item* wi);
 void insieme_wi_add_datareq(irt_work_item* wi, irt_wi_di_requirement* requirements);
 
-irt_wi_implementation_variant g_insieme_wi_startup_variants[] = {
-	{ &insieme_wi_startup_implementation, 0, NULL, 0, NULL, 0, {0} }
-};
+irt_wi_implementation_variant g_insieme_wi_startup_variants[] = {{&insieme_wi_startup_implementation, 0, NULL, 0, NULL, 0, {0}}};
 
-irt_wi_implementation_variant g_insieme_wi_add_variants[] = {
-	{ &insieme_wi_add_implementation1, 2, &insieme_wi_add_datareq, 0, NULL, NULL, {0} },
-	{ &insieme_wi_add_implementation2, 2, &insieme_wi_add_datareq, 0, NULL, NULL, {0} }
-};
+irt_wi_implementation_variant g_insieme_wi_add_variants[] = {{&insieme_wi_add_implementation1, 2, &insieme_wi_add_datareq, 0, NULL, NULL, {0}},
+                                                             {&insieme_wi_add_implementation2, 2, &insieme_wi_add_datareq, 0, NULL, NULL, {0}}};
 
-irt_wi_implementation g_insieme_impl_table[] = {
-	{ 1, 1, g_insieme_wi_startup_variants },
-	{ 2, 2, g_insieme_wi_add_variants }
-};
+irt_wi_implementation g_insieme_impl_table[] = {{1, 1, g_insieme_wi_startup_variants}, {2, 2, g_insieme_wi_add_variants}};
 
 // OpenCL Kernel table
 #ifdef USE_OPENCL
 #include <CL/cl.h>
 unsigned g_kernel_code_table_size = 1;
-irt_ocl_kernel_code g_kernel_code_table[] = {
-	{
-		"vector_add",
-		"typedef struct _insieme_struct1 { \n"
-		"	int do_add; \n"
-		"	ulong v1; \n"
-		"	ulong v2; \n"
-		"} insieme_struct1; \n"
-		"__kernel void vector_add(__global const insieme_struct1* input, __global ulong* output, long num_elements) \n"
-		"{\n"
-		"	int gid = get_global_id(0);\n"
-		"	if (gid >= num_elements) return;\n"
-		"	if(input[gid].do_add) { output[gid] = (input[gid].v1 + input[gid].v2)/2; }\n"
-		"}"
-	}
-};
+irt_ocl_kernel_code g_kernel_code_table[] = {{"vector_add",
+                                              "typedef struct _insieme_struct1 { \n"
+                                              "	int do_add; \n"
+                                              "	ulong v1; \n"
+                                              "	ulong v2; \n"
+                                              "} insieme_struct1; \n"
+                                              "__kernel void vector_add(__global const insieme_struct1* input, __global ulong* output, long num_elements) \n"
+                                              "{\n"
+                                              "	int gid = get_global_id(0);\n"
+                                              "	if (gid >= num_elements) return;\n"
+                                              "	if(input[gid].do_add) { output[gid] = (input[gid].v1 + input[gid].v2)/2; }\n"
+                                              "}"}};
 #endif
 
 // initialization
@@ -124,25 +111,23 @@ void insieme_init_context(irt_context* context) {
 	context->impl_table_size = 2;
 	context->type_table = g_insieme_type_table;
 	context->impl_table = g_insieme_impl_table;
-#ifdef USE_OPENCL
+	#ifdef USE_OPENCL
 	irt_ocl_rt_create_all_kernels(context, g_kernel_code_table, g_kernel_code_table_size);
-#endif
+	#endif
 }
 
 void insieme_cleanup_context(irt_context* context) {
 #ifdef USE_OPENCL
 	irt_ocl_rt_release_all_kernels(context, g_kernel_code_table_size);
-#endif
+	#endif
 	// nothing
 	printf("Cleaning up standalone irt test array add\n");
 }
 
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
 	uint32 wcount = irt_get_default_worker_count();
-	if(argc>=2) {
-		wcount = atoi(argv[1]);
-	}
+	if(argc >= 2) { wcount = atoi(argv[1]); }
 	irt_runtime_standalone(wcount, &insieme_init_context, &insieme_cleanup_context, &g_insieme_impl_table[0], NULL);
 	return 0;
 }
@@ -154,45 +139,45 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 	irt_work_item_range fullrange_wi = {0, NUM_ELEMENTS, 1};
 	irt_data_item* inputdata = irt_di_create(INSIEME_STRUCT1_T_INDEX, 1, &fullrange);
 	irt_data_item* outputdata = irt_di_create(INSIEME_INT_T_INDEX, 1, &fullrange);
-	
+
 	// fill input data
 	irt_data_block* inputblock = irt_di_acquire(inputdata, IRT_DMODE_WRITE_ONLY);
 	insieme_struct1* input = (insieme_struct1*)inputblock->data;
-	for(int i=0; i<NUM_ELEMENTS; ++i) {
+	for(int i = 0; i < NUM_ELEMENTS; ++i) {
 		input[i].v1 = i;
-		input[i].v2 = i*2;
+		input[i].v2 = i * 2;
 		input[i].do_add = true;
 	}
-	
+
 	// pre-acquire output block
 	irt_data_block* outputblock = irt_di_acquire(outputdata, IRT_DMODE_READ_ONLY);
 	uint64* output = (uint64*)outputblock->data;
-	
+
 	uint64 start_time = irt_time_ms();
 	uint64 start_ticks = irt_time_ticks();
-	
-	insieme_wi_add_params addition_params = {INSIEME_ADD_WI_PARAM_T_INDEX, inputdata->id, outputdata->id };
+
+	insieme_wi_add_params addition_params = {INSIEME_ADD_WI_PARAM_T_INDEX, inputdata->id, outputdata->id};
 	irt_work_item* addition_wi = irt_wi_create(fullrange_wi, &g_insieme_impl_table[INSIEME_ADD_WI_INDEX], (irt_lw_data_item*)&addition_params);
 	irt_work_item_id add_id = addition_wi->id;
 	irt_scheduling_assign_wi(irt_worker_get_current(), addition_wi);
-	
+
 	irt_wi_join(add_id);
-	
+
 	uint64 end_ticks = irt_time_ticks();
 	uint64 end_time = irt_time_ms();
-	
+
 	printf("======================\n= manual irt test array add done\n");
 	printf("= time taken: %lu ms, %lu clock ticks\n", end_time - start_time, end_ticks - start_ticks);
 	bool check = true;
-	for(uint64 i=0; i<NUM_ELEMENTS; ++i) {
-		if(output[i] != i*3/2) {
+	for(uint64 i = 0; i < NUM_ELEMENTS; ++i) {
+		if(output[i] != i * 3 / 2) {
 			check = false;
-			printf("= fail at %lu, expected %lu / actual %lu", i, i*3/2, output[i]);
+			printf("= fail at %lu, expected %lu / actual %lu", i, i * 3 / 2, output[i]);
 			break;
 		}
 	}
 	printf("= result check: %s\n======================\n", check ? "OK" : "FAIL");
-	
+
 	irt_di_free(inputblock);
 	irt_di_free(outputblock);
 	irt_di_destroy(inputdata);
@@ -200,20 +185,18 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 }
 
 void insieme_wi_add_implementation1(irt_work_item* wi) {
-	insieme_wi_add_params *params = (insieme_wi_add_params*)wi->parameters;
+	insieme_wi_add_params* params = (insieme_wi_add_params*)wi->parameters;
 	irt_data_item* inputdata = irt_di_create_sub(irt_data_item_table_lookup(params->input), (irt_data_range*)(&wi->range));
 	irt_data_item* outputdata = irt_di_create_sub(irt_data_item_table_lookup(params->output), (irt_data_range*)(&wi->range));
 	irt_data_block* inputblock = irt_di_acquire(inputdata, IRT_DMODE_READ_ONLY);
 	irt_data_block* outputblock = irt_di_acquire(outputdata, IRT_DMODE_WRITE_ONLY);
 	insieme_struct1* input = (insieme_struct1*)inputblock->data;
 	uint64* output = (uint64*)outputblock->data;
-	
+
 	for(uint64 i = wi->range.begin; i < wi->range.end; ++i) {
-		if(input[i].do_add) {
-			output[i] = (input[i].v1 + input[i].v2) / 2;
-		}
+		if(input[i].do_add) { output[i] = (input[i].v1 + input[i].v2) / 2; }
 	}
-	
+
 	irt_di_free(inputblock);
 	irt_di_free(outputblock);
 	irt_di_destroy(inputdata);
@@ -222,51 +205,46 @@ void insieme_wi_add_implementation1(irt_work_item* wi) {
 
 void insieme_wi_add_implementation2(irt_work_item* wi) {
 #ifdef USE_OPENCL
-	insieme_wi_add_params *params = (insieme_wi_add_params*)wi->parameters;
+	insieme_wi_add_params* params = (insieme_wi_add_params*)wi->parameters;
 	irt_data_item* inputdata = irt_di_create_sub(irt_data_item_table_lookup(params->input), (irt_data_range*)(&wi->range));
 	irt_data_item* outputdata = irt_di_create_sub(irt_data_item_table_lookup(params->output), (irt_data_range*)(&wi->range));
 	irt_data_block* inputblock = irt_di_acquire(inputdata, IRT_DMODE_READ_ONLY);
 	irt_data_block* outputblock = irt_di_acquire(outputdata, IRT_DMODE_WRITE_ONLY);
 	insieme_struct1* input = (insieme_struct1*)inputblock->data;
 	uint64* output = (uint64*)outputblock->data;
-	
+
 	cl_long len_input = (wi->range.end - wi->range.begin);
 	cl_long len_output = (wi->range.end - wi->range.begin);
-	
+
 	unsigned int mem_size_input = sizeof(insieme_struct1) * len_input;
 	unsigned int mem_size_output = sizeof(uint64) * len_output;
-	
+
 	irt_ocl_buffer* buf_input = irt_ocl_rt_create_buffer(CL_MEM_READ_ONLY, mem_size_input);
 	irt_ocl_buffer* buf_output = irt_ocl_rt_create_buffer(CL_MEM_WRITE_ONLY, mem_size_output);
-	
+
 	irt_ocl_write_buffer(buf_input, CL_FALSE, 0, mem_size_input, &input[wi->range.begin]);
-	
+
 	size_t szLocalWorkSize = 256;
-	float multiplier = NUM_ELEMENTS/(float)szLocalWorkSize;
-	if(multiplier > (int)multiplier) {
-		multiplier += 1;
-	}
+	float multiplier = NUM_ELEMENTS / (float)szLocalWorkSize;
+	if(multiplier > (int)multiplier) { multiplier += 1; }
 	size_t szGlobalWorkSize = (int)multiplier * szLocalWorkSize;
-	
-	irt_ocl_rt_run_kernel(0,	1,0,&szGlobalWorkSize, &szLocalWorkSize,
-	                      3,	(size_t)0, buf_input,
-	                      (size_t)0, buf_output,
-	                      sizeof(cl_long), &len_input);
-	                      
+
+	irt_ocl_rt_run_kernel(0, 1, 0, &szGlobalWorkSize, &szLocalWorkSize, 3, (size_t)0, buf_input, (size_t)0, buf_output, sizeof(cl_long), &len_input);
+
 	irt_ocl_read_buffer(buf_output, CL_TRUE, 0, mem_size_output, &output[wi->range.begin]);
-	//clFinish(dev->cl_queue); // ??
-	
+	// clFinish(dev->cl_queue); // ??
+
 	irt_ocl_release_buffer(buf_input);
 	irt_ocl_release_buffer(buf_output);
-	
-#ifdef IRT_OCL_INSTR // remove this when cleanup context will work.
+
+	#ifdef IRT_OCL_INSTR // remove this when cleanup context will work.
 	irt_ocl_print_events();
-#endif
+	#endif
 	irt_di_free(inputblock);
 	irt_di_free(outputblock);
 	irt_di_destroy(inputdata);
 	irt_di_destroy(outputdata);
-#endif
+	#endif
 }
 
 void insieme_wi_add_datareq(irt_work_item* wi, irt_wi_di_requirement* requirements) {
@@ -280,4 +258,3 @@ void insieme_wi_add_datareq(irt_work_item* wi, irt_wi_di_requirement* requiremen
 	requirements[1].range.end = wi->range.end;
 	requirements[1].range.step = wi->range.step;
 }
-

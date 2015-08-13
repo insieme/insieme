@@ -61,60 +61,61 @@ namespace insieme {
 namespace core {
 namespace analysis {
 
-/**
- * Normalizes the given node to match a fixed schema such that
- * structural name independent equivalence can be checked with the
- * equality operator.
- *
- * @param node the node to be normalized.
- * @return the normalized version of the given node.
- */
-NodePtr normalize(const NodePtr& node);
+	/**
+	 * Normalizes the given node to match a fixed schema such that
+	 * structural name independent equivalence can be checked with the
+	 * equality operator.
+	 *
+	 * @param node the node to be normalized.
+	 * @return the normalized version of the given node.
+	 */
+	NodePtr normalize(const NodePtr& node);
 
-/**
- * A generic wrapper for the normalization operation above.
- *
- * @tparam T the type of node to be normalized
- * @param node the node to be normalized
- * @param the normalized version of the given node
- */
-template<typename T> Pointer<T> normalize(const Pointer<T>& node) {
-	return normalize(NodePtr(node)).as<Pointer<T>>();
-}
+	/**
+	 * A generic wrapper for the normalization operation above.
+	 *
+	 * @tparam T the type of node to be normalized
+	 * @param node the node to be normalized
+	 * @param the normalized version of the given node
+	 */
+	template <typename T>
+	Pointer<T> normalize(const Pointer<T>& node) {
+		return normalize(NodePtr(node)).as<Pointer<T>>();
+	}
 
-/**
- * Normalizes the given address to match a fixed schema such that
- * structural name independent equivalence can be checked with the
- * equality operator. The normalization is applied to the root node.
- *
- * @param node the node to be normalized.
- * @return the normalized version of the given node.
- */
-NodeAddress normalize(const NodeAddress& node);
+	/**
+	 * Normalizes the given address to match a fixed schema such that
+	 * structural name independent equivalence can be checked with the
+	 * equality operator. The normalization is applied to the root node.
+	 *
+	 * @param node the node to be normalized.
+	 * @return the normalized version of the given node.
+	 */
+	NodeAddress normalize(const NodeAddress& node);
 
-/**
- * A generic wrapper for the normalization operation above.
- *
- * @tparam T the type of node to be normalized
- * @param node the node to be normalized
- * @param the normalized version of the given node
- */
-template<typename T> Address<T> normalize(const Address<T>& node) {
-	return normalize(NodeAddress(node)).as<Address<T>>();
-}
+	/**
+	 * A generic wrapper for the normalization operation above.
+	 *
+	 * @tparam T the type of node to be normalized
+	 * @param node the node to be normalized
+	 * @param the normalized version of the given node
+	 */
+	template <typename T>
+	Address<T> normalize(const Address<T>& node) {
+		return normalize(NodeAddress(node)).as<Address<T>>();
+	}
 
 
-
-/**
- *  This function compares the normalize value of two nodes, usefull to identify identic codes
- *  whith different variables
- *  @param node to compare
- *  @param node to compare
- *  @retun  if both nodes are equivalent
- */
-inline bool equalNormalize(const NodePtr& a, const NodePtr& b) {
-	return *normalize(a) == *normalize(b);
-}
+	/**
+	 *  This function compares the normalize value of two nodes, usefull to identify identic codes
+	 *  whith different variables
+	 *  @param node to compare
+	 *  @param node to compare
+	 *  @retun  if both nodes are equivalent
+	 */
+	inline bool equalNormalize(const NodePtr& a, const NodePtr& b) {
+		return *normalize(a) == *normalize(b);
+	}
 
 
 } // end namespace analysis

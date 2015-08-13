@@ -62,24 +62,23 @@
 #define LWT_STACK_ALIGNMENT 128
 
 typedef struct _lwt_reused_stack {
-	struct _lwt_reused_stack *next;
-	
-#if defined(__GNUC__)
+	struct _lwt_reused_stack* next;
+
+	#if defined(__GNUC__)
 	char stack[] __attribute__((aligned(LWT_STACK_ALIGNMENT)));
 	//	char stack[] __attribute__ ((aligned (__BIGGEST_ALIGNMENT__))); // older versions of gcc don't like this
-#elif defined(__MINGW32__) || defined(__MINGW64__)
+	#elif defined(__MINGW32__) || defined(__MINGW64__)
 	char stack[] __attribute__((aligned(LWT_STACK_ALIGNMENT)));
-#elif _MSC_VER
-	__declspec(align(LWT_STACK_ALIGNMENT))
+	#elif _MSC_VER
+	__declspec(align(LWT_STACK_ALIGNMENT)) char stack[];
+	#else
+	#pragma warning "Unknown platform, stack unaligned"
 	char stack[];
-#else
-#pragma warning "Unknown platform, stack unaligned"
-	char stack[];
-#endif
-	
+	#endif
+
 } lwt_reused_stack;
 
-#if  defined(__x86_64__) || defined(_WIN32) || defined(_GEMS_SIM) || defined(__arm__)
+#if defined(__x86_64__) || defined(_WIN32) || defined(_GEMS_SIM) || defined(__arm__)
 //#if 0 // for testing the ucontext fallback on x64 systems
 #define USING_MINLWT 1
 typedef intptr_t lwt_context;
@@ -92,12 +91,12 @@ typedef intptr_t lwt_context;
 typedef ucontext_t lwt_context;
 #endif
 
-static inline void lwt_prepare(int tid, irt_work_item *wi, lwt_context *basestack);
-static inline void lwt_recycle(int tid, irt_work_item *wi);
-void lwt_start(irt_work_item *wi, lwt_context *basestack, wi_implementation_func* func);
-void lwt_continue(lwt_context *newstack, lwt_context *basestack);
-void lwt_end(lwt_context *basestack);
-void lwt_get_stack_ptr(lwt_context *dest);
+static inline void lwt_prepare(int tid, irt_work_item* wi, lwt_context* basestack);
+static inline void lwt_recycle(int tid, irt_work_item* wi);
+void lwt_start(irt_work_item* wi, lwt_context* basestack, wi_implementation_func* func);
+void lwt_continue(lwt_context* newstack, lwt_context* basestack);
+void lwt_end(lwt_context* basestack);
+void lwt_get_stack_ptr(lwt_context* dest);
 
 
 #endif // ifndef __GUARD_UTILS_MINLWT_H

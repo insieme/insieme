@@ -46,9 +46,9 @@
  * These functions provide an interface to get and set CPU frequency settings.
  */
 
-#define IRT_GEM_MIN_FREQ    (1 * 1000)      // 1 MHz
-#define IRT_GEM_MAX_FREQ    (101 * 1000)    // 101 MHz
-#define IRT_GEM_STEP_FREQ   (5 * 1000)      // 5 MHz
+#define IRT_GEM_MIN_FREQ (1 * 1000)   // 1 MHz
+#define IRT_GEM_MAX_FREQ (101 * 1000) // 101 MHz
+#define IRT_GEM_STEP_FREQ (5 * 1000)  // 5 MHz
 
 #ifdef _GEMS_ODROID
 int irt_cpu_freq_a07_max_freq;
@@ -59,27 +59,27 @@ int32 irt_cpu_freq_get_available_frequencies(uint32* frequencies, uint32* length
 #ifdef _GEMS_SIM
 	uint32 freq = IRT_GEM_MIN_FREQ;
 	uint32 j = 0;
-	
+
 	while(freq <= IRT_GEM_MAX_FREQ) {
 		frequencies[j++] = freq;
 		freq += IRT_GEM_STEP_FREQ;
 	}
-	
+
 	*length = j;
-#elif defined(_GEMS_ODROID)
+	#elif defined(_GEMS_ODROID)
 	*length = 0;
-	for(int j=8; j>=0; j--) {
+	for(int j = 8; j >= 0; j--) {
 		frequencies[(*length)++] = freq_table_a15[j];
 	}
-	for(int j=7; j>=0; j--) {
-		frequencies[(*length)++] = freq_table_a07[j]/2;
+	for(int j = 7; j >= 0; j--) {
+		frequencies[(*length)++] = freq_table_a07[j] / 2;
 	}
-	
-	irt_cpu_freq_a07_max_freq = freq_table_a07[7]/2;
-	
+
+	irt_cpu_freq_a07_max_freq = freq_table_a07[7] / 2;
+
 	irt_cpu_freq_cluster = rapmi_get_cluster();
-#endif
-	
+	#endif
+
 	return 0;
 }
 
@@ -88,8 +88,8 @@ int32 irt_cpu_freq_get_available_frequencies(uint32* frequencies, uint32* length
  */
 
 int32 irt_cpu_freq_get_available_frequencies_core(const uint32 coreid, uint32* frequencies, uint32* length) {
-	IRT_ASSERT(irt_affinity_mask_get_first_cpu(irt_worker_get_current()->affinity) == coreid,
-	           IRT_ERR_INVALIDARGUMENT, "DVFS of non-current core is unsupported");
+	IRT_ASSERT(irt_affinity_mask_get_first_cpu(irt_worker_get_current()->affinity) == coreid, IRT_ERR_INVALIDARGUMENT,
+	           "DVFS of non-current core is unsupported");
 	return irt_cpu_freq_get_available_frequencies(frequencies, length);
 }
 
@@ -98,8 +98,7 @@ int32 irt_cpu_freq_get_available_frequencies_core(const uint32 coreid, uint32* f
  */
 
 int32 irt_cpu_freq_get_available_frequencies_worker(const irt_worker* worker, uint32* frequencies, uint32* length) {
-	IRT_ASSERT(irt_worker_get_current() == worker,
-	           IRT_ERR_INVALIDARGUMENT, "DVFS of non-current worker is unsupported");
+	IRT_ASSERT(irt_worker_get_current() == worker, IRT_ERR_INVALIDARGUMENT, "DVFS of non-current worker is unsupported");
 	return irt_cpu_freq_get_available_frequencies(frequencies, length);
 }
 
@@ -108,14 +107,13 @@ int32 irt_cpu_freq_get_available_frequencies_worker(const irt_worker* worker, ui
  */
 
 int32 irt_cpu_freq_get_cur_frequency_worker(const irt_worker* worker) {
-	IRT_ASSERT(irt_worker_get_current() == worker,
-	           IRT_ERR_INVALIDARGUMENT, "DVFS of non-current worker is unsupported");
-	           
-#ifdef _GEMS_SIM
+	IRT_ASSERT(irt_worker_get_current() == worker, IRT_ERR_INVALIDARGUMENT, "DVFS of non-current worker is unsupported");
+
+	#ifdef _GEMS_SIM
 	return rapmi_get_freq();
-#elif defined(_GEMS_ODROID)
+	#elif defined(_GEMS_ODROID)
 	return (irt_cpu_freq_cluster == A15_CLUSTER) ? rapmi_get_freq() : rapmi_get_freq() / 2;
-#endif
+	#endif
 }
 
 /*
@@ -128,15 +126,14 @@ int32 irt_cpu_freq_set_frequency_worker(const irt_worker* worker, const uint32 f
 	// Cluster switching involved
 	if(irt_cpu_freq_cluster == A15_CLUSTER && frequency <= irt_cpu_freq_a07_max_freq) {
 		irt_cpu_freq_cluster = A07_CLUSTER;
-		return rapmi_set_cluster(A07_CLUSTER, frequency*2);
-	}
-	else if(irt_cpu_freq_cluster == A07_CLUSTER && frequency > irt_cpu_freq_a07_max_freq) {
+		return rapmi_set_cluster(A07_CLUSTER, frequency * 2);
+	} else if(irt_cpu_freq_cluster == A07_CLUSTER && frequency > irt_cpu_freq_a07_max_freq) {
 		irt_cpu_freq_cluster = A15_CLUSTER;
 		return rapmi_set_cluster(A15_CLUSTER, frequency);
 	}
 
 	// No cluster switching involved
-	return rapmi_set_freq((irt_cpu_freq_cluster == A07_CLUSTER) ? frequency*2 : frequency);
+	return rapmi_set_freq((irt_cpu_freq_cluster == A07_CLUSTER) ? frequency * 2 : frequency);
 #endif
 }
 
@@ -205,7 +202,7 @@ bool irt_cpu_freq_reset_frequencies() {
 
 int32 irt_cpu_freq_reset_frequency_worker(const irt_worker* worker) {
 	/* No limits on the gemsclaim simulator */
-	
+
 	return (IRT_GEM_MAX_FREQ - IRT_GEM_MIN_FREQ) / IRT_GEM_STEP_FREQ + 1;
 }
 

@@ -52,82 +52,80 @@ namespace core {
 namespace pattern {
 
 
-class Tree;
-typedef std::shared_ptr<Tree> TreePtr;
+	class Tree;
+	typedef std::shared_ptr<Tree> TreePtr;
 
-typedef std::vector<TreePtr> TreeList;
-typedef TreeList::const_iterator TreeListIterator;
+	typedef std::vector<TreePtr> TreeList;
+	typedef TreeList::const_iterator TreeListIterator;
 
-class Tree : public utils::Annotatable<>, public utils::Printable, boost::noncopyable {
-public:
+	class Tree : public utils::Annotatable<>, public utils::Printable, boost::noncopyable {
+	  public:
+		static const char VALUE_ID;
 
-	static const char VALUE_ID;
-	
-	typedef boost::variant<bool,int,unsigned,string> Value;
-	
-protected:
+		typedef boost::variant<bool, int, unsigned, string> Value;
 
-	const char id;
-	TreeList subTrees;
-	Value value;
-	
-public:
+	  protected:
+		const char id;
+		TreeList subTrees;
+		Value value;
 
-	Tree(const Value& value) : id(VALUE_ID), subTrees(), value(value) {}
-	
-	template<typename... Args>
-	Tree(char id, Args && ... args) : id(id), subTrees(toVector<TreePtr>(args...)) {
-		assert_ne(id, VALUE_ID) << "Value ID must not be used!";
+	  public:
+		Tree(const Value& value) : id(VALUE_ID), subTrees(), value(value) {}
+
+		template <typename... Args>
+		Tree(char id, Args&&... args)
+		    : id(id), subTrees(toVector<TreePtr>(args...)) {
+			assert_ne(id, VALUE_ID) << "Value ID must not be used!";
+		}
+
+		Tree(const TreeList& children, int id) : id(id), subTrees(children) {
+			assert_ne(id, VALUE_ID) << "Value ID must not be used!";
+		}
+
+		virtual ~Tree(){};
+
+		virtual std::ostream& printTo(std::ostream& out) const;
+		virtual bool operator==(const Tree& other) const;
+		virtual bool operator!=(const Tree& other) const {
+			return !(*this == other);
+		}
+
+		virtual const TreeList& getSubTrees() const {
+			return subTrees;
+		}
+		virtual const TreeList& getChildList() const {
+			return subTrees;
+		}
+
+		const char getId() const {
+			return char(id);
+		}
+	};
+
+	template <typename... Args>
+	TreePtr makeTree(const Args&... args) {
+		return std::make_shared<Tree>(0, args...);
 	}
-	
-	Tree(const TreeList& children, int id) : id(id), subTrees(children) {
-		assert_ne(id, VALUE_ID) << "Value ID must not be used!";
+
+	template <typename... Args>
+	TreePtr makeTree(char symbol, const Args&... args) {
+		return std::make_shared<Tree>((int)symbol, args...);
 	}
-	
-	virtual ~Tree() {};
-	
-	virtual std::ostream& printTo(std::ostream& out) const;
-	virtual bool operator==(const Tree& other) const;
-	virtual bool operator!=(const Tree& other) const {
-		return !(*this == other);
+
+	inline TreePtr makeTree(char id, const TreeList& children) {
+		return std::make_shared<Tree>(children, id);
 	}
-	
-	virtual const TreeList& getSubTrees() const {
-		return subTrees;
+
+	template <typename V>
+	TreePtr makeValue(const V& value) {
+		return std::make_shared<Tree>(Tree::Value(value));
 	}
-	virtual const TreeList& getChildList() const {
-		return subTrees;
-	}
-	
-	const char getId() const {
-		return char(id);
-	}
-};
 
-template<typename... Args>
-TreePtr makeTree(const Args & ... args) {
-	return std::make_shared<Tree>(0, args...);
-}
+	TreePtr parseTree(const string& tree);
 
-template<typename... Args>
-TreePtr makeTree(char symbol, const Args & ... args) {
-	return std::make_shared<Tree>((int)symbol, args...);
-}
+	std::ostream& operator<<(std::ostream& out, const Tree& tree);
 
-inline TreePtr makeTree(char id, const TreeList& children) {
-	return std::make_shared<Tree>(children, id);
-}
-
-template<typename V>
-TreePtr makeValue(const V& value) {
-	return std::make_shared<Tree>(Tree::Value(value));
-}
-
-TreePtr parseTree(const string& tree);
-
-std::ostream& operator<<(std::ostream& out, const Tree& tree);
-
-std::ostream& operator<<(std::ostream& out, const TreePtr& tree);
+	std::ostream& operator<<(std::ostream& out, const TreePtr& tree);
 
 } // end namespace pattern
 } // end namespace core

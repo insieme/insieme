@@ -36,7 +36,5 @@
 
 // this is from mingw's pthread.h (really implementing a threadsafe and reentrant rand?)
 #ifndef rand_r
-#define rand_r(__seed) (__seed == __seed ? rand () : rand ())
+#define rand_r(__seed) (__seed == __seed ? rand() : rand())
 #endif
-
-

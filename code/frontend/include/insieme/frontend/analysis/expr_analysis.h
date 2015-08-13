@@ -42,55 +42,49 @@ namespace insieme {
 namespace frontend {
 namespace analysis {
 
-/**
- * Defines the ordering for Variables used within the VarSet set
- */
-struct lt_ident {
+	/**
+	 * Defines the ordering for Variables used within the VarSet set
+	 */
+	struct lt_ident {
+		bool operator()(const core::VariablePtr& s1, const core::VariablePtr& s2) const {
+			return s1->getId() < s2->getId();
+		}
+	};
 
-	bool operator()(const core::VariablePtr& s1, const core::VariablePtr& s2) const {
-		return s1->getId() < s2->getId();
-	}
-	
-};
+	typedef std::set<core::VariablePtr, lt_ident> VarSet;
 
-typedef std::set<core::VariablePtr, lt_ident> VarSet;
+	/**
+	 * Returns the list of variables referenced within an expression.
+	 * This class is used when a code block needs to be transformed into a function
+	 */
+	struct VarRefFinder : public core::IRVisitor<void>, public VarSet {
+		VarRefFinder(const core::NodePtr& node) : core::IRVisitor<void>(false) {
+			visit(node);
+			// we have to remove eventual variables which are declared inside this block of code
+			VarSet nonDecls;
+			lt_ident comp;
+			std::set_difference(begin(), end(), declaredVars.begin(), declaredVars.end(), std::inserter(nonDecls, nonDecls.begin()), comp);
+			VarSet::operator=(nonDecls);
+		}
 
-/**
- * Returns the list of variables referenced within an expression.
- * This class is used when a code block needs to be transformed into a function
- */
-struct VarRefFinder: public core::IRVisitor<void>, public VarSet {
+		void visitVariable(const core::VariablePtr& varExpr) {
+			insert(varExpr);
+		}
 
-	VarRefFinder(const core::NodePtr& node) : core::IRVisitor<void>(false) {
-		visit(node);
-		// we have to remove eventual variables which are declared inside this block of code
-		VarSet nonDecls;
-		lt_ident comp;
-		std::set_difference(begin(), end(), declaredVars.begin(), declaredVars.end(), std::inserter(nonDecls, nonDecls.begin()), comp);
-		VarSet::operator=(nonDecls);
-	}
-	
-	void visitVariable(const core::VariablePtr& varExpr) {
-		insert(varExpr);
-	}
-	
-	// don't look inside the body of functions
-	void visitLambdaExpr(const core::LambdaExprPtr& lambdaExpr) { }
-	
-	void visitDeclarationStmt(const core::DeclarationStmtPtr& declStmt) {
-		declaredVars.insert(declStmt->getVariable());
-	}
-	
-	void visitNode(const core::NodePtr& node) {
-		std::for_each(node->getChildList().begin(), node->getChildList().end(),
-		[ this ](core::NodePtr curr) {
-			this->visit(curr);
-		});
-	}
-	
-private:
-	VarSet declaredVars;
-};
+		// don't look inside the body of functions
+		void visitLambdaExpr(const core::LambdaExprPtr& lambdaExpr) {}
+
+		void visitDeclarationStmt(const core::DeclarationStmtPtr& declStmt) {
+			declaredVars.insert(declStmt->getVariable());
+		}
+
+		void visitNode(const core::NodePtr& node) {
+			std::for_each(node->getChildList().begin(), node->getChildList().end(), [this](core::NodePtr curr) { this->visit(curr); });
+		}
+
+	  private:
+		VarSet declaredVars;
+	};
 
 } // End analysis namespace
 } // End frontend namespace

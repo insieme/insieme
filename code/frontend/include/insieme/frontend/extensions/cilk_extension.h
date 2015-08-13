@@ -42,15 +42,16 @@ namespace insieme {
 namespace frontend {
 namespace extensions {
 
-class CilkFrontendExtension : public FrontendExtension {
-	bool flagActivated;
-public:
-	CilkFrontendExtension();
-	
-	virtual tu::IRTranslationUnit IRVisit(tu::IRTranslationUnit& tu);
-	virtual FrontendExtension::flagHandler registerFlag(boost::program_options::options_description& options);
-};
+	class CilkFrontendExtension : public FrontendExtension {
+		bool flagActivated;
 
-}   //end namespace extensions
-}   //end namespace frontend
-}   //end namespace insieme
+	  public:
+		CilkFrontendExtension();
+
+		virtual tu::IRTranslationUnit IRVisit(tu::IRTranslationUnit& tu);
+		virtual FrontendExtension::flagHandler registerFlag(boost::program_options::options_description& options);
+	};
+
+} // end namespace extensions
+} // end namespace frontend
+} // end namespace insieme

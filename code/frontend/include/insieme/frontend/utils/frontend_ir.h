@@ -43,23 +43,21 @@ namespace insieme {
 namespace frontend {
 namespace ir {
 
-class FrontendIr : public core::lang::Extension {
+	class FrontendIr : public core::lang::Extension {
+		bool isCXX;
 
-	bool isCXX;
-	
-	
-public:
-	/**
-	 * Creates a new instance based on the given node manager.
-	 */
-	FrontendIr(core::NodeManager& manager, bool cxx)
-		: core::lang::Extension(manager), isCXX(cxx) {}
-		
-	/**
-	 * 	frontend assignment operator
-	 */
-	LANG_EXT_LITERAL_WITH_NAME(RefAssign, "fe_ref_assign", "FE_RefAssign", isCXX? "(ref<'a>, 'a)->ref<'a>":"(ref<'a>, 'a)->'a");
-};
+
+	  public:
+		/**
+		 * Creates a new instance based on the given node manager.
+		 */
+		FrontendIr(core::NodeManager& manager, bool cxx) : core::lang::Extension(manager), isCXX(cxx) {}
+
+		/**
+		 * 	frontend assignment operator
+		 */
+		LANG_EXT_LITERAL_WITH_NAME(RefAssign, "fe_ref_assign", "FE_RefAssign", isCXX ? "(ref<'a>, 'a)->ref<'a>" : "(ref<'a>, 'a)->'a");
+	};
 
 
 } // namespace ir

@@ -41,37 +41,35 @@
 namespace insieme {
 namespace utils {
 
-/**
- * A base class for constant singleton values. Subclasses of this
- * class should be instantiated only once and reused like a singleton.
- *
- * The represented value has to be default-constructable.
- *
- * @tparam the type of constant to be represented (has to be default-constructable)
- */
-template<typename Derived>
-class StaticConstant : boost::noncopyable {
+	/**
+	 * A base class for constant singleton values. Subclasses of this
+	 * class should be instantiated only once and reused like a singleton.
+	 *
+	 * The represented value has to be default-constructable.
+	 *
+	 * @tparam the type of constant to be represented (has to be default-constructable)
+	 */
+	template <typename Derived>
+	class StaticConstant : boost::noncopyable {
+		/**
+		 * The singleton instance of this value (default constructed).
+		 */
+		static const Derived instance;
+
+	  public:
+		/**
+		 * Obtains a reference to the maintained singleton instance.
+		 */
+		static const Derived& getInstance() {
+			return instance;
+		}
+	};
 
 	/**
-	 * The singleton instance of this value (default constructed).
+	 * The definition of the static constant.
 	 */
-	static const Derived instance;
-	
-public:
-
-	/**
-	 * Obtains a reference to the maintained singleton instance.
-	 */
-	static const Derived& getInstance() {
-		return instance;
-	}
-};
-
-/**
- * The definition of the static constant.
- */
-template<typename Derived>
-const Derived StaticConstant<Derived>::instance;
+	template <typename Derived>
+	const Derived StaticConstant<Derived>::instance;
 
 
 } // end namespace utils

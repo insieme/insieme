@@ -52,7 +52,6 @@ namespace lang {
 	 * memory allocation call (ref_alloc).
 	 */
 	class DatapathExtension : public core::lang::Extension {
-
 		/**
 		 * Allow the node manager to create instances of this class.
 		 */
@@ -61,36 +60,33 @@ namespace lang {
 		/**
 		 * Creates a new instance based on the given node manager.
 		 */
-		DatapathExtension(core::NodeManager& manager)
-			: core::lang::Extension(manager) {}
+		DatapathExtension(core::NodeManager& manager) : core::lang::Extension(manager) {}
 
-	public:
-
+	  public:
 		/**
 		 * The root path is modeling the empty path -- the identity when utilized for narrow / expand operations.
 		 */
-		LANG_EXT_LITERAL(DataPathRoot,		"dp_root", 				"(type<'a>) -> datapath<'a,'a>")
+		LANG_EXT_LITERAL(DataPathRoot, "dp_root", "(type<'a>) -> datapath<'a,'a>")
 
 		/**
 		 * The member path extends a given path by accessing a member field  of type 'c of a struct / union 'a.
 		 */
-		LANG_EXT_LITERAL(DataPathMember,	"dp_member", 			"(datapath<'a,'b>, identifier, type<'c>) -> datapath<'a,'c>")
+		LANG_EXT_LITERAL(DataPathMember, "dp_member", "(datapath<'a,'b>, identifier, type<'c>) -> datapath<'a,'c>")
 
 		/**
 		 * An element access operation extends a given path by an access to an element of an array.
 		 */
-		LANG_EXT_LITERAL(DataPathElement,	"dp_element", 			"(datapath<'a,array<'b,'s>>, int<8>) -> datapath<'a,'b>")
+		LANG_EXT_LITERAL(DataPathElement, "dp_element", "(datapath<'a,array<'b,'s>>, int<8>) -> datapath<'a,'b>")
 
 		/**
 		 * A component access is extend a data path by accessing an element of a tuple type.
 		 */
-		LANG_EXT_LITERAL(DataPathComponent,	"dp_component", 		"(datapath<'a,'b>, uint<8>, type<'c>) -> datapath<'a,'c>")
+		LANG_EXT_LITERAL(DataPathComponent, "dp_component", "(datapath<'a,'b>, uint<8>, type<'c>) -> datapath<'a,'c>")
 
 		/**
 		 * A parent access path is moving a reference to a base class.
 		 */
-		LANG_EXT_LITERAL(DataPathParent,    "dp_parent",            "(datapath<'a,'b>, type<'c>) -> datapath<'a,'c>")
-
+		LANG_EXT_LITERAL(DataPathParent, "dp_parent", "(datapath<'a,'b>, type<'c>) -> datapath<'a,'c>")
 	};
 
 	/**
@@ -98,7 +94,6 @@ namespace lang {
 	 * associated operators.
 	 */
 	class ReferenceExtension : public core::lang::Extension {
-
 		/**
 		 * Allow the node manager to create instances of this class.
 		 */
@@ -107,12 +102,9 @@ namespace lang {
 		/**
 		 * Creates a new instance based on the given node manager.
 		 */
-		ReferenceExtension(core::NodeManager& manager)
-			: core::lang::Extension(manager) {}
+		ReferenceExtension(core::NodeManager& manager) : core::lang::Extension(manager) {}
 
-	public:
-
-
+	  public:
 		// ------------------ memory location ------------------------
 
 		/**
@@ -139,7 +131,6 @@ namespace lang {
 		LANG_EXT_TYPE_WITH_NAME(GenRef, "generic_ref_template", "ref<'a,'const,'volatile>");
 
 
-
 		// -- memory management --
 
 		/**
@@ -150,7 +141,7 @@ namespace lang {
 		/**
 		 * A literal to free memory.
 		 */
-		LANG_EXT_LITERAL(RefDelete,	"ref_delete", "(ref<'a,f,'v>) -> unit")
+		LANG_EXT_LITERAL(RefDelete, "ref_delete", "(ref<'a,f,'v>) -> unit")
 
 
 		/**
@@ -162,7 +153,6 @@ namespace lang {
 		 * A built-in derived operator allocating memory on the heap.
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(RefNew, "ref_new", "lambda ('a v) -> ref<'a,f,f> { decl auto r = ref_alloc(type_of(v), memloc_heap ); r = v; return r; }")
-
 
 
 		// -- access --
@@ -178,31 +168,30 @@ namespace lang {
 		LANG_EXT_LITERAL(RefAssign, "ref_assign", "(ref<'a,f,'v>, 'a) -> unit")
 
 
-
 		// -- casts --
 
 		/**
 		 * A reinterpret cast altering the actual interpretation of the referenced memory cell.
 		 */
-		LANG_EXT_LITERAL(RefReinterpret, 				"ref_reinterpret", 		"(ref<'a,'c,'v>,type<'b>) -> ref<'b,'c,'v>")
+		LANG_EXT_LITERAL(RefReinterpret, "ref_reinterpret", "(ref<'a,'c,'v>,type<'b>) -> ref<'b,'c,'v>")
 
 		/**
 		 * A simpler reference cast merely altering the view on the otherwise untouched memory location. This
 		 * is the basis for e.g. const or volatile casts.
 		 */
-		LANG_EXT_LITERAL(RefCast, 						"ref_cast", 			"(ref<'a,'c,'v>,type<'new_const>,type<'new_volatile>) -> ref<'a,'new_const,'new_volatile>")
+		LANG_EXT_LITERAL(RefCast, "ref_cast", "(ref<'a,'c,'v>,type<'new_const>,type<'new_volatile>) -> ref<'a,'new_const,'new_volatile>")
 
 
 		/**
 		 * A specialization of the ref_cast operator for modeling const casts.
 		 */
-		LANG_EXT_DERIVED_WITH_NAME(RefConstCast, 		"ref_const_cast", 		"lambda (ref<'a,'c,'v> r, type<'nc> c) -> ref<'a,'nc,'v> { return ref_cast(r,c,type('v)); }")
+		LANG_EXT_DERIVED_WITH_NAME(RefConstCast, "ref_const_cast", "lambda (ref<'a,'c,'v> r, type<'nc> c) -> ref<'a,'nc,'v> { return ref_cast(r,c,type('v)); }")
 
 		/**
 		 * A specialization of the ref_cast operator for modeling volatile casts.
 		 */
-		LANG_EXT_DERIVED_WITH_NAME(RefVolatileCast, 	"ref_volatile_cast", 	"lambda (ref<'a,'c,'v> r, type<'nv> v) -> ref<'a,'c,'nv> { return ref_cast(r,type('c),v); }")
-
+		LANG_EXT_DERIVED_WITH_NAME(RefVolatileCast, "ref_volatile_cast",
+		                           "lambda (ref<'a,'c,'v> r, type<'nv> v) -> ref<'a,'c,'nv> { return ref_cast(r,type('c),v); }")
 
 
 		// -- sub-referencing --
@@ -221,22 +210,29 @@ namespace lang {
 		/**
 		 * A derived operator providing access to an element in an array.
 		 */
-		LANG_EXT_DERIVED_WITH_NAME(RefArrayElement, 	"ref_array_elem", 			"lambda (ref<array<'a,'s>,'c,'v> r, int<8> i) -> ref<'a,'c,'v> { return ref_narrow(r, dp_element(dp_root(type(array<'a,'s>)),i)); }")
+		LANG_EXT_DERIVED_WITH_NAME(
+		    RefArrayElement, "ref_array_elem",
+		    "lambda (ref<array<'a,'s>,'c,'v> r, int<8> i) -> ref<'a,'c,'v> { return ref_narrow(r, dp_element(dp_root(type(array<'a,'s>)),i)); }")
 
 		/**
 		 * A derived reference navigation operator providing access to a member of a struct / union.
 		 */
-		LANG_EXT_DERIVED_WITH_NAME(RefMemberAccess, 	"ref_member_access", 		"lambda (ref<'a,'c,'v> r, identifier name, type<'b> type) -> ref<'b,'c,'v> { return ref_narrow(r, dp_member(dp_root(type('a)),name,type)); }")
+		LANG_EXT_DERIVED_WITH_NAME(
+		    RefMemberAccess, "ref_member_access",
+		    "lambda (ref<'a,'c,'v> r, identifier name, type<'b> type) -> ref<'b,'c,'v> { return ref_narrow(r, dp_member(dp_root(type('a)),name,type)); }")
 
 		/**
 		 * A derived reference navigation operator providing access to a components of a tuple.
 		 */
-		LANG_EXT_DERIVED_WITH_NAME(RefComponentAccess, 	"ref_component_access", 	"lambda (ref<'a,'c,'v> r, uint<8> pos, type<'b> type) -> ref<'b,'c,'v> { return ref_narrow(r, dp_component(dp_root(type('a)),pos,type)); }")
+		LANG_EXT_DERIVED_WITH_NAME(
+		    RefComponentAccess, "ref_component_access",
+		    "lambda (ref<'a,'c,'v> r, uint<8> pos, type<'b> type) -> ref<'b,'c,'v> { return ref_narrow(r, dp_component(dp_root(type('a)),pos,type)); }")
 
 		/**
 		 * A derived reference-navigation operation providing an array view on a scalar.
 		 */
-		LANG_EXT_DERIVED_WITH_NAME(RefScalarToRefArray, "ref_scalar_to_ref_array", 	"lambda (ref<'a,'c,'v> a) -> ref<array<'a,1>,'c,'v> { return ref_expand(a, dp_element(dp_root(type(array<'a,1>)),0u)); }")
+		LANG_EXT_DERIVED_WITH_NAME(RefScalarToRefArray, "ref_scalar_to_ref_array",
+		                           "lambda (ref<'a,'c,'v> a) -> ref<array<'a,1>,'c,'v> { return ref_expand(a, dp_element(dp_root(type(array<'a,1>)),0u)); }")
 
 
 		// -- null --
@@ -257,7 +253,7 @@ namespace lang {
 		/**
 		 * An operator to compare two references for inequality.
 		 */
-		LANG_EXT_DERIVED_WITH_NAME(RefNotEqual, "ref_ne", 	"lambda (ref<'a1,'c1,'v1> a, ref<'a2,'c2,'v2> b) -> bool { return !ref_eq(a,b); }")
+		LANG_EXT_DERIVED_WITH_NAME(RefNotEqual, "ref_ne", "lambda (ref<'a1,'c1,'v1> a, ref<'a2,'c2,'v2> b) -> bool { return !ref_eq(a,b); }")
 
 
 		/*
@@ -292,7 +288,6 @@ namespace lang {
 		LITERAL(RefToSrc, "ref_src_cast",      "(ref<'a>) -> src<'a>")
 
 		 */
-
 	};
 
 
@@ -303,18 +298,15 @@ namespace lang {
 	 * friendly way then its raw encoding.
 	 */
 	class ReferenceType {
-
 		TypePtr elementType;
 
 		bool mConst;
 
 		bool mVolatile;
 
-		ReferenceType(const TypePtr& elementType, bool mConst, bool mVolatile)
-			: elementType(elementType), mConst(mConst), mVolatile(mVolatile) {}
+		ReferenceType(const TypePtr& elementType, bool mConst, bool mVolatile) : elementType(elementType), mConst(mConst), mVolatile(mVolatile) {}
 
-	public:
-
+	  public:
 		ReferenceType(const NodePtr& node);
 
 		ReferenceType(const ReferenceType&) = default;
@@ -353,14 +345,11 @@ namespace lang {
 		void setVolatile(bool newState = true) {
 			mVolatile = newState;
 		}
-
 	};
 
 
 	static inline bool isReference(const NodePtr& node) {
-		if (auto expr = node.isa<ExpressionPtr>()) {
-			return isReference(expr->getType());
-		}
+		if(auto expr = node.isa<ExpressionPtr>()) { return isReference(expr->getType()); }
 		return node && ReferenceType::isReferenceType(node);
 	}
 

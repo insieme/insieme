@@ -47,30 +47,29 @@ namespace insieme {
 namespace frontend {
 namespace extensions {
 
-/**
- * Custom pragma used for testing purposes;
- *
- * #pragma test "insieme-IR"
- * C stmt
- *
- * checks if the conversion of the C statement matches the one specified by the user
- */
-class TestPragmaExtension : public FrontendExtension {
-	// holds the IR that is expected for the target statement, to be used for comparison and testing
-	std::string expected;
-	// holds a number of dummy arguments used for pragma parsing and location testing
-	std::vector<std::string> dummyArguments;
-	
-public:
-	TestPragmaExtension();
-	std::string getExpected() const {
-		return expected;
-	}
-	std::vector<std::string> getDummyArguments() const {
-		return dummyArguments;
-	}
-	
-};
+	/**
+	 * Custom pragma used for testing purposes;
+	 *
+	 * #pragma test "insieme-IR"
+	 * C stmt
+	 *
+	 * checks if the conversion of the C statement matches the one specified by the user
+	 */
+	class TestPragmaExtension : public FrontendExtension {
+		// holds the IR that is expected for the target statement, to be used for comparison and testing
+		std::string expected;
+		// holds a number of dummy arguments used for pragma parsing and location testing
+		std::vector<std::string> dummyArguments;
+
+	  public:
+		TestPragmaExtension();
+		std::string getExpected() const {
+			return expected;
+		}
+		std::vector<std::string> getDummyArguments() const {
+			return dummyArguments;
+		}
+	};
 
 } // extensions
 } // frontend

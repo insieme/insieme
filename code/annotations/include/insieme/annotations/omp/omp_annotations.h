@@ -42,41 +42,40 @@
 namespace insieme {
 namespace annotations {
 
-using namespace insieme::core;
+	using namespace insieme::core;
 
-namespace omp {
+	namespace omp {
 
-class RegionAnnotation : public NodeAnnotation {
+		class RegionAnnotation : public NodeAnnotation {
+		  public:
+			static const string NAME;
+			static const utils::StringKey<RegionAnnotation> KEY;
 
-public:
-	static const string NAME;
-	static const utils::StringKey<RegionAnnotation> KEY;
-	
-	const utils::AnnotationKeyPtr getKey() const {
-		return &KEY;
-	}
-	const std::string& getAnnotationName() const {
-		return NAME;
-	}
-	
-	virtual bool migrate(const core::NodeAnnotationPtr& ptr, const core::NodePtr& before, const core::NodePtr& after) const {
-		// always copy the annotation
-		assert_true(&*ptr == this) << "Annotation pointer should reference this annotation!";
-		after->addAnnotation(ptr);
-		return true;
-	}
-	
-	static void attach(const NodePtr& node);
-};
+			const utils::AnnotationKeyPtr getKey() const {
+				return &KEY;
+			}
+			const std::string& getAnnotationName() const {
+				return NAME;
+			}
 
-typedef std::shared_ptr<RegionAnnotation> RegionAnnotationPtr;
+			virtual bool migrate(const core::NodeAnnotationPtr& ptr, const core::NodePtr& before, const core::NodePtr& after) const {
+				// always copy the annotation
+				assert_true(&*ptr == this) << "Annotation pointer should reference this annotation!";
+				after->addAnnotation(ptr);
+				return true;
+			}
 
-} // end namespace omp
+			static void attach(const NodePtr& node);
+		};
+
+		typedef std::shared_ptr<RegionAnnotation> RegionAnnotationPtr;
+
+	} // end namespace omp
 } // end namespace annotations
 } // end namespace insieme
 
 namespace std {
 
-std::ostream& operator<<(std::ostream& out, const insieme::annotations::omp::RegionAnnotation& lAnnot);
+	std::ostream& operator<<(std::ostream& out, const insieme::annotations::omp::RegionAnnotation& lAnnot);
 
 } // end namespace std

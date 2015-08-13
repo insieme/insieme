@@ -71,8 +71,7 @@ void get_load_own(unsigned long* time) {
 	// overflow "handling"
 	if(user_time < last_user_time || kernel_time < last_kernel_time) {
 		*time = 0;
-	}
-	else {
+	} else {
 		*time = (user_time - last_user_time) + (kernel_time - last_kernel_time);
 	}
 	last_user_time = user_time;
@@ -104,8 +103,7 @@ void get_load_system(unsigned long* system_time, unsigned long* idle_time) {
 	if(total_user < last_total_user || total_user_low < last_total_user_low || total_system < last_total_system || total_idle < last_total_idle) {
 		*system_time = 0;
 		*idle_time = 0;
-	}
-	else {
+	} else {
 		*system_time = (total_user - last_total_user) + (total_user_low - last_total_user_low) + (total_system - last_total_system);
 		*idle_time = (total_idle - last_total_idle);
 	}
@@ -126,13 +124,10 @@ double get_load_external() {
 	get_load_own(&proc_time);
 	get_load_system(&system_time, &idle_time);
 	// granularity problems, division by 0 if full load
-	if(idle_time == 0) {
-		idle_time = 1;
-	}
+	if(idle_time == 0) { idle_time = 1; }
 	ext = (system_time - proc_time) / ((double)system_time + idle_time);
 	return ext;
 }
-
 
 
 #endif // ifndef __GUARD_UTILS_LOAD_H

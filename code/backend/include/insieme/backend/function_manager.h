@@ -46,126 +46,118 @@
 namespace insieme {
 namespace backend {
 
-class Converter;
-class ConversionContext;
-class FunctionInfo;
-class LambdaInfo;
-class BindInfo;
+	class Converter;
+	class ConversionContext;
+	class FunctionInfo;
+	class LambdaInfo;
+	class BindInfo;
 
 
-/**
- * A type definition for a map linking external function names (literals)
- * with include files those literals are part of.
- */
-typedef std::map<string, string> FunctionIncludeTable;
+	/**
+	 * A type definition for a map linking external function names (literals)
+	 * with include files those literals are part of.
+	 */
+	typedef std::map<string, string> FunctionIncludeTable;
 
-FunctionIncludeTable getBasicFunctionIncludeTable();
+	FunctionIncludeTable getBasicFunctionIncludeTable();
 
-namespace detail {
-class FunctionInfoStore;
-}
-
-class FunctionManager : private boost::noncopyable {
-
-	const Converter& converter;
-	
-	detail::FunctionInfoStore* store;
-	
-	OperatorConverterTable operatorTable;
-	
-	FunctionIncludeTable includeTable;
-	
-public:
-
-	FunctionManager(const Converter& converter);
-	
-	FunctionManager(const Converter& converter, const OperatorConverterTable& operatorTable, const FunctionIncludeTable& includeTable);
-	
-	~FunctionManager();
-	
-	const FunctionInfo& getInfo(const core::LiteralPtr& literal);
-	
-	const FunctionInfo& getInfo(const core::LiteralPtr& pureVirtualMemberFun, bool isConst);
-	
-	const LambdaInfo& getInfo(const core::LambdaExprPtr& lambda);
-	
-	const LambdaInfo& getInfo(const core::LambdaExprPtr& memberFun, bool isConst, bool isVirtual);
-	
-	const BindInfo& getInfo(const core::BindExprPtr& bind);
-	
-	const c_ast::NodePtr getCall(const core::CallExprPtr& call, ConversionContext& context);
-	
-	const c_ast::ExpressionPtr getValue(const core::ExpressionPtr& fun, ConversionContext& context);
-	
-	const c_ast::ExpressionPtr getValue(const core::BindExprPtr& bind, ConversionContext& context);
-	
-	const boost::optional<string> getHeaderFor(const string& function) const;
-	
-	const boost::optional<string> getHeaderFor(const core::LiteralPtr& function) const;
-	
-	bool isBuiltIn(const core::NodePtr& op) const;
-	
-	// ------------------------- Management ---------------------
-	
-	OperatorConverterTable& getOperatorConverterTable() {
-		return operatorTable;
+	namespace detail {
+		class FunctionInfoStore;
 	}
-	
-	FunctionIncludeTable& getFunctionIncludeTable() {
-		return includeTable;
-	}
-};
+
+	class FunctionManager : private boost::noncopyable {
+		const Converter& converter;
+
+		detail::FunctionInfoStore* store;
+
+		OperatorConverterTable operatorTable;
+
+		FunctionIncludeTable includeTable;
+
+	  public:
+		FunctionManager(const Converter& converter);
+
+		FunctionManager(const Converter& converter, const OperatorConverterTable& operatorTable, const FunctionIncludeTable& includeTable);
+
+		~FunctionManager();
+
+		const FunctionInfo& getInfo(const core::LiteralPtr& literal);
+
+		const FunctionInfo& getInfo(const core::LiteralPtr& pureVirtualMemberFun, bool isConst);
+
+		const LambdaInfo& getInfo(const core::LambdaExprPtr& lambda);
+
+		const LambdaInfo& getInfo(const core::LambdaExprPtr& memberFun, bool isConst, bool isVirtual);
+
+		const BindInfo& getInfo(const core::BindExprPtr& bind);
+
+		const c_ast::NodePtr getCall(const core::CallExprPtr& call, ConversionContext& context);
+
+		const c_ast::ExpressionPtr getValue(const core::ExpressionPtr& fun, ConversionContext& context);
+
+		const c_ast::ExpressionPtr getValue(const core::BindExprPtr& bind, ConversionContext& context);
+
+		const boost::optional<string> getHeaderFor(const string& function) const;
+
+		const boost::optional<string> getHeaderFor(const core::LiteralPtr& function) const;
+
+		bool isBuiltIn(const core::NodePtr& op) const;
+
+		// ------------------------- Management ---------------------
+
+		OperatorConverterTable& getOperatorConverterTable() {
+			return operatorTable;
+		}
+
+		FunctionIncludeTable& getFunctionIncludeTable() {
+			return includeTable;
+		}
+	};
 
 
-struct ElementInfo {
+	struct ElementInfo {
+		virtual ~ElementInfo() {}
+	};
 
-	virtual ~ElementInfo() {}
-};
+	struct FunctionInfo : public ElementInfo {
+		// to be included:
+		// 		- the C-AST function represented
+		//		- prototype
+		//		- definition
+		//		- lambdaWrapper
 
-struct FunctionInfo : public ElementInfo {
+		c_ast::FunctionPtr function;
 
-	// to be included:
-	// 		- the C-AST function represented
-	//		- prototype
-	//		- definition
-	//		- lambdaWrapper
-	
-	c_ast::FunctionPtr function;
-	
-	c_ast::CodeFragmentPtr prototype;
-	
-	c_ast::IdentifierPtr lambdaWrapperName;
-	
-	c_ast::CodeFragmentPtr lambdaWrapper;
-	
-};
+		c_ast::CodeFragmentPtr prototype;
 
-struct LambdaInfo : public FunctionInfo {
+		c_ast::IdentifierPtr lambdaWrapperName;
 
-	// to be included
-	// 		- the definition of the function
-	
-	c_ast::CodeFragmentPtr definition;
-	
-};
+		c_ast::CodeFragmentPtr lambdaWrapper;
+	};
 
-struct BindInfo : public ElementInfo {
+	struct LambdaInfo : public FunctionInfo {
+		// to be included
+		// 		- the definition of the function
 
-	// to be included
-	//		- the closure type definition
-	//		- the mapper function definition
-	//		- the constructor
-	
-	c_ast::IdentifierPtr closureName;
-	
-	c_ast::TypePtr closureType;
-	
-	c_ast::CodeFragmentPtr definitions;
-	
-	c_ast::IdentifierPtr mapperName;
-	
-	c_ast::IdentifierPtr constructorName;
-};
+		c_ast::CodeFragmentPtr definition;
+	};
+
+	struct BindInfo : public ElementInfo {
+		// to be included
+		//		- the closure type definition
+		//		- the mapper function definition
+		//		- the constructor
+
+		c_ast::IdentifierPtr closureName;
+
+		c_ast::TypePtr closureType;
+
+		c_ast::CodeFragmentPtr definitions;
+
+		c_ast::IdentifierPtr mapperName;
+
+		c_ast::IdentifierPtr constructorName;
+	};
 
 } // end namespace backend
 } // end namespace insieme

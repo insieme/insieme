@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-//typedef int bool;
+// typedef int bool;
 #define bool int
 
 #define true 1

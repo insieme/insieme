@@ -42,7 +42,7 @@
 
 #ifndef IRT_CWBUFFER_LENGTH
 #define IRT_CWBUFFER_LENGTH 32
-#endif //IRT_CWBUFFER_LENGTH
+#endif // IRT_CWBUFFER_LENGTH
 
 #include "utils/circular_work_buffers.h"
 
@@ -50,14 +50,13 @@
 
 typedef struct _irt_cw_data {
 	irt_circular_work_buffer queue;
-	irt_worker *wake_target;
+	irt_worker* wake_target;
 } irt_cw_data;
 
 #define irt_worker_scheduling_data irt_cw_data
 
 // placeholder, not required
 #define irt_wi_scheduling_data uint32
-
 
 
 #endif // ifndef __GUARD_SCHED_POLICIES_IRT_SCHED_UBER_H

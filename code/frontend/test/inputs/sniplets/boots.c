@@ -12,7 +12,7 @@
 //
 //
 //
-//void bots_get_architecture(char *str) {
+// void bots_get_architecture(char *str) {
 //	int ncpus = sysconf(_SC_NPROCESSORS_CONF);
 //	struct utsname architecture;
 //	uname(&architecture);
@@ -20,7 +20,7 @@
 //}
 //
 //
-//int main(){
+// int main(){
 //	char str[512];
 //
 //	bots_get_architecture(str);
@@ -28,14 +28,12 @@
 //}
 
 
-typedef struct {
-	char str[20];
-} t_mine;
+typedef struct { char str[20]; } t_mine;
 
-extern int printf(char *, ...);
+extern int printf(char*, ...);
 
 int main() {
 	t_mine a;
-	printf("%s",a.str);
-	printf("%s","asas");
+	printf("%s", a.str);
+	printf("%s", "asas");
 }

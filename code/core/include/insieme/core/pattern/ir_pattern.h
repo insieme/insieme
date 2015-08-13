@@ -50,354 +50,319 @@
 namespace insieme {
 namespace core {
 namespace pattern {
-/// Namespace for constructing/search for IR Patterns: irp
-namespace irp {
-using std::make_shared;
-
-inline TreePattern atom(const core::NodePtr& node) {
-	return pattern::atom(node);
-}
-
-inline TreePattern atom(core::NodeManager& manager, const string& code) {
-	return atom(core::IRBuilder(manager).parse(code));
-}
-
-inline TreePattern lazyAtom(const std::function<core::NodePtr(core::NodeManager&)>& factory) {
-	return pattern::lazyAtom(factory);
-}
-
-inline TreePattern wrapBody(const TreePattern& body) {
-	return node(core::NT_CompoundStmt, single(body)) | body;
-}
-
-inline TreePattern genericType(const TreePattern& family, const ListPattern& parents, const ListPattern& subtypes, const ListPattern& typeParams) {
-	return node(core::NT_GenericType, family << single(node(parents)) << single(node(subtypes)) << single(node(typeParams)));
-}
-inline TreePattern genericType(const TreePattern& family, const ListPattern& subtypes = empty, const ListPattern& typeParams = empty) {
-	return genericType(family, empty, subtypes, typeParams);
-}
-inline TreePattern genericType(const core::StringValuePtr& family, const ListPattern& typeParams = empty, const ListPattern& intParams = empty) {
-	return genericType(atom(family.as<core::NodePtr>()), typeParams, intParams);
-}
-inline TreePattern genericType(const string& name, const ListPattern& typeParams = empty, const ListPattern& intParams = empty) {
-	return genericType(value(name), typeParams, intParams);
-}
-
-inline TreePattern exprOfType(const TreePattern& type) {
-	return node(single(type) << *any);
-}
-
-inline TreePattern literal(const TreePattern& type, const TreePattern& value) {
-	return node(core::NT_Literal, single(type) << single(value));
-}
-
-inline TreePattern literal(const TreePattern& type, const core::StringValuePtr& value) {
-	return literal(type, atom(value.as<core::NodePtr>()));
-}
-
-inline TreePattern literal(const TreePattern& type, const string& str) {
-	return literal(type, value(str));
-}
-
-inline TreePattern literal(const string& str) {
-	return literal(any, str);
-}
-
-inline TreePattern literal() {
-	return literal(any, any);
-}
-
-inline TreePattern typeLiteral(const TreePattern& type = pattern::any) {
-	return literal(genericType("type", single(type), empty), any);
-}
-
-inline TreePattern tupleType(const ListPattern& pattern) {
-	return node(core::NT_TupleType, pattern);
-}
-
-inline TreePattern structType(const ListPattern& pattern) {
-	return node(core::NT_StructType, pattern);
-}
-
-inline TreePattern arrayType(const TreePattern& pattern) {
-	return genericType("array",single(pattern));
-}
-
-inline TreePattern refType(const TreePattern& elementType) {
-	return genericType("ref",elementType << anyList );
-}
-
-inline TreePattern variable(const TreePattern& type = pattern::any, const TreePattern& id = pattern::any) {
-	return node(core::NT_Variable, single(type) << single(id));
-}
-
-inline TreePattern callExpr(const TreePattern& type, const TreePattern& function, const ListPattern& parameters) {
-	return node(core::NT_CallExpr, type << single(function) << parameters);
-}
-
-inline TreePattern callExpr(const TreePattern& type, const NodePtr& function, const ListPattern& parameters) {
-	return callExpr(type, atom(function), parameters);
-}
-
-inline TreePattern callExpr(const core::NodePtr& function, const ListPattern& parameters = anyList) {
-	return callExpr(any, atom(function), parameters);
-}
-
-inline TreePattern callExpr(const core::NodePtr& function, const TreePattern& parameter) {
-	return callExpr(function, single(parameter));
-}
-
-inline TreePattern callExpr(const TreePattern& function, const ListPattern& parameters = anyList) {
-	return callExpr(any, function, parameters);
-}
-
-inline TreePattern callExpr(const TreePattern& fun, const TreePattern& arg0) {
-	return callExpr(any, fun, single(arg0));
-}
-
-inline TreePattern callExpr(const TreePattern& fun, const TreePattern& arg0, const TreePattern& arg1) {
-	return callExpr(any, fun, single(arg0) << single(arg1));
-}
-
-inline TreePattern callExpr(const TreePattern& fun, const TreePattern& arg0, const TreePattern& arg1, const TreePattern& arg2) {
-	return callExpr(any, fun, single(arg0) << single(arg1) << single(arg2));
-}
-
-inline TreePattern castExpr(const TreePattern& type, const TreePattern& expression) {
-	return node(core::NT_CastExpr, type << single(expression));
-}
-
-inline TreePattern bindExpr(const ListPattern& parameters, const TreePattern& call) {
-	return node(core::NT_BindExpr, parameters << single(call));
-}
-
-inline TreePattern tupleExpr(const ListPattern& expressions) {
-	return node(core::NT_TupleExpr, expressions);
-}
-
-inline TreePattern expressions(const ListPattern& expressions) {
-	return node(core::NT_Expressions, expressions);
-}
-
-inline TreePattern structExpr(const ListPattern& members) {
-	return node(core::NT_StructExpr, members);
-}
-
-inline TreePattern unionExpr(const TreePattern& memberName, const TreePattern& member) {
-	return node(core::NT_UnionExpr, single(memberName) << single(member));
-}
-
-inline TreePattern markerExpr(const TreePattern& subExpression, const TreePattern& id) {
-	return node(core::NT_MarkerExpr, single(subExpression) << single(id));
-}
-
-inline TreePattern lambda(const TreePattern& type, const ListPattern& parameters, const TreePattern& body) {
-	return node(core::NT_Lambda, single(type) << single(node(core::NT_Parameters, parameters)) << wrapBody(body));
-}
-
-inline TreePattern lambdaExpr(const TreePattern& variable, const TreePattern& lambdaDef) {
-	return node(core::NT_LambdaExpr, single(any) << single(variable) << single(lambdaDef));
-}
-
-inline TreePattern lambdaDefinition(const ListPattern& definitions) {
-	return node(core::NT_LambdaDefinition, definitions);
-}
-
-inline TreePattern compoundStmt(const ListPattern& stmts = empty) {
-	return node(core::NT_CompoundStmt, stmts);
-}
-inline TreePattern compoundStmt(const TreePattern& stmt) {
-	return compoundStmt(single(stmt));
-}
-
-inline TreePattern declarationStmt(const TreePattern& variable = any, const TreePattern& initExpr = any) {
-	return node(core::NT_DeclarationStmt, single(variable) << single(initExpr));
-}
-
-inline TreePattern ifStmt(const TreePattern& condition, const TreePattern& thenBody, const TreePattern& elseBody) {
-	return node(core::NT_IfStmt, single(condition) << wrapBody(thenBody) << wrapBody(elseBody));
-}
-
-
-inline TreePattern forStmt(const TreePattern& iterator, const TreePattern& start,
-                           const TreePattern& end, const TreePattern& step,
-                           const ListPattern& body) {
-	return node(core::NT_ForStmt, single(declarationStmt(iterator,start)) <<
-	            single(end) << single(step) << compoundStmt(body)
-	           );
-}
-
-inline TreePattern forStmt(const TreePattern& iterator, const TreePattern& start,
-                           const TreePattern& end, const TreePattern& step,
-                           const TreePattern& body) {
-	return node(core::NT_ForStmt, single(declarationStmt(iterator,start)) <<
-	            single(end) << single(step) << wrapBody(body)
-	           );
-}
-
-inline TreePattern forStmt(const TreePattern& body) {
-	return forStmt(any, any, any, any, body);
-}
-
-inline TreePattern forStmt() {
-	return node(core::NT_ForStmt, anyList);
-}
-
-inline TreePattern whileStmt(const TreePattern& condition, const TreePattern& body) {
-	return node(core::NT_WhileStmt, single(condition) << wrapBody(body));
-}
-
-inline TreePattern whileStmt() {
-	return node(core::NT_WhileStmt, anyList);
-}
-
-inline TreePattern switchStmt(const TreePattern& expression, const ListPattern& cases, const TreePattern& defaultCase) {
-	return node(core::NT_SwitchStmt, single(expression) << cases << single(defaultCase));
-}
-
-inline TreePattern returnStmt(const TreePattern& returnExpression) {
-	return node(core::NT_ReturnStmt, single(returnExpression));
-}
-
-inline TreePattern markerStmt(const TreePattern& subExpr, const TreePattern& id) {
-	return node(core::NT_MarkerStmt, single(subExpr) << single(id));
-}
-
-inline const TreePattern& continueStmt() {
-	static const TreePattern res = node(core::NT_ContinueStmt);
-	return res;
-}
-
-inline const TreePattern& breakStmt() {
-	static const TreePattern res = node(core::NT_BreakStmt);
-	return res;
-}
-
-inline TreePattern jobExpr(const TreePattern& threadNumRange, const TreePattern& body) {
-	return jobExpr(threadNumRange, body);
-}
-
-inline TreePattern pfor(const TreePattern& group = any, const TreePattern& start = any, const TreePattern& end = any, const TreePattern& step = any,
-                        const TreePattern& body = any) {
-	return callExpr(lazyAtom([](core::NodeManager& mgr) {
-		return mgr.getLangBasic().getUnit();
-	}),
-	lazyAtom([](core::NodeManager& mgr) {
-		return mgr.getLangBasic().getPFor();
-	}),
-	single(group) << single(start) << single(end) << single(step) << single(body));
-}
-
-/**
- * Creates a pattern matching loops on the given level.
- */
-inline TreePattern innerMostForLoop(unsigned level = 1) {
-	if(level <= 1) {
-		return forStmt(!aT(forStmt()));
-	}
-	return irp::forStmt(rT(innerMostForLoop(level-1) | ((!irp::forStmt()) & step(recurse))));
-}
-
-/**
- * Creates a pattern matching deepest innermost loops of the given depth.
- */
-inline TreePattern innerMostForLoopNest(unsigned level = 1) {
-	if(level <= 1) {
-		return forStmt(!aT(forStmt()));
-	}
-	return rT(irp::forStmt(rT(innerMostForLoopNest(level-1) | ((!irp::forStmt()) & step(rec("x"))), "x") & !step(aT(rec("y")))), "y");
-}
-
-
-//  ---- composed operations ------
-
-inline TreePattern assignment(const TreePattern& lhs = any, const TreePattern& rhs = any) {
-	return callExpr(lazyAtom([](core::NodeManager& mgr) {
-		return mgr.getLangExtension<lang::ReferenceExtension>().getRefAssign();
-	}), lhs, rhs);
-}
-
-inline TreePattern arrayRefElem(const TreePattern& data = any, const TreePattern& idx = any) {
-	return callExpr(lazyAtom([](core::NodeManager& mgr) {
-		return mgr.getLangExtension<lang::ReferenceExtension>().getRefArrayElement();
-	}), data, idx);
-}
-
-inline TreePattern tupleMemberAccess(const TreePattern& data = any, const TreePattern& idx = any, const TreePattern& type = any) {
-	return callExpr(lazyAtom([](core::NodeManager& mgr) {
-		return mgr.getLangBasic().getTupleMemberAccess();
-	}), data, idx, type);
-}
-
-inline TreePattern tupleRefElem(const TreePattern& data = any, const TreePattern& idx = any, const TreePattern& type = any) {
-	return callExpr(lazyAtom([](core::NodeManager& mgr) {
-		return mgr.getLangExtension<lang::ReferenceExtension>().getRefComponentAccess();
-	}), data, idx, type);
-}
-
-inline TreePattern scalarToArray(const TreePattern& data = any) {
-	return callExpr(lazyAtom([](core::NodeManager& mgr) {
-		return mgr.getLangExtension<lang::ReferenceExtension>().getRefScalarToRefArray();
-	}), data);
-}
-
-inline TreePattern compositeRefElem(const TreePattern& structVar = any, const TreePattern& member = any, const TreePattern& type = any) {
-	return callExpr(pattern::irp::lazyAtom([](core::NodeManager& mgr) {
-		return mgr.getLangExtension<lang::ReferenceExtension>().getRefMemberAccess();
-	}), structVar, member, type);
-}
-
-inline TreePattern compositeMemberAccess(const TreePattern& structVar = any, const TreePattern& member = any, const TreePattern& type = any) {
-	return callExpr(pattern::irp::lazyAtom([](core::NodeManager& mgr) {
-		return mgr.getLangBasic().getCompositeMemberAccess();
-	}), structVar, member, type);
-}
-
-inline TreePattern refVar(const TreePattern& expr = any) {
-	return callExpr(lazyAtom([](core::NodeManager& mgr) {
-		return mgr.getLangExtension<lang::ReferenceExtension>().getRefVar();
-	}), expr);
-}
-
-inline TreePattern refNew(const TreePattern& expr = any) {
-	return callExpr(lazyAtom([](core::NodeManager& mgr) {
-		return mgr.getLangExtension<lang::ReferenceExtension>().getRefNew();
-	}), expr);
-}
-
-inline TreePattern refDelete(const TreePattern& refExpr = any) {
-	return callExpr(lazyAtom([](core::NodeManager& mgr) {
-		return mgr.getLangExtension<lang::ReferenceExtension>().getRefDelete();
-	}), refExpr);
-}
-
-inline TreePattern refDeref(const TreePattern& refExpr = any) {
-	return callExpr(lazyAtom([](core::NodeManager& mgr) {
-		return mgr.getLangExtension<lang::ReferenceExtension>().getRefDeref();
-	}), refExpr);
-}
-
-inline TreePattern refReinterpret(const TreePattern& refExpr = any, const TreePattern& type = any) {
-	return callExpr(lazyAtom([](core::NodeManager& mgr) {
-		return mgr.getLangExtension<lang::ReferenceExtension>().getRefReinterpret();
-	}), refExpr, type);
-}
-
-inline TreePattern unaryOp(const TreePattern& a) {
-	return callExpr(any, a);
-}
-
-inline TreePattern binaryOp(const TreePattern& a, const TreePattern& b) {
-	return callExpr(any, a, b);
-}
-
-inline TreePattern pick(const ListPattern& args = anyList) {
-	return callExpr(lazyAtom([](core::NodeManager& mgr) {
-		return mgr.getLangBasic().getPick();
-	}), args);
-}
-
-} // end namespace irp
+	/// Namespace for constructing/search for IR Patterns: irp
+	namespace irp {
+		using std::make_shared;
+
+		inline TreePattern atom(const core::NodePtr& node) {
+			return pattern::atom(node);
+		}
+
+		inline TreePattern atom(core::NodeManager& manager, const string& code) {
+			return atom(core::IRBuilder(manager).parse(code));
+		}
+
+		inline TreePattern lazyAtom(const std::function<core::NodePtr(core::NodeManager&)>& factory) {
+			return pattern::lazyAtom(factory);
+		}
+
+		inline TreePattern wrapBody(const TreePattern& body) {
+			return node(core::NT_CompoundStmt, single(body)) | body;
+		}
+
+		inline TreePattern genericType(const TreePattern& family, const ListPattern& parents, const ListPattern& subtypes, const ListPattern& typeParams) {
+			return node(core::NT_GenericType, family << single(node(parents)) << single(node(subtypes)) << single(node(typeParams)));
+		}
+		inline TreePattern genericType(const TreePattern& family, const ListPattern& subtypes = empty, const ListPattern& typeParams = empty) {
+			return genericType(family, empty, subtypes, typeParams);
+		}
+		inline TreePattern genericType(const core::StringValuePtr& family, const ListPattern& typeParams = empty, const ListPattern& intParams = empty) {
+			return genericType(atom(family.as<core::NodePtr>()), typeParams, intParams);
+		}
+		inline TreePattern genericType(const string& name, const ListPattern& typeParams = empty, const ListPattern& intParams = empty) {
+			return genericType(value(name), typeParams, intParams);
+		}
+
+		inline TreePattern exprOfType(const TreePattern& type) {
+			return node(single(type) << *any);
+		}
+
+		inline TreePattern literal(const TreePattern& type, const TreePattern& value) {
+			return node(core::NT_Literal, single(type) << single(value));
+		}
+
+		inline TreePattern literal(const TreePattern& type, const core::StringValuePtr& value) {
+			return literal(type, atom(value.as<core::NodePtr>()));
+		}
+
+		inline TreePattern literal(const TreePattern& type, const string& str) {
+			return literal(type, value(str));
+		}
+
+		inline TreePattern literal(const string& str) {
+			return literal(any, str);
+		}
+
+		inline TreePattern literal() {
+			return literal(any, any);
+		}
+
+		inline TreePattern typeLiteral(const TreePattern& type = pattern::any) {
+			return literal(genericType("type", single(type), empty), any);
+		}
+
+		inline TreePattern tupleType(const ListPattern& pattern) {
+			return node(core::NT_TupleType, pattern);
+		}
+
+		inline TreePattern structType(const ListPattern& pattern) {
+			return node(core::NT_StructType, pattern);
+		}
+
+		inline TreePattern arrayType(const TreePattern& pattern) {
+			return genericType("array", single(pattern));
+		}
+
+		inline TreePattern refType(const TreePattern& elementType) {
+			return genericType("ref", elementType << anyList);
+		}
+
+		inline TreePattern variable(const TreePattern& type = pattern::any, const TreePattern& id = pattern::any) {
+			return node(core::NT_Variable, single(type) << single(id));
+		}
+
+		inline TreePattern callExpr(const TreePattern& type, const TreePattern& function, const ListPattern& parameters) {
+			return node(core::NT_CallExpr, type << single(function) << parameters);
+		}
+
+		inline TreePattern callExpr(const TreePattern& type, const NodePtr& function, const ListPattern& parameters) {
+			return callExpr(type, atom(function), parameters);
+		}
+
+		inline TreePattern callExpr(const core::NodePtr& function, const ListPattern& parameters = anyList) {
+			return callExpr(any, atom(function), parameters);
+		}
+
+		inline TreePattern callExpr(const core::NodePtr& function, const TreePattern& parameter) {
+			return callExpr(function, single(parameter));
+		}
+
+		inline TreePattern callExpr(const TreePattern& function, const ListPattern& parameters = anyList) {
+			return callExpr(any, function, parameters);
+		}
+
+		inline TreePattern callExpr(const TreePattern& fun, const TreePattern& arg0) {
+			return callExpr(any, fun, single(arg0));
+		}
+
+		inline TreePattern callExpr(const TreePattern& fun, const TreePattern& arg0, const TreePattern& arg1) {
+			return callExpr(any, fun, single(arg0) << single(arg1));
+		}
+
+		inline TreePattern callExpr(const TreePattern& fun, const TreePattern& arg0, const TreePattern& arg1, const TreePattern& arg2) {
+			return callExpr(any, fun, single(arg0) << single(arg1) << single(arg2));
+		}
+
+		inline TreePattern castExpr(const TreePattern& type, const TreePattern& expression) {
+			return node(core::NT_CastExpr, type << single(expression));
+		}
+
+		inline TreePattern bindExpr(const ListPattern& parameters, const TreePattern& call) {
+			return node(core::NT_BindExpr, parameters << single(call));
+		}
+
+		inline TreePattern tupleExpr(const ListPattern& expressions) {
+			return node(core::NT_TupleExpr, expressions);
+		}
+
+		inline TreePattern expressions(const ListPattern& expressions) {
+			return node(core::NT_Expressions, expressions);
+		}
+
+		inline TreePattern structExpr(const ListPattern& members) {
+			return node(core::NT_StructExpr, members);
+		}
+
+		inline TreePattern unionExpr(const TreePattern& memberName, const TreePattern& member) {
+			return node(core::NT_UnionExpr, single(memberName) << single(member));
+		}
+
+		inline TreePattern markerExpr(const TreePattern& subExpression, const TreePattern& id) {
+			return node(core::NT_MarkerExpr, single(subExpression) << single(id));
+		}
+
+		inline TreePattern lambda(const TreePattern& type, const ListPattern& parameters, const TreePattern& body) {
+			return node(core::NT_Lambda, single(type) << single(node(core::NT_Parameters, parameters)) << wrapBody(body));
+		}
+
+		inline TreePattern lambdaExpr(const TreePattern& variable, const TreePattern& lambdaDef) {
+			return node(core::NT_LambdaExpr, single(any) << single(variable) << single(lambdaDef));
+		}
+
+		inline TreePattern lambdaDefinition(const ListPattern& definitions) {
+			return node(core::NT_LambdaDefinition, definitions);
+		}
+
+		inline TreePattern compoundStmt(const ListPattern& stmts = empty) {
+			return node(core::NT_CompoundStmt, stmts);
+		}
+		inline TreePattern compoundStmt(const TreePattern& stmt) {
+			return compoundStmt(single(stmt));
+		}
+
+		inline TreePattern declarationStmt(const TreePattern& variable = any, const TreePattern& initExpr = any) {
+			return node(core::NT_DeclarationStmt, single(variable) << single(initExpr));
+		}
+
+		inline TreePattern ifStmt(const TreePattern& condition, const TreePattern& thenBody, const TreePattern& elseBody) {
+			return node(core::NT_IfStmt, single(condition) << wrapBody(thenBody) << wrapBody(elseBody));
+		}
+
+
+		inline TreePattern forStmt(const TreePattern& iterator, const TreePattern& start, const TreePattern& end, const TreePattern& step,
+		                           const ListPattern& body) {
+			return node(core::NT_ForStmt, single(declarationStmt(iterator, start)) << single(end) << single(step) << compoundStmt(body));
+		}
+
+		inline TreePattern forStmt(const TreePattern& iterator, const TreePattern& start, const TreePattern& end, const TreePattern& step,
+		                           const TreePattern& body) {
+			return node(core::NT_ForStmt, single(declarationStmt(iterator, start)) << single(end) << single(step) << wrapBody(body));
+		}
+
+		inline TreePattern forStmt(const TreePattern& body) {
+			return forStmt(any, any, any, any, body);
+		}
+
+		inline TreePattern forStmt() {
+			return node(core::NT_ForStmt, anyList);
+		}
+
+		inline TreePattern whileStmt(const TreePattern& condition, const TreePattern& body) {
+			return node(core::NT_WhileStmt, single(condition) << wrapBody(body));
+		}
+
+		inline TreePattern whileStmt() {
+			return node(core::NT_WhileStmt, anyList);
+		}
+
+		inline TreePattern switchStmt(const TreePattern& expression, const ListPattern& cases, const TreePattern& defaultCase) {
+			return node(core::NT_SwitchStmt, single(expression) << cases << single(defaultCase));
+		}
+
+		inline TreePattern returnStmt(const TreePattern& returnExpression) {
+			return node(core::NT_ReturnStmt, single(returnExpression));
+		}
+
+		inline TreePattern markerStmt(const TreePattern& subExpr, const TreePattern& id) {
+			return node(core::NT_MarkerStmt, single(subExpr) << single(id));
+		}
+
+		inline const TreePattern& continueStmt() {
+			static const TreePattern res = node(core::NT_ContinueStmt);
+			return res;
+		}
+
+		inline const TreePattern& breakStmt() {
+			static const TreePattern res = node(core::NT_BreakStmt);
+			return res;
+		}
+
+		inline TreePattern jobExpr(const TreePattern& threadNumRange, const TreePattern& body) {
+			return jobExpr(threadNumRange, body);
+		}
+
+		inline TreePattern pfor(const TreePattern& group = any, const TreePattern& start = any, const TreePattern& end = any, const TreePattern& step = any,
+		                        const TreePattern& body = any) {
+			return callExpr(lazyAtom([](core::NodeManager& mgr) { return mgr.getLangBasic().getUnit(); }),
+			                lazyAtom([](core::NodeManager& mgr) { return mgr.getLangBasic().getPFor(); }),
+			                single(group) << single(start) << single(end) << single(step) << single(body));
+		}
+
+		/**
+		 * Creates a pattern matching loops on the given level.
+		 */
+		inline TreePattern innerMostForLoop(unsigned level = 1) {
+			if(level <= 1) { return forStmt(!aT(forStmt())); }
+			return irp::forStmt(rT(innerMostForLoop(level - 1) | ((!irp::forStmt()) & step(recurse))));
+		}
+
+		/**
+		 * Creates a pattern matching deepest innermost loops of the given depth.
+		 */
+		inline TreePattern innerMostForLoopNest(unsigned level = 1) {
+			if(level <= 1) { return forStmt(!aT(forStmt())); }
+			return rT(irp::forStmt(rT(innerMostForLoopNest(level - 1) | ((!irp::forStmt()) & step(rec("x"))), "x") & !step(aT(rec("y")))), "y");
+		}
+
+
+		//  ---- composed operations ------
+
+		inline TreePattern assignment(const TreePattern& lhs = any, const TreePattern& rhs = any) {
+			return callExpr(lazyAtom([](core::NodeManager& mgr) { return mgr.getLangExtension<lang::ReferenceExtension>().getRefAssign(); }), lhs, rhs);
+		}
+
+		inline TreePattern arrayRefElem(const TreePattern& data = any, const TreePattern& idx = any) {
+			return callExpr(lazyAtom([](core::NodeManager& mgr) { return mgr.getLangExtension<lang::ReferenceExtension>().getRefArrayElement(); }), data, idx);
+		}
+
+		inline TreePattern tupleMemberAccess(const TreePattern& data = any, const TreePattern& idx = any, const TreePattern& type = any) {
+			return callExpr(lazyAtom([](core::NodeManager& mgr) { return mgr.getLangBasic().getTupleMemberAccess(); }), data, idx, type);
+		}
+
+		inline TreePattern tupleRefElem(const TreePattern& data = any, const TreePattern& idx = any, const TreePattern& type = any) {
+			return callExpr(lazyAtom([](core::NodeManager& mgr) { return mgr.getLangExtension<lang::ReferenceExtension>().getRefComponentAccess(); }), data,
+			                idx, type);
+		}
+
+		inline TreePattern scalarToArray(const TreePattern& data = any) {
+			return callExpr(lazyAtom([](core::NodeManager& mgr) { return mgr.getLangExtension<lang::ReferenceExtension>().getRefScalarToRefArray(); }), data);
+		}
+
+		inline TreePattern compositeRefElem(const TreePattern& structVar = any, const TreePattern& member = any, const TreePattern& type = any) {
+			return callExpr(
+			    pattern::irp::lazyAtom([](core::NodeManager& mgr) { return mgr.getLangExtension<lang::ReferenceExtension>().getRefMemberAccess(); }), structVar,
+			    member, type);
+		}
+
+		inline TreePattern compositeMemberAccess(const TreePattern& structVar = any, const TreePattern& member = any, const TreePattern& type = any) {
+			return callExpr(pattern::irp::lazyAtom([](core::NodeManager& mgr) { return mgr.getLangBasic().getCompositeMemberAccess(); }), structVar, member,
+			                type);
+		}
+
+		inline TreePattern refVar(const TreePattern& expr = any) {
+			return callExpr(lazyAtom([](core::NodeManager& mgr) { return mgr.getLangExtension<lang::ReferenceExtension>().getRefVar(); }), expr);
+		}
+
+		inline TreePattern refNew(const TreePattern& expr = any) {
+			return callExpr(lazyAtom([](core::NodeManager& mgr) { return mgr.getLangExtension<lang::ReferenceExtension>().getRefNew(); }), expr);
+		}
+
+		inline TreePattern refDelete(const TreePattern& refExpr = any) {
+			return callExpr(lazyAtom([](core::NodeManager& mgr) { return mgr.getLangExtension<lang::ReferenceExtension>().getRefDelete(); }), refExpr);
+		}
+
+		inline TreePattern refDeref(const TreePattern& refExpr = any) {
+			return callExpr(lazyAtom([](core::NodeManager& mgr) { return mgr.getLangExtension<lang::ReferenceExtension>().getRefDeref(); }), refExpr);
+		}
+
+		inline TreePattern refReinterpret(const TreePattern& refExpr = any, const TreePattern& type = any) {
+			return callExpr(lazyAtom([](core::NodeManager& mgr) { return mgr.getLangExtension<lang::ReferenceExtension>().getRefReinterpret(); }), refExpr,
+			                type);
+		}
+
+		inline TreePattern unaryOp(const TreePattern& a) {
+			return callExpr(any, a);
+		}
+
+		inline TreePattern binaryOp(const TreePattern& a, const TreePattern& b) {
+			return callExpr(any, a, b);
+		}
+
+		inline TreePattern pick(const ListPattern& args = anyList) {
+			return callExpr(lazyAtom([](core::NodeManager& mgr) { return mgr.getLangBasic().getPick(); }), args);
+		}
+
+	} // end namespace irp
 } // end namespace pattern
 } // end namespace core
 } // end namespace insieme

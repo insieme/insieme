@@ -52,13 +52,16 @@
 IRT_MAKE_ID_TYPE(work_item)
 
 typedef enum _irt_work_item_state {
-	IRT_WI_STATE_NEW, IRT_WI_STATE_STARTED, IRT_WI_STATE_SUSPENDED, IRT_WI_STATE_DONE,
+	IRT_WI_STATE_NEW,
+	IRT_WI_STATE_STARTED,
+	IRT_WI_STATE_SUSPENDED,
+	IRT_WI_STATE_DONE,
 } irt_work_item_state;
 
 struct _irt_work_item_range {
 	int64 begin, end, step;
 };
-static const irt_work_item_range irt_g_wi_range_one_elem = {0,1,1};
+static const irt_work_item_range irt_g_wi_range_one_elem = {0, 1, 1};
 static inline int64 irt_wi_range_get_size(const irt_work_item_range* r) {
 	return (r->end - r->begin) / r->step;
 }
@@ -66,10 +69,10 @@ static inline void _irt_print_work_item_range(const irt_work_item_range* r);
 
 typedef bool irt_wi_readiness_check_fun(irt_work_item* wi);
 typedef struct _irt_wi_readiness_check {
-	irt_wi_readiness_check_fun *fun;
-	void *data;
+	irt_wi_readiness_check_fun* fun;
+	void* data;
 } irt_wi_readiness_check;
-irt_wi_readiness_check irt_g_null_readiness_check = { NULL, NULL };
+irt_wi_readiness_check irt_g_null_readiness_check = {NULL, NULL};
 
 struct _irt_work_item {
 	// core functionality
@@ -82,26 +85,26 @@ struct _irt_work_item {
 	irt_work_item_range range;
 	uint32 num_groups;
 	volatile uint32 _num_active_children;
-	volatile uint32 *num_active_children;
-	volatile uint32 *parent_num_active_children;
-	irt_wi_wg_membership *wg_memberships;
+	volatile uint32* num_active_children;
+	volatile uint32* parent_num_active_children;
+	irt_wi_wg_membership* wg_memberships;
 	volatile irt_work_item_state state;
-	irt_lw_data_item *parameters;
+	irt_lw_data_item* parameters;
 	// wi splitting related
 	irt_work_item_id source_id;
 	uint32 num_fragments;
 	// private implementation details, do not need to be migrated
-	irt_work_item *next_reuse;
-	lwt_reused_stack *stack_storage;
+	irt_work_item* next_reuse;
+	lwt_reused_stack* stack_storage;
 	lwt_context stack_ptr;
-#ifdef IRT_ASTEROIDEA_STACKS
+	#ifdef IRT_ASTEROIDEA_STACKS
 	volatile bool stack_available;
-#endif
+	#endif
 	irt_wi_scheduling_data sched_data;
-#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
+	#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 	irt_inst_region_wi_data* inst_region_data;
 	irt_inst_region_list* inst_region_list;
-#endif
+	#endif
 	union {
 		char param_storage[IRT_WI_PARAM_BUFFER_SIZE];
 		irt_lw_data_item param_buffer;
@@ -112,13 +115,13 @@ struct _irt_work_item {
 
 static inline irt_work_item* irt_wi_get_current();
 
-static inline bool irt_wi_is_fragment(irt_work_item *wi) {
+static inline bool irt_wi_is_fragment(irt_work_item* wi) {
 	return wi->source_id.full != irt_work_item_null_id().full;
 }
-static inline irt_wi_wg_membership irt_wi_get_wg_membership(irt_work_item *wi, uint32 index);
-static inline uint32 irt_wi_get_wg_num(irt_work_item *wi, uint32 index);
-static inline uint32 irt_wi_get_wg_size(irt_work_item *wi, uint32 index);
-static inline irt_work_group* irt_wi_get_wg(irt_work_item *wi, uint32 index);
+static inline irt_wi_wg_membership irt_wi_get_wg_membership(irt_work_item* wi, uint32 index);
+static inline uint32 irt_wi_get_wg_num(irt_work_item* wi, uint32 index);
+static inline uint32 irt_wi_get_wg_size(irt_work_item* wi, uint32 index);
+static inline irt_work_group* irt_wi_get_wg(irt_work_item* wi, uint32 index);
 
 irt_work_item* _irt_wi_create(irt_worker* self, const irt_work_item_range* range, irt_wi_implementation* impl, irt_lw_data_item* params);
 static inline irt_work_item* irt_wi_create(irt_work_item_range range, irt_wi_implementation* impl, irt_lw_data_item* params);
@@ -129,10 +132,10 @@ static inline irt_work_item* irt_wi_create(irt_work_item_range range, irt_wi_imp
 extern "C" {
 #endif
 void
-#if (defined(_M_IX86)  && defined(_MSC_VER)) || (defined(__MINGW32__) && !defined(__MINGW64__))
-__fastcall
+#if(defined(_M_IX86) && defined(_MSC_VER)) || (defined(__MINGW32__) && !defined(__MINGW64__))
+    __fastcall
 #endif
-_irt_wi_trampoline(irt_work_item *wi, wi_implementation_func *func);
+    _irt_wi_trampoline(irt_work_item* wi, wi_implementation_func* func);
 
 #ifdef __cplusplus
 }

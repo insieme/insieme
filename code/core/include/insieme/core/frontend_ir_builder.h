@@ -42,33 +42,32 @@
 namespace insieme {
 namespace core {
 
-/**
- *  This class wraps the IRBuilder and provides the
- *  methods that are needed to generate IR elements.
- */
-class FrontendIRBuilder : public core::IRBuilder {
-public:
-	FrontendIRBuilder(core::NodeManager& mgr) : core::IRBuilder(mgr) { }
-	
-	// --------------------------- C++ -----------------------------
-
 	/**
-	 * Creates an expression representing a pure virtual function of the given type.
-	 *
-	 * @param memberFunctionType the type of the resulting pure virtual function
-	 * @return an expression representing a pure virtual function of the given type
+	 *  This class wraps the IRBuilder and provides the
+	 *  methods that are needed to generate IR elements.
 	 */
-	ExpressionPtr getPureVirtual(const FunctionTypePtr& memberFunctionType) const;
+	class FrontendIRBuilder : public core::IRBuilder {
+	  public:
+		FrontendIRBuilder(core::NodeManager& mgr) : core::IRBuilder(mgr) {}
+
+		// --------------------------- C++ -----------------------------
+
+		/**
+		 * Creates an expression representing a pure virtual function of the given type.
+		 *
+		 * @param memberFunctionType the type of the resulting pure virtual function
+		 * @return an expression representing a pure virtual function of the given type
+		 */
+		ExpressionPtr getPureVirtual(const FunctionTypePtr& memberFunctionType) const;
 
 
-	// --------------------- static variables ----------------------
-	
+		// --------------------- static variables ----------------------
 
-	ExpressionPtr initStaticVariable(const LiteralPtr& staticVariable, const ExpressionPtr& initValue, bool constant= false) const;
-	
-	StatementPtr createStaticVariable(const LiteralPtr& staticVariable) const;
-	
-};
 
-}   //namespace core
-}   //namespace insieme
+		ExpressionPtr initStaticVariable(const LiteralPtr& staticVariable, const ExpressionPtr& initValue, bool constant = false) const;
+
+		StatementPtr createStaticVariable(const LiteralPtr& staticVariable) const;
+	};
+
+} // namespace core
+} // namespace insieme

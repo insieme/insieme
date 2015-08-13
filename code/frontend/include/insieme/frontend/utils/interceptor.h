@@ -51,43 +51,41 @@ namespace insieme {
 namespace frontend {
 
 namespace conversion {
-class Converter;
+	class Converter;
 }
 
 namespace utils {
 
-class Interceptor {
-public:
-	Interceptor(const std::set<std::string>& patterns)
-		: // by default intercept std:: and __gnu_cxx:: namespaces
-		  // __gnu_cxx is needed for the iterator of std::vector for example
-		  toIntercept(patterns),
-		  
-		  //joins all the strings in the toIntercept-set to one big regEx
-		  rx("("+toString(join(")|(", toIntercept))+")") {
-	}
-	
-	bool isIntercepted(const string& name) const;
-	bool isIntercepted(const clang::QualType& type) const;
-	bool isIntercepted(const clang::FunctionDecl* decl) const;
-	
-	insieme::core::TypePtr 		 intercept(const clang::QualType& type, insieme::frontend::conversion::Converter& convFact) const ;
-	insieme::core::ExpressionPtr intercept(
-	    const clang::FunctionDecl* decl, insieme::frontend::conversion::Converter& convFact,
-	    const bool explicitTemplateArgs = false, const std::string& name = "") const;
-	insieme::core::ExpressionPtr intercept(const clang::EnumConstantDecl* enumConstant, insieme::frontend::conversion::Converter& convFact) const;
-	
-private:
-	/**
-	 * set of strings representing the regEx to be intercepted
-	 */
-	std::set<std::string> toIntercept;
-	
-	/**
-	 * the combined regex from the toIntercept-set
-	 */
-	boost::regex rx;
-};
+	class Interceptor {
+	  public:
+		Interceptor(const std::set<std::string>& patterns)
+		    : // by default intercept std:: and __gnu_cxx:: namespaces
+		      // __gnu_cxx is needed for the iterator of std::vector for example
+		      toIntercept(patterns),
+
+		      // joins all the strings in the toIntercept-set to one big regEx
+		      rx("(" + toString(join(")|(", toIntercept)) + ")") {}
+
+		bool isIntercepted(const string& name) const;
+		bool isIntercepted(const clang::QualType& type) const;
+		bool isIntercepted(const clang::FunctionDecl* decl) const;
+
+		insieme::core::TypePtr intercept(const clang::QualType& type, insieme::frontend::conversion::Converter& convFact) const;
+		insieme::core::ExpressionPtr intercept(const clang::FunctionDecl* decl, insieme::frontend::conversion::Converter& convFact,
+		                                       const bool explicitTemplateArgs = false, const std::string& name = "") const;
+		insieme::core::ExpressionPtr intercept(const clang::EnumConstantDecl* enumConstant, insieme::frontend::conversion::Converter& convFact) const;
+
+	  private:
+		/**
+		 * set of strings representing the regEx to be intercepted
+		 */
+		std::set<std::string> toIntercept;
+
+		/**
+		 * the combined regex from the toIntercept-set
+		 */
+		boost::regex rx;
+	};
 
 } // end utils namespace
 } // end frontend namespace

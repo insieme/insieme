@@ -49,17 +49,15 @@ namespace backend {
 namespace addons {
 
 
-/**
- * An Add-On providing support for long long type
- * */
-struct LongLongType : public AddOn {
-
 	/**
-	 * Installs the this Add-On within the given converter.
-	 */
-	virtual void installOn(Converter& converter) const;
-	
-};
+	 * An Add-On providing support for long long type
+	 * */
+	struct LongLongType : public AddOn {
+		/**
+		 * Installs the this Add-On within the given converter.
+		 */
+		virtual void installOn(Converter& converter) const;
+	};
 
 
 } // end namespace addons

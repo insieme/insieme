@@ -124,7 +124,7 @@ typedef struct _irt_type irt_type;
 /* ------------------------------ work groups ----- */
 
 IRT_DECLARE_ID_TYPE(work_group)
-//typedef uint32 irt_barrier_id;
+// typedef uint32 irt_barrier_id;
 typedef uint32 irt_distribute_id;
 typedef struct _irt_work_group irt_work_group;
 typedef struct _irt_wi_wg_membership irt_wi_wg_membership;
@@ -155,6 +155,6 @@ typedef struct _irt_worker irt_worker;
 
 /* ------------------------------ region instrumentation ----- */
 
-//typedef struct _irt_inst_region_data irt_inst_region_data;
+// typedef struct _irt_inst_region_data irt_inst_region_data;
 
 #endif // ifndef __GUARD_DECLARATIONS_H

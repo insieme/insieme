@@ -80,37 +80,35 @@ irt_type_id g_type_2_components[] = {1};
 irt_type_id g_type_4_components[] = {3};
 irt_type_id g_type_5_components[] = {4};
 irt_type_id g_type_7_components[] = {6};
-irt_type_id g_type_8_components[] = {0,2,5,5,7,5};
+irt_type_id g_type_8_components[] = {0, 2, 5, 5, 7, 5};
 irt_type_id g_type_10_components[] = {9};
 irt_type_id g_type_11_components[] = {10};
-irt_type_id g_type_12_components[] = {0,1,11};
+irt_type_id g_type_12_components[] = {0, 1, 11};
 
 // --- the type table ---
-irt_type g_insieme_type_table[] = {
-	{IRT_T_UINT32, sizeof(irt_type_id), 0, 0},
-	{IRT_T_INT32, sizeof(int32_t), 0, 0},
-	{IRT_T_POINTER, sizeof(int32_t*), 1, g_type_2_components},
-	{IRT_T_UINT32, sizeof(float), 0, 0},
-	{IRT_T_POINTER, sizeof(float*), 1, g_type_4_components},
-	{IRT_T_POINTER, sizeof(float**), 1, g_type_5_components},
-	{IRT_T_UINT32, sizeof(double), 0, 0},
-	{IRT_T_POINTER, sizeof(double*), 1, g_type_7_components},
-	{IRT_T_STRUCT, sizeof(_insieme_gen_type_27), 6, g_type_8_components},
-	{IRT_T_UINT32, sizeof(char), 0, 0},
-	{IRT_T_POINTER, sizeof(char*), 1, g_type_10_components},
-	{IRT_T_POINTER, sizeof(char**), 1, g_type_11_components},
-	{IRT_T_STRUCT, sizeof(_insieme_gen_type_30), 3, g_type_12_components}
-};
+irt_type g_insieme_type_table[] = {{IRT_T_UINT32, sizeof(irt_type_id), 0, 0},
+                                   {IRT_T_INT32, sizeof(int32_t), 0, 0},
+                                   {IRT_T_POINTER, sizeof(int32_t*), 1, g_type_2_components},
+                                   {IRT_T_UINT32, sizeof(float), 0, 0},
+                                   {IRT_T_POINTER, sizeof(float*), 1, g_type_4_components},
+                                   {IRT_T_POINTER, sizeof(float**), 1, g_type_5_components},
+                                   {IRT_T_UINT32, sizeof(double), 0, 0},
+                                   {IRT_T_POINTER, sizeof(double*), 1, g_type_7_components},
+                                   {IRT_T_STRUCT, sizeof(_insieme_gen_type_27), 6, g_type_8_components},
+                                   {IRT_T_UINT32, sizeof(char), 0, 0},
+                                   {IRT_T_POINTER, sizeof(char*), 1, g_type_10_components},
+                                   {IRT_T_POINTER, sizeof(char**), 1, g_type_11_components},
+                                   {IRT_T_STRUCT, sizeof(_insieme_gen_type_30), 3, g_type_12_components}};
 
 double sqrt(double p1);
 
 // WINFIX: type changed from int64_t to clock_t (caused compile error with VS), or just don't write prototype
-//clock_t clock();
+// clock_t clock();
 
 double pow(double p1, double p2);
 
 // WINFIX: void* memset(void* p1, int32_t p2, uint64_t p3);
-//void* memset(void* p1, int p2, size_t p3); // either this or don't write prototype
+// void* memset(void* p1, int p2, size_t p3); // either this or don't write prototype
 
 double sin(double p1);
 
@@ -123,8 +121,8 @@ double sin(double p1);
 #define IRT_STACK_STRUCT(__name, ...) ((__name){__VA_ARGS__})
 #endif
 
-inline _insieme_gen_type_27 _insieme_gen_type_27_create(irt_type_id c0, int32_t* c1, float** c2, float** c3,    double* c4,   float** c5) {
-	_insieme_gen_type_27 ret = { c0, c1, c2, c3, c4, c5};
+inline _insieme_gen_type_27 _insieme_gen_type_27_create(irt_type_id c0, int32_t* c1, float** c2, float** c3, double* c4, float** c5) {
+	_insieme_gen_type_27 ret = {c0, c1, c2, c3, c4, c5};
 	return ret;
 }
 
@@ -149,67 +147,62 @@ inline irt_parallel_job irt_parallel_job_create(uint32 min, uint32 max, uint32 m
 
 /* ------- Function Definitions --------- */
 double init_func(int32_t x, int32_t y) {
-	return (double)40*sin((double)(16*(2*x-1)*y));
+	return (double)40 * sin((double)(16 * (2 * x - 1) * y));
 }
 /* ------- Function Definitions --------- */
 int32_t __insieme_fun_8(int32_t argc, char** argv) {
 	int32_t N = 650;
-	if(argc > 1) {
-		N = atoi(argv[1]);
-	};
+	if(argc > 1) { N = atoi(argv[1]); };
 	int32_t numIter = 100;
-	if(argc > 2) {
-		numIter = atoi(argv[1]);
-	};
+	if(argc > 2) { numIter = atoi(argv[1]); };
 	float* u;
 	float* tmp;
 	float* f;
 	float* res;
-	u = (float*)malloc(sizeof(float)*((uint64_t)(N*N)*sizeof(float)/sizeof(float)));	// WINFIX: missing cast to float* added
-	tmp = (float*)malloc(sizeof(float)*((uint64_t)(N*N)*sizeof(float)/sizeof(float)));	// WINFIX: missing cast to float* added
-	f = (float*)malloc(sizeof(float)*((uint64_t)(N*N)*sizeof(float)/sizeof(float)));	// WINFIX: missing cast to float* added
-	res = (float*)malloc(sizeof(float)*((uint64_t)(N*N)*sizeof(float)/sizeof(float)));	// WINFIX: missing cast to float* added
-	if(!(!(u == 0) && !(tmp == 0) && !(f == 0) && !(res == 0))) {
-		printf("Error allocating arrays\n");
-	};
-	memset((void*)u, 0, (uint64_t)(N*N)*sizeof(float));
-	memset((void*)f, 0, (uint64_t)(N*N)*sizeof(float));
-	for(int32_t var_20 = 0, var_87 = N, var_88 = 1; var_20 < var_87; var_20+=var_88) {
-		for(int32_t var_22 = 0, var_89 = N, var_90 = 1; var_22 < var_89; var_22+=var_90) {
-			f[var_20*N+var_22] = (float)init_func(var_20, var_22);
+	u = (float*)malloc(sizeof(float) * ((uint64_t)(N * N) * sizeof(float) / sizeof(float)));   // WINFIX: missing cast to float* added
+	tmp = (float*)malloc(sizeof(float) * ((uint64_t)(N * N) * sizeof(float) / sizeof(float))); // WINFIX: missing cast to float* added
+	f = (float*)malloc(sizeof(float) * ((uint64_t)(N * N) * sizeof(float) / sizeof(float)));   // WINFIX: missing cast to float* added
+	res = (float*)malloc(sizeof(float) * ((uint64_t)(N * N) * sizeof(float) / sizeof(float))); // WINFIX: missing cast to float* added
+	if(!(!(u == 0) && !(tmp == 0) && !(f == 0) && !(res == 0))) { printf("Error allocating arrays\n"); };
+	memset((void*)u, 0, (uint64_t)(N * N) * sizeof(float));
+	memset((void*)f, 0, (uint64_t)(N * N) * sizeof(float));
+	for(int32_t var_20 = 0, var_87 = N, var_88 = 1; var_20 < var_87; var_20 += var_88) {
+		for(int32_t var_22 = 0, var_89 = N, var_90 = 1; var_22 < var_89; var_22 += var_90) {
+			f[var_20 * N + var_22] = (float)init_func(var_20, var_22);
 		};
 	};
 	double resv = 0.0;
-	double factor = pow((double)1/(double)N, (double)2);
-	for(int32_t var_32 = 0, var_92 = numIter, var_93 = 1; var_32 < var_92; var_32+=var_93) {
-	
+	double factor = pow((double)1 / (double)N, (double)2);
+	for(int32_t var_32 = 0, var_92 = numIter, var_93 = 1; var_32 < var_92; var_32 += var_93) {
 		// WINFIX:
-		// old: irt_merge(irt_parallel(&(irt_parallel_job){1, 4294967295, 1, 1, (irt_lw_data_item*)(&(struct __insieme_gen_type_27){8, &N, &u, &tmp, &factor, &f})}));
+		// old: irt_merge(irt_parallel(&(irt_parallel_job){1, 4294967295, 1, 1, (irt_lw_data_item*)(&(struct __insieme_gen_type_27){8, &N, &u, &tmp, &factor,
+		// &f})}));
 		// new:
 		irt_merge(irt_parallel(&(IRT_STACK_STRUCT(irt_parallel_job, 1, 4294967295, 1, &g_insieme_impl_table[1],
-		                         (irt_lw_data_item*)(&IRT_STACK_STRUCT(_insieme_gen_type_27, 8, &N, &u, &tmp, &factor, &f))))));
-		memcpy((void*)u, (void*)tmp, (uint64_t)(N*N)*sizeof(float));
-		for(int32_t var_40 = 1, var_101 = N-1, var_102 = 1; var_40 < var_101; var_40+=var_102) {
-			for(int32_t var_42 = 1, var_103 = N-1, var_104 = 1; var_42 < var_103; var_42+=var_104) {
-				res[var_40*N+var_42] = f[var_40*N+var_42]-(float)4*u[var_40*N+var_42]+u[(var_40-1)*N+var_42]+u[(var_40+1)*N+var_42]+u[var_40*N+var_42-1]+u[var_40*N+var_42+1];
+		                                          (irt_lw_data_item*)(&IRT_STACK_STRUCT(_insieme_gen_type_27, 8, &N, &u, &tmp, &factor, &f))))));
+		memcpy((void*)u, (void*)tmp, (uint64_t)(N * N) * sizeof(float));
+		for(int32_t var_40 = 1, var_101 = N - 1, var_102 = 1; var_40 < var_101; var_40 += var_102) {
+			for(int32_t var_42 = 1, var_103 = N - 1, var_104 = 1; var_42 < var_103; var_42 += var_104) {
+				res[var_40 * N + var_42] = f[var_40 * N + var_42] - (float)4 * u[var_40 * N + var_42] + u[(var_40 - 1) * N + var_42]
+				                           + u[(var_40 + 1) * N + var_42] + u[var_40 * N + var_42 - 1] + u[var_40 * N + var_42 + 1];
 			};
 		};
 		double norm = (double)0;
-		for(int32_t var_45 = 1, var_105 = N-1, var_106 = 1; var_45 < var_105; var_45+=var_106) {
-			for(int32_t var_47 = 1, var_107 = N-1, var_108 = 1; var_47 < var_107; var_47+=var_108) {
-				norm = norm+pow((double)res[var_45*N+var_47], (double)2);
+		for(int32_t var_45 = 1, var_105 = N - 1, var_106 = 1; var_45 < var_105; var_45 += var_106) {
+			for(int32_t var_47 = 1, var_107 = N - 1, var_108 = 1; var_47 < var_107; var_47 += var_108) {
+				norm = norm + pow((double)res[var_45 * N + var_47], (double)2);
 			};
 		};
-		resv = sqrt(norm)/(double)(N-1);
+		resv = sqrt(norm) / (double)(N - 1);
 	};
 	free(u);
 	free(tmp);
 	free(f);
 	free(res);
 	printf("Job Done! - residuo: %lf\n", resv);
-	
+
 	irt_exit(0);
-	
+
 	// WINFIX: missing return
 	return 0;
 }
@@ -221,10 +214,11 @@ void insieme_wi_2_var_0_impl(irt_work_item* var_81) {
 void __insieme_fun_23(int32_t* var_65, float** var_66, float** var_67, double* var_68, float** var_69) {
 	{
 		{
-			// WINFIX: old: irt_pfor(irt_wi_get_current(), irt_wi_get_wg(irt_wi_get_current(), 0), (irt_work_item_range){1, *var_65-1, 1}, 0, (irt_lw_data_item*)(&(struct __insieme_gen_type_27){8, var_65, var_66, var_67, var_68, var_69}));
+			// WINFIX: old: irt_pfor(irt_wi_get_current(), irt_wi_get_wg(irt_wi_get_current(), 0), (irt_work_item_range){1, *var_65-1, 1}, 0,
+			// (irt_lw_data_item*)(&(struct __insieme_gen_type_27){8, var_65, var_66, var_67, var_68, var_69}));
 			// new:
-			irt_pfor(irt_wi_get_current(), irt_wi_get_wg(irt_wi_get_current(), 0), IRT_STACK_STRUCT(irt_work_item_range, 1, *var_65-1, 1), &g_insieme_impl_table[0],
-			         (irt_lw_data_item*)(&IRT_STACK_STRUCT(_insieme_gen_type_27, 8, var_65, var_66, var_67, var_68, var_69)));
+			irt_pfor(irt_wi_get_current(), irt_wi_get_wg(irt_wi_get_current(), 0), IRT_STACK_STRUCT(irt_work_item_range, 1, *var_65 - 1, 1),
+			         &g_insieme_impl_table[0], (irt_lw_data_item*)(&IRT_STACK_STRUCT(_insieme_gen_type_27, 8, var_65, var_66, var_67, var_68, var_69)));
 			irt_wg_barrier(irt_wi_get_wg(irt_wi_get_current(), 0));
 		};
 	};
@@ -232,7 +226,8 @@ void __insieme_fun_23(int32_t* var_65, float** var_66, float** var_67, double* v
 /* ------- Function Definitions --------- */
 void insieme_wi_1_var_0_impl(irt_work_item* var_77) {
 	__insieme_fun_23((*(_insieme_gen_type_27*)(*var_77).parameters).c1, (*(_insieme_gen_type_27*)(*var_77).parameters).c2,
-	                 (*(_insieme_gen_type_27*)(*var_77).parameters).c3, (*(_insieme_gen_type_27*)(*var_77).parameters).c4, (*(_insieme_gen_type_27*)(*var_77).parameters).c5);
+	                 (*(_insieme_gen_type_27*)(*var_77).parameters).c3, (*(_insieme_gen_type_27*)(*var_77).parameters).c4,
+	                 (*(_insieme_gen_type_27*)(*var_77).parameters).c5);
 }
 /* ------- Function Definitions --------- */
 void insieme_wi_0_var_0_impl(irt_work_item* var_71) {
@@ -241,14 +236,20 @@ void insieme_wi_0_var_0_impl(irt_work_item* var_71) {
 	int32_t var_74 = var_72.end;
 	int32_t var_75 = var_72.step;
 	{
-		for(int32_t var_34 = var_73, var_97 = var_74, var_98 = var_75; var_34 < var_97; var_34+=var_98) {
-			for(int32_t var_36 = 1, var_99 = *(*(_insieme_gen_type_27*)(*var_71).parameters).c1-1, var_100 = 1; var_36 < var_99; var_36+=var_100) {
-				(*(*(_insieme_gen_type_27*)(*var_71).parameters).c3)[var_34**(*(_insieme_gen_type_27*)(*var_71).parameters).c1+var_36] = (float)((double)1/(double)4*((double)((
-				            *(*(_insieme_gen_type_27*)(*var_71).parameters).c2)[(var_34-1)**(*(_insieme_gen_type_27*)(*var_71).parameters).c1+var_36]+(*(*(_insieme_gen_type_27*)(
-				                        *var_71).parameters).c2)[var_34**(*(_insieme_gen_type_27*)(*var_71).parameters).c1+var_36+1]+(*(*(_insieme_gen_type_27*)(*var_71).parameters).c2)[var_34**(*
-				                                (_insieme_gen_type_27*)(*var_71).parameters).c1+var_36-1]+(*(*(_insieme_gen_type_27*)(*var_71).parameters).c2)[(var_34+1)**(*(_insieme_gen_type_27*)(
-				                                        *var_71).parameters).c1+var_36])-*(*(_insieme_gen_type_27*)(*var_71).parameters).c4*(double)(*(*(_insieme_gen_type_27*)(*var_71).parameters).c5)[var_34**(*
-				                                                (_insieme_gen_type_27*)(*var_71).parameters).c1+var_36]));
+		for(int32_t var_34 = var_73, var_97 = var_74, var_98 = var_75; var_34 < var_97; var_34 += var_98) {
+			for(int32_t var_36 = 1, var_99 = *(*(_insieme_gen_type_27 *)(*var_71).parameters).c1 - 1, var_100 = 1; var_36 < var_99; var_36 += var_100) {
+				(*(*(_insieme_gen_type_27*)(*var_71).parameters).c3)[var_34 * *(*(_insieme_gen_type_27*)(*var_71).parameters).c1 + var_36] =
+				    (float)((double)1 / (double)4 * ((double)((*(*(_insieme_gen_type_27*)(*var_71).parameters)
+				                                                    .c2)[(var_34 - 1) * *(*(_insieme_gen_type_27*)(*var_71).parameters).c1 + var_36]
+				                                              + (*(*(_insieme_gen_type_27*)(*var_71).parameters)
+				                                                      .c2)[var_34 * *(*(_insieme_gen_type_27*)(*var_71).parameters).c1 + var_36 + 1]
+				                                              + (*(*(_insieme_gen_type_27*)(*var_71).parameters)
+				                                                      .c2)[var_34 * *(*(_insieme_gen_type_27*)(*var_71).parameters).c1 + var_36 - 1]
+				                                              + (*(*(_insieme_gen_type_27*)(*var_71).parameters)
+				                                                      .c2)[(var_34 + 1) * *(*(_insieme_gen_type_27*)(*var_71).parameters).c1 + var_36])
+				                                     - *(*(_insieme_gen_type_27*)(*var_71).parameters).c4
+				                                           * (double)(*(*(_insieme_gen_type_27*)(*var_71).parameters)
+				                                                           .c5)[var_34 * *(*(_insieme_gen_type_27*)(*var_71).parameters).c1 + var_36]));
 			};
 		};
 	};
@@ -257,19 +258,17 @@ void insieme_wi_0_var_0_impl(irt_work_item* var_71) {
 
 // --- work item variants ---
 irt_wi_implementation_variant g_insieme_wi_0_variants[] = {
-	{ &insieme_wi_0_var_0_impl, 0, NULL, 0, NULL, 0, {0} },
+    {&insieme_wi_0_var_0_impl, 0, NULL, 0, NULL, 0, {0}},
 };
 irt_wi_implementation_variant g_insieme_wi_1_variants[] = {
-	{ &insieme_wi_1_var_0_impl, 0, NULL, 0, NULL, 0, {0} },
+    {&insieme_wi_1_var_0_impl, 0, NULL, 0, NULL, 0, {0}},
 };
 irt_wi_implementation_variant g_insieme_wi_2_variants[] = {
-	{ &insieme_wi_2_var_0_impl, 0, NULL, 0, NULL, 0, {0} },
+    {&insieme_wi_2_var_0_impl, 0, NULL, 0, NULL, 0, {0}},
 };
 // --- the implementation table ---
 irt_wi_implementation g_insieme_impl_table[] = {
-	{ 1, 1, g_insieme_wi_0_variants },
-	{ 2, 1, g_insieme_wi_1_variants },
-	{ 3, 1, g_insieme_wi_2_variants },
+    {1, 1, g_insieme_wi_0_variants}, {2, 1, g_insieme_wi_1_variants}, {3, 1, g_insieme_wi_2_variants},
 };
 
 void insieme_init_context(irt_context* context) {
@@ -279,16 +278,14 @@ void insieme_init_context(irt_context* context) {
 	context->impl_table = g_insieme_impl_table;
 }
 
-void insieme_cleanup_context(irt_context* context) {
-}
+void insieme_cleanup_context(irt_context* context) {}
 
 /* ------- Function Definitions --------- */
 int32_t main(int32_t var_79, char** var_80) {
-	// WINFIX, old:  irt_runtime_standalone(irt_get_default_worker_count(), &insieme_init_context, &insieme_cleanup_context, 2, (irt_lw_data_item*)(&(struct __insieme_gen_type_30){12, var_79, var_80}));
+	// WINFIX, old:  irt_runtime_standalone(irt_get_default_worker_count(), &insieme_init_context, &insieme_cleanup_context, 2, (irt_lw_data_item*)(&(struct
+	// __insieme_gen_type_30){12, var_79, var_80}));
 	// new:
 	irt_runtime_standalone(irt_get_default_worker_count(), &insieme_init_context, &insieme_cleanup_context, &g_insieme_impl_table[2],
 	                       (irt_lw_data_item*)(&IRT_STACK_STRUCT(_insieme_gen_type_30, 12, var_79, var_80)));
 	return 0;
 }
-
-

@@ -58,15 +58,15 @@
 /*
 // at this point it could still be, that CLOCK_REALTIME is not defined (eg with MinGWs time.h)
 #ifndef CLOCK_REALTIME
-	#define CLOCK_REALTIME 1
+    #define CLOCK_REALTIME 1
 #endif
 
 // same holds for struct timespec
 #if !defined(_TIMESPEC_DEFINED)
 #define _TIMESPEC_DEFINED
 struct timespec {
-	long  tv_sec;         // seconds
-	long  tv_nsec;        // nanoseconds
+    long  tv_sec;         // seconds
+    long  tv_nsec;        // nanoseconds
 };
 #endif
 */
@@ -76,7 +76,7 @@ uint64 irt_g_time_ticks_per_sec = 0;
 
 // ====== sleep functions ======================================
 
-int irt_nanosleep_timespec(const struct timespec *wait_time);
+int irt_nanosleep_timespec(const struct timespec* wait_time);
 
 int irt_nanosleep(uint64 wait_time);
 

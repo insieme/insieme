@@ -39,26 +39,22 @@
 namespace insieme {
 namespace backend {
 
-/**
- * The class for backend configuration
- */
-class BackendConfig {
-public:
-	BackendConfig() :
-		mainFunctionName("main"),
-		areShiftOpsSupported(true),
-		instrumentMainFunction(false),
-		addIRCodeAsComment(false) {};
-		
-	std::string mainFunctionName;
-	std::vector<std::string> additionalHeaderFiles;
-	bool areShiftOpsSupported;
-	bool instrumentMainFunction;
-	
-	bool addIRCodeAsComment;
-};
+	/**
+	 * The class for backend configuration
+	 */
+	class BackendConfig {
+	  public:
+		BackendConfig() : mainFunctionName("main"), areShiftOpsSupported(true), instrumentMainFunction(false), addIRCodeAsComment(false){};
 
-typedef std::shared_ptr<BackendConfig> BackendConfigPtr;
+		std::string mainFunctionName;
+		std::vector<std::string> additionalHeaderFiles;
+		bool areShiftOpsSupported;
+		bool instrumentMainFunction;
+
+		bool addIRCodeAsComment;
+	};
+
+	typedef std::shared_ptr<BackendConfig> BackendConfigPtr;
 
 } // end namespace backend
 } // end namespace insieme

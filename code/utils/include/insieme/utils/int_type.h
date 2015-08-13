@@ -39,8 +39,9 @@
 namespace insieme {
 namespace utils {
 
-// a small meta-class required for a mpl-recursion
-template<int i> struct int_type {};
+	// a small meta-class required for a mpl-recursion
+	template <int i>
+	struct int_type {};
 
 } // end namespace utils
 } // end namespace insieme

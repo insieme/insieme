@@ -45,5 +45,4 @@
 #endif
 
 
-
 #endif // ifndef __GUARD_ABSTRACTION_IMPL_MEMORY_IMPL_H

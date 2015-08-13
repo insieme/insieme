@@ -43,52 +43,44 @@ namespace insieme {
 namespace frontend {
 namespace stmtutils {
 
-using namespace insieme::core;
+	using namespace insieme::core;
 
-namespace {
-typedef vector<StatementPtr> StatementList;
-}
+	namespace {
+		typedef vector<StatementPtr> StatementList;
+	}
 
-//-------------------------------------------- StmtWrapper ------------------------------------------------------------
-/*
- * Utility class used as a return type for the StmtVisitor. It can store a list of statement
- * as conversion of a single C stmt can result in multiple IR statements.
- */
-struct StmtWrapper: public StatementList {
-	StmtWrapper(const StatementList& list): StatementList(list) {
-	}
-	
-	StmtWrapper() :
-		StatementList() {
-	}
-	StmtWrapper(const StatementPtr& stmt) :
-		StatementList( {
-		stmt
-	}) {
-	}
-	
-	StatementPtr getSingleStmt() const {
-		assert_eq(size(), 1) << "More than 1 statement present";
-		return front();
-	}
-	
-	bool isSingleStmt() const {
-		return size() == 1;
-	}
-	
-	std::ostream& operator<<(std::ostream& out) {
-		for(auto s : *this) {
-			out << "-" << dumpOneLine(s) << "\n";
+	//-------------------------------------------- StmtWrapper ------------------------------------------------------------
+	/*
+	 * Utility class used as a return type for the StmtVisitor. It can store a list of statement
+	 * as conversion of a single C stmt can result in multiple IR statements.
+	 */
+	struct StmtWrapper : public StatementList {
+		StmtWrapper(const StatementList& list) : StatementList(list) {}
+
+		StmtWrapper() : StatementList() {}
+		StmtWrapper(const StatementPtr& stmt) : StatementList({stmt}) {}
+
+		StatementPtr getSingleStmt() const {
+			assert_eq(size(), 1) << "More than 1 statement present";
+			return front();
 		}
-		return out;
-	}
-};
 
-StatementPtr tryAggregateStmt(const IRBuilder& builder, const StatementPtr& stmt);
-StatementPtr tryAggregateStmts(const IRBuilder& builder, const StatementList& stmtVect);
-ExpressionPtr makeOperation(const IRBuilder& builder, const ExpressionPtr& lhs,
-                            const ExpressionPtr& rhs, const lang::BasicGenerator::Operator& op);
-                            
+		bool isSingleStmt() const {
+			return size() == 1;
+		}
+
+		std::ostream& operator<<(std::ostream& out) {
+			for(auto s : *this) {
+				out << "-" << dumpOneLine(s) << "\n";
+			}
+			return out;
+		}
+	};
+
+	StatementPtr tryAggregateStmt(const IRBuilder& builder, const StatementPtr& stmt);
+	StatementPtr tryAggregateStmts(const IRBuilder& builder, const StatementList& stmtVect);
+	ExpressionPtr makeOperation(const IRBuilder& builder, const ExpressionPtr& lhs, const ExpressionPtr& rhs, const lang::BasicGenerator::Operator& op);
+
 } // end namespace stmtutils
 } // end namespace frontend
 } // end namespace insieme

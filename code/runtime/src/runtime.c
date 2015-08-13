@@ -46,24 +46,22 @@ int main(int argc, char** argv) {
 		IRT_INFO("usage: runtime [libname] [numthreads]\n");
 		return -1;
 	}
-	
+
 	uint32 worker_count = 1;
-	if(argc >= 3) {
-		worker_count = atoi(argv[2]);
-	}
+	if(argc >= 3) { worker_count = atoi(argv[2]); }
 	irt_runtime_start(IRT_RT_MQUEUE, worker_count);
-	
+
 	IRT_DEBUG("Sending new app msg");
 	irt_mqueue_send_new_app(argv[1]);
 	IRT_DEBUG("New app msg sent");
-	
+
 	for(;;) {
-		irt_nanosleep(60*60*1e9);
+		irt_nanosleep(60 * 60 * 1e9);
 	}
-	
+
 	exit(0);
-#else //IRT_MIN_MODE
+	#else  // IRT_MIN_MODE
 	printf("Runtime built in minimal mode (IRT_MIN_MODE) can not be used in service mode!\n");
 	exit(-1);
-#endif //IRT_MIN_MODE
+	#endif // IRT_MIN_MODE
 }

@@ -71,35 +71,31 @@ typedef struct _irt_hw_info {
 
 static irt_hw_info __irt_g_cached_hw_info;
 
-//static uint32 __irt_g_cached_cpu_count = 0;
-//static uint32 __irt_g_cached_threads_per_core_count = 0;
-//static uint32 __irt_g_cached_cores_per_socket_count = 0;
-//static uint32 __irt_g_cached_sockets_count = 0;
-//static uint32 __irt_g_cached_numa_nodes_count = 0;
+// static uint32 __irt_g_cached_cpu_count = 0;
+// static uint32 __irt_g_cached_threads_per_core_count = 0;
+// static uint32 __irt_g_cached_cores_per_socket_count = 0;
+// static uint32 __irt_g_cached_sockets_count = 0;
+// static uint32 __irt_g_cached_numa_nodes_count = 0;
 
 uint32 irt_hw_get_num_cpus() {
-	if(__irt_g_cached_hw_info.cpus!=0) {
-		return __irt_g_cached_hw_info.cpus;
-	}
+	if(__irt_g_cached_hw_info.cpus != 0) { return __irt_g_cached_hw_info.cpus; }
 	uint32 ret = 1;
-#ifdef _SC_NPROCESSORS_ONLN
+	#ifdef _SC_NPROCESSORS_ONLN
 	// Linux
 	ret = sysconf(_SC_NPROCESSORS_ONLN);
-#elif defined(_WIN32)
+	#elif defined(_WIN32)
 	// Windows
 	SYSTEM_INFO sysinfo;
 	GetSystemInfo(&sysinfo);
 	ret = sysinfo.dwNumberOfProcessors;
-#elif defined(_SC_NPROC_ONLN)
+	#elif defined(_SC_NPROC_ONLN)
 	// Irix
 	ret = sysconf(_SC_NPROC_ONLN);
-#elif defined(MPC_GETNUMSPUS)
+	#elif defined(MPC_GETNUMSPUS)
 	// HPUX
 	ret = mpctl(MPC_GETNUMSPUS, NULL, NULL);
-#endif
-	if(ret<1) {
-		ret = 1;
-	}
+	#endif
+	if(ret < 1) { ret = 1; }
 	__irt_g_cached_hw_info.cpus = ret;
 	return ret;
 }
@@ -112,90 +108,70 @@ void _irt_hw_set_num_cpus(uint32 num) {
 void _irt_hw_info_shutdown() {
 #ifdef IRT_USE_PAPI
 	irt_papi_shutdown();
-#endif
+	#endif
 }
 
 int32 _irt_hw_info_init() {
 #ifdef IRT_USE_PAPI
 	irt_papi_init();
-	
+
 	const PAPI_hw_info_t* hwinfo = PAPI_get_hardware_info();
-	
+
 	if(hwinfo == NULL) {
 		IRT_WARN("hwinfo: Error trying to get hardware information from PAPI!\n");
 		return -1;
 	}
-	
-	if(hwinfo->threads > 0) {
-		__irt_g_cached_hw_info.threads_per_core = hwinfo->threads;
-	}
-	if(hwinfo->cores > 0) {
-		__irt_g_cached_hw_info.cores_per_socket = hwinfo->cores;
-	}
-	if(hwinfo->sockets > 0) {
-		__irt_g_cached_hw_info.sockets = hwinfo->sockets;
-	}
-	if(hwinfo->nnodes > 0) {
-		__irt_g_cached_hw_info.numa_nodes = hwinfo->nnodes;
-	}
-	if(hwinfo->cpu_max_mhz > 0) {
-		__irt_g_cached_hw_info.cpu_max_mhz = hwinfo->cpu_max_mhz;
-	}
-	if(hwinfo->cpu_min_mhz > 0) {
-		__irt_g_cached_hw_info.cpu_min_mhz = hwinfo->cpu_min_mhz;
-	}
-	
+
+	if(hwinfo->threads > 0) { __irt_g_cached_hw_info.threads_per_core = hwinfo->threads; }
+	if(hwinfo->cores > 0) { __irt_g_cached_hw_info.cores_per_socket = hwinfo->cores; }
+	if(hwinfo->sockets > 0) { __irt_g_cached_hw_info.sockets = hwinfo->sockets; }
+	if(hwinfo->nnodes > 0) { __irt_g_cached_hw_info.numa_nodes = hwinfo->nnodes; }
+	if(hwinfo->cpu_max_mhz > 0) { __irt_g_cached_hw_info.cpu_max_mhz = hwinfo->cpu_max_mhz; }
+	if(hwinfo->cpu_min_mhz > 0) { __irt_g_cached_hw_info.cpu_min_mhz = hwinfo->cpu_min_mhz; }
+
 	__irt_g_cached_hw_info.cpuid.family = hwinfo->cpuid_family;
 	__irt_g_cached_hw_info.cpuid.model = hwinfo->cpuid_model;
 	__irt_g_cached_hw_info.cpuid.stepping = hwinfo->cpuid_stepping;
-	
+
 	strncpy(__irt_g_cached_hw_info.model_string, hwinfo->model_string, IRT_HW_MAX_STRING_LENGTH);
 	strncpy(__irt_g_cached_hw_info.vendor_string, hwinfo->vendor_string, IRT_HW_MAX_STRING_LENGTH);
-	
-#else
+
+	#else
 	IRT_DEBUG("hwinfo: papi not available, reporting dummy values")
-#endif
-	
+	#endif
+
 	return 0;
 }
 
 uint32 irt_hw_get_num_threads_per_core() {
-	if(__irt_g_cached_hw_info.threads_per_core == 0) {
-		_irt_hw_info_init();
-	}
-	
+	if(__irt_g_cached_hw_info.threads_per_core == 0) { _irt_hw_info_init(); }
+
 	IRT_ASSERT(__irt_g_cached_hw_info.threads_per_core != 0, IRT_ERR_HW_INFO, "Hardware information only available when runtime compiled with PAPI!")
-	
+
 	return __irt_g_cached_hw_info.threads_per_core;
 }
 
 uint32 irt_hw_get_num_cores_per_socket() {
-	if(__irt_g_cached_hw_info.cores_per_socket == 0) {
-		_irt_hw_info_init();
-	}
-	
+	if(__irt_g_cached_hw_info.cores_per_socket == 0) { _irt_hw_info_init(); }
+
 	IRT_ASSERT(__irt_g_cached_hw_info.cores_per_socket != 0, IRT_ERR_HW_INFO, "Hardware information only available when runtime compiled with PAPI!")
-	
+
 	return __irt_g_cached_hw_info.cores_per_socket;
 }
 
 uint32 irt_hw_get_num_sockets() {
-	if(__irt_g_cached_hw_info.sockets == 0) {
-		_irt_hw_info_init();
-	}
-	
+	if(__irt_g_cached_hw_info.sockets == 0) { _irt_hw_info_init(); }
+
 	IRT_ASSERT(__irt_g_cached_hw_info.sockets != 0, IRT_ERR_HW_INFO, "Hardware information only available when runtime compiled with PAPI!")
-	
+
 	return __irt_g_cached_hw_info.sockets;
 }
 
 uint32 irt_hw_get_num_numa_nodes() {
-	if(__irt_g_cached_hw_info.numa_nodes == 0) {
-		_irt_hw_info_init();
-	}
-	
+	if(__irt_g_cached_hw_info.numa_nodes == 0) { _irt_hw_info_init(); }
+
 	IRT_ASSERT(__irt_g_cached_hw_info.numa_nodes != 0, IRT_ERR_HW_INFO, "Hardware information only available when runtime compiled with PAPI!")
-	
+
 	return __irt_g_cached_hw_info.numa_nodes;
 }
 
@@ -204,30 +180,25 @@ uint32 irt_hw_get_sibling_hyperthread(uint32 coreid) {
 	uint32 num_threads_per_core = irt_hw_get_num_threads_per_core();
 	if(num_threads_per_core > 1) {
 		uint32 cores_total = irt_hw_get_num_sockets() * irt_hw_get_num_cores_per_socket();
-		return (coreid + cores_total)%(cores_total*num_threads_per_core);
-	}
-	else {
+		return (coreid + cores_total) % (cores_total * num_threads_per_core);
+	} else {
 		return coreid;
 	}
 }
 
 uint32 irt_hw_get_cpu_max_mhz() {
-	if(__irt_g_cached_hw_info.cpu_max_mhz == 0) {
-		_irt_hw_info_init();
-	}
-	
+	if(__irt_g_cached_hw_info.cpu_max_mhz == 0) { _irt_hw_info_init(); }
+
 	IRT_ASSERT(__irt_g_cached_hw_info.cpu_max_mhz != 0, IRT_ERR_HW_INFO, "Hardware information only available when runtime compiled with PAPI!")
-	
+
 	return __irt_g_cached_hw_info.cpu_max_mhz;
 }
 
 uint32 irt_hw_get_cpu_min_mhz() {
-	if(__irt_g_cached_hw_info.cpu_min_mhz == 0) {
-		_irt_hw_info_init();
-	}
-	
+	if(__irt_g_cached_hw_info.cpu_min_mhz == 0) { _irt_hw_info_init(); }
+
 	IRT_ASSERT(__irt_g_cached_hw_info.cpu_min_mhz != 0, IRT_ERR_HW_INFO, "Hardware information only available when runtime compiled with PAPI!")
-	
+
 	return __irt_g_cached_hw_info.cpu_min_mhz;
 }
 
@@ -236,23 +207,17 @@ bool irt_hw_get_hyperthreading_enabled() {
 }
 
 irt_hw_cpuid_info irt_hw_get_cpuid_info() {
-	if(__irt_g_cached_hw_info.cpuid.family == 0) {
-		_irt_hw_info_init();
-	}
+	if(__irt_g_cached_hw_info.cpuid.family == 0) { _irt_hw_info_init(); }
 	return __irt_g_cached_hw_info.cpuid;
 }
 
 char* irt_hw_get_vendor_string() {
-	if(strlen(__irt_g_cached_hw_info.vendor_string) == 0) {
-		_irt_hw_info_init();
-	}
+	if(strlen(__irt_g_cached_hw_info.vendor_string) == 0) { _irt_hw_info_init(); }
 	return __irt_g_cached_hw_info.vendor_string;
 }
 
 char* irt_hw_get_model_string() {
-	if(strlen(__irt_g_cached_hw_info.model_string) == 0) {
-		_irt_hw_info_init();
-	}
+	if(strlen(__irt_g_cached_hw_info.model_string) == 0) { _irt_hw_info_init(); }
 	return __irt_g_cached_hw_info.model_string;
 }
 
@@ -260,7 +225,7 @@ void irt_hw_dump_info(FILE* fd) {
 	_irt_hw_info_init();
 	fprintf(fd, "--------\nIRT hardware dump:\n");
 	fprintf(fd, "  Number of CPUs: %u\n", irt_hw_get_num_cpus());
-#ifdef IRT_USE_PAPI
+	#ifdef IRT_USE_PAPI
 	fprintf(fd, "  System type:\n");
 	fprintf(fd, "    CPU vendor: %s\n", __irt_g_cached_hw_info.vendor_string);
 	fprintf(fd, "    CPU model: %s\n", __irt_g_cached_hw_info.model_string);
@@ -271,33 +236,26 @@ void irt_hw_dump_info(FILE* fd) {
 	fprintf(fd, "    Number of sockets: \t\t\t%4u\n", irt_hw_get_num_sockets());
 	fprintf(fd, "    Number of cores per socket: \t%4u\n", irt_hw_get_num_cores_per_socket());
 	fprintf(fd, "    Number of HW threads per core: \t%4u\n", irt_hw_get_num_threads_per_core());
-	
+
 	const PAPI_hw_info_t* hwinfo = PAPI_get_hardware_info();
-	
+
 	fprintf(fd, "  Cache hierarchy: %u levels\n", hwinfo->mem_hierarchy.levels);
 	for(int32 i = 0; i < hwinfo->mem_hierarchy.levels; ++i) {
 		uint32 number_of_memories = 0;
 		for(uint32 j = 0; j < PAPI_MH_MAX_LEVELS; ++j)
-			if(hwinfo->mem_hierarchy.level[i].cache[j].type != PAPI_MH_TYPE_EMPTY) {
-				number_of_memories++;
-			}
+			if(hwinfo->mem_hierarchy.level[i].cache[j].type != PAPI_MH_TYPE_EMPTY) { number_of_memories++; }
 		fprintf(fd, "    Level %u: number of entities: %u \n", i, number_of_memories);
-		
+
 		for(uint32 j = 0; j < PAPI_MH_MAX_LEVELS; ++j) {
-			if(hwinfo->mem_hierarchy.level[i].cache[j].type == PAPI_MH_TYPE_EMPTY) {
-				continue;
-			}
+			if(hwinfo->mem_hierarchy.level[i].cache[j].type == PAPI_MH_TYPE_EMPTY) { continue; }
 			fprintf(fd, "      Type:");
 			if(hwinfo->mem_hierarchy.level[i].cache[j].type == PAPI_MH_TYPE_INST) {
 				fprintf(fd, "%16s", "instruction");
-			}
-			else if(hwinfo->mem_hierarchy.level[i].cache[j].type == PAPI_MH_TYPE_DATA) {
+			} else if(hwinfo->mem_hierarchy.level[i].cache[j].type == PAPI_MH_TYPE_DATA) {
 				fprintf(fd, "%16s", "data");
-			}
-			else if(hwinfo->mem_hierarchy.level[i].cache[j].type == PAPI_MH_TYPE_UNIFIED) {
+			} else if(hwinfo->mem_hierarchy.level[i].cache[j].type == PAPI_MH_TYPE_UNIFIED) {
 				fprintf(fd, "%16s", "unified");
-			}
-			else {
+			} else {
 				fprintf(fd, "%16s", "unknown");
 			}
 			fprintf(fd, ", size: %10u KB, ", hwinfo->mem_hierarchy.level[i].cache[j].size);
@@ -306,14 +264,14 @@ void irt_hw_dump_info(FILE* fd) {
 			fprintf(fd, "associativity: %4u)\n", hwinfo->mem_hierarchy.level[i].cache[j].associativity);
 		}
 	}
-#else
-#endif
+	#else
+	#endif
 	fprintf(fd, "  Miscellaneous:\n");
-	fprintf(fd, "    CPU DVFS domain:\t\t\t%s\n", irt_cpu_freq_cores_have_individual_domains()?"cores":"sockets");
+	fprintf(fd, "    CPU DVFS domain:\t\t\t%s\n", irt_cpu_freq_cores_have_individual_domains() ? "cores" : "sockets");
 	fprintf(fd, "    CPU DVFS range: min: %u MHz, max: %u MHz\n", irt_hw_get_cpu_min_mhz(), irt_hw_get_cpu_max_mhz());
-#ifndef IRT_USE_PAPI
+	#ifndef IRT_USE_PAPI
 	fprintf(fd, "(Note: Compile with -DIRT_USE_PAPI to get more detailed hardware information)\n");
-#endif
+	#endif
 	fprintf(fd, "--------\n");
 }
 

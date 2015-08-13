@@ -41,7 +41,7 @@
 #include "abstraction/atomic.h"
 #include "abstraction/spin_locks.h"
 
-asm int atomic_rmw_int_asm(int *ptr, int value) {
+asm int atomic_rmw_int_asm(int* ptr, int value) {
 	nop;
 	nop;
 	nop;
@@ -50,7 +50,7 @@ asm int atomic_rmw_int_asm(int *ptr, int value) {
 	nop;
 };
 
-int atomic_rmw_int(int *ptr, int value) {
+int atomic_rmw_int(int* ptr, int value) {
 	return atomic_rmw_int_asm(ptr, value);
 };
 
@@ -59,46 +59,42 @@ int atomic_rmw_int(int *ptr, int value) {
 /* 0 is unlocked */
 irt_spinlock global_lock = 0;
 
-#define IRT_DEFINE_SYNC_OP_AND_FETCH(__type__, __op_string__, __op__) \
-	__type__  __sync_##__op_string__##_and_fetch_##__type__(__type__* ptr, __type__ value) { \
-		__type__ tmp; \
-		irt_spin_lock(&global_lock); \
-		*ptr __op__##= value; \
-		tmp = *ptr; \
-		irt_spin_unlock(&global_lock); \
-		return tmp; \
+#define IRT_DEFINE_SYNC_OP_AND_FETCH(__type__, __op_string__, __op__)                                                                                          \
+	__type__ __sync_##__op_string__##_and_fetch_##__type__(__type__* ptr, __type__ value) {                                                                    \
+		__type__ tmp;                                                                                                                                          \
+		irt_spin_lock(&global_lock);                                                                                                                           \
+		*ptr __op__## = value;                                                                                                                                 \
+		tmp = *ptr;                                                                                                                                            \
+		irt_spin_unlock(&global_lock);                                                                                                                         \
+		return tmp;                                                                                                                                            \
 	};
 
-#define IRT_DEFINE_SYNC_FETCH_AND_OP(__type__, __op_string__, __op__) \
-	__type__  __sync_fetch_and_##__op_string__##_##__type__(__type__* ptr, __type__ value) { \
-		__type__ tmp; \
-		irt_spin_lock(&global_lock); \
-		tmp = *ptr; \
-		*ptr __op__##= value; \
-		irt_spin_unlock(&global_lock); \
-		return tmp; \
+#define IRT_DEFINE_SYNC_FETCH_AND_OP(__type__, __op_string__, __op__)                                                                                          \
+	__type__ __sync_fetch_and_##__op_string__##_##__type__(__type__* ptr, __type__ value) {                                                                    \
+		__type__ tmp;                                                                                                                                          \
+		irt_spin_lock(&global_lock);                                                                                                                           \
+		tmp = *ptr;                                                                                                                                            \
+		*ptr __op__## = value;                                                                                                                                 \
+		irt_spin_unlock(&global_lock);                                                                                                                         \
+		return tmp;                                                                                                                                            \
 	};
 
-#define IRT_DEFINE_SYNC_BOOL_COMPARE_AND_SWAP(__type__) \
-	bool  __sync_bool_compare_and_swap_##__type__(__type__* ptr, __type__ oldval, __type__ newval) { \
-		bool res; \
-		irt_spin_lock(&global_lock); \
-		if(res = (*ptr == oldval)) { \
-			*ptr = newval; \
-		} \
-		irt_spin_unlock(&global_lock); \
-		return res; \
+#define IRT_DEFINE_SYNC_BOOL_COMPARE_AND_SWAP(__type__)                                                                                                        \
+	bool __sync_bool_compare_and_swap_##__type__(__type__* ptr, __type__ oldval, __type__ newval) {                                                            \
+		bool res;                                                                                                                                              \
+		irt_spin_lock(&global_lock);                                                                                                                           \
+		if(res = (*ptr == oldval)) { *ptr = newval; }                                                                                                          \
+		irt_spin_unlock(&global_lock);                                                                                                                         \
+		return res;                                                                                                                                            \
 	};
 
-#define IRT_DEFINE_SYNC_VAL_COMPARE_AND_SWAP(__type__) \
-	__type__  __sync_val_compare_and_swap_##__type__(__type__* ptr, __type__ oldval, __type__ newval) { \
-		__type__ res; \
-		irt_spin_lock(&global_lock); \
-		if((res = *ptr) == oldval) { \
-			*ptr = newval; \
-		} \
-		irt_spin_unlock(&global_lock); \
-		return res; \
+#define IRT_DEFINE_SYNC_VAL_COMPARE_AND_SWAP(__type__)                                                                                                         \
+	__type__ __sync_val_compare_and_swap_##__type__(__type__* ptr, __type__ oldval, __type__ newval) {                                                         \
+		__type__ res;                                                                                                                                          \
+		irt_spin_lock(&global_lock);                                                                                                                           \
+		if((res = *ptr) == oldval) { *ptr = newval; }                                                                                                          \
+		irt_spin_unlock(&global_lock);                                                                                                                         \
+		return res;                                                                                                                                            \
 	};
 
 /* 32-bit signed int versions */
@@ -108,7 +104,7 @@ IRT_DEFINE_SYNC_FETCH_AND_OP(int32, sub, -)
 
 IRT_DEFINE_SYNC_OP_AND_FETCH(int32, add, +)
 IRT_DEFINE_SYNC_OP_AND_FETCH(int32, sub, -)
-IRT_DEFINE_SYNC_OP_AND_FETCH(int32, or, |)
+IRT_DEFINE_SYNC_OP_AND_FETCH(int32, or, | )
 IRT_DEFINE_SYNC_OP_AND_FETCH(int32, and, &)
 IRT_DEFINE_SYNC_OP_AND_FETCH(int32, xor, ^)
 
@@ -122,7 +118,7 @@ IRT_DEFINE_SYNC_FETCH_AND_OP(uint32, sub, -)
 
 IRT_DEFINE_SYNC_OP_AND_FETCH(uint32, add, +)
 IRT_DEFINE_SYNC_OP_AND_FETCH(uint32, sub, -)
-IRT_DEFINE_SYNC_OP_AND_FETCH(uint32, or, |)
+IRT_DEFINE_SYNC_OP_AND_FETCH(uint32, or, | )
 IRT_DEFINE_SYNC_OP_AND_FETCH(uint32, and, &)
 IRT_DEFINE_SYNC_OP_AND_FETCH(uint32, xor, ^)
 
@@ -136,7 +132,7 @@ IRT_DEFINE_SYNC_FETCH_AND_OP(int64, sub, -)
 
 IRT_DEFINE_SYNC_OP_AND_FETCH(int64, add, +)
 IRT_DEFINE_SYNC_OP_AND_FETCH(int64, sub, -)
-IRT_DEFINE_SYNC_OP_AND_FETCH(int64, or, |)
+IRT_DEFINE_SYNC_OP_AND_FETCH(int64, or, | )
 IRT_DEFINE_SYNC_OP_AND_FETCH(int64, and, &)
 IRT_DEFINE_SYNC_OP_AND_FETCH(int64, xor, ^)
 
@@ -150,7 +146,7 @@ IRT_DEFINE_SYNC_FETCH_AND_OP(uint64, sub, -)
 
 IRT_DEFINE_SYNC_OP_AND_FETCH(uint64, add, +)
 IRT_DEFINE_SYNC_OP_AND_FETCH(uint64, sub, -)
-IRT_DEFINE_SYNC_OP_AND_FETCH(uint64, or, |)
+IRT_DEFINE_SYNC_OP_AND_FETCH(uint64, or, | )
 IRT_DEFINE_SYNC_OP_AND_FETCH(uint64, and, &)
 IRT_DEFINE_SYNC_OP_AND_FETCH(uint64, xor, ^)
 

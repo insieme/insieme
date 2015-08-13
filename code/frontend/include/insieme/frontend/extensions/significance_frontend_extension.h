@@ -44,16 +44,16 @@ namespace insieme {
 namespace frontend {
 namespace extensions {
 
-class SignificanceFrontendExtension : public OmpFrontendExtension {
-	bool flagActivated = false;
-public:
-	SignificanceFrontendExtension();
-	virtual flagHandler registerFlag(boost::program_options::options_description& options);
-	virtual insieme::frontend::tu::IRTranslationUnit IRVisit(insieme::frontend::tu::IRTranslationUnit& tu);
-	virtual boost::optional<std::string> isPrerequisiteMissing(ConversionSetup& setup) const;
-};
+	class SignificanceFrontendExtension : public OmpFrontendExtension {
+		bool flagActivated = false;
 
-}   //end namespace extensions
-}   //end namespace frontend
-}   //end namespace insieme
+	  public:
+		SignificanceFrontendExtension();
+		virtual flagHandler registerFlag(boost::program_options::options_description& options);
+		virtual insieme::frontend::tu::IRTranslationUnit IRVisit(insieme::frontend::tu::IRTranslationUnit& tu);
+		virtual boost::optional<std::string> isPrerequisiteMissing(ConversionSetup& setup) const;
+	};
 
+} // end namespace extensions
+} // end namespace frontend
+} // end namespace insieme

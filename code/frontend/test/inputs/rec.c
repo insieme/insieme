@@ -34,22 +34,20 @@
  * regarding third party software licenses.
  */
 
-int g(int x) ;
-int f(int x) ;
+int g(int x);
+int f(int x);
 
-#pragma test expected \
-	"recFun v11 { v11 = fun(int<4> v13) -> int<4> { return v12((v13-1)); }; v12 = fun(int<4> v15) -> int<4> { return v11((v15+1)); };}"
+#pragma test expected "recFun v11 { v11 = fun(int<4> v13) -> int<4> { return v12((v13-1)); }; v12 = fun(int<4> v15) -> int<4> { return v11((v15+1)); };}"
 int f(int x) {
-	return g(x-1);
+	return g(x - 1);
 }
 
-#pragma test expected \
-	"recFun v11 { v11 = fun(int<4> v13) -> int<4> { return v12((v13+1)); }; v12 = fun(int<4> v15) -> int<4> { return v11((v15-1)); };}"
+#pragma test expected "recFun v11 { v11 = fun(int<4> v13) -> int<4> { return v12((v13+1)); }; v12 = fun(int<4> v15) -> int<4> { return v11((v15-1)); };}"
 int g(int x) {
-	return f(x+1);
+	return f(x + 1);
 }
 
-//recFun v1 {
+// recFun v1 {
 //    v2 = fun(int<4> v4) {
 //        return v1((v4+1));
 //    };
@@ -57,4 +55,3 @@ int g(int x) {
 //        return v2((v3-1));
 //    };
 //}
-

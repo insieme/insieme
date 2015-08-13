@@ -46,169 +46,153 @@
 namespace insieme {
 namespace utils {
 
-template<
-    template<typename T> class ValueType,
-    typename BaseType,
-    typename ExampleElementType = int,
-    typename std::enable_if<std::is_base_of<BaseType, ValueType<ExampleElementType>>::value, int>::type = 0
-    >
-class TypedMap {
+	template <template <typename T> class ValueType, typename BaseType, typename ExampleElementType = int,
+	          typename std::enable_if<std::is_base_of<BaseType, ValueType<ExampleElementType>>::value, int>::type = 0>
+	class TypedMap {
+	  public:
+		typedef std::map<std::type_index, BaseType*> map_type;
+		typedef typename map_type::const_iterator const_iterator;
 
-public:
+	  private:
+		map_type data;
 
-	typedef std::map<std::type_index, BaseType*> map_type;
-	typedef typename map_type::const_iterator const_iterator;
-	
-private:
+	  public:
+		TypedMap() {}
 
-	map_type data;
-	
-public:
+		TypedMap(const TypedMap& other) {
+			for(auto cur : other.data) {
+				data[cur.first] = cur.second->copy();
+			}
+		}
 
-	TypedMap() {}
-	
-	TypedMap(const TypedMap& other) {
-		for(auto cur : other.data) {
-			data[cur.first] = cur.second->copy();
-		}
-	}
-	
-	TypedMap(TypedMap&& other) = default;
-	
-	~TypedMap() {
-		for(auto cur : data) {
-			delete cur.second;
-		}
-	}
-	
-	template<typename T>
-	ValueType<T>& get() {
-		auto& key = typeid(T);
-		auto pos = data.find(key);
-		if(pos != data.end()) {
-			return static_cast<ValueType<T>&>(*pos->second);
-		}
-		
-		// create, register and return a new instance
-		ValueType<T>* element = new ValueType<T>();
-		data[key] = element;
-		return *element;
-	}
-	
-	template<typename T>
-	const ValueType<T>& get() const {
-		static const ValueType<T> empty = ValueType<T>();
-		
-		auto& key = typeid(T);
-		auto pos = data.find(key);
-		if(pos != data.end()) {
-			return static_cast<ValueType<T>&>(*pos->second);
-		}
-		
-		return empty;
-	}
-	
-	const_iterator begin() const {
-		return data.begin();
-	}
-	const_iterator end() const {
-		return data.end();
-	}
-	
-	bool operator==(const TypedMap& other) const {
-		return data == other.data;
-	}
-	
-	bool operator!=(const TypedMap& other) const {
-		return !(*this == other);
-	}
-	
-	TypedMap& operator=(const TypedMap& other) {
-		// delete content
-		for(auto cur : data) {
-			delete cur.second;
-		}
-		data.clear();
-		
-		// copy data
-		for(auto cur : other.data) {
-			data[cur.first] = cur.second->copy();
-		}
-		
-		return *this;
-	}
-};
+		TypedMap(TypedMap&& other) = default;
 
-/**
- * A container for handling heterogeneous collections of objects.
- */
-class HeterogenousContainer {
-
-	struct HandlerBase {
-		virtual ~HandlerBase() {};
-	};
-	
-	template<typename T>
-	struct Handler : public HandlerBase {
-		T t;
-		template<typename ... Args>
-		Handler(const Args& ... args) : t(args...) {}
-		operator T&() {
-			return t;
+		~TypedMap() {
+			for(auto cur : data) {
+				delete cur.second;
+			}
 		}
-		operator const T&() const {
-			return t;
+
+		template <typename T>
+		ValueType<T>& get() {
+			auto& key = typeid(T);
+			auto pos = data.find(key);
+			if(pos != data.end()) { return static_cast<ValueType<T>&>(*pos->second); }
+
+			// create, register and return a new instance
+			ValueType<T>* element = new ValueType<T>();
+			data[key] = element;
+			return *element;
+		}
+
+		template <typename T>
+		const ValueType<T>& get() const {
+			static const ValueType<T> empty = ValueType<T>();
+
+			auto& key = typeid(T);
+			auto pos = data.find(key);
+			if(pos != data.end()) { return static_cast<ValueType<T>&>(*pos->second); }
+
+			return empty;
+		}
+
+		const_iterator begin() const {
+			return data.begin();
+		}
+		const_iterator end() const {
+			return data.end();
+		}
+
+		bool operator==(const TypedMap& other) const {
+			return data == other.data;
+		}
+
+		bool operator!=(const TypedMap& other) const {
+			return !(*this == other);
+		}
+
+		TypedMap& operator=(const TypedMap& other) {
+			// delete content
+			for(auto cur : data) {
+				delete cur.second;
+			}
+			data.clear();
+
+			// copy data
+			for(auto cur : other.data) {
+				data[cur.first] = cur.second->copy();
+			}
+
+			return *this;
 		}
 	};
-	
-	std::map<std::type_index, HandlerBase*> content;
-	
-public:
 
-	~HeterogenousContainer() {
-		for(auto cur : content) {
-			delete cur.second;
+	/**
+	 * A container for handling heterogeneous collections of objects.
+	 */
+	class HeterogenousContainer {
+		struct HandlerBase {
+			virtual ~HandlerBase(){};
+		};
+
+		template <typename T>
+		struct Handler : public HandlerBase {
+			T t;
+			template <typename... Args>
+			Handler(const Args&... args)
+			    : t(args...) {}
+			operator T&() {
+				return t;
+			}
+			operator const T&() const {
+				return t;
+			}
+		};
+
+		std::map<std::type_index, HandlerBase*> content;
+
+	  public:
+		~HeterogenousContainer() {
+			for(auto cur : content) {
+				delete cur.second;
+			}
 		}
-	}
-	
-	template<typename T, typename ... Args>
-	T& getInstance(Args ... args) {
-		std::type_index key = typeid(T);
-		auto pos = content.find(key);
-		if(pos != content.end()) {
+
+		template <typename T, typename... Args>
+		T& getInstance(Args... args) {
+			std::type_index key = typeid(T);
+			auto pos = content.find(key);
+			if(pos != content.end()) { return static_cast<Handler<T>&>(*(pos->second)); }
+
+			// insert element
+			content[key] = new Handler<T>(args...);
+			return getInstance<T>();
+		}
+
+		template <typename T>
+		const T& getInstance() const {
+			std::type_index key = typeid(T);
+			auto pos = content.find(key);
+			assert_true(pos != content.end());
 			return static_cast<Handler<T>&>(*(pos->second));
 		}
-		
-		// insert element
-		content[key] = new Handler<T>(args...);
-		return getInstance<T>();
-	}
-	
-	template<typename T>
-	const T& getInstance() const {
-		std::type_index key = typeid(T);
-		auto pos = content.find(key);
-		assert_true(pos != content.end());
-		return static_cast<Handler<T>&>(*(pos->second));
-	}
-	
-	template<typename T>
-	bool contains() const {
-		return content.find(typeid(T)) != content.end();
-	}
-	
-};
+
+		template <typename T>
+		bool contains() const {
+			return content.find(typeid(T)) != content.end();
+		}
+	};
 
 } // end namespace utils
 } // end namespace insieme
 
 namespace std {
 
-template<template<typename X> class A, typename B, typename C>
-std::ostream& operator<<(std::ostream& out, const insieme::utils::TypedMap<A,B,C>& map) {
-	return out << "{" << join(",", map, [](std::ostream& out, const typename insieme::utils::TypedMap<A,B,C>::map_type::value_type& cur) {
-		out << *cur.second;
-	}) << "}";
-}
+	template <template <typename X> class A, typename B, typename C>
+	std::ostream& operator<<(std::ostream& out, const insieme::utils::TypedMap<A, B, C>& map) {
+		return out << "{"
+		           << join(",", map, [](std::ostream& out, const typename insieme::utils::TypedMap<A, B, C>::map_type::value_type& cur) { out << *cur.second; })
+		           << "}";
+	}
 
 } // end namespace std

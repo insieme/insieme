@@ -43,39 +43,35 @@ namespace core {
 namespace analysis {
 namespace region {
 
-/**
- * This region selector is picking regions based on a estimated computation
- * cost model.
- */
-class SizeBasedRegionSelector : public RegionSelector {
+	/**
+	 * This region selector is picking regions based on a estimated computation
+	 * cost model.
+	 */
+	class SizeBasedRegionSelector : public RegionSelector {
+		/**
+		 * The lower limit for the cost of a code fragment to be classified
+		 * as a region.
+		 */
+		unsigned minSize;
 
-	/**
-	 * The lower limit for the cost of a code fragment to be classified
-	 * as a region.
-	 */
-	unsigned minSize;
-	
-	/**
-	 * The upper bound for the estimated costs a code fragment can have
-	 * to be classified as a region.
-	 */
-	unsigned maxSize;
-	
-public:
+		/**
+		 * The upper bound for the estimated costs a code fragment can have
+		 * to be classified as a region.
+		 */
+		unsigned maxSize;
 
-	/**
-	 * Creates a new selector identifying regions having a estimated execution
-	 * cost within the given boundaries.
-	 */
-	SizeBasedRegionSelector(unsigned minSize, unsigned maxSize)
-		: minSize(minSize), maxSize(maxSize) {}
-		
-	/**
-	 * Selects all regions within the given code fragment.
-	 */
-	virtual RegionList getRegions(const core::NodePtr& code) const;
-	
-};
+	  public:
+		/**
+		 * Creates a new selector identifying regions having a estimated execution
+		 * cost within the given boundaries.
+		 */
+		SizeBasedRegionSelector(unsigned minSize, unsigned maxSize) : minSize(minSize), maxSize(maxSize) {}
+
+		/**
+		 * Selects all regions within the given code fragment.
+		 */
+		virtual RegionList getRegions(const core::NodePtr& code) const;
+	};
 
 } // end namespace region
 } // end namespace analysis

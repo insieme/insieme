@@ -52,106 +52,109 @@ namespace insieme {
 namespace driver {
 namespace printer {
 
-template <class NodeTy, class NodeIdTy, class ProperyIdTy, class PropertyValueTy>
-struct GraphBuilder {
+	template <class NodeTy, class NodeIdTy, class ProperyIdTy, class PropertyValueTy>
+	struct GraphBuilder {
+		typedef std::map<const ProperyIdTy, PropertyValueTy> Decorator;
 
-	typedef std::map<const ProperyIdTy, PropertyValueTy> Decorator;
-	
-	class Node: public Decorator {
-		NodeIdTy id;
-	public:
-		Node(const NodeIdTy& id): id(id) { }
-		const NodeIdTy& getId() const {
-			return id;
+		class Node : public Decorator {
+			NodeIdTy id;
+
+		  public:
+			Node(const NodeIdTy& id) : id(id) {}
+			const NodeIdTy& getId() const {
+				return id;
+			}
+		};
+
+		class Link : public Decorator {
+			NodeIdTy src;
+			NodeIdTy dest;
+
+		  public:
+			Link(const NodeIdTy& src, const NodeIdTy& dest) : src(src), dest(dest) {}
+
+			const NodeIdTy& getSrc() const {
+				return src;
+			}
+			const NodeIdTy& getDest() const {
+				return dest;
+			}
+		};
+
+		template <class GraphNodeTy>
+		void addNode(const NodeTy& node) {
+			addNode(GraphNodeTy(getNodeId(node)));
 		}
+		virtual void addNode(const Node& node) = 0;
+
+		virtual void addLink(const Link& link) = 0;
+		virtual NodeIdTy getNodeId(const NodeTy& fromNode) = 0;
 	};
-	
-	class Link: public Decorator {
-		NodeIdTy src;
-		NodeIdTy dest;
-	public:
-		Link(const NodeIdTy& src, const NodeIdTy& dest) : src(src), dest(dest) { }
-		
-		const NodeIdTy& getSrc() const {
-			return src;
-		}
-		const NodeIdTy& getDest() const {
-			return dest;
-		}
+
+	enum NodeProperty { LABEL, SHAPE, STYLE, DIRECTION, HEIGHT, WIDTH, COLOR };
+
+	class DOTGraphBuilder : public GraphBuilder<core::NodePtr, size_t, NodeProperty, std::string> {
+		std::ostream& out;
+
+	  public:
+		typedef GraphBuilder<core::NodePtr, size_t, NodeProperty, std::string>::Node Node;
+		typedef GraphBuilder<core::NodePtr, size_t, NodeProperty, std::string>::Link Link;
+		typedef GraphBuilder<core::NodePtr, size_t, NodeProperty, std::string>::Decorator Properties;
+
+		DOTGraphBuilder(std::ostream& out) : out(out) {}
+
+		virtual void addNode(const Node& node);
+		virtual void addLink(const Link& link);
+		virtual size_t getNodeId(const core::NodePtr& fromNode);
 	};
-	
-	template <class GraphNodeTy>
-	void addNode(const NodeTy& node) {
-		addNode(GraphNodeTy(getNodeId(node)));
-	}
-	virtual void addNode(const Node& node) = 0;
-	
-	virtual void addLink(const Link& link) = 0;
-	virtual NodeIdTy getNodeId(const NodeTy& fromNode) = 0;
-};
 
-enum NodeProperty { LABEL, SHAPE, STYLE, DIRECTION, HEIGHT, WIDTH, COLOR };
+	class ASTPrinter : public insieme::core::IRVisitor<> {
+	  public:
+		typedef GraphBuilder<core::NodePtr, size_t, NodeProperty, std::string> IRBuilder;
+		typedef std::shared_ptr<IRBuilder> IRBuilderPtr;
 
-class DOTGraphBuilder: public GraphBuilder<core::NodePtr, size_t, NodeProperty, std::string> {
-	std::ostream& 	out;
-public:
-	typedef GraphBuilder<core::NodePtr, size_t, NodeProperty, std::string>::Node 		Node;
-	typedef GraphBuilder<core::NodePtr, size_t, NodeProperty, std::string>::Link 		Link;
-	typedef GraphBuilder<core::NodePtr, size_t, NodeProperty, std::string>::Decorator	Properties;
-	
-	DOTGraphBuilder(std::ostream& out): out(out) { }
-	
-	virtual void addNode(const Node& node);
-	virtual void addLink(const Link& link);
-	virtual size_t getNodeId(const core::NodePtr& fromNode);
-};
+		ASTPrinter(const IRBuilderPtr& builder, const MessageList& errors);
+		// Types
+		void visitTypeVariable(const TypeVariablePtr& typeVar);
+		void visitGenericType(const GenericTypePtr& genTy);
+		void visitIntTypeParam(const IntTypeParamPtr& intTyParm);
+		void visitFunctionType(const FunctionTypePtr& funcType);
+		void visitTupleType(const TupleTypePtr& tupleTy);
+		void visitNamedCompositeType(const NamedCompositeTypePtr& compTy);
+		void visitRecType(const RecTypePtr& recTy);
+		void visitRecTypeDefinition(const RecTypeDefinitionPtr& recTy);
 
-class ASTPrinter: public insieme::core::IRVisitor<> {
-public:
-	typedef GraphBuilder<core::NodePtr, size_t, NodeProperty, std::string> IRBuilder;
-	typedef std::shared_ptr<IRBuilder> IRBuilderPtr;
-	
-	ASTPrinter(const IRBuilderPtr& builder, const MessageList& errors);
-	// Types
-	void visitTypeVariable(const TypeVariablePtr& typeVar);
-	void visitGenericType(const GenericTypePtr& genTy);
-	void visitIntTypeParam(const IntTypeParamPtr& intTyParm);
-	void visitFunctionType(const FunctionTypePtr& funcType);
-	void visitTupleType(const TupleTypePtr& tupleTy);
-	void visitNamedCompositeType(const NamedCompositeTypePtr& compTy);
-	void visitRecType(const RecTypePtr& recTy);
-	void visitRecTypeDefinition(const RecTypeDefinitionPtr& recTy);
-	
-	// Statements
-	void visitCompoundStmt(const CompoundStmtPtr& comp);
-	void visitForStmt(const ForStmtPtr& forStmt);
-	void visitIfStmt(const IfStmtPtr& ifStmt);
-	void visitWhileStmt(const WhileStmtPtr& whileStmt);
-	void visitDeclarationStmt(const DeclarationStmtPtr& declStmt);
-	void visitReturnStmt(const ReturnStmtPtr& retStmt);
-	
-	// Expressions
-	void visitLambdaExpr(const LambdaExprPtr& lambdaExpr);
-	void visitLambda(const LambdaPtr& lambda);
-	void visitLambdaDefinition(const LambdaDefinitionPtr& lambda);
-	void visitVariable(const VariablePtr& var);
-	void visitCallExpr(const CallExprPtr& callExpr);
-	void visitCastExpr(const CastExprPtr& castExpr);
-	void visitLiteral(const LiteralPtr& lit);
-	void visitVectorExpr(const VectorExprPtr& init);
-	
-	void visitStatement(const insieme::core::StatementPtr& stmt);
-	void visitNode(const insieme::core::NodePtr& node);
-	void visitProgram(const core::ProgramPtr& prog);
-private:
-	size_t dummyNodeID;
-	IRBuilderPtr builder;
-	const MessageList& errors;
-};
+		// Statements
+		void visitCompoundStmt(const CompoundStmtPtr& comp);
+		void visitForStmt(const ForStmtPtr& forStmt);
+		void visitIfStmt(const IfStmtPtr& ifStmt);
+		void visitWhileStmt(const WhileStmtPtr& whileStmt);
+		void visitDeclarationStmt(const DeclarationStmtPtr& declStmt);
+		void visitReturnStmt(const ReturnStmtPtr& retStmt);
 
-ASTPrinter makeDotPrinter(std::ostream& out, const MessageList& errors);
+		// Expressions
+		void visitLambdaExpr(const LambdaExprPtr& lambdaExpr);
+		void visitLambda(const LambdaPtr& lambda);
+		void visitLambdaDefinition(const LambdaDefinitionPtr& lambda);
+		void visitVariable(const VariablePtr& var);
+		void visitCallExpr(const CallExprPtr& callExpr);
+		void visitCastExpr(const CastExprPtr& castExpr);
+		void visitLiteral(const LiteralPtr& lit);
+		void visitVectorExpr(const VectorExprPtr& init);
 
-void printDotGraph(const insieme::core::NodePtr& root, const MessageList& errors, std::ostream& out);
+		void visitStatement(const insieme::core::StatementPtr& stmt);
+		void visitNode(const insieme::core::NodePtr& node);
+		void visitProgram(const core::ProgramPtr& prog);
+
+	  private:
+		size_t dummyNodeID;
+		IRBuilderPtr builder;
+		const MessageList& errors;
+	};
+
+	ASTPrinter makeDotPrinter(std::ostream& out, const MessageList& errors);
+
+	void printDotGraph(const insieme::core::NodePtr& root, const MessageList& errors, std::ostream& out);
 
 } // end namespace utils
 } // end namespace driver

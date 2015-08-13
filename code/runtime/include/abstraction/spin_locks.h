@@ -50,16 +50,16 @@ typedef pthread_spinlock_t irt_spinlock;
 #endif
 
 /** spin until lock is acquired */
-inline void irt_spin_lock(irt_spinlock *lock);
+inline void irt_spin_lock(irt_spinlock* lock);
 
 /** release lock */
-inline void irt_spin_unlock(irt_spinlock *lock);
+inline void irt_spin_unlock(irt_spinlock* lock);
 
 /** initializing spin lock variable puts it in state unlocked. lock variable can not be shared by different processes */
-inline int irt_spin_init(irt_spinlock *lock);
+inline int irt_spin_init(irt_spinlock* lock);
 
 /**	destroy lock variable and free all used resources,
-	will cause an error when attempting to destroy an object which is in any state other than unlocked */
-inline void irt_spin_destroy(irt_spinlock *lock);
+    will cause an error when attempting to destroy an object which is in any state other than unlocked */
+inline void irt_spin_destroy(irt_spinlock* lock);
 
 #endif // ifndef __GUARD_ABSTRACTION_SPIN_LOCKS_H

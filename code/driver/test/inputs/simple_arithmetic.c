@@ -34,20 +34,20 @@
  * regarding third party software licenses.
  */
 
-//typedef int bool;
+// typedef int bool;
 #define bool int
 
 #define true 1
 #define false 0
 
-extern int printf(char *, ...);
+extern int printf(char*, ...);
 
 
 int main(int argc, char* argv[]) {
 	int x = 10;
 	int y = 10;
-	
+
 	printf("res: %d\n", x + y * x + y);
-	
+
 	return 0;
 }

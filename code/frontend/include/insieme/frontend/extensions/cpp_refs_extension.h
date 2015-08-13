@@ -42,17 +42,17 @@ namespace insieme {
 namespace frontend {
 namespace extensions {
 
-/**
- * since cpp refs are pure left side values, we can not determine when to return a ccp ref or not,
- * The Return stmt lacks of the information to decide, so we just return.
- * here is the place to fix the right return value
- */
-class CppRefsCleanupExtension : public insieme::frontend::extensions::FrontendExtension {
-public:
-	FrontendExtension::flagHandler registerFlag(boost::program_options::options_description& options);
-	
-	virtual insieme::frontend::tu::IRTranslationUnit IRVisit(insieme::frontend::tu::IRTranslationUnit& tu);
-};
+	/**
+	 * since cpp refs are pure left side values, we can not determine when to return a ccp ref or not,
+	 * The Return stmt lacks of the information to decide, so we just return.
+	 * here is the place to fix the right return value
+	 */
+	class CppRefsCleanupExtension : public insieme::frontend::extensions::FrontendExtension {
+	  public:
+		FrontendExtension::flagHandler registerFlag(boost::program_options::options_description& options);
+
+		virtual insieme::frontend::tu::IRTranslationUnit IRVisit(insieme::frontend::tu::IRTranslationUnit& tu);
+	};
 
 
 } // extensions

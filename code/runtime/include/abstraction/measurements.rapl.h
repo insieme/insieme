@@ -72,7 +72,7 @@
 
 #include "irt_inttypes.h"
 
-#define MSR_RAPL_POWER_UNIT		0x606
+#define MSR_RAPL_POWER_UNIT 0x606
 
 /*
  * Platform specific RAPL Domains.
@@ -81,13 +81,13 @@
  */
 /* Package RAPL Domain */
 //#define MSR_PKG_RAPL_POWER_LIMIT	0x610
-#define MSR_PKG_ENERGY_STATUS		0x611
+#define MSR_PKG_ENERGY_STATUS 0x611
 //#define MSR_PKG_PERF_STATUS		0x613
 //#define MSR_PKG_POWER_INFO		0x614
 //
 ///* PP0 RAPL Domain */
 //#define MSR_PP0_POWER_LIMIT		0x638
-#define MSR_PP0_ENERGY_STATUS		0x639
+#define MSR_PP0_ENERGY_STATUS 0x639
 //#define MSR_PP0_POLICY			0x63A
 //#define MSR_PP0_PERF_STATUS		0x63B
 //
@@ -98,7 +98,7 @@
 //
 ///* DRAM RAPL Domain */
 //#define MSR_DRAM_POWER_LIMIT		0x618
-#define MSR_DRAM_ENERGY_STATUS		0x619
+#define MSR_DRAM_ENERGY_STATUS 0x619
 //#define MSR_DRAM_PERF_STATUS		0x61B
 //#define MSR_DRAM_POWER_INFO		0x61C
 //
@@ -130,7 +130,7 @@ typedef struct _rapl_energy_data {
  * values.
  */
 
-void _irt_get_rapl_energy_consumption(rapl_energy_data *data);
+void _irt_get_rapl_energy_consumption(rapl_energy_data* data);
 
 /*
  * checks if RAPL is supported - currently, only Sandy Bridge (EX) and Ivy Bridge processors are known

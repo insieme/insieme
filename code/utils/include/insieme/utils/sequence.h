@@ -42,28 +42,26 @@ namespace insieme {
 namespace utils {
 
 
-/**
- * A utility header for generating sequences of values.
- * TODO: implement this in a way such that the result is a lazy-evaluated,
- *  random access container
- */
+	/**
+	 * A utility header for generating sequences of values.
+	 * TODO: implement this in a way such that the result is a lazy-evaluated,
+	 *  random access container
+	 */
 
 
-/**
- * Creates a vector of elements containing all the values within the
- * range [begin, ... ,end : step].
- */
-template<typename T>
-std::vector<T> seq(T begin, T end, T step = 1) {
-	std::vector<T> res;
-	for(T i = begin; i <= end; i+=step) {
-		res.push_back(i);
+	/**
+	 * Creates a vector of elements containing all the values within the
+	 * range [begin, ... ,end : step].
+	 */
+	template <typename T>
+	std::vector<T> seq(T begin, T end, T step = 1) {
+		std::vector<T> res;
+		for(T i = begin; i <= end; i += step) {
+			res.push_back(i);
+		}
+		return res;
 	}
-	return res;
-}
 
 
 } // end namespace utils
 } // end namespace insieme
-
-

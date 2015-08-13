@@ -49,20 +49,17 @@ namespace backend {
 namespace addons {
 
 
-/**
- * An Add-On realizing support for C++ style reference types.
- */
-struct ComplexType : public AddOn {
-
 	/**
-	 * Installs the this Add-On within the given converter.
+	 * An Add-On realizing support for C++ style reference types.
 	 */
-	virtual void installOn(Converter& converter) const;
-	
-};
+	struct ComplexType : public AddOn {
+		/**
+		 * Installs the this Add-On within the given converter.
+		 */
+		virtual void installOn(Converter& converter) const;
+	};
 
 
 } // end namespace addons
 } // end namespace backend
 } // end namespace insieme
-

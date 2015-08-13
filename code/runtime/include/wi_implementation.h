@@ -57,20 +57,18 @@ struct _irt_wi_implementation {
 	irt_wi_implementation_variant* variants;
 };
 
-typedef enum _irt_wi_implementation_type {
-	IRT_WI_IMPL_SHARED_MEM, IRT_WI_IMPL_DISTRIBUTED, IRT_WI_IMPL_OPENCL
-} irt_wi_implementation_type;
+typedef enum _irt_wi_implementation_type { IRT_WI_IMPL_SHARED_MEM, IRT_WI_IMPL_DISTRIBUTED, IRT_WI_IMPL_OPENCL } irt_wi_implementation_type;
 
 struct _irt_wi_implementation_runtime_data {
 	bool flat_profile;
 	bool tested;
 	bool force_dyn;
 	double distribution[IRT_MAX_WORKERS];
-#ifdef IRT_ENABLE_OMPP_OPTIMIZER
+	#ifdef IRT_ENABLE_OMPP_OPTIMIZER
 	irt_optimizer_runtime_data optimizer_rt_data;
 	irt_optimizer_runtime_data* wrapping_optimizer_rt_data;
 	uint32 completed_wi_count;
-#endif
+	#endif
 	uint32 chunk_size;
 };
 
@@ -85,8 +83,6 @@ struct _irt_wi_implementation_variant {
 };
 
 /* ------------------------------ operations ----- */
-
-
 
 
 #endif // ifndef __GUARD_WI_IMPLEMENTATION_H

@@ -48,18 +48,16 @@ struct timeval {
 // time since boot (in microseconds, 32 bit value):
 // *(unsigned int*)(0x08000000);
 
-int gettimeofday(struct timeval *tv, void *tz) {
+int gettimeofday(struct timeval* tv, void* tz) {
 	unsigned int cur_time;
-	
-	if(tv == NULL) {
-		return -1;
-	}
-	
+
+	if(tv == NULL) { return -1; }
+
 	cur_time = *(unsigned int*)(0x08000000);
-	
-	tv->tv_sec 	= cur_time / 1000000;
-	tv->tv_usec 	= cur_time - tv->tv_sec;
-	
+
+	tv->tv_sec = cur_time / 1000000;
+	tv->tv_usec = cur_time - tv->tv_sec;
+
 	return 0;
 }
 

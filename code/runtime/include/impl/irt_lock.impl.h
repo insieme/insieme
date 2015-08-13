@@ -56,24 +56,23 @@ void irt_lock_init(irt_lock* lock) {
 }
 
 void irt_lock_acquire(irt_lock* lock) {
-	//uint64 start_t = irt_time_ns();
-	//restart:
+	// uint64 start_t = irt_time_ns();
+	// restart:
 	irt_spin_lock(&lock->mutex);
 	if(lock->locked) { // suspend if locked
-		//if(irt_time_ns()-start_t < IRT_LOCK_NANOS_BUSY_WAIT) {
+		// if(irt_time_ns()-start_t < IRT_LOCK_NANOS_BUSY_WAIT) {
 		//	irt_spin_unlock(&lock->mutex);
 		//	irt_busy_nanosleep(IRT_LOCK_NANOS_INTERVAL);
 		//	goto restart;
 		//}
-		irt_worker *wo = irt_worker_get_current();
-		irt_work_item *wi = wo->cur_wi;
+		irt_worker* wo = irt_worker_get_current();
+		irt_work_item* wi = wo->cur_wi;
 		locked_wi selflocked = {wi, wo, lock->top};
 		lock->top = &selflocked;
 		irt_spin_unlock(&lock->mutex);
 		irt_inst_insert_wi_event(wo, IRT_INST_WORK_ITEM_SUSPENDED_LOCK, wi->id);
 		_irt_worker_switch_from_wi(wo, wi);
-	}
-	else {   // acquire lock
+	} else { // acquire lock
 		lock->locked = 1;
 		irt_spin_unlock(&lock->mutex);
 	}
@@ -82,13 +81,12 @@ void irt_lock_acquire(irt_lock* lock) {
 void irt_lock_release(irt_lock* lock) {
 	irt_spin_lock(&lock->mutex);
 	if(lock->top) { // release a waiting task
-		locked_wi *task = lock->top;
+		locked_wi* task = lock->top;
 		lock->top = task->next;
 		__irt_unused irt_worker* wo = task->worker;
 		irt_scheduling_continue_wi(task->worker, task->wi);
 		irt_signal_worker(wo);
-	}
-	else {   // none waiting, lock is now unlocked
+	} else { // none waiting, lock is now unlocked
 		lock->locked = 0;
 	}
 	irt_spin_unlock(&lock->mutex);

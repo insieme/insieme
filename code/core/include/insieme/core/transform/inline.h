@@ -43,25 +43,24 @@ namespace insieme {
 namespace core {
 namespace transform {
 
-/** Inlines the given assignment of type "x = f(a,b,c,...);"
- *  returns a compound statement which implements the same semantics when executed at the given call site
- */
-CompoundStmtPtr inlineMultiReturnAssignment(NodeManager& nodeMan, const CallExprPtr& assignment);
+	/** Inlines the given assignment of type "x = f(a,b,c,...);"
+	 *  returns a compound statement which implements the same semantics when executed at the given call site
+	 */
+	CompoundStmtPtr inlineMultiReturnAssignment(NodeManager& nodeMan, const CallExprPtr& assignment);
 
 
-/** Inlines the given function call of type "f(a,b,c,...);"
- *  (the return type is either unit, or the return value is unused)
- *  returns a compound statement which implements the same semantics when executed at the given call site
- */
-CompoundStmtPtr inlineMultiReturnPlainCall(NodeManager& nodeMan, const CallExprPtr& call);
+	/** Inlines the given function call of type "f(a,b,c,...);"
+	 *  (the return type is either unit, or the return value is unused)
+	 *  returns a compound statement which implements the same semantics when executed at the given call site
+	 */
+	CompoundStmtPtr inlineMultiReturnPlainCall(NodeManager& nodeMan, const CallExprPtr& call);
 
-/** Inlines the given function call of type "x = f(a,b,c,...);" or "f(a,b,c,...);"
- *  returns a compound statement which implements the same semantics when executed at the given call site
- */
-CompoundStmtPtr inlineMultiReturn(NodeManager& nodeMan, const CallExprPtr& call);
+	/** Inlines the given function call of type "x = f(a,b,c,...);" or "f(a,b,c,...);"
+	 *  returns a compound statement which implements the same semantics when executed at the given call site
+	 */
+	CompoundStmtPtr inlineMultiReturn(NodeManager& nodeMan, const CallExprPtr& call);
 
-NodePtr inlineCode(NodeManager& nodeMan, const NodePtr& code);
-
+	NodePtr inlineCode(NodeManager& nodeMan, const NodePtr& code);
 }
 }
 }

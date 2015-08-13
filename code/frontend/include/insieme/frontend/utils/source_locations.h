@@ -46,29 +46,30 @@ namespace insieme {
 namespace frontend {
 namespace utils {
 
-std::string FileName(clang::SourceLocation const& l, clang::SourceManager const& sm);
+	std::string FileName(clang::SourceLocation const& l, clang::SourceManager const& sm);
 
-std::string FileId(clang::SourceLocation const& l, clang::SourceManager const& sm);
+	std::string FileId(clang::SourceLocation const& l, clang::SourceManager const& sm);
 
-unsigned Line(clang::SourceLocation const& l, clang::SourceManager const& sm);
+	unsigned Line(clang::SourceLocation const& l, clang::SourceManager const& sm);
 
-std::pair<unsigned, unsigned> Line(clang::SourceRange const& r, clang::SourceManager const& sm);
+	std::pair<unsigned, unsigned> Line(clang::SourceRange const& r, clang::SourceManager const& sm);
 
-unsigned Column(clang::SourceLocation const& l, clang::SourceManager const& sm);
+	unsigned Column(clang::SourceLocation const& l, clang::SourceManager const& sm);
 
-std::pair<unsigned, unsigned> Column(clang::SourceRange const& r, clang::SourceManager const& sm);
+	std::pair<unsigned, unsigned> Column(clang::SourceRange const& r, clang::SourceManager const& sm);
 
-std::string location(clang::SourceLocation const& l, clang::SourceManager const& sm);
+	std::string location(clang::SourceLocation const& l, clang::SourceManager const& sm);
 
-clang::SourceLocation getExpansionLoc(const clang::SourceManager& sm, clang::SourceLocation loc);
+	clang::SourceLocation getExpansionLoc(const clang::SourceManager& sm, clang::SourceLocation loc);
 
-// Convert clang source locations into a core::annotations::Location object to be attached to a node
-core::annotations::Location convertClangSrcLoc(core::NodeManager& man, const clang::SourceManager& sm, clang::SourceLocation start, clang::SourceLocation end);
+	// Convert clang source locations into a core::annotations::Location object to be attached to a node
+	core::annotations::Location convertClangSrcLoc(core::NodeManager& man, const clang::SourceManager& sm, clang::SourceLocation start,
+	                                               clang::SourceLocation end);
 
-// Attach source location based on clang coordinates to IR node
-const core::NodePtr& attachLocationFromClang(const core::NodePtr& node, const clang::SourceManager& sm, clang::SourceLocation start, clang::SourceLocation end);
+	// Attach source location based on clang coordinates to IR node
+	const core::NodePtr& attachLocationFromClang(const core::NodePtr& node, const clang::SourceManager& sm, clang::SourceLocation start,
+	                                             clang::SourceLocation end);
 
 } // End utils namespace
 } // End frontend namespace
 } // End insieme namespace
-

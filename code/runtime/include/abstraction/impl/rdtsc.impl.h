@@ -69,17 +69,14 @@
 
 uint64 irt_time_ticks(void) {
 	int64 upper0, upper1, lower;
-	
+
 	__asm__ volatile("\
 		mfspr %[upper0], 269 \n\
 		mfspr %[lower] , 268 \n\
 		mfspr %[upper1], 269 "
-	                 : [lower] "=r"(lower),
-	                 [upper0] "=r"(upper0),
-	                 [upper1] "=r"(upper1)
-	                );
-	                
-	return (uint64)(((upper1 ^ ((upper0 ^ upper1) & (lower>>31)))<<32) | lower);
+	                 : [lower] "=r"(lower), [upper0] "=r"(upper0), [upper1] "=r"(upper1));
+
+	return (uint64)(((upper1 ^ ((upper0 ^ upper1) & (lower >> 31))) << 32) | lower);
 }
 
 bool irt_time_ticks_constant() {

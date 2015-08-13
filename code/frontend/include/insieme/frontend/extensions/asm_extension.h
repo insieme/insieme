@@ -44,15 +44,13 @@ namespace insieme {
 namespace frontend {
 namespace extensions {
 
-using namespace insieme;
+	using namespace insieme;
 
-class ASMExtension : public insieme::frontend::extensions::FrontendExtension {
-
-public:
-	virtual stmtutils::StmtWrapper Visit(const clang::Stmt* stmt, frontend::conversion::Converter& convFact) ;
-};
+	class ASMExtension : public insieme::frontend::extensions::FrontendExtension {
+	  public:
+		virtual stmtutils::StmtWrapper Visit(const clang::Stmt* stmt, frontend::conversion::Converter& convFact);
+	};
 
 } // extensions
 } // frontend
 } // insieme
-

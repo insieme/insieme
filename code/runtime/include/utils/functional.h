@@ -40,7 +40,7 @@
 
 #include <stdarg.h>
 
-typedef int irt_util_vsnprinter(char*,size_t,va_list);
+typedef int irt_util_vsnprinter(char*, size_t, va_list);
 
 char* irt_util_to_str(irt_util_vsnprinter* p, ...);
 

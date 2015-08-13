@@ -49,17 +49,15 @@ namespace backend {
 namespace addons {
 
 
-/**
- * An Add-On realizing support for C/C++ based static variables.
- */
-struct StaticVariables : public AddOn {
-
 	/**
-	 * Installs this Add-On within the given converter.
+	 * An Add-On realizing support for C/C++ based static variables.
 	 */
-	virtual void installOn(Converter& converter) const;
-	
-};
+	struct StaticVariables : public AddOn {
+		/**
+		 * Installs this Add-On within the given converter.
+		 */
+		virtual void installOn(Converter& converter) const;
+	};
 
 
 } // end namespace addons

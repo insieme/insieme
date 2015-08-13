@@ -38,9 +38,8 @@
 
 // x64 implementation
 
-__attribute__((noinline))
-void lwt_continue_impl(irt_work_item *wi /*rcx*/, wi_implementation_func* func /*rdx*/,
-                       intptr_t *newstack /*r8*/, intptr_t *basestack /*r9*/) {
+__attribute__((noinline)) void lwt_continue_impl(irt_work_item* wi /*rcx*/, wi_implementation_func* func /*rdx*/, intptr_t* newstack /*r8*/,
+                                                 intptr_t* basestack /*r9*/) {
 	__asm__(
 	    /* save callee save registers on stack: RBX, RBP, RDI, RSI, R12, R13, R14, and R15*/
 	    "push %%rbp ;"
@@ -53,7 +52,7 @@ void lwt_continue_impl(irt_work_item *wi /*rcx*/, wi_implementation_func* func /
 	    "push %%r15 ;"
 	    /* swap stacks */
 	    "movq %%rsp, (%%r9) ;"
-	    "movq (%%r8), %%rsp ;"	// copy value at address pointed to by r8 into rsp
+	    "movq (%%r8), %%rsp ;" // copy value at address pointed to by r8 into rsp
 	    // save rcx (*wi) in rbx because it will be overwritten by next instruction
 	    "movq %%rcx, %%rbx ;"
 	    "movq %%rdx, %%rcx ;"
@@ -73,16 +72,15 @@ void lwt_continue_impl(irt_work_item *wi /*rcx*/, wi_implementation_func* func /
 	    "pop %%rbx  ;"
 	    "pop %%rbp  ;"
 	    : /* no output registers */
-	    : "a"(&_irt_wi_trampoline)
-	);
+	    : "a"(&_irt_wi_trampoline));
 }
 
-__attribute__((noinline))
-void lwt_get_stack_ptr(intptr_t *dest /*rcx*/) {
+__attribute__((noinline)) void lwt_get_stack_ptr(intptr_t* dest /*rcx*/) {
 	__asm__(
 	    /* store sp */
 	    "movq %%rsp, (%%rcx);"
-	    : :);
+	    :
+	    :);
 }
 
 
@@ -91,63 +89,58 @@ void lwt_get_stack_ptr(intptr_t *dest /*rcx*/) {
 // 32 bit implementation
 
 // we use __fastcall calling convention to have first two parameters put into registers ecx and edx
-__attribute__((noinline))
-void __fastcall lwt_continue_impl(irt_work_item *wi /*ecx*/, wi_implementation_func* func /*edx*/,
-                                  intptr_t *newstack /* pushed on stack */, intptr_t *basestack /* pushed on stack */) {
+__attribute__((noinline)) void __fastcall lwt_continue_impl(irt_work_item* wi /*ecx*/, wi_implementation_func* func /*edx*/,
+                                                            intptr_t* newstack /* pushed on stack */, intptr_t* basestack /* pushed on stack */) {
 	__asm__(
 	    /* save registers on stack EBX, ESI, EDI, EBP */
 	    "push %%ebp ;"
 	    "push %%edi ;"
 	    "push %%esi ;"
 	    "push %%ebx ;"
-	    
+
 	    /* swap stacks */
-	    
+
 	    /* third param newstack at 0x8(%ebp) = 8(%ebp) */
 	    /* fourth param basestack at 0xc(%ebp) = 12(%ebp) */
-	    
+
 	    /* save current esp to basestack  */
 	    "mov 12(%%ebp), %%ebx ;" // write basestack pointer address to ebx
-	    "mov %%esp, (%%ebx) ;" // at the memory address which ebx points to, write esp
-	    
+	    "mov %%esp, (%%ebx) ;"   // at the memory address which ebx points to, write esp
+
 	    /* mov newstack into esp */
-	    "mov 8(%%ebp), %%ebx ;"	// write newstack pointer address to ebx
+	    "mov 8(%%ebp), %%ebx ;" // write newstack pointer address to ebx
 	    "mov (%%ebx), %%esp ;"  // write memory address held by ebx to esp
-	    
+
 	    // save ecx because it will be overwritten
 	    "mov %%ecx, %%ebx ;"
-	    
+
 	    /* mov func address to ecx because we will use jecxz */
 	    "mov %%edx, %%ecx ;"
-	    
+
 	    /* call function if func != NULL */
 	    "jecxz .NOCALL ;"
-	    
+
 	    /* edx still holds func address, ecx needs to be restored, then call */
 	    "mov %%ebx, %%ecx ;"
 	    "call *%%eax  ;"
-	    
+
 	    /* restore registers for other coroutine */
 	    ".NOCALL: "
 	    "pop %%ebx  ;"
 	    "pop %%esi  ;"
 	    "pop %%edi  ;"
 	    "pop %%ebp  ;"
-	    : /* no output registers */
-	    : "a"(&_irt_wi_trampoline)  // move address of trampoline function to eax
-	);
+	    :                          /* no output registers */
+	    : "a"(&_irt_wi_trampoline) // move address of trampoline function to eax
+	    );
 }
 
-__attribute__((noinline))
-void __fastcall lwt_get_stack_ptr(intptr_t *dest /*ecx*/) {
+__attribute__((noinline)) void __fastcall lwt_get_stack_ptr(intptr_t* dest /*ecx*/) {
 	__asm__(
 	    /* store sp */
 	    "movq %%esp, (%%ecx);"
-	    : :);
+	    :
+	    :);
 }
 
 #endif
-
-
-
-

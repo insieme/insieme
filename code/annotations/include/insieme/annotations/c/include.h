@@ -50,33 +50,33 @@ namespace insieme {
 namespace annotations {
 namespace c {
 
-using std::string;
+	using std::string;
 
-/**
- * Checks whether a include is attached to the given node.
- *
- * @param node the node to be tested
- * @return true if a include-file is attached, false otherwise
- */
-bool hasIncludeAttached(const insieme::core::NodePtr& node);
+	/**
+	 * Checks whether a include is attached to the given node.
+	 *
+	 * @param node the node to be tested
+	 * @return true if a include-file is attached, false otherwise
+	 */
+	bool hasIncludeAttached(const insieme::core::NodePtr& node);
 
-/**
- * Obtains a reference to the include-file attached to the given node. If
- * no include-file has been attached the result is undefined (an assertion
- * in debug mode).
- *
- * @param node the node to obtain the attached include-file from
- * @return the include attached to the given node
- */
-const string& getAttachedInclude(const insieme::core::NodePtr& node);
+	/**
+	 * Obtains a reference to the include-file attached to the given node. If
+	 * no include-file has been attached the result is undefined (an assertion
+	 * in debug mode).
+	 *
+	 * @param node the node to obtain the attached include-file from
+	 * @return the include attached to the given node
+	 */
+	const string& getAttachedInclude(const insieme::core::NodePtr& node);
 
-/**
- * Updates the include-file attached to the given node.
- *
- * @param node the node to attach a include-file to
- * @param include-file the include-file to be attached to the node
- */
-void attachInclude(const insieme::core::NodePtr& node, const string& include);
+	/**
+	 * Updates the include-file attached to the given node.
+	 *
+	 * @param node the node to attach a include-file to
+	 * @param include-file the include-file to be attached to the node
+	 */
+	void attachInclude(const insieme::core::NodePtr& node, const string& include);
 
 
 } // end namespace c

@@ -43,17 +43,17 @@ namespace core {
 namespace checks {
 
 
-/**
- * Obtains a combined check case containing all the checks defined within this header file.
- */
-CheckPtr getFullCheck();
+	/**
+	 * Obtains a combined check case containing all the checks defined within this header file.
+	 */
+	CheckPtr getFullCheck();
 
-/**
- * Allies all known semantic checks on the given node and returns the obtained message list.
- */
-inline MessageList check(const NodePtr& node) {
-	return check(node, getFullCheck());
-}
+	/**
+	 * Allies all known semantic checks on the given node and returns the obtained message list.
+	 */
+	inline MessageList check(const NodePtr& node) {
+		return check(node, getFullCheck());
+	}
 
 
 } // end namespace checks

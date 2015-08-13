@@ -42,9 +42,9 @@
 
 irt_mutex_obj print_mutex;
 
-#define printf(...) \
-        irt_mutex_lock(&print_mutex); \
-        printf(__VA_ARGS__); \
-        irt_mutex_unlock(&print_mutex);
+#define printf(...)                                                                                                                                            \
+	irt_mutex_lock(&print_mutex);                                                                                                                              \
+	printf(__VA_ARGS__);                                                                                                                                       \
+	irt_mutex_unlock(&print_mutex);
 
 #endif // ifndef __GUARD_INCLUDE_GEMS_STDIO_H

@@ -46,171 +46,162 @@ namespace insieme {
 namespace backend {
 namespace runtime {
 
-// ------------------------------------------------------------------------
-//  Within this header file a list of special code fragments used for
-//  creating code to be executed on the Insieme runtime is defined.
-// ------------------------------------------------------------------------
+	// ------------------------------------------------------------------------
+	//  Within this header file a list of special code fragments used for
+	//  creating code to be executed on the Insieme runtime is defined.
+	// ------------------------------------------------------------------------
 
-class ContextHandlingFragment;
-typedef Ptr<ContextHandlingFragment> ContextHandlingFragmentPtr;
+	class ContextHandlingFragment;
+	typedef Ptr<ContextHandlingFragment> ContextHandlingFragmentPtr;
 
-class TypeTable;
-typedef Ptr<TypeTable> TypeTablePtr;
+	class TypeTable;
+	typedef Ptr<TypeTable> TypeTablePtr;
 
-class ImplementationTable;
-typedef Ptr<ImplementationTable> ImplementationTablePtr;
+	class ImplementationTable;
+	typedef Ptr<ImplementationTable> ImplementationTablePtr;
 
-class MetaInfoTable;
-typedef Ptr<MetaInfoTable> MetaInfoTablePtr;
+	class MetaInfoTable;
+	typedef Ptr<MetaInfoTable> MetaInfoTablePtr;
 
-/**
- * This code fragment is containing code for context handling functions like
- * insieme_init_context - invoked right after loading a context (shared library
- * file) or the insieme_cleanup_context which is triggered just before
- * the file is unloaded.
- */
-class ContextHandlingFragment : public c_ast::CodeFragment {
-
-	const Converter& converter;
-	
-	vector<string> initExpressions;
-	
-	vector<string> cleanupExpressions;
-	
-	TypeTablePtr typeTable;
-	
-	ImplementationTablePtr implTable;
-	
-	MetaInfoTablePtr infoTable;
-	
-public:
-
-	ContextHandlingFragment(const Converter& converter);
-	
-	static ContextHandlingFragmentPtr get(const Converter& converter);
-	
-	const c_ast::IdentifierPtr getInitFunctionName();
-	
-	const c_ast::IdentifierPtr getCleanupFunctionName();
-	
-	virtual std::ostream& printTo(std::ostream& out) const;
-	
 	/**
-	 * This method allows to add additional expressions to the initialization method.
-	 * The given expression should be a valid C statement and may contain formating
-	 * symbols (like printf). The one parameter to be passed to the formatting will
-	 * be the name of the context variable.
-	 *
-	 * e.g. given the pattern "do_something_with_context(%s);" will be instantiated as
-	 * "do_something_with_context(context);" if context is the name of the variable.
-	 *
-	 * @param expr the initialization expression to be added
+	 * This code fragment is containing code for context handling functions like
+	 * insieme_init_context - invoked right after loading a context (shared library
+	 * file) or the insieme_cleanup_context which is triggered just before
+	 * the file is unloaded.
 	 */
-	void addInitExpression(const string& expr) {
-		initExpressions.push_back(expr);
-	}
-	
+	class ContextHandlingFragment : public c_ast::CodeFragment {
+		const Converter& converter;
+
+		vector<string> initExpressions;
+
+		vector<string> cleanupExpressions;
+
+		TypeTablePtr typeTable;
+
+		ImplementationTablePtr implTable;
+
+		MetaInfoTablePtr infoTable;
+
+	  public:
+		ContextHandlingFragment(const Converter& converter);
+
+		static ContextHandlingFragmentPtr get(const Converter& converter);
+
+		const c_ast::IdentifierPtr getInitFunctionName();
+
+		const c_ast::IdentifierPtr getCleanupFunctionName();
+
+		virtual std::ostream& printTo(std::ostream& out) const;
+
+		/**
+		 * This method allows to add additional expressions to the initialization method.
+		 * The given expression should be a valid C statement and may contain formating
+		 * symbols (like printf). The one parameter to be passed to the formatting will
+		 * be the name of the context variable.
+		 *
+		 * e.g. given the pattern "do_something_with_context(%s);" will be instantiated as
+		 * "do_something_with_context(context);" if context is the name of the variable.
+		 *
+		 * @param expr the initialization expression to be added
+		 */
+		void addInitExpression(const string& expr) {
+			initExpressions.push_back(expr);
+		}
+
+		/**
+		 * This method allows to add an additional statement to the cleanup method. As for
+		 * the initialization method, the given expression may have formatting symbols.
+		 *
+		 * @param expr the expression to be added to the cleanup method.
+		 */
+		void addCleanupExpression(const string& expr) {
+			cleanupExpressions.push_back(expr);
+		}
+	};
+
+	class TypeTableStore;
+
 	/**
-	 * This method allows to add an additional statement to the cleanup method. As for
-	 * the initialization method, the given expression may have formatting symbols.
-	 *
-	 * @param expr the expression to be added to the cleanup method.
+	 * The type table fragment contains code creating and handling the type table
+	 * used by the Insieme runtime to obtain information regarding data item types.
 	 */
-	void addCleanupExpression(const string& expr) {
-		cleanupExpressions.push_back(expr);
-	}
-	
-};
+	class TypeTable : public c_ast::CodeFragment {
+		const Converter& converter;
 
-class TypeTableStore;
+		TypeTableStore* store;
 
-/**
- * The type table fragment contains code creating and handling the type table
- * used by the Insieme runtime to obtain information regarding data item types.
- */
-class TypeTable : public c_ast::CodeFragment {
+	  public:
+		TypeTable(const Converter& converter);
 
-	const Converter& converter;
-	
-	TypeTableStore* store;
-	
-public:
+		~TypeTable();
 
-	TypeTable(const Converter& converter);
-	
-	~TypeTable();
-	
-	static TypeTablePtr get(const Converter& converter);
-	
-	const c_ast::ExpressionPtr getTable();
-	
-	virtual std::ostream& printTo(std::ostream& out) const;
-	
-	unsigned registerType(const core::TypePtr& type);
-	
-	unsigned size() const;
-};
+		static TypeTablePtr get(const Converter& converter);
 
-struct WorkItemImplCode;
+		const c_ast::ExpressionPtr getTable();
 
-/**
- * The implementation table fragment represents code resulting in the creation of the
- * implementation table. This table consists of a list of work item implementations providing
- * access points for work-item executions.
- */
-class ImplementationTable : public c_ast::CodeFragment {
+		virtual std::ostream& printTo(std::ostream& out) const;
 
-	const Converter& converter;
-	
-	utils::map::PointerMap<core::ExpressionPtr, unsigned> index;
-	
-	vector<WorkItemImplCode> workItems;
-	
-	c_ast::CodeFragmentPtr declaration;
-	
-public:
+		unsigned registerType(const core::TypePtr& type);
 
-	ImplementationTable(const Converter& converter);
-	
-	static ImplementationTablePtr get(const Converter& converter);
-	
-	c_ast::CodeFragmentPtr getDeclaration();
-	
-	const c_ast::ExpressionPtr getTable();
-	
-	unsigned registerWorkItemImpl(const core::ExpressionPtr& implementation);
-	
-	virtual std::ostream& printTo(std::ostream& out) const;
-	
-	unsigned size() const;
-};
+		unsigned size() const;
+	};
 
-struct MetaInfoTableEntry;
+	struct WorkItemImplCode;
 
-/**
- * The code fragment maintaining the meta information to be encoded into the generated
- * target code to be forwarded to the runtime system.
- */
-class MetaInfoTable : public c_ast::CodeFragment {
+	/**
+	 * The implementation table fragment represents code resulting in the creation of the
+	 * implementation table. This table consists of a list of work item implementations providing
+	 * access points for work-item executions.
+	 */
+	class ImplementationTable : public c_ast::CodeFragment {
+		const Converter& converter;
 
-	const Converter& converter;
-	
-	vector<MetaInfoTableEntry> infos;
-	
-public:
+		utils::map::PointerMap<core::ExpressionPtr, unsigned> index;
 
-	MetaInfoTable(const Converter& converter);
-	
-	static MetaInfoTablePtr get(const Converter& converter);
-	
-	const c_ast::ExpressionPtr getTable();
-	
-	unsigned registerMetaInfoFor(const core::NodePtr& node);
-	
-	virtual std::ostream& printTo(std::ostream& out) const;
-	
-	unsigned size() const;
-};
+		vector<WorkItemImplCode> workItems;
+
+		c_ast::CodeFragmentPtr declaration;
+
+	  public:
+		ImplementationTable(const Converter& converter);
+
+		static ImplementationTablePtr get(const Converter& converter);
+
+		c_ast::CodeFragmentPtr getDeclaration();
+
+		const c_ast::ExpressionPtr getTable();
+
+		unsigned registerWorkItemImpl(const core::ExpressionPtr& implementation);
+
+		virtual std::ostream& printTo(std::ostream& out) const;
+
+		unsigned size() const;
+	};
+
+	struct MetaInfoTableEntry;
+
+	/**
+	 * The code fragment maintaining the meta information to be encoded into the generated
+	 * target code to be forwarded to the runtime system.
+	 */
+	class MetaInfoTable : public c_ast::CodeFragment {
+		const Converter& converter;
+
+		vector<MetaInfoTableEntry> infos;
+
+	  public:
+		MetaInfoTable(const Converter& converter);
+
+		static MetaInfoTablePtr get(const Converter& converter);
+
+		const c_ast::ExpressionPtr getTable();
+
+		unsigned registerMetaInfoFor(const core::NodePtr& node);
+
+		virtual std::ostream& printTo(std::ostream& out) const;
+
+		unsigned size() const;
+	};
 
 } // end namespace runtime
 } // end namespace backend

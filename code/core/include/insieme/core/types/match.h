@@ -45,7 +45,7 @@ namespace types {
 	// -------------------------------------------------------------------------------------------------------------------------
 	//                                                    matching
 	// -------------------------------------------------------------------------------------------------------------------------
-	
+
 	/**
 	 * Tries to match a type to a given generic type
 	 *
@@ -55,7 +55,7 @@ namespace types {
 	 * @return an optional substitution mapping type variables in the pattern to types such that the given type and the pattern are equivalent
 	 */
 	SubstitutionOpt match(NodeManager& manager, const TypePtr& type, const TypePtr& pattern);
-	
+
 	/**
 	 * Tests whether a given type can be matched to a pattern.
 	 *

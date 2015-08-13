@@ -112,19 +112,17 @@ void _dirt_delete(dirt_blob_container* container) {
 }
 
 void _dirt_write_to_blob_container(dirt_blob_container* container, void* ptr, size_t size) {
-
 	// initialize
-	dirt_container_node* new_node = (_dirt_container_node*) malloc(sizeof(_dirt_container_node));
+	dirt_container_node* new_node = (_dirt_container_node*)malloc(sizeof(_dirt_container_node));
 	new_node->next = NULL;
 	new_node->blob.payload = ptr;
 	new_node->blob.size = size;
-	
+
 	// attach
 	_dirt_container_node* current = container->root;
 	if(current == NULL) {
 		container->root = new_node;
-	}
-	else {
+	} else {
 		while(current->next != NULL) {
 			current = current->next;
 		}
@@ -134,11 +132,11 @@ void _dirt_write_to_blob_container(dirt_blob_container* container, void* ptr, si
 
 dirt_blob _dirt_read_from_blob_container(dirt_blob_container* container) {
 	_dirt_container_node* top = container->root;
-	
+
 	// sanity check
-	IRT_ASSERT(top!=NULL, IRT_ERR_BLOB_CONTAINER, "the blob container is empty");
+	IRT_ASSERT(top != NULL, IRT_ERR_BLOB_CONTAINER, "the blob container is empty");
 	container->root = top->next;
-	
+
 	dirt_blob blob = top->blob;
 	free(top);
 	return blob;
@@ -148,38 +146,36 @@ dirt_blob _dirt_read_from_blob_container(dirt_blob_container* container) {
 dirt_byte_stream _dirt_blob_pack(dirt_blob_container* container) {
 	// compute size
 	size_t total_size = 0;
-	
+
 	_dirt_container_node* curr = container->root;
 	do {
 		if(curr != NULL) {
-			total_size+= curr->blob.size;
-			total_size+=sizeof(size_t);
+			total_size += curr->blob.size;
+			total_size += sizeof(size_t);
 			curr = curr->next;
 		}
-	}
-	while(curr != NULL);
-	
+	} while(curr != NULL);
+
 	// allocate buffer
 	dirt_byte_stream stream;
 	stream.size = total_size;
-	stream.payload = (unsigned char*) malloc(total_size);
-	
+	stream.payload = (unsigned char*)malloc(total_size);
+
 	// copy
 	unsigned char* ptr = stream.payload;
 	curr = container->root;
 	do {
 		if(curr != NULL) {
 			memcpy(ptr, (unsigned char*)&curr->blob.size, sizeof(size_t));
-			ptr+= sizeof(size_t);
+			ptr += sizeof(size_t);
 			memcpy(ptr, (unsigned char*)curr->blob.payload, curr->blob.size);
-			ptr+= curr->blob.size;
-			
+			ptr += curr->blob.size;
+
 			curr = curr->next;
 		}
-	}
-	while(curr != NULL);
-	IRT_ASSERT(ptr == (stream.payload+stream.size), IRT_ERR_BLOB_CONTAINER, "copy operation did not made OK");
-	
+	} while(curr != NULL);
+	IRT_ASSERT(ptr == (stream.payload + stream.size), IRT_ERR_BLOB_CONTAINER, "copy operation did not made OK");
+
 	return stream;
 }
 
@@ -187,30 +183,29 @@ void _dirt_blob_unpack(dirt_blob_container* container, dirt_byte_stream stream) 
 	// read size
 	size_t total_size = stream.size;
 	unsigned char* ptr = stream.payload;
-	
-	_dirt_container_node* new_node = (_dirt_container_node*) malloc(sizeof(_dirt_container_node));
-	IRT_ASSERT(container->root==NULL, IRT_ERR_BLOB_CONTAINER, "the blob container must be empty");
+
+	_dirt_container_node* new_node = (_dirt_container_node*)malloc(sizeof(_dirt_container_node));
+	IRT_ASSERT(container->root == NULL, IRT_ERR_BLOB_CONTAINER, "the blob container must be empty");
 	container->root = new_node;
-	while(ptr < stream.payload+stream.size) {
-	
+	while(ptr < stream.payload + stream.size) {
 		// read a size
 		memcpy(&new_node->blob.size, ptr, sizeof(size_t));
-		ptr+= sizeof(size_t);
+		ptr += sizeof(size_t);
 		// point to the payload
 		new_node->blob.payload = ptr;
-		
+
 		// move ptr
-		ptr+= new_node->blob.size;
-		new_node->next = (_dirt_container_node*) malloc(sizeof(_dirt_container_node));
-		new_node= new_node->next;
+		ptr += new_node->blob.size;
+		new_node->next = (_dirt_container_node*)malloc(sizeof(_dirt_container_node));
+		new_node = new_node->next;
 		new_node->next = NULL;
 	}
-	
+
 	// save the stream pointer in the container context for future deletion
-	dirt_to_delete* tmp = (dirt_to_delete*) malloc(sizeof(dirt_to_delete));
+	dirt_to_delete* tmp = (dirt_to_delete*)malloc(sizeof(dirt_to_delete));
 	tmp->next = container->toDelete;
 	tmp->buffer = stream.payload;
-	container->toDelete =  tmp;
+	container->toDelete = tmp;
 }
 
 #endif // ifndef __GUARD_BLOB_CONTAINER_IMPL_H

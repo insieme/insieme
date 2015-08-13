@@ -49,8 +49,8 @@
 
 IRT_MAKE_ID_TYPE(context)
 
-typedef void (init_context_fun)(irt_context* context);
-typedef void (cleanup_context_fun)(irt_context* context);
+typedef void(init_context_fun)(irt_context* context);
+typedef void(cleanup_context_fun)(irt_context* context);
 
 struct _irt_context {
 	irt_context_id id;
@@ -63,19 +63,19 @@ struct _irt_context {
 	irt_wi_implementation* impl_table;
 	uint32 info_table_size;
 	irt_meta_info_table_entry* info_table;
-	
+
 	// TODO: moved this into an #ifdef and have the backend only set it when actually required
-	uint32 num_regions;													// initialized by compiler
-#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
-	irt_inst_region_context_data* inst_region_data;							// initialized by runtime
-	irt_inst_region_context_declarations inst_region_metric_group_support_data;					// initialized by runtime
-#endif
-	
-#ifdef USE_OPENCL
+	uint32 num_regions; // initialized by compiler
+	#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
+	irt_inst_region_context_data* inst_region_data;                             // initialized by runtime
+	irt_inst_region_context_declarations inst_region_metric_group_support_data; // initialized by runtime
+	#endif
+
+	#ifdef USE_OPENCL
 	irt_ocl_kernel_code* kernel_code_table;
 	irt_ocl_kernel** kernel_binary_table;
-#endif
-	
+	#endif
+
 	// private implementation detail
 	struct _irt_context* lookup_table_next;
 };

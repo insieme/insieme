@@ -44,99 +44,92 @@ namespace insieme {
 namespace core {
 namespace lang {
 
-/**
- */
-class EnumExtension : public core::lang::Extension {
+	/**
+	 */
+	class EnumExtension : public core::lang::Extension {
+		/**
+		 * Allow the node manager to create instances of this class.
+		 */
+		friend class core::NodeManager;
 
-	/**
-	 * Allow the node manager to create instances of this class.
-	 */
-	friend class core::NodeManager;
-	
-	/**
-	 * Creates a new instance based on the given node manager.
-	 */
-	EnumExtension(core::NodeManager& manager)
-		: core::lang::Extension(manager) {}
-		
-		
-public:
+		/**
+		 * Creates a new instance based on the given node manager.
+		 */
+		EnumExtension(core::NodeManager& manager) : core::lang::Extension(manager) {}
 
-	LANG_EXT_LITERAL(EnumElementAsInt,      "enum_to_int",    "('a) -> int<4>");
-	
-	LANG_EXT_LITERAL(EnumElementAsUInt,     "enum_to_uint",   "('a) -> uint<4>");
-	
-	LANG_EXT_DERIVED(EnumElementAsBool,     "lambda ('a i) -> bool { return lit(\"enum_to_int\":('a)->int<4>)(i) != 0; }");
-	
-	LANG_EXT_LITERAL(IntAsEnum,             "int_to_enum",    "(int<4>, type<'a> ) -> 'a");
-	LANG_EXT_LITERAL(UIntAsEnum,            "uint_to_enum",   "(uint<4>, type<'a> ) -> 'a");
-	
-	
-	/**
-	 * Creates an enum type out a literal.
-	 * @param lit The name (co
-	 * @param elements vector of elements
-	 * @return the enum type
-	 */
-	TypePtr getEnumType(const string& lit, const std::vector<TypePtr> elements = std::vector<TypePtr>()) const {
-		IRBuilder builder(getNodeManager());
-		TypeList typeList;
-		typeList.insert(typeList.end(), builder.genericType(lit));
-		for(TypePtr gt : elements) {
-			assert(gt.isa<GenericTypePtr>());
-			typeList.insert(typeList.end(), gt);
+
+	  public:
+		LANG_EXT_LITERAL(EnumElementAsInt, "enum_to_int", "('a) -> int<4>");
+
+		LANG_EXT_LITERAL(EnumElementAsUInt, "enum_to_uint", "('a) -> uint<4>");
+
+		LANG_EXT_DERIVED(EnumElementAsBool, "lambda ('a i) -> bool { return lit(\"enum_to_int\":('a)->int<4>)(i) != 0; }");
+
+		LANG_EXT_LITERAL(IntAsEnum, "int_to_enum", "(int<4>, type<'a> ) -> 'a");
+		LANG_EXT_LITERAL(UIntAsEnum, "uint_to_enum", "(uint<4>, type<'a> ) -> 'a");
+
+
+		/**
+		 * Creates an enum type out a literal.
+		 * @param lit The name (co
+		 * @param elements vector of elements
+		 * @return the enum type
+		 */
+		TypePtr getEnumType(const string& lit, const std::vector<TypePtr> elements = std::vector<TypePtr>()) const {
+			IRBuilder builder(getNodeManager());
+			TypeList typeList;
+			typeList.insert(typeList.end(), builder.genericType(lit));
+			for(TypePtr gt : elements) {
+				assert(gt.isa<GenericTypePtr>());
+				typeList.insert(typeList.end(), gt);
+			}
+			return builder.genericType("__insieme_enum", typeList);
 		}
-		return builder.genericType("__insieme_enum", typeList);
-	}
-	/**
-	 * Check if a type is an enumeration type
-	 * @param type TypePtr that should be checked
-	 * @return boolean value
-	 */
-	bool isEnumType(const TypePtr& type) const {
-		core::GenericTypePtr gt;
-		if(!type.isa<core::GenericTypePtr>()) {
+		/**
+		 * Check if a type is an enumeration type
+		 * @param type TypePtr that should be checked
+		 * @return boolean value
+		 */
+		bool isEnumType(const TypePtr& type) const {
+			core::GenericTypePtr gt;
+			if(!type.isa<core::GenericTypePtr>()) { return false; }
+			gt = static_pointer_cast<const core::GenericType>(type);
+			return (gt->getName()->getValue() == "__insieme_enum");
+		}
+
+		bool isEnumConstant(const NodePtr& node) const {
+			if(const LiteralPtr lit = node.isa<LiteralPtr>()) {
+				if(!isEnumType(lit->getType())) { return false; }
+				return (boost::starts_with(lit->getStringValue(), "__insieme_enum_constant__"));
+			}
 			return false;
 		}
-		gt = static_pointer_cast<const core::GenericType>(type);
-		return (gt->getName()->getValue() == "__insieme_enum");
-	}
-	
-	bool isEnumConstant(const NodePtr& node) const {
-		if(const LiteralPtr lit= node.isa<LiteralPtr>()) {
-			if(!isEnumType(lit->getType())) {
-				return false;
-			}
-			return (boost::starts_with(lit->getStringValue(), "__insieme_enum_constant__"));
+
+		/**
+		 * Retrieve the name of an enumeration.
+		 * @param type Enumeration type pointer
+		 * @return TypePtr that contains the enumeration name literal
+		 */
+		std::string getEnumName(const TypePtr& type) const {
+			assert_true(isEnumType(type)) << "this is no enumeration type";
+			core::GenericTypePtr gt = static_pointer_cast<const core::GenericType>(type);
+			return gt->getFamilyName();
 		}
-		return false;
-	}
-	
-	/**
-	 * Retrieve the name of an enumeration.
-	 * @param type Enumeration type pointer
-	 * @return TypePtr that contains the enumeration name literal
-	 */
-	std::string getEnumName(const TypePtr& type) const {
-		assert_true(isEnumType(type)) << "this is no enumeration type";
-		core::GenericTypePtr gt = static_pointer_cast<const core::GenericType>(type);
-		return gt->getFamilyName();
-	}
-	
-	TypePtr getEnumConstantType(const string& lit) const {
-		IRBuilder builder(getNodeManager());
-		TypeList typeList;
-		return builder.genericType(lit, typeList);
-	}
-	
-	TypePtr getEnumConstantType(const string& lit, const string& val) const {
-		IRBuilder builder(getNodeManager());
-		TypeList typeList;
-		typeList.push_back(builder.genericType(lit));
-		typeList.push_back(builder.genericType(val));
-		return builder.genericType("__insieme_enum_constant__", typeList);
-	}
-};
+
+		TypePtr getEnumConstantType(const string& lit) const {
+			IRBuilder builder(getNodeManager());
+			TypeList typeList;
+			return builder.genericType(lit, typeList);
+		}
+
+		TypePtr getEnumConstantType(const string& lit, const string& val) const {
+			IRBuilder builder(getNodeManager());
+			TypeList typeList;
+			typeList.push_back(builder.genericType(lit));
+			typeList.push_back(builder.genericType(val));
+			return builder.genericType("__insieme_enum_constant__", typeList);
+		}
+	};
 } // lang
 } // core
 } // insieme

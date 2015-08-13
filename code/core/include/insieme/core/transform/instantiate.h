@@ -43,28 +43,25 @@ namespace insieme {
 namespace core {
 namespace transform {
 
-namespace detail {
+	namespace detail {
 
-	static auto skipNone = [&](const NodePtr& node) {
-		return false;
-	};
+		static auto skipNone = [&](const NodePtr& node) { return false; };
 
-	NodePtr instantiate(const NodePtr& root, std::function<bool(const core::NodePtr& node)> skip);
+		NodePtr instantiate(const NodePtr& root, std::function<bool(const core::NodePtr& node)> skip);
 
-} // end namespace detail
+	} // end namespace detail
 
-/**
- * A transformation which instantiates all type variables within the given code fragment
- * where concrete types can be deduced from the call parameters.
- *
- * @param root the node to start the instantiation from
- * @return IR with the same root node, with all deducible types instantiated
- */
-template<typename T>
-core::Pointer<T> instantiateTypes(const core::Pointer<T>& root,
-                                  std::function<bool(const NodePtr& node)> skip = detail::skipNone) {
-	return static_pointer_cast<T>(detail::instantiate(root, skip));
-}
+	/**
+	 * A transformation which instantiates all type variables within the given code fragment
+	 * where concrete types can be deduced from the call parameters.
+	 *
+	 * @param root the node to start the instantiation from
+	 * @return IR with the same root node, with all deducible types instantiated
+	 */
+	template <typename T>
+	core::Pointer<T> instantiateTypes(const core::Pointer<T>& root, std::function<bool(const NodePtr& node)> skip = detail::skipNone) {
+		return static_pointer_cast<T>(detail::instantiate(root, skip));
+	}
 
 } // end namespace transform
 } // end namespace core

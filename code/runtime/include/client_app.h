@@ -50,14 +50,13 @@ IRT_MAKE_ID_TYPE(client_app)
 struct _irt_client_app {
 	irt_client_app_id id;
 	size_t pid;
-	void *library;
+	void* library;
 };
 
 /* ------------------------------ operations ----- */
 
 irt_client_app* irt_client_app_create(const char* library_file_name);
 void irt_client_app_destroy(irt_client_app* app);
-
 
 
 #endif // ifndef __GUARD_CLIENT_APP_H

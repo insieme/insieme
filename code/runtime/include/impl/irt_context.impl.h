@@ -56,7 +56,7 @@ static inline irt_context* irt_context_get_current() {
 }
 
 irt_context* irt_context_create_standalone(init_context_fun* init_fun, cleanup_context_fun* cleanup_fun) {
-	irt_context *context = (irt_context*)malloc(sizeof(irt_context));
+	irt_context* context = (irt_context*)malloc(sizeof(irt_context));
 	context->id = irt_generate_context_id(IRT_LOOKUP_GENERATOR_ID_PTR);
 	context->id.cached = context;
 	context->client_app = NULL;
@@ -67,9 +67,7 @@ irt_context* irt_context_create_standalone(init_context_fun* init_fun, cleanup_c
 }
 
 void irt_context_initialize(irt_context* context) {
-	if(context->init_fun) {
-		context->init_fun(context);
-	}
+	if(context->init_fun) { context->init_fun(context); }
 	irt_optimizer_context_startup(context);
 	irt_inst_region_init(context);
 }
@@ -84,20 +82,16 @@ irt_context* irt_context_create(irt_client_app* app, init_context_fun* init_fun,
 
 void irt_context_destroy(irt_context* context) {
 	irt_inst_region_finalize(context);
-#ifdef IRT_ENABLE_INSTRUMENTATION
-	if(irt_g_instrumentation_event_output_is_enabled) {
-		irt_inst_event_data_output_all(irt_g_instrumentation_event_output_is_binary);
-	}
+	#ifdef IRT_ENABLE_INSTRUMENTATION
+	if(irt_g_instrumentation_event_output_is_enabled) { irt_inst_event_data_output_all(irt_g_instrumentation_event_output_is_binary); }
 	for(uint32 i = 0; i < irt_g_worker_count; ++i) {
 		irt_inst_destroy_event_data_table(irt_g_workers[i]->instrumentation_event_data);
 	}
-#endif
-	
+	#endif
+
 	irt_optimizer_context_destroy(context);
-	
-	if(context->cleanup_fun) {
-		context->cleanup_fun(context);
-	}
+
+	if(context->cleanup_fun) { context->cleanup_fun(context); }
 	irt_context_table_remove(context->id);
 	free(context);
 }

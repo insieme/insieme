@@ -57,174 +57,165 @@
 namespace insieme {
 namespace backend {
 
-/**
- * An abstract class defining an interface for the resulting target code. While
- * the internal organization remains back-end specific, the basic interaction
- * with the produced code is standardized by this interface.
- */
-class TargetCode : public utils::Printable {
+	/**
+	 * An abstract class defining an interface for the resulting target code. While
+	 * the internal organization remains back-end specific, the basic interaction
+	 * with the produced code is standardized by this interface.
+	 */
+	class TargetCode : public utils::Printable {
+		/**
+		 * The INSPIRE program fragment this target code has been generated from.
+		 */
+		const core::NodePtr source;
 
-	/**
-	 * The INSPIRE program fragment this target code has been generated from.
-	 */
-	const core::NodePtr source;
-	
-protected:
+	  protected:
+		/**
+		 * A protected constructor for this class to be used by derived versions.
+		 *
+		 * @param source the INSPIRE program for which this target code representation has been generated.
+		 */
+		TargetCode(const core::NodePtr& source) : source(source) {}
 
-	/**
-	 * A protected constructor for this class to be used by derived versions.
-	 *
-	 * @param source the INSPIRE program for which this target code representation has been generated.
-	 */
-	TargetCode(const core::NodePtr& source) : source(source) {}
-	
-public:
+	  public:
+		/**
+		 * A virtual default constructor allowing subclasses to be properly destroyed.
+		 */
+		virtual ~TargetCode(){};
 
-	/**
-	 * A virtual default constructor allowing subclasses to be properly destroyed.
-	 */
-	virtual ~TargetCode() {};
-	
-	/**
-	 * Obtains the INSPIRE program code this target code is based on.
-	 */
-	const core::NodePtr& getSource() const {
-		return source;
-	}
-	
-	/**
-	 * Requests this target code implementation to print the code to
-	 * the given output stream.
-	 *
-	 * Implementations of this pure virtual function have to use their
-	 * internal program representation to conduct the requested operation.
-	 * Multiple (parallel) invocations of this function have to be supported.
-	 *
-	 * @param out the stream to be printed to.
-	 * @return a reference to the given output stream.
-	 */
-	virtual std::ostream& printTo(std::ostream& out) const =0;
-	
-};
-
-/**
- * A definition of the pointer type to be used for handling
- * polymorphic objects of the abstract target code class.
- */
-typedef std::shared_ptr<TargetCode> TargetCodePtr;
-
-
-/**
- * The abstract base class for any kind of compiler back-end. A back-end
- * may have may have an arbitrary, implementation dependent set of configuration
- * flags. The only common requirement is to offer a converter function
- * which is translating the internal INSPIRE representation of a program to
- * some implementation specific target code.
- */
-class Backend {
-
-	/**
-	 * The list of installed Add-Ons.
-	 */
-	vector<AddOnPtr> addons;
-	
-	/**
-	 * This backend's configuration.
-	 */
-	BackendConfigPtr config;
-	
-public:
-
-	/**
-	 * Creates a new backend instance based on an optional list of add-ons to
-	 * be installed within this backend.
-	 */
-	Backend(const vector<AddOnPtr>& addons = std::vector<AddOnPtr>(), const BackendConfigPtr& config = std::make_shared<BackendConfig>())
-		: addons(addons), config(config) { }
-		
-	/**
-	 * A virtual default constructor allowing subclasses to be properly destroyed.
-	 */
-	virtual ~Backend() {};
-	
-	/**
-	 * Installs an additional Add-On within this backend instance.
-	 *
-	 * @param addon the AddOn to be installed.
-	 */
-	void addAddOn(const AddOnPtr& addon) {
-		addons.push_back(addon);
-	}
-	
-	/**
-	 * Creates and installs an additional Add-On within this backend instance.
-	 *
-	 * @tparam A the type of the add-on to be installed
-	 * @tparam T the types of parameters required for the constructor of A
-	 * @param addon the AddOn to be installed.
-	 */
-	template<typename A, typename ... T>
-	void addAddOn(T ... args) {
-		addons.push_back(makeAddOn<A>(args ...));
-	}
-	
-	/**
-	 * The method performing the actual conversion of the given program into
-	 * a corresponding target code fragment.
-	 *
-	 * The method is processing the given program and producing some implementation
-	 * specific target code. Multiple (parallel) invocations of this function have to
-	 * be supported.
-	 */
-	TargetCodePtr convert(const core::NodePtr& program) const {
-		Converter converter = buildConverter(program->getNodeManager());
-		installAddons(converter);
-		return converter.convert(program);
-	}
-	
-	/**
-	 * Obtains mutable access to this backend's configuration.
-	 */
-	BackendConfig& getConfiguration() {
-		return *config;
-	}
-	
-	/**
-	 * Obtains constant access to this backend's configuration.
-	 */
-	const BackendConfig& getConfiguration() const {
-		return *config;
-	}
-	
-protected:
-
-	// ---------------- to be implemented by sub-classes -----------------
-	
-	/**
-	 * This member function needs to be implemented by sub-types by constructing
-	 * a converter instance ready to convert input codes according to the corresponding
-	 * backend specification - not considering AddOns.
-	 */
-	virtual Converter buildConverter(core::NodeManager& manager) const =0;
-	
-private:
-
-	/**
-	 * Installs all Add-Ons defined for this backend instance within the given converter.
-	 */
-	void installAddons(Converter& converter) const {
-		for(auto cur : addons) {
-			cur->installOn(converter);
+		/**
+		 * Obtains the INSPIRE program code this target code is based on.
+		 */
+		const core::NodePtr& getSource() const {
+			return source;
 		}
-	}
-	
-};
 
-/**
- * A definition of the pointer type to be used for handling
- * polymorphic objects of the abstract backend class.
- */
-typedef std::shared_ptr<Backend> BackendPtr;
+		/**
+		 * Requests this target code implementation to print the code to
+		 * the given output stream.
+		 *
+		 * Implementations of this pure virtual function have to use their
+		 * internal program representation to conduct the requested operation.
+		 * Multiple (parallel) invocations of this function have to be supported.
+		 *
+		 * @param out the stream to be printed to.
+		 * @return a reference to the given output stream.
+		 */
+		virtual std::ostream& printTo(std::ostream& out) const = 0;
+	};
+
+	/**
+	 * A definition of the pointer type to be used for handling
+	 * polymorphic objects of the abstract target code class.
+	 */
+	typedef std::shared_ptr<TargetCode> TargetCodePtr;
+
+
+	/**
+	 * The abstract base class for any kind of compiler back-end. A back-end
+	 * may have may have an arbitrary, implementation dependent set of configuration
+	 * flags. The only common requirement is to offer a converter function
+	 * which is translating the internal INSPIRE representation of a program to
+	 * some implementation specific target code.
+	 */
+	class Backend {
+		/**
+		 * The list of installed Add-Ons.
+		 */
+		vector<AddOnPtr> addons;
+
+		/**
+		 * This backend's configuration.
+		 */
+		BackendConfigPtr config;
+
+	  public:
+		/**
+		 * Creates a new backend instance based on an optional list of add-ons to
+		 * be installed within this backend.
+		 */
+		Backend(const vector<AddOnPtr>& addons = std::vector<AddOnPtr>(), const BackendConfigPtr& config = std::make_shared<BackendConfig>())
+		    : addons(addons), config(config) {}
+
+		/**
+		 * A virtual default constructor allowing subclasses to be properly destroyed.
+		 */
+		virtual ~Backend(){};
+
+		/**
+		 * Installs an additional Add-On within this backend instance.
+		 *
+		 * @param addon the AddOn to be installed.
+		 */
+		void addAddOn(const AddOnPtr& addon) {
+			addons.push_back(addon);
+		}
+
+		/**
+		 * Creates and installs an additional Add-On within this backend instance.
+		 *
+		 * @tparam A the type of the add-on to be installed
+		 * @tparam T the types of parameters required for the constructor of A
+		 * @param addon the AddOn to be installed.
+		 */
+		template <typename A, typename... T>
+		void addAddOn(T... args) {
+			addons.push_back(makeAddOn<A>(args...));
+		}
+
+		/**
+		 * The method performing the actual conversion of the given program into
+		 * a corresponding target code fragment.
+		 *
+		 * The method is processing the given program and producing some implementation
+		 * specific target code. Multiple (parallel) invocations of this function have to
+		 * be supported.
+		 */
+		TargetCodePtr convert(const core::NodePtr& program) const {
+			Converter converter = buildConverter(program->getNodeManager());
+			installAddons(converter);
+			return converter.convert(program);
+		}
+
+		/**
+		 * Obtains mutable access to this backend's configuration.
+		 */
+		BackendConfig& getConfiguration() {
+			return *config;
+		}
+
+		/**
+		 * Obtains constant access to this backend's configuration.
+		 */
+		const BackendConfig& getConfiguration() const {
+			return *config;
+		}
+
+	  protected:
+		// ---------------- to be implemented by sub-classes -----------------
+
+		/**
+		 * This member function needs to be implemented by sub-types by constructing
+		 * a converter instance ready to convert input codes according to the corresponding
+		 * backend specification - not considering AddOns.
+		 */
+		virtual Converter buildConverter(core::NodeManager& manager) const = 0;
+
+	  private:
+		/**
+		 * Installs all Add-Ons defined for this backend instance within the given converter.
+		 */
+		void installAddons(Converter& converter) const {
+			for(auto cur : addons) {
+				cur->installOn(converter);
+			}
+		}
+	};
+
+	/**
+	 * A definition of the pointer type to be used for handling
+	 * polymorphic objects of the abstract backend class.
+	 */
+	typedef std::shared_ptr<Backend> BackendPtr;
 
 
 } // end: namespace backend

@@ -45,7 +45,7 @@
 uint64 irt_time_ticks(void) {
 	// time in us since boot
 	unsigned int cur_time = *(unsigned int*)(0x08000000);
-	
+
 	// core frequency is 100 MHz (it can be modified via simulator configuration)
 	return cur_time * GEMS_CORE_FREQ_MHZ;
 }

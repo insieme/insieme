@@ -41,10 +41,10 @@
 #include <cassert>
 
 //
-//Declaration:
+// Declaration:
 //  #define MAKE_ENUM(enumname, first, ...);
 //
-//Using:
+// Using:
 //  MAKE_ENUM(testColor, RED, GREEN, YELLOW)
 //  testColor tc = fromName<testColor>("RED");
 //  for(testColor c = min(c); c < max(c); c++ )
@@ -81,37 +81,46 @@ std::vector<std::string> getListOutOfCommaSeperated(std::string str, std::size_t
  * @param ... The tail elements
  */
 
-#define MAKE_ENUM(enumname, first, ...) \
-		enum enumname {enumname ## MIN, first = enumname ## MIN, __VA_ARGS__ , enumname ## MAX}; \
-		const std::vector<std::string> enumname ## Strings \
-			= getListOutOfCommaSeperated( "" #first "," #__VA_ARGS__ "", enumname ## MAX ); \
-		inline enumname operator++(enumname &rs) { return rs = enumname( rs+1 ); }  \
-		inline enumname operator++(enumname &rs, int) {\
-			enumname old = rs; \
-			rs = enumname( rs+1 ); \
-			return old; \
-		} \
-		inline enumname operator--(enumname &rs) { return rs = enumname( rs - 1 ); }  \
-		inline enumname operator--(enumname &rs, int) {\
-			enumname old = rs; \
-			rs = enumname( rs - 1 ); \
-			return old; \
-		} \
-		inline enumname max(const enumname &rs) { return enumname ## MAX; } \
-		inline enumname min(const enumname &rs) { return enumname ## MIN; } \
-		inline bool isMember(const enumname& rs) { return enumname ## MIN < rs && rs < enumname ## MAX; } \
-		inline std::string name(const enumname &rs) {\
-			return (enumname ## Strings).at((std::size_t) rs);\
-		} \
-		inline std::size_t ord(const enumname &rs) {\
-			return (std::size_t) rs;\
-		} \
-		inline enumname count(const enumname &rs) { \
-			return (enumname) (ord(max(rs)) - ord(min(rs))); \
-		} \
-		inline std::ostream& operator<<(std::ostream &os, const enumname &c) { \
-			return os << name(c);\
-		}
+#define MAKE_ENUM(enumname, first, ...)                                                                                                                        \
+	enum enumname { enumname##MIN, first = enumname##MIN, __VA_ARGS__, enumname##MAX };                                                                        \
+	const std::vector<std::string> enumname##Strings = getListOutOfCommaSeperated("" #first "," #__VA_ARGS__ "", enumname##MAX);                               \
+	inline enumname operator++(enumname & rs) {                                                                                                                \
+		return rs = enumname(rs + 1);                                                                                                                          \
+	}                                                                                                                                                          \
+	inline enumname operator++(enumname & rs, int) {                                                                                                           \
+		enumname old = rs;                                                                                                                                     \
+		rs = enumname(rs + 1);                                                                                                                                 \
+		return old;                                                                                                                                            \
+	}                                                                                                                                                          \
+	inline enumname operator--(enumname & rs) {                                                                                                                \
+		return rs = enumname(rs - 1);                                                                                                                          \
+	}                                                                                                                                                          \
+	inline enumname operator--(enumname & rs, int) {                                                                                                           \
+		enumname old = rs;                                                                                                                                     \
+		rs = enumname(rs - 1);                                                                                                                                 \
+		return old;                                                                                                                                            \
+	}                                                                                                                                                          \
+	inline enumname max(const enumname& rs) {                                                                                                                  \
+		return enumname##MAX;                                                                                                                                  \
+	}                                                                                                                                                          \
+	inline enumname min(const enumname& rs) {                                                                                                                  \
+		return enumname##MIN;                                                                                                                                  \
+	}                                                                                                                                                          \
+	inline bool isMember(const enumname& rs) {                                                                                                                 \
+		return enumname##MIN < rs && rs < enumname##MAX;                                                                                                       \
+	}                                                                                                                                                          \
+	inline std::string name(const enumname& rs) {                                                                                                              \
+		return (enumname##Strings).at((std::size_t)rs);                                                                                                        \
+	}                                                                                                                                                          \
+	inline std::size_t ord(const enumname& rs) {                                                                                                               \
+		return (std::size_t)rs;                                                                                                                                \
+	}                                                                                                                                                          \
+	inline enumname count(const enumname& rs) {                                                                                                                \
+		return (enumname)(ord(max(rs)) - ord(min(rs)));                                                                                                        \
+	}                                                                                                                                                          \
+	inline std::ostream& operator<<(std::ostream& os, const enumname& c) {                                                                                     \
+		return os << name(c);                                                                                                                                  \
+	}
 
 
 /**
@@ -122,12 +131,11 @@ std::vector<std::string> getListOutOfCommaSeperated(std::string str, std::size_t
  * @return The enum element
  */
 template <typename T>
-inline const T fromName(const std::string &nam);
-
+inline const T fromName(const std::string& nam);
 
 
 ////////////////////////////////////////////////////////////////////////////////
-//The characters to trim at enumTrimName
+// The characters to trim at enumTrimName
 const std::string ENUM_BAD_CHARS(", \r\n\t");
 
 /**
@@ -140,14 +148,12 @@ std::string enumTrimName(std::string s);
 
 
 template <typename T>
-inline const T fromName(const std::string &nam) {
+inline const T fromName(const std::string& nam) {
 	T i;
 	for(i = min(i); i < max(i); ++i) {
-		if(nam == name(i)) {
-			return i;
-		}
+		if(nam == name(i)) { return i; }
 	}
-	
-	//TODO: exception state: throw exception or use invalid number?
+
+	// TODO: exception state: throw exception or use invalid number?
 	return max(i);
 }

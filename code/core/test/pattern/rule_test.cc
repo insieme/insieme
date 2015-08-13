@@ -265,7 +265,6 @@ TEST(Rule, VarDeref) {
 
 	NodeManager mgr;
 	IRBuilder builder(mgr);
-	const auto& lang = builder.getLangBasic();
 	const auto& ext = mgr.getLangExtension<lang::ReferenceExtension>();
 	
 	Variable x;

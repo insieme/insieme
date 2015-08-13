@@ -64,30 +64,28 @@ typedef enum {
 	// + all other entities of the HW model
 } irt_subject_type;
 
-typedef struct {
-	irt_context_id context_id;
-} irt_subject_program;
+typedef struct { irt_context_id context_id; } irt_subject_program;
 
 typedef struct {
-	irt_context_id context_id;				// < the ID of the context
-	irt_wi_implementation_id work_item;		// < the ID of the work item
-	uint16 variant;							// < the index of the selected implementation
-	uint16 fragment;						// < the code fragment within the implementation
+	irt_context_id context_id;          // < the ID of the context
+	irt_wi_implementation_id work_item; // < the ID of the work item
+	uint16 variant;                     // < the index of the selected implementation
+	uint16 fragment;                    // < the code fragment within the implementation
 } irt_subject_region;
 
 typedef struct {
-	irt_context_id context_id;				// < the ID of the context
-	irt_wi_implementation_id work_item;		// < the work item implementation ID (impl table)
-	uint16 variant;							// < the variant of the implementation
-	uint16 variable;						// < the index of the variable within the variant
+	irt_context_id context_id;          // < the ID of the context
+	irt_wi_implementation_id work_item; // < the work item implementation ID (impl table)
+	uint16 variant;                     // < the variant of the implementation
+	uint16 variable;                    // < the index of the variable within the variant
 } irt_subject_variable;
 
 typedef struct {
-	irt_worker_id worker_id;				// < the ID of the addressed worker
+	irt_worker_id worker_id; // < the ID of the addressed worker
 } irt_subject_worker;
 
 typedef struct {
-	uint16 node_id;							// < the ID of the node the runtime is running on
+	uint16 node_id; // < the ID of the node the runtime is running on
 } irt_subject_runtime;
 
 typedef struct {
@@ -118,7 +116,7 @@ typedef enum {
 	IRT_VT_UINT64,
 	IRT_VT_FLOAT,
 	IRT_VT_DOUBLE,
-	IRT_VT_COMPLEX,		// < the value is a pointer to something complex
+	IRT_VT_COMPLEX, // < the value is a pointer to something complex
 } irt_value_type;
 
 
@@ -180,28 +178,33 @@ typedef struct {
 
 typedef uint16 irt_atomic_metric_index;
 
-typedef enum {
-	ATOMIC_METRIC, COMPOSED_METRIC
-} irt_metric_kind;
+typedef enum { ATOMIC_METRIC, COMPOSED_METRIC } irt_metric_kind;
 
 typedef enum {
-	OP_AVG, OP_MAX, OP_MIN,						// < single argument connectors
-	OP_MOVING_AVG, OP_VARIANCE,
-	OP_SUM, OP_PROD,
-	OP_ADD, OP_SUB, OP_MUL, OP_DIV				// < binary connectors
+	OP_AVG,
+	OP_MAX,
+	OP_MIN, // < single argument connectors
+	OP_MOVING_AVG,
+	OP_VARIANCE,
+	OP_SUM,
+	OP_PROD,
+	OP_ADD,
+	OP_SUB,
+	OP_MUL,
+	OP_DIV // < binary connectors
 } irt_metric_combinator;
 
 
 typedef struct _irt_metric {
-	irt_metric_kind kind;							// < determines whether it is an atomic or composed metric
+	irt_metric_kind kind; // < determines whether it is an atomic or composed metric
 	union {
 		struct {
-			irt_atomic_metric_index index;				// < the index of the atomic metric within the table
+			irt_atomic_metric_index index; // < the index of the atomic metric within the table
 		};
 		struct {
-			irt_metric_combinator combinator;		// < the connector used for composing
-			struct _irt_metric* metricA;			// < the first sub-metric
-			struct _irt_metric* metricB;			// < the second sub-metric
+			irt_metric_combinator combinator; // < the connector used for composing
+			struct _irt_metric* metricA;      // < the first sub-metric
+			struct _irt_metric* metricB;      // < the second sub-metric
 		};
 	};
 } irt_metric;
@@ -225,9 +228,7 @@ typedef struct {
 
 typedef uint64 irt_time;
 
-typedef enum {
-	IRT_TC_NOW, IRT_TC_LATEST, IRT_TC_LAST_BEFORE, IRT_FIRST_AFTER, IRT_TC_BETWEEN
-} irt_time_constraint_kind;
+typedef enum { IRT_TC_NOW, IRT_TC_LATEST, IRT_TC_LAST_BEFORE, IRT_FIRST_AFTER, IRT_TC_BETWEEN } irt_time_constraint_kind;
 
 typedef struct {
 	irt_time begin;
@@ -305,7 +306,6 @@ irt_tuning_error_code irt_get_params(const irt_subject* subject, const irt_param
  * @param n       ... the number of parameters to be updated
  */
 irt_tuning_error_code irt_set_params(const irt_subject* subject, const irt_parameter_id params[], const irt_value value[], unsigned n);
-
 
 
 #endif // ifndef __GUARD_DATA_TUNING_H

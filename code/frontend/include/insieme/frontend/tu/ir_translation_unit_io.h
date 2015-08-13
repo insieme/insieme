@@ -42,33 +42,33 @@ namespace insieme {
 namespace frontend {
 namespace tu {
 
-/**
- * dumps the TU into a sigle IR node, useful tu use visitors on the whole thing
- * and do not loose a bit
- */
-core::ExpressionPtr toIR(core::NodeManager& manager, const IRTranslationUnit& unit);
+	/**
+	 * dumps the TU into a sigle IR node, useful tu use visitors on the whole thing
+	 * and do not loose a bit
+	 */
+	core::ExpressionPtr toIR(core::NodeManager& manager, const IRTranslationUnit& unit);
 
-/**
- * 	builds a translation unit from a previously dumped TU, or spetialy crafted IR node
- */
-IRTranslationUnit fromIR(const core::ExpressionPtr& node);
+	/**
+	 * 	builds a translation unit from a previously dumped TU, or spetialy crafted IR node
+	 */
+	IRTranslationUnit fromIR(const core::ExpressionPtr& node);
 
-/**
- * Dumps the given translation unit to the given output stream.
- *
- * @param out the target stream
- * @param unit the translation unit to be dumped
- */
-void dump(std::ostream& out, const IRTranslationUnit& unit);
+	/**
+	 * Dumps the given translation unit to the given output stream.
+	 *
+	 * @param out the target stream
+	 * @param unit the translation unit to be dumped
+	 */
+	void dump(std::ostream& out, const IRTranslationUnit& unit);
 
-/**
- * Load a translation unit from the given input stream.
- *
- * @param in the stream to read from
- * @param manager the node manager to be utilized for creating resulting nodes
- * @return the restored translation unit
- */
-IRTranslationUnit load(std::istream& in, core::NodeManager& manager);
+	/**
+	 * Load a translation unit from the given input stream.
+	 *
+	 * @param in the stream to read from
+	 * @param manager the node manager to be utilized for creating resulting nodes
+	 * @return the restored translation unit
+	 */
+	IRTranslationUnit load(std::istream& in, core::NodeManager& manager);
 
 } // end namespace tu
 } // end namespace frontend

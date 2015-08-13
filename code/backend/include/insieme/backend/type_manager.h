@@ -51,263 +51,246 @@
 namespace insieme {
 namespace backend {
 
-class Converter;
+	class Converter;
 
-class TypeInfo;
-class FunctionTypeInfo;
-class StructTypeInfo;
-class UnionTypeInfo;
-class RefTypeInfo;
-class ArrayTypeInfo;
-class VectorTypeInfo;
-class ChannelTypeInfo;
+	class TypeInfo;
+	class FunctionTypeInfo;
+	class StructTypeInfo;
+	class UnionTypeInfo;
+	class RefTypeInfo;
+	class ArrayTypeInfo;
+	class VectorTypeInfo;
+	class ChannelTypeInfo;
 
-typedef TypeInfo* TypeInfoPtr;
-typedef std::map<string, string> TypeIncludeTable;
+	typedef TypeInfo* TypeInfoPtr;
+	typedef std::map<string, string> TypeIncludeTable;
 
-TypeIncludeTable getBasicTypeIncludeTable();
-
-
-typedef std::function<const TypeInfo*(const Converter&, const core::TypePtr&)> TypeHandler;
-
-typedef vector<TypeHandler> TypeHandlerList;
-
-static inline TypeHandlerList getBasicTypeHandlerList() {
-	return TypeHandlerList();
-}
-
-namespace detail {
-class TypeInfoStore;
-}
-
-class TypeManager : private boost::noncopyable {
-
-	detail::TypeInfoStore* store;
-	
-public:
-
-	TypeManager(const Converter& converter);
-	
-	TypeManager(const Converter& converter, const TypeIncludeTable& includeTable, const TypeHandlerList& handlers);
-	
-	~TypeManager();
-	
-	const TypeInfo& getTypeInfo(const core::TypePtr&);
-	
-	const StructTypeInfo& getTypeInfo(const core::StructTypePtr&);
-	
-	const StructTypeInfo& getTypeInfo(const core::TupleTypePtr&);
-	
-	const UnionTypeInfo& getTypeInfo(const core::UnionTypePtr&);
-	
-	const FunctionTypeInfo& getTypeInfo(const core::FunctionTypePtr&);
-	
-	const RefTypeInfo& getTypeInfo(const core::RefTypePtr&);
-	
-	const ArrayTypeInfo& getTypeInfo(const core::ArrayTypePtr& type);
-	
-	const VectorTypeInfo& getTypeInfo(const core::VectorTypePtr& type);
-	
-	const ChannelTypeInfo& getTypeInfo(const core::ChannelTypePtr& type);
-	
-	const TypeInfo& getCVectorTypeInfo(const core::TypePtr& elementType, const c_ast::ExpressionPtr& size);
-	
-	// this one is only working for already resolved types
-	const c_ast::CodeFragmentPtr getDefinitionOf(const c_ast::TypePtr& type);
-	
-	// ----------------------- Management -----------------------
-	
-	TypeIncludeTable& getTypeIncludeTable();
-	
-	void addTypeHandler(const TypeHandler& handler);
-	
-	void addTypeHandler(const TypeHandlerList& list);
-	
-};
+	TypeIncludeTable getBasicTypeIncludeTable();
 
 
-/**
- * A type definition for a function converting one C AST node pointer into another
- * node pointer. Elements of this type are used to realize variable and parameter
- * declarations and conversions between plain C and Inspire types.
- *
- *  - The shared C-node manager should be used for generating new C-AST nodes.
- *  - the C-AST expression is the converted value representation
- */
-typedef std::function<c_ast::ExpressionPtr(const c_ast::SharedCNodeManager&, const c_ast::ExpressionPtr&)> NodeConverter;
+	typedef std::function<const TypeInfo*(const Converter&, const core::TypePtr&)> TypeHandler;
 
-struct TypeInfo {
+	typedef vector<TypeHandler> TypeHandlerList;
 
-	// to be included:
-	// 		- l / r value name
-	//		- external name
-	//		- declaration pattern
-	//		- parameter pattern
-	//		- externalization
-	//		- internalization
-	
-	c_ast::TypePtr lValueType;
-	
-	c_ast::TypePtr rValueType;
-	
-	c_ast::TypePtr externalType; // always rValue
-	
-	NodeConverter externalize;
-	
-	NodeConverter internalize;
-	
-	c_ast::CodeFragmentPtr declaration;
-	
-	c_ast::CodeFragmentPtr definition;
-	
-	TypeInfo();
-	
-	virtual ~TypeInfo() {};
-};
+	static inline TypeHandlerList getBasicTypeHandlerList() {
+		return TypeHandlerList();
+	}
 
-struct StructTypeInfo : public TypeInfo {
+	namespace detail {
+		class TypeInfoStore;
+	}
 
-	// to be included:
-	//		- a constructor function
-	
-	c_ast::CodeFragmentPtr constructor;
-	
-};
+	class TypeManager : private boost::noncopyable {
+		detail::TypeInfoStore* store;
 
-struct UnionTypeInfo : public TypeInfo {
+	  public:
+		TypeManager(const Converter& converter);
 
-	// to be included:
-	//		- a constructor per member
-	
-	std::vector<c_ast::CodeFragmentPtr> constructors;
-	
-};
+		TypeManager(const Converter& converter, const TypeIncludeTable& includeTable, const TypeHandlerList& handlers);
 
-struct FunctionTypeInfo : public TypeInfo {
+		~TypeManager();
 
-	// to be included
-	//		- plain flag
-	//		- closure name
-	//		- caller name
-	//		- references to code fragments of utilities
-	
-	bool plain;
-	
-	c_ast::IdentifierPtr callerName;
-	
-	c_ast::CodeFragmentPtr caller;
-	
-	c_ast::IdentifierPtr constructorName;
-	
-	c_ast::CodeFragmentPtr constructor;
-	
-};
+		const TypeInfo& getTypeInfo(const core::TypePtr&);
 
-struct RefTypeInfo : public TypeInfo {
+		const StructTypeInfo& getTypeInfo(const core::StructTypePtr&);
 
-	// to be included
-	//		- new operator
-	
-	c_ast::IdentifierPtr newOperatorName;
-	
-	c_ast::CodeFragmentPtr newOperator;
-	
-};
+		const StructTypeInfo& getTypeInfo(const core::TupleTypePtr&);
 
-struct ArrayTypeInfo : public TypeInfo {
-	// to be included
-	//		- nothing extra so far
-};
+		const UnionTypeInfo& getTypeInfo(const core::UnionTypePtr&);
 
-struct VectorTypeInfo : public StructTypeInfo {
-	// to be included
-	//		- init uniform operator
-	
-	c_ast::IdentifierPtr initUniformName;
-	
-	c_ast::CodeFragmentPtr initUniform;
-	
-};
+		const FunctionTypeInfo& getTypeInfo(const core::FunctionTypePtr&);
 
-struct ChannelTypeInfo : public TypeInfo {
-	// to be included
-	//		- read and write operations?
-};
+		const RefTypeInfo& getTypeInfo(const core::RefTypePtr&);
+
+		const ArrayTypeInfo& getTypeInfo(const core::ArrayTypePtr& type);
+
+		const VectorTypeInfo& getTypeInfo(const core::VectorTypePtr& type);
+
+		const ChannelTypeInfo& getTypeInfo(const core::ChannelTypePtr& type);
+
+		const TypeInfo& getCVectorTypeInfo(const core::TypePtr& elementType, const c_ast::ExpressionPtr& size);
+
+		// this one is only working for already resolved types
+		const c_ast::CodeFragmentPtr getDefinitionOf(const c_ast::TypePtr& type);
+
+		// ----------------------- Management -----------------------
+
+		TypeIncludeTable& getTypeIncludeTable();
+
+		void addTypeHandler(const TypeHandler& handler);
+
+		void addTypeHandler(const TypeHandlerList& list);
+	};
 
 
-namespace type_info_utils {
+	/**
+	 * A type definition for a function converting one C AST node pointer into another
+	 * node pointer. Elements of this type are used to realize variable and parameter
+	 * declarations and conversions between plain C and Inspire types.
+	 *
+	 *  - The shared C-node manager should be used for generating new C-AST nodes.
+	 *  - the C-AST expression is the converted value representation
+	 */
+	typedef std::function<c_ast::ExpressionPtr(const c_ast::SharedCNodeManager&, const c_ast::ExpressionPtr&)> NodeConverter;
 
-c_ast::ExpressionPtr NoOp(const c_ast::SharedCNodeManager&, const c_ast::ExpressionPtr& node);
+	struct TypeInfo {
+		// to be included:
+		// 		- l / r value name
+		//		- external name
+		//		- declaration pattern
+		//		- parameter pattern
+		//		- externalization
+		//		- internalization
 
-template<typename T = TypeInfo>
-T* createInfo(const c_ast::TypePtr& type) {
-	// construct the type information
-	T* res = new T();
-	res->lValueType = type;
-	res->rValueType = type;
-	res->externalType = type;
-	res->externalize = &NoOp;
-	res->internalize = &NoOp;
-	return res;
-}
+		c_ast::TypePtr lValueType;
 
-template<typename T = TypeInfo>
-T* createInfo(c_ast::CNodeManager& nodeManager, c_ast::PrimitiveType::CType primitiveType) {
-	c_ast::IdentifierPtr ident = nodeManager.create("primitive-type");
-	c_ast::TypePtr type = nodeManager.create<c_ast::PrimitiveType>(primitiveType);
-	return createInfo<T>(type);
-}
+		c_ast::TypePtr rValueType;
 
-template<typename T = TypeInfo>
-T* createInfo(c_ast::CNodeManager& nodeManager, const string& name) {
-	c_ast::IdentifierPtr ident = nodeManager.create(name);
-	c_ast::TypePtr type = nodeManager.create<c_ast::NamedType>(ident);
-	return createInfo<T>(type);
-}
+		c_ast::TypePtr externalType; // always rValue
 
-template<typename T = TypeInfo>
-T* createInfo(const c_ast::SharedCodeFragmentManager& fragmentManager, const string& name, const string& includeFile) {
-	const c_ast::SharedCNodeManager& nodeManager = fragmentManager->getNodeManager();
-	c_ast::IdentifierPtr ident = nodeManager->create(name);
-	c_ast::TypePtr type = nodeManager->create<c_ast::NamedType>(ident);
-	T* res = createInfo<T>(type);
-	
-	c_ast::CodeFragmentPtr decl = c_ast::IncludeFragment::createNew(fragmentManager, includeFile);
-	res->declaration = decl;
-	res->definition = decl;
-	return res;
-}
+		NodeConverter externalize;
+
+		NodeConverter internalize;
+
+		c_ast::CodeFragmentPtr declaration;
+
+		c_ast::CodeFragmentPtr definition;
+
+		TypeInfo();
+
+		virtual ~TypeInfo(){};
+	};
+
+	struct StructTypeInfo : public TypeInfo {
+		// to be included:
+		//		- a constructor function
+
+		c_ast::CodeFragmentPtr constructor;
+	};
+
+	struct UnionTypeInfo : public TypeInfo {
+		// to be included:
+		//		- a constructor per member
+
+		std::vector<c_ast::CodeFragmentPtr> constructors;
+	};
+
+	struct FunctionTypeInfo : public TypeInfo {
+		// to be included
+		//		- plain flag
+		//		- closure name
+		//		- caller name
+		//		- references to code fragments of utilities
+
+		bool plain;
+
+		c_ast::IdentifierPtr callerName;
+
+		c_ast::CodeFragmentPtr caller;
+
+		c_ast::IdentifierPtr constructorName;
+
+		c_ast::CodeFragmentPtr constructor;
+	};
+
+	struct RefTypeInfo : public TypeInfo {
+		// to be included
+		//		- new operator
+
+		c_ast::IdentifierPtr newOperatorName;
+
+		c_ast::CodeFragmentPtr newOperator;
+	};
+
+	struct ArrayTypeInfo : public TypeInfo {
+		// to be included
+		//		- nothing extra so far
+	};
+
+	struct VectorTypeInfo : public StructTypeInfo {
+		// to be included
+		//		- init uniform operator
+
+		c_ast::IdentifierPtr initUniformName;
+
+		c_ast::CodeFragmentPtr initUniform;
+	};
+
+	struct ChannelTypeInfo : public TypeInfo {
+		// to be included
+		//		- read and write operations?
+	};
 
 
-template<typename T = TypeInfo>
-T* createUnsupportedInfo(c_ast::CNodeManager& nodeManager, const std::string& name = "") {
-	return createInfo<T>(nodeManager, "/* UNSUPPORTED TYPE " + name + " */");
-}
+	namespace type_info_utils {
 
-template<typename T = TypeInfo>
-T* createInfo(const c_ast::TypePtr& type, const c_ast::CodeFragmentPtr& definition) {
-	T* res = createInfo<T>(type);
-	res->declaration = definition;
-	res->definition = definition;
-	return res;
-}
+		c_ast::ExpressionPtr NoOp(const c_ast::SharedCNodeManager&, const c_ast::ExpressionPtr& node);
 
-template<typename T = TypeInfo>
-T* createInfo(const c_ast::TypePtr& type,
-              const c_ast::CodeFragmentPtr& declaration,
-              const c_ast::CodeFragmentPtr& definition) {
-              
-	// declaration => definition
-	assert(!declaration || definition);
-	
-	T* res = createInfo<T>(type);
-	res->declaration = declaration;
-	res->definition = definition;
-	res->declaration->addRequirement(definition);
-	return res;
-}
+		template <typename T = TypeInfo>
+		T* createInfo(const c_ast::TypePtr& type) {
+			// construct the type information
+			T* res = new T();
+			res->lValueType = type;
+			res->rValueType = type;
+			res->externalType = type;
+			res->externalize = &NoOp;
+			res->internalize = &NoOp;
+			return res;
+		}
 
-}
+		template <typename T = TypeInfo>
+		T* createInfo(c_ast::CNodeManager& nodeManager, c_ast::PrimitiveType::CType primitiveType) {
+			c_ast::IdentifierPtr ident = nodeManager.create("primitive-type");
+			c_ast::TypePtr type = nodeManager.create<c_ast::PrimitiveType>(primitiveType);
+			return createInfo<T>(type);
+		}
+
+		template <typename T = TypeInfo>
+		T* createInfo(c_ast::CNodeManager& nodeManager, const string& name) {
+			c_ast::IdentifierPtr ident = nodeManager.create(name);
+			c_ast::TypePtr type = nodeManager.create<c_ast::NamedType>(ident);
+			return createInfo<T>(type);
+		}
+
+		template <typename T = TypeInfo>
+		T* createInfo(const c_ast::SharedCodeFragmentManager& fragmentManager, const string& name, const string& includeFile) {
+			const c_ast::SharedCNodeManager& nodeManager = fragmentManager->getNodeManager();
+			c_ast::IdentifierPtr ident = nodeManager->create(name);
+			c_ast::TypePtr type = nodeManager->create<c_ast::NamedType>(ident);
+			T* res = createInfo<T>(type);
+
+			c_ast::CodeFragmentPtr decl = c_ast::IncludeFragment::createNew(fragmentManager, includeFile);
+			res->declaration = decl;
+			res->definition = decl;
+			return res;
+		}
+
+
+		template <typename T = TypeInfo>
+		T* createUnsupportedInfo(c_ast::CNodeManager& nodeManager, const std::string& name = "") {
+			return createInfo<T>(nodeManager, "/* UNSUPPORTED TYPE " + name + " */");
+		}
+
+		template <typename T = TypeInfo>
+		T* createInfo(const c_ast::TypePtr& type, const c_ast::CodeFragmentPtr& definition) {
+			T* res = createInfo<T>(type);
+			res->declaration = definition;
+			res->definition = definition;
+			return res;
+		}
+
+		template <typename T = TypeInfo>
+		T* createInfo(const c_ast::TypePtr& type, const c_ast::CodeFragmentPtr& declaration, const c_ast::CodeFragmentPtr& definition) {
+			// declaration => definition
+			assert(!declaration || definition);
+
+			T* res = createInfo<T>(type);
+			res->declaration = declaration;
+			res->definition = definition;
+			res->declaration->addRequirement(definition);
+			return res;
+		}
+	}
 
 } // end namespace backend
 } // end namespace insieme

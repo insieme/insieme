@@ -45,70 +45,66 @@ namespace insieme {
 namespace core {
 namespace printer {
 
-/**
- * The Lua printer is converting an internal IR code representation
- * into approximately equal Lua script code. Correct semantic encoding
- * can not be guaranteed due to the restricted support of language construts
- * within lua.
- */
-struct LuaPrinter : public utils::Printable {
+	/**
+	 * The Lua printer is converting an internal IR code representation
+	 * into approximately equal Lua script code. Correct semantic encoding
+	 * can not be guaranteed due to the restricted support of language construts
+	 * within lua.
+	 */
+	struct LuaPrinter : public utils::Printable {
+		/**
+		 * The statement to be printed by this printer.
+		 */
+		StatementPtr stmt;
+
+		/**
+		 * Creates a new instance of this printer converting
+		 * the given statement into a equivalent Lua script.
+		 *
+		 * @param stmt the statement to be converted
+		 */
+		LuaPrinter(const StatementPtr& stmt) : stmt(stmt) {}
+
+		/**
+		 * The internal implementation realizing the actual
+		 * conversion into the Lua script language.
+		 *
+		 * @param out the stream to be printed to
+		 */
+		std::ostream& printTo(std::ostream& out) const;
+	};
 
 	/**
-	 * The statement to be printed by this printer.
+	 * A utility function converting the given statement into a
+	 * approximately equal Lua script.
 	 */
-	StatementPtr stmt;
-	
-	/**
-	 * Creates a new instance of this printer converting
-	 * the given statement into a equivalent Lua script.
-	 *
-	 * @param stmt the statement to be converted
-	 */
-	LuaPrinter(const StatementPtr& stmt) : stmt(stmt) {}
-	
-	/**
-	 * The internal implementation realizing the actual
-	 * conversion into the Lua script language.
-	 *
-	 * @param out the stream to be printed to
-	 */
-	std::ostream& printTo(std::ostream& out) const;
-	
-};
-
-/**
- * A utility function converting the given statement into a
- * approximately equal Lua script.
- */
-string toLuaScript(const StatementPtr& stmt);
-
-/**
- * The type of exception been thrown if some construct could
- * not be converted successfully into an equivalent Lua script.
- */
-class LuaConversionException : public std::exception {
+	string toLuaScript(const StatementPtr& stmt);
 
 	/**
-	 * The node which caused the problem.
+	 * The type of exception been thrown if some construct could
+	 * not be converted successfully into an equivalent Lua script.
 	 */
-	NodePtr source;
-	
-	/**
-	 * A brief description of the encountered problem.
-	 */
-	std::string msg;
-	
-public:
+	class LuaConversionException : public std::exception {
+		/**
+		 * The node which caused the problem.
+		 */
+		NodePtr source;
 
-	LuaConversionException(const NodePtr& source, const string& msg = "");
-	virtual ~LuaConversionException() throw() { }
-	const NodePtr& getSource() const {
-		return source;
-	}
-	virtual const char* what() const throw() {
-		return msg.c_str();
-	}
-};
+		/**
+		 * A brief description of the encountered problem.
+		 */
+		std::string msg;
+
+	  public:
+		LuaConversionException(const NodePtr& source, const string& msg = "");
+		virtual ~LuaConversionException() throw() {}
+		const NodePtr& getSource() const {
+			return source;
+		}
+		virtual const char* what() const throw() {
+			return msg.c_str();
+		}
+	};
 
 
 } // end namespace printer

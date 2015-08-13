@@ -42,14 +42,14 @@
 #include "irt_inttypes.h"
 
 struct timespec {
-	long  tv_sec;         /* seconds */
-	long  tv_nsec;        /* nanoseconds */
+	long tv_sec;  /* seconds */
+	long tv_nsec; /* nanoseconds */
 };
 
 #define CLOCK_REALTIME 1
 
-int clock_gettime(int clk_id, struct timespec *tp);
+int clock_gettime(int clk_id, struct timespec* tp);
 
-int nanosleep(const struct timespec *req, struct timespec *rem);
+int nanosleep(const struct timespec* req, struct timespec* rem);
 
 #endif // ifndef __GUARD_INCLUDE_GEMS_TIME_H

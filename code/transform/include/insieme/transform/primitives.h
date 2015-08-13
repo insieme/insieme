@@ -47,157 +47,142 @@ namespace insieme {
 namespace transform {
 
 
-// --------------- NoOp Transformation -----------------
-
-/**
- * A transformation representing the identity, hence not doing anything.
- */
-struct NoOp : public Transformation {
+	// --------------- NoOp Transformation -----------------
 
 	/**
-	 * Creates a new instance of this NoOp transformation.
+	 * A transformation representing the identity, hence not doing anything.
+	 */
+	struct NoOp : public Transformation {
+		/**
+		 * Creates a new instance of this NoOp transformation.
+		 *
+		 * @param value only valid if empty (required for Transformation Type infrastructure)
+		 */
+		NoOp(const parameter::Value& value = parameter::emptyValue);
+
+		/**
+		 * Applies this transformation to the given target node.
+		 */
+		virtual core::NodeAddress apply(const core::NodeAddress& target) const {
+			return target; // this is just the identity!
+		}
+
+		/**
+		 * Compares this connector with the given transformation. It will only be the same
+		 * if it is a transformation of the same type being instantiated using the same parameters.
+		 */
+		virtual bool operator==(const Transformation& other) const;
+
+		/**
+		 * Prints a readable representation of this transformation to the given output stream
+		 * using the given indent.
+		 */
+		virtual std::ostream& printTo(std::ostream& out, const Indent& indent) const;
+	};
+
+
+	/**
+	 * The transformation type used as a factory for pipeline connectors.
+	 */
+	TRANSFORMATION_TYPE(NoOp, "A transformation representing the identity, hence not doing anything.", parameter::tuple());
+	/**
+	 * makeNoOp() : creates a no transformation
+	 */
+	inline TransformationPtr makeNoOp() {
+		return std::make_shared<NoOp>();
+	}
+
+
+	// --------------- Lambda Transformation -----------------
+
+
+	/**
+	 * A lambda transformation is a simple wrapper allowing to easily create simple transformations
+	 * within test cases or when composing transformations to form new transformations. These kind
+	 * of transformations are not part of any catalog. They are only a utility for implementing
+	 * other transformations.
+	 */
+	class LambdaTransformation : public Transformation {
+		/**
+		 * The function type internally stored for conducting the actual transformation.
+		 */
+		typedef std::function<core::NodePtr(const core::NodePtr&)> TransformationFunction;
+
+		/**
+		 * The function conducting the actual transformation.
+		 */
+		TransformationFunction fun;
+
+		/**
+		 * A description for this transformation. If there is no description associated,
+		 * an empty string is used.
+		 */
+		const string desc;
+
+	  public:
+		/**
+		 * Creates a new instance based on the given transformation function and description.
+		 */
+		LambdaTransformation(const TransformationFunction& fun, const string& desc);
+
+		LambdaTransformation(const parameter::Value& value);
+
+		/**
+		 * Applies this transformation to the given target node.
+		 */
+		virtual core::NodeAddress apply(const core::NodeAddress& target) const {
+			return core::transform::replaceAddress(target->getNodeManager(), target, fun(target));
+		}
+
+		/**
+		 * Compares this transformation with the given transformation. It is considered equivalent
+		 * in case it is the same instance or it has the same non-empty description.
+		 */
+		virtual bool operator==(const Transformation& other) const;
+
+		/**
+		 * Prints a string representation to the given output stream.
+		 */
+		virtual std::ostream& printTo(std::ostream& out, const Indent& indent) const;
+	};
+
+	/**
+	 * The transformation type used as a factory for pipeline connectors.
+	 */
+	TRANSFORMATION_TYPE(LambdaTransformation, "A transformation hull for a lambda function realizing the actual transformation.", parameter::tuple());
+
+
+	/**
+	 * A factory method creating a lambda transformation based on the given lambda.
 	 *
-	 * @param value only valid if empty (required for Transformation Type infrastructure)
+	 * @param lambda the function conducting the actual transformation
+	 * @return a transformation which will invoke the given lambda when being applied
 	 */
-	NoOp(const parameter::Value& value = parameter::emptyValue);
-	
-	/**
-	 * Applies this transformation to the given target node.
-	 */
-	virtual core::NodeAddress apply(const core::NodeAddress& target) const {
-		return target; // this is just the identity!
+	template <typename Lambda>
+	TransformationPtr makeLambdaTransformation(const Lambda& lambda) {
+		return std::make_shared<LambdaTransformation>(lambda, "");
 	}
-	
-	/**
-	 * Compares this connector with the given transformation. It will only be the same
-	 * if it is a transformation of the same type being instantiated using the same parameters.
-	 */
-	virtual bool operator==(const Transformation& other) const;
-	
-	/**
-	 * Prints a readable representation of this transformation to the given output stream
-	 * using the given indent.
-	 */
-	virtual std::ostream& printTo(std::ostream& out, const Indent& indent) const;
-	
-};
-
-
-/**
- * The transformation type used as a factory for pipeline connectors.
- */
-TRANSFORMATION_TYPE(
-    NoOp,
-    "A transformation representing the identity, hence not doing anything.",
-    parameter::tuple()
-);
-/**
- * makeNoOp() : creates a no transformation
- */
-inline TransformationPtr makeNoOp() {
-	return std::make_shared<NoOp>();
-}
-
-
-
-
-// --------------- Lambda Transformation -----------------
-
-
-/**
- * A lambda transformation is a simple wrapper allowing to easily create simple transformations
- * within test cases or when composing transformations to form new transformations. These kind
- * of transformations are not part of any catalog. They are only a utility for implementing
- * other transformations.
- */
-class LambdaTransformation : public Transformation {
 
 	/**
-	 * The function type internally stored for conducting the actual transformation.
+	 * A factory method creating a lambda transformation based on the given lambda.
+	 *
+	 * @param desc a description for the resulting transformation
+	 * @param lambda the function conducting the actual transformation
+	 * @return a transformation which will invoke the given lambda when being applied
 	 */
-	typedef std::function<core::NodePtr(const core::NodePtr&)> TransformationFunction;
-	
-	/**
-	 * The function conducting the actual transformation.
-	 */
-	TransformationFunction fun;
-	
-	/**
-	 * A description for this transformation. If there is no description associated,
-	 * an empty string is used.
-	 */
-	const string desc;
-	
-public:
-
-	/**
-	 * Creates a new instance based on the given transformation function and description.
-	 */
-	LambdaTransformation(const TransformationFunction& fun, const string& desc);
-	
-	LambdaTransformation(const parameter::Value& value);
-	
-	/**
-	 * Applies this transformation to the given target node.
-	 */
-	virtual core::NodeAddress apply(const core::NodeAddress& target) const {
-		return core::transform::replaceAddress(target->getNodeManager(), target, fun(target));
+	template <typename Lambda>
+	TransformationPtr makeLambdaTransformation(const string& desc, const Lambda& lambda) {
+		return std::make_shared<LambdaTransformation>(lambda, desc);
 	}
-	
+
+
+	// --- For debugging purposes ---
+
 	/**
-	 * Compares this transformation with the given transformation. It is considered equivalent
-	 * in case it is the same instance or it has the same non-empty description.
+	 * A factory for a debugging-transformation which can be added inside a composed
+	 * transformation to print the current transformed code version.
 	 */
-	virtual bool operator==(const Transformation& other) const;
-	
-	/**
-	 * Prints a string representation to the given output stream.
-	 */
-	virtual std::ostream& printTo(std::ostream& out, const Indent& indent) const;
-	
-};
-
-/**
- * The transformation type used as a factory for pipeline connectors.
- */
-TRANSFORMATION_TYPE(
-    LambdaTransformation,
-    "A transformation hull for a lambda function realizing the actual transformation.",
-    parameter::tuple()
-);
-
-
-/**
- * A factory method creating a lambda transformation based on the given lambda.
- *
- * @param lambda the function conducting the actual transformation
- * @return a transformation which will invoke the given lambda when being applied
- */
-template<typename Lambda>
-TransformationPtr makeLambdaTransformation(const Lambda& lambda) {
-	return std::make_shared<LambdaTransformation>(lambda, "");
-}
-
-/**
- * A factory method creating a lambda transformation based on the given lambda.
- *
- * @param desc a description for the resulting transformation
- * @param lambda the function conducting the actual transformation
- * @return a transformation which will invoke the given lambda when being applied
- */
-template<typename Lambda>
-TransformationPtr makeLambdaTransformation(const string& desc, const Lambda& lambda) {
-	return std::make_shared<LambdaTransformation>(lambda, desc);
-}
-
-
-// --- For debugging purposes ---
-
-/**
- * A factory for a debugging-transformation which can be added inside a composed
- * transformation to print the current transformed code version.
- */
-TransformationPtr makeDebugPrinter(const string& title = "", std::ostream& out = std::cout);
+	TransformationPtr makeDebugPrinter(const string& title = "", std::ostream& out = std::cout);
 
 } // end namespace transform
 } // end namespace insieme

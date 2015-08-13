@@ -38,10 +38,7 @@
 #ifndef __GUARD_RUNTIME_H
 #define __GUARD_RUNTIME_H
 
-typedef enum _irt_runtime_behaviour_flags {
-	IRT_RT_STANDALONE	=	1<<0,
-	IRT_RT_MQUEUE		=	1<<1
-} irt_runtime_behaviour_flags;
+typedef enum _irt_runtime_behaviour_flags { IRT_RT_STANDALONE = 1 << 0, IRT_RT_MQUEUE = 1 << 1 } irt_runtime_behaviour_flags;
 
 
 #endif // ifndef __GUARD_RUNTIME_H

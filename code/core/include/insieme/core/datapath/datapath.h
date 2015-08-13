@@ -43,214 +43,207 @@ namespace insieme {
 namespace core {
 namespace datapath {
 
-/**
- * Legacy code - a data path used to be a plain expression pointer.
- */
-typedef ExpressionPtr DataPathPtr;
-
-/**
- * The type used to represent data paths. Internally
- * a data path is represented by an IR construct modeling
- * the path within a data object to some referenced
- * sub-element.
- */
-class DataPath : public utils::Printable {
-
-	ExpressionPtr path;
-	
 	/**
-	 * The constructor to be invoked by the builder class.
-	 *
-	 * @param path the path to be represented by the resulting instance
+	 * Legacy code - a data path used to be a plain expression pointer.
 	 */
-	DataPath(const ExpressionPtr& path)
-		: path(path) {}
-		
-public:
+	typedef ExpressionPtr DataPathPtr;
 
 	/**
-	 * Creates a new data path referencing the root of a data object.
+	 * The type used to represent data paths. Internally
+	 * a data path is represented by an IR construct modeling
+	 * the path within a data object to some referenced
+	 * sub-element.
 	 */
-	DataPath(const TypePtr& type);
-	
-	/**
-	 * Extends this data path by an access to the given member.
-	 * This call is only supported if the accessed element is a
-	 * struct, union or recursive type with a top-level struct/union.
-	 *
-	 * @param member the member to be accessed
-	 * @return the extended data path
-	 */
-	DataPath member(const string& name) const;
-	
-	/**
-	 * Extends this data path by an access to the given element.
-	 * This call is only supported if the accessed element is a
-	 * vector or array or a recursive type with a top-level vector/array.
-	 *
-	 * @param element the element to be accessed; the expression has to be an unsigned integer
-	 * @return the extended data path
-	 */
-	DataPath element(const ExpressionPtr& element) const;
-	
-	/**
-	 * Extends this data path by an access to the given element.
-	 * This call is only supported if the accessed element is a
-	 * vector or array or a recursive type with a top-level vector/array.
-	 *
-	 * @param element the element to be accessed
-	 * @return the extended data path
-	 */
-	DataPath element(unsigned index) const;
-	
-	/**
-	 * Extends this data path by an access to the given component.
-	 * This call is only supported if the accessed element is a
-	 * tuple or a recursive type with a top-level tuple.
-	 *
-	 * @param component the component to be accessed
-	 * @return the extended data path
-	 */
-	DataPath component(unsigned index) const;
-	
-	/**
-	 * Extends this data path by an access to the given parent type.
-	 * This call is only supported if the accessed element is a struct
-	 * exhibiting the corresponding parent class.
-	 *
-	 * @param parent the type of parent to be accessed
-	 * @return the extended data path
-	 */
-	DataPath parent(const TypePtr& parent) const;
-	
-	/**
-	 * A conversion operation to an ExpressionPtr.
-	 */
-	operator ExpressionPtr() const {
-		return path;
-	}
-	
-	/**
-	 * A conversion operation to an StatementPtr.
-	 */
-	operator StatementPtr() const {
-		return path;
-	}
-	
-	/**
-	 * A conversion operation to an NodePtr.
-	 */
-	operator NodePtr() const {
-		return path;
-	}
-	
-	/**
-	 * Returns the source type of this data path.
-	 */
-	TypePtr getSourceType() const;
+	class DataPath : public utils::Printable {
+		ExpressionPtr path;
+
+		/**
+		 * The constructor to be invoked by the builder class.
+		 *
+		 * @param path the path to be represented by the resulting instance
+		 */
+		DataPath(const ExpressionPtr& path) : path(path) {}
+
+	  public:
+		/**
+		 * Creates a new data path referencing the root of a data object.
+		 */
+		DataPath(const TypePtr& type);
+
+		/**
+		 * Extends this data path by an access to the given member.
+		 * This call is only supported if the accessed element is a
+		 * struct, union or recursive type with a top-level struct/union.
+		 *
+		 * @param member the member to be accessed
+		 * @return the extended data path
+		 */
+		DataPath member(const string& name) const;
+
+		/**
+		 * Extends this data path by an access to the given element.
+		 * This call is only supported if the accessed element is a
+		 * vector or array or a recursive type with a top-level vector/array.
+		 *
+		 * @param element the element to be accessed; the expression has to be an unsigned integer
+		 * @return the extended data path
+		 */
+		DataPath element(const ExpressionPtr& element) const;
+
+		/**
+		 * Extends this data path by an access to the given element.
+		 * This call is only supported if the accessed element is a
+		 * vector or array or a recursive type with a top-level vector/array.
+		 *
+		 * @param element the element to be accessed
+		 * @return the extended data path
+		 */
+		DataPath element(unsigned index) const;
+
+		/**
+		 * Extends this data path by an access to the given component.
+		 * This call is only supported if the accessed element is a
+		 * tuple or a recursive type with a top-level tuple.
+		 *
+		 * @param component the component to be accessed
+		 * @return the extended data path
+		 */
+		DataPath component(unsigned index) const;
+
+		/**
+		 * Extends this data path by an access to the given parent type.
+		 * This call is only supported if the accessed element is a struct
+		 * exhibiting the corresponding parent class.
+		 *
+		 * @param parent the type of parent to be accessed
+		 * @return the extended data path
+		 */
+		DataPath parent(const TypePtr& parent) const;
+
+		/**
+		 * A conversion operation to an ExpressionPtr.
+		 */
+		operator ExpressionPtr() const {
+			return path;
+		}
+
+		/**
+		 * A conversion operation to an StatementPtr.
+		 */
+		operator StatementPtr() const {
+			return path;
+		}
+
+		/**
+		 * A conversion operation to an NodePtr.
+		 */
+		operator NodePtr() const {
+			return path;
+		}
+
+		/**
+		 * Returns the source type of this data path.
+		 */
+		TypePtr getSourceType() const;
+
+		/**
+		 * Returns the target type of the data path.
+		 */
+		TypePtr getTargetType() const;
+
+		/**
+		 * Allows this data path to be printed in a human readable format.
+		 */
+		std::ostream& printTo(std::ostream& out) const;
+	};
+
 
 	/**
-	 * Returns the target type of the data path.
+	 * A utility class supporting the creation of data paths.
 	 */
-	TypePtr getTargetType() const;
+	class DataPathBuilder {
+		/**
+		 * The path constructed by this builder.
+		 */
+		DataPath path;
 
-	/**
-	 * Allows this data path to be printed in a human readable format.
-	 */
-	std::ostream& printTo(std::ostream& out) const;
-	
-};
+	  public:
+		/**
+		 * Creates a new builder instance based on the given manager
+		 * using the empty path as its initial path.
+		 *
+		 * @param type the type to start your data path from
+		 */
+		DataPathBuilder(const TypePtr& type) : path(type) {}
+
+		/**
+		 * Creates a new builder instance based on the given initial path.
+		 *
+		 * @param path the path to be used as an initial path for the builder
+		 */
+		DataPathBuilder(const DataPath& path) : path(path) {}
+
+		/**
+		 * This function will extend the internally constructed path by
+		 * an access to the given member of a struct / union.
+		 *
+		 * @param member the member element to be accessed
+		 * @return a reference to this builder to chain build-commands
+		 */
+		DataPathBuilder& member(const string& member);
 
 
-/**
- * A utility class supporting the creation of data paths.
- */
-class DataPathBuilder {
+		/**
+		 * This function will extend the internally constructed path by
+		 * an access to the given element of an array / vector.
+		 *
+		 * @param element the element to be accessed
+		 * @return a reference to this builder to chain build-commands
+		 */
+		DataPathBuilder& element(const ExpressionPtr& element);
 
-	/**
-	 * The path constructed by this builder.
-	 */
-	DataPath path;
-	
-public:
+		/**
+		 * This function will extend the internally constructed path by
+		 * an access to the given element of an array / vector.
+		 *
+		 * @param element the element to be accessed
+		 * @return a reference to this builder to chain build-commands
+		 */
+		DataPathBuilder& element(unsigned index);
 
-	/**
-	 * Creates a new builder instance based on the given manager
-	 * using the empty path as its initial path.
-	 *
-	 * @param type the type to start your data path from
-	 */
-	DataPathBuilder(const TypePtr& type) : path(type) {}
-	
-	/**
-	 * Creates a new builder instance based on the given initial path.
-	 *
-	 * @param path the path to be used as an initial path for the builder
-	 */
-	DataPathBuilder(const DataPath& path) : path(path) {}
-	
-	/**
-	 * This function will extend the internally constructed path by
-	 * an access to the given member of a struct / union.
-	 *
-	 * @param member the member element to be accessed
-	 * @return a reference to this builder to chain build-commands
-	 */
-	DataPathBuilder& member(const string& member);
-	
-	
-	/**
-	 * This function will extend the internally constructed path by
-	 * an access to the given element of an array / vector.
-	 *
-	 * @param element the element to be accessed
-	 * @return a reference to this builder to chain build-commands
-	 */
-	DataPathBuilder& element(const ExpressionPtr& element);
-	
-	/**
-	 * This function will extend the internally constructed path by
-	 * an access to the given element of an array / vector.
-	 *
-	 * @param element the element to be accessed
-	 * @return a reference to this builder to chain build-commands
-	 */
-	DataPathBuilder& element(unsigned index);
-	
-	
-	/**
-	 * This function will extend the internally constructed path by
-	 * an access to the given component of a tuple.
-	 *
-	 * @param component the (index) of the component to be accessed
-	 * @return a reference to this builder to chain build-commands
-	 */
-	DataPathBuilder& component(unsigned index);
-	
-	/**
-	 * This function will extend the internally constructed path by
-	 * an access to the given parent type.
-	 *
-	 * @param type the parent type to be accessed
-	 * @return a reference to this builder to chain build-commands
-	 */
-	DataPathBuilder& parent(const TypePtr& type);
-	
-	/**
-	 * Obtains a copy of the internally constructed data path.
-	 */
-	DataPath getDataPath() const {
-		return path;
-	}
-	
-	/**
-	 * Obtains a copy of the internally constructed data path as an expression.
-	 */
-	DataPathPtr getPath() const {
-		return path;
-	}
-	
-};
+
+		/**
+		 * This function will extend the internally constructed path by
+		 * an access to the given component of a tuple.
+		 *
+		 * @param component the (index) of the component to be accessed
+		 * @return a reference to this builder to chain build-commands
+		 */
+		DataPathBuilder& component(unsigned index);
+
+		/**
+		 * This function will extend the internally constructed path by
+		 * an access to the given parent type.
+		 *
+		 * @param type the parent type to be accessed
+		 * @return a reference to this builder to chain build-commands
+		 */
+		DataPathBuilder& parent(const TypePtr& type);
+
+		/**
+		 * Obtains a copy of the internally constructed data path.
+		 */
+		DataPath getDataPath() const {
+			return path;
+		}
+
+		/**
+		 * Obtains a copy of the internally constructed data path as an expression.
+		 */
+		DataPathPtr getPath() const {
+			return path;
+		}
+	};
 
 
 } // end namespace datapath

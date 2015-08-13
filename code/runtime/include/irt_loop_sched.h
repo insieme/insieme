@@ -50,7 +50,7 @@ struct _irt_loop_sched_policy {
 	uint32 participants;
 	union {
 		int32 chunk_size;
-		uint64 *boundaries;
+		uint64* boundaries;
 		double shares[IRT_MAX_WORKERS];
 	} param;
 };
@@ -62,20 +62,19 @@ struct _irt_loop_sched_data {
 	irt_loop_sched_policy policy;
 	volatile uint64 completed;
 	volatile uint64 block_size;
-#ifdef IRT_RUNTIME_TUNING
+	#ifdef IRT_RUNTIME_TUNING
 	volatile uint32 participants_complete;
 	uint64 start_time;
-#ifdef IRT_RUNTIME_TUNING_EXTENDED
-	uint64 *part_times;
-#endif
-#endif
+	#ifdef IRT_RUNTIME_TUNING_EXTENDED
+	uint64* part_times;
+	#endif
+	#endif
 };
 
 // schedule a loop using the policy specified for this group
 // runs the optimizer and collects instrumentation data if the IRT_RUNTIME_TUNING flag is active
-inline static void irt_schedule_loop(
-    irt_work_item* self, irt_work_group* group, irt_work_item_range base_range,
-    irt_wi_implementation* impl, irt_lw_data_item* args);
+inline static void irt_schedule_loop(irt_work_item* self, irt_work_group* group, irt_work_item_range base_range, irt_wi_implementation* impl,
+                                     irt_lw_data_item* args);
 
 // sets the scheduling policy for the given group
 // it will activate upon reaching the next loop

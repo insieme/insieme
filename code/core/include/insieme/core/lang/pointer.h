@@ -42,12 +42,11 @@ namespace insieme {
 namespace core {
 namespace lang {
 
-/**
-	 * An extension covering the derived pointer type and all its
-	 * associated operators.
-	 */
+	/**
+	     * An extension covering the derived pointer type and all its
+	     * associated operators.
+	     */
 	class PointerExtension : public core::lang::Extension {
-
 		/**
 		 * Allow the node manager to create instances of this class.
 		 */
@@ -56,20 +55,16 @@ namespace lang {
 		/**
 		 * Creates a new instance based on the given node manager.
 		 */
-		PointerExtension(core::NodeManager& manager)
-			: core::lang::Extension(manager) {}
+		PointerExtension(core::NodeManager& manager) : core::lang::Extension(manager) {}
 
-	public:
-
-
+	  public:
 		// -------------------- pointers ---------------------------
 
 		/**
 		 * The generic ref type template e.g. utilized as a reference for is-ref checks.
 		 */
-//		LANG_EXT_TYPE_WITH_NAME(GenPtr, "generic_ptr_template", "struct _ir_pointer { ref<array<'a,'v,'c>> data; int<8> offset; }");
+		//		LANG_EXT_TYPE_WITH_NAME(GenPtr, "generic_ptr_template", "struct _ir_pointer { ref<array<'a,'v,'c>> data; int<8> offset; }");
 		LANG_EXT_TYPE_WITH_NAME(GenPtr, "generic_ptr_template", "ptr<'a,'v,'c>");
-
 
 
 		// -- ptr <-> ref converters --
@@ -78,15 +73,18 @@ namespace lang {
 		/**
 		 * A built-in operator to convert a reference into a pointer
 		 */
-//		LANG_EXT_DERIVED_WITH_NAME(PtrFromRef, "ptr_from_ref", "lambda (ref<'a,'v,'c> r) -> struct _ir_pointer { ref<array<'a,'v,'c>> data; int<8> offset; } { return (struct _ir_pointer { ref<array<'a,'v,'c>> data; int<8> offset; }) { ref_scalar_to_ref_array(r), 0 }; }")
+		//		LANG_EXT_DERIVED_WITH_NAME(PtrFromRef, "ptr_from_ref", "lambda (ref<'a,'v,'c> r) -> struct _ir_pointer { ref<array<'a,'v,'c>> data; int<8>
+		//offset;
+		//} { return (struct _ir_pointer { ref<array<'a,'v,'c>> data; int<8> offset; }) { ref_scalar_to_ref_array(r), 0 }; }")
 		LANG_EXT_LITERAL(PtrFromRef, "ptr_from_ref", "(ref<'a,'v,'c>) -> ptr<'a,'v,'c>")
 
 		/**
 		 * A built-in derived operator allocating memory on the heap.
 		 */
-//		LANG_EXT_DERIVED_WITH_NAME(PtrToRef, "ptr_to_ref", "lambda (struct _ir_pointer { ref<array<'a,'v,'c>> data; int<8> offset; } p) -> ref<'a,'v,'c> { return p.data[p.offset]; }")
+		//		LANG_EXT_DERIVED_WITH_NAME(PtrToRef, "ptr_to_ref", "lambda (struct _ir_pointer { ref<array<'a,'v,'c>> data; int<8> offset; } p) -> ref<'a,'v,'c>
+		//{
+		// return p.data[p.offset]; }")
 		LANG_EXT_LITERAL(PtrToRef, "ptr_to_ref", "(ptr<'a,'v,'c>) -> ref<'a,'v,'c>")
-
 
 
 		// -- casts --
@@ -94,25 +92,25 @@ namespace lang {
 		/**
 		 * A reinterpret cast altering the actual interpretation of the referenced memory cell.
 		 */
-		LANG_EXT_LITERAL(PtrReinterpret, 				"ptr_reinterpret", 		"(ptr<'a,'c,'v>,type<'b>) -> ptr<'b,'c,'v>")
+		LANG_EXT_LITERAL(PtrReinterpret, "ptr_reinterpret", "(ptr<'a,'c,'v>,type<'b>) -> ptr<'b,'c,'v>")
 
 		/**
 		 * A simpler reference cast merely altering the view on the otherwise untouched memory location. This
 		 * is the basis for e.g. const or volatile casts.
 		 */
-		LANG_EXT_LITERAL(PtrCast, 						"ptr_cast", 			"(ptr<'a,'c,'v>,type<'new_const>,type<'new_volatile>) -> ptr<'a,'new_const,'new_volatile>")
+		LANG_EXT_LITERAL(PtrCast, "ptr_cast", "(ptr<'a,'c,'v>,type<'new_const>,type<'new_volatile>) -> ptr<'a,'new_const,'new_volatile>")
 
 
 		/**
 		 * A specialization of the ref_cast operator for modeling const casts.
 		 */
-		LANG_EXT_DERIVED_WITH_NAME(PtrConstCast, 		"ptr_const_cast", 		"lambda (ptr<'a,'c,'v> r, type<'nc> c) -> ptr<'a,'nc,'v> { return ptr_cast(r,c,type('v)); }")
+		LANG_EXT_DERIVED_WITH_NAME(PtrConstCast, "ptr_const_cast", "lambda (ptr<'a,'c,'v> r, type<'nc> c) -> ptr<'a,'nc,'v> { return ptr_cast(r,c,type('v)); }")
 
 		/**
 		 * A specialization of the ref_cast operator for modeling volatile casts.
 		 */
-		LANG_EXT_DERIVED_WITH_NAME(PtrVolatileCast, 	"ptr_volatile_cast", 	"lambda (ptr<'a,'c,'v> r, type<'nv> v) -> ptr<'a,'c,'nv> { return ptr_cast(r,type('c),v); }")
-
+		LANG_EXT_DERIVED_WITH_NAME(PtrVolatileCast, "ptr_volatile_cast",
+		                           "lambda (ptr<'a,'c,'v> r, type<'nv> v) -> ptr<'a,'c,'nv> { return ptr_cast(r,type('c),v); }")
 
 
 		// -- sub-referencing --
@@ -131,22 +129,29 @@ namespace lang {
 		/**
 		 * A derived operator providing access to an element in an array.
 		 */
-		LANG_EXT_DERIVED_WITH_NAME(PtrArrayElement, 	"ref_array_elem", 			"lambda (ptr<array<'a,'s>,'c,'v> r, int<8> i) -> ptr<'a,'c,'v> { return ptr_narrow(r, dp_element(dp_root(type(array<'a,'s>)),i)); }")
+		LANG_EXT_DERIVED_WITH_NAME(
+		    PtrArrayElement, "ref_array_elem",
+		    "lambda (ptr<array<'a,'s>,'c,'v> r, int<8> i) -> ptr<'a,'c,'v> { return ptr_narrow(r, dp_element(dp_root(type(array<'a,'s>)),i)); }")
 
 		/**
 		 * A derived reference navigation operator providing access to a member of a struct / union.
 		 */
-		LANG_EXT_DERIVED_WITH_NAME(PtrMemberAccess, 	"ref_member_access", 		"lambda (ptr<'a,'c,'v> r, identifier name, type<'b> type) -> ptr<'b,'c,'v> { return ptr_narrow(r, dp_member(dp_root(type('a)),name,type)); }")
+		LANG_EXT_DERIVED_WITH_NAME(
+		    PtrMemberAccess, "ref_member_access",
+		    "lambda (ptr<'a,'c,'v> r, identifier name, type<'b> type) -> ptr<'b,'c,'v> { return ptr_narrow(r, dp_member(dp_root(type('a)),name,type)); }")
 
 		/**
 		 * A derived reference navigation operator providing access to a components of a tuple.
 		 */
-		LANG_EXT_DERIVED_WITH_NAME(PtrComponentAccess, 	"ref_component_access", 	"lambda (ptr<'a,'c,'v> r, uint<8> pos, type<'b> type) -> ptr<'b,'c,'v> { return ptr_narrow(r, dp_component(dp_root(type('a)),pos,type)); }")
+		LANG_EXT_DERIVED_WITH_NAME(
+		    PtrComponentAccess, "ref_component_access",
+		    "lambda (ptr<'a,'c,'v> r, uint<8> pos, type<'b> type) -> ptr<'b,'c,'v> { return ptr_narrow(r, dp_component(dp_root(type('a)),pos,type)); }")
 
 		/**
 		 * A derived reference-navigation operation providing an array view on a scalar.
 		 */
-		LANG_EXT_DERIVED_WITH_NAME(PtrScalarToPtrArray, "ref_scalar_to_ref_array", 	"lambda (ptr<'a,'c,'v> a) -> ptr<array<'a,1>,'c,'v> { return ptr_expand(a, dp_element(dp_root(type(array<'a,1>)),0u)); }")
+		LANG_EXT_DERIVED_WITH_NAME(PtrScalarToPtrArray, "ref_scalar_to_ref_array",
+		                           "lambda (ptr<'a,'c,'v> a) -> ptr<array<'a,1>,'c,'v> { return ptr_expand(a, dp_element(dp_root(type(array<'a,1>)),0u)); }")
 
 
 		// -- null --
@@ -167,20 +172,19 @@ namespace lang {
 		/**
 		 * An operator to compare two references for inequality.
 		 */
-		LANG_EXT_DERIVED_WITH_NAME(PtrNotEqual, "ptr_ne", 	"lambda (ptr<'a1,'c1,'v1> a, ptr<'a2,'c2,'v2> b) -> bool { return !ptr_eq(a,b); }")
+		LANG_EXT_DERIVED_WITH_NAME(PtrNotEqual, "ptr_ne", "lambda (ptr<'a1,'c1,'v1> a, ptr<'a2,'c2,'v2> b) -> bool { return !ptr_eq(a,b); }")
 
 
-		LANG_EXT_LITERAL(PtrLessThan, 		"ptr_lt", "(ptr<'a1,'c1,'v1>, ptr<'a2,'c2,'v2>) -> bool")
-		LANG_EXT_LITERAL(PtrLessEqual, 		"ptr_le", "(ptr<'a1,'c1,'v1>, ptr<'a2,'c2,'v2>) -> bool")
-		LANG_EXT_LITERAL(PtrGreaterEqual, 	"ptr_ge", "(ptr<'a1,'c1,'v1>, ptr<'a2,'c2,'v2>) -> bool")
-		LANG_EXT_LITERAL(PtrGreaterThan, 	"ptr_gt", "(ptr<'a1,'c1,'v1>, ptr<'a2,'c2,'v2>) -> bool")
+		LANG_EXT_LITERAL(PtrLessThan, "ptr_lt", "(ptr<'a1,'c1,'v1>, ptr<'a2,'c2,'v2>) -> bool")
+		LANG_EXT_LITERAL(PtrLessEqual, "ptr_le", "(ptr<'a1,'c1,'v1>, ptr<'a2,'c2,'v2>) -> bool")
+		LANG_EXT_LITERAL(PtrGreaterEqual, "ptr_ge", "(ptr<'a1,'c1,'v1>, ptr<'a2,'c2,'v2>) -> bool")
+		LANG_EXT_LITERAL(PtrGreaterThan, "ptr_gt", "(ptr<'a1,'c1,'v1>, ptr<'a2,'c2,'v2>) -> bool")
 
 
 		// -- pointer arithmetic --
 
-		LANG_EXT_LITERAL(PtrAdd, 			"ptr_add", "(ptr<'a,'c,'v>, int<8>) -> ptr<'a,'c,'v>")
-		LANG_EXT_LITERAL(PtrSub, 			"ptr_sub", "(ptr<'a,'c,'v>, int<8>) -> ptr<'a,'c,'v>")
-
+		LANG_EXT_LITERAL(PtrAdd, "ptr_add", "(ptr<'a,'c,'v>, int<8>) -> ptr<'a,'c,'v>")
+		LANG_EXT_LITERAL(PtrSub, "ptr_sub", "(ptr<'a,'c,'v>, int<8>) -> ptr<'a,'c,'v>")
 	};
 
 
@@ -191,18 +195,15 @@ namespace lang {
 	 * friendly way then its raw encoding.
 	 */
 	class PointerType {
-
 		TypePtr elementType;
 
 		bool mConst;
 
 		bool mVolatile;
 
-		PointerType(const TypePtr& elementType, bool mConst, bool mVolatile)
-			: elementType(elementType), mConst(mConst), mVolatile(mVolatile) {}
+		PointerType(const TypePtr& elementType, bool mConst, bool mVolatile) : elementType(elementType), mConst(mConst), mVolatile(mVolatile) {}
 
-	public:
-
+	  public:
 		PointerType(const NodePtr& node);
 
 		PointerType(const PointerType&) = default;
@@ -241,7 +242,6 @@ namespace lang {
 		void setVolatile(bool newState = true) {
 			mVolatile = newState;
 		}
-
 	};
 
 } // end namespace lang

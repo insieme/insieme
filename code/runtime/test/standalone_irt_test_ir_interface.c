@@ -52,8 +52,7 @@ typedef struct _insieme_wi_add_params {
 // type table
 
 irt_type g_insieme_type_table[] = {
-	{ IRT_T_BOOL, 4, 0, 0 },
-	{ IRT_T_INT64, 8, 0, 0 },
+    {IRT_T_BOOL, 4, 0, 0}, {IRT_T_INT64, 8, 0, 0},
 };
 
 // work item table
@@ -62,23 +61,13 @@ void insieme_wi_startup_implementation(irt_work_item* wi);
 void insieme_wi_test_implementation(irt_work_item* wi);
 void insieme_wi_loop_implementation(irt_work_item* wi);
 
-irt_wi_implementation_variant g_insieme_wi_startup_variants[] = {
-	{ &insieme_wi_startup_implementation, 0, NULL, 0, NULL, 0, {0} }
-};
+irt_wi_implementation_variant g_insieme_wi_startup_variants[] = {{&insieme_wi_startup_implementation, 0, NULL, 0, NULL, 0, {0}}};
 
-irt_wi_implementation_variant g_insieme_wi_test_variants[] = {
-	{ &insieme_wi_test_implementation, 0, NULL, 0, NULL, 0, {0} }
-};
+irt_wi_implementation_variant g_insieme_wi_test_variants[] = {{&insieme_wi_test_implementation, 0, NULL, 0, NULL, 0, {0}}};
 
-irt_wi_implementation_variant g_insieme_wi_loop_variants[] = {
-	{ &insieme_wi_loop_implementation, 0, NULL, 0, NULL, 0, {0} }
-};
+irt_wi_implementation_variant g_insieme_wi_loop_variants[] = {{&insieme_wi_loop_implementation, 0, NULL, 0, NULL, 0, {0}}};
 
-irt_wi_implementation g_insieme_impl_table[] = {
-	{ 1, 1, g_insieme_wi_startup_variants },
-	{ 2, 1, g_insieme_wi_test_variants },
-	{ 3, 1, g_insieme_wi_loop_variants }
-};
+irt_wi_implementation g_insieme_impl_table[] = {{1, 1, g_insieme_wi_startup_variants}, {2, 1, g_insieme_wi_test_variants}, {3, 1, g_insieme_wi_loop_variants}};
 
 // initialization
 void insieme_init_context(irt_context* context) {
@@ -94,11 +83,9 @@ void insieme_cleanup_context(irt_context* context) {
 }
 
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
 	uint32 wcount = irt_get_default_worker_count();
-	if(argc>=2) {
-		wcount = atoi(argv[1]);
-	}
+	if(argc >= 2) { wcount = atoi(argv[1]); }
 	irt_runtime_standalone(wcount, &insieme_init_context, &insieme_cleanup_context, &g_insieme_impl_table[0], NULL);
 	return 0;
 }
@@ -106,7 +93,7 @@ int main(int argc, char **argv) {
 // work item function definitions
 
 void insieme_wi_startup_implementation(irt_work_item* wi) {
-	irt_parallel_job job = { 8,8,1, &g_insieme_impl_table[INSIEME_TEST_WI_INDEX], NULL };
+	irt_parallel_job job = {8, 8, 1, &g_insieme_impl_table[INSIEME_TEST_WI_INDEX], NULL};
 	irt_joinable joinable = irt_parallel(&job);
 	irt_merge(joinable);
 }

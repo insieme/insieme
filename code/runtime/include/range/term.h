@@ -98,16 +98,15 @@ int irt_range_term_3d_snprint(char* str, size_t size, irt_range_term_3d* a);
 
 //// ---- Equality -------
 //
-//inline bool irt_range_term_1d_eq(irt_range_term_1d a, irt_range_term_1d b) {
+// inline bool irt_range_term_1d_eq(irt_range_term_1d a, irt_range_term_1d b) {
 //	return irt_range_point_1d_eq(a.start, b.start) && irt_range_point_1d_eq(a.end, b.end) && irt_range_point_1d_eq(a.step, b.step);
 //}
-//inline bool irt_range_term_2d_eq(irt_range_term_2d a, irt_range_term_2d b) {
+// inline bool irt_range_term_2d_eq(irt_range_term_2d a, irt_range_term_2d b) {
 //	return irt_range_point_2d_eq(a.start, b.start) && irt_range_point_2d_eq(a.end, b.end) && irt_range_point_2d_eq(a.step, b.step);
 //}
-//inline bool irt_range_term_3d_eq(irt_range_term_3d a, irt_range_term_3d b) {
+// inline bool irt_range_term_3d_eq(irt_range_term_3d a, irt_range_term_3d b) {
 //	return irt_range_point_3d_eq(a.start, b.start) && irt_range_point_3d_eq(a.end, b.end) && irt_range_point_3d_eq(a.step, b.step);
 //}
-
 
 
 #endif // ifndef __GUARD_RANGE_TERM_H

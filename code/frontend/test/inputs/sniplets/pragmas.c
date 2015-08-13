@@ -34,19 +34,16 @@
  * regarding third party software licenses.
  */
 
-#define FAKE(x) \
+#define FAKE(x)                                                                                                                                                \
 	{ x++; }
 
 
 int main() {
-
 #pragma test dummy "first"
 	int x;
-	
-#pragma test dummy "macro"
+
+	#pragma test dummy "macro"
 	FAKE(x);
-	
-#pragma test dummy "solo"
-	
-	
+
+	#pragma test dummy "solo"
 }

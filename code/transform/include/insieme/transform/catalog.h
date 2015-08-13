@@ -48,101 +48,96 @@
 namespace insieme {
 namespace transform {
 
-/**
- * Within this header file the transformation catalog infrastructure is defined.
- * The corresponding factory mechanisms are as well offered.
- */
-
-using std::string;
-
-// forward declaration
-class Catalog;
-
-/**
- * Obtains a catalog containing a comprehensive list of transformations.
- */
-Catalog getStandardCatalog();
-
-/**
- * The catalog provides a list of transformations annotated with additional information enabling users / code to
- * instantiated them. The catalog should be the main interface for an optimizer when interacting with the
- * transformation environment of the Insieme Compiler core. It should shield the optimizer from the underlying
- * details.
- *
- * The Transformation catalog is an aggregation of Transformation-Meta-Information and the main
- * utility to be used by the optimizer when selecting, instantiating and composing transformations
- * to be applied on code within the Insieme Compiler.
- */
-class Catalog {
-
 	/**
-	 * The container for the internally stored transformations.
+	 * Within this header file the transformation catalog infrastructure is defined.
+	 * The corresponding factory mechanisms are as well offered.
 	 */
-	std::map<string, TransformationTypePtr> catalog;
-	
-public:
+
+	using std::string;
+
+	// forward declaration
+	class Catalog;
 
 	/**
-	 * Adds a new transformation type to this catalog.
+	 * Obtains a catalog containing a comprehensive list of transformations.
+	 */
+	Catalog getStandardCatalog();
+
+	/**
+	 * The catalog provides a list of transformations annotated with additional information enabling users / code to
+	 * instantiated them. The catalog should be the main interface for an optimizer when interacting with the
+	 * transformation environment of the Insieme Compiler core. It should shield the optimizer from the underlying
+	 * details.
 	 *
-	 * @param newType the new transformation type to be added
+	 * The Transformation catalog is an aggregation of Transformation-Meta-Information and the main
+	 * utility to be used by the optimizer when selecting, instantiating and composing transformations
+	 * to be applied on code within the Insieme Compiler.
 	 */
-	void add(const TransformationType& newType) {
-		assert(catalog.find(newType.getName()) == catalog.end() && "Discoverd name collision!");
-		catalog.insert(std::make_pair(newType.getName(), &newType));
-	}
-	
-	/**
-	 * Obtains the type registered to the given name.
-	 *
-	 * @param name the name of the transformation looking for
-	 * @return the requested type or a null pointer if there is no such type
-	 */
-	TransformationTypePtr getTransformationType(const string& name) const {
-		auto pos = catalog.find(name);
-		if(pos != catalog.end()) {
-			return pos->second;
+	class Catalog {
+		/**
+		 * The container for the internally stored transformations.
+		 */
+		std::map<string, TransformationTypePtr> catalog;
+
+	  public:
+		/**
+		 * Adds a new transformation type to this catalog.
+		 *
+		 * @param newType the new transformation type to be added
+		 */
+		void add(const TransformationType& newType) {
+			assert(catalog.find(newType.getName()) == catalog.end() && "Discoverd name collision!");
+			catalog.insert(std::make_pair(newType.getName(), &newType));
 		}
-		return NULL;
-	}
-	
-	/**
-	 * Creates a new transformation. The given name is used to determine the type of the requested
-	 * transformation and the given values are used to parameterize the result.
-	 *
-	 * @param name the name of the transformation for which a new instance is requested
-	 * @param value the values to be used for setting up transformation parameters
-	 */
-	TransformationPtr createTransformation(const string& name, const parameter::Value& value = parameter::emptyValue) const {
-		TransformationTypePtr type = getTransformationType(name);
-		assert_true(type) << "Unknown transformation type requested!";
-		return type->createTransformation(value);
-	}
-	
-	/**
-	 * Obtains a reference to the internally maintained transformation type register.
-	 */
-	const std::map<string, TransformationTypePtr>& getRegister() const {
-		return catalog;
-	}
-	
-	/**
-	 * Obtains a list of all names of the internally maintained transformations.
-	 */
-	vector<string> getAllTransformationNames() const {
-		vector<string> res;
-		projectToFirst(catalog, res);
-		return res;
-	}
-	
-	/**
-	 * Obtains a list of all internally maintained transformations.
-	 */
-	vector<TransformationTypePtr> getAllTransformations() const {
-		return projectToSecond(catalog);
-	}
-	
-};
+
+		/**
+		 * Obtains the type registered to the given name.
+		 *
+		 * @param name the name of the transformation looking for
+		 * @return the requested type or a null pointer if there is no such type
+		 */
+		TransformationTypePtr getTransformationType(const string& name) const {
+			auto pos = catalog.find(name);
+			if(pos != catalog.end()) { return pos->second; }
+			return NULL;
+		}
+
+		/**
+		 * Creates a new transformation. The given name is used to determine the type of the requested
+		 * transformation and the given values are used to parameterize the result.
+		 *
+		 * @param name the name of the transformation for which a new instance is requested
+		 * @param value the values to be used for setting up transformation parameters
+		 */
+		TransformationPtr createTransformation(const string& name, const parameter::Value& value = parameter::emptyValue) const {
+			TransformationTypePtr type = getTransformationType(name);
+			assert_true(type) << "Unknown transformation type requested!";
+			return type->createTransformation(value);
+		}
+
+		/**
+		 * Obtains a reference to the internally maintained transformation type register.
+		 */
+		const std::map<string, TransformationTypePtr>& getRegister() const {
+			return catalog;
+		}
+
+		/**
+		 * Obtains a list of all names of the internally maintained transformations.
+		 */
+		vector<string> getAllTransformationNames() const {
+			vector<string> res;
+			projectToFirst(catalog, res);
+			return res;
+		}
+
+		/**
+		 * Obtains a list of all internally maintained transformations.
+		 */
+		vector<TransformationTypePtr> getAllTransformations() const {
+			return projectToSecond(catalog);
+		}
+	};
 
 
 } // end namespace transform

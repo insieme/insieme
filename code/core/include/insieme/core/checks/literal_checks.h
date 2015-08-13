@@ -45,11 +45,10 @@ namespace checks {
 // defines macros for generating CHECK declarations
 #include "insieme/core/checks/check_macros.inc"
 
-SIMPLE_CHECK(LiteralFormat, Literal, false);
+	SIMPLE_CHECK(LiteralFormat, Literal, false);
 
-#undef SIMPLE_CHECK
+	#undef SIMPLE_CHECK
 
 } // end namespace check
 } // end namespace core
 } // end namespace insieme
-

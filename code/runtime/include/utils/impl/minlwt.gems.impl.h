@@ -34,15 +34,15 @@
 * regarding third party software licenses.
 */
 
-void lwt_continue_impl_asm(irt_work_item *wi /*r0*/, wi_implementation_func* func /*r1*/, intptr_t *newstack /*r2*/, intptr_t *basestack /*r3*/);
+void lwt_continue_impl_asm(irt_work_item* wi /*r0*/, wi_implementation_func* func /*r1*/, intptr_t* newstack /*r2*/, intptr_t* basestack /*r3*/);
 
 // TODO [_GEMS]: noinline is not supported by lcc
 //__attribute__ ((noinline))
-void lwt_continue_impl(irt_work_item *wi, wi_implementation_func* func, intptr_t *newstack, intptr_t *basestack) {
+void lwt_continue_impl(irt_work_item* wi, wi_implementation_func* func, intptr_t* newstack, intptr_t* basestack) {
 	lwt_continue_impl_asm(wi, func, newstack, basestack);
 }
 
-#define LWT_STACK_SIZE  64
+#define LWT_STACK_SIZE 64
 #define LWT_STACK_POS_R0 (LWT_STACK_SIZE - 4)
 #define LWT_STACK_POS_R1 (LWT_STACK_SIZE - 8)
 #define LWT_STACK_POS_R2 (LWT_STACK_SIZE - 12)
@@ -61,10 +61,9 @@ void lwt_continue_impl(irt_work_item *wi, wi_implementation_func* func, intptr_t
 
 
 // TODO [_GEMS]: remove useless nops
-asm void lwt_continue_impl_asm(irt_work_item *wi /*r0*/, wi_implementation_func* func /*r1*/, intptr_t *newstack /*r2*/, intptr_t *basestack /*r3*/) {
-
+asm void lwt_continue_impl_asm(irt_work_item* wi /*r0*/, wi_implementation_func* func /*r1*/, intptr_t* newstack /*r2*/, intptr_t* basestack /*r3*/) {
 	; /* push caller saved registers (r0-r5) on stack (r14 = SP) */
-	
+
 	add r14, -LWT_STACK_SIZE;
 	nop;
 	sw r0, r14, LWT_STACK_POS_R0;
@@ -81,27 +80,27 @@ asm void lwt_continue_impl_asm(irt_work_item *wi /*r0*/, wi_implementation_func*
 	sw r11, r14, LWT_STACK_POS_R11;
 	sw r12, r14, LWT_STACK_POS_R12;
 	sw r13, r14, LWT_STACK_POS_R13;
-	
+
 	; /* push LinkRegister (r15) on the stack (r14 = SP) */
-	
+
 	sw r15, r14, LWT_STACK_POS_R15;
 	nop;
-	
+
 	; /* swap stacks */
-	
+
 	sw r14, r3;
 	lw r14, r2;
-	
+
 	; /* call function if func != NULL */
-	
+
 	cmpeq r1, 0;
-	bcc($+3);  /* +1 to skip the branch, +1 to skip the nop (branch delay slot) and finally +1 to skip the call*/
+	bcc($ + 3); /* +1 to skip the branch, +1 to skip the nop (branch delay slot) and finally +1 to skip the call*/
 	nop;
 	call __irt_wi_trampoline; /* r0 still has wi, r1 still has func, so just call */
 	nop;
-	
+
 	; /* restore registers for other coroutine */
-	
+
 	lw r0, r14, LWT_STACK_POS_R0;
 	lw r1, r14, LWT_STACK_POS_R1;
 	lw r2, r14, LWT_STACK_POS_R2;
@@ -118,8 +117,7 @@ asm void lwt_continue_impl_asm(irt_work_item *wi /*r0*/, wi_implementation_func*
 	lw r12, r14, LWT_STACK_POS_R12;
 	lw r13, r14, LWT_STACK_POS_R13;
 	nop;
-	
+
 	b r15;
 	add r14, LWT_STACK_SIZE;
 }
-

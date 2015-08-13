@@ -75,7 +75,7 @@ typedef double __m128d __attribute__((__vector_size__(16)));
 
 // builtins called in GCC's emmintrin.h
 extern __v2df __builtin_ia32_movsd(__v2df, __v2df);
-extern __v2df __builtin_ia32_loadupd(const double *);
+extern __v2df __builtin_ia32_loadupd(const double*);
 extern __v2df __builtin_ia32_shufpd(__v2df, __v2df, const int);
 extern double __builtin_ia32_vec_ext_v2df(__v2df, const int);
 extern int __builtin_ia32_vec_ext_v4si(__v4si, const int);
@@ -114,7 +114,7 @@ extern __v2df __builtin_ia32_cmpnltsd(__v2df, __v2df);
 extern __v2df __builtin_ia32_cmpnlesd(__v2df, __v2df);
 extern __v2df __builtin_ia32_cmpunordsd(__v2df, __v2df);
 
-extern __v16qi __builtin_ia32_loaddqu(const char *);
+extern __v16qi __builtin_ia32_loaddqu(const char*);
 extern __v2di __builtin_ia32_movq128(__v2di);
 extern int __builtin_ia32_cvttsd2si(__v2df);
 extern long long __builtin_ia32_cvttsd2si64(__v2df);
@@ -124,8 +124,8 @@ extern __v2df __builtin_ia32_cvtsi642sd(__v2df, int);
 extern __v2df __builtin_ia32_cvtss2sd(__v2df, __v4sf);
 extern __v2df __builtin_ia32_unpckhpd(__v2df, __v2df);
 extern __v2df __builtin_ia32_unpcklpd(__v2df, __v2df);
-extern __v2df __builtin_ia32_loadhpd(__v2df, double const *);
-extern __v2df __builtin_ia32_loadlpd(__v2df, double const *);
+extern __v2df __builtin_ia32_loadhpd(__v2df, double const*);
+extern __v2df __builtin_ia32_loadlpd(__v2df, double const*);
 extern __v16qi __builtin_ia32_punpckhbw128(__v16qi, __v16qi);
 extern __v8hi __builtin_ia32_punpckhwd128(__v8hi, __v8hi);
 extern __v4si __builtin_ia32_punpckhdq128(__v4si, __v4si);
@@ -156,7 +156,7 @@ extern __v8hi __builtin_ia32_pcmpgtw128(__v8hi, __v8hi);
 
 extern __v4si __builtin_ia32_pcmpeqd128(__v4si, __v4si);
 extern __v4si __builtin_ia32_pcmpgtd128(__v4si, __v4si);
-extern void __builtin_ia32_movnti64(long long int *, long long int);
+extern void __builtin_ia32_movnti64(long long int*, long long int);
 
 extern __m128i __builtin_ia32_pshufhw(__v8hi, int);
 extern __m128i __builtin_ia32_pshuflw(__v8hi, int);
@@ -177,7 +177,7 @@ extern int __builtin_ia32_bsrsi(int);
 extern int __builtin_ia32_bsrdi(long long);
 extern unsigned long long __builtin_ia32_rdpmc(int);
 extern unsigned long long __builtin_ia32_rdtsc(void);
-extern unsigned long long __builtin_ia32_rdtscp(unsigned int *);
+extern unsigned long long __builtin_ia32_rdtscp(unsigned int*);
 extern unsigned char __builtin_ia32_rolqi(unsigned char, int);
 extern unsigned short __builtin_ia32_rolhi(unsigned short, int);
 extern unsigned char __builtin_ia32_rorqi(unsigned char, int);
@@ -234,26 +234,26 @@ extern __v4sf __builtin_ia32_cvtsi642ss(__v4sf, long long);
 extern __v4sf __builtin_ia32_movlhps(__v4sf, __v4sf);
 extern __v4sf __builtin_ia32_movhlps(__v4sf, __v4sf);
 extern __v4sf __builtin_ia32_unpckhps(__v4sf, __v4sf);
-extern __v4sf __builtin_ia32_unpcklps(__v4sf ,__v4sf);
-extern __v4sf __builtin_ia32_loadhps(__v4sf, const __v2sf *);
-extern __v4sf __builtin_ia32_loadlps(__v4sf, const __v2sf *);
+extern __v4sf __builtin_ia32_unpcklps(__v4sf, __v4sf);
+extern __v4sf __builtin_ia32_loadhps(__v4sf, const __v2sf*);
+extern __v4sf __builtin_ia32_loadlps(__v4sf, const __v2sf*);
 
 // different signature in Clang than in GCC — we only care about GCC, as outlined above
 // extern void __builtin_ia32_storehps(__v2si *, __v4sf);				// Clang
-extern void __builtin_ia32_storehps(__v2sf *, __v4sf);						// GCC
+extern void __builtin_ia32_storehps(__v2sf*, __v4sf); // GCC
 // extern void __builtin_ia32_storelps(__v2si *, __v4sf);				// Clang
-extern void __builtin_ia32_storelps(__v2sf *, __v4sf);						// GCC
+extern void __builtin_ia32_storelps(__v2sf*, __v4sf); // GCC
 // extern void __builtin_ia32_movntq(unsigned long long *, unsigned long long);	// GCC
-extern void __builtin_ia32_movntq(__v1di*,              __v1di);		// Clang
+extern void __builtin_ia32_movntq(__v1di*, __v1di); // Clang
 
-extern int   __builtin_ia32_vec_ext_v4hi(__v4hi, int);
+extern int __builtin_ia32_vec_ext_v4hi(__v4hi, int);
 extern __m64 __builtin_ia32_vec_set_v4hi(__v4hi, int, int);
 
 
-extern __v4sf __builtin_ia32_loadups(const float *);
-extern void __builtin_ia32_storeups(float *, __v4sf);
-extern __v4sf  __builtin_ia32_shufps(__v4sf, __v4sf, int const);
+extern __v4sf __builtin_ia32_loadups(const float*);
+extern void __builtin_ia32_storeups(float*, __v4sf);
+extern __v4sf __builtin_ia32_shufps(__v4sf, __v4sf, int const);
 extern float __builtin_ia32_vec_ext_v4sf(__v4sf, const int);
-extern void __builtin_ia32_movntq(__v1di *, __v1di);
+extern void __builtin_ia32_movntq(__v1di*, __v1di);
 
 #endif

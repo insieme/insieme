@@ -56,8 +56,15 @@
 IRT_MAKE_ID_TYPE(worker)
 
 typedef enum _irt_worker_state {
-	IRT_WORKER_STATE_CREATED, IRT_WORKER_STATE_READY, IRT_WORKER_STATE_START, IRT_WORKER_STATE_RUNNING, IRT_WORKER_STATE_SLEEPING,
-	IRT_WORKER_STATE_DISABLED, IRT_WORKER_STATE_WAITING, IRT_WORKER_STATE_STOP, IRT_WORKER_STATE_JOINED
+	IRT_WORKER_STATE_CREATED,
+	IRT_WORKER_STATE_READY,
+	IRT_WORKER_STATE_START,
+	IRT_WORKER_STATE_RUNNING,
+	IRT_WORKER_STATE_SLEEPING,
+	IRT_WORKER_STATE_DISABLED,
+	IRT_WORKER_STATE_WAITING,
+	IRT_WORKER_STATE_STOP,
+	IRT_WORKER_STATE_JOINED
 } irt_worker_state;
 
 struct _irt_worker {
@@ -72,47 +79,47 @@ struct _irt_worker {
 	volatile irt_worker_state state;
 	irt_worker_scheduling_data sched_data;
 	irt_work_item lazy_wi;
-	
-#ifdef IRT_WORKER_SLEEPING
+
+	#ifdef IRT_WORKER_SLEEPING
 	bool wake_signal;
 	irt_cond_var wait_cond;
-#endif
+	#endif
 	irt_cond_var dop_wait_cond;
 	irt_spinlock shutdown_lock;
-	
+
 	uint32 default_variant;
 	unsigned int rand_seed;
-	
-#ifdef IRT_ASTEROIDEA_STACKS
+
+	#ifdef IRT_ASTEROIDEA_STACKS
 	irt_work_item* share_stack_wi;
-#endif
-	
-#ifdef IRT_ENABLE_APP_TIME_ACCOUNTING
+	#endif
+
+	#ifdef IRT_ENABLE_APP_TIME_ACCOUNTING
 	clockid_t clockid;
 	double app_time_total;
 	double app_time_last_start;
 	bool app_time_running;
-#endif // IRT_ENABLE_APP_TIME_ACCOUNTING
-	
-#ifdef IRT_ENABLE_INSTRUMENTATION
+	#endif // IRT_ENABLE_APP_TIME_ACCOUNTING
+
+	#ifdef IRT_ENABLE_INSTRUMENTATION
 	irt_instrumentation_event_data_table* instrumentation_event_data;
-#endif
-#ifdef IRT_OCL_INSTR
+	#endif
+	#ifdef IRT_OCL_INSTR
 	irt_ocl_event_table* event_data;
-#endif
-	
+	#endif
+
 	// memory reuse stuff
-	irt_wi_event_register *wi_ev_register_list;
-	irt_wg_event_register *wg_ev_register_list;
-	irt_work_item *wi_reuse_stack;
-	intptr_t *stack_reuse_stack;
+	irt_wi_event_register* wi_ev_register_list;
+	irt_wg_event_register* wg_ev_register_list;
+	irt_work_item* wi_reuse_stack;
+	intptr_t* stack_reuse_stack;
 };
 
 typedef struct _irt_worker_init_signal {
 	uint32 init_count;
-#if !defined(_WIN32) || (WINVER >= 0x0600)
+	#if !defined(_WIN32) || (WINVER >= 0x0600)
 	irt_cond_var init_condvar;
-#endif
+	#endif
 	irt_mutex_obj init_mutex;
 } irt_worker_init_signal;
 
@@ -128,10 +135,10 @@ void irt_worker_create(uint16 index, irt_affinity_mask affinity, irt_worker_init
 void irt_worker_late_init(irt_worker* self);
 void _irt_worker_cancel_all_others();
 
-void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi);
-void _irt_worker_switch_from_wi(irt_worker* self, irt_work_item *wi);
+void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item* wi);
+void _irt_worker_switch_from_wi(irt_worker* self, irt_work_item* wi);
 
-void irt_worker_run_immediate_wi(irt_worker* self, irt_work_item *wi);
+void irt_worker_run_immediate_wi(irt_worker* self, irt_work_item* wi);
 inline void irt_worker_run_immediate(irt_worker* target, const irt_work_item_range* range, irt_wi_implementation* impl, irt_lw_data_item* args);
 
 void irt_worker_cleanup(irt_worker* self);

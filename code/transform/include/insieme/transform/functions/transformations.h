@@ -49,62 +49,56 @@ namespace transform {
 namespace functions {
 
 
-/**
- * A transformation unrolling the recursive definition of a function for a given
- * number of levels. The unrolling includes the recursive unrolling and successive
- * inlining of the unrolled recursive functions.
- */
-class RecursiveFunctionUnrolling : public Transformation {
+	/**
+	 * A transformation unrolling the recursive definition of a function for a given
+	 * number of levels. The unrolling includes the recursive unrolling and successive
+	 * inlining of the unrolled recursive functions.
+	 */
+	class RecursiveFunctionUnrolling : public Transformation {
+		/**
+		 * The number of times the targeted function shell be unrolled.
+		 */
+		int unrolling;
+
+	  public:
+		/**
+		 * Creates a new instance of this transformation type
+		 */
+		RecursiveFunctionUnrolling(const parameter::Value& value);
+
+		/**
+		 * Implements the actual transformation.
+		 *
+		 * @param target the node to be transformed
+		 */
+		virtual core::NodeAddress apply(const core::NodeAddress& target) const;
+
+		/**
+		 * Prints a readable representation of this transformation to the given output stream
+		 * using the given indent.
+		 */
+		virtual std::ostream& printTo(std::ostream& out, const Indent& indent) const {
+			return out << indent << "RecursiveFunctionUnrolling(" << unrolling << ")";
+		}
+	};
 
 	/**
-	 * The number of times the targeted function shell be unrolled.
+	 * Factory for the recursive-function unrolling transformation.
 	 */
-	int unrolling;
-	
-public:
+	TRANSFORMATION_TYPE(RecursiveFunctionUnrolling, "Implementation of the recursive function unrolling transformation.",
+	                    parameter::atom<unsigned>("The unrolling factor to be used."));
 
 	/**
-	 * Creates a new instance of this transformation type
-	 */
-	RecursiveFunctionUnrolling(const parameter::Value& value);
-	
-	/**
-	 * Implements the actual transformation.
+	 * A factory function allowing recursive-function unrolling transformations to be
+	 * easily constructed.
 	 *
-	 * @param target the node to be transformed
+	 * @param unrollingFactor the number of times the resulting transformation will unroll the
+	 * 				recursive function it will be applied on
+	 * @return the requested transformation instance
 	 */
-	virtual core::NodeAddress apply(const core::NodeAddress& target) const;
-	
-	/**
-	 * Prints a readable representation of this transformation to the given output stream
-	 * using the given indent.
-	 */
-	virtual std::ostream& printTo(std::ostream& out, const Indent& indent) const {
-		return out << indent << "RecursiveFunctionUnrolling(" << unrolling << ")";
+	inline TransformationPtr makeRecFunUnrolling(unsigned unrollingFactor) {
+		return RecursiveFunctionUnrollingType().buildTransformation(parameter::makeValue<unsigned>(unrollingFactor));
 	}
-	
-};
-
-/**
- * Factory for the recursive-function unrolling transformation.
- */
-TRANSFORMATION_TYPE(
-    RecursiveFunctionUnrolling,
-    "Implementation of the recursive function unrolling transformation.",
-    parameter::atom<unsigned>("The unrolling factor to be used.")
-);
-
-/**
- * A factory function allowing recursive-function unrolling transformations to be
- * easily constructed.
- *
- * @param unrollingFactor the number of times the resulting transformation will unroll the
- * 				recursive function it will be applied on
- * @return the requested transformation instance
- */
-inline TransformationPtr makeRecFunUnrolling(unsigned unrollingFactor) {
-	return RecursiveFunctionUnrollingType().buildTransformation(parameter::makeValue<unsigned>(unrollingFactor));
-}
 
 
 } // end functions

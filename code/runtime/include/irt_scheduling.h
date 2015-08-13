@@ -123,8 +123,7 @@ inline irt_joinable irt_scheduling_optional_wi(irt_worker* target, irt_work_item
 /* Either runs implementation directly on the current worker, or creates a work item
  * for it and acts identically to irt_scheduling_assign_wi. The decision depends on the scheduling policy.
  */
-inline irt_joinable irt_scheduling_optional(irt_worker* target, const irt_work_item_range* range,
-        irt_wi_implementation* impl, irt_lw_data_item* args);
+inline irt_joinable irt_scheduling_optional(irt_worker* target, const irt_work_item_range* range, irt_wi_implementation* impl, irt_lw_data_item* args);
 
 /* Work item yielding_wi yields on self.
  * Precondition: yielding_wi is self's current_wi
@@ -134,7 +133,7 @@ void irt_scheduling_yield(irt_worker* self, irt_work_item* yielding_wi);
 /* Prepare worker for sleep. Self must be executing the call.
  * returns true if sleep should proceed, false to stay awake
  */
-bool irt_scheduling_worker_sleep(irt_worker *self);
+bool irt_scheduling_worker_sleep(irt_worker* self);
 
 #if IRT_SCHED_POLICY == IRT_SCHED_POLICY_STATIC
 #include "sched_policies/irt_sched_static.h"

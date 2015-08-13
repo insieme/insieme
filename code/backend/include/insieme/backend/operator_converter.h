@@ -48,20 +48,20 @@
 namespace insieme {
 namespace backend {
 
-class Converter;
-class ConversionContext;
+	class Converter;
+	class ConversionContext;
 
-namespace operators {
+	namespace operators {
 
-c_ast::ExpressionPtr refDelete(ConversionContext& context, const core::CallExprPtr& call, const std::string& name, bool addHeader);
+		c_ast::ExpressionPtr refDelete(ConversionContext& context, const core::CallExprPtr& call, const std::string& name, bool addHeader);
 
-} // end namespace operators
+	} // end namespace operators
 
-typedef std::function<c_ast::ExpressionPtr(ConversionContext&, const core::CallExprPtr&)> OperatorConverter;
+	typedef std::function<c_ast::ExpressionPtr(ConversionContext&, const core::CallExprPtr&)> OperatorConverter;
 
-typedef utils::map::PointerMap<core::ExpressionPtr, OperatorConverter> OperatorConverterTable;
+	typedef utils::map::PointerMap<core::ExpressionPtr, OperatorConverter> OperatorConverterTable;
 
-OperatorConverterTable getBasicOperatorTable(core::NodeManager& manager);
+	OperatorConverterTable getBasicOperatorTable(core::NodeManager& manager);
 
 } // end namespace backend
 } // end namespace insieme

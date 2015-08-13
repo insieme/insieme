@@ -51,114 +51,107 @@ namespace insieme {
 namespace core {
 namespace types {
 
-/**
- * This class is forming a collection of sub-type constraints.
- */
-class SubTypeConstraints : public utils::Printable {
+	/**
+	 * This class is forming a collection of sub-type constraints.
+	 */
+	class SubTypeConstraints : public utils::Printable {
+		/**
+		 * A pair of types representing a sub-type constraint. The first
+		 * type is constraint to be a sub-type of the second type.
+		 */
+		typedef std::pair<TypePtr, TypePtr> Constraint;
 
-	/**
-	 * A pair of types representing a sub-type constraint. The first
-	 * type is constraint to be a sub-type of the second type.
-	 */
-	typedef std::pair<TypePtr, TypePtr> Constraint;
-	
-	/**
-	 * A flag marking this constraints as unsatisfiable. The internally stored constraints
-	 * may still be satisfiable. However, during their inference a unsatisfiable constrain
-	 * has been encountered => no valid substitution can be derived.
-	 */
-	bool unsatisfiable;
-	
-	/**
-	 * The set of type constraints to be considered.
-	 */
-	std::unordered_set<Constraint> constraints;
-	
-public:
+		/**
+		 * A flag marking this constraints as unsatisfiable. The internally stored constraints
+		 * may still be satisfiable. However, during their inference a unsatisfiable constrain
+		 * has been encountered => no valid substitution can be derived.
+		 */
+		bool unsatisfiable;
 
-	/**
-	 * Creates a new, empty set of constraints.
-	 */
-	SubTypeConstraints() :
-		unsatisfiable(false) {
-	}
-	
-	/**
-	 * Adds an additional sub-type constraint to this set of constraints.
-	 *
-	 * @param var the variable to be constraint
-	 * @param subType the type the variable instantiation has to be a sub-type of
-	 */
-	void addSubtypeConstraint(const TypePtr& subType, const TypePtr& superType) {
-		if(!unsatisfiable) {
-			constraints.insert(std::make_pair(subType, superType));
+		/**
+		 * The set of type constraints to be considered.
+		 */
+		std::unordered_set<Constraint> constraints;
+
+	  public:
+		/**
+		 * Creates a new, empty set of constraints.
+		 */
+		SubTypeConstraints() : unsatisfiable(false) {}
+
+		/**
+		 * Adds an additional sub-type constraint to this set of constraints.
+		 *
+		 * @param var the variable to be constraint
+		 * @param subType the type the variable instantiation has to be a sub-type of
+		 */
+		void addSubtypeConstraint(const TypePtr& subType, const TypePtr& superType) {
+			if(!unsatisfiable) { constraints.insert(std::make_pair(subType, superType)); }
 		}
-	}
-	
-	/**
-	 * Adds an equality constraint to this set of constraints.
-	 *
-	 * @param typeA the first type to be equivalent
-	 * @param typeB the second type to be equivalent
-	 */
-	void addEqualsConstraint(const TypePtr& typeA, const TypePtr& typeB) {
-		if(!unsatisfiable) {
-			// add constraints in both directions
-			constraints.insert(std::make_pair(typeA, typeB));
-			constraints.insert(std::make_pair(typeB, typeA));
+
+		/**
+		 * Adds an equality constraint to this set of constraints.
+		 *
+		 * @param typeA the first type to be equivalent
+		 * @param typeB the second type to be equivalent
+		 */
+		void addEqualsConstraint(const TypePtr& typeA, const TypePtr& typeB) {
+			if(!unsatisfiable) {
+				// add constraints in both directions
+				constraints.insert(std::make_pair(typeA, typeB));
+				constraints.insert(std::make_pair(typeB, typeA));
+			}
 		}
-	}
-	
-	/**
-	 * Marks the entire set of constraints to be unsatisfiable. This can method can be
-	 * used instead of adding an unsatisfiable constraint to this set.
-	 */
-	void makeUnsatisfiable() {
-		unsatisfiable = true;
-	}
-	
-	/**
-	 * Obtains the current state of the explicit unsatisfiability mark. The method will return
-	 * true in case this set of constraints has been marked as being unsatisfiable.
-	 */
-	bool isSatisfiable() const {
-		return !unsatisfiable;
-	}
-	
-	/**
-	 * Attempts to solve this set of constraints by deriving a variable substitution
-	 * mapping each constraint type variable to a satisfying substitute.
-	 *
-	 * @return an optional substitution satisfying all the constraints or an
-	 * 			uninitialized substitution
-	 */
-	SubstitutionOpt solve() const;
-	
-	/**
-	 * Attempts to solve this set of constraints by deriving a variable substitution
-	 * mapping each constraint type variable to a satisfying substitute.
-	 *
-	 * @param manager the node manager to be used for constructing substitution results
-	 * @return an optional substitution satisfying all the constraints or an
-	 * 			uninitialized substitution
-	 */
-	SubstitutionOpt solve(NodeManager& manager) const;
-	
-	/**
-	 * Clears all the constraints added to this container.
-	 */
-	void clear() {
-		// clear the various members
-		unsatisfiable = false;
-		constraints.clear();
-	}
-	
-	/**
-	 * Allows instances of this class to be printed to a stream.
-	 */
-	virtual std::ostream& printTo(std::ostream& out) const;
-	
-};
+
+		/**
+		 * Marks the entire set of constraints to be unsatisfiable. This can method can be
+		 * used instead of adding an unsatisfiable constraint to this set.
+		 */
+		void makeUnsatisfiable() {
+			unsatisfiable = true;
+		}
+
+		/**
+		 * Obtains the current state of the explicit unsatisfiability mark. The method will return
+		 * true in case this set of constraints has been marked as being unsatisfiable.
+		 */
+		bool isSatisfiable() const {
+			return !unsatisfiable;
+		}
+
+		/**
+		 * Attempts to solve this set of constraints by deriving a variable substitution
+		 * mapping each constraint type variable to a satisfying substitute.
+		 *
+		 * @return an optional substitution satisfying all the constraints or an
+		 * 			uninitialized substitution
+		 */
+		SubstitutionOpt solve() const;
+
+		/**
+		 * Attempts to solve this set of constraints by deriving a variable substitution
+		 * mapping each constraint type variable to a satisfying substitute.
+		 *
+		 * @param manager the node manager to be used for constructing substitution results
+		 * @return an optional substitution satisfying all the constraints or an
+		 * 			uninitialized substitution
+		 */
+		SubstitutionOpt solve(NodeManager& manager) const;
+
+		/**
+		 * Clears all the constraints added to this container.
+		 */
+		void clear() {
+			// clear the various members
+			unsatisfiable = false;
+			constraints.clear();
+		}
+
+		/**
+		 * Allows instances of this class to be printed to a stream.
+		 */
+		virtual std::ostream& printTo(std::ostream& out) const;
+	};
 
 } // end namespace types
 } // end namespace core

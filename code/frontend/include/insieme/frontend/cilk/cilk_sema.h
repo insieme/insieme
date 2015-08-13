@@ -42,19 +42,19 @@ namespace insieme {
 namespace frontend {
 
 namespace tu {
-class IRTranslationUnit;
+	class IRTranslationUnit;
 }
 
 namespace cilk {
 
-/**
- * Applies cilk semantics to all the definitions within the given translation unit.
- *
- * @param unit the translation unit to be processed
- * @param mgr the node manager to be utilized for creating IR nodes
- * @return the modified translation unit
- */
-tu::IRTranslationUnit applySema(const tu::IRTranslationUnit& unit, core::NodeManager& mgr);
+	/**
+	 * Applies cilk semantics to all the definitions within the given translation unit.
+	 *
+	 * @param unit the translation unit to be processed
+	 * @param mgr the node manager to be utilized for creating IR nodes
+	 * @return the modified translation unit
+	 */
+	tu::IRTranslationUnit applySema(const tu::IRTranslationUnit& unit, core::NodeManager& mgr);
 
 } // namespace cilk
 } // namespace frontend

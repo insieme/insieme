@@ -44,9 +44,9 @@
 // prototypes
 /*
 extern "C" {
-	uint64 irt_time_ticks(void);
-	bool irt_time_ticks_available();
-	bool irt_time_ticks_constant();
+    uint64 irt_time_ticks(void);
+    bool irt_time_ticks_available();
+    bool irt_time_ticks_constant();
 }
 */
 
@@ -54,9 +54,8 @@ extern "C" {
 // since there is no support for inline assembly code under win64
 #ifndef _WIN64
 uint64 irt_time_ticks(void) {
-
 	uint32 a, d;
-	
+
 	__asm {
 		rdtsc
 		mov a, eax
@@ -65,7 +64,7 @@ uint64 irt_time_ticks(void) {
 	uint64 a64, d64;
 	a64 = a;
 	d64 = d;
-	
+
 	return (a64 | (d64 << 32));
 }
 
@@ -93,7 +92,7 @@ bool irt_time_ticks_constant() {
 		cpuid
 		mov d, edx
 	}
-	
+
 	// the 8th bit represents the TscInvariant bit
 	if((d & 0x00000100) > 0) {
 		return 1;

@@ -40,13 +40,12 @@ namespace insieme {
 namespace frontend {
 namespace utils {
 
-/**
- *  search in the inner tree for the used temporaries
- */
-std::vector<const clang::CXXTemporary*> lookupTemporaries(const clang::Expr* innerExpr);
+	/**
+	 *  search in the inner tree for the used temporaries
+	 */
+	std::vector<const clang::CXXTemporary*> lookupTemporaries(const clang::Expr* innerExpr);
 
 
-
-} //namespace utils
-} //namespace frontend
-} //namespace insieme
+} // namespace utils
+} // namespace frontend
+} // namespace insieme

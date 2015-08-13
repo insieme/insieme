@@ -54,9 +54,7 @@ extern mqd_t irt_g_message_queue;
 
 /* ------------------------------ data structures ----- */
 
-typedef enum _irt_mqueue_msg_type {
-	IRT_MQ_NEW_APP
-} irt_mqueue_msg_type;
+typedef enum _irt_mqueue_msg_type { IRT_MQ_NEW_APP } irt_mqueue_msg_type;
 
 typedef struct _irt_mqueue_msg {
 	irt_mqueue_msg_type type;

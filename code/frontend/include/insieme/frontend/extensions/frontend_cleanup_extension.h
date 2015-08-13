@@ -42,21 +42,20 @@ namespace insieme {
 namespace frontend {
 namespace extensions {
 
-/**
- * This is the frontend cleanup tool.
- * it is a NOT OPTIONAL pass which removes artifacts the frontend might generate.
- * frontend might generate stuff in an "correct" but not optimal way just because is the straight forward approach.
- * instead of trying to fix this everywhere, is much more convenient to clean up afterwards, reduces complexity of code
- */
-class FrontendCleanupExtension : public insieme::frontend::extensions::FrontendExtension {
-public:
-	virtual boost::optional<std::string> isPrerequisiteMissing(ConversionSetup& setup) const;
-	virtual insieme::core::ProgramPtr IRVisit(insieme::core::ProgramPtr& prog);
-	virtual insieme::frontend::tu::IRTranslationUnit IRVisit(insieme::frontend::tu::IRTranslationUnit& tu);
-	virtual stmtutils::StmtWrapper PostVisit(const clang::Stmt* stmt, const stmtutils::StmtWrapper& irStmt, conversion::Converter& convFact);
-};
+	/**
+	 * This is the frontend cleanup tool.
+	 * it is a NOT OPTIONAL pass which removes artifacts the frontend might generate.
+	 * frontend might generate stuff in an "correct" but not optimal way just because is the straight forward approach.
+	 * instead of trying to fix this everywhere, is much more convenient to clean up afterwards, reduces complexity of code
+	 */
+	class FrontendCleanupExtension : public insieme::frontend::extensions::FrontendExtension {
+	  public:
+		virtual boost::optional<std::string> isPrerequisiteMissing(ConversionSetup& setup) const;
+		virtual insieme::core::ProgramPtr IRVisit(insieme::core::ProgramPtr& prog);
+		virtual insieme::frontend::tu::IRTranslationUnit IRVisit(insieme::frontend::tu::IRTranslationUnit& tu);
+		virtual stmtutils::StmtWrapper PostVisit(const clang::Stmt* stmt, const stmtutils::StmtWrapper& irStmt, conversion::Converter& convFact);
+	};
 
 } // extensions
 } // frontend
 } // insieme
-

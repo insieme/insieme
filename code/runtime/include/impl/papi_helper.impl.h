@@ -75,23 +75,18 @@
 
 void irt_papi_init() {
 	// PAPI is already initialized, do nothing
-	if(PAPI_is_initialized() != 0) {
-		return;
-	}
-	
+	if(PAPI_is_initialized() != 0) { return; }
+
 	int32 retval = 0;
 	// initialize papi and check version
 	retval = PAPI_library_init(PAPI_VER_CURRENT);
 	if(retval > 0 && retval != PAPI_VER_CURRENT) {
 		IRT_DEBUG("Instrumentation: PAPI version mismatch: require %d but found %d\n", PAPI_VER_CURRENT, retval);
-	}
-	else if(retval < 0) {
+	} else if(retval < 0) {
 		IRT_DEBUG("Instrumentation: Error while trying to initialize PAPI! Reason: %s\n", PAPI_strerror(retval));
-		if(retval == PAPI_EINVAL) {
-			IRT_DEBUG("Instrumentation: papi.h version mismatch between compilation and execution!\n");
-		}
+		if(retval == PAPI_EINVAL) { IRT_DEBUG("Instrumentation: papi.h version mismatch between compilation and execution!\n"); }
 	}
-	
+
 	// must only be called once!
 	if((retval = PAPI_thread_init(pthread_self)) != PAPI_OK) {
 		IRT_DEBUG("Instrumentation: Error while trying to initialize PAPI's thread support! Reason: %s\n", PAPI_strerror(retval));
@@ -123,7 +118,7 @@ void irt_papi_finalize_worker(irt_worker* worker) {
 void irt_papi_start() {
 	uint16 worker_id = irt_worker_get_current()->id.thread;
 	int32 retval = 0;
-	
+
 	if((retval = PAPI_start(irt_context_get_current()->inst_region_metric_group_support_data.papi_eventset[worker_id])) != PAPI_OK) {
 		IRT_DEBUG("Instrumentation: Error in PAPI_start! Reason: %s\n", PAPI_strerror(retval));
 	}
@@ -137,7 +132,7 @@ void irt_papi_stop(long long int* papi_values) {
 	uint16 worker_id = irt_worker_get_current()->id.thread;
 	int32 retval = 0;
 	irt_inst_region_context_declarations* papi_data = &irt_context_get_current()->inst_region_metric_group_support_data;
-	
+
 	if((retval = PAPI_stop(papi_data->papi_eventset[worker_id], papi_values)) != PAPI_OK) {
 		IRT_DEBUG("Instrumentation: Error in PAPI_stop! Reason: %s\n", PAPI_strerror(retval));
 	}
@@ -148,31 +143,29 @@ void irt_papi_stop(long long int* papi_values) {
  */
 
 int64 irt_papi_get_value_by_name(irt_context* context, long long int* papi_values, const char* event_name) {
-	char event_name_copy[strlen(event_name)+1];
+	char event_name_copy[strlen(event_name) + 1];
 	strcpy(event_name_copy, event_name);
 	uint16 worker_id = irt_worker_get_current()->id.thread;
 	int64 retval = 0;
 	int32 eventset = context->inst_region_metric_group_support_data.papi_eventset[worker_id];
 	int32 num_present_events = PAPI_num_events(eventset);
-	
-	if(num_present_events < 1) {
-		return -1;
-	}
-	
+
+	if(num_present_events < 1) { return -1; }
+
 	int32 present_events[num_present_events];
 	int32 target_event_code = 0;
-	
+
 	PAPI_event_name_to_code(event_name_copy, &target_event_code);
-	
+
 	PAPI_list_events(eventset, present_events, &num_present_events);
-	
+
 	for(int i = 0; i < num_present_events; ++i) {
 		if(present_events[i] == target_event_code) {
 			retval = papi_values[i];
 			break;
 		}
 	}
-	
+
 	return retval;
 }
 
@@ -181,28 +174,26 @@ int64 irt_papi_get_value_by_name(irt_context* context, long long int* papi_value
  */
 
 void irt_papi_select_events(irt_worker* worker, irt_context* context, const char* papi_events_string) {
-	if(!papi_events_string) {
-		return;
-	}
-	
+	if(!papi_events_string) { return; }
+
 	int32 retval = 0;
-	
+
 	uint16 id = worker->id.thread;
 	char* saveptr = NULL;
-	
+
 	context->inst_region_metric_group_support_data.papi_eventset[id] = PAPI_NULL;
-	
+
 	if((retval = PAPI_create_eventset(&context->inst_region_metric_group_support_data.papi_eventset[id])) != PAPI_OK) {
 		IRT_DEBUG("Instrumentation: Error creating PAPI event set for worker %hd! Reason: %s\n", id, PAPI_strerror(retval));
 		return;
 	}
-	
-	char papi_events_string_copy[strlen(papi_events_string)+1];
-	
+
+	char papi_events_string_copy[strlen(papi_events_string) + 1];
+
 	strcpy(papi_events_string_copy, papi_events_string);
-	
+
 	char* current_event = strtok_r(papi_events_string_copy, ",", &saveptr);
-	
+
 	while(current_event != NULL) {
 		// skip all non-papi events
 		if(strncmp(current_event, "PAPI", 4) != 0) {
@@ -228,9 +219,7 @@ void irt_papi_select_events(irt_worker* worker, irt_context* context, const char
 
 void irt_papi_select_events_from_env(irt_worker* worker, irt_context* context) {
 	const char* papi_events_string = getenv(IRT_INST_REGION_INSTRUMENTATION_TYPES_ENV);
-	if(papi_events_string && strcmp(papi_events_string, "") != 0) {
-		irt_papi_select_events(worker, context, papi_events_string);
-	}
+	if(papi_events_string && strcmp(papi_events_string, "") != 0) { irt_papi_select_events(worker, context, papi_events_string); }
 }
 
 /*
@@ -250,30 +239,30 @@ void irt_papi_setup_worker(irt_worker* worker) {
 	irt_papi_select_events_from_env(worker, context);
 }
 
-#else //IRT_USE_PAPI
+#else // IRT_USE_PAPI
 
-void irt_papi_init() { }
+void irt_papi_init() {}
 
-void irt_papi_shutdown() { }
+void irt_papi_shutdown() {}
 
-void irt_papi_finalize_context(irt_context* context) { }
+void irt_papi_finalize_context(irt_context* context) {}
 
-void irt_papi_finalize_worker(irt_worker* worker) { }
+void irt_papi_finalize_worker(irt_worker* worker) {}
 
-void irt_papi_start() { }
+void irt_papi_start() {}
 
-void irt_papi_stop(long long int* papi_values) { }
+void irt_papi_stop(long long int* papi_values) {}
 
 int64 irt_papi_get_value_by_name(irt_context* context, long long int* papi_values, const char* event_name) {
 	return -1;
 }
 
-void irt_papi_select_events(irt_worker* worker, irt_context* context, const char* papi_events_string) { }
+void irt_papi_select_events(irt_worker* worker, irt_context* context, const char* papi_events_string) {}
 
-void irt_papi_select_events_from_env(irt_worker* worker, irt_context* context) { }
+void irt_papi_select_events_from_env(irt_worker* worker, irt_context* context) {}
 
-void irt_papi_setup_context(irt_context* context) { }
+void irt_papi_setup_context(irt_context* context) {}
 
-void irt_papi_setup_worker(irt_worker* worker) { }
+void irt_papi_setup_worker(irt_worker* worker) {}
 
 #endif // IRT_USE_PAPI

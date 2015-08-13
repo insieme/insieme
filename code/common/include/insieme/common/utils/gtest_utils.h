@@ -40,7 +40,9 @@
 #include <future>
 
 
-#define EXPECT_IN_TIME(__time, __code) \
-	EXPECT_EXIT({ auto _ft = std::async(std::launch::async, [&]() { __code; }); \
-	auto ret = _ft.wait_for(std::chrono::milliseconds(__time)); \
-	exit(ret == std::future_status::timeout ? 1 : 0); }, [](int ret) { return ret == 0; }, "") << "Failed to complete in time (" #__time " ms)!";
+#define EXPECT_IN_TIME(__time, __code)                                                                                                                         \
+	EXPECT_EXIT({                                                                                                                                              \
+		auto _ft = std::async(std::launch::async, [&]() { __code; });                                                                                          \
+		auto ret = _ft.wait_for(std::chrono::milliseconds(__time));                                                                                            \
+		exit(ret == std::future_status::timeout ? 1 : 0);                                                                                                      \
+	}, [](int ret) { return ret == 0; }, "") << "Failed to complete in time (" #__time " ms)!";

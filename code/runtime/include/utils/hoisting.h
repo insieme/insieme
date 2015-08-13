@@ -81,7 +81,4 @@ void* dlopen_unique(const char* filename, int flag) {
 #endif
 
 
-
-
-
 #endif // ifndef __GUARD_UTILS_HOISTING_H

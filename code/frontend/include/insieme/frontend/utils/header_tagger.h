@@ -45,7 +45,7 @@
 #include "insieme/core/forward_decls.h"
 
 namespace clang {
-class Decl;
+	class Decl;
 }
 
 namespace insieme {
@@ -61,61 +61,59 @@ namespace ba = boost::algorithm;
  * the most apropiate header has to be computed
  */
 class HeaderTagger {
-
 	vector<fs::path> stdLibDirs;
 	vector<fs::path> interceptedHeaderDirs;
 	vector<fs::path> userIncludeDirs;
 	const clang::SourceManager& sm;
-	
+
 	mutable std::map<clang::FileID, std::pair<std::string, bool>> isStdCache;
 	mutable std::map<clang::FileID, std::pair<std::string, bool>> isInterceptedCache;
 	mutable std::map<clang::FileID, std::pair<std::string, bool>> isUserCache;
-	
+
 	/**
 	 * A utility function cutting down std-lib header files.
 	 */
 	boost::optional<fs::path> toStdLibHeader(const fs::path& path) const;
-	
-	bool isStdLibHeader(const clang::SourceLocation& loc) const;
-	
-	bool isStdLibHeader(const fs::path& path) const;
-	
-	bool isInterceptedLibHeader(const clang::SourceLocation& loc) const;
-	
-	bool isInterceptedLibHeader(const fs::path& path) const;
-	
-	boost::optional<fs::path> toInterceptedLibHeader(const fs::path& path) const;
-	
-	bool isUserLibHeader(const clang::SourceLocation& loc) const;
-	
-	bool isUserLibHeader(const fs::path& path) const;
-	
-	boost::optional<fs::path> toUserLibHeader(const fs::path& path) const;
-	
-	bool isHeaderFile(const string& name) const;
-	
-	string getTopLevelInclude(const clang::SourceLocation& loc) const;
-	
-	bool isIntrinsicHeader(const string& name) const;
-	
-	bool isInjectedHeader(const clang::PresumedLoc& ploc) const;
-	
-	boost::optional<fs::path> toIntrinsicHeader(const fs::path& path) const;
-	
-	
-public:
 
+	bool isStdLibHeader(const clang::SourceLocation& loc) const;
+
+	bool isStdLibHeader(const fs::path& path) const;
+
+	bool isInterceptedLibHeader(const clang::SourceLocation& loc) const;
+
+	bool isInterceptedLibHeader(const fs::path& path) const;
+
+	boost::optional<fs::path> toInterceptedLibHeader(const fs::path& path) const;
+
+	bool isUserLibHeader(const clang::SourceLocation& loc) const;
+
+	bool isUserLibHeader(const fs::path& path) const;
+
+	boost::optional<fs::path> toUserLibHeader(const fs::path& path) const;
+
+	bool isHeaderFile(const string& name) const;
+
+	string getTopLevelInclude(const clang::SourceLocation& loc) const;
+
+	bool isIntrinsicHeader(const string& name) const;
+
+	bool isInjectedHeader(const clang::PresumedLoc& ploc) const;
+
+	boost::optional<fs::path> toIntrinsicHeader(const fs::path& path) const;
+
+
+  public:
 	HeaderTagger(const vector<fs::path>& stdLibDirs, const vector<fs::path>& interceptedHeaderDirs, const vector<fs::path>& userIncludeDirs,
 	             const clang::SourceManager& srcMgr);
-	             
-	             
+
+
 	/**
 	 *	asks whenever this declaration is in a system header,
 	 *	@param the declaration we are asking for
 	 *	@whenever is a system header
 	 */
 	bool isDefinedInSystemHeader(const clang::Decl* decl) const;
-	
+
 	/**
 	 * Attaches a header annotation to the given node which is supposed to be
 	 * the result of converting the given declaration.

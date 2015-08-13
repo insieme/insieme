@@ -52,29 +52,27 @@ struct _lwt_g_stack_reuse {
 
 lwt_reused_stack* _lwt_get_stack(int w_id) {
 	lwt_reused_stack* ret = lwt_g_stack_reuse.stacks[w_id];
-#ifdef LWT_STACK_STEALING_ENABLED
+	#ifdef LWT_STACK_STEALING_ENABLED
 	if(ret) {
 		if(irt_atomic_bool_compare_and_swap(&lwt_g_stack_reuse.stacks[w_id], ret, ret->next, intptr_t)) {
-			//IRT_DEBUG("LWT_RE\n");
+			// IRT_DEBUG("LWT_RE\n");
 			return ret;
-		}
-		else {
+		} else {
 			return _lwt_get_stack(w_id);
 		}
-	}
-	else {
-		for(int i=0; i<irt_g_worker_count; ++i) {
+	} else {
+		for(int i = 0; i < irt_g_worker_count; ++i) {
 			ret = lwt_g_stack_reuse.stacks[i];
 			if(ret && irt_atomic_bool_compare_and_swap(&lwt_g_stack_reuse.stacks[i], ret, ret->next, intptr_t)) {
-				//IRT_DEBUG("LWT_ST\n");
+				// IRT_DEBUG("LWT_ST\n");
 				return ret;
 			}
 		}
 	}
-#else
+	#else
 	if(ret) {
-		//IRT_DEBUG("LWT_RE\n");
-		//IRT_VERBOSE_ONLY(
+		// IRT_DEBUG("LWT_RE\n");
+		// IRT_VERBOSE_ONLY(
 		//{
 		//	int num_stacks=1;
 		//	lwt_reused_stack* cur = ret;
@@ -88,46 +86,46 @@ lwt_reused_stack* _lwt_get_stack(int w_id) {
 		lwt_g_stack_reuse.stacks[w_id] = ret->next;
 		return ret;
 	}
-#endif
-	
+	#endif
+
 	// create new
-	//static unsigned long long total = 0;
-	//total += sizeof(lwt_reused_stack) + IRT_WI_STACK_SIZE;
-	//printf("Total allocated: %6.2lf MB\n", total/(1024.0*1024.0));
+	// static unsigned long long total = 0;
+	// total += sizeof(lwt_reused_stack) + IRT_WI_STACK_SIZE;
+	// printf("Total allocated: %6.2lf MB\n", total/(1024.0*1024.0));
 	// TODO [_GEMS]: we need +4 because of gemsclaim compiler generated instruction: when entering a function call the sp is stored on the stack
 	ret = (lwt_reused_stack*)malloc(sizeof(lwt_reused_stack) + IRT_WI_STACK_SIZE + 4);
-	
+
 	IRT_ASSERT(ret != NULL, IRT_ERR_IO, "Malloc of lwt stack failed.\n");
-	
+
 	ret->next = NULL;
 	return ret;
 }
 
-static inline void lwt_recycle(int tid, irt_work_item *wi) {
+static inline void lwt_recycle(int tid, irt_work_item* wi) {
 	if(!wi->stack_storage) {
-#ifdef IRT_ASTEROIDEA_STACKS
+	#ifdef IRT_ASTEROIDEA_STACKS
 		// make parent stack available again
 		irt_work_item* parent = wi->parent_id.cached;
-		IRT_DEBUG(" + %p returning stack to %p\n", (void*) wi, (void*) parent);
+		IRT_DEBUG(" + %p returning stack to %p\n", (void*)wi, (void*)parent);
 		IRT_ASSERT(parent != NULL, IRT_ERR_INTERNAL, "Asteroidea: No parent and no stack storage.\n");
-		IRT_ASSERT(irt_atomic_bool_compare_and_swap(&parent->stack_available, false, true, intptr_t), IRT_ERR_INTERNAL, "Asteroidea: Could not return stack.\n");
-#endif //IRT_ASTEROIDEA_STACKS
+		IRT_ASSERT(irt_atomic_bool_compare_and_swap(&parent->stack_available, false, true, intptr_t), IRT_ERR_INTERNAL,
+		           "Asteroidea: Could not return stack.\n");
+		#endif // IRT_ASTEROIDEA_STACKS
 		return;
 	}
-#ifdef LWT_STACK_STEALING_ENABLED
+	#ifdef LWT_STACK_STEALING_ENABLED
 	for(;;) {
 		lwt_reused_stack* top = lwt_g_stack_reuse.stacks[tid];
 		wi->stack_storage->next = top;
 		if(irt_atomic_bool_compare_and_swap(&lwt_g_stack_reuse.stacks[tid], top, wi->stack_storage, intptr_t)) {
-			//IRT_DEBUG("LWT_CYC\n");
+			// IRT_DEBUG("LWT_CYC\n");
 			return;
-		}
-		else {
-			//IRT_DEBUG("LWT_FCY\n");
+		} else {
+			// IRT_DEBUG("LWT_FCY\n");
 		}
 	}
-#else
-	//IRT_VERBOSE_ONLY(
+	#else
+	// IRT_VERBOSE_ONLY(
 	//{
 	//	int num_stacks=0;
 	//	if(lwt_g_stack_reuse.stacks[tid]) {
@@ -146,9 +144,9 @@ static inline void lwt_recycle(int tid, irt_work_item *wi) {
 	wi->stack_storage->next = lwt_g_stack_reuse.stacks[tid];
 	lwt_g_stack_reuse.stacks[tid] = wi->stack_storage;
 	wi->stack_storage = NULL;
-	//printf("Reuse!");
-	//IRT_DEBUG("LWT_CYC\n");
-#endif
+	// printf("Reuse!");
+	// IRT_DEBUG("LWT_CYC\n");
+	#endif
 }
 
 #ifdef USING_MINLWT
@@ -156,7 +154,7 @@ static inline void lwt_recycle(int tid, irt_work_item *wi) {
 // ----------------------------------------------------------------------------
 // x86-64 implementation
 
-static inline void lwt_prepare(int tid, irt_work_item *wi, intptr_t *basestack) {
+static inline void lwt_prepare(int tid, irt_work_item* wi, intptr_t* basestack) {
 #ifdef IRT_ASTEROIDEA_STACKS
 	// if parent stack is available, reuse it
 	irt_work_item* parent = wi->parent_id.cached;
@@ -168,34 +166,34 @@ static inline void lwt_prepare(int tid, irt_work_item *wi, intptr_t *basestack) 
 			 */
 			// only use the stack if our parent runs no immediate sibling at the moment
 			if(parent->num_active_children == wi->parent_num_active_children) {
-				IRT_DEBUG(" + %p taking stack from %p\n", (void*) wi, (void*) parent);
-				IRT_DEBUG("   %p child count: %d\n", (void*) parent, *parent->num_active_children);
+				IRT_DEBUG(" + %p taking stack from %p\n", (void*)wi, (void*)parent);
+				IRT_DEBUG("   %p child count: %d\n", (void*)parent, *parent->num_active_children);
 				wi->stack_storage = NULL;
 				wi->stack_ptr = parent->stack_ptr - 8;
 				wi->stack_ptr -= wi->stack_ptr % LWT_STACK_ALIGNMENT;
 				return;
-			}
-			else {
+			} else {
 				// otherwise give it back, since we shouldn't have taken it in the first place
-				IRT_ASSERT(irt_atomic_bool_compare_and_swap(&parent->stack_available, false, true, bool), IRT_ERR_INTERNAL, "Asteroidea: Could not return stack to parent.\n");
+				IRT_ASSERT(irt_atomic_bool_compare_and_swap(&parent->stack_available, false, true, bool), IRT_ERR_INTERNAL,
+				           "Asteroidea: Could not return stack to parent.\n");
 			}
 		}
 	}
-#endif
-	
+	#endif
+
 	// heap allocated thread memory
 	wi->stack_storage = _lwt_get_stack(tid);
 	wi->stack_ptr = (intptr_t)(&wi->stack_storage->stack) + IRT_WI_STACK_SIZE;
-	
+
 	// let stack be allocated by the OS kernel
 	// see http://www.evanjones.ca/software/threading.html
 	// section: Implementing Kernel Threads on Linux
-//	wi->stack_ptr = (intptr_t)(mmap(NULL, IRT_WI_STACK_SIZE,
-//			PROT_READ | PROT_WRITE,
-//			MAP_PRIVATE | MAP_32BIT | MAP_ANONYMOUS | MAP_GROWSDOWN | MAP_STACK,
-//			-1, 0)
-//	);
-//	wi->stack_start = wi->stack_ptr - IRT_WI_STACK_SIZE;
+	//	wi->stack_ptr = (intptr_t)(mmap(NULL, IRT_WI_STACK_SIZE,
+	//			PROT_READ | PROT_WRITE,
+	//			MAP_PRIVATE | MAP_32BIT | MAP_ANONYMOUS | MAP_GROWSDOWN | MAP_STACK,
+	//			-1, 0)
+	//	);
+	//	wi->stack_start = wi->stack_ptr - IRT_WI_STACK_SIZE;
 }
 
 
@@ -212,7 +210,7 @@ static inline void lwt_prepare(int tid, irt_work_item *wi, intptr_t *basestack) 
 
 #include "minlwt.gems.impl.h"
 
-#elif defined (__arm__)
+#elif defined(__arm__)
 
 #include "minlwt.arm.impl.h"
 
@@ -223,25 +221,23 @@ static inline void lwt_prepare(int tid, irt_work_item *wi, intptr_t *basestack) 
 #endif
 
 
-void lwt_start(irt_work_item *wi, intptr_t *basestack, wi_implementation_func* func) {
+void lwt_start(irt_work_item* wi, intptr_t* basestack, wi_implementation_func* func) {
 	IRT_DEBUG_ONLY(
-	    //dirty hack to print the function pointer in debug output, as function pointers can't be legally casted to void pointers.
-	    //This solution may still be undefined behaviour, but it will probably do what it is supposed to do for our debugging purposes
-	union {
-		wi_implementation_func* f;
-		void* pt;
-	} hack;
-	hack.f = func;
-	         IRT_DEBUG("START WI: %p, Basestack: %p, func: %p", (void*) wi, (void*)*basestack, hack.pt);
-	)
+	    // dirty hack to print the function pointer in debug output, as function pointers can't be legally casted to void pointers.
+	    // This solution may still be undefined behaviour, but it will probably do what it is supposed to do for our debugging purposes
+	    union {
+		    wi_implementation_func* f;
+		    void* pt;
+		} hack;
+	    hack.f = func; IRT_DEBUG("START WI: %p, Basestack: %p, func: %p", (void*)wi, (void*)*basestack, hack.pt);)
 	lwt_continue_impl(wi, func, &wi->stack_ptr, basestack);
 }
-void lwt_continue(intptr_t *newstack, intptr_t *basestack) {
+void lwt_continue(intptr_t* newstack, intptr_t* basestack) {
 	IRT_DEBUG("CONTINUE Newstack before: %p, Basestack before: %p", (void*)*newstack, (void*)*basestack);
 	lwt_continue_impl(NULL, NULL, newstack, basestack);
 	IRT_DEBUG("CONTINUE Newstack after: %p, Basestack after: %p", (void*)*newstack, (void*)*basestack);
 }
-void lwt_end(intptr_t *basestack) {
+void lwt_end(intptr_t* basestack) {
 	IRT_DEBUG("END Basestack: %p", (void*)*basestack);
 	intptr_t dummy;
 	lwt_continue_impl(NULL, NULL, basestack, &dummy);
@@ -255,10 +251,10 @@ void lwt_end(intptr_t *basestack) {
 //// PPC implementation
 //
 //__attribute__ ((noinline))
-//void lwt_start(irt_work_item *wi, intptr_t *basestack, wi_implementation_func* func) {
+// void lwt_start(irt_work_item *wi, intptr_t *basestack, wi_implementation_func* func) {
 //}
 //__attribute__ ((noinline))
-//void lwt_continue(intptr_t *newstack, intptr_t *basestack) {
+// void lwt_continue(intptr_t *newstack, intptr_t *basestack) {
 //	__asm__ (
 //		/* save registers on stack */
 //		"mflr 0 \n" // move link register to r0
@@ -273,7 +269,7 @@ void lwt_end(intptr_t *basestack) {
 //	: "a" (basestack), "c" (newstack) );
 //}
 //__attribute__ ((noinline))
-//void lwt_end(intptr_t *basestack) {
+// void lwt_end(intptr_t *basestack) {
 //}
 //
 //#else
@@ -281,22 +277,22 @@ void lwt_end(intptr_t *basestack) {
 // ----------------------------------------------------------------------------
 // Fallback ucontext implementation
 
-static inline void lwt_prepare(int tid, irt_work_item *wi, lwt_context *basestack) {
-	wi->stack_storage =  _lwt_get_stack(tid);
-	wi->stack_ptr.uc_link          = basestack;
-	wi->stack_ptr.uc_stack.ss_sp   = (char*)wi->stack_storage->stack;
+static inline void lwt_prepare(int tid, irt_work_item* wi, lwt_context* basestack) {
+	wi->stack_storage = _lwt_get_stack(tid);
+	wi->stack_ptr.uc_link = basestack;
+	wi->stack_ptr.uc_stack.ss_sp = (char*)wi->stack_storage->stack;
 	wi->stack_ptr.uc_stack.ss_size = IRT_WI_STACK_SIZE;
 	getcontext(&wi->stack_ptr);
 }
 
-void lwt_start(irt_work_item *wi, lwt_context *basestack, wi_implementation_func* func) {
-	makecontext(&wi->stack_ptr, (void(*)(void))&_irt_wi_trampoline, 2, wi, func);
+void lwt_start(irt_work_item* wi, lwt_context* basestack, wi_implementation_func* func) {
+	makecontext(&wi->stack_ptr, (void (*)(void)) & _irt_wi_trampoline, 2, wi, func);
 	swapcontext(basestack, &wi->stack_ptr);
 }
-void lwt_continue(lwt_context *newstack, lwt_context *basestack) {
+void lwt_continue(lwt_context* newstack, lwt_context* basestack) {
 	swapcontext(basestack, newstack);
 }
-void lwt_end(lwt_context *basestack) {
+void lwt_end(lwt_context* basestack) {
 	setcontext(basestack);
 }
 

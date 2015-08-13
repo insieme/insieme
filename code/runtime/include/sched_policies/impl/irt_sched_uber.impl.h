@@ -68,15 +68,13 @@ irt_joinable irt_scheduling_optional_wi(irt_worker* target, irt_work_item* wi) {
 	return irt_scheduling_optional(target, &wi->range, wi->impl, wi->parameters);
 }
 
-irt_joinable irt_scheduling_optional(irt_worker* target, const irt_work_item_range* range,
-                                     irt_wi_implementation* impl, irt_lw_data_item* args) {
-	irt_circular_work_buffer *queue = &target->sched_data.queue;
-	if(irt_cwb_size(queue) >= IRT_CWBUFFER_LENGTH-2) {
+irt_joinable irt_scheduling_optional(irt_worker* target, const irt_work_item_range* range, irt_wi_implementation* impl, irt_lw_data_item* args) {
+	irt_circular_work_buffer* queue = &target->sched_data.queue;
+	if(irt_cwb_size(queue) >= IRT_CWBUFFER_LENGTH - 2) {
 		irt_worker_run_immediate(target, range, impl, args);
 		return irt_joinable_null();
-	}
-	else {
-		irt_work_item *real_wi = _irt_wi_create(target, range, impl, args);
+	} else {
+		irt_work_item* real_wi = _irt_wi_create(target, range, impl, args);
 		irt_joinable joinable;
 		joinable.wi_id = real_wi->id;
 		irt_scheduling_generate_wi(target, real_wi);
@@ -103,14 +101,14 @@ void irt_scheduling_assign_wi(irt_worker* target, irt_work_item* wi) {
 	irt_worker* self = irt_worker_get_current();
 	target = self;
 	while(!irt_cwb_push_front(&target->sched_data.queue, wi)) {
-		target = irt_g_workers[rand_r(&self->rand_seed)%irt_g_worker_count];
+		target = irt_g_workers[rand_r(&self->rand_seed) % irt_g_worker_count];
 	}
 	irt_signal_worker(target);
 }
 
-bool irt_scheduling_worker_sleep(irt_worker *self) {
+bool irt_scheduling_worker_sleep(irt_worker* self) {
 	uint32 id = self->id.thread;
-	irt_worker* waker = irt_g_workers[(id+1)%irt_g_worker_count];
+	irt_worker* waker = irt_g_workers[(id + 1) % irt_g_worker_count];
 	irt_work_item* stolen = irt_cwb_pop_back(&waker->sched_data.queue);
 	if(stolen) {
 		irt_cwb_push_front(&self->sched_data.queue, stolen);
@@ -127,28 +125,26 @@ bool irt_scheduling_worker_sleep(irt_worker *self) {
 int irt_scheduling_iteration(irt_worker* self) {
 	irt_inst_insert_wo_event(self, IRT_INST_WORKER_SCHEDULING_LOOP, self->id);
 	irt_work_item* wi = NULL;
-	
+
 	// wake sleeper if enough wis
-	if(self->sched_data.wake_target && irt_cwb_size(&self->sched_data.queue)>1) {
+	if(self->sched_data.wake_target && irt_cwb_size(&self->sched_data.queue) > 1) {
 		irt_signal_worker(self->sched_data.wake_target);
 		self->sched_data.wake_target = NULL;
 	}
-	
+
 	// try to take a work item from the queue
 	if((wi = irt_cwb_pop_back(&self->sched_data.queue))) {
 		irt_inst_insert_wo_event(self, IRT_INST_WORKER_SCHEDULING_LOOP_END, self->id);
 		_irt_worker_switch_to_wi(self, wi);
 		return 1;
 	}
-	
+
 	// try to steal a work item from random
-	for(int i=0; i<IRT_SCHED_UBER_STEAL_ATTEMPTS; ++i) {
+	for(int i = 0; i < IRT_SCHED_UBER_STEAL_ATTEMPTS; ++i) {
 		irt_inst_insert_wo_event(self, IRT_INST_WORKER_STEAL_TRY, self->id);
-		irt_worker *wo = irt_g_workers[rand_r(&self->rand_seed)%irt_g_worker_count];
+		irt_worker* wo = irt_g_workers[rand_r(&self->rand_seed) % irt_g_worker_count];
 		if(irt_atomic_load(&wo->state) == IRT_WORKER_STATE_SLEEPING) {
-			if(irt_cwb_size(&wo->sched_data.queue) > 0) {
-				irt_signal_worker(wo);
-			}
+			if(irt_cwb_size(&wo->sched_data.queue) > 0) { irt_signal_worker(wo); }
 			continue;
 		}
 		if((wi = irt_cwb_pop_back(&wo->sched_data.queue))) {
@@ -158,7 +154,7 @@ int irt_scheduling_iteration(irt_worker* self) {
 			return 1;
 		}
 	}
-	
+
 	// didn't find any work
 	return 0;
 }
@@ -166,10 +162,9 @@ int irt_scheduling_iteration(irt_worker* self) {
 // ------------------------------------------------------------ optional scheduling -----------------------------------
 
 void irt_scheduling_yield(irt_worker* self, irt_work_item* yielding_wi) {
-	IRT_DEBUG("Worker yield, worker: %p,  wi: %p", (void*) self, (void*) yielding_wi);
+	IRT_DEBUG("Worker yield, worker: %p,  wi: %p", (void*)self, (void*)yielding_wi);
 	irt_cwb_push_front(&self->sched_data.queue, yielding_wi);
 	lwt_continue(&self->basestack, &yielding_wi->stack_ptr);
 }
 
 #endif // ifndef __GUARD_SCHED_POLICIES_IMPL_IRT_SCHED_UBER_IMPL_H
-

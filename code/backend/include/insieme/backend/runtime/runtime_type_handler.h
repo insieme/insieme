@@ -42,7 +42,7 @@ namespace insieme {
 namespace backend {
 namespace runtime {
 
-extern TypeHandler RuntimeTypeHandler;
+	extern TypeHandler RuntimeTypeHandler;
 
 } // end namespace runtime
 } // end namespace backend

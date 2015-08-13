@@ -41,12 +41,12 @@
 uint64 irt_g_opt_min_effort = 1000000ull;
 #include "utils/load.h"
 
-void irt_shared_mem_effort_estimate_external_load_optimizer_context_startup(irt_context *context) {
-	//const uint64 EST_RANGE = 1000000;
-	
-	//for(uint32 i=0; i < context->impl_table_size; ++i) {
+void irt_shared_mem_effort_estimate_external_load_optimizer_context_startup(irt_context* context) {
+	// const uint64 EST_RANGE = 1000000;
+
+	// for(uint32 i=0; i < context->impl_table_size; ++i) {
 	//	irt_wi_implementation_variant *variant = &context->impl_table[i].variants[0];
-	
+
 	//	// check if effort estimator available
 	//	if(variant->effort_estimator != NULL) {
 	//		// check if flat profile
@@ -58,9 +58,9 @@ void irt_shared_mem_effort_estimate_external_load_optimizer_context_startup(irt_
 	//			if(j>0 && effort != last_effort) flat = false;
 	//			last_effort = effort;
 	//		}
-	
+
 	//		variant->rt_data.flat_profile = flat;
-	
+
 	//		// if not flat profile, calculate ideal distribution
 	//		if(!flat) {
 	//			uint64 total_effort = variant->effort_estimator(0, EST_RANGE);
@@ -88,16 +88,16 @@ void irt_shared_mem_effort_estimate_external_load_optimizer_context_startup(irt_
 	//			}
 	//		}
 	//	}
-	
+
 	//	// calculate a good chunk size based on per-iteration effort
 	//	uint64 effort = variant->features.effort;
 	//	uint64 chunk = irt_g_opt_min_effort/MAX(effort, 1);
 	//	chunk = MAX(chunk, 1);
 	//	variant->rt_data.chunk_size = chunk;
-	
+
 	//	variant->rt_data.tested = false;
 	//	variant->rt_data.force_dyn = false;
-	
+
 	//	// print info
 	//	//if(variant->effort_estimator != NULL) {
 	//	//	printf("flat profile: % 5s\n", variant->rt_data.flat_profile ? "true" : "false");
@@ -112,37 +112,33 @@ void irt_shared_mem_effort_estimate_external_load_optimizer_context_startup(irt_
 	//	//printf("per-iteration effort estimate: %llu\n", variant->features.effort);
 	//	//printf("dynamic minimum chunk: %llu\n", variant->rt_data.chunk_size);
 	//}
-	//get_load_external();
+	// get_load_external();
 }
 
 static inline double get_cur_external_load() {
 	static double load = 0.0;
 	static uint64 last_ticks = 0;
-	if(irt_time_ticks()-last_ticks < 1000000000ull) {
-		return load;
-	}
+	if(irt_time_ticks() - last_ticks < 1000000000ull) { return load; }
 	load = get_load_external();
-	if(load>1.0) {
-		load = 0.0;
-	}
-	//printf("measure %lf\n", load);
+	if(load > 1.0) { load = 0.0; }
+	// printf("measure %lf\n", load);
 	last_ticks = irt_time_ticks();
 	return load;
 }
 
 void irt_shared_mem_effort_estimate_external_load_optimizer_starting_pfor(irt_wi_implementation* impl, irt_work_item_range range, irt_work_group* group) {
-	//uint32 ncpus = group->local_member_count;
-	//irt_wi_implementation_variant *variant = &impl->variants[0];
-	
+	// uint32 ncpus = group->local_member_count;
+	// irt_wi_implementation_variant *variant = &impl->variants[0];
+
 	//// if we have an effort estimator
-	//if(variant->effort_estimator) {
+	// if(variant->effort_estimator) {
 	//	// check if worth parallelizing
 	//	if(variant->effort_estimator(range.begin, range.end) < irt_g_opt_min_effort) {
 	//		irt_wg_set_loop_scheduling_policy(group, &irt_g_loop_sched_policy_single);
 	//		//printf("Haha tiny! % 3d\n", impl_id);
 	//		return;
 	//	}
-	
+
 	//	//check for external load
 	//	double load = get_cur_external_load();
 	//	if(load>0.03 || variant->rt_data.force_dyn) {
@@ -156,7 +152,7 @@ void irt_shared_mem_effort_estimate_external_load_optimizer_starting_pfor(irt_wi
 	//		//printf("Haha load! % 3d l: %lf\n", impl_id, load);
 	//		return;
 	//	}
-	
+
 	//	// check if flat profile
 	//	if(variant->rt_data.flat_profile) {
 	//		irt_wg_set_loop_scheduling_policy(group, &irt_g_loop_sched_policy_default);
@@ -175,14 +171,14 @@ void irt_shared_mem_effort_estimate_external_load_optimizer_starting_pfor(irt_wi
 	//	}
 	//}
 	//// we don't have an effort estimator
-	//else {
+	// else {
 	//	// check if worth parallelizing
 	//	if(variant->features.effort * (range.end-range.begin) < irt_g_opt_min_effort) {
 	//		irt_wg_set_loop_scheduling_policy(group, &irt_g_loop_sched_policy_single);
 	//		//printf("Haha tiny 2! % 3d\n", impl_id);
 	//		return;
 	//	}
-	
+
 	//	// use dynamic distribution with educated chunk size estimation
 	//	irt_loop_sched_policy dynamic_policy;
 	//	dynamic_policy.type = IRT_DYNAMIC_CHUNKED;
@@ -208,9 +204,9 @@ void irt_shared_mem_effort_estimate_external_load_optimizer_completed_pfor(irt_w
 
 #else
 
-void irt_shared_mem_effort_estimate_external_load_optimizer_completed_pfor(irt_wi_implementation_id impl_id,
-        irt_work_item_range range, uint64 total_time, irt_loop_sched_data *sched_data) {
-	//if(sched_data->policy.type == IRT_STATIC) {
+void irt_shared_mem_effort_estimate_external_load_optimizer_completed_pfor(irt_wi_implementation_id impl_id, irt_work_item_range range, uint64 total_time,
+                                                                           irt_loop_sched_data* sched_data) {
+	// if(sched_data->policy.type == IRT_STATIC) {
 	//	irt_wi_implementation_variant *variant = &irt_context_get_current()->impl_table[impl_id].variants[0];
 	//	if(!variant->rt_data.tested) {
 	//		variant->rt_data.tested = true;
@@ -228,13 +224,13 @@ void irt_shared_mem_effort_estimate_external_load_optimizer_completed_pfor(irt_w
 #endif
 
 ///////////////////////////////////// Loops (old) =====================================================================
-//irt_loop
-//double **irt_g_opt_shares = NULL; //stores the shares for each thread in each region
+// irt_loop
+// double **irt_g_opt_shares = NULL; //stores the shares for each thread in each region
 //				//shares[3][4] = 0.4 means: in work_item 3, thread 4 does 40% of the work
-//double **irt_g_opt_times = NULL;
+// double **irt_g_opt_times = NULL;
 //
 //
-//void irt_optimizer_starting_pfor(irt_wi_implementation_id impl_id, irt_work_item_range range, irt_work_group* group) {
+// void irt_optimizer_starting_pfor(irt_wi_implementation_id impl_id, irt_work_item_range range, irt_work_group* group) {
 //	uint32 ncpus = group->local_member_count;
 //
 //	// first call
@@ -309,14 +305,14 @@ void irt_shared_mem_effort_estimate_external_load_optimizer_completed_pfor(irt_w
 //
 //#ifndef IRT_RUNTIME_TUNING_EXTENDED
 //
-//void irt_optimizer_completed_pfor(irt_wi_implementation_id impl_id, uint64 time) {
+// void irt_optimizer_completed_pfor(irt_wi_implementation_id impl_id, uint64 time) {
 //	// TODO
 //	//printf("Completed pfor % 3d, time: % 10ld\n", impl_id, time);
 //}
 //
 //#else
 //
-//void irt_optimizer_completed_pfor(irt_wi_implementation_id impl_id, irt_work_item_range range, uint64 total_time, irt_loop_sched_data *sched_data) {
+// void irt_optimizer_completed_pfor(irt_wi_implementation_id impl_id, irt_work_item_range range, uint64 total_time, irt_loop_sched_data *sched_data) {
 //	if(sched_data->policy.type == IRT_SHARES) {
 //		for(int i = 0; i < sched_data->participants_complete; ++i) {
 //			irt_g_opt_times[impl_id][i] = (double)sched_data->part_times[i] / (double)total_time;

@@ -34,35 +34,29 @@
  * regarding third party software licenses.
  */
 
-//typedef int bool;
+// typedef int bool;
 #define bool int
 
 #define true 1
 #define false 0
 
-extern int printf(char *, ...);
+extern int printf(char*, ...);
 
 bool even(unsigned x);
 bool odd(unsigned x);
 
 bool even(unsigned x) {
-	if(x==0) {
-		return true;
-	}
-	return odd(x-1);
+	if(x == 0) { return true; }
+	return odd(x - 1);
 }
 
 bool odd(unsigned x) {
-	if(x==0) {
-		return false;
-	}
-	return even(x-1);
+	if(x == 0) { return false; }
+	return even(x - 1);
 }
 
 char* toStr(bool value) {
-	if(value) {
-		return "true";
-	}
+	if(value) { return "true"; }
 	return "false";
 }
 
@@ -70,6 +64,6 @@ int main(int argc, char* argv[]) {
 	int x = 10;
 	printf("x=%d\n", x);
 	printf("even(x)=%s\n", toStr(even(x)));
-	//printf("odd(x)=%s\n", toStr(odd(x)));
+	// printf("odd(x)=%s\n", toStr(odd(x)));
 	return 0;
 }

@@ -60,8 +60,7 @@ static inline bool _irt_cwb_try_push_back(irt_worker* target, irt_work_item* wi)
 		success = irt_cwb_push_back(&target->sched_data.queue, wi);
 		if(!success) {
 			target = irt_g_workers[rand_r(&(irt_worker_get_current()->rand_seed)) % irt_g_worker_count];
-		}
-		else {
+		} else {
 			irt_signal_worker(target);
 		}
 		tries--;
@@ -76,8 +75,7 @@ static inline bool _irt_cwb_try_push_front(irt_worker* target, irt_work_item* wi
 		success = irt_cwb_push_front(&target->sched_data.queue, wi);
 		if(!success) {
 			target = irt_g_workers[rand_r(&(irt_worker_get_current()->rand_seed)) % irt_g_worker_count];
-		}
-		else {
+		} else {
 			irt_signal_worker(target);
 		}
 		tries--;
@@ -89,13 +87,13 @@ void irt_scheduling_init_worker(irt_worker* self) {
 	irt_cwb_init(&self->sched_data.queue);
 	self->sched_data.overflow_stack = NULL;
 	irt_spin_init(&self->sched_data.overflow_stack_lock);
-#ifdef IRT_TASK_OPT
+	#ifdef IRT_TASK_OPT
 	self->sched_data.demand = IRT_CWBUFFER_LENGTH;
-#endif //IRT_TASK_OPT
+	#endif // IRT_TASK_OPT
 }
 
 void irt_scheduling_yield(irt_worker* self, irt_work_item* yielding_wi) {
-	IRT_DEBUG("Worker yield, worker: %p,  wi: %p", (void*) self, (void*) yielding_wi);
+	IRT_DEBUG("Worker yield, worker: %p,  wi: %p", (void*)self, (void*)yielding_wi);
 	irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_YIELD, yielding_wi->id);
 	irt_scheduling_assign_wi(self, yielding_wi);
 	_irt_worker_switch_from_wi(self, yielding_wi);
@@ -109,53 +107,48 @@ irt_joinable irt_scheduling_optional_wi(irt_worker* target, irt_work_item* wi) {
 	return irt_scheduling_optional(target, &wi->range, wi->impl, wi->parameters);
 }
 
-irt_joinable irt_scheduling_optional(irt_worker* target, const irt_work_item_range* range,
-                                     irt_wi_implementation* impl, irt_lw_data_item* args) {
+irt_joinable irt_scheduling_optional(irt_worker* target, const irt_work_item_range* range, irt_wi_implementation* impl, irt_lw_data_item* args) {
 #ifndef IRT_TASK_OPT
-	irt_circular_work_buffer *queue = &target->sched_data.queue;
-	if(irt_cwb_size(queue) >= IRT_CWBUFFER_LENGTH-2) {
+	irt_circular_work_buffer* queue = &target->sched_data.queue;
+	if(irt_cwb_size(queue) >= IRT_CWBUFFER_LENGTH - 2) {
 		/* Note that we intentionally do not lock the CWBs here mostly to reduce complexity
 		 * Locking is actually not needed here, since the current size will only influence
 		 * our scheduling decision and not affect correctness in any way.
 		 */
 		irt_worker_run_immediate(target, range, impl, args);
 		return irt_joinable_null();
-	}
-	else {
-		irt_work_item *real_wi = _irt_wi_create(target, range, impl, args);
+	} else {
+		irt_work_item* real_wi = _irt_wi_create(target, range, impl, args);
 		irt_joinable joinable;
 		joinable.wi_id = real_wi->id;
 		irt_scheduling_assign_wi(target, real_wi);
 		return joinable;
 	}
-#else //!IRT_TASK_OPT
+	#else  //! IRT_TASK_OPT
 	int64 demand = --target->sched_data.demand;
-	if(demand > IRT_CWBUFFER_LENGTH/2) {
-		irt_work_item *real_wi = _irt_wi_create(target, range, impl, args);
+	if(demand > IRT_CWBUFFER_LENGTH / 2) {
+		irt_work_item* real_wi = _irt_wi_create(target, range, impl, args);
 		irt_joinable joinable;
 		joinable.wi_id = real_wi->id;
 		irt_scheduling_assign_wi(target, real_wi);
 		return joinable;
-	}
-	else {
+	} else {
 		irt_worker_run_immediate(target, range, impl, args);
 		return irt_joinable_null();
 	}
-#endif //!IRT_TASK_OPT
+	#endif //! IRT_TASK_OPT
 }
 
 #ifdef IRT_TASK_OPT
 #define IRT_NUM_TASK_VARIANTS 4
 uint32 irt_scheduling_select_taskopt_variant(irt_work_item* wi, irt_worker* wo) {
 	int64 demand = wo->sched_data.demand;
-	uint64 selection = IRT_NUM_TASK_VARIANTS-1;
-	if(demand > (IRT_CWBUFFER_LENGTH*(IRT_NUM_TASK_VARIANTS-1))/(IRT_NUM_TASK_VARIANTS*2)) {
+	uint64 selection = IRT_NUM_TASK_VARIANTS - 1;
+	if(demand > (IRT_CWBUFFER_LENGTH * (IRT_NUM_TASK_VARIANTS - 1)) / (IRT_NUM_TASK_VARIANTS * 2)) {
 		selection = 0;
-	}
-	else if(demand > (IRT_CWBUFFER_LENGTH*(IRT_NUM_TASK_VARIANTS-2))/(IRT_NUM_TASK_VARIANTS*2)) {
+	} else if(demand > (IRT_CWBUFFER_LENGTH * (IRT_NUM_TASK_VARIANTS - 2)) / (IRT_NUM_TASK_VARIANTS * 2)) {
 		selection = 1;
-	}
-	else if(demand > (IRT_CWBUFFER_LENGTH*(IRT_NUM_TASK_VARIANTS-3))/(IRT_NUM_TASK_VARIANTS*2)) {
+	} else if(demand > (IRT_CWBUFFER_LENGTH * (IRT_NUM_TASK_VARIANTS - 3)) / (IRT_NUM_TASK_VARIANTS * 2)) {
 		selection = 2;
 		//} else if(demand > (IRT_CWBUFFER_LENGTH*(IRT_NUM_TASK_VARIANTS-4))/(IRT_NUM_TASK_VARIANTS*2)) {
 		//	return 3;
@@ -167,7 +160,7 @@ uint32 irt_scheduling_select_taskopt_variant(irt_work_item* wi, irt_worker* wo) 
 	irt_inst_insert_db_event(wo, IRT_INST_DBG_TASK_SELECTION, *(irt_worker_id*)(&selection));
 	return (uint32)selection;
 }
-#endif //IRT_TASK_OPT
+#endif // IRT_TASK_OPT
 
 void irt_scheduling_generate_wi(irt_worker* target, irt_work_item* wi) {
 	irt_scheduling_assign_wi(target, wi);
@@ -178,13 +171,13 @@ void irt_scheduling_generate_wi(irt_worker* target, irt_work_item* wi) {
 void irt_scheduling_assign_wi(irt_worker* target, irt_work_item* wi) {
 	irt_inst_insert_wi_event(irt_worker_get_current(), IRT_INST_WORK_ITEM_QUEUED, wi->id);
 	bool succeeded = false;
-#ifdef IRT_STEAL_SELF_PUSH_FRONT
+	#ifdef IRT_STEAL_SELF_PUSH_FRONT
 	succeeded = _irt_cwb_try_push_front(target, wi);
-#else
+	#else
 	succeeded = _irt_cwb_try_push_back(target, wi);
-#endif
+	#endif
 	if(!succeeded) {
-		//IRT_ASSERT(false, IRT_ERR_INTERNAL, "IRT circular stealing: ran out of worker queue");
+		// IRT_ASSERT(false, IRT_ERR_INTERNAL, "IRT circular stealing: ran out of worker queue");
 		irt_spin_lock(&target->sched_data.overflow_stack_lock);
 		wi->next_reuse = target->sched_data.overflow_stack;
 		target->sched_data.overflow_stack = wi;
@@ -195,62 +188,58 @@ void irt_scheduling_assign_wi(irt_worker* target, irt_work_item* wi) {
 int irt_scheduling_iteration(irt_worker* self) {
 	irt_inst_insert_wo_event(self, IRT_INST_WORKER_SCHEDULING_LOOP, self->id);
 	irt_work_item* wi = NULL;
-	
+
 	// if there are WIs in the overflow stack, re-integrate as many as possible
 	if(self->sched_data.overflow_stack != NULL) {
 		irt_spin_lock(&self->sched_data.overflow_stack_lock);
-		irt_work_item *wi = self->sched_data.overflow_stack;
+		irt_work_item* wi = self->sched_data.overflow_stack;
 		while(wi != NULL) {
-			irt_work_item *next = wi->next_reuse;
+			irt_work_item* next = wi->next_reuse;
 			if(irt_cwb_push_back(&self->sched_data.queue, wi)) {
 				// got rid of this one
 				self->sched_data.overflow_stack = next;
 				wi = next;
-			}
-			else {
+			} else {
 				wi = NULL;
 			}
 		};
 		irt_spin_unlock(&self->sched_data.overflow_stack_lock);
 	}
-	
+
 	// try to take a work item from the queue
-#ifndef IRT_STEAL_SELF_POP_BACK
+	#ifndef IRT_STEAL_SELF_POP_BACK
 	if((wi = irt_cwb_pop_front(&self->sched_data.queue))) {
-#else
+	#else
 	if((wi = irt_cwb_pop_back(&self->sched_data.queue))) {
-#endif
+	#endif
 		irt_inst_insert_wo_event(self, IRT_INST_WORKER_SCHEDULING_LOOP_END, self->id);
 		_irt_worker_switch_to_wi(self, wi);
 		return 1;
 	}
-	
+
 	// try to steal a work item from random
 	irt_inst_insert_wo_event(self, IRT_INST_WORKER_STEAL_TRY, self->id);
-	irt_worker *wo = irt_g_workers[rand_r(&self->rand_seed)%irt_g_worker_count];
-#ifdef IRT_STEAL_OTHER_POP_FRONT
+	irt_worker* wo = irt_g_workers[rand_r(&self->rand_seed) % irt_g_worker_count];
+	#ifdef IRT_STEAL_OTHER_POP_FRONT
 	if((wi = irt_cwb_pop_front(&wo->sched_data.queue))) {
-#else
+	#else
 	if((wi = irt_cwb_pop_back(&wo->sched_data.queue))) {
-#endif
+	#endif
 		irt_inst_insert_wo_event(self, IRT_INST_WORKER_STEAL_SUCCESS, self->id);
 		irt_inst_insert_wo_event(self, IRT_INST_WORKER_SCHEDULING_LOOP_END, self->id);
 		_irt_worker_switch_to_wi(self, wi);
 		return 1;
-	}
-	else {
-#ifdef IRT_TASK_OPT
+	} else {
+	#ifdef IRT_TASK_OPT
 		wo->sched_data.demand = IRT_CWBUFFER_LENGTH;
-#endif //IRT_TASK_OPT
+		#endif // IRT_TASK_OPT
 	}
-	
+
 	// if that failed as well, look in the IPC message queue
-#ifndef IRT_MIN_MODE
-	if(_irt_sched_check_ipc_queue(self)) {
-		return 1;
-	}
-#endif
-	
+	#ifndef IRT_MIN_MODE
+	if(_irt_sched_check_ipc_queue(self)) { return 1; }
+	#endif
+
 	// didn't find any work
 	return 0;
 }
