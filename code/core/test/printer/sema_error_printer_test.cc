@@ -48,6 +48,8 @@
 
 #include "insieme/core/checks/full_check.h"
 
+#include "insieme/core/lang/reference.h"
+
 using namespace insieme::core;
 using namespace insieme::core::printer;
 
@@ -154,7 +156,7 @@ TEST(ErrorPrinter, error) {
 	auto valueType = builder.getLangBasic().getInt4();
 	auto var       = builder.variable(valueType);
 	auto expr      = builder.literal("1", valueType);
-	auto stmt      = builder.callExpr(mgr.getLangBasic().getUnit(), mgr.getLangBasic().getRefAssign(), var, expr);
+	auto stmt      = builder.callExpr(mgr.getLangBasic().getUnit(), mgr.getLangExtension<lang::ReferenceExtension>().getRefAssign(), var, expr);
 	
 	auto msgs = checks::check(stmt);
 	

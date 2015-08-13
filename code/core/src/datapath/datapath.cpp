@@ -40,6 +40,7 @@
 
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/lang/basic.h"
+#include "insieme/core/lang/reference.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 
 #include "insieme/core/ir_visitor.h"
@@ -50,48 +51,60 @@ namespace core {
 namespace datapath {
 
 
-DataPath::DataPath(NodeManager& manager)
-	: path(manager.getLangBasic().getDataPathRoot()) { }
-	
-DataPath DataPath::member(const ExpressionPtr& member) const {
-	auto& mgr = path.getNodeManager();
-	auto& basic = mgr.getLangBasic();
-	assert_true(basic.isIdentifier(member->getType())) << "Member identifier has to be an identifier!";
-	return DataPath(IRBuilder(mgr).callExpr(basic.getDataPath(), basic.getDataPathMember(), path, member));
+DataPath::DataPath(const TypePtr& type) {
+	auto& mgr = type.getNodeManager();
+	auto& ext = mgr.getLangExtension<lang::DatapathExtension>();
+	IRBuilder builder(mgr);
+	path = builder.callExpr(ext.getDataPathRoot(), builder.getTypeLiteral(type));
 }
-
+	
 DataPath DataPath::member(const string& name) const {
-	return member(IRBuilder(path.getNodeManager()).getIdentifierLiteral(name));
+	auto& mgr = path.getNodeManager();
+	auto& ext = mgr.getLangExtension<lang::DatapathExtension>();
+	assert_true(getTargetType().isa<NamedCompositeTypePtr>()) << "Current target must be a named composite type!";
+	auto elementType = getTargetType().as<NamedCompositeTypePtr>()->getTypeOfMember(name);
+	assert_true(elementType) << "No member " << name << " in type " << *getTargetType() << "\n";
+	IRBuilder builder(mgr);
+	return DataPath(builder.callExpr(ext.getDataPathMember(), builder.getIdentifierLiteral(name), builder.getTypeLiteral(elementType)));
 }
 
 DataPath DataPath::element(const ExpressionPtr& element) const {
 	auto& mgr = path.getNodeManager();
-	auto& basic = mgr.getLangBasic();
-	assert_true(basic.isUnsignedInt(element->getType())) << "Index has to be an unsigned integer!";
-	return DataPath(IRBuilder(mgr).callExpr(basic.getDataPath(), basic.getDataPathElement(), path, element));
+	auto& base = mgr.getLangBasic();
+	auto& ext = mgr.getLangExtension<lang::DatapathExtension>();
+	assert_true(base.isSignedInt(element->getType())) << "Index has to be a signed integer!";
+	return DataPath(IRBuilder(mgr).callExpr(ext.getDataPathElement(), path, element));
 }
 
 DataPath DataPath::element(unsigned index) const {
 	return element(IRBuilder(path.getNodeManager()).uintLit(index).as<ExpressionPtr>());
 }
 
-DataPath DataPath::component(const LiteralPtr& component) const {
-	auto& mgr = path.getNodeManager();
-	auto& basic = mgr.getLangBasic();
-	assert_true(basic.isUnsignedInt(component->getType())) << "Index has to be an unsigned integer!";
-	return DataPath(IRBuilder(mgr).callExpr(basic.getDataPath(), basic.getDataPathComponent(), path, component));
-}
-
 DataPath DataPath::component(unsigned index) const {
-	return component(IRBuilder(path.getNodeManager()).uintLit(index));
+	auto& mgr = path.getNodeManager();
+	auto& ext = mgr.getLangExtension<lang::DatapathExtension>();
+	assert_true(getTargetType().isa<TupleTypePtr>()) << "Current target must be a tuple type!";
+	assert_lt(index, getTargetType().as<TupleTypePtr>().size());
+	auto elementType = getTargetType().as<TupleTypePtr>()[index];
+	IRBuilder builder(mgr);
+	return DataPath(builder.callExpr(ext.getDataPathMember(), path, builder.uintLit(index), builder.getTypeLiteral(elementType)));
 }
 
 DataPath DataPath::parent(const TypePtr& type) const {
 	auto& mgr = path.getNodeManager();
-	auto& basic = mgr.getLangBasic();
+	auto& ext = mgr.getLangExtension<lang::DatapathExtension>();
 	IRBuilder builder(mgr);
-	return DataPath(builder.callExpr(basic.getDataPath(), basic.getDataPathParent(), path, builder.getTypeLiteral(type)));
+	return DataPath(builder.callExpr(ext.getDataPathParent(), path, builder.getTypeLiteral(type)));
 }
+
+TypePtr DataPath::getSourceType() const {
+	return path->getType().as<GenericTypePtr>().getTypeParameter(0);
+}
+
+TypePtr DataPath::getTargetType() const {
+	return path->getType().as<GenericTypePtr>().getTypeParameter(1);
+}
+
 
 namespace {
 
@@ -103,45 +116,41 @@ class DataPathPrinter : public core::IRVisitor<void,Pointer,std::ostream&> {
 public:
 
 	/**
-	 * Handle the literal forming the root node.
-	 */
-	void visitLiteral(const LiteralPtr& literal, std::ostream& out) {
-		assert(literal.getNodeManager().getLangBasic().isDataPathRoot(literal)
-		       && "Invalid literal encountered within data path!");
-		out << "<>";
-	}
-	
-	/**
 	 * Handle steps along the data path.
 	 */
 	void visitCallExpr(const CallExprPtr& call, std::ostream& out) {
-		auto& basic = call.getNodeManager().getLangBasic();
+		auto& ext = call.getNodeManager().getLangExtension<lang::DatapathExtension>();
 		const auto& fun = call->getFunctionExpr();
 		
+		// handle root step
+		if(ext.isDataPathRoot(fun)) {
+			out << "<" << *(call->getType().as<GenericTypePtr>()->getTypeParameter(0)) << ">";
+			return;
+		}
 		
 		// visit in post-fix order
 		visit(call->getArgument(0), out);
 		
 		// handle member accesses
-		if(basic.isDataPathMember(fun)) {
+		if(ext.isDataPathMember(fun)) {
 			out << "." << core::printer::PrettyPrinter(call->getArgument(1));
 			return;
 		}
 		
 		// handle element accesses
-		if(basic.isDataPathElement(fun)) {
+		if(ext.isDataPathElement(fun)) {
 			out << "[" << core::printer::PrettyPrinter(call->getArgument(1)) << "]";
 			return;
 		}
 		
 		// handle component accesses
-		if(basic.isDataPathComponent(fun)) {
+		if(ext.isDataPathComponent(fun)) {
 			out << ".c" << core::printer::PrettyPrinter(call->getArgument(1));
 			return;
 		}
 		
 		// handle pre-fix notation of parent access
-		if(basic.isDataPathParent(fun)) {
+		if(ext.isDataPathParent(fun)) {
 			out << ".as<" << core::printer::PrettyPrinter(call->getArgument(1)->getType().as<GenericTypePtr>().getTypeParameter(0)) << ">";
 			return;
 		}
@@ -165,11 +174,6 @@ std::ostream& DataPath::printTo(std::ostream& out) const {
 
 
 
-DataPathBuilder& DataPathBuilder::member(const ExpressionPtr& member) {
-	path = path.member(member);
-	return *this;
-}
-
 DataPathBuilder& DataPathBuilder::member(const string& name) {
 	path = path.member(name);
 	return *this;
@@ -182,11 +186,6 @@ DataPathBuilder& DataPathBuilder::element(const ExpressionPtr& element) {
 
 DataPathBuilder& DataPathBuilder::element(unsigned index) {
 	path = path.element(index);
-	return *this;
-}
-
-DataPathBuilder& DataPathBuilder::component(const LiteralPtr& component) {
-	path = path.component(component);
 	return *this;
 }
 

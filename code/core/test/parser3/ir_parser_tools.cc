@@ -61,8 +61,8 @@ TEST(Parser_Tools, ctx_manager) {
 	IRBuilder builder(mgr);
 	DeclarationContext dc;
 	
-	auto one = builder.concreteIntTypeParam(12);
-	auto two = builder.variableIntTypeParam('c');
+	auto one = builder.intLit(1);
+	auto two = builder.intLit(2);
 	
 	EXPECT_NE(one, two);
 	
@@ -78,7 +78,7 @@ TEST(Parser_Tools, ctx_manager) {
 	// enter an scope
 	dc.open_scope();
 	
-	auto three = builder.variableIntTypeParam('t');
+	auto three = builder.intLit(3);
 	dc.add_symb("three", three);
 	
 	EXPECT_NE(dc.find("one"), dc.find("two"));
@@ -89,7 +89,7 @@ TEST(Parser_Tools, ctx_manager) {
 	EXPECT_EQ(dc.find("three"), three);
 	
 	// declare a shadow name
-	auto notOne = builder.variableIntTypeParam('x');
+	auto notOne = builder.intLit(4);
 	dc.add_symb("one", notOne);
 	
 	EXPECT_NE(dc.find("one"), one);
@@ -99,7 +99,7 @@ TEST(Parser_Tools, ctx_manager) {
 	dc.open_scope();
 	
 	// declare a shadow name
-	auto notTwo = builder.variableIntTypeParam('y');
+	auto notTwo = builder.intLit(5);
 	dc.add_symb("two", notTwo);
 	
 	EXPECT_NE(dc.find("two"), two);

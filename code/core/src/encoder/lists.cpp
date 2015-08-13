@@ -101,8 +101,7 @@ bool isListType(const core::TypePtr& type) {
 	// check generic type properties
 	core::GenericTypePtr genType = static_pointer_cast<const GenericType>(type);
 	return genType->getName()->getValue() == ListExtension::LIST_TYPE_NAME &&
-	       genType->getTypeParameter().size() == static_cast<std::size_t>(1) &&
-	       genType->getIntTypeParameter().empty();
+	       genType->getTypeParameter().size() == static_cast<std::size_t>(1);
 }
 
 const core::TypePtr getElementType(const core::TypePtr& listType) {

@@ -87,13 +87,23 @@ Pointer<T> markAsDerived(const Pointer<T>& node, const string& name) {
 	return markAsDerived(NodePtr(node), name).as<Pointer<T>>();
 }
 
+/**
+ * Checks whether the given construct is marked as a built-in construct within
+ * any language extension. Built-in constructs are annotated by a
+ * corresponding annotation.
+ *
+ * @param node the node to be tested
+ * @return true if the given node is marked as a built-in construct, false otherwise
+ */
+bool isBuiltIn(const core::NodePtr& node);
 
 /**
- * Struct used to mark Builtins, for efficient checking
+ * Marks the given construct as being a built-in construct.
+ *
+ * @param node the node to be marked as being a built-in
+ * @return the handed in node
  */
-struct BuiltInTag {};
 void markAsBuiltIn(const NodePtr& node);
-bool isBuiltIn(const core::NodePtr& node);
 
 } // end namespace lang
 } // end namespace core

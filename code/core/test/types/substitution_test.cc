@@ -50,28 +50,21 @@ TEST(Substitution, Basic) {
 	TypeVariablePtr varA = builder.typeVariable("A");
 	TypeVariablePtr varB = builder.typeVariable("B");
 	
-	VariableIntTypeParamPtr paramVarX = builder.variableIntTypeParam('x');
-	VariableIntTypeParamPtr paramVarY = builder.variableIntTypeParam('y');
-	
 	TypePtr constType = builder.genericType("constType");
-	IntTypeParamPtr constParam = builder.concreteIntTypeParam(15);
 	
-	TypePtr typeA = builder.genericType("type", toVector<TypePtr>(varA), toVector<IntTypeParamPtr>(paramVarX));
-	TypePtr typeB = builder.genericType("type", toVector<TypePtr>(varA, varB), toVector<IntTypeParamPtr>(paramVarX, paramVarY));
-	TypePtr typeC = builder.genericType("type", toVector<TypePtr>(typeB, varB), toVector<IntTypeParamPtr>(paramVarY, paramVarY));
+	TypePtr typeA = builder.genericType("type", toVector<TypePtr>(varA));
+	TypePtr typeB = builder.genericType("type", toVector<TypePtr>(varA, varB));
+	TypePtr typeC = builder.genericType("type", toVector<TypePtr>(typeB, varB));
 	
 	
 	EXPECT_EQ("'A", toString(*varA));
 	EXPECT_EQ("'B", toString(*varB));
-	EXPECT_EQ("#x", toString(*paramVarX));
-	EXPECT_EQ("#y", toString(*paramVarY));
 	
 	EXPECT_EQ("constType", toString(*constType));
-	EXPECT_EQ("15", toString(*constParam));
 	
-	EXPECT_EQ("type<'A,#x>", toString(*typeA));
-	EXPECT_EQ("type<'A,'B,#x,#y>", toString(*typeB));
-	EXPECT_EQ("type<type<'A,'B,#x,#y>,'B,#y,#y>", toString(*typeC));
+	EXPECT_EQ("type<'A>", toString(*typeA));
+	EXPECT_EQ("type<'A,'B>", toString(*typeB));
+	EXPECT_EQ("type<type<'A,'B>,'B>", toString(*typeC));
 	
 	// test empty substitution
 	auto all = toVector<TypePtr>(varA, varB, typeA, typeB, typeC);
@@ -100,31 +93,6 @@ TEST(Substitution, Basic) {
 	EXPECT_EQ("type<constType,#x>", toString(*substitution.applyTo(manager, typeA)));
 	EXPECT_EQ("type<constType,'B,#x,#y>", toString(*substitution.applyTo(manager, typeB)));
 	EXPECT_EQ("type<type<constType,'B,#x,#y>,'B,#y,#y>", toString(*substitution.applyTo(manager, typeC)));
-	
-	// test one int type parameter replacement
-	substitution = Substitution(paramVarX, paramVarY);
-	EXPECT_EQ(paramVarY, substitution.applyTo(paramVarX));
-	EXPECT_EQ(paramVarY, substitution.applyTo(paramVarY));
-	
-	EXPECT_EQ("'A", toString(*substitution.applyTo(manager, varA)));
-	EXPECT_EQ("'B", toString(*substitution.applyTo(manager, varB)));
-	EXPECT_EQ("constType", toString(*substitution.applyTo(manager, constType)));
-	EXPECT_EQ("type<'A,#y>", toString(*substitution.applyTo(manager, typeA)));
-	EXPECT_EQ("type<'A,'B,#y,#y>", toString(*substitution.applyTo(manager, typeB)));
-	EXPECT_EQ("type<type<'A,'B,#y,#y>,'B,#y,#y>", toString(*substitution.applyTo(manager, typeC)));
-	
-	// test one int type parameter replacement
-	substitution = Substitution(paramVarY, constParam);
-	EXPECT_EQ(paramVarX, substitution.applyTo(paramVarX));
-	EXPECT_EQ(constParam, substitution.applyTo(paramVarY));
-	
-	EXPECT_EQ("'A", toString(*substitution.applyTo(manager, varA)));
-	EXPECT_EQ("'B", toString(*substitution.applyTo(manager, varB)));
-	EXPECT_EQ("constType", toString(*substitution.applyTo(manager, constType)));
-	EXPECT_EQ("type<'A,#x>", toString(*substitution.applyTo(manager, typeA)));
-	EXPECT_EQ("type<'A,'B,#x,15>", toString(*substitution.applyTo(manager, typeB)));
-	EXPECT_EQ("type<type<'A,'B,#x,15>,'B,15,15>", toString(*substitution.applyTo(manager, typeC)));
-	
 	
 	// add replacement for variable B
 	substitution = Substitution(varA, constType);
@@ -160,13 +128,10 @@ TEST(Substitution, Basic) {
 	Substitution subA(varA, typeB);
 	
 	Substitution subB(varB, constType);
-	subB.addMapping(paramVarX, constParam);
 	
 	
 	EXPECT_EQ("{AP('A)=AP(type<'A,'B,#x,#y>)}", toString(subA.getMapping()));
-	EXPECT_EQ("{}", toString(subA.getIntTypeParamMapping()));
 	EXPECT_EQ("{AP('B)=AP(constType)}", toString(subB.getMapping()));
-	EXPECT_EQ("{AP(#x)=AP(15)}", toString(subB.getIntTypeParamMapping()));
 	
 	Substitution combinedAA = Substitution::compose(manager, subA, subA);
 	Substitution combinedAB = Substitution::compose(manager, subA, subB);
@@ -179,10 +144,6 @@ TEST(Substitution, Basic) {
 	EXPECT_PRED2(containsSubString, toString(combinedBA.getMapping()), "AP('B)=AP(constType)");
 	EXPECT_EQ("{AP('B)=AP(constType)}", toString(combinedBB.getMapping()));
 	
-	EXPECT_EQ("{}", toString(combinedAA.getIntTypeParamMapping()));
-	EXPECT_EQ("{AP(#x)=AP(15)}", toString(combinedAB.getIntTypeParamMapping()));
-	EXPECT_EQ("{AP(#x)=AP(15)}", toString(combinedBA.getIntTypeParamMapping()));
-	EXPECT_EQ("{AP(#x)=AP(15)}", toString(combinedBB.getIntTypeParamMapping()));
 }
 
 } // end namespace types

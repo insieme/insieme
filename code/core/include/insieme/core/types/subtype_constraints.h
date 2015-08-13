@@ -74,11 +74,6 @@ class SubTypeConstraints : public utils::Printable {
 	 */
 	std::unordered_set<Constraint> constraints;
 	
-	/**
-	 * The mapping for int-type parameter variables resulting from the constraints.
-	 */
-	utils::map::PointerMap<VariableIntTypeParamPtr, IntTypeParamPtr> intTypeParameter;
-	
 public:
 
 	/**
@@ -112,36 +107,6 @@ public:
 			constraints.insert(std::make_pair(typeA, typeB));
 			constraints.insert(std::make_pair(typeB, typeA));
 		}
-	}
-	
-	/**
-	 * Fixes the value assigned to an int-type parameter variable.
-	 *
-	 * @param var the variable to be fixed
-	 * @param value the value to be assigned to it
-	 */
-	void fixIntTypeParameter(const VariableIntTypeParamPtr& var, const IntTypeParamPtr& value) {
-		auto res = intTypeParameter.insert(std::make_pair(var, value));
-		
-		if(!res.second && *(res.first->second) != *value) {
-			// someone tried to assign different values the same integer type variable
-			// => makes the constraints unsatisfiable
-			unsatisfiable = true;
-		}
-	}
-	
-	/**
-	 * Obtains the value of a fixed int-type parameter.
-	 *
-	 * @param var the int-type parameter variable to be looking for
-	 * @return the requested value if fixed before, a null-pointer otherwise
-	 */
-	IntTypeParamPtr getIntTypeParamValue(const VariableIntTypeParamPtr& var) const {
-		auto pos = intTypeParameter.find(var);
-		if(pos != intTypeParameter.end()) {
-			return pos->second;
-		}
-		return 0;
 	}
 	
 	/**
@@ -186,7 +151,6 @@ public:
 		// clear the various members
 		unsatisfiable = false;
 		constraints.clear();
-		intTypeParameter.clear();
 	}
 	
 	/**

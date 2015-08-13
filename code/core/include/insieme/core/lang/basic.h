@@ -119,15 +119,10 @@ public:
 	bool isType(const NodePtr& type) const;
 	
 	/**
-	 * Required to support operators on type ref.
-	 */
-	bool isRef(const NodePtr& type) const;
-	
-	/**
 	 * Required to support operators on generic types.
 	 */
 	bool isGen(const NodePtr& type) const;
-	
+
 	/**
 	 * Obtains an expression representing the the requested operator for the
 	 * given data type.

@@ -79,9 +79,9 @@ public:
 			return false;
 		}
 		
-		return (gt->getName()->getValue() == "const" &&
-		        gt->getTypeParameter().size() == 1u &&
-		        gt->getIntTypeParameter().empty()
+		return (
+				gt->getName()->getValue() == "const" &&
+		        gt->getTypeParameter().size() == 1u
 		       );
 	}
 	

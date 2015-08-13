@@ -56,7 +56,6 @@ typedef std::pair<NodeMap,bool> InstContext;
 
 class TypeInstantiator : public NodeMapping<InstContext> {
 private:
-	detail::InstantiationOption opt;
 	std::function<bool(const NodePtr& node)> skip;
 	
 	template<template <typename> class Ptr, class T, typename Result = Ptr<T>>
@@ -144,10 +143,10 @@ private:
 	}
 	
 public:
-	TypeInstantiator(detail::InstantiationOption opt, std::function<bool(const NodePtr& node)>
+	TypeInstantiator(std::function<bool(const NodePtr& node)>
 	skip = [](const NodePtr& node) {
 		return false;
-	}) : opt(opt), skip(skip) { }
+	}) : skip(skip) { }
 	
 	virtual const NodePtr mapElement(unsigned index, const NodePtr& ptr, InstContext& context) override {
 		auto prevNodeMap = context.first;
@@ -171,12 +170,7 @@ public:
 			core::types::SubstitutionOpt&& map = core::types::getTypeVariableInstantiation(nodeMan, call);
 			NodeMap nodeMap;
 			if(map) {
-				if(opt == detail::InstantiationOption::TYPE_VARIABLES || opt == detail::InstantiationOption::BOTH) {
-					nodeMap.insertAll(map->getMapping());
-				}
-				if(opt == detail::InstantiationOption::INT_TYPE_PARAMS || opt == detail::InstantiationOption::BOTH) {
-					nodeMap.insertAll(map->getIntTypeParamMapping());
-				}
+				nodeMap.insertAll(map->getMapping());
 			}
 			
 			// apply prev node map to RHS of new node map
@@ -241,9 +235,8 @@ public:
 }
 
 namespace detail {
-NodePtr instantiateInternal(const NodePtr& root, std::function<bool(const core::NodePtr& node)> skip,
-                            detail::InstantiationOption opt) {
-	TypeInstantiator inst(opt, skip);
+NodePtr instantiate(const NodePtr& root, std::function<bool(const core::NodePtr& node)> skip) {
+	TypeInstantiator inst(skip);
 	InstContext emtpy = { {}, false };
 	return inst.map(root, emtpy);
 }

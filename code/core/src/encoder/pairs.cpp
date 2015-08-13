@@ -88,8 +88,7 @@ bool isPairType(const core::TypePtr& type) {
 	// check generic type properties
 	core::GenericTypePtr genType = type.as<GenericTypePtr>();
 	return genType->getName()->getValue() == PairExtension::PAIR_TYPE_NAME &&
-	       genType->getTypeParameter().size() == static_cast<std::size_t>(2) &&
-	       genType->getIntTypeParameter().empty();
+	       genType->getTypeParameter().size() == static_cast<std::size_t>(2);
 }
 
 const core::TypePtr getFirstElementType(const core::TypePtr& pairType) {

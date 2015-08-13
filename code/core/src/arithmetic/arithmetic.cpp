@@ -46,6 +46,7 @@
 
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/lang/basic.h"
+#include "insieme/core/lang/reference.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/arithmetic/cudd/cudd.h"
 
@@ -273,6 +274,7 @@ bool isValueInternal(const ExpressionPtr& expr, bool topLevel=false) {
 	// ---------------------------------------------------
 	
 	const lang::BasicGenerator& basic = expr->getNodeManager().getLangBasic();
+	const lang::ReferenceExtension& ext = expr->getNodeManager().getLangExtension<lang::ReferenceExtension>();
 	
 	// every value has to be of an integer type
 	if(topLevel && !basic.isInt(expr->getType())) {
@@ -314,29 +316,24 @@ bool isValueInternal(const ExpressionPtr& expr, bool topLevel=false) {
 	const ExpressionList& args = call->getArguments();
 	
 	// handle references
-	if(basic.isRefDeref(fun)) {
+	if(ext.isRefDeref(fun)) {
 		return isValueInternal(args[0]);
 	}
 	
 	// handle tuples
-	if(basic.isTupleRefElem(fun) || basic.isTupleMemberAccess(fun)) {
+	if(ext.isRefComponentAccess(fun) || basic.isTupleMemberAccess(fun)) {
 		return isValueInternal(args[0]);
 	}
 	
 	// handle composites
-	if(basic.isCompositeRefElem(fun) || basic.isCompositeMemberAccess(fun)) {
+	if(ext.isRefMemberAccess(fun) || basic.isCompositeMemberAccess(fun)) {
 		return isValueInternal(args[0]);
 	}
 	
 	try {
 	
-		// handle vectors
-		if(basic.isVectorSubscript(fun) || basic.isVectorRefElem(fun)) {
-			return isValueInternal(args[0]) && toFormula(args[1]).isConstant();
-		}
-		
 		// handle arrays
-		if(basic.isArraySubscript1D(fun) || basic.isArrayRefElem1D(fun)) {
+		if(ext.isRefArrayElement(fun)) {
 			return isValueInternal(args[0]) && toFormula(args[1]).isConstant();
 		}
 		

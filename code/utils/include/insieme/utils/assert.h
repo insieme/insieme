@@ -65,6 +65,7 @@
 #define assert_gt(_a,_b) _assert_ignore
 #define assert_ge(_a,_b) _assert_ignore
 #define assert_fail() _assert_ignore
+#define assert_pred1(_a,_b) _assert_ignore
 
 #else
 #include <iostream>
@@ -77,14 +78,11 @@ namespace detail {
 
 struct LazyAssertion {
 	bool value;
-	LazyAssertion(bool value) : value(value) {
-		if(!value) {
-			std::cerr << "Assertion backtrace:\n" << debug::getBacktraceString();
-		}
-	}
+	LazyAssertion(bool value) : value(value) {}
 	~LazyAssertion() {
 		if(!value) {
 			std::cerr << "\n";
+			std::cerr << "Assertion backtrace:\n" << debug::getBacktraceString(2);
 			abort();
 		}
 	}
@@ -119,9 +117,11 @@ struct LazyAssertion {
 // the << "" part is to suppress no-effect statement warnings
 #define assert_fail() if (__unused auto x = insieme::utils::detail::LazyAssertion(false)) std::cerr << ""
 
+#define assert_pred1(_P,_A) if (__unused auto x = insieme::utils::detail::LazyAssertion((bool)((_P)(_A)))) std::cerr << "\nAssertion " #_P "(" #_A ") with " #_A " = " << (_A) << " in " __FILE__ ":" __xstr(__LINE__) " failed!\n"
+
 #endif
 
 // ------ derived definitions ------
 
 #define assert_false(_COND) assert_true(!(_COND))
-#define assert_not_implemented() assert_fail() << "Not implemented!"
+#define assert_not_implemented() assert_fail() << "Not implemented functionality in " __FILE__ ":" __xstr(__LINE__)

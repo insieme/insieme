@@ -116,21 +116,23 @@ TEST(ReturnTypeDeduction, AutoTypeInference_ArrayInitCall) {
 	//		before trying to match the given arguments to the function parameters
 	//		all type variables are replaced by fresh variables.
 	
-	NodeManager manager;
-	IRBuilder builder(manager);
-	const lang::BasicGenerator& basic = manager.getLangBasic();
+	assert_not_implemented() << "Needs to be ported to the new array constructs!";
 	
-	// get element type
-	TypePtr elementType = builder.genericType("Set", toVector<TypePtr>(builder.typeVariable("elem")));
-	
-	// create the call
-	ExpressionPtr element = builder.getTypeLiteral(elementType);
-	ExpressionPtr size = builder.literal(basic.getUInt8(), "15");
-	ExpressionPtr res = builder.callExpr(basic.getArrayCreate1D(), element, size);
-	
-	// check infered type
-	TypePtr resType = builder.arrayType(elementType, builder.concreteIntTypeParam(1));
-	EXPECT_EQ(*resType, *res->getType());
+//	NodeManager manager;
+//	IRBuilder builder(manager);
+//	const lang::BasicGenerator& basic = manager.getLangBasic();
+//
+//	// get element type
+//	TypePtr elementType = builder.genericType("Set", toVector<TypePtr>(builder.typeVariable("elem")));
+//
+//	// create the call
+//	ExpressionPtr element = builder.getTypeLiteral(elementType);
+//	ExpressionPtr size = builder.literal(basic.getUInt8(), "15");
+//	ExpressionPtr res = builder.callExpr(basic.getArrayCreate1D(), element, size);
+//
+//	// check infered type
+//	TypePtr resType = builder.arrayType(elementType);
+//	EXPECT_EQ(*resType, *res->getType());
 	
 }
 
@@ -170,31 +172,34 @@ TEST(ReturnTypeDeduction, VariableSubstitutionBug) {
 	// The expected return type should be consistent with the type of the
 	// second argument.
 	
-	// reconstruct test case
-	NodeManager manager;
-	IRBuilder builder(manager);
 	
-	TypePtr intType = manager.getLangBasic().getUInt4();
-	TypePtr vectorType = builder.vectorType(intType, builder.concreteIntTypeParam(8));
-	TypePtr funType = builder.parseType("(vector<'elem,#l>,'res,('elem,'res)->'res)->'res");
-	EXPECT_TRUE(funType);
+	assert_not_implemented() << "Needs to be ported to the new array constructs!";
 	
-	EXPECT_EQ(NT_VectorType, vectorType->getNodeType());
-	EXPECT_EQ(NT_VectorType, static_pointer_cast<const FunctionType>(funType)->getParameterTypes()[0]->getNodeType());
-	
-	LiteralPtr fun = Literal::get(manager, funType, "fun");
-	LiteralPtr vector = Literal::get(manager, vectorType, "x");
-	LiteralPtr zero = Literal::get(manager, intType, "0");
-	LiteralPtr op = manager.getLangBasic().getUnsignedIntAdd();
-	
-	ExpressionPtr call = builder.callExpr(intType, fun, vector, zero, op);
-	
-	// run check
-	checks::CheckPtr callCheck = checks::make_check<checks::CallExprTypeCheck>();
-	auto res = checks::check(call, callCheck);
-	
-	// there shouldn't be any errors
-	EXPECT_TRUE(res.empty());
+//	// reconstruct test case
+//	NodeManager manager;
+//	IRBuilder builder(manager);
+//
+//	TypePtr intType = manager.getLangBasic().getUInt4();
+//	TypePtr vectorType = builder.vectorType(intType, builder.concreteIntTypeParam(8));
+//	TypePtr funType = builder.parseType("(vector<'elem,#l>,'res,('elem,'res)->'res)->'res");
+//	EXPECT_TRUE(funType);
+//
+//	EXPECT_EQ(NT_VectorType, vectorType->getNodeType());
+//	EXPECT_EQ(NT_VectorType, static_pointer_cast<const FunctionType>(funType)->getParameterTypes()[0]->getNodeType());
+//
+//	LiteralPtr fun = Literal::get(manager, funType, "fun");
+//	LiteralPtr vector = Literal::get(manager, vectorType, "x");
+//	LiteralPtr zero = Literal::get(manager, intType, "0");
+//	LiteralPtr op = manager.getLangBasic().getUnsignedIntAdd();
+//
+//	ExpressionPtr call = builder.callExpr(intType, fun, vector, zero, op);
+//
+//	// run check
+//	checks::CheckPtr callCheck = checks::make_check<checks::CallExprTypeCheck>();
+//	auto res = checks::check(call, callCheck);
+//
+//	// there shouldn't be any errors
+//	EXPECT_TRUE(res.empty());
 }
 
 TEST(ReturnTypeDeduction, RefAny) {

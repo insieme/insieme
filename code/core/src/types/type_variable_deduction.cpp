@@ -91,35 +91,6 @@ void addTypeConstraints(SubTypeConstraints& constraints, const TypePtr& paramTyp
 
 // -------------------------------------------------------- Implementation ----------------------------------------------
 
-void addEqualityConstraints(SubTypeConstraints& constraints, const IntTypeParamPtr& paramA, const IntTypeParamPtr& paramB) {
-	if(paramA->getNodeType() == NT_VariableIntTypeParam) {
-		// obtain variable
-		VariableIntTypeParamPtr var = static_pointer_cast<const VariableIntTypeParam>(paramA);
-		
-		// check if the parameter has already been set
-		if(IntTypeParamPtr value = constraints.getIntTypeParamValue(var)) {
-			if(*value == *paramB) {
-				// everything is fine
-				return;
-			}
-			// int type parameter needs to be instantiated twice, in different ways => unsatisfiable
-			constraints.makeUnsatisfiable();
-			return;
-		}
-		
-		// fix a new value for the parameter
-		constraints.fixIntTypeParameter(var, paramB);
-	}
-	else {
-		// the two parameters have to be the same!
-		if(*paramA != *paramB) {
-			// unable to satisfy constraints
-			constraints.makeUnsatisfiable();
-			return;
-		}
-	}
-}
-
 
 void addEqualityConstraints(SubTypeConstraints& constraints, const TypePtr& typeA, const TypePtr& typeB) {
 
@@ -158,40 +129,6 @@ void addEqualityConstraints(SubTypeConstraints& constraints, const TypePtr& type
 	// check node types
 	switch(nodeTypeA) {
 	
-	case NT_RefType: {
-		auto refParamType = static_pointer_cast<RefTypePtr>(typeA);
-		auto refArgType = static_pointer_cast<RefTypePtr>(typeB);
-		
-		// add equality constraint for element type
-		addEqualityConstraints(constraints,
-		                       refParamType->getElementType(),
-		                       refArgType->getElementType()
-		                      );
-		                      
-		break;
-	}
-	
-	case NT_ArrayType:
-	case NT_VectorType:
-	case NT_ChannelType: {
-		auto genParamType = static_pointer_cast<SingleElementTypePtr>(typeA);
-		auto genArgType = static_pointer_cast<SingleElementTypePtr>(typeB);
-		
-		// add equality constraint for element type
-		addEqualityConstraints(constraints,
-		                       genParamType->getElementType(),
-		                       genArgType->getElementType()
-		                      );
-		                      
-		// add constraint for int type parameter
-		addEqualityConstraints(constraints,
-		                       genParamType->getIntTypeParameter(),
-		                       genArgType->getIntTypeParameter()
-		                      );
-		                      
-		break;
-	}
-	
 	// first handle those types equipped with int type parameters
 	case NT_GenericType: {
 		// check name of generic type ... if not matching => wrong
@@ -201,28 +138,6 @@ void addEqualityConstraints(SubTypeConstraints& constraints, const TypePtr& type
 			// those types cannot be equivalent if they are part of a different family
 			constraints.makeUnsatisfiable();
 			return;
-		}
-		
-		// check the int-type parameter ...
-		auto param = genParamType->getIntTypeParameter();
-		auto args = genArgType->getIntTypeParameter();
-		
-		// quick-check on size
-		if(param.size() != args.size()) {
-			constraints.makeUnsatisfiable();
-			return;
-		}
-		
-		// match int-type parameters individually
-		for(auto it = make_paired_iterator(param.begin(), args.begin()); it != make_paired_iterator(param.end(), args.end()); ++it) {
-			// check constraints state
-			if(!constraints.isSatisfiable()) {
-				return;
-			}
-			auto paramA = (*it).first;
-			auto paramB = (*it).second;
-			
-			addEqualityConstraints(constraints, paramA, paramB);
 		}
 		
 		// check parameter types
@@ -362,45 +277,6 @@ void addTypeConstraints(SubTypeConstraints& constraints, const TypePtr& paramTyp
 		return;
 	}
 	
-	
-	// ---------------------------------- Arrays / Vectors Type ---------------------------------------------
-	
-	// check direction and array/vector relationship
-	if((direction == Direction::SUB_TYPE && nodeTypeA == NT_VectorType && nodeTypeB == NT_ArrayType) ||
-	        (direction == Direction::SUPER_TYPE && nodeTypeA == NT_ArrayType && nodeTypeB == NT_VectorType)) {
-	        
-		bool isSubType = (direction == Direction::SUB_TYPE);
-		const VectorTypePtr& vector = static_pointer_cast<const VectorType>((isSubType)?paramType:argType);
-		const ArrayTypePtr& array = static_pointer_cast<const ArrayType>((isSubType)?argType:paramType);
-		
-		// make sure the dimension of the array is 1
-		auto dim = array->getDimension();
-		ConcreteIntTypeParamPtr one = ConcreteIntTypeParam::get(array->getNodeManager(), 1);
-		switch(dim->getNodeType()) {
-		case NT_VariableIntTypeParam:
-			// this is fine ... no restrictions required
-			if(!isSubType) {
-				constraints.fixIntTypeParameter(static_pointer_cast<const VariableIntTypeParam>(dim), one);
-			}
-			break;
-		case NT_ConcreteIntTypeParam:
-		case NT_InfiniteIntTypeParam:
-			if(*dim != *one) {
-				// only dimension 1 is allowed when passing a vector
-				constraints.makeUnsatisfiable();
-				return;
-			}
-			break;
-		default:
-			assert_fail() << "Unknown int-type parameter encountered!";
-		}
-		
-		// also make sure element types are equivalent
-		addEqualityConstraints(constraints, array->getElementType(), vector->getElementType());
-		return;
-		
-	}
-	
 	// --------------------------------------------- Function Type ---------------------------------------------
 	
 	// check function type
@@ -498,19 +374,6 @@ inline TypeMapping substituteFreeVariablesWithConstants(NodeManager& manager, co
 			}
 			// add a new constant
 			const TypePtr substitute = GenericType::get(manager, string("_const_") + var->getVarName()->toString());
-			argumentMapping.addMapping(var, substitute);
-			break;
-		}
-		case NT_VariableIntTypeParam: {
-			// check whether already encountered
-			const VariableIntTypeParamPtr& var = static_pointer_cast<const VariableIntTypeParam>(cur);
-			if(argumentMapping.containsMappingFor(var)) {
-				break;
-			}
-			// add a new constant
-			// NOTE: the generation of constants is not safe in all cases - it is just assumed
-			// that no constants > 1.000.000.000 are used
-			auto substitute = ConcreteIntTypeParam::get(manager, 1000000000 + var->getSymbol()->getValue());
 			argumentMapping.addMapping(var, substitute);
 			break;
 		}
@@ -662,18 +525,6 @@ SubstitutionOpt getTypeVariableInstantiation(NodeManager& manager, const TypeLis
 		// also apply argument renaming backwards ..
 		for(auto it2 = argumentRenaming.begin(); it2 != argumentRenaming.end(); ++it2) {
 			var = it2->applyBackward(manager, var).as<TypeVariablePtr>();
-			substitute = it2->applyBackward(manager, substitute);
-		}
-		
-		restored.addMapping(manager.get(var), manager.get(substitute));
-	}
-	for(auto it = res->getIntTypeParamMapping().begin(); it != res->getIntTypeParamMapping().end(); ++it) {
-		VariableIntTypeParamPtr var = static_pointer_cast<const VariableIntTypeParam>(parameterMapping.applyBackward(manager, it->first));
-		IntTypeParamPtr substitute = argumentMapping.applyBackward(manager, it->second);
-		
-		// also apply argument renaming backwards ..
-		for(auto it2 = argumentRenaming.begin(); it2 != argumentRenaming.end(); ++it2) {
-			var = it2->applyBackward(manager, var).as<VariableIntTypeParamPtr>();
 			substitute = it2->applyBackward(manager, substitute);
 		}
 		

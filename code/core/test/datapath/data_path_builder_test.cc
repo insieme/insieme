@@ -49,16 +49,17 @@ namespace datapath {
 TEST(DataPathBuilder, Basic) {
 
 	NodeManager mgr;
+	TypePtr root = GenericType::get(mgr, "R");
 	TypePtr typeA = GenericType::get(mgr, "A");
 	
-	EXPECT_EQ("dp_root", toString(*DataPathBuilder(mgr).getPath()));
-	EXPECT_EQ("dp_member(dp_root, hello)", toString(*DataPathBuilder(mgr).member("hello").getPath()));
-	EXPECT_EQ("dp_element(dp_root, 12)", toString(*DataPathBuilder(mgr).element(12).getPath()));
-	EXPECT_EQ("dp_component(dp_root, 3)", toString(*DataPathBuilder(mgr).component(3).getPath()));
-	EXPECT_EQ("dp_parent(dp_root, type<A>)", toString(*DataPathBuilder(mgr).parent(typeA).getPath()));
+	EXPECT_EQ("dp_root", toString(*DataPathBuilder(root).getPath()));
+	EXPECT_EQ("dp_member(dp_root, hello)", toString(*DataPathBuilder(root).member("hello").getPath()));
+	EXPECT_EQ("dp_element(dp_root, 12)", toString(*DataPathBuilder(root).element(12).getPath()));
+	EXPECT_EQ("dp_component(dp_root, 3)", toString(*DataPathBuilder(root).component(3).getPath()));
+	EXPECT_EQ("dp_parent(dp_root, type<A>)", toString(*DataPathBuilder(root).parent(typeA).getPath()));
 	
 	
-	EXPECT_EQ("dp_parent(dp_component(dp_member(dp_element(dp_root, 12), hello), 3), type<A>)", toString(*DataPathBuilder(mgr)
+	EXPECT_EQ("dp_parent(dp_component(dp_member(dp_element(dp_root, 12), hello), 3), type<A>)", toString(*DataPathBuilder(root)
 	          .element(12)
 	          .member("hello")
 	          .component(3)
@@ -70,9 +71,10 @@ TEST(DataPathBuilder, Basic) {
 
 TEST(DataPath, Basic) {
 	NodeManager mgr;
+	TypePtr root = GenericType::get(mgr, "R");
 	TypePtr typeA = GenericType::get(mgr, "A");
 	
-	DataPath path(mgr);
+	DataPath path(root);
 	
 	EXPECT_EQ("<>", toString(path));
 	EXPECT_EQ("<>[4]", toString(path.element(4)));

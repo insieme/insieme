@@ -65,23 +65,13 @@ public:
 	 */
 	typedef utils::map::PointerMap<TypeVariablePtr, TypePtr> Mapping;
 	
-	/**
-	 * The definition of the data structure used to maintain int type parameter mappings.
-	 */
-	typedef utils::map::PointerMap<VariableIntTypeParamPtr, IntTypeParamPtr> IntTypeParamMapping;
-	
 private:
 
 	/**
 	 * The mapping this substitution is representing.
 	 */
 	Mapping mapping;
-	
-	/**
-	 * The mapping between integer type variables and concrete values.
-	 */
-	IntTypeParamMapping paramMapping;
-	
+
 public:
 
 	/**
@@ -98,18 +88,10 @@ public:
 	Substitution(const TypeVariablePtr& var, const TypePtr& type);
 	
 	/**
-	 * Creates a single-int-type-parameter mapping.
-	 *
-	 * @param var the parameter to be substituted
-	 * @param parameter the int-type-parameter the parameter is substituted for
-	 */
-	Substitution(const VariableIntTypeParamPtr& var, const IntTypeParamPtr& parameter);
-	
-	/**
 	 * Checks whether this substitution is actually mapping any variables to some type.
 	 */
 	bool empty() const {
-		return mapping.empty() && paramMapping.empty();
+		return mapping.empty();
 	}
 	
 	/**
@@ -132,13 +114,6 @@ public:
 	}
 	
 	/**
-	 * Applies this substitution to the given int type parameter.
-	 * @param param the int type param this substitution should be applied to
-	 * @return the resulting int type parameter
-	 */
-	IntTypeParamPtr applyTo(const IntTypeParamPtr& param) const;
-	
-	/**
 	 * Extends this substitution by the given mapping. If the same variable
 	 * is already mapped to some type, the current mapping will be replaced.
 	 *
@@ -146,15 +121,6 @@ public:
 	 * @param the type the variable should be substituted for.
 	 */
 	void addMapping(const TypeVariablePtr& var, const TypePtr& type);
-	
-	/**
-	 * Extends this substitution by the given int-type param mapping. If the same
-	 * variable is already mapped to some value, the curren mapping will be replaced.
-	 *
-	 * @param var the int type parameter variable to be substituted. This has to be a int type parameter variable.
-	 * @param value the value the variable should be substituted with.
-	 */
-	void addMapping(const VariableIntTypeParamPtr& var, const IntTypeParamPtr& value);
 	
 	/**
 	 * Checks whether this substitution contains a mapping for the given variable.
@@ -165,25 +131,10 @@ public:
 	bool containsMappingFor(const TypeVariablePtr& var) const;
 	
 	/**
-	 * Checks whether this substitution contains a mapping for the given int type parameter
-	 * variable.
-	 *
-	 * @param var the variable to be checked
-	 * @return true if present, false otherwise
-	 */
-	bool containsMappingFor(const VariableIntTypeParamPtr& var) const;
-	
-	/**
 	 * Removes the mapping stored for the given variable from this substitution.
 	 * @param var the variable which's entry should be removed
 	 */
 	void remMappingOf(const TypeVariablePtr& var);
-	
-	/**
-	 * Removes the mapping stored for the given variable from this substitution.
-	 * @param var the variable which's entry should be removed
-	 */
-	void remMappingOf(const VariableIntTypeParamPtr& var);
 	
 	/**
 	 * Obtains a constant reference to the type variable mapping constituting this substitution.
@@ -199,22 +150,6 @@ public:
 	 */
 	const Mapping& getMapping() const {
 		return mapping;
-	}
-	
-	/**
-	 * Obtains a constant reference to the int-type parameter mapping constituting this substitution.
-	 * @return a constant reference to the internally maintained int type parameter mapping
-	 */
-	IntTypeParamMapping& getIntTypeParamMapping() {
-		return paramMapping;
-	}
-	
-	/**
-	 * Obtains a constant reference to the int-type parameter mapping constituting this substitution.
-	 * @return a constant reference to the internally maintained int type parameter mapping
-	 */
-	const IntTypeParamMapping& getIntTypeParamMapping() const {
-		return paramMapping;
 	}
 	
 	/**
@@ -257,9 +192,6 @@ inline SubstitutionOpt copyTo(NodeManager& manager, const SubstitutionOpt& subst
 	// copy the substitution
 	SubstitutionOpt res(boost::in_place<Substitution>());
 	for_each(substitution->getMapping(), [&](const std::pair<TypeVariablePtr, TypePtr>& cur) {
-		res->addMapping(manager.get(cur.first), manager.get(cur.second));
-	});
-	for_each(substitution->getIntTypeParamMapping(), [&](const std::pair<VariableIntTypeParamPtr, IntTypeParamPtr>& cur) {
 		res->addMapping(manager.get(cur.first), manager.get(cur.second));
 	});
 	return res;

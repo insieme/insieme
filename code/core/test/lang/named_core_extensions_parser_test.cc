@@ -42,7 +42,6 @@
 #include "insieme/core/lang/extension.h"
 #include "insieme/core/parser3/ir_parser.h"
 
-#include "insieme/core/lang/complex_extension.h"
 #include "insieme/core/test/test_utils.h"
 
 #include "insieme/utils/assert.h"

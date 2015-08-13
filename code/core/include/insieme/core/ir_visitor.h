@@ -49,7 +49,6 @@
 
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_values.h"
-#include "insieme/core/ir_int_type_param.h"
 #include "insieme/core/ir_types.h"
 #include "insieme/core/ir_expressions.h"
 #include "insieme/core/ir_statements.h"

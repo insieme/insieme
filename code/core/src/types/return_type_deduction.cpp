@@ -62,71 +62,41 @@ class FreshVariableSubstitution : public SimpleNodeMapping {
 	
 	// sets of used variables
 	TypeSet& varSet;
-	IntTypeParamSet& paramSet;
 	
 	// a container for "remembering" replacements
 	utils::map::PointerMap<TypeVariablePtr, TypeVariablePtr> varMap;
-	utils::map::PointerMap<VariableIntTypeParamPtr, VariableIntTypeParamPtr> paramMap;
 	
 	// some utilities for generating variables
 	unsigned varCounter;
-	unsigned paramCounter;
 	
 public:
 
-	FreshVariableSubstitution(NodeManager& manager, TypeSet& varSet, IntTypeParamSet& paramSet)
-		: SimpleNodeMapping(), manager(manager), varSet(varSet), paramSet(paramSet), varCounter(0), paramCounter(0) {};
+	FreshVariableSubstitution(NodeManager& manager, TypeSet& varSet)
+		: SimpleNodeMapping(), manager(manager), varSet(varSet), varCounter(0) {};
 		
 	virtual const NodePtr mapElement(unsigned, const NodePtr& ptr) {
 		// only handle type variables
 		NodeType curType = ptr->getNodeType();
-		if(curType != NT_TypeVariable && curType != NT_VariableIntTypeParam) {
+		if(curType != NT_TypeVariable) {
 			return ptr->substitute(manager, *this);
 		}
 		
 		
-		switch(curType) {
-		case NT_TypeVariable: {
-	
-			// cast type variable
-			TypeVariablePtr cur = static_pointer_cast<const TypeVariable>(ptr);
-			
-			// search for parameter ...
-			auto pos = varMap.find(cur);
-			if(pos != varMap.end()) {
-				// found => return result
-				return pos->second;
-			}
-			
-			// create new variable substitution
-			TypeVariablePtr res = getFreshVar();
-			varMap.insert(std::make_pair(cur, res));
-			varSet.insert(res);
-			return res;
+		// cast type variable
+		TypeVariablePtr cur = static_pointer_cast<const TypeVariable>(ptr);
+
+		// search for parameter ...
+		auto pos = varMap.find(cur);
+		if(pos != varMap.end()) {
+			// found => return result
+			return pos->second;
 		}
 		
-		case NT_VariableIntTypeParam: {
-	
-			// cast int type parameter
-			VariableIntTypeParamPtr cur = static_pointer_cast<const VariableIntTypeParam>(ptr);
-			
-			// search for parameter ...
-			auto pos = paramMap.find(cur);
-			if(pos != paramMap.end()) {
-				// found => return result
-				return pos->second;
-			}
-			
-			// create fresh parameter ...
-			VariableIntTypeParamPtr res = getFreshParam();
-			paramMap.insert(std::make_pair(cur, res));
-			paramSet.insert(res);
-			return res;
-		}
-		default:
-			assert_fail() << "Should be impossible to reach!";
-		}
-		return ptr;
+		// create new variable substitution
+		TypeVariablePtr res = getFreshVar();
+		varMap.insert(std::make_pair(cur, res));
+		varSet.insert(res);
+		return res;
 	}
 	
 private:
@@ -140,22 +110,13 @@ private:
 		return res;
 	}
 	
-	VariableIntTypeParamPtr getFreshParam() {
-		VariableIntTypeParamPtr res;
-		do {
-			res = VariableIntTypeParam::get(manager, 'a' + (paramCounter++));
-		}
-		while(paramSet.find(res) != paramSet.end());
-		return res;
-	}
-	
 };
 
 
 template<typename T>
-Pointer<T> makeTypeVariablesUnique(const Pointer<T>& target, TypeSet& usedTypes, IntTypeParamSet& paramSet) {
+Pointer<T> makeTypeVariablesUnique(const Pointer<T>& target, TypeSet& usedTypes) {
 	NodeManager& manager = target->getNodeManager();
-	FreshVariableSubstitution mapper(manager, usedTypes, paramSet);
+	FreshVariableSubstitution mapper(manager, usedTypes);
 	return static_pointer_cast<T>(target->substitute(manager, mapper));
 }
 

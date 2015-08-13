@@ -45,6 +45,8 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/pattern/pattern.h"
 
+#include "insieme/core/lang/reference.h"
+
 namespace insieme {
 namespace core {
 namespace pattern {
@@ -117,12 +119,12 @@ inline TreePattern structType(const ListPattern& pattern) {
 	return node(core::NT_StructType, pattern);
 }
 
-inline TreePattern arrayType(const TreePattern& pattern, const TreePattern& dim = pattern::any) {
-	return node(core::NT_ArrayType, pattern << dim);
+inline TreePattern arrayType(const TreePattern& pattern) {
+	return genericType("array",single(pattern));
 }
 
-inline TreePattern refType(const TreePattern& elementType, const TreePattern& refKind = pattern::any) {
-	return node(core::NT_RefType, elementType << refKind);
+inline TreePattern refType(const TreePattern& elementType) {
+	return genericType("ref",elementType << anyList );
 }
 
 inline TreePattern variable(const TreePattern& type = pattern::any, const TreePattern& id = pattern::any) {
@@ -171,10 +173,6 @@ inline TreePattern bindExpr(const ListPattern& parameters, const TreePattern& ca
 
 inline TreePattern tupleExpr(const ListPattern& expressions) {
 	return node(core::NT_TupleExpr, expressions);
-}
-
-inline TreePattern vectorExpr(const ListPattern& expressions) {
-	return node(core::NT_VectorExpr, expressions);
 }
 
 inline TreePattern expressions(const ListPattern& expressions) {
@@ -315,50 +313,14 @@ inline TreePattern innerMostForLoopNest(unsigned level = 1) {
 
 inline TreePattern assignment(const TreePattern& lhs = any, const TreePattern& rhs = any) {
 	return callExpr(lazyAtom([](core::NodeManager& mgr) {
-		return mgr.getLangBasic().getRefAssign();
+		return mgr.getLangExtension<lang::ReferenceExtension>().getRefAssign();
 	}), lhs, rhs);
 }
 
-inline TreePattern arrayRefElem1D(const TreePattern& data = any, const TreePattern& idx = any) {
+inline TreePattern arrayRefElem(const TreePattern& data = any, const TreePattern& idx = any) {
 	return callExpr(lazyAtom([](core::NodeManager& mgr) {
-		return mgr.getLangBasic().getArrayRefElem1D();
+		return mgr.getLangExtension<lang::ReferenceExtension>().getRefArrayElement();
 	}), data, idx);
-}
-
-inline TreePattern arraySubscript1D(const TreePattern& data = any, const TreePattern& idx = any) {
-	return callExpr(lazyAtom([](core::NodeManager& mgr) {
-		return mgr.getLangBasic().getArraySubscript1D();
-	}), data, idx);
-}
-
-inline TreePattern arrayView(const TreePattern& data = any, const TreePattern& offset = any) {
-	return callExpr(lazyAtom([](core::NodeManager& mgr) {
-		return mgr.getLangBasic().getArrayView();
-	}), data, offset);
-}
-
-inline TreePattern arrayViewPostDec(const TreePattern& data = any) {
-	return callExpr(lazyAtom([](core::NodeManager& mgr) {
-		return mgr.getLangBasic().getArrayViewPostDec();
-	}), data);
-}
-
-inline TreePattern arrayViewPostInc(const TreePattern& data = any) {
-	return callExpr(lazyAtom([](core::NodeManager& mgr) {
-		return mgr.getLangBasic().getArrayViewPostInc();
-	}), data);
-}
-
-inline TreePattern arrayViewPreDec(const TreePattern& data = any) {
-	return callExpr(lazyAtom([](core::NodeManager& mgr) {
-		return mgr.getLangBasic().getArrayViewPreDec();
-	}), data);
-}
-
-inline TreePattern arrayViewPreInc(const TreePattern& data = any) {
-	return callExpr(lazyAtom([](core::NodeManager& mgr) {
-		return mgr.getLangBasic().getArrayViewPreInc();
-	}), data);
 }
 
 inline TreePattern tupleMemberAccess(const TreePattern& data = any, const TreePattern& idx = any, const TreePattern& type = any) {
@@ -369,50 +331,19 @@ inline TreePattern tupleMemberAccess(const TreePattern& data = any, const TreePa
 
 inline TreePattern tupleRefElem(const TreePattern& data = any, const TreePattern& idx = any, const TreePattern& type = any) {
 	return callExpr(lazyAtom([](core::NodeManager& mgr) {
-		return mgr.getLangBasic().getTupleRefElem();
+		return mgr.getLangExtension<lang::ReferenceExtension>().getRefComponentAccess();
 	}), data, idx, type);
-}
-
-inline TreePattern vectorRefElem(const TreePattern& data = any, const TreePattern& idx = any) {
-	return callExpr(lazyAtom([](core::NodeManager& mgr) {
-		return mgr.getLangBasic().getVectorRefElem();
-	}), data, idx);
-}
-
-inline TreePattern vectorSubscript(const TreePattern& data = any, const TreePattern& idx = any) {
-	return callExpr(lazyAtom([](core::NodeManager& mgr) {
-		return mgr.getLangBasic().getVectorSubscript();
-	}), data, idx);
-}
-
-inline TreePattern subscript1D(const TreePattern& data = any, const TreePattern& idx = any) {
-	return arrayRefElem1D(data, idx) | arraySubscript1D(data, idx) | vectorRefElem(data, idx) | vectorSubscript(data, idx);
-}
-
-inline TreePattern subscript1D(std::string operation, const TreePattern& data = any, const TreePattern& idx = any) {
-	return callExpr(var(operation, lazyAtom([&](core::NodeManager& mgr) {
-		return mgr.getLangBasic().getArrayRefElem1D();
-	})) |
-	var(operation, lazyAtom([](core::NodeManager& mgr) {
-		return mgr.getLangBasic().getArraySubscript1D();
-	})) |
-	var(operation, lazyAtom([](core::NodeManager& mgr) {
-		return mgr.getLangBasic().getVectorRefElem();
-	})) |
-	var(operation, lazyAtom([](core::NodeManager& mgr) {
-		return mgr.getLangBasic().getVectorSubscript();
-	})), data, idx);
 }
 
 inline TreePattern scalarToArray(const TreePattern& data = any) {
 	return callExpr(lazyAtom([](core::NodeManager& mgr) {
-		return mgr.getLangBasic().getScalarToArray();
+		return mgr.getLangExtension<lang::ReferenceExtension>().getRefScalarToRefArray();
 	}), data);
 }
 
 inline TreePattern compositeRefElem(const TreePattern& structVar = any, const TreePattern& member = any, const TreePattern& type = any) {
 	return callExpr(pattern::irp::lazyAtom([](core::NodeManager& mgr) {
-		return mgr.getLangBasic().getCompositeRefElem();
+		return mgr.getLangExtension<lang::ReferenceExtension>().getRefMemberAccess();
 	}), structVar, member, type);
 }
 
@@ -424,37 +355,31 @@ inline TreePattern compositeMemberAccess(const TreePattern& structVar = any, con
 
 inline TreePattern refVar(const TreePattern& expr = any) {
 	return callExpr(lazyAtom([](core::NodeManager& mgr) {
-		return mgr.getLangBasic().getRefVar();
+		return mgr.getLangExtension<lang::ReferenceExtension>().getRefVar();
 	}), expr);
 }
 
 inline TreePattern refNew(const TreePattern& expr = any) {
 	return callExpr(lazyAtom([](core::NodeManager& mgr) {
-		return mgr.getLangBasic().getRefNew();
-	}), expr);
-}
-
-inline TreePattern refLoc(const TreePattern& expr = any) {
-	return callExpr(lazyAtom([](core::NodeManager& mgr) {
-		return mgr.getLangBasic().getRefLoc();
+		return mgr.getLangExtension<lang::ReferenceExtension>().getRefNew();
 	}), expr);
 }
 
 inline TreePattern refDelete(const TreePattern& refExpr = any) {
 	return callExpr(lazyAtom([](core::NodeManager& mgr) {
-		return mgr.getLangBasic().getRefDelete();
+		return mgr.getLangExtension<lang::ReferenceExtension>().getRefDelete();
 	}), refExpr);
 }
 
 inline TreePattern refDeref(const TreePattern& refExpr = any) {
 	return callExpr(lazyAtom([](core::NodeManager& mgr) {
-		return mgr.getLangBasic().getRefDeref();
+		return mgr.getLangExtension<lang::ReferenceExtension>().getRefDeref();
 	}), refExpr);
 }
 
 inline TreePattern refReinterpret(const TreePattern& refExpr = any, const TreePattern& type = any) {
 	return callExpr(lazyAtom([](core::NodeManager& mgr) {
-		return mgr.getLangBasic().getRefReinterpret();
+		return mgr.getLangExtension<lang::ReferenceExtension>().getRefReinterpret();
 	}), refExpr, type);
 }
 

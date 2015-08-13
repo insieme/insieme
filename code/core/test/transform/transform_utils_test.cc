@@ -42,6 +42,8 @@
 #include "insieme/core/checks/full_check.h"
 #include "insieme/utils/logging.h"
 
+#include "insieme/core/lang/reference.h"
+
 namespace insieme {
 namespace core {
 namespace transform {
@@ -52,6 +54,7 @@ TEST(TransformUtils, MemberAccessLiteralUpdater) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 	const auto& basic = mgr.getLangBasic();
+	const auto& refExt = mgr.getLangExtension<lang::ReferenceExtension>();
 	
 	StatementList saStmts;
 	// construct a struct variable
@@ -65,14 +68,14 @@ TEST(TransformUtils, MemberAccessLiteralUpdater) {
 		init.push_back(builder.namedValue("first", builder.intLit(1)));
 		init.push_back(builder.namedValue("second", builder.literal(basic.getReal8(), "0.0")));
 		
-		saStmts.push_back(builder.declarationStmt(structVar, builder.callExpr(structVar->getType(), basic.getRefVar(), builder.structExpr(init))));
+		saStmts.push_back(builder.declarationStmt(structVar, builder.callExpr(structVar->getType(), refExt.getRefVar(), builder.structExpr(init))));
 		
 		// CompositeMemberAccess
 		saStmts.push_back(builder.callExpr(basic.getInt8(), basic.getCompositeMemberAccess(),
-		                                   builder.callExpr(builder.structType(fields), basic.getRefDeref(), structVar),
+		                                   builder.callExpr(builder.structType(fields), refExt.getRefDeref(), structVar),
 		                                   builder.getIdentifierLiteral("first"), builder.getTypeLiteral(basic.getUInt2())));
 		// CompositeRefElem
-		saStmts.push_back(builder.callExpr(builder.refType(basic.getReal8()), basic.getCompositeRefElem(), structVar,
+		saStmts.push_back(builder.callExpr(builder.refType(basic.getReal8()), refExt.getRefMemberAccess(), structVar,
 		                                   builder.getIdentifierLiteral("second"), builder.getTypeLiteral(basic.getReal4())));
 		const StatementPtr& structAccess = builder.compoundStmt(saStmts);
 		
@@ -101,12 +104,12 @@ TEST(TransformUtils, MemberAccessLiteralUpdater) {
 		std::vector<ExpressionPtr> init;
 		init.push_back(builder.intLit(1));
 		init.push_back(builder.literal(basic.getChar(), "'a'"));
-		saStmts.push_back(builder.declarationStmt(tupleVar, builder.callExpr(tupleVar->getType(), basic.getRefVar(), builder.tupleExpr(init))));
+		saStmts.push_back(builder.declarationStmt(tupleVar, builder.callExpr(tupleVar->getType(), refExt.getRefVar(), builder.tupleExpr(init))));
 		// TupleMemberAcces
-		saStmts.push_back(builder.callExpr(basic.getUInt2(), basic.getTupleMemberAccess(), builder.callExpr(tupleTy, basic.getRefDeref(), tupleVar),
+		saStmts.push_back(builder.callExpr(basic.getUInt2(), basic.getTupleMemberAccess(), builder.callExpr(tupleTy, refExt.getRefDeref(), tupleVar),
 		                                   builder.literal(basic.getUInt8(), "0"), builder.getTypeLiteral(basic.getInt4())));
 		// TupleRefElem
-		saStmts.push_back(builder.callExpr(basic.getChar(), basic.getTupleRefElem(), tupleVar, builder.castExpr(basic.getUInt8(), builder.intLit(1)),
+		saStmts.push_back(builder.callExpr(basic.getChar(), refExt.getRefComponentAccess(), tupleVar, builder.castExpr(basic.getUInt8(), builder.intLit(1)),
 		                                   builder.getTypeLiteral(basic.getWChar16())));
 		const StatementPtr& tupleAccess = builder.compoundStmt(saStmts);
 		

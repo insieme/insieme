@@ -49,6 +49,7 @@
 #include "insieme/core/parser3/detail/scanner.h"
 
 #include "insieme/core/lang/extension.h"
+#include "insieme/core/lang/array.h"
 
 // this last one is generated and the path will be provided to the command
 #include "inspire_parser.hpp"
@@ -217,10 +218,10 @@ ExpressionPtr inspire_driver::genBinaryExpression(const location& l, const std::
 	// left side must be a ref, right side must be untouched
 	if(op == "=") {
 	
-		if(!left.getType().isa<RefTypePtr>()) {
+		if(!analysis::isRefType(left.getType())) {
 			error(l, format("left side on assignment must be a reference and is %s", toString(left.getType())));
 		}
-		else if(left.getType().as<RefTypePtr>()->getElementType() != right->getType()) {
+		else if(analysis::getReferencedType(left.getType()) != right->getType()) {
 			error(l, format("right side expression of type %s can not be assingend to type %s",
 			                toString(right.getType()),
 			                toString(left.getType())));
@@ -235,9 +236,9 @@ ExpressionPtr inspire_driver::genBinaryExpression(const location& l, const std::
 		if(builder.getLangBasic().isSignedInt(b->getType())) {
 			b = builder.castExpr(builder.getLangBasic().getUInt8(), b);
 		}
-		if(left->getType()->getNodeType() == NT_RefType) {
-			auto inType = left->getType().as<RefTypePtr>()->getElementType();
-			if(!inType.isa<ArrayTypePtr>() && !inType.isa<VectorTypePtr>()) {
+		if(analysis::isRefType(left->getType())) {
+			auto inType = analysis::getReferencedType(left->getType());
+			if(!lang::isArray(inType)) {
 				error(l, "expression is neither a vector nor array to subscript");
 				return nullptr;
 			}
@@ -245,7 +246,7 @@ ExpressionPtr inspire_driver::genBinaryExpression(const location& l, const std::
 			return builder.arrayRefElem(left, b);
 		}
 		auto inType = left->getType();
-		if(!inType.isa<ArrayTypePtr>() && !inType.isa<VectorTypePtr>()) {
+		if(!lang::isArray(inType)) {
 			error(l, "expression is neither a vector nor array to subscript");
 			return nullptr;
 		}
@@ -329,8 +330,8 @@ ExpressionPtr inspire_driver::genFieldAccess(const location& l, const Expression
 	if(expr->getType().isa<StructTypePtr>()) {
 		structType = expr->getType().as<StructTypePtr>();
 	}
-	else if(expr->getType().isa<RefTypePtr>()) {
-		TypePtr type = expr->getType().as<RefTypePtr>()->getElementType();
+	else if(analysis::isRefType(expr->getType())) {
+		TypePtr type = analysis::getReferencedType(expr->getType());
 		
 		if(type.isa<RecTypePtr>()) {
 			type = type.as<RecTypePtr>()->unroll(mgr);
@@ -354,7 +355,7 @@ ExpressionPtr inspire_driver::genFieldAccess(const location& l, const Expression
 	}
 	
 	// create access
-	if(expr->getType().isa<RefTypePtr>()) {
+	if(analysis::isRefType(expr->getType())) {
 		return builder.refMember(expr, fieldname);
 	}
 	return builder.accessMember(expr, fieldname);
@@ -367,8 +368,8 @@ ExpressionPtr inspire_driver::genTupleAccess(const location& l, const Expression
 	if(expr->getType()->getNodeType() == NT_TupleType) {
 		tupleType = expr->getType().as<TupleTypePtr>();
 	}
-	else if(expr->getType()->getNodeType() == NT_RefType) {
-		TypePtr type = expr->getType().as<RefTypePtr>()->getElementType();
+	else if(analysis::isRefType(expr->getType())) {
+		TypePtr type = analysis::getReferencedType(expr->getType());
 		
 		if(type->getNodeType() == core::NT_RecType) {
 			type = core::static_pointer_cast<const core::RecType>(type)->unroll(type.getNodeManager());
@@ -395,72 +396,22 @@ ExpressionPtr inspire_driver::genTupleAccess(const location& l, const Expression
 	}
 	
 	// create access
-	if(expr->getType()->getNodeType() == NT_RefType) {
+	if(analysis::isRefType(expr->getType())) {
 		return builder.refComponent(expr, index);
 	}
 	return builder.accessComponent(expr, index);
 	
 }
 
-TypePtr inspire_driver::genGenericType(const location& l, const std::string& name, const ParentList& parents,
-                                       const TypeList& params, const IntParamList& iparamlist) {
+TypePtr inspire_driver::genGenericType(const location& l, const std::string& name, const ParentList& parents, const TypeList& params) {
                                        
-	if(name == "ref") {
-		if(iparamlist.size() != 0 || params.size() != 1) {
-			error(l, "malform ref type");
-		}
-		else {
-			return builder.refType(params[0]);
-		}
-	}
-	if(name == "src") {
-		if(iparamlist.size() != 0 || params.size() != 1) {
-			error(l, "malform ref type");
-		}
-		else {
-			return builder.refType(params[0], RK_SOURCE);
-		}
-	}
-	if(name == "sink") {
-		if(iparamlist.size() != 0 || params.size() != 1) {
-			error(l, "malform ref type");
-		}
-		else {
-			return builder.refType(params[0], RK_SINK);
-		}
-	}
-	if(name == "channel") {
-		if(iparamlist.size() != 1 || params.size() != 1) {
-			error(l, "malform channel type");
-		}
-		else {
-			return builder.channelType(params[0], iparamlist[0]);
-		}
-	}
-	if(name == "vector") {
-		if(iparamlist.size() != 1 || params.size() != 1) {
-			error(l, "malform vector type");
-		}
-		else {
-			return builder.vectorType(params[0], iparamlist[0]);
-		}
-	}
-	if(name == "array") {
-		if(iparamlist.size() != 1 || params.size() != 1) {
-			error(l, "malform array type");
-		}
-		else {
-			return builder.arrayType(params[0], iparamlist[0]);
-		}
-	}
 	if(name == "int") {
-		if(iparamlist.size() != 1) {
+		if(params.size() != 1) {
 			error(l, "wrong int size");
 		}
 	}
 	if(name == "real") {
-	
-		if(iparamlist.size() != 1) {
+		if(params.size() != 1) {
 			error(l, "wrong real size");
 		}
 	}
@@ -470,14 +421,12 @@ TypePtr inspire_driver::genGenericType(const location& l, const std::string& nam
 			abort();
 		}
 	}
-	for(const auto& p : iparamlist) {
-		if(!p) {
-			std::cerr <<  "wrong parameter in paramenter list" << std::endl;
-			abort();
-		}
-	}
 	
-	return builder.genericType(name, parents, params, iparamlist);
+	return builder.genericType(name, parents, params);
+}
+
+TypePtr inspire_driver::genNumericType(const location& l, const string& value) const {
+	return builder.numericType(builder.literal(value, builder.getLangBasic().getIntInf()));
 }
 
 TypePtr inspire_driver::genFuncType(const location& l, const TypeList& params, const TypePtr& retType, const FunctionKind& fk) {
@@ -658,32 +607,6 @@ void inspire_driver::add_symb(const location& l, const std::string& name, NodePt
 
 void inspire_driver::add_symb(const std::string& name, NodePtr ptr) {
 	add_symb(glob_loc, name, ptr);
-}
-
-VariableIntTypeParamPtr inspire_driver::gen_type_param_var(const location& l, const std::string& name) {
-	auto x = scopes.find(name);
-	if(!x) {
-		if(name.size() != 2) {
-			error(l, format("variable %s needs to have lenght 1", name));
-		}
-		x = builder.variableIntTypeParam(name[1]);
-		add_symb(l, name, x);
-	}
-	if(!x.isa<VariableIntTypeParamPtr>()) {
-		error(l, format("variable %s is not an int type param var", name));
-	}
-	return x.as<VariableIntTypeParamPtr>();
-}
-
-VariableIntTypeParamPtr inspire_driver::find_type_param_var(const location& l, const std::string& name) {
-	auto x = scopes.find(name);
-	if(!x) {
-		error(l, format("variable %s is not defined in context", name));
-	}
-	if(!x.isa<VariableIntTypeParamPtr>()) {
-		error(l, format("variable %s is not a type param variable", name));
-	}
-	return x.as<VariableIntTypeParamPtr>();
 }
 
 namespace {

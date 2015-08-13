@@ -180,8 +180,6 @@ struct node_child_type : public detail::node_child_type_helper<decltype(((Node*)
 	template<> struct node_child_type<CLASS,INDEX> : public detail::node_child_type_helper<TYPE> {}
 
 SET_CHILD_TYPE(Expression, 0, Type);
-SET_CHILD_TYPE(SingleElementType, 0, Type);
-SET_CHILD_TYPE(SingleElementType, 1, IntTypeParam);
 
 #undef SET_CHILD_TYPE
 

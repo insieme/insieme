@@ -183,14 +183,6 @@ bool isSubTypeOf(const TypePtr& subType, const TypePtr& superType) {
 		return isSubTypeOfInternal(subType, superType);
 	}
 	
-	// check for vector types
-	if(subType.isa<VectorTypePtr>()) {
-		VectorTypePtr vector = static_pointer_cast<const VectorType>(subType);
-		// potential super type is an array of the same element type
-		IRBuilder builder(vector->getNodeManager());
-		return *superType == *builder.arrayType(vector->getElementType());
-	}
-	
 	// for all other relations, the node type has to be the same
 	if(subType->getNodeType() != superType->getNodeType()) {
 		return false;
@@ -219,24 +211,12 @@ bool isSubTypeOf(const TypePtr& subType, const TypePtr& superType) {
 	}
 	
 	// check reference types
-	if(subType->getNodeType() == NT_RefType) {
+	if (analysis::isRefType(subType) && analysis::isRefType(superType)) {
 		const auto& basic = subType->getNodeManager().getLangBasic();
 		
-		// check source / sink
-		auto srcRef = subType.as<RefTypePtr>();
-		auto trgRef = superType.as<RefTypePtr>();
-		
-		// check read/write privileges
-		if(trgRef.isRead() && !srcRef.isRead()) {
-			return false;
-		}
-		if(trgRef.isWrite() && !srcRef.isWrite()) {
-			return false;
-		}
-		
 		// check element type
-		auto srcElement = subType.as<RefTypePtr>()->getElementType();
-		auto trgElement = superType.as<RefTypePtr>()->getElementType();
+		auto srcElement = analysis::getReferencedType(subType);
+		auto trgElement = analysis::getReferencedType(superType);
 		
 		// if element types are identical => it is fine
 		//if (srcElement == trgElement) return true;
@@ -250,18 +230,8 @@ bool isSubTypeOf(const TypePtr& subType, const TypePtr& superType) {
 		}
 		
 		// support nested references
-		if(srcElement.isa<RefTypePtr>() && trgElement.isa<RefTypePtr>()) {
+		if (analysis::isRefType(srcElement) && analysis::isRefType(trgElement)) {
 			return isSubTypeOf(srcElement, trgElement);
-		}
-		
-		// a ref<vector<X,Y>> is a sub-type of a ref<array<X,1>>
-		if(trgElement.isa<ArrayTypePtr>() && srcElement.isa<VectorTypePtr>()) {
-			IRBuilder builder(srcElement.getNodeManager());
-			auto one = builder.concreteIntTypeParam(1);
-			
-			// array needs to be 1-dimensional and both have to have the same element type
-			return trgElement.as<ArrayTypePtr>()->getDimension() == one &&
-			       trgElement.as<ArrayTypePtr>()->getElementType() == srcElement.as<VectorTypePtr>()->getElementType();
 		}
 		
 		// also support references of derived classes being passed to base-type pointer
@@ -302,29 +272,7 @@ TypePtr getJoinMeetType(const TypePtr& typeA, const TypePtr& typeB, bool join) {
 		const GenericTypePtr& genTypeB = static_pointer_cast<const GenericType>(typeB);
 		return (join) ? getJoinType(genTypeA, genTypeB) : getMeetType(genTypeA, genTypeB);
 	}
-	
-	// handle vector types (only if array super type of A is a super type of B)
-	
-	// make sure typeA is the vector
-	if(nodeTypeA != NT_VectorType && nodeTypeB == NT_VectorType) {
-		// switch sides
-		return getJoinMeetType(typeB, typeA, join);
-	}
-	
-	// handle vector-array conversion (only works for joins)
-	if(join && nodeTypeA == NT_VectorType) {
-		VectorTypePtr vector = static_pointer_cast<const VectorType>(typeA);
-		
-		// the only potential super type is an array of the same element type
-		IRBuilder builder(vector->getNodeManager());
-		ArrayTypePtr array = builder.arrayType(vector->getElementType());
-		if(isSubTypeOf(typeB, array)) {
-			return array;
-		}
-		// no common super type!
-		return fail;
-	}
-	
+
 	// the rest can only work if it is of the same kind
 	if(nodeTypeA != nodeTypeB) {
 		// => no common super type

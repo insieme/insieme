@@ -150,16 +150,6 @@ AST_TERMINAL(StringValue, Value)
 
 
 //
-// --- Int Type Parameters Nodes ---
-//
-
-AST_NODE(IntTypeParam, Node)
-AST_TERMINAL(VariableIntTypeParam, IntTypeParam)
-AST_TERMINAL(ConcreteIntTypeParam, IntTypeParam)
-AST_TERMINAL(InfiniteIntTypeParam, IntTypeParam)
-
-
-//
 // --- Types ---
 //
 
@@ -172,19 +162,12 @@ AST_TERMINAL(TypeVariable, Type)
 AST_TERMINAL(FunctionType, Type)
 AST_TERMINAL(TupleType, Type)
 AST_TERMINAL(RecType, Type)
-AST_TERMINAL(RefType, Type)
 
-// + generic types
-AST_NODE(GenericType, Type)
-CONCRETE(GenericType)
+// + generic type
+AST_TERMINAL(GenericType, Type)
 
-// + single element types
-AST_NODE(SingleElementType, Type)
-ABSTRACT(SingleElementType)
-
-AST_TERMINAL(ArrayType, SingleElementType)
-AST_TERMINAL(VectorType, SingleElementType)
-AST_TERMINAL(ChannelType, SingleElementType)
+// + numeric types
+AST_TERMINAL(NumericType, Type)
 
 // + named composite types
 AST_NODE(NamedCompositeType, Type)
@@ -234,7 +217,6 @@ AST_TERMINAL(CallExpr, Expression)
 AST_TERMINAL(CastExpr, Expression)
 
 AST_TERMINAL(TupleExpr, Expression)
-AST_TERMINAL(VectorExpr, Expression)
 AST_TERMINAL(StructExpr, Expression)
 AST_TERMINAL(UnionExpr, Expression)
 AST_TERMINAL(JobExpr, Expression)
@@ -252,7 +234,6 @@ AST_TERMINAL(Program, Node)
 
 
 AST_NODE(Support, Node)
-AST_TERMINAL(IntTypeParams, Support)
 AST_TERMINAL(Types, Support)
 
 AST_TERMINAL(RecTypeBinding, Support)

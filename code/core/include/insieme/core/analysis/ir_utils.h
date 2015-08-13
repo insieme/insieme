@@ -40,21 +40,12 @@
 #include "insieme/core/ir_expressions.h"
 #include "insieme/core/ir_types.h"
 
+#include "insieme/core/lang/reference.h"
+
 namespace insieme {
 namespace core {
 namespace analysis {
 
-bool isRefArrayType(const TypePtr& type);
-bool isArrayType(const TypePtr& type);
-TypePtr getArrayElementType(const TypePtr& ptr);
-RefTypePtr getRefArrayElementType(const TypePtr& ptr);
-
-// ------------------ VECTOR checks --------------------------------
-
-bool isVectorType(const TypePtr& type);
-TypePtr getVectorElementType(const TypePtr& ptr);
-bool isRefVectorType(const TypePtr& ptr);
-TypePtr getRefVectorElementType(const TypePtr& ptr);
 
 /**
  * Gets all nodes of the given type in node which are free.
@@ -160,27 +151,13 @@ bool isRefOf(const NodePtr& candidate, const NodePtr& type);
 bool isRefOf(const NodePtr& candidate, const NodeType kind);
 
 /**
- * A simple helper utility to test whether the given type is a reference type.
- * In this particular case, the answer can be determined statically.
- *
- * @param refType the type to be tested.
- * @return true - always.
- */
-static inline bool isRefType(const RefTypePtr& refType) {
-	return true;
-}
-
-/**
- * A simple helper utility to test whether the given type is a reference type.
+ * A simple helper utility to test whether the given node is a reference type.
  *
  * @param type the type to be tested.
  * @return true if the given type is a reference type, false otherwise
  */
-static inline bool isRefType(const TypePtr& type) {
-	if(!type) {
-		return false;
-	}
-	return type->getNodeType() == core::NT_RefType;
+static inline bool isRefType(const NodePtr& type) {
+	return lang::ReferenceType::isReferenceType(type);
 }
 
 /**
@@ -190,25 +167,20 @@ static inline bool isRefType(const TypePtr& type) {
  * @return true if so, false otherwise
  */
 static inline bool hasRefType(const ExpressionPtr& expr) {
-	if(!expr) {
-		return false;
-	}
-	return isRefType(expr->getType());
+	return expr && isRefType(expr->getType());
 }
 
-static inline TypePtr getReferencedType(const RefTypePtr& type) {
-	if(!type) {
-		assert_fail() << "Cannot get the referenced type of a non ref type.";
-	}
-	return type->getElementType();
+/**
+ * Obtains the type referenced by the given reference type.
+ *
+ * @param type the type of the reference to be processed
+ * @return the type of the value referenced by the given reference type
+ */
+static inline TypePtr getReferencedType(const NodePtr& type) {
+	assert_true(isRefType(type)) << "Cannot get the referenced type of a non ref type.";
+	return lang::ReferenceType(type).getElementType();
 }
 
-static inline TypePtr getReferencedType(const TypePtr& type) {
-	if(!type) {
-		return NULL;
-	}
-	return getReferencedType(dynamic_pointer_cast<const RefType>(type));
-}
 
 // ----------------------------------- Type-Literals ----------------------------
 
@@ -269,72 +241,6 @@ static inline TypePtr getRepresentedType(const TypePtr& type) {
  */
 static inline TypePtr getRepresentedType(const ExpressionPtr& expr) {
 	return getRepresentedType(expr->getType());
-}
-
-// ----------------------------------- Type-Parameter ----------------------------
-
-/**
- * Checks whether the given type is a int-type-param literal type.
- *
- * @param type the type to be checked
- * @return true if it is a int-type-param literal type, false otherwise
- */
-bool isIntTypeParamType(const TypePtr& type);
-
-/**
- * Checks whether the given literal is an int-type-param literal.
- *
- * @param literal the literal to be tested
- * @return true if so, false otherwise
- */
-static inline bool isIntTypeParamLiteral(const LiteralPtr& literal) {
-	return literal && isIntTypeParamType(literal->getType());
-}
-
-/**
- * Checks whether the given node is an int-type-param literal.
- *
- * @param node the node to be tested
- * @return true if so, false otherwise
- */
-static inline bool isIntTypeParamLiteral(const NodePtr& node) {
-	return node && isIntTypeParamLiteral(node.isa<LiteralPtr>());
-}
-
-/**
- * Extracts the int-type parameter represented by the given int-type-parameter type.
- *
- * @param type the int-type-param type to be processed
- * @return the extracted int-type parameter
- */
-static inline IntTypeParamPtr getRepresentedTypeParam(const TypePtr& type) {
-	assert_true(isIntTypeParamType(type));
-	return type.as<GenericTypePtr>()->getIntTypeParameter()[0];
-}
-
-/**
- * Extract the int-type parameters represented by the given int-type-parameter literal.
- *
- * @param expr the literal / expression to be processed.
- * @return the extracted int-type parameter
- */
-static inline IntTypeParamPtr getRepresentedTypeParam(const ExpressionPtr& expr) {
-	return getRepresentedTypeParam(expr->getType());
-}
-
-/**
- * returns true if the given type models a C pointer type
- * @param the type to test
- * @return whenever is a pointer represented in IR
- */
-static inline bool isPointerType(const TypePtr& ptr) {
-	if(!ptr.isa<RefTypePtr>()) {
-		return false;
-	}
-	if(!ptr.as<RefTypePtr>().getElementType().isa<ArrayTypePtr>()) {
-		return false;
-	}
-	return true;
 }
 
 

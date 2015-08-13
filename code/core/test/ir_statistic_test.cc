@@ -61,8 +61,8 @@ TEST(IRStatistic, Basic) {
 	EXPECT_EQ(static_cast<unsigned>(6), stat.getHeight());
 	EXPECT_EQ(25/static_cast<float>(13), stat.getShareRatio());
 	
-	EXPECT_EQ(static_cast<unsigned>(0), stat.getNodeTypeInfo(NT_ArrayType).numShared);
-	EXPECT_EQ(static_cast<unsigned>(0), stat.getNodeTypeInfo(NT_ArrayType).numAddressable);
+	EXPECT_EQ(static_cast<unsigned>(0), stat.getNodeTypeInfo(NT_CallExpr).numShared);
+	EXPECT_EQ(static_cast<unsigned>(0), stat.getNodeTypeInfo(NT_CallExpr).numAddressable);
 	
 	EXPECT_EQ(static_cast<unsigned>(4), stat.getNodeTypeInfo(NT_GenericType).numShared);
 	EXPECT_EQ(static_cast<unsigned>(5), stat.getNodeTypeInfo(NT_GenericType).numAddressable);
@@ -87,11 +87,10 @@ TEST(IRStatistic, Manager) {
 	EXPECT_EQ(4u, stat.getNodeTypeInfo(NT_GenericType).num);
 	EXPECT_EQ(4u, stat.getNodeTypeInfo(NT_StringValue).num);
 	EXPECT_EQ(3u, stat.getNodeTypeInfo(NT_Types).num);
-	EXPECT_EQ(1u, stat.getNodeTypeInfo(NT_IntTypeParams).num);
 	
 	EXPECT_NE(0u, stat.getNodeTypeInfo(NT_GenericType).memory);
 	
-	// check whether summes check out
+	// check whether sums check out
 	unsigned total = 0;
 	unsigned totalMem = 0;
 	for(int i=0; i<NUM_CONCRETE_NODE_TYPES; i++) {

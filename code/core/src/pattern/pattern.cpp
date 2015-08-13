@@ -613,7 +613,6 @@ namespace details {
 
 bool isTypeOrValueOrParam(const core::NodeType type) {
 	return core::isA<core::NC_Type>(type) ||
-	       core::isA<core::NC_IntTypeParam>(type) ||
 	       core::isA<core::NC_Value>(type);
 }
 

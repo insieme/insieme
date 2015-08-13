@@ -90,6 +90,8 @@ NodePtr markAsDerived(const NodePtr& node, const string& name) {
 
 // ----------------------------------------------------
 
+struct BuiltInTag {};
+
 void markAsBuiltIn(const NodePtr& node) {
 	node->attachValue<BuiltInTag>();
 }

@@ -38,6 +38,8 @@
 
 #include "insieme/core/transform/node_mapper_utils.h"
 
+#include "insieme/core/lang/reference.h"
+
 namespace insieme {
 namespace core {
 
@@ -54,16 +56,9 @@ std::ostream& GenericType::printTo(std::ostream& out) const {
 	
 	// check whether there are type parameters
 	auto typeParam = getTypeParameter();
-	auto intParam = getIntTypeParameter();
-	if(!typeParam->empty() || !intParam->empty()) {
+	if(!typeParam->empty()) {
 		// print parameters ...
-		out << '<';
-		out << join(",", typeParam->getChildList(), print<deref<NodePtr>>());
-		if(!typeParam->empty() && !intParam->empty()) {
-			out << ',';
-		}
-		out << join(",", intParam->getChildList(), print<deref<NodePtr>>());
-		out << '>';
+		out << '<' << join(",", typeParam->getChildList(), print<deref<NodePtr>>()) << '>';
 	}
 	return out;
 }
@@ -74,7 +69,7 @@ std::ostream& FunctionType::printTo(std::ostream& out) const {
 	// fetch object type if required
 	TypePtr objType;
 	if(isConstructor() || isDestructor() || isMemberFunction()) {
-		if(getParameterTypes().empty() || getParameterTypes()[0].getNodeType() != NT_RefType) {
+		if(getParameterTypes().empty() || !lang::ReferenceType::isReferenceType(getParameterTypes()[0])) {
 			objType = GenericType::get(getNodeManager(), "%error%");
 		}
 		else {
@@ -201,6 +196,19 @@ NamedCompositeType::NamedCompositeType(const NodeType& type, const NodeList& ele
 	checkForNameCollisions(convertList<NamedType>(elements));
 }
 
+
+
+std::ostream& NumericType::printTo(std::ostream& out) const {
+	return out << *getValue();
+}
+
+NumericTypePtr NumericType::get(NodeManager& manager, const LiteralPtr& value) {
+	return manager.get(NumericType(value));
+}
+
+NumericTypePtr NumericType::get(NodeManager& manager, const VariablePtr& var) {
+	return manager.get(NumericType(var));
+}
 
 } // end namespace core
 } // end namespace insieme

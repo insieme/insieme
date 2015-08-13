@@ -44,6 +44,9 @@
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/analysis/normalize.h"
 
+#include "insieme/core/lang/reference.h"
+#include "insieme/core/lang/array.h"
+
 namespace insieme {
 namespace core {
 namespace checks {
@@ -130,7 +133,7 @@ TEST(CallExprTypeCheck, Basic) {
 	EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(expr), EC_TYPE_INVALID_RETURN_TYPE, "", Message::ERROR));
 	
 	// invalid argument types
-	TypePtr concreteType2 = builder.genericType("int", toVector<TypePtr>(), toVector<IntTypeParamPtr>(ConcreteIntTypeParam::get(manager, 2)));
+	TypePtr concreteType2 = builder.parseType("int<2>");
 	LiteralPtr z = builder.literal(concreteType2, "3");
 	EXPECT_EQ("3", toString(*z));
 	
@@ -469,9 +472,10 @@ TEST(MemberAccessElementTypeCheck, References) {
 	NodeManager manager;
 	IRBuilder builder(manager);
 	const lang::BasicGenerator& basic = builder.getLangBasic();
+	const lang::ReferenceExtension& refExt = manager.getLangExtension<lang::ReferenceExtension>();
 	
 	// get function to be tested
-	ExpressionPtr fun = basic.getCompositeRefElem();
+	ExpressionPtr fun = refExt.getRefMemberAccess();
 	
 	// Create a example expressions
 	TypePtr typeA = builder.genericType("typeA");
@@ -557,9 +561,10 @@ TEST(ComponentAccessTypeCheck, References) {
 	NodeManager manager;
 	IRBuilder builder(manager);
 	const lang::BasicGenerator& basic = builder.getLangBasic();
+	const lang::ReferenceExtension& refExt = manager.getLangExtension<lang::ReferenceExtension>();
 	
 	// get function to be tested
-	ExpressionPtr fun = basic.getTupleRefElem();
+	ExpressionPtr fun = refExt.getRefComponentAccess();
 	
 	// Create a example expressions
 	TypePtr typeA = builder.genericType("typeA");
@@ -875,14 +880,40 @@ TEST(KeywordCheck, Basic) {
 	// OK ... create correct and wrong instances
 	
 	TypePtr element = builder.genericType("A");
-	IntTypeParamPtr param = builder.concreteIntTypeParam(8);
+	NumericTypePtr size = builder.numericType(builder.intLit(8));
 	
 	CheckPtr typeCheck = make_check<KeywordCheck>();
 	
-	// test vector
+	// test array
 	{
-		TypePtr ok = builder.vectorType(element, param);
-		TypePtr err = builder.genericType("vector", toVector<TypePtr>(element), toVector<IntTypeParamPtr>(param));
+		TypePtr ok = builder.parseType("array<int<4>,12>");
+		TypePtr err = builder.parseType("array<int<4>>");
+
+		EXPECT_FALSE(*ok == *err);
+
+		EXPECT_TRUE(check(ok, typeCheck).empty());
+		EXPECT_FALSE(check(err, typeCheck).empty());
+
+		EXPECT_PRED2(containsMSG, check(err,typeCheck), Message(NodeAddress(err), EC_TYPE_ILLEGAL_USE_OF_TYPE_KEYWORD, "", Message::WARNING));
+	}
+
+	// test array
+	{
+		TypePtr ok = builder.parseType("array<int<4>,12>");
+		TypePtr err = builder.parseType("array<12,int<4>>");
+
+		EXPECT_FALSE(*ok == *err);
+
+		EXPECT_TRUE(check(ok, typeCheck).empty());
+		EXPECT_FALSE(check(err, typeCheck).empty());
+
+		EXPECT_PRED2(containsMSG, check(err,typeCheck), Message(NodeAddress(err), EC_TYPE_ILLEGAL_USE_OF_TYPE_KEYWORD, "", Message::WARNING));
+	}
+
+	// test array
+	{
+		TypePtr ok = builder.parseType("array<int<4>,12>");
+		TypePtr err = builder.parseType("array<int<4>>");
 		
 		EXPECT_FALSE(*ok == *err);
 		
@@ -894,8 +925,8 @@ TEST(KeywordCheck, Basic) {
 	
 	// test array
 	{
-		TypePtr ok = builder.arrayType(element, param);
-		TypePtr err = builder.genericType("array", toVector<TypePtr>(element), toVector<IntTypeParamPtr>(param));
+		TypePtr ok = builder.parseType("array<int<4>,12>");
+		TypePtr err = builder.parseType("array<int<4>,12,14>");
 		
 		EXPECT_FALSE(*ok == *err);
 		
@@ -907,8 +938,8 @@ TEST(KeywordCheck, Basic) {
 	
 	// test references
 	{
-		TypePtr ok = builder.refType(element);
-		TypePtr err = builder.genericType("ref", toVector<TypePtr>(element));
+		TypePtr ok = lang::ReferenceType::create(builder.parseType("int<4>"));
+		TypePtr err = builder.parseType("ref<int<4>>");
 		
 		EXPECT_TRUE(check(ok, typeCheck).empty());
 		EXPECT_FALSE(check(err, typeCheck).empty());
@@ -918,8 +949,8 @@ TEST(KeywordCheck, Basic) {
 	
 	// test channel
 	{
-		TypePtr ok = builder.channelType(element, param);
-		TypePtr err = builder.genericType("channel", toVector<TypePtr>(element), toVector<IntTypeParamPtr>(param));
+		TypePtr ok = builder.parseType("channel<int<4>,12>");
+		TypePtr err = builder.parseType("channel<12,int<4>>");
 		
 		EXPECT_FALSE(*ok == *err);
 		
@@ -1318,6 +1349,7 @@ TEST(ArrayTypeChecks, Exceptions) {
 	NodeManager manager;
 	IRBuilder builder(manager);
 	auto& basic = manager.getLangBasic();
+	auto& array = manager.getLangExtension<lang::ArrayExtension>();
 	
 	CheckPtr typeCheck = getFullCheck();
 	
@@ -1333,7 +1365,7 @@ TEST(ArrayTypeChecks, Exceptions) {
 	errors = check(cur, typeCheck);
 	EXPECT_TRUE(errors.empty()) << cur << "\n" << errors;
 	
-	ExpressionPtr arrayPtr = builder.callExpr(basic.getArrayCreate1D(), builder.getTypeLiteral(element), builder.uintLit(12u));
+	ExpressionPtr arrayPtr = builder.callExpr(array.getArrayCreate(), builder.getTypeLiteral(element), builder.uintLit(12u));
 	
 	// also, allow array values to be used within ref.new, ref.var, struct, tuple and union expressions
 	

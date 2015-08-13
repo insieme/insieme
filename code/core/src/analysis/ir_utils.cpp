@@ -47,6 +47,7 @@
 #include "insieme/core/analysis/attributes.h"
 
 #include "insieme/core/lang/basic.h"
+#include "insieme/core/lang/reference.h"
 #include "insieme/core/lang/static_vars.h"
 
 #include "insieme/utils/logging.h"
@@ -56,59 +57,6 @@ namespace core {
 namespace analysis {
 
 using std::map;
-
-// ------------------ REF ARRAY checks --------------------------------
-
-bool isRefArrayType(const TypePtr& type) {
-	if(RefTypePtr refTy = type.isa<RefTypePtr>()) {
-		return (refTy->getElementType()->getNodeType() == NT_ArrayType);
-	}
-	return false;
-}
-
-bool isArrayType(const TypePtr& type) {
-	return (type->getNodeType() == NT_ArrayType);
-}
-
-TypePtr getArrayElementType(const TypePtr& ptr) {
-	assert_true(ptr->getNodeType() == NT_ArrayType) << "no ref to array with";
-	return ptr.as<ArrayTypePtr>()->getElementType();
-}
-
-RefTypePtr getRefArrayElementType(const TypePtr& ptr) {
-	assert_true(ptr->getNodeType() == NT_RefType) << "no ref to play with";
-	IRBuilder builder(ptr->getNodeManager());
-	return builder.refType(getArrayElementType(ptr.as<RefTypePtr>()->getElementType()));
-}
-
-// ------------------ VECTOR checks --------------------------------
-
-bool isVectorType(const TypePtr& type) {
-	return (type->getNodeType() == NT_VectorType);
-}
-
-TypePtr getVectorElementType(const TypePtr& ptr) {
-	assert_true(isVectorType(ptr)) << *ptr << " is not a VectorType";
-	return ptr.as<VectorTypePtr>()->getElementType();
-}
-
-bool isRefVectorType(const TypePtr& ptr) {
-	if(RefTypePtr refTy = ptr.isa<RefTypePtr>()) {
-		return isVectorType(ptr);
-	}
-	
-	return false;
-}
-
-TypePtr getRefVectorElementType(const TypePtr& ptr) {
-	RefTypePtr refTy = ptr.isa<RefTypePtr>();
-	assert_true(refTy) << *ptr << " is not a RefVectorType";
-	
-	VectorTypePtr vecTy = refTy->getElementType().isa<VectorTypePtr>();
-	assert_true(vecTy) << *ptr << " is not a RefVectorType";
-	
-	return vecTy->getElementType();
-}
 
 NodeList getFreeNodes(
     const NodePtr& node, NodeType controlStmt,	const vector<NodeType>& pruneNodes) {
@@ -229,10 +177,6 @@ private:
 		return boundVars.find(var) == boundVars.end();	// if not, there is a free generic variable
 	}
 	
-	bool visitRefType(const RefTypePtr& type, TypeVariableSet& boundVars) {
-		return this->visit(type->getElementType(), boundVars);
-	}
-	
 	bool visitFunctionType(const FunctionTypePtr& funType, TypeVariableSet& boundVars) {
 		return any(funType->getParameterTypes(), [&](const TypePtr& type) {
 			return this->visit(type, boundVars);
@@ -254,18 +198,10 @@ private:
 	
 	bool visitGenericType(const GenericTypePtr& type, TypeVariableSet& boundVars) {
 		// generic type is generic if one of its parameters is
-		return
-		    any(
-		        type->getTypeParameter()->getTypes(),
-		[&](const TypePtr& type) {
-			return this->visit(type, boundVars);
-		}
-		    ) ||
-		any(
-		    type->getIntTypeParameter()->getParameters(),
-		[&](const IntTypeParamPtr& param) {
-			return this->visit(param, boundVars);
-		}
+		return any(type->getTypeParameter()->getTypes(),
+			[&](const TypePtr& type) {
+				return this->visit(type, boundVars);
+			}
 		);
 	}
 	
@@ -286,18 +222,6 @@ private:
 			return this->visit(node, boundVars);
 		});
 	}
-	
-	
-	// -- int type parameters --
-	
-	bool visitVariableIntTypeParam(const VariableIntTypeParamPtr& var, TypeVariableSet& boundVars) {
-		return true;	// if there are free int type parameter => it is generic
-	}
-	
-	bool visitIntTypeParam(const IntTypeParamPtr& param, TypeVariableSet& boundVars) {
-		return false;	// int-type params are not causing a type to be generic
-	}
-	
 	
 	/**
 	 * A terminal visit capturing all non-covered types. This one should
@@ -354,12 +278,12 @@ bool isRefOf(const NodePtr& candidate, const NodePtr& type) {
 	}
 	
 	// check type of node
-	if(adjustedCandidate->getNodeType() != NT_RefType) {
+	if (!isRefType(adjustedCandidate)) {
 		return false;
 	}
 	
 	// check element type
-	return *(adjustedCandidate.as<RefTypePtr>()->getElementType()) == *type;
+	return *getReferencedType(adjustedCandidate) == *type;
 }
 
 bool isRefOf(const NodePtr& candidate, const NodeType kind) {
@@ -376,19 +300,18 @@ bool isRefOf(const NodePtr& candidate, const NodeType kind) {
 	}
 	
 	// check type of node
-	if(adjustedCandidate->getNodeType() != NT_RefType) {
+	if (!isRefType(adjustedCandidate)) {
 		return false;
 	}
 	
 	// check element type (kind)
-	return adjustedCandidate.as<RefTypePtr>()->getElementType()->getNodeType() == kind;
+	return getReferencedType(adjustedCandidate)->getNodeType() == kind;
 }
 
 bool isTypeLiteralType(const GenericTypePtr& type) {
 	// check family name as well as type and name of parameters
 	return type->getName()->getValue() == "type"
-	       && type->getTypeParameter().size() == static_cast<std::size_t>(1)
-	       && type->getIntTypeParameter().empty();
+	       && type->getTypeParameter().size() == static_cast<std::size_t>(1);
 }
 
 bool isTypeLiteralType(const TypePtr& type) {
@@ -402,38 +325,11 @@ bool isTypeLiteralType(const TypePtr& type) {
 	return isTypeLiteralType(static_pointer_cast<const core::GenericType>(type));
 }
 
-bool isIntTypeParamType(const GenericTypePtr& type) {
-	// check family name as well as type of parameters
-	return type->getName()->getValue() == "intTypeParam"
-	       && type->getTypeParameter().empty()
-	       && type->getIntTypeParameter().size() == static_cast<std::size_t>(1);
-}
-
-bool isIntTypeParamType(const TypePtr& type) {
-	// check node type
-	return type && type->getNodeType() == core::NT_GenericType && isIntTypeParamType(type.as<GenericTypePtr>());
-}
-
 bool isConstructorExpr(const NodePtr& node) {
 	NodeType pnt = node->getNodeType();
-	return pnt == NT_VectorExpr || pnt == NT_StructExpr || pnt == NT_UnionExpr || pnt == NT_TupleExpr || pnt == NT_JobExpr;
+	return pnt == NT_StructExpr || pnt == NT_UnionExpr || pnt == NT_TupleExpr || pnt == NT_JobExpr;
 }
 
-
-bool isVolatileType(const TypePtr& type) {
-	core::GenericTypePtr gt;
-	return type->getNodeType() == core::NT_GenericType &&
-	       (gt = static_pointer_cast<const core::GenericType>(type),
-	        gt->getName()->getValue() == "volatile" &&
-	        gt->getTypeParameter().size() == 1u &&
-	        gt->getIntTypeParameter().empty()
-	       );
-}
-
-TypePtr getVolatileType(const TypePtr& type) {
-	assert_true(isVolatileType(type));
-	return core::static_pointer_cast<const core::GenericType>(type)->getTypeParameter()[0];
-}
 
 // ------ Free Variable Extraction ----------
 
@@ -819,7 +715,7 @@ class RenamingVarVisitor: public core::IRVisitor<void, Address> {
 		
 		if(CallExprAddress call = dynamic_address_cast<const CallExpr>(exp)) {
 			NodeManager& manager = exp->getNodeManager();
-			if(manager.getLangBasic().isRefDeref(call->getFunctionExpr())) {
+			if(manager.getLangExtension<lang::ReferenceExtension>().isRefDeref(call->getFunctionExpr())) {
 				return extractVariable(call->getArgument(0));
 			}
 			
@@ -877,7 +773,7 @@ class VariableNameVisitor: public core::IRVisitor<void, Address> {
 		
 		if(CallExprAddress call = dynamic_address_cast<const CallExpr>(exp)) {
 			NodeManager& manager = exp->getNodeManager();
-			if(manager.getLangBasic().isRefDeref(call->getFunctionExpr())) {
+			if(manager.getLangExtension<lang::ReferenceExtension>().isRefDeref(call->getFunctionExpr())) {
 				return extractVariable(call->getArgument(0));
 			}
 			
@@ -1060,12 +956,12 @@ bool isReadOnly(const LambdaPtr& lambda, const VariablePtr& param) {
 bool isReadOnly(const StatementPtr& stmt, const VariablePtr& var) {
 
 	// non-ref values are always read-only
-	if(var->getType()->getNodeType() != NT_RefType) {
+	if(!isRefType(var->getType())) {
 		return true;
 	}
 	
 	// get deref token
-	auto deref = var->getNodeManager().getLangBasic().getRefDeref();
+	auto deref = var->getNodeManager().getLangExtension<lang::ReferenceExtension>().getRefDeref();
 	
 	bool readOnly = true;
 	visitDepthFirstPrunable(NodeAddress(stmt), [&](const NodeAddress& cur) {
@@ -1147,9 +1043,16 @@ bool isReadOnlyWithinScope(const StatementPtr& stmt, const VariablePtr& var) {
 }
 
 bool isStaticVar(const ExpressionPtr& var) {
+	if (!var) return false;
+
+	auto type = var->getType();
+	if (!isRefType(type)) {
+		return false;
+	}
+
 	if(const LiteralPtr lit = var.as<LiteralPtr>()) {
 		const lang::StaticVariableExtension& ext = var->getNodeManager().getLangExtension<lang::StaticVariableExtension>();
-		return(ext.isStaticType(lit->getType().as<core::RefTypePtr>().getElementType()));
+		return(ext.isStaticType(getReferencedType(type)));
 	}
 	else {
 		return false;
@@ -1200,24 +1103,7 @@ bool compareTypes(const TypePtr& a, const TypePtr& b) {
 		}
 		assert_fail() << "How could you get here?";
 	}
-	
-	//RefType
-	if(a.isa<RefTypePtr>() && b.isa<RefTypePtr>()) {
-		return	compareTypes(a.as<RefTypePtr>()->getElementType(), b.as<RefTypePtr>()->getElementType());
-	}
-	
-	//ArrayType
-	if(a.isa<ArrayTypePtr>() && b.isa<ArrayTypePtr>()) {
-		return	(a.as<ArrayTypePtr>()->getDimension() == b.as<ArrayTypePtr>()->getDimension()) &&
-		        compareTypes(a.as<ArrayTypePtr>()->getElementType(), b.as<ArrayTypePtr>()->getElementType());
-	}
-	
-	//VectorType
-	if(a.isa<VectorTypePtr>() && b.isa<VectorTypePtr>()) {
-		return	(a.as<VectorTypePtr>()->getSize() == b.as<VectorTypePtr>()->getSize()) &&
-		        compareTypes(a.as<VectorTypePtr>()->getElementType(), b.as<VectorTypePtr>()->getElementType());
-	}
-	
+
 	//TypeVariable
 	if(a.isa<TypeVariablePtr>() || b.isa<TypeVariablePtr>()) {
 		return a == b;
@@ -1226,11 +1112,6 @@ bool compareTypes(const TypePtr& a, const TypePtr& b) {
 	//GenericType
 	if(a.isa<GenericTypePtr>() && b.isa<GenericTypePtr>()) {
 		return a == b;
-	}
-	
-	//ChannelType
-	if(a.isa<ChannelTypePtr>() && b.isa<ChannelTypePtr>()) {
-		return a==b;
 	}
 	
 	//TupleType
@@ -1275,7 +1156,8 @@ bool compareTypes(const TypePtr& a, const TypePtr& b) {
 
 bool isZero(const core::ExpressionPtr& value) {
 
-	const core::lang::BasicGenerator& basic = value->getNodeManager().getLangBasic();
+	const auto& base = value->getNodeManager().getLangBasic();
+	const auto& refExt = value->getNodeManager().getLangExtension<lang::ReferenceExtension>();
 	core::IRBuilder builder(value->getNodeManager());
 	
 	// if initialization is zero ...
@@ -1297,18 +1179,18 @@ bool isZero(const core::ExpressionPtr& value) {
 	}
 	
 	// ... or the ref_null literal
-	if(basic.isRefNull(value)) {
+	if(refExt.isRefNull(value)) {
 		return true;
 	}
 	
 	// ... or a vector initialization with a zero value
-	if(core::analysis::isCallOf(value, basic.getVectorInitUniform())) {
+	if(core::analysis::isCallOf(value, base.getVectorInitUniform())) {
 		return isZero(core::analysis::getArgument(value, 0));
 	}
 	
 	// TODO: remove this when frontend is fixed!!
 	// => compensate for silly stuff like var(*getNull()) or NULL aka ref_deref(ref_null)
-	if(core::analysis::isCallOf(value, basic.getRefVar()) || core::analysis::isCallOf(value, basic.getRefDeref())) {
+	if(core::analysis::isCallOf(value, refExt.getRefVar()) || core::analysis::isCallOf(value, refExt.getRefDeref())) {
 		return isZero(core::analysis::getArgument(value, 0));
 	}
 	

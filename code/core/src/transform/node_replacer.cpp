@@ -315,7 +315,7 @@ private:
 			ExpressionPtr val = decl->getInitialization();
 			
 			if(CallExprPtr initCall = val.isa<CallExprPtr>()) {
-				if(builder.getLangBasic().isRefVar(initCall->getFunctionExpr())) {
+				if(manager.getLangExtension<lang::ReferenceExtension>().isRefVar(initCall->getFunctionExpr())) {
 					if(VariablePtr iVar = initCall->getArgument(0).isa<VariablePtr>()) {
 						auto ding = replacements.find(iVar);
 						if(ding != replacements.end()) {
@@ -348,7 +348,7 @@ private:
 		if(fun->getNodeType() == NT_LambdaExpr) {
 			return handleCallToLamba(call);
 		}
-		if(manager.getLangBasic().isRefAssign(fun)) {
+		if(manager.getLangExtension<lang::ReferenceExtension>().isRefAssign(fun)) {
 			ExpressionPtr lhs = call.getArgument(0);
 			ExpressionPtr rhs = call.getArgument(1);
 			
@@ -358,9 +358,9 @@ private:
 				return call;
 			}
 			
-			assert(lhs->getType().isa<RefTypePtr>() && "Replacing variable of ref-type with variable of non-ref-type makes assignment impossible");
+			assert_pred1(analysis::isRefType, lhs->getType()) << "Replacing variable of ref-type with variable of non-ref-type makes assignment impossible";
 			
-			TypePtr lhsTy = lhs->getType().as<RefTypePtr>()->getElementType();
+			TypePtr lhsTy = analysis::getReferencedType(lhs->getType());
 			
 			if(!isSubTypeOf(rhs->getType(), lhsTy)) {
 			
@@ -369,11 +369,10 @@ private:
 					return builder.callExpr(fun, lhs, builder.castExpr(lhsTy, rCast->getSubExpression()));
 				}
 				if(CallExprPtr rCall = rhs.isa<CallExprPtr>()) {
-					if(builder.getLangBasic().isRefReinterpret(rCall->getFunctionExpr())) {
-						assert(lhsTy.isa<RefTypePtr>() &&
-						       "Replacing variable of ref-ref-type with variable of non-ref-ref-type makes assignment of ref.reinterpret impossible");
-						       
-						return builder.callExpr(fun, lhs, builder.refReinterpret(rCall->getArgument(0), lhsTy.as<RefTypePtr>()->getElementType()));
+					if(manager.getLangExtension<lang::ReferenceExtension>().isRefReinterpret(rCall->getFunctionExpr())) {
+						assert_pred1(analysis::isRefType, lhsTy) <<
+						       "Replacing variable of ref-ref-type with variable of non-ref-ref-type makes assignment of ref.reinterpret impossible";
+						return builder.callExpr(fun, lhs, builder.refReinterpret(rCall->getArgument(0), analysis::getReferencedType(lhsTy)));
 					}
 				}
 				// else add cast
@@ -493,8 +492,8 @@ private:
 			
 			const ExpressionList args = call->getArguments();
 			// remove illegal deref operations
-			if(builder.getNodeManager().getLangBasic().isRefDeref(call->getFunctionExpr()) &&
-			        (!dynamic_pointer_cast<const RefType>(args.at(0)->getType()) && args.at(0)->getType()->getNodeType() != NT_GenericType)) {
+			if(manager.getLangExtension<lang::ReferenceExtension>().isRefDeref(call->getFunctionExpr()) &&
+			        (!analysis::isRefType(args.at(0)->getType()) && args.at(0)->getType()->getNodeType() != NT_GenericType)) {
 				res = args.at(0);
 				utils::migrateAnnotations(ptr, res);
 				return res;
@@ -633,31 +632,34 @@ private:
 		// should only be called for built-in functions
 		assert_true(lang::isBuiltIn(fun));
 		
+		auto& basic = manager.getLangBasic();
+		auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
+
 		// use type inference for the return type
-		if(manager.getLangBasic().isCompositeRefElem(fun)) {
+		if(refExt.isRefMemberAccess(fun)) {
 			return static_pointer_cast<const CallExpr>(builder.refMember(args.at(0),
 			        static_pointer_cast<const Literal>(args.at(1))->getValue()));
 		}
-		if(manager.getLangBasic().isCompositeMemberAccess(fun)) {
+		if(basic.isCompositeMemberAccess(fun)) {
 			return static_pointer_cast<const CallExpr>(builder.accessMember(args.at(0),
 			        static_pointer_cast<const Literal>(args.at(1))->getValue()));
 		}
-		if(manager.getLangBasic().isTupleRefElem(fun)) {
+		if(refExt.isRefComponentAccess(fun)) {
 			return static_pointer_cast<const CallExpr>(builder.refComponent(args.at(0), args.at(1)));
 		}
-		if(manager.getLangBasic().isTupleMemberAccess(fun)) {
+		if(basic.isTupleMemberAccess(fun)) {
 			return static_pointer_cast<const CallExpr>(builder.accessComponent(args.at(0), args.at(1)));
 		}
 		
-		if(manager.getLangBasic().isRefAssign(fun)) {
+		if(refExt.isRefAssign(fun)) {
 			return builder.assign(args.at(0), args.at(1));
 		}
 		
-		if(manager.getLangBasic().isRefNew(fun)) {
+		if(refExt.isRefNew(fun)) {
 			return builder.refNew(args.at(0));
 		}
 		
-		if(manager.getLangBasic().isRefVar(fun)) {
+		if(refExt.isRefVar(fun)) {
 			return builder.refVar(args.at(0));
 		}
 		
@@ -803,7 +805,7 @@ private:
 	virtual const NodePtr resolveElement(const NodePtr& ptr) {
 	
 		// check whether the element has been found
-		if(ptr->getNodeType() == NT_TypeVariable || ptr->getNodeType() == NT_VariableIntTypeParam) {
+		if(ptr->getNodeType() == NT_TypeVariable) {
 			return substitution->applyTo(manager, static_pointer_cast<const Type>(ptr));
 		}
 		
@@ -996,6 +998,7 @@ ExpressionPtr defaultCallExprTypeRecovery(const CallExprPtr& call) {
 	// check whether target of call is a literal
 	NodeManager& manager = call->getNodeManager();
 	const auto& basic = manager.getLangBasic();
+	const auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
 	if(lang::isBuiltIn(call->getFunctionExpr())) {
 		IRBuilder builder(manager);
 		
@@ -1004,16 +1007,16 @@ ExpressionPtr defaultCallExprTypeRecovery(const CallExprPtr& call) {
 		const ExpressionPtr& fun = call->getFunctionExpr().as<ExpressionPtr>();
 		
 		// deal with standard build-in funs
-		if(basic.isCompositeRefElem(fun) &&
-		        args[0]->getType().isa<RefTypePtr>() &&
-		        args[0]->getType().as<RefTypePtr>()->getElementType().isa<NamedCompositeTypePtr>()) {
+		if(refExt.isRefMemberAccess(fun) &&
+				analysis::isRefType(args[0]->getType()) &&
+		        analysis::getReferencedType(args[0]->getType()).isa<NamedCompositeTypePtr>()) {
 			return builder.refMember(args[0], args[1].as<LiteralPtr>()->getValue());
 		}
 		if(basic.isCompositeMemberAccess(fun) &&
 		        args[0]->getType().isa<NamedCompositeTypePtr>()) {
 			return builder.accessMember(args[0], args[1].as<LiteralPtr>()->getValue());
 		}
-		if(basic.isTupleRefElem(fun)) {
+		if(refExt.isRefComponentAccess(fun)) {
 			return builder.refComponent(args[0], args[1]);
 		}
 		if(basic.isTupleMemberAccess(fun)) {
@@ -1021,7 +1024,7 @@ ExpressionPtr defaultCallExprTypeRecovery(const CallExprPtr& call) {
 		}
 		
 		// eliminate unnecessary dereferencing
-		if(basic.isRefDeref(fun) && !analysis::isRefType(args[0]->getType())) {
+		if(refExt.isRefDeref(fun) && !analysis::isRefType(args[0]->getType())) {
 			return args[0];
 		}
 	}
@@ -1189,6 +1192,7 @@ TypeHandler getVarInitUpdater(NodeManager& manager) {
 		IRBuilder builder(manager);
 		StatementPtr res = node;
 		const lang::BasicGenerator& basic = builder.getLangBasic();
+		const lang::ReferenceExtension& refExt = manager.getLangExtension<lang::ReferenceExtension>();
 		
 		// update init undefined
 		if(const DeclarationStmtPtr& decl = dynamic_pointer_cast<const DeclarationStmt>(node)) {
@@ -1196,12 +1200,13 @@ TypeHandler getVarInitUpdater(NodeManager& manager) {
 				const VariablePtr& var = decl->getVariable();
 				const ExpressionPtr& fun = init->getFunctionExpr();
 				// handle ref variables
-				if((init->getType() != var->getType()) && (basic.isRefVar(fun) || basic.isRefNew(fun))) {
-					const RefTypePtr varTy = static_pointer_cast<const RefType>(var->getType());
+				if((init->getType() != var->getType()) && (refExt.isRefVar(fun) || refExt.isRefNew(fun))) {
+					auto varTy = var->getType();
+					auto elemTy = analysis::getReferencedType(varTy);
 					if(const CallExprPtr& undefined = dynamic_pointer_cast<const CallExpr>(init->getArgument(0))) {
 						if(basic.isUndefined(undefined->getFunctionExpr()))
-							res = builder.declarationStmt(var, builder.callExpr(varTy, fun, builder.callExpr(varTy->getElementType(),
-							basic.getUndefined(), builder.getTypeLiteral(varTy->getElementType()))));
+							res = builder.declarationStmt(var, builder.callExpr(varTy, fun, builder.callExpr(elemTy,
+							basic.getUndefined(), builder.getTypeLiteral(elemTy))));
 					}
 				}
 				// handle non ref variables

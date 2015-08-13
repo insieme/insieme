@@ -146,26 +146,28 @@ TEST(TypeUtils, IsSubTypeOf) {
 	TypePtr elemA = builder.genericType("A");
 	TypePtr elemB = builder.genericType("B");
 	
-	TypePtr vecA2 = builder.vectorType(elemA, builder.concreteIntTypeParam(2));
-	TypePtr vecA4 = builder.vectorType(elemA, builder.concreteIntTypeParam(4));
-	TypePtr vecB2 = builder.vectorType(elemB, builder.concreteIntTypeParam(2));
-	TypePtr vecB4 = builder.vectorType(elemB, builder.concreteIntTypeParam(4));
-	
-	TypePtr arrA1 = builder.arrayType(elemA);
-	TypePtr arrA2 = builder.arrayType(elemA, builder.concreteIntTypeParam(2));
-	TypePtr arrB1 = builder.arrayType(elemB);
-	TypePtr arrB2 = builder.arrayType(elemB, builder.concreteIntTypeParam(2));
-	
-	EXPECT_PRED2(isSubTypeOf, vecA2, vecA2);
-	EXPECT_PRED2(isSubTypeOf, vecA4, vecA4);
-	EXPECT_PRED2(isSubTypeOf, arrA1, arrA1);
-	EXPECT_PRED2(isSubTypeOf, arrA2, arrA2);
-	
-	EXPECT_PRED2(isSubTypeOf, vecA2, arrA1);
-	EXPECT_PRED2(isSubTypeOf, vecA4, arrA1);
-	
-	EXPECT_PRED2(isNotSubTypeOf, vecA2, arrA2);
-	EXPECT_PRED2(isNotSubTypeOf, vecA2, arrB1);
+	assert_not_implemented() << "Update this to the new array type!";
+//
+//	TypePtr vecA2 = builder.vectorType(elemA, builder.concreteIntTypeParam(2));
+//	TypePtr vecA4 = builder.vectorType(elemA, builder.concreteIntTypeParam(4));
+//	TypePtr vecB2 = builder.vectorType(elemB, builder.concreteIntTypeParam(2));
+//	TypePtr vecB4 = builder.vectorType(elemB, builder.concreteIntTypeParam(4));
+//
+//	TypePtr arrA1 = builder.arrayType(elemA);
+//	TypePtr arrA2 = builder.arrayType(elemA, builder.concreteIntTypeParam(2));
+//	TypePtr arrB1 = builder.arrayType(elemB);
+//	TypePtr arrB2 = builder.arrayType(elemB, builder.concreteIntTypeParam(2));
+//
+//	EXPECT_PRED2(isSubTypeOf, vecA2, vecA2);
+//	EXPECT_PRED2(isSubTypeOf, vecA4, vecA4);
+//	EXPECT_PRED2(isSubTypeOf, arrA1, arrA1);
+//	EXPECT_PRED2(isSubTypeOf, arrA2, arrA2);
+//
+//	EXPECT_PRED2(isSubTypeOf, vecA2, arrA1);
+//	EXPECT_PRED2(isSubTypeOf, vecA4, arrA1);
+//
+//	EXPECT_PRED2(isNotSubTypeOf, vecA2, arrA2);
+//	EXPECT_PRED2(isNotSubTypeOf, vecA2, arrB1);
 }
 
 TEST(TypeUtils, IsSubTypeOfRefType) {
@@ -216,95 +218,6 @@ TEST(TypeUtils, IsSubTypeOfRefType) {
 	EXPECT_PRED2(isNotSubTypeOf, refArray, refArray2);
 	
 }
-
-TEST(TypeUtils, SourceAndSink) {
-
-	NodeManager mgr;
-	IRBuilder builder(mgr);
-	const auto& basic = mgr.getLangBasic();
-	
-	TypePtr a = builder.genericType("A");
-	
-	TypePtr src = builder.refType(a, RK_SOURCE);
-	TypePtr ref = builder.refType(a, RK_REFERENCE);
-	TypePtr snk = builder.refType(a, RK_SINK);
-	
-	// symmetric
-	EXPECT_PRED2(isSubTypeOf, src, src);
-	EXPECT_PRED2(isSubTypeOf, ref, ref);
-	EXPECT_PRED2(isSubTypeOf, snk, snk);
-	
-	// ref is a sub-type of src and snk, but not the other way arround
-	EXPECT_PRED2(isSubTypeOf, ref, src);
-	EXPECT_PRED2(isSubTypeOf, ref, snk);
-	
-	EXPECT_PRED2(isNotSubTypeOf, src, ref);
-	EXPECT_PRED2(isNotSubTypeOf, snk, ref);
-	
-	// sink and source are unrelated
-	EXPECT_PRED2(isNotSubTypeOf, src, snk);
-	EXPECT_PRED2(isNotSubTypeOf, snk, src);
-	
-	
-	// and references to sub-types
-	TypePtr int4 = basic.getInt4();
-	TypePtr int8 = basic.getInt8();
-	
-	EXPECT_PRED2(isSubTypeOf, int4, int8);
-	EXPECT_PRED2(isNotSubTypeOf, int8, int4);
-	
-	TypePtr srcInt4 = builder.refType(int4, RK_SOURCE);
-	TypePtr srcInt8 = builder.refType(int8, RK_SOURCE);
-	TypePtr refInt4 = builder.refType(int4);
-	TypePtr refInt8 = builder.refType(int8);
-	TypePtr snkInt4 = builder.refType(int4, RK_SINK);
-	TypePtr snkInt8 = builder.refType(int8, RK_SINK);
-	
-	// what is supported
-	EXPECT_PRED2(isSubTypeOf, refInt4, srcInt4);
-	EXPECT_PRED2(isSubTypeOf, refInt8, srcInt8);
-	
-	EXPECT_PRED2(isSubTypeOf, refInt4, snkInt4);
-	EXPECT_PRED2(isSubTypeOf, refInt8, snkInt8);
-	
-	// what is not supported
-	EXPECT_PRED2(isNotSubTypeOf, refInt4, refInt8);
-	EXPECT_PRED2(isNotSubTypeOf, refInt8, refInt4);
-	
-	EXPECT_PRED2(isNotSubTypeOf, refInt8, srcInt4);
-	EXPECT_PRED2(isNotSubTypeOf, refInt8, snkInt4);
-	
-	EXPECT_PRED2(isNotSubTypeOf, refInt4, srcInt8);
-	EXPECT_PRED2(isNotSubTypeOf, refInt4, snkInt8);
-	
-}
-
-//TEST(TypeUtils, IsSubTypeOfTypeVariable) {
-//
-//	NodeManager manager;
-//	IRBuilder builder(manager);
-//	const lang::BasicGenerator& basic = manager.getLangBasic();
-//
-//	TypePtr typeA = builder.genericType("A");
-//	TypePtr int2 = basic.getInt2();
-//
-//	TypePtr varA = builder.typeVariable("a");
-//	TypePtr varB = builder.typeVariable("b");
-//
-//	EXPECT_PRED2(isSubTypeOf, varA, varA);
-//	EXPECT_PRED2(isSubTypeOf, varA, varB);
-//	EXPECT_PRED2(isSubTypeOf, varB, varA);
-//	EXPECT_PRED2(isSubTypeOf, varB, varB);
-//
-//	EXPECT_PRED2(isSubTypeOf, int2, varA);
-//	EXPECT_PRED2(isSubTypeOf, varA, int2);
-//
-//	EXPECT_PRED2(isSubTypeOf, int2, varA);
-//	EXPECT_PRED2(isSubTypeOf, varA, int2);
-//
-//	EXPECT_PRED2(isSubTypeOf, typeA, varA);
-//	EXPECT_PRED2(isSubTypeOf, varA, typeA);
-//}
 
 TEST(TypeUtils, IsSubTypeOfFunctionType) {
 
@@ -462,33 +375,35 @@ TEST(TypeUtils, JoinMeetTypeComputation) {
 	
 	EXPECT_PRED2(isSubTypeOf, meet, int4);
 	EXPECT_PRED2(isSubTypeOf, meet, uint4);
+
+	assert_not_implemented() << "Adapt to new array handling!";
 	
-	// test with vectors
-	TypePtr vectorA = builder.vectorType(int4, builder.concreteIntTypeParam(12));
-	TypePtr vectorB = builder.vectorType(int4, builder.concreteIntTypeParam(14));
-	
-	join = getSmallestCommonSuperType(vectorA, vectorB);
-	EXPECT_TRUE(join);
-	EXPECT_EQ("AP(array<int<4>,1>)", toString(join));
-	EXPECT_FALSE(getBiggestCommonSubType(vectorA, vectorB));
-	
-	EXPECT_EQ(vectorA, getSmallestCommonSuperType(vectorA, vectorA));
-	EXPECT_EQ(vectorA, getBiggestCommonSubType(vectorA, vectorA));
-	
-	// test some functions
-	TypePtr funA = builder.functionType(toVector(int4), int4);
-	TypePtr funB = builder.functionType(toVector(uint4), uint4);
-	
-	join = getSmallestCommonSuperType(funA, funB);
-	EXPECT_EQ("((uint<2>)->int<8>)", toString(*join));
-	meet = getBiggestCommonSubType(funA, funB);
-	EXPECT_EQ("((int<8>)->uint<2>)", toString(*meet));
-	
-	EXPECT_PRED2(isSubTypeOf, funA, join);
-	EXPECT_PRED2(isSubTypeOf, funB, join);
-	
-	EXPECT_PRED2(isSubTypeOf, meet, funA);
-	EXPECT_PRED2(isSubTypeOf, meet, funB);
+//	// test with vectors
+//	TypePtr vectorA = builder.vectorType(int4, builder.concreteIntTypeParam(12));
+//	TypePtr vectorB = builder.vectorType(int4, builder.concreteIntTypeParam(14));
+//
+//	join = getSmallestCommonSuperType(vectorA, vectorB);
+//	EXPECT_TRUE(join);
+//	EXPECT_EQ("AP(array<int<4>,1>)", toString(join));
+//	EXPECT_FALSE(getBiggestCommonSubType(vectorA, vectorB));
+//
+//	EXPECT_EQ(vectorA, getSmallestCommonSuperType(vectorA, vectorA));
+//	EXPECT_EQ(vectorA, getBiggestCommonSubType(vectorA, vectorA));
+//
+//	// test some functions
+//	TypePtr funA = builder.functionType(toVector(int4), int4);
+//	TypePtr funB = builder.functionType(toVector(uint4), uint4);
+//
+//	join = getSmallestCommonSuperType(funA, funB);
+//	EXPECT_EQ("((uint<2>)->int<8>)", toString(*join));
+//	meet = getBiggestCommonSubType(funA, funB);
+//	EXPECT_EQ("((int<8>)->uint<2>)", toString(*meet));
+//
+//	EXPECT_PRED2(isSubTypeOf, funA, join);
+//	EXPECT_PRED2(isSubTypeOf, funB, join);
+//
+//	EXPECT_PRED2(isSubTypeOf, meet, funA);
+//	EXPECT_PRED2(isSubTypeOf, meet, funB);
 	
 }
 

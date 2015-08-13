@@ -58,7 +58,7 @@ TEST(NodePointer, DynamicCast) {
 	EXPECT_TRUE(a.isa<LiteralPtr>());
 	a.as<LiteralPtr>();
 	
-	std::cout << node_type<Literal>::getName() << "\n";
+	EXPECT_EQ("Literal", toString(node_type<Literal>::getName()));
 	
 	// this should not work
 	// a.as<CallExprPtr>();
