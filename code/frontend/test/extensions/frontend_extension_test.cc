@@ -51,7 +51,7 @@
 #include "insieme/core/printer/pretty_printer.h"
 
 #include "insieme/utils/config.h"
-#include "insieme/frontend/convert.h"
+#include "insieme/frontend/converter.h"
 #include "insieme/frontend/utils/stmt_wrapper.h"
 
 #include "insieme/frontend/extensions/frontend_extension.h"
@@ -136,35 +136,35 @@ class ClangTestExtension : public insieme::frontend::extensions::FrontendExtensi
 	}
 
 	// TYPE VISITOR
-	virtual core::TypePtr Visit(const clang::QualType& type, frontend::conversion::Converter& convFact) {
+	virtual core::TypePtr Visit(const clang::QualType& type, frontend::conversion::Converter& converter) {
 		typeVisited = true;
 		return nullptr;
 	}
 
-	virtual insieme::core::TypePtr PostVisit(const clang::QualType& type, const insieme::core::TypePtr& irType, frontend::conversion::Converter& convFact) {
+	virtual insieme::core::TypePtr PostVisit(const clang::QualType& type, const insieme::core::TypePtr& irType, frontend::conversion::Converter& converter) {
 		postTypeVisited = true;
 		return irType;
 	}
 
 	// EXPR VISITOR
-	virtual core::ExpressionPtr Visit(const clang::Expr* expr, frontend::conversion::Converter& convFact) {
+	virtual core::ExpressionPtr Visit(const clang::Expr* expr, frontend::conversion::Converter& converter) {
 		exprVisited = true;
 		return nullptr;
 	}
 
 	virtual insieme::core::ExpressionPtr PostVisit(const clang::Expr* expr, const insieme::core::ExpressionPtr& irExpr,
-	                                               frontend::conversion::Converter& convFact) {
+	                                               frontend::conversion::Converter& converter) {
 		postExprVisited = true;
 		return irExpr;
 	}
 
 	// STMT VISITOR
-	virtual stmtutils::StmtWrapper Visit(const clang::Stmt* stmt, insieme::frontend::conversion::Converter& convFact) {
+	virtual stmtutils::StmtWrapper Visit(const clang::Stmt* stmt, insieme::frontend::conversion::Converter& converter) {
 		stmtVisited = true;
 		return stmtutils::StmtWrapper();
 	}
 
-	virtual stmtutils::StmtWrapper PostVisit(const clang::Stmt* stmt, const stmtutils::StmtWrapper& irStmt, frontend::conversion::Converter& convFact) {
+	virtual stmtutils::StmtWrapper PostVisit(const clang::Stmt* stmt, const stmtutils::StmtWrapper& irStmt, frontend::conversion::Converter& converter) {
 		postStmtVisited = true;
 		return irStmt;
 	}
@@ -386,33 +386,33 @@ int funcsPre, funsPost;
 int typesPre, typesPost;
 
 struct DeclVistors : public insieme::frontend::extensions::FrontendExtension {
-	virtual core::ExpressionPtr FuncDeclVisit(const clang::FunctionDecl* decl, frontend::conversion::Converter& convFact, bool symbolic) {
+	virtual core::ExpressionPtr FuncDeclVisit(const clang::FunctionDecl* decl, frontend::conversion::Converter& converter, bool symbolic) {
 		funcsPre++;
 		return nullptr;
 	}
 
-	virtual core::ExpressionPtr ValueDeclVisit(const clang::ValueDecl* decl, frontend::conversion::Converter& convFact) {
+	virtual core::ExpressionPtr ValueDeclVisit(const clang::ValueDecl* decl, frontend::conversion::Converter& converter) {
 		varsPre++;
 		return nullptr;
 	}
 
-	virtual core::TypePtr TypeDeclVisit(const clang::TypeDecl* decl, frontend::conversion::Converter& convFact) {
+	virtual core::TypePtr TypeDeclVisit(const clang::TypeDecl* decl, frontend::conversion::Converter& converter) {
 		typesPre++;
 		return nullptr;
 	}
 
-	virtual core::ExpressionPtr FuncDeclPostVisit(const clang::FunctionDecl* decl, core::ExpressionPtr expr, frontend::conversion::Converter& convFact,
+	virtual core::ExpressionPtr FuncDeclPostVisit(const clang::FunctionDecl* decl, core::ExpressionPtr expr, frontend::conversion::Converter& converter,
 	                                              bool symbolic) {
 		funsPost++;
 		return nullptr;
 	}
 
-	virtual core::ExpressionPtr ValueDeclPostVisit(const clang::ValueDecl* decl, core::ExpressionPtr expr, frontend::conversion::Converter& convFact) {
+	virtual core::ExpressionPtr ValueDeclPostVisit(const clang::ValueDecl* decl, core::ExpressionPtr expr, frontend::conversion::Converter& converter) {
 		varsPost++;
 		return nullptr;
 	}
 
-	virtual core::TypePtr TypeDeclPostVisit(const clang::TypeDecl* decl, core::TypePtr type, frontend::conversion::Converter& convFact) {
+	virtual core::TypePtr TypeDeclPostVisit(const clang::TypeDecl* decl, core::TypePtr type, frontend::conversion::Converter& converter) {
 		typesPost++;
 		return nullptr;
 	}

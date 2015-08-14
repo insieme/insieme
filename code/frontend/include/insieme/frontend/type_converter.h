@@ -36,7 +36,7 @@
 
 #pragma once
 
-#include "insieme/frontend/convert.h"
+#include "insieme/frontend/converter.h"
 
 #include "insieme/frontend/clang.h"
 
@@ -56,7 +56,7 @@ namespace conversion {
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	class Converter::TypeConverter {
 	  protected:
-		Converter& convFact;
+		Converter& converter;
 		core::NodeManager& mgr;
 		const core::IRBuilder& builder;
 		const core::lang::BasicGenerator& basic;

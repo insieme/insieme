@@ -34,33 +34,21 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include "insieme/frontend/state/variable_manager.h"
 
-#include "insieme/core/lang/extension.h"
+#include "insieme/frontend/decl_converter.h"
+
+#include "insieme/utils/container_utils.h"
 
 namespace insieme {
-namespace core {
-namespace lang {
+namespace frontend {
+namespace state {
 
-//	/**
-//	 */
-//	class ParallelExtension : public core::lang::Extension {
-//		/**
-//		 * Allow the node manager to create instances of this class.
-//		 */
-//		friend class core::NodeManager;
-//
-//		/**
-//		 * Creates a new instance based on the given node manager.
-//		 */
-//		ParallelExtension(core::NodeManager& manager) : core::lang::Extension(manager) {
-//			std::cout << "You are in the B-Team!!\n";
-//		}
-//
-//	  public:
-//		// An extension representing a busy waiting loop
-//		LANG_EXT_DERIVED(BusyLoop, "lambda (()=>bool condition) -> unit { while(condition()) { } }");
-//	};
-}
-}
-}
+	core::VariablePtr VariableManager::lookupOrInsert(const clang::VarDecl* varDecl) {
+		if(!::containsKey(storage, varDecl)) { storage[varDecl] = converter.getDeclConverter()->convertVarDecl(varDecl); }
+		return storage[varDecl];
+	}
+
+} // end namespace state
+} // end namespace frontend
+} // end namespace insieme

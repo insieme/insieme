@@ -38,21 +38,23 @@
 
 #include <boost/format.hpp>
 
-#include "insieme/frontend/convert.h"
+#include "insieme/frontend/converter.h"
 
 #include "insieme/frontend/analysis/prunable_decl_visitor.h"
 #include "insieme/frontend/clang.h"
-#include "insieme/frontend/stmt_converter.h"
+#include "insieme/frontend/decl_converter.h"
 #include "insieme/frontend/expr_converter.h"
-#include "insieme/frontend/type_converter.h"
-#include "insieme/frontend/utils/clang_cast.h"
-#include "insieme/frontend/utils/name_manager.h"
-#include "insieme/frontend/utils/error_report.h"
-#include "insieme/frontend/utils/debug.h"
-#include "insieme/frontend/utils/header_tagger.h"
-#include "insieme/frontend/utils/source_locations.h"
-#include "insieme/frontend/utils/macros.h"
 #include "insieme/frontend/omp/omp_annotation.h"
+#include "insieme/frontend/stmt_converter.h"
+#include "insieme/frontend/type_converter.h"
+#include "insieme/frontend/state/variable_manager.h"
+#include "insieme/frontend/utils/clang_cast.h"
+#include "insieme/frontend/utils/debug.h"
+#include "insieme/frontend/utils/error_report.h"
+#include "insieme/frontend/utils/header_tagger.h"
+#include "insieme/frontend/utils/macros.h"
+#include "insieme/frontend/utils/name_manager.h"
+#include "insieme/frontend/utils/source_locations.h"
 
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/numeric_cast.h"
@@ -84,8 +86,6 @@
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/types/subtyping.h"
 
-#include "insieme/annotations/c/extern.h"
-#include "insieme/annotations/c/extern_c.h"
 #include "insieme/annotations/c/include.h"
 
 using namespace clang;
@@ -115,6 +115,8 @@ namespace conversion {
 	Converter::Converter(core::NodeManager& mgr, const TranslationUnit& tu, const ConversionSetup& setup)
 		: translationUnit(tu), convSetup(setup), pragmaMap(translationUnit.pragmas_begin(), translationUnit.pragmas_end()),
 		  mgr(mgr), builder(mgr), feIR(mgr, getCompiler().isCXX()), irTranslationUnit(mgr) {
+		varManPtr = std::make_shared<state::VariableManager>(*this);
+		declConvPtr = std::make_shared<DeclConverter>(*this);
 		if (translationUnit.isCxx()) {
 			typeConvPtr = std::make_shared<CXXTypeConverter>(*this);
 			exprConvPtr = std::make_shared<CXXExprConverter>(*this);
@@ -152,107 +154,7 @@ namespace conversion {
 	
 		// collect all type definitions
 		auto declContext = clang::TranslationUnitDecl::castToDeclContext(getCompiler().getASTContext().getTranslationUnitDecl());
-	
-		struct TypeVisitor : public analysis::PrunableDeclVisitor<TypeVisitor> {
-	
-			Converter& converter;
-			TypeVisitor(Converter& converter) : converter(converter) {}
-		
-			Converter& getConverter() {
-				return converter;
-			}
-		
-			void VisitRecordDecl(const clang::RecordDecl* typeDecl) {
-				if(!typeDecl->isCompleteDefinition()) {
-					return;
-				}
-				if(typeDecl->isDependentType()) {
-					return;
-				}
-			
-				// we do not convert templates or partial specialized classes/functions, the full
-				// type will be found and converted once the instantiation is found
-				converter.trackSourceLocation(typeDecl);
-				converter.convertTypeDecl(typeDecl);
-				converter.untrackSourceLocation();
-			}
-			// typedefs and typealias
-			void VisitTypedefNameDecl(const clang::TypedefNameDecl* typedefDecl) {
-				if(!typedefDecl->getTypeForDecl()) {
-					return;
-				}
-			
-				// get contained type
-				converter.trackSourceLocation(typedefDecl);
-				converter.convertTypeDecl(typedefDecl);
-				converter.untrackSourceLocation();
-			}
-		} typeVisitor(*this);
-		typeVisitor.traverseDeclCtx(declContext);
-	
-		// collect all global declarations
-		struct GlobalVisitor : public analysis::PrunableDeclVisitor<GlobalVisitor> {
-	
-			Converter& converter;
-			GlobalVisitor(Converter& converter) : converter(converter) {}
-		
-			Converter& getConverter() {
-				return converter;
-			}
-		
-			void VisitVarDecl(const clang::VarDecl* var) {
-				// variables to be skipped
-				if(!var->hasGlobalStorage()) {
-					return;
-				}
-				if(var->hasExternalStorage()) {
-					return;
-				}
-				if(var->isStaticLocal()) {
-					return;
-				}
-			
-				converter.trackSourceLocation(var);
-				//converter.lookUpVariable(var);
-				converter.untrackSourceLocation();
-			}
-		} varVisitor(*this);
-		varVisitor.traverseDeclCtx(declContext);
-	
-		// collect all global declarations
-		struct FunctionVisitor : public analysis::PrunableDeclVisitor<FunctionVisitor> {
-	
-			Converter& converter;
-
-			bool externC;
-			FunctionVisitor(Converter& converter, bool Ccode)
-				: converter(converter), externC(Ccode) {
-			}
-		
-			Converter& getConverter() {
-				return converter;
-			}
-		
-			void VisitLinkageSpec(const clang::LinkageSpecDecl* link) {
-				bool isC =  link->getLanguage() == clang::LinkageSpecDecl::lang_c;
-				FunctionVisitor vis(converter, isC);
-				vis.traverseDeclCtx(llvm::cast<clang::DeclContext>(link));
-			}
-		
-			void VisitFunctionDecl(const clang::FunctionDecl* funcDecl) {
-				if(funcDecl->isTemplateDecl() && !funcDecl->isFunctionTemplateSpecialization()) {
-					return;
-				}
-			
-				converter.trackSourceLocation(funcDecl);
-				core::ExpressionPtr irFunc = converter.convertFunctionDecl(funcDecl);
-				converter.untrackSourceLocation();
-				if(externC) {
-					annotations::c::markAsExternC(irFunc.as<core::LiteralPtr>());
-				}
-			}
-		} funVisitor(*this, false);
-		funVisitor.traverseDeclCtx(declContext);
+		declConvPtr->VisitDeclContext(declContext);
 		
 		//std::cout << " ==================================== " << std::endl;
 		//std::cout << getIRTranslationUnit() << std::endl;
@@ -260,14 +162,6 @@ namespace conversion {
 	
 		// that's all
 		return irTranslationUnit;
-	}
-
-	core::ExpressionPtr Converter::convertFunctionDecl(const clang::FunctionDecl* funcDecl, bool symbolic) {
-		core::TypePtr funType = convertType(funcDecl->getType());
-		dumpColor(funType);
-		
-		assert_not_implemented();
-		return core::ExpressionPtr();
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -352,46 +246,10 @@ namespace conversion {
 		return stmtutils::tryAggregateStmts(builder, stmtConvPtr->Visit(const_cast<Stmt*>(stmt)));
 	}
 
-	core::TypePtr Converter::convertType(const clang::QualType& type) {
+	core::TypePtr Converter::convertType(const clang::QualType& type) const {
 		return typeConvPtr->convert(type);
 	}
-
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	//						TYPE DECLS
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-	void Converter::convertTypeDecl(const clang::TypeDecl* decl) {
-		assert_not_implemented();
-		//core::TypePtr res = nullptr;
-		//for(auto extension : this->getConversionSetup().getExtensions()) {
-		//	auto result = extension->Visit(decl, *this).as<core::TypePtr>();
-		//}
-
-		//if(!res) {
-		//	// trigger the actual conversion
-		//	res = convertType(decl->getTypeForDecl()->getCanonicalTypeInternal());
-		//}
-
-		//// frequently structs and their type definitions have the same name
-		//// in this case symbol == res and should be ignored
-		//if(const clang::TypedefDecl* typedefDecl = llvm::dyn_cast<clang::TypedefDecl>(decl)) {
-		//	auto symbol = builder.genericType(typedefDecl->getQualifiedNameAsString());
-		//	if(res != symbol && res.isa<core::NamedCompositeTypePtr>()) { // also: skip simple type-defs
-		//		getIRTranslationUnit().addType(symbol, res);
-		//	}
-		//}
-
-		//// handle pragmas
-		//core::NodeList list({res});
-		//list = pragma::attachPragma(list, decl, *this);
-		//assert_eq(1, list.size()) << "More than 1 node present";
-		//res = list.front().as<core::TypePtr>();
-
-		//for(auto extension : this->getConversionSetup().getExtensions()) {
-		//	extension->PostVisit(decl, res, *this);
-		//}
-	}
-	
+		
 } // End conversion namespace
 } // End frontend namespace
 } // End insieme namespace

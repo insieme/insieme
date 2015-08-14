@@ -69,30 +69,30 @@ namespace conversion {
 
 		// iterate clang handler list and check if a handler wants to convert the stmt
 		stmtutils::StmtWrapper retStmt;
-		for (auto extension : convFact.getConversionSetup().getExtensions()) {
-			retStmt = extension->Visit(stmt, convFact);
+		for (auto extension : converter.getConversionSetup().getExtensions()) {
+			retStmt = extension->Visit(stmt, converter);
 			if (retStmt.size()) { break; }
 		}
 		if (retStmt.size() == 0) {
-			convFact.trackSourceLocation(stmt);
+			converter.trackSourceLocation(stmt);
 			retStmt = StmtVisitor<CXXStmtConverter, stmtutils::StmtWrapper>::Visit(stmt);
-			convFact.untrackSourceLocation();
+			converter.untrackSourceLocation();
 		}
 
 		// print diagnosis messages
-		convFact.printDiagnosis(stmt->getLocStart());
+		converter.printDiagnosis(stmt->getLocStart());
 
 		// Deal with transformation pragmas
 		core::NodeList list(retStmt.begin(), retStmt.end());
-		list = pragma::attachPragma(list, stmt, convFact);
+		list = pragma::attachPragma(list, stmt, converter);
 		retStmt.clear();
 		for (const auto& e : list) {
 			retStmt.push_back(e.as<core::StatementPtr>());
 		}
 
 		// call frontend extension post visitors
-		for (auto extension : convFact.getConversionSetup().getExtensions()) {
-			retStmt = extension->PostVisit(stmt, retStmt, convFact);
+		for (auto extension : converter.getConversionSetup().getExtensions()) {
+			retStmt = extension->PostVisit(stmt, retStmt, converter);
 		}
 
 		return retStmt;
@@ -172,21 +172,21 @@ namespace conversion {
 
 		//	core::VariablePtr var;
 		//	if(const clang::VarDecl* exceptionVarDecl = catchStmt->getExceptionDecl()) {
-		//		core::TypePtr exceptionTy = convFact.convertType(catchStmt->getCaughtType());
+		//		core::TypePtr exceptionTy = converter.convertType(catchStmt->getCaughtType());
 
-		//		if(convFact.varDeclMap.find(exceptionVarDecl) != convFact.varDeclMap.end()) {
+		//		if(converter.varDeclMap.find(exceptionVarDecl) != converter.varDeclMap.end()) {
 		//			// static cast allowed here, because the insertion of
 		//			// exceptionVarDecls is exclusively done here
-		//			var = (convFact.varDeclMap[exceptionVarDecl]).as<core::VariablePtr>();
-		//			VLOG(2) << convFact.lookUpVariable(catchStmt->getExceptionDecl()).as<core::VariablePtr>();
+		//			var = (converter.varDeclMap[exceptionVarDecl]).as<core::VariablePtr>();
+		//			VLOG(2) << converter.lookUpVariable(catchStmt->getExceptionDecl()).as<core::VariablePtr>();
 		//		} else {
 		//			var = builder.variable(exceptionTy);
 
 		//			// we assume that exceptionVarDecl is not in the varDeclMap
-		//			frontend_assert(convFact.varDeclMap.find(exceptionVarDecl) == convFact.varDeclMap.end() && "excepionVarDecl already in vardeclmap");
+		//			frontend_assert(converter.varDeclMap.find(exceptionVarDecl) == converter.varDeclMap.end() && "excepionVarDecl already in vardeclmap");
 		//			// insert var to be used in conversion of handlerBlock
-		//			convFact.varDeclMap.insert({exceptionVarDecl, var});
-		//			VLOG(2) << convFact.lookUpVariable(catchStmt->getExceptionDecl()).as<core::VariablePtr>();
+		//			converter.varDeclMap.insert({exceptionVarDecl, var});
+		//			VLOG(2) << converter.lookUpVariable(catchStmt->getExceptionDecl()).as<core::VariablePtr>();
 		//		}
 		//	} else {
 		//		// no exceptiondecl indicates a catch-all (...)

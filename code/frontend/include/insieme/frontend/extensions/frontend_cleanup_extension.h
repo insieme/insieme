@@ -53,7 +53,7 @@ namespace extensions {
 		virtual boost::optional<std::string> isPrerequisiteMissing(ConversionSetup& setup) const;
 		virtual insieme::core::ProgramPtr IRVisit(insieme::core::ProgramPtr& prog);
 		virtual insieme::frontend::tu::IRTranslationUnit IRVisit(insieme::frontend::tu::IRTranslationUnit& tu);
-		virtual stmtutils::StmtWrapper PostVisit(const clang::Stmt* stmt, const stmtutils::StmtWrapper& irStmt, conversion::Converter& convFact);
+		virtual stmtutils::StmtWrapper PostVisit(const clang::Stmt* stmt, const stmtutils::StmtWrapper& irStmt, conversion::Converter& converter);
 	};
 
 } // extensions

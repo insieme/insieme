@@ -36,7 +36,7 @@
 
 #pragma once
 
-#include "insieme/frontend/convert.h"
+#include "insieme/frontend/converter.h"
 
 #include "insieme/frontend/clang.h"
 
@@ -49,7 +49,7 @@ namespace conversion {
 
 #define FORWARD_STMT_TO_EXPR_VISITOR_CALL(StmtTy)                                                                                                              \
 	stmtutils::StmtWrapper Visit##StmtTy(clang::StmtTy* stmt) {                                                                                                \
-		return stmtutils::StmtWrapper(convFact.convertExpr(stmt));                                                                                             \
+		return stmtutils::StmtWrapper(converter.convertExpr(stmt));                                                                                             \
 	}
 
 #define CALL_BASE_STMT_VISIT(Base, StmtTy)                                                                                                                     \
@@ -62,13 +62,13 @@ namespace conversion {
 	//---------------------------------------------------------------------------------------------------------------------
 	class Converter::StmtConverter {
 	  protected:
-		Converter& convFact;
+		Converter& converter;
 		core::NodeManager& mgr;
 		const core::IRBuilder& builder;
 		const core::lang::BasicGenerator& gen;
 
 	  public:
-		StmtConverter(Converter& convFact) : convFact(convFact), mgr(convFact.mgr), builder(convFact.builder), gen(convFact.mgr.getLangBasic()) {}
+		StmtConverter(Converter& converter) : converter(converter), mgr(converter.mgr), builder(converter.builder), gen(converter.mgr.getLangBasic()) {}
 
 		virtual ~StmtConverter() {}
 
@@ -158,10 +158,10 @@ namespace conversion {
 	//---------------------------------------------------------------------------------------------------------------------
 	class Converter::CStmtConverter : public Converter::StmtConverter, public clang::StmtVisitor<Converter::CStmtConverter, stmtutils::StmtWrapper> {
 	  protected:
-		// Converter& convFact;
+		// Converter& converter;
 
 	  public:
-		CStmtConverter(Converter& convFact) : StmtConverter(convFact) { /*, convFact(convFact)*/
+		CStmtConverter(Converter& converter) : StmtConverter(converter) { /*, converter(converter)*/
 		}
 		virtual ~CStmtConverter() {}
 

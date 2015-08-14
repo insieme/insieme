@@ -38,7 +38,7 @@
 
 #include "insieme/frontend/frontend.h"
 
-#include "insieme/frontend/convert.h"
+#include "insieme/frontend/converter.h"
 #include "insieme/frontend/omp/omp_annotation.h"
 #include "insieme/frontend/tu/ir_translation_unit.h"
 

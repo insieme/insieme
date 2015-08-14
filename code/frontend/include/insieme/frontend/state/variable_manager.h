@@ -36,33 +36,31 @@
 
 #pragma once
 
+#include <map>
+
+#include "insieme/frontend/converter.h"
+
 #include "insieme/core/forward_decls.h"
-#include "insieme/utils/pointer.h"
 
 namespace insieme {
-namespace core {
-namespace transform {
+namespace frontend {
+namespace state {
+	using namespace conversion;
 
-	namespace detail {
+	/// Manages variable identities from clang to its INSPIRE translation
+	class VariableManager {
+	private:
+		Converter& converter;
+		/// Internal storage for mappings from clang variable declarations to IR variables
+		///
+		std::map<const clang::VarDecl*, core::VariablePtr> storage;
 
-		static auto skipNone = [](const NodePtr& node) { return false; };
+	public:
+		VariableManager(Converter& converter) : converter(converter) {}
 
-		NodePtr instantiate(const NodePtr& root, std::function<bool(const core::NodePtr& node)> skip);
+		core::VariablePtr lookupOrInsert(const clang::VarDecl* varDecl);
+	};
 
-	} // end namespace detail
-
-	/**
-	 * A transformation which instantiates all type variables within the given code fragment
-	 * where concrete types can be deduced from the call parameters.
-	 *
-	 * @param root the node to start the instantiation from
-	 * @return IR with the same root node, with all deducible types instantiated
-	 */
-	template <typename T>
-	core::Pointer<T> instantiateTypes(const core::Pointer<T>& root, std::function<bool(const NodePtr& node)> skip = detail::skipNone) {
-		return static_pointer_cast<T>(detail::instantiate(root, skip));
-	}
-
-} // end namespace transform
-} // end namespace core
+} // end namespace state
+} // end namespace frontend
 } // end namespace insieme

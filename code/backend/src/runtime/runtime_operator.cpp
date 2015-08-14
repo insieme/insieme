@@ -48,7 +48,7 @@
 #include "insieme/backend/c_ast/c_code.h"
 #include "insieme/backend/c_ast/c_ast_utils.h"
 
-#include "insieme/core/lang/parallel_extension.h"
+#include "insieme/core/lang/parallel.h"
 #include "insieme/core/lang/instrumentation_extension.h"
 
 #include "insieme/core/transform/manipulation.h"

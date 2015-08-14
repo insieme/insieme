@@ -50,7 +50,7 @@
 
 #include "insieme/frontend/translation_unit.h"
 #include "insieme/utils/config.h"
-#include "insieme/frontend/convert.h"
+#include "insieme/frontend/converter.h"
 
 using namespace insieme::core;
 using namespace insieme::core::checks;
@@ -94,8 +94,8 @@ TEST(CppConversion, FileTest) {
 		// we use an internal manager to have private counter for variables so we can write independent tests
 		NodeManager mgr;
 
-		//		fe::conversion::ConversionFactory convFact( mgr, tu, true/*=isCXX*/ );
-		//		convFact.setTranslationUnit(&tu);
+		//		fe::conversion::ConversionFactory converter( mgr, tu, true/*=isCXX*/ );
+		//		converter.setTranslationUnit(&tu);
 		/*
 		        if(tp.isStatement()){
 		            const clang::Stmt* td = tp.getStatement();
@@ -107,7 +107,7 @@ TEST(CppConversion, FileTest) {
 		            if (declStmt->isSingleDecl() && llvm::isa<clang::VarDecl>(declStmt->getSingleDecl())) {
 		                stmtutils::StmtWrapper retList;
 		                const clang::VarDecl* varDecl = llvm::dyn_cast<clang::VarDecl>(declStmt->getSingleDecl());
-		                auto retStmt = convFact.convertVarDecl(varDecl);
+		                auto retStmt = converter.convertVarDecl(varDecl);
 		                EXPECT_EQ(tp.getExpected(), '\"' + getPrettyPrinted(retStmt) + '\"' );
 		                // do semantics checking
 		                checkSemanticErrors(retStmt);

@@ -37,7 +37,7 @@
 #pragma once
 
 #include "insieme/frontend/clang.h"
-#include "insieme/frontend/convert.h"
+#include "insieme/frontend/converter.h"
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/clang_cast.h"
 #include "insieme/frontend/utils/frontend_ir.h"
@@ -59,14 +59,14 @@ namespace conversion {
 	//---------------------------------------------------------------------------------------------------------------------
 	class Converter::ExprConverter {
 	  protected:
-		Converter& convFact;
+		Converter& converter;
 
 		core::NodeManager& mgr;
 		const core::FrontendIRBuilder& builder;
 		const core::lang::BasicGenerator& basic;
 
 	  public:
-		ExprConverter(Converter& convFact) : convFact(convFact), mgr(convFact.mgr), builder(convFact.builder), basic(convFact.builder.getLangBasic()) {}
+		ExprConverter(Converter& converter) : converter(converter), mgr(converter.mgr), builder(converter.builder), basic(converter.builder.getLangBasic()) {}
 		virtual ~ExprConverter() {}
 		
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -118,7 +118,7 @@ namespace conversion {
 	//---------------------------------------------------------------------------------------------------------------------
 	class Converter::CExprConverter : public ExprConverter, public clang::ConstStmtVisitor<CExprConverter, core::ExpressionPtr> {
 	  public:
-		CExprConverter(Converter& convFact) : ExprConverter(convFact) {}
+		CExprConverter(Converter& converter) : ExprConverter(converter) {}
 		virtual ~CExprConverter(){};
 
 		CALL_BASE_EXPR_VISIT(ExprConverter, IntegerLiteral)
