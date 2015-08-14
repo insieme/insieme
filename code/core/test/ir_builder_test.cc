@@ -147,5 +147,52 @@ namespace core {
 
 		EXPECT_EQ(2u, call->getArguments().size());
 	}
+
+
+	struct BuilderModule {
+		NodeManager& mgr;
+		BuilderModule(NodeManager& mgr) : mgr(mgr) {}
+	};
+
+	template<typename ... Modules>
+	struct Builder : public virtual Modules... {
+		Builder(NodeManager& mgr) : Modules(mgr)...  {}
+
+		int f() { return 0; };
+	};
+
+	struct DefaultBuilder : public Builder<> {
+		DefaultBuilder(NodeManager& mgr) : Builder<>(mgr) {}
+	};
+
+	struct ModuleA : public BuilderModule {
+		ModuleA(NodeManager& mgr) : BuilderModule(mgr) {}
+		int a() { return 0; };
+	};
+
+	struct ModuleB : public BuilderModule {
+		ModuleB(NodeManager& mgr) : BuilderModule(mgr) {}
+		int b() { return 0; };
+	};
+
+
+	TEST(BuilderTest, ModularStructure) {
+
+		NodeManager mgr;
+
+		DefaultBuilder builder(mgr);
+		builder.f();
+
+		Builder<ModuleA> builderA(mgr);
+		builderA.a();
+
+		Builder<ModuleA, ModuleB> builderAB(mgr);
+		builderAB.a();
+		builderAB.b();
+
+
+	}
+
+
 }
 }

@@ -82,7 +82,7 @@
 namespace insieme {
 namespace core {
 
-	const lang::BasicGenerator& IRBuilder::getLangBasic() const {
+	const lang::BasicGenerator& IRBuilderBaseModule::getLangBasic() const {
 		return manager.getLangBasic();
 	}
 
@@ -129,7 +129,7 @@ namespace core {
 	}
 
 
-	NodePtr IRBuilder::get(NodeType type, const NodeList& children) const {
+	NodePtr IRBuilderBaseModule::get(NodeType type, const NodeList& children) const {
 		switch(type) {
 		#define CONCRETE(KIND)                                                                                                                                 \
 			case NT_##KIND:                                                                                                                                    \
@@ -142,7 +142,7 @@ namespace core {
 		return NodePtr();
 	}
 
-	ProgramPtr IRBuilder::createProgram(const ExpressionList& entryPoints) const {
+	ProgramPtr IRBuilderBaseModule::createProgram(const ExpressionList& entryPoints) const {
 		return Program::get(manager, entryPoints);
 	}
 
@@ -151,69 +151,97 @@ namespace core {
 		/**
 		 * Converts a eager map into a lazy map.
 		 */
-		IRBuilder::lazy_definition_map toLazy(const IRBuilder::eager_definition_map& map) {
-			IRBuilder::lazy_definition_map res;
+		IRBuilderBaseModule::lazy_definition_map toLazy(const IRBuilderBaseModule::eager_definition_map& map) {
+			IRBuilderBaseModule::lazy_definition_map res;
 			for(const auto& cur : map) res.insert({cur.first, [=]() { return cur.second; }});
 			return res;
 		}
 
+		IRBuilderBaseModule::lazy_definition_map addStandardSymbols(NodeManager& mgr, const IRBuilderBaseModule::lazy_definition_map& init = IRBuilderBaseModule::lazy_definition_map()) {
+			IRBuilderBaseModule::lazy_definition_map res = init;
+
+			// load standard modules
+			for(const auto& cur : mgr.getLangExtension<lang::ArrayExtension>().getSymbols()) res.insert(cur);
+			for(const auto& cur : mgr.getLangExtension<lang::ReferenceExtension>().getSymbols()) res.insert(cur);
+			for(const auto& cur : mgr.getLangExtension<lang::ParallelExtension>().getSymbols()) res.insert(cur);
+			for(const auto& cur : mgr.getLangExtension<lang::PointerExtension>().getSymbols()) res.insert(cur);
+
+			// add initializer symbols (overrides standard if necessary)
+			for(const auto& cur : init) res.insert(cur);
+
+			// done
+			return res;
+		}
+
+		parser3::type_alias_map getStandardAliasMap(NodeManager& mgr) {
+			parser3::type_alias_map res;
+
+			// load standard modules
+			for(const auto& cur : mgr.getLangExtension<lang::ArrayExtension>().getTypeAliases()) res.insert(cur);
+			for(const auto& cur : mgr.getLangExtension<lang::ReferenceExtension>().getTypeAliases()) res.insert(cur);
+			for(const auto& cur : mgr.getLangExtension<lang::ParallelExtension>().getTypeAliases()) res.insert(cur);
+			for(const auto& cur : mgr.getLangExtension<lang::PointerExtension>().getTypeAliases()) res.insert(cur);
+
+			// done
+			return res;
+		}
 	}
 
 	// ---------------------------- Parser Integration -----------------------------------
 
-	NodePtr IRBuilder::parse(const string& code, const lazy_definition_map& symbols) const {
-		return parser3::parse_any(manager, code, true, symbols);
+	NodePtr IRBuilderBaseModule::parse(const string& code, const lazy_definition_map& symbols) const {
+		return parser3::parse_any(manager, code, true, addStandardSymbols(manager, symbols), getStandardAliasMap(manager));
 	}
 
-	NodePtr IRBuilder::parse(const string& code, const eager_definition_map& symbols) const {
+	NodePtr IRBuilderBaseModule::parse(const string& code, const eager_definition_map& symbols) const {
 		return parse(code, toLazy(symbols));
 	}
 
-	TypePtr IRBuilder::parseType(const string& code, const lazy_definition_map& symbols) const {
-		return parser3::parse_type(manager, code, true, symbols);
+	TypePtr IRBuilderBaseModule::parseType(const string& code, const lazy_definition_map& symbols) const {
+		return parser3::parse_type(manager, code, true, addStandardSymbols(manager, symbols), getStandardAliasMap(manager));
 	}
 
-	TypePtr IRBuilder::parseType(const string& code, const eager_definition_map& symbols) const {
+	TypePtr IRBuilderBaseModule::parseType(const string& code, const eager_definition_map& symbols) const {
 		return parseType(code, toLazy(symbols));
 	}
 
-	ExpressionPtr IRBuilder::parseExpr(const string& code, const lazy_definition_map& symbols) const {
-		return parser3::parse_expr(manager, code, true, symbols);
+	ExpressionPtr IRBuilderBaseModule::parseExpr(const string& code, const lazy_definition_map& symbols) const {
+		return parser3::parse_expr(manager, code, true, addStandardSymbols(manager, symbols), getStandardAliasMap(manager));
 	}
 
-	ExpressionPtr IRBuilder::parseExpr(const string& code, const eager_definition_map& symbols) const {
+	ExpressionPtr IRBuilderBaseModule::parseExpr(const string& code, const eager_definition_map& symbols) const {
 		return parseExpr(code, toLazy(symbols));
 	}
 
-	StatementPtr IRBuilder::parseStmt(const string& code, const lazy_definition_map& symbols) const {
-		return parser3::parse_stmt(manager, code, true, symbols);
+	StatementPtr IRBuilderBaseModule::parseStmt(const string& code, const lazy_definition_map& symbols) const {
+		return parser3::parse_stmt(manager, code, true, addStandardSymbols(manager, symbols), getStandardAliasMap(manager));
 	}
 
-	StatementPtr IRBuilder::parseStmt(const string& code, const eager_definition_map& symbols) const {
+	StatementPtr IRBuilderBaseModule::parseStmt(const string& code, const eager_definition_map& symbols) const {
 		return parseStmt(code, toLazy(symbols));
 	}
 
-	ProgramPtr IRBuilder::parseProgram(const string& code, const lazy_definition_map& symbols) const {
-		return parser3::parse_program(manager, code, true, symbols);
+	ProgramPtr IRBuilderBaseModule::parseProgram(const string& code, const lazy_definition_map& symbols) const {
+		return parser3::parse_program(manager, code, true, addStandardSymbols(manager, symbols), getStandardAliasMap(manager));
 	}
 
-	ProgramPtr IRBuilder::parseProgram(const string& code, const eager_definition_map& symbols) const {
+	ProgramPtr IRBuilderBaseModule::parseProgram(const string& code, const eager_definition_map& symbols) const {
 		return parseProgram(code, toLazy(symbols));
 	}
 
-	vector<NodeAddress> IRBuilder::parseAddressesStatement(const string& code, const lazy_definition_map& symbols) const {
-		return parser3::parse_addresses_statement(manager, code, true, symbols);
+	vector<NodeAddress> IRBuilderBaseModule::parseAddressesStatement(const string& code, const lazy_definition_map& symbols) const {
+		return parser3::parse_addresses_statement(manager, code, true, addStandardSymbols(manager, symbols), getStandardAliasMap(manager));
 	}
 
-	vector<NodeAddress> IRBuilder::parseAddressesStatement(const string& code, const eager_definition_map& symbols) const {
+	vector<NodeAddress> IRBuilderBaseModule::parseAddressesStatement(const string& code, const eager_definition_map& symbols) const {
 		return parseAddressesStatement(code, toLazy(symbols));
 	}
 
-	vector<NodeAddress> IRBuilder::parseAddressesProgram(const string& code, const lazy_definition_map& symbols) const {
-		return parser3::parse_addresses_program(manager, code, true, symbols);
+	vector<NodeAddress> IRBuilderBaseModule::parseAddressesProgram(const string& code, const lazy_definition_map& symbols) const {
+		return parser3::parse_addresses_program(manager, code, true, addStandardSymbols(manager, symbols), getStandardAliasMap(manager));
 	}
 
-	vector<NodeAddress> IRBuilder::parseAddressesProgram(const string& code, const eager_definition_map& symbols) const {
+	vector<NodeAddress> IRBuilderBaseModule::parseAddressesProgram(const string& code, const eager_definition_map& symbols) const {
 		return parseAddressesProgram(code, toLazy(symbols));
 	}
 
@@ -221,33 +249,33 @@ namespace core {
 
 	#include "ir_builder_impl.inl"
 
-	StringValuePtr IRBuilder::stringValue(const char* str) const {
+	StringValuePtr IRBuilderBaseModule::stringValue(const char* str) const {
 		return stringValue(string(str));
 	}
 
-	StringValuePtr IRBuilder::stringValue(const string& str) const {
+	StringValuePtr IRBuilderBaseModule::stringValue(const string& str) const {
 		return StringValue::get(manager, str);
 	}
 
-	BoolValuePtr IRBuilder::boolValue(bool value) const {
+	BoolValuePtr IRBuilderBaseModule::boolValue(bool value) const {
 		return BoolValue::get(manager, value);
 	}
 
-	CharValuePtr IRBuilder::charValue(char value) const {
+	CharValuePtr IRBuilderBaseModule::charValue(char value) const {
 		return CharValue::get(manager, value);
 	}
 
-	IntValuePtr IRBuilder::intValue(int value) const {
+	IntValuePtr IRBuilderBaseModule::intValue(int value) const {
 		return IntValue::get(manager, value);
 	}
 
-	UIntValuePtr IRBuilder::uintValue(unsigned value) const {
+	UIntValuePtr IRBuilderBaseModule::uintValue(unsigned value) const {
 		return UIntValue::get(manager, value);
 	}
 
 	// ---------------------------- Convenience -------------------------------------
 
-	bool IRBuilder::matchType(const std::string& typeStr, const core::TypePtr& irType) const {
+	bool IRBuilderBaseModule::matchType(const std::string& typeStr, const core::TypePtr& irType) const {
 		// the type used for caching parser results
 		struct ParserCache : public std::map<string, TypePtr> {};
 		typedef std::shared_ptr<ParserCache> ParserCachePtr;
@@ -273,78 +301,78 @@ namespace core {
 		return types::unify(manager, type, irType);
 	}
 
-	GenericTypePtr IRBuilder::refType(const TypePtr& elementType, bool _const, bool _volatile) const {
+	GenericTypePtr IRBuilderBaseModule::refType(const TypePtr& elementType, bool _const, bool _volatile) const {
 		return lang::ReferenceType::create(elementType, _const, _volatile);
 	}
 
-	GenericTypePtr IRBuilder::ptrType(const TypePtr& elementType, bool _const, bool _volatile) const {
+	GenericTypePtr IRBuilderBaseModule::ptrType(const TypePtr& elementType, bool _const, bool _volatile) const {
 		return lang::PointerType::create(elementType, _const, _volatile);
 	}
 
-	GenericTypePtr IRBuilder::arrayType(const TypePtr& elementType) const {
+	GenericTypePtr IRBuilderBaseModule::arrayType(const TypePtr& elementType) const {
 		return lang::ArrayType::create(elementType);
 	}
 
-	GenericTypePtr IRBuilder::arrayType(const TypePtr& elementType, const LiteralPtr& size) const {
+	GenericTypePtr IRBuilderBaseModule::arrayType(const TypePtr& elementType, const LiteralPtr& size) const {
 		return lang::ArrayType::create(elementType, size);
 	}
 
-	GenericTypePtr IRBuilder::arrayType(const TypePtr& elementType, const VariablePtr& size) const {
+	GenericTypePtr IRBuilderBaseModule::arrayType(const TypePtr& elementType, const VariablePtr& size) const {
 		return lang::ArrayType::create(elementType, size);
 	}
 
-	GenericTypePtr IRBuilder::arrayType(const TypePtr& elementType, size_t size) const {
+	GenericTypePtr IRBuilderBaseModule::arrayType(const TypePtr& elementType, size_t size) const {
 		return lang::ArrayType::create(elementType, literal(toString(size), getLangBasic().getUIntInf()));
 	}
 
 
-	StructTypePtr IRBuilder::structType(const vector<std::pair<StringValuePtr, TypePtr>>& entries) const {
+	StructTypePtr IRBuilderBaseModule::structType(const vector<std::pair<StringValuePtr, TypePtr>>& entries) const {
 		return structType(::transform(entries, [&](const pair<StringValuePtr, TypePtr>& cur) { return namedType(cur.first, cur.second); }));
 	}
 
-	UnionTypePtr IRBuilder::unionType(const vector<std::pair<StringValuePtr, TypePtr>>& entries) const {
+	UnionTypePtr IRBuilderBaseModule::unionType(const vector<std::pair<StringValuePtr, TypePtr>>& entries) const {
 		return unionType(::transform(entries, [&](const pair<StringValuePtr, TypePtr>& cur) { return namedType(cur.first, cur.second); }));
 	}
 
-	StructTypePtr IRBuilder::structType(const vector<ParentPtr>& parents, const vector<NamedTypePtr>& entries) const {
-		return structType(IRBuilder::parents(parents), entries);
+	StructTypePtr IRBuilderBaseModule::structType(const vector<ParentPtr>& parents, const vector<NamedTypePtr>& entries) const {
+		return structType(IRBuilderBaseModule::parents(parents), entries);
 	}
 
-	StructTypePtr IRBuilder::structType(const vector<TypePtr>& parents, const vector<NamedTypePtr>& entries) const {
-		return structType(IRBuilder::parents(parents), entries);
+	StructTypePtr IRBuilderBaseModule::structType(const vector<TypePtr>& parents, const vector<NamedTypePtr>& entries) const {
+		return structType(IRBuilderBaseModule::parents(parents), entries);
 	}
 
-	StructTypePtr IRBuilder::structType(const vector<ParentPtr>& parents, const vector<std::pair<StringValuePtr, TypePtr>>& entries) const {
+	StructTypePtr IRBuilderBaseModule::structType(const vector<ParentPtr>& parents, const vector<std::pair<StringValuePtr, TypePtr>>& entries) const {
 		return structType(parents, ::transform(entries, [&](const pair<StringValuePtr, TypePtr>& cur) { return namedType(cur.first, cur.second); }));
 	}
 
-	StructTypePtr IRBuilder::structType(const vector<TypePtr>& parents, const vector<std::pair<StringValuePtr, TypePtr>>& entries) const {
+	StructTypePtr IRBuilderBaseModule::structType(const vector<TypePtr>& parents, const vector<std::pair<StringValuePtr, TypePtr>>& entries) const {
 		return structType(parents, ::transform(entries, [&](const pair<StringValuePtr, TypePtr>& cur) { return namedType(cur.first, cur.second); }));
 	}
 
-	StructTypePtr IRBuilder::structType(const StringValuePtr& name, const vector<ParentPtr>& parentsList, const vector<NamedTypePtr>& entries) const {
+	StructTypePtr IRBuilderBaseModule::structType(const StringValuePtr& name, const vector<ParentPtr>& parentsList, const vector<NamedTypePtr>& entries) const {
 		return StructType::get(manager, name, parents(parentsList), entries);
 	}
 
 
-	NamedTypePtr IRBuilder::namedType(const string& name, const TypePtr& type) const {
+	NamedTypePtr IRBuilderBaseModule::namedType(const string& name, const TypePtr& type) const {
 		return namedType(stringValue(name), type);
 	}
 
-	NamedValuePtr IRBuilder::namedValue(const string& name, const ExpressionPtr& value) const {
+	NamedValuePtr IRBuilderBaseModule::namedValue(const string& name, const ExpressionPtr& value) const {
 		return namedValue(stringValue(name), value);
 	}
 
-	TupleExprPtr IRBuilder::tupleExpr(const vector<ExpressionPtr>& values) const {
+	TupleExprPtr IRBuilderBaseModule::tupleExpr(const vector<ExpressionPtr>& values) const {
 		TupleTypePtr type = tupleType(extractTypes(values));
 		return tupleExpr(type, Expressions::get(manager, values));
 	}
 
-	StructExprPtr IRBuilder::structExpr(const StructTypePtr& structType, const vector<NamedValuePtr>& values) const {
+	StructExprPtr IRBuilderBaseModule::structExpr(const StructTypePtr& structType, const vector<NamedValuePtr>& values) const {
 		return structExpr(structType, namedValues(values));
 	}
 
-	StructExprPtr IRBuilder::structExpr(const vector<std::pair<StringValuePtr, ExpressionPtr>>& members) const {
+	StructExprPtr IRBuilderBaseModule::structExpr(const vector<std::pair<StringValuePtr, ExpressionPtr>>& members) const {
 		vector<NamedTypePtr> types;
 		vector<NamedValuePtr> values;
 		for_each(members, [&](const pair<StringValuePtr, ExpressionPtr>& cur) {
@@ -354,32 +382,32 @@ namespace core {
 		return structExpr(structType(types), namedValues(values));
 	}
 
-	StructExprPtr IRBuilder::structExpr(const vector<NamedValuePtr>& values) const {
+	StructExprPtr IRBuilderBaseModule::structExpr(const vector<NamedValuePtr>& values) const {
 		vector<NamedTypePtr> types;
 		for_each(values, [&](const NamedValuePtr& cur) { types.push_back(namedType(cur->getName(), cur->getValue()->getType())); });
 		return structExpr(structType(types), namedValues(values));
 	}
 
 
-	IfStmtPtr IRBuilder::ifStmt(const ExpressionPtr& condition, const StatementPtr& thenBody, const StatementPtr& elseBody) const {
+	IfStmtPtr IRBuilderBaseModule::ifStmt(const ExpressionPtr& condition, const StatementPtr& thenBody, const StatementPtr& elseBody) const {
 		if(!elseBody) { return ifStmt(condition, wrapBody(thenBody), getNoOp()); }
 		return ifStmt(condition, wrapBody(thenBody), wrapBody(elseBody));
 	}
 
-	WhileStmtPtr IRBuilder::whileStmt(const ExpressionPtr& condition, const StatementPtr& body) const {
+	WhileStmtPtr IRBuilderBaseModule::whileStmt(const ExpressionPtr& condition, const StatementPtr& body) const {
 		return whileStmt(condition, wrapBody(body));
 	}
 
-	ForStmtPtr IRBuilder::forStmt(const DeclarationStmtPtr& var, const ExpressionPtr& end, const ExpressionPtr& step, const StatementPtr& body) const {
+	ForStmtPtr IRBuilderBaseModule::forStmt(const DeclarationStmtPtr& var, const ExpressionPtr& end, const ExpressionPtr& step, const StatementPtr& body) const {
 		return forStmt(var->getVariable(), var->getInitialization(), end, step, wrapBody(body));
 	}
 
-	ForStmtPtr IRBuilder::forStmt(const VariablePtr& var, const ExpressionPtr& start, const ExpressionPtr& end, const ExpressionPtr& step,
+	ForStmtPtr IRBuilderBaseModule::forStmt(const VariablePtr& var, const ExpressionPtr& start, const ExpressionPtr& end, const ExpressionPtr& step,
 	                              const StatementPtr& body) const {
 		return forStmt(var, start, end, step, wrapBody(body));
 	}
 
-	ExpressionPtr IRBuilder::forStmtFinalValue(const ForStmtPtr& loopStmt) {
+	ExpressionPtr IRBuilderBaseModule::forStmtFinalValue(const ForStmtPtr& loopStmt) {
 		assert_not_implemented() << "This hard-coded implementation should be reconsidered";
 
 		core::TypePtr iterType = (analysis::isRefType(loopStmt->getIterator()->getType())) ? analysis::getReferencedType(loopStmt->getIterator()->getType())
@@ -401,7 +429,7 @@ namespace core {
 		return finalVal;
 	}
 
-	SwitchStmtPtr IRBuilder::switchStmt(const ExpressionPtr& switchExpr, const vector<std::pair<ExpressionPtr, StatementPtr>>& cases,
+	SwitchStmtPtr IRBuilderBaseModule::switchStmt(const ExpressionPtr& switchExpr, const vector<std::pair<ExpressionPtr, StatementPtr>>& cases,
 	                                    const StatementPtr& defaultCase) const {
 		CompoundStmtPtr defCase = (defaultCase) ? wrapBody(defaultCase) : getNoOp();
 
@@ -411,22 +439,22 @@ namespace core {
 		return switchStmt(switchExpr, switchCases(caseList), defCase);
 	}
 
-	SwitchStmtPtr IRBuilder::switchStmt(const ExpressionPtr& switchExpr, const vector<SwitchCasePtr>& cases, const StatementPtr& defaultCase) const {
+	SwitchStmtPtr IRBuilderBaseModule::switchStmt(const ExpressionPtr& switchExpr, const vector<SwitchCasePtr>& cases, const StatementPtr& defaultCase) const {
 		return switchStmt(switchExpr, switchCases(cases), (defaultCase) ? wrapBody(defaultCase) : getNoOp());
 	}
 
-	FunctionTypePtr IRBuilder::toPlainFunctionType(const FunctionTypePtr& funType) const {
+	FunctionTypePtr IRBuilderBaseModule::toPlainFunctionType(const FunctionTypePtr& funType) const {
 		if(funType->isPlain()) { return funType; }
 		return functionType(funType->getParameterTypes(), funType->getReturnType(), FK_PLAIN);
 	}
 
-	FunctionTypePtr IRBuilder::toThickFunctionType(const FunctionTypePtr& funType) const {
+	FunctionTypePtr IRBuilderBaseModule::toThickFunctionType(const FunctionTypePtr& funType) const {
 		if(!funType->isPlain()) { return funType; }
 		return functionType(funType->getParameterTypes(), funType->getReturnType(), FK_CLOSURE);
 	}
 
 
-	LiteralPtr IRBuilder::stringLit(const string& str) const {
+	LiteralPtr IRBuilderBaseModule::stringLit(const string& str) const {
 		return literal(str, ptrType(getLangBasic().getChar(), true));
 	}
 
@@ -438,7 +466,7 @@ namespace core {
 		}
 	}
 
-	LiteralPtr IRBuilder::intLit(const int val, bool tight) const {
+	LiteralPtr IRBuilderBaseModule::intLit(const int val, bool tight) const {
 		if(!tight) { return literal(getLangBasic().getInt4(), toString(val)); }
 
 		TypePtr type;
@@ -452,7 +480,7 @@ namespace core {
 		return literal(type, toString(val));
 	}
 
-	LiteralPtr IRBuilder::uintLit(const unsigned int val, bool tight) const {
+	LiteralPtr IRBuilderBaseModule::uintLit(const unsigned int val, bool tight) const {
 		if(!tight) { return literal(getLangBasic().getUInt4(), toString(val)); }
 
 		TypePtr type;
@@ -466,20 +494,20 @@ namespace core {
 		return literal(type, toString(val));
 	}
 
-	LiteralPtr IRBuilder::integerLit(const int val, bool tight) const {
+	LiteralPtr IRBuilderBaseModule::integerLit(const int val, bool tight) const {
 		if(val < 0) { return intLit(val, tight); }
 		return uintLit((unsigned int)val, tight);
 	}
 
-	LiteralPtr IRBuilder::boolLit(bool value) const {
+	LiteralPtr IRBuilderBaseModule::boolLit(bool value) const {
 		return literal(getLangBasic().getBool(), (value) ? "true" : "false");
 	}
 
-	LiteralPtr IRBuilder::floatLit(const string& value) const {
+	LiteralPtr IRBuilderBaseModule::floatLit(const string& value) const {
 		return literal(getLangBasic().getReal4(), value);
 	}
 
-	LiteralPtr IRBuilder::floatLit(float value) const {
+	LiteralPtr IRBuilderBaseModule::floatLit(float value) const {
 		// special handling for de-normalized values
 		if(std::fpclassify(value) == FP_SUBNORMAL) { return floatLit(format("%a", value)); }
 
@@ -489,11 +517,11 @@ namespace core {
 		return floatLit(out.str());
 	}
 
-	LiteralPtr IRBuilder::doubleLit(const string& value) const {
+	LiteralPtr IRBuilderBaseModule::doubleLit(const string& value) const {
 		return literal(getLangBasic().getReal8(), value);
 	}
 
-	LiteralPtr IRBuilder::doubleLit(double value) const {
+	LiteralPtr IRBuilderBaseModule::doubleLit(double value) const {
 		// special handling for de-normalized values
 		if(std::fpclassify(value) == FP_SUBNORMAL) { return floatLit(format("%a", value)); }
 
@@ -503,11 +531,11 @@ namespace core {
 		return doubleLit(out.str());
 	}
 
-	ExpressionPtr IRBuilder::undefined(const TypePtr& type) const {
+	ExpressionPtr IRBuilderBaseModule::undefined(const TypePtr& type) const {
 		return callExpr(type, getLangBasic().getUndefined(), getTypeLiteral(type));
 	}
 
-	ExpressionPtr IRBuilder::undefinedVar(const TypePtr& type) const {
+	ExpressionPtr IRBuilderBaseModule::undefinedVar(const TypePtr& type) const {
 		if(analysis::isRefType(type)) {
 			core::TypePtr elementType = core::analysis::getReferencedType(type);
 			return refVar(undefined(elementType));
@@ -515,7 +543,7 @@ namespace core {
 		return undefined(type);
 	}
 
-	ExpressionPtr IRBuilder::undefinedNew(const TypePtr& type) const {
+	ExpressionPtr IRBuilderBaseModule::undefinedNew(const TypePtr& type) const {
 		if(analysis::isRefType(type)) {
 			core::TypePtr elementType = core::analysis::getReferencedType(type);
 			return refNew(undefined(elementType));
@@ -524,7 +552,7 @@ namespace core {
 	}
 
 
-	core::ExpressionPtr IRBuilder::getZero(const core::TypePtr& type) const {
+	core::ExpressionPtr IRBuilderBaseModule::getZero(const core::TypePtr& type) const {
 		// if it is an integer ...
 		if(manager.getLangBasic().isInt(type)) { return literal(type, "0"); }
 
@@ -599,7 +627,7 @@ namespace core {
 		return literal(type, "0");
 	}
 
-	ExpressionPtr IRBuilder::convert(const ExpressionPtr& src, const TypePtr& target) const {
+	ExpressionPtr IRBuilderBaseModule::convert(const ExpressionPtr& src, const TypePtr& target) const {
 		assert_true(src) << "Invalid null-input.";
 		if(*src->getType() == *target) return src;
 		assert_not_implemented() << "ToDo: implement conversions.";
@@ -607,47 +635,47 @@ namespace core {
 		return castExpr(target, src);
 	}
 
-	CallExprPtr IRBuilder::deref(const ExpressionPtr& subExpr) const {
+	CallExprPtr IRBuilderBaseModule::deref(const ExpressionPtr& subExpr) const {
 		assert_pred1(analysis::isRefType, subExpr->getType());
 		auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
 		return callExpr(analysis::getReferencedType(subExpr->getType()), refExt.getRefDeref(), subExpr);
 	}
 
-	ExpressionPtr IRBuilder::tryDeref(const ExpressionPtr& subExpr) const {
+	ExpressionPtr IRBuilderBaseModule::tryDeref(const ExpressionPtr& subExpr) const {
 		if(!analysis::isRefType(subExpr->getType())) { return subExpr; }
 		return deref(subExpr);
 	}
 
-	CallExprPtr IRBuilder::refVar(const ExpressionPtr& subExpr) const {
+	CallExprPtr IRBuilderBaseModule::refVar(const ExpressionPtr& subExpr) const {
 		auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
 		return callExpr(refType(subExpr->getType()), refExt.getRefVar(), subExpr);
 	}
 
-	CallExprPtr IRBuilder::refNew(const ExpressionPtr& subExpr) const {
+	CallExprPtr IRBuilderBaseModule::refNew(const ExpressionPtr& subExpr) const {
 		auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
 		return callExpr(refType(subExpr->getType()), refExt.getRefNew(), subExpr);
 	}
 
-	CallExprPtr IRBuilder::refDelete(const ExpressionPtr& subExpr) const {
+	CallExprPtr IRBuilderBaseModule::refDelete(const ExpressionPtr& subExpr) const {
 		auto& basic = manager.getLangBasic();
 		auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
 		return callExpr(basic.getUnit(), refExt.getRefDelete(), subExpr);
 	}
 
-	CallExprPtr IRBuilder::assign(const ExpressionPtr& target, const ExpressionPtr& value) const {
+	CallExprPtr IRBuilderBaseModule::assign(const ExpressionPtr& target, const ExpressionPtr& value) const {
 		assert_pred1(analysis::isRefType, target->getType());
 		auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
 		return callExpr(manager.getLangBasic().getUnit(), refExt.getRefAssign(), target, value);
 	}
 
-	ExpressionPtr IRBuilder::refReinterpret(const ExpressionPtr& subExpr, const TypePtr& newElementType) const {
+	ExpressionPtr IRBuilderBaseModule::refReinterpret(const ExpressionPtr& subExpr, const TypePtr& newElementType) const {
 		assert_pred1(analysis::isRefType, subExpr->getType());
 		auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
 		return callExpr(refType(newElementType), refExt.getRefReinterpret(), subExpr, getTypeLiteral(newElementType));
 	}
 
 
-	ExpressionPtr IRBuilder::invertSign(const ExpressionPtr& subExpr) const {
+	ExpressionPtr IRBuilderBaseModule::invertSign(const ExpressionPtr& subExpr) const {
 		// get the zero constant for this value
 		ExpressionPtr zero = getZero(subExpr->getType());
 
@@ -689,56 +717,56 @@ namespace core {
 		return callExpr(subExpr->getType(), manager.getLangBasic().getOperator(subExpr->getType(), lang::BasicGenerator::Sub), zero, subExpr);
 	}
 
-	ExpressionPtr IRBuilder::negateExpr(const ExpressionPtr& boolExpr) const {
+	ExpressionPtr IRBuilderBaseModule::negateExpr(const ExpressionPtr& boolExpr) const {
 		assert_true(manager.getLangBasic().isBool(boolExpr->getType())) << "Cannot negate a non boolean expression.";
 		return callExpr(manager.getLangBasic().getBool(), manager.getLangBasic().getBoolLNot(), boolExpr);
 	}
 
 
-	CallExprPtr IRBuilder::arraySubscript(const ExpressionPtr& array, const ExpressionPtr& index) const {
+	CallExprPtr IRBuilderBaseModule::arraySubscript(const ExpressionPtr& array, const ExpressionPtr& index) const {
 		assert_not_implemented();
 		return CallExprPtr();
 	}
-	CallExprPtr IRBuilder::arrayRefElem(const ExpressionPtr& array, const ExpressionPtr& index) const {
+	CallExprPtr IRBuilderBaseModule::arrayRefElem(const ExpressionPtr& array, const ExpressionPtr& index) const {
 		assert_not_implemented() << "Todo: implement";
 		return CallExprPtr();
 	}
 
-	CallExprPtr IRBuilder::arrayAccess(const ExpressionPtr& array, const ExpressionPtr& index) const {
+	CallExprPtr IRBuilderBaseModule::arrayAccess(const ExpressionPtr& array, const ExpressionPtr& index) const {
 		if(analysis::isRefType(array->getType())) { return arrayRefElem(array, index); }
 		return arraySubscript(array, index);
 	}
 
-	DeclarationStmtPtr IRBuilder::declarationStmt(const ExpressionPtr& value) const {
+	DeclarationStmtPtr IRBuilderBaseModule::declarationStmt(const ExpressionPtr& value) const {
 		return declarationStmt(value->getType(), value);
 	}
 
-	DeclarationStmtPtr IRBuilder::declarationStmt(const TypePtr& type, const ExpressionPtr& value) const {
+	DeclarationStmtPtr IRBuilderBaseModule::declarationStmt(const TypePtr& type, const ExpressionPtr& value) const {
 		return declarationStmt(variable(type), value);
 	}
 
 
-	CallExprPtr IRBuilder::acquireLock(const ExpressionPtr& lock) const {
+	CallExprPtr IRBuilderBaseModule::acquireLock(const ExpressionPtr& lock) const {
 		assert_true(analysis::isRefOf(lock, manager.getLangExtension<lang::ParallelExtension>().getLock())) << "Cannot lock a non-lock type.";
 		return callExpr(manager.getLangBasic().getUnit(), manager.getLangExtension<lang::ParallelExtension>().getLockAcquire(), lock);
 	}
-	CallExprPtr IRBuilder::releaseLock(const ExpressionPtr& lock) const {
+	CallExprPtr IRBuilderBaseModule::releaseLock(const ExpressionPtr& lock) const {
 		assert_true(analysis::isRefOf(lock, manager.getLangExtension<lang::ParallelExtension>().getLock())) << "Cannot unlock a non-lock type.";
 		return callExpr(manager.getLangBasic().getUnit(), manager.getLangExtension<lang::ParallelExtension>().getLockRelease(), lock);
 	}
-	CallExprPtr IRBuilder::initLock(const ExpressionPtr& lock) const {
+	CallExprPtr IRBuilderBaseModule::initLock(const ExpressionPtr& lock) const {
 		assert_true(analysis::isRefOf(lock, manager.getLangExtension<lang::ParallelExtension>().getLock())) << "Cannot init a non-lock type.";
 		return callExpr(manager.getLangBasic().getUnit(), manager.getLangExtension<lang::ParallelExtension>().getLockInit(), lock);
 	}
 
 
-	CallExprPtr IRBuilder::atomicOp(const ExpressionPtr& location, const ExpressionPtr& testFunc, const ExpressionPtr& replaceFunc) {
+	CallExprPtr IRBuilderBaseModule::atomicOp(const ExpressionPtr& location, const ExpressionPtr& testFunc, const ExpressionPtr& replaceFunc) {
 		assert_true(core::analysis::isRefType(location->getType())) << "Atomic must be applied on ref.";
 		// should also check types of testFunc and replaceFunc
 		return callExpr(analysis::getReferencedType(location->getType()), manager.getLangExtension<lang::ParallelExtension>().getAtomic(), location, testFunc, replaceFunc);
 	}
 
-	CallExprPtr IRBuilder::atomicAssignment(const CallExprPtr& assignment) {
+	CallExprPtr IRBuilderBaseModule::atomicAssignment(const CallExprPtr& assignment) {
 		// FIXME argument order
 		const auto& basic = manager.getLangBasic();
 		auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
@@ -765,13 +793,13 @@ namespace core {
 		return assignment;
 	}
 
-	CallExprPtr IRBuilder::atomicConditional(const IfStmtPtr& statement) {
+	CallExprPtr IRBuilderBaseModule::atomicConditional(const IfStmtPtr& statement) {
 		assert_fail() << "Not implemented";
 		return CallExprPtr();
 	}
 
 
-	CallExprPtr IRBuilder::pickVariant(const ExpressionList& variants) const {
+	CallExprPtr IRBuilderBaseModule::pickVariant(const ExpressionList& variants) const {
 		assert_false(variants.empty()) << "Variant list must not be empty!";
 		assert(all(variants, [&](const ExpressionPtr& cur) { return *cur->getType() == *variants[0]->getType(); })
 		       && "All options have to have the same type.");
@@ -779,7 +807,7 @@ namespace core {
 		                encoder::toIR<ExpressionList, encoder::DirectExprListConverter>(manager, variants));
 	}
 
-	CallExprPtr IRBuilder::pickInRange(const ExpressionPtr& id, const ExpressionPtr& max, const ExpressionPtr& qualLB, const ExpressionPtr& qualUB,
+	CallExprPtr IRBuilderBaseModule::pickInRange(const ExpressionPtr& id, const ExpressionPtr& max, const ExpressionPtr& qualLB, const ExpressionPtr& qualUB,
 	                                   const ExpressionPtr& qualS) const {
 		vector<ExpressionPtr> args;
 		args.push_back(id);
@@ -832,7 +860,7 @@ namespace core {
 		}
 
 
-		CallExprPtr createCall(const IRBuilder& builder, const TypePtr& resultType, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments) {
+		CallExprPtr createCall(const IRBuilderBaseModule& builder, const TypePtr& resultType, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments) {
 			// check user-specified return type - only when compiled in debug mode
 			// NOTE: the check returns true in any case, hence this assertion will never fail - its just a warning!
 			// TODO: make this check faster
@@ -843,50 +871,50 @@ namespace core {
 		}
 	}
 
-	CallExprPtr IRBuilder::callExpr(const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments) const {
+	CallExprPtr IRBuilderBaseModule::callExpr(const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments) const {
 		// use deduced return type to construct call
 		return callExpr(deduceReturnTypeForCall(functionExpr, arguments), functionExpr, arguments);
 	}
-	CallExprPtr IRBuilder::callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr) const {
+	CallExprPtr IRBuilderBaseModule::callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr) const {
 		return createCall(*this, resultType, functionExpr, toVector<ExpressionPtr>());
 	}
 
-	LambdaPtr IRBuilder::lambda(const FunctionTypePtr& type, const ParametersPtr& params, const StatementPtr& body) const {
+	LambdaPtr IRBuilderBaseModule::lambda(const FunctionTypePtr& type, const ParametersPtr& params, const StatementPtr& body) const {
 		return lambda(type, params, wrapBody(body));
 	}
 
-	LambdaPtr IRBuilder::lambda(const FunctionTypePtr& type, const VariableList& params, const StatementPtr& body) const {
+	LambdaPtr IRBuilderBaseModule::lambda(const FunctionTypePtr& type, const VariableList& params, const StatementPtr& body) const {
 		return lambda(type, params, wrapBody(body));
 	}
 
-	LambdaExprPtr IRBuilder::lambdaExpr(const StatementPtr& body, const ParametersPtr& params) const {
+	LambdaExprPtr IRBuilderBaseModule::lambdaExpr(const StatementPtr& body, const ParametersPtr& params) const {
 		return lambdaExpr(functionType(extractTypes(params->getParameters()), manager.getLangBasic().getUnit(), FK_PLAIN), params, wrapBody(body));
 	}
-	LambdaExprPtr IRBuilder::lambdaExpr(const StatementPtr& body, const VariableList& params) const {
+	LambdaExprPtr IRBuilderBaseModule::lambdaExpr(const StatementPtr& body, const VariableList& params) const {
 		return lambdaExpr(body, parameters(params));
 	}
-	LambdaExprPtr IRBuilder::lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const ParametersPtr& params) const {
+	LambdaExprPtr IRBuilderBaseModule::lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const ParametersPtr& params) const {
 		return lambdaExpr(functionType(extractTypes(params->getParameters()), returnType, FK_PLAIN), params, wrapBody(body));
 	}
-	LambdaExprPtr IRBuilder::lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const VariableList& params) const {
+	LambdaExprPtr IRBuilderBaseModule::lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const VariableList& params) const {
 		return lambdaExpr(returnType, body, parameters(params));
 	}
 
-	LambdaExprPtr IRBuilder::lambdaExpr(const FunctionTypePtr& type, const VariableList& params, const StatementPtr& body) const {
+	LambdaExprPtr IRBuilderBaseModule::lambdaExpr(const FunctionTypePtr& type, const VariableList& params, const StatementPtr& body) const {
 		return lambdaExpr(lambda(type, params, body));
 	}
 
-	BindExprPtr IRBuilder::bindExpr(const VariableList& params, const CallExprPtr& call) const {
+	BindExprPtr IRBuilderBaseModule::bindExpr(const VariableList& params, const CallExprPtr& call) const {
 		FunctionTypePtr type = functionType(extractTypes(params), call->getType(), FK_CLOSURE);
 		return bindExpr(type, parameters(params), call);
 	}
 
-	JobExprPtr IRBuilder::jobExpr(const ExpressionPtr& threadNumRange, const ExpressionPtr& body) const {
+	JobExprPtr IRBuilderBaseModule::jobExpr(const ExpressionPtr& threadNumRange, const ExpressionPtr& body) const {
 		GenericTypePtr type = static_pointer_cast<GenericTypePtr>(manager.getLangBasic().getJob());
 		return jobExpr(type, threadNumRange, body);
 	}
 
-	JobExprPtr IRBuilder::jobExpr(const ExpressionPtr& rangeLowerBound, const ExpressionPtr& rangeUpperBound, const ExpressionPtr& body) const {
+	JobExprPtr IRBuilderBaseModule::jobExpr(const ExpressionPtr& rangeLowerBound, const ExpressionPtr& rangeUpperBound, const ExpressionPtr& body) const {
 		GenericTypePtr type = static_pointer_cast<GenericTypePtr>(manager.getLangBasic().getJob());
 		const ExpressionPtr threadNumRange = getThreadNumRange(rangeLowerBound, rangeUpperBound);
 		return jobExpr(type, threadNumRange, body);
@@ -905,70 +933,70 @@ namespace core {
 		}
 	}
 
-	JobExprPtr IRBuilder::jobExpr(const StatementPtr& stmt, int numThreads) const {
+	JobExprPtr IRBuilderBaseModule::jobExpr(const StatementPtr& stmt, int numThreads) const {
 		ExpressionPtr jobBody = (isJobBody(stmt)) ? stmt.as<ExpressionPtr>() : transform::extractLambda(manager, stmt);
 
 		return jobExpr((numThreads < 1) ? getThreadNumRange(1) : getThreadNumRange(numThreads, numThreads), jobBody);
 	}
 
-	MarkerExprPtr IRBuilder::markerExpr(const ExpressionPtr& subExpr, unsigned id) const {
+	MarkerExprPtr IRBuilderBaseModule::markerExpr(const ExpressionPtr& subExpr, unsigned id) const {
 		return markerExpr(subExpr, uintValue(id));
 	}
 
-	MarkerExprPtr IRBuilder::markerExpr(const ExpressionPtr& subExpr, const UIntValuePtr& id) const {
+	MarkerExprPtr IRBuilderBaseModule::markerExpr(const ExpressionPtr& subExpr, const UIntValuePtr& id) const {
 		return markerExpr(id, subExpr);
 	}
 
-	MarkerStmtPtr IRBuilder::markerStmt(const StatementPtr& subStmt, unsigned id) const {
+	MarkerStmtPtr IRBuilderBaseModule::markerStmt(const StatementPtr& subStmt, unsigned id) const {
 		return markerStmt(subStmt, uintValue(id));
 	}
 
-	MarkerStmtPtr IRBuilder::markerStmt(const StatementPtr& subStmt, const UIntValuePtr& id) const {
+	MarkerStmtPtr IRBuilderBaseModule::markerStmt(const StatementPtr& subStmt, const UIntValuePtr& id) const {
 		return markerStmt(id, subStmt);
 	}
 
-	CallExprPtr IRBuilder::getThreadNumRange(unsigned min) const {
+	CallExprPtr IRBuilderBaseModule::getThreadNumRange(unsigned min) const {
 		TypePtr type = manager.getLangBasic().getUInt8();
 		return callExpr(manager.getLangExtension<lang::ParallelExtension>().getCreateMinRange(), literal(type, toString(min)));
 	}
-	CallExprPtr IRBuilder::getThreadNumRange(unsigned min, unsigned max) const {
+	CallExprPtr IRBuilderBaseModule::getThreadNumRange(unsigned min, unsigned max) const {
 		TypePtr type = manager.getLangBasic().getUInt8();
 		return callExpr(manager.getLangExtension<lang::ParallelExtension>().getCreateBoundRange(), literal(type, toString(min)), literal(type, toString(max)));
 	}
 
-	CallExprPtr IRBuilder::getThreadNumRange(const ExpressionPtr& min) const {
+	CallExprPtr IRBuilderBaseModule::getThreadNumRange(const ExpressionPtr& min) const {
 		TypePtr type = manager.getLangBasic().getUInt8();
 		return callExpr(manager.getLangExtension<lang::ParallelExtension>().getCreateMinRange(), convert(min, type));
 	}
-	CallExprPtr IRBuilder::getThreadNumRange(const ExpressionPtr& min, const ExpressionPtr& max) const {
+	CallExprPtr IRBuilderBaseModule::getThreadNumRange(const ExpressionPtr& min, const ExpressionPtr& max) const {
 		TypePtr type = manager.getLangBasic().getUInt8();
 		return callExpr(manager.getLangExtension<lang::ParallelExtension>().getCreateBoundRange(), convert(min, type), convert(max, type));
 	}
 
 
-	CallExprPtr IRBuilder::getThreadGroup(ExpressionPtr level) const {
+	CallExprPtr IRBuilderBaseModule::getThreadGroup(ExpressionPtr level) const {
 		if(!level) { level = uintLit(0); }
 		return callExpr(manager.getLangExtension<lang::ParallelExtension>().getGetThreadGroup(), level);
 	}
-	CallExprPtr IRBuilder::getThreadGroupSize(ExpressionPtr level) const {
+	CallExprPtr IRBuilderBaseModule::getThreadGroupSize(ExpressionPtr level) const {
 		if(!level) { level = uintLit(0); }
 		return callExpr(manager.getLangExtension<lang::ParallelExtension>().getGetGroupSize(), level);
 	}
-	CallExprPtr IRBuilder::getThreadId(ExpressionPtr level) const {
+	CallExprPtr IRBuilderBaseModule::getThreadId(ExpressionPtr level) const {
 		if(!level) { level = uintLit(0); }
 		return callExpr(manager.getLangExtension<lang::ParallelExtension>().getGetThreadId(), level);
 	}
 
-	CallExprPtr IRBuilder::barrier(ExpressionPtr threadgroup) const {
+	CallExprPtr IRBuilderBaseModule::barrier(ExpressionPtr threadgroup) const {
 		if(!threadgroup) { threadgroup = getThreadGroup(); }
 		return callExpr(manager.getLangExtension<lang::ParallelExtension>().getBarrier(), threadgroup);
 	}
 
-	CallExprPtr IRBuilder::mergeAll() const {
+	CallExprPtr IRBuilderBaseModule::mergeAll() const {
 		return callExpr(manager.getLangExtension<lang::ParallelExtension>().getMergeAll());
 	}
 
-	CallExprPtr IRBuilder::pfor(const ExpressionPtr& body, const ExpressionPtr& start, const ExpressionPtr& end, ExpressionPtr step) const {
+	CallExprPtr IRBuilderBaseModule::pfor(const ExpressionPtr& body, const ExpressionPtr& start, const ExpressionPtr& end, ExpressionPtr step) const {
 		if(!step) { step = uintLit(1); }
 		assert_true(manager.getLangBasic().isInt(start->getType()));
 		assert_true(manager.getLangBasic().isInt(end->getType()));
@@ -978,7 +1006,7 @@ namespace core {
 		return ret;
 	}
 
-	CallExprPtr IRBuilder::pfor(const ForStmtPtr& initialFor) const {
+	CallExprPtr IRBuilderBaseModule::pfor(const ForStmtPtr& initialFor) const {
 		auto loopStart = initialFor->getStart();
 		auto loopEnd = initialFor->getEnd();
 		auto loopStep = initialFor->getStep();
@@ -1000,12 +1028,12 @@ namespace core {
 		return pfor(lambda, loopStart, loopEnd, loopStep);
 	}
 
-	CallExprPtr IRBuilder::parallel(const StatementPtr& stmt, int numThreads) const {
+	CallExprPtr IRBuilderBaseModule::parallel(const StatementPtr& stmt, int numThreads) const {
 		auto& ext = manager.getLangExtension<lang::ParallelExtension>();
 		return callExpr(ext.getThreadGroup(), ext.getParallel(), jobExpr(stmt, numThreads));
 	}
 
-	core::ExpressionPtr IRBuilder::createCallExprFromBody(StatementPtr body, TypePtr retTy, bool lazy) const {
+	core::ExpressionPtr IRBuilderBaseModule::createCallExprFromBody(StatementPtr body, TypePtr retTy, bool lazy) const {
 		// Find the variables which are used in the body and not declared
 		std::vector<VariablePtr>&& args = getReachingVariables(body);
 
@@ -1059,11 +1087,11 @@ namespace core {
 		return bindExpr(std::vector<VariablePtr>(), callExpr);
 	}
 
-	CallExprPtr IRBuilder::accessMember(const ExpressionPtr& structExpr, const string& member) const {
+	CallExprPtr IRBuilderBaseModule::accessMember(const ExpressionPtr& structExpr, const string& member) const {
 		return accessMember(structExpr, stringValue(member));
 	}
 
-	CallExprPtr IRBuilder::accessMember(const ExpressionPtr& structExpr, const StringValuePtr& member) const {
+	CallExprPtr IRBuilderBaseModule::accessMember(const ExpressionPtr& structExpr, const StringValuePtr& member) const {
 		core::TypePtr type = structExpr->getType();
 		if(type->getNodeType() == core::NT_RecType) { type = core::static_pointer_cast<const core::RecType>(type)->unroll(type.getNodeManager()); }
 
@@ -1080,11 +1108,11 @@ namespace core {
 		return callExpr(memberType, access, structExpr, getIdentifierLiteral(member), getTypeLiteral(memberType));
 	}
 
-	CallExprPtr IRBuilder::refMember(const ExpressionPtr& structExpr, const string& member) const {
+	CallExprPtr IRBuilderBaseModule::refMember(const ExpressionPtr& structExpr, const string& member) const {
 		return refMember(structExpr, stringValue(member));
 	}
 
-	CallExprPtr IRBuilder::refMember(const ExpressionPtr& structExpr, const StringValuePtr& member) const {
+	CallExprPtr IRBuilderBaseModule::refMember(const ExpressionPtr& structExpr, const StringValuePtr& member) const {
 		core::TypePtr type = structExpr->getType();
 		assert_pred1(analysis::isRefType, type) << "Cannot deref non-ref type";
 
@@ -1105,7 +1133,7 @@ namespace core {
 		return callExpr(refType(memberType), access, structExpr, getIdentifierLiteral(member), getTypeLiteral(memberType));
 	}
 
-	CallExprPtr IRBuilder::refParent(const ExpressionPtr& structExpr, const TypePtr& parent) const {
+	CallExprPtr IRBuilderBaseModule::refParent(const ExpressionPtr& structExpr, const TypePtr& parent) const {
 		// check some pre-conditions
 		TypePtr type = structExpr->getType();
 		assert_pred1(analysis::isRefType, type) << "Cannot deref non-ref type";
@@ -1121,12 +1149,12 @@ namespace core {
 		return callExpr(resType, narrow, structExpr, dataPath, getTypeLiteral(parent));
 	}
 
-	CallExprPtr IRBuilder::accessComponent(ExpressionPtr tupleExpr, ExpressionPtr component) const {
+	CallExprPtr IRBuilderBaseModule::accessComponent(ExpressionPtr tupleExpr, ExpressionPtr component) const {
 		unsigned idx = extractNumberFromExpression(component);
 		return accessComponent(tupleExpr, idx);
 	}
 
-	CallExprPtr IRBuilder::accessComponent(ExpressionPtr tupleExpr, unsigned component) const {
+	CallExprPtr IRBuilderBaseModule::accessComponent(ExpressionPtr tupleExpr, unsigned component) const {
 		core::TypePtr type = tupleExpr->getType();
 		assert_eq(type->getNodeType(), core::NT_TupleType) << "Cannot access non-tuple type!";
 
@@ -1141,11 +1169,11 @@ namespace core {
 		return callExpr(componentType, access, tupleExpr, index, typeLiteral);
 	}
 
-	CallExprPtr IRBuilder::refComponent(ExpressionPtr tupleExpr, ExpressionPtr component) const {
+	CallExprPtr IRBuilderBaseModule::refComponent(ExpressionPtr tupleExpr, ExpressionPtr component) const {
 		unsigned idx = extractNumberFromExpression(component);
 		return refComponent(tupleExpr, idx);
 	}
-	CallExprPtr IRBuilder::refComponent(ExpressionPtr tupleExpr, unsigned component) const {
+	CallExprPtr IRBuilderBaseModule::refComponent(ExpressionPtr tupleExpr, unsigned component) const {
 		core::TypePtr type = tupleExpr->getType();
 		assert_pred1(analysis::isRefType, type) << "Cannot deref non ref type";
 
@@ -1164,32 +1192,32 @@ namespace core {
 	}
 
 
-	CompoundStmtPtr IRBuilder::getNoOp() const {
+	CompoundStmtPtr IRBuilderBaseModule::getNoOp() const {
 		return compoundStmt();
 	}
 
-	bool IRBuilder::isNoOp(const NodePtr& p) const {
+	bool IRBuilderBaseModule::isNoOp(const NodePtr& p) const {
 		return *p == *getNoOp();
 	}
 
-	TypePtr IRBuilder::getTypeLiteralType(const TypePtr& type) const {
+	TypePtr IRBuilderBaseModule::getTypeLiteralType(const TypePtr& type) const {
 		return genericType("type", toVector(type));
 	}
 
-	LiteralPtr IRBuilder::getTypeLiteral(const TypePtr& type) const {
+	LiteralPtr IRBuilderBaseModule::getTypeLiteral(const TypePtr& type) const {
 		auto literalType = getTypeLiteralType(type);
 		return literal(literalType, "type_literal");
 	}
 
-	LiteralPtr IRBuilder::getIdentifierLiteral(const string& value) const {
+	LiteralPtr IRBuilderBaseModule::getIdentifierLiteral(const string& value) const {
 		return getIdentifierLiteral(stringValue(value));
 	}
 
-	LiteralPtr IRBuilder::getIdentifierLiteral(const core::StringValuePtr& value) const {
+	LiteralPtr IRBuilderBaseModule::getIdentifierLiteral(const core::StringValuePtr& value) const {
 		return literal(getLangBasic().getIdentifier(), value);
 	}
 
-	ExpressionPtr IRBuilder::scalarToVector(const TypePtr& type, const ExpressionPtr& subExpr) const {
+	ExpressionPtr IRBuilderBaseModule::scalarToVector(const TypePtr& type, const ExpressionPtr& subExpr) const {
 		assert_not_implemented();
 		return ExpressionPtr();
 
@@ -1257,22 +1285,22 @@ namespace core {
 		}
 	}
 
-	TypePtr IRBuilder::infereExprType(const ExpressionPtr& op, const ExpressionPtr& a) const {
+	TypePtr IRBuilderBaseModule::infereExprType(const ExpressionPtr& op, const ExpressionPtr& a) const {
 		return infereExprTypeInternal(op, a);
 	}
 
-	TypePtr IRBuilder::infereExprType(const ExpressionPtr& op, const ExpressionPtr& a, const ExpressionPtr& b) const {
+	TypePtr IRBuilderBaseModule::infereExprType(const ExpressionPtr& op, const ExpressionPtr& a, const ExpressionPtr& b) const {
 		return infereExprTypeInternal(op, a, b);
 	}
 
-	TypePtr IRBuilder::infereExprType(const ExpressionPtr& op, const ExpressionPtr& a, const ExpressionPtr& b, const ExpressionPtr& c) const {
+	TypePtr IRBuilderBaseModule::infereExprType(const ExpressionPtr& op, const ExpressionPtr& a, const ExpressionPtr& b, const ExpressionPtr& c) const {
 		return infereExprTypeInternal(op, a, b, c);
 	}
 
 
 	namespace {
 
-		GenericTypePtr toSigned(const IRBuilder& builder, const GenericTypePtr& type) {
+		GenericTypePtr toSigned(const IRBuilderBaseModule& builder, const GenericTypePtr& type) {
 			assert_true(builder.getLangBasic().isScalarType(type)) << "Can not alter non-scalar type to signed!";
 
 			// check whether a modification is required
@@ -1285,7 +1313,7 @@ namespace core {
 	}
 
 
-	LiteralPtr IRBuilder::minus(const LiteralPtr& lit) const {
+	LiteralPtr IRBuilderBaseModule::minus(const LiteralPtr& lit) const {
 		assert_true(getLangBasic().isScalarType(lit->getType())) << "Can not change sign of non-scalar type!";
 
 		// update type of literal to support unsigned
@@ -1304,7 +1332,7 @@ namespace core {
 		return literal(value, type);
 	}
 
-	ExpressionPtr IRBuilder::minus(const ExpressionPtr& a) const {
+	ExpressionPtr IRBuilderBaseModule::minus(const ExpressionPtr& a) const {
 		assert_true(getLangBasic().isScalarType(a->getType())) << "Can not change sign of non-scalar type!";
 
 		// check literal type
@@ -1324,7 +1352,7 @@ namespace core {
 	// ---------------------------- Utilities ---------------------------------------
 
 
-	unsigned IRBuilder::extractNumberFromExpression(ExpressionPtr& expr) const {
+	unsigned IRBuilderBaseModule::extractNumberFromExpression(ExpressionPtr& expr) const {
 		unsigned idx = 0;
 		// search for the literal in the second argument
 		auto lambdaVisitor = makeLambdaVisitor([&idx, this](const NodePtr& node) -> bool {
@@ -1350,12 +1378,12 @@ namespace core {
 	/**
 	 * A utility function wrapping a given statement into a compound statement (if necessary).
 	 */
-	CompoundStmtPtr IRBuilder::wrapBody(const StatementPtr& stmt) const {
+	CompoundStmtPtr IRBuilderBaseModule::wrapBody(const StatementPtr& stmt) const {
 		if(stmt->getNodeType() == NT_CompoundStmt) { return static_pointer_cast<CompoundStmtPtr>(stmt); }
 		return CompoundStmt::get(stmt->getNodeManager(), stmt);
 	}
 
-	ExpressionPtr IRBuilder::wrapLazy(const ExpressionPtr& expr) const {
+	ExpressionPtr IRBuilderBaseModule::wrapLazy(const ExpressionPtr& expr) const {
 		// if it is a expression, bind free variables
 		VariableList list = analysis::getFreeVariables(expr);
 		std::sort(list.begin(), list.end(), compare_target<VariablePtr>());
@@ -1371,32 +1399,32 @@ namespace core {
 		return bindExpr(VariableList(), callExpr(expr->getType(), res, convertList<Expression>(list)));
 	}
 
-	CallExprPtr IRBuilder::print(const string& format, const ExpressionList& args) const {
+	CallExprPtr IRBuilderBaseModule::print(const string& format, const ExpressionList& args) const {
 		return print(stringLit(format), args);
 	}
 
-	CallExprPtr IRBuilder::print(const ExpressionPtr& format, const ExpressionList& args) const {
+	CallExprPtr IRBuilderBaseModule::print(const ExpressionPtr& format, const ExpressionList& args) const {
 		auto& basic = getLangBasic();
 		return callExpr(basic.getUnit(), basic.getPrint(), format, pack(args));
 	}
 
-	CallExprPtr IRBuilder::pack(const ExpressionList& values) const {
+	CallExprPtr IRBuilderBaseModule::pack(const ExpressionList& values) const {
 		auto& basic = getLangBasic();
 		return callExpr(basic.getVarList(), basic.getVarlistPack(), tupleExpr(values));
 	}
 
-	CallExprPtr IRBuilder::select(const ExpressionPtr& a, const ExpressionPtr& b, const ExpressionPtr& op) const {
+	CallExprPtr IRBuilderBaseModule::select(const ExpressionPtr& a, const ExpressionPtr& b, const ExpressionPtr& op) const {
 		const auto& basic = manager.getLangBasic();
 		const core::LiteralPtr& select = basic.getSelect();
 		return callExpr(infereExprType(select, a, b, op), select, a, b, op);
 	}
 
-	CallExprPtr IRBuilder::select(const ExpressionPtr& a, const ExpressionPtr& b, lang::BasicGenerator::Operator op) const {
+	CallExprPtr IRBuilderBaseModule::select(const ExpressionPtr& a, const ExpressionPtr& b, lang::BasicGenerator::Operator op) const {
 		return select(a, b, manager.getLangBasic().getOperator(a->getType(), op));
 	}
 
 	// helper for the pointwise operation
-	CallExprPtr IRBuilder::pointwise(const ExpressionPtr& callee) const {
+	CallExprPtr IRBuilderBaseModule::pointwise(const ExpressionPtr& callee) const {
 		assert_not_implemented();
 		return CallExprPtr();
 
@@ -1428,7 +1456,7 @@ namespace core {
 	}
 
 	// helper for accuraccy functions
-	CallExprPtr IRBuilder::accuracyHigh(const ExpressionPtr& callee) const {
+	CallExprPtr IRBuilderBaseModule::accuracyHigh(const ExpressionPtr& callee) const {
 		const FunctionTypePtr funTy = dynamic_pointer_cast<const FunctionType>(callee->getType());
 		assert_true(funTy) << "The argument of accuraccy high must be a function";
 		int nArgs = funTy->getParameterTypeList().size();
@@ -1437,7 +1465,7 @@ namespace core {
 		const auto& basic = manager.getLangBasic();
 		return nArgs == 1 ? callExpr(funTy, basic.getAccuracyFastUnary(), callee) : callExpr(funTy, basic.getAccuracyFastBinary(), callee);
 	}
-	CallExprPtr IRBuilder::accuracyBestEffort(const ExpressionPtr& callee) const {
+	CallExprPtr IRBuilderBaseModule::accuracyBestEffort(const ExpressionPtr& callee) const {
 		const FunctionTypePtr funTy = dynamic_pointer_cast<const FunctionType>(callee->getType());
 		assert_true(funTy) << "The argument of accuraccy best effort must be a function";
 		int nArgs = funTy->getParameterTypeList().size();
@@ -1446,7 +1474,7 @@ namespace core {
 		const auto& basic = manager.getLangBasic();
 		return nArgs == 1 ? callExpr(funTy, basic.getAccuracyBestEffortUnary(), callee) : callExpr(funTy, basic.getAccuracyBestEffortBinary(), callee);
 	}
-	CallExprPtr IRBuilder::accuracyFast(const ExpressionPtr& callee) const {
+	CallExprPtr IRBuilderBaseModule::accuracyFast(const ExpressionPtr& callee) const {
 		const FunctionTypePtr funTy = dynamic_pointer_cast<const FunctionType>(callee->getType());
 		assert_true(funTy) << "The argument of accuraccy fast must be a function";
 		int nArgs = funTy->getParameterTypeList().size();
@@ -1456,7 +1484,7 @@ namespace core {
 		return nArgs == 1 ? callExpr(basic.getAccuracyFastUnary(), callee) : callExpr(basic.getAccuracyFastBinary(), callee);
 	}
 
-	CallExprPtr IRBuilder::vectorPermute(const ExpressionPtr& dataVec, const ExpressionPtr& permutationVec) const {
+	CallExprPtr IRBuilderBaseModule::vectorPermute(const ExpressionPtr& dataVec, const ExpressionPtr& permutationVec) const {
 		assert_not_implemented();
 		return CallExprPtr();
 		//	const RefTypePtr refTy = dataVec->getType().isa<RefTypePtr>();

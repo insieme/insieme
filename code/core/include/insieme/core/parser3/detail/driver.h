@@ -314,6 +314,19 @@ namespace parser3 {
 			void using_scope_handle(const location& l, const std::vector<std::string>& extension_names);
 
 			/**
+			 * supports the import of all the symbols and aliases of an extension.
+			 */
+			void import_extension(const lang::Extension& extension);
+
+			/**
+			 * supports the import of an extension.
+			 */
+			template<typename Extension>
+			void import_extension() {
+				import_extension(mgr.getLangExtension<Extension>());
+			}
+
+			/**
 			 *  debug: prints location in parsed text
 			 */
 			void print_location(const location& l) const;

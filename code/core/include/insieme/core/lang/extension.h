@@ -269,11 +269,16 @@ namespace lang {
 	#define IMPORT_MODULE(NAME) \
 	  private: bool _module_##NAME##_import = importExtension<NAME>();
 
+
+	// Two auxiliary macros to concatenate tokens
+	#define __INSIEME_MACRO_ARGUMENT_CONCAT_DETAIL(X, Y) X##Y
+	#define __INSIEME_MACRO_ARGUMENT_CONCAT(X, Y) __INSIEME_MACRO_ARGUMENT_CONCAT_DETAIL(X, Y)
+
 	/**
 	 * A macro adding a type alias definition to this extension.
 	 */
 	#define TYPE_ALIAS(PATTERN,TYPE) \
-	  private : bool _alias__LINE__ = addAlias(PATTERN,TYPE);
+	  private : bool __INSIEME_MACRO_ARGUMENT_CONCAT(_alias_, __LINE__) = addAlias(PATTERN,TYPE);
 
 	/**
 	 * A macro supporting the simple declaration and definition of a type within a language extension

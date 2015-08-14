@@ -50,8 +50,10 @@
 
 #include "insieme/core/parser3/detail/scanner.h"
 
-#include "insieme/core/lang/extension.h"
 #include "insieme/core/lang/array.h"
+#include "insieme/core/lang/reference.h"
+#include "insieme/core/lang/parallel.h"
+#include "insieme/core/lang/pointer.h"
 
 // this last one is generated and the path will be provided to the command
 #include "inspire_parser.hpp"
@@ -122,7 +124,6 @@ namespace parser3 {
 		inspire_driver::inspire_driver(const std::string& str, NodeManager& mgr, const DeclarationContext& ctx)
 		    : scopes(ctx), mgr(mgr), builder(mgr), file("global scope"), str(str), result(nullptr), glob_loc(&file), ss(str), scanner(&ss),
 		      parser(*this, scanner), let_count(0), inhibit_building_count(false) {
-			// std::cout << "parse: " << str << std::endl;
 		}
 
 		inspire_driver::~inspire_driver() {}
@@ -818,13 +819,22 @@ namespace parser3 {
 			for(std::string extensionName : extension_names) {
 				extensionName.replace(0, 1, "");
 				extensionName.replace(extensionName.size() - 1, 1, "");
-
-				const lang::Extension& extension = mgr.getLangExtensionByName(extensionName);
-
-				for(const auto& cur : extension.getSymbols()) {
-					add_symb(l, cur.first, cur.second);
-				}
+				import_extension(mgr.getLangExtensionByName(extensionName));
 			}
+		}
+
+		void inspire_driver::import_extension(const lang::Extension& extension) {
+
+			// import symbols
+			for(const auto& cur : extension.getSymbols()) {
+				add_symb(cur.first, cur.second);
+			}
+
+			// import type aliases
+			for(const auto& cur : extension.getTypeAliases()) {
+				add_type_alias(cur.first, cur.second);
+			}
+
 		}
 
 		// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Debug tools  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
