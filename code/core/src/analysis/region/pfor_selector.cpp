@@ -40,6 +40,8 @@
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/lang/basic.h"
 
+#include "insieme/core/lang/parallel.h"
+
 namespace insieme {
 namespace core {
 namespace analysis {
@@ -47,7 +49,7 @@ namespace region {
 
 	RegionList PForBodySelector::getRegions(const core::NodePtr& node) const {
 		RegionList res;
-		auto pfor = node->getNodeManager().getLangBasic().getPFor();
+		auto pfor = node->getNodeManager().getLangExtension<lang::ParallelExtension>().getPFor();
 		core::visitDepthFirstPrunable(core::NodeAddress(node), [&](const core::CallExprAddress& cur) -> bool {
 			if(*cur.getAddressedNode()->getFunctionExpr() != *pfor) { return false; }
 			core::ExpressionAddress body = cur->getArgument(4);
@@ -61,7 +63,7 @@ namespace region {
 
 	RegionList PForSelector::getRegions(const core::NodePtr& node) const {
 		RegionList res;
-		auto pfor = node->getNodeManager().getLangBasic().getPFor();
+		auto pfor = node->getNodeManager().getLangExtension<lang::ParallelExtension>().getPFor();
 		core::visitDepthFirstPrunable(core::NodeAddress(node), [&](const core::CallExprAddress& cur) -> bool {
 			if(*cur.getAddressedNode()->getFunctionExpr() != *pfor) { return false; }
 			res.push_back(cur);

@@ -65,6 +65,8 @@
 #include "insieme/core/lang/static_vars.h"
 #include "insieme/core/lang/array.h"
 #include "insieme/core/lang/reference.h"
+#include "insieme/core/lang/parallel.h"
+#include "insieme/core/lang/pointer.h"
 
 #include "insieme/core/parser3/ir_parser.h"
 
@@ -276,7 +278,7 @@ namespace core {
 	}
 
 	GenericTypePtr IRBuilder::ptrType(const TypePtr& elementType, bool _const, bool _volatile) const {
-		assert_not_implemented();
+		return lang::PointerType::create(elementType, _const, _volatile);
 	}
 
 	GenericTypePtr IRBuilder::arrayType(const TypePtr& elementType) const {
@@ -292,7 +294,7 @@ namespace core {
 	}
 
 	GenericTypePtr IRBuilder::arrayType(const TypePtr& elementType, size_t size) const {
-		assert_not_implemented();
+		return lang::ArrayType::create(elementType, literal(toString(size), getLangBasic().getUIntInf()));
 	}
 
 
@@ -539,7 +541,7 @@ namespace core {
 		if(manager.getLangBasic().isChar(type)) { return literal(type, "' '"); }
 
 		// if it is a lock, keep it undefined
-		if(manager.getLangBasic().isLock(type)) { return undefined(type); }
+		if(manager.getLangExtension<lang::ParallelExtension>().isLock(type)) { return undefined(type); }
 
 		// if it is a struct ...
 		if(type->getNodeType() == core::NT_StructType) {
@@ -717,29 +719,30 @@ namespace core {
 
 
 	CallExprPtr IRBuilder::acquireLock(const ExpressionPtr& lock) const {
-		assert_true(analysis::isRefOf(lock, manager.getLangBasic().getLock())) << "Cannot lock a non-lock type.";
-		return callExpr(manager.getLangBasic().getUnit(), manager.getLangBasic().getLockAcquire(), lock);
+		assert_true(analysis::isRefOf(lock, manager.getLangExtension<lang::ParallelExtension>().getLock())) << "Cannot lock a non-lock type.";
+		return callExpr(manager.getLangBasic().getUnit(), manager.getLangExtension<lang::ParallelExtension>().getLockAcquire(), lock);
 	}
 	CallExprPtr IRBuilder::releaseLock(const ExpressionPtr& lock) const {
-		assert_true(analysis::isRefOf(lock, manager.getLangBasic().getLock())) << "Cannot unlock a non-lock type.";
-		return callExpr(manager.getLangBasic().getUnit(), manager.getLangBasic().getLockRelease(), lock);
+		assert_true(analysis::isRefOf(lock, manager.getLangExtension<lang::ParallelExtension>().getLock())) << "Cannot unlock a non-lock type.";
+		return callExpr(manager.getLangBasic().getUnit(), manager.getLangExtension<lang::ParallelExtension>().getLockRelease(), lock);
 	}
 	CallExprPtr IRBuilder::initLock(const ExpressionPtr& lock) const {
-		assert_true(analysis::isRefOf(lock, manager.getLangBasic().getLock())) << "Cannot init a non-lock type.";
-		return callExpr(manager.getLangBasic().getUnit(), manager.getLangBasic().getLockInit(), lock);
+		assert_true(analysis::isRefOf(lock, manager.getLangExtension<lang::ParallelExtension>().getLock())) << "Cannot init a non-lock type.";
+		return callExpr(manager.getLangBasic().getUnit(), manager.getLangExtension<lang::ParallelExtension>().getLockInit(), lock);
 	}
 
 
 	CallExprPtr IRBuilder::atomicOp(const ExpressionPtr& location, const ExpressionPtr& testFunc, const ExpressionPtr& replaceFunc) {
 		assert_true(core::analysis::isRefType(location->getType())) << "Atomic must be applied on ref.";
 		// should also check types of testFunc and replaceFunc
-		return callExpr(analysis::getReferencedType(location->getType()), manager.getLangBasic().getAtomic(), location, testFunc, replaceFunc);
+		return callExpr(analysis::getReferencedType(location->getType()), manager.getLangExtension<lang::ParallelExtension>().getAtomic(), location, testFunc, replaceFunc);
 	}
 
 	CallExprPtr IRBuilder::atomicAssignment(const CallExprPtr& assignment) {
 		// FIXME argument order
 		const auto& basic = manager.getLangBasic();
 		auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
+		auto& parExt = manager.getLangExtension<lang::ParallelExtension>();
 		assert_true(refExt.isRefAssign(assignment->getFunctionExpr())) << "Trying to build atomic assignment from non-assigment";
 
 		const auto &lhs = assignment->getArgument(0), &rhs = assignment->getArgument(1);
@@ -753,11 +756,11 @@ namespace core {
 		assert_true(factor) << "LHS not found in RHS of atomic assignment";
 
 		const auto& rhsFun = rhsCall->getFunctionExpr();
-		if(basic.isAddOp(rhsFun)) { return callExpr(factor->getType(), basic.getAtomicFetchAndAdd(), lhs, factor); }
-		if(basic.isSubOp(rhsFun)) { return callExpr(factor->getType(), basic.getAtomicFetchAndSub(), lhs, factor); }
-		if(basic.isBitwiseAndOp(rhsFun)) { return callExpr(factor->getType(), basic.getAtomicFetchAndAnd(), lhs, factor); }
-		if(basic.isBitwiseOrOp(rhsFun)) { return callExpr(factor->getType(), basic.getAtomicFetchAndOr(), lhs, factor); }
-		if(basic.isBitwiseXorOp(rhsFun)) { return callExpr(factor->getType(), basic.getAtomicFetchAndXor(), lhs, factor); }
+		if(basic.isAddOp(rhsFun)) { return callExpr(factor->getType(), parExt.getAtomicFetchAndAdd(), lhs, factor); }
+		if(basic.isSubOp(rhsFun)) { return callExpr(factor->getType(), parExt.getAtomicFetchAndSub(), lhs, factor); }
+		if(basic.isBitwiseAndOp(rhsFun)) { return callExpr(factor->getType(), parExt.getAtomicFetchAndAnd(), lhs, factor); }
+		if(basic.isBitwiseOrOp(rhsFun)) { return callExpr(factor->getType(), parExt.getAtomicFetchAndOr(), lhs, factor); }
+		if(basic.isBitwiseXorOp(rhsFun)) { return callExpr(factor->getType(), parExt.getAtomicFetchAndXor(), lhs, factor); }
 		assert_fail() << "Unsupported atomic operation";
 		return assignment;
 	}
@@ -926,43 +929,43 @@ namespace core {
 
 	CallExprPtr IRBuilder::getThreadNumRange(unsigned min) const {
 		TypePtr type = manager.getLangBasic().getUInt8();
-		return callExpr(manager.getLangBasic().getCreateMinRange(), literal(type, toString(min)));
+		return callExpr(manager.getLangExtension<lang::ParallelExtension>().getCreateMinRange(), literal(type, toString(min)));
 	}
 	CallExprPtr IRBuilder::getThreadNumRange(unsigned min, unsigned max) const {
 		TypePtr type = manager.getLangBasic().getUInt8();
-		return callExpr(manager.getLangBasic().getCreateBoundRange(), literal(type, toString(min)), literal(type, toString(max)));
+		return callExpr(manager.getLangExtension<lang::ParallelExtension>().getCreateBoundRange(), literal(type, toString(min)), literal(type, toString(max)));
 	}
 
 	CallExprPtr IRBuilder::getThreadNumRange(const ExpressionPtr& min) const {
 		TypePtr type = manager.getLangBasic().getUInt8();
-		return callExpr(manager.getLangBasic().getCreateMinRange(), convert(min, type));
+		return callExpr(manager.getLangExtension<lang::ParallelExtension>().getCreateMinRange(), convert(min, type));
 	}
 	CallExprPtr IRBuilder::getThreadNumRange(const ExpressionPtr& min, const ExpressionPtr& max) const {
 		TypePtr type = manager.getLangBasic().getUInt8();
-		return callExpr(manager.getLangBasic().getCreateBoundRange(), convert(min, type), convert(max, type));
+		return callExpr(manager.getLangExtension<lang::ParallelExtension>().getCreateBoundRange(), convert(min, type), convert(max, type));
 	}
 
 
 	CallExprPtr IRBuilder::getThreadGroup(ExpressionPtr level) const {
 		if(!level) { level = uintLit(0); }
-		return callExpr(manager.getLangBasic().getGetThreadGroup(), level);
+		return callExpr(manager.getLangExtension<lang::ParallelExtension>().getGetThreadGroup(), level);
 	}
 	CallExprPtr IRBuilder::getThreadGroupSize(ExpressionPtr level) const {
 		if(!level) { level = uintLit(0); }
-		return callExpr(manager.getLangBasic().getGetGroupSize(), level);
+		return callExpr(manager.getLangExtension<lang::ParallelExtension>().getGetGroupSize(), level);
 	}
 	CallExprPtr IRBuilder::getThreadId(ExpressionPtr level) const {
 		if(!level) { level = uintLit(0); }
-		return callExpr(manager.getLangBasic().getGetThreadId(), level);
+		return callExpr(manager.getLangExtension<lang::ParallelExtension>().getGetThreadId(), level);
 	}
 
 	CallExprPtr IRBuilder::barrier(ExpressionPtr threadgroup) const {
 		if(!threadgroup) { threadgroup = getThreadGroup(); }
-		return callExpr(manager.getLangBasic().getBarrier(), threadgroup);
+		return callExpr(manager.getLangExtension<lang::ParallelExtension>().getBarrier(), threadgroup);
 	}
 
 	CallExprPtr IRBuilder::mergeAll() const {
-		return callExpr(manager.getLangBasic().getMergeAll());
+		return callExpr(manager.getLangExtension<lang::ParallelExtension>().getMergeAll());
 	}
 
 	CallExprPtr IRBuilder::pfor(const ExpressionPtr& body, const ExpressionPtr& start, const ExpressionPtr& end, ExpressionPtr step) const {
@@ -970,7 +973,7 @@ namespace core {
 		assert_true(manager.getLangBasic().isInt(start->getType()));
 		assert_true(manager.getLangBasic().isInt(end->getType()));
 		assert_true(manager.getLangBasic().isInt(step->getType()));
-		auto ret = callExpr(getLangBasic().getUnit(), manager.getLangBasic().getPFor(), toVector<ExpressionPtr>(getThreadGroup(), start, end, step, body));
+		auto ret = callExpr(getLangBasic().getUnit(), manager.getLangExtension<lang::ParallelExtension>().getPFor(), toVector<ExpressionPtr>(getThreadGroup(), start, end, step, body));
 		// LOG(INFO) <<  "%%% generated pfor:\n "<< core::printer::PrettyPrinter(ret) << "\n";
 		return ret;
 	}
@@ -998,8 +1001,8 @@ namespace core {
 	}
 
 	CallExprPtr IRBuilder::parallel(const StatementPtr& stmt, int numThreads) const {
-		auto& basic = manager.getLangBasic();
-		return callExpr(basic.getThreadGroup(), basic.getParallel(), jobExpr(stmt, numThreads));
+		auto& ext = manager.getLangExtension<lang::ParallelExtension>();
+		return callExpr(ext.getThreadGroup(), ext.getParallel(), jobExpr(stmt, numThreads));
 	}
 
 	core::ExpressionPtr IRBuilder::createCallExprFromBody(StatementPtr body, TypePtr retTy, bool lazy) const {

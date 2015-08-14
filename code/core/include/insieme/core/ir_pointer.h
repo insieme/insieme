@@ -132,7 +132,7 @@ namespace core {
 		typedef StaticPointerCast StaticCast;
 		typedef DynamicPointerCast DynamicCast;
 
-		Pointer() : Ptr<T>(NULL) {}
+		Pointer() : Ptr<T>() {}
 
 		Pointer(T* ptr) : Ptr<T>(ptr) {}
 

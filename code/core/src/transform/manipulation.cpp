@@ -57,6 +57,8 @@
 
 #include "insieme/core/printer/pretty_printer.h"
 
+#include "insieme/core/lang/parallel.h"
+
 namespace insieme {
 namespace core {
 namespace transform {
@@ -1250,7 +1252,7 @@ namespace transform {
 
 				                   // some preparation
 				                   NodeManager& mgr = cur->getNodeManager();
-				                   auto& basic = mgr.getLangBasic();
+				                   auto& parExt = mgr.getLangExtension<lang::ParallelExtension>();
 				                   IRBuilder builder(mgr);
 				                   auto call = cur.as<CallExprPtr>();
 
@@ -1263,13 +1265,13 @@ namespace transform {
 					               };
 
 				                   // handle getThreadID
-				                   if(analysis::isCallOf(call, basic.getGetThreadId())) {
+				                   if(analysis::isCallOf(call, parExt.getGetThreadId())) {
 					                   if(ExpressionPtr newLevel = decLevel(call[0])) { return builder.getThreadId(newLevel); }
 					                   return idConstant;
 				                   }
 
 				                   // handle group size
-				                   if(analysis::isCallOf(call, basic.getGetGroupSize())) {
+				                   if(analysis::isCallOf(call, parExt.getGetGroupSize())) {
 					                   if(ExpressionPtr newLevel = decLevel(call[0])) { return builder.getThreadGroupSize(newLevel); }
 					                   return sizeConstant;
 				                   }
@@ -1339,7 +1341,7 @@ namespace transform {
 		NodeManager& mgr = job.getNodeManager();
 
 		// also, there must not be a re-distribute call => can not be supported
-		if(analysis::contains(job->getBody(), mgr.getLangBasic().getRedistribute())) { return fail; }
+		if(analysis::contains(job->getBody(), mgr.getLangExtension<lang::ParallelExtension>().getRedistribute())) { return fail; }
 
 		/**
 		 * Converts a job of the format

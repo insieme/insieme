@@ -42,6 +42,15 @@ namespace insieme {
 namespace core {
 namespace lang {
 
+	namespace {
+
+		bool isInf(const TypePtr& type) {
+			auto gen = type.isa<GenericTypePtr>();
+			return gen && gen->getFamilyName() == "inf" && gen->getParents().empty() && gen->getTypeParameter().empty();
+		}
+
+	}
+
 	ArrayType::ArrayType(const NodePtr& node) {
 		// check given node type
 		assert_true(node) << "Given node is null!";
@@ -72,18 +81,22 @@ namespace lang {
 	}
 
 	bool ArrayType::isFixedSizedArrayType(const NodePtr& node) {
-		assert_not_implemented();
-		return false;
+		// arrays that are with a constant numeric type parameter
+		return isArrayType(node) &&
+				node.as<GenericTypePtr>().getTypeParameter(1).isa<NumericTypePtr>() &&
+				node.as<GenericTypePtr>().getTypeParameter(1).as<NumericTypePtr>().isConstant() ;
 	}
 
 	bool ArrayType::isVariableSizedArrayType(const NodePtr& node) {
-		assert_not_implemented();
-		return false;
+		// arrays that are with a constant numeric type parameter
+		return isArrayType(node) &&
+				node.as<GenericTypePtr>().getTypeParameter(1).isa<NumericTypePtr>() &&
+				node.as<GenericTypePtr>().getTypeParameter(1).as<NumericTypePtr>().isVariable() ;
 	}
 
 	bool ArrayType::isUnknownSizedArrayType(const NodePtr& node) {
-		assert_not_implemented();
-		return false;
+		return isArrayType(node) &&
+				isInf(node.as<GenericTypePtr>().getTypeParameter(1));
 	}
 
 

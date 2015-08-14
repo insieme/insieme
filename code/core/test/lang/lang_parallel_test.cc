@@ -34,33 +34,21 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <gtest/gtest.h>
 
-#include "insieme/core/lang/extension.h"
+#include "insieme/core/lang/parallel.h"
+#include "insieme/core/test/test_utils.h"
 
 namespace insieme {
 namespace core {
 namespace lang {
 
-//	/**
-//	 */
-//	class ParallelExtension : public core::lang::Extension {
-//		/**
-//		 * Allow the node manager to create instances of this class.
-//		 */
-//		friend class core::NodeManager;
-//
-//		/**
-//		 * Creates a new instance based on the given node manager.
-//		 */
-//		ParallelExtension(core::NodeManager& manager) : core::lang::Extension(manager) {
-//			std::cout << "You are in the B-Team!!\n";
-//		}
-//
-//	  public:
-//		// An extension representing a busy waiting loop
-//		LANG_EXT_DERIVED(BusyLoop, "lambda (()=>bool condition) -> unit { while(condition()) { } }");
-//	};
-}
-}
-}
+	TEST(ParallelExtension, SemanticChecks) {
+		NodeManager nm;
+		auto& ext = nm.getLangExtension<ParallelExtension>();
+		semanticCheckSecond(ext.getDefinedSymbols());
+	}
+
+} // end namespace lang
+} // end namespace core
+} // end namespace insieme

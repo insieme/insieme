@@ -60,7 +60,7 @@
 #endif
 
 #include "insieme/core/lang/inspire_api/basic.def"
-#include "insieme/core/lang/inspire_api/parallel.def"
+//#include "insieme/core/lang/inspire_api/parallel.def"
 #include "insieme/core/lang/inspire_api/accuracy.def"
 #include "insieme/core/lang/inspire_api/deprecated.def"
 

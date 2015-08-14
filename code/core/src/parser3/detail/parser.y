@@ -75,6 +75,8 @@
     #include "insieme/core/annotations/naming.h"
     #include "insieme/core/analysis/ir_utils.h"
     #include "insieme/core/encoder/lists.h"
+	
+	#include "insieme/core/lang/parallel.h"
 
     #define INSPIRE_MSG(l, n, msg) \
             if(!n) { driver.error(l, msg); YYABORT; }
@@ -667,6 +669,8 @@ markable_expression : "identifier" { RULE $$ = driver.findSymbol(@$, $1); }
            | "stringlit"  { RULE $$ = driver.builder.stringLit($1); }
             /* constructed literals */
            | "type(" type ")"         { RULE $$ = driver.builder.getTypeLiteral($2); }
+           | "param(" "type_var" ")"  { RULE $$ = driver.builder.getTypeLiteral(driver.builder.typeVariable($2)); }
+           | "param(" "int" ")"       { RULE $$ = driver.builder.getTypeLiteral(driver.genNumericType(@$, $2)); }
            | "lit(" "stringlit" ")"          { RULE 
                                                     $2.replace(0,1,"");
                                                     $2.replace($2.size()-1,1,"");
@@ -690,10 +694,10 @@ markable_expression : "identifier" { RULE $$ = driver.findSymbol(@$, $1); }
                 }
            | "sync" expression  { RULE 
                         $$ = driver.builder.callExpr(driver.builder.getLangBasic().getUnit(), 
-                                                     driver.builder.getLangBasic().getMerge(), $2);
+                                                     driver.builder.getExtension<lang::ParallelExtension>().getMerge(), $2);
                 }
            | "syncAll" { RULE 
-                    $$ = driver.builder.callExpr(driver.builder.getLangBasic().getUnit(), driver.builder.getLangBasic().getMergeAll()); 
+                    $$ = driver.builder.callExpr(driver.builder.getLangBasic().getUnit(), driver.builder.getExtension<lang::ParallelExtension>().getMergeAll()); 
                 }
             /* job expressions */
            | "job" "(" "[" expression ":" expression "]" "," expression ")" { RULE

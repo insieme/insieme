@@ -47,6 +47,9 @@
 
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/ir_class_info.h"
+
+#include "insieme/core/lang/parallel.h"
+
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/encoder/lists.h"
 
@@ -58,6 +61,7 @@
 #include <boost/iostreams/concepts.hpp>
 
 #include "insieme/core/printer/lexer.h"
+
 
 namespace insieme {
 namespace core {
@@ -1034,6 +1038,7 @@ namespace printer {
 			const lang::BasicGenerator& basic = mgr.getLangBasic();
 			const lang::ReferenceExtension& refExt = mgr.getLangExtension<lang::ReferenceExtension>();
 			const lang::DatapathExtension& dpExt = mgr.getLangExtension<lang::DatapathExtension>();
+			const lang::ParallelExtension& parExt = mgr.getLangExtension<lang::ParallelExtension>();
 
 
 			#define OUT(Literal) printer.out << Literal
@@ -1406,12 +1411,12 @@ namespace printer {
 				PRINT_ARG(1);
 			});
 
-			ADD_FORMATTER(basic.getCreateMinRange(), {
+			ADD_FORMATTER(parExt.getCreateMinRange(), {
 				OUT("[");
 				PRINT_ARG(0);
 				OUT("-inf]");
 			});
-			ADD_FORMATTER(basic.getCreateBoundRange(), {
+			ADD_FORMATTER(parExt.getCreateBoundRange(), {
 				OUT("[");
 				PRINT_ARG(0);
 				OUT("-");
@@ -1436,9 +1441,9 @@ namespace printer {
 				}
 			});
 
-			ADD_FORMATTER(basic.getBarrier(), { OUT("barrier()"); });
+			ADD_FORMATTER(parExt.getBarrier(), { OUT("barrier()"); });
 
-			ADD_FORMATTER(basic.getAtomic(), {
+			ADD_FORMATTER(parExt.getAtomic(), {
 				OUT("atomic(");
 				PRINT_ARG(0);
 				OUT(", ");

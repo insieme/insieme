@@ -113,7 +113,7 @@ class Ptr {
 
 	T* ptr;
 
-	Ptr() : ptr(NULL) {}
+	Ptr() : ptr(nullptr) {}
 
 	Ptr(T* ptr) : ptr(ptr) {}
 

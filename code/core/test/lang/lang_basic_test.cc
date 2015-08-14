@@ -64,7 +64,7 @@ TEST(LangBasic, BoolChecks) {
 TEST(LangBasic, StringGet) {
 	NodeManager nm;
 
-	EXPECT_EQ(nm.getLangBasic().getRedistribute(), nm.getLangBasic().getBuiltIn("redistribute"));
+	EXPECT_EQ(nm.getLangBasic().getBoolEq(), nm.getLangBasic().getBuiltIn("bool_eq"));
 }
 
 TEST(LangBasic, Grouping) {
