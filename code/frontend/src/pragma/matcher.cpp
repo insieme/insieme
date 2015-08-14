@@ -35,7 +35,7 @@
  */
 
 #include "insieme/frontend/pragma/matcher.h"
-#include "insieme/frontend/convert.h"
+#include "insieme/frontend/converter.h"
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/error_report.h"
 

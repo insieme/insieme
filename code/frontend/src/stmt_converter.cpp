@@ -78,7 +78,7 @@ namespace conversion {
 		//	// external declaration statement as per very early K&R C -> ignore
 		//	if(varDecl->hasExternalStorage()) { return retList; }
 
-		//	auto retStmt = convFact.convertVarDecl(varDecl);
+		//	auto retStmt = converter.convertVarDecl(varDecl);
 		//	if(core::DeclarationStmtPtr decl = retStmt.isa<core::DeclarationStmtPtr>()) {
 		//		retList.push_back(decl);
 		//	} else {
@@ -92,7 +92,7 @@ namespace conversion {
 		//stmtutils::StmtWrapper retList;
 		//for(auto it = declStmt->decl_begin(), e = declStmt->decl_end(); it != e; ++it) {
 		//	if(clang::VarDecl* varDecl = dyn_cast<clang::VarDecl>(*it)) {
-		//		auto retStmt = convFact.convertVarDecl(varDecl).as<core::DeclarationStmtPtr>();
+		//		auto retStmt = converter.convertVarDecl(varDecl).as<core::DeclarationStmtPtr>();
 		//		retList.push_back(retStmt);
 		//	}
 		//}
@@ -111,10 +111,10 @@ namespace conversion {
 		//core::TypePtr retTy;
 		//QualType clangTy;
 		//if(clang::Expr* expr = retStmt->getRetValue()) {
-		//	retExpr = convFact.convertExpr(expr);
+		//	retExpr = converter.convertExpr(expr);
 
 		//	clangTy = expr->getType();
-		//	retTy = convFact.convertType(clangTy);
+		//	retTy = converter.convertType(clangTy);
 
 		//	// arrays and vectors in C are always returned as reference, so the type of the return
 		//	// expression is of array (or vector) type we are sure we have to return a reference, in the
@@ -202,10 +202,10 @@ namespace conversion {
 
 		//try {
 		//	// Analyze loop for induction variable
-		//	analysis::LoopAnalyzer loopAnalysis(forStmt, convFact);
+		//	analysis::LoopAnalyzer loopAnalysis(forStmt, converter);
 
 		//	// convert the body
-		//	core::StatementPtr body = convFact.convertStmt(forStmt->getBody());
+		//	core::StatementPtr body = converter.convertStmt(forStmt->getBody());
 
 		//	// for loops with break statements are while loops
 		//	bool breakStmtFound = false;
@@ -279,7 +279,7 @@ namespace conversion {
 		//		 */
 		//		clang::Expr* expr = condVarDecl->getInit();
 		//		condVarDecl->setInit(NULL); // set the expression to null (temporarely)
-		//		core::StatementPtr declStmt = convFact.convertVarDecl(condVarDecl);
+		//		core::StatementPtr declStmt = converter.convertVarDecl(condVarDecl);
 		//		condVarDecl->setInit(expr); // restore the init value
 
 		//		frontend_assert(false && "ForStmt with a declaration of a condition variable not supported");
@@ -293,7 +293,7 @@ namespace conversion {
 
 		//		if(!conts.empty()) {
 		//			core::StatementList stmtList;
-		//			stmtList.push_back(convFact.convertExpr(forStmt->getInc()));
+		//			stmtList.push_back(converter.convertExpr(forStmt->getInc()));
 		//			stmtList.push_back(builder.continueStmt());
 		//			core::CompoundStmtPtr incr = builder.compoundStmt(stmtList);
 		//			std::map<core::NodeAddress, core::NodePtr> replacementsMap;
@@ -319,22 +319,22 @@ namespace conversion {
 		//	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		//	core::ExpressionPtr condition;
 		//	if(forStmt->getCond()) {
-		//		condition = core::types::smartCast(builder.getLangBasic().getBool(), convFact.convertExpr(forStmt->getCond()));
+		//		condition = core::types::smartCast(builder.getLangBasic().getBool(), converter.convertExpr(forStmt->getCond()));
 		//	} else {
 		//		// we might not have condition, this is an infinite loop
 		//		//    for (;;)
-		//		condition = convFact.builder.literal(std::string("true"), builder.getLangBasic().getBool());
+		//		condition = converter.builder.literal(std::string("true"), builder.getLangBasic().getBool());
 		//	}
 
 		//	core::StatementPtr whileStmt = builder.whileStmt(
-		//	    condition, forStmt->getInc() ? builder.compoundStmt(toVector<core::StatementPtr>(irBody, convFact.convertExpr(forStmt->getInc()))) : irBody);
+		//	    condition, forStmt->getInc() ? builder.compoundStmt(toVector<core::StatementPtr>(irBody, converter.convertExpr(forStmt->getInc()))) : irBody);
 
 		//	// handle eventual pragmas attached to the Clang node
 		//	retStmt.push_back(whileStmt);
 
-		//	if(!convFact.getConversionSetup().hasOption(ConversionSetup::NoWarnings)) {
+		//	if(!converter.getConversionSetup().hasOption(ConversionSetup::NoWarnings)) {
 		//		std::cerr << std::endl;
-		//		clang::Preprocessor& pp = convFact.getPreprocessor();
+		//		clang::Preprocessor& pp = converter.getPreprocessor();
 		//		utils::clangPreprocessorDiag(pp, forStmt->getLocStart(), DiagnosticsEngine::Warning,
 		//		                             std::string("For loop converted into while loop, cause: ") + e.what());
 		//	}
@@ -368,7 +368,7 @@ namespace conversion {
 		//	 * 			if(cast<bool>(a)){ }
 		//	 * 		}
 		//	 */
-		//	core::StatementPtr declStmt = convFact.convertVarDecl(condVarDecl);
+		//	core::StatementPtr declStmt = converter.convertVarDecl(condVarDecl);
 		//	retStmt.push_back(declStmt);
 
 		//	frontend_assert(declStmt.isa<core::DeclarationStmtPtr>() && "declaring static variables within an if is not very polite");
@@ -377,7 +377,7 @@ namespace conversion {
 		//const clang::Expr* cond = ifStmt->getCond();
 		//frontend_assert(cond && "If statement with no condition.");
 
-		//condExpr = convFact.convertExpr(cond);
+		//condExpr = converter.convertExpr(cond);
 
 		//if(core::analysis::isCallOf(condExpr, builder.getLangBasic().getRefAssign())) {
 		//	// an assignment as condition is not allowed in IR, prepend the assignment operation
@@ -441,7 +441,7 @@ namespace conversion {
 		//	 */
 		//	clang::Expr* expr = condVarDecl->getInit();
 		//	condVarDecl->setInit(NULL); // set the expression to null (temporarely)
-		//	core::StatementPtr declStmt = convFact.convertVarDecl(condVarDecl);
+		//	core::StatementPtr declStmt = converter.convertVarDecl(condVarDecl);
 		//	condVarDecl->setInit(expr); // set back the value of init value
 
 		//	retStmt.push_back(declStmt);
@@ -451,7 +451,7 @@ namespace conversion {
 		//	const clang::Expr* cond = whileStmt->getCond();
 		//	frontend_assert(cond && "WhileStmt with no condition.");
 
-		//	condExpr = convFact.convertExpr(cond);
+		//	condExpr = converter.convertExpr(cond);
 
 		//	if(core::analysis::isCallOf(condExpr, builder.getLangBasic().getRefAssign())) {
 		//		// an assignment as condition is not allowed in IR, prepend the assignment operation
@@ -492,7 +492,7 @@ namespace conversion {
 		//const clang::Expr* cond = doStmt->getCond();
 		//frontend_assert(cond && "DoStmt must have a condition.");
 
-		//core::ExpressionPtr condExpr = convFact.convertExpr(cond);
+		//core::ExpressionPtr condExpr = converter.convertExpr(cond);
 		//frontend_assert(condExpr && "Couldn't convert 'condition' expression of the DoStmt");
 
 		//frontend_assert(!core::analysis::isCallOf(condExpr, builder.getLangBasic().getRefAssign()) && "Assignment not allowd in condition expression");
@@ -501,7 +501,7 @@ namespace conversion {
 		//	// convert the expression to bool via the castToType utility routine
 		//	condExpr = core::types::smartCast(gen.getBool(), condExpr);
 		//}
-		//condExpr = convFact.tryDeref(condExpr);
+		//condExpr = converter.tryDeref(condExpr);
 
 		//StatementList stmts;
 		//core::VariablePtr exitTest = builder.variable(builder.refType(gen.getBool()));
@@ -536,7 +536,7 @@ namespace conversion {
 		//if(const clang::VarDecl* condVarDecl = switchStmt->getConditionVariable()) {
 		//	frontend_assert(!switchStmt->getCond() && "SwitchStmt condition cannot contains both a variable declaration and an expression");
 
-		//	core::StatementPtr declStmt = convFact.convertVarDecl(condVarDecl);
+		//	core::StatementPtr declStmt = converter.convertVarDecl(condVarDecl);
 		//	retStmt.push_back(declStmt);
 
 		//	frontend_assert(declStmt.isa<core::DeclarationStmtPtr>()
@@ -547,7 +547,7 @@ namespace conversion {
 		//} else {
 		//	const clang::Expr* cond = switchStmt->getCond();
 		//	frontend_assert(cond && "SwitchStmt with no condition.");
-		//	condExpr = convFact.tryDeref(convFact.convertExpr(cond));
+		//	condExpr = converter.tryDeref(converter.convertExpr(cond));
 
 		//	// we create a variable to store the value of the condition for this switch
 		//	core::VariablePtr condVar = builder.variable(gen.getInt4());
@@ -582,14 +582,14 @@ namespace conversion {
 		//	const clang::Expr* caseExpr = llvm::cast<clang::CaseStmt>(switchCase)->getLHS();
 
 		//	// if the expr is an integerConstantExpr
-		//	if(caseExpr->isIntegerConstantExpr(convFact.getCompiler().getASTContext())) {
+		//	if(caseExpr->isIntegerConstantExpr(converter.getCompiler().getASTContext())) {
 		//		llvm::APSInt result;
 		//		// reduce it and store it in result -- done by clang
-		//		caseExpr->isIntegerConstantExpr(result, convFact.getCompiler().getASTContext());
-		//		core::TypePtr type = convFact.convertType(caseExpr->getType());
+		//		caseExpr->isIntegerConstantExpr(result, converter.getCompiler().getASTContext());
+		//		core::TypePtr type = converter.convertType(caseExpr->getType());
 		//		caseLiteral = builder.literal(type, result.toString(10));
 		//	} else {
-		//		core::ExpressionPtr caseExprIr = convFact.convertExpr(caseExpr);
+		//		core::ExpressionPtr caseExprIr = converter.convertExpr(caseExpr);
 		//		if(caseExprIr->getNodeType() == core::NT_CastExpr) {
 		//			core::CastExprPtr cast = static_pointer_cast<core::CastExprPtr>(caseExprIr);
 		//			if(cast->getSubExpression()->getNodeType() == core::NT_Literal) {
@@ -611,7 +611,7 @@ namespace conversion {
 		//};
 
 		//auto handleDeclStmt = [this, &decls](const clang::DeclStmt* declStmt) {
-		//	auto result = convFact.convertStmt(declStmt);
+		//	auto result = converter.convertStmt(declStmt);
 		//	core::DeclarationStmtPtr decl;
 		//	if(result.isa<core::CompoundStmtPtr>()) {
 		//		core::CompoundStmtPtr comp = result.as<core::CompoundStmtPtr>();
@@ -624,7 +624,7 @@ namespace conversion {
 		//			decls.push_back(decl);
 		//		}
 		//	} else {
-		//		decl = convFact.convertStmt(declStmt).as<core::DeclarationStmtPtr>();
+		//		decl = converter.convertStmt(declStmt).as<core::DeclarationStmtPtr>();
 		//		// remove the init, use undefinedvar
 		//		// this is what GCC does, VC simply errors out
 		//		decl = builder.declarationStmt(decl->getVariable(), builder.undefinedVar(decl->getInitialization()->getType()));
@@ -656,7 +656,7 @@ namespace conversion {
 		//		if(const clang::DeclStmt* declStmt = dyn_cast<clang::DeclStmt>(stmt)) {
 		//			handleDeclStmt(declStmt);
 		//		} else {
-		//			addStmtToOpenCases(convFact.convertStmt(stmt));
+		//			addStmtToOpenCases(converter.convertStmt(stmt));
 		//		}
 		//	}
 		//};
@@ -678,7 +678,7 @@ namespace conversion {
 		//	}
 
 		//	// if is whatever other kind of stmt append it to each of the open cases list
-		//	addStmtToOpenCases(convFact.convertStmt(currStmt));
+		//	addStmtToOpenCases(converter.convertStmt(currStmt));
 		//}
 
 		//// we need to sort the elements to assure same output for different memory aligment, valgrinf problem
@@ -833,30 +833,30 @@ namespace conversion {
 
 		// iterate frontend extension list and check if a extension wants to convert the stmt
 		stmtutils::StmtWrapper retStmt;
-		for(auto extension : convFact.getConversionSetup().getExtensions()) {
-			retStmt = extension->Visit(stmt, convFact);
+		for(auto extension : converter.getConversionSetup().getExtensions()) {
+			retStmt = extension->Visit(stmt, converter);
 			if(retStmt.size()) { break; }
 		}
 		if(retStmt.size() == 0) {
-			convFact.trackSourceLocation(stmt);
+			converter.trackSourceLocation(stmt);
 			retStmt = StmtVisitor<CStmtConverter, stmtutils::StmtWrapper>::Visit(stmt);
-			convFact.untrackSourceLocation();
+			converter.untrackSourceLocation();
 		}
 
 		// print diagnosis messages
-		convFact.printDiagnosis(stmt->getLocStart());
+		converter.printDiagnosis(stmt->getLocStart());
 
 		// Deal with pragmas
 		core::NodeList list(retStmt.begin(), retStmt.end());
-		list = pragma::attachPragma(list, stmt, convFact);
+		list = pragma::attachPragma(list, stmt, converter);
 		retStmt.clear();
 		for(const auto& e : list) {
 			retStmt.push_back(e.as<core::StatementPtr>());
 		}
 
 		// call frontend extension post visitors
-		for(auto extension : convFact.getConversionSetup().getExtensions()) {
-			retStmt = extension->PostVisit(stmt, retStmt, convFact);
+		for(auto extension : converter.getConversionSetup().getExtensions()) {
+			retStmt = extension->PostVisit(stmt, retStmt, converter);
 		}
 
 		return retStmt;

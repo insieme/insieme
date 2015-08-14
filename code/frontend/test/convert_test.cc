@@ -36,7 +36,7 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/frontend/convert.h"
+#include "insieme/frontend/converter.h"
 #include "insieme/utils/config.h"
 #include "insieme/frontend/tu/ir_translation_unit_check.h"
 

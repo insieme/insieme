@@ -36,7 +36,7 @@
 
 #include "insieme/frontend/pragma/handler.h"
 
-#include "insieme/frontend/convert.h"
+#include "insieme/frontend/converter.h"
 
 #include "insieme/frontend/clang.h"
 #include <llvm/Support/raw_ostream.h>

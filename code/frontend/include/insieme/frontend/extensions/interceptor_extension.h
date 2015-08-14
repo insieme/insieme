@@ -38,7 +38,7 @@
 
 #include "insieme/frontend/extensions/frontend_extension.h"
 #include "insieme/frontend/clang.h"
-#include "insieme/frontend/convert.h"
+#include "insieme/frontend/converter.h"
 #include "insieme/frontend/utils/interceptor.h"
 
 namespace insieme {
@@ -54,18 +54,18 @@ namespace extensions {
 		virtual boost::optional<std::string> isPrerequisiteMissing(ConversionSetup& setup) const;
 
 		// Extension Hooks
-		virtual insieme::core::ExpressionPtr Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& convFact);
+		virtual insieme::core::ExpressionPtr Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& converter);
 
-		virtual core::ExpressionPtr FuncDeclVisit(const clang::FunctionDecl* funcDecl, insieme::frontend::conversion::Converter& convFact, bool symbolic);
+		virtual core::ExpressionPtr FuncDeclVisit(const clang::FunctionDecl* funcDecl, insieme::frontend::conversion::Converter& converter, bool symbolic);
 
-		virtual core::TypePtr Visit(const clang::QualType& type, insieme::frontend::conversion::Converter& convFact);
+		virtual core::TypePtr Visit(const clang::QualType& type, insieme::frontend::conversion::Converter& converter);
 
 		virtual core::ExpressionPtr ValueDeclPostVisit(const clang::ValueDecl* decl, core::ExpressionPtr expr,
-		                                               insieme::frontend::conversion::Converter& convFact);
+		                                               insieme::frontend::conversion::Converter& converter);
 
-		virtual core::TypePtr TypeDeclVisit(const clang::TypeDecl* decl, insieme::frontend::conversion::Converter& convFact);
+		virtual core::TypePtr TypeDeclVisit(const clang::TypeDecl* decl, insieme::frontend::conversion::Converter& converter);
 
-		virtual core::ExpressionPtr PostVisit(const clang::Expr* expr, const core::ExpressionPtr& irExpr, conversion::Converter& convFact);
+		virtual core::ExpressionPtr PostVisit(const clang::Expr* expr, const core::ExpressionPtr& irExpr, conversion::Converter& converter);
 
 	  private:
 		insieme::frontend::utils::Interceptor interceptor;

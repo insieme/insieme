@@ -52,7 +52,7 @@ namespace extensions {
 		return boost::optional<std::string>();
 	}
 
-	insieme::core::ExpressionPtr InterceptorExtension::Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& convFact) {
+	insieme::core::ExpressionPtr InterceptorExtension::Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& converter) {
 		//if(const clang::DeclRefExpr* declRefExpr = llvm::dyn_cast<clang::DeclRefExpr>(expr)) {
 		//	const clang::FunctionDecl* funcDecl = llvm::dyn_cast<clang::FunctionDecl>(declRefExpr->getDecl());
 		//	std::string name;
@@ -69,55 +69,55 @@ namespace extensions {
 		//		if(getInterceptor().isIntercepted(name)) {
 		//			VLOG(2) << "interceptorextension\n";
 		//			// returns a callable expression
-		//			return getInterceptor().intercept(funcDecl, convFact, declRefExpr->hasExplicitTemplateArgs(), name);
+		//			return getInterceptor().intercept(funcDecl, converter, declRefExpr->hasExplicitTemplateArgs(), name);
 		//		}
 		//	}
 
 		//	if(const clang::EnumConstantDecl* enumConstant = llvm::dyn_cast<clang::EnumConstantDecl>(declRefExpr->getDecl())) {
 		//		const clang::EnumType* enumType =
 		//		    llvm::dyn_cast<clang::EnumType>(llvm::cast<clang::TypeDecl>(enumConstant->getDeclContext())->getTypeForDecl());
-		//		if(getInterceptor().isIntercepted(enumType->getCanonicalTypeInternal())) { return getInterceptor().intercept(enumConstant, convFact); }
+		//		if(getInterceptor().isIntercepted(enumType->getCanonicalTypeInternal())) { return getInterceptor().intercept(enumConstant, converter); }
 		//	}
 		//}
 		return nullptr;
 	}
 
-	core::ExpressionPtr InterceptorExtension::FuncDeclVisit(const clang::FunctionDecl* funcDecl, insieme::frontend::conversion::Converter& convFact,
+	core::ExpressionPtr InterceptorExtension::FuncDeclVisit(const clang::FunctionDecl* funcDecl, insieme::frontend::conversion::Converter& converter,
 	                                                        bool symbolic) {
 		//// check whether function should be intercected
 		//if(getInterceptor().isIntercepted(funcDecl)) {
-		//	auto irExpr = getInterceptor().intercept(funcDecl, convFact);
+		//	auto irExpr = getInterceptor().intercept(funcDecl, converter);
 		//	VLOG(2) << "interceptorextension" << irExpr;
 		//	return irExpr;
 		//}
 		return nullptr;
 	}
 
-	core::TypePtr InterceptorExtension::Visit(const clang::QualType& type, insieme::frontend::conversion::Converter& convFact) {
+	core::TypePtr InterceptorExtension::Visit(const clang::QualType& type, insieme::frontend::conversion::Converter& converter) {
 		//if(getInterceptor().isIntercepted(type)) {
 		//	VLOG(2) << "interceptorextension\n";
-		//	auto res = getInterceptor().intercept(type, convFact);
-		//	// convFact.addToTypeCache(type, res);
+		//	auto res = getInterceptor().intercept(type, converter);
+		//	// converter.addToTypeCache(type, res);
 		//	return res;
 		//}
 		return nullptr;
 	}
 
 	core::ExpressionPtr InterceptorExtension::ValueDeclPostVisit(const clang::ValueDecl* decl, core::ExpressionPtr expr,
-	                                                             insieme::frontend::conversion::Converter& convFact) {
+	                                                             insieme::frontend::conversion::Converter& converter) {
 		//if(const clang::VarDecl* varDecl = llvm::dyn_cast<clang::VarDecl>(decl)) {
 		//	if(getInterceptor().isIntercepted(varDecl->getQualifiedNameAsString())) {
 		//		if(varDecl->hasGlobalStorage()) {
 		//			// we expect globals to be literals -- get the "standard IR"which we need to change
-		//			core::LiteralPtr globalLit = convFact.lookUpVariable(varDecl).as<core::LiteralPtr>();
+		//			core::LiteralPtr globalLit = converter.lookUpVariable(varDecl).as<core::LiteralPtr>();
 		//			assert_true(globalLit);
 		//			VLOG(2) << globalLit;
 
-		//			auto globals = convFact.getIRTranslationUnit().getGlobals();
+		//			auto globals = converter.getIRTranslationUnit().getGlobals();
 
 		//			// varDecl in the cache has "name" we need "qualifiedName"
 		//			auto name = varDecl->getQualifiedNameAsString();
-		//			auto replacement = convFact.getIRBuilder().literal(name, globalLit->getType());
+		//			auto replacement = converter.getIRBuilder().literal(name, globalLit->getType());
 
 		//			// migrate possible annotations
 		//			core::transform::utils::migrateAnnotations(globalLit, replacement);
@@ -143,19 +143,19 @@ namespace extensions {
 		//			}
 
 		//			// replace the current var with the changed one
-		//			convFact.addToVarDeclMap(varDecl, replacement);
+		//			converter.addToVarDeclMap(varDecl, replacement);
 		//			VLOG(2) << "changed from " << globalLit << " to " << replacement;
-		//			VLOG(2) << convFact.lookUpVariable(varDecl);
+		//			VLOG(2) << converter.lookUpVariable(varDecl);
 		//		}
 		//	}
 		//}
 		return nullptr;
 	}
 
-	core::TypePtr InterceptorExtension::TypeDeclVisit(const clang::TypeDecl* decl, insieme::frontend::conversion::Converter& convFact) {
+	core::TypePtr InterceptorExtension::TypeDeclVisit(const clang::TypeDecl* decl, insieme::frontend::conversion::Converter& converter) {
 		//if(llvm::isa<clang::TypedefDecl>(decl)) {
 		//	if(getInterceptor().isIntercepted(decl->getQualifiedNameAsString())) {
-		//		auto innerType = convFact.convertType(decl->getTypeForDecl()->getCanonicalTypeInternal());
+		//		auto innerType = converter.convertType(decl->getTypeForDecl()->getCanonicalTypeInternal());
 
 		//		core::IRBuilder builder(innerType->getNodeManager());
 
@@ -163,13 +163,13 @@ namespace extensions {
 
 		//		// if is a typedef which ends pointing to an annonymous struct, lets save the effort and
 		//		// return a generic opaque type
-		//		auto tmp = convFact.getIRTranslationUnit()[innerType.as<core::GenericTypePtr>()];
+		//		auto tmp = converter.getIRTranslationUnit()[innerType.as<core::GenericTypePtr>()];
 		//		core::StructTypePtr structTy = tmp.isa<core::StructTypePtr>();
 		//		// if (structTy && structTy->getName()->getValue().substr(0,5) == "_anon"){
 		//		if(structTy && structTy->getName()->getValue() == "") {
 		//			auto name = decl->getQualifiedNameAsString();
 		//			core::GenericTypePtr gen = builder.genericType(name);
-		//			convFact.getHeaderTagger().addHeaderForDecl(gen, decl);
+		//			converter.getHeaderTagger().addHeaderForDecl(gen, decl);
 		//			return structTy;
 		//		}
 		//		return nullptr;
@@ -186,7 +186,7 @@ namespace extensions {
 	 *  class A { private: struct X{}; public: A(X x=X()) {} };
 	 *  int main() { A a; }
 	 */
-	core::ExpressionPtr InterceptorExtension::PostVisit(const clang::Expr* expr, const core::ExpressionPtr& irExpr, conversion::Converter& convFact) {
+	core::ExpressionPtr InterceptorExtension::PostVisit(const clang::Expr* expr, const core::ExpressionPtr& irExpr, conversion::Converter& converter) {
 		//if(const clang::CXXConstructExpr* call = llvm::dyn_cast<clang::CXXConstructExpr>(expr)) {
 		//	// only do this for intercepted types and only if we have an IR ctor call
 		//	if(!interceptor.isIntercepted(call->getConstructor())) { return irExpr; }
@@ -226,10 +226,10 @@ namespace extensions {
 		//	core::LiteralPtr literal = callExpr->getFunctionExpr().as<core::LiteralPtr>();
 		//	core::transform::utils::migrateAnnotations(callExpr->getFunctionExpr(), literal);
 		//	core::ExpressionPtr newFunExpr =
-		//	    convFact.getIRBuilder().literal(literal->getStringValue(), convFact.getIRBuilder().functionType(argTypes, retType, core::FK_CONSTRUCTOR));
+		//	    converter.getIRBuilder().literal(literal->getStringValue(), converter.getIRBuilder().functionType(argTypes, retType, core::FK_CONSTRUCTOR));
 		//	core::transform::utils::migrateAnnotations(callExpr->getFunctionExpr(), newFunExpr);
 
-		//	auto ir = convFact.getIRBuilder().callExpr(retType, newFunExpr, newArgs);
+		//	auto ir = converter.getIRBuilder().callExpr(retType, newFunExpr, newArgs);
 		//	core::transform::utils::migrateAnnotations(irExpr, ir);
 		//	return ir;
 		//}

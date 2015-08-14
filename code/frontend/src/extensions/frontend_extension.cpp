@@ -93,79 +93,79 @@ namespace extensions {
 	}
 
 	// ############ CLANG STAGE ############ //
-	insieme::core::ExpressionPtr FrontendExtension::Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& convFact) {
+	insieme::core::ExpressionPtr FrontendExtension::Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& converter) {
 		return nullptr;
 	}
 
-	insieme::core::TypePtr FrontendExtension::Visit(const clang::QualType& type, insieme::frontend::conversion::Converter& convFact) {
+	insieme::core::TypePtr FrontendExtension::Visit(const clang::QualType& type, insieme::frontend::conversion::Converter& converter) {
 		return nullptr;
 	}
 
-	stmtutils::StmtWrapper FrontendExtension::Visit(const clang::Stmt* stmt, insieme::frontend::conversion::Converter& convFact) {
+	stmtutils::StmtWrapper FrontendExtension::Visit(const clang::Stmt* stmt, insieme::frontend::conversion::Converter& converter) {
 		return stmtutils::StmtWrapper();
 	}
 
-	insieme::core::NodePtr FrontendExtension::Visit(const clang::Decl* decl, insieme::frontend::conversion::Converter& convFact, bool symbolic) {
-		if(llvm::isa<clang::FunctionDecl>(decl)) { return this->FuncDeclVisit(llvm::cast<clang::FunctionDecl>(decl), convFact, symbolic); }
-		if(llvm::isa<clang::ValueDecl>(decl)) { return this->ValueDeclVisit(llvm::cast<clang::ValueDecl>(decl), convFact); }
-		if(llvm::isa<clang::TypeDecl>(decl)) { return this->TypeDeclVisit(llvm::cast<clang::TypeDecl>(decl), convFact); }
+	insieme::core::NodePtr FrontendExtension::Visit(const clang::Decl* decl, insieme::frontend::conversion::Converter& converter, bool symbolic) {
+		if(llvm::isa<clang::FunctionDecl>(decl)) { return this->FuncDeclVisit(llvm::cast<clang::FunctionDecl>(decl), converter, symbolic); }
+		if(llvm::isa<clang::ValueDecl>(decl)) { return this->ValueDeclVisit(llvm::cast<clang::ValueDecl>(decl), converter); }
+		if(llvm::isa<clang::TypeDecl>(decl)) { return this->TypeDeclVisit(llvm::cast<clang::TypeDecl>(decl), converter); }
 		return nullptr;
 	}
 
-	insieme::core::TypePtr FrontendExtension::TypeDeclVisit(const clang::TypeDecl* decl, insieme::frontend::conversion::Converter& convFact) {
+	insieme::core::TypePtr FrontendExtension::TypeDeclVisit(const clang::TypeDecl* decl, insieme::frontend::conversion::Converter& converter) {
 		return nullptr;
 	}
 
-	insieme::core::ExpressionPtr FrontendExtension::FuncDeclVisit(const clang::FunctionDecl* decl, insieme::frontend::conversion::Converter& convFact,
+	insieme::core::ExpressionPtr FrontendExtension::FuncDeclVisit(const clang::FunctionDecl* decl, insieme::frontend::conversion::Converter& converter,
 	                                                              bool symbolic) {
 		return nullptr;
 	}
 
-	insieme::core::ExpressionPtr FrontendExtension::ValueDeclVisit(const clang::ValueDecl* decl, insieme::frontend::conversion::Converter& convFact) {
+	insieme::core::ExpressionPtr FrontendExtension::ValueDeclVisit(const clang::ValueDecl* decl, insieme::frontend::conversion::Converter& converter) {
 		return nullptr;
 	}
 
 
 	insieme::core::ExpressionPtr FrontendExtension::PostVisit(const clang::Expr* expr, const insieme::core::ExpressionPtr& irExpr,
-	                                                          insieme::frontend::conversion::Converter& convFact) {
+	                                                          insieme::frontend::conversion::Converter& converter) {
 		return irExpr;
 	}
 
 	insieme::core::TypePtr FrontendExtension::PostVisit(const clang::QualType& type, const insieme::core::TypePtr& irType,
-	                                                    insieme::frontend::conversion::Converter& convFact) {
+	                                                    insieme::frontend::conversion::Converter& converter) {
 		return irType;
 	}
 
 	stmtutils::StmtWrapper FrontendExtension::PostVisit(const clang::Stmt* stmt, const stmtutils::StmtWrapper& irStmt,
-	                                                    insieme::frontend::conversion::Converter& convFact) {
+	                                                    insieme::frontend::conversion::Converter& converter) {
 		return irStmt;
 	}
 
 	insieme::core::TypePtr FrontendExtension::TypeDeclPostVisit(const clang::TypeDecl* decl, core::TypePtr type,
-	                                                            insieme::frontend::conversion::Converter& convFact) {
+	                                                            insieme::frontend::conversion::Converter& converter) {
 		return nullptr;
 	}
 
 	insieme::core::ExpressionPtr FrontendExtension::FuncDeclPostVisit(const clang::FunctionDecl* decl, core::ExpressionPtr expr,
-	                                                                  insieme::frontend::conversion::Converter& convFact, bool symbolic) {
+	                                                                  insieme::frontend::conversion::Converter& converter, bool symbolic) {
 		return nullptr;
 	}
 
 	insieme::core::ExpressionPtr FrontendExtension::ValueDeclPostVisit(const clang::ValueDecl* decl, core::ExpressionPtr expr,
-	                                                                   insieme::frontend::conversion::Converter& convFact) {
+	                                                                   insieme::frontend::conversion::Converter& converter) {
 		return nullptr;
 	}
 
-	insieme::core::NodePtr FrontendExtension::PostVisit(const clang::Decl* decl, core::NodePtr ir, insieme::frontend::conversion::Converter& convFact,
+	insieme::core::NodePtr FrontendExtension::PostVisit(const clang::Decl* decl, core::NodePtr ir, insieme::frontend::conversion::Converter& converter,
 	                                                    bool symbolic) {
 		if(llvm::isa<clang::FunctionDecl>(decl) && ir.isa<core::ExpressionPtr>()) {
-			return this->FuncDeclPostVisit(llvm::cast<clang::FunctionDecl>(decl), ir.as<core::ExpressionPtr>(), convFact, symbolic);
+			return this->FuncDeclPostVisit(llvm::cast<clang::FunctionDecl>(decl), ir.as<core::ExpressionPtr>(), converter, symbolic);
 		}
 		if(llvm::isa<clang::ValueDecl>(decl) && ir.isa<core::ExpressionPtr>()) {
-			return this->ValueDeclPostVisit(llvm::cast<clang::ValueDecl>(decl), ir.as<core::ExpressionPtr>(), convFact);
+			return this->ValueDeclPostVisit(llvm::cast<clang::ValueDecl>(decl), ir.as<core::ExpressionPtr>(), converter);
 		}
 		if(llvm::isa<clang::TypeDecl>(decl) && ir.isa<core::TypePtr>()) {
-			return this->TypeDeclPostVisit(llvm::cast<clang::TypeDecl>(decl), ir.as<core::TypePtr>(), convFact);
+			return this->TypeDeclPostVisit(llvm::cast<clang::TypeDecl>(decl), ir.as<core::TypePtr>(), converter);
 		}
 		return nullptr;
 	}

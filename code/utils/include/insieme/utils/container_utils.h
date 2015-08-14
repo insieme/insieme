@@ -377,6 +377,19 @@ inline bool contains(const Container& container, const typename Container::value
 }
 
 /**
+ * Checks whether the given map contains a key equal to the given value (using find).
+ *
+ * @tparam Map the type of map to be inspected
+ * @param map the map to be tested
+ * @param key the key to be searched
+ * @return true if found, false otherwise
+ */
+template <class Map>
+inline bool containsKey(const Map& map, const typename Map::key_type& key) {
+	return map.find(key) != map.end();
+}
+
+/**
  * Compares the content of the two given containers using lexicographical order.
  *
  * @tparam ContainerA type of first container

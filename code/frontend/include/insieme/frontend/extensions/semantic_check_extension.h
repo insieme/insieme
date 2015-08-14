@@ -66,7 +66,7 @@ namespace extensions {
 		SemanticCheckExtension() : current(0), eE(0), tE(0) {}
 
 		virtual insieme::core::ExpressionPtr PostVisit(const clang::Expr* expr, const insieme::core::ExpressionPtr& irExpr,
-		                                               insieme::frontend::conversion::Converter& convFact) {
+		                                               insieme::frontend::conversion::Converter& converter) {
 			if(irExpr && current < 125000) {
 				auto msg = insieme::core::checks::check(irExpr);
 				if(!msg.empty()) {
@@ -99,7 +99,7 @@ namespace extensions {
 
 
 		virtual insieme::core::TypePtr PostVisit(const clang::QualType& type, const insieme::core::TypePtr& irType,
-		                                         insieme::frontend::conversion::Converter& convFact) {
+		                                         insieme::frontend::conversion::Converter& converter) {
 			if(irType && current < 125000) {
 				auto msg = insieme::core::checks::check(irType);
 				if(!msg.empty()) {
@@ -131,7 +131,7 @@ namespace extensions {
 
 
 		virtual stmtutils::StmtWrapper PostVisit(const clang::Stmt* stmt, const stmtutils::StmtWrapper& irStmt,
-		                                         insieme::frontend::conversion::Converter& convFact) {
+		                                         insieme::frontend::conversion::Converter& converter) {
 			/*   if(irStmt.isSingleStmt() && current < 100000) {
 			       if(irStmt.getSingleStmt()) {
 			           auto msg = insieme::core::checks::check(irStmt.getSingleStmt());
@@ -156,11 +156,11 @@ namespace extensions {
 		}
 
 		virtual insieme::core::ExpressionPtr FuncDeclPostVisit(const clang::FunctionDecl* decl, insieme::core::ExpressionPtr expr,
-		                                                       insieme::frontend::conversion::Converter& convFact, bool symbolic = false) {
+		                                                       insieme::frontend::conversion::Converter& converter, bool symbolic = false) {
 			std::cout << "func decl: " << decl->getNameAsString() << std::endl;
 			if(decl->getSourceRange().isValid()) {
-				std::cout << decl->getSourceRange().getBegin().printToString(convFact.getCompiler().getSourceManager())
-				          << decl->getSourceRange().getEnd().printToString(convFact.getCompiler().getSourceManager()) << std::endl;
+				std::cout << decl->getSourceRange().getBegin().printToString(converter.getCompiler().getSourceManager())
+				          << decl->getSourceRange().getEnd().printToString(converter.getCompiler().getSourceManager()) << std::endl;
 			}
 			return expr;
 		}

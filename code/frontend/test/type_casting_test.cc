@@ -45,7 +45,7 @@
 
 #include "insieme/driver/cmd/insiemecc_options.h"
 
-#include "insieme/frontend/convert.h"
+#include "insieme/frontend/converter.h"
 #include "insieme/frontend/extensions/test_pragma_extension.h"
 #include "insieme/frontend/translation_unit.h"
 

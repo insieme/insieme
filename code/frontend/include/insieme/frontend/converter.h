@@ -53,11 +53,9 @@
 
 #include "insieme/utils/map_utils.h"
 
-
 namespace {
 	typedef vector<insieme::core::StatementPtr> StatementList;
 	typedef vector<insieme::core::ExpressionPtr> ExpressionList;
-
 } // end anonymous namespace
 
 namespace insieme {
@@ -71,42 +69,52 @@ namespace frontend {
 	* @return the resulting translation unit
 	*/
 	tu::IRTranslationUnit convert(core::NodeManager& manager, const path& unit, const ConversionSetup& setup = ConversionSetup());
-}
-}
+
+	// Forward Declaration
+	namespace state {
+		class VariableManager;
+	}
+} // end namespace frontend
+} // end namespace insieme
 
 namespace insieme {
 namespace frontend {
 namespace conversion {
+
+	// Forward Declaration
+	class DeclConverter;
+
+	namespace state = insieme::frontend::state;
 
 	// ------------------------------------ Converter ---------------------------
 	/**
 	 * The main unit orchestrating the clang AST => IR Translation Unit conversion processes.
 	 */
 	class Converter : boost::noncopyable {
-		/**
-		 * List of warnings up to this point
-		 */
+		/// List of warnings up to this point
+		///
 		std::set<std::string> warnings;
 		
-		/**
-		 * Converts a Clang statements into an IR statements.
-		 */
+		/// Converts Clang declarations to corresponding IR, also storing the necessary state
+		///
+		std::shared_ptr<DeclConverter> declConvPtr;
+
+		/// Converts a Clang statement into an IR statement
+		///
 		class StmtConverter;
 		class CStmtConverter;
 		class CXXStmtConverter;
 		std::shared_ptr<StmtConverter> stmtConvPtr;
 
-		/**
-		 * Converts a Clang types into an IR types.
-		 */
+		///  Converts a Clang types into an IR types
+		///
 		class TypeConverter;
 		class CTypeConverter;
 		class CXXTypeConverter;
 		std::shared_ptr<TypeConverter> typeConvPtr;
 
-		/**
-		 * Converts a Clang expression into an IR expression.
-		 */
+		/// Converts a Clang expression into an IR expression
+		///
 		class ExprConverter;
 		class CExprConverter;
 		class CXXExprConverter;
@@ -115,10 +123,13 @@ namespace conversion {
 		const TranslationUnit& translationUnit;
 		const ConversionSetup& convSetup;
 
-		/**
-		 * A map which associates a statement of the clang AST to a pragma (if any)
-		 */
+		/// A map which associates a statement of the clang AST to a pragma (if any)
+		///
 		pragma::PragmaStmtMap pragmaMap;
+
+		/// A state object which manages mappings from clang variables to IR variables
+		///
+		std::shared_ptr<state::VariableManager> varManPtr;
 
 		/**
 		 * IR building and managing tools
@@ -139,8 +150,6 @@ namespace conversion {
 		 *  keeps track of the last point a source location to the input code could be found
 		 */
 		std::stack<clang::SourceLocation> lastTrackableLocation;
-		
-		void convertFunctionDeclImpl(const clang::FunctionDecl* funcDecl);
 
 	  public:
 		Converter(core::NodeManager& mgr, const TranslationUnit& translationUnit, const ConversionSetup& setup = ConversionSetup());
@@ -163,19 +172,15 @@ namespace conversion {
 		tu::IRTranslationUnit& getIRTranslationUnit() { return irTranslationUnit; }
 		const tu::IRTranslationUnit& getIRTranslationUnit() const { return irTranslationUnit; }
 
+		std::shared_ptr<DeclConverter> getDeclConverter() const { return declConvPtr; }
 		std::shared_ptr<ExprConverter> getExprConverter() const { return exprConvPtr; }
 		std::shared_ptr<StmtConverter> getStmtConverter() const { return stmtConvPtr; }
 		std::shared_ptr<TypeConverter> getTypeConverter() const { return typeConvPtr; }
+
+		std::shared_ptr<state::VariableManager> getVarMan() const { return varManPtr; }
 		
-		const pragma::PragmaStmtMap& getPragmaMap() const {	return pragmaMap; }
-
-		/**
-		 * Convert type declaration, it triggers the extensions and converts the represented type
-		 * fills the translation unit with this type
-		 * @param typeDecl: the type declaration itself
-		 */
-		void convertTypeDecl(const clang::TypeDecl* decl);
-
+		const pragma::PragmaStmtMap& getPragmaMap() const {	return pragmaMap; 
+		
 		/**
 		 * Entry point for converting clang statements into IR statements
 		 * @param stmt is a clang statement of the AST
@@ -195,14 +200,8 @@ namespace conversion {
 		 * @param type is a clang type
 		 * @return the corresponding IR type
 		 */
-		core::TypePtr convertType(const clang::QualType& type);
+		core::TypePtr convertType(const clang::QualType& type) const;
 		
-		/**
-		 * Converts a function declaration into an IR lambda.
-		 * @param funcDecl is a clang FunctionDecl which represent a definition for the function
-		 * @return Converted lambda
-		 */
-		core::ExpressionPtr convertFunctionDecl(const clang::FunctionDecl* funcDecl, bool symbolic = false);
 
 		/**
 		 * Print diagnosis errors, warnings stored during translation

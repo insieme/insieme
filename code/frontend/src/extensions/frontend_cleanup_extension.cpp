@@ -57,7 +57,7 @@
 #include "insieme/annotations/c/decl_only.h"
 #include "insieme/annotations/c/include.h"
 
-#include "insieme/frontend/convert.h"
+#include "insieme/frontend/converter.h"
 #include "insieme/frontend/tu/ir_translation_unit.h"
 #include "insieme/frontend/utils/memalloc.h"
 #include "insieme/frontend/utils/stmt_wrapper.h"
@@ -377,14 +377,14 @@ namespace extensions {
 	} // annonymous namespace
 
 	stmtutils::StmtWrapper FrontendCleanupExtension::PostVisit(const clang::Stmt* stmt, const stmtutils::StmtWrapper& irStmts,
-	                                                           conversion::Converter& convFact) {
+	                                                           conversion::Converter& converter) {
 		stmtutils::StmtWrapper newStmts;
 
 		//////////////////////////////////////////////////////////////
 		// remove frontend assignments and extract them into different statements
 		{
-			const auto& feExt = convFact.getFrontendIR();
-			core::IRBuilder builder(convFact.getNodeManager());
+			const auto& feExt = converter.getFrontendIR();
+			core::IRBuilder builder(converter.getNodeManager());
 
 			// stores the last expression returned to avoid writting a dead read
 			core::StatementPtr lastExpr;
@@ -424,7 +424,7 @@ namespace extensions {
 					core::StatementList conditionBody;
 					core::ExpressionPtr conditionExpr;
 
-					auto res = collectAssignments(stmt, feExt.getRefAssign(), lastExpr, conditionBody, convFact.getCompiler().isCXX());
+					auto res = collectAssignments(stmt, feExt.getRefAssign(), lastExpr, conditionBody, converter.getCompiler().isCXX());
 					conditionBody.push_back(builder.returnStmt(res.as<core::WhileStmtPtr>().getCondition()));
 
 					// reconstruct the conditional expression, if this became more than one statements we'll capture it in a lambda
@@ -442,7 +442,7 @@ namespace extensions {
 						core::StatementPtr lastBodyExpr;
 						core::StatementList preBodyProcess;
 						for(auto bodyStmt : bodyList) {
-							auto bodyRes = collectAssignments(bodyStmt, feExt.getRefAssign(), lastBodyExpr, preBodyProcess, convFact.getCompiler().isCXX());
+							auto bodyRes = collectAssignments(bodyStmt, feExt.getRefAssign(), lastBodyExpr, preBodyProcess, converter.getCompiler().isCXX());
 							if(preBodyProcess.empty() || allPostOps(preBodyProcess)) {
 								if(res != lastBodyExpr) { newBody.push_back(bodyStmt); }
 							} else {
@@ -457,7 +457,7 @@ namespace extensions {
 
 					newStmts.push_back(res);
 				} else {
-					auto res = collectAssignments(stmt, feExt.getRefAssign(), lastExpr, prependStmts, convFact.getCompiler().isCXX());
+					auto res = collectAssignments(stmt, feExt.getRefAssign(), lastExpr, prependStmts, converter.getCompiler().isCXX());
 					if(prependStmts.empty() || allPostOps(prependStmts)) {
 						newStmts.push_back(stmt);
 					} else {
@@ -491,12 +491,12 @@ namespace extensions {
 				if(!usesVar) { return newStmts; }
 				// now we know that we have something like int x=x;
 				// create decl ref<type> a = undefined(type);
-				auto& builder = convFact.getIRBuilder();
+				auto& builder = converter.getIRBuilder();
 				// keep the old var name (instead if creating a new one)
 				// makes life easier, because we dont have to replace
 				// the name of the var everywhere..
 				core::DeclarationStmtPtr newDecl =
-				    core::transform::replaceAllGen(convFact.getNodeManager(), decl, decl->getInitialization(), builder.undefinedVar(var->getType()));
+				    core::transform::replaceAllGen(converter.getNodeManager(), decl, decl->getInitialization(), builder.undefinedVar(var->getType()));
 				// this is our new declaration statement
 				newStmts[0] = newDecl;
 				// if it is a ctor call we have to call a deref operation
@@ -508,7 +508,7 @@ namespace extensions {
 					newStmts.push_back(builder.assign(newDecl->getVariable(), decl->getInitialization().as<core::CallExprPtr>()->getArgument(0)));
 				}
 				// fix uses on right side.. var(*v1) -> *v1
-				newStmts[1] = core::transform::replaceAllGen(convFact.getNodeManager(), newStmts[1], builder.refVar(builder.deref(newDecl->getVariable())),
+				newStmts[1] = core::transform::replaceAllGen(converter.getNodeManager(), newStmts[1], builder.refVar(builder.deref(newDecl->getVariable())),
 				                                             builder.deref(newDecl->getVariable()));
 			}
 		}

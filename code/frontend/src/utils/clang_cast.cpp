@@ -35,7 +35,7 @@
  */
 
 #include "insieme/frontend/clang.h"
-#include "insieme/frontend/convert.h"
+#include "insieme/frontend/converter.h"
 #include "insieme/frontend/utils/debug.h"
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/macros.h"
@@ -64,14 +64,14 @@ namespace utils {
 	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Takes a clang::CastExpr, converts its subExpr into IR and wraps it with the necessary IR casts
 	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	core::ExpressionPtr performClangCastOnIR(insieme::frontend::conversion::Converter& convFact, const clang::CastExpr* castExpr) {
-		core::ExpressionPtr expr = convFact.convertExpr(castExpr->getSubExpr());
-		//core::TypePtr targetTy = convFact.convertType(castExpr->getType());
+	core::ExpressionPtr performClangCastOnIR(insieme::frontend::conversion::Converter& converter, const clang::CastExpr* castExpr) {
+		core::ExpressionPtr expr = converter.convertExpr(castExpr->getSubExpr());
+		//core::TypePtr targetTy = converter.convertType(castExpr->getType());
 		//core::TypePtr exprTy = expr->getType();
 
-		//const core::FrontendIRBuilder& builder = convFact.getIRBuilder();
+		//const core::FrontendIRBuilder& builder = converter.getIRBuilder();
 		//const core::lang::BasicGenerator& gen = builder.getLangBasic();
-		//core::NodeManager& mgr = convFact.getNodeManager();
+		//core::NodeManager& mgr = converter.getNodeManager();
 
 		//if(VLOG_IS_ON(2)) {
 		//	VLOG(2) << "####### Expr: #######";
@@ -398,7 +398,7 @@ namespace utils {
 
 		//		clang::CastExpr::path_const_iterator it;
 		//		for(it = castExpr->path_begin(); it != castExpr->path_end(); ++it) {
-		//			core::TypePtr targetTy = convFact.convertType((*it)->getType());
+		//			core::TypePtr targetTy = converter.convertType((*it)->getType());
 		//			// if it is no ref we have to materialize it, otherwise refParent cannot be called
 		//			if(expr->getType()->getNodeType() != core::NT_RefType) {
 		//				// expr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), expr);
@@ -421,7 +421,7 @@ namespace utils {
 		//	// A conversion from a C++ class pointer/reference to a derived class pointer/reference. B *b = static_cast<B*>(a);
 		//	{
 		//		// we want to know the TYPE of static_cast<TYPE>()
-		//		targetTy = convFact.convertType(llvm::dyn_cast<clang::ExplicitCastExpr>(castExpr)->getType());
+		//		targetTy = converter.convertType(llvm::dyn_cast<clang::ExplicitCastExpr>(castExpr)->getType());
 		//		VLOG(2) << exprTy << " " << targetTy;
 
 		//		core::ExpressionPtr retIr;
@@ -469,7 +469,7 @@ namespace utils {
 		//	// A C++ dynamic_cast.
 		//	{
 		//		// we want to know the TYPE of static_cast<TYPE>()
-		//		targetTy = convFact.convertType(llvm::dyn_cast<clang::ExplicitCastExpr>(castExpr)->getType());
+		//		targetTy = converter.convertType(llvm::dyn_cast<clang::ExplicitCastExpr>(castExpr)->getType());
 		//		VLOG(2) << exprTy << " " << targetTy;
 
 		//		core::ExpressionPtr retIr;
@@ -535,7 +535,7 @@ namespace utils {
 		//	/*case clang::CK_UserDefinedConversion - Conversion using a user defined type conversion function.i
 		//	* struct A { operator int(); }; int i = int(A());
 		//	* */
-		//	{ return convFact.convertExpr(castExpr->getSubExpr()); }
+		//	{ return converter.convertExpr(castExpr->getSubExpr()); }
 
 		//case clang::CK_BuiltinFnToFnPtr: {
 		//	return expr;
@@ -615,7 +615,7 @@ namespace utils {
 		//case clang::CK_NonAtomicToAtomic:
 		//case clang::CK_CopyAndAutoreleaseBlockObject:
 		//	std::cout << " \nCAST: " << castExpr->getCastKindName() << " not supported!!" << std::endl;
-		//	std::cout << " at location: " << frontend::utils::location(castExpr->getLocStart(), convFact.getSourceManager()) << std::endl;
+		//	std::cout << " at location: " << frontend::utils::location(castExpr->getLocStart(), converter.getSourceManager()) << std::endl;
 		//	castExpr->dump();
 		//	assert_fail();
 		//default: assert_fail() << "not all options listed, is this clang 3.2? maybe should upgrade Clang support";

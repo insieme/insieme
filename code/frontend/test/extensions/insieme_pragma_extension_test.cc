@@ -49,7 +49,7 @@
 #include "insieme/core/printer/pretty_printer.h"
 
 #include "insieme/frontend/compiler.h"
-#include "insieme/frontend/convert.h"
+#include "insieme/frontend/converter.h"
 #include "insieme/frontend/extensions/omp_frontend_extension.h"
 #include "insieme/frontend/pragma/handler.h"
 #include "insieme/frontend/translation_unit.h"

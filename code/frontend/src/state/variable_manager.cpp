@@ -34,35 +34,21 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include "insieme/frontend/state/variable_manager.h"
 
-#include "insieme/core/forward_decls.h"
-#include "insieme/utils/pointer.h"
+#include "insieme/frontend/decl_converter.h"
+
+#include "insieme/utils/container_utils.h"
 
 namespace insieme {
-namespace core {
-namespace transform {
+namespace frontend {
+namespace state {
 
-	namespace detail {
-
-		static auto skipNone = [](const NodePtr& node) { return false; };
-
-		NodePtr instantiate(const NodePtr& root, std::function<bool(const core::NodePtr& node)> skip);
-
-	} // end namespace detail
-
-	/**
-	 * A transformation which instantiates all type variables within the given code fragment
-	 * where concrete types can be deduced from the call parameters.
-	 *
-	 * @param root the node to start the instantiation from
-	 * @return IR with the same root node, with all deducible types instantiated
-	 */
-	template <typename T>
-	core::Pointer<T> instantiateTypes(const core::Pointer<T>& root, std::function<bool(const NodePtr& node)> skip = detail::skipNone) {
-		return static_pointer_cast<T>(detail::instantiate(root, skip));
+	core::VariablePtr VariableManager::lookupOrInsert(const clang::VarDecl* varDecl) {
+		if(!::containsKey(storage, varDecl)) { storage[varDecl] = converter.getDeclConverter()->convertVarDecl(varDecl); }
+		return storage[varDecl];
 	}
 
-} // end namespace transform
-} // end namespace core
+} // end namespace state
+} // end namespace frontend
 } // end namespace insieme

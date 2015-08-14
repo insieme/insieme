@@ -103,7 +103,7 @@ namespace conversion {
 	//											CLANG TYPE CONVERTER
 	//---------------------------------------------------------------------------------------------------------------------
 
-	Converter::TypeConverter::TypeConverter(Converter& fact) : convFact(fact), mgr(fact.mgr), builder(fact.builder), basic(fact.mgr.getLangBasic()) {}
+	Converter::TypeConverter::TypeConverter(Converter& fact) : converter(fact), mgr(fact.mgr), builder(fact.builder), basic(fact.mgr.getLangBasic()) {}
 
 	core::TypePtr Converter::CTypeConverter::convertInternal(const clang::QualType& type) {
 		return TypeVisitor<CTypeConverter, core::TypePtr>::Visit(type.getTypePtr());
@@ -113,16 +113,16 @@ namespace conversion {
 		core::TypePtr retTy;
 
 		// iterate FE extension clang pre handler list and check if a handler wants to convert the type
-		for(auto extension : convFact.getConversionSetup().getExtensions()) {
-			retTy = extension->Visit(type, convFact);
+		for(auto extension : converter.getConversionSetup().getExtensions()) {
+			retTy = extension->Visit(type, converter);
 			if(retTy) { break; }
 		}
 
 		if(!retTy) { retTy = convertInternal(type); }
 
 		// iterate FE extension clang post handler list and check if a handler wants to modify the type
-		for(auto extension : convFact.getConversionSetup().getExtensions()) {
-			retTy = extension->PostVisit(type, retTy, convFact);
+		for(auto extension : converter.getConversionSetup().getExtensions()) {
+			retTy = extension->PostVisit(type, retTy, converter);
 		}
 
 		return retTy;

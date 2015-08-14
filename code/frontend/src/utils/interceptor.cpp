@@ -48,7 +48,7 @@
 #include "insieme/annotations/c/include.h"
 
 #include "insieme/frontend/clang.h"
-#include "insieme/frontend/convert.h"
+#include "insieme/frontend/converter.h"
 #include "insieme/frontend/utils/header_tagger.h"
 #include "insieme/frontend/utils/name_manager.h"
 #include "insieme/core/lang/enum_extension.h"
@@ -66,8 +66,8 @@ namespace utils {
 			return name;
 		}
 
-		insieme::core::TypeList evaluateTemplatedType(const clang::TemplateArgument* arg, insieme::frontend::conversion::Converter& convFact) {
-			auto builder = convFact.getIRBuilder();
+		insieme::core::TypeList evaluateTemplatedType(const clang::TemplateArgument* arg, insieme::frontend::conversion::Converter& converter) {
+			auto builder = converter.getIRBuilder();
 
 			core::TypeList resList;
 			switch(arg->getKind()) {
@@ -77,7 +77,7 @@ namespace utils {
 				break;
 			}
 			case clang::TemplateArgument::ArgKind::Type: {
-				auto type = convFact.convertType(arg->getAsType());
+				auto type = converter.convertType(arg->getAsType());
 				if(arg->getAsType().isConstQualified()) {
 					if(core::GenericTypePtr ptr = type.isa<core::GenericTypePtr>()) {
 						type = builder.getNodeManager().getLangExtension<core::lang::ConstExtension>().getConstType(type);
@@ -132,7 +132,7 @@ namespace utils {
 				unsigned i(0);
 				for(clang::TemplateArgument::pack_iterator it = arg->pack_begin(), end = arg->pack_end(); it != end; it++) {
 					VLOG(2) << " pack elem: " << i++;
-					auto tmp = evaluateTemplatedType(it, convFact);
+					auto tmp = evaluateTemplatedType(it, converter);
 					resList.insert(resList.end(), tmp.begin(), tmp.end());
 				}
 			} break;
@@ -143,8 +143,8 @@ namespace utils {
 
 	} // end anonymous namespace
 
-	insieme::core::TypePtr Interceptor::intercept(const clang::QualType& type, insieme::frontend::conversion::Converter& convFact) const {
-		auto builder = convFact.getIRBuilder();
+	insieme::core::TypePtr Interceptor::intercept(const clang::QualType& type, insieme::frontend::conversion::Converter& converter) const {
+		auto builder = converter.getIRBuilder();
 		core::TypePtr irType;
 
 		if(const clang::TagType* tagType = llvm::dyn_cast<clang::TagType>(type.getTypePtr())) {
@@ -157,7 +157,7 @@ namespace utils {
 				for(size_t i = 0; i < args.size(); i++) {
 					VLOG(2) << " template elem elem: " << i << " of ";
 
-					auto tmp = evaluateTemplatedType(&args[i], convFact);
+					auto tmp = evaluateTemplatedType(&args[i], converter);
 					typeList.insert(typeList.end(), tmp.begin(), tmp.end());
 				}
 			}
@@ -219,9 +219,9 @@ namespace utils {
 		return regex_match(decl->getQualifiedNameAsString(), rx);
 	}
 
-	insieme::core::ExpressionPtr Interceptor::intercept(const clang::FunctionDecl* decl, insieme::frontend::conversion::Converter& convFact,
+	insieme::core::ExpressionPtr Interceptor::intercept(const clang::FunctionDecl* decl, insieme::frontend::conversion::Converter& converter,
 	                                                    const bool explicitTemplateArgs, const std::string& name) const {
-		auto builder = convFact.getIRBuilder();
+		auto builder = converter.getIRBuilder();
 		std::stringstream ss;
 		switch(decl->getTemplatedKind()) {
 		case clang::FunctionDecl::TemplatedKind::TK_NonTemplate: VLOG(2) << "TK_NonTemplate"; break;
@@ -310,7 +310,7 @@ namespace utils {
 		}
 
 
-		core::FunctionTypePtr type = convFact.convertType(decl->getType()).as<core::FunctionTypePtr>();
+		core::FunctionTypePtr type = converter.convertType(decl->getType()).as<core::FunctionTypePtr>();
 
 		// fix types for ctor, mfunc, ...
 		std::string literalName = decl->getQualifiedNameAsString();
@@ -326,12 +326,12 @@ namespace utils {
 		//	} else {
 		//		if(!methodDecl->isStatic()) { literalName = methodDecl->getNameAsString(); }
 		//	}
-		//	type = convFact.convertFunctionType(methodDecl);
+		//	type = converter.convertFunctionType(methodDecl);
 		//}
 
 		//literalName = fixQualifiedName(literalName);
 		//core::ExpressionPtr interceptExpr = builder.literal(literalName, type);
-		//convFact.getHeaderTagger().addHeaderForDecl(interceptExpr, decl, true);
+		//converter.getHeaderTagger().addHeaderForDecl(interceptExpr, decl, true);
 
 		//VLOG(2) << interceptExpr << " " << interceptExpr->getType();
 
@@ -345,7 +345,7 @@ namespace utils {
 	}
 
 
-	insieme::core::ExpressionPtr Interceptor::intercept(const clang::EnumConstantDecl* enumConstant, insieme::frontend::conversion::Converter& convFact) const {
+	insieme::core::ExpressionPtr Interceptor::intercept(const clang::EnumConstantDecl* enumConstant, insieme::frontend::conversion::Converter& converter) const {
 		const clang::EnumType* enumType = llvm::dyn_cast<clang::EnumType>(llvm::cast<clang::TypeDecl>(enumConstant->getDeclContext())->getTypeForDecl());
 		auto enumDecl = enumType->getDecl();
 
@@ -370,8 +370,8 @@ namespace utils {
 		VLOG(2) << fixedQualifiedName;
 
 		std::string enumConstantName = fixedQualifiedName;
-		core::TypePtr enumTy = convFact.convertType(enumType->getCanonicalTypeInternal());
-		return convFact.getIRBuilder().literal(enumConstantName, enumTy);
+		core::TypePtr enumTy = converter.convertType(enumType->getCanonicalTypeInternal());
+		return converter.getIRBuilder().literal(enumConstantName, enumTy);
 	}
 
 

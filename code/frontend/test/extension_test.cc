@@ -51,7 +51,7 @@
 #include "insieme/core/lang/simd_vector.h"
 #include "insieme/core/lang/enum_extension.h"
 
-#include "insieme/frontend/convert.h"
+#include "insieme/frontend/converter.h"
 #include "insieme/frontend/tu/ir_translation_unit.h"
 #include "insieme/frontend/extensions/frontend_extension.h"
 #include "insieme/frontend/extensions/cpp11_extension.h"
@@ -94,7 +94,7 @@ class UnitTestExtension : public insieme::frontend::extensions::FrontendExtensio
 	}
 
   private:
-	insieme::core::TypePtr PostVisit(const clang::Type* type, const insieme::core::TypePtr& irType, insieme::frontend::conversion::Converter& convFact) {
+	insieme::core::TypePtr PostVisit(const clang::Type* type, const insieme::core::TypePtr& irType, insieme::frontend::conversion::Converter& converter) {
 		EXPECT_TRUE(irType);
 
 		if(const clang::BuiltinType* builtin = llvm::dyn_cast<clang::BuiltinType>(type)) {
@@ -153,7 +153,7 @@ class UnitTestExtension : public insieme::frontend::extensions::FrontendExtensio
 		// if(const clang::ComplexType* complexType = llvm::dyn_cast<clang::ComplexType>(type)) {
 		if(llvm::isa<clang::ComplexType>(type)) {
 			// check if it is a IR complexType
-			EXPECT_TRUE(convFact.getIRBuilder().getNodeManager().getLangExtension<insieme::core::lang::ComplexExtension>().isComplexType(irType));
+			EXPECT_TRUE(converter.getIRBuilder().getNodeManager().getLangExtension<insieme::core::lang::ComplexExtension>().isComplexType(irType));
 		}
 
 		if(llvm::isa<clang::ArrayType>(type)) {
@@ -165,7 +165,7 @@ class UnitTestExtension : public insieme::frontend::extensions::FrontendExtensio
 
 				// checking elementType
 				// VectorTypePtr vecType = irType.as<VectorTypePtr>();
-				// TypePtr&& elemTy = convFact.convertType( constArrType->getElementType().getTypePtr() );
+				// TypePtr&& elemTy = converter.convertType( constArrType->getElementType().getTypePtr() );
 				// EXPECT_TRUE( *elemTy == *vecType.getElementType());
 
 				// checking size
@@ -189,7 +189,7 @@ class UnitTestExtension : public insieme::frontend::extensions::FrontendExtensio
 
 				// checking elementType
 				// ArrayTypePtr arrType = irType.as<ArrayTypePtr>();
-				// TypePtr&& elemTy = convFact.convertType( varArrType->getElementType().getTypePtr() );
+				// TypePtr&& elemTy = converter.convertType( varArrType->getElementType().getTypePtr() );
 				// EXPECT_TRUE( *elemTy == *arrType.getElementType());
 			}
 		}
@@ -259,7 +259,7 @@ class UnitTestExtension : public insieme::frontend::extensions::FrontendExtensio
 		if(const clang::PointerType* pointerType = llvm::dyn_cast<clang::PointerType>(type)) {
 			if(pointerType->isVoidPointerType()) {
 				// check void* to be anyRef
-				EXPECT_TRUE(convFact.getIRBuilder().getLangBasic().isAnyRef(irType));
+				EXPECT_TRUE(converter.getIRBuilder().getLangBasic().isAnyRef(irType));
 			} else if(pointerType->isFunctionPointerType()) {
 				// function pointers stay as function type
 				EXPECT_TRUE(irType.isa<FunctionTypePtr>());
@@ -280,11 +280,11 @@ class UnitTestExtension : public insieme::frontend::extensions::FrontendExtensio
 			EXPECT_TRUE(irType.isa<GenericTypePtr>()) << "ir type: " << irType << " clang type" << type;
 
 			// TODO how to check details?
-			// EXPECT_TRUE(convFact.lookupTypeDetails(irType).isa<StructTypePtr>()) << "ir type: " << irType << " clang type" << type;
+			// EXPECT_TRUE(converter.lookupTypeDetails(irType).isa<StructTypePtr>()) << "ir type: " << irType << " clang type" << type;
 		}
 
 		if(llvm::isa<clang::EnumType>(type)) {
-			const auto& ext = convFact.getIRBuilder().getNodeManager().getLangExtension<insieme::core::lang::EnumExtension>();
+			const auto& ext = converter.getIRBuilder().getNodeManager().getLangExtension<insieme::core::lang::EnumExtension>();
 			EXPECT_TRUE(ext.isEnumType(irType)) << "ir type: " << irType << " clang type" << type;
 			// TODO how to check the details?
 		}

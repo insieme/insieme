@@ -52,7 +52,7 @@
 #include "insieme/utils/logging.h"
 
 #include "insieme/utils/config.h"
-#include "insieme/frontend/convert.h"
+#include "insieme/frontend/converter.h"
 #include "insieme/frontend/extensions/interceptor_extension.h"
 #include "insieme/frontend/tu/ir_translation_unit.h"
 

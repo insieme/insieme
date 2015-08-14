@@ -167,7 +167,7 @@ namespace conversion {
 		LOG_TYPE_CONVERSION(refTy, retTy);
 
 		//// get inner type
-		//core::TypePtr inTy = convFact.convertType(refTy->getPointeeType()->getCanonicalTypeInternal());
+		//core::TypePtr inTy = converter.convertType(refTy->getPointeeType()->getCanonicalTypeInternal());
 
 		//// find out if is a const ref or not
 		//QualType qual;
@@ -206,12 +206,12 @@ namespace conversion {
 			switch(templTy->getArg(argId).getKind()) {
 			case clang::TemplateArgument::Expression: {
 				VLOG(2) << "arg: expression";
-				convFact.convertType(templTy->getArg(argId).getAsExpr()->getType());
+				converter.convertType(templTy->getArg(argId).getAsExpr()->getType());
 				break;
 			}
 			case clang::TemplateArgument::Type: {
 				VLOG(2) << "arg: TYPE";
-				convFact.convertType(templTy->getArg(argId).getAsType());
+				converter.convertType(templTy->getArg(argId).getAsType());
 				break;
 			}
 			// -------------------   NON IMPLEMENTED ONES ------------------------
@@ -258,7 +258,7 @@ namespace conversion {
 		}
 
 		assert_true(templTy->isSugared()) << "no idea what to do with non sugar";
-		return retTy = convFact.convertType(templTy->desugar());
+		return retTy = converter.convertType(templTy->desugar());
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -303,7 +303,7 @@ namespace conversion {
 
 		// START_LOG_TYPE_CONVERSION(substTy);
 		// assert_fail() << "SubstTemplateTypeParmType not yet handled!";
-		retTy = convFact.convertType(substTy->getReplacementType());
+		retTy = converter.convertType(substTy->getReplacementType());
 		return retTy;
 	}
 
@@ -326,7 +326,7 @@ namespace conversion {
 		core::TypePtr retTy;
 		LOG_TYPE_CONVERSION(memPointerTy, retTy);
 		retTy = convert(memPointerTy->getPointeeType());
-		//core::TypePtr memTy = convFact.lookupTypeDetails(retTy);
+		//core::TypePtr memTy = converter.lookupTypeDetails(retTy);
 		//core::TypePtr classTy = convert(memPointerTy->getClass()->getCanonicalTypeInternal());
 
 		//if(memPointerTy->isMemberFunctionPointer()) {

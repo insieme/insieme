@@ -43,7 +43,7 @@
 #include "insieme/core/ir_program.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/frontend/compiler.h"
-#include "insieme/frontend/convert.h"
+#include "insieme/frontend/converter.h"
 #include "insieme/frontend/frontend.h"
 #include "insieme/frontend/extensions/omp_frontend_extension.h"
 #include "insieme/frontend/extensions/test_pragma_extension.h"

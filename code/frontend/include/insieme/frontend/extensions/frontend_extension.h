@@ -182,30 +182,30 @@ namespace extensions {
 		 *  is visited by the insieme visitor. If non nullptr is returned the clang expression
 		 *  won't be visited by the insieme converter anymore.
 		 *  @param expr clang expression
-		 *  @param convFact insieme conversion factory
+		 *  @param converter insieme conversion factory
 		 *  @return converted clang expression or nullptr if not converted
 		 */
-		virtual insieme::core::ExpressionPtr Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& convFact);
+		virtual insieme::core::ExpressionPtr Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& converter);
 
 		/**
 		 *  User provided clang type visitor. Will be called before clang type
 		 *  is visited by the insieme visitor. If non nullptr is returned the clang type
 		 *  won't be visited by the insieme converter anymore.
 		 *  @param type clang type
-		 *  @param convFact insieme conversion factory
+		 *  @param converter insieme conversion factory
 		 *  @return converted clang type or nullptr if not converted
 		 */
-		virtual insieme::core::TypePtr Visit(const clang::QualType& type, insieme::frontend::conversion::Converter& convFact);
+		virtual insieme::core::TypePtr Visit(const clang::QualType& type, insieme::frontend::conversion::Converter& converter);
 
 		/**
 		 *  User provided clang stmt visitor. Will be called before clang stmt
 		 *  is visited by the insieme visitor. If non empty IR stmt list is
 		 *  returned the clang stmt won't be visited by the insieme converter anymore.
 		 *  @param stmt clang stmt
-		 *  @param convFact insieme conversion factory
+		 *  @param converter insieme conversion factory
 		 *  @return converted clang stmt or empty stmt list if not converted
 		 */
-		virtual stmtutils::StmtWrapper Visit(const clang::Stmt* stmt, insieme::frontend::conversion::Converter& convFact);
+		virtual stmtutils::StmtWrapper Visit(const clang::Stmt* stmt, insieme::frontend::conversion::Converter& converter);
 
 		/**
 		 *  User provided clang decl visitor. Will be called before clang decl
@@ -213,40 +213,40 @@ namespace extensions {
 		 *  or an IR type the standard visitors are not called. This method mustn't be
 		 *  overriden, because this method delegates the declaration to the right extension decl visitor.
 		 *  @param decl clang decl
-		 *  @param convFact insieme conversion factory
+		 *  @param converter insieme conversion factory
 		 *  @return NodePtr that can either be an expression or a type
 		 */
-		virtual insieme::core::NodePtr Visit(const clang::Decl* decl, insieme::frontend::conversion::Converter& convFact, bool symbolic = false);
+		virtual insieme::core::NodePtr Visit(const clang::Decl* decl, insieme::frontend::conversion::Converter& converter, bool symbolic = false);
 
 		/**
 		 *  User provided clang type decl visitor. Will be called before clang type decl
 		 *  is visited by the insieme type decl visitor. If the extension returns an IR type
 		 *  the standard visitor is not called.
 		 *  @param decl clang type decl
-		 *  @param convFact insieme conversion factory
+		 *  @param converter insieme conversion factory
 		 *  @return Insieme IR TypePtr
 		 */
-		virtual core::TypePtr TypeDeclVisit(const clang::TypeDecl* decl, insieme::frontend::conversion::Converter& convFact);
+		virtual core::TypePtr TypeDeclVisit(const clang::TypeDecl* decl, insieme::frontend::conversion::Converter& converter);
 
 		/**
 		 *  User provided clang function decl visitor. Will be called before clang function decl
 		 *  is visited by the insieme function decl visitor. If the extension returns an IR expression
 		 *  the standard visitor is not called.
 		 *  @param decl clang function decl
-		 *  @param convFact insieme conversion factory
+		 *  @param converter insieme conversion factory
 		 *  @return Insieme IR ExpressionPtr
 		 */
-		virtual core::ExpressionPtr FuncDeclVisit(const clang::FunctionDecl* decl, insieme::frontend::conversion::Converter& convFact, bool symbolic = false);
+		virtual core::ExpressionPtr FuncDeclVisit(const clang::FunctionDecl* decl, insieme::frontend::conversion::Converter& converter, bool symbolic = false);
 
 		/**
 		 *  User provided clang value decl visitor. Will be called before clang value decl
 		 *  is visited by the insieme value decl visitor. If the extension returns an IR expression
 		 *  the standard visitor is not called.
 		 *  @param decl clang value decl
-		 *  @param convFact insieme conversion factory
+		 *  @param converter insieme conversion factory
 		 *  @return Insieme IR ExpressionPtr
 		 */
-		virtual core::ExpressionPtr ValueDeclVisit(const clang::ValueDecl* decl, insieme::frontend::conversion::Converter& convFact);
+		virtual core::ExpressionPtr ValueDeclVisit(const clang::ValueDecl* decl, insieme::frontend::conversion::Converter& converter);
 
 		/**
 		 *  User provided clang expr visitor. Will be called after clang expression
@@ -254,11 +254,11 @@ namespace extensions {
 		 *  conversion took place.
 		 *  @param expr clang expression
 		 *  @param irExpr converted clang expression
-		 *  @param convFact insieme conversion factory
+		 *  @param converter insieme conversion factory
 		 *  @return modified IR expression or irExpr if no modification should be done
 		 */
 		virtual insieme::core::ExpressionPtr PostVisit(const clang::Expr* expr, const insieme::core::ExpressionPtr& irExpr,
-		                                               insieme::frontend::conversion::Converter& convFact);
+		                                               insieme::frontend::conversion::Converter& converter);
 
 		/**
 		 *  User provided clang type visitor. Will be called after clang type
@@ -266,11 +266,11 @@ namespace extensions {
 		 *  conversion took place.
 		 *  @param type clang type
 		 *  @param irType converted clang type
-		 *  @param convFact insieme conversion factory
+		 *  @param converter insieme conversion factory
 		 *  @return modified IR type or irType if no modification should be done
 		 */
 		virtual insieme::core::TypePtr PostVisit(const clang::QualType& type, const insieme::core::TypePtr& irType,
-		                                         insieme::frontend::conversion::Converter& convFact);
+		                                         insieme::frontend::conversion::Converter& converter);
 
 		/**
 		 *  User provided clang stmt visitor. Will be called after clang stmt
@@ -278,11 +278,11 @@ namespace extensions {
 		 *  conversion took place.
 		 *  @param stmt clang stmt
 		 *  @param irStmt converted clang stmt
-		 *  @param convFact insieme conversion factory
+		 *  @param converter insieme conversion factory
 		 *  @return modified IR stmt or irStmt if no modification should be done
 		 */
 		virtual stmtutils::StmtWrapper PostVisit(const clang::Stmt* stmt, const stmtutils::StmtWrapper& irStmt,
-		                                         insieme::frontend::conversion::Converter& convFact);
+		                                         insieme::frontend::conversion::Converter& converter);
 
 		/**
 		 *  User provided post clang decl visitor. Will be called after clang decl
@@ -291,10 +291,10 @@ namespace extensions {
 		 *  delegate the declaration to the right visitor.
 		 *  @param decl clang decl
 		 *  @param ir IR NodePtr
-		 *  @param convFact insieme conversion factory
+		 *  @param converter insieme conversion factory
 		 *  @return modified version of IR input
 		 */
-		virtual insieme::core::NodePtr PostVisit(const clang::Decl* decl, insieme::core::NodePtr ir, insieme::frontend::conversion::Converter& convFact,
+		virtual insieme::core::NodePtr PostVisit(const clang::Decl* decl, insieme::core::NodePtr ir, insieme::frontend::conversion::Converter& converter,
 		                                         bool symbolic = false);
 
 		/**
@@ -302,32 +302,32 @@ namespace extensions {
 		 *  was visited by the insieme type decl visitor and returns a modified IR type.
 		 *  @param decl clang type decl
 		 *  @param type IR TypePtr
-		 *  @param convFact insieme conversion factory
+		 *  @param converter insieme conversion factory
 		 *  @return modified version of IR TypePtr
 		 */
-		virtual core::TypePtr TypeDeclPostVisit(const clang::TypeDecl* decl, insieme::core::TypePtr type, insieme::frontend::conversion::Converter& convFact);
+		virtual core::TypePtr TypeDeclPostVisit(const clang::TypeDecl* decl, insieme::core::TypePtr type, insieme::frontend::conversion::Converter& converter);
 
 		/**
 		 *  User provided post clang function decl visitor. Will be called after clang decl
 		 *  was visited by the insieme function decl visitor and returns a modified IR expression.
 		 *  @param decl clang function decl
 		 *  @param type IR ExpressionPtr
-		 *  @param convFact insieme conversion factory
+		 *  @param converter insieme conversion factory
 		 *  @return modified version of IR ExpressionPtr
 		 */
 		virtual core::ExpressionPtr FuncDeclPostVisit(const clang::FunctionDecl* decl, insieme::core::ExpressionPtr expr,
-		                                              insieme::frontend::conversion::Converter& convFact, bool symbolic = false);
+		                                              insieme::frontend::conversion::Converter& converter, bool symbolic = false);
 
 		/**
 		 *  User provided post clang value decl visitor. Will be called after clang decl
 		 *  was visited by the insieme value decl visitor and returns a modified IR expression.
 		 *  @param decl clang value decl
 		 *  @param type IR ExpressionPtr
-		 *  @param convFact insieme conversion factory
+		 *  @param converter insieme conversion factory
 		 *  @return modified version of IR ExpressionPtr
 		 */
 		virtual core::ExpressionPtr ValueDeclPostVisit(const clang::ValueDecl* decl, insieme::core::ExpressionPtr expr,
-		                                               insieme::frontend::conversion::Converter& convFact);
+		                                               insieme::frontend::conversion::Converter& converter);
 
 
 		/*****************POST CLANG STAGE*****************/
