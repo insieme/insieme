@@ -266,6 +266,7 @@ namespace conversion {
 		core::TypePtr funType = convertType(funcDecl->getType());
 		dumpColor(funType);
 		
+		assert_not_implemented();
 		return core::ExpressionPtr();
 	}
 
