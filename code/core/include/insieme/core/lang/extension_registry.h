@@ -41,7 +41,7 @@
 
 #include "insieme/core/lang/enum_extension.h"
 #include "insieme/core/lang/ir++_extension.h"
-#include "insieme/core/lang/parallel_extension.h"
+#include "insieme/core/lang/parallel.h"
 #include "insieme/core/lang/simd_vector.h"
 #include "insieme/core/lang/static_vars.h"
 #include "insieme/core/lang/varargs_extension.h"

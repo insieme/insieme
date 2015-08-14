@@ -49,6 +49,7 @@
 
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/reference.h"
+#include "insieme/core/lang/parallel.h"
 #include "insieme/core/lang/static_vars.h"
 
 #include "insieme/utils/logging.h"
@@ -208,7 +209,7 @@ namespace analysis {
 
 	bool isParallel(const NodePtr& node) {
 		return visitDepthFirstOnceInterruptible(
-		    node, [](const CallExprPtr& call) { return call->getNodeManager().getLangBasic().isParallel(call->getFunctionExpr()); });
+		    node, [](const CallExprPtr& call) { return call->getNodeManager().getLangExtension<lang::ParallelExtension>().isParallel(call->getFunctionExpr()); });
 	}
 
 	TypeList getElementTypes(const TypePtr& type) {

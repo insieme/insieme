@@ -45,6 +45,8 @@
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 
+#include "insieme/core/lang/parallel.h"
+
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/node_mapper_utils.h"
@@ -68,7 +70,7 @@ namespace transform {
 
 				       // some preparation
 				       NodeManager& mgr = cur->getNodeManager();
-				       auto& basic = mgr.getLangBasic();
+				       auto& parExt = mgr.getLangExtension<lang::ParallelExtension>();
 				       IRBuilder builder(mgr);
 				       auto call = cur.as<CallExprPtr>();
 
@@ -81,13 +83,13 @@ namespace transform {
 					   };
 
 				       // handle getThreadID
-				       if(analysis::isCallOf(call, basic.getGetThreadId())) {
+				       if(analysis::isCallOf(call, parExt.getGetThreadId())) {
 					       if(ExpressionPtr newLevel = decLevel(call[0])) { return builder.getThreadId(newLevel); }
 					       return builder.intLit(0);
 				       }
 
 				       // handle group size
-				       if(analysis::isCallOf(call, basic.getGetGroupSize())) {
+				       if(analysis::isCallOf(call, parExt.getGetGroupSize())) {
 					       if(ExpressionPtr newLevel = decLevel(call[0])) { return builder.getThreadGroupSize(newLevel); }
 					       return builder.intLit(1);
 				       }
@@ -102,12 +104,13 @@ namespace transform {
 			NodeManager& manager;
 			IRBuilder builder;
 			const lang::BasicGenerator& basic;
+			const lang::ParallelExtension& parExt;
 
 			bool removeSyncOps;
 
 		  public:
 			Sequentializer(NodeManager& manager, bool removeSyncOps)
-			    : manager(manager), builder(manager), basic(manager.getLangBasic()), removeSyncOps(removeSyncOps) {}
+			    : manager(manager), builder(manager), basic(manager.getLangBasic()), parExt(manager.getLangExtension<lang::ParallelExtension>()), removeSyncOps(removeSyncOps) {}
 
 			virtual const NodePtr resolveElement(const NodePtr& ptr) {
 				// skip types
@@ -121,23 +124,23 @@ namespace transform {
 				auto args = call->getArguments();
 
 				// skip merge expressions if possible
-				if(basic.isMerge(fun)) {
+				if(parExt.isMerge(fun)) {
 					// eval argument if necessary
 					if(args[0]->getNodeType() == NT_CallExpr) { return args[0]; }
 					return builder.getNoOp();
 				}
 
 				// ignore merge-all calls
-				if(basic.isMergeAll(fun)) { return builder.getNoOp(); }
+				if(parExt.isMergeAll(fun)) { return builder.getNoOp(); }
 
 				// handle parallel expression
-				if(basic.isParallel(fun)) {
+				if(parExt.isParallel(fun)) {
 					// invoke recursively resolved argument (should be a lazy function after conversion)
 					return evalLazy(manager, args[0]);
 				}
 
 				// handle pfor calls
-				if(basic.isPFor(fun)) {
+				if(parExt.isPFor(fun)) {
 					core::ExpressionPtr start = args[1];
 					core::ExpressionPtr end = args[2];
 					core::ExpressionPtr step = args[3];
@@ -148,7 +151,7 @@ namespace transform {
 				if(!removeSyncOps) { return call; }
 
 				// handle barrier
-				if(basic.isBarrier(fun)) {
+				if(parExt.isBarrier(fun)) {
 					// => can be ignored
 					return builder.getNoOp();
 				}
@@ -160,14 +163,14 @@ namespace transform {
 				}
 
 				// and locks
-				if(basic.isLockAcquire(fun)) { return builder.getNoOp(); }
+				if(parExt.isLockAcquire(fun)) { return builder.getNoOp(); }
 
-				if(basic.isLockRelease(fun)) { return builder.getNoOp(); }
+				if(parExt.isLockRelease(fun)) { return builder.getNoOp(); }
 
-				if(basic.isLockInit(fun)) { return builder.getNoOp(); }
+				if(parExt.isLockInit(fun)) { return builder.getNoOp(); }
 
 				// and atomics
-				if(basic.isAtomic(fun)) {
+				if(parExt.isAtomic(fun)) {
 					// fix generic parameters within atomic body definition
 					core::CallExprPtr newCall = call;
 

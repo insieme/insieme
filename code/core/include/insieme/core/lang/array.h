@@ -61,6 +61,8 @@ namespace lang {
 		ArrayExtension(core::NodeManager& manager) : core::lang::Extension(manager) {}
 
 	  public:
+
+
 		// -------------------- arrays ---------------------------
 
 		/**
@@ -68,10 +70,34 @@ namespace lang {
 		 */
 		LANG_EXT_TYPE_WITH_NAME(GenArray, "generic_array_template", "array<'a,'s>");
 
+
+		/**
+		 * A type alias for arrays with undefined size.
+		 */
+		TYPE_ALIAS("array<'a>", "array<'a,inf>");
+
+
+		// -------------------- operators ---------------------------
+
 		/**
 		 * A literal to create a (partially) initialized array instance.
 		 */
 		LANG_EXT_LITERAL(ArrayCreate, "array_create", "(type<'elem>, type<'size>, list<'elem>) -> array<'elem,'size>")
+
+		/**
+		 * A derived operator conducting a reduction over the elements of a given array.
+		 */
+		LANG_EXT_DERIVED_WITH_NAME(ArrayReduce, "array_reduce",
+				    "                                                                                "
+					"   lambda (ref<array<'a>> data, uint<8> size, ('b,'a)->'b op, 'b init)->'b {    "
+					"   	decl ref<'b> res = var(init);                                            "
+					"   	for(uint<8> i = 0ul .. size) {                                           "
+					"   		res = op(*res, *(data[i]));                                          "
+					"   	}                                                                        "
+					"   	return *res;                                                             "
+					"   }                                                                            "
+				    "                                                                                "
+		)
 
 
 		//		// Arrays -------------------------------------------------------------------------------------------------------------

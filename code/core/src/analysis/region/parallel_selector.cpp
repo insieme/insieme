@@ -40,6 +40,8 @@
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/lang/basic.h"
 
+#include "insieme/core/lang/parallel.h"
+
 namespace insieme {
 namespace core {
 namespace analysis {
@@ -47,7 +49,7 @@ namespace region {
 
 	RegionList ParallelSelector::getRegions(const core::NodePtr& node) const {
 		RegionList res;
-		auto parallel = node->getNodeManager().getLangBasic().getParallel();
+		auto parallel = node->getNodeManager().getLangExtension<lang::ParallelExtension>().getParallel();
 		core::visitDepthFirst(core::NodeAddress(node), [&](const core::CallExprAddress& cur) -> bool {
 			if(*cur.getAddressedNode()->getFunctionExpr() != *parallel) { return false; }
 

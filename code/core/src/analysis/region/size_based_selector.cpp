@@ -39,6 +39,7 @@
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/lang/basic.h"
+#include "insieme/core/lang/parallel.h"
 
 #include "insieme/utils/cache_utils.h"
 
@@ -74,7 +75,7 @@ namespace region {
 				// multiply with number of iterations (loops count twice)
 				unsigned mul = 1;
 				auto t = node->getNodeType();
-				auto& b = node->getNodeManager().getLangBasic();
+				auto& b = node->getNodeManager().getLangExtension<lang::ParallelExtension>();
 				if(t == core::NT_ForStmt || t == core::NT_WhileStmt) { mul = 2; }
 				if(core::analysis::isCallOf(node, b.getPFor())) { mul = 2; }
 

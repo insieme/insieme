@@ -281,38 +281,38 @@ GROUP(ScalarCast, ToInt, ToUint, ToReal, ToChar, ToBool)
 
 // TO INT
 GROUP(ToInt, UnsignedToInt, WCharToInt, RealToInt, CharToInt, BoolToInt, IntPrecisionFix)
-LITERAL(UnsignedToInt, "uint_to_int", "(uint<'a>,intTypeParam<'b>) -> int<'b>")
-LITERAL(RealToInt, "real_to_int", "(real<'a>,intTypeParam<'b>) -> int<'b>")
-LITERAL(WCharToInt, "wchar_to_int", "(wchar<'a>,intTypeParam<'b>) -> int<'b>")
-LITERAL(CharToInt, "char_to_int", "(char,intTypeParam<'b>) -> int<'b>")
-LITERAL(IntPrecisionFix, "int_precision", "(int<'a>,intTypeParam<'b>) -> int<'b>")
-DERIVED(BoolToInt, "bool_to_int", "lambda (bool b,intTypeParam<'b> t) -> int<'b> { return (b)?(int_precision(1,param('b))):(int_precision(0,param('b))); }")
+LITERAL(UnsignedToInt, "uint_to_int", "(uint<'a>,type<'b>) -> int<'b>")
+LITERAL(RealToInt, "real_to_int", "(real<'a>,type<'b>) -> int<'b>")
+LITERAL(WCharToInt, "wchar_to_int", "(wchar<'a>,type<'b>) -> int<'b>")
+LITERAL(CharToInt, "char_to_int", "(char,type<'b>) -> int<'b>")
+LITERAL(IntPrecisionFix, "int_precision", "(int<'a>,type<'b>) -> int<'b>")
+DERIVED(BoolToInt, "bool_to_int", "lambda (bool b,type<'b> t) -> int<'b> { return (b)?(int_precision(1,param('b))):(int_precision(0,param('b))); }")
 
 // TO UINT
 GROUP(ToUint, SignedToUnsigned, WCharToUnsigned, RealToUnsigned, CharToUnsigned, BoolToUnsigned, UintPrecisionFix)
-LITERAL(SignedToUnsigned, "int_to_uint", "(int<'a>,intTypeParam<'b>) -> uint<'b>")
-LITERAL(RealToUnsigned, "real_to_uint", "(real<'a>,intTypeParam<'b>) -> uint<'b>")
-LITERAL(WCharToUnsigned, "wchar_to_uint", "(wchar<'a>,intTypeParam<'b>) -> uint<'b>")
-LITERAL(CharToUnsigned, "char_to_uint", "(char,intTypeParam<'b>) -> uint<'b>")
-LITERAL(BoolToUnsigned, "bool_to_uint", "(bool,intTypeParam<'b>) -> uint<'b>")
-LITERAL(UintPrecisionFix, "uint_precision", "(uint<'a>,intTypeParam<'b>) -> uint<'b>")
+LITERAL(SignedToUnsigned, "int_to_uint", "(int<'a>,type<'b>) -> uint<'b>")
+LITERAL(RealToUnsigned, "real_to_uint", "(real<'a>,type<'b>) -> uint<'b>")
+LITERAL(WCharToUnsigned, "wchar_to_uint", "(wchar<'a>,type<'b>) -> uint<'b>")
+LITERAL(CharToUnsigned, "char_to_uint", "(char,type<'b>) -> uint<'b>")
+LITERAL(BoolToUnsigned, "bool_to_uint", "(bool,type<'b>) -> uint<'b>")
+LITERAL(UintPrecisionFix, "uint_precision", "(uint<'a>,type<'b>) -> uint<'b>")
 
 // TO WCHAR
 GROUP(ToWChar, SignedToWChar, UnsignedToWChar, RealToWChar, CharToWChar, BoolToWChar, WCharPrecisionFix)
-LITERAL(SignedToWChar, "int_to_wchar", "(int<'a>,intTypeParam<'b>) -> wchar<'b>")
-LITERAL(UnsignedToWChar, "uint_to_wchar", "(uint<'a>,intTypeParam<'b>) -> wchar<'b>")
-LITERAL(RealToWChar, "real_to_wchar", "(real<'a>,intTypeParam<'b>) -> wchar<'b>")
-LITERAL(CharToWChar, "char_to_wchar", "(char,intTypeParam<'b>) -> wchar<'b>")
-LITERAL(BoolToWChar, "bool_to_wchar", "(bool,intTypeParam<'b>) -> wchar<'b>")
-LITERAL(WCharPrecisionFix, "wchar_precision", "(wchar<'a>,intTypeParam<'b>) -> wchar<'b>")
+LITERAL(SignedToWChar, "int_to_wchar", "(int<'a>,type<'b>) -> wchar<'b>")
+LITERAL(UnsignedToWChar, "uint_to_wchar", "(uint<'a>,type<'b>) -> wchar<'b>")
+LITERAL(RealToWChar, "real_to_wchar", "(real<'a>,type<'b>) -> wchar<'b>")
+LITERAL(CharToWChar, "char_to_wchar", "(char,type<'b>) -> wchar<'b>")
+LITERAL(BoolToWChar, "bool_to_wchar", "(bool,type<'b>) -> wchar<'b>")
+LITERAL(WCharPrecisionFix, "wchar_precision", "(wchar<'a>,type<'b>) -> wchar<'b>")
 
 // TO REAL
 GROUP(ToReal, SignedToReal, UnsignedToReal, CharToReal, BoolToReal, RealPrecisionFix)
-LITERAL(SignedToReal, "int_to_real", "(int<'a>,intTypeParam<'b>) -> real<'b>")
-LITERAL(UnsignedToReal, "uint_to_real", "(uint<'a>,intTypeParam<'b>) -> real<'b>")
-LITERAL(CharToReal, "char_to_real", "(char,intTypeParam<'b>) -> real<'b>")
-LITERAL(BoolToReal, "bool_to_real", "(bool,intTypeParam<'b>) -> real<'b>")
-LITERAL(RealPrecisionFix, "real_precision", "(real<'a>,intTypeParam<'b>) -> real<'b>")
+LITERAL(SignedToReal, "int_to_real", "(int<'a>,type<'b>) -> real<'b>")
+LITERAL(UnsignedToReal, "uint_to_real", "(uint<'a>,type<'b>) -> real<'b>")
+LITERAL(CharToReal, "char_to_real", "(char,type<'b>) -> real<'b>")
+LITERAL(BoolToReal, "bool_to_real", "(bool,type<'b>) -> real<'b>")
+LITERAL(RealPrecisionFix, "real_precision", "(real<'a>,type<'b>) -> real<'b>")
 
 // TO CHAR
 GROUP(ToChar, SignedToChar, UnsignedToChar, RealToChar, BoolToChar)
@@ -412,7 +412,7 @@ DERIVED(Id, "id", "lambda ('a x)->'a { return x; }")
 LITERAL(Undefined, "undefined", "(type<'a>) -> 'a")
 LITERAL(Zero, "zero", "(type<'a>) -> 'a")
 LITERAL(Sizeof, "sizeof", "(type<'a>) -> uint<8>")
-LITERAL(IntTypeParamToInt, "to_uint", "(intTypeParam<'n>)->uint<8>")
+LITERAL(IntTypeParamToInt, "to_uint", "(type<'n>)->uint<8>")
 
 
 // Struct and Unions --------------------------------------------------------------------------------------------------
@@ -433,6 +433,12 @@ LITERAL(GenInit, "gen_init", "(type<'a>, 'b) -> 'a")
 // IO -----------------------------------------------------------------------------------------------------------------
 
 LITERAL(Print, "print", "(ref<array<char,1>>,var_list)->unit")
+
+// Tunable Options ----------------------------------------------------------------------------------------------------
+
+LITERAL(Pick, "pick", "(list<'a>)->'a")
+LITERAL(PickInRange, "pickInRange", "(int<4>, 'a, int<4>, int<4>, int<4>)->'a")
+
 
 // Misc. --------------------------------------------------------------------------------------------------------------
 

@@ -267,7 +267,7 @@ namespace lang {
 	 * A macro enabling the import of symbols of other language extensions.
 	 */
 	#define IMPORT_MODULE(NAME) \
-	  private: bool _module_##NAME_import = importExtension<NAME>();
+	  private: bool _module_##NAME##_import = importExtension<NAME>();
 
 	/**
 	 * A macro adding a type alias definition to this extension.
@@ -327,7 +327,7 @@ namespace lang {
 	  private:                                                                                                                                                 \
 		mutable insieme::core::LiteralPtr lit_##NAME = reg##NAME();                                                                                            \
                                                                                                                                                                \
-		const insieme::core::LiteralPtr reg##NAME() const {                                                                                                    \
+		insieme::core::LiteralPtr reg##NAME() const {                                                                                                    \
 			checkIrNameNotAlreadyInUse(IR_NAME);                                                                                                               \
 			addNamedIrExtension(IR_NAME, [&]()->NodePtr { return get##NAME(); });                                                                              \
 			return insieme::core::LiteralPtr();                                                                                                                \
@@ -336,7 +336,7 @@ namespace lang {
 	  public:                                                                                                                                                  \
 		const insieme::core::LiteralPtr& get##NAME() const {                                                                                                   \
 		    if (!lit_##NAME) {                                                                                                                                 \
-				lit_##NAME = getLiteral(getNodeManager(), TYPE, VALUE, getSymbols());                                                     \
+				lit_##NAME = getLiteral(getNodeManager(), TYPE, VALUE, getSymbols());                                                     					   \
 				insieme::core::lang::markAsDerived(lit_##NAME, VALUE);                                                                                         \
 				insieme::core::lang::markAsBuiltIn(lit_##NAME);                                                                                                \
 			}                                                                                                                                                  \

@@ -46,6 +46,7 @@
 #include "insieme/core/pattern/pattern.h"
 
 #include "insieme/core/lang/reference.h"
+#include "insieme/core/lang/parallel.h"
 
 namespace insieme {
 namespace core {
@@ -274,7 +275,7 @@ namespace pattern {
 		inline TreePattern pfor(const TreePattern& group = any, const TreePattern& start = any, const TreePattern& end = any, const TreePattern& step = any,
 		                        const TreePattern& body = any) {
 			return callExpr(lazyAtom([](core::NodeManager& mgr) { return mgr.getLangBasic().getUnit(); }),
-			                lazyAtom([](core::NodeManager& mgr) { return mgr.getLangBasic().getPFor(); }),
+			                lazyAtom([](core::NodeManager& mgr) { return mgr.getLangExtension<lang::ParallelExtension>().getPFor(); }),
 			                single(group) << single(start) << single(end) << single(step) << single(body));
 		}
 
