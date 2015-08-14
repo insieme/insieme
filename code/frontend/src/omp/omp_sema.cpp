@@ -35,7 +35,6 @@
  */
 
 #include "insieme/frontend/omp/omp_sema.h"
-#include "insieme/frontend/omp/omp_utils.h"
 #include "insieme/frontend/omp/omp_annotation.h"
 
 #include "insieme/core/transform/node_replacer.h"
@@ -43,7 +42,7 @@
 #include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/array.h"
-#include "insieme/core/lang/parallel_extension.h"
+#include "insieme/core/lang/parallel.h"
 #include "insieme/core/ir_mapper.h"
 #include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/printer/pretty_printer.h"
@@ -80,19 +79,17 @@ namespace omp {
 	namespace us = insieme::utils::set;
 	namespace um = insieme::utils::map;
 
-
 	namespace {
-
 		bool contains(const vector<ExpressionPtr>& list, const ExpressionPtr& element) {
 			return ::contains(list, element, equal_target<ExpressionPtr>());
 		}
 	}
 
-
 	class OMPSemaMapper : public insieme::core::transform::CachedNodeMapping {
 		NodeManager& nodeMan;
 		IRBuilder build;
 		const lang::BasicGenerator& basic;
+		const lang::ParallelExtension& parExt;
 		us::PointerSet<CompoundStmtPtr> toFlatten; // set of compound statements to flatten one step further up
 
 		// the following vars handle global struct type adjustment due to threadprivate
@@ -112,10 +109,11 @@ namespace omp {
 
 	  public:
 		OMPSemaMapper(NodeManager& nodeMan)
-		    : nodeMan(nodeMan), build(nodeMan), basic(nodeMan.getLangBasic()), toFlatten(), fixStructType(false), adjustStruct(), adjustedStruct(),
-		      thisLambdaTPAccesses(), orderedCountLit(build.literal("ordered_counter", build.refType(basic.getInt8(), false, true))),
-		      orderedItLit(build.literal("ordered_loop_it", basic.getInt8())), orderedIncLit(build.literal("ordered_loop_inc", basic.getInt8())),
-		      paramCounter(0) {}
+			: nodeMan(nodeMan), build(nodeMan), basic(nodeMan.getLangBasic()), parExt(nodeMan.getLangExtension<lang::ParallelExtension>()), toFlatten(),
+			  fixStructType(false), adjustStruct(), adjustedStruct(), thisLambdaTPAccesses(),
+			  orderedCountLit(build.literal("ordered_counter", build.refType(basic.getInt8(), false, true))),
+			  orderedItLit(build.literal("ordered_loop_it", basic.getInt8())), orderedIncLit(build.literal("ordered_loop_inc", basic.getInt8())),
+			  paramCounter(0) {}
 
 		StructTypePtr getAdjustStruct() {
 			return adjustStruct;
@@ -188,7 +186,7 @@ namespace omp {
 				// check whether it is a struct-init expression of a lock
 				if(node->getNodeType() == NT_StructExpr && isLockStructType(node.as<ExpressionPtr>()->getType())) {
 					// replace with uninitialized lock
-					newNode = build.undefined(basic.getLock());
+					newNode = build.undefined(parExt.getLock());
 				} else {
 					// no changes required at this level, recurse
 					newNode = node->substitute(nodeMan, *this);
@@ -313,7 +311,7 @@ namespace omp {
 
 				if(refExt.isRefScalarToRefArray(fun)) {
 					ExpressionPtr arg = callExp->getArgument(0);
-					if(analysis::isRefOf(arg, basic.getLock())) { return arg; }
+					if(analysis::isRefOf(arg, parExt.getLock())) { return arg; }
 					return newNode;
 				} else if(LiteralPtr litFunExp = dynamic_pointer_cast<const Literal>(fun)) {
 					const string& funName = litFunExp->getStringValue();
@@ -367,7 +365,7 @@ namespace omp {
 				if(core::lang::isArray(type)) {
 					type = core::lang::getArrayElementType(type);
 				}
-				if(isLockStructType(type)) { return basic.getLock(); }
+				if(isLockStructType(type)) { return parExt.getLock(); }
 			}
 			return newNode;
 		}
@@ -715,8 +713,8 @@ namespace omp {
 			auto range = build.getThreadNumRange(1); // if no range is specified, assume 1 to infinity
 			if(par->hasNumThreads()) { range = build.getThreadNumRange(par->getNumThreads(), par->getNumThreads()); }
 			auto jobExp = build.jobExpr(range, parLambda.as<ExpressionPtr>());
-			auto parallelCall = build.callExpr(basic.getParallel(), jobExp);
-			auto mergeCall = build.callExpr(basic.getMerge(), parallelCall);
+			auto parallelCall = build.callExpr(parExt.getParallel(), jobExp);
+			auto mergeCall = build.callExpr(parExt.getMerge(), parallelCall);
 
 			resultStmts.push_back(mergeCall);
 			// if clause handling
@@ -735,7 +733,7 @@ namespace omp {
 			auto range = build.getThreadNumRange(1, 1); // range for tasks is always 1
 
 			JobExprPtr jobExp = build.jobExpr(range, parLambda.as<ExpressionPtr>());
-			auto parallelCall = build.callExpr(basic.getParallel(), jobExp);
+			auto parallelCall = build.callExpr(parExt.getParallel(), jobExp);
 			insieme::annotations::migrateMetaInfos(stmtNode, parallelCall);
 			resultStmts.push_back(parallelCall);
 
@@ -853,11 +851,11 @@ namespace omp {
 			string name = "global_omp_critical_lock_" + nameSuffix;
 			StatementList replacements;
 			// push lock
-			replacements.push_back(build.acquireLock(build.literal(build.refType(basic.getLock()), name)));
+			replacements.push_back(build.acquireLock(build.literal(build.refType(parExt.getLock()), name)));
 			// push original code fragment
 			replacements.push_back(statement);
 			// push unlock
-			replacements.push_back(build.releaseLock(build.literal(build.refType(basic.getLock()), name)));
+			replacements.push_back(build.releaseLock(build.literal(build.refType(parExt.getLock()), name)));
 			// build replacement compound
 			return build.compoundStmt(replacements);
 		}
@@ -943,7 +941,7 @@ namespace omp {
 			visitDepthFirstOnce(fragment, [&](const LiteralPtr& lit) {
 				const string& gname = lit->getStringValue();
 				if(gname.find("global_omp") != 0) { return; }
-				assert_true(analysis::isRefOf(lit, mgr.getLangBasic().getLock()));
+				assert_true(analysis::isRefOf(lit, mgr.getLangExtension<lang::ParallelExtension>().getLock()));
 
 				// add lock to global list
 				unit.addGlobal(lit);

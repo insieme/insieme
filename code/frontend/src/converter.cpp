@@ -247,7 +247,6 @@ namespace conversion {
 	}
 
 	core::TypePtr Converter::convertType(const clang::QualType& type) const {
-		assert_true(stmt) << "Calling convertType with a NULL pointer";
 		return typeConvPtr->convert(type);
 	}
 		

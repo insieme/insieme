@@ -275,7 +275,7 @@ namespace conversion {
 
 		if(funcTy->isVariadic()) { argTypes.push_back(basic.getVarList()); }
 
-		retTy = builder.functionType(argTypes, retTy);
+		retTy = builder.functionType(argTypes, funRetTy);
 		return retTy;
 	}
 

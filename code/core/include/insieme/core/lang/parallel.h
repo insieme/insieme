@@ -306,7 +306,8 @@ namespace lang {
 																		  "}  ")
 
 
-
+		// An extension representing a busy waiting loop
+		LANG_EXT_DERIVED(BusyLoop, "lambda (()=>bool condition) -> unit { while(condition()) { } }");
 
 //
 //		GROUP(ParallelOp, Parallel, ParallelDetached)

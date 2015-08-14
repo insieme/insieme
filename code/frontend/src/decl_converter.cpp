@@ -37,6 +37,7 @@
 #include "insieme/frontend/decl_converter.h"
 
 #include "insieme/frontend/converter.h"
+#include "insieme/frontend/state/variable_manager.h"
 
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_builder.h"
@@ -54,6 +55,7 @@ namespace conversion {
 
 	core::VariablePtr DeclConverter::convertVarDecl(const clang::VarDecl* varDecl) const {
 		assert_not_implemented();
+		// convert type and add ref
 	}
 
 	std::pair<core::LiteralPtr, core::LambdaExprPtr> DeclConverter::convertFunctionDecl(const clang::FunctionDecl* funcDecl) const {
@@ -64,7 +66,7 @@ namespace conversion {
 			core::StatementPtr body = converter.convertStmt(funcDecl->getBody());
 			for(auto param : funcDecl->parameters()) {
 				auto irParam = converter.getVarMan()->lookupOrInsert(param);
-
+				dumpColor(irParam);
 			}
 			//std::make_pair(funLit, builder.lambdaExpr(funcDecl->getNameAsString(), funType));
 		} else {

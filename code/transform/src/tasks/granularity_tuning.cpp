@@ -76,12 +76,13 @@ namespace tasks {
 			NodeManager& nodeMan;
 			IRBuilder build;
 			const lang::BasicGenerator& basic;
+			const lang::ParallelExtension& parExt;
 
 			vector<JobExprAddress> gatherJobAddresses(const NodePtr& root) {
 				vector<JobExprAddress> jobAddresses;
 				visitDepthFirstPrunable(ProgramAddress(root), [&](const JobExprAddress& job) -> bool {
 					if(CallExprPtr rangeCall = dynamic_pointer_cast<CallExprPtr>(job.getAddressedNode()->getThreadNumRange())) {
-						if(analysis::isCallOf(rangeCall, basic.getCreateBoundRange()) || analysis::isCallOf(rangeCall, basic.getCreateBoundRangeMod())) {
+						if(analysis::isCallOf(rangeCall, parExt.getCreateBoundRange()) || analysis::isCallOf(rangeCall, parExt.getCreateBoundRangeMod())) {
 							try {
 								arithmetic::Formula lowBound = arithmetic::toFormula(analysis::getArgument(rangeCall, 0));
 								arithmetic::Formula highBound = arithmetic::toFormula(analysis::getArgument(rangeCall, 1));
@@ -114,14 +115,14 @@ namespace tasks {
 			LambdaDefinitionPtr removeOuterParallels(LambdaDefinitionPtr lamDef) {
 				// create a cached check for nested parallel calls
 				auto containsParallel = makeCachedLambdaVisitor([&](const NodePtr& node, rec_call<bool>::type& rec) {
-					return analysis::isCallOf(node, basic.getParallel()) || any(node->getChildList(), rec);
+					return analysis::isCallOf(node, parExt.getParallel()) || any(node->getChildList(), rec);
 				});
 
 				// sequentialize all job-spawning steps running jobs with nested parallels
 				return core::transform::makeCachedLambdaMapper([&](const NodePtr& ptr) -> NodePtr {
 
 					       // only interested in parallel calls
-					       if(!analysis::isCallOf(ptr, basic.getParallel())) return ptr;
+					       if(!analysis::isCallOf(ptr, parExt.getParallel())) return ptr;
 
 					       // skip parallel if there is another nested parallel
 					       ExpressionPtr branch = ptr.as<CallExprPtr>()->getArgument(0).as<JobExprPtr>()->getBody();
@@ -167,11 +168,11 @@ namespace tasks {
 			LambdaDefinitionPtr removeExtraneousMergeAlls(LambdaDefinitionPtr lamDef) {
 				// create a cached check for nested parallel calls
 				auto containsParallel = makeCachedLambdaVisitor([&](const NodePtr& node, rec_call<bool>::type& rec) {
-					return analysis::isCallOf(node, basic.getParallel()) || any(node->getChildList(), rec);
+					return analysis::isCallOf(node, parExt.getParallel()) || any(node->getChildList(), rec);
 				});
 				// create a cached check for nested mergeAll calls
 				auto containsMergeAll = makeCachedLambdaVisitor([&](const NodePtr& node, rec_call<bool>::type& rec) {
-					return analysis::isCallOf(node, basic.getMergeAll()) || any(node->getChildList(), rec);
+					return analysis::isCallOf(node, parExt.getMergeAll()) || any(node->getChildList(), rec);
 				});
 
 				// remove all the superfluous mergeAlls from Compound Statements
@@ -187,7 +188,7 @@ namespace tasks {
 					       for(int i = 0; i < comp.getStatements().end() - comp.getStatements().begin(); ++i) {
 						       StatementPtr stat = comp.getStatement(i);
 						       bool skip = false;
-						       if(analysis::isCallOf(stat, basic.getMergeAll())) {
+						       if(analysis::isCallOf(stat, parExt.getMergeAll())) {
 							       for(int j = i - 1; j >= 0 && !skip; --j) {
 								       StatementPtr backTrackStat = comp.getStatement(j);
 								       if(containsMergeAll(backTrackStat)) {
@@ -304,7 +305,8 @@ namespace tasks {
 			}
 
 		  public:
-			TaskMultiversioner(NodeManager& nodeMan) : nodeMan(nodeMan), build(nodeMan), basic(nodeMan.getLangBasic()) {}
+			TaskMultiversioner(NodeManager& nodeMan)
+				: nodeMan(nodeMan), build(nodeMan), basic(nodeMan.getLangBasic()), parExt(nodeMan.getLangExtension<lang::ParallelExtension>()) {}
 
 			ProgramPtr apply(const ProgramPtr& program) {
 				vector<JobExprAddress> jobAddresses = gatherJobAddresses(program);

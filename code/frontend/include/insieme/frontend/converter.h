@@ -179,7 +179,7 @@ namespace conversion {
 
 		std::shared_ptr<state::VariableManager> getVarMan() const { return varManPtr; }
 		
-		const pragma::PragmaStmtMap& getPragmaMap() const {	return pragmaMap; 
+		const pragma::PragmaStmtMap& getPragmaMap() const {	return pragmaMap; }
 		
 		/**
 		 * Entry point for converting clang statements into IR statements
