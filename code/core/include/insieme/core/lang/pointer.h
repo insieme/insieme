@@ -58,6 +58,7 @@ namespace lang {
 		PointerExtension(core::NodeManager& manager) : core::lang::Extension(manager) {}
 
 	  public:
+
 		// -------------------- pointers ---------------------------
 
 		/**
@@ -66,6 +67,9 @@ namespace lang {
 		//		LANG_EXT_TYPE_WITH_NAME(GenPtr, "generic_ptr_template", "struct _ir_pointer { ref<array<'a,'v,'c>> data; int<8> offset; }");
 		LANG_EXT_TYPE_WITH_NAME(GenPtr, "generic_ptr_template", "ptr<'a,'v,'c>");
 
+
+		TYPE_ALIAS("ptr<'a,'v,'c>", "struct _ir_pointer { ref<array<'a,'v,'c>> data; int<8> offset; }");
+		TYPE_ALIAS("ptr<'a>", "ptr<'a,f,f>");
 
 		// -- ptr <-> ref converters --
 

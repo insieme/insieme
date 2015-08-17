@@ -60,14 +60,46 @@ namespace insieme {
 namespace core {
 
 
-	class IRBuilder {
+	/**
+	 * A base class for IR builder modules covering basic module features
+	 * including e.g. the maintenance of a node manager reference.
+	 */
+	class IRBuilderModule {
+	  protected:
+
 		/**
-		 * The manager used by this builder to create new nodes.
+		 * The mode manager references this module is utilizing for
+		 * constructing IR nodes.
 		 */
 		NodeManager& manager;
 
 	  public:
-		virtual ~IRBuilder() {}
+
+		/**
+		 * Creates a new instance of this module based on the given manager.
+		 */
+		IRBuilderModule(NodeManager& mgr) : manager(mgr) {}
+
+	};
+
+	/**
+	 * The
+	 */
+	template<typename ... Modules>
+	class ModularIRBuilder : public Modules... {
+	public:
+		ModularIRBuilder(NodeManager& mgr) : Modules(mgr)... {}
+	};
+
+
+	/**
+	 * An IR builder module covering the construction of basic language
+	 * including literals, calls, and struct statements. It also introduces
+	 * support for parsing IR code fragments and normalizing IR code.
+	 */
+	class IRBuilderBaseModule : public IRBuilderModule {
+
+	  public:
 
 		/**
 		 * A type used within some signatures mapping variables to values.
@@ -77,7 +109,7 @@ namespace core {
 		/**
 		 * Creates a new IR builder working with the given node manager.
 		 */
-		IRBuilder(NodeManager& manager) : manager(manager) {}
+		IRBuilderBaseModule(NodeManager& manager) : IRBuilderModule(manager) {}
 
 		/**
 		 * Obtains a reference to the node manager used by this builder.
@@ -716,6 +748,15 @@ namespace core {
 
 	  private:
 		unsigned extractNumberFromExpression(ExpressionPtr& expr) const;
+	};
+
+
+	/**
+	 * The default IR builder collecting a standard set of modules.
+	 */
+	class IRBuilder : public ModularIRBuilder<IRBuilderBaseModule> {
+	public:
+		IRBuilder(NodeManager& manager) : ModularIRBuilder(manager) {}
 	};
 
 	// Utilities

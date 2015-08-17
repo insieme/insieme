@@ -16,7 +16,7 @@
      * this code goes in the header
      */
 
-    # include <string>
+    #include <string>
     #include "insieme/core/ir.h"
 
     namespace insieme{

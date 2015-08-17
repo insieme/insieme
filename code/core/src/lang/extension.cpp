@@ -59,18 +59,6 @@ namespace lang {
 			assert_fail() << "IR_NAME \"" << irName << "\" already in use in this extension";
 		}
 
-		// then try to parse the given name as an expression
-		try {
-
-			insieme::core::IRBuilder builder(getNodeManager());
-			builder.parseExpr(irName, symbols);
-
-			// if the parsing succeeded, then there already exists some literal or derived with that name
-			assert_fail() << "IR_NAME \"" << irName << "\" already in use";
-
-		} catch(const insieme::core::parser3::IRParserException& ex) {
-			// nothing to do in here
-		}
 	}
 
 	TypePtr Extension::getType(NodeManager& manager, const string& type, const symbol_map& definitions) {

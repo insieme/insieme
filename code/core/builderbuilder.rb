@@ -54,9 +54,9 @@ else
 				params = params.split(",").map { |param| param.sub(/=.*/,"").strip }.join(", ")
 				funDecl = "#{typeName.sub(/[A-Z]/) {|c| c.downcase}}(#{params})"
 				paramNames = params.split(",").map { |param| param[/\w* *\z/].strip }.join(", ")
-				inlFileImpl.puts("#{sig[0].ljust(18)} IRBuilder::#{funDecl} const { return #{typeName}::get(manager, #{paramNames}); }")
+				inlFileImpl.puts("#{sig[0].ljust(18)} IRBuilderBaseModule::#{funDecl} const { return #{typeName}::get(manager, #{paramNames}); }")
 			else
-				inlFileImpl.puts("#{sig[0].ljust(18)} IRBuilder::#{funDecl} const { return #{typeName}::get(manager); }")
+				inlFileImpl.puts("#{sig[0].ljust(18)} IRBuilderBaseModule::#{funDecl} const { return #{typeName}::get(manager); }")
 			end
 		}
 	} 

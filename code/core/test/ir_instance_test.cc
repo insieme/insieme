@@ -310,7 +310,7 @@ namespace core {
 		vector<NodeInstance> list;
 		visitDepthFirst(NodeInstance(root), [&](const NodeInstance& cur) { list.push_back(cur); }, true, true);
 
-		EXPECT_EQ(35u, list.size()) << list;
+		EXPECT_EQ(28u, list.size()) << list;
 	}
 
 	TEST(NodeInstanceTest, LessTest) {
