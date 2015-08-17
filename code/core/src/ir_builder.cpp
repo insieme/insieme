@@ -712,11 +712,13 @@ namespace core {
 	DeclarationStmtPtr IRBuilder::declarationStmt(const ExpressionPtr& value) const {
 		return declarationStmt(value->getType(), value);
 	}
-
 	DeclarationStmtPtr IRBuilder::declarationStmt(const TypePtr& type, const ExpressionPtr& value) const {
 		return declarationStmt(variable(type), value);
 	}
 
+	ReturnStmtPtr IRBuilder::returnStmt() const {
+		return returnStmt(manager.getLangBasic().getUnitConstant());
+	}
 
 	CallExprPtr IRBuilder::acquireLock(const ExpressionPtr& lock) const {
 		assert_true(analysis::isRefOf(lock, manager.getLangExtension<lang::ParallelExtension>().getLock())) << "Cannot lock a non-lock type.";
@@ -730,7 +732,6 @@ namespace core {
 		assert_true(analysis::isRefOf(lock, manager.getLangExtension<lang::ParallelExtension>().getLock())) << "Cannot init a non-lock type.";
 		return callExpr(manager.getLangBasic().getUnit(), manager.getLangExtension<lang::ParallelExtension>().getLockInit(), lock);
 	}
-
 
 	CallExprPtr IRBuilder::atomicOp(const ExpressionPtr& location, const ExpressionPtr& testFunc, const ExpressionPtr& replaceFunc) {
 		assert_true(core::analysis::isRefType(location->getType())) << "Atomic must be applied on ref.";
