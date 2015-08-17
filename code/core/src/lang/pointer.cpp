@@ -86,7 +86,7 @@ namespace lang {
 		NodeManager& mgr = elementType.getNodeManager();
 		auto& ext = mgr.getLangExtension<BooleanMarkerExtension>();
 
-		return GenericType::get(mgr, "ref", ParentList(),
+		return GenericType::get(mgr, "ptr", ParentList(),
 		                        toVector(elementType, (mConst ? ext.getTrue() : ext.getFalse()), (mVolatile ? ext.getTrue() : ext.getFalse())));
 	}
 

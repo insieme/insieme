@@ -705,7 +705,7 @@ namespace core {
 		return declarationStmt(variable(type), value);
 	}
 
-	ReturnStmtPtr IRBuilder::returnStmt() const {
+	ReturnStmtPtr IRBuilderBaseModule::returnStmt() const {
 		return returnStmt(manager.getLangBasic().getUnitConstant());
 	}
 

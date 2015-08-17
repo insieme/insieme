@@ -58,7 +58,8 @@ namespace state {
 	public:
 		VariableManager(Converter& converter) : converter(converter) {}
 
-		core::VariablePtr lookupOrInsert(const clang::VarDecl* varDecl);
+		core::VariablePtr lookup(const clang::VarDecl* varDecl) const;
+		void insert(const clang::VarDecl* varDecl, const core::VariablePtr& var);
 	};
 
 } // end namespace state

@@ -201,6 +201,13 @@ namespace conversion {
 		 * @return the corresponding IR type
 		 */
 		core::TypePtr convertType(const clang::QualType& type) const;
+
+		/**
+		 * Entry point for converting clang types into IR types with memory locations for variables
+		 * @param type is a clang type
+		 * @return the corresponding IR type
+		 */
+		core::TypePtr convertVarType(const clang::QualType& type) const;
 		
 
 		/**

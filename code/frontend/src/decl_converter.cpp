@@ -53,22 +53,31 @@ namespace conversion {
 	
 	// Converters -----------------------------------------------------------------------------------------------------
 
-	core::VariablePtr DeclConverter::convertVarDecl(const clang::VarDecl* varDecl) const {
-		assert_not_implemented();
-		// convert type and add ref
+	DeclConverter::ConvertedVarDecl DeclConverter::convertVarDecl(const clang::VarDecl* varDecl) const {
+		auto irType = converter.convertVarType(varDecl->getType());
+		auto var = builder.variable(irType);
+		if(varDecl->getInit()) {
+			return {var, converter.convertExpr(varDecl->getInit())};
+		} else {
+			return {var, {}};
+		}
 	}
 
 	std::pair<core::LiteralPtr, core::LambdaExprPtr> DeclConverter::convertFunctionDecl(const clang::FunctionDecl* funcDecl) const {
-		core::TypePtr funType = converter.convertType(funcDecl->getType());
+		auto funType = converter.convertType(funcDecl->getType()).as<core::FunctionTypePtr>();
 		core::LiteralPtr funLit = builder.literal(funcDecl->getNameAsString(), funType);
 
 		if(funcDecl->hasBody()) {
-			core::StatementPtr body = converter.convertStmt(funcDecl->getBody());
+			// TODO NF open new var scope
+			core::VariableList params;
 			for(auto param : funcDecl->parameters()) {
-				auto irParam = converter.getVarMan()->lookupOrInsert(param);
-				dumpColor(irParam);
+				auto irParam = convertVarDecl(param);
+				params.push_back(irParam.first);
 			}
-			//std::make_pair(funLit, builder.lambdaExpr(funcDecl->getNameAsString(), funType));
+			auto body = converter.convertStmt(funcDecl->getBody());
+			// TODO NF close new var scope
+			auto funExp = builder.lambdaExpr(funType, params, body);
+			return std::make_pair(funLit, funExp);
 		} else {
 			return std::make_pair(funLit, core::LambdaExprPtr());
 		}

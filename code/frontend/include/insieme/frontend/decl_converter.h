@@ -63,12 +63,16 @@ namespace conversion {
 	public:
 		DeclConverter(Converter& converter);
 
+		/// Type expressing the conversion result of a clang Variable decl
+		///
+		using ConvertedVarDecl = std::pair<core::VariablePtr, boost::optional<core::ExpressionPtr>>;
+		
 		// Converters -----------------------------------------------------------------------------------------------------
 
 		/// Converts a variable declaration into an IR variable.
 		/// @param varDecl is a clang VarDecl which represent a definition for the variable
 		/// @return Converted variable
-		core::VariablePtr convertVarDecl(const clang::VarDecl* varDecl) const;
+		ConvertedVarDecl convertVarDecl(const clang::VarDecl* varDecl) const;
 
 		/// Converts a function declaration into an IR lambda.
 		/// @param funcDecl is a clang FunctionDecl which represent a definition for the function

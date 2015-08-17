@@ -59,6 +59,7 @@ namespace stmtutils {
 
 		StmtWrapper() : StatementList() {}
 		StmtWrapper(const StatementPtr& stmt) : StatementList({stmt}) {}
+		StmtWrapper(const CompoundStmtPtr& stmt) : StatementList({stmt}) {}
 
 		StatementPtr getSingleStmt() const {
 			assert_eq(size(), 1) << "More than 1 statement present";
@@ -77,8 +78,8 @@ namespace stmtutils {
 		}
 	};
 
-	StatementPtr tryAggregateStmt(const IRBuilder& builder, const StatementPtr& stmt);
-	StatementPtr tryAggregateStmts(const IRBuilder& builder, const StatementList& stmtVect);
+	CompoundStmtPtr aggregateStmt(const IRBuilder& builder, const StatementPtr& stmt);
+	CompoundStmtPtr aggregateStmts(const IRBuilder& builder, const StatementList& stmtVect);
 	ExpressionPtr makeOperation(const IRBuilder& builder, const ExpressionPtr& lhs, const ExpressionPtr& rhs, const lang::BasicGenerator::Operator& op);
 
 } // end namespace stmtutils

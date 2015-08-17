@@ -37,6 +37,7 @@
 #include "insieme/frontend/state/variable_manager.h"
 
 #include "insieme/frontend/decl_converter.h"
+#include "insieme/frontend/utils/macros.h"
 
 #include "insieme/utils/container_utils.h"
 
@@ -44,9 +45,14 @@ namespace insieme {
 namespace frontend {
 namespace state {
 
-	core::VariablePtr VariableManager::lookupOrInsert(const clang::VarDecl* varDecl) {
-		if(!::containsKey(storage, varDecl)) { storage[varDecl] = converter.getDeclConverter()->convertVarDecl(varDecl); }
-		return storage[varDecl];
+	core::VariablePtr VariableManager::lookup(const clang::VarDecl* varDecl) const {
+		frontend_assert(::containsKey(storage, varDecl)) << "Trying to look up variable not previously declared";
+		return storage.find(varDecl)->second;
+	}
+
+	void VariableManager::insert(const clang::VarDecl* varDecl, const core::VariablePtr& var) {
+		frontend_assert(!::containsKey(storage, varDecl)) << "Trying to insert variable already declared previously";
+		storage[varDecl] = var;
 	}
 
 } // end namespace state

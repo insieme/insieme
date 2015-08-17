@@ -75,7 +75,7 @@ namespace extensions {
 					    wrapper.push_back(e.as<core::StatementPtr>());
 				    }
 				    IRBuilder builder(nodes[0].getNodeManager());
-				    node = stmtutils::tryAggregateStmts(builder, wrapper);
+				    node = stmtutils::aggregateStmts(builder, wrapper);
 			    } else {
 				    node = nodes[0];
 			    }

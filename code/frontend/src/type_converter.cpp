@@ -127,6 +127,11 @@ namespace conversion {
 
 		return retTy;
 	}
+	
+	core::TypePtr Converter::TypeConverter::convertVarType(const clang::QualType& type) {
+		// add correctly qualified "ref" to inner type
+		return builder.refType(convert(type), type.isConstQualified(), type.isVolatileQualified());
+	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//								BUILTIN TYPES
@@ -391,9 +396,10 @@ namespace conversion {
 		core::TypePtr retTy;
 		LOG_TYPE_CONVERSION(pointerTy, retTy);
 
-		core::TypePtr subTy = convert(pointerTy->getPointeeType());
+		auto clangSubTy = pointerTy->getPointeeType();
+		core::TypePtr subTy = convert(clangSubTy);
 
-		retTy = builder.ptrType(subTy);
+		retTy = builder.ptrType(subTy, clangSubTy.isConstQualified(), clangSubTy.isVolatileQualified());
 		return retTy;
 	}
 

@@ -560,7 +560,6 @@ namespace frontend {
 			auto extensionPtr = std::make_shared<T>();
 			boost::program_options::options_description extOptions;
 
-
 			// insert the extension before "Before", unless it's not found
 			bool inserted = false;
 			for(auto it = extensions.begin(); it < extensions.end(); ++it) {

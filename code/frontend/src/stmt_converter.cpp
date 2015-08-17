@@ -36,6 +36,8 @@
 
 #include "insieme/frontend/stmt_converter.h"
 
+#include "insieme/frontend/converter.h"
+#include "insieme/frontend/decl_converter.h"
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/clang_cast.h"
 #include "insieme/frontend/utils/macros.h"
@@ -70,42 +72,47 @@ namespace conversion {
 	//							BASE STMT CONVERTER -- takes care of C nodes
 	//---------------------------------------------------------------------------------------------------------------------
 	stmtutils::StmtWrapper Converter::StmtConverter::VisitDeclStmt(clang::DeclStmt* declStmt) {
-		// if there is only one declaration in the DeclStmt we return it
-		//if(declStmt->isSingleDecl() && llvm::isa<clang::VarDecl>(declStmt->getSingleDecl())) {
-		//	stmtutils::StmtWrapper retList;
-		//	clang::VarDecl* varDecl = dyn_cast<clang::VarDecl>(declStmt->getSingleDecl());
+		stmtutils::StmtWrapper retIr;
+		LOG_STMT_CONVERSION(declStmt, retIr);
 
-		//	// external declaration statement as per very early K&R C -> ignore
-		//	if(varDecl->hasExternalStorage()) { return retList; }
+		for(auto decl : declStmt->decls()) {
+			// a decl can be either a variable decl, or e.g. a typedef
+			if(clang::VarDecl* varDecl = dyn_cast<clang::VarDecl>(decl)) {
+				// external declaration statement as per very early K&R C -> ignore
+				if(varDecl->hasExternalStorage()) { continue; }
+				// convert decl
+				auto convertedDecl = converter.getDeclConverter()->convertVarDecl(varDecl);
+				// check if we have an init expression
+				core::ExpressionPtr initExp;
+				if(convertedDecl.second) {
+					initExp = builder.refVar(*convertedDecl.second);
+				} else {
+					// generate undefined initializer
+					initExp = builder.undefinedVar(convertedDecl.first.getType());
+				}
+				retIr.push_back(builder.declarationStmt(convertedDecl.first, initExp));
+			}
+		}
 
-		//	auto retStmt = converter.convertVarDecl(varDecl);
-		//	if(core::DeclarationStmtPtr decl = retStmt.isa<core::DeclarationStmtPtr>()) {
-		//		retList.push_back(decl);
-		//	} else {
-		//		retList.push_back(retStmt);
-		//	}
-
-		//	return retList;
-		//}
-
-		//// otherwise we create an an expression list which contains the multiple declaration inside the statement
-		//stmtutils::StmtWrapper retList;
-		//for(auto it = declStmt->decl_begin(), e = declStmt->decl_end(); it != e; ++it) {
-		//	if(clang::VarDecl* varDecl = dyn_cast<clang::VarDecl>(*it)) {
-		//		auto retStmt = converter.convertVarDecl(varDecl).as<core::DeclarationStmtPtr>();
-		//		retList.push_back(retStmt);
-		//	}
-		//}
-		stmtutils::StmtWrapper retList;
-		return retList;
+		return retIr;
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//							RETURN STATEMENT
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	stmtutils::StmtWrapper Converter::StmtConverter::VisitReturnStmt(clang::ReturnStmt* retStmt) {
-		core::StatementPtr retIr;
+		stmtutils::StmtWrapper retIr;
 		LOG_STMT_CONVERSION(retStmt, retIr);
+
+		auto irRetStmt = builder.returnStmt();
+
+		// check if we have a return value
+		if(clang::Expr* expr = retStmt->getRetValue()) {
+			irRetStmt = builder.returnStmt(converter.convertExpr(expr));
+		}
+
+		retIr.push_back(irRetStmt);
+		return retIr;
 
 		//core::ExpressionPtr retExpr;
 		//core::TypePtr retTy;
@@ -156,11 +163,8 @@ namespace conversion {
 		//retIr = builder.returnStmt(retExpr);
 		//stmtList.push_back(retIr);
 		//core::StatementPtr retStatement = builder.compoundStmt(stmtList);
-		//stmtutils::StmtWrapper body = stmtutils::tryAggregateStmts(builder, stmtList);
+		//stmtutils::StmtWrapper body = stmtutils::aggregateStmts(builder, stmtList);
 		//return body;
-
-		assert_not_implemented();
-		return retIr;
 	}
 
 	struct ContinueStmtCollector : public core::IRVisitor<bool, core::Address> {
@@ -259,7 +263,7 @@ namespace conversion {
 
 		//} catch(const analysis::LoopNormalizationError& e) {
 		//	// The for loop cannot be normalized into an IR loop, therefore we create a while stmt
-		//	stmtutils::StmtWrapper body = tryAggregateStmts(builder, Visit(forStmt->getBody()));
+		//	stmtutils::StmtWrapper body = aggregateStmts(builder, Visit(forStmt->getBody()));
 
 		//	clang::Stmt* initStmt = forStmt->getInit();
 		//	if(initStmt) {
@@ -286,7 +290,7 @@ namespace conversion {
 		//		retStmt.push_back(declStmt);
 		//	}
 
-		//	core::StatementPtr irBody = stmtutils::tryAggregateStmts(builder, body);
+		//	core::StatementPtr irBody = stmtutils::aggregateStmts(builder, body);
 
 		//	if(forStmt->getInc()) {
 		//		vector<core::ContinueStmtAddress> conts = getContinues(irBody);
@@ -351,7 +355,7 @@ namespace conversion {
 		stmtutils::StmtWrapper retStmt;
 		LOG_STMT_CONVERSION(ifStmt, retStmt);
 
-		//core::StatementPtr thenBody = stmtutils::tryAggregateStmts(builder, Visit(ifStmt->getThen()));
+		//core::StatementPtr thenBody = stmtutils::aggregateStmts(builder, Visit(ifStmt->getThen()));
 		//frontend_assert(thenBody && "Couldn't convert 'then' body of the IfStmt");
 
 		//core::ExpressionPtr condExpr;
@@ -395,7 +399,7 @@ namespace conversion {
 
 		//core::StatementPtr elseBody = builder.compoundStmt();
 		//// check for else statement
-		//if(Stmt* elseStmt = ifStmt->getElse()) { elseBody = stmtutils::tryAggregateStmts(builder, Visit(elseStmt)); }
+		//if(Stmt* elseStmt = ifStmt->getElse()) { elseBody = stmtutils::aggregateStmts(builder, Visit(elseStmt)); }
 		//frontend_assert(elseBody && "Couldn't convert 'else' body of the IfStmt");
 
 		//// adding the ifstmt to the list of returned stmts
@@ -403,7 +407,7 @@ namespace conversion {
 
 		//// try to aggregate statements into a CompoundStmt if more than 1 statement has been created
 		//// from this IfStmt
-		//retStmt = tryAggregateStmts(builder, retStmt);
+		//retStmt = aggregateStmts(builder, retStmt);
 
 		//// otherwise we introduce an outer CompoundStmt
 		//return retStmt;
@@ -420,7 +424,7 @@ namespace conversion {
 
 		//LOG_STMT_CONVERSION(whileStmt, retStmt);
 
-		//core::StatementPtr body = tryAggregateStmts(builder, Visit(whileStmt->getBody()));
+		//core::StatementPtr body = aggregateStmts(builder, Visit(whileStmt->getBody()));
 		//frontend_assert(body && "Couldn't convert body of the WhileStmt");
 
 		//core::ExpressionPtr condExpr;
@@ -469,7 +473,7 @@ namespace conversion {
 		//}
 
 		//retStmt.push_back(builder.whileStmt(condExpr, body));
-		//retStmt = tryAggregateStmts(builder, retStmt);
+		//retStmt = aggregateStmts(builder, retStmt);
 
 		// otherwise we introduce an outer CompoundStmt
 
@@ -486,7 +490,7 @@ namespace conversion {
 
 		//LOG_STMT_CONVERSION(doStmt, retStmt);
 
-		//core::CompoundStmtPtr body = builder.wrapBody(stmtutils::tryAggregateStmts(builder, Visit(doStmt->getBody())));
+		//core::CompoundStmtPtr body = builder.wrapBody(stmtutils::aggregateStmts(builder, Visit(doStmt->getBody())));
 		//frontend_assert(body && "Couldn't convert body of the WhileStmt");
 
 		//const clang::Expr* cond = doStmt->getCond();
@@ -514,7 +518,7 @@ namespace conversion {
 
 		//// adding the WhileStmt to the list of returned stmts
 		//retStmt.push_back(irNode);
-		//retStmt = stmtutils::tryAggregateStmts(builder, retStmt);
+		//retStmt = stmtutils::aggregateStmts(builder, retStmt);
 
 		// otherwise we introduce an outer CompoundStmt
 
@@ -692,9 +696,9 @@ namespace conversion {
 		//core::CompoundStmtPtr defStmt = builder.compoundStmt();
 		//for(auto literal : caseLiterals) {
 		//	if(literal != defLit) {
-		//		cases.push_back(builder.switchCase(literal, builder.wrapBody(stmtutils::tryAggregateStmts(builder, caseMap[literal]))));
+		//		cases.push_back(builder.switchCase(literal, builder.wrapBody(stmtutils::aggregateStmts(builder, caseMap[literal]))));
 		//	} else {
-		//		defStmt = builder.wrapBody(stmtutils::tryAggregateStmts(builder, caseMap[literal]));
+		//		defStmt = builder.wrapBody(stmtutils::aggregateStmts(builder, caseMap[literal]));
 		//	}
 		//}
 
@@ -706,7 +710,7 @@ namespace conversion {
 		//}
 
 		//retStmt.push_back(irSwitch);
-		//retStmt = tryAggregateStmts(builder, retStmt);
+		//retStmt = aggregateStmts(builder, retStmt);
 
 		assert_not_implemented();
 

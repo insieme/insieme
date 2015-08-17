@@ -452,7 +452,7 @@ namespace extensions {
 							preBodyProcess.clear();
 						}
 
-						res = builder.whileStmt(conditionExpr, stmtutils::tryAggregateStmts(builder, newBody));
+						res = builder.whileStmt(conditionExpr, stmtutils::aggregateStmts(builder, newBody));
 					}
 
 					newStmts.push_back(res);

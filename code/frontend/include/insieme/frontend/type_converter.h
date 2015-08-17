@@ -60,9 +60,7 @@ namespace conversion {
 		core::NodeManager& mgr;
 		const core::IRBuilder& builder;
 		const core::lang::BasicGenerator& basic;
-
-		std::map<clang::QualType, core::TypePtr> anonimousNamedTypes;
-
+		
 	  public:
 		TypeConverter(Converter& fact);
 
@@ -85,16 +83,14 @@ namespace conversion {
 		DECLARE_TYPE_VISIT(TypeConverter, PointerType)
 		DECLARE_TYPE_VISIT(TypeConverter, DecayedType)
 		DECLARE_TYPE_VISIT(TypeConverter, AtomicType)
-
+		
 		// main entry point
 		core::TypePtr convert(const clang::QualType& type);
+		// main entry point for variables
+		core::TypePtr convertVarType(const clang::QualType& type);
 
 	  protected:
-		virtual core::TypePtr convertInternal(const clang::QualType& type) = 0;
-		
-		core::TypePtr handleTagType(const clang::TagDecl* tagDecl, const core::NamedCompositeType::Entries& structElements);
-
-		core::TypePtr convertImpl(const clang::QualType& type);
+		virtual core::TypePtr convertInternal(const clang::QualType& type) = 0;		
 	};
 
 

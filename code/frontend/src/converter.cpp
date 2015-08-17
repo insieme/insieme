@@ -243,11 +243,15 @@ namespace conversion {
 
 	core::StatementPtr Converter::convertStmt(const clang::Stmt* stmt) const {
 		assert_true(stmt) << "Calling convertStmt with a NULL pointer";
-		return stmtutils::tryAggregateStmts(builder, stmtConvPtr->Visit(const_cast<Stmt*>(stmt)));
+		return stmtutils::aggregateStmts(builder, stmtConvPtr->Visit(const_cast<Stmt*>(stmt)));
 	}
 
 	core::TypePtr Converter::convertType(const clang::QualType& type) const {
 		return typeConvPtr->convert(type);
+	}
+	
+	core::TypePtr Converter::convertVarType(const clang::QualType& type) const {
+		return typeConvPtr->convertVarType(type);
 	}
 		
 } // End conversion namespace

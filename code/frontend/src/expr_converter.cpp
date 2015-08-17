@@ -1347,7 +1347,7 @@ namespace conversion {
 		//const clang::CompoundStmt* inner = stmtExpr->getSubStmt();
 		//core::StatementPtr subStmtIr = converter.convertStmt(inner);
 
-		//// FIXME: tryAggregateStmts in stmt_wrapper _removes_ compoundStmt if compoundStmt contains only one stmt
+		//// FIXME: aggregateStmts in stmt_wrapper _removes_ compoundStmt if compoundStmt contains only one stmt
 		//core::CompoundStmtPtr innerIr = (subStmtIr.isa<core::CompoundStmtPtr>()) ? subStmtIr.as<core::CompoundStmtPtr>() : builder.compoundStmt(subStmtIr);
 
 		//// create new body with <returnStmt <expr>> instead of <expr> as last stmt

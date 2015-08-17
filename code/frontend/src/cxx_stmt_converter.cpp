@@ -135,7 +135,7 @@ namespace conversion {
 				vector<core::StatementPtr> stmtList;
 				stmtList.push_back(builder.returnStmt(builder.deref(retExpr)));
 				core::StatementPtr retStatement = builder.compoundStmt(stmtList);
-				stmt = stmtutils::tryAggregateStmts(builder, stmtList);
+				stmt = stmtutils::aggregateStmts(builder, stmtList);
 			}
 		}
 
@@ -163,7 +163,7 @@ namespace conversion {
 		stmtutils::StmtWrapper stmt;
 		LOG_STMT_CONVERSION(tryStmt, stmt);
 		frontend_assert(false) << "Try -- Currently not supported!";
-		//core::CompoundStmtPtr body = builder.wrapBody(stmtutils::tryAggregateStmts(builder, Visit(tryStmt->getTryBlock())));
+		//core::CompoundStmtPtr body = builder.wrapBody(stmtutils::aggregateStmts(builder, Visit(tryStmt->getTryBlock())));
 
 		//vector<core::CatchClausePtr> catchClauses;
 		//unsigned numCatch = tryStmt->getNumHandlers();
@@ -193,7 +193,7 @@ namespace conversion {
 		//		var = builder.variable(gen.getAny());
 		//	}
 
-		//	core::CompoundStmtPtr body = builder.wrapBody(stmtutils::tryAggregateStmts(builder, Visit(catchStmt->getHandlerBlock())));
+		//	core::CompoundStmtPtr body = builder.wrapBody(stmtutils::aggregateStmts(builder, Visit(catchStmt->getHandlerBlock())));
 		//	catchClauses.push_back(builder.catchClause(var, body));
 		//}
 

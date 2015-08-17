@@ -211,7 +211,7 @@ TEST(PragmaMatcherTest, PragmaPositions) {
 	}
 
 
-	/// three pragmas in a raw
+	// three pragmas in a row
 	p = pl[5];
 	{
 		// check pragma start location
