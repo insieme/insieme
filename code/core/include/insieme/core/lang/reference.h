@@ -384,6 +384,39 @@ namespace lang {
 		return node && ReferenceType::isReferenceType(node);
 	}
 
+	static inline CallExprPtr deref(const ExpressionPtr& subExpr) {
+		assert_pred1(isReference, subExpr->getType());
+		return callExpr(ReferenceType(subExpr->getType()).getElementType(), getRefDeref(), subExpr);
+	}
+
+	static inline ExpressionPtr tryDeref(const ExpressionPtr& subExpr) {
+		if(!isReference(subExpr->getType())) { return subExpr; }
+		return deref(subExpr);
+	}
+
+	static inline CallExprPtr refVar(const ExpressionPtr& subExpr) {
+		return callExpr(refType(subExpr->getType()), getRefVar(), subExpr);
+	}
+
+	static inline CallExprPtr refNew(const ExpressionPtr& subExpr) {
+		return callExpr(refType(subExpr->getType()), getRefNew(), subExpr);
+	}
+
+	static inline CallExprPtr refDelete(const ExpressionPtr& subExpr) {
+		auto& basic = subExpr.getNodeManager().getLangBasic();
+		return callExpr(basic.getUnit(), getRefDelete(), subExpr);
+	}
+
+	static inline CallExprPtr assign(const ExpressionPtr& target, const ExpressionPtr& value) {
+		assert_pred1(isReference, target->getType());
+		return callExpr(target.getNodeManager().getLangBasic().getUnit(), getRefAssign(), target, value);
+	}
+
+	static inline ExpressionPtr refReinterpret(const ExpressionPtr& subExpr, const TypePtr& newElementType) {
+		assert_pred1(isReference, subExpr->getType());
+		return callExpr(refType(newElementType), getRefReinterpret(), subExpr, getTypeLiteral(newElementType));
+	}        
+        
 
 } // end namespace lang
 } // end namespace core
