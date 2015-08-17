@@ -56,8 +56,46 @@ int main() {
 	#pragma test expected "decl ref<ptr<ptr<ptr<int<4>,f,f>,f,f>,t,f>,f,f> v0;"
 	int * *const * ppcpi;
 	
-	// ARRAY TYPES //////////////////////////////////////////////////////////////
+	// FIXED SIZE ARRAY TYPES //////////////////////////////////////////////////////////////
 	
-	#pragma test expected "decl ref<array<int<4>,2>,f,f> v0;"
-	int array[2];
+	#pragma test expected "decl ref<array<real<4>,2>,f,f> v0;"
+	float arrf[2];
+	#pragma test expected "decl ref<array<real<4>,2>,t,f> v0;"
+	const float arrcf[2];
+	#pragma test expected "decl ref<array<real<4>,2>,f,t> v0;"
+	volatile float arrvf[2];
+	
+	#pragma test expected "decl ref<array<array<real<4>,5>,2>,f,f> v0;"
+	float arrarrf[2][5];
+	#pragma test expected "decl ref<array<array<array<real<4>,3>,5>,2>,f,f> v0;"
+	float arrarrarrf[2][5][3];
+	
+	#pragma test expected "decl ref<array<ptr<real<4>,f,f>,2>,f,f> v0;"
+	float* arrpf[2];
+	#pragma test expected "decl ref<array<ptr<real<4>,t,f>,2>,f,f> v0;"
+	const float* arrpcf[2];
+	#pragma test expected "decl ref<array<ptr<real<4>,t,f>,2>,f,t> v0;"
+	const float *volatile arrvpcf[2];
+	
+	// ENUM TYPES //////////////////////////////////////////////////////////////
+	
+	typedef enum { Bla, Alb } enum_t;
+	#pragma test expected "decl ref<__insieme_enum<enum_t,Bla,Alb>,f,f> v0;"
+	enum_t enu;
+	
+	// STRUCT TYPES //////////////////////////////////////////////////////////////
+	
+	//#pragma test expected "REGEX;"
+	//struct { int i; } swi_anon;
+	
+	//typedef struct { int i; } swi_t;
+	//#pragma test expected "decl ref<array<ptr<real<4>,t,f>,2>,f,t> v0;"
+	//swi_t swi; 
+	
+	//typedef union { int i; } union_t;
+	//union_t uni;
+	
+	//int length = 2;
+	//#pragma test expected "decl ref<array<real<4>,2>,f,t> v0;"
+	//volatile float vlarrvf[length];
 }

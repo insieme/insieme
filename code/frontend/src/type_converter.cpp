@@ -245,11 +245,8 @@ namespace conversion {
 	// array<int<4>,v0>
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::TypePtr Converter::TypeConverter::VisitVariableArrayType(const VariableArrayType* arrTy) {
-		core::TypePtr retTy;
-		LOG_TYPE_CONVERSION(arrTy, retTy);
-
-		frontend_assert(false) << "Not implemented, need to create map entry in decl statement conversion and use here\n";
-		return retTy;
+		frontend_assert(false) << "Variable arrays are handled in a separate FE extension, which does not appear to be loaded\n";
+		return core::TypePtr();
 	}
 
 	// --------------------  FUNCTIONS  ---------------------------------------
@@ -344,6 +341,20 @@ namespace conversion {
 		return retTy;
 	}
 
+	namespace {
+		core::TypePtr handleEnumType(const Converter& converter, const EnumType* clangEnumTy) {
+			core::NodeManager& mgr = converter.getNodeManager();
+			core::IRBuilder builder(mgr);
+			auto enumDecl = clangEnumTy->getDecl();
+			auto& enumExt = mgr.getLangExtension<core::lang::EnumExtension>();
+			core::TypeList enumMembers;
+			for(auto m : enumDecl->enumerators()) {
+				enumMembers.push_back(builder.genericType(m->getNameAsString()));
+			}
+			return enumExt.getEnumType(utils::getNameForEnum(enumDecl, converter.getSourceManager()), enumMembers);
+		}
+	}
+
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//					TAG TYPE: STRUCT | UNION | CLASS | ENUM
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -351,7 +362,14 @@ namespace conversion {
 		core::TypePtr retTy;
 		LOG_TYPE_CONVERSION(tagType, retTy);
 
-		frontend_assert(false) << "Tag types not implemented!\n";
+		if(auto clangRecTy = llvm::dyn_cast<RecordType>(tagType)) {
+			return builder.genericType(utils::getNameForRecord(clangRecTy->getDecl(), tagType, converter.getSourceManager()));
+		} else if(auto clangEnumTy = llvm::dyn_cast<EnumType>(tagType)) {
+			return handleEnumType(converter, clangEnumTy);
+		} else {
+			frontend_assert(false) << "Unimplemented TagType";
+		}
+
 		return retTy;
 	}
 

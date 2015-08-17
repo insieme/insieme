@@ -69,6 +69,11 @@ namespace frontend {
 				auto s = ex.substr(1, ex.size()-2);
 				auto expected = builder.parseStmt(s);
 				EXPECT_EQ(builder.normalize(expected), builder.normalize(node));
+				//if(builder.normalize(expected) != builder.normalize(node)) {
+				//	dumpText(builder.normalize(expected));
+				//	std::cout << "MUAHAHAMUAHAHAMUAHAHAMUAHAHAMUAHAHAMUAHAHAMUAHAHAMUAHAHAMUAHAHAMUAHAHAMUAHAHA\n";
+				//	dumpText(builder.normalize(node));
+				//}
 				visited++;
 			}
 		});

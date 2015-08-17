@@ -46,27 +46,27 @@ namespace frontend {
 namespace utils {
 
 	using namespace llvm;
-
-	#define REMOVE_SYMBOLS(str)                                                                                                                                \
-		{                                                                                                                                                      \
-			boost::replace_all(str, "<", "_");                                                                                                                 \
-			boost::replace_all(str, ">", "_");                                                                                                                 \
-			boost::replace_all(str, "::", "_");                                                                                                                \
-			boost::replace_all(str, ":", "_");                                                                                                                 \
-			boost::replace_all(str, " ", "_");                                                                                                                 \
-			boost::replace_all(str, "(", "_");                                                                                                                 \
-			boost::replace_all(str, ")", "_");                                                                                                                 \
-			boost::replace_all(str, ",", "_");                                                                                                                 \
-			boost::replace_all(str, "*", "_");                                                                                                                 \
-			boost::replace_all(str, "&", "_");                                                                                                                 \
-			boost::replace_all(str, ".", "_");                                                                                                                 \
-			boost::replace_all(str, "+", "_");                                                                                                                 \
-			boost::replace_all(str, "/", "_");                                                                                                                 \
-			boost::replace_all(str, "-", "_");                                                                                                                 \
-		}
-
+	using std::string;
+	
+	std::string removeSymbols(std::string str) {
+		boost::replace_all(str, "<", "_lt_");
+		boost::replace_all(str, ">", "_gt_");
+		boost::replace_all(str, ":", "_colon_");
+		boost::replace_all(str, " ", "_space_");
+		boost::replace_all(str, "(", "_lparen_");
+		boost::replace_all(str, ")", "_rparen_");
+		boost::replace_all(str, ",", "_comma_");
+		boost::replace_all(str, "*", "_star_");
+		boost::replace_all(str, "&", "_ampersand_");
+		boost::replace_all(str, ".", "_dot_");
+		boost::replace_all(str, "+", "_plus_");
+		boost::replace_all(str, "/", "_slash_");
+		boost::replace_all(str, "-", "_minus_");
+		return str;
+	}
+	
 	namespace {
-		std::string createNameForAnnon(const std::string& prefix, const clang::Decl* decl, const clang::SourceManager& sm) {
+		std::string createNameForAnon(const std::string& prefix, const clang::Decl* decl, const clang::SourceManager& sm) {
 			std::stringstream ss;
 			ss << prefix;
 
@@ -75,31 +75,20 @@ namespace utils {
 			boost::filesystem::path path(filename);
 			path = boost::filesystem::canonical(path);
 
-			ss << path.string(); //.getHashValue();
+			ss << path.string();
 			ss << sm.getExpansionLineNumber(decl->getLocStart());
 			ss << sm.getExpansionColumnNumber(decl->getLocStart());
 
-			std::string name = ss.str();
-			REMOVE_SYMBOLS(name);
-			boost::replace_all(name, ".", "_"); // names have full path, remove symbols
-			boost::replace_all(name, "/", "_");
-			boost::replace_all(name, "-", "_");
-
+			std::string name = removeSymbols(ss.str());
 			return name;
 		}
 	}
 
-	std::string removeSymbols(std::string& s) {
-		REMOVE_SYMBOLS(s);
-		boost::replace_all(s, "&", "_");
-		return s;
-	}
-
 	/* we build a complete name for the class,
-	 * qualified name does not have the specific types of the spetialization
+	 * qualified name does not have the specific types of the specialization
 	 */
-	std::string getNameForRecord(const clang::NamedDecl* decl, const clang::QualType& type, const clang::SourceManager& sm) {
-		if(decl->getNameAsString().empty()) { return createNameForAnnon("_anonRecord", decl, sm); }
+	std::string getNameForRecord(const clang::NamedDecl* decl, const clang::Type* type, const clang::SourceManager& sm) {
+		if(decl->getNameAsString().empty()) { return createNameForAnon("_anonRecord", decl, sm); }
 		std::string fullName = decl->getQualifiedNameAsString();
 
 		if(llvm::isa<clang::ClassTemplateSpecializationDecl>(decl) && !llvm::isa<clang::TypedefNameDecl>(decl)) {
@@ -111,7 +100,7 @@ namespace utils {
 			//
 			//     namespace::owner::myClass                 <= qualname
 			//                class  myClass<int, type>      <= typename
-			//                       myClass                 just the name, the key to happines
+			//                       myClass                 just the name, the key to happiness
 			//      ---------------------------------
 			//     namespace::owner::myClass<int, type>      <= final name
 
@@ -119,8 +108,7 @@ namespace utils {
 			boost::replace_last(fullName, name, std::string(typeName.begin() + pos, typeName.end()));
 		}
 
-		REMOVE_SYMBOLS(fullName);
-		return fullName;
+		return removeSymbols(fullName);
 	}
 
 
@@ -130,7 +118,7 @@ namespace utils {
 			if(method->isVirtual()) {
 				name = funcDecl->getNameAsString();
 			} else if(method->getParent()) {
-				if(method->getParent()->isLambda()) { name = createNameForAnnon("lambda", method->getParent(), funcDecl->getASTContext().getSourceManager()); }
+				if(method->getParent()->isLambda()) { name = createNameForAnon("lambda", method->getParent(), funcDecl->getASTContext().getSourceManager()); }
 			} else if(method->isOverloadedOperator()) {
 				//	name = funcDecl->getNameAsString();
 			}
@@ -142,7 +130,7 @@ namespace utils {
 		// the name, because it is not allowed to have overloaded functions
 		// that only differ by the return type.
 		// FIXME: Call to external functions might not work. What should we do with templated operators?!
-		// TODO clenaup early exit
+		// TODO cleanup early exit
 		/*
 		if(funcDecl->isTemplateInstantiation() && !funcDecl->isOverloadedOperator()) {
 		    std::string functionname = funcDecl->getNameAsString();
@@ -169,7 +157,7 @@ namespace utils {
 		}
 
 		// we need to replace right and left shift operators with a dummy
-		// to avoid wrong renaming and double occurence when both operators
+		// to avoid wrong renaming and double occurrence when both operators
 		// have been overloaded
 		boost::algorithm::replace_last(name, "operator<<", "LESSLESSdummy");
 		boost::algorithm::replace_last(name, "operator>>", "GREATERGREATERdummy");
@@ -196,7 +184,7 @@ namespace utils {
 
 		// if(!funcDecl->isOverloadedOperator())
 		{
-			// beware of spetialized functions, the type does not show off
+			// beware of specialized functions, the type does not show off
 			// check if we have template spec args otherwise seg faults may occur
 			if(funcDecl->isFunctionTemplateSpecialization() && funcDecl->getTemplateSpecializationArgs()) {
 				for(unsigned i = 0; i < funcDecl->getTemplateSpecializationArgs()->size(); ++i) {
@@ -212,7 +200,7 @@ namespace utils {
 						std::string typeName;
 						if(arg.getAsType().getTypePtr()->getAsCXXRecordDecl() && arg.getAsType().getTypePtr()->getAsCXXRecordDecl()->isLambda()) {
 							typeName =
-							    createNameForAnnon("lambda", arg.getAsType().getTypePtr()->getAsCXXRecordDecl(), funcDecl->getASTContext().getSourceManager());
+							    createNameForAnon("lambda", arg.getAsType().getTypePtr()->getAsCXXRecordDecl(), funcDecl->getASTContext().getSourceManager());
 						} else {
 							typeName = arg.getAsType().getAsString();
 						}
@@ -262,7 +250,7 @@ namespace utils {
 
 		if(llvm::isa<clang::CXXMethodDecl>(funcDecl) && llvm::cast<clang::CXXMethodDecl>(funcDecl)->isConst()) { name.append("_c"); }
 
-		REMOVE_SYMBOLS(name);
+		name = removeSymbols(name);
 
 		// check for dummyss or dummygg and replace it with the original name
 		boost::algorithm::replace_last(name, "LESSLESSdummy", "operator<<");
@@ -270,7 +258,7 @@ namespace utils {
 		// if nothing was found check for the other ones
 		boost::algorithm::replace_last(name, "LESSdummy", "operator<");
 		boost::algorithm::replace_last(name, "GREATERdummy", "operator>");
-		// and the asterisc symbol
+		// and the asterisk symbol
 		boost::algorithm::replace_last(name, "ASTdummy", "operator*");
 		boost::algorithm::replace_last(name, "COMdummy", "operator,");
 		boost::algorithm::replace_last(name, "MINUSdummy", "operator-");
@@ -292,77 +280,17 @@ namespace utils {
 		return name;
 	}
 
-	std::string buildNameForVariable(const clang::VarDecl* varDecl) {
-		std::string name = varDecl->getQualifiedNameAsString();
-		REMOVE_SYMBOLS(name);
-		return name;
+	std::string buildNameForGlobal(const clang::VarDecl* varDecl, const clang::SourceManager& sm) {		
+		return createNameForAnon("_global", varDecl, sm);
 	}
 
-	std::string buildNameForGlobal(const clang::VarDecl* varDecl, const clang::SourceManager& sm) {
-		std::stringstream ss;
-		ss << "_global";
+	std::string getNameForEnum(const clang::EnumDecl* enumDecl, const clang::SourceManager& sm) {
+		if(enumDecl->getTypedefNameForAnonDecl()) {
+			string qName = enumDecl->getTypedefNameForAnonDecl()->getQualifiedNameAsString();
+			if(!qName.empty()) return qName;
+		}
 
-		ss << sm.getFilename(varDecl->getLocStart()).str(); //.getHashValue();
-		ss << sm.getExpansionLineNumber(varDecl->getLocStart());
-		ss << sm.getExpansionColumnNumber(varDecl->getLocStart());
-		ss << "_";
-		ss << sm.getExpansionColumnNumber(varDecl->getLocEnd());
-
-		std::string name = ss.str();
-		REMOVE_SYMBOLS(name);
-		boost::replace_all(name, ".", "_"); // names have full path, remove symbols
-		boost::replace_all(name, "/", "_");
-		boost::replace_all(name, "-", "_");
-
-		return name;
-	}
-
-
-	std::string buildNameForEnum(const clang::EnumDecl* enumDecl, const clang::SourceManager& sm) {
-		std::stringstream ss;
-		ss << "_enum";
-
-		// A canonical path is needed to avoid different names for
-		// differently specified paths ( a/b/enum.h vs a/c/../b/enum.h)
-		char path[PATH_MAX];
-		realpath(sm.getFilename(enumDecl->getLocStart()).str().c_str(), path);
-		ss << path;
-
-		ss << sm.getExpansionLineNumber(enumDecl->getLocStart());
-		ss << sm.getExpansionColumnNumber(enumDecl->getLocStart());
-		ss << "_";
-		ss << sm.getExpansionColumnNumber(enumDecl->getLocEnd());
-
-		std::string name = ss.str();
-		REMOVE_SYMBOLS(name);
-		boost::replace_all(name, ".", "_"); // names have full path, remove symbols
-		boost::replace_all(name, "/", "_");
-		boost::replace_all(name, "-", "_");
-
-		return name;
-	}
-
-	std::string buildNameForEnumConstant(const clang::EnumConstantDecl* ecd, const clang::SourceManager& sm) {
-		std::stringstream ss;
-		ss << "_enumCtnt";
-
-		// A canonical path is needed to avoid different names for
-		// differently specified paths ( a/b/enum.h vs a/c/../b/enum.h)
-		char path[PATH_MAX];
-		realpath(sm.getFilename(ecd->getLocStart()).str().c_str(), path);
-		ss << path;
-
-		ss << sm.getExpansionLineNumber(ecd->getLocStart());
-		ss << sm.getExpansionColumnNumber(ecd->getLocStart());
-		ss << "_";
-		ss << sm.getExpansionColumnNumber(ecd->getLocEnd());
-
-		std::string name = ss.str();
-		REMOVE_SYMBOLS(name);
-		boost::replace_all(name, ".", "_"); // names have full path, remove symbols
-		boost::replace_all(name, "/", "_");
-		boost::replace_all(name, "-", "_");
-		return name;
+		return createNameForAnon("_enum", enumDecl, sm);
 	}
 
 } // End utils namespace

@@ -72,8 +72,8 @@ namespace lang {
 
 
 		/**
-		 * Creates an enum type out a literal.
-		 * @param lit The name (co
+		 * Creates an enum type out of a literal.
+		 * @param lit The name of the enum
 		 * @param elements vector of elements
 		 * @return the enum type
 		 */
