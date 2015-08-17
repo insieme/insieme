@@ -635,6 +635,46 @@ namespace core {
 		return castExpr(target, src);
 	}
 
+	CallExprPtr IRBuilderBaseModule::deref(const ExpressionPtr& subExpr) const {
+		assert_pred1(analysis::isRefType, subExpr->getType());
+		auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
+		return callExpr(analysis::getReferencedType(subExpr->getType()), refExt.getRefDeref(), subExpr);
+	}
+
+	ExpressionPtr IRBuilderBaseModule::tryDeref(const ExpressionPtr& subExpr) const {
+		if(!analysis::isRefType(subExpr->getType())) { return subExpr; }
+		return deref(subExpr);
+	}
+
+	CallExprPtr IRBuilderBaseModule::refVar(const ExpressionPtr& subExpr) const {
+		auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
+		return callExpr(refType(subExpr->getType()), refExt.getRefVar(), subExpr);
+	}
+
+	CallExprPtr IRBuilderBaseModule::refNew(const ExpressionPtr& subExpr) const {
+		auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
+		return callExpr(refType(subExpr->getType()), refExt.getRefNew(), subExpr);
+	}
+
+	CallExprPtr IRBuilderBaseModule::refDelete(const ExpressionPtr& subExpr) const {
+		auto& basic = manager.getLangBasic();
+		auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
+		return callExpr(basic.getUnit(), refExt.getRefDelete(), subExpr);
+	}
+
+	CallExprPtr IRBuilderBaseModule::assign(const ExpressionPtr& target, const ExpressionPtr& value) const {
+		assert_pred1(analysis::isRefType, target->getType());
+		auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
+		return callExpr(manager.getLangBasic().getUnit(), refExt.getRefAssign(), target, value);
+	}
+
+	ExpressionPtr IRBuilderBaseModule::refReinterpret(const ExpressionPtr& subExpr, const TypePtr& newElementType) const {
+		assert_pred1(analysis::isRefType, subExpr->getType());
+		auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
+		return callExpr(refType(newElementType), refExt.getRefReinterpret(), subExpr, getTypeLiteral(newElementType));
+	}
+
+
 	ExpressionPtr IRBuilderBaseModule::invertSign(const ExpressionPtr& subExpr) const {
 		// get the zero constant for this value
 		ExpressionPtr zero = getZero(subExpr->getType());
