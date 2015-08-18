@@ -1,10 +1,4 @@
 
-
-
-int a(int b, float c) {
-	return 0;
-}
-
 int main() {	
 	
 	// BASE TYPES //////////////////////////////////////////////////////////////
@@ -34,6 +28,17 @@ int main() {
 	float f1;
 	#pragma test expected "decl ref<real<8>,f,f> v0;"
 	double f2;
+	
+	// BASE TYPE TYPEDEFS //////////////////////////////////////////////////////////////
+	
+	typedef float fluffy;
+	typedef volatile float fluffier;
+	
+	#pragma test expected "decl ref<real<4>,f,f> v0;"
+	fluffy fluff;
+	
+	#pragma test expected "decl ref<real<4>,f,t> v0;"
+	fluffier fluffer;
 	
 	// POINTER TYPES //////////////////////////////////////////////////////////////
 	
@@ -78,7 +83,7 @@ int main() {
 	const float *volatile arrvpcf[2];
 	
 	// ENUM TYPES //////////////////////////////////////////////////////////////
-	
+		
 	typedef enum { Bla, Alb } enum_t;
 	#pragma test expected "decl ref<__insieme_enum<enum_t,Bla,Alb>,f,f> v0;"
 	enum_t enu;

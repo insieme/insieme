@@ -83,6 +83,7 @@ namespace extensions {
 			    ExpectedIRAnnotation expectedIRAnnotation(object.getString(ARG_LABEL));
 			    ExpectedIRAnnotationPtr annot = std::make_shared<ExpectedIRAnnotation>(expectedIRAnnotation);
 			    node->addAnnotation(annot);
+				std::cout << "Added anno to :\n" << dumpColor(node);
 
 			    return nodes;
 			})));

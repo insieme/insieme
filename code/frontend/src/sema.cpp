@@ -39,16 +39,15 @@
 #include "insieme/frontend/pragma/handler.h"
 #include "insieme/frontend/utils/source_locations.h"
 
+#include "clang/AST/ASTConsumer.h"
+#include "clang/AST/ASTContext.h"
+#include "clang/AST/Decl.h"
+#include "clang/AST/Stmt.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Sema/Sema.h"
-#include "clang/AST/Stmt.h"
-#include "clang/AST/Decl.h"
-#include "clang/AST/ASTContext.h"
-#include "clang/AST/ASTConsumer.h"
 
 #include "insieme/utils/logging.h"
-
 
 using namespace clang;
 using namespace insieme::frontend;
@@ -60,15 +59,12 @@ typedef std::list<PragmaPtr> PendingPragmaList;
 
 namespace {
 
-	// It returns true if the source location SL is inside the range defined by SR
+	// Returns true if the source location SL is inside the range defined by SR
 	bool isInsideRange(SourceRange SR, SourceLocation SL, SourceManager const& sm) {
-		// LOG(INFO) << "Is after RANGE(" << Line(SR, sm).first << ", " << Line(SR, sm).second << ")";
-		// LOG(INFO) << "Is after RANGE(" << Line(SL, sm) << ")";
-
 		return Line(SR, sm).first <= Line(SL, sm) && Line(SR, sm).second > Line(SL, sm);
 	}
 
-	// It returns true if the source location SL is after the range defined by SR
+	// Returns true if the source location SL is after the range defined by SR
 	bool isAfterRange(SourceRange SR, SourceLocation SL, clang::SourceManager const& sm) {
 		return Line(SR, sm).second <= Line(SL, sm);
 	}
@@ -79,7 +75,7 @@ namespace {
 			assert(it != pending.end() && "Current matched pragma is not in the list of pending pragmas");
 			pending.erase(it);
 		}
-	} // end anonymous namespace
+	}
 
 	/**
 	 * Given a range, the PragmaFilter returns the pragmas with are defined between that range.
@@ -119,8 +115,7 @@ namespace {
 			return I == other.I;
 		}
 	};
-
-} // End empty namespace
+} // end anonymous namespace
 
 namespace insieme {
 namespace frontend {
@@ -155,23 +150,17 @@ namespace frontend {
 		// we parse the original code segment, within the original locations
 		StmtResult&& ret = Sema::ActOnCompoundStmt(L, R, std::move(Elts), isStmtExpr);
 		clang::CompoundStmt* CS = cast<clang::CompoundStmt>(ret.get());
-
-		//	std::cout << "{InsiemeSema}: ActOnCompoundStmt()\n";
-		//	std::cout << "LEFT  { line: " << utils::Line(L, SourceMgr) << " col: " << utils::Line(L,SourceMgr) << std::endl;
-		//	std::cout << "RIGHT } line: " << utils::Line(R, SourceMgr) << " col: " << utils::Line(R,SourceMgr) << std::endl;
-
-
-		// FIXME: check if this is actually needed anymore
-		/// when pragmas are just after the beginning of a compound stmt, example:
-		/// {
-		/// 		#pragma xxx
-		/// 		...
-		/// }
-		/// the location of the opening bracket is wrong because of a bug in the clang parser.
-		///
-		/// We solve the problem by searching for the bracket in the input stream and overwrite
-		/// the value of L (which contains the wrong location) with the correct value.
-
+		
+		// This is still buggy as of Clang 3.6.2:
+		// when pragmas are just after the beginning of a compound stmt, example:
+		// {
+		// 		#pragma xxx
+		// 		...
+		// }
+		// the location of the opening bracket is wrong because of a bug in the clang parser.
+		//
+		// We solve the problem by searching for the bracket in the input stream and overwrite
+		// the value of L (which contains the wrong location) with the correct value.
 
 		enum { MacroIDBit = 1U << 31 }; // from clang/Basic/SourceLocation.h for use with cpp classes
 		{
@@ -200,13 +189,10 @@ namespace frontend {
 				R = rightBracketLoc.getLocWithOffset(rBracePos - strData);
 			}
 		}
-
-		//	std::cout << "corrected LEFT  { line: " << utils::Line(L, SourceMgr) << " col: " << utils::Line(L,SourceMgr) << std::endl;
-		//	std::cout << "corrected RIGHT } line: " << utils::Line(R, SourceMgr) << " col: " << utils::Line(R,SourceMgr) << std::endl;
-
+		
 		// the source range we inspect is defined by the new source locations,
-		// this fix the problem with bonduaries jumping to the beginning of the file in
-		// the macro expanisons:
+		// this fix the problem with boundaries jumping to the beginning of the file in
+		// the macro expansions:
 		//
 		//	#define F(x) { }
 		//
@@ -220,21 +206,15 @@ namespace frontend {
 		// for each of the pragmas in the range between brackets
 		for(PragmaFilter&& filter = PragmaFilter(SR, SourceMgr, pimpl->pending_pragma); *filter; ++filter) {
 			PragmaPtr P = *filter;
-			// iterate throug statements of the compound in reverse order
 
 			unsigned int pragmaStart = utils::Line(P->getStartLocation(), SourceMgr);
 			unsigned int pragmaEnd = utils::Line(P->getEndLocation(), SourceMgr);
-
-			//		std::cout << "Match Pragma: " << pragmaStart  << " , " << pragmaEnd << std::endl;
 
 			bool found = false;
 			// problem with first pragma, compound start is delayed until fist usable line (first stmt)
 			if(CS->size() > 0) {
 				for(clang::CompoundStmt::body_iterator it = CS->body_begin(); it != CS->body_end(); ++it) {
 					unsigned int stmtStart = (Line((*it)->getLocStart(), SourceMgr));
-					//				(*it)->dump();
-					//				std::cout << "lastEnd: " << lastEnd << std::endl;
-					//				std::cout << "   vs stmt: " << stmtStart  << " -> " << stmtEnd << std::endl;
 
 					if((pragmaEnd <= stmtStart)) {
 						// ACHTUNG: if the node is a nullStmt, and is not at the end of the compound (in
@@ -243,59 +223,9 @@ namespace frontend {
 						// postponed until next stmt) this makes pragmas to be attached to a previous
 						// stmt
 						if(!llvm::isa<clang::NullStmt>(*it)) {
-							/*
-							                        Stmt** stmts = new Stmt*[CS->size()];
-
-							                        CompoundStmt* newCS =
-							                                new (Context) CompoundStmt(Context, stmts, CS->size(), CS->getSourceRange().getBegin(),
-							                                        CS->getSourceRange().getEnd()
-							                                    );
-
-							                        //create Attributed Stmt, attach AnnotateAttr and set it as new statement of the CS
-							                        std::vector<const clang::Attr *> annotationListVec;
-							                        //if statement is an attributed statement add the prev list of annotations
-							                        if(llvm::isa<clang::AttributedStmt>(*it)) {
-							                            llvm::ArrayRef<const clang::Attr *> annotationList = ((clang::AttributedStmt *)(*it))->getAttrs();
-							                            for(llvm::ArrayRef<const clang::Attr *>::iterator ia=annotationList.begin(); ia != annotationList.end();
-							   ++ia) {
-							                                annotationListVec.push_back(*ia);
-							                            }
-							                        }
-							                        //check what kind of pragma is handled
-							                        if(auto ompPragma = std::dynamic_pointer_cast<insieme::frontend::omp::OmpPragma>(P)) {
-
-							                            //omp pragma has to be handled
-							                            //pragma type and matchmap has to be stored
-							                            //annotationListVec.push_back(clang::AnnotateAttr(SourceLocation(), Context,
-							   P->getType()).clone(Context));
-							                            std::ostringstream str;
-							                            str << "[" << P->getType();
-							                            for (const MatchMap::value_type& curr : ompPragma->getMap()){
-							                                str << "[" << curr.first;
-							                                str << "[" << join(",", curr.second,
-							                                    [](std::ostream& str, const ValueUnionPtr& cur){ str << *cur; } ) << "]";
-							                                str << "]";
-							                            }
-							                            str << "]";
-							                            annotationListVec.push_back(clang::AnnotateAttr(SourceLocation(), Context, str.str()).clone(Context));
-							                            //set new stmt. if stmt is already an AttributedStmt take the subStmt
-							                            if(llvm::isa<clang::AttributedStmt>(*it)) {
-							                                *it = clang::AttributedStmt::Create(Context, P->getEndLocation(), llvm::ArrayRef<const clang::Attr
-							   *>(annotationListVec), ((clang::AttributedStmt *) *it)->getSubStmt());
-							                            } else {
-							                                *it = clang::AttributedStmt::Create(Context, P->getEndLocation(), llvm::ArrayRef<const clang::Attr
-							   *>(annotationListVec), *it);
-							                            }
-							                        }
-							                        CompoundStmt::body_iterator next = std::copy(CS->body_begin(), it, newCS->body_begin());
-							                        std::copy(it, CS->body_end(), next);
-							                        //std::for_each(CS->body_begin(), CS->body_end(), [&] (Stmt*& curr) { this->Context.Deallocate(curr); });
-							*/
 							// this pragma is attached to the current stmt
 							P->setStatement(*it);
 							matched.push_back(P);
-
-							//						std::cout << " ## attached\n" << std::endl;
 							found = true;
 							break;
 						}
@@ -314,29 +244,8 @@ namespace frontend {
 
 				std::copy(CS->body_begin(), CS->body_end(), newCS->body_begin());
 				std::for_each(CS->body_begin(), CS->body_end(), [&](Stmt*& curr) { this->Context.Deallocate(curr); });
-				/*
-				            //create annotation
-				            std::ostringstream str;
-
-				            if(auto ompPragma = std::dynamic_pointer_cast<insieme::frontend::omp::OmpPragma>(P)) {
-				                str << "[" << P->getType();
-				                for (const MatchMap::value_type& curr : ompPragma->getMap()){
-				                    str << "[" << curr.first;
-				                    str << "[" << join(",", curr.second,
-				                        [](std::ostream& str, const ValueUnionPtr& cur){ str << *cur; } ) << "]";
-				                    str << "]";
-				                }
-				                str << "]";
-				            }
-				            clang::AnnotateAttr annotation(SourceLocation(), Context, str.str());
-				            clang::AttributedStmt * stmt = clang::AttributedStmt::Create(Context, P->getEndLocation(), annotation.clone(Context), new (Context)
-				   NullStmt(SourceLocation()));
-				            newCS->setLastStmt( stmt );
-				*/
 				newCS->setLastStmt(new(Context) NullStmt(SourceLocation()));
 
-				// TODO: This is the oldschool pragma matcher. Each pragma contains a pointer to the attached stmt.
-				// In the new mechanism pragmas are stored inside of the attributed statement.
 				P->setStatement(*newCS->body_rbegin());
 				matched.push_back(P);
 
@@ -349,11 +258,8 @@ namespace frontend {
 				// destroy the old compound stmt
 				Context.Deallocate(oldStmt);
 				delete[] stmts;
-				//			std::cout << "### de-attached pragma " << utils::Line(P->getEndLocation(), SourceMgr) << std::endl <<std::endl;
 			}
 		}
-		//	std::cout << matched.size()<< " pragmas withing locations" << std::endl << std::endl;
-
 		// remove matched pragmas
 		EraseMatchedPragmas(pimpl->pending_pragma, matched);
 
@@ -371,7 +277,7 @@ namespace frontend {
 
 	clang::StmtResult InsiemeSema::ActOnIfStmt(clang::SourceLocation IfLoc, clang::Sema::FullExprArg CondVal, clang::Decl* CondVar, clang::Stmt* ThenVal,
 	                                           clang::SourceLocation ElseLoc, clang::Stmt* ElseVal) {
-		// VLOG(2) << "{InsiemeSema}: ActOnIfStmt()";
+		VLOG(2) << "{InsiemeSema}: ActOnIfStmt()";
 		clang::StmtResult ret = Sema::ActOnIfStmt(IfLoc, CondVal, CondVar, std::move(ThenVal), ElseLoc, std::move(ElseVal));
 
 		clang::IfStmt* ifStmt = static_cast<clang::IfStmt*>(ret.get());
@@ -398,7 +304,7 @@ namespace frontend {
 	clang::StmtResult InsiemeSema::ActOnForStmt(clang::SourceLocation ForLoc, clang::SourceLocation LParenLoc, clang::Stmt* First,
 	                                            clang::Sema::FullExprArg Second, clang::Decl* SecondVar, clang::Sema::FullExprArg Third,
 	                                            clang::SourceLocation RParenLoc, clang::Stmt* Body) {
-		// VLOG(2) << "{InsiemeSema}: ActOnForStmt()" << std::endl;
+		VLOG(2) << "{InsiemeSema}: ActOnForStmt()" << std::endl;
 		clang::StmtResult ret = Sema::ActOnForStmt(ForLoc, LParenLoc, std::move(First), Second, SecondVar, Third, RParenLoc, std::move(Body));
 
 		clang::ForStmt* forStmt = (clang::ForStmt*)ret.get();
@@ -421,16 +327,12 @@ namespace frontend {
 	}
 
 	clang::Decl* InsiemeSema::ActOnFinishFunctionBody(clang::Decl* Decl, clang::Stmt* Body) {
-		// VLOG(2) << "{InsiemeSema}: ActOnFinishFunctionBody()";
+		VLOG(2) << "{InsiemeSema}: ActOnFinishFunctionBody()";
 		clang::Decl* ret = Sema::ActOnFinishFunctionBody(Decl, std::move(Body));
 		// We are sure all the pragmas inside the function body have been matched
 
 		FunctionDecl* FD = dyn_cast<FunctionDecl>(ret);
-
-		//	std::cout << "\nfunc in: " ;
-		//	FD->getSourceRange().getBegin().dump(SourceMgr);
-		//	std::cout << std::endl;
-
+		
 		if(!FD) { return ret; }
 
 		PragmaList matched;
@@ -444,9 +346,6 @@ namespace frontend {
 			unsigned int pragmaEnd = utils::Line((*I)->getEndLocation(), SourceMgr);
 			unsigned int declBegin = utils::Line(ret->getSourceRange().getBegin(), SourceMgr);
 
-			//		std::cout << "pragma ends: " <<pragmaEnd << std::endl;
-			//		std::cout << "Decl begins: " <<declBegin << std::endl;
-
 			if(pragmaEnd <= declBegin) {
 				(*I)->setDecl(FD);
 				matched.push_back(*I);
@@ -459,45 +358,11 @@ namespace frontend {
 		return ret;
 	}
 
-	// clang::StmtResult
-	// InsiemeSema::ActOnDeclStmt(clang::Sema::DeclGroupPtrTy 	Decl,
-	//						   SourceLocation 				StartLoc,
-	//						   SourceLocation 				EndLoc)
-	//{
-	//	DLOG(INFO) << "{InsiemeSema}: ActOnDeclStmt()";
-	//	clang::StmtResult ret = Sema::ActOnDeclStmt(Decl, StartLoc, EndLoc);
-	//	DeclStmt* DS = (DeclStmt*) ret.get();
-	//
-	//	DS->dump();
-	//
-	//	assert(isa<DeclStmt>(DS));
-	//
-	//	PragmaList matched;
-	//	std::list<PragmaPtr>::reverse_iterator I = pimpl->pending_pragma.rbegin(),
-	//										 E = pimpl->pending_pragma.rend();
-	//
-	//	while(I != E && isAfterRange(DS->getSourceRange(),(*I)->getStartLocation(), SourceMgr))
-	//		++I;
-	//
-	//	while(I != E){
-	//		(*I)->setStatement(DS);
-	//		matched.push_back(*I);
-	//		++I;
-	//	}
-	//	EraseMatchedPragmas(pimpl->pragma_list, pimpl->pending_pragma, matched);
-	//	return std::move(ret);
-	//}
-
 	clang::Decl* InsiemeSema::ActOnDeclarator(clang::Scope* S, clang::Declarator& D) {
-		// VLOG(2) << "{InsiemeSema}: ActOnDeclarator()";
+		VLOG(2) << "{InsiemeSema}: ActOnDeclarator()";
 
 		clang::Decl* ret = Sema::ActOnDeclarator(S, D);
 		if(isInsideFunctionDef) { return ret; }
-
-		//	std::cout << utils::Line(ret->getSourceRange().getBegin(), SourceMgr) << ":" <<
-		//				  utils::Column(ret->getSourceRange().getBegin(), SourceMgr) << ", " <<
-		//	  			  utils::Line(ret->getSourceRange().getEnd(), SourceMgr) << ":" <<
-		//				  utils::Column(ret->getSourceRange().getEnd(), SourceMgr) << std::endl;
 
 		PragmaList matched;
 		std::list<PragmaPtr>::reverse_iterator I = pimpl->pending_pragma.rbegin(), E = pimpl->pending_pragma.rend();
@@ -517,9 +382,11 @@ namespace frontend {
 	}
 
 	void InsiemeSema::ActOnTagFinishDefinition(clang::Scope* S, clang::Decl* TagDecl, clang::SourceLocation RBraceLoc) {
-		// VLOG(2) << "{InsiemeSema}: ActOnTagFinishDefinition()";
+		VLOG(2) << "{InsiemeSema}: ActOnTagFinishDefinition()";
 
 		Sema::ActOnTagFinishDefinition(S, TagDecl, RBraceLoc);
+		if(isInsideFunctionDef) { return; }
+
 		PragmaList matched;
 		std::list<PragmaPtr>::reverse_iterator I = pimpl->pending_pragma.rbegin(), E = pimpl->pending_pragma.rend();
 
@@ -538,16 +405,6 @@ namespace frontend {
 	void InsiemeSema::addPragma(PragmaPtr P) {
 		pimpl->pragma_list.push_back(P);
 		pimpl->pending_pragma.push_back(P);
-	}
-
-	void InsiemeSema::dump() {
-		// Visual Studios 2010 fix: Release mode (without debug) evaluates DLOG(INFO) to "(void) 0"
-		// if(VLOG_IS_ON(2)) {
-		//	VLOG(2) << "{InsiemeSema}:\nRegistered Pragmas: " << pimpl->pragma_list.size() << std::endl;
-		//	std::for_each(pimpl->pragma_list.begin(), pimpl->pragma_list.end(),
-		//			[ this ](const PragmaPtr& pragma) { pragma->dump(LOG_STREAM(INFO), this->SourceMgr); }
-		//		);
-		//}
 	}
 
 } // End frontend namespace

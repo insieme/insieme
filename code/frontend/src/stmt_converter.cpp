@@ -90,7 +90,14 @@ namespace conversion {
 					// generate undefined initializer
 					initExp = builder.undefinedVar(convertedDecl.first.getType());
 				}
-				retIr.push_back(builder.declarationStmt(convertedDecl.first, initExp));
+				// build ir declaration
+				auto irDeclStmt = builder.declarationStmt(convertedDecl.first, initExp);
+
+				// deal with pragmas attached to declarations
+				core::NodeList list({irDeclStmt});
+				list = pragma::attachPragma(list, varDecl, converter);
+
+				retIr.push_back(list.back().as<core::StatementPtr>());
 			}
 		}
 
@@ -833,7 +840,7 @@ namespace conversion {
 	// and transparently attach annotations to node which are annotated
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	stmtutils::StmtWrapper Converter::CStmtConverter::Visit(clang::Stmt* stmt) {
-		VLOG(2) << "C";
+		VLOG(0) << "C";
 
 		// iterate frontend extension list and check if a extension wants to convert the stmt
 		stmtutils::StmtWrapper retStmt;
@@ -850,7 +857,7 @@ namespace conversion {
 		// print diagnosis messages
 		converter.printDiagnosis(stmt->getLocStart());
 
-		// Deal with pragmas
+		// deal with pragmas
 		core::NodeList list(retStmt.begin(), retStmt.end());
 		list = pragma::attachPragma(list, stmt, converter);
 		retStmt.clear();
@@ -862,6 +869,9 @@ namespace conversion {
 		for(auto extension : converter.getConversionSetup().getExtensions()) {
 			retStmt = extension->PostVisit(stmt, retStmt, converter);
 		}
+
+		// attach location from clang
+		for(auto s: retStmt) utils::attachLocationFromClang(s, converter.getSourceManager(), stmt->getLocStart(), stmt->getLocEnd());
 
 		return retStmt;
 	}

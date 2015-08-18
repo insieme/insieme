@@ -115,6 +115,22 @@ namespace conversion {
 	Converter::Converter(core::NodeManager& mgr, const TranslationUnit& tu, const ConversionSetup& setup)
 		: translationUnit(tu), convSetup(setup), pragmaMap(translationUnit.pragmas_begin(), translationUnit.pragmas_end()),
 		  mgr(mgr), builder(mgr), feIR(mgr, getCompiler().isCXX()), irTranslationUnit(mgr) {
+		
+		for(auto p: translationUnit.getPragmaList()) {
+			if(p->isStatement()) {
+				std::cout << "Pragma on statement:\n";
+				p->getStatement()->dump();
+				p->dump(std::cout, getSourceManager());
+				std::cout << "\n";
+			}
+			if(p->isDecl()) {
+				std::cout << "Pragma on decl:\n";
+				p->getDecl()->dump();
+				p->dump(std::cout, getSourceManager());
+				std::cout << "\n";
+			}
+		}
+
 		varManPtr = std::make_shared<state::VariableManager>(*this);
 		declConvPtr = std::make_shared<DeclConverter>(*this);
 		if (translationUnit.isCxx()) {

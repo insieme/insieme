@@ -39,8 +39,9 @@
 #include <boost/filesystem.hpp>
 
 #include "insieme/annotations/expected_ir_annotation.h"
-#include "insieme/frontend/frontend.h"
+#include "insieme/core/annotations/source_location.h"
 #include "insieme/frontend/extensions/test_pragma_extension.h"
+#include "insieme/frontend/frontend.h"
 #include "insieme/utils/config.h"
 
 namespace insieme {
@@ -48,27 +49,25 @@ namespace frontend {
 	using namespace extensions;
 	using namespace core;
 	using insieme::annotations::ExpectedIRAnnotation;
-	
-	TEST(SimplestIndependentTest, Simple) {
+
+	void runTestOn(const string& fn) {
 		core::NodeManager mgr;
 		core::IRBuilder builder(mgr);
-
-		string s = FRONTEND_TEST_DIR "/inputs/sniplets/simplest.c";
-
-		ConversionJob job(s);
+		ConversionJob job(fn);
 		job.registerFrontendExtension<TestPragmaExtension>();
 				
 		auto res = builder.normalize(job.execute(mgr));
 
 		// iterate over res and check pragma expectations
 		size_t visited = 0;
-		visitDepthFirstOnce(res, [&](const NodePtr& node) {
+		visitDepthFirstOnce(NodeAddress(res), [&](const NodeAddress& addr) {
+			auto node = addr.getAddressedNode();
 			if(node->hasAnnotation(ExpectedIRAnnotation::KEY)) {
 				auto ann = node->getAnnotation(ExpectedIRAnnotation::KEY);
 				auto ex = ann->getExpected();
 				auto s = ex.substr(1, ex.size()-2);
 				auto expected = builder.parseStmt(s);
-				EXPECT_EQ(builder.normalize(expected), builder.normalize(node));
+				EXPECT_EQ(builder.normalize(expected), builder.normalize(node)) << "Location: " << *core::annotations::getLocation(addr) << "\n";
 				//if(builder.normalize(expected) != builder.normalize(node)) {
 				//	dumpText(builder.normalize(expected));
 				//	std::cout << "MUAHAHAMUAHAHAMUAHAHAMUAHAHAMUAHAHAMUAHAHAMUAHAHAMUAHAHAMUAHAHAMUAHAHAMUAHAHA\n";
@@ -79,8 +78,10 @@ namespace frontend {
 		});
 		// TODO NF check against number of test pragma string occurring in input code (via string search)
 		EXPECT_GT(visited, 0);
-		
-		dumpColor(res);
+	}
+	
+	TEST(IndependentTest, Types) {
+		runTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_basic_types.c");
 	}
 
 } // fe namespace
