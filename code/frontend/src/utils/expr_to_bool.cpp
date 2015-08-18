@@ -34,53 +34,34 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include "insieme/frontend/utils/expr_to_bool.h"
 
-#include "insieme/core/ir_statements.h"
+#include "insieme/core/ir_builder.h"
 #include "insieme/core/lang/basic.h"
 
 namespace insieme {
 namespace frontend {
-namespace stmtutils {
+namespace utils {
+	using namespace core;
 
-	using namespace insieme::core;
+	ExpressionPtr exprToBool(const ExpressionPtr& expr) {
+		auto& mgr = expr->getNodeManager();
+		auto& basic = mgr.getLangBasic();
+		IRBuilder builder(mgr);
 
-	namespace {
-		typedef vector<StatementPtr> StatementList;
+		auto t = expr->getType();
+
+		// no need to do anything if already bool
+		if(basic.isBool(t)) return expr;
+
+		// if integral, check against 0
+		if(basic.isInt(t)) return builder.ne(expr, builder.getZero(expr->getType()));
+
+		assert_not_implemented();
+		return ExpressionPtr();
 	}
 
-	//-------------------------------------------- StmtWrapper ------------------------------------------------------------
-	/*
-	 * Utility class used as a return type for the StmtVisitor. It can store a list of statement
-	 * as conversion of a single C stmt can result in multiple IR statements.
-	 */
-	struct StmtWrapper : public StatementList {
-		StmtWrapper(const StatementList& list) : StatementList(list) {}
-
-		StmtWrapper() : StatementList() {}
-		StmtWrapper(const StatementPtr& stmt) : StatementList({stmt}) {}
-		StmtWrapper(const CompoundStmtPtr& stmt) : StatementList({stmt}) {}
-
-		StatementPtr getSingleStmt() const {
-			assert_eq(size(), 1) << "More than 1 statement present";
-			return front();
-		}
-
-		bool isSingleStmt() const {
-			return size() == 1;
-		}
-
-		std::ostream& operator<<(std::ostream& out) {
-			for(auto s : *this) {
-				out << "-" << dumpOneLine(s) << "\n";
-			}
-			return out;
-		}
-	};
-
-	StatementPtr aggregateStmt(const IRBuilder& builder, const StatementPtr& stmt);
-	StatementPtr aggregateStmts(const IRBuilder& builder, const StatementList& stmtVect);
-
-} // end namespace stmtutils
+} // end namespace utils
 } // end namespace frontend
 } // end namespace insieme
+

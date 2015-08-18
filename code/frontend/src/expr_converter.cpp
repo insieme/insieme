@@ -45,6 +45,8 @@
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/memalloc.h"
 #include "insieme/frontend/utils/stmt_wrapper.h"
+#include "insieme/frontend/state/function_manager.h"
+#include "insieme/frontend/state/variable_manager.h"
 
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/logging.h"
@@ -354,59 +356,19 @@ namespace conversion {
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr Converter::ExprConverter::VisitCallExpr(const clang::CallExpr* callExpr) {
 		// return converted node
-		core::ExpressionPtr irNode;
-		LOG_EXPR_CONVERSION(callExpr, irNode);
+		core::ExpressionPtr irExpr;
+		LOG_EXPR_CONVERSION(callExpr, irExpr);
 
-		//core::ExpressionPtr func = converter.convertExpr(callExpr->getCallee());
+		core::ExpressionPtr irCallee = converter.convertExpr(callExpr->getCallee());
 
-		//// check if we have a call to a static function
-		//bool isStatic = false;
-		//if(callExpr->getDirectCallee()) {
-		//	if(auto mdecl = llvm::dyn_cast<clang::CXXMethodDecl>(callExpr->getDirectCallee())) { isStatic = mdecl->isStatic(); }
-		//}
+		core::ExpressionList irArguments;
+		for(auto arg : callExpr->arguments()) {
+			irArguments.push_back(Visit(arg));
+		}
 
-		//core::CallExprPtr call = func.isa<core::CallExprPtr>();
-		//core::FunctionTypePtr funcTy;
+		irExpr = builder.callExpr(irCallee, irArguments);
 
-		//// if we have a nested function call to a static function
-		//// try to retrieve the the function type from the inner call expression.
-		//assert_true(func->getType().isa<core::FunctionTypePtr>() || call->getFunctionExpr()->getType().as<core::FunctionTypePtr>())
-		//    << "Cannot find a function type in the converted callee expression";
-		//(call && isStatic) ? (funcTy = call->getFunctionExpr()->getType().as<core::FunctionTypePtr>()) : (funcTy = func->getType().as<core::FunctionTypePtr>());
-
-		//// FIXME if we have a call to "free" we get a refDelete back which expects ref<'a'>
-		//// this results in a cast ot "'a" --> use the type we get from the funcDecl
-		//if(callExpr->getDirectCallee()) {
-		//	const clang::FunctionDecl* funcDecl = llvm::cast<clang::FunctionDecl>(callExpr->getDirectCallee());
-		//	// FIXME changing type to fit "free" -- with refDelete
-		//	funcTy = converter.convertFunctionType(funcDecl);
-		//}
-
-		//ExpressionList&& args = getFunctionArguments(callExpr, funcTy);
-
-		//// In case we have a K&R C-style declaration (without argument types)
-		//// and a different number of arguments in the call we need to adjust the function type
-		//vector<core::TypePtr> typeList = funcTy.getParameterTypeList();
-		//if(typeList.size() == 0 && args.size() > 0) {
-		//	typeList = ::transform(args, [](const core::ExpressionPtr& exprPtr) { return exprPtr->getType(); });
-		//	core::FunctionTypePtr newFuncTy = builder.functionType(typeList, funcTy->getReturnType());
-		//	func = core::transform::replaceAddress(mgr, core::ExpressionAddress(func)->getType(), newFuncTy).getRootNode().as<core::ExpressionPtr>();
-		//}
-
-		//// in case that there is a nested call to static functions try to
-		//// rebuild the intended behavior (e.g., fun() { base_call(); return nested_call; } (args) )
-		//if(call && isStatic) {
-		//	auto originalFunType = call->getFunctionExpr()->getType().as<core::FunctionTypePtr>();
-		//	irNode = builder.callExpr(originalFunType->getReturnType(), call->getFunctionExpr());
-		//	assert_true(originalFunType->getReturnType().isa<core::FunctionTypePtr>());
-		//	irNode = builder.callExpr(originalFunType->getReturnType().as<core::FunctionTypePtr>()->getReturnType(), irNode, args);
-		//	return irNode;
-		//}
-
-		//irNode = builder.callExpr(funcTy->getReturnType(), func, args
-
-		assert_not_implemented();
-		return irNode;
+		return irExpr;
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1234,27 +1196,15 @@ namespace conversion {
 		core::ExpressionPtr retIr;
 		LOG_EXPR_CONVERSION(declRef, retIr);
 
-		//// check whether this is a reference to a variable
-		//core::ExpressionPtr retExpr;
-		//if(const clang::ParmVarDecl* parmDecl = llvm::dyn_cast<clang::ParmVarDecl>(declRef->getDecl())) {
-		//	VLOG(2) << "Parameter type: " << converter.convertType(parmDecl->getOriginalType());
-
-		//	retIr = converter.lookUpVariable(parmDecl);
-		//	auto fit = converter.wrapRefMap.find(retIr.as<core::VariablePtr>());
-		//	if(fit == converter.wrapRefMap.end()) {
-		//		fit = converter.wrapRefMap.insert(std::make_pair(retIr.as<core::VariablePtr>(), builder.variable(builder.refType(retIr->getType())))).first;
-
-		//		VLOG(2) << "parmVar wrapped from " << retIr << " (" << retIr->getType() << ")"
-		//		        << " to " << fit->second << "(" << fit->second->getType();
-		//	}
-		//	return (retIr = fit->second);
-		//}
-
-		//if(const clang::VarDecl* varDecl = llvm::dyn_cast<clang::VarDecl>(declRef->getDecl())) { return (retIr = converter.lookUpVariable(varDecl)); }
-
-		//if(const clang::FunctionDecl* funcDecl = llvm::dyn_cast<clang::FunctionDecl>(declRef->getDecl())) {
-		//	return (retIr = converter.getCallableExpression(funcDecl).as<core::ExpressionPtr>());
-		//}
+		if(const clang::VarDecl* varDecl = llvm::dyn_cast<clang::VarDecl>(declRef->getDecl())) { 
+			retIr = converter.getVarMan()->lookup(varDecl);
+			return retIr;
+		}
+		
+		if(const clang::FunctionDecl* funcDecl = llvm::dyn_cast<clang::FunctionDecl>(declRef->getDecl())) {
+			retIr = converter.getFunMan()->lookup(funcDecl);
+			return retIr;
+		}
 
 		//if(const clang::EnumConstantDecl* decl = llvm::dyn_cast<clang::EnumConstantDecl>(declRef->getDecl())) {
 		//	string enumConstantname = insieme::frontend::utils::buildNameForEnumConstant(decl, converter.getSourceManager());

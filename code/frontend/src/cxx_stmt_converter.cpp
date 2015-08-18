@@ -84,7 +84,7 @@ namespace conversion {
 
 		// Deal with transformation pragmas
 		core::NodeList list(retStmt.begin(), retStmt.end());
-		list = pragma::attachPragma(list, stmt, converter);
+		list = pragma::handlePragmas(list, stmt, converter);
 		retStmt.clear();
 		for (const auto& e : list) {
 			retStmt.push_back(e.as<core::StatementPtr>());

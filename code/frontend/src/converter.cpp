@@ -47,6 +47,7 @@
 #include "insieme/frontend/omp/omp_annotation.h"
 #include "insieme/frontend/stmt_converter.h"
 #include "insieme/frontend/type_converter.h"
+#include "insieme/frontend/state/function_manager.h"
 #include "insieme/frontend/state/variable_manager.h"
 #include "insieme/frontend/utils/clang_cast.h"
 #include "insieme/frontend/utils/debug.h"
@@ -83,7 +84,6 @@
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/transform/node_replacer.h"
-#include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/types/subtyping.h"
 
 #include "insieme/annotations/c/include.h"
@@ -116,22 +116,25 @@ namespace conversion {
 		: translationUnit(tu), convSetup(setup), pragmaMap(translationUnit.pragmas_begin(), translationUnit.pragmas_end()),
 		  mgr(mgr), builder(mgr), feIR(mgr, getCompiler().isCXX()), irTranslationUnit(mgr) {
 		
-		for(auto p: translationUnit.getPragmaList()) {
-			if(p->isStatement()) {
-				std::cout << "Pragma on statement:\n";
-				p->getStatement()->dump();
-				p->dump(std::cout, getSourceManager());
-				std::cout << "\n";
-			}
-			if(p->isDecl()) {
-				std::cout << "Pragma on decl:\n";
-				p->getDecl()->dump();
-				p->dump(std::cout, getSourceManager());
-				std::cout << "\n";
+		if(getenv("INSIEME_DUMP_PRAGMALIST")) {
+			for(auto p: translationUnit.getPragmaList()) {
+				if(p->isStatement()) {
+					std::cout << "Pragma on statement:\n";
+					p->getStatement()->dump();
+					p->dump(std::cout, getSourceManager());
+					std::cout << "\n";
+				}
+				if(p->isDecl()) {
+					std::cout << "Pragma on decl:\n";
+					p->getDecl()->dump();
+					p->dump(std::cout, getSourceManager());
+					std::cout << "\n";
+				}
 			}
 		}
-
+		
 		varManPtr = std::make_shared<state::VariableManager>(*this);
+		funManPtr = std::make_shared<state::FunctionManager>(*this);
 		declConvPtr = std::make_shared<DeclConverter>(*this);
 		if (translationUnit.isCxx()) {
 			typeConvPtr = std::make_shared<CXXTypeConverter>(*this);
@@ -216,7 +219,7 @@ namespace conversion {
 	core::ExpressionPtr Converter::attachFuncAnnotations(const core::ExpressionPtr& node, const clang::FunctionDecl* funcDecl) {
 		
 		// ----------------------------------- Add annotations to this function -------------------------------------------
-		pragma::attachPragma(core::NodeList({node.as<core::NodePtr>()}), funcDecl, *this);
+		pragma::handlePragmas(core::NodeList({node.as<core::NodePtr>()}), funcDecl, *this);
 
 		// -------------------------------------------------- C NAME ------------------------------------------------------
 		// check for overloaded operator "function" (normal function has kind OO_None)

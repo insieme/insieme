@@ -295,10 +295,9 @@ namespace pragma {
 		}
 	};
 
-	// Handle the automatic attaching of annotations (coming from user pragmas) to generated IR nodes
-	core::NodeList attachPragma(const core::NodeList& nodes, const clang::Stmt* clangNode, conversion::Converter& fact);
-
-	core::NodeList attachPragma(const core::NodeList& nodes, const clang::Decl* clangDecl, conversion::Converter& fact);
+	// Handle the processing of pragmas in extensions
+	core::NodeList handlePragmas(const core::NodeList& nodes, const clang::Stmt* clangNode, conversion::Converter& fact);
+	core::NodeList handlePragmas(const core::NodeList& nodes, const clang::Decl* clangDecl, conversion::Converter& fact);
 
 } // end pragma namespace
 } // End frontend namespace

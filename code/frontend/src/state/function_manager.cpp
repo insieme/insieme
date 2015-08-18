@@ -34,53 +34,26 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include "insieme/frontend/state/function_manager.h"
 
-#include "insieme/core/ir_statements.h"
-#include "insieme/core/lang/basic.h"
+#include "insieme/frontend/decl_converter.h"
+#include "insieme/frontend/utils/macros.h"
+
+#include "insieme/utils/container_utils.h"
 
 namespace insieme {
 namespace frontend {
-namespace stmtutils {
+namespace state {
 
-	using namespace insieme::core;
-
-	namespace {
-		typedef vector<StatementPtr> StatementList;
+	core::LiteralPtr FunctionManager::lookup(const clang::FunctionDecl* funDecl) const {
+		frontend_assert(::containsKey(functions, funDecl)) << "Trying to look up function not previously declared";
+		return functions.find(funDecl)->second;
+	}
+	void FunctionManager::insert(const clang::FunctionDecl* funDecl, const core::LiteralPtr& fun) {
+		frontend_assert(!::containsKey(functions, funDecl)) << "Trying to insert previously declared function";
+		functions[funDecl] = fun;
 	}
 
-	//-------------------------------------------- StmtWrapper ------------------------------------------------------------
-	/*
-	 * Utility class used as a return type for the StmtVisitor. It can store a list of statement
-	 * as conversion of a single C stmt can result in multiple IR statements.
-	 */
-	struct StmtWrapper : public StatementList {
-		StmtWrapper(const StatementList& list) : StatementList(list) {}
-
-		StmtWrapper() : StatementList() {}
-		StmtWrapper(const StatementPtr& stmt) : StatementList({stmt}) {}
-		StmtWrapper(const CompoundStmtPtr& stmt) : StatementList({stmt}) {}
-
-		StatementPtr getSingleStmt() const {
-			assert_eq(size(), 1) << "More than 1 statement present";
-			return front();
-		}
-
-		bool isSingleStmt() const {
-			return size() == 1;
-		}
-
-		std::ostream& operator<<(std::ostream& out) {
-			for(auto s : *this) {
-				out << "-" << dumpOneLine(s) << "\n";
-			}
-			return out;
-		}
-	};
-
-	StatementPtr aggregateStmt(const IRBuilder& builder, const StatementPtr& stmt);
-	StatementPtr aggregateStmts(const IRBuilder& builder, const StatementList& stmtVect);
-
-} // end namespace stmtutils
+} // end namespace state
 } // end namespace frontend
 } // end namespace insieme

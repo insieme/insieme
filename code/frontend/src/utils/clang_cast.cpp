@@ -69,7 +69,7 @@ namespace utils {
 		//core::TypePtr targetTy = converter.convertType(castExpr->getType());
 		//core::TypePtr exprTy = expr->getType();
 
-		//const core::FrontendIRBuilder& builder = converter.getIRBuilder();
+		const core::FrontendIRBuilder& builder = converter.getIRBuilder();
 		//const core::lang::BasicGenerator& gen = builder.getLangBasic();
 		//core::NodeManager& mgr = converter.getNodeManager();
 
@@ -89,39 +89,14 @@ namespace utils {
 		//if(*exprTy == *targetTy) { return expr; }
 
 		//// handle implicit casts according to their kind
-		//switch(castExpr->getCastKind()) {
+		switch(castExpr->getCastKind()) {
 		////////////////////////////////////////////////////////////////////////////////////////////////////////////
-		//case clang::CK_LValueToRValue:
-		//	// A conversion which causes the extraction of an r-value from the operand gl-value.
-		//	// The result of an r-value conversion is always unqualified.
-		//	//
-		//	// IR: this is the same as out ref deref ref<a'> -> a'
-		//	{
-		//		// we use by value a member accessor. we have a better operation for this
-		//		// instead of derefing the memberRef
-		//		//  refElem   (ref<owner>, elemName) -> ref<member>   => this is composite ref
-		//		//  membAcces ( owner, elemName) -> member            => uses read-only, returns value
-		//		if(core::CallExprPtr call = expr.isa<core::CallExprPtr>()) {
-		//			if(core::analysis::isCallOf(call, gen.getCompositeRefElem())
-		//			   && (!core::analysis::isCallOf(call, mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToIR())
-		//			       && !core::analysis::isCallOf(call, mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR()))) {
-		//				expr = builder.callExpr(gen.getCompositeMemberAccess(), builder.deref(call[0]), call[1], builder.getTypeLiteral(targetTy));
-		//			}
-		//			// TODO: we can do something similar and turn vector ref elem into vectorSubscript
-		//			// else if (core::analysis::isCallOf(call, gen.getVectorRefElem())) {
-		//			else if(expr->getType().isa<core::RefTypePtr>()) {
-		//				expr = builder.deref(expr);
-		//			}
-		//		} else if(expr->getType().isa<core::RefTypePtr>()) {
-		//			expr = builder.deref(expr);
-		//		}
-
-		//		// this is CppRef -> ref
-		//		if(core::analysis::isAnyCppRef(expr->getType())) { expr = builder.deref(builder.toIRRef(expr)); }
-
-		//		return expr;
-		//		break;
-		//	}
+		case clang::CK_LValueToRValue:
+			// A conversion which causes the extraction of an r-value from the operand gl-value.
+			// The result of an r-value conversion is always unqualified.
+			//
+			// IR: this is the same as out ref deref ref<a'> -> a'
+			return builder.deref(expr);
 		////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 		//case clang::CK_IntegralCast:
@@ -519,9 +494,9 @@ namespace utils {
 		//	{ return builder.callExpr(gen.getUInt8(), gen.getRefToInt(), expr); }
 
 		////////////////////////////////////////////////////////////////////////////////////////////////////////////
-		//case clang::CK_FunctionToPointerDecay:
-		//	// CK_FunctionToPointerDecay - Function to pointer decay. void(int) -> void(*)(int)
-		//	{ return expr; }
+		case clang::CK_FunctionToPointerDecay:
+			// CK_FunctionToPointerDecay - Function to pointer decay. void(int) -> void(*)(int)
+			return expr;
 
 		////////////////////////////////////////////////////////////////////////////////////////////////////////////
 		//case clang::CK_NullToMemberPointer:
@@ -619,7 +594,7 @@ namespace utils {
 		//	castExpr->dump();
 		//	assert_fail();
 		//default: assert_fail() << "not all options listed, is this clang 3.2? maybe should upgrade Clang support";
-		//}
+		}
 
 		assert_fail() << "control reached an invalid point!";
 

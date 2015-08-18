@@ -51,15 +51,32 @@ namespace state {
 	class VariableManager {
 	private:
 		Converter& converter;
-		/// Internal storage for mappings from clang variable declarations to IR variables
-		///
-		std::map<const clang::VarDecl*, core::VariablePtr> storage;
+
+		struct Scope {
+			Scope(bool n) : nested(n) {}
+			/// stores variables declared in this scope
+			std::map<const clang::VarDecl*, core::ExpressionPtr> variables;
+			/// determines whether variables from upper scopes are visible
+			bool nested;
+		};
+
+		/// Internal storage for mappings from clang variable declarations to 
+		/// IR variables for locals and literals for globals
+		std::vector<Scope> storage;
 
 	public:
-		VariableManager(Converter& converter) : converter(converter) {}
+		VariableManager(Converter& converter);
 
-		core::VariablePtr lookup(const clang::VarDecl* varDecl) const;
-		void insert(const clang::VarDecl* varDecl, const core::VariablePtr& var);
+		/// Push a new scope for declared local variables
+		void pushScope(bool nested) { storage.push_back(Scope{nested}); }
+		/// Pop a scope after closing it
+		void popScope() { storage.pop_back(); }
+
+		core::ExpressionPtr lookup(const clang::VarDecl* varDecl) const;
+		void insert(const clang::VarDecl* varDecl, const core::ExpressionPtr& var);
+
+		/// get the number of visible declarations in current scope (for testing)
+		size_t numVisibleDeclarations() const;
 	};
 
 } // end namespace state

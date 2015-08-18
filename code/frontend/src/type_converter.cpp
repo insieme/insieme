@@ -69,32 +69,6 @@
 using namespace clang;
 using namespace insieme;
 
-namespace {
-	//const clang::TagDecl* findDefinition(const clang::TagType* tagType) {
-	//	const clang::TagDecl* decl = tagType->getDecl();
-	//	clang::TagDecl* res = nullptr;
-
-	//	TagDecl::redecl_iterator i, e = decl->redecls_end();
-	//	for(i = decl->redecls_begin(); i != e; ++i) {
-	//		if(llvm::isa<clang::TypedefDecl>(*i)) {
-	//			std::cerr << "this is a typedef aliased type" << std::endl;
-	//			assert_fail();
-	//		}
-
-	//		if(i->isCompleteDefinition()) { res = i->getDefinition(); }
-	//		if(llvm::isa<clang::ClassTemplatePartialSpecializationDecl>(*i)) { continue; }
-
-	//		if(llvm::isa<clang::ClassTemplateSpecializationDecl>(*i)) {
-	//			if(i->isCompleteDefinitionRequired()) { res = *i; }
-	//		}
-	//	}
-
-	//	if(res) { return res; }
-
-	//	return NULL;
-	//}
-} // end anonymous namespace
-
 namespace insieme {
 namespace frontend {
 namespace conversion {
@@ -289,7 +263,6 @@ namespace conversion {
 	core::TypePtr Converter::TypeConverter::VisitFunctionNoProtoType(const FunctionNoProtoType* funcTy) {
 		core::TypePtr retTy;
 		LOG_TYPE_CONVERSION(funcTy, retTy);
-		funcTy->getReturnType()->dump();
 		core::TypePtr funRetTy = convert(funcTy->getReturnType());
 		frontend_assert(funRetTy) << "Function has no return type!\n";
 

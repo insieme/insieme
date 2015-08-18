@@ -188,9 +188,12 @@ namespace pragma {
 		std::map<std::string, StringList> stringList;
 		core::VariablePtr getVar(const ValueUnionPtr& p, conversion::Converter& fact);
 		core::ExpressionPtr getExpr(const ValueUnionPtr& p, conversion::Converter& fact);
+		conversion::Converter* converter;
 
 	  public:
-		MatchObject() : initialized(false){};
+		MatchObject() : initialized(false) {};
+
+		conversion::Converter& getConverter() const { return *converter; }
 
 		const VarList getVars(const std::string& s) const {
 			if(varList.find(s) == varList.end()) { return VarList(); }

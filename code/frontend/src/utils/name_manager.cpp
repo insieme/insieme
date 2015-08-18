@@ -280,7 +280,9 @@ namespace utils {
 		return name;
 	}
 
-	std::string buildNameForGlobal(const clang::VarDecl* varDecl, const clang::SourceManager& sm) {		
+	std::string getNameForGlobal(const clang::VarDecl* varDecl, const clang::SourceManager& sm) {
+		string s = varDecl->getNameAsString();
+		if(!s.empty()) { return s; }
 		return createNameForAnon("_global", varDecl, sm);
 	}
 

@@ -46,21 +46,15 @@ namespace stmtutils {
 	using namespace insieme::core;
 
 	// Tried to aggregate statements into a compound statement (if more than 1 statement is present)
-	CompoundStmtPtr aggregateStmts(const IRBuilder& builder, const StatementList& stmtVect) {
+	StatementPtr aggregateStmts(const IRBuilder& builder, const StatementList& stmtVect) {
 		if(stmtVect.empty()) { return builder.compoundStmt(); }
 		if(stmtVect.size() == 1) { return aggregateStmt(builder, stmtVect[0]); }
 		return builder.compoundStmt(stmtVect);
 	}
 
-	CompoundStmtPtr aggregateStmt(const IRBuilder& builder, const StatementPtr& stmt) {
+	StatementPtr aggregateStmt(const IRBuilder& builder, const StatementPtr& stmt) {
 		if(stmt.isa<CompoundStmtPtr>()) { return aggregateStmts(builder, stmt.as<CompoundStmtPtr>()->getStatements()); }
-		return builder.compoundStmt(stmt);
-	}
-
-	ExpressionPtr makeOperation(const IRBuilder& builder, const ExpressionPtr& lhs, const ExpressionPtr& rhs, const lang::BasicGenerator::Operator& op) {
-		return builder.callExpr(lhs->getType(),                                         // return type
-		                        builder.getLangBasic().getOperator(lhs->getType(), op), // get the operator
-		                        lhs, rhs);                                              // LHS and RHS of the operation
+		return stmt;
 	}
 
 } // end namespace stmtutils

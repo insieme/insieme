@@ -34,14 +34,18 @@
  * regarding third party software licenses.
  */
 
-#include <gtest/gtest.h>
+#include <string>
+#include <fstream>
 
+#include <gtest/gtest.h>
 #include <boost/filesystem.hpp>
+#include <boost/algorithm/string/replace.hpp>
 
 #include "insieme/annotations/expected_ir_annotation.h"
 #include "insieme/core/annotations/source_location.h"
 #include "insieme/frontend/extensions/test_pragma_extension.h"
 #include "insieme/frontend/frontend.h"
+#include "insieme/frontend/state/variable_manager.h"
 #include "insieme/utils/config.h"
 
 namespace insieme {
@@ -54,7 +58,9 @@ namespace frontend {
 		core::NodeManager mgr;
 		core::IRBuilder builder(mgr);
 		ConversionJob job(fn);
-		job.registerFrontendExtension<TestPragmaExtension>();
+		job.registerFrontendExtension<TestPragmaExtension>([](conversion::Converter& converter, int num) {
+			EXPECT_EQ(num, converter.getVarMan()->numVisibleDeclarations()) << "Location: " << converter.getLastTrackableLocation() << "\n";
+		});
 				
 		auto res = builder.normalize(job.execute(mgr));
 
@@ -65,9 +71,16 @@ namespace frontend {
 			if(node->hasAnnotation(ExpectedIRAnnotation::KEY)) {
 				auto ann = node->getAnnotation(ExpectedIRAnnotation::KEY);
 				auto ex = ann->getExpected();
-				auto s = ex.substr(1, ex.size()-2);
-				auto expected = builder.parseStmt(s);
-				EXPECT_EQ(builder.normalize(expected), builder.normalize(node)) << "Location: " << *core::annotations::getLocation(addr) << "\n";
+				boost::replace_all(ex, R"(\")", R"(")");
+				NodePtr expected;
+				if(node.isa<ExpressionPtr>()) {
+					expected = builder.parseExpr(ex);
+				} else {
+					expected = builder.parseStmt(ex);
+				}
+				EXPECT_EQ(builder.normalize(expected), builder.normalize(node)) 
+					<< "Location: " << *core::annotations::getLocation(addr) << "\n"
+					<< "Actual Pretty: " << dumpOneLine(builder.normalize(node)) << "\n";
 				//if(builder.normalize(expected) != builder.normalize(node)) {
 				//	dumpText(builder.normalize(expected));
 				//	std::cout << "MUAHAHAMUAHAHAMUAHAHAMUAHAHAMUAHAHAMUAHAHAMUAHAHAMUAHAHAMUAHAHAMUAHAHAMUAHAHA\n";
@@ -76,12 +89,39 @@ namespace frontend {
 				visited++;
 			}
 		});
-		// TODO NF check against number of test pragma string occurring in input code (via string search)
-		EXPECT_GT(visited, 0);
+
+		std::ifstream tf(fn);
+		std::string fileText((std::istreambuf_iterator<char>(tf)), std::istreambuf_iterator<char>());
+		std::string searchString{"#pragma test expect_ir"};
+		string::size_type start = 0;
+		unsigned occurrences = 0;
+		while((start = fileText.find(searchString, start)) != string::npos) { 
+			++occurrences; 
+			start += searchString.length();
+		}
+		EXPECT_EQ(visited, occurrences);
+
+		dumpColor(res);
 	}
 	
-	TEST(IndependentTest, Types) {
+	TEST(IndependentTest, BasicTypes) {
 		runTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_basic_types.c");
+	}
+
+	TEST(IndependentTest, Globals) {
+		runTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_globals.c");
+	}
+
+	TEST(IndependentTest, Statements) {
+		runTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_statements.c");
+	}
+
+	TEST(IndependentTest, VariableScopes) {
+		runTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_variable_scopes.c");
+	}
+	
+	TEST(IndependentTest, FunCalls) {
+		runTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_fun_calls.c");
 	}
 
 } // fe namespace

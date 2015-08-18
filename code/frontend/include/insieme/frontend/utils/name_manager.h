@@ -66,7 +66,7 @@ namespace utils {
 	 */
 	std::string buildNameForFunction(const clang::FunctionDecl* funcDecl);
 	
-	std::string buildNameForGlobal(const clang::VarDecl* varDecl, const clang::SourceManager& sm);
+	std::string getNameForGlobal(const clang::VarDecl* varDecl, const clang::SourceManager& sm);
 
 	/**
 	 * Get name for enumeration, either from typedef or generated for anonymous

@@ -73,6 +73,7 @@ namespace frontend {
 	// Forward Declaration
 	namespace state {
 		class VariableManager;
+		class FunctionManager;
 	}
 } // end namespace frontend
 } // end namespace insieme
@@ -131,6 +132,10 @@ namespace conversion {
 		///
 		std::shared_ptr<state::VariableManager> varManPtr;
 
+		/// A state object which manages mappings from clang functions to IR LiteralPtrs
+		///
+		std::shared_ptr<state::FunctionManager> funManPtr;
+
 		/**
 		 * IR building and managing tools
 		 */
@@ -178,6 +183,7 @@ namespace conversion {
 		std::shared_ptr<TypeConverter> getTypeConverter() const { return typeConvPtr; }
 
 		std::shared_ptr<state::VariableManager> getVarMan() const { return varManPtr; }
+		std::shared_ptr<state::FunctionManager> getFunMan() const { return funManPtr; }
 		
 		const pragma::PragmaStmtMap& getPragmaMap() const {	return pragmaMap; }
 		
