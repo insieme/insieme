@@ -257,6 +257,31 @@ namespace conversion {
 		stmtutils::StmtWrapper retStmt;
 		LOG_STMT_CONVERSION(forStmt, retStmt);
 
+		assert_not_implemented();
+
+		return retStmt;
+		
+		//core::StatementPtr body = aggregateStmts(builder, Visit(forStmt->getBody()));
+		//frontend_assert(body) << "Couldn't convert body of the ForStmt";
+
+		//core::ExpressionPtr condExpr = converter.convertExpr(forStmt->getCond());
+		//frontend_assert(condExpr) << "Couldn't convert condition expression of the ForStmt";
+
+		//core::ExpressionPtr incExpr = converter.convertExpr(forStmt->getInc());
+		//frontend_assert(incExpr) << "Couldn't convert increment expression of the ForStmt";
+		//frontend_assert(incExpr.isa<core::StatementPtr>()) << "Increment expression of the ForStmt is not a valid statement";
+		//core::StatementPtr incStmt = incExpr.as<core::StatementPtr>();
+
+		//core::StatementPtr initStmt = converter.convertStmt(forStmt->getInit());
+		//frontend_assert(initStmt) << "Couldn't convert init statement of the ForStmt";
+
+		//retStmt.push_back(initStmt);
+
+		//core::StatementList bodyAndIncrement{body, incStmt};
+
+		//retStmt.push_back(builder.whileStmt(condExpr, stmtutils::aggregateStmts(builder, bodyAndIncrement)));
+
+		//return builder.compoundStmt(retStmt);
 		
 		//try {
 		//	// Analyze loop for induction variable
@@ -397,9 +422,6 @@ namespace conversion {
 		//		                             std::string("For loop converted into while loop, cause: ") + e.what());
 		//	}
 		//}
-
-		assert_not_implemented();
-		return retStmt;
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

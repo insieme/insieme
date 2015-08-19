@@ -102,6 +102,6 @@ int main() {
 	//union_t uni;
 	
 	//int length = 2;
-	//pragma test expect_ir("decl ref<array<real<4>,2>,f,t> v0;"
+	//pragma test expect_ir("decl ref<array<real<4>,2>,f,t> v0;")
 	//volatile float vlarrvf[length];
 }

@@ -69,6 +69,12 @@ namespace utils {
 		//core::TypePtr targetTy = converter.convertType(castExpr->getType());
 		//core::TypePtr exprTy = expr->getType();
 
+		if(VLOG_IS_ON(2)) {
+			VLOG(2) << "castExpr: ";
+			castExpr->dump();
+			VLOG(2) << "\n";
+		}
+
 		const core::FrontendIRBuilder& builder = converter.getIRBuilder();
 		//const core::lang::BasicGenerator& gen = builder.getLangBasic();
 		//core::NodeManager& mgr = converter.getNodeManager();
@@ -145,7 +151,7 @@ namespace utils {
 		//		}
 		//	}
 
-		////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		//////////////////////////////////////////////////////////////////////////////////////////////////////////
 		//case clang::CK_ArrayToPointerDecay:
 		//	// Array to pointer decay. int[10] -> int* char[5][6] -> char(*)[6]
 		//	{

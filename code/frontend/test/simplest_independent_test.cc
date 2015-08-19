@@ -80,7 +80,7 @@ namespace frontend {
 				}
 				EXPECT_EQ(builder.normalize(expected), builder.normalize(node)) 
 					<< "Location: " << *core::annotations::getLocation(addr) << "\n"
-					<< "Actual Pretty: " << dumpOneLine(builder.normalize(node)) << "\n";
+					<< "Actual Pretty: " << dumpColor(builder.normalize(node), std::cout, true) << "\n";
 				//if(builder.normalize(expected) != builder.normalize(node)) {
 				//	dumpText(builder.normalize(expected));
 				//	std::cout << "MUAHAHAMUAHAHAMUAHAHAMUAHAHAMUAHAHAMUAHAHAMUAHAHAMUAHAHAMUAHAHAMUAHAHAMUAHAHA\n";
@@ -122,6 +122,10 @@ namespace frontend {
 	
 	TEST(IndependentTest, FunCalls) {
 		runTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_fun_calls.c");
+	}
+
+	TEST(IndependentTest, Expressions) {
+		runTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_expressions.c");
 	}
 
 } // fe namespace

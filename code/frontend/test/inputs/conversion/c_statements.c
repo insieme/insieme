@@ -70,9 +70,25 @@ int main() {
 	//int iii;
 	//if(iii = 3) { }
 
-	//int i;
-	//for(i = 0; i < 10; i += 1) {
-	//	i;
+	//{
+	//	int i;
+	//	for( ; ; ) {
+	//		break;
+	//	}
+	//}
+
+	//{
+	//	int i = 0;
+	//	for( ; i < 10; i += 1) {
+	//		i;
+	//	}
+	//}
+
+	//{
+	//	int i = 0;
+	//	for( ; ; i += 1) {
+	//		break;
+	//	}
 	//}
 
 	//for(int k = 0; k < 5; k++) {

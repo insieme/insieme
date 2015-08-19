@@ -137,7 +137,7 @@ namespace conversion {
 
 		core::TypePtr type = converter.convertType(intLit->getType());
 		if(intLit->getType().getTypePtr()->isUnsignedIntegerOrEnumerationType()) { value.append("u"); }
-		frontend_assert(!value.empty()) << "literal con not be an empty string";
+		frontend_assert(!value.empty()) << "literal cannot be an empty string";
 		retExpr = builder.literal(type, value);
 
 		return retExpr;
@@ -161,7 +161,7 @@ namespace conversion {
 		} else if(llvm::APFloat::semanticsPrecision(sema) == llvm::APFloat::semanticsPrecision(llvm::APFloat::IEEEdouble)) {
 			retExpr = builder.literal(strVal, basic.getReal8());
 		} else {
-			frontend_assert(false) << "no idea how you got here, but only single/double precission literals are allowed in insieme\n";
+			frontend_assert(false) << "no idea how you got here, but only single/double precision literals are allowed in insieme\n";
 		}
 
 		return retExpr;
@@ -438,180 +438,102 @@ namespace conversion {
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//							BINARY OPERATOR
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+	namespace {
+		core::ExpressionPtr createCallExprFromBody(Converter& converter, const stmtutils::StmtWrapper& irStmts, const core::TypePtr& retType, bool lazy) {
+			stmtutils::StmtWrapper retStmts = irStmts;
+			for(auto extension : converter.getConversionSetup().getExtensions()) {
+				retStmts = extension->PostVisit(static_cast<clang::Stmt*>(nullptr), retStmts, converter);
+			}
+
+			return converter.getIRBuilder().createCallExprFromBody(stmtutils::aggregateStmts(converter.getIRBuilder(), retStmts), retType, lazy);
+		}
+
+		core::ExpressionPtr removeDeref(core::ExpressionPtr dereffedExp) {
+			auto& mgr = dereffedExp->getNodeManager();
+			assert_true(core::analysis::isCallOf(dereffedExp, mgr.getLangExtension<core::lang::ReferenceExtension>().getRefDeref())) 
+				<< "Trying to remove deref from non-deref:\n" << dumpColor(dereffedExp);
+			return dereffedExp.as<core::CallExprPtr>()->getArgument(0);
+		}
+
+		core::ExpressionPtr createAssignWithCSemantics(Converter& converter, const core::ExpressionPtr& lhs, const core::ExpressionPtr& rhs) {
+			frontend_assert(core::analysis::isRefType(lhs->getType()))
+				<< "Need to perform c-style semantics on refs to prevent spurious copies and assign to the right thing";
+
+			auto cStyleAssignment = converter.getIRBuilder().parseExpr(R"(
+				lambda (ref<ref<'a,f,'b>,'c,'d> lhs, ref<'a,'e,'f> rhs) -> 'a {
+					*lhs = *rhs;
+					return *lhs;
+				}
+			)");
+
+			return converter.getIRBuilder().callExpr(cStyleAssignment, lhs, rhs);
+		}
+	}
+
 	core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::BinaryOperator* binOp) {
 		core::ExpressionPtr retIr;
 		LOG_EXPR_CONVERSION(binOp, retIr);
 
-		//core::ExpressionPtr&& lhs = Visit(binOp->getLHS());
-		//core::ExpressionPtr&& rhs = Visit(binOp->getRHS());
-		//core::TypePtr exprTy = converter.convertType(binOp->getType());
+		core::ExpressionPtr lhs = Visit(binOp->getLHS());
+		core::ExpressionPtr rhs = Visit(binOp->getRHS());
+		core::TypePtr exprTy = converter.convertType(binOp->getType());
 
-		//frontend_assert(lhs) << "no left side could be translated";
-		//frontend_assert(rhs) << "no right side could be translated";
-		//frontend_assert(exprTy) << "no type for expression";
+		// if the binary operator is a comma separated expression, we convert it into a function call which returns the
+		// value of the last expression
+		if(binOp->getOpcode() == clang::BO_Comma) {
+			// the return type of this lambda is the type of the last expression (according to the C standard)
+			stmtutils::StmtWrapper stmts;
+			stmts.push_back(lhs);
+			stmts.push_back(basic.isUnit(rhs->getType()) ? rhs.as<core::StatementPtr>() : builder.returnStmt(rhs));
+			retIr = createCallExprFromBody(converter, stmts, rhs->getType(), false);
+			return retIr;
+		}
 
-		//// if the binary operator is a comma separated expression, we convert it into a function call which returns the
-		//// value of the last expression
-		//if(binOp->getOpcode() == clang::BO_Comma) {
-		//	core::TypePtr retType;
-		//	// the return type of this lambda is the type of the last expression (according to the C standard)
-		//	stmtutils::StmtWrapper stmts;
-		//	stmts.push_back(lhs);
-		//	stmts.push_back(basic.isUnit(rhs->getType()) ? static_cast<core::StatementPtr>(rhs) : builder.returnStmt(rhs));
-		//	retType = rhs->getType();
+		std::map<clang::BinaryOperator::Opcode, core::lang::BasicGenerator::Operator> opMap = {
+			{clang::BO_MulAssign, core::lang::BasicGenerator::Mul},    // a *= b
+			{clang::BO_DivAssign, core::lang::BasicGenerator::Div},    // a /= b
+			{clang::BO_RemAssign, core::lang::BasicGenerator::Mod},    // a %= b
+			{clang::BO_AddAssign, core::lang::BasicGenerator::Add},    // a += b
+			{clang::BO_SubAssign, core::lang::BasicGenerator::Sub},    // a -= b
+			{clang::BO_ShlAssign, core::lang::BasicGenerator::LShift}, // a <<= b
+			{clang::BO_ShrAssign, core::lang::BasicGenerator::RShift}, // a >>= b
+			{clang::BO_AndAssign, core::lang::BasicGenerator::And},    // a &= b
+			{clang::BO_OrAssign, core::lang::BasicGenerator::Or},      // a |= b
+			{clang::BO_XorAssign, core::lang::BasicGenerator::Xor},    // a ^= b
 
+			{clang::BO_Add, core::lang::BasicGenerator::Add},          // a + b
+			{clang::BO_Sub, core::lang::BasicGenerator::Sub},          // a - b
+			{clang::BO_Mul, core::lang::BasicGenerator::Mul},          // a * b
+			{clang::BO_Div, core::lang::BasicGenerator::Div},          // a / b
+			{clang::BO_Rem, core::lang::BasicGenerator::Mod},          // a % b
+			{clang::BO_Shl, core::lang::BasicGenerator::LShift},       // a << b
+			{clang::BO_Shr, core::lang::BasicGenerator::RShift},       // a >> b
+			{clang::BO_And, core::lang::BasicGenerator::And},          // a & b
+			{clang::BO_Xor, core::lang::BasicGenerator::Xor},          // a ^ b
+			{clang::BO_Or, core::lang::BasicGenerator::Or},            // a | b
 
-		//	// core::StatementPtr body =  builder.compoundStmt(stmts);
-		//	return (retIr = converter.createCallExprFromBody(stmts, retType));
-		//}
+			{clang::BO_LAnd, core::lang::BasicGenerator::LAnd},        // a && b
+			{clang::BO_LOr, core::lang::BasicGenerator::LOr},          // a || b
+			{clang::BO_LT, core::lang::BasicGenerator::Lt},            // a < b
+			{clang::BO_GT, core::lang::BasicGenerator::Gt},            // a > b
+			{clang::BO_LE, core::lang::BasicGenerator::Le},            // a <= b
+			{clang::BO_GE, core::lang::BasicGenerator::Ge},            // a >= b
+			{clang::BO_EQ, core::lang::BasicGenerator::Eq},            // a == b
+			{clang::BO_NE, core::lang::BasicGenerator::Ne},            // a != b
+		};
 
+		auto opIt = opMap.find(binOp->getOpcode());
+		frontend_assert(opIt != opMap.end()) << "Operator not implemented.";
 
-		///*
-		// * we take care of compound operators first, we rewrite the RHS expression in a normal form, i.e.:
-		// * 		->		a op= b  ---->  a = a op b
-		// */
-		//clang::BinaryOperatorKind baseOp;
-		//core::lang::BasicGenerator::Operator op;
-		//bool isCompound = true;
+		retIr = builder.binaryOp(basic.getOperator(exprTy, opIt->second), lhs, rhs);
 
-		//switch(binOp->getOpcode()) {
-		//// a *= b
-		//case clang::BO_MulAssign:
-		//	op = core::lang::BasicGenerator::Mul;
-		//	baseOp = clang::BO_Mul;
-		//	break;
-		//// a /= b
-		//case clang::BO_DivAssign:
-		//	op = core::lang::BasicGenerator::Div;
-		//	baseOp = clang::BO_Div;
-		//	break;
-		//// a %= b
-		//case clang::BO_RemAssign:
-		//	op = core::lang::BasicGenerator::Mod;
-		//	baseOp = clang::BO_Rem;
-		//	break;
-		//// a += b
-		//case clang::BO_AddAssign:
-		//	op = core::lang::BasicGenerator::Add;
-		//	baseOp = clang::BO_Add;
-		//	break;
-		//// a -= b
-		//case clang::BO_SubAssign:
-		//	op = core::lang::BasicGenerator::Sub;
-		//	baseOp = clang::BO_Sub;
-		//	break;
-		//// a <<= b
-		//case clang::BO_ShlAssign:
-		//	op = core::lang::BasicGenerator::LShift;
-		//	baseOp = clang::BO_Shl;
-		//	break;
-		//// a >>= b
-		//case clang::BO_ShrAssign:
-		//	op = core::lang::BasicGenerator::RShift;
-		//	baseOp = clang::BO_Shr;
-		//	break;
-		//// a &= b
-		//case clang::BO_AndAssign:
-		//	op = core::lang::BasicGenerator::And;
-		//	baseOp = clang::BO_And;
-		//	break;
-		//// a |= b
-		//case clang::BO_OrAssign:
-		//	op = core::lang::BasicGenerator::Or;
-		//	baseOp = clang::BO_Or;
-		//	break;
-		//// a ^= b
-		//case clang::BO_XorAssign:
-		//	op = core::lang::BasicGenerator::Xor;
-		//	baseOp = clang::BO_Xor;
-		//	break;
-		//default: isCompound = false;
-		//}
+		if(binOp->isCompoundAssignmentOp()) {
+			// for compound operators, we need to build a CallExpr returning the LHS after the operation
+			retIr = createAssignWithCSemantics(converter, removeDeref(lhs), retIr);
+		}
 
-		//// perform any pointer arithmetic needed
-		//auto doPointerArithmetic = [&]() -> core::ExpressionPtr {
-		//	// LHS must be a ref<array<'a>>
-		//	core::TypePtr subRefTy = GET_REF_ELEM_TYPE(lhs->getType());
-
-		//	frontend_assert(core::analysis::isRefType(lhs->getType()));
-		//	if(subRefTy->getNodeType() == core::NT_VectorType) {
-		//		lhs = builder.callExpr(basic.getRefVectorToRefArray(), lhs);
-		//	} else if(!isCompound && subRefTy->getNodeType() != core::NT_ArrayType) {
-		//		lhs = builder.callExpr(basic.getScalarToArray(), lhs);
-		//	}
-
-		//	// Capture pointer arithmetics
-		//	// 	Base op must be either a + or a -
-		//	frontend_assert((baseOp == clang::BO_Add || baseOp == clang::BO_Sub)) << "Operators allowed in pointer arithmetic are + and - only\n"
-		//	                                                                      << "baseOp used: " << binOp->getOpcodeStr().str() << "\n";
-
-		//	// LOG(INFO) << rhs->getType();
-		//	frontend_assert(basic.isInt(rhs->getType())) << "Array view displacement must be an integer type\nGiven: " << *rhs->getType();
-		//	if(basic.isUnsignedInt(rhs->getType())) { rhs = builder.castExpr(basic.getInt8(), rhs); }
-		//	if(basic.isInt16(rhs->getType())) { rhs = builder.castExpr(basic.getInt4(), rhs); }
-
-		//	// compound operator do not deref the target var (no implicit LtoR cast)
-		//	// we need a right side in the operation call
-		//	core::ExpressionPtr arg = lhs;
-		//	if(isCompound) { arg = builder.deref(lhs); }
-
-		//	// we build the pointer arithmetic expression,
-		//	// if is not addition, must be substration, therefore is a negative increment
-		//	return builder.callExpr(basic.getArrayView(), arg, baseOp == clang::BO_Add ? rhs : builder.invertSign(rhs));
-		//};
-
-		//// compound operators are op + assignation. we need to express this in IR in a different way.
-		//if(isCompound) {
-		//	// we check if the RHS is a ref, in that case we use the deref operator
-		//	// rhs = converter.tryDeref(rhs);
-
-		//	// We have a compound operation applied to a ref<array<'a>> type which is probably one of
-		//	// the function parameters, We have to wrap this variable in a way it becomes a
-		//	// ref<ref<array<'a>>>
-		//	if(core::analysis::isRefType(lhs->getType()) && !core::analysis::isRefType(rhs->getType())
-		//	   && core::analysis::getReferencedType(lhs->getType())->getNodeType() == core::NT_ArrayType) {
-		//		// FIXME: if this does not create errors..  delete it
-		//		frontend_assert(false) << "who uses this?\n";
-		//		lhs = wrapVariable(binOp->getLHS());
-		//	}
-
-		//	// capture the case when pointer arithmetic is performed
-		//	if(core::analysis::isRefType(lhs->getType()) && !core::analysis::isRefType(rhs->getType())
-		//	   && core::analysis::isRefType(core::analysis::getReferencedType(lhs->getType()))
-		//	   && core::analysis::getReferencedType(core::analysis::getReferencedType(lhs->getType()))->getNodeType() == core::NT_ArrayType) {
-		//		// do pointer arithmetic
-		//		rhs = doPointerArithmetic();
-		//	} else {
-		//		// get basic element type
-		//		core::ExpressionPtr&& subExprLHS = converter.tryDeref(lhs);
-		//		// beware of cpp refs, to operate, we need to deref the value in the left side
-		//		if(core::analysis::isAnyCppRef(subExprLHS->getType())) {
-		//			subExprLHS = builder.toIRRef(subExprLHS);
-		//			subExprLHS = converter.tryDeref(subExprLHS);
-		//		}
-		//		// rightside will become the current operation
-		//		//  a += 1   =>    a = a + 1
-
-		//		auto compOp = llvm::cast<clang::CompoundAssignOperator>(binOp);
-
-		//		if(compOp->getComputationLHSType() != binOp->getType()) {
-		//			exprTy = converter.convertType(compOp->getComputationLHSType());
-		//			subExprLHS = core::types::castScalar(exprTy, subExprLHS);
-		//		}
-
-		//		core::ExpressionPtr opFunc;
-		//		if(binOp->isShiftAssignOp() || binOp->getOpcode() == clang::BO_XorAssign || binOp->getOpcode() == clang::BO_OrAssign
-		//		   || binOp->getOpcode() == clang::BO_AndAssign) {
-		//			opFunc = basic.getOperator(builder.typeVariable("a"), op);
-		//		} else {
-		//			opFunc = basic.getOperator(exprTy, op);
-		//		}
-
-		//		rhs = builder.callExpr(exprTy, opFunc, subExprLHS, rhs);
-
-		//		if(compOp->getComputationResultType() != binOp->getType()) { rhs = core::types::castScalar(converter.convertType(binOp->getType()), rhs); }
-		//	}
-		//}
+		return retIr;
 
 		//bool isAssignment = false;
 		//bool isLogical = false;
@@ -624,100 +546,7 @@ namespace conversion {
 		//case clang::BO_PtrMemI:
 		//	frontend_assert(false) << "Operator not yet supported!\n";
 
-		//// a * b
-		//case clang::BO_Mul:
-		//	op = core::lang::BasicGenerator::Mul;
-		//	break;
-		//// a / b
-		//case clang::BO_Div:
-		//	op = core::lang::BasicGenerator::Div;
-		//	break;
-		//// a % b
-		//case clang::BO_Rem:
-		//	op = core::lang::BasicGenerator::Mod;
-		//	break;
-		//// a + b
-		//case clang::BO_Add:
-		//	op = core::lang::BasicGenerator::Add;
-		//	break;
-		//// a - b
-		//case clang::BO_Sub:
-		//	op = core::lang::BasicGenerator::Sub;
-		//	break;
-		//// a << b
-		//case clang::BO_Shl:
-		//	op = core::lang::BasicGenerator::LShift;
-		//	break;
-		//// a >> b
-		//case clang::BO_Shr:
-		//	op = core::lang::BasicGenerator::RShift;
-		//	break;
-		//// a & b
-		//case clang::BO_And:
-		//	op = core::lang::BasicGenerator::And;
-		//	break;
-		//// a ^ b
-		//case clang::BO_Xor:
-		//	op = core::lang::BasicGenerator::Xor;
-		//	break;
-		//// a | b
-		//case clang::BO_Or:
-		//	op = core::lang::BasicGenerator::Or;
-		//	break;
-
-		//// Logic operators
-
-		//// a && b
-		//case clang::BO_LAnd:
-		//	op = core::lang::BasicGenerator::LAnd;
-		//	isLogical = true;
-		//	break;
-		//// a || b
-		//case clang::BO_LOr:
-		//	op = core::lang::BasicGenerator::LOr;
-		//	isLogical = true;
-		//	break;
-		//// a < b
-		//case clang::BO_LT:
-		//	op = core::lang::BasicGenerator::Lt;
-		//	isLogical = true;
-		//	break;
-		//// a > b
-		//case clang::BO_GT:
-		//	op = core::lang::BasicGenerator::Gt;
-		//	isLogical = true;
-		//	break;
-		//// a <= b
-		//case clang::BO_LE:
-		//	op = core::lang::BasicGenerator::Le;
-		//	isLogical = true;
-		//	break;
-		//// a >= b
-		//case clang::BO_GE:
-		//	op = core::lang::BasicGenerator::Ge;
-		//	isLogical = true;
-		//	break;
-		//// a == b
-		//case clang::BO_EQ:
-		//	op = core::lang::BasicGenerator::Eq;
-		//	isLogical = true;
-		//	break;
-		//// a != b
-		//case clang::BO_NE:
-		//	op = core::lang::BasicGenerator::Ne;
-		//	isLogical = true;
-		//	break;
-
-		//case clang::BO_MulAssign:
-		//case clang::BO_DivAssign:
-		//case clang::BO_RemAssign:
-		//case clang::BO_AddAssign:
-		//case clang::BO_SubAssign:
-		//case clang::BO_ShlAssign:
-		//case clang::BO_ShrAssign:
-		//case clang::BO_AndAssign:
-		//case clang::BO_XorAssign:
-		//case clang::BO_OrAssign:
+		
 		//case clang::BO_Assign: {
 		//	baseOp = clang::BO_Assign;
 
@@ -1197,7 +1026,7 @@ namespace conversion {
 		LOG_EXPR_CONVERSION(declRef, retIr);
 
 		if(const clang::VarDecl* varDecl = llvm::dyn_cast<clang::VarDecl>(declRef->getDecl())) { 
-			retIr = converter.getVarMan()->lookup(varDecl);
+			retIr = builder.deref(converter.getVarMan()->lookup(varDecl));
 			return retIr;
 		}
 		
