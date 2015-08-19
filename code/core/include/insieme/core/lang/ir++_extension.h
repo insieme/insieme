@@ -244,15 +244,15 @@ namespace lang {
 		 */
 		LANG_EXT_LITERAL(StaticCast, "static_cast", "(ref<'a>, type<'b>)->ref<'b>");
 
-		LANG_EXT_LITERAL(StaticCastRefCppToRefCpp, "static_cast", "let cppRefA = struct { ref<'a> _cpp_ref }; "
+		LANG_EXT_LITERAL(StaticCastRefCppToRefCpp, "static_cast_rcpp_to_rcpp", "let cppRefA = struct { ref<'a> _cpp_ref }; "
 		                                                          "let cppRefB = struct { ref<'b> _cpp_ref }; "
 		                                                          "(cppRefA, type<cppRefB>)->cppRefB");
 
-		LANG_EXT_LITERAL(StaticCastConstCppToConstCpp, "static_cast", "let constCppRefA = struct { src<'a> _const_cpp_ref }; "
+		LANG_EXT_LITERAL(StaticCastConstCppToConstCpp, "static_cast_ccpp_to_ccpp", "let constCppRefA = struct { src<'a> _const_cpp_ref }; "
 		                                                              "let constCppRefB = struct { src<'b> _const_cpp_ref }; "
 		                                                              "(constCppRefA, type<constCppRefB>)->constCppRefB");
 
-		LANG_EXT_LITERAL(StaticCastRefCppToConstCpp, "static_cast", "let cppRefA = struct { ref<'a> _cpp_ref }; "
+		LANG_EXT_LITERAL(StaticCastRefCppToConstCpp, "static_cast_rcpp_to_ccpp", "let cppRefA = struct { ref<'a> _cpp_ref }; "
 		                                                            "let constCppRefB = struct { src<'b> _const_cpp_ref }; "
 		                                                            "(cppRefA, type<constCppRefB>)->constCppRefB");
 
@@ -262,15 +262,15 @@ namespace lang {
 		 */
 		LANG_EXT_LITERAL(DynamicCast, "dynamic_cast", "(ref<'a>, type<'b>)->ref<'b>")
 
-		LANG_EXT_LITERAL(DynamicCastRefCppToRefCpp, "dynamic_cast", "let cppRefA = struct { ref<'a> _cpp_ref }; "
+		LANG_EXT_LITERAL(DynamicCastRefCppToRefCpp, "dynamic_cast_rcpp_to_rcpp", "let cppRefA = struct { ref<'a> _cpp_ref }; "
 		                                                            "let cppRefB = struct { ref<'b> _cpp_ref }; "
 		                                                            "(cppRefA, type<cppRefB>)->cppRefB");
 
-		LANG_EXT_LITERAL(DynamicCastConstCppToConstCpp, "dynamic_cast", "let constCppRefA = struct { src<'a> _const_cpp_ref }; "
+		LANG_EXT_LITERAL(DynamicCastConstCppToConstCpp, "dynamic_cast_ccpp_to_ccpp", "let constCppRefA = struct { src<'a> _const_cpp_ref }; "
 		                                                                "let constCppRefB = struct { src<'b> _const_cpp_ref }; "
 		                                                                "(constCppRefA, type<constCppRefB>)->constCppRefB");
 
-		LANG_EXT_LITERAL(DynamicCastRefCppToConstCpp, "dynamic_cast", "let cppRefA = struct { ref<'a> _cpp_ref }; "
+		LANG_EXT_LITERAL(DynamicCastRefCppToConstCpp, "dynamic_cast_rcpp_to_ccpp", "let cppRefA = struct { ref<'a> _cpp_ref }; "
 		                                                              "let constCppRefB = struct { src<'b> _const_cpp_ref }; "
 		                                                              "(cppRefA, type<constCppRefB>)->constCppRefB");
 
