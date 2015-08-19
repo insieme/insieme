@@ -69,7 +69,7 @@ namespace runtime {
 
 
 	OperatorConverterTable& addRuntimeSpecificOps(core::NodeManager& manager, OperatorConverterTable& table, const BackendConfig& config) {
-		const Extensions& ext = manager.getLangExtension<Extensions>();
+		const RuntimeExtensions& ext = manager.getLangExtension<RuntimeExtensions>();
 		const core::lang::ParallelExtension& parExt = manager.getLangExtension<core::lang::ParallelExtension>();
 		const core::lang::InstrumentationExtension& instExt = manager.getLangExtension<core::lang::InstrumentationExtension>();
 		const core::lang::BasicGenerator& basic = manager.getLangBasic();
@@ -120,7 +120,7 @@ namespace runtime {
 			unsigned id = implTable->registerWorkItemImpl(call);
 
 			// produce work item id as a result
-			const Extensions& ext = NODE_MANAGER.getLangExtension<Extensions>();
+			const RuntimeExtensions& ext = NODE_MANAGER.getLangExtension<RuntimeExtensions>();
 			return c_ast::lit(CONVERT_TYPE(ext.workItemImplType), utils::numeric_cast<string>(id));
 		});
 
@@ -160,7 +160,7 @@ namespace runtime {
 		});
 
 		table[ext.createJob] = OP_CONVERTER({
-			const Extensions& ext = NODE_MANAGER.getLangExtension<Extensions>();
+			const RuntimeExtensions& ext = NODE_MANAGER.getLangExtension<RuntimeExtensions>();
 
 			// uint4, uint4, uint4, implType, data
 			c_ast::ExpressionPtr min = CONVERT_ARG(0);

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -53,7 +53,7 @@ namespace runtime {
 	 * Insieme Runtime. The extensions include literals and types to model work items,
 	 * data items and additional runtime functionality.
 	 */
-	class Extensions : public core::lang::Extension {
+	class RuntimeExtensions : public core::lang::Extension {
 	  public:
 		// Adds the definition of constant, public members to this definition using a macro file
 
@@ -74,7 +74,7 @@ namespace runtime {
 		 *
 		 * @param manager the manager to be used to construct the required types and literals
 		 */
-		Extensions(core::NodeManager& manager);
+		RuntimeExtensions(core::NodeManager& manager);
 	};
 
 } // end namespace encoder

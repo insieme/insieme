@@ -50,7 +50,7 @@ namespace runtime {
 	const string DATA_ITEM_TYPE_NAME = "irt_di";
 	const string LW_DATA_ITEM_TYPE_NAME = "irt_lwdi";
 
-	Extensions::Extensions(core::NodeManager& manager)
+	RuntimeExtensions::RuntimeExtensions(core::NodeManager& manager)
 	    : core::lang::Extension(manager),
 
 	// members are initialized using the content of the macro file
@@ -111,7 +111,7 @@ namespace runtime {
 		// obtain some utilities
 		core::NodeManager& manager = tupleType->getNodeManager();
 		core::IRBuilder builder(manager);
-		const Extensions& ext = manager.getLangExtension<Extensions>();
+		const RuntimeExtensions& ext = manager.getLangExtension<RuntimeExtensions>();
 
 		// create resulting tuple - same components + the type id field
 		core::TypeList components;
@@ -124,7 +124,7 @@ namespace runtime {
 		// obtain some utilities
 		core::NodeManager& manager = tupleValue->getNodeManager();
 		core::IRBuilder builder(manager);
-		const Extensions& ext = manager.getLangExtension<Extensions>();
+		const RuntimeExtensions& ext = manager.getLangExtension<RuntimeExtensions>();
 
 		core::ExpressionList values;
 		values.push_back(builder.literal(ext.typeID, toString(typeID)));

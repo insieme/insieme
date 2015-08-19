@@ -128,7 +128,7 @@ namespace runtime {
 		core::StatementPtr registerEntryPoint(core::NodeManager& manager, const core::ExpressionPtr& workItemImpl) {
 			core::IRBuilder builder(manager);
 			auto& basic = manager.getLangBasic();
-			auto& extensions = manager.getLangExtension<Extensions>();
+			auto& extensions = manager.getLangExtension<RuntimeExtensions>();
 
 			// create register call
 			return builder.callExpr(basic.getUnit(), extensions.registerWorkItemImpl, workItemImpl);
@@ -137,7 +137,7 @@ namespace runtime {
 		WorkItemImpl wrapEntryPoint(core::NodeManager& manager, const core::ExpressionPtr& entry, bool instrumentBody) {
 			core::IRBuilder builder(manager);
 			const core::lang::BasicGenerator& basic = manager.getLangBasic();
-			const Extensions& extensions = manager.getLangExtension<Extensions>();
+			const RuntimeExtensions& extensions = manager.getLangExtension<RuntimeExtensions>();
 
 			// create new lambda expression wrapping the entry point
 			assert_eq(entry->getType()->getNodeType(), core::NT_FunctionType) << "Only functions can be entry points!";
@@ -180,7 +180,7 @@ namespace runtime {
 		core::ProgramPtr replaceMain(core::NodeManager& manager, const core::ProgramPtr& program, const backend::Converter& converter) {
 			core::IRBuilder builder(manager);
 			auto& basic = manager.getLangBasic();
-			auto& extensions = manager.getLangExtension<Extensions>();
+			auto& extensions = manager.getLangExtension<RuntimeExtensions>();
 
 			core::TypePtr unit = basic.getUnit();
 			core::TypePtr intType = basic.getUInt4();
@@ -393,7 +393,7 @@ namespace runtime {
 	std::pair<WorkItemImpl, core::ExpressionPtr> wrapJob(core::NodeManager& manager, const core::JobExprPtr& job) {
 		core::IRBuilder builder(manager);
 		const core::lang::BasicGenerator& basic = manager.getLangBasic();
-		const Extensions& extensions = manager.getLangExtension<Extensions>();
+		const RuntimeExtensions& extensions = manager.getLangExtension<RuntimeExtensions>();
 
 		// define parameter of resulting lambda
 		core::VariablePtr workItem = builder.variable(builder.refType(extensions.workItemType));
@@ -492,13 +492,13 @@ namespace runtime {
 	class WorkItemIntroducer : public core::transform::CachedNodeMapping {
 		core::NodeManager& manager;
 		const core::lang::BasicGenerator& basic;
-		const Extensions& ext;
+		const RuntimeExtensions& ext;
 		core::IRBuilder builder;
 		bool includeEffortEstimation;
 
 	  public:
 		WorkItemIntroducer(core::NodeManager& manager, bool includeEffortEstimation)
-		    : manager(manager), basic(manager.getLangBasic()), ext(manager.getLangExtension<Extensions>()), builder(manager),
+		    : manager(manager), basic(manager.getLangBasic()), ext(manager.getLangExtension<RuntimeExtensions>()), builder(manager),
 		      includeEffortEstimation(includeEffortEstimation) {}
 
 		virtual const core::NodePtr resolveElement(const core::NodePtr& ptr) {
@@ -847,7 +847,7 @@ namespace runtime {
 	core::NodePtr InstrumentationSupport::process(const backend::Converter& converter, const core::NodePtr& node) {
 		// get language extension
 		auto& mgr = converter.getNodeManager();
-		auto& rtExt = mgr.getLangExtension<insieme::backend::runtime::Extensions>();
+		auto& rtExt = mgr.getLangExtension<insieme::backend::runtime::RuntimeExtensions>();
 		const auto& instExt = mgr.getLangExtension<core::lang::InstrumentationExtension>();
 
 		// get max region id
