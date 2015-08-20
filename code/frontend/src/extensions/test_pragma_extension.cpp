@@ -64,10 +64,17 @@ namespace extensions {
 	
 	TestPragmaExtension::TestPragmaExtension() : expected(""), dummyArguments(std::vector<string>()) {
 		pragmaHandlers.push_back(std::make_shared<PragmaHandler>(
-		    PragmaHandler("test", "expect_ir", tok::l_paren >> string_literal[ARG_LABEL] >> tok::r_paren >> tok::eod, 
+		    PragmaHandler("test", "expect_ir", tok::l_paren >> string_literal[ARG_LABEL] >> *(~comma >> string_literal[ARG_LABEL]) >> tok::r_paren >> tok::eod, 
 					[&](const pragma::MatchObject& object, core::NodeList nodes) {
 
-			    assert_eq(1, object.getStrings(ARG_LABEL).size()) << "Test expect_ir pragma expects exactly one string argument!";
+			    assert_gt(object.getStrings(ARG_LABEL).size(), 0) << "Test expect_ir pragma expects at least one string argument!";
+
+				auto strings = object.getStrings(ARG_LABEL);
+				string expectedString;
+				for(const string& s: strings) {				
+					// strip surrounding quotation marks and add
+					expectedString += s.substr(1, s.size()-2) + "\n";
+				}
 
 			    NodePtr node;
 			    // if we are dealing with more than one node, construct a compound statement
@@ -82,9 +89,6 @@ namespace extensions {
 				    node = nodes[0];
 			    }
 
-				// strip surrounding quotation marks
-				string expectedString = object.getString(ARG_LABEL);
-				expectedString = expectedString.substr(1, expectedString.size()-2);
 
 			    ExpectedIRAnnotation expectedIRAnnotation(expectedString);
 			    ExpectedIRAnnotationPtr annot = std::make_shared<ExpectedIRAnnotation>(expectedIRAnnotation);
