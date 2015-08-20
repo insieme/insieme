@@ -45,6 +45,7 @@
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/memalloc.h"
 #include "insieme/frontend/utils/stmt_wrapper.h"
+#include "insieme/frontend/utils/expr_to_bool.h"
 #include "insieme/frontend/state/function_manager.h"
 #include "insieme/frontend/state/variable_manager.h"
 
@@ -449,25 +450,18 @@ namespace conversion {
 			return converter.getIRBuilder().createCallExprFromBody(stmtutils::aggregateStmts(converter.getIRBuilder(), retStmts), retType, lazy);
 		}
 
-		core::ExpressionPtr removeDeref(core::ExpressionPtr dereffedExp) {
-			auto& mgr = dereffedExp->getNodeManager();
-			assert_true(core::analysis::isCallOf(dereffedExp, mgr.getLangExtension<core::lang::ReferenceExtension>().getRefDeref())) 
-				<< "Trying to remove deref from non-deref:\n" << dumpColor(dereffedExp);
-			return dereffedExp.as<core::CallExprPtr>()->getArgument(0);
-		}
-
 		core::ExpressionPtr createAssignWithCSemantics(Converter& converter, const core::ExpressionPtr& lhs, const core::ExpressionPtr& rhs) {
 			frontend_assert(core::analysis::isRefType(lhs->getType()))
 				<< "Need to perform c-style semantics on refs to prevent spurious copies and assign to the right thing";
-
+			// TODO FE NG call semantic
 			auto cStyleAssignment = converter.getIRBuilder().parseExpr(R"(
-				lambda (ref<ref<'a,f,'b>,'c,'d> lhs, ref<'a,'e,'f> rhs) -> 'a {
-					*lhs = *rhs;
+				lambda (ref<'a,f,'b> lhs, 'a rhs) -> 'a {
+					lhs = rhs;
 					return *lhs;
 				}
 			)");
 
-			return converter.getIRBuilder().callExpr(cStyleAssignment, lhs, rhs);
+			return converter.getIRBuilder().callExpr(core::analysis::getReferencedType(lhs->getType()), cStyleAssignment, lhs, rhs);
 		}
 	}
 
@@ -479,14 +473,18 @@ namespace conversion {
 		core::ExpressionPtr rhs = Visit(binOp->getRHS());
 		core::TypePtr exprTy = converter.convertType(binOp->getType());
 
-		// if the binary operator is a comma separated expression, we convert it into a function call which returns the
-		// value of the last expression
+		// if the binary operator is a comma separated expression, we convert it into a function call which returns the value of the last expression --- COMMA -
 		if(binOp->getOpcode() == clang::BO_Comma) {
-			// the return type of this lambda is the type of the last expression (according to the C standard)
 			stmtutils::StmtWrapper stmts;
 			stmts.push_back(lhs);
 			stmts.push_back(basic.isUnit(rhs->getType()) ? rhs.as<core::StatementPtr>() : builder.returnStmt(rhs));
 			retIr = createCallExprFromBody(converter, stmts, rhs->getType(), false);
+			return retIr;
+		}
+
+		// we need to translate the semantics of C-style assignments to a function call ----------------------------------------------------------- ASSIGNMENT -
+		if(binOp->getOpcode() == clang::BO_Assign) {
+			retIr = createAssignWithCSemantics(converter, lhs, rhs);
 			return retIr;
 		}
 
@@ -513,8 +511,9 @@ namespace conversion {
 			{clang::BO_Xor, core::lang::BasicGenerator::Xor},          // a ^ b
 			{clang::BO_Or, core::lang::BasicGenerator::Or},            // a | b
 
-			{clang::BO_LAnd, core::lang::BasicGenerator::LAnd},        // a && b
+			{clang::BO_LAnd, core::lang::BasicGenerator::LAnd},         // a && b
 			{clang::BO_LOr, core::lang::BasicGenerator::LOr},          // a || b
+
 			{clang::BO_LT, core::lang::BasicGenerator::Lt},            // a < b
 			{clang::BO_GT, core::lang::BasicGenerator::Gt},            // a > b
 			{clang::BO_LE, core::lang::BasicGenerator::Le},            // a <= b
@@ -526,12 +525,22 @@ namespace conversion {
 		auto opIt = opMap.find(binOp->getOpcode());
 		frontend_assert(opIt != opMap.end()) << "Operator not implemented.";
 
-		retIr = builder.binaryOp(basic.getOperator(exprTy, opIt->second), lhs, rhs);
-
-		if(binOp->isCompoundAssignmentOp()) {
+		if(binOp->isCompoundAssignmentOp()) { // ---------------------------------------------------------------------------------------------------- COMPOUND -
+			// we need to deref the LHS, as it is assigned to the clang AST does not contain an LtoR cast
+			auto op = builder.binaryOp(basic.getOperator(exprTy, opIt->second), builder.deref(lhs), rhs);
 			// for compound operators, we need to build a CallExpr returning the LHS after the operation
-			retIr = createAssignWithCSemantics(converter, removeDeref(lhs), retIr);
+			retIr = createAssignWithCSemantics(converter, lhs, op);
+			return retIr;
 		}
+
+		// the logical operators && and || need to eval their arguments lazily ------------------------------------------------------------------ LAZY LOGICAL -
+		if(binOp->getOpcode() == clang::BO_LAnd || binOp->getOpcode() == clang::BO_LOr) {
+			exprTy = basic.getBool();
+			lhs = utils::exprToBool(lhs);
+			rhs = builder.wrapLazy(utils::exprToBool(rhs)); 
+		}
+
+		retIr = builder.binaryOp(basic.getOperator(exprTy, opIt->second), lhs, rhs);
 
 		return retIr;
 
@@ -1026,7 +1035,7 @@ namespace conversion {
 		LOG_EXPR_CONVERSION(declRef, retIr);
 
 		if(const clang::VarDecl* varDecl = llvm::dyn_cast<clang::VarDecl>(declRef->getDecl())) { 
-			retIr = builder.deref(converter.getVarMan()->lookup(varDecl));
+			retIr = converter.getVarMan()->lookup(varDecl);
 			return retIr;
 		}
 		

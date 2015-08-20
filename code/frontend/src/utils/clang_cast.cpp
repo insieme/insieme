@@ -101,7 +101,7 @@ namespace utils {
 			// A conversion which causes the extraction of an r-value from the operand gl-value.
 			// The result of an r-value conversion is always unqualified.
 			//
-			// IR: this is the same as out ref deref ref<a'> -> a'
+			// IR: this is the same as ref_deref: ref<a'> -> a'
 			return builder.deref(expr);
 		////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
