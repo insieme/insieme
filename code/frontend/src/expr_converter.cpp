@@ -500,30 +500,30 @@ namespace conversion {
 			{clang::BO_OrAssign, core::lang::BasicGenerator::Or},      // a |= b
 			{clang::BO_XorAssign, core::lang::BasicGenerator::Xor},    // a ^= b
 
-			{clang::BO_Add, core::lang::BasicGenerator::Add},          // a + b
-			{clang::BO_Sub, core::lang::BasicGenerator::Sub},          // a - b
-			{clang::BO_Mul, core::lang::BasicGenerator::Mul},          // a * b
-			{clang::BO_Div, core::lang::BasicGenerator::Div},          // a / b
-			{clang::BO_Rem, core::lang::BasicGenerator::Mod},          // a % b
-			{clang::BO_Shl, core::lang::BasicGenerator::LShift},       // a << b
-			{clang::BO_Shr, core::lang::BasicGenerator::RShift},       // a >> b
-			{clang::BO_And, core::lang::BasicGenerator::And},          // a & b
-			{clang::BO_Xor, core::lang::BasicGenerator::Xor},          // a ^ b
-			{clang::BO_Or, core::lang::BasicGenerator::Or},            // a | b
+			{clang::BO_Add, core::lang::BasicGenerator::Add},    // a + b
+			{clang::BO_Sub, core::lang::BasicGenerator::Sub},    // a - b
+			{clang::BO_Mul, core::lang::BasicGenerator::Mul},    // a * b
+			{clang::BO_Div, core::lang::BasicGenerator::Div},    // a / b
+			{clang::BO_Rem, core::lang::BasicGenerator::Mod},    // a % b
+			{clang::BO_Shl, core::lang::BasicGenerator::LShift}, // a << b
+			{clang::BO_Shr, core::lang::BasicGenerator::RShift}, // a >> b
+			{clang::BO_And, core::lang::BasicGenerator::And},    // a & b
+			{clang::BO_Xor, core::lang::BasicGenerator::Xor},    // a ^ b
+			{clang::BO_Or, core::lang::BasicGenerator::Or},      // a | b
 
-			{clang::BO_LAnd, core::lang::BasicGenerator::LAnd},         // a && b
-			{clang::BO_LOr, core::lang::BasicGenerator::LOr},          // a || b
+			{clang::BO_LAnd, core::lang::BasicGenerator::LAnd}, // a && b
+			{clang::BO_LOr, core::lang::BasicGenerator::LOr},   // a || b
 
-			{clang::BO_LT, core::lang::BasicGenerator::Lt},            // a < b
-			{clang::BO_GT, core::lang::BasicGenerator::Gt},            // a > b
-			{clang::BO_LE, core::lang::BasicGenerator::Le},            // a <= b
-			{clang::BO_GE, core::lang::BasicGenerator::Ge},            // a >= b
-			{clang::BO_EQ, core::lang::BasicGenerator::Eq},            // a == b
-			{clang::BO_NE, core::lang::BasicGenerator::Ne},            // a != b
+			{clang::BO_LT, core::lang::BasicGenerator::Lt}, // a < b
+			{clang::BO_GT, core::lang::BasicGenerator::Gt}, // a > b
+			{clang::BO_LE, core::lang::BasicGenerator::Le}, // a <= b
+			{clang::BO_GE, core::lang::BasicGenerator::Ge}, // a >= b
+			{clang::BO_EQ, core::lang::BasicGenerator::Eq}, // a == b
+			{clang::BO_NE, core::lang::BasicGenerator::Ne}, // a != b
 		};
 
 		auto opIt = opMap.find(binOp->getOpcode());
-		frontend_assert(opIt != opMap.end()) << "Operator not implemented.";
+		frontend_assert(opIt != opMap.end()) << "Binary Operator " <<  binOp->getOpcodeStr().str() << " not implemented.";
 
 		if(binOp->isCompoundAssignmentOp()) { // ---------------------------------------------------------------------------------------------------- COMPOUND -
 			// we need to deref the LHS, as it is assigned to the clang AST does not contain an LtoR cast
@@ -541,197 +541,6 @@ namespace conversion {
 		}
 
 		retIr = builder.binaryOp(basic.getOperator(exprTy, opIt->second), lhs, rhs);
-
-		return retIr;
-
-		//bool isAssignment = false;
-		//bool isLogical = false;
-
-		//baseOp = binOp->getOpcode();
-
-		//core::ExpressionPtr opFunc;
-		//switch(binOp->getOpcode()) {
-		//case clang::BO_PtrMemD:
-		//case clang::BO_PtrMemI:
-		//	frontend_assert(false) << "Operator not yet supported!\n";
-
-		
-		//case clang::BO_Assign: {
-		//	baseOp = clang::BO_Assign;
-
-		//	// make sure the lhs is a L-Value
-		//	lhs = asLValue(lhs);
-
-		//	if(core::types::isRefArray(lhs->getType().as<core::RefTypePtr>()->getElementType()) && core::types::isRefVector(rhs->getType())) {
-		//		rhs = builder.callExpr(mgr.getLangBasic().getRefVectorToRefArray(), rhs);
-		//	}
-
-		//	// OK!! here there is a problem,
-		//	//	let fun000 = fun(ref<array<int<4>,1>> v5) -> unit {
-		//	//		    decl ref<ref<array<int<4>,1>>> v6 =  var(v5);
-		//	//	};
-		//	// check ~/myTest/ptr.cpp
-
-		//	// why to cast?
-		//	// some casts are not pressent in IR
-		//	if(basic.isPrimitive(rhs->getType())) {
-		//		if(core::analysis::isVolatileType(GET_REF_ELEM_TYPE(lhs->getType()))) {
-		//			rhs = builder.makeVolatile(core::types::castScalar(core::analysis::getVolatileType(GET_REF_ELEM_TYPE(lhs->getType())), rhs));
-		//		} else {
-		//			rhs = core::types::castScalar(GET_REF_ELEM_TYPE(lhs->getType()), rhs);
-		//		}
-		//	}
-
-		//	isAssignment = true;
-		//	opFunc = converter.getFrontendIR().getRefAssign();
-		//	if(converter.getCompiler().isCXX()) {
-		//		exprTy = lhs.getType();
-		//	} else {
-		//		exprTy = lhs.getType().as<core::RefTypePtr>()->getElementType();
-		//	}
-		//	break;
-		//}
-		//default: frontend_assert(false) << "Operator not supported\n";
-		//}
-
-		//// Operators && and || introduce short circuit operations, this has to be directly supported in the IR.
-		//// Vector operations are handled in basic.cpp
-		//if((baseOp == clang::BO_LAnd || baseOp == clang::BO_LOr) && exprTy->getNodeType() != core::NT_VectorType) {
-		//	lhs = core::types::castToBool(lhs);
-		//	rhs = core::types::castToBool(rhs);
-
-		//	// lazy evaluation of RHS
-		//	// generate a bind call
-		//	exprTy = basic.getBool();
-		//	stmtutils::StmtWrapper body;
-		//	body.push_back(builder.returnStmt(rhs));
-		//	rhs = converter.createCallExprFromBody(body, basic.getBool(), true);
-		//}
-
-		//core::TypePtr&& lhsTy = lhs->getType();
-		//core::TypePtr&& rhsTy = rhs->getType();
-
-		//if(!isAssignment) {
-		//	// handling for ocl-vector operations
-		//	if((binOp->getLHS()->getType().getUnqualifiedType()->isExtVectorType() || binOp->getRHS()->getType().getUnqualifiedType()->isExtVectorType())) {
-		//		//			lhs = core::types::smartCast(lhs, exprTy);
-		//		//			rhs = core::types::smartCast(rhs, exprTy);
-
-		//		// generate a ocl_vector - scalar operation
-		//		opFunc = basic.getOperator(lhs->getType(), op);
-
-		//		// TODO to be tested
-		//		if(const core::FunctionTypePtr funTy = core::dynamic_pointer_cast<const core::FunctionType>(opFunc->getType()))
-		//			// check if we can use the type of the first argument as return type
-		//			if(funTy->getReturnType() == funTy->getParameterTypeList().at(0)) {
-		//				return (retIr = builder.callExpr(lhs->getType(), opFunc, lhs, core::types::smartCast(rhs, lhs->getType())));
-		//			} else { // let deduce it otherwise
-		//				return (retIr = builder.callExpr(opFunc, lhs, core::types::smartCast(rhs, lhs->getType())));
-		//			}
-		//		else {
-		//			frontend_assert(false) << "old stuff needed, tell Klaus\n";
-		//			return (retIr = builder.callExpr(lhsTy, opFunc, lhs, rhs));
-		//		}
-		//	} else if((binOp->getLHS()->getType().getUnqualifiedType()->isVectorType() || binOp->getRHS()->getType().getUnqualifiedType()->isVectorType())) {
-		//		lhs = core::types::smartCast(lhs, exprTy);
-		//		rhs = core::types::smartCast(rhs, exprTy);
-
-		//		const auto& ext = mgr.getLangExtension<insieme::core::lang::SIMDVectorExtension>();
-		//		auto type = lhs->getType();
-		//		frontend_assert(core::lang::isSIMDVector(type));
-
-		//		core::LiteralPtr simdOp;
-		//		switch(binOp->getOpcode()) {
-		//		case clang::BO_Add: simdOp = ext.getSIMDAdd(); break;
-		//		case clang::BO_Mul: simdOp = ext.getSIMDMul(); break;
-		//		case clang::BO_Div: simdOp = ext.getSIMDDiv(); break;
-		//		case clang::BO_Rem: simdOp = ext.getSIMDMod(); break;
-		//		case clang::BO_And: simdOp = ext.getSIMDAnd(); break;
-		//		case clang::BO_Or: simdOp = ext.getSIMDOr(); break;
-		//		case clang::BO_Xor: simdOp = ext.getSIMDXor(); break;
-		//		case clang::BO_Shl: simdOp = ext.getSIMDLShift(); break;
-		//		case clang::BO_Shr: simdOp = ext.getSIMDRShift(); break;
-		//		case clang::BO_EQ: simdOp = ext.getSIMDEq(); break;
-		//		case clang::BO_NE: simdOp = ext.getSIMDNe(); break;
-		//		case clang::BO_LT: simdOp = ext.getSIMDLt(); break;
-		//		case clang::BO_LE: simdOp = ext.getSIMDLe(); break;
-		//		case clang::BO_GT: simdOp = ext.getSIMDGt(); break;
-		//		case clang::BO_GE: simdOp = ext.getSIMDGe(); break;
-
-		//		default: { frontend_assert(false) << "Operator for simd-vectortypes not supported\n"; }
-		//		}
-
-		//		auto retTy = lhs->getType();
-		//		retIr = builder.callExpr(retTy, simdOp, lhs, rhs);
-		//		return retIr;
-		//	}
-
-
-		//	// pointer arithmetic only allowed for additive operation
-		//	if(baseOp == clang::BO_Add || baseOp == clang::BO_Sub) {
-		//		// This is the required pointer arithmetic in the case we deal with pointers
-		//		if(!core::analysis::isRefType(rhs->getType()) && core::analysis::isRefType(lhs->getType())) {
-		//			rhs = doPointerArithmetic();
-		//			return (retIr = rhs);
-		//		}
-
-		//		// it might be all the way round, left side is the one to do pointer arithmetics on, is not very usual, but it happens
-		//		if(!core::analysis::isRefType(lhs->getType()) && core::analysis::isRefType(rhs->getType())) {
-		//			std::swap(rhs, lhs);
-		//			rhs = doPointerArithmetic();
-		//			return (retIr = rhs);
-		//		}
-		//	}
-
-		//	// especial case to deal with the pointer distance operation
-		//	//  x = ptr1 - ptr2
-		//	if(core::types::isRefArray(lhs->getType()) && core::types::isRefArray(rhs->getType()) && baseOp == clang::BO_Sub) {
-		//		return retIr = builder.callExpr(basic.getArrayRefDistance(), lhs, rhs);
-		//	}
-
-		//	if(isLogical) {
-		//		// this is like some lines ahead, char and bool types are treated as integers by clang,
-		//		// while they are converted into char or bool int IR. we need to recover the original
-		//		// CLANG typing
-		//		if(baseOp != clang::BO_LAnd && baseOp != clang::BO_LOr) {
-		//			lhs = core::types::smartCast(lhs, converter.convertType(binOp->getLHS()->getType()));
-		//			rhs = core::types::smartCast(rhs, converter.convertType(binOp->getRHS()->getType()));
-		//		}
-
-		//		exprTy = basic.getBool();
-		//		VLOG(2) << "Lookup for operation: " << op << ", for type: " << lhs->getType();
-		//		opFunc = basic.getOperator(lhs->getType(), op);
-		//	} else if(lhsTy->getNodeType() != core::NT_RefType && rhsTy->getNodeType() != core::NT_RefType) {
-		//		// TODO: would love to remove this, but some weirdos still need this cast
-		//		// somehow related with char type. is treated as integer everywhere, not in ir
-		//		lhs = core::types::smartCast(lhs, converter.convertType(binOp->getLHS()->getType()));
-		//		rhs = core::types::smartCast(rhs, converter.convertType(binOp->getRHS()->getType()));
-
-
-		//		if(binOp->isBitwiseOp() || binOp->isShiftOp()) {
-		//			opFunc = basic.getOperator(builder.typeVariable("a"), op);
-		//		} else {
-		//			VLOG(2) << "Lookup for operation: " << op << ", for type: " << *exprTy;
-		//			opFunc = basic.getOperator(lhs->getType(), op);
-		//		}
-		//	} else if(lhsTy->getNodeType() == core::NT_RefType && rhsTy->getNodeType() == core::NT_RefType) {
-		//		frontend_assert((*lhsTy == *rhsTy)) << "Comparing incompatible types\n";
-		//		VLOG(2) << "Lookup for operation: " << op << ", for type: " << lhsTy;
-		//		opFunc = basic.getOperator(lhsTy, op);
-		//	}
-		//}
-
-		//frontend_assert(opFunc) << "no operation code set\n"
-		//                        << "\tOperator: " << binOp->getOpcodeStr().str() << "\n"
-		//                        << "\t     LHS: \n" << dumpOneLine(lhs) << " \n of type: " << lhs->getType() << "\n"
-		//                        << "\t     RHS: \n" << dumpOneLine(rhs) << " \n of type: " << rhs->getType() << "\n";
-
-		//VLOG(2) << " Operator: " << binOp->getOpcodeStr().str();
-		//VLOG(2) << " LHS: \n    " << dumpOneLine(lhs) << " \nof type: " << lhs->getType();
-		//VLOG(2) << " RHS: \n    " << dumpOneLine(rhs) << " \nof type: " << rhs->getType();
-
-		//retIr = builder.callExpr(exprTy, opFunc, lhs, rhs);
-		assert_not_implemented();
 		return retIr;
 	}
 
@@ -742,121 +551,30 @@ namespace conversion {
 		core::ExpressionPtr retIr;
 		LOG_EXPR_CONVERSION(unOp, retIr);
 
-		//core::ExpressionPtr&& subExpr = Visit(unOp->getSubExpr());
+		core::ExpressionPtr subExpr = Visit(unOp->getSubExpr());
+		core::TypePtr exprTy = converter.convertType(unOp->getType());
 
-		//// build lambda expression for post/pre increment/decrement unary operators
-		//auto encloseIncrementOperator = [&](core::ExpressionPtr subExpr, core::lang::BasicGenerator::Operator op) -> core::ExpressionPtr {
+		// A unary + is an integral upcast in some situations, but then clang generates the implicit cast in the subexpr -------------------------------- PLUS -
+		if(unOp->getOpcode() == clang::UO_Plus) {
+			retIr = subExpr;
+			return retIr;
+		}
+		
+		// A unary - is equivalent to 0-x -------------------------------------------------------------------------------------------------------------- MINUS -
+		if(unOp->getOpcode() == clang::UO_Minus) {
+			retIr = builder.minus(subExpr);
+			return retIr;
+		}
+		
+		std::map<clang::UnaryOperator::Opcode, core::lang::BasicGenerator::Operator> opMap = {
+			{clang::UO_Not, core::lang::BasicGenerator::Not},         // ~a
+		};
 
-		//	core::TypePtr type = subExpr->getType();
-		//	frontend_assert(type->getNodeType() == core::NT_RefType && "Illegal increment/decrement operand - not a ref type");
-		//	core::TypePtr elementType = GET_REF_ELEM_TYPE(type);
+		auto opIt = opMap.find(unOp->getOpcode());
+		frontend_assert(opIt != opMap.end()) << "Unary Operator " << clang::UnaryOperator::getOpcodeStr(unOp->getOpcode()).str() << " not implemented.";
 
-		//	if(core::analysis::isRefType(elementType) && (GET_REF_ELEM_TYPE(elementType)->getNodeType() == core::NT_ArrayType)) {
-		//		// if this is a post/pre incremenet operator applied to an array we have to deal with it
-		//		// immediatelly because the getOperator function wouldn't deal with such case
-
-		//		core::ExpressionPtr opLit;
-		//		switch(op) {
-		//		case core::lang::BasicGenerator::PreInc: opLit = basic.getArrayViewPreInc(); break;
-		//		case core::lang::BasicGenerator::PostInc: opLit = basic.getArrayViewPostInc(); break;
-		//		case core::lang::BasicGenerator::PreDec: opLit = basic.getArrayViewPreDec(); break;
-		//		case core::lang::BasicGenerator::PostDec: opLit = basic.getArrayViewPostDec(); break;
-		//		default: frontend_assert(false) << "Operator not handled for pointer arithmetic\n";
-		//		}
-		//		return builder.callExpr(elementType, opLit, subExpr);
-		//	}
-
-		//	switch(op) {
-		//	case core::lang::BasicGenerator::PreInc: return builder.preInc(subExpr);
-		//	case core::lang::BasicGenerator::PostInc: return builder.postInc(subExpr);
-		//	case core::lang::BasicGenerator::PreDec: return builder.preDec(subExpr);
-		//	case core::lang::BasicGenerator::PostDec: return builder.postDec(subExpr);
-		//	default: frontend_assert(false);
-		//	}
-		//	return core::ExpressionPtr(); // should not be reachable
-		//};
-
-		//switch(unOp->getOpcode()) {
-		//// conversion of post increment/decrement operation is done by creating a tuple expression i.e.:
-		//// a++ ==> (__tmp = a, a=a+1, __tmp)
-		//// ++a ==> ( a=a+1, a)
-		//// --a
-		//case clang::UO_PreDec:
-		//	return retIr = encloseIncrementOperator(subExpr, core::lang::BasicGenerator::PreDec);
-		//// a--
-		//case clang::UO_PostDec:
-		//	return (retIr = encloseIncrementOperator(subExpr, core::lang::BasicGenerator::PostDec));
-		//// a++
-		//case clang::UO_PreInc:
-		//	return (retIr = encloseIncrementOperator(subExpr, core::lang::BasicGenerator::PreInc));
-		//// ++a
-		//case clang::UO_PostInc:
-		//	return (retIr = encloseIncrementOperator(subExpr, core::lang::BasicGenerator::PostInc));
-		//// &a
-		//case clang::UO_AddrOf: {
-		//	retIr = subExpr;
-
-		//	// in the case we are getting the address of a function the & operator
-		//	// has no effects, therefore we return
-		//	if(retIr->getType()->getNodeType() == core::NT_FunctionType) { return retIr; }
-
-		//	// make sure it is a L-Value
-		//	retIr = asLValue(retIr);
-
-		//	frontend_assert(retIr->getType().isa<core::RefTypePtr>()) << "not a ref? " << retIr << " : " << retIr->getType();
-		//	return (retIr = core::types::refScalarToRefArray(retIr));
-		//}
-		//// *a
-		//case clang::UO_Deref: {
-		//	// make sure it is a L-Value
-		//	retIr = asLValue(subExpr);
-
-		//	frontend_assert(retIr->getType()->getNodeType() == core::NT_RefType) << "Impossible to apply * operator to an R-Value\n";
-
-		//	const core::TypePtr& subTy = GET_REF_ELEM_TYPE(retIr->getType());
-
-		//	return (retIr = (subTy->getNodeType() == core::NT_VectorType || subTy->getNodeType() == core::NT_ArrayType) ? getCArrayElemRef(builder, retIr)
-		//	                                                                                                            : converter.tryDeref(retIr));
-		//}
-		//// +a
-		//case clang::UO_Plus:
-		//	return retIr = subExpr;
-		//// -a
-		//case clang::UO_Minus:
-		//	if(unOp->getSubExpr()->getType().getUnqualifiedType()->isVectorType()
-		//	   && !unOp->getSubExpr()->getType().getUnqualifiedType()->isExtVectorType()) { // OpenCL vectors don't need special treatment, they just work
-		//		const auto& ext = mgr.getLangExtension<insieme::core::lang::SIMDVectorExtension>();
-		//		return (retIr = builder.callExpr(ext.getSIMDMinus(), subExpr));
-		//	}
-
-		//	return (retIr = builder.invertSign(converter.tryDeref(subExpr)));
-		//// ~a
-		//case clang::UO_Not:
-		//	if(unOp->getSubExpr()->getType().getUnqualifiedType()->isVectorType()
-		//	   && !unOp->getSubExpr()->getType().getUnqualifiedType()->isExtVectorType()) { // OpenCL vectors don't need special treatment, they just work
-		//		const auto& ext = mgr.getLangExtension<insieme::core::lang::SIMDVectorExtension>();
-		//		return (retIr = builder.callExpr(ext.getSIMDNot(), subExpr));
-		//	}
-
-		//	retIr = converter.tryDeref(subExpr);
-		//	return (retIr = builder.callExpr(retIr->getType(), basic.getOperator(retIr->getType(), core::lang::BasicGenerator::Not), retIr));
-		//// !a
-		//case clang::UO_LNot:
-		//	if(!basic.isBool(subExpr->getType())) { subExpr = core::types::smartCast(subExpr, basic.getBool()); }
-		//	frontend_assert(basic.isBool(subExpr->getType()));
-
-		//	return (retIr = builder.callExpr(subExpr->getType(), basic.getBoolLNot(), subExpr));
-
-		//case clang::UO_Extension: return retIr = subExpr;
-
-		//case clang::UO_Real: return mgr.getLangExtension<core::lang::ComplexExtension>().getReal(subExpr);
-
-		//case clang::UO_Imag: return mgr.getLangExtension<core::lang::ComplexExtension>().getImg(subExpr);
-
-		//default: frontend_assert(false && "Unary operator not supported");
-		//}
-		frontend_assert(false) << "Unary operator not supported";
-		return core::ExpressionPtr(); // should not be reachable
+		retIr = builder.unaryOp(basic.getOperator(exprTy, opIt->second), subExpr);
+		return retIr;
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
