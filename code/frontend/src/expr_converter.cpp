@@ -58,6 +58,7 @@
 #include "insieme/core/lang/ir++_extension.h"
 #include "insieme/core/lang/simd_vector.h"
 #include "insieme/core/lang/enum_extension.h"
+#include "insieme/core/lang/pointer.h"
 
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"
@@ -77,10 +78,16 @@ using namespace insieme;
 namespace insieme {
 namespace frontend {
 namespace conversion {
-	
+		
 	//---------------------------------------------------------------------------------------------------------------------
 	//										BASE EXPRESSION CONVERTER
 	//---------------------------------------------------------------------------------------------------------------------
+	
+	core::TypePtr Converter::ExprConverter::convertExprType(const clang::Expr* expr) {
+		auto irType = converter.convertType(expr->getType());
+		if(expr->getValueKind() == clang::VK_LValue) irType = builder.refType(irType);
+		return irType;
+	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// Overwrite the basic visit method for expression in order to automatically
@@ -89,17 +96,16 @@ namespace conversion {
 	core::ExpressionPtr Converter::CExprConverter::Visit(const clang::Expr* expr) {
 		// iterate clang handler list and check if a handler wants to convert the expr
 		core::ExpressionPtr retIr;
-		for (auto extension : converter.getConversionSetup().getExtensions()) {
+		for(auto extension : converter.getConversionSetup().getExtensions()) {
 			retIr = extension->Visit(expr, converter);
-			if (retIr) { break; }
+			if(retIr) { break; }
 		}
 
-		if (!retIr) {
+		if(!retIr) {
 			converter.trackSourceLocation(expr);
 			retIr = ConstStmtVisitor<CExprConverter, core::ExpressionPtr>::Visit(expr);
 			converter.untrackSourceLocation();
-		}
-		else {
+		} else {
 			VLOG(2) << "CExprConverter::Visit handled by plugin";
 		}
 
@@ -107,21 +113,21 @@ namespace conversion {
 		converter.printDiagnosis(expr->getLocStart());
 
 		// call frontend extension post visitors
-		for (auto extension : converter.getConversionSetup().getExtensions()) {
+		for(auto extension : converter.getConversionSetup().getExtensions()) {
 			retIr = extension->PostVisit(expr, retIr, converter);
 		}
 
 		// attach location annotation
-		if (expr->getLocStart().isValid()) {
+		if(expr->getLocStart().isValid()) {
 			auto presStart = converter.getSourceManager().getPresumedLoc(expr->getLocStart());
 			auto presEnd = converter.getSourceManager().getPresumedLoc(expr->getLocEnd());
 			core::annotations::attachLocation(retIr, std::string(presStart.getFilename()), presStart.getLine(), presStart.getColumn(), presEnd.getLine(),
-				presEnd.getColumn());
+				                              presEnd.getColumn());
 		}
 
 		return retIr;
 	}
-	
+
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//								INTEGER LITERAL
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -136,7 +142,7 @@ namespace conversion {
 			value = toString(intLit->getValue().getSExtValue());
 		}
 
-		core::TypePtr type = converter.convertType(intLit->getType());
+		core::TypePtr type = convertExprType(intLit);
 		if(intLit->getType().getTypePtr()->isUnsignedIntegerOrEnumerationType()) { value.append("u"); }
 		frontend_assert(!value.empty()) << "literal cannot be an empty string";
 		retExpr = builder.literal(type, value);
@@ -300,8 +306,7 @@ namespace conversion {
 			expand('\0', "\\0");
 		}
 
-		retExpr = builder.stringLit("\"" + strValue + "\"");
-		VLOG(2) << retExpr;
+		retExpr = builder.literal("\"" + strValue + "\"", convertExprType(stringLit));
 		return retExpr;
 	}
 
@@ -566,8 +571,30 @@ namespace conversion {
 			return retIr;
 		}
 		
+		// A unary ! implies a conversion to bool in IR -------------------------------------------------------------------------------------------------- NOT -
+		if(unOp->getOpcode() == clang::UO_LNot) {
+			retIr = builder.logicNeg(utils::exprToBool(subExpr));
+			return retIr;
+		}
+
+		// A unary AddressOf operator translates to a ptr-from-ref in IR --------------------------------------------------------------------------- ADDRESSOF -
+		if(unOp->getOpcode() == clang::UO_AddrOf) {
+			retIr = core::lang::buildPtrFromRef(subExpr);
+			return retIr;
+		}
+
+		// A unary Deref operator translates to a ptr-to-ref operation in IR --------------------------------------------------------------------------- DEREF -
+		if(unOp->getOpcode() == clang::UO_Deref) {
+			retIr = core::lang::buildPtrToRef(subExpr);
+			return retIr;
+		}
+		
 		std::map<clang::UnaryOperator::Opcode, core::lang::BasicGenerator::Operator> opMap = {
 			{clang::UO_Not, core::lang::BasicGenerator::Not},         // ~a
+			{clang::UO_PreDec, core::lang::BasicGenerator::PreDec},   // --a
+			{clang::UO_PreInc, core::lang::BasicGenerator::PreInc},   // ++a
+			{clang::UO_PostDec, core::lang::BasicGenerator::PostDec}, // a--
+			{clang::UO_PostInc, core::lang::BasicGenerator::PostInc}, // a++
 		};
 
 		auto opIt = opMap.find(unOp->getOpcode());
@@ -584,106 +611,17 @@ namespace conversion {
 		core::ExpressionPtr retIr;
 		LOG_EXPR_CONVERSION(condOp, retIr);
 
-		//core::TypePtr retTy = converter.convertType(condOp->getType());
-		//core::ExpressionPtr trueExpr = Visit(condOp->getTrueExpr());
-		//core::ExpressionPtr falseExpr = Visit(condOp->getFalseExpr());
-		//core::ExpressionPtr condExpr = Visit(condOp->getCond());
+		core::TypePtr retTy = converter.convertType(condOp->getType());
+		core::ExpressionPtr trueExpr = Visit(condOp->getTrueExpr());
+		core::ExpressionPtr falseExpr = Visit(condOp->getFalseExpr());
+		core::ExpressionPtr condExpr = Visit(condOp->getCond());
+		
+		trueExpr = builder.wrapLazy(trueExpr);
+		falseExpr = builder.wrapLazy(falseExpr);
+		condExpr = utils::exprToBool(condExpr);
 
-		//condExpr = core::types::castToBool(condExpr);
+		retIr = builder.callExpr(basic.getIfThenElse(), condExpr, trueExpr, falseExpr);
 
-		//// Dereference eventual references
-		//if(retTy->getNodeType() == core::NT_RefType && !core::types::isRefArray(retTy) && !builder.getLangBasic().isAnyRef(retTy)) {
-		//	retTy = GET_REF_ELEM_TYPE(retTy);
-		//}
-
-		//// fixes the return type to retTy of the given expression toFix
-		//auto fixingThrowExprType = [&](core::ExpressionPtr toFix, const core::TypePtr& retTy) {
-		//	// get address of callExpr: callExpr(lambdaExpr(throwExpr),(argument))
-		//	core::CallExprPtr callExpr = toFix.as<core::CallExprPtr>();
-		//	core::CallExprAddress callExprAddr(callExpr);
-
-		//	// get returnType of callExpr
-		//	core::NodeAddress addrTy0 = callExprAddr.getType();
-
-		//	// get address of throwExpr
-		//	core::LambdaExprAddress throwExprAddr(callExprAddr->getFunctionExpr().as<core::LambdaExprAddress>());
-
-		//	// get address of returnType of throwExpr
-		//	core::NodeAddress addrTy1 = throwExprAddr.getFunctionType().getReturnType();
-
-		//	// get address of returnType of the lambdaVariable
-		//	core::NodeAddress addrTy2 = throwExprAddr.getVariable().getType().as<core::FunctionTypeAddress>().getReturnType();
-
-		//	// get address of returnType of the lambda
-		//	core::NodeAddress addrTy3 = throwExprAddr.getLambda().getType().as<core::FunctionTypeAddress>().getReturnType();
-
-		//	// get address of returnType of the lambdabinding
-		//	core::NodeAddress addrTy4 =
-		//	    throwExprAddr.getDefinition().getBindingOf(throwExprAddr.getVariable()).getVariable().getType().as<core::FunctionTypeAddress>().getReturnType();
-
-		//	// setup replaceMap with the address of the types to be fixed to "retTy"
-		//	std::map<core::NodeAddress, core::NodePtr> replaceMap;
-		//	replaceMap.insert({addrTy0, retTy});
-		//	replaceMap.insert({addrTy1, retTy});
-		//	replaceMap.insert({addrTy2, retTy});
-		//	replaceMap.insert({addrTy3, retTy});
-		//	replaceMap.insert({addrTy4, retTy});
-
-		//	toFix = core::transform::replaceAll(mgr, replaceMap).as<core::ExpressionPtr>();
-		//	return toFix;
-		//};
-
-		//// if trueExpr or falseExpr is a CXXThrowExpr we need to fix the type
-		//// of the throwExpr (and the according calls) to the type of the other branch of the
-		//// conditional operator, as the c++ standard defines throwExpr always with void and the
-		//// conditional operator expects on both branches the same returnType (except when used with
-		//// throw then the type of the "nonthrowing" branch is used
-		//if(llvm::isa<clang::CXXThrowExpr>(condOp->getTrueExpr())) {
-		//	trueExpr = fixingThrowExprType(trueExpr, retTy);
-		//} else if(llvm::isa<clang::CXXThrowExpr>(condOp->getFalseExpr())) {
-		//	falseExpr = fixingThrowExprType(falseExpr, retTy);
-		//}
-
-		//// in C++, string literals with same size may produce an error, do not cast to avoid
-		//// weird behaviour
-		//if(!llvm::isa<clang::StringLiteral>(condOp->getTrueExpr())) {
-		//	// if one of true or false exprs is a cpp
-		//	// ref the other one has to be a cpp ref too
-		//	if(core::analysis::isAnyCppRef(falseExpr->getType()) && !core::analysis::isAnyCppRef(trueExpr->getType())) {
-		//		// ok, false is a ref, but is it a const cpp ref
-		//		if(core::analysis::isConstCppRef(falseExpr->getType())) {
-		//			trueExpr = builder.toConstCppRef(trueExpr);
-		//		} else {
-		//			trueExpr = builder.toCppRef(trueExpr);
-		//		}
-		//	}
-		//	if(core::analysis::isAnyCppRef(trueExpr->getType()) && !core::analysis::isAnyCppRef(falseExpr->getType())) {
-		//		// ok, false is a ref, but is it a const cpp ref
-		//		if(core::analysis::isConstCppRef(trueExpr->getType())) {
-		//			falseExpr = builder.toConstCppRef(falseExpr);
-		//		} else {
-		//			falseExpr = builder.toCppRef(falseExpr);
-		//		}
-		//	}
-
-		//	if(trueExpr->getType() != falseExpr->getType()) {
-		//		trueExpr = core::types::smartCast(trueExpr, retTy);
-		//		falseExpr = core::types::smartCast(falseExpr, retTy);
-		//	} else {
-		//		retTy = trueExpr->getType();
-		//	}
-		//} else {
-		//	retTy = trueExpr->getType();
-		//}
-
-		//// be carefull! createCallExpr turns given statements into lazy -- keep it that way
-		//return (retIr = builder.callExpr(retTy, basic.getIfThenElse(),
-		//                                 condExpr,                                                                                  // Condition
-		//                                 converter.createCallExprFromBody(builder.returnStmt(trueExpr), trueExpr->getType(), true),  // True
-		//                                 converter.createCallExprFromBody(builder.returnStmt(falseExpr), falseExpr->getType(), true) // False
-		//                                 ));
-
-		frontend_assert(false);
 		return retIr;
 	}
 

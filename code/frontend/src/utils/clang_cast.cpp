@@ -53,6 +53,7 @@
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/enum_extension.h"
 #include "insieme/core/lang/ir++_extension.h"
+#include "insieme/core/lang/pointer.h"
 
 using namespace insieme;
 using namespace insieme::frontend::utils;
@@ -60,14 +61,14 @@ using namespace insieme::frontend::utils;
 namespace insieme {
 namespace frontend {
 namespace utils {
-	
+		
 	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Takes a clang::CastExpr, converts its subExpr into IR and wraps it with the necessary IR casts
 	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	core::ExpressionPtr performClangCastOnIR(insieme::frontend::conversion::Converter& converter, const clang::CastExpr* castExpr) {
 		core::ExpressionPtr expr = converter.convertExpr(castExpr->getSubExpr());
-		//core::TypePtr targetTy = converter.convertType(castExpr->getType());
-		//core::TypePtr exprTy = expr->getType();
+		core::TypePtr targetTy = converter.convertType(castExpr->getType());
+		core::TypePtr exprTy = expr->getType();
 
 		if(VLOG_IS_ON(2)) {
 			VLOG(2) << "castExpr: ";
@@ -76,7 +77,7 @@ namespace utils {
 		}
 
 		const core::FrontendIRBuilder& builder = converter.getIRBuilder();
-		//const core::lang::BasicGenerator& gen = builder.getLangBasic();
+		const core::lang::BasicGenerator& basic = builder.getLangBasic();
 		//core::NodeManager& mgr = converter.getNodeManager();
 
 		//if(VLOG_IS_ON(2)) {
@@ -100,15 +101,15 @@ namespace utils {
 		case clang::CK_LValueToRValue:
 			// A conversion which causes the extraction of an r-value from the operand gl-value.
 			// The result of an r-value conversion is always unqualified.
-			//
 			// IR: this is the same as ref_deref: ref<a'> -> a'
 			return builder.deref(expr);
 		////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-		//case clang::CK_IntegralCast:
-		//// A cast between integral types (other than to boolean). Variously a bitcast, a truncation,
-		//// a sign-extension, or a zero-extension. long l = 5; (unsigned) i
-		//// IR: convert to int or uint
+		case clang::CK_IntegralCast:
+			// A cast between integral types (other than to boolean). Variously a bitcast, a truncation,
+			// a sign-extension, or a zero-extension. long l = 5; (unsigned) i
+			return builder.callExpr(basic.getTypeCast(), expr, builder.getTypeLiteral(targetTy)); 
+
 		//case clang::CK_IntegralToBoolean:
 		//// Integral to boolean. A check against zero. (bool) i
 		//case clang::CK_IntegralToFloating:
@@ -152,34 +153,22 @@ namespace utils {
 		//	}
 
 		//////////////////////////////////////////////////////////////////////////////////////////////////////////
-		//case clang::CK_ArrayToPointerDecay:
-		//	// Array to pointer decay. int[10] -> int* char[5][6] -> char(*)[6]
-		//	{
-		//		// if inner expression is not ref.... it might be a compound initializer
-		//		if(!IS_IR_REF(exprTy)) { expr = builder.callExpr(gen.getRefVar(), expr); }
-
-		//		if(core::analysis::isAnyCppRef(exprTy)) { expr = core::analysis::unwrapCppRef(expr); }
-
-		//		if(core::types::isRefArray(expr->getType())) { return expr; }
-
-		//		if(targetTy.isa<core::FunctionTypePtr>()) { return expr; }
-
-		//		if(targetTy.as<core::RefTypePtr>()->isSource()) {
-		//			return builder.callExpr(gen.getRefVectorToSrcArray(), expr);
-		//		} else {
-		//			return builder.callExpr(gen.getRefVectorToRefArray(), expr);
-		//		}
-		//	}
+		case clang::CK_ArrayToPointerDecay:
+			// Array to pointer decay. int[10] -> int* char[5][6] -> char(*)[6]
+			return core::lang::buildPtrFromArray(expr);	
 
 		////////////////////////////////////////////////////////////////////////////////////////////////////////////
-		//case clang::CK_BitCast:
-		//	// A conversion which causes a bit pattern of one type to be reinterpreted as a bit pattern
-		//	// of another type.
-		//	// Generally the operands must have equivalent size and unrelated types.  The pointer conversion
-		//	// char* -> int* is a bitcast. A conversion from any pointer type to a C pointer type is a bitcast unless
-		//	// it's actually BaseToDerived or DerivedToBase. A conversion to a block pointer or ObjC pointer type is a
-		//	// bitcast only if the operand has the same type kind; otherwise, it's one of the specialized casts below.
-		//	// Vector coercions are bitcasts.
+		// A conversion which causes a bit pattern of one type to be reinterpreted as a bit pattern of another type.
+		// Generally the operands must have equivalent size and unrelated types.  The pointer conversion
+		// char* -> int* is a bitcast. A conversion from any pointer type to a C pointer type is a bitcast unless
+		// it's actually BaseToDerived or DerivedToBase. A conversion to a block pointer or ObjC pointer type is a
+		// bitcast only if the operand has the same type kind; otherwise, it's one of the specialized casts below.
+		// Vector coercions are bitcasts.
+		case clang::CK_BitCast:
+			if(core::lang::isPointer(expr) && core::lang::differOnlyInQualifiers(exprTy, targetTy)) { return core::lang::buildPtrCast(expr, targetTy); }
+			assert_not_implemented();
+
+
 		//	{
 		//		// char* -> const char* is a bitcast in clang, and not a Noop, but we drop qualifiers
 		//		if(core::types::isSubTypeOf(exprTy, targetTy)) { return expr; }

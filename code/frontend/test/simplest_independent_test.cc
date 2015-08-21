@@ -128,5 +128,9 @@ namespace frontend {
 		runTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_expressions.c");
 	}
 
+	TEST(IndependentTest, HelloWorld) {
+		runTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_hello_world.c");
+	}
+
 } // fe namespace
 } // insieme namespace

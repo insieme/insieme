@@ -202,7 +202,7 @@ namespace conversion {
 		converter.untrackSourceLocation();
 		if(inExternC) { annotations::c::markAsExternC(irLit); }
 		converter.getFunMan()->insert(funcDecl, irLit);
-		converter.getIRTranslationUnit().addFunction(irLit, irFunc);
+		if(irFunc) converter.getIRTranslationUnit().addFunction(irLit, irFunc);
 	}
 
 } // End conversion namespace
