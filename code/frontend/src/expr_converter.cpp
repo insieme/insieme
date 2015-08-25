@@ -372,7 +372,9 @@ namespace conversion {
 			irArguments.push_back(Visit(arg));
 		}
 
-		irExpr = builder.callExpr(irCallee, irArguments);
+		core::TypeList irTypes = ::transform(irArguments, [](const core::ExpressionPtr& expr){ return expr->getType(); });
+		auto newType = builder.functionType(irTypes, converter.convertType(callExpr->getCallReturnType()));
+		irExpr = builder.callExpr(newType, irCallee, irArguments);
 
 		return irExpr;
 	}

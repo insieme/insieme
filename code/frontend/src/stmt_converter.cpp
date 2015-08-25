@@ -257,171 +257,36 @@ namespace conversion {
 		stmtutils::StmtWrapper retStmt;
 		LOG_STMT_CONVERSION(forStmt, retStmt);
 
-		assert_not_implemented();
+		if(forStmt->getInit()) { retStmt.push_back(converter.convertStmt(forStmt->getInit())); }
 
-		return retStmt;
-		
-		//core::StatementPtr body = aggregateStmts(builder, Visit(forStmt->getBody()));
-		//frontend_assert(body) << "Couldn't convert body of the ForStmt";
+		core::ExpressionPtr condExpr;
+		if(forStmt->getCond()) {
+			condExpr = converter.convertExpr(forStmt->getCond());
+		} else {
+			condExpr = builder.boolLit(true);
+		}
 
-		//core::ExpressionPtr condExpr = converter.convertExpr(forStmt->getCond());
-		//frontend_assert(condExpr) << "Couldn't convert condition expression of the ForStmt";
+		core::StatementList newBody;
 
-		//core::ExpressionPtr incExpr = converter.convertExpr(forStmt->getInc());
-		//frontend_assert(incExpr) << "Couldn't convert increment expression of the ForStmt";
-		//frontend_assert(incExpr.isa<core::StatementPtr>()) << "Increment expression of the ForStmt is not a valid statement";
-		//core::StatementPtr incStmt = incExpr.as<core::StatementPtr>();
+		// only generate non-empty body in IR if not a clang::NullStmt (for() ;) and not an empty compound (for() { })
+		// TODO: move removal of empty compounds to VisitCompoundStmt to be applied in general?
+		clang::Stmt* clangBody = forStmt->getBody();
+		if(clangBody && !dyn_cast<clang::NullStmt>(clangBody)) {
+			stmtutils::StmtWrapper irOldBody = Visit(clangBody);
+			if(irOldBody.getSingleStmt().isa<core::CompoundStmtPtr>()) {
+				core::CompoundStmtPtr compound = irOldBody.getSingleStmt().as<core::CompoundStmtPtr>();
+				if(!compound->empty()) { newBody.push_back(aggregateStmts(builder, irOldBody)); }
+			} else {
+				newBody.push_back(irOldBody.getSingleStmt());
+			}
+		}
 
-		//core::StatementPtr initStmt = converter.convertStmt(forStmt->getInit());
-		//frontend_assert(initStmt) << "Couldn't convert init statement of the ForStmt";
+		if(forStmt->getInc()) { newBody.push_back(converter.convertExpr(forStmt->getInc()).as<core::StatementPtr>()); }
 
-		//retStmt.push_back(initStmt);
+		retStmt.push_back(builder.whileStmt(condExpr, stmtutils::aggregateStmts(builder, newBody)));
 
-		//core::StatementList bodyAndIncrement{body, incStmt};
-
-		//retStmt.push_back(builder.whileStmt(condExpr, stmtutils::aggregateStmts(builder, bodyAndIncrement)));
-
-		//return builder.compoundStmt(retStmt);
-		
-		//try {
-		//	// Analyze loop for induction variable
-		//	analysis::LoopAnalyzer loopAnalysis(forStmt, converter);
-
-		//	// convert the body
-		//	core::StatementPtr body = converter.convertStmt(forStmt->getBody());
-
-		//	// for loops with break statements are while loops
-		//	bool breakStmtFound = false;
-		//	core::visitDepthFirstPrunable(body, [&](const core::NodePtr& cur) -> bool {
-		//		if(cur.isa<core::BreakStmtPtr>()) breakStmtFound = true;
-
-		//		if(cur.isa<core::LambdaExprPtr>() || cur.isa<core::ForStmtPtr>() || cur.isa<core::WhileStmtPtr>() || cur.isa<core::SwitchStmtPtr>())
-		//			return true;
-		//		else {
-		//			return false;
-		//		}
-		//	});
-		//	if(breakStmtFound) { throw analysis::LoopNormalizationError("break statement not allowed in for loop"); }
-
-
-		//	// we have to replace all occurrences of the induction expression/var in the annotations of the body
-		//	// by the new induction var
-		//	core::visitDepthFirstPrunable(body, [&](const core::StatementPtr& stmt) -> bool {
-		//		if(stmt->hasAnnotation(omp::BaseAnnotation::KEY)) {
-		//			auto anno = stmt->getAnnotation(omp::BaseAnnotation::KEY);
-
-		//			std::vector<core::VariablePtr> orgVars;
-		//			std::vector<core::VariablePtr> trgVars;
-		//			core::visitDepthFirstOnce(loopAnalysis.getOriginalInductionExpr(), [&](const core::VariablePtr& var) { orgVars.push_back(var); });
-		//			core::visitDepthFirstOnce(loopAnalysis.getInductionExpr(), [&](const core::VariablePtr& var) { trgVars.push_back(var); });
-
-		//			int i = 0;
-		//			for(auto org : orgVars) {
-		//				anno->replaceUsage(org, trgVars[i]);
-		//				i++;
-		//			}
-		//		}
-		//		if(stmt.isa<core::CompoundStmtPtr>() || stmt.isa<core::IfStmtPtr>() || stmt.isa<core::SwitchStmtPtr>())
-		//			return false;
-		//		else {
-		//			return true;
-		//		}
-		//	});
-
-		//	retStmt.insert(retStmt.end(), loopAnalysis.getPreStmts().begin(), loopAnalysis.getPreStmts().end());
-
-		//	core::ForStmtPtr forIr = loopAnalysis.getLoop(body);
-		//	frontend_assert(forIr && "Created for statement is not valid");
-
-		//	retStmt.push_back(forIr);
-
-		//	// incorporate statements do be done after loop and we are done
-		//	retStmt.insert(retStmt.end(), loopAnalysis.getPostStmts().begin(), loopAnalysis.getPostStmts().end());
-
-		//	return retStmt;
-
-		//} catch(const analysis::LoopNormalizationError& e) {
-		//	// The for loop cannot be normalized into an IR loop, therefore we create a while stmt
-		//	stmtutils::StmtWrapper body = aggregateStmts(builder, Visit(forStmt->getBody()));
-
-		//	clang::Stmt* initStmt = forStmt->getInit();
-		//	if(initStmt) {
-		//		stmtutils::StmtWrapper init = Visit(forStmt->getInit());
-		//		std::copy(init.begin(), init.end(), std::back_inserter(retStmt));
-		//	}
-
-		//	if(clang::VarDecl* condVarDecl = forStmt->getConditionVariable()) {
-		//		frontend_assert(forStmt->getCond() == NULL && "ForLoop condition cannot be a variable declaration and an expression");
-		//		/*
-		//		 * the for loop has a variable declared in the condition part, e.g.
-		//		 *
-		//		 * 		for(...; int a = f(); ...)
-		//		 *
-		//		 * to handle this kind of situation we have to move the declaration  outside the loop body inside a
-		//		 * new context
-		//		 */
-		//		clang::Expr* expr = condVarDecl->getInit();
-		//		condVarDecl->setInit(NULL); // set the expression to null (temporarely)
-		//		core::StatementPtr declStmt = converter.convertVarDecl(condVarDecl);
-		//		condVarDecl->setInit(expr); // restore the init value
-
-		//		frontend_assert(false && "ForStmt with a declaration of a condition variable not supported");
-		//		retStmt.push_back(declStmt);
-		//	}
-
-		//	core::StatementPtr irBody = stmtutils::aggregateStmts(builder, body);
-
-		//	if(forStmt->getInc()) {
-		//		vector<core::ContinueStmtAddress> conts = getContinues(irBody);
-
-		//		if(!conts.empty()) {
-		//			core::StatementList stmtList;
-		//			stmtList.push_back(converter.convertExpr(forStmt->getInc()));
-		//			stmtList.push_back(builder.continueStmt());
-		//			core::CompoundStmtPtr incr = builder.compoundStmt(stmtList);
-		//			std::map<core::NodeAddress, core::NodePtr> replacementsMap;
-		//			for_each(conts.begin(), conts.end(), [&](core::ContinueStmtAddress& cur) { replacementsMap.insert({cur, incr}); });
-		//			irBody = core::transform::replaceAll(builder.getNodeManager(), replacementsMap).as<core::StatementPtr>();
-		//		}
-		//	}
-
-		//	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		//	// analysis of loop structure failed, we have to build a while statement:
-		//	//
-		//	// 		for(init; cond; step) { body }
-		//	//
-		//	// Will be translated in the following while statement structure:
-		//	//
-		//	// 		{
-		//	// 			init;
-		//	// 			while(cond) {
-		//	// 				{ body }
-		//	// 				step;
-		//	// 			}
-		//	// 		}
-		//	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		//	core::ExpressionPtr condition;
-		//	if(forStmt->getCond()) {
-		//		condition = core::types::smartCast(builder.getLangBasic().getBool(), converter.convertExpr(forStmt->getCond()));
-		//	} else {
-		//		// we might not have condition, this is an infinite loop
-		//		//    for (;;)
-		//		condition = converter.builder.literal(std::string("true"), builder.getLangBasic().getBool());
-		//	}
-
-		//	core::StatementPtr whileStmt = builder.whileStmt(
-		//	    condition, forStmt->getInc() ? builder.compoundStmt(toVector<core::StatementPtr>(irBody, converter.convertExpr(forStmt->getInc()))) : irBody);
-
-		//	// handle eventual pragmas attached to the Clang node
-		//	retStmt.push_back(whileStmt);
-
-		//	if(!converter.getConversionSetup().hasOption(ConversionSetup::NoWarnings)) {
-		//		std::cerr << std::endl;
-		//		clang::Preprocessor& pp = converter.getPreprocessor();
-		//		utils::clangPreprocessorDiag(pp, forStmt->getLocStart(), DiagnosticsEngine::Warning,
-		//		                             std::string("For loop converted into while loop, cause: ") + e.what());
-		//	}
-		//}
+		// compound statement required for correct scoping of variables declared in init statement of for header
+		return builder.compoundStmt(retStmt);
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
