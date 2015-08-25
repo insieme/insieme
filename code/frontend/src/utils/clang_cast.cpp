@@ -303,29 +303,9 @@ namespace utils {
 		//	}
 
 		////////////////////////////////////////////////////////////////////////////////////////////////////////////
-		//case clang::CK_NullToPointer:
-		//	// Null pointer constant to pointer, ObjC pointer, or block pointer. (void*) 0;
-		//	{
-		//		if(gen.isAnyRef(targetTy)) { return gen.getRefNull(); }
-
-		//		// if( targetTy.isa<core::RefTypePtr>() && core::analysis::getReferencedType(targetTy).isa<core::FunctionTypePtr>() ) {
-		//		if(targetTy.isa<core::FunctionTypePtr>()) { return builder.callExpr(targetTy, gen.getNullFunc(), builder.getTypeLiteral(targetTy)); }
-
-		//		// cast NULL to anything else
-		//		if(((targetTy->getNodeType() == core::NT_RefType)) && (*expr == *builder.literal(expr->getType(), "0") || gen.isRefNull(expr))) {
-		//			return builder.getZero(targetTy);
-		//		} else {
-		//			// it might be that is a reinterpret cast already, we can avoid chaining
-		//			if(core::analysis::isCallOf(expr, gen.getRefReinterpret())) { expr = expr.as<core::CallExprPtr>()[0]; }
-
-		//			// it might be a function type e.g. fun(void *(**) (size_t)) {} called with fun(__null)
-		//			if(core::dynamic_pointer_cast<const core::FunctionType>(targetTy)) { return builder.getZero(targetTy); }
-
-		//			core::TypePtr elementType = core::analysis::getReferencedType(targetTy);
-		//			assert_true(elementType) << "cannot build ref reinterpret without a type";
-		//			return builder.callExpr(targetTy, gen.getRefReinterpret(), expr, builder.getTypeLiteral(elementType));
-		//		}
-		//	}
+		case clang::CK_NullToPointer:
+			// Null pointer constant to pointer, ObjC pointer, or block pointer. (void*) 0;
+				return builder.callExpr(basic.getTypeCast(), expr, builder.getTypeLiteral(targetTy));
 
 		////////////////////////////////////////////////////////////////////////////////////////////////////////////
 		//case clang::CK_MemberPointerToBoolean:

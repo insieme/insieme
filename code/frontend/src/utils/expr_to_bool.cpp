@@ -38,6 +38,7 @@
 
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/lang/basic.h"
+#include "insieme/core/lang/pointer.h"
 
 namespace insieme {
 namespace frontend {
@@ -56,6 +57,10 @@ namespace utils {
 
 		// if integral, check against 0
 		if(basic.isInt(t)) return builder.ne(expr, builder.getZero(expr->getType()));
+
+		// if pointer, check against equality with PtrNull
+		auto& pExt = builder.getExtension<core::lang::PointerExtension>();
+		if(core::lang::isPointer(t)) return builder.callExpr(basic.getBool(), pExt.getPtrEqual(), expr, pExt.getPtrNull());
 
 		assert_not_implemented();
 		return ExpressionPtr();
