@@ -166,90 +166,8 @@ namespace conversion {
 
 		retIr.push_back(irRetStmt);
 		return retIr;
-
-		//core::ExpressionPtr retExpr;
-		//core::TypePtr retTy;
-		//QualType clangTy;
-		//if(clang::Expr* expr = retStmt->getRetValue()) {
-		//	retExpr = converter.convertExpr(expr);
-
-		//	clangTy = expr->getType();
-		//	retTy = converter.convertType(clangTy);
-
-		//	// arrays and vectors in C are always returned as reference, so the type of the return
-		//	// expression is of array (or vector) type we are sure we have to return a reference, in the
-		//	// other case we can safely deref the retExpr
-		//	if((retTy->getNodeType() == core::NT_ArrayType || retTy->getNodeType() == core::NT_VectorType)
-		//	   && (!clangTy.getUnqualifiedType()
-		//	            ->isVectorType())) { // this applies also for OpenCL ExtVectorType. If this is moved, take care it still works also for them.
-		//		retTy = builder.refType(retTy);
-		//		retExpr = core::types::smartCast(retTy, retExpr);
-		//	} else if(builder.getLangBasic().isBool(retExpr->getType())) {
-		//		// attention with this, bools cast not handled in AST in C
-		//		retExpr = core::types::castScalar(retTy, retExpr);
-		//	}
-
-		//	if(retExpr->getType()->getNodeType() == core::NT_RefType) {
-		//		// Obviously vectors are an exception and must be handled like scalars
-		//		// no reference returned
-		//		if(clangTy->isVectorType()) { // this applies also for OpenCL ExtVectorType. If this is moved, take care it still works also for them.
-		//			retExpr = core::types::smartCast(retTy, retExpr);
-		//		}
-
-		//		// vector to array
-		//		if(retTy->getNodeType() == core::NT_RefType) {
-		//			core::TypePtr expectedTy = core::analysis::getReferencedType(retTy);
-		//			core::TypePtr currentTy = core::analysis::getReferencedType(retExpr->getType());
-		//			if(expectedTy->getNodeType() == core::NT_ArrayType && currentTy->getNodeType() == core::NT_VectorType) {
-		//				retExpr = core::types::smartCast(retTy, retExpr);
-		//			}
-		//		}
-		//	}
-
-		//} else {
-		//	// no return expression
-		//	retExpr = gen.getUnitConstant();
-		//	retTy = gen.getUnit();
-		//}
-
-		//vector<core::StatementPtr> stmtList;
-		//retIr = builder.returnStmt(retExpr);
-		//stmtList.push_back(retIr);
-		//core::StatementPtr retStatement = builder.compoundStmt(stmtList);
-		//stmtutils::StmtWrapper body = stmtutils::aggregateStmts(builder, stmtList);
-		//return body;
 	}
-
-	struct ContinueStmtCollector : public core::IRVisitor<bool, core::Address> {
-		vector<core::ContinueStmtAddress> conts;
-
-		// do not visit types
-		ContinueStmtCollector() : IRVisitor<bool, core::Address>(false) {}
-
-		bool visitWhileStmt(const core::WhileStmtAddress& cur) {
-			return true;
-		}
-
-		bool visitForStmt(const core::ForStmtAddress& cur) {
-			return true;
-		}
-
-		bool visitLambdaExpr(const core::LambdaExprAddress& cur) {
-			return true;
-		}
-
-		bool visitContinueStmt(const core::ContinueStmtAddress& cur) {
-			conts.push_back(cur);
-			return true;
-		}
-	};
-
-	vector<core::ContinueStmtAddress> getContinues(const core::StatementPtr& mainBody) {
-		ContinueStmtCollector collector;
-		core::visitDepthFirstPrunable(core::NodeAddress(mainBody), collector);
-		return collector.conts;
-	}
-
+	
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//								FOR STATEMENT
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -565,9 +483,7 @@ namespace conversion {
 	}
 
 	/*
-	 * as a CaseStmt or DefaultStmt cannot be converted into any IR statements, we generate an error
-	 * in the case the visitor visits one of these nodes, the VisitSwitchStmt has to make sure the
-	 * visitor is not called on his subnodes
+	 * A switch case should have been converted as part of its enclosing switch statement
 	 */
 	stmtutils::StmtWrapper Converter::StmtConverter::VisitSwitchCase(clang::SwitchCase* caseStmt) {
 		frontend_assert(false) << "Visitor is visiting a 'case' stmt";

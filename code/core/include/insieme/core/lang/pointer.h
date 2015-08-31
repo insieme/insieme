@@ -139,29 +139,32 @@ namespace lang {
 		 * A derived operator providing access to an element in an array.
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(
-		    PtrArrayElement, "ref_array_elem",
-		    "lambda (ptr<array<'a,'s>,'c,'v> r, int<8> i) -> ptr<'a,'c,'v> { return ptr_narrow(r, dp_element(dp_root(type(array<'a,'s>)),i)); }")
+		    PtrArrayElement, "ptr_array_elem",
+		    "lambda (ptr<'a,'c,'v> r, int<8> i) -> ptr<'a,'c,'v> { return ptr_narrow(r, dp_element(dp_root(type('a)),i)); }")
 
 		/**
 		 * A derived reference navigation operator providing access to a member of a struct / union.
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(
-		    PtrMemberAccess, "ref_member_access",
-		    "lambda (ptr<'a,'c,'v> r, identifier name, type<'b> type) -> ptr<'b,'c,'v> { return ptr_narrow(r, dp_member(dp_root(type('a)),name,type)); }")
+		    PtrMemberAccess, "ptr_member_access",
+		    "lambda (ptr<array<'a,'s>,'c,'v> r, identifier name, type<'b> type) -> ptr<'b,'c,'v> { return ptr_narrow(r, dp_member(dp_root(type(array<'a,'s>)),name,type)); }")
 
 		/**
 		 * A derived reference navigation operator providing access to a components of a tuple.
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(
-		    PtrComponentAccess, "ref_component_access",
+		    PtrComponentAccess, "ptr_component_access",
 		    "lambda (ptr<'a,'c,'v> r, uint<8> pos, type<'b> type) -> ptr<'b,'c,'v> { return ptr_narrow(r, dp_component(dp_root(type('a)),pos,type)); }")
 
 		/**
 		 * A derived reference-navigation operation providing an array view on a scalar.
 		 */
-		LANG_EXT_DERIVED_WITH_NAME(PtrScalarToPtrArray, "ref_scalar_to_ref_array",
+		LANG_EXT_DERIVED_WITH_NAME(PtrScalarToPtrArray, "ptr_scalar_to_ptr_array",
 		                           "lambda (ptr<'a,'c,'v> a) -> ptr<array<'a,1>,'c,'v> { return ptr_expand(a, dp_element(dp_root(type(array<'a,1>)),0u)); }")
 
+
+		// TODO FE NG ask Herbert about operation
+		LANG_EXT_LITERAL(PtrSubscript, "ptr_subscript", "(ptr<'a,'c,'v>, int<8>) -> ref<'a,'c,'v>")
 
 		// -- null --
 
@@ -262,6 +265,8 @@ namespace lang {
 	ExpressionPtr buildPtrFromArray(const ExpressionPtr& arrExpr);
 	ExpressionPtr buildPtrToRef(const ExpressionPtr& ptrExpr);
 	ExpressionPtr buildPtrCast(const ExpressionPtr& ptrExpr, const TypePtr& targetTy);
+
+	ExpressionPtr buildPtrSubscript(const ExpressionPtr& ptrExpr, const ExpressionPtr& subscriptExpr);
 
 } // end namespace lang
 } // end namespace core

@@ -1,5 +1,5 @@
 
-int main () {
+int main() {
 	
 	//===-------------------------------------------------------------------------------------------------------------------------------- UNARY OPERATORS ---===
 
@@ -113,11 +113,15 @@ int main () {
 	1 && 0;
 	
 	// COMPARISON /////////////////////////////////////////////////////////
+
 	#pragma test expect_ir("int_eq(1, 2)")
 	1 == 2;
 
 	#pragma test expect_ir("int_ne(1, 2)")
 	1 != 2;
+	
+	#pragma test expect_ir("real_ne(lit(\"1.0E+0\":real<8>), lit(\"2.0E+0\":real<8>))")
+	1.0 != 2.0;
 
 	#pragma test expect_ir("int_lt(1, 2)")
 	1 < 2;
@@ -132,23 +136,59 @@ int main () {
 	1 >= 2;
 
 	// POINTER & ARRAYS ///////////////////////////////////////////////////////
-	//pragma test expect_ir(";")
-	//{
-	//	int a[5];
-	//	a[1];
-	//}
 
-	//pragma test expect_ir(";")
-	//{
-	//	int a[1];
-	//	*a;
-	//}
+	// one dimension
 
-	//pragma test expect_ir(";")
-	//{
-	//	int* a;
-	//	&a;
-	//}
+	#pragma test expect_ir("{ decl ref<array<int<4>,5>,f,f> v0; ref_deref(ptr_subscript(ptr_from_array(v0), 1)); }")
+	{
+		int a[5];
+		a[1];
+	}
+
+	#pragma test expect_ir("{ decl ref<array<int<4>,5>,f,f> v0; ref_deref(ptr_subscript(ptr_from_array(v0), -1)); }")
+	{
+		int a[5];
+		a[-1];
+	}
+
+	#pragma test expect_ir("{ decl ref<array<int<4>,5>,f,f> v0; ref_deref(ptr_subscript(ptr_from_array(v0), 1)); }")
+	{
+		int a[5];
+		1[a];
+	}
+	
+	#pragma test expect_ir("{ decl ref<array<int<4>,1>,f,f> v0; ref_deref(ptr_to_ref(ptr_from_array(v0))); }")
+	{
+		int a[1];
+		*a;
+	}
+
+	#pragma test expect_ir("{ decl ref<ptr<int<4>,f,f>,f,f> v0; ptr_from_ref(v0); }")
+	{
+		int* a;
+		&a;
+	}
+	
+	#pragma test expect_ir("{ decl ref<array<int<4>,5>,f,f> v0; ptr_from_ref(v0); }")
+	{
+		int a[5];
+		&a;
+	}
+
+	// multidimensional
+	
+	#pragma test expect_ir("{ decl ref<array<array<int<4>,3>,2>,f,f> v0; ref_deref(ptr_subscript(ptr_from_array(ptr_subscript(ptr_from_array(v0), 1)), 2)); }")
+	{
+		int a[2][3];
+		a[1][2];
+	}
+	
+	// note: there are no rvalue arrays in C!
+	#pragma test expect_ir("{ decl ref<array<array<int<4>,3>,2>,f,f> v0; ptr_from_array(ptr_subscript(ptr_from_array(v0), 1)); }")
+	{
+		int a[2][3];
+		a[1];
+	}
 
 	// COMPOUND //////////////////////////////////////////////////////////////
 

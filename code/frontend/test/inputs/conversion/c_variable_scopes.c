@@ -1,5 +1,5 @@
 
-int main () {
+int main() {
 
 	#pragma test expect_ir("{ 1; decl ref<int<4>,f,f> v0; ref_deref(v0); }")
 	{

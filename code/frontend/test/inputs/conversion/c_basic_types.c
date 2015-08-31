@@ -89,9 +89,12 @@ int main() {
 	#pragma test expect_ir("decl ref<__insieme_enum<enum_t,Bla,Alb>,f,f> v0;")
 	enum_t enu;
 	
+	#pragma test expect_ir("REGEX","decl ref<__insieme_enum<_enum_\w+,XY,ZR>,f,f> v0 = .*")
+	enum { XY, ZR } bla; 
+
 	// STRUCT TYPES //////////////////////////////////////////////////////////////
 	
-	//pragma test expect_ir("REGEX;"
+	//pragma test expect_ir("REGEX ")
 	//struct { int i; } swi_anon;
 	
 	//typedef struct { int i; } swi_t;
