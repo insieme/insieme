@@ -170,22 +170,6 @@ namespace tu {
 
 		void addFunction(const core::LiteralPtr& symbol, const core::LambdaExprPtr& definition) {
 			assert_eq(*symbol->getType(), *definition->getType());
-			// check if function exists, if it exists we
-			// have to check if they are really the same.
-
-			//		if (functions.find(symbol) != functions.end() && !core::analysis::equalNormalize ( definition, functions[symbol] )){
-			//			std::cout << "alias on symbol " << symbol << " \n with type: " << symbol->getType() << std::endl;
-			//			core::annotations::LocationOpt firstLoc = core::annotations::getLocation(functions[symbol]);
-			//			core::annotations::LocationOpt aliasLoc = core::annotations::getLocation(definition);
-			//			if (firstLoc) std::cout << " -first @ " << *firstLoc << std::endl;
-			//			if (aliasLoc) std::cout << " -alias @ " << *aliasLoc << std::endl;
-			//		}
-
-			//			assert_true(functions.find(symbol) == functions.end() || core::analysis::equalNormalize ( definition, functions[symbol] ))
-			//					<< "Symbol: " << *symbol << " : " << *symbol->getType() << "\n"
-			//					<< "New:\n" << core::printer::PrettyPrinter(definition) << "\n"
-			//					<< "Old:\n" << core::printer::PrettyPrinter(functions[symbol]) << "\n";
-
 			functions.insert({mgr->get(symbol), mgr->get(definition)});
 		}
 
@@ -198,7 +182,7 @@ namespace tu {
 			functions[symbol] = definition;
 		}
 		/**
-		 * replaces previus definition and changes the symbold that points to it
+		 * replaces previous definition and changes the symbol that points to it
 		 */
 		void substituteFunction(const core::LiteralPtr& oldSymbol, const core::LiteralPtr& newSymbol, const core::LambdaExprPtr& definition) {
 			assert_eq(*newSymbol->getType(), *definition->getType());

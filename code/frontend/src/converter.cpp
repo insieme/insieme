@@ -48,6 +48,7 @@
 #include "insieme/frontend/stmt_converter.h"
 #include "insieme/frontend/type_converter.h"
 #include "insieme/frontend/state/function_manager.h"
+#include "insieme/frontend/state/record_manager.h"
 #include "insieme/frontend/state/variable_manager.h"
 #include "insieme/frontend/utils/clang_cast.h"
 #include "insieme/frontend/utils/debug.h"
@@ -113,11 +114,11 @@ namespace conversion {
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	Converter::Converter(core::NodeManager& mgr, const TranslationUnit& tu, const ConversionSetup& setup)
-		: translationUnit(tu), convSetup(setup), pragmaMap(translationUnit.pragmas_begin(), translationUnit.pragmas_end()),
-		  mgr(mgr), builder(mgr), feIR(mgr, getCompiler().isCXX()), irTranslationUnit(mgr) {
-		
+		: translationUnit(tu), convSetup(setup), pragmaMap(translationUnit.pragmas_begin(), translationUnit.pragmas_end()), mgr(mgr), builder(mgr),
+		  feIR(mgr, getCompiler().isCXX()), irTranslationUnit(mgr) {
+
 		if(getenv("INSIEME_DUMP_PRAGMALIST")) {
-			for(auto p: translationUnit.getPragmaList()) {
+			for(auto p : translationUnit.getPragmaList()) {
 				if(p->isStatement()) {
 					std::cout << "Pragma on statement:\n";
 					p->getStatement()->dump();
@@ -132,16 +133,17 @@ namespace conversion {
 				}
 			}
 		}
-		
+
 		varManPtr = std::make_shared<state::VariableManager>(*this);
 		funManPtr = std::make_shared<state::FunctionManager>(*this);
+		recordManPtr = std::make_shared<state::RecordManager>(*this);
+
 		declConvPtr = std::make_shared<DeclConverter>(*this);
-		if (translationUnit.isCxx()) {
+		if(translationUnit.isCxx()) {
 			typeConvPtr = std::make_shared<CXXTypeConverter>(*this);
 			exprConvPtr = std::make_shared<CXXExprConverter>(*this);
 			stmtConvPtr = std::make_shared<CXXStmtConverter>(*this);
-		}
-		else {
+		} else {
 			typeConvPtr = std::make_shared<CTypeConverter>(*this);
 			exprConvPtr = std::make_shared<CExprConverter>(*this);
 			stmtConvPtr = std::make_shared<CStmtConverter>(*this);

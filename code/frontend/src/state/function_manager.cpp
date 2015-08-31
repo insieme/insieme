@@ -36,7 +36,6 @@
 
 #include "insieme/frontend/state/function_manager.h"
 
-#include "insieme/frontend/decl_converter.h"
 #include "insieme/frontend/utils/macros.h"
 
 #include "insieme/utils/container_utils.h"

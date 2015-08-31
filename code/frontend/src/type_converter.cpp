@@ -36,35 +36,29 @@
 
 #include "insieme/frontend/type_converter.h"
 
-#include "insieme/frontend/utils/source_locations.h"
+#include "insieme/frontend/clang.h"
+#include "insieme/frontend/state/record_manager.h"
 #include "insieme/frontend/utils/debug.h"
-#include "insieme/frontend/utils/name_manager.h"
 #include "insieme/frontend/utils/header_tagger.h"
 #include "insieme/frontend/utils/macros.h"
+#include "insieme/frontend/utils/name_manager.h"
+#include "insieme/frontend/utils/source_locations.h"
 
 #include "insieme/utils/numeric_cast.h"
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/logging.h"
 
-#include "insieme/core/ir_types.h"
-#include "insieme/core/ir_cached_visitor.h"
 #include "insieme/core/analysis/type_utils.h"
-#include "insieme/core/transform/node_replacer.h"
-#include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/annotations/naming.h"
+#include "insieme/core/ir_cached_visitor.h"
+#include "insieme/core/ir_types.h"
+#include "insieme/core/lang/enum_extension.h"
+#include "insieme/core/lang/simd_vector.h"
+#include "insieme/core/transform/manipulation_utils.h"
+#include "insieme/core/transform/node_replacer.h"
+
 #include "insieme/annotations/c/include.h"
 #include "insieme/annotations/c/decl_only.h"
-
-#include "insieme/core/lang/simd_vector.h"
-#include "insieme/core/lang/enum_extension.h"
-
-#include <clang/AST/Decl.h>
-#include <clang/AST/Expr.h>
-
-#include <clang/AST/DeclCXX.h>
-#include <clang/AST/ExprCXX.h>
-#include <clang/AST/DeclTemplate.h>
-
 
 using namespace clang;
 using namespace insieme;
@@ -326,6 +320,29 @@ namespace conversion {
 			}
 			return enumExt.getEnumType(utils::getNameForEnum(enumDecl, converter.getSourceManager()), enumMembers);
 		}
+
+		core::TypePtr handleRecordType(Converter& converter, const RecordType* clangRecordTy, const TagType* clangTagTy) {
+			core::NodeManager& mgr = converter.getNodeManager();
+			core::IRBuilder builder(mgr);
+			auto& rMan = *converter.getRecordMan();
+			auto clangDecl = clangRecordTy->getDecl();
+			if(rMan.contains(clangDecl)) {
+				return rMan.lookup(clangDecl);
+			}
+			// first time we encounter this type
+			auto genTy = builder.genericType(utils::getNameForRecord(clangRecordTy->getDecl(), clangTagTy, converter.getSourceManager()));
+			rMan.insert(clangDecl, genTy);
+			// build actual struct type (after insert!)
+			core::NamedTypeList recordMembers;
+			for(auto mem : clangDecl->fields()) {
+				recordMembers.push_back(builder.namedType(mem->getNameAsString(), converter.convertType(mem->getType())));
+			}
+			core::TypePtr recordType =
+				clangRecordTy->isUnionType() ? builder.unionType(recordMembers).as<core::TypePtr>() : builder.structType(recordMembers).as<core::TypePtr>();
+			// add type to ir translation unit
+			converter.getIRTranslationUnit().addType(genTy, recordType);
+			return genTy;
+		}
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -336,7 +353,7 @@ namespace conversion {
 		LOG_TYPE_CONVERSION(tagType, retTy);
 
 		if(auto clangRecTy = llvm::dyn_cast<RecordType>(tagType)) {
-			return builder.genericType(utils::getNameForRecord(clangRecTy->getDecl(), tagType, converter.getSourceManager()));
+			return handleRecordType(converter, clangRecTy, tagType);
 		} else if(auto clangEnumTy = llvm::dyn_cast<EnumType>(tagType)) {
 			return handleEnumType(converter, clangEnumTy);
 		} else {
