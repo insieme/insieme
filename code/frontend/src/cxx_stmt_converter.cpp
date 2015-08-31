@@ -69,11 +69,11 @@ namespace conversion {
 
 		// iterate clang handler list and check if a handler wants to convert the stmt
 		stmtutils::StmtWrapper retStmt;
-		for (auto extension : converter.getConversionSetup().getExtensions()) {
+		for(auto extension : converter.getConversionSetup().getExtensions()) {
 			retStmt = extension->Visit(stmt, converter);
-			if (retStmt.size()) { break; }
+			if(retStmt.size()) { break; }
 		}
-		if (retStmt.size() == 0) {
+		if(retStmt.size() == 0) {
 			converter.trackSourceLocation(stmt);
 			retStmt = StmtVisitor<CXXStmtConverter, stmtutils::StmtWrapper>::Visit(stmt);
 			converter.untrackSourceLocation();
@@ -84,14 +84,14 @@ namespace conversion {
 
 		// Deal with transformation pragmas
 		core::NodeList list(retStmt.begin(), retStmt.end());
-		list = pragma::attachPragma(list, stmt, converter);
+		list = pragma::handlePragmas(list, stmt, converter);
 		retStmt.clear();
-		for (const auto& e : list) {
+		for(const auto& e : list) {
 			retStmt.push_back(e.as<core::StatementPtr>());
 		}
 
 		// call frontend extension post visitors
-		for (auto extension : converter.getConversionSetup().getExtensions()) {
+		for(auto extension : converter.getConversionSetup().getExtensions()) {
 			retStmt = extension->PostVisit(stmt, retStmt, converter);
 		}
 

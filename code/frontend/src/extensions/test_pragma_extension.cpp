@@ -42,6 +42,7 @@
 #include "insieme/annotations/transform.h"
 
 #include "insieme/core/annotations/source_location.h"
+#include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/ir_expressions.h"
 
 #include "insieme/frontend/extensions/frontend_extension.h"
@@ -60,12 +61,20 @@ namespace extensions {
 	using namespace insieme::annotations;
 
 	#define ARG_LABEL "arg"
-
+	
 	TestPragmaExtension::TestPragmaExtension() : expected(""), dummyArguments(std::vector<string>()) {
 		pragmaHandlers.push_back(std::make_shared<PragmaHandler>(
-		    PragmaHandler("test", "expected", string_literal[ARG_LABEL] >> tok::eod, [&](const pragma::MatchObject& object, core::NodeList nodes) {
+		    PragmaHandler("test", "expect_ir", tok::l_paren >> string_literal[ARG_LABEL] >> *(~comma >> string_literal[ARG_LABEL]) >> tok::r_paren >> tok::eod, 
+					[&](const pragma::MatchObject& object, core::NodeList nodes) {
 
-			    assert_eq(1, object.getStrings(ARG_LABEL).size()) << "Test expected pragma expects exactly one string argument!";
+			    assert_gt(object.getStrings(ARG_LABEL).size(), 0) << "Test expect_ir pragma expects at least one string argument!";
+
+				auto strings = object.getStrings(ARG_LABEL);
+				string expectedString;
+				for(const string& s: strings) {				
+					// strip surrounding quotation marks and add
+					expectedString += s.substr(1, s.size()-2) + "\n";
+				}
 
 			    NodePtr node;
 			    // if we are dealing with more than one node, construct a compound statement
@@ -80,10 +89,20 @@ namespace extensions {
 				    node = nodes[0];
 			    }
 
-			    ExpectedIRAnnotation expectedIRAnnotation(object.getString(ARG_LABEL));
+
+			    ExpectedIRAnnotation expectedIRAnnotation(expectedString);
 			    ExpectedIRAnnotationPtr annot = std::make_shared<ExpectedIRAnnotation>(expectedIRAnnotation);
 			    node->addAnnotation(annot);
+			    return nodes;
+			})));
 
+		pragmaHandlers.push_back(std::make_shared<PragmaHandler>(
+		    PragmaHandler("test", "expect_num_vars", tok::l_paren >> tok::numeric_constant[ARG_LABEL] >> tok::r_paren >> tok::eod, 
+					[&](const pragma::MatchObject& object, core::NodeList nodes) {
+				assert_eq(1, object.getStrings(ARG_LABEL).size()) << "Test expect_num_vars expects a number";
+				auto numStr = object.getStrings(ARG_LABEL).back();
+				auto num = insieme::utils::numeric_cast<unsigned>(numStr);
+				expectNumVarsHandler(object.getConverter(), num);
 			    return nodes;
 			})));
 
@@ -93,6 +112,10 @@ namespace extensions {
 			    dummyArguments.push_back(object.getString(ARG_LABEL));
 			    return nodes;
 			})));
+	}
+
+	TestPragmaExtension::TestPragmaExtension(const std::function<void(conversion::Converter&, int)>& expectNumVarsHandler) : TestPragmaExtension() {
+		this->expectNumVarsHandler = expectNumVarsHandler;
 	}
 
 } // extensions

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -53,7 +53,7 @@ namespace enc = insieme::core::encoder;
 core::LambdaExprPtr getDummyImpl(core::NodeManager& manager) {
 	core::IRBuilder builder(manager);
 	const auto& basic = manager.getLangBasic();
-	const auto& ext = manager.getLangExtension<Extensions>();
+	const auto& ext = manager.getLangExtension<RuntimeExtensions>();
 
 	core::VariablePtr param = builder.variable(builder.refType(ext.workItemType), 1);
 	core::StatementPtr body = builder.getNoOp();
@@ -74,7 +74,7 @@ core::LambdaExprPtr getDummyEffort(core::NodeManager& manager) {
 TEST(RuntimeExtensions, WorkItemVariant) {
 	core::NodeManager manager;
 	core::IRBuilder builder(manager);
-	const Extensions& ext = manager.getLangExtension<Extensions>();
+	const RuntimeExtensions& ext = manager.getLangExtension<RuntimeExtensions>();
 
 	// test type
 	EXPECT_EQ(ext.workItemVariantType, enc::getTypeFor<WorkItemVariant>(manager));
@@ -101,7 +101,7 @@ TEST(RuntimeExtensions, WorkItemVariant) {
 TEST(RuntimeExtensions, WorkItemImpl) {
 	core::NodeManager manager;
 	core::IRBuilder builder(manager);
-	const Extensions& ext = manager.getLangExtension<Extensions>();
+	const RuntimeExtensions& ext = manager.getLangExtension<RuntimeExtensions>();
 
 	// test type
 	EXPECT_EQ(ext.workItemImplType, enc::getTypeFor<WorkItemImpl>(manager));

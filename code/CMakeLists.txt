@@ -69,12 +69,10 @@ elseif(BUILD_CLANG)
 	add_subdirectory(utils)
 	add_subdirectory(core)
 	add_subdirectory(transform)
-	add_subdirectory(analysis)
 	add_subdirectory(annotations)
 	add_subdirectory(frontend)
 	add_subdirectory(backend)
 	add_subdirectory(driver)
-	add_subdirectory(machine_learning)
 
 	#Configure the integration test
 	set(CONFIG_INTEGRATION_TESTS TRUE)

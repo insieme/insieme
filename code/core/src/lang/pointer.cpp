@@ -43,6 +43,8 @@
 #include "insieme/core/types/match.h"
 
 #include "insieme/core/lang/boolean_marker.h"
+#include "insieme/core/lang/reference.h"
+#include "insieme/core/lang/array.h"
 
 namespace insieme {
 namespace core {
@@ -90,6 +92,60 @@ namespace lang {
 		                        toVector(elementType, (mConst ? ext.getTrue() : ext.getFalse()), (mVolatile ? ext.getTrue() : ext.getFalse())));
 	}
 
+
+	bool isPointer(const NodePtr& node) {
+		if(auto expr = node.isa<ExpressionPtr>()) { return isPointer(expr->getType()); }
+		return node && PointerType::isPointerType(node);
+	}
+
+	bool differOnlyInQualifiers(const TypePtr& typeA, const TypePtr& typeB) {
+		assert_true(core::lang::isPointer(typeA) || core::lang::isReference(typeA)) << "Can only check qualifiers on pointers or references, not on "
+			                                                                        << dumpColor(typeA);
+		assert_true(core::lang::isPointer(typeB) || core::lang::isReference(typeB)) << "Can only check qualifiers on pointers or references, not on "
+			                                                                        << dumpColor(typeB);
+		
+		auto gA = typeA.as<GenericTypePtr>();
+		auto gB = typeB.as<GenericTypePtr>();
+
+		return gA->getTypeParameter(0) == gB->getTypeParameter(0)
+			   && (gA->getTypeParameter(1) != gB->getTypeParameter(1) || gA->getTypeParameter(2) != gB->getTypeParameter(2));
+	}
+
+
+	ExpressionPtr buildPtrFromRef(const ExpressionPtr& refExpr) {
+		assert_pred1(core::lang::isReference, refExpr) << "Trying to build ptr from non-ref.";
+		IRBuilder builder(refExpr->getNodeManager());
+		auto& pExt = refExpr->getNodeManager().getLangExtension<PointerExtension>();
+		return builder.callExpr(pExt.getPtrFromRef(), refExpr);
+	}
+
+	ExpressionPtr buildPtrFromArray(const ExpressionPtr& arrExpr) {
+		assert_pred1(core::lang::isReference, arrExpr) << "Trying to buildPtrFromArray from non-ref.";
+		assert_pred1(core::lang::isArray, core::analysis::getReferencedType(arrExpr->getType())) << "Trying to buildPtrFromArray from non-array.";
+		IRBuilder builder(arrExpr->getNodeManager());
+		auto& pExt = arrExpr->getNodeManager().getLangExtension<PointerExtension>();
+		return builder.callExpr(pExt.getPtrFromArray(), arrExpr);
+	}
+
+	ExpressionPtr buildPtrToRef(const ExpressionPtr& ptrExpr) {
+		assert_pred1(core::lang::isPointer, ptrExpr) << "Trying to build a ref from non-ptr.";
+		IRBuilder builder(ptrExpr->getNodeManager());
+		auto& pExt = ptrExpr->getNodeManager().getLangExtension<PointerExtension>();
+		return builder.callExpr(pExt.getPtrToRef(), ptrExpr);
+	}
+	
+	ExpressionPtr buildPtrCast(const ExpressionPtr& ptrExpr, const TypePtr& targetTy) {
+		assert_pred1(core::lang::isPointer, ptrExpr) << "Trying to build a ptr cast from non-ptr.";
+		assert_pred1(core::lang::isPointer, targetTy) << "Trying to build a ptr cast to non-ptr type.";
+		assert_true(differOnlyInQualifiers(ptrExpr->getType(), targetTy)) << "Ptr cast only allowed to cast between qualifiers.";
+		// TODO THIS IS WHY WE NEED THE MODULAR BUILDER
+		IRBuilder builder(ptrExpr->getNodeManager());
+		auto& pExt = ptrExpr->getNodeManager().getLangExtension<PointerExtension>();
+		auto& bmExt = ptrExpr->getNodeManager().getLangExtension<BooleanMarkerExtension>();
+		PointerType pointerTy(targetTy);
+		return builder.callExpr(pExt.getPtrCast(), ptrExpr, bmExt.getMarkerTypeLiteral(pointerTy.isConst()),
+			                    bmExt.getMarkerTypeLiteral(pointerTy.isVolatile()));
+	}
 
 } // end namespace lang
 } // end namespace core

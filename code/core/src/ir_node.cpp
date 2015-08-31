@@ -227,11 +227,12 @@ IRDump dumpText(const insieme::core::NodePtr& node, std::ostream& out) {
 	return IRDump([node](std::ostream& out) -> std::ostream& { return out << insieme::core::dump::text::TextDump(node) << std::endl; }, out);
 }
 
-IRDump dumpColor(const insieme::core::NodePtr& node, std::ostream& out) {
-	return IRDump([node](std::ostream& out) -> std::ostream& {
+IRDump dumpColor(const insieme::core::NodePtr& node, std::ostream& out, bool noLet) {
+	return IRDump([node, noLet](std::ostream& out) -> std::ostream& {
 		insieme::core::printer::PrettyPrinter print(node);
 		print.setOption(insieme::core::printer::PrettyPrinter::USE_COLOR);
 		print.setOption(insieme::core::printer::PrettyPrinter::PRINT_DEREFS);
+		if(noLet) print.setOption(insieme::core::printer::PrettyPrinter::NO_LET_BINDINGS);
 		return out << print << std::endl;
 	}, out);
 }

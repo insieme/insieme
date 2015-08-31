@@ -34,49 +34,39 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include "insieme/frontend/utils/expr_to_bool.h"
 
-#include "insieme/core/ir_expressions.h"
-#include "insieme/core/lang/extension.h"
-
-#include "insieme/core/analysis/ir_utils.h"
-
-#include "insieme/core/encoder/encoder.h"
-#include "insieme/core/encoder/lists.h"
+#include "insieme/core/ir_builder.h"
+#include "insieme/core/lang/basic.h"
+#include "insieme/core/lang/pointer.h"
 
 namespace insieme {
-namespace backend {
-namespace runtime {
+namespace frontend {
+namespace utils {
+	using namespace core;
 
-	/**
-	 * This class offers a list of IR extensions required to model concepts within the
-	 * Insieme Runtime. The extensions include literals and types to model work items,
-	 * data items and additional runtime functionality.
-	 */
-	class RuntimeExtensions : public core::lang::Extension {
-	  public:
-		// Adds the definition of constant, public members to this definition using a macro file
+	ExpressionPtr exprToBool(const ExpressionPtr& expr) {
+		auto& mgr = expr->getNodeManager();
+		auto& basic = mgr.getLangBasic();
+		IRBuilder builder(mgr);
 
-		#define TYPE(name, type) const core::TypePtr name;
-		#define LITERAL(name, value, type) const core::LiteralPtr name;
-		#include "ir_extensions.def"
-		#undef TYPE
-		#undef LITERAL
+		auto t = expr->getType();
 
-	  private:
-		int dummy;
+		// no need to do anything if already bool
+		if(basic.isBool(t)) return expr;
 
-		friend class core::NodeManager;
+		// if integral, check against 0
+		if(basic.isInt(t)) return builder.ne(expr, builder.getZero(expr->getType()));
 
-		/**
-		 * Creates a new instance of this extension set. The given manager is used to construct
-		 * the contained literals and types.
-		 *
-		 * @param manager the manager to be used to construct the required types and literals
-		 */
-		RuntimeExtensions(core::NodeManager& manager);
-	};
+		// if pointer, check against equality with PtrNull
+		auto& pExt = builder.getExtension<core::lang::PointerExtension>();
+		if(core::lang::isPointer(t)) return builder.callExpr(basic.getBool(), pExt.getPtrEqual(), expr, pExt.getPtrNull());
 
-} // end namespace encoder
-} // end namespace core
+		assert_not_implemented();
+		return ExpressionPtr();
+	}
+
+} // end namespace utils
+} // end namespace frontend
 } // end namespace insieme
+

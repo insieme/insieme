@@ -99,7 +99,7 @@ namespace pragma {
 	}
 
 
-	core::NodeList attachPragma(const core::NodeList& nodes, const clang::Stmt* clangNode, conversion::Converter& fact) {
+	core::NodeList handlePragmas(const core::NodeList& nodes, const clang::Stmt* clangNode, conversion::Converter& fact) {
 		const PragmaStmtMap::StmtMap& pragmaStmtMap = fact.getPragmaMap().getStatementMap();
 
 		typedef PragmaStmtMap::StmtMap::const_iterator PragmaStmtIter;
@@ -117,7 +117,7 @@ namespace pragma {
 		return ret;
 	}
 
-	core::NodeList attachPragma(const core::NodeList& nodes, const clang::Decl* clangDecl, conversion::Converter& fact) {
+	core::NodeList handlePragmas(const core::NodeList& nodes, const clang::Decl* clangDecl, conversion::Converter& fact) {
 		const PragmaStmtMap::DeclMap& pragmaDeclMap = fact.getPragmaMap().getDeclarationMap();
 
 		typedef PragmaStmtMap::DeclMap::const_iterator PragmaDeclIter;

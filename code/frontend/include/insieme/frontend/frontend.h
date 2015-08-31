@@ -554,10 +554,10 @@ namespace frontend {
 		 * We get from the extensions possible options and parse the arguments which were unknown to the driver
 		 * Most useful to write tests involving extensions
 		 */
-		template <class T, class Before = extensions::FrontendCleanupExtension>
-		void registerFrontendExtension() {
+		template <class T, class Before = extensions::FrontendCleanupExtension, class... Args>
+		void registerFrontendExtension(Args&&... args) {
 			// we want to keep the newly registered frontend
-			auto extensionPtr = std::make_shared<T>();
+			auto extensionPtr = std::make_shared<T>(args...);
 			boost::program_options::options_description extOptions;
 
 			// insert the extension before "Before", unless it's not found

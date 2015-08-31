@@ -133,7 +133,7 @@ namespace utils {
 	                                               clang::SourceLocation end) {
 		// check file validity
 		FileID&& fileId = sm.getFileID(start);
-		assert_false(fileId.isInvalid()) << "File is not valid!";
+		if(fileId.isInvalid()) return core::annotations::Location::getShared();
 		const clang::FileEntry* fileEntry = sm.getFileEntryForID(fileId);
 		// if we cannot get the file entry, lets try to get the source filename directly
 		std::string filename;

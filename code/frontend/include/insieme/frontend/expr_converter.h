@@ -65,6 +65,8 @@ namespace conversion {
 		const core::FrontendIRBuilder& builder;
 		const core::lang::BasicGenerator& basic;
 
+		core::TypePtr convertExprType(const clang::Expr* expr);
+
 	  public:
 		ExprConverter(Converter& converter) : converter(converter), mgr(converter.mgr), builder(converter.builder), basic(converter.builder.getLangBasic()) {}
 		virtual ~ExprConverter() {}

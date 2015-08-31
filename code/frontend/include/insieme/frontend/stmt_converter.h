@@ -161,8 +161,7 @@ namespace conversion {
 		// Converter& converter;
 
 	  public:
-		CStmtConverter(Converter& converter) : StmtConverter(converter) { /*, converter(converter)*/
-		}
+		CStmtConverter(Converter& converter) : StmtConverter(converter) {}
 		virtual ~CStmtConverter() {}
 
 		CALL_BASE_STMT_VISIT(StmtConverter, DeclStmt)

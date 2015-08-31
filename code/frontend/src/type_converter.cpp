@@ -69,32 +69,6 @@
 using namespace clang;
 using namespace insieme;
 
-namespace {
-	//const clang::TagDecl* findDefinition(const clang::TagType* tagType) {
-	//	const clang::TagDecl* decl = tagType->getDecl();
-	//	clang::TagDecl* res = nullptr;
-
-	//	TagDecl::redecl_iterator i, e = decl->redecls_end();
-	//	for(i = decl->redecls_begin(); i != e; ++i) {
-	//		if(llvm::isa<clang::TypedefDecl>(*i)) {
-	//			std::cerr << "this is a typedef aliased type" << std::endl;
-	//			assert_fail();
-	//		}
-
-	//		if(i->isCompleteDefinition()) { res = i->getDefinition(); }
-	//		if(llvm::isa<clang::ClassTemplatePartialSpecializationDecl>(*i)) { continue; }
-
-	//		if(llvm::isa<clang::ClassTemplateSpecializationDecl>(*i)) {
-	//			if(i->isCompleteDefinitionRequired()) { res = *i; }
-	//		}
-	//	}
-
-	//	if(res) { return res; }
-
-	//	return NULL;
-	//}
-} // end anonymous namespace
-
 namespace insieme {
 namespace frontend {
 namespace conversion {
@@ -245,11 +219,8 @@ namespace conversion {
 	// array<int<4>,v0>
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::TypePtr Converter::TypeConverter::VisitVariableArrayType(const VariableArrayType* arrTy) {
-		core::TypePtr retTy;
-		LOG_TYPE_CONVERSION(arrTy, retTy);
-
-		frontend_assert(false) << "Not implemented, need to create map entry in decl statement conversion and use here\n";
-		return retTy;
+		frontend_assert(false) << "Variable arrays are handled in a separate FE extension, which does not appear to be loaded\n";
+		return core::TypePtr();
 	}
 
 	// --------------------  FUNCTIONS  ---------------------------------------
@@ -292,7 +263,6 @@ namespace conversion {
 	core::TypePtr Converter::TypeConverter::VisitFunctionNoProtoType(const FunctionNoProtoType* funcTy) {
 		core::TypePtr retTy;
 		LOG_TYPE_CONVERSION(funcTy, retTy);
-		funcTy->getReturnType()->dump();
 		core::TypePtr funRetTy = convert(funcTy->getReturnType());
 		frontend_assert(funRetTy) << "Function has no return type!\n";
 
@@ -344,6 +314,20 @@ namespace conversion {
 		return retTy;
 	}
 
+	namespace {
+		core::TypePtr handleEnumType(const Converter& converter, const EnumType* clangEnumTy) {
+			core::NodeManager& mgr = converter.getNodeManager();
+			core::IRBuilder builder(mgr);
+			auto enumDecl = clangEnumTy->getDecl();
+			auto& enumExt = mgr.getLangExtension<core::lang::EnumExtension>();
+			core::TypeList enumMembers;
+			for(auto m : enumDecl->enumerators()) {
+				enumMembers.push_back(builder.genericType(m->getNameAsString()));
+			}
+			return enumExt.getEnumType(utils::getNameForEnum(enumDecl, converter.getSourceManager()), enumMembers);
+		}
+	}
+
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//					TAG TYPE: STRUCT | UNION | CLASS | ENUM
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -351,7 +335,14 @@ namespace conversion {
 		core::TypePtr retTy;
 		LOG_TYPE_CONVERSION(tagType, retTy);
 
-		frontend_assert(false) << "Tag types not implemented!\n";
+		if(auto clangRecTy = llvm::dyn_cast<RecordType>(tagType)) {
+			return builder.genericType(utils::getNameForRecord(clangRecTy->getDecl(), tagType, converter.getSourceManager()));
+		} else if(auto clangEnumTy = llvm::dyn_cast<EnumType>(tagType)) {
+			return handleEnumType(converter, clangEnumTy);
+		} else {
+			frontend_assert(false) << "Unimplemented TagType";
+		}
+
 		return retTy;
 	}
 

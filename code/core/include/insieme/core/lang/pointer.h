@@ -83,6 +83,11 @@ namespace lang {
 		LANG_EXT_LITERAL(PtrFromRef, "ptr_from_ref", "(ref<'a,'v,'c>) -> ptr<'a,'v,'c>")
 
 		/**
+		 * A built-in operator to convert an array to a pointer
+		 */
+		LANG_EXT_LITERAL(PtrFromArray, "ptr_from_array", "(ref<array<'a,'s>,'v,'c>) -> ptr<'a,'v,'c>") // TODO should be derived
+
+		/**
 		 * A built-in derived operator allocating memory on the heap.
 		 */
 		//		LANG_EXT_DERIVED_WITH_NAME(PtrToRef, "ptr_to_ref", "lambda (struct _ir_pointer { ref<array<'a,'v,'c>> data; int<8> offset; } p) -> ref<'a,'v,'c>
@@ -247,6 +252,16 @@ namespace lang {
 			mVolatile = newState;
 		}
 	};
+	
+	bool isPointer(const NodePtr& node);
+	
+	// TODO move to core::analysis?
+	bool differOnlyInQualifiers(const TypePtr& typeA, const TypePtr& typeB);
+
+	ExpressionPtr buildPtrFromRef(const ExpressionPtr& refExpr);
+	ExpressionPtr buildPtrFromArray(const ExpressionPtr& arrExpr);
+	ExpressionPtr buildPtrToRef(const ExpressionPtr& ptrExpr);
+	ExpressionPtr buildPtrCast(const ExpressionPtr& ptrExpr, const TypePtr& targetTy);
 
 } // end namespace lang
 } // end namespace core

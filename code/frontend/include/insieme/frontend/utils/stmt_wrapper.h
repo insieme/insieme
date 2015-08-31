@@ -78,9 +78,8 @@ namespace stmtutils {
 		}
 	};
 
-	CompoundStmtPtr aggregateStmt(const IRBuilder& builder, const StatementPtr& stmt);
-	CompoundStmtPtr aggregateStmts(const IRBuilder& builder, const StatementList& stmtVect);
-	ExpressionPtr makeOperation(const IRBuilder& builder, const ExpressionPtr& lhs, const ExpressionPtr& rhs, const lang::BasicGenerator::Operator& op);
+	StatementPtr aggregateStmt(const IRBuilder& builder, const StatementPtr& stmt);
+	StatementPtr aggregateStmts(const IRBuilder& builder, const StatementList& stmtVect);
 
 } // end namespace stmtutils
 } // end namespace frontend

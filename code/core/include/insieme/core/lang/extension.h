@@ -92,12 +92,7 @@ namespace lang {
 	 * this extension in arbitrary IR code during parsing, as well as in other extensions.
 	 */
 	class Extension : private boost::noncopyable {
-
-		/**
-		 * The manager this extension is maintained by.
-		 */
-		NodeManager& manager;
-
+		
 		/**
 		 * The list of all symbols visible to the definitions of the local primitives,
 		 * including the local symbols.
@@ -121,6 +116,11 @@ namespace lang {
 		mutable type_alias_map local_type_aliases;
 
 	  protected:
+		  
+		/**
+		 * The manager this extension is maintained by.
+		 */
+		NodeManager& manager;
 
 		/**
 		 * Creates a new instance of this language extension being associated to the

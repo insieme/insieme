@@ -42,6 +42,7 @@
 #include <string>
 
 #include "insieme/frontend/extensions/frontend_extension.h"
+#include "insieme/frontend/converter.h"
 
 namespace insieme {
 namespace frontend {
@@ -61,8 +62,15 @@ namespace extensions {
 		// holds a number of dummy arguments used for pragma parsing and location testing
 		std::vector<std::string> dummyArguments;
 
+		// handler for "expect_num_vars" pragmas
+		std::function<void(conversion::Converter&, int)> expectNumVarsHandler = [](conversion::Converter&, int) {
+			assert_fail() << R"(Encountered a "expect_num_vars" pragma without handler)";
+		};
+
 	  public:
 		TestPragmaExtension();
+		TestPragmaExtension(const std::function<void(conversion::Converter&,int)>& expectNumVarsHandler);
+
 		std::string getExpected() const {
 			return expected;
 		}

@@ -36,47 +36,17 @@
 
 #pragma once
 
-#include "insieme/core/ir_expressions.h"
-#include "insieme/core/lang/extension.h"
-
-#include "insieme/core/analysis/ir_utils.h"
-
-#include "insieme/core/encoder/encoder.h"
-#include "insieme/core/encoder/lists.h"
+#include "insieme/core/forward_decls.h"
 
 namespace insieme {
-namespace backend {
-namespace runtime {
+namespace frontend {
+namespace utils {
 
-	/**
-	 * This class offers a list of IR extensions required to model concepts within the
-	 * Insieme Runtime. The extensions include literals and types to model work items,
-	 * data items and additional runtime functionality.
-	 */
-	class RuntimeExtensions : public core::lang::Extension {
-	  public:
-		// Adds the definition of constant, public members to this definition using a macro file
+	/// Convert an arbitrary expression to bool following the C semantics
+	///
+	core::ExpressionPtr exprToBool(const core::ExpressionPtr& expr);
 
-		#define TYPE(name, type) const core::TypePtr name;
-		#define LITERAL(name, value, type) const core::LiteralPtr name;
-		#include "ir_extensions.def"
-		#undef TYPE
-		#undef LITERAL
-
-	  private:
-		int dummy;
-
-		friend class core::NodeManager;
-
-		/**
-		 * Creates a new instance of this extension set. The given manager is used to construct
-		 * the contained literals and types.
-		 *
-		 * @param manager the manager to be used to construct the required types and literals
-		 */
-		RuntimeExtensions(core::NodeManager& manager);
-	};
-
-} // end namespace encoder
-} // end namespace core
+} // end namespace utils
+} // end namespace frontend
 } // end namespace insieme
+

@@ -180,6 +180,7 @@ namespace pragma {
 					stringList[m.first] = StringList(1, "");
 				}
 			}
+			converter = &fact;
 			initialized = true;
 		}
 	}

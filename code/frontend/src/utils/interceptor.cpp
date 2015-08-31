@@ -221,7 +221,6 @@ namespace utils {
 
 	insieme::core::ExpressionPtr Interceptor::intercept(const clang::FunctionDecl* decl, insieme::frontend::conversion::Converter& converter,
 	                                                    const bool explicitTemplateArgs, const std::string& name) const {
-		auto builder = converter.getIRBuilder();
 		std::stringstream ss;
 		switch(decl->getTemplatedKind()) {
 		case clang::FunctionDecl::TemplatedKind::TK_NonTemplate: VLOG(2) << "TK_NonTemplate"; break;

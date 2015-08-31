@@ -56,7 +56,6 @@ namespace annotations {
 		return expected;
 	}
 
-
 	void ExpectedIRAnnotation::attach(const core::NodePtr& node, string expected) {
 		node->addAnnotation(std::make_shared<ExpectedIRAnnotation>(expected));
 	}

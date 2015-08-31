@@ -45,14 +45,39 @@ namespace insieme {
 namespace frontend {
 namespace state {
 
-	core::VariablePtr VariableManager::lookup(const clang::VarDecl* varDecl) const {
-		frontend_assert(::containsKey(storage, varDecl)) << "Trying to look up variable not previously declared";
-		return storage.find(varDecl)->second;
+	VariableManager::VariableManager(Converter& converter) : converter(converter) { pushScope(false); }
+
+	core::ExpressionPtr VariableManager::lookup(const clang::VarDecl* varDecl) const {
+		// lookup globals in outermost scope
+		if(varDecl->hasGlobalStorage()) {
+			frontend_assert(::containsKey(storage.front().variables, varDecl)) << "Trying to look up global variable not previously declared";
+			return storage.front().variables.find(varDecl)->second;
+		}
+
+		// lookup local vars in all applicable scopes starting from innermost
+		for(auto it = storage.crbegin(); it != storage.crend(); ++it) {
+			auto loc = it->variables.find(varDecl);
+			if(loc!=it->variables.end()) return loc->second;
+			if(!it->nested) break;
+		}
+
+		frontend_assert(false) << "Trying to look up local variable not previously declared";
+		return core::ExpressionPtr();
 	}
 
-	void VariableManager::insert(const clang::VarDecl* varDecl, const core::VariablePtr& var) {
-		frontend_assert(!::containsKey(storage, varDecl)) << "Trying to insert variable already declared previously";
-		storage[varDecl] = var;
+	void VariableManager::insert(const clang::VarDecl* varDecl, const core::ExpressionPtr& var) {
+		if(varDecl->hasGlobalStorage()) frontend_assert(storage.size() == 1) << "Global variable not inserted at global scope";
+		frontend_assert(!::containsKey(storage.back().variables, varDecl)) << "Trying to insert variable already declared previously";
+		storage.back().variables[varDecl] = var;
+	}
+
+	size_t VariableManager::numVisibleDeclarations() const {
+		size_t sum = storage.front().variables.size(); // globals always visible
+		for(auto it = storage.crbegin(); it != storage.crend()-1; ++it) {
+			sum += it->variables.size();
+			if(!it->nested) break;
+		}
+		return sum;
 	}
 
 } // end namespace state

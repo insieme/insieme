@@ -37,7 +37,9 @@
 #include "insieme/frontend/decl_converter.h"
 
 #include "insieme/frontend/converter.h"
+#include "insieme/frontend/state/function_manager.h"
 #include "insieme/frontend/state/variable_manager.h"
+#include "insieme/frontend/utils/name_manager.h"
 
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_builder.h"
@@ -68,14 +70,15 @@ namespace conversion {
 		core::LiteralPtr funLit = builder.literal(funcDecl->getNameAsString(), funType);
 
 		if(funcDecl->hasBody()) {
-			// TODO NF open new var scope
+			converter.getVarMan()->pushScope(false);
 			core::VariableList params;
 			for(auto param : funcDecl->parameters()) {
 				auto irParam = convertVarDecl(param);
 				params.push_back(irParam.first);
+				converter.getVarMan()->insert(param, irParam.first);
 			}
 			auto body = converter.convertStmt(funcDecl->getBody());
-			// TODO NF close new var scope
+			converter.getVarMan()->popScope();
 			auto funExp = builder.lambdaExpr(funType, params, body);
 			return std::make_pair(funLit, funExp);
 		} else {
@@ -109,7 +112,7 @@ namespace conversion {
 
 		//// handle pragmas
 		//core::NodeList list({res});
-		//list = pragma::attachPragma(list, decl, *this);
+		//list = pragma::handlePragmas(list, decl, *this);
 		//assert_eq(1, list.size()) << "More than 1 node present";
 		//res = list.front().as<core::TypePtr>();
 
@@ -168,7 +171,11 @@ namespace conversion {
 		}
 			
 		converter.trackSourceLocation(var);
-		//converter.lookUpVariable(var);
+		auto converted = convertVarDecl(var);
+		auto globalLit = builder.literal(converted.first->getType(), utils::getNameForGlobal(var, converter.getSourceManager()));
+		globalLit = pragma::handlePragmas({globalLit}, var, converter).front().as<core::LiteralPtr>();
+		converter.getVarMan()->insert(var, globalLit);
+		// handle pragmas attached to decls
 		converter.untrackSourceLocation();
 	}
 	
@@ -194,7 +201,8 @@ namespace conversion {
 		std::tie(irLit, irFunc) = convertFunctionDecl(funcDecl);
 		converter.untrackSourceLocation();
 		if(inExternC) { annotations::c::markAsExternC(irLit); }
-		converter.getIRTranslationUnit().addFunction(irLit, irFunc);
+		converter.getFunMan()->insert(funcDecl, irLit);
+		if(irFunc) converter.getIRTranslationUnit().addFunction(irLit, irFunc);
 	}
 
 } // End conversion namespace

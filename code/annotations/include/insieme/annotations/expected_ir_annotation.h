@@ -47,7 +47,6 @@ namespace annotations {
 
 	using namespace insieme::core;
 
-
 	class ExpectedIRAnnotation : public NodeAnnotation {
 		std::string expected;
 

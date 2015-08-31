@@ -63,6 +63,15 @@ namespace lang {
 		LANG_EXT_TYPE_WITH_NAME(True, "true_marker", "t");
 
 		LANG_EXT_TYPE_WITH_NAME(False, "false_marker", "f");
+		
+		core::TypePtr getMarkerType(bool value) const {
+			return value ? getTrue() : getFalse();
+		}
+
+		core::ExpressionPtr getMarkerTypeLiteral(bool value) const {
+			IRBuilder builder(manager);
+			return value ? builder.getTypeLiteral(getTrue()) : builder.getTypeLiteral(getFalse());
+		}
 	};
 
 	static inline bool isTrueMarker(const NodePtr& node) {

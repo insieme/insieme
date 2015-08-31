@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -37,6 +37,8 @@
 #pragma once
 
 #include <limits>
+
+#include "insieme/core/lang/parallel.h"
 
 namespace insieme {
 namespace backend {
@@ -131,7 +133,7 @@ namespace rbe = backend::runtime;
 template <>
 struct type_factory<rbe::WorkItemRange> {
 	core::TypePtr operator()(core::NodeManager& manager) const {
-		return manager.getLangBasic().getJobRange();
+		return manager.getLangExtension<core::lang::ParallelExtension>().getJobRange();
 	}
 };
 
@@ -139,10 +141,11 @@ template <>
 struct value_to_ir_converter<rbe::WorkItemRange> {
 	core::ExpressionPtr operator()(core::NodeManager& manager, const rbe::WorkItemRange& value) const {
 		IRBuilder builder(manager);
-		const core::lang::BasicGenerator& basic = manager.getLangBasic();
+		auto& parallelExtension = manager.getLangExtension<core::lang::ParallelExtension>();
 
 		// create a call to the range constructor using the given values
-		return builder.callExpr(basic.getJobRange(), basic.getCreateBoundRangeMod(), toVector(value.min, value.max, value.mod));
+		return builder.callExpr(parallelExtension.getJobRange(), parallelExtension.getCreateBoundRangeMod(),
+		                        toVector(value.min, value.max, value.mod));
 	}
 };
 
@@ -150,7 +153,7 @@ template <>
 struct ir_to_value_converter<rbe::WorkItemRange> {
 	rbe::WorkItemRange operator()(const core::ExpressionPtr& expr) const {
 		core::NodeManager& manager = expr->getNodeManager();
-		const lang::BasicGenerator& basic = manager.getLangBasic();
+		auto& parallelExtension = manager.getLangExtension<core::lang::ParallelExtension>();
 
 		// check for call
 		if(expr->getNodeType() != core::NT_CallExpr) { throw InvalidExpression(expr); }
@@ -163,12 +166,12 @@ struct ir_to_value_converter<rbe::WorkItemRange> {
 		;
 		core::ExpressionPtr max = toIR<uint64_t>(manager, std::numeric_limits<uint32_t>::max()); // target filed is 32 bit only ...
 		core::ExpressionPtr mod = toIR<uint64_t>(manager, 1);
-		if(basic.isCreateMinRange(fun)) {
+		if(parallelExtension.isCreateMinRange(fun)) {
 			min = args[0];
-		} else if(basic.isCreateBoundRange(fun)) {
+		} else if(parallelExtension.isCreateBoundRange(fun)) {
 			min = args[0];
 			max = args[1];
-		} else if(basic.isCreateBoundRangeMod(fun)) {
+		} else if(parallelExtension.isCreateBoundRangeMod(fun)) {
 			min = args[0];
 			max = args[1];
 			mod = args[2];
@@ -189,16 +192,16 @@ struct is_encoding_of<rbe::WorkItemRange> {
 
 		// check call target and arguments
 		const core::CallExprPtr& call = static_pointer_cast<const core::CallExpr>(expr);
-		const core::lang::BasicGenerator& basic = expr->getNodeManager().getLangBasic();
+		auto& parallelExtension = expr->getNodeManager().getLangExtension<core::lang::ParallelExtension>();
 
 		const core::ExpressionPtr& fun = call->getFunctionExpr();
 
 		std::size_t numArgs = 0;
-		if(basic.isCreateMinRange(fun)) {
+		if(parallelExtension.isCreateMinRange(fun)) {
 			numArgs = 1;
-		} else if(basic.isCreateBoundRange(fun)) {
+		} else if(parallelExtension.isCreateBoundRange(fun)) {
 			numArgs = 2;
-		} else if(basic.isCreateBoundRangeMod(fun)) {
+		} else if(parallelExtension.isCreateBoundRangeMod(fun)) {
 			numArgs = 3;
 		} else {
 			return false;
@@ -215,7 +218,7 @@ struct is_encoding_of<rbe::WorkItemRange> {
 template <>
 struct type_factory<rbe::WorkItemVariant> {
 	core::TypePtr operator()(core::NodeManager& manager) const {
-		return manager.getLangExtension<rbe::Extensions>().workItemVariantType;
+		return manager.getLangExtension<rbe::RuntimeExtensions>().workItemVariantType;
 	}
 };
 
@@ -223,7 +226,7 @@ template <>
 struct value_to_ir_converter<rbe::WorkItemVariant> {
 	core::ExpressionPtr operator()(core::NodeManager& manager, const rbe::WorkItemVariant& value) const {
 		IRBuilder builder(manager);
-		const rbe::Extensions& ext = manager.getLangExtension<rbe::Extensions>();
+		const rbe::RuntimeExtensions& ext = manager.getLangExtension<rbe::RuntimeExtensions>();
 
 		// ... and call the variant constructor
 		return builder.callExpr(ext.workItemVariantType, ext.workItemVariantCtr, value.getImplementation());
@@ -233,7 +236,7 @@ struct value_to_ir_converter<rbe::WorkItemVariant> {
 template <>
 struct ir_to_value_converter<rbe::WorkItemVariant> {
 	rbe::WorkItemVariant operator()(const core::ExpressionPtr& expr) const {
-		const rbe::Extensions& ext = expr->getNodeManager().getLangExtension<rbe::Extensions>();
+		const rbe::RuntimeExtensions& ext = expr->getNodeManager().getLangExtension<rbe::RuntimeExtensions>();
 
 		// check constructor format
 		if(!core::analysis::isCallOf(expr, ext.workItemVariantCtr)) { throw InvalidExpression(expr); }
@@ -250,7 +253,7 @@ struct is_encoding_of<rbe::WorkItemVariant> {
 
 		// check call target and arguments
 		const core::CallExprPtr& call = static_pointer_cast<const core::CallExpr>(expr);
-		const rbe::Extensions& ext = expr->getNodeManager().getLangExtension<rbe::Extensions>();
+		const rbe::RuntimeExtensions& ext = expr->getNodeManager().getLangExtension<rbe::RuntimeExtensions>();
 
 		bool res = true;
 		res = res && call->getArguments().size() == static_cast<std::size_t>(1);
@@ -275,7 +278,7 @@ struct is_encoding_of<rbe::WorkItemVariant> {
 template <>
 struct type_factory<rbe::WorkItemImpl> {
 	core::TypePtr operator()(core::NodeManager& manager) const {
-		return manager.getLangExtension<rbe::Extensions>().workItemImplType;
+		return manager.getLangExtension<rbe::RuntimeExtensions>().workItemImplType;
 	}
 };
 
@@ -286,7 +289,7 @@ template <>
 struct value_to_ir_converter<rbe::WorkItemImpl> {
 	core::ExpressionPtr operator()(core::NodeManager& manager, const rbe::WorkItemImpl& value) const {
 		IRBuilder builder(manager);
-		const rbe::Extensions& ext = manager.getLangExtension<rbe::Extensions>();
+		const rbe::RuntimeExtensions& ext = manager.getLangExtension<rbe::RuntimeExtensions>();
 		return builder.callExpr(ext.workItemImplType, ext.workItemImplCtr, toVector(toIR(manager, value.getVariants())));
 	}
 };
@@ -297,7 +300,7 @@ struct value_to_ir_converter<rbe::WorkItemImpl> {
 template <>
 struct ir_to_value_converter<rbe::WorkItemImpl> {
 	rbe::WorkItemImpl operator()(const core::ExpressionPtr& expr) const {
-		const rbe::Extensions& ext = expr->getNodeManager().getLangExtension<rbe::Extensions>();
+		const rbe::RuntimeExtensions& ext = expr->getNodeManager().getLangExtension<rbe::RuntimeExtensions>();
 
 		// check constructor format
 		if(!core::analysis::isCallOf(expr, ext.workItemImplCtr)) { throw InvalidExpression(expr); }
@@ -317,7 +320,7 @@ struct is_encoding_of<rbe::WorkItemImpl> {
 
 		// check call target and arguments
 		const core::CallExprPtr& call = static_pointer_cast<const core::CallExpr>(expr);
-		const rbe::Extensions& ext = expr->getNodeManager().getLangExtension<rbe::Extensions>();
+		const rbe::RuntimeExtensions& ext = expr->getNodeManager().getLangExtension<rbe::RuntimeExtensions>();
 
 		bool res = true;
 		res = res && call->getArguments().size() == static_cast<std::size_t>(1);

@@ -36,6 +36,8 @@
 
 #include "insieme/core/lang/array.h"
 
+#include "insieme/core/ir_builder.h"
+
 #include "insieme/core/types/match.h"
 
 namespace insieme {
@@ -101,16 +103,17 @@ namespace lang {
 
 
 	GenericTypePtr ArrayType::create(const TypePtr& elementType, const ExpressionPtr& size) {
-		assert_not_implemented();
-		return GenericTypePtr();
+		return static_cast<GenericTypePtr>(ArrayType(elementType, size));
 	}
 
 	ArrayType::operator GenericTypePtr() const {
 		NodeManager& nm = elementType.getNodeManager();
+		IRBuilder builder(nm);
 
 		NumericTypePtr num;
 		if(auto lit = size.isa<LiteralPtr>()) {
-			num = NumericType::get(nm, lit);
+			auto newIntLit = builder.literal(lit.getValue(), builder.getLangBasic().getIntInf());
+			num = NumericType::get(nm, newIntLit);
 		} else {
 			assert_true(size.isa<VariablePtr>());
 			num = NumericType::get(nm, size.as<VariablePtr>());

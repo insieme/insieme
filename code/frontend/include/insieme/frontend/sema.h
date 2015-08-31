@@ -107,11 +107,6 @@ class InsiemeSema : public clang::Sema {
 	void ActOnFrontendExtensionPragma(pragma::PragmaPtr p) {
 		addPragma(p);
 	}
-
-	/**
-	 * Write into the logger information about the pragmas and their association to AST nodes.
-	 */
-	void dump();
 };
 
 } // End frontend namespace

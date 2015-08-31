@@ -68,7 +68,7 @@ namespace runtime {
 
 
 		const TypeInfo* handleType(const Converter& converter, const core::TypePtr& type) {
-			const Extensions& extensions = converter.getNodeManager().getLangExtension<Extensions>();
+			const RuntimeExtensions& extensions = converter.getNodeManager().getLangExtension<RuntimeExtensions>();
 
 			if(*extensions.contextType == *type) {
 				// use runtime definition of the context
