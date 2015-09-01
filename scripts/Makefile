@@ -24,7 +24,6 @@ BOOST 	:= ${PREFIX}/boost-$(shell ${AWK_CMD} boost_install.sh | cut -d= -f2 )
 CMAKE 	:= ${PREFIX}/cmake-$(shell ${AWK_CMD} cmake_install.sh | cut -d= -f2 )
 LUAJIT 	:= ${PREFIX}/luajit-$(shell ${AWK_CMD} luajit_install.sh | cut -d= -f2 )
 CUDD 	:= ${PREFIX}/cudd-$(shell ${AWK_CMD} cudd_install.sh | cut -d= -f2 )
-SHARK 	:= ${PREFIX}/shark-$(shell ${AWK_CMD} shark_install.sh | cut -d= -f2 )
 KOMPEX 	:= ${PREFIX}/kompex-$(shell ${AWK_CMD} kompex_install.sh | cut -d= -f2 )
 XERCES 	:= ${PREFIX}/xerces-$(shell ${AWK_CMD} xerces_install.sh | cut -d= -f2 )
 BISON 	:= ${PREFIX}/bison-$(shell ${AWK_CMD} bison_install.sh | cut -d= -f2 )
@@ -135,12 +134,6 @@ ${CUDD}: cudd_install.sh ${GCC}
 	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh cudd_install.sh
 	@echo "@@@@ Done! @@@@"
 
-## SHARK
-${SHARK}: shark_install.sh ${GCC} ${BOOST} ${CMAKE}
-	@echo "#### INSTALL SHARK ${SHARK} ####"
-	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh shark_install.sh
-	@echo "@@@@ Done! @@@@"
-
 ## KOMPEX
 ${KOMPEX}: kompex_install.sh ${GCC}
 	@echo "#### INSTALL KOMPEX ${KOMPEX} ####"
@@ -191,6 +184,6 @@ ${FLEX}: flex_install.sh ${GCC}
 
 
 INSIEME: ${GCC} ${ISL} ${CLOOG} ${BARVINOK} ${LLVM} ${BOOST} \
-		 ${CMAKE} ${LUAJIT} ${CUDD} ${SHARK} ${KOMPEX} \
+		 ${CMAKE} ${LUAJIT} ${CUDD} ${KOMPEX} \
 		 ${RUBY} ${PAPI} ${CCACHE} ${XERCES} \
 		 ${BISON} ${FLEX} ${HWLOC}
