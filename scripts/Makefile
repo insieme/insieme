@@ -25,7 +25,6 @@ CMAKE 	:= ${PREFIX}/cmake-$(shell ${AWK_CMD} cmake_install.sh | cut -d= -f2 )
 LUAJIT 	:= ${PREFIX}/luajit-$(shell ${AWK_CMD} luajit_install.sh | cut -d= -f2 )
 CUDD 	:= ${PREFIX}/cudd-$(shell ${AWK_CMD} cudd_install.sh | cut -d= -f2 )
 KOMPEX 	:= ${PREFIX}/kompex-$(shell ${AWK_CMD} kompex_install.sh | cut -d= -f2 )
-XERCES 	:= ${PREFIX}/xerces-$(shell ${AWK_CMD} xerces_install.sh | cut -d= -f2 )
 BISON 	:= ${PREFIX}/bison-$(shell ${AWK_CMD} bison_install.sh | cut -d= -f2 )
 FLEX 	:= ${PREFIX}/flex-$(shell ${AWK_CMD} flex_install.sh | cut -d= -f2 )
 RUBY 	:= ${PREFIX}/ruby-$(shell ${AWK_CMD} ruby_install.sh | cut -d= -f2 )
@@ -164,12 +163,6 @@ ${HWLOC}: hwloc_install.sh ${GCC}
 	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh hwloc_install.sh
 	@echo "@@@@ Done! @@@@"
 
-## XERCES
-${XERCES}: xerces_install.sh ${GCC}
-	@echo "#### INSTALL XERCES ${XERCES} ####"
-	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh xerces_install.sh
-	@echo "@@@@ Done! @@@@"
-
 ## BISON
 ${BISON}: bison_install.sh ${GCC}
 	@echo "#### INSTALL BISON ${BISON} ####"
@@ -185,5 +178,5 @@ ${FLEX}: flex_install.sh ${GCC}
 
 INSIEME: ${GCC} ${ISL} ${CLOOG} ${BARVINOK} ${LLVM} ${BOOST} \
 		 ${CMAKE} ${LUAJIT} ${CUDD} ${KOMPEX} \
-		 ${RUBY} ${PAPI} ${CCACHE} ${XERCES} \
+		 ${RUBY} ${PAPI} ${CCACHE} \
 		 ${BISON} ${FLEX} ${HWLOC}
