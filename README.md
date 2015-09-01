@@ -29,7 +29,6 @@ Name 		| Version | Purpose |
 [Barvinok](http://garage.kotnet.org/~skimo/barvinok/)               | = 0.35   | Polyhedral model cardinality |
 [CUDD](http://vlsi.colorado.edu/~fabio/CUDD/)	  	            | >= 2.4.2 | Manipulation of decision diagrams |
 [LuaJIT](http://luajit.org/)                                  	    | >= 2.0.0 | Scripting |
-[Kompex](http://sqlitewrapper.kompex-online.com/)             	    | >= 1.7.9 | DBMS |
 [Ruby](http://www.ruby-lang.org/en/)                                | >= 2.0   | Scripting |
 [Bison](https://www.gnu.org/software/bison/)                                | >= 3.0   | Inspire language parser |
 [Flex](http://flex.sourceforge.net/)                                | >= 2.5   | Inspire language scanner |

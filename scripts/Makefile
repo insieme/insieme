@@ -24,7 +24,6 @@ BOOST 	:= ${PREFIX}/boost-$(shell ${AWK_CMD} boost_install.sh | cut -d= -f2 )
 CMAKE 	:= ${PREFIX}/cmake-$(shell ${AWK_CMD} cmake_install.sh | cut -d= -f2 )
 LUAJIT 	:= ${PREFIX}/luajit-$(shell ${AWK_CMD} luajit_install.sh | cut -d= -f2 )
 CUDD 	:= ${PREFIX}/cudd-$(shell ${AWK_CMD} cudd_install.sh | cut -d= -f2 )
-KOMPEX 	:= ${PREFIX}/kompex-$(shell ${AWK_CMD} kompex_install.sh | cut -d= -f2 )
 BISON 	:= ${PREFIX}/bison-$(shell ${AWK_CMD} bison_install.sh | cut -d= -f2 )
 FLEX 	:= ${PREFIX}/flex-$(shell ${AWK_CMD} flex_install.sh | cut -d= -f2 )
 RUBY 	:= ${PREFIX}/ruby-$(shell ${AWK_CMD} ruby_install.sh | cut -d= -f2 )
@@ -133,12 +132,6 @@ ${CUDD}: cudd_install.sh ${GCC}
 	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh cudd_install.sh
 	@echo "@@@@ Done! @@@@"
 
-## KOMPEX
-${KOMPEX}: kompex_install.sh ${GCC}
-	@echo "#### INSTALL KOMPEX ${KOMPEX} ####"
-	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh kompex_install.sh
-	@echo "@@@@ Done! @@@@"
-
 ## RUBY
 ${RUBY}: ruby_install.sh ${GCC}
 	@echo "#### INSTALL RUBY ${RUBY} ####"
@@ -177,6 +170,6 @@ ${FLEX}: flex_install.sh ${GCC}
 
 
 INSIEME: ${GCC} ${ISL} ${CLOOG} ${BARVINOK} ${LLVM} ${BOOST} \
-		 ${CMAKE} ${LUAJIT} ${CUDD} ${KOMPEX} \
+		 ${CMAKE} ${LUAJIT} ${CUDD} \
 		 ${RUBY} ${PAPI} ${CCACHE} \
 		 ${BISON} ${FLEX} ${HWLOC}

@@ -10,7 +10,6 @@
 #	GMP_ROOT    				as env-var or cmake-var
 #	MPFR_ROOT    				as env-var or cmake-var
 #	CUDD_ROOT    				as env-var or cmake-var
-#	KOMPEX_ROOT    				as env-var or cmake-var
 #	ISL_ROOT    				as env-var or cmake-var
 #	PAPI_ROOT    				as env-var or cmake-var
 
