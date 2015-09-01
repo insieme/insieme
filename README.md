@@ -26,7 +26,6 @@ Name 		| Version | Purpose |
 [LLVM/Clang](http://llvm.org/) 	                                    | = 3.6.2 ([patch](https://github.com/insieme/insieme/blob/master/scripts/patches/insieme-clang-3.6.2.patch)) | C/C++ frontend | 
 [ISL](http://garage.kotnet.org/~skimo/isl/)			    | = 0.10   | Polyhedral model representation & analysis |
 [CLooG](http://www.cloog.org/)		                            | = 0.17   | Polyhedral model code generation |
-[Barvinok](http://garage.kotnet.org/~skimo/barvinok/)               | = 0.35   | Polyhedral model cardinality |
 [CUDD](http://vlsi.colorado.edu/~fabio/CUDD/)	  	            | >= 2.4.2 | Manipulation of decision diagrams |
 [LuaJIT](http://luajit.org/)                                  	    | >= 2.0.0 | Scripting |
 [Ruby](http://www.ruby-lang.org/en/)                                | >= 2.0   | Scripting |

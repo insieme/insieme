@@ -16,7 +16,6 @@ ISL 	:= ${PREFIX}/isl-$(shell ${AWK_CMD} isl_install.sh | cut -d= -f2 )
 PPL 	:= ${PREFIX}/ppl-$(shell ${AWK_CMD} ppl_install.sh | cut -d= -f2 )
 CLOOG 	:= ${PREFIX}/cloog-$(shell ${AWK_CMD} cloog_install.sh | cut -d= -f2 )
 CLOOG_GCC := ${PREFIX}/cloog-gcc-$(shell ${AWK_CMD} cloog_gcc_install.sh | cut -d= -f2 )
-BARVINOK := ${PREFIX}/barvinok-$(shell ${AWK_CMD} barvinok_install.sh | cut -d= -f2 )
 
 # INSIEME STUFF
 LLVM 	:= ${PREFIX}/llvm-$(shell ${AWK_CMD} llvm_install.sh | cut -d= -f2 )
@@ -96,12 +95,6 @@ ${CLOOG}: cloog_install.sh ${GMP} ${ISL} ${GCC}
 	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh cloog_install.sh
 	@echo "@@@@ Done! @@@@"
 
-## BARVINOK
-${BARVINOK}: barvinok_install.sh ${GMP} ${ISL} ${NTL} ${GCC} ${CLOOG}
-	@echo "#### INSTALL BARVINOK ${BARVINOK} ####"
-	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh barvinok_install.sh
-	@echo "@@@@ Done! @@@@"
-
 ## LLVM
 ${LLVM}: llvm_install.sh ${GCC}
 	@echo "#### INSTALL LLVM ${LLVM} ####"
@@ -169,7 +162,7 @@ ${FLEX}: flex_install.sh ${GCC}
 	@echo "@@@@ Done! @@@@"
 
 
-INSIEME: ${GCC} ${ISL} ${CLOOG} ${BARVINOK} ${LLVM} ${BOOST} \
+INSIEME: ${GCC} ${ISL} ${CLOOG} ${LLVM} ${BOOST} \
 		 ${CMAKE} ${LUAJIT} ${CUDD} \
 		 ${RUBY} ${PAPI} ${CCACHE} \
 		 ${BISON} ${FLEX} ${HWLOC}
