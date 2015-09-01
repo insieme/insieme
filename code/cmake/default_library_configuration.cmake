@@ -19,18 +19,6 @@ set(PAPI_VERSION 5.4.0)
 #HWLOC - used by: runtime
 set(HWLOC_VERSION 1.10.1)
 
-#ISL - used by: analysis
-set(ISL_VERSION 0.10)
-
-#CLOOG - used by: analysis
-set(CLOOG_VERSION 0.17.0)
-
-#MPFR - used by: analysis
-set(MPFR_VERSION 3.1.1)
-
-#GMP - used by: analysis
-set(GMP_VERSION 6.0.0)
-
 #CUDD - used by: core
 set(CUDD_VERSION 2.4.2)
 
@@ -52,8 +40,8 @@ set(FLEX_VERSION 2.5.35)
 #TODO: currently this happens everytime we include this cmake some where...
 #if the user provides a env{lib_version} for one of the libraries
 # we overwrite the default
-list(APPEND LIB_VERSIONS LLVM_VERSION PAPI_VERSION ISL_VERSION CLOOG_VERSION
-	MPFR_VERSION GMP_VERSION CUDD_VERSION LUAJIT_VERSION
+list(APPEND LIB_VERSIONS LLVM_VERSION PAPI_VERSION
+	CUDD_VERSION LUAJIT_VERSION
 	GTEST_VERSION BOOST_VERSION BISON_VERSION FLEX_VERSION HWLOC_VERSION)
 
 foreach(libversion ${LIB_VERSIONS})

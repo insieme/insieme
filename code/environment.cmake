@@ -7,10 +7,7 @@
 
 #	BOOST_ROOT    				as env-var or cmake-var
 #	GTEST_ROOT    				as env-var or cmake-var
-#	GMP_ROOT    				as env-var or cmake-var
-#	MPFR_ROOT    				as env-var or cmake-var
 #	CUDD_ROOT    				as env-var or cmake-var
-#	ISL_ROOT    				as env-var or cmake-var
 #	PAPI_ROOT    				as env-var or cmake-var
 
 ENABLE_LANGUAGE(C)
@@ -74,9 +71,6 @@ set ( insieme_common_include_dir			${insieme_code_dir}/common/include )
 
 set ( insieme_runtime_src_dir				${insieme_code_dir}/runtime/src )
 set ( insieme_runtime_include_dir 	        ${insieme_code_dir}/runtime/include )
-
-set ( insieme_machine_learning_src_dir  	${insieme_code_dir}/machine_learning/src )
-set ( insieme_machine_learning_include_dir  ${insieme_code_dir}/machine_learning/include )
 
 # only in ext repo
 set ( insieme_playground_include_dir       	${insieme_code_dir}/playground/include )

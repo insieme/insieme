@@ -8,15 +8,6 @@ MPFR 	= ${PREFIX}/mpfr-$(shell ${AWK_CMD} mpfr_install.sh | cut -d= -f2 )
 MPC 	= ${PREFIX}/mpc-$(shell ${AWK_CMD} mpc_install.sh | cut -d= -f2 )
 GCC 	= ${PREFIX}/gcc-$(shell ${AWK_CMD} gcc_install.sh | cut -d= -f2 )
 
-LIBTOOL	= ${PREFIX}/libtool-$(shell ${AWK_CMD} libtool_install.sh | cut -d= -f2 )
-
-# POLYHEDEAL STUFF
-NTL 	:= ${PREFIX}/ntl-$(shell ${AWK_CMD} ntl_install.sh | cut -d= -f2 )
-ISL 	:= ${PREFIX}/isl-$(shell ${AWK_CMD} isl_install.sh | cut -d= -f2 )
-PPL 	:= ${PREFIX}/ppl-$(shell ${AWK_CMD} ppl_install.sh | cut -d= -f2 )
-CLOOG 	:= ${PREFIX}/cloog-$(shell ${AWK_CMD} cloog_install.sh | cut -d= -f2 )
-CLOOG_GCC := ${PREFIX}/cloog-gcc-$(shell ${AWK_CMD} cloog_gcc_install.sh | cut -d= -f2 )
-
 # INSIEME STUFF
 LLVM 	:= ${PREFIX}/llvm-$(shell ${AWK_CMD} llvm_install.sh | cut -d= -f2 )
 BOOST 	:= ${PREFIX}/boost-$(shell ${AWK_CMD} boost_install.sh | cut -d= -f2 )
@@ -53,46 +44,10 @@ ${MPC}: mpc_install.sh ${GMP} ${MPFR}
 	PREFIX=${PREFIX} CXX=${CXX} CC=${CC} SLOTS=${SLOTS} sh mpc_install.sh
 	@echo "@@@@ Done! @@@@"
 
-## PPL
-${PPL}: ppl_install.sh ${GMP} 	
-	@echo "#### INSTALL PPL ${PPL} ####"
-	PREFIX=${PREFIX} CXX=${CXX} CC=${CC} SLOTS=${SLOTS} sh ppl_install.sh
-	@echo "@@@@ Done! @@@@"
-
-## CLOOG
-${CLOOG_GCC}: cloog_gcc_install.sh ${GMP}  
-	@echo "#### INSTALL CLOOG GCC ${CLOOG_GCC} ####"
-	PREFIX=${PREFIX} CXX=${CXX} CC=${CC} SLOTS=${SLOTS} sh cloog_gcc_install.sh
-	@echo "@@@@ Done! @@@@"
-
 ## GCC
-${GCC}: gcc_install.sh ${GMP} ${MPFR} ${MPC} ${PPL} ${CLOOG_GCC}
+${GCC}: gcc_install.sh ${GMP} ${MPFR} ${MPC}
 	@echo "#### INSTALL GCC ${GCC} ####"
 	PREFIX=${PREFIX} CXX=${CXX} CC=${CC} SLOTS=${SLOTS} sh gcc_install.sh
-	@echo "@@@@ Done! @@@@"
-
-## LIBTOOL
-${LIBTOOL}: libtool_install.sh ${GMP}
-	@echo "#### INSTALL LIBTOOL ${LIBTOOL} ####"
-	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${CC} SLOTS=${SLOTS} sh libtool_install.sh
-	@echo "@@@@ Done! @@@@"
-
-## NTL
-${NTL}: ntl_install.sh ${LIBTOOL} ${GCC}
-	@echo "#### INSTALL NTL ${NTL} ####"
-	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh ntl_install.sh
-	@echo "@@@@ Done! @@@@"
-
-## ISL
-${ISL}: isl_install.sh ${GMP} ${GCC}
-	@echo "#### INSTALL ISL ${ISL} ####"
-	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh isl_install.sh
-	@echo "@@@@ Done! @@@@"
-
-## CLOOG
-${CLOOG}: cloog_install.sh ${GMP} ${ISL} ${GCC}
-	@echo "#### INSTALL CLOOG ${CLOOG} ####"
-	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh cloog_install.sh
 	@echo "@@@@ Done! @@@@"
 
 ## LLVM
@@ -162,7 +117,7 @@ ${FLEX}: flex_install.sh ${GCC}
 	@echo "@@@@ Done! @@@@"
 
 
-INSIEME: ${GCC} ${ISL} ${CLOOG} ${LLVM} ${BOOST} \
+INSIEME: ${GCC} ${LLVM} ${BOOST} \
 		 ${CMAKE} ${LUAJIT} ${CUDD} \
 		 ${RUBY} ${PAPI} ${CCACHE} \
 		 ${BISON} ${FLEX} ${HWLOC}

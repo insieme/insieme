@@ -21,11 +21,9 @@ Name 		| Version | Purpose |
 --------|---------|------------|
 [G++](http://gcc.gnu.org/gcc-4.8/)	                            | >= 4.8   | Compiler |
 [CMake](http://www.cmake.org/)                                      | >= 3.2.x | Build System |
-[Google Test](https://code.google.com/p/googletest/)                | >= 1.7   | Unit testing - is installed/build by us - no need to install it|
+[Google Test](https://code.google.com/p/googletest/)                | >= 1.7   | Unit testing - is installed/built by us - no need to install it|
 [Boost](http://www.boost.org/users/history/version_1_50_0.html)     | = 1.50   | Utilities, regex, filesystem, program options|
 [LLVM/Clang](http://llvm.org/) 	                                    | = 3.6.2 ([patch](https://github.com/insieme/insieme/blob/master/scripts/patches/insieme-clang-3.6.2.patch)) | C/C++ frontend | 
-[ISL](http://garage.kotnet.org/~skimo/isl/)			    | = 0.10   | Polyhedral model representation & analysis |
-[CLooG](http://www.cloog.org/)		                            | = 0.17   | Polyhedral model code generation |
 [CUDD](http://vlsi.colorado.edu/~fabio/CUDD/)	  	            | >= 2.4.2 | Manipulation of decision diagrams |
 [LuaJIT](http://luajit.org/)                                  	    | >= 2.0.0 | Scripting |
 [Ruby](http://www.ruby-lang.org/en/)                                | >= 2.0   | Scripting |
