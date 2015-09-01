@@ -17,7 +17,7 @@ set(LLVM_VERSION 3.6.2)
 set(PAPI_VERSION 5.4.0)
 
 #HWLOC - used by: runtime
-set(HWLOC_VERSION 1.7)
+set(HWLOC_VERSION 1.10.1)
 
 #ISL - used by: analysis
 set(ISL_VERSION 0.10)
@@ -54,9 +54,6 @@ set(BISON_VERSION 3.0.0)
 
 #FLEX - used in core
 set(FLEX_VERSION 2.5.35)
-
-#HWLOC - used everywhere except for runtime...
-set(HWLOC_VERSION 1.10.1)
 
 #TODO: currently this happens everytime we include this cmake some where...
 #if the user provides a env{lib_version} for one of the libraries
