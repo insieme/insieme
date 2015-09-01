@@ -79,7 +79,7 @@ namespace lang {
 		// check instantiation
 		const types::Substitution& map = *sub;
 		auto size = map.applyTo(ref->getTypeParameter(1));
-		return size.isa<TypeVariablePtr>() || size.isa<NumericTypePtr>();
+		return size.isa<TypeVariablePtr>() || size.isa<NumericTypePtr>() || isInf(size);
 	}
 
 	bool ArrayType::isFixedSizedArrayType(const NodePtr& node) {

@@ -68,6 +68,7 @@ namespace core {
 
 			// just check whether the code is not exhibiting errors
 			EXPECT_TRUE(errors.empty()) <<
+					"Key:    " << cur.first << "\n"
 					"Code:   " << *node  << "\n" <<
 					"Errors: " << errors;
 		}

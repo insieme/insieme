@@ -123,7 +123,7 @@ namespace types {
 
 			// check node types
 			switch(nodeTypeA) {
-			// first handle those types equipped with int type parameters
+			// first handle those types equipped with type parameters
 			case NT_GenericType: {
 				// check name of generic type ... if not matching => wrong
 				auto genParamType = static_pointer_cast<const GenericType>(typeA);
@@ -226,7 +226,17 @@ namespace types {
 				}
 				break;
 			}
-			default: assert_fail() << "Missed a kind of type!";
+
+			case NT_NumericType: {
+				// check for equality
+				if (*typeA != *typeB) {
+					// if they are different => constraints unsatisfiable
+					constraints.makeUnsatisfiable();
+				}
+				break;
+			}
+
+			default: assert_fail() << "Missed a kind of type: " << nodeTypeA;
 			}
 		}
 

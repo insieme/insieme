@@ -142,4 +142,4 @@ namespace utils {
 // ------ derived definitions ------
 
 #define assert_false(_COND) assert_true(!(_COND))
-#define assert_not_implemented() assert_fail() << "Not implemented functionality in " __FILE__ ":" __xstr(__LINE__)
+#define assert_not_implemented() assert_fail() << "Not implemented functionality in " __FILE__ ":" __xstr(__LINE__) "\n"

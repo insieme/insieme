@@ -38,9 +38,6 @@
 // Types --------------------------------------------------------------------------------------------------------------
 TYPE(Unit, "unit")
 
-TYPE(Any, "any")
-TYPE(AnyRef, "ref<any>")
-
 TYPE(Char, "char")
 TYPE(WChar16, "wchar<16>")
 TYPE(WChar32, "wchar<32>")
@@ -52,7 +49,7 @@ GROUP(SignedInt, Int1, Int2, Int4, Int8, Int16, IntInf, IntGen)
 GROUP(Int, UnsignedInt, SignedInt)
 GROUP(WChar, WChar16, WChar32)
 
-GROUP(Primitive, Any, Bool, Char, WChar, Int, Real)
+GROUP(Primitive, Bool, Char, WChar, Int, Real)
 GROUP(IRBuiltin, Primitive, Unit)
 
 TYPE(IntGen, "int<'a>")

@@ -108,8 +108,17 @@ namespace parser3 {
 				for(const auto& cur : it->alias) {
 					// check whether pattern matches
 					if (auto sub = types::match(mgr, type, cur.first)) {
+						// compute substitution
+						auto next = (*sub).applyTo(cur.second);
+						assert_ne(type, next) << "Invalid pattern matching:\n"
+								"Target:     " << *type << "\n"
+								"Pattern:    " << *cur.first << "\n"
+								"Substitute: " << *cur.first << "\n"
+								"Match:      " << *sub << "\n"
+								"Next:       " << *next << "\n";
+
 						// apply pattern and start over again
-						return resolve((*sub).applyTo(cur.second));
+						return resolve(next);
 					}
 				}
 			}
@@ -236,7 +245,7 @@ namespace parser3 {
 			auto b = getOperand(right);
 			// left side is untouched because of reference subscript operators
 			if(op == "[") {
-				if(builder.getLangBasic().isSignedInt(b->getType())) { b = builder.castExpr(builder.getLangBasic().getUInt8(), b); }
+				if(builder.getLangBasic().isUnsignedInt(b->getType())) { b = builder.castExpr(builder.getLangBasic().getInt8(), b); }
 				if(analysis::isRefType(left->getType())) {
 					auto inType = analysis::getReferencedType(left->getType());
 					if(!lang::isArray(inType)) {

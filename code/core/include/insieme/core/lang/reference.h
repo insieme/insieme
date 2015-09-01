@@ -38,6 +38,8 @@
 
 #include "insieme/core/lang/extension.h"
 
+#include "insieme/core/lang/array.h"
+
 namespace insieme {
 namespace core {
 namespace lang {
@@ -109,6 +111,9 @@ namespace lang {
 
 		// import data-path extension for defined literals
 		IMPORT_MODULE(DatapathExtension);
+
+		// import array extension for defined literals
+		IMPORT_MODULE(ArrayExtension);
 
 
 		// ------------------ memory location ------------------------
@@ -243,7 +248,7 @@ namespace lang {
 		 * A derived reference-navigation operation providing an array view on a scalar.
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(RefScalarToRefArray, "ref_scalar_to_ref_array",
-		                           "lambda (ref<'a,'c,'v> a) -> ref<array<'a,1>,'c,'v> { return ref_expand(a, dp_element(dp_root(type(array<'a,1>)),0u)); }")
+		    "lambda (ref<'a,'c,'v> a) -> ref<array<'a>,'c,'v> { return ref_expand(a, dp_element(dp_root(type(array<'a>)),0u)); }")
 
 
 		// -- null --

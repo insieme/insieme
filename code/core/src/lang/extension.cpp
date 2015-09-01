@@ -61,20 +61,20 @@ namespace lang {
 
 	}
 
-	TypePtr Extension::getType(NodeManager& manager, const string& type, const symbol_map& definitions) {
+	TypePtr Extension::getType(NodeManager& manager, const string& type, const symbol_map& definitions, const type_alias_map& aliases) {
 		// build type
-		TypePtr res = parser3::parse_type(manager, type, false, definitions);
+		TypePtr res = parser3::parse_type(manager, type, false, definitions, aliases);
 		assert_true(res) << "Unable to parse type: " << type;
 		return res;
 	}
 
-	LiteralPtr Extension::getLiteral(NodeManager& manager, const string& type, const string& value, const symbol_map& definitions) {
-		return Literal::get(manager, getType(manager, type, definitions), value);
+	LiteralPtr Extension::getLiteral(NodeManager& manager, const string& type, const string& value, const symbol_map& definitions, const type_alias_map& aliases) {
+		return Literal::get(manager, getType(manager, type, definitions, aliases), value);
 	}
 
-	ExpressionPtr Extension::getExpression(NodeManager& manager, const string& spec, const symbol_map& definitions) {
+	ExpressionPtr Extension::getExpression(NodeManager& manager, const string& spec, const symbol_map& definitions, const type_alias_map& aliases) {
 		insieme::core::IRBuilder builder(manager);
-		return builder.normalize(builder.parseExpr(spec, definitions)).as<insieme::core::ExpressionPtr>();
+		return builder.normalize(parser3::parse_expr(manager, spec, false, definitions, aliases));
 	}
 
 } // end namespace lang
