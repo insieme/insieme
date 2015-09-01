@@ -16,15 +16,12 @@ cmake_minimum_required(VERSION 3.2)
 enable_testing()
 
 # -- if no option is set we build EVERYTHING:
-#		C/C++, IWIR Frontends
+#		C/C++
 #		all the core stuff
 #		the runtime
 
 # -- option to build only the Runtime part
 option(BUILD_RUNTIME_ONLY "Build only the Runtime of Insieme" OFF)
-
-# -- option to build IWIR FE + Insieme Core
-option(BUILD_IWIR "Builds the IWIR Frontend + Insieme Core" OFF)
 
 # -- option to build Insieme (C/C++) FE + core + transform/analysis + BE ... 
 option(BUILD_CLANG "Builds the Insieme Frontend + Insieme CORE + Insieme Backend" OFF)
@@ -35,23 +32,6 @@ if(BUILD_RUNTIME_ONLY)
 	add_subdirectory(common)
 	add_subdirectory(runtime)
 
-	#Configure the integration test
-	set(CONFIG_INTEGRATION_TESTS FALSE)
-
-elseif(BUILD_IWIR)
-
-	# Build compiler IWIR FE + core + backend 
-	include(environment.cmake)
-
-	#add_subdirectory(transform)	#CURRENTLY NOT USED FOR IWIR
-	#add_subdirectory(analysis)		#CURRENTLY NOT USED FOR IWIR
-	add_subdirectory(utils)
-	add_subdirectory(common) # needed by annotations...
-	add_subdirectory(annotations)
-	add_subdirectory(core)
-	add_subdirectory(xml)
-	add_subdirectory(iwir)
-	
 	#Configure the integration test
 	set(CONFIG_INTEGRATION_TESTS FALSE)
 
@@ -78,7 +58,7 @@ elseif(BUILD_CLANG)
 	set(CONFIG_INTEGRATION_TESTS TRUE)
 
 else()
-	# Build compiler (iwir and c/c++ FE) + core + backend  + runtime -- everything
+	# Build compiler (c/c++ FE) + core + backend  + runtime -- everything
 	get_filename_component( curdir ${CMAKE_CURRENT_LIST_FILE} PATH )
 	file(GLOB children RELATIVE ${curdir} ${curdir}/*)
 

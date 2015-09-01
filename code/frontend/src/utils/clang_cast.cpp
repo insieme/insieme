@@ -79,56 +79,32 @@ namespace utils {
 		const core::FrontendIRBuilder& builder = converter.getIRBuilder();
 		const core::lang::BasicGenerator& basic = builder.getLangBasic();
 		//core::NodeManager& mgr = converter.getNodeManager();
-
-		//if(VLOG_IS_ON(2)) {
-		//	VLOG(2) << "####### Expr: #######";
-		//	VLOG(2) << (expr);
-		//	VLOG(2) << "####### Expr Type: #######";
-		//	VLOG(2) << (exprTy);
-		//	VLOG(2) << "####### cast result Type: #######";
-		//	VLOG(2) << (targetTy);
-		//	VLOG(2) << "####### clang: #######" << std::endl;
-		//	castExpr->dump();
-		//}
-
-		//// it might be that the types are already fixed:
-		//// like LtoR in arrays, they will always be a ref<...>
-		//if(*exprTy == *targetTy) { return expr; }
-
-		//// handle implicit casts according to their kind
+		
 		switch(castExpr->getCastKind()) {
-		////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		////////////////////////////////////////////////////////////////////////////////////////////////////////////	
+		// A conversion which causes the extraction of an r-value from the operand gl-value.
+		// The result of an r-value conversion is always unqualified.
+		// IR: this is the same as ref_deref: ref<a'> -> a'
 		case clang::CK_LValueToRValue:
-			// A conversion which causes the extraction of an r-value from the operand gl-value.
-			// The result of an r-value conversion is always unqualified.
-			// IR: this is the same as ref_deref: ref<a'> -> a'
 			return builder.deref(expr);
-		////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+		////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		// Numerical value type conversions
+		// handled by IR type_cast
 		case clang::CK_IntegralCast:
-			// A cast between integral types (other than to boolean). Variously a bitcast, a truncation,
-			// a sign-extension, or a zero-extension. long l = 5; (unsigned) i
+		case clang::CK_IntegralToFloating:
+		case clang::CK_FloatingToIntegral:
+		case clang::CK_FloatingCast:
 			return builder.callExpr(basic.getTypeCast(), expr, builder.getTypeLiteral(targetTy)); 
 
 		//case clang::CK_IntegralToBoolean:
 		//// Integral to boolean. A check against zero. (bool) i
-		//case clang::CK_IntegralToFloating:
 		//// Integral to floating point. float f = i;
 		//case clang::CK_FloatingToIntegral:
 		//// Floating point to integral. Rounds towards zero, discarding any fractional component.
 		//// (int) f
 		//case clang::CK_FloatingToBoolean:
 		//// Floating point to boolean. (bool) f
-		//case clang::CK_FloatingCast:
-		//	// Casting between floating types of different size. (double) f (float) ld
-		//	{
-		//		assert(
-		//		    builder.getLangBasic().isPrimitive(expr->getType())
-		//		    || (core::analysis::isVolatileType(expr->getType()) && builder.getLangBasic().isPrimitive(core::analysis::getVolatileType(expr->getType())))
-		//		    || mgr.getLangExtension<core::lang::EnumExtension>().isEnumType(expr->getType()));
-		//		assert(builder.getLangBasic().isPrimitive(targetTy) || mgr.getLangExtension<core::lang::EnumExtension>().isEnumType(targetTy));
-		//		return core::types::smartCast(targetTy, expr);
-		//	}
 
 		////////////////////////////////////////////////////////////////////////////////////////////////////////////
 		//case clang::CK_NoOp:
@@ -568,11 +544,10 @@ namespace utils {
 		//	std::cout << " at location: " << frontend::utils::location(castExpr->getLocStart(), converter.getSourceManager()) << std::endl;
 		//	castExpr->dump();
 		//	assert_fail();
-		//default: assert_fail() << "not all options listed, is this clang 3.2? maybe should upgrade Clang support";
+		default: break; // fall through to not implemented assertion below
 		}
 
-		assert_fail() << "control reached an invalid point!";
-
+		frontend_assert(false) << "Clang cast type not implemented: " << castExpr->getCastKindName();
 		return expr;
 	}
 

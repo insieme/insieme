@@ -147,6 +147,16 @@ namespace lang {
 			                    bmExt.getMarkerTypeLiteral(pointerTy.isVolatile()));
 	}
 
+	ExpressionPtr buildPtrSubscript(const ExpressionPtr& ptrExpr, const ExpressionPtr& subscriptExpr) {
+		assert_pred1(core::lang::isPointer, ptrExpr) << "Trying to build a ptr subscript from non-ptr.";		
+		auto& basic = ptrExpr->getNodeManager().getLangBasic();
+		assert_pred1(basic.isInt, subscriptExpr->getType()) << "Trying to build a ptr subscript with non-integral subscript.";
+		// TODO THIS IS WHY WE NEED THE MODULAR BUILDER
+		IRBuilder builder(ptrExpr->getNodeManager());
+		auto& pExt = ptrExpr->getNodeManager().getLangExtension<PointerExtension>();
+		return builder.callExpr(pExt.getPtrSubscript(), ptrExpr, subscriptExpr);
+	}
+
 } // end namespace lang
 } // end namespace core
 } // end namespace insieme

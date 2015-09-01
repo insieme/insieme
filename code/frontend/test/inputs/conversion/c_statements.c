@@ -105,7 +105,7 @@ int main() {
 	#pragma test expect_ir("{", C_STYLE_ASSIGN, "decl ref<int<4>,f,f> v0; { c_ass(v0, 0); while(*v0 < 10) { *v0; int_post_inc(v0); } } }")
 	{
 		int i;
-		for( i = 0; i < 10; i++ ) {
+		for(i = 0; i < 10; i++) {
 			i;
 		}
 	}
@@ -135,29 +135,30 @@ int main() {
 	#pragma test expect_ir("{ decl ref<int<4>,f,f> v0 = var(0); { while(*v0 < 10) { *v0; int_post_inc(v0); } } }")
 	{
 		int i = 0;
-		for( ; i < 10; i++ ) {
+		for(; i < 10; i++) {
 			i;
 		}
 	}
 
-	#pragma test expect_ir("{ decl ref<int<4>,f,f> v0 = var(0); { while(true) { break; int_post_inc(v0); } } }")
+    #pragma test expect_ir("{ decl ref<int<4>,f,f> v0 = var(0); { while(true) { break; int_post_inc(v0); } } }")
 	{
 		int i = 0;
-		for( ; ; i++ ) {
+		for(;; i++) {
 			break;
 		}
 	}
 
-	#pragma test expect_ir("{ { while(true) { break; } } }")
+    #pragma test expect_ir("{ { while(true) { break; } } }")
 	{
-		for( ; ; ) {
+		for(;;) {
 			break;
 		}
 	}
 
 	#pragma test expect_ir("{ { decl ref<int<4>,f,f> v0 = var(0); while(*v0 < 0); } }")
 	{
-		for( int i = 0; i < 0; ) { }
+		for(int i = 0; i < 0;) {
+		}
 	}
 
 	return 0;

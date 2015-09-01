@@ -34,50 +34,33 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/frontend/state/variable_manager.h"
+#pragma once
 
-#include "insieme/frontend/utils/macros.h"
+#include <map>
 
-#include "insieme/utils/container_utils.h"
+#include "insieme/frontend/converter.h"
+
+#include "insieme/core/forward_decls.h"
 
 namespace insieme {
 namespace frontend {
 namespace state {
+	using namespace conversion;
 
-	VariableManager::VariableManager(Converter& converter) : converter(converter) { pushScope(false); }
+	/// Manages record (struct/union/class) identities from clang to its INSPIRE translation
+	class RecordManager {
+	private:
+		Converter& converter;
+		
+		std::map<const clang::RecordDecl*, core::GenericTypePtr> records;
 
-	core::ExpressionPtr VariableManager::lookup(const clang::VarDecl* varDecl) const {
-		// lookup globals in outermost scope
-		if(varDecl->hasGlobalStorage()) {
-			frontend_assert(::containsKey(storage.front().variables, varDecl)) << "Trying to look up global variable not previously declared";
-			return storage.front().variables.find(varDecl)->second;
-		}
+	public:
+		RecordManager(Converter& converter) : converter(converter) {}
 
-		// lookup local vars in all applicable scopes starting from innermost
-		for(auto it = storage.crbegin(); it != storage.crend(); ++it) {
-			auto loc = it->variables.find(varDecl);
-			if(loc!=it->variables.end()) return loc->second;
-			if(!it->nested) break;
-		}
-
-		frontend_assert(false) << "Trying to look up local variable not previously declared";
-		return core::ExpressionPtr();
-	}
-
-	void VariableManager::insert(const clang::VarDecl* varDecl, const core::ExpressionPtr& var) {
-		if(varDecl->hasGlobalStorage()) frontend_assert(storage.size() == 1) << "Global variable not inserted at global scope";
-		frontend_assert(!::containsKey(storage.back().variables, varDecl)) << "Trying to insert variable already declared previously";
-		storage.back().variables[varDecl] = var;
-	}
-
-	size_t VariableManager::numVisibleDeclarations() const {
-		size_t sum = storage.front().variables.size(); // globals always visible
-		for(auto it = storage.crbegin(); it != storage.crend()-1; ++it) {
-			sum += it->variables.size();
-			if(!it->nested) break;
-		}
-		return sum;
-	}
+		core::GenericTypePtr lookup(const clang::RecordDecl* recordDecl) const;
+		bool contains(const clang::RecordDecl* recordDecl) const;
+		void insert(const clang::RecordDecl* recordDecl, const core::GenericTypePtr& genType);
+	};
 
 } // end namespace state
 } // end namespace frontend

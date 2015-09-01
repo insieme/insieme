@@ -89,38 +89,6 @@ namespace conversion {
 		return std::make_pair(core::LiteralPtr(), core::LambdaExprPtr());
 	}
 	
-	//void DeclConverter::convertTypeDecl(const clang::TypeDecl* decl) {
-		//assert_not_implemented();
-		//core::TypePtr res = nullptr;
-		//for(auto extension : this->getConversionSetup().getExtensions()) {
-		//	auto result = extension->Visit(decl, *this).as<core::TypePtr>();
-		//}
-
-		//if(!res) {
-		//	// trigger the actual conversion
-		//	res = convertType(decl->getTypeForDecl()->getCanonicalTypeInternal());
-		//}
-
-		//// frequently structs and their type definitions have the same name
-		//// in this case symbol == res and should be ignored
-		//if(const clang::TypedefDecl* typedefDecl = llvm::dyn_cast<clang::TypedefDecl>(decl)) {
-		//	auto symbol = builder.genericType(typedefDecl->getQualifiedNameAsString());
-		//	if(res != symbol && res.isa<core::NamedCompositeTypePtr>()) { // also: skip simple type-defs
-		//		getIRTranslationUnit().addType(symbol, res);
-		//	}
-		//}
-
-		//// handle pragmas
-		//core::NodeList list({res});
-		//list = pragma::handlePragmas(list, decl, *this);
-		//assert_eq(1, list.size()) << "More than 1 node present";
-		//res = list.front().as<core::TypePtr>();
-
-		//for(auto extension : this->getConversionSetup().getExtensions()) {
-		//	extension->PostVisit(decl, res, *this);
-		//}
-	//}
-	
 	// Visitors -------------------------------------------------------------------------------------------------------
 	
 	void DeclConverter::VisitDeclContext(const clang::DeclContext* context) {

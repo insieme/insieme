@@ -40,6 +40,7 @@
 #include <gtest/gtest.h>
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string/replace.hpp>
+#include <boost/regex.hpp>
 
 #include "insieme/annotations/expected_ir_annotation.h"
 #include "insieme/core/annotations/source_location.h"
@@ -72,20 +73,31 @@ namespace frontend {
 				auto ann = node->getAnnotation(ExpectedIRAnnotation::KEY);
 				auto ex = ann->getExpected();
 				boost::replace_all(ex, R"(\")", R"(")");
-				NodePtr expected;
-				if(node.isa<ExpressionPtr>()) {
-					expected = builder.parseExpr(ex);
+
+				// Regex expect
+				if(boost::starts_with(ex, "REGEX")) {
+					boost::regex re(ex.substr(6));
+					auto irString = ::toString(dumpPretty(builder.normalize(node)));
+					EXPECT_TRUE(boost::regex_match(irString.begin(), irString.end(), re)) 
+						<< "Location : " << *core::annotations::getLocation(addr) << "\n"
+						<< "IR String: " << irString << "\n"
+						<< "Regex    : " << re << "\n";
 				} else {
-					expected = builder.parseStmt(ex);
+					NodePtr expected;
+					if(node.isa<ExpressionPtr>()) {
+						expected = builder.parseExpr(ex);
+					} else {
+						expected = builder.parseStmt(ex);
+					}
+					EXPECT_EQ(builder.normalize(expected), builder.normalize(node)) 
+						<< "Location: " << *core::annotations::getLocation(addr) << "\n"
+						<< "Actual Pretty: " << dumpColor(builder.normalize(node), std::cout, true) << "\n";
+					//if(builder.normalize(expected) != builder.normalize(node)) {
+					//	dumpText(builder.normalize(expected));
+					//	std::cout << "MUAHAHAMUAHAHAMUAHAHAMUAHAHAMUAHAHAMUAHAHAMUAHAHAMUAHAHAMUAHAHAMUAHAHAMUAHAHA\n";
+					//	dumpText(builder.normalize(node));
+					//}
 				}
-				EXPECT_EQ(builder.normalize(expected), builder.normalize(node)) 
-					<< "Location: " << *core::annotations::getLocation(addr) << "\n"
-					<< "Actual Pretty: " << dumpColor(builder.normalize(node), std::cout, true) << "\n";
-				//if(builder.normalize(expected) != builder.normalize(node)) {
-				//	dumpText(builder.normalize(expected));
-				//	std::cout << "MUAHAHAMUAHAHAMUAHAHAMUAHAHAMUAHAHAMUAHAHAMUAHAHAMUAHAHAMUAHAHAMUAHAHAMUAHAHA\n";
-				//	dumpText(builder.normalize(node));
-				//}
 				visited++;
 			}
 		});
@@ -128,12 +140,16 @@ namespace frontend {
 		runTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_expressions.c");
 	}
 
+	TEST(IndependentTest, Casts) {
+		runTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_casts.c");
+	}
+
 	TEST(IndependentTest, HelloWorld) {
 		runTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_hello_world.c");
 	}
-
-	TEST(IndependentTest, Casts) {
-		runTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_casts.c");
+	
+	TEST(IndependentTest, MatrixMul) {
+		runTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_matrix_mul.c");
 	}
 
 } // fe namespace

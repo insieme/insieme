@@ -74,6 +74,7 @@ namespace frontend {
 	namespace state {
 		class VariableManager;
 		class FunctionManager;
+		class RecordManager;
 	}
 } // end namespace frontend
 } // end namespace insieme
@@ -136,6 +137,10 @@ namespace conversion {
 		///
 		std::shared_ptr<state::FunctionManager> funManPtr;
 
+		/// A state object which manages mappings from clang record types to IR GenericTypes
+		///
+		std::shared_ptr<state::RecordManager> recordManPtr;
+
 		/**
 		 * IR building and managing tools
 		 */
@@ -184,7 +189,8 @@ namespace conversion {
 
 		std::shared_ptr<state::VariableManager> getVarMan() const { return varManPtr; }
 		std::shared_ptr<state::FunctionManager> getFunMan() const { return funManPtr; }
-		
+		std::shared_ptr<state::RecordManager> getRecordMan() const { return recordManPtr; }
+
 		const pragma::PragmaStmtMap& getPragmaMap() const {	return pragmaMap; }
 		
 		/**

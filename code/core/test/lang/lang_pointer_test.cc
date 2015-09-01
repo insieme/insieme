@@ -34,25 +34,21 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/frontend/state/function_manager.h"
+#include <gtest/gtest.h>
 
-#include "insieme/frontend/utils/macros.h"
-
-#include "insieme/utils/container_utils.h"
+#include "insieme/core/lang/pointer.h"
+#include "insieme/core/test/test_utils.h"
 
 namespace insieme {
-namespace frontend {
-namespace state {
+namespace core {
+namespace lang {
 
-	core::LiteralPtr FunctionManager::lookup(const clang::FunctionDecl* funDecl) const {
-		frontend_assert(::containsKey(functions, funDecl)) << "Trying to look up function not previously declared";
-		return functions.find(funDecl)->second;
-	}
-	void FunctionManager::insert(const clang::FunctionDecl* funDecl, const core::LiteralPtr& fun) {
-		frontend_assert(!::containsKey(functions, funDecl)) << "Trying to insert previously declared function";
-		functions[funDecl] = fun;
+	TEST(Pointer, SemanticChecks) {
+		NodeManager nm;
+		auto& ext = nm.getLangExtension<PointerExtension>();
+		semanticCheckSecond(ext.getSymbols());
 	}
 
-} // end namespace state
-} // end namespace frontend
+} // end namespace lang
+} // end namespace core
 } // end namespace insieme

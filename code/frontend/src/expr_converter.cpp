@@ -311,7 +311,7 @@ namespace conversion {
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	//							PARENTESIS EXPRESSION
+	//							PARENTHESIS EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr Converter::ExprConverter::VisitParenExpr(const clang::ParenExpr* parExpr) {
 		core::ExpressionPtr retExpr;
@@ -547,7 +547,12 @@ namespace conversion {
 			rhs = builder.wrapLazy(utils::exprToBool(rhs)); 
 		}
 
-		retIr = builder.binaryOp(basic.getOperator(exprTy, opIt->second), lhs, rhs);
+		auto irOp = basic.getOperator(exprTy, opIt->second);
+
+		// for comparisons, use type of operand
+		if(binOp->isComparisonOp()) irOp = basic.getOperator(lhs->getType(), opIt->second);
+
+		retIr = builder.binaryOp(irOp, lhs, rhs);
 		return retIr;
 	}
 
@@ -633,54 +638,12 @@ namespace conversion {
 	core::ExpressionPtr Converter::ExprConverter::VisitArraySubscriptExpr(const clang::ArraySubscriptExpr* arraySubExpr) {
 		core::ExpressionPtr retIr;
 		LOG_EXPR_CONVERSION(arraySubExpr, retIr);
+		
+		core::ExpressionPtr ptrExpr = Visit(arraySubExpr->getBase());
+		core::ExpressionPtr idxExpr = Visit(arraySubExpr->getIdx());
 
-		///*
-		// * CLANG introduces implicit cast for the base expression of array subscripts which cast the array type into a
-		// * simple pointer. As insieme supports subscripts only for array or vector types, we skip eventual implicit
-		// * cast operations.
-		// */
-		//const clang::Expr* baseExpr = arraySubExpr->getBase();
+		retIr = core::lang::buildPtrSubscript(ptrExpr, idxExpr);
 
-		//// IDX
-		//core::ExpressionPtr idx = converter.tryDeref(Visit(arraySubExpr->getIdx()));
-		//if(!basic.isUInt4(idx->getType())) { idx = core::types::castScalar(basic.getUInt4(), idx); }
-
-		//// BASE
-		//core::ExpressionPtr base = Visit(baseExpr);
-
-		//core::TypePtr opType;
-		//core::ExpressionPtr op;
-
-		//if(base->getType()->getNodeType() == core::NT_RefType) {
-		//	// The vector/array is an L-Value so we use the array.ref.elem
-		//	// operator to return a reference to the addressed memory location
-		//	core::TypePtr refSubTy = GET_REF_ELEM_TYPE(base->getType());
-
-		//	// TODO: we need better checking for vector type
-		//	frontend_assert((refSubTy->getNodeType() == core::NT_VectorType || refSubTy->getNodeType() == core::NT_ArrayType)
-		//	                && "Base expression of array subscript is not a vector/array type.");
-
-		//	op = refSubTy->getNodeType() == core::NT_ArrayType ? basic.getArrayRefElem1D() : basic.getVectorRefElem();
-
-		//	opType = builder.refType(refSubTy.as<core::SingleElementTypePtr>()->getElementType());
-
-		//} else {
-		//	/*
-		//	 * The vector/array is an R-value (e.g. (int[2]){0,1}[1] ) in this case the subscript returns an R-value so
-		//	 * the array.subscript operator must be used
-		//	 */
-		//	// TODO: we need better checking for vector type
-		//	frontend_assert((base->getType()->getNodeType() == core::NT_VectorType || base->getType()->getNodeType() == core::NT_ArrayType)
-		//	                && "Base expression of array subscript is not a vector/array type.");
-
-		//	op = base->getType()->getNodeType() == core::NT_ArrayType ? basic.getArraySubscript1D() : basic.getVectorSubscript();
-
-		//	opType = core::static_pointer_cast<const core::SingleElementType>(base->getType())->getElementType();
-		//}
-
-		//return (retIr = builder.callExpr(opType, op, base, idx));
-
-		frontend_assert(false);
 		return retIr;
 	}
 
