@@ -58,9 +58,6 @@ set ( insieme_utils_include_dir          	${insieme_code_dir}/utils/include )
 set ( insieme_annotations_src_dir			${insieme_code_dir}/annotations/src )
 set ( insieme_annotations_include_dir       ${insieme_code_dir}/annotations/include )
 
-set ( insieme_xml_src_dir					${insieme_code_dir}/xml/src )
-set ( insieme_xml_include_dir            	${insieme_code_dir}/xml/include )
-
 set ( insieme_frontend_src_dir				${insieme_code_dir}/frontend/src )
 set ( insieme_frontend_include_dir       	${insieme_code_dir}/frontend/include )
 set ( insieme_backend_src_dir				${insieme_code_dir}/backend/src )
