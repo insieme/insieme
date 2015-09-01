@@ -144,6 +144,10 @@ namespace frontend {
 		runTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_casts.c");
 	}
 
+	TEST(IndependentTest, DeclInitExpressions) {
+		runTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_decl_init_expressions.c");
+	}
+
 	TEST(IndependentTest, HelloWorld) {
 		runTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_hello_world.c");
 	}
@@ -151,6 +155,7 @@ namespace frontend {
 	TEST(IndependentTest, MatrixMul) {
 		runTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_matrix_mul.c");
 	}
+	
 
 } // fe namespace
 } // insieme namespace

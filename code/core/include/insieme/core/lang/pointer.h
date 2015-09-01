@@ -258,7 +258,6 @@ namespace lang {
 	
 	bool isPointer(const NodePtr& node);
 	
-	// TODO move to core::analysis?
 	bool differOnlyInQualifiers(const TypePtr& typeA, const TypePtr& typeB);
 
 	ExpressionPtr buildPtrFromRef(const ExpressionPtr& refExpr);
