@@ -1,7 +1,7 @@
 # Insieme: Compiler and Runtime Infrastructure
 The Insieme compiler is a source-to-source compiler for C/C++ that supports portable parallel abstractions (OpenMP, MPI and OpenCL) for heterogeneous multi-core architectures. More details are available [here](http://insieme-compiler.org/mission.html).
 
-**IMPORTANT NOTE**
+## *IMPORTANT NOTE*
 The master branch of Insieme is currently undergoing severe changes and refactoring. Until these changes are complete, several features will be missing and all interfaces are in flux. If you just want to try Insieme as a user or want to do research building on top of its infrastructure please use the **inspire_1.3** branch.
 
 ## Directory Structure
