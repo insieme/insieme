@@ -140,14 +140,14 @@ namespace lang {
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(
 		    PtrArrayElement, "ptr_array_elem",
-		    "lambda (ptr<'a,'c,'v> r, int<8> i) -> ptr<'a,'c,'v> { return ptr_narrow(r, dp_element(dp_root(type('a)),i)); }")
+		    "lambda (ptr<array<'a,'s>,'c,'v> r, int<8> i) -> ptr<'a,'c,'v> { return ptr_narrow(r, dp_element(dp_root(type(array<'a,'s>)),i)); }")
 
 		/**
 		 * A derived reference navigation operator providing access to a member of a struct / union.
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(
 		    PtrMemberAccess, "ptr_member_access",
-		    "lambda (ptr<array<'a,'s>,'c,'v> r, identifier name, type<'b> type) -> ptr<'b,'c,'v> { return ptr_narrow(r, dp_member(dp_root(type(array<'a,'s>)),name,type)); }")
+		    "lambda (ptr<'a,'c,'v> r, identifier name, type<'b> type) -> ptr<'b,'c,'v> { return ptr_narrow(r, dp_member(dp_root(type('a)),name,type)); }")
 
 		/**
 		 * A derived reference navigation operator providing access to a components of a tuple.
@@ -159,11 +159,14 @@ namespace lang {
 		/**
 		 * A derived reference-navigation operation providing an array view on a scalar.
 		 */
-		LANG_EXT_DERIVED_WITH_NAME(PtrScalarToPtrArray, "ptr_scalar_to_ptr_array",
-		                           "lambda (ptr<'a,'c,'v> a) -> ptr<array<'a,1>,'c,'v> { return ptr_expand(a, dp_element(dp_root(type(array<'a,1>)),0u)); }")
+		LANG_EXT_DERIVED_WITH_NAME(
+			PtrScalarToPtrArray, "ptr_scalar_to_ptr_array",
+		    "lambda (ptr<'a,'c,'v> a) -> ptr<array<'a,1>,'c,'v> { return ptr_expand(a, dp_element(dp_root(type(array<'a,1>)),0u)); }")
 
 
-		// TODO FE NG ask Herbert about operation
+		/**
+		 * A
+		 */
 		LANG_EXT_LITERAL(PtrSubscript, "ptr_subscript", "(ptr<'a,'c,'v>, int<8>) -> ref<'a,'c,'v>")
 
 		// -- null --
