@@ -43,6 +43,7 @@
 
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/lang/pointer.h"
 
 #include "insieme/annotations/c/extern.h"
 #include "insieme/annotations/c/extern_c.h"

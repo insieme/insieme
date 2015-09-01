@@ -137,6 +137,7 @@ namespace lang {
 	ExpressionPtr buildPtrCast(const ExpressionPtr& ptrExpr, const TypePtr& targetTy) {
 		assert_pred1(core::lang::isPointer, ptrExpr) << "Trying to build a ptr cast from non-ptr.";
 		assert_pred1(core::lang::isPointer, targetTy) << "Trying to build a ptr cast to non-ptr type.";
+		if(targetTy == ptrExpr->getType()) return ptrExpr;
 		assert_true(differOnlyInQualifiers(ptrExpr->getType(), targetTy)) << "Ptr cast only allowed to cast between qualifiers.";
 		// TODO THIS IS WHY WE NEED THE MODULAR BUILDER
 		IRBuilder builder(ptrExpr->getNodeManager());

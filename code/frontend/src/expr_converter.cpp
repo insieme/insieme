@@ -416,18 +416,12 @@ namespace conversion {
 		    expr->isArgumentType() ? converter.convertType(expr->getArgumentType()) : converter.convertType(expr->getArgumentExpr()->getType());
 
 		switch(expr->getKind()) {
-		case clang::UETT_SizeOf: {
-			return (irNode = frontend::utils::getSizeOfType(builder, type));
+		case clang::UETT_SizeOf: irNode = frontend::utils::getSizeOfType(builder, type); break;
+		case clang::UETT_AlignOf: irNode = frontend::utils::getAlignOfType(builder, type); break;
+		default: frontend_assert(false) << "UnaryExprOrTypeTraitExpr not handled";
 		}
-		case clang::UETT_AlignOf: {
-			return (irNode = frontend::utils::getAlignOfType(builder, type));
-		}
-		case clang::UETT_VecStep: {
-			frontend_assert(false) << "vecStep Kind of expressions not handled\n";
-		}
-		}
-
-		return core::ExpressionPtr();
+		
+		return irNode;
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

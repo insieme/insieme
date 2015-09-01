@@ -387,7 +387,8 @@ namespace lang {
 		if(auto expr = node.isa<ExpressionPtr>()) { return isReference(expr->getType()); }
 		return node && ReferenceType::isReferenceType(node);
 	}
-
+	
+	ExpressionPtr buildRefCast(const ExpressionPtr& refExpr, const TypePtr& targetTy);
 
 } // end namespace lang
 } // end namespace core
