@@ -297,7 +297,6 @@ namespace lang {
 																																							   \
 		const insieme::core::TypePtr reg##NAME() const {                                                                                                       \
 			checkIrNameNotAlreadyInUse(IR_NAME);                                                                                                               \
-			addNamedIrExtension(IR_NAME, [&]()->NodePtr { return get##NAME(); });                                                                              \
 			return insieme::core::TypePtr();                                                                                                                   \
 		}                                                                                                                                                      \
                                                                                                                                                                \
