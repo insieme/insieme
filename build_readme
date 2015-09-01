@@ -34,9 +34,7 @@ Several CMake options to build only parts of insieme:
 
 + BUILD_RUNTIME_ONLY=ON|OFF - builds only runtime + dependencies
 
-+ BUILD_IWIR=ON|OFF - builds IWIR frontend + everything else (NO CLANG)
-
-+ BUILD_CLANG=ON|OFF - build Clang frontend + everything else (NO IWIR)
++ BUILD_CLANG=ON|OFF - build Clang frontend + everything else
 
 If non of the above options are provided or if they are set to OFF, EVERYTHING is build.
 

@@ -9,7 +9,6 @@
 #	GTEST_ROOT    				as env-var or cmake-var
 #	GMP_ROOT    				as env-var or cmake-var
 #	MPFR_ROOT    				as env-var or cmake-var
-#	XERCES_ROOT    				as env-var or cmake-var
 #	CUDD_ROOT    				as env-var or cmake-var
 #	SHARK_ROOT    				as env-var or cmake-var
 #	KOMPEX_ROOT    				as env-var or cmake-var
@@ -62,9 +61,6 @@ set ( insieme_annotations_include_dir       ${insieme_code_dir}/annotations/incl
 
 set ( insieme_xml_src_dir					${insieme_code_dir}/xml/src )
 set ( insieme_xml_include_dir            	${insieme_code_dir}/xml/include )
-
-set ( insieme_iwir_src_dir					${insieme_code_dir}/iwir/src )
-set ( insieme_iwir_include_dir            	${insieme_code_dir}/iwir/include )
 
 set ( insieme_frontend_src_dir				${insieme_code_dir}/frontend/src )
 set ( insieme_frontend_include_dir       	${insieme_code_dir}/frontend/include )
