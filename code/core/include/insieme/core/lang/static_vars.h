@@ -37,6 +37,7 @@
 #pragma once
 
 #include "insieme/core/lang/extension.h"
+#include "insieme/core/lang/reference.h"
 
 namespace insieme {
 namespace core {
@@ -54,7 +55,11 @@ namespace lang {
 		 */
 		StaticVariableExtension(core::NodeManager& manager) : core::lang::Extension(manager) {}
 
+		// this extension is based upon the symbols defined by the reference module
+		IMPORT_MODULE(ReferenceExtension);
+
 	  public:
+
 		bool isStaticType(const TypePtr& type) const;
 
 		TypePtr wrapStaticType(const TypePtr& type) const;

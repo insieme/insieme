@@ -34,35 +34,38 @@
  * regarding third party software licenses.
  */
 
-#include <vector>
+#include "insieme/core/lang/complex.h"
 
-#include <gtest/gtest.h>
-
-#include "insieme/core/analysis/ir++_utils.h"
-
-#include "insieme/core/ir_builder.h"
-#include "insieme/core/frontend_ir_builder.h"
-#include "insieme/core/checks/full_check.h"
+#include "insieme/core/lang/basic.h"
+#include "insieme/core/types/match.h"
 
 namespace insieme {
 namespace core {
-namespace analysis {
+namespace lang {
 
-	TEST(IRppUtils, DefaultCtorTest) {
-		NodeManager manager;
-		IRBuilder builder(manager);
+	bool isComplexType(const NodePtr& node) {
+		// some simple checks
+		if (!node) return false;
+		if (auto expr = node.isa<ExpressionPtr>()) return isComplexType(node);
 
-		// create a struct type
-		StructTypePtr type = builder.parseType("struct { int<4> x; int<4> y; }").as<StructTypePtr>();
-		ASSERT_TRUE(type);
+		auto type = node.isa<StructTypePtr>();
+		if(!type) return false;
 
-		// create a default constructor for this type
-		auto ctor = createDefaultConstructor(type);
-		EXPECT_TRUE(checks::check(ctor).empty()) << ctor << checks::check(ctor);
+		// simple approach: use unification
+		NodeManager& mgr = node.getNodeManager();
+		const ComplexExtension& ext = mgr.getLangExtension<ComplexExtension>();
 
-		EXPECT_PRED1(isDefaultConstructor, ctor);
+		// unify given type with template type
+		auto ref = ext.getGenComplex();
+		auto sub = types::match(mgr, type, ref);
+		if(!sub) return false;
+
+		// check whether the value instantiation is a numeric type
+		const BasicGenerator& base = mgr.getLangBasic();
+		return base.isSelect((*sub).applyTo(TypeVariable::get(mgr, "'a")));
 	}
 
-} // end namespace analysis
+
+} // end namespace lang
 } // end namespace core
 } // end namespace insieme

@@ -46,12 +46,6 @@
 namespace insieme {
 namespace core {
 
-	ExpressionPtr FrontendIRBuilder::getPureVirtual(const FunctionTypePtr& type) const {
-		assert_true(type->isMemberFunction());
-		const auto& ext = getNodeManager().getLangExtension<lang::IRppExtensions>();
-		return callExpr(type, ext.getPureVirtual(), getTypeLiteral(type));
-	}
-
 
 	ExpressionPtr FrontendIRBuilder::initStaticVariable(const LiteralPtr& staticVariable, const ExpressionPtr& initValue, bool constant) const {
 		const lang::StaticVariableExtension& ext = getNodeManager().getLangExtension<lang::StaticVariableExtension>();

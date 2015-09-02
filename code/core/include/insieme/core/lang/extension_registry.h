@@ -42,11 +42,11 @@
 #include "insieme/core/lang/enum_extension.h"
 #include "insieme/core/lang/ir++_extension.h"
 #include "insieme/core/lang/parallel.h"
-#include "insieme/core/lang/simd_vector.h"
 #include "insieme/core/lang/static_vars.h"
 #include "insieme/core/lang/varargs_extension.h"
 #include "insieme/core/lang/instrumentation_extension.h"
 #include "insieme/core/lang/asm_extension.h"
+#include "insieme/core/lang/complex.h"
 
 #include "insieme/utils/assert.h"
 
@@ -74,8 +74,8 @@ namespace lang {
 			extensionFactories.insert(getExtensionFactory<AsmStmtExtension>("ext.asm"));
 			extensionFactories.insert(getExtensionFactory<EnumExtension>("ext.enum"));
 			extensionFactories.insert(getExtensionFactory<IRppExtensions>("ext.ir++"));
+			extensionFactories.insert(getExtensionFactory<ComplexExtension>("ext.complex"));
 			extensionFactories.insert(getExtensionFactory<ParallelExtension>("ext.parallel"));
-			extensionFactories.insert(getExtensionFactory<SIMDVectorExtension>("ext.simd"));
 			extensionFactories.insert(getExtensionFactory<StaticVariableExtension>("ext.static"));
 			extensionFactories.insert(getExtensionFactory<VarArgsExtension>("ext.varargs"));
 			extensionFactories.insert(getExtensionFactory<InstrumentationExtension>("ext.instrumentation"));

@@ -154,13 +154,13 @@ namespace lang {
 		 * is contributing an element and a reduction operation and all threads receive the aggregated value.
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(PReduce, "preduce",
-				    "                                                                                                                 "
-					"	lambda (threadgroup g, 'a v, ('b,'a)->'b op, 'b init)->'b {                                                   "
-					"	   return redistribute(g, v,                                                                                  "
-					"				  lambda (ref<array<'a>> data, uint<8> size, uint<8> tid) => array_reduce(data, size, op, init)   "
-					"	          );                                                                                                  "
-					"	}                                                                                                             "
-		            "                                                                                                                 "
+				    "                                                                                                                                        "
+					"	lambda (threadgroup g, 'a v, ('b,'a)->'b op, 'b init)->'b {                                                                          "
+					"	   return redistribute(g, v,                                                                                                         "
+					"				  lambda (ref<array<'a>> data, uint<8> size, uint<8> tid) => array_reduce(data, num_cast(size,type(int<8>)), op, init)   "
+					"	          );                                                                                                                         "
+					"	}                                                                                                                                    "
+		            "                                                                                                                                        "
 		)
 
 
@@ -223,7 +223,7 @@ namespace lang {
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(Atomic, "atomic",
 				    "                                                              "
-					"	lambda (ref<'a,'c,'v> v, ('a)=>bool p, ('a)=>'a f)->'a {   "
+					"	lambda (ref<'a, f,'v> v, ('a)=>bool p, ('a)=>'a f)->'a {   "
 					"		decl auto res = *v;                                    "
 					"		if (p(*v)) {                                           "
 					"			v = f(*v);                                         "

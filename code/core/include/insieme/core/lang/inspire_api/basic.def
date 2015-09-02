@@ -189,7 +189,7 @@ OPERATION(SignedInt, Mod, "int_mod", "(int<'a>,int<'a>) -> int<'a>")
 
 DERIVED_OP(SignedInt, PreInc,  "int_pre_inc",  "lambda (ref<int<'a>,f,'b> val) -> int<'a> { val = *val+lit(\"1\":int<'a>); return *val; }")
 DERIVED_OP(SignedInt, PostInc, "int_post_inc", "lambda (ref<int<'a>,f,'b> val) -> int<'a> { decl int<'a> temp = *val; val = *val+lit(\"1\":int<'a>); return temp; }")
-DERIVED_OP(SignedInt, PreDec,  "int_pre_dec",  "lambda (ref<int<'a>,f,'b> val) -> int<'a> { val = *val-lit(\"1\":int<'a>) return *val; }")
+DERIVED_OP(SignedInt, PreDec,  "int_pre_dec",  "lambda (ref<int<'a>,f,'b> val) -> int<'a> { val = *val-lit(\"1\":int<'a>); return *val; }")
 DERIVED_OP(SignedInt, PostDec, "int_post_dec", "lambda (ref<int<'a>,f,'b> val) -> int<'a> { decl int<'a> temp = *val; val = *val-lit(\"1\":int<'a>); return temp; }")
 
 GROUP(CharArithOp, CharAdd, CharSub, CharMul, CharDiv, CharMod)
@@ -289,6 +289,10 @@ OPERATION(UnsignedInt, LShift, "uint_lshift", "(uint<'a>,int<4>) -> uint<'a>")
 OPERATION(UnsignedInt, RShift, "uint_rshift", "(uint<'a>,int<4>) -> uint<'a>")
 
 GROUP(BitwiseOp, BitwiseIntOp, BitwiseUIntOp)
+
+// Generic Numeric Cast -----------------------------------------------------------------------------------------------
+
+DERIVED(NumericCast, "num_cast", "lambda ('a x, type<'b> t)->'b { return CAST('b)x; }")
 
 
 // Type Operations ----------------------------------------------------------------------------------------------------

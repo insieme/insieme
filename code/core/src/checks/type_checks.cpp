@@ -390,14 +390,9 @@ namespace checks {
 		// check expressions (must not be arrays except within very few cases)
 		if(cat == NC_Expression) {
 			ExpressionPtr expr = address.as<ExpressionPtr>();
-			if(lang::isArray(expr)) {
-				// if it is the result of a array-create call it is accepted
-				auto& ext = address->getNodeManager().getLangExtension<lang::ArrayExtension>();
-				if(core::analysis::isCallOf(expr, ext.getArrayCreate())) {
-					return res; // all fine for those two components
-				}
+			if(lang::isUnknownSizedArray(expr)) {
 
-				// no value instantiation allowed
+				// no value instantiation allowed for unknown size arrays
 				add(res, Message(address, EC_TYPE_INVALID_ARRAY_VALUE,
 				                 format("Invalid instantiation of array value of type %s! Arrays must not be accessed by value, only by reference.",
 				                        toString(*address)),

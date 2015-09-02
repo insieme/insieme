@@ -57,9 +57,10 @@ namespace lang {
 		NamedCoreExtensionTestExtension(core::NodeManager& manager) : core::lang::Extension(manager) {}
 
 	  public:
-		LANG_EXT_TYPE_WITH_NAME(NamedTypeUsingBelow, "NamedTypeUsingBelow", "struct { NamedType foo; }")
 
-		LANG_EXT_TYPE_WITH_NAME(NamedType, "NamedType", "struct { 'a foo; }")
+		TYPE_ALIAS("NamedType", "struct { 'a foo; }")
+
+		LANG_EXT_TYPE_WITH_NAME(NamedTypeUsingBelow, "NamedTypeUsingBelow", "struct { NamedType foo; }")
 
 		LANG_EXT_TYPE_WITH_NAME(NamedTypeReusingUnknown, "NamedTypeReusingUnknown", "struct { FooType foo; }")
 
@@ -83,9 +84,6 @@ namespace lang {
 		// Lookup unknown
 		EXPECT_TRUE(definedNames.find("NotRegisteredName") == definedNames.end());
 
-		// Lookup a registered type
-		EXPECT_TRUE(definedNames.find("NamedType")->second() == extension.getNamedType());
-
 		// Lookup a registered literal
 		EXPECT_TRUE(definedNames.find("NamedLiteral")->second() == extension.getNamedLiteral());
 
@@ -98,12 +96,9 @@ namespace lang {
 
 		auto& extension = manager.getLangExtension<NamedCoreExtensionTestExtension>();
 
-		auto& namedType = extension.getNamedType();
-		EXPECT_EQ("struct<foo:'a>", toString(*namedType));
-
 		// Test for the re-use of a named extension which is defined below the current one and therefore won't be found
 		auto& namedTypeUsingBelow = extension.getNamedTypeUsingBelow();
-		EXPECT_EQ("struct<foo:NamedType>", toString(*namedTypeUsingBelow));
+		EXPECT_EQ("struct<foo:struct<foo:'a>>", toString(*namedTypeUsingBelow));
 
 		// Test for the re-use of an unknown named extension
 		auto& namedTypeReusingUnknown = extension.getNamedTypeReusingUnknown();
@@ -154,17 +149,18 @@ namespace lang {
 		NamedCoreExtensionTestDuplicatedExtension(core::NodeManager& manager) : core::lang::Extension(manager) {}
 
 	  public:
-		LANG_EXT_TYPE_WITH_NAME(NamedType, "NamedType", "struct { 'a foo; }")
+		LANG_EXT_LITERAL_WITH_NAME(NamedLiteral, "NamedLiteral", "named_lit", "(NamedType)->unit")
 
 		// Note the re-use of the same IR_NAME
-		LANG_EXT_TYPE_WITH_NAME(NamedType2, "NamedType", "struct { 'a foo; }")
+		LANG_EXT_LITERAL_WITH_NAME(NamedLiteral2, "NamedLiteral", "named_lit", "(NamedType)->unit")
+
 	};
 
 	TEST(NamedCoreExtensionTest, AssertNameCollisionDeathTest) {
 		NodeManager manager;
 
 		assert_decl(
-		    ASSERT_DEATH(manager.getLangExtension<NamedCoreExtensionTestDuplicatedExtension>(), "IR_NAME \"NamedType\" already in use in this extension"););
+		    ASSERT_DEATH(manager.getLangExtension<NamedCoreExtensionTestDuplicatedExtension>(), "IR_NAME \"NamedLiteral\" already in use in this extension"););
 	}
 } // end namespace lang
 } // end namespace core

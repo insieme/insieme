@@ -175,7 +175,7 @@ TEST(Rule, MultiplyAndAdd) {
 
 	auto mul = builder.getLangBasic().getSignedIntMul();
 	auto add = builder.getLangBasic().getSignedIntAdd();
-	auto mad = builder.parseExpr("lit(\"mad\" : (int<#a>,int<#a>,int<#a>) -> int<#a>)");
+	auto mad = builder.parseExpr("lit(\"mad\" : (int<'a>,int<'a>,int<'a>) -> int<'a>)");
 
 	Variable t = "t";
 	Variable a = "a";
@@ -249,10 +249,10 @@ TEST(Rule, VarDeref) {
 	auto b = builder.deref(builder.refVar(a));
 	auto c = builder.deref(builder.refNew(a));
 
-	EXPECT_EQ("ref_deref(rec v0.{v0=fun('a v1) {ref<'a> v2 = ref_alloc(rec v0.{v0=fun('a v1) {return type<'a>;}}(v1), memloc_stack); ref_assign(v2, v1); "
+	EXPECT_EQ("ref_deref(rec v0.{v0=fun('a v1) {ref<'a,f,f> v2 = ref_alloc(rec v0.{v0=fun('a v1) {return type<'a>;}}(v1), mem_loc_stack); ref_assign(v2, v1); "
 	          "return v2;}}(1))",
 	          toString(*b));
-	EXPECT_EQ("ref_deref(rec v0.{v0=fun('a v1) {ref<'a> v2 = ref_alloc(rec v0.{v0=fun('a v1) {return type<'a>;}}(v1), memloc_heap); ref_assign(v2, v1); return "
+	EXPECT_EQ("ref_deref(rec v0.{v0=fun('a v1) {ref<'a,f,f> v2 = ref_alloc(rec v0.{v0=fun('a v1) {return type<'a>;}}(v1), mem_loc_heap); ref_assign(v2, v1); return "
 	          "v2;}}(1))",
 	          toString(*c));
 	EXPECT_EQ("1", toString(*r.fixpoint(b)));

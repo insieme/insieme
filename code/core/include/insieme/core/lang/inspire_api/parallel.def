@@ -89,25 +89,25 @@ DERIVED(Atomic, "atomic", "lambda (ref<'a> v, ('a)=>bool p, ('a)=>'a f)->'a { "
 
 // arithmetic
 
-DERIVED(AtomicFetchAndAdd, "atomic_fetch_and_add", "lambda (ref<'a> v, 'a exp) -> 'a { "
-                                                   "	let test = lambda ('a _)=>true; "
-                                                   "	let apply = lambda ('a x)=>x+exp; "
-                                                   "	return atomic(v, test, apply); "
-                                                   "}  ")
-
-DERIVED(AtomicAddAndFetch, "atomic_add_and_fetch", "lambda (ref<'a> v, 'a exp) -> 'a { "
-                                                   "	return atomic_fetch_and_add(v, exp) + exp; "
-                                                   "}  ")
-
-DERIVED(AtomicFetchAndSub, "atomic_fetch_and_sub", "lambda (ref<'a> v, 'a exp) -> 'a { "
-                                                   "	let test = lambda ('a _)=>true; "
-                                                   "	let apply = lambda ('a x)=>x-exp; "
-                                                   "	return atomic(v, test, apply); "
-                                                   "}  ")
-
-DERIVED(AtomicSubAndFetch, "atomic_sub_and_fetch", "lambda (ref<'a> v, 'a exp) -> 'a { "
-                                                   "	return atomic_fetch_and_sub(v, exp) - exp; "
-                                                   "}  ")
+//DERIVED(AtomicFetchAndAdd, "atomic_fetch_and_add", "lambda (ref<'a> v, 'a exp) -> 'a { "
+//                                                   "	let test = lambda ('a _)=>true; "
+//                                                   "	let apply = lambda ('a x)=>x+exp; "
+//                                                   "	return atomic(v, test, apply); "
+//                                                   "}  ")
+//
+//DERIVED(AtomicAddAndFetch, "atomic_add_and_fetch", "lambda (ref<'a> v, 'a exp) -> 'a { "
+//                                                   "	return atomic_fetch_and_add(v, exp) + exp; "
+//                                                   "}  ")
+//
+//DERIVED(AtomicFetchAndSub, "atomic_fetch_and_sub", "lambda (ref<'a> v, 'a exp) -> 'a { "
+//                                                   "	let test = lambda ('a _)=>true; "
+//                                                   "	let apply = lambda ('a x)=>x-exp; "
+//                                                   "	return atomic(v, test, apply); "
+//                                                   "}  ")
+//
+//DERIVED(AtomicSubAndFetch, "atomic_sub_and_fetch", "lambda (ref<'a> v, 'a exp) -> 'a { "
+//                                                   "	return atomic_fetch_and_sub(v, exp) - exp; "
+//                                                   "}  ")
 
 // bitwise
 

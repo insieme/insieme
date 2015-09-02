@@ -34,35 +34,56 @@
  * regarding third party software licenses.
  */
 
-#include <vector>
+#pragma once
 
-#include <gtest/gtest.h>
-
-#include "insieme/core/analysis/ir++_utils.h"
-
-#include "insieme/core/ir_builder.h"
-#include "insieme/core/frontend_ir_builder.h"
-#include "insieme/core/checks/full_check.h"
+#include "insieme/core/lang/extension.h"
+#include "insieme/core/lang/reference.h"
 
 namespace insieme {
 namespace core {
-namespace analysis {
+namespace lang {
 
-	TEST(IRppUtils, DefaultCtorTest) {
-		NodeManager manager;
-		IRBuilder builder(manager);
+	/**
+	 * An extension covering the derived complex type and all its
+	 * associated operators.
+	 */
+	class ComplexExtension : public core::lang::Extension {
+		/**
+		 * Allow the node manager to create instances of this class.
+		 */
+		friend class core::NodeManager;
 
-		// create a struct type
-		StructTypePtr type = builder.parseType("struct { int<4> x; int<4> y; }").as<StructTypePtr>();
-		ASSERT_TRUE(type);
+		/**
+		 * Creates a new instance based on the given node manager.
+		 */
+		ComplexExtension(core::NodeManager& manager) : core::lang::Extension(manager) {}
 
-		// create a default constructor for this type
-		auto ctor = createDefaultConstructor(type);
-		EXPECT_TRUE(checks::check(ctor).empty()) << ctor << checks::check(ctor);
+	  public:
 
-		EXPECT_PRED1(isDefaultConstructor, ctor);
-	}
+		// -------------------- pointers ---------------------------
 
-} // end namespace analysis
+
+		/**
+		 * Defines a complex number as a pair of a real and imaginary value
+		 */
+		TYPE_ALIAS("complex", "struct _ir_complex { 'a rel; 'a img; }");
+
+		/**
+		 * Defines the generic complex type.
+		 */
+		LANG_EXT_TYPE(GenComplex, "struct _ir_complex { 'a rel; 'a img; }")
+
+	};
+
+
+	// --------------------- Utilities ----------------------------
+
+	/**
+	 * Determines whether a given node is the complex type or an expression of
+	 * the complex type.
+	 */
+	bool isComplexType(const NodePtr& node);
+	
+} // end namespace lang
 } // end namespace core
 } // end namespace insieme
