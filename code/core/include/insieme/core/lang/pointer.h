@@ -218,9 +218,9 @@ namespace lang {
 		// -- null --
 
 		/**
-		 * A null reference constant.
+		 * A function generating a null pointer of the specified type.
 		 */
-		LANG_EXT_LITERAL(PtrNull, "ptr_null", "ptr<any,f,f>")
+		LANG_EXT_LITERAL(PtrNull, "ptr_null", "(type<'a>, type<'c>, type<'v>) -> ptr<'a,'c,'v>")
 
 
 		// -- comparison operators --
@@ -333,8 +333,9 @@ namespace lang {
 	
 	bool isPointer(const NodePtr& node);
 	
-	bool differOnlyInQualifiers(const TypePtr& typeA, const TypePtr& typeB);
-
+	bool doPointersDifferOnlyInQualifiers(const TypePtr& typeA, const TypePtr& typeB);
+	
+	ExpressionPtr buildPtrNull(const TypePtr& type);
 	ExpressionPtr buildPtrFromRef(const ExpressionPtr& refExpr);
 	ExpressionPtr buildPtrFromArray(const ExpressionPtr& arrExpr);
 	ExpressionPtr buildPtrToRef(const ExpressionPtr& ptrExpr);

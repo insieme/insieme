@@ -387,6 +387,8 @@ namespace lang {
 		if(auto expr = node.isa<ExpressionPtr>()) { return isReference(expr->getType()); }
 		return node && ReferenceType::isReferenceType(node);
 	}
+		
+	bool doReferencesDifferOnlyInQualifiers(const TypePtr& typeA, const TypePtr& typeB);
 	
 	ExpressionPtr buildRefCast(const ExpressionPtr& refExpr, const TypePtr& targetTy);
 

@@ -41,49 +41,7 @@
 namespace insieme {
 namespace frontend {
 namespace utils {
-
-	////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	//
-	core::CallExprPtr getSizeOfType(const core::IRBuilder& builder, const core::TypePtr& type) {
-		core::CallExprPtr retVal;
-		//core::LiteralPtr size;
-
-		//const core::lang::BasicGenerator& gen = builder.getLangBasic();
-		//if(core::VectorTypePtr&& vecTy = core::dynamic_pointer_cast<const core::VectorType>(type)) {
-		//	return builder.callExpr(gen.getUnsignedIntMul(), builder.literal(gen.getUInt8(), toString(*(vecTy->getSize()))),
-		//	                        getSizeOfType(builder, vecTy->getElementType()));
-		//}
-		//// in case of ref<'a>, recurr on 'a
-		//if(core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(type)) { return getSizeOfType(builder, refTy->getElementType()); }
-
-		//return builder.callExpr(gen.getSizeof(), builder.getTypeLiteral(type));
-		assert_not_implemented() << "getSizeOfType not implemented!";
-		return retVal;
-	}
-
-
-	////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	//
-	core::CallExprPtr getAlignOfType(const core::IRBuilder& builder, const core::TypePtr& type) {
-		core::CallExprPtr retVal;
-		//core::LiteralPtr size;
-
-		//const core::lang::BasicGenerator& gen = builder.getLangBasic();
-		//if(core::VectorTypePtr&& vecTy = core::dynamic_pointer_cast<const core::VectorType>(type)) {
-		//	return builder.callExpr(gen.getUnsignedIntMul(), builder.literal(gen.getUInt8(), toString(*(vecTy->getSize()))),
-		//	                        frontend::utils::getSizeOfType(builder, vecTy->getElementType()));
-		//}
-		//// in case of ref<'a>, recurr on 'a
-		//if(core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(type)) {
-		//	return frontend::utils::getSizeOfType(builder, refTy->getElementType());
-		//}
-
-		//return builder.callExpr(builder.getNodeManager().getLangExtension<core::lang::IRppExtensions>().getAlignof(), builder.getTypeLiteral(type));
-		assert_not_implemented() << "getAlignOfType not implemented!";
-		return retVal;
-	}
-
-
+	
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Special method which handle malloc and calloc which need to be treated in a special way in the IR.
 	core::ExpressionPtr handleMemAlloc(const core::IRBuilder& builder, const core::TypePtr& type, const core::ExpressionPtr& subExpr) {

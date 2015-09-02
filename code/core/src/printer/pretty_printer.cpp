@@ -1455,13 +1455,13 @@ namespace printer {
 
 			if(!config.hasOption(PrettyPrinter::NO_LIST_SUGAR)) {
 				// add semantic sugar for list handling
-				const encoder::ListExtension& ext = config.root->getNodeManager().getLangExtension<encoder::ListExtension>();
+				const lang::ListExtension& ext = config.root->getNodeManager().getLangExtension<lang::ListExtension>();
 
 				typedef encoder::ListConverter<ExpressionPtr, encoder::DirectExprConverter> AttributConverter;
 				typedef AttributConverter::is_encoding_of is_encoding_of_type;
 
-				ADD_FORMATTER(ext.empty, { OUT("[]"); });
-				ADD_FORMATTER(ext.cons, {
+				ADD_FORMATTER(ext.getListEmpty(), { OUT("[]"); });
+				ADD_FORMATTER(ext.getListCons(), {
 					const is_encoding_of_type is_encoding_of{};
 					// check whether syntactic sugar is supported
 					if(is_encoding_of(call)) {

@@ -130,19 +130,25 @@ namespace lang {
 		return node && PointerType::isPointerType(node);
 	}
 
-	bool differOnlyInQualifiers(const TypePtr& typeA, const TypePtr& typeB) {
-		assert_true(core::lang::isPointer(typeA) || core::lang::isReference(typeA)) << "Can only check qualifiers on pointers or references, not on "
-			                                                                        << dumpColor(typeA);
-		assert_true(core::lang::isPointer(typeB) || core::lang::isReference(typeB)) << "Can only check qualifiers on pointers or references, not on "
-			                                                                        << dumpColor(typeB);
+	bool doPointersDifferOnlyInQualifiers(const TypePtr& typeA, const TypePtr& typeB) {
+		assert_true(core::lang::isPointer(typeA)) << "Can only check qualifiers on pointers, not on " << dumpColor(typeA);
+		assert_true(core::lang::isPointer(typeB)) << "Can only check qualifiers on pointers, not on " << dumpColor(typeB);
 		
-		auto gA = typeA.as<GenericTypePtr>();
-		auto gB = typeB.as<GenericTypePtr>();
-
-		return gA->getTypeParameter(0) == gB->getTypeParameter(0)
-			   && (gA->getTypeParameter(1) != gB->getTypeParameter(1) || gA->getTypeParameter(2) != gB->getTypeParameter(2));
+		PointerType gA(typeA);
+		PointerType gB(typeB);
+		
+		return gA.getElementType() == gB.getElementType() && (gA.isConst() != gB.isConst() || gA.isVolatile() != gB.isVolatile());
 	}
 
+	insieme::core::ExpressionPtr buildPtrNull(const TypePtr& type) {
+		assert_pred1(core::lang::isPointer, type) << "Trying to build a null ptr which isn't a pointer.";
+		IRBuilder builder(type->getNodeManager());
+		auto& pExt = type->getNodeManager().getLangExtension<PointerExtension>();
+		auto& bmExt = type->getNodeManager().getLangExtension<BooleanMarkerExtension>();
+		PointerType pt(type);
+		return builder.callExpr(pExt.getPtrNull(), builder.getTypeLiteral(pt.getElementType()), bmExt.getMarkerTypeLiteral(pt.isConst()),
+			                    bmExt.getMarkerTypeLiteral(pt.isVolatile()));
+	}
 
 	ExpressionPtr buildPtrFromRef(const ExpressionPtr& refExpr) {
 		assert_pred1(core::lang::isReference, refExpr) << "Trying to build ptr from non-ref.";
@@ -170,8 +176,7 @@ namespace lang {
 		assert_pred1(core::lang::isPointer, ptrExpr) << "Trying to build a ptr cast from non-ptr.";
 		assert_pred1(core::lang::isPointer, targetTy) << "Trying to build a ptr cast to non-ptr type.";
 		if(targetTy == ptrExpr->getType()) return ptrExpr;
-		assert_true(differOnlyInQualifiers(ptrExpr->getType(), targetTy)) << "Ptr cast only allowed to cast between qualifiers.";
-		// TODO THIS IS WHY WE NEED THE MODULAR BUILDER
+		assert_true(doPointersDifferOnlyInQualifiers(ptrExpr->getType(), targetTy)) << "Ptr cast only allowed to cast between qualifiers.";
 		IRBuilder builder(ptrExpr->getNodeManager());
 		auto& pExt = ptrExpr->getNodeManager().getLangExtension<PointerExtension>();
 		auto& bmExt = ptrExpr->getNodeManager().getLangExtension<BooleanMarkerExtension>();
@@ -184,7 +189,6 @@ namespace lang {
 		assert_pred1(core::lang::isPointer, ptrExpr) << "Trying to build a ptr subscript from non-ptr.";		
 		auto& basic = ptrExpr->getNodeManager().getLangBasic();
 		assert_pred1(basic.isInt, subscriptExpr->getType()) << "Trying to build a ptr subscript with non-integral subscript.";
-		// TODO THIS IS WHY WE NEED THE MODULAR BUILDER
 		IRBuilder builder(ptrExpr->getNodeManager());
 		auto& pExt = ptrExpr->getNodeManager().getLangExtension<PointerExtension>();
 		return builder.callExpr(pExt.getPtrSubscript(), ptrExpr, subscriptExpr);

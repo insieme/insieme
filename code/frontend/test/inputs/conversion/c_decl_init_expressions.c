@@ -43,4 +43,26 @@ int main() {
 		const int* pci2 = &i;
 	}
 
+	// ARRAY TYPES /////////////////////////////////////////////////////////////////
+
+	#pragma test expect_ir("decl ref<array<int<4>,5>,f,f> v0 = var(array_create(type(int<4>), type(5), [1,2,3,4,5]));")
+	int arr_all[5] = {1,2,3,4,5};
+	
+	#pragma test expect_ir("decl ref<array<int<4>,5>,f,f> v0 = var(array_create(type(int<4>), type(5), [1,2]));")
+	int arr_partial[5] = {1,2};
+	
+	#pragma test expect_ir("decl ref<array<int<4>,5>,f,f> v0 = var(array_create(type(int<4>), type(5), [0]));")
+	int arr_zero[5] = {0};
+	
+	#pragma test expect_ir("decl ref<array<int<4>,3>,f,f> v0 = var(array_create(type(int<4>), type(3), [0,1,2]));")
+	int arr_implied[] = {0,1,2};
+	
+	#pragma test expect_ir("decl ref<array<array<int<4>,3>,2>,f,f> v0 =",\
+		"var(array_create(type(array<int<4>,3>), type(2), [array_create(type(int<4>), type(3), [1,2,3]), array_create(type(int<4>), type(3), [4,5,6])]));")
+	int arr_multi[2][3] = {{1,2,3}, {4,5,6}};
+
+	#pragma test expect_ir("decl ref<array<array<int<4>,3>,2>,f,f> v0 =",\
+		"var(array_create(type(array<int<4>,3>), type(2), [array_create(type(int<4>), type(3), [1]), array_create(type(int<4>), type(3), [4,5])]));")
+	int arr_multi_partial[2][3] = {{1}, {4,5}};
+	
 }
