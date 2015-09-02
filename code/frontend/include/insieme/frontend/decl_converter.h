@@ -77,7 +77,7 @@ namespace conversion {
 		/// Converts a function declaration into an IR lambda.
 		/// @param funcDecl is a clang FunctionDecl which represent a definition for the function
 		/// @return Converted literal and lambda
-		std::pair<core::LiteralPtr, core::LambdaExprPtr> convertFunctionDecl(const clang::FunctionDecl* funcDecl) const;
+		core::LambdaExprPtr convertFunctionDecl(const core::FunctionTypePtr& funType, const clang::FunctionDecl* funcDecl) const;
 
 		// Visitors -------------------------------------------------------------------------------------------------------
 

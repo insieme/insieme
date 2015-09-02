@@ -98,9 +98,9 @@ int main() {
 	//struct { int i; } swi_anon;
 	
 	typedef struct swi_s { int i; } swi_t;
-	#pragma test expect_ir("decl ref<array<ptr<real<4>,t,f>,2>,f,t> v0;")
+	//pragma test expect_ir("decl ref<array<ptr<real<4>,t,f>,2>,f,t> v0;")
 	swi_t swi_1;
-	#pragma test expect_ir("decl ref<array<ptr<real<4>,t,f>,2>,f,t> v0;")
+	//pragma test expect_ir("decl ref<array<ptr<real<4>,t,f>,2>,f,t> v0;")
 	struct swi_s swi_2; 
 	
 	//typedef union { int i; } union_t;

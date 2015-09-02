@@ -40,6 +40,7 @@
 #include "insieme/core/ir_builder.h"
 
 #include "insieme/core/lang/boolean_marker.h"
+#include "insieme/core/lang/pointer.h"
 #include "insieme/core/types/match.h"
 
 namespace insieme {
@@ -86,6 +87,20 @@ namespace lang {
 
 		return GenericType::get(mgr, "ref", ParentList(),
 		                        toVector(elementType, (mConst ? ext.getTrue() : ext.getFalse()), (mVolatile ? ext.getTrue() : ext.getFalse())));
+	}
+	
+	ExpressionPtr buildRefCast(const ExpressionPtr& refExpr, const TypePtr& targetTy) {
+		assert_pred1(core::lang::isReference, refExpr) << "Trying to build a ref cast from non-ref.";
+		assert_pred1(core::lang::isReference, targetTy) << "Trying to build a ref cast to non-ref type.";
+		if(targetTy == refExpr->getType()) return refExpr;
+		assert_true(core::lang::differOnlyInQualifiers(refExpr->getType(), targetTy)) << "Ref cast only allowed to cast between qualifiers.";
+		// TODO THIS IS WHY WE NEED THE MODULAR BUILDER
+		IRBuilder builder(refExpr->getNodeManager());
+		auto& rExt = refExpr->getNodeManager().getLangExtension<ReferenceExtension>();
+		auto& bmExt = refExpr->getNodeManager().getLangExtension<BooleanMarkerExtension>();
+		ReferenceType referenceTy(targetTy);
+		return builder.callExpr(rExt.getRefCast(), refExpr, bmExt.getMarkerTypeLiteral(referenceTy.isConst()),
+			                    bmExt.getMarkerTypeLiteral(referenceTy.isVolatile()));
 	}
 
 

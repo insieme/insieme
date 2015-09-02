@@ -43,6 +43,7 @@
 
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/lang/pointer.h"
 
 #include "insieme/annotations/c/extern.h"
 #include "insieme/annotations/c/extern_c.h"
@@ -65,8 +66,7 @@ namespace conversion {
 		}
 	}
 
-	std::pair<core::LiteralPtr, core::LambdaExprPtr> DeclConverter::convertFunctionDecl(const clang::FunctionDecl* funcDecl) const {
-		auto funType = converter.convertType(funcDecl->getType()).as<core::FunctionTypePtr>();
+	core::LambdaExprPtr DeclConverter::convertFunctionDecl(const core::FunctionTypePtr& funType, const clang::FunctionDecl* funcDecl) const {
 		core::LiteralPtr funLit = builder.literal(funcDecl->getNameAsString(), funType);
 
 		if(funcDecl->hasBody()) {
@@ -80,13 +80,13 @@ namespace conversion {
 			auto body = converter.convertStmt(funcDecl->getBody());
 			converter.getVarMan()->popScope();
 			auto funExp = builder.lambdaExpr(funType, params, body);
-			return std::make_pair(funLit, funExp);
+			return funExp;
 		} else {
-			return std::make_pair(funLit, core::LambdaExprPtr());
+			return core::LambdaExprPtr();
 		}
 
 		assert_not_implemented();
-		return std::make_pair(core::LiteralPtr(), core::LambdaExprPtr());
+		return core::LambdaExprPtr();
 	}
 	
 	// Visitors -------------------------------------------------------------------------------------------------------
@@ -162,14 +162,14 @@ namespace conversion {
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	void DeclConverter::VisitFunctionDecl(const clang::FunctionDecl* funcDecl) {
 		if(funcDecl->isTemplateDecl() && !funcDecl->isFunctionTemplateSpecialization()) { return; }
-
 		converter.trackSourceLocation(funcDecl);
-		core::LiteralPtr irLit;
-		core::LambdaExprPtr irFunc;
-		std::tie(irLit, irFunc) = convertFunctionDecl(funcDecl);
-		converter.untrackSourceLocation();
+		auto funType = converter.convertType(funcDecl->getType()).as<core::FunctionTypePtr>();
+		core::LiteralPtr irLit = builder.literal(funcDecl->getNameAsString(), funType);
 		if(inExternC) { annotations::c::markAsExternC(irLit); }
+		// insert first before converting the body
 		converter.getFunMan()->insert(funcDecl, irLit);
+		core::LambdaExprPtr irFunc = convertFunctionDecl(funType, funcDecl);
+		converter.untrackSourceLocation();
 		if(irFunc) converter.getIRTranslationUnit().addFunction(irLit, irFunc);
 	}
 

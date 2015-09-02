@@ -88,6 +88,7 @@ namespace parser3 {
 	TypePtr parse_type(NodeManager& manager, const string& code, bool onFailThrow, const definition_map& definitions, const type_alias_map& aliases) {
 		inspire_driver driver(code, manager);
 		save_symbol_table(driver, definitions);
+		append_type_aliases(driver, aliases);
 		auto x = driver.parseType();
 		if(!x) { checkErrors(driver, onFailThrow); }
 		return x;
@@ -96,6 +97,7 @@ namespace parser3 {
 	ExpressionPtr parse_expr(NodeManager& manager, const string& code, bool onFailThrow, const definition_map& definitions, const type_alias_map& aliases) {
 		inspire_driver driver(code, manager);
 		save_symbol_table(driver, definitions);
+		append_type_aliases(driver, aliases);
 		auto x = driver.parseExpression();
 		if(!x) { checkErrors(driver, onFailThrow); }
 		return x;
@@ -104,6 +106,7 @@ namespace parser3 {
 	StatementPtr parse_stmt(NodeManager& manager, const string& code, bool onFailThrow, const definition_map& definitions, const type_alias_map& aliases) {
 		inspire_driver driver(code, manager);
 		save_symbol_table(driver, definitions);
+		append_type_aliases(driver, aliases);
 		auto x = driver.parseStmt();
 		if(!x) { checkErrors(driver, onFailThrow); }
 		return x;
@@ -112,6 +115,7 @@ namespace parser3 {
 	ProgramPtr parse_program(NodeManager& manager, const string& code, bool onFailThrow, const definition_map& definitions, const type_alias_map& aliases) {
 		inspire_driver driver(code, manager);
 		save_symbol_table(driver, definitions);
+		append_type_aliases(driver, aliases);
 		auto x = driver.parseProgram();
 		if(!x) { checkErrors(driver, onFailThrow); }
 		return x;
@@ -122,21 +126,25 @@ namespace parser3 {
 		{
 			inspire_driver driver(code, manager);
 			save_symbol_table(driver, definitions);
+			append_type_aliases(driver, aliases);
 			x = driver.parseType();
 		}
 		if(!x) {
 			inspire_driver driver(code, manager);
 			save_symbol_table(driver, definitions);
+			append_type_aliases(driver, aliases);
 			x = driver.parseExpression();
 		}
 		if(!x) {
 			inspire_driver driver(code, manager);
 			save_symbol_table(driver, definitions);
+			append_type_aliases(driver, aliases);
 			x = driver.parseStmt();
 		}
 		if(!x) {
 			inspire_driver driver(code, manager);
 			save_symbol_table(driver, definitions);
+			append_type_aliases(driver, aliases);
 			x = driver.parseProgram();
 		}
 

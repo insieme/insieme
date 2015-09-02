@@ -39,6 +39,8 @@
 #include "insieme/core/types/subtyping.h"
 #include "insieme/core/ir_builder.h"
 
+#include "insieme/core/lang/array.h"
+
 #include "insieme/utils/set_utils.h"
 
 namespace insieme {
@@ -141,7 +143,12 @@ namespace types {
 		TypePtr elemA = builder.genericType("A");
 		TypePtr elemB = builder.genericType("B");
 
-		assert_not_implemented() << "Update this to the new array type!";
+		TypePtr vecA2 = lang::ArrayType::create(elemA, builder.intLit(2));
+		TypePtr vecA4 = lang::ArrayType::create(elemA, builder.intLit(4));
+		TypePtr vecB2 = lang::ArrayType::create(elemB, builder.intLit(2));
+		TypePtr vecB4 = lang::ArrayType::create(elemB, builder.intLit(4));
+
+//		assert_not_implemented() << "Update this to the new array type!";
 		//
 		//	TypePtr vecA2 = builder.vectorType(elemA, builder.concreteIntTypeParam(2));
 		//	TypePtr vecA4 = builder.vectorType(elemA, builder.concreteIntTypeParam(4));
@@ -170,15 +177,12 @@ namespace types {
 		IRBuilder builder(manager);
 		const auto& basic = manager.getLangBasic();
 
-		TypePtr any = basic.getAny();
-
 		TypePtr int4 = basic.getInt4();
 		TypePtr int8 = basic.getInt8();
 
 		TypePtr real4 = basic.getReal4();
 		TypePtr real8 = basic.getReal8();
 
-		TypePtr refAny = builder.refType(any);
 		TypePtr refInt4 = builder.refType(int4);
 		TypePtr refInt8 = builder.refType(int8);
 		TypePtr refReal4 = builder.refType(real4);
@@ -190,26 +194,6 @@ namespace types {
 		EXPECT_PRED2(isNotSubTypeOf, refInt4, refInt8);
 		EXPECT_PRED2(isNotSubTypeOf, refReal4, refReal8);
 
-		EXPECT_PRED2(isSubTypeOf, refInt4, refAny);
-		EXPECT_PRED2(isSubTypeOf, refInt8, refAny);
-		EXPECT_PRED2(isSubTypeOf, refReal4, refAny);
-		EXPECT_PRED2(isSubTypeOf, refReal8, refAny);
-
-		EXPECT_PRED2(isNotSubTypeOf, refAny, refInt4);
-		EXPECT_PRED2(isNotSubTypeOf, refAny, refInt8);
-		EXPECT_PRED2(isNotSubTypeOf, refAny, refReal4);
-		EXPECT_PRED2(isNotSubTypeOf, refAny, refReal8);
-
-		// check arrays - vector relation
-		TypePtr refArray = builder.parseType("ref<array<int<4>,1>>");
-		TypePtr refVector = builder.parseType("ref<vector<int<4>,50>>");
-
-		EXPECT_PRED2(isSubTypeOf, refVector, refArray);
-		EXPECT_PRED2(isNotSubTypeOf, refArray, refVector);
-
-		TypePtr refArray2 = builder.parseType("ref<array<int<8>,1>>");
-		EXPECT_PRED2(isNotSubTypeOf, refArray, refArray2);
-		EXPECT_PRED2(isNotSubTypeOf, refArray, refArray2);
 	}
 
 	TEST(TypeUtils, IsSubTypeOfFunctionType) {
@@ -307,12 +291,14 @@ namespace types {
 
 		TypePtr F = builder.parseType("F : B, E <>", symbols);
 
+		/*
 		std::cout << "A: " << A << std::endl;
 		std::cout << "B: " << B << std::endl;
 		std::cout << "C: " << C << std::endl;
 		std::cout << "D: " << D << std::endl;
 		std::cout << "E: " << E << std::endl;
 		std::cout << "F: " << F << std::endl;
+		*/
 
 		// now check the relations
 
@@ -365,34 +351,33 @@ namespace types {
 		EXPECT_PRED2(isSubTypeOf, meet, int4);
 		EXPECT_PRED2(isSubTypeOf, meet, uint4);
 
-		assert_not_implemented() << "Adapt to new array handling!";
 
-		//	// test with vectors
-		//	TypePtr vectorA = builder.vectorType(int4, builder.concreteIntTypeParam(12));
-		//	TypePtr vectorB = builder.vectorType(int4, builder.concreteIntTypeParam(14));
-		//
-		//	join = getSmallestCommonSuperType(vectorA, vectorB);
-		//	EXPECT_TRUE(join);
-		//	EXPECT_EQ("AP(array<int<4>,1>)", toString(join));
-		//	EXPECT_FALSE(getBiggestCommonSubType(vectorA, vectorB));
-		//
-		//	EXPECT_EQ(vectorA, getSmallestCommonSuperType(vectorA, vectorA));
-		//	EXPECT_EQ(vectorA, getBiggestCommonSubType(vectorA, vectorA));
-		//
-		//	// test some functions
-		//	TypePtr funA = builder.functionType(toVector(int4), int4);
-		//	TypePtr funB = builder.functionType(toVector(uint4), uint4);
-		//
-		//	join = getSmallestCommonSuperType(funA, funB);
-		//	EXPECT_EQ("((uint<2>)->int<8>)", toString(*join));
-		//	meet = getBiggestCommonSubType(funA, funB);
-		//	EXPECT_EQ("((int<8>)->uint<2>)", toString(*meet));
-		//
-		//	EXPECT_PRED2(isSubTypeOf, funA, join);
-		//	EXPECT_PRED2(isSubTypeOf, funB, join);
-		//
-		//	EXPECT_PRED2(isSubTypeOf, meet, funA);
-		//	EXPECT_PRED2(isSubTypeOf, meet, funB);
+		// test with vectors
+		TypePtr vectorA = builder.arrayType(int4, 12);
+		TypePtr vectorB = builder.arrayType(int4, 14);
+
+		// those types should be unrelated
+		EXPECT_FALSE(getSmallestCommonSuperType(vectorA, vectorB));
+		EXPECT_FALSE(getBiggestCommonSubType(vectorA, vectorB));
+
+		// but identity should work
+		EXPECT_EQ(vectorA, getSmallestCommonSuperType(vectorA, vectorA));
+		EXPECT_EQ(vectorA, getBiggestCommonSubType(vectorA, vectorA));
+
+		// test some functions
+		TypePtr funA = builder.functionType(toVector(int4), int4);
+		TypePtr funB = builder.functionType(toVector(uint4), uint4);
+
+		join = getSmallestCommonSuperType(funA, funB);
+		EXPECT_EQ("((uint<2>)->int<8>)", toString(*join));
+		meet = getBiggestCommonSubType(funA, funB);
+		EXPECT_EQ("((int<8>)->uint<2>)", toString(*meet));
+
+		EXPECT_PRED2(isSubTypeOf, funA, join);
+		EXPECT_PRED2(isSubTypeOf, funB, join);
+
+		EXPECT_PRED2(isSubTypeOf, meet, funA);
+		EXPECT_PRED2(isSubTypeOf, meet, funB);
 	}
 
 	TEST(TypeUtils, RecursiveTypes) {
@@ -428,9 +413,6 @@ namespace types {
 
 		auto type = builder.parseType("let t, s = struct : s { B b; ref<t> next; }, struct { A a; }; t").as<RecTypePtr>();
 
-		std::cout << type << std::endl;
-		dumpColor(type);
-
 		EXPECT_PRED2(isSubTypeOf, type, type);
 		EXPECT_PRED2(isSubTypeOf, type, type->unroll());
 		EXPECT_PRED2(isSubTypeOf, type->unroll(), type);
@@ -445,28 +427,6 @@ namespace types {
 
 		EXPECT_PRED2(isSubTypeOf, typeA, typeB);
 		EXPECT_PRED2(isNotSubTypeOf, typeB, typeA);
-	}
-
-	TEST(TypeUtils, RefAny) {
-		NodeManager mgr;
-		IRBuilder builder(mgr);
-
-		// the simple ref any
-		auto refAny = builder.parseType("ref<any>");
-
-		EXPECT_PRED2(isSubTypeOf, builder.parseType("ref<A>"), refAny);
-		EXPECT_PRED2(isSubTypeOf, builder.parseType("ref<int<4>>"), refAny);
-		EXPECT_PRED2(isSubTypeOf, builder.parseType("ref<ref<int<4>>>"), refAny);
-
-		EXPECT_PRED2(isNotSubTypeOf, builder.parseType("A"), refAny);
-		EXPECT_PRED2(isNotSubTypeOf, builder.parseType("int<4>"), refAny);
-
-		// a more nested version
-		refAny = builder.parseType("ref<ref<any>>");
-
-		EXPECT_PRED2(isSubTypeOf, builder.parseType("ref<ref<A>>"), refAny);
-		EXPECT_PRED2(isSubTypeOf, builder.parseType("ref<ref<int<4>>>"), refAny);
-		EXPECT_PRED2(isSubTypeOf, builder.parseType("ref<ref<ref<int<4>>>>"), refAny);
 	}
 
 	TEST(TypeUtils, TypeLiteralArgument) {

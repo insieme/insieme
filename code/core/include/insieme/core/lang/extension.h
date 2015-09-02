@@ -222,8 +222,8 @@ namespace lang {
 		 */
 		bool addAlias(const string& pattern, const string& full) {
 			return addAlias(
-					getType(manager, pattern, getSymbols()).as<GenericTypePtr>(),
-					getType(manager, pattern, getSymbols())
+					getType(manager, pattern, getSymbols(), getTypeAliases()).as<GenericTypePtr>(),
+					getType(manager, full, getSymbols(), getTypeAliases())
 			);
 		}
 
@@ -234,9 +234,10 @@ namespace lang {
 		 * @param manager the node manager to be used for creating the type
 		 * @param type the string to be parsed
 		 * @param definitions a map of already existing named definitions used during parsing
+		 * @param aliases a map of type aliases to be considered in the parsing
 		 * @return the requested type
 		 */
-		static TypePtr getType(NodeManager& manager, const string& type, const symbol_map& definitions = symbol_map());
+		static TypePtr getType(NodeManager& manager, const string& type, const symbol_map& definitions = symbol_map(), const type_alias_map& aliases = type_alias_map());
 
 		/**
 		 * A utility simplifying the creation of literals within language extensions.
@@ -246,10 +247,11 @@ namespace lang {
 		 * @param type the type of the resulting literal, encoded as a string
 		 * @param value the value of the resulting literal
 		 * @param definitions a map of already existing named definitions used during parsing
+		 * @param aliases a map of type aliases to be considered in the parsing
 		 * @return the requested literal
 		 */
 		static LiteralPtr getLiteral(NodeManager& manager, const string& type, const string& value,
-							  const symbol_map& definitions = symbol_map());
+							  const symbol_map& definitions = symbol_map(), const type_alias_map& aliases = type_alias_map());
 
 		/**
 		 * A utility simplifying the creation of expressions within language extensions.
@@ -257,9 +259,10 @@ namespace lang {
 		 * @param manager the node manager to be used for creating the resulting literal
 		 * @param spec the inspire code describing the resulting construct
 		 * @param definitions a map of already existing named definitions used during parsing
+		 * @param aliases a map of type aliases to be considered in the parsing
 		 * @return the requested literal
 		 */
-		static ExpressionPtr getExpression(NodeManager& manager, const string& spec, const symbol_map& definitions = symbol_map());
+		static ExpressionPtr getExpression(NodeManager& manager, const string& spec, const symbol_map& definitions = symbol_map(), const type_alias_map& aliases = type_alias_map());
 	};
 
 
@@ -294,14 +297,13 @@ namespace lang {
 																																							   \
 		const insieme::core::TypePtr reg##NAME() const {                                                                                                       \
 			checkIrNameNotAlreadyInUse(IR_NAME);                                                                                                               \
-			addNamedIrExtension(IR_NAME, [&]()->NodePtr { return get##NAME(); });                                                                              \
 			return insieme::core::TypePtr();                                                                                                                   \
 		}                                                                                                                                                      \
                                                                                                                                                                \
 	  public:                                                                                                                                                  \
 		const insieme::core::TypePtr& get##NAME() const {                                                                                                      \
 		    if(!type_##NAME) {                                                                                                                                 \
-				type_##NAME = getType(getNodeManager(), TYPE, getSymbols());                                                              \
+				type_##NAME = getType(getNodeManager(), TYPE, getSymbols(), getTypeAliases());                                                                 \
 				insieme::core::lang::markAsBuiltIn(type_##NAME);                                                                                               \
 			}                                                                                                                                                  \
 			return type_##NAME;                                                                                                                                \
@@ -332,7 +334,7 @@ namespace lang {
 	  private:                                                                                                                                                 \
 		mutable insieme::core::LiteralPtr lit_##NAME = reg##NAME();                                                                                            \
                                                                                                                                                                \
-		insieme::core::LiteralPtr reg##NAME() const {                                                                                                    \
+		insieme::core::LiteralPtr reg##NAME() const {                                                                                                          \
 			checkIrNameNotAlreadyInUse(IR_NAME);                                                                                                               \
 			addNamedIrExtension(IR_NAME, [&]()->NodePtr { return get##NAME(); });                                                                              \
 			return insieme::core::LiteralPtr();                                                                                                                \
@@ -341,7 +343,7 @@ namespace lang {
 	  public:                                                                                                                                                  \
 		const insieme::core::LiteralPtr& get##NAME() const {                                                                                                   \
 		    if (!lit_##NAME) {                                                                                                                                 \
-				lit_##NAME = getLiteral(getNodeManager(), TYPE, VALUE, getSymbols());                                                     					   \
+				lit_##NAME = getLiteral(getNodeManager(), TYPE, VALUE, getSymbols(), getTypeAliases());                                                        \
 				insieme::core::lang::markAsDerived(lit_##NAME, VALUE);                                                                                         \
 				insieme::core::lang::markAsBuiltIn(lit_##NAME);                                                                                                \
 			}                                                                                                                                                  \
@@ -381,7 +383,7 @@ namespace lang {
 	  public:                                                                                                                                                  \
 		const insieme::core::ExpressionPtr& get##NAME() const {                                                                                                \
 		    if (!expr_##NAME) {                                                                                                                                \
-		    	expr_##NAME = getExpression(getNodeManager(), SPEC, getSymbols()); \
+		    	expr_##NAME = getExpression(getNodeManager(), SPEC, getSymbols(), getTypeAliases()); \
 				insieme::core::lang::markAsDerived(expr_##NAME, #NAME);                                                                                        \
 				insieme::core::lang::markAsBuiltIn(expr_##NAME);                                                                                               \
 	        }                                                                                                                                                  \

@@ -187,7 +187,6 @@ namespace types {
 
 		// check reference types
 		if(analysis::isRefType(subType) && analysis::isRefType(superType)) {
-			const auto& basic = subType->getNodeManager().getLangBasic();
 
 			// check element type
 			auto srcElement = analysis::getReferencedType(subType);
@@ -196,9 +195,6 @@ namespace types {
 			// if element types are identical => it is fine
 			// if (srcElement == trgElement) return true;
 			if(core::analysis::compareTypes(srcElement, trgElement)) { return true; }
-
-			// if sub-type is ref<any> it is ok
-			if(basic.isAny(trgElement)) { return true; }
 
 			// support nested references
 			if(analysis::isRefType(srcElement) && analysis::isRefType(trgElement)) { return isSubTypeOf(srcElement, trgElement); }

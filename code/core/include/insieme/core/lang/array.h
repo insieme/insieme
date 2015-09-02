@@ -88,15 +88,15 @@ namespace lang {
 		 * A derived operator conducting a reduction over the elements of a given array.
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(ArrayReduce, "array_reduce",
-				    "                                                                                "
-					"   lambda (ref<array<'a>> data, uint<8> size, ('b,'a)->'b op, 'b init)->'b {    "
-					"   	decl ref<'b> res = var(init);                                            "
-					"   	for(uint<8> i = 0ul .. size) {                                           "
-					"   		res = op(*res, *(data[i]));                                          "
-					"   	}                                                                        "
-					"   	return *res;                                                             "
-					"   }                                                                            "
-				    "                                                                                "
+				    "                                                                                       "
+					"   lambda (ref<array<'a,'s>,'v,'c> data, int<8> size, ('b,'a)->'b op, 'b init)->'b {   "
+					"   	decl ref<'b,f,f> res = var(init);                                               "
+					"   	for(int<8> i = 0 .. size) {                                                     "
+					"   		res = op(*res, *(data[i]));                                                 "
+					"   	}                                                                               "
+					"   	return *res;                                                                    "
+					"   }                                                                                   "
+				    "                                                                                       "
 		)
 
 

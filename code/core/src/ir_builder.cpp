@@ -63,6 +63,7 @@
 
 #include "insieme/core/lang/ir++_extension.h"
 #include "insieme/core/lang/static_vars.h"
+
 #include "insieme/core/lang/array.h"
 #include "insieme/core/lang/reference.h"
 #include "insieme/core/lang/parallel.h"
@@ -305,7 +306,7 @@ namespace core {
 		return lang::ReferenceType::create(elementType, _const, _volatile);
 	}
 
-	GenericTypePtr IRBuilderBaseModule::ptrType(const TypePtr& elementType, bool _const, bool _volatile) const {
+	StructTypePtr IRBuilderBaseModule::ptrType(const TypePtr& elementType, bool _const, bool _volatile) const {
 		return lang::PointerType::create(elementType, _const, _volatile);
 	}
 
@@ -728,8 +729,12 @@ namespace core {
 		return CallExprPtr();
 	}
 	CallExprPtr IRBuilderBaseModule::arrayRefElem(const ExpressionPtr& array, const ExpressionPtr& index) const {
-		assert_not_implemented() << "Todo: implement";
-		return CallExprPtr();
+		// check that the access is valid
+		assert_pred1(lang::isReference, array);
+		assert_pred1(lang::isArray, analysis::getReferencedType(array));
+		// build expression accessing the addressed element in the given array
+		auto& refExt = getExtension<lang::ReferenceExtension>();
+		return callExpr(refExt.getRefArrayElement(), array, index);
 	}
 
 	CallExprPtr IRBuilderBaseModule::arrayAccess(const ExpressionPtr& array, const ExpressionPtr& index) const {
@@ -843,7 +848,9 @@ namespace core {
 
 			TypePtr res = types::deduceReturnType(funType, argumentTypes, false);
 
-			assert_ne(TypePtr(), res) << "Unable to deduce return type!";
+			assert_true(res) << "Unable to deduce return type!\n"
+					"Function Type:  " << *funType << "\n"
+					"Argument Types:   " << join(",", argumentTypes, print<deref<TypePtr>>()) << "\n";
 
 			return res;
 		}

@@ -126,7 +126,7 @@ namespace conversion {
 			// check if we have an init expression
 			core::ExpressionPtr initExp;
 			if(convertedDecl.second) {
-				initExp = builder.refVar(*convertedDecl.second);
+				initExp = core::lang::buildRefCast(builder.refVar(*convertedDecl.second), convertedDecl.first->getType());
 			} else {
 				// generate undefined initializer
 				initExp = builder.undefinedVar(convertedDecl.first.getType());

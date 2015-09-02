@@ -39,6 +39,8 @@
 #include "insieme/core/lang/pointer.h"
 #include "insieme/core/test/test_utils.h"
 
+#include "insieme/core/ir_builder.h"
+
 namespace insieme {
 namespace core {
 namespace lang {
@@ -47,6 +49,54 @@ namespace lang {
 		NodeManager nm;
 		auto& ext = nm.getLangExtension<PointerExtension>();
 		semanticCheckSecond(ext.getSymbols());
+	}
+
+	TEST(Pointer, StructSubstitute) {
+		NodeManager nm;
+		const PointerExtension& ext = nm.getLangExtension<PointerExtension>();
+
+		// the generic pointer template should be a struct
+		EXPECT_EQ(NT_StructType, ext.getGenPtr()->getNodeType());
+
+		// the arguments in the functions accepting a pointer should be expanded to a struct
+		EXPECT_EQ(NT_StructType, ext.getPtrCast()->getType().as<FunctionTypePtr>()->getParameterTypes()[0]->getNodeType());
+	}
+
+	TEST(Pointer, Alias) {
+
+		// test whether the pointer alias is working
+
+		NodeManager nm;
+		IRBuilder builder(nm);
+
+		auto t1 = builder.parseType("ptr<int<4>>");
+		auto t2 = builder.parseType("ptr<int<4>,f,f>");
+		auto t3 = builder.parseType("ptr<int<4>,f,t>");
+
+		EXPECT_EQ(t1->getNodeType(), NT_StructType);
+		EXPECT_EQ(t2->getNodeType(), NT_StructType);
+		EXPECT_EQ(t3->getNodeType(), NT_StructType);
+
+		EXPECT_EQ(t1, t2);
+		EXPECT_NE(t1, t3);
+	}
+
+	TEST(Pointer, IsPointer) {
+		NodeManager nm;
+		IRBuilder builder(nm);
+
+		auto A = builder.parseType("A");
+		EXPECT_TRUE(isPointer(PointerType::create(A)));
+		EXPECT_TRUE(isPointer(PointerType::create(A, false, true)));
+
+		EXPECT_FALSE(isPointer(builder.parseType("A")));
+		EXPECT_TRUE(isPointer(builder.parseType("ptr<A>")));
+		EXPECT_TRUE(isPointer(builder.parseType("ptr<A,f,t>")));
+
+		EXPECT_TRUE(isPointer(builder.parseType("ptr<A,f,t>")));
+
+		EXPECT_FALSE(isPointer(builder.parseType("ptr<A,c,t>")));
+		EXPECT_FALSE(isPointer(builder.parseType("ptr<A,f,t,c>")));
 	}
 
 } // end namespace lang

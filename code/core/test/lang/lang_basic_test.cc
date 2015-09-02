@@ -115,8 +115,8 @@ TEST(LangBasic, DerivedMembership) {
 	const BasicGenerator& gen = nm.getLangBasic();
 	const ReferenceExtension& ext = nm.getLangExtension<lang::ReferenceExtension>();
 
-	EXPECT_TRUE(gen.isMemberAccess(gen.getCompositeMemberAccess()));
-	EXPECT_TRUE(gen.isMemberAccess(ext.getRefMemberAccess()));
+	EXPECT_TRUE(gen.isArithOp(gen.getSignedIntPreInc()));
+	EXPECT_TRUE(gen.isArithOp(gen.getSignedIntPostInc()));
 }
 
 

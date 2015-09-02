@@ -173,12 +173,13 @@ namespace analysis {
 	/**
 	 * Obtains the type referenced by the given reference type.
 	 *
-	 * @param type the type of the reference to be processed
-	 * @return the type of the value referenced by the given reference type
+	 * @param type the type or expression of the reference to be processed
+	 * @return the type of the value referenced by the given reference type or expression
 	 */
-	static inline TypePtr getReferencedType(const NodePtr& type) {
-		assert_true(isRefType(type)) << "Cannot get the referenced type of a non ref type.";
-		return lang::ReferenceType(type).getElementType();
+	static inline TypePtr getReferencedType(const NodePtr& node) {
+		if (auto expr = node.isa<ExpressionPtr>()) return getReferencedType(expr->getType());
+		assert_true(isRefType(node)) << "Cannot get the referenced type of a non ref type.";
+		return lang::ReferenceType(node).getElementType();
 	}
 
 
