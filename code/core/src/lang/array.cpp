@@ -37,8 +37,8 @@
 #include "insieme/core/lang/array.h"
 
 #include "insieme/core/ir_builder.h"
-
 #include "insieme/core/types/match.h"
+#include "insieme/core/lang/list.h"
 
 namespace insieme {
 namespace core {
@@ -60,7 +60,8 @@ namespace lang {
 
 		// process node type
 		GenericTypePtr type = node.as<GenericTypePtr>();
-		*this = ArrayType(type->getTypeParameter(0), type->getTypeParameter(1).as<NumericTypePtr>()->getValue());
+		if(isInf(type->getTypeParameter(1))) *this = ArrayType(type->getTypeParameter(0), ExpressionPtr());
+		else *this = ArrayType(type->getTypeParameter(0), type->getTypeParameter(1).as<NumericTypePtr>()->getValue());
 	}
 
 	bool ArrayType::isArrayType(const NodePtr& node) {
@@ -122,6 +123,15 @@ namespace lang {
 		}
 
 		return GenericType::get(nm, "array", ParentList(), toVector(elementType, num));
+	}
+
+	ExpressionPtr buildArrayCreate(const TypePtr& elemType, const TypePtr& size, const ExpressionList& list) {
+		NodeManager& nm = elemType.getNodeManager();
+		IRBuilder builder(nm);
+		auto& arrExt = nm.getLangExtension<ArrayExtension>();
+
+		return builder.callExpr(arrExt.getArrayCreate(), builder.getTypeLiteral(elemType), builder.getTypeLiteral(size),
+			                    core::lang::buildListOfExpressions(list));
 	}
 
 } // end namespace lang

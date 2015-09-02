@@ -41,7 +41,7 @@
 #include "insieme/core/encoder/encoder.h"
 
 #include "insieme/core/forward_decls.h"
-#include "insieme/core/lang/extension.h"
+#include "insieme/core/lang/list.h"
 
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_expressions.h"
@@ -54,72 +54,9 @@ namespace encoder {
 
 	// -- list representation within the IR --
 
-	/**
-	 * A language extension introducing the primitives required to encode lists of elements.
-	 * Lists are represented within the IR using cons and empty tokens.
-	 */
-	class ListExtension : public core::lang::Extension {
-	  public:
-		/**
-		 * The family name of the list data type.
-		 */
-		static string LIST_TYPE_NAME;
-
-		/**
-		 * The empty literal of type (type<'a>)->list<'a> allowing the creation of an
-		 * empty list of a certain type.
-		 */
-		const core::LiteralPtr empty;
-
-		/**
-		 * The cons operator of type ('a,list<'a>)->list<'a> extending a given list
-		 * by an additional head-element.
-		 */
-		const core::LiteralPtr cons;
-
-	  private:
-		/**
-		 * Language extensions should only be constructed by the node manager.
-		 */
-		friend class core::NodeManager;
-
-		/**
-		 * A constructor for this language extension creating a new instance based on the
-		 * given node manager.
-		 *
-		 * @param manager the manager to base all node types within resulting extension on
-		 */
-		ListExtension(core::NodeManager& manager);
-	};
-
-	/**
-	 * A utility allowing to test whether the given type is a list type.
-	 *
-	 * @param type the type to be tested
-	 */
-	bool isListType(const core::TypePtr& type);
-
-	/**
-	 * A utility allowing to obtain the element type of the given list type.
-	 *
-	 * @param listType the type representing a list type from which the element type should be extracted
-	 * @return a reference to the contained element type
-	 */
-	const core::TypePtr getElementType(const core::TypePtr& listType);
-
-	/**
-	 * Creates a list type maintaining elements of the given element type.
-	 *
-	 * @param elementType the type to be maintained by the resulting list type.
-	 * @return the requested list type maintained by the same manager as the given element type.
-	 */
-	const core::TypePtr getListType(const core::TypePtr& elementType);
-
-
 	namespace detail {
 
 		//  -- some utility functors --
-
 
 		/**
 		 * A generic functor creating the IR type of an encoded list.
@@ -132,7 +69,7 @@ namespace encoder {
 			create_list_type() {}
 
 			core::TypePtr operator()(NodeManager& manager) const {
-				return GenericType::get(manager, ListExtension::LIST_TYPE_NAME, toVector(typename C::type_factory()(manager)));
+				return GenericType::get(manager, "list", toVector(typename C::type_factory()(manager)));
 			}
 		};
 
@@ -148,7 +85,7 @@ namespace encoder {
 			is_list() {}
 
 			bool operator()(const core::ExpressionPtr& expr) const {
-				const ListExtension& ext = expr->getNodeManager().getLangExtension<ListExtension>();
+				const lang::ListExtension& ext = expr->getNodeManager().getLangExtension<lang::ListExtension>();
 
 				// check step case
 				if(expr->getNodeType() != core::NT_CallExpr) { return false; }
@@ -158,8 +95,8 @@ namespace encoder {
 
 				// lists can only be composed using cons and empty
 				const auto& fun = call->getFunctionExpr();
-				if(*fun == *ext.empty) { return true; }
-				if(*fun == *ext.cons) {
+				if(*fun == *ext.getListEmpty()) { return true; }
+				if(*fun == *ext.getListCons()) {
 					// check element type encoding + rest of the list
 					return typename C::is_encoding_of()(call->getArgument(0)) && (*this)(call->getArgument(1));
 				}
@@ -186,16 +123,16 @@ namespace encoder {
 				core::TypePtr elementType = getTypeFor<E, C>(manager);
 
 				IRBuilder builder(manager);
-				const ListExtension& ext = manager.getLangExtension<ListExtension>();
+				const lang::ListExtension& ext = manager.getLangExtension<lang::ListExtension>();
 
 				// create terminal token
 				core::ExpressionPtr typeToken = builder.getTypeLiteral(elementType);
-				core::ExpressionPtr res = builder.callExpr(listType, ext.empty, toVector(typeToken));
+				core::ExpressionPtr res = builder.callExpr(listType, ext.getListEmpty(), toVector(typeToken));
 
 				// append remaining tokens back to front
 				for(auto it = list.rbegin(); it != list.rend(); ++it) {
 					core::ExpressionPtr head = toIR<E, C>(manager, *it);
-					res = builder.callExpr(listType, ext.cons, head, res);
+					res = builder.callExpr(listType, ext.getListCons(), head, res);
 				}
 
 				return res;
@@ -213,19 +150,19 @@ namespace encoder {
 			core::ExpressionPtr operator()(NodeManager& manager, const vector<ExpressionPtr>& list) const {
 				// obtain some useful values
 				core::TypePtr elementType = (list.empty()) ? manager.getLangBasic().getUnit() : list[0].getType();
-				core::TypePtr listType = GenericType::get(manager, ListExtension::LIST_TYPE_NAME, toVector(elementType));
+				core::TypePtr listType = GenericType::get(manager, "list", toVector(elementType));
 
 				IRBuilder builder(manager);
-				const ListExtension& ext = manager.getLangExtension<ListExtension>();
+				const lang::ListExtension& ext = manager.getLangExtension<lang::ListExtension>();
 
 				// create terminal token
 				core::ExpressionPtr typeToken = builder.getTypeLiteral(elementType);
-				core::ExpressionPtr res = builder.callExpr(listType, ext.empty, toVector(typeToken));
+				core::ExpressionPtr res = builder.callExpr(listType, ext.getListEmpty(), toVector(typeToken));
 
 				// append remaining tokens back to front
 				for(auto it = list.rbegin(); it != list.rend(); ++it) {
 					core::ExpressionPtr head = toIR<ExpressionPtr, DirectExprConverter>(manager, *it);
-					res = builder.callExpr(listType, ext.cons, head, res);
+					res = builder.callExpr(listType, ext.getListCons(), head, res);
 				}
 
 				return res;
@@ -249,10 +186,10 @@ namespace encoder {
 			 * @param res the resulting vector (will be incrementally constructed)
 			 */
 			vector<E>& toList(const core::ExpressionPtr& list, vector<E>& res) const {
-				const ListExtension& ext = list->getNodeManager().getLangExtension<ListExtension>();
+				const lang::ListExtension& ext = list->getNodeManager().getLangExtension<lang::ListExtension>();
 
 				CallExprPtr call = static_pointer_cast<const CallExpr>(list);
-				if(*call->getFunctionExpr() == *ext.empty) { return res; }
+				if(*call->getFunctionExpr() == *ext.getListEmpty()) { return res; }
 				res.push_back(toValue<E, C>(call->getArgument(0)));
 				return toList(call->getArgument(1), res);
 			}

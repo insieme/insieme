@@ -235,6 +235,15 @@ namespace lang {
 		if(auto expr = node.isa<ExpressionPtr>()) { return getArrayElementType(expr->getType()); }
 		return ArrayType(node.as<GenericTypePtr>()).getElementType();
 	}
+	
+	static inline TypePtr getArraySize(const NodePtr& node) {
+		assert_true(isArray(node));
+		if(auto expr = node.isa<ExpressionPtr>()) { return getArraySize(expr->getType()); }
+		auto type = node.as<GenericTypePtr>();
+		return type->getTypeParameter(1).as<NumericTypePtr>();
+	}
+
+	ExpressionPtr buildArrayCreate(const TypePtr& elemType, const TypePtr& size, const ExpressionList& list);
 
 } // end namespace lang
 } // end namespace core

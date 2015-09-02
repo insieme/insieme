@@ -89,11 +89,22 @@ namespace lang {
 		                        toVector(elementType, (mConst ? ext.getTrue() : ext.getFalse()), (mVolatile ? ext.getTrue() : ext.getFalse())));
 	}
 	
+	bool doReferencesDifferOnlyInQualifiers(const TypePtr& typeA, const TypePtr& typeB) {
+		assert_true(core::lang::isReference(typeA)) << "Can only check qualifiers on references, not on " << dumpColor(typeA);
+		assert_true(core::lang::isReference(typeB)) << "Can only check qualifiers on references, not on " << dumpColor(typeB);
+		
+		auto gA = typeA.as<GenericTypePtr>();
+		auto gB = typeB.as<GenericTypePtr>();
+
+		return gA->getTypeParameter(0) == gB->getTypeParameter(0)
+			   && (gA->getTypeParameter(1) != gB->getTypeParameter(1) || gA->getTypeParameter(2) != gB->getTypeParameter(2));
+	}
+	
 	ExpressionPtr buildRefCast(const ExpressionPtr& refExpr, const TypePtr& targetTy) {
 		assert_pred1(core::lang::isReference, refExpr) << "Trying to build a ref cast from non-ref.";
 		assert_pred1(core::lang::isReference, targetTy) << "Trying to build a ref cast to non-ref type.";
 		if(targetTy == refExpr->getType()) return refExpr;
-		assert_true(core::lang::differOnlyInQualifiers(refExpr->getType(), targetTy)) << "Ref cast only allowed to cast between qualifiers.";
+		assert_true(core::lang::doReferencesDifferOnlyInQualifiers(refExpr->getType(), targetTy)) << "Ref cast only allowed to cast between qualifiers.";
 		// TODO THIS IS WHY WE NEED THE MODULAR BUILDER
 		IRBuilder builder(refExpr->getNodeManager());
 		auto& rExt = refExpr->getNodeManager().getLangExtension<ReferenceExtension>();
