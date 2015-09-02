@@ -47,70 +47,8 @@ namespace insieme {
 namespace core {
 namespace lang {
 
-	TEST(IRppExtensions, ArrayCtor) {
-		NodeManager nm;
-
-		const IRppExtensions& ext = nm.getLangExtension<IRppExtensions>();
-		auto element = ext.getArrayCtor();
-		dump(element);
-
-		// just check whether the code is not exhibiting errors
-		EXPECT_TRUE(checks::check(element).empty()) << checks::check(element);
-	}
-
-	TEST(IRppExtensions, VectorCtor) {
-		NodeManager nm;
-
-		const IRppExtensions& ext = nm.getLangExtension<IRppExtensions>();
-		auto element = ext.getVectorCtor();
-		dump(element);
-
-		// just check whether the code is not exhibiting errors
-		EXPECT_TRUE(checks::check(element).empty()) << checks::check(element);
-		EXPECT_TRUE(isDerived(element));
-	}
-
-	TEST(IRppExtensions, VectorCtor2D) {
-		NodeManager nm;
-
-		const IRppExtensions& ext = nm.getLangExtension<IRppExtensions>();
-		auto element = ext.getVectorCtor2D();
-		dump(element);
-
-		// just check whether the code is not exhibiting errors
-		EXPECT_TRUE(checks::check(element).empty()) << checks::check(element);
-		EXPECT_TRUE(isDerived(element));
-	}
-
-	TEST(IRppExtensions, ArrayDtor) {
-		NodeManager nm;
-
-		const IRppExtensions& ext = nm.getLangExtension<IRppExtensions>();
-		auto element = ext.getArrayDtor();
-		dump(element);
-
-		// just check whether the code is not exhibiting errors
-		EXPECT_TRUE(checks::check(element).empty()) << checks::check(element);
-		EXPECT_TRUE(isDerived(element));
-	}
-
-	TEST(IRppExtensions, References) {
-		NodeManager nm;
-
-		const IRppExtensions& ext = nm.getLangExtension<IRppExtensions>();
-
-		// check all reference constructs
-		for(auto cur : {ext.getRefCppToIR(), ext.getRefIRToCpp(), ext.getRefConstCppToIR(), ext.getRefIRToConstCpp()}) {
-			dump(cur);
-
-			// just check whether the code is not exhibiting errors
-			EXPECT_TRUE(checks::check(cur).empty()) << checks::check(cur);
-		}
-	}
-
 	TEST(IRppExtensions, AllSemantics) {
 		NodeManager nm;
-
 		const IRppExtensions& ext = nm.getLangExtension<IRppExtensions>();
 
 		semanticCheckSecond(ext.getDefinedSymbols());

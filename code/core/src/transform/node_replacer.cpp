@@ -66,16 +66,12 @@ namespace {
 	class NodeReplacer : public CachedNodeMapping {
 		NodeManager& manager;
 		const PointerMap<NodePtr, NodePtr>& replacements;
-		const bool includesTypes;
 		const ReplaceLimiter limiter;
 		bool interrupted = false;
 
 	  public:
 		NodeReplacer(NodeManager& manager, const PointerMap<NodePtr, NodePtr>& replacements, const ReplaceLimiter limiter)
-		    : manager(manager), replacements(replacements), includesTypes(any(replacements, [](const std::pair<NodePtr, NodePtr>& cur) {
-			      auto cat = cur.first->getNodeCategory();
-			      return cat == NC_Type || cat == NC_IntTypeParam || cat == NC_Support;
-			  })), limiter(limiter) {}
+		    : manager(manager), replacements(replacements), limiter(limiter) {}
 
 	  private:
 		/**
@@ -84,11 +80,6 @@ namespace {
 		virtual const NodePtr resolveElement(const NodePtr& ptr) {
 			// we shouldn't do anything if replacement was interrupted
 			if(interrupted) { return ptr; }
-
-			// if element to be replaced is a not a type but the current node is,
-			// the recursion can be pruned (since types only have other types as
-			// sub-nodes)
-			if(!includesTypes && ptr->getNodeCategory() == NC_Type) { return ptr; }
 
 			// check which action to perform for this node
 			ReplaceAction repAction = limiter(ptr);
@@ -125,7 +116,6 @@ namespace {
 
 	class RecVariableMapReplacer : public CachedNodeMapping {
 		NodeManager& manager;
-		IRBuilder builder;
 		ExpressionMap replacements;
 		bool limitScope;
 		const TypeRecoveryHandler& recoverTypes;
@@ -137,8 +127,8 @@ namespace {
 	  public:
 		RecVariableMapReplacer(NodeManager& manager, const ExpressionMap& replacements, bool limitScope, const TypeRecoveryHandler& recoverTypes,
 		                       const TypeHandler& typeHandler, const PointerMap<VariablePtr, ExpressionPtr>& declInitReplacements)
-		    : manager(manager), builder(manager), replacements(replacements), limitScope(limitScope), recoverTypes(recoverTypes), typeHandler(typeHandler),
-		      declInitReplacements(declInitReplacements) {}
+		    : manager(manager), replacements(replacements), limitScope(limitScope), recoverTypes(recoverTypes), typeHandler(typeHandler),
+		      declInitReplacements(declInitReplacements) { }
 
 	  private:
 		virtual const NodePtr mapElement(unsigned index, const NodePtr& ptr) {
@@ -174,9 +164,6 @@ namespace {
 				auto pos = replacements.find(expr);
 				if(pos != replacements.end()) { return pos->second; }
 			}
-
-			// shortcut for types => will never be changed
-			if(ptr->getNodeCategory() == NC_Type) { return ptr; }
 
 			// handle scope limiting elements
 			if(limitScope && ptr->getNodeType() == NT_LambdaExpr && ptr != root) {
@@ -217,7 +204,7 @@ namespace {
 			TypePtr varType = var->getType();
 			ExpressionPtr val = decl->getInitialization();
 			TypePtr valType = val->getType();
-
+			IRBuilder builder(manager);
 			// check if the new variable is in declInitReplacements
 			auto newInit = declInitReplacements.find(var);
 			if(newInit != declInitReplacements.end()) {
@@ -276,7 +263,7 @@ namespace {
 
 		DeclarationStmtPtr newVarFromInit(NodePtr ptr) {
 			DeclarationStmtPtr newDecl;
-
+			IRBuilder builder(manager);
 			if(DeclarationStmtPtr decl = ptr.isa<DeclarationStmtPtr>()) {
 				// check variable and value type
 				ExpressionPtr val = decl->getInitialization();
@@ -310,6 +297,7 @@ namespace {
 
 		ExpressionPtr handleCallExpr(const CallExprPtr& call) {
 			// check whether it is a call to a literal
+			IRBuilder builder(manager);
 			const ExpressionPtr& fun = call->getFunctionExpr();
 			if(fun->getNodeType() == NT_LambdaExpr) { return handleCallToLamba(call); }
 			if(manager.getLangExtension<lang::ReferenceExtension>().isRefAssign(fun)) {
@@ -344,7 +332,7 @@ namespace {
 
 		CallExprPtr handleCallToLamba(const CallExprPtr& call) {
 			assert_eq(call->getFunctionExpr()->getNodeType(), NT_LambdaExpr);
-
+			IRBuilder builder(manager);
 			const LambdaExprPtr& lambda = call->getFunctionExpr().as<LambdaExprPtr>();
 			const ExpressionList& args = call->getArguments();
 
@@ -366,7 +354,7 @@ namespace {
 			for_range(make_paired_range(params, args), [&](const std::pair<VariablePtr, ExpressionPtr>& cur) {
 				VariablePtr param = cur.first;
 				if(!isSubTypeOf(cur.second->getType(), param->getType())) {
-					param = this->builder.variable(cur.second->getType());
+					param = builder.variable(cur.second->getType());
 					map[cur.first] = param;
 				}
 				newParams.push_back(param);
@@ -395,14 +383,13 @@ namespace {
 
 	class TypeFixer : public CachedNodeMapping {
 		NodeManager& manager;
-		IRBuilder builder;
 		const ExpressionMap& replacements;
 		bool limitScope;
 		const TypeHandler& typeHandler;
 
 	  public:
 		TypeFixer(NodeManager& manager, const ExpressionMap& replacements, bool limitScope, const TypeHandler& typeHandler)
-		    : manager(manager), builder(manager), replacements(replacements), limitScope(limitScope), typeHandler(typeHandler) {}
+		    : manager(manager), replacements(replacements), limitScope(limitScope), typeHandler(typeHandler) {}
 
 	  private:
 		/**
@@ -492,6 +479,7 @@ namespace {
 		}
 
 		NodePtr handleDeclStmt(const DeclarationStmtPtr& decl) {
+			IRBuilder builder(manager);
 			auto pos = replacements.find(decl->getVariable());
 			if(pos != replacements.end()) {
 				ExpressionPtr newInit = static_pointer_cast<const Expression>(this->resolveElement(decl->getInitialization()));
@@ -553,6 +541,8 @@ namespace {
 		}
 
 		CallExprPtr handleCallToBuiltIn(const CallExprPtr& call, const ExpressionList& args) {
+			IRBuilder builder(manager);
+			
 			// obtain function
 			auto fun = call->getFunctionExpr();
 
@@ -583,6 +573,7 @@ namespace {
 		}
 
 		CallExprPtr handleCallToLamba(const TypePtr& resType, const LambdaExprPtr& lambda, const ExpressionList& args) {
+			IRBuilder builder(manager);
 			const VariableList& params = lambda->getParameterList()->getParameters();
 			if(params.size() != args.size()) {
 				// wrong number of arguments => don't touch this!
@@ -615,7 +606,7 @@ namespace {
 				auto hasReplacement = replacements.find(cur.second);
 				VariablePtr param = (hasReplacement == replacements.end()) ? cur.second : (*hasReplacement).second.as<VariablePtr>();
 				if(!isSubTypeOf(cur.first->getType(), param->getType())) {
-					param = this->builder.variable(cur.first->getType());
+					param = builder.variable(cur.first->getType());
 
 					map[cur.second] = param;
 				}

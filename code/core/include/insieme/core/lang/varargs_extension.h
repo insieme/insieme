@@ -55,6 +55,8 @@ namespace lang {
 		 */
 		VarArgsExtension(core::NodeManager& manager) : core::lang::Extension(manager) {}
 
+		// this extension is based upon the symbols defined by the reference module
+		IMPORT_MODULE(ReferenceExtension);
 
 	  public:
 		LANG_EXT_TYPE(Valist, "va_list");

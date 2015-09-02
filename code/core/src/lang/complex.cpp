@@ -34,40 +34,38 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/core/lang/simd_vector.h"
+#include "insieme/core/lang/complex.h"
 
-#include "insieme/core/ir_types.h"
-#include "insieme/core/ir_builder.h"
+#include "insieme/core/lang/basic.h"
+#include "insieme/core/types/match.h"
 
 namespace insieme {
 namespace core {
 namespace lang {
 
-	bool isSIMDVector(const TypePtr& type) {
-		assert_not_implemented();
+	bool isComplexType(const NodePtr& node) {
+		// some simple checks
+		if (!node) return false;
+		if (auto expr = node.isa<ExpressionPtr>()) return isComplexType(node);
 
-		// TODO: fix this
-		//	core::GenericTypePtr gt;
-		//	return type->getNodeType() == core::NT_GenericType &&
-		//	       (gt = static_pointer_cast<const core::GenericType>(type),
-		//	        gt->getName()->getValue() == "simd" &&
-		//	        gt->getTypeParameter().size() == 1u &&
-		//	        gt->getTypeParameter()[0].isa<core::VectorTypePtr>() &&
-		//	        gt->getIntTypeParameter().empty()
-		//	       );
-		return false;
+		auto type = node.isa<StructTypePtr>();
+		if(!type) return false;
+
+		// simple approach: use unification
+		NodeManager& mgr = node.getNodeManager();
+		const ComplexExtension& ext = mgr.getLangExtension<ComplexExtension>();
+
+		// unify given type with template type
+		auto ref = ext.getGenComplex();
+		auto sub = types::match(mgr, type, ref);
+		if(!sub) return false;
+
+		// check whether the value instantiation is a numeric type
+		const BasicGenerator& base = mgr.getLangBasic();
+		return base.isSelect((*sub).applyTo(TypeVariable::get(mgr, "'a")));
 	}
 
-	ArrayType getSIMDVectorType(const TypePtr& type) {
-		assert_true(core::lang::isSIMDVector(type));
-		return ArrayType(type.as<GenericTypePtr>()->getTypeParameter(0));
-	}
 
-	GenericTypePtr toSIMDVector(const GenericTypePtr& type) {
-		assert_true(ArrayType::isFixedSizedArrayType(type));
-		insieme::core::IRBuilder builder(type.getNodeManager());
-		return builder.genericType("simd", toVector<TypePtr>(type));
-	}
 } // end namespace lang
 } // end namespace core
 } // end namespace insieme

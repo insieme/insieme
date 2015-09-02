@@ -177,31 +177,25 @@ namespace checks {
 			}
 
 			/**
-			 * Checks the special variable scope rules within a bind expression. The function
-			 * for which arguments should be bound as well as non-parameter arguments to the
-			 * resulting call have to be part of the local scope.
+			 * Adds the parameters of the bind expression temporarily to the set of defined
+			 * variables and verifies the usage of variables in the nested call expression.
 			 */
 			void visitBindExpr(const BindExprAddress& cur) {
-				// get list of parameters
-				const vector<VariablePtr>& params = cur.getAddressedNode()->getParameters()->getElements();
 
-				// check call expressions
-				const CallExprAddress call = cur->getCall();
+				// copy current scope
+				VariableSet currentScope = declaredVariables;
 
-				// start with function
-				visit(call->getFunctionExpr());
-
-				// check parameters
-				std::size_t numArgs = call->getArguments().size();
-				for(std::size_t i = 0; i < numArgs; i++) {
-					const ExpressionAddress cur = call->getArgument(i);
-
-					// check whether variable is a bind-parameter
-					if(cur->getNodeType() == NT_Variable && contains(params, static_pointer_cast<const Variable>(cur.getAddressedNode()))) { continue; }
-
-					// check whether all variables of the expression are within the current scope
-					visit(cur);
+				// add bind parameters
+				for(const auto& param : cur.getAddressedNode()->getParameters()) {
+					declaredVariables.insert(param);
 				}
+
+				// check nested call statement
+				visit(cur->getCall());
+
+				// reset current scope
+				declaredVariables = currentScope;
+
 			}
 
 			/**

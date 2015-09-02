@@ -383,6 +383,13 @@ namespace parser3 {
 			return builder.genericType(name, parents, params);
 		}
 
+		TypePtr inspire_driver::genNumericType(const location& l, const ExpressionPtr& variable) const {
+			if(!variable.isa<VariablePtr>()) {
+				error(l, "not a variable");
+			}
+			return builder.numericType(variable.as<core::VariablePtr>());
+		}
+
 		TypePtr inspire_driver::genNumericType(const location& l, const string& value) const {
 			return builder.numericType(builder.literal(value, builder.getLangBasic().getIntInf()));
 		}

@@ -288,7 +288,7 @@ namespace analysis {
 			    builder.structType(toVector(builder.namedType("load", manager.getLangBasic().getInt4()), builder.namedType("next", builder.refType(rec))));
 			TypePtr constRecType = builder.recType(rec, builder.recTypeDefinition(toVector(builder.recTypeBinding(rec, listElem))));
 
-			EXPECT_EQ("rec 'list.{'list=struct<load:int<4>,next:ref<'list>>}", toString(*constRecType));
+			EXPECT_EQ("rec 'list.{'list=struct<load:int<4>,next:ref<'list,f,f>>}", toString(*constRecType));
 			EXPECT_FALSE(isGeneric(constRecType));
 		}
 
@@ -299,7 +299,7 @@ namespace analysis {
 			    builder.structType(toVector(builder.namedType("load", builder.typeVariable("b")), builder.namedType("next", builder.refType(rec))));
 			TypePtr constRecType = builder.recType(rec, builder.recTypeDefinition(toVector(builder.recTypeBinding(rec, listElem))));
 
-			EXPECT_EQ("rec 'list.{'list=struct<load:'b,next:ref<'list>>}", toString(*constRecType));
+			EXPECT_EQ("rec 'list.{'list=struct<load:'b,next:ref<'list,f,f>>}", toString(*constRecType));
 			EXPECT_TRUE(isGeneric(constRecType));
 		}
 	}

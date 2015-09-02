@@ -192,7 +192,7 @@ namespace analysis {
 			 * visit members.
 			 */
 			bool visitNode(const NodePtr& node, TypeVariableSet& boundVars) {
-				LOG(FATAL) << "Reaching " << *node << " within IsGeneric visitor!";
+				LOG(FATAL) << "Reaching " << *node << " of type " << node->getNodeType() << " within IsGeneric visitor!";
 				assert_fail() << "Should not be reached!";
 				return false;
 			}

@@ -110,16 +110,6 @@ namespace analysis {
 	 */
 	bool isObjectReferenceType(const GenericTypePtr& type);
 
-	/**
-	 * Determines whether the given expression is representing a pure virtual function.
-	 */
-	bool isPureVirtual(const CallExprPtr& expr);
-
-	/**
-	 * Determines whether the given node is representing a pure virtual function.
-	 */
-	bool isPureVirtual(const NodePtr& node);
-
 
 	// --------------------------- data member pointer -----------------------------------
 

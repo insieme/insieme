@@ -291,7 +291,7 @@ namespace core {
 		                                                symbols)
 		                                  .as<LambdaExprPtr>());
 
-		info.addMemberFunction("magic", builder.getPureVirtual(builder.parseType("method T::()->bool", symbols).as<FunctionTypePtr>()), true);
+//		info.addMemberFunction("magic", builder.getPureVirtual(builder.parseType("method T::()->bool", symbols).as<FunctionTypePtr>()), true);
 
 		setMetaInfo(type, info);
 

@@ -52,8 +52,8 @@ namespace parser3 {
 		inspire_driver driver(x, nm);
 		driver.parseType();
 		if(driver.result) {
-			dumpColor(driver.result);
-			std::cout << " ============== TEST ============ " << std::endl;
+//			dumpColor(driver.result);
+//			std::cout << " ============== TEST ============ " << std::endl;
 			auto msg = checks::check(driver.result);
 			EXPECT_TRUE(msg.empty()) << msg;
 		}
@@ -73,9 +73,9 @@ namespace parser3 {
 		EXPECT_TRUE(test_type(nm, "struct { int<4> a; int<5> b;}"));
 		EXPECT_TRUE(test_type(nm, "let int = int<4>; int"));
 
-		EXPECT_TRUE(test_type(nm, "( int<4> , ref<int<4>>) -> int<4>"));
-		EXPECT_TRUE(test_type(nm, "( int<4> , ref<int<4>>) => int<4>"));
-		EXPECT_TRUE(test_type(nm, "(array<'elem,#n>, vector<uint<8>,#n>) -> 'elem"));
+		EXPECT_TRUE(test_type(nm, "( int<4> , rf<int<4>>) -> int<4>"));
+		EXPECT_TRUE(test_type(nm, "( int<4> , rf<int<4>>) => int<4>"));
+		EXPECT_TRUE(test_type(nm, "(ary<'elem,'n>, vector<uint<8>,'n>) -> 'elem"));
 
 		EXPECT_TRUE(test_type(nm, "let class = struct name { int<4> a; int<5> b};"
 		                          "method class::()->int<4> "));
@@ -85,12 +85,10 @@ namespace parser3 {
 		                          "ctor class::()"));
 
 		EXPECT_TRUE(test_type(nm, "struct C { int<4> field; }"));
-		EXPECT_TRUE(test_type(nm, "(ref<array<ref<array<struct{int<4> int; real<4> float },1>>,1>>,"
-		                          " ref<array<ref<array<real<4>,1>>,1>>,"
-		                          " ref<array<uint<8>,1>>)"));
+		EXPECT_TRUE(test_type(nm, "(rf<ary<rf<ary<struct{int<4> int; real<4> float },1>>,1>>,"
+		                          " rf<ary<rf<ary<real<4>,1>>,1>>,"
+		                          " rf<ary<uint<8>,1>>)"));
 
-		// failing types
-		EXPECT_FALSE(test_type(nm, "vector<int<4>>"));
 	}
 
 	bool test_expression(NodeManager& nm, const std::string& x) {
@@ -242,7 +240,7 @@ namespace parser3 {
 		EXPECT_FALSE(test_statement(nm, "try  {2;} catch( int<4> e)  1+1; "));
 
 		EXPECT_TRUE(test_statement(nm, "try  {2;} catch( int<4> e) { 1+1; }"));
-		EXPECT_TRUE(test_statement(nm, "try  {2;} catch( int<4> e) { 1+1; } catch (ref<int<4>> r) { 3+4; }"));
+		EXPECT_TRUE(test_statement(nm, "try  {2;} catch( int<4> e) { 1+1; } catch (rf<int<4>> r) { 3+4; }"));
 
 		EXPECT_TRUE(test_statement(nm, "{ }"));
 
@@ -250,22 +248,14 @@ namespace parser3 {
 		EXPECT_TRUE(test_statement(nm, "{"
 		                               "    let type = struct a { int<4> a; int<8> b; };"
 		                               "    decl type varable;"
-		                               "    decl ref<type> var2;"
+		                               "    decl rf<type> var2;"
 		                               "    decl auto var3 = undefined(type);"
 		                               "}"));
 
 		EXPECT_TRUE(test_statement(nm, "{"
-		                               "    let int = int<4>;    "
-		                               "    let A = struct { int a; };  "
-		                               "    let B = struct : A { int b; };  "
-		                               "    decl ref<B> b;  "
-		                               "    decl auto x = ref_narrow( b, dp_parent( dp_root, lit(A) ), lit(A) );"
-		                               "}"));
-
-		EXPECT_TRUE(test_statement(nm, "{"
 		                               "    let class = struct name { int<2> a};"
-		                               "    let collection = vector<class, 10>;"
-		                               "    decl ref<collection> x;"
+		                               "    let collection = array<class, 10>;"
+		                               "    decl ref<collection,f,f> x;"
 		                               "    decl int<2> y;"
 		                               "    x[5].a = y;"
 		                               "}"));
@@ -275,7 +265,7 @@ namespace parser3 {
 		inspire_driver driver(x, nm);
 		driver.parseProgram();
 		if(driver.result) {
-			//       dumpColor(driver.result);
+			// dumpColor(driver.result);
 			auto msg = checks::check(driver.result);
 			EXPECT_TRUE(msg.empty()) << msg;
 		}
@@ -299,16 +289,16 @@ namespace parser3 {
 		EXPECT_TRUE(test_program(mgr, "let f,g = lambda()->unit{g();},lambda()->unit{f();}; unit main() { f(); }"));
 
 		EXPECT_TRUE(test_program(mgr, "let class = struct name { int<4> a; int<5> b};"
-		                              "let f,g = lambda class :: ()->unit{"
-		                              "        g(this);"
+		                              "let a,b = lambda class :: ()->unit{"
+		                              "        b(this);"
 		                              "    },"
 		                              "    lambda class ::()->unit{"
-		                              "        f(this);"
+		                              "        a(this);"
 		                              "    }; "
 		                              "unit main() {  "
-		                              "    decl ref<class> x;"
-		                              "    f(x);"
-		                              "    g(x);"
+		                              "    decl ref<class,f,f> x;"
+		                              "    a(x);"
+		                              "    b(x);"
 		                              "}"));
 	}
 
@@ -336,6 +326,7 @@ namespace parser3 {
 
 		EXPECT_TRUE(test_program(nm, "let int = int<4>;"
 		                             "let uint = uint<4>;"
+//		                             "let parallel = lit(\"parallel\" : (job) -> threadgroup);"
 		                             "let differentbla = lambda ('b x) -> unit {"
 		                             "    decl auto m = x;"
 		                             "    decl auto l = m;"
@@ -346,7 +337,7 @@ namespace parser3 {
 		                             "    };"
 		                             "    anotherbla(f);"
 		                             "    differentbla(f);"
-		                             "    parallel(job { decl auto l = f; });"
+//		                             "    parallel(job { decl auto l = f; });"
 		                             "};"
 		                             "int main() {"
 		                             "    decl int x = 10;"

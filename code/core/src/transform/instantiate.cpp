@@ -71,7 +71,7 @@ namespace transform {
 				};
 
 				// using the derived mapping, we generate a new lambda expression with instantiated type params
-				auto builder = IRBuilder(nodeMan);
+				IRBuilder builder(nodeMan);
 				auto funType = funExp->getFunctionType();
 				auto replacedBody = funExp->getBody();
 				// only apply replacement to body of lambdas which we are not supposed to skip
@@ -138,7 +138,7 @@ namespace transform {
 			virtual const NodePtr mapElement(unsigned index, const NodePtr& ptr, InstContext& context) override {
 				auto prevNodeMap = context.first;
 				auto& nodeMan = ptr->getNodeManager();
-				auto builder = IRBuilder(nodeMan);
+				IRBuilder builder(nodeMan);
 				LOG(DEBUG) << "============ MAP: " << dumpOneLine(ptr) << " |==| " << *ptr << "\n";
 				LOG(DEBUG) << "===> CONTEXT: " << context.second << "\n";
 				// we are looking for CallExprs which have a concrete type params in the arguments,

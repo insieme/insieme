@@ -101,19 +101,6 @@ namespace analysis {
 		return isRefType(type) && isObjectType(getReferencedType(type));
 	}
 
-	bool isPureVirtual(const CallExprPtr& call) {
-		// check for null
-		if(!call) { return false; }
-
-		// check whether it is a call to the pure-virtual literal
-		const auto& ext = call->getNodeManager().getLangExtension<lang::IRppExtensions>();
-		return isCallOf(call, ext.getPureVirtual());
-	}
-
-	bool isPureVirtual(const NodePtr& node) {
-		return node && isPureVirtual(node.isa<CallExprPtr>());
-	}
-
 
 	// --------------------------- data member pointer -----------------------------------
 

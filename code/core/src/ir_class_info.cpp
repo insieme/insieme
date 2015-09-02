@@ -213,6 +213,8 @@ namespace core {
 	}
 
 	bool ClassMetaInfo::migrate(const NodeAnnotationPtr& ptr, const NodePtr& before, const NodePtr& after) const {
+		assert_not_implemented() << "This is no longer valid!";
+
 		assert_true(before != after);
 		assert_true(before.isa<TypePtr>());
 		assert_true(&getMetaInfo(before.as<TypePtr>()) == this);
@@ -300,27 +302,27 @@ namespace core {
 			// extract implementation
 			auto impl = newMember.getImplementation();
 
-			// update implementation
-			if(analysis::isPureVirtual(impl)) {
-				// update type
-				auto oldFunType = impl->getType().as<FunctionTypePtr>();
-				auto newFunType = core::transform::replaceNode(mgr, FunctionTypeAddress(oldFunType)->getParameterType(0), builder.refType(newClassType))
-				                      .as<FunctionTypePtr>();
-
-				// create new pure-virtual implementation
-				newMember.setImplementation(builder.getPureVirtual(newFunType));
-
-			} else if(auto lit = impl.isa<LiteralPtr>()) {
-				// update function type
-				newMember.setImplementation(core::transform::replaceNode(mgr, LiteralAddress(lit)->getType().as<FunctionTypeAddress>()->getParameterType(0),
-				                                                         builder.refType(newClassType))
-				                                .as<LiteralPtr>());
-
-			} else {
-				// handle as all other implementations
-				assert_true(impl.isa<LambdaExprPtr>());
-				newMember.setImplementation(alter(impl.as<LambdaExprPtr>()));
-			}
+//			// update implementation
+//			if(analysis::isPureVirtual(impl)) {
+//				// update type
+//				auto oldFunType = impl->getType().as<FunctionTypePtr>();
+//				auto newFunType = core::transform::replaceNode(mgr, FunctionTypeAddress(oldFunType)->getParameterType(0), builder.refType(newClassType))
+//				                      .as<FunctionTypePtr>();
+//
+//				// create new pure-virtual implementation
+//				newMember.setImplementation(builder.getPureVirtual(newFunType));
+//
+//			} else if(auto lit = impl.isa<LiteralPtr>()) {
+//				// update function type
+//				newMember.setImplementation(core::transform::replaceNode(mgr, LiteralAddress(lit)->getType().as<FunctionTypeAddress>()->getParameterType(0),
+//				                                                         builder.refType(newClassType))
+//				                                .as<LiteralPtr>());
+//
+//			} else {
+//				// handle as all other implementations
+//				assert_true(impl.isa<LambdaExprPtr>());
+//				newMember.setImplementation(alter(impl.as<LambdaExprPtr>()));
+//			}
 
 			newInfo.addMemberFunction(newMember);
 		}

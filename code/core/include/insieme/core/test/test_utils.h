@@ -44,6 +44,7 @@
 #include "insieme/core/checks/full_check.h"
 
 #include "insieme/core/lang/extension.h"
+#include "insieme/core/printer/error_printer.h"
 
 using std::string;
 

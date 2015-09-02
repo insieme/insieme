@@ -50,16 +50,6 @@ namespace core {
 	  public:
 		FrontendIRBuilder(core::NodeManager& mgr) : core::IRBuilder(mgr) {}
 
-		// --------------------------- C++ -----------------------------
-
-		/**
-		 * Creates an expression representing a pure virtual function of the given type.
-		 *
-		 * @param memberFunctionType the type of the resulting pure virtual function
-		 * @return an expression representing a pure virtual function of the given type
-		 */
-		ExpressionPtr getPureVirtual(const FunctionTypePtr& memberFunctionType) const;
-
 
 		// --------------------- static variables ----------------------
 

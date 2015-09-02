@@ -384,7 +384,7 @@ namespace lang {
 		const insieme::core::ExpressionPtr& get##NAME() const {                                                                                                \
 		    if (!expr_##NAME) {                                                                                                                                \
 		    	expr_##NAME = getExpression(getNodeManager(), SPEC, getSymbols(), getTypeAliases()); \
-				insieme::core::lang::markAsDerived(expr_##NAME, #NAME);                                                                                        \
+				insieme::core::lang::markAsDerived(expr_##NAME, IR_NAME);                                                                                        \
 				insieme::core::lang::markAsBuiltIn(expr_##NAME);                                                                                               \
 	        }                                                                                                                                                  \
 			return expr_##NAME;                                                                                                                                \
