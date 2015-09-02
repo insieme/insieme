@@ -46,7 +46,6 @@ ulonglong [0-9]+ull
 uint    [0-9]+u
 int     [0-9]+
 blank   [ \t]
-paramvar #[a-zA-Z]
 
 
 %{
@@ -82,6 +81,7 @@ paramvar #[a-zA-Z]
 "*"      return inspire_parser::make_STAR(loc);
 "/"      return inspire_parser::make_SLASH(loc);
 "%"      return inspire_parser::make_PERCENT(loc);
+"#"      return inspire_parser::make_HASH(loc);
 
 "("      return inspire_parser::make_LPAREN(loc);
 ")"      return inspire_parser::make_RPAREN(loc);
@@ -169,11 +169,6 @@ paramvar #[a-zA-Z]
 "syncAll" return inspire_parser::make_SYNCALL(loc);
 "job"     return inspire_parser::make_JOB(loc);
 "task"     return inspire_parser::make_TASK(loc);
-
-{paramvar} {
-    // skip # char
-  return inspire_parser::make_PARAMVAR(yytext, loc);
-}
 
 {stringlit}      {
     std::string tmp(yytext);
