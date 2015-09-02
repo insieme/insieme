@@ -50,19 +50,42 @@ namespace insieme {
 namespace core {
 namespace lang {
 
+	namespace {
+
+		TypePtr extractReferencedType(const StructTypePtr& type) {
+			GenericTypePtr refType = type->getTypeOfMember("data").as<GenericTypePtr>();
+			return ArrayType(ReferenceType(refType).getElementType()).getElementType();
+		}
+
+		TypePtr extractConstMarker(const StructTypePtr& type) {
+			GenericTypePtr refType = type->getTypeOfMember("data").as<GenericTypePtr>();
+			return refType->getTypeParameter(1);
+		}
+
+		TypePtr extractVolatileMarker(const StructTypePtr& type) {
+			GenericTypePtr refType = type->getTypeOfMember("data").as<GenericTypePtr>();
+			return refType->getTypeParameter(2);
+		}
+
+	}
+
 
 	PointerType::PointerType(const NodePtr& node) {
 		// check given node type
 		assert_true(node) << "Given node is null!";
-		assert_true(isPointerType(node)) << "Given node " << *node << " is not a reference type!";
+		assert_true(isPointerType(node)) << "Given node " << *node << " is not a pointer type!";
 
 		// process node type
-		GenericTypePtr type = node.as<GenericTypePtr>();
-		*this = PointerType(type->getTypeParameter(0), isTrueMarker(type->getTypeParameter(1)), isTrueMarker(type->getTypeParameter(2)));
+		StructTypePtr type = node.as<StructTypePtr>();
+		*this = PointerType(
+				extractReferencedType(type),
+				isTrueMarker(extractConstMarker(type)),
+				isTrueMarker(extractVolatileMarker(type))
+		);
 	}
 
 	bool PointerType::isPointerType(const NodePtr& node) {
-		auto type = node.isa<GenericTypePtr>();
+		auto type = node.isa<StructTypePtr>();
 		if(!type) return false;
 
 		// simple approach: use unification
@@ -70,26 +93,35 @@ namespace lang {
 		const PointerExtension& ext = mgr.getLangExtension<PointerExtension>();
 
 		// unify given type with template type
-		auto ref = ext.getGenPtr().as<GenericTypePtr>();
+		auto ref = ext.getGenPtr();
 		auto sub = types::match(mgr, type, ref);
 		if(!sub) return false;
 
 		// check instantiation
-		const types::Substitution& map = *sub;
-		return isValidBooleanMarker(map.applyTo(ref->getTypeParameter(1))) && isValidBooleanMarker(map.applyTo(ref->getTypeParameter(2)));
+		return isValidBooleanMarker(extractConstMarker(type)) && isValidBooleanMarker(extractVolatileMarker(type));
 	}
 
-	GenericTypePtr PointerType::create(const TypePtr& elementType, bool _const, bool _volatile) {
+	StructTypePtr PointerType::create(const TypePtr& elementType, bool _const, bool _volatile) {
 		assert_true(elementType);
 		return PointerType(elementType, _const, _volatile);
 	}
 
-	PointerType::operator GenericTypePtr() const {
+	PointerType::operator StructTypePtr() const {
 		NodeManager& mgr = elementType.getNodeManager();
-		auto& ext = mgr.getLangExtension<BooleanMarkerExtension>();
+		IRBuilder builder(mgr);
 
-		return GenericType::get(mgr, "ptr", ParentList(),
-		                        toVector(elementType, (mConst ? ext.getTrue() : ext.getFalse()), (mVolatile ? ext.getTrue() : ext.getFalse())));
+		auto& ext = mgr.getLangBasic();
+
+		// build a struct representing this pointer
+		return StructType::get(
+				mgr,
+				builder.stringValue("_ir_pointer"),
+				{
+						builder.namedType( builder.stringValue("data"), ReferenceType::create(ArrayType::create(elementType), mConst, mVolatile) ),
+						builder.namedType( builder.stringValue("offset"), ext.getInt8() )
+				}
+		);
+
 	}
 
 

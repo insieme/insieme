@@ -110,12 +110,14 @@ namespace lang {
 		NodeManager& nm = elementType.getNodeManager();
 		IRBuilder builder(nm);
 
-		NumericTypePtr num;
-		if(auto lit = size.isa<LiteralPtr>()) {
+		TypePtr num;
+		if (!size) {
+			num = GenericType::get(nm, "inf");
+		} else if(auto lit = size.isa<LiteralPtr>()) {
 			auto newIntLit = builder.literal(lit.getValue(), builder.getLangBasic().getIntInf());
 			num = NumericType::get(nm, newIntLit);
 		} else {
-			assert_true(size.isa<VariablePtr>());
+			assert_true(size.isa<VariablePtr>()) << "Not a variable: " << *size << "\n";
 			num = NumericType::get(nm, size.as<VariablePtr>());
 		}
 

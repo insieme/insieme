@@ -81,6 +81,24 @@ namespace lang {
 		EXPECT_NE(t1, t3);
 	}
 
+	TEST(Pointer, IsPointer) {
+		NodeManager nm;
+		IRBuilder builder(nm);
+
+		auto A = builder.parseType("A");
+		EXPECT_TRUE(isPointer(PointerType::create(A)));
+		EXPECT_TRUE(isPointer(PointerType::create(A, false, true)));
+
+		EXPECT_FALSE(isPointer(builder.parseType("A")));
+		EXPECT_TRUE(isPointer(builder.parseType("ptr<A>")));
+		EXPECT_TRUE(isPointer(builder.parseType("ptr<A,f,t>")));
+
+		EXPECT_TRUE(isPointer(builder.parseType("ptr<A,f,t>")));
+
+		EXPECT_FALSE(isPointer(builder.parseType("ptr<A,c,t>")));
+		EXPECT_FALSE(isPointer(builder.parseType("ptr<A,f,t,c>")));
+	}
+
 } // end namespace lang
 } // end namespace core
 } // end namespace insieme

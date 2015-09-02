@@ -304,9 +304,9 @@ namespace lang {
 
 		static bool isPointerType(const NodePtr& node);
 
-		static GenericTypePtr create(const TypePtr& elementType, bool _const = false, bool _volatile = false);
+		static StructTypePtr create(const TypePtr& elementType, bool _const = false, bool _volatile = false);
 
-		operator GenericTypePtr() const;
+		operator StructTypePtr() const;
 
 		// --- observers and mutators ---
 

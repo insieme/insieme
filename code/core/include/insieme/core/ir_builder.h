@@ -262,7 +262,7 @@ namespace core {
 		}
 
 		GenericTypePtr refType(const TypePtr& elementType, bool _const = false, bool _volatile = false) const;
-		GenericTypePtr ptrType(const TypePtr& elementType, bool _const = false, bool _volatile = false) const;
+		StructTypePtr ptrType(const TypePtr& elementType, bool _const = false, bool _volatile = false) const;
 
 		GenericTypePtr arrayType(const TypePtr& elementType) const;
 		GenericTypePtr arrayType(const TypePtr& elementType, const LiteralPtr& size) const;

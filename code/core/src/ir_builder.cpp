@@ -306,7 +306,7 @@ namespace core {
 		return lang::ReferenceType::create(elementType, _const, _volatile);
 	}
 
-	GenericTypePtr IRBuilderBaseModule::ptrType(const TypePtr& elementType, bool _const, bool _volatile) const {
+	StructTypePtr IRBuilderBaseModule::ptrType(const TypePtr& elementType, bool _const, bool _volatile) const {
 		return lang::PointerType::create(elementType, _const, _volatile);
 	}
 

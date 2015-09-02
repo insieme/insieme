@@ -41,7 +41,7 @@ TYPE(Unit, "unit")
 TYPE(Char, "char")
 TYPE(WChar16, "wchar<16>")
 TYPE(WChar32, "wchar<32>")
-TYPE(String, "ref<array<char,1>>")
+TYPE(String, "ref<array<char,inf>,f,f>")
 TYPE(Identifier, "identifier")
 
 GROUP(UnsignedInt, UInt1, UInt2, UInt4, UInt8, UInt16, UIntInf, UIntGen)
@@ -341,7 +341,7 @@ GROUP(BitwiseXorOp, GenXor, SignedIntXor, UnsignedIntXor)
 
 
 // TEMP FIX
-LITERAL(Flush, "flush", "(ref<'a>) -> unit")
+LITERAL(Flush, "flush", "(ref<'a,'c,'v>) -> unit")
 
 // General ------------------------------------------------------------------------------------------------------------
 
@@ -363,8 +363,6 @@ LITERAL(CompositeMemberAccess, "composite_member_access", "('a, identifier, type
 // first argument has to be a tuple or a union, 'b has to be the type of the requested member
 LITERAL(TupleMemberAccess, "tuple_member_access", "('a, uint<8>, type<'b>) -> 'b")
 
-GROUP(MemberAccess, CompositeMemberAccess, TupleMemberAccess)
-
 // Generic type initialization ----------------------------------------------------------------------------------------
 
 LITERAL(GenInit, "gen_init", "(type<'a>, 'b) -> 'a")
@@ -372,7 +370,7 @@ LITERAL(GenInit, "gen_init", "(type<'a>, 'b) -> 'a")
 
 // IO -----------------------------------------------------------------------------------------------------------------
 
-LITERAL(Print, "print", "(ref<array<char,1>>,var_list)->unit")
+LITERAL(Print, "print", "(ref<array<char,inf>,f,f>,var_list)->unit")
 
 // Tunable Options ----------------------------------------------------------------------------------------------------
 
@@ -389,4 +387,4 @@ DERIVED(IfThenElse, "ite", "lambda (bool c, () => 'b a, () => 'b b) -> 'b { if (
 
 GROUP(CompOp, IntCompOp, UIntCompOp, RealCompOp, TypeCompOp, GenCompOp)
 
-GROUP(Pure, IfThenElse, VarlistPack, CloogMath, MemberAccess, CompOp, BitwiseOp, CompOp, ArithOp, GeneralOp)
+GROUP(Pure, IfThenElse, VarlistPack, CloogMath, CompOp, BitwiseOp, CompOp, ArithOp, GeneralOp)
