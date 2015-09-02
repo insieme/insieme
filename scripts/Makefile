@@ -16,15 +16,12 @@ LUAJIT 	:= ${PREFIX}/luajit-$(shell ${AWK_CMD} luajit_install.sh | cut -d= -f2 )
 CUDD 	:= ${PREFIX}/cudd-$(shell ${AWK_CMD} cudd_install.sh | cut -d= -f2 )
 BISON 	:= ${PREFIX}/bison-$(shell ${AWK_CMD} bison_install.sh | cut -d= -f2 )
 FLEX 	:= ${PREFIX}/flex-$(shell ${AWK_CMD} flex_install.sh | cut -d= -f2 )
-RUBY 	:= ${PREFIX}/ruby-$(shell ${AWK_CMD} ruby_install.sh | cut -d= -f2 )
-PAPI 	:= ${PREFIX}/papi-$(shell ${AWK_CMD} papi_install.sh | cut -d= -f2 )
 
-CCACHE	:= ${PREFIX}/ccache-$(shell ${AWK_CMD} ccache_install.sh | cut -d= -f2 )
+# OPTIONAL STUFF
+PAPI 	:= ${PREFIX}/papi-$(shell ${AWK_CMD} papi_install.sh | cut -d= -f2 )
 HWLOC	:= ${PREFIX}/hwloc-$(shell ${AWK_CMD} hwloc_install.sh | cut -d= -f2 )
 
 all: INSIEME
-
-water: ${GCC} ${BOOST} ${CMAKE} ${OPENMPI}
 
 ## GMP
 ${GMP}: gmp_install.sh 
@@ -80,30 +77,6 @@ ${CUDD}: cudd_install.sh ${GCC}
 	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh cudd_install.sh
 	@echo "@@@@ Done! @@@@"
 
-## RUBY
-${RUBY}: ruby_install.sh ${GCC}
-	@echo "#### INSTALL RUBY ${RUBY} ####"
-	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh ruby_install.sh
-	@echo "@@@@ Done! @@@@"
-
-## PAPI
-${PAPI}: papi_install.sh ${GCC}
-	@echo "#### INSTALL PAPI ${PAPI} ####"
-	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh papi_install.sh
-	@echo "@@@@ Done! @@@@"
-
-## CCache
-${CCACHE}: ccache_install.sh ${GCC}
-	@echo "#### INSTALL CCACHE ${CCACHE} ####"
-	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh ccache_install.sh
-	@echo "@@@@ Done! @@@@"
-
-## HWLOC
-${HWLOC}: hwloc_install.sh ${GCC}
-	@echo "#### INSTALL HWLOC ${HWLOC} ####"
-	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh hwloc_install.sh
-	@echo "@@@@ Done! @@@@"
-
 ## BISON
 ${BISON}: bison_install.sh ${GCC}
 	@echo "#### INSTALL BISON ${BISON} ####"
@@ -116,8 +89,27 @@ ${FLEX}: flex_install.sh ${GCC}
 	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh flex_install.sh
 	@echo "@@@@ Done! @@@@"
 
+## PAPI
+${PAPI}: papi_install.sh ${GCC}
+	@echo "#### INSTALL PAPI ${PAPI} ####"
+	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh papi_install.sh
+	@echo "@@@@ Done! @@@@"
 
-INSIEME: ${GCC} ${LLVM} ${BOOST} \
-		 ${CMAKE} ${LUAJIT} ${CUDD} \
-		 ${RUBY} ${PAPI} ${CCACHE} \
-		 ${BISON} ${FLEX} ${HWLOC}
+## HWLOC
+${HWLOC}: hwloc_install.sh ${GCC}
+	@echo "#### INSTALL HWLOC ${HWLOC} ####"
+	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh hwloc_install.sh
+	@echo "@@@@ Done! @@@@"
+
+
+INSIEME: ${GCC} \
+		 ${LLVM} \
+		 ${BOOST} \
+		 ${CMAKE} \
+		 ${LUAJIT} \
+		 ${CUDD} \
+		 ${BISON} \
+		 ${FLEX} \
+		 ${PAPI} \
+		 ${HWLOC}
+
