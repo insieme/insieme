@@ -189,6 +189,14 @@ namespace parser3 {
 			TypePtr genNumericType(const location& l, const string& value) const;
 
 			/**
+			 * generates a numeric type representing the given value
+			 * @param l: the location where this generic type was found
+			 * @param variable: the variable to be represented
+			 * @return the corresponding type node
+			 */
+			TypePtr genNumericType(const location& l, const ExpressionPtr& variable) const;
+
+			/**
 			 *  generates a function type
 			 */
 			TypePtr genFuncType(const location& l, const TypeList& params, const TypePtr& retType, const FunctionKind& fk = FK_PLAIN);

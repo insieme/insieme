@@ -102,6 +102,7 @@
   STAR    "*"
   SLASH   "/"
   PERCENT "%"
+  HASH "#"
 
   LPAREN  "("
   RPAREN  ")"
@@ -213,7 +214,6 @@
 %token <std::string> ULONGLONG "ulonglong"
 %token <std::string> FLOAT "float"
 %token <std::string> DOUBLE "double"
-%token <std::string> PARAMVAR "paramvar"
 
 %type  <std::string> "Number" 
 %type  <std::string> "indentifier" 
@@ -375,6 +375,7 @@ struct_type : tag_def              { RULE $$ = driver.builder.structType(driver.
 
 type : "struct" struct_type { RULE $$ = $2; }
      | "union"  union_type  { RULE $$ = driver.builder.unionType($2); }
+     | "#" "identifier" { RULE $$ = driver.genNumericType(@$, driver.findSymbol(@$, $2)); }
      | "ctor" just_name "::" "(" type_list { RULE
                             TypePtr classType = driver.builder.refType($2);
                             TypePtr retType = classType;

@@ -49,113 +49,50 @@
 #include "insieme/frontend/state/variable_manager.h"
 #include "insieme/utils/config.h"
 
+#include "independent_test_utils.h"
+
 namespace insieme {
 namespace frontend {
-	using namespace extensions;
-	using namespace core;
-	using insieme::annotations::ExpectedIRAnnotation;
-
-	void runTestOn(const string& fn) {
-		core::NodeManager mgr;
-		core::IRBuilder builder(mgr);
-		ConversionJob job(fn);
-		job.registerFrontendExtension<TestPragmaExtension>([](conversion::Converter& converter, int num) {
-			EXPECT_EQ(num, converter.getVarMan()->numVisibleDeclarations()) << "Location: " << converter.getLastTrackableLocation() << "\n";
-		});
-				
-		auto res = builder.normalize(job.execute(mgr));
-
-		// iterate over res and check pragma expectations
-		size_t visited = 0;
-		visitDepthFirstOnce(NodeAddress(res), [&](const NodeAddress& addr) {
-			auto node = addr.getAddressedNode();
-			if(node->hasAnnotation(ExpectedIRAnnotation::KEY)) {
-				auto ann = node->getAnnotation(ExpectedIRAnnotation::KEY);
-				auto ex = ann->getExpected();
-				boost::replace_all(ex, R"(\")", R"(")");
-
-				// Regex expect
-				if(boost::starts_with(ex, "REGEX")) {
-					boost::regex re(ex.substr(6));
-					auto irString = ::toString(dumpPretty(builder.normalize(node)));
-					EXPECT_TRUE(boost::regex_match(irString.begin(), irString.end(), re)) 
-						<< "Location : " << *core::annotations::getLocation(addr) << "\n"
-						<< "IR String: " << irString << "\n"
-						<< "Regex    : " << re << "\n";
-				} else {
-					NodePtr expected;
-					if(node.isa<ExpressionPtr>()) {
-						expected = builder.parseExpr(ex);
-					} else {
-						expected = builder.parseStmt(ex);
-					}
-					EXPECT_EQ(builder.normalize(expected), builder.normalize(node)) 
-						<< "Location: " << *core::annotations::getLocation(addr) << "\n"
-						<< "Actual Pretty: " << dumpColor(builder.normalize(node), std::cout, true) << "\n";
-					//if(builder.normalize(expected) != builder.normalize(node)) {
-					//	dumpText(builder.normalize(expected));
-					//	std::cout << "MUAHAHAMUAHAHAMUAHAHAMUAHAHAMUAHAHAMUAHAHAMUAHAHAMUAHAHAMUAHAHAMUAHAHAMUAHAHA\n";
-					//	dumpText(builder.normalize(node));
-					//}
-				}
-				visited++;
-			}
-		});
-
-		std::ifstream tf(fn);
-		std::string fileText((std::istreambuf_iterator<char>(tf)), std::istreambuf_iterator<char>());
-		std::string searchString{"#pragma test expect_ir"};
-		string::size_type start = 0;
-		unsigned occurrences = 0;
-		while((start = fileText.find(searchString, start)) != string::npos) { 
-			++occurrences; 
-			start += searchString.length();
-		}
-		EXPECT_EQ(visited, occurrences);
-
-		dumpColor(res);
-	}
 	
 	TEST(IndependentTest, BasicTypes) {
-		runTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_basic_types.c");
+		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_basic_types.c");
 	}
 
 	TEST(IndependentTest, Globals) {
-		runTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_globals.c");
+		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_globals.c");
 	}
 
 	TEST(IndependentTest, Statements) {
-		runTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_statements.c");
+		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_statements.c");
 	}
 
 	TEST(IndependentTest, VariableScopes) {
-		runTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_variable_scopes.c");
+		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_variable_scopes.c");
 	}
 	
 	TEST(IndependentTest, FunCalls) {
-		runTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_fun_calls.c");
+		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_fun_calls.c");
 	}
 
 	TEST(IndependentTest, Expressions) {
-		runTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_expressions.c");
+		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_expressions.c");
 	}
 
 	TEST(IndependentTest, Casts) {
-		runTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_casts.c");
+		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_casts.c");
 	}
 
 	TEST(IndependentTest, DeclInitExpressions) {
-		runTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_decl_init_expressions.c");
+		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_decl_init_expressions.c");
 	}
 
 	TEST(IndependentTest, HelloWorld) {
-		runTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_hello_world.c");
+		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_hello_world.c");
 	}
 	
 	TEST(IndependentTest, MatrixMul) {
-		runTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_matrix_mul.c");
+		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_matrix_mul.c");
 	}
-	
 
 } // fe namespace
 } // insieme namespace

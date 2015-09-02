@@ -60,6 +60,7 @@ namespace lang {
 
 	  public:
 
+<<<<<<< HEAD
 		// this extension is based upon the symbols defined by the reference module
 		IMPORT_MODULE(ReferenceExtension);
 
