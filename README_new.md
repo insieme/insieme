@@ -19,26 +19,21 @@ Insieme is written in C++11 and relies on several third-party libraries:
 ### List of Required Libraries and Software
 Name 		| Version | Purpose |
 --------|---------|------------|
-[G++](http://gcc.gnu.org/gcc-4.8/)	                            | >= 4.8   | Compiler |
+[G++](http://gcc.gnu.org/gcc-4.8/)	                                | >= 4.8   | Compiler |
 [CMake](http://www.cmake.org/)                                      | >= 3.2.x | Build System |
-[Google Test](https://code.google.com/p/googletest/)                | >= 1.7   | Unit testing - is installed/build by us - no need to install it|
+[Google Test](https://code.google.com/p/googletest/)                | >= 1.7   | Unit testing - is installed/built by us - no need to install it|
 [Boost](http://www.boost.org/users/history/version_1_50_0.html)     | = 1.50   | Utilities, regex, filesystem, program options|
 [LLVM/Clang](http://llvm.org/) 	                                    | = 3.6.2 ([patch](https://github.com/insieme/insieme/blob/master/scripts/patches/insieme-clang-3.6.2.patch)) | C/C++ frontend | 
-[ISL](http://garage.kotnet.org/~skimo/isl/)			    | = 0.10   | Polyhedral model representation & analysis |
-[CLooG](http://www.cloog.org/)		                            | = 0.17   | Polyhedral model code generation |
-[Barvinok](http://garage.kotnet.org/~skimo/barvinok/)               | = 0.35   | Polyhedral model cardinality |
-[CUDD](http://vlsi.colorado.edu/~fabio/CUDD/)	  	            | >= 2.4.2 | Manipulation of decision diagrams |
+[CUDD](http://vlsi.colorado.edu/~fabio/CUDD/)	  	                  | >= 2.4.2 | Manipulation of decision diagrams |
 [LuaJIT](http://luajit.org/)                                  	    | >= 2.0.0 | Scripting |
-[Kompex](http://sqlitewrapper.kompex-online.com/)             	    | >= 1.7.9 | DBMS |
-[Ruby](http://www.ruby-lang.org/en/)                                | >= 2.0   | Scripting |
-[Bison](https://www.gnu.org/software/bison/)                                | >= 3.0   | Inspire language parser |
+[Bison](https://www.gnu.org/software/bison/)                        | >= 3.0   | Inspire language parser |
 [Flex](http://flex.sourceforge.net/)                                | >= 2.5   | Inspire language scanner |
 
 ### List of Optional Libraries and Software
 Name 		| Version | Purpose |
 --------|---------|------------|
-[PAPI](http://icl.cs.utk.edu/papi/)	                            | >= 5.4.0 | Runtime system, for hardware information and event counters |
-[hwloc](http://www.open-mpi.org/projects/hwloc/)	            | >= 1.10  | Runtime system, for system architecture information |
+[PAPI](http://icl.cs.utk.edu/papi/)	                                | >= 5.4.0 | Runtime system, for hardware information and event counters |
+[hwloc](http://www.open-mpi.org/projects/hwloc/)	                  | >= 1.10  | Runtime system, for system architecture information |
 
 ### Preparing the Environment
 You can either install those packages manually (or via a package manager) or use the provided utility which takes care of building all dependencies from scratch and applies patches. 
@@ -58,8 +53,8 @@ cd build
 # SET ENVIRONMENT 
 export PREFIX=$HOME/libs
 export LD_LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$PREFIX/mpfr-latest/lib:$PREFIX/mpc-latest/lib:\\
-  $PREFIX/gmp-latest/lib:$PREFIX/cloog-gcc-latest/lib:$PREFIX/ppl-latest/lib:$PREFIX/papi-latest/lib:$LD_LIBRARY_PATH
-export PATH=$PREFIX/ruby-latest/bin/:$PREFIX/cmake-latest/bin:$PATH
+  $PREFIX/gmp-latest/lib:$PREFIX/papi-latest/lib:$LD_LIBRARY_PATH
+export PATH=$PREFIX/cmake-latest/bin:$PATH
 
 # CREATE PROJECT MAKEFILE
 CXX=$PREFIX/gcc-latest/bin/g++ INSIEME_LIBS_HOME=$PREFIX $PREFIX/cmake-latest/bin/cmake ..
@@ -67,8 +62,7 @@ CXX=$PREFIX/gcc-latest/bin/g++ INSIEME_LIBS_HOME=$PREFIX $PREFIX/cmake-latest/bi
 
 Several other options can be provided to enable/disable some of the compiler features:
 - ``-DDOCS=ON|OFF`` -- Enable/disable generation of documentation
-- ``-DCMAKE_BUILD_TYPE=Debug|Release`` -- Set the build to be in Debug or Release mode 
-- ``-DUSE_OPENCL=ON|OFF`` -- Enabe/disable OpenCL support (in both frontend/backend/runtime)
+- ``-DCMAKE_BUILD_TYPE=Debug|Release|RelWithAsserts`` -- Set the build to be in Debug, Release or Release with asserts mode
 - ``-DUSE_ENERGY=ON|OFF`` -- Enable/disable energy measurement support
 - ``-DCONDUCT_MEMORY_CHECKS=ON|OFF`` -- Enable/disable valgrind memory checks for most unit tests
 (note: these variables must be passed as parameters to the ``cmake`` command, not set as environment variables)
