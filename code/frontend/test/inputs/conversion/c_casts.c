@@ -3,22 +3,22 @@ int main() {
 
 	//===-------------------------------------------------------------------------------------------------------------------------------- NULL TO POINTER ---===
 
-	#pragma test expect_ir("type_cast(0, type(ptr<int<4>,f,f>))")
+	#pragma test expect_ir("ptr_null(type(int<4>), type(f), type(f))")
 	(int*)0;
 
-	#pragma test expect_ir("type_cast(0, type(ptr<real<4>,t,f>))")
+	#pragma test expect_ir("ptr_null(type(real<4>), type(t), type(f))")
 	(const float*)0;
 
-	#pragma test expect_ir("type_cast(0, type(ptr<real<4>,f,f>))")
+	#pragma test expect_ir("ptr_null(type(real<4>), type(f), type(f))")
 	(float* const)0;
 
-	#pragma test expect_ir("type_cast(0, type(ptr<int<4>,t,f>))")
+	#pragma test expect_ir("ptr_null(type(int<4>), type(t), type(f))")
 	(const int* const)0;
 
 	//===-------------------------------------------------------------------------------------------------------------------------------- POINTER TO BOOL ---===
 
 	// TODO: move this somewhere else? Because there is no actual clang::CK_PointerToBoolean involved here
-	#pragma test expect_ir("{ decl ref<ptr<int<4>,f,f>,f,f> v0; if(ptr_eq((*v0), ptr_null)) { } }")
+	#pragma test expect_ir("{ decl ref<ptr<int<4>,f,f>,f,f> v0; if(ptr_ne(*v0, ptr_null(type(int<4>), type(f), type(f)))) { }; }")
 	{
 		int* p;
 		if(p) { }

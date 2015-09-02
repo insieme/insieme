@@ -141,7 +141,7 @@ namespace utils {
 		// bitcast only if the operand has the same type kind; otherwise, it's one of the specialized casts below.
 		// Vector coercions are bitcasts.
 		case clang::CK_BitCast:
-			if(core::lang::isPointer(expr) && core::lang::differOnlyInQualifiers(exprTy, targetTy)) { return core::lang::buildPtrCast(expr, targetTy); }
+			if(core::lang::isPointer(expr) && core::lang::doPointersDifferOnlyInQualifiers(exprTy, targetTy)) { return core::lang::buildPtrCast(expr, targetTy); }
 			assert_not_implemented();
 
 
@@ -280,8 +280,7 @@ namespace utils {
 
 		////////////////////////////////////////////////////////////////////////////////////////////////////////////
 		case clang::CK_NullToPointer:
-			// Null pointer constant to pointer, ObjC pointer, or block pointer. (void*) 0;
-				return builder.callExpr(basic.getTypeCast(), expr, builder.getTypeLiteral(targetTy));
+			return core::lang::buildPtrNull(targetTy);
 
 		////////////////////////////////////////////////////////////////////////////////////////////////////////////
 		//case clang::CK_MemberPointerToBoolean:

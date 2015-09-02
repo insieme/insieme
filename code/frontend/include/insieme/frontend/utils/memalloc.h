@@ -43,12 +43,6 @@ namespace insieme {
 namespace frontend {
 namespace utils {
 
-	// get a sizeof expression from the given type
-	core::CallExprPtr getSizeOfType(const core::IRBuilder& builder, const core::TypePtr& type);
-
-	// get an alignof expression from the given type
-	core::CallExprPtr getAlignOfType(const core::IRBuilder& builder, const core::TypePtr& type);
-
 	// create the correct translation of malloc and calloc calls
 	core::ExpressionPtr handleMemAlloc(const core::IRBuilder& builder, const core::TypePtr& type, const core::ExpressionPtr& subExpr);
 }

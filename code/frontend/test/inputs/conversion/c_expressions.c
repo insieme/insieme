@@ -273,4 +273,25 @@ int main() {
 
 	#pragma test expect_ir("(1!=0)?2:3")
 	1?2:3;
+	
+	//===---------------------------------------------------------------------------------------------------------------------------------- MISCELLANEOUS ---===
+	
+	#pragma test expect_ir("sizeof(type(real<8>))")
+	sizeof(double);
+
+	#pragma test expect_ir("sizeof(type(char))")
+	sizeof(char);
+	
+	#pragma test expect_ir("{ decl ref<int<4>,f,f> v0; sizeof(type(int<4>)); }")
+	{
+		int sizeof_int;
+		sizeof(sizeof_int);
+	}
+
+	#pragma test expect_ir("{ decl ref<array<char,8>,f,f> v0; sizeof(type(array<char,8>)); }")
+	{
+		char char_arr[8];
+		sizeof(char_arr);
+	}
+
 }

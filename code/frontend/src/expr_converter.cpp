@@ -416,9 +416,10 @@ namespace conversion {
 		    expr->isArgumentType() ? converter.convertType(expr->getArgumentType()) : converter.convertType(expr->getArgumentExpr()->getType());
 
 		switch(expr->getKind()) {
-		case clang::UETT_SizeOf: irNode = frontend::utils::getSizeOfType(builder, type); break;
-		case clang::UETT_AlignOf: irNode = frontend::utils::getAlignOfType(builder, type); break;
-		default: frontend_assert(false) << "UnaryExprOrTypeTraitExpr not handled";
+		case clang::UETT_SizeOf: 
+			irNode = builder.callExpr(basic.getSizeof(), builder.getTypeLiteral(type)); 
+			break;
+		default: frontend_assert(false) << "UnaryExprOrTypeTraitExpr not handled.";
 		}
 		
 		return irNode;
@@ -684,34 +685,23 @@ namespace conversion {
 		core::ExpressionPtr retIr;
 		LOG_EXPR_CONVERSION(initList, retIr);
 
-		//if(initList->isStringLiteralInit()) { frontend_assert(false) << "string literal\n"; }
+		auto convType = converter.convertType(initList->getType());
+		if(auto sT = convType.isa<core::StructTypePtr>()) {
+		}
+		else if(auto uT = convType.isa<core::UnionTypePtr>()) {
+		}
+		else if(auto gT = convType.isa<core::GenericTypePtr>()) {
+			frontend_assert(core::lang::isArray(gT)) << "Clang InitListExpr of unexpected generic type (should be array)";
+			ExpressionList initExps;
+			for(unsigned i=0; i < initList->getNumInits(); ++i) { // yes, that is really the best way to do this in clang 3.6
+				initExps.push_back(converter.convertExpr(initList->getInit(i)));
+			}
+			retIr = core::lang::buildArrayCreate(core::lang::getArrayElementType(gT), core::lang::getArraySize(gT), initExps);
+		}
+		else {
+			frontend_assert(false) << "Clang InitListExpr of unexpected type";
+		}
 
-		////	if (initList->hasArrayFiller ())
-		////		frontend_assert(false && "array filler");
-
-		//// if is a union initilization we build the field assigment, later we wont have it
-		//if(const clang::FieldDecl* field = initList->getInitializedFieldInUnion()) {
-		//	frontend_assert(initList->getNumInits() == 1);
-		//	// AHA!! here is the trick, magic trick. we hide the union initialization into an expression
-		//	// it has to be an expression, so we hide the thing in a fake funtion to cheat everyone!!
-		//	// the name of the literal is the field !!! hahaha isn't it briliant???
-		//	// twisted??? maybe i'm going crazy, but it works! and is criptic enought to piss off people
-		//	string name = llvm::cast<clang::NamedDecl>(field)->getNameAsString();
-		//	core::ExpressionPtr init = Visit(initList->getInit(0));
-		//	auto dummyFuncType = builder.functionType(init->getType(), basic.getUnit());
-		//	return builder.callExpr(builder.literal(name, dummyFuncType), init);
-		//}
-
-		//// if is anything else, we pack a list, we'll check what is it later on
-		//vector<core::ExpressionPtr> inits;
-		//for(size_t i = 0, end = initList->getNumInits(); i < end; ++i) {
-		//	const clang::Expr* subExpr = initList->getInit(i);
-		//	inits.push_back(Visit(subExpr));
-		//}
-
-		//return retIr = core::encoder::toIR<ExpressionList, core::encoder::DirectExprListConverter>(mgr, inits);
-
-		frontend_assert(false);
 		return retIr;
 	}
 

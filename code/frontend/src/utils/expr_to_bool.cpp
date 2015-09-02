@@ -60,7 +60,7 @@ namespace utils {
 
 		// if pointer, check against equality with PtrNull
 		auto& pExt = builder.getExtension<core::lang::PointerExtension>();
-		if(core::lang::isPointer(t)) return builder.callExpr(basic.getBool(), pExt.getPtrEqual(), expr, pExt.getPtrNull());
+		if(core::lang::isPointer(t)) return builder.callExpr(basic.getBool(), pExt.getPtrNotEqual(), expr, core::lang::buildPtrNull(t));
 
 		assert_not_implemented();
 		return ExpressionPtr();

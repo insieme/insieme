@@ -68,6 +68,7 @@ namespace extensions {
 					[&](const pragma::MatchObject& object, core::NodeList nodes) {
 
 			    assert_gt(object.getStrings(ARG_LABEL).size(), 0) << "Test expect_ir pragma expects at least one string argument!";
+				assert_gt(nodes.size(), 0) << "Test expect_ir pragma needs to be attached to at least one IR node!";
 
 				auto strings = object.getStrings(ARG_LABEL);
 				string expectedString;

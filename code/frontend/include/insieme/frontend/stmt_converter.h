@@ -143,7 +143,6 @@ namespace conversion {
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		stmtutils::StmtWrapper VisitAsmStmt(clang::AsmStmt* asmStmt);
 
-
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		// Overwrite the basic visit method for expression in order to automatically
 		// and transparently attach annotations to node which are annotated
@@ -207,6 +206,7 @@ namespace conversion {
 		FORWARD_STMT_TO_EXPR_VISITOR_CALL(CompoundLiteralExpr)
 		FORWARD_STMT_TO_EXPR_VISITOR_CALL(StmtExpr)
 		FORWARD_STMT_TO_EXPR_VISITOR_CALL(AtomicExpr)
+		FORWARD_STMT_TO_EXPR_VISITOR_CALL(UnaryExprOrTypeTraitExpr)
 	};
 
 	//---------------------------------------------------------------------------------------------------------------------
