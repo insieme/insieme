@@ -42,6 +42,7 @@
 #include "insieme/core/lang/enum_extension.h"
 #include "insieme/core/lang/ir++_extension.h"
 #include "insieme/core/lang/parallel.h"
+#include "insieme/core/lang/io.h"
 #include "insieme/core/lang/static_vars.h"
 #include "insieme/core/lang/varargs_extension.h"
 #include "insieme/core/lang/instrumentation_extension.h"
@@ -74,6 +75,7 @@ namespace lang {
 			extensionFactories.insert(getExtensionFactory<AsmStmtExtension>("ext.asm"));
 			extensionFactories.insert(getExtensionFactory<EnumExtension>("ext.enum"));
 			extensionFactories.insert(getExtensionFactory<IRppExtensions>("ext.ir++"));
+			extensionFactories.insert(getExtensionFactory<InputOutputExtension>("ext.io"));
 			extensionFactories.insert(getExtensionFactory<ComplexExtension>("ext.complex"));
 			extensionFactories.insert(getExtensionFactory<ParallelExtension>("ext.parallel"));
 			extensionFactories.insert(getExtensionFactory<StaticVariableExtension>("ext.static"));

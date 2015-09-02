@@ -52,10 +52,10 @@ namespace encoder {
 
 	TEST(Lists, languageExtension) {
 		NodeManager manager;
-		const ListExtension& ext = manager.getLangExtension<ListExtension>();
+		const lang::ListExtension& ext = manager.getLangExtension<lang::ListExtension>();
 
-		EXPECT_EQ("(('a,list<'a>)->list<'a>)", toString(*ext.cons->getType()));
-		EXPECT_EQ("((type<'a>)->list<'a>)", toString(*ext.empty->getType()));
+		EXPECT_EQ("(('a,list<'a>)->list<'a>)", toString(ext.getListCons()->getType()));
+		EXPECT_EQ("((type<'a>)->list<'a>)", toString(ext.getListEmpty()->getType()));
 	}
 
 

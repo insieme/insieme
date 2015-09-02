@@ -372,10 +372,6 @@ LITERAL(TupleMemberAccess, "tuple_member_access", "('a, uint<8>, type<'b>) -> 'b
 LITERAL(GenInit, "gen_init", "(type<'a>, 'b) -> 'a")
 
 
-// IO -----------------------------------------------------------------------------------------------------------------
-
-LITERAL(Print, "print", "(ref<array<char,inf>,f,f>,var_list)->unit")
-
 // Tunable Options ----------------------------------------------------------------------------------------------------
 
 LITERAL(Pick, "pick", "(list<'a>)->'a")

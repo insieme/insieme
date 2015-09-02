@@ -34,55 +34,23 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <gtest/gtest.h>
 
-#include "insieme/core/lang/extension.h"
+#include "insieme/core/lang/io.h"
+#include "insieme/core/test/test_utils.h"
+
+#include "insieme/core/ir_builder.h"
 
 namespace insieme {
 namespace core {
 namespace lang {
 
-	/**
-	 * An extension covering the derived complex type and all its
-	 * associated operators.
-	 */
-	class ComplexExtension : public core::lang::Extension {
-		/**
-		 * Allow the node manager to create instances of this class.
-		 */
-		friend class core::NodeManager;
+	TEST(Pointer, SemanticChecks) {
+		NodeManager nm;
+		auto& ext = nm.getLangExtension<InputOutputExtension>();
+		semanticCheckSecond(ext.getSymbols());
+	}
 
-		/**
-		 * Creates a new instance based on the given node manager.
-		 */
-		ComplexExtension(core::NodeManager& manager) : core::lang::Extension(manager) {}
-
-	  public:
-
-		// -------------------- pointers ---------------------------
-
-
-		/**
-		 * Defines a complex number as a pair of a real and imaginary value
-		 */
-		TYPE_ALIAS("complex", "struct _ir_complex { 'a rel; 'a img; }");
-
-		/**
-		 * Defines the generic complex type.
-		 */
-		LANG_EXT_TYPE(GenComplex, "struct _ir_complex { 'a rel; 'a img; }")
-
-	};
-
-
-	// --------------------- Utilities ----------------------------
-
-	/**
-	 * Determines whether a given node is the complex type or an expression of
-	 * the complex type.
-	 */
-	bool isComplexType(const NodePtr& node);
-	
 } // end namespace lang
 } // end namespace core
 } // end namespace insieme
