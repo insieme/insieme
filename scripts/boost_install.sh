@@ -26,7 +26,7 @@ fi
 tar -xf boost_$VERSION_FILENAME.tar.bz2
 cd boost_$VERSION_FILENAME
 
-export LD_LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$PREFIX/gmp-latest/lib:$PREFIX/mpc-latest/lib:$PREFIX/mpfr-latest/lib:$LD_LIBRARY_PATH 
+export LD_LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$LD_LIBRARY_PATH 
 
 export PATH=$PREFIX/gcc-latest/bin:$PATH
 

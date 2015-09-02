@@ -1,6 +1,5 @@
 
 #include <vector>
-#include <gmp.h>
 
 using namespace std;
 

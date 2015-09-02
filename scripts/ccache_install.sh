@@ -26,7 +26,7 @@ fi
 tar -xf ccache-$VERSION.tar.bz2
 cd ccache-$VERSION
 
-export LD_LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$PREFIX/gmp-latest/lib:$PREFIX/mpc-latest/lib:$PREFIX/mpfr-latest/lib:$LD_LIBRARY_PATH 
+export LD_LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$LD_LIBRARY_PATH 
 
 echo "#### Building CCache ####"
 CC=$CC CXX=$CXX CFLAGS=$CFLAGS CXXFLAGS=$CXXFLAGS LDFLAGS=$LDFLAGS ./configure --prefix=$PREFIX/ccache-$VERSION

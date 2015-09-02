@@ -29,7 +29,7 @@ fi
 tar -xf hwloc-$VERSION.tar.gz
 cd hwloc-$VERSION
 
-export LD_LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$PREFIX/gmp-latest/lib:$PREFIX/mpc-latest/lib:$PREFIX/mpfr-latest/lib:$LD_LIBRARY_PATH 
+export LD_LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$LD_LIBRARY_PATH 
 
 echo "#### Building Hwloc ####"
 CC=$CC CXX=$CXX CFLAGS=$CFLAGS CXXFLAGS=$CXXFLAGS LDFLAGS=$LDFLAGS ./configure --prefix=$PREFIX/hwloc-$VERSION --disable-libxml2

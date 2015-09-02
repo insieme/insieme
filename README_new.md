@@ -52,8 +52,7 @@ cd build
 
 # SET ENVIRONMENT 
 export PREFIX=$HOME/libs
-export LD_LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$PREFIX/mpfr-latest/lib:$PREFIX/mpc-latest/lib:\\
-  $PREFIX/gmp-latest/lib:$PREFIX/papi-latest/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$PREFIX/papi-latest/lib:$LD_LIBRARY_PATH
 export PATH=$PREFIX/cmake-latest/bin:$PATH
 
 # CREATE PROJECT MAKEFILE

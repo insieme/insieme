@@ -22,7 +22,7 @@ fi
 tar xvf valgrind-$VERSION.tar.bz2
 cd valgrind-$VERSION
 
-export LD_LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$PREFIX/gmp-latest/lib:$PREFIX/mpfr-latest/lib:$LD_LIBRARY_PATH 
+export LD_LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$LD_LIBRARY_PATH 
 
 
 echo "#### Configuring Valgrind ####"
