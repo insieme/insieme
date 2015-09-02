@@ -58,12 +58,6 @@ intercepted_header_file_dirs=
 boost_include=@Boost_INCLUDE_DIRS@
 boost_lib=@Boost_LIBRARY_DIRS@
 
-# mpfr path
-mpfr_include_dir=@MPFR_INCLUDE_DIRS@
-mpfr_libraries_dir=@MPFR_LIBRARY_DIRS@
-# gmp path
-gmp_include_dir=@GMP_INCLUDE_DIRS@
-
 # third party libraries
 third_party_libs_home=@THIRD_PARTY_LIBS_HOME@
 

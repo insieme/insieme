@@ -7,12 +7,7 @@
 
 #	BOOST_ROOT    				as env-var or cmake-var
 #	GTEST_ROOT    				as env-var or cmake-var
-#	GMP_ROOT    				as env-var or cmake-var
-#	MPFR_ROOT    				as env-var or cmake-var
 #	CUDD_ROOT    				as env-var or cmake-var
-#	SHARK_ROOT    				as env-var or cmake-var
-#	KOMPEX_ROOT    				as env-var or cmake-var
-#	ISL_ROOT    				as env-var or cmake-var
 #	PAPI_ROOT    				as env-var or cmake-var
 
 ENABLE_LANGUAGE(C)
@@ -59,9 +54,6 @@ set ( insieme_utils_include_dir          	${insieme_code_dir}/utils/include )
 set ( insieme_annotations_src_dir			${insieme_code_dir}/annotations/src )
 set ( insieme_annotations_include_dir       ${insieme_code_dir}/annotations/include )
 
-set ( insieme_xml_src_dir					${insieme_code_dir}/xml/src )
-set ( insieme_xml_include_dir            	${insieme_code_dir}/xml/include )
-
 set ( insieme_frontend_src_dir				${insieme_code_dir}/frontend/src )
 set ( insieme_frontend_include_dir       	${insieme_code_dir}/frontend/include )
 set ( insieme_backend_src_dir				${insieme_code_dir}/backend/src )
@@ -79,9 +71,6 @@ set ( insieme_common_include_dir			${insieme_code_dir}/common/include )
 
 set ( insieme_runtime_src_dir				${insieme_code_dir}/runtime/src )
 set ( insieme_runtime_include_dir 	        ${insieme_code_dir}/runtime/include )
-
-set ( insieme_machine_learning_src_dir  	${insieme_code_dir}/machine_learning/src )
-set ( insieme_machine_learning_include_dir  ${insieme_code_dir}/machine_learning/include )
 
 # only in ext repo
 set ( insieme_playground_include_dir       	${insieme_code_dir}/playground/include )
@@ -266,7 +255,7 @@ if(GIT_FOUND)
 	#set ( insieme_version "`(cd ${insieme_code_dir}; ${GIT_EXECUTABLE} describe --dirty)`")
 
 	set (git_cmd "${GIT_EXECUTABLE}")
-	set (git_arg "describe;--dirty")
+	set (git_arg "rev-parse;--short;HEAD")
 
 	execute_process(COMMAND ${git_cmd} ${git_arg}
 							  WORKING_DIRECTORY ${insieme_code_dir}
