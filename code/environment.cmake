@@ -255,7 +255,7 @@ if(GIT_FOUND)
 	#set ( insieme_version "`(cd ${insieme_code_dir}; ${GIT_EXECUTABLE} describe --dirty)`")
 
 	set (git_cmd "${GIT_EXECUTABLE}")
-	set (git_arg "describe;--dirty")
+	set (git_arg "rev-parse;--short;HEAD")
 
 	execute_process(COMMAND ${git_cmd} ${git_arg}
 							  WORKING_DIRECTORY ${insieme_code_dir}
