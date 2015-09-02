@@ -159,7 +159,7 @@ namespace analysis {
 			/**
 			 * The map mapping variables to their normalized counterpart.
 			 */
-			const VariableMap& vars;
+			VariableMap vars;
 
 		  public:
 			/**
@@ -168,15 +168,25 @@ namespace analysis {
 			 *
 			 * @param vars the map mapping every variable within a scope to their normalized counterpart.
 			 */
-			Normalizer(const VariableMap& vars) : vars(vars){};
+			Normalizer(const VariableMap& varMap) : vars(varMap){
+				// apply all mappings for each type (except its own) on the RHS of the "vars" map, in order to catch changed array types
+				VariableMap newMap;
+				for(auto varPair : vars) {
+					//apply the replacements on the rhs of the current type
+					auto newType = varPair.second->getType();
+					for(auto repl : vars) {
+						newType = transform::replaceAllGen(varPair.second->getNodeManager(), newType, repl.first, repl.second);
+					}
+					auto newTypedVar = transform::replaceAllGen(varPair.second->getNodeManager(), varPair.second, varPair.second->getType(), newType);
+					newMap[varPair.first] = newTypedVar;
+				}
+				vars = newMap;
+			};
 
 			/**
 			 * Conducts the actual replacement.
 			 */
 			const NodePtr resolveElement(const NodePtr& cur) {
-				// skip types
-				if(cur->getNodeCategory() == NC_Type) { return cur; }
-
 				// fix variables
 				NodeType type = cur->getNodeType();
 				if(type == NT_Variable) {
@@ -253,7 +263,7 @@ namespace analysis {
 				}
 				// decent further
 				return false;
-			});
+			}, true);
 
 			// special handling for LambdaExpression (to break recursive loop)
 			Normalizer normalizer(varMap);
@@ -270,7 +280,7 @@ namespace analysis {
 		if(!node) { return node; }
 
 		// short cut for constructs not including any variables
-		if(node->getNodeCategory() == NC_Type || node->getNodeType() == NT_Literal) { return node; }
+		if(node->getNodeType() == NT_Literal) { return node; }
 		// check whether it has already been normalized
 		if(auto annotation = node.getAnnotation(NormalizeAnnotation::KEY)) { return annotation->getNormalized(); }
 

@@ -66,16 +66,12 @@ namespace {
 	class NodeReplacer : public CachedNodeMapping {
 		NodeManager& manager;
 		const PointerMap<NodePtr, NodePtr>& replacements;
-		const bool includesTypes;
 		const ReplaceLimiter limiter;
 		bool interrupted = false;
 
 	  public:
 		NodeReplacer(NodeManager& manager, const PointerMap<NodePtr, NodePtr>& replacements, const ReplaceLimiter limiter)
-		    : manager(manager), replacements(replacements), includesTypes(any(replacements, [](const std::pair<NodePtr, NodePtr>& cur) {
-			      auto cat = cur.first->getNodeCategory();
-			      return cat == NC_Type || cat == NC_IntTypeParam || cat == NC_Support;
-			  })), limiter(limiter) {}
+		    : manager(manager), replacements(replacements), limiter(limiter) {}
 
 	  private:
 		/**
@@ -84,11 +80,6 @@ namespace {
 		virtual const NodePtr resolveElement(const NodePtr& ptr) {
 			// we shouldn't do anything if replacement was interrupted
 			if(interrupted) { return ptr; }
-
-			// if element to be replaced is a not a type but the current node is,
-			// the recursion can be pruned (since types only have other types as
-			// sub-nodes)
-			if(!includesTypes && ptr->getNodeCategory() == NC_Type) { return ptr; }
 
 			// check which action to perform for this node
 			ReplaceAction repAction = limiter(ptr);
@@ -173,9 +164,6 @@ namespace {
 				auto pos = replacements.find(expr);
 				if(pos != replacements.end()) { return pos->second; }
 			}
-
-			// shortcut for types => will never be changed
-			if(ptr->getNodeCategory() == NC_Type) { return ptr; }
 
 			// handle scope limiting elements
 			if(limitScope && ptr->getNodeType() == NT_LambdaExpr && ptr != root) {

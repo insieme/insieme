@@ -124,6 +124,19 @@ namespace analysis {
 		EXPECT_EQ("rec v0.{v0=fun(int<4> v1) {return rec v2.{v2=fun(int<4> v3) {return v0(v3);}}(v1);}}(3)", toString(*normalize(code)));
 	}
 
+	TEST(Normalizing, VariablesInTypes) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		auto code = builder.parseExpr("let x = lambda() -> unit {"
+		                              "	decl int<inf> v40 = 3;"
+		                              "	decl ref<array<int<4>,#v40>,f,f> v50;"
+		                              "}; x()");
+
+		EXPECT_EQ("rec v0.{v0=fun() {int<inf> v1 = 3; ref<array<int<4>,v1>,f,f> v2 = rec v0.{v0=fun('a v1) {ref<'a,f,f> v2 = ref_alloc(rec v0.{v0=fun('a v1) {return type<'a>;}}(v1), mem_loc_stack); ref_assign(v2, v1); return v2;}}(undefined(type<array<int<4>,v1>>));}}()", toString(*normalize(code)));
+	}
+
+
 	TEST(Normalizing, TryCatch) {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
