@@ -34,26 +34,31 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include "insieme/frontend/utils/frontend_inspire_module.h"
 
-#include "insieme/frontend/extensions/frontend_extension.h"
+#include "insieme/core/ir_builder.h"
+#include "insieme/core/analysis/ir_utils.h"
 
 namespace insieme {
 namespace frontend {
-namespace extensions {
+namespace utils {
 
-	/**
-	 * This is the frontend cleanup tool.
-	 * it is a NOT OPTIONAL pass which removes artifacts the frontend might generate.
-	 * frontend might generate stuff in an "correct" but not optimal way just because is the straight forward approach.
-	 * instead of trying to fix this everywhere, is much more convenient to clean up afterwards, reduces complexity of code
-	 */
-	class FrontendCleanupExtension : public insieme::frontend::extensions::FrontendExtension {
-	  public:
-		virtual boost::optional<std::string> isPrerequisiteMissing(ConversionSetup& setup) const;
-		virtual insieme::core::ProgramPtr IRVisit(insieme::core::ProgramPtr& prog);
-	};
+	using namespace core;
 
-} // extensions
-} // frontend
-} // insieme
+	ExpressionPtr buildCStyleAssignment(const ExpressionPtr& lhs, const ExpressionPtr& rhs) {
+		NodeManager& mgr = lhs->getNodeManager();
+		IRBuilder builder(mgr);
+		auto& inspMod = mgr.getLangExtension<FrontendInspireModule>();
+		return builder.callExpr(core::analysis::getReferencedType(lhs->getType()), inspMod.getCStyleAssignment(), lhs, rhs);
+	}
+
+	ExpressionPtr buildRecordTypeFixup(const ExpressionPtr& expr, const GenericTypePtr& targetType) {
+		NodeManager& mgr = expr->getNodeManager();
+		IRBuilder builder(mgr);
+		auto& inspMod = mgr.getLangExtension<FrontendInspireModule>();
+		return builder.callExpr(targetType, inspMod.getRecordTypeFixup(), expr, builder.getTypeLiteral(targetType));
+	}
+
+} // end namespace utils
+} // end namespace frontend
+} // end namespace insieme

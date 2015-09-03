@@ -130,16 +130,6 @@ namespace lang {
 		return node && PointerType::isPointerType(node);
 	}
 
-	bool doPointersDifferOnlyInQualifiers(const TypePtr& typeA, const TypePtr& typeB) {
-		assert_true(core::lang::isPointer(typeA)) << "Can only check qualifiers on pointers, not on " << dumpColor(typeA);
-		assert_true(core::lang::isPointer(typeB)) << "Can only check qualifiers on pointers, not on " << dumpColor(typeB);
-		
-		PointerType gA(typeA);
-		PointerType gB(typeB);
-		
-		return gA.getElementType() == gB.getElementType() && (gA.isConst() != gB.isConst() || gA.isVolatile() != gB.isVolatile());
-	}
-
 	insieme::core::ExpressionPtr buildPtrNull(const TypePtr& type) {
 		assert_pred1(core::lang::isPointer, type) << "Trying to build a null ptr which isn't a pointer.";
 		IRBuilder builder(type->getNodeManager());
@@ -172,17 +162,27 @@ namespace lang {
 		return builder.callExpr(pExt.getPtrToRef(), ptrExpr);
 	}
 	
-	ExpressionPtr buildPtrCast(const ExpressionPtr& ptrExpr, const TypePtr& targetTy) {
+	ExpressionPtr buildPtrCast(const ExpressionPtr& ptrExpr, bool newConst, bool newVolatile) {
 		assert_pred1(core::lang::isPointer, ptrExpr) << "Trying to build a ptr cast from non-ptr.";
-		assert_pred1(core::lang::isPointer, targetTy) << "Trying to build a ptr cast to non-ptr type.";
-		if(targetTy == ptrExpr->getType()) return ptrExpr;
-		assert_true(doPointersDifferOnlyInQualifiers(ptrExpr->getType(), targetTy)) << "Ptr cast only allowed to cast between qualifiers.";
+		PointerType srcTy(ptrExpr->getType());
+		// early exit if there is nothing to do
+		if(srcTy.isConst() == newConst && srcTy.isVolatile() == newVolatile) return ptrExpr;
+		// otherwise, build cast
 		IRBuilder builder(ptrExpr->getNodeManager());
 		auto& pExt = ptrExpr->getNodeManager().getLangExtension<PointerExtension>();
 		auto& bmExt = ptrExpr->getNodeManager().getLangExtension<BooleanMarkerExtension>();
-		PointerType pointerTy(targetTy);
-		return builder.callExpr(pExt.getPtrCast(), ptrExpr, bmExt.getMarkerTypeLiteral(pointerTy.isConst()),
-			                    bmExt.getMarkerTypeLiteral(pointerTy.isVolatile()));
+		return builder.callExpr(pExt.getPtrCast(), ptrExpr, bmExt.getMarkerTypeLiteral(newConst), bmExt.getMarkerTypeLiteral(newVolatile));
+	}
+	
+	ExpressionPtr buildPtrReinterpret(const ExpressionPtr& ptrExpr, const TypePtr& newElementType) {
+		assert_pred1(core::lang::isPointer, ptrExpr) << "Trying to build a ptr reinterpret from non-ptr.";
+		PointerType srcTy(ptrExpr->getType());
+		// early exit if there is nothing to do
+		if(srcTy.getElementType() == newElementType) return ptrExpr;
+		// otherwise, build reinterpret
+		IRBuilder builder(ptrExpr->getNodeManager());
+		auto& pExt = ptrExpr->getNodeManager().getLangExtension<PointerExtension>();
+		return builder.callExpr(pExt.getPtrReinterpret(), ptrExpr, builder.getTypeLiteral(newElementType));
 	}
 
 	ExpressionPtr buildPtrSubscript(const ExpressionPtr& ptrExpr, const ExpressionPtr& subscriptExpr) {

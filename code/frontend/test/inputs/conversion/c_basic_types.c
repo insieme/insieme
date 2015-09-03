@@ -86,19 +86,19 @@ int main() {
 	// ENUM TYPES //////////////////////////////////////////////////////////////
 		
 	typedef enum { Bla, Alb } enum_t;
-	#pragma test expect_ir("decl ref<__insieme_enum<enum_t,Bla,Alb>,f,f> v0;")
+	#pragma test expect_ir("REGEX", "decl ref<__insieme_enum<\w+enum_t\w+,Bla,Alb>,f,f> v0 = .*")
 	enum_t enu;
 	
-	#pragma test expect_ir("REGEX", "decl ref<__insieme_enum<_enum_\w+,XY,ZR>,f,f> v0 = .*")
+	#pragma test expect_ir("REGEX", "decl ref<__insieme_enum<\w+,XY,ZR>,f,f> v0 = .*")
 	enum { XY, ZR } bla; 
 
 	// STRUCT TYPES //////////////////////////////////////////////////////////////
 	
-	//pragma test expect_ir("REGEX", "")
-	//struct { int i; } swi_anon;
+	#pragma test expect_ir("decl ref<struct{int<4> i},f,f> v0;")
+	struct { int i; } swi_anon;
 	
 	typedef struct swi_s { int i; } swi_t;
-	//pragma test expect_ir("decl ref<array<ptr<real<4>,t,f>,2>,f,t> v0;")
+	#pragma test expect_ir("REGEX", "decl ref<struct \w+swi_s\w+ <i:int<4>>,f,f> v0 = .*")
 	swi_t swi_1;
 	//pragma test expect_ir("decl ref<array<ptr<real<4>,t,f>,2>,f,t> v0;")
 	struct swi_s swi_2; 

@@ -36,24 +36,59 @@
 
 #pragma once
 
-#include "insieme/frontend/extensions/frontend_extension.h"
+#include "insieme/core/lang/extension.h"
 
 namespace insieme {
 namespace frontend {
-namespace extensions {
+namespace utils {
+
+	using namespace core;
+
+	// --------------------- Extension ----------------------------
 
 	/**
-	 * This is the frontend cleanup tool.
-	 * it is a NOT OPTIONAL pass which removes artifacts the frontend might generate.
-	 * frontend might generate stuff in an "correct" but not optimal way just because is the straight forward approach.
-	 * instead of trying to fix this everywhere, is much more convenient to clean up afterwards, reduces complexity of code
+	 * A language extension which introduces some primitives necessary for C/C++ to INSPIRE translation.
 	 */
-	class FrontendCleanupExtension : public insieme::frontend::extensions::FrontendExtension {
-	  public:
-		virtual boost::optional<std::string> isPrerequisiteMissing(ConversionSetup& setup) const;
-		virtual insieme::core::ProgramPtr IRVisit(insieme::core::ProgramPtr& prog);
+	class FrontendInspireModule : public core::lang::Extension {
+
+		/**
+		 * Allow the node manager to create instances of this class.
+		 */
+		friend class core::NodeManager;
+
+		/**
+		 * Creates a new instance based on the given node manager.
+		 */
+		FrontendInspireModule(core::NodeManager& manager) : core::lang::Extension(manager) {}
+
+	  public:		
+		// -------------------- operators ---------------------------
+
+		/**
+		 * Implements a C style assignment (returning the assigned value)
+		 */
+		// TODO FE NG call semantic
+		LANG_EXT_DERIVED(CStyleAssignment, "lambda (ref<'a,f,'b> lhs, 'a rhs) -> 'a { lhs = rhs; return *lhs; }")
+
+		/**
+		 * Temporary operator to fix record types before resolver pass
+		 * NOTE: should be completely eliminated before IR passes out of the FE
+		 */
+		LANG_EXT_LITERAL(RecordTypeFixup, "record_type_fixup", "('a, type<'b>) -> 'b")
 	};
 
-} // extensions
-} // frontend
-} // insieme
+	// --------------------- Utilities ----------------------------
+
+	/**
+	 * Creates a C-style assignment operation
+	 */
+	core::ExpressionPtr buildCStyleAssignment(const core::ExpressionPtr& lhs, const core::ExpressionPtr& rhs);
+	
+	/**
+	 * Creates a temporary fix call for record init expression types
+	 */
+	core::ExpressionPtr buildRecordTypeFixup(const core::ExpressionPtr& expr, const core::GenericTypePtr& targetType);
+
+} // end namespace utils
+} // end namespace frontend
+} // end namespace insieme

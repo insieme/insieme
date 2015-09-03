@@ -6,15 +6,16 @@ int x;
 const float y;
 
 typedef enum { Bla, Alb } enum_t;
-#pragma test expect_ir("lit(\"globalEnum\": ref<__insieme_enum<enum_t,Bla,Alb>,f,f>)")
+#pragma test expect_ir("lit(\"globalEnum\": ref<__insieme_enum<IMP_enum_t,Bla,Alb>,f,f>)")
 enum_t globalEnum;
 
-//typedef struct { int x } IAmTheTagType;
-//pragma test expect_ir("lit(\"y\": ref<real<4>,t,f>)"
-//IAmTheTagType tt;
+typedef struct { int x; } IAmTheTagType;
+#pragma test expect_ir("lit(\"tt\": ref<struct IMP_IAmTheTagType { int<4> x; },f,f>)")
+IAmTheTagType tt;
 
 int main() {
 	globalEnum;
 	y;
+	tt;
 	return x;
 }

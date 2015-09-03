@@ -104,8 +104,8 @@ namespace lang {
 		assert_pred1(core::lang::isReference, refExpr) << "Trying to build a ref cast from non-ref.";
 		assert_pred1(core::lang::isReference, targetTy) << "Trying to build a ref cast to non-ref type.";
 		if(targetTy == refExpr->getType()) return refExpr;
-		assert_true(core::lang::doReferencesDifferOnlyInQualifiers(refExpr->getType(), targetTy)) << "Ref cast only allowed to cast between qualifiers.";
-		// TODO THIS IS WHY WE NEED THE MODULAR BUILDER
+		assert_true(core::lang::doReferencesDifferOnlyInQualifiers(refExpr->getType(), targetTy)) << "Ref cast only allowed to cast between qualifiers,"
+			<< "trying to cast from\n" << dumpColor(refExpr->getType()) << " - to - \n" << dumpColor(targetTy);
 		IRBuilder builder(refExpr->getNodeManager());
 		auto& rExt = refExpr->getNodeManager().getLangExtension<ReferenceExtension>();
 		auto& bmExt = refExpr->getNodeManager().getLangExtension<BooleanMarkerExtension>();

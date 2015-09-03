@@ -333,13 +333,13 @@ namespace lang {
 	
 	bool isPointer(const NodePtr& node);
 	
-	bool doPointersDifferOnlyInQualifiers(const TypePtr& typeA, const TypePtr& typeB);
-	
 	ExpressionPtr buildPtrNull(const TypePtr& type);
 	ExpressionPtr buildPtrFromRef(const ExpressionPtr& refExpr);
 	ExpressionPtr buildPtrFromArray(const ExpressionPtr& arrExpr);
 	ExpressionPtr buildPtrToRef(const ExpressionPtr& ptrExpr);
-	ExpressionPtr buildPtrCast(const ExpressionPtr& ptrExpr, const TypePtr& targetTy);
+
+	ExpressionPtr buildPtrCast(const ExpressionPtr& ptrExpr, bool newConst, bool newVolatile);
+	ExpressionPtr buildPtrReinterpret(const ExpressionPtr& ptrExpr, const TypePtr& newElementType);
 
 	ExpressionPtr buildPtrSubscript(const ExpressionPtr& ptrExpr, const ExpressionPtr& subscriptExpr);
 

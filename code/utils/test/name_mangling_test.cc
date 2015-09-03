@@ -34,26 +34,22 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <gtest/gtest.h>
 
-#include "insieme/frontend/extensions/frontend_extension.h"
+#include "insieme/utils/name_mangling.h"
 
-namespace insieme {
-namespace frontend {
-namespace extensions {
+using namespace insieme::utils;
 
-	/**
-	 * This is the frontend cleanup tool.
-	 * it is a NOT OPTIONAL pass which removes artifacts the frontend might generate.
-	 * frontend might generate stuff in an "correct" but not optimal way just because is the straight forward approach.
-	 * instead of trying to fix this everywhere, is much more convenient to clean up afterwards, reduces complexity of code
-	 */
-	class FrontendCleanupExtension : public insieme::frontend::extensions::FrontendExtension {
-	  public:
-		virtual boost::optional<std::string> isPrerequisiteMissing(ConversionSetup& setup) const;
-		virtual insieme::core::ProgramPtr IRVisit(insieme::core::ProgramPtr& prog);
-	};
+TEST(NameMangling, Basic) {
+	EXPECT_EQ("IMP_bla", mangle("bla"));
+	EXPECT_EQ("bla", demangle("bla"));
+	EXPECT_EQ("bla", demangle("IMP_bla"));
+	EXPECT_EQ("bla", demangle("IMP_bla_IMLOC_110_28"));
+	EXPECT_EQ("IMP_kls_IMLOC__slash_bla_slash_xy_slash_z_dot_cpp_5_299", mangle("kls", "/bla/xy/z.cpp", 5, 299));
+	EXPECT_EQ("kls", demangle("IMP_kls_IMLOC__slash_bla_slash_xy_slash_z_dot_cpp_5_299"));
+}
 
-} // extensions
-} // frontend
-} // insieme
+TEST(NameMangling, Special) {
+	EXPECT_EQ("IMP_bla_colon_klu_plus_r_wave__slash_", mangle("bla:klu+r~/"));
+	EXPECT_EQ("bla:klu+r~/", demangle("IMP_bla_colon_klu_plus_r_wave__slash_"));
+}

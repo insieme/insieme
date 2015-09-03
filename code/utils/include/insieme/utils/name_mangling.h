@@ -34,26 +34,21 @@
  * regarding third party software licenses.
  */
 
-#pragma once
-
-#include "insieme/frontend/extensions/frontend_extension.h"
+#include <string>
 
 namespace insieme {
-namespace frontend {
-namespace extensions {
+namespace utils {
 
-	/**
-	 * This is the frontend cleanup tool.
-	 * it is a NOT OPTIONAL pass which removes artifacts the frontend might generate.
-	 * frontend might generate stuff in an "correct" but not optimal way just because is the straight forward approach.
-	 * instead of trying to fix this everywhere, is much more convenient to clean up afterwards, reduces complexity of code
-	 */
-	class FrontendCleanupExtension : public insieme::frontend::extensions::FrontendExtension {
-	  public:
-		virtual boost::optional<std::string> isPrerequisiteMissing(ConversionSetup& setup) const;
-		virtual insieme::core::ProgramPtr IRVisit(insieme::core::ProgramPtr& prog);
-	};
-
-} // extensions
-} // frontend
-} // insieme
+	/// Format string "name" to be usable as an identifier, and encode file, line and column information in it
+	///
+	std::string mangle(std::string name, std::string file, unsigned line, unsigned column);
+	
+	/// Format string "name" to be usable as an identifier
+	///
+	std::string mangle(std::string name);
+	
+	/// Retrieve the original name from the mangled representation.
+	///
+	std::string demangle(std::string name);
+}
+}

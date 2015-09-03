@@ -61,7 +61,26 @@ using namespace insieme::frontend::utils;
 namespace insieme {
 namespace frontend {
 namespace utils {
-		
+
+	namespace {
+		core::ExpressionPtr implementBitcast(insieme::frontend::conversion::Converter& converter, const core::TypePtr& targetTy,
+			                                 const core::ExpressionPtr& expr) {
+			frontend_assert(core::lang::isPointer(expr)) << "Bitcasts only implemented for pointer types, trying to cast from \n" << dumpColor(expr->getType());
+			frontend_assert(core::lang::isPointer(targetTy)) << "Bitcasts only implemented for pointer types, trying to cast to \n" << dumpColor(targetTy);
+
+			core::lang::PointerType srcPtrType(expr->getType());
+			core::lang::PointerType trgPtrType(targetTy);
+			
+			core::ExpressionPtr retExpr = expr;			
+			// if types pointed to differ, reinterpret
+			retExpr = core::lang::buildPtrReinterpret(retExpr, trgPtrType.getElementType());
+			// if qualifiers differ, cast
+			retExpr = core::lang::buildPtrCast(retExpr, trgPtrType.isConst(), trgPtrType.isVolatile());
+
+			return retExpr;
+		}
+	}
+
 	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Takes a clang::CastExpr, converts its subExpr into IR and wraps it with the necessary IR casts
 	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -141,9 +160,7 @@ namespace utils {
 		// bitcast only if the operand has the same type kind; otherwise, it's one of the specialized casts below.
 		// Vector coercions are bitcasts.
 		case clang::CK_BitCast:
-			if(core::lang::isPointer(expr) && core::lang::doPointersDifferOnlyInQualifiers(exprTy, targetTy)) { return core::lang::buildPtrCast(expr, targetTy); }
-			frontend_assert(false) << "Clang cast type not implemented: " << castExpr->getCastKindName() << 
-				" with source type " << dumpColor(exprTy) << "and target type " << dumpColor(targetTy);
+			return implementBitcast(converter, targetTy, expr);
 
 
 		//	{

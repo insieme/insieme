@@ -74,7 +74,7 @@ namespace extensions {
 				string expectedString;
 				for(const string& s: strings) {				
 					// strip surrounding quotation marks and add
-					expectedString += s.substr(1, s.size()-2) + "\n";
+					expectedString += s.substr(1, s.size()-2);
 				}
 
 			    NodePtr node;

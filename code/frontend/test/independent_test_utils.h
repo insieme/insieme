@@ -57,13 +57,27 @@ namespace frontend {
 	using namespace core;
 	using insieme::annotations::ExpectedIRAnnotation;
 
-	void runIndependentTestOn(const string& fn, std::function<void(ConversionJob&)> jobModifier = [](ConversionJob& job){ }) {
+	namespace {
+		static inline void checkExpected(const NodePtr& expected, const NodePtr& actual, const NodeAddress& addr) {
+			IRBuilder builder(expected->getNodeManager());
+			bool eIsExp = expected.isa<ExpressionPtr>();
+			bool aIsExp = actual.isa<ExpressionPtr>();
+			EXPECT_EQ(builder.normalize(expected), builder.normalize(actual))
+			    << "Location     : " << *core::annotations::getLocation(addr) << "\n"
+			    << "Actual Pretty: " << dumpColor(builder.normalize(actual), std::cout, true) << "\n"
+			    << "Expected type: " << (eIsExp ? toString(dumpColor(builder.normalize(expected.as<ExpressionPtr>()->getType()))) : toString("none")) << "\n"
+			    << "Actual type  : " << (aIsExp ? toString(dumpColor(builder.normalize(actual.as<ExpressionPtr>()->getType()))) : toString("none")) << "\n";
+		}
+	}
+
+	static inline void runIndependentTestOn(const string& fn, std::function<void(ConversionJob&)> jobModifier = [](ConversionJob& job){ }) {
 		core::NodeManager mgr;
 		core::IRBuilder builder(mgr);
 		ConversionJob job(fn);
 		job.registerFrontendExtension<TestPragmaExtension>([](conversion::Converter& converter, int num) {
 			EXPECT_EQ(num, converter.getVarMan()->numVisibleDeclarations()) << "Location: " << converter.getLastTrackableLocation() << "\n";
 		});
+		job.registerFrontendExtension<FrontendCleanupExtension>();
 		jobModifier(job); 
 		auto res = builder.normalize(job.execute(mgr));
 
@@ -76,14 +90,22 @@ namespace frontend {
 				auto ex = ann->getExpected();
 				boost::replace_all(ex, R"(\")", R"(")");
 
+				const string regexKey = "REGEX";
+				const string exprTypeKey = "EXPR_TYPE";
+
 				// Regex expect
-				if(boost::starts_with(ex, "REGEX")) {
-					boost::regex re(ex.substr(6));
-					auto irString = ::toString(dumpPretty(builder.normalize(node)));
-					EXPECT_TRUE(boost::regex_match(irString.begin(), irString.end(), re)) 
-						<< "Location : " << *core::annotations::getLocation(addr) << "\n"
-						<< "IR String: " << irString << "\n"
-						<< "Regex    : " << re << "\n";
+				if(boost::starts_with(ex, regexKey)) {
+					boost::regex re(ex.substr(regexKey.size()));
+					auto irString = ::toString(printer::PrettyPrinter(builder.normalize(node), printer::PrettyPrinter::OPTIONS_DEFAULT
+					                                                                               | printer::PrettyPrinter::NO_LET_BINDINGS
+					                                                                               | printer::PrettyPrinter::NO_LET_BOUND_FUNCTIONS));
+					EXPECT_TRUE(boost::regex_match(irString.begin(), irString.end(), re)) << "Location : " << *core::annotations::getLocation(addr) << "\n"
+					                                                                      << "IR String: " << irString << "\n"
+					                                                                      << "Regex    : " << re << "\n";
+				} else if(boost::starts_with(ex, exprTypeKey)) {
+					string irs(ex.substr(exprTypeKey.size()));
+					NodePtr expected = builder.parseType(irs);
+					checkExpected(expected, node.as<ExpressionPtr>()->getType(), addr);
 				} else {
 					NodePtr expected;
 					if(node.isa<ExpressionPtr>()) {
@@ -91,14 +113,7 @@ namespace frontend {
 					} else {
 						expected = builder.parseStmt(ex);
 					}
-					EXPECT_EQ(builder.normalize(expected), builder.normalize(node)) 
-						<< "Location: " << *core::annotations::getLocation(addr) << "\n"
-						<< "Actual Pretty: " << dumpColor(builder.normalize(node), std::cout, true) << "\n";
-					//if(builder.normalize(expected) != builder.normalize(node)) {
-					//	dumpText(builder.normalize(expected));
-					//	std::cout << "MUAHAHAMUAHAHAMUAHAHAMUAHAHAMUAHAHAMUAHAHAMUAHAHAMUAHAHAMUAHAHAMUAHAHAMUAHAHA\n";
-					//	dumpText(builder.normalize(node));
-					//}
+					checkExpected(expected, node, addr);
 				}
 				visited++;
 			}

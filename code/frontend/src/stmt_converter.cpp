@@ -509,7 +509,9 @@ namespace conversion {
 		core::StatementList stmtList;
 		for(auto stmt : compStmt->body()) {
 			stmtutils::StmtWrapper convertedStmt = Visit(stmt);
-			copy(convertedStmt.begin(), convertedStmt.end(), std::back_inserter(stmtList));
+			for(auto stmt : convertedStmt) {
+				if(stmt != builder.getNoOp()) stmtList.push_back(stmt);
+			}
 		}
 		converter.getVarMan()->popScope();
 

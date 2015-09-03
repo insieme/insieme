@@ -38,37 +38,38 @@
 
 #include "insieme/frontend/expr_converter.h"
 
-#include "insieme/frontend/utils/source_locations.h"
-#include "insieme/frontend/utils/name_manager.h"
-#include "insieme/frontend/utils/clang_cast.h"
-#include "insieme/frontend/utils/macros.h"
-#include "insieme/frontend/utils/source_locations.h"
-#include "insieme/frontend/utils/memalloc.h"
-#include "insieme/frontend/utils/stmt_wrapper.h"
-#include "insieme/frontend/utils/expr_to_bool.h"
 #include "insieme/frontend/state/function_manager.h"
+#include "insieme/frontend/state/record_manager.h"
 #include "insieme/frontend/state/variable_manager.h"
+#include "insieme/frontend/utils/clang_cast.h"
+#include "insieme/frontend/utils/expr_to_bool.h"
+#include "insieme/frontend/utils/frontend_inspire_module.h"
+#include "insieme/frontend/utils/macros.h"
+#include "insieme/frontend/utils/memalloc.h"
+#include "insieme/frontend/utils/name_manager.h"
+#include "insieme/frontend/utils/source_locations.h"
+#include "insieme/frontend/utils/source_locations.h"
+#include "insieme/frontend/utils/stmt_wrapper.h"
 
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/logging.h"
 #include "insieme/utils/numeric_cast.h"
 #include "insieme/utils/functional_utils.h"
 
-#include "insieme/core/lang/basic.h"
-#include "insieme/core/lang/ir++_extension.h"
-#include "insieme/core/lang/enum_extension.h"
-#include "insieme/core/lang/pointer.h"
-
-#include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"
-#include "insieme/core/transform/node_replacer.h"
-#include "insieme/core/transform/manipulation.h"
-#include "insieme/core/checks/full_check.h"
-#include "insieme/core/arithmetic/arithmetic_utils.h"
-#include "insieme/core/datapath/datapath.h"
-#include "insieme/core/encoder/lists.h"
+#include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/annotations/naming.h"
 #include "insieme/core/annotations/source_location.h"
+#include "insieme/core/arithmetic/arithmetic_utils.h"
+#include "insieme/core/checks/full_check.h"
+#include "insieme/core/datapath/datapath.h"
+#include "insieme/core/encoder/lists.h"
+#include "insieme/core/lang/basic.h"
+#include "insieme/core/lang/enum_extension.h"
+#include "insieme/core/lang/ir++_extension.h"
+#include "insieme/core/lang/pointer.h"
+#include "insieme/core/transform/manipulation.h"
+#include "insieme/core/transform/node_replacer.h"
 
 #include "insieme/annotations/c/include.h"
 
@@ -371,9 +372,7 @@ namespace conversion {
 			irArguments.push_back(Visit(arg));
 		}
 
-		core::TypeList irTypes = ::transform(irArguments, [](const core::ExpressionPtr& expr){ return expr->getType(); });
-		auto newType = builder.functionType(irTypes, converter.convertType(callExpr->getCallReturnType()));
-		irExpr = builder.callExpr(newType, irCallee, irArguments);
+		irExpr = builder.callExpr(converter.convertType(callExpr->getCallReturnType()), irCallee, irArguments);
 
 		return irExpr;
 	}
@@ -384,20 +383,7 @@ namespace conversion {
 	// [C99 6.4.2.2] - A predefined identifier such as __func__.
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr Converter::ExprConverter::VisitPredefinedExpr(const clang::PredefinedExpr* preExpr) {
-		string lit;
-		//switch(preExpr->getIdentType()) {
-		//case clang::PredefinedExpr::Func: lit = "__func__"; break;
-		//case clang::PredefinedExpr::Function: lit = "__FUNCTION__"; break;
-		//case clang::PredefinedExpr::PrettyFunction: lit = "__PRETTY_FUNCTION__"; break;
-		//case clang::PredefinedExpr::PrettyFunctionNoVirtual:
-		//default: frontend_assert(false) << "Handle for predefined function not defined\n";
-		//}
-
-		//core::TypePtr type = converter.convertType(preExpr->getType());
-		//frontend_assert(type->getNodeType() == core::NT_VectorType);
-		//core::TypePtr elemType = type.as<core::VectorTypePtr>()->getElementType();
-		//return builder.literal(lit, builder.refType(builder.arrayType(elemType)));
-		assert_not_implemented();
+		frontend_assert(false) << "PredefinedExpr not implemented";
 		return core::ExpressionPtr();
 	}
 
@@ -450,20 +436,6 @@ namespace conversion {
 
 			return converter.getIRBuilder().createCallExprFromBody(stmtutils::aggregateStmts(converter.getIRBuilder(), retStmts), retType, lazy);
 		}
-
-		core::ExpressionPtr createAssignWithCSemantics(Converter& converter, const core::ExpressionPtr& lhs, const core::ExpressionPtr& rhs) {
-			frontend_assert(core::analysis::isRefType(lhs->getType()))
-				<< "Need to perform c-style semantics on refs to prevent spurious copies and assign to the right thing";
-			// TODO FE NG call semantic
-			auto cStyleAssignment = converter.getIRBuilder().parseExpr(R"(
-				lambda (ref<'a,f,'b> lhs, 'a rhs) -> 'a {
-					lhs = rhs;
-					return *lhs;
-				}
-			)");
-
-			return converter.getIRBuilder().callExpr(core::analysis::getReferencedType(lhs->getType()), cStyleAssignment, lhs, rhs);
-		}
 	}
 
 	core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::BinaryOperator* binOp) {
@@ -485,7 +457,7 @@ namespace conversion {
 
 		// we need to translate the semantics of C-style assignments to a function call ----------------------------------------------------------- ASSIGNMENT -
 		if(binOp->getOpcode() == clang::BO_Assign) {
-			retIr = createAssignWithCSemantics(converter, lhs, rhs);
+			retIr = utils::buildCStyleAssignment(lhs, rhs);
 			return retIr;
 		}
 
@@ -530,7 +502,7 @@ namespace conversion {
 			// we need to deref the LHS, as it is assigned to the clang AST does not contain an LtoR cast
 			auto op = builder.binaryOp(basic.getOperator(exprTy, opIt->second), builder.deref(lhs), rhs);
 			// for compound operators, we need to build a CallExpr returning the LHS after the operation
-			retIr = createAssignWithCSemantics(converter, lhs, op);
+			retIr = utils::buildCStyleAssignment(lhs, op);
 			return retIr;
 		}
 
@@ -680,17 +652,56 @@ namespace conversion {
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//                  VECTOR/STRUCT INITALIZATION EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+	namespace {
+		std::pair<core::NamedCompositeTypePtr, core::GenericTypePtr> lookupRecordTypes(Converter& converter, const clang::InitListExpr* initList) {
+			auto clangType = initList->getType();
+			auto clangRecordType = llvm::dyn_cast<clang::RecordType>(clangType->getCanonicalTypeUnqualified());
+			frontend_assert(clangRecordType);
+			auto irGenericType = converter.getRecordMan()->lookup(clangRecordType->getDecl());
+			auto irRecordTypeIt = converter.getIRTranslationUnit().getTypes().find(irGenericType);
+			frontend_assert(irRecordTypeIt != converter.getIRTranslationUnit().getTypes().end()) << "Initializing unregistered record type"; 
+			auto irRecordType = irRecordTypeIt->second.as<core::NamedCompositeTypePtr>();
+			return std::make_pair(irRecordType, irGenericType);
+		}
+
+		core::NamedValueList buildNamedValuesForStructInit(Converter& converter, const clang::InitListExpr* initList) {
+			core::NamedCompositeTypePtr irRecordType = lookupRecordTypes(converter, initList).first;
+			core::NamedValueList values;
+			core::NamedTypeList entries = irRecordType->getEntries();
+			unsigned i = 0;
+			for(auto entry : entries) {
+				core::ExpressionPtr initExp = converter.getIRBuilder().getZero(entry->getType());
+				if(i < initList->getNumInits()) initExp = converter.convertExpr(initList->getInit(i));
+				frontend_assert(initExp->getType() == entry->getType()) << "Type mismatch in record initialization expression"; 
+				values.push_back(converter.getIRBuilder().namedValue(entry->getName(), initExp));
+				++i;
+			}
+			return values;
+		}
+	}
+
 	core::ExpressionPtr Converter::ExprConverter::VisitInitListExpr(const clang::InitListExpr* initList) {
 		core::ExpressionPtr retIr;
 		LOG_EXPR_CONVERSION(initList, retIr);
 
-		auto convType = converter.convertType(initList->getType());
-		if(auto sT = convType.isa<core::StructTypePtr>()) {
+		// check on clang type, at this point in the IR no struct types exist
+		auto clangType = initList->getType();
+		
+		if(clangType->isStructureType()) {
+			auto types = lookupRecordTypes(converter, initList);
+			auto values = buildNamedValuesForStructInit(converter, initList);
+			retIr = utils::buildRecordTypeFixup(builder.structExpr(types.first.as<core::StructTypePtr>(), values), types.second);
 		}
-		else if(auto uT = convType.isa<core::UnionTypePtr>()) {
+		else if(clangType->isUnionType()) {
+			auto types = lookupRecordTypes(converter, initList);
+			auto member = builder.stringValue(initList->getInitializedFieldInUnion()->getNameAsString());
+			auto initExp = Visit(initList->getInit(0));
+			retIr = utils::buildRecordTypeFixup(builder.unionExpr(types.first.as<core::UnionTypePtr>(), member, initExp), types.second);
 		}
-		else if(auto gT = convType.isa<core::GenericTypePtr>()) {
-			frontend_assert(core::lang::isArray(gT)) << "Clang InitListExpr of unexpected generic type (should be array)";
+		else if(clangType->isArrayType()) {
+			auto gT = converter.convertType(clangType).as<core::GenericTypePtr>();
+			frontend_assert(core::lang::isArray(gT)) << "Clang InitListExpr of unexpected generic type (should be array):\n" << dumpColor(gT);
 			ExpressionList initExps;
 			for(unsigned i=0; i < initList->getNumInits(); ++i) { // yes, that is really the best way to do this in clang 3.6
 				initExps.push_back(converter.convertExpr(initList->getInit(i)));
@@ -700,7 +711,7 @@ namespace conversion {
 		else {
 			frontend_assert(false) << "Clang InitListExpr of unexpected type";
 		}
-
+		
 		return retIr;
 	}
 
@@ -718,12 +729,11 @@ namespace conversion {
 		core::ExpressionPtr retIr;
 		LOG_EXPR_CONVERSION(compLitExpr, retIr);
 
-		//if(const clang::InitListExpr* initList = llvm::dyn_cast<clang::InitListExpr>(compLitExpr->getInitializer())) {
-		//	return (retIr = converter.convertInitExpr(NULL, initList, converter.convertType(compLitExpr->getType()), false));
-		//}
-		//return (retIr = Visit(compLitExpr->getInitializer()));
-
-		frontend_assert(false);
+		if(const clang::InitListExpr* initList = llvm::dyn_cast<clang::InitListExpr>(compLitExpr->getInitializer())) {
+			retIr = Visit(initList);
+		}
+		
+		if(!retIr) frontend_assert(false) << "Unimplemented type of CompoundLiteralExpr encountered";
 		return retIr;
 	}
 
@@ -780,16 +790,16 @@ namespace conversion {
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	//                  ImplicitValueInit EXPRESSION
+	//                  IMPLICIT VALUE INIT EXPRESSION
+	// generated for skipped struct members in initializations such as
+	//      struct { int a; float b; char c; } sifc = { .a = 1, .c = 'a' };
+	// ("b" would be initialized by a ImplicitValueInitExpr)
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr Converter::ExprConverter::VisitImplicitValueInitExpr(const clang::ImplicitValueInitExpr* initExpr) {
 		core::ExpressionPtr retIr;
 		LOG_EXPR_CONVERSION(initExpr, retIr);
-		//core::TypePtr elementType = converter.convertType(initExpr->getType());
-		//frontend_assert(elementType) << "IR type creation failed (given element type not supported)\n";
-		//retIr = converter.defaultInitVal(elementType);
-		//return retIr;
-		frontend_assert(false);
+		core::TypePtr elementType = converter.convertType(initExpr->getType());
+		retIr = builder.getZero(elementType);
 		return retIr;
 	}
 

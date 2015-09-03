@@ -41,12 +41,12 @@
 #include "insieme/frontend/utils/debug.h"
 #include "insieme/frontend/utils/header_tagger.h"
 #include "insieme/frontend/utils/macros.h"
-#include "insieme/frontend/utils/name_manager.h"
 #include "insieme/frontend/utils/source_locations.h"
 
-#include "insieme/utils/numeric_cast.h"
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/logging.h"
+#include "insieme/utils/name_mangling.h"
+#include "insieme/utils/numeric_cast.h"
 
 #include "insieme/core/analysis/type_utils.h"
 #include "insieme/core/annotations/naming.h"
@@ -307,7 +307,30 @@ namespace conversion {
 		return retTy;
 	}
 
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//					TAG TYPE: STRUCT | UNION | CLASS | ENUM
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 	namespace {
+		std::pair<string,bool> getNameFor(const Converter& converter, const clang::TagDecl* tagDecl) {
+			auto canon = tagDecl->getCanonicalDecl();
+			// try to use name, if not available try to use typedef name, otherwise no name
+			string name;
+			if(canon->getDeclName()) name = canon->getQualifiedNameAsString();
+			else if(canon->hasNameForLinkage()) name = canon->getTypedefNameForAnonDecl()->getQualifiedNameAsString();
+			// if externally visible, build mangled name based on canonical decl without location
+			if(tagDecl->isExternallyVisible()) return std::make_pair(insieme::utils::mangle(name), true);
+			// not externally visible: build mangled name with location
+			// canonicalize filename in case we refer to it from different relative locations
+			auto& sm = converter.getSourceManager();
+			std::string filename = sm.getFilename(canon->getLocStart()).str();
+			boost::filesystem::path path(filename);
+			path = boost::filesystem::canonical(path);
+			auto line = sm.getExpansionLineNumber(canon->getLocStart());
+			auto column = sm.getExpansionColumnNumber(canon->getLocStart());
+			return std::make_pair(insieme::utils::mangle(name, path.string(), line, column), canon->hasNameForLinkage());
+		}
+
 		core::TypePtr handleEnumType(const Converter& converter, const EnumType* clangEnumTy) {
 			core::NodeManager& mgr = converter.getNodeManager();
 			core::IRBuilder builder(mgr);
@@ -317,10 +340,10 @@ namespace conversion {
 			for(auto m : enumDecl->enumerators()) {
 				enumMembers.push_back(builder.genericType(m->getNameAsString()));
 			}
-			return enumExt.getEnumType(utils::getNameForEnum(enumDecl, converter.getSourceManager()), enumMembers);
+			return enumExt.getEnumType(getNameFor(converter, enumDecl).first, enumMembers);
 		}
 
-		core::TypePtr handleRecordType(Converter& converter, const RecordType* clangRecordTy, const TagType* clangTagTy) {
+		core::TypePtr handleRecordType(Converter& converter, const RecordType* clangRecordTy) {
 			core::NodeManager& mgr = converter.getNodeManager();
 			core::IRBuilder builder(mgr);
 			auto& rMan = *converter.getRecordMan();
@@ -329,30 +352,31 @@ namespace conversion {
 				return rMan.lookup(clangDecl);
 			}
 			// first time we encounter this type
-			auto genTy = builder.genericType(utils::getNameForRecord(clangRecordTy->getDecl(), clangTagTy, converter.getSourceManager()));
+			string name;
+			bool useName;
+			std::tie(name, useName) = getNameFor(converter, clangDecl);
+			auto genTy = builder.genericType(name);
 			rMan.insert(clangDecl, genTy);
 			// build actual struct type (after insert!)
 			core::NamedTypeList recordMembers;
 			for(auto mem : clangDecl->fields()) {
 				recordMembers.push_back(builder.namedType(mem->getNameAsString(), converter.convertType(mem->getType())));
 			}
-			core::TypePtr recordType =
-				clangRecordTy->isUnionType() ? builder.unionType(recordMembers).as<core::TypePtr>() : builder.structType(recordMembers).as<core::TypePtr>();
+			auto compoundName = useName ? builder.stringValue(name) : builder.stringValue("");
+			core::TypePtr recordType = clangRecordTy->isUnionType() ? builder.unionType(compoundName, recordMembers).as<core::TypePtr>()
+				                                                    : builder.structType(compoundName, recordMembers).as<core::TypePtr>();
 			// add type to ir translation unit
 			converter.getIRTranslationUnit().addType(genTy, recordType);
 			return genTy;
 		}
 	}
 
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	//					TAG TYPE: STRUCT | UNION | CLASS | ENUM
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::TypePtr Converter::TypeConverter::VisitTagType(const TagType* tagType) {
 		core::TypePtr retTy;
 		LOG_TYPE_CONVERSION(tagType, retTy);
 
 		if(auto clangRecTy = llvm::dyn_cast<RecordType>(tagType)) {
-			return handleRecordType(converter, clangRecTy, tagType);
+			return handleRecordType(converter, clangRecTy);
 		} else if(auto clangEnumTy = llvm::dyn_cast<EnumType>(tagType)) {
 			return handleEnumType(converter, clangEnumTy);
 		} else {

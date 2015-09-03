@@ -63,5 +63,48 @@ int main() {
 		char x;
 		signed char y = x;
 	}
+	
+	//===---------------------------------------------------------------------------------------------------------------------------------- POINTER CASTS ---===
+	
+	// implicit type change
+	#pragma test expect_ir("{ decl ref<ptr<unit,f,f>,f,f> v0; decl ref<ptr<int<4>,f,f>,f,f> v1 = var(ptr_reinterpret(*v0, type(int<4>))); }")
+	{
+		void* x;
+		int* y = x;
+	}
+	
+	// explicit type change
+	#pragma test expect_ir("{ decl ref<ptr<unit,f,f>,f,f> v0; decl ref<ptr<int<4>,f,f>,f,f> v1 = var(ptr_reinterpret(*v0, type(int<4>))); }")
+	{
+		void* x;
+		int* y = (int*)x;
+	}
 
+	// implicit qualifier change
+	#pragma test expect_ir("{ decl ref<ptr<unit,t,f>,f,f> v0; decl ref<ptr<unit,f,f>,f,f> v1 = var(ptr_cast(*v0, type(f), type(f))); }")
+	{
+		const void* x;
+		void* y = x;
+	}
+	
+	// explicit qualifier change
+	#pragma test expect_ir("{ decl ref<ptr<unit,t,f>,f,f> v0; decl ref<ptr<unit,f,f>,f,f> v1 = var(ptr_cast(*v0, type(f), type(f))); }")
+	{
+		const void* x;
+		void* y = (void*)x;
+	}
+	
+	// implicit type + qualifier change
+	#pragma test expect_ir("{ decl ref<ptr<unit,t,f>,f,f> v0; decl ref<ptr<int<4>,f,f>,f,f> v1 = var(ptr_cast(ptr_reinterpret(*v0, type(int<4>)), type(f), type(f))); }")
+	{
+		const void* x;
+		int* y = x;
+	}
+	
+	// explicit type + qualifier change
+	#pragma test expect_ir("{ decl ref<ptr<unit,t,f>,f,f> v0; decl ref<ptr<int<4>,f,f>,f,f> v1 = var(ptr_cast(ptr_reinterpret(*v0, type(int<4>)), type(f), type(f))); }")
+	{
+		const void* x;
+		int* y = (int*)x;
+	}
 }
