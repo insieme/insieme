@@ -228,7 +228,7 @@ namespace types {
 		TypePtr param1 = builder.genericType("a");
 		TypePtr param2 = builder.genericType("b");
 		TypePtr concrete = builder.genericType("T", toVector(param1, param2));
-		EXPECT_EQ("T<1,2>", toString(*concrete));
+		EXPECT_EQ("T<a,b>", toString(*concrete));
 
 		// this should not work ...
 		auto unifier = unify(manager, gen, concrete);
