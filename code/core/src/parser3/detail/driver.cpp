@@ -485,7 +485,7 @@ namespace parser3 {
 			return res;
 		}
 
-		ExpressionPtr inspire_driver::genTagExpression(const location& l, const TypePtr& type, const ExpressionList& list) {
+		ExpressionPtr inspire_driver::genStructExpression(const location& l, const TypePtr& type, const ExpressionList& list) {
 			if(!type) {
 				error(l, "Not a struct type");
 				return nullptr;
@@ -516,6 +516,26 @@ namespace parser3 {
 
 			// build struct expression
 			return builder.structExpr(structType, values);
+		}
+
+		
+		ExpressionPtr inspire_driver::genUnionExpression(const location& l, const TypePtr& type, const std::string field, const ExpressionPtr& expr) {
+
+			// retrieve union type, (unroll rec types)
+			UnionTypePtr unionType = type.isa<UnionTypePtr>();
+			if(type.isa<RecTypePtr>()) { unionType = type.as<RecTypePtr>()->unroll(type.getNodeManager()).isa<UnionTypePtr>(); }
+
+			if(!unionType) {
+				error(l, format("Not a union type: %s", toString(type)));
+				return nullptr;
+			}
+			if(!unionType->getNamedTypeEntryOf(field)) {
+				error(l, "field name does not appear in union");
+				return nullptr;
+			}
+
+			// build union expression
+			return builder.unionExpr(unionType, builder.stringValue(field), expr);
 		}
 
 		// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Address marking   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

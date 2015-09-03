@@ -223,9 +223,14 @@ namespace parser3 {
 			ExpressionPtr genCall(const location& l, const ExpressionPtr& func, ExpressionList params);
 
 			/**
-			 * constructs a struct/union expression
+			 * constructs a struct expression
 			 */
-			ExpressionPtr genTagExpression(const location& l, const TypePtr& structType, const ExpressionList& list);
+			ExpressionPtr genStructExpression(const location& l, const TypePtr& structType, const ExpressionList& list);
+
+			/**
+			 * constructs a union expression
+			 */
+			ExpressionPtr genUnionExpression(const location& l, const TypePtr& type, const std::string field, const ExpressionPtr& expr);
 
 
 			/* ~~~~~~~~~~~~~~~~~~~~~~~ let bindings management ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */

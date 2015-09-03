@@ -807,7 +807,7 @@ namespace printer {
 			});
 
 			PRINT(UnionExpr, {
-				out << "union{" << node->getMemberName() << ":=";
+				out << "union{" << node->getMemberName()->getValue() << ":=";
 				visit(node->getMember());
 				out << "}";
 			});

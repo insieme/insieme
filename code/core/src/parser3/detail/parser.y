@@ -685,7 +685,8 @@ markable_expression : "identifier" { RULE $$ = driver.findSymbol(@$, $1); }
            | "[" expression_list "]"         { RULE 
                             $$ = encoder::toIR<ExpressionList, encoder::DirectExprListConverter>(driver.mgr, $2); }
             /* struct / union expressions */
-           | "struct" type "{" expression_list "}" { RULE $$ = driver.genTagExpression(@$, $2, $4); }
+           | "struct" type "{" expression_list "}" { RULE $$ = driver.genStructExpression(@$, $2, $4); }
+           | "union" type "{" "identifier" "=" expression  "}" { RULE $$ = driver.genUnionExpression(@$, $2, $4, $6); }
             /* async */
            | "spawn" expression { RULE 
                         $$ = driver.builder.parallel($2, 1);  
