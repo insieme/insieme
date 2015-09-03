@@ -202,8 +202,7 @@ namespace checks {
 
 		cur = builder.compoundStmt(bind11c);
 		EXPECT_EQ("{bind(v1){f(f(v1))};}", toString(*cur));
-		EXPECT_FALSE(check(wrap(cur), scopeChecker).empty());
-		EXPECT_PRED2(isUndeclaredVariableError, check(wrap(cur), scopeChecker), varA);
+		EXPECT_TRUE(check(wrap(cur), scopeChecker).empty());
 
 		cur = builder.compoundStmt(bind21);
 		EXPECT_EQ("{bind(v1){f(v1, v2)};}", toString(*cur));

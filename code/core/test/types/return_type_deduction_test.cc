@@ -293,6 +293,20 @@ namespace types {
 		EXPECT_EQ("int<4>", toString(*deduceReturnType(funType, toVector(argType, argType, arfType))));
 	}
 
+	TEST(ReturnTypeDeduction, PReduceBug) {
+
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		auto argType = builder.parseType("int<4>");
+		auto arfType = builder.parseType("(ref<array<'a>>, uint<8>, uint<8>)=>bool");
+		auto funType = builder.parseType("('a, (ref<array<'a>>, uint<8>, uint<8>)=>'b )->'b").as<FunctionTypePtr>();
+		EXPECT_EQ("bool", toString(*deduceReturnType(funType, toVector(argType, arfType))));
+
+		arfType = builder.parseType("(ref<array<'a>>, uint<8>, uint<8>)=>'b");
+		EXPECT_EQ("'b", toString(*deduceReturnType(funType, toVector(argType, arfType))));
+	}
+
 } // end namespace types
 } // end namespace core
 } // end namespace insieme

@@ -502,32 +502,6 @@ namespace types {
 	}
 
 
-	TEST(TypeVariableDeduction, ArrayRefElementBug) {
-		// The problem:
-		//		Processing:     array.ref.elem.1D(v2881, 1)
-		//		FunctionType:   ((ref<array<'elem,1>>,uint<8>)->ref<'elem>)
-		//		Argument Types: [AP(ref<vector<real<8>,5>>),AP(uint<4>)]
-		//		=> cannot be typed
-		// => WHICH IS CORRECT!
-
-
-		NodeManager manager;
-		IRBuilder builder(manager);
-		const lang::BasicGenerator& basic = manager.getLangBasic();
-		const lang::ReferenceExtension& refExt = manager.getLangExtension<lang::ReferenceExtension>();
-
-		TypePtr uint4 = basic.getUInt4();
-		TypePtr vector = builder.parseType("array<uint<4>,5>");
-		TypePtr ref = builder.refType(vector);
-
-		CallExprPtr call =
-		    builder.callExpr(basic.getUnit(), refExt.getRefArrayElement(), toVector<ExpressionPtr>(builder.literal(ref, "x"), builder.literal(uint4, "1")));
-
-		auto res = getTypeVariableInstantiation(manager, call);
-		EXPECT_FALSE(res); // this is in deed not a valid call!
-	}
-
-
 	TEST(TypeVariableDeduction, ArgumentBasedTypeConstraints) {
 		// The following scenario should be tested:
 		//		function type: ('a, ('a -> 'r)) -> 'r
@@ -732,29 +706,6 @@ namespace types {
 		EXPECT_PRED2(notMatchable, uintInf, intInf);
 	}
 
-	TEST(TypeVariableDeduction, ArrayVectorRelation) {
-		NodeManager manager;
-
-		IRBuilder builder(manager);
-
-		assert_not_implemented() << "Port to new array infrastructure!";
-
-		//	TypePtr typeA = builder.parseType("array<ref<char>,1>");
-		//	TypePtr typeB = builder.parseType("vector<ref<char>,25>");
-		//	EXPECT_NE(typeA, typeB);
-		//	EXPECT_PRED2(matchable, typeA, typeB);
-		//
-		//	EXPECT_EQ(NT_ArrayType, typeA->getNodeType());
-		//	EXPECT_EQ(NT_VectorType, typeB->getNodeType());
-		//
-		//	// now within a tuple
-		//	typeA = builder.parseType("(array<ref<char>,1>,var_list)");
-		//	typeB = builder.parseType("(vector<ref<char>,25>,var_list)");
-		//
-		//	EXPECT_NE(typeA, typeB);
-		//	EXPECT_PRED2(matchable, typeA, typeB);
-	}
-
 	TEST(TypeVariableDeduction, VectorMatchingBug) {
 		// The Bug:
 		//		When matching vectors of different size to parameters ('a,'a), the matching is successful - which it should not.
@@ -779,20 +730,18 @@ namespace types {
 		TypePtr vectorB = builder.parseType("array<A,14>");
 
 		auto match = getTypeVariableInstantiation(manager, toVector(alpha, alpha), toVector(vectorB, vectorA));
-		EXPECT_TRUE(match);
-		if(match) { EXPECT_EQ("{'a->array<A,1>}", toString(*match)); }
+		EXPECT_FALSE(match);
 
 		match = getTypeVariableInstantiation(manager, toVector(alpha, alpha), toVector(vectorB, vectorA));
-		EXPECT_TRUE(match);
-		if(match) { EXPECT_EQ("{'a->array<A,1>}", toString(*match)); }
+		EXPECT_FALSE(match);
 
 		match = getTypeVariableInstantiation(manager, toVector(alpha, alpha), toVector(vectorA, vectorA));
 		EXPECT_TRUE(match);
-		if(match) { EXPECT_EQ("{'a->vector<A,12>}", toString(*match)); }
+		if(match) { EXPECT_EQ("{'a->array<A,12>}", toString(*match)); }
 
 		match = getTypeVariableInstantiation(manager, toVector(alpha, alpha), toVector(vectorB, vectorB));
 		EXPECT_TRUE(match);
-		if(match) { EXPECT_EQ("{'a->vector<A,14>}", toString(*match)); }
+		if(match) { EXPECT_EQ("{'a->array<A,14>}", toString(*match)); }
 	}
 
 
@@ -861,25 +810,6 @@ namespace types {
 		ASSERT_TRUE(res);
 		EXPECT_EQ("A", toString(*res->applyTo(alpha)));
 		EXPECT_EQ("B", toString(*res->applyTo(beta)));
-	}
-
-	TEST(TypeVariableDeduction, VectorSubTypeOfArray) {
-		NodeManager manager;
-		IRBuilder builder(manager);
-		const lang::BasicGenerator& basic = manager.getLangBasic();
-
-		TypePtr vecTy = builder.parseType("array<int<4>,12>");
-		TypePtr arrTy = builder.arrayType(builder.typeVariable("a"));
-
-		//	EXPECT_PRED2(isSubTypeOf, vecTy, arrTy);
-
-		// create a function which takes an array as arugment
-		TypePtr fun = builder.functionType(toVector(arrTy), basic.getInt8(), FK_PLAIN);
-
-		EXPECT_EQ("((array<'a,1>)->int<8>)", toString(*fun));
-
-		auto res = getTypeVariableInstantiation(manager, toVector(arrTy), toVector(vecTy));
-		EXPECT_TRUE(res);
 	}
 
 	TEST(TypeVariableDeduction, ReductionType) {

@@ -437,6 +437,7 @@ namespace types {
 		}
 
 		if(debug) { std::cout << " Renamed Arguments: " << renamedArguments << std::endl; }
+		if(debug) { std::cout << " Renamings: " << argumentRenaming << std::endl; }
 
 
 		// ---------------------------------- Assembling Constraints -----------------------------------------

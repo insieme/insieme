@@ -102,8 +102,8 @@ namespace types {
 			ASSERT_PRED2(unifyable, termA, termB);
 
 			auto unifyingMap = *unify(manager, termA, termB);
-			EXPECT_EQ("f<h<'u>,g<'u>,h<'u>>", toString(*unifyingMap.applyTo(manager, termA))) << unifyingMap;
-			EXPECT_EQ("f<h<'u>,g<'u>,h<'u>>", toString(*unifyingMap.applyTo(manager, termB)));
+			EXPECT_EQ("f<h<'y>,g<'y>,h<'y>>", toString(*unifyingMap.applyTo(manager, termA))) << unifyingMap;
+			EXPECT_EQ("f<h<'y>,g<'y>,h<'y>>", toString(*unifyingMap.applyTo(manager, termB)));
 			EXPECT_EQ(unifyingMap.applyTo(manager, termA), unifyingMap.applyTo(manager, termB));
 		}
 
@@ -120,8 +120,8 @@ namespace types {
 
 			EXPECT_PRED2(unifyable, termA, termB);
 			auto unifyingMap = *unify(manager, termA, termB);
-			EXPECT_EQ("(vector<'u>,array<'u>,vector<'u>)", toString(*unifyingMap.applyTo(manager, termA)));
-			EXPECT_EQ("(vector<'u>,array<'u>,vector<'u>)", toString(*unifyingMap.applyTo(manager, termB)));
+			EXPECT_EQ("(vector<'y>,array<'y>,vector<'y>)", toString(*unifyingMap.applyTo(manager, termA)));
+			EXPECT_EQ("(vector<'y>,array<'y>,vector<'y>)", toString(*unifyingMap.applyTo(manager, termB)));
 			EXPECT_EQ(unifyingMap.applyTo(manager, termA), unifyingMap.applyTo(manager, termB));
 		}
 	}

@@ -103,6 +103,18 @@ namespace types {
 					continue;
 				}
 
+				// 2c) make sure the smaller variable is on the left side
+				if(typeOfA == NT_TypeVariable && typeOfB == NT_TypeVariable) {
+					// make sure the smaller variable is in front
+					// (this does not really matter for the unification but
+					//  ensures parameter variables to be on the left side
+					//  for the return type deduction)
+					if (a.as<TypeVariablePtr>()->getVarName()->getValue() > b.as<TypeVariablePtr>()->getVarName()->getValue()) {
+						list.push_front(std::make_pair(b,a));
+						continue;
+					}
+				}
+
 				// 3) handle variables on left hand side ...
 				if(typeOfA == NT_TypeVariable) {
 					if(analysis::contains(a, b)) {
