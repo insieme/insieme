@@ -254,9 +254,10 @@ namespace lang {
 		// -- null --
 
 		/**
-		 * A null reference constant.
+		 * A literal to create a null-reference pointing to no memory location. Such a reference
+		 * must not be read or written.
 		 */
-		LANG_EXT_LITERAL(RefNull, "ref_null", "ref<any,f,f>")
+		LANG_EXT_LITERAL(RefNull, "ref_null", "(type<'a>, type<'c>, type<'v>) -> ref<'a,'c,'v>")
 
 
 		// -- operators --
@@ -292,38 +293,6 @@ namespace lang {
 		LANG_EXT_DERIVED_WITH_NAME(GenPostDec, "gen_post_dec", "lambda (ref<'a,f,'v> v)->'a { decl auto tmp=*v; v=*v-lit(\"1\":'a); return tmp; }")
 
 
-		/*
-		LITERAL(RefNull,        "ref_null",             "ref<any>")
-		LITERAL(NullFunc,       "func_null",            "(type<'a>)->'a")
-		LITERAL(RefDelete, 		"ref_delete", 			"(ref<'a>) -> unit")
-		LITERAL(RefAssign, 		"ref_assign", 			"(sink<'a>,'a) -> unit")
-		LITERAL(RefDeref,  		"ref_deref",  			"(src<'a>) -> 'a")
-
-		LITERAL(SrcToRef,		"src_to_ref",			"(src<'a>) -> ref<'a>")
-		LITERAL(SinkToRef,		"sink_to_ref",			"(sink<'a>) -> ref<'a>")
-
-		LITERAL(RefToInt,		"ref_to_int",			"(ref<'a>) -> uint<8>")
-		LITERAL(IntToRef,		"int_to_ref",			"(int<16>, type<'a>) -> ref<'a>")
-
-		DERIVED(RefVar,  			"ref_var",    	    "lambda ('a v) -> ref<'a> { decl auto r = ref_alloc(  type_of(v), memloc_stack); r = v; return r; }")
-		DERIVED(RefNew,  			"ref_new",    	    "lambda ('a v) -> ref<'a> { decl auto r = ref_alloc(  type_of(v), memloc_heap ); r = v; return r; }")
-		DERIVED(RefLoc,  			"ref_loc",    	    "lambda ('a v) -> ref<'a> { decl auto r = ref_alloc(  type_of(v), memloc_local); r = v; return r; }")
-		DERIVED(RefIsNull,   		"ref_is_null",	    "lambda (ref<'a> r) -> bool { return ref_eq(r, ref_null); }")
-		DERIVED(FuncIsNull,   		"func_is_null",	    "lambda ('a f) -> bool { return f == func_null(lit('a)); }")
-
-		GROUP(AllocOp, RefVar, RefNew, RefLoc)
-
-		LITERAL(RefReinterpret, "ref_reinterpret",      "(ref<'a>, type<'b>) -> ref<'b>")
-		LITERAL(RefNarrow, 		"ref_narrow",			"(ref<'a>, datapath, type<'b>) -> ref<'b>")
-		LITERAL(RefExpand,		"ref_expand",			"(ref<'a>, datapath, type<'b>) -> ref<'b>")
-
-		LITERAL(SrcReinterpret, "src_reinterpret",      "(src<'a>, type<'b>) -> src<'b>")
-		LITERAL(SrcNarrow, 		"src_narrow",			"(src<'a>, datapath, type<'b>) -> src<'b>")
-		LITERAL(SrcExpand,		"src_expand",			"(src<'a>, datapath, type<'b>) -> src<'b>")
-
-		LITERAL(RefToSrc, "ref_src_cast",      "(ref<'a>) -> src<'a>")
-
-		 */
 	};
 
 
@@ -334,15 +303,35 @@ namespace lang {
 	 * friendly way then its raw encoding.
 	 */
 	class ReferenceType {
+
+		/**
+		 * The type of data stored in the referenced memory location.
+		 */
 		TypePtr elementType;
 
+		/**
+		 * A marker indicating whether the referenced memory cell can be modified through this reference or not (const).
+		 */
 		bool mConst;
 
+		/**
+		 * A marker indicating whether the referenced memory cell might be concurrently modified or not.
+		 */
 		bool mVolatile;
 
-		ReferenceType(const TypePtr& elementType, bool mConst, bool mVolatile) : elementType(elementType), mConst(mConst), mVolatile(mVolatile) {}
+		/**
+		 * Creates a new reference type based on the given parameters.
+		 */
+		ReferenceType(const TypePtr& elementType, bool mConst, bool mVolatile)
+			: elementType(elementType), mConst(mConst), mVolatile(mVolatile) {}
 
 	  public:
+
+		/**
+		 * Tries to 'parse' the given node to obtain an instance of this wrapper type characterizing
+		 * the given reference. The give node may either be a reference type itself or an expression
+		 * of a reference type.
+		 */
 		ReferenceType(const NodePtr& node);
 
 		ReferenceType(const ReferenceType&) = default;
@@ -354,10 +343,14 @@ namespace lang {
 
 		// --- utilities ---
 
-		static bool isReferenceType(const NodePtr& node);
+		/**
+		 * A factory for reference types.
+		 *
+		 * see: buildRefType(..) function in enclosing name space
+		 */
+		static TypePtr create(const TypePtr& elementType, bool _const = false, bool _volatile = false);
 
-		static GenericTypePtr create(const TypePtr& elementType, bool _const = false, bool _volatile = false);
-
+		// an implicit converter of this wrapper to an IR type
 		operator GenericTypePtr() const;
 
 		// --- observers and mutators ---
@@ -383,10 +376,15 @@ namespace lang {
 		}
 	};
 
-	static inline bool isReference(const NodePtr& node) {
-		if(auto expr = node.isa<ExpressionPtr>()) { return isReference(expr->getType()); }
-		return node && ReferenceType::isReferenceType(node);
-	}
+	/**
+	 * Determines whether a given node is a reference type or an expression of a reference type.
+	 */
+	bool isReference(const NodePtr& node);
+
+	/**
+	 * A factory function creating a reference type utilizing the given element type and flag combination.
+	 */
+	TypePtr buildRefType(const TypePtr& elementType, bool _const = false, bool _volatile = false);
 		
 	bool doReferencesDifferOnlyInQualifiers(const TypePtr& typeA, const TypePtr& typeB);
 	

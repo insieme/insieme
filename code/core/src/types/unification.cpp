@@ -81,6 +81,7 @@ namespace types {
 			boost::optional<Substitution> unmatchable;
 
 			while(!list.empty()) {
+
 				// get current element
 				Pair cur = list.front();
 				list.pop_front();
@@ -142,6 +143,12 @@ namespace types {
 
 					// check same number of type parameters
 					if(genericTypeA->getTypeParameter().size() != genericTypeB->getTypeParameter().size()) { return unmatchable; }
+				}
+
+				// => check value of numeric types
+				if(typeOfA == NT_NumericType) {
+					// they need to be identical
+					if (*a != *b) return unmatchable;
 				}
 
 				// => check all child nodes

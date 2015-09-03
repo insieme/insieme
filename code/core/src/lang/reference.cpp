@@ -51,14 +51,39 @@ namespace lang {
 	ReferenceType::ReferenceType(const NodePtr& node) {
 		// check given node type
 		assert_true(node) << "Given node is null!";
-		assert_true(isReferenceType(node)) << "Given node " << *node << " is not a reference type!";
+		assert_true(isReference(node)) << "Given node " << *node << " is not a reference type!";
 
-		// process node type
-		GenericTypePtr type = node.as<GenericTypePtr>();
+		// extract the type
+		GenericTypePtr type = node.isa<GenericTypePtr>();
+		if (auto expr = node.isa<ExpressionPtr>()) type = expr->getType().as<GenericTypePtr>();
+
+		// initialize the local instance
 		*this = ReferenceType(type->getTypeParameter(0), isTrueMarker(type->getTypeParameter(1)), isTrueMarker(type->getTypeParameter(2)));
 	}
 
-	bool ReferenceType::isReferenceType(const NodePtr& node) {
+	TypePtr ReferenceType::create(const TypePtr& elementType, bool _const, bool _volatile) {
+		assert_true(elementType);
+		return ReferenceType(elementType, _const, _volatile).operator GenericTypePtr();
+	}
+
+	ReferenceType::operator GenericTypePtr() const {
+		NodeManager& mgr = elementType.getNodeManager();
+		auto& ext = mgr.getLangExtension<BooleanMarkerExtension>();
+
+		return GenericType::get(mgr, "ref", ParentList(),
+		                        toVector(elementType, (mConst ? ext.getTrue() : ext.getFalse()), (mVolatile ? ext.getTrue() : ext.getFalse())));
+	}
+
+
+	bool isReference(const NodePtr& node) {
+
+		// check for null
+		if (!node) return false;
+
+		// check for expressions
+		if (auto expr = node.isa<ExpressionPtr>()) return isReference(expr->getType());
+
+		// check type
 		auto type = node.isa<GenericTypePtr>();
 		if(!type) return false;
 
@@ -75,23 +100,15 @@ namespace lang {
 		const types::Substitution& map = *sub;
 		return isValidBooleanMarker(map.applyTo(ref->getTypeParameter(1))) && isValidBooleanMarker(map.applyTo(ref->getTypeParameter(2)));
 	}
-
-	GenericTypePtr ReferenceType::create(const TypePtr& elementType, bool _const, bool _volatile) {
-		assert_true(elementType);
-		return ReferenceType(elementType, _const, _volatile);
-	}
-
-	ReferenceType::operator GenericTypePtr() const {
-		NodeManager& mgr = elementType.getNodeManager();
-		auto& ext = mgr.getLangExtension<BooleanMarkerExtension>();
-
-		return GenericType::get(mgr, "ref", ParentList(),
-		                        toVector(elementType, (mConst ? ext.getTrue() : ext.getFalse()), (mVolatile ? ext.getTrue() : ext.getFalse())));
-	}
 	
+	TypePtr buildRefType(const TypePtr& elementType, bool _const, bool _volatile) {
+		return ReferenceType::create(elementType, _const, _volatile);
+	}
+
+
 	bool doReferencesDifferOnlyInQualifiers(const TypePtr& typeA, const TypePtr& typeB) {
-		assert_true(core::lang::isReference(typeA)) << "Can only check qualifiers on references, not on " << dumpColor(typeA);
-		assert_true(core::lang::isReference(typeB)) << "Can only check qualifiers on references, not on " << dumpColor(typeB);
+		assert_true(isReference(typeA)) << "Can only check qualifiers on references, not on " << dumpColor(typeA);
+		assert_true(isReference(typeB)) << "Can only check qualifiers on references, not on " << dumpColor(typeB);
 		
 		auto gA = typeA.as<GenericTypePtr>();
 		auto gB = typeB.as<GenericTypePtr>();
@@ -101,10 +118,10 @@ namespace lang {
 	}
 	
 	ExpressionPtr buildRefCast(const ExpressionPtr& refExpr, const TypePtr& targetTy) {
-		assert_pred1(core::lang::isReference, refExpr) << "Trying to build a ref cast from non-ref.";
-		assert_pred1(core::lang::isReference, targetTy) << "Trying to build a ref cast to non-ref type.";
+		assert_pred1(isReference, refExpr) << "Trying to build a ref cast from non-ref.";
+		assert_pred1(isReference, targetTy) << "Trying to build a ref cast to non-ref type.";
 		if(targetTy == refExpr->getType()) return refExpr;
-		assert_true(core::lang::doReferencesDifferOnlyInQualifiers(refExpr->getType(), targetTy)) << "Ref cast only allowed to cast between qualifiers.";
+		assert_true(doReferencesDifferOnlyInQualifiers(refExpr->getType(), targetTy)) << "Ref cast only allowed to cast between qualifiers.";
 		// TODO THIS IS WHY WE NEED THE MODULAR BUILDER
 		IRBuilder builder(refExpr->getNodeManager());
 		auto& rExt = refExpr->getNodeManager().getLangExtension<ReferenceExtension>();

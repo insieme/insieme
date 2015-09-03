@@ -583,7 +583,7 @@ namespace checks {
 			if(!requiredType) {
 				add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
 				                 format("No member %s in struct type %s", toString(cur->getName()).c_str(), toString(*structType).c_str()), Message::ERROR));
-			} else if(*requiredType != *isType) {
+			} else if(!types::isSubTypeOf(isType, requiredType)) {
 				add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
 				                 format("Invalid type of struct-member initalization - expected type: \n%s, actual: \n%s", toString(*requiredType).c_str(),
 				                        toString(*isType).c_str()),

@@ -55,6 +55,8 @@
 #include "insieme/core/lang/parallel.h"
 #include "insieme/core/lang/pointer.h"
 
+#include "insieme/core/lang/extension_registry.h"
+
 // this last one is generated and the path will be provided to the command
 #include "inspire_parser.hpp"
 
@@ -212,6 +214,7 @@ namespace parser3 {
 			}
 
 			if(!x) {
+				std::cout << "Symbol " << name << " not found!\n";
 				error(l, format("the symbol %s was not declared in this context", name));
 				return nullptr;
 			}
@@ -880,7 +883,16 @@ namespace parser3 {
 			for(std::string extensionName : extension_names) {
 				extensionName.replace(0, 1, "");
 				extensionName.replace(extensionName.size() - 1, 1, "");
-				import_extension(mgr.getLangExtensionByName(extensionName));
+
+				// get extension factory from the registry
+				std::cout << "Loading extension: " << extensionName << "\n";
+				auto optFactory = lang::ExtensionRegistry::getInstance().lookupExtensionFactory(extensionName);
+				if (optFactory) {
+					std::cout << "Found!\n";
+					import_extension((*optFactory)(mgr));
+				} else {
+					error(l, format("Unable to locate module: %s", extensionName.c_str()));
+				}
 			}
 		}
 

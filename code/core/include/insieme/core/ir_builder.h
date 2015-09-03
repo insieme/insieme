@@ -261,8 +261,8 @@ namespace core {
 			return core::analysis::normalize(root);
 		}
 
-		GenericTypePtr refType(const TypePtr& elementType, bool _const = false, bool _volatile = false) const;
-		StructTypePtr ptrType(const TypePtr& elementType, bool _const = false, bool _volatile = false) const;
+		TypePtr refType(const TypePtr& elementType, bool _const = false, bool _volatile = false) const;
+		TypePtr ptrType(const TypePtr& elementType, bool _const = false, bool _volatile = false) const;
 
 		GenericTypePtr arrayType(const TypePtr& elementType) const;
 		GenericTypePtr arrayType(const TypePtr& elementType, const LiteralPtr& size) const;
@@ -603,6 +603,9 @@ namespace core {
 		LiteralPtr minus(const LiteralPtr& lit) const;
 		ExpressionPtr minus(const ExpressionPtr& a) const;
 
+		ExpressionPtr numericCast(const core::ExpressionPtr& expr, const core::TypePtr& targetType) const  {
+			return callExpr(targetType, getLangBasic().getNumericCast(), expr, getTypeLiteral(targetType));
+		}
 
 		inline CallExprPtr preInc(const ExpressionPtr& a) const {
 			return unaryOp(getExtension<lang::ReferenceExtension>().getGenPreInc(), a);

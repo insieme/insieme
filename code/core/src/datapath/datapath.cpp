@@ -65,7 +65,7 @@ namespace datapath {
 		auto elementType = getTargetType().as<NamedCompositeTypePtr>()->getTypeOfMember(name);
 		assert_true(elementType) << "No member " << name << " in type " << *getTargetType() << "\n";
 		IRBuilder builder(mgr);
-		return DataPath(builder.callExpr(ext.getDataPathMember(), builder.getIdentifierLiteral(name), builder.getTypeLiteral(elementType)));
+		return DataPath(builder.callExpr(ext.getDataPathMember(), path, builder.getIdentifierLiteral(name), builder.getTypeLiteral(elementType)));
 	}
 
 	DataPath DataPath::element(const ExpressionPtr& element) const {
@@ -77,7 +77,7 @@ namespace datapath {
 	}
 
 	DataPath DataPath::element(unsigned index) const {
-		return element(IRBuilder(path.getNodeManager()).uintLit(index).as<ExpressionPtr>());
+		return element(IRBuilder(path.getNodeManager()).intLit(index).as<ExpressionPtr>());
 	}
 
 	DataPath DataPath::component(unsigned index) const {
@@ -87,7 +87,7 @@ namespace datapath {
 		assert_lt(index, getTargetType().as<TupleTypePtr>().size());
 		auto elementType = getTargetType().as<TupleTypePtr>()[index];
 		IRBuilder builder(mgr);
-		return DataPath(builder.callExpr(ext.getDataPathMember(), path, builder.uintLit(index), builder.getTypeLiteral(elementType)));
+		return DataPath(builder.callExpr(ext.getDataPathComponent(), path, builder.uintLit(index), builder.getTypeLiteral(elementType)));
 	}
 
 	DataPath DataPath::parent(const TypePtr& type) const {

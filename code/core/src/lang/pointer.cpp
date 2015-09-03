@@ -71,40 +71,29 @@ namespace lang {
 
 
 	PointerType::PointerType(const NodePtr& node) {
+
 		// check given node type
-		assert_true(node) << "Given node is null!";
-		assert_true(isPointerType(node)) << "Given node " << *node << " is not a pointer type!";
+		assert_true(node) << "Invalid input node!";
+		assert_true(isPointer(node)) << "Given node " << *node << " is not a pointer type!";
+
+		// get the type
+		TypePtr type = node.isa<TypePtr>();
+		if (auto expr = node.isa<ExpressionPtr>()) type = expr->getType();
 
 		// process node type
-		StructTypePtr type = node.as<StructTypePtr>();
+		StructTypePtr structType = node.as<StructTypePtr>();
 		*this = PointerType(
-				extractReferencedType(type),
-				isTrueMarker(extractConstMarker(type)),
-				isTrueMarker(extractVolatileMarker(type))
+				extractReferencedType(structType),
+				isTrueMarker(extractConstMarker(structType)),
+				isTrueMarker(extractVolatileMarker(structType))
 		);
 	}
 
-	bool PointerType::isPointerType(const NodePtr& node) {
-		auto type = node.isa<StructTypePtr>();
-		if(!type) return false;
-
-		// simple approach: use unification
-		NodeManager& mgr = node.getNodeManager();
-		const PointerExtension& ext = mgr.getLangExtension<PointerExtension>();
-
-		// unify given type with template type
-		auto ref = ext.getGenPtr();
-		auto sub = types::match(mgr, type, ref);
-		if(!sub) return false;
-
-		// check instantiation
-		return isValidBooleanMarker(extractConstMarker(type)) && isValidBooleanMarker(extractVolatileMarker(type));
-	}
-
-	StructTypePtr PointerType::create(const TypePtr& elementType, bool _const, bool _volatile) {
+	TypePtr PointerType::create(const TypePtr& elementType, bool _const, bool _volatile) {
 		assert_true(elementType);
-		return PointerType(elementType, _const, _volatile);
+		return PointerType(elementType, _const, _volatile).operator StructTypePtr();
 	}
+
 
 	PointerType::operator StructTypePtr() const {
 		NodeManager& mgr = elementType.getNodeManager();
@@ -124,15 +113,38 @@ namespace lang {
 
 	}
 
-
 	bool isPointer(const NodePtr& node) {
-		if(auto expr = node.isa<ExpressionPtr>()) { return isPointer(expr->getType()); }
-		return node && PointerType::isPointerType(node);
+
+		// check for null
+		if (!node) return false;
+
+		// check for an expression
+		if (auto expr = node.isa<ExpressionPtr>()) return isPointer(expr->getType());
+
+		// needs to be a struct type
+		auto type = node.isa<StructTypePtr>();
+		if(!type) return false;
+
+		// simple approach: use unification
+		NodeManager& mgr = node.getNodeManager();
+		const PointerExtension& ext = mgr.getLangExtension<PointerExtension>();
+
+		// unify given type with template type
+		auto ref = ext.getGenPtr();
+		auto sub = types::match(mgr, type, ref);
+		if(!sub) return false;
+
+		// check instantiation
+		return isValidBooleanMarker(extractConstMarker(type)) && isValidBooleanMarker(extractVolatileMarker(type));
+	}
+
+	TypePtr buildPtrType(const TypePtr& elementType, bool _const, bool _volatile) {
+		return PointerType::create(elementType, _const, _volatile);
 	}
 
 	bool doPointersDifferOnlyInQualifiers(const TypePtr& typeA, const TypePtr& typeB) {
-		assert_true(core::lang::isPointer(typeA)) << "Can only check qualifiers on pointers, not on " << dumpColor(typeA);
-		assert_true(core::lang::isPointer(typeB)) << "Can only check qualifiers on pointers, not on " << dumpColor(typeB);
+		assert_true(isPointer(typeA)) << "Can only check qualifiers on pointers, not on " << dumpColor(typeA);
+		assert_true(isPointer(typeB)) << "Can only check qualifiers on pointers, not on " << dumpColor(typeB);
 		
 		PointerType gA(typeA);
 		PointerType gB(typeB);
@@ -141,7 +153,7 @@ namespace lang {
 	}
 
 	insieme::core::ExpressionPtr buildPtrNull(const TypePtr& type) {
-		assert_pred1(core::lang::isPointer, type) << "Trying to build a null ptr which isn't a pointer.";
+		assert_pred1(isPointer, type) << "Trying to build a null ptr which isn't a pointer.";
 		IRBuilder builder(type->getNodeManager());
 		auto& pExt = type->getNodeManager().getLangExtension<PointerExtension>();
 		auto& bmExt = type->getNodeManager().getLangExtension<BooleanMarkerExtension>();
@@ -151,30 +163,30 @@ namespace lang {
 	}
 
 	ExpressionPtr buildPtrFromRef(const ExpressionPtr& refExpr) {
-		assert_pred1(core::lang::isReference, refExpr) << "Trying to build ptr from non-ref.";
+		assert_pred1(isReference, refExpr) << "Trying to build ptr from non-ref.";
 		IRBuilder builder(refExpr->getNodeManager());
 		auto& pExt = refExpr->getNodeManager().getLangExtension<PointerExtension>();
 		return builder.callExpr(pExt.getPtrFromRef(), refExpr);
 	}
 
 	ExpressionPtr buildPtrFromArray(const ExpressionPtr& arrExpr) {
-		assert_pred1(core::lang::isReference, arrExpr) << "Trying to buildPtrFromArray from non-ref.";
-		assert_pred1(core::lang::isArray, core::analysis::getReferencedType(arrExpr->getType())) << "Trying to buildPtrFromArray from non-array.";
+		assert_pred1(isReference, arrExpr) << "Trying to buildPtrFromArray from non-ref.";
+		assert_pred1(isArray, core::analysis::getReferencedType(arrExpr->getType())) << "Trying to buildPtrFromArray from non-array.";
 		IRBuilder builder(arrExpr->getNodeManager());
 		auto& pExt = arrExpr->getNodeManager().getLangExtension<PointerExtension>();
 		return builder.callExpr(pExt.getPtrFromArray(), arrExpr);
 	}
 
 	ExpressionPtr buildPtrToRef(const ExpressionPtr& ptrExpr) {
-		assert_pred1(core::lang::isPointer, ptrExpr) << "Trying to build a ref from non-ptr.";
+		assert_pred1(isPointer, ptrExpr) << "Trying to build a ref from non-ptr.";
 		IRBuilder builder(ptrExpr->getNodeManager());
 		auto& pExt = ptrExpr->getNodeManager().getLangExtension<PointerExtension>();
 		return builder.callExpr(pExt.getPtrToRef(), ptrExpr);
 	}
 	
 	ExpressionPtr buildPtrCast(const ExpressionPtr& ptrExpr, const TypePtr& targetTy) {
-		assert_pred1(core::lang::isPointer, ptrExpr) << "Trying to build a ptr cast from non-ptr.";
-		assert_pred1(core::lang::isPointer, targetTy) << "Trying to build a ptr cast to non-ptr type.";
+		assert_pred1(isPointer, ptrExpr) << "Trying to build a ptr cast from non-ptr.";
+		assert_pred1(isPointer, targetTy) << "Trying to build a ptr cast to non-ptr type.";
 		if(targetTy == ptrExpr->getType()) return ptrExpr;
 		assert_true(doPointersDifferOnlyInQualifiers(ptrExpr->getType(), targetTy)) << "Ptr cast only allowed to cast between qualifiers.";
 		IRBuilder builder(ptrExpr->getNodeManager());
@@ -186,7 +198,7 @@ namespace lang {
 	}
 
 	ExpressionPtr buildPtrSubscript(const ExpressionPtr& ptrExpr, const ExpressionPtr& subscriptExpr) {
-		assert_pred1(core::lang::isPointer, ptrExpr) << "Trying to build a ptr subscript from non-ptr.";		
+		assert_pred1(isPointer, ptrExpr) << "Trying to build a ptr subscript from non-ptr.";
 		auto& basic = ptrExpr->getNodeManager().getLangBasic();
 		assert_pred1(basic.isInt, subscriptExpr->getType()) << "Trying to build a ptr subscript with non-integral subscript.";
 		IRBuilder builder(ptrExpr->getNodeManager());

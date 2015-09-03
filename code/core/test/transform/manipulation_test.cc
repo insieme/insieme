@@ -556,8 +556,8 @@ namespace core {
 		// now, try fixing non-propagated parameter b
 		fixed = transform::tryFixParameter(manager, lambda, 1, builder.intLit(5));
 		EXPECT_NE(lambda, fixed);
-		EXPECT_EQ("AP(rec v0.{v0=fun(ref<int<4>> v4) {if(int_eq(5, 0)) {return unit;} else {}; ref_assign(v4, int_add(ref_deref(v4), 5)); rec "
-		          "v3.{v3=fun(ref<int<4>> v4, int<4> v5) {if(int_eq(v5, 0)) {return unit;} else {}; ref_assign(v4, int_add(ref_deref(v4), v5)); v3(v4, "
+		EXPECT_EQ("AP(rec v0.{v0=fun(ref<int<4>,f,f> v4) {if(int_eq(5, 0)) {return unit;} else {}; ref_assign(v4, int_add(ref_deref(v4), 5)); rec "
+		          "v3.{v3=fun(ref<int<4>,f,f> v4, int<4> v5) {if(int_eq(v5, 0)) {return unit;} else {}; ref_assign(v4, int_add(ref_deref(v4), v5)); v3(v4, "
 		          "int_sub(v5, 1));}}(v4, int_sub(5, 1));}})",
 		          toString(fixed));
 		EXPECT_EQ("[]", toString(core::checks::check(fixed)));
@@ -999,16 +999,15 @@ namespace core {
 		EXPECT_TRUE(checks::check(modified).empty()) << checks::check(modified);
 	}
 
-	TEST(Manipulation, ReplaseVaresRecursive) {
+	TEST(Manipulation, ReplaceVaresRecursive) {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 
 		auto addr = builder.parseAddressesStatement("{"
-		                                            "	decl ref<int<4>> A = var(0);"
-		                                            "	decl ref<int<4>> B = var(0);"
-		                                            "	$ A $ = 4;"
-		                                            "	$ B $ = 5;"
-		                                            "	lambda (int<4> arg)->int<4> { return arg; }(*A);"
+		                                            "	decl ref<int<4>,f,f> A = var(0);"
+		                                            "	decl ref<int<4>,f,f> B = var(0);"
+		                                            "	lambda (int<4> arg)->int<4> { return arg; }(* $ A $);"
+													"	lambda (int<4> arg)->int<4> { return arg; }(* $ B $);"
 		                                            "}");
 
 		CompoundStmtPtr code = addr[0].getRootNode().as<CompoundStmtPtr>();

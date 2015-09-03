@@ -283,7 +283,7 @@ string_list : "stringlit"  { RULE $$.push_back($1); }
 
 declarations : /* empty */ { } 
              | "let" { driver.let_count++; } let_chain { }
-             | "using" string_list ";" declarations { RULE driver.using_scope_handle(@$, $2); }
+             | "using" string_list { RULE driver.using_scope_handle(@$, $2); } ";" declarations 
              ;
 
 /* ~~~~~~~~~~~~~~~~~~~  PROGRAM ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -375,7 +375,12 @@ struct_type : tag_def              { RULE $$ = driver.builder.structType(driver.
 
 type : "struct" struct_type { RULE $$ = $2; }
      | "union"  union_type  { RULE $$ = driver.builder.unionType($2); }
-     | "#" "identifier" { RULE $$ = driver.genNumericType(@$, driver.findSymbol(@$, $2)); }
+     | "#" "identifier" { 
+    	 auto var = driver.findSymbol(@$, $2);
+    	 INSPIRE_MSG(@$, var, "undeclared variable");
+    	 INSPIRE_MSG(@$, var.isa<VariablePtr>(), "not a variable"); 
+    	 RULE $$ = driver.genNumericType(@$, var); 
+       }
      | "ctor" just_name "::" "(" type_list { RULE
                             TypePtr classType = driver.builder.refType($2);
                             TypePtr retType = classType;

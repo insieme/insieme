@@ -62,6 +62,6 @@ int main() {
 	{
 		char x;
 		signed char y = x;
-	}	
+	}
 
 }

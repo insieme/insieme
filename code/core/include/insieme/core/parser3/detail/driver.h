@@ -148,6 +148,7 @@ namespace parser3 {
 			 * finds an expression symbol previously defined in the scoope
 			 */
 			ExpressionPtr findSymbol(const location& l, const std::string& name);
+
 			/**
 			 * finds a type symbol previously defined in the scoope
 			 */

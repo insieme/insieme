@@ -54,8 +54,8 @@ namespace encoder {
 		NodeManager manager;
 		const lang::ListExtension& ext = manager.getLangExtension<lang::ListExtension>();
 
-		EXPECT_EQ("(('a,list<'a>)->list<'a>)", toString(ext.getListCons()->getType()));
-		EXPECT_EQ("((type<'a>)->list<'a>)", toString(ext.getListEmpty()->getType()));
+		EXPECT_EQ("AP((('a,list<'a>)->list<'a>))", toString(ext.getListCons()->getType()));
+		EXPECT_EQ("AP(((type<'a>)->list<'a>))", toString(ext.getListEmpty()->getType()));
 	}
 
 
@@ -69,7 +69,7 @@ namespace encoder {
 		vector<int> back = toValue<vector<int>>(irList);
 
 		EXPECT_EQ("[1,2,3]", toString(list));
-		EXPECT_EQ("cons(1, cons(2, cons(3, empty(type<int<4>>))))", toString(*irList));
+		EXPECT_EQ("list_cons(1, list_cons(2, list_cons(3, list_empty(type<int<4>>))))", toString(*irList));
 
 		EXPECT_TRUE(isEncodingOf<vector<int>>(irList));
 		EXPECT_EQ(list, back);
@@ -78,7 +78,7 @@ namespace encoder {
 
 
 		// test another type
-		EXPECT_EQ("cons(3.75, cons(1.47, empty(type<real<8>>)))", toString(*toIR(manager, toVector<double>(3.75, 1.47))));
+		EXPECT_EQ("list_cons(3.75, list_cons(1.47, list_empty(type<real<8>>)))", toString(*toIR(manager, toVector<double>(3.75, 1.47))));
 	}
 
 

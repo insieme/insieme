@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -56,10 +56,10 @@ namespace core {
 
 		IRStatistic stat = IRStatistic::evaluate(typeA);
 
-		EXPECT_EQ(static_cast<unsigned>(25), stat.getNumAddressableNodes());
-		EXPECT_EQ(static_cast<unsigned>(13), stat.getNumSharedNodes());
+		EXPECT_EQ(static_cast<unsigned>(20), stat.getNumAddressableNodes());
+		EXPECT_EQ(static_cast<unsigned>(12), stat.getNumSharedNodes());
 		EXPECT_EQ(static_cast<unsigned>(6), stat.getHeight());
-		EXPECT_EQ(25 / static_cast<float>(13), stat.getShareRatio());
+		EXPECT_EQ(20 / static_cast<float>(12), stat.getShareRatio());
 
 		EXPECT_EQ(static_cast<unsigned>(0), stat.getNodeTypeInfo(NT_CallExpr).numShared);
 		EXPECT_EQ(static_cast<unsigned>(0), stat.getNodeTypeInfo(NT_CallExpr).numAddressable);

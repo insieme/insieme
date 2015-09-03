@@ -53,7 +53,6 @@
 #include "insieme/core/ir_cached_visitor.h"
 #include "insieme/core/ir_types.h"
 #include "insieme/core/lang/enum_extension.h"
-#include "insieme/core/lang/simd_vector.h"
 #include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/transform/node_replacer.h"
 
