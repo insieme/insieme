@@ -54,11 +54,11 @@ namespace checks {
             {
                 let uint = uint<8>;
                 lambda () -> unit { 
-                    decl ref<uint<8>> i = var(0u); 
-                    lambda (ref<array<uint<8>,1>> arr) -> unit { 
+                    decl ref<uint<8>,f,f> i = var(0u); 
+                    lambda (ref<array<uint<8>,inf>,f,f> arr) -> unit { 
                         decl uint<8> b = 1u; 
                         arr[b]; 
-                    } (scalar_to_array(i)); 
+                    } (ref_scalar_to_ref_array(i)); 
                  };
 			}
             )1N5P1RE");
@@ -66,11 +66,11 @@ namespace checks {
             {
                 let uint = uint<8>;
                 lambda () -> unit { 
-                    decl ref<uint<8>> i = var(0u); 
-                    lambda (ref<array<uint<8>,1>> arr) -> unit { 
+                    decl ref<uint<8>,f,f> i = var(0u); 
+                    lambda (ref<array<uint<8>,inf>,f,f> arr) -> unit { 
                         decl uint<8> b = 1u; 
                         $ arr[b] $; 
-                    } (scalar_to_array(i)); 
+                    } (ref_scalar_to_ref_array(i)); 
                  };
 			}
             )1N5P1RE");
@@ -94,11 +94,11 @@ namespace checks {
 		{
 			StatementPtr stmt_pass = builder.parseExpr("let uint = uint<8>;"
 			                                           "lambda () -> unit { "
-			                                           "	decl ref<uint<8>> i = var(0u); "
-			                                           "	lambda (ref<array<uint<8>,1>> arr) -> unit { "
+			                                           "	decl ref<uint<8>,f,f> i = var(0u); "
+			                                           "	lambda (ref<array<uint<8>,inf>,f,f> arr) -> unit { "
 			                                           "		decl uint<8> b = 1; "
 			                                           "		arr[0u]; "
-			                                           "	} (scalar_to_array(i)); "
+			                                           "	} (ref_scalar_to_ref_array(i)); "
 			                                           "}");
 			EXPECT_TRUE(stmt_pass) << "parsing error";
 
@@ -115,7 +115,7 @@ namespace checks {
 	{
 		let uint = uint<8>;
 		lambda () -> unit { 
-			decl ref<uint<8>> i = var(0u);
+			decl ref<uint<8>,f,f> i = var(0u);
 		};
 	}
 	)1N5P1RE");
@@ -135,7 +135,7 @@ namespace checks {
 	{
 		let uint = uint<8>;
 		lambda () -> uint { 
-			decl ref<uint<8>> i = var(0u);
+			decl ref<int<8>,f,f> i = var(0u);
 		};
 	}
 	)1N5P1RE");
