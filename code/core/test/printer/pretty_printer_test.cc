@@ -120,6 +120,13 @@ TEST(PrettyPrinter, Wrapper) {
 
 	++it;
 
+	// 4 literal loc
+	EXPECT_EQ(builder.numericType(builder.literal("4",builder.getLangBasic().getIntInf())), it->second);
+	EXPECT_EQ(SourceLocation(0, 13), it->first.first);
+	EXPECT_EQ(SourceLocation(0, 14), it->first.second);
+
+	++it;
+
 	// variable loc
 	EXPECT_EQ(iter, it->second);
 	EXPECT_EQ(SourceLocation(0, 16), it->first.first);
@@ -263,7 +270,7 @@ TEST(PrettyPrinter, LambdaTypes) {
 	LambdaExprPtr lambdaC = builder.lambdaExpr(funC, toVector(varO), body);
 	LambdaExprPtr lambdaD = builder.lambdaExpr(funD, toVector(varO, varA, varB), body);
 
-	EXPECT_EQ("fun(ref<C> v0, A v1, B v2) -> R { }", toString(PrettyPrinter(lambdaA, PrettyPrinter::NO_LET_BOUND_FUNCTIONS)));
+	EXPECT_EQ("fun(ref<C,f,f> v0, A v1, B v2) -> R { }", toString(PrettyPrinter(lambdaA, PrettyPrinter::NO_LET_BOUND_FUNCTIONS)));
 	EXPECT_EQ("ctor C v0 :: (A v1, B v2) { }", toString(PrettyPrinter(lambdaB, PrettyPrinter::NO_LET_BOUND_FUNCTIONS)));
 	EXPECT_EQ("dtor ~C v0 :: () { }", toString(PrettyPrinter(lambdaC, PrettyPrinter::NO_LET_BOUND_FUNCTIONS)));
 	EXPECT_EQ("mfun C v0 :: (A v1, B v2) -> R { }", toString(PrettyPrinter(lambdaD, PrettyPrinter::NO_LET_BOUND_FUNCTIONS)));
@@ -333,18 +340,18 @@ TEST(PrettyPrinter, JustOutermostScope) {
 	                  "    return (v5+1);\n"
 	                  "};\n"
 	                  "\n"
-	                  "let fun001 = fun(ref<int<4>> v8) -> int<4> {\n"
+	                  "let fun001 = fun(ref<int<4>,f,f> v8) -> int<4> {\n"
 	                  "    return (v8);\n"
 	                  "};\n"
 	                  "\n"
 	                  "{\n"
-	                  "    decl ref<int<4>> v9 = ( var(undefined(type<int<4>>)));\n"
-	                  "    decl ref<int<4>> v13 = ( var(undefined(type<int<4>>)));\n"
-	                  "    decl ref<int<4>> v14 = ( var(undefined(type<int<4>>)));\n"
-	                  "    decl ref<int<4>> v15 = ( var(undefined(type<int<4>>)));\n"
-	                  "    decl ref<int<4>> v16 = ( var(undefined(type<int<4>>)));\n"
-	                  "    decl ref<int<4>> v17 = ( var(undefined(type<int<4>>)));\n"
-	                  "    decl ref<int<4>> v18 = ( var(undefined(type<int<4>>)));\n"
+	                  "    decl ref<int<4>,f,f> v9 = ( var(undefined(type<int<4>>)));\n"
+	                  "    decl ref<int<4>,f,f> v13 = ( var(undefined(type<int<4>>)));\n"
+	                  "    decl ref<int<4>,f,f> v14 = ( var(undefined(type<int<4>>)));\n"
+	                  "    decl ref<int<4>,f,f> v15 = ( var(undefined(type<int<4>>)));\n"
+	                  "    decl ref<int<4>,f,f> v16 = ( var(undefined(type<int<4>>)));\n"
+	                  "    decl ref<int<4>,f,f> v17 = ( var(undefined(type<int<4>>)));\n"
+	                  "    decl ref<int<4>,f,f> v18 = ( var(undefined(type<int<4>>)));\n"
 	                  "    {\n"
 	                  "        (v9 := 7);\n"
 	                  "        fun000((v13));\n"
@@ -358,13 +365,13 @@ TEST(PrettyPrinter, JustOutermostScope) {
 
 	EXPECT_EQ(res, toString(PrettyPrinter(stmt)));
 	std::string res2 = "{\n"
-	                   "    decl ref<int<4>> v9 = ( var(undefined(type<int<4>>)));\n"
-	                   "    decl ref<int<4>> v13 = ( var(undefined(type<int<4>>)));\n"
-	                   "    decl ref<int<4>> v14 = ( var(undefined(type<int<4>>)));\n"
-	                   "    decl ref<int<4>> v15 = ( var(undefined(type<int<4>>)));\n"
-	                   "    decl ref<int<4>> v16 = ( var(undefined(type<int<4>>)));\n"
-	                   "    decl ref<int<4>> v17 = ( var(undefined(type<int<4>>)));\n"
-	                   "    decl ref<int<4>> v18 = ( var(undefined(type<int<4>>)));\n"
+	                   "    decl ref<int<4>,f,f> v9 = ( var(undefined(type<int<4>>)));\n"
+	                   "    decl ref<int<4>,f,f> v13 = ( var(undefined(type<int<4>>)));\n"
+	                   "    decl ref<int<4>,f,f> v14 = ( var(undefined(type<int<4>>)));\n"
+	                   "    decl ref<int<4>,f,f> v15 = ( var(undefined(type<int<4>>)));\n"
+	                   "    decl ref<int<4>,f,f> v16 = ( var(undefined(type<int<4>>)));\n"
+	                   "    decl ref<int<4>,f,f> v17 = ( var(undefined(type<int<4>>)));\n"
+	                   "    decl ref<int<4>,f,f> v18 = ( var(undefined(type<int<4>>)));\n"
 	                   "    {\n"
 	                   "        (v9 := 7);\n"
 	                   "        fun000((v13));\n"

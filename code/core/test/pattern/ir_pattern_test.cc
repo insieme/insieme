@@ -104,7 +104,7 @@ namespace pattern {
 		auto pt = [&manager](const string& typespec) { return IRBuilder(manager).parseType(typespec); };
 
 		TypePtr int8Type = pt("int<8>");
-		TypePtr genericA = pt("megatype<ultratype<int<8>,666>>");
+		TypePtr genericA = pt("megatype<ultratype<int<8>>>");
 		TypePtr genericB = pt("megatype<ultratype<int<8>,B>>");
 
 		TreePattern patternA = irp::genericType("megatype", single(any));
@@ -118,7 +118,7 @@ namespace pattern {
 		EXPECT_PRED2(noMatch, aT(patternB), genericA);
 		EXPECT_PRED2(isMatch, aT(patternB), genericB);
 
-		TreePattern patternC = irp::genericType("ultratype", single(any), single(any));
+		TreePattern patternC = irp::genericType("ultratype", single(any));
 		EXPECT_PRED2(noMatch, patternC, int8Type);
 		EXPECT_PRED2(noMatch, patternC, genericA);
 		EXPECT_PRED2(noMatch, aT(patternC), int8Type);
