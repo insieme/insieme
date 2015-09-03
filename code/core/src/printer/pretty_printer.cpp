@@ -46,7 +46,6 @@
 #include "insieme/utils/map_utils.h"
 
 #include "insieme/core/ir_visitor.h"
-#include "insieme/core/ir_class_info.h"
 
 #include "insieme/core/lang/parallel.h"
 

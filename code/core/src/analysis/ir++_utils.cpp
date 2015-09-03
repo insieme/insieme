@@ -38,7 +38,6 @@
 
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_visitor.h"
-#include "insieme/core/ir_class_info.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/lang/ir++_extension.h"
@@ -63,9 +62,6 @@ namespace analysis {
 			if(StructTypePtr structType = cur.isa<StructTypePtr>()) {
 				// if not empty => it is a IR++ code
 				if(!structType->getParents().empty()) { return true; }
-
-				// if there is meta-info => it is a IR++ code
-				if(hasMetaInfo(structType)) { return true; }
 			}
 
 			// check function types

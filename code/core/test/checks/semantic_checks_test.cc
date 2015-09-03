@@ -146,7 +146,7 @@ namespace checks {
 		auto checkResult = check(stmt, missingReturnStmtCheck);
 		EXPECT_EQ(checkResult.size(), 1);
 		EXPECT_EQ(toString(checkResult[0]),
-		          "ERROR:   [00045] - SEMANTIC / MISSING_RETURN_STMT @ (0-0) - MSG: Not all control paths of non-unit lambdaExpr return a value.");
+		          "ERROR:   [00044] - SEMANTIC / MISSING_RETURN_STMT @ (0-0) - MSG: Not all control paths of non-unit lambdaExpr return a value.");
 	}
 
 	TEST(MissingReturnStmtCheck, IfCorrect) {
@@ -197,7 +197,7 @@ namespace checks {
 		auto checkResult = check(stmt, missingReturnStmtCheck);
 		EXPECT_EQ(checkResult.size(), 1);
 		EXPECT_EQ(toString(checkResult[0]),
-		          "ERROR:   [00045] - SEMANTIC / MISSING_RETURN_STMT @ (0-0) - MSG: Not all control paths of non-unit lambdaExpr return a value.");
+		          "ERROR:   [00044] - SEMANTIC / MISSING_RETURN_STMT @ (0-0) - MSG: Not all control paths of non-unit lambdaExpr return a value.");
 	}
 
 	TEST(MissingReturnStmtCheck, WhileCorrect) {
@@ -246,7 +246,7 @@ namespace checks {
 		auto checkResult = check(stmt, missingReturnStmtCheck);
 		EXPECT_EQ(checkResult.size(), 1);
 		EXPECT_EQ(toString(checkResult[0]),
-		          "ERROR:   [00045] - SEMANTIC / MISSING_RETURN_STMT @ (0-0) - MSG: Not all control paths of non-unit lambdaExpr return a value.");
+		          "ERROR:   [00044] - SEMANTIC / MISSING_RETURN_STMT @ (0-0) - MSG: Not all control paths of non-unit lambdaExpr return a value.");
 	}
 
 	TEST(MissingReturnStmtCheck, Throw) {
@@ -320,7 +320,7 @@ namespace checks {
 		auto checkResult = check(stmt, missingReturnStmtCheck);
 		EXPECT_EQ(checkResult.size(), 1);
 		EXPECT_EQ(toString(checkResult[0]),
-		          "ERROR:   [00045] - SEMANTIC / MISSING_RETURN_STMT @ (0-0) - MSG: Not all control paths of non-unit lambdaExpr return a value.");
+		          "ERROR:   [00044] - SEMANTIC / MISSING_RETURN_STMT @ (0-0) - MSG: Not all control paths of non-unit lambdaExpr return a value.");
 	}
 
 	TEST(MissingReturnStmtCheck, SwitchErrorDefaultMissing) {
@@ -346,7 +346,7 @@ namespace checks {
 		auto checkResult = check(stmt, missingReturnStmtCheck);
 		EXPECT_EQ(checkResult.size(), 1);
 		EXPECT_EQ(toString(checkResult[0]),
-		          "ERROR:   [00045] - SEMANTIC / MISSING_RETURN_STMT @ (0-0) - MSG: Not all control paths of non-unit lambdaExpr return a value.");
+		          "ERROR:   [00044] - SEMANTIC / MISSING_RETURN_STMT @ (0-0) - MSG: Not all control paths of non-unit lambdaExpr return a value.");
 	}
 
 	TEST(MissingReturnStmtCheck, SwitchCorrectInLoop) {
