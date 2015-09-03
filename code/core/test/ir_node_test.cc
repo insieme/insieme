@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -184,7 +184,7 @@ namespace new_core {
 			std::stringstream buf;
 			dumpText(node, buf);
 			EXPECT_EQ("(GenericType |\n    (StringValue \"B\")\n    (Parents )\n    (Types |\n        (GenericType |\n            (StringValue \"A\")\n        "
-			          "    (Parents )\n            (Types )\n            (IntTypeParams )\n        )\n    )\n    (IntTypeParams )\n)\n\n",
+			          "    (Parents )\n            (Types )\n        )\n    )\n)\n\n",
 			          buf.str());
 		}
 
@@ -251,7 +251,7 @@ namespace new_core {
 			std::stringstream buf;
 			buf << dumpText(node);
 			EXPECT_EQ("(GenericType |\n    (StringValue \"B\")\n    (Parents )\n    (Types |\n        (GenericType |\n            (StringValue \"A\")\n        "
-			          "    (Parents )\n            (Types )\n            (IntTypeParams )\n        )\n    )\n    (IntTypeParams )\n)\n\n",
+			          "    (Parents )\n            (Types )\n        )\n    )\n)\n\n",
 			          buf.str());
 		}
 
