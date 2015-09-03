@@ -70,15 +70,15 @@ namespace checks {
 		TupleTypePtr empty = builder.tupleType(toVector<TypePtr>());
 		EXPECT_EQ("()", toString(*empty));
 		FunctionTypePtr nullary = builder.functionType(empty->getElementTypes(), intA);
-		EXPECT_EQ("(()->int<#a>)", toString(*nullary));
+		EXPECT_EQ("(()->int<'a>)", toString(*nullary));
 		TupleTypePtr single = builder.tupleType(toVector(intA));
-		EXPECT_EQ("(int<#a>)", toString(*single));
+		EXPECT_EQ("(int<'a>)", toString(*single));
 		FunctionTypePtr unary = builder.functionType(single->getElementTypes(), intA);
-		EXPECT_EQ("((int<#a>)->int<#a>)", toString(*unary));
+		EXPECT_EQ("((int<'a>)->int<'a>)", toString(*unary));
 		TupleTypePtr pair = builder.tupleType(toVector(intA, intA));
-		EXPECT_EQ("(int<#a>,int<#a>)", toString(*pair));
+		EXPECT_EQ("(int<'a>,int<'a>)", toString(*pair));
 		FunctionTypePtr binary = builder.functionType(pair->getElementTypes(), intA);
-		EXPECT_EQ("((int<#a>,int<#a>)->int<#a>)", toString(*binary));
+		EXPECT_EQ("((int<'a>,int<'a>)->int<'a>)", toString(*binary));
 
 		// define literals
 		LiteralPtr x = builder.literal(int2, "1");
