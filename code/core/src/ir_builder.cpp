@@ -576,8 +576,7 @@ namespace core {
 		// if it is a ref type ...
 		if(analysis::isRefType(type)) {
 			// return NULL for the specific type
-			auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
-			return refReinterpret(refExt.getRefNull(), analysis::getReferencedType(type));
+			return lang::buildRefNull(type);
 		}
 
 		// if it is a function type -- used for function pointers
@@ -696,8 +695,11 @@ namespace core {
 
 
 	CallExprPtr IRBuilderBaseModule::arraySubscript(const ExpressionPtr& array, const ExpressionPtr& index) const {
-		assert_not_implemented();
-		return CallExprPtr();
+		// check that the access is valid
+		assert_pred1(lang::isArray, array);
+		// build expression accessing the addressed element in the given array
+		auto& refExt = getExtension<lang::ArrayExtension>();
+		return callExpr(refExt.getArraySubscript(), array, index);
 	}
 	CallExprPtr IRBuilderBaseModule::arrayRefElem(const ExpressionPtr& array, const ExpressionPtr& index) const {
 		// check that the access is valid

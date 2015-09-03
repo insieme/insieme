@@ -80,7 +80,8 @@ namespace parser3 {
 			void close_scope(const std::string& msg = "");
 
 			bool add_symb(const std::string& name, const node_factory& factory);
-			bool add_func(const std::string& name, const node_factory& factory);
+			bool add_type(const std::string& name, const node_factory& factory);
+
 			NodePtr find_symb(const std::string& name) const;
 			NodePtr find_type(const std::string& name) const;
 
@@ -182,7 +183,7 @@ namespace parser3 {
 			 * @param params: list of type paramenters
 			 * @param IntParamList: list of int type paramenters
 			 */
-			TypePtr genGenericType(const location& l, const std::string& name, const ParentList& parents, const TypeList& params);
+			TypePtr genGenericType(const location& l, const std::string& name, const ParentList& parents = ParentList(), const TypeList& params = TypeList());
 
 			/**
 			 * generates a numeric type representing the given value

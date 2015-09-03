@@ -84,10 +84,10 @@ namespace parser3 {
 			return true;
 		}
 
-		bool DeclarationContext::add_func(const std::string& name, const node_factory& factory) {
-			auto& symbols = stack.back().types;
-			if (symbols.find(name) != symbols.end()) return false;
-			symbols[name] = factory;
+		bool DeclarationContext::add_type(const std::string& name, const node_factory& factory) {
+			auto& types = stack.back().types;
+			if (types.find(name) != types.end()) return false;
+			types[name] = factory;
 			return true;
 		}
 
@@ -109,6 +109,12 @@ namespace parser3 {
 				auto pos = cur.find(name);
 				if (pos != cur.end()) return pos->second();
 			}
+
+			// check symbol table too -- as it might have been defined by the user
+			NodePtr res = find_symb(name);
+			if (auto type = res.isa<TypePtr>()) return type;
+
+			// nothing found
 			return nullptr;
 		}
 
@@ -214,7 +220,6 @@ namespace parser3 {
 			}
 
 			if(!x) {
-				std::cout << "Symbol " << name << " not found!\n";
 				error(l, format("the symbol %s was not declared in this context", name));
 				return nullptr;
 			}
@@ -595,7 +600,7 @@ namespace parser3 {
 			// ignore wildcard for unused variables
 			if(name == "_") { return; }
 
-			if(!scopes.add_func(name, factory)) { error(l, format("symbol %s redefined", name)); }
+			if(!scopes.add_type(name, factory)) { error(l, format("type name %s redefined", name)); }
 		}
 
 		void inspire_driver::add_type(const location& l, const std::string& name, const NodePtr& node) {
@@ -885,10 +890,8 @@ namespace parser3 {
 				extensionName.replace(extensionName.size() - 1, 1, "");
 
 				// get extension factory from the registry
-				std::cout << "Loading extension: " << extensionName << "\n";
 				auto optFactory = lang::ExtensionRegistry::getInstance().lookupExtensionFactory(extensionName);
 				if (optFactory) {
-					std::cout << "Found!\n";
 					import_extension((*optFactory)(mgr));
 				} else {
 					error(l, format("Unable to locate module: %s", extensionName.c_str()));

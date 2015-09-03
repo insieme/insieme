@@ -231,7 +231,7 @@ namespace transform {
 			f(v[0]);
 		};
 		
-		decl vector<int<4>, 8> a;
+		decl array<int<4>, 8> a;
 		test(a, foo);
 	}
 	)raw");

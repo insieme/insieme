@@ -45,6 +45,11 @@
 
 #include "insieme/core/datapath/datapath.h"
 
+#include "insieme/core/lang/array.h"
+#include "insieme/core/lang/reference.h"
+#include "insieme/core/lang/pointer.h"
+#include "insieme/core/lang/channel.h"
+
 #include "insieme/utils/assert.h"
 
 namespace insieme {
@@ -77,6 +82,13 @@ namespace analysis {
 	}
 
 	bool isObjectType(const TypePtr& type) {
+
+		// exclude predefined types
+		if (lang::isArray(type)) return false;
+		if (lang::isReference(type)) return false;
+		if (lang::isPointer(type)) return false;
+		if (lang::isChannel(type)) return false;
+
 		// decide whether something is an object type based on the node type
 		switch(type->getNodeType()) {
 		case NT_GenericType:

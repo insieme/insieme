@@ -390,6 +390,8 @@ namespace lang {
 	
 	ExpressionPtr buildRefCast(const ExpressionPtr& refExpr, const TypePtr& targetTy);
 
+	ExpressionPtr buildRefNull(const TypePtr& type);
+
 } // end namespace lang
 } // end namespace core
 } // end namespace insieme

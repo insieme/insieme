@@ -375,11 +375,11 @@ struct_type : tag_def              { RULE $$ = driver.builder.structType(driver.
 
 type : "struct" struct_type { RULE $$ = $2; }
      | "union"  union_type  { RULE $$ = driver.builder.unionType($2); }
-     | "#" "identifier" { 
+     | "#" "identifier" { RULE 
     	 auto var = driver.findSymbol(@$, $2);
     	 INSPIRE_MSG(@$, var, "undeclared variable");
     	 INSPIRE_MSG(@$, var.isa<VariablePtr>(), "not a variable"); 
-    	 RULE $$ = driver.genNumericType(@$, var); 
+    	 $$ = driver.genNumericType(@$, var); 
        }
      | "ctor" just_name "::" "(" type_list { RULE
                             TypePtr classType = driver.builder.refType($2);
@@ -405,7 +405,7 @@ type : "struct" struct_type { RULE $$ = $2; }
      ;
 
 just_name : "identifier" { RULE  $$ = driver.findType(@1, $1); 
-                           INSPIRE_MSG(@$,$$, format("Type %s was not defined", $1));
+						   if (!$$) $$ = driver.genGenericType(@$, $1);
                          }
           | "type_var"   { RULE  $$ = driver.builder.typeVariable($1); }
           ;

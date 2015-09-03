@@ -131,6 +131,15 @@ namespace lang {
 			                    bmExt.getMarkerTypeLiteral(referenceTy.isVolatile()));
 	}
 
+	ExpressionPtr buildRefNull(const TypePtr& type) {
+		assert_pred1(isReference, type) << "Trying to build a null ref which isn't a reference.";
+		IRBuilder builder(type->getNodeManager());
+		auto& rExt = type->getNodeManager().getLangExtension<ReferenceExtension>();
+		auto& bmExt = type->getNodeManager().getLangExtension<BooleanMarkerExtension>();
+		ReferenceType rt(type);
+		return builder.callExpr(rExt.getRefNull(), builder.getTypeLiteral(rt.getElementType()), bmExt.getMarkerTypeLiteral(rt.isConst()),
+								bmExt.getMarkerTypeLiteral(rt.isVolatile()));
+	}
 
 } // end namespace lang
 } // end namespace core

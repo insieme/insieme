@@ -39,6 +39,8 @@
 #include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/arithmetic/arithmetic_utils.h"
+
 #include "insieme/utils/logging.h"
 
 namespace insieme {
@@ -97,21 +99,20 @@ namespace utils {
 				ExpressionPtr arg = call->getArgument(1);
 				int idx = -1;
 
-				// search for the literal in the second argument
-				auto lambdaVisitor = makeLambdaVisitor([&idx, this](const NodePtr& node) -> bool {
-					// check for literal, assuming it will always be a valid integer
-					if(const LiteralPtr& lit = dynamic_pointer_cast<const Literal>(node)) {
-						if(BASIC.isInt(lit->getType())) {
-							idx = atoi(lit->getValue()->getValue().c_str());
-							return true;
-						}
-					}
-					return false;
-				});
+				try {
+					// parse position
+					arithmetic::Formula pos = arithmetic::toFormula(arg);
 
-				if(!visitDepthFirstInterruptible(arg, lambdaVisitor) || idx == -1) {
-					LOG(ERROR) << fun;
-					assert_fail() << "Tuple access does not contain a literal as index";
+					// check correctness of value
+					if (pos.isInteger()) idx = pos.getIntegerValue();
+
+				} catch(const arithmetic::NotAFormulaException& nafe) {
+					assert_fail() << "Tuple access does not contain a literal as index: " << *arg;
+				}
+
+				// check for success
+				if (idx == -1) {
+					assert_fail() << "Tuple access does not contain a literal as index: " << *arg;
 				}
 
 				bool isRef = analysis::isRefType(call->getArgument(0)->getType());
@@ -120,6 +121,10 @@ namespace utils {
 				if(!tupleTy) { // TODO remove dirty workaround
 					return res;
 				}
+
+				assert_le(0,idx) << "Invalid index " << idx << " from argument " << *arg << "\n";
+				assert_lt(idx,(int)(tupleTy.size())) << "Invalid index " << idx << " from argument " << *arg << "\n";
+
 				assert_true(tupleTy) << "Tuple acces on a non tuple variable called";
 				const TypePtr& elemTy = tupleTy->getElement(idx);
 

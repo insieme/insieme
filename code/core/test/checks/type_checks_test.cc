@@ -345,8 +345,7 @@ namespace checks {
 		auto err2 = builder.parent(builder.parseType("(A,B)->R"));
 		auto err3 = builder.parent(builder.parseType("ref<A>"));
 		auto err4 = builder.parent(builder.parseType("array<A,1>"));
-		auto err5 = builder.parent(builder.parseType("vector<A,2>"));
-		auto err6 = builder.parent(builder.parseType("channel<A,2>"));
+		auto err5 = builder.parent(builder.parseType("channel<A,2>"));
 
 		// check the correct types
 		EXPECT_TRUE(check(ok1).empty()) << check(ok1);
@@ -360,7 +359,6 @@ namespace checks {
 		EXPECT_PRED2(containsMSG, check(err3), Message(NodeAddress(err3), EC_TYPE_ILLEGAL_OBJECT_TYPE, "", Message::ERROR));
 		EXPECT_PRED2(containsMSG, check(err4), Message(NodeAddress(err4), EC_TYPE_ILLEGAL_OBJECT_TYPE, "", Message::ERROR));
 		EXPECT_PRED2(containsMSG, check(err5), Message(NodeAddress(err5), EC_TYPE_ILLEGAL_OBJECT_TYPE, "", Message::ERROR));
-		EXPECT_PRED2(containsMSG, check(err6), Message(NodeAddress(err6), EC_TYPE_ILLEGAL_OBJECT_TYPE, "", Message::ERROR));
 	}
 
 	TEST(StructExprTypeCheck, Basic) {
@@ -880,7 +878,7 @@ namespace checks {
 		// test array
 		{
 			TypePtr ok = builder.parseType("array<int<4>,12>");
-			TypePtr err = builder.parseType("array<int<4>>");
+			TypePtr err = builder.parseType("array<int<4>,12,14>");
 
 			EXPECT_FALSE(*ok == *err);
 
@@ -903,36 +901,10 @@ namespace checks {
 			EXPECT_PRED2(containsMSG, check(err, typeCheck), Message(NodeAddress(err), EC_TYPE_ILLEGAL_USE_OF_TYPE_KEYWORD, "", Message::WARNING));
 		}
 
-		// test array
-		{
-			TypePtr ok = builder.parseType("array<int<4>,12>");
-			TypePtr err = builder.parseType("array<int<4>>");
-
-			EXPECT_FALSE(*ok == *err);
-
-			EXPECT_TRUE(check(ok, typeCheck).empty());
-			EXPECT_FALSE(check(err, typeCheck).empty());
-
-			EXPECT_PRED2(containsMSG, check(err, typeCheck), Message(NodeAddress(err), EC_TYPE_ILLEGAL_USE_OF_TYPE_KEYWORD, "", Message::WARNING));
-		}
-
-		// test array
-		{
-			TypePtr ok = builder.parseType("array<int<4>,12>");
-			TypePtr err = builder.parseType("array<int<4>,12,14>");
-
-			EXPECT_FALSE(*ok == *err);
-
-			EXPECT_TRUE(check(ok, typeCheck).empty());
-			EXPECT_FALSE(check(err, typeCheck).empty());
-
-			EXPECT_PRED2(containsMSG, check(err, typeCheck), Message(NodeAddress(err), EC_TYPE_ILLEGAL_USE_OF_TYPE_KEYWORD, "", Message::WARNING));
-		}
-
 		// test references
 		{
 			TypePtr ok = lang::ReferenceType::create(builder.parseType("int<4>"));
-			TypePtr err = builder.parseType("ref<int<4>>");
+			TypePtr err = builder.parseType("ref<int<4>,f>");
 
 			EXPECT_TRUE(check(ok, typeCheck).empty());
 			EXPECT_FALSE(check(err, typeCheck).empty());
@@ -1038,8 +1010,11 @@ namespace checks {
 		// create simple, context less array type
 		TypePtr element = manager.getLangBasic().getInt4();
 		TypePtr arrayType = builder.arrayType(element);
-
+		TypePtr fixedArrayType = builder.arrayType(element, 12);
 		TypePtr cur;
+
+		EXPECT_TRUE(lang::isUnknownSizedArray(arrayType));
+		EXPECT_TRUE(lang::isFixedSizedArray(fixedArrayType));
 
 		// test something without context
 		EXPECT_TRUE(check(arrayType, typeCheck).empty()) << check(arrayType, typeCheck);
@@ -1094,33 +1069,28 @@ namespace checks {
 		// ----- tuples ------
 
 		// test it within a tuple
-		cur = builder.tupleType(toVector(arrayType));
+		cur = builder.tupleType(toVector(fixedArrayType));
 		errors = check(cur, typeCheck);
 		EXPECT_TRUE(errors.empty()) << errors;
 
 		// .. a bigger tuple
-		cur = builder.tupleType(toVector(element, arrayType));
+		cur = builder.tupleType(toVector(element, fixedArrayType));
 		errors = check(cur, typeCheck);
 		EXPECT_TRUE(errors.empty()) << errors;
 
-		// it has to be the last element
+		// variable size arrays are not allowed
 		cur = builder.tupleType(toVector(arrayType, element));
 		errors = check(cur, typeCheck);
 		EXPECT_FALSE(errors.empty()) << errors;
 		EXPECT_EQ(1u, errors.size());
 		EXPECT_PRED2(containsMSG, check(cur, typeCheck), Message(NodeAddress(cur), EC_TYPE_INVALID_ARRAY_CONTEXT, "", Message::ERROR));
 
-		// and must not be present multiple times
+		// also not multiple times
 		cur = builder.tupleType(toVector(arrayType, element, arrayType));
 		errors = check(cur, typeCheck);
 		EXPECT_FALSE(errors.empty()) << errors;
-		EXPECT_EQ(1u, errors.size());
+		EXPECT_EQ(2u, errors.size());
 		EXPECT_PRED2(containsMSG, check(cur, typeCheck), Message(NodeAddress(cur), EC_TYPE_INVALID_ARRAY_CONTEXT, "", Message::ERROR));
-
-		// variable size tuple must not be nested inside a non-reference
-		cur = builder.structType(toVector(builder.namedType("a", builder.tupleType(toVector(arrayType)))));
-		errors = check(cur, typeCheck);
-		EXPECT_TRUE(errors.empty()) << errors;
 
 		// also, there must not be a value of type array
 		ExpressionPtr exp = builder.literal("val", arrayType);
@@ -1172,146 +1142,6 @@ namespace checks {
 		EXPECT_PRED2(containsMSG, check(err2), Message(NodeAddress(err2), EC_TYPE_INVALID_GENERIC_OPERATOR_APPLICATION, "", Message::ERROR));
 	}
 
-	TEST(NarrowExpression, Basic) {
-		NodeManager manager;
-		IRBuilder builder(manager);
-		CheckPtr typeCheck = getFullCheck();
-
-		NodePtr res = analysis::normalize(
-		    builder.parseStmt("{"
-		                      " let inner = struct{ int<4> a;};"
-		                      " let two   = struct{ inner a; int<4> b;};"
-		                      " decl ref<two> obj; "
-		                      " decl ref<int<4>> inside = ref_narrow( obj, dp_member(dp_root, lit(\"b\")), lit(int<4>));"
-		                      " decl ref<int<4>> morein = ref_narrow( obj, dp_member(dp_member(dp_root, lit(\"a\")),lit(\"a\")), lit(int<4>));"
-		                      "}"));
-		ASSERT_TRUE(res);
-		auto errors = check(res, typeCheck);
-		EXPECT_TRUE(errors.empty()) << "Correct Narrow Test\n" << errors;
-		EXPECT_EQ("{decl ref<struct<a:struct<a:int<4>>,b:int<4>>> v0 = ( var(undefined(type<struct<a:struct<a:int<4>>,b:int<4>>>)));decl ref<int<4>> v1 = "
-		          "ref_narrow(v0, (dp_root.b), type<int<4>>);decl ref<int<4>> v2 = ref_narrow(v0, ((dp_root.a).a), type<int<4>>);}",
-		          toString(printer::PrettyPrinter(res, printer::PrettyPrinter::PRINT_SINGLE_LINE)));
-
-		res = builder.parseStmt(
-		    "{"
-		    " let inner = struct{ int<4> a;};"
-		    " let two   = struct{ inner a; int<4> b;};"
-		    " decl ref<two> obj; "
-		    " decl ref<int<4>> x = ref_narrow( obj, dp_member(dp_member(dp_root, lit(\"b\")),lit(\"a\")), lit(int<4>));"
-		    " decl ref<int<4>> y = ref_narrow( obj, dp_member(dp_member(dp_root, lit(\"a\")),lit(\"b\")), lit(int<4>));"
-		    " decl ref<int<8>> z = ref_narrow( obj, dp_member(dp_member(dp_root, lit(\"a\")),lit(\"a\")), lit(int<8>));" // this test is no longer wrong since
-		                                                                                                                 // generic types can be narrowed
-		    "}");
-		ASSERT_TRUE(res);
-		errors = check(res, typeCheck);
-		EXPECT_EQ(2u, errors.size());
-	}
-
-	TEST(NarrowExpression, Parents) {
-		NodeManager manager;
-		IRBuilder builder(manager);
-
-		NodePtr ok = builder.parseStmt("{"
-		                               "	let int = int<4>;"
-		                               "	let A = struct { int a; };"
-		                               "	let B = struct : A { int b; };"
-		                               "	decl ref<B> b;"
-		                               "	decl auto ref2A = ref_narrow( b, dp_parent( dp_root, lit(A) ), lit(A) );"
-		                               "	decl auto ref2a = ref_narrow( b, dp_member( dp_parent( dp_root, lit(A) ), lit(\"a\")), lit(int) );"
-		                               "}");
-
-		ASSERT_TRUE(ok);
-
-		EXPECT_TRUE(checks::check(ok).empty()) << checks::check(ok);
-
-		NodePtr err = builder.parseStmt("{"
-		                                "	let int = int<4>;"
-		                                "	let A = struct { int a; };"
-		                                "	let B = struct : A { int b; };"
-		                                "	decl ref<B> b; "
-		                                "	decl auto x = ref_narrow( b, dp_parent( dp_root, lit(B) ), lit(B) );"
-		                                "}");
-		ASSERT_TRUE(err);
-
-		auto errors = checks::check(err);
-		EXPECT_FALSE(errors.empty());
-		EXPECT_EQ(1u, errors.size());
-	}
-
-
-	TEST(ExpandExpression, Basic) {
-		NodeManager manager;
-		IRBuilder builder(manager);
-		CheckPtr typeCheck = getFullCheck();
-
-		NodePtr res = builder.parseStmt("{"
-		                                " let int   = int<4>;"
-		                                " let inner = struct{ int a;};"
-		                                " let outer = struct{ inner a; int b;};"
-		                                ""
-		                                " decl ref<inner>  obj;"
-		                                " obj.a = -15;"
-		                                " decl ref<int> x = obj.a;"
-		                                " decl ref<inner> exp = ref_expand(x, dp_member(dp_root, lit(\"a\")), lit(inner));"
-		                                ""
-		                                " decl ref<outer> obj2; "
-		                                " decl ref<inner> y = obj2.a;"
-		                                " decl ref<int>   z = y.a;"
-		                                " decl ref<outer> exp2 = ref_expand (z, dp_member (dp_member (dp_root, lit(\"a\")), lit(\"a\")), lit(outer));"
-		                                "}");
-		ASSERT_TRUE(res);
-		auto errors = check(res, typeCheck);
-		EXPECT_TRUE(errors.empty()) << "Correct Narrow Test\n" << errors;
-
-		res = builder.parseStmt("{"
-		                        " let int   = int<4>;"
-		                        " let inner = struct{ int a;};"
-		                        " let outer = struct{ inner a; int b;};"
-		                        ""
-		                        " decl ref<inner>  obj;"
-		                        " obj.a = -15;"
-		                        " decl ref<int> x = obj.a;"
-		                        " decl ref<inner> exp = ref_expand(x, dp_member(dp_root, lit(\"r\")), lit(inner));"
-		                        ""
-		                        " decl ref<outer> obj2; "
-		                        " decl ref<inner> y = obj2.a;"
-		                        " decl ref<int>   z = y.a;"
-		                        " decl ref<outer> exp2 = ref_expand (z, dp_member (dp_member (dp_root, lit(\"b\")), lit(\"a\")), lit(outer));"
-		                        " decl ref<int>   exp3 = ref_expand (z, dp_member (dp_member (dp_root, lit(\"a\")), lit(\"a\")), lit(int));"
-		                        "}");
-		ASSERT_TRUE(res);
-		errors = check(res, typeCheck);
-		EXPECT_EQ(2u, errors.size());
-	}
-
-	TEST(ExpandExpression, Parents) {
-		NodeManager manager;
-		IRBuilder builder(manager);
-
-		NodePtr ok = builder.parseStmt("{"
-		                               "	let int = int<4>;"
-		                               "	let A = struct { int a; };"
-		                               "	let B = struct : A { int b; };"
-		                               "	decl ref<A> a;"
-		                               "	decl auto ref2B = ref_expand( a, dp_parent( dp_root, lit(A) ), lit(B) );"
-		                               "}");
-
-		ASSERT_TRUE(ok);
-		EXPECT_TRUE(checks::check(ok).empty()) << checks::check(ok);
-
-		NodePtr err = builder.parseStmt("{"
-		                                "	let int = int<4>;"
-		                                "	let A = struct { int a; };"
-		                                "	let B = struct { int b; };"
-		                                "	decl ref<A> a;"
-		                                "	decl auto ref2B = ref_expand( a, dp_parent( dp_root, lit(A) ), lit(B) );"
-		                                "}");
-		ASSERT_TRUE(err);
-
-		auto errors = checks::check(err);
-		EXPECT_FALSE(errors.empty());
-		EXPECT_EQ(1u, errors.size());
-	}
 
 
 	TEST(ArrayTypeChecks, Exceptions) {
@@ -1333,7 +1163,7 @@ namespace checks {
 		errors = check(cur, typeCheck);
 		EXPECT_TRUE(errors.empty()) << cur << "\n" << errors;
 
-		ExpressionPtr arrayPtr = builder.callExpr(array.getArrayCreate(), builder.getTypeLiteral(element), builder.uintLit(12u));
+		ExpressionPtr arrayPtr = builder.parseExpr("array_create(type(int<4>),type(12),[0])");
 
 		// also, allow array values to be used within ref.new, ref.var, struct, tuple and union expressions
 

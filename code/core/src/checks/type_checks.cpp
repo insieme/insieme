@@ -411,10 +411,16 @@ namespace checks {
 		if(address->getNodeType() == NT_StructType) {
 			StructTypePtr structType = address.as<StructTypePtr>();
 			if(structType.empty()) { return res; }
-			for(auto it = structType.begin(); it != structType.end() - 1; ++it) {
+			for(auto it = structType.begin(); it != structType.end(); ++it) {
 				if(lang::isVariableSizedArray(it->getType())) {
 					add(res, Message(address, EC_TYPE_INVALID_ARRAY_CONTEXT,
-					                 "Variable sized data structure has to be the last component of enclosing struct type.", Message::ERROR));
+									 "Variable sized array not allowed within struct types.", Message::ERROR));
+				}
+			}
+			for(auto it = structType.begin(); it != structType.end() - 1; ++it) {
+				if(lang::isUnknownSizedArray(it->getType())) {
+					add(res, Message(address, EC_TYPE_INVALID_ARRAY_CONTEXT,
+					                 "Unknown sized data structure has to be the last component of enclosing struct type.", Message::ERROR));
 				}
 			}
 			return res;
@@ -424,10 +430,10 @@ namespace checks {
 		if(address->getNodeType() == NT_TupleType) {
 			TupleTypePtr tupleType = address.as<TupleTypePtr>();
 			if(tupleType.empty()) { return res; }
-			for(auto it = tupleType.begin(); it != tupleType.end() - 1; ++it) {
-				if(lang::isVariableSizedArray(*it)) {
+			for(auto it = tupleType.begin(); it != tupleType.end(); ++it) {
+				if(lang::isArray(*it) && !lang::isFixedSizedArray(*it)) {
 					add(res, Message(address, EC_TYPE_INVALID_ARRAY_CONTEXT,
-					                 "Variable sized data structure has to be the last component of enclosing tuple type.", Message::ERROR));
+					                 "Arrays within tuple types need to be fixed-size.", Message::ERROR));
 				}
 			}
 			return res;
