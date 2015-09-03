@@ -172,6 +172,11 @@ namespace analysis {
 				return any(type->getTypeParameter()->getTypes(), [&](const TypePtr& type) { return this->visit(type, boundVars); });
 			}
 
+			bool visitNumericType(const NumericTypePtr&, TypeVariable&) {
+				// numeric types are never generic
+				return false;
+			}
+
 			bool visitRecType(const RecTypePtr& recType, TypeVariableSet& boundVars) {
 				TypeVariableSet local = boundVars;
 				for(const RecTypeBindingPtr& binding : recType->getDefinition()) {
