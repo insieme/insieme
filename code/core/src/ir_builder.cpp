@@ -68,6 +68,7 @@
 #include "insieme/core/lang/reference.h"
 #include "insieme/core/lang/parallel.h"
 #include "insieme/core/lang/pointer.h"
+#include "insieme/core/lang/io.h"
 
 #include "insieme/core/parser3/ir_parser.h"
 
@@ -159,7 +160,7 @@ namespace core {
 		}
 
 		IRBuilderBaseModule::lazy_definition_map addStandardSymbols(NodeManager& mgr, const IRBuilderBaseModule::lazy_definition_map& init = IRBuilderBaseModule::lazy_definition_map()) {
-			IRBuilderBaseModule::lazy_definition_map res = init;
+			IRBuilderBaseModule::lazy_definition_map res;
 
 			// load standard modules
 			for(const auto& cur : mgr.getLangExtension<lang::ArrayExtension>().getSymbols()) res.insert(cur);
@@ -1414,7 +1415,8 @@ namespace core {
 
 	CallExprPtr IRBuilderBaseModule::print(const ExpressionPtr& format, const ExpressionList& args) const {
 		auto& basic = getLangBasic();
-		return callExpr(basic.getUnit(), basic.getPrint(), format, pack(args));
+		auto& ext = getExtension<lang::InputOutputExtension>();
+		return callExpr(basic.getUnit(), ext.getPrint(), format, pack(args));
 	}
 
 	CallExprPtr IRBuilderBaseModule::pack(const ExpressionList& values) const {

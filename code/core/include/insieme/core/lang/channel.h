@@ -61,6 +61,21 @@ namespace lang {
 		ChannelExtension(core::NodeManager& manager) : core::lang::Extension(manager) {}
 
 	  public:
+
+		LANG_EXT_TYPE(Channel, "channel<'a,'s>")
+
+	    LANG_EXT_LITERAL(ChannelCreate, "channel_create", "(type<'a>, type<'s>) -> channel<'a,'s>")
+
+		LANG_EXT_LITERAL(ChannelRelease, "channel_release", "(channel<'a,'s>) -> unit")
+
+		LANG_EXT_LITERAL(ChannelSend, "channel_send", "(channel<'a,'s>,'a) -> unit")
+
+		LANG_EXT_LITERAL(ChannelRecv, "channel_recv", "(channel<'a,'s>) -> 'a")
+
+		LANG_EXT_LITERAL(ChannelFull, "channel_full", "(channel<'a,'s>) -> bool")
+
+		LANG_EXT_LITERAL(ChannelEmpty, "channel_empty", "(channel<'a,'s>) -> bool")
+
 	};
 
 

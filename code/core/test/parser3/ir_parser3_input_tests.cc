@@ -47,6 +47,12 @@
 #include "insieme/core/parser3/ir_parser.h"
 #include "insieme/core/checks/full_check.h"
 
+#include "insieme/core/lang/array.h"
+#include "insieme/core/lang/reference.h"
+#include "insieme/core/lang/channel.h"
+#include "insieme/core/lang/parallel.h"
+#include "insieme/core/lang/io.h"
+
 #include "insieme/utils/config.h"
 
 namespace insieme {
@@ -82,7 +88,26 @@ namespace parser3 {
 
 		// parse file
 		NodeManager manager;
-		NodePtr res = parse_program(manager, ss.str(), true);
+
+		// create default definitions and alias maps
+		definition_map definitions;
+		type_alias_map aliases;
+
+		// add up definitions
+		for(const auto& cur : manager.getLangExtension<lang::ArrayExtension>().getDefinedSymbols()) definitions.insert(cur);
+		for(const auto& cur : manager.getLangExtension<lang::ReferenceExtension>().getDefinedSymbols()) definitions.insert(cur);
+		for(const auto& cur : manager.getLangExtension<lang::ParallelExtension>().getDefinedSymbols()) definitions.insert(cur);
+		for(const auto& cur : manager.getLangExtension<lang::ChannelExtension>().getDefinedSymbols()) definitions.insert(cur);
+		for(const auto& cur : manager.getLangExtension<lang::InputOutputExtension>().getDefinedSymbols()) definitions.insert(cur);
+
+		for(const auto& cur : manager.getLangExtension<lang::ArrayExtension>().getTypeAliases()) aliases.insert(cur);
+		for(const auto& cur : manager.getLangExtension<lang::ReferenceExtension>().getTypeAliases()) aliases.insert(cur);
+		for(const auto& cur : manager.getLangExtension<lang::ChannelExtension>().getTypeAliases()) aliases.insert(cur);
+		for(const auto& cur : manager.getLangExtension<lang::ParallelExtension>().getTypeAliases()) aliases.insert(cur);
+		for(const auto& cur : manager.getLangExtension<lang::InputOutputExtension>().getTypeAliases()) aliases.insert(cur);
+
+
+		NodePtr res = parse_program(manager, ss.str(), true, definitions, aliases);
 
 		// if(res) dumpColor(res);
 

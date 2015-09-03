@@ -16,8 +16,8 @@ unit main() {
 	// try receiving stuff
 	decl auto v = channel_recv(c);
 	
-	// check probe
-	if (channel_probe(c)) {};
+	// check empty
+	if (channel_empty(c)) {};
 	
 	// and release
 	channel_release(c);

@@ -37,16 +37,16 @@
 #pragma once
 
 #include "insieme/core/lang/extension.h"
+#include "insieme/core/lang/pointer.h"
 
 namespace insieme {
 namespace core {
 namespace lang {
 
 	/**
-	 * An extension covering the derived complex type and all its
-	 * associated operators.
+	 * An extension covering IO primitives.
 	 */
-	class ComplexExtension : public core::lang::Extension {
+	class InputOutputExtension : public core::lang::Extension {
 		/**
 		 * Allow the node manager to create instances of this class.
 		 */
@@ -55,33 +55,26 @@ namespace lang {
 		/**
 		 * Creates a new instance based on the given node manager.
 		 */
-		ComplexExtension(core::NodeManager& manager) : core::lang::Extension(manager) {}
+		InputOutputExtension(core::NodeManager& manager) : core::lang::Extension(manager) {}
 
 	  public:
 
-		// -------------------- pointers ---------------------------
+		// this extension is based upon the symbols defined by the pointer module
+		IMPORT_MODULE(PointerExtension);
 
-
-		/**
-		 * Defines a complex number as a pair of a real and imaginary value
-		 */
-		TYPE_ALIAS("complex", "struct _ir_complex { 'a rel; 'a img; }");
+		// -------------------- basic IO operations ---------------------------
 
 		/**
-		 * Defines the generic complex type.
+		 * An operation reading formated input from the command line (scanf)
 		 */
-		LANG_EXT_TYPE(GenComplex, "struct _ir_complex { 'a rel; 'a img; }")
+		LANG_EXT_LITERAL(Scan, "scan", "(ptr<char,t,f>, va_args)->unit")
+
+	  	/**
+		 * An operation writing formated output to the command line (printf)
+		 */
+		LANG_EXT_LITERAL(Print, "print", "(ptr<char,t,f>, va_args)->unit")
 
 	};
-
-
-	// --------------------- Utilities ----------------------------
-
-	/**
-	 * Determines whether a given node is the complex type or an expression of
-	 * the complex type.
-	 */
-	bool isComplexType(const NodePtr& node);
 	
 } // end namespace lang
 } // end namespace core
