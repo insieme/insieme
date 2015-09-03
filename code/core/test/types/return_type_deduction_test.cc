@@ -261,10 +261,10 @@ namespace types {
 			lambda (array<'elem1,'l> v1, array<'elem2,'l> v2) => lambda (array<'elem1,'l> v1, array<'elem2,'l> v2, ('elem1, 'elem2) -> 'res op) -> array<'res,'l> {
 				decl ref<array<'res,'l>> res = var(undefined(array<'res,'l>));
 				return *res;
-			}(v1, v2, lit("x":('elem1,'elem2)->'res))
+			}(v1, v2, lit("x":('elem1,'elem2)->'elem2))
 		)");
 
-		EXPECT_EQ("((array<'elem1,'l>,array<'elem2,'l>)=>array<'res,'l>)", toString(*op1->getType()));
+		EXPECT_EQ("((array<'elem1,'l>,array<'elem2,'l>)=>array<'elem2,'l>)", toString(*op1->getType()));
 
 		auto op2 = builder.parseExpr(R"(
 			lambda (array<int<'a>,'l> v1, array<int<'a>,'l> v2) => lambda (array<'elem1,'l> v1, array<'elem2,'l> v2, ('elem1, 'elem2) -> 'res op) -> array<'res,'l> {
@@ -274,6 +274,23 @@ namespace types {
 		)");
 
 		EXPECT_EQ("((array<int<'a>,'l>,array<int<'a>,'l>)=>array<int<'a>,'l>)", toString(*op2->getType()));
+	}
+
+	TEST(ReturnTypeDeduction, HigherOrderFunction) {
+
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		auto argType = builder.parseType("int<4>");
+		auto arfType = builder.parseType("('a,'a)->'a");
+		auto funType = builder.parseType("('a,'a,('a,'a)->'b)->'b").as<FunctionTypePtr>();
+		EXPECT_EQ("int<4>", toString(*deduceReturnType(funType, toVector(argType, argType, arfType))));
+
+		arfType = builder.parseType("(int<'a>,int<'a>)->bool");
+		EXPECT_EQ("bool", toString(*deduceReturnType(funType, toVector(argType, argType, arfType))));
+
+		arfType = builder.parseType("(int<'a>,int<'a>)->int<'a>");
+		EXPECT_EQ("int<4>", toString(*deduceReturnType(funType, toVector(argType, argType, arfType))));
 	}
 
 } // end namespace types
