@@ -56,7 +56,6 @@
 
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/ir++_extension.h"
-#include "insieme/core/lang/simd_vector.h"
 #include "insieme/core/lang/enum_extension.h"
 #include "insieme/core/lang/pointer.h"
 

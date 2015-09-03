@@ -80,7 +80,6 @@
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/enum_extension.h"
 #include "insieme/core/lang/ir++_extension.h"
-#include "insieme/core/lang/simd_vector.h"
 #include "insieme/core/lang/static_vars.h"
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/manipulation_utils.h"

@@ -532,8 +532,7 @@ namespace conversion {
 		core::StatementPtr retStmt;
 		LOG_STMT_CONVERSION(gotoStmt, retStmt);
 
-		core::StringValuePtr str = builder.stringValue(gotoStmt->getLabel()->getName());
-		retStmt = builder.gotoStmt(str);
+		frontend_assert(false) << "Goto not implemented.";
 		return retStmt;
 	}
 
