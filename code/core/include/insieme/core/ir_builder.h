@@ -603,6 +603,9 @@ namespace core {
 		LiteralPtr minus(const LiteralPtr& lit) const;
 		ExpressionPtr minus(const ExpressionPtr& a) const;
 
+		ExpressionPtr numericCast(const core::ExpressionPtr& expr, const core::TypePtr& targetType) const  {
+			return callExpr(targetType, getLangBasic().getNumericCast(), expr, getTypeLiteral(targetType));
+		}
 
 		inline CallExprPtr preInc(const ExpressionPtr& a) const {
 			return unaryOp(getExtension<lang::ReferenceExtension>().getGenPreInc(), a);
