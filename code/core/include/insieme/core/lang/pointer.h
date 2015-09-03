@@ -220,7 +220,10 @@ namespace lang {
 		/**
 		 * A function generating a null pointer of the specified type.
 		 */
-		LANG_EXT_LITERAL(PtrNull, "ptr_null", "(type<'a>, type<'c>, type<'v>) -> ptr<'a,'c,'v>")
+		LANG_EXT_DERIVED_WITH_NAME(
+				PtrNull, "ptr_null",
+				"lambda (type<'a> a, type<'c> c, type<'v> v) -> ptr<'a,'c,'v> { return struct ptr<'a,'c,'v> { ref_null(type(array<'a,inf>),c,v), 0 }; }"
+		)
 
 
 		// -- comparison operators --
@@ -282,36 +285,72 @@ namespace lang {
 	 * friendly way then its raw encoding.
 	 */
 	class PointerType {
+
+		/**
+		 * The type of element this pointer is addressing.
+		 */
 		TypePtr elementType;
 
+		/**
+		 * A flag indicating whether the addressed element is not mutable (constant) through
+		 * this this pointer.
+		 */
 		bool mConst;
 
+		/**
+		 * A flag indicating whether the addressed element is volatile.
+		 */
 		bool mVolatile;
 
-		PointerType(const TypePtr& elementType, bool mConst, bool mVolatile) : elementType(elementType), mConst(mConst), mVolatile(mVolatile) {}
+		/**
+		 * Creates a new pointer addressing an element of the given type, being marked const and volatile as specified.
+		 */
+		PointerType(const TypePtr& elementType, bool mConst, bool mVolatile)
+			: elementType(elementType), mConst(mConst), mVolatile(mVolatile) {}
 
 	  public:
+
+		/**
+		 * Creates a new instance of this wrapper class by 'parsing' the given node.
+		 * If the node is a type, it attempts to interpret it as a pointer type. If the
+		 * node is an expression, it utilizes its type. If unsuccessful, a exception
+		 * will be raised.
+		 *
+		 * See also: isPointer(NodePtr) utility function
+		 */
 		PointerType(const NodePtr& node);
 
+		// a default copy constructor
 		PointerType(const PointerType&) = default;
+
+		// a default r-value copy constructor
 		PointerType(PointerType&&) = default;
 
+		// a default assignment operator
 		PointerType& operator=(const PointerType&) = default;
+
+		// a default r-value assignment operator
 		PointerType& operator=(PointerType&&) = default;
 
 
 		// --- utilities ---
 
-		static bool isPointerType(const NodePtr& node);
+		// a factory function for pointer types
+		static TypePtr create(const TypePtr& elementType, bool _const = false, bool _volatile = false);
 
-		static StructTypePtr create(const TypePtr& elementType, bool _const = false, bool _volatile = false);
-
+		// an implicit converter from this wrapper type to an IR type
 		operator StructTypePtr() const;
+
 
 		// --- observers and mutators ---
 
 		const TypePtr& getElementType() const {
 			return elementType;
+		}
+
+		void setElementType(const TypePtr& type) {
+			assert_true(type) << "Element type must not be null!";
+			elementType = type;
 		}
 
 		bool isConst() const {
@@ -331,8 +370,16 @@ namespace lang {
 		}
 	};
 	
+	/**
+	 * Tests whether the given node is a pointer type or an expression of a pointer type.
+	 */
 	bool isPointer(const NodePtr& node);
 	
+	/**
+	 * Creates a new pointer type based on the given specification.
+	 */
+	TypePtr buildPtrType(const TypePtr& elementType, bool _const = false, bool _volatile = false);
+
 	ExpressionPtr buildPtrNull(const TypePtr& type);
 	ExpressionPtr buildPtrFromRef(const ExpressionPtr& refExpr);
 	ExpressionPtr buildPtrFromArray(const ExpressionPtr& arrExpr);

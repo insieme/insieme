@@ -431,12 +431,13 @@ namespace types {
 			cur = argumentMapping.applyForward(internalManager, cur);
 
 			// second: apply variable renaming
-			TypeMapping mapping = renamer.mapVariables(internalManager, cur, parameterMapping);
+			TypeMapping mapping = renamer.mapVariables(internalManager, cur);
 			if(!mapping.empty()) { argumentRenaming.push_back(mapping); }
 			cur = mapping.applyForward(internalManager, cur);
 		}
 
 		if(debug) { std::cout << " Renamed Arguments: " << renamedArguments << std::endl; }
+		if(debug) { std::cout << " Renamings: " << argumentRenaming << std::endl; }
 
 
 		// ---------------------------------- Assembling Constraints -----------------------------------------

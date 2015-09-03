@@ -108,8 +108,8 @@ namespace transform {
 
 		auto addresses = builder.parseAddressesStatement(R"raw(
 	{		
-		let test = lambda (vector<'res,#l> a) -> unit {
-			$decl vector<'res, #l> res;$
+		let test = lambda (vector<'res,'l> a) -> unit {
+			$decl vector<'res, 'l> res;$
 		};
 
 		decl vector<int<4>, 8> a;
@@ -133,8 +133,8 @@ namespace transform {
 
 		auto addresses = builder.parseAddressesStatement(R"raw(
 	{		
-		let test = lambda (vector<'res,#l> a) -> unit {
-			$decl vector<'res, #l> res;$
+		let test = lambda (vector<'res,'l> a) -> unit {
+			$decl vector<'res, 'l> res;$
 			decl int<4> x = 0;
 			$x$;
 			$res$;
@@ -166,8 +166,8 @@ namespace transform {
 
 		auto addresses = builder.parseAddressesStatement(R"raw(
 	{		
-		let test = lambda (vector<'res,#l> a) -> unit {
-			$decl vector<'res, #l> res;$
+		let test = lambda (vector<'res,'l> a) -> unit {
+			$decl vector<'res, 'l> res;$
 		};
 
 		decl vector<int<4>, 8> a;
@@ -195,8 +195,8 @@ namespace transform {
 
 		auto addresses = builder.parseAddressesStatement(R"raw(
 	{
-		let test = lambda (vector<'res,#l> a) -> unit {
-			decl vector<'res, #l> res;
+		let test = lambda (vector<'res,'l> a) -> unit {
+			decl vector<'res, 'l> res;
 		};
 
 		decl vector<int<4>, 8> a;
@@ -227,11 +227,11 @@ namespace transform {
 			return $v$;
 		};
 		
-		let test = lambda (vector<'res,#l> v, ('res) -> 'res f) -> unit {
+		let test = lambda (array<'res,'l> v, ('res) -> 'res f) -> unit {
 			f(v[0]);
 		};
 		
-		decl vector<int<4>, 8> a;
+		decl array<int<4>, 8> a;
 		test(a, foo);
 	}
 	)raw");

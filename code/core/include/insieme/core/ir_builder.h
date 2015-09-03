@@ -56,6 +56,8 @@
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/reference.h"
 
+#include "insieme/core/types/subtyping.h"
+
 namespace insieme {
 namespace core {
 
@@ -261,8 +263,8 @@ namespace core {
 			return core::analysis::normalize(root);
 		}
 
-		GenericTypePtr refType(const TypePtr& elementType, bool _const = false, bool _volatile = false) const;
-		StructTypePtr ptrType(const TypePtr& elementType, bool _const = false, bool _volatile = false) const;
+		TypePtr refType(const TypePtr& elementType, bool _const = false, bool _volatile = false) const;
+		TypePtr ptrType(const TypePtr& elementType, bool _const = false, bool _volatile = false) const;
 
 		GenericTypePtr arrayType(const TypePtr& elementType) const;
 		GenericTypePtr arrayType(const TypePtr& elementType, const LiteralPtr& size) const;
@@ -352,9 +354,6 @@ namespace core {
 		// Values
 		// obtains a zero value - recursively resolved for the given type
 		ExpressionPtr getZero(const TypePtr& type) const;
-
-		// conversions
-		ExpressionPtr convert(const ExpressionPtr& src, const TypePtr& to) const;
 
 		// Referencing
 		CallExprPtr deref(const ExpressionPtr& subExpr) const;
@@ -547,8 +546,6 @@ namespace core {
 		ForStmtPtr forStmt(const VariablePtr& var, const ExpressionPtr& start, const ExpressionPtr& end, const ExpressionPtr& step,
 		                   const StatementPtr& body) const;
 
-		ExpressionPtr forStmtFinalValue(const ForStmtPtr& loopStmt);
-
 		SwitchCasePtr switchCase(const LiteralPtr& lit, const StatementPtr& stmt) const {
 			return switchCase(lit, wrapBody(stmt));
 		};
@@ -603,6 +600,10 @@ namespace core {
 		LiteralPtr minus(const LiteralPtr& lit) const;
 		ExpressionPtr minus(const ExpressionPtr& a) const;
 
+		ExpressionPtr numericCast(const core::ExpressionPtr& expr, const core::TypePtr& targetType) const  {
+			if (types::isSubTypeOf(expr->getType(), targetType)) return expr;
+			return callExpr(targetType, getLangBasic().getNumericCast(), expr, getTypeLiteral(targetType));
+		}
 
 		inline CallExprPtr preInc(const ExpressionPtr& a) const {
 			return unaryOp(getExtension<lang::ReferenceExtension>().getGenPreInc(), a);

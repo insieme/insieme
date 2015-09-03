@@ -127,13 +127,13 @@ namespace parser3 {
 			inspire_driver driver(code, manager);
 			save_symbol_table(driver, definitions);
 			append_type_aliases(driver, aliases);
-			x = driver.parseType();
+			x = driver.parseExpression();
 		}
 		if(!x) {
 			inspire_driver driver(code, manager);
 			save_symbol_table(driver, definitions);
 			append_type_aliases(driver, aliases);
-			x = driver.parseExpression();
+			x = driver.parseType();
 		}
 		if(!x) {
 			inspire_driver driver(code, manager);

@@ -130,10 +130,10 @@ namespace types {
 		RecTypeDefinitionPtr def = builder.recTypeDefinition(defs);
 		RecTypePtr recType = builder.recType(var, def);
 
-		EXPECT_EQ("rec 'X.{'X=ref<'X>}", toString(*recType));
+		EXPECT_EQ("rec 'X.{'X=ref<'X,f,f>}", toString(*recType));
 
 		VariableRenamer renamer;
-		EXPECT_EQ("rec 'X.{'X=ref<'X>}", toString(*renamer.rename(recType)));
+		EXPECT_EQ("rec 'X.{'X=ref<'X,f,f>}", toString(*renamer.rename(recType)));
 	}
 
 } // end namespace analysis

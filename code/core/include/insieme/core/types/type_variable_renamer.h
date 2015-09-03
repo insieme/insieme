@@ -161,15 +161,11 @@ namespace types {
 	 * a type expression.
 	 */
 	class VariableRenamer {
+
 		/**
 		 * A counter used to generate fresh variable names.
 		 */
 		int varCounter;
-
-		/**
-		 * A counter used to generate fresh int-type-param names.
-		 */
-		int varParamCounter;
 
 		/**
 		 * Used as default parameter (to allow passing by reference).
@@ -185,8 +181,7 @@ namespace types {
 		/**
 		 * Creates an new instance of this class producing substitutions using the given offsets.
 		 */
-		VariableRenamer(int varCounterOffset = 0, int varParamCounterOffset = 0) : varCounter(varCounterOffset), varParamCounter(varParamCounterOffset) {}
-
+		VariableRenamer(int varCounterOffset = 0) : varCounter(varCounterOffset) {}
 
 		/**
 		 * Applies the renaming to the given target type.
@@ -254,7 +249,7 @@ namespace types {
 		TypeMapping mapVariables(NodeManager& manager, const Iterator& begin, const Iterator& end, const TypeMapping& base = emptyMapping) {
 			TypeMapping res;
 
-			// TODO: the renaming should happen recursivel within every new scope (e.g. a function)
+			// TODO: the renaming should happen recursively within every new scope (e.g. a function)
 
 			// create visitor collecting the renaming information
 			auto visitor = makeLambdaVisitor([&](const NodePtr& node) {
@@ -289,10 +284,10 @@ namespace types {
 		 */
 		void reset() {
 			varCounter = 0;
-			varParamCounter = 0;
 		}
 
 	  private:
+
 		TypeVariablePtr getFreshVariable(NodeManager& manager) {
 			return TypeVariable::get(manager, format("v%d", (++varCounter)));
 		}

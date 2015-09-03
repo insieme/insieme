@@ -46,7 +46,6 @@
 
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/extension.h"
-#include "insieme/core/lang/extension_registry.h"
 
 #include "insieme/utils/container_utils.h"
 
@@ -200,11 +199,6 @@ namespace core {
 
 	NodeManager::NodeManager(unsigned initialFreshID) : data(new NodeManagerData(*this)) {
 		setNextFreshID(initialFreshID);
-	}
-
-	const lang::Extension& NodeManager::getLangExtensionByName(const string& extensionName) {
-		const lang::ExtensionRegistry& registry = lang::ExtensionRegistry::getInstance();
-		return registry.getExtensionFactory(extensionName)(*this);
 	}
 
 	NodeManager::NodeManagerData::NodeManagerData(NodeManager& manager) : root(manager), basic(new lang::BasicGenerator(manager)){};

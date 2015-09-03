@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -109,7 +109,7 @@ namespace encoder {
 		// check strings
 		string test = "Hello";
 		expr = toIR(manager, test);
-		EXPECT_EQ("ref<array<char,1>>", toString(*expr->getType()));
+		EXPECT_EQ("ref<array<char,inf>,f,f>", toString(*expr->getType()));
 		EXPECT_EQ("Hello", toString(*expr));
 		EXPECT_EQ(test, toValue<string>(expr));
 		EXPECT_TRUE(checks::check(expr).empty()) << checks::check(expr);

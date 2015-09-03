@@ -57,9 +57,7 @@ namespace lang {
 	TEST(NamedCoreExtensionParserTest, ParserAssertsDeathTest) {
 		NodeManager manager;
 
-		assert_decl(ASSERT_DEATH(parser3::parse_stmt(manager, "using \"ext.unknown_extension\"; decl complex a;"),
-		                         "Can't find extension with name \"ext.unknown_extension\". Please check the name and also register it in the constructor of "
-		                         "ExtensionRegistry"););
+		EXPECT_THROW(parser3::parse_stmt(manager, "using \"ext.unknown_extension\"; decl complex a;", true), parser3::IRParserException);
 	}
 
 	TEST(NamedCoreExtensionParserTest, ParserSingleStatement) {

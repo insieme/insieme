@@ -81,6 +81,7 @@ namespace types {
 			boost::optional<Substitution> unmatchable;
 
 			while(!list.empty()) {
+
 				// get current element
 				Pair cur = list.front();
 				list.pop_front();
@@ -100,6 +101,18 @@ namespace types {
 					// add swapped pair to front of list
 					list.push_front(std::make_pair(b, a));
 					continue;
+				}
+
+				// 2c) make sure the smaller variable is on the left side
+				if(typeOfA == NT_TypeVariable && typeOfB == NT_TypeVariable) {
+					// make sure the smaller variable is in front
+					// (this does not really matter for the unification but
+					//  ensures parameter variables to be on the left side
+					//  for the return type deduction)
+					if (a.as<TypeVariablePtr>()->getVarName()->getValue() > b.as<TypeVariablePtr>()->getVarName()->getValue()) {
+						list.push_front(std::make_pair(b,a));
+						continue;
+					}
 				}
 
 				// 3) handle variables on left hand side ...
@@ -142,6 +155,12 @@ namespace types {
 
 					// check same number of type parameters
 					if(genericTypeA->getTypeParameter().size() != genericTypeB->getTypeParameter().size()) { return unmatchable; }
+				}
+
+				// => check value of numeric types
+				if(typeOfA == NT_NumericType) {
+					// they need to be identical
+					if (*a != *b) return unmatchable;
 				}
 
 				// => check all child nodes

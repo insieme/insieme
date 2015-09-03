@@ -60,10 +60,10 @@ namespace lang {
 		EXPECT_EQ("ref<A,t,f>", toString(*ratf));
 		EXPECT_EQ("ref<A,t,t>", toString(*ratt));
 
-		EXPECT_TRUE(ReferenceType::isReferenceType(raff));
-		EXPECT_TRUE(ReferenceType::isReferenceType(raft));
-		EXPECT_TRUE(ReferenceType::isReferenceType(ratf));
-		EXPECT_TRUE(ReferenceType::isReferenceType(ratt));
+		EXPECT_TRUE(isReference(raff));
+		EXPECT_TRUE(isReference(raft));
+		EXPECT_TRUE(isReference(ratf));
+		EXPECT_TRUE(isReference(ratt));
 
 
 		EXPECT_FALSE(ReferenceType(raff).isConst());
@@ -90,22 +90,22 @@ namespace lang {
 
 		auto& ext = nm.getLangExtension<ReferenceExtension>();
 
-		EXPECT_TRUE(ReferenceType::isReferenceType(ext.getGenRef()));
+		EXPECT_TRUE(isReference(ext.getGenRef()));
 
-		EXPECT_TRUE(ReferenceType::isReferenceType(builder.parseType("ref<A,f,f>")));
-		EXPECT_TRUE(ReferenceType::isReferenceType(builder.parseType("ref<A,t,f>")));
-		EXPECT_TRUE(ReferenceType::isReferenceType(builder.parseType("ref<A,f,t>")));
-		EXPECT_TRUE(ReferenceType::isReferenceType(builder.parseType("ref<A,t,t>")));
+		EXPECT_TRUE(isReference(builder.parseType("ref<A,f,f>")));
+		EXPECT_TRUE(isReference(builder.parseType("ref<A,t,f>")));
+		EXPECT_TRUE(isReference(builder.parseType("ref<A,f,t>")));
+		EXPECT_TRUE(isReference(builder.parseType("ref<A,t,t>")));
 
-		EXPECT_TRUE(ReferenceType::isReferenceType(builder.parseType("ref<ref<A,t,f>,t,t>")));
+		EXPECT_TRUE(isReference(builder.parseType("ref<ref<A,t,f>,t,t>")));
 
-		EXPECT_TRUE(ReferenceType::isReferenceType(builder.parseType("ref<A,'a,t>")));
-		EXPECT_TRUE(ReferenceType::isReferenceType(builder.parseType("ref<A,t,'b>")));
-		EXPECT_TRUE(ReferenceType::isReferenceType(builder.parseType("ref<A,'a,'b>")));
+		EXPECT_TRUE(isReference(builder.parseType("ref<A,'a,t>")));
+		EXPECT_TRUE(isReference(builder.parseType("ref<A,t,'b>")));
+		EXPECT_TRUE(isReference(builder.parseType("ref<A,'a,'b>")));
 
-		EXPECT_FALSE(ReferenceType::isReferenceType(builder.parseType("A")));
-		EXPECT_FALSE(ReferenceType::isReferenceType(builder.parseType("ref<A,t>")));
-		EXPECT_FALSE(ReferenceType::isReferenceType(builder.parseType("ref<A,t,t,t>")));
+		EXPECT_FALSE(isReference(builder.parseType("A")));
+		EXPECT_FALSE(isReference(builder.parseType("ref<A,t>")));
+		EXPECT_FALSE(isReference(builder.parseType("ref<A,t,t,t>")));
 	}
 
 } // end namespace lang

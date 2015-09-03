@@ -35,14 +35,42 @@
  */
 
 #include "insieme/core/lang/channel.h"
+#include "insieme/core/types/match.h"
 
 namespace insieme {
 namespace core {
 namespace lang {
 
-	bool ChannelType::isChannelType(const NodePtr& node) {
-		assert_not_implemented();
-		return false;
+	bool isChannel(const NodePtr& node) {
+		// check for null
+		if (!node) return false;
+
+		// check for expressions
+		if (auto expr = node.isa<ExpressionPtr>()) return isChannel(expr->getType());
+
+		// check the type
+		auto type = node.isa<GenericTypePtr>();
+		if (!type) return false;
+
+		// match with generic reference
+		NodeManager& nm = node.getNodeManager();
+		auto genChannel = nm.getLangExtension<ChannelExtension>().getGenChannel().as<GenericTypePtr>();
+		auto sub = types::match(nm, type, genChannel);
+
+		// check matching
+		if (!sub) return false;
+		auto size = type->getTypeParameter(1);
+
+		// check that second parameter is a numeric type
+		return size.isa<NumericTypePtr>() || size.isa<TypeVariablePtr>();
+	}
+
+	bool isFixedSizedChannelType(const NodePtr& node) {
+		return isChannel(node) && node.as<GenericTypePtr>()->getTypeParameter(1).as<NumericTypePtr>()->isConstant();
+	}
+
+	bool isVariableSizedChannelType(const NodePtr& node) {
+		return isChannel(node) && node.as<GenericTypePtr>()->getTypeParameter(1).as<NumericTypePtr>()->isVariable();
 	}
 
 } // end namespace lang

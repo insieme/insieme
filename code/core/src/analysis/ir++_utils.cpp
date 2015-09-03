@@ -38,12 +38,16 @@
 
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_visitor.h"
-#include "insieme/core/ir_class_info.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/lang/ir++_extension.h"
 
 #include "insieme/core/datapath/datapath.h"
+
+#include "insieme/core/lang/array.h"
+#include "insieme/core/lang/reference.h"
+#include "insieme/core/lang/pointer.h"
+#include "insieme/core/lang/channel.h"
 
 #include "insieme/utils/assert.h"
 
@@ -58,9 +62,6 @@ namespace analysis {
 			if(StructTypePtr structType = cur.isa<StructTypePtr>()) {
 				// if not empty => it is a IR++ code
 				if(!structType->getParents().empty()) { return true; }
-
-				// if there is meta-info => it is a IR++ code
-				if(hasMetaInfo(structType)) { return true; }
 			}
 
 			// check function types
@@ -77,6 +78,13 @@ namespace analysis {
 	}
 
 	bool isObjectType(const TypePtr& type) {
+
+		// exclude predefined types
+		if (lang::isArray(type)) return false;
+		if (lang::isReference(type)) return false;
+		if (lang::isPointer(type)) return false;
+		if (lang::isChannel(type)) return false;
+
 		// decide whether something is an object type based on the node type
 		switch(type->getNodeType()) {
 		case NT_GenericType:

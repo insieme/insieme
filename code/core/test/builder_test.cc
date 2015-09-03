@@ -74,9 +74,9 @@ TEST(IRBuilder, TypeMatch) {
 	IRBuilder builder(manager);
 
 	auto type = builder.parseType("ref<vector<int<4>,6>>");
-	EXPECT_TRUE(builder.matchType("ref<vector<'a,#n>>", type));
+	EXPECT_TRUE(builder.matchType("ref<vector<'a,'n>>", type));
 	EXPECT_FALSE(builder.matchType("ref<vector<'a,5>>", type));
-	EXPECT_TRUE(builder.matchType("ref<vector<int<#b>,6>>", type));
+	EXPECT_TRUE(builder.matchType("ref<vector<int<'b>,6>>", type));
 }
 
 int check(NodePtr nodeToCheck) {

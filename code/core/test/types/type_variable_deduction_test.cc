@@ -316,14 +316,14 @@ namespace types {
 
 		TypePtr int4 = basic.getInt4();
 		TypePtr uint4 = basic.getUInt4();
-		TypePtr vectorInt12 = builder.parseType("array<int<4>,12>");
-		TypePtr vectorInt14 = builder.parseType("array<int<4>,14>");
-		TypePtr vectorUInt12 = builder.parseType("array<uint<4>,12>");
-		TypePtr vectorUInt14 = builder.parseType("array<uint<4>,14>");
-		TypePtr vectorGen12 = builder.parseType("array<'a,12>");
+		TypePtr vectorInt12 = builder.parseType("vector<int<4>,12>");
+		TypePtr vectorInt14 = builder.parseType("vector<int<4>,14>");
+		TypePtr vectorUInt12 = builder.parseType("vector<uint<4>,12>");
+		TypePtr vectorUInt14 = builder.parseType("vector<uint<4>,14>");
+		TypePtr vectorGen12 = builder.parseType("vector<'a,12>");
 		;
-		TypePtr vectorIntA = builder.parseType("array<int<4>,'l>");
-		TypePtr vectorGenA = builder.parseType("array<'a,'l>");
+		TypePtr vectorIntA = builder.parseType("vector<int<4>,'l>");
+		TypePtr vectorGenA = builder.parseType("vector<'a,'l>");
 
 		TypePtr array1Int = builder.arrayType(int4);
 		TypePtr array2Int = builder.arrayType(int4, builder.intLit(2));
@@ -346,7 +346,7 @@ namespace types {
 		// ... now with a vector with a generic variable and generic size (even the same)
 		res = getTypeVariableInstantiation(manager, toVector(varA), toVector(vectorGenA));
 		EXPECT_TRUE(res);
-		if(res) { EXPECT_EQ("{'a->vector<'a,#l>}", toString(*res)); }
+		if(res) { EXPECT_EQ("{'a->vector<'a,'l>}", toString(*res)); }
 
 
 		// Let's test two arguments (same type)
@@ -360,13 +360,12 @@ namespace types {
 
 		// ... now - let's test two vectors of different size
 		res = getTypeVariableInstantiation(manager, toVector(varA, varA), toVector(vectorInt12, vectorInt14));
-		EXPECT_TRUE(res);
-		if(res) { EXPECT_EQ("{'a->array<int<4>,1>}", toString(*res)); }
+		EXPECT_FALSE(res);
 
 		// test it with int-type parameter
 		res = getTypeVariableInstantiation(manager, toVector(vectorIntA), toVector(vectorInt12));
 		EXPECT_TRUE(res);
-		if(res) { EXPECT_EQ("{#l->12}", toString(*res)); }
+		if(res) { EXPECT_EQ("{'l->12}", toString(*res)); }
 
 		// test vectors with different, yet related sub-types (should fail)
 		res = getTypeVariableInstantiation(manager, toVector(varA, varA), toVector(vectorInt12, vectorUInt12));
@@ -385,110 +384,17 @@ namespace types {
 
 		// also with multiple occurrences
 		res = getTypeVariableInstantiation(manager, toVector(varA, varB, varA), toVector(vectorInt12, vectorUInt14, vectorInt14));
-		EXPECT_TRUE(res);
-		if(res) { EXPECT_EQ(array1Int, res->applyTo(varA)); }
-		if(res) { EXPECT_EQ(vectorUInt14, res->applyTo(varB)); }
+		EXPECT_FALSE(res);
 
 
 		// check for variable array dimensions
 		res = getTypeVariableInstantiation(manager, toVector(arrayAInt), toVector(array2Int));
 		EXPECT_TRUE(res);
-		if(res) { EXPECT_EQ("{#a->2}", toString(*res)); }
+		if(res) { EXPECT_EQ("{'a->2}", toString(*res)); }
 
 		// check for vector being passed ot an generic array
 		res = getTypeVariableInstantiation(manager, toVector(arrayAInt), toVector(vectorInt12));
-		EXPECT_TRUE(res);
-		if(res) { EXPECT_EQ("{#a->1}", toString(*res)); }
-	}
-
-	TEST(TypeVariableDeduction, intTypeParams) {
-		assert_not_implemented() << "Port this to new infrastructure";
-
-		//	NodeManager manager;
-		//	IRBuilder builder(manager);
-		//
-		//	IntTypeParamPtr varA = builder.variableIntTypeParam('a');
-		//	IntTypeParamPtr varB = builder.variableIntTypeParam('b');
-		//	IntTypeParamPtr const1 = builder.concreteIntTypeParam(1);
-		//	IntTypeParamPtr const2 = builder.concreteIntTypeParam(2);
-		//
-		//	TypePtr typeA = builder.genericType("T", TypeList(), toVector(varA));
-		//	TypePtr typeB = builder.genericType("T", TypeList(), toVector(varB));
-		//	TypePtr type1 = builder.genericType("T", TypeList(), toVector(const1));
-		//	TypePtr type2 = builder.genericType("T", TypeList(), toVector(const2));
-		//	TypePtr typeAA = builder.genericType("T", TypeList(), toVector(varA, varA));
-		//	TypePtr typeAB = builder.genericType("T", TypeList(), toVector(varA, varB));
-		//	TypePtr type11 = builder.genericType("T", TypeList(), toVector(const1, const1));
-		//	TypePtr type12 = builder.genericType("T", TypeList(), toVector(const1, const2));
-		//
-		//
-		//	// most straight forward test
-		//	auto res = getTypeVariableInstantiation(manager, toVector(typeA), toVector(type1));
-		//	EXPECT_TRUE(res);
-		//	if(res) {
-		//		EXPECT_EQ("{#a->1}", toString(*res));
-		//	}
-		//
-		//	// test with two variables
-		//	res = getTypeVariableInstantiation(manager, toVector(typeA, typeB), toVector(type1, type2));
-		//	EXPECT_TRUE(res);
-		//	if(res) {
-		//		EXPECT_EQ(const1, res->applyTo(varA));
-		//	}
-		//	if(res) {
-		//		EXPECT_EQ(const2, res->applyTo(varB));
-		//	}
-		//
-		//
-		//	// test with two times the same variable - same value (should be OK)
-		//	res = getTypeVariableInstantiation(manager, toVector(typeA, typeA), toVector(type1, type1));
-		//	EXPECT_TRUE(res);
-		//	if(res) {
-		//		EXPECT_EQ(const1, res->applyTo(varA));
-		//	}
-		//
-		//	res = getTypeVariableInstantiation(manager, toVector(typeA, typeA), toVector(type2, type2));
-		//	EXPECT_TRUE(res);
-		//	if(res) {
-		//		EXPECT_EQ(const2, res->applyTo(varA));
-		//	}
-		//
-		//
-		//	// test with two times the same variable - different values (should be an ERROR)
-		//	res = getTypeVariableInstantiation(manager, toVector(typeA, typeA), toVector(type1, type2));
-		//	EXPECT_FALSE(res);
-		//
-		//	res = getTypeVariableInstantiation(manager, toVector(typeA, typeB), toVector(type1, type2));
-		//	EXPECT_TRUE(res);
-		//	if(res) {
-		//		EXPECT_EQ(const1, res->applyTo(varA));
-		//	}
-		//	if(res) {
-		//		EXPECT_EQ(const2, res->applyTo(varB));
-		//	}
-		//
-		//	// multiple occurrences
-		//	res = getTypeVariableInstantiation(manager, toVector(typeAA, typeA), toVector(type11, type1));
-		//	EXPECT_TRUE(res);
-		//	if(res) {
-		//		EXPECT_EQ(const1, res->applyTo(varA));
-		//	}
-		//
-		//	res = getTypeVariableInstantiation(manager, toVector(typeAA, typeA), toVector(type11, type2));
-		//	EXPECT_FALSE(res);
-		//
-		//	// multiple occurrences
-		//	res = getTypeVariableInstantiation(manager, toVector(typeAA, typeA), toVector(type12, type1));
-		//	EXPECT_FALSE(res);
-		//
-		//	res = getTypeVariableInstantiation(manager, toVector(typeAB, typeA), toVector(type11, type1));
-		//	EXPECT_TRUE(res);
-		//	if(res) {
-		//		EXPECT_EQ(const1, res->applyTo(varA));
-		//	}
-		//	if(res) {
-		//		EXPECT_EQ(const1, res->applyTo(varB));
-		//	}
+		EXPECT_FALSE(res);
 	}
 
 	TEST(TypeVariableDeduction, FunctionTypes) {
@@ -576,7 +482,7 @@ namespace types {
 		// The problem:
 		// 		within the expression "vector.reduction(v3956, 1, uint.mul)"
 		//		a function of type ((vector<'elem,#l>,'res,(('elem,'res)->'res))->'res)
-		//		is called using [vector<uint<4>,3>,uint<4>,((uint<#a>,uint<#a>)->uint<#a>))]
+		//		is called using [vector<uint<4>,3>,uint<4>,((uint<'a>,uint<'a>)->uint<'a>))]
 		//		The inference is not working ...
 		//
 
@@ -588,7 +494,7 @@ namespace types {
 		TypePtr vector = builder.parseType("array<uint<4>,3>");
 
 		CallExprPtr call = builder.callExpr(
-				builder.literal("fun", builder.parseType("(vector<'a,#n>, 'b, ('b, 'a) -> 'b) -> 'b")),
+				builder.literal("fun", builder.parseType("(array<'a,'n>, 'b, ('b, 'a) -> 'b) -> 'b")),
 				toVector<ExpressionPtr>(builder.literal(vector, "x"), builder.literal(uint4, "1"), basic.getUnsignedIntMul()));
 
 		auto res = getTypeVariableInstantiation(manager, call);
@@ -596,36 +502,10 @@ namespace types {
 	}
 
 
-	TEST(TypeVariableDeduction, ArrayRefElementBug) {
-		// The problem:
-		//		Processing:     array.ref.elem.1D(v2881, 1)
-		//		FunctionType:   ((ref<array<'elem,1>>,uint<8>)->ref<'elem>)
-		//		Argument Types: [AP(ref<vector<real<8>,5>>),AP(uint<4>)]
-		//		=> cannot be typed
-		// => WHICH IS CORRECT!
-
-
-		NodeManager manager;
-		IRBuilder builder(manager);
-		const lang::BasicGenerator& basic = manager.getLangBasic();
-		const lang::ReferenceExtension& refExt = manager.getLangExtension<lang::ReferenceExtension>();
-
-		TypePtr uint4 = basic.getUInt4();
-		TypePtr vector = builder.parseType("array<uint<4>,5>");
-		TypePtr ref = builder.refType(vector);
-
-		CallExprPtr call =
-		    builder.callExpr(basic.getUnit(), refExt.getRefArrayElement(), toVector<ExpressionPtr>(builder.literal(ref, "x"), builder.literal(uint4, "1")));
-
-		auto res = getTypeVariableInstantiation(manager, call);
-		EXPECT_FALSE(res); // this is in deed not a valid call!
-	}
-
-
 	TEST(TypeVariableDeduction, ArgumentBasedTypeConstraints) {
 		// The following scenario should be tested:
 		//		function type: ('a, ('a -> 'r)) -> 'r
-		//		parameter: uint<4> and uint<#a> -> uint<#a>
+		//		parameter: uint<4> and uint<'a> -> uint<'a>
 
 		NodeManager manager;
 		IRBuilder builder(manager);
@@ -648,7 +528,7 @@ namespace types {
 
 	TEST(TypeVariableDeduction, PureIntTypeVariableConstraintsBug) {
 		// The Problem:
-		//		expected: (int<#a>,int<#a>), actual: (int<4>,int<2>) => unable to deduce that #a = 4
+		//		expected: (int<'a>,int<'a>), actual: (int<4>,int<2>) => unable to deduce that 'a = 4
 
 
 		NodeManager manager;
@@ -826,29 +706,6 @@ namespace types {
 		EXPECT_PRED2(notMatchable, uintInf, intInf);
 	}
 
-	TEST(TypeVariableDeduction, ArrayVectorRelation) {
-		NodeManager manager;
-
-		IRBuilder builder(manager);
-
-		assert_not_implemented() << "Port to new array infrastructure!";
-
-		//	TypePtr typeA = builder.parseType("array<ref<char>,1>");
-		//	TypePtr typeB = builder.parseType("vector<ref<char>,25>");
-		//	EXPECT_NE(typeA, typeB);
-		//	EXPECT_PRED2(matchable, typeA, typeB);
-		//
-		//	EXPECT_EQ(NT_ArrayType, typeA->getNodeType());
-		//	EXPECT_EQ(NT_VectorType, typeB->getNodeType());
-		//
-		//	// now within a tuple
-		//	typeA = builder.parseType("(array<ref<char>,1>,var_list)");
-		//	typeB = builder.parseType("(vector<ref<char>,25>,var_list)");
-		//
-		//	EXPECT_NE(typeA, typeB);
-		//	EXPECT_PRED2(matchable, typeA, typeB);
-	}
-
 	TEST(TypeVariableDeduction, VectorMatchingBug) {
 		// The Bug:
 		//		When matching vectors of different size to parameters ('a,'a), the matching is successful - which it should not.
@@ -873,20 +730,18 @@ namespace types {
 		TypePtr vectorB = builder.parseType("array<A,14>");
 
 		auto match = getTypeVariableInstantiation(manager, toVector(alpha, alpha), toVector(vectorB, vectorA));
-		EXPECT_TRUE(match);
-		if(match) { EXPECT_EQ("{'a->array<A,1>}", toString(*match)); }
+		EXPECT_FALSE(match);
 
 		match = getTypeVariableInstantiation(manager, toVector(alpha, alpha), toVector(vectorB, vectorA));
-		EXPECT_TRUE(match);
-		if(match) { EXPECT_EQ("{'a->array<A,1>}", toString(*match)); }
+		EXPECT_FALSE(match);
 
 		match = getTypeVariableInstantiation(manager, toVector(alpha, alpha), toVector(vectorA, vectorA));
 		EXPECT_TRUE(match);
-		if(match) { EXPECT_EQ("{'a->vector<A,12>}", toString(*match)); }
+		if(match) { EXPECT_EQ("{'a->array<A,12>}", toString(*match)); }
 
 		match = getTypeVariableInstantiation(manager, toVector(alpha, alpha), toVector(vectorB, vectorB));
 		EXPECT_TRUE(match);
-		if(match) { EXPECT_EQ("{'a->vector<A,14>}", toString(*match)); }
+		if(match) { EXPECT_EQ("{'a->array<A,14>}", toString(*match)); }
 	}
 
 
@@ -907,51 +762,11 @@ namespace types {
 		const lang::BasicGenerator& basic = manager.getLangBasic();
 
 		auto op = basic.getUnsignedIntAdd();
-		auto fun = builder.literal("fun", builder.parseType("(('elem1, 'elem2) => 'res) -> (vector<'elem1,#l>, vector<'elem2,#l>) => vector<'res, #l>"));
+		auto fun = builder.literal("fun", builder.parseType("(('elem1, 'elem2) => 'res) -> (vector<'elem1,'l>, vector<'elem2,'l>) => vector<'res, 'l>"));
 		auto call = builder.callExpr(fun, op);
 
-		EXPECT_EQ("((uint<#a>,uint<#a>)->uint<#a>)", toString(*op->getType()));
-		EXPECT_EQ("((vector<uint<#a>,#l>,vector<uint<#a>,#l>)=>vector<uint<#a>,#l>)", toString(*call->getType()));
-	}
-
-	TEST(TypeVariableDeduction, PassingVectorToArrayBug) {
-		// The Bug:
-		//		passing a vector<uint<8>,1> to a function accepting an array<'elem,1> does not work
-		//
-		// The reason:
-		//		incorrect resolution of sub-type constraints within addEqualityConstraints(...) - if the second
-		//		type was a variable, the equality constraint was dismissed.
-		//
-		// The fix:
-		//		variables within the first or second type parameter are now treated equally
-		//
-
-		NodeManager manager;
-		IRBuilder builder(manager);
-		const lang::BasicGenerator& basic = manager.getLangBasic();
-
-		TypePtr uint8 = basic.getUInt8();
-		TypePtr alpha = builder.typeVariable("a");
-		TypePtr arrayA = builder.arrayType(alpha);
-		TypePtr arrayC = builder.arrayType(uint8);
-		TypePtr vectorA = builder.parseType("array<'a,1>");
-		TypePtr vectorC = builder.parseType("array<uint<8>,1>");
-
-		// the two simple, concrete cases
-		EXPECT_TRUE(getTypeVariableInstantiation(manager, toVector(arrayC), toVector(vectorC)));
-		EXPECT_FALSE(getTypeVariableInstantiation(manager, toVector(vectorC), toVector(arrayC)));
-
-		// now with variable parts
-		EXPECT_TRUE(getTypeVariableInstantiation(manager, toVector(arrayA), toVector(vectorC)));
-		EXPECT_TRUE(getTypeVariableInstantiation(manager, toVector(arrayA), toVector(vectorA)));
-
-		EXPECT_FALSE(getTypeVariableInstantiation(manager, toVector(vectorA), toVector(arrayC)));
-		EXPECT_FALSE(getTypeVariableInstantiation(manager, toVector(vectorA), toVector(arrayA)));
-
-		// the original test case leading to the identification of the problem
-		auto unifier = getTypeVariableInstantiation(manager, toVector(arrayA, uint8), toVector(vectorC, uint8));
-		EXPECT_TRUE(unifier);
-		if(unifier) { EXPECT_EQ(*uint8, *unifier->applyTo(manager, alpha)); }
+		EXPECT_EQ("((uint<'a>,uint<'a>)->uint<'a>)", toString(*op->getType()));
+		EXPECT_EQ("((vector<uint<'a>,'l>,vector<uint<'a>,'l>)=>vector<uint<'a>,'l>)", toString(*call->getType()));
 	}
 
 	TEST(TypeVariableDeduction, PlainFunctionTest) {
@@ -995,25 +810,6 @@ namespace types {
 		ASSERT_TRUE(res);
 		EXPECT_EQ("A", toString(*res->applyTo(alpha)));
 		EXPECT_EQ("B", toString(*res->applyTo(beta)));
-	}
-
-	TEST(TypeVariableDeduction, VectorSubTypeOfArray) {
-		NodeManager manager;
-		IRBuilder builder(manager);
-		const lang::BasicGenerator& basic = manager.getLangBasic();
-
-		TypePtr vecTy = builder.parseType("array<int<4>,12>");
-		TypePtr arrTy = builder.arrayType(builder.typeVariable("a"));
-
-		//	EXPECT_PRED2(isSubTypeOf, vecTy, arrTy);
-
-		// create a function which takes an array as arugment
-		TypePtr fun = builder.functionType(toVector(arrTy), basic.getInt8(), FK_PLAIN);
-
-		EXPECT_EQ("((array<'a,1>)->int<8>)", toString(*fun));
-
-		auto res = getTypeVariableInstantiation(manager, toVector(arrTy), toVector(vecTy));
-		EXPECT_TRUE(res);
 	}
 
 	TEST(TypeVariableDeduction, ReductionType) {

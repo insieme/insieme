@@ -55,6 +55,8 @@
 #include "insieme/core/lang/parallel.h"
 #include "insieme/core/lang/pointer.h"
 
+#include "insieme/core/lang/extension_registry.h"
+
 // this last one is generated and the path will be provided to the command
 #include "inspire_parser.hpp"
 
@@ -82,13 +84,37 @@ namespace parser3 {
 			return true;
 		}
 
-		NodePtr DeclarationContext::find(const std::string& name) const {
+		bool DeclarationContext::add_type(const std::string& name, const node_factory& factory) {
+			auto& types = stack.back().types;
+			if (types.find(name) != types.end()) return false;
+			types[name] = factory;
+			return true;
+		}
+
+
+		NodePtr DeclarationContext::find_symb(const std::string& name) const {
 			// lookup symbols throughout scopes
 			for(auto it = stack.rbegin(); it != stack.rend(); ++it) {
 				const definition_map& cur = it->symbols;
 				auto pos = cur.find(name);
 				if (pos != cur.end()) return pos->second();
 			}
+			return nullptr;
+		}
+
+		NodePtr DeclarationContext::find_type(const std::string& name) const {
+			// lookup symbols throughout scopes
+			for(auto it = stack.rbegin(); it != stack.rend(); ++it) {
+				const definition_map& cur = it->types;
+				auto pos = cur.find(name);
+				if (pos != cur.end()) return pos->second();
+			}
+
+			// check symbol table too -- as it might have been defined by the user
+			NodePtr res = find_symb(name);
+			if (auto type = res.isa<TypePtr>()) return type;
+
+			// nothing found
 			return nullptr;
 		}
 
@@ -183,7 +209,7 @@ namespace parser3 {
 		// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Some tools ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 		ExpressionPtr inspire_driver::findSymbol(const location& l, const std::string& name) {
-			auto x = scopes.find(name);
+			auto x = scopes.find_symb(name);
 
 			if(!x) {
 				try {
@@ -211,7 +237,7 @@ namespace parser3 {
 				return builder.typeVariable(name);
 			}
 
-			auto x = scopes.find(name);
+			auto x = scopes.find_type(name);
 			if(x && !x.isa<TypePtr>()) {
 				error(l, format("the symbol %s is not a type", name));
 				return nullptr;
@@ -584,6 +610,33 @@ namespace parser3 {
 			scopes.add_type_alias(pattern, substitute);
 		}
 
+		void inspire_driver::add_type(const location& l, const std::string& name, const node_factory&  factory) {
+
+			if(name.find(".") != std::string::npos) {
+				error(l, format("symbol names can not contain dot chars: %s", name));
+				return;
+			}
+
+			// ignore wildcard for unused variables
+			if(name == "_") { return; }
+
+			if(!scopes.add_type(name, factory)) { error(l, format("type name %s redefined", name)); }
+		}
+
+		void inspire_driver::add_type(const location& l, const std::string& name, const NodePtr& node) {
+			add_type(l, name, [=]() { return node; });
+		}
+
+
+		void inspire_driver::add_type(const std::string& name, const node_factory& factory) {
+			add_type(glob_loc, name, factory);
+		}
+
+		void inspire_driver::add_type(const std::string& name, const NodePtr& node) {
+			add_type(name, [=]() { return node; });
+		}
+
+
 		namespace {
 
 			bool contains_type_variables(const TypePtr& t, const TypeList& variables) {
@@ -769,7 +822,7 @@ namespace parser3 {
 					if(!contains_type_variables(type, variables)) {
 						non_recursive[builder.typeVariable(name)] = type;
 						annotations::attachName(type, name);
-						add_symb(l, name, type);
+						add_type(l, name, type);
 					}
 					count++;
 				}
@@ -793,7 +846,7 @@ namespace parser3 {
 				for(const auto& n : names) {
 					auto t = builder.recType(builder.typeVariable(n), fullType);
 					annotations::attachName(t, n);
-					add_symb(l, n, t);
+					add_type(l, n, t);
 				}
 
 				type_lets.clear();
@@ -855,7 +908,14 @@ namespace parser3 {
 			for(std::string extensionName : extension_names) {
 				extensionName.replace(0, 1, "");
 				extensionName.replace(extensionName.size() - 1, 1, "");
-				import_extension(mgr.getLangExtensionByName(extensionName));
+
+				// get extension factory from the registry
+				auto optFactory = lang::ExtensionRegistry::getInstance().lookupExtensionFactory(extensionName);
+				if (optFactory) {
+					import_extension((*optFactory)(mgr));
+				} else {
+					error(l, format("Unable to locate module: %s", extensionName.c_str()));
+				}
 			}
 		}
 

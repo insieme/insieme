@@ -37,7 +37,6 @@
 #include "insieme/core/checks/type_checks.h"
 
 #include "insieme/core/ir_builder.h"
-#include "insieme/core/ir_class_info.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
@@ -141,37 +140,6 @@ namespace checks {
 		auto type = address.as<ParentPtr>()->getType();
 		if(!analysis::isObjectType(type) || isUnion(type)) {
 			add(res, Message(address, EC_TYPE_ILLEGAL_OBJECT_TYPE, format("Invalid parent type - not an object: %s", toString(*type)), Message::ERROR));
-		}
-
-		return res;
-	}
-
-	OptionalMessageList ClassInfoCheck::visitType(const TypeAddress& address) {
-		OptionalMessageList res;
-
-		// check whether there is something to check
-		if(!hasMetaInfo(address)) { return res; }
-
-		// extract the class type
-		TypePtr type = address.as<TypePtr>();
-
-		// check whether address is referencing object type
-		if(!analysis::isObjectType(type)) {
-			add(res, Message(address, EC_TYPE_ILLEGAL_OBJECT_TYPE, format("Invalid type exhibiting class-meta-info: %s", toString(*type)), Message::ERROR));
-
-			// skip rest of the checks
-			return res;
-		}
-
-		// extract information
-		const ClassMetaInfo& info = getMetaInfo(type);
-
-		// check whether class info is covering target type
-		TypePtr should = info.getClassType();
-		if(should && should != type) {
-			add(res,
-			    Message(address, EC_TYPE_MISMATCHING_OBJECT_TYPE,
-			            format("Class-Meta-Info attached to mismatching type - is: %s - should be: %s", toString(*type), toString(*should)), Message::ERROR));
 		}
 
 		return res;
@@ -411,10 +379,16 @@ namespace checks {
 		if(address->getNodeType() == NT_StructType) {
 			StructTypePtr structType = address.as<StructTypePtr>();
 			if(structType.empty()) { return res; }
-			for(auto it = structType.begin(); it != structType.end() - 1; ++it) {
+			for(auto it = structType.begin(); it != structType.end(); ++it) {
 				if(lang::isVariableSizedArray(it->getType())) {
 					add(res, Message(address, EC_TYPE_INVALID_ARRAY_CONTEXT,
-					                 "Variable sized data structure has to be the last component of enclosing struct type.", Message::ERROR));
+									 "Variable sized array not allowed within struct types.", Message::ERROR));
+				}
+			}
+			for(auto it = structType.begin(); it != structType.end() - 1; ++it) {
+				if(lang::isUnknownSizedArray(it->getType())) {
+					add(res, Message(address, EC_TYPE_INVALID_ARRAY_CONTEXT,
+					                 "Unknown sized data structure has to be the last component of enclosing struct type.", Message::ERROR));
 				}
 			}
 			return res;
@@ -424,10 +398,10 @@ namespace checks {
 		if(address->getNodeType() == NT_TupleType) {
 			TupleTypePtr tupleType = address.as<TupleTypePtr>();
 			if(tupleType.empty()) { return res; }
-			for(auto it = tupleType.begin(); it != tupleType.end() - 1; ++it) {
-				if(lang::isVariableSizedArray(*it)) {
+			for(auto it = tupleType.begin(); it != tupleType.end(); ++it) {
+				if(lang::isArray(*it) && !lang::isFixedSizedArray(*it)) {
 					add(res, Message(address, EC_TYPE_INVALID_ARRAY_CONTEXT,
-					                 "Variable sized data structure has to be the last component of enclosing tuple type.", Message::ERROR));
+					                 "Arrays within tuple types need to be fixed-size.", Message::ERROR));
 				}
 			}
 			return res;
@@ -583,7 +557,7 @@ namespace checks {
 			if(!requiredType) {
 				add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
 				                 format("No member %s in struct type %s", toString(cur->getName()).c_str(), toString(*structType).c_str()), Message::ERROR));
-			} else if(*requiredType != *isType) {
+			} else if(!types::isSubTypeOf(isType, requiredType)) {
 				add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
 				                 format("Invalid type of struct-member initalization - expected type: \n%s, actual: \n%s", toString(*requiredType).c_str(),
 				                        toString(*isType).c_str()),

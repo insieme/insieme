@@ -261,15 +261,27 @@ namespace parser3 {
 		                               "}"));
 	}
 
+/*
+ 	bool test_program(NodeManager& nm, const std::string& x) {
+		IRBuilder builder(nm);
+		auto type = builder.parseProgram(x);
+		if(type) {
+
+		}
+*/
+
 	bool test_program(NodeManager& nm, const std::string& x) {
+
 		inspire_driver driver(x, nm);
 		driver.parseProgram();
 		if(driver.result) {
-			// dumpColor(driver.result);
+			dumpColor(driver.result);
 			auto msg = checks::check(driver.result);
 			EXPECT_TRUE(msg.empty()) << msg;
+		} else {
+
 		}
-		//   std::cout << " ============== TEST ============ " << std::endl;
+		   std::cout << " ============== TEST ============ " << std::endl;
 		return driver.result;
 	}
 
@@ -289,16 +301,16 @@ namespace parser3 {
 		EXPECT_TRUE(test_program(mgr, "let f,g = lambda()->unit{g();},lambda()->unit{f();}; unit main() { f(); }"));
 
 		EXPECT_TRUE(test_program(mgr, "let class = struct name { int<4> a; int<5> b};"
-		                              "let a,b = lambda class :: ()->unit{"
-		                              "        b(this);"
+		                              "let f,g = lambda class :: ()->unit{"
+		                              "        g(this);"
 		                              "    },"
 		                              "    lambda class ::()->unit{"
-		                              "        a(this);"
+		                              "        f(this);"
 		                              "    }; "
 		                              "unit main() {  "
 		                              "    decl ref<class,f,f> x;"
-		                              "    a(x);"
-		                              "    b(x);"
+		                              "    f(x);"
+		                              "    g(x);"
 		                              "}"));
 	}
 
@@ -326,7 +338,7 @@ namespace parser3 {
 
 		EXPECT_TRUE(test_program(nm, "let int = int<4>;"
 		                             "let uint = uint<4>;"
-//		                             "let parallel = lit(\"parallel\" : (job) -> threadgroup);"
+		                             "let parallel = expr lit(\"parallel\" : (job) -> threadgroup);"
 		                             "let differentbla = lambda ('b x) -> unit {"
 		                             "    decl auto m = x;"
 		                             "    decl auto l = m;"
@@ -337,7 +349,7 @@ namespace parser3 {
 		                             "    };"
 		                             "    anotherbla(f);"
 		                             "    differentbla(f);"
-//		                             "    parallel(job { decl auto l = f; });"
+		                             "    parallel(job { decl auto l = f; });"
 		                             "};"
 		                             "int main() {"
 		                             "    decl int x = 10;"

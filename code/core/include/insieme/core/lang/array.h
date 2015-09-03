@@ -85,6 +85,11 @@ namespace lang {
 		LANG_EXT_LITERAL(ArrayCreate, "array_create", "(type<'elem>, type<'size>, list<'elem>) -> array<'elem,'size>")
 
 		/**
+		 * A literal to project arrays to single elements.
+		 */
+		LANG_EXT_LITERAL(ArraySubscript, "array_subscript", "(array<'elem,'size>, int<8>) -> 'elem")
+
+		/**
 		 * A derived operator conducting a reduction over the elements of a given array.
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(ArrayReduce, "array_reduce",

@@ -62,18 +62,47 @@ namespace lang {
 
 	  public:
 
-		LANG_EXT_TYPE(Channel, "channel<'a,'s>")
+		/**
+		 * A generic channel type 'template'.
+		 */
+		LANG_EXT_TYPE(GenChannel, "channel<'a,'s>")
 
+	    /**
+	     * An abstract operator for the creation of a channel utilizing a buffer of elements.
+	     * The type and size have to be fixed.
+	     */
 	    LANG_EXT_LITERAL(ChannelCreate, "channel_create", "(type<'a>, type<'s>) -> channel<'a,'s>")
 
+		/**
+		 * An abstract operator for releasing a channel. After releasing it, it can not be
+		 * utilized any further.
+		 */
 		LANG_EXT_LITERAL(ChannelRelease, "channel_release", "(channel<'a,'s>) -> unit")
 
+		/**
+		 * An abstract operator sending a data element to a channel. The operation blocks
+		 * if the buffer of the targeted channel is full. Accesses to channels are implicitly
+		 * synchronized among threads.
+		 */
 		LANG_EXT_LITERAL(ChannelSend, "channel_send", "(channel<'a,'s>,'a) -> unit")
 
+		/**
+		 * An abstract operator receiving a data element form a channel. The operation blocks
+		 * if the buffer of the targeted channel is empty. Accesses to channels are implicitly
+		 * synchronized among threads.
+		 */
 		LANG_EXT_LITERAL(ChannelRecv, "channel_recv", "(channel<'a,'s>) -> 'a")
 
+		/**
+		 * An abstract operation testing whether the buffer associated to the given channel
+		 * is full. This operation is non-blocking.
+		 */
 		LANG_EXT_LITERAL(ChannelFull, "channel_full", "(channel<'a,'s>) -> bool")
 
+		/**
+		 * An abstract operation testing whether the buffer associated to the given channel
+		 * is empty. This operation is non-blocking.
+		 */
 		LANG_EXT_LITERAL(ChannelEmpty, "channel_empty", "(channel<'a,'s>) -> bool")
 
 	};
@@ -86,13 +115,28 @@ namespace lang {
 	 * friendly way then its raw encoding.
 	 */
 	class ChannelType {
+
+		/**
+		 * The type of elements to be communicated through the channel's buffer.
+		 */
 		TypePtr elementType;
 
+		/**
+		 * The size of the channel's buffer.
+		 */
 		ExpressionPtr size;
 
+		/**
+		 * Creates a new instances of this class based on the given element type and size.
+		 */
 		ChannelType(const TypePtr& elementType, const ExpressionPtr& size) : elementType(elementType), size(size) {}
 
 	  public:
+
+		/**
+		 * 'Parses' the given node and and tries to decode it as a channel type or expression
+		 * of a channel type.
+		 */
 		ChannelType(const NodePtr& node);
 
 		ChannelType(const ChannelType&) = default;
@@ -104,13 +148,7 @@ namespace lang {
 
 		// --- utilities ---
 
-		static bool isChannelType(const NodePtr& node);
-
-		static bool isFixedSizedChannelType(const NodePtr& node);
-
-		static bool isVariableSizedChannelType(const NodePtr& node);
-
-		static ChannelType getChannelType(const NodePtr& node);
+		TypePtr create(const TypePtr& elementType, const ExpressionPtr& size);
 
 		operator GenericTypePtr() const;
 
@@ -148,10 +186,11 @@ namespace lang {
 
 	// --------------------- utilities -------------------
 
-	static inline bool isChannel(const NodePtr& node) {
-		if(auto expr = node.isa<ExpressionPtr>()) { return isChannel(expr->getType()); }
-		return node && ChannelType::isChannelType(node);
-	}
+	bool isChannel(const NodePtr& node);
+
+	bool isFixedSizedChannelType(const NodePtr& node);
+
+	bool isVariableSizedChannelType(const NodePtr& node);
 
 } // end namespace lang
 } // end namespace core

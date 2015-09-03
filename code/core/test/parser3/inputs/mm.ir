@@ -4,11 +4,15 @@ let uint = uint<4>;
 
 let double = real<8>;
 
-let matrix = vector<vector<double,100>,100>;
+let matrix = array<array<double,100>,100>;
 
-let initUniform = lambda ('elem elem, intTypeParam<#a> type) -> vector<'elem,#a>{
-                    return vector_init_uniform(elem, type);
-                    };
+let initUniform = lambda ('elem elem, type<'a> size) -> array<'elem,'a>{
+					decl ref<array<'elem,'a>> res;
+					for(int i=0 .. 100) {
+						res[i] = elem;
+					}
+					return *res;
+                  };
 
 
 

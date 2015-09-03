@@ -71,17 +71,17 @@ namespace pattern {
 			return node(core::NT_CompoundStmt, single(body)) | body;
 		}
 
-		inline TreePattern genericType(const TreePattern& family, const ListPattern& parents, const ListPattern& subtypes, const ListPattern& typeParams) {
-			return node(core::NT_GenericType, family << single(node(parents)) << single(node(subtypes)) << single(node(typeParams)));
+		inline TreePattern genericType(const TreePattern& family, const ListPattern& parents, const ListPattern& typeParams) {
+			return node(core::NT_GenericType, family << single(node(parents)) << single(node(typeParams)));
 		}
-		inline TreePattern genericType(const TreePattern& family, const ListPattern& subtypes = empty, const ListPattern& typeParams = empty) {
-			return genericType(family, empty, subtypes, typeParams);
+		inline TreePattern genericType(const TreePattern& family, const ListPattern& typeParams = empty) {
+			return genericType(family, empty, typeParams);
 		}
-		inline TreePattern genericType(const core::StringValuePtr& family, const ListPattern& typeParams = empty, const ListPattern& intParams = empty) {
-			return genericType(atom(family.as<core::NodePtr>()), typeParams, intParams);
+		inline TreePattern genericType(const core::StringValuePtr& family, const ListPattern& typeParams = empty) {
+			return genericType(atom(family.as<core::NodePtr>()), typeParams);
 		}
-		inline TreePattern genericType(const string& name, const ListPattern& typeParams = empty, const ListPattern& intParams = empty) {
-			return genericType(value(name), typeParams, intParams);
+		inline TreePattern genericType(const string& name, const ListPattern& typeParams = empty) {
+			return genericType(value(name), typeParams);
 		}
 
 		inline TreePattern exprOfType(const TreePattern& type) {
@@ -109,7 +109,7 @@ namespace pattern {
 		}
 
 		inline TreePattern typeLiteral(const TreePattern& type = pattern::any) {
-			return literal(genericType("type", single(type), empty), any);
+			return literal(genericType("type", single(type)), any);
 		}
 
 		inline TreePattern tupleType(const ListPattern& pattern) {
@@ -120,8 +120,8 @@ namespace pattern {
 			return node(core::NT_StructType, pattern);
 		}
 
-		inline TreePattern arrayType(const TreePattern& pattern) {
-			return genericType("array", single(pattern));
+		inline TreePattern arrayType(const TreePattern& pattern, const TreePattern& size = any) {
+			return genericType("array", single(pattern) << single(size));
 		}
 
 		inline TreePattern refType(const TreePattern& elementType) {
