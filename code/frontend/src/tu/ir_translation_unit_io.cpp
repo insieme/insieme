@@ -45,7 +45,6 @@
 #include "insieme/core/encoder/encoder.h"
 #include "insieme/core/encoder/pointer_maps.h"
 #include "insieme/core/encoder/tuples.h"
-#include "insieme/core/encoder/ir_class_info.h"
 
 
 namespace insieme {
@@ -55,12 +54,12 @@ namespace tu {
 
 	// the type used for encoding a translation unit
 	typedef std::tuple<IRTranslationUnit::TypeMap, IRTranslationUnit::FunctionMap, IRTranslationUnit::GlobalsList, IRTranslationUnit::Initializer,
-	                   IRTranslationUnit::EntryPointList, IRTranslationUnit::MetaInfoMap, bool> WrapperType;
+	                   IRTranslationUnit::EntryPointList, bool> WrapperType;
 
 
 	core::ExpressionPtr toIR(core::NodeManager& manager, const IRTranslationUnit& unit) {
 		return core::encoder::toIR(manager, std::make_tuple(unit.getTypes(), unit.getFunctions(), unit.getGlobals(), unit.getInitializer(),
-		                                                    unit.getEntryPoints(), unit.getMetaInfos(), unit.isCXX()));
+		                                                    unit.getEntryPoints(), unit.isCXX()));
 	}
 
 	IRTranslationUnit fromIR(const core::ExpressionPtr& node) {
@@ -69,7 +68,7 @@ namespace tu {
 
 		// build resulting translation unit
 		return IRTranslationUnit(node.getNodeManager(), std::get<0>(values), std::get<1>(values), std::get<2>(values), std::get<3>(values), std::get<4>(values),
-		                         std::get<5>(values), std::get<6>(values));
+		                         std::get<5>(values));
 	}
 
 

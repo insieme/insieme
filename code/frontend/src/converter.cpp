@@ -75,7 +75,6 @@
 #include "insieme/core/datapath/datapath.h"
 #include "insieme/core/dump/text_dump.h"
 #include "insieme/core/encoder/lists.h"
-#include "insieme/core/ir_class_info.h"
 #include "insieme/core/ir_program.h"
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/enum_extension.h"

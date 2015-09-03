@@ -294,4 +294,14 @@ int main() {
 		sizeof(char_arr);
 	}
 
+	// completely weird but possible compound init expr that can be assigned to
+	//pragma test expect_ir(";")
+	//typedef struct {
+	//	unsigned** data;
+	//	int x, y;
+	//} Image;
+
+	//(Image){0, 0, 0} = (Image){1,1,1};
+
+	//(Image){0, 0, 0}.x = 1;
 }

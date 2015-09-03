@@ -730,7 +730,8 @@ namespace conversion {
 		LOG_EXPR_CONVERSION(compLitExpr, retIr);
 
 		if(const clang::InitListExpr* initList = llvm::dyn_cast<clang::InitListExpr>(compLitExpr->getInitializer())) {
-			retIr = Visit(initList);
+			// for some reason, this is an lvalue
+			retIr = builder.refVar(Visit(initList));
 		}
 		
 		if(!retIr) frontend_assert(false) << "Unimplemented type of CompoundLiteralExpr encountered";

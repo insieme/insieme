@@ -45,7 +45,6 @@
 #include "insieme/utils/logging.h"
 
 #include "insieme/core/ir_types.h"
-#include "insieme/core/ir_class_info.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/annotations/naming.h"
 #include "insieme/core/lang/ir++_extension.h"

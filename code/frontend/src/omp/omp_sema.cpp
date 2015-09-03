@@ -673,11 +673,12 @@ namespace omp {
 					auto outer = static_pointer_cast<const ForStmt>(subStmt);
 					StatementList newForBodyStmts;
 					for_each(outer->getBody()->getStatements(), [&](core::StatementPtr elem) { newForBodyStmts.push_back(elem); });
-					auto condition = build.eq(build.forStmtFinalValue(outer), outer->getIterator());
-					auto ifStmt = build.ifStmt(condition, build.compoundStmt(ifStmtBodyLast));
-					newForBodyStmts.push_back(ifStmt);
-					auto newForStmt = build.forStmt(outer->getDeclaration(), outer->getEnd(), outer->getStep(), build.compoundStmt(newForBodyStmts));
-					subStmt = build.pfor(newForStmt);
+					//auto condition = build.eq(build.forStmtFinalValue(outer), outer->getIterator());
+					assert_not_implemented() << "forStmtFinalValue needs to be replaced";
+					//auto ifStmt = build.ifStmt(condition, build.compoundStmt(ifStmtBodyLast));
+					//newForBodyStmts.push_back(ifStmt);
+					//auto newForStmt = build.forStmt(outer->getDeclaration(), outer->getEnd(), outer->getStep(), build.compoundStmt(newForBodyStmts));
+					//subStmt = build.pfor(newForStmt);
 				} else {
 					subStmt = build.pfor(static_pointer_cast<const ForStmt>(subStmt));
 				}
@@ -964,7 +965,6 @@ namespace omp {
 		for(auto& cur : unit.getTypes()) {
 			auto mapped = semaMapper.map(cur.second);
 			res.addType(cur.first, mapped);
-			res.addMetaInfo(cur.first, unit.getMetaInfo(cur.first));
 		}
 
 		// ... the functions ...

@@ -57,7 +57,6 @@
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/datapath/datapath.h"
 #include "insieme/core/encoder/lists.h"
-#include "insieme/core/ir_class_info.h"
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/ir++_extension.h"
 #include "insieme/core/transform/node_replacer.h"

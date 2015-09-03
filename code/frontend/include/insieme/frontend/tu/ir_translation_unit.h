@@ -48,7 +48,6 @@
 #include "insieme/core/analysis/normalize.h"
 #include "insieme/core/annotations/source_location.h"
 #include "insieme/core/printer/pretty_printer.h"
-#include "insieme/core/ir_class_info.h"
 
 namespace insieme {
 namespace frontend {
@@ -66,9 +65,7 @@ namespace tu {
 		typedef std::vector<core::ExpressionPtr> Initializer;
 
 		typedef std::vector<core::LiteralPtr> EntryPointList;
-
-		typedef insieme::utils::map::PointerMap<core::TypePtr, std::vector<core::ClassMetaInfo>> MetaInfoMap;
-
+		
 	  private:
 		core::NodeManager* mgr;
 
@@ -81,22 +78,19 @@ namespace tu {
 		Initializer initializer;
 
 		EntryPointList entryPoints;
-
-		MetaInfoMap metaInfos;
-
+		
 		bool isCppCode;
 
 	  public:
 		IRTranslationUnit(core::NodeManager& mgr) : mgr(&mgr), isCppCode(false) {}
 
 		IRTranslationUnit(core::NodeManager& mgr, const TypeMap& types, const FunctionMap& functions, const GlobalsList& globals,
-		                  const Initializer& initializer, const EntryPointList& entryPoints, const MetaInfoMap& metaInfos, bool cppCode)
-		    : mgr(&mgr), types(types), functions(functions), globals(globals), initializer(initializer), entryPoints(entryPoints), metaInfos(metaInfos),
-		      isCppCode(cppCode) {}
+		                  const Initializer& initializer, const EntryPointList& entryPoints, bool cppCode)
+		    : mgr(&mgr), types(types), functions(functions), globals(globals), initializer(initializer), entryPoints(entryPoints), isCppCode(cppCode) {}
 
 		IRTranslationUnit(const IRTranslationUnit& other)
 		    : mgr(other.mgr), types(other.types), functions(other.functions), globals(other.globals), initializer(other.initializer),
-		      entryPoints(other.entryPoints), metaInfos(other.metaInfos), isCppCode(other.isCppCode) {}
+		      entryPoints(other.entryPoints), isCppCode(other.isCppCode) {}
 
 		// getter:
 		bool isEmpty() {
@@ -121,10 +115,6 @@ namespace tu {
 
 		const EntryPointList& getEntryPoints() const {
 			return entryPoints;
-		}
-
-		const MetaInfoMap& getMetaInfos() const {
-			return metaInfos;
 		}
 
 		// mutable getter:
@@ -224,8 +214,6 @@ namespace tu {
 			std::copy(other.globals.begin(), other.globals.end(), std::back_inserter(globals));
 			entryPoints.clear();
 			std::copy(other.entryPoints.begin(), other.entryPoints.end(), std::back_inserter(entryPoints));
-			metaInfos.clear();
-			std::copy(other.metaInfos.begin(), other.metaInfos.end(), std::inserter(metaInfos, metaInfos.end()));
 			isCppCode = other.isCppCode;
 
 			return *this;
@@ -291,31 +279,7 @@ namespace tu {
 		}
 
 		std::ostream& printTo(std::ostream& out) const;
-
-		/**
-		 * Gets the metainfo for the given classType
-		 * Carefull merges _all_ the metainfos for the type together might be expensive
-		 * @param metaInfo a core::ClassMetaInfor for the given classType
-		 * @param symbolic - boolean if the classmetainfo/classtype should be symbolic or resolved
-		 * -- by default symbolic
-		 * @return the merged metaInfo
-		 */
-		core::ClassMetaInfo getMetaInfo(const core::TypePtr& classType, bool symbolic = true) const;
-
-		/**
-		 * Adds the given metainfo to the vector associated with classType
-		 * @param classType a TypePtr with the type the meta-info should be associated with
-		 * @param metaInfo a core::ClassMetaInfor for the given classType
-		 */
-		void addMetaInfo(const core::TypePtr& classType, const core::ClassMetaInfo& metaInfo);
-
-		/**
-		 * Adds the given vector of metainfos to the vector associated with classType
-		 * @param classType a TypePtr with the type the meta-infos should be associated with
-		 * @param metaInfo a vector of core::ClassMetaInfos for the given classType
-
-		 */
-		void addMetaInfo(const core::TypePtr& classType, const std::vector<core::ClassMetaInfo>& metaInfoList);
+		
 	};
 
 

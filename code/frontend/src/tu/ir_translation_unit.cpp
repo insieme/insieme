@@ -46,7 +46,6 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/frontend_ir_builder.h"
 #include "insieme/core/ir_visitor.h"
-#include "insieme/core/ir_class_info.h"
 #include "insieme/core/lang/array.h"
 #include "insieme/core/lang/ir++_extension.h"
 #include "insieme/core/lang/static_vars.h"
@@ -56,7 +55,6 @@
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/manipulation_utils.h"
-#include "insieme/core/encoder/ir_class_info.h"
 
 #include "insieme/core/ir_statistic.h"
 
@@ -102,10 +100,7 @@ namespace tu {
 			                                              out << *cur.first << " : " << *cur.first->getType() << " => " << print(cur.second);
 			                                          })
 		           << ",\n\tEntry Points:\t{" << join(", ", entryPoints, [&](std::ostream& out, const core::LiteralPtr& cur) { out << *cur; })
-		           << "},\n\tMetaInfos:\t{"
-		           << join(", ", metaInfos, [&](std::ostream& out, const std::pair<core::TypePtr, std::vector<core::ClassMetaInfo>>& cur) {
-			              out << *cur.first << " : " << cur.second;
-			          }) << "}\n)";
+		           << "}\n)";
 	}
 
 	IRTranslationUnit IRTranslationUnit::toManager(core::NodeManager& manager) const {
@@ -134,11 +129,6 @@ namespace tu {
 		// entry points
 		for(auto cur : getEntryPoints()) {
 			res.addEntryPoints(cur);
-		}
-
-		// copy meta infos
-		for(auto cur : getMetaInfos()) {
-			res.addMetaInfo(cur.first, cur.second);
 		}
 
 		// done
@@ -171,11 +161,6 @@ namespace tu {
 		// entry points
 		for(auto cur : b.getEntryPoints()) {
 			res.addEntryPoints(cur);
-		}
-
-		// copy meta infos
-		for(auto cur : b.getMetaInfos()) {
-			res.addMetaInfo(cur.first, cur.second);
 		}
 
 		// done
@@ -458,9 +443,6 @@ namespace tu {
 
 					// replace bindings with resolved definitions
 					for(const auto& s : vars) {
-						// we drop meta infos for now ... TODO: fix this
-						if(s.isa<TypePtr>()) { core::removeMetaInfo(s.as<TypePtr>()); }
-
 						// migrate annotations
 						core::transform::utils::migrateAnnotations(s, resolved[s]);
 
@@ -572,16 +554,7 @@ namespace tu {
 				prevAddedLiterals = currAddedLiterals;
 				currAddedLiterals.clear();
 			};
-
-			// check all types for dtors which use literals
-			for(auto cur : unit.getTypes()) {
-				TypePtr def = cur.second;
-				if(core::hasMetaInfo(def.isa<TypePtr>())) {
-					auto dtor = core::getMetaInfo(def).getDestructor();
-					core::visitDepthFirstOnce(dtor, [&](const core::LiteralPtr& literal) { usedLiterals.insert(literal); });
-				}
-			}
-
+			
 			core::FrontendIRBuilder builder(internalMainFunc->getNodeManager());
 			core::StatementList inits;
 
@@ -673,71 +646,7 @@ namespace tu {
 	core::NodePtr IRTranslationUnit::resolve(const core::NodePtr& node) const {
 		return Resolver(getNodeManager(), *this).apply(node);
 	}
-
-	core::ClassMetaInfo IRTranslationUnit::getMetaInfo(const core::TypePtr& classType, bool symbolic) const {
-		core::ClassMetaInfo metaInfo;
-		auto mm = metaInfos.find(classType);
-		if(mm != metaInfos.end()) {
-			auto metaInfoList = mm->second;
-
-			// merge metaInfos into one
-			for(auto m : metaInfoList) {
-				metaInfo = core::merge(metaInfo, m);
-			}
-		}
-
-		if(symbolic) { return metaInfo; }
-
-		auto resolvedClassType = this->resolve(classType).as<core::TypePtr>();
-
-		// encode meta info into pure IR
-		auto encoded = core::encoder::toIR(getNodeManager(), metaInfo);
-
-		// resolve meta info
-		auto resolved = core::encoder::toValue<ClassMetaInfo>(this->resolve(encoded).as<core::ExpressionPtr>());
-		return resolved;
-	}
-
-	void IRTranslationUnit::addMetaInfo(const core::TypePtr& classType, const core::ClassMetaInfo& metaInfo) {
-		// TODO: optimization/simplification: store the metainfos already merged?
-		metaInfos[classType].push_back(metaInfo);
-	}
-
-	void IRTranslationUnit::addMetaInfo(const core::TypePtr& classType, const std::vector<core::ClassMetaInfo>& metaInfoList) {
-		// TODO:  optimization/simplification: store the metainfos already merged?
-		for(auto m : metaInfoList) {
-			metaInfos[classType].push_back(m);
-		}
-	}
-
-	namespace {
-
-		void resolveMetaInfos(const IRTranslationUnit& tu, Resolver& resolver) {
-			// attach all the meta infos of the TU to their types
-			for(const auto& m : tu.getMetaInfos()) {
-				auto classType = m.first;
-				auto metaInfoList = m.second; // metaInfos per classType
-
-				// resolve targeted type
-				auto resolvedClassType = resolver.apply(classType);
-
-				// merge metaInfos into one
-				core::ClassMetaInfo metaInfo;
-				for(auto m : metaInfoList) {
-					metaInfo = core::merge(metaInfo, m);
-				}
-
-				// encode meta info into pure IR
-				auto encoded = core::encoder::toIR(tu.getNodeManager(), metaInfo);
-
-				// resolve meta info
-				auto resolved = core::encoder::toValue<ClassMetaInfo>(resolver.apply(encoded));
-
-				// attach meta-info to type
-				core::setMetaInfo(resolvedClassType, resolved);
-			}
-		}
-	}
+	
 
 	core::ProgramPtr toProgram(core::NodeManager& mgr, const IRTranslationUnit& a, const string& entryPoint) {
 		// search for entry point
@@ -751,11 +660,7 @@ namespace tu {
 
 				// extract lambda expression
 				core::LambdaExprPtr lambda = resolver.apply(symbol).as<core::LambdaExprPtr>();
-
-				// add meta information
-				//				std::cout << "Resolving Meta-Infos ...\n";
-				resolveMetaInfos(a, resolver);
-
+				
 				// add initializer
 				//				std::cout << "Adding initializers ...\n";
 				lambda = addInitializer(a, lambda);
@@ -782,9 +687,6 @@ namespace tu {
 		for(auto cur : a.getEntryPoints()) {
 			entryPoints.push_back(resolver.apply(cur.as<core::ExpressionPtr>()));
 		}
-
-		// resolve meta infos
-		resolveMetaInfos(a, resolver);
 
 		// built complete program
 		return core::IRBuilder(mgr).program(entryPoints);
