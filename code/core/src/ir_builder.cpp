@@ -1155,8 +1155,8 @@ namespace core {
 
 		// build up access operation
 		auto narrow = manager.getLangExtension<lang::ReferenceExtension>().getRefNarrow();
-		auto dataPath = datapath::DataPathBuilder(structExpr->getType()).parent(parent).getPath();
-		return callExpr(resType, narrow, structExpr, dataPath, getTypeLiteral(parent));
+		auto dataPath = datapath::DataPathBuilder(type).parent(parent).getPath();
+		return callExpr(resType, narrow, structExpr, dataPath);
 	}
 
 	CallExprPtr IRBuilderBaseModule::accessComponent(ExpressionPtr tupleExpr, ExpressionPtr component) const {

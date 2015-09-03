@@ -59,9 +59,10 @@ namespace lang {
 
 		// check matching
 		if (!sub) return false;
+		auto size = type->getTypeParameter(1);
 
 		// check that second parameter is a numeric type
-		return genChannel->getTypeParameter(1).isa<NumericTypePtr>();
+		return size.isa<NumericTypePtr>() || size.isa<TypeVariablePtr>();
 	}
 
 	bool isFixedSizedChannelType(const NodePtr& node) {

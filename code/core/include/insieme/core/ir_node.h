@@ -646,8 +646,6 @@ namespace core {
 			return getLangExtension<E>();
 		}
 
-		const lang::Extension& getLangExtensionByName(const string& name);
-
 		/**
 		 * Obtains a fresh ID to be used within a node.
 		 */

@@ -54,6 +54,7 @@
 #include <functional>
 #include <string>
 #include <map>
+#include <boost/optional.hpp>
 
 namespace insieme {
 namespace core {
@@ -81,6 +82,7 @@ namespace lang {
 			extensionFactories.insert(getExtensionFactory<StaticVariableExtension>("ext.static"));
 			extensionFactories.insert(getExtensionFactory<VarArgsExtension>("ext.varargs"));
 			extensionFactories.insert(getExtensionFactory<InstrumentationExtension>("ext.instrumentation"));
+			extensionFactories.insert(getExtensionFactory<DatapathExtension>("ext.datapath"));
 		}
 
 		// prevent copies
@@ -111,11 +113,14 @@ namespace lang {
 		 * @param name the name of the extension to look up
 		 * @return a factory which can be used to create the extension, given a NodeManager
 		 */
-		const std::function<const Extension&(NodeManager&)> getExtensionFactory(const std::string& extensionName) const {
-			const auto& result = extensionFactories.find(extensionName);
-			assert_true(result != extensionFactories.end()) << "Can't find extension with name \"" << extensionName
-			                                                << "\". Please check the name and also register it in the constructor of ExtensionRegistry";
-			return result->second;
+		const boost::optional<std::function<const Extension&(NodeManager&)>> lookupExtensionFactory(const std::string& extensionName) const {
+			auto pos = extensionFactories.find(extensionName);
+			if (pos != extensionFactories.end()) {
+				// return the factory
+				return pos->second;
+			}
+			// return failed result
+			return boost::optional<std::function<const Extension&(NodeManager&)>>();
 		}
 
 		/**

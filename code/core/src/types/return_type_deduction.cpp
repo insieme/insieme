@@ -122,7 +122,8 @@ namespace types {
 		// check whether derivation was successful
 		if(!varInstantiation) {
 			std::stringstream msg;
-			msg << "Cannot match arguments (" << join(", ", argumentTypes, print<deref<TypePtr>>()) << ") to parameters ("
+			msg << "Cannot match arguments (" << join(", ", argumentTypes, print<deref<TypePtr>>()) << ") \n"
+				   "         to parameters ("
 			    << join(", ", funType->getParameterTypes(), print<deref<TypePtr>>()) << ")";
 			throw ReturnTypeDeductionException(msg.str());
 		}
