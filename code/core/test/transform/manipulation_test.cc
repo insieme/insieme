@@ -999,16 +999,15 @@ namespace core {
 		EXPECT_TRUE(checks::check(modified).empty()) << checks::check(modified);
 	}
 
-	TEST(Manipulation, ReplaseVaresRecursive) {
+	TEST(Manipulation, ReplaceVaresRecursive) {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 
 		auto addr = builder.parseAddressesStatement("{"
 		                                            "	decl ref<int<4>,f,f> A = var(0);"
 		                                            "	decl ref<int<4>,f,f> B = var(0);"
-		                                            "	$ A $ = 4;"
-		                                            "	$ B $ = 5;"
-		                                            "	lambda (int<4> arg)->int<4> { return arg; }(*A);"
+		                                            "	lambda (int<4> arg)->int<4> { return arg; }(* $ A $);"
+													"	lambda (int<4> arg)->int<4> { return arg; }(* $ B $);"
 		                                            "}");
 
 		CompoundStmtPtr code = addr[0].getRootNode().as<CompoundStmtPtr>();
