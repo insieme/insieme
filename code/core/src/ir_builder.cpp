@@ -303,11 +303,11 @@ namespace core {
 		return types::unify(manager, type, irType);
 	}
 
-	GenericTypePtr IRBuilderBaseModule::refType(const TypePtr& elementType, bool _const, bool _volatile) const {
+	TypePtr IRBuilderBaseModule::refType(const TypePtr& elementType, bool _const, bool _volatile) const {
 		return lang::ReferenceType::create(elementType, _const, _volatile);
 	}
 
-	StructTypePtr IRBuilderBaseModule::ptrType(const TypePtr& elementType, bool _const, bool _volatile) const {
+	TypePtr IRBuilderBaseModule::ptrType(const TypePtr& elementType, bool _const, bool _volatile) const {
 		return lang::PointerType::create(elementType, _const, _volatile);
 	}
 

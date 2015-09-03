@@ -79,7 +79,7 @@ namespace utils {
 				// TODO find better way to extract Identifier from IdentifierLiteral
 				const StringValuePtr& id = static_pointer_cast<const Literal>(call->getArgument(1))->getValue();
 				const TypePtr& elemType = structTy->getTypeOfMember(id);
-				const GenericTypePtr& refTy = builder.refType(elemType);
+				const TypePtr& refTy = builder.refType(elemType);
 				if(call->getArgument(2)->getType() != elemType || call->getType() != refTy)
 					res = builder.callExpr(refTy, fun, call->getArgument(0), call->getArgument(1), builder.getTypeLiteral(elemType));
 			}

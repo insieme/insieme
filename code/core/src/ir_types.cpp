@@ -68,7 +68,7 @@ namespace core {
 		// fetch object type if required
 		TypePtr objType;
 		if(isConstructor() || isDestructor() || isMemberFunction()) {
-			if(getParameterTypes().empty() || !lang::ReferenceType::isReferenceType(getParameterTypes()[0])) {
+			if(getParameterTypes().empty() || !lang::isReference(getParameterTypes()[0])) {
 				objType = GenericType::get(getNodeManager(), "%error%");
 			} else {
 				objType = getObjectType();

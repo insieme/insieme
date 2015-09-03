@@ -157,7 +157,7 @@ namespace analysis {
 	 * @return true if the given type is a reference type, false otherwise
 	 */
 	static inline bool isRefType(const NodePtr& type) {
-		return lang::ReferenceType::isReferenceType(type);
+		return lang::isReference(type);
 	}
 
 	/**
