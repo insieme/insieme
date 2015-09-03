@@ -409,28 +409,6 @@ namespace core {
 		return forStmt(var, start, end, step, wrapBody(body));
 	}
 
-	ExpressionPtr IRBuilderBaseModule::forStmtFinalValue(const ForStmtPtr& loopStmt) {
-		assert_not_implemented() << "This hard-coded implementation should be reconsidered";
-
-		core::TypePtr iterType = (analysis::isRefType(loopStmt->getIterator()->getType())) ? analysis::getReferencedType(loopStmt->getIterator()->getType())
-		                                                                                   : loopStmt->getIterator()->getType();
-		core::FunctionTypePtr ceilTy = functionType(toVector<core::TypePtr>(getLangBasic().getDouble()), getLangBasic().getDouble());
-
-		core::ExpressionPtr finalVal = add( // start + ceil((end-start)/step) * step
-		    loopStmt->getStart(),
-		    mul(                                                                      // ceil((end-start)/step) * step
-		        convert(callExpr(getLangBasic().getDouble(), literal(ceilTy, "ceil"), // ceil()
-		                         div(                                                 // (end-start)/step
-		                             convert(sub(sub(loopStmt->getEnd(), loopStmt->getStep()),
-		                                         loopStmt->getStart()), // end - start
-		                                     getLangBasic().getDouble()),
-		                             convert(loopStmt->getStep(), getLangBasic().getDouble()))),
-		                iterType),
-		        convert(loopStmt->getStep(), loopStmt->getStart()->getType())));
-
-		return finalVal;
-	}
-
 	SwitchStmtPtr IRBuilderBaseModule::switchStmt(const ExpressionPtr& switchExpr, const vector<std::pair<ExpressionPtr, StatementPtr>>& cases,
 	                                    const StatementPtr& defaultCase) const {
 		CompoundStmtPtr defCase = (defaultCase) ? wrapBody(defaultCase) : getNoOp();
@@ -627,14 +605,6 @@ namespace core {
 
 		// fall-back => return a literal 0 of the corresponding type
 		return literal(type, "0");
-	}
-
-	ExpressionPtr IRBuilderBaseModule::convert(const ExpressionPtr& src, const TypePtr& target) const {
-		assert_true(src) << "Invalid null-input.";
-		if(*src->getType() == *target) return src;
-		assert_not_implemented() << "ToDo: implement conversions.";
-		// use a cast node for this step
-		return castExpr(target, src);
 	}
 
 	CallExprPtr IRBuilderBaseModule::deref(const ExpressionPtr& subExpr) const {
@@ -976,11 +946,11 @@ namespace core {
 
 	CallExprPtr IRBuilderBaseModule::getThreadNumRange(const ExpressionPtr& min) const {
 		TypePtr type = manager.getLangBasic().getUInt8();
-		return callExpr(manager.getLangExtension<lang::ParallelExtension>().getCreateMinRange(), convert(min, type));
+		return callExpr(manager.getLangExtension<lang::ParallelExtension>().getCreateMinRange(), numericCast(min, type));
 	}
 	CallExprPtr IRBuilderBaseModule::getThreadNumRange(const ExpressionPtr& min, const ExpressionPtr& max) const {
 		TypePtr type = manager.getLangBasic().getUInt8();
-		return callExpr(manager.getLangExtension<lang::ParallelExtension>().getCreateBoundRange(), convert(min, type), convert(max, type));
+		return callExpr(manager.getLangExtension<lang::ParallelExtension>().getCreateBoundRange(), numericCast(min, type), numericCast(max, type));
 	}
 
 
@@ -1351,8 +1321,7 @@ namespace core {
 		// update type of literal to support unsigned
 		TypePtr type = toSigned(*this, a->getType().as<GenericTypePtr>());
 
-		ExpressionPtr value = a;
-		if(value->getType() != type) { value = convert(value, type); }
+		ExpressionPtr value = numericCast(a,type);
 
 		// return 0 - a
 		return sub(getZero(type), a);

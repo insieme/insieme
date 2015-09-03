@@ -161,6 +161,7 @@ namespace types {
 	 * a type expression.
 	 */
 	class VariableRenamer {
+
 		/**
 		 * A counter used to generate fresh variable names.
 		 */
@@ -181,7 +182,6 @@ namespace types {
 		 * Creates an new instance of this class producing substitutions using the given offsets.
 		 */
 		VariableRenamer(int varCounterOffset = 0) : varCounter(varCounterOffset) {}
-
 
 		/**
 		 * Applies the renaming to the given target type.
