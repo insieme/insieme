@@ -60,7 +60,7 @@ namespace encoder {
 		auto back = toValue<map<string, int>>(ir);
 
 		EXPECT_EQ("{}", toString(value));
-		EXPECT_EQ("empty(type<pair<ref<array<char,1>>,int<4>>>)", toString(*ir));
+		EXPECT_EQ("list_empty(type<pair<ref<array<char,inf>,f,f>,int<4>>>)", toString(*ir));
 
 
 		EXPECT_TRUE((isEncodingOf<map<string, int>>(ir)));
@@ -79,7 +79,7 @@ namespace encoder {
 		back = toValue<map<string, int>>(ir);
 
 		EXPECT_EQ("{hello=12, world=14}", toString(value));
-		EXPECT_EQ("cons(pair(hello, 12), cons(pair(world, 14), empty(type<pair<ref<array<char,1>>,int<4>>>)))", toString(*ir));
+		EXPECT_EQ("list_cons(pair(hello, 12), list_cons(pair(world, 14), list_empty(type<pair<ref<array<char,inf>,f,f>,int<4>>>)))", toString(*ir));
 
 		EXPECT_TRUE((isEncodingOf<map<string, int>>(ir)));
 		EXPECT_EQ(value, back);
