@@ -601,7 +601,7 @@ namespace core {
 		ExpressionPtr minus(const ExpressionPtr& a) const;
 
 		ExpressionPtr numericCast(const core::ExpressionPtr& expr, const core::TypePtr& targetType) const  {
-			if (types::isSubTypeOf(expr->getType(), targetType)) return expr;
+			if(expr->getType() == targetType) return expr;
 			return callExpr(targetType, getLangBasic().getNumericCast(), expr, getTypeLiteral(targetType));
 		}
 

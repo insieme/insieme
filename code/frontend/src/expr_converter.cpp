@@ -183,22 +183,7 @@ namespace conversion {
 
 		string value;
 		unsigned int v = charLit->getValue();
-
-		core::TypePtr elemType;
-		switch(charLit->getKind()) {
-		case clang::CharacterLiteral::Ascii: elemType = basic.getChar(); break;
-		case clang::CharacterLiteral::UTF16:
-			elemType = basic.getWChar16();
-			converter.warnings.insert("Insieme widechar support is experimental");
-			break;
-		case clang::CharacterLiteral::UTF32:
-		case clang::CharacterLiteral::Wide:
-			elemType = basic.getWChar32();
-			converter.warnings.insert("Insieme widechar support is experimental");
-			break;
-		}
-		frontend_assert(elemType);
-
+		
 		if(charLit->getKind() == clang::CharacterLiteral::Ascii) {
 			value.append("\'");
 			if(v == '\\') {
@@ -232,9 +217,11 @@ namespace conversion {
 				value.append(cad);
 			}
 			value.append("\'");
+		} else {
+			frontend_assert(false) << "Non-ASCII character literals unsupported";
 		}
 
-		return retExpr = builder.literal(value, elemType);
+		return retExpr = builder.literal(value, converter.convertType(charLit->getType()));
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -3,12 +3,12 @@ int main() {
 	
 	// BASE TYPES //////////////////////////////////////////////////////////////
 	
-	#pragma test expect_ir("decl ref<char,f,f> v0 = var(type_cast('a', type(char)));")
+	#pragma test expect_ir("decl ref<char,f,f> v0 = var(num_cast(lit(\"'a'\":int<4>), type(char)));")
 	char c = 'a';
 
-	#pragma test expect_ir("decl ref<uint<1>,f,f> v0 = var(type_cast(5, type(uint<1>)));")
+	#pragma test expect_ir("decl ref<uint<1>,f,f> v0 = var(num_cast(5, type(uint<1>)));")
 	unsigned char uc = 5;
-	#pragma test expect_ir("decl ref<int<1>,f,f> v0 = var(type_cast(2, type(int<1>)));")
+	#pragma test expect_ir("decl ref<int<1>,f,f> v0 = var(num_cast(2, type(int<1>)));")
 	signed char sc = 2;
 	
 	#pragma test expect_ir("decl ref<int<4>,f,f> v0 = var(2);")

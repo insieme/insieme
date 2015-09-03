@@ -114,7 +114,7 @@ namespace utils {
 		case clang::CK_IntegralToFloating:
 		case clang::CK_FloatingToIntegral:
 		case clang::CK_FloatingCast:
-			return builder.callExpr(basic.getTypeCast(), expr, builder.getTypeLiteral(targetTy)); 
+			return builder.numericCast(expr, targetTy); 
 
 		//case clang::CK_IntegralToBoolean:
 		//// Integral to boolean. A check against zero. (bool) i

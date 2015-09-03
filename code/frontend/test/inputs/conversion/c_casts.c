@@ -27,38 +27,38 @@ int main() {
 	//===---------------------------------------------------------------------------------------------------------------------------------- NUMERIC CASTS ---===
 
 	// IntegralToFloating
-	#pragma test expect_ir("{ decl ref<int<4>,f,f> v0; decl ref<real<4>,f,f> v1 = var(type_cast(*v0,type(real<4>))); }")
+	#pragma test expect_ir("{ decl ref<int<4>,f,f> v0; decl ref<real<4>,f,f> v1 = var(num_cast(*v0,type(real<4>))); }")
 	{
 		int x;
 		float y = x;
 	}
 	
 	// FloatingToIntegral
-	#pragma test expect_ir("{ decl ref<real<4>,f,f> v0; decl ref<int<4>,f,f> v1 = var(type_cast(*v0,type(int<4>))); }")
+	#pragma test expect_ir("{ decl ref<real<4>,f,f> v0; decl ref<int<4>,f,f> v1 = var(num_cast(*v0,type(int<4>))); }")
 	{
 		float x;
 		int y = x;
 	}
 	
 	// FloatingCast
-	#pragma test expect_ir("{ decl ref<real<4>,f,f> v0; decl ref<real<8>,f,f> v1 = var(type_cast(*v0,type(real<8>))); }")
+	#pragma test expect_ir("{ decl ref<real<4>,f,f> v0; decl ref<real<8>,f,f> v1 = var(num_cast(*v0,type(real<8>))); }")
 	{
 		float x;
 		double y = x;
 	}
 
 	// IntegralCast
-	#pragma test expect_ir("{ decl ref<int<4>,f,f> v0; decl ref<uint<4>,f,f> v1 = var(type_cast(*v0,type(uint<4>))); }")
+	#pragma test expect_ir("{ decl ref<int<4>,f,f> v0; decl ref<uint<4>,f,f> v1 = var(num_cast(*v0,type(uint<4>))); }")
 	{
 		int x;
 		unsigned y = x;
 	}
-	#pragma test expect_ir("{ decl ref<uint<8>,f,f> v0; decl ref<int<4>,f,f> v1 = var(type_cast(*v0,type(int<4>))); }")
+	#pragma test expect_ir("{ decl ref<uint<8>,f,f> v0; decl ref<int<4>,f,f> v1 = var(num_cast(*v0,type(int<4>))); }")
 	{
 		unsigned long x;
 		int y = x;
 	}
-	#pragma test expect_ir("{ decl ref<char,f,f> v0; decl ref<int<1>,f,f> v1 = var(type_cast(*v0,type(int<1>))); }")
+	#pragma test expect_ir("{ decl ref<char,f,f> v0; decl ref<int<1>,f,f> v1 = var(num_cast(*v0,type(int<1>))); }")
 	{
 		char x;
 		signed char y = x;
