@@ -63,6 +63,7 @@ namespace parser3 {
 
 			struct Scope {
 				definition_map symbols;
+				definition_map types;
 				type_alias_map alias;
 			};
 
@@ -79,7 +80,9 @@ namespace parser3 {
 			void close_scope(const std::string& msg = "");
 
 			bool add_symb(const std::string& name, const node_factory& factory);
-			NodePtr find(const std::string& name) const;
+			bool add_func(const std::string& name, const node_factory& factory);
+			NodePtr find_symb(const std::string& name) const;
+			NodePtr find_type(const std::string& name) const;
 
 			void add_type_alias(const GenericTypePtr& pattern, const TypePtr& substitute);
 			TypePtr resolve(const TypePtr& type) const;
@@ -279,6 +282,26 @@ namespace parser3 {
 			 * add a symbol into the scope (no location, used when setting up the inspire_parser)
 			 */
 			void add_symb(const std::string& name, const NodePtr& node);
+
+			/**
+			 * add a symbol into the scope
+ 			*/
+			void add_type(const location& l, const std::string& name, const node_factory& factory);
+
+			/**
+			 * add a symbol into the scope
+			 */
+			void add_type(const location& l, const std::string& name, const NodePtr& node);
+
+			/**
+			 * add a symbol into the scope (no location, used when setting up the inspire_parser)
+			 */
+			void add_type(const std::string& name, const node_factory& factory);
+
+			/**
+			 * add a symbol into the scope (no location, used when setting up the inspire_parser)
+			 */
+			void add_type(const std::string& name, const NodePtr& node);
 
 			/**
 			 * add a type alias to the current scope
