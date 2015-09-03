@@ -75,13 +75,13 @@ namespace printer {
 		IRBuilder builder(mgr);
 
 		std::map<std::string, core::NodePtr> symbols;
-		symbols["v"] = builder.variable(builder.parseType("ref<vector<int<4>,10>>"));
-		symbols["x"] = builder.variable(builder.parseType("ref<int<4>>"));
+		symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,10>,f,f>"));
+		symbols["x"] = builder.variable(builder.parseType("ref<int<4>,f,f>"));
 
 		auto forStmt = analysis::normalize(builder.parseStmt(R"(
 			for(int<4> k = 0 .. 10) {
 				for(int<4> i = 0 .. 20) {
-					decl ref<int<4>> m = var(10);
+					decl ref<int<4>,f,f> m = var(10);
 					for(int<4> j = 0 .. 30) {
 						v[i] = *m;
 			           x = x + 1;
