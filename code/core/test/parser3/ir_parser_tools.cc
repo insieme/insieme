@@ -76,11 +76,11 @@ namespace parser3 {
 			dc.add_symb("one", toFactory(one));
 			dc.add_symb("two", toFactory(two));
 
-			EXPECT_NE(dc.find("one"), dc.find("two"));
-			EXPECT_NE(dc.find("one"), two);
-			EXPECT_NE(dc.find("twp"), one);
-			EXPECT_EQ(dc.find("one"), one);
-			EXPECT_EQ(dc.find("two"), two);
+			EXPECT_NE(dc.find_symb("one"), dc.find_symb("two"));
+			EXPECT_NE(dc.find_symb("one"), two);
+			EXPECT_NE(dc.find_symb("twp"), one);
+			EXPECT_EQ(dc.find_symb("one"), one);
+			EXPECT_EQ(dc.find_symb("two"), two);
 
 			// enter an scope
 			dc.open_scope();
@@ -88,19 +88,19 @@ namespace parser3 {
 			auto three = builder.intLit(3);
 			dc.add_symb("three", toFactory(three));
 
-			EXPECT_NE(dc.find("one"), dc.find("two"));
-			EXPECT_NE(dc.find("one"), two);
-			EXPECT_NE(dc.find("twp"), one);
-			EXPECT_EQ(dc.find("one"), one);
-			EXPECT_EQ(dc.find("two"), two);
-			EXPECT_EQ(dc.find("three"), three);
+			EXPECT_NE(dc.find_symb("one"), dc.find_symb("two"));
+			EXPECT_NE(dc.find_symb("one"), two);
+			EXPECT_NE(dc.find_symb("twp"), one);
+			EXPECT_EQ(dc.find_symb("one"), one);
+			EXPECT_EQ(dc.find_symb("two"), two);
+			EXPECT_EQ(dc.find_symb("three"), three);
 
 			// declare a shadow name
 			auto notOne = builder.intLit(4);
 			dc.add_symb("one", toFactory(notOne));
 
-			EXPECT_NE(dc.find("one"), one);
-			EXPECT_EQ(dc.find("one"), notOne);
+			EXPECT_NE(dc.find_symb("one"), one);
+			EXPECT_EQ(dc.find_symb("one"), notOne);
 
 			// once again
 			dc.open_scope();
@@ -109,21 +109,21 @@ namespace parser3 {
 			auto notTwo = builder.intLit(5);
 			dc.add_symb("two", toFactory(notTwo));
 
-			EXPECT_NE(dc.find("two"), two);
-			EXPECT_EQ(dc.find("two"), notTwo);
-			EXPECT_NE(dc.find("one"), one);
-			EXPECT_EQ(dc.find("one"), notOne);
+			EXPECT_NE(dc.find_symb("two"), two);
+			EXPECT_EQ(dc.find_symb("two"), notTwo);
+			EXPECT_NE(dc.find_symb("one"), one);
+			EXPECT_EQ(dc.find_symb("one"), notOne);
 
 			dc.close_scope();
 
-			EXPECT_NE(dc.find("one"), one);
-			EXPECT_EQ(dc.find("one"), notOne);
+			EXPECT_NE(dc.find_symb("one"), one);
+			EXPECT_EQ(dc.find_symb("one"), notOne);
 
 			// close the scope
 			dc.close_scope();
 
-			EXPECT_EQ(dc.find("one"), one);
-			EXPECT_NE(dc.find("one"), notOne);
+			EXPECT_EQ(dc.find_symb("one"), one);
+			EXPECT_NE(dc.find_symb("one"), notOne);
 		}
 
 		TEST(Parser_Tools, error_locations) {
