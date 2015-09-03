@@ -142,7 +142,8 @@ namespace utils {
 		// Vector coercions are bitcasts.
 		case clang::CK_BitCast:
 			if(core::lang::isPointer(expr) && core::lang::doPointersDifferOnlyInQualifiers(exprTy, targetTy)) { return core::lang::buildPtrCast(expr, targetTy); }
-			assert_not_implemented();
+			frontend_assert(false) << "Clang cast type not implemented: " << castExpr->getCastKindName() << 
+				" with source type " << dumpColor(exprTy) << "and target type " << dumpColor(targetTy);
 
 
 		//	{

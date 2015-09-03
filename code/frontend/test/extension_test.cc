@@ -48,7 +48,6 @@
 #include "insieme/core/analysis/ir++_utils.h"
 
 #include "insieme/core/lang/complex_extension.h"
-#include "insieme/core/lang/simd_vector.h"
 #include "insieme/core/lang/enum_extension.h"
 
 #include "insieme/frontend/converter.h"
