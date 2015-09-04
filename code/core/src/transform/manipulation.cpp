@@ -251,7 +251,7 @@ namespace transform {
 		class InlineSubstituter : public SimpleNodeMapping {
 			bool successful;
 
-			um::PointerMap<VariablePtr, ExpressionPtr>& replacements;
+			const um::PointerMap<VariablePtr, ExpressionPtr>& replacements;
 			us::PointerSet<VariablePtr> replacedOnce;
 
 		  public:
@@ -432,7 +432,7 @@ namespace transform {
 		vector<StatementPtr> stmts;
 		VariableMap varMap;
 
-		// instantiate very variable within the parameter list with a fresh name
+		// instantiate every variable within the parameter list with a fresh name
 		const auto& params = fun->getParameterList().getElements();
 		const auto& args = call->getArguments();
 
@@ -455,8 +455,40 @@ namespace transform {
 			varMap[params[i]] = localVar;
 		}
 
+		// check whether all parameters are always dereferenced
+		bool allParamsDerefed = true;
+		auto deref = manager.getLangExtension<lang::ReferenceExtension>().getRefDeref();
+		NodeMap derefReplacements;
+		visitDepthFirstOncePrunable(NodeAddress(fun->getBody()), [&](const NodeAddress& cur)->bool {
+			// early exit ...
+			if (!allParamsDerefed) return true;
+
+			// prune nested lambdas
+			if (cur.isa<LambdaExprPtr>()) return true;
+
+			// check for parameters
+			if (auto var = cur.isa<VariablePtr>()) {
+				if (::contains(params, var)) {
+					// if it is a parameter read ..
+					if(analysis::isCallOf(cur.getParentAddress(), deref)) {
+						// .. replace it
+						derefReplacements[cur.getParentNode()] = varMap[var];
+					} else {
+						// invalid parameter access => no inlining possible
+						allParamsDerefed = false;
+					}
+				}
+			}
+
+			// do not prune here
+			return false;
+		});
+
+		// if there is a un-dereferenced parameter => no inlining supported
+		if (!allParamsDerefed) return call;
+
 		// add body of function to resulting inlined code
-		for_each(fun->getBody()->getStatements(), [&](const core::StatementPtr& cur) { stmts.push_back(replaceVarsGen(manager, cur, varMap)); });
+		for_each(fun->getBody()->getStatements(), [&](const core::StatementPtr& cur) { stmts.push_back(replaceAllGen(manager, cur, derefReplacements)); });
 
 		// return compound stmt containing the entire stmt sequence
 		return builder.compoundStmt(stmts);
