@@ -393,6 +393,11 @@ namespace parser3 {
 			return builder.accessComponent(expr, index);
 		}
 
+		LiteralPtr inspire_driver::genNumericLiteral(const location& l, const TypePtr& type, const std::string& lit) {
+			// remove any type modifier suffixes since they're already encoded in "type"
+			return builder.literal(type, lit.substr(0, lit.find_first_not_of("0123456789.+eE")));
+		}
+
 		TypePtr inspire_driver::genGenericType(const location& l, const std::string& name, const ParentList& parents, const TypeList& params) {
 			if(name == "int") {
 				if(params.size() != 1) { error(l, "wrong int size"); }

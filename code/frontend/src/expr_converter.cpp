@@ -143,7 +143,7 @@ namespace conversion {
 		}
 
 		core::TypePtr type = convertExprType(intLit);
-		if(intLit->getType().getTypePtr()->isUnsignedIntegerOrEnumerationType()) { value.append("u"); }
+
 		frontend_assert(!value.empty()) << "literal cannot be an empty string";
 		retExpr = builder.literal(type, value);
 
@@ -167,8 +167,10 @@ namespace conversion {
 			retExpr = builder.literal(strVal, basic.getReal4());
 		} else if(llvm::APFloat::semanticsPrecision(sema) == llvm::APFloat::semanticsPrecision(llvm::APFloat::IEEEdouble)) {
 			retExpr = builder.literal(strVal, basic.getReal8());
+		} else if(llvm::APFloat::semanticsPrecision(sema) == llvm::APFloat::semanticsPrecision(llvm::APFloat::x87DoubleExtended)) {
+			frontend_assert(false) << "Unsupported floating point literal type encountered, possibly a \"long double\".";
 		} else {
-			frontend_assert(false) << "no idea how you got here, but only single/double precision literals are allowed in insieme\n";
+			frontend_assert(false) << "Unsupported floating point literal type encountered.";
 		}
 
 		return retExpr;

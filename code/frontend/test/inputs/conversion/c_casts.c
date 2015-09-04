@@ -124,13 +124,12 @@ int main() {
 		(_Bool)x;
 	}
 
-	// TODO: fix the parser to not append precision suffixes when building literals
 	// integral to bool
-	//pragma test expect_ir("{ decl ref<uint<8>,f,f> v0; (*v0!=0ul); }")
-	//{
-	//	unsigned long x;
-	//	(_Bool)x;
-	//}
+	#pragma test expect_ir("{ decl ref<uint<8>,f,f> v0; (*v0!=0ul); }")
+	{
+		unsigned long x;
+		(_Bool)x;
+	}
 
 	// float to bool
 	#pragma test expect_ir("{ decl ref<real<4>,f,f> v0; (*v0!=0.0f); }")
