@@ -546,7 +546,7 @@ namespace core {
 		if(manager.getLangBasic().isBool(type)) { return boolLit(false); }
 
 		// if it is the char type
-		if(manager.getLangBasic().isChar(type)) { return literal(type, "' '"); }
+		if(manager.getLangBasic().isChar(type)) { return literal(type, "'\\0'"); }
 
 		// if it is a lock, keep it undefined
 		if(manager.getLangExtension<lang::ParallelExtension>().isLock(type)) { return undefined(type); }

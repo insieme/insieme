@@ -55,14 +55,14 @@ namespace utils {
 		// no need to do anything if already bool
 		if(basic.isBool(t)) return expr;
 
-		// if integral, check against 0
-		if(basic.isInt(t)) return builder.ne(expr, builder.getZero(expr->getType()));
+		// if numeric or char, check against 0
+		if(basic.isInt(t) || basic.isReal(t) || basic.isChar(t)) return builder.ne(expr, builder.getZero(t));
 
 		// if pointer, check against equality with PtrNull
 		auto& pExt = builder.getExtension<core::lang::PointerExtension>();
-		if(core::lang::isPointer(t)) return builder.callExpr(basic.getBool(), pExt.getPtrNotEqual(), expr, core::lang::buildPtrNull(t));
+		if(lang::isPointer(t)) return builder.callExpr(basic.getBool(), pExt.getPtrNotEqual(), expr, lang::buildPtrNull(t));
 
-		assert_not_implemented();
+		assert_not_implemented() << "Trying to build bool expression from unsupported type " << *t;
 		return ExpressionPtr();
 	}
 

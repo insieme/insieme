@@ -39,6 +39,7 @@
 #include "insieme/frontend/utils/debug.h"
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/macros.h"
+#include "insieme/frontend/utils/expr_to_bool.h"
 
 #include "insieme/utils/logging.h"
 #include "insieme/utils/unused.h"
@@ -96,7 +97,7 @@ namespace utils {
 		}
 
 		const core::FrontendIRBuilder& builder = converter.getIRBuilder();
-		const core::lang::BasicGenerator& basic = builder.getLangBasic();
+		//const core::lang::BasicGenerator& basic = builder.getLangBasic();
 		//core::NodeManager& mgr = converter.getNodeManager();
 		
 		switch(castExpr->getCastKind()) {
@@ -109,47 +110,29 @@ namespace utils {
 
 		////////////////////////////////////////////////////////////////////////////////////////////////////////////
 		// Numerical value type conversions
-		// handled by IR type_cast
+		// handled by IR numeric_cast
 		case clang::CK_IntegralCast:
 		case clang::CK_IntegralToFloating:
 		case clang::CK_FloatingToIntegral:
 		case clang::CK_FloatingCast:
 			return builder.numericCast(expr, targetTy); 
 
-		//case clang::CK_IntegralToBoolean:
-		//// Integral to boolean. A check against zero. (bool) i
-		//// Integral to floating point. float f = i;
-		//case clang::CK_FloatingToIntegral:
-		//// Floating point to integral. Rounds towards zero, discarding any fractional component.
-		//// (int) f
-		//case clang::CK_FloatingToBoolean:
-		//// Floating point to boolean. (bool) f
+		////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		// Numeric and pointer to boolean
+		case clang::CK_IntegralToBoolean:
+		case clang::CK_FloatingToBoolean:
+		case clang::CK_PointerToBoolean:
+			return utils::exprToBool(expr);
 
 		////////////////////////////////////////////////////////////////////////////////////////////////////////////
-		//case clang::CK_NoOp:
-		//	// A conversion which does not affect the type other than (possibly) adding qualifiers. i
-		//	// int -> int char** -> const char * const *
-		//	{
-		//		if(core::analysis::isCppRef(exprTy)) {
-		//			return builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToConstCpp(), expr);
-		//		}
-		//		if(core::analysis::isRValCppRef(exprTy)) {
-		//			return builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefRValCppToConstCpp(), expr);
-		//		}
-
-		//		// types equality has been already checked, if is is a NoOp is because clang identifies
-		//		// this as the same type. but we might intepret it in a diff way. (ex, char literals are
-		//		// int for clang, we build a char type
-		//		if(gen.isPrimitive(exprTy)) {
-		//			return core::types::castScalar(targetTy, expr);
-		//		} else {
-		//			return expr;
-		//		}
-		//	}
+		// A conversion which does not affect the type
+		// e.g. int -> int
+		case clang::CK_NoOp:
+				return expr;
 
 		//////////////////////////////////////////////////////////////////////////////////////////////////////////
+		// Array to pointer decay. int[10] -> int* char[5][6] -> char(*)[6]
 		case clang::CK_ArrayToPointerDecay:
-			// Array to pointer decay. int[10] -> int* char[5][6] -> char(*)[6]
 			return core::lang::buildPtrFromArray(expr);	
 
 		////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -224,17 +207,6 @@ namespace utils {
 		//	}
 
 		////////////////////////////////////////////////////////////////////////////////////////////////////////////
-		//case clang::CK_PointerToBoolean:
-		//	// case clang::CK_PointerToBoolean - Pointer to boolean conversion. A check against null. Applies to normal, ObjC,
-		//	// and block pointers.
-		//	{
-		//		if(expr->getType().isa<core::FunctionTypePtr>()) {
-		//			return builder.callExpr(gen.getBoolLNot(), builder.callExpr(gen.getBool(), gen.getFuncIsNull(), expr));
-		//		}
-		//		return builder.callExpr(gen.getBoolLNot(), builder.callExpr(gen.getBool(), gen.getRefIsNull(), expr));
-		//	}
-
-		////////////////////////////////////////////////////////////////////////////////////////////////////////////
 		//case clang::CK_FloatingRealToComplex:
 		//case clang::CK_IntegralRealToComplex:
 		//	return builder.callExpr(mgr.getLangExtension<core::lang::ComplexExtension>().getConstantToComplex(), expr);
@@ -297,6 +269,7 @@ namespace utils {
 		//	}
 
 		////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		// Null pointer constant to pointer, e.g. (int*)0
 		case clang::CK_NullToPointer:
 			return core::lang::buildPtrNull(targetTy);
 
@@ -462,8 +435,8 @@ namespace utils {
 		//	{ return builder.callExpr(gen.getUInt8(), gen.getRefToInt(), expr); }
 
 		////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		// CK_FunctionToPointerDecay - Function to pointer decay. void(int) -> void(*)(int)
 		case clang::CK_FunctionToPointerDecay:
-			// CK_FunctionToPointerDecay - Function to pointer decay. void(int) -> void(*)(int)
 			return expr;
 
 		////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -517,41 +490,8 @@ namespace utils {
 		//* which is required to be a lossless operation (although many ABIs do not guarantee this on all possible intermediate types).
 		//* */
 
-		//case clang::CK_CPointerToObjCPointerCast:
-		///*case clang::CK_CPointerToObjCPointerCast - Casting a C pointer kind to an Objective-C pointer.
-		//* */
-
-		//case clang::CK_BlockPointerToObjCPointerCast:
-		///*case clang::CK_BlockPointerToObjCPointerCast - Casting a block pointer to an ObjC pointer.
-		//* */
-
 		//case clang::CK_AnyPointerToBlockPointerCast:
 		///*case clang::CK_AnyPointerToBlockPointerCast - Casting any non-block pointer to a block pointer. Block-to-block casts are bitcasts.
-		//* */
-
-		//case clang::CK_ObjCObjectLValueCast:
-		///*Converting between two Objective-C object types, which can occur when performing reference binding to an Objective-C object.
-		//* */
-
-		//case clang::CK_ARCProduceObject:
-		///*[ARC] Produces a retainable object pointer so that it may be consumed, e.g. by being passed to a consuming parameter.
-		//* Calls objc_retain.
-		//* */
-
-		//case clang::CK_ARCConsumeObject:
-		///*[ARC] Consumes a retainable object pointer that has just been produced, e.g. as the return value of a retaining call.
-		//* Enters a cleanup to call objc_release at some indefinite time.
-		//* */
-
-		//case clang::CK_ARCReclaimReturnedObject:
-		///*[ARC] Reclaim a retainable object pointer object that may have been produced and autoreleased as part of a function
-		//* return sequence.
-		//* */
-
-		//case clang::CK_ARCExtendBlockObject:
-		///*[ARC] Causes a value of block type to be copied to the heap, if it is not already there. A number of other operations in
-		//* ARC cause blocks to be copied; this is for cases where that would not otherwise be guaranteed, such as when casting to a
-		//* non-block pointer type.
 		//* */
 
 		//case clang::CK_AtomicToNonAtomic:
@@ -571,3 +511,4 @@ namespace utils {
 } // end utils namespace
 } // end frontend namespace
 } // end insieme namespace
+
