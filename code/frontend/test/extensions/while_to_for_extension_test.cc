@@ -51,10 +51,10 @@ namespace pattern {
 		core::ProgramPtr program = builder.parseProgram(
 		    R"(
 				int<4> main() {
-					decl ref<int<4>> i = 0;
-					decl ref<int<4>> j = 4;
+					decl ref<int<4>,f,f> i = 0;
+					decl ref<int<4>,f,f> j = 4;
 					while (i < 10) {
-						decl ref<int<4>> i2 = i;
+						decl ref<int<4>,f,f> i2 = i;
 						i = i + 3;
 					}
 					while (j!=0) {
@@ -69,7 +69,7 @@ namespace pattern {
 		frontend::extensions::WhileToForExtension extension;
 		auto str = toString(extension.IRVisit(program));
 		EXPECT_PRED2(containsSubString, str,
-		             "{{}; {}; for(int<4> v5 = 0 .. 10 : 3) {ref<int<4>> v3 = v1; {};}; for(int<4> v4 = 4 .. 0 : -2) {{};}; return v1;}}");
+		             "{{}; {}; for(int<4> v5 = 0 .. 10 : 3) {ref<int<4>,f,f> v3 = v1; {};}; for(int<4> v4 = 4 .. 0 : -2) {{};}; return v1;}}");
 	}
 
 	TEST(WhileToFor, MultipleAss) {
@@ -79,10 +79,10 @@ namespace pattern {
 		core::ProgramPtr program = builder.parseProgram(
 		    R"(
 				int<4> main() {
-					decl ref<int<4>> i = 0;
-					decl ref<int<4>> j = 4;
+					decl ref<int<4>,f,f> i = 0;
+					decl ref<int<4>,f,f> j = 4;
 					while (i < 10 && j!=0) {
-						decl ref<int<4>> i2 = i;
+						decl ref<int<4>,f,f> i2 = i;
 						i = 1 + i + 1;
 						j = j - 2;
 						i = i - 1;
@@ -95,9 +95,9 @@ namespace pattern {
 
 		frontend::extensions::WhileToForExtension extension;
 		auto str = toString(extension.IRVisit(program));
-		EXPECT_PRED2(containsSubString, str, "{ref<int<4>> v1 = 0; ref<int<4>> v2 = 4; while(rec v0.{v0=fun(bool v1, (()=>bool) v2) {if(v1) {return v2();} "
-		                                     "else {}; return false;}}(int_lt(ref_deref(v1), 10), bind(){rec v0.{v0=fun(ref<int<4>> v2) {return "
-		                                     "int_ne(ref_deref(v2), 0);}}(v2)})) {ref<int<4>> v5 = v1; ref_assign(v1, int_add(int_add(1, ref_deref(v1)), 1)); "
+		EXPECT_PRED2(containsSubString, str, "{ref<int<4>,f,f> v1 = 0; ref<int<4>,f,f> v2 = 4; while(rec v0.{v0=fun(bool v1, (()=>bool) v2) {if(v1) {return v2();} "
+		                                     "else {}; return false;}}(int_lt(ref_deref(v1), 10), bind(){rec v0.{v0=fun(ref<int<4>,f,f> v2) {return "
+		                                     "int_ne(ref_deref(v2), 0);}}(v2)})) {ref<int<4>,f,f> v5 = v1; ref_assign(v1, int_add(int_add(1, ref_deref(v1)), 1)); "
 		                                     "ref_assign(v2, int_sub(ref_deref(v2), 2)); ref_assign(v1, int_sub(ref_deref(v1), 1));}; return 0;}");
 	}
 

@@ -170,17 +170,16 @@ namespace analysis {
 			 */
 			Normalizer(const VariableMap& varMap) : vars(varMap){
 				// apply all mappings for each type (except its own) on the RHS of the "vars" map, in order to catch changed array types
-				VariableMap newMap;
+				NodeMap nm;
 				for(auto varPair : vars) {
-					//apply the replacements on the rhs of the current type
-					auto newType = varPair.second->getType();
-					for(auto repl : vars) {
-						newType = transform::replaceAllGen(varPair.second->getNodeManager(), newType, repl.first, repl.second);
-					}
-					auto newTypedVar = transform::replaceAllGen(varPair.second->getNodeManager(), varPair.second, varPair.second->getType(), newType);
-					newMap[varPair.first] = newTypedVar;
+					nm.insert(varPair);
 				}
-				vars = newMap;
+				//iterate trough rhs
+				for(auto& varPair : vars) {
+					auto newType = transform::replaceAllGen(varPair.second->getNodeManager(), varPair.second->getType(), nm);
+					//replace type of varPair.second
+					varPair.second = transform::replaceAllGen(varPair.second->getNodeManager(), varPair.second, varPair.second->getType(), newType);
+				}
 			};
 
 			/**
