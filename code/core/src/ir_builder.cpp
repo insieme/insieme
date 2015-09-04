@@ -52,6 +52,7 @@
 
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/transform/materialize.h"
 
 #include "insieme/core/types/unification.h"
 #include "insieme/core/types/return_type_deduction.h"
@@ -1368,7 +1369,12 @@ namespace core {
 		// if it is a expression, bind free variables
 		VariableList list = analysis::getFreeVariables(expr);
 		std::sort(list.begin(), list.end(), compare_target<VariablePtr>());
-		ExpressionPtr res = lambdaExpr(expr->getType(), returnStmt(expr), list);
+
+		// convert all variables to references
+		auto ingredients = transform::materialize({list, returnStmt(expr)});
+		auto funType = functionType(extractTypes(list), expr->getType());
+
+		ExpressionPtr res = lambdaExpr(funType, ingredients.params, ingredients.body);
 
 		// if there are no free variables ...
 		if(list.empty()) {

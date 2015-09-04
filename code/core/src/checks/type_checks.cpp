@@ -199,31 +199,6 @@ namespace checks {
 		return res;
 	}
 
-	OptionalMessageList FunctionTypeCheck::visitLambdaExpr(const LambdaExprAddress& address) {
-		NodeManager& manager = address->getNodeManager();
-		OptionalMessageList res;
-
-		// recreate type
-		auto extractType = [](const VariablePtr& var) { return var->getType(); };
-
-		TypeList param;
-		::transform(address.getAddressedNode()->getParameterList()->getElements(), back_inserter(param), extractType);
-
-		FunctionTypePtr isType = address->getLambda()->getType();
-
-		// assume return type and function type to be correct
-		auto result = isType->getReturnType();
-		auto kind = isType->getKind();
-
-		FunctionTypePtr funType = FunctionType::get(manager, param, result, kind);
-		if(*funType != *isType) {
-			add(res, Message(address, EC_TYPE_INVALID_FUNCTION_TYPE,
-			                 format("Invalid type of lambda expression - expected: \n%s, actual: \n%s", toString(*funType).c_str(), toString(*isType).c_str()),
-			                 Message::ERROR));
-		}
-		return res;
-	}
-
 	OptionalMessageList BindExprTypeCheck::visitBindExpr(const BindExprAddress& address) {
 		NodeManager& manager = address->getNodeManager();
 		OptionalMessageList res;
@@ -330,11 +305,24 @@ namespace checks {
 			                 Message::ERROR));
 		}
 
+		// check that all parameters are references
+		bool parametersOK = true;
+		for(const auto& cur : address->getLambda()->getParameterList()) {
+			if (!lang::isReference(cur)) {
+				add(res, Message(cur, EC_TYPE_INVALID_LAMBDA_PARAMETER_TYPE,
+						format("Invalid parameter type: %s -- all lambda parameters need to be references.", toString(*cur->getType()))));
+				parametersOK = false;
+			}
+		}
+
+		// stop here if not all parameters are references
+		if (!parametersOK) return res;
+
 		// check type of lambda
 		IRBuilder builder(lambda->getNodeManager());
 		FunctionTypePtr funTypeIs = lambda->getLambda()->getType();
 		FunctionTypePtr funTypeShould =
-		    builder.functionType(::transform(lambda->getLambda()->getParameterList(), [](const VariablePtr& cur) { return cur->getType(); }),
+		    builder.functionType(::transform(lambda->getLambda()->getParameterList(), [](const VariablePtr& cur) { return analysis::getReferencedType(cur->getType()); }),
 		                         funTypeIs->getReturnType(), funTypeIs->getKind());
 		if(*funTypeIs != *funTypeShould) {
 			add(res, Message(address, EC_TYPE_INVALID_LAMBDA_TYPE, format("Invalid type of lambda definition for variable %s - is: %s, should %s",

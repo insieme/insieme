@@ -163,12 +163,12 @@ namespace lang {
 		/**
 		 * A built-in derived operator allocating memory on the stack.
 		 */
-		LANG_EXT_DERIVED_WITH_NAME(RefVar, "ref_var", "lambda ('a v) -> ref<'a,f,f> { decl auto r = ref_alloc(type_of(v), mem_loc_stack); r = v; return r; }")
+		LANG_EXT_DERIVED_WITH_NAME(RefVar, "ref_var", "lambda ('a v) -> ref<'a,f,f> { decl auto r = ref_alloc(type('a), mem_loc_stack); r = v; return r; }")
 
 		/**
 		 * A built-in derived operator allocating memory on the heap.
 		 */
-		LANG_EXT_DERIVED_WITH_NAME(RefNew, "ref_new", "lambda ('a v) -> ref<'a,f,f> { decl auto r = ref_alloc(type_of(v), mem_loc_heap ); r = v; return r; }")
+		LANG_EXT_DERIVED_WITH_NAME(RefNew, "ref_new", "lambda ('a v) -> ref<'a,f,f> { decl auto r = ref_alloc(type('a), mem_loc_heap ); r = v; return r; }")
 
 
 		// -- access --

@@ -46,6 +46,8 @@
 #include "insieme/core/parser3/ir_parser.h"
 #include "insieme/core/parser3/detail/scanner.h"
 
+#include "insieme/core/ir_node_annotation.h"
+
 #include "inspire_parser.hpp"
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -376,7 +378,7 @@ namespace parser3 {
 			void print_errors(std::ostream& out = std::cout, bool color = true) const;
 		};
 
-		class AddressMark {};
+		class AddressMark : public core::value_annotation::copy_on_migration {};
 
 	} // namespace detail
 } // namespace parser3

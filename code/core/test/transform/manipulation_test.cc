@@ -735,24 +735,20 @@ namespace core {
 
 		// -- create a function --
 
-		VariablePtr p1 = builder.variable(type, 3);
-		VariablePtr p2 = builder.variable(type, 4);
-
-		CompoundStmtPtr body = builder.compoundStmt(builder.add(p1, p2), builder.sub(p2, p1));
-
-		LambdaExprPtr fun = builder.lambdaExpr(body, toVector(p1, p2));
-
-		EXPECT_EQ("rec v0.{v0=fun(int<4> v3, int<4> v4) {int_add(v3, v4); int_sub(v4, v3);}}", toString(*fun));
+		ExpressionPtr fun = builder.normalize(builder.parseExpr("lambda (int<4> x, int<4> y) -> unit { x+y; y-x; }"));
+		EXPECT_EQ("rec v0.{v0=fun(ref<int<4>,f,f> v1, ref<int<4>,f,f> v2) {int_add(ref_deref(v1), ref_deref(v2)); int_sub(ref_deref(v2), ref_deref(v1));}}", toString(*fun));
 
 
 		// -- create a call --
 
-		VariablePtr v1 = builder.variable(type, 1);
-		VariablePtr v2 = builder.variable(type, 2);
+		VariablePtr v1 = builder.variable(type, 10);
+		VariablePtr v2 = builder.variable(type, 20);
 
 		CallExprPtr call = builder.callExpr(fun, v1, builder.add(v1, v2));
-		EXPECT_EQ("rec v0.{v0=fun(int<4> v3, int<4> v4) {int_add(v3, v4); int_sub(v4, v3);}}(v1, int_add(v1, v2))", toString(*call));
-		EXPECT_EQ("{int<4> v5 = int_add(v1, v2); int_add(v1, v5); int_sub(v5, v1);}", toString(*transform::tryInlineToStmt(mgr, call)));
+		EXPECT_EQ("rec v0.{v0=fun(ref<int<4>,f,f> v1, ref<int<4>,f,f> v2) {int_add(ref_deref(v1), ref_deref(v2)); int_sub(ref_deref(v2), ref_deref(v1));}}(v10, int_add(v10, v20))", toString(*call));
+
+		auto inlined = builder.normalize(transform::tryInlineToStmt(mgr, call));
+		EXPECT_EQ("{int<4> v0 = int_add(v10, v20); int_add(v10, v0); int_sub(v0, v10);}", toString(*inlined));
 	}
 
 	TEST(Manipulation, InlineITE) {

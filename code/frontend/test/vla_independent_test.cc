@@ -34,54 +34,33 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <string>
+#include <fstream>
 
-#include "insieme/core/checks/ir_checks.h"
+#include <gtest/gtest.h>
+#include <boost/filesystem.hpp>
+#include <boost/algorithm/string/replace.hpp>
+#include <boost/regex.hpp>
+
+#include "insieme/annotations/expected_ir_annotation.h"
+#include "insieme/core/annotations/source_location.h"
+#include "insieme/frontend/extensions/test_pragma_extension.h"
+#include "insieme/frontend/extensions/variable_length_array_extension.h"
+#include "insieme/frontend/frontend.h"
+#include "insieme/frontend/state/variable_manager.h"
+#include "insieme/utils/config.h"
+
+#include "independent_test_utils.h"
 
 namespace insieme {
-namespace core {
-namespace checks {
-
-// defines macros for generating CHECK declarations
-#include "insieme/core/checks/check_macros.inc"
-
-	SIMPLE_CHECK(Keyword, GenericType, true);
-	SIMPLE_CHECK(FunctionKind, FunctionType, true);
-
-	SIMPLE_CHECK(Parent, Parent, true);
-
-	SIMPLE_CHECK(CallExprType, CallExpr, false);
-	SIMPLE_CHECK(BindExprType, BindExpr, false);
-	SIMPLE_CHECK(ExternalFunctionType, Literal, false);
-	SIMPLE_CHECK(ReturnType, Lambda, false);
-	SIMPLE_CHECK(LambdaType, LambdaExpr, false);
-	SIMPLE_CHECK(ArrayType, Node, true);
-	SIMPLE_CHECK(GenericOps, CallExpr, false);
-
-	SIMPLE_CHECK(DeclarationStmtType, DeclarationStmt, false);
-	SIMPLE_CHECK(IfConditionType, IfStmt, false);
-	SIMPLE_CHECK(ForStmtType, ForStmt, false);
-	SIMPLE_CHECK(WhileConditionType, WhileStmt, false);
-	SIMPLE_CHECK(SwitchExpressionType, SwitchStmt, false);
-
-	SIMPLE_CHECK(StructExprType, StructExpr, false);
-	SIMPLE_CHECK(MemberAccessElementType, CallExpr, false);
-	SIMPLE_CHECK(ComponentAccessType, CallExpr, false);
-
-	SIMPLE_CHECK(BuiltInLiteral, Literal, false);
-
-	SIMPLE_CHECK(RefCast, CastExpr, false);
-
-	SIMPLE_CHECK(Cast, CastExpr, false);
-
-	SIMPLE_CHECK(GenericZero, CallExpr, false);
+namespace frontend {
+	
+	TEST(IndependentTest, VariableLengthArrays) {
+		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_variable_length_arrays.c", 
+			[](ConversionJob& job) { job.registerFrontendExtension<extensions::VariableLengthArrayExtension>(); }
+		);
+	}
 
 
-	// TODO:
-	//	- check that only concrete types are used for variables
-
-	#undef SIMPLE_CHECK
-
-} // end namespace check
-} // end namespace core
-} // end namespace insieme
+} // fe namespace
+} // insieme namespace
