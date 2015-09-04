@@ -51,7 +51,6 @@ namespace checks {
 	SIMPLE_CHECK(Parent, Parent, true);
 
 	SIMPLE_CHECK(CallExprType, CallExpr, false);
-	SIMPLE_CHECK(FunctionType, LambdaExpr, false);
 	SIMPLE_CHECK(BindExprType, BindExpr, false);
 	SIMPLE_CHECK(ExternalFunctionType, Literal, false);
 	SIMPLE_CHECK(ReturnType, Lambda, false);

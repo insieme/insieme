@@ -42,6 +42,7 @@
 
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/transform/materialize.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/annotations/naming.h"
 
@@ -430,13 +431,18 @@ namespace parser3 {
 
 		ExpressionPtr inspire_driver::genLambda(const location& l, const VariableList& params, const TypePtr& retType, const StatementPtr& body,
 		                                        const FunctionKind& fk) {
-			// TODO: cast returns to apropiate type
+			// TODO: cast returns to appropriate type
 			TypeList paramTys;
 			for(const auto& var : params) {
 				paramTys.push_back(var.getType());
 			}
+
+			// replace all variables in the body by their implicitly materialized version
+			auto lambdaIngredients = transform::materialize({params, body});
+
+			// build resulting function type
 			auto funcType = genFuncType(l, paramTys, retType, fk);
-			return builder.lambdaExpr(funcType.as<FunctionTypePtr>(), params, body);
+			return builder.lambdaExpr(funcType.as<FunctionTypePtr>(), lambdaIngredients.params, lambdaIngredients.body);
 		}
 
 		ExpressionPtr inspire_driver::genClosure(const location& l, const VariableList& params, StatementPtr stmt) {

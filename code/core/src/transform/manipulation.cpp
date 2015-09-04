@@ -40,6 +40,7 @@
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/transform/manipulation_utils.h"
+#include "insieme/core/transform/materialize.h"
 
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_visitor.h"
@@ -904,8 +905,12 @@ namespace transform {
 		});
 		ExpressionPtr body = replaceVarsGen(manager, expr, replacements);
 
+		// materialize parameters and body
+		auto ingredients = core::transform::materialize({ parameter, builder.returnStmt(body) });
+		auto funType = builder.functionType(extractTypes(parameter), body->getType());
+
 		// create lambda accepting all free variables as arguments
-		LambdaExprPtr lambda = builder.lambdaExpr(body->getType(), builder.returnStmt(body), parameter);
+		LambdaExprPtr lambda = builder.lambdaExpr(funType, ingredients.params, ingredients.body);
 
 		// create call to this lambda
 		return builder.callExpr(body->getType(), lambda, convertList<Expression>(free));

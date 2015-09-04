@@ -448,9 +448,7 @@ namespace core {
 		 * @param body the body defining the requested lambda
 		 * @return the requested type instance managed by the given manager
 		 */
-		static LambdaPtr get(NodeManager & manager, const FunctionTypePtr& type, const ParametersPtr& params, const CompoundStmtPtr& body) {
-			return manager.get(Lambda(type, params, body));
-		}
+		static LambdaPtr get(NodeManager & manager, const FunctionTypePtr& type, const ParametersPtr& params, const CompoundStmtPtr& body);
 
 		/**
 		 * This static factory method allows to obtain an instance of a lambda node

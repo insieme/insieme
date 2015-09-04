@@ -44,6 +44,9 @@
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/ir_address.h"
 
+#include "insieme/core/lang/reference.h"
+#include "insieme/core/ir_builder.h"
+
 namespace insieme {
 namespace core {
 
@@ -65,6 +68,11 @@ namespace core {
 		return ::toString(*getType()) < ::toString(*other->getType());
 	}
 
+
+	LambdaPtr Lambda::get(NodeManager & manager, const FunctionTypePtr& type, const ParametersPtr& params, const CompoundStmtPtr& body) {
+		assert_true(::all(params, lang::isReference)) << "Unsupported non-reference parameter: " << extractTypes(params) << "\n";
+		return manager.get(Lambda(type, params, body));
+	}
 
 	namespace {
 
