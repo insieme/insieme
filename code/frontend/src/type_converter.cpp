@@ -141,7 +141,7 @@ namespace conversion {
 
 		// not supported types
 		case BuiltinType::NullPtr: retTy = builder.typeVariable("nullptr_t"); break; // TODO c++11 specific builtin type for nullptr literal
-		default: frontend_assert(false) << "Built-in type conversion not supported!\n"; break;
+		default: frontend_assert(false) << "Built-in type conversion not supported."; break;
 		}
 		
 		return retTy;
@@ -150,9 +150,11 @@ namespace conversion {
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//								COMPLEX TYPE
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::TypePtr Converter::TypeConverter::VisitComplexType(const ComplexType* bulinTy) {
-		frontend_assert(false) << "Conversion of complex element type failed.\n";
-		return core::TypePtr();
+	core::TypePtr Converter::TypeConverter::VisitComplexType(const ComplexType* complexType) {
+		core::TypePtr retTy;
+		LOG_TYPE_CONVERSION(complexType, retTy);
+		frontend_assert(false) << "ComplexType not implemented.";
+		return retTy;
 	}
 
 	// ------------------------   ARRAYS  -------------------------------------
@@ -171,9 +173,10 @@ namespace conversion {
 		
 		size_t arrSize = *arrTy->getSize().getRawData();
 		core::TypePtr&& elemTy = convert(arrTy->getElementType());
-		frontend_assert(elemTy) << "Conversion of array element type failed.\n";
+		frontend_assert(elemTy) << "Conversion of array element type failed.";
 
 		retTy = builder.arrayType(elemTy, arrSize);
+		frontend_assert(elemTy) << "Conversion of ConstantArrayType failed.";
 		return retTy;
 	}
 
@@ -190,9 +193,10 @@ namespace conversion {
 		LOG_TYPE_CONVERSION(arrTy, retTy);
 
 		auto elemTy = convert(arrTy->getElementType());
-		frontend_assert(elemTy) << "Conversion of array element type failed.\n";
+		frontend_assert(elemTy) << "Conversion of array element type failed.";
 
 		retTy = builder.arrayType(elemTy);
+		frontend_assert(elemTy) << "Conversion of IncompleteArrayType failed.";
 		return retTy;
 	}
 
@@ -212,7 +216,7 @@ namespace conversion {
 	// array<int<4>,v0>
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::TypePtr Converter::TypeConverter::VisitVariableArrayType(const VariableArrayType* arrTy) {
-		frontend_assert(false) << "Variable arrays are handled in a separate FE extension, which does not appear to be loaded\n";
+		frontend_assert(false) << "Variable arrays are handled in a separate FE extension, which does not appear to be loaded.";
 		return core::TypePtr();
 	}
 
@@ -229,7 +233,7 @@ namespace conversion {
 		LOG_TYPE_CONVERSION(funcTy, retTy);
 
 		core::TypePtr funRetTy = convert(funcTy->getReturnType());
-		frontend_assert(funRetTy) << "Function has no return type!\n";
+		frontend_assert(funRetTy) << "Function has no return type.";
 
 		core::TypeList argTypes;
 		for(const QualType& currArgType : funcTy->param_types()) {
@@ -257,7 +261,7 @@ namespace conversion {
 		core::TypePtr retTy;
 		LOG_TYPE_CONVERSION(funcTy, retTy);
 		core::TypePtr funRetTy = convert(funcTy->getReturnType());
-		frontend_assert(funRetTy) << "Function has no return type!\n";
+		frontend_assert(funRetTy) << "Function has no return type.";
 
 		retTy = builder.functionType(core::TypeList(), funRetTy);
 		return retTy;
@@ -274,7 +278,7 @@ namespace conversion {
 		core::TypePtr retTy;
 		LOG_TYPE_CONVERSION(vecTy, retTy);
 
-		frontend_assert(false) << "Vector types not implemented!\n";
+		frontend_assert(false) << "VectorType not implemented.";
 		return retTy;
 	}
 
@@ -285,7 +289,7 @@ namespace conversion {
 		auto underType = typedefType->getDecl()->getUnderlyingType();
 		core::TypePtr retTy = convert(underType);
 		LOG_TYPE_CONVERSION(typedefType, retTy);
-		frontend_assert(retTy);
+		frontend_assert(retTy) << "Conversion of TypedefType failed.";
 		return retTy;
 	}
 
@@ -295,15 +299,17 @@ namespace conversion {
 	core::TypePtr Converter::TypeConverter::VisitTypeOfType(const TypeOfType* typeOfType) {
 		core::TypePtr retTy = basic.getUnit();
 		LOG_TYPE_CONVERSION(typeOfType, retTy);
+		frontend_assert(retTy) << "Conversion of TypeOfType failed.";
 		return retTy;
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// 							TYPE OF EXPRESSION TYPE
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::TypePtr Converter::TypeConverter::VisitTypeOfExprType(const TypeOfExprType* typeOfType) {
-		core::TypePtr retTy = convert(typeOfType->getUnderlyingExpr()->getType());
-		LOG_TYPE_CONVERSION(typeOfType, retTy);
+	core::TypePtr Converter::TypeConverter::VisitTypeOfExprType(const TypeOfExprType* typeOfExprType) {
+		core::TypePtr retTy = convert(typeOfExprType->getUnderlyingExpr()->getType());
+		LOG_TYPE_CONVERSION(typeOfExprType, retTy);
+		frontend_assert(retTy) << "Conversion of TypeOfExprType failed.";
 		return retTy;
 	}
 
@@ -380,7 +386,7 @@ namespace conversion {
 		} else if(auto clangEnumTy = llvm::dyn_cast<EnumType>(tagType)) {
 			return handleEnumType(converter, clangEnumTy);
 		} else {
-			frontend_assert(false) << "Unimplemented TagType";
+			frontend_assert(false) << "TagType not implemented.";
 		}
 
 		return retTy;
@@ -397,6 +403,7 @@ namespace conversion {
 		LOG_TYPE_CONVERSION(elabType, retTy);
 
 		retTy = convert(elabType->getNamedType());
+		frontend_assert(retTy) << "Conversion of ElaboratedType failed.";
 		return retTy;
 	}
 
@@ -406,6 +413,7 @@ namespace conversion {
 	core::TypePtr Converter::TypeConverter::VisitParenType(const ParenType* parenTy) {
 		core::TypePtr retTy = convert(parenTy->getInnerType());
 		LOG_TYPE_CONVERSION(parenTy, retTy);
+		frontend_assert(retTy) << "Conversion of ParenType failed.";
 		return retTy;
 	}
 
@@ -431,6 +439,7 @@ namespace conversion {
 		core::TypePtr subTy = convert(clangSubTy);
 
 		retTy = builder.ptrType(subTy, clangSubTy.isConstQualified(), clangSubTy.isVolatileQualified());
+		frontend_assert(retTy) << "Conversion of PointerType failed.";
 		return retTy;
 	}
 
@@ -447,6 +456,7 @@ namespace conversion {
 		core::TypePtr subTy = convert(decTy->getPointeeType());
 
 		retTy = builder.ptrType(subTy);
+		frontend_assert(retTy) << "Conversion of DecayedType failed.";
 		return retTy;
 	}
 	
