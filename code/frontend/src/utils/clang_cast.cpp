@@ -175,12 +175,6 @@ namespace utils {
 		//	}
 
 		////////////////////////////////////////////////////////////////////////////////////////////////////////////
-		//case clang::CK_VectorSplat:
-		//	// A conversion from an arithmetic type to a vector of that element type. Fills all elements
-		//	//("splats") with the source value. __attribute__((ext_vector_type(4))) int v = 5;
-		//	{ return builder.callExpr(gen.getVectorInitUniform(), expr, builder.getIntTypeParamLiteral(targetTy.as<core::VectorTypePtr>()->getSize())); }
-
-		////////////////////////////////////////////////////////////////////////////////////////////////////////////
 		//case clang::CK_IntegralToPointer:
 		//	// Integral to pointer. A special kind of reinterpreting conversion. Applies to normal,
 		//	// ObjC, and block pointers. (char*) 0x1001aab0 reinterpret_cast<int*>(0)
