@@ -362,30 +362,6 @@ namespace transform {
 	DeclarationStmtPtr createGlobalStruct(NodeManager& manager, ProgramPtr& prog, const NamedValueList& globals);
 
 	/**
-	 * Makes the Variable var available at the scope enclosing location. Accomplished by forwarding it through the call graph.
-	 * This overload should be used if you don't know the exact location where the variable is available.
-	 *
-	 * @param manager the manager used to create new nodes
-	 * @param var the the variable to be made available
-	 * @param location indicating where the var should be made available
-	 * @param outNewRoot output parameter containing the root of the manipulated IR
-	 * @return the variable alias to use or a null pointer if the variable is not found
-	 */
-	// VariablePtr makeAvailable(NodeManager& manager, const VariablePtr& var, const NodeAddress& location, NodePtr& outNewRoot);
-
-	/**
-	 * Makes the Variable var available at the scope enclosing location. Accomplished by forwarding it through the call graph.
-	 * This overload should be used if you *do* know the *exact* location where the variable is available.
-	 *
-	 * @param manager the manager used to create new nodes
-	 * @param var the the variable to be made available
-	 * @param location indicating where the var should be made available
-	 * @param outNewRoot output parameter containing the root of the manipulated IR
-	 * @return the variable alias to use or a null pointer if the variable is not found
-	 */
-	// VariablePtr makeAvailable(NodeManager& manager, const VariableAddress& var, const NodeAddress& location, NodePtr& outNewRoot);
-
-	/**
 	 * Replaces the given expression by the given variable of the root-node context. The variable will
 	 * be passed as an argument through all functions between the root node and the targeted expression. If the
 	 * variable is already passed along, it will not be added again.
@@ -395,7 +371,7 @@ namespace transform {
 	 * @param var the variable to be implanted
 	 * @return the address to the implanted variable
 	 */
-	VariableAddress pushInto(NodeManager& manager, const ExpressionAddress& target, const VariablePtr& var);
+	ExpressionAddress pushInto(NodeManager& manager, const ExpressionAddress& target, const VariablePtr& var);
 
 	/**
 	 * Replaces the given expressions by the given variable of the root-node context. The variable will be
@@ -407,7 +383,7 @@ namespace transform {
 	 * @param var the variable to be implanted
 	 * @return the addresses to the implanted variable
 	 */
-	vector<VariableAddress> pushInto(NodeManager& manager, const vector<ExpressionAddress>& targets, const VariablePtr& var);
+	vector<ExpressionAddress> pushInto(NodeManager& manager, const vector<ExpressionAddress>& targets, const VariablePtr& var);
 
 	/**
 	 * An extended version of the pushInto(..) method above processing a list of target/variable pairs at once.

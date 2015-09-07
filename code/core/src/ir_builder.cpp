@@ -867,20 +867,15 @@ namespace core {
 		return lambda(type, params, wrapBody(body));
 	}
 
-	LambdaExprPtr IRBuilderBaseModule::lambdaExpr(const StatementPtr& body, const ParametersPtr& params) const {
-		return lambdaExpr(functionType(extractTypes(params->getParameters()), manager.getLangBasic().getUnit(), FK_PLAIN), params, wrapBody(body));
-	}
-	LambdaExprPtr IRBuilderBaseModule::lambdaExpr(const StatementPtr& body, const VariableList& params) const {
-		return lambdaExpr(body, parameters(params));
-	}
-	LambdaExprPtr IRBuilderBaseModule::lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const ParametersPtr& params) const {
-		return lambdaExpr(functionType(extractTypes(params->getParameters()), returnType, FK_PLAIN), params, wrapBody(body));
-	}
-	LambdaExprPtr IRBuilderBaseModule::lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const VariableList& params) const {
-		return lambdaExpr(returnType, body, parameters(params));
+	LambdaExprPtr IRBuilderBaseModule::lambdaExpr(const TypePtr& returnType, const VariableList& params, const StatementPtr& body) const {
+		auto paramVarTypes = extractTypes(params);
+		assert_true(::all(paramVarTypes, lang::isReference)) << "All parameters need to be reference types, given: " << paramVarTypes;
+		auto paramTypes = ::transform(paramVarTypes, analysis::getReferencedType);
+		return lambdaExpr(functionType(paramTypes, returnType, FK_PLAIN), params, wrapBody(body));
 	}
 
 	LambdaExprPtr IRBuilderBaseModule::lambdaExpr(const FunctionTypePtr& type, const VariableList& params, const StatementPtr& body) const {
+		assert_true(::all(extractTypes(params), lang::isReference)) << "All parameters need to be reference types, given: " << extractTypes(params);
 		return lambdaExpr(lambda(type, params, body));
 	}
 

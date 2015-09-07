@@ -54,7 +54,7 @@ namespace analysis {
 
 		VariablePtr p1 = builder.variable(basic.getInt4());
 		VariablePtr q1 = builder.variable(basic.getInt4());
-		LambdaExprPtr lambda = builder.lambdaExpr(basic.getInt4(), builder.returnStmt(builder.intLit(0)), builder.parameters(p1, q1));
+		LambdaExprPtr lambda = builder.lambdaExpr(basic.getInt4(), {p1,q1}, builder.returnStmt(builder.intLit(0)));
 		VariablePtr p2 = builder.variable(basic.getInt4());
 		VariablePtr q2 = builder.variable(basic.getUInt4());
 		CallExprPtr call = builder.callExpr(lambda, p2, builder.castExpr(basic.getInt4(), q2));
@@ -62,7 +62,7 @@ namespace analysis {
 		CompoundStmtPtr cmp1 = builder.compoundStmt(decl2, builder.returnStmt(call));
 
 		VariablePtr p3 = builder.variable(builder.refType(basic.getInt4()));
-		LambdaExprPtr lambda2 = builder.lambdaExpr(basic.getInt4(), cmp1, builder.parameters(p2));
+		LambdaExprPtr lambda2 = builder.lambdaExpr(basic.getInt4(), {p2}, cmp1);
 		CallExprPtr call2 = builder.callExpr(lambda2, builder.deref(p3));
 		DeclarationStmtPtr decl = builder.declarationStmt(p3, builder.intLit(0));
 

@@ -354,7 +354,7 @@ namespace {
 			for_range(make_paired_range(params, args), [&](const std::pair<VariablePtr, ExpressionPtr>& cur) {
 				VariablePtr param = cur.first;
 				if(!isSubTypeOf(cur.second->getType(), param->getType())) {
-					param = builder.variable(cur.second->getType());
+					param = builder.variable(builder.refType(cur.second->getType()));
 					map[cur.first] = param;
 				}
 				newParams.push_back(param);
@@ -370,14 +370,10 @@ namespace {
 			TypePtr returnType = analysis::autoReturnType(manager, newBody);
 
 			// construct new function type
-			FunctionTypePtr funType = builder.functionType(extractTypes(newParams), returnType);
-			LambdaExprPtr newLambda = builder.lambdaExpr(funType, newParams, newBody);
-
-			// deduce type of resulting call
-			TypePtr callType = deduceReturnType(funType, argumentTypes);
+			LambdaExprPtr newLambda = builder.lambdaExpr(returnType, newParams, newBody);
 
 			// create replacing call (including the deduction of a new return type)
-			return builder.callExpr(callType, newLambda, args);
+			return builder.callExpr(newLambda, args);
 		}
 	};
 

@@ -285,7 +285,7 @@ TEST(PrettyPrinter, DerivedLiterals) {
 	auto var = builder.variable(type);
 	auto val = builder.literal("x", type);
 
-	auto fun = builder.lambdaExpr(builder.compoundStmt(), toVector(var));
+	auto fun = builder.lambdaExpr(builder.getLangBasic().getUnit(), toVector(var), builder.compoundStmt());
 	auto call = builder.callExpr(fun, val);
 
 	EXPECT_FALSE(lang::isDerived(fun));
