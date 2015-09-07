@@ -726,8 +726,11 @@ namespace printer {
 				bool printBrackets = !printer.hasOption(PrettyPrinter::SKIP_BRACKETS);
 
 				// don't print brackets for derefs
-				if(!printer.hasOption(PrettyPrinter::PRINT_DEREFS) && analysis::isCallOf(node, node->getNodeManager().getLangExtension<lang::ReferenceExtension>().getRefDeref())) {
-					printBrackets = false;
+				if(printBrackets && !printer.hasOption(PrettyPrinter::PRINT_DEREFS)) {
+					auto& refExt = node->getNodeManager().getLangExtension<lang::ReferenceExtension>();
+					if (analysis::isCallOf(node, refExt.getRefDeref())) {
+						printBrackets = false;
+					}
 				}
 
 				// test whether for the current call a special format has been registered

@@ -767,9 +767,15 @@ namespace analysis {
 		 * A container storing results and assumptions for read-only parameters
 		 * in a recursive context.
 		 */
-		struct ReadOnlyCheck {
+		class ReadOnlyCheck {
 			bool VisitScopes;
-			ReadOnlyCheck(bool v = true) : VisitScopes(v) {}
+			int indirectionLevels;
+
+		public:
+
+			ReadOnlyCheck(bool v = true) : VisitScopes(v), indirectionLevels(0) {}
+
+		private:
 
 			/**
 			 * A map mapping recursive variables and parameter positions to a flag
@@ -799,6 +805,14 @@ namespace analysis {
 				return res;
 			}
 
+			bool isReadOnly(const LambdaPtr& lambda, const VariablePtr& param) {
+				indirectionLevels++;
+				bool res = isReadOnly(lambda->getBody(), param);
+				indirectionLevels--;
+				return res;
+			}
+
+		public:
 
 			bool isReadOnly(const LambdaExprPtr& lambda, const VariablePtr& param) {
 				if(!VisitScopes) { return true; }
@@ -838,10 +852,6 @@ namespace analysis {
 				return res;
 			}
 
-			bool isReadOnly(const LambdaPtr& lambda, const VariablePtr& param) {
-				return isReadOnly(lambda->getBody(), param);
-			}
-
 			bool isReadOnly(const StatementPtr& stmt, const VariablePtr& var) {
 				// non-ref values are always read-only
 				if(!isRefType(var->getType())) { return true; }
@@ -850,7 +860,9 @@ namespace analysis {
 				auto deref = var->getNodeManager().getLangExtension<lang::ReferenceExtension>().getRefDeref();
 
 				bool readOnly = true;
-				visitDepthFirstPrunable(NodeAddress(stmt), [&](const NodeAddress& cur) {
+				visitDepthFirstPrunable(NodeAddress(stmt), [&](const NodeAddress& node)->bool {
+					NodeAddress cur = node;
+
 					// already violated => abort
 					if(!readOnly) { return true; }
 
@@ -859,12 +871,22 @@ namespace analysis {
 
 					// only interested in the given variable
 					if(*cur != *var) { return false; }
+					
+					// peeling of enclosing deref calls
+					int peeledLevels = 0;
+					for(int i=0; i<indirectionLevels; i++) {
+						if (!cur.isRoot() && isCallOf(cur.getParentNode(), deref)) {
+							cur = cur.getParentAddress();
+							peeledLevels++;
+						}
+					}
 
 					// check whether value is used
 					if(cur.getParentNode()->getNodeType() == NT_CompoundStmt) { return true; }
 
 					// if it is a call to a lambda, check the lambda
 					if(VisitScopes) {
+						indirectionLevels -= peeledLevels;
 						if(CallExprPtr call = cur.getParentNode().isa<CallExprPtr>()) {
 							// check calls to nested functions
 							if(LambdaExprPtr fun = call->getFunctionExpr().isa<LambdaExprPtr>()) {
@@ -885,10 +907,11 @@ namespace analysis {
 								return true;
 							}
 						}
+						indirectionLevels += peeledLevels;
 					}
 
 					// check whether variable is dereferenced at this location
-					if(!isCallOf(cur.getParentNode(), deref)) {
+					if(peeledLevels == indirectionLevels && !isCallOf(cur.getParentNode(), deref)) {
 						// => it is not, so it is used by reference
 						readOnly = false; // it is no longer read-only
 						return true;      // we can stop the decent here
@@ -902,6 +925,7 @@ namespace analysis {
 				return readOnly;
 			}
 		};
+
 	}
 
 

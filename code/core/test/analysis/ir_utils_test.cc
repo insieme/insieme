@@ -66,7 +66,7 @@ namespace analysis {
 		ASSERT_TRUE(call);
 
 		// check free variables
-		EXPECT_EQ("rec v0.{v0=fun(((int<4>)=>int<4>) v1) {return v1(2);}}(bind(v0){int_add(int_add(2, v77), v0)})", toString(*call));
+		EXPECT_EQ("rec v0.{v0=fun(ref<((int<4>)=>int<4>),f,f> v1) {return ref_deref(v1)(2);}}(bind(v0){int_add(int_add(2, v77), v0)})", toString(*call));
 		EXPECT_EQ("[AP(v77)]", toString(getFreeVariables(call)));
 	}
 
@@ -87,7 +87,7 @@ namespace analysis {
 		ASSERT_TRUE(call);
 
 		// check free variables
-		EXPECT_EQ("rec v0.{v0=fun(((int<4>)=>int<4>) v1) {return v1(2);}}(bind(v0){int_add(int_add(2, v77), v0)})", toString(*call));
+		EXPECT_EQ("rec v0.{v0=fun(ref<((int<4>)=>int<4>),f,f> v1) {return ref_deref(v1)(2);}}(bind(v0){int_add(int_add(2, v77), v0)})", toString(*call));
 		EXPECT_EQ("[0-2-2-2-3]", toString(getFreeVariableAddresses(call)));
 	}
 
@@ -259,8 +259,8 @@ namespace analysis {
 		ASSERT_TRUE(call);
 
 		// check free variables
-		EXPECT_EQ("rec v0.{v0=fun(((int<4>)=>int<4>) v1) {return v1(2);}}(bind(v0){int_add(int_add(2, v77), v0)})", toString(*call));
-		EXPECT_EQ(utils::set::toSet<VariableSet>(builder.variable(int4, 0), builder.variable(builder.functionType(int4, int4, FK_CLOSURE), 1),
+		EXPECT_EQ("rec v0.{v0=fun(ref<((int<4>)=>int<4>),f,f> v1) {return ref_deref(v1)(2);}}(bind(v0){int_add(int_add(2, v77), v0)})", toString(*call));
+		EXPECT_EQ(utils::set::toSet<VariableSet>(builder.variable(int4, 0), builder.variable(builder.refType(builder.functionType(int4, int4, FK_CLOSURE)), 1),
 		                                         builder.variable(int4, 77),
 		                                         builder.variable(builder.functionType(builder.functionType(int4, int4, FK_CLOSURE), int4), 0)),
 		          getAllVariables(call));
@@ -457,8 +457,8 @@ namespace analysis {
 		ExpressionPtr call1 = builder.callExpr(none, var);
 		ExpressionPtr call2 = builder.callExpr(used, var);
 
-		EXPECT_PRED2(readOnly, call1, var);
-		EXPECT_PRED2(notReadOnly, call2, var);
+		EXPECT_PRED2(readOnly, call1, var) << dumpColor(call1);
+		EXPECT_PRED2(notReadOnly, call2, var) << dumpColor(call2);
 
 		// check two parameters
 		ExpressionPtr fun = builder.parseExpr("lambda (ref<int<4>> a, ref<int<4>> b)->unit { a = *b; }");
@@ -487,10 +487,10 @@ namespace analysis {
 
 		call = builder.callExpr(recFun, varA, varB, varC, varD);
 
-		EXPECT_PRED2(readOnly, call, varA);
-		EXPECT_PRED2(notReadOnly, call, varB);
-		EXPECT_PRED2(notReadOnly, call, varC);
-		EXPECT_PRED2(notReadOnly, call, varD);
+		EXPECT_PRED2(readOnly, call, varA) << dumpColor(call);
+		EXPECT_PRED2(notReadOnly, call, varB) << dumpColor(call);
+		EXPECT_PRED2(notReadOnly, call, varC) << dumpColor(call);
+		EXPECT_PRED2(notReadOnly, call, varD) << dumpColor(call);
 	}
 	namespace {
 		bool isNotReadOnlyWithinScope(const StatementPtr& stmt, const VariablePtr& var) {
@@ -567,8 +567,8 @@ namespace analysis {
 		auto callA = builder.callExpr(funA, varA, varB, varC, varD);
 		auto callB = builder.callExpr(funB, varA, varB, varC, varD);
 
-		EXPECT_PRED2(readOnly, callA, varA);
-		EXPECT_PRED2(notReadOnly, callB, varA);
+		EXPECT_PRED2(readOnly, callA, varA) << dumpColor(callA);
+		EXPECT_PRED2(notReadOnly, callB, varA) << dumpColor(callB);
 	}
 
 	TEST(IsReadOnly, ForwardingMutualRecursive) {

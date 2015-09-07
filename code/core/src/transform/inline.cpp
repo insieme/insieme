@@ -162,28 +162,28 @@ namespace transform {
 			LambdaExprPtr lambdaExpr = call->getFunctionExpr().as<LambdaExprPtr>();
 
 			// build parameter map
-			VarExprMap parReplacements;
+			NodeMap parReplacements;
 			VariableList parameters = lambdaExpr->getParameterList()->getParameters();
 			ExpressionList arguments = call->getArguments();
 			auto parArgRange = make_paired_range(parameters, arguments);
 			for_range(make_paired_range(parameters, arguments), [&](const std::pair<VariablePtr, ExpressionPtr>& cur) {
 				if(LiteralPtr lit = dynamic_pointer_cast<LiteralPtr>(cur.second)) {
 					// this literal can be mapped directly
-					parReplacements.insert(make_pair(cur.first, cur.second));
+					parReplacements.insert(make_pair(build.deref(cur.first), cur.second));
 				} else if(VariablePtr argVar = dynamic_pointer_cast<VariablePtr>(cur.second)) {
 					// this variable can be mapped directly
-					parReplacements.insert(make_pair(cur.first, cur.second));
+					parReplacements.insert(make_pair(build.deref(cur.first), cur.second));
 				} else {
 					// a more complex expression - we need to build a variable and map it to that
 					VariablePtr newVar = build.variable(cur.first->getType());
-					retStmts.push_back(build.declarationStmt(newVar, cur.second));
+					retStmts.push_back(build.declarationStmt(newVar, build.refVar(cur.second)));
 					parReplacements.insert(make_pair(cur.first, newVar));
 				}
 			});
 
 			// adjust function body
 			CompoundStmtPtr body = lambdaExpr->getBody();
-			body = core::transform::replaceVarsGen(nodeMan, body, parReplacements);
+			body = core::transform::replaceAllGen(nodeMan, body, parReplacements, transform::localReplacement);
 
 			// replace returns with assignments, and adjust control flow
 			Redeemer redeemer(nodeMan);
