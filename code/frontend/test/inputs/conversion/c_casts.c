@@ -98,6 +98,34 @@ int main() {
 		const void* x;
 		int* y = (int*)x;
 	}
+	
+	// implicit int to pointer
+	#pragma test expect_ir("decl ref<ptr<unit,f,f>,f,f> v0 = var(ptr_from_integral(5, type(ptr<unit,f,f>)));")
+	void* a = 5;
+
+	// explicit int to pointer
+	#pragma test expect_ir("decl ref<ptr<unit,f,f>,f,f> v0 = var(ptr_from_integral(5, type(ptr<unit,f,f>)));")
+	void* a2 = (void*)5;
+	
+	// implicit pointer to int
+	#pragma test expect_ir("decl ref<int<4>,f,f> v0 = ( var(ptr_to_integral(ptr_from_integral(5, type(ptr<unit,f,f>)), type(int<4>))));")
+	int ifromp = (void*)5;
+
+	// explicit pointer to int
+	#pragma test expect_ir("decl ref<int<4>,f,f> v0 = ( var(ptr_to_integral(ptr_from_integral(5, type(ptr<unit,f,f>)), type(int<4>))));")
+	int ifromp2 = (int)(void*)5;
+	
+	// implicit int to volatile pointer
+	#pragma test expect_ir("decl ref<ptr<unit,f,t>,f,f> v0 = var(ptr_from_integral(5, type(ptr<unit,f,t>)));")
+	volatile void* vpointerfromint = 5;
+	
+	// implicit uint to pointer
+	#pragma test expect_ir("decl ref<ptr<unit,f,f>,f,f> v0 = var(ptr_from_integral(5u, type(ptr<unit,f,f>)));")
+	void* pointerfromuint = 5u;
+	
+	// implicit pointer to uint
+	#pragma test expect_ir("decl ref<uint<4>,f,f> v0 = ( var(ptr_to_integral(ptr_from_integral(5, type(ptr<unit,f,f>)), type(uint<4>))));")
+	unsigned uintfrompointer = (void*)5;
 
 	//===------------------------------------------------------------------------------------------------------------------------------------- MISC CASTS ---===
 
