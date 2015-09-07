@@ -330,26 +330,26 @@ namespace parser3 {
 				return nullptr;
 			}
 
-			StructTypePtr structType;
-			if(expr->getType().isa<StructTypePtr>()) {
-				structType = expr->getType().as<StructTypePtr>();
+			NamedCompositeTypePtr compositeType;
+			if(expr->getType().isa<NamedCompositeTypePtr>()) {
+				compositeType = expr->getType().as<NamedCompositeTypePtr>();
 			} else if(analysis::isRefType(expr->getType())) {
 				TypePtr type = analysis::getReferencedType(expr->getType());
 
 				if(type.isa<RecTypePtr>()) { type = type.as<RecTypePtr>()->unroll(mgr); }
 
-				structType = type.isa<StructTypePtr>();
-				if(!structType) {
-					error(l, "Accessing element of non-struct type");
+				compositeType = type.isa<NamedCompositeTypePtr>();
+				if(!compositeType) {
+					error(l, "Accessing element of non-named-composite type");
 					return nullptr;
 				}
 			} else {
-				error(l, "Accessing element of non-struct type %s");
+				error(l, "Accessing element of non-named-composite type %s");
 				return nullptr;
 			}
 
 			// check field
-			if(!structType->getNamedTypeEntryOf(fieldname)) {
+			if(!compositeType->getNamedTypeEntryOf(fieldname)) {
 				error(l, format("Accessing unknown field %s", fieldname));
 				return nullptr;
 			}

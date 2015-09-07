@@ -100,13 +100,10 @@ int main() {
 	typedef struct swi_s { int i; } swi_t;
 	#pragma test expect_ir("REGEX", "decl ref<struct \w+swi_s\w+ <i:int<4>>,f,f> v0 = .*")
 	swi_t swi_1;
-	//pragma test expect_ir("decl ref<array<ptr<real<4>,t,f>,2>,f,t> v0;")
+	#pragma test expect_ir("REGEX", "decl ref<struct \w+swi_s\w+ <i:int<4>>,f,f> v0 = .*")
 	struct swi_s swi_2; 
 	
-	//typedef union { int i; } union_t;
-	//union_t uni;
-	
-	//int length = 2;
-	//pragma test expect_ir("decl ref<array<real<4>,2>,f,t> v0;")
-	//volatile float vlarrvf[length];
+	typedef union { int i; } union_t;
+	#pragma test expect_ir("REGEX", "decl ref<union \w+ <i:int<4>>,f,f> v0 = .*")
+	union_t uni;
 }
