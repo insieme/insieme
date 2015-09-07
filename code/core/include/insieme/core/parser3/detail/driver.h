@@ -148,17 +148,17 @@ namespace parser3 {
 
 			// ~~~~~~~~~~~~~~~~~~~~~~~~  tools  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 			/**
-			 * finds an expression symbol previously defined in the scoope
+			 * finds an expression symbol previously defined in the scope
 			 */
 			ExpressionPtr findSymbol(const location& l, const std::string& name);
 
 			/**
-			 * finds a type symbol previously defined in the scoope
+			 * finds a type symbol previously defined in the scope
 			 */
 			TypePtr findType(const location& l, const std::string& name);
 
 			/**
-			 *  handles apropiate type for expression to be used in an operation
+			 *  handles appropriate type for expression to be used in an operation
 			 */
 			ExpressionPtr getOperand(ExpressionPtr expr);
 
@@ -178,12 +178,17 @@ namespace parser3 {
 			ExpressionPtr genTupleAccess(const location& l, const ExpressionPtr& expr, const std::string& member);
 
 			/**
+			 * generates a numeric literal of the correct type, removing any type modifier suffixes
+			 */
+			LiteralPtr genNumericLiteral(const location& l, const TypePtr& type, const std::string& lit);
+
+			/**
 			 * generates a generic type
 			 * @param l: the location where this generic type was found
 			 * @param name: the name of type
 			 * @param parents: list of parent types if any
-			 * @param params: list of type paramenters
-			 * @param IntParamList: list of int type paramenters
+			 * @param params: list of type parameters
+			 * @param IntParamList: list of int type parameters
 			 */
 			TypePtr genGenericType(const location& l, const std::string& name, const ParentList& parents = ParentList(), const TypeList& params = TypeList());
 
@@ -220,7 +225,7 @@ namespace parser3 {
 			                        const FunctionKind& = FK_PLAIN);
 
 			/**
-			 * genereates a closure
+			 * generates a closure
 			 */
 			ExpressionPtr genClosure(const location& l, const VariableList& params, StatementPtr body);
 
@@ -268,7 +273,7 @@ namespace parser3 {
 			void add_this(const location& l, const TypePtr& classType);
 
 			/**
-			 * finish the let statement, matches names and definitions of types/lambdas/expresions
+			 * finish the let statement, matches names and definitions of types/lambdas/expressions
 			 */
 			void close_let_statement(const location& l);
 
@@ -339,12 +344,12 @@ namespace parser3 {
 
 			/**
 			 * queries whenever the core generation is inhibited
-			 *  syntatic parsing, no build (this can be used to jump over large ranges of code to do subscooping
+			 * syntactic parsing, no build (this can be used to jump over large ranges of code to do subscoping)
 			 */
 			bool inhibit_building() const;
 
 			/**
-			 *  enambes code generation inhibition
+			 *  enables code generation inhibition
 			 */
 			void set_inhibit(bool flag = true);
 

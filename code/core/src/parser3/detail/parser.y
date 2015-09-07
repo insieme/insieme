@@ -664,14 +664,14 @@ markable_expression : "identifier" { RULE $$ = driver.findSymbol(@$, $1); }
             /* literals */
            | "bool"       { RULE $$ = driver.builder.literal(driver.mgr.getLangBasic().getBool(), $1); }
            | "charlit"    { RULE $$ = driver.builder.literal(driver.mgr.getLangBasic().getChar(), $1); }
-           | "int"        { RULE $$ = driver.builder.literal(driver.mgr.getLangBasic().getInt4(), $1); }
-           | "uint"       { RULE $$ = driver.builder.literal(driver.mgr.getLangBasic().getUInt4(), $1); }
-           | "long"       { RULE $$ = driver.builder.literal(driver.mgr.getLangBasic().getInt8(), $1); }
-           | "ulong"      { RULE $$ = driver.builder.literal(driver.mgr.getLangBasic().getUInt8(), $1); }
-           | "longlong"   { RULE $$ = driver.builder.literal(driver.mgr.getLangBasic().getInt16(), $1); }
-           | "ulonglong"  { RULE $$ = driver.builder.literal(driver.mgr.getLangBasic().getUInt16(), $1); }
-           | "float"      { RULE $$ = driver.builder.literal(driver.mgr.getLangBasic().getReal4(), $1); }
-           | "double"     { RULE $$ = driver.builder.literal(driver.mgr.getLangBasic().getReal8(), $1); }
+           | "int"        { RULE $$ = driver.genNumericLiteral(@$, driver.mgr.getLangBasic().getInt4(), $1); }
+           | "uint"       { RULE $$ = driver.genNumericLiteral(@$, driver.mgr.getLangBasic().getUInt4(), $1); }
+           | "long"       { RULE $$ = driver.genNumericLiteral(@$, driver.mgr.getLangBasic().getInt8(), $1); }
+           | "ulong"      { RULE $$ = driver.genNumericLiteral(@$, driver.mgr.getLangBasic().getUInt8(), $1); }
+           | "longlong"   { RULE $$ = driver.genNumericLiteral(@$, driver.mgr.getLangBasic().getInt16(), $1); }
+           | "ulonglong"  { RULE $$ = driver.genNumericLiteral(@$, driver.mgr.getLangBasic().getUInt16(), $1); }
+           | "float"      { RULE $$ = driver.genNumericLiteral(@$, driver.mgr.getLangBasic().getReal4(), $1); }
+           | "double"     { RULE $$ = driver.genNumericLiteral(@$, driver.mgr.getLangBasic().getReal8(), $1); }
            | "stringlit"  { RULE $$ = driver.builder.stringLit($1); }
             /* constructed literals */
            | "type(" type ")"         { RULE $$ = driver.builder.getTypeLiteral($2); }

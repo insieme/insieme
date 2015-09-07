@@ -143,7 +143,7 @@ namespace conversion {
 		}
 
 		core::TypePtr type = convertExprType(intLit);
-		if(intLit->getType().getTypePtr()->isUnsignedIntegerOrEnumerationType()) { value.append("u"); }
+
 		frontend_assert(!value.empty()) << "literal cannot be an empty string";
 		retExpr = builder.literal(type, value);
 
@@ -167,8 +167,10 @@ namespace conversion {
 			retExpr = builder.literal(strVal, basic.getReal4());
 		} else if(llvm::APFloat::semanticsPrecision(sema) == llvm::APFloat::semanticsPrecision(llvm::APFloat::IEEEdouble)) {
 			retExpr = builder.literal(strVal, basic.getReal8());
+		} else if(llvm::APFloat::semanticsPrecision(sema) == llvm::APFloat::semanticsPrecision(llvm::APFloat::x87DoubleExtended)) {
+			frontend_assert(false) << "Unsupported floating point literal type encountered, possibly a \"long double\".";
 		} else {
-			frontend_assert(false) << "no idea how you got here, but only single/double precision literals are allowed in insieme\n";
+			frontend_assert(false) << "Unsupported floating point literal type encountered.";
 		}
 
 		return retExpr;
@@ -181,7 +183,7 @@ namespace conversion {
 		core::ExpressionPtr retExpr;
 		LOG_EXPR_CONVERSION(charLit, retExpr);
 
-		string value;
+		std::string value;
 		unsigned int v = charLit->getValue();
 		
 		if(charLit->getKind() == clang::CharacterLiteral::Ascii) {
@@ -301,10 +303,9 @@ namespace conversion {
 	//							PARENTHESIS EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr Converter::ExprConverter::VisitParenExpr(const clang::ParenExpr* parExpr) {
-		core::ExpressionPtr retExpr;
-
+		core::ExpressionPtr retExpr = Visit(parExpr->getSubExpr());
 		LOG_EXPR_CONVERSION(parExpr, retExpr);
-		return (retExpr = Visit(parExpr->getSubExpr()));
+		return retExpr;
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -318,14 +319,14 @@ namespace conversion {
 	// of a pointer).
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr Converter::ExprConverter::VisitGNUNullExpr(const clang::GNUNullExpr* nullExpr) {
+		core::ExpressionPtr retIr;
+		LOG_EXPR_CONVERSION(nullExpr, retIr);
 		//core::TypePtr type = converter.convertType(nullExpr->getType());
 
-		//core::ExpressionPtr retIr;
-		//LOG_EXPR_CONVERSION(nullExpr, retIr);
 		//frontend_assert(core::analysis::isArrayType(type->getNodeType())) << "C pointer type must of type array<'a,1>\n";
 		//return (retIr = builder.refReinterpret(mgr.getLangBasic().getRefNull(), type));
-		assert_not_implemented();
-		return core::ExpressionPtr();
+		frontend_assert(false) << "GNU NUllExpr not implemented.";
+		return retIr;
 	}
 
 	core::ExpressionPtr Converter::ExprConverter::VisitImplicitCastExpr(const clang::ImplicitCastExpr* castExpr) {
@@ -370,8 +371,10 @@ namespace conversion {
 	// [C99 6.4.2.2] - A predefined identifier such as __func__.
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr Converter::ExprConverter::VisitPredefinedExpr(const clang::PredefinedExpr* preExpr) {
+		core::ExpressionPtr retIr;
+		LOG_EXPR_CONVERSION(preExpr, retIr);
 		frontend_assert(false) << "PredefinedExpr not implemented";
-		return core::ExpressionPtr();
+		return retIr;
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -403,10 +406,11 @@ namespace conversion {
 	// [C99 6.5.2.3] Structure and Union Members. X->F and X.F.
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr Converter::ExprConverter::VisitMemberExpr(const clang::MemberExpr* membExpr) {
-		core::ExpressionPtr&& base = Visit(membExpr->getBase());
-		core::ExpressionPtr retIr;// = exprutils::getMemberAccessExpr(converter, builder, base, membExpr);
+		core::ExpressionPtr retIr;
 		LOG_EXPR_CONVERSION(membExpr, retIr);
-		assert_not_implemented();
+		//core::ExpressionPtr&& base = Visit(membExpr->getBase());
+		//retIr = exprutils::getMemberAccessExpr(converter, builder, base, membExpr);
+		frontend_assert(false) << "Member expressions not implemented.";
 		return retIr;
 	}
 
@@ -632,7 +636,7 @@ namespace conversion {
 		//frontend_assert(false) << "clang::DeclRefExpr not supported!\n";
 		//return core::ExpressionPtr();
 
-		frontend_assert(false);
+		frontend_assert(false) << "DeclRefExpr not handled.";
 		return retIr;
 	}
 
@@ -773,7 +777,7 @@ namespace conversion {
 
 		//return retIr = builder.callExpr(lambdaRetType, lambda, packedArgs);
 
-		frontend_assert(false);
+		frontend_assert(false) << "GNU C statement expressions not implemented.";
 		return retIr;
 	}
 
@@ -863,7 +867,7 @@ namespace conversion {
 
 		//assert_fail();
 		//return core::ExpressionPtr();
-		frontend_assert(false);
+		frontend_assert(false) << "Atomic expressions not implemented.";
 		return retIr;
 	}
 

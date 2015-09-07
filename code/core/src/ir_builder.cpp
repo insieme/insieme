@@ -538,16 +538,13 @@ namespace core {
 		if(manager.getLangBasic().isInt(type)) { return literal(type, "0"); }
 
 		// if it is a real ..
-		if(manager.getLangBasic().isReal(type)) {
-			if(manager.getLangBasic().isFloat(type)) { return literal(type, "0.0f"); }
-			return literal(type, "0.0");
-		}
+		if(manager.getLangBasic().isReal(type)) { return literal(type, "0.0"); }
 
 		// if it is the bool type
 		if(manager.getLangBasic().isBool(type)) { return boolLit(false); }
 
 		// if it is the char type
-		if(manager.getLangBasic().isChar(type)) { return literal(type, "' '"); }
+		if(manager.getLangBasic().isChar(type)) { return literal(type, "'\\0'"); }
 
 		// if it is a lock, keep it undefined
 		if(manager.getLangExtension<lang::ParallelExtension>().isLock(type)) { return undefined(type); }

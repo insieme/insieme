@@ -47,13 +47,11 @@
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"
 
-#include "insieme/core/lang/complex_extension.h"
 #include "insieme/core/lang/enum_extension.h"
 
 #include "insieme/frontend/converter.h"
 #include "insieme/frontend/tu/ir_translation_unit.h"
 #include "insieme/frontend/extensions/frontend_extension.h"
-#include "insieme/frontend/extensions/cpp11_extension.h"
 
 #include "insieme/driver/cmd/insiemecc_options.h"
 

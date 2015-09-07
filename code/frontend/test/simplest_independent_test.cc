@@ -53,6 +53,10 @@
 
 namespace insieme {
 namespace frontend {
+
+	TEST(IndependentTest, Literals) {
+		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_literals.c");
+	}
 	
 	TEST(IndependentTest, BasicTypes) {
 		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_basic_types.c");

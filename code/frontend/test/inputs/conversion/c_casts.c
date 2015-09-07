@@ -15,15 +15,6 @@ int main() {
 	#pragma test expect_ir("ptr_null(type(int<4>), type(t), type(f))")
 	(const int* const)0;
 
-	//===-------------------------------------------------------------------------------------------------------------------------------- POINTER TO BOOL ---===
-
-	// TODO: move this somewhere else? Because there is no actual clang::CK_PointerToBoolean involved here
-	#pragma test expect_ir("{ decl ref<ptr<int<4>,f,f>,f,f> v0; if(ptr_ne(*v0, ptr_null(type(int<4>), type(f), type(f)))) { }; }")
-	{
-		int* p;
-		if(p) { }
-	}
-	
 	//===---------------------------------------------------------------------------------------------------------------------------------- NUMERIC CASTS ---===
 
 	// IntegralToFloating
@@ -107,4 +98,51 @@ int main() {
 		const void* x;
 		int* y = (int*)x;
 	}
+
+	//===------------------------------------------------------------------------------------------------------------------------------------- MISC CASTS ---===
+
+	// NoOp - casting between identical types
+	#pragma test expect_ir("{ decl ref<int<4>,f,f> v0; *v0; }")
+	{
+		int x;
+		(int)x;
+	}
+
+	//===----------------------------------------------------------------------------------------------------------------------------------- TO BOOL CASTS---===
+
+	// char to bool (C99's native boolean type is _Bool)
+	#pragma test expect_ir("{ decl ref<char,f,f> v0; (*v0!='\0'); }")
+	{
+		char x;
+		(_Bool)x;
+	}
+
+	// integral to bool
+	#pragma test expect_ir("{ decl ref<int<4>,f,f> v0; (*v0!=0); }")
+	{
+		int x;
+		(_Bool)x;
+	}
+
+	// integral to bool
+	#pragma test expect_ir("{ decl ref<uint<8>,f,f> v0; (*v0!=0ul); }")
+	{
+		unsigned long x;
+		(_Bool)x;
+	}
+
+	// float to bool
+	#pragma test expect_ir("{ decl ref<real<4>,f,f> v0; (*v0!=0.0f); }")
+	{
+		float x;
+		(_Bool)x;
+	}
+
+	// pointer to bool
+	#pragma test expect_ir("{ decl ref<ptr<real<4>,f,f>,f,f> v0; ptr_ne(*v0, ptr_null(type(real<4>), type(f), type(f))); }")
+	{
+		float* x;
+		(_Bool)x;
+	}
+
 }

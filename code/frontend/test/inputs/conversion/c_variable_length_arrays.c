@@ -89,7 +89,8 @@ int main() {
 	int j=20;
 	int k[j];
 	int l[i][j];
-	sizeof(k);
-	sizeof(l);	
+	//TODO: implement UnaryExprOrTypeTraitExpr for VLAs
+	//sizeof(k);
+	//sizeof(l);
 	
 }
