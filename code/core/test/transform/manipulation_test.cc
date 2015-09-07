@@ -44,6 +44,7 @@
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/analysis/normalize.h"
 #include "insieme/core/checks/full_check.h"
+#include "insieme/core/analysis/ir_utils.h"
 
 #include "insieme/core/printer/pretty_printer.h"
 
@@ -765,9 +766,6 @@ namespace core {
 
 		ASSERT_TRUE(call);
 
-		// std::cout << core::printer::PrettyPrinter(call, core::printer::PrettyPrinter::NO_LET_BOUND_FUNCTIONS | core::printer::PrettyPrinter::NO_EVAL_LAZY) <<
-		// "\n";
-
 		// this call should be inline-able
 		auto inlined = transform::tryInlineToExpr(mgr, call);
 		EXPECT_TRUE(inlined);
@@ -776,13 +774,40 @@ namespace core {
 		// check resulting IR
 		EXPECT_TRUE(core::checks::check(inlined).empty()) << core::checks::check(inlined);
 
-		// std::cout << core::printer::PrettyPrinter(inlined, core::printer::PrettyPrinter::NO_LET_BOUND_FUNCTIONS | core::printer::PrettyPrinter::NO_EVAL_LAZY)
-		// << "\n";
-
-		// auto simple = transform::simplify(mgr, call);
-		// std::cout << core::printer::PrettyPrinter(simple, core::printer::PrettyPrinter::NO_LET_BOUND_FUNCTIONS | core::printer::PrettyPrinter::NO_EVAL_LAZY)
-		// << "\n";
 	}
+
+	TEST(Manipulation, InlineArgsWithSideEffects) {
+
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto fun = builder.parseExpr("lambda (int<4> a, int<4> b, int<4> c) -> int<4> { return a + c + c; }");
+
+		auto argPure = builder.parseExpr("1+2*3");
+		auto argSideEffects = builder.parseExpr("let bad = expr lit(\"bad\":(int<4>)->int<4>); bad(12)");
+
+		// check arguments
+		auto hasSideEffects = [](const ExpressionPtr& cur) { return !analysis::isSideEffectFree(cur); };
+		EXPECT_PRED1(analysis::isSideEffectFree, argPure);
+		EXPECT_PRED1(hasSideEffects, argSideEffects);
+
+
+		auto inlineable = [&](const CallExprPtr& call) { return call != transform::tryInlineToExpr(mgr, call); };
+		auto notInlineable = [&](const CallExprPtr& call) { return !inlineable(call); };
+
+		// pure arguments should always work
+		EXPECT_PRED1(inlineable, builder.callExpr(fun, argPure, argPure, argPure));
+		EXPECT_PRED1(inlineable, builder.callExpr(fun, argSideEffects, argPure, argPure));
+		EXPECT_PRED1(notInlineable, builder.callExpr(fun, argSideEffects, argSideEffects, argPure));
+		EXPECT_PRED1(notInlineable, builder.callExpr(fun, argPure, argSideEffects, argPure));
+
+		// multiple evaluations should not work either
+		EXPECT_PRED1(notInlineable, builder.callExpr(fun, argPure, argPure, argSideEffects));
+
+	}
+
+
+
 
 
 	TEST(Manipulation, CorrectRecursiveLambdaVariableUsage) {
