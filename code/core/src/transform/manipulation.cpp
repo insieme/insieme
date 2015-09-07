@@ -35,6 +35,7 @@
  */
 
 #include <algorithm>
+#include <tuple>
 
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/node_replacer.h"
@@ -249,6 +250,8 @@ namespace transform {
 	namespace {
 
 		ExpressionPtr tryInlineBindToExpr(NodeManager& manager, const CallExprPtr& call) {
+			IRBuilder builder(manager);
+
 			// extract bind and call expression
 			assert_eq(call->getFunctionExpr()->getNodeType(), NT_BindExpr) << "Illegal argument!";
 			BindExprPtr bind = static_pointer_cast<const BindExpr>(call->getFunctionExpr());
@@ -256,11 +259,6 @@ namespace transform {
 			// process call recursively
 			CallExprPtr innerCall = bind->getCall();
 			ExpressionPtr inlined = tryInlineToExpr(manager, innerCall);
-
-			// check whether inlining was successful
-			if (inlined == innerCall) return call;
-
-			IRBuilder builder(manager);
 
 			// build intermediate lambda (result of bind)
 			auto ingredients = transform::materialize({ bind->getParameters(), builder.returnStmt(inlined) });
@@ -501,14 +499,14 @@ namespace transform {
 
 	namespace {
 
-		class ParameterFixer : public core::transform::CachedNodeMapping {
+		class ConstantPropagater : public core::transform::CachedNodeMapping {
 			NodeManager& manager;
-			const VariablePtr var;
+			const ExpressionPtr target;
 			const ExpressionPtr replacement;
 
 		  public:
-			ParameterFixer(NodeManager& manager, const VariablePtr& var, const ExpressionPtr& replacement)
-			    : manager(manager), var(var), replacement(replacement) {}
+			ConstantPropagater(NodeManager& manager, const ExpressionPtr& target, const ExpressionPtr& replacement)
+			    : manager(manager), target(target), replacement(replacement) {}
 
 			LambdaExprPtr fixLambda(const LambdaExprPtr& original, const ExpressionList& args, ExpressionList& newArgs) {
 				// start based on same lambda
@@ -520,7 +518,7 @@ namespace transform {
 					// check if it is the variable
 
 					// try to fix the parameter for called function
-					if(*args[i] == *var) {
+					if(*args[i] == *target) {
 						LambdaExprPtr newLambda = tryFixParameter(manager, lambda, i, replacement);
 						if(*newLambda != *lambda) {
 							// => nice, it worked!
@@ -543,8 +541,10 @@ namespace transform {
 			}
 
 			const NodePtr resolveElement(const NodePtr& ptr) {
-				// check for replacement
-				if(*ptr == *var) { return replacement; }
+				// check for replacement (dereferenced parameter needs to be replaced)
+				if (*ptr == *target) {
+					return replacement;
+				}
 
 				// cut off types and stop if already unsuccessful
 				if(ptr->getNodeCategory() == NC_Type) { return ptr; }
@@ -552,7 +552,7 @@ namespace transform {
 				// handle call expressions
 				if(ptr->getNodeType() == NT_CallExpr) {
 					CallExprPtr call = static_pointer_cast<const CallExpr>(ptr);
-					if(::contains(call->getArguments(), var)) {
+					if(::contains(call->getArguments(), target)) {
 						const auto& args = call->getArguments();
 						ExpressionList newArgs;
 
@@ -592,7 +592,7 @@ namespace transform {
 						if(!resolved) {
 							// cannot be pushed through ... just substitute within arguments and done
 							::transform(args, std::back_inserter(newArgs), [&](const ExpressionPtr& cur) -> const ExpressionPtr {
-								if(*cur == *var) { return replacement; }
+								if(*cur == *target) { return replacement; }
 								return this->map(cur);
 							});
 						}
@@ -613,54 +613,12 @@ namespace transform {
 			}
 		};
 
+		class ParameterFixer : public ConstantPropagater {
+		public:
+			ParameterFixer(NodeManager& manager, const VariablePtr& param, const ExpressionPtr& replacement)
+				: ConstantPropagater(manager, IRBuilder(manager).deref(param), replacement)  {}
+		};
 
-		//	LambdaExprPtr tryFixRecursive(NodeManager& manager, const LambdaExprPtr& lambda, unsigned index, const ExpressionPtr& value) {
-		//		assert_true(lambda->isRecursive());
-		//
-		//		/**
-		//		 * The following procedure is applied:
-		//		 * 		- the parameter is fixed within the body of the lambda
-		//		 * 		- all recursive calls are searched within the lambda
-		//		 * 		- if value is passed along at the same position, unmodified
-		//		 * 			=> remove parameter from recursion
-		//		 * 		  otherwise: unroll once, fix parameter for non-recursive function
-		//		 */
-		//
-		//		// check for compatible target type
-		//		FunctionTypePtr funType = lambda->getFunctionType();
-		//		TypeList paramTypes = funType->getParameterTypeList();
-		//		assert_lt(index, paramTypes.size()) << "Index out of bound - no such parameter!";
-		//		assert_true(types::isSubTypeOf(value->getType(), paramTypes[index])) << "Cannot substitute non-compatible value for specified parameter.";
-		//
-		//		// replace parameter within body
-		//		const VariablePtr& param = lambda->getParameterList()[index];
-		//		CompoundStmtPtr newBody = fixVariable(manager, lambda->getBody(), param, value).as<CompoundStmtPtr>();
-		//
-		//		// check whether it can be propagated over the recursion
-		//		//  - search for recursive calls in new body
-		//		auto recVar = lambda->getVariable();
-		//
-		//
-		//
-		//		// value is propagated => eliminate parameter in recursion
-		//
-		//		// Step 1) fix recursive variable
-		//
-		//		// Step 1) fix body by replacing all calls with fixed calls
-		//		std::map<NodeAddress, NodePtr> replacements;
-		//		for(const CallExprAddress& cur : calls) {
-		//
-		//
-		//
-		//			replacements.insert({cur, newCall});
-		//		}
-		//
-		//
-		//		bool canPropagate = all();
-		//
-		//
-		//		return lambda;
-		//	}
 	}
 
 
@@ -757,10 +715,12 @@ namespace transform {
 	}
 
 	NodePtr fixVariable(NodeManager& manager, const NodePtr& node, const VariablePtr& var, const ExpressionPtr& value) {
-		ParameterFixer fixer(manager, var, value);
-		return fixer.map(node);
+		return ConstantPropagater(manager, var, value).map(node);
 	}
 
+	NodePtr fixParameter(NodeManager& manager, const NodePtr& node, const VariablePtr& param, const ExpressionPtr& value) {
+		return ParameterFixer(manager, param, value).map(node);
+	}
 
 	CallExprPtr pushBindIntoLambda(NodeManager& manager, const CallExprPtr& call, unsigned index) {
 		// ---------------- Pre-Conditions --------------------
@@ -818,8 +778,8 @@ namespace transform {
 			}
 
 			//  => otherwise it is evaluated and forwarded as a parameter
-			VariablePtr newParam = builder.variable(cur->getType(), next_index++);
-			newBindCallArgs.push_back(newParam);
+			VariablePtr newParam = builder.variable(builder.refType(cur->getType()), next_index++);
+			newBindCallArgs.push_back(builder.deref(newParam));
 
 			// add new parameter to list of parameters to be added to the lambda
 			newParams.push_back(newParam);
@@ -835,7 +795,7 @@ namespace transform {
 		                             CallExpr::get(manager, callWithinBind->getType(), callWithinBind->getFunctionExpr(), newBindCallArgs));
 
 		// fix parameter within body of lambda
-		auto newBody = fixVariable(manager, lambda->getBody(), lambda->getParameterList()[index], newBind);
+		auto newBody = fixParameter(manager, lambda->getBody(), lambda->getParameterList()[index], newBind).as<StatementPtr>();
 
 		// fix parameter list of lambda
 		VariableList newLambdaParams = lambda->getParameterList()->getParameters();
@@ -843,7 +803,7 @@ namespace transform {
 		newLambdaParams.insert(newLambdaParams.begin() + index, newParams.begin(), newParams.end()); // inject new parameters
 
 		// build new lambda
-		auto newLambda = builder.lambdaExpr(lambda->getFunctionType()->getReturnType(), newBody, newLambdaParams);
+		auto newLambda = builder.lambdaExpr(lambda->getFunctionType()->getReturnType(), newLambdaParams, newBody);
 
 		// assemble new argument list
 		ExpressionList newArgumentList = call->getArguments();
@@ -903,12 +863,12 @@ namespace transform {
 
 		// rename free variables within body using restricted scope
 		IRBuilder builder(manager);
-		um::PointerMap<VariablePtr, VariablePtr> replacements;
+		um::PointerMap<VariablePtr, ExpressionPtr> replacements;
 		VariableList parameter;
 		for_each(free, [&](const VariablePtr& cur) {
-			auto var = builder.variable(cur->getType());
-			replacements[cur] = var;
-			parameter.push_back(var);
+			auto param = builder.variable(builder.refType(cur->getType()));
+			replacements[cur] = builder.deref(param);
+			parameter.push_back(param);
 		});
 		StatementPtr body = replaceVarsGen(manager, stmt, replacements);
 
@@ -917,7 +877,8 @@ namespace transform {
 		if(allowReturns) { retType = analysis::autoReturnType(manager, builder.compoundStmt(body)); }
 
 		// create lambda accepting all free variables as arguments
-		LambdaExprPtr lambda = builder.lambdaExpr(retType, body, parameter);
+		auto funType = builder.functionType(extractTypes(free), retType);
+		LambdaExprPtr lambda = builder.lambdaExpr(funType, parameter, body);
 
 		// create call to this lambda
 		return builder.callExpr(retType, lambda, convertList<Expression>(free));
@@ -1080,11 +1041,10 @@ namespace transform {
 		namespace detail {
 
 			/**
-			 * Adds a new parameter to the given lambda - if the parameter is colliding with a free variable
-			 * within the given lambda a alternative variable of the same type will be created to replace the
-			 * handed in parameter.
+			 * Adds a new parameter to the given lambda and returns a pair of the modified lambda and an expression to
+			 * access the value of the new parameter within the lambda's body.
 			 */
-			LambdaExprPtr addNewParameter(const LambdaExprPtr& lambda, VariablePtr& param) {
+			std::pair<LambdaExprPtr, ExpressionPtr> addNewParameter(const LambdaExprPtr& lambda, const TypePtr& paramType) {
 				assert_false(lambda->isRecursive()) << "Recursive functions not supported yet!";
 
 				IRBuilder builder(lambda.getNodeManager());
@@ -1092,34 +1052,35 @@ namespace transform {
 				// find name for new parameter
 				auto variablesInScope = core::analysis::getAllVariablesInScope(lambda->getLambda());
 
-				VariablePtr newVar = param;
+				auto paramVarType = builder.refType(paramType);
+				VariablePtr newVar = builder.variable(paramVarType);
 				while(contains(variablesInScope, newVar, [](const VariablePtr& a, const VariablePtr& b) { return a->getId() == b->getId(); })) {
-					newVar = builder.variable(newVar->getType());
+					newVar = builder.variable(paramVarType);
 				}
-
-				// update propagated variable
-				param = newVar;
 
 				// add new parameter and return new lambda
 				VariableList params = lambda->getParameterList().getParameters();
 				params.push_back(newVar);
-				return builder.lambdaExpr(lambda->getFunctionType()->getReturnType(), lambda->getBody(), params);
+				return std::make_pair(
+					builder.lambdaExpr(lambda->getFunctionType()->getReturnType(), params, lambda->getBody()),
+					builder.deref(newVar)
+				);
 			}
 		}
 
 
 		/**
-		 * Pushes the given variable from the root-node context of target to the target node by passing it
-		 * to every lambda encountered along this path. In the variable has to be renamed since the same id is
-		 * already present (types will not be considered to increase readability) the parameter var will be updated.
-		 * After the call var will reference the name of the variable as it is named in the context of the target.
+		 * Pushes the given value from the root-node context of target to the target node by passing it
+		 * to every lambda encountered along this path. If the value has to be restructured due to variable renaming
+		 * in nested scopes, the parameter value will be updated.
+		 * After the call value will reference the expression containing the pushed in value in the context of the target.
 		 */
-		NodeAddress makeAvailable(NodeManager& manager, const NodeAddress& target, VariablePtr& var) {
+		NodeAddress makeAvailable(NodeManager& manager, const NodeAddress& target, ExpressionPtr& value) {
 			// we are at the root node, no modification is necessary
 			if(target.isRoot()) { return target; }
 
-			// process recursively first (bring the variable to the current scope
-			NodeAddress parent = makeAvailable(manager, target.getParentAddress(), var);
+			// process recursively first (bring the value to the current scope
+			NodeAddress parent = makeAvailable(manager, target.getParentAddress(), value);
 			NodeAddress res = parent.getAddressOfChild(target.getIndex());
 
 			// handle standard calls to lambdas
@@ -1129,10 +1090,10 @@ namespace transform {
 					CallExprPtr call = parent.as<CallExprPtr>();
 					if(*call->getFunctionExpr() == *target) {
 						// we are following the function call => add a parameter
-						if(!contains(call.getArguments(), var)) {
+						if(!contains(call.getArguments(), value)) {
 							IRBuilder builder(manager);
 							ExpressionList newArgs = call.getArguments();
-							newArgs.push_back(var);
+							newArgs.push_back(value);
 
 							// build new call (function is fixed within recursive step one level up)
 							CallExprPtr newCall = builder.callExpr(call->getType(), call->getFunctionExpr(), newArgs);
@@ -1152,15 +1113,16 @@ namespace transform {
 					// check whether a new argument needs to be added
 					if(call->getArguments().size() != lambda->getParameterList().size()) {
 						// add new parameter to lambda
-						LambdaExprPtr newLambda = detail::addNewParameter(lambda, var);
+						LambdaExprPtr newLambda;
+						std::tie(newLambda, value) = detail::addNewParameter(lambda, value->getType());
 						res = replaceAddress(manager, res, newLambda);
 
 					} else {
 						// update variable when it is already passed as an argument
 						auto args = call->getArguments();
 						for(int i = args.size() - 1; i > 0; i--) {
-							if(args[i] == var) {
-								var = lambda->getParameterList()[i];
+							if(args[i] == value) {
+								value = IRBuilder(manager).deref(lambda->getParameterList()[i]);
 								break;
 							}
 						}
@@ -1175,8 +1137,9 @@ namespace transform {
 				//   bool.and(..., (<args>)=>fun(<args>,var), ...)
 
 				// extend lambda by an extra parameter (and update variable to be pushed)
-				VariablePtr innerVar = var;
-				LambdaExprPtr newLambda = detail::addNewParameter(lambda, innerVar);
+				ExpressionPtr innerValue = value;
+				LambdaExprPtr newLambda;
+				std::tie(newLambda, innerValue) = detail::addNewParameter(lambda, value->getType());
 
 				// build bind expression
 				IRBuilder builder(lambda->getNodeManager());
@@ -1186,7 +1149,7 @@ namespace transform {
 				for(const auto& cur : lambda->getParameterList()) {
 					newArgs.push_back(cur);
 				}
-				newArgs.push_back(var);
+				newArgs.push_back(value);
 
 				// - new function type
 				auto funTypeIn = lambda->getFunctionType();
@@ -1200,7 +1163,7 @@ namespace transform {
 				res = res.as<BindExprAddress>()->getCall()->getFunctionExpr();
 
 				// update propagated variable
-				var = innerVar;
+				value = innerValue;
 			}
 
 			// for all others: just return result
@@ -1208,15 +1171,15 @@ namespace transform {
 		}
 	}
 
-	VariableAddress pushInto(NodeManager& manager, const ExpressionAddress& target, const VariablePtr& var) {
-		VariablePtr inner = var;
+	ExpressionAddress pushInto(NodeManager& manager, const ExpressionAddress& target, const VariablePtr& var) {
+		ExpressionPtr inner = var;
 		NodeAddress inserted = makeAvailable(manager, target, inner);
-		return replaceAddress(manager, inserted, inner).as<VariableAddress>();
+		return replaceAddress(manager, inserted, inner).as<ExpressionAddress>();
 	}
 
-	vector<VariableAddress> pushInto(NodeManager& manager, const vector<ExpressionAddress>& targets, const VariablePtr& var) {
+	vector<ExpressionAddress> pushInto(NodeManager& manager, const vector<ExpressionAddress>& targets, const VariablePtr& var) {
 		// check whether there is something to do
-		if(targets.empty()) { return vector<VariableAddress>(); }
+		if(targets.empty()) { return vector<ExpressionAddress>(); }
 
 		// special handling for a single step
 		if(targets.size() == 1u) { return toVector(pushInto(manager, targets[0], var)); }
@@ -1227,7 +1190,7 @@ namespace transform {
 
 		// implant variables - one by one
 		NodePtr curRoot = targets[0].getRootNode();
-		vector<VariableAddress> res;
+		vector<ExpressionAddress> res;
 		for(const auto& cur : targets) {
 			res.push_back(pushInto(manager, cur.switchRoot(curRoot), var));
 			curRoot = res.back().getRootNode();

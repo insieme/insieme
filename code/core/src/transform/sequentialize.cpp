@@ -210,7 +210,7 @@ namespace transform {
 
 					if(f.getConstantValue().isZero()) {
 						// job can be completely eliminated => return empty function
-						return builder.lambdaExpr(basic.getUnit(), builder.getNoOp(), VariableList());
+						return builder.lambdaExpr(basic.getUnit(), VariableList(), builder.getNoOp());
 					}
 
 				} catch(const arithmetic::NotAFormulaException& nfe) {
