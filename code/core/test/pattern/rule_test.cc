@@ -249,11 +249,9 @@ TEST(Rule, VarDeref) {
 	auto b = builder.deref(builder.refVar(a));
 	auto c = builder.deref(builder.refNew(a));
 
-	EXPECT_EQ("ref_deref(rec v0.{v0=fun('a v1) {ref<'a,f,f> v2 = ref_alloc(rec v0.{v0=fun('a v1) {return type<'a>;}}(v1), mem_loc_stack); ref_assign(v2, v1); "
-	          "return v2;}}(1))",
+	EXPECT_EQ("ref_deref(rec v0.{v0=fun(ref<'a,f,f> v1) {ref<'a,f,f> v2 = ref_alloc(type<'a>, mem_loc_stack); ref_assign(v2, ref_deref(v1)); return v2;}}(1))",
 	          toString(*b));
-	EXPECT_EQ("ref_deref(rec v0.{v0=fun('a v1) {ref<'a,f,f> v2 = ref_alloc(rec v0.{v0=fun('a v1) {return type<'a>;}}(v1), mem_loc_heap); ref_assign(v2, v1); return "
-	          "v2;}}(1))",
+	EXPECT_EQ("ref_deref(rec v0.{v0=fun(ref<'a,f,f> v1) {ref<'a,f,f> v2 = ref_alloc(type<'a>, mem_loc_heap); ref_assign(v2, ref_deref(v1)); return v2;}}(1))",
 	          toString(*c));
 	EXPECT_EQ("1", toString(*r.fixpoint(b)));
 	EXPECT_EQ("1", toString(*r.fixpoint(c)));

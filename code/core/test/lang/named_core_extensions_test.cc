@@ -132,12 +132,12 @@ namespace lang {
 
 		// Test for the re-use of an unknown named extension
 		auto& namedDerivedUnknown = extension.getNamedDerivedUnknown();
-		EXPECT_EQ("rec v0.{v0=fun(FooType v1) {return v1;}}", toString(*namedDerivedUnknown));
+		EXPECT_EQ("rec v0.{v0=fun(ref<FooType,f,f> v1) {return ref_deref(v1);}}", toString(*namedDerivedUnknown));
 		EXPECT_EQ("((FooType)->FooType)", toString(*namedDerivedUnknown.getType()));
 
 		// Test for correct handling of a known named extension
 		auto& namedDerived = extension.getNamedDerived();
-		EXPECT_EQ("rec v0.{v0=fun(struct<foo:'a> v1) {return v1;}}", toString(*namedDerived));
+		EXPECT_EQ("rec v0.{v0=fun(ref<struct<foo:'a>,f,f> v1) {return ref_deref(v1);}}", toString(*namedDerived));
 		EXPECT_EQ("((struct<foo:'a>)->struct<foo:'a>)", toString(*namedDerived.getType()));
 	}
 

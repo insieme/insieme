@@ -50,7 +50,7 @@ namespace checks {
 		IRBuilder builder(manager);
 
 		{
-			StatementPtr stmt_err = builder.parseStmt(R"1N5P1RE(
+			StatementPtr stmt_err = builder.normalize(builder.parseStmt(R"1N5P1RE(
             {
                 let uint = uint<8>;
                 lambda () -> unit { 
@@ -61,7 +61,7 @@ namespace checks {
                     } (ref_scalar_to_ref_array(i)); 
                  };
 			}
-            )1N5P1RE");
+            )1N5P1RE"));
 			auto addrlist = builder.parseAddressesStatement(R"1N5P1RE(
             {
                 let uint = uint<8>;
@@ -86,9 +86,11 @@ namespace checks {
 			EXPECT_EQ("0-0-2-0-1-2-1-1-2-0-1-2-1", toString(errorAdr));
 			EXPECT_TRUE(dynamic_pointer_cast<CallExprPtr>(errorAdr.getAddressedNode())) << errorAdr.getAddressedNode();
 
+			ASSERT_FALSE(check(stmt_err, scalarArrayIndexRangeCheck).empty());
+
 			EXPECT_EQ(toString(check(stmt_err, scalarArrayIndexRangeCheck)[0]),
 			          toString(Message(errorAdr, EC_SEMANTIC_ARRAY_INDEX_OUT_OF_RANGE,
-			                           "Potentially unsafe indexing of single-element array v5 using formula v6", Message::WARNING)));
+			                           "Potentially unsafe indexing of single-element array v1 using formula v2", Message::WARNING)));
 		}
 
 		{
@@ -146,7 +148,7 @@ namespace checks {
 		auto checkResult = check(stmt, missingReturnStmtCheck);
 		EXPECT_EQ(checkResult.size(), 1);
 		EXPECT_EQ(toString(checkResult[0]),
-		          "ERROR:   [00044] - SEMANTIC / MISSING_RETURN_STMT @ (0-0) - MSG: Not all control paths of non-unit lambdaExpr return a value.");
+		          "ERROR:   [00045] - SEMANTIC / MISSING_RETURN_STMT @ (0-0) - MSG: Not all control paths of non-unit lambdaExpr return a value.");
 	}
 
 	TEST(MissingReturnStmtCheck, IfCorrect) {
@@ -197,7 +199,7 @@ namespace checks {
 		auto checkResult = check(stmt, missingReturnStmtCheck);
 		EXPECT_EQ(checkResult.size(), 1);
 		EXPECT_EQ(toString(checkResult[0]),
-		          "ERROR:   [00044] - SEMANTIC / MISSING_RETURN_STMT @ (0-0) - MSG: Not all control paths of non-unit lambdaExpr return a value.");
+		          "ERROR:   [00045] - SEMANTIC / MISSING_RETURN_STMT @ (0-0) - MSG: Not all control paths of non-unit lambdaExpr return a value.");
 	}
 
 	TEST(MissingReturnStmtCheck, WhileCorrect) {
@@ -246,7 +248,7 @@ namespace checks {
 		auto checkResult = check(stmt, missingReturnStmtCheck);
 		EXPECT_EQ(checkResult.size(), 1);
 		EXPECT_EQ(toString(checkResult[0]),
-		          "ERROR:   [00044] - SEMANTIC / MISSING_RETURN_STMT @ (0-0) - MSG: Not all control paths of non-unit lambdaExpr return a value.");
+		          "ERROR:   [00045] - SEMANTIC / MISSING_RETURN_STMT @ (0-0) - MSG: Not all control paths of non-unit lambdaExpr return a value.");
 	}
 
 	TEST(MissingReturnStmtCheck, Throw) {
@@ -320,7 +322,7 @@ namespace checks {
 		auto checkResult = check(stmt, missingReturnStmtCheck);
 		EXPECT_EQ(checkResult.size(), 1);
 		EXPECT_EQ(toString(checkResult[0]),
-		          "ERROR:   [00044] - SEMANTIC / MISSING_RETURN_STMT @ (0-0) - MSG: Not all control paths of non-unit lambdaExpr return a value.");
+		          "ERROR:   [00045] - SEMANTIC / MISSING_RETURN_STMT @ (0-0) - MSG: Not all control paths of non-unit lambdaExpr return a value.");
 	}
 
 	TEST(MissingReturnStmtCheck, SwitchErrorDefaultMissing) {
@@ -346,7 +348,7 @@ namespace checks {
 		auto checkResult = check(stmt, missingReturnStmtCheck);
 		EXPECT_EQ(checkResult.size(), 1);
 		EXPECT_EQ(toString(checkResult[0]),
-		          "ERROR:   [00044] - SEMANTIC / MISSING_RETURN_STMT @ (0-0) - MSG: Not all control paths of non-unit lambdaExpr return a value.");
+		          "ERROR:   [00045] - SEMANTIC / MISSING_RETURN_STMT @ (0-0) - MSG: Not all control paths of non-unit lambdaExpr return a value.");
 	}
 
 	TEST(MissingReturnStmtCheck, SwitchCorrectInLoop) {
