@@ -248,54 +248,6 @@ namespace transform {
 
 	namespace {
 
-		class InlineSubstituter : public SimpleNodeMapping {
-			bool successful;
-
-			const um::PointerMap<VariablePtr, ExpressionPtr>& replacements;
-			us::PointerSet<VariablePtr> replacedOnce;
-
-		  public:
-			InlineSubstituter(um::PointerMap<VariablePtr, ExpressionPtr>& replacements) : successful(true), replacements(replacements) {}
-
-			const NodePtr mapElement(unsigned index, const NodePtr& ptr) {
-				if(!successful) { return ptr; }
-
-				if(ptr->getNodeType() != NT_Variable) {
-					if(ptr->getNodeType() == NT_LambdaExpr) {
-						// entering new scope => ignore this
-						return ptr;
-					}
-					return ptr->substitute(ptr->getNodeManager(), *this);
-				}
-
-				const VariablePtr& var = ptr.as<VariablePtr>();
-
-				// check whether variable has been already encountered
-				if(replacedOnce.find(var) != replacedOnce.end()) {
-					// variable may only be replaced once!
-					successful = false;
-					return ptr;
-				}
-
-				auto pos = replacements.find(var);
-				if(pos != replacements.end()) {
-					ExpressionPtr res = pos->second;
-
-					// to ensure a single evaluation!
-					if(!core::analysis::isSideEffectFree(res)) { replacedOnce.insert(var); }
-					return res;
-				}
-
-				// no modification required
-				return ptr;
-			}
-
-			bool wasSuccessful() const {
-				return successful;
-			}
-		};
-
-
 		ExpressionPtr tryInlineBindToExpr(NodeManager& manager, const CallExprPtr& call) {
 			// extract bind and call expression
 			assert_eq(call->getFunctionExpr()->getNodeType(), NT_BindExpr) << "Illegal argument!";
@@ -305,23 +257,27 @@ namespace transform {
 			CallExprPtr innerCall = bind->getCall();
 			ExpressionPtr inlined = tryInlineToExpr(manager, innerCall);
 
-			// check for matching argument number
-			auto parameter = bind->getParameters();
-			auto arguments = call->getArguments();
-			if(parameter.size() != arguments.size()) { return call; }
+			// check whether inlining was successful
+			if (inlined == innerCall) return call;
 
-			// substituted call arguments with bind parameters
-			um::PointerMap<VariablePtr, ExpressionPtr> replacements;
+			IRBuilder builder(manager);
 
-			replacements.insert(make_paired_iterator(parameter.begin(), arguments.begin()), make_paired_iterator(parameter.end(), arguments.end()));
+			// build intermediate lambda (result of bind)
+			auto ingredients = transform::materialize({ bind->getParameters(), builder.returnStmt(inlined) });
+			auto bindType = bind->getType().as<FunctionTypePtr>();
+			auto funType = builder.functionType(bindType->getParameterTypes(), bindType->getReturnType());
+			auto fun = builder.lambdaExpr(funType, ingredients.params, ingredients.body);
+			auto intermediateCall = builder.callExpr(call->getType(), fun, call->getArguments());
 
-			// substitute variables within body
-			InlineSubstituter substituter(replacements);
-			ExpressionPtr res = static_pointer_cast<const Expression>(substituter.mapElement(0, inlined));
+			// try inlining the intermediate call
+			auto res = tryInlineToExpr(manager, intermediateCall);
 
-			// check result
-			if(!substituter.wasSuccessful()) { return call; }
-			return res;
+			// only if both steps worked, the bind could be inlined
+			if (res != intermediateCall) return res;
+
+			// fallback => stick to bind call
+			return call;
+
 		}
 
 		ExpressionPtr tryInlineToExprInternal(NodeManager& manager, const CallExprPtr& call, bool inlineDerivedBuiltIns) {
@@ -372,21 +328,69 @@ namespace transform {
 			}
 
 			// Step 3 - collect variables replacements
-			const ParametersPtr& paramList = lambda->getParameterList();
+			std::set<std::size_t> accessedArguments;
+			std::map<NodeAddress, NodePtr> replacements;
 
-			um::PointerMap<VariablePtr, ExpressionPtr> replacements;
+			bool success = true;
+			const auto& params = lambda->getParameterList();
+			auto deref = manager.getLangExtension<lang::ReferenceExtension>().getRefDeref();
+			visitDepthFirstPrunable(ExpressionAddress(body), [&](const NodeAddress& cur)->bool {
 
-			// add call parameters
-			int index = 0;
-			::for_each(call->getArguments(), [&](const ExpressionPtr& cur) { replacements.insert(std::make_pair(paramList[index++], cur)); });
+				// cut of nested lambdas
+				if (cur.isa<LambdaExprPtr>()) return true;		// prune
+
+				// check if current node is a parameter access
+				if (analysis::isCallOf(cur, deref)) {
+					// check for parameters
+					if (auto var = cur.as<CallExprPtr>()[0].isa<VariablePtr>()) {
+						if (::contains(params, var)) {
+
+							// get position of parameter
+							std::size_t idx = std::find(params.begin(), params.end(), var) - params.begin();
+
+							// get the argument
+							auto arg = call[idx];
+
+							// added to accessed variables
+							auto firstUsage = accessedArguments.insert(idx).second;
+
+							// update success flag
+							success &= (core::analysis::isSideEffectFree(arg) || firstUsage);
+
+							// register replacement
+							replacements[cur] = call[idx];
+
+							// no more descent required here
+							return true;
+						}
+					}
+				}
+
+				// otherwise => search deeper
+				return false;
+			});
+
+			// get set of arguments with side effects
+			std::set<std::size_t> argsWithSideEffects;
+			for(std::size_t i = 0; i < call.size(); i++) {
+				if (!analysis::isSideEffectFree(call[i])) {
+					argsWithSideEffects.insert(i);
+				}
+			}
+
+			// get set of accessed arguments with side effects
+			std::set<std::size_t> accessedArgsWithSideEffects;
+			for(const auto& arg : accessedArguments) {
+				if (!analysis::isSideEffectFree(call[arg])) {
+					accessedArgsWithSideEffects.insert(arg);
+				}
+			}
+
+			// check whether parameters have only been accessed at most once
+			if (!success || accessedArgsWithSideEffects != argsWithSideEffects) return call;
 
 			// Step 4 - substitute variables within body
-			InlineSubstituter substituter(replacements);
-			ExpressionPtr res = substituter.mapElement(0, body).as<ExpressionPtr>();
-
-			// check result
-			if(substituter.wasSuccessful()) { return res; }
-			return call;
+			return replacements.empty() ? body : replaceAll(manager, replacements).as<ExpressionPtr>();
 		}
 	}
 
