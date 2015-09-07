@@ -98,9 +98,9 @@ namespace frontend {
 		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_matrix_mul.c");
 	}
 
-	//TEST(IndependentTest, Pendulum123) {
-	//	runIndependentTestOn(FRONTEND_TEST_DIR "../../../test/pendulum/pendulum.c");
-	//}
+	TEST(IndependentTest, Pendulum123) {
+		//runIndependentTestOn(FRONTEND_TEST_DIR "../../../test/pendulum/pendulum.c");
+	}
 
 } // fe namespace
 } // insieme namespace

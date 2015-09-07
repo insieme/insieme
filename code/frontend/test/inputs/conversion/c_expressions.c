@@ -274,6 +274,24 @@ int main() {
 	#pragma test expect_ir("(1!=0)?2:3")
 	1?2:3;
 	
+	//===------------------------------------------------------------------------------------------------------------------------------------ MEMBER EXPR ---===
+		
+	#pragma test expect_ir("{ decl ref<struct{int<4> i},f,f> v0; *v0.i; }")
+	{
+		struct {
+			int i;
+		} ts;
+		ts.i;
+	}
+	
+	#pragma test expect_ir("{ decl ref<union{int<4> i},f,f> v0; *v0.i; }")
+	{
+		union {
+			int i;
+		} tu;
+		tu.i;
+	}
+	
 	//===---------------------------------------------------------------------------------------------------------------------------------- MISCELLANEOUS ---===
 	
 	#pragma test expect_ir("sizeof(type(real<8>))")
@@ -295,13 +313,13 @@ int main() {
 	}
 
 	// completely weird but possible compound init expr that can be assigned to
-	//pragma test expect_ir(";")
-	//typedef struct {
-	//	unsigned** data;
-	//	int x, y;
-	//} Image;
+	typedef struct {
+		unsigned data;
+		int x, y;
+	} Image;
 
-	//(Image){0, 0, 0} = (Image){1,1,1};
+	#pragma test expect_ir("STRING", "c_style_assignment(( var(struct{data:=0, x:=0, y:=0})), ( *( var(struct{data:=1, x:=1, y:=1}))))")
+	(Image){0u, 0, 0} = (Image){1u,1,1};
 
-	//(Image){0, 0, 0}.x = 1;
+	//(Image){0u, 0, 0}.x = 1;
 }

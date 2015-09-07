@@ -295,7 +295,7 @@ namespace conversion {
 			expand('\0', "\\0");
 		}
 
-		retExpr = builder.literal("\"" + strValue + "\"", convertExprType(stringLit));
+		retExpr = builder.literal(strValue, convertExprType(stringLit));
 		return retExpr;
 	}
 
@@ -408,9 +408,16 @@ namespace conversion {
 	core::ExpressionPtr Converter::ExprConverter::VisitMemberExpr(const clang::MemberExpr* membExpr) {
 		core::ExpressionPtr retIr;
 		LOG_EXPR_CONVERSION(membExpr, retIr);
-		//core::ExpressionPtr&& base = Visit(membExpr->getBase());
-		//retIr = exprutils::getMemberAccessExpr(converter, builder, base, membExpr);
-		frontend_assert(false) << "Member expressions not implemented.";
+		core::ExpressionPtr base = Visit(membExpr->getBase());
+		frontend_assert(base);
+		string memName(membExpr->getMemberDecl()->getName());
+		auto retType = converter.convertType(membExpr->getType());
+		frontend_assert(retType);
+
+		core::ExpressionPtr access = mgr.getLangExtension<core::lang::ReferenceExtension>().getRefMemberAccess();
+		frontend_assert(access);
+		retIr = builder.callExpr(builder.refType(retType), access, base, builder.getIdentifierLiteral(memName), builder.getTypeLiteral(retType));
+		frontend_assert(retIr);
 		return retIr;
 	}
 
@@ -678,6 +685,8 @@ namespace conversion {
 
 		// check on clang type, at this point in the IR no struct types exist
 		auto clangType = initList->getType();
+		// convert the type if this is the first time we encounter it
+		converter.convertType(clangType);
 		
 		if(clangType->isStructureType()) {
 			auto types = lookupRecordTypes(converter, initList);

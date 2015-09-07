@@ -89,19 +89,27 @@ namespace frontend {
 				auto ann = node->getAnnotation(ExpectedIRAnnotation::KEY);
 				auto ex = ann->getExpected();
 				boost::replace_all(ex, R"(\")", R"(")");
-
+				boost::replace_all(ex, R"(\\)", R"(\)");
+				
 				const string regexKey = "REGEX";
+				const string stringKey = "STRING";
 				const string exprTypeKey = "EXPR_TYPE";
 
 				// Regex expect
 				if(boost::starts_with(ex, regexKey)) {
 					boost::regex re(ex.substr(regexKey.size()));
-					auto irString = ::toString(printer::PrettyPrinter(builder.normalize(node), printer::PrettyPrinter::OPTIONS_DEFAULT
-					                                                                               | printer::PrettyPrinter::NO_LET_BINDINGS
-					                                                                               | printer::PrettyPrinter::NO_LET_BOUND_FUNCTIONS));
+					auto irString = ::toString(printer::PrettyPrinter(
+					    builder.normalize(node), printer::PrettyPrinter::OPTIONS_DEFAULT | printer::PrettyPrinter::NO_LET_BINDINGS
+					                                 | printer::PrettyPrinter::NO_LET_BOUND_FUNCTIONS | printer::PrettyPrinter::PRINT_DEREFS));
 					EXPECT_TRUE(boost::regex_match(irString.begin(), irString.end(), re)) << "Location : " << *core::annotations::getLocation(addr) << "\n"
 					                                                                      << "IR String: " << irString << "\n"
 					                                                                      << "Regex    : " << re << "\n";
+				} else if(boost::starts_with(ex, stringKey)) {
+					string exs(ex.substr(stringKey.size()));
+					auto irString = ::toString(printer::PrettyPrinter(
+					    builder.normalize(node), printer::PrettyPrinter::OPTIONS_DEFAULT | printer::PrettyPrinter::NO_LET_BINDINGS
+					                                 | printer::PrettyPrinter::NO_LET_BOUND_FUNCTIONS | printer::PrettyPrinter::PRINT_DEREFS));
+					EXPECT_EQ(exs, irString) << "Location       : " << *core::annotations::getLocation(addr) << "\n";
 				} else if(boost::starts_with(ex, exprTypeKey)) {
 					string irs(ex.substr(exprTypeKey.size()));
 					NodePtr expected = builder.parseType(irs);

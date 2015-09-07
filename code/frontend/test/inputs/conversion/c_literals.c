@@ -47,8 +47,7 @@ int main() {
 	#pragma test expect_ir("lit(\"'z'\":int<4>)")
 	'z';
 
-	// TODO: test parser with string literals?
-	//pragma test expect_ir("lit(\"abc\":ptr<char,f,f>)")
-	//"abc";
+	#pragma test expect_ir("ptr_from_array(lit(\"abc\":ref<array<char,4>>))")
+	"abc";
 
 }
