@@ -102,6 +102,7 @@ namespace extensions {
 				if(const clang::DeclRefExpr* varTy = llvm::dyn_cast<clang::DeclRefExpr>(sizeofexpr->getArgumentExpr()->IgnoreParenImpCasts())) {
 					//TODO: IMPLEMENT SIZEOF FOR VAR ARRAYS HERE!!!
 					//do the map lookup here
+					assert_not_implemented() << "UnaryExprOrTypeTraitExpr for VLAs not implemented.";
 				}
 			}
 		}
