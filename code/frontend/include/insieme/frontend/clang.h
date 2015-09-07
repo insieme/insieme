@@ -83,3 +83,25 @@
 #include <clang/Frontend/Utils.h>
 #include <clang/Lex/HeaderSearch.h>
 #pragma GCC diagnostic pop
+
+template <typename ClangType>
+static inline std::string dumpClang(ClangType* node) {
+	static_assert(std::is_base_of<clang::Stmt, ClangType>::value || std::is_base_of<clang::Decl, ClangType>::value
+	                  || std::is_base_of<clang::Type, ClangType>::value,
+	              "Can only dump clang nodes");
+	std::string ret;
+	llvm::raw_string_ostream strostream(ret);
+	node->dump(strostream);
+	return ret;
+}
+
+template <typename ClangType>
+static inline std::string dumpClang(ClangType* node, clang::SourceManager& sm) {
+	static_assert(std::is_base_of<clang::Stmt, ClangType>::value || std::is_base_of<clang::Decl, ClangType>::value
+	                  || std::is_base_of<clang::Type, ClangType>::value,
+	              "Can only dump clang nodes");
+	std::string ret;
+	llvm::raw_string_ostream strostream(ret);
+	node->dump(strostream, sm);
+	return ret;
+}

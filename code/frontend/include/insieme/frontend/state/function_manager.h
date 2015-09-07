@@ -60,6 +60,7 @@ namespace state {
 		FunctionManager(Converter& converter) : converter(converter) {}
 
 		core::LiteralPtr lookup(const clang::FunctionDecl* funDecl) const;
+		bool contains(const clang::FunctionDecl* funDecl) const;
 		void insert(const clang::FunctionDecl* funDecl, const core::LiteralPtr& fun);
 	};
 

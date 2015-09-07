@@ -60,14 +60,20 @@ int main() {
 	//===------------------------------------------------------------------------------------------------------------------------------- BINARY OPERATORS ---===
 	
 	// COMMA OPERATOR //////////////////////////////////////////////////////////////
-
-	#pragma test expect_ir("lambda () -> int<4> { 2; return 3; }()")
-	2, 3;
-
-	#pragma test expect_ir("lambda () -> int<4> { lambda () -> int<4> { 2; return 3; }(); return 4; }()")
-	2, 3, 4;
 	
-	#pragma test expect_ir("lambda () -> real<8> { 2; return lit(\"3.0E+0\":real<8>); }()")
+	#define C_STYLE_COMMA "let c_comma = lambda ('a lhs, 'b rhs) -> 'b { lhs; return rhs; };"
+
+	#pragma test expect_ir("{",C_STYLE_COMMA,"c_comma(2, 3); }")
+	{ 2, 3; }
+	#pragma test expect_ir("EXPR_TYPE", "int<4>")
+	2, 3;
+	
+	#pragma test expect_ir("{",C_STYLE_COMMA,"c_comma(c_comma(2, 3), 4); }")
+	{ 2, 3, 4; }
+	
+	#pragma test expect_ir("{",C_STYLE_COMMA,"c_comma(2, lit(\"3.0E+0\":real<8>)); }")
+	{ 2, 3.0; }
+	#pragma test expect_ir("EXPR_TYPE", "real<8>")
 	2, 3.0;
 	
 	// MATH //////////////////////////////////////////////////////////////

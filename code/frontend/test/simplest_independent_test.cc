@@ -90,6 +90,10 @@ namespace frontend {
 		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_decl_init_expressions.c");
 	}
 
+	TEST(IndependentTest, Prototypes) {
+		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_prototypes.c");
+	}
+
 	TEST(IndependentTest, HelloWorld) {
 		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_hello_world.c");
 	}
@@ -98,8 +102,8 @@ namespace frontend {
 		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_matrix_mul.c");
 	}
 
-	TEST(IndependentTest, Pendulum123) {
-		//runIndependentTestOn(FRONTEND_TEST_DIR "../../../test/pendulum/pendulum.c");
+	TEST(IndependentTest, Pendulum) {
+		runIndependentTestOn(FRONTEND_TEST_DIR "../../../test/pendulum/pendulum.c");
 	}
 
 } // fe namespace

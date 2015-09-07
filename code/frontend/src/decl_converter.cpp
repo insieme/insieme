@@ -92,7 +92,10 @@ namespace conversion {
 	// Visitors -------------------------------------------------------------------------------------------------------
 	
 	void DeclConverter::VisitDeclContext(const clang::DeclContext* context) {
+		VLOG(2) << "~~~~~~~~~~~~~~~~ VisitDeclContext: !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n ";
+		if(VLOG_IS_ON(2)) context->dumpDeclContext();
 		for(auto decl : context->decls()) {
+			VLOG(2) << "~~~~~~~~~~~~~~~~ VisitDeclContext, decl : " << dumpClang(decl);
 			Visit(decl);
 		}
 	}
@@ -101,6 +104,7 @@ namespace conversion {
 	//							Structs, Unions and Classes 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	void DeclConverter::VisitRecordDecl(const clang::RecordDecl* typeDecl) {
+		VLOG(2) << "~~~~~~~~~~~~~~~~ VisitRecordDecl: " << dumpClang(typeDecl);
 		if(!typeDecl->isCompleteDefinition()) { return; }
 		if(typeDecl->isDependentType()) { return; }
 
@@ -115,6 +119,7 @@ namespace conversion {
 	//							Typedefs and type aliases
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	void DeclConverter::VisitTypedefNameDecl(const clang::TypedefNameDecl* typedefDecl) {
+		VLOG(2) << "~~~~~~~~~~~~~~~~ VisitTypedefNameDecl: " << dumpClang(typedefDecl);
 		if(!typedefDecl->getTypeForDecl()) { return; }
 
 		// get contained type
@@ -127,6 +132,7 @@ namespace conversion {
 	//							Variable declarations
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	void DeclConverter::VisitVarDecl(const clang::VarDecl* var) {
+		VLOG(2) << "~~~~~~~~~~~~~~~~ VisitVarDecl: " << dumpClang(var);
 		// variables to be skipped
 		if(!var->hasGlobalStorage()) {
 			return;
@@ -151,6 +157,7 @@ namespace conversion {
 	//					 Linkage spec, e.g. extern "C"
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	void DeclConverter::VisitLinkageSpec(const clang::LinkageSpecDecl* link) {
+		VLOG(2) << "~~~~~~~~~~~~~~~~ VisitLinkageSpec: " << dumpClang(link);
 		bool prevExternC = inExternC;
 		inExternC = link->getLanguage() == clang::LinkageSpecDecl::lang_c;
 		VisitDeclContext(llvm::cast<clang::DeclContext>(link));
@@ -163,14 +170,24 @@ namespace conversion {
 	void DeclConverter::VisitFunctionDecl(const clang::FunctionDecl* funcDecl) {
 		if(funcDecl->isTemplateDecl() && !funcDecl->isFunctionTemplateSpecialization()) { return; }
 		converter.trackSourceLocation(funcDecl);
+		VLOG(2) << "~~~~~~~~~~~~~~~~ VisitFunctionDecl: " << dumpClang(funcDecl);
+		bool isDefinition = funcDecl->isThisDeclarationADefinition();
+		// switch to the declaration containing the body (if there is one)
+		funcDecl->hasBody(funcDecl); // yes, right, this one has the side effect of updating funcDecl!!
+
+		// convert prototype
 		auto funType = converter.convertType(funcDecl->getType()).as<core::FunctionTypePtr>();
 		core::LiteralPtr irLit = builder.literal(funcDecl->getNameAsString(), funType);
 		if(inExternC) { annotations::c::markAsExternC(irLit); }
-		// insert first before converting the body
-		converter.getFunMan()->insert(funcDecl, irLit);
-		core::LambdaExprPtr irFunc = convertFunctionDecl(funType, funcDecl);
+		// insert first before converting the body - skip if we already handled this decl
+		if(!converter.getFunMan()->contains(funcDecl->getCanonicalDecl())) converter.getFunMan()->insert(funcDecl->getCanonicalDecl(), irLit);
+
+		// if definition, convert body
+		if(isDefinition) {
+			core::LambdaExprPtr irFunc = convertFunctionDecl(funType, funcDecl);
+			if(irFunc) converter.getIRTranslationUnit().addFunction(irLit, irFunc);
+		}
 		converter.untrackSourceLocation();
-		if(irFunc) converter.getIRTranslationUnit().addFunction(irLit, irFunc);
 	}
 
 } // End conversion namespace
