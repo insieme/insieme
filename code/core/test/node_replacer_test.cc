@@ -262,9 +262,9 @@ namespace core {
 		VariablePtr varA = builder.variable(builder.refType(uint4), 1);
 		VariablePtr varB = builder.variable(builder.refType(boolType), 2);
 
-		VariablePtr param = builder.variable(uint4, 3);
+		VariablePtr param = builder.variable(builder.refType(uint4), 3);
 		FunctionTypePtr funType = builder.functionType(toVector(uint4), uint4);
-		LambdaExprPtr lambda = builder.lambdaExpr(funType, toVector(param), builder.returnStmt(param));
+		LambdaExprPtr lambda = builder.lambdaExpr(funType, toVector(param), builder.returnStmt(builder.deref(param)));
 
 
 		StatementPtr stmt = builder.compoundStmt(toVector<StatementPtr>(builder.declarationStmt(varA, builder.refVar(zero)),
@@ -288,7 +288,7 @@ namespace core {
 
 		EXPECT_EQ("[]", toString(check(stmt2, all)));
 		EXPECT_PRED2(containsSubString, toString(printer::PrettyPrinter(stmt2)), "decl ref<bool,f,f> v2 = ( var(false))");
-		EXPECT_PRED2(containsSubString, toString(printer::PrettyPrinter(stmt2)), "fun(bool");
+		EXPECT_PRED2(containsSubString, toString(printer::PrettyPrinter(stmt2)), "fun(ref<bool,f,f>");
 	}
 
 } // end namespace core

@@ -80,9 +80,10 @@ namespace checks {
 			if(addr) {
 				visitDepthFirst(addr, [&](const VariableAddress& var) {
 					if(*var.getAddressedNode() != *param) { return; }
-					if(var.isRoot()) { return; }
-					if(var.getParentAddress(1).getNodeType() != NT_CallExpr) { return; }
-					CallExprAddress useCallAdr = var.getParentAddress(1).as<CallExprAddress>();
+					if(var.isRoot() || var.getDepth() < 2) { return; }
+					if(!analysis::isCallOf(var.getParentAddress(1), refExt.getRefDeref())) { return; }
+					if(var.getParentAddress(2).getNodeType() != NT_CallExpr) { return; }
+					CallExprAddress useCallAdr = var.getParentAddress(2).as<CallExprAddress>();
 					CallExprPtr usecall = useCallAdr;
 					if(usecall) {
 						if(refExt.isRefArrayElement(usecall->getFunctionExpr())) {
