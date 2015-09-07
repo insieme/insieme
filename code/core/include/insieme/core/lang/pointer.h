@@ -152,7 +152,12 @@ namespace lang {
 				"		return struct ptr<'a,'c,'nv> { ref_volatile_cast(p.data, v), p.offset };   "
 				"  }                                                                               "
 		)
-
+			
+		/**
+		 * Literals to support converting from/to pointers/integral data types.
+		 */
+		LANG_EXT_LITERAL(PtrFromIntegral, "ptr_from_integral", "('a, type<'b>) -> 'b")
+		LANG_EXT_LITERAL(PtrToIntegral, "ptr_to_integral", "(ptr<'a, 'c, 'v>, type<'b>) -> 'b")
 
 		// -- sub-referencing --
 
@@ -382,8 +387,10 @@ namespace lang {
 
 	ExpressionPtr buildPtrNull(const TypePtr& type);
 	ExpressionPtr buildPtrFromRef(const ExpressionPtr& refExpr);
-	ExpressionPtr buildPtrFromArray(const ExpressionPtr& arrExpr);
 	ExpressionPtr buildPtrToRef(const ExpressionPtr& ptrExpr);
+	ExpressionPtr buildPtrFromArray(const ExpressionPtr& arrExpr);
+	ExpressionPtr buildPtrFromIntegral(const ExpressionPtr& intExpr, const TypePtr& ptrType);
+	ExpressionPtr buildPtrToIntegral(const ExpressionPtr& ptrExpr, const TypePtr& intType);
 
 	ExpressionPtr buildPtrCast(const ExpressionPtr& ptrExpr, bool newConst, bool newVolatile);
 	ExpressionPtr buildPtrReinterpret(const ExpressionPtr& ptrExpr, const TypePtr& newElementType);

@@ -71,6 +71,11 @@ namespace utils {
 		LANG_EXT_DERIVED(CStyleAssignment, "lambda (ref<'a,f,'b> lhs, 'a rhs) -> 'a { lhs = rhs; return *lhs; }")
 
 		/**
+		 * Implements the C comma operator semantics
+		 */
+		LANG_EXT_DERIVED(CommaOperator, "lambda ('a lhs, 'b rhs) -> 'b { lhs; return rhs; }")
+
+		/**
 		 * Temporary operator to fix record types before resolver pass
 		 * NOTE: should be completely eliminated before IR passes out of the FE
 		 */
@@ -78,11 +83,16 @@ namespace utils {
 	};
 
 	// --------------------- Utilities ----------------------------
-
+	
 	/**
 	 * Creates a C-style assignment operation
 	 */
 	core::ExpressionPtr buildCStyleAssignment(const core::ExpressionPtr& lhs, const core::ExpressionPtr& rhs);
+	
+	/**
+	 * Creates a C-style comma operation
+	 */
+	core::ExpressionPtr buildCommaOperator(const core::ExpressionPtr& lhs, const core::ExpressionPtr& rhs);
 	
 	/**
 	 * Creates a temporary fix call for record init expression types

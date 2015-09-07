@@ -58,15 +58,19 @@ namespace frontend {
 	using insieme::annotations::ExpectedIRAnnotation;
 
 	namespace {
-		static inline void checkExpected(const NodePtr& expected, const NodePtr& actual, const NodeAddress& addr) {
+		static inline void checkExpected(NodePtr expected, NodePtr actual, const NodeAddress& addr) {
 			IRBuilder builder(expected->getNodeManager());
 			bool eIsExp = expected.isa<ExpressionPtr>();
 			bool aIsExp = actual.isa<ExpressionPtr>();
-			EXPECT_EQ(builder.normalize(expected), builder.normalize(actual))
-			    << "Location     : " << *core::annotations::getLocation(addr) << "\n"
-			    << "Actual Pretty: " << dumpColor(builder.normalize(actual), std::cout, true) << "\n"
-			    << "Expected type: " << (eIsExp ? toString(dumpColor(builder.normalize(expected.as<ExpressionPtr>()->getType()))) : toString("none")) << "\n"
-			    << "Actual type  : " << (aIsExp ? toString(dumpColor(builder.normalize(actual.as<ExpressionPtr>()->getType()))) : toString("none")) << "\n";
+			expected = builder.normalize(expected);
+			actual = builder.normalize(actual);
+			EXPECT_EQ(expected, actual) << "Location     : " << *core::annotations::getLocation(addr) << "\n"
+			                            << "Actual Pretty: " << dumpColor(actual, std::cout, true) << "\n"
+			                            << "Expected type: " << (eIsExp ? toString(dumpColor(expected.as<ExpressionPtr>()->getType())) : toString("-")) << "\n"
+			                            << "Actual type  : " << (aIsExp ? toString(dumpColor(actual.as<ExpressionPtr>()->getType())) : toString("-")) << "\n"
+			    //<< "Text expected:\n" << dumpText(expected) << "\n"
+			    //<< "Text actual  :\n" << dumpText(actual) << "\n";
+			    ;
 		}
 	}
 

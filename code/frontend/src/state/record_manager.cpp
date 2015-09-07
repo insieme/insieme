@@ -45,7 +45,7 @@ namespace frontend {
 namespace state {
 
 	core::GenericTypePtr RecordManager::lookup(const clang::RecordDecl* recordDecl) const {
-		frontend_assert(::containsKey(records, recordDecl)) << "Trying to look up record not previously declared";
+		frontend_assert(::containsKey(records, recordDecl)) << "Trying to look up record not previously declared: " << dumpClang(recordDecl);
 		return records.find(recordDecl)->second;
 	}
 
@@ -54,7 +54,7 @@ namespace state {
 	}
 
 	void RecordManager::insert(const clang::RecordDecl* recordDecl, const core::GenericTypePtr& genType) {
-		frontend_assert(!::containsKey(records, recordDecl)) << "Trying to insert previously declared record";
+		frontend_assert(!::containsKey(records, recordDecl)) << "Trying to insert previously declared record: " << dumpClang(recordDecl);
 		records[recordDecl] = genType;
 	}
 

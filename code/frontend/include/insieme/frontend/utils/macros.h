@@ -37,24 +37,6 @@
 #pragma once
 
 /*****************************************************************************************************
- *      IR QUERING METHODS
- *      shortcuts to access or retrieve specific IR features
-*****************************************************************************************************/
-
-#define GET_REF_ELEM_TYPE(type) (core::static_pointer_cast<const core::RefType>(type)->getElementType())
-
-#define GET_VEC_ELEM_TYPE(type) (core::static_pointer_cast<const core::VectorType>(type)->getElementType())
-
-#define IS_ARRAY_TYPE(type) (type.isa<core::RefTypePtr>() && type.as<core::RefTypePtr>()->getElementType().isa<core::ArrayTypePtr>())
-
-#define GET_ARRAY_ELEM_TYPE(type) (core::static_pointer_cast<const core::ArrayType>(type)->getElementType())
-
-#define IS_IR_REF(type) (type->getNodeType() == core::NT_RefType)
-
-#define GET_REF_ELEM_TYPE(type) (core::static_pointer_cast<const core::RefType>(type)->getElementType())
-
-
-/*****************************************************************************************************
  *      LOG MACROS
 *****************************************************************************************************/
 
@@ -65,7 +47,7 @@
 			VLOG(2) << "Dump of clang expression: ";                                                                                                           \
 			parentExpr->dump();                                                                                                                                \
 		}                                                                                                                                                      \
-		VLOG(1) << "-> at location: (" << utils::location(parentExpr->getLocStart(), converter.getSourceManager()) << "); ";                                    \
+		VLOG(1) << "-> at location: (" << utils::location(parentExpr->getLocStart(), converter.getSourceManager()) << "); ";                                   \
 		VLOG(1) << "Converted into IR expression: ";                                                                                                           \
 		if(expr) {                                                                                                                                             \
 			VLOG(1) << "\n" << dumpOneLine(expr) << "\n of type:( " << *expr->getType() << " )";                                                               \
@@ -81,9 +63,9 @@
 		VLOG(1) << "******      STMT [class:'" << parentStmt->getStmtClassName() << "'] ******";                                                               \
 		if(VLOG_IS_ON(2)) {                                                                                                                                    \
 			VLOG(2) << "Dump of clang statement:";                                                                                                             \
-			parentStmt->dump(converter.getSourceManager());                                                                                                     \
+			parentStmt->dump(converter.getSourceManager());                                                                                                    \
 		}                                                                                                                                                      \
-		VLOG(1) << "-> at location: (" << utils::location(parentStmt->getLocStart(), converter.getSourceManager()) << "); ";                                    \
+		VLOG(1) << "-> at location: (" << utils::location(parentStmt->getLocStart(), converter.getSourceManager()) << "); ";                                   \
 		VLOG(1) << "Converted 'statement' into IR stmt: ";                                                                                                     \
 		VLOG(1) << stmt;                                                                                                                                       \
 		VLOG(1) << "****** DONE STMT [class:'" << parentStmt->getStmtClassName() << "'] ******";                                                               \
@@ -121,7 +103,7 @@
 #include "insieme/utils/assert.h"
 
 /**
-  * this macro is meant to be used in the visitors ( stmt, expr and type) it requires the object converter to be present
+  * this macro is meant to be used in the visitors (stmt, expr and type) it requires the object converter to be present
   * in the scope to able to print the current translating location
   */
 #define frontend_assert(_COND) assert_true(_COND) << " ==> last Trackable location: " << converter.getLastTrackableLocation() << "\n"

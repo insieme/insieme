@@ -44,3 +44,21 @@ void bla() {
 	int c;
 	#pragma test expect_num_vars(2)
 }
+
+void bla2(int x) {
+	#pragma test expect_num_vars(2)
+	x;
+}
+
+void bla3(char* filename);
+void bla4(char* filename) { filename; }
+
+typedef struct { int i; } Image;
+typedef unsigned long long ull;
+
+void write_image(Image target, Image dist, char* filename, ull minSteps, ull maxSteps) {
+	
+	#pragma test expect_num_vars(6)
+	bla3(filename);
+	bla4(filename);
+}

@@ -145,52 +145,23 @@ namespace utils {
 		case clang::CK_BitCast:
 			return implementBitcast(converter, targetTy, expr);
 
-
-		//	{
-		//		// char* -> const char* is a bitcast in clang, and not a Noop, but we drop qualifiers
-		//		if(core::types::isSubTypeOf(exprTy, targetTy)) { return expr; }
-
-		//		// cast to void*
-		//		if(gen.isAnyRef(targetTy)) { return builder.callExpr(targetTy, gen.getRefReinterpret(), expr, builder.getTypeLiteral(targetTy)); }
-
-		//		// is a cast of Null to another pointer type:
-		//		// we rebuild null
-		//		if(*expr == *builder.literal(expr->getType(), "0") || gen.isRefNull(expr)) { return builder.getZero(targetTy); }
-
-		//		if(targetTy->getNodeType() == core::NT_FunctionType) { return builder.castExpr(targetTy, expr); }
-
-		//		// cast from void*
-		//		if(gen.isAnyRef(exprTy)) {
-		//			core::TypePtr elementType = core::analysis::getReferencedType(targetTy);
-		//			return builder.callExpr(targetTy, gen.getRefReinterpret(), expr, builder.getTypeLiteral(elementType));
-		//		}
-
-		//		// otherwise, we just reinterpret
-		//		core::ExpressionPtr innerExpr = expr;
-		//		if(gen.isRefDeref(expr)) {
-		//			// clang does LtoR always, but we want refs in the cast. if there is a deref in the inner expression remove it
-		//			innerExpr = expr.as<core::LambdaExprPtr>()->getParameterList()[0];
-		//		}
-		//		return builder.callExpr(targetTy, gen.getRefReinterpret(), innerExpr, builder.getTypeLiteral(GET_REF_ELEM_TYPE(targetTy)));
-		//	}
+		////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		// Integral to pointer. A special kind of reinterpreting conversion.
+		// (char*) 0x1001aab0,  reinterpret_cast<int*>(0)
+		case clang::CK_IntegralToPointer:
+			return core::lang::buildPtrFromIntegral(expr, targetTy);
 
 		////////////////////////////////////////////////////////////////////////////////////////////////////////////
-		//case clang::CK_IntegralToPointer:
-		//	// Integral to pointer. A special kind of reinterpreting conversion. Applies to normal,
-		//	// ObjC, and block pointers. (char*) 0x1001aab0 reinterpret_cast<int*>(0)
-		//	{
-		//		// is a cast of Null to another pointer type:
-		//		// we rebuild null
-		//		if(*expr == *builder.literal(expr->getType(), "0") || gen.isRefNull(expr)) {
-		//			return builder.getZero(targetTy);
-		//		} else {
-		//			assert(targetTy.isa<core::RefTypePtr>());
-		//			core::TypePtr elemTy = targetTy.as<core::RefTypePtr>()->getElementType();
-		//			return builder.callExpr(targetTy, gen.getIntToRef(), toVector(expr, builder.getTypeLiteral(elemTy)));
-		//		}
-		//		break;
-		//	}
+		// Pointer to integral. A special kind of reinterpreting conversion.
+		// (int)((void*)0x1001aab0)
+		case clang::CK_PointerToIntegral:
+			return core::lang::buildPtrToIntegral(expr, targetTy);
 
+		////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		// Null pointer constant to pointer, e.g. (int*)0
+		case clang::CK_NullToPointer:
+			return core::lang::buildPtrNull(targetTy);
+		
 		////////////////////////////////////////////////////////////////////////////////////////////////////////////
 		//case clang::CK_ConstructorConversion:
 		//	// Conversion by constructor. struct A { A(int); }; A a = A(10);
@@ -261,11 +232,6 @@ namespace utils {
 		//		// wrap it as cpp ref
 		//		return builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp(), newExpr);
 		//	}
-
-		////////////////////////////////////////////////////////////////////////////////////////////////////////////
-		// Null pointer constant to pointer, e.g. (int*)0
-		case clang::CK_NullToPointer:
-			return core::lang::buildPtrNull(targetTy);
 
 		////////////////////////////////////////////////////////////////////////////////////////////////////////////
 		//case clang::CK_MemberPointerToBoolean:

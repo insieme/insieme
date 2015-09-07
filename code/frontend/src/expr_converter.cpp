@@ -446,10 +446,7 @@ namespace conversion {
 
 		// if the binary operator is a comma separated expression, we convert it into a function call which returns the value of the last expression --- COMMA -
 		if(binOp->getOpcode() == clang::BO_Comma) {
-			stmtutils::StmtWrapper stmts;
-			stmts.push_back(lhs);
-			stmts.push_back(basic.isUnit(rhs->getType()) ? rhs.as<core::StatementPtr>() : builder.returnStmt(rhs));
-			retIr = createCallExprFromBody(converter, stmts, rhs->getType(), false);
+			retIr = utils::buildCommaOperator(lhs, rhs);
 			return retIr;
 		}
 
@@ -625,25 +622,18 @@ namespace conversion {
 		}
 		
 		if(const clang::FunctionDecl* funcDecl = llvm::dyn_cast<clang::FunctionDecl>(declRef->getDecl())) {
-			retIr = converter.getFunMan()->lookup(funcDecl);
+			retIr = converter.getFunMan()->lookup(funcDecl->getCanonicalDecl());
 			return retIr;
 		}
 
-		//if(const clang::EnumConstantDecl* decl = llvm::dyn_cast<clang::EnumConstantDecl>(declRef->getDecl())) {
-		//	string enumConstantname = insieme::frontend::utils::buildNameForEnumConstant(decl, converter.getSourceManager());
-		//	const clang::EnumType* enumType = llvm::dyn_cast<clang::EnumType>(llvm::cast<clang::TypeDecl>(decl->getDeclContext())->getTypeForDecl());
+		if(const clang::EnumConstantDecl* decl = llvm::dyn_cast<clang::EnumConstantDecl>(declRef->getDecl())) {
+			string enumConstantname = decl->getNameAsString();
+			const clang::EnumType* enumType = llvm::dyn_cast<clang::EnumType>(llvm::cast<clang::TypeDecl>(decl->getDeclContext())->getTypeForDecl());
+			auto expType = converter.convertType(enumType->getCanonicalTypeInternal());
+			return builder.literal(enumConstantname, expType);
+		}
 
-		//	// Just dont you mesh with sys headers stuff
-		//	auto expType = converter.convertType(enumType->getCanonicalTypeInternal());
-		//	if(annotations::c::hasIncludeAttached(expType)) { enumConstantname = decl->getNameAsString(); }
-
-		//	return builder.literal(enumConstantname, expType);
-		//}
-
-		//frontend_assert(false) << "clang::DeclRefExpr not supported!\n";
-		//return core::ExpressionPtr();
-
-		frontend_assert(false) << "DeclRefExpr not handled.";
+		frontend_assert(false) << "DeclRefExpr not handled: " << dumpClang(declRef, converter.getSourceManager());
 		return retIr;
 	}
 

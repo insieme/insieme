@@ -45,11 +45,16 @@ namespace frontend {
 namespace state {
 
 	core::LiteralPtr FunctionManager::lookup(const clang::FunctionDecl* funDecl) const {
-		frontend_assert(::containsKey(functions, funDecl)) << "Trying to look up function not previously declared";
+		frontend_assert(::containsKey(functions, funDecl)) << "Trying to look up function not previously declared: " << dumpClang(funDecl);
 		return functions.find(funDecl)->second;
 	}
+
+	bool FunctionManager::contains(const clang::FunctionDecl* funDecl) const {
+		return ::containsKey(functions, funDecl);
+	}
+
 	void FunctionManager::insert(const clang::FunctionDecl* funDecl, const core::LiteralPtr& fun) {
-		frontend_assert(!::containsKey(functions, funDecl)) << "Trying to insert previously declared function";
+		frontend_assert(!::containsKey(functions, funDecl)) << "Trying to insert previously declared function: " << dumpClang(funDecl);
 		functions[funDecl] = fun;
 	}
 

@@ -167,6 +167,22 @@ namespace lang {
 		return builder.callExpr(pExt.getPtrFromArray(), arrExpr);
 	}
 
+	ExpressionPtr buildPtrFromIntegral(const ExpressionPtr& intExpr, const TypePtr& ptrType) {
+		assert_pred1(intExpr->getNodeManager().getLangBasic().isInt, intExpr->getType()) << "Trying to build ptr from non-integral.";
+		assert_pred1(isPointer, ptrType) << "Trying to build non-ptr-type from integral.";
+		IRBuilder builder(intExpr->getNodeManager());
+		auto& pExt = intExpr->getNodeManager().getLangExtension<PointerExtension>();
+		return builder.callExpr(pExt.getPtrFromIntegral(), intExpr, builder.getTypeLiteral(ptrType));
+	}
+
+	insieme::core::ExpressionPtr buildPtrToIntegral(const ExpressionPtr& ptrExpr, const TypePtr& intType) {
+		assert_pred1(isPointer, ptrExpr) << "Trying to build a ref from non-ptr.";
+		assert_pred1(ptrExpr->getNodeManager().getLangBasic().isInt, intType) << "Trying to build non-integral from ptr.";
+		IRBuilder builder(ptrExpr->getNodeManager());
+		auto& pExt = ptrExpr->getNodeManager().getLangExtension<PointerExtension>();
+		return builder.callExpr(pExt.getPtrToIntegral(), ptrExpr, builder.getTypeLiteral(intType));
+	}
+
 	ExpressionPtr buildPtrToRef(const ExpressionPtr& ptrExpr) {
 		assert_pred1(isPointer, ptrExpr) << "Trying to build a ref from non-ptr.";
 		IRBuilder builder(ptrExpr->getNodeManager());

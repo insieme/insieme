@@ -49,7 +49,8 @@ namespace state {
 	core::ExpressionPtr VariableManager::lookup(const clang::VarDecl* varDecl) const {
 		// lookup globals in outermost scope
 		if(varDecl->hasGlobalStorage()) {
-			frontend_assert(::containsKey(storage.front().variables, varDecl)) << "Trying to look up global variable not previously declared";
+			frontend_assert(::containsKey(storage.front().variables, varDecl)) << "Trying to look up global variable not previously declared: "
+				                                                               << dumpClang(varDecl);
 			return storage.front().variables.find(varDecl)->second;
 		}
 
@@ -60,13 +61,13 @@ namespace state {
 			if(!it->nested) break;
 		}
 
-		frontend_assert(false) << "Trying to look up local variable not previously declared";
+		frontend_assert(false) << "Trying to look up local variable not previously declared: " << dumpClang(varDecl);
 		return core::ExpressionPtr();
 	}
 
 	void VariableManager::insert(const clang::VarDecl* varDecl, const core::ExpressionPtr& var) {
 		if(varDecl->hasGlobalStorage()) frontend_assert(storage.size() == 1) << "Global variable not inserted at global scope";
-		frontend_assert(!::containsKey(storage.back().variables, varDecl)) << "Trying to insert variable already declared previously";
+		frontend_assert(!::containsKey(storage.back().variables, varDecl)) << "Trying to insert variable already declared previously: "<< dumpClang(varDecl);
 		storage.back().variables[varDecl] = var;
 	}
 
