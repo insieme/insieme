@@ -291,10 +291,7 @@ declarations : /* empty */ { }
 program : type "identifier" "(" variable_list markable_compound_stmt { RULE
                              INSPIRE_GUARD(@1, $1); 
                              driver.close_scope(@$, "program");
-                             TypeList paramTys;
-                             for (const auto& var : $4) paramTys.push_back(var.getType());
-                             FunctionTypePtr funcType = driver.builder.functionType(paramTys, $1); 
-						     ExpressionPtr main = driver.builder.lambdaExpr(funcType, $4, $5);
+                             auto main = driver.genLambda(@$,$4,$1,$5);
 						     $$ = driver.builder.createProgram(toVector(main));
                         }
         ;

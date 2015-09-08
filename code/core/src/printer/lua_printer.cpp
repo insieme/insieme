@@ -462,7 +462,7 @@ namespace printer {
 
 			auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
 
-			res[refExt.getRefAlloc()] = OP_CONVERTER({ converter.visit(static_pointer_cast<const core::CallExpr>(call->getArgument(0))->getArgument(0)); });
+			res[refExt.getRefAlloc()] = OP_CONVERTER({ OUT("{}"); });
 			res[refExt.getRefDeref()] = OP_CONVERTER({ PRINT_ARG(0); });
 			res[refExt.getRefDelete()] = OP_CONVERTER({});
 			res[refExt.getRefAssign()] = OP_CONVERTER({

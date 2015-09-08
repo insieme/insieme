@@ -95,7 +95,7 @@ namespace parser3 {
 		inspire_driver driver(x, nm);
 		driver.parseExpression();
 		if(driver.result) {
-			std::cout << driver.result << std::endl;
+//			std::cout << driver.result << std::endl;
 			//       dumpColor(driver.result);
 			auto msg = checks::check(driver.result);
 			EXPECT_TRUE(msg.empty()) << msg;
@@ -181,13 +181,13 @@ namespace parser3 {
 		inspire_driver driver(x, nm);
 		driver.parseStmt();
 		if(driver.result) {
-			dumpColor(driver.result);
+//			dumpColor(driver.result);
 			auto msg = checks::check(driver.result);
 			EXPECT_TRUE(msg.empty()) << msg;
 		} else {
 			driver.print_errors();
 		}
-		std::cout << " ============== TEST ============ " << std::endl;
+//		std::cout << " ============== TEST ============ " << std::endl;
 		return driver.result;
 	}
 
@@ -275,13 +275,13 @@ namespace parser3 {
 		inspire_driver driver(x, nm);
 		driver.parseProgram();
 		if(driver.result) {
-			dumpColor(driver.result);
+//			dumpColor(driver.result);
 			auto msg = checks::check(driver.result);
 			EXPECT_TRUE(msg.empty()) << msg;
 		} else {
 
 		}
-		   std::cout << " ============== TEST ============ " << std::endl;
+//		   std::cout << " ============== TEST ============ " << std::endl;
 		return driver.result;
 	}
 

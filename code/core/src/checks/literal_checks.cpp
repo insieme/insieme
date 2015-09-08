@@ -58,8 +58,9 @@ namespace checks {
 		boost::regex charRegex(R"('\\?.')", FLAGS);
 		boost::regex stringRegex(R"("(\\.|[^\\"])*")", FLAGS);
 
-		boost::regex signedRegex(R"((-?(0|[1-9][0-9]*))(l|ll)?)", FLAGS);
-		boost::regex unsignedRegex(R"((0|[1-9][0-9]*)u?(l|ll)?)", FLAGS);
+		// allow signedRegex to also match char types due to C semantics
+		boost::regex signedRegex(R"(((-?(0|[1-9][0-9]*))(l|ll)?)|('\\?.'))", FLAGS);
+		boost::regex unsignedRegex(R"((0|[1-9][0-9]*)u?(l|ll)?|)", FLAGS);
 	}
 
 
