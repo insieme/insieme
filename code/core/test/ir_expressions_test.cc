@@ -142,16 +142,16 @@ namespace core {
 
 		TypePtr type = GenericType::get(manager, "A");
 		CompoundStmtPtr body = CompoundStmt::get(manager, Literal::get(manager, type, "a"));
-		VariablePtr varA = Variable::get(manager, type, 1);
-		VariablePtr varB = Variable::get(manager, type, 2);
+		VariablePtr varA = Variable::get(manager, builder.refType(type), 1);
+		VariablePtr varB = Variable::get(manager, builder.refType(type), 2);
 		FunctionTypePtr funType = FunctionType::get(manager, TypeList(), type);
 		LambdaPtr empty = Lambda::get(manager, funType, VariableList(), body);
 		LambdaPtr little = Lambda::get(manager, funType, toVector(varA), body);
 		LambdaPtr more = Lambda::get(manager, funType, toVector(varA, varB), body);
 
 		EXPECT_EQ("fun() {a;}", toString(*empty));
-		EXPECT_EQ("fun(A v1) {a;}", toString(*little));
-		EXPECT_EQ("fun(A v1, A v2) {a;}", toString(*more));
+		EXPECT_EQ("fun(ref<A,f,f> v1) {a;}", toString(*little));
+		EXPECT_EQ("fun(ref<A,f,f> v1, ref<A,f,f> v2) {a;}", toString(*more));
 
 		// conduct basic node checks
 		basicNodeTests(empty, toVector<NodePtr>(funType, empty->getParameters(), body));
@@ -171,10 +171,10 @@ namespace core {
 
 
 		VariableList param;
-		param.push_back(builder.variable(gen.getUInt4(), 3));
+		param.push_back(builder.variable(builder.refType(gen.getUInt4()), 3));
 
 		LiteralPtr zero = builder.literal(gen.getUInt4(), "0");
-		VariablePtr x = builder.variable(gen.getUInt4(), 3);
+		VariablePtr x = builder.variable(builder.refType(gen.getUInt4()), 3);
 		ExpressionPtr condition = builder.callExpr(gen.getBool(), gen.getUnsignedIntEq(), x, zero);
 
 		// build even body ...
@@ -219,10 +219,10 @@ namespace core {
 		LambdaExprPtr simple = builder.lambdaExpr(functionType, toVector(x), builder.returnStmt(builder.boolLit("true")));
 		EXPECT_FALSE(simple->isRecursive());
 
-		EXPECT_EQ("rec v1.{v1=fun(uint<4> v3) {if(uint_eq(v3, 0)) {return true;} else {return bool_not(v2(v3));};}, v2=fun(uint<4> v3) {if(uint_eq(v3, 0)) "
+		EXPECT_EQ("rec v1.{v1=fun(ref<uint<4>,f,f> v3) {if(uint_eq(v3, 0)) {return true;} else {return bool_not(v2(v3));};}, v2=fun(ref<uint<4>,f,f> v3) {if(uint_eq(v3, 0)) "
 		          "{return false;} else {return bool_not(v1(v3));};}}",
 		          toString(*even));
-		EXPECT_EQ("rec v2.{v1=fun(uint<4> v3) {if(uint_eq(v3, 0)) {return true;} else {return bool_not(v2(v3));};}, v2=fun(uint<4> v3) {if(uint_eq(v3, 0)) "
+		EXPECT_EQ("rec v2.{v1=fun(ref<uint<4>,f,f> v3) {if(uint_eq(v3, 0)) {return true;} else {return bool_not(v2(v3));};}, v2=fun(ref<uint<4>,f,f> v3) {if(uint_eq(v3, 0)) "
 		          "{return false;} else {return bool_not(v1(v3));};}}",
 		          toString(*odd));
 	}
