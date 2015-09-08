@@ -45,6 +45,7 @@
 
 #include "insieme/annotations/expected_ir_annotation.h"
 #include "insieme/core/annotations/source_location.h"
+#include "insieme/core/checks/full_check.h"
 #include "insieme/frontend/extensions/test_pragma_extension.h"
 #include "insieme/frontend/frontend.h"
 #include "insieme/frontend/state/variable_manager.h"
@@ -143,6 +144,9 @@ namespace frontend {
 		EXPECT_EQ(visited, occurrences);
 
 		dumpColor(res);
+
+		auto checkResult = core::checks::check(res);
+		EXPECT_EQ(checkResult.size(), 0) << checkResult;
 	}
 }
 }
