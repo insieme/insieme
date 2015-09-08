@@ -704,30 +704,6 @@ namespace analysis {
 		return varVec;
 	}
 
-	utils::map::PointerMap<VariableAddress, VariableAddress> getRenamedVariableMap(const std::vector<VariableAddress> varlist) {
-		utils::map::PointerMap<VariableAddress, VariableAddress> varMap;
-		for_each(varlist, [&](const VariableAddress& add) {
-			RenamingVarVisitor rvv(add);
-			visitPathBottomUp(add, rvv);
-			if(VariableAddress source = rvv.getVariableAddr()) {
-				if(source) { varMap[add] = source; }
-			}
-		});
-
-		return varMap;
-	}
-
-	void getRenamedVariableMap(utils::map::PointerMap<VariableAddress, VariableAddress>& varMap) {
-		for_each(varMap, [&](std::pair<VariableAddress, VariableAddress> add) {
-			RenamingVarVisitor rvv(add.second);
-			visitPathBottomUp(add.second, rvv);
-			if(VariableAddress source = rvv.getVariableAddr()) {
-				if(source) { varMap[add.first] = source; }
-			}
-		});
-	}
-
-
 	CallExprAddress findLeftMostOutermostCallOf(const NodeAddress& root, const ExpressionPtr& fun) {
 		CallExprAddress res;
 		core::visitDepthFirstInterruptible(root, [&](const CallExprAddress& call) -> bool {

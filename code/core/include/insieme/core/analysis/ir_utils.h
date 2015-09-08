@@ -332,22 +332,6 @@ namespace analysis {
 	std::vector<VariablePtr> getVariableNames(const VariablePtr& var, const NodePtr& code);
 
 	/**
-	 * Retrieves the name of variable in the outer scope where it has been declared.
-	 *
-	 * @param varlist the list of addresses of renamed variables
-	 * @return a map of the addresses in varlist to their declaration in the outermost scope
-	 */
-	utils::map::PointerMap<VariableAddress, VariableAddress> getRenamedVariableMap(const std::vector<VariableAddress> varlist);
-
-	/**
-	 * Retrieves the name of variable in the outer scope where it has been declared.
-	 *
-	 * @param varMap map of the addresses in varlist to their declaration in the outermost scope
-	 *        will be updated with aliases of the outer scope in place
-	 */
-	void getRenamedVariableMap(utils::map::PointerMap<VariableAddress, VariableAddress>& varMap);
-
-	/**
 	 * Tests whether the given type is a volatile type. In that case
 	 * the type is of the form volatile<'a> where 'a is a concrete type.
 	 *
