@@ -279,6 +279,7 @@ namespace transform {
 		}
 
 		ExpressionPtr tryInlineToExprInternal(NodeManager& manager, const CallExprPtr& call, bool inlineDerivedBuiltIns) {
+
 			// Step 1 - get capture init and lambda expression
 			ExpressionPtr target = call->getFunctionExpr();
 			LambdaExprPtr lambda;
@@ -393,14 +394,14 @@ namespace transform {
 	}
 
 
-	ExpressionPtr tryInlineToExpr(NodeManager& manager, const CallExprPtr& call, bool inlineDerivedBuiltIns, bool sigleStep) {
+	ExpressionPtr tryInlineToExpr(NodeManager& manager, const CallExprPtr& call, bool inlineDerivedBuiltIns, bool singleStep) {
 		bool successful = true;
 		ExpressionPtr res = call;
 		while(successful && res->getNodeType() == NT_CallExpr) {
 			ExpressionPtr tmp = tryInlineToExprInternal(manager, res.as<CallExprPtr>(), inlineDerivedBuiltIns);
 			successful = (*tmp != *res);
 			res = tmp;
-			if(sigleStep) { return res; }
+			if(singleStep) { return res; }
 		}
 		return res;
 	}

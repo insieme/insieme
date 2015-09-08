@@ -85,7 +85,11 @@ namespace analysis {
 		// check whether function is side-effect free + all arguments are
 		CallExprPtr call = expr.as<CallExprPtr>();
 		auto& basic = expr->getNodeManager().getLangBasic();
-		return basic.isPure(call->getFunctionExpr()) && all(call->getArguments(), &isSideEffectFree);
+		auto& refExt = expr->getNodeManager().getLangExtension<lang::ReferenceExtension>();
+
+		// TODO: use different way of identifying pure functions!
+		auto fun = call->getFunctionExpr();
+		return (basic.isPure(fun) || refExt.isRefDeref(fun)) && all(call->getArguments(), &isSideEffectFree);
 	}
 
 	bool isCallOf(const CallExprPtr& candidate, const NodePtr& function) {
