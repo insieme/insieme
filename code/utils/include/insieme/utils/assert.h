@@ -52,6 +52,9 @@
 #endif
 #define assert(_BLA) static_assert(false, "You should use insieme assertions only! (insieme::utils::assert_*)")
 
+#define __xstr(a) __str(a)
+#define __str(a) #a
+
 #if defined(NDEBUG)
 
 #define _assert_ignore                                                                                                                                         \
@@ -95,9 +98,6 @@ namespace utils {
 	} // end namespace detail
 } // end namespace utils
 } // end namespace insieme
-
-#define __xstr(a) __str(a)
-#define __str(a) #a
 
 #define assert_decl(_DECL) _DECL
 
