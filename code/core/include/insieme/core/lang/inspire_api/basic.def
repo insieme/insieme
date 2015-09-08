@@ -111,8 +111,6 @@ TYPE(Bool, "bool")
 LITERAL(True, "true", "bool")
 LITERAL(False, "false", "bool")
 
-TYPE(VarList, "var_list")
-
 // Parallel Types -----------------------------------------------------------------------------------------------------
 
 TYPE(Job, "job")
@@ -380,11 +378,10 @@ LITERAL(PickInRange, "pickInRange", "(int<4>, 'a, int<4>, int<4>, int<4>)->'a")
 
 // Misc. --------------------------------------------------------------------------------------------------------------
 
-LITERAL(VarlistPack, "varlist_pack", "('alpha) -> var_list")
 DERIVED(IfThenElse, "ite", "lambda (bool c, () => 'b a, () => 'b b) -> 'b { if (c) { return a(); } else { return b(); } }")
 
 // Semantic Grouping --------------------------------------------------------------------------------
 
 GROUP(CompOp, IntCompOp, UIntCompOp, RealCompOp, TypeCompOp, GenCompOp)
 
-GROUP(Pure, IfThenElse, VarlistPack, CloogMath, CompOp, BitwiseOp, CompOp, ArithOp, GeneralOp)
+GROUP(Pure, IfThenElse, CloogMath, CompOp, BitwiseOp, CompOp, ArithOp, GeneralOp)

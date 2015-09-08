@@ -423,19 +423,7 @@ namespace conversion {
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//							BINARY OPERATOR
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-	namespace {
-		core::ExpressionPtr createCallExprFromBody(Converter& converter, const stmtutils::StmtWrapper& irStmts, const core::TypePtr& retType, bool lazy) {
-			stmtutils::StmtWrapper retStmts = irStmts;
-			for(auto extension : converter.getConversionSetup().getExtensions()) {
-				retStmts = extension->PostVisit(static_cast<clang::Stmt*>(nullptr), retStmts, converter);
-			}
-
-			return converter.getIRBuilder().createCallExprFromBody(stmtutils::aggregateStmts(converter.getIRBuilder(), retStmts), retType, lazy);
-		}
-	}
-
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~	
 	core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::BinaryOperator* binOp) {
 		core::ExpressionPtr retIr;
 		LOG_EXPR_CONVERSION(binOp, retIr);
