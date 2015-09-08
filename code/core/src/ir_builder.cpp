@@ -1008,60 +1008,6 @@ namespace core {
 		return callExpr(ext.getThreadGroup(), ext.getParallel(), jobExpr(stmt, numThreads));
 	}
 
-	core::ExpressionPtr IRBuilderBaseModule::createCallExprFromBody(StatementPtr body, TypePtr retTy, bool lazy) const {
-		// Find the variables which are used in the body and not declared
-		std::vector<VariablePtr>&& args = getReachingVariables(body);
-
-		core::TypeList argsType;
-		VariableList params;
-		vector<ExpressionPtr> callArgs;
-
-		vector<pair<ExpressionPtr, ExpressionPtr>> replVariableMap;
-		for(const core::ExpressionPtr& curr : args) {
-			assert_eq(curr->getNodeType(), core::NT_Variable);
-
-			const core::VariablePtr& bodyVar = curr.as<core::VariablePtr>();
-			const core::TypePtr& varType = bodyVar->getType();
-
-			// substitute all value use of variables by a value paramenter, this avoids pointers in the
-			// prototype and interacts better with the materialize read only routine
-			if(analysis::isRefType(varType) && core::analysis::isReadOnly(body, bodyVar)) {
-				core::VariablePtr&& parmVar = this->variable(analysis::getReferencedType(varType));
-				argsType.push_back(parmVar->getType());
-				params.push_back(parmVar);
-				callArgs.push_back(this->deref(bodyVar));
-				replVariableMap.push_back(std::make_pair(deref(bodyVar), parmVar));
-				replVariableMap.push_back(std::make_pair(bodyVar, refVar(parmVar)));
-			} else {
-				// we create a new variable to replace the captured variable
-				core::VariablePtr&& parmVar = this->variable(varType);
-				argsType.push_back(varType);
-				params.push_back(parmVar);
-				callArgs.push_back(curr);
-				replVariableMap.push_back(std::make_pair(bodyVar, parmVar));
-			}
-		}
-
-		// Replace the variables in the body with the input parameters which have been created
-		if(!replVariableMap.empty()) {
-			for(auto replace : replVariableMap) {
-				body = core::transform::replaceAllGen(manager, body, replace.first, replace.second);
-			}
-			// TODO: there is no suitable tool to replace expression by variable
-			//    	body = core::static_pointer_cast<const core::Statement>(
-			//    			core::transform::replaceVars(manager, body, replVariableMap)
-			//    		);
-		}
-
-		core::LambdaExprPtr&& lambdaExpr = this->lambdaExpr(functionType(argsType, retTy, FK_PLAIN), params, wrapBody(body));
-		core::CallExprPtr&& callExpr = this->callExpr(retTy, lambdaExpr, callArgs);
-
-		if(!lazy) { return callExpr; }
-
-		// build the expression body
-		return bindExpr(std::vector<VariablePtr>(), callExpr);
-	}
-
 	CallExprPtr IRBuilderBaseModule::accessMember(const ExpressionPtr& structExpr, const string& member) const {
 		return accessMember(structExpr, stringValue(member));
 	}
