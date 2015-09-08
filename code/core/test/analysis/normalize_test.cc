@@ -73,20 +73,20 @@ namespace analysis {
 
 		// -- bound variables --
 
-		EXPECT_EQ("AP(rec v0.{v0=fun(int<4> v1) {v1;}}(v2))", toString(normalize(transform::outline(manager, StatementPtr(a)))));
-		EXPECT_EQ("AP(rec v0.{v0=fun(bool v1) {v1;}}(v3))", toString(normalize(transform::outline(manager, StatementPtr(b)))));
+		EXPECT_EQ("AP(rec v0.{v0=fun(ref<int<4>,f,f> v1) {ref_deref(v1);}}(v2))", toString(normalize(transform::outline(manager, StatementPtr(a)))));
+		EXPECT_EQ("AP(rec v0.{v0=fun(ref<bool,f,f> v1) {ref_deref(v1);}}(v3))", toString(normalize(transform::outline(manager, StatementPtr(b)))));
 
-		EXPECT_EQ("AP(rec v0.{v0=fun(int<4> v1, bool v2) {v1; v2;}}(v2, v3))",
+		EXPECT_EQ("AP(rec v0.{v0=fun(ref<int<4>,f,f> v1, ref<bool,f,f> v2) {ref_deref(v1); ref_deref(v2);}}(v2, v3))",
 		          toString(normalize(transform::outline(manager, StatementPtr(builder.compoundStmt(a, b))))));
-		EXPECT_EQ("AP(rec v0.{v0=fun(int<4> v1, bool v2) {v1; {v2;};}}(v2, v3))",
+		EXPECT_EQ("AP(rec v0.{v0=fun(ref<int<4>,f,f> v1, ref<bool,f,f> v2) {ref_deref(v1); {ref_deref(v2);};}}(v2, v3))",
 		          toString(normalize(transform::outline(manager, StatementPtr(builder.compoundStmt(a, builder.compoundStmt(b)))))));
 
 
 		// test a function
 		manager.setNextFreshID(5);
 		NodePtr node = builder.parseStmt("{decl int<4> a = 0; let f = lambda (int<4> a, int<4> b)->int<4> { return a; }; f(a,a); }");
-		EXPECT_EQ("AP({int<4> v6 = 0; rec v0.{v0=fun(int<4> v10, int<4> v11) {return v10;}}(v6, v6);})", toString(node));
-		EXPECT_EQ("AP({int<4> v0 = 0; rec v0.{v0=fun(int<4> v1, int<4> v2) {return v1;}}(v0, v0);})", toString(normalize(node)));
+		EXPECT_EQ("AP({int<4> v5 = 0; rec v0.{v0=fun(ref<int<4>,f,f> v9, ref<int<4>,f,f> v10) {return ref_deref(v9);}}(v5, v5);})", toString(node));
+		EXPECT_EQ("AP({int<4> v0 = 0; rec v0.{v0=fun(ref<int<4>,f,f> v1, ref<int<4>,f,f> v2) {return ref_deref(v1);}}(v0, v0);})", toString(normalize(node)));
 
 
 		// test normalization with existing free variables
@@ -121,7 +121,7 @@ namespace analysis {
 		                              "	}(x);"
 		                              "}; f(3)");
 
-		EXPECT_EQ("rec v0.{v0=fun(int<4> v1) {return rec v2.{v2=fun(int<4> v3) {return v0(v3);}}(v1);}}(3)", toString(*normalize(code)));
+		EXPECT_EQ("rec v0.{v0=fun(ref<int<4>,f,f> v1) {return rec v2.{v2=fun(ref<int<4>,f,f> v3) {return v0(ref_deref(v3));}}(ref_deref(v1));}}(3)", toString(*normalize(code)));
 	}
 
 	TEST(Normalizing, VariablesInTypes) {
@@ -133,7 +133,7 @@ namespace analysis {
 		                              "	decl ref<array<int<4>,#v40>,f,f> v50;"
 		                              "}; x()");
 
-		EXPECT_EQ("rec v0.{v0=fun() {int<inf> v1 = 3; ref<array<int<4>,v1>,f,f> v2 = rec v0.{v0=fun('a v1) {ref<'a,f,f> v2 = ref_alloc(rec v0.{v0=fun('a v1) {return type<'a>;}}(v1), mem_loc_stack); ref_assign(v2, v1); return v2;}}(undefined(type<array<int<4>,v1>>));}}()", toString(*normalize(code)));
+		EXPECT_EQ("rec v0.{v0=fun() {int<inf> v1 = 3; ref<array<int<4>,v1>,f,f> v2 = rec v0.{v0=fun(ref<'a,f,f> v1) {ref<'a,f,f> v2 = ref_alloc(type<'a>, mem_loc_stack); ref_assign(v2, ref_deref(v1)); return v2;}}(undefined(type<array<int<4>,v1>>));}}()", toString(*normalize(code)));
 	}
 
 
@@ -165,23 +165,23 @@ namespace analysis {
 
 		FunctionTypePtr funType = builder.parseType("(A)->unit").as<FunctionTypePtr>();
 		;
-		VariablePtr var1 = builder.variable(builder.parseType("A"), 12);
+		VariablePtr var1 = builder.variable(builder.refType(builder.parseType("A")), 12);
 		VariablePtr var2 = builder.variable(funType, 17);
 
 		LambdaBindingPtr binding = builder.lambdaBinding(var2, builder.lambda(funType, toVector(var1), builder.compoundStmt()));
 		LambdaExprPtr lambda = builder.lambdaExpr(var2, builder.lambdaDefinition(toVector(binding)));
 
-		EXPECT_EQ("rec v17.{v17=fun(A v12) {}}", toString(*lambda));
-		EXPECT_EQ("rec v0.{v0=fun(A v1) {}}", toString(*normalize(lambda)));
-		EXPECT_EQ("rec v0.{v0=fun(A v1) {}}", toString(*normalize(normalize(lambda))));
+		EXPECT_EQ("rec v17.{v17=fun(ref<A,f,f> v12) {}}", toString(*lambda));
+		EXPECT_EQ("rec v0.{v0=fun(ref<A,f,f> v1) {}}", toString(*normalize(lambda)));
+		EXPECT_EQ("rec v0.{v0=fun(ref<A,f,f> v1) {}}", toString(*normalize(normalize(lambda))));
 
 
 		// this was failing once - the normalized annotation was not properly transfered
 		NodeManager mgr2;
 		lambda = mgr2.get(lambda);
-		EXPECT_EQ("rec v17.{v17=fun(A v12) {}}", toString(*lambda));
-		EXPECT_EQ("rec v0.{v0=fun(A v1) {}}", toString(*normalize(lambda)));
-		EXPECT_EQ("rec v0.{v0=fun(A v1) {}}", toString(*normalize(normalize(lambda))));
+		EXPECT_EQ("rec v17.{v17=fun(ref<A,f,f> v12) {}}", toString(*lambda));
+		EXPECT_EQ("rec v0.{v0=fun(ref<A,f,f> v1) {}}", toString(*normalize(lambda)));
+		EXPECT_EQ("rec v0.{v0=fun(ref<A,f,f> v1) {}}", toString(*normalize(normalize(lambda))));
 	}
 
 	TEST(Normalizing, ForLoops) {
