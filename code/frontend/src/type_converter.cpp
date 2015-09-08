@@ -441,7 +441,6 @@ namespace conversion {
 		return retTy;
 	}
 
-
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//							DECAYED TYPE
 	// A pointer type decayed from an array or function type.
