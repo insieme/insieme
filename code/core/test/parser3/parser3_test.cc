@@ -152,7 +152,7 @@ namespace parser3 {
 		EXPECT_TRUE(test_expression(nm, "lambda (bool x) => { if(x) { return true; } else { return false; } }"));
 		EXPECT_TRUE(test_expression(nm, "lambda (bool x) => { if(x) { return 1; } else { return -5; } }"));
 
-		EXPECT_TRUE(test_expression(nm, "type(int<4>)"));
+		EXPECT_TRUE(test_expression(nm, "type_lit(int<4>)"));
 
 		EXPECT_TRUE(test_expression(nm, "let f = lambda ()->unit {  5;  lambda ()->unit { f(); } (); }; f"));
 

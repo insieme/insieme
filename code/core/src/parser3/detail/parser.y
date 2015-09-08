@@ -16,7 +16,9 @@
      * this code goes in the header
      */
 
+    #include <utility> 
     #include <string>
+    #include <iostream>
     #include "insieme/core/ir.h"
 
     namespace insieme{
@@ -152,6 +154,7 @@
   CTOR          "ctor"    
   METHOD        "method"    
   EXPR          "expr"    
+  RECFUNC       "recFunc"
 
   IF            "if"      
   ELSE          "else"    
@@ -174,7 +177,7 @@
   DELETE        "delete"
   UNDEFINED     "undefined"
 
-  TYPE_LITERAL  "type("
+  TYPE_LITERAL  "type_lit("
   LITERAL       "lit("
   PARAM         "param("
 
@@ -247,6 +250,7 @@
 
 %printer { yyoutput << $$; } <std::string>
 
+
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 %%
 
@@ -266,11 +270,15 @@ let_defs : "lambda" lambda_expression ";"
          | "expr" expression ";" { RULE driver.add_let_expression(@1, $2); }
          | "expr" expression "," let_defs { RULE driver.add_let_expression(@1, $2); }
          | type ";" { RULE driver.add_let_type(@1, $1); }
-         | type "," { RULE driver.add_let_type(@1, $1); } let_defs                       
+         | type "," { RULE driver.add_let_type(@1, $1); } let_defs
+         | "recFunc" "identifier" {} "{" lambdaBindList "}" ";" { RULE
+                driver.is_rec_func = 1;
+                driver.rec_call_func = $2;
+                }
          ;
 
-let_decl : "identifier" { if(driver.let_count==1) driver.add_let_name(@1,$1); } "=" let_defs  { }
-         | "identifier" { if(driver.let_count==1) driver.add_let_name(@1,$1); } "," let_decl  { }
+let_decl : "identifier" { if(driver.let_count==1) driver.add_let_name(@1, $1); } "=" let_defs  { }
+         | "identifier" { if(driver.let_count==1) driver.add_let_name(@1, $1); } "," let_decl  { }
          ;
 
 let_chain : let_decl { driver.close_let_statement(@$); } 
@@ -286,12 +294,22 @@ declarations : /* empty */ { }
              | "using" string_list { RULE driver.using_scope_handle(@$, $2); } ";" declarations 
              ;
 
+lambdaBindList    : lambdaBind { }
+                  | lambdaBind lambdaBindList { }
+                  ;
+
+lambdaBind  : "identifier" "=" "lambda" lambda_expression ";" { RULE driver.add_let_name(@1, $1); }
+              ;
+
+
+
 /* ~~~~~~~~~~~~~~~~~~~  PROGRAM ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 program : type "identifier" "(" variable_list markable_compound_stmt { RULE
                              INSPIRE_GUARD(@1, $1); 
                              driver.close_scope(@$, "program");
                              auto main = driver.genLambda(@$,$4,$1,$5);
+                             annotations::attachName(main, $2);
 						     $$ = driver.builder.createProgram(toVector(main));
                         }
         ;
@@ -323,10 +341,10 @@ type_list : ")" { }
           | type_list_aux { RULE std::swap($$, $1); }
           ;
 
-parent_list : just_name                 { RULE  $$.insert($$.begin(), driver.builder.parent(false, $1));  }
-            | just_name "," parent_list { RULE  $3.insert($3.begin(), driver.builder.parent(false, $1)); std::swap($$, $3); }
-            | "virtual" just_name                 { RULE  $$.insert($$.begin(), driver.builder.parent(true, $2)); }
-            | "virtual" just_name "," parent_list { RULE  $4.insert($4.begin(), driver.builder.parent(true, $2)); std::swap($$, $4); }
+parent_list : named_type                 { RULE  $$.insert($$.begin(), driver.builder.parent(false, $1));  }
+            | named_type "," parent_list { RULE  $3.insert($3.begin(), driver.builder.parent(false, $1)); std::swap($$, $3); }
+            | "virtual" named_type                 { RULE  $$.insert($$.begin(), driver.builder.parent(true, $2)); }
+            | "virtual" named_type "," parent_list { RULE  $4.insert($4.begin(), driver.builder.parent(true, $2)); std::swap($$, $4); }
             ;
 
 func_tok : "->" { RULE $$ = FK_PLAIN; }
@@ -411,16 +429,20 @@ namespaced_type : "identifier"  { RULE std::swap($$, $1); }
                 | "identifier" "::" namespaced_type  { RULE $$.append($1); $$.append("::"); $$.append($3); }
                 ;
                 
-named_type : "identifier" "<" gen_type { RULE $$ = driver.genGenericType(@$, $1, $3.parents, $3.typeParams); }
+named_type : "identifier" "<" gen_type { RULE $$ = driver.genGenericType(@$, $1, ParentList(), $3.typeParams); }
            | "identifier" { RULE         
                                   $$ = driver.findType(@1, $1);
                                   if(!$$) $$ = driver.genGenericType(@$, $1, ParentList(), TypeList()); 
                                   if(!$$) { driver.error(@$, format("undefined type %s", $1)); YYABORT; } 
                           }
-           | "identifier" ":" parent_list "<" gen_type { RULE
-                            $$ = driver.genGenericType(@$, $1, $3, $5.typeParams);
+           | "identifier" ":" parent_list { RULE
+                            $$ = driver.genGenericType(@$, $1, $3, TypeList());
+                        }
+           | "identifier" "<" gen_type ":" parent_list { RULE
+                            $$ = driver.genGenericType(@$, $1, $5, $3.typeParams);
                         }
            | "type_var"   { RULE $$ = driver.builder.typeVariable($1); }
+           | "type_lit" "(" type ")" { RULE $$ = $3; }
            | "identifier" "::" namespaced_type { RULE
                                     $1.append("::"); $1.append($3); 
                                     $$ = driver.genGenericType(@$, $1, ParentList(), TypeList()); 
@@ -479,8 +501,7 @@ statement_aux  : ";" { RULE $$ = driver.builder.getNoOp(); }
                | "throw" expression ";" { RULE $$ = driver.builder.throwStmt($2); }
                ;
 
-catch_clause_list : 
-                   "catch" "(" ")" statement { RULE
+catch_clause_list : "catch" "(" ")" statement { RULE
                             if(!$4.isa<CompoundStmtPtr>()) { driver.error(@4, "catch body must be a compound"); YYABORT; }
                             $$.push_back(driver.builder.catchClause(VariablePtr(), $4.as<CompoundStmtPtr>())); 
                     } 
@@ -671,7 +692,7 @@ markable_expression : "identifier" { RULE $$ = driver.findSymbol(@$, $1); }
            | "double"     { RULE $$ = driver.genNumericLiteral(@$, driver.mgr.getLangBasic().getReal8(), $1); }
            | "stringlit"  { RULE $$ = driver.builder.stringLit($1); }
             /* constructed literals */
-           | "type(" type ")"         { RULE $$ = driver.builder.getTypeLiteral($2); }
+           | "type_lit(" type ")"         { RULE $$ = driver.builder.getTypeLiteral($2); }
            | "param(" "type_var" ")"  { RULE $$ = driver.builder.getTypeLiteral(driver.builder.typeVariable($2)); }
            | "param(" "int" ")"       { RULE $$ = driver.builder.getTypeLiteral(driver.genNumericType(@$, $2)); }
            | "lit(" "stringlit" ")"          { RULE 
@@ -746,7 +767,7 @@ lambda_expression_aux :
                                 driver.add_let_lambda(@$, @1, @6, $4, $2);
                             }
                             else{
-                                  RULE $$ = driver.genLambda(@$, $2, $4, $6); 
+                                RULE $$ = driver.genLambda(@$, $2, $4, $6); 
                             }
                             driver.set_inhibit(false);
                         } %prec LAMBDA
@@ -796,7 +817,7 @@ lambda_expression_aux :
                      ;
 
 
-lambda_expression : { driver.open_scope(@$,"lambda expr"); } lambda_expression_aux 
+lambda_expression : { driver.open_scope(@$,"lambda expr"); } lambda_expression_aux
                     { driver.close_scope(@$, "lambda expr"); $$ = $2; }
                   ;
 

@@ -1110,7 +1110,7 @@ namespace checks {
 		errors = check(cur, typeCheck);
 		EXPECT_TRUE(errors.empty()) << cur << "\n" << errors;
 
-		ExpressionPtr arrayPtr = builder.parseExpr("array_create(type(int<4>),type(12),[0])");
+		ExpressionPtr arrayPtr = builder.parseExpr("array_create(type_lit(int<4>),type_lit(12),[0])");
 
 		// also, allow array values to be used within ref.new, ref.var, struct, tuple and union expressions
 
