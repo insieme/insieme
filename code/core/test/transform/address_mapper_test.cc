@@ -113,9 +113,10 @@ namespace transform {
 		const auto exprAddr = addresses[2];
 
 		// what we do here is add a new variable to the lambda, its call, and use it in the body
-		auto varToAdd = builder.variable(basic.getInt4(), 10042);
+		auto varToAdd = builder.variable(builder.refType(basic.getInt4()), 10042);
+		auto refDeref = mgr.getLangExtension<lang::ReferenceExtension>().getRefDeref();
 		auto mapper = makeLambdaAddressMapping([&](const NodePtr& builtPtr, const NodeAddress& prevAddr) -> NodePtr {
-			if(prevAddr == exprAddr) { return builder.sub(builtPtr.as<ExpressionPtr>(), varToAdd); }
+			if(prevAddr == exprAddr) { return builder.sub(builtPtr.as<ExpressionPtr>(), builder.callExpr(refDeref, varToAdd)); }
 			if(prevAddr == funAddr) {
 				auto curFun = builtPtr.as<LambdaExprPtr>();
 				auto newFunType = builder.functionType(toVector(basic.getInt4(), basic.getInt4(), basic.getInt4()), curFun->getFunctionType()->getReturnType());
@@ -132,7 +133,7 @@ namespace transform {
 
 		auto result = builder.normalize(mapper.mapFromRoot(addresses[0].getRootNode()));
 		EXPECT_EQ(
-		    R"raw({rec v0.{v0=fun(int<4> v1, int<4> v2, int<4> v3) {ref<int<4>,f,f> v4 = int_sub(int_add(int_mul(v1, v2), v1), v3); return ref_deref(v4);}}(4, 2, 31337);})raw",
+		    R"raw({rec v0.{v0=fun(ref<int<4>,f,f> v1, ref<int<4>,f,f> v2, ref<int<4>,f,f> v3) {ref<int<4>,f,f> v4 = int_sub(int_add(int_mul(ref_deref(v1), ref_deref(v2)), ref_deref(v1)), ref_deref(v3)); return ref_deref(v4);}}(4, 2, 31337);})raw",
 		    result->toString());
 	}
 
