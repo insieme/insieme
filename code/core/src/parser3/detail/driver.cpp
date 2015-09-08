@@ -159,7 +159,7 @@ namespace parser3 {
 
 		inspire_driver::inspire_driver(const std::string& str, NodeManager& mgr, const DeclarationContext& ctx)
 		    : scopes(ctx), mgr(mgr), builder(mgr), file("global scope"), str(str), result(nullptr), glob_loc(&file), ss(str), scanner(&ss),
-		      parser(*this, scanner), let_count(0), inhibit_building_count(false) {
+		      parser(*this, scanner), let_count(0), is_rec_func(0), inhibit_building_count(false) {
 		}
 
 		inspire_driver::~inspire_driver() {}
@@ -740,7 +740,12 @@ namespace parser3 {
 			expr_lets.insert(expr_lets.begin(), expr);
 		}
 
-		void inspire_driver::close_let_statement(const location& l) {
+		void inspire_driver::add_rec_lambda(const location& l, const std::string recFuncName,
+		                                    const std::vector<std::pair<std::string, ExpressionPtr>> body) {
+		}
+
+
+	void inspire_driver::close_let_statement(const location& l) {
 			// if we are inside of a let in a let
 			if(let_count > 1) {
 				let_count--;
@@ -748,8 +753,70 @@ namespace parser3 {
 				return;
 			}
 
+		   if(is_rec_func && !rec_call_func.empty()){
+			   std::map<std::string, VariablePtr> funcVars;
+			   unsigned count = 0;
+			   for (const auto& name :  let_names) {
+				   if (count == 0){
+					   count++;
+					   continue;
+				   }
+				   Lambda_let& tmp = lambda_lets[count-1];
+				   TypeList types;
+				   for(const auto& v : tmp.params) types.push_back(v->getType());
+				   funcVars[name] = builder.variable(builder.functionType(types, tmp.retType, tmp.fk));
+				   count ++;
+			   }
+			   // generate a nested parser to parse the body with the right types
+			   std::vector<std::pair<VariablePtr, LambdaExprPtr>> funcs;
+			   count =1;
+			   for(const auto& let : lambda_lets){
+				   inspire_driver let_driver(let.expression, mgr, scopes);
+				   for (const auto pair : funcVars) let_driver.add_symb(pair.first, pair.second);
+				   try{
+					   ExpressionPtr lambda = let_driver.parseExpression();
+					   if (!lambda) {
+						   // write the location with the offset of the current call site
+						   // FIXME: due to the new string, locations get messed up
+						   let_driver.print_errors(std::cerr);
+						   error(l, "lambda expression is wrong");
+						   return;
+					   }
+					   if(let_names.size() < count && !(let_names[count]).compare(rec_call_func)) {
+						   VariablePtr temp;
+						   Lambda_let& tmp = lambda_lets[count-1];
+						   TypeList types;
+						   for(const auto& v : tmp.params) {
+							   types.push_back(v->getType());
+						   }
+						   temp = builder.variable(builder.functionType(types, tmp.retType, tmp.fk));
+						   funcs.push_back({funcVars[let_names[count]], lambda.as<LambdaExprPtr>()});
+					   } else {
+						   funcs.push_back({funcVars[let_names[count]], lambda.as<LambdaExprPtr>()});
+					   }
+				   }catch(...){
+					   error(l, "something went really wrong parsing lambda body");
+				   }
+				   count ++;
+			   }
+			   // generate funcs and bound them to the var types
+			   std::vector<LambdaBindingPtr> lambdas;
+			   for (const auto& lf : funcs){
+				   auto var = lf.first;
+				   auto params = lf.second->getParameterList();
+				   auto type = lf.second->getType();
+				   auto body = lf.second->getBody();
+				   lambdas.push_back(builder.lambdaBinding(var, builder.lambda(type.as<FunctionTypePtr>(), params, body)));
+			   }
+			   LambdaDefinitionPtr lambdaDef = builder.lambdaDefinition(lambdas);
+			   add_symb(l, let_names[0], builder.lambdaExpr(funcVars.find(rec_call_func)->second, lambdaDef));
+			   is_rec_func=0;
+			   rec_call_func = "";
+			   lambda_lets.clear();
+		   }
+
 			// LAMBDA LETS (functions):
-			if(let_names.size() == lambda_lets.size()) {
+			else if(let_names.size() == lambda_lets.size()) {
 				// DeclarationContext temp_scope (scopes);
 
 				std::map<std::string, VariablePtr> funcVars;

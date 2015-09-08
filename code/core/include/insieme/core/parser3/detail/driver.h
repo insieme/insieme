@@ -122,6 +122,8 @@ namespace parser3 {
 
 		  public:
 			unsigned let_count;
+		    unsigned is_rec_func;
+		    std::string rec_call_func;
 			unsigned inhibit_building_count;
 
 		  private:
@@ -263,7 +265,13 @@ namespace parser3 {
 			void add_let_type(const location& l, const TypePtr& type);
 
 			/**
-			 * stores in the current state the expression for a let expression being defined
+			 * stores a explicit defined recursive function
+     		 */
+			void add_rec_lambda(const location& l, const std::string recFuncName,
+			                    const std::vector<std::pair<std::string, ExpressionPtr>> body);
+
+			/**
+ 			 * stores in the current state the expression for a let expression being defined
 			 */
 			void add_let_expression(const location& l, const ExpressionPtr& expr);
 
