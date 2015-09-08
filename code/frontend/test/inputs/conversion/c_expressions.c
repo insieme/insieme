@@ -2,12 +2,14 @@
 int main() {
 	
 	//===-------------------------------------------------------------------------------------------------------------------------------- UNARY OPERATORS ---===
+	
+	#define BOOL_TO_INT "let bool_to_int = lambda (bool b) -> int<4> { if(b) return 1; else return 0; };"
 
 	#pragma test expect_ir("int_not(3)")
 	~3;
 	
-	#pragma test expect_ir("!(3!=0)")
-	!3;
+	#pragma test expect_ir("{",BOOL_TO_INT,"bool_to_int(!(3!=0)); }")
+	{ !3; }
 	
 	#pragma test expect_ir("3")
 	+3;

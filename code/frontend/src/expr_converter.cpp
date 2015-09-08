@@ -530,7 +530,7 @@ namespace conversion {
 		// A unary ! implies a conversion to bool in IR -------------------------------------------------------------------------------------------------- NOT -
 		if(unOp->getOpcode() == clang::UO_LNot) {
 			retIr = builder.logicNeg(utils::exprToBool(subExpr));
-			return retIr;
+			return utils::buildBoolToInt(retIr);
 		}
 
 		// A unary AddressOf operator translates to a ptr-from-ref in IR --------------------------------------------------------------------------- ADDRESSOF -
