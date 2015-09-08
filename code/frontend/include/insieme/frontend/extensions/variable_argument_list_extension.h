@@ -34,58 +34,31 @@
  * regarding third party software licenses.
  */
 
-#include "independent_test_utils.h"
+#pragma once
+
+#include "insieme/frontend/extensions/frontend_extension.h"
 
 namespace insieme {
 namespace frontend {
+namespace extensions {
 
-	TEST(IndependentTest, Literals) {
-		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_literals.c");
-	}
-	
-	TEST(IndependentTest, BasicTypes) {
-		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_basic_types.c");
-	}
+	/**
+	 * An extension for handling everything related to C variable argument lists
+	 * Responsibilities:
+	 * - adjust lambda types of variadic functions, adding a var_list argument
+	 * - adjust calls to such functions, packing excess expressions into a var_list
+	 * TODO:
+	 * - support custom variable argument list implementations, by supporting va_start(), va_end(), va_arg() macros 
+	 */
+	class VariableArgumentListExtension : public insieme::frontend::extensions::FrontendExtension {
+	  public:
+		virtual insieme::core::TypePtr PostVisit(const clang::QualType& type, const insieme::core::TypePtr& irType,
+		                                         insieme::frontend::conversion::Converter& converter);
 
-	TEST(IndependentTest, Globals) {
-		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_globals.c");
-	}
+		virtual insieme::core::ExpressionPtr PostVisit(const clang::Expr* expr, const insieme::core::ExpressionPtr& irExpr,
+			                                           insieme::frontend::conversion::Converter& converter);
+	};
 
-	TEST(IndependentTest, Statements) {
-		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_statements.c");
-	}
-
-	TEST(IndependentTest, VariableScopes) {
-		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_variable_scopes.c");
-	}
-	
-	TEST(IndependentTest, FunCalls) {
-		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_fun_calls.c");
-	}
-
-	TEST(IndependentTest, Expressions) {
-		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_expressions.c");
-	}
-
-	TEST(IndependentTest, Casts) {
-		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_casts.c");
-	}
-
-	TEST(IndependentTest, DeclInitExpressions) {
-		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_decl_init_expressions.c");
-	}
-
-	TEST(IndependentTest, Prototypes) {
-		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_prototypes.c");
-	}
-	
-	TEST(IndependentTest, MatrixMul) {
-		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_matrix_mul.c");
-	}
-
-	TEST(IndependentTest, Pendulum) {
-		runIndependentTestOn(FRONTEND_TEST_DIR "../../../test/pendulum/pendulum.c");
-	}
-
-} // fe namespace
-} // insieme namespace
+} // extensions
+} // frontend
+} // insieme

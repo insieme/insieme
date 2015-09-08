@@ -55,6 +55,7 @@
 #include "insieme/core/lang/reference.h"
 #include "insieme/core/lang/parallel.h"
 #include "insieme/core/lang/pointer.h"
+#include "insieme/core/lang/varargs_extension.h"
 
 #include "insieme/core/lang/extension_registry.h"
 
@@ -483,10 +484,10 @@ namespace parser3 {
 			auto funcParamTypes = ftype.as<FunctionTypePtr>()->getParameterTypeList();
 			if(!funcParamTypes.empty()) {
 				// fix variadic arguments
-				if(builder.getLangBasic().isVarList(*funcParamTypes.rbegin())) {
+				if(lang::isVarList(*funcParamTypes.rbegin())) {
 					if(args.size() < funcParamTypes.size()) {
 						args.push_back(builder.pack(ExpressionList()));
-					} else if(!builder.getLangBasic().isVarList(args.rbegin()->getType())) {
+					} else if(!lang::isVarList(args.rbegin()->getType())) {
 						ExpressionList newParams(args.begin(), args.begin() + funcParamTypes.size() - 1);
 						ExpressionList packParams(args.begin() + funcParamTypes.size(), args.end());
 						newParams.push_back(builder.pack(packParams));

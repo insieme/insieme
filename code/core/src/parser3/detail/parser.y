@@ -182,6 +182,7 @@
   FALSE         "false"  
   STRUCT        "struct"
   UNION         "union"
+  TUPLE         "tuple"
 
   SPAWN         "spawn"
   SYNC          "sync"
@@ -497,10 +498,7 @@ catch_clause_list :
 
 decl_stmt : var_decl ";" {RULE
                 auto type = $1->getType();
-                ExpressionPtr value = driver.builder.undefined(type);
-                if (analysis::isRefType(type)) {
-                    value = driver.builder.refVar(driver.builder.undefined(analysis::getReferencedType(type)));
-                }
+                ExpressionPtr value = driver.builder.undefinedVar(type);
                 $$ = driver.builder.declarationStmt($1, value);
             }
           | var_decl "=" expression ";" {RULE
@@ -640,13 +638,13 @@ markable_expression : "identifier" { RULE $$ = driver.findSymbol(@$, $1); }
                                         $$ = driver.genCall(@$, $1, $3); 
                                 }
 
-            /* parenthesis : tuple or expression */
-           | "(" expression_list ")"  { RULE  
-                                                  if ($2.size() == 1) $$ = $2[0];
-                                                  else $$ = driver.builder.tupleExpr($2);
-             }
+            /* parenthesis expression */
+           | "(" expression ")"  { RULE $$ = $2; }
+            /* tuple expressions */
+           | "tuple" "(" expression_list ")"  { RULE $$ = driver.builder.tupleExpr($3); }
+           | "tuple" "(" ")"  { RULE $$ = driver.builder.tupleExpr(core::ExpressionList()); }
             /* lambda or closure expression: callable expression */
-           |  "lambda" lambda_expression  { RULE $$ = $2; }
+           | "lambda" lambda_expression  { RULE $$ = $2; }
             /* cast */ 
            | "CAST(" type ")" expression  { RULE $$ = driver.builder.castExpr($2, $4); }
            | expression ".as(" type ")"   { RULE 
@@ -685,7 +683,7 @@ markable_expression : "identifier" { RULE $$ = driver.findSymbol(@$, $1); }
            | "lit(" type ")"                 { RULE $$ = driver.builder.getTypeLiteral($2); }
             /* list expression */
            | "[" expression_list "]"         { RULE 
-                            $$ = encoder::toIR<ExpressionList, encoder::DirectExprListConverter>(driver.mgr, $2); }
+                        $$ = encoder::toIR<ExpressionList, encoder::DirectExprListConverter>(driver.mgr, $2); }
             /* struct / union expressions */
            | "struct" type "{" expression_list "}" { RULE $$ = driver.genStructExpression(@$, $2, $4); }
            | "union" type "{" "identifier" "=" expression  "}" { RULE $$ = driver.genUnionExpression(@$, $2, $4, $6); }
