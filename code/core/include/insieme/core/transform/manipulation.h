@@ -252,7 +252,7 @@ namespace transform {
 	 * @param inlineDerivedBuiltIns to decide whether derived literals should also be inlined
 	 * @return the inlined expression
 	 */
-	ExpressionPtr tryInlineToExpr(NodeManager& manager, const CallExprPtr& call, bool inlineDerivedBuiltIns = false, bool sigleStep = false);
+	ExpressionPtr tryInlineToExpr(NodeManager& manager, const CallExprPtr& call, bool inlineDerivedBuiltIns = false, bool singleStep = false);
 
 	/**
 	 * Inlines the given call expression into a statement if possible. The target of the call has to

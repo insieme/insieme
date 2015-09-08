@@ -195,7 +195,7 @@ namespace analysis {
 		FunctionTypePtr ctorType = builder.functionType(toVector(refType), refType, FK_CONSTRUCTOR);
 
 		// build the constructor
-		VariablePtr thisVar = builder.variable(refType, 1);
+		VariablePtr thisVar = builder.variable(builder.refType(refType), 1);
 		return builder.lambdaExpr(ctorType, toVector(thisVar), builder.compoundStmt());
 	}
 

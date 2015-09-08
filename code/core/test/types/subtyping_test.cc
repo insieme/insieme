@@ -437,7 +437,7 @@ namespace types {
 		LiteralPtr alphaLit = builder.getTypeLiteral(alpha);
 
 		FunctionTypePtr ft = builder.functionType(toVector(alpha), builder.refType(alpha));
-		VariablePtr alphaVar = builder.variable(alphaLit->getType());
+		VariablePtr alphaVar = builder.variable(builder.refType(alphaLit->getType()));
 		LambdaExprPtr lambda = builder.lambdaExpr(ft, toVector(alphaVar), builder.compoundStmt(builder.returnStmt(builder.refNew(alphaVar))));
 
 		LiteralPtr intLit = builder.getTypeLiteral(builder.getLangBasic().getInt4());
