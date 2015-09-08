@@ -454,11 +454,6 @@ namespace core {
 		// Builds a job processing the given statement and triggers its parallel execution
 		CallExprPtr parallel(const StatementPtr& stmt, int numThreads = -1) const;
 
-		/*
-		 * creates a function call from a list of expressions
-		 */
-		ExpressionPtr createCallExprFromBody(StatementPtr body, TypePtr retTy, bool lazy = false) const;
-
 		/**
 		 * Creates an expression accessing the corresponding member of the given struct.
 		 */
