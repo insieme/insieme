@@ -259,21 +259,21 @@ TEST(PrettyPrinter, LambdaTypes) {
 
 	StatementPtr body = builder.compoundStmt();
 
-	VariablePtr varO = builder.variable(objC, 0);
-	VariablePtr varA = builder.variable(typeA, 1);
-	VariablePtr varB = builder.variable(typeB, 2);
-	VariablePtr varC = builder.variable(typeC, 3);
-	VariablePtr varR = builder.variable(typeR, 4);
+	VariablePtr varO = builder.variable(builder.refType(objC), 0);
+	VariablePtr varA = builder.variable(builder.refType(typeA), 1);
+	VariablePtr varB = builder.variable(builder.refType(typeB), 2);
+	VariablePtr varC = builder.variable(builder.refType(typeC), 3);
+	VariablePtr varR = builder.variable(builder.refType(typeR), 4);
 
 	LambdaExprPtr lambdaA = builder.lambdaExpr(funA, toVector(varO, varA, varB), body);
 	LambdaExprPtr lambdaB = builder.lambdaExpr(funB, toVector(varO, varA, varB), body);
 	LambdaExprPtr lambdaC = builder.lambdaExpr(funC, toVector(varO), body);
 	LambdaExprPtr lambdaD = builder.lambdaExpr(funD, toVector(varO, varA, varB), body);
 
-	EXPECT_EQ("fun(ref<C,f,f> v0, A v1, B v2) -> R { }", toString(PrettyPrinter(lambdaA, PrettyPrinter::NO_LET_BOUND_FUNCTIONS)));
-	EXPECT_EQ("ctor C v0 :: (A v1, B v2) { }", toString(PrettyPrinter(lambdaB, PrettyPrinter::NO_LET_BOUND_FUNCTIONS)));
+	EXPECT_EQ("fun(ref<ref<C,f,f>,f,f> v0, ref<A,f,f> v1, ref<B,f,f> v2) -> R { }", toString(PrettyPrinter(lambdaA, PrettyPrinter::NO_LET_BOUND_FUNCTIONS)));
+	EXPECT_EQ("ctor C v0 :: (ref<A,f,f> v1, ref<B,f,f> v2) { }", toString(PrettyPrinter(lambdaB, PrettyPrinter::NO_LET_BOUND_FUNCTIONS)));
 	EXPECT_EQ("dtor ~C v0 :: () { }", toString(PrettyPrinter(lambdaC, PrettyPrinter::NO_LET_BOUND_FUNCTIONS)));
-	EXPECT_EQ("mfun C v0 :: (A v1, B v2) -> R { }", toString(PrettyPrinter(lambdaD, PrettyPrinter::NO_LET_BOUND_FUNCTIONS)));
+	EXPECT_EQ("mfun C v0 :: (ref<A,f,f> v1, ref<B,f,f> v2) -> R { }", toString(PrettyPrinter(lambdaD, PrettyPrinter::NO_LET_BOUND_FUNCTIONS)));
 }
 
 TEST(PrettyPrinter, DerivedLiterals) {
@@ -282,7 +282,7 @@ TEST(PrettyPrinter, DerivedLiterals) {
 
 	// create a function
 	auto type = builder.structType();
-	auto var = builder.variable(type);
+	auto var = builder.variable(builder.refType(type));
 	auto val = builder.literal("x", type);
 
 	auto fun = builder.lambdaExpr(builder.getLangBasic().getUnit(), toVector(var), builder.compoundStmt());
@@ -290,7 +290,7 @@ TEST(PrettyPrinter, DerivedLiterals) {
 
 	EXPECT_FALSE(lang::isDerived(fun));
 
-	EXPECT_EQ("let type000 = struct<\n\t\n>;\n\nlet fun000 = fun(type000 v1) -> unit { };\n\nfun000(x)", toString(PrettyPrinter(call)));
+	EXPECT_EQ("let type000 = struct<\n\t\n>;\n\nlet fun000 = fun(ref<type000,f,f> v1) -> unit { };\n\nfun000(x)", toString(PrettyPrinter(call)));
 
 	// mark it derived
 	lang::markAsDerived(fun, "id");
@@ -299,7 +299,7 @@ TEST(PrettyPrinter, DerivedLiterals) {
 	EXPECT_EQ("let type000 = struct<\n\t\n>;\n\nid(x)", toString(PrettyPrinter(call)));
 
 	// without derived interception
-	EXPECT_EQ("let type000 = struct<\n\t\n>;\n\nlet fun000 = fun(type000 v1) -> unit { };\n\nfun000(x)",
+	EXPECT_EQ("let type000 = struct<\n\t\n>;\n\nlet fun000 = fun(ref<type000,f,f> v1) -> unit { };\n\nfun000(x)",
 	          toString(PrettyPrinter(call, PrettyPrinter::PRINT_DERIVED_IMPL)));
 }
 
@@ -310,7 +310,7 @@ TEST(PrettyPrinter, JustOutermostScope) {
 
 	DeclarationStmtPtr a = builder.declarationStmt(builder.variable(gen.getInt4()));
 
-	StatementPtr stmt = builder.parseStmt(R"1N5P1RE(
+	StatementPtr stmt = builder.normalize(builder.parseStmt(R"1N5P1RE(
 		{
 			let fun = lambda (int<4> arg)->int<4> { return arg + 1; };
 			let lfun = expr lit("lfun":(ref<int<4>>)->int<4>);
@@ -333,55 +333,55 @@ TEST(PrettyPrinter, JustOutermostScope) {
 				rfun(var(lfun(g)));
 			}
 		}
-	)1N5P1RE");
+	)1N5P1RE"));
 	EXPECT_TRUE(stmt);
 
-	std::string res = "let fun000 = fun(int<4> v5) -> int<4> {\n"
-	                  "    return (v5+1);\n"
+	std::string res = "let fun000 = fun(ref<int<4>,f,f> v1) -> int<4> {\n"
+	                  "    return (v1+1);\n"
 	                  "};\n"
 	                  "\n"
-	                  "let fun001 = fun(ref<int<4>,f,f> v8) -> int<4> {\n"
-	                  "    return (v8);\n"
+	                  "let fun001 = fun(ref<ref<int<4>,f,f>,f,f> v1) -> int<4> {\n"
+	                  "    return v1;\n"
 	                  "};\n"
 	                  "\n"
 	                  "{\n"
-	                  "    decl ref<int<4>,f,f> v9 = ( var(undefined(type<int<4>>)));\n"
-	                  "    decl ref<int<4>,f,f> v13 = ( var(undefined(type<int<4>>)));\n"
-	                  "    decl ref<int<4>,f,f> v14 = ( var(undefined(type<int<4>>)));\n"
-	                  "    decl ref<int<4>,f,f> v15 = ( var(undefined(type<int<4>>)));\n"
-	                  "    decl ref<int<4>,f,f> v16 = ( var(undefined(type<int<4>>)));\n"
-	                  "    decl ref<int<4>,f,f> v17 = ( var(undefined(type<int<4>>)));\n"
-	                  "    decl ref<int<4>,f,f> v18 = ( var(undefined(type<int<4>>)));\n"
+	                  "    decl ref<int<4>,f,f> v0 = ( var(undefined(type<int<4>>)));\n"
+	                  "    decl ref<int<4>,f,f> v1 = ( var(undefined(type<int<4>>)));\n"
+	                  "    decl ref<int<4>,f,f> v2 = ( var(undefined(type<int<4>>)));\n"
+	                  "    decl ref<int<4>,f,f> v3 = ( var(undefined(type<int<4>>)));\n"
+	                  "    decl ref<int<4>,f,f> v4 = ( var(undefined(type<int<4>>)));\n"
+	                  "    decl ref<int<4>,f,f> v5 = ( var(undefined(type<int<4>>)));\n"
+	                  "    decl ref<int<4>,f,f> v6 = ( var(undefined(type<int<4>>)));\n"
 	                  "    {\n"
-	                  "        (v9 := 7);\n"
-	                  "        fun000((v13));\n"
-	                  "        fun001(v14);\n"
-	                  "        fun000(fun000((v15)));\n"
-	                  "        fun000(fun001(v16));\n"
-	                  "        lfun(v17);\n"
-	                  "        fun001(( var(lfun(v18))));\n"
+	                  "        (v0 := 7);\n"
+	                  "        fun000(v1);\n"
+	                  "        fun001(v2);\n"
+	                  "        fun000(fun000(v3));\n"
+	                  "        fun000(fun001(v4));\n"
+	                  "        lfun(v5);\n"
+	                  "        fun001(( var(lfun(v6))));\n"
 	                  "    };\n"
 	                  "}";
 
 	EXPECT_EQ(res, toString(PrettyPrinter(stmt)));
 	std::string res2 = "{\n"
-	                   "    decl ref<int<4>,f,f> v9 = ( var(undefined(type<int<4>>)));\n"
-	                   "    decl ref<int<4>,f,f> v13 = ( var(undefined(type<int<4>>)));\n"
-	                   "    decl ref<int<4>,f,f> v14 = ( var(undefined(type<int<4>>)));\n"
-	                   "    decl ref<int<4>,f,f> v15 = ( var(undefined(type<int<4>>)));\n"
-	                   "    decl ref<int<4>,f,f> v16 = ( var(undefined(type<int<4>>)));\n"
-	                   "    decl ref<int<4>,f,f> v17 = ( var(undefined(type<int<4>>)));\n"
-	                   "    decl ref<int<4>,f,f> v18 = ( var(undefined(type<int<4>>)));\n"
-	                   "    {\n"
-	                   "        (v9 := 7);\n"
-	                   "        fun000((v13));\n"
-	                   "        fun001(v14);\n"
-	                   "        fun000(fun000((v15)));\n"
-	                   "        fun000(fun001(v16));\n"
-	                   "        lfun(v17);\n"
-	                   "        fun001(( var(lfun(v18))));\n"
-	                   "    };\n"
-	                   "}";
+				       "    decl ref<int<4>,f,f> v0 = ( var(undefined(type<int<4>>)));\n"
+				       "    decl ref<int<4>,f,f> v1 = ( var(undefined(type<int<4>>)));\n"
+				       "    decl ref<int<4>,f,f> v2 = ( var(undefined(type<int<4>>)));\n"
+				       "    decl ref<int<4>,f,f> v3 = ( var(undefined(type<int<4>>)));\n"
+				       "    decl ref<int<4>,f,f> v4 = ( var(undefined(type<int<4>>)));\n"
+				       "    decl ref<int<4>,f,f> v5 = ( var(undefined(type<int<4>>)));\n"
+				       "    decl ref<int<4>,f,f> v6 = ( var(undefined(type<int<4>>)));\n"
+				       "    {\n"
+				       "        (v0 := 7);\n"
+				       "        fun000(v1);\n"
+				       "        fun001(v2);\n"
+				       "        fun000(fun000(v3));\n"
+				       "        fun000(fun001(v4));\n"
+				       "        lfun(v5);\n"
+				       "        fun001(( var(lfun(v6))));\n"
+				       "    };\n"
+				       "}";
 
 	EXPECT_EQ(res2, toString(PrettyPrinter(stmt, PrettyPrinter::JUST_OUTERMOST_SCOPE)));
 }
