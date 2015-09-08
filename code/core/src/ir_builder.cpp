@@ -317,15 +317,15 @@ namespace core {
 	}
 
 	GenericTypePtr IRBuilderBaseModule::arrayType(const TypePtr& elementType, const LiteralPtr& size) const {
-		return lang::ArrayType::create(elementType, size);
+		return lang::ArrayType::create(elementType, size.as<ExpressionPtr>());
 	}
 
 	GenericTypePtr IRBuilderBaseModule::arrayType(const TypePtr& elementType, const VariablePtr& size) const {
-		return lang::ArrayType::create(elementType, size);
+		return lang::ArrayType::create(elementType, size.as<ExpressionPtr>());
 	}
 
 	GenericTypePtr IRBuilderBaseModule::arrayType(const TypePtr& elementType, size_t size) const {
-		return lang::ArrayType::create(elementType, literal(toString(size), getLangBasic().getUIntInf()));
+		return lang::ArrayType::create(elementType, size);
 	}
 
 

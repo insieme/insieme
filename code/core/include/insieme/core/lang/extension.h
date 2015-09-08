@@ -336,7 +336,7 @@ namespace lang {
                                                                                                                                                                \
 		insieme::core::LiteralPtr reg##NAME() const {                                                                                                          \
 			checkIrNameNotAlreadyInUse(IR_NAME);                                                                                                               \
-			addNamedIrExtension(IR_NAME, [&]()->NodePtr { return get##NAME(); });                                                                              \
+			addNamedIrExtension(IR_NAME, [&]()->insieme::core::NodePtr { return get##NAME(); });                                                                              \
 			return insieme::core::LiteralPtr();                                                                                                                \
 		}                                                                                                                                                      \
                                                                                                                                                                \
@@ -376,7 +376,7 @@ namespace lang {
                                                                                                                                                                \
 		const insieme::core::ExpressionPtr reg##NAME() const {                                                                                                 \
 			checkIrNameNotAlreadyInUse(IR_NAME);                                                                                                               \
-			addNamedIrExtension(IR_NAME, [&]()->NodePtr { return get##NAME(); });                                                                              \
+			addNamedIrExtension(IR_NAME, [&]()->insieme::core::NodePtr { return get##NAME(); });                                                                              \
 			return insieme::core::ExpressionPtr();                                                                                                             \
 		}                                                                                                                                                      \
                                                                                                                                                                \
