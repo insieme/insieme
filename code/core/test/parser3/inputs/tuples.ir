@@ -1,7 +1,9 @@
 
 unit main() {
 	
-	decl auto a = (1, 2, "hello");
+	decl auto e = tuple();
+
+	decl auto a = tuple(1, 2, "hello");
 	
 	a.0;
 	a.1;

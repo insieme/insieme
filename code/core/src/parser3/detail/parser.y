@@ -182,6 +182,7 @@
   FALSE         "false"  
   STRUCT        "struct"
   UNION         "union"
+  TUPLE         "tuple"
 
   SPAWN         "spawn"
   SYNC          "sync"
@@ -638,18 +639,12 @@ markable_expression : "identifier" { RULE $$ = driver.findSymbol(@$, $1); }
                                 }
 
             /* parenthesis expression */
-           | "(" expression ")"  { RULE  
-                                   $$ = $2;
-             }
+           | "(" expression ")"  { RULE $$ = $2; }
             /* tuple expressions */
-           | "tuple" "(" expression_list ")"  { RULE
-                                   $$ = driver.builder.tupleExpr($3);
-             }
-           | "tuple" "(" ")"  { RULE
-                                   $$ = driver.builder.tupleExpr(core::ExpressionList());
-             }
+           | "tuple" "(" expression_list ")"  { RULE $$ = driver.builder.tupleExpr($3); }
+           | "tuple" "(" ")"  { RULE $$ = driver.builder.tupleExpr(core::ExpressionList()); }
             /* lambda or closure expression: callable expression */
-           |  "lambda" lambda_expression  { RULE $$ = $2; }
+           | "lambda" lambda_expression  { RULE $$ = $2; }
             /* cast */ 
            | "CAST(" type ")" expression  { RULE $$ = driver.builder.castExpr($2, $4); }
            | expression ".as(" type ")"   { RULE 

@@ -137,6 +137,7 @@ namespace parser3 {
 		EXPECT_TRUE(test_expression(nm, "((1.0))"));
 		EXPECT_TRUE(test_expression(nm, "((1.0) + 4.0)"));
 
+		EXPECT_TRUE(test_expression(nm, "let uni = union{ int<4> a }; union uni {a=4}"));
 		EXPECT_TRUE(test_expression(nm, "let x = struct{ int<4> a }; struct x { 4}"));
 
 		EXPECT_FALSE(test_expression(nm, "x"));

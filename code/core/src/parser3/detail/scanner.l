@@ -163,6 +163,7 @@ blank   [ \t]
 "false"   return inspire_parser::make_BOOL(yytext, loc);
 "struct"  return inspire_parser::make_STRUCT(loc);
 "union"   return inspire_parser::make_UNION(loc);
+"tuple"   return inspire_parser::make_TUPLE(loc);
 
 "spawn"   return inspire_parser::make_SPAWN(loc);
 "sync"    return inspire_parser::make_SYNC(loc);
