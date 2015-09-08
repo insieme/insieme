@@ -85,8 +85,11 @@ namespace {
 	 */
 	template <class RetTy, class InTy>
 	struct numeric_cast_impl<RetTy, InTy, 1> {
-		static RetTy convert(const std::string& in) {
-			// special handling for 0u and 0ul
+		static RetTy convert(const std::string& inParam) {
+			std::string in = inParam;
+			// if character
+			if(in.front() == '\'' && in.back() == '\'' && in.size() == 3) { return in.at(1); }
+			// special handling for 0u, 0ul and '\0'
 			if(in == "0u" || in == "0ul" || in == "0l" || in == "0ll" || in == "0ull") { return static_cast<RetTy>(0); }
 			// special handling for -0u and -0ul and -0l
 			if(in == "-0u" || in == "-0ul" || in == "-0l" || in == "-0ll" || in == "-0ull") { return static_cast<RetTy>(0); }
