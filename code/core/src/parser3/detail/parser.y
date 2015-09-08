@@ -500,10 +500,7 @@ catch_clause_list :
 
 decl_stmt : var_decl ";" {RULE
                 auto type = $1->getType();
-                ExpressionPtr value = driver.builder.undefined(type);
-                if (analysis::isRefType(type)) {
-                    value = driver.builder.refVar(driver.builder.undefined(analysis::getReferencedType(type)));
-                }
+                ExpressionPtr value = driver.builder.undefinedVar(type);
                 $$ = driver.builder.declarationStmt($1, value);
             }
           | var_decl "=" expression ";" {RULE

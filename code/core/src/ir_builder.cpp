@@ -519,7 +519,7 @@ namespace core {
 	ExpressionPtr IRBuilderBaseModule::undefinedVar(const TypePtr& type) const {
 		if(analysis::isRefType(type)) {
 			core::TypePtr elementType = core::analysis::getReferencedType(type);
-			return refVar(undefined(elementType));
+			return core::lang::buildRefCast(refVar(undefined(elementType)), type);
 		}
 		return undefined(type);
 	}
@@ -527,7 +527,7 @@ namespace core {
 	ExpressionPtr IRBuilderBaseModule::undefinedNew(const TypePtr& type) const {
 		if(analysis::isRefType(type)) {
 			core::TypePtr elementType = core::analysis::getReferencedType(type);
-			return refNew(undefined(elementType));
+			return core::lang::buildRefCast(refNew(undefined(elementType)), type);
 		}
 		return undefined(type);
 	}

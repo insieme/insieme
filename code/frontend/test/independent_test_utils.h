@@ -46,6 +46,7 @@
 #include "insieme/annotations/expected_ir_annotation.h"
 #include "insieme/core/annotations/source_location.h"
 #include "insieme/core/checks/full_check.h"
+#include "insieme/core/printer/error_printer.h"
 #include "insieme/frontend/extensions/test_pragma_extension.h"
 #include "insieme/frontend/frontend.h"
 #include "insieme/frontend/state/variable_manager.h"
@@ -147,7 +148,8 @@ namespace frontend {
 
 		auto checkResult = core::checks::check(res);
 		EXPECT_EQ(checkResult.size(), 0) << checkResult;
+		//std::cout << "Semantic Error dump:\n";
+		//dumpText(checkResult.getErrors()[0].getOrigin().getParentNode(2));
 	}
-}
-}
-
+} // end namespace frontend
+} // end namespace insieme
