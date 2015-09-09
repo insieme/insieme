@@ -98,12 +98,18 @@ int main() {
 		sizeof(int[i][5][j][2]);
 	}
 
-	int i=10;
-	int j=20;
-	int k[j];
-	int l[i][j];
-	//TODO: implement UnaryExprOrTypeTraitExpr for VLAs
-	//sizeof(k);
-	//sizeof(l);
+	#pragma test expect_ir("{ decl ref<int<4>> v0 = var(10); decl int<inf> v1 = type_cast(*v0, type(int<inf>)); decl ref<array<int<4>,#v1>> v2; decl int<inf> v3 = type_cast(*v0, type(int<inf>)); sizeof(type(array<int<4>,#v3>)); }")
+	{
+		int i=10;
+		int k[i];
+		sizeof(k);
+	}
 	
+	#pragma test expect_ir("{ decl ref<int<4>> v0 = var(10); decl ref<int<4>> v1 = var(20); decl int<inf> v2 = type_cast(*v0, type(int<inf>)); decl int<inf> v3 = type_cast(*v1, type(int<inf>)); decl ref<array<array<int<4>,#v3>,#v2>> v4; decl int<inf> v5 = type_cast(*v0, type(int<inf>)); decl int<inf> v6 = type_cast(*v1, type(int<inf>)); sizeof(type(array<array<int<4>,#v6>,#v5>)); }")
+	{
+		int i=10;
+		int j=20;
+		int l[i][j];
+		sizeof(l);
+	}
 }

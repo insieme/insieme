@@ -122,18 +122,11 @@ namespace extensions {
 					return retExpr;
 				}
 			}
-			//only do this if we have a decl ref to a variable length array
-			if(!sizeofexpr->isArgumentType()) {
-				if(const clang::DeclRefExpr* varTy = llvm::dyn_cast<clang::DeclRefExpr>(sizeofexpr->getArgumentExpr()->IgnoreParenImpCasts())) {
-					//TODO: IMPLEMENT SIZEOF FOR VAR ARRAYS HERE!!!
-					//do the map lookup here
-					assert_not_implemented() << "UnaryExprOrTypeTraitExpr for VLAs not implemented.";
-				}
-			}
+			// if argument of UnaryExprOrTypeTraitExpr is any DeclRef, then handle like every other UnaryExprOrTypeTraitExpr, outside of this FE extension
 		}
 		return nullptr;
 	}
 	
-}
-}
-}
+} // end namespace extensions
+} // end namespace frontend
+} // end namespace insieme
