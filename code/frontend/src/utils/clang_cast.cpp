@@ -125,17 +125,6 @@ namespace utils {
 			return utils::exprToBool(expr);
 
 		////////////////////////////////////////////////////////////////////////////////////////////////////////////
-		// A conversion which does not affect the type
-		// e.g. int -> int
-		case clang::CK_NoOp:
-				return expr;
-
-		//////////////////////////////////////////////////////////////////////////////////////////////////////////
-		// Array to pointer decay. int[10] -> int* char[5][6] -> char(*)[6]
-		case clang::CK_ArrayToPointerDecay:
-			return core::lang::buildPtrFromArray(expr);	
-
-		////////////////////////////////////////////////////////////////////////////////////////////////////////////
 		// A conversion which causes a bit pattern of one type to be reinterpreted as a bit pattern of another type.
 		// Generally the operands must have equivalent size and unrelated types.  The pointer conversion
 		// char* -> int* is a bitcast. A conversion from any pointer type to a C pointer type is a bitcast unless
@@ -161,7 +150,25 @@ namespace utils {
 		// Null pointer constant to pointer, e.g. (int*)0
 		case clang::CK_NullToPointer:
 			return core::lang::buildPtrNull(targetTy);
-		
+
+		//////////////////////////////////////////////////////////////////////////////////////////////////////////
+		// Array to pointer decay. int[10] -> int* char[5][6] -> char(*)[6]
+		case clang::CK_ArrayToPointerDecay:
+			return core::lang::buildPtrFromArray(expr);
+
+		////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		// CK_FunctionToPointerDecay - Function to pointer decay. void(int) -> void(*)(int)
+		case clang::CK_FunctionToPointerDecay:
+			return expr;
+
+		////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		// NoOps: Conversions that have no effect
+		// * same type casts, CK_NoOp, e.g. int -> int
+		// * unused return value, CK_ToVoid, (void)fun()
+		case clang::CK_NoOp:
+		case clang::CK_ToVoid:
+				return expr;
+
 		////////////////////////////////////////////////////////////////////////////////////////////////////////////
 		//case clang::CK_ConstructorConversion:
 		//	// Conversion by constructor. struct A { A(int); }; A a = A(10);
@@ -249,15 +256,6 @@ namespace utils {
 		////////////////////////////////////////////////////////////////////////////////////////////////////////////
 		////  PARTIALY IMPLEMENTED
 		////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-		///////////////////////////////////////////////////////////////////////////////////////////////////////////
-		//case clang::CK_ToVoid:
-		//	// Cast to void, discarding the computed value. (void) malloc(2048)
-		//	{
-		//		// this cast ignores inner expression, is not very usual, but might show off when dealing
-		//		// with null pointer.
-		//		if(gen.isUnit(targetTy)) { return gen.getUnitConstant(); }
-		//	}
 
 		///////////////////////////////////////////////////////////////////////////////////////////////////////////
 		//case clang::CK_UncheckedDerivedToBase:
@@ -389,17 +387,6 @@ namespace utils {
 		//	}
 
 		////////////////////////////////////////////////////////////////////////////////////////////////////////////
-		//case clang::CK_PointerToIntegral:
-		//	// CK_PointerToIntegral - Pointer to integral. A special kind of reinterpreting conversion. Applies to normal,
-		//	// ObjC, and block pointers. (intptr_t) "help!"
-		//	{ return builder.callExpr(gen.getUInt8(), gen.getRefToInt(), expr); }
-
-		////////////////////////////////////////////////////////////////////////////////////////////////////////////
-		// CK_FunctionToPointerDecay - Function to pointer decay. void(int) -> void(*)(int)
-		case clang::CK_FunctionToPointerDecay:
-			return expr;
-
-		////////////////////////////////////////////////////////////////////////////////////////////////////////////
 		//case clang::CK_NullToMemberPointer:
 		//	/*case clang::CK_NullToMemberPointer - Null pointer constant to member pointer.
 		//	 * int A::*mptr = 0; int (A::*fptr)(int) = nullptr;
@@ -416,43 +403,6 @@ namespace utils {
 		//case clang::CK_BuiltinFnToFnPtr: {
 		//	return expr;
 		//}
-
-
-		////////////////////////////////////////////////////////////////////////////////////////////////////////////
-		////  NOT IMPLEMENTED
-		////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-		//case clang::CK_Dependent:
-		///*case clang::CK_Dependent - A conversion which cannot yet be analyzed because either the expression
-		//* or target type is dependent. These are created only for explicit casts; dependent ASTs aren't
-		//* required to even approximately type-check. (T*) malloc(sizeof(T)) reinterpret_cast<intptr_t>(A<T>::alloc());
-		//* */
-
-		//case clang::CK_ToUnion:
-		///*case clang::CK_ToUnion - The GCC cast-to-union extension. i
-		//* int -> union { int x; float y; } float -> union { int x; float y; }
-		//* */
-
-		//case clang::CK_BaseToDerivedMemberPointer:
-		///*case clang::CK_BaseToDerivedMemberPointer - Member pointer in base class to member pointer in derived class.
-		// * int B::*mptr = &A::member;
-		//* */
-
-		//case clang::CK_DerivedToBaseMemberPointer:
-		///*case clang::CK_DerivedToBaseMemberPointer - Member pointer in derived class to member pointer in base class.
-		//* int A::*mptr = static_cast<int A::*>(&B::member);
-		//* */
-
-		//case clang::CK_ReinterpretMemberPointer:
-		///*case clang::CK_ReinterpretMemberPointer - Reinterpret a member pointer as a different kind of member pointer.
-		//* C++ forbids this from crossing between function and object types, but otherwise does not restrict it.
-		//* However, the only operation that is permitted on a "punned" member pointer is casting it back to the original type,
-		//* which is required to be a lossless operation (although many ABIs do not guarantee this on all possible intermediate types).
-		//* */
-
-		//case clang::CK_AnyPointerToBlockPointerCast:
-		///*case clang::CK_AnyPointerToBlockPointerCast - Casting any non-block pointer to a block pointer. Block-to-block casts are bitcasts.
-		//* */
 
 		//case clang::CK_AtomicToNonAtomic:
 		//case clang::CK_NonAtomicToAtomic:

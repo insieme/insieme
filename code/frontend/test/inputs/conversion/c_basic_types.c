@@ -106,4 +106,12 @@ int main() {
 	typedef union { int i; } union_t;
 	#pragma test expect_ir("REGEX", "decl ref<union \w+ <i:int<4>>,f,f> v0 = .*")
 	union_t uni;
+
+	// FUNCTION POINTER TYPES //////////////////////////////////////////////////////////////
+
+	#pragma test expect_ir("decl ref<ptr<(real<4>)->int<4>,f,f>,f,f> v0;")
+	int(*ifFuncPtr)(float);
+
+	#pragma test expect_ir("decl ref<ptr<()->unit,f,f>,f,f> v0;")
+	void(*vvFuncPtr)(void);
 }
