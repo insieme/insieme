@@ -43,6 +43,8 @@
 #include <boost/type_traits/is_array.hpp>
 #include <boost/type_traits/is_floating_point.hpp>
 
+#include "insieme/utils/character_escaping.h"
+
 namespace {
 	template <typename ElemT>
 	struct HexTo {
@@ -85,10 +87,12 @@ namespace {
 	 */
 	template <class RetTy, class InTy>
 	struct numeric_cast_impl<RetTy, InTy, 1> {
-		static RetTy convert(const std::string& inParam) {
-			std::string in = inParam;
+		static RetTy convert(const std::string& in) {
 			// if character
-			if(in.front() == '\'' && in.back() == '\'' && in.size() == 3) { return in.at(1); }
+			if(in.front() == '\'' && in.back() == '\'') {
+				assert_true(in.size() == 3 || in.size() == 4) << "Expected single char within string, but length was " << in.size();
+				return insieme::utils::escapedStringToChar(in.substr(1, in.size()-2));
+			}
 			// special handling for 0u, 0ul and '\0'
 			if(in == "0u" || in == "0ul" || in == "0l" || in == "0ll" || in == "0ull") { return static_cast<RetTy>(0); }
 			// special handling for -0u and -0ul and -0l
