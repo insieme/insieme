@@ -222,6 +222,59 @@ namespace lang {
 		return builder.callExpr(pExt.getPtrSubscript(), ptrExpr, subscriptExpr);
 	}
 
+	ExpressionPtr buildPtrOperation(BasicGenerator::Operator op, const ExpressionPtr& lhs, const ExpressionPtr& rhs) {
+		auto assertPtr = [&](const ExpressionPtr& exp) {
+			assert_pred1(isPointer, exp) << "Trying to build a ptr operation from non-ptr:"
+				<< "\n lhs: " << *lhs << "\n  - of type: " << *lhs->getType() 
+				<< "\n rhs: " << *rhs << "\n  - of type: " << *rhs->getType()
+				<< "\n op: " << op;
+		};
+		auto assertInt = [&](const ExpressionPtr& exp) {
+			assert_pred1(exp->getNodeManager().getLangBasic().isInt, exp->getType()) << "Trying to build a ptr add/sub with non-int"
+				<< "\n lhs: " << *lhs << "\n  - of type: " << *lhs->getType() 
+				<< "\n rhs: " << *rhs << "\n  - of type: " << *rhs->getType()
+				<< "\n op: " << op;
+		};
+		auto& pExt = lhs->getNodeManager().getLangExtension<PointerExtension>();
+		IRBuilder builder(lhs->getNodeManager());
+
+		// arithmetic operations
+		switch(op) {
+		case BasicGenerator::Operator::Add: {
+			if(!isPointer(lhs)) {
+				assertPtr(rhs);
+				assertInt(lhs);
+				return builder.callExpr(pExt.getPtrAdd(), rhs, lhs);
+			}
+			assertPtr(lhs);
+			assertInt(rhs);
+			return builder.callExpr(pExt.getPtrAdd(), lhs, rhs);
+		}
+		case BasicGenerator::Operator::Sub: { // minus is only supported with ptr on the lhs
+			assertPtr(lhs);
+			assertInt(rhs);
+			return builder.callExpr(pExt.getPtrSub(), lhs, rhs);
+		}
+		default: break;
+		}
+
+		// comparison operations
+		assertPtr(lhs);
+		assertPtr(rhs);
+		switch(op) {
+		case BasicGenerator::Operator::Eq: return builder.callExpr(pExt.getPtrEqual(), lhs, rhs);
+		case BasicGenerator::Operator::Ne: return builder.callExpr(pExt.getPtrNotEqual(), lhs, rhs);
+		case BasicGenerator::Operator::Le: return builder.callExpr(pExt.getPtrLessEqual(), lhs, rhs);
+		case BasicGenerator::Operator::Lt: return builder.callExpr(pExt.getPtrLessThan(), lhs, rhs);
+		case BasicGenerator::Operator::Ge: return builder.callExpr(pExt.getPtrGreaterEqual(), lhs, rhs);
+		case BasicGenerator::Operator::Gt: return builder.callExpr(pExt.getPtrGreaterThan(), lhs, rhs);
+		default: break;
+		}
+
+		assert_fail() << "Unsupported pointer operation " << op;
+		return ExpressionPtr();
+	}
+
 } // end namespace lang
 } // end namespace core
 } // end namespace insieme

@@ -182,6 +182,33 @@ int main() {
 		int a[5];
 		&a;
 	}
+	
+	#pragma test expect_ir("{ decl ref<ptr<unit,f,f>,f,f> v0; ptr_add(*v0, 5); }")
+	{
+		void* a;
+		a+5;
+	}
+
+	#pragma test expect_ir("{ decl ref<ptr<unit,f,f>,f,f> v0; ptr_add(*v0, 5); }")
+	{
+		void* a;
+		5+a;
+	}
+	
+	#pragma test expect_ir("{ decl ref<ptr<unit,f,f>,f,f> v0; ptr_sub(*v0, 5); }")
+	{
+		void* a;
+		a-5;
+	}
+	
+	#pragma test expect_ir("{ decl ref<ptr<unit,f,f>,f,f> v0; ptr_gt(*v0,*v0); ptr_lt(*v0,*v0); ptr_le(*v0,*v0); ptr_ge(*v0,*v0); }")
+	{
+		void* a;
+		a>a;
+		a<a;
+		a<=a;
+		a>=a;
+	}
 
 	// multidimensional
 	

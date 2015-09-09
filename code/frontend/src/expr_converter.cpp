@@ -423,7 +423,25 @@ namespace conversion {
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//							BINARY OPERATOR
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~	
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+	namespace {
+		core::ExpressionPtr buildBinaryOpExpression(Converter& converter, const core::TypePtr& exprTy, const core::ExpressionPtr& lhs,
+			                                        const core::ExpressionPtr& rhs, core::lang::BasicGenerator::Operator op,
+			                                        const clang::BinaryOperator* binOp) {
+			auto& basic = converter.getNodeManager().getLangBasic();
+			auto& builder = converter.getIRBuilder();
+
+			if(core::lang::isPointer(lhs->getType()) || core::lang::isPointer(rhs->getType())) { return core::lang::buildPtrOperation(op, lhs, rhs); }
+
+			auto irOp = basic.getOperator(exprTy, op);
+			// for comparisons, use type of operand
+			if(binOp->isComparisonOp()) irOp = basic.getOperator(lhs->getType(), op);
+
+			return builder.binaryOp(irOp, lhs, rhs);
+		}
+	}
+
 	core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::BinaryOperator* binOp) {
 		core::ExpressionPtr retIr;
 		LOG_EXPR_CONVERSION(binOp, retIr);
@@ -479,11 +497,11 @@ namespace conversion {
 		};
 
 		auto opIt = opMap.find(binOp->getOpcode());
-		frontend_assert(opIt != opMap.end()) << "Binary Operator " <<  binOp->getOpcodeStr().str() << " not implemented.";
+		frontend_assert(opIt != opMap.end()) << "Binary Operator " << binOp->getOpcodeStr().str() << " not implemented.";
 
 		if(binOp->isCompoundAssignmentOp()) { // ---------------------------------------------------------------------------------------------------- COMPOUND -
 			// we need to deref the LHS, as it is assigned to the clang AST does not contain an LtoR cast
-			auto op = builder.binaryOp(basic.getOperator(exprTy, opIt->second), builder.deref(lhs), rhs);
+			auto op = buildBinaryOpExpression(converter, exprTy, builder.deref(lhs), rhs, opIt->second, binOp);
 			// for compound operators, we need to build a CallExpr returning the LHS after the operation
 			retIr = utils::buildCStyleAssignment(lhs, op);
 			return retIr;
@@ -493,15 +511,10 @@ namespace conversion {
 		if(binOp->getOpcode() == clang::BO_LAnd || binOp->getOpcode() == clang::BO_LOr) {
 			exprTy = basic.getBool();
 			lhs = utils::exprToBool(lhs);
-			rhs = builder.wrapLazy(utils::exprToBool(rhs)); 
+			rhs = builder.wrapLazy(utils::exprToBool(rhs));
 		}
 
-		auto irOp = basic.getOperator(exprTy, opIt->second);
-
-		// for comparisons, use type of operand
-		if(binOp->isComparisonOp()) irOp = basic.getOperator(lhs->getType(), opIt->second);
-
-		retIr = builder.binaryOp(irOp, lhs, rhs);
+		retIr = buildBinaryOpExpression(converter, exprTy, lhs, rhs, opIt->second, binOp);
 		return retIr;
 	}
 
