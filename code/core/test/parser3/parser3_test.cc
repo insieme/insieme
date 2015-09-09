@@ -96,7 +96,7 @@ namespace parser3 {
 		driver.parseExpression();
 		if(driver.result) {
 //			std::cout << driver.result << std::endl;
-			//       dumpColor(driver.result);
+//		    dumpColor(driver.result);
 			auto msg = checks::check(driver.result);
 			EXPECT_TRUE(msg.empty()) << msg;
 		} else {
@@ -137,14 +137,16 @@ namespace parser3 {
 		EXPECT_TRUE(test_expression(nm, "((1.0))"));
 		EXPECT_TRUE(test_expression(nm, "((1.0) + 4.0)"));
 
+		EXPECT_TRUE(test_expression(nm, "1 + 2 * 3"));
+		EXPECT_TRUE(test_expression(nm, "(1 + 2) * 3"));
+
 		EXPECT_TRUE(test_expression(nm, "let uni = union{ int<4> a }; union uni {a=4}"));
 		EXPECT_TRUE(test_expression(nm, "let x = struct{ int<4> a }; struct x { 4}"));
+		EXPECT_TRUE(test_expression(nm, "let x = struct{ }; struct x { }"));
 
 		EXPECT_FALSE(test_expression(nm, "x"));
 
 		EXPECT_TRUE(test_expression(nm, "lambda ('a _) -> bool { return true; }"));
-		EXPECT_TRUE(test_expression(nm, "lambda ('a x) -> 'a { return x+CAST('a) 3; }"));
-		EXPECT_TRUE(test_expression(nm, "lambda ('a x) -> 'a { return(x+CAST('a) 3); }"));
 		EXPECT_TRUE(test_expression(nm, "lambda ('a x) -> 'a { return x+CAST('a) 3; }"));
 		EXPECT_TRUE(test_expression(nm, "lambda ('a x) => x+CAST('a) 3"));
 
@@ -176,6 +178,23 @@ namespace parser3 {
 
 		EXPECT_TRUE(test_expression(nm, "    let class = struct name { int<4> a; int<5> b};"
 		                                "    lambda  ~class::() { }"));
+	}
+
+	TEST(IR_Parser3, Precedence) {
+		NodeManager mgr;
+		EXPECT_EQ("int_add(1, int_mul(2, 3))", toString(*parse_expr(mgr, "1+2*3")));
+		EXPECT_EQ("int_mul(int_add(1, 2), 3)", toString(*parse_expr(mgr, "(1+2)*3")));
+		EXPECT_EQ("int_add(1, int_mul(2, 3))", toString(*parse_expr(mgr, "1+(2*3)")));
+	}
+
+	TEST(IR_Parser3, LambdasAndFunctions) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto funA = builder.normalize(parse_expr(mgr, "lambda (int<4> x) -> int<4> { return x; }"));
+		auto funB = builder.normalize(parse_expr(mgr, "function (ref<int<4>,f,f> x) -> int<4> { return *x; }"));
+
+		EXPECT_EQ(funA, funB);
 	}
 
 	bool test_statement(NodeManager& nm, const std::string& x) {
@@ -260,6 +279,26 @@ namespace parser3 {
 		                               "    decl int<2> y;"
 		                               "    x[5].a = y;"
 		                               "}"));
+	}
+
+
+	TEST(IR_Parser3, Tuples) {
+		NodeManager nm;
+
+		EXPECT_TRUE(test_statement(nm,
+				"{ "
+				"	let int = int<4>;"
+				"	let f = expr lit(\"f\" : (int,(int),(int,int),(int,int,int)) -> unit); "
+				"	f(1,(1),(1,2),(1,2,3));"
+				"}"));
+
+		EXPECT_TRUE(test_statement(nm,
+				"{ "
+				"	let int = int<4>;"
+				"	let f = expr lit(\"f\" : (int,(int),(int,int),(int,int,int)) -> unit); "
+				"	f(1+2,(1+2),(1,2),(1,2,3+3));"
+				"}"));
+
 	}
 
 /*
