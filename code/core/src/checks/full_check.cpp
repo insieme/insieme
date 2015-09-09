@@ -79,6 +79,7 @@ namespace checks {
 			// checks.push_back(make_check<UndefinedCheck>());
 			checks.push_back(make_check<FreeBreakInsideForLoopCheck>());
 			checks.push_back(make_check<MissingReturnStmtCheck>());
+			checks.push_back(make_check<IllegalNumCastCheck>());
 
 			checks.push_back(make_check<LiteralFormatCheck>());
 
