@@ -107,6 +107,12 @@ namespace lang {
 		return static_cast<GenericTypePtr>(ArrayType(elementType, size));
 	}
 
+	GenericTypePtr ArrayType::create(const TypePtr& elementType, unsigned size) {
+		auto& mgr = elementType->getNodeManager();
+		ExpressionPtr s = Literal::get(mgr, mgr.getLangBasic().getUIntInf(), toString(size));
+		return create(elementType, s);
+	}
+
 	ArrayType::operator GenericTypePtr() const {
 		NodeManager& nm = elementType.getNodeManager();
 		IRBuilder builder(nm);

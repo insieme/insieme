@@ -67,6 +67,7 @@ namespace parser3 {
 				definition_map symbols;
 				definition_map types;
 				type_alias_map alias;
+				bool isFunction;
 			};
 
 			std::vector<Scope> stack;
@@ -86,6 +87,8 @@ namespace parser3 {
 
 			NodePtr find_symb(const std::string& name) const;
 			NodePtr find_type(const std::string& name) const;
+
+			bool isInFunctionDefinition() const;
 
 			void add_type_alias(const GenericTypePtr& pattern, const TypePtr& substitute);
 			TypePtr resolve(const TypePtr& type) const;
@@ -156,6 +159,11 @@ namespace parser3 {
 			 * finds a type symbol previously defined in the scope
 			 */
 			TypePtr findType(const location& l, const std::string& name);
+
+			/**
+			 *  removes potential tuple wrappers from the given expression (if it is a single element)
+			 */
+			ExpressionPtr getScalar(ExpressionPtr expr);
 
 			/**
 			 *  handles appropriate type for expression to be used in an operation

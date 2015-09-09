@@ -1,3 +1,4 @@
+int foo(int a) { return a; }
 
 int main() {
 	
@@ -22,6 +23,9 @@ int main() {
 		int x = 0;
 		&x;
 	}
+
+	#pragma test expect_ir("42;")
+	&foo;
 
 	#pragma test expect_ir("{ decl ref<ptr<int<4>,f,f>,f,f> v0; *ptr_to_ref(*v0); }")
 	{

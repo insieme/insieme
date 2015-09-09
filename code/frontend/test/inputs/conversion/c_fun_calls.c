@@ -48,5 +48,9 @@ int main() {
 	#pragma test expect_ir("EXPR_TYPE","int<4>")
 	rec(4);
 
+	int(*funcPtr)(int);
+	funcPtr = i_to_i;
+	funcPtr(1);
+
 	return 0;
 }

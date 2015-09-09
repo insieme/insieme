@@ -247,13 +247,13 @@ namespace arithmetic {
 
 
 		// test support of division by 1
-		expr = builder.parseExpr("((12 * x) / 1)", symbols);
+		expr = builder.parseExpr("(12 * x) / 1", symbols);
 		EXPECT_EQ("int_div(int_mul(12, v6), 1)", toString(*expr));
 		f = toFormula(expr);
 		EXPECT_EQ("12*v6", toString(f));
 
 		// test support for division by -1
-		expr = builder.parseExpr("((4 * x) / -1)", symbols);
+		expr = builder.parseExpr("(4 * x) / -1", symbols);
 		EXPECT_EQ("int_div(int_mul(4, v6), -1)", toString(*expr));
 		f = toFormula(expr);
 		EXPECT_EQ("-4*v6", toString(f));

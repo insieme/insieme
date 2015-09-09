@@ -73,6 +73,7 @@ namespace parser3 {
 
 		void DeclarationContext::open_scope(const std::string& msg) {
 			stack.push_back(Scope());
+			stack.back().isFunction = (msg == "function");
 		}
 		void DeclarationContext::close_scope(const std::string& msg) {
 			assert_gt(stack.size(), 1) << "Attempted to pop global scope!";
@@ -120,6 +121,9 @@ namespace parser3 {
 			return nullptr;
 		}
 
+		bool DeclarationContext::isInFunctionDefinition() const {
+			return stack.back().isFunction;
+		}
 
 		void DeclarationContext::add_type_alias(const GenericTypePtr& pattern, const TypePtr& substitute) {
 			auto& aliases = stack.back().alias;
@@ -247,9 +251,20 @@ namespace parser3 {
 			return x.as<TypePtr>();
 		}
 
+		ExpressionPtr inspire_driver::getScalar(ExpressionPtr expr) {
+			// auto-unwrap tuple
+			if (auto tuple = expr.isa<TupleExprPtr>()) {
+				const auto& elements = tuple->getExpressions();
+				if (elements.size() == 1) {
+					return elements[0];
+				}
+			}
+			// otherwise stay as it is
+			return expr;
+		}
 
 		ExpressionPtr inspire_driver::getOperand(ExpressionPtr expr) {
-			return builder.tryDeref(expr);
+			return builder.tryDeref(getScalar(expr));
 		}
 
 		ExpressionPtr inspire_driver::genBinaryExpression(const location& l, const std::string& op, ExpressionPtr left, ExpressionPtr right) {
@@ -441,6 +456,12 @@ namespace parser3 {
 			TypeList paramTys;
 			for(const auto& var : params) {
 				paramTys.push_back(var.getType());
+			}
+
+			// if it is a function that is defined
+			if (scopes.isInFunctionDefinition()) {
+				// => skip materialization of parameters
+				return builder.lambdaExpr(retType, params, body);
 			}
 
 			// replace all variables in the body by their implicitly materialized version
