@@ -261,15 +261,15 @@
 start_rule : TYPE_ONLY declarations type             { RULE if(!driver.where_errors())  driver.result = $3; }
            | STMT_ONLY statement                     { RULE if(!driver.where_errors())  driver.result = $2; }
            | EXPRESSION_ONLY declarations expression { RULE if(!driver.where_errors())  driver.result = $3; }
-           | FULL_PROGRAM  declarations { RULE driver.open_scope(@$, "program"); }  program { RULE if(!driver.where_errors()) driver.result = $4; }
+           | FULL_PROGRAM  declarations { RULE driver.open_scope(@$, "function"); }  program { RULE if(!driver.where_errors()) driver.result = $4; }
            ;
 
 /* ~~~~~~~~~~~~~~~~~~~  LET ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 let_defs : "lambda" lambda_expression ";" 
          | "lambda" lambda_expression "," let_defs
-		 | "function" fun_expression ";"
-		 | "function" fun_expression "," let_defs
+		     | "function" fun_expression ";"
+		     | "function" fun_expression "," let_defs
          | "expr" expression ";" { RULE driver.add_let_expression(@1, $2); }
          | "expr" expression "," let_defs { RULE driver.add_let_expression(@1, $2); }
          | type ";" { RULE driver.add_let_type(@1, $1); }
@@ -301,19 +301,20 @@ lambdaBindList    : lambdaBind { }
                   | lambdaBind lambdaBindList { }
                   ;
 
-lambdaBind  : "identifier" "=" "lambda" lambda_expression ";" { RULE driver.add_let_name(@1, $1); }
-              ;
+lambdaBind  : "identifier" "=" lambdaBind_aux { RULE driver.add_let_name(@1, $1); }
+            ;
 
-
+lambdaBind_aux: "lambda" lambda_expression ";"
+              | "function" fun_expression ";"
 
 /* ~~~~~~~~~~~~~~~~~~~  PROGRAM ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 program : type "identifier" "(" variable_list markable_compound_stmt { RULE
                              INSPIRE_GUARD(@1, $1); 
-                             driver.close_scope(@$, "program");
                              auto main = driver.genLambda(@$,$4,$1,$5);
                              annotations::attachName(main, $2);
 						     $$ = driver.builder.createProgram(toVector(main));
+                             driver.close_scope(@$, "function");
                         }
         ;
 
