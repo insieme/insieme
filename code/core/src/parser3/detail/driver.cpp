@@ -256,7 +256,7 @@ namespace parser3 {
 			if (auto tuple = expr.isa<TupleExprPtr>()) {
 				const auto& elements = tuple->getExpressions();
 				if (elements.size() == 1) {
-					return elements[0];
+					return getScalar(elements[0]);
 				}
 			}
 			// otherwise stay as it is
@@ -711,7 +711,7 @@ namespace parser3 {
 				return res;
 			}
 
-			std::string get_body_string(const std::string& text, const location& b, const location& e) {
+			std::string get_body_string(const std::string& text, const location& b, const location& e, bool isFunction) {
 				auto tmp = text;
 
 				auto strings = split_string(text);
@@ -727,8 +727,8 @@ namespace parser3 {
 					res.append(*it);
 				}
 				res = res.substr(b.begin.column - 1, res.size());
-				// the lambda keyword is lost during parsing, ammend
-				return std::string("lambda ").append(res);
+				// the lambda or function keyword is lost during parsing, ammend
+				return std::string((isFunction)?"function ":"lambda ").append(res);
 			}
 		}
 		void inspire_driver::add_let_name(const location& l, const std::string& name) {
@@ -738,7 +738,7 @@ namespace parser3 {
 		void inspire_driver::add_let_lambda(const location& l, const location& begin, const location& end, const TypePtr& retType, const VariableList& params,
 		                                    const FunctionKind& fk) {
 			if(inhibit_building_count > 1) { return; }
-			lambda_lets.push_back(Lambda_let(retType, params, get_body_string(str, begin, end), fk));
+			lambda_lets.push_back(Lambda_let(retType, params, get_body_string(str, begin, end, scopes.isInFunctionDefinition()), fk));
 		}
 
 		void inspire_driver::add_this(const location& l, const TypePtr& classType) {
