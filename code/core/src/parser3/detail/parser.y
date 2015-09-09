@@ -148,7 +148,8 @@
   LET           "let"    
   USING         "using"    
   AUTO          "auto"    
-  LAMBDA        "lambda"    
+  LAMBDA        "lambda"
+  FUNCTION      "function"
   CTOR          "ctor"    
   METHOD        "method"    
   EXPR          "expr"    
@@ -182,7 +183,6 @@
   FALSE         "false"  
   STRUCT        "struct"
   UNION         "union"
-  TUPLE         "tuple"
 
   SPAWN         "spawn"
   SYNC          "sync"
@@ -231,8 +231,8 @@
 %type <std::vector<SwitchCasePtr> > switch_case_list
 %type <std::vector<CatchClausePtr> > catch_clause_list
 
-%type <ExpressionPtr> expression  lambda_expression markable_expression lambda_expression_aux
-%type <ExpressionList> expression_list
+%type <ExpressionPtr> expression  lambda_expression markable_expression lambda_expression_aux fun_expression
+%type <ExpressionList> expression_list expression_list_non_empty
 
 %type <Gen_type> type_param_list gen_type
 %type <TypePtr> type tuple_or_function  struct_type named_type just_name 
@@ -263,7 +263,9 @@ start_rule : TYPE_ONLY declarations type             { RULE if(!driver.where_err
 /* ~~~~~~~~~~~~~~~~~~~  LET ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 let_defs : "lambda" lambda_expression ";" 
-         | "lambda" lambda_expression "," let_defs  
+         | "lambda" lambda_expression "," let_defs
+		 | "function" fun_expression ";"
+		 | "function" fun_expression "," let_defs
          | "expr" expression ";" { RULE driver.add_let_expression(@1, $2); }
          | "expr" expression "," let_defs { RULE driver.add_let_expression(@1, $2); }
          | type ";" { RULE driver.add_let_type(@1, $1); }
@@ -570,21 +572,26 @@ statement_list : statement { RULE
 expression : markable_expression         { RULE INSPIRE_GUARD(@1, $1); $$ = $1; } 
            | "$" markable_expression "$" {  RULE INSPIRE_GUARD(@2, $2); $$ = driver.mark_address(@2, $2); } 
 
-expression_list : expression                      { RULE $$.push_back($1); }
-                | expression "," expression_list  { RULE $3.insert($3.begin(), $1); std::swap($$, $3); }
- 
+expression_list_non_empty : expression                      { RULE $$.push_back($1); }
+                | expression "," expression_list_non_empty  { RULE $3.insert($3.begin(), $1); std::swap($$, $3); }
+
+expression_list :                            { /* nothing - all by default */ }
+				| expression_list_non_empty  { RULE $$=$1; }
+
+                
 markable_expression : "identifier" { RULE $$ = driver.findSymbol(@$, $1); }
 
             /* unary */
            | "*" expression { RULE  
-           	   	   	   	   	   	   	   	  INSPIRE_MSG(@2, analysis::isRefType($2->getType()), "cannot deref non ref type: " + toString($2->getType()));
+                                          $2 = driver.getScalar($2);
+                                          INSPIRE_MSG(@2, analysis::isRefType($2->getType()), "cannot deref non ref type: " + toString($2->getType()));
                                           $$ = driver.builder.deref($2); } %prec UDEREF
            | "-" expression { RULE 
-                                          auto tmp = driver.builder.tryDeref($2);
+                                          auto tmp = driver.getOperand($2);
                                           $$ = driver.builder.minus(tmp); 
                             } %prec UMINUS
            | "!" expression { RULE 
-                                          auto tmp = driver.builder.tryDeref($2);
+                                          auto tmp = driver.getOperand($2);
                                           $$ = driver.builder.logicNeg(tmp); 
                             }%prec UNOT
            | expression "=" expression  { RULE $$ = driver.genBinaryExpression(@$, "=", $1, $3); }
@@ -613,38 +620,26 @@ markable_expression : "identifier" { RULE $$ = driver.findSymbol(@$, $1); }
                 
             /* ternary operator */
            | expression "?" expression ":" expression { RULE
-						$$ =  driver.builder.ite($1, driver.builder.wrapLazy($3), driver.builder.wrapLazy($5));
+						$$ =  driver.builder.ite(driver.getScalar($1), driver.builder.wrapLazy(driver.getScalar($3)), driver.builder.wrapLazy(driver.getScalar($5)));
                     }
 
             /* call expr */
-           | expression "->" "identifier" "(" ")"{ RULE 
-                                        auto mf = driver.findSymbol(@3, $3);
-                                        INSPIRE_GUARD(@1, mf);
-                                        INSPIRE_TYPE(@1, mf->getType(), FunctionTypePtr, "non callable expr"); 
-                                        $$ = driver.genCall(@$, mf, toVector($1));  
-                                }
            | expression "->" "identifier" "(" expression_list ")"{ RULE 
                                         auto mf = driver.findSymbol(@3, $3);
                                         INSPIRE_TYPE(@1, mf->getType(), FunctionTypePtr, "non callable expr"); 
                                         $5.insert($5.begin(), $1);
                                         $$ = driver.genCall(@$, mf, $5);  
                                 }
-           | expression "(" ")" { RULE 
-                                        INSPIRE_TYPE(@1, $1->getType(), FunctionTypePtr, "non callable expr"); 
-                                        $$ = driver.genCall(@$, $1, ExpressionList());  
-                                }
            | expression "(" expression_list ")" { RULE 
                                         INSPIRE_TYPE(@1, $1->getType(), FunctionTypePtr, "non callable expr"); 
                                         $$ = driver.genCall(@$, $1, $3); 
                                 }
 
-            /* parenthesis expression */
-           | "(" expression ")"  { RULE $$ = $2; }
-            /* tuple expressions */
-           | "tuple" "(" expression_list ")"  { RULE $$ = driver.builder.tupleExpr($3); }
-           | "tuple" "(" ")"  { RULE $$ = driver.builder.tupleExpr(core::ExpressionList()); }
+            /* tuple expressions - in the unary case it covers the parenthesis expression as well */
+           | "(" expression_list ")"  { RULE $$ = driver.builder.tupleExpr($2); }
             /* lambda or closure expression: callable expression */
            | "lambda" lambda_expression  { RULE $$ = $2; }
+           | "function" fun_expression { RULE $$ = $2; }
             /* cast */ 
            | "CAST(" type ")" expression  { RULE $$ = driver.builder.castExpr($2, $4); }
            | expression ".as(" type ")"   { RULE 
@@ -682,7 +677,7 @@ markable_expression : "identifier" { RULE $$ = driver.findSymbol(@$, $1); }
                                                     $$ = driver.builder.literal($4, $2); }
            | "lit(" type ")"                 { RULE $$ = driver.builder.getTypeLiteral($2); }
             /* list expression */
-           | "[" expression_list "]"         { RULE 
+           | "[" expression_list_non_empty "]"         { RULE 
                         $$ = encoder::toIR<ExpressionList, encoder::DirectExprListConverter>(driver.mgr, $2); }
             /* struct / union expressions */
            | "struct" type "{" expression_list "}" { RULE $$ = driver.genStructExpression(@$, $2, $4); }
@@ -797,6 +792,10 @@ lambda_expression_aux :
 lambda_expression : { driver.open_scope(@$,"lambda expr"); } lambda_expression_aux 
                     { driver.close_scope(@$, "lambda expr"); $$ = $2; }
                   ;
+
+fun_expression : { driver.open_scope(@$,"function"); } lambda_expression_aux
+				 { driver.close_scope(@$,"function"); $$ = $2; }
+				;
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Precedence list ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // the lowest in list, the highest precedence
