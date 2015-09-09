@@ -68,7 +68,7 @@ namespace conversion {
 
 	core::LambdaExprPtr DeclConverter::convertFunctionDecl(const core::FunctionTypePtr& funType, const clang::FunctionDecl* funcDecl) const {
 		core::LiteralPtr funLit = builder.literal(funcDecl->getNameAsString(), funType);
-
+		
 		if(funcDecl->hasBody()) {
 			converter.getVarMan()->pushScope(false);
 			core::VariableList params;

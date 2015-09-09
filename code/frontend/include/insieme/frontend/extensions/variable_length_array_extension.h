@@ -46,7 +46,7 @@ namespace extensions {
 	
 	class VariableLengthArrayExtension : public FrontendExtension {
 	private:
-		std::list<core::StatementPtr> sizes;
+		std::list<core::DeclarationStmtPtr> sizes;
 		std::map<const clang::Decl*, std::list<core::ExpressionPtr>> arrayDeclVarMap;
 	public:
 		/**

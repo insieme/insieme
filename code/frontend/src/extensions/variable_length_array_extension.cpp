@@ -95,8 +95,33 @@ namespace extensions {
 
 	
 	core::ExpressionPtr VariableLengthArrayExtension::Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& converter) {
+		auto& basic = converter.getNodeManager().getLangBasic();
+		auto& builder = converter.getIRBuilder();
+
 		//HINT: This will change to clang::SizeOfAlignOfExpr with clang 3.7
-		if(const clang::UnaryExprOrTypeTraitExpr* sizeofexpr = llvm::dyn_cast<clang::UnaryExprOrTypeTraitExpr>(expr)) {
+		if(clang::UnaryExprOrTypeTraitExpr* sizeofexpr = const_cast<clang::UnaryExprOrTypeTraitExpr*>(llvm::dyn_cast<clang::UnaryExprOrTypeTraitExpr>(expr))) {
+			
+			// if it's a VLA type, clang gives us the components we need to multiply in the child list (up to the innermost VLA)
+			if(sizeofexpr->isArgumentType()) {
+				// run through the conversion to see if it's VLA
+				auto irType = converter.convertType(sizeofexpr->getTypeOfArgument());
+				// if sizes is not empty, we just converted a VLA
+				if(!sizes.empty()) {
+					// use sizes to navigate to innermost VLA and get its element type
+					core::TypePtr elemType;
+					do {
+						elemType = core::lang::ArrayType(irType).getElementType();
+						if(core::lang::ArrayType(irType).getSize() == sizes.front()->getVariable()) sizes.pop_front();
+						irType = elemType;
+					} while(!sizes.empty());
+					// multiply all children with sizeof of inner type
+					auto retExpr = builder.callExpr(basic.getSizeof(), builder.getTypeLiteral(elemType)); 
+					for(auto child : sizeofexpr->children()) {
+						retExpr = builder.mul(retExpr, builder.numericCast(converter.convertExpr(llvm::dyn_cast<clang::Expr>(child)), basic.getUInt8()));
+					}
+					return retExpr;
+				}
+			}
 			//only do this if we have a decl ref to a variable length array
 			if(!sizeofexpr->isArgumentType()) {
 				if(const clang::DeclRefExpr* varTy = llvm::dyn_cast<clang::DeclRefExpr>(sizeofexpr->getArgumentExpr()->IgnoreParenImpCasts())) {

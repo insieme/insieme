@@ -622,14 +622,26 @@ namespace conversion {
 	core::ExpressionPtr Converter::ExprConverter::VisitDeclRefExpr(const clang::DeclRefExpr* declRef) {
 		core::ExpressionPtr retIr;
 		LOG_EXPR_CONVERSION(declRef, retIr);
-
-		if(const clang::VarDecl* varDecl = llvm::dyn_cast<clang::VarDecl>(declRef->getDecl())) { 
-			retIr = converter.getVarMan()->lookup(varDecl);
+		
+		if(const clang::VarDecl* varDecl = llvm::dyn_cast<clang::VarDecl>(declRef->getDecl())) {
+			// fall back to literals for extern variables
+			if(varDecl->hasExternalStorage()) {
+				retIr = builder.literal(declRef->getDecl()->getNameAsString(), converter.convertVarType(declRef->getType()));
+			} else {
+				retIr = converter.getVarMan()->lookup(varDecl);
+			}
 			return retIr;
 		}
 		
 		if(const clang::FunctionDecl* funcDecl = llvm::dyn_cast<clang::FunctionDecl>(declRef->getDecl())) {
-			retIr = converter.getFunMan()->lookup(funcDecl->getCanonicalDecl());
+			// fall back to literals for builtin functions
+			if(declRef->getType()->isBuiltinType()) {
+				auto vd = llvm::dyn_cast<clang::ValueDecl>(declRef->getDecl());
+				auto clangTy = vd ? vd->getType() : declRef->getType();
+				retIr = builder.literal(declRef->getDecl()->getNameAsString(), converter.convertType(clangTy));
+			} else {
+				retIr = converter.getFunMan()->lookup(funcDecl->getCanonicalDecl());
+			}
 			return retIr;
 		}
 

@@ -85,6 +85,19 @@ int main() {
 	}
 
 	// VARIABLE LENGTH ARRAY SIZEOF //////////////////////////////////////////////////////////////
+	
+	#pragma test expect_ir("{ decl ref<int<4>,f,f> v0; sizeof(type(int<4>))*num_cast(*v0, type(uint<8>)); }")
+	{
+		int i;
+		sizeof(int[i]);
+	}
+	
+	#pragma test expect_ir("{ decl ref<int<4>,f,f> v0; decl ref<int<4>,f,f> v1; sizeof(type(array<int<4>,2>))*num_cast(*v0, type(uint<8>))*num_cast(5, type(uint<8>))*num_cast(*v1, type(uint<8>)); }")
+	{
+		int i, j;
+		sizeof(int[i][5][j][2]);
+	}
+
 	int i=10;
 	int j=20;
 	int k[j];

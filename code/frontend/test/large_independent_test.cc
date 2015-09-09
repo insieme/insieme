@@ -46,6 +46,7 @@ namespace frontend {
 		runIndependentTestOn(fn, [](ConversionJob& job) {
 			job.registerFrontendExtension<extensions::VariableArgumentListExtension>();
 			job.registerFrontendExtension<extensions::VariableLengthArrayExtension>();
+			job.addIncludeDirectory(FRONTEND_TEST_DIR "../../../test/bots/");
 		});
 	}
 
@@ -59,6 +60,10 @@ namespace frontend {
 
 	TEST(IndependentTest, Pendulum) {
 		runLargeIndependentTestOn(FRONTEND_TEST_DIR "../../../test/pendulum/pendulum.c");
+	}
+	
+	TEST(IndependentTest, NQueens) {
+		runLargeIndependentTestOn(FRONTEND_TEST_DIR "../../../test/bots/nqueens/nqueens.c");
 	}
 
 } // fe namespace

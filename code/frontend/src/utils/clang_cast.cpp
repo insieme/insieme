@@ -158,7 +158,9 @@ namespace utils {
 
 		////////////////////////////////////////////////////////////////////////////////////////////////////////////
 		// CK_FunctionToPointerDecay - Function to pointer decay. void(int) -> void(*)(int)
+		// CK_BuiltinFnToFnPtr - Same as above, for builtin functions
 		case clang::CK_FunctionToPointerDecay:
+		case clang::CK_BuiltinFnToFnPtr:
 			return expr;
 
 		////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -399,10 +401,6 @@ namespace utils {
 		//	* struct A { operator int(); }; int i = int(A());
 		//	* */
 		//	{ return converter.convertExpr(castExpr->getSubExpr()); }
-
-		//case clang::CK_BuiltinFnToFnPtr: {
-		//	return expr;
-		//}
 
 		//case clang::CK_AtomicToNonAtomic:
 		//case clang::CK_NonAtomicToAtomic:
