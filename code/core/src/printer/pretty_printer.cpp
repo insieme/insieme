@@ -703,15 +703,24 @@ namespace printer {
 					out << ")";
 					return;
 				}
-
-				const string& str = node->getStringValue();
+ 				const string& str = node->getStringValue();
 				if(printer.hasOption(PrettyPrinter::NAME_CONTRACTION) && str.size() > 9) {
 					out << str.substr(0, 3) << "..." << str.substr(str.size() - 3, str.size());
 				} else {
-					if(!node->getChild(0)->getChild(0).toString().compare("intTypeParam")) {
-						out << "param(" << str << ")";
-					} else {
-						out << str;
+					out << str;
+					if(!node->getChild(0)->getChildList().empty() ) {
+						if (!node->getChild(0)->getChild(0)->toString().compare("real")) {
+							if (!node->getChild(0)->getChild(2)->getChild(0)->toString().compare("4"))
+								out << "f";
+						} else {
+							if (!node->getChild(0)->getChild(0)->toString().compare("uint"))
+								out << "u";
+
+							if (!node->getChild(0)->getChild(2)->getChild(0)->toString().compare("8"))
+								out << "l";
+							else if (!node->getChild(0)->getChild(2)->getChild(0)->toString().compare("16"))
+								out << "ll";
+						}
 					}
 				}
 
@@ -814,7 +823,7 @@ namespace printer {
 
 				} else if(funType->isMemberFunction()) {
 					// print member function header
-					out << "lambda ";
+					out << "function ";
 					this->visit(funType->getObjectType());
 					out << "::(" << join(", ", node->getParameters().begin() + 1, node->getParameters().end(), paramPrinter) << ") -> ";
 					this->visit(funType->getReturnType());
@@ -828,7 +837,7 @@ namespace printer {
 
 				} else {
 					// print plain header function
-					out << "lambda(" << join(", ", node->getParameterList(), paramPrinter) << ") -> ";
+					out << "function(" << join(", ", node->getParameterList(), paramPrinter) << ") -> ";
 					this->visit(funType->getReturnType());
 					out << " ";
 					// .. and body
@@ -885,7 +894,7 @@ namespace printer {
 			});
 
 			PRINT(BindExpr, {
-				out << "( lambda(" << join(", ", node->getParameters(),[&](std::ostream& out, const ExpressionPtr& cur) {
+				out << "( function(" << join(", ", node->getParameters(),[&](std::ostream& out, const ExpressionPtr& cur) {
 					this->visit(cur->getType());
 					out << " ";
 					this->visit(cur);

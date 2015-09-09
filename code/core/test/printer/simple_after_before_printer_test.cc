@@ -181,15 +181,15 @@ namespace parser3{
 
     TEST(After_Before_Test, Expressions) {
         NodeManager nm;
-/*
+
         EXPECT_TRUE(test_expression(nm, "param(123456789)"));
 
         EXPECT_TRUE(test_expression(nm, "1"));
 
         EXPECT_TRUE(test_expression(nm, "((((1))))"));
-*/
+
         EXPECT_TRUE(test_expression(nm, "1u"));
-/*        EXPECT_TRUE(test_expression(nm, "1l"));
+        EXPECT_TRUE(test_expression(nm, "1l"));
         EXPECT_TRUE(test_expression(nm, "1ul"));
         EXPECT_TRUE(test_expression(nm, "1ll"));
         EXPECT_TRUE(test_expression(nm, "1ull"));
@@ -214,13 +214,19 @@ namespace parser3{
 
         EXPECT_TRUE(test_expression(nm, "((1.0) + 4.0)"));
 
+        EXPECT_TRUE(test_expression(nm, "lambda () -> unit { }"));
+        EXPECT_TRUE(test_expression(nm, "lambda () -> bool { return false; }"));
+        EXPECT_TRUE(test_expression(nm, "lambda (bool a) -> bool { return a; }"));
+        EXPECT_TRUE(test_expression(nm, "lambda (int<4> a) -> bool { return true; }"));
+
+/*
 	    EXPECT_TRUE(test_expression(nm, "lambda ('a _) -> bool { return true; }"));
        	EXPECT_TRUE(test_expression(nm, "lambda ('a x) -> bool { return true; }"));
         EXPECT_TRUE(test_expression(nm, "lambda ('a x) -> 'a { return x+CAST('a) 3; }"));
         EXPECT_TRUE(test_expression(nm, "lambda ('a x) -> 'a { return(x+CAST('a) 3); }"));
         EXPECT_TRUE(test_expression(nm, "lambda ('a x) -> 'a { return x+CAST('a) 3; }"));
         EXPECT_TRUE(test_expression(nm, "lambda ('a x) => x+CAST('a) 3"));
-
+*/
         // return type deduction
         EXPECT_TRUE(test_expression(nm, "lambda () => { return true; }"));
         EXPECT_TRUE(test_expression(nm, "lambda (bool x) => { if(x) { return true; } else { return false; } }"));
@@ -241,7 +247,7 @@ namespace parser3{
     	"	let two = lambda(int<4> x)=>(x+exp); "
         "    return one(two(exp));"
     	"}  "));
-*/
+
     }
     
 
@@ -530,10 +536,54 @@ namespace parser3{
     TEST(After_Before_Test, Program) {
         NodeManager nm;
 
+EXPECT_TRUE(test_program(nm, ""
+        "int<4> main() {}"));
+EXPECT_TRUE(test_program(nm, ""
+        "let int = int<4>;"
+        "int main() {"
+        "}"));
+EXPECT_TRUE(test_program(nm, ""
+        "let int = int<4>;"
+        "int main(int a, int b) {"
+        "}"));
+EXPECT_TRUE(test_program(nm, ""
+        "int<4> main(int <4> a) {"
+        "decl int <4> c = a;"
+        "}"));
+EXPECT_TRUE(test_program(nm, ""
+        "let int = int<4>;"
+        "let f = lambda()->unit{};"
+        "int<4> main() {"
+        "   f();"
+        "}"));
+EXPECT_TRUE(test_program(nm, ""
+        "let int = int<4>;"
+        "let f = lambda(int<4> a)->unit{"
+        "   a = 5;"
+        "};"
+        "int<4> main() {"
+        "   f(6);"
+        "}"));
+EXPECT_TRUE(test_program(nm, ""
+        "let int = int<4>;"
+        "let f = lambda(int<4> a)->int{"
+        "   return a;"
+        "};"
+        "int<4> main() {"
+        "   f();"
+        "}"));
+
         EXPECT_TRUE(test_program(nm, "let f = lambda (int<4> a) -> int<4> { return a; }; int<4> main (int<8> argc, int <4> argc2) {1;2;3;f(2);}"));
-        EXPECT_TRUE(test_program(nm, "int<4> main (int<4> a, int<4> b)  { 1+1; }"));
+        EXPECT_TRUE(test_program(nm, "int<4> main (int<4> a, int<4> b)  { a = 1+1; }"));
         EXPECT_TRUE(test_program(nm, "let int = int<4>; int main (int a, int b) { 1+1; }"));
-        EXPECT_TRUE(test_program(nm, "let int = int<4>; let f = lambda (int a) ->int { return a; }; int main (int a, int b) { f(1); }"));
+        EXPECT_TRUE(test_program(nm,
+                         "let int = int<4>; "
+                         "let f = lambda (int a) ->int { "
+                         "  return a; "
+                         "}; "
+                         "int main (int a, int b) { "
+                         "  f(1); "
+                         "}"));
 
         EXPECT_TRUE(test_program(nm,
                          "let int = int<4>;"
