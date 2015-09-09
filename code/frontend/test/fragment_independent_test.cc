@@ -36,21 +36,47 @@
 
 #include "independent_test_utils.h"
 
-#include "insieme/frontend/extensions/variable_argument_list_extension.h"
-
 namespace insieme {
 namespace frontend {
+
+	TEST(IndependentTest, Literals) {
+		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_literals.c");
+	}
 	
-	TEST(VarargIndependentTest, Basic) {
-		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_variable_argument_lists.c", 
-			[](ConversionJob& job) { job.registerFrontendExtension<extensions::VariableArgumentListExtension>(); }
-		);
+	TEST(IndependentTest, BasicTypes) {
+		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_basic_types.c");
 	}
 
-	TEST(VarargIndependentTest, HelloWorld) {
-		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_hello_world.c", 
-			[](ConversionJob& job) { job.registerFrontendExtension<extensions::VariableArgumentListExtension>(); }
-		);
+	TEST(IndependentTest, Globals) {
+		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_globals.c");
+	}
+
+	TEST(IndependentTest, Statements) {
+		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_statements.c");
+	}
+
+	TEST(IndependentTest, VariableScopes) {
+		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_variable_scopes.c");
+	}
+	
+	TEST(IndependentTest, FunCalls) {
+		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_fun_calls.c");
+	}
+
+	TEST(IndependentTest, Expressions) {
+		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_expressions.c");
+	}
+
+	TEST(IndependentTest, Casts) {
+		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_casts.c");
+	}
+
+	TEST(IndependentTest, DeclInitExpressions) {
+		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_decl_init_expressions.c");
+	}
+
+	TEST(IndependentTest, Prototypes) {
+		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_prototypes.c");
 	}
 
 } // fe namespace

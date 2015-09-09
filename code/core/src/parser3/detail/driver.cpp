@@ -253,11 +253,9 @@ namespace parser3 {
 
 		ExpressionPtr inspire_driver::getScalar(ExpressionPtr expr) {
 			// auto-unwrap tuple
-			if (auto tuple = expr.isa<TupleExprPtr>()) {
+			if(auto tuple = expr.isa<TupleExprPtr>()) {
 				const auto& elements = tuple->getExpressions();
-				if (elements.size() == 1) {
-					return elements[0];
-				}
+				if(elements.size() == 1) { return elements[0]; }
 			}
 			// otherwise stay as it is
 			return expr;
