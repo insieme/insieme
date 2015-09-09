@@ -409,7 +409,13 @@ namespace conversion {
 		core::ExpressionPtr retIr;
 		LOG_EXPR_CONVERSION(membExpr, retIr);
 		core::ExpressionPtr base = Visit(membExpr->getBase());
-		frontend_assert(base);
+		
+		// deal with pointer accesses by conversion to ref
+		if(membExpr->isArrow()) {
+			frontend_assert(core::lang::isPointer(base)) << "Arrow member access on non-pointer " << dumpColor(base);
+			base = core::lang::buildPtrToRef(base);
+		}
+
 		string memName(membExpr->getMemberDecl()->getName());
 		auto retType = converter.convertType(membExpr->getType());
 		frontend_assert(retType);

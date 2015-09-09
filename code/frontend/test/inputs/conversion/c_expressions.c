@@ -326,6 +326,22 @@ int main() {
 		} tu;
 		tu.i;
 	}
+
+	#pragma test expect_ir("{ decl ref<ptr<struct{int<4> i},f,f>,f,f> v0;  *(ptr_to_ref(*v0).i); }")
+	{
+		struct {
+			int i;
+		} *ts;
+		ts->i;
+	}
+
+	#pragma test expect_ir("{ decl ref<ptr<union{int<4> i},f,f>,f,f> v0;  *(ptr_to_ref(*v0).i); }")
+	{
+		union {
+			int i;
+		} *ts;
+		ts->i;
+	}
 	
 	//===---------------------------------------------------------------------------------------------------------------------------------- MISCELLANEOUS ---===
 	
