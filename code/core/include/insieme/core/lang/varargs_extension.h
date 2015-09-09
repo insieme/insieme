@@ -61,6 +61,7 @@ namespace lang {
 		IMPORT_MODULE(ReferenceExtension);
 
 		public:
+
 		// represents a packed list of arguments passed to a function taking a variable number of arguments (e.g. printf)
 		LANG_EXT_TYPE(VarList, "var_list")
 				

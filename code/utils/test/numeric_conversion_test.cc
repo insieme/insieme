@@ -97,4 +97,8 @@ TEST(NumericConversion, FromString) {
 	EXPECT_EQ("1.0f", numeric_cast<std::string>(1.0f));
 	EXPECT_EQ("1.5f", numeric_cast<std::string>(1.5f));
 	EXPECT_EQ(1.0f, numeric_cast<float>("1.0f"));
+
+	EXPECT_EQ(32, numeric_cast<int>("' '"));
+	EXPECT_EQ(65, numeric_cast<int>("'A'"));
+	EXPECT_EQ(0, numeric_cast<int>("'\\0'"));
 }

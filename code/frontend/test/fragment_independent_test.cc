@@ -34,45 +34,50 @@
  * regarding third party software licenses.
  */
 
-#pragma once
-
-#include "insieme/core/checks/ir_checks.h"
+#include "independent_test_utils.h"
 
 namespace insieme {
-namespace core {
-namespace checks {
+namespace frontend {
 
-// defines macros for generating CHECK declarations
-#include "insieme/core/checks/check_macros.inc"
+	TEST(IndependentTest, Literals) {
+		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_literals.c");
+	}
+	
+	TEST(IndependentTest, BasicTypes) {
+		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_basic_types.c");
+	}
 
-	/**
-	 * This check verifies that array indices are in range.
-	 * Currently only implemented for single element arrays generated from scalars.
-	 */
-	SIMPLE_CHECK(ScalarArrayIndexRange, CallExpr, false);
+	TEST(IndependentTest, Globals) {
+		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_globals.c");
+	}
 
-	/**
-	 * This check verifies that undefined(...) is only called within ref.new or ref.var.
-	 */
-	SIMPLE_CHECK(Undefined, CallExpr, false);
+	TEST(IndependentTest, Statements) {
+		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_statements.c");
+	}
 
-	/**
-	 * This check verifies that there are no free break statements inside for loops.
-	 */
-	SIMPLE_CHECK(FreeBreakInsideForLoop, ForStmt, false);
+	TEST(IndependentTest, VariableScopes) {
+		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_variable_scopes.c");
+	}
+	
+	TEST(IndependentTest, FunCalls) {
+		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_fun_calls.c");
+	}
 
-	/**
-	 * This check verifies that functions with non-unit return type return something on every code path.
-	 */
-	SIMPLE_CHECK(MissingReturnStmt, LambdaExpr, false);
+	TEST(IndependentTest, Expressions) {
+		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_expressions.c");
+	}
 
-	/**
-	 * This check verifies that NumCasts are only applied to numeric types
-	 */
-	SIMPLE_CHECK(IllegalNumCast, CallExpr, false);
+	TEST(IndependentTest, Casts) {
+		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_casts.c");
+	}
 
-	#undef SIMPLE_CHECK
+	TEST(IndependentTest, DeclInitExpressions) {
+		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_decl_init_expressions.c");
+	}
 
-} // end namespace check
-} // end namespace core
-} // end namespace insieme
+	TEST(IndependentTest, Prototypes) {
+		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_prototypes.c");
+	}
+
+} // fe namespace
+} // insieme namespace

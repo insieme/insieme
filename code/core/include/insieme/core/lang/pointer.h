@@ -36,6 +36,7 @@
 
 #pragma once
 
+#include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/extension.h"
 #include "insieme/core/lang/reference.h"
 
@@ -385,6 +386,7 @@ namespace lang {
 	 */
 	TypePtr buildPtrType(const TypePtr& elementType, bool _const = false, bool _volatile = false);
 
+	// constructors and conversions
 	ExpressionPtr buildPtrNull(const TypePtr& type);
 	ExpressionPtr buildPtrFromRef(const ExpressionPtr& refExpr);
 	ExpressionPtr buildPtrToRef(const ExpressionPtr& ptrExpr);
@@ -392,10 +394,13 @@ namespace lang {
 	ExpressionPtr buildPtrFromIntegral(const ExpressionPtr& intExpr, const TypePtr& ptrType);
 	ExpressionPtr buildPtrToIntegral(const ExpressionPtr& ptrExpr, const TypePtr& intType);
 
+	// casts
 	ExpressionPtr buildPtrCast(const ExpressionPtr& ptrExpr, bool newConst, bool newVolatile);
 	ExpressionPtr buildPtrReinterpret(const ExpressionPtr& ptrExpr, const TypePtr& newElementType);
 
+	// operations
 	ExpressionPtr buildPtrSubscript(const ExpressionPtr& ptrExpr, const ExpressionPtr& subscriptExpr);
+	ExpressionPtr buildPtrOperation(BasicGenerator::Operator op, const ExpressionPtr& lhs, const ExpressionPtr& rhs);
 
 } // end namespace lang
 } // end namespace core

@@ -76,6 +76,11 @@ namespace utils {
 		LANG_EXT_DERIVED(CommaOperator, "lambda ('a lhs, 'b rhs) -> 'b { lhs; return rhs; }")
 
 		/**
+		 * Implements the C bool semantics
+		 */
+		LANG_EXT_DERIVED(BoolToInt, "lambda (bool b) -> int<4> { if(b) return 1; else return 0; }")
+
+		/**
 		 * Temporary operator to fix record types before resolver pass
 		 * NOTE: should be completely eliminated before IR passes out of the FE
 		 */
@@ -93,6 +98,11 @@ namespace utils {
 	 * Creates a C-style comma operation
 	 */
 	core::ExpressionPtr buildCommaOperator(const core::ExpressionPtr& lhs, const core::ExpressionPtr& rhs);
+	
+	/**
+	 * Creates a an expression implementing C bool semantics
+	 */
+	core::ExpressionPtr buildBoolToInt(const core::ExpressionPtr& b);
 	
 	/**
 	 * Creates a temporary fix call for record init expression types

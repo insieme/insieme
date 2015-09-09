@@ -34,45 +34,55 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include "insieme/utils/character_escaping.h"
 
-#include "insieme/core/checks/ir_checks.h"
+#include <utility>
+#include <string>
+#include <vector>
+
+#include "insieme/utils/assert.h"
 
 namespace insieme {
-namespace core {
-namespace checks {
+namespace utils {
 
-// defines macros for generating CHECK declarations
-#include "insieme/core/checks/check_macros.inc"
+	namespace {
 
-	/**
-	 * This check verifies that array indices are in range.
-	 * Currently only implemented for single element arrays generated from scalars.
-	 */
-	SIMPLE_CHECK(ScalarArrayIndexRange, CallExpr, false);
+		std::vector<std::pair<std::string, char>> escapedCharMapping {
+				{"\\0", '\0'},
+				{"\\n", '\n'},
+				{"\\t", '\t'},
+				{"\\v", '\v'},
+				{"\\b", '\b'},
+				{"\\r", '\r'},
+				{"\\f", '\f'},
+				{"\\a", '\a'},
+				{"\\\\", '\\'},
+				{"\\?", '\?'},
+				{"\\'", '\''},
+				{"\\\"", '\"'}
+			};
+	}
 
-	/**
-	 * This check verifies that undefined(...) is only called within ref.new or ref.var.
-	 */
-	SIMPLE_CHECK(Undefined, CallExpr, false);
+	char escapedStringToChar(const std::string& character) {
+		assert_true(character.length() > 0 && character.length() < 3) <<
+				"Can only convert escaped characters in strings of length 1 or 2, encountered length " << character.length();
+		if(character.length() == 1)
+			return character.front();
+		for(auto p : escapedCharMapping) {
+			if(p.first == character) return p.second;
+		}
+		assert_not_implemented() << "Unsupported escaped character in string: >" << character << "<";
+		return ' ';
+	}
 
-	/**
-	 * This check verifies that there are no free break statements inside for loops.
-	 */
-	SIMPLE_CHECK(FreeBreakInsideForLoop, ForStmt, false);
+	std::string escapedCharToString(char character) {
+		for(auto p : escapedCharMapping) {
+			if(p.second == character) return p.first;
+		}
+		assert_not_implemented() << "Unsupported escaped character of value " << (int)character;
+		return std::string();
+	}
 
-	/**
-	 * This check verifies that functions with non-unit return type return something on every code path.
-	 */
-	SIMPLE_CHECK(MissingReturnStmt, LambdaExpr, false);
 
-	/**
-	 * This check verifies that NumCasts are only applied to numeric types
-	 */
-	SIMPLE_CHECK(IllegalNumCast, CallExpr, false);
-
-	#undef SIMPLE_CHECK
-
-} // end namespace check
-} // end namespace core
+} // end namespace utils
 } // end namespace insieme

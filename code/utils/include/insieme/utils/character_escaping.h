@@ -36,43 +36,26 @@
 
 #pragma once
 
-#include "insieme/core/checks/ir_checks.h"
+#include <string>
+
+#include "insieme/utils/assert.h"
 
 namespace insieme {
-namespace core {
-namespace checks {
+namespace utils {
 
-// defines macros for generating CHECK declarations
-#include "insieme/core/checks/check_macros.inc"
-
-	/**
-	 * This check verifies that array indices are in range.
-	 * Currently only implemented for single element arrays generated from scalars.
+	/*
+	 * Converts a string containing a possibly escaped character to a char
+	 * @param character a string holding the possibly escaped character to be converted to char
+	 * @return the possibly escaped character as a char type
 	 */
-	SIMPLE_CHECK(ScalarArrayIndexRange, CallExpr, false);
+	char escapedStringToChar(const std::string& character);
 
-	/**
-	 * This check verifies that undefined(...) is only called within ref.new or ref.var.
+	/*
+	 * Converts a possibly escaped character to a string
+	 * @param character a char holding the possibly escaped character to be converted to string
+	 * @return the possibly escaped character as a string
 	 */
-	SIMPLE_CHECK(Undefined, CallExpr, false);
+	std::string escapedCharToString(char character);
 
-	/**
-	 * This check verifies that there are no free break statements inside for loops.
-	 */
-	SIMPLE_CHECK(FreeBreakInsideForLoop, ForStmt, false);
-
-	/**
-	 * This check verifies that functions with non-unit return type return something on every code path.
-	 */
-	SIMPLE_CHECK(MissingReturnStmt, LambdaExpr, false);
-
-	/**
-	 * This check verifies that NumCasts are only applied to numeric types
-	 */
-	SIMPLE_CHECK(IllegalNumCast, CallExpr, false);
-
-	#undef SIMPLE_CHECK
-
-} // end namespace check
-} // end namespace core
+} // end namespace utils
 } // end namespace insieme

@@ -60,12 +60,12 @@ int main() {
 		while(i = 1) { break; }
 	}
 
-	#pragma test expect_ir("{ decl ref<bool,f,f> v0 = var(false);  while(((!(*v0)) || (0!=0))) { v0 = true; { decl ref<int<4>,f,f> v1; } } }")
+	#pragma test expect_ir("{ decl ref<bool,f,f> v0 = var(false);  while(!*v0 || 0!=0) { v0 = true; { decl ref<int<4>,f,f> v1; } } }")
 	do {
 		int x;
 	} while(0);
 	
-	#pragma test expect_ir("{", C_STYLE_ASSIGN, "decl ref<int<4>,f,f> v0; { decl ref<bool,f,f> v1 = var(false); while((!(*v1)) || int_ne(c_ass(v0, 1), 0)) { v1 = true; { break; } } } }")
+	#pragma test expect_ir("{", C_STYLE_ASSIGN, "decl ref<int<4>,f,f> v0; { decl ref<bool,f,f> v1 = var(false); while(!*v1 || int_ne(c_ass(v0, 1), 0)) { v1 = true; { break; } } } }")
 	{
 		int i;
 		do {
@@ -73,7 +73,7 @@ int main() {
 		} while(i = 1);
 	}
 
-	#pragma test expect_ir("{ decl ref<int<4>,f,f> v0; switch(( *v0)) { case 0: { return 5; } case 4: { 5; 6; break; } case 5: { 6; break; } case 8: { return 6; } default: { break; } } }")
+	#pragma test expect_ir("{ decl ref<int<4>,f,f> v0; switch(*v0) { case 0: { return 5; } case 4: { 5; 6; break; } case 5: { 6; break; } case 8: { return 6; } default: { break; } } }")
 	{
 		int a;
 		switch(a) {

@@ -3,12 +3,14 @@ int foo(int a) { return a; }
 int main() {
 	
 	//===-------------------------------------------------------------------------------------------------------------------------------- UNARY OPERATORS ---===
+	
+	#define BOOL_TO_INT "let bool_to_int = lambda (bool b) -> int<4> { if(b) return 1; else return 0; };"
 
 	#pragma test expect_ir("int_not(3)")
 	~3;
 	
-	#pragma test expect_ir("!(3!=0)")
-	!3;
+	#pragma test expect_ir("{",BOOL_TO_INT,"bool_to_int(!(3!=0)); }")
+	{ !3; }
 	
 	#pragma test expect_ir("3")
 	+3;
@@ -22,8 +24,8 @@ int main() {
 		&x;
 	}
 
-	#pragma test expect_ir("42;")
-	&foo;
+	//pragma test expect_ir("42;")
+	//&foo;
 
 	#pragma test expect_ir("{ decl ref<ptr<int<4>,f,f>,f,f> v0; *ptr_to_ref(*v0); }")
 	{
@@ -116,10 +118,10 @@ int main() {
 
 	// LOGICAL ////////////////////////////////////////////////////////////
 	
-	#pragma test expect_ir("((0!=0) || (1!=0))")
+	#pragma test expect_ir("(0!=0) || (1!=0)")
 	0 || 1;
 
-	#pragma test expect_ir("((1!=0) && (0!=0))")
+	#pragma test expect_ir("(1!=0) && (0!=0)")
 	1 && 0;
 	
 	// COMPARISON /////////////////////////////////////////////////////////
@@ -184,6 +186,33 @@ int main() {
 		int a[5];
 		&a;
 	}
+	
+	#pragma test expect_ir("{ decl ref<ptr<unit,f,f>,f,f> v0; ptr_add(*v0, 5); }")
+	{
+		void* a;
+		a+5;
+	}
+
+	#pragma test expect_ir("{ decl ref<ptr<unit,f,f>,f,f> v0; ptr_add(*v0, 5); }")
+	{
+		void* a;
+		5+a;
+	}
+	
+	#pragma test expect_ir("{ decl ref<ptr<unit,f,f>,f,f> v0; ptr_sub(*v0, 5); }")
+	{
+		void* a;
+		a-5;
+	}
+	
+	#pragma test expect_ir("{ decl ref<ptr<unit,f,f>,f,f> v0; ptr_gt(*v0,*v0); ptr_lt(*v0,*v0); ptr_le(*v0,*v0); ptr_ge(*v0,*v0); }")
+	{
+		void* a;
+		a>a;
+		a<a;
+		a<=a;
+		a>=a;
+	}
 
 	// multidimensional
 	
@@ -205,61 +234,61 @@ int main() {
 	// TODO FE NG new call semantic
 	#define C_STYLE_ASSIGN "let c_ass = lambda (ref<'a,f,'b> v1, 'a v2) -> 'a { v1 = v2; return *v1; };"
 
-	#pragma test expect_ir("{", C_STYLE_ASSIGN, "decl ref<int<4>,f,f> v1 = var(1); c_ass(v1, (( *v1)+1)); }")
+	#pragma test expect_ir("{", C_STYLE_ASSIGN, "decl ref<int<4>,f,f> v1 = var(1); c_ass(v1, *v1+1); }")
 	{
 		int a = 1;
 		a += 1;
 	}
 	
-	#pragma test expect_ir("{", C_STYLE_ASSIGN, "decl ref<int<4>,f,f> v1 = var(1); c_ass(v1, (( *v1)-2)); }")
+	#pragma test expect_ir("{", C_STYLE_ASSIGN, "decl ref<int<4>,f,f> v1 = var(1); c_ass(v1, *v1-2); }")
 	{
 		int a = 1;
 		a -= 2;
 	}
 	
-	#pragma test expect_ir("{", C_STYLE_ASSIGN, "decl ref<int<4>,f,f> v1 = var(1); c_ass(v1, (( *v1)/1)); }")
+	#pragma test expect_ir("{", C_STYLE_ASSIGN, "decl ref<int<4>,f,f> v1 = var(1); c_ass(v1, *v1/1); }")
 	{
 		int a = 1;
 		a /= 1;
 	}
 	
-	#pragma test expect_ir("{", C_STYLE_ASSIGN, "decl ref<int<4>,f,f> v1 = var(1); c_ass(v1, (( *v1)*5)); }")
+	#pragma test expect_ir("{", C_STYLE_ASSIGN, "decl ref<int<4>,f,f> v1 = var(1); c_ass(v1, *v1*5); }")
 	{
 		int a = 1;
 		a *= 5;
 	}
 
-	#pragma test expect_ir("{", C_STYLE_ASSIGN, "decl ref<int<4>,f,f> v1 = var(1); c_ass(v1, (( *v1)%5)); }")
+	#pragma test expect_ir("{", C_STYLE_ASSIGN, "decl ref<int<4>,f,f> v1 = var(1); c_ass(v1, *v1%5); }")
 	{
 		int a = 1;
 		a %= 5;
 	}
 
-	#pragma test expect_ir("{", C_STYLE_ASSIGN, "decl ref<int<4>,f,f> v1 = var(1); c_ass(v1, (( *v1)&5)); }")
+	#pragma test expect_ir("{", C_STYLE_ASSIGN, "decl ref<int<4>,f,f> v1 = var(1); c_ass(v1, *v1&5); }")
 	{
 		int a = 1;
 		a &= 5;
 	}
 
-	#pragma test expect_ir("{", C_STYLE_ASSIGN, "decl ref<int<4>,f,f> v1 = var(1); c_ass(v1, (( *v1)|5)); }")
+	#pragma test expect_ir("{", C_STYLE_ASSIGN, "decl ref<int<4>,f,f> v1 = var(1); c_ass(v1, *v1|5); }")
 	{
 		int a = 1;
 		a |= 5;
 	}
 
-	#pragma test expect_ir("{", C_STYLE_ASSIGN, "decl ref<int<4>,f,f> v1 = var(1); c_ass(v1, (( *v1)^5)); }")
+	#pragma test expect_ir("{", C_STYLE_ASSIGN, "decl ref<int<4>,f,f> v1 = var(1); c_ass(v1, *v1^5); }")
 	{
 		int a = 1;
 		a ^= 5;
 	}
 
-	#pragma test expect_ir("{", C_STYLE_ASSIGN, "decl ref<int<4>,f,f> v1 = var(1); c_ass(v1, int_lshift(( *v1), 5)); }")
+	#pragma test expect_ir("{", C_STYLE_ASSIGN, "decl ref<int<4>,f,f> v1 = var(1); c_ass(v1, int_lshift(*v1, 5)); }")
 	{
 		int a = 1;
 		a <<= 5;
 	}
 
-	#pragma test expect_ir("{", C_STYLE_ASSIGN, "decl ref<int<4>,f,f> v1 = var(1); c_ass(v1, int_rshift(( *v1), 5)); }")
+	#pragma test expect_ir("{", C_STYLE_ASSIGN, "decl ref<int<4>,f,f> v1 = var(1); c_ass(v1, int_rshift(*v1, 5)); }")
 	{
 		int a = 1;
 		a >>= 5;
@@ -301,6 +330,22 @@ int main() {
 		} tu;
 		tu.i;
 	}
+
+	#pragma test expect_ir("{ decl ref<ptr<struct{int<4> i},f,f>,f,f> v0;  *(ptr_to_ref(*v0).i); }")
+	{
+		struct {
+			int i;
+		} *ts;
+		ts->i;
+	}
+
+	#pragma test expect_ir("{ decl ref<ptr<union{int<4> i},f,f>,f,f> v0;  *(ptr_to_ref(*v0).i); }")
+	{
+		union {
+			int i;
+		} *ts;
+		ts->i;
+	}
 	
 	//===---------------------------------------------------------------------------------------------------------------------------------- MISCELLANEOUS ---===
 	
@@ -331,5 +376,6 @@ int main() {
 	#pragma test expect_ir("STRING", "c_style_assignment(( var(struct{data:=0, x:=0, y:=0})), ( *( var(struct{data:=1, x:=1, y:=1}))))")
 	(Image){0u, 0, 0} = (Image){1u,1,1};
 
-	//(Image){0u, 0, 0}.x = 1;
+	#pragma test expect_ir("STRING", "c_style_assignment((( var(struct{data:=0, x:=0, y:=0}))->x), 1)")
+	(Image){0u, 0, 0}.x = 1;
 }

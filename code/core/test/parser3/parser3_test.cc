@@ -194,7 +194,12 @@ namespace parser3 {
 		auto funA = builder.normalize(parse_expr(mgr, "lambda (int<4> x) -> int<4> { return x; }"));
 		auto funB = builder.normalize(parse_expr(mgr, "function (ref<int<4>,f,f> x) -> int<4> { return *x; }"));
 
+		auto funC = builder.normalize(parse_expr(mgr, "let f = lambda (int<4> x) -> int<4> { return x; }; f"));
+		auto funD = builder.normalize(parse_expr(mgr, "let f = function (ref<int<4>,f,f> y) -> int<4> { return *y; }; f"));
+
 		EXPECT_EQ(funA, funB);
+		EXPECT_EQ(funB, funC);
+		EXPECT_EQ(funC, funD);
 	}
 
 	bool test_statement(NodeManager& nm, const std::string& x) {

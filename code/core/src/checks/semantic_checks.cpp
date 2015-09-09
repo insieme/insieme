@@ -257,6 +257,38 @@ namespace checks {
 		return res;
 	}
 
+	OptionalMessageList IllegalNumCastCheck::visitCallExpr(const CallExprAddress& callExpr) {
+		OptionalMessageList res;
+
+		auto& mgr = callExpr->getNodeManager();
+		auto& basic = mgr.getLangBasic();
+
+		//skip all calls which aren't NumericCasts
+		if (!analysis::isCallOf(callExpr.getAddressedNode(), basic.getNumericCast())) {
+			return res;
+		}
+
+		const auto& targetExprType = callExpr.getArgument(0).getType();
+
+		const auto& targetGenericType = callExpr.getArgument(1).getType().as<GenericTypePtr>();
+		if (targetGenericType.getTypeParameter().size() != 1) {
+			add(res, Message(callExpr, EC_SEMANTIC_ILLEGAL_NUM_CAST, format("Illegal numeric cast - given target type is not a numeric type (%s).", toString(*(targetGenericType)).c_str()), Message::ERROR));
+		}
+		const auto& targetType = targetGenericType.getTypeParameter(0);
+
+		//check expression type
+		if (!basic.isScalarType(targetExprType)) {
+			add(res, Message(callExpr, EC_SEMANTIC_ILLEGAL_NUM_CAST, format("Illegal numeric cast - given expression is not of numeric type (%s).", toString(*(targetExprType)).c_str()), Message::ERROR));
+		}
+
+		//as well as the target type
+		if (!basic.isScalarType(targetType)) {
+			add(res, Message(callExpr, EC_SEMANTIC_ILLEGAL_NUM_CAST, format("Illegal numeric cast - given target type is not a numeric type (%s).", toString(*(targetType)).c_str()), Message::ERROR));
+		}
+
+		return res;
+	}
+
 } // end namespace check
 } // end namespace core
 } // end namespace insieme
