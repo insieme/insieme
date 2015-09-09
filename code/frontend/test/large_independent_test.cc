@@ -37,6 +37,7 @@
 #include "independent_test_utils.h"
 
 #include "insieme/frontend/extensions/variable_argument_list_extension.h"
+#include "insieme/frontend/extensions/variable_length_array_extension.h"
 
 namespace insieme {
 namespace frontend {
