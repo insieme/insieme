@@ -105,6 +105,8 @@ SUB_TYPE(Double, RealInf)
 
 GROUP(ScalarType, Int, Real)
 
+GROUP(Numeric, ScalarType, Char, WChar)
+
 GROUP(BoolLiteral, True, False)
 
 TYPE(Bool, "bool")

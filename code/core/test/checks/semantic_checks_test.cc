@@ -423,7 +423,7 @@ namespace checks {
 			EXPECT_FALSE(checkResult.empty());
 			auto errorString = toString(checkResult[0]);
 			EXPECT_TRUE(errorString.find("SEMANTIC / ILLEGAL_NUM_CAST") != string::npos);
-			EXPECT_TRUE(errorString.find("MSG: Illegal numeric cast - given expression is not of numeric type") != string::npos);
+			EXPECT_TRUE(errorString.find("MSG: given expression is not of numeric type") != string::npos);
 		}
 
 		//illegal numeric cast to arbitrary type
@@ -435,7 +435,7 @@ namespace checks {
 			EXPECT_FALSE(checkResult.empty());
 			auto errorString = toString(checkResult[0]);
 			EXPECT_TRUE(errorString.find("SEMANTIC / ILLEGAL_NUM_CAST") != string::npos);
-			EXPECT_TRUE(errorString.find("MSG: Illegal numeric cast - given target type is not a numeric type") != string::npos);
+			EXPECT_TRUE(errorString.find("MSG: given target type is not a numeric type") != string::npos);
 		}
 	}
 
