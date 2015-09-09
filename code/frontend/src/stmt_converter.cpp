@@ -187,7 +187,6 @@ namespace conversion {
 		core::StatementList newBody;
 
 		// only generate non-empty body in IR if not a clang::NullStmt (for() ;) and not an empty compound (for() { })
-		// TODO: move removal of empty compounds to VisitCompoundStmt to be applied in general?
 		clang::Stmt* clangBody = forStmt->getBody();
 		if(clangBody && !dyn_cast<clang::NullStmt>(clangBody)) {
 			stmtutils::StmtWrapper irOldBody = Visit(clangBody);

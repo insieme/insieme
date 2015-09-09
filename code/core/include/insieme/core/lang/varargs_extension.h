@@ -43,27 +43,42 @@ namespace core {
 namespace lang {
 
 	/**
-	 */
+		* Handling of C variable argument lists 
+		* - e.g. bla(int x, ...)
+		*/
 	class VarArgsExtension : public core::lang::Extension {
 		/**
-		 * Allow the node manager to create instances of this class.
-		 */
+			* Allow the node manager to create instances of this class.
+			*/
 		friend class core::NodeManager;
 
 		/**
-		 * Creates a new instance based on the given node manager.
-		 */
+			* Creates a new instance based on the given node manager.
+			*/
 		VarArgsExtension(core::NodeManager& manager) : core::lang::Extension(manager) {}
 
 		// this extension is based upon the symbols defined by the reference module
 		IMPORT_MODULE(ReferenceExtension);
 
-	  public:
-		LANG_EXT_TYPE(Valist, "va_list");
+		public:
+		// represents a packed list of arguments passed to a function taking a variable number of arguments (e.g. printf)
+		LANG_EXT_TYPE(VarList, "var_list")
+				
+		// operation for packing a list of arguments into a var_list
+		LANG_EXT_LITERAL(VarlistPack, "varlist_pack", "('alpha) -> var_list")
 
+		// represents the type used as a parameter for the macros defined in <cstdarg> to retrieve the additional arguments of a function
+		LANG_EXT_TYPE(Valist, "va_list");
+			
+		// mappings of the C functions used to handle va_lists
 		LANG_EXT_LITERAL(Vaarg, "va_arg", "(va_list, type<'a>) -> 'a");
 		LANG_EXT_LITERAL(Vastart, "va_start", "(ref<va_list>, var_list) -> unit");
 	};
+
+	static inline bool isVarList(const core::NodePtr& node) {
+		if(auto exp = node.isa<ExpressionPtr>()) return isVarList(exp->getType());
+		return node == node->getNodeManager().getLangExtension<VarArgsExtension>().getVarList();
+	}
 }
 }
 }

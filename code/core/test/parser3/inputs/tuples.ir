@@ -1,6 +1,8 @@
 
 unit main() {
 	
+	decl auto e = ();
+
 	decl auto a = (1, 2, "hello");
 	
 	a.0;

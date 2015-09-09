@@ -55,6 +55,7 @@
 #include "insieme/core/lang/reference.h"
 #include "insieme/core/lang/parallel.h"
 #include "insieme/core/lang/pointer.h"
+#include "insieme/core/lang/varargs_extension.h"
 
 #include "insieme/core/lang/extension_registry.h"
 
@@ -72,6 +73,7 @@ namespace parser3 {
 
 		void DeclarationContext::open_scope(const std::string& msg) {
 			stack.push_back(Scope());
+			stack.back().isFunction = (msg == "function");
 		}
 		void DeclarationContext::close_scope(const std::string& msg) {
 			assert_gt(stack.size(), 1) << "Attempted to pop global scope!";
@@ -119,6 +121,9 @@ namespace parser3 {
 			return nullptr;
 		}
 
+		bool DeclarationContext::isInFunctionDefinition() const {
+			return stack.back().isFunction;
+		}
 
 		void DeclarationContext::add_type_alias(const GenericTypePtr& pattern, const TypePtr& substitute) {
 			auto& aliases = stack.back().alias;
@@ -246,9 +251,20 @@ namespace parser3 {
 			return x.as<TypePtr>();
 		}
 
+		ExpressionPtr inspire_driver::getScalar(ExpressionPtr expr) {
+			// auto-unwrap tuple
+			if (auto tuple = expr.isa<TupleExprPtr>()) {
+				const auto& elements = tuple->getExpressions();
+				if (elements.size() == 1) {
+					return elements[0];
+				}
+			}
+			// otherwise stay as it is
+			return expr;
+		}
 
 		ExpressionPtr inspire_driver::getOperand(ExpressionPtr expr) {
-			return builder.tryDeref(expr);
+			return builder.tryDeref(getScalar(expr));
 		}
 
 		ExpressionPtr inspire_driver::genBinaryExpression(const location& l, const std::string& op, ExpressionPtr left, ExpressionPtr right) {
@@ -442,6 +458,12 @@ namespace parser3 {
 				paramTys.push_back(var.getType());
 			}
 
+			// if it is a function that is defined
+			if (scopes.isInFunctionDefinition()) {
+				// => skip materialization of parameters
+				return builder.lambdaExpr(retType, params, body);
+			}
+
 			// replace all variables in the body by their implicitly materialized version
 			auto lambdaIngredients = transform::materialize({params, body});
 
@@ -483,10 +505,10 @@ namespace parser3 {
 			auto funcParamTypes = ftype.as<FunctionTypePtr>()->getParameterTypeList();
 			if(!funcParamTypes.empty()) {
 				// fix variadic arguments
-				if(builder.getLangBasic().isVarList(*funcParamTypes.rbegin())) {
+				if(lang::isVarList(*funcParamTypes.rbegin())) {
 					if(args.size() < funcParamTypes.size()) {
 						args.push_back(builder.pack(ExpressionList()));
-					} else if(!builder.getLangBasic().isVarList(args.rbegin()->getType())) {
+					} else if(!lang::isVarList(args.rbegin()->getType())) {
 						ExpressionList newParams(args.begin(), args.begin() + funcParamTypes.size() - 1);
 						ExpressionList packParams(args.begin() + funcParamTypes.size(), args.end());
 						newParams.push_back(builder.pack(packParams));

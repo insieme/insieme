@@ -245,9 +245,7 @@ namespace conversion {
 			// we have only 1 argument, and it is a unit type (void), remove it from the list
 			argTypes.clear();
 		}
-
-		if(funcTy->isVariadic()) { argTypes.push_back(basic.getVarList()); }
-
+		
 		retTy = builder.functionType(argTypes, funRetTy);
 		return retTy;
 	}
@@ -442,7 +440,6 @@ namespace conversion {
 		frontend_assert(retTy) << "Conversion of PointerType failed.";
 		return retTy;
 	}
-
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//							DECAYED TYPE

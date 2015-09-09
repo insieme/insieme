@@ -62,14 +62,14 @@
 
 #include "insieme/core/encoder/lists.h"
 
-#include "insieme/core/lang/ir++_extension.h"
-#include "insieme/core/lang/static_vars.h"
-
 #include "insieme/core/lang/array.h"
-#include "insieme/core/lang/reference.h"
+#include "insieme/core/lang/io.h"
+#include "insieme/core/lang/ir++_extension.h"
 #include "insieme/core/lang/parallel.h"
 #include "insieme/core/lang/pointer.h"
-#include "insieme/core/lang/io.h"
+#include "insieme/core/lang/reference.h"
+#include "insieme/core/lang/static_vars.h"
+#include "insieme/core/lang/varargs_extension.h"
 
 #include "insieme/core/parser3/ir_parser.h"
 
@@ -317,15 +317,15 @@ namespace core {
 	}
 
 	GenericTypePtr IRBuilderBaseModule::arrayType(const TypePtr& elementType, const LiteralPtr& size) const {
-		return lang::ArrayType::create(elementType, size);
+		return lang::ArrayType::create(elementType, size.as<ExpressionPtr>());
 	}
 
 	GenericTypePtr IRBuilderBaseModule::arrayType(const TypePtr& elementType, const VariablePtr& size) const {
-		return lang::ArrayType::create(elementType, size);
+		return lang::ArrayType::create(elementType, size.as<ExpressionPtr>());
 	}
 
 	GenericTypePtr IRBuilderBaseModule::arrayType(const TypePtr& elementType, size_t size) const {
-		return lang::ArrayType::create(elementType, literal(toString(size), getLangBasic().getUIntInf()));
+		return lang::ArrayType::create(elementType, size);
 	}
 
 
@@ -519,7 +519,7 @@ namespace core {
 	ExpressionPtr IRBuilderBaseModule::undefinedVar(const TypePtr& type) const {
 		if(analysis::isRefType(type)) {
 			core::TypePtr elementType = core::analysis::getReferencedType(type);
-			return refVar(undefined(elementType));
+			return core::lang::buildRefCast(refVar(undefined(elementType)), type);
 		}
 		return undefined(type);
 	}
@@ -527,7 +527,7 @@ namespace core {
 	ExpressionPtr IRBuilderBaseModule::undefinedNew(const TypePtr& type) const {
 		if(analysis::isRefType(type)) {
 			core::TypePtr elementType = core::analysis::getReferencedType(type);
-			return refNew(undefined(elementType));
+			return core::lang::buildRefCast(refNew(undefined(elementType)), type);
 		}
 		return undefined(type);
 	}
@@ -1335,8 +1335,8 @@ namespace core {
 	}
 
 	CallExprPtr IRBuilderBaseModule::pack(const ExpressionList& values) const {
-		auto& basic = getLangBasic();
-		return callExpr(basic.getVarList(), basic.getVarlistPack(), tupleExpr(values));
+		auto& vaExt = manager.getLangExtension<lang::VarArgsExtension>();
+		return callExpr(vaExt.getVarList(), vaExt.getVarlistPack(), tupleExpr(values));
 	}
 
 	CallExprPtr IRBuilderBaseModule::select(const ExpressionPtr& a, const ExpressionPtr& b, const ExpressionPtr& op) const {

@@ -123,17 +123,18 @@ blank   [ \t]
 "."      return inspire_parser::make_DOT(loc);
 "$"      return inspire_parser::make_ADDRESS(loc);
 
-"CAST("   return inspire_parser::make_CAST(loc);
-".as("    return inspire_parser::make_PARENT(loc);
-"#inf"    return inspire_parser::make_INFINITE(loc);
-"let"     return inspire_parser::make_LET(loc);
+"CAST("     return inspire_parser::make_CAST(loc);
+".as("      return inspire_parser::make_PARENT(loc);
+"#inf"      return inspire_parser::make_INFINITE(loc);
+"let"       return inspire_parser::make_LET(loc);
 "using"     return inspire_parser::make_USING(loc);
-"auto"    return inspire_parser::make_AUTO(loc);
-"lambda"  return inspire_parser::make_LAMBDA(loc);
-"ctor"    return inspire_parser::make_CTOR(loc);
-"method"  return inspire_parser::make_METHOD(loc);
-"expr"    return inspire_parser::make_EXPR(loc);
-"recFunc" return inspire_parser::make_RECFUNC(loc);
+"auto"      return inspire_parser::make_AUTO(loc);
+"lambda"    return inspire_parser::make_LAMBDA(loc);
+"function"  return inspire_parser::make_FUNCTION(loc);
+"ctor"      return inspire_parser::make_CTOR(loc);
+"method"    return inspire_parser::make_METHOD(loc);
+"expr"      return inspire_parser::make_EXPR(loc);
+"recFunc"   return inspire_parser::make_RECFUNC(loc);
 
 "if"      return inspire_parser::make_IF(loc);
 "else"    return inspire_parser::make_ELSE(loc);

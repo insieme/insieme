@@ -104,6 +104,11 @@ namespace lang {
 				    "                                                                                       "
 		)
 
+		/**
+		 * A higher level function converting a scalar operation to a pointwise operation on arrays.
+		 */
+		LANG_EXT_LITERAL(ArrayPointwise, "array_pointwise", "(('a,'b)->'c) -> (array<'a,'l>,array<'b,'l>)->array<'c,'l>")
+
 
 		//		// Arrays -------------------------------------------------------------------------------------------------------------
 		//
@@ -177,7 +182,17 @@ namespace lang {
 
 		static bool isUnknownSizedArrayType(const NodePtr& node);
 
+		static GenericTypePtr create(const TypePtr& elementType, unsigned size);
+
 		static GenericTypePtr create(const TypePtr& elementType, const ExpressionPtr& size = ExpressionPtr());
+
+		static GenericTypePtr create(const TypePtr& elementType, const LiteralPtr& size) {
+			return create(elementType, size.as<ExpressionPtr>());
+		}
+
+		static GenericTypePtr create(const TypePtr& elementType, const VariablePtr& size) {
+			return create(elementType, size.as<ExpressionPtr>());
+		}
 
 		operator GenericTypePtr() const;
 

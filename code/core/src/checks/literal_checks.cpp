@@ -54,13 +54,10 @@ namespace checks {
 		// some static regex expressions to be utilized by literal format checks
 		boost::regex floatRegex(R"((-?[0-9]+((\.[0-9]+)?(((E|e)(\+|-)[0-9]+)|f)?)?)|(0x[0-9]+\.[0-9]+p(\+|-)[0-9]+))", FLAGS);
 		boost::regex doubleRegex(R"((-?[0-9]+((\.[0-9]+)?(((E|e)(\+|-)[0-9]+))?)?)|(0x[0-9]+\.[0-9]+p(\+|-)[0-9]+))", FLAGS);
-
-		boost::regex charRegex(R"('\\?.')", FLAGS);
-		boost::regex stringRegex(R"("(\\.|[^\\"])*")", FLAGS);
-
-		// allow signedRegex to also match char types due to C semantics
-		boost::regex signedRegex(R"(((-?(0|[1-9][0-9]*))(l|ll)?)|('\\?.'))", FLAGS);
-		boost::regex unsignedRegex(R"((0|[1-9][0-9]*)u?(l|ll)?|)", FLAGS);
+		
+		// allow char literals
+		boost::regex signedAndCharRegex(R"(((-?(0|[1-9][0-9]*))(l|ll)?)|('\\?.'))", FLAGS);
+		boost::regex unsignedRegex(R"((0|[1-9][0-9]*)u?(l|ll)?)", FLAGS);
 	}
 
 
@@ -106,9 +103,8 @@ namespace checks {
 
 		if(basic.isReal4(type)) { pattern = &floatRegex; }
 		if(basic.isReal8(type)) { pattern = &doubleRegex; }
-		if(basic.isChar(type)) { pattern = &charRegex; }
-		//		if (basic.isString(type)) 		pattern = &stringRegex;
-		if(basic.isSignedInt(type)) { pattern = &signedRegex; }
+		if(basic.isChar(type)) { pattern = &signedAndCharRegex; }
+		if(basic.isSignedInt(type)) { pattern = &signedAndCharRegex; }
 		if(basic.isUnsignedInt(type)) { pattern = &unsignedRegex; }
 
 		// check pattern
@@ -134,12 +130,14 @@ namespace checks {
 			} else if(basic.isInt8(type)) {
 				min = std::numeric_limits<int64_t>::min();
 				max = std::numeric_limits<int64_t>::max();
-			} else if(basic.isInt16(type) || basic.isIntInf(type)) {
+			} else if(basic.isInt16(type) || basic.isIntInf(type) || type.as<GenericTypePtr>()->getTypeParameter(0).isa<TypeVariablePtr>()) {
 				// note int16 is used for long long, and it has same values as long for this architecture
 				min = std::numeric_limits<int64_t>::min();
 				max = std::numeric_limits<int64_t>::max();
 			} else {
-				assert_fail() << "Unsupported signed integer type encountered: \n" << type;
+				add(res,
+					Message(address, EC_FORMAT_INVALID_LITERAL, format("Literal of unsupported type %s literal: %s", toString(*type), value), Message::ERROR));
+				return res;
 			}
 
 			if(!(basic.isInt8(type) || basic.isInt16(type)) && *value.rbegin() == 'l') {
@@ -169,10 +167,12 @@ namespace checks {
 				max = std::numeric_limits<uint32_t>::max();
 			} else if(basic.isUInt8(type)) {
 				max = std::numeric_limits<uint64_t>::max();
-			} else if(basic.isUInt16(type)) {
+			} else if(basic.isUInt16(type) || basic.isUIntInf(type) || type.as<GenericTypePtr>()->getTypeParameter(0).isa<TypeVariablePtr>()) {
 				max = std::numeric_limits<uint64_t>::max();
 			} else {
-				assert_fail() << "Unsupported signed integer type encountered: \n" << type;
+				add(res,
+					Message(address, EC_FORMAT_INVALID_LITERAL, format("Literal of unspecific type %s literal: %s", toString(*type), value), Message::ERROR));
+				return res;
 			}
 
 			if(!(basic.isUInt8(type) || basic.isUInt16(type)) && *value.rbegin() == 'l') {

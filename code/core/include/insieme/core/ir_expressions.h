@@ -266,6 +266,13 @@ namespace core {
 		Ptr<const Expression> getArgument(unsigned index) const {
 			return CallExprAccessor<Derived, Ptr>::getElement(index);
 		}
+		
+		/**
+		 * Obtains a list of argument expressions for this call.
+		 */
+		ExpressionList getArgumentList() const {
+			return getArguments();
+		}
 	IR_NODE_END()
 
 	/**
