@@ -52,7 +52,5 @@ int main() {
 		}
 	}
 
-	// print verification result
-	printf("Verification: %s\n", (success) ? "OK" : "ERR");
 	return !success;
 }

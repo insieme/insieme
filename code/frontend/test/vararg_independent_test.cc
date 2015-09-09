@@ -33,6 +33,7 @@
  * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
+
 #include "independent_test_utils.h"
 
 #include "insieme/frontend/extensions/variable_argument_list_extension.h"
@@ -51,7 +52,6 @@ namespace frontend {
 			[](ConversionJob& job) { job.registerFrontendExtension<extensions::VariableArgumentListExtension>(); }
 		);
 	}
-
 
 } // fe namespace
 } // insieme namespace

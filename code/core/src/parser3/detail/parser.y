@@ -464,10 +464,10 @@ statement_aux  : ";" { RULE $$ = driver.builder.getNoOp(); }
                  }
                      /* switch */
                | "switch" "(" expression ")" "{" switch_case_list "}" { RULE
-		             $$ = driver.builder.switchStmt($3, $6, driver.builder.getNoOp());
+		             $$ = driver.builder.switchStmt(driver.getScalar($3), $6, driver.builder.getNoOp());
                  }
                | "switch" "(" expression ")" "{" switch_case_list "default" ":" statement "}" { RULE
-		             $$ = driver.builder.switchStmt($3, $6, $9);
+		             $$ = driver.builder.switchStmt(driver.getScalar($3), $6, $9);
                  }
                      /* exceptions */
                | "try" statement "catch" catch_clause_list { RULE

@@ -108,11 +108,11 @@ int main() {
 	void* a2 = (void*)5;
 	
 	// implicit pointer to int
-	#pragma test expect_ir("decl ref<int<4>,f,f> v0 = ( var(ptr_to_integral(ptr_from_integral(5, type(ptr<unit,f,f>)), type(int<4>))));")
+	#pragma test expect_ir("decl ref<int<4>,f,f> v0 = var(ptr_to_integral(ptr_from_integral(5, type(ptr<unit,f,f>)), type(int<4>)));")
 	int ifromp = (void*)5;
 
 	// explicit pointer to int
-	#pragma test expect_ir("decl ref<int<4>,f,f> v0 = ( var(ptr_to_integral(ptr_from_integral(5, type(ptr<unit,f,f>)), type(int<4>))));")
+	#pragma test expect_ir("decl ref<int<4>,f,f> v0 = var(ptr_to_integral(ptr_from_integral(5, type(ptr<unit,f,f>)), type(int<4>)));")
 	int ifromp2 = (int)(void*)5;
 	
 	// implicit int to volatile pointer
@@ -124,7 +124,7 @@ int main() {
 	void* pointerfromuint = 5u;
 	
 	// implicit pointer to uint
-	#pragma test expect_ir("decl ref<uint<4>,f,f> v0 = ( var(ptr_to_integral(ptr_from_integral(5, type(ptr<unit,f,f>)), type(uint<4>))));")
+	#pragma test expect_ir("decl ref<uint<4>,f,f> v0 = var(ptr_to_integral(ptr_from_integral(5, type(ptr<unit,f,f>)), type(uint<4>)));")
 	unsigned uintfrompointer = (void*)5;
 
 	// function pointer casts
@@ -150,28 +150,28 @@ int main() {
 	//===----------------------------------------------------------------------------------------------------------------------------------- TO BOOL CASTS---===
 
 	// char to bool (C99's native boolean type is _Bool)
-	#pragma test expect_ir("{ decl ref<char,f,f> v0; (*v0!='\0'); }")
+	#pragma test expect_ir("{ decl ref<char,f,f> v0; *v0!='\0'; }")
 	{
 		char x;
 		(_Bool)x;
 	}
 
 	// integral to bool
-	#pragma test expect_ir("{ decl ref<int<4>,f,f> v0; (*v0!=0); }")
+	#pragma test expect_ir("{ decl ref<int<4>,f,f> v0; *v0!=0; }")
 	{
 		int x;
 		(_Bool)x;
 	}
 
 	// integral to bool
-	#pragma test expect_ir("{ decl ref<uint<8>,f,f> v0; (*v0!=0ul); }")
+	#pragma test expect_ir("{ decl ref<uint<8>,f,f> v0; *v0!=0ul; }")
 	{
 		unsigned long x;
 		(_Bool)x;
 	}
 
 	// float to bool
-	#pragma test expect_ir("{ decl ref<real<4>,f,f> v0; (*v0!=0.0f); }")
+	#pragma test expect_ir("{ decl ref<real<4>,f,f> v0; *v0!=0.0f; }")
 	{
 		float x;
 		(_Bool)x;

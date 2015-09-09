@@ -34,23 +34,9 @@
  * regarding third party software licenses.
  */
 
-#include <string>
-#include <fstream>
-
-#include <gtest/gtest.h>
-#include <boost/filesystem.hpp>
-#include <boost/algorithm/string/replace.hpp>
-#include <boost/regex.hpp>
-
-#include "insieme/annotations/expected_ir_annotation.h"
-#include "insieme/core/annotations/source_location.h"
-#include "insieme/frontend/extensions/test_pragma_extension.h"
-#include "insieme/frontend/extensions/variable_length_array_extension.h"
-#include "insieme/frontend/frontend.h"
-#include "insieme/frontend/state/variable_manager.h"
-#include "insieme/utils/config.h"
-
 #include "independent_test_utils.h"
+
+#include "insieme/frontend/extensions/variable_length_array_extension.h"
 
 namespace insieme {
 namespace frontend {
@@ -60,7 +46,6 @@ namespace frontend {
 			[](ConversionJob& job) { job.registerFrontendExtension<extensions::VariableLengthArrayExtension>(); }
 		);
 	}
-
 
 } // fe namespace
 } // insieme namespace
