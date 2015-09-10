@@ -454,6 +454,18 @@ namespace conversion {
 
 			return builder.binaryOp(irOp, lhs, rhs);
 		}
+
+		core::ExpressionPtr buildUnaryOpExpression(Converter& converter, const core::TypePtr& exprTy, const core::ExpressionPtr& expr,
+			                                       core::lang::BasicGenerator::Operator op) {
+			auto& basic = converter.getNodeManager().getLangBasic();
+			auto& builder = converter.getIRBuilder();
+
+			if(core::lang::isReference(expr) && core::lang::isPointer(core::analysis::getReferencedType(expr->getType()))) {
+				return core::lang::buildPtrOperation(op, expr);
+			}
+
+			return builder.unaryOp(basic.getOperator(exprTy, op), expr);
+		}
 	}
 
 	core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::BinaryOperator* binOp) {
@@ -594,7 +606,7 @@ namespace conversion {
 		auto opIt = opMap.find(unOp->getOpcode());
 		frontend_assert(opIt != opMap.end()) << "Unary Operator " << clang::UnaryOperator::getOpcodeStr(unOp->getOpcode()).str() << " not implemented.";
 
-		retIr = builder.unaryOp(basic.getOperator(exprTy, opIt->second), subExpr);
+		retIr = buildUnaryOpExpression(converter, exprTy, subExpr, opIt->second);
 		return retIr;
 	}
 
