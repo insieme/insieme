@@ -263,6 +263,10 @@ namespace analysis {
 		return getReferencedType(adjustedCandidate)->getNodeType() == kind;
 	}
 
+	bool isRefOf(const NodePtr& candidate, const std::function<bool(const NodePtr&)>& filter) {
+		return core::lang::isReference(candidate) && filter(core::lang::ReferenceType(candidate).getElementType());
+	}
+
 	bool isTypeLiteralType(const GenericTypePtr& type) {
 		// check family name as well as type and name of parameters
 		return type->getName()->getValue() == "type" && type->getTypeParameter().size() == static_cast<std::size_t>(1);
