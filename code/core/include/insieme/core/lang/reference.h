@@ -170,6 +170,11 @@ namespace lang {
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(RefNew, "ref_new", "lambda ('a v) -> ref<'a,f,f> { decl auto r = ref_alloc(type('a), mem_loc_heap ); r = v; return r; }")
 
+		/**
+		 * A built-in abstract operator obtaining references to functions.
+		 */
+		LANG_EXT_LITERAL(RefOfFunction, "ref_of_function", "('a) -> ref<'a,t,f>")
+
 
 		// -- access --
 
