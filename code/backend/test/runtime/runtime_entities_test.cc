@@ -35,13 +35,13 @@
  */
 
 #include <gtest/gtest.h>
+#include <insieme/backend/runtime/runtime_extension.h>
 
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/lang/extension.h"
 
-#include "insieme/backend/runtime/runtime_extensions.h"
 #include "insieme/backend/runtime/runtime_entities.h"
 
 namespace insieme {
@@ -53,7 +53,7 @@ namespace enc = insieme::core::encoder;
 core::LambdaExprPtr getDummyImpl(core::NodeManager& manager) {
 	core::IRBuilder builder(manager);
 	const auto& basic = manager.getLangBasic();
-	const auto& ext = manager.getLangExtension<RuntimeExtensions>();
+	const auto& ext = manager.getLangExtension<RuntimeExtension>();
 
 	core::VariablePtr param = builder.variable(builder.refType(ext.workItemType), 1);
 	core::StatementPtr body = builder.getNoOp();
@@ -71,13 +71,13 @@ core::LambdaExprPtr getDummyEffort(core::NodeManager& manager) {
 }
 
 
-TEST(RuntimeExtensions, WorkItemVariant) {
+TEST(RuntimeExtension, WorkItemVariant) {
 	core::NodeManager manager;
 	core::IRBuilder builder(manager);
-	const RuntimeExtensions& ext = manager.getLangExtension<RuntimeExtensions>();
+	const RuntimeExtension& ext = manager.getLangExtension<RuntimeExtension>();
 
 	// test type
-	EXPECT_EQ(ext.workItemVariantType, enc::getTypeFor<WorkItemVariant>(manager));
+	EXPECT_EQ(ext.getWorkItemVariantType(), enc::getTypeFor<WorkItemVariant>(manager));
 
 	// test encoding
 	WorkItemVariant variant(getDummyImpl(manager));
@@ -98,10 +98,10 @@ TEST(RuntimeExtensions, WorkItemVariant) {
 }
 
 
-TEST(RuntimeExtensions, WorkItemImpl) {
+TEST(RuntimeExtension, WorkItemImpl) {
 	core::NodeManager manager;
 	core::IRBuilder builder(manager);
-	const RuntimeExtensions& ext = manager.getLangExtension<RuntimeExtensions>();
+	const RuntimeExtension& ext = manager.getLangExtension<RuntimeExtension>();
 
 	// test type
 	EXPECT_EQ(ext.workItemImplType, enc::getTypeFor<WorkItemImpl>(manager));
@@ -125,7 +125,7 @@ TEST(RuntimeExtensions, WorkItemImpl) {
 	EXPECT_EQ("[]", toString(core::checks::check(encoded, core::checks::getFullCheck())));
 }
 
-TEST(RuntimeExtensions, DataItem) {
+TEST(RuntimeExtension, DataItem) {
 	core::NodeManager manager;
 	core::IRBuilder builder(manager);
 

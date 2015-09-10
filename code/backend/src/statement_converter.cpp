@@ -53,12 +53,10 @@
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
-#include "insieme/core/types/variable_sized_struct_utils.h"
 #include "insieme/core/types/subtyping.h"
 #include "insieme/core/lang/ir++_extension.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/annotations/naming.h"
-#include "insieme/core/ir_class_info.h"
 
 #include "insieme/annotations/c/extern.h"
 #include "insieme/annotations/c/include.h"
@@ -188,13 +186,6 @@ namespace backend {
 			                   converter.getCNodeManager()->create<c_ast::Literal>("0"));
 		}
 
-		// special handling for int-type-parameter literal
-		if(core::analysis::isIntTypeParamLiteral(ptr)) {
-			core::IntTypeParamPtr value = core::analysis::getRepresentedTypeParam(ptr);
-			assert(value.isa<core::ConcreteIntTypeParamPtr>() && "Uninstantiated int-type-parameter literal encountered!");
-			return converter.getCNodeManager()->create<c_ast::Literal>(toString(*value) + "u");
-		}
-
 		// convert literal
 		auto toLiteral = [&](const string& value) { return converter.getCNodeManager()->create<c_ast::Literal>(value); };
 		c_ast::ExpressionPtr res = toLiteral(ptr->getStringValue());
@@ -232,7 +223,7 @@ namespace backend {
 
 		// special handling for the global struct
 		if(!ptr->getStringValue().compare(0, IRExtensions::GLOBAL_ID.size(), IRExtensions::GLOBAL_ID)) {
-			if(ptr->getType()->getNodeType() == core::NT_RefType) { res = c_ast::ref(res); }
+			if(core::lang::isReference(ptr)) { res = c_ast::ref(res); }
 
 			// add code dependency to global struct
 			auto fragment = converter.getFragmentManager()->getFragment(IRExtensions::GLOBAL_ID);
@@ -252,7 +243,7 @@ namespace backend {
 		if(ptr.getNodeManager().getLangBasic().isBool(ptr->getType())) { context.getIncludes().insert("stdbool.h"); }
 
 		// handle null pointer
-		if(converter.getNodeManager().getLangBasic().isRefNull(ptr)) { return converter.getCNodeManager()->create<c_ast::Literal>("0"); }
+		if(converter.getNodeManager().getLangExtension<core::lang::ReferenceExtension>().isCallOfRefNull(ptr)) { return converter.getCNodeManager()->create<c_ast::Literal>("0"); }
 
 		// handle pre-defined C identifiers (standard - 6.4.2.2)
 		const static vector<string> predefined = {"__func__", "__FUNCTION__", "__PRETTY_FUNCTION__"};
@@ -260,11 +251,11 @@ namespace backend {
 			return res; // just print literal as it is
 		}
 
-		// handle C string literals (which are of type ref<vector<...>>)
+		// handle C string literals
 		if(ptr->getStringValue()[0] == '"') {
-			assert(ptr->getType().isa<core::RefTypePtr>());
-			core::TypePtr type = ptr->getType().as<core::RefTypePtr>()->getElementType();
-			if(type.isa<core::VectorTypePtr>() && basic.isWChar(type.as<core::VectorTypePtr>()->getElementType())) {
+			assert_pred1(core::lang::isReference, ptr->getType());
+			core::TypePtr type = core::analysis::getReferencedType(ptr);
+			if(core::lang::isArray(type) && basic.isWChar(core::lang::ArrayType(type).getElementType())) {
 				// reproduce the longstring signature for widechars, this is 16 in windows and 32 in unix
 				res = toLiteral("L" + ptr->getStringValue());
 			}
@@ -277,7 +268,7 @@ namespace backend {
 			context.getIncludes().insert(annotations::c::getAttachedInclude(ptr));
 
 			// and use it (as a pointer if it is a reference type)
-			return (ptr->getType().isa<core::RefTypePtr>()) ? c_ast::ref(res) : res;
+			return core::lang::isReference(ptr) ? c_ast::ref(res) : res;
 		}
 
 		// handle literals referencing external data elements
@@ -342,21 +333,21 @@ namespace backend {
 		c_ast::InitializerPtr init = c_ast::init(type);
 
 		// obtain some helper
-		auto& basic = converter.getNodeManager().getLangBasic();
+		auto& refExt = converter.getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
 
 		// append initialization values
 		::transform(ptr->getMembers()->getElements(), std::back_inserter(init->values), [&](const core::NamedValuePtr& cur) {
 			core::ExpressionPtr arg = cur->getValue();
 			// skip ref.var if present
-			if(core::analysis::isCallOf(cur->getValue(), basic.getRefVar())) {
+			if(core::analysis::isCallOf(cur->getValue(), refExt.getRefVar())) {
 				arg = static_pointer_cast<const core::CallExpr>(cur->getValue())->getArgument(0);
-				if(core::analysis::isCallOf(arg, basic.getRefDeref())) { arg = static_pointer_cast<const core::CallExpr>(arg)->getArgument(0); }
+				if(core::analysis::isCallOf(arg, refExt.getRefDeref())) { arg = static_pointer_cast<const core::CallExpr>(arg)->getArgument(0); }
 			}
 			return convert(context, arg);
 		});
 
 		// remove last element if it is a variable sized struct
-		if(core::types::isVariableSized(ptr->getType())) {
+		if(core::lang::isUnknownSizedArray(ptr->getMembers()->getElements().back())) {
 			assert_false(init->values.empty());
 			init->values.pop_back();
 		}
@@ -380,7 +371,7 @@ namespace backend {
 
 		// special handling for vector initialization (should not be turned into a struct)
 		auto value = convertExpression(context, ptr->getMember());
-		if(ptr->getMember()->getNodeType() == core::NT_VectorExpr) {
+		if(core::lang::isFixedSizedArray(ptr->getMember())) {
 			assert(dynamic_pointer_cast<c_ast::Initializer>(value));
 			value = cmgr->create<c_ast::VectorInit>(static_pointer_cast<c_ast::VectorInit>(static_pointer_cast<c_ast::Initializer>(value)->values[0])->values);
 		}
@@ -411,25 +402,7 @@ namespace backend {
 	c_ast::NodePtr StmtConverter::visitVariable(const core::VariablePtr& ptr, ConversionContext& context) {
 		// just look up variable within variable manager and return variable token ...
 		const VariableInfo& info = context.getVariableManager().getInfo(ptr);
-		return (info.location == VariableInfo::DIRECT && !core::analysis::isRefOf(ptr->getType(), core::NT_ArrayType)) ? c_ast::ref(info.var) : info.var;
-	}
-
-	c_ast::NodePtr StmtConverter::visitVectorExpr(const core::VectorExprPtr& ptr, ConversionContext& context) {
-		// to be created: an initialization of the corresponding struct - where one value is a vector
-		//     (<type>){{<list of members>}}
-
-		// get type and create empty init expression
-		const TypeInfo& info = converter.getTypeManager().getTypeInfo(ptr->getType());
-		c_ast::TypePtr type = info.rValueType;
-		context.getDependencies().insert(info.definition);
-
-		// create inner vector init and append initialization values
-		c_ast::VectorInitPtr vectorInit = context.getConverter().getCNodeManager()->create<c_ast::VectorInit>();
-		::transform(ptr->getExpressions()->getElements(), std::back_inserter(vectorInit->values),
-		            [&](const core::ExpressionPtr& cur) { return convert(context, cur); });
-
-		// create and return out initializer
-		return c_ast::init(type, vectorInit);
+		return (info.location == VariableInfo::DIRECT && !core::analysis::isRefOf(ptr->getType(), core::lang::isArray)) ? c_ast::ref(info.var) : info.var;
 	}
 
 	c_ast::NodePtr StmtConverter::visitMarkerExpr(const core::MarkerExprPtr& ptr, ConversionContext& context) {
@@ -460,44 +433,43 @@ namespace backend {
 	namespace {
 
 		bool toBeAllocatedOnStack(const core::ExpressionPtr& initValue) {
-			auto& basic = initValue->getNodeManager().getLangBasic();
-
-			// if call to volatileMake, check inner
-			if(core::analysis::isCallOf(initValue, basic.getVolatileMake())) { return toBeAllocatedOnStack(initValue.as<core::CallExprPtr>()[0]); }
+			auto& refExt = initValue->getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
 
 			// if it is a call to a ref.var => put it on the stack
-			if(core::analysis::isCallOf(initValue, basic.getRefVar())) { return true; }
+			if(core::analysis::isCallOf(initValue, refExt.getRefVar())) { return true; }
 
 			// if it is a constructor call ..
-			if(core::CallExprPtr call = initValue.isa<core::CallExprPtr>()) { return core::analysis::isCallOf(call[0], basic.getRefVar()); }
+			if(core::CallExprPtr call = initValue.isa<core::CallExprPtr>()) { return core::analysis::isCallOf(call[0], refExt.getRefVar()); }
 
 			// everything else is heap based
 			return false;
 		}
 
 		bool isStackBasedCArray(const core::ExpressionPtr& initValue) {
-			const auto& basic = initValue->getNodeManager().getLangBasic();
+			const auto& refExt = initValue->getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
+			const auto& arrayExt = initValue->getNodeManager().getLangExtension<core::lang::ArrayExtension>();
 
 			// it has to be stack based ..
-			if(!core::analysis::isCallOf(initValue, basic.getRefVar())) { return false; }
+			if(!core::analysis::isCallOf(initValue, refExt.getRefVar())) { return false; }
 
 			// .. and a newly created array
 			auto value = initValue.as<core::CallExprPtr>()->getArgument(0);
-			return core::analysis::isCallOf(value, basic.getArrayCreate1D());
+			return core::analysis::isCallOf(value, arrayExt.getArrayCreate());
 		}
 
 		bool isStackBasedCppArray(const core::ExpressionPtr& initValue) {
-			const auto& basic = initValue->getNodeManager().getLangBasic();
-			const auto& ext = initValue->getNodeManager().getLangExtension<core::lang::IRppExtensions>();
-
-			// check whether it is a array ctor call
-			if(!core::analysis::isCallOf(initValue, ext.getArrayCtor()) && !core::analysis::isCallOf(initValue, ext.getVectorCtor())
-			   && !core::analysis::isCallOf(initValue, ext.getVectorCtor2D())) {
-				return false;
-			}
-
-			// first argument needs to be a ref.var
-			return basic.isRefVar(initValue.as<core::CallExprPtr>()->getArgument(0));
+			assert_not_implemented() << "TODO: port this to new infrastructure!";
+			return false;
+//			const auto& refExt = initValue->getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
+//			const auto& ext = initValue->getNodeManager().getLangExtension<core::lang::IRppExtensions>();
+//
+//			// check whether it is a array ctor call
+//			if(!core::analysis::isCallOf(initValue, ext.getArrayCtor())) {
+//				return false;
+//			}
+//
+//			// first argument needs to be a ref.var
+//			return refExt.isRefVar(initValue.as<core::CallExprPtr>()->getArgument(0));
 		}
 
 		bool isStackBasedArray(const core::ExpressionPtr& initValue) {
@@ -511,7 +483,7 @@ namespace backend {
 
 			// resolve type (needs to be explicitly handled here)
 			auto size = converter.getStmtConverter().convertExpression(context, sizeExpr);
-			auto elementType = var->getType().as<core::RefTypePtr>()->getElementType().as<core::SingleElementTypePtr>()->getElementType();
+			auto elementType = core::lang::ArrayType(core::lang::ReferenceType(var).getElementType()).getElementType();
 			const TypeInfo& typeInfo = converter.getTypeManager().getCVectorTypeInfo(elementType, size);
 
 			// although it is on the stack, it is to be treated as it would be indirect (implicit pointer!)
@@ -530,10 +502,12 @@ namespace backend {
 		}
 
 		c_ast::NodePtr resolveStackBasedCppArray(ConversionContext& context, const core::VariablePtr& var, const core::ExpressionPtr& init) {
-			assert_true(isStackBasedCppArray(init)) << "Invalid input parameter!";
-			const auto& ext = init->getNodeManager().getLangExtension<core::lang::IRppExtensions>();
-			return resolveStackBasedArrayInternal(context, var,
-			                                      init.as<core::CallExprPtr>()->getArgument((core::analysis::isCallOf(init, ext.getVectorCtor2D())) ? 3 : 2));
+			assert_not_implemented() << "Needs to be ported to new infrastructure or dropped!";
+			return c_ast::NodePtr();
+//			assert_true(isStackBasedCppArray(init)) << "Invalid input parameter!";
+//			const auto& ext = init->getNodeManager().getLangExtension<core::lang::IRppExtensions>();
+//			return resolveStackBasedArrayInternal(context, var,
+//			                                      init.as<core::CallExprPtr>()->getArgument((core::analysis::isCallOf(init, ext.getVectorCtor2D())) ? 3 : 2));
 		}
 
 		c_ast::NodePtr resolveStackBasedArray(ConversionContext& context, const core::VariablePtr& var, const core::ExpressionPtr& init) {
@@ -559,11 +533,10 @@ namespace backend {
 		}
 
 		core::TypePtr plainType = var->getType();
-		if(core::analysis::isVolatileType(plainType)) { plainType = core::analysis::getVolatileType(plainType); }
 
 		// decide storage location of variable
 		VariableInfo::MemoryLocation location = VariableInfo::NONE;
-		if(plainType.isa<core::RefTypePtr>()) {
+		if(core::lang::isReference(plainType)) {
 			if(toBeAllocatedOnStack(init)) {
 				location = VariableInfo::DIRECT;
 			} else {
@@ -608,13 +581,11 @@ namespace backend {
 
 	c_ast::ExpressionPtr StmtConverter::convertInitExpression(ConversionContext& context, const core::ExpressionPtr& init) {
 		auto& basic = converter.getNodeManager().getLangBasic();
+		auto& refExt = converter.getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
 		auto manager = converter.getCNodeManager();
 
-		// skip make volatile calls ...
-		if(core::analysis::isCallOf(init, basic.getVolatileMake())) { return convertInitExpression(context, init.as<core::CallExprPtr>()[0]); }
-
 		// test whether initialization is required ...
-		if(core::analysis::isCallOf(init, basic.getRefVar())) {
+		if(core::analysis::isCallOf(init, refExt.getRefVar())) {
 			core::CallExprPtr call = static_pointer_cast<const core::CallExpr>(init);
 			core::ExpressionPtr init = call->getArgument(0);
 			if(core::analysis::isCallOf(init, basic.getUndefined())) {
@@ -638,7 +609,7 @@ namespace backend {
 
 		// drop ref.var ...
 		core::ExpressionPtr initValue = init;
-		if(core::analysis::isCallOf(initValue, basic.getRefVar())) { initValue = core::analysis::getArgument(initValue, 0); }
+		if(core::analysis::isCallOf(initValue, refExt.getRefVar())) { initValue = core::analysis::getArgument(initValue, 0); }
 
 		return convertExpression(context, initValue);
 	}
@@ -648,7 +619,7 @@ namespace backend {
 			try {
 				core::arithmetic::Formula form = core::arithmetic::toFormula(exp);
 				if(form.isConstant() || form.isValue()) { return true; }
-			} catch(core::arithmetic::NotAFormulaException e) {}
+			} catch(const core::arithmetic::NotAFormulaException& e) {}
 			return false;
 		}
 	}
@@ -737,7 +708,6 @@ namespace backend {
 	}
 
 	c_ast::NodePtr StmtConverter::visitTryCatchStmt(const core::TryCatchStmtPtr& ptr, ConversionContext& context) {
-		const auto& basic = converter.getNodeManager().getLangBasic();
 
 		// convert body
 		c_ast::StatementPtr body = convertStmt(context, ptr->getBody());
@@ -745,11 +715,13 @@ namespace backend {
 		// convert clauses
 		vector<c_ast::TryCatch::Clause> clauses;
 		for(const core::CatchClausePtr& clause : ptr->getClauses()) {
-			// handle catch-all case
-			if(basic.isAny(clause->getVariable()->getType())) {
-				clauses.push_back(c_ast::TryCatch::Clause(convertStmt(context, clause->getBody())));
-				break;
-			}
+
+			// TODO: provide a fix for the catch-all case
+//			// handle catch-all case
+//			if(basic.isAny(clause->getVariable()->getType())) {
+//				clauses.push_back(c_ast::TryCatch::Clause(convertStmt(context, clause->getBody())));
+//				break;
+//			}
 
 			// register variable information
 			const VariableInfo& info = context.getVariableManager().addInfo(converter, clause->getVariable(), VariableInfo::MemoryLocation::NONE);
@@ -772,41 +744,8 @@ namespace backend {
 			return converter.getCNodeManager()->create<c_ast::Return>();
 		}
 
-		// special handling for returns in ctors / dtors
-		auto funType = context.getEntryPoint()->getType();
-		if(funType->isConstructor() || funType->isDestructor()) { return converter.getCNodeManager()->create<c_ast::Return>(); }
-
-		core::IRBuilder builder(ptr.getNodeManager());
-		core::ExpressionPtr tmpRet = ptr->getReturnExpr();
-
-		// try to find refNarrow calls in the return statement
-		// those calls should be avoided because they create
-		// useless static_casts to base classes (should be done implicitly)
-		bool stopCond = true;
-		core::ExpressionPtr innerExpr = tmpRet;
-		while(stopCond) {
-			if(!innerExpr.isa<core::CallExprPtr>()) {
-				stopCond = false;
-			} else {
-				// we know that this we have a call expr
-				// but we only can handle it if it has an argument
-				if(!innerExpr.as<core::CallExprPtr>()->getArguments().size()) {
-					stopCond = false;
-				} else {
-					// ok, we have an argument. replace the innerExpr with the argument
-					// to dig into the expression. Once we found the narrow, replace it
-					// and stop the loop
-					if(core::analysis::isCallOf(innerExpr, builder.getLangBasic().getRefNarrow())) {
-						tmpRet = core::transform::replaceAll(ptr.getNodeManager(), tmpRet, innerExpr, innerExpr.as<core::CallExprPtr>()->getArgument(0))
-						             .as<core::ExpressionPtr>();
-						stopCond = false;
-					}
-					innerExpr = innerExpr.as<core::CallExprPtr>()->getArgument(0);
-				}
-			}
-		}
-
-		return converter.getCNodeManager()->create<c_ast::Return>(convertExpression(context, tmpRet));
+		// return value of return expression
+		return converter.getCNodeManager()->create<c_ast::Return>(convertExpression(context, ptr->getReturnExpr()));
 	}
 
 	c_ast::NodePtr StmtConverter::visitThrowStmt(const core::ThrowStmtPtr& ptr, ConversionContext& context) {

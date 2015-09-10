@@ -34,15 +34,14 @@
  * regarding third party software licenses.
  */
 
+#include <insieme/backend/runtime/runtime_extension.h>
 #include "insieme/backend/runtime/runtime_preprocessor.h"
 
-#include "insieme/backend/runtime/runtime_extensions.h"
 #include "insieme/backend/runtime/runtime_entities.h"
 
 #include "insieme/core/ir_expressions.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_visitor.h"
-#include "insieme/core/ir_class_info.h"
 #include "insieme/core/analysis/attributes.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/transform/node_mapper_utils.h"
@@ -51,6 +50,7 @@
 #include "insieme/core/encoder/encoder.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/printer/pretty_printer.h"
+#include "insieme/core/lang/parallel.h"
 #include "insieme/core/lang/instrumentation_extension.h"
 #include "insieme/core/pattern/ir_pattern.h"
 
@@ -69,7 +69,7 @@ namespace runtime {
 		bool hasGroupOperations(const JobExprPtr& job) {
 			if(!job) { return false; }
 
-			const core::lang::BasicGenerator& basic = job->getNodeManager().getLangBasic();
+			auto& parExt = job->getNodeManager().getLangExtension<lang::ParallelExtension>();
 
 			bool hasGroupOps = false;
 			core::visitDepthFirstPrunable(job, [&](const core::NodePtr& cur) -> bool {
@@ -77,12 +77,12 @@ namespace runtime {
 					const auto& c = cur.as<core::CallExprPtr>();
 					const auto& f = core::analysis::stripAttributes(c->getFunctionExpr());
 
-					if(basic.isGetThreadGroup(f) || basic.isGetGroupSize(f) || basic.isGetThreadId(f) || basic.isPFor(f) || basic.isRedistribute(f)) {
+					if(parExt.isGetThreadGroup(f) || parExt.isGetGroupSize(f) || parExt.isGetThreadId(f) || parExt.isPFor(f) || parExt.isRedistribute(f)) {
 						hasGroupOps = true;
 					}
 
 					// Prune on Parallel
-					if(basic.isParallel(f) && !c->hasAnnotation(insieme::annotations::omp::RegionAnnotation::KEY)) {
+					if(parExt.isParallel(f) && !c->hasAnnotation(insieme::annotations::omp::RegionAnnotation::KEY)) {
 						return true;
 					} else {
 						return false;
@@ -128,16 +128,16 @@ namespace runtime {
 		core::StatementPtr registerEntryPoint(core::NodeManager& manager, const core::ExpressionPtr& workItemImpl) {
 			core::IRBuilder builder(manager);
 			auto& basic = manager.getLangBasic();
-			auto& extensions = manager.getLangExtension<RuntimeExtensions>();
+			auto& extension = manager.getLangExtension<RuntimeExtension>();
 
 			// create register call
-			return builder.callExpr(basic.getUnit(), extensions.registerWorkItemImpl, workItemImpl);
+			return builder.callExpr(basic.getUnit(), extension.getRegisterWorkItemImpl(), workItemImpl);
 		}
 
 		WorkItemImpl wrapEntryPoint(core::NodeManager& manager, const core::ExpressionPtr& entry, bool instrumentBody) {
 			core::IRBuilder builder(manager);
 			const core::lang::BasicGenerator& basic = manager.getLangBasic();
-			const RuntimeExtensions& extensions = manager.getLangExtension<RuntimeExtensions>();
+			const RuntimeExtension& extensions = manager.getLangExtension<RuntimeExtension>();
 
 			// create new lambda expression wrapping the entry point
 			assert_eq(entry->getType()->getNodeType(), core::NT_FunctionType) << "Only functions can be entry points!";
@@ -146,14 +146,14 @@ namespace runtime {
 
 
 			// define parameter of resulting lambda
-			core::VariablePtr workItem = builder.variable(builder.refType(extensions.workItemType));
+			core::VariablePtr workItem = builder.variable(builder.refType(extensions.getWorkItemType()));
 			core::TypePtr tupleType = DataItem::toLWDataItemType(builder.tupleType(entryType->getParameterTypes()->getElements()));
 			core::ExpressionPtr paramTypes = builder.getTypeLiteral(tupleType);
 
 			vector<core::ExpressionPtr> argList;
 			unsigned counter = 0;
 			::transform(entryType->getParameterTypes()->getElements(), std::back_inserter(argList), [&](const core::TypePtr& type) {
-				return builder.callExpr(type, extensions.getWorkItemArgument, toVector<core::ExpressionPtr>(workItem, core::encoder::toIR(manager, counter++),
+				return builder.callExpr(type, extensions.getGetWorkItemArgument(), toVector<core::ExpressionPtr>(workItem, core::encoder::toIR(manager, counter++),
 				                                                                                            paramTypes, builder.getTypeLiteral(type)));
 			});
 
@@ -168,10 +168,10 @@ namespace runtime {
 				stmts.push_back(call);
 				stmts.push_back(builder.callExpr(instExt.getInstrumentationRegionEnd(), builder.uintLit(0)));
 				auto instrumentedBody = builder.compoundStmt(stmts);
-				WorkItemVariant variant(builder.lambdaExpr(unit, instrumentedBody, toVector(workItem)));
+				WorkItemVariant variant(builder.lambdaExpr(unit, toVector(workItem), instrumentedBody));
 				return WorkItemImpl(toVector(variant));
 			} else {
-				WorkItemVariant variant(builder.lambdaExpr(unit, call, toVector(workItem)));
+				WorkItemVariant variant(builder.lambdaExpr(unit, toVector(workItem), call));
 				return WorkItemImpl(toVector(variant));
 			}
 		}
@@ -180,7 +180,7 @@ namespace runtime {
 		core::ProgramPtr replaceMain(core::NodeManager& manager, const core::ProgramPtr& program, const backend::Converter& converter) {
 			core::IRBuilder builder(manager);
 			auto& basic = manager.getLangBasic();
-			auto& extensions = manager.getLangExtension<RuntimeExtensions>();
+			auto& extensions = manager.getLangExtension<RuntimeExtension>();
 
 			core::TypePtr unit = basic.getUnit();
 			core::TypePtr intType = basic.getUInt4();
@@ -209,10 +209,10 @@ namespace runtime {
 			// construct light-weight data item tuple
 			core::ExpressionPtr expr = builder.tupleExpr(toVector<core::ExpressionPtr>(argc, argv));
 			core::TupleTypePtr tupleType = static_pointer_cast<const core::TupleType>(expr->getType());
-			expr = builder.callExpr(DataItem::toLWDataItemType(tupleType), extensions.wrapLWData, toVector(expr));
+			expr = builder.callExpr(DataItem::toLWDataItemType(tupleType), extensions.getWrapLWData(), toVector(expr));
 
 			// create call to standalone runtime
-			if(!workItemImpls.empty()) { stmts.push_back(builder.callExpr(unit, extensions.runStandalone, workItemImpls[0], expr)); }
+			if(!workItemImpls.empty()) { stmts.push_back(builder.callExpr(unit, extensions.getRunStandalone(), workItemImpls[0], expr)); }
 
 			// ------------------- Add return   -------------------------
 
@@ -364,13 +364,13 @@ namespace runtime {
 
 	// migrate meta-infos from anywhere in subtree to job
 	void collectSubMetaInfos(core::NodeManager& manager, core::NodePtr job) {
-		const core::lang::BasicGenerator& basic = manager.getLangBasic();
+		const core::lang::ParallelExtension& parExt = manager.getLangExtension<lang::ParallelExtension>();
 		auto rootMetas = annotations::getMetaInfos(job);
 		core::visitDepthFirstPrunable(job, [&](const core::NodePtr& npr) -> bool {
 			// skip root node of sub-tree
 			if(npr == job) return false;
 			// prune for subtrees which generate their own WI description
-			if(core::analysis::isCallOf(npr, basic.getParallel()) || core::analysis::isCallOf(npr, basic.getPFor()) || npr.isa<core::JobExprPtr>()) {
+			if(core::analysis::isCallOf(npr, parExt.getParallel()) || core::analysis::isCallOf(npr, parExt.getPFor()) || npr.isa<core::JobExprPtr>()) {
 				return true;
 			}
 			// prune for subtrees which already generated their WI
@@ -393,10 +393,10 @@ namespace runtime {
 	std::pair<WorkItemImpl, core::ExpressionPtr> wrapJob(core::NodeManager& manager, const core::JobExprPtr& job) {
 		core::IRBuilder builder(manager);
 		const core::lang::BasicGenerator& basic = manager.getLangBasic();
-		const RuntimeExtensions& extensions = manager.getLangExtension<RuntimeExtensions>();
+		const RuntimeExtension& extensions = manager.getLangExtension<RuntimeExtension>();
 
 		// define parameter of resulting lambda
-		core::VariablePtr workItem = builder.variable(builder.refType(extensions.workItemType));
+		core::VariablePtr workItem = builder.variable(builder.refType(extensions.getWorkItemType()));
 
 		// collect parameters to be captured by the job
 
@@ -420,7 +420,7 @@ namespace runtime {
 		for_each(varIndex, [&](const std::pair<core::VariablePtr, unsigned>& cur) {
 			core::TypePtr varType = cur.first->getType();
 			core::ExpressionPtr index = coder::toIR(manager, cur.second);
-			core::ExpressionPtr access = builder.callExpr(varType, extensions.getWorkItemArgument,
+			core::ExpressionPtr access = builder.callExpr(varType, extensions.getGetWorkItemArgument(),
 			                                              toVector<core::ExpressionPtr>(workItem, index, paramTypeToken, builder.getTypeLiteral(varType)));
 			varReplacements.insert(std::make_pair(cur.first, access));
 		});
@@ -454,7 +454,7 @@ namespace runtime {
 
 			for(const auto& cur : impls) {
 				core::StatementPtr instrumentedBody = wrapWithInstrumentationRegion(manager, job, fixBranch(cur));
-				auto impl = builder.lambdaExpr(unit, instrumentedBody, params);
+				auto impl = builder.lambdaExpr(unit, params, instrumentedBody);
 				annotations::migrateMetaInfos(job, impl);
 				variants.push_back(WorkItemVariant(impl));
 			}
@@ -467,7 +467,7 @@ namespace runtime {
 			core::StatementPtr instrumentedBody = wrapWithInstrumentationRegion(manager, job, fixBranch(job->getBody()));
 
 			// build implementation
-			auto impl = builder.lambdaExpr(unit, instrumentedBody, params);
+			auto impl = builder.lambdaExpr(unit, params, instrumentedBody);
 
 			// move meta-infos
 			annotations::migrateMetaInfos(job, impl);
@@ -483,7 +483,7 @@ namespace runtime {
 
 		// construct light-weight data item tuple
 		core::ExpressionPtr tuple = builder.tupleExpr(capturedValues);
-		core::ExpressionPtr parameters = builder.callExpr(dataItemType, extensions.wrapLWData, toVector(tuple));
+		core::ExpressionPtr parameters = builder.callExpr(dataItemType, extensions.getWrapLWData(), toVector(tuple));
 
 		// return implementation + parameters
 		return std::make_pair(impl, parameters);
@@ -492,16 +492,19 @@ namespace runtime {
 	class WorkItemIntroducer : public core::transform::CachedNodeMapping {
 		core::NodeManager& manager;
 		const core::lang::BasicGenerator& basic;
-		const RuntimeExtensions& ext;
+		const core::lang::ParallelExtension& parExt;
+		const RuntimeExtension& ext;
 		core::IRBuilder builder;
 		bool includeEffortEstimation;
 
 	  public:
 		WorkItemIntroducer(core::NodeManager& manager, bool includeEffortEstimation)
-		    : manager(manager), basic(manager.getLangBasic()), ext(manager.getLangExtension<RuntimeExtensions>()), builder(manager),
+		    : manager(manager), basic(manager.getLangBasic()), parExt(manager.getLangExtension<lang::ParallelExtension>()),
+			  ext(manager.getLangExtension<RuntimeExtension>()), builder(manager),
 		      includeEffortEstimation(includeEffortEstimation) {}
 
 		virtual const core::NodePtr resolveElement(const core::NodePtr& ptr) {
+
 			// skip types
 			if(ptr->getNodeCategory() == core::NC_Type) {
 				return ptr; // don't touch types
@@ -519,9 +522,9 @@ namespace runtime {
 				const auto& fun = core::analysis::stripAttributes(call->getFunctionExpr());
 
 				// handle parallel/task call
-				if(basic.isParallel(fun)) {
+				if(parExt.isParallel(fun)) {
 					const core::ExpressionPtr& job = core::analysis::getArgument(res, 0);
-					assert(*job->getType() == *ext.jobType && "Argument hasn't been converted!");
+					assert(ext.isJobType(job->getType()) && "Argument hasn't been converted!");
 
 					// unpack job to attach meta information
 					WorkItemImpl wi = core::encoder::toValue<WorkItemImpl>(job.as<core::CallExprPtr>()[3]);
@@ -533,23 +536,23 @@ namespace runtime {
 
 					// handle region (must be handled before task or it will be mixed up)
 					if(call->hasAnnotation(annotations::omp::RegionAnnotation::KEY)) {
-						return builder.callExpr(builder.refType(ext.workItemType), ext.region, job);
+						return builder.callExpr(builder.refType(ext.getWorkItemType()), ext.getRegion(), job);
 					}
 
 					// handle task
-					if(isTask(ptr.as<core::CallExprPtr>()->getArgument(0))) { return builder.callExpr(builder.refType(ext.workItemType), ext.task, job); }
+					if(isTask(ptr.as<core::CallExprPtr>()->getArgument(0))) { return builder.callExpr(builder.refType(ext.getWorkItemType()), ext.getTask(), job); }
 
-					return builder.callExpr(builder.refType(ext.workItemType), ext.parallel, job);
+					return builder.callExpr(builder.refType(ext.getWorkItemType()), ext.getParallel(), job);
 				}
 
 				// handle merge call
-				if(basic.isMerge(fun)) {
+				if(parExt.isMerge(fun)) {
 					const auto& arg = core::analysis::getArgument(res, 0);
-					return builder.callExpr(basic.getUnit(), ext.merge, arg);
+					return builder.callExpr(basic.getUnit(), ext.getMerge(), arg);
 				}
 
 				// handle pfor calls
-				if(basic.isPFor(fun)) { return convertPfor(call).as<core::CallExprPtr>(); }
+				if(parExt.isPFor(fun)) { return convertPfor(call).as<core::CallExprPtr>(); }
 			}
 
 			// handle calls to pick-variant calls
@@ -578,12 +581,12 @@ namespace runtime {
 			core::ExpressionPtr data = info.second;                    // the work item data record to be passed
 
 			// create call to job constructor
-			return builder.callExpr(ext.jobType, ext.createJob, toVector(min, max, mod, wi, data));
+			return builder.callExpr(ext.getJobType(), ext.getCreateJob(), toVector(min, max, mod, wi, data));
 		}
 
 		core::ExpressionPtr convertPfor(const core::CallExprPtr& call) {
 			// check that it is indeed a pfor call
-			assert_true(basic.isPFor(core::analysis::stripAttributes(call->getFunctionExpr())));
+			assert_true(parExt.isPFor(core::analysis::stripAttributes(call->getFunctionExpr())));
 
 			// construct call to pfor ...
 			const core::ExpressionList& args = call->getArguments();
@@ -603,9 +606,9 @@ namespace runtime {
 			// encode into IR
 			core::ExpressionPtr bodyImpl = coder::toIR(manager, info.first);
 			core::ExpressionPtr data = info.second;
-			core::TypePtr resType = builder.refType(ext.workItemType);
+			core::TypePtr resType = builder.refType(ext.getWorkItemType());
 
-			return builder.callExpr(resType, ext.pfor, toVector(args[0], args[1], args[2], args[3], bodyImpl, data));
+			return builder.callExpr(resType, ext.getPfor(), toVector(args[0], args[1], args[2], args[3], bodyImpl, data));
 
 			//				irt_work_item* irt_pfor(irt_work_item* self, irt_work_group* group, irt_work_item_range range, irt_wi_implementation_id impl_id,
 			//irt_lw_data_item* args);
@@ -629,7 +632,7 @@ namespace runtime {
 			core::TupleTypePtr tupleType = builder.tupleType(typeList);
 			core::TypePtr dataItemType = DataItem::toLWDataItemType(tupleType);
 			core::ExpressionPtr tuple = builder.tupleExpr(capturedValues);
-			core::ExpressionPtr data = builder.callExpr(dataItemType, ext.wrapLWData, toVector(tuple));
+			core::ExpressionPtr data = builder.callExpr(dataItemType, ext.getWrapLWData(), toVector(tuple));
 
 
 			// ------------- build up function computing for-loop body -------------
@@ -637,18 +640,18 @@ namespace runtime {
 			core::StatementList resBody;
 
 			// define parameter of resulting lambda
-			core::VariablePtr workItem = builder.variable(builder.refType(ext.workItemType));
+			core::VariablePtr workItem = builder.variable(builder.refType(ext.getWorkItemType()));
 
 			// create variables containing loop boundaries
 			core::TypePtr unit = basic.getUnit();
 			core::TypePtr int4 = basic.getInt4();
 
-			core::VariablePtr range = builder.variable(ext.workItemRange);
+			core::VariablePtr range = builder.variable(ext.getWorkItemRange());
 			core::VariablePtr begin = builder.variable(int4);
 			core::VariablePtr end = builder.variable(int4);
 			core::VariablePtr step = builder.variable(int4);
 
-			resBody.push_back(builder.declarationStmt(range, builder.callExpr(ext.workItemRange, ext.getWorkItemRange, workItem)));
+			resBody.push_back(builder.declarationStmt(range, builder.callExpr(ext.getWorkItemRange(), ext.getGetWorkItemRange(), workItem)));
 			resBody.push_back(builder.declarationStmt(begin, builder.accessMember(range, "begin")));
 			resBody.push_back(builder.declarationStmt(end, builder.accessMember(range, "end")));
 			resBody.push_back(builder.declarationStmt(step, builder.accessMember(range, "step")));
@@ -664,7 +667,7 @@ namespace runtime {
 			for_each(captured, [&](const core::VariablePtr& cur) {
 				core::TypePtr varType = cur->getType();
 				core::ExpressionPtr index = coder::toIR(manager, count++);
-				core::ExpressionPtr access = builder.callExpr(varType, ext.getWorkItemArgument,
+				core::ExpressionPtr access = builder.callExpr(varType, ext.getGetWorkItemArgument(),
 				                                              toVector<core::ExpressionPtr>(workItem, index, paramTypeToken, builder.getTypeLiteral(varType)));
 				varReplacements.insert(std::make_pair(cur, access));
 			});
@@ -673,7 +676,7 @@ namespace runtime {
 
 			// build for loop
 			resBody.push_back(inlinedLoop);
-			core::LambdaExprPtr entryPoint = builder.lambdaExpr(unit, builder.compoundStmt(resBody), toVector(workItem));
+			core::LambdaExprPtr entryPoint = builder.lambdaExpr(unit, toVector(workItem), builder.compoundStmt(resBody));
 
 			// ------------- finish process -------------
 
@@ -732,7 +735,7 @@ namespace runtime {
 			core::TupleTypePtr tupleType = builder.tupleType(typeList);
 			core::TypePtr dataItemType = DataItem::toLWDataItemType(tupleType);
 			core::ExpressionPtr tuple = builder.tupleExpr(arguments);
-			core::ExpressionPtr data = builder.callExpr(dataItemType, ext.wrapLWData, toVector(tuple));
+			core::ExpressionPtr data = builder.callExpr(dataItemType, ext.getWrapLWData(), toVector(tuple));
 			core::ExpressionPtr paramTypeToken = builder.getTypeLiteral(dataItemType);
 
 			// --- Build Work Item Variations ---
@@ -760,7 +763,7 @@ namespace runtime {
 				//
 
 				// define parameter of resulting lambda
-				core::VariablePtr workItem = builder.variable(builder.refType(ext.workItemType));
+				core::VariablePtr workItem = builder.variable(builder.refType(ext.getWorkItemType()));
 
 				// create function triggering the computation of this variant (forming the entry point)
 				core::StatementList body;
@@ -770,7 +773,7 @@ namespace runtime {
 				for(std::size_t i = 0; i < arguments.size(); i++) {
 					core::TypePtr argType = arguments[i]->getType();
 					core::ExpressionPtr index = builder.uintLit(i);
-					newArgs.push_back(builder.callExpr(argType, ext.getWorkItemArgument,
+					newArgs.push_back(builder.callExpr(argType, ext.getGetWorkItemArgument(),
 					                                   toVector<core::ExpressionPtr>(workItem, index, paramTypeToken, builder.getTypeLiteral(argType))));
 				}
 
@@ -778,7 +781,7 @@ namespace runtime {
 				body.push_back(builder.callExpr(basic.getUnit(), variantImpl, newArgs));
 
 				// create the resulting lambda expression / work item variant
-				variants.push_back(WorkItemVariant(builder.lambdaExpr(unit, builder.compoundStmt(body), toVector(workItem))));
+				variants.push_back(WorkItemVariant(builder.lambdaExpr(unit, toVector(workItem), builder.compoundStmt(body))));
 			});
 
 			// produce work item implementation
@@ -792,8 +795,8 @@ namespace runtime {
 			core::ExpressionPtr one = builder.uintLit(1);
 
 			// create call to job constructor and merge
-			return builder.callExpr(unit, ext.merge, builder.callExpr(builder.refType(ext.workItemType), ext.parallel,
-			                                                          builder.callExpr(ext.jobType, ext.createJob, toVector(one, one, one, wi, data))));
+			return builder.callExpr(unit, ext.getMerge(), builder.callExpr(builder.refType(ext.getWorkItemType()), ext.getParallel(),
+			                                                          builder.callExpr(ext.getJobType(), ext.getCreateJob(), toVector(one, one, one, wi, data))));
 		}
 
 		core::StatementPtr convertVariant(const core::CallExprPtr& call) {
@@ -823,31 +826,14 @@ namespace runtime {
 
 	core::NodePtr WorkItemizer::process(const backend::Converter& converter, const core::NodePtr& node) {
 		WorkItemIntroducer wiIntroducer(converter.getNodeManager(), includeEffortEstimation);
-		auto ret = wiIntroducer.resolveElement(node);
-
-		// pre-process meta information
-		// TODO: apply to all annotations which satisfy has_child_list
-		visitDepthFirstOnce(ret, [&](const core::TypePtr& typ) {
-			if(core::hasMetaInfo(typ)) {
-				core::ClassMetaInfo metaInfos = core::getMetaInfo(typ);
-				vector<core::MemberFunction> newMemFuns = ::transform(metaInfos.getMemberFunctions(), [&](const core::MemberFunction& memFun) {
-					core::MemberFunction copy(memFun);
-					copy.setImplementation(wiIntroducer.resolveElement(memFun.getImplementation()).as<core::ExpressionPtr>());
-					return copy;
-				});
-				metaInfos.setMemberFunctions(newMemFuns);
-				core::setMetaInfo(typ, metaInfos);
-			}
-		}, true, true);
-
-		return ret;
+		return wiIntroducer.resolveElement(node);
 	}
 
 
 	core::NodePtr InstrumentationSupport::process(const backend::Converter& converter, const core::NodePtr& node) {
 		// get language extension
 		auto& mgr = converter.getNodeManager();
-		auto& rtExt = mgr.getLangExtension<insieme::backend::runtime::RuntimeExtensions>();
+		auto& rtExt = mgr.getLangExtension<insieme::backend::runtime::RuntimeExtension>();
 		const auto& instExt = mgr.getLangExtension<core::lang::InstrumentationExtension>();
 
 		// get max region id
@@ -855,7 +841,7 @@ namespace runtime {
 		core::visitDepthFirstOnce(node, [&](const core::CallExprPtr& call) {
 
 			// check whether this call is specifying some region ID
-			if(!(core::analysis::isCallOf(call, instExt.getInstrumentationRegionStart()) || core::analysis::isCallOf(call, rtExt.regionAttribute))) { return; }
+			if(!(core::analysis::isCallOf(call, instExt.getInstrumentationRegionStart()) || core::analysis::isCallOf(call, rtExt.getRegionAttribute()))) { return; }
 
 			// take first argument
 			assert_eq(call[0]->getNodeType(), core::NT_Literal) << "Region ID is expected to be a literal!";
