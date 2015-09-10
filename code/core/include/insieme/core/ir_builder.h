@@ -275,7 +275,7 @@ namespace core {
 			return core::analysis::normalize(root);
 		}
 
-		TypePtr refType(const TypePtr& elementType, bool _const = false, bool _volatile = false) const;
+		GenericTypePtr refType(const TypePtr& elementType, bool _const = false, bool _volatile = false) const;
 		TypePtr ptrType(const TypePtr& elementType, bool _const = false, bool _volatile = false) const;
 
 		GenericTypePtr arrayType(const TypePtr& elementType) const;

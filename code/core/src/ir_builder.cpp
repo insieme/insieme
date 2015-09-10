@@ -312,7 +312,7 @@ namespace core {
 		return types::unify(manager, type, irType);
 	}
 
-	TypePtr IRBuilderBaseModule::refType(const TypePtr& elementType, bool _const, bool _volatile) const {
+	GenericTypePtr IRBuilderBaseModule::refType(const TypePtr& elementType, bool _const, bool _volatile) const {
 		return lang::ReferenceType::create(elementType, _const, _volatile);
 	}
 

@@ -341,22 +341,6 @@ namespace analysis {
 	std::vector<VariablePtr> getVariableNames(const VariablePtr& var, const NodePtr& code);
 
 	/**
-	 * Tests whether the given type is a volatile type. In that case
-	 * the type is of the form volatile<'a> where 'a is a concrete type.
-	 *
-	 * @param type the type to be tested
-	 * @return true if the given type is a type literal volatile, false otherwise
-	 */
-	bool isVolatileType(const TypePtr& type);
-
-	/**
-	 * Returns the inner type of a volatile type.
-	 *
-	 * @return inner type of "type"
-	 */
-	TypePtr getVolatileType(const TypePtr& type);
-
-	/**
 	 * Locates the address of the first call expression node calling the given function.
 	 *
 	 * @param root the root node to start the search with

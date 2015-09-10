@@ -104,11 +104,8 @@ namespace analysis {
 		// check for null
 		if(!candidate) { return false; }
 
-		// check type of node => has to be a call expression
-		if(candidate->getNodeType() != NT_CallExpr) { return false; }
-
 		// check invoked function
-		return isCallOf(static_pointer_cast<const CallExpr>(candidate), function);
+		return isCallOf(candidate.isa<CallExprPtr>(), function);
 	}
 
 	bool isNoOp(const StatementPtr& candidate) {

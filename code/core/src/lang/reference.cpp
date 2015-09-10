@@ -61,7 +61,7 @@ namespace lang {
 		*this = ReferenceType(type->getTypeParameter(0), isTrueMarker(type->getTypeParameter(1)), isTrueMarker(type->getTypeParameter(2)));
 	}
 
-	TypePtr ReferenceType::create(const TypePtr& elementType, bool _const, bool _volatile) {
+	GenericTypePtr ReferenceType::create(const TypePtr& elementType, bool _const, bool _volatile) {
 		assert_true(elementType);
 		return ReferenceType(elementType, _const, _volatile).operator GenericTypePtr();
 	}
