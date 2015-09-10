@@ -913,16 +913,21 @@ namespace checks {
 		// extract actual target type
 		trgType = analysis::getRepresentedType(trgType);
 
-		// skip generic types
-		if (trgType.isa<TypeVariablePtr>()) return res;
+		//TODO we need a special case handling enum types here, until this is implemented
+		auto& enumExt = mgr.getLangExtension<lang::EnumExtension>();
+
+		// create a validity check for the argument types
+		auto isValidNumericType = [&](const TypePtr& type) {
+			return type.isa<TypeVariablePtr>() || basic.isNumeric(type) || enumExt.isEnumType(type);
+		};
 
 		//check expression type
-		if (!basic.isScalarType(srcType)) {
+		if (!isValidNumericType(srcType)) {
 			add(res, Message(callExpr[0], EC_SEMANTIC_ILLEGAL_NUM_CAST, format("given source value is not of a numeric type (%s).", *srcType), Message::ERROR));
 		}
 
 		//as well as the target type
-		if (!basic.isScalarType(trgType)) {
+		if (!isValidNumericType(trgType)) {
 			add(res, Message(callExpr[1], EC_SEMANTIC_ILLEGAL_NUM_CAST, format("given target type is not a numeric type  (%s).", *trgType), Message::ERROR));
 		}
 
