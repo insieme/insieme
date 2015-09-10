@@ -40,11 +40,22 @@
 
 #include "insieme/utils/string_utils.h"
 #include "insieme/utils/container_utils.h"
+#include "insieme/utils/printable.h"
 
 TEST(StringUtilsTest, Format) {
 	EXPECT_EQ(format("Hello World"), "Hello World");
 	EXPECT_EQ(format("Print %2d ...", 12), "Print 12 ...");
 	EXPECT_EQ(format("Print %2d, %2d, %s ...", 12, 14, "hello"), "Print 12, 14, hello ...");
+}
+
+TEST(StringUtilsTest, FormatPrintables) {
+
+	struct X : public insieme::utils::Printable {
+		std::ostream& printTo(std::ostream& out) const { return out << "I am X"; }
+	};
+
+	X x;
+	EXPECT_EQ("Say something: I am X", format("Say something: %s",x));
 }
 
 TEST(StringUtilsTest, FormatStrings) {

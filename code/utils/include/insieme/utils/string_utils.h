@@ -53,21 +53,69 @@
 using std::string;
 
 template <typename T>
-struct to_primitive : public id<T> {};
+string toString(const T& value) {
+	std::stringstream res;
+	res << value;
+	return res.str();
+}
 
-template <>
-struct to_primitive<std::string> {
-	const char* operator()(const string& str) const {
-		return str.c_str();
+namespace detail {
+
+	// a template functor to convert any object into something printable
+	template <typename T>
+	struct to_printable {
+		string operator()(const T& obj) const {
+			return toString(obj);
+		}
+	};
+
+	template <> struct to_printable<bool>  : public id<bool> {};
+	template <> struct to_printable<char>  : public id<char> {};
+	template <> struct to_printable<short> : public id<short> {};
+	template <> struct to_printable<long>  : public id<long> {};
+
+	template <> struct to_printable<signed>    : public id<signed> {};
+	template <> struct to_printable<unsigned>  : public id<unsigned> {};
+
+	template <> struct to_printable<float>  : public id<float> {};
+	template <> struct to_printable<double> : public id<double> {};
+
+	template <> struct to_printable<std::string> : public id<std::string> {};
+
+	template <typename T>
+	struct to_printable<T&> : public to_printable<T> {};
+	template <typename T>
+	struct to_printable<const T> : public to_printable<T> {};
+	template <typename T>
+	struct to_printable<const T&> : public to_printable<T> {};
+
+
+	// a template functor to convert something printable into a C-primitive
+	template<typename T>
+	struct to_c_primitive : public id<T> {};
+
+	template<>
+	struct to_c_primitive<std::string> {
+		const char* operator()(const std::string& str) {
+			return str.c_str();
+		}
+	};
+
+	template <typename T>
+	struct to_c_primitive<T&> : public to_c_primitive<T> {};
+	template <typename T>
+	struct to_c_primitive<const T> : public to_c_primitive<T> {};
+	template <typename T>
+	struct to_c_primitive<const T&> : public to_c_primitive<T> {};
+
+
+	// a wrapper for the to_c_primitive functor
+	template<typename T>
+	auto to_c_prim(const T& t) -> decltype(to_c_primitive<T>()(t)) {
+		return to_c_primitive<T>()(t);
 	}
-};
 
-template <typename T>
-struct to_primitive<T&> : public to_primitive<T> {};
-template <typename T>
-struct to_primitive<const T> : public to_primitive<T> {};
-template <typename T>
-struct to_primitive<const T&> : public to_primitive<T> {};
+}
 
 template <typename... Args>
 string format(const char* formatString, const Args&... args) {
@@ -78,11 +126,11 @@ string format(const char* formatString, const Args&... args) {
 	#pragma GCC diagnostic push
 	#pragma GCC diagnostic ignored "-Wformat-security"
 
-	int written = snprintf(buffer, BUFFER_SIZE, formatString, to_primitive<decltype(args)>()(args)...);
+	int written = snprintf(buffer, BUFFER_SIZE, formatString, detail::to_c_prim(detail::to_printable<decltype(args)>()(args))...);
 	if(written >= BUFFER_SIZE || written < 0) { // deal with both GNU and c99 error reporting
 		BUFFER_SIZE = written > 0 ? written + 1 : 1024 * 1024 * 8;
 		char* heap_buffer = new char[BUFFER_SIZE];
-		snprintf(heap_buffer, BUFFER_SIZE, formatString, to_primitive<decltype(args)>()(args)...);
+		snprintf(heap_buffer, BUFFER_SIZE, formatString, detail::to_c_prim(detail::to_printable<decltype(args)>()(args))...);
 		retval = string(heap_buffer);
 		delete[] heap_buffer;
 	} else {
@@ -92,13 +140,6 @@ string format(const char* formatString, const Args&... args) {
 	#pragma GCC diagnostic pop
 
 	return retval;
-}
-
-template <typename T>
-string toString(const T& value) {
-	std::stringstream res;
-	res << value;
-	return res.str();
 }
 
 /**
