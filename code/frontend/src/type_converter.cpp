@@ -438,7 +438,11 @@ namespace conversion {
 		auto clangSubTy = pointerTy->getPointeeType();
 		core::TypePtr subTy = convert(clangSubTy);
 
-		retTy = builder.ptrType(subTy, clangSubTy.isConstQualified(), clangSubTy.isVolatileQualified());
+		bool isConst = clangSubTy.isConstQualified();
+		// INSPIRE function references must be const
+		if(clangSubTy->isFunctionType()) isConst = true;
+
+		retTy = builder.ptrType(subTy, isConst, clangSubTy.isVolatileQualified());
 		frontend_assert(retTy) << "Conversion of PointerType failed.";
 		return retTy;
 	}

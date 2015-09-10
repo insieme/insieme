@@ -175,12 +175,20 @@ namespace lang {
 		return builder.callExpr(pExt.getPtrFromIntegral(), intExpr, builder.getTypeLiteral(ptrType));
 	}
 
-	insieme::core::ExpressionPtr buildPtrToIntegral(const ExpressionPtr& ptrExpr, const TypePtr& intType) {
+	ExpressionPtr buildPtrToIntegral(const ExpressionPtr& ptrExpr, const TypePtr& intType) {
 		assert_pred1(isPointer, ptrExpr) << "Trying to build a ref from non-ptr.";
 		assert_pred1(ptrExpr->getNodeManager().getLangBasic().isInt, intType) << "Trying to build non-integral from ptr.";
 		IRBuilder builder(ptrExpr->getNodeManager());
 		auto& pExt = ptrExpr->getNodeManager().getLangExtension<PointerExtension>();
 		return builder.callExpr(pExt.getPtrToIntegral(), ptrExpr, builder.getTypeLiteral(intType));
+	}
+
+	ExpressionPtr buildPtrOfFunction(const ExpressionPtr& funExpr) {
+		assert_true(funExpr->getType().isa<FunctionTypePtr>()) << "Trying to build a ptr of a non-function type:\n" << dumpColor(funExpr)
+			                                                   << "\nType: " << dumpColor(funExpr->getType());
+		IRBuilder builder(funExpr->getNodeManager());
+		auto& pExt = funExpr->getNodeManager().getLangExtension<PointerExtension>();
+		return builder.callExpr(pExt.getPtrOfFunction(), funExpr);
 	}
 
 	ExpressionPtr buildPtrToRef(const ExpressionPtr& ptrExpr) {
@@ -211,6 +219,13 @@ namespace lang {
 		IRBuilder builder(ptrExpr->getNodeManager());
 		auto& pExt = ptrExpr->getNodeManager().getLangExtension<PointerExtension>();
 		return builder.callExpr(pExt.getPtrReinterpret(), ptrExpr, builder.getTypeLiteral(newElementType));
+	}
+
+	ExpressionPtr buildPtrDeref(const ExpressionPtr& ptrExpr) {
+		assert_pred1(isPointer, ptrExpr) << "Trying to build ptr_deref from non-ptr type.";
+		IRBuilder builder(ptrExpr->getNodeManager());
+		auto& pExt = ptrExpr->getNodeManager().getLangExtension<PointerExtension>();
+		return builder.callExpr(pExt.getPtrDeref(), ptrExpr);
 	}
 
 	ExpressionPtr buildPtrSubscript(const ExpressionPtr& ptrExpr, const ExpressionPtr& subscriptExpr) {

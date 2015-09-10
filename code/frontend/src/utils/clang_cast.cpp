@@ -161,7 +161,7 @@ namespace utils {
 		// CK_BuiltinFnToFnPtr - Same as above, for builtin functions
 		case clang::CK_FunctionToPointerDecay:
 		case clang::CK_BuiltinFnToFnPtr:
-			return expr;
+			return core::lang::buildPtrOfFunction(expr);
 
 		////////////////////////////////////////////////////////////////////////////////////////////////////////////
 		// NoOps: Conversions that have no effect

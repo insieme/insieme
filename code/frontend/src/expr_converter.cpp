@@ -354,14 +354,22 @@ namespace conversion {
 		LOG_EXPR_CONVERSION(callExpr, irExpr);
 
 		core::ExpressionPtr irCallee = converter.convertExpr(callExpr->getCallee());
+		frontend_assert_expr(core::lang::isPointer, irCallee) << "Expecting callee to be of function pointer type";
 
 		core::ExpressionList irArguments;
 		for(auto arg : callExpr->arguments()) {
 			irArguments.push_back(Visit(arg));
 		}
 
-		irExpr = builder.callExpr(converter.convertType(callExpr->getCallReturnType()), irCallee, irArguments);
+		// simplify generated call if direct call of function
+		auto& pExt = irCallee->getNodeManager().getLangExtension<core::lang::PointerExtension>();
+		if(core::analysis::isCallOf(irCallee, pExt.getPtrOfFunction())) {
+			irCallee = core::analysis::getArgument(irCallee, 0);
+		} else {
+			irCallee = core::lang::buildPtrDeref(irCallee);
+		}
 
+		irExpr = builder.callExpr(converter.convertType(callExpr->getCallReturnType()), irCallee, irArguments);
 		return irExpr;
 	}
 
@@ -554,13 +562,24 @@ namespace conversion {
 
 		// A unary AddressOf operator translates to a ptr-from-ref in IR --------------------------------------------------------------------------- ADDRESSOF -
 		if(unOp->getOpcode() == clang::UO_AddrOf) {
-			retIr = core::lang::buildPtrFromRef(subExpr);
+			// if function type, handle with special operator
+			if(subExpr->getType().isa<core::FunctionTypePtr>()) {
+				retIr = core::lang::buildPtrOfFunction(subExpr);
+			} else {
+				retIr = core::lang::buildPtrFromRef(subExpr);
+			}
 			return retIr;
 		}
 
 		// A unary Deref operator translates to a ptr-to-ref operation in IR --------------------------------------------------------------------------- DEREF -
 		if(unOp->getOpcode() == clang::UO_Deref) {
-			retIr = core::lang::buildPtrToRef(subExpr);
+			frontend_assert(core::lang::isPointer(subExpr)) << "Deref operation only possible on pointers, got:\n" << dumpColor(subExpr->getType());
+			// if function pointer type, access function directly
+			if(core::lang::PointerType(subExpr->getType()).getElementType().isa<core::FunctionTypePtr>()) {
+				retIr = core::lang::buildPtrDeref(subExpr);
+			} else {
+				retIr = core::lang::buildPtrToRef(subExpr);
+			}
 			return retIr;
 		}
 		
