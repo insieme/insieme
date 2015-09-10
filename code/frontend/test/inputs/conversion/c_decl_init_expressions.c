@@ -92,10 +92,16 @@ int main() {
 	
 	// NESTED INITIALIZERS //////////////////////////////////////////////////////
 
-	#pragma test expect_ir("{ let ist = struct { int<4> inner1; real<4> inner2 }; let iut = union { int<4> u1; real<4> u2 }; let sut = struct { ist is; iut iu; }; decl ref<sut,f,f> v0 = var(struct sut { struct ist { 1, lit(\"2.0E+0\":real<4>) }, union iut { u1 = 3 } } ); }")
+	#pragma test expect_ir(R"({ 
+		let ist = struct { int<4> inner1; real<4> inner2 }; 
+		let iut = union { int<4> u1; real<4> u2 }; 
+		let sut = struct { ist is; iut iu; }; 
+		decl ref<sut,f,f> v0 = var(struct sut { struct ist { 1, lit("2.0E+0":real<4>) }, union iut { u1 = 3 } } ); })")
 	{ struct { struct { int inner1; float inner2; } is; union { int u1; float u2; } iu; } su = { { 1, 2.0f }, { 3 } }; }
 	
-	#pragma test expect_ir("{ let s = struct { int<4> a; uint<4> b }; decl ref<array<s,2>,f,f> v0 = var(array_create(type(s), type(2), [struct s {1, 2u}, struct s{3, 4u}])); }")
+	#pragma test expect_ir(R"({ 
+		let s = struct { int<4> a; uint<4> b }; 
+		decl ref<array<s,2>,f,f> v0 = var(array_create(type(s), type(2), [struct s {1, 2u}, struct s{3, 4u}])); })")
 	{ struct { int a; unsigned b; } su[2] = { { 1, 2u }, { 3, 4u } }; }
 
 }
