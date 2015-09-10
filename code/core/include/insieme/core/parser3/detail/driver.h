@@ -135,9 +135,10 @@ namespace parser3 {
 				VariableList params;
 				std::string expression;
 				FunctionKind fk;
+				bool isFunction;
 
-				Lambda_let(const TypePtr& retType, const VariableList& params, const std::string& expression, const FunctionKind& fk)
-				    : retType(retType), params(params.begin(), params.end()), expression(expression), fk(fk) {}
+				Lambda_let(const TypePtr& retType, const VariableList& params, const std::string& expression, const FunctionKind& fk, bool isFunc)
+				    : retType(retType), params(params.begin(), params.end()), expression(expression), fk(fk), isFunction(isFunc) {}
 			};
 			std::vector<std::string> let_names;
 			std::vector<Lambda_let> lambda_lets;

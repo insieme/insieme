@@ -529,7 +529,7 @@ namespace parser3 {
 			try {
 				retType = types::tryDeduceReturnType(ftype.as<FunctionTypePtr>(), argumentTypes);
 			} catch(types::ReturnTypeDeductionException e) {
-				error(l, format("Error in call expression:\n%s", e.what()));
+				error(l, format("Error in call expression :\n%s", e.what()));
 				return nullptr;
 			}
 
@@ -738,7 +738,7 @@ namespace parser3 {
 		void inspire_driver::add_let_lambda(const location& l, const location& begin, const location& end, const TypePtr& retType, const VariableList& params,
 		                                    const FunctionKind& fk) {
 			if(inhibit_building_count > 1) { return; }
-			lambda_lets.push_back(Lambda_let(retType, params, get_body_string(str, begin, end, scopes.isInFunctionDefinition()), fk));
+			lambda_lets.push_back(Lambda_let(retType, params, get_body_string(str, begin, end, scopes.isInFunctionDefinition()), fk, scopes.isInFunctionDefinition()));
 		}
 
 		void inspire_driver::add_this(const location& l, const TypePtr& classType) {
@@ -768,270 +768,285 @@ namespace parser3 {
 
 
 	void inspire_driver::close_let_statement(const location& l) {
-			// if we are inside of a let in a let
-			if(let_count > 1) {
-				let_count--;
-				set_inhibit(false);
+		// if we are inside of a let in a let
+		if(let_count > 1) {
+			let_count--;
+			set_inhibit(false);
+			return;
+		}
+		//std::cout << "let_names: " << let_names << std::endl;
+	   if(is_rec_func && !rec_call_func.empty()){
+		   std::map<std::string, VariablePtr> funcVars;
+		   unsigned count = 0;
+		   for (const auto& name :  let_names) {
+			   if (count == 0){
+				   count++;
+				   continue;
+			   }
+			   Lambda_let& tmp = lambda_lets[count-1];
+
+			   TypeList types;
+			   for(const auto& v : tmp.params) {
+				   if(tmp.isFunction) {
+					   types.push_back(analysis::getReferencedType(v->getType()));
+				   } else {
+					   types.push_back(v->getType());
+				   }
+			   }
+			   funcVars[name] = builder.variable(builder.functionType(types, tmp.retType, tmp.fk));
+			   //std::cout << "name: " << name << ", type: " << *builder.functionType(types, tmp.retType, tmp.fk) << std::endl;
+			   //std::cout << "isFunction(): " << tmp.isFunction << std::endl;
+			   count ++;
+		   }
+		   // generate a nested parser to parse the body with the right types
+		   std::vector<std::pair<VariablePtr, LambdaExprPtr>> funcs;
+		   count =1;
+		   for(const auto& let : lambda_lets){
+			   inspire_driver let_driver(let.expression, mgr, scopes);
+			   for (const auto pair : funcVars) let_driver.add_symb(pair.first, pair.second);
+			   try{
+				   ExpressionPtr lambda = let_driver.parseExpression();
+				   if (!lambda) {
+					   // write the location with the offset of the current call site
+					   // FIXME: due to the new string, locations get messed up
+					   let_driver.print_errors(std::cerr);
+					   error(l, "lambda expression is wrong");
+					   return;
+				   }
+				   if(let_names.size() < count && !(let_names[count]).compare(rec_call_func)) {
+					   VariablePtr temp;
+					   Lambda_let& tmp = lambda_lets[count-1];
+					   TypeList types;
+					   for(const auto& v : tmp.params) {
+						   types.push_back(v->getType());
+					   }
+					   temp = builder.variable(builder.functionType(types, tmp.retType, tmp.fk));
+					   funcs.push_back({funcVars[let_names[count]], lambda.as<LambdaExprPtr>()});
+				   } else {
+					   funcs.push_back({funcVars[let_names[count]], lambda.as<LambdaExprPtr>()});
+				   }
+			   }catch(...){
+				   error(l, "something went really wrong parsing lambda body");
+			   }
+			   count ++;
+		   }
+		   // generate funcs and bound them to the var types
+		   std::vector<LambdaBindingPtr> lambdas;
+		   for (const auto& lf : funcs){
+			   auto var = lf.first;
+			   auto params = lf.second->getParameterList();
+			   auto type = lf.second->getType();
+			   auto body = lf.second->getBody();
+			   lambdas.push_back(builder.lambdaBinding(var, builder.lambda(type.as<FunctionTypePtr>(), params, body)));
+		   }
+		   LambdaDefinitionPtr lambdaDef = builder.lambdaDefinition(lambdas);
+		   add_symb(l, let_names[0], builder.lambdaExpr(funcVars.find(rec_call_func)->second, lambdaDef));
+		   is_rec_func=0;
+		   rec_call_func = "";
+		   lambda_lets.clear();
+	   }
+
+		// LAMBDA LETS (functions):
+		else if(let_names.size() == lambda_lets.size()) {
+			// DeclarationContext temp_scope (scopes);
+
+			std::map<std::string, VariablePtr> funcVars;
+			unsigned count = 0;
+			for(const auto& name : let_names) {
+				Lambda_let& tmp = lambda_lets[count];
+
+				TypeList types;
+				for(const auto& v : tmp.params) {
+					if(tmp.isFunction) {
+						types.push_back(analysis::getReferencedType(v->getType()));
+					} else {
+						types.push_back(v->getType());
+					}
+				}
+
+				funcVars[name] = builder.variable(builder.functionType(types, tmp.retType, tmp.fk));
+				//std::cout << "name: " << name << ", type: " << *builder.functionType(types, tmp.retType, tmp.fk) << std::endl;
+				//std::cout << "isFunction(): " << tmp.isFunction << std::endl;
+				count++;
+			}
+
+			// generate a nested parser to parse the body with the right types
+			std::vector<std::pair<VariablePtr, LambdaExprPtr>> funcs;
+			count = 0;
+			for(const auto& let : lambda_lets) {
+				inspire_driver let_driver(let.expression, mgr, scopes);
+				for(const auto pair : funcVars) {
+					let_driver.add_symb(pair.first, pair.second);
+				}
+				try {
+					ExpressionPtr lambda = let_driver.parseExpression();
+
+					if(!lambda) {
+						// write the location with the offset of the current call site
+						// FIXME: due to the new string, locations get messed up
+						let_driver.print_errors(std::cerr);
+						error(l, "lambda expression is wrong");
+
+						return;
+					}
+
+					funcs.push_back({funcVars[let_names[count]], lambda.as<LambdaExprPtr>()});
+				} catch(...) { error(l, "something went really wrong parsing lambda body"); }
+
+				count++;
+			}
+
+			// if all variables in body are defined, this is regular function
+			if(funcs.size() == 1 && analysis::getFreeVariables(funcs[0].second).empty()) {
+				annotations::attachName(funcs[0].second, let_names[0]);
+				add_symb(l, let_names[0], funcs[0].second);
+			} else {
+				// generate funcs and bound them to the var types
+				std::vector<LambdaBindingPtr> lambdas;
+				for(const auto& lf : funcs) {
+					auto var = lf.first;
+					auto params = lf.second->getParameterList();
+					auto type = lf.second->getType();
+					auto body = lf.second->getBody();
+					lambdas.push_back(builder.lambdaBinding(var, builder.lambda(type.as<FunctionTypePtr>(), params, body)));
+				}
+				LambdaDefinitionPtr lambdaDef = builder.lambdaDefinition(lambdas);
+				for(const auto& fv : funcVars) {
+					add_symb(l, fv.first, builder.lambdaExpr(fv.second, lambdaDef));
+				}
+			}
+
+			lambda_lets.clear();
+		}
+		// TYPE LETS
+		else if(let_names.size() == type_lets.size()) {
+			std::vector<RecTypeBindingPtr> type_defs;
+			std::vector<std::string> names;
+			NodeMap non_recursive;
+			unsigned count = 0;
+
+			TypeList variables;
+			for(const auto& name : let_names) {
+				variables.push_back(builder.typeVariable(name));
+			}
+
+			// check for non recursive types
+			// if the type has no recursion inside, replace all uses of the type variable by a full type
+			for(const auto& type : type_lets) {
+				const std::string& name = let_names[count];
+				if(!contains_type_variables(type, variables)) {
+					non_recursive[builder.typeVariable(name)] = type;
+					annotations::attachName(type, name);
+					add_type(l, name, type);
+				}
+				count++;
+			}
+
+			count = 0;
+			// go over the types again and produce recursive type bindings for those who need it
+			for(const auto& type : type_lets) {
+				const std::string& name = let_names[count];
+
+				if(contains_type_variables(type, variables)) {
+					auto tmp = transform::replaceAllGen(mgr, type, non_recursive);
+
+					type_defs.push_back(builder.recTypeBinding(builder.typeVariable(name), tmp));
+					names.push_back(name);
+				}
+				count++;
+			}
+
+			// generate a full recursive type and one entry point for each type variable
+			RecTypeDefinitionPtr fullType = builder.recTypeDefinition(type_defs);
+			for(const auto& n : names) {
+				auto t = builder.recType(builder.typeVariable(n), fullType);
+				annotations::attachName(t, n);
+				add_type(l, n, t);
+			}
+
+			type_lets.clear();
+		}
+		// Expression LETS (includes closures)
+		else if(let_names.size() == expr_lets.size()) {
+			unsigned count = 0;
+			for(const auto& name : let_names) {
+				add_symb(l, name, expr_lets[count]);
+				count++;
+			}
+
+			expr_lets.clear();
+		} else {
+			//            std::cout << "let count: " << let_count << std::endl;
+			//            std::cout << " ihibit? " << inhibit_building_count <<  std::endl;
+			//
+			//            std::cout << "let_mames " << let_names << std::endl;
+			//            std::cout << "let_type " << type_lets << std::endl;
+			//            std::cout << "let_expr " << expr_lets << std::endl;
+			//            std::cout << "let_lambd " << lambda_lets.size() << std::endl;
+
+			if(lambda_lets.size() + type_lets.size() + expr_lets.size() != let_names.size()) {
+				error(l, "not all let names were defined");
 				return;
 			}
 
-		   if(is_rec_func && !rec_call_func.empty()){
-			   std::map<std::string, VariablePtr> funcVars;
-			   unsigned count = 0;
-			   for (const auto& name :  let_names) {
-				   if (count == 0){
-					   count++;
-					   continue;
-				   }
-				   Lambda_let& tmp = lambda_lets[count-1];
-				   TypeList types;
-				   for(const auto& v : tmp.params) types.push_back(v->getType());
-				   funcVars[name] = builder.variable(builder.functionType(types, tmp.retType, tmp.fk));
-				   count ++;
-			   }
-			   // generate a nested parser to parse the body with the right types
-			   std::vector<std::pair<VariablePtr, LambdaExprPtr>> funcs;
-			   count =1;
-			   for(const auto& let : lambda_lets){
-				   inspire_driver let_driver(let.expression, mgr, scopes);
-				   for (const auto pair : funcVars) let_driver.add_symb(pair.first, pair.second);
-				   try{
-					   ExpressionPtr lambda = let_driver.parseExpression();
-					   if (!lambda) {
-						   // write the location with the offset of the current call site
-						   // FIXME: due to the new string, locations get messed up
-						   let_driver.print_errors(std::cerr);
-						   error(l, "lambda expression is wrong");
-						   return;
-					   }
-					   if(let_names.size() < count && !(let_names[count]).compare(rec_call_func)) {
-						   VariablePtr temp;
-						   Lambda_let& tmp = lambda_lets[count-1];
-						   TypeList types;
-						   for(const auto& v : tmp.params) {
-							   types.push_back(v->getType());
-						   }
-						   temp = builder.variable(builder.functionType(types, tmp.retType, tmp.fk));
-						   funcs.push_back({funcVars[let_names[count]], lambda.as<LambdaExprPtr>()});
-					   } else {
-						   funcs.push_back({funcVars[let_names[count]], lambda.as<LambdaExprPtr>()});
-					   }
-				   }catch(...){
-					   error(l, "something went really wrong parsing lambda body");
-				   }
-				   count ++;
-			   }
-			   // generate funcs and bound them to the var types
-			   std::vector<LambdaBindingPtr> lambdas;
-			   for (const auto& lf : funcs){
-				   auto var = lf.first;
-				   auto params = lf.second->getParameterList();
-				   auto type = lf.second->getType();
-				   auto body = lf.second->getBody();
-				   lambdas.push_back(builder.lambdaBinding(var, builder.lambda(type.as<FunctionTypePtr>(), params, body)));
-			   }
-			   LambdaDefinitionPtr lambdaDef = builder.lambdaDefinition(lambdas);
-			   add_symb(l, let_names[0], builder.lambdaExpr(funcVars.find(rec_call_func)->second, lambdaDef));
-			   is_rec_func=0;
-			   rec_call_func = "";
-			   lambda_lets.clear();
-		   }
+			error(l, "mixed type/function/closure let not allowed");
+		}
 
-			// LAMBDA LETS (functions):
-			else if(let_names.size() == lambda_lets.size()) {
-				// DeclarationContext temp_scope (scopes);
 
-				std::map<std::string, VariablePtr> funcVars;
-				unsigned count = 0;
-				for(const auto& name : let_names) {
-					Lambda_let& tmp = lambda_lets[count];
+		let_names.clear();
+		let_count--;
+		set_inhibit(false);
+	}
 
-					TypeList types;
-					for(const auto& v : tmp.params) {
-						types.push_back(v->getType());
-					}
+	void inspire_driver::open_scope(const location& l, const std::string& name) {
+		scopes.open_scope(name);
+	}
 
-					funcVars[name] = builder.variable(builder.functionType(types, tmp.retType, tmp.fk));
-					count++;
-				}
+	void inspire_driver::close_scope(const location& l, const std::string& name) {
+		scopes.close_scope(name);
+	}
 
-				// generate a nested parser to parse the body with the right types
-				std::vector<std::pair<VariablePtr, LambdaExprPtr>> funcs;
-				count = 0;
-				for(const auto& let : lambda_lets) {
-					inspire_driver let_driver(let.expression, mgr, scopes);
-					for(const auto pair : funcVars) {
-						let_driver.add_symb(pair.first, pair.second);
-					}
-					try {
-						ExpressionPtr lambda = let_driver.parseExpression();
 
-						if(!lambda) {
-							// write the location with the offset of the current call site
-							// FIXME: due to the new string, locations get messed up
-							let_driver.print_errors(std::cerr);
-							error(l, "lambda expression is wrong");
+	void inspire_driver::set_inhibit(bool flag) {
+		if(!flag) {
+			if(inhibit_building_count > 0) { inhibit_building_count--; }
+		} else {
+			inhibit_building_count++;
+		}
+	}
+	bool inspire_driver::inhibit_building() const {
+		return inhibit_building_count > 0;
+	}
 
-							return;
-						}
 
-						funcs.push_back({funcVars[let_names[count]], lambda.as<LambdaExprPtr>()});
-					} catch(...) { error(l, "something went really wrong parsing lambda body"); }
+	void inspire_driver::using_scope_handle(const location& l, const std::vector<std::string>& extension_names) {
+		for(std::string extensionName : extension_names) {
+			extensionName.replace(0, 1, "");
+			extensionName.replace(extensionName.size() - 1, 1, "");
 
-					count++;
-				}
-
-				// if all variables in body are defined, this is regular function
-				if(funcs.size() == 1 && analysis::getFreeVariables(funcs[0].second).empty()) {
-					annotations::attachName(funcs[0].second, let_names[0]);
-					add_symb(l, let_names[0], funcs[0].second);
-				} else {
-					// generate funcs and bound them to the var types
-					std::vector<LambdaBindingPtr> lambdas;
-					for(const auto& lf : funcs) {
-						auto var = lf.first;
-						auto params = lf.second->getParameterList();
-						auto type = lf.second->getType();
-						auto body = lf.second->getBody();
-						lambdas.push_back(builder.lambdaBinding(var, builder.lambda(type.as<FunctionTypePtr>(), params, body)));
-					}
-					LambdaDefinitionPtr lambdaDef = builder.lambdaDefinition(lambdas);
-					for(const auto& fv : funcVars) {
-						add_symb(l, fv.first, builder.lambdaExpr(fv.second, lambdaDef));
-					}
-				}
-
-				lambda_lets.clear();
-			}
-			// TYPE LETS
-			else if(let_names.size() == type_lets.size()) {
-				std::vector<RecTypeBindingPtr> type_defs;
-				std::vector<std::string> names;
-				NodeMap non_recursive;
-				unsigned count = 0;
-
-				TypeList variables;
-				for(const auto& name : let_names) {
-					variables.push_back(builder.typeVariable(name));
-				}
-
-				// check for non recursive types
-				// if the type has no recursion inside, replace all uses of the type variable by a full type
-				for(const auto& type : type_lets) {
-					const std::string& name = let_names[count];
-					if(!contains_type_variables(type, variables)) {
-						non_recursive[builder.typeVariable(name)] = type;
-						annotations::attachName(type, name);
-						add_type(l, name, type);
-					}
-					count++;
-				}
-
-				count = 0;
-				// go over the types again and produce recursive type bindings for those who need it
-				for(const auto& type : type_lets) {
-					const std::string& name = let_names[count];
-
-					if(contains_type_variables(type, variables)) {
-						auto tmp = transform::replaceAllGen(mgr, type, non_recursive);
-
-						type_defs.push_back(builder.recTypeBinding(builder.typeVariable(name), tmp));
-						names.push_back(name);
-					}
-					count++;
-				}
-
-				// generate a full recursive type and one entry point for each type variable
-				RecTypeDefinitionPtr fullType = builder.recTypeDefinition(type_defs);
-				for(const auto& n : names) {
-					auto t = builder.recType(builder.typeVariable(n), fullType);
-					annotations::attachName(t, n);
-					add_type(l, n, t);
-				}
-
-				type_lets.clear();
-			}
-			// Expression LETS (includes closures)
-			else if(let_names.size() == expr_lets.size()) {
-				unsigned count = 0;
-				for(const auto& name : let_names) {
-					add_symb(l, name, expr_lets[count]);
-					count++;
-				}
-
-				expr_lets.clear();
+			// get extension factory from the registry
+			auto optFactory = lang::ExtensionRegistry::getInstance().lookupExtensionFactory(extensionName);
+			if (optFactory) {
+				import_extension((*optFactory)(mgr));
 			} else {
-				//            std::cout << "let count: " << let_count << std::endl;
-				//            std::cout << " ihibit? " << inhibit_building_count <<  std::endl;
-				//
-				//            std::cout << "let_mames " << let_names << std::endl;
-				//            std::cout << "let_type " << type_lets << std::endl;
-				//            std::cout << "let_expr " << expr_lets << std::endl;
-				//            std::cout << "let_lambd " << lambda_lets.size() << std::endl;
-
-				if(lambda_lets.size() + type_lets.size() + expr_lets.size() != let_names.size()) {
-					error(l, "not all let names were defined");
-					return;
-				}
-
-				error(l, "mixed type/function/closure let not allowed");
-			}
-
-
-			let_names.clear();
-			let_count--;
-			set_inhibit(false);
-		}
-
-		void inspire_driver::open_scope(const location& l, const std::string& name) {
-			scopes.open_scope(name);
-		}
-
-		void inspire_driver::close_scope(const location& l, const std::string& name) {
-			scopes.close_scope(name);
-		}
-
-
-		void inspire_driver::set_inhibit(bool flag) {
-			if(!flag) {
-				if(inhibit_building_count > 0) { inhibit_building_count--; }
-			} else {
-				inhibit_building_count++;
+				error(l, format("Unable to locate module: %s", extensionName.c_str()));
 			}
 		}
-		bool inspire_driver::inhibit_building() const {
-			return inhibit_building_count > 0;
+	}
+
+	void inspire_driver::import_extension(const lang::Extension& extension) {
+
+		// import symbols
+		for(const auto& cur : extension.getSymbols()) {
+			add_symb(cur.first, cur.second);
 		}
 
-
-		void inspire_driver::using_scope_handle(const location& l, const std::vector<std::string>& extension_names) {
-			for(std::string extensionName : extension_names) {
-				extensionName.replace(0, 1, "");
-				extensionName.replace(extensionName.size() - 1, 1, "");
-
-				// get extension factory from the registry
-				auto optFactory = lang::ExtensionRegistry::getInstance().lookupExtensionFactory(extensionName);
-				if (optFactory) {
-					import_extension((*optFactory)(mgr));
-				} else {
-					error(l, format("Unable to locate module: %s", extensionName.c_str()));
-				}
-			}
+		// import type aliases
+		for(const auto& cur : extension.getTypeAliases()) {
+			add_type_alias(cur.first, cur.second);
 		}
 
-		void inspire_driver::import_extension(const lang::Extension& extension) {
-
-			// import symbols
-			for(const auto& cur : extension.getSymbols()) {
-				add_symb(cur.first, cur.second);
-			}
-
-			// import type aliases
-			for(const auto& cur : extension.getTypeAliases()) {
-				add_type_alias(cur.first, cur.second);
-			}
-
-		}
+	}
 
 		// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Debug tools  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

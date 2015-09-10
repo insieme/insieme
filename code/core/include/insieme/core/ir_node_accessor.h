@@ -127,6 +127,10 @@ namespace core {
 			return getNode().nodeCategory == NC_Value;
 		}
 
+		bool isReference() const {
+			return true; //getNode().nodeCategory == NC_
+		}
+
 		/**
 		 * Obtains access to a concrete child of this node.
 		 *
@@ -134,7 +138,7 @@ namespace core {
 		 * @return a pointer to the requested child
 		 */
 		const NodePtr& getChild(std::size_t index) const {
-			assert_false(isValue()) << "Node represents a value!";
+			assert_false(isValue()) << "Node represents a value! <<< " << getNode().nodeCategory << " >>>";
 			assert_lt(index, getNode().children.size()) << "Index out of bound!";
 			return getNode().children[index];
 		}

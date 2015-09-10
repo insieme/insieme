@@ -539,7 +539,7 @@ namespace printer {
 				out << newLine << "}";
 			});
 
-			PRINT(TupleType, { out << '(' << join(",", node->getElementTypes(), [&](std::ostream&, const TypePtr& cur) { this->visit(cur); }) << ')'; });
+			PRINT(TupleType, { out << "" << join(",", node->getElementTypes(), [&](std::ostream&, const TypePtr& cur) { this->visit(cur); }) << ""; });
 
 			PRINT(Type, { out << *node; });
 
@@ -715,11 +715,12 @@ namespace printer {
 						} else {
 							if (!node->getChild(0)->getChild(0)->toString().compare("uint"))
 								out << "u";
-
-							if (!node->getChild(0)->getChild(2)->getChild(0)->toString().compare("8"))
-								out << "l";
-							else if (!node->getChild(0)->getChild(2)->getChild(0)->toString().compare("16"))
-								out << "ll";
+							if(node->getChild(0)->getChildList().size() > 2 && node->getChild(0)->getChild(2)->getChildList().size() > 0) {
+								if (!node->getChild(0)->getChild(2)->getChild(0)->toString().compare("8"))
+									out << "l";
+								else if (!node->getChild(0)->getChild(2)->getChild(0)->toString().compare("16"))
+									out << "ll";
+							}
 						}
 					}
 				}
@@ -894,13 +895,12 @@ namespace printer {
 			});
 
 			PRINT(BindExpr, {
-				out << "( function(" << join(", ", node->getParameters(),[&](std::ostream& out, const ExpressionPtr& cur) {
+				out << "function(" << join(", ", node->getParameters(),[&](std::ostream& out, const ExpressionPtr& cur) {
 					this->visit(cur->getType());
 					out << " ";
 					this->visit(cur);
 				}) << ")=> ";
 				visit(node->getCall());                 // ???????????????????
-				out << " )";
 			});
 
 			PRINT(CastExpr, {
@@ -1185,7 +1185,8 @@ namespace printer {
 				res.insert(std::make_pair(Literal, make_formatter([](InspirePrinter & printer, const CallExprPtr& call)FORMAT))).second;
 
 			#define ADD_BRACKET_FORMATTER(Literal, FORMAT) \
-				ADD_FORMATTER(Literal, { if(!HAS_OPTION(SKIP_BRACKETS)) OUT("("); FORMAT; if(!HAS_OPTION(SKIP_BRACKETS)) OUT(")"); })
+					ADD_FORMATTER(Literal, { if(!HAS_OPTION(SKIP_BRACKETS)) OUT("("); FORMAT; if(!HAS_OPTION(SKIP_BRACKETS)) OUT(")"); })
+
 
 			if(config.hasOption(PrettyPrinter::PRINT_DEREFS)) {
 				ADD_FORMATTER(refExt.getRefDeref(), {
@@ -1250,7 +1251,7 @@ namespace printer {
 
 			ADD_FORMATTER(refExt.getRefMemberAccess(), {
 				PRINT_ARG(0);
-				OUT("->");
+				OUT(".");
 				PRINT_ARG(1);
 			});
 			ADD_FORMATTER(basic.getCompositeMemberAccess(), {
@@ -1259,74 +1260,74 @@ namespace printer {
 				PRINT_ARG(1);
 			});
 
-			ADD_BRACKET_FORMATTER(basic.getRealAdd(), {
+			ADD_FORMATTER(basic.getRealAdd(), {
 				PRINT_ARG(0);
 				OUT("+");
 				PRINT_ARG(1);
 			});
-			ADD_BRACKET_FORMATTER(basic.getRealSub(), {
+			ADD_FORMATTER(basic.getRealSub(), {
 				PRINT_ARG(0);
 				OUT("-");
 				PRINT_ARG(1);
 			});
-			ADD_BRACKET_FORMATTER(basic.getRealMul(), {
+			ADD_FORMATTER(basic.getRealMul(), {
 				PRINT_ARG(0);
 				OUT("*");
 				PRINT_ARG(1);
 			});
-			ADD_BRACKET_FORMATTER(basic.getRealDiv(), {
+			ADD_FORMATTER(basic.getRealDiv(), {
 				PRINT_ARG(0);
 				OUT("/");
 				PRINT_ARG(1);
 			});
 
-			ADD_BRACKET_FORMATTER(basic.getUnsignedIntAdd(), {
+			ADD_FORMATTER(basic.getUnsignedIntAdd(), {
 				PRINT_ARG(0);
 				OUT("+");
 				PRINT_ARG(1);
 			});
-			ADD_BRACKET_FORMATTER(basic.getUnsignedIntSub(), {
+			ADD_FORMATTER(basic.getUnsignedIntSub(), {
 				PRINT_ARG(0);
 				OUT("-");
 				PRINT_ARG(1);
 			});
-			ADD_BRACKET_FORMATTER(basic.getUnsignedIntMul(), {
+			ADD_FORMATTER(basic.getUnsignedIntMul(), {
 				PRINT_ARG(0);
 				OUT("*");
 				PRINT_ARG(1);
 			});
-			ADD_BRACKET_FORMATTER(basic.getUnsignedIntDiv(), {
+			ADD_FORMATTER(basic.getUnsignedIntDiv(), {
 				PRINT_ARG(0);
 				OUT("/");
 				PRINT_ARG(1);
 			});
-			ADD_BRACKET_FORMATTER(basic.getUnsignedIntMod(), {
+			ADD_FORMATTER(basic.getUnsignedIntMod(), {
 				PRINT_ARG(0);
 				OUT("%");
 				PRINT_ARG(1);
 			});
 
-			ADD_BRACKET_FORMATTER(basic.getSignedIntAdd(), {
+			ADD_FORMATTER(basic.getSignedIntAdd(), {
 				PRINT_ARG(0);
 				OUT("+");
 				PRINT_ARG(1);
 			});
-			ADD_BRACKET_FORMATTER(basic.getSignedIntSub(), {
+			ADD_FORMATTER(basic.getSignedIntSub(), {
 				PRINT_ARG(0);
 				OUT("-");
 				PRINT_ARG(1);
 			});
-			ADD_BRACKET_FORMATTER(basic.getSignedIntMul(), {
+			ADD_FORMATTER(basic.getSignedIntMul(), {
 				PRINT_ARG(0);
 				OUT("*");
 				PRINT_ARG(1);
 			});
-			ADD_BRACKET_FORMATTER(basic.getSignedIntDiv(), {
+			ADD_FORMATTER(basic.getSignedIntDiv(), {
 				PRINT_ARG(0);
 				OUT("/");
 				PRINT_ARG(1);
 			});
-			ADD_BRACKET_FORMATTER(basic.getSignedIntMod(), {
+			ADD_FORMATTER(basic.getSignedIntMod(), {
 				PRINT_ARG(0);
 				OUT("%");
 				PRINT_ARG(1);
@@ -1619,7 +1620,7 @@ namespace printer {
 				ADD_FORMATTER(ext.getAttr(), { PRINT_ARG(0); });
 			}
 
-
+			#undef ADD_BRACKET_FORMATTER
 			#undef ADD_FORMATTER
 			#undef OUT
 			#undef ARG

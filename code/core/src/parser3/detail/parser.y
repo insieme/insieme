@@ -446,7 +446,7 @@ named_type : "identifier" "<" gen_type { RULE $$ = driver.genGenericType(@$, $1,
                             $$ = driver.genGenericType(@$, $1, $5, $3.typeParams);
                         }
            | "type_var"   { RULE $$ = driver.builder.typeVariable($1); }
-           | "type_lit" "(" type ")" { RULE $$ = $3; }
+           | "type_lit(" type ")" { RULE $$ = $2; }
            | "identifier" "::" namespaced_type { RULE
                                     $1.append("::"); $1.append($3); 
                                     $$ = driver.genGenericType(@$, $1, ParentList(), TypeList()); 
