@@ -151,6 +151,15 @@ namespace analysis {
 	bool isRefOf(const NodePtr& candidate, const NodeType kind);
 
 	/**
+	 * Tests whether the given node is reference to a type satisfying the given filter.
+	 *
+	 * @param candidate the node to be tested
+	 * @param filter the filter to be applied on the element type
+	 * @return true if so, false otherwise
+	 */
+	bool isRefOf(const NodePtr& candidate, const std::function<bool(const NodePtr&)>& filter);
+
+	/**
 	 * A simple helper utility to test whether the given node is a reference type.
 	 *
 	 * @param type the type to be tested.

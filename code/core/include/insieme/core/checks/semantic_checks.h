@@ -66,11 +66,6 @@ namespace checks {
 	 */
 	SIMPLE_CHECK(MissingReturnStmt, LambdaExpr, false);
 
-	/**
-	 * This check verifies that NumCasts are only applied to numeric types
-	 */
-	SIMPLE_CHECK(IllegalNumCast, CallExpr, false);
-
 	#undef SIMPLE_CHECK
 
 } // end namespace check

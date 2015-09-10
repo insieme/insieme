@@ -114,6 +114,14 @@ namespace lang {
 				"  }                                             "
 		)
 
+		/**
+		 * A built-in derived operator for obtaining pointers to functions.
+		 */
+		LANG_EXT_DERIVED_WITH_NAME(PtrOfFunction, "ptr_of_function",
+				"lambda ('a fun) -> ptr<'a,t,f> {"
+				"	return ptr_from_ref(ref_of_function(fun));"
+				"}"
+		)
 
 		// -- casts --
 

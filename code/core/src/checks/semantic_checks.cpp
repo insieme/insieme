@@ -95,13 +95,13 @@ namespace checks {
 								} else {
 									add(res, Message(useCallAdr, EC_SEMANTIC_ARRAY_INDEX_OUT_OF_RANGE,
 									                 format("Potentially unsafe indexing of single-element array %s using formula %s",
-									                        toString(*(param)).c_str(), toString(formula).c_str()),
+									                        *param, formula),
 									                 Message::WARNING));
 								}
 							} catch(const arithmetic::NotAFormulaException& e) {
 								add(res, Message(useCallAdr, EC_SEMANTIC_ARRAY_INDEX_OUT_OF_RANGE,
 								                 format("Potentially unsafe indexing of single-element array %s using expression %s",
-								                        toString(*(param)).c_str(), toString(*(usecall->getArgument(1))).c_str()),
+								                        *param, *(usecall->getArgument(1))),
 								                 Message::WARNING));
 							}
 						} else {
@@ -253,41 +253,6 @@ namespace checks {
 					                 Message::ERROR));
 				}
 			}
-		}
-
-		return res;
-	}
-
-	OptionalMessageList IllegalNumCastCheck::visitCallExpr(const CallExprAddress& callExpr) {
-		OptionalMessageList res;
-
-		auto& manager = callExpr->getNodeManager();
-		auto& basic = manager.getLangBasic();
-
-		//skip all calls which aren't NumericCasts
-		if (!analysis::isCallOf(callExpr.getAddressedNode(), basic.getNumericCast())) {
-			return res;
-		}
-
-		const auto& targetExprType = callExpr.getArgument(0).getType().getAddressedNode();
-
-		const auto& targetGenericType = callExpr.getArgument(1).getType().as<GenericTypePtr>();
-		if (targetGenericType.getTypeParameter().size() != 1) {
-			add(res, Message(callExpr, EC_SEMANTIC_ILLEGAL_NUM_CAST, format("given target type is not a numeric type (%s).", toString(*(targetGenericType)).c_str()), Message::ERROR));
-		}
-		const auto& targetType = targetGenericType.getTypeParameter(0);
-
-		//TODO we need a special case handling enum types here, until this is implemented
-		auto& enumExt = manager.getLangExtension<lang::EnumExtension>();
-
-		//check expression type
-		if (!(basic.isNumeric(targetExprType) || enumExt.isEnumType(targetExprType))) {
-			add(res, Message(callExpr, EC_SEMANTIC_ILLEGAL_NUM_CAST, format("given expression is not of numeric type (%s).", toString(*(targetExprType)).c_str()), Message::ERROR));
-		}
-
-		//as well as the target type
-		if (!(basic.isNumeric(targetType) || enumExt.isEnumType(targetType))) {
-			add(res, Message(callExpr, EC_SEMANTIC_ILLEGAL_NUM_CAST, format("given target type is not a numeric type (%s).", toString(*(targetType)).c_str()), Message::ERROR));
 		}
 
 		return res;

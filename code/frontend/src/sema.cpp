@@ -176,13 +176,29 @@ namespace frontend {
 				L = leftBracketLoc.getLocWithOffset(lBracePos - strData);
 			}
 		}
-		// the same is done for the right bracket
+
+		// For the right bracket, we start at the final statement in the compound 
+		//   (or its start if it is empty) and search forward until we find the first "}"
+		// Otherwise, cases such as this:
+		//
+		// {
+		//    bla();
+		// }
+		// #pragma test expect_ir(R"( {} )")
+		//
+		// will be broken
+
 		{
-			SourceLocation&& rightBracketLoc = SourceMgr.getImmediateSpellingLoc(R);
+			SourceLocation rightBracketLoc;
+			if(CS->size() == 0) {
+				rightBracketLoc = SourceMgr.getImmediateSpellingLoc(L);
+			} else {
+				rightBracketLoc = SourceMgr.getImmediateSpellingLoc(CS->body_back()->getLocEnd());
+			}
 			std::pair<FileID, unsigned>&& locInfo = SourceMgr.getDecomposedLoc(rightBracketLoc);
-			llvm::StringRef&& buffer = SourceMgr.getBufferData(locInfo.first);
+			llvm::StringRef buffer = SourceMgr.getBufferData(locInfo.first);
 			const char* strData = buffer.begin() + locInfo.second;
-			char const* rBracePos = strbchr(strData, buffer.begin(), '}');
+			char const* rBracePos = strchr(strData, '}');
 
 			// We know the location of the right bracket, we overwrite the value of R with the correct location
 			if((((rightBracketLoc.getRawEncoding() & ~MacroIDBit) + (rBracePos - strData)) & MacroIDBit) == 0) {

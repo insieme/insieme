@@ -216,6 +216,18 @@ namespace core {
 		ProgramPtr parseProgram(const string& code, const eager_definition_map& symbols) const;
 
 		/**
+		 * Allows lists of addresses to be parsed in an expression. This parser supports the same grammar + allows constructs to be enclosed
+		 * within $ .. $ signs. Addresses referencing constructs enclosed like this will be returned. The resulting list is
+		 * ordered according to the order of node-addresses (lexicographical).
+		 */
+		vector<NodeAddress> parseAddressesExpression(const string& code, const lazy_definition_map& symbols = lazy_definition_map()) const;
+
+		/**
+		 * The same as above, but utilizing a eager definition map (will be internally converted into a lazy map).
+		 */
+		vector<NodeAddress> parseAddressesExpression(const string& code, const eager_definition_map& symbols) const;
+
+		/**
 		 * Allows lists of addresses to be parsed in a Statement. This parser supports the same grammar + allows constructs to be enclosed
 		 * within $ .. $ signs. Addresses referencing constructs enclosed like this will be returned. The resulting list is
 		 * ordered according to the order of node-addresses (lexicographical).

@@ -45,70 +45,88 @@
 namespace insieme {
 namespace frontend {
 namespace extensions {
-	
+
 	insieme::core::TypePtr VariableLengthArrayExtension::Visit(const clang::QualType& type, insieme::frontend::conversion::Converter& converter) {
-		//we iterate trough the dimensions of 
-		//the array from left to right. There is no hint 
-		//in the C standard how this should be handled
-		//and therefore the normal operator precedence
-		//is used.
+		// we iterate trough the dimensions of the array from left to right. There is no hint
+		// in the C standard how this should be handled and therefore the normal operator precedence is used.
 		if(const clang::VariableArrayType* arrType = llvm::dyn_cast<clang::VariableArrayType>(type.getTypePtr())) {
-			//only consider variable array types
-			//create a decl stmt e.g., decl uint v1 = i;
+			// check if we already converted this decl
+			if(::containsKey(arrayTypeMap, arrType)) return arrayTypeMap[arrType];
+
+			// only consider variable array types
+			// create a decl stmt e.g., decl uint v1 = i;
 			core::IRBuilder builder = converter.getIRBuilder();
 			auto index = converter.convertExpr(arrType->getSizeExpr());
-			//cast needed from rhs type to int<inf>?!
-			if(index->getType() != builder.getLangBasic().getIntInf()) {
-				index = builder.numericCast(index, builder.getLangBasic().getIntInf());
-			} 
+			// cast needed from rhs type to int<inf>?!
+			if(index->getType() != builder.getLangBasic().getIntInf()) { index = builder.numericCast(index, builder.getLangBasic().getIntInf()); }
 			auto decl = builder.declarationStmt(builder.getLangBasic().getIntInf(), index);
 			sizes.push_back(decl);
 
-			//convert the element type (in nested array case this is again a variable array type)
+			// convert the element type (in nested array case this is again a variable array type)
 			core::TypePtr elementType = converter.convertType(arrType->getElementType());
 			core::TypePtr arrayType = builder.arrayType(elementType, decl->getVariable());
 
+			// add type to map
+			arrayTypeMap[arrType] = arrayType;
 			return arrayType;
 		}
 		return nullptr;
 	}
-	
+
 	stmtutils::StmtWrapper VariableLengthArrayExtension::Visit(const clang::Stmt* stmt, insieme::frontend::conversion::Converter& converter) {
-		sizes.clear();
+		if(llvm::dyn_cast<clang::DeclStmt>(stmt)) inDecl = true;
 		return stmtutils::StmtWrapper();
 	}
 
-	stmtutils::StmtWrapper VariableLengthArrayExtension::PostVisit(const clang::Stmt* stmt, const stmtutils::StmtWrapper& irStmt, 
-					insieme::frontend::conversion::Converter& converter) {
-		if(sizes.size()>0) {
-			//insert the variable declarations of the 
-			//indices before the array is declared
+	stmtutils::StmtWrapper VariableLengthArrayExtension::PostVisit(const clang::Stmt* stmt, const stmtutils::StmtWrapper& irStmt,
+		                                                           insieme::frontend::conversion::Converter& converter) {
+		if(inDecl && sizes.size() > 0) {
+			// insert the variable declarations of the indices before the array is declared
 			stmtutils::StmtWrapper newIRStmt = irStmt;
-			while(sizes.size()>0) {
+			while(sizes.size() > 0) {
 				newIRStmt.insert(newIRStmt.begin(), sizes.back());
 				sizes.pop_back();
-			}	
+			}
 			return newIRStmt;
 		}
+		assert_true(sizes.empty()) << "Sizes array not empty, something went wrong during translation of VLA type.";
+		inDecl = false;
 		return irStmt;
 	}
 
-	
+
 	core::ExpressionPtr VariableLengthArrayExtension::Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& converter) {
-		//HINT: This will change to clang::SizeOfAlignOfExpr with clang 3.7
-		if(const clang::UnaryExprOrTypeTraitExpr* sizeofexpr = llvm::dyn_cast<clang::UnaryExprOrTypeTraitExpr>(expr)) {
-			//only do this if we have a decl ref to a variable length array
-			if(!sizeofexpr->isArgumentType()) {
-				if(const clang::DeclRefExpr* varTy = llvm::dyn_cast<clang::DeclRefExpr>(sizeofexpr->getArgumentExpr()->IgnoreParenImpCasts())) {
-					//TODO: IMPLEMENT SIZEOF FOR VAR ARRAYS HERE!!!
-					//do the map lookup here
-					assert_not_implemented() << "UnaryExprOrTypeTraitExpr for VLAs not implemented.";
+		auto& basic = converter.getNodeManager().getLangBasic();
+		auto& builder = converter.getIRBuilder();
+
+		// HINT: This will change to clang::SizeOfAlignOfExpr with clang 3.7
+		if(clang::UnaryExprOrTypeTraitExpr* sizeofexpr = const_cast<clang::UnaryExprOrTypeTraitExpr*>(llvm::dyn_cast<clang::UnaryExprOrTypeTraitExpr>(expr))) {
+			// if it's a VLA type, clang gives us the components we need to multiply in the child list (up to the innermost VLA)
+			if(sizeofexpr->isArgumentType()) {
+				// run through the conversion to see if it's VLA
+				auto irType = converter.convertType(sizeofexpr->getTypeOfArgument());
+				// if sizes is not empty, we just converted a VLA
+				if(!sizes.empty()) {
+					// use sizes to navigate to innermost VLA and get its element type
+					core::TypePtr elemType;
+					do {
+						elemType = core::lang::ArrayType(irType).getElementType();
+						if(core::lang::ArrayType(irType).getSize() == sizes.front()->getVariable()) sizes.pop_front();
+						irType = elemType;
+					} while(!sizes.empty());
+					// multiply all children with sizeof of inner type
+					auto retExpr = builder.callExpr(basic.getSizeof(), builder.getTypeLiteral(elemType));
+					for(auto child : sizeofexpr->children()) {
+						retExpr = builder.mul(retExpr, builder.numericCast(converter.convertExpr(llvm::dyn_cast<clang::Expr>(child)), basic.getUInt8()));
+					}
+					return retExpr;
 				}
 			}
+			// if argument of UnaryExprOrTypeTraitExpr is any DeclRef, then handle like every other UnaryExprOrTypeTraitExpr, outside of this FE extension
 		}
 		return nullptr;
 	}
-	
-}
-}
-}
+
+} // end namespace extensions
+} // end namespace frontend
+} // end namespace insieme

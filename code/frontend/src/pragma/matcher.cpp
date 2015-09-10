@@ -34,30 +34,31 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/frontend/pragma/matcher.h"
-#include "insieme/frontend/converter.h"
-#include "insieme/frontend/utils/source_locations.h"
-#include "insieme/frontend/utils/error_report.h"
-
-#include "insieme/utils/logging.h"
-#include "insieme/utils/string_utils.h"
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// What we are doing here is: patch the Clang preprocessor with a friend declaration to get internal access
+//   (without having to physically patch the compiled clang library) -- Don't think too hard about this.
+// This is required in order to implement cpp_string_lit_p
+//---------------------------------------------------------------------------------------------------------------------
+namespace insieme { namespace frontend { namespace pragma { class cpp_string_lit_p; } } }
+#define Ident__has_declspec \
+Ident__has_declspec;\
+friend class insieme::frontend::pragma::cpp_string_lit_p
 #include <clang/Lex/Preprocessor.h>
-#include <clang/Parse/Parser.h>
-#include <clang/Sema/Sema.h>
-#include <clang/Sema/Lookup.h>
-#include <clang/Frontend/TextDiagnosticPrinter.h>
-#include <clang/Basic/Diagnostic.h>
-#include <clang/AST/Expr.h>
-#include <clang/AST/ASTContext.h>
-#pragma GCC diagnostic pop
+#undef Ident__has_declspec
+//------------------------------------------------------- Hack over ---------------------------------------------------
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#include <llvm/Support/raw_ostream.h>
+#include "insieme/frontend/pragma/matcher.h"
 
 #include <boost/algorithm/string/join.hpp>
 
+#include "insieme/frontend/converter.h"
+#include "insieme/frontend/utils/source_locations.h"
+#include "insieme/frontend/utils/error_report.h"
+#include "insieme/frontend/clang.h"
+
+#include "insieme/utils/logging.h"
+#include "insieme/utils/string_utils.h"
 
 using namespace clang;
 using namespace insieme::frontend;
@@ -80,7 +81,7 @@ namespace {
 namespace insieme {
 namespace frontend {
 namespace pragma {
-
+	
 	// ------------------------------------ ValueUnion ---------------------------
 	ValueUnion::~ValueUnion() {
 		if(ptrOwner && is<clang::Stmt*>()) {
@@ -319,6 +320,10 @@ namespace pragma {
 	std::ostream& expr_p::printTo(std::ostream& out) const {
 		return out << "expr_p[" << getMapName() << "]";
 	}
+	
+	std::ostream& cpp_string_lit_p::printTo(std::ostream& out) const {
+		return out << "cpp_string_lit_p[" << getMapName() << "]";
+	}
 
 	std::ostream& var_p::printTo(std::ostream& out) const {
 		return out << "var_p[" << getMapName() << "]";
@@ -341,8 +346,8 @@ namespace pragma {
 	}
 
 	bool star::match(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const {
-		while(getNode()->match(PP, mmap, errStack, recID))
-			;
+		while(getNode()->match(PP, mmap, errStack, recID)) {
+		}
 		return true;
 	}
 
@@ -376,10 +381,9 @@ namespace pragma {
 	}
 
 	bool expr_p::match(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const {
-		// ClangContext::get().getParser()->Tok.setKind(*firstTok);
 		PP.EnableBacktrackAtThisPos();
 		Expr* result = ParserProxy::get().ParseExpression(PP);
-
+		
 		if(result) {
 			PP.CommitBacktrackedTokens();
 			ParserProxy::get().EnterTokenStream(PP);
@@ -391,6 +395,36 @@ namespace pragma {
 		}
 		PP.Backtrack();
 		errStack.addExpected(recID, ParserStack::Error("expr", ParserProxy::get().CurrentToken().getLocation()));
+		return false;
+	}
+	
+	bool cpp_string_lit_p::match(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const {
+		// Big picture: we temporarily change the lexer to C++11 standard, lex the string literal, then revert everything
+		PP.EnableBacktrackAtThisPos();	
+		// Exit caching and recompute lexer kind necessary to obtain a valid lexer pointer in order to enable c++11 language options
+		PP.ExitCachingLexMode();
+		PP.recomputeCurLexerKind();
+		auto lex = dynamic_cast<clang::Lexer*>(PP.getCurrentLexer());
+		bool prev = lex->getLangOpts().CPlusPlus11;
+		const_cast<LangOptions&>(lex->getLangOpts()).CPlusPlus11 = true;
+		PP.EnterCachingLexMode();
+		FinalActions restore([&]{ 
+			const_cast<LangOptions&>(lex->getLangOpts()).CPlusPlus11 = prev;
+		});
+		
+		clang::Token token;
+		std::string l;
+		bool ret = PP.LexStringLiteral(token, l, "cpp_string_lit", true);
+
+		if(ret) {
+			// LexStringLiteral consumes one additional non-string token, undo that
+			PP.RevertCachedTokens(1);
+			PP.CommitBacktrackedTokens();
+			mmap[getMapName()].push_back(ValueUnionPtr(new ValueUnion(l)));
+			return true;
+		}
+		PP.Backtrack();
+		errStack.addExpected(recID, ParserStack::Error("cpp_string_lit", token.getLocation()));
 		return false;
 	}
 

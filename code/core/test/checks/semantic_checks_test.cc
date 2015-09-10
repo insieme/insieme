@@ -379,66 +379,6 @@ namespace checks {
 		EXPECT_EQ(toString(checkResult), "[]");
 	}
 
-	TEST(IllegalNumCastCheck, Simple) {
-		NodeManager manager;
-		IRBuilder builder(manager);
-		CheckPtr illegalNumCastCheckCheck = makeRecursive(make_check<IllegalNumCastCheck>());
-
-		//legal numeric cast of constant to integral type
-		{
-			auto expr = builder.parseExpr("num_cast(3, type(int<4>))");
-			EXPECT_TRUE(expr) << "parsing error";
-
-			auto checkResult = check(expr, illegalNumCastCheckCheck);
-			EXPECT_TRUE(checkResult.empty());
-			EXPECT_EQ(toString(checkResult), "[]");
-		}
-
-		//legal numeric cast of expression to integral type
-		{
-			auto expr = builder.parseExpr("num_cast(5 + 4, type(int<4>))");
-			EXPECT_TRUE(expr) << "parsing error";
-
-			auto checkResult = check(expr, illegalNumCastCheckCheck);
-			EXPECT_TRUE(checkResult.empty());
-			EXPECT_EQ(toString(checkResult), "[]");
-		}
-
-		//legal numeric cast of constant to real type
-		{
-			auto expr = builder.parseExpr("num_cast(3, type(real<4>))");
-			EXPECT_TRUE(expr) << "parsing error";
-
-			auto checkResult = check(expr, illegalNumCastCheckCheck);
-			EXPECT_TRUE(checkResult.empty());
-			EXPECT_EQ(toString(checkResult), "[]");
-		}
-
-		//illegal numeric cast from string type
-		{
-			auto expr = builder.parseExpr("num_cast(\"test\", type(real<4>))");
-			EXPECT_TRUE(expr) << "parsing error";
-
-			auto checkResult = check(expr, illegalNumCastCheckCheck);
-			EXPECT_FALSE(checkResult.empty());
-			auto errorString = toString(checkResult[0]);
-			EXPECT_TRUE(errorString.find("SEMANTIC / ILLEGAL_NUM_CAST") != string::npos);
-			EXPECT_TRUE(errorString.find("MSG: given expression is not of numeric type") != string::npos);
-		}
-
-		//illegal numeric cast to arbitrary type
-		{
-			auto expr = builder.parseExpr("num_cast(3, lit(foo))");
-			EXPECT_TRUE(expr) << "parsing error";
-
-			auto checkResult = check(expr, illegalNumCastCheckCheck);
-			EXPECT_FALSE(checkResult.empty());
-			auto errorString = toString(checkResult[0]);
-			EXPECT_TRUE(errorString.find("SEMANTIC / ILLEGAL_NUM_CAST") != string::npos);
-			EXPECT_TRUE(errorString.find("MSG: given target type is not a numeric type") != string::npos);
-		}
-	}
-
 } // end namespace checks
 } // end namespace core
 } // end namespace insieme
