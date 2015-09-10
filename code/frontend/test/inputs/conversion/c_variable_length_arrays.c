@@ -19,13 +19,19 @@ int main() {
 		int i = 3;
 		float arrfm[i+3];
 	}
-
+	
 	#pragma test expect_ir("{ decl ref<int<4>,f,f> v0 = var(3); decl int<inf> v1 = type_cast(*v0, type(int<inf>)); decl ref<array<real<4>,#v1>,t,f> v2; }")
 	{
 		int i = 3;
 		const float arrcf[i];
 	}
-	
+
+	#pragma test expect_ir("{ decl ref<int<4>,f,f> v0 = var(3); decl int<inf> v1 = type_cast(*v0, type(int<inf>)); decl ref<array<real<4>,#v1>,t,f> v2; ptr_from_array(v2); }")
+	{
+		int i = 3;
+		const float arrcf[i];
+		arrcf;
+	}	
 
 	#pragma test expect_ir("{ decl ref<int<4>,f,f> v0 = var(3); decl int<inf> v1 = type_cast(*v0, type(int<inf>)); decl ref<array<real<4>,#v1>,f,t> v2; }")
 	{
@@ -54,6 +60,7 @@ int main() {
 		int k = 10;
 		float arrarrarrf[i][j][k];
 	}
+
 	#pragma test expect_ir("{ decl ref<int<4>,f,f> v0 = var(3); decl ref<int<4>,f,f> v1 = var(6); decl ref<int<4>,f,f> v2 = var(10); decl int<inf> v3 = type_cast(*v0+2, type(int<inf>)); decl int<inf> v4 = type_cast(*v1, type(int<inf>)); decl int<inf> v5 = type_cast(*v2+1, type(int<inf>)); decl ref<array<array<array<real<4>,#v5>,#v4>,#v3>,f,f> v6; }")
 	{
 		int i = 3;
@@ -98,18 +105,28 @@ int main() {
 		sizeof(int[i][5][j][2]);
 	}
 
-	#pragma test expect_ir("{ decl ref<int<4>> v0 = var(10); decl int<inf> v1 = type_cast(*v0, type(int<inf>)); decl ref<array<int<4>,#v1>> v2; decl int<inf> v3 = type_cast(*v0, type(int<inf>)); sizeof(type(array<int<4>,#v3>)); }")
+	#pragma test expect_ir("{ decl ref<int<4>> v0 = var(10); decl int<inf> v1 = type_cast(*v0, type(int<inf>)); decl ref<array<int<4>,#v1>> v2; sizeof(type(array<int<4>,#v1>)); }")
 	{
 		int i=10;
 		int k[i];
 		sizeof(k);
 	}
 	
-	#pragma test expect_ir("{ decl ref<int<4>> v0 = var(10); decl ref<int<4>> v1 = var(20); decl int<inf> v2 = type_cast(*v0, type(int<inf>)); decl int<inf> v3 = type_cast(*v1, type(int<inf>)); decl ref<array<array<int<4>,#v3>,#v2>> v4; decl int<inf> v5 = type_cast(*v0, type(int<inf>)); decl int<inf> v6 = type_cast(*v1, type(int<inf>)); sizeof(type(array<array<int<4>,#v6>,#v5>)); }")
+	#pragma test expect_ir("{ decl ref<int<4>> v0 = var(10); decl ref<int<4>> v1 = var(20); decl int<inf> v2 = type_cast(*v0, type(int<inf>)); decl int<inf> v3 = type_cast(*v1, type(int<inf>)); decl ref<array<array<int<4>,#v3>,#v2>> v4; sizeof(type(array<array<int<4>,#v3>,#v2>)); }")
 	{
 		int i=10;
 		int j=20;
 		int l[i][j];
 		sizeof(l);
+	}
+	
+	#pragma test expect_ir("{ decl ref<int<4>> v0 = var(10); decl ref<int<4>> v1 = var(20); decl int<inf> v2 = type_cast(*v0, type(int<inf>)); decl int<inf> v3 = type_cast(*v1, type(int<inf>)); decl ref<array<array<int<4>,#v3>,#v2>> v4; decl int<inf> v5 = type_cast(*v0, type(int<inf>)); decl int<inf> v6 = type_cast(*v1, type(int<inf>)); decl ref<array<array<int<4>,#v6>,#v5>> v7; sizeof(type(array<array<int<4>,#v3>,#v2>)); sizeof(type(array<array<int<4>,#v6>,#v5>)); }")
+	{
+		int i=10;
+		int j=20;
+		int l[i][j];
+		int x[i][j];
+		sizeof(l);
+		sizeof(x);
 	}
 }

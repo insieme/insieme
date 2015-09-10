@@ -40,14 +40,24 @@
 
 #include "insieme/frontend/extensions/frontend_extension.h"
 
+// forward decl
+namespace clang {
+	class VariableArrayType;
+}
+
 namespace insieme {
 namespace frontend {
 namespace extensions {
 	
 	class VariableLengthArrayExtension : public FrontendExtension {
 	private:
+		// store list of generated declaration expressions
 		std::list<core::DeclarationStmtPtr> sizes;
-		std::map<const clang::Decl*, std::list<core::ExpressionPtr>> arrayDeclVarMap;
+		// map from clang declarations to the associated variable array type
+		std::map<const clang::VariableArrayType*, core::TypePtr> arrayTypeMap;
+		// whether we are currently in a declaration statement
+		bool inDecl = false;
+
 	public:
 		/**
 		 *  Type Visitor that converts clang variable sized array types 
