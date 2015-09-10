@@ -755,9 +755,8 @@ namespace core {
 	CallExprPtr IRBuilderBaseModule::atomicAssignment(const CallExprPtr& assignment) {
 		// FIXME argument order
 		const auto& basic = manager.getLangBasic();
-		auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
 		auto& parExt = manager.getLangExtension<lang::ParallelExtension>();
-		assert_true(refExt.isRefAssign(assignment->getFunctionExpr())) << "Trying to build atomic assignment from non-assigment";
+		assert_true(manager.getLangExtension<lang::ReferenceExtension>().isRefAssign(assignment->getFunctionExpr())) << "Trying to build atomic assignment from non-assigment";
 
 		const auto &lhs = assignment->getArgument(0), &rhs = assignment->getArgument(1);
 		const auto& lhsDeref = deref(lhs);
