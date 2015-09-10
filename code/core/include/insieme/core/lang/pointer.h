@@ -220,13 +220,20 @@ namespace lang {
 		    "lambda (ptr<'a,'c,'v> a) -> ptr<array<'a>,'c,'v> { return ptr_expand(a, dp_element(dp_root(type(array<'a>)),0u)); }"
 		)
 
-
 		/**
 		 * A derived operator accessing a element addressed by a pointer + some offset.
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(
 			PtrSubscript, "ptr_subscript",
 			"lambda (ptr<'a,'c,'v> p, int<8> i) -> ref<'a,'c,'v> { return p.data[p.offset + i]; }"
+		)
+
+		/**
+		 * A derived operator accessing a element addressed by a pointer.
+		 */
+		LANG_EXT_DERIVED_WITH_NAME(
+			PtrDeref, "ptr_deref",
+			"lambda (ptr<'a,'c,'v> p) -> 'a { return ref_deref(ptr_to_ref(p)); }"
 		)
 
 		// -- null --
@@ -401,12 +408,14 @@ namespace lang {
 	ExpressionPtr buildPtrFromArray(const ExpressionPtr& arrExpr);
 	ExpressionPtr buildPtrFromIntegral(const ExpressionPtr& intExpr, const TypePtr& ptrType);
 	ExpressionPtr buildPtrToIntegral(const ExpressionPtr& ptrExpr, const TypePtr& intType);
+	ExpressionPtr buildPtrOfFunction(const ExpressionPtr& funExpr);
 
 	// casts
 	ExpressionPtr buildPtrCast(const ExpressionPtr& ptrExpr, bool newConst, bool newVolatile);
 	ExpressionPtr buildPtrReinterpret(const ExpressionPtr& ptrExpr, const TypePtr& newElementType);
 
 	// operations
+	ExpressionPtr buildPtrDeref(const ExpressionPtr& ptrExpr);
 	ExpressionPtr buildPtrSubscript(const ExpressionPtr& ptrExpr, const ExpressionPtr& subscriptExpr);
 	ExpressionPtr buildPtrOperation(BasicGenerator::Operator op, const ExpressionPtr& lhs, const ExpressionPtr& rhs);
 
