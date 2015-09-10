@@ -377,11 +377,17 @@ namespace conversion {
 	//							PREDEFINED EXPRESSION
 	//
 	// [C99 6.4.2.2] - A predefined identifier such as __func__.
+	// The identifier __func__ shall be implicitly declared by the translator as if, immediately following
+	// the opening brace of each function definition, the declaration 
+	// static const char __func__[] = "function-name";
+	// appeared, where function-name is the name of the lexically-enclosing function.
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr Converter::ExprConverter::VisitPredefinedExpr(const clang::PredefinedExpr* preExpr) {
 		core::ExpressionPtr retIr;
 		LOG_EXPR_CONVERSION(preExpr, retIr);
-		frontend_assert(false) << "PredefinedExpr not implemented";
+
+		retIr = Visit(preExpr->getFunctionName());
+
 		return retIr;
 	}
 

@@ -1,4 +1,11 @@
+
+void nameCheck() {
+	#pragma test expect_ir(R"(ptr_from_array(lit("nameCheck":ref<array<char,10>>)))")
+	__func__;
+}
+
 int main() {
+	nameCheck();
 	
 	//===-------------------------------------------------------------------------------------------------------------------------------- UNARY OPERATORS ---===
 	
