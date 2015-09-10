@@ -34,10 +34,6 @@ int main() {
 	#pragma test expect_ir("lit(\"1.0E+0\":real<8>)")
 	1.0;
 
-	// TODO: support long double types?
-	//pragma test expect_ir("lit(\"2.0E+0\":real<16>)")
-	//2.0L;
-
 	#pragma test expect_ir("lit(\"3.0E+1\":real<8>)")
 	3.0e+1;
 
