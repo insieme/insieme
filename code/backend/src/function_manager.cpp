@@ -1515,18 +1515,9 @@ namespace backend {
 	}
 
 	FunctionIncludeTable getBasicFunctionIncludeTable() {
-		// create table
-		FunctionIncludeTable res;
-
-		// add function definitions from macro file
-		#define FUN(l, f) res[#f] = l;
-		#include "includes.def"
-		#undef FUN
-
-		// done
-		return res;
+		// the basic include table is empty
+		return FunctionIncludeTable();
 	}
-
 
 } // end namespace backend
 } // end namespace insieme

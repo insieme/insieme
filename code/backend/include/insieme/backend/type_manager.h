@@ -63,10 +63,10 @@ namespace backend {
 	class ChannelTypeInfo;
 
 	typedef TypeInfo* TypeInfoPtr;
+
 	typedef std::map<string, string> TypeIncludeTable;
 
 	TypeIncludeTable getBasicTypeIncludeTable();
-
 
 	typedef std::function<const TypeInfo*(const Converter&, const core::TypePtr&)> TypeHandler;
 

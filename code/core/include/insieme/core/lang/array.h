@@ -226,6 +226,11 @@ namespace lang {
 		bool isVariableSize() const {
 			return !isConstSize();
 		}
+
+		unsigned getNumElements() const {
+			assert_true(isConstSize());
+			return size.as<LiteralPtr>()->getValueAs<unsigned>();
+		}
 	};
 
 	// --------------------- utilities -------------------

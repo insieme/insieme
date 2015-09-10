@@ -158,9 +158,14 @@ namespace c_ast {
 		return type->getManager()->create<c_ast::ReferenceType>(isConst, type);
 	}
 
-	inline TypePtr makeConst(const TypePtr& type) {
-		if(type->getNodeType() == NT_PointerType) { return ptr(type.as<PointerTypePtr>()->elementType, true); }
-		return type->getManager()->create<c_ast::ModifiedType>(type, c_ast::ModifiedType::CONST);
+	inline TypePtr modifier(const TypePtr& type, bool isConst, bool isVolatile) {
+		if (auto mod = type.isa<c_ast::ModifiedTypePtr>()) return modifier(mod->type, isConst, isVolatile);
+		if (auto cpt = type.isa<c_ast::PointerTypePtr>()) return ptr(cpt->elementType, isConst, isVolatile);
+		return type->getManager()->create<c_ast::ModifiedType>(type, isConst, isVolatile);
+	}
+
+	inline VectorTypePtr vec(const TypePtr& element) {
+		return element->getManager()->create<c_ast::VectorType>(element);
 	}
 
 	inline VectorTypePtr vec(const TypePtr& element, unsigned size) {

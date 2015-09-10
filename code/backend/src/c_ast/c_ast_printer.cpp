@@ -52,12 +52,15 @@ namespace c_ast {
 		class CPrinter;
 
 		struct PrintWrapper : public utils::Printable {
+
 			CPrinter& printer;
 			const NodePtr& node;
 
 		  public:
+
 			PrintWrapper(CPrinter& printer, const NodePtr& node) : printer(printer), node(node){};
-			virtual std::ostream& printTo(std::ostream& out) const;
+
+			std::ostream& printTo(std::ostream& out) const;
 		};
 
 
@@ -126,8 +129,8 @@ namespace c_ast {
 			}
 
 			PRINT(ModifiedType) {
-				if(node->hasMod(ModifiedType::VOLATILE)) { out << "volatile "; }
-				if(node->hasMod(ModifiedType::CONST)) { out << "const "; }
+				if(node->isConst())    { out << "const "; }
+				if(node->isVolatile()) { out << "volatile "; }
 				return out << print(node->type);
 			}
 
@@ -903,8 +906,9 @@ namespace c_ast {
 			const TypeLevel& cur = *level_it;
 			for(auto it = cur.qualifier.rbegin(); it != cur.qualifier.rend(); it++) {
 				out << "*";
-				if (*it & CONST) out << " const";
-				if (*it & VOLATILE) out << " volatile";
+				if (*it & CONST) out << "const";
+				if ((*it & CONST) && (*it & VOLATILE)) out << " ";
+				if (*it & VOLATILE) out << "volatile";
 			}
 
 			++level_it;

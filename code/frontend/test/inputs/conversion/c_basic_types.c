@@ -54,6 +54,10 @@ int main() {
 	
 	#pragma test expect_ir("decl ref<ptr<int<4>,f,f>,t,f> v0;")
 	int *const cpi;
+
+	#pragma test expect_ir("decl ref<ptr<int<4>,t,f>,f,f> v0;")
+	int const * cpi2;
+
 	#pragma test expect_ir("decl ref<ptr<int<4>,t,f>,t,f> v0;")
 	const int *const cpci;
 	
