@@ -885,6 +885,49 @@ namespace checks {
 		}
 	}
 
+	OptionalMessageList IllegalNumCastCheck::visitCallExpr(const CallExprAddress& callExpr) {
+		OptionalMessageList res;
+
+		auto& mgr = callExpr->getNodeManager();
+		auto& basic = mgr.getLangBasic();
+
+		//skip all calls which aren't NumericCasts
+		if (!analysis::isCallOf(callExpr.getAddressedNode(), basic.getNumericCast())) {
+			return res;
+		}
+
+		// check number of parameters
+		if (callExpr->size() != 2) {
+			return res; // => will be handled by general call parameter check
+		}
+
+		// get source and target types
+		TypePtr srcType = callExpr[0]->getType();
+		TypePtr trgType = callExpr[1]->getType();
+
+		// check whether the second type is a type literal
+		if (!analysis::isTypeLiteralType(trgType)) {
+			return res; // => will be handled by general call parameter check
+		}
+
+		// extract actual target type
+		trgType = analysis::getRepresentedType(trgType);
+
+		// skip generic types
+		if (trgType.isa<TypeVariablePtr>()) return res;
+
+		//check expression type
+		if (!basic.isScalarType(srcType)) {
+			add(res, Message(callExpr[0], EC_SEMANTIC_ILLEGAL_NUM_CAST, format("Illegal numeric cast - given expression is not of numeric type (%s).", toString(*(srcType)).c_str()), Message::ERROR));
+		}
+
+		//as well as the target type
+		if (!basic.isScalarType(trgType)) {
+			add(res, Message(callExpr[1], EC_SEMANTIC_ILLEGAL_NUM_CAST, format("Illegal numeric cast - given target type is not a numeric type (%s).", toString(*(trgType)).c_str()), Message::ERROR));
+		}
+
+		return res;
+	}
 
 	OptionalMessageList CastCheck::visitCastExpr(const CastExprAddress& address) {
 		OptionalMessageList res;

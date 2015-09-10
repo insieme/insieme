@@ -1141,6 +1141,98 @@ namespace checks {
 		EXPECT_TRUE(errors.empty()) << cur << "\n" << errors;
 	}
 
+
+	TEST(IllegalNumCastCheck, Simple) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+		CheckPtr illegalNumCastCheckCheck = makeRecursive(make_check<IllegalNumCastCheck>());
+
+		//legal numeric cast of constant to integral type
+		{
+			auto expr = builder.parseExpr("num_cast(3, type(int<4>))");
+			EXPECT_TRUE(expr) << "parsing error";
+
+			auto checkResult = check(expr, illegalNumCastCheckCheck);
+			EXPECT_TRUE(checkResult.empty());
+			EXPECT_EQ(toString(checkResult), "[]");
+		}
+
+		//legal numeric cast of expression to integral type
+		{
+			auto expr = builder.parseExpr("num_cast(5 + 4, type(int<4>))");
+			EXPECT_TRUE(expr) << "parsing error";
+
+			auto checkResult = check(expr, illegalNumCastCheckCheck);
+			EXPECT_TRUE(checkResult.empty());
+			EXPECT_EQ(toString(checkResult), "[]");
+		}
+
+		//legal numeric cast of constant to real type
+		{
+			auto expr = builder.parseExpr("num_cast(3, type(real<4>))");
+			EXPECT_TRUE(expr) << "parsing error";
+
+			auto checkResult = check(expr, illegalNumCastCheckCheck);
+			EXPECT_TRUE(checkResult.empty());
+			EXPECT_EQ(toString(checkResult), "[]");
+		}
+
+		//legal numeric cast of constant to generic type
+		{
+			auto expr = builder.parseExpr("num_cast(3, type('a))");
+			EXPECT_TRUE(expr) << "parsing error";
+
+			auto checkResult = check(expr, illegalNumCastCheckCheck);
+			EXPECT_TRUE(checkResult.empty());
+			EXPECT_EQ(toString(checkResult), "[]");
+		}
+
+		//legal numeric cast of constant to generic type
+		{
+			auto expr = builder.parseExpr("num_cast(3, type(int<'a>))");
+			EXPECT_TRUE(expr) << "parsing error";
+
+			auto checkResult = check(expr, illegalNumCastCheckCheck);
+			EXPECT_TRUE(checkResult.empty());
+			EXPECT_EQ(toString(checkResult), "[]");
+		}
+
+		//illegal numeric cast from string type
+		{
+			auto expr = builder.parseExpr("num_cast(\"test\", type(real<4>))");
+			EXPECT_TRUE(expr) << "parsing error";
+
+			auto checkResult = check(expr, illegalNumCastCheckCheck);
+			EXPECT_FALSE(checkResult.empty());
+			auto errorString = toString(checkResult[0]);
+			EXPECT_TRUE(errorString.find("SEMANTIC / ILLEGAL_NUM_CAST") != string::npos);
+			EXPECT_TRUE(errorString.find("MSG: Illegal numeric cast - given expression is not of numeric type") != string::npos);
+		}
+
+		//illegal numeric cast of constant to non-type element
+		{
+			auto addresses = builder.parseAddressesExpression("num_cast(4, $type(real<4>)$)");
+			EXPECT_EQ(1u, addresses.size()) << "parsing error";
+			auto expr = transform::replaceNode(manager, addresses[0], builder.parseExpr("(12)")).as<ExpressionPtr>();
+
+			auto checkResult = check(expr);
+			EXPECT_FALSE(checkResult.empty());
+			auto errorString = toString(checkResult[0]);
+			EXPECT_TRUE(errorString.find("TYPE / INVALID_ARGUMENT_TYPE") != string::npos) << errorString;
+		}
+
+		//illegal numeric cast to arbitrary type
+		{
+			auto expr = builder.parseExpr("num_cast(3, lit(foo))");
+			EXPECT_TRUE(expr) << "parsing error";
+
+			auto checkResult = check(expr, illegalNumCastCheckCheck);
+			EXPECT_FALSE(checkResult.empty());
+			auto errorString = toString(checkResult[0]);
+			EXPECT_TRUE(errorString.find("SEMANTIC / ILLEGAL_NUM_CAST") != string::npos);
+			EXPECT_TRUE(errorString.find("MSG: Illegal numeric cast - given target type is not a numeric type") != string::npos);
+		}
+	}
 } // end namespace checks
 } // end namespace core
 } // end namespace insieme

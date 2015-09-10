@@ -237,6 +237,20 @@ namespace parser3 {
 
 	} // annon namespace
 
+	std::vector<NodeAddress> parse_addresses_expression(NodeManager& manager, const string& code, bool onFailThrow,
+	                                                   const definition_map& definitions, const type_alias_map& aliases) {
+		inspire_driver driver(code, manager);
+		save_symbol_table(driver, definitions);
+		auto root = driver.parseExpression();
+
+		// check the result
+		if(!root) {
+			checkErrors(driver, onFailThrow);
+			return std::vector<NodeAddress>();
+		}
+
+		return extract_addresses(root);
+	}
 
 	std::vector<NodeAddress> parse_addresses_statement(NodeManager& manager, const string& code, bool onFailThrow,
 	                                                   const definition_map& definitions, const type_alias_map& aliases) {

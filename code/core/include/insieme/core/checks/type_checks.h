@@ -71,6 +71,7 @@ namespace checks {
 	SIMPLE_CHECK(BuiltInLiteral, Literal, false);
 
 	SIMPLE_CHECK(RefCast, CastExpr, false);
+	SIMPLE_CHECK(IllegalNumCast, CallExpr, false);
 
 	SIMPLE_CHECK(Cast, CastExpr, false);
 

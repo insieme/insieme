@@ -232,6 +232,14 @@ namespace core {
 		return parseProgram(code, toLazy(symbols));
 	}
 
+	vector<NodeAddress> IRBuilderBaseModule::parseAddressesExpression(const string& code, const lazy_definition_map& symbols) const {
+		return parser3::parse_addresses_expression(manager, code, true, addStandardSymbols(manager, symbols), getStandardAliasMap(manager));
+	}
+
+	vector<NodeAddress> IRBuilderBaseModule::parseAddressesExpression(const string& code, const eager_definition_map& symbols) const {
+		return parseAddressesExpression(code, toLazy(symbols));
+	}
+
 	vector<NodeAddress> IRBuilderBaseModule::parseAddressesStatement(const string& code, const lazy_definition_map& symbols) const {
 		return parser3::parse_addresses_statement(manager, code, true, addStandardSymbols(manager, symbols), getStandardAliasMap(manager));
 	}
@@ -1051,7 +1059,7 @@ namespace core {
 
 		// create access instruction
 		core::ExpressionPtr access = manager.getLangExtension<lang::ReferenceExtension>().getRefMemberAccess();
-		return callExpr(refType(memberType), access, structExpr, getIdentifierLiteral(member), getTypeLiteral(memberType));
+		return callExpr(access, structExpr, getIdentifierLiteral(member), getTypeLiteral(memberType));
 	}
 
 	CallExprPtr IRBuilderBaseModule::refParent(const ExpressionPtr& structExpr, const TypePtr& parent) const {
@@ -1109,7 +1117,7 @@ namespace core {
 		core::ExpressionPtr access = manager.getLangExtension<lang::ReferenceExtension>().getRefComponentAccess();
 		core::ExpressionPtr index = literal(getLangBasic().getUInt8(), utils::numeric_cast<string>(component));
 		core::ExpressionPtr typeLiteral = getTypeLiteral(componentType);
-		return callExpr(refType(componentType), access, tupleExpr, index, typeLiteral);
+		return callExpr(access, tupleExpr, index, typeLiteral);
 	}
 
 

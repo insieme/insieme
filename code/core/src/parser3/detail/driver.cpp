@@ -356,11 +356,11 @@ namespace parser3 {
 
 				compositeType = type.isa<NamedCompositeTypePtr>();
 				if(!compositeType) {
-					error(l, "Accessing element of non-named-composite type");
+					error(l, format("Accessing element of non-named-composite type %s", *expr->getType()));
 					return nullptr;
 				}
 			} else {
-				error(l, "Accessing element of non-named-composite type %s");
+				error(l, format("Accessing element of non-named-composite type %s", *expr->getType()));
 				return nullptr;
 			}
 
