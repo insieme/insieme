@@ -33,7 +33,7 @@ int main() {
 		float b;
 	}
 	
-	#pragma test expect_ir("{", C_STYLE_ASSIGN, "decl ref<int<4>,f,f> v0; if(int_ne(c_ass(v0, 1), 0)) { } }")
+	#pragma test expect_ir("{" C_STYLE_ASSIGN "decl ref<int<4>,f,f> v0; if(int_ne(c_ass(v0, 1), 0)) { } }")
 	{
 		int i;
 		if(i = 1) { }
@@ -54,7 +54,7 @@ int main() {
 		continue;
 	}
 	
-	#pragma test expect_ir("{", C_STYLE_ASSIGN, "decl ref<int<4>,f,f> v0; while(int_ne(c_ass(v0, 1), 0)) { break; } }")
+	#pragma test expect_ir("{" C_STYLE_ASSIGN "decl ref<int<4>,f,f> v0; while(int_ne(c_ass(v0, 1), 0)) { break; } }")
 	{
 		int i;
 		while(i = 1) { break; }
@@ -65,7 +65,7 @@ int main() {
 		int x;
 	} while(0);
 	
-	#pragma test expect_ir("{", C_STYLE_ASSIGN, "decl ref<int<4>,f,f> v0; { decl ref<bool,f,f> v1 = var(false); while(!*v1 || int_ne(c_ass(v0, 1), 0)) { v1 = true; { break; } } } }")
+	#pragma test expect_ir("{" C_STYLE_ASSIGN "decl ref<int<4>,f,f> v0; { decl ref<bool,f,f> v1 = var(false); while(!*v1 || int_ne(c_ass(v0, 1), 0)) { v1 = true; { break; } } } }")
 	{
 		int i;
 		do {
@@ -85,7 +85,7 @@ int main() {
 		}
 	}
 	
-	#pragma test expect_ir("{", C_STYLE_ASSIGN, "decl ref<int<4>,f,f> v0; switch(c_ass(v0, 0)) { case 0: { return 5; } case 4: { 5; 6; break; } case 5: { 6; break; } case 8: { return 6; } default: { break; } } }")
+	#pragma test expect_ir("{" C_STYLE_ASSIGN "decl ref<int<4>,f,f> v0; switch(c_ass(v0, 0)) { case 0: { return 5; } case 4: { 5; 6; break; } case 5: { 6; break; } case 8: { return 6; } default: { break; } } }")
 	{
 		int a;
 		switch(a=0) {
@@ -102,7 +102,7 @@ int main() {
 	;
 	;;
 		
-	#pragma test expect_ir("{", C_STYLE_ASSIGN, "decl ref<int<4>,f,f> v0; { c_ass(v0, 0); while(*v0 < 10) { *v0; int_post_inc(v0); } } }")
+	#pragma test expect_ir("{" C_STYLE_ASSIGN "decl ref<int<4>,f,f> v0; { c_ass(v0, 0); while(*v0 < 10) { *v0; int_post_inc(v0); } } }")
 	{
 		int i;
 		for(i = 0; i < 10; i++) {
@@ -110,24 +110,24 @@ int main() {
 		}
 	}
 
-	#pragma test expect_ir("{", C_STYLE_ASSIGN, "{ decl ref<int<4>,f,f> v0 = var(2); while(*v0 < 5) { *v0; c_ass(v0, *v0+1); } } }")
+	#pragma test expect_ir("{" C_STYLE_ASSIGN "{ decl ref<int<4>,f,f> v0 = var(2); while(*v0 < 5) { *v0; c_ass(v0, *v0+1); } } }")
 	{
 		for(int k = 2; k < 5; k+=1) {
 			k;
 		}
 	}
 
-	#pragma test expect_ir("{", C_STYLE_ASSIGN, "{ decl ref<int<4>,f,f> v0 = var(2); while(*v0 < 5) { *v0; c_ass(v0, *v0+1); } } }")
+	#pragma test expect_ir("{" C_STYLE_ASSIGN "{ decl ref<int<4>,f,f> v0 = var(2); while(*v0 < 5) { *v0; c_ass(v0, *v0+1); } } }")
 	{
 		for(int k = 2; k < 5; k+=1) k;
 	}
 
-	#pragma test expect_ir("{", C_STYLE_ASSIGN, "{ decl ref<int<4>,f,f> v0 = var(2); while(*v0 < 5) { c_ass(v0, *v0+1); } } }")
+	#pragma test expect_ir("{" C_STYLE_ASSIGN "{ decl ref<int<4>,f,f> v0 = var(2); while(*v0 < 5) { c_ass(v0, *v0+1); } } }")
 	{
 		for(int k = 2; k < 5; k+=1);
 	}
 
-	#pragma test expect_ir("{", C_STYLE_ASSIGN, "{ decl ref<int<4>,f,f> v0 = var(2); while(*v0 < 5) { c_ass(v0, *v0+1); } } }")
+	#pragma test expect_ir("{" C_STYLE_ASSIGN "{ decl ref<int<4>,f,f> v0 = var(2); while(*v0 < 5) { c_ass(v0, *v0+1); } } }")
 	{
 		for(int k = 2; k < 5; k+=1) { }
 	}

@@ -150,7 +150,7 @@ int main() {
 	//===----------------------------------------------------------------------------------------------------------------------------------- TO BOOL CASTS---===
 
 	// char to bool (C99's native boolean type is _Bool)
-	#pragma test expect_ir("{ decl ref<char,f,f> v0; *v0!='\0'; }")
+	#pragma test expect_ir(R"({ decl ref<char,f,f> v0; *v0!='\0'; })")
 	{
 		char x;
 		(_Bool)x;

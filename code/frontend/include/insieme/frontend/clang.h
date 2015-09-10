@@ -72,6 +72,7 @@
 #include <clang/Lex/Token.h>
 #include <clang/Lex/Preprocessor.h>
 
+#include <clang/Sema/Lookup.h>
 #include <clang/Sema/Ownership.h>
 #include <clang/Sema/Sema.h>
 #include <clang/Sema/SemaConsumer.h>
