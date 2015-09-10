@@ -1,4 +1,13 @@
+
+void nameCheck() {
+	#pragma test expect_ir(R"({ ptr_from_array(lit("nameCheck":ref<array<char,10>,t,f>)); 1; })")
+	{ __func__; 1; }
+	#pragma test expect_ir("EXPR_TYPE",R"(ptr<char,t,f>)")
+	__func__;
+}
+
 int main() {
+	nameCheck();
 	
 	//===-------------------------------------------------------------------------------------------------------------------------------- UNARY OPERATORS ---===
 	
@@ -192,6 +201,15 @@ int main() {
 	{
 		void* a;
 		5+a;
+	}
+
+	#pragma test expect_ir("{ decl ref<ptr<unit,f,f>,f,f> v0; ptr_post_inc(v0); ptr_post_dec(v0); ptr_pre_inc(v0); ptr_pre_dec(v0); }")
+	{
+		void* a;
+		a++;
+		a--;
+		++a;
+		--a;
 	}
 	
 	#pragma test expect_ir("{ decl ref<ptr<unit,f,f>,f,f> v0; ptr_sub(*v0, 5); }")

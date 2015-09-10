@@ -285,7 +285,25 @@ namespace lang {
 		default: break;
 		}
 
-		assert_fail() << "Unsupported pointer operation " << op;
+		assert_fail() << "Unsupported binary pointer operation " << op;
+		return ExpressionPtr();
+	}
+
+
+	ExpressionPtr buildPtrOperation(BasicGenerator::Operator op, const ExpressionPtr& ptrExpr) {
+		assert_true(isReference(ptrExpr) && isPointer(core::analysis::getReferencedType(ptrExpr->getType())))
+			<< "Trying to build a unary pointer operation with non-ref<ptr>.";
+		IRBuilder builder(ptrExpr->getNodeManager());
+		auto& pExt = ptrExpr->getNodeManager().getLangExtension<PointerExtension>();
+		switch(op) {
+		case BasicGenerator::Operator::PostInc: return builder.callExpr(pExt.getPtrPostInc(), ptrExpr);
+		case BasicGenerator::Operator::PostDec: return builder.callExpr(pExt.getPtrPostDec(), ptrExpr);
+		case BasicGenerator::Operator::PreInc: return builder.callExpr(pExt.getPtrPreInc(), ptrExpr);
+		case BasicGenerator::Operator::PreDec: return builder.callExpr(pExt.getPtrPreDec(), ptrExpr);
+		default: break;
+		}
+
+		assert_fail() << "Unsupported unary pointer operation " << op;
 		return ExpressionPtr();
 	}
 

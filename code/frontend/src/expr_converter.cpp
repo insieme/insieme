@@ -84,8 +84,9 @@ namespace conversion {
 	//---------------------------------------------------------------------------------------------------------------------
 	
 	core::TypePtr Converter::ExprConverter::convertExprType(const clang::Expr* expr) {
-		auto irType = converter.convertType(expr->getType());
-		if(expr->getValueKind() == clang::VK_LValue) irType = builder.refType(irType);
+		auto qType = expr->getType();
+		auto irType = converter.convertType(qType);
+		if(expr->getValueKind() == clang::VK_LValue) irType = builder.refType(irType, qType.isConstQualified(), qType.isVolatileQualified());
 		return irType;
 	}
 
@@ -377,11 +378,17 @@ namespace conversion {
 	//							PREDEFINED EXPRESSION
 	//
 	// [C99 6.4.2.2] - A predefined identifier such as __func__.
+	// The identifier __func__ shall be implicitly declared by the translator as if, immediately following
+	// the opening brace of each function definition, the declaration 
+	// static const char __func__[] = "function-name";
+	// appeared, where function-name is the name of the lexically-enclosing function.
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr Converter::ExprConverter::VisitPredefinedExpr(const clang::PredefinedExpr* preExpr) {
 		core::ExpressionPtr retIr;
 		LOG_EXPR_CONVERSION(preExpr, retIr);
-		frontend_assert(false) << "PredefinedExpr not implemented";
+
+		retIr = Visit(preExpr->getFunctionName());
+
 		return retIr;
 	}
 
@@ -453,6 +460,18 @@ namespace conversion {
 			if(binOp->isComparisonOp()) irOp = basic.getOperator(lhs->getType(), op);
 
 			return builder.binaryOp(irOp, lhs, rhs);
+		}
+
+		core::ExpressionPtr buildUnaryOpExpression(Converter& converter, const core::TypePtr& exprTy, const core::ExpressionPtr& expr,
+			                                       core::lang::BasicGenerator::Operator op) {
+			auto& basic = converter.getNodeManager().getLangBasic();
+			auto& builder = converter.getIRBuilder();
+
+			if(core::lang::isReference(expr) && core::lang::isPointer(core::analysis::getReferencedType(expr->getType()))) {
+				return core::lang::buildPtrOperation(op, expr);
+			}
+
+			return builder.unaryOp(basic.getOperator(exprTy, op), expr);
 		}
 	}
 
@@ -594,7 +613,7 @@ namespace conversion {
 		auto opIt = opMap.find(unOp->getOpcode());
 		frontend_assert(opIt != opMap.end()) << "Unary Operator " << clang::UnaryOperator::getOpcodeStr(unOp->getOpcode()).str() << " not implemented.";
 
-		retIr = builder.unaryOp(basic.getOperator(exprTy, opIt->second), subExpr);
+		retIr = buildUnaryOpExpression(converter, exprTy, subExpr, opIt->second);
 		return retIr;
 	}
 
