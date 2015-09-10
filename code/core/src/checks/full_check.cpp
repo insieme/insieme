@@ -68,6 +68,7 @@ namespace checks {
 			checks.push_back(make_check<ComponentAccessTypeCheck>());
 			checks.push_back(make_check<BuiltInLiteralCheck>());
 			checks.push_back(make_check<RefCastCheck>());
+			checks.push_back(make_check<IllegalNumCastCheck>());
 			checks.push_back(make_check<CastCheck>());
 			checks.push_back(make_check<GenericZeroCheck>());
 			checks.push_back(make_check<ArrayTypeCheck>());
@@ -79,7 +80,6 @@ namespace checks {
 			// checks.push_back(make_check<UndefinedCheck>());
 			checks.push_back(make_check<FreeBreakInsideForLoopCheck>());
 			checks.push_back(make_check<MissingReturnStmtCheck>());
-			checks.push_back(make_check<IllegalNumCastCheck>());
 
 			checks.push_back(make_check<LiteralFormatCheck>());
 

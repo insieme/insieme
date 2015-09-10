@@ -70,9 +70,8 @@ namespace datapath {
 
 	DataPath DataPath::element(const ExpressionPtr& element) const {
 		auto& mgr = path.getNodeManager();
-		auto& base = mgr.getLangBasic();
 		auto& ext = mgr.getLangExtension<lang::DatapathExtension>();
-		assert_true(base.isSignedInt(element->getType())) << "Index has to be a signed integer!";
+		assert_true(mgr.getLangBasic().isSignedInt(element->getType())) << "Index has to be a signed integer!";
 		return DataPath(IRBuilder(mgr).callExpr(ext.getDataPathElement(), path, element));
 	}
 
