@@ -136,8 +136,8 @@ int main() {
 		(int)x;
 	}
 
-	// void - ignores the return value, has no effect from a compiler point of view
-	#pragma test expect_ir("1")
+	// void - ignores the return value
+	#pragma test expect_ir("unit_consume(1)")
 	(void)1;
 
 	//===----------------------------------------------------------------------------------------------------------------------------------- TO BOOL CASTS---===

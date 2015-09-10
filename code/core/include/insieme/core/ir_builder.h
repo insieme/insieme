@@ -317,6 +317,9 @@ namespace core {
 		FunctionTypePtr toPlainFunctionType(const FunctionTypePtr& funType) const;
 		FunctionTypePtr toThickFunctionType(const FunctionTypePtr& funType) const;
 
+		// Unit consume
+		ExpressionPtr unitConsume(const ExpressionPtr& toConsume) const;
+
 		// Literals
 		LiteralPtr stringLit(const std::string& str) const;
 		LiteralPtr intLit(const int val, bool tight = false) const;

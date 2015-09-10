@@ -152,7 +152,7 @@ namespace frontend {
 		}
 		EXPECT_EQ(visited, occurrences);
 
-		dumpColor(res);
+		//dumpColor(res);
 
 		auto checkResult = core::checks::check(res);
 		EXPECT_EQ(checkResult.size(), 0) << checkResult;

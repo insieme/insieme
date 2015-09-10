@@ -84,8 +84,9 @@ namespace conversion {
 	//---------------------------------------------------------------------------------------------------------------------
 	
 	core::TypePtr Converter::ExprConverter::convertExprType(const clang::Expr* expr) {
-		auto irType = converter.convertType(expr->getType());
-		if(expr->getValueKind() == clang::VK_LValue) irType = builder.refType(irType);
+		auto qType = expr->getType();
+		auto irType = converter.convertType(qType);
+		if(expr->getValueKind() == clang::VK_LValue) irType = builder.refType(irType, qType.isConstQualified(), qType.isVolatileQualified());
 		return irType;
 	}
 

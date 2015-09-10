@@ -1,6 +1,8 @@
 
 void nameCheck() {
-	#pragma test expect_ir(R"(ptr_from_array(lit("nameCheck":ref<array<char,10>>)))")
+	#pragma test expect_ir(R"({ ptr_from_array(lit("nameCheck":ref<array<char,10>,t,f>)); 1; })")
+	{ __func__; 1; }
+	#pragma test expect_ir("EXPR_TYPE",R"(ptr<char,t,f>)")
 	__func__;
 }
 
