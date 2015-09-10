@@ -38,6 +38,7 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/lang/enum_extension.h"
 
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/logging.h"
@@ -94,13 +95,13 @@ namespace checks {
 								} else {
 									add(res, Message(useCallAdr, EC_SEMANTIC_ARRAY_INDEX_OUT_OF_RANGE,
 									                 format("Potentially unsafe indexing of single-element array %s using formula %s",
-									                        toString(*(param)).c_str(), toString(formula).c_str()),
+									                        *param, formula),
 									                 Message::WARNING));
 								}
 							} catch(const arithmetic::NotAFormulaException& e) {
 								add(res, Message(useCallAdr, EC_SEMANTIC_ARRAY_INDEX_OUT_OF_RANGE,
 								                 format("Potentially unsafe indexing of single-element array %s using expression %s",
-								                        toString(*(param)).c_str(), toString(*(usecall->getArgument(1))).c_str()),
+								                        *param, *(usecall->getArgument(1))),
 								                 Message::WARNING));
 							}
 						} else {

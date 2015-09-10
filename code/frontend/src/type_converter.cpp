@@ -141,9 +141,11 @@ namespace conversion {
 
 		// not supported types
 		case BuiltinType::NullPtr: retTy = builder.typeVariable("nullptr_t"); break; // TODO c++11 specific builtin type for nullptr literal
-		default: frontend_assert(false) << "Built-in type conversion not supported."; break;
+		default: 
+			buldInTy->dump();
+			frontend_assert(false) << "Built-in type conversion not supported for this type."; 
+			break;
 		}
-		
 		return retTy;
 	}
 

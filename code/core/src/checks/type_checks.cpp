@@ -61,7 +61,7 @@ namespace checks {
 
 		if((address->getName()->getValue() == "array" && !lang::isArray(address)) || (address->getName()->getValue() == "ref" && !lang::isReference(address))
 		   || (address->getName()->getValue() == "channel" && !lang::isChannel(address))) {
-			add(res, Message(address, EC_TYPE_ILLEGAL_USE_OF_TYPE_KEYWORD, format("Name of generic type %s is a reserved keyword.", toString(*address).c_str()),
+			add(res, Message(address, EC_TYPE_ILLEGAL_USE_OF_TYPE_KEYWORD, format("Name of generic type %s is a reserved keyword.", *address),
 			                 Message::WARNING));
 		}
 		return res;
@@ -167,7 +167,7 @@ namespace checks {
 		if(numArguments != numParameter) {
 			add(res, Message(address, EC_TYPE_INVALID_NUMBER_OF_ARGUMENTS,
 			                 format("Wrong number of arguments \nexpected: %d\n", numParameter) + format("actual: %d\n ", numArguments)
-			                     + format("function type: \n\t%s", toString(*functionType).c_str()),
+			                     + format("function type: \n\t%s", *functionType),
 			                 Message::ERROR));
 			return res;
 		}
@@ -178,9 +178,9 @@ namespace checks {
 		if(!substitution) {
 			TupleTypePtr argumentTuple = TupleType::get(manager, argumentTypes);
 			TupleTypePtr parameterTuple = TupleType::get(manager, parameterTypes);
-			add(res, Message(address, EC_TYPE_INVALID_ARGUMENT_TYPE, format("Invalid argument type(s) \nexpected: \n\t%s\n", toString(*parameterTuple).c_str())
-			                                                             + format("actual: \n\t%s\n", toString(*argumentTuple).c_str())
-			                                                             + format("function type: \n\t%s", toString(*functionType).c_str()),
+			add(res, Message(address, EC_TYPE_INVALID_ARGUMENT_TYPE, format("Invalid argument type(s) \nexpected: \n\t%s\n", *parameterTuple)
+			                                                             + format("actual: \n\t%s\n", *argumentTuple)
+			                                                             + format("function type: \n\t%s", *functionType),
 			                 Message::ERROR));
 			return res;
 		}
@@ -192,7 +192,7 @@ namespace checks {
 		if(!core::types::isSubTypeOf(retType, resType)) {
 			add(res, Message(address, EC_TYPE_INVALID_RETURN_TYPE,
 			                 format("Invalid result type of call expression \nexpected: \n\t%s \nactual: \n\t%s \nfunction type: \n\t%s",
-			                        toString(*retType).c_str(), toString(*resType).c_str(), toString(*functionType).c_str()),
+			                        *retType, *resType, *functionType),
 			                 Message::ERROR));
 			return res;
 		}
@@ -215,7 +215,7 @@ namespace checks {
 		FunctionTypePtr funType = FunctionType::get(manager, param, result, FK_CLOSURE);
 		if(*funType != *isType) {
 			add(res, Message(address, EC_TYPE_INVALID_FUNCTION_TYPE,
-			                 format("Invalid type of bind expression - expected: \n%s, actual: \n%s", toString(*funType).c_str(), toString(*isType).c_str()),
+			                 format("Invalid type of bind expression - expected: \n%s, actual: \n%s", *funType, *isType),
 			                 Message::ERROR));
 		}
 		return res;
@@ -437,7 +437,7 @@ namespace checks {
 
 		if(!types::isSubTypeOf(initType, variableType)) {
 			add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR, format("Invalid type of initial value - expected: \n%s, actual: \n%s",
-			                                                                      toString(*variableType).c_str(), toString(*initType).c_str()),
+			                                                                      *variableType, *initType),
 			                 Message::ERROR));
 		}
 		return res;
@@ -452,7 +452,7 @@ namespace checks {
 		if(!manager.getLangBasic().isBool(conditionType)) {
 			add(res,
 			    Message(address, EC_TYPE_INVALID_CONDITION_EXPR, format("Invalid type of condition expression - expected: \n%s, actual: \n%s",
-			                                                            toString(*manager.getLangBasic().getBool()).c_str(), toString(*conditionType).c_str()),
+			                                                            *manager.getLangBasic().getBool(), *conditionType),
 			            Message::ERROR));
 		}
 		return res;
@@ -471,19 +471,19 @@ namespace checks {
 		if(!basic.isInt(iteratorType)) {
 			add(res,
 			    Message(address, EC_TYPE_INVALID_ITERATOR_TYPE,
-			            format("Invalid type of iterator variable - expected: some integral, actual: %s\n", toString(*iteratorType).c_str()), Message::ERROR));
+			            format("Invalid type of iterator variable - expected: some integral, actual: %s\n", *iteratorType), Message::ERROR));
 			return res;
 		}
 
 		if(!types::isSubTypeOf(node->getEnd().getType(), iteratorType)) {
 			add(res, Message(address, EC_TYPE_INVALID_BOUNDARY_TYPE, format("Invalid type of upper loop boundary - expected: %s, actual: %s\n",
-			                                                                toString(*iteratorType).c_str(), toString(*node->getEnd().getType()).c_str()),
+			                                                                *iteratorType, *node->getEnd().getType()),
 			                 Message::ERROR));
 		}
 
 		if(!types::isSubTypeOf(node->getStep().getType(), iteratorType)) {
 			add(res, Message(address, EC_TYPE_INVALID_BOUNDARY_TYPE, format("Invalid type of step size - expected: %s, actual: %s\n",
-			                                                                toString(*iteratorType).c_str(), toString(*node->getStep().getType()).c_str()),
+			                                                                *iteratorType, *node->getStep().getType()),
 			                 Message::ERROR));
 		}
 
@@ -498,7 +498,7 @@ namespace checks {
 		if(!manager.getLangBasic().isBool(conditionType)) {
 			add(res,
 			    Message(address, EC_TYPE_INVALID_CONDITION_EXPR, format("Invalid type of condition expression - expected: \n%s, actual: \n%s",
-			                                                            toString(*manager.getLangBasic().getBool()).c_str(), toString(*conditionType).c_str()),
+			                                                            *manager.getLangBasic().getBool(), *conditionType),
 			            Message::ERROR));
 		}
 		return res;
@@ -513,7 +513,7 @@ namespace checks {
 		if(!manager.getLangBasic().isInt(switchType)) {
 			add(res,
 			    Message(address, EC_TYPE_INVALID_SWITCH_EXPR,
-			            format("Invalid type of switch expression - expected: integral type, actual: \n%s", toString(*switchType).c_str()), Message::ERROR));
+			            format("Invalid type of switch expression - expected: integral type, actual: \n%s", *switchType), Message::ERROR));
 		}
 		return res;
 	}
@@ -533,7 +533,7 @@ namespace checks {
 
 		// check whether it is a struct type
 		if(!structType) {
-			add(res, Message(address, EC_TYPE_INVALID_TYPE_OF_STRUCT_EXPR, format("Invalid type of struct-expression - type: \n%s", toString(*type).c_str()),
+			add(res, Message(address, EC_TYPE_INVALID_TYPE_OF_STRUCT_EXPR, format("Invalid type of struct-expression - type: \n%s", *type),
 			                 Message::ERROR));
 			return res;
 		}
@@ -544,11 +544,11 @@ namespace checks {
 			core::TypePtr isType = cur->getValue()->getType();
 			if(!requiredType) {
 				add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
-				                 format("No member %s in struct type %s", toString(cur->getName()).c_str(), toString(*structType).c_str()), Message::ERROR));
+				                 format("No member %s in struct type %s", cur->getName(), *structType), Message::ERROR));
 			} else if(!types::isSubTypeOf(isType, requiredType)) {
 				add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
-				                 format("Invalid type of struct-member initalization - expected type: \n%s, actual: \n%s", toString(*requiredType).c_str(),
-				                        toString(*isType).c_str()),
+				                 format("Invalid type of struct-member initalization - expected type: \n%s, actual: \n%s", *requiredType,
+				                        *isType),
 				                 Message::ERROR));
 			}
 		});
@@ -588,8 +588,8 @@ namespace checks {
 			const NamedCompositeTypePtr compositeType = dynamic_pointer_cast<const NamedCompositeType>(exprType);
 			if(!compositeType) {
 				add(res, Message(address, EC_TYPE_ACCESSING_MEMBER_OF_NON_NAMED_COMPOSITE_TYPE,
-				                 format("Cannot access member '%s' of non-named-composed type \n%s of type \n%s", toString(*identifier).c_str(),
-				                        toString(*structExpr).c_str(), toString(*exprType).c_str()),
+				                 format("Cannot access member '%s' of non-named-composed type \n%s of type \n%s", *identifier,
+				                        *structExpr, *exprType),
 				                 Message::ERROR));
 				return res;
 			}
@@ -598,7 +598,7 @@ namespace checks {
 			const TypePtr& resultType = compositeType->getTypeOfMember(identifier);
 			if(!resultType) {
 				add(res, Message(address, EC_TYPE_NO_SUCH_MEMBER,
-				                 format("No member '%s' within composed type '%s'", toString(*identifier).c_str(), toString(*compositeType).c_str()),
+				                 format("No member '%s' within composed type '%s'", *identifier, *compositeType),
 				                 Message::ERROR));
 				return res;
 			}
@@ -606,7 +606,7 @@ namespace checks {
 			// check for correct member type
 			if(!core::analysis::compareTypes(elementType, resultType)) {
 				add(res, Message(address, EC_TYPE_INVALID_TYPE_OF_MEMBER,
-				                 format("Invalid type of extracted member '%s' - expected '%s'", toString(*resultType).c_str(), toString(*elementType).c_str()),
+				                 format("Invalid type of extracted member '%s' - expected '%s'", *resultType, *elementType),
 				                 Message::ERROR));
 				return res;
 			}
@@ -641,7 +641,7 @@ namespace checks {
 		// check identifier literal
 		if(identifierExpr->getNodeType() != NT_Literal) {
 			add(res, Message(address, EC_TYPE_INVALID_IDENTIFIER,
-			                 format("Invalid identifier expression \n%s - not a constant.", toString(*identifierExpr).c_str()), Message::ERROR));
+			                 format("Invalid identifier expression \n%s - not a constant.", *identifierExpr), Message::ERROR));
 			return res;
 		}
 
@@ -696,7 +696,7 @@ namespace checks {
 			const TupleTypePtr tupleType = dynamic_pointer_cast<const TupleType>(exprType);
 			if(!tupleType) {
 				add(res, Message(address, EC_TYPE_ACCESSING_MEMBER_OF_NON_TUPLE_TYPE, format("Cannot access element #%d of non-tuple type \n%s of type \n%s",
-				                                                                             index, toString(*tupleExpr).c_str(), toString(*exprType).c_str()),
+				                                                                             index, *tupleExpr, *exprType),
 				                 Message::ERROR));
 				return res;
 			}
@@ -705,7 +705,7 @@ namespace checks {
 			unsigned numElements = tupleType->getElements().size();
 			if(numElements <= index) {
 				add(res, Message(address, EC_TYPE_NO_SUCH_MEMBER,
-				                 format("No element with index %d within tuple type \n%s", index, toString(*tupleType).c_str()), Message::ERROR));
+				                 format("No element with index %d within tuple type \n%s", index, *tupleType), Message::ERROR));
 				return res;
 			}
 
@@ -714,7 +714,7 @@ namespace checks {
 			// check for correct element type
 			if(elementType != resultType) {
 				add(res, Message(address, EC_TYPE_INVALID_TYPE_OF_MEMBER,
-				                 format("Invalid type of extracted member \n%s - expected \n%s", toString(*resultType).c_str(), toString(*elementType).c_str()),
+				                 format("Invalid type of extracted member \n%s - expected \n%s", *resultType, *elementType),
 				                 Message::ERROR));
 				return res;
 			}
@@ -751,7 +751,7 @@ namespace checks {
 			indexExpr = static_pointer_cast<core::CastExprPtr>(indexExpr)->getSubExpression();
 		}
 		if(indexExpr->getNodeType() != NT_Literal) {
-			add(res, Message(address, EC_TYPE_INVALID_TUPLE_INDEX, format("Invalid index expression \n%s - not a constant.", toString(*indexExpr).c_str()),
+			add(res, Message(address, EC_TYPE_INVALID_TUPLE_INDEX, format("Invalid index expression \n%s - not a constant.", *indexExpr),
 			                 Message::ERROR));
 			return res;
 		}
@@ -794,8 +794,8 @@ namespace checks {
 			// check whether used one is special case of build-in version
 			if(*buildIn->getType() != *address->getType()) {
 				add(res, Message(address, EC_TYPE_INVALID_TYPE_OF_LITERAL,
-				                 format("Deviating type of build in literal \n%s - expected: \n%s, actual: \n%s", address->getValue()->getValue().c_str(),
-				                        toString(*buildIn->getType()).c_str(), toString(*address->getType()).c_str()),
+				                 format("Deviating type of build in literal \n%s - expected: \n%s, actual: \n%s", address->getValue()->getValue(),
+				                        *buildIn->getType(), *address->getType()),
 				                 Message::WARNING));
 			}
 
@@ -830,12 +830,12 @@ namespace checks {
 
 		if(srcCount > trgCount) {
 			add(res, Message(address, EC_TYPE_REF_TO_NON_REF_CAST,
-			                 format("Casting reference type %s to non-reference type %s", toString(*src).c_str(), toString(*trg).c_str()), Message::ERROR));
+			                 format("Casting reference type %s to non-reference type %s", *src, *trg), Message::ERROR));
 		}
 
 		if(srcCount < trgCount) {
 			add(res, Message(address, EC_TYPE_NON_REF_TO_REF_CAST,
-			                 format("Casting non-reference type %s to reference type %s", toString(*src).c_str(), toString(*trg).c_str()), Message::ERROR));
+			                 format("Casting non-reference type %s to reference type %s", *src, *trg), Message::ERROR));
 		}
 
 		return res;
@@ -918,12 +918,12 @@ namespace checks {
 
 		//check expression type
 		if (!basic.isScalarType(srcType)) {
-			add(res, Message(callExpr[0], EC_SEMANTIC_ILLEGAL_NUM_CAST, format("Illegal numeric cast - given expression is not of numeric type (%s).", toString(*(srcType)).c_str()), Message::ERROR));
+			add(res, Message(callExpr[0], EC_SEMANTIC_ILLEGAL_NUM_CAST, format("given source value is not of a numeric type (%s).", *srcType), Message::ERROR));
 		}
 
 		//as well as the target type
 		if (!basic.isScalarType(trgType)) {
-			add(res, Message(callExpr[1], EC_SEMANTIC_ILLEGAL_NUM_CAST, format("Illegal numeric cast - given target type is not a numeric type (%s).", toString(*(trgType)).c_str()), Message::ERROR));
+			add(res, Message(callExpr[1], EC_SEMANTIC_ILLEGAL_NUM_CAST, format("given target type is not a numeric type  (%s).", *trgType), Message::ERROR));
 		}
 
 		return res;

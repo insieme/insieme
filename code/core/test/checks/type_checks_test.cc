@@ -1141,8 +1141,7 @@ namespace checks {
 		EXPECT_TRUE(errors.empty()) << cur << "\n" << errors;
 	}
 
-
-	TEST(IllegalNumCastCheck, Simple) {
+	TEST(IllegalNumCastCheck, Simple2) {
 		NodeManager manager;
 		IRBuilder builder(manager);
 		CheckPtr illegalNumCastCheckCheck = makeRecursive(make_check<IllegalNumCastCheck>());
@@ -1206,7 +1205,7 @@ namespace checks {
 			EXPECT_FALSE(checkResult.empty());
 			auto errorString = toString(checkResult[0]);
 			EXPECT_TRUE(errorString.find("SEMANTIC / ILLEGAL_NUM_CAST") != string::npos);
-			EXPECT_TRUE(errorString.find("MSG: Illegal numeric cast - given expression is not of numeric type") != string::npos);
+			EXPECT_TRUE(errorString.find("MSG: given source value is not of a numeric type") != string::npos) << errorString;
 		}
 
 		//illegal numeric cast of constant to non-type element
@@ -1230,7 +1229,7 @@ namespace checks {
 			EXPECT_FALSE(checkResult.empty());
 			auto errorString = toString(checkResult[0]);
 			EXPECT_TRUE(errorString.find("SEMANTIC / ILLEGAL_NUM_CAST") != string::npos);
-			EXPECT_TRUE(errorString.find("MSG: Illegal numeric cast - given target type is not a numeric type") != string::npos);
+			EXPECT_TRUE(errorString.find("MSG: given target type is not a numeric type") != string::npos);
 		}
 	}
 } // end namespace checks
