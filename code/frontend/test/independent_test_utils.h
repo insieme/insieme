@@ -61,6 +61,8 @@ namespace frontend {
 
 	namespace {
 		static inline void checkExpected(NodePtr expected, NodePtr actual, const NodeAddress& addr) {
+			ASSERT_TRUE(actual) << "Actual IR pointer null!";
+			ASSERT_TRUE(expected) << "Expected IR pointer null (likely parser error)!\n" << "  Location: " << *core::annotations::getLocation(addr) << "\n";
 			IRBuilder builder(expected->getNodeManager());
 			bool eIsExp = expected.isa<ExpressionPtr>();
 			bool aIsExp = actual.isa<ExpressionPtr>();
@@ -71,7 +73,7 @@ namespace frontend {
 			                            << "Expected type: " << (eIsExp ? toString(dumpColor(expected.as<ExpressionPtr>()->getType())) : toString("-")) << "\n"
 			                            << "Actual type  : " << (aIsExp ? toString(dumpColor(actual.as<ExpressionPtr>()->getType())) : toString("-")) << "\n"
 			    //<< "Text expected:\n" << dumpText(expected) << "\n"
-			    //<< "Text actual  :\n" << dumpText(actual) << "\n";
+			    //<< "Text actual  :\n" << dumpText(actual) << "\n"
 			    ;
 		}
 	}
@@ -94,12 +96,12 @@ namespace frontend {
 			if(node->hasAnnotation(ExpectedIRAnnotation::KEY)) {
 				auto ann = node->getAnnotation(ExpectedIRAnnotation::KEY);
 				auto ex = ann->getExpected();
-				boost::replace_all(ex, R"(\")", R"(")");
-				boost::replace_all(ex, R"(\\)", R"(\)");
 				
 				const string regexKey = "REGEX";
 				const string stringKey = "STRING";
 				const string exprTypeKey = "EXPR_TYPE";
+
+				VLOG(2) << "Expected annotation string: " << ex << "\n";
 
 				// Regex expect
 				if(boost::starts_with(ex, regexKey)) {

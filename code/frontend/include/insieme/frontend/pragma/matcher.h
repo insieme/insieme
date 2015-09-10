@@ -445,7 +445,18 @@ namespace pragma {
 
 		virtual std::ostream& printTo(std::ostream& out) const;
 	};
+	
+	/**
+	 * Matches a string literal according to CPP11 standard, even in C files
+	 */
+	struct cpp_string_lit_p : public MappableNode<cpp_string_lit_p> {
+		cpp_string_lit_p() {}
+		cpp_string_lit_p(std::string const& map_str, bool addToMap = true) : MappableNode<cpp_string_lit_p>(map_str, addToMap) {}
 
+		bool match(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const;
+
+		virtual std::ostream& printTo(std::ostream& out) const;
+	};
 
 	/**
 	 * Utility function for adding a token with a specific key to the matcher map.
@@ -522,25 +533,19 @@ namespace pragma {
 	#undef PUNCTUATOR
 	#undef TOK
 
-		struct ExprGenerator {
-			inline expr_p operator[](const std::string name) {
-				return expr_p(name);
+		template<class T>
+		struct MatchNodeGenerator {
+			inline T operator[](const std::string name) {
+				return T(name);
 			}
-			inline operator expr_p() {
-				return expr_p();
+			inline operator T() {
+				return T();
 			}
 		};
-		__attribute__((unused)) static ExprGenerator expr;
 
-		struct VarGenerator {
-			inline var_p operator[](const std::string name) {
-				return var_p(name);
-			}
-			inline operator var_p() {
-				return var_p();
-			}
-		};
-		__attribute__((unused)) static VarGenerator var;
+		__unused static MatchNodeGenerator<expr_p> expr;
+		__unused static MatchNodeGenerator<var_p> var;
+		__unused static MatchNodeGenerator<cpp_string_lit_p> cpp_string_lit;
 
 	} // End tok namespace
 } // End pragma namespace

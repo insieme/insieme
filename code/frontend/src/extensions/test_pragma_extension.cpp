@@ -64,20 +64,16 @@ namespace extensions {
 	
 	TestPragmaExtension::TestPragmaExtension() : expected(""), dummyArguments(std::vector<string>()) {
 		pragmaHandlers.push_back(std::make_shared<PragmaHandler>(
-		    PragmaHandler("test", "expect_ir", tok::l_paren >> string_literal[ARG_LABEL] >> *(~comma >> string_literal[ARG_LABEL]) >> tok::r_paren >> tok::eod, 
+		    PragmaHandler("test", "expect_ir", tok::l_paren >> cpp_string_lit[ARG_LABEL] >> *(~comma >> cpp_string_lit[ARG_LABEL]) >> tok::r_paren >> tok::eod, 
 					[&](const pragma::MatchObject& object, core::NodeList nodes) {
 
 			    assert_gt(object.getStrings(ARG_LABEL).size(), 0) << "Test expect_ir pragma expects at least one string argument!";
 				assert_gt(nodes.size(), 0) << "Test expect_ir pragma needs to be attached to at least one IR node!";
 
 				auto strings = object.getStrings(ARG_LABEL);
-				string expectedString;
-				for(const string& s: strings) {				
-					// strip surrounding quotation marks and add
-					expectedString += s.substr(1, s.size()-2);
-				}
+				string expectedString = toString(join("", strings));
 
-			    NodePtr node;
+				NodePtr node;
 			    // if we are dealing with more than one node, construct a compound statement
 			    if(nodes.size() > 1) {
 				    stmtutils::StmtWrapper wrapper;
