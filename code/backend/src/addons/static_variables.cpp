@@ -44,9 +44,9 @@
 #include "insieme/backend/statement_converter.h"
 #include "insieme/backend/preprocessor.h"
 
-#include "insieme/core/analysis/ir_utils.h"
-#include "insieme/core/ir_class_info.h"
+#include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_node_annotation.h"
+#include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/lang/static_vars.h"
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/node_replacer.h"
@@ -101,15 +101,6 @@ namespace addons {
 				// search all InitStaticLazy calls
 				core::visitDepthFirstOnce(code, collector);
 
-				// also search all meta-type infos
-				core::visitDepthFirstOnce(code, [&](const core::TypePtr& type) {
-					if(core::hasMetaInfo(type)) {
-						for(const auto& cur : core::getMetaInfo(type).getChildNodes()) {
-							visitDepthFirstOnce(cur, collector);
-						}
-					}
-				}, true, true);
-
 				// mark init calls that are unique
 				for(const auto& cur : inits) {
 					if(cur.second.size() == 1u) { cur.first->attachValue<SingleStaticInitMarker>(); }
@@ -160,7 +151,7 @@ namespace addons {
 				core::IRBuilder builder(mgr);
 
 				auto init = builder.callExpr(ext.getInitStaticConst(), call[1], call[0]);
-				auto lambda = builder.lambdaExpr(retType, init, core::VariableList());
+				auto lambda = builder.lambdaExpr(retType, core::VariableList(), init);
 
 				// this function call is equivalent to a call to the new artifical lambda
 				auto ret = builder.callExpr(retType, lambda, core::ExpressionList());
@@ -175,7 +166,7 @@ namespace addons {
 				//			return &a;
 				//
 				// where A is the type of the resulting object.
-				auto A = call->getType().as<core::RefTypePtr>()->getElementType();
+				auto A = core::lang::ReferenceType(call).getElementType();
 				LOG(DEBUG) << "ext2.getInitStaticConst() A:\n" << *A << "\n";
 
 				// get meta-type
@@ -197,12 +188,12 @@ namespace addons {
 
 					// Let's avoid a cast in static variable initializations when dealing with string literals
 					// Char vectors are wrapped into structs by Insieme
-					if(initValue->getType().isa<core::VectorTypePtr>()
-					   && mgr.getLangBasic().isChar(initValue->getType().as<core::VectorTypePtr>()->getElementType())) {
+					if(core::lang::isFixedSizedArray(initValue)
+					   && mgr.getLangBasic().isChar(core::lang::ArrayType(initValue).getElementType())) {
 						const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(initValue->getType());
 						c_ast::InitializerPtr structInit =
 						    c_ast::init(C_NODE_MANAGER->create<c_ast::StructType>(static_pointer_cast<c_ast::NamedType>(info.lValueType)->name));
-						assert_true(core::analysis::isCallOf(initValue, mgr.getLangBasic().getRefDeref()));
+						assert_true(core::analysis::isCallOf(initValue, mgr.getLangExtension<core::lang::ReferenceExtension>().getRefDeref()));
 						structInit->values.push_back(CONVERT_EXPR(core::analysis::getArgument(initValue, 0)));
 						return structInit;
 					}
@@ -261,7 +252,7 @@ namespace addons {
 
 					auto init = builder.callExpr(retType, ext.getInitStaticConst(), value, call[0]);
 					LOG(DEBUG) << ">>>>>>>INIT: \n" << dumpPretty(init) << " : " << init->getType() << "\n";
-					auto lambda = builder.lambdaExpr(retType, init, core::VariableList());
+					auto lambda = builder.lambdaExpr(retType, core::VariableList(), init);
 					LOG(DEBUG) << ">>>>>>>LAMBDA: \n" << dumpPretty(lambda) << " : " << lambda->getType() << "\n";
 
 					// this function call is equivalent to a call to the new artificial lambda
@@ -277,7 +268,7 @@ namespace addons {
 				LOG(DEBUG) << ">>>>>>>INIT: \n" << dumpPretty(init) << " : " << init->getType() << "\n";
 				auto newFunTy = builder.functionType(param->getType(), init->getType());
 				LOG(DEBUG) << ">>>>NEWFT: \n" << dumpPretty(newFunTy) << "\n";
-				auto lambda = builder.lambdaExpr(newFunTy->getReturnType(), init, toVector(param));
+				auto lambda = builder.lambdaExpr(newFunTy->getReturnType(), toVector(param), init);
 				LOG(DEBUG) << ">>>>>>>LAMBDA: \n" << dumpPretty(lambda) << " : " << lambda->getType() << "\n";
 
 				// this function call is equivalent to a call to the new artificial lambda
@@ -294,7 +285,7 @@ namespace addons {
 				//
 				// where A is the type of the resulting object.
 
-				auto A = call->getType().as<core::RefTypePtr>()->getElementType();
+				auto A = core::lang::ReferenceType(call).getElementType();
 
 				// get meta-type
 				auto& infoA = GET_TYPE_INFO(A);

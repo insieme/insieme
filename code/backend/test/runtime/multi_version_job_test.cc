@@ -35,6 +35,7 @@
  */
 
 #include <gtest/gtest.h>
+#include <insieme/backend/runtime/runtime_extension.h>
 
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/checks/full_check.h"
@@ -44,7 +45,6 @@
 
 #include "insieme/backend/runtime/runtime_preprocessor.h"
 #include "insieme/backend/runtime/runtime_backend.h"
-#include "insieme/backend/runtime/runtime_extensions.h"
 #include "insieme/backend/runtime/runtime_entities.h"
 
 #include "insieme/utils/compiler/compiler.h"

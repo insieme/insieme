@@ -34,14 +34,16 @@
  * regarding third party software licenses.
  */
 
+#include <insieme/backend/runtime/runtime_extension.h>
 #include "insieme/backend/runtime/runtime_type_handler.h"
 
 #include "insieme/backend/converter.h"
-#include "insieme/backend/runtime/runtime_extensions.h"
 #include "insieme/backend/runtime/runtime_entities.h"
 
 #include "insieme/backend/c_ast/c_code.h"
 #include "insieme/backend/c_ast/c_ast_utils.h"
+
+#include "insieme/core/lang/parallel.h"
 
 #include "insieme/utils/logging.h"
 
@@ -68,19 +70,21 @@ namespace runtime {
 
 
 		const TypeInfo* handleType(const Converter& converter, const core::TypePtr& type) {
-			const RuntimeExtensions& extensions = converter.getNodeManager().getLangExtension<RuntimeExtensions>();
+			auto& mgr = converter.getNodeManager();
+			auto& extension = mgr.getLangExtension<RuntimeExtension>();
+			auto& parExt = mgr.getLangExtension<core::lang::ParallelExtension>();
 
-			if(*extensions.contextType == *type) {
+			if(extension.isContextType(type)) {
 				// use runtime definition of the context
 				return type_info_utils::createInfo(converter.getFragmentManager(), "irt_context", "irt_all_impls.h");
 			}
 
-			if(*extensions.workItemType == *type) {
+			if(extension.isWorkItemType(type)) {
 				// use runtime definition of the work item type
 				return type_info_utils::createInfo(converter.getFragmentManager(), "irt_work_item", "irt_all_impls.h");
 			}
 
-			if(*extensions.typeID == *type) {
+			if(extension.isTypeID(type)) {
 				// use runtime definition of the id
 				return type_info_utils::createInfo(converter.getFragmentManager(), "irt_type_id", "irt_all_impls.h");
 			}
@@ -98,7 +102,7 @@ namespace runtime {
 
 			if(basic.isThreadGroup(type)) { return type_info_utils::createInfo(converter.getFragmentManager(), "irt_work_group", "ir_interface.h"); }
 
-			if(basic.isLock(type)) { return type_info_utils::createInfo(converter.getFragmentManager(), "irt_lock", "irt_lock.h"); }
+			if(parExt.isLock(type)) { return type_info_utils::createInfo(converter.getFragmentManager(), "irt_lock", "irt_lock.h"); }
 
 			// it is not a special runtime type => let somebody else try
 			return 0;

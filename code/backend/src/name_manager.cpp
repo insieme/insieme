@@ -42,6 +42,7 @@
 #include "insieme/core/ir_visitor.h"
 
 #include "insieme/core/annotations/naming.h"
+#include "insieme/core/lang/reference.h"
 
 #include "insieme/utils/unused.h"
 
@@ -68,7 +69,7 @@ namespace backend {
 	void SimpleNameManager::registerGlobalNames(const core::NodePtr& root) {
 		// just collect the names of global literals (which are all references)
 		core::visitDepthFirstOnce(root, [&](const core::LiteralPtr& literal) {
-			if(literal->getType().isa<core::RefTypePtr>()) { globalScope.usedNames.insert(literal->getStringValue()); }
+			if(core::lang::isReference(literal)) { globalScope.usedNames.insert(literal->getStringValue()); }
 		});
 
 		// if the main function is renamed, we need this to avoid

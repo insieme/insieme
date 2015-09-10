@@ -34,9 +34,9 @@
  * regarding third party software licenses.
  */
 
+#include <insieme/backend/runtime/runtime_extension.h>
 #include "insieme/backend/runtime/runtime_stmt_handler.h"
 
-#include "insieme/backend/runtime/runtime_extensions.h"
 
 namespace insieme {
 namespace backend {

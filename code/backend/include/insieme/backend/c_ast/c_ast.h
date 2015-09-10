@@ -170,7 +170,9 @@ namespace c_ast {
 	struct PointerType : public Type {
 		TypePtr elementType;
 		bool isConst;
-		PointerType(TypePtr elementType, bool isConst = false) : Type(NT_PointerType), elementType(elementType), isConst(isConst) {}
+		bool isVolatile;
+		PointerType(TypePtr elementType, bool isConst = false, bool isVolatile = false)
+			: Type(NT_PointerType), elementType(elementType), isConst(isConst), isVolatile(isVolatile) {}
 		virtual bool equals(const Node& other) const;
 	};
 

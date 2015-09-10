@@ -117,7 +117,6 @@ namespace printer {
 		// Types
 		void visitTypeVariable(const TypeVariablePtr& typeVar);
 		void visitGenericType(const GenericTypePtr& genTy);
-		void visitIntTypeParam(const IntTypeParamPtr& intTyParm);
 		void visitFunctionType(const FunctionTypePtr& funcType);
 		void visitTupleType(const TupleTypePtr& tupleTy);
 		void visitNamedCompositeType(const NamedCompositeTypePtr& compTy);
@@ -140,7 +139,6 @@ namespace printer {
 		void visitCallExpr(const CallExprPtr& callExpr);
 		void visitCastExpr(const CastExprPtr& castExpr);
 		void visitLiteral(const LiteralPtr& lit);
-		void visitVectorExpr(const VectorExprPtr& init);
 
 		void visitStatement(const insieme::core::StatementPtr& stmt);
 		void visitNode(const insieme::core::NodePtr& node);

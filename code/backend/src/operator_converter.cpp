@@ -48,10 +48,15 @@
 #include "insieme/backend/c_ast/c_ast_printer.h"
 
 #include "insieme/core/ir_builder.h"
+
 #include "insieme/core/lang/basic.h"
+#include "insieme/core/lang/array.h"
+#include "insieme/core/lang/reference.h"
+#include "insieme/core/lang/complex.h"
+#include "insieme/core/lang/io.h"
 #include "insieme/core/lang/ir++_extension.h"
-#include "insieme/core/lang/complex_extension.h"
 #include "insieme/core/lang/enum_extension.h"
+
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/encoder/encoder.h"
@@ -60,9 +65,6 @@
 #include "insieme/core/transform/simplify.h"
 #include "insieme/core/analysis/attributes.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
-#include "insieme/core/types/variable_sized_struct_utils.h"
-
-#include "insieme/core/ir_class_info.h"
 
 #include "insieme/utils/logging.h"
 
@@ -107,7 +109,7 @@ namespace backend {
 			// construct argument
 			c_ast::ExpressionPtr arg = CONVERT_ARG(0);
 
-			if(core::analysis::getReferencedType(ARG(0)->getType())->getNodeType() == core::NT_ArrayType) {
+			if(core::lang::isArray(core::analysis::getReferencedType(ARG(0)->getType()))) {
 				// TODO: call array destructor instead!!
 			}
 
@@ -144,11 +146,11 @@ namespace backend {
 
 		core::ExpressionPtr wrapNarrow(const core::ExpressionPtr& root, const core::ExpressionPtr& dataPath) {
 			core::NodeManager& mgr = dataPath.getNodeManager();
-			auto& basic = mgr.getLangBasic();
+			auto& dpExt = mgr.getLangExtension<core::lang::DatapathExtension>();
 			core::IRBuilder builder(mgr);
 
 			// check for the terminal case
-			if(basic.isDataPathRoot(dataPath)) { return root; }
+			if(dpExt.isDataPathRoot(dataPath)) { return root; }
 
 			// checks the remaining data path
 			assert_eq(dataPath->getNodeType(), core::NT_CallExpr) << "Data Path is neither root nor call!";
@@ -157,19 +159,20 @@ namespace backend {
 			core::CallExprPtr call = dataPath.as<core::CallExprPtr>();
 			core::ExpressionPtr res = wrapNarrow(root, call->getArgument(0));
 			auto fun = call->getFunctionExpr();
-			if(basic.isDataPathMember(fun)) {
+			if(dpExt.isDataPathMember(fun)) {
 				// access the member of the struct / union
 				return builder.refMember(res, call->getArgument(1).as<core::LiteralPtr>()->getStringValue());
-			} else if(basic.isDataPathElement(fun)) {
+			} else if(dpExt.isDataPathElement(fun)) {
 				// access element of vector
 				return builder.arrayRefElem(res, call->getArgument(1));
-			} else if(basic.isDataPathComponent(fun)) {
+			} else if(dpExt.isDataPathComponent(fun)) {
 				// access tuple component
 				return builder.refComponent(res, call->getArgument(1));
-			} else if(basic.isDataPathParent(fun)) {
-				// cast to parent type using a static cast
-				const auto& ext = mgr.getLangExtension<core::lang::IRppExtensions>();
-				return builder.callExpr(ext.getStaticCast(), res, call->getArgument(1));
+			} else if(dpExt.isDataPathParent(fun)) {
+				assert_not_implemented() << "Not supported yet!";
+//				// cast to parent type using a static cast
+//				const auto& ext = mgr.getLangExtension<core::lang::IRppExtensions>();
+//				return builder.callExpr(ext.getStaticCast(), res, call->getArgument(1));
 			}
 
 			// this is not a valid data path
@@ -193,18 +196,12 @@ namespace backend {
 		 */
 		c_ast::ExpressionPtr expand(ConversionContext& context, const c_ast::ExpressionPtr& src, const core::ExpressionPtr& dataPath,
 		                            const core::TypePtr& resType, core::TypePtr& curType) {
-			auto& basic = dataPath.getNodeManager().getLangBasic();
+			auto& dpExt = dataPath.getNodeManager().getLangExtension<core::lang::DatapathExtension>();
 
 			// expansion is not supported in C => requires manual pointer arithmetic
 
-			// check for the terminal case
-			if(basic.isDataPathRoot(dataPath)) {
-				curType = resType; // update currently processed type
-				return src;        // done, no offset required
-			}
-
 			// process remaining data-path components
-			assert_eq(dataPath->getNodeType(), core::NT_CallExpr) << "Data Path is neither root nor call!";
+			assert_eq(dataPath->getNodeType(), core::NT_CallExpr) << "Data Path is not a call!";
 
 			// resolve data path recursively
 			core::CallExprPtr call = dataPath.as<core::CallExprPtr>();
@@ -216,7 +213,11 @@ namespace backend {
 
 			// compute access expression
 			auto& cNodeManager = context.getConverter().getCNodeManager();
-			if(basic.isDataPathMember(fun)) {
+			if(dpExt.isDataPathRoot(fun)) {
+				// check for the terminal case
+				curType = resType; // update currently processed type
+				return src;        // done, no offset required
+			} else if(dpExt.isDataPathMember(fun)) {
 				// extract element type from current result type
 				core::LiteralPtr memberName = call->getArgument(1).as<core::LiteralPtr>();
 
@@ -235,7 +236,7 @@ namespace backend {
 
 				return c_ast::sub(res, offset);
 
-			} else if(basic.isDataPathElement(fun)) {
+			} else if(dpExt.isDataPathElement(fun)) {
 				// update current type for next steps
 				curType = curType.getChild(0).as<core::TypePtr>();
 
@@ -251,7 +252,7 @@ namespace backend {
 				// subtract offset from pointer
 				return c_ast::sub(res, offset);
 
-			} else if(basic.isDataPathComponent(fun)) {
+			} else if(dpExt.isDataPathComponent(fun)) {
 				// obtain reference to struct type
 				const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(curType);
 
@@ -289,7 +290,11 @@ namespace backend {
 
 
 	OperatorConverterTable getBasicOperatorTable(core::NodeManager& manager) {
+		// TODO: distribute this among multiple addons
 		const core::lang::BasicGenerator& basic = manager.getLangBasic();
+		const core::lang::ArrayExtension& arrayExt = manager.getLangExtension<core::lang::ArrayExtension>();
+		const core::lang::ReferenceExtension& refExt = manager.getLangExtension<core::lang::ReferenceExtension>();
+		const core::lang::InputOutputExtension& ioExt = manager.getLangExtension<core::lang::InputOutputExtension>();
 
 		OperatorConverterTable res;
 
@@ -321,10 +326,10 @@ namespace backend {
 		res[basic.getUnsignedIntLShift()] = OP_CONVERTER({ return c_ast::lShift(CONVERT_ARG(0), CONVERT_ARG(1)); });
 		res[basic.getUnsignedIntRShift()] = OP_CONVERTER({ return c_ast::rShift(CONVERT_ARG(0), CONVERT_ARG(1)); });
 
-		res[basic.getGenPreInc()] = OP_CONVERTER({ return c_ast::preInc(getAssignmentTarget(context, ARG(0))); });
-		res[basic.getGenPostInc()] = OP_CONVERTER({ return c_ast::postInc(getAssignmentTarget(context, ARG(0))); });
-		res[basic.getGenPreDec()] = OP_CONVERTER({ return c_ast::preDec(getAssignmentTarget(context, ARG(0))); });
-		res[basic.getGenPostDec()] = OP_CONVERTER({ return c_ast::postDec(getAssignmentTarget(context, ARG(0))); });
+		res[refExt.getGenPreInc()]  = OP_CONVERTER({ return c_ast::preInc(getAssignmentTarget(context, ARG(0))); });
+		res[refExt.getGenPostInc()] = OP_CONVERTER({ return c_ast::postInc(getAssignmentTarget(context, ARG(0))); });
+		res[refExt.getGenPreDec()]  = OP_CONVERTER({ return c_ast::preDec(getAssignmentTarget(context, ARG(0))); });
+		res[refExt.getGenPostDec()] = OP_CONVERTER({ return c_ast::postDec(getAssignmentTarget(context, ARG(0))); });
 
 		res[basic.getUnsignedIntEq()] = OP_CONVERTER({ return c_ast::eq(CONVERT_ARG(0), CONVERT_ARG(1)); });
 		res[basic.getUnsignedIntNe()] = OP_CONVERTER({ return c_ast::ne(CONVERT_ARG(0), CONVERT_ARG(1)); });
@@ -358,36 +363,7 @@ namespace backend {
 
 		// -- casts --
 
-		auto cast = OP_CONVERTER({ return c_ast::cast(CONVERT_RES_TYPE, CONVERT_ARG(0)); });
-
-		res[basic.getUnsignedToInt()] = cast;
-		res[basic.getRealToInt()] = cast;
-		res[basic.getCharToInt()] = cast;
-		res[basic.getBoolToInt()] = OP_CONVERTER({ return CONVERT_ARG(0); });
-
-		res[basic.getSignedToUnsigned()] = cast;
-		res[basic.getRealToUnsigned()] = cast;
-		res[basic.getCharToUnsigned()] = cast;
-		res[basic.getBoolToUnsigned()] = OP_CONVERTER({ return CONVERT_ARG(0); });
-
-		res[basic.getSignedToReal()] = cast;
-		res[basic.getUnsignedToReal()] = cast;
-		res[basic.getCharToReal()] = cast;
-		res[basic.getBoolToReal()] = cast;
-
-		res[basic.getSignedToChar()] = cast;
-		res[basic.getUnsignedToChar()] = cast;
-		res[basic.getRealToChar()] = cast;
-		res[basic.getBoolToChar()] = cast;
-
-		res[basic.getSignedToBool()] = cast;
-		res[basic.getUnsignedToBool()] = cast;
-		res[basic.getRealToBool()] = cast;
-		res[basic.getCharToBool()] = cast;
-
-		res[basic.getIntPrecisionFix()] = cast;
-		res[basic.getUintPrecisionFix()] = cast;
-		res[basic.getRealPrecisionFix()] = cast;
+		res[basic.getNumericCast()] = OP_CONVERTER({ return c_ast::cast(CONVERT_RES_TYPE, CONVERT_ARG(0)); });
 
 		// -- reals --
 
@@ -403,8 +379,6 @@ namespace backend {
 		res[basic.getRealLt()] = OP_CONVERTER({ return c_ast::lt(CONVERT_ARG(0), CONVERT_ARG(1)); });
 		res[basic.getRealLe()] = OP_CONVERTER({ return c_ast::le(CONVERT_ARG(0), CONVERT_ARG(1)); });
 
-		res[basic.getRealToInt()] = OP_CONVERTER({ return c_ast::cast(CONVERT_RES_TYPE, CONVERT_ARG(0)); });
-
 		// -- characters --
 
 		res[basic.getCharEq()] = OP_CONVERTER({ return c_ast::eq(CONVERT_ARG(0), CONVERT_ARG(1)); });
@@ -417,12 +391,8 @@ namespace backend {
 
 		// -- references --
 
-		res[basic.getRefEq()] = OP_CONVERTER({ return c_ast::eq(CONVERT_ARG(0), CONVERT_ARG(1)); });
-		res[basic.getRefNe()] = OP_CONVERTER({ return c_ast::ne(CONVERT_ARG(0), CONVERT_ARG(1)); });
-		res[basic.getRefGe()] = OP_CONVERTER({ return c_ast::ge(CONVERT_ARG(0), CONVERT_ARG(1)); });
-		res[basic.getRefGt()] = OP_CONVERTER({ return c_ast::gt(CONVERT_ARG(0), CONVERT_ARG(1)); });
-		res[basic.getRefLt()] = OP_CONVERTER({ return c_ast::lt(CONVERT_ARG(0), CONVERT_ARG(1)); });
-		res[basic.getRefLe()] = OP_CONVERTER({ return c_ast::le(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		res[refExt.getRefEqual()]    = OP_CONVERTER({ return c_ast::eq(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		res[refExt.getRefNotEqual()] = OP_CONVERTER({ return c_ast::ne(CONVERT_ARG(0), CONVERT_ARG(1)); });
 
 		// -- generic --
 
@@ -481,22 +451,17 @@ namespace backend {
 			return c_ast::deref(CONVERT_EXPR(core::IRBuilder(call->getNodeManager()).refVar(call)));
 		});
 
-		// -- volatile --
-
-		res[basic.getVolatileMake()] = OP_CONVERTER({ return CONVERT_ARG(0); });
-		res[basic.getVolatileRead()] = OP_CONVERTER({ return CONVERT_ARG(0); });
 
 		// -- references --
 
-		res[basic.getRefDeref()] = OP_CONVERTER({
+		res[refExt.getRefDeref()] = OP_CONVERTER({
 
 			// check type
-			assert_true(ARG(0)->getType().isa<core::RefTypePtr>()) << ARG(0)->getType();
+			assert_pred1(core::lang::isReference, ARG(0)->getType());
 
 			// special handling of derefing result of ref.new or ref.var => bogus
 			core::ExpressionPtr arg = ARG(0);
-			if(core::analysis::isCallOf(arg, LANG_BASIC.getRefVar()) || core::analysis::isCallOf(arg, LANG_BASIC.getRefNew())
-			   || core::analysis::isCallOf(arg, LANG_BASIC.getRefLoc())) {
+			if(core::analysis::isCallOf(arg, LANG_EXT_REF.getRefVar()) || core::analysis::isCallOf(arg, LANG_EXT_REF.getRefNew())) {
 				// skip ref.var / ref.new => stupid
 				core::CallExprPtr call = static_pointer_cast<const core::CallExpr>(arg);
 				return CONVERT_EXPR(call->getArgument(0));
@@ -520,12 +485,12 @@ namespace backend {
 			}
 
 			// deref of an assigment, do not
-			if(core::analysis::isCallOf(ARG(0), LANG_BASIC.getRefAssign())) { return CONVERT_ARG(0); }
+			if(core::analysis::isCallOf(ARG(0), LANG_EXT_REF.getRefAssign())) { return CONVERT_ARG(0); }
 
 			return c_ast::deref(CONVERT_ARG(0));
 		});
 
-		res[basic.getRefAssign()] = OP_CONVERTER({
+		res[refExt.getRefAssign()] = OP_CONVERTER({
 
 			// extract type
 			core::ExpressionPtr initValue = call->getArgument(0);
@@ -539,10 +504,7 @@ namespace backend {
 			return c_ast::assign(getAssignmentTarget(context, ARG(0)), CONVERT_ARG(1));
 		});
 
-		res[basic.getRefVar()] = OP_CONVERTER({
-
-			// get some manager
-			const core::lang::BasicGenerator& basic = LANG_BASIC;
+		res[refExt.getRefVar()] = OP_CONVERTER({
 
 			// extract type
 			core::ExpressionPtr initValue = call->getArgument(0);
@@ -553,18 +515,10 @@ namespace backend {
 			context.getDependencies().insert(valueTypeInfo.definition);
 
 			// special handling for arrays
-			if(type->getNodeType() == core::NT_ArrayType) {
+			if(core::lang::isArray(type)) {
 				// no out allocation required!
 				return CONVERT_EXPR(initValue);
 			}
-
-			// use a initializer to realize the ref var locally
-			if(core::analysis::isCallOf(initValue, basic.getVectorInitUndefined()) || core::analysis::isCallOf(initValue, basic.getUndefined())) {
-				return c_ast::ref(c_ast::init(valueTypeInfo.rValueType, c_ast::lit(valueTypeInfo.rValueType, "0")));
-			}
-
-			// add support for partial vector initialization
-			if(core::analysis::isCallOf(initValue, basic.getVectorInitPartial())) { return CONVERT_ARG(0); }
 
 			auto res = CONVERT_EXPR(initValue);
 			if(res->getNodeType() == c_ast::NT_Initializer) { return c_ast::ref(res); }
@@ -581,11 +535,11 @@ namespace backend {
 			return c_ast::init(c_ast::vec(valueTypeInfo.rValueType, 1), res);
 		});
 
-		auto refNewLoc = OP_CONVERTER({
+		res[refExt.getRefNew()] = OP_CONVERTER({
 
 			// get result type information
-			core::RefTypePtr resType = static_pointer_cast<const core::RefType>(call->getType());
-			const RefTypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(resType);
+			core::GenericTypePtr resType = call->getType().as<core::GenericTypePtr>();
+			const RefTypeInfo& info = context.getConverter().getTypeManager().getRefTypeInfo(resType);
 
 			// extract type
 			core::ExpressionPtr initValue = call->getArgument(0);
@@ -599,14 +553,14 @@ namespace backend {
 			if(core::analysis::isCallOf(ARG(0), LANG_BASIC.getUndefined())) {
 				ADD_HEADER_FOR("malloc");
 
-				c_ast::ExpressionPtr size = c_ast::sizeOf(CONVERT_TYPE(resType->getElementType()));
+				c_ast::ExpressionPtr size = c_ast::sizeOf(CONVERT_TYPE(core::analysis::getReferencedType(resType)));
 				auto cType = CONVERT_TYPE(resType);
 				auto mallocNode = c_ast::call(C_NODE_MANAGER->create("malloc"), size);
 				return c_ast::cast(cType, mallocNode);
 			}
 
 			// special handling for arrays
-			if(core::analysis::isCallOf(ARG(0), LANG_BASIC.getArrayCreate1D())) {
+			if(core::analysis::isCallOf(ARG(0), LANG_EXT(core::lang::ArrayExtension).getArrayCreate())) {
 				// array-init is allocating data on stack using alloca => switch to malloc
 				ADD_HEADER_FOR("malloc");
 
@@ -615,34 +569,37 @@ namespace backend {
 			}
 
 			// special handling for variable sized structs
-			if(core::types::isVariableSized(resType->getElementType())) {
-				// Create code similar to this:
-				// 		(A*)memcpy(malloc(sizeof(A) + sizeof(float) * v2), &(struct A){ v2 }, sizeof(A))
+			if(auto structType = initValue->getType().isa<core::StructTypePtr>()) {
+				if (core::lang::isUnknownSizedArray(structType->getEntries().back()->getType())) {
+					// Create code similar to this:
+					// 		(A*)memcpy(malloc(sizeof(A) + sizeof(float) * v2), &(struct A){ v2 }, sizeof(A))
 
-				assert_eq(ARG(0)->getNodeType(), core::NT_StructExpr) << "Only supporting struct expressions as initializer value so far!";
-				core::StructExprPtr initValue = ARG(0).as<core::StructExprPtr>();
+					auto& arrayExt = LANG_EXT(core::lang::ArrayExtension);
 
-				// get types of struct and element
-				auto structType = initValue->getType();
-				auto elementType = core::types::getRepeatedType(structType);
+					assert_eq(ARG(0)->getNodeType(), core::NT_StructExpr) << "Only supporting struct expressions as initializer value so far!";
+					core::StructExprPtr initValue = ARG(0).as<core::StructExprPtr>();
 
-				// get size of variable part
-				auto arrayInitValue = initValue->getMembers().back()->getValue();
-				assert_true(core::analysis::isCallOf(arrayInitValue, LANG_BASIC.getArrayCreate1D())) << "Array not properly initialized!";
-				auto size = arrayInitValue.as<core::CallExprPtr>()->getArgument(1);
+					// get types of struct and element
+					auto structType = initValue->getType();
 
-				// add header dependencies
-				ADD_HEADER_FOR("malloc");
-				ADD_HEADER_FOR("memcpy");
+					// get size of variable part
+					auto arrayInitValue = initValue->getMembers().back()->getValue();
+					assert_true(core::analysis::isCallOf(arrayInitValue, arrayExt.getArrayCreate())) << "Array not properly initialized!";
+					auto size = arrayInitValue.as<core::CallExprPtr>()->getArgument(1);
 
-				auto c_struct_type = CONVERT_TYPE(structType);
-				auto c_element_type = CONVERT_TYPE(elementType);
+					// add header dependencies
+					ADD_HEADER_FOR("malloc");
+					ADD_HEADER_FOR("memcpy");
 
-				// build call
-				auto malloc = c_ast::call(C_NODE_MANAGER->create("malloc"),
-				                          c_ast::add(c_ast::sizeOf(c_struct_type), c_ast::mul(c_ast::sizeOf(c_element_type), CONVERT_EXPR(size))));
-				return c_ast::cast(CONVERT_TYPE(resType),
-				                   c_ast::call(C_NODE_MANAGER->create("memcpy"), malloc, c_ast::ref(CONVERT_EXPR(initValue)), c_ast::sizeOf(c_struct_type)));
+					auto c_struct_type = CONVERT_TYPE(structType);
+					auto c_element_type = CONVERT_TYPE(core::lang::ArrayType(arrayInitValue).getElementType());
+
+					// build call
+					auto malloc = c_ast::call(C_NODE_MANAGER->create("malloc"),
+											  c_ast::add(c_ast::sizeOf(c_struct_type), c_ast::mul(c_ast::sizeOf(c_element_type), CONVERT_EXPR(size))));
+					return c_ast::cast(CONVERT_TYPE(resType),
+									   c_ast::call(C_NODE_MANAGER->create("memcpy"), malloc, c_ast::ref(CONVERT_EXPR(initValue)), c_ast::sizeOf(c_struct_type)));
+				}
 			}
 
 			// use a call to the ref_new operator of the ref type
@@ -651,12 +608,9 @@ namespace backend {
 
 		});
 
-		res[basic.getRefNew()] = refNewLoc;
-		res[basic.getRefLoc()] = refNewLoc;
+		res[refExt.getRefDelete()] = OP_CONVERTER({ return operators::refDelete(context, call); });
 
-		res[basic.getRefDelete()] = OP_CONVERTER({ return operators::refDelete(context, call); });
-
-		res[basic.getRefReinterpret()] = OP_CONVERTER({
+		res[refExt.getRefReinterpret()] = OP_CONVERTER({
 			c_ast::TypePtr type;
 
 			if(core::analysis::getReferencedType(call->getType()).isa<core::FunctionTypePtr>()) {
@@ -670,33 +624,14 @@ namespace backend {
 			return GET_TYPE_INFO(call->getType()).internalize(C_NODE_MANAGER, c_ast::cast(type, value));
 		});
 
-		res[basic.getRefToSrc()] = OP_CONVERTER({
-			std::cerr << " WARNING: this is an unchecked feature" << std::endl;
-			return CONVERT_ARG(0);
-		});
-
-		res[basic.getRefToInt()] = OP_CONVERTER({ return CONVERT_ARG(0); });
-
-		res[basic.getRefIsNull()] = OP_CONVERTER({
-			ADD_HEADER_FOR("NULL");
-			return c_ast::eq(CONVERT_ARG(0), context.getConverter().getCNodeManager()->create<c_ast::Literal>("NULL"));
-		});
-
-		res[basic.getFuncIsNull()] = OP_CONVERTER({
-			ADD_HEADER_FOR("NULL");
-			return c_ast::eq(CONVERT_ARG(0), context.getConverter().getCNodeManager()->create<c_ast::Literal>("NULL"));
-		});
-
-		res[basic.getIntToRef()] = OP_CONVERTER({ return c_ast::cast(CONVERT_TYPE(call->getType()), CONVERT_ARG(0)); });
-
 		// -- support narrow and expand --
 
-		res[basic.getRefNarrow()] = OP_CONVERTER({
+		res[refExt.getRefNarrow()] = OP_CONVERTER({
 			// narrow starting position step by step
 			return narrow(context, ARG(0), ARG(1));
 		});
 
-		res[basic.getRefExpand()] = OP_CONVERTER({
+		res[refExt.getRefExpand()] = OP_CONVERTER({
 			ADD_HEADER_FOR("offsetof");
 
 			auto charPtrType = c_ast::ptr(C_NODE_MANAGER->create<c_ast::PrimitiveType>(c_ast::PrimitiveType::Char));
@@ -709,7 +644,7 @@ namespace backend {
 
 			// subtract offsets
 			core::TypePtr curType;
-			res = expand(context, res, ARG(1), call->getType().as<core::RefTypePtr>()->getElementType(), curType);
+			res = expand(context, res, ARG(1), core::lang::ReferenceType(call).getElementType(), curType);
 
 			// cast to target type and return result
 			return c_ast::cast(CONVERT_TYPE(call->getType()), res);
@@ -717,10 +652,10 @@ namespace backend {
 
 		// -- arrays --
 
-		res[basic.getArraySubscript1D()] = OP_CONVERTER({
+		res[arrayExt.getArraySubscript()] = OP_CONVERTER({
 			// skip deref => included subscript operator
 			c_ast::ExpressionPtr target;
-			if(core::analysis::isCallOf(ARG(0), LANG_BASIC.getRefDeref())) {
+			if(core::analysis::isCallOf(ARG(0), LANG_EXT_REF.getRefDeref())) {
 				target = CONVERT_EXPR(core::analysis::getArgument(ARG(0), 0));
 			} else {
 				target = CONVERT_ARG(0);
@@ -728,213 +663,72 @@ namespace backend {
 			return c_ast::subscript(target, CONVERT_ARG(1));
 		});
 
-		res[basic.getArrayRefElem1D()] = OP_CONVERTER({
+		res[refExt.getRefArrayElement()] = OP_CONVERTER({
 			// add dependency to element type
 			core::TypePtr elementType = core::analysis::getReferencedType(ARG(0)->getType());
-			elementType = elementType.as<core::ArrayTypePtr>()->getElementType();
+			elementType = core::lang::ArrayType(elementType).getElementType();
 			const TypeInfo& info = GET_TYPE_INFO(elementType);
 			context.getDependencies().insert(info.definition);
 			// generated code &(X[Y])
 			return c_ast::ref(c_ast::subscript(CONVERT_ARG(0), CONVERT_ARG(1)));
 		});
 
-		res[basic.getScalarToArray()] = OP_CONVERTER({
+		res[refExt.getRefScalarToRefArray()] = OP_CONVERTER({
 			// initialize an array instance
 			//   Operator Type: (ref<'a>) -> ref<array<'a,1>>
 			// => requires no special treatment
 			return CONVERT_ARG(0);
 		});
 
-		res[basic.getArrayCreate1D()] = OP_CONVERTER({
+		res[arrayExt.getArrayCreate()] = OP_CONVERTER({
 			// type of Operator: (type<'elem>, uint<8>) -> array<'elem,1>
 			// create new array on the heap using alloca
 			ADD_HEADER_FOR("alloca");
 
-			const core::ArrayTypePtr& resType = static_pointer_cast<const core::ArrayType>(call->getType());
-			c_ast::ExpressionPtr size = c_ast::mul(c_ast::sizeOf(CONVERT_TYPE(resType->getElementType())), CONVERT_ARG(1));
+			core::lang::ArrayType resType(call->getType());
+			c_ast::ExpressionPtr size = c_ast::mul(c_ast::sizeOf(CONVERT_TYPE(resType.getElementType())), CONVERT_ARG(1));
 			return c_ast::call(C_NODE_MANAGER->create("alloca"), size);
 		});
 
-		#define ADD_ELEMENT_TYPE_DEPENDENCY()                                                                                                                  \
-			core::TypePtr elementType = core::analysis::getReferencedType(call->getType());                                                                    \
-			elementType = elementType.as<core::ArrayTypePtr>()->getElementType();                                                                              \
-			const TypeInfo& info = GET_TYPE_INFO(elementType);                                                                                                 \
-			context.getDependencies().insert(info.definition);
-
-		res[basic.getArrayView()] = OP_CONVERTER({
-			// add dependency to element type definition
-			ADD_ELEMENT_TYPE_DEPENDENCY();
-			return c_ast::add(CONVERT_ARG(0), CONVERT_ARG(1));
-		});
-
-		res[basic.getArrayViewPreInc()] = OP_CONVERTER({
-			// add dependency to element type definition
-			ADD_ELEMENT_TYPE_DEPENDENCY();
-			return c_ast::preInc(getAssignmentTarget(context, ARG(0)));
-		});
-
-		res[basic.getArrayViewPostInc()] = OP_CONVERTER({
-			// add dependency to element type definition
-			ADD_ELEMENT_TYPE_DEPENDENCY();
-			return c_ast::postInc(getAssignmentTarget(context, ARG(0)));
-		});
-
-		res[basic.getArrayViewPreDec()] = OP_CONVERTER({
-			// add dependency to element type definition
-			ADD_ELEMENT_TYPE_DEPENDENCY();
-			return c_ast::preDec(getAssignmentTarget(context, ARG(0)));
-		});
-
-		res[basic.getArrayViewPostDec()] = OP_CONVERTER({
-			// add dependency to element type definition
-			ADD_ELEMENT_TYPE_DEPENDENCY();
-			return c_ast::postDec(getAssignmentTarget(context, ARG(0)));
-		});
-
-		#undef ADD_ELEMENT_TYPE_DEPENDENCY
-
-		res[basic.getArrayRefDistance()] = OP_CONVERTER({
-
-			// add dependency to full type for both operators, need to know the offset for the pointer arithmetics
-			core::TypePtr elementType = core::analysis::getReferencedType(call[0]->getType());
-			elementType = elementType.as<core::ArrayTypePtr>()->getElementType();
-			const TypeInfo& info = GET_TYPE_INFO(elementType);
-			context.getDependencies().insert(info.definition);
-
-			elementType = core::analysis::getReferencedType(call[1]->getType());
-			elementType = elementType.as<core::ArrayTypePtr>()->getElementType();
-			const TypeInfo& info2 = GET_TYPE_INFO(elementType);
-			context.getDependencies().insert(info2.definition);
-
-			return c_ast::sub(CONVERT_ARG(0), CONVERT_ARG(1));
-		});
-
-		// -- vectors --
-
-		res[basic.getVectorRefElem()] = OP_CONVERTER({
-			//   operator type:  (ref<vector<'elem,#l>>, uint<8>) -> ref<'elem>
-
-			// fix dependency
-			const TypeInfo& infoSrc = GET_TYPE_INFO(core::analysis::getReferencedType(call->getArgument(0)->getType()));
-			context.getDependencies().insert(infoSrc.definition);
-
-			//   generated code: &((*X).data[Y])
-			return c_ast::ref(c_ast::subscript(c_ast::access(c_ast::deref(CONVERT_ARG(0)), "data"), CONVERT_ARG(1)));
-		});
-
-		res[basic.getVectorSubscript()] = OP_CONVERTER({
-			//   operator type:  (vector<'elem,#l>, uint<#a>) -> 'elem
-			//   generated code: ((X).data[Y])
-			return c_ast::subscript(c_ast::access(CONVERT_ARG(0), "data"), CONVERT_ARG(1));
-		});
-
-		res[basic.getVectorInitUniform()] = OP_CONVERTER({
-			//  operator type:  ('elem, intTypeParam<#a>) -> vector<'elem,#a>
-			//  generated code: <init_uniform_function>(ARG_0)
-
-			// obtain information regarding vector type (including required functionality)
-			const core::VectorTypePtr vectorType = static_pointer_cast<const core::VectorType>(call->getType());
-			const VectorTypeInfo& info = GET_TYPE_INFO(vectorType);
-
-			// add dependency
-			context.getDependencies().insert(info.initUniform);
-
-			return c_ast::call(info.initUniformName, CONVERT_ARG(0));
-		});
-
-		res[basic.getVectorInitPartial()] = OP_CONVERTER({
-
-			// obtain information regarding vector type
-			const core::VectorTypePtr vectorType = call->getType().as<core::VectorTypePtr>();
-			const VectorTypeInfo& info = GET_TYPE_INFO(vectorType);
-
-			// add dependency
-			context.getDependencies().insert(info.definition);
-
-			// create data vector to fill struct
-			auto values = (core::encoder::toValue<vector<core::ExpressionPtr>, core::encoder::DirectExprListConverter>(ARG(0)));
-			auto converted = ::transform(values, [&](const core::ExpressionPtr& cur) -> c_ast::NodePtr { return CONVERT_EXPR(cur); });
-			auto data = C_NODE_MANAGER->create<c_ast::VectorInit>(converted);
-
-			// create compound-init expression filing struct
-			return c_ast::init(info.rValueType, data);
-		});
-
-		res[basic.getRefVectorToRefArray()] = OP_CONVERTER({
-			// Operator type: (ref<vector<'elem,#l>>) -> ref<array<'elem,1>>
-			const TypeInfo& infoSrc = GET_TYPE_INFO(core::analysis::getReferencedType(call->getArgument(0)->getType()));
-			context.getDependencies().insert(infoSrc.definition);
-
-			const TypeInfo& infoRes = GET_TYPE_INFO(core::analysis::getReferencedType(call->getType()));
-			context.getDependencies().insert(infoRes.definition);
-
-			// special handling for string literals
-			if(call->getArgument(0)->getNodeType() == core::NT_Literal) {
-				core::LiteralPtr literal = call->getArgument(0).as<core::LiteralPtr>();
-				if(literal->getStringValue()[0] == '\"') { return CONVERT_ARG(0); }
-			}
-
-			return c_ast::cast(infoRes.rValueType, CONVERT_ARG(0));
-		});
-
-		res[basic.getRefVectorToSrcArray()] = OP_CONVERTER({
-			// Operator type: (ref<vector<'elem,#l>>) -> ref<array<'elem,1>>
-			const TypeInfo& infoSrc = GET_TYPE_INFO(core::analysis::getReferencedType(call->getArgument(0)->getType()));
-			context.getDependencies().insert(infoSrc.definition);
-
-			const TypeInfo& infoRes = GET_TYPE_INFO(core::analysis::getReferencedType(call->getType()));
-			context.getDependencies().insert(infoRes.definition);
-
-			// special handling for string literals
-			if(call->getArgument(0)->getNodeType() == core::NT_Literal) {
-				core::LiteralPtr literal = call->getArgument(0).as<core::LiteralPtr>();
-				if(literal->getStringValue()[0] == '\"') { return CONVERT_ARG(0); }
-			}
-
-			return c_ast::cast(infoRes.rValueType, CONVERT_ARG(0));
-		});
-
-		res[basic.getVectorReduction()] = OP_CONVERTER({
+		res[arrayExt.getArrayReduce()] = OP_CONVERTER({
 			// type of the operation:
 			// (vector<'elem,#l>, 'res, ('elem, 'res) -> 'res) -> 'res
 
-			// get vector size
-			core::ExpressionPtr vector = ARG(0);
-			assert((vector->getNodeType() == core::NT_VectorExpr || vector->getNodeType() == core::NT_Variable)
-			       && "Only supporting vector expression or variable!");
+			assert_not_implemented() << "Port to new infrastructure!";
 
-			core::VectorExprPtr vectorExpr = dynamic_pointer_cast<const core::VectorExpr>(vector);
-			core::VectorTypePtr vectorType = static_pointer_cast<const core::VectorType>(vector->getType());
-
-			core::IntTypeParamPtr vectorSize = vectorType->getSize();
-			assert_eq(vectorSize->getNodeType(), core::NT_ConcreteIntTypeParam) << "Only supported for fixed vector sizes!";
-			std::size_t size = static_pointer_cast<const core::ConcreteIntTypeParam>(vectorSize)->getValue();
-
-			// compose unfolded reduction expression
-			core::ExpressionPtr res = ARG(1);
-			core::ExpressionPtr op = ARG(2);
-			core::ExpressionPtr subscript = op->getNodeManager().getLangBasic().getVectorSubscript();
-			core::TypePtr elementType = vectorType->getElementType();
-
-			core::IRBuilder builder(op->getNodeManager());
-			for(std::size_t i = 0; i < size; i++) {
-				core::ExpressionPtr element;
-				if(vectorExpr) {
-					element = vectorExpr->getExpressions()[i];
-				} else {
-					element = builder.callExpr(elementType, subscript, toVector(vector, builder.uintLit(i)));
-				}
-
-				res = builder.callExpr(res->getType(), op, toVector(res, element));
-			}
-
-			// add code of reduction expression
-			return CONVERT_EXPR(res);
-		});
-
-		res[basic.getNullFunc()] = OP_CONVERTER({
-			auto intType = C_NODE_MANAGER->create<c_ast::PrimitiveType>(c_ast::PrimitiveType::UInt8);
-			return c_ast::lit(intType, "0");
+//			// get vector size
+//			core::ExpressionPtr vector = ARG(0);
+//			assert((vector->getNodeType() == core::NT_VectorExpr || vector->getNodeType() == core::NT_Variable)
+//			       && "Only supporting vector expression or variable!");
+//
+//			core::VectorExprPtr vectorExpr = dynamic_pointer_cast<const core::VectorExpr>(vector);
+//			core::VectorTypePtr vectorType = static_pointer_cast<const core::VectorType>(vector->getType());
+//
+//			core::IntTypeParamPtr vectorSize = vectorType->getSize();
+//			assert_eq(vectorSize->getNodeType(), core::NT_ConcreteIntTypeParam) << "Only supported for fixed vector sizes!";
+//			std::size_t size = static_pointer_cast<const core::ConcreteIntTypeParam>(vectorSize)->getValue();
+//
+//			// compose unfolded reduction expression
+//			core::ExpressionPtr res = ARG(1);
+//			core::ExpressionPtr op = ARG(2);
+//			core::ExpressionPtr subscript = op->getNodeManager().getLangBasic().getVectorSubscript();
+//			core::TypePtr elementType = vectorType->getElementType();
+//
+//			core::IRBuilder builder(op->getNodeManager());
+//			for(std::size_t i = 0; i < size; i++) {
+//				core::ExpressionPtr element;
+//				if(vectorExpr) {
+//					element = vectorExpr->getExpressions()[i];
+//				} else {
+//					element = builder.callExpr(elementType, subscript, toVector(vector, builder.uintLit(i)));
+//				}
+//
+//				res = builder.callExpr(res->getType(), op, toVector(res, element));
+//			}
+//
+//			// add code of reduction expression
+//			return CONVERT_EXPR(res);
+			return CONVERT_EXPR(ARG(0));
 		});
 
 		// -- structs --
@@ -954,7 +748,7 @@ namespace backend {
 			return c_ast::access(CONVERT_ARG(0), field);
 		});
 
-		res[basic.getCompositeRefElem()] = OP_CONVERTER({
+		res[refExt.getRefMemberAccess()] = OP_CONVERTER({
 			// signature of operation:
 			//		(ref<'a>, identifier, type<'b>) -> ref<'b>
 
@@ -968,7 +762,7 @@ namespace backend {
 
 			// special handling for accessing variable array within struct
 			auto access = c_ast::access(c_ast::deref(CONVERT_ARG(0)), field);
-			if(core::analysis::isRefOf(call->getType(), core::NT_ArrayType)) { return access; }
+			if(core::lang::isArray(core::analysis::getReferencedType(call->getType()))) { return access; }
 
 			// access the type
 			return c_ast::ref(access);
@@ -995,7 +789,7 @@ namespace backend {
 			return c_ast::access(CONVERT_ARG(0), field);
 		});
 
-		res[basic.getTupleRefElem()] = OP_CONVERTER({
+		res[refExt.getRefComponentAccess()] = OP_CONVERTER({
 			// signature of operation:
 			//		(ref<'a>, uint<8>, type<'b>) -> ref<'b>
 
@@ -1048,7 +842,7 @@ namespace backend {
 			return c_ast::sizeOf(CONVERT_TYPE(target));
 		});
 
-		res[basic.getPrint()] = OP_CONVERTER({
+		res[ioExt.getPrint()] = OP_CONVERTER({
 			// map to invoking the external function printf
 			core::IRBuilder builder(NODE_MANAGER);
 			auto printf = builder.literal("printf", call->getFunctionExpr()->getType());
@@ -1109,7 +903,7 @@ namespace backend {
 
 			string name = static_pointer_cast<core::LiteralPtr>(ARG(0))->getStringValue();
 			core::TypePtr globalType = core::analysis::getRepresentedType(ARG(1)->getType());
-			if(globalType->getNodeType() == core::NT_RefType) { globalType = core::analysis::getReferencedType(globalType); }
+			if(core::lang::isReference(globalType)) { globalType = core::analysis::getReferencedType(globalType); }
 
 			// get type of global struct
 			const TypeInfo& info = GET_TYPE_INFO(globalType);
@@ -1219,241 +1013,241 @@ namespace backend {
 		// ---------------------------- IR++ / C++ --------------------------
 
 
-		{
-			// core C++ extensions
+//		{
+//			// core C++ extensions
+//
+//			const auto& irppExt = manager.getLangExtension<core::lang::IRppExtensions>();
+//
+//			res[irppExt.getArrayCtor()] = OP_CONVERTER({
+//
+//				// init array using a vector expression
+//				auto objType = ARG(1)->getType().as<core::FunctionTypePtr>()->getObjectType();
+//				auto type = CONVERT_TYPE(objType);
+//				auto size = CONVERT_ARG(2);
+//				c_ast::ExpressionPtr res = c_ast::initArray(type, size);
+//
+//				// add dependency to class declaration
+//				context.addDependency(GET_TYPE_INFO(objType).declaration);
+//
+//				// convert default constructor
+//				auto ctor = CONVERT_ARG(1);
+//
+//				// add new if required
+//				const auto& basic = LANG_BASIC;
+//				core::IRBuilder builder(NODE_MANAGER);
+//				auto normArg0 = builder.normalize(ARG(0));
+//				if(basic.isRefVar(normArg0)) {
+//					// nothing to do
+//				} else if(basic.isRefNew(normArg0)) {
+//					res = c_ast::newCall(res);
+//				} else {
+//					assert_fail() << "Creating Arrays of objects neither on heap nor stack isn't supported!";
+//				}
+//				return res;
+//			});
+//
+//			res[irppExt.getVectorCtor()] = OP_CONVERTER({
+//
+//				// init vector using a vector expression
+//				auto objType = ARG(1)->getType().as<core::FunctionTypePtr>()->getObjectType();
+//				auto type = CONVERT_TYPE(objType);
+//				auto size = CONVERT_ARG(2);
+//				c_ast::ExpressionPtr res = c_ast::initArray(type, size);
+//
+//				// add dependency to class declaration
+//				context.addDependency(GET_TYPE_INFO(objType).declaration);
+//
+//				// convert default constructor
+//				auto ctor = CONVERT_ARG(1);
+//
+//				// add new if required
+//				const auto& basic = LANG_BASIC;
+//				if(basic.isRefVar(ARG(0))) {
+//					// nothing to do
+//				} else if(basic.isRefNew(ARG(0))) {
+//					res = c_ast::newCall(res);
+//				} else {
+//					assert_fail() << "Creating Arrays of objects neither on heap nor stack isn't supported!";
+//				}
+//				return res;
+//			});
+//
+//			res[irppExt.getVectorCtor2D()] = OP_CONVERTER({
+//
+//				// init vector using a vector expression
+//				auto objType = ARG(1)->getType().as<core::FunctionTypePtr>()->getObjectType();
+//				auto type = CONVERT_TYPE(objType);
+//				auto sizeA = CONVERT_ARG(2);
+//				auto sizeB = CONVERT_ARG(3);
+//				c_ast::ExpressionPtr res = c_ast::initArray(type, sizeB, sizeA);
+//
+//				// add dependency to class declaration
+//				context.addDependency(GET_TYPE_INFO(objType).declaration);
+//
+//				// convert default constructor
+//				auto ctor = CONVERT_ARG(1);
+//
+//				// add new if required
+//				const auto& basic = LANG_BASIC;
+//				if(refExt.isRefVar(ARG(0))) {
+//					// nothing to do
+//				} else if(refExt.isRefNew(ARG(0))) {
+//					res = c_ast::newCall(res);
+//				} else {
+//					assert_fail() << "Creating Arrays of objects neither on heap nor stack isn't supported!";
+//				}
+//				return res;
+//			});
+//
+//			res[irppExt.getArrayDtor()] = OP_CONVERTER({
+//				// create a node representing a delete operation
+//				return c_ast::deleteArrayCall(CONVERT_ARG(0));
+//			});
+//		}
 
-			const auto& irppExt = manager.getLangExtension<core::lang::IRppExtensions>();
-
-			res[irppExt.getArrayCtor()] = OP_CONVERTER({
-
-				// init array using a vector expression
-				auto objType = ARG(1)->getType().as<core::FunctionTypePtr>()->getObjectType();
-				auto type = CONVERT_TYPE(objType);
-				auto size = CONVERT_ARG(2);
-				c_ast::ExpressionPtr res = c_ast::initArray(type, size);
-
-				// add dependency to class declaration
-				context.addDependency(GET_TYPE_INFO(objType).declaration);
-
-				// convert default constructor
-				auto ctor = CONVERT_ARG(1);
-
-				// add new if required
-				const auto& basic = LANG_BASIC;
-				core::IRBuilder builder(NODE_MANAGER);
-				auto normArg0 = builder.normalize(ARG(0));
-				if(basic.isRefVar(normArg0)) {
-					// nothing to do
-				} else if(basic.isRefNew(normArg0)) {
-					res = c_ast::newCall(res);
-				} else {
-					assert_fail() << "Creating Arrays of objects neither on heap nor stack isn't supported!";
-				}
-				return res;
-			});
-
-			res[irppExt.getVectorCtor()] = OP_CONVERTER({
-
-				// init vector using a vector expression
-				auto objType = ARG(1)->getType().as<core::FunctionTypePtr>()->getObjectType();
-				auto type = CONVERT_TYPE(objType);
-				auto size = CONVERT_ARG(2);
-				c_ast::ExpressionPtr res = c_ast::initArray(type, size);
-
-				// add dependency to class declaration
-				context.addDependency(GET_TYPE_INFO(objType).declaration);
-
-				// convert default constructor
-				auto ctor = CONVERT_ARG(1);
-
-				// add new if required
-				const auto& basic = LANG_BASIC;
-				if(basic.isRefVar(ARG(0))) {
-					// nothing to do
-				} else if(basic.isRefNew(ARG(0))) {
-					res = c_ast::newCall(res);
-				} else {
-					assert_fail() << "Creating Arrays of objects neither on heap nor stack isn't supported!";
-				}
-				return res;
-			});
-
-			res[irppExt.getVectorCtor2D()] = OP_CONVERTER({
-
-				// init vector using a vector expression
-				auto objType = ARG(1)->getType().as<core::FunctionTypePtr>()->getObjectType();
-				auto type = CONVERT_TYPE(objType);
-				auto sizeA = CONVERT_ARG(2);
-				auto sizeB = CONVERT_ARG(3);
-				c_ast::ExpressionPtr res = c_ast::initArray(type, sizeB, sizeA);
-
-				// add dependency to class declaration
-				context.addDependency(GET_TYPE_INFO(objType).declaration);
-
-				// convert default constructor
-				auto ctor = CONVERT_ARG(1);
-
-				// add new if required
-				const auto& basic = LANG_BASIC;
-				if(basic.isRefVar(ARG(0))) {
-					// nothing to do
-				} else if(basic.isRefNew(ARG(0))) {
-					res = c_ast::newCall(res);
-				} else {
-					assert_fail() << "Creating Arrays of objects neither on heap nor stack isn't supported!";
-				}
-				return res;
-			});
-
-			res[irppExt.getArrayDtor()] = OP_CONVERTER({
-				// create a node representing a delete operation
-				return c_ast::deleteArrayCall(CONVERT_ARG(0));
-			});
-		}
-
-		{
-			// backend C++ extensions
-
-			const auto& irppExt = manager.getLangExtension<core::lang::IRppExtensions>();
-
-			res[irppExt.getStaticCast()] = OP_CONVERTER({
-				// build up a static cast operator
-
-				auto targetTy = core::analysis::getRepresentedType(ARG(1));
-				auto targetCType = CONVERT_TYPE(targetTy);
-
-				if(!targetTy.isa<core::ArrayTypePtr>() && !core::analysis::isCppRef(targetTy)) { targetCType = c_ast::ptr(targetCType); }
-
-				// cast needs full definition of target type to be done
-				const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(targetTy);
-				context.addDependency(info.definition);
-
-				// and the definition of the source type (to retrieve sub-type relations)
-				const TypeInfo& srcTypeInfo = context.getConverter().getTypeManager().getTypeInfo(ARG(0)->getType().as<core::RefTypePtr>()->getElementType());
-				context.addDependency(srcTypeInfo.definition);
-
-				return c_ast::staticCast(targetCType, CONVERT_ARG(0));
-			});
-
-			res[irppExt.getStaticCastRefCppToRefCpp()] = OP_CONVERTER({
-				// build up a static cast operator for cpp_ref to cpp_ref
-
-				auto targetTy = core::analysis::getRepresentedType(ARG(1));
-				auto targetCType = CONVERT_TYPE(targetTy);
-
-				assert_true(core::analysis::isCppRef(targetTy)) << "targetType not a reference type";
-				return c_ast::staticCast(targetCType, CONVERT_ARG(0));
-			});
-
-			res[irppExt.getStaticCastConstCppToConstCpp()] = OP_CONVERTER({
-				// build up a static cast operator for const_cpp_ref to const_cpp_ref
-
-				auto targetTy = core::analysis::getRepresentedType(ARG(1));
-				auto targetCType = CONVERT_TYPE(targetTy);
-
-				assert_true(core::analysis::isConstCppRef(targetTy)) << "targetType not a reference type";
-				return c_ast::staticCast(targetCType, CONVERT_ARG(0));
-			});
-			res[irppExt.getStaticCastRefCppToConstCpp()] = OP_CONVERTER({
-				// build up a static cast operator for cpp_ref to const_cpp_ref
-
-				auto targetTy = core::analysis::getRepresentedType(ARG(1));
-				auto targetCType = CONVERT_TYPE(targetTy);
-
-				assert_true(core::analysis::isConstCppRef(targetTy)) << "targetType not a reference type";
-				return c_ast::staticCast(targetCType, CONVERT_ARG(0));
-			});
-
-			res[irppExt.getDynamicCast()] = OP_CONVERTER({
-				// build up a dynamic cast operator
-
-				auto targetTy = core::analysis::getRepresentedType(ARG(1));
-				auto targetCType = CONVERT_TYPE(targetTy);
-
-				if(!targetTy.isa<core::ArrayTypePtr>() && !core::analysis::isCppRef(targetTy)) { targetCType = c_ast::ptr(targetCType); }
-
-				// cast needs full definition of target type to be done
-				const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(targetTy);
-				context.addDependency(info.definition);
-
-				// and the definition of the source type (to retrieve sub-type relations)
-				const TypeInfo& srcTypeInfo = context.getConverter().getTypeManager().getTypeInfo(ARG(0)->getType().as<core::RefTypePtr>()->getElementType());
-				context.addDependency(srcTypeInfo.definition);
-
-				return c_ast::dynamicCast(targetCType, CONVERT_ARG(0));
-			});
-
-			res[irppExt.getDynamicCastRefCppToRefCpp()] = OP_CONVERTER({
-				// build up a dynamic cast operator for cpp_ref to cpp_ref
-
-				auto targetTy = core::analysis::getRepresentedType(ARG(1));
-				auto targetCType = CONVERT_TYPE(targetTy);
-
-				assert_true(core::analysis::isCppRef(targetTy)) << "targetType not a reference type";
-				return c_ast::dynamicCast(targetCType, CONVERT_ARG(0));
-			});
-
-			res[irppExt.getDynamicCastConstCppToConstCpp()] = OP_CONVERTER({
-				// build up a dynamic cast operator for const_cpp_ref to const_cpp_ref
-
-				auto targetTy = core::analysis::getRepresentedType(ARG(1));
-				auto targetCType = CONVERT_TYPE(targetTy);
-
-				assert_true(core::analysis::isConstCppRef(targetTy)) << "targetType not a reference type";
-				return c_ast::dynamicCast(targetCType, CONVERT_ARG(0));
-			});
-
-			res[irppExt.getDynamicCastRefCppToConstCpp()] = OP_CONVERTER({
-				// build up a dynamic cast operator for cpp_ref to const_cpp_ref
-
-				auto targetTy = core::analysis::getRepresentedType(ARG(1));
-				auto targetCType = CONVERT_TYPE(targetTy);
-
-				assert_true(core::analysis::isConstCppRef(targetTy)) << "targetType not a reference type";
-				return c_ast::dynamicCast(targetCType, CONVERT_ARG(0));
-			});
-
-			res[irppExt.getTypeid()] = OP_CONVERTER({
-				// extract typeinfo
-				core::GenericTypePtr type = dynamic_pointer_cast<const core::GenericType>(ARG(0)->getType());
-				if(type) {
-					core::TypePtr target = type->getTypeParameter()[0];
-					return c_ast::typeId(CONVERT_TYPE(target));
-				} else {
-					return c_ast::typeId(c_ast::deref(CONVERT_ARG(0)));
-				}
-			});
-
-			res[irppExt.getAlignof()] = OP_CONVERTER({
-				c_ast::CallPtr res = c_ast::call(C_NODE_MANAGER->create("__alignof__"));
-				res->arguments.push_back(CONVERT_TYPE(core::analysis::getRepresentedType(ARG(0))));
-				return res;
-			});
-
-			res[irppExt.getMemberPointerCheck()] = OP_CONVERTER({ return CONVERT_ARG(0); });
-
-			res[irppExt.getStdInitListExpr()] = OP_CONVERTER({
-				// get type of the init list expression elements
-				const core::TypePtr type = core::analysis::getRepresentedType(ARG(1));
-				const TypeInfo& info = GET_TYPE_INFO(type);
-				// retrieve the list of init values
-				auto values = (insieme::core::encoder::toValue<vector<insieme::core::ExpressionPtr>, core::encoder::DirectExprListConverter>(ARG(0)));
-				// convert the list elements
-				auto converted = ::transform(values, [&](const core::ExpressionPtr& cur) -> c_ast::NodePtr {
-					c_ast::ExpressionPtr no = CONVERT_EXPR(cur);
-					// in a bracket initalization we cannot use references, we have to use values
-					if(c_ast::isUnaryOp(no, c_ast::UnaryOperation::Reference)) { no = c_ast::deref(no); }
-					return no;
-				});
-				// create the {val1, val2, ...} init list
-				c_ast::InitializerPtr initializer = c_ast::init(info.rValueType, converted);
-				// avoid explicit type printing
-				initializer->explicitType = false;
-				std::vector<c_ast::NodePtr> args{initializer};
-				// return the ctor call of the given type (e.g., std::vector) and the init list as argument
-				return c_ast::ctorCall(info.rValueType, args);
-			});
-		}
+//		{
+//			// backend C++ extensions
+//
+//			const auto& irppExt = manager.getLangExtension<core::lang::IRppExtensions>();
+//
+//			res[irppExt.getStaticCast()] = OP_CONVERTER({
+//				// build up a static cast operator
+//
+//				auto targetTy = core::analysis::getRepresentedType(ARG(1));
+//				auto targetCType = CONVERT_TYPE(targetTy);
+//
+//				if(!targetTy.isa<core::ArrayTypePtr>() && !core::analysis::isCppRef(targetTy)) { targetCType = c_ast::ptr(targetCType); }
+//
+//				// cast needs full definition of target type to be done
+//				const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(targetTy);
+//				context.addDependency(info.definition);
+//
+//				// and the definition of the source type (to retrieve sub-type relations)
+//				const TypeInfo& srcTypeInfo = context.getConverter().getTypeManager().getTypeInfo(ARG(0)->getType().as<core::RefTypePtr>()->getElementType());
+//				context.addDependency(srcTypeInfo.definition);
+//
+//				return c_ast::staticCast(targetCType, CONVERT_ARG(0));
+//			});
+//
+//			res[irppExt.getStaticCastRefCppToRefCpp()] = OP_CONVERTER({
+//				// build up a static cast operator for cpp_ref to cpp_ref
+//
+//				auto targetTy = core::analysis::getRepresentedType(ARG(1));
+//				auto targetCType = CONVERT_TYPE(targetTy);
+//
+//				assert_true(core::analysis::isCppRef(targetTy)) << "targetType not a reference type";
+//				return c_ast::staticCast(targetCType, CONVERT_ARG(0));
+//			});
+//
+//			res[irppExt.getStaticCastConstCppToConstCpp()] = OP_CONVERTER({
+//				// build up a static cast operator for const_cpp_ref to const_cpp_ref
+//
+//				auto targetTy = core::analysis::getRepresentedType(ARG(1));
+//				auto targetCType = CONVERT_TYPE(targetTy);
+//
+//				assert_true(core::analysis::isConstCppRef(targetTy)) << "targetType not a reference type";
+//				return c_ast::staticCast(targetCType, CONVERT_ARG(0));
+//			});
+//			res[irppExt.getStaticCastRefCppToConstCpp()] = OP_CONVERTER({
+//				// build up a static cast operator for cpp_ref to const_cpp_ref
+//
+//				auto targetTy = core::analysis::getRepresentedType(ARG(1));
+//				auto targetCType = CONVERT_TYPE(targetTy);
+//
+//				assert_true(core::analysis::isConstCppRef(targetTy)) << "targetType not a reference type";
+//				return c_ast::staticCast(targetCType, CONVERT_ARG(0));
+//			});
+//
+//			res[irppExt.getDynamicCast()] = OP_CONVERTER({
+//				// build up a dynamic cast operator
+//
+//				auto targetTy = core::analysis::getRepresentedType(ARG(1));
+//				auto targetCType = CONVERT_TYPE(targetTy);
+//
+//				if(!targetTy.isa<core::ArrayTypePtr>() && !core::analysis::isCppRef(targetTy)) { targetCType = c_ast::ptr(targetCType); }
+//
+//				// cast needs full definition of target type to be done
+//				const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(targetTy);
+//				context.addDependency(info.definition);
+//
+//				// and the definition of the source type (to retrieve sub-type relations)
+//				const TypeInfo& srcTypeInfo = context.getConverter().getTypeManager().getTypeInfo(ARG(0)->getType().as<core::RefTypePtr>()->getElementType());
+//				context.addDependency(srcTypeInfo.definition);
+//
+//				return c_ast::dynamicCast(targetCType, CONVERT_ARG(0));
+//			});
+//
+//			res[irppExt.getDynamicCastRefCppToRefCpp()] = OP_CONVERTER({
+//				// build up a dynamic cast operator for cpp_ref to cpp_ref
+//
+//				auto targetTy = core::analysis::getRepresentedType(ARG(1));
+//				auto targetCType = CONVERT_TYPE(targetTy);
+//
+//				assert_true(core::analysis::isCppRef(targetTy)) << "targetType not a reference type";
+//				return c_ast::dynamicCast(targetCType, CONVERT_ARG(0));
+//			});
+//
+//			res[irppExt.getDynamicCastConstCppToConstCpp()] = OP_CONVERTER({
+//				// build up a dynamic cast operator for const_cpp_ref to const_cpp_ref
+//
+//				auto targetTy = core::analysis::getRepresentedType(ARG(1));
+//				auto targetCType = CONVERT_TYPE(targetTy);
+//
+//				assert_true(core::analysis::isConstCppRef(targetTy)) << "targetType not a reference type";
+//				return c_ast::dynamicCast(targetCType, CONVERT_ARG(0));
+//			});
+//
+//			res[irppExt.getDynamicCastRefCppToConstCpp()] = OP_CONVERTER({
+//				// build up a dynamic cast operator for cpp_ref to const_cpp_ref
+//
+//				auto targetTy = core::analysis::getRepresentedType(ARG(1));
+//				auto targetCType = CONVERT_TYPE(targetTy);
+//
+//				assert_true(core::analysis::isConstCppRef(targetTy)) << "targetType not a reference type";
+//				return c_ast::dynamicCast(targetCType, CONVERT_ARG(0));
+//			});
+//
+//			res[irppExt.getTypeid()] = OP_CONVERTER({
+//				// extract typeinfo
+//				core::GenericTypePtr type = dynamic_pointer_cast<const core::GenericType>(ARG(0)->getType());
+//				if(type) {
+//					core::TypePtr target = type->getTypeParameter()[0];
+//					return c_ast::typeId(CONVERT_TYPE(target));
+//				} else {
+//					return c_ast::typeId(c_ast::deref(CONVERT_ARG(0)));
+//				}
+//			});
+//
+//			res[irppExt.getAlignof()] = OP_CONVERTER({
+//				c_ast::CallPtr res = c_ast::call(C_NODE_MANAGER->create("__alignof__"));
+//				res->arguments.push_back(CONVERT_TYPE(core::analysis::getRepresentedType(ARG(0))));
+//				return res;
+//			});
+//
+//			res[irppExt.getMemberPointerCheck()] = OP_CONVERTER({ return CONVERT_ARG(0); });
+//
+//			res[irppExt.getStdInitListExpr()] = OP_CONVERTER({
+//				// get type of the init list expression elements
+//				const core::TypePtr type = core::analysis::getRepresentedType(ARG(1));
+//				const TypeInfo& info = GET_TYPE_INFO(type);
+//				// retrieve the list of init values
+//				auto values = (insieme::core::encoder::toValue<vector<insieme::core::ExpressionPtr>, core::encoder::DirectExprListConverter>(ARG(0)));
+//				// convert the list elements
+//				auto converted = ::transform(values, [&](const core::ExpressionPtr& cur) -> c_ast::NodePtr {
+//					c_ast::ExpressionPtr no = CONVERT_EXPR(cur);
+//					// in a bracket initalization we cannot use references, we have to use values
+//					if(c_ast::isUnaryOp(no, c_ast::UnaryOperation::Reference)) { no = c_ast::deref(no); }
+//					return no;
+//				});
+//				// create the {val1, val2, ...} init list
+//				c_ast::InitializerPtr initializer = c_ast::init(info.rValueType, converted);
+//				// avoid explicit type printing
+//				initializer->explicitType = false;
+//				std::vector<c_ast::NodePtr> args{initializer};
+//				// return the ctor call of the given type (e.g., std::vector) and the init list as argument
+//				return c_ast::ctorCall(info.rValueType, args);
+//			});
+//		}
 
 		#include "insieme/backend/operator_converter_end.inc"
 

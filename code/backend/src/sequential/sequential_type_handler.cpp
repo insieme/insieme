@@ -39,7 +39,7 @@
 #include "insieme/backend/converter.h"
 #include "insieme/backend/type_manager.h"
 
-#include "insieme/core/lang/basic.h"
+#include "insieme/core/lang/parallel.h"
 
 namespace insieme {
 namespace backend {
@@ -49,10 +49,10 @@ namespace sequential {
 
 		const TypeInfo* handleType(const Converter& converter, const core::TypePtr& type) {
 			// handle jobs
-			const core::lang::BasicGenerator& basic = converter.getNodeManager().getLangBasic();
+			const core::lang::ParallelExtension& ext = converter.getNodeManager().getLangExtension<core::lang::ParallelExtension>();
 
 			// handle lock types
-			if(basic.isLock(type)) { return type_info_utils::createInfo(converter.getFragmentManager(), "int32_t", "stdint.h"); }
+			if(ext.isLock(type)) { return type_info_utils::createInfo(converter.getFragmentManager(), "int32_t", "stdint.h"); }
 
 			// it is not a special runtime type => let somebody else try
 			return 0;

@@ -150,8 +150,8 @@ namespace c_ast {
 
 	// --- types ------------------------------------------------
 
-	inline PointerTypePtr ptr(const TypePtr& type, bool isConst = false) {
-		return type->getManager()->create<c_ast::PointerType>(type, isConst);
+	inline PointerTypePtr ptr(const TypePtr& type, bool isConst = false, bool isVolatile = false) {
+		return type->getManager()->create<c_ast::PointerType>(type, isConst, isVolatile);
 	}
 
 	inline ReferenceTypePtr ref(const TypePtr& type, bool isConst = false) {

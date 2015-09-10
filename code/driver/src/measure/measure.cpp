@@ -42,6 +42,7 @@
 
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>
+#include <insieme/backend/runtime/runtime_extension.h>
 
 #include "insieme/utils/config.h"
 
@@ -49,13 +50,12 @@
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/analysis/attributes.h"
+#include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/region/for_selector.h"
 #include "insieme/core/analysis/region/pfor_selector.h"
 #include "insieme/core/lang/instrumentation_extension.h"
 
 #include "insieme/backend/runtime/runtime_backend.h"
-#include "insieme/backend/runtime/runtime_extensions.h"
-
 #include "insieme/utils/compiler/compiler.h"
 #include "insieme/utils/functional_utils.h"
 #include "insieme/utils/container_utils.h"
@@ -896,7 +896,7 @@ namespace measure {
 			core::StatementPtr stmt = ptr.as<core::StatementPtr>();
 
 			// build entry point
-			core::NodePtr main = builder.lambdaExpr(stmt, core::VariableList());
+			core::NodePtr main = builder.lambdaExpr(builder.getLangBasic().getUnit(), core::VariableList(), stmt);
 
 			// build enclosing program
 			return builder.program(toVector(main));

@@ -49,11 +49,13 @@
 #include "insieme/backend/c_ast/c_ast_utils.h"
 
 #include "insieme/core/ir_expressions.h"
+#include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_cached_visitor.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/attributes.h"
 #include "insieme/core/analysis/normalize.h"
 #include "insieme/core/lang/basic.h"
+#include "insieme/core/lang/varargs_extension.h"
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/instantiate.h"
@@ -180,7 +182,7 @@ namespace backend {
 			StmtConverter& stmtConverter = converter.getStmtConverter();
 			TypeManager& typeManager = converter.getTypeManager();
 
-			auto varlistPack = converter.getNodeManager().getLangBasic().getVarlistPack();
+			auto varlistPack = converter.getNodeManager().getLangExtension<core::lang::VarArgsExtension>().getVarlistPack();
 
 			// create a recursive lambda appending arguments to the caller (descent into varlist-pack calls)
 			std::function<void(const core::ExpressionPtr& argument)> append;
@@ -232,7 +234,7 @@ namespace backend {
 				vector<c_ast::NodePtr> args = c_call->arguments;
 				assert_false(args.empty());
 
-				const auto& basic = call->getNodeManager().getLangBasic();
+				const auto& refs = call->getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
 				auto location = args[0];
 				args.erase(args.begin());
 
@@ -243,10 +245,10 @@ namespace backend {
 				// case a) create object on stack => default
 
 				// case b) create object on heap
-				bool isOnHeap = core::analysis::isCallOf(call[0], basic.getRefNew());
+				bool isOnHeap = core::analysis::isCallOf(call[0], refs.getRefNew());
 
 				// case c) create object in-place (placement new)
-				c_ast::ExpressionPtr loc = (!core::analysis::isCallOf(call[0], basic.getRefVar()) && !core::analysis::isCallOf(call[0], basic.getRefNew()))
+				c_ast::ExpressionPtr loc = (!core::analysis::isCallOf(call[0], refs.getRefVar()) && !core::analysis::isCallOf(call[0], refs.getRefNew()))
 				                               ? location.as<c_ast::ExpressionPtr>()
 				                               : c_ast::ExpressionPtr();
 
@@ -1013,10 +1015,10 @@ namespace backend {
 				core::CallExprPtr call = candidate.as<core::CallExprPtr>();
 
 				// check whether it is a filed access
-				const auto& basic = thisVar->getNodeManager().getLangBasic();
-				if(core::analysis::isCallOf(call, basic.getRefAssign())) {
+				const auto& refs = thisVar->getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
+				if(core::analysis::isCallOf(call, refs.getRefAssign())) {
 					core::ExpressionPtr target = call->getArgument(0);
-					if(core::analysis::isCallOf(target, basic.getCompositeRefElem())) {
+					if(core::analysis::isCallOf(target, refs.getRefMemberAccess())) {
 						// check whether it is accessing this
 						auto deref = target.as<core::CallExprPtr>();
 						if(deref->getArgument(0) != thisVar) { return NO_ACCESS; }
@@ -1035,7 +1037,7 @@ namespace backend {
 					if(target == thisVar) { return funType->getObjectType(); }
 
 					// test whether argument is a member (member initializer)
-					if(core::analysis::isCallOf(target, basic.getCompositeRefElem())) {
+					if(core::analysis::isCallOf(target, refs.getRefMemberAccess())) {
 						// check whether it is accessing this
 						auto deref = target.as<core::CallExprPtr>();
 						if(deref->getArgument(0) != thisVar) { return NO_ACCESS; }
@@ -1055,8 +1057,8 @@ namespace backend {
 				core::ExpressionList values;
 				{
 					// in case it is an assignment
-					const auto& basic = call->getNodeManager().getLangBasic();
-					if(core::analysis::isCallOf(call, basic.getRefAssign())) {
+					const auto& refExt = call->getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
+					if(core::analysis::isCallOf(call, refExt.getRefAssign())) {
 						values.push_back(call->getArgument(1)); // that is the value
 					} else {
 						// it is a constructor call => collect all arguments but the first
@@ -1276,14 +1278,14 @@ namespace backend {
 				core::CompoundStmtPtr newBody = core::transform::remove(ctor->getNodeManager(), firstWriteOps).as<core::CompoundStmtPtr>();
 
 				// assemble initializer list in correct order
-				const auto& basic = thisVar->getNodeManager().getLangBasic();
+				const auto& refExt = thisVar->getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
 				for(const c_ast::IdentifierPtr& cur : all) {
 					for(const auto& write : firstWriteOps) {
 						// check whether write target is current identifier
 						core::CallExprPtr call = write.as<core::CallExprPtr>();
 						if(cur == getIdentifierFor(converter, getAccessedField(thisVar, call))) {
 							// add filed assignment
-							if(core::analysis::isCallOf(call, basic.getRefAssign())) {
+							if(core::analysis::isCallOf(call, refExt.getRefAssign())) {
 								// avoid default inits, those will be done anyway
 								if(core::analysis::isCallOf(call[1], call->getNodeManager().getLangBasic().getZero())
 								   || core::analysis::isCallOf(call[1], call->getNodeManager().getLangBasic().getUndefined())) {
@@ -1375,7 +1377,7 @@ namespace backend {
 						paramName = "this";
 						nameManager.setName(lambda->getParameterList()[counter], paramName);
 					} else {
-						if(!converter.getNodeManager().getLangBasic().isVarList(cur) || counter < lambda->getParameterList().size()) {
+						if(!converter.getNodeManager().getLangExtension<core::lang::VarArgsExtension>().isVarList(cur) || counter < lambda->getParameterList().size()) {
 							paramName = nameManager.getName(lambda->getParameterList()[counter]);
 						}
 					}
@@ -1396,7 +1398,7 @@ namespace backend {
 				ConversionContext context(converter, lambda);
 				for_each(lambda->getParameterList(), [&](const core::VariablePtr& cur) {
 					context.getVariableManager().addInfo(converter, cur,
-					                                     (cur->getType()->getNodeType() == core::NT_RefType) ? VariableInfo::INDIRECT : VariableInfo::NONE);
+					                                     core::lang::isReference(cur) ? VariableInfo::INDIRECT : VariableInfo::NONE);
 				});
 
 				core::CompoundStmtPtr body = lambda->getBody();
