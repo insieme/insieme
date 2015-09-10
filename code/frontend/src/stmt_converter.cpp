@@ -239,14 +239,6 @@ namespace conversion {
 		const clang::Expr* cond = ifStmt->getCond();
 		frontend_assert(cond) << "If statement with no condition";
 		condExpr = converter.convertExpr(cond);
-
-		if(core::analysis::isCallOf(condExpr, mgr.getLangExtension<core::lang::ReferenceExtension>().getRefAssign())) {
-			// an assignment as condition is not allowed in IR, prepend the assignment operation
-			retStmt.push_back(condExpr);
-			// use the first argument as condition
-			condExpr = builder.deref(condExpr.as<core::CallExprPtr>()->getArgument(0));
-			// TODO FE NG NF what if LHS has side effects -> evaluated twice
-		}
 		frontend_assert(condExpr) << "Couldn't convert 'condition' expression of the IfStmt";
 		
 		core::StatementPtr elseBody = builder.compoundStmt();

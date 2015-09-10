@@ -60,6 +60,12 @@ namespace frontend {
 	using insieme::annotations::ExpectedIRAnnotation;
 
 	namespace {
+		
+		static inline std::string locationOf(const NodeAddress& addr) {
+			auto loc = core::annotations::getLocation(addr);
+			return loc ? toString(*loc) : std::string("-");
+		}
+
 		static inline void checkExpected(NodePtr expected, NodePtr actual, const NodeAddress& addr) {
 			ASSERT_TRUE(actual) << "Actual IR pointer null!";
 			ASSERT_TRUE(expected) << "Expected IR pointer null (likely parser error)!\n" << "  Location: " << *core::annotations::getLocation(addr) << "\n";
@@ -68,7 +74,7 @@ namespace frontend {
 			bool aIsExp = actual.isa<ExpressionPtr>();
 			expected = builder.normalize(expected);
 			actual = builder.normalize(actual);
-			EXPECT_EQ(expected, actual) << "Location     : " << *core::annotations::getLocation(addr) << "\n"
+			EXPECT_EQ(expected, actual) << "Location     : " << locationOf(addr) << "\n"
 			                            << "Actual Pretty: " << dumpColor(actual, std::cout, true) << "\n"
 			                            << "Expected type: " << (eIsExp ? toString(dumpColor(expected.as<ExpressionPtr>()->getType())) : toString("-")) << "\n"
 			                            << "Actual type  : " << (aIsExp ? toString(dumpColor(actual.as<ExpressionPtr>()->getType())) : toString("-")) << "\n"
@@ -109,7 +115,7 @@ namespace frontend {
 					auto irString = ::toString(printer::PrettyPrinter(
 					    builder.normalize(node), printer::PrettyPrinter::OPTIONS_DEFAULT | printer::PrettyPrinter::NO_LET_BINDINGS
 					                                 | printer::PrettyPrinter::NO_LET_BOUND_FUNCTIONS | printer::PrettyPrinter::PRINT_DEREFS));
-					EXPECT_TRUE(boost::regex_match(irString.begin(), irString.end(), re)) << "Location : " << *core::annotations::getLocation(addr) << "\n"
+					EXPECT_TRUE(boost::regex_match(irString.begin(), irString.end(), re)) << "Location : " << locationOf(addr) << "\n"
 					                                                                      << "IR String: " << irString << "\n"
 					                                                                      << "Regex    : " << re << "\n";
 				} else if(boost::starts_with(ex, stringKey)) {
@@ -117,7 +123,7 @@ namespace frontend {
 					auto irString = ::toString(printer::PrettyPrinter(
 					    builder.normalize(node), printer::PrettyPrinter::OPTIONS_DEFAULT | printer::PrettyPrinter::NO_LET_BINDINGS
 					                                 | printer::PrettyPrinter::NO_LET_BOUND_FUNCTIONS | printer::PrettyPrinter::PRINT_DEREFS));
-					EXPECT_EQ(exs, irString) << "Location       : " << *core::annotations::getLocation(addr) << "\n";
+					EXPECT_EQ(exs, irString) << "Location       : " << locationOf(addr) << "\n";
 				} else if(boost::starts_with(ex, exprTypeKey)) {
 					string irs(ex.substr(exprTypeKey.size()));
 					NodePtr expected = builder.parseType(irs);
