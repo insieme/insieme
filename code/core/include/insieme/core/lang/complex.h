@@ -115,7 +115,7 @@ namespace lang {
 		 * Check if the real and imaginary part of the complex number are zero.
 		 */
 		LANG_EXT_DERIVED(ComplexToBool,
-			"lambda (struct _ir_complex { 'a _real; 'a _img; } x)->bool { return (x._img != num_cast(0.0, type('a))) || (x._real != num_cast(0.0, type('a))); }"
+			"lambda (struct _ir_complex { 'a _real; 'a _img; } x)->bool { return (x._img != num_cast(0.0, type_lit('a))) || (x._real != num_cast(0.0, type_lit('a))); }"
 		);
 
 		/**
@@ -124,7 +124,7 @@ namespace lang {
 		LANG_EXT_DERIVED(ComplexToComplex,
 							"let res_t = struct _ir_complex {'b _real; 'b _img};"
 							"lambda (struct _ir_complex {'a _real; 'a _img} c, type<'b> t)->struct _ir_complex {'b _real; 'b _img} {"
-								"return struct res_t { num_cast(c._real, type('b)), num_cast(c._img, type('b)) };"
+								"return struct res_t { num_cast(c._real, type_lit('b)), num_cast(c._img, type_lit('b)) };"
 							"}");
 
 	};

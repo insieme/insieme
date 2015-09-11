@@ -57,8 +57,7 @@ namespace parser3{
     using namespace insieme::core::printer;
 
     bool test_type(NodeManager& nm, const std::string& x){
-        NodeManager nm1;
-        IRBuilder builder(nm1);
+        IRBuilder builder(nm);
 
         std::cout << " ============== TEST ============== " << std::endl;
         auto type1 = builder.parseType(x);
@@ -122,8 +121,7 @@ namespace parser3{
 
     
     bool test_expression(NodeManager& nm, const std::string& x){
-        NodeManager nm1;
-        IRBuilder builder(nm1);
+        IRBuilder builder(nm);
 
         std::cout << " ============== TEST ============ " << std::endl;
         auto type1 = builder.parseExpr(x);
@@ -223,7 +221,6 @@ namespace parser3{
 
     bool test_statement(NodeManager& nm, const std::string& x){
         IRBuilder builder(nm);
-        IRBuilder builder1(nm);
 
         std::cout << " ============== TEST ============ " << std::endl;
         auto type1 = builder.parseStmt(x);
@@ -239,7 +236,7 @@ namespace parser3{
             std::ostringstream ss;
             std::cout << printerA << std::endl;
             ss << printerA;
-            auto type2 = builder1.parseStmt(ss.str());
+            auto type2 = builder.parseStmt(ss.str());
             if(type2) {
                 PrettyPrinter printerB(type2,   PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::PRINT_CASTS
                                                 | PrettyPrinter::PRINT_DEREFS  | PrettyPrinter::PRINT_MARKERS
@@ -356,8 +353,7 @@ namespace parser3{
 
     bool test_program(NodeManager& nm, const std::string& x){
 
-        NodeManager nm1;
-        IRBuilder builder1(nm1);
+        IRBuilder builder1(nm);
 
         std::ofstream ostreamA, ostreamB;
 

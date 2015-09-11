@@ -1148,7 +1148,7 @@ namespace checks {
 
 		//legal numeric cast of constant to integral type
 		{
-			auto expr = builder.parseExpr("num_cast(3, type(int<4>))");
+			auto expr = builder.parseExpr("num_cast(3, type_lit(int<4>))");
 			EXPECT_TRUE(expr) << "parsing error";
 
 			auto checkResult = check(expr, illegalNumCastCheckCheck);
@@ -1158,7 +1158,7 @@ namespace checks {
 
 		//legal numeric cast of expression to integral type
 		{
-			auto expr = builder.parseExpr("num_cast(5 + 4, type(int<4>))");
+			auto expr = builder.parseExpr("num_cast(5 + 4, type_lit(int<4>))");
 			EXPECT_TRUE(expr) << "parsing error";
 
 			auto checkResult = check(expr, illegalNumCastCheckCheck);
@@ -1168,7 +1168,7 @@ namespace checks {
 
 		//legal numeric cast of constant to real type
 		{
-			auto expr = builder.parseExpr("num_cast(3, type(real<4>))");
+			auto expr = builder.parseExpr("num_cast(3, type_lit(real<4>))");
 			EXPECT_TRUE(expr) << "parsing error";
 
 			auto checkResult = check(expr, illegalNumCastCheckCheck);
@@ -1178,7 +1178,7 @@ namespace checks {
 
 		//legal numeric cast of constant to generic type
 		{
-			auto expr = builder.parseExpr("num_cast(3, type('a))");
+			auto expr = builder.parseExpr("num_cast(3, type_lit('a))");
 			EXPECT_TRUE(expr) << "parsing error";
 
 			auto checkResult = check(expr, illegalNumCastCheckCheck);
@@ -1188,7 +1188,7 @@ namespace checks {
 
 		//legal numeric cast of constant to generic type
 		{
-			auto expr = builder.parseExpr("num_cast(3, type(int<'a>))");
+			auto expr = builder.parseExpr("num_cast(3, type_lit(int<'a>))");
 			EXPECT_TRUE(expr) << "parsing error";
 
 			auto checkResult = check(expr, illegalNumCastCheckCheck);
@@ -1198,7 +1198,7 @@ namespace checks {
 
 		//illegal numeric cast from string type
 		{
-			auto expr = builder.parseExpr("num_cast(\"test\", type(real<4>))");
+			auto expr = builder.parseExpr("num_cast(\"test\", type_lit(real<4>))");
 			EXPECT_TRUE(expr) << "parsing error";
 
 			auto checkResult = check(expr, illegalNumCastCheckCheck);
@@ -1210,7 +1210,7 @@ namespace checks {
 
 		//illegal numeric cast of constant to non-type element
 		{
-			auto addresses = builder.parseAddressesExpression("num_cast(4, $type(real<4>)$)");
+			auto addresses = builder.parseAddressesExpression("num_cast(4, $type_lit(real<4>)$)");
 			EXPECT_EQ(1u, addresses.size()) << "parsing error";
 			auto expr = transform::replaceNode(manager, addresses[0], builder.parseExpr("(12)")).as<ExpressionPtr>();
 

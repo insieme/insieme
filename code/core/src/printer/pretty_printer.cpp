@@ -295,9 +295,11 @@ namespace printer {
 					   || (!printer.hasOption(PrettyPrinter::NO_LET_BOUND_FUNCTIONS) && type == NT_LambdaExpr)) {
 						string name;
 
-						if(insieme::core::annotations::hasAttachedName(cur))
+						if(insieme::core::annotations::hasAttachedName(cur) &&
+							!insieme::core::annotations::getAttachedName(cur).compare("main"))
 							name = insieme::core::annotations::getAttachedName(cur);
 						else
+
 							name = (type == NT_LambdaExpr)?format("fun%03d", funCounter++):format("type%03d", typeCounter++);
 
 						if(type == NT_StructType) {
@@ -685,9 +687,9 @@ namespace printer {
 
 				// print variale names if attached to the node... otherwise
 				// a variable like "v..." will be used
-				if (insieme::core::annotations::hasAttachedName(node)) {
+		/*		if (insieme::core::annotations::hasAttachedName(node)) {
 					out << insieme::core::annotations::getAttachedName(node);;
-				} else if(!thisStack.empty() && !(*node).toString().compare(thisStack.top().toString())) {
+				} else*/ if(!thisStack.empty() && !(*node).toString().compare(thisStack.top().toString())) {
 					out << "this";
 				} else {
 					out << *node;

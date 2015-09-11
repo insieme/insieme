@@ -65,15 +65,15 @@ namespace transform {
 
 		ASSERT_TRUE(code);
 
-		EXPECT_EQ("{decl ref<int<4>,f,f> v0 = ( var(2));atomic_fetch_and_add(v0, 10);}",
+		EXPECT_EQ("{decl ref<int<4>,f,f> v0 =  var(2);atomic_fetch_and_add(v0, 10);}",
 		          toString(printer::PrettyPrinter(code, printer::PrettyPrinter::PRINT_SINGLE_LINE)));
 		EXPECT_TRUE(check(code, checks::getFullCheck()).empty()) << check(code, checks::getFullCheck());
 
 
 		auto res = analysis::normalize(transform::trySequentialize(mgr, code));
 		//		std::cout << core::printer::PrettyPrinter(res) << "\n";
-		EXPECT_EQ("{decl ref<int<4>,f,f> v0 = ( var(2));fun(ref<ref<'a,f,f>,f,f> v1, ref<'a,f,f> v2) -> 'a {return fun(ref<ref<'a,f,'v>,f,f> v1, ref<'a,f,f> v2) -> 'a {decl 'a v3 = v1;(v1 := gen_add(v1, "
-		          "v2));return v3;}(v1, v2);}(v0, 10);}",
+		EXPECT_EQ("{decl ref<int<4>,f,f> v0 =  var(2);function(ref<ref<'a,f,f>,f,f> v1, ref<'a,f,f> v2) -> 'a {return function(ref<ref<'a,f,'v>,f,f> v1, ref<'a,f,f> v2) -> 'a {decl 'a v3 = v1;v1 = gen_add(v1, "
+		          "v2);return v3;}(v1, v2);}(v0, 10);}",
 		          toString(printer::PrettyPrinter(res, printer::PrettyPrinter::PRINT_SINGLE_LINE)));
 		EXPECT_TRUE(check(res, checks::getFullCheck()).empty()) << check(res, checks::getFullCheck());
 	}
