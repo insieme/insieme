@@ -5,12 +5,12 @@ int main() {
 	
 	// BASE TYPES //////////////////////////////////////////////////////////////
 	
-	#pragma test expect_ir("decl ref<char,f,f> v0 = var(num_cast(lit(\"'a'\":int<4>), type(char)));")
+	#pragma test expect_ir("decl ref<char,f,f> v0 = var(num_cast(lit(\"'a'\":int<4>), type_lit(char)));")
 	char c = 'a';
 
-	#pragma test expect_ir("decl ref<uint<1>,f,f> v0 = var(num_cast(5, type(uint<1>)));")
+	#pragma test expect_ir("decl ref<uint<1>,f,f> v0 = var(num_cast(5, type_lit(uint<1>)));")
 	unsigned char uc = 5;
-	#pragma test expect_ir("decl ref<int<1>,f,f> v0 = var(num_cast(2, type(int<1>)));")
+	#pragma test expect_ir("decl ref<int<1>,f,f> v0 = var(num_cast(2, type_lit(int<1>)));")
 	signed char sc = 2;
 	
 	#pragma test expect_ir("decl ref<int<4>,f,f> v0 = var(2);")
@@ -18,13 +18,13 @@ int main() {
 	
 	// QUALIFIERS ////////////////////////////////////////////////////////////// 
 	
-	#pragma test expect_ir("decl ref<int<4>,t,f> v0 = ref_cast(var(5), type(t), type(f));")
+	#pragma test expect_ir("decl ref<int<4>,t,f> v0 = ref_cast(var(5), type_lit(t), type_lit(f));")
 	const int ci = 5;
 	
-	#pragma test expect_ir("decl ref<int<4>,f,t> v0 = ref_cast(var(5), type(f), type(t));")
+	#pragma test expect_ir("decl ref<int<4>,f,t> v0 = ref_cast(var(5), type_lit(f), type_lit(t));")
 	volatile int vi = 5;
 	
-	#pragma test expect_ir("decl ref<int<4>,t,t> v0 = ref_cast(var(5), type(t), type(t));")
+	#pragma test expect_ir("decl ref<int<4>,t,t> v0 = ref_cast(var(5), type_lit(t), type_lit(t));")
 	const volatile int cvi = 5;
 		
 	// POINTER TYPES //////////////////////////////////////////////////////////////
@@ -39,7 +39,7 @@ int main() {
 		const int ci;
 		const int* pci = &ci;
 	}
-	#pragma test expect_ir("{ decl ref<int<4>,f,f> v0; decl ref<ptr<int<4>,t,f>,f,f> v1 = var(ptr_cast(ptr_from_ref(v0), type(t), type(f))); }")
+	#pragma test expect_ir("{ decl ref<int<4>,f,f> v0; decl ref<ptr<int<4>,t,f>,f,f> v1 = var(ptr_cast(ptr_from_ref(v0), type_lit(t), type_lit(f))); }")
 	{
 		int i;
 		const int* pci2 = &i;
@@ -47,24 +47,24 @@ int main() {
 
 	// ARRAY TYPES /////////////////////////////////////////////////////////////////
 
-	#pragma test expect_ir("decl ref<array<int<4>,5>,f,f> v0 = var(array_create(type(int<4>), type(5), [1,2,3,4,5]));")
+	#pragma test expect_ir("decl ref<array<int<4>,5>,f,f> v0 = var(array_create(type_lit(int<4>), type_lit(5), [1,2,3,4,5]));")
 	int arr_all[5] = {1,2,3,4,5};
 	
-	#pragma test expect_ir("decl ref<array<int<4>,5>,f,f> v0 = var(array_create(type(int<4>), type(5), [1,2]));")
+	#pragma test expect_ir("decl ref<array<int<4>,5>,f,f> v0 = var(array_create(type_lit(int<4>), type_lit(5), [1,2]));")
 	int arr_partial[5] = {1,2};
 	
-	#pragma test expect_ir("decl ref<array<int<4>,5>,f,f> v0 = var(array_create(type(int<4>), type(5), [0]));")
+	#pragma test expect_ir("decl ref<array<int<4>,5>,f,f> v0 = var(array_create(type_lit(int<4>), type_lit(5), [0]));")
 	int arr_zero[5] = {0};
 	
-	#pragma test expect_ir("decl ref<array<int<4>,3>,f,f> v0 = var(array_create(type(int<4>), type(3), [0,1,2]));")
+	#pragma test expect_ir("decl ref<array<int<4>,3>,f,f> v0 = var(array_create(type_lit(int<4>), type_lit(3), [0,1,2]));")
 	int arr_implied[] = {0,1,2};
 	
 	#pragma test expect_ir("decl ref<array<array<int<4>,3>,2>,f,f> v0 =",\
-		"var(array_create(type(array<int<4>,3>), type(2), [array_create(type(int<4>), type(3), [1,2,3]), array_create(type(int<4>), type(3), [4,5,6])]));")
+		"var(array_create(type_lit(array<int<4>,3>), type_lit(2), [array_create(type_lit(int<4>), type_lit(3), [1,2,3]), array_create(type_lit(int<4>), type_lit(3), [4,5,6])]));")
 	int arr_multi[2][3] = {{1,2,3}, {4,5,6}};
 
 	#pragma test expect_ir("decl ref<array<array<int<4>,3>,2>,f,f> v0 =",\
-		"var(array_create(type(array<int<4>,3>), type(2), [array_create(type(int<4>), type(3), [1]), array_create(type(int<4>), type(3), [4,5])]));")
+		"var(array_create(type_lit(array<int<4>,3>), type_lit(2), [array_create(type_lit(int<4>), type_lit(3), [1]), array_create(type_lit(int<4>), type_lit(3), [4,5])]));")
 	int arr_multi_partial[2][3] = {{1}, {4,5}};
 	
 	// STRUCT TYPES //////////////////////////////////////////////////////////////
@@ -103,7 +103,7 @@ int main() {
 	
 	#pragma test expect_ir(R"({ 
 		let s = struct { int<4> a; uint<4> b }; 
-		decl ref<array<s,2>,f,f> v0 = var(array_create(type(s), type(2), [struct s {1, 2u}, struct s{3, 4u}])); })")
+		decl ref<array<s,2>,f,f> v0 = var(array_create(type_lit(s), type_lit(2), [struct s {1, 2u}, struct s{3, 4u}])); })")
 	{ struct { int a; unsigned b; } su[2] = { { 1, 2u }, { 3, 4u } }; }
 
 }
