@@ -1,5 +1,5 @@
 #
-# Builds the insieme util library
+# Builds the insieme utils library
 #
 project(insieme_utils CXX)
 message(STATUS "========== configure utils =============")
@@ -38,7 +38,7 @@ target_link_libraries(insieme_utils dl)
 cotire(insieme_utils)
 
 # =============================================  TESTING  =====================================
-set ( ut_prefix  ut_util )
+set ( ut_prefix  ut_utils )
 file(GLOB_RECURSE test_cases test/*.cc)
 foreach ( case_file ${test_cases} )
 	get_filename_component( case_name ${case_file} NAME_WE )
