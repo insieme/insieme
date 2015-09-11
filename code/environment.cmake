@@ -33,6 +33,7 @@ include(insieme_find_package)
 include(insieme_glob_headers)
 include(add_unit_test)
 include(cotire)
+include(insieme_fix_case_name)
 
 #if CBA_JOBS option was given, we query the number of cores, if no -j was specified this is the
 #uperlimit for parallel compile jobs

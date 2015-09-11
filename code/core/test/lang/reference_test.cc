@@ -36,76 +36,17 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/core/ir_node.h"
 #include "insieme/core/lang/reference.h"
-#include "insieme/core/ir_builder.h"
+#include "insieme/core/test/test_utils.h"
 
 namespace insieme {
 namespace core {
 namespace lang {
 
-	TEST(Reference, Basic) {
+	TEST(Reference, SemanticChecks) {
 		NodeManager nm;
-
-		IRBuilder builder(nm);
-
-		auto a = builder.genericType("A");
-		auto raff = ReferenceType::create(a);
-		auto raft = ReferenceType::create(a, false, true);
-		auto ratf = ReferenceType::create(a, true, false);
-		auto ratt = ReferenceType::create(a, true, true);
-
-		EXPECT_EQ("ref<A,f,f>", toString(*raff));
-		EXPECT_EQ("ref<A,f,t>", toString(*raft));
-		EXPECT_EQ("ref<A,t,f>", toString(*ratf));
-		EXPECT_EQ("ref<A,t,t>", toString(*ratt));
-
-		EXPECT_TRUE(isReference(raff));
-		EXPECT_TRUE(isReference(raft));
-		EXPECT_TRUE(isReference(ratf));
-		EXPECT_TRUE(isReference(ratt));
-
-
-		EXPECT_FALSE(ReferenceType(raff).isConst());
-		EXPECT_FALSE(ReferenceType(raff).isVolatile());
-
-		EXPECT_FALSE(ReferenceType(raft).isConst());
-		EXPECT_TRUE(ReferenceType(raft).isVolatile());
-
-		EXPECT_TRUE(ReferenceType(ratf).isConst());
-		EXPECT_FALSE(ReferenceType(ratf).isVolatile());
-
-		EXPECT_TRUE(ReferenceType(ratt).isConst());
-		EXPECT_TRUE(ReferenceType(ratt).isVolatile());
-
-		EXPECT_EQ(raff, (GenericTypePtr)(ReferenceType(raff)));
-		EXPECT_EQ(ratf, (GenericTypePtr)(ReferenceType(ratf)));
-		EXPECT_EQ(raft, (GenericTypePtr)(ReferenceType(raft)));
-		EXPECT_EQ(ratt, (GenericTypePtr)(ReferenceType(ratt)));
-	}
-
-	TEST(Reference, IsReferenceType) {
-		NodeManager nm;
-		IRBuilder builder(nm);
-
 		auto& ext = nm.getLangExtension<ReferenceExtension>();
-
-		EXPECT_TRUE(isReference(ext.getGenRef()));
-
-		EXPECT_TRUE(isReference(builder.parseType("ref<A,f,f>")));
-		EXPECT_TRUE(isReference(builder.parseType("ref<A,t,f>")));
-		EXPECT_TRUE(isReference(builder.parseType("ref<A,f,t>")));
-		EXPECT_TRUE(isReference(builder.parseType("ref<A,t,t>")));
-
-		EXPECT_TRUE(isReference(builder.parseType("ref<ref<A,t,f>,t,t>")));
-
-		EXPECT_TRUE(isReference(builder.parseType("ref<A,'a,t>")));
-		EXPECT_TRUE(isReference(builder.parseType("ref<A,t,'b>")));
-		EXPECT_TRUE(isReference(builder.parseType("ref<A,'a,'b>")));
-
-		EXPECT_FALSE(isReference(builder.parseType("A")));
-		EXPECT_FALSE(isReference(builder.parseType("ref<A,t>")));
-		EXPECT_FALSE(isReference(builder.parseType("ref<A,t,t,t>")));
+		semanticCheckSecond(ext.getSymbols());
 	}
 
 } // end namespace lang
