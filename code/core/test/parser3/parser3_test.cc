@@ -306,25 +306,20 @@ namespace parser3 {
 
 	}
 
-/*
- 	bool test_program(NodeManager& nm, const std::string& x) {
-		IRBuilder builder(nm);
-		auto type = builder.parseProgram(x);
-		if(type) {
-
-		}
-*/
-
 	bool test_program(NodeManager& nm, const std::string& x) {
 
 		inspire_driver driver(x, nm);
+	   	std::cout << " ============== TEST ============ " << std::endl;
+
 		driver.parseProgram();
+		std::cout << " ============= PARSED =========== " << std::endl;
+
 		if(driver.result) {
 //			dumpColor(driver.result);
 			auto msg = checks::check(driver.result);
 			EXPECT_TRUE(msg.empty()) << msg;
 		} else {
-
+			driver.print_errors();
 		}
 //		   std::cout << " ============== TEST ============ " << std::endl;
 		return driver.result;
@@ -333,7 +328,7 @@ namespace parser3 {
 	TEST(IR_Parser3, Let) {
 		NodeManager mgr;
 		EXPECT_TRUE(test_program(mgr, "let int = int<4>; int main () { return 1; }"));
-		EXPECT_TRUE(test_program(mgr, "let int = int<4>; let long = int<8>; long main (int a) { return 1; }"));
+		EXPECT_TRUE(test_program(mgr, "let int = int<4>; let long = int<8>; long main (ref<int,f,f> a) { return 1; }"));
 		EXPECT_TRUE(test_program(mgr, "let int , long = int<4> ,int<8>; int<4> main () { return 1; }"));
 		EXPECT_TRUE(test_program(mgr, "let f = lambda () -> unit { }; int<4> main () { f(); return 1; }"));
 		EXPECT_TRUE(test_program(mgr, "let int = int<4>; let f = lambda (int a) -> int { return a; }; int<4> main () { f(1); return 1; }"));
@@ -361,9 +356,9 @@ namespace parser3 {
 
 	TEST(IR_Parser3, Program) {
 		NodeManager nm;
-		EXPECT_TRUE(test_program(nm, "int<4> main (int<4> a, int<4> b)  { return 1+1; }"));
-		EXPECT_TRUE(test_program(nm, "let int = int<4>; int main (int a, int b) { return 1+1; }"));
-		EXPECT_TRUE(test_program(nm, "let int = int<4>; let f = lambda (int a) ->int { return a; }; int main (int a, int b) { return f(1); }"));
+		EXPECT_TRUE(test_program(nm, "int<4> main (ref<int<4>,f,f> a, ref<int<4>,f,f> b)  { return 1+1; }"));
+		EXPECT_TRUE(test_program(nm, "let int = int<4>; int main (ref<int,f,f> a, ref<int,f,f> b) { return 1+1; }"));
+		EXPECT_TRUE(test_program(nm, "let int = int<4>; let f = lambda (int a) ->int { return a; }; int main (ref<int,f,f> a, ref<int,f,f> b) { return f(1); }"));
 		EXPECT_TRUE(test_program(nm, "let int = int<4> ; "
 		                             "let h = lambda ((int)->int f)->int { return f(5); } ; "
 		                             "let f,g = "
