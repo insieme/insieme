@@ -25,6 +25,13 @@ int main() {
 	#pragma test expect_ir("decl ref<int<4>,t,t> v0;")
 	const volatile int q;
 	
+	#pragma test expect_ir("decl ref<int<4>,t,f> v0;")
+	int const y2;
+	#pragma test expect_ir("decl ref<int<4>,f,t> v0;")
+	int volatile z2;
+	#pragma test expect_ir("decl ref<int<4>,t,t> v0;")
+	int const volatile q2;
+
 	#pragma test expect_ir("decl ref<real<4>,f,f> v0;")
 	float f1;
 	#pragma test expect_ir("decl ref<real<8>,f,f> v0;")
@@ -45,18 +52,24 @@ int main() {
 	
 	#pragma test expect_ir("decl ref<ptr<int<4>,f,f>,f,f> v0;")
 	int* pi;
+
 	#pragma test expect_ir("decl ref<ptr<int<4>,t,f>,f,f> v0;")
 	const int* pci;
+
+	#pragma test expect_ir("decl ref<ptr<int<4>,t,f>,f,f> v0;")
+	int const * pci2;
+
 	#pragma test expect_ir("decl ref<ptr<int<4>,f,t>,f,f> v0;")
 	volatile int* pvi;
+
+	#pragma test expect_ir("decl ref<ptr<int<4>,f,t>,f,f> v0;")
+	int volatile * pvi2;
+
 	#pragma test expect_ir("decl ref<ptr<int<4>,t,t>,f,f> v0;")
 	const volatile int* pcvi;
 	
 	#pragma test expect_ir("decl ref<ptr<int<4>,f,f>,t,f> v0;")
 	int *const cpi;
-
-	#pragma test expect_ir("decl ref<ptr<int<4>,t,f>,f,f> v0;")
-	int const * cpi2;
 
 	#pragma test expect_ir("decl ref<ptr<int<4>,t,f>,t,f> v0;")
 	const int *const cpci;
@@ -102,12 +115,12 @@ int main() {
 	struct { int i; } swi_anon;
 	
 	typedef struct swi_s { int i; } swi_t;
-	#pragma test expect_ir("REGEX", R"(decl ref<struct \w+swi_s\w+ <i:int<4>>,f,f> v0 = .*)")
+	#pragma test expect_ir("REGEX", R"(decl ref<struct \w+swi_s\w+ \{int<4> i\},f,f> v0 = .*)")
 	swi_t swi_1;
-	#pragma test expect_ir("REGEX", R"(decl ref<struct \w+swi_s\w+ <i:int<4>>,f,f> v0 = .*)")
+	#pragma test expect_ir("REGEX", R"(decl ref<struct \w+swi_s\w+ \{int<4> i\},f,f> v0 = .*)")
 	struct swi_s swi_2; 
 	
 	typedef union { int i; } union_t;
-	#pragma test expect_ir("REGEX", R"(decl ref<union \w+ <i:int<4>>,f,f> v0 = .*)")
+	#pragma test expect_ir("REGEX", R"(decl ref<union \w+ \{int<4> i\},f,f> v0 = .*)")
 	union_t uni;
 }

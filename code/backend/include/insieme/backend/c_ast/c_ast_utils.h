@@ -154,22 +154,47 @@ namespace c_ast {
 		return type->getManager()->create<c_ast::PointerType>(type, isConst, isVolatile);
 	}
 
-	inline ReferenceTypePtr ref(const TypePtr& type, bool isConst = false) {
-		return type->getManager()->create<c_ast::ReferenceType>(isConst, type);
-	}
-
-	inline TypePtr modifier(const TypePtr& type, bool isConst, bool isVolatile) {
-		if (auto mod = type.isa<c_ast::ModifiedTypePtr>()) return modifier(mod->type, isConst, isVolatile);
-		if (auto cpt = type.isa<c_ast::PointerTypePtr>()) return ptr(cpt->elementType, isConst, isVolatile);
-		return type->getManager()->create<c_ast::ModifiedType>(type, isConst, isVolatile);
+	inline ReferenceTypePtr ref(const TypePtr& type, bool isConst = false, bool isVolatile = false) {
+		return type->getManager()->create<c_ast::ReferenceType>(type, isConst, isVolatile);
 	}
 
 	inline VectorTypePtr vec(const TypePtr& element) {
 		return element->getManager()->create<c_ast::VectorType>(element);
 	}
 
+	inline VectorTypePtr vec(const TypePtr& element, const ExpressionPtr& size) {
+		return element->getManager()->create<c_ast::VectorType>(element, size);
+	}
+
 	inline VectorTypePtr vec(const TypePtr& element, unsigned size) {
-		return element->getManager()->create<c_ast::VectorType>(element, element->getManager()->create<Literal>(toString(size)));
+		return vec(element, element->getManager()->create<Literal>(toString(size)).as<ExpressionPtr>());
+	}
+
+	inline TypePtr qualify(const TypePtr& type, bool isConst, bool isVolatile) {
+		if (auto prim = type.isa<c_ast::PrimitiveTypePtr>()) {
+			return type->getManager()->create<c_ast::PrimitiveType>(prim->type, isConst, isVolatile);
+		}
+		if (auto ptrt = type.isa<c_ast::PointerTypePtr>()) {
+			return ptr(ptrt->elementType, isConst, isVolatile);
+		}
+		if (auto reft = type.isa<c_ast::ReferenceTypePtr>()) {
+			return ref(reft->elementType, isConst, isVolatile);
+		}
+		if (auto namedType = type.isa<c_ast::NamedTypePtr>()) {
+			auto res = type->getManager()->create<c_ast::NamedType>(namedType->name, isConst, isVolatile);
+			res->isFunctionType = namedType->isFunctionType;
+			res->parameters = namedType->parameters;
+			return res;
+		}
+		if (auto compositeType = type.isa<c_ast::NamedCompositeTypePtr>()) {
+			if (!isConst && !isVolatile) return compositeType;
+			return type->getManager()->create<c_ast::NamedType>(compositeType->name, isConst, isVolatile);
+		}
+		if (auto vectorType = type.isa<c_ast::VectorTypePtr>()) {
+			return vec(qualify(vectorType->elementType, isConst, isVolatile), vectorType->size);
+		}
+		assert_fail() << "Unsupported input type: " << type->getType() << "\n";
+		return type;
 	}
 
 	inline FunctionTypePtr fun(const TypePtr& returnType, const vector<c_ast::TypePtr>& params) {

@@ -55,9 +55,9 @@ core::LambdaExprPtr getDummyImpl(core::NodeManager& manager) {
 	const auto& basic = manager.getLangBasic();
 	const auto& ext = manager.getLangExtension<RuntimeExtension>();
 
-	core::VariablePtr param = builder.variable(builder.refType(ext.workItemType), 1);
+	core::VariablePtr param = builder.variable(builder.refType(ext.getWorkItemType()), 1);
 	core::StatementPtr body = builder.getNoOp();
-	return builder.lambdaExpr(basic.getUnit(), body, toVector(param));
+	return builder.lambdaExpr(basic.getUnit(), toVector(param), body);
 }
 
 core::LambdaExprPtr getDummyEffort(core::NodeManager& manager) {
@@ -67,7 +67,7 @@ core::LambdaExprPtr getDummyEffort(core::NodeManager& manager) {
 	core::VariablePtr a = builder.variable(basic.getInt8(), 1);
 	core::VariablePtr b = builder.variable(basic.getInt8(), 2);
 	core::StatementPtr body = builder.returnStmt(builder.castExpr(basic.getUInt8(), builder.sub(b, a)));
-	return builder.lambdaExpr(basic.getUInt8(), body, toVector(a, b));
+	return builder.lambdaExpr(basic.getUInt8(), toVector(a, b), body);
 }
 
 
@@ -104,7 +104,7 @@ TEST(RuntimeExtension, WorkItemImpl) {
 	const RuntimeExtension& ext = manager.getLangExtension<RuntimeExtension>();
 
 	// test type
-	EXPECT_EQ(ext.workItemImplType, enc::getTypeFor<WorkItemImpl>(manager));
+	EXPECT_EQ(ext.getWorkItemImplType(), enc::getTypeFor<WorkItemImpl>(manager));
 
 	// test encoding
 	WorkItemImpl impl(toVector(WorkItemVariant(getDummyImpl(manager))));

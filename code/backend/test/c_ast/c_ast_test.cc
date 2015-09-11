@@ -154,13 +154,56 @@ namespace c_ast {
 		auto code = toC(def);
 		EXPECT_PRED2(containsSubString, code, "int32_t x1");
 		EXPECT_PRED2(containsSubString, code, "int32_t* x2");
-		EXPECT_PRED2(containsSubString, code, "int32_t*const x3");
-		EXPECT_PRED2(containsSubString, code, "int32_t*const*const x4");
-		EXPECT_PRED2(containsSubString, code, "int32_t*const* x5");
-		EXPECT_PRED2(containsSubString, code, "int32_t**const x6");
-		EXPECT_PRED2(containsSubString, code, "int32_t**const* x7");
-		EXPECT_PRED2(containsSubString, code, "int32_t*const**const x8");
+		EXPECT_PRED2(containsSubString, code, "int32_t* const x3");
+		EXPECT_PRED2(containsSubString, code, "int32_t* const* const x4");
+		EXPECT_PRED2(containsSubString, code, "int32_t* const* x5");
+		EXPECT_PRED2(containsSubString, code, "int32_t** const x6");
+		EXPECT_PRED2(containsSubString, code, "int32_t** const* x7");
+		EXPECT_PRED2(containsSubString, code, "int32_t* const** const x8");
 	}
+
+	TEST(C_AST_Printer, ConstVolatilePointerParameterPrinter) {
+			CNodeManager manager;
+
+			TypePtr type;
+
+			StructTypePtr structType = manager.create<StructType>(manager.create("XY"));
+			TypePtr intType = manager.create<PrimitiveType>(PrimitiveType::Int32);
+
+			structType->elements.push_back(var(intType, "x1"));
+
+			structType->elements.push_back(var(c_ast::ptr(intType), "x2"));
+
+			structType->elements.push_back(var(c_ast::ptr(intType, true, false), "x3"));
+
+			structType->elements.push_back(var(c_ast::ptr(intType, false, true), "x4"));
+
+			structType->elements.push_back(var(c_ast::ptr(intType, true, true), "x5"));
+
+			structType->elements.push_back(var(c_ast::ptr(c_ast::ptr(intType)), "x6"));
+
+			structType->elements.push_back(var(c_ast::ptr(c_ast::ptr(intType), true, false), "x7"));
+
+			structType->elements.push_back(var(c_ast::ptr(c_ast::ptr(intType), false, true), "x8"));
+
+			structType->elements.push_back(var(c_ast::ptr(c_ast::ptr(intType), true, true), "x9"));
+
+			structType->elements.push_back(var(c_ast::ptr(c_ast::ptr(intType, true, true), true, true), "x10"));
+
+			NodePtr def = manager.create<TypeDefinition>(structType);
+
+			auto code = toC(def);
+			EXPECT_PRED2(containsSubString, code, "int32_t x1");
+			EXPECT_PRED2(containsSubString, code, "int32_t* x2");
+			EXPECT_PRED2(containsSubString, code, "int32_t* const x3");
+			EXPECT_PRED2(containsSubString, code, "int32_t* volatile x4");
+			EXPECT_PRED2(containsSubString, code, "int32_t* const volatile x5");
+			EXPECT_PRED2(containsSubString, code, "int32_t** x6");
+			EXPECT_PRED2(containsSubString, code, "int32_t** const x7");
+			EXPECT_PRED2(containsSubString, code, "int32_t** volatile x8");
+			EXPECT_PRED2(containsSubString, code, "int32_t** const volatile x9");
+			EXPECT_PRED2(containsSubString, code, "int32_t* const volatile* const volatile x10");
+		}
 
 
 	int f(int (*fun)(int, int)) {

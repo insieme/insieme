@@ -154,12 +154,16 @@ AST_TERMINAL(OpaqueCode, Node)
 AST_NODE(Type, Node)
 ABSTRACT(Type)
 
+// add CV qualified base type
+AST_NODE(CVQualifiedType, Type)
+ABSTRACT(CVQualifiedType)
+
 // and type constructors ...
-AST_TERMINAL(PrimitiveType, Type)
-AST_TERMINAL(ModifiedType, Type)
-AST_TERMINAL(NamedType, Type)
-AST_TERMINAL(PointerType, Type)
-AST_TERMINAL(ReferenceType, Type)
+AST_TERMINAL(PrimitiveType, CVQualifiedType)
+AST_TERMINAL(NamedType, CVQualifiedType)
+AST_TERMINAL(PointerType, CVQualifiedType)
+AST_TERMINAL(ReferenceType, CVQualifiedType)
+
 AST_TERMINAL(VectorType, Type)
 AST_TERMINAL(FunctionType, Type)
 AST_TERMINAL(VarArgsType, Type)

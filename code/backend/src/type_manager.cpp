@@ -962,64 +962,29 @@ namespace backend {
 			RefTypeInfo* res = new RefTypeInfo();
 
 			// produce R and L value type
-			// generally, a level of indirection needs to be added
-			res->lValueType = c_ast::modifier(subType->lValueType, ref.isConst(), ref.isVolatile());
-			res->rValueType = c_ast::ptr(subType->rValueType, ref.isConst(), ref.isVolatile());
 
-			// handle special nested types
+			// generally, a level of indirection needs to be added
+			res->lValueType = c_ast::qualify(subType->lValueType, ref.isConst(), ref.isVolatile());
+			res->rValueType = c_ast::ptr(c_ast::qualify(subType->rValueType, ref.isConst(), ref.isVolatile()));
+			res->externalType = c_ast::ptr(c_ast::qualify(subType->externalType, ref.isConst(), ref.isVolatile()));
+
+			// support nested references
+			if (core::lang::isReference(elementType)) {
+				// for nested references, the lValue type is composed differently
+				res->lValueType = c_ast::ptr(subType->lValueType, ref.isConst(), ref.isVolatile());
+			}
+
+			// special support for unknown sized arrays
 			if (core::lang::isUnknownSizedArray(elementType)) {
 				// make it a pointer to the arrays element type
 				auto arrayElementType = core::lang::ArrayType(elementType).getElementType();
 				const TypeInfo* arrayElementTypeInfo = resolveType(arrayElementType);
 
 				// both, R and L value are just pointers
-				res->lValueType = c_ast::ptr(arrayElementTypeInfo->lValueType, ref.isConst(), ref.isVolatile());
-				res->rValueType = c_ast::ptr(arrayElementTypeInfo->rValueType, ref.isConst(), ref.isVolatile());
-
+				res->lValueType = c_ast::ptr(c_ast::qualify(arrayElementTypeInfo->lValueType, ref.isConst(), ref.isVolatile()));
+				res->rValueType = c_ast::ptr(c_ast::qualify(arrayElementTypeInfo->rValueType, ref.isConst(), ref.isVolatile()));
+				res->externalType = c_ast::ptr(c_ast::qualify(arrayElementTypeInfo->externalType, ref.isConst(), ref.isVolatile()));
 			}
-//			if(core::lang::isUnknownSizedArray(elementType)) {
-//				// if target is an array, indirection can be skipped (array is always implicitly a reference)
-//				res->lValueType = subType->lValueType;
-//				res->rValueType = subType->rValueType;
-//
-//				// special case: if ptr is a source than we have to make the element type of the array const
-//				if(ref.isConst()) {
-//					assert_eq(res->lValueType, res->rValueType);               // we assume that those are equal (they should)
-//					assert_true(res->lValueType.isa<c_ast::PointerTypePtr>()); // the type should also be a pointer
-//
-//					// get element type
-//					auto elementType = res->lValueType.as<c_ast::PointerTypePtr>()->elementType;
-//
-//					// create new types
-//					res->lValueType = c_ast::ptr(c_ast::makeConst(elementType));
-//					res->rValueType = res->lValueType;
-//				}
-//
-//			} else if(!core::lang::isReference(elementType)) {
-//				// if the target is a non-ref / non-array, on level of indirection can be omitted for local variables (implicit in C)
-//				res->lValueType = subType->lValueType;
-//
-//				// if it is a source, the value type has to be const
-//				if(ref.isConst()) {
-//					res->lValueType = c_ast::makeConst(subType->lValueType);
-//					res->rValueType = c_ast::ptr(res->lValueType);
-//				}
-//
-//			} else if(core::lang::isArray(core::analysis::getReferencedType(ref.getElementType()))) {
-//				// if the target is a ref pointing to an array, the implicit indirection of the array needs to be considered
-//				res->lValueType = subType->lValueType;
-//			}
-
-			// produce external type
-			res->externalType = c_ast::ptr(subType->externalType, ref.isConst(), ref.isVolatile());
-
-//			// special handling of references to vectors (implicit pointer in C)
-//			if(core::lang::isFixedSizedArray(elementType)) {
-//				res->externalType = c_ast::ptr(resolveType(core::lang::ArrayType(elementType).getElementType())->externalType);
-//			}
-//
-//			// special handling of references to arrays (always pointer in C)
-//			if(core::lang::isArray(elementType)) { res->externalType = subType->externalType; }
 
 			// add externalization operators
 			if(*res->rValueType == *res->externalType) {
@@ -1033,20 +998,6 @@ namespace backend {
 				};
 				res->internalize = [res](const c_ast::SharedCNodeManager& manager, const c_ast::ExpressionPtr& node) {
 					return c_ast::cast(res->rValueType, node);
-				};
-			}
-
-			// special treatment for exporting vectors
-			if(core::lang::isFixedSizedArray(elementType)) {
-				res->externalize = [res, subType](const c_ast::SharedCNodeManager& manager, const c_ast::ExpressionPtr& node) {
-					// special treatment for literals (e.g. string literals)
-					if(node->getNodeType() == c_ast::NT_Literal && static_pointer_cast<const c_ast::Literal>(node)->value[0] == '\"') { return node; }
-					// generated code: ((elementName*)X)
-					return c_ast::cast(res->externalType, node);
-				};
-				res->internalize = [res](const c_ast::SharedCNodeManager& manager, const c_ast::ExpressionPtr& node) {
-					// generate initializser: (arraytype){node}
-					return c_ast::init(res->rValueType, node);
 				};
 			}
 
@@ -1066,13 +1017,11 @@ namespace backend {
 
 			std::stringstream code;
 			code << "/* New Operator for type " << toString(*ptr) << "*/ \n"
-			                                                         "static inline "
-			     << resultTypeName << " " << newOpName << "(" << valueTypeName << " value) {\n"
-			                                                                      "    "
-			     << resultTypeName << " res = malloc(sizeof(" << valueTypeName << "));\n"
-			                                                                      "    *res = value;\n"
-			                                                                      "    return res;\n"
-			                                                                      "}\n";
+				 "static inline " << resultTypeName << " " << newOpName << "(" << valueTypeName << " value) {\n"
+			           << resultTypeName << " res = malloc(sizeof(" << valueTypeName << "));\n"
+			     "    *res = value;\n"
+			     "    return res;\n"
+			     "}\n";
 
 			// attach the new operator
 			c_ast::OpaqueCodePtr cCode = manager->create<c_ast::OpaqueCode>(code.str());
@@ -1132,7 +1081,8 @@ namespace backend {
 			res->definition = res->declaration;
 
 			// R / L value names
-			c_ast::TypePtr funcType = manager->create<c_ast::NamedType>(funcTypeName, true);
+			c_ast::NamedTypePtr funcType = manager->create<c_ast::NamedType>(funcTypeName);
+			funcType->isFunctionType = true;		// mark as function
 			res->rValueType = c_ast::ptr(funcType);
 			res->lValueType = res->rValueType;
 

@@ -141,45 +141,43 @@ namespace c_ast {
 		Type(NodeType type) : Node(type) {}
 	};
 
-	struct PrimitiveType : public Type {
-		enum CType { Void, Bool, Char, Int8, Int16, Int32, Int64, Int128, UInt8, UInt16, UInt32, UInt64, UInt128, Float, Double, LongLong, ULongLong };
-		const CType type;
-		PrimitiveType(CType type) : Type(NT_PrimitiveType), type(type) {}
-		virtual bool equals(const Node& other) const;
-	};
-
-	struct ModifiedType : public Type {
-		TypePtr type;
+	struct CVQualifiedType : public Type {
 		bool mConst;
 		bool mVolatile;
-		ModifiedType(const TypePtr& type, bool isConst, bool isVolatile)
-			: Type(NT_ModifiedType), type(type), mConst(isConst), mVolatile(isVolatile) {}
+		CVQualifiedType(NodeType type, bool isConst, bool isVolatile)
+			: Type(type), mConst(isConst), mVolatile(isVolatile) {}
 		virtual bool equals(const Node& other) const;
 		bool isConst() const { return mConst; }
 		bool isVolatile() const { return mVolatile; }
 	};
 
-	struct NamedType : public Type {
+	struct PrimitiveType : public CVQualifiedType {
+		enum CType { Void, Bool, Char, Int8, Int16, Int32, Int64, Int128, UInt8, UInt16, UInt32, UInt64, UInt128, Float, Double, LongLong, ULongLong };
+		const CType type;
+		PrimitiveType(CType type, bool isConst = false, bool isVolatile = false) : CVQualifiedType(NT_PrimitiveType, isConst, isVolatile), type(type) {}
+		virtual bool equals(const Node& other) const;
+	};
+
+	struct NamedType : public CVQualifiedType {
 		IdentifierPtr name;
 		vector<NodePtr> parameters;
 		bool isFunctionType;
-		NamedType(IdentifierPtr name, bool isFunctionType = false) : Type(NT_NamedType), name(name), isFunctionType(isFunctionType) {}
+		NamedType(IdentifierPtr name, bool isConst = false, bool isVolatile = false)
+			: CVQualifiedType(NT_NamedType, isConst, isVolatile), name(name), isFunctionType(false) {}
 		virtual bool equals(const Node& other) const;
 	};
 
-	struct PointerType : public Type {
+	struct PointerType : public CVQualifiedType {
 		TypePtr elementType;
-		bool isConst;
-		bool isVolatile;
 		PointerType(TypePtr elementType, bool isConst = false, bool isVolatile = false)
-			: Type(NT_PointerType), elementType(elementType), isConst(isConst), isVolatile(isVolatile) {}
+			: CVQualifiedType(NT_PointerType, isConst, isVolatile), elementType(elementType) {}
 		virtual bool equals(const Node& other) const;
 	};
 
-	struct ReferenceType : public Type {
-		bool isConst;
+	struct ReferenceType : public CVQualifiedType {
 		TypePtr elementType;
-		ReferenceType(bool isConst, TypePtr elementType) : Type(NT_ReferenceType), isConst(isConst), elementType(elementType) {}
+		ReferenceType(TypePtr elementType, bool isConst = false, bool isVolatile = false)
+			: CVQualifiedType(NT_ReferenceType, isConst, isVolatile), elementType(elementType) {}
 		virtual bool equals(const Node& other) const;
 	};
 
