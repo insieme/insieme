@@ -616,7 +616,7 @@ namespace core {
 		 * @return the requested type instance managed by the given manager
 		 */
 		static LambdaExprPtr get(NodeManager & manager, const VariablePtr& var, const LambdaDefinitionPtr& definition) {
-			assert(dynamic_pointer_cast<FunctionTypePtr>(var->getType()) && "Variable type has to be a function type!");
+			assert_true(dynamic_pointer_cast<FunctionTypePtr>(var->getType())) << "Variable type has to be a function type!";
 			return get(manager, static_pointer_cast<FunctionTypePtr>(var->getType()), var, definition);
 		}
 

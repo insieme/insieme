@@ -551,7 +551,7 @@ namespace core {
 			assert_eq(getParameterType(0)->getNodeType(), NT_GenericType);
 			static const auto caster = typename Ptr<const GenericType>::StaticCast();
 			Ptr<const GenericType> type = caster.template operator()<const GenericType>(getParameterType(0));
-			assert(!type->getTypeParameter().empty());
+			assert_true(!type->getTypeParameter().empty());
 			return type->getTypeParameter(0);
 		}
 	IR_NODE_END()

@@ -42,8 +42,10 @@ set ( ut_prefix  ut_utils )
 file(GLOB_RECURSE test_cases test/*.cc)
 foreach ( case_file ${test_cases} )
 	get_filename_component( case_name ${case_file} NAME_WE )
+
+	insieme_fix_case_name( case_subdir ${case_file} )
 	
-	set ( case_name ${ut_prefix}_${case_name} )
+	set ( case_name ${ut_prefix}${case_subdir}_${case_name} )
 	add_executable(${case_name} ${case_file})
 	target_link_libraries(${case_name} insieme_utils)
 	target_link_libraries(${case_name} ${Boost_LIBRARIES})
