@@ -79,46 +79,6 @@ namespace backend {
 		}
 	} // anon
 
-	namespace operators {
-
-	#include "insieme/backend/operator_converter_begin.inc"
-
-		c_ast::ExpressionPtr refDelete(ConversionContext& context, const core::CallExprPtr& call, const std::string& name = "free", bool addHeader = true) {
-			// TODO: fix when frontend is producing correct code
-
-			// do not free non-heap variables
-			if(ARG(0)->getNodeType() == core::NT_Variable) {
-				core::VariablePtr var = static_pointer_cast<const core::Variable>(ARG(0));
-				if(GET_VAR_INFO(var).location != VariableInfo::INDIRECT) {
-					// return NULL pointer => no op
-					return c_ast::ExpressionPtr();
-				}
-			}
-
-			// ensure correct type
-			assert_true(core::analysis::hasRefType(ARG(0))) << "Cannot free a non-ref type!";
-
-			// handle destructor call
-			if(core::CallExprPtr dtorCall = ARG(0).isa<core::CallExprPtr>()) {
-				if(dtorCall->getFunctionExpr()->getType().as<core::FunctionTypePtr>()->isDestructor()) { return c_ast::deleteCall(CONVERT_EXPR(dtorCall[0])); }
-			}
-
-			// add dependency to stdlib.h (contains the free)
-			if(addHeader) { ADD_HEADER_FOR(name); }
-
-			// construct argument
-			c_ast::ExpressionPtr arg = CONVERT_ARG(0);
-
-			if(core::lang::isArray(core::analysis::getReferencedType(ARG(0)->getType()))) {
-				// TODO: call array destructor instead!!
-			}
-
-			return c_ast::call(C_NODE_MANAGER->create(name), arg);
-		}
-
-		#include "insieme/backend/operator_converter_end.inc"
-	}
-
 	namespace {
 
 
@@ -150,10 +110,10 @@ namespace backend {
 			core::IRBuilder builder(mgr);
 
 			// check for the terminal case
-			if(dpExt.isDataPathRoot(dataPath)) { return root; }
+			if(dpExt.isCallOfDataPathRoot(dataPath)) { return root; }
 
 			// checks the remaining data path
-			assert_eq(dataPath->getNodeType(), core::NT_CallExpr) << "Data Path is neither root nor call!";
+			assert_eq(dataPath->getNodeType(), core::NT_CallExpr) << "Data Path is neither root nor call: " << *dataPath;
 
 			// resolve data path recursively
 			core::CallExprPtr call = dataPath.as<core::CallExprPtr>();
@@ -201,23 +161,24 @@ namespace backend {
 			// expansion is not supported in C => requires manual pointer arithmetic
 
 			// process remaining data-path components
-			assert_eq(dataPath->getNodeType(), core::NT_CallExpr) << "Data Path is not a call!";
+			assert_eq(dataPath->getNodeType(), core::NT_CallExpr) << "Data Path is not a call: " << *dataPath;
 
 			// resolve data path recursively
 			core::CallExprPtr call = dataPath.as<core::CallExprPtr>();
 			auto fun = call->getFunctionExpr();
 
+			// check for the terminal case
+			if(dpExt.isDataPathRoot(fun)) {
+				curType = resType; // update currently processed type
+				return src;        // done, no offset required
+			}
 
 			// compute offsets of remaining data path recursively
 			c_ast::ExpressionPtr res = expand(context, src, call->getArgument(0), resType, curType);
 
 			// compute access expression
 			auto& cNodeManager = context.getConverter().getCNodeManager();
-			if(dpExt.isDataPathRoot(fun)) {
-				// check for the terminal case
-				curType = resType; // update currently processed type
-				return src;        // done, no offset required
-			} else if(dpExt.isDataPathMember(fun)) {
+			if(dpExt.isDataPathMember(fun)) {
 				// extract element type from current result type
 				core::LiteralPtr memberName = call->getArgument(1).as<core::LiteralPtr>();
 
@@ -238,7 +199,7 @@ namespace backend {
 
 			} else if(dpExt.isDataPathElement(fun)) {
 				// update current type for next steps
-				curType = curType.getChild(0).as<core::TypePtr>();
+				curType = core::lang::ArrayType(curType).getElementType();
 
 				// get type-info of element type
 				const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(curType);
@@ -551,7 +512,7 @@ namespace backend {
 
 			// special handling for requesting a un-initialized memory cell
 			if(core::analysis::isCallOf(ARG(0), LANG_BASIC.getUndefined())) {
-				ADD_HEADER_FOR("malloc");
+				ADD_HEADER("stdlib.h"); // for 'malloc'
 
 				c_ast::ExpressionPtr size = c_ast::sizeOf(CONVERT_TYPE(core::analysis::getReferencedType(resType)));
 				auto cType = CONVERT_TYPE(resType);
@@ -562,7 +523,7 @@ namespace backend {
 			// special handling for arrays
 			if(core::analysis::isCallOf(ARG(0), LANG_EXT(core::lang::ArrayExtension).getArrayCreate())) {
 				// array-init is allocating data on stack using alloca => switch to malloc
-				ADD_HEADER_FOR("malloc");
+				ADD_HEADER("stdlib.h"); // for 'malloc'
 
 				auto res = CONVERT_ARG(0);
 				return c_ast::call(C_NODE_MANAGER->create("malloc"), static_pointer_cast<const c_ast::Call>(res)->arguments[0]);
@@ -588,8 +549,8 @@ namespace backend {
 					auto size = arrayInitValue.as<core::CallExprPtr>()->getArgument(1);
 
 					// add header dependencies
-					ADD_HEADER_FOR("malloc");
-					ADD_HEADER_FOR("memcpy");
+					ADD_HEADER("stdlib.h"); // for 'malloc'
+					ADD_HEADER("string.h"); // for 'memcpy'
 
 					auto c_struct_type = CONVERT_TYPE(structType);
 					auto c_element_type = CONVERT_TYPE(core::lang::ArrayType(arrayInitValue).getElementType());
@@ -608,7 +569,38 @@ namespace backend {
 
 		});
 
-		res[refExt.getRefDelete()] = OP_CONVERTER({ return operators::refDelete(context, call); });
+		res[refExt.getRefDelete()] = OP_CONVERTER({
+			// TODO: fix when frontend is producing correct code
+
+			// do not free non-heap variables
+			if(ARG(0)->getNodeType() == core::NT_Variable) {
+				core::VariablePtr var = static_pointer_cast<const core::Variable>(ARG(0));
+				if(GET_VAR_INFO(var).location != VariableInfo::INDIRECT) {
+					// return NULL pointer => no op
+					return c_ast::ExpressionPtr();
+				}
+			}
+
+			// ensure correct type
+			assert_true(core::analysis::hasRefType(ARG(0))) << "Cannot free a non-ref type!";
+
+			// handle destructor call
+			if(core::CallExprPtr dtorCall = ARG(0).isa<core::CallExprPtr>()) {
+				if(dtorCall->getFunctionExpr()->getType().as<core::FunctionTypePtr>()->isDestructor()) { return c_ast::deleteCall(CONVERT_EXPR(dtorCall[0])); }
+			}
+
+			// add dependency to stdlib.h (contains the free)
+			ADD_HEADER("stdlib.h");
+
+			// construct argument
+			c_ast::ExpressionPtr arg = CONVERT_ARG(0);
+
+			if(core::lang::isArray(core::analysis::getReferencedType(ARG(0)->getType()))) {
+				// TODO: call array destructor instead!!
+			}
+
+			return c_ast::call(C_NODE_MANAGER->create("free"), arg);
+		});
 
 		res[refExt.getRefReinterpret()] = OP_CONVERTER({
 			c_ast::TypePtr type;
@@ -632,7 +624,7 @@ namespace backend {
 		});
 
 		res[refExt.getRefExpand()] = OP_CONVERTER({
-			ADD_HEADER_FOR("offsetof");
+			ADD_HEADER("stddef.h") // for 'offsetof';
 
 			auto charPtrType = c_ast::ptr(C_NODE_MANAGER->create<c_ast::PrimitiveType>(c_ast::PrimitiveType::Char));
 
@@ -683,7 +675,7 @@ namespace backend {
 		res[arrayExt.getArrayCreate()] = OP_CONVERTER({
 			// type of Operator: (type<'elem>, uint<8>) -> array<'elem,1>
 			// create new array on the heap using alloca
-			ADD_HEADER_FOR("alloca");
+			ADD_HEADER("alloca.h"); // for 'alloca'
 
 			core::lang::ArrayType resType(call->getType());
 			c_ast::ExpressionPtr size = c_ast::mul(c_ast::sizeOf(CONVERT_TYPE(resType.getElementType())), CONVERT_ARG(1));
@@ -974,7 +966,7 @@ namespace backend {
 		res[basic.getCloogMod()] = OP_CONVERTER({ return c_ast::mod(CONVERT_ARG(0), CONVERT_ARG(1)); });
 
 		res[basic.getExit()] = OP_CONVERTER({
-			ADD_HEADER_FOR("exit");
+			ADD_HEADER("stdlib.h"); // for 'exit'
 			return c_ast::call(C_NODE_MANAGER->create("exit"), CONVERT_ARG(0));
 		});
 

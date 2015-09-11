@@ -38,6 +38,8 @@
 
 #include "insieme/core/lang/extension.h"
 
+#include "insieme/core/lang/list.h"
+
 namespace insieme {
 namespace core {
 namespace lang {
@@ -62,6 +64,8 @@ namespace lang {
 
 	  public:
 
+		// import list extension for list operations
+		IMPORT_MODULE(ListExtension);
 
 		// -------------------- arrays ---------------------------
 

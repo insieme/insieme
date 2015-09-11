@@ -54,6 +54,7 @@
 #include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/types/subtyping.h"
+#include "insieme/core/lang/pointer.h"
 #include "insieme/core/lang/ir++_extension.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/annotations/naming.h"
@@ -252,9 +253,10 @@ namespace backend {
 		}
 
 		// handle C string literals
+		// TODO: move this to an extension since it is a pointer
 		if(ptr->getStringValue()[0] == '"') {
-			assert_pred1(core::lang::isReference, ptr->getType());
-			core::TypePtr type = core::analysis::getReferencedType(ptr);
+			assert_pred1(core::lang::isPointer, ptr->getType());
+			core::TypePtr type = core::lang::PointerType(ptr).getElementType();
 			if(core::lang::isArray(type) && basic.isWChar(core::lang::ArrayType(type).getElementType())) {
 				// reproduce the longstring signature for widechars, this is 16 in windows and 32 in unix
 				res = toLiteral("L" + ptr->getStringValue());
@@ -458,7 +460,7 @@ namespace backend {
 		}
 
 		bool isStackBasedCppArray(const core::ExpressionPtr& initValue) {
-			assert_not_implemented() << "TODO: port this to new infrastructure!";
+			//assert_not_implemented() << "TODO: port this to new infrastructure!";
 			return false;
 //			const auto& refExt = initValue->getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
 //			const auto& ext = initValue->getNodeManager().getLangExtension<core::lang::IRppExtensions>();

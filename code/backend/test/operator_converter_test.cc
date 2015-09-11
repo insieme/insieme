@@ -41,8 +41,11 @@
 #include "insieme/core/forward_decls.h"
 #include "insieme/core/ir_builder.h"
 
+#include "insieme/core/checks/full_check.h"
 #include "insieme/core/printer/pretty_printer.h"
+
 #include "insieme/utils/compiler/compiler.h"
+
 
 namespace insieme {
 namespace backend {
@@ -64,7 +67,7 @@ namespace backend {
 			
 			let obj = struct {
 				int a;
-				vector<int,4> b;
+				array<int,4> b;
 				pair c;
 			};
 			
@@ -77,7 +80,7 @@ namespace backend {
 				print("o.a = %d\n", *o.a);
 			
 				// updated member a directly
-				decl ref<int> x = ref_narrow(o, dp_member(dp_root, lit("a")), lit(int));
+				decl ref<int> x = ref_narrow(o, dp_member(dp_root(lit(obj)), lit("a"), lit(int)));
 				x = 12;
 				print("Equal: %d\n", ref_eq(o.a, x));
 				print("x = %d \t o.a = %d\n", *x, *o.a);
@@ -87,14 +90,14 @@ namespace backend {
 				o.b[2u] = 0;
 				print("o.b[2] = %d\n", *o.b[2u]);
 			
-				decl ref<int> y = ref_narrow(o, dp_element(dp_member(dp_root, lit("b")), 2u), lit(int));
+				decl ref<int> y = ref_narrow(o, dp_element(dp_member(dp_root(lit(obj)), lit("b"), lit(array<int,4>)), 2u));
 				y = 12;
 				print("Equal: %d\n", ref_eq(o.b[2u], y));
 				print("y = %d \t o.b[2] = %d\n", *y, *o.b[2u]);
 		
 			
 				// expand a definition
-				decl ref<vector<int,4>> v = ref_expand(y, dp_element(dp_root, 2u), lit(vector<int,4>));
+				decl ref<array<int,4>> v = ref_expand(y, dp_element(dp_root(lit(array<int,4>)), 2u));
 				v[1u] = 10;
 				v[2u] = 14;
 			
@@ -104,19 +107,22 @@ namespace backend {
 			
 			
 				// handle nested element
-				decl ref<int> first = ref_narrow(o, dp_member(dp_member(dp_root, lit("c")), lit("first")), lit(int));
+				decl ref<int> first = ref_narrow(o, dp_member(dp_member(dp_root(lit(obj)), lit("c"), lit(pair)), lit("first"), lit(int)));
 			
 				// check reference equality
 				print("Equal: %d\n", ref_eq(o.c.first, first));
 			
 				// and the reverse
-				decl ref<obj> full = ref_expand(first, dp_member(dp_member(dp_root, lit("c")), lit("first")), lit(obj));
+				decl ref<obj> full = ref_expand(first, dp_member(dp_member(dp_root(lit(obj)), lit("c"), lit(pair)), lit("first"), lit(int)));
 				print("Equal: %d\n", ref_eq(o,full));
 			}
 		)").as<core::ProgramPtr>();
 
 		// check whether parsing was successful
 		ASSERT_TRUE(prog);
+
+		// check input program
+		EXPECT_TRUE(core::checks::check(prog).empty()) << core::checks::check(prog);
 
 		// print program using pretty printer
 		std::cout << core::printer::PrettyPrinter(prog);

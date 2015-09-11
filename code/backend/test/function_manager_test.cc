@@ -129,24 +129,10 @@ namespace backend {
 		converter.setNameManager(std::make_shared<TestNameManager>());
 		FunctionManager& funManager = converter.getFunctionManager();
 
-		// create a function type
-		core::TypePtr int4 = basic.getInt4();
-		core::TypePtr real4 = basic.getFloat();
-		core::TypePtr boolean = basic.getBool();
-
-		core::FunctionTypePtr funType = builder.functionType(toVector(real4, boolean), int4);
-		EXPECT_EQ("((real<4>,bool)->int<4>)", toString(*funType));
-
-		// create parameters
-		vector<core::VariablePtr> params;
-		params.push_back(builder.variable(real4, 1));
-		params.push_back(builder.variable(boolean, 2));
-
-		// create body
-		core::StatementPtr body = builder.returnStmt(builder.intLit(12));
-
 		// create the lambda
-		core::LambdaExprPtr lambda = builder.lambdaExpr(funType, params, body);
+		core::LambdaExprPtr lambda = builder.parseExpr(
+				"lambda (real<4> a, bool b)->int<4> { return 12; }"
+		).as<core::LambdaExprPtr>();
 
 		// obtain information
 		LambdaInfo info = funManager.getInfo(lambda);
@@ -187,32 +173,13 @@ namespace backend {
 		converter.setNameManager(std::make_shared<TestNameManager>());
 		FunctionManager& funManager = converter.getFunctionManager();
 
-		// create a function type
-		core::TypePtr int4 = basic.getInt4();
-		core::TypePtr boolean = basic.getBool();
-
-		core::FunctionTypePtr funType = builder.functionType(toVector(int4), boolean);
-		EXPECT_EQ("((int<4>)->bool)", toString(*funType));
-
-		// create parameters
-		core::VariablePtr param = builder.variable(int4, 3);
-		vector<core::VariablePtr> params = toVector(param);
-
-		// create function variables
-		core::VariablePtr varEven = builder.variable(funType, 1);
-		core::VariablePtr varOdd = builder.variable(funType, 2);
-
-		// create body
-		core::StatementPtr bodyEven = builder.returnStmt(builder.callExpr(varOdd, param));
-		core::StatementPtr bodyOdd = builder.returnStmt(builder.callExpr(varOdd, param));
-
-		// create the lambda
-		vector<core::LambdaBindingPtr> definitions;
-		definitions.push_back(builder.lambdaBinding(varEven, builder.lambda(funType, params, bodyEven)));
-		definitions.push_back(builder.lambdaBinding(varOdd, builder.lambda(funType, params, bodyOdd)));
-		core::LambdaDefinitionPtr lambdaDef = builder.lambdaDefinition(definitions);
-
-		core::LambdaExprPtr lambda = builder.lambdaExpr(varEven, lambdaDef);
+		// create the recursive
+		core::LambdaExprPtr lambda = builder.parseExpr(
+				"let even,odd = "
+				"	lambda (int<4> a)->bool { return odd(a); }, "
+				"	lambda (int<4> a)->bool { return even(a); }; "
+				"even"
+		).as<core::LambdaExprPtr>();
 
 		// obtain information
 		LambdaInfo info = funManager.getInfo(lambda);

@@ -77,11 +77,11 @@ namespace lang {
 		assert_true(isPointer(node)) << "Given node " << *node << " is not a pointer type!";
 
 		// get the type
-		TypePtr type = node.isa<TypePtr>();
-		if (auto expr = node.isa<ExpressionPtr>()) type = expr->getType();
+		NodePtr trg = node;
+		if (auto expr = node.isa<ExpressionPtr>()) trg = expr->getType();
 
 		// process node type
-		StructTypePtr structType = node.as<StructTypePtr>();
+		StructTypePtr structType = trg.as<StructTypePtr>();
 		*this = PointerType(
 				extractReferencedType(structType),
 				isTrueMarker(extractConstMarker(structType)),

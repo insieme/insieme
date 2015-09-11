@@ -74,12 +74,12 @@ namespace addons {
 			/**
 			 * A literal masking the initialization of a static literal using constants.
 			 */
-			LANG_EXT_LITERAL(InitStaticConst, "BE.InitStaticConst", "('a, 'b)->ref<'a>");
+			LANG_EXT_LITERAL(InitStaticConst, "BE_InitStaticConst", "('a, 'b)->ref<'a>");
 
 			/**
 			 * A literal masking the initialization of a static literal using lazy expressions.
 			 */
-			LANG_EXT_LITERAL(InitStaticLazy, "BE.InitStaticLazy", "(()=>'a, 'b)->ref<'a>");
+			LANG_EXT_LITERAL(InitStaticLazy, "BE_InitStaticLazy", "(()=>'a, 'b)->ref<'a>");
 		};
 
 		// a marker for annotation for globals only only initialized once

@@ -168,6 +168,7 @@ namespace core {
 			for(const auto& cur : mgr.getLangExtension<lang::ReferenceExtension>().getSymbols()) res.insert(cur);
 			for(const auto& cur : mgr.getLangExtension<lang::ParallelExtension>().getSymbols()) res.insert(cur);
 			for(const auto& cur : mgr.getLangExtension<lang::PointerExtension>().getSymbols()) res.insert(cur);
+			for(const auto& cur : mgr.getLangExtension<lang::InputOutputExtension>().getSymbols()) res.insert(cur);
 
 			// add initializer symbols (overrides standard if necessary)
 			for(const auto& cur : init) res.insert(cur);
@@ -184,6 +185,7 @@ namespace core {
 			for(const auto& cur : mgr.getLangExtension<lang::ReferenceExtension>().getTypeAliases()) res.insert(cur);
 			for(const auto& cur : mgr.getLangExtension<lang::ParallelExtension>().getTypeAliases()) res.insert(cur);
 			for(const auto& cur : mgr.getLangExtension<lang::PointerExtension>().getTypeAliases()) res.insert(cur);
+			for(const auto& cur : mgr.getLangExtension<lang::InputOutputExtension>().getTypeAliases()) res.insert(cur);
 
 			// done
 			return res;

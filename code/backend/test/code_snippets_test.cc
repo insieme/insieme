@@ -63,13 +63,15 @@ namespace backend {
 		core::IRBuilder builder(manager);
 
 		core::ProgramPtr program = builder.parseProgram("int<4> main() {"
-		                                                "	lambda (type<'a> dtype, uint<4> size)->ref<array<'a,1>> {"
-		                                                "		return ref_new(array_create_1D(dtype, size));"
-		                                                "	} (lit(real<4>), 7u);"
+		                                                "	lambda (type<'a> dtype, type<'s> size)->ref<array<'a,'s>> {"
+		                                                "		return ref_new(array_create(dtype, size, list_empty(dtype)));"
+		                                                "	} (lit(real<4>), lit(7));"
 		                                                "	return 0;"
 		                                                "}");
 
 		ASSERT_TRUE(program);
+
+		dumpColor(program);
 
 		LOG(INFO) << "Printing the IR: " << core::printer::PrettyPrinter(program);
 

@@ -111,7 +111,13 @@ namespace backend {
 		PointwiseReplacer(core::NodeManager& manager) : manager(manager), basic(manager.getLangBasic()){};
 
 		const core::NodePtr resolveElement(const core::NodePtr& ptr) {
-			assert_not_implemented() << "Update this to fit new array infrastructure.";
+			auto& arrayModule = manager.getLangExtension<core::lang::ArrayExtension>();
+
+			// check whether this node is of interest
+			if (arrayModule.isCallOfArrayPointwise(ptr)) {
+				assert_not_implemented() << "Update this to fit new array infrastructure.";
+			}
+
 			return ptr;
 //			auto& arrayModule = manager.getLangExtension<core::lang::ArrayExtension>();
 //
