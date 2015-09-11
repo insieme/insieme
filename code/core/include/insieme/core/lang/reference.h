@@ -163,12 +163,12 @@ namespace lang {
 		/**
 		 * A built-in derived operator allocating memory on the stack.
 		 */
-		LANG_EXT_DERIVED_WITH_NAME(RefVar, "ref_var", "lambda ('a v) -> ref<'a,f,f> { decl auto r = ref_alloc(type('a), mem_loc_stack); r = v; return r; }")
+		LANG_EXT_DERIVED_WITH_NAME(RefVar, "ref_var", "lambda ('a v) -> ref<'a,f,f> { decl auto r = ref_alloc(type_lit('a), mem_loc_stack); r = v; return r; }")
 
 		/**
 		 * A built-in derived operator allocating memory on the heap.
 		 */
-		LANG_EXT_DERIVED_WITH_NAME(RefNew, "ref_new", "lambda ('a v) -> ref<'a,f,f> { decl auto r = ref_alloc(type('a), mem_loc_heap ); r = v; return r; }")
+		LANG_EXT_DERIVED_WITH_NAME(RefNew, "ref_new", "lambda ('a v) -> ref<'a,f,f> { decl auto r = ref_alloc(type_lit('a), mem_loc_heap ); r = v; return r; }")
 
 		/**
 		 * A built-in abstract operator obtaining references to functions.
@@ -206,13 +206,13 @@ namespace lang {
 		/**
 		 * A specialization of the ref_cast operator for modeling const casts.
 		 */
-		LANG_EXT_DERIVED_WITH_NAME(RefConstCast, "ref_const_cast", "lambda (ref<'a,'c,'v> r, type<'nc> c) -> ref<'a,'nc,'v> { return ref_cast(r,c,type('v)); }")
+		LANG_EXT_DERIVED_WITH_NAME(RefConstCast, "ref_const_cast", "lambda (ref<'a,'c,'v> r, type<'nc> c) -> ref<'a,'nc,'v> { return ref_cast(r,c,type_lit('v)); }")
 
 		/**
 		 * A specialization of the ref_cast operator for modeling volatile casts.
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(RefVolatileCast, "ref_volatile_cast",
-		                           "lambda (ref<'a,'c,'v> r, type<'nv> v) -> ref<'a,'c,'nv> { return ref_cast(r,type('c),v); }")
+		                           "lambda (ref<'a,'c,'v> r, type<'nv> v) -> ref<'a,'c,'nv> { return ref_cast(r,type_lit('c),v); }")
 
 
 		// -- sub-referencing --
@@ -233,27 +233,27 @@ namespace lang {
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(
 		    RefArrayElement, "ref_array_elem",
-		    "lambda (ref<array<'a,'s>,'c,'v> r, int<8> i) -> ref<'a,'c,'v> { return ref_narrow(r, dp_element(dp_root(type(array<'a,'s>)),i)); }")
+		    "lambda (ref<array<'a,'s>,'c,'v> r, int<8> i) -> ref<'a,'c,'v> { return ref_narrow(r, dp_element(dp_root(type_lit(array<'a,'s>)),i)); }")
 
 		/**
 		 * A derived reference navigation operator providing access to a member of a struct / union.
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(
 		    RefMemberAccess, "ref_member_access",
-		    "lambda (ref<'a,'c,'v> r, identifier name, type<'b> type) -> ref<'b,'c,'v> { return ref_narrow(r, dp_member(dp_root(type('a)),name,type)); }")
+		    "lambda (ref<'a,'c,'v> r, identifier name, type<'b> type) -> ref<'b,'c,'v> { return ref_narrow(r, dp_member(dp_root(type_lit('a)),name,type)); }")
 
 		/**
 		 * A derived reference navigation operator providing access to a components of a tuple.
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(
 		    RefComponentAccess, "ref_component_access",
-		    "lambda (ref<'a,'c,'v> r, uint<8> pos, type<'b> type) -> ref<'b,'c,'v> { return ref_narrow(r, dp_component(dp_root(type('a)),pos,type)); }")
+		    "lambda (ref<'a,'c,'v> r, uint<8> pos, type<'b> type) -> ref<'b,'c,'v> { return ref_narrow(r, dp_component(dp_root(type_lit('a)),pos,type)); }")
 
 		/**
 		 * A derived reference-navigation operation providing an array view on a scalar.
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(RefScalarToRefArray, "ref_scalar_to_ref_array",
-		    "lambda (ref<'a,'c,'v> a) -> ref<array<'a>,'c,'v> { return ref_expand(a, dp_element(dp_root(type(array<'a>)),0u)); }")
+		    "lambda (ref<'a,'c,'v> a) -> ref<array<'a>,'c,'v> { return ref_expand(a, dp_element(dp_root(type_lit(array<'a>)),0u)); }")
 
 
 		// -- null --

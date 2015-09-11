@@ -134,7 +134,8 @@ blank   [ \t]
 "ctor"      return inspire_parser::make_CTOR(loc);
 "method"    return inspire_parser::make_METHOD(loc);
 "expr"      return inspire_parser::make_EXPR(loc);
-            
+"recFunc"   return inspire_parser::make_RECFUNC(loc);
+
 "if"      return inspire_parser::make_IF(loc);
 "else"    return inspire_parser::make_ELSE(loc);
 "for"     return inspire_parser::make_FOR(loc);
@@ -156,7 +157,7 @@ blank   [ \t]
 "delete"     return inspire_parser::make_DELETE(loc);
 "undefined"  return inspire_parser::make_UNDEFINED(loc);
 
-"type("    return inspire_parser::make_TYPE_LITERAL(loc);
+"type_lit("    return inspire_parser::make_TYPE_LITERAL(loc);
 "lit("     return inspire_parser::make_LITERAL(loc);
 "param("   return inspire_parser::make_PARAM(loc);
 

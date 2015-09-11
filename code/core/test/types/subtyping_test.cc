@@ -286,10 +286,10 @@ namespace types {
 		TypePtr D = builder.parseType("D");
 		symbols["D"] = D;
 
-		TypePtr E = builder.parseType("E : D <>", symbols);
+		TypePtr E = builder.parseType("E <> : D", symbols);
 		symbols["E"] = E;
 
-		TypePtr F = builder.parseType("F : B, E <>", symbols);
+		TypePtr F = builder.parseType("F <> : B, E", symbols);
 
 		/*
 		std::cout << "A: " << A << std::endl;

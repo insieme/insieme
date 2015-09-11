@@ -382,7 +382,7 @@ namespace types {
 					// check whether current type is a sub-type of the limit
 					if(!isSubTypeOf(limit, cur)) {
 						// => no solution
-						if(debug) { std::cout << "The type " << cur << " is not a sub-type of " << limit << std::endl; }
+						if(debug) { std::cout << "The type " << cur << " is definetly not a sub-type of " << limit << std::endl; }
 						return 0;
 					}
 				}

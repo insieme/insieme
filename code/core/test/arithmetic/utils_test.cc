@@ -194,8 +194,8 @@ namespace arithmetic {
 		auto all = checks::getFullCheck();
 
 		EXPECT_EQ("v3", toString(*varX));
-		EXPECT_EQ("(v3.a)", toString(printer::PrettyPrinter(xa, printer::PrettyPrinter::NO_LET_BINDINGS)));
-		EXPECT_EQ("(v3.b)", toString(printer::PrettyPrinter(xb, printer::PrettyPrinter::NO_LET_BINDINGS)));
+		EXPECT_EQ("v3.a", toString(printer::PrettyPrinter(xa, printer::PrettyPrinter::NO_LET_BINDINGS)));
+		EXPECT_EQ("v3.b", toString(printer::PrettyPrinter(xb, printer::PrettyPrinter::NO_LET_BINDINGS)));
 
 		// -- build formulas using subscripts --
 
@@ -205,7 +205,7 @@ namespace arithmetic {
 		tmp = builder.callExpr(basic.getOperator(type, lang::BasicGenerator::Add), varA, xa);
 
 		f = toFormula(tmp);
-		EXPECT_EQ("v1+(v3.a)", toString(f));
+		EXPECT_EQ("v1+v3.a", toString(f));
 		EXPECT_EQ("int_add(v1, composite_member_access(v3, a, type<int<4>>))", toString(*toIR(manager, f)));
 		EXPECT_EQ(f, toFormula(toIR(manager, f)));
 		EXPECT_EQ(toIR(manager, f), toIR(manager, toFormula(toIR(manager, f))));

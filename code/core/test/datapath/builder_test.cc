@@ -81,8 +81,10 @@ namespace datapath {
 		EXPECT_EQ("<array<struct<test:(int<4>,bool,int<4>,struct E : [struct A <>] <>)>,50>>", toString(path));
 		EXPECT_EQ("<array<struct<test:(int<4>,bool,int<4>,struct E : [struct A <>] <>)>,50>>[4]", toString(path.element(4)));
 		EXPECT_EQ("<array<struct<test:(int<4>,bool,int<4>,struct E : [struct A <>] <>)>,50>>[4].test", toString(path.element(4).member("test")));
-		EXPECT_EQ("<array<struct<test:(int<4>,bool,int<4>,struct E : [struct A <>] <>)>,50>>[4].test.c3", toString(path.element(4).member("test").component(3)));
-		EXPECT_EQ("<array<struct<test:(int<4>,bool,int<4>,struct E : [struct A <>] <>)>,50>>[4].test.c3.as<A>", toString(path.element(4).member("test").component(3).parent(typeA)));
+
+		// "u" after "c3" added to match the printer
+		EXPECT_EQ("<array<struct<test:(int<4>,bool,int<4>,struct E : [struct A <>] <>)>,50>>[4].test.c3u", toString(path.element(4).member("test").component(3)));
+		EXPECT_EQ("<array<struct<test:(int<4>,bool,int<4>,struct E : [struct A <>] <>)>,50>>[4].test.c3u.as<A>", toString(path.element(4).member("test").component(3).parent(typeA)));
 	}
 
 } // end namespace analysis

@@ -5,7 +5,7 @@ let channel = channel<int,1>;
 unit main() {
 	
 	// check creation
-	decl auto c = channel_create(type(int),param(1));
+	decl auto c = channel_create(type_lit(int),param(1));
 	
 	// check assignment
 	decl channel c2 = c;

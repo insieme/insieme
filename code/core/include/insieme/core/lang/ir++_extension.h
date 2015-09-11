@@ -306,7 +306,7 @@ namespace lang {
 		 */
 		LANG_EXT_DERIVED(MemberPointerAccess, "let memb_ptr = struct { type<'a> objType; identifier id; type<'b> membType; }; "
 		                                      "lambda (ref<'a,'c,'v> obj, memb_ptr m) -> ref<'b,'c,'v> { "
-		                                      " return ref_narrow(obj, dp_member(dp_root(type('a)), m.id, type('b)) );"
+		                                      " return ref_narrow(obj, dp_member(dp_root(type_lit('a)), m.id, type_lit('b)) );"
 		                                      "}");
 
 		/**

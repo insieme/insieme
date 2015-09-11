@@ -157,7 +157,7 @@ namespace lang {
 				    "                                                                                                                                        "
 					"	lambda (threadgroup g, 'a v, ('b,'a)->'b op, 'b init)->'b {                                                                          "
 					"	   return redistribute(g, v,                                                                                                         "
-					"				  lambda (ref<array<'a>> data, uint<8> size, uint<8> tid) => array_reduce(data, num_cast(size,type(int<8>)), op, init)   "
+					"				  lambda (ref<array<'a>> data, uint<8> size, uint<8> tid) => array_reduce(data, num_cast(size,type_lit(int<8>)), op, init)   "
 					"	          );                                                                                                                         "
 					"	}                                                                                                                                    "
 		            "                                                                                                                                        "

@@ -101,7 +101,7 @@ namespace lang {
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(PtrFromArray, "ptr_from_array",
 				"  lambda (ref<array<'a,'s>,'c,'v> r) -> ptr<'a,'c,'v> {                             "
-				"		return struct ptr<'a,'c,'v> { ref_reinterpret(r,type(array<'a,inf>)), 0l };  "
+				"		return struct ptr<'a,'c,'v> { ref_reinterpret(r,type_lit(array<'a,inf>)), 0l };  "
 				"  }                                                                                 "
 		)
 
@@ -130,7 +130,7 @@ namespace lang {
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(PtrReinterpret, "ptr_reinterpret",
 				"  lambda (ptr<'a,'c,'v> p, type<'b> t) -> ptr<'b,'c,'v> {               "
-				"		return ptr_from_ref(ref_reinterpret(ptr_to_ref(p), type('b)));   "
+				"		return ptr_from_ref(ref_reinterpret(ptr_to_ref(p), type_lit('b)));   "
 				"  }                                                                     "
 		)
 
@@ -193,7 +193,7 @@ namespace lang {
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(
 		    PtrArrayElement, "ptr_array_elem",
-		    "lambda (ptr<array<'a,'s>,'c,'v> r, int<8> i) -> ptr<'a,'c,'v> { return ptr_narrow(r, dp_element(dp_root(type(array<'a,'s>)),i)); }"
+		    "lambda (ptr<array<'a,'s>,'c,'v> r, int<8> i) -> ptr<'a,'c,'v> { return ptr_narrow(r, dp_element(dp_root(type_lit(array<'a,'s>)),i)); }"
 		)
 
 		/**
@@ -201,7 +201,7 @@ namespace lang {
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(
 		    PtrMemberAccess, "ptr_member_access",
-		    "lambda (ptr<'a,'c,'v> r, identifier name, type<'b> type) -> ptr<'b,'c,'v> { return ptr_narrow(r, dp_member(dp_root(type('a)),name,type)); }"
+		    "lambda (ptr<'a,'c,'v> r, identifier name, type<'b> type) -> ptr<'b,'c,'v> { return ptr_narrow(r, dp_member(dp_root(type_lit('a)),name,type)); }"
 		)
 
 		/**
@@ -209,7 +209,7 @@ namespace lang {
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(
 		    PtrComponentAccess, "ptr_component_access",
-		    "lambda (ptr<'a,'c,'v> r, uint<8> pos, type<'b> type) -> ptr<'b,'c,'v> { return ptr_narrow(r, dp_component(dp_root(type('a)),pos,type)); }"
+		    "lambda (ptr<'a,'c,'v> r, uint<8> pos, type<'b> type) -> ptr<'b,'c,'v> { return ptr_narrow(r, dp_component(dp_root(type_lit('a)),pos,type)); }"
 		)
 
 		/**
@@ -217,7 +217,7 @@ namespace lang {
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(
 			PtrScalarToPtrArray, "ptr_scalar_to_ptr_array",
-		    "lambda (ptr<'a,'c,'v> a) -> ptr<array<'a>,'c,'v> { return ptr_expand(a, dp_element(dp_root(type(array<'a>)),0u)); }"
+		    "lambda (ptr<'a,'c,'v> a) -> ptr<array<'a>,'c,'v> { return ptr_expand(a, dp_element(dp_root(type_lit(array<'a>)),0u)); }"
 		)
 
 		/**
@@ -243,7 +243,7 @@ namespace lang {
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(
 				PtrNull, "ptr_null",
-				"lambda (type<'a> a, type<'c> c, type<'v> v) -> ptr<'a,'c,'v> { return struct ptr<'a,'c,'v> { ref_null(type(array<'a,inf>),c,v), 0 }; }"
+				"lambda (type<'a> a, type<'c> c, type<'v> v) -> ptr<'a,'c,'v> { return struct ptr<'a,'c,'v> { ref_null(type_lit(array<'a,inf>),c,v), 0 }; }"
 		)
 
 
