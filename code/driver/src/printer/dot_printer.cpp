@@ -195,15 +195,8 @@ namespace printer {
 		visitAnnotationList(*builder, NODE_ID(typeVar), typeVar->getAnnotations());
 	}
 
-	void ASTPrinter::visitIntTypeParam(const IntTypeParamPtr& intTyParm) {}
-
 	void ASTPrinter::visitGenericType(const core::GenericTypePtr& genTy) {
-		std::ostringstream ss("");
-		// special handling for integer type parameters
-		if(!genTy->getIntTypeParameter().empty()) {
-			ss << "<" << join(", ", genTy->getIntTypeParameter(), [](std::ostream& out, const IntTypeParamPtr& cur) { out << toString(*cur); }) << ">";
-		}
-		TypeNode genNode(NODE_ID(genTy), "\"" + genTy->getFamilyName() + " " + ss.str() + "\"");
+		TypeNode genNode(NODE_ID(genTy), "\"" + genTy->getFamilyName() + "\"");
 		checkSemanticErrors(errors, genNode, genTy);
 		builder->addNode(genNode);
 
@@ -448,15 +441,6 @@ namespace printer {
 
 		visitAnnotationList(*builder, NODE_ID(lit), lit->getAnnotations());
 		visitChildList(*builder, toVector(lit->getType()), lit, "type");
-	}
-
-	void ASTPrinter::visitVectorExpr(const VectorExprPtr& vexp) {
-		StmtNode vectNode(NODE_ID(vexp), "vect_expr");
-		checkSemanticErrors(errors, vectNode, vexp);
-		builder->addNode(vectNode);
-
-		visitAnnotationList(*builder, NODE_ID(vexp), vexp->getAnnotations());
-		visitChildList(*builder, vexp->getChildList(), vexp, "expr");
 	}
 
 	void ASTPrinter::visitStatement(const insieme::core::StatementPtr& stmt) {

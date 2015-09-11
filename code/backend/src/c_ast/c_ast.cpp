@@ -161,7 +161,7 @@ namespace c_ast {
 	bool ModifiedType::equals(const Node& node) const {
 		assert(dynamic_cast<const ModifiedType*>(&node));
 		auto other = static_cast<const ModifiedType&>(node);
-		return mods == other.mods && *type == *other.type;
+		return mConst == other.mConst && mVolatile == other.mVolatile && *type == *other.type;
 	}
 
 	bool NamedType::equals(const Node& node) const {

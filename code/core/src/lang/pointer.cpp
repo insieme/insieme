@@ -175,12 +175,20 @@ namespace lang {
 		return builder.callExpr(pExt.getPtrFromIntegral(), intExpr, builder.getTypeLiteral(ptrType));
 	}
 
-	insieme::core::ExpressionPtr buildPtrToIntegral(const ExpressionPtr& ptrExpr, const TypePtr& intType) {
+	ExpressionPtr buildPtrToIntegral(const ExpressionPtr& ptrExpr, const TypePtr& intType) {
 		assert_pred1(isPointer, ptrExpr) << "Trying to build a ref from non-ptr.";
 		assert_pred1(ptrExpr->getNodeManager().getLangBasic().isInt, intType) << "Trying to build non-integral from ptr.";
 		IRBuilder builder(ptrExpr->getNodeManager());
 		auto& pExt = ptrExpr->getNodeManager().getLangExtension<PointerExtension>();
 		return builder.callExpr(pExt.getPtrToIntegral(), ptrExpr, builder.getTypeLiteral(intType));
+	}
+
+	ExpressionPtr buildPtrOfFunction(const ExpressionPtr& funExpr) {
+		assert_true(funExpr->getType().isa<FunctionTypePtr>()) << "Trying to build a ptr of a non-function type:\n" << dumpColor(funExpr)
+			                                                   << "\nType: " << dumpColor(funExpr->getType());
+		IRBuilder builder(funExpr->getNodeManager());
+		auto& pExt = funExpr->getNodeManager().getLangExtension<PointerExtension>();
+		return builder.callExpr(pExt.getPtrOfFunction(), funExpr);
 	}
 
 	ExpressionPtr buildPtrToRef(const ExpressionPtr& ptrExpr) {
@@ -211,6 +219,13 @@ namespace lang {
 		IRBuilder builder(ptrExpr->getNodeManager());
 		auto& pExt = ptrExpr->getNodeManager().getLangExtension<PointerExtension>();
 		return builder.callExpr(pExt.getPtrReinterpret(), ptrExpr, builder.getTypeLiteral(newElementType));
+	}
+
+	ExpressionPtr buildPtrDeref(const ExpressionPtr& ptrExpr) {
+		assert_pred1(isPointer, ptrExpr) << "Trying to build ptr_deref from non-ptr type.";
+		IRBuilder builder(ptrExpr->getNodeManager());
+		auto& pExt = ptrExpr->getNodeManager().getLangExtension<PointerExtension>();
+		return builder.callExpr(pExt.getPtrDeref(), ptrExpr);
 	}
 
 	ExpressionPtr buildPtrSubscript(const ExpressionPtr& ptrExpr, const ExpressionPtr& subscriptExpr) {
@@ -270,7 +285,25 @@ namespace lang {
 		default: break;
 		}
 
-		assert_fail() << "Unsupported pointer operation " << op;
+		assert_fail() << "Unsupported binary pointer operation " << op;
+		return ExpressionPtr();
+	}
+
+
+	ExpressionPtr buildPtrOperation(BasicGenerator::Operator op, const ExpressionPtr& ptrExpr) {
+		assert_true(isReference(ptrExpr) && isPointer(core::analysis::getReferencedType(ptrExpr->getType())))
+			<< "Trying to build a unary pointer operation with non-ref<ptr>.";
+		IRBuilder builder(ptrExpr->getNodeManager());
+		auto& pExt = ptrExpr->getNodeManager().getLangExtension<PointerExtension>();
+		switch(op) {
+		case BasicGenerator::Operator::PostInc: return builder.callExpr(pExt.getPtrPostInc(), ptrExpr);
+		case BasicGenerator::Operator::PostDec: return builder.callExpr(pExt.getPtrPostDec(), ptrExpr);
+		case BasicGenerator::Operator::PreInc: return builder.callExpr(pExt.getPtrPreInc(), ptrExpr);
+		case BasicGenerator::Operator::PreDec: return builder.callExpr(pExt.getPtrPreDec(), ptrExpr);
+		default: break;
+		}
+
+		assert_fail() << "Unsupported unary pointer operation " << op;
 		return ExpressionPtr();
 	}
 

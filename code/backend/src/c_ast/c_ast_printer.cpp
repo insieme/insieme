@@ -52,12 +52,15 @@ namespace c_ast {
 		class CPrinter;
 
 		struct PrintWrapper : public utils::Printable {
+
 			CPrinter& printer;
 			const NodePtr& node;
 
 		  public:
+
 			PrintWrapper(CPrinter& printer, const NodePtr& node) : printer(printer), node(node){};
-			virtual std::ostream& printTo(std::ostream& out) const;
+
+			std::ostream& printTo(std::ostream& out) const;
 		};
 
 
@@ -126,8 +129,8 @@ namespace c_ast {
 			}
 
 			PRINT(ModifiedType) {
-				if(node->hasMod(ModifiedType::VOLATILE)) { out << "volatile "; }
-				if(node->hasMod(ModifiedType::CONST)) { out << "const "; }
+				if(node->isConst())    { out << "const "; }
+				if(node->isVolatile()) { out << "volatile "; }
 				return out << print(node->type);
 			}
 
@@ -802,14 +805,17 @@ namespace c_ast {
 			return (node) ? printer.print(node, out) : out;
 		}
 
+		enum PointerQualifier {
+			PLAIN = 0, CONST = 1, VOLATILE = 2
+		};
+
 		struct TypeLevel {
-			typedef bool Pointer;
-			vector<Pointer> pointers; // true is a const pointer, false a standard pointer
+			vector<PointerQualifier> qualifier; // pointer qualifiers
 			vector<ExpressionPtr> subscripts;
 			vector<TypePtr> parameters;
 			IdentifierPtr owner;
 			bool hasParameters;
-			TypeLevel() : pointers(), hasParameters(false) {}
+			TypeLevel() : qualifier(), hasParameters(false) {}
 		};
 
 		IdentifierPtr getNameFrom(const TypePtr& type) {
@@ -863,7 +869,7 @@ namespace c_ast {
 					res.owner = getNameFrom(cur.as<MemberFieldPointerPtr>()->parentType);
 					cur = static_pointer_cast<MemberFieldPointer>(cur)->type;
 					data.push_back(res);
-					res.pointers.push_back(false);
+					res.qualifier.push_back(PLAIN);
 				}
 			}
 
@@ -871,7 +877,11 @@ namespace c_ast {
 			while(cur->getType() == NT_PointerType) {
 				PointerTypePtr ptr = cur.as<PointerTypePtr>();
 				cur = static_pointer_cast<PointerType>(cur)->elementType;
-				res.pointers.push_back(ptr->isConst);
+				res.qualifier.push_back(
+						PointerQualifier(
+							((ptr->isConst) ? CONST : PLAIN) | ((ptr->isVolatile) ? VOLATILE : PLAIN)
+						)
+				);
 			}
 
 			// resolve rest recursively
@@ -894,8 +904,11 @@ namespace c_ast {
 
 			// print pointers ...
 			const TypeLevel& cur = *level_it;
-			for(auto it = cur.pointers.rbegin(); it != cur.pointers.rend(); it++) {
-				out << ((*it) ? "*const" : "*");
+			for(auto it = cur.qualifier.rbegin(); it != cur.qualifier.rend(); it++) {
+				out << "*";
+				if (*it & CONST) out << "const";
+				if ((*it & CONST) && (*it & VOLATILE)) out << " ";
+				if (*it & VOLATILE) out << "volatile";
 			}
 
 			++level_it;

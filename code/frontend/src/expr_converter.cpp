@@ -84,8 +84,9 @@ namespace conversion {
 	//---------------------------------------------------------------------------------------------------------------------
 	
 	core::TypePtr Converter::ExprConverter::convertExprType(const clang::Expr* expr) {
-		auto irType = converter.convertType(expr->getType());
-		if(expr->getValueKind() == clang::VK_LValue) irType = builder.refType(irType);
+		auto qType = expr->getType();
+		auto irType = converter.convertType(qType);
+		if(expr->getValueKind() == clang::VK_LValue) irType = builder.refType(irType, qType.isConstQualified(), qType.isVolatileQualified());
 		return irType;
 	}
 
@@ -354,14 +355,22 @@ namespace conversion {
 		LOG_EXPR_CONVERSION(callExpr, irExpr);
 
 		core::ExpressionPtr irCallee = converter.convertExpr(callExpr->getCallee());
+		frontend_assert_expr(core::lang::isPointer, irCallee) << "Expecting callee to be of function pointer type";
 
 		core::ExpressionList irArguments;
 		for(auto arg : callExpr->arguments()) {
 			irArguments.push_back(Visit(arg));
 		}
 
-		irExpr = builder.callExpr(converter.convertType(callExpr->getCallReturnType()), irCallee, irArguments);
+		// simplify generated call if direct call of function
+		auto& pExt = irCallee->getNodeManager().getLangExtension<core::lang::PointerExtension>();
+		if(core::analysis::isCallOf(irCallee, pExt.getPtrOfFunction())) {
+			irCallee = core::analysis::getArgument(irCallee, 0);
+		} else {
+			irCallee = core::lang::buildPtrDeref(irCallee);
+		}
 
+		irExpr = builder.callExpr(converter.convertType(callExpr->getCallReturnType()), irCallee, irArguments);
 		return irExpr;
 	}
 
@@ -369,11 +378,17 @@ namespace conversion {
 	//							PREDEFINED EXPRESSION
 	//
 	// [C99 6.4.2.2] - A predefined identifier such as __func__.
+	// The identifier __func__ shall be implicitly declared by the translator as if, immediately following
+	// the opening brace of each function definition, the declaration 
+	// static const char __func__[] = "function-name";
+	// appeared, where function-name is the name of the lexically-enclosing function.
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr Converter::ExprConverter::VisitPredefinedExpr(const clang::PredefinedExpr* preExpr) {
 		core::ExpressionPtr retIr;
 		LOG_EXPR_CONVERSION(preExpr, retIr);
-		frontend_assert(false) << "PredefinedExpr not implemented";
+
+		retIr = Visit(preExpr->getFunctionName());
+
 		return retIr;
 	}
 
@@ -445,6 +460,18 @@ namespace conversion {
 			if(binOp->isComparisonOp()) irOp = basic.getOperator(lhs->getType(), op);
 
 			return builder.binaryOp(irOp, lhs, rhs);
+		}
+
+		core::ExpressionPtr buildUnaryOpExpression(Converter& converter, const core::TypePtr& exprTy, const core::ExpressionPtr& expr,
+			                                       core::lang::BasicGenerator::Operator op) {
+			auto& basic = converter.getNodeManager().getLangBasic();
+			auto& builder = converter.getIRBuilder();
+
+			if(core::lang::isReference(expr) && core::lang::isPointer(core::analysis::getReferencedType(expr->getType()))) {
+				return core::lang::buildPtrOperation(op, expr);
+			}
+
+			return builder.unaryOp(basic.getOperator(exprTy, op), expr);
 		}
 	}
 
@@ -554,13 +581,24 @@ namespace conversion {
 
 		// A unary AddressOf operator translates to a ptr-from-ref in IR --------------------------------------------------------------------------- ADDRESSOF -
 		if(unOp->getOpcode() == clang::UO_AddrOf) {
-			retIr = core::lang::buildPtrFromRef(subExpr);
+			// if function type, handle with special operator
+			if(subExpr->getType().isa<core::FunctionTypePtr>()) {
+				retIr = core::lang::buildPtrOfFunction(subExpr);
+			} else {
+				retIr = core::lang::buildPtrFromRef(subExpr);
+			}
 			return retIr;
 		}
 
 		// A unary Deref operator translates to a ptr-to-ref operation in IR --------------------------------------------------------------------------- DEREF -
 		if(unOp->getOpcode() == clang::UO_Deref) {
-			retIr = core::lang::buildPtrToRef(subExpr);
+			frontend_assert(core::lang::isPointer(subExpr)) << "Deref operation only possible on pointers, got:\n" << dumpColor(subExpr->getType());
+			// if function pointer type, access function directly
+			if(core::lang::PointerType(subExpr->getType()).getElementType().isa<core::FunctionTypePtr>()) {
+				retIr = core::lang::buildPtrDeref(subExpr);
+			} else {
+				retIr = core::lang::buildPtrToRef(subExpr);
+			}
 			return retIr;
 		}
 		
@@ -575,7 +613,7 @@ namespace conversion {
 		auto opIt = opMap.find(unOp->getOpcode());
 		frontend_assert(opIt != opMap.end()) << "Unary Operator " << clang::UnaryOperator::getOpcodeStr(unOp->getOpcode()).str() << " not implemented.";
 
-		retIr = builder.unaryOp(basic.getOperator(exprTy, opIt->second), subExpr);
+		retIr = buildUnaryOpExpression(converter, exprTy, subExpr, opIt->second);
 		return retIr;
 	}
 

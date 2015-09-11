@@ -176,14 +176,6 @@ namespace backend {
 	};
 
 	/**
-	 * A pre-processor making implicit vector to array conversions explicit.
-	 */
-	class MakeVectorArrayCastsExplicit : public PreProcessor {
-	  public:
-		virtual core::NodePtr process(const Converter& converter, const core::NodePtr& code);
-	};
-
-	/**
 	 * Eliminates assignments to or declarations of dead variables.
 	 */
 	class RedundancyElimination : public PreProcessor {

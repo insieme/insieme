@@ -55,7 +55,6 @@ namespace lang {
 
 	using std::string;
 
-
 	/**
 	 * The type utilized for producing nodes lazily.
 	 */
@@ -263,6 +262,18 @@ namespace lang {
 		 * @return the requested literal
 		 */
 		static ExpressionPtr getExpression(NodeManager& manager, const string& spec, const symbol_map& definitions = symbol_map(), const type_alias_map& aliases = type_alias_map());
+
+		/**
+		 * A utility to verify whether a given node is a call to a given expression.
+		 *
+		 * @param candidate the node to be tested
+		 * @param factory a lazy factory for the creation of the call target to be tested
+		 * @return true if it is a call to the given literal, false otherwise
+		 */
+		static bool isCallOf(const NodePtr& candidate, const lazy_factory& factory) {
+			auto call = candidate.isa<CallExprPtr>();
+			return call && *(call->getFunctionExpr()) == *(factory());
+		}
 	};
 
 
@@ -309,6 +320,7 @@ namespace lang {
 			return type_##NAME;                                                                                                                                \
 		}                                                                                                                                                      \
 		const bool is##NAME(const insieme::core::NodePtr& node) const {                                                                                        \
+			if(auto expr = node.isa<insieme::core::ExpressionPtr>()) return is##NAME(expr->getType());																		   \
 			return node && (*node == *get##NAME());                                                                                                            \
 		}
 
@@ -351,6 +363,9 @@ namespace lang {
 		}                                                                                                                                                      \
 		const bool is##NAME(const insieme::core::NodePtr& node) const {                                                                                        \
 			return node && (*node == *get##NAME());                                                                                                            \
+		} 																																					   \
+	    const bool isCallOf##NAME(const insieme::core::NodePtr& node) const {                                                                                  \
+			return isCallOf(node,[&]()->insieme::core::NodePtr { return get##NAME(); });                                                             		   \
 		}
 
 	/**
@@ -391,6 +406,9 @@ namespace lang {
 		}                                                                                                                                                      \
 		const bool is##NAME(const insieme::core::NodePtr& node) const {                                                                                        \
 			return node && (*node == *get##NAME());                                                                                                            \
+		} 																																					   \
+		const bool isCallOf##NAME(const insieme::core::NodePtr& node) const {                                                                                  \
+			return isCallOf(node,[&]()->insieme::core::NodePtr { return get##NAME(); });                                                            		   \
 		}
 
 	/**

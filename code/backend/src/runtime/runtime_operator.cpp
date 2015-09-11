@@ -34,6 +34,7 @@
  * regarding third party software licenses.
  */
 
+#include <insieme/backend/runtime/runtime_extension.h>
 #include "insieme/backend/runtime/runtime_operator.h"
 
 #include "insieme/backend/converter.h"
@@ -42,7 +43,6 @@
 #include "insieme/backend/statement_converter.h"
 #include "insieme/backend/type_manager.h"
 
-#include "insieme/backend/runtime/runtime_extensions.h"
 #include "insieme/backend/runtime/runtime_code_fragments.h"
 
 #include "insieme/backend/c_ast/c_code.h"
@@ -69,14 +69,14 @@ namespace runtime {
 
 
 	OperatorConverterTable& addRuntimeSpecificOps(core::NodeManager& manager, OperatorConverterTable& table, const BackendConfig& config) {
-		const RuntimeExtensions& ext = manager.getLangExtension<RuntimeExtensions>();
+		const RuntimeExtension& ext = manager.getLangExtension<RuntimeExtension>();
 		const core::lang::ParallelExtension& parExt = manager.getLangExtension<core::lang::ParallelExtension>();
 		const core::lang::InstrumentationExtension& instExt = manager.getLangExtension<core::lang::InstrumentationExtension>();
 		const core::lang::BasicGenerator& basic = manager.getLangBasic();
 
 		#include "insieme/backend/operator_converter_begin.inc"
 
-		table[ext.runStandalone] = OP_CONVERTER({
+		table[ext.getRunStandalone()] = OP_CONVERTER({
 
 			// add dependencies
 			ADD_HEADER_FOR("irt_runtime_standalone");
@@ -99,7 +99,7 @@ namespace runtime {
 			return c_ast::call(fun, numThreads, initContext, cleanupContext, impl, args);
 		});
 
-		table[ext.registerWorkItemImpl] = OP_CONVERTER({
+		table[ext.getRegisterWorkItemImpl()] = OP_CONVERTER({
 
 			// just register new work item
 			ImplementationTablePtr implTable = ImplementationTable::get(context.getConverter());
@@ -113,18 +113,18 @@ namespace runtime {
 			return c_ast::ExpressionPtr();
 		});
 
-		table[ext.workItemImplCtr] = OP_CONVERTER({
+		table[ext.getWorkItemImplCtr()] = OP_CONVERTER({
 
 			// register work item
 			ImplementationTablePtr implTable = ImplementationTable::get(context.getConverter());
 			unsigned id = implTable->registerWorkItemImpl(call);
 
 			// produce work item id as a result
-			const RuntimeExtensions& ext = NODE_MANAGER.getLangExtension<RuntimeExtensions>();
-			return c_ast::lit(CONVERT_TYPE(ext.workItemImplType), utils::numeric_cast<string>(id));
+			const RuntimeExtension& ext = NODE_MANAGER.getLangExtension<RuntimeExtension>();
+			return c_ast::lit(CONVERT_TYPE(ext.getWorkItemImplType()), utils::numeric_cast<string>(id));
 		});
 
-		table[ext.wrapLWData] = OP_CONVERTER({
+		table[ext.getWrapLWData()] = OP_CONVERTER({
 			// check arguments
 			assert_eq(ARG(0)->getNodeType(), core::NT_TupleExpr) << "Only supported for tuple expressions!";
 
@@ -147,20 +147,20 @@ namespace runtime {
 			return c_ast::cast(resType, c_ast::ref(CONVERT_EXPR(dataItem)));
 		});
 
-		table[ext.getWorkItemArgument] = OP_CONVERTER({
+		table[ext.getGetWorkItemArgument()] = OP_CONVERTER({
 			// access work item member and cast to proper value
 			c_ast::TypePtr paramPtr = c_ast::ptr(CONVERT_TYPE(core::analysis::getRepresentedType(ARG(2))));
 			c_ast::ExpressionPtr inner = c_ast::cast(paramPtr, c_ast::access(c_ast::deref(CONVERT_ARG(0)), "parameters"));
 			return c_ast::access(c_ast::deref(inner), format("c%d", core::encoder::toValue<unsigned>(ARG(1)) + 1));
 		});
 
-		table[ext.getWorkItemRange] = OP_CONVERTER({
+		table[ext.getGetWorkItemRange()] = OP_CONVERTER({
 			// access work item range directly
 			return c_ast::access(c_ast::deref(CONVERT_ARG(0)), "range");
 		});
 
-		table[ext.createJob] = OP_CONVERTER({
-			const RuntimeExtensions& ext = NODE_MANAGER.getLangExtension<RuntimeExtensions>();
+		table[ext.getCreateJob()] = OP_CONVERTER({
+			const RuntimeExtension& ext = NODE_MANAGER.getLangExtension<RuntimeExtension>();
 
 			// uint4, uint4, uint4, implType, data
 			c_ast::ExpressionPtr min = CONVERT_ARG(0);
@@ -170,30 +170,30 @@ namespace runtime {
 			c_ast::ExpressionPtr wi = getWorkItemPointer(context, CONVERT_ARG(3));
 			c_ast::ExpressionPtr data = CONVERT_ARG(4);
 
-			return c_ast::init(CONVERT_TYPE(ext.jobType), min, max, mod, wi, data);
+			return c_ast::init(CONVERT_TYPE(ext.getJobType()), min, max, mod, wi, data);
 		});
 
-		table[ext.parallel] = OP_CONVERTER({
+		table[ext.getParallel()] = OP_CONVERTER({
 			ADD_HEADER_FOR("irt_parallel");
 			return c_ast::call(C_NODE_MANAGER->create("irt_parallel"), c_ast::ref(CONVERT_ARG(0)));
 		});
 
-		table[ext.task] = OP_CONVERTER({
+		table[ext.getTask()] = OP_CONVERTER({
 			ADD_HEADER_FOR("irt_task");
 			return c_ast::call(C_NODE_MANAGER->create("irt_task"), c_ast::ref(CONVERT_ARG(0)));
 		});
 
-		table[ext.region] = OP_CONVERTER({
+		table[ext.getRegion()] = OP_CONVERTER({
 			ADD_HEADER_FOR("irt_region");
 			return c_ast::call(C_NODE_MANAGER->create("irt_region"), c_ast::ref(CONVERT_ARG(0)));
 		});
 
-		table[ext.merge] = OP_CONVERTER({
+		table[ext.getMerge()] = OP_CONVERTER({
 			ADD_HEADER_FOR("irt_merge");
 			return c_ast::call(C_NODE_MANAGER->create("irt_merge"), CONVERT_ARG(0));
 		});
 
-		table[ext.pfor] = OP_CONVERTER({
+		table[ext.getPfor()] = OP_CONVERTER({
 			ADD_HEADER_FOR("irt_pfor");
 			ADD_HEADER_FOR("irt_wi_get_current");
 
@@ -208,33 +208,33 @@ namespace runtime {
 			return c_ast::call(C_NODE_MANAGER->create("irt_pfor"), item, group, range, body, data);
 		});
 
-		table[basic.getGetThreadGroup()] = OP_CONVERTER({
+		table[parExt.getGetThreadGroup()] = OP_CONVERTER({
 			ADD_HEADER_FOR("irt_wi_get_current");
 			ADD_HEADER_FOR("irt_wi_get_wg");
 			c_ast::ExpressionPtr item = c_ast::call(C_NODE_MANAGER->create("irt_wi_get_current"));
 			return c_ast::call(C_NODE_MANAGER->create("irt_wi_get_wg"), item, CONVERT_ARG(0));
 		});
 
-		table[basic.getGetThreadId()] = OP_CONVERTER({
+		table[parExt.getGetThreadId()] = OP_CONVERTER({
 			ADD_HEADER_FOR("irt_wi_get_current");
 			ADD_HEADER_FOR("irt_wi_get_wg_num");
 			c_ast::ExpressionPtr item = c_ast::call(C_NODE_MANAGER->create("irt_wi_get_current"));
 			return c_ast::call(C_NODE_MANAGER->create("irt_wi_get_wg_num"), item, CONVERT_ARG(0));
 		});
 
-		table[basic.getGetGroupSize()] = OP_CONVERTER({
+		table[parExt.getGetGroupSize()] = OP_CONVERTER({
 			ADD_HEADER_FOR("irt_wi_get_current");
 			ADD_HEADER_FOR("irt_wi_get_wg_size");
 			c_ast::ExpressionPtr item = c_ast::call(C_NODE_MANAGER->create("irt_wi_get_current"));
 			return c_ast::call(C_NODE_MANAGER->create("irt_wi_get_wg_size"), item, CONVERT_ARG(0));
 		});
 
-		table[basic.getBarrier()] = OP_CONVERTER({
+		table[parExt.getBarrier()] = OP_CONVERTER({
 			ADD_HEADER_FOR("irt_wg_barrier");
 			return c_ast::call(C_NODE_MANAGER->create("irt_wg_barrier"), CONVERT_ARG(0));
 		});
 
-		table[basic.getMergeAll()] = OP_CONVERTER({
+		table[parExt.getMergeAll()] = OP_CONVERTER({
 			ADD_HEADER_FOR("irt_wi_get_current");
 			ADD_HEADER_FOR("irt_wi_join_all");
 			c_ast::ExpressionPtr item = c_ast::call(C_NODE_MANAGER->create("irt_wi_get_current"));
@@ -250,15 +250,15 @@ namespace runtime {
 
 		// locks
 
-		table[basic.getLockInit()] = OP_CONVERTER({
+		table[parExt.getLockInit()] = OP_CONVERTER({
 			ADD_HEADER_FOR("irt_lock_init");
 			return c_ast::call(C_NODE_MANAGER->create("irt_lock_init"), CONVERT_ARG(0));
 		});
-		table[basic.getLockAcquire()] = OP_CONVERTER({
+		table[parExt.getLockAcquire()] = OP_CONVERTER({
 			ADD_HEADER_FOR("irt_lock_acquire");
 			return c_ast::call(C_NODE_MANAGER->create("irt_lock_acquire"), CONVERT_ARG(0));
 		});
-		table[basic.getLockRelease()] = OP_CONVERTER({
+		table[parExt.getLockRelease()] = OP_CONVERTER({
 			ADD_HEADER_FOR("irt_lock_release");
 			return c_ast::call(C_NODE_MANAGER->create("irt_lock_release"), CONVERT_ARG(0));
 		});
@@ -266,7 +266,7 @@ namespace runtime {
 		// atomics
 
 		#define BIN_ATOMIC_CONVERTER(__IRNAME, __IRTNAME)                                                                                                      \
-			table[basic.get##__IRNAME()] = OP_CONVERTER({                                                                                                      \
+			table[parExt.get##__IRNAME()] = OP_CONVERTER({                                                                                                      \
 		        ADD_HEADER_FOR(#__IRTNAME);                                                                                                                    \
 		        core::IRBuilder builder(NODE_MANAGER);                                                                                                         \
 		        return c_ast::call(C_NODE_MANAGER->create(#__IRTNAME), CONVERT_ARG(0), CONVERT_ARG(1), CONVERT_TYPE(builder.deref(ARG(0))->getType()));        \
@@ -284,14 +284,14 @@ namespace runtime {
 		BIN_ATOMIC_CONVERTER(AtomicXorAndFetch, irt_atomic_xor_and_fetch)
 		#undef BIN_ATOMIC_CONVERTER
 
-		table[basic.getAtomicValCompareAndSwap()] = OP_CONVERTER({
+		table[parExt.getAtomicValCompareAndSwap()] = OP_CONVERTER({
 			ADD_HEADER_FOR("irt_atomic_val_compare_and_swap");
 			core::IRBuilder builder(NODE_MANAGER);
 			return c_ast::call(C_NODE_MANAGER->create("irt_atomic_val_compare_and_swap"), CONVERT_ARG(0), CONVERT_ARG(1), CONVERT_ARG(2),
 			                   CONVERT_TYPE(builder.deref(ARG(0))->getType()));
 		});
 
-		table[basic.getAtomicBoolCompareAndSwap()] = OP_CONVERTER({
+		table[parExt.getAtomicBoolCompareAndSwap()] = OP_CONVERTER({
 			ADD_HEADER_FOR("irt_atomic_bool_compare_and_swap");
 			core::IRBuilder builder(NODE_MANAGER);
 			return c_ast::call(C_NODE_MANAGER->create("irt_atomic_bool_compare_and_swap"), CONVERT_ARG(0), CONVERT_ARG(1), CONVERT_ARG(2),
@@ -328,23 +328,12 @@ namespace runtime {
 
 		table[instExt.getInstrumentationRegionEnd()] = OP_CONVERTER({ return c_ast::call(C_NODE_MANAGER->create("ir_inst_region_end"), CONVERT_ARG(0)); });
 
-		// scratchpad
-
-		table[basic.getRefLoc()] = OP_CONVERTER({
-			core::RefTypePtr resType = static_pointer_cast<const core::RefType>(call->getType());
-			c_ast::ExpressionPtr size = c_ast::sizeOf(CONVERT_TYPE(resType->getElementType()));
-
-			return c_ast::call(C_NODE_MANAGER->create("irt_scratchpad_alloc"), size);
-		});
-
 		// param clause
 
 		table[basic.getPickInRange()] = OP_CONVERTER({
 			return c_ast::call(C_NODE_MANAGER->create("irt_optimizer_pick_in_range"), CONVERT_ARG(0), CONVERT_ARG(1), CONVERT_ARG(2), CONVERT_ARG(3),
 			                   CONVERT_ARG(4));
 		});
-
-		table[basic.getRefDelete()] = OP_CONVERTER({ return operators::refDelete(context, call, "irt_free", false); });
 
 		if(!config.areShiftOpsSupported) {
 		// TODO: parenthesize ARG(0)

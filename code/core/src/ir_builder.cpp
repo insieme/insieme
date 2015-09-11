@@ -312,7 +312,7 @@ namespace core {
 		return types::unify(manager, type, irType);
 	}
 
-	TypePtr IRBuilderBaseModule::refType(const TypePtr& elementType, bool _const, bool _volatile) const {
+	GenericTypePtr IRBuilderBaseModule::refType(const TypePtr& elementType, bool _const, bool _volatile) const {
 		return lang::ReferenceType::create(elementType, _const, _volatile);
 	}
 
@@ -442,6 +442,9 @@ namespace core {
 		return functionType(funType->getParameterTypes(), funType->getReturnType(), FK_CLOSURE);
 	}
 
+	ExpressionPtr IRBuilderBaseModule::unitConsume(const ExpressionPtr& toConsume) const {
+		return callExpr(getLangBasic().getUnit(), getLangBasic().getUnitConsume(), toConsume);
+	}
 
 	LiteralPtr IRBuilderBaseModule::stringLit(const string& str) const {
 		return literal(str, ptrType(getLangBasic().getChar(), true));

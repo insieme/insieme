@@ -54,6 +54,10 @@ int main() {
 	
 	#pragma test expect_ir("decl ref<ptr<int<4>,f,f>,t,f> v0;")
 	int *const cpi;
+
+	#pragma test expect_ir("decl ref<ptr<int<4>,t,f>,f,f> v0;")
+	int const * cpi2;
+
 	#pragma test expect_ir("decl ref<ptr<int<4>,t,f>,t,f> v0;")
 	const int *const cpci;
 	
@@ -106,12 +110,4 @@ int main() {
 	typedef union { int i; } union_t;
 	#pragma test expect_ir("REGEX", R"(decl ref<union \w+ <i:int<4>>,f,f> v0 = .*)")
 	union_t uni;
-
-	// FUNCTION POINTER TYPES //////////////////////////////////////////////////////////////
-
-	#pragma test expect_ir("decl ref<ptr<(real<4>)->int<4>,f,f>,f,f> v0;")
-	int(*ifFuncPtr)(float);
-
-	#pragma test expect_ir("decl ref<ptr<()->unit,f,f>,f,f> v0;")
-	void(*vvFuncPtr)(void);
 }

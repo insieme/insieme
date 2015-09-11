@@ -127,13 +127,6 @@ int main() {
 	#pragma test expect_ir("decl ref<uint<4>,f,f> v0 = var(ptr_to_integral(ptr_from_integral(5, type(ptr<unit,f,f>)), type(uint<4>)));")
 	unsigned uintfrompointer = (void*)5;
 
-	// function pointer casts
-	#pragma test expect_ir("{ decl ref<ptr<(real<4>)->int<4>,f,f>,f,f> v0; ptr_reinterpret(*v0, type((int<4>)->real<4>)); }")
-	{
-		int(*ifFuncPtr)(float);
-		(float(*)(int))ifFuncPtr;
-	}
-
 	//===------------------------------------------------------------------------------------------------------------------------------------- MISC CASTS ---===
 
 	// NoOp - casting between identical types
@@ -143,8 +136,8 @@ int main() {
 		(int)x;
 	}
 
-	// void - ignores the return value, has no effect from a compiler point of view
-	#pragma test expect_ir("1")
+	// void - ignores the return value
+	#pragma test expect_ir("unit_consume(1)")
 	(void)1;
 
 	//===----------------------------------------------------------------------------------------------------------------------------------- TO BOOL CASTS---===

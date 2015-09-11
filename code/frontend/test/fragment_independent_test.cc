@@ -51,6 +51,10 @@ namespace frontend {
 		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_globals.c");
 	}
 
+	TEST(IndependentTest, GlobalsInit) {
+		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_globals_init.c");
+	}
+
 	TEST(IndependentTest, Statements) {
 		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_statements.c");
 	}
@@ -77,6 +81,10 @@ namespace frontend {
 
 	TEST(IndependentTest, Prototypes) {
 		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_prototypes.c");
+	}
+
+	TEST(IndependentTest, FunctionPointers) {
+		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_function_pointers.c");
 	}
 
 } // fe namespace

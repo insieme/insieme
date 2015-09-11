@@ -52,12 +52,15 @@
 
 #include "insieme/core/ir_types.h"
 #include "insieme/core/ir_builder.h"
-#include "insieme/core/ir_class_info.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/annotations/naming.h"
 #include "insieme/annotations/c/include.h"
 #include "insieme/annotations/c/decl_only.h"
+
+#include "insieme/core/lang/array.h"
+#include "insieme/core/lang/reference.h"
+#include "insieme/core/lang/channel.h"
 #include "insieme/core/lang/enum_extension.h"
 #include "insieme/core/lang/const_extension.h"
 
@@ -81,10 +84,6 @@ namespace backend {
 			typedef TypeInfo type;
 		};
 		template <>
-		struct info_trait<core::RefType> {
-			typedef RefTypeInfo type;
-		};
-		template <>
 		struct info_trait<core::StructType> {
 			typedef StructTypeInfo type;
 		};
@@ -95,18 +94,6 @@ namespace backend {
 		template <>
 		struct info_trait<core::UnionType> {
 			typedef UnionTypeInfo type;
-		};
-		template <>
-		struct info_trait<core::ArrayType> {
-			typedef ArrayTypeInfo type;
-		};
-		template <>
-		struct info_trait<core::VectorType> {
-			typedef VectorTypeInfo type;
-		};
-		template <>
-		struct info_trait<core::ChannelType> {
-			typedef ChannelTypeInfo type;
 		};
 		template <>
 		struct info_trait<core::FunctionType> {
@@ -176,6 +163,7 @@ namespace backend {
 
 			const TypeInfo* addInfo(const core::TypePtr& type, const TypeInfo* info);
 			const TypeInfo* resolveInternal(const core::TypePtr& type);
+			const TypeInfo* resolveTypeInternal(const core::TypePtr& type);
 
 			const TypeInfo* resolveTypeVariable(const core::TypeVariablePtr& ptr);
 			const TypeInfo* resolveGenericType(const core::GenericTypePtr& ptr);
@@ -185,16 +173,19 @@ namespace backend {
 
 			const UnionTypeInfo* resolveUnionType(const core::UnionTypePtr& ptr);
 
-			const ArrayTypeInfo* resolveArrayType(const core::ArrayTypePtr& ptr);
-			const VectorTypeInfo* resolveVectorType(const core::VectorTypePtr& ptr);
-			const ChannelTypeInfo* resolveChannelType(const core::ChannelTypePtr& ptr);
+			const ArrayTypeInfo* resolveArrayType(const core::GenericTypePtr& ptr);
+			const ArrayTypeInfo* resolveFixedSizedArrayType(const core::GenericTypePtr& ptr);
+			const ArrayTypeInfo* resolveVariableSizedArrayType(const core::GenericTypePtr& ptr);
+			const ArrayTypeInfo* resolveUnknownSizedArrayType(const core::GenericTypePtr& ptr);
+
+			const ChannelTypeInfo* resolveChannelType(const core::GenericTypePtr& ptr);
 
 			const FunctionTypeInfo* resolveFunctionType(const core::FunctionTypePtr& ptr);
 			const FunctionTypeInfo* resolvePlainFunctionType(const core::FunctionTypePtr& ptr);
 			const FunctionTypeInfo* resolveMemberFunctionType(const core::FunctionTypePtr& ptr);
 			const FunctionTypeInfo* resolveThickFunctionType(const core::FunctionTypePtr& ptr);
 
-			const RefTypeInfo* resolveRefType(const core::RefTypePtr& ptr);
+			const RefTypeInfo* resolveRefType(const core::GenericTypePtr& ptr);
 
 			const TypeInfo* resolveRecType(const core::RecTypePtr& ptr);
 			void resolveRecTypeDefinition(const core::RecTypeDefinitionPtr& ptr);
@@ -239,24 +230,16 @@ namespace backend {
 		return *(store->resolveType(type));
 	}
 
-	const RefTypeInfo& TypeManager::getTypeInfo(const core::RefTypePtr& type) {
-		// just take value from store
-		return *(store->resolveType(type));
+	const RefTypeInfo& TypeManager::getRefTypeInfo(const core::GenericTypePtr& type) {
+		return *(static_cast<const RefTypeInfo*>(store->resolveType(type)));
 	}
 
-	const ArrayTypeInfo& TypeManager::getTypeInfo(const core::ArrayTypePtr& type) {
-		// take value from store
-		return *(store->resolveType(type));
+	const ArrayTypeInfo& TypeManager::getArrayTypeInfo(const core::GenericTypePtr& type) {
+		return *(static_cast<const ArrayTypeInfo*>(store->resolveType(type)));
 	}
 
-	const VectorTypeInfo& TypeManager::getTypeInfo(const core::VectorTypePtr& type) {
-		// take value from store
-		return *(store->resolveType(type));
-	}
-
-	const ChannelTypeInfo& TypeManager::getTypeInfo(const core::ChannelTypePtr& type) {
-		// take value from store
-		return *(store->resolveType(type));
+	const ChannelTypeInfo& TypeManager::getChannelTypeInfo(const core::GenericTypePtr& type) {
+		return *(static_cast<const ChannelTypeInfo*>(store->resolveType(type)));
 	}
 
 	const TypeInfo& TypeManager::getCVectorTypeInfo(const core::TypePtr& elementType, const c_ast::ExpressionPtr& size) {
@@ -315,71 +298,46 @@ namespace backend {
 		// --------------------- Implementations of resolution utilities --------------------
 
 		const TypeInfo* TypeInfoStore::resolveInternal(const core::TypePtr& type) {
-			const auto& gen = type->getNodeManager().getLangBasic();
 
 			// lookup information within cache
 			auto pos = typeInfos.find(type);
-			if(pos != typeInfos.end()) { return pos->second; }
+			if (pos != typeInfos.end()) return pos->second;
 
-			// check whether there is an annotated include file (intercepted type) [avoir primitives and unit, those could have header as well]
-			if(type->getNodeType() == core::NT_GenericType && annotations::c::hasIncludeAttached(type) && !core::annotations::hasAttachedName(type)
-			   && !gen.isIRBuiltin(type)) {
-				auto genericType = type.as<core::GenericTypePtr>();
-				const string& name = genericType->getFamilyName();
-				const string& header = annotations::c::getAttachedInclude(type);
+			// resolve information if there is no information yet
+			auto info = resolveTypeInternal(type);
 
-				bool isEnum = type->getNodeManager().getLangExtension<core::lang::EnumExtension>().isEnumType(type);
-				TypeInfo* info;
-				if(isEnum) {
-					// extract first arg of insieme enum (which is the original name of the enum)
-					// and create a corresponding type info.
-					auto innerType = genericType->getTypeParameter(0);
-					assert(innerType.isa<core::GenericTypePtr>() && "Inner Type of an Insieme enum has to be a GenericType");
-					info = type_info_utils::createInfo(converter.getFragmentManager(), innerType.as<core::GenericTypePtr>()->getFamilyName(), header);
-				} else {
-					info = type_info_utils::createInfo(converter.getFragmentManager(), name, header);
+			// register information
+			addInfo(type, info);
+
+			// done
+			return info;
+		}
+
+
+		const TypeInfo* TypeInfoStore::resolveTypeInternal(const core::TypePtr& type) {
+
+
+			// - Installed Type Handlers -------------------------------------------------------------------
+
+			// try resolving it using type handlers
+			for(const auto& handler : typeHandlers) {
+				if (const TypeInfo* info = handler(converter, type)) {
+					return info;
 				}
-
-				// if is an enum, there is no need to translate inner generic types, since it is the name of the enum construct
-				if(!(type->getNodeManager().getLangExtension<core::lang::EnumExtension>().isEnumType(type))) {
-					// extract resulting c-type
-					c_ast::NamedTypePtr cType = info->rValueType.as<c_ast::NamedTypePtr>();
-
-					// add generic parameters
-					for(auto cur : genericType->getTypeParameter()) {
-						// resolve info for current parameter
-						const TypeInfo* curInfo = resolveInternal(cur);
-
-						// add dependency to inner type
-						info->declaration->addDependency(curInfo->declaration);
-
-						// add dependency also to the definition if it is not closing a cycle
-						if(curInfo->definition) {
-							if(curInfo->definition.isa<c_ast::IncludeFragmentPtr>() || cur.isa<core::RecTypePtr>()
-							   || curInfo->definition->isDependingOn(info->definition)) {
-								info->definition->addRequirement(curInfo->definition);
-							} else {
-								info->definition->addDependency(curInfo->definition);
-							}
-						}
-
-						// if we have a function type as template argument, we need to
-						// avoid that the asterisk is written -> directly take the element type.
-						if(curInfo->rValueType.isa<c_ast::PointerTypePtr>() && cur.isa<core::FunctionTypePtr>()) {
-							cType->parameters.push_back(curInfo->rValueType.as<c_ast::PointerTypePtr>()->elementType);
-						} else {
-							cType->parameters.push_back(curInfo->rValueType);
-						}
-					}
-				}
-
-				// TODO: add int-type parameters
-
-				// TODO: add type-parameter permutation support
-
-				addInfo(type, info);
-				return info;
 			}
+
+
+			// - Header Annotation ------------------------------------------------------------------------
+
+			// if type is annotated with an include file => use the include file
+			if(annotations::c::hasIncludeAttached(type) && core::annotations::hasAttachedName(type)) {
+				const string& name = core::annotations::getAttachedName(type);
+				const string& header = annotations::c::getAttachedInclude(type);
+				return type_info_utils::createInfo(converter.getFragmentManager(), name, header);
+			}
+
+
+			// - Include Table ----------------------------------------------------------------------------
 
 			// lookup type within include table
 			string name = getName(converter, type);
@@ -387,9 +345,7 @@ namespace backend {
 			if(pos2 != includeTable.end()) {
 				// create new info referencing a header file
 				const string& header = pos2->second;
-				TypeInfo* info = type_info_utils::createInfo(converter.getFragmentManager(), name, header);
-				addInfo(type, info);
-				return info;
+				return type_info_utils::createInfo(converter.getFragmentManager(), name, header);
 			}
 
 			// also test struct variant
@@ -398,58 +354,42 @@ namespace backend {
 			if(pos2 != includeTable.end()) {
 				// create new info referencing a header file
 				const string& header = pos2->second;
-				TypeInfo* info = type_info_utils::createInfo(converter.getFragmentManager(), name, header);
-				addInfo(type, info);
-				return info;
+				return type_info_utils::createInfo(converter.getFragmentManager(), name, header);
 			}
 
-			// the type might not be generic but be anotated. belongs to some system header and
-			// redeclaration has to be avoided
-			if(annotations::c::hasIncludeAttached(type) && core::annotations::hasAttachedName(type) && !gen.isPrimitive(type)) {
-				const string& name = core::annotations::getAttachedName(type);
-				const string& header = annotations::c::getAttachedInclude(type);
-				TypeInfo* info = type_info_utils::createInfo(converter.getFragmentManager(), name, header);
-				addInfo(type, info);
-				return info;
-			}
 
-			// try resolving it using type handlers
-			for(auto it = typeHandlers.begin(); it != typeHandlers.end(); ++it) {
-				const TypeInfo* info = (*it)(converter, type);
-				if(info) {
-					addInfo(type, info);
-					return info;
-				}
-			}
+			// - Basic Conversion -------------------------------------------------------------------------
 
 			// obtain type information
 			const TypeInfo* info;
 
 			// dispatch to corresponding sub-type implementation
 			switch(type->getNodeType()) {
-			case core::NT_GenericType: info = resolveGenericType(static_pointer_cast<const core::GenericType>(type)); break;
-			case core::NT_StructType: info = resolveStructType(static_pointer_cast<const core::StructType>(type)); break;
-			case core::NT_UnionType: info = resolveUnionType(static_pointer_cast<const core::UnionType>(type)); break;
-			case core::NT_TupleType: info = resolveTupleType(static_pointer_cast<const core::TupleType>(type)); break;
-			case core::NT_FunctionType: info = resolveFunctionType(static_pointer_cast<const core::FunctionType>(type)); break;
-			case core::NT_VectorType: info = resolveVectorType(static_pointer_cast<const core::VectorType>(type)); break;
-			case core::NT_ArrayType: info = resolveArrayType(static_pointer_cast<const core::ArrayType>(type)); break;
-			case core::NT_RefType: info = resolveRefType(static_pointer_cast<const core::RefType>(type)); break;
-			case core::NT_RecType:
-				info = resolveRecType(static_pointer_cast<const core::RecType>(type));
-				break;
-			//			case core::NT_ChannelType:
-			case core::NT_TypeVariable: info = resolveTypeVariable(static_pointer_cast<const core::TypeVariable>(type)); break;
-			default:
-				// this should not happen ...
-				LOG(FATAL) << "Unsupported IR Type encountered: " << type;
-				assert_fail() << "Unsupported IR type encountered!" << std::endl << type->getNodeType();
-				info = type_info_utils::createUnsupportedInfo(*converter.getCNodeManager());
-				break;
+				case core::NT_GenericType: {
+					// distinguish essential abstract types
+					auto genType = type.as<core::GenericTypePtr>();
+					if(core::lang::isReference(type)) 		info = resolveRefType(genType);
+					else if(core::lang::isArray(type))     	info = resolveArrayType(genType);
+					else if(core::lang::isChannel(type))   	info = resolveChannelType(genType);
+					else info = resolveGenericType(genType);
+					break;
+				}
+				case core::NT_StructType: info = resolveStructType(static_pointer_cast<const core::StructType>(type)); break;
+				case core::NT_UnionType: info = resolveUnionType(static_pointer_cast<const core::UnionType>(type)); break;
+				case core::NT_TupleType: info = resolveTupleType(static_pointer_cast<const core::TupleType>(type)); break;
+				case core::NT_FunctionType: info = resolveFunctionType(static_pointer_cast<const core::FunctionType>(type)); break;
+				case core::NT_RecType:
+					info = resolveRecType(static_pointer_cast<const core::RecType>(type));
+					break;
+				//			case core::NT_ChannelType:
+				case core::NT_TypeVariable: info = resolveTypeVariable(static_pointer_cast<const core::TypeVariable>(type)); break;
+				default:
+					// this should not happen ...
+					LOG(FATAL) << "Unsupported IR Type encountered: " << type;
+					assert_fail() << "Unsupported IR type encountered: " << type->getNodeType() << "\n";
+					info = type_info_utils::createUnsupportedInfo(*converter.getCNodeManager());
+					break;
 			}
-
-			// store information
-			addInfo(type, info);
 
 			// return pointer to obtained information
 			return info;
@@ -466,7 +406,7 @@ namespace backend {
 			c_ast::CNodeManager& manager = *converter.getCNodeManager();
 
 			// try find a match
-			if(basic.isUnit(ptr) || basic.isAny(ptr)) {
+			if(basic.isUnit(ptr)) {
 				c_ast::TypePtr voidType = manager.create<c_ast::PrimitiveType>(c_ast::PrimitiveType::Void);
 				return type_info_utils::createInfo(voidType);
 			}
@@ -524,8 +464,6 @@ namespace backend {
 			// ------------ string  -----------------------
 			if(basic.isString(ptr)) { return type_info_utils::createInfo(manager, "char*"); }
 
-			// ------------ list  -------------------- ----
-			if(basic.isVarList(ptr)) { return type_info_utils::createInfo(manager.create<c_ast::VarArgsType>()); }
 
 			// ------------- boolean ------------------
 
@@ -561,55 +499,6 @@ namespace backend {
 			if(core::analysis::isTypeLiteralType(ptr)) {
 				// use same info then for the generic case
 				return resolveInternal(builder.getTypeLiteralType(builder.typeVariable("a")));
-			}
-
-			if(core::analysis::isVolatileType(ptr)) {
-				// resolve volatile type
-				const TypeInfo* subType = resolveInternal(core::analysis::getVolatileType(ptr));
-
-				// create new type info being modified by adding the volatile modifier
-				TypeInfo* res = new TypeInfo();
-				res->lValueType = manager.create<c_ast::ModifiedType>(subType->lValueType, c_ast::ModifiedType::VOLATILE);
-				res->rValueType = manager.create<c_ast::ModifiedType>(subType->rValueType, c_ast::ModifiedType::VOLATILE);
-				res->externalType = res->rValueType;
-				res->externalize = subType->externalize;
-				res->internalize = subType->internalize;
-				res->declaration = subType->declaration;
-				res->definition = subType->definition;
-				return res;
-			}
-
-			// handle const wrapper
-			auto& ext = converter.getNodeManager().getLangExtension<core::lang::ConstExtension>();
-			if(ext.isConstType(ptr)) {
-				// load information of nested type
-				const TypeInfo* subType = resolveInternal(ext.getWrappedConstType(ptr));
-
-				// build wrapped information for const type
-				TypeInfo* res = new TypeInfo();
-				res->lValueType = manager.create<c_ast::ModifiedType>(subType->lValueType, c_ast::ModifiedType::CONST);
-				res->rValueType = manager.create<c_ast::ModifiedType>(subType->rValueType, c_ast::ModifiedType::CONST);
-				res->externalType = res->rValueType;
-				res->externalize = subType->externalize;
-				res->internalize = subType->internalize;
-				res->declaration = subType->declaration;
-				res->definition = subType->definition;
-				return res;
-			}
-
-			if(ptr->getName()->getValue() == "__insieme_IntTempParam") {
-				if(core::ConcreteIntTypeParamPtr param = ptr->getIntTypeParameter()[0].isa<core::ConcreteIntTypeParamPtr>()) {
-					return type_info_utils::createInfo(manager, boost::lexical_cast<string>(param->getValue()));
-				}
-			}
-
-			if(ptr->getName()->getValue() == "va_list") {
-				auto res = type_info_utils::createInfo(manager, "va_list");
-				c_ast::CodeFragmentPtr decl = c_ast::IncludeFragment::createNew(converter.getFragmentManager(), "stdarg.h");
-				res->declaration = decl;
-				res->definition = decl;
-
-				return res;
 			}
 
 			if(annotations::c::isDeclOnly(ptr)) {
@@ -670,14 +559,10 @@ namespace backend {
 				core::TypePtr curType = entry->getType();
 
 				// special handling of variable sized arrays within structs / unions
-				if(curType->getNodeType() == core::NT_ArrayType) {
-					core::ArrayTypePtr array = curType.as<core::ArrayTypePtr>();
-
-					// make sure it is 1-dimensional
-					assert(array->getDimension() == core::IRBuilder(ptr->getNodeManager()).concreteIntTypeParam(1));
+				if(core::lang::isUnknownSizedArray(curType)) {
 
 					// construct vector type to be used
-					core::TypePtr elementType = array->getElementType();
+					core::TypePtr elementType = core::lang::ArrayType(curType).getElementType();
 					const TypeInfo* info = resolveType(elementType);
 					auto memberType = manager->create<c_ast::VectorType>(info->rValueType);
 
@@ -765,60 +650,62 @@ namespace backend {
 				type->parents.push_back(manager->create<c_ast::Parent>(parent->isVirtual(), parentInfo->lValueType));
 			}
 
-			// -- Process Meta-Infos --
+			// TODO: port this to new infrastructure
 
-			// skip rest if there is no meta-info present
-			if(!core::hasMetaInfo(ptr)) { return res; }
-
-			// save current info (otherwise the following code will result in an infinite recursion)
-			addInfo(ptr, res);
-
-			auto& nameMgr = converter.getNameManager();
-			core::ClassMetaInfo info = core::getMetaInfo(ptr);
-			auto& funMgr = converter.getFunctionManager();
-
-			// add constructors
-			for(const core::ExpressionPtr& cur : info.getConstructors()) {
-				assert(cur.isa<core::LambdaExprPtr>() && "metaInfo should only contain ctors which are lambdaExprs at this point");
-				// let function manager handle it
-				funMgr.getInfo(cur.as<core::LambdaExprPtr>());
-			}
-
-			// add destructor
-			if(auto dtor = info.getDestructor()) {
-				assert(dtor.isa<core::LambdaExprPtr>() && "metaInfo should only contain dtor which is a lambdaExprs at this point");
-				// let function manager handle it
-				funMgr.getInfo(dtor.as<core::LambdaExprPtr>(), false, info.isDestructorVirtual());
-			}
-
-			// add member functions
-			for(const core::MemberFunction& cur : info.getMemberFunctions()) {
-				// fix name of all member functions before converting them
-				auto impl = cur.getImplementation();
-				if(!core::analysis::isPureVirtual(impl)) { nameMgr.setName(core::analysis::normalize(impl), cur.getName()); }
-			}
-			for(const core::MemberFunction& cur : info.getMemberFunctions()) {
-				// process function using function manager
-				auto impl = cur.getImplementation();
-				if(!core::analysis::isPureVirtual(impl)) {
-					// might be than there is no implementation for the function?
-					// what about ignoring it and allow backend compiler to synthetize it?
-					if(impl.isa<core::LiteralPtr>()) { continue; }
-
-					// generate code for member function
-					funMgr.getInfo(impl.as<core::LambdaExprPtr>(), cur.isConst(), cur.isVirtual());
-
-				} else {
-					// resolve the type of this function and all its dependencies using the function manager
-					// by asking for an temporary "external function"
-
-					// create temporary literal ...
-					core::NodeManager& nodeMgr = ptr->getNodeManager();
-
-					// ... and resolve dependencies (that's all, function manager will do the rest)
-					funMgr.getInfo(core::Literal::get(nodeMgr, impl.getType(), cur.getName()), cur.isConst());
-				}
-			}
+//			// -- Process Meta-Infos --
+//
+//			// skip rest if there is no meta-info present
+//			if(!core::hasMetaInfo(ptr)) { return res; }
+//
+//			// save current info (otherwise the following code will result in an infinite recursion)
+//			addInfo(ptr, res);
+//
+//			auto& nameMgr = converter.getNameManager();
+//			core::ClassMetaInfo info = core::getMetaInfo(ptr);
+//			auto& funMgr = converter.getFunctionManager();
+//
+//			// add constructors
+//			for(const core::ExpressionPtr& cur : info.getConstructors()) {
+//				assert(cur.isa<core::LambdaExprPtr>() && "metaInfo should only contain ctors which are lambdaExprs at this point");
+//				// let function manager handle it
+//				funMgr.getInfo(cur.as<core::LambdaExprPtr>());
+//			}
+//
+//			// add destructor
+//			if(auto dtor = info.getDestructor()) {
+//				assert(dtor.isa<core::LambdaExprPtr>() && "metaInfo should only contain dtor which is a lambdaExprs at this point");
+//				// let function manager handle it
+//				funMgr.getInfo(dtor.as<core::LambdaExprPtr>(), false, info.isDestructorVirtual());
+//			}
+//
+//			// add member functions
+//			for(const core::MemberFunction& cur : info.getMemberFunctions()) {
+//				// fix name of all member functions before converting them
+//				auto impl = cur.getImplementation();
+//				if(!core::analysis::isPureVirtual(impl)) { nameMgr.setName(core::analysis::normalize(impl), cur.getName()); }
+//			}
+//			for(const core::MemberFunction& cur : info.getMemberFunctions()) {
+//				// process function using function manager
+//				auto impl = cur.getImplementation();
+//				if(!core::analysis::isPureVirtual(impl)) {
+//					// might be than there is no implementation for the function?
+//					// what about ignoring it and allow backend compiler to synthetize it?
+//					if(impl.isa<core::LiteralPtr>()) { continue; }
+//
+//					// generate code for member function
+//					funMgr.getInfo(impl.as<core::LambdaExprPtr>(), cur.isConst(), cur.isVirtual());
+//
+//				} else {
+//					// resolve the type of this function and all its dependencies using the function manager
+//					// by asking for an temporary "external function"
+//
+//					// create temporary literal ...
+//					core::NodeManager& nodeMgr = ptr->getNodeManager();
+//
+//					// ... and resolve dependencies (that's all, function manager will do the rest)
+//					funMgr.getInfo(core::Literal::get(nodeMgr, impl.getType(), cur.getName()), cur.isConst());
+//				}
+//			}
 
 			// done
 			return res;
@@ -872,87 +759,55 @@ namespace backend {
 			return resolveStructType(builder.structType(entries));
 		}
 
-		const ArrayTypeInfo* TypeInfoStore::resolveArrayType(const core::ArrayTypePtr& ptr) {
-			auto manager = converter.getCNodeManager();
+		const ArrayTypeInfo* TypeInfoStore::resolveArrayType(const core::GenericTypePtr& ptr) {
+			assert_pred1(core::lang::isArray, ptr) << "Can only convert array types.";
 
-			// obtain dimension of array
-			unsigned dim = 0;
-			const core::IntTypeParamPtr& dimPtr = ptr->getDimension();
-			if(dimPtr->getNodeType() != core::NT_ConcreteIntTypeParam) {
-				// non-concrete array types are not supported
-				return type_info_utils::createUnsupportedInfo<ArrayTypeInfo>(*manager);
-			} else {
-				dim = static_pointer_cast<const core::ConcreteIntTypeParam>(dimPtr)->getValue();
+			// distribute among more specialized cases
+
+			// fixed size arrays (once known as vectors)
+			if (core::lang::isFixedSizedArray(ptr)) {
+				return resolveFixedSizedArrayType(ptr);
 			}
 
+			// unkown sized arrays, like 'int a[]';
+			if (core::lang::isUnknownSizedArray(ptr)) {
+				return resolveUnknownSizedArrayType(ptr);
+			}
 
-			// ----- create array type representation ------
+			// final case - variable iszed array
+			assert_pred1(core::lang::isVariableSizedArray, ptr);
+			return resolveVariableSizedArrayType(ptr);
+		}
 
-			const TypeInfo* elementTypeInfo = resolveType(ptr->getElementType());
+		const ArrayTypeInfo* TypeInfoStore::resolveFixedSizedArrayType(const core::GenericTypePtr& ptr) {
+			assert_pred1(core::lang::isFixedSizedArray, ptr);
+
+			// start with the parsing of the array type
+			core::lang::ArrayType array(ptr);
+
+			// obtain number of elements in array
+			unsigned size = array.getNumElements();
+
+
+			// ----- create the struct representing the array type ------
+
+			const TypeInfo* elementTypeInfo = resolveType(array.getElementType());
 			assert_true(elementTypeInfo);
 
-			// check whether this array type has been resolved while resolving the sub-type (due to recursion)
+			// check whether the type has been resolved while resolving the sub-type
 			auto pos = typeInfos.find(ptr);
 			if(pos != typeInfos.end()) {
 				assert(dynamic_cast<const ArrayTypeInfo*>(pos->second));
 				return static_cast<const ArrayTypeInfo*>(pos->second);
 			}
 
-			// create array type information
-			ArrayTypeInfo* res = new ArrayTypeInfo();
-
-			// create C type (pointer to target type)
-			c_ast::TypePtr arrayType = elementTypeInfo->rValueType;
-			for(unsigned i = 0; i < dim; i++) {
-				arrayType = c_ast::ptr(arrayType);
-			}
-
-			// set L / R value types
-			res->lValueType = arrayType;
-			res->rValueType = arrayType;
-			res->externalType = arrayType;
-
-			// set externalizer / internalizer
-			res->externalize = &type_info_utils::NoOp;
-			res->internalize = &type_info_utils::NoOp;
-
-			// set declaration / definition (based on element type)
-			res->declaration = elementTypeInfo->declaration;
-			res->definition = elementTypeInfo->definition;
-
-			// done
-			return res;
-		}
-
-		const VectorTypeInfo* TypeInfoStore::resolveVectorType(const core::VectorTypePtr& ptr) {
+			// get the c-ast node manager
 			auto manager = converter.getCNodeManager();
 
-			// obtain dimension of array
-			unsigned size = 0;
-			const core::IntTypeParamPtr& sizePtr = ptr->getSize();
-			if(sizePtr->getNodeType() != core::NT_ConcreteIntTypeParam) {
-				// non-concrete array types are not supported
-				return type_info_utils::createUnsupportedInfo<VectorTypeInfo>(*manager);
-			} else {
-				size = static_pointer_cast<const core::ConcreteIntTypeParam>(sizePtr)->getValue();
-			}
-
-			// ----- create the struct representing the array type ------
-
-			const TypeInfo* elementTypeInfo = resolveType(ptr->getElementType());
-			assert_true(elementTypeInfo);
-
-			// check whether the type has been resolved while resolving the sub-type
-			auto pos = typeInfos.find(ptr);
-			if(pos != typeInfos.end()) {
-				assert(dynamic_cast<const VectorTypeInfo*>(pos->second));
-				return static_cast<const VectorTypeInfo*>(pos->second);
-			}
-
 			// compose resulting info instance
-			VectorTypeInfo* res = new VectorTypeInfo();
-			string vectorName = converter.getNameManager().getName(ptr);
-			auto name = manager->create(vectorName);
+			ArrayTypeInfo* res = new ArrayTypeInfo();
+			string arrayName = converter.getNameManager().getName(ptr);
+			auto name = manager->create(arrayName);
 
 			// create L / R value name
 			c_ast::NamedTypePtr vectorType = manager->create<c_ast::NamedType>(name);
@@ -987,50 +842,113 @@ namespace backend {
 			res->definition->addDependency(res->declaration);
 			res->definition->addDependency(elementTypeInfo->definition);
 
+			// done
+			return res;
+		}
 
-			// ---------------------- add init uniform operator ---------------------
 
-			// todo: convert this to pure C-AST code
-			string initUniformName = name->name + "_init_uniform";
-			res->initUniformName = manager->create(initUniformName);
+		const ArrayTypeInfo* TypeInfoStore::resolveUnknownSizedArrayType(const core::GenericTypePtr& ptr) {
+			assert_pred1(core::lang::isUnknownSizedArray, ptr);
 
-			// ---------------------- add init uniform ---------------------
+			auto manager = converter.getCNodeManager();
 
-			c_ast::VariablePtr valueParam = manager->create<c_ast::Variable>(elementTypeInfo->lValueType, manager->create("value"));
+			// ----- create array type representation ------
 
-			std::stringstream code;
-			code << "/* A constructor initializing a vector of type " << vectorName << " = " << toString(*ptr) << " uniformly */ \n"
-			                                                                                                      "static inline "
-			     << vectorName << " " << initUniformName << "(" << c_ast::ParameterPrinter(valueParam) << ") {\n"
-			                                                                                              "    "
-			     << vectorName << " res;\n"
-			                      "    for(int i=0; i<"
-			     << size << ";++i) {\n"
-			                "        res.data[i] = value;\n"
-			                "    }\n"
-			                "    return res;\n"
-			                "}\n";
+			const TypeInfo* elementTypeInfo = resolveType(core::lang::ArrayType(ptr).getElementType());
+			assert_true(elementTypeInfo);
 
-			// attach the init operator
-			c_ast::OpaqueCodePtr cCode = manager->create<c_ast::OpaqueCode>(code.str());
-			res->initUniform = c_ast::CCodeFragment::createNew(converter.getFragmentManager(), cCode);
-			res->initUniform->addDependency(res->definition);
+			// check whether this array type has been resolved while resolving the sub-type (due to recursion)
+			auto pos = typeInfos.find(ptr);
+			if(pos != typeInfos.end()) {
+				assert_true(dynamic_cast<const ArrayTypeInfo*>(pos->second));
+				return static_cast<const ArrayTypeInfo*>(pos->second);
+			}
+
+			// create array type information
+			ArrayTypeInfo* res = new ArrayTypeInfo();
+
+			// create C type (pointer to target type)
+			c_ast::TypePtr arrayType = c_ast::vec(elementTypeInfo->rValueType);
+
+			// set L / R value types
+			res->lValueType = arrayType;
+			res->rValueType = arrayType;
+			res->externalType = arrayType;
+
+			// set externalizer / internalizer
+			res->externalize = &type_info_utils::NoOp;
+			res->internalize = &type_info_utils::NoOp;
+
+			// set declaration / definition (based on element type)
+			res->declaration = elementTypeInfo->declaration;
+			res->definition = elementTypeInfo->definition;
 
 			// done
 			return res;
 		}
 
-		const ChannelTypeInfo* TypeInfoStore::resolveChannelType(const core::ChannelTypePtr& ptr) {
+
+		const ArrayTypeInfo* TypeInfoStore::resolveVariableSizedArrayType(const core::GenericTypePtr& ptr) {
+			assert_pred1(core::lang::isVariableSizedArray, ptr);
+
+			assert_not_implemented();
+			return nullptr;
+
+//			// start with the parsing of the array type
+//			core::lang::ArrayType array(ptr);
+//
+//			// ----- create array type representation ------
+//
+//			const TypeInfo* elementTypeInfo = resolveType(core::lang::ArrayType(ptr).getElementType());
+//			assert_true(elementTypeInfo);
+//
+//			// check whether this array type has been resolved while resolving the sub-type (due to recursion)
+//			auto pos = typeInfos.find(ptr);
+//			if(pos != typeInfos.end()) {
+//				assert_true(dynamic_cast<const ArrayTypeInfo*>(pos->second));
+//				return static_cast<const ArrayTypeInfo*>(pos->second);
+//			}
+//
+//			// create array type information
+//			ArrayTypeInfo* res = new ArrayTypeInfo();
+//
+//			// create C type (pointer to target type)
+//			c_ast::ExpressionPtr size = converter.getStmtConverter().convert(context, array.getSize());
+//			c_ast::TypePtr arrayType = c_ast::vec(elementTypeInfo->rValueType, size);
+//
+//			// set L / R value types
+//			res->lValueType = arrayType;
+//			res->rValueType = arrayType;
+//			res->externalType = arrayType;
+//
+//			// set externalizer / internalizer
+//			res->externalize = &type_info_utils::NoOp;
+//			res->internalize = &type_info_utils::NoOp;
+//
+//			// set declaration / definition (based on element type)
+//			res->declaration = elementTypeInfo->declaration;
+//			res->definition = elementTypeInfo->definition;
+//
+//			// done
+//			return res;
+		}
+
+
+		const ChannelTypeInfo* TypeInfoStore::resolveChannelType(const core::GenericTypePtr& ptr) {
+			assert_true(core::lang::isChannel(ptr)) << "Can only convert channel types.";
 			return type_info_utils::createUnsupportedInfo<ChannelTypeInfo>(*converter.getCNodeManager());
 		}
 
-		const RefTypeInfo* TypeInfoStore::resolveRefType(const core::RefTypePtr& ptr) {
+		const RefTypeInfo* TypeInfoStore::resolveRefType(const core::GenericTypePtr& ptr) {
+			assert_true(core::lang::isReference(ptr)) << "Can only convert reference types.";
+
 			auto manager = converter.getCNodeManager();
-			auto& basic = converter.getNodeManager().getLangBasic();
+
+			// parse reference type
+			core::lang::ReferenceType ref(ptr);
 
 			// obtain information covering sub-type
-			auto elementType = ptr->getElementType();
-			auto elementNodeType = elementType->getNodeType();
+			auto elementType = ref.getElementType();
 			const TypeInfo* subType = resolveType(elementType);
 
 			// check whether this ref type has been resolved while resolving the sub-type (due to recursion)
@@ -1045,58 +963,63 @@ namespace backend {
 
 			// produce R and L value type
 			// generally, a level of indirection needs to be added
-			res->lValueType = c_ast::ptr(subType->lValueType, ptr->isSource());
-			res->rValueType = c_ast::ptr((ptr->isSource()) ? c_ast::makeConst(subType->rValueType) : subType->rValueType);
-			if(basic.isAny(elementType)) {
-				// nothing to fix
-			} else if(basic.isAnyRef(elementType)) {
-				res->lValueType = subType->lValueType;
-			} else if(elementNodeType == core::NT_ArrayType) {
-				// if target is an array, indirection can be skipped (array is always implicitly a reference)
-				res->lValueType = subType->lValueType;
-				res->rValueType = subType->rValueType;
+			res->lValueType = c_ast::modifier(subType->lValueType, ref.isConst(), ref.isVolatile());
+			res->rValueType = c_ast::ptr(subType->rValueType, ref.isConst(), ref.isVolatile());
 
-				// special case: if ptr is a source than we have to make the element type of the array const
-				if(ptr->isSource()) {
-					assert_eq(res->lValueType, res->rValueType);               // we assume that those are equal (they should)
-					assert_true(res->lValueType.isa<c_ast::PointerTypePtr>()); // the type should also be a pointer
+			// handle special nested types
+			if (core::lang::isUnknownSizedArray(elementType)) {
+				// make it a pointer to the arrays element type
+				auto arrayElementType = core::lang::ArrayType(elementType).getElementType();
+				const TypeInfo* arrayElementTypeInfo = resolveType(arrayElementType);
 
-					// get element type
-					auto elementType = res->lValueType.as<c_ast::PointerTypePtr>()->elementType;
+				// both, R and L value are just pointers
+				res->lValueType = c_ast::ptr(arrayElementTypeInfo->lValueType, ref.isConst(), ref.isVolatile());
+				res->rValueType = c_ast::ptr(arrayElementTypeInfo->rValueType, ref.isConst(), ref.isVolatile());
 
-					// create new types
-					res->lValueType = c_ast::ptr(c_ast::makeConst(elementType));
-					res->rValueType = res->lValueType;
-				}
-
-			} else if(elementNodeType != core::NT_RefType) {
-				// if the target is a non-ref / non-array, on level of indirection can be omitted for local variables (implicit in C)
-				res->lValueType = subType->lValueType;
-
-				// if it is a source, the value type has to be const
-				if(ptr->isSource()) {
-					res->lValueType = c_ast::makeConst(subType->lValueType);
-					res->rValueType = c_ast::ptr(res->lValueType);
-				}
-
-			} else if(core::analysis::getReferencedType(ptr->getElementType())->getNodeType() == core::NT_ArrayType) {
-				// if the target is a ref pointing to an array, the implicit indirection of the array needs to be considered
-				res->lValueType = subType->lValueType;
 			}
+//			if(core::lang::isUnknownSizedArray(elementType)) {
+//				// if target is an array, indirection can be skipped (array is always implicitly a reference)
+//				res->lValueType = subType->lValueType;
+//				res->rValueType = subType->rValueType;
+//
+//				// special case: if ptr is a source than we have to make the element type of the array const
+//				if(ref.isConst()) {
+//					assert_eq(res->lValueType, res->rValueType);               // we assume that those are equal (they should)
+//					assert_true(res->lValueType.isa<c_ast::PointerTypePtr>()); // the type should also be a pointer
+//
+//					// get element type
+//					auto elementType = res->lValueType.as<c_ast::PointerTypePtr>()->elementType;
+//
+//					// create new types
+//					res->lValueType = c_ast::ptr(c_ast::makeConst(elementType));
+//					res->rValueType = res->lValueType;
+//				}
+//
+//			} else if(!core::lang::isReference(elementType)) {
+//				// if the target is a non-ref / non-array, on level of indirection can be omitted for local variables (implicit in C)
+//				res->lValueType = subType->lValueType;
+//
+//				// if it is a source, the value type has to be const
+//				if(ref.isConst()) {
+//					res->lValueType = c_ast::makeConst(subType->lValueType);
+//					res->rValueType = c_ast::ptr(res->lValueType);
+//				}
+//
+//			} else if(core::lang::isArray(core::analysis::getReferencedType(ref.getElementType()))) {
+//				// if the target is a ref pointing to an array, the implicit indirection of the array needs to be considered
+//				res->lValueType = subType->lValueType;
+//			}
 
 			// produce external type
-			res->externalType = c_ast::ptr(subType->externalType);
+			res->externalType = c_ast::ptr(subType->externalType, ref.isConst(), ref.isVolatile());
 
-			// special handling of source references (const references)
-			if(ptr->isSource()) { res->externalType = c_ast::ptr(c_ast::makeConst(subType->externalType)); }
-
-			// special handling of references to arrays (always pointer in C)
-			if(elementNodeType == core::NT_ArrayType) { res->externalType = subType->externalType; }
-
-			// special handling of references to vectors (implicit pointer in C)
-			if(elementNodeType == core::NT_VectorType) {
-				res->externalType = c_ast::ptr(resolveType(ptr->getElementType().as<core::VectorTypePtr>()->getElementType())->externalType);
-			}
+//			// special handling of references to vectors (implicit pointer in C)
+//			if(core::lang::isFixedSizedArray(elementType)) {
+//				res->externalType = c_ast::ptr(resolveType(core::lang::ArrayType(elementType).getElementType())->externalType);
+//			}
+//
+//			// special handling of references to arrays (always pointer in C)
+//			if(core::lang::isArray(elementType)) { res->externalType = subType->externalType; }
 
 			// add externalization operators
 			if(*res->rValueType == *res->externalType) {
@@ -1114,7 +1037,7 @@ namespace backend {
 			}
 
 			// special treatment for exporting vectors
-			if(elementNodeType == core::NT_VectorType) {
+			if(core::lang::isFixedSizedArray(elementType)) {
 				res->externalize = [res, subType](const c_ast::SharedCNodeManager& manager, const c_ast::ExpressionPtr& node) {
 					// special treatment for literals (e.g. string literals)
 					if(node->getNodeType() == c_ast::NT_Literal && static_pointer_cast<const c_ast::Literal>(node)->value[0] == '\"') { return node; }
@@ -1242,7 +1165,7 @@ namespace backend {
 
 			// construct the C AST function type token, since is a member function, we need to provide the this class type
 			const TypeInfo* retTypeInfo = resolveType(ptr->getReturnType());
-			const TypeInfo* ownerType = resolveType(params[0].as<core::RefTypePtr>()->getElementType());
+			const TypeInfo* ownerType = resolveType(core::lang::ReferenceType(params[0]).getElementType());
 			c_ast::FunctionTypePtr functionType = manager->create<c_ast::FunctionType>(retTypeInfo->rValueType, ownerType->rValueType);
 
 			// add result type dependencies
@@ -1537,16 +1460,8 @@ namespace backend {
 	} // end namespace detail
 
 	TypeIncludeTable getBasicTypeIncludeTable() {
-		// create table
-		TypeIncludeTable res;
-
-		// add function definitions from macro file
-		#define TYPE(l, f) res[f] = l;
-		#include "includes.def"
-		#undef TYPE
-
-		// done
-		return res;
+		// the basic table is empty
+		return TypeIncludeTable();
 	}
 
 } // end namespace backend

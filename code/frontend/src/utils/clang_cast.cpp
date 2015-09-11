@@ -161,15 +161,18 @@ namespace utils {
 		// CK_BuiltinFnToFnPtr - Same as above, for builtin functions
 		case clang::CK_FunctionToPointerDecay:
 		case clang::CK_BuiltinFnToFnPtr:
-			return expr;
+			return core::lang::buildPtrOfFunction(expr);
 
 		////////////////////////////////////////////////////////////////////////////////////////////////////////////
 		// NoOps: Conversions that have no effect
 		// * same type casts, CK_NoOp, e.g. int -> int
-		// * unused return value, CK_ToVoid, (void)fun()
 		case clang::CK_NoOp:
+			return expr;
+			
+		////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		// Unused return value: (void)fun()
 		case clang::CK_ToVoid:
-				return expr;
+			return builder.unitConsume(expr);
 
 		////////////////////////////////////////////////////////////////////////////////////////////////////////////
 		//case clang::CK_ConstructorConversion:

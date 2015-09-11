@@ -149,14 +149,14 @@ namespace c_ast {
 	};
 
 	struct ModifiedType : public Type {
-		enum Modifier { VOLATILE = 1, CONST = 2 };
 		TypePtr type;
-		unsigned mods;
-		ModifiedType(const TypePtr& type, unsigned mods) : Type(NT_ModifiedType), type(type), mods(mods) {}
+		bool mConst;
+		bool mVolatile;
+		ModifiedType(const TypePtr& type, bool isConst, bool isVolatile)
+			: Type(NT_ModifiedType), type(type), mConst(isConst), mVolatile(isVolatile) {}
 		virtual bool equals(const Node& other) const;
-		bool hasMod(Modifier mod) const {
-			return mods & mod;
-		}
+		bool isConst() const { return mConst; }
+		bool isVolatile() const { return mVolatile; }
 	};
 
 	struct NamedType : public Type {
@@ -170,7 +170,9 @@ namespace c_ast {
 	struct PointerType : public Type {
 		TypePtr elementType;
 		bool isConst;
-		PointerType(TypePtr elementType, bool isConst = false) : Type(NT_PointerType), elementType(elementType), isConst(isConst) {}
+		bool isVolatile;
+		PointerType(TypePtr elementType, bool isConst = false, bool isVolatile = false)
+			: Type(NT_PointerType), elementType(elementType), isConst(isConst), isVolatile(isVolatile) {}
 		virtual bool equals(const Node& other) const;
 	};
 

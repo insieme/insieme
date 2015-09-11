@@ -63,10 +63,10 @@ namespace backend {
 	class ChannelTypeInfo;
 
 	typedef TypeInfo* TypeInfoPtr;
+
 	typedef std::map<string, string> TypeIncludeTable;
 
 	TypeIncludeTable getBasicTypeIncludeTable();
-
 
 	typedef std::function<const TypeInfo*(const Converter&, const core::TypePtr&)> TypeHandler;
 
@@ -100,13 +100,11 @@ namespace backend {
 
 		const FunctionTypeInfo& getTypeInfo(const core::FunctionTypePtr&);
 
-		const RefTypeInfo& getTypeInfo(const core::RefTypePtr&);
+		const RefTypeInfo& getRefTypeInfo(const core::GenericTypePtr&);
 
-		const ArrayTypeInfo& getTypeInfo(const core::ArrayTypePtr& type);
+		const ArrayTypeInfo& getArrayTypeInfo(const core::GenericTypePtr& type);
 
-		const VectorTypeInfo& getTypeInfo(const core::VectorTypePtr& type);
-
-		const ChannelTypeInfo& getTypeInfo(const core::ChannelTypePtr& type);
+		const ChannelTypeInfo& getChannelTypeInfo(const core::GenericTypePtr& type);
 
 		const TypeInfo& getCVectorTypeInfo(const core::TypePtr& elementType, const c_ast::ExpressionPtr& size);
 
@@ -205,15 +203,6 @@ namespace backend {
 	struct ArrayTypeInfo : public TypeInfo {
 		// to be included
 		//		- nothing extra so far
-	};
-
-	struct VectorTypeInfo : public StructTypeInfo {
-		// to be included
-		//		- init uniform operator
-
-		c_ast::IdentifierPtr initUniformName;
-
-		c_ast::CodeFragmentPtr initUniform;
 	};
 
 	struct ChannelTypeInfo : public TypeInfo {

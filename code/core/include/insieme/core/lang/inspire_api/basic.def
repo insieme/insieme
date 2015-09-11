@@ -122,6 +122,8 @@ TYPE(ThreadGroup, "threadgroup")
 
 LITERAL(UnitConstant, "unit", "unit")
 
+DERIVED(UnitConsume, "unit_consume", "lambda ('a a) -> unit { }")
+
 // No Argument -> Unit Type -------------------------------------------------------------------------------------------
 
 TYPE(NoArgsOpType, "() -> unit")

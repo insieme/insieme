@@ -62,6 +62,37 @@ namespace addons {
 
 	namespace {
 
+		const TypeInfo* handleVarArgsType(const Converter& converter, const core::TypePtr& type) {
+			auto& ext = type->getNodeManager().getLangExtension<core::lang::VarArgsExtension>();
+
+			// check whether this is the type of interest
+			if (!ext.isVarList(type)) return nullptr;
+
+			// build up TypeInfo for complex type
+			c_ast::CNodeManager& manager = *converter.getCNodeManager();
+
+			// create the resulting type representation
+			return type_info_utils::createInfo(manager.create<c_ast::VarArgsType>());
+		}
+
+		const TypeInfo* handleVaListType(const Converter& converter, const core::TypePtr& type) {
+			auto& ext = type->getNodeManager().getLangExtension<core::lang::VarArgsExtension>();
+
+			// check whether this is the type of interest
+			if (!ext.isVarList(type)) return nullptr;
+
+			// build up TypeInfo for complex type
+			c_ast::CNodeManager& manager = *converter.getCNodeManager();
+
+			// create the resulting type representation
+			auto res = type_info_utils::createInfo(manager, "va_list");
+			c_ast::CodeFragmentPtr decl = c_ast::IncludeFragment::createNew(converter.getFragmentManager(), "stdarg.h");
+			res->declaration = decl;
+			res->definition = decl;
+
+			return res;
+		}
+
 		OperatorConverterTable getVarArgsOperatorTable(core::NodeManager& manager) {
 			OperatorConverterTable res;
 			const auto& ext = manager.getLangExtension<insieme::core::lang::VarArgsExtension>();
@@ -85,6 +116,9 @@ namespace addons {
 	}
 
 	void VarArgs::installOn(Converter& converter) const {
+		// register type handler
+		converter.getTypeManager().addTypeHandler(handleVarArgsType);
+		converter.getTypeManager().addTypeHandler(handleVaListType);
 		// register additional operators
 		converter.getFunctionManager().getOperatorConverterTable().insertAll(getVarArgsOperatorTable(converter.getNodeManager()));
 	}

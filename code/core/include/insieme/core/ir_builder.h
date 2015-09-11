@@ -275,7 +275,7 @@ namespace core {
 			return core::analysis::normalize(root);
 		}
 
-		TypePtr refType(const TypePtr& elementType, bool _const = false, bool _volatile = false) const;
+		GenericTypePtr refType(const TypePtr& elementType, bool _const = false, bool _volatile = false) const;
 		TypePtr ptrType(const TypePtr& elementType, bool _const = false, bool _volatile = false) const;
 
 		GenericTypePtr arrayType(const TypePtr& elementType) const;
@@ -316,6 +316,9 @@ namespace core {
 		// Function Types
 		FunctionTypePtr toPlainFunctionType(const FunctionTypePtr& funType) const;
 		FunctionTypePtr toThickFunctionType(const FunctionTypePtr& funType) const;
+
+		// Unit consume
+		ExpressionPtr unitConsume(const ExpressionPtr& toConsume) const;
 
 		// Literals
 		LiteralPtr stringLit(const std::string& str) const;

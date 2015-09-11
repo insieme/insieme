@@ -353,7 +353,7 @@ namespace lang {
 		 *
 		 * see: buildRefType(..) function in enclosing name space
 		 */
-		static TypePtr create(const TypePtr& elementType, bool _const = false, bool _volatile = false);
+		static GenericTypePtr create(const TypePtr& elementType, bool _const = false, bool _volatile = false);
 
 		// an implicit converter of this wrapper to an IR type
 		operator GenericTypePtr() const;

@@ -1,6 +1,13 @@
-int foo(int a) { return a; }
+
+void nameCheck() {
+	#pragma test expect_ir(R"({ ptr_from_array(lit("nameCheck":ref<array<char,10>,t,f>)); 1; })")
+	{ __func__; 1; }
+	#pragma test expect_ir("EXPR_TYPE",R"(ptr<char,t,f>)")
+	__func__;
+}
 
 int main() {
+	nameCheck();
 	
 	//===-------------------------------------------------------------------------------------------------------------------------------- UNARY OPERATORS ---===
 	
@@ -23,10 +30,7 @@ int main() {
 		int x = 0;
 		&x;
 	}
-
-	//pragma test expect_ir("42;")
-	//&foo;
-
+	
 	#pragma test expect_ir("{ decl ref<ptr<int<4>,f,f>,f,f> v0; *ptr_to_ref(*v0); }")
 	{
 		int* x;
@@ -62,7 +66,7 @@ int main() {
 		signed char v = 0;
 		v--;
 	}
-
+	
 	//===------------------------------------------------------------------------------------------------------------------------------- BINARY OPERATORS ---===
 	
 	// COMMA OPERATOR //////////////////////////////////////////////////////////////
@@ -198,6 +202,15 @@ int main() {
 		void* a;
 		5+a;
 	}
+
+	#pragma test expect_ir("{ decl ref<ptr<unit,f,f>,f,f> v0; ptr_post_inc(v0); ptr_post_dec(v0); ptr_pre_inc(v0); ptr_pre_dec(v0); }")
+	{
+		void* a;
+		a++;
+		a--;
+		++a;
+		--a;
+	}
 	
 	#pragma test expect_ir("{ decl ref<ptr<unit,f,f>,f,f> v0; ptr_sub(*v0, 5); }")
 	{
@@ -231,7 +244,6 @@ int main() {
 
 	// COMPOUND //////////////////////////////////////////////////////////////
 
-	// TODO FE NG new call semantic
 	#define C_STYLE_ASSIGN "let c_ass = lambda (ref<'a,f,'b> v1, 'a v2) -> 'a { v1 = v2; return *v1; };"
 
 	#pragma test expect_ir("{", C_STYLE_ASSIGN, "decl ref<int<4>,f,f> v1 = var(1); c_ass(v1, *v1+1); }")

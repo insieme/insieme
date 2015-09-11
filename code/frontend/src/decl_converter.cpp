@@ -143,12 +143,13 @@ namespace conversion {
 		if(var->isStaticLocal()) {
 			return;
 		}
-			
+		
 		converter.trackSourceLocation(var);
-		auto converted = convertVarDecl(var);
-		auto globalLit = builder.literal(converted.first->getType(), utils::getNameForGlobal(var, converter.getSourceManager()));
+		auto convertedVar = convertVarDecl(var);
+		auto globalLit = builder.literal(convertedVar.first->getType(), utils::getNameForGlobal(var, converter.getSourceManager()));
 		globalLit = pragma::handlePragmas({globalLit}, var, converter).front().as<core::LiteralPtr>();
 		converter.getVarMan()->insert(var, globalLit);
+		if(var->getInit()) { converter.getIRTranslationUnit().addGlobal(globalLit, converter.convertExpr(var->getInit())); }
 		// handle pragmas attached to decls
 		converter.untrackSourceLocation();
 	}
@@ -185,8 +186,13 @@ namespace conversion {
 		// if definition, convert body
 		if(isDefinition) {
 			core::LambdaExprPtr irFunc = convertFunctionDecl(funType, funcDecl);
-			if(irFunc) converter.getIRTranslationUnit().addFunction(irLit, irFunc);
+			if(irFunc) { 
+				irFunc = pragma::handlePragmas({irFunc}, funcDecl, converter).front().as<core::LambdaExprPtr>();
+				converter.getIRTranslationUnit().addFunction(irLit, irFunc);
+			}
 		}
+
+
 		converter.untrackSourceLocation();
 	}
 

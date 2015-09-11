@@ -220,13 +220,20 @@ namespace lang {
 		    "lambda (ptr<'a,'c,'v> a) -> ptr<array<'a>,'c,'v> { return ptr_expand(a, dp_element(dp_root(type_lit(array<'a>)),0u)); }"
 		)
 
-
 		/**
 		 * A derived operator accessing a element addressed by a pointer + some offset.
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(
 			PtrSubscript, "ptr_subscript",
 			"lambda (ptr<'a,'c,'v> p, int<8> i) -> ref<'a,'c,'v> { return p.data[p.offset + i]; }"
+		)
+
+		/**
+		 * A derived operator accessing a element addressed by a pointer.
+		 */
+		LANG_EXT_DERIVED_WITH_NAME(
+			PtrDeref, "ptr_deref",
+			"lambda (ptr<'a,'c,'v> p) -> 'a { return ref_deref(ptr_to_ref(p)); }"
 		)
 
 		// -- null --
@@ -288,6 +295,14 @@ namespace lang {
 			PtrSub, "ptr_sub",
 			"lambda (ptr<'a,'c,'v> p, int<8> i) -> ptr<'a,'c,'v> { return struct ptr<'a,'c,'v> { p.data, p.offset - i }; }"
 		)
+
+		LANG_EXT_DERIVED(PtrPostInc, "lambda (ref<ptr<'a,'c,'v>> p) -> ptr<'a,'c,'v> { decl ptr<'a,'c,'v> temp = *p; p = ptr_add(*p, 1l); return temp; }")
+
+		LANG_EXT_DERIVED(PtrPostDec, "lambda (ref<ptr<'a,'c,'v>> p) -> ptr<'a,'c,'v> { decl ptr<'a,'c,'v> temp = *p; p = ptr_sub(*p, 1l); return temp; }")
+
+		LANG_EXT_DERIVED(PtrPreInc, "lambda (ref<ptr<'a,'c,'v>> p) -> ptr<'a,'c,'v> { p = ptr_add(*p, 1l); return *p; }")
+
+		LANG_EXT_DERIVED(PtrPreDec, "lambda (ref<ptr<'a,'c,'v>> p) -> ptr<'a,'c,'v> { p = ptr_sub(*p, 1l); return *p; }")
 
 	};
 
@@ -401,14 +416,17 @@ namespace lang {
 	ExpressionPtr buildPtrFromArray(const ExpressionPtr& arrExpr);
 	ExpressionPtr buildPtrFromIntegral(const ExpressionPtr& intExpr, const TypePtr& ptrType);
 	ExpressionPtr buildPtrToIntegral(const ExpressionPtr& ptrExpr, const TypePtr& intType);
+	ExpressionPtr buildPtrOfFunction(const ExpressionPtr& funExpr);
 
 	// casts
 	ExpressionPtr buildPtrCast(const ExpressionPtr& ptrExpr, bool newConst, bool newVolatile);
 	ExpressionPtr buildPtrReinterpret(const ExpressionPtr& ptrExpr, const TypePtr& newElementType);
 
 	// operations
+	ExpressionPtr buildPtrDeref(const ExpressionPtr& ptrExpr);
 	ExpressionPtr buildPtrSubscript(const ExpressionPtr& ptrExpr, const ExpressionPtr& subscriptExpr);
 	ExpressionPtr buildPtrOperation(BasicGenerator::Operator op, const ExpressionPtr& lhs, const ExpressionPtr& rhs);
+	ExpressionPtr buildPtrOperation(BasicGenerator::Operator op, const ExpressionPtr& ptrExpr);
 
 } // end namespace lang
 } // end namespace core
