@@ -82,7 +82,9 @@ endif()
 foreach ( case_file ${test_cases})
 	get_filename_component( case_name ${case_file} NAME_WE )
 	
-	set ( case_name ${ut_prefix}_${case_name} )
+	insieme_fix_case_name( case_subdir ${case_file} )
+	
+	set ( case_name ${ut_prefix}${case_subdir}_${case_name} )
 	add_executable(${case_name} ${case_file})
 	target_link_libraries(${case_name} insieme_driver) 
 	target_link_libraries(${case_name} insieme_core) 

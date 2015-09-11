@@ -154,7 +154,7 @@ TEST(ErrorPrinter, error) {
 
 	std::stringstream ss;
 	dumpErrors(msgs, ss);
-	EXPECT_EQ("\x1B[33m(v1 := 1)\x1B[0m\n\x1B[31mERROR: \x1B[37mInvalid argument type(s) \nexpected: \n\t(ref<'a,f,'v>,'a)\nactual: \n\t(int<4>,int<4>)\nfunction "
+	EXPECT_EQ("\x1B[33mv1 = 1\x1B[0m\n\x1B[31mERROR: \x1B[37mInvalid argument type(s) \nexpected: \n\t(ref<'a,f,'v>,'a)\nactual: \n\t(int<4>,int<4>)\nfunction "
 	          "type: \n\t((ref<'a,f,'v>,'a)->unit)\x1B[0m\n\n\n\n",
 	          ss.str());
 

@@ -39,12 +39,14 @@
 #include <cassert>
 #include <memory>
 #include <iomanip>
+#include <stack>
 
 #include <boost/unordered_map.hpp>
 
 #include "insieme/utils/string_utils.h"
 #include "insieme/utils/map_utils.h"
 
+#include "insieme/core/ir_node.h"
 #include "insieme/core/ir_visitor.h"
 
 #include "insieme/core/lang/parallel.h"
@@ -55,6 +57,7 @@
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/attributes.h"
+#include "insieme/core/annotations/naming.h"
 
 #include <boost/iostreams/stream.hpp>
 #include <boost/iostreams/concepts.hpp>
@@ -231,7 +234,13 @@ namespace printer {
 			 */
 			std::map<NodePtr, std::string> letBindings;
 
+            /**
+             * A stack used to keep track of the "this"-operator
+             */
+            std::stack<VariablePtr> thisStack;
+
 			bool singleLineTypes;
+			int funCounter = 0;
 
 		  public:
 			/**
@@ -269,7 +278,6 @@ namespace printer {
 				}
 
 				// compute set of substitutions
-				int funCounter = 0;
 				int typeCounter = 0;
 				singleLineTypes = false; // enable multiline type definitions
 
@@ -285,15 +293,91 @@ namespace printer {
 
 					if(type == NT_RecType || type == NT_StructType || type == NT_UnionType
 					   || (!printer.hasOption(PrettyPrinter::NO_LET_BOUND_FUNCTIONS) && type == NT_LambdaExpr)) {
-						// obtain a name (TODO: pick something more important)
-						string name = (type == NT_LambdaExpr) ? format("fun%03d", funCounter++) : format("type%03d", typeCounter++);
+						string name;
+
+						if(insieme::core::annotations::hasAttachedName(cur) &&
+							!insieme::core::annotations::getAttachedName(cur).compare("main"))
+							name = insieme::core::annotations::getAttachedName(cur);
+						else
+
+							name = (type == NT_LambdaExpr)?format("fun%03d", funCounter++):format("type%03d", typeCounter++);
+
+						if(type == NT_StructType) {
+
+
+							out << "let " << name << " = struct ";
+							this->visit(cur.getChild(0));
+
+							// include all inherited classes if there are any
+							if(!cur.getChild(1).getChildList().empty()) {
+								out << " : ";
+								int first = 1;
+								for(auto n : cur.getChild(1).getChildList()) {
+									if(first) {
+										first = 0;
+									} else {
+										out << ", ";
+									}
+									this->visit(n.getChild(1));
+								}
+							}
+
+							out << " { ";
+
+							// print the variable fields
+							int maxPara = cur.getChildList().size();
+							for(int i=2; i<maxPara; i++) {
+								auto tmp = cur.getChild(i);
+								this->visit(tmp.getChild(1));   //print type
+								out << " ";
+								this->visit(tmp.getChild(0));   //print variable name
+								if(i+1 < maxPara)
+									out << "; ";
+							}
+
+							out << " };" << std::endl;
+
+						}
 
 						// avoid printing more than one scope
 						if(!printer.hasOption(PrettyPrinter::JUST_OUTERMOST_SCOPE)) {
 							// print a let binding
-							out << "let " << name << " = ";
-							visit(cur);
-							out << ";\n\n";
+
+							if (cur.getNodeType() == NT_LambdaExpr) {
+
+								LambdaExprPtr func;
+								func = cur.as<LambdaExprPtr>();
+
+								if (name.compare("main") != 0) {
+									// not the main function
+									out << "let " << name << " = ";
+									visit(cur);
+									out << ";\n\n";
+								} else {
+									// the special case for the main function
+									auto paramPrinter = [&](std::ostream &out, const VariablePtr &cur) {
+										this->visit(cur->getType());
+										out << " ";
+										this->visit(cur);
+									};
+
+									out << std::endl;
+
+									// printing the return Value
+									visit(cur.getChild(0).getChild(1));
+
+									// print the signature of the main function
+									out << " " << name << "(" << join(", ", func->getParameterList(), paramPrinter) <<
+									")";
+
+									// print the body of the main function
+									visit(func->getBody());
+									out << "\n\n";
+								}
+							}
+
+
+
 						}
 
 						// add a substitution rule
@@ -335,9 +419,9 @@ namespace printer {
 					return;
 				}
 				depth++;
-				printAnnotations(element, true);
+				//printAnnotations(element, true);
 				IRVisitor<>::visit(element);
-				printAnnotations(element, false);
+				//printAnnotations(element, false);
 				out.flush();
 				depth--;
 			}
@@ -369,16 +453,20 @@ namespace printer {
 				auto printer = [&](std::ostream&, const TypePtr& cur) { this->visit(cur); };
 
 				if(node->isConstructor()) {
-					visit(node->getObjectType());
+					out << "ctor ";
+					visit(node->getObjectType()->getChild(0));
 					auto begin = node->getParameterTypes().begin() + 1;
 					auto end = node->getParameterTypes().end();
 					out << "::(" << join(", ", begin, end, printer) << ")";
 				} else if(node->isDestructor()) {
 					out << "~";
-					visit(node->getObjectType());
+					visit(node->getObjectType()->getChild(0));
 					out << "::()";
 				} else if(node->isMemberFunction()) {
-					visit(node->getObjectType());
+					out << "method ";
+					//out << std::endl;
+					//out << "node->getChildList(): " << node.getChildList() << std::endl;
+					visit(node->getObjectType()->getChild(0));
 					auto begin = node->getParameterTypes().begin() + 1;
 					auto end = node->getParameterTypes().end();
 					out << "::(" << join(", ", begin, end, printer) << ") -> ";
@@ -434,13 +522,13 @@ namespace printer {
 					}) << " ";
 				}
 
-				out << "<" << newItem << join("," + newItem, node->getEntries(), [&](std::ostream& out, const NamedTypePtr& cur) {
-					this->visit(cur->getName());
-					out << ":";
+				out << "{" << newItem << join(";" + newItem, node->getEntries(), [&](std::ostream& out, const NamedTypePtr& cur) {
 					this->visit(cur->getType());
+					out << " ";
+					this->visit(cur->getName());
 				});
 
-				// TODO: finnish
+				// TODO: finish
 				//
 				//			if(hasMetaInfo(node)){
 				//				const ClassMetaInfo& meta = getMetaInfo(node);
@@ -450,10 +538,10 @@ namespace printer {
 				//				}
 				//			}
 
-				out << newLine << ">";
+				out << newLine << "}";
 			});
 
-			PRINT(TupleType, { out << '(' << join(",", node->getElementTypes(), [&](std::ostream&, const TypePtr& cur) { this->visit(cur); }) << ')'; });
+			PRINT(TupleType, { out << "" << join(",", node->getElementTypes(), [&](std::ostream&, const TypePtr& cur) { this->visit(cur); }) << ""; });
 
 			PRINT(Type, { out << *node; });
 
@@ -524,7 +612,7 @@ namespace printer {
 
 			PRINT(ForStmt, {
 				// variables can be directly printed
-				out << "for(decl ";
+				out << "for( ";
 				this->visit(node->getIterator()->getType());
 				out << " ";
 				this->visit(node->getIterator());
@@ -596,22 +684,47 @@ namespace printer {
 			});
 
 			PRINT(Variable, {
-				// variables can be directly printed
-				out << *node;
+
+				// print variale names if attached to the node... otherwise
+				// a variable like "v..." will be used
+		/*		if (insieme::core::annotations::hasAttachedName(node)) {
+					out << insieme::core::annotations::getAttachedName(node);;
+				} else*/ if(!thisStack.empty() && !(*node).toString().compare(thisStack.top().toString())) {
+					out << "this";
+				} else {
+					out << *node;
+				}
+
 			});
 
 			PRINT(Literal, {
 				// special handling of type literals (ignore value)
 				if(!printer.hasOption(PrettyPrinter::PRINT_LITERAL_TYPES) && analysis::isTypeLiteral(node)) {
-					visit(node->getType());
+					out << "type_lit(";
+					visit(node->getType().as<GenericTypePtr>()->getTypeParameter(0));
+					out << ")";
 					return;
 				}
-
-				const string& str = node->getStringValue();
+ 				const string& str = node->getStringValue();
 				if(printer.hasOption(PrettyPrinter::NAME_CONTRACTION) && str.size() > 9) {
 					out << str.substr(0, 3) << "..." << str.substr(str.size() - 3, str.size());
 				} else {
 					out << str;
+					if(!node->getChild(0)->getChildList().empty() ) {
+						if (!node->getChild(0)->getChild(0)->toString().compare("real")) {
+							if (!node->getChild(0)->getChild(2)->getChild(0)->toString().compare("4"))
+								out << "f";
+						} else {
+							if (!node->getChild(0)->getChild(0)->toString().compare("uint"))
+								out << "u";
+							if(node->getChild(0)->getChildList().size() > 2 && node->getChild(0)->getChild(2)->getChildList().size() > 0) {
+								if (!node->getChild(0)->getChild(2)->getChild(0)->toString().compare("8"))
+									out << "l";
+								else if (!node->getChild(0)->getChild(2)->getChild(0)->toString().compare("16"))
+									out << "ll";
+							}
+						}
+					}
 				}
 
 				// add type if requested
@@ -644,7 +757,7 @@ namespace printer {
 				}
 
 				// general case: recursive function
-				out << "recFun ";
+				out << "recFunc ";
 				this->visit(node->getVariable());
 				out << " ";
 				this->visit(node->getDefinition());
@@ -690,33 +803,49 @@ namespace printer {
 					out << " ";
 					this->visit(node->getParameters()->getElement(0));
 					out << " :: (" << join(", ", node->getParameters().begin() + 1, node->getParameters().end(), paramPrinter) << ") ";
+					if (!node->getParameterList().empty())
+						thisStack.push(node->getParameterList().front());
+					// .. and body
+					visit(node->getBody());
+					if (!node->getParameterList().empty())
+						thisStack.pop();
 
 				} else if(funType->isDestructor()) {
 					// print destructor header
-					out << "dtor ~";
+					out << "~";
 					this->visit(funType->getObjectType());
 					out << " ";
 					this->visit(node->getParameters()->getElement(0));
 					out << " :: (" << join(", ", node->getParameters().begin() + 1, node->getParameters().end(), paramPrinter) << ") ";
+					if (!node->getParameterList().empty())
+						thisStack.push(node->getParameterList().front());
+					// .. and body
+					visit(node->getBody());
+					if (!node->getParameterList().empty())
+						thisStack.pop();
 
 				} else if(funType->isMemberFunction()) {
 					// print member function header
-					out << "mfun ";
+					out << "function ";
 					this->visit(funType->getObjectType());
-					out << " ";
-					this->visit(node->getParameters()->getElement(0));
-					out << " :: (" << join(", ", node->getParameters().begin() + 1, node->getParameters().end(), paramPrinter) << ") -> ";
+					out << "::(" << join(", ", node->getParameters().begin() + 1, node->getParameters().end(), paramPrinter) << ") -> ";
 					this->visit(funType->getReturnType());
 					out << " ";
+					if (!node->getParameterList().empty())
+						thisStack.push(node->getParameterList().front());
+					// .. and body
+					visit(node->getBody());
+					if (!node->getParameterList().empty())
+						thisStack.pop();
+
 				} else {
 					// print plain header function
-					out << "fun(" << join(", ", node->getParameterList(), paramPrinter) << ") -> ";
+					out << "function(" << join(", ", node->getParameterList(), paramPrinter) << ") -> ";
 					this->visit(funType->getReturnType());
 					out << " ";
+					// .. and body
+					visit(node->getBody());
 				}
-
-				// .. and body
-				visit(node->getBody());
 			});
 
 
@@ -738,9 +867,7 @@ namespace printer {
 				auto pos = formatTable.find(function);
 				if(pos != formatTable.end()) {
 					FormatterPtr formatter = (*pos).second;
-					if(printBrackets) { out << "("; }
 					formatter->format(*this, node);
-					if(printBrackets) { out << ")"; }
 					return;
 				}
 
@@ -770,18 +897,20 @@ namespace printer {
 			});
 
 			PRINT(BindExpr, {
-				out << "bind(" << join(", ", node->getParameters(), [&](std::ostream& out, const ExpressionPtr& cur) { this->visit(cur); }) << "){";
-				visit(node->getCall());
-				out << "}";
+				out << "function(" << join(", ", node->getParameters(),[&](std::ostream& out, const ExpressionPtr& cur) {
+					this->visit(cur->getType());
+					out << " ";
+					this->visit(cur);
+				}) << ")=> ";
+				visit(node->getCall());                 // ???????????????????
 			});
 
 			PRINT(CastExpr, {
 				if(printer.hasOption(PrettyPrinter::PRINT_CASTS)) {
-					out << "CAST<";
+					out << "CAST(";
 					this->visit(node->getType());
-					out << ">(";
+					out << ") ";
 					this->visit(node->getSubExpression());
-					out << ")";
 				} else {
 					this->visit(node->getSubExpression());
 				}
@@ -808,13 +937,13 @@ namespace printer {
 			PRINT(StructExpr, {
 				out << "struct{" << ::join(", ", node->getMembers()->getElements(), [&](std::ostream& out, const NamedValuePtr& cur) {
 					this->visit(cur->getName());
-					out << ":=";
+					out << "=";
 					this->visit(cur->getValue());
 				}) << "}";
 			});
 
 			PRINT(UnionExpr, {
-				out << "union{" << node->getMemberName()->getValue() << ":=";
+				out << "union{" << node->getMemberName()->getValue() << "=";
 				visit(node->getMember());
 				out << "}";
 			});
@@ -844,7 +973,7 @@ namespace printer {
 			});
 
 			PRINT(Program, {
-				out << "// Inspire Program ";
+/*				out << "// Inspire Program ";
 				newLine();
 				for_each(node->getEntryPoints(), [&](const NodePtr& cur) {
 					this->out << "//  Entry Point: ";
@@ -855,7 +984,7 @@ namespace printer {
 					this->newLine();
 					this->newLine();
 				});
-			});
+*/			});
 
 			PRINT(MarkerExpr, {
 				bool showMarker = printer.hasOption(PrettyPrinter::Option::PRINT_MARKERS);
@@ -1057,6 +1186,9 @@ namespace printer {
 			#define ADD_FORMATTER(Literal, FORMAT)                                                                                                             \
 				res.insert(std::make_pair(Literal, make_formatter([](InspirePrinter & printer, const CallExprPtr& call)FORMAT))).second;
 
+			#define ADD_BRACKET_FORMATTER(Literal, FORMAT) \
+					ADD_FORMATTER(Literal, { if(!HAS_OPTION(SKIP_BRACKETS)) OUT("("); FORMAT; if(!HAS_OPTION(SKIP_BRACKETS)) OUT(")"); })
+
 
 			if(config.hasOption(PrettyPrinter::PRINT_DEREFS)) {
 				ADD_FORMATTER(refExt.getRefDeref(), {
@@ -1069,7 +1201,7 @@ namespace printer {
 
 			ADD_FORMATTER(refExt.getRefAssign(), {
 				PRINT_ARG(0);
-				OUT(" := ");
+				OUT(" = ");
 				PRINT_ARG(1);
 			});
 			ADD_FORMATTER(refExt.getRefVar(), {
@@ -1083,7 +1215,7 @@ namespace printer {
 				OUT(")");
 			});
 			ADD_FORMATTER(refExt.getRefDelete(), {
-				OUT(" del(");
+				OUT(" delete(");
 				PRINT_ARG(0);
 				OUT(")");
 			});
@@ -1114,14 +1246,14 @@ namespace printer {
 
 			ADD_FORMATTER(refExt.getRefArrayElement(), {
 				PRINT_ARG(0);
-				OUT("&[");
+				OUT("[");
 				PRINT_ARG(1);
 				OUT("]");
 			});
 
 			ADD_FORMATTER(refExt.getRefMemberAccess(), {
 				PRINT_ARG(0);
-				OUT("->");
+				OUT(".");
 				PRINT_ARG(1);
 			});
 			ADD_FORMATTER(basic.getCompositeMemberAccess(), {
@@ -1207,27 +1339,27 @@ namespace printer {
 				OUT("~");
 				PRINT_ARG(0);
 			});
-			ADD_FORMATTER(basic.getUnsignedIntAnd(), {
+			ADD_BRACKET_FORMATTER(basic.getUnsignedIntAnd(), {
 				PRINT_ARG(0);
 				OUT("&");
 				PRINT_ARG(1);
 			});
-			ADD_FORMATTER(basic.getUnsignedIntOr(), {
+			ADD_BRACKET_FORMATTER(basic.getUnsignedIntOr(), {
 				PRINT_ARG(0);
 				OUT("|");
 				PRINT_ARG(1);
 			});
-			ADD_FORMATTER(basic.getUnsignedIntXor(), {
+			ADD_BRACKET_FORMATTER(basic.getUnsignedIntXor(), {
 				PRINT_ARG(0);
 				OUT("^");
 				PRINT_ARG(1);
 			});
-			ADD_FORMATTER(basic.getUnsignedIntLShift(), {
+			ADD_BRACKET_FORMATTER(basic.getUnsignedIntLShift(), {
 				PRINT_ARG(0);
 				OUT("<<");
 				PRINT_ARG(1);
 			});
-			ADD_FORMATTER(basic.getUnsignedIntRShift(), {
+			ADD_BRACKET_FORMATTER(basic.getUnsignedIntRShift(), {
 				PRINT_ARG(0);
 				OUT(">>");
 				PRINT_ARG(1);
@@ -1237,27 +1369,27 @@ namespace printer {
 				OUT("~");
 				PRINT_ARG(0);
 			});
-			ADD_FORMATTER(basic.getSignedIntAnd(), {
+			ADD_BRACKET_FORMATTER(basic.getSignedIntAnd(), {
 				PRINT_ARG(0);
 				OUT("&");
 				PRINT_ARG(1);
 			});
-			ADD_FORMATTER(basic.getSignedIntOr(), {
+			ADD_BRACKET_FORMATTER(basic.getSignedIntOr(), {
 				PRINT_ARG(0);
 				OUT("|");
 				PRINT_ARG(1);
 			});
-			ADD_FORMATTER(basic.getSignedIntXor(), {
+			ADD_BRACKET_FORMATTER(basic.getSignedIntXor(), {
 				PRINT_ARG(0);
 				OUT("^");
 				PRINT_ARG(1);
 			});
-			ADD_FORMATTER(basic.getSignedIntLShift(), {
+			ADD_BRACKET_FORMATTER(basic.getSignedIntLShift(), {
 				PRINT_ARG(0);
 				OUT("<<");
 				PRINT_ARG(1);
 			});
-			ADD_FORMATTER(basic.getSignedIntRShift(), {
+			ADD_BRACKET_FORMATTER(basic.getSignedIntRShift(), {
 				PRINT_ARG(0);
 				OUT(">>");
 				PRINT_ARG(1);
@@ -1265,154 +1397,154 @@ namespace printer {
 
 			// nicer inlined versions of the && and || operators
 			//		ADD_FORMATTER(basic.getBoolLAnd(), { PRINT_ARG(0); OUT(" && "); PRINT_ARG(1); });
-			ADD_FORMATTER(basic.getBoolLAnd(), {
+			ADD_BRACKET_FORMATTER(basic.getBoolLAnd(), {
 				PRINT_ARG(0);
 				OUT(" && ");
-				if(HAS_OPTION(NO_EVAL_LAZY))
+				if (HAS_OPTION(NO_EVAL_LAZY))
 					PRINT_ARG(1);
-				else {
+				else
 					PRINT_EXPR(transform::evalLazy(MGR, ARG(1)));
-				}
 			});
 			//		ADD_FORMATTER(basic.getBoolLOr(), { PRINT_ARG(0); OUT(" || "); PRINT_ARG(1); });
-			ADD_FORMATTER(basic.getBoolLOr(), {
+			ADD_BRACKET_FORMATTER(basic.getBoolLOr(), {
 				PRINT_ARG(0);
 				OUT(" || ");
-				if(HAS_OPTION(NO_EVAL_LAZY))
+				if (HAS_OPTION(NO_EVAL_LAZY))
 					PRINT_ARG(1);
-				else {
+				else
 					PRINT_EXPR(transform::evalLazy(MGR, ARG(1)));
-				}
 			});
-			ADD_FORMATTER(basic.getBoolEq(), {
+
+			ADD_BRACKET_FORMATTER(basic.getBoolEq(), {
 				PRINT_ARG(0);
 				OUT("==");
 				PRINT_ARG(1);
 			});
+
 			ADD_FORMATTER(basic.getBoolLNot(), {
 				OUT("!");
 				PRINT_ARG(0);
 			});
 
-			ADD_FORMATTER(basic.getCharNe(), {
+			ADD_BRACKET_FORMATTER(basic.getCharNe(), {
 				PRINT_ARG(0);
 				OUT("!=");
 				PRINT_ARG(1);
 			});
-			ADD_FORMATTER(basic.getCharEq(), {
+			ADD_BRACKET_FORMATTER(basic.getCharEq(), {
 				PRINT_ARG(0);
 				OUT("==");
 				PRINT_ARG(1);
 			});
-			ADD_FORMATTER(basic.getCharGe(), {
+			ADD_BRACKET_FORMATTER(basic.getCharGe(), {
 				PRINT_ARG(0);
 				OUT(">=");
 				PRINT_ARG(1);
 			});
-			ADD_FORMATTER(basic.getCharGt(), {
+			ADD_BRACKET_FORMATTER(basic.getCharGt(), {
 				PRINT_ARG(0);
 				OUT(">");
 				PRINT_ARG(1);
 			});
-			ADD_FORMATTER(basic.getCharLt(), {
+			ADD_BRACKET_FORMATTER(basic.getCharLt(), {
 				PRINT_ARG(0);
 				OUT("<");
 				PRINT_ARG(1);
 			});
-			ADD_FORMATTER(basic.getCharLe(), {
+			ADD_BRACKET_FORMATTER(basic.getCharLe(), {
 				PRINT_ARG(0);
 				OUT("<=");
 				PRINT_ARG(1);
 			});
 
-			ADD_FORMATTER(basic.getUnsignedIntEq(), {
+			ADD_BRACKET_FORMATTER(basic.getUnsignedIntEq(), {
 				PRINT_ARG(0);
 				OUT("==");
 				PRINT_ARG(1);
 			});
-			ADD_FORMATTER(basic.getUnsignedIntNe(), {
+			ADD_BRACKET_FORMATTER(basic.getUnsignedIntNe(), {
 				PRINT_ARG(0);
 				OUT("!=");
 				PRINT_ARG(1);
 			});
-			ADD_FORMATTER(basic.getUnsignedIntGe(), {
+			ADD_BRACKET_FORMATTER(basic.getUnsignedIntGe(), {
 				PRINT_ARG(0);
 				OUT(">=");
 				PRINT_ARG(1);
 			});
-			ADD_FORMATTER(basic.getUnsignedIntGt(), {
+			ADD_BRACKET_FORMATTER(basic.getUnsignedIntGt(), {
 				PRINT_ARG(0);
 				OUT(">");
 				PRINT_ARG(1);
 			});
-			ADD_FORMATTER(basic.getUnsignedIntLt(), {
+			ADD_BRACKET_FORMATTER(basic.getUnsignedIntLt(), {
 				PRINT_ARG(0);
 				OUT("<");
 				PRINT_ARG(1);
 			});
-			ADD_FORMATTER(basic.getUnsignedIntLe(), {
+			ADD_BRACKET_FORMATTER(basic.getUnsignedIntLe(), {
 				PRINT_ARG(0);
 				OUT("<=");
 				PRINT_ARG(1);
 			});
 
-			ADD_FORMATTER(basic.getSignedIntEq(), {
+			ADD_BRACKET_FORMATTER(basic.getSignedIntEq(), {
 				PRINT_ARG(0);
 				OUT("==");
 				PRINT_ARG(1);
 			});
-			ADD_FORMATTER(basic.getSignedIntNe(), {
+			ADD_BRACKET_FORMATTER(basic.getSignedIntNe(), {
 				PRINT_ARG(0);
 				OUT("!=");
 				PRINT_ARG(1);
 			});
-			ADD_FORMATTER(basic.getSignedIntGe(), {
+			ADD_BRACKET_FORMATTER(basic.getSignedIntGe(), {
 				PRINT_ARG(0);
 				OUT(">=");
 				PRINT_ARG(1);
 			});
-			ADD_FORMATTER(basic.getSignedIntGt(), {
+			ADD_BRACKET_FORMATTER(basic.getSignedIntGt(), {
 				PRINT_ARG(0);
 				OUT(">");
 				PRINT_ARG(1);
 			});
-			ADD_FORMATTER(basic.getSignedIntLt(), {
+			ADD_BRACKET_FORMATTER(basic.getSignedIntLt(), {
 				PRINT_ARG(0);
 				OUT("<");
 				PRINT_ARG(1);
 			});
-			ADD_FORMATTER(basic.getSignedIntLe(), {
+			ADD_BRACKET_FORMATTER(basic.getSignedIntLe(), {
 				PRINT_ARG(0);
 				OUT("<=");
 				PRINT_ARG(1);
 			});
 
-			ADD_FORMATTER(basic.getRealEq(), {
+			ADD_BRACKET_FORMATTER(basic.getRealEq(), {
 				PRINT_ARG(0);
 				OUT("==");
 				PRINT_ARG(1);
 			});
-			ADD_FORMATTER(basic.getRealNe(), {
+			ADD_BRACKET_FORMATTER(basic.getRealNe(), {
 				PRINT_ARG(0);
 				OUT("!=");
 				PRINT_ARG(1);
 			});
-			ADD_FORMATTER(basic.getRealGe(), {
+			ADD_BRACKET_FORMATTER(basic.getRealGe(), {
 				PRINT_ARG(0);
 				OUT(">=");
 				PRINT_ARG(1);
 			});
-			ADD_FORMATTER(basic.getRealGt(), {
+			ADD_BRACKET_FORMATTER(basic.getRealGt(), {
 				PRINT_ARG(0);
 				OUT(">");
 				PRINT_ARG(1);
 			});
-			ADD_FORMATTER(basic.getRealLt(), {
+			ADD_BRACKET_FORMATTER(basic.getRealLt(), {
 				PRINT_ARG(0);
 				OUT("<");
 				PRINT_ARG(1);
 			});
-			ADD_FORMATTER(basic.getRealLe(), {
+			ADD_BRACKET_FORMATTER(basic.getRealLe(), {
 				PRINT_ARG(0);
 				OUT("<=");
 				PRINT_ARG(1);
@@ -1432,9 +1564,9 @@ namespace printer {
 			});
 
 			ADD_FORMATTER(basic.getIfThenElse(), {
-				OUT("(");
+				OUT("");
 				PRINT_ARG(0);
-				OUT(")?");
+				OUT("?");
 				if(HAS_OPTION(NO_EVAL_LAZY))
 					PRINT_ARG(1);
 				else {
@@ -1490,7 +1622,7 @@ namespace printer {
 				ADD_FORMATTER(ext.getAttr(), { PRINT_ARG(0); });
 			}
 
-
+			#undef ADD_BRACKET_FORMATTER
 			#undef ADD_FORMATTER
 			#undef OUT
 			#undef ARG
