@@ -49,19 +49,19 @@ int main() {
 		++v;
 	}
 
-	#pragma test expect_ir("{ decl ref<uint<2>,f,f> v1 = var(type_cast(0, type(uint<2>))); uint_post_inc(v1); }")
+	#pragma test expect_ir("{ decl ref<uint<2>,f,f> v1 = var(type_cast(0, type_lit(uint<2>))); uint_post_inc(v1); }")
 	{
 		unsigned short v = 0;
 		v++;
 	}
 
-	#pragma test expect_ir("{ decl ref<char,f,f> v1 = var(type_cast(0, type(char))); char_pre_dec(v1); }")
+	#pragma test expect_ir("{ decl ref<char,f,f> v1 = var(type_cast(0, type_lit(char))); char_pre_dec(v1); }")
 	{
 		char v = 0;
 		--v;
 	}
 
-	#pragma test expect_ir("{ decl ref<int<1>,f,f> v1 = var(type_cast(0, type(int<1>))); int_post_dec(v1); }")
+	#pragma test expect_ir("{ decl ref<int<1>,f,f> v1 = var(type_cast(0, type_lit(int<1>))); int_post_dec(v1); }")
 	{
 		signed char v = 0;
 		v--;
@@ -361,19 +361,19 @@ int main() {
 	
 	//===---------------------------------------------------------------------------------------------------------------------------------- MISCELLANEOUS ---===
 	
-	#pragma test expect_ir("sizeof(type(real<8>))")
+	#pragma test expect_ir("sizeof(type_lit(real<8>))")
 	sizeof(double);
 
-	#pragma test expect_ir("sizeof(type(char))")
+	#pragma test expect_ir("sizeof(type_lit(char))")
 	sizeof(char);
 	
-	#pragma test expect_ir("{ decl ref<int<4>,f,f> v0; sizeof(type(int<4>)); }")
+	#pragma test expect_ir("{ decl ref<int<4>,f,f> v0; sizeof(type_lit(int<4>)); }")
 	{
 		int sizeof_int;
 		sizeof(sizeof_int);
 	}
 
-	#pragma test expect_ir("{ decl ref<array<char,8>,f,f> v0; sizeof(type(array<char,8>)); }")
+	#pragma test expect_ir("{ decl ref<array<char,8>,f,f> v0; sizeof(type_lit(array<char,8>)); }")
 	{
 		char char_arr[8];
 		sizeof(char_arr);
@@ -385,9 +385,9 @@ int main() {
 		int x, y;
 	} Image;
 
-	#pragma test expect_ir("STRING", "c_style_assignment(( var(struct{data:=0, x:=0, y:=0})), ( *( var(struct{data:=1, x:=1, y:=1}))))")
+	#pragma test expect_ir("STRING", "c_style_assignment( var(struct{data=0u, x=0, y=0}),  * var(struct{data=1u, x=1, y=1}))")
 	(Image){0u, 0, 0} = (Image){1u,1,1};
 
-	#pragma test expect_ir("STRING", "c_style_assignment((( var(struct{data:=0, x:=0, y:=0}))->x), 1)")
+	#pragma test expect_ir("STRING", "c_style_assignment( var(struct{data=0u, x=0, y=0}).x, 1)")
 	(Image){0u, 0, 0}.x = 1;
 }
