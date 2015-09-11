@@ -48,6 +48,7 @@
 #include "insieme/core/lang/array.h"
 #include "insieme/core/lang/channel.h"
 #include "insieme/core/lang/reference.h"
+#include "insieme/core/lang/pointer.h"
 
 #include "insieme/utils/numeric_cast.h"
 
@@ -930,6 +931,32 @@ namespace checks {
 		if (!isValidNumericType(trgType)) {
 			add(res, Message(callExpr[1], EC_SEMANTIC_ILLEGAL_NUM_CAST, format("given target type is not a numeric type  (%s).", *trgType), Message::ERROR));
 		}
+
+		return res;
+	}
+
+	OptionalMessageList RefOfFunCastCheck::visitCallExpr(const CallExprAddress& callExpr) {
+		OptionalMessageList res;
+
+		auto& mgr = callExpr->getNodeManager();
+		auto& refExt = mgr.getLangExtension<lang::ReferenceExtension>();
+		auto& ptrExt = mgr.getLangExtension<lang::PointerExtension>();
+
+
+		// check if CallExpr is ref_of_func
+		if (!(refExt.isCallOfRefOfFunction(callExpr) || ptrExt.isCallOfPtrOfFunction(callExpr)))
+			return res;
+
+		// type check will be performed somewhrere else
+		if  (callExpr->size() != 1)
+			return res;
+
+		auto argumentType = callExpr[0]->getType();
+
+		if( auto funType = argumentType.isa<FunctionTypePtr>() )
+			if (!funType->isPlain())
+				add(res, Message(callExpr[0], EC_SEMANTIC_ILLEGAL_REF_TO_FUN_CAST,
+								 format("this is a illegal ref_to_fun() cast!"), Message::ERROR));
 
 		return res;
 	}

@@ -54,6 +54,7 @@ namespace checks {
 		return contains(list.getAll(), msg);
 	}
 
+	bool getDetails = true;
 
 	TEST(CallExprTypeCheck, Basic) {
 		NodeManager manager;
@@ -1232,6 +1233,149 @@ namespace checks {
 			EXPECT_TRUE(errorString.find("MSG: given target type is not a numeric type") != string::npos);
 		}
 	}
+
+
+TEST(RefToFunCastCheck, Simple) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+	CheckPtr RefToFunCastCheckCheck = makeRecursive(make_check<RefOfFunCastCheck>());
+
+	//legal checks
+	{
+		auto expr = builder.parseExpr("ref_of_function(lambda () -> unit { })");
+		EXPECT_TRUE(expr) << "parsing error";
+		//if(getDetails)	std::cout << "detail: parsed expression: " << expr << std::endl;
+		auto checkResult = check(expr, RefToFunCastCheckCheck);
+		EXPECT_TRUE(checkResult.empty());
+		EXPECT_EQ(toString(checkResult), "[]");
+	}
+
+	{
+		auto expr = builder.parseExpr("ref_of_function(lambda (bool a) -> bool { return a; })");
+		EXPECT_TRUE(expr) << "parsing error";
+		//if(getDetails)	std::cout << "detail: parsed expression: " << expr << std::endl;
+		auto checkResult = check(expr, RefToFunCastCheckCheck);
+		EXPECT_TRUE(checkResult.empty());
+		EXPECT_EQ(toString(checkResult), "[]");
+	}
+
+	{
+		auto expr = builder.parseExpr("ref_of_function(lambda ('a _) -> bool { return true; })");
+		EXPECT_TRUE(expr) << "parsing error";
+		//if(getDetails)	std::cout << "detail: parsed expression: " << expr << std::endl;
+		auto checkResult = check(expr, RefToFunCastCheckCheck);
+		EXPECT_TRUE(checkResult.empty());
+		EXPECT_EQ(toString(checkResult), "[]");
+	}
+
+	{
+		auto expr = builder.parseExpr("ref_of_function(lambda ('a x) -> 'a { return x+CAST('a) 3; })");
+		EXPECT_TRUE(expr) << "parsing error";
+		//if(getDetails)	std::cout << "detail: parsed expression: " << expr << std::endl;
+		auto checkResult = check(expr, RefToFunCastCheckCheck);
+		EXPECT_TRUE(checkResult.empty());
+		EXPECT_EQ(toString(checkResult), "[]");
+	}
+
+	{
+		auto expr = builder.parseExpr("ref_of_function(function (ref<int<4>,f,f> a) -> unit { })");
+		EXPECT_TRUE(expr) << "parsing error";
+		//if(getDetails)	std::cout << "detail: parsed expression: " << expr << std::endl;
+		auto checkResult = check(expr, RefToFunCastCheckCheck);
+		EXPECT_TRUE(checkResult.empty());
+		EXPECT_EQ(toString(checkResult), "[]");
+	}
+
+	{
+		auto expr = builder.parseExpr("ref_of_function(lit(\"x\":'a))");
+		EXPECT_TRUE(expr) << "parsing error: " << expr;
+		auto checkResult = check(expr, RefToFunCastCheckCheck);
+		EXPECT_TRUE(checkResult.empty());
+		EXPECT_EQ(toString(checkResult), "[]");
+	}
+
+	// illegal checks
+	{
+		auto expr = builder.parseExpr("ref_of_function(lambda ('a x) => x+CAST('a) 3)");
+		EXPECT_TRUE(expr) << "parsing error: " << expr;
+		//if(getDetails)	std::cout << "detail: parsed expression: " << expr << std::endl;
+		auto checkResult = check(expr, RefToFunCastCheckCheck);
+		EXPECT_FALSE(checkResult.empty());
+		auto errorString = toString(checkResult[0]);
+		EXPECT_TRUE(errorString.find("MSG: this is a illegal ref_to_fun() cast!") != string::npos);
+	}
+}
+TEST(PtrToFunCastCheck, Simple) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+	CheckPtr RefToFunCastCheckCheck = makeRecursive(make_check<RefOfFunCastCheck>());
+
+	//legal checks
+	{
+		auto expr = builder.parseExpr("ptr_of_function(lambda () -> unit { })");
+		EXPECT_TRUE(expr) << "parsing error";
+		//if(getDetails)	std::cout << "detail: parsed expression: " << expr << std::endl;
+		auto checkResult = check(expr, RefToFunCastCheckCheck);
+		EXPECT_TRUE(checkResult.empty());
+		EXPECT_EQ(toString(checkResult), "[]");
+	}
+
+	{
+		auto expr = builder.parseExpr("ptr_of_function(lambda (bool a) -> bool { return a; })");
+		EXPECT_TRUE(expr) << "parsing error";
+		//if(getDetails)	std::cout << "detail: parsed expression: " << expr << std::endl;
+		auto checkResult = check(expr, RefToFunCastCheckCheck);
+		EXPECT_TRUE(checkResult.empty());
+		EXPECT_EQ(toString(checkResult), "[]");
+	}
+
+	{
+		auto expr = builder.parseExpr("ptr_of_function(lambda ('a _) -> bool { return true; })");
+		EXPECT_TRUE(expr) << "parsing error";
+		//if(getDetails)	std::cout << "detail: parsed expression: " << expr << std::endl;
+		auto checkResult = check(expr, RefToFunCastCheckCheck);
+		EXPECT_TRUE(checkResult.empty());
+		EXPECT_EQ(toString(checkResult), "[]");
+	}
+
+	{
+		auto expr = builder.parseExpr("ptr_of_function(lambda ('a x) -> 'a { return x+CAST('a) 3; })");
+		EXPECT_TRUE(expr) << "parsing error";
+		//if(getDetails)	std::cout << "detail: parsed expression: " << expr << std::endl;
+		auto checkResult = check(expr, RefToFunCastCheckCheck);
+		EXPECT_TRUE(checkResult.empty());
+		EXPECT_EQ(toString(checkResult), "[]");
+	}
+
+	{
+		auto expr = builder.parseExpr("ptr_of_function(function (ref<int<4>,f,f> a) -> unit { })");
+		EXPECT_TRUE(expr) << "parsing error";
+		//if(getDetails)	std::cout << "detail: parsed expression: " << expr << std::endl;
+		auto checkResult = check(expr, RefToFunCastCheckCheck);
+		EXPECT_TRUE(checkResult.empty());
+		EXPECT_EQ(toString(checkResult), "[]");
+	}
+
+	{
+		auto expr = builder.parseExpr("ptr_of_function(lit(\"x\":'a))");
+		EXPECT_TRUE(expr) << "parsing error: " << expr;
+		auto checkResult = check(expr, RefToFunCastCheckCheck);
+		EXPECT_TRUE(checkResult.empty());
+		EXPECT_EQ(toString(checkResult), "[]");
+	}
+
+	// illegal checks
+	{
+		auto expr = builder.parseExpr("ptr_of_function(lambda ('a x) => x+CAST('a) 3)");
+		EXPECT_TRUE(expr) << "parsing error: " << expr;
+		//if(getDetails)	std::cout << "detail: parsed expression: " << expr << std::endl;
+		auto checkResult = check(expr, RefToFunCastCheckCheck);
+		EXPECT_FALSE(checkResult.empty());
+		auto errorString = toString(checkResult[0]);
+		EXPECT_TRUE(errorString.find("MSG: this is a illegal ref_to_fun() cast!") != string::npos);
+	}
+}
+
 } // end namespace checks
 } // end namespace core
 } // end namespace insieme
