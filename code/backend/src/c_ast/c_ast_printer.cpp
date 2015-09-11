@@ -128,13 +128,12 @@ namespace c_ast {
 				return out << node->code;
 			}
 
-			PRINT(ModifiedType) {
+			PRINT(PrimitiveType) {
+
+				// print qualifiers
 				if(node->isConst())    { out << "const "; }
 				if(node->isVolatile()) { out << "volatile "; }
-				return out << print(node->type);
-			}
 
-			PRINT(PrimitiveType) {
 				switch(node->type) {
 				case PrimitiveType::Void: return out << "void";
 				case PrimitiveType::Bool: return out << "bool";
@@ -159,6 +158,12 @@ namespace c_ast {
 			}
 
 			PRINT(NamedType) {
+
+				// print qualifiers
+				if(node->isConst())    { out << "const "; }
+				if(node->isVolatile()) { out << "volatile "; }
+
+				// print name
 				out << print(node->name);
 				if(!node->parameters.empty()) {
 					out << "<" << join(", ", node->parameters, [&](std::ostream& out, const NodePtr& cur) { out << print(cur); }) << " >";
@@ -173,7 +178,12 @@ namespace c_ast {
 			}
 
 			PRINT(ReferenceType) {
-				if(node->isConst) { out << "const "; }
+
+				// print qualifiers
+				if(node->isConst())    { out << "const "; }
+				if(node->isVolatile()) { out << "volatile "; }
+
+				// print rest
 				return out << print(node->elementType) << "&";
 			}
 
@@ -879,7 +889,7 @@ namespace c_ast {
 				cur = static_pointer_cast<PointerType>(cur)->elementType;
 				res.qualifier.push_back(
 						PointerQualifier(
-							((ptr->isConst) ? CONST : PLAIN) | ((ptr->isVolatile) ? VOLATILE : PLAIN)
+							((ptr->isConst()) ? CONST : PLAIN) | ((ptr->isVolatile()) ? VOLATILE : PLAIN)
 						)
 				);
 			}
@@ -906,9 +916,8 @@ namespace c_ast {
 			const TypeLevel& cur = *level_it;
 			for(auto it = cur.qualifier.rbegin(); it != cur.qualifier.rend(); it++) {
 				out << "*";
-				if (*it & CONST) out << "const";
-				if ((*it & CONST) && (*it & VOLATILE)) out << " ";
-				if (*it & VOLATILE) out << "volatile";
+				if (*it & CONST) out << " const";
+				if (*it & VOLATILE) out << " volatile";
 			}
 
 			++level_it;

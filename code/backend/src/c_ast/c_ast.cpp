@@ -153,33 +153,33 @@ namespace c_ast {
 		return code == static_cast<const OpaqueCode&>(other).code;
 	}
 
-	bool PrimitiveType::equals(const Node& other) const {
-		assert(dynamic_cast<const PrimitiveType*>(&other));
-		return type == static_cast<const PrimitiveType&>(other).type;
+	bool CVQualifiedType::equals(const Node& node) const {
+		assert(dynamic_cast<const CVQualifiedType*>(&node));
+		auto other = static_cast<const CVQualifiedType&>(node);
+		return mConst == other.mConst && mVolatile == other.mVolatile;
 	}
 
-	bool ModifiedType::equals(const Node& node) const {
-		assert(dynamic_cast<const ModifiedType*>(&node));
-		auto other = static_cast<const ModifiedType&>(node);
-		return mConst == other.mConst && mVolatile == other.mVolatile && *type == *other.type;
+	bool PrimitiveType::equals(const Node& other) const {
+		assert(dynamic_cast<const PrimitiveType*>(&other));
+		return CVQualifiedType::equals(other) && type == static_cast<const PrimitiveType&>(other).type;
 	}
 
 	bool NamedType::equals(const Node& node) const {
 		assert(dynamic_cast<const NamedType*>(&node));
 		auto other = static_cast<const NamedType&>(node);
-		return *name == *other.name && ::equals(parameters, other.parameters, equal_target<NodePtr>());
+		return CVQualifiedType::equals(other) && *name == *other.name && ::equals(parameters, other.parameters, equal_target<NodePtr>());
 	}
 
 	bool PointerType::equals(const Node& type) const {
 		assert(dynamic_cast<const PointerType*>(&type));
 		const auto& other = static_cast<const PointerType&>(type);
-		return isConst == other.isConst && *elementType == *other.elementType;
+		return CVQualifiedType::equals(other) && *elementType == *other.elementType;
 	}
 
 	bool ReferenceType::equals(const Node& node) const {
 		assert(dynamic_cast<const ReferenceType*>(&node));
 		auto other = static_cast<const ReferenceType&>(node);
-		return isConst == other.isConst && *elementType == *other.elementType;
+		return CVQualifiedType::equals(other) && *elementType == *other.elementType;
 	}
 
 	bool VectorType::equals(const Node& node) const {

@@ -91,15 +91,15 @@ namespace backend {
 	}
 
 
-	TEST(FunctionCall, VectorReduction) {
+	TEST(FunctionCall, ArrayReduction) {
 		core::NodeManager manager;
 		core::IRBuilder builder(manager);
 
-		// Operation: vector.reduction
-		// Type: (vector<'elem,#l>, 'res, ('elem, 'res) -> 'res) -> 'res
+		// Operation: array.reduction
+		// Type: (array<'elem,'l>, 'res, ('elem, 'res) -> 'res) -> 'res
 
 		std::map<string, core::NodePtr> symbols;
-		symbols["v"] = builder.vectorExpr(toVector<core::ExpressionPtr>(builder.intLit(1), builder.intLit(2), builder.intLit(3), builder.intLit(4)));
+		symbols["v"] = builder.parseExpr("array_create(type(int<4>), type(4), [1,2,3,4])");
 
 		core::ProgramPtr program = builder.parseProgram("unit main() {"
 		                                                "	lambda ()->int<4> {"
@@ -138,8 +138,8 @@ namespace backend {
 		// Type: (('elem, 'elem) -> 'res) -> (vector<'elem,#l>, vector<'elem,#l>) -> vector<'res, #l>
 
 		std::map<string, core::NodePtr> symbols;
-		symbols["v1"] = builder.vectorExpr(toVector<core::ExpressionPtr>(builder.intLit(1), builder.intLit(2), builder.intLit(3), builder.intLit(4)));
-		symbols["v2"] = builder.vectorExpr(toVector<core::ExpressionPtr>(builder.intLit(5), builder.intLit(6), builder.intLit(7), builder.intLit(8)));
+		symbols["v1"] = builder.parseExpr("array_create(type(int<4>), type(4), [1,2,3,4])");
+		symbols["v2"] = builder.parseExpr("array_create(type(int<4>), type(4), [5,6,7,8])");
 
 		core::ProgramPtr program = builder.parseProgram("unit main() {"
 		                                                "	vector_pointwise(int_add)(v1,v2);"
@@ -254,8 +254,8 @@ namespace backend {
 		core::IRBuilder builder(manager);
 
 		core::ExpressionPtr zero = builder.literal(manager.getLangBasic().getUInt8(), "0");
-		core::ExpressionPtr offset = builder.refVar(builder.vectorExpr(toVector(zero, zero, zero)));
-		core::ExpressionPtr extFun = core::lang::getLiteral(manager, "(ref<vector<uint<8>,3>>)->unit", "call_vector");
+		core::ExpressionPtr offset = builder.parseExpr("var(array_create(type(int<4>),type(3),[0,0,0]))");
+		core::ExpressionPtr extFun = builder.parseExpr("lit(\"call_vector\" : (ref<array<uint<8>,3>>)->unit )");
 		core::ExpressionPtr call = builder.callExpr(manager.getLangBasic().getUnit(), extFun, toVector(offset));
 
 		auto converted = sequential::SequentialBackend::getDefault()->convert(call);

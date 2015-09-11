@@ -39,7 +39,7 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/printer/pretty_printer.h"
-#include "insieme/core/lang/extension.h"
+#include "insieme/core/lang/parallel.h"
 #include "insieme/core/transform/manipulation.h"
 
 #include "insieme/utils/compiler/compiler.h"
@@ -56,6 +56,7 @@ namespace runtime {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 		auto& basic = mgr.getLangBasic();
+		auto& parallel = mgr.getLangExtension<core::lang::ParallelExtension>();
 
 		// ------------------- Constructions ---------------------
 
@@ -69,13 +70,13 @@ namespace runtime {
 
 
 		// step 2: execute job
-		ExpressionPtr run = builder.callExpr(basic.getMerge(), builder.callExpr(basic.getParallel(), job));
+		ExpressionPtr run = builder.callExpr(parallel.getMerge(), builder.callExpr(parallel.getParallel(), job));
 
 		// step 3: create surrounding body
 		StatementPtr body = builder.compoundStmt(builder.declarationStmt(localVar, builder.intLit(4)), run);
 
 		// step 4: encapsulate it into a function
-		NodePtr code = builder.program(toVector<ExpressionPtr>(builder.lambdaExpr(body)));
+		NodePtr code = builder.program(toVector<ExpressionPtr>(builder.lambdaExpr(basic.getUnit(), VariableList(), body)));
 
 
 		// -------------------- Testing ---------------------------

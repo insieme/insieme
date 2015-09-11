@@ -167,7 +167,6 @@ namespace runtime {
 			case c_ast::NT_VectorType: return addType(static_pointer_cast<c_ast::VectorType>(type));
 			case c_ast::NT_NamedType: return addType(static_pointer_cast<c_ast::NamedType>(type));
 			case c_ast::NT_FunctionType: return addType(c_ast::ptr(type->getManager()->create<c_ast::PrimitiveType>(c_ast::PrimitiveType::Int64))); // TODO
-			case c_ast::NT_ModifiedType: return addType(static_pointer_cast<c_ast::ModifiedType>(type)->type);
 			case c_ast::NT_ReferenceType: return addType(static_pointer_cast<c_ast::ReferenceType>(type));
 			default: LOG(FATAL) << "Unsupported type: " << c_ast::toC(type); assert_fail() << "Unsupported type encountered!";
 			}
