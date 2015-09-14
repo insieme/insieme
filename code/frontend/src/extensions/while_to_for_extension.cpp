@@ -61,6 +61,12 @@
 namespace pattern = insieme::core::pattern;
 namespace irp = insieme::core::pattern::irp;
 
+// TODO (in order of precedence):
+// - Support more operations for boundary extraction (LT, LE, variables on the RHS)
+// - Also support more ways to write the increment expression
+// - Handle the case where the original loop variable is used after the while (by assigning to it either in or after the for)
+// - Handle non-int loops (e.g. for C++) by constructing the required int range, looping over it and setting the iterator variable internally
+
 namespace insieme {
 namespace frontend {
 namespace extensions {
