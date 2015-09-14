@@ -5,11 +5,11 @@ let A = struct {
 	int x;
 };
 
-let B = struct : A {
+let B = struct : [A] {
 	int y;
 };
 
-let C = struct : B {
+let C = struct : [B] {
 	int z;
 };
 
