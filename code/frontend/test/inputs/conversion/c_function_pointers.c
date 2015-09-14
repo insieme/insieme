@@ -30,7 +30,7 @@ int main() {
 		2; // to make INSPIRE different from previous case
 	}
 	
-	#pragma test expect_ir("{" FOO_FUN BOOL_TO_INT " decl ref<foo_ptr_type,f,f> v0; bool_to_int(!ptr_ne(*v0, ptr_null(type_lit(foo_type), type_lit(t), type_lit(f)))); }")
+	#pragma test expect_ir("{" FOO_FUN BOOL_TO_INT " decl ref<foo_ptr_type,f,f> v0; !ptr_ne(*v0, ptr_null(type_lit(foo_type), type_lit(t), type_lit(f))); }")
 	{
 		int (*ptr)(int);
 		!ptr;

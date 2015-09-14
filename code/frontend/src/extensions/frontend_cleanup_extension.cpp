@@ -143,6 +143,31 @@ namespace extensions {
 
 			return prog;
 		}
+		
+		//////////////////////////////////////////////////////////////////////////
+		// Remove superfluous bool_to_int calls (from the frontend inspire module)
+		// =======================================================================
+		//
+		// These are generated to ensure valid C-style semantics, but can be removed if they are unnecessary in the final IR.
+		//
+		ProgramPtr removeSuperfluousBoolToInt(ProgramPtr prog) {
+			auto& mgr = prog->getNodeManager();
+			auto& inspModule = mgr.getLangExtension<frontend::utils::FrontendInspireModule>();
+
+			prog = irp::replaceAllAddr(irp::callExpr(inspModule.getBoolToInt(), icp::anyList), prog, [&](const NodeAddress& matchingAddress) -> NodePtr {
+				auto call = matchingAddress.getAddressedNode().as<CallExprPtr>();
+				auto arg0 = call->getArgument(0);
+				// ensure unused (currently simply check parent)
+				if(matchingAddress.getDepth()>0 && matchingAddress.getParentNode().isa<CompoundStmtPtr>()) {
+					core::transform::utils::migrateAnnotations(call, arg0);
+					return arg0;
+				}
+				// else keep call
+				return call;
+			}).as<ProgramPtr>();
+
+			return prog;
+		}
 	}
 
 	boost::optional<std::string> FrontendCleanupExtension::isPrerequisiteMissing(ConversionSetup& setup) const {
@@ -160,6 +185,7 @@ namespace extensions {
 	insieme::core::ProgramPtr FrontendCleanupExtension::IRVisit(insieme::core::ProgramPtr& prog) {
 		prog = mainReturnCorrection(prog);
 		prog = removeRecordTypeFixup(prog);
+		prog = removeSuperfluousBoolToInt(prog);
 
 		return prog;
 	}

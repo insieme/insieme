@@ -9,15 +9,15 @@ void nameCheck() {
 int main() {
 	nameCheck();
 	
+	#define BOOL_TO_INT "let bool_to_int = lambda (bool b) -> int<4> { if(b) return 1; else return 0; };"
+	
 	//===-------------------------------------------------------------------------------------------------------------------------------- UNARY OPERATORS ---===
 	
-	#define BOOL_TO_INT "let bool_to_int = lambda (bool b) -> int<4> { if(b) return 1; else return 0; };"
-
 	#pragma test expect_ir("int_not(3)")
 	~3;
 	
-	#pragma test expect_ir("{",BOOL_TO_INT,"bool_to_int(!(3!=0)); }")
-	{ !3; }
+	#pragma test expect_ir("!(3!=0)")
+	!3;
 	
 	#pragma test expect_ir("3")
 	+3;
@@ -390,4 +390,8 @@ int main() {
 
 	#pragma test expect_ir("STRING", "c_style_assignment( var(struct{data=0u, x=0, y=0}).x, 1)")
 	(Image){0u, 0, 0}.x = 1;
+	
+	// bool to int conversion	
+	#pragma test expect_ir("{",BOOL_TO_INT," bool_to_int(1<5)+17; }")
+	{ (1 < 5) + 17; }
 }

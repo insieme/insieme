@@ -65,8 +65,17 @@ namespace frontend {
 	}
 
 	TEST(IndependentTest, Pyramids) {
-		runLargeIndependentTestOn(FRONTEND_TEST_DIR "../../../test/pyramids/pyramids.c", toVector<std::string>(FRONTEND_TEST_DIR "../../../test/bots/"));
+		runLargeIndependentTestOn(FRONTEND_TEST_DIR "../../../test/pyramids/pyramids.c");
 	}
+	
+	TEST(IndependentTest, Stencil3D) {
+		runLargeIndependentTestOn(FRONTEND_TEST_DIR "../../../test/stencil3d/stencil3d.c");
+	}
+
+	// enable after checking recursive struct resolve
+	//TEST(IndependentTest, QAP) {
+	//	runLargeIndependentTestOn(FRONTEND_TEST_DIR "../../../test/qap/qap.c");
+	//}
 
 } // fe namespace
 } // insieme namespace
