@@ -84,6 +84,30 @@ namespace analysis {
 		return HasFreeTypeVariableVisitor().visit(type, tmp);
 	}
 
+	TypeVariableSet getFreeTypeVariables(const TypePtr& type) {
+		TypeVariableSet res;
+
+		// collect all nested type variables
+		visitDepthFirstOncePrunable(type, [&](const TypePtr& type)->bool {
+			// prune function types
+			if (type.isa<FunctionTypePtr>()) return true;
+			if (auto var = type.isa<TypeVariablePtr>()) res.insert(var);
+			// continue searching free variables
+			return false;
+		});
+
+		return res;
+	}
+
+	TypeVariableSet getTypeVariablesBoundBy(const FunctionTypePtr& funType) {
+		// collect all free type variables int he parameters
+		TypeVariableSet res;
+		for(const auto& cur : funType->getParameterTypes()) {
+			res.insertAll(getFreeTypeVariables(cur));
+		}
+		return res;
+	}
+
 	insieme::core::TypePtr autoReturnType(NodeManager& nodeMan, const CompoundStmtPtr& body) {
 		auto debug = false;
 		if(debug) { std::cout << "{{{{{{ autoReturnType ----\n"; }

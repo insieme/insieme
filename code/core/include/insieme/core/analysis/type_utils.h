@@ -51,6 +51,19 @@ namespace analysis {
 	bool hasFreeTypeVariables(const TypePtr& type);
 
 	/**
+	 * Collects all free type variables within the given type.
+	 *
+	 * @param type the type whose free variables shell be collected
+	 * @return the set of all free type variables
+	 */
+	TypeVariableSet getFreeTypeVariables(const TypePtr& type);
+
+	/**
+	 * Obtains the set of type variables bound by the given function type.
+	 */
+	TypeVariableSet getTypeVariablesBoundBy(const FunctionTypePtr& funType);
+
+	/**
 	 * Determines the return type of a function based on its return statements.
 	 *
 	 * @param nodeMan NodeManager used to generate required types if necessary

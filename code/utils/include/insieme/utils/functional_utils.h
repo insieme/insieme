@@ -225,6 +225,25 @@ struct RejectAll {
 	}
 };
 
+/**
+ * A predicate accepting everything / all objects.
+ */
+template<typename T>
+struct All {
+	bool operator()(const T&) const {
+		return true;
+	}
+};
+
+/**
+ * A predicate accepting nothing / no objects.
+ */
+template<typename T>
+struct None {
+	bool operator()(const T&) const {
+		return false;
+	}
+};
 
 // -------------------- Member function wrapper ---------------------
 //  A functor wrapping member function calls to known objects.

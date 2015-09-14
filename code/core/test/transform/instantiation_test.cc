@@ -39,10 +39,13 @@
 #include "insieme/core/transform/instantiate.h"
 
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/checks/full_check.h"
 #include "insieme/core/annotations/naming.h"
 #include "insieme/core/annotations/source_location.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/utils/test/test_utils.h"
+
+#include "insieme/core/printer/error_printer.h"
 
 namespace insieme {
 namespace core {
@@ -249,10 +252,10 @@ namespace transform {
 		IRBuilder build(mgr);
 
 		auto expr = build.parseExpr(R"(
-		lambda ('a arg) -> 'b {
-			return arg;
-	}(5)
-	)");
+		lambda ('a arg) -> 'a {
+				return arg;
+		}(5)
+		)");
 
 		EXPECT_TRUE(expr);
 
@@ -263,36 +266,13 @@ namespace transform {
 		EXPECT_EQ(build.parseType("int<4>"), instantiated->getType());
 	}
 
-	TEST(TypeInstantiation, ReturnTypeMultiple) {
-		NodeManager mgr;
-		IRBuilder build(mgr);
-
-		auto expr = build.parseExpr(R"(
-		lambda ('a arg, 'b x) -> 'c {
-			if(x) {
-				return arg;
-			} else {
-				return 5u;
-			}
-	}(-5l, true)
-	)");
-
-		EXPECT_TRUE(expr);
-
-		auto instantiated = core::transform::instantiateTypes(expr);
-
-		// std::cout << "Pretty uninstantiated: \n" << dumpColor(expr) << "\n";
-		// std::cout << "Pretty instantiation : \n" << dumpColor(instantiated) << "\n";
-		EXPECT_EQ(build.parseType("int<8>"), instantiated->getType());
-	}
-
 	TEST(TypeInstantiation, BindExpr) {
 		NodeManager mgr;
 		IRBuilder build(mgr);
 
 		auto expr = build.parseExpr(R"(
-		lambda ('a x) -> unit {
-			decl ref<'a> b;
+		lambda ('_type_ x) -> unit {
+			decl ref<'_type_> b;
 			lambda () => {
 				decl auto y = b;
 				return y;
@@ -307,8 +287,8 @@ namespace transform {
 		// std::cout << "Pretty uninstantiated: \n" << dumpColor(expr) << "\n";
 		// std::cout << "Pretty instantiation : \n" << dumpColor(instantiated) << "\n";
 		// std::cout << "Less pretty instantiation: \n" << dumpText(instantiated) << "\n";
-		EXPECT_TRUE(core::analysis::contains(expr, build.parseType("'a")));
-		EXPECT_FALSE(core::analysis::contains(instantiated, build.parseType("'a")));
+		EXPECT_TRUE(core::analysis::contains(expr, build.parseType("'_type_")));
+		EXPECT_FALSE(core::analysis::contains(instantiated, build.parseType("'_type_")));
 	}
 
 	TEST(TypeInstantiation, BindInBindExpr) {
@@ -316,8 +296,8 @@ namespace transform {
 		IRBuilder build(mgr);
 
 		auto expr = build.parseExpr(R"(
-		lambda ('a x) -> unit {
-			decl ref<'a> b;
+		lambda ('_type_ x) -> unit {
+			decl ref<'_type_> b;
 			lambda () => {
 				decl auto y = b;
 				lambda () => {
@@ -335,8 +315,8 @@ namespace transform {
 
 		// std::cout << "Pretty uninstantiated: \n" << dumpColor(expr) << "\n";
 		// std::cout << "Pretty instantiation : \n" << dumpColor(instantiated) << "\n";
-		EXPECT_TRUE(core::analysis::contains(expr, build.parseType("'a")));
-		EXPECT_FALSE(core::analysis::contains(instantiated, build.parseType("'a")));
+		EXPECT_TRUE(core::analysis::contains(expr, build.parseType("'_type_")));
+		EXPECT_FALSE(core::analysis::contains(instantiated, build.parseType("'_type_")));
 	}
 
 	TEST(TypeInstantiation, JobExpr) {
@@ -344,8 +324,8 @@ namespace transform {
 		IRBuilder build(mgr);
 
 		auto expr = build.parseExpr(R"(
-		lambda ('a x) -> unit {
-			decl ref<'a> b;		
+		lambda ('_type_ x) -> unit {
+			decl ref<'_type_> b;		
 			parallel(job {
 				decl auto y = b;
 			});
@@ -358,8 +338,8 @@ namespace transform {
 
 		// std::cout << "Pretty uninstantiated: \n" << dumpColor(expr) << "\n";
 		// std::cout << "Pretty instantiation : \n" << dumpColor(instantiated) << "\n";
-		EXPECT_TRUE(core::analysis::contains(expr, build.parseType("'a")));
-		EXPECT_FALSE(core::analysis::contains(instantiated, build.parseType("'a")));
+		EXPECT_TRUE(core::analysis::contains(expr, build.parseType("'_type_")));
+		EXPECT_FALSE(core::analysis::contains(instantiated, build.parseType("'_type_")));
 	}
 
 	TEST(TypeInstantiation, NestedLambda) {
@@ -371,13 +351,13 @@ namespace transform {
             let int = int<4>;
             let uint = uint<4>;
 
-            let differentbla = lambda ('b x) -> unit {
+            let differentbla = lambda ('_type_b x) -> unit {
                 decl auto m = x;
                 decl auto l = m;
             };
 
-            let bla = lambda ('a f) -> unit {
-                let anotherbla = lambda ('a x) -> unit {
+            let bla = lambda ('_type_a f) -> unit {
+                let anotherbla = lambda ('_type_a x) -> unit {
                     decl auto m = x;
                 };
                 anotherbla(f);
@@ -400,10 +380,10 @@ namespace transform {
 
 		// std::cout << "Pretty uninstantiated: \n" << dumpColor(program) << "\n";
 		// std::cout << "Pretty instantiation : \n" << dumpColor(instantiated) << "\n";
-		EXPECT_TRUE(core::analysis::contains(program, build.parseType("'a")));
-		EXPECT_TRUE(core::analysis::contains(program, build.parseType("'b")));
-		EXPECT_FALSE(core::analysis::contains(instantiated, build.parseType("'a")));
-		EXPECT_FALSE(core::analysis::contains(instantiated, build.parseType("'b")));
+		EXPECT_TRUE(core::analysis::contains(program, build.parseType("'_type_a")));
+		EXPECT_TRUE(core::analysis::contains(program, build.parseType("'_type_b")));
+		EXPECT_FALSE(core::analysis::contains(instantiated, build.parseType("'_type_a")));
+		EXPECT_FALSE(core::analysis::contains(instantiated, build.parseType("'_type_b")));
 	}
 
 
@@ -413,7 +393,7 @@ namespace transform {
 
 		auto addresses = build.parseAddressesStatement(R"raw(
 	{
-		let x = lambda ('a a)->unit {
+		let x = lambda ('_type_ a)->unit {
 			$x$(a); // address 1
 		};
 		$x$(5); // address 0
@@ -425,8 +405,8 @@ namespace transform {
 		auto code = addresses[0].getRootNode();
 		auto result = instantiateTypes(code);
 
-		EXPECT_TRUE(core::analysis::contains(code, build.parseType("'a")));
-		EXPECT_FALSE(core::analysis::contains(result, build.parseType("'a")));
+		EXPECT_TRUE(core::analysis::contains(code, build.parseType("'_type_")));
+		EXPECT_FALSE(core::analysis::contains(result, build.parseType("'_type_")));
 
 		auto add0res = addresses[0].switchRoot(result).getAddressedNode().as<LambdaExprPtr>();
 		auto add1res = addresses[1].switchRoot(result);
@@ -461,13 +441,39 @@ namespace transform {
 		// dumpColor(addresses[0].getRootNode());
 
 		#ifndef NDEBUG
-		ASSERT_DEATH_IF_SUPPORTED(instantiateTypes(addresses[0].getRootNode()), "not yet implemented for mutually recursive functions");
+		ASSERT_DEATH_IF_SUPPORTED(instantiateTypes(addresses[0].getRootNode()), "Instantiation of generic recursive functions not supported yet!");
 		#endif
 
 		// auto result = instantiateTypes(addresses[0].getRootNode());
 
 		// auto newAddr = addresses[0].switchRoot(result);
 		// EXPECT_EQ(builder.parseType("int<4>"), newAddr.getAddressedNode().as<ExpressionPtr>()->getType());
+	}
+
+
+	TEST(TypeInstantiation, ReturnTypeBug) {
+
+		/**
+		 * This code fragment has been encountered as being buggy in the backend.
+		 * The return type of the utilized lambda has not been properly instantiated.
+		 */
+
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		core::ProgramPtr code = builder.parseProgram("int<4> main() {"
+														"	lambda (type<'a> dtype, type<'s> size)->ref<array<'a,'s>> {"
+														"		return ref_new(array_create(dtype, size, list_empty(dtype)));"
+														"	} (lit(real<4>), lit(7));"
+														"	return 0;"
+														"}");
+
+		ASSERT_TRUE(code);
+
+		EXPECT_TRUE(checks::check(code).empty()) << checks::check(code);
+
+		auto ret = core::transform::instantiateTypes(code, core::lang::isBuiltIn);
+		EXPECT_TRUE(checks::check(ret).empty()) << printer::dumpErrors(checks::check(ret));
 	}
 
 	/*

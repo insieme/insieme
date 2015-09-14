@@ -91,22 +91,67 @@ namespace types {
 		}
 
 		/**
-		 * Applies this substitution to the given type.
+		 * Applies this substitution to the given node.
 		 * @param manager the manager to be used for creating new type node instances
-		 * @param type the type to which this substitution should be applied to
-		 * @return the resulting type expression
+		 * @param node the node to which this substitution should be applied to
+		 * @return the resulting node
 		 */
-		TypePtr applyTo(NodeManager& manager, const TypePtr& type) const;
+		NodePtr applyTo(NodeManager& manager, const NodePtr& node) const;
 
 		/**
-		 * Applies this substitution to the given type using the types node manager. A call
-		 * to applyTo(type) is equivalent to applyTo(type->getNodeManager(),type).
+		 * Applies this substitution to the given node and preserves the type information.
 		 *
-		 * @param type the type to which this substitution should be applied to
+		 * @param manager the manager to be used for creating new type node instances
+		 * @param node the node to which this substitution should be applied to
 		 * @return the resulting type expression
 		 */
-		TypePtr applyTo(const TypePtr& type) const {
-			return applyTo(type->getNodeManager(), type);
+		template<typename T>
+		Pointer<T> applyTo(NodeManager& manager, const Pointer<T>& node) const {
+			return applyTo(manager, NodePtr(node)).template as<Pointer<T>>();
+		}
+
+		/**
+		 * A special overload for type variables for which the preservation of there
+		 * node type can not be ensured.
+		 */
+		TypePtr applyTo(NodeManager& manager, const TypeVariablePtr& node) const {
+			return applyTo(manager, node.as<TypePtr>());
+		}
+
+		/**
+		 * Applies this substitution to the given node using the node's node manager. A call
+		 * to applyTo(node) is equivalent to applyTo(node->getNodeManager(),node).
+		 *
+		 * @param node the node to which this substitution should be applied to
+		 * @return the resulting type expression
+		 */
+		template<typename T>
+		Pointer<T> applyTo(const Pointer<T>& node) const {
+			return applyTo(node->getNodeManager(), NodePtr(node)).template as<Pointer<T>>();
+		}
+
+		/**
+		 * A special overload for type variables for which the preservation of there
+		 * node type can not be ensured.
+		 */
+		TypePtr applyTo(const TypeVariablePtr& node) const {
+			return applyTo(node.as<TypePtr>());
+		}
+
+		/**
+		 * Enables substitutions to be utilized as functors.
+		 */
+		template<typename T>
+		Pointer<T> operator()(const Pointer<T>& node) const {
+			return applyTo(node);
+		}
+
+		/**
+		 * An overload for type variables for which the preservation of the node type
+		 * can not be guaranteed.
+		 */
+		TypePtr operator()(const TypeVariablePtr& var) const {
+			return applyTo(var);
 		}
 
 		/**

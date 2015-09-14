@@ -120,15 +120,6 @@ namespace core {
 			utils::set::PointerSet<VariablePtr> usedVars;
 		};
 
-		std::vector<VariablePtr> getReachingVariables(const core::NodePtr& root) {
-			assert_true(root) << " no root node";
-			VarRefFinder visitor;
-			visitDepthFirstPrunable(root, visitor);
-
-			auto nonDecls = utils::set::difference(visitor.usedVars, visitor.declaredVars);
-
-			return std::vector<VariablePtr>(nonDecls.begin(), nonDecls.end());
-		}
 	}
 
 

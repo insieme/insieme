@@ -36,8 +36,8 @@
 
 #pragma once
 
-#include "insieme/core/forward_decls.h"
-#include "insieme/utils/pointer.h"
+#include "insieme/core/ir_expressions.h"
+#include "insieme/core/lang/lang.h"
 
 namespace insieme {
 namespace core {
@@ -45,9 +45,7 @@ namespace transform {
 
 	namespace detail {
 
-		static auto skipNone = [](const NodePtr& node) { return false; };
-
-		NodePtr instantiate(const NodePtr& root, std::function<bool(const core::NodePtr& node)> skip);
+		NodePtr instantiate(const NodePtr& root, const NodeFilter& skip);
 
 	} // end namespace detail
 
@@ -59,8 +57,8 @@ namespace transform {
 	 * @return IR with the same root node, with all deducible types instantiated
 	 */
 	template <typename T>
-	core::Pointer<T> instantiateTypes(const core::Pointer<T>& root, std::function<bool(const NodePtr& node)> skip = detail::skipNone) {
-		return static_pointer_cast<T>(detail::instantiate(root, skip));
+	Pointer<T> instantiateTypes(const Pointer<T>& root, const NodeFilter& skip = lang::isBuiltIn) {
+		return detail::instantiate(root, skip).template as<Pointer<T>>();
 	}
 
 } // end namespace transform

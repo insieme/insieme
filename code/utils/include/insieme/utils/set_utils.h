@@ -75,6 +75,10 @@ namespace set {
 		bool contains(const Ptr& entry) const {
 			return base::find(entry) != base::cend();
 		}
+
+		void insertAll(const PointerSet<Ptr>& other) {
+			this->insert(other.begin(), other.end());
+		}
 	};
 
 	template <class Ptr>

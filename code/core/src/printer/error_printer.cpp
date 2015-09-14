@@ -36,6 +36,8 @@
 
 #include "insieme/core/printer/error_printer.h"
 
+#include <boost/algorithm/string/replace.hpp>
+
 #include "insieme/core/ir_node.h"
 #include "insieme/core/annotations/error.h"
 
@@ -91,7 +93,7 @@ namespace printer {
 
 			std::ostream& afterNewLine(std::ostream& out) const {
 				for(unsigned i = 0; i < nextLineMessages.size(); ++i) {
-					out << format("%s\n", nextLineMessages[i]);
+					out << nextLineMessages[i];
 				}
 				nextLineMessages.clear();
 				return out;
@@ -113,15 +115,20 @@ namespace printer {
 			// for each message: split warnig/error save with address
 			addr2msg errors;
 			for(auto msg : msgs.getAll()) {
+				std::stringstream ss;
 				auto addrs = msg.getOrigin();
-				std::string text;
 				switch(msg.getType()) {
-				case Message::WARNING: text.append(RED + "WARNING: "); break;
-				case Message::ERROR: text.append(RED + "ERROR: "); break;
+				case Message::WARNING: ss << RED << "WARNING: "; break;
+				case Message::ERROR:   ss << RED << "ERROR: "; break;
 				default: { assert_fail() << "what was that?"; }
 				};
 
-				text.append(GREY + msg.getMessage() + RESET);
+				ss << GREY << msg.getMessage() << RESET;
+
+				auto body = ss.str();
+				boost::replace_all(body, "\n", "\n\t");
+
+				std::string text = "------- \n" + body + "\n-------";
 				errors.insert({addrs, text});
 			}
 
@@ -130,7 +137,7 @@ namespace printer {
 
 			ErrorPlugin plug(errors);
 			auto root = msgs.getAll()[0].getOrigin().getRootNode();
-			insieme::core::printer::PrettyPrinter print(root, plug);
+			PrettyPrinter print(root, plug);
 
 			return out << print << std::endl;
 		}, out);

@@ -36,6 +36,10 @@
 
 #include "insieme/core/types/substitution.h"
 
+#include "insieme/core/analysis/type_utils.h"
+#include "insieme/core/transform/manipulation_utils.h"
+#include "insieme/core/transform/node_mapper_utils.h"
+
 namespace insieme {
 namespace core {
 namespace types {
@@ -47,7 +51,8 @@ namespace types {
 		 * wrapper is based on a node mapping, which allows this class to exploit the general node mapping
 		 * mechanism to perform
 		 */
-		class SubstitutionMapper : public SimpleNodeMapping {
+		class SubstitutionMapper : public transform::CachedNodeMapping {
+
 			/**
 			 * The node manager to be used for creating new type nodes.
 			 */
@@ -58,6 +63,12 @@ namespace types {
 			 */
 			const Substitution::Mapping& mapping;
 
+			/**
+			 * The root node of the substitution. This one will always be effected, however,
+			 * nested scopes will be skipped.
+			 */
+			NodePtr root;
+
 		  public:
 			/**
 			 * Creates a new instance of this class wrapping the given substitution.
@@ -65,18 +76,57 @@ namespace types {
 			 * @param manager the node manager to be used for creating new node instances if necessary
 			 * @param substitution the substitution to be wrapped by the resulting instance.
 			 */
-			SubstitutionMapper(NodeManager& manager, const Substitution& substitution)
-			    : SimpleNodeMapping(), manager(manager), mapping(substitution.getMapping()){};
+			SubstitutionMapper(NodeManager& manager, const Substitution& substitution, const NodePtr& root)
+			    : manager(manager), mapping(substitution.getMapping()), root(root) {};
 
 			/**
 			 * The procedure mapping a node to its substitution.
 			 *
 			 * @param element the node to be resolved
 			 */
-			const NodePtr mapElement(unsigned, const NodePtr& element) {
+			const NodePtr resolveElement(const NodePtr& element) override {
+
+				// prune area of influence
+				if (element != root && (
+						element.isa<LambdaExprPtr>() ||
+						element.isa<BindExprPtr>() ||
+						(element.isa<LiteralPtr>() && element.as<LiteralPtr>()->getType().isa<FunctionTypePtr>())
+					)) {
+
+					// lambdas define new scopes for variables => filter
+					auto typeVars = analysis::getTypeVariablesBoundBy(element.as<ExpressionPtr>()->getType().as<FunctionTypePtr>());
+
+					// compute reduced type variable substitution
+					Substitution sub;
+					for(const auto& cur : mapping) {
+						if (!typeVars.contains(cur.first)) {
+							sub.addMapping(cur.first, cur.second);
+						}
+					}
+
+					// run substitution recursively on reduced set
+					return sub(element);
+				}
+
+				// make sure current limitations are not exceeded
+				assert_true(!element.isa<LambdaExprPtr>() ||
+						!element.as<LambdaExprPtr>()->isRecursive() ||
+						element.as<LambdaExprPtr>()->getDefinition().size() == 1)
+						<< "Instantiation of generic recursive functions not supported yet!";
+
 				// quick check - only variables are substituted
 				auto currentType = element->getNodeType();
-				if(currentType != NT_TypeVariable) { return element->substitute(manager, *this); }
+				if(currentType != NT_TypeVariable) {
+
+					// replace base
+					auto res = element->substitute(manager, *this);
+
+					// move annotations
+					transform::utils::migrateAnnotations(element, res);
+
+					// done
+					return res;
+				}
 
 				// check type
 				assert_eq(NT_TypeVariable, currentType);
@@ -91,10 +141,6 @@ namespace types {
 				// not found => return current node
 				// (since nothing within a variable node may be substituted)
 				return element;
-
-				// should never be reached
-				assert_fail() << "This point shouldn't be reachable!";
-				return element;
 			}
 		};
 
@@ -105,10 +151,12 @@ namespace types {
 		mapping.insert(std::make_pair(var, type));
 	};
 
-	TypePtr Substitution::applyTo(NodeManager& manager, const TypePtr& type) const {
+	NodePtr Substitution::applyTo(NodeManager& manager, const NodePtr& node) const {
+		// shortcut for empty substitutions
+		if (empty()) return node;
 		// perform substitution
-		SubstitutionMapper mapper(manager, *this);
-		return mapper.map(0, type);
+		SubstitutionMapper mapper(manager, *this, node);
+		return mapper.map(0, node);
 	}
 
 	void Substitution::addMapping(const TypeVariablePtr& var, const TypePtr& type) {

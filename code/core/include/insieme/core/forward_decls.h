@@ -106,6 +106,7 @@ namespace core {
 
 	typedef utils::set::PointerSet<NodePtr> NodeSet;
 	typedef utils::set::PointerSet<TypePtr> TypeSet;
+	typedef utils::set::PointerSet<TypeVariablePtr> TypeVariableSet;
 	typedef utils::set::PointerSet<VariablePtr> VariableSet;
 	typedef utils::set::PointerSet<StatementPtr> StatementSet;
 	typedef utils::set::PointerSet<ExpressionPtr> ExpressionSet;
@@ -117,6 +118,8 @@ namespace core {
 	typedef utils::map::PointerMap<VariablePtr, VariablePtr> VariableMap;
 	typedef utils::map::PointerMap<VariablePtr, ExpressionPtr> VarExprMap;
 	typedef utils::map::PointerMap<ExpressionPtr, VariablePtr> ExprVarMap;
+
+	typedef std::function<bool(NodePtr)> NodeFilter;
 
 } // end namespace core
 } // end namespace insieme
