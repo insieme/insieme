@@ -41,7 +41,7 @@
 namespace insieme {
 namespace frontend {
 	
-	TEST(IndependentTest, VariableLengthArrays) {
+	TEST(IndependentTest, WhileToFor) {
 		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_for.c", 
 			[](ConversionJob& job) { job.registerFrontendExtension<extensions::WhileToForExtension>(); }
 		);
