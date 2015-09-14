@@ -179,7 +179,7 @@ namespace conversion {
 
 		core::ExpressionPtr condExpr;
 		if(forStmt->getCond()) {
-			condExpr = converter.convertExpr(forStmt->getCond());
+			condExpr = utils::exprToBool(converter.convertExpr(forStmt->getCond()));
 		} else {
 			condExpr = builder.boolLit(true);
 		}

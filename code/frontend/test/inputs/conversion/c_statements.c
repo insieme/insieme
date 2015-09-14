@@ -1,7 +1,5 @@
 
 int main() {
-
-	// TODO FE NG new call semantic
 	#define C_STYLE_ASSIGN "let c_ass = lambda (ref<'a,f,'b> v1, 'a v2) -> 'a { v1 = v2; return *v1; };"
 
 	#pragma test expect_ir("{ decl ref<int<4>,f,f> v0; decl ref<int<4>,f,f> v1;}")

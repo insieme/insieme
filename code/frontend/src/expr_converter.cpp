@@ -548,6 +548,12 @@ namespace conversion {
 		}
 
 		retIr = buildBinaryOpExpression(converter, exprTy, lhs, rhs, opIt->second, binOp);
+
+		// in C, bool operations return an int
+		if(retIr->getType() == basic.getBool()) {
+			retIr = utils::buildBoolToInt(retIr);
+		}
+
 		return retIr;
 	}
 

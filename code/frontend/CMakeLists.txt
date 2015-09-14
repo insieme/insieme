@@ -38,6 +38,10 @@ target_link_libraries(insieme_frontend insieme_annotations)
 # required for llvm
 add_definitions(-D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS)
 
+# prevent clang Preprocessor.h from being included in cotire header to enable privacy violation workaround
+set_target_properties(insieme_frontend PROPERTIES
+	COTIRE_PREFIX_HEADER_IGNORE_PATH "${CMAKE_SOURCE_DIR};${CMAKE_BINARY_DIR};${CLANG_INCLUDE_DIRS}/clang/Lex/Preprocessor.h;${CLANG_INCLUDE_DIRS}/clang/Parse/Parser.h"
+	COTIRE_PREFIX_HEADER_INCLUDE_PATH "/")
 cotire(insieme_frontend)
 
 # =============================================  TESTING  =====================================

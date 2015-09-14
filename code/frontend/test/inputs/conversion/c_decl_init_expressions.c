@@ -106,4 +106,10 @@ int main() {
 		decl ref<array<s,2>,f,f> v0 = var(array_create(type_lit(s), type_lit(2), [struct s {1, 2u}, struct s{3, 4u}])); })")
 	{ struct { int a; unsigned b; } su[2] = { { 1, 2u }, { 3, 4u } }; }
 
+	// BOOL CONVERSION //////////////////////////////////////////////////////
+	
+	#define BOOL_TO_INT "let bool_to_int = lambda (bool b) -> int<4> { if(b) return 1; else return 0; };"
+
+	#pragma test expect_ir("{",BOOL_TO_INT,"decl ref<int<4>,f,f> v0 = var(bool_to_int(1<2)); }")
+	{ int boolconv = 1 < 2; }
 }

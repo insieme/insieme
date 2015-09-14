@@ -34,46 +34,18 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/frontend/utils/expr_to_bool.h"
+#include "independent_test_utils.h"
 
-#include "insieme/frontend/utils/frontend_inspire_module.h"
-
-#include "insieme/core/ir_builder.h"
-#include "insieme/core/analysis/ir_utils.h"
-#include "insieme/core/lang/basic.h"
-#include "insieme/core/lang/pointer.h"
+#include "insieme/frontend/extensions/while_to_for_extension.h"
 
 namespace insieme {
 namespace frontend {
-namespace utils {
-	using namespace core;
-
-	ExpressionPtr exprToBool(const ExpressionPtr& expr) {
-		auto& mgr = expr->getNodeManager();
-		auto& basic = mgr.getLangBasic();
-		auto& fMod = mgr.getLangExtension<FrontendInspireModule>();
-		IRBuilder builder(mgr);
-
-		auto t = expr->getType();
-
-		// no need to do anything if already bool
-		if(basic.isBool(t)) return expr;
-
-		// if it is a bool to int conversion, strip it off
-		if(core::analysis::isCallOf(expr, fMod.getBoolToInt())) return expr.as<CallExprPtr>()->getArgument(0);
-
-		// if numeric or char, check against 0
-		if(basic.isInt(t) || basic.isReal(t) || basic.isChar(t)) return builder.ne(expr, builder.getZero(t));
-
-		// if pointer, check against equality with PtrNull
-		auto& pExt = builder.getExtension<core::lang::PointerExtension>();
-		if(lang::isPointer(t)) return builder.callExpr(basic.getBool(), pExt.getPtrNotEqual(), expr, lang::buildPtrNull(t));
-
-		assert_not_implemented() << "Trying to build bool expression from unsupported type " << *t;
-		return ExpressionPtr();
+	
+	TEST(IndependentTest, VariableLengthArrays) {
+		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_for.c", 
+			[](ConversionJob& job) { job.registerFrontendExtension<extensions::WhileToForExtension>(); }
+		);
 	}
 
-} // end namespace utils
-} // end namespace frontend
-} // end namespace insieme
-
+} // fe namespace
+} // insieme namespace
