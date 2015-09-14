@@ -47,11 +47,6 @@
 
 #include "insieme/utils/debug/backtrace.h"
 
-#ifdef assert
-#undef assert
-#endif
-#define assert(_BLA) static_assert(false, "You should use insieme assertions only! (insieme::utils::assert_*)")
-
 #define __xstr(a) __str(a)
 #define __str(a) #a
 
