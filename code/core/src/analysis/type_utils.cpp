@@ -102,9 +102,15 @@ namespace analysis {
 	TypeVariableSet getTypeVariablesBoundBy(const FunctionTypePtr& funType) {
 		// collect all free type variables int he parameters
 		TypeVariableSet res;
-		for(const auto& cur : funType->getParameterTypes()) {
-			res.insertAll(getFreeTypeVariables(cur));
+
+		// collect all type variables
+		for(const auto& paramType : funType->getParameterTypes()) {
+			visitDepthFirstOnce(paramType, [&](const TypeVariablePtr& var) {
+				res.insert(var);
+			});
 		}
+
+		// done
 		return res;
 	}
 

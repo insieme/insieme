@@ -85,11 +85,11 @@ namespace transform {
 				if (!substitution) return ptr;
 
 				// apply substitution on function
-				auto newFun = skip(fun) ? fun : (*substitution).applyTo(fun);
+				auto newFun = (fun.isa<LiteralPtr>() || fun.isa<CallExprPtr>() || skip(fun)) ? fun : (*substitution).applyTo(fun);
 
 				// apply substitution on arguments (for higher-order functions)
 				auto newArgs = ::transform(call->getArgumentList(), [&](const ExpressionPtr& expr) {
-					return skip(expr) ? expr : (*substitution)(expr);
+					return (expr.isa<CallExprPtr>() || skip(expr)) ? expr : (*substitution)(expr);
 				});
 
 				// build replacement call

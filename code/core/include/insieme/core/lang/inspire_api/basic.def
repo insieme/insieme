@@ -299,9 +299,12 @@ DERIVED(NumericCast, "num_cast", "lambda ('a x, type<'b> t)->'b { return CAST('b
 
 // Type Operations ----------------------------------------------------------------------------------------------------
 
+
 DERIVED(TypeOf, "type_of", "lambda ('a x)->type<'a> { return lit('a); }")
 DERIVED(TypeCast, "type_cast", "lambda ('a x,type<'b> t)->'b { return CAST('b)x; }")
 LITERAL(TypeIsSubtype, "type_is_subtype", "(type<'a>, type<'b>)->bool")
+
+LITERAL(NumTypeToInt, "type_to_int", "(type<'a>)->int<8>")
 
 OPERATION(Type, Eq, "type_eq", "(type<'a>,type<'a>) -> bool")
 

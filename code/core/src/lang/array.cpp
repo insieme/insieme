@@ -54,12 +54,16 @@ namespace lang {
 	}
 
 	ArrayType::ArrayType(const NodePtr& node) {
-		// check given node type
 		assert_true(node) << "Given node is null!";
-		assert_true(isArrayType(node)) << "Given node " << *node << " is not a array type!";
+
+		// support expressions as input
+		auto type = node.isa<GenericTypePtr>();
+		if (auto expr = node.isa<ExpressionPtr>()) type = expr->getType().isa<GenericTypePtr>();
+
+		// check given node type
+		assert_true(isArrayType(type)) << "Given node " << *node << " is not a array type!";
 
 		// process node type
-		GenericTypePtr type = node.as<GenericTypePtr>();
 		if(isInf(type->getTypeParameter(1))) *this = ArrayType(type->getTypeParameter(0), ExpressionPtr());
 		else *this = ArrayType(type->getTypeParameter(0), type->getTypeParameter(1).as<NumericTypePtr>()->getValue());
 	}

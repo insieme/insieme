@@ -109,6 +109,21 @@ namespace lang {
 		)
 
 		/**
+		 * A derived operator conducting a fold operation over a fixed sized array.
+		 */
+		LANG_EXT_DERIVED_WITH_NAME(ArrayFold, "array_fold",
+					"                                                                                       "
+					"   lambda (array<'a,'s> data, 'b init, ('b,'a)->'b op)->'b {                           "
+					"   	decl ref<'b,f,f> res = var(init);                                               "
+					"   	for(int<8> i = 0 .. type_to_int(lit('s))) {                                     "
+					"   		res = op(*res, data[i]);                                                    "
+					"   	}                                                                               "
+					"   	return *res;                                                                    "
+					"   }                                                                                   "
+					"                                                                                       "
+		)
+
+		/**
 		 * A higher level function converting a scalar operation to a pointwise operation on arrays.
 		 */
 		LANG_EXT_LITERAL(ArrayPointwise, "array_pointwise", "(('a,'b)->'c) -> (array<'a,'l>,array<'b,'l>)->array<'c,'l>")

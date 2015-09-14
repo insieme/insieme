@@ -476,6 +476,30 @@ namespace transform {
 		EXPECT_TRUE(checks::check(ret).empty()) << printer::dumpErrors(checks::check(ret));
 	}
 
+
+	TEST(TypeInstantiation, ArrayPointwiseTest) {
+
+		/**
+		 * This code fragment has been encountered as being buggy in the backend.
+		 * The return type of the utilized lambda has not been properly instantiated.
+		 */
+
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto code = builder.parseExpr("array_pointwise(int_add)");
+		ASSERT_TRUE(code);
+		EXPECT_TRUE(checks::check(code).empty()) << checks::check(code);
+		auto ret = core::transform::instantiateTypes(code, core::lang::isBuiltIn);
+		EXPECT_TRUE(checks::check(ret).empty()) << printer::dumpErrors(checks::check(ret));
+
+		code = builder.parseExpr("array_pointwise(int_add)(lit(\"x\":array<int<4>,12>),lit(\"y\":array<int<4>,12>))");
+		ASSERT_TRUE(code);
+		EXPECT_TRUE(checks::check(code).empty()) << checks::check(code);
+		ret = core::transform::instantiateTypes(code, core::lang::isBuiltIn);
+		EXPECT_TRUE(checks::check(ret).empty()) << printer::dumpErrors(checks::check(ret));
+	}
+
 	/*
 	TEST(InRecFunc, ExpressionArgument) {
 	    NodeManager mgr;
