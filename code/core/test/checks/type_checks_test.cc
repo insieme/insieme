@@ -1304,6 +1304,24 @@ TEST(RefToFunCastCheck, Simple) {
 		auto errorString = toString(checkResult[0]);
 		EXPECT_TRUE(errorString.find("MSG: this is a illegal ref_to_fun() cast!") != string::npos);
 	}
+	{
+		auto expr = builder.parseExpr("ref_of_function(4)");
+		EXPECT_TRUE(expr) << "parsing error: " << expr;
+		//if(getDetails)	std::cout << "detail: parsed expression: " << expr << std::endl;
+		auto checkResult = check(expr, RefToFunCastCheckCheck);
+		EXPECT_FALSE(checkResult.empty());
+		auto errorString = toString(checkResult[0]);
+		EXPECT_TRUE(errorString.find("MSG: this is a illegal ref_to_fun() cast!") != string::npos);
+	}
+	{
+		auto expr = builder.parseExpr("ref_of_function(struct struct {} {})");
+		EXPECT_TRUE(expr) << "parsing error: " << expr;
+		//if(getDetails)	std::cout << "detail: parsed expression: " << expr << std::endl;
+		auto checkResult = check(expr, RefToFunCastCheckCheck);
+		EXPECT_FALSE(checkResult.empty());
+		auto errorString = toString(checkResult[0]);
+		EXPECT_TRUE(errorString.find("MSG: this is a illegal ref_to_fun() cast!") != string::npos);
+	}
 }
 TEST(PtrToFunCastCheck, Simple) {
 	NodeManager manager;

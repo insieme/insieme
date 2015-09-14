@@ -953,10 +953,16 @@ namespace checks {
 
 		auto argumentType = callExpr[0]->getType();
 
-		if( auto funType = argumentType.isa<FunctionTypePtr>() )
-			if (!funType->isPlain())
-				add(res, Message(callExpr[0], EC_SEMANTIC_ILLEGAL_REF_TO_FUN_CAST,
-								 format("this is a illegal ref_to_fun() cast!"), Message::ERROR));
+		if (argumentType.isa<TypeVariablePtr>()) {
+			return res;		// this might still be a function
+		}
+
+		auto funType = argumentType.isa<FunctionTypePtr>();
+		if (!funType || !funType->isPlain()) {
+			add(res, Message(callExpr[0], EC_SEMANTIC_ILLEGAL_REF_TO_FUN_CAST,
+							 format("this is a illegal ref_to_fun() cast!"), Message::ERROR));
+			return res;
+		}
 
 		return res;
 	}

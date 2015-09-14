@@ -180,7 +180,7 @@ namespace parser3{
 
         EXPECT_TRUE(test_expression(nm, "1.0f"));
         EXPECT_TRUE(test_expression(nm, "1.0"));
-        EXPECT_TRUE(test_expression(nm, "1.0E+1");
+        EXPECT_TRUE(test_expression(nm, "1.0E+1"));
 
 
         EXPECT_TRUE(test_expression(nm, "1 + 3"));
