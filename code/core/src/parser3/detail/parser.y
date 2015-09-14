@@ -383,11 +383,11 @@ union_type : tag_def   { RULE std::swap($$, $1); }
 
 struct_type : tag_def              { RULE $$ = driver.builder.structType(driver.builder.stringValue(""), $1); }
             | "identifier" tag_def { RULE $$ = driver.builder.structType(driver.builder.stringValue($1), $2); }
-            | "identifier" ":" parent_list tag_def { RULE 
-                        $$ = driver.builder.structType(driver.builder.stringValue($1), $3, $4); 
+            | "identifier" ":" "[" parent_list "]" tag_def { RULE 
+                        $$ = driver.builder.structType(driver.builder.stringValue($1), $4, $6); 
                     }
-            | ":" parent_list tag_def { RULE 
-                        $$ = driver.builder.structType($2, $3); 
+            | ":" "[" parent_list "]" tag_def { RULE 
+                        $$ = driver.builder.structType($3, $5); 
                     }
             ;
 
@@ -439,12 +439,12 @@ named_type : "identifier" "<" gen_type { RULE $$ = driver.genGenericType(@$, $1,
                                   if(!$$) $$ = driver.genGenericType(@$, $1, ParentList(), TypeList()); 
                                   if(!$$) { driver.error(@$, format("undefined type %s", $1)); YYABORT; } 
                           }
-           | "identifier" ":" parent_list { RULE
-                            $$ = driver.genGenericType(@$, $1, $3, TypeList());
+           | "identifier" ":" "[" parent_list "]" { RULE
+                            $$ = driver.genGenericType(@$, $1, $4, TypeList());
                         }
-           | "identifier" "<" gen_type ":" parent_list { RULE
-                            $$ = driver.genGenericType(@$, $1, $5, $3.typeParams);
-                        }
+           | "identifier" "<" gen_type ":" "[" parent_list "]" { RULE
+                            $$ = driver.genGenericType(@$, $1, $6, $3.typeParams);
+                         }
            | "type_var"   { RULE $$ = driver.builder.typeVariable($1); }
            | "type_lit(" type ")" { RULE $$ = $2; }
            | "identifier" "::" namespaced_type { RULE

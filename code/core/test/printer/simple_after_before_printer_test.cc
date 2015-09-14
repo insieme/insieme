@@ -116,8 +116,8 @@ namespace insieme {
 			EXPECT_TRUE(test_type(nm, "(array<'elem,'n>, vector<uint<8>,'n>) -> 'elem"));
 
 			EXPECT_TRUE(test_type(nm, "struct C { int<4> field; }"));
-			EXPECT_TRUE(test_type(nm, "let papa, mama = t<11>, t<4>; struct name : papa, mama { int<4> a; int<5> b}"));
-			EXPECT_TRUE(test_type(nm, "let papa = t<11>; struct name : papa { int<4> a; int<5> b}"));
+			EXPECT_TRUE(test_type(nm, "let papa, mama = t<11>, t<4>; struct name : [ papa, mama ] { int<4> a; int<5> b}"));
+			EXPECT_TRUE(test_type(nm, "let papa = t<11>; struct name :[ papa ]{ int<4> a; int<5> b}"));
 
 		}
 

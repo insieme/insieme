@@ -310,7 +310,7 @@ namespace printer {
 
 							// include all inherited classes if there are any
 							if(!cur.getChild(1).getChildList().empty()) {
-								out << " : ";
+								out << " : [";
 								int first = 1;
 								for(auto n : cur.getChild(1).getChildList()) {
 									if(first) {
@@ -320,6 +320,7 @@ namespace printer {
 									}
 									this->visit(n.getChild(1));
 								}
+								out << "]";
 							}
 
 							out << " { ";

@@ -5,7 +5,7 @@ let A = struct {
 	int x;
 };
 
-let B = struct : A {
+let B = struct : [A]{
 	int y;
 };
 

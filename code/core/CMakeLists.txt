@@ -36,7 +36,7 @@ if(NOT MSVC)
 	    ADD_CUSTOM_COMMAND(
 	      SOURCE ${BISON_INPUT}
 	      COMMAND ${BISON_EXECUTABLE}
-	      ARGS -d
+	      ARGS -d -v
 		    --report=all
 		   -o ${BISON_O_FILE}
 		   --graph 

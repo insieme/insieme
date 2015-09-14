@@ -68,8 +68,8 @@ namespace parser3 {
 		EXPECT_TRUE(test_type(nm, "vector<'a, 4>"));
 		EXPECT_TRUE(test_type(nm, "struct { int<4> a; int<5> b}"));
 		EXPECT_TRUE(test_type(nm, "struct name { int<4> a; int<5> b}"));
-		EXPECT_TRUE(test_type(nm, "let papa, mama = t<11>, t<4>; struct name : papa, mama { int<4> a; int<5> b}"));
-		EXPECT_TRUE(test_type(nm, "let papa = t<11>; struct name : papa { int<4> a; int<5> b}"));
+		EXPECT_TRUE(test_type(nm, "let papa, mama = t<11>, t<4>; struct name : [papa, mama] { int<4> a; int<5> b}"));
+		EXPECT_TRUE(test_type(nm, "let papa = t<11>; struct name : [papa] { int<4> a; int<5> b}"));
 		EXPECT_TRUE(test_type(nm, "struct { int<4> a; int<5> b;}"));
 		EXPECT_TRUE(test_type(nm, "let int = int<4>; int"));
 
