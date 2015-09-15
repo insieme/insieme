@@ -439,7 +439,7 @@ namespace parser3 {
 		}
 
 		TypePtr inspire_driver::genNumericType(const location& l, const string& value) const {
-			return builder.numericType(builder.literal(value, builder.getLangBasic().getIntInf()));
+			return builder.numericType(builder.literal(value, builder.getLangBasic().getUIntInf()));
 		}
 
 		TypePtr inspire_driver::genFuncType(const location& l, const TypeList& params, const TypePtr& retType, const FunctionKind& fk) {

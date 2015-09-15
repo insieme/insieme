@@ -51,6 +51,24 @@ namespace lang {
 			return gen && gen->getFamilyName() == "inf" && gen->getParents().empty() && gen->getTypeParameter().empty();
 		}
 
+		ExpressionPtr toUIntInf(const ExpressionPtr& expr) {
+			// check for literals
+			LiteralPtr size = expr.isa<LiteralPtr>();
+			if (!size) {
+				return expr;
+			}
+
+			// fix literal type
+			auto& mgr = size->getNodeManager();
+			auto& basic = mgr.getLangBasic();
+			if (basic.isUIntInf(size->getType())) {
+				return size;	// take size at it is
+			}
+
+			// fix the size
+			return Literal::get(mgr, basic.getUIntInf(), size->getValue());
+		}
+
 	}
 
 	ArrayType::ArrayType(const NodePtr& node) {
@@ -64,8 +82,19 @@ namespace lang {
 		assert_true(isArrayType(type)) << "Given node " << *node << " is not a array type!";
 
 		// process node type
-		if(isInf(type->getTypeParameter(1))) *this = ArrayType(type->getTypeParameter(0), ExpressionPtr());
-		else *this = ArrayType(type->getTypeParameter(0), type->getTypeParameter(1).as<NumericTypePtr>()->getValue());
+		if(isInf(type->getTypeParameter(1))) {
+			// unknown sized array
+			*this = ArrayType(type->getTypeParameter(0), ExpressionPtr());
+		} else if (auto num = type->getTypeParameter(1).isa<NumericTypePtr>()) {
+			// variable or fixed sized array
+			*this = ArrayType(type->getTypeParameter(0), num->getValue());
+		} else {
+			// check validity
+			auto size = type->getTypeParameter(1).isa<TypeVariablePtr>();
+			assert_true(size) << "Invalid size parameter: " << *size << " of kind: " << size->getNodeType();
+			// generic array type
+			*this = ArrayType(type->getTypeParameter(0), size);
+		}
 	}
 
 	bool ArrayType::isArrayType(const NodePtr& node) {
@@ -106,9 +135,12 @@ namespace lang {
 				isInf(node.as<GenericTypePtr>().getTypeParameter(1));
 	}
 
+	bool ArrayType::isGenericSizedArrayType(const NodePtr& node) {
+		return isArrayType(node) && node.as<GenericTypePtr>().getTypeParameter(1).isa<TypeVariablePtr>();
+	}
 
 	GenericTypePtr ArrayType::create(const TypePtr& elementType, const ExpressionPtr& size) {
-		return static_cast<GenericTypePtr>(ArrayType(elementType, size));
+		return static_cast<GenericTypePtr>(ArrayType(elementType, toUIntInf(size)));
 	}
 
 	GenericTypePtr ArrayType::create(const TypePtr& elementType, unsigned size) {
@@ -125,14 +157,31 @@ namespace lang {
 		if (!size) {
 			num = GenericType::get(nm, "inf");
 		} else if(auto lit = size.isa<LiteralPtr>()) {
-			auto newIntLit = builder.literal(lit.getValue(), builder.getLangBasic().getIntInf());
-			num = NumericType::get(nm, newIntLit);
+			assert_pred1(builder.getLangBasic().isUIntInf, lit->getType());
+			num = NumericType::get(nm, lit);
+		} else if (auto var = size.isa<VariablePtr>()) {
+			assert_pred1(builder.getLangBasic().isUIntInf, var->getType());
+			num = NumericType::get(nm, var);
 		} else {
-			assert_true(size.isa<VariablePtr>()) << "Not a variable: " << *size << "\n";
-			num = NumericType::get(nm, size.as<VariablePtr>());
+			num = size.as<TypeVariablePtr>();
 		}
 
 		return GenericType::get(nm, "array", ParentList(), toVector(elementType, num));
+	}
+
+	void ArrayType::setSize(const LiteralPtr& size) {
+		this->size = toUIntInf(size);
+	}
+
+	void ArrayType::setSize(unsigned size) {
+		auto& mgr = elementType->getNodeManager();
+		auto& basic = mgr.getLangBasic();
+		this->size = Literal::get(mgr, basic.getUIntInf(), toString(size));
+	}
+
+	void ArrayType::setSize(const VariablePtr& size) {
+		if (size) assert_pred1(size->getNodeManager().getLangBasic().isUIntInf, size->getType());
+		this->size = size;
 	}
 
 	ExpressionPtr buildArrayCreate(const TypePtr& elemType, const TypePtr& size, const ExpressionList& list) {

@@ -121,7 +121,7 @@ TEST(PrettyPrinter, Wrapper) {
 	++it;
 
 	// 4 literal loc
-	EXPECT_EQ(builder.numericType(builder.literal("4",builder.getLangBasic().getIntInf())), it->second);
+	EXPECT_EQ(builder.numericType(builder.literal("4",builder.getLangBasic().getUIntInf())), it->second);
 	EXPECT_EQ(SourceLocation(0, 9), it->first.first);
 	EXPECT_EQ(SourceLocation(0, 10), it->first.second);
 

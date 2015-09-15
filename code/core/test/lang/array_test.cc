@@ -56,8 +56,8 @@ namespace lang {
 		IRBuilder builder(nm);
 
 		auto A = builder.parseType("A");
-		ExpressionPtr l = builder.literal(builder.parseType("int<inf>"), "4");
-		ExpressionPtr v = builder.variable(builder.parseType("int<inf>"), 0);
+		ExpressionPtr l = builder.literal(builder.parseType("uint<inf>"), "4");
+		ExpressionPtr v = builder.variable(builder.parseType("uint<inf>"), 0);
 
 		std::map<string,NodePtr> symbols;
 		symbols["x"] = v;
@@ -77,6 +77,27 @@ namespace lang {
 		EXPECT_EQ(ArrayType::create(A,15), builder.parseType("array<A,15>"));
 		EXPECT_EQ(ArrayType::create(A,v), builder.parseType("array<A,#x>", symbols));
 
+
+		EXPECT_PRED1(isUnknownSizedArray, builder.parseType("array<A>"));
+		EXPECT_PRED1(isFixedSizedArray, builder.parseType("array<A,12>"));
+		EXPECT_PRED1(isVariableSizedArray, builder.parseType("array<A,#x>", symbols));
+		EXPECT_PRED1(isGenericSizedArray, builder.parseType("array<A,'a>"));
+
+		EXPECT_FALSE(isUnknownSizedArray(builder.parseType("array<A,12>")));
+		EXPECT_FALSE(isUnknownSizedArray(builder.parseType("array<A,#x>", symbols)));
+		EXPECT_FALSE(isUnknownSizedArray(builder.parseType("array<A,'a>")));
+
+		EXPECT_FALSE(isFixedSizedArray(builder.parseType("array<A>")));
+		EXPECT_FALSE(isFixedSizedArray(builder.parseType("array<A,#x>", symbols)));
+		EXPECT_FALSE(isFixedSizedArray(builder.parseType("array<A,'a>")));
+
+		EXPECT_FALSE(isVariableSizedArray(builder.parseType("array<A>")));
+		EXPECT_FALSE(isVariableSizedArray(builder.parseType("array<A,12>")));
+		EXPECT_FALSE(isVariableSizedArray(builder.parseType("array<A,'a>")));
+
+		EXPECT_FALSE(isGenericSizedArray(builder.parseType("array<A>")));
+		EXPECT_FALSE(isGenericSizedArray(builder.parseType("array<A,12>")));
+		EXPECT_FALSE(isGenericSizedArray(builder.parseType("array<A,#x>", symbols)));
 	}
 
 	TEST(Array, Alias) {

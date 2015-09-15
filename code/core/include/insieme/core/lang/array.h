@@ -175,11 +175,12 @@ namespace lang {
 	 * friendly way then its raw encoding.
 	 */
 	class ArrayType {
+
 		TypePtr elementType;
 
-		ExpressionPtr size;
+		NodePtr size;
 
-		ArrayType(const TypePtr& elementType, const ExpressionPtr& size) : elementType(elementType), size(size) {}
+		ArrayType(const TypePtr& elementType, const NodePtr& size) : elementType(elementType), size(size) {}
 
 	  public:
 		ArrayType(const NodePtr& node);
@@ -200,6 +201,8 @@ namespace lang {
 		static bool isVariableSizedArrayType(const NodePtr& node);
 
 		static bool isUnknownSizedArrayType(const NodePtr& node);
+
+		static bool isGenericSizedArrayType(const NodePtr& node);
 
 		static GenericTypePtr create(const TypePtr& elementType, unsigned size);
 
@@ -226,16 +229,22 @@ namespace lang {
 			elementType = type;
 		}
 
-		const ExpressionPtr& getSize() const {
+		const NodePtr& getSize() const {
 			return size;
 		}
 
-		void setSize(const LiteralPtr& size) {
+		void setSize(unsigned size);
+
+		void setSize(const LiteralPtr& size);
+
+		void setSize(const VariablePtr& size);
+
+		void setSize(const TypeVariablePtr& size) {
 			this->size = size;
 		}
 
-		void setSize(const VariablePtr& size) {
-			this->size = size;
+		bool isUnknownSize() const {
+			return !size;
 		}
 
 		bool isConstSize() const {
@@ -243,7 +252,11 @@ namespace lang {
 		}
 
 		bool isVariableSize() const {
-			return !isConstSize();
+			return size.isa<VariablePtr>();
+		}
+
+		bool isGenericSize() const {
+			return size.isa<TypeVariablePtr>();
 		}
 
 		unsigned getNumElements() const {
@@ -272,6 +285,11 @@ namespace lang {
 	static inline bool isUnknownSizedArray(const NodePtr& node) {
 		if(auto expr = node.isa<ExpressionPtr>()) { return isUnknownSizedArray(expr->getType()); }
 		return node && ArrayType::isUnknownSizedArrayType(node);
+	}
+
+	static inline bool isGenericSizedArray(const NodePtr& node) {
+		if(auto expr = node.isa<ExpressionPtr>()) { return isUnknownSizedArray(expr->getType()); }
+		return node && ArrayType::isGenericSizedArrayType(node);
 	}
 
 	static inline TypePtr getArrayElementType(const NodePtr& node) {
