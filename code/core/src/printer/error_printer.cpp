@@ -101,7 +101,7 @@ namespace printer {
 
 			std::ostream& afterAllDone(std::ostream& out) const {
 				for(unsigned i = 0; i < nextLineMessages.size(); ++i) {
-					out << nextLineMessages[i] << "\n";
+					out << "\n" << nextLineMessages[i] << "\n";
 				}
 				nextLineMessages.clear();
 				return out;
