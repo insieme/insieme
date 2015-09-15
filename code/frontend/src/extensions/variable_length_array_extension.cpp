@@ -58,8 +58,8 @@ namespace extensions {
 			core::IRBuilder builder = converter.getIRBuilder();
 			auto index = converter.convertExpr(arrType->getSizeExpr());
 			// cast needed from rhs type to int<inf>?!
-			if(index->getType() != builder.getLangBasic().getIntInf()) { index = builder.numericCast(index, builder.getLangBasic().getIntInf()); }
-			auto decl = builder.declarationStmt(builder.getLangBasic().getIntInf(), index);
+			if(index->getType() != builder.getLangBasic().getUIntInf()) { index = builder.numericCast(index, builder.getLangBasic().getUIntInf()); }
+			auto decl = builder.declarationStmt(builder.getLangBasic().getUIntInf(), index);
 			sizes.push_back(decl);
 
 			// convert the element type (in nested array case this is again a variable array type)

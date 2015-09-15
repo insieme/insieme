@@ -4,7 +4,7 @@ int main() {
 	// VARIABLE LENGTH ARRAY TYPES //////////////////////////////////////////////////////////////
 	#pragma test expect_ir(R"({
 			decl ref<int<4>,f,f> v0 = var(3);
-			decl int<inf> v1 = type_cast(*v0,type_lit(int<inf>));
+			decl uint<inf> v1 = type_cast(*v0,type_lit(uint<inf>));
 			decl ref<array<real<4>,#v1>,f,f> v2;
 		})")
 	{
@@ -14,7 +14,7 @@ int main() {
 
 	#pragma test expect_ir(R"({
 			decl ref<int<4>,f,f> v0 = var(3);
-			decl int<inf> v1 = type_cast(*v0, type_lit(int<inf>));
+			decl uint<inf> v1 = type_cast(*v0, type_lit(uint<inf>));
 			decl ref<real<4>,f,f> v2;
 			decl ref<real<4>,f,f> v3;
 			decl ref<array<real<4>,#v1>,f,f> v4;
@@ -26,7 +26,7 @@ int main() {
 	
 	#pragma test expect_ir(R"({
 			decl ref<int<4>,f,f> v0 = var(3);
-			decl int<inf> v1 = type_cast(*v0+3, type_lit(int<inf>));
+			decl uint<inf> v1 = type_cast(*v0+3, type_lit(uint<inf>));
 			decl ref<array<real<4>,#v1>,f,f> v2;
 		})")
 	{
@@ -36,7 +36,7 @@ int main() {
 	
 	#pragma test expect_ir(R"({
 			decl ref<int<4>,f,f> v0 = var(3);
-			decl int<inf> v1 = type_cast(*v0, type_lit(int<inf>));
+			decl uint<inf> v1 = type_cast(*v0, type_lit(uint<inf>));
 			decl ref<array<real<4>,#v1>,t,f> v2;
 		})")
 	{
@@ -46,7 +46,7 @@ int main() {
 
 	#pragma test expect_ir(R"({
 			decl ref<int<4>,f,f> v0 = var(3);
-			decl int<inf> v1 = type_cast(*v0, type_lit(int<inf>));
+			decl uint<inf> v1 = type_cast(*v0, type_lit(uint<inf>));
 			decl ref<array<real<4>,#v1>,t,f> v2; ptr_from_array(v2);
 		})")
 	{
@@ -57,7 +57,7 @@ int main() {
 
 	#pragma test expect_ir(R"({
 			decl ref<int<4>,f,f> v0 = var(3);
-			decl int<inf> v1 = type_cast(*v0, type_lit(int<inf>));
+			decl uint<inf> v1 = type_cast(*v0, type_lit(uint<inf>));
 			decl ref<array<real<4>,#v1>,f,t> v2;
 		})")
 	{
@@ -68,8 +68,8 @@ int main() {
 	#pragma test expect_ir(R"({
 			decl ref<int<4>,f,f> v0 = var(3);
 			decl ref<int<4>,f,f> v1 = var(6);
-			decl int<inf> v2 = type_cast(*v0, type_lit(int<inf>));
-			decl int<inf> v3 = type_cast(*v1, type_lit(int<inf>));
+			decl uint<inf> v2 = type_cast(*v0, type_lit(uint<inf>));
+			decl uint<inf> v3 = type_cast(*v1, type_lit(uint<inf>));
 			decl ref<array<array<real<4>,#v3>,#v2>,f,f> v4;
 		})")
 	{
@@ -81,8 +81,8 @@ int main() {
 	#pragma test expect_ir(R"({
 			decl ref<int<4>,f,f> v0 = var(3);
 			decl ref<int<4>,f,f> v1 = var(6);
-			decl int<inf> v2 = type_cast(*v0+2, type_lit(int<inf>));
-			decl int<inf> v3 = type_cast(*v1+5, type_lit(int<inf>));
+			decl uint<inf> v2 = type_cast(*v0+2, type_lit(uint<inf>));
+			decl uint<inf> v3 = type_cast(*v1+5, type_lit(uint<inf>));
 			decl ref<array<array<real<4>,#v3>,#v2>,f,f> v4;
 		})")
 	{
@@ -95,9 +95,9 @@ int main() {
 			decl ref<int<4>,f,f> v0 = var(3);
 			decl ref<int<4>,f,f> v1 = var(6);
 			decl ref<int<4>,f,f> v2 = var(10);
-			decl int<inf> v3 = type_cast(*v0, type_lit(int<inf>));
-			decl int<inf> v4 = type_cast(*v1, type_lit(int<inf>));
-			decl int<inf> v5 = type_cast(*v2, type_lit(int<inf>));
+			decl uint<inf> v3 = type_cast(*v0, type_lit(uint<inf>));
+			decl uint<inf> v4 = type_cast(*v1, type_lit(uint<inf>));
+			decl uint<inf> v5 = type_cast(*v2, type_lit(uint<inf>));
 			decl ref<array<array<array<real<4>,#v5>,#v4>,#v3>,f,f> v6;
 		})")
 	{
@@ -111,9 +111,9 @@ int main() {
 			decl ref<int<4>,f,f> v0 = var(3);
 			decl ref<int<4>,f,f> v1 = var(6);
 			decl ref<int<4>,f,f> v2 = var(10);
-			decl int<inf> v3 = type_cast(*v0+2, type_lit(int<inf>));
-			decl int<inf> v4 = type_cast(*v1, type_lit(int<inf>));
-			decl int<inf> v5 = type_cast(*v2+1, type_lit(int<inf>));
+			decl uint<inf> v3 = type_cast(*v0+2, type_lit(uint<inf>));
+			decl uint<inf> v4 = type_cast(*v1, type_lit(uint<inf>));
+			decl uint<inf> v5 = type_cast(*v2+1, type_lit(uint<inf>));
 			decl ref<array<array<array<real<4>,#v5>,#v4>,#v3>,f,f> v6;
 		})")
 	{
@@ -125,8 +125,8 @@ int main() {
 
 	#pragma test expect_ir(R"({
 			decl ref<int<4>,f,f> v0 = var(61);
-			decl int<inf> v1 = type_cast(10, type_lit(int<inf>));
-			decl int<inf> v2 = type_cast(*v0+2, type_lit(int<inf>));
+			decl uint<inf> v1 = type_cast(10, type_lit(uint<inf>));
+			decl uint<inf> v2 = type_cast(*v0+2, type_lit(uint<inf>));
 			decl ref<array<array<array<real<4>,10>,#v2>,#v1>,t,t> v3;
 		})")
 	{
@@ -136,7 +136,7 @@ int main() {
 	
 	#pragma test expect_ir(R"({
 			decl ref<int<4>,f,f> v0 = var(4);
-			decl int<inf> v1 = type_cast(*v0,type_lit(int<inf>));
+			decl uint<inf> v1 = type_cast(*v0,type_lit(uint<inf>));
 			decl ref<array<ptr<real<4>,f,f>,#v1>,f,f> v2;
 		})")
 	{
@@ -145,7 +145,7 @@ int main() {
 	}
 	#pragma test expect_ir(R"({
 			decl ref<int<4>,f,f> v0 = var(4);
-			decl int<inf> v1 = type_cast(*v0,type_lit(int<inf>));
+			decl uint<inf> v1 = type_cast(*v0,type_lit(uint<inf>));
 			decl ref<array<ptr<real<4>,t,f>,#v1>,f,f> v2;
 		})")
 	{
@@ -154,7 +154,7 @@ int main() {
 	}
 	#pragma test expect_ir(R"({
 			decl ref<int<4>,f,f> v0 = var(4);
-			decl int<inf> v1 = type_cast(*v0,type_lit(int<inf>));
+			decl uint<inf> v1 = type_cast(*v0,type_lit(uint<inf>));
 			decl ref<array<ptr<real<4>,t,f>,#v1>,f,t> v2;
 		})")
 	{
@@ -185,7 +185,7 @@ int main() {
 
 	#pragma test expect_ir(R"({
 			decl ref<int<4>> v0 = var(10);
-			decl int<inf> v1 = type_cast(*v0, type_lit(int<inf>));
+			decl uint<inf> v1 = type_cast(*v0, type_lit(uint<inf>));
 			decl ref<array<int<4>,#v1>> v2;
 			sizeof(type_lit(array<int<4>,#v1>));
 		})")
@@ -198,8 +198,8 @@ int main() {
 	#pragma test expect_ir(R"({ 
 			decl ref<int<4>> v0 = var(10); 
 			decl ref<int<4>> v1 = var(20); 
-			decl int<inf> v2 = type_cast(*v0, type_lit(int<inf>));
-			decl int<inf> v3 = type_cast(*v1, type_lit(int<inf>));
+			decl uint<inf> v2 = type_cast(*v0, type_lit(uint<inf>));
+			decl uint<inf> v3 = type_cast(*v1, type_lit(uint<inf>));
 			decl ref<array<array<int<4>,#v3>,#v2>> v4; sizeof(type_lit(array<array<int<4>,#v3>,#v2>));
 		})")
 	{
@@ -212,11 +212,11 @@ int main() {
 	#pragma test expect_ir(R"({ 
 			decl ref<int<4>> v0 = var(10); 
 			decl ref<int<4>> v1 = var(20); 
-			decl int<inf> v2 = type_cast(*v0, type_lit(int<inf>));
-			decl int<inf> v3 = type_cast(*v1, type_lit(int<inf>));
+			decl uint<inf> v2 = type_cast(*v0, type_lit(uint<inf>));
+			decl uint<inf> v3 = type_cast(*v1, type_lit(uint<inf>));
 			decl ref<array<array<int<4>,#v3>,#v2>> v4; 
-			decl int<inf> v5 = type_cast(*v0, type_lit(int<inf>));
-			decl int<inf> v6 = type_cast(*v1, type_lit(int<inf>));
+			decl uint<inf> v5 = type_cast(*v0, type_lit(uint<inf>));
+			decl uint<inf> v6 = type_cast(*v1, type_lit(uint<inf>));
 			decl ref<array<array<int<4>,#v6>,#v5>> v7; 
 			sizeof(type_lit(array<array<int<4>,#v3>,#v2>));
 			sizeof(type_lit(array<array<int<4>,#v6>,#v5>));
