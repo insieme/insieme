@@ -66,16 +66,6 @@ namespace bfs = boost::filesystem;
 
 namespace {
 
-	bool typeMemberCheck(const core::TypePtr& a, const core::TypePtr& b, const core::TypePtr& c = core::TypePtr()) {
-		if(a != b) {
-			std::cout << "constructor uses a different type as target\n";
-			std::cout << "it should be: " << b << "\n";
-			if(c && a == c) { std::cout << "NOTE: it is bind to the expanded version: " << c << "\n"; }
-			return false;
-		}
-		return true;
-	}
-
 	void PerformChecks(const frontend::tu::IRTranslationUnit& tu) {
 		unsigned count = 0;
 		std::cout << " =======================================================" << std::endl;

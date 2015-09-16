@@ -97,7 +97,10 @@ namespace insieme {
 			// load program and create IR TU
 			frontend::tu::IRTranslationUnit code = testCase.loadTU(tmpManager);
 			char tmpname[] = "tmp.XXXXXX";
-			mkstemp(tmpname);
+			int src = mkstemp(tmpname);
+			assert_ne(src, -1);
+			close(src);
+
 			filename = tmpname;
 			insieme::driver::saveLib(code, filename);
 			EXPECT_TRUE(insieme::driver::isInsiemeLib(filename));

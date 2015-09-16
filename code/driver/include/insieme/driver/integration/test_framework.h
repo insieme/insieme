@@ -174,7 +174,8 @@ namespace testFramework {
 		string getGitVersionCmd = string("cd ") + SRC_ROOT_DIR + "; git describe --dirty";
 		FILE* pipe = popen(getGitVersionCmd.c_str(), "r");
 		char buff[50];
-		fgets(buff, 50, pipe);
+		auto success = fgets(buff, 50, pipe);
+		if(!success) return "unknown version";
 		pclose(pipe);
 
 		// remove line break
