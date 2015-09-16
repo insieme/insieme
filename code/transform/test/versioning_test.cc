@@ -62,7 +62,7 @@ namespace transform {
 
 		out = versioning(makeNoOp(), makeNoOp())->apply(in);
 		EXPECT_TRUE(core::checks::check(out).empty());
-		EXPECT_PRED2(containsSubString, toString(core::printer::PrettyPrinter(out)), "pick(([0,1]))");
+		EXPECT_PRED2(containsSubString, toString(core::printer::PrettyPrinter(out)), "pick([0u,1u])");
 
 		// try special case - on transformation only
 		out = versioning(makeNoOp())->apply(in);
@@ -72,7 +72,7 @@ namespace transform {
 		// and a large number of versions
 		out = versioning(makeNoOp(), makeNoOp(), makeNoOp(), makeNoOp())->apply(in);
 		EXPECT_TRUE(core::checks::check(out).empty());
-		EXPECT_PRED2(containsSubString, toString(core::printer::PrettyPrinter(out)), "pick(([0,1,2,3]))");
+		EXPECT_PRED2(containsSubString, toString(core::printer::PrettyPrinter(out)), "pick([0u,1u,2u,3u])");
 	}
 
 
