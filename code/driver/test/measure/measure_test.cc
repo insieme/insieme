@@ -47,6 +47,7 @@
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/lang/parallel.h"
 #include "insieme/core/printer/pretty_printer.h"
 
 #include "insieme/utils/timer.h"
@@ -85,6 +86,7 @@ namespace measure {
 		// create a small example code fragment
 		NodeManager manager;
 		auto& basic = manager.getLangBasic();
+		auto& parExt = manager.getLangExtension<core::lang::ParallelExtension>();
 		IRBuilder builder(manager);
 
 		StatementPtr stmt = builder.parseStmt("{"
@@ -105,13 +107,13 @@ namespace measure {
 		ForStmtPtr loop = builder.forStmt(iter, start, end, step, stmt);
 
 		// convert into parallel loop
-		stmt = builder.callExpr(basic.getUnit(), basic.getMerge(), builder.parallel(builder.pfor(loop)));
+		stmt = builder.callExpr(basic.getUnit(), parExt.getMerge(), builder.parallel(builder.pfor(loop)));
 
 		std::map<StatementAddress, driver::measure::region_id> regions;
 
 		StatementAddress addr(stmt);
 		regions[addr] = 0;
-		regions[core::analysis::findLeftMostOutermostCallOf(addr, basic.getPFor())] = 1;
+		regions[core::analysis::findLeftMostOutermostCallOf(addr, parExt.getPFor())] = 1;
 
 		// ---- run code ----
 

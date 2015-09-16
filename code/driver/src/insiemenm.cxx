@@ -52,7 +52,6 @@
 #include "insieme/driver/object_file_utils.h"
 
 #include "insieme/core/checks/full_check.h"
-#include "insieme/core/ir_class_info.h"
 
 
 using namespace std;
@@ -88,55 +87,8 @@ namespace {
 				// retrieve metainfo for the object.
 				//  those objects should not fail, this test does not really make sense, frontend assertion enforce the right behaviour of this,
 				//  it never failed, but i wont remove it since is not very expensive
-				if(hasMetaInfo(pair.second)) {
-					std::cout << "object: " << pair.second << " should not have metainfo" << std::endl;
-					count++;
-				} else if(hasMetaInfo(pair.first)) {
-					auto& meta = getMetaInfo(pair.first);
 
-					// check that any ctor uses the right owner object
-					for(auto ctor : meta.getConstructors()) {
-						if(!ctor->getType().as<core::FunctionTypePtr>().isConstructor()) {
-							std::cout << "\n member function is not a constructor\n";
-							dumpPretty(ctor);
-							count++;
-						}
-
-						if(!typeMemberCheck(ctor->getType().as<core::FunctionTypePtr>()->getObjectType(), pair.first, pair.second)) {
-							dumpPretty(ctor);
-							count++;
-						}
-					}
-
-					// check that dtor uses the right owner object
-					const auto& dtor = meta.getDestructor();
-					if(dtor) {
-						if(!dtor->getType().as<core::FunctionTypePtr>().isDestructor()) {
-							std::cout << "\n member function is not a destructor\n";
-							dumpPretty(dtor);
-							count++;
-						}
-
-						if(!typeMemberCheck(dtor->getType().as<core::FunctionTypePtr>()->getObjectType(), pair.first, pair.second)) {
-							dumpPretty(dtor);
-							count++;
-						}
-					}
-
-					// check that any method uses the right owner object
-					for(auto member : meta.getMemberFunctions()) {
-						if(!member.getImplementation()->getType().as<core::FunctionTypePtr>().isMemberFunction()) {
-							std::cout << "\n member function is not a member function\n";
-							dumpPretty(member.getImplementation());
-							count++;
-						}
-
-						if(!typeMemberCheck(member.getImplementation()->getType().as<core::FunctionTypePtr>()->getObjectType(), pair.first, pair.second)) {
-							dumpPretty(member.getImplementation());
-							count++;
-						}
-					}
-				}
+				// TODO: run semantic checks on member functions ...
 
 				// stop on 10
 				if(count > 10) {
@@ -219,13 +171,6 @@ int main(int argc, char** argv) {
 		std::cout << "        " << cur.first->getFamilyName();
 		if(options.printDefinitions) { std::cout << " : " << *cur.second; }
 		std::cout << "\n";
-
-		if(core::hasMetaInfo(cur.first)) {
-			std::cout << "        {" << cur.first->getFamilyName() << " hasMetaInfo: \n";
-			core::ClassMetaInfo info = core::getMetaInfo(cur.first);
-			std::cout << info;
-			std::cout << "}\n";
-		}
 	}
 
 	std::cout << "    Globals:\n";
