@@ -387,7 +387,7 @@ namespace backend {
 					// this should not happen ...
 					LOG(FATAL) << "Unsupported IR Type encountered: " << type;
 					assert_fail() << "Unsupported IR type encountered: " << type->getNodeType() << "\n";
-					info = type_info_utils::createUnsupportedInfo(*converter.getCNodeManager());
+					info = type_info_utils::createUnsupportedInfo(*converter.getCNodeManager(), type);
 					break;
 			}
 
@@ -397,12 +397,11 @@ namespace backend {
 
 		const TypeInfo* TypeInfoStore::resolveTypeVariable(const core::TypeVariablePtr& ptr) {
 			c_ast::CNodeManager& manager = *converter.getCNodeManager();
-			return type_info_utils::createInfo(manager, "<" + ptr->getVarName()->getValue() + ">");
+			return type_info_utils::createUnsupportedInfo(manager, ptr);
 		}
 
 		const TypeInfo* TypeInfoStore::resolveGenericType(const core::GenericTypePtr& ptr) {
 			auto& basic = converter.getNodeManager().getLangBasic();
-			auto builder = core::IRBuilder(converter.getNodeManager());
 			c_ast::CNodeManager& manager = *converter.getCNodeManager();
 
 			// try find a match
@@ -420,7 +419,7 @@ namespace backend {
 					type = c_ast::PrimitiveType::UInt16;
 				} else if(basic.isUInt4(ptr)) {
 					type = c_ast::PrimitiveType::UInt32;
-				} else if(basic.isUInt8(ptr)) {
+				} else if(basic.isUInt8(ptr) || basic.isUIntInf(ptr)) {
 					type = c_ast::PrimitiveType::UInt64;
 				} else if(basic.isUInt16(ptr)) {
 					type = c_ast::PrimitiveType::UInt128;
@@ -430,14 +429,14 @@ namespace backend {
 					type = c_ast::PrimitiveType::Int16;
 				} else if(basic.isInt4(ptr)) {
 					type = c_ast::PrimitiveType::Int32;
-				} else if(basic.isInt8(ptr)) {
+				} else if(basic.isInt8(ptr) || basic.isUIntInf(ptr)) {
 					type = c_ast::PrimitiveType::Int64;
 				} else if(basic.isInt16(ptr)) {
 					type = c_ast::PrimitiveType::Int128;
 				} else {
 					LOG(FATAL) << "Unsupported integer type: " << *ptr;
 					// assert_fail() << "Unsupported Integer type encountered!";
-					return type_info_utils::createUnsupportedInfo(manager);
+					return type_info_utils::createUnsupportedInfo(manager, ptr);
 				}
 
 				// create primitive type + include dependency
@@ -477,29 +476,6 @@ namespace backend {
 				return type_info_utils::createInfo(boolType, definition);
 			}
 
-			// -------------- type literals -------------
-
-			if(ptr == builder.getTypeLiteralType(builder.typeVariable("a"))) {
-				// creates a empty struct and a new type "type"
-
-				// create type literal type
-				c_ast::IdentifierPtr name = manager.create("type");
-				c_ast::TypePtr typeType = manager.create<c_ast::NamedType>(name);
-				c_ast::TypeDefinitionPtr def = manager.create<c_ast::TypeDefinition>(manager.create<c_ast::StructType>(manager.create("_type")), name);
-
-				// also add empty instance
-				c_ast::VarDeclPtr decl = manager.create<c_ast::VarDecl>(manager.create<c_ast::Variable>(typeType, manager.create("type_token")));
-
-				c_ast::CodeFragmentPtr code = c_ast::CCodeFragment::createNew(converter.getFragmentManager(), def, decl);
-
-				// add dependency to header
-				return type_info_utils::createInfo(typeType, code);
-			}
-
-			if(core::analysis::isTypeLiteralType(ptr)) {
-				// use same info then for the generic case
-				return resolveInternal(builder.getTypeLiteralType(builder.typeVariable("a")));
-			}
 
 			if(annotations::c::isDeclOnly(ptr)) {
 				// if a genericType has a DeclOnlyAnnotation determine Kind and only declare the type
@@ -520,7 +496,7 @@ namespace backend {
 
 			// no match found => return unsupported type info
 			LOG(FATAL) << "Unsupported type: " << *ptr;
-			return type_info_utils::createUnsupportedInfo(manager, toString(*ptr));
+			return type_info_utils::createUnsupportedInfo(manager, ptr);
 		}
 
 		template <typename ResInfo>
@@ -761,6 +737,7 @@ namespace backend {
 
 		const ArrayTypeInfo* TypeInfoStore::resolveArrayType(const core::GenericTypePtr& ptr) {
 			assert_pred1(core::lang::isArray, ptr) << "Can only convert array types.";
+			assert_false(core::lang::isGenericSizedArray(ptr)) << "Can not handle generic type: " << *ptr;
 
 			// distribute among more specialized cases
 
@@ -774,7 +751,7 @@ namespace backend {
 				return resolveUnknownSizedArrayType(ptr);
 			}
 
-			// final case - variable iszed array
+			// final case - variable sized array
 			assert_pred1(core::lang::isVariableSizedArray, ptr);
 			return resolveVariableSizedArrayType(ptr);
 		}
@@ -936,7 +913,7 @@ namespace backend {
 
 		const ChannelTypeInfo* TypeInfoStore::resolveChannelType(const core::GenericTypePtr& ptr) {
 			assert_true(core::lang::isChannel(ptr)) << "Can only convert channel types.";
-			return type_info_utils::createUnsupportedInfo<ChannelTypeInfo>(*converter.getCNodeManager());
+			return type_info_utils::createUnsupportedInfo<ChannelTypeInfo>(*converter.getCNodeManager(), ptr);
 		}
 
 		const RefTypeInfo* TypeInfoStore::resolveRefType(const core::GenericTypePtr& ptr) {

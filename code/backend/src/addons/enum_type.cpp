@@ -123,10 +123,10 @@ namespace addons {
 
 			#include "insieme/backend/operator_converter_begin.inc"
 
-			res[ext.getEnumElementAsInt()] = OP_CONVERTER({ return CONVERT_ARG(0); });
-			res[ext.getEnumElementAsUInt()] = OP_CONVERTER({ return CONVERT_ARG(0); });
-			res[ext.getIntAsEnum()] = OP_CONVERTER({ return c_ast::cast(CONVERT_TYPE(call->getType()), CONVERT_ARG(0)); });
-			res[ext.getUIntAsEnum()] = OP_CONVERTER({ return c_ast::cast(CONVERT_TYPE(call->getType()), CONVERT_ARG(0)); });
+			res[ext.getEnumElementAsInt()] = OP_CONVERTER { return CONVERT_ARG(0); };
+			res[ext.getEnumElementAsUInt()] = OP_CONVERTER { return CONVERT_ARG(0); };
+			res[ext.getIntAsEnum()] = OP_CONVERTER { return c_ast::cast(CONVERT_TYPE(call->getType()), CONVERT_ARG(0)); };
+			res[ext.getUIntAsEnum()] = OP_CONVERTER { return c_ast::cast(CONVERT_TYPE(call->getType()), CONVERT_ARG(0)); };
 
 			#include "insieme/backend/operator_converter_end.inc"
 			return res;

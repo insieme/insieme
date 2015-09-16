@@ -90,6 +90,7 @@ namespace backend {
 	////////////////////////////////////////////////////////////////////////// Core Visitor
 
 	c_ast::NodePtr StmtConverter::visit(const core::NodePtr& node, ConversionContext& context) {
+
 		// first ask the handlers
 		for(auto cur : stmtHandler) {
 			c_ast::NodePtr res = cur(context, node);
@@ -192,16 +193,17 @@ namespace backend {
 		c_ast::ExpressionPtr res = toLiteral(ptr->getStringValue());
 
 		// handle primitive types
+		auto type = ptr->getType();
 		auto& basic = ptr->getNodeManager().getLangBasic();
-		if(basic.isPrimitive(ptr->getType())) {
+		if(basic.isPrimitive(type)) {
 			// handle special cases
 			const string& value = ptr->getStringValue();
 
 			// things that need not be extra-casted (default values)
-			if(basic.isInt4(ptr->getType()) || basic.isReal8(ptr->getType())) { return res; }
+			if(basic.isInt4(type) || basic.isReal8(type) || basic.isIntInf(type) || basic.isUIntInf(type)) { return res; }
 
 			// add a f in case it is a float literal and it is missing
-			if(basic.isReal4(ptr->getType())) {
+			if(basic.isReal4(type)) {
 				if(*value.rbegin() != 'f') {
 					res = toLiteral(value + "f");
 					// add a ".0" if we have an integer in a float literal
@@ -211,13 +213,13 @@ namespace backend {
 			}
 
 			// add a u in case it is a signed literal and it is missing
-			if(basic.isUInt4(ptr->getType())) {
+			if(basic.isUInt4(type)) {
 				if(*value.rbegin() != 'u') { res = toLiteral(value + "u"); }
 				return res;
 			}
 
 			// fall-back solution: use an explicit cast
-			auto info = converter.getTypeManager().getTypeInfo(ptr->getType());
+			auto info = converter.getTypeManager().getTypeInfo(type);
 			context.addDependency(info.definition);
 			return c_ast::cast(info.rValueType, res);
 		}
@@ -234,14 +236,14 @@ namespace backend {
 		}
 
 		// special handling for type literals (fall-back solution)
-		if(core::analysis::isTypeLiteralType(ptr->getType())) {
-			const TypeInfo& info = converter.getTypeManager().getTypeInfo(ptr->getType());
+		if(core::analysis::isTypeLiteralType(type)) {
+			const TypeInfo& info = converter.getTypeManager().getTypeInfo(type);
 			context.addDependency(info.declaration);
 			return c_ast::lit(info.rValueType, "type_token");
 		}
 
 		// special handling for boolean literals
-		if(ptr.getNodeManager().getLangBasic().isBool(ptr->getType())) { context.getIncludes().insert("stdbool.h"); }
+		if(ptr.getNodeManager().getLangBasic().isBool(type)) { context.getIncludes().insert("stdbool.h"); }
 
 		// handle null pointer
 		if(converter.getNodeManager().getLangExtension<core::lang::ReferenceExtension>().isCallOfRefNull(ptr)) { return converter.getCNodeManager()->create<c_ast::Literal>("0"); }
@@ -255,7 +257,7 @@ namespace backend {
 		// handle C string literals
 		// TODO: move this to an extension since it is a pointer
 		if(ptr->getStringValue()[0] == '"') {
-			assert_pred1(core::lang::isPointer, ptr->getType());
+			assert_pred1(core::lang::isPointer, type);
 			core::TypePtr type = core::lang::PointerType(ptr).getElementType();
 			if(core::lang::isArray(type) && basic.isWChar(core::lang::ArrayType(type).getElementType())) {
 				// reproduce the longstring signature for widechars, this is 16 in windows and 32 in unix
@@ -274,7 +276,7 @@ namespace backend {
 		}
 
 		// handle literals referencing external data elements
-		if(core::analysis::isRefType(ptr->getType())) {
+		if(core::analysis::isRefType(type)) {
 			// look up external variable declaration
 			auto fragmentManager = converter.getFragmentManager();
 			string fragmentName = "global:" + ptr->getStringValue();
@@ -288,7 +290,7 @@ namespace backend {
 				fragmentManager->bindFragment(fragmentName, declaration);
 
 				// get type info
-				const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(core::analysis::getReferencedType(ptr->getType()));
+				const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(core::analysis::getReferencedType(type));
 
 				// add external declaration
 				auto& cManager = converter.getCNodeManager();
@@ -404,7 +406,7 @@ namespace backend {
 	c_ast::NodePtr StmtConverter::visitVariable(const core::VariablePtr& ptr, ConversionContext& context) {
 		// just look up variable within variable manager and return variable token ...
 		const VariableInfo& info = context.getVariableManager().getInfo(ptr);
-		return (info.location == VariableInfo::DIRECT && !core::analysis::isRefOf(ptr->getType(), core::lang::isArray)) ? c_ast::ref(info.var) : info.var;
+		return (info.location == VariableInfo::DIRECT) ? c_ast::ref(info.var) : info.var;
 	}
 
 	c_ast::NodePtr StmtConverter::visitMarkerExpr(const core::MarkerExprPtr& ptr, ConversionContext& context) {
@@ -438,7 +440,7 @@ namespace backend {
 			auto& refExt = initValue->getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
 
 			// if it is a call to a ref.var => put it on the stack
-			if(core::analysis::isCallOf(initValue, refExt.getRefVar())) { return true; }
+			if (refExt.isCallOfRefVar(initValue)) return true;
 
 			// if it is a constructor call ..
 			if(core::CallExprPtr call = initValue.isa<core::CallExprPtr>()) { return core::analysis::isCallOf(call[0], refExt.getRefVar()); }
@@ -484,12 +486,13 @@ namespace backend {
 			auto manager = converter.getCNodeManager();
 
 			// resolve type (needs to be explicitly handled here)
-			auto size = converter.getStmtConverter().convertExpression(context, sizeExpr);
-			auto elementType = core::lang::ArrayType(core::lang::ReferenceType(var).getElementType()).getElementType();
-			const TypeInfo& typeInfo = converter.getTypeManager().getCVectorTypeInfo(elementType, size);
+			core::lang::ArrayType arrayType(core::lang::ReferenceType(var).getElementType());
+			auto elementType = arrayType.getElementType();
+			const TypeInfo& typeInfo = converter.getTypeManager().getTypeInfo(core::lang::ReferenceType(var).getElementType()); //getCVectorTypeInfo(elementType, size);
 
-			// although it is on the stack, it is to be treated as it would be indirect (implicit pointer!)
-			const VariableInfo& info = context.getVariableManager().addInfo(converter, var, VariableInfo::INDIRECT, typeInfo);
+			// determine its status as a direct or indirect variable
+			auto location = (arrayType.isConstSize()) ? VariableInfo::DIRECT : VariableInfo::INDIRECT;
+			const VariableInfo& info = context.getVariableManager().addInfo(converter, var, location, typeInfo);
 
 			// add dependency to type definition of variable
 			context.getDependencies().insert(info.typeInfo->definition);

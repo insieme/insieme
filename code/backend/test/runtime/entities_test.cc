@@ -55,7 +55,7 @@ core::LambdaExprPtr getDummyImpl(core::NodeManager& manager) {
 	const auto& basic = manager.getLangBasic();
 	const auto& ext = manager.getLangExtension<RuntimeExtension>();
 
-	core::VariablePtr param = builder.variable(builder.refType(ext.getWorkItemType()), 1);
+	core::VariablePtr param = builder.variable(builder.refType(builder.refType(ext.getWorkItemType())), 1);
 	core::StatementPtr body = builder.getNoOp();
 	return builder.lambdaExpr(basic.getUnit(), toVector(param), body);
 }
@@ -82,7 +82,7 @@ TEST(RuntimeExtension, WorkItemVariant) {
 	// test encoding
 	WorkItemVariant variant(getDummyImpl(manager));
 	core::ExpressionPtr encoded = enc::toIR(manager, variant);
-	EXPECT_EQ("WorkItemVariant(fun(ref<irt_wi> v1) -> unit { })",
+	EXPECT_EQ("WorkItemVariant(function(ref<ref<irt_wi,f,f>,f,f> v1) -> unit { })",
 	          toString(core::printer::PrettyPrinter(encoded, core::printer::PrettyPrinter::OPTIONS_SINGLE_LINE)));
 
 	// test decoding
@@ -110,7 +110,7 @@ TEST(RuntimeExtension, WorkItemImpl) {
 	WorkItemImpl impl(toVector(WorkItemVariant(getDummyImpl(manager))));
 	core::ExpressionPtr encoded = enc::toIR(manager, impl);
 	EXPECT_TRUE(encoded);
-	EXPECT_EQ("WorkItemImpl(([WorkItemVariant(fun(ref<irt_wi> v1) -> unit { })]))",
+	EXPECT_EQ("WorkItemImpl([WorkItemVariant(function(ref<ref<irt_wi,f,f>,f,f> v1) -> unit { })])",
 	          toString(core::printer::PrettyPrinter(encoded, core::printer::PrettyPrinter::NO_LET_BINDINGS)));
 
 	// test decoding

@@ -44,6 +44,8 @@
 #include "insieme/backend/function_manager.h"
 #include "insieme/backend/ir_extensions.h"
 
+#include "insieme/backend/addons/cpp_casts.h"
+
 #include "insieme/backend/c_ast/c_ast_utils.h"
 #include "insieme/backend/c_ast/c_ast_printer.h"
 
@@ -129,10 +131,11 @@ namespace backend {
 				// access tuple component
 				return builder.refComponent(res, call->getArgument(1));
 			} else if(dpExt.isDataPathParent(fun)) {
-				assert_not_implemented() << "Not supported yet!";
-//				// cast to parent type using a static cast
-//				const auto& ext = mgr.getLangExtension<core::lang::IRppExtensions>();
-//				return builder.callExpr(ext.getStaticCast(), res, call->getArgument(1));
+				// cast to parent type using a static cast
+				const auto& ext = mgr.getLangExtension<addons::CppCastExtension>();
+				core::lang::ReferenceType refType(res);
+				refType.setElementType(core::analysis::getRepresentedType(call[1]));
+				return builder.callExpr(ext.getStaticCast(), res, builder.getTypeLiteral((core::GenericTypePtr)refType));
 			}
 
 			// this is not a valid data path
@@ -263,122 +266,122 @@ namespace backend {
 
 		// -- booleans --
 
-		res[basic.getBoolLAnd()] = OP_CONVERTER({ return c_ast::logicAnd(CONVERT_ARG(0), CONVERT_EXPR(inlineLazy(ARG(1)))); });
-		res[basic.getBoolLOr()] = OP_CONVERTER({ return c_ast::logicOr(CONVERT_ARG(0), CONVERT_EXPR(inlineLazy(ARG(1)))); });
-		res[basic.getBoolLNot()] = OP_CONVERTER({ return c_ast::logicNot(CONVERT_ARG(0)); });
+		res[basic.getBoolLAnd()] = OP_CONVERTER { return c_ast::logicAnd(CONVERT_ARG(0), CONVERT_EXPR(inlineLazy(ARG(1)))); };
+		res[basic.getBoolLOr()] = OP_CONVERTER { return c_ast::logicOr(CONVERT_ARG(0), CONVERT_EXPR(inlineLazy(ARG(1)))); };
+		res[basic.getBoolLNot()] = OP_CONVERTER { return c_ast::logicNot(CONVERT_ARG(0)); };
 
-		res[basic.getBoolEq()] = OP_CONVERTER({ return c_ast::eq(CONVERT_ARG(0), CONVERT_ARG(1)); });
-		res[basic.getBoolNe()] = OP_CONVERTER({ return c_ast::ne(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		res[basic.getBoolEq()] = OP_CONVERTER { return c_ast::eq(CONVERT_ARG(0), CONVERT_ARG(1)); };
+		res[basic.getBoolNe()] = OP_CONVERTER { return c_ast::ne(CONVERT_ARG(0), CONVERT_ARG(1)); };
 
-
-		// -- unsigned integers --
-
-		res[basic.getUnsignedIntAdd()] = OP_CONVERTER({ return c_ast::add(CONVERT_ARG(0), CONVERT_ARG(1)); });
-		res[basic.getUnsignedIntSub()] = OP_CONVERTER({ return c_ast::sub(CONVERT_ARG(0), CONVERT_ARG(1)); });
-		res[basic.getUnsignedIntMul()] = OP_CONVERTER({ return c_ast::mul(CONVERT_ARG(0), CONVERT_ARG(1)); });
-		res[basic.getUnsignedIntDiv()] = OP_CONVERTER({ return c_ast::div(CONVERT_ARG(0), CONVERT_ARG(1)); });
-		res[basic.getUnsignedIntMod()] = OP_CONVERTER({ return c_ast::mod(CONVERT_ARG(0), CONVERT_ARG(1)); });
-
-		res[basic.getUnsignedIntAnd()] = OP_CONVERTER({ return c_ast::bitwiseAnd(CONVERT_ARG(0), CONVERT_ARG(1)); });
-		res[basic.getUnsignedIntOr()] = OP_CONVERTER({ return c_ast::bitwiseOr(CONVERT_ARG(0), CONVERT_ARG(1)); });
-		res[basic.getUnsignedIntXor()] = OP_CONVERTER({ return c_ast::bitwiseXor(CONVERT_ARG(0), CONVERT_ARG(1)); });
-		res[basic.getUnsignedIntNot()] = OP_CONVERTER({ return c_ast::bitwiseNot(CONVERT_ARG(0)); });
-
-		res[basic.getUnsignedIntLShift()] = OP_CONVERTER({ return c_ast::lShift(CONVERT_ARG(0), CONVERT_ARG(1)); });
-		res[basic.getUnsignedIntRShift()] = OP_CONVERTER({ return c_ast::rShift(CONVERT_ARG(0), CONVERT_ARG(1)); });
-
-		res[refExt.getGenPreInc()]  = OP_CONVERTER({ return c_ast::preInc(getAssignmentTarget(context, ARG(0))); });
-		res[refExt.getGenPostInc()] = OP_CONVERTER({ return c_ast::postInc(getAssignmentTarget(context, ARG(0))); });
-		res[refExt.getGenPreDec()]  = OP_CONVERTER({ return c_ast::preDec(getAssignmentTarget(context, ARG(0))); });
-		res[refExt.getGenPostDec()] = OP_CONVERTER({ return c_ast::postDec(getAssignmentTarget(context, ARG(0))); });
-
-		res[basic.getUnsignedIntEq()] = OP_CONVERTER({ return c_ast::eq(CONVERT_ARG(0), CONVERT_ARG(1)); });
-		res[basic.getUnsignedIntNe()] = OP_CONVERTER({ return c_ast::ne(CONVERT_ARG(0), CONVERT_ARG(1)); });
-		res[basic.getUnsignedIntGe()] = OP_CONVERTER({ return c_ast::ge(CONVERT_ARG(0), CONVERT_ARG(1)); });
-		res[basic.getUnsignedIntGt()] = OP_CONVERTER({ return c_ast::gt(CONVERT_ARG(0), CONVERT_ARG(1)); });
-		res[basic.getUnsignedIntLt()] = OP_CONVERTER({ return c_ast::lt(CONVERT_ARG(0), CONVERT_ARG(1)); });
-		res[basic.getUnsignedIntLe()] = OP_CONVERTER({ return c_ast::le(CONVERT_ARG(0), CONVERT_ARG(1)); });
 
 		// -- unsigned integers --
 
-		res[basic.getSignedIntAdd()] = OP_CONVERTER({ return c_ast::add(CONVERT_ARG(0), CONVERT_ARG(1)); });
-		res[basic.getSignedIntSub()] = OP_CONVERTER({ return c_ast::sub(CONVERT_ARG(0), CONVERT_ARG(1)); });
-		res[basic.getSignedIntMul()] = OP_CONVERTER({ return c_ast::mul(CONVERT_ARG(0), CONVERT_ARG(1)); });
-		res[basic.getSignedIntDiv()] = OP_CONVERTER({ return c_ast::div(CONVERT_ARG(0), CONVERT_ARG(1)); });
-		res[basic.getSignedIntMod()] = OP_CONVERTER({ return c_ast::mod(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		res[basic.getUnsignedIntAdd()] = OP_CONVERTER { return c_ast::add(CONVERT_ARG(0), CONVERT_ARG(1)); };
+		res[basic.getUnsignedIntSub()] = OP_CONVERTER { return c_ast::sub(CONVERT_ARG(0), CONVERT_ARG(1)); };
+		res[basic.getUnsignedIntMul()] = OP_CONVERTER { return c_ast::mul(CONVERT_ARG(0), CONVERT_ARG(1)); };
+		res[basic.getUnsignedIntDiv()] = OP_CONVERTER { return c_ast::div(CONVERT_ARG(0), CONVERT_ARG(1)); };
+		res[basic.getUnsignedIntMod()] = OP_CONVERTER { return c_ast::mod(CONVERT_ARG(0), CONVERT_ARG(1)); };
 
-		res[basic.getSignedIntAnd()] = OP_CONVERTER({ return c_ast::bitwiseAnd(CONVERT_ARG(0), CONVERT_ARG(1)); });
-		res[basic.getSignedIntOr()] = OP_CONVERTER({ return c_ast::bitwiseOr(CONVERT_ARG(0), CONVERT_ARG(1)); });
-		res[basic.getSignedIntXor()] = OP_CONVERTER({ return c_ast::bitwiseXor(CONVERT_ARG(0), CONVERT_ARG(1)); });
-		res[basic.getSignedIntNot()] = OP_CONVERTER({ return c_ast::bitwiseNot(CONVERT_ARG(0)); });
+		res[basic.getUnsignedIntAnd()] = OP_CONVERTER { return c_ast::bitwiseAnd(CONVERT_ARG(0), CONVERT_ARG(1)); };
+		res[basic.getUnsignedIntOr()] = OP_CONVERTER { return c_ast::bitwiseOr(CONVERT_ARG(0), CONVERT_ARG(1)); };
+		res[basic.getUnsignedIntXor()] = OP_CONVERTER { return c_ast::bitwiseXor(CONVERT_ARG(0), CONVERT_ARG(1)); };
+		res[basic.getUnsignedIntNot()] = OP_CONVERTER { return c_ast::bitwiseNot(CONVERT_ARG(0)); };
 
-		res[basic.getSignedIntLShift()] = OP_CONVERTER({ return c_ast::lShift(CONVERT_ARG(0), CONVERT_ARG(1)); });
-		res[basic.getSignedIntRShift()] = OP_CONVERTER({ return c_ast::rShift(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		res[basic.getUnsignedIntLShift()] = OP_CONVERTER { return c_ast::lShift(CONVERT_ARG(0), CONVERT_ARG(1)); };
+		res[basic.getUnsignedIntRShift()] = OP_CONVERTER { return c_ast::rShift(CONVERT_ARG(0), CONVERT_ARG(1)); };
 
-		res[basic.getSignedIntEq()] = OP_CONVERTER({ return c_ast::eq(CONVERT_ARG(0), CONVERT_ARG(1)); });
-		res[basic.getSignedIntNe()] = OP_CONVERTER({ return c_ast::ne(CONVERT_ARG(0), CONVERT_ARG(1)); });
-		res[basic.getSignedIntGe()] = OP_CONVERTER({ return c_ast::ge(CONVERT_ARG(0), CONVERT_ARG(1)); });
-		res[basic.getSignedIntGt()] = OP_CONVERTER({ return c_ast::gt(CONVERT_ARG(0), CONVERT_ARG(1)); });
-		res[basic.getSignedIntLt()] = OP_CONVERTER({ return c_ast::lt(CONVERT_ARG(0), CONVERT_ARG(1)); });
-		res[basic.getSignedIntLe()] = OP_CONVERTER({ return c_ast::le(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		res[refExt.getGenPreInc()]  = OP_CONVERTER { return c_ast::preInc(getAssignmentTarget(context, ARG(0))); };
+		res[refExt.getGenPostInc()] = OP_CONVERTER { return c_ast::postInc(getAssignmentTarget(context, ARG(0))); };
+		res[refExt.getGenPreDec()]  = OP_CONVERTER { return c_ast::preDec(getAssignmentTarget(context, ARG(0))); };
+		res[refExt.getGenPostDec()] = OP_CONVERTER { return c_ast::postDec(getAssignmentTarget(context, ARG(0))); };
+
+		res[basic.getUnsignedIntEq()] = OP_CONVERTER { return c_ast::eq(CONVERT_ARG(0), CONVERT_ARG(1)); };
+		res[basic.getUnsignedIntNe()] = OP_CONVERTER { return c_ast::ne(CONVERT_ARG(0), CONVERT_ARG(1)); };
+		res[basic.getUnsignedIntGe()] = OP_CONVERTER { return c_ast::ge(CONVERT_ARG(0), CONVERT_ARG(1)); };
+		res[basic.getUnsignedIntGt()] = OP_CONVERTER { return c_ast::gt(CONVERT_ARG(0), CONVERT_ARG(1)); };
+		res[basic.getUnsignedIntLt()] = OP_CONVERTER { return c_ast::lt(CONVERT_ARG(0), CONVERT_ARG(1)); };
+		res[basic.getUnsignedIntLe()] = OP_CONVERTER { return c_ast::le(CONVERT_ARG(0), CONVERT_ARG(1)); };
+
+		// -- unsigned integers --
+
+		res[basic.getSignedIntAdd()] = OP_CONVERTER { return c_ast::add(CONVERT_ARG(0), CONVERT_ARG(1)); };
+		res[basic.getSignedIntSub()] = OP_CONVERTER { return c_ast::sub(CONVERT_ARG(0), CONVERT_ARG(1)); };
+		res[basic.getSignedIntMul()] = OP_CONVERTER { return c_ast::mul(CONVERT_ARG(0), CONVERT_ARG(1)); };
+		res[basic.getSignedIntDiv()] = OP_CONVERTER { return c_ast::div(CONVERT_ARG(0), CONVERT_ARG(1)); };
+		res[basic.getSignedIntMod()] = OP_CONVERTER { return c_ast::mod(CONVERT_ARG(0), CONVERT_ARG(1)); };
+
+		res[basic.getSignedIntAnd()] = OP_CONVERTER { return c_ast::bitwiseAnd(CONVERT_ARG(0), CONVERT_ARG(1)); };
+		res[basic.getSignedIntOr()] = OP_CONVERTER { return c_ast::bitwiseOr(CONVERT_ARG(0), CONVERT_ARG(1)); };
+		res[basic.getSignedIntXor()] = OP_CONVERTER { return c_ast::bitwiseXor(CONVERT_ARG(0), CONVERT_ARG(1)); };
+		res[basic.getSignedIntNot()] = OP_CONVERTER { return c_ast::bitwiseNot(CONVERT_ARG(0)); };
+
+		res[basic.getSignedIntLShift()] = OP_CONVERTER { return c_ast::lShift(CONVERT_ARG(0), CONVERT_ARG(1)); };
+		res[basic.getSignedIntRShift()] = OP_CONVERTER { return c_ast::rShift(CONVERT_ARG(0), CONVERT_ARG(1)); };
+
+		res[basic.getSignedIntEq()] = OP_CONVERTER { return c_ast::eq(CONVERT_ARG(0), CONVERT_ARG(1)); };
+		res[basic.getSignedIntNe()] = OP_CONVERTER { return c_ast::ne(CONVERT_ARG(0), CONVERT_ARG(1)); };
+		res[basic.getSignedIntGe()] = OP_CONVERTER { return c_ast::ge(CONVERT_ARG(0), CONVERT_ARG(1)); };
+		res[basic.getSignedIntGt()] = OP_CONVERTER { return c_ast::gt(CONVERT_ARG(0), CONVERT_ARG(1)); };
+		res[basic.getSignedIntLt()] = OP_CONVERTER { return c_ast::lt(CONVERT_ARG(0), CONVERT_ARG(1)); };
+		res[basic.getSignedIntLe()] = OP_CONVERTER { return c_ast::le(CONVERT_ARG(0), CONVERT_ARG(1)); };
 
 		// -- casts --
 
-		res[basic.getNumericCast()] = OP_CONVERTER({ return c_ast::cast(CONVERT_RES_TYPE, CONVERT_ARG(0)); });
+		res[basic.getNumericCast()] = OP_CONVERTER { return c_ast::cast(CONVERT_RES_TYPE, CONVERT_ARG(0)); };
 
 		// -- reals --
 
-		res[basic.getRealAdd()] = OP_CONVERTER({ return c_ast::add(CONVERT_ARG(0), CONVERT_ARG(1)); });
-		res[basic.getRealSub()] = OP_CONVERTER({ return c_ast::sub(CONVERT_ARG(0), CONVERT_ARG(1)); });
-		res[basic.getRealMul()] = OP_CONVERTER({ return c_ast::mul(CONVERT_ARG(0), CONVERT_ARG(1)); });
-		res[basic.getRealDiv()] = OP_CONVERTER({ return c_ast::div(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		res[basic.getRealAdd()] = OP_CONVERTER { return c_ast::add(CONVERT_ARG(0), CONVERT_ARG(1)); };
+		res[basic.getRealSub()] = OP_CONVERTER { return c_ast::sub(CONVERT_ARG(0), CONVERT_ARG(1)); };
+		res[basic.getRealMul()] = OP_CONVERTER { return c_ast::mul(CONVERT_ARG(0), CONVERT_ARG(1)); };
+		res[basic.getRealDiv()] = OP_CONVERTER { return c_ast::div(CONVERT_ARG(0), CONVERT_ARG(1)); };
 
-		res[basic.getRealEq()] = OP_CONVERTER({ return c_ast::eq(CONVERT_ARG(0), CONVERT_ARG(1)); });
-		res[basic.getRealNe()] = OP_CONVERTER({ return c_ast::ne(CONVERT_ARG(0), CONVERT_ARG(1)); });
-		res[basic.getRealGe()] = OP_CONVERTER({ return c_ast::ge(CONVERT_ARG(0), CONVERT_ARG(1)); });
-		res[basic.getRealGt()] = OP_CONVERTER({ return c_ast::gt(CONVERT_ARG(0), CONVERT_ARG(1)); });
-		res[basic.getRealLt()] = OP_CONVERTER({ return c_ast::lt(CONVERT_ARG(0), CONVERT_ARG(1)); });
-		res[basic.getRealLe()] = OP_CONVERTER({ return c_ast::le(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		res[basic.getRealEq()] = OP_CONVERTER { return c_ast::eq(CONVERT_ARG(0), CONVERT_ARG(1)); };
+		res[basic.getRealNe()] = OP_CONVERTER { return c_ast::ne(CONVERT_ARG(0), CONVERT_ARG(1)); };
+		res[basic.getRealGe()] = OP_CONVERTER { return c_ast::ge(CONVERT_ARG(0), CONVERT_ARG(1)); };
+		res[basic.getRealGt()] = OP_CONVERTER { return c_ast::gt(CONVERT_ARG(0), CONVERT_ARG(1)); };
+		res[basic.getRealLt()] = OP_CONVERTER { return c_ast::lt(CONVERT_ARG(0), CONVERT_ARG(1)); };
+		res[basic.getRealLe()] = OP_CONVERTER { return c_ast::le(CONVERT_ARG(0), CONVERT_ARG(1)); };
 
 		// -- characters --
 
-		res[basic.getCharEq()] = OP_CONVERTER({ return c_ast::eq(CONVERT_ARG(0), CONVERT_ARG(1)); });
-		res[basic.getCharNe()] = OP_CONVERTER({ return c_ast::ne(CONVERT_ARG(0), CONVERT_ARG(1)); });
-		res[basic.getCharGe()] = OP_CONVERTER({ return c_ast::ge(CONVERT_ARG(0), CONVERT_ARG(1)); });
-		res[basic.getCharGt()] = OP_CONVERTER({ return c_ast::gt(CONVERT_ARG(0), CONVERT_ARG(1)); });
-		res[basic.getCharLt()] = OP_CONVERTER({ return c_ast::lt(CONVERT_ARG(0), CONVERT_ARG(1)); });
-		res[basic.getCharLe()] = OP_CONVERTER({ return c_ast::le(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		res[basic.getCharEq()] = OP_CONVERTER { return c_ast::eq(CONVERT_ARG(0), CONVERT_ARG(1)); };
+		res[basic.getCharNe()] = OP_CONVERTER { return c_ast::ne(CONVERT_ARG(0), CONVERT_ARG(1)); };
+		res[basic.getCharGe()] = OP_CONVERTER { return c_ast::ge(CONVERT_ARG(0), CONVERT_ARG(1)); };
+		res[basic.getCharGt()] = OP_CONVERTER { return c_ast::gt(CONVERT_ARG(0), CONVERT_ARG(1)); };
+		res[basic.getCharLt()] = OP_CONVERTER { return c_ast::lt(CONVERT_ARG(0), CONVERT_ARG(1)); };
+		res[basic.getCharLe()] = OP_CONVERTER { return c_ast::le(CONVERT_ARG(0), CONVERT_ARG(1)); };
 
 
 		// -- references --
 
-		res[refExt.getRefEqual()]    = OP_CONVERTER({ return c_ast::eq(CONVERT_ARG(0), CONVERT_ARG(1)); });
-		res[refExt.getRefNotEqual()] = OP_CONVERTER({ return c_ast::ne(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		res[refExt.getRefEqual()]    = OP_CONVERTER { return c_ast::eq(CONVERT_ARG(0), CONVERT_ARG(1)); };
+		res[refExt.getRefNotEqual()] = OP_CONVERTER { return c_ast::ne(CONVERT_ARG(0), CONVERT_ARG(1)); };
 
 		// -- generic --
 
-		res[basic.getGenAdd()] = OP_CONVERTER({ return c_ast::add(CONVERT_ARG(0), CONVERT_ARG(1)); });
-		res[basic.getGenSub()] = OP_CONVERTER({ return c_ast::sub(CONVERT_ARG(0), CONVERT_ARG(1)); });
-		res[basic.getGenMul()] = OP_CONVERTER({ return c_ast::mul(CONVERT_ARG(0), CONVERT_ARG(1)); });
-		res[basic.getGenDiv()] = OP_CONVERTER({ return c_ast::div(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		res[basic.getGenAdd()] = OP_CONVERTER { return c_ast::add(CONVERT_ARG(0), CONVERT_ARG(1)); };
+		res[basic.getGenSub()] = OP_CONVERTER { return c_ast::sub(CONVERT_ARG(0), CONVERT_ARG(1)); };
+		res[basic.getGenMul()] = OP_CONVERTER { return c_ast::mul(CONVERT_ARG(0), CONVERT_ARG(1)); };
+		res[basic.getGenDiv()] = OP_CONVERTER { return c_ast::div(CONVERT_ARG(0), CONVERT_ARG(1)); };
 
-		res[basic.getGenNot()] = OP_CONVERTER({ return c_ast::bitwiseNot(CONVERT_ARG(0)); });
-		res[basic.getGenAnd()] = OP_CONVERTER({ return c_ast::bitwiseAnd(CONVERT_ARG(0), CONVERT_ARG(1)); });
-		res[basic.getGenOr()] = OP_CONVERTER({ return c_ast::bitwiseOr(CONVERT_ARG(0), CONVERT_ARG(1)); });
-		res[basic.getGenXor()] = OP_CONVERTER({ return c_ast::bitwiseXor(CONVERT_ARG(0), CONVERT_ARG(1)); });
-		res[basic.getGenRShift()] = OP_CONVERTER({ return c_ast::rShift(CONVERT_ARG(0), CONVERT_ARG(1)); });
-		res[basic.getGenLShift()] = OP_CONVERTER({ return c_ast::lShift(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		res[basic.getGenNot()] = OP_CONVERTER { return c_ast::bitwiseNot(CONVERT_ARG(0)); };
+		res[basic.getGenAnd()] = OP_CONVERTER { return c_ast::bitwiseAnd(CONVERT_ARG(0), CONVERT_ARG(1)); };
+		res[basic.getGenOr()] = OP_CONVERTER { return c_ast::bitwiseOr(CONVERT_ARG(0), CONVERT_ARG(1)); };
+		res[basic.getGenXor()] = OP_CONVERTER { return c_ast::bitwiseXor(CONVERT_ARG(0), CONVERT_ARG(1)); };
+		res[basic.getGenRShift()] = OP_CONVERTER { return c_ast::rShift(CONVERT_ARG(0), CONVERT_ARG(1)); };
+		res[basic.getGenLShift()] = OP_CONVERTER { return c_ast::lShift(CONVERT_ARG(0), CONVERT_ARG(1)); };
 
-		res[basic.getGenEq()] = OP_CONVERTER({ return c_ast::eq(CONVERT_ARG(0), CONVERT_ARG(1)); });
-		res[basic.getGenNe()] = OP_CONVERTER({ return c_ast::ne(CONVERT_ARG(0), CONVERT_ARG(1)); });
-		res[basic.getGenGe()] = OP_CONVERTER({ return c_ast::ge(CONVERT_ARG(0), CONVERT_ARG(1)); });
-		res[basic.getGenGt()] = OP_CONVERTER({ return c_ast::gt(CONVERT_ARG(0), CONVERT_ARG(1)); });
-		res[basic.getGenLt()] = OP_CONVERTER({ return c_ast::lt(CONVERT_ARG(0), CONVERT_ARG(1)); });
-		res[basic.getGenLe()] = OP_CONVERTER({ return c_ast::le(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		res[basic.getGenEq()] = OP_CONVERTER { return c_ast::eq(CONVERT_ARG(0), CONVERT_ARG(1)); };
+		res[basic.getGenNe()] = OP_CONVERTER { return c_ast::ne(CONVERT_ARG(0), CONVERT_ARG(1)); };
+		res[basic.getGenGe()] = OP_CONVERTER { return c_ast::ge(CONVERT_ARG(0), CONVERT_ARG(1)); };
+		res[basic.getGenGt()] = OP_CONVERTER { return c_ast::gt(CONVERT_ARG(0), CONVERT_ARG(1)); };
+		res[basic.getGenLt()] = OP_CONVERTER { return c_ast::lt(CONVERT_ARG(0), CONVERT_ARG(1)); };
+		res[basic.getGenLe()] = OP_CONVERTER { return c_ast::le(CONVERT_ARG(0), CONVERT_ARG(1)); };
 
 		// -- undefined --
 
-		res[basic.getZero()] = OP_CONVERTER({
+		res[basic.getZero()] = OP_CONVERTER {
 			auto type = call->getType();
 			// special case: intercepted object
 			if(type.isa<core::GenericTypePtr>()) {
@@ -387,9 +390,9 @@ namespace backend {
 				return c_ast::call(cType);
 			}
 			return nullptr;
-		});
+		};
 
-		res[basic.getUndefined()] = OP_CONVERTER({
+		res[basic.getUndefined()] = OP_CONVERTER {
 
 			auto type = call->getType();
 
@@ -401,21 +404,32 @@ namespace backend {
 					return c_ast::deref(c_ast::cast(c_ast::ptr(cType), zero));
 				}
 			}
+
+			// convert target type
+			auto cType = CONVERT_TYPE(type);
+
 			// 2) special case: intercepted object
 			if(type.isa<core::GenericTypePtr>()) {
 				// write a string witch is the whole type
-				auto cType = CONVERT_TYPE(type);
 				return c_ast::call(cType);
 			}
 
-			// the rest is handled like a *var(undefined(..))
-			return c_ast::deref(CONVERT_EXPR(core::IRBuilder(call->getNodeManager()).refVar(call)));
-		});
+			// return a initializer expression (Type){}
+			return c_ast::init(cType);
 
+//			// the rest is handled like a *var(undefined(..))
+//			return c_ast::deref(CONVERT_EXPR(core::IRBuilder(call->getNodeManager()).refVar(call)));
+		};
+
+		res[basic.getNumTypeToInt()] = OP_CONVERTER {
+			auto type = call->getType().isa<core::GenericTypePtr>();
+			assert_true(type) << "Invalid result type: " << *type;
+			return C_NODE_MANAGER->create<c_ast::Literal>(toString(*type->getTypeParameter(0)));
+		};
 
 		// -- references --
 
-		res[refExt.getRefDeref()] = OP_CONVERTER({
+		res[refExt.getRefDeref()] = OP_CONVERTER {
 
 			// check type
 			assert_pred1(core::lang::isReference, ARG(0)->getType());
@@ -449,9 +463,9 @@ namespace backend {
 			if(core::analysis::isCallOf(ARG(0), LANG_EXT_REF.getRefAssign())) { return CONVERT_ARG(0); }
 
 			return c_ast::deref(CONVERT_ARG(0));
-		});
+		};
 
-		res[refExt.getRefAssign()] = OP_CONVERTER({
+		res[refExt.getRefAssign()] = OP_CONVERTER {
 
 			// extract type
 			core::ExpressionPtr initValue = call->getArgument(0);
@@ -463,9 +477,9 @@ namespace backend {
 
 
 			return c_ast::assign(getAssignmentTarget(context, ARG(0)), CONVERT_ARG(1));
-		});
+		};
 
-		res[refExt.getRefVar()] = OP_CONVERTER({
+		res[refExt.getRefVar()] = OP_CONVERTER {
 
 			// extract type
 			core::ExpressionPtr initValue = call->getArgument(0);
@@ -478,7 +492,7 @@ namespace backend {
 			// special handling for arrays
 			if(core::lang::isArray(type)) {
 				// no out allocation required!
-				return CONVERT_EXPR(initValue);
+				return c_ast::ref(CONVERT_EXPR(initValue));
 			}
 
 			auto res = CONVERT_EXPR(initValue);
@@ -494,9 +508,9 @@ namespace backend {
 
 			// creates a something of the format "(int[1]){x}"
 			return c_ast::init(c_ast::vec(valueTypeInfo.rValueType, 1), res);
-		});
+		};
 
-		res[refExt.getRefNew()] = OP_CONVERTER({
+		res[refExt.getRefNew()] = OP_CONVERTER {
 
 			// get result type information
 			core::GenericTypePtr resType = call->getType().as<core::GenericTypePtr>();
@@ -521,12 +535,19 @@ namespace backend {
 			}
 
 			// special handling for arrays
-			if(core::analysis::isCallOf(ARG(0), LANG_EXT(core::lang::ArrayExtension).getArrayCreate())) {
+			if (LANG_EXT(core::lang::ArrayExtension).isCallOfArrayCreate(ARG(0))) {
+				assert_not_pred1(core::lang::isGenericSizedArray, call[0]->getType());
+				assert_true(core::lang::parseListOfExpressions(call[0].as<core::CallExprPtr>()[2]).empty()) << "(Partial) Initialization of heap-allocated arrays not supported!";
+
+				// parse resulting array type
+				core::lang::ArrayType array(call[0]);
+
 				// array-init is allocating data on stack using alloca => switch to malloc
 				ADD_HEADER("stdlib.h"); // for 'malloc'
 
-				auto res = CONVERT_ARG(0);
-				return c_ast::call(C_NODE_MANAGER->create("malloc"), static_pointer_cast<const c_ast::Call>(res)->arguments[0]);
+				// build malloc call
+				auto arrayType = CONVERT_TYPE(call[0]->getType());
+				return c_ast::cast(c_ast::ptr(arrayType), c_ast::call(C_NODE_MANAGER->create("malloc"), c_ast::sizeOf(arrayType)));
 			}
 
 			// special handling for variable sized structs
@@ -567,9 +588,9 @@ namespace backend {
 			context.getDependencies().insert(info.newOperator);
 			return c_ast::call(info.newOperatorName, CONVERT_ARG(0));
 
-		});
+		};
 
-		res[refExt.getRefDelete()] = OP_CONVERTER({
+		res[refExt.getRefDelete()] = OP_CONVERTER {
 			// TODO: fix when frontend is producing correct code
 
 			// do not free non-heap variables
@@ -600,9 +621,9 @@ namespace backend {
 			}
 
 			return c_ast::call(C_NODE_MANAGER->create("free"), arg);
-		});
+		};
 
-		res[refExt.getRefReinterpret()] = OP_CONVERTER({
+		res[refExt.getRefReinterpret()] = OP_CONVERTER {
 			c_ast::TypePtr type;
 
 			if(core::analysis::getReferencedType(call->getType()).isa<core::FunctionTypePtr>()) {
@@ -614,16 +635,16 @@ namespace backend {
 
 			c_ast::ExpressionPtr value = GET_TYPE_INFO(ARG(0)->getType()).externalize(C_NODE_MANAGER, CONVERT_ARG(0));
 			return GET_TYPE_INFO(call->getType()).internalize(C_NODE_MANAGER, c_ast::cast(type, value));
-		});
+		};
 
 		// -- support narrow and expand --
 
-		res[refExt.getRefNarrow()] = OP_CONVERTER({
+		res[refExt.getRefNarrow()] = OP_CONVERTER {
 			// narrow starting position step by step
 			return narrow(context, ARG(0), ARG(1));
-		});
+		};
 
-		res[refExt.getRefExpand()] = OP_CONVERTER({
+		res[refExt.getRefExpand()] = OP_CONVERTER {
 			ADD_HEADER("stddef.h") // for 'offsetof';
 
 			auto charPtrType = c_ast::ptr(C_NODE_MANAGER->create<c_ast::PrimitiveType>(c_ast::PrimitiveType::Char));
@@ -640,92 +661,70 @@ namespace backend {
 
 			// cast to target type and return result
 			return c_ast::cast(CONVERT_TYPE(call->getType()), res);
-		});
+		};
+
+		res[refExt.getRefNull()] = OP_CONVERTER {
+			// just cast the 0 constant to the proper pointer type
+			return c_ast::cast(CONVERT_TYPE(call->getType()), C_NODE_MANAGER->create<c_ast::Literal>("0"));
+		};
 
 		// -- arrays --
 
-		res[arrayExt.getArraySubscript()] = OP_CONVERTER({
+		res[arrayExt.getArraySubscript()] = OP_CONVERTER {
 			// skip deref => included subscript operator
-			c_ast::ExpressionPtr target;
-			if(core::analysis::isCallOf(ARG(0), LANG_EXT_REF.getRefDeref())) {
-				target = CONVERT_EXPR(core::analysis::getArgument(ARG(0), 0));
-			} else {
-				target = CONVERT_ARG(0);
-			}
-			return c_ast::subscript(target, CONVERT_ARG(1));
-		});
+			c_ast::ExpressionPtr src = CONVERT_ARG(0);
 
-		res[refExt.getRefArrayElement()] = OP_CONVERTER({
+			// access vector struct if necessary
+			if (core::lang::isFixedSizedArray(ARG(0))) {
+				src = c_ast::access(src, "data");
+			}
+
+			// access field
+			return c_ast::subscript(src, CONVERT_ARG(1));
+		};
+
+		res[refExt.getRefArrayElement()] = OP_CONVERTER {
 			// add dependency to element type
-			core::TypePtr elementType = core::analysis::getReferencedType(ARG(0)->getType());
-			elementType = core::lang::ArrayType(elementType).getElementType();
+			core::TypePtr arrayType = core::analysis::getReferencedType(ARG(0)->getType());
+			core::TypePtr elementType = core::lang::ArrayType(arrayType).getElementType();
 			const TypeInfo& info = GET_TYPE_INFO(elementType);
 			context.getDependencies().insert(info.definition);
-			// generated code &(X[Y])
-			return c_ast::ref(c_ast::subscript(CONVERT_ARG(0), CONVERT_ARG(1)));
-		});
 
-		res[refExt.getRefScalarToRefArray()] = OP_CONVERTER({
+			// access source
+			auto src = CONVERT_ARG(0);
+			if (core::lang::isFixedSizedArray(arrayType)) {
+				src = c_ast::access(c_ast::deref(src), "data");
+			}
+
+			// generated code &(X[Y])
+			return c_ast::ref(c_ast::subscript(src, CONVERT_ARG(1)));
+		};
+
+		res[refExt.getRefScalarToRefArray()] = OP_CONVERTER {
 			// initialize an array instance
 			//   Operator Type: (ref<'a>) -> ref<array<'a,1>>
 			// => requires no special treatment
 			return CONVERT_ARG(0);
-		});
+		};
 
-		res[arrayExt.getArrayCreate()] = OP_CONVERTER({
-			// type of Operator: (type<'elem>, uint<8>) -> array<'elem,1>
-			// create new array on the heap using alloca
-			ADD_HEADER("alloca.h"); // for 'alloca'
+		res[arrayExt.getArrayCreate()] = OP_CONVERTER {
+			// type of Operator: "(type<'elem>, type<'size>, list<'elem>) -> array<'elem,'size>"
+			assert_not_pred1(core::lang::isGenericSizedArray, call->getType());
 
-			core::lang::ArrayType resType(call->getType());
-			c_ast::ExpressionPtr size = c_ast::mul(c_ast::sizeOf(CONVERT_TYPE(resType.getElementType())), CONVERT_ARG(1));
-			return c_ast::call(C_NODE_MANAGER->create("alloca"), size);
-		});
+			// convert initialization values
+			vector<c_ast::NodePtr> values;
+			for(const auto& cur : core::lang::parseListOfExpressions(call[2])) {
+				values.push_back(CONVERT_EXPR(cur));
+			}
 
-		res[arrayExt.getArrayReduce()] = OP_CONVERTER({
-			// type of the operation:
-			// (vector<'elem,#l>, 'res, ('elem, 'res) -> 'res) -> 'res
+			// create a new array on the stack using an initializer expression
+			return c_ast::init(CONVERT_TYPE(call->getType()), c_ast::init(values));
+		};
 
-			assert_not_implemented() << "Port to new infrastructure!";
-
-//			// get vector size
-//			core::ExpressionPtr vector = ARG(0);
-//			assert((vector->getNodeType() == core::NT_VectorExpr || vector->getNodeType() == core::NT_Variable)
-//			       && "Only supporting vector expression or variable!");
-//
-//			core::VectorExprPtr vectorExpr = dynamic_pointer_cast<const core::VectorExpr>(vector);
-//			core::VectorTypePtr vectorType = static_pointer_cast<const core::VectorType>(vector->getType());
-//
-//			core::IntTypeParamPtr vectorSize = vectorType->getSize();
-//			assert_eq(vectorSize->getNodeType(), core::NT_ConcreteIntTypeParam) << "Only supported for fixed vector sizes!";
-//			std::size_t size = static_pointer_cast<const core::ConcreteIntTypeParam>(vectorSize)->getValue();
-//
-//			// compose unfolded reduction expression
-//			core::ExpressionPtr res = ARG(1);
-//			core::ExpressionPtr op = ARG(2);
-//			core::ExpressionPtr subscript = op->getNodeManager().getLangBasic().getVectorSubscript();
-//			core::TypePtr elementType = vectorType->getElementType();
-//
-//			core::IRBuilder builder(op->getNodeManager());
-//			for(std::size_t i = 0; i < size; i++) {
-//				core::ExpressionPtr element;
-//				if(vectorExpr) {
-//					element = vectorExpr->getExpressions()[i];
-//				} else {
-//					element = builder.callExpr(elementType, subscript, toVector(vector, builder.uintLit(i)));
-//				}
-//
-//				res = builder.callExpr(res->getType(), op, toVector(res, element));
-//			}
-//
-//			// add code of reduction expression
-//			return CONVERT_EXPR(res);
-			return CONVERT_EXPR(ARG(0));
-		});
 
 		// -- structs --
 
-		res[basic.getCompositeMemberAccess()] = OP_CONVERTER({
+		res[basic.getCompositeMemberAccess()] = OP_CONVERTER {
 			// signature of operation:
 			//		('a, identifier, type<'b>) -> 'b
 
@@ -738,9 +737,9 @@ namespace backend {
 			assert_eq(ARG(1)->getNodeType(), core::NT_Literal);
 			c_ast::IdentifierPtr field = C_NODE_MANAGER->create(static_pointer_cast<const core::Literal>(ARG(1))->getStringValue());
 			return c_ast::access(CONVERT_ARG(0), field);
-		});
+		};
 
-		res[refExt.getRefMemberAccess()] = OP_CONVERTER({
+		res[refExt.getRefMemberAccess()] = OP_CONVERTER {
 			// signature of operation:
 			//		(ref<'a>, identifier, type<'b>) -> ref<'b>
 
@@ -754,15 +753,18 @@ namespace backend {
 
 			// special handling for accessing variable array within struct
 			auto access = c_ast::access(c_ast::deref(CONVERT_ARG(0)), field);
-			if(core::lang::isArray(core::analysis::getReferencedType(call->getType()))) { return access; }
+
+			// handle implicit C array / pointer duality
+			if(core::lang::isVariableSizedArray(core::analysis::getReferencedType(call->getType()))) { return access; }
+			if(core::lang::isUnknownSizedArray(core::analysis::getReferencedType(call->getType()))) { return access; }
 
 			// access the type
 			return c_ast::ref(access);
-		});
+		};
 
 		// -- tuples --
 
-		res[basic.getTupleMemberAccess()] = OP_CONVERTER({
+		res[basic.getTupleMemberAccess()] = OP_CONVERTER {
 			// signature of operation:
 			//		('a, uint<8>, type<'b>) -> 'b
 
@@ -779,9 +781,9 @@ namespace backend {
 			assert_eq(index->getNodeType(), core::NT_Literal);
 			c_ast::IdentifierPtr field = C_NODE_MANAGER->create(string("c") + static_pointer_cast<const core::Literal>(index)->getStringValue());
 			return c_ast::access(CONVERT_ARG(0), field);
-		});
+		};
 
-		res[refExt.getRefComponentAccess()] = OP_CONVERTER({
+		res[refExt.getRefComponentAccess()] = OP_CONVERTER {
 			// signature of operation:
 			//		(ref<'a>, uint<8>, type<'b>) -> ref<'b>
 
@@ -799,32 +801,32 @@ namespace backend {
 
 			// access the type
 			return c_ast::ref(c_ast::access(c_ast::deref(CONVERT_ARG(0)), field));
-		});
+		};
 
 
 		// -- pointer --
 
 		/*
-		        res[basic.getRefIsNull()] = OP_CONVERTER({
+		        res[basic.getRefIsNull()] = OP_CONVERTER {
 		            // Operator Type:  (array<'a,1>) -> bool
 		            // generated code: X == 0
 		            auto intType = C_NODE_MANAGER->create<c_ast::PrimitiveType>(c_ast::PrimitiveType::Int32);
 		            return c_ast::eq(CONVERT_ARG(0), c_ast::lit(intType,"0"));
-		        });
+		        };
 		*/
 
 		// -- others --
 
-		res[basic.getId()] = OP_CONVERTER({
+		res[basic.getId()] = OP_CONVERTER {
 			return CONVERT_ARG(0); // simply forward input argument
-		});
+		};
 
-		res[basic.getIfThenElse()] = OP_CONVERTER({
+		res[basic.getIfThenElse()] = OP_CONVERTER {
 			// IF-THEN-ELSE literal: (bool, () -> 'b, () -> 'b) -> 'b")
 			return c_ast::ite(CONVERT_ARG(0), CONVERT_EXPR(inlineLazy(ARG(1))), CONVERT_EXPR(inlineLazy(ARG(2))));
-		});
+		};
 
-		res[basic.getSizeof()] = OP_CONVERTER({
+		res[basic.getSizeof()] = OP_CONVERTER {
 			// extract type sizeof is applied to
 			core::GenericTypePtr type = dynamic_pointer_cast<const core::GenericType>(ARG(0)->getType());
 			assert_true(type) << "Illegal argument to sizeof operator";
@@ -832,20 +834,20 @@ namespace backend {
 
 			// return size-of operator call
 			return c_ast::sizeOf(CONVERT_TYPE(target));
-		});
+		};
 
-		res[ioExt.getPrint()] = OP_CONVERTER({
+		res[ioExt.getPrint()] = OP_CONVERTER {
 			// map to invoking the external function printf
 			core::IRBuilder builder(NODE_MANAGER);
 			auto printf = builder.literal("printf", call->getFunctionExpr()->getType());
 			return CONVERT_EXPR(builder.callExpr(LANG_BASIC.getUnit(), printf, ARG(0), ARG(1)));
-		});
+		};
 
 		// -- IR extensions --
 
 		auto& ext = manager.getLangExtension<IRExtensions>();
 
-		res[ext.getInitGlobal()] = OP_CONVERTER({
+		res[ext.getInitGlobal()] = OP_CONVERTER {
 			static const c_ast::ExpressionPtr none;
 
 			auto global = call[0].as<core::LiteralPtr>();
@@ -881,9 +883,9 @@ namespace backend {
 
 			// no actual code needs to be generated for this operator
 			return none;
-		});
+		};
 
-		res[ext.getRegisterGlobal()] = OP_CONVERTER({
+		res[ext.getRegisterGlobal()] = OP_CONVERTER {
 
 			// obtain access to global fragment
 			c_ast::CCodeFragmentPtr globals = static_pointer_cast<c_ast::CCodeFragment>(FRAGMENT_MANAGER->getFragment(IRExtensions::GLOBAL_ID));
@@ -910,17 +912,17 @@ namespace backend {
 
 			// => no actual expression required her ...
 			return c_ast::ExpressionPtr();
-		});
+		};
 
-		res[basic.getSelect()] = OP_CONVERTER({
+		res[basic.getSelect()] = OP_CONVERTER {
 			//  Implements the select operation
 			//   Operator Type: ( comp(arg0, arg1) ? arg0 : arg1)
 
 			core::IRBuilder builder(ARG(0)->getNodeManager());
 			return c_ast::ite(CONVERT_EXPR(builder.callExpr(ARG(2), ARG(0), ARG(1))), CONVERT_ARG(0), CONVERT_ARG(1));
-		});
+		};
 
-		res[basic.getCloogFloor()] = OP_CONVERTER({
+		res[basic.getCloogFloor()] = OP_CONVERTER {
 			//			ADD_HEADER_FOR("floor");
 			//			auto floatType = C_NODE_MANAGER->create<c_ast::PrimitiveType>(c_ast::PrimitiveType::Float);
 			//			return c_ast::call( C_NODE_MANAGER->create("floor"),
@@ -940,9 +942,9 @@ namespace backend {
 
 			return c_ast::ite(c_ast::gt(c_ast::mul(a, b), z), c_ast::div(a, b), c_ast::minus(c_ast::add(c_ast::div(na, b), c_ast::ne(c_ast::mod(na, b), z))));
 
-		});
+		};
 
-		res[basic.getCloogCeil()] = OP_CONVERTER({
+		res[basic.getCloogCeil()] = OP_CONVERTER {
 			//			ADD_HEADER_FOR("ceil");
 			//			auto floatType = C_NODE_MANAGER->create<c_ast::PrimitiveType>(c_ast::PrimitiveType::Float);
 			//			return c_ast::call( C_NODE_MANAGER->create("ceil"),
@@ -961,16 +963,16 @@ namespace backend {
 
 			return c_ast::ite(c_ast::gt(c_ast::mul(a, b), z), c_ast::add(c_ast::div(a, b), c_ast::ne(c_ast::mod(a, b), z)),
 			                  c_ast::minus(c_ast::div(c_ast::minus(a), b)));
-		});
+		};
 
-		res[basic.getCloogMod()] = OP_CONVERTER({ return c_ast::mod(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		res[basic.getCloogMod()] = OP_CONVERTER { return c_ast::mod(CONVERT_ARG(0), CONVERT_ARG(1)); };
 
-		res[basic.getExit()] = OP_CONVERTER({
+		res[basic.getExit()] = OP_CONVERTER {
 			ADD_HEADER("stdlib.h"); // for 'exit'
 			return c_ast::call(C_NODE_MANAGER->create("exit"), CONVERT_ARG(0));
-		});
+		};
 
-		res[basic.getGenInit()] = OP_CONVERTER({
+		res[basic.getGenInit()] = OP_CONVERTER {
 			// this is a blind initialization, used to initialize intercepted objects
 
 			// we need a little introspection over whatever we find inside, it might be that we find another expression list.
@@ -984,22 +986,22 @@ namespace backend {
 			}
 
 			return C_NODE_MANAGER->create<c_ast::Initializer>(CONVERT_TYPE(call->getType()), v);
-		});
+		};
 
 		// ----------------------------  Enum extension ----------------------------
 		auto& enumExt = manager.getLangExtension<core::lang::EnumExtension>();
-		res[enumExt.getEnumElementAsBool()] = OP_CONVERTER({
+		res[enumExt.getEnumElementAsBool()] = OP_CONVERTER {
 			// write it out as we got it in
 			return CONVERT_ARG(0);
-		});
+		};
 
 		// ----------------------------  Attribute extension --------------------------
 
 		auto& attrExt = manager.getLangExtension<core::analysis::AttributeExtension>();
-		res[attrExt.getAttr()] = OP_CONVERTER({
+		res[attrExt.getAttr()] = OP_CONVERTER {
 			// just skip this attribute
 			return CONVERT_ARG(0);
-		});
+		};
 
 
 		// ---------------------------- IR++ / C++ --------------------------
@@ -1010,7 +1012,7 @@ namespace backend {
 //
 //			const auto& irppExt = manager.getLangExtension<core::lang::IRppExtensions>();
 //
-//			res[irppExt.getArrayCtor()] = OP_CONVERTER({
+//			res[irppExt.getArrayCtor()] = OP_CONVERTER {
 //
 //				// init array using a vector expression
 //				auto objType = ARG(1)->getType().as<core::FunctionTypePtr>()->getObjectType();
@@ -1036,9 +1038,9 @@ namespace backend {
 //					assert_fail() << "Creating Arrays of objects neither on heap nor stack isn't supported!";
 //				}
 //				return res;
-//			});
+//			};
 //
-//			res[irppExt.getVectorCtor()] = OP_CONVERTER({
+//			res[irppExt.getVectorCtor()] = OP_CONVERTER {
 //
 //				// init vector using a vector expression
 //				auto objType = ARG(1)->getType().as<core::FunctionTypePtr>()->getObjectType();
@@ -1062,9 +1064,9 @@ namespace backend {
 //					assert_fail() << "Creating Arrays of objects neither on heap nor stack isn't supported!";
 //				}
 //				return res;
-//			});
+//			};
 //
-//			res[irppExt.getVectorCtor2D()] = OP_CONVERTER({
+//			res[irppExt.getVectorCtor2D()] = OP_CONVERTER {
 //
 //				// init vector using a vector expression
 //				auto objType = ARG(1)->getType().as<core::FunctionTypePtr>()->getObjectType();
@@ -1089,12 +1091,12 @@ namespace backend {
 //					assert_fail() << "Creating Arrays of objects neither on heap nor stack isn't supported!";
 //				}
 //				return res;
-//			});
+//			};
 //
-//			res[irppExt.getArrayDtor()] = OP_CONVERTER({
+//			res[irppExt.getArrayDtor()] = OP_CONVERTER {
 //				// create a node representing a delete operation
 //				return c_ast::deleteArrayCall(CONVERT_ARG(0));
-//			});
+//			};
 //		}
 
 //		{
@@ -1102,7 +1104,7 @@ namespace backend {
 //
 //			const auto& irppExt = manager.getLangExtension<core::lang::IRppExtensions>();
 //
-//			res[irppExt.getStaticCast()] = OP_CONVERTER({
+//			res[irppExt.getStaticCast()] = OP_CONVERTER {
 //				// build up a static cast operator
 //
 //				auto targetTy = core::analysis::getRepresentedType(ARG(1));
@@ -1119,9 +1121,9 @@ namespace backend {
 //				context.addDependency(srcTypeInfo.definition);
 //
 //				return c_ast::staticCast(targetCType, CONVERT_ARG(0));
-//			});
+//			};
 //
-//			res[irppExt.getStaticCastRefCppToRefCpp()] = OP_CONVERTER({
+//			res[irppExt.getStaticCastRefCppToRefCpp()] = OP_CONVERTER {
 //				// build up a static cast operator for cpp_ref to cpp_ref
 //
 //				auto targetTy = core::analysis::getRepresentedType(ARG(1));
@@ -1129,9 +1131,9 @@ namespace backend {
 //
 //				assert_true(core::analysis::isCppRef(targetTy)) << "targetType not a reference type";
 //				return c_ast::staticCast(targetCType, CONVERT_ARG(0));
-//			});
+//			};
 //
-//			res[irppExt.getStaticCastConstCppToConstCpp()] = OP_CONVERTER({
+//			res[irppExt.getStaticCastConstCppToConstCpp()] = OP_CONVERTER {
 //				// build up a static cast operator for const_cpp_ref to const_cpp_ref
 //
 //				auto targetTy = core::analysis::getRepresentedType(ARG(1));
@@ -1139,8 +1141,8 @@ namespace backend {
 //
 //				assert_true(core::analysis::isConstCppRef(targetTy)) << "targetType not a reference type";
 //				return c_ast::staticCast(targetCType, CONVERT_ARG(0));
-//			});
-//			res[irppExt.getStaticCastRefCppToConstCpp()] = OP_CONVERTER({
+//			};
+//			res[irppExt.getStaticCastRefCppToConstCpp()] = OP_CONVERTER {
 //				// build up a static cast operator for cpp_ref to const_cpp_ref
 //
 //				auto targetTy = core::analysis::getRepresentedType(ARG(1));
@@ -1148,9 +1150,9 @@ namespace backend {
 //
 //				assert_true(core::analysis::isConstCppRef(targetTy)) << "targetType not a reference type";
 //				return c_ast::staticCast(targetCType, CONVERT_ARG(0));
-//			});
+//			};
 //
-//			res[irppExt.getDynamicCast()] = OP_CONVERTER({
+//			res[irppExt.getDynamicCast()] = OP_CONVERTER {
 //				// build up a dynamic cast operator
 //
 //				auto targetTy = core::analysis::getRepresentedType(ARG(1));
@@ -1167,9 +1169,9 @@ namespace backend {
 //				context.addDependency(srcTypeInfo.definition);
 //
 //				return c_ast::dynamicCast(targetCType, CONVERT_ARG(0));
-//			});
+//			};
 //
-//			res[irppExt.getDynamicCastRefCppToRefCpp()] = OP_CONVERTER({
+//			res[irppExt.getDynamicCastRefCppToRefCpp()] = OP_CONVERTER {
 //				// build up a dynamic cast operator for cpp_ref to cpp_ref
 //
 //				auto targetTy = core::analysis::getRepresentedType(ARG(1));
@@ -1177,9 +1179,9 @@ namespace backend {
 //
 //				assert_true(core::analysis::isCppRef(targetTy)) << "targetType not a reference type";
 //				return c_ast::dynamicCast(targetCType, CONVERT_ARG(0));
-//			});
+//			};
 //
-//			res[irppExt.getDynamicCastConstCppToConstCpp()] = OP_CONVERTER({
+//			res[irppExt.getDynamicCastConstCppToConstCpp()] = OP_CONVERTER {
 //				// build up a dynamic cast operator for const_cpp_ref to const_cpp_ref
 //
 //				auto targetTy = core::analysis::getRepresentedType(ARG(1));
@@ -1187,9 +1189,9 @@ namespace backend {
 //
 //				assert_true(core::analysis::isConstCppRef(targetTy)) << "targetType not a reference type";
 //				return c_ast::dynamicCast(targetCType, CONVERT_ARG(0));
-//			});
+//			};
 //
-//			res[irppExt.getDynamicCastRefCppToConstCpp()] = OP_CONVERTER({
+//			res[irppExt.getDynamicCastRefCppToConstCpp()] = OP_CONVERTER {
 //				// build up a dynamic cast operator for cpp_ref to const_cpp_ref
 //
 //				auto targetTy = core::analysis::getRepresentedType(ARG(1));
@@ -1197,9 +1199,9 @@ namespace backend {
 //
 //				assert_true(core::analysis::isConstCppRef(targetTy)) << "targetType not a reference type";
 //				return c_ast::dynamicCast(targetCType, CONVERT_ARG(0));
-//			});
+//			};
 //
-//			res[irppExt.getTypeid()] = OP_CONVERTER({
+//			res[irppExt.getTypeid()] = OP_CONVERTER {
 //				// extract typeinfo
 //				core::GenericTypePtr type = dynamic_pointer_cast<const core::GenericType>(ARG(0)->getType());
 //				if(type) {
@@ -1208,17 +1210,17 @@ namespace backend {
 //				} else {
 //					return c_ast::typeId(c_ast::deref(CONVERT_ARG(0)));
 //				}
-//			});
+//			};
 //
-//			res[irppExt.getAlignof()] = OP_CONVERTER({
+//			res[irppExt.getAlignof()] = OP_CONVERTER {
 //				c_ast::CallPtr res = c_ast::call(C_NODE_MANAGER->create("__alignof__"));
 //				res->arguments.push_back(CONVERT_TYPE(core::analysis::getRepresentedType(ARG(0))));
 //				return res;
-//			});
+//			};
 //
-//			res[irppExt.getMemberPointerCheck()] = OP_CONVERTER({ return CONVERT_ARG(0); });
+//			res[irppExt.getMemberPointerCheck()] = OP_CONVERTER { return CONVERT_ARG(0); };
 //
-//			res[irppExt.getStdInitListExpr()] = OP_CONVERTER({
+//			res[irppExt.getStdInitListExpr()] = OP_CONVERTER {
 //				// get type of the init list expression elements
 //				const core::TypePtr type = core::analysis::getRepresentedType(ARG(1));
 //				const TypeInfo& info = GET_TYPE_INFO(type);
@@ -1238,7 +1240,7 @@ namespace backend {
 //				std::vector<c_ast::NodePtr> args{initializer};
 //				// return the ctor call of the given type (e.g., std::vector) and the init list as argument
 //				return c_ast::ctorCall(info.rValueType, args);
-//			});
+//			};
 //		}
 
 		#include "insieme/backend/operator_converter_end.inc"

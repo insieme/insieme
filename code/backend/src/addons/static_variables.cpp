@@ -48,6 +48,7 @@
 #include "insieme/core/ir_node_annotation.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/lang/static_vars.h"
+#include "insieme/core/lang/reference.h"
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/node_replacer.h"
 
@@ -71,6 +72,10 @@ namespace addons {
 			StaticVarBackendExtension(core::NodeManager& manager) : core::lang::Extension(manager) {}
 
 		  public:
+
+			// import reference extension to utilize aliases
+			IMPORT_MODULE(core::lang::ReferenceExtension);
+
 			/**
 			 * A literal masking the initialization of a static literal using constants.
 			 */
@@ -120,14 +125,14 @@ namespace addons {
 
 			#include "insieme/backend/operator_converter_begin.inc"
 
-			res[ext.getCreateStatic()] = OP_CONVERTER({
+			res[ext.getCreateStatic()] = OP_CONVERTER {
 				return nullptr; // no instruction required at this point
-			});
+			};
 
 
 			// -------------------- Constant initialization -----------------------
 
-			res[ext.getInitStaticConst()] = OP_CONVERTER({
+			res[ext.getInitStaticConst()] = OP_CONVERTER {
 
 				// we have to build a new function for this init call containing a static variable
 				//
@@ -157,9 +162,9 @@ namespace addons {
 				auto ret = builder.callExpr(retType, lambda, core::ExpressionList());
 				LOG(DEBUG) << "ISC: " << dumpColor(ret) << " : " << dumpColor(ret->getType()) << "\n";
 				return CONVERT_EXPR(ret);
-			});
+			};
 
-			res[ext2.getInitStaticConst()] = OP_CONVERTER({
+			res[ext2.getInitStaticConst()] = OP_CONVERTER {
 				// a call to this is translated to the following:
 				//
 				//			static A a = lazy();
@@ -214,11 +219,11 @@ namespace addons {
 
 				// done
 				return C_NODE_MANAGER->create<c_ast::StmtExpr>(comp);
-			});
+			};
 
 			// ---------------- lazy initialization -------------------------
 
-			res[ext.getInitStaticLazy()] = OP_CONVERTER({
+			res[ext.getInitStaticLazy()] = OP_CONVERTER {
 				LOG(DEBUG) << "--------------------------\n------ ext.getInitStaticLazy()\n";
 				LOG(DEBUG) << "call type: " << call->getType() << "\n";
 
@@ -264,7 +269,7 @@ namespace addons {
 				auto param = fun->getParameterList()[1];
 				param = core::transform::replaceAllGen(mgr, param, {{builder.typeVariable("a"), core::analysis::getReferencedType(retType)}});
 
-				auto init = builder.callExpr(ext.getInitStaticLazy(), param, call[0]);
+				auto init = builder.callExpr(ext.getInitStaticLazy(), builder.deref(param), call[0]);
 				LOG(DEBUG) << ">>>>>>>INIT: \n" << dumpPretty(init) << " : " << init->getType() << "\n";
 				auto newFunTy = builder.functionType(param->getType(), init->getType());
 				LOG(DEBUG) << ">>>>NEWFT: \n" << dumpPretty(newFunTy) << "\n";
@@ -275,9 +280,9 @@ namespace addons {
 				auto rcall = builder.callExpr(newFunTy->getReturnType(), lambda, call[1]);
 				LOG(DEBUG) << "ext.getInitStaticLazy() BUILT2:\n" << *rcall << "\n";
 				return CONVERT_EXPR(rcall);
-			});
+			};
 
-			res[ext2.getInitStaticLazy()] = OP_CONVERTER({
+			res[ext2.getInitStaticLazy()] = OP_CONVERTER {
 				// a call to this is translated to the following:
 				//
 				//			static A a = lazy();
@@ -313,7 +318,7 @@ namespace addons {
 
 				// done
 				return C_NODE_MANAGER->create<c_ast::StmtExpr>(comp);
-			});
+			};
 
 			#include "insieme/backend/operator_converter_end.inc"
 

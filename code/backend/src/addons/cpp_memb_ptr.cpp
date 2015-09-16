@@ -116,16 +116,16 @@ namespace addons {
 
 			#include "insieme/backend/operator_converter_begin.inc"
 
-			res[ext.getMemberPointerCtor()] = OP_CONVERTER({
+			res[ext.getMemberPointerCtor()] = OP_CONVERTER {
 				c_ast::NodePtr objTy = CONVERT_TYPE(core::analysis::getRepresentedType(ARG(0)->getType()));
 				c_ast::NodePtr lit = C_NODE_MANAGER->create(ARG(1).as<core::LiteralPtr>()->getStringValue());
 				return c_ast::ref(c_ast::scope(objTy, lit));
-			});
+			};
 
-			res[ext.getMemberPointerAccess()] = OP_CONVERTER({
+			res[ext.getMemberPointerAccess()] = OP_CONVERTER {
 				// FIXME: is this right?
 				return c_ast::ref(pointerToMember(CONVERT_ARG(0), CONVERT_ARG(1)));
-			});
+			};
 
 			#include "insieme/backend/operator_converter_end.inc"
 			return res;

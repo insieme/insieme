@@ -155,7 +155,7 @@ namespace backend {
 
 		// try compiling the code fragment
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
-		// compiler.addFlag("-c"); // do not run the linker
+		compiler.addFlag("-c"); // do not run the linker
 		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
 	}
 
@@ -172,11 +172,11 @@ namespace backend {
 					int x;
 				};
 
-				let B = struct : A {
+				let B = struct : [A] {
 					int y;
 				};
 
-				let C = struct : B {
+				let C = struct : [B] {
 					int z;
 				};
 
@@ -660,7 +660,7 @@ namespace backend {
 					let int = int<4>;
 
 					let B = struct { };
-					let A = struct : B { int x; int y; int z; };
+					let A = struct : [B] { int x; int y; int z; };
 
 					let ctorA = lambda ctor A::(int y) {
 						this.y = y;
@@ -715,7 +715,7 @@ namespace backend {
 					let int = int<4>;
 
 					let A = struct { int x; };
-					let B = struct : A { int y; };
+					let B = struct : [A] { int y; };
 
 					let ctorA = lambda ctor A::(int x) {
 						this.x = x;
@@ -767,7 +767,7 @@ namespace backend {
 					let int = int<4>;
 
 					let A = struct { int x; int y; };
-					let B = struct : A { int z; };
+					let B = struct : [A] { int z; };
 
 					let ctorA = lambda ctor A::(int x, int y) {
 						this.x = x;
@@ -877,8 +877,8 @@ namespace backend {
 							print("Catched short %d\n", y);
 						} catch (ref<short> z) {
 							print("Catched short %d\n", *z);
-						} catch (any a) {
-							print("Catched something!\n");
+//						} catch (any a) {
+//							print("Catched something!\n");
 						 }
 
 						return 0;
@@ -899,7 +899,7 @@ namespace backend {
 		EXPECT_PRED2(containsSubString, code, "} catch(int32_t x) {");
 		EXPECT_PRED2(containsSubString, code, "} catch(int16_t y) {");
 		EXPECT_PRED2(containsSubString, code, "} catch(int16_t* z) {");
-		EXPECT_PRED2(containsSubString, code, "} catch(...) {");
+//		EXPECT_PRED2(containsSubString, code, "} catch(...) {");
 
 		// check whether code is compiling
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();

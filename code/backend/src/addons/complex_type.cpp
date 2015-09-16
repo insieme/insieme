@@ -108,42 +108,42 @@ namespace addons {
 			#include "insieme/backend/operator_converter_begin.inc"
 
 			// ------------------ complex specific operators ---------------
-			res[ext.getRefComplexReal()] = OP_CONVERTER({ return c_ast::ref(c_ast::complexReal(c_ast::deref(CONVERT_ARG(0)))); });
+			res[ext.getRefComplexReal()] = OP_CONVERTER { return c_ast::ref(c_ast::complexReal(c_ast::deref(CONVERT_ARG(0)))); };
 
-			res[ext.getRefComplexImg()] = OP_CONVERTER({ return c_ast::ref(c_ast::complexImag(c_ast::deref(CONVERT_ARG(0)))); });
+			res[ext.getRefComplexImg()] = OP_CONVERTER { return c_ast::ref(c_ast::complexImag(c_ast::deref(CONVERT_ARG(0)))); };
 
-			res[ext.getComplexReal()] = OP_CONVERTER({ return c_ast::complexReal(CONVERT_ARG(0)); });
+			res[ext.getComplexReal()] = OP_CONVERTER { return c_ast::complexReal(CONVERT_ARG(0)); };
 
-			res[ext.getComplexImg()] = OP_CONVERTER({ return c_ast::complexImag(CONVERT_ARG(0)); });
+			res[ext.getComplexImg()] = OP_CONVERTER { return c_ast::complexImag(CONVERT_ARG(0)); };
 
 			// -------------------- cast operators -------------------------
 
-			res[ext.getConstantToComplex()] = OP_CONVERTER({ return CONVERT_ARG(0); });
+			res[ext.getConstantToComplex()] = OP_CONVERTER { return CONVERT_ARG(0); };
 
-			res[ext.getComplexToBool()] = OP_CONVERTER({ return CONVERT_ARG(0); });
+			res[ext.getComplexToBool()] = OP_CONVERTER { return CONVERT_ARG(0); };
 
-			res[ext.getComplexToComplex()] = OP_CONVERTER({ return CONVERT_ARG(0); });
+			res[ext.getComplexToComplex()] = OP_CONVERTER { return CONVERT_ARG(0); };
 
 			// -------------------- generic operators ----------------------
-			res[gen.getGenAdd()] = OP_CONVERTER({
+			res[gen.getGenAdd()] = OP_CONVERTER {
 				if(isComplexType(ARG(0)->getType()) || isComplexType(ARG(1)->getType())) { return c_ast::add(CONVERT_ARG(0), CONVERT_ARG(1)); }
 				return NULL;
-			});
+			};
 
-			res[gen.getGenSub()] = OP_CONVERTER({
+			res[gen.getGenSub()] = OP_CONVERTER {
 				if(isComplexType(ARG(0)->getType()) || isComplexType(ARG(1)->getType())) { return c_ast::sub(CONVERT_ARG(0), CONVERT_ARG(1)); }
 				return NULL;
-			});
+			};
 
-			res[gen.getGenMul()] = OP_CONVERTER({
+			res[gen.getGenMul()] = OP_CONVERTER {
 				if(isComplexType(ARG(0)->getType()) || isComplexType(ARG(1)->getType())) { return c_ast::mul(CONVERT_ARG(0), CONVERT_ARG(1)); }
 				return NULL;
-			});
+			};
 
-			res[gen.getGenDiv()] = OP_CONVERTER({
+			res[gen.getGenDiv()] = OP_CONVERTER {
 				if(isComplexType(ARG(0)->getType()) || isComplexType(ARG(1)->getType())) { return c_ast::div(CONVERT_ARG(0), CONVERT_ARG(1)); }
 				return NULL;
-			});
+			};
 
 
 			#include "insieme/backend/operator_converter_end.inc"

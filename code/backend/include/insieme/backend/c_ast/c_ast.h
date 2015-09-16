@@ -393,10 +393,10 @@ namespace c_ast {
 	struct Initializer : public Expression {
 		TypePtr type;
 		vector<NodePtr> values;
-		bool explicitType;
-		Initializer(TypePtr type = TypePtr()) : Expression(NT_Initializer), type(type), explicitType(type){};
-		Initializer(TypePtr type, const vector<NodePtr>& values, bool explicitType = true)
-		    : Expression(NT_Initializer), type(type), values(values), explicitType(explicitType){};
+		Initializer(TypePtr type = TypePtr()) : Expression(NT_Initializer), type(type) {};
+		Initializer(const vector<NodePtr>& values) : Expression(NT_Initializer), values(values) {};
+		Initializer(TypePtr type, const vector<NodePtr>& values)
+		    : Expression(NT_Initializer), type(type), values(values) {};
 		virtual bool equals(const Node& node) const;
 	};
 

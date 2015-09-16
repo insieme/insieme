@@ -123,7 +123,6 @@ namespace backend {
 	TEST(FunctionManager, Lambda) {
 		core::NodeManager nodeManager;
 		core::IRBuilder builder(nodeManager);
-		const core::lang::BasicGenerator& basic = nodeManager.getLangBasic();
 
 		Converter converter(nodeManager);
 		converter.setNameManager(std::make_shared<TestNameManager>());
@@ -167,7 +166,6 @@ namespace backend {
 	TEST(FunctionManager, MutualRecursiveLambda) {
 		core::NodeManager nodeManager;
 		core::IRBuilder builder(nodeManager);
-		const core::lang::BasicGenerator& basic = nodeManager.getLangBasic();
 
 		Converter converter(nodeManager);
 		converter.setNameManager(std::make_shared<TestNameManager>());
