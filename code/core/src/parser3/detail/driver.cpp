@@ -243,11 +243,25 @@ namespace parser3 {
 				return builder.typeVariable(name);
 			}
 
+			// search types defined in current scope
 			auto x = scopes.find_type(name);
 			if(x && !x.isa<TypePtr>()) {
 				error(l, format("the symbol %s is not a type", name));
 				return nullptr;
 			}
+
+			// also: check for variable (for numeric literals)
+			if (!x) {
+				// lookup variable
+				auto var = scopes.find_symb(name).isa<VariablePtr>();
+
+				// if it is a valid numeric type value => wrap it up
+				if (var && builder.getLangBasic().isUIntInf(var->getType())) {
+					x = builder.numericType(var);
+				}
+			}
+
+			// done
 			return x.as<TypePtr>();
 		}
 
@@ -292,7 +306,7 @@ namespace parser3 {
 				if(analysis::isRefType(left->getType())) {
 					auto inType = analysis::getReferencedType(left->getType());
 					if(!lang::isArray(inType)) {
-						error(l, "expression is neither a vector nor array to subscript");
+						error(l, format("expression is neither a vector nor array to subscript - type: %s", inType));
 						return nullptr;
 					}
 
@@ -300,7 +314,7 @@ namespace parser3 {
 				}
 				auto inType = left->getType();
 				if(!lang::isArray(inType)) {
-					error(l, "expression is neither a vector nor array to subscript");
+					error(l, format("expression is neither a vector nor array to subscript - type: %s", inType));
 					return nullptr;
 				}
 				return builder.arraySubscript(left, b); // works for arrays and vectors
