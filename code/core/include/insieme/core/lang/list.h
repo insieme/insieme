@@ -119,6 +119,14 @@ namespace lang {
 	 */
 	ExpressionPtr buildListOfExpressions(const ExpressionList& expressions);
 
+	/**
+	 * Converts an encoded list of expressions into a vector of expressions.
+	 *
+	 * @param list the encoded list of expressions
+	 * @return the list of expressions as a vector of expressions
+	 */
+	ExpressionList parseListOfExpressions(const ExpressionPtr& list);
+
 } // end namespace lang
 } // end namespace core
 } // end namespace insieme
