@@ -364,6 +364,11 @@ namespace lang {
 			return elementType;
 		}
 
+		void setElementType(const TypePtr& type) {
+			assert_true(type);
+			elementType = type;
+		}
+
 		bool isConst() const {
 			return mConst;
 		}
