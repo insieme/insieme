@@ -64,7 +64,6 @@
 #include "insieme/backend/addons/cpp_casts.h"
 #include "insieme/backend/addons/cpp_memb_ptr.h"
 #include "insieme/backend/addons/complex_type.h"
-#include "insieme/backend/addons/enum_type.h"
 #include "insieme/backend/addons/longlong_type.h"
 #include "insieme/backend/addons/asm_stmt.h"
 #include "insieme/backend/addons/varargs.h"
@@ -100,7 +99,6 @@ namespace runtime {
 		res->addAddOn<addons::CppCastsAddon>();
 		res->addAddOn<addons::CppMembAddon>();
 		res->addAddOn<addons::ComplexType>();
-		res->addAddOn<addons::EnumTypes>();
 		res->addAddOn<addons::LongLongType>();
 		res->addAddOn<addons::AsmStmt>();
 		res->addAddOn<addons::VarArgs>();
