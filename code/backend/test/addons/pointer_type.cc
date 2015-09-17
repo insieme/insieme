@@ -39,6 +39,7 @@
 #include "insieme/backend/addons/pointer_type.h"
 #include "insieme/backend/converter.h"
 #include "insieme/backend/type_manager.h"
+#include "insieme/backend/statement_converter.h"
 #include "insieme/backend/c_ast/c_ast_printer.h"
 
 #include "insieme/core/ir_builder.h"
@@ -92,6 +93,56 @@ namespace runtime {
 		EXPECT_EQ("const char* volatile*", c_ast::toC(info.lValueType));
 		EXPECT_EQ("const char* volatile*", c_ast::toC(info.rValueType));
 		EXPECT_EQ("const char* volatile*", c_ast::toC(info.externalType));
+
+	}
+
+	TEST(PointerAddon, Operators) {
+
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		// create a backend instance
+		Converter converter(mgr);
+
+		// install pointer addon
+		addons::PointerType().installOn(converter);
+
+		// get type manager
+		ConversionContext ctxt(converter);
+		StmtConverter& stmtConverter = converter.getStmtConverter();
+
+
+		// --- build a parser utility supporting pointer constructs ---
+
+		// import symbols into a symbol map
+		lang::symbol_map symbols = mgr.getLangExtension<core::lang::PointerExtension>().getSymbols();
+
+		// add a few extra symbols for the test cases
+		symbols["x"] = [&]()->NodePtr { return builder.parseExpr("lit(\"x\":ptr<char,f,f>)"); };
+
+		// load pointer extension
+		auto convert = [&](const std::string& ir) {
+			return toC(stmtConverter.convertExpression(ctxt, builder.parseExpr(ir, symbols)));
+		};
+
+
+		// --- run tests --
+
+		// check constants
+		EXPECT_EQ("x", convert("x"));
+
+		// check constructors
+//		EXPECT_EQ(  "(char*)0",  convert("ptr_null(lit(char),lit(f),lit(f))"));
+
+		// check casts
+		EXPECT_EQ(                      "x", convert("ptr_cast(x,lit(f),lit(f))"));
+		EXPECT_EQ(         "(const char*)x", convert("ptr_cast(x,lit(t),lit(f))"));
+		EXPECT_EQ(      "(volatile char*)x", convert("ptr_cast(x,lit(f),lit(t))"));
+		EXPECT_EQ("(const volatile char*)x", convert("ptr_cast(x,lit(t),lit(t))"));
+
+		// check pointer operators
+//
+//		EXPECT_EQ(        "*x",  convert("ptr_deref(x)"));
 
 	}
 
