@@ -40,6 +40,7 @@
 #include <map>
 #include <functional>
 
+#include <boost/tokenizer.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>
 #include <insieme/backend/runtime/runtime_extension.h>

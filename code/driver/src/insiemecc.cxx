@@ -40,6 +40,7 @@
 #define TEXT_WIDTH 120
 
 #include <string>
+#include <iomanip>
 
 #include <boost/algorithm/string.hpp>
 

@@ -36,6 +36,8 @@
 
 #include "insieme/frontend/translation_unit.h"
 
+#include <boost/regex.hpp>
+
 #include "insieme/frontend/clang.h"
 #include "insieme/frontend/pragma/handler.h"
 

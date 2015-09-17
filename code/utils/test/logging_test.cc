@@ -56,6 +56,7 @@ TEST(Logging, EnvVariableLevel) {
 	ASSERT_EXIT({
 		StdoutRedirect redirect;
 		setenv(LOG_LEVEL_ENV, "DEBUG", 1);
+		insieme::utils::logger_details::reloadConfiguration();
 		LOG(DEBUG) << "DEBUG log test";
 		LOG(INFO) << "INFO log test";
 		LOG(WARNING) << "WARNING log test";
@@ -66,6 +67,7 @@ TEST(Logging, EnvVariableLevel) {
 	ASSERT_EXIT({
 		StdoutRedirect redirect;
 		setenv(LOG_LEVEL_ENV, "INFO", 1);
+		insieme::utils::logger_details::reloadConfiguration();
 		LOG(DEBUG) << "DEBUG log test";
 		LOG(INFO) << "INFO log test";
 		LOG(WARNING) << "WARNING log test";
@@ -77,6 +79,7 @@ TEST(Logging, EnvVariableLevel) {
 	ASSERT_EXIT({
 		StdoutRedirect redirect;
 		setenv(LOG_LEVEL_ENV, "WARNING", 1);
+		insieme::utils::logger_details::reloadConfiguration();
 		LOG(DEBUG) << "DEBUG log test";
 		LOG(INFO) << "INFO log test";
 		LOG(WARNING) << "WARNING log test";
@@ -88,6 +91,7 @@ TEST(Logging, EnvVariableLevel) {
 	ASSERT_EXIT({
 		StdoutRedirect redirect;
 		setenv(LOG_LEVEL_ENV, "ERROR", 1);
+		insieme::utils::logger_details::reloadConfiguration();
 		LOG(DEBUG) << "DEBUG log test";
 		LOG(INFO) << "INFO log test";
 		LOG(WARNING) << "WARNING log test";
@@ -99,6 +103,7 @@ TEST(Logging, EnvVariableLevel) {
 	ASSERT_EXIT({
 		StdoutRedirect redirect;
 		setenv(LOG_LEVEL_ENV, "FATAL", 1);
+		insieme::utils::logger_details::reloadConfiguration();
 		LOG(DEBUG) << "DEBUG log test";
 		LOG(INFO) << "INFO log test";
 		LOG(WARNING) << "WARNING log test";
