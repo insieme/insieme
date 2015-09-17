@@ -151,7 +151,6 @@ namespace insieme {
 
 	TEST(MetaInformationTest, Migrate) {
 		core::NodeManager manager;
-		auto& refExt = manager.getLangExtension<core::lang::ReferenceExtension>();
 
 		// obtain test case & check that it's available
 		driver::integration::IntegrationTestCaseOpt testCaseOpt = getCase("omp/meta_info_test");
@@ -166,7 +165,7 @@ namespace insieme {
 		// find parallel
 		core::ExpressionPtr postinc;
 		core::visitDepthFirstOnceInterruptible(code, [&](const core::ExpressionPtr& expr) {
-			if(expr == refExt.getGenPostInc()) {
+			if(expr == manager.getLangBasic().getSignedIntPostInc()) {
 				postinc = expr;
 				return true;
 			}
