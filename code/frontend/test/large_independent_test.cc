@@ -44,7 +44,6 @@ namespace frontend {
 
 	static inline void runLargeIndependentTestOn(const string& fn, std::vector<std::string> includeDirs = toVector<std::string>()) {
 		runIndependentTestOn(fn, [&](ConversionJob& job) {
-			job.registerFrontendExtension<extensions::VariableArgumentListExtension>();
 			job.registerFrontendExtension<extensions::VariableLengthArrayExtension>();
 			for(auto inc : includeDirs) {
 				job.addIncludeDirectory(inc);

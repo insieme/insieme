@@ -42,15 +42,11 @@ namespace insieme {
 namespace frontend {
 	
 	TEST(VarargIndependentTest, Basic) {
-		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_variable_argument_lists.c", 
-			[](ConversionJob& job) { job.registerFrontendExtension<extensions::VariableArgumentListExtension>(); }
-		);
+		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_variable_argument_lists.c");
 	}
 
 	TEST(VarargIndependentTest, HelloWorld) {
-		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_hello_world.c", 
-			[](ConversionJob& job) { job.registerFrontendExtension<extensions::VariableArgumentListExtension>(); }
-		);
+		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_hello_world.c");
 	}
 
 } // fe namespace
