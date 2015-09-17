@@ -8,3 +8,7 @@ mpi
 mqap
 vectors
 vivid
+
+# Disabling cpp test cases for the time being
+cpp
+interceptor
