@@ -1,0 +1,314 @@
+/**
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ *                Institute of Computer Science,
+ *               University of Innsbruck, Austria
+ *
+ * This file is part of the INSIEME Compiler and Runtime System.
+ *
+ * We provide the software of this file (below described as "INSIEME")
+ * under GPL Version 3.0 on an AS IS basis, and do not warrant its
+ * validity or performance.  We reserve the right to update, modify,
+ * or discontinue this software at any time.  We shall have no
+ * obligation to supply such updates or modifications or any other
+ * form of support to you.
+ *
+ * If you require different license terms for your intended use of the
+ * software, e.g. for proprietary commercial or industrial use, please
+ * contact us at:
+ *                   insieme@dps.uibk.ac.at
+ *
+ * We kindly ask you to acknowledge the use of this software in any
+ * publication or other disclosure of results by referring to the
+ * following citation:
+ *
+ * H. Jordan, P. Thoman, J. Durillo, S. Pellegrini, P. Gschwandtner,
+ * T. Fahringer, H. Moritsch. A Multi-Objective Auto-Tuning Framework
+ * for Parallel Codes, in Proc. of the Intl. Conference for High
+ * Performance Computing, Networking, Storage and Analysis (SC 2012),
+ * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
+ *
+ * All copyright notices must be kept intact.
+ *
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * regarding third party software licenses.
+ */
+
+#include "insieme/core/analysis/parentheses.h"
+#include "insieme/core/ir_visitor.h"
+#include "insieme/core/lang/basic.h"
+#include "insieme/core/lang/reference.h"
+
+namespace insieme {
+namespace core {
+namespace analysis {
+
+	typedef struct {
+		int precedence;
+		int associativity;
+	} precedence_container;
+
+	std::map<NodePtr,precedence_container> create_precedence_map(const NodeManager& nm)
+	{
+
+		auto& lang = nm.getLangBasic();
+		//auto& refs = nm.getLangExtension<lang::ReferenceExtension>();
+
+		std::map<NodePtr, precedence_container> m;
+
+		m[lang.getSignedIntPostInc()] = {2,0};
+		m[lang.getSignedIntPostDec()] = {2,0};
+		m[lang.getUnsignedIntPostInc()] = {2,0};
+		m[lang.getUnsignedIntPostDec()] = {2,0};
+		m[lang.getCharPostInc()] = {2,0};
+		m[lang.getCharPostDec()] = {2,0};
+		m[lang.getBoolLNot()] = {3,1};
+		m[lang.getSignedIntNot()] = {3,1};
+		m[lang.getUnsignedIntNot()] = {3,1};
+		m[lang.getSignedIntPreInc()] = {3,1};
+		m[lang.getSignedIntPreDec()] = {3,1};
+		m[lang.getUnsignedIntPreInc()] = {3,1};
+		m[lang.getUnsignedIntPreDec()] = {3,1};
+		m[lang.getCharPreInc()] = {3,1};
+		m[lang.getCharPreDec()] = {3,1};
+		m[lang.getSignedIntMul()] = {5,0};
+		m[lang.getGenMul()] = {5,0};
+		m[lang.getUnsignedIntMul()] = {5,0};
+		m[lang.getRealMul()] = {5,0};
+		m[lang.getCharMul()] = {5,0};
+		m[lang.getSignedIntMod()] = {5,0};
+		m[lang.getGenMod()] = {5,0};
+		m[lang.getUnsignedIntMod()] = {5,0};
+		m[lang.getCharMod()] = {5,0};
+		m[lang.getSignedIntDiv()] = {5,0};
+		m[lang.getGenDiv()] = {5,0};
+		m[lang.getUnsignedIntDiv()] = {5,0};
+		m[lang.getRealDiv()] = {5,0};
+		m[lang.getCharDiv()] = {5,0};
+		m[lang.getSignedIntAdd()] = {6,0};
+		m[lang.getGenAdd()] = {6,0};
+		m[lang.getUnsignedIntAdd()] = {6,0};
+		m[lang.getRealAdd()] = {6,0};
+		m[lang.getCharAdd()] = {6,0};
+		m[lang.getSignedIntSub()] = {6,0};
+		m[lang.getGenSub()] = {6,0};
+		m[lang.getUnsignedIntSub()] = {6,0};
+		m[lang.getRealSub()] = {6,0};
+		m[lang.getCharSub()] = {6,0};
+		m[lang.getSignedIntLShift()] = {7,0};
+		m[lang.getGenLShift()] = {7,0};
+		m[lang.getSignedIntRShift()] = {7,0};
+		m[lang.getGenRShift()] = {7,0};
+		m[lang.getUnsignedIntLShift()] = {7,0};
+		m[lang.getUnsignedIntRShift()] = {7,0};
+		m[lang.getSignedIntLt()] = {8,0};
+		m[lang.getGenLt()] = {8,0};
+		m[lang.getRealLt()] = {8,0};
+		m[lang.getUnsignedIntLt()] = {8,0};
+		m[lang.getCharLt()] = {8,0};
+		m[lang.getSignedIntLe()] = {8,0};
+		m[lang.getGenLe()] = {8,0};
+		m[lang.getRealLe()] = {8,0};
+		m[lang.getUnsignedIntLe()] = {8,0};
+		m[lang.getCharLe()] = {8,0};
+		m[lang.getSignedIntGt()] = {8,0};
+		m[lang.getGenGt()] = {8,0};
+		m[lang.getRealGt()] = {8,0};
+		m[lang.getUnsignedIntGt()] = {8,0};
+		m[lang.getCharGt()] = {8,0};
+		m[lang.getSignedIntGe()] = {8,0};
+		m[lang.getGenGe()] = {8,0};
+		m[lang.getRealGe()] = {8,0};
+		m[lang.getUnsignedIntGe()] = {8,0};
+		m[lang.getCharGe()] = {8,0};
+		m[lang.getSignedIntEq()] = {9,0};
+		m[lang.getGenEq()] = {9,0};
+		m[lang.getRealEq()] = {9,0};
+		m[lang.getUnsignedIntEq()] = {9,0};
+		m[lang.getCharEq()] = {9,0};
+		m[lang.getBoolEq()] = {9,0};
+		m[lang.getTypeEq()] = {9,0};
+		m[lang.getSignedIntNe()] = {9,0};
+		m[lang.getGenNe()] = {9,0};
+		m[lang.getUnsignedIntNe()] = {9,0};
+		m[lang.getCharNe()] = {9,0};
+		m[lang.getBoolNe()] = {9,0};
+		m[lang.getRealNe()] = {9,0};
+		m[lang.getSignedIntAnd()] = {10,0};
+		m[lang.getGenAnd()] = {10,0};
+		m[lang.getUnsignedIntAnd()] = {10,0};
+		m[lang.getBoolAnd()] = {10,0};
+		m[lang.getSignedIntXor()] = {11,0};
+		m[lang.getGenXor()] = {11,0};
+		m[lang.getUnsignedIntXor()] = {11,0};
+		m[lang.getBoolXor()] = {11,0};
+		m[lang.getSignedIntOr()] = {12,0};
+		m[lang.getGenOr()] = {12,0};
+		m[lang.getUnsignedIntOr()] = {12,0};
+		m[lang.getBoolOr()] = {12,0};
+		m[lang.getBoolLAnd()] = {13,0};
+		m[lang.getBoolLOr()] = {14,0};
+
+		return m;
+	}
+
+	namespace {
+
+		/**
+		 * This is a helper function for the "needsParentheses" function
+		 * @param toTest String to be checked
+		 * @return true, if toTest is a addition operation
+		 */
+		bool checkIfAdd(NodePtr toTest) {
+			auto& lang = toTest.getNodeManager().getLangBasic();
+			if (lang.isSignedIntAdd(toTest) ||
+				  lang.isGenAdd(toTest) ||
+				  lang.isUnsignedIntAdd(toTest) ||
+				  lang.isRealAdd(toTest) ||
+				  lang.isCharAdd(toTest))
+				return true;
+			return false;
+		}
+
+		/**
+		 * This is a helper function for the "needsParentheses" function
+		 * @param toTest String to be checked
+		 * @return true, if toTest is a subtraction operation
+		 */
+		bool checkIfSub(NodePtr toTest) {
+			auto& lang = toTest.getNodeManager().getLangBasic();
+			if (lang.isSignedIntSub(toTest) ||
+				  lang.isGenSub(toTest) ||
+				  lang.isUnsignedIntSub(toTest) ||
+				  lang.isRealSub(toTest) ||
+				  lang.isCharSub(toTest))
+				return true;
+			return false;
+		}
+
+		/**
+		 * This is a helper function for the "needsParentheses" function
+		 * @param toTest String to be checked
+		 * @return true, if toTest is a dividing operation
+		 */
+		bool checkIfDiv(NodePtr toTest) {
+			auto& lang = toTest.getNodeManager().getLangBasic();
+			if (lang.isSignedIntDiv(toTest) ||
+				  lang.isGenDiv(toTest) ||
+				  lang.isUnsignedIntDiv(toTest) ||
+				  lang.isRealDiv(toTest) ||
+				  lang.isCharDiv(toTest))
+				return true;
+			return false;
+		}
+
+		/**
+		 * This is a helper function for the "needsParentheses" function
+		 * @param toTest String to be checked
+		 * @return true, if toTest is a multiplication operation
+		 */
+		bool checkIfMul(NodePtr toTest) {
+			auto& lang = toTest.getNodeManager().getLangBasic();
+			if (lang.isSignedIntMul(toTest) ||
+				  lang.isGenMul(toTest) ||
+				  lang.isUnsignedIntMul(toTest) ||
+				  lang.isRealMul(toTest) ||
+				  lang.isCharMul(toTest))
+				return true;
+			return false;
+		}
+
+		/**
+		 * This is a helper function for the "needsParentheses" function
+		 * @param toTest String to be checked
+		 * @return true, if toTest is a modulo operation
+		 */
+		bool checkIfMod(NodePtr toTest) {
+			auto& lang = toTest.getNodeManager().getLangBasic();
+			if (lang.isSignedIntMod(toTest) ||
+				  lang.isGenMod(toTest) ||
+				  lang.isUnsignedIntMod(toTest) |
+				  lang.isCharMod(toTest))
+				return true;
+			return false;
+		}
+
+		/**
+		 *
+		 */
+		CallExprAddress getEnclosingOperatorCall(const NodeAddress& adr) {
+			// check for target
+			if (auto call = adr.isa<CallExprAddress>()) {
+				if (call.isRoot() || !call.getParentNode().isa<BindExprPtr>()) {
+					return call;
+				}
+			}
+
+			// check for root
+			if (!adr || adr.isRoot()) return CallExprAddress();
+
+			// otherwise: keep walking
+			return getEnclosingOperatorCall(adr.getParentAddress());
+		}
+
+	}
+
+
+	/**
+	 * This function check an Address for its parents and children and determines,
+	 * if a parentheses is necessary or not.
+	 *
+	 * @param cur Address to be checked
+	 * @return true, if there is the need for parentheses, false otherwise
+	 */
+	bool needsParentheses(const CallExprAddress& cur) {
+
+		const std::map<NodePtr,precedence_container> precedence_map = create_precedence_map(cur->getNodeManager());
+
+		// in the case, where the operation is already the root
+		// there is no need for parentheses
+		if(cur.isRoot()) {
+			return false;
+		}
+
+		// In every other case we need to check the parent,
+		// to determine, whether we need parentheses or not.
+		auto curOp = precedence_map.find(cur->getFunctionExpr());
+		auto parentOp= precedence_map.find(getEnclosingOperatorCall(cur.getParentAddress())->getFunctionExpr());
+
+		auto parentAddress = cur.getParentAddress();
+		auto parentArgs = parentAddress.as<CallExprPtr>().getArguments();
+
+		// If the precedence of the parent element is higher,
+		// we need braces for the current
+		if(parentOp->second.precedence < curOp->second.precedence)
+			return true;
+
+		// If the precedence of the two elements is the same,
+		// we need to determine other things
+		if(parentOp->second.precedence == curOp->second.precedence){
+
+			// The first thing we check is, if cur is the same as
+			// the second ([1]) child-Node of the parent AND if
+			// the parent function expressions are NOT "sub", "div" or "mod"
+
+			if(cur.as<CallExprPtr>() == parentArgs[1]) {
+				if( checkIfSub(curOp->first) || checkIfSub(parentOp->first) ||
+					checkIfDiv(curOp->first) || checkIfDiv(parentOp->first) ||
+					checkIfMod(curOp->first) || checkIfMod(parentOp->first)
+						)
+					return true;
+				else
+					return false;
+
+			} else {
+				return false;
+			}
+
+		}
+
+		return false;
+	}
+}
+}
+}

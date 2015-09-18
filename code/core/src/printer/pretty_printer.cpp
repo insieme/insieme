@@ -1189,8 +1189,10 @@ namespace printer {
 
 			#define ADD_BRACKET_FORMATTER(Literal, FORMAT) \
 					ADD_FORMATTER(Literal, { if(!HAS_OPTION(SKIP_BRACKETS)) OUT("("); FORMAT; if(!HAS_OPTION(SKIP_BRACKETS)) OUT(")"); })
-
-
+/*
+#define ADD_INTELLIGENT_BRACKET_FORMATTER(Literal, FORMAT) \
+			ADD_FORMATTER(Literal, { if(insieme::core::analysis::needParentheses()) OUT("("); FORMAT; if(insieme::core::analysis::needParentheses()) OUT(")"); })
+*/
 			if(config.hasOption(PrettyPrinter::PRINT_DEREFS)) {
 				ADD_FORMATTER(refExt.getRefDeref(), {
 					OUT(" *");

@@ -130,6 +130,7 @@ namespace insieme {
 
 			if (type1) {
 				dumpColor(type1);
+				//dumpText(type1);
 				PrettyPrinter printerA(type1, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::PRINT_CASTS
 											  | PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_MARKERS
 											  | PrettyPrinter::NO_LIST_SUGAR | PrettyPrinter::PRINT_ATTRIBUTES
@@ -218,6 +219,12 @@ namespace insieme {
 											"	let two = lambda(int<4> x)-> int<4> { return x+5; };"
 											"   return one(two(exp));"
 											"}  "));
+
+		EXPECT_TRUE(test_expression(nm, "100+200*300"));
+		EXPECT_TRUE(test_expression(nm, "100-200*300"));
+		EXPECT_TRUE(test_expression(nm, "100-200+300"));
+//		EXPECT_TRUE(test_expression(nm, "100-(200+300)"));
+		EXPECT_TRUE(test_expression(nm, "100-200-300"));
 
 	}
 
@@ -757,8 +764,20 @@ EXPECT_TRUE(test_program(nm,
 ));
 
 EXPECT_TRUE(test_program(nm,
+						 "unit main()  {"
+								 "while ( (false || true) && (true || false) ) { decl int<4> a = 5; }"
+								 "}"
+));
+
+EXPECT_TRUE(test_program(nm,
 "unit main()  {"
-"while ( (false || true) && (true || false) ) { decl int<4> a = 5; }"
+"while ( false || true && true ) { decl int<4> a = 5; }"
+"}"
+));
+
+EXPECT_TRUE(test_program(nm,
+"unit main()  {"
+"while ( false && true || true ) { decl int<4> a = 5; }"
 "}"
 ));
 */
