@@ -35,7 +35,11 @@
 id       [a-zA-Z_][a-zA-Z0-9_]*
 type_var [\'][a-zA-Z0-9_]*
 
-stringlit \"(\\.|[^"])*\"
+/* Note: the original stringlit regex was: \"(\\.|[^"])*\"
+ * We had to create an alternative one which puts the strin in double quotes on each side, in order to enable the parsing of
+ * string literals (which are real strings - not real values or so) and also pass on the enclosing quotes to the builder.
+ */
+stringlit \"(\\.|[^"])*\"|\"(\"(\\.|[^"])*\")\"
 charlit   \'(\\.|[^"])\'
 float   [0-9]+"."[0-9]+f
 double  [0-9]+"."[0-9]+

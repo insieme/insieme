@@ -96,7 +96,7 @@ namespace parser3 {
 		driver.parseExpression();
 		if(driver.result) {
 //			std::cout << driver.result << std::endl;
-//		    dumpColor(driver.result);
+//			dumpColor(driver.result);
 			auto msg = checks::check(driver.result);
 			EXPECT_TRUE(msg.empty()) << msg;
 		} else {
@@ -104,6 +104,14 @@ namespace parser3 {
 		}
 		//   std::cout << " ============== TEST ============ " << std::endl;
 		return driver.result;
+	}
+
+	TEST(IR_Parser3, Strings) {
+		NodeManager nm;
+		EXPECT_TRUE(test_expression(nm, "lit(\"foo\")"));
+		EXPECT_TRUE(test_expression(nm, "lit(\"\"foo\"\")"));
+		EXPECT_TRUE(test_expression(nm, "lit(\"5\")"));
+		EXPECT_TRUE(test_expression(nm, "lit(\"\"foo\\nbar\"\")"));
 	}
 
 	TEST(IR_Parser3, Expressions) {

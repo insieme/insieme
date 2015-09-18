@@ -67,12 +67,12 @@ namespace lang {
 		/**
 		 * An operation reading formated input from the command line (scanf)
 		 */
-		LANG_EXT_LITERAL(Scan, "scan", "(ptr<char,t,f>, var_list)->int<4>")
+		LANG_EXT_LITERAL(Scan, "scan", "(ref<array<char,'s>,t,f>, var_list)->int<4>")
 
 	  	/**
 		 * An operation writing formated output to the command line (printf)
 		 */
-		LANG_EXT_LITERAL(Print, "print", "(ptr<char,t,f>, var_list)->int<4>")
+		LANG_EXT_LITERAL(Print, "print", "(ref<array<char,'s>,t,f>, var_list)->int<4>")
 
 	};
 	

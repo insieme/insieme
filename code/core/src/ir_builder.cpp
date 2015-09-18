@@ -440,8 +440,17 @@ namespace core {
 		return callExpr(getLangBasic().getUnit(), getLangBasic().getUnitConsume(), toConsume);
 	}
 
-	LiteralPtr IRBuilderBaseModule::stringLit(const string& str) const {
-		return literal(str, ptrType(getLangBasic().getChar(), true));
+	LiteralPtr IRBuilderBaseModule::stringLit(const string& str, const bool isConst) const {
+		if (str.length() == 0 || str[0] != '"') {
+			return stringLit("\"" + str + "\"", isConst);
+		}
+
+		// We calculate the payload length, which is:
+		// * the length of the given string - 2 (because we added double quotes) + 1 (because clang counts the terminating \0 character)
+		// * also we need to subtract 1 for each encountered escaped sequence, since they got encoded like this in the frontend
+		int payloadLength = str.length() - 2 + 1 - std::count(str.begin(), str.end(), '\\');
+
+		return literal(str, refType(arrayType(getLangBasic().getChar(), payloadLength), isConst));
 	}
 
 	namespace {

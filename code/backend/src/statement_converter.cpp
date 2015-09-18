@@ -257,8 +257,7 @@ namespace backend {
 		// handle C string literals
 		// TODO: move this to an extension since it is a pointer
 		if(ptr->getStringValue()[0] == '"') {
-			assert_pred1(core::lang::isPointer, type);
-			core::TypePtr type = core::lang::PointerType(ptr).getElementType();
+			core::TypePtr type = core::lang::ReferenceType(ptr).getElementType();
 			if(core::lang::isArray(type) && basic.isWChar(core::lang::ArrayType(type).getElementType())) {
 				// reproduce the longstring signature for widechars, this is 16 in windows and 32 in unix
 				res = toLiteral("L" + ptr->getStringValue());
