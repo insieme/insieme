@@ -118,7 +118,10 @@ namespace runtime {
 		lang::symbol_map symbols = mgr.getLangExtension<core::lang::PointerExtension>().getSymbols();
 
 		// add a few extra symbols for the test cases
+		symbols["a"] = [&]()->NodePtr { return builder.parseExpr("lit(\"a\":int<4>)"); };
 		symbols["x"] = [&]()->NodePtr { return builder.parseExpr("lit(\"x\":ptr<char,f,f>)"); };
+		symbols["y"] = [&]()->NodePtr { return builder.parseExpr("lit(\"y\":ptr<char,f,f>)"); };
+		symbols["r"] = [&]()->NodePtr { return builder.parseExpr("lit(\"r\":ref<ptr<char,f,f>>)"); };
 
 		// load pointer extension
 		auto convert = [&](const std::string& ir) {
@@ -132,7 +135,10 @@ namespace runtime {
 		EXPECT_EQ("x", convert("x"));
 
 		// check constructors
-//		EXPECT_EQ(  "(char*)0",  convert("ptr_null(lit(char),lit(f),lit(f))"));
+		EXPECT_EQ(               "(char*)0", convert("ptr_null(lit(char),lit(f),lit(f))"));
+		EXPECT_EQ(         "(const char*)0", convert("ptr_null(lit(char),lit(t),lit(f))"));
+		EXPECT_EQ(      "(volatile char*)0", convert("ptr_null(lit(char),lit(f),lit(t))"));
+		EXPECT_EQ("(const volatile char*)0", convert("ptr_null(lit(char),lit(t),lit(t))"));
 
 		// check casts
 		EXPECT_EQ(                      "x", convert("ptr_cast(x,lit(f),lit(f))"));
@@ -140,10 +146,30 @@ namespace runtime {
 		EXPECT_EQ(      "(volatile char*)x", convert("ptr_cast(x,lit(f),lit(t))"));
 		EXPECT_EQ("(const volatile char*)x", convert("ptr_cast(x,lit(t),lit(t))"));
 
-		// check pointer operators
-//
-//		EXPECT_EQ(        "*x",  convert("ptr_deref(x)"));
+		// check pointer subscript
+		EXPECT_EQ("x[5]", convert("ptr_subscript(x,5)"));
+		EXPECT_EQ("x[a]", convert("ptr_subscript(x,a)"));
 
+		// check pointer operators
+		EXPECT_EQ("*x", convert("ptr_deref(x)"));
+
+		// check pointer comparisons
+		EXPECT_EQ("x == y", convert("ptr_eq(x,y)"));
+		EXPECT_EQ("x != y", convert("ptr_ne(x,y)"));
+		EXPECT_EQ( "x < y", convert("ptr_lt(x,y)"));
+		EXPECT_EQ("x <= y", convert("ptr_le(x,y)"));
+		EXPECT_EQ( "x > y", convert("ptr_gt(x,y)"));
+		EXPECT_EQ("x >= y", convert("ptr_ge(x,y)"));
+
+		// check pointer arithmetic
+		EXPECT_EQ("x + 5", convert("ptr_add(x,5)"));
+		EXPECT_EQ("x + a", convert("ptr_add(x,a)"));
+		EXPECT_EQ("x - 5", convert("ptr_sub(x,5)"));
+		EXPECT_EQ("x - a", convert("ptr_sub(x,a)"));
+		EXPECT_EQ(  "r++", convert("ptr_post_inc(r)"));
+		EXPECT_EQ(  "r--", convert("ptr_post_dec(r)"));
+		EXPECT_EQ(  "++r", convert("ptr_pre_inc(r)"));
+		EXPECT_EQ(  "--r", convert("ptr_pre_dec(r)"));
 	}
 
 
