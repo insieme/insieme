@@ -317,7 +317,7 @@ namespace backend {
 		 *
 		 * @param converter the converter which will be using the resulting context.
 		 */
-		ConversionContext(const Converter& converter, const core::LambdaPtr& entryPoint)
+		ConversionContext(const Converter& converter, const core::LambdaPtr& entryPoint = core::LambdaPtr())
 		    : converter(converter), entryPoint(entryPoint), dependencies(), requirements(), variableManager(), includes() {}
 
 		const Converter& getConverter() const {

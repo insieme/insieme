@@ -524,7 +524,7 @@ namespace parser3 {
 						args.push_back(builder.pack(ExpressionList()));
 					} else if(!lang::isVarList(args.rbegin()->getType())) {
 						ExpressionList newParams(args.begin(), args.begin() + funcParamTypes.size() - 1);
-						ExpressionList packParams(args.begin() + funcParamTypes.size(), args.end());
+						ExpressionList packParams(args.begin() + funcParamTypes.size() - 1, args.end());
 						newParams.push_back(builder.pack(packParams));
 						std::swap(args, newParams);
 					}

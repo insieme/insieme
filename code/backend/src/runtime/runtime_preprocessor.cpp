@@ -146,14 +146,14 @@ namespace runtime {
 
 
 			// define parameter of resulting lambda
-			core::VariablePtr workItem = builder.variable(builder.refType(extensions.getWorkItemType()));
+			core::VariablePtr workItem = builder.variable(builder.refType(builder.refType(extensions.getWorkItemType())));
 			core::TypePtr tupleType = DataItem::toLWDataItemType(builder.tupleType(entryType->getParameterTypes()->getElements()));
 			core::ExpressionPtr paramTypes = builder.getTypeLiteral(tupleType);
 
 			vector<core::ExpressionPtr> argList;
 			unsigned counter = 0;
 			::transform(entryType->getParameterTypes()->getElements(), std::back_inserter(argList), [&](const core::TypePtr& type) {
-				return builder.callExpr(type, extensions.getGetWorkItemArgument(), toVector<core::ExpressionPtr>(workItem, core::encoder::toIR(manager, counter++),
+				return builder.callExpr(type, extensions.getGetWorkItemArgument(), toVector<core::ExpressionPtr>(builder.deref(workItem), core::encoder::toIR(manager, counter++),
 				                                                                                            paramTypes, builder.getTypeLiteral(type)));
 			});
 
@@ -190,8 +190,8 @@ namespace runtime {
 
 			// -------------------- assemble parameters ------------------------------
 
-			core::VariablePtr argc = builder.variable(basic.getInt4());
-			core::VariablePtr argv = builder.variable(builder.refType(builder.arrayType(builder.refType(builder.arrayType(basic.getChar())))));
+			core::VariablePtr argc = builder.variable(builder.parseType("ref<int<4>>"));
+			core::VariablePtr argv = builder.variable(builder.parseType("ref<ref<ref<array<char,inf>>>>"));
 			vector<core::VariablePtr> params = toVector(argc, argv);
 
 			// ------------------- Add list of entry points --------------------------
@@ -207,7 +207,7 @@ namespace runtime {
 			// ------------------- Start standalone runtime  -------------------------
 
 			// construct light-weight data item tuple
-			core::ExpressionPtr expr = builder.tupleExpr(toVector<core::ExpressionPtr>(argc, argv));
+			core::ExpressionPtr expr = builder.tupleExpr(toVector<core::ExpressionPtr>(builder.deref(argc), builder.deref(argv)));
 			core::TupleTypePtr tupleType = static_pointer_cast<const core::TupleType>(expr->getType());
 			expr = builder.callExpr(DataItem::toLWDataItemType(tupleType), extensions.getWrapLWData(), toVector(expr));
 
@@ -221,11 +221,9 @@ namespace runtime {
 			// ------------------- Creation of new main function -------------------------
 
 
-			core::FunctionTypePtr mainType = builder.functionType(toVector(argc->getType(), argv->getType()), basic.getInt4());
-
 			// create new main function
 			core::StatementPtr body = builder.compoundStmt(stmts);
-			core::ExpressionPtr main = builder.lambdaExpr(mainType, params, body);
+			core::ExpressionPtr main = builder.lambdaExpr(basic.getInt4(), params, body);
 
 			// return resulting program
 			return core::Program::get(manager, toVector(main));
@@ -396,7 +394,7 @@ namespace runtime {
 		const RuntimeExtension& extensions = manager.getLangExtension<RuntimeExtension>();
 
 		// define parameter of resulting lambda
-		core::VariablePtr workItem = builder.variable(builder.refType(extensions.getWorkItemType()));
+		core::VariablePtr workItem = builder.variable(builder.refType(builder.refType(extensions.getWorkItemType())));
 
 		// collect parameters to be captured by the job
 
@@ -421,7 +419,7 @@ namespace runtime {
 			core::TypePtr varType = cur.first->getType();
 			core::ExpressionPtr index = coder::toIR(manager, cur.second);
 			core::ExpressionPtr access = builder.callExpr(varType, extensions.getGetWorkItemArgument(),
-			                                              toVector<core::ExpressionPtr>(workItem, index, paramTypeToken, builder.getTypeLiteral(varType)));
+			                                              toVector<core::ExpressionPtr>(builder.deref(workItem), index, paramTypeToken, builder.getTypeLiteral(varType)));
 			varReplacements.insert(std::make_pair(cur.first, access));
 		});
 
@@ -640,7 +638,7 @@ namespace runtime {
 			core::StatementList resBody;
 
 			// define parameter of resulting lambda
-			core::VariablePtr workItem = builder.variable(builder.refType(ext.getWorkItemType()));
+			core::VariablePtr workItem = builder.variable(builder.refType(builder.refType(ext.getWorkItemType())));
 
 			// create variables containing loop boundaries
 			core::TypePtr unit = basic.getUnit();
@@ -651,7 +649,7 @@ namespace runtime {
 			core::VariablePtr end = builder.variable(int4);
 			core::VariablePtr step = builder.variable(int4);
 
-			resBody.push_back(builder.declarationStmt(range, builder.callExpr(ext.getWorkItemRange(), ext.getGetWorkItemRange(), workItem)));
+			resBody.push_back(builder.declarationStmt(range, builder.callExpr(ext.getWorkItemRange(), ext.getGetWorkItemRange(), builder.deref(workItem))));
 			resBody.push_back(builder.declarationStmt(begin, builder.accessMember(range, "begin")));
 			resBody.push_back(builder.declarationStmt(end, builder.accessMember(range, "end")));
 			resBody.push_back(builder.declarationStmt(step, builder.accessMember(range, "step")));
@@ -668,7 +666,7 @@ namespace runtime {
 				core::TypePtr varType = cur->getType();
 				core::ExpressionPtr index = coder::toIR(manager, count++);
 				core::ExpressionPtr access = builder.callExpr(varType, ext.getGetWorkItemArgument(),
-				                                              toVector<core::ExpressionPtr>(workItem, index, paramTypeToken, builder.getTypeLiteral(varType)));
+				                                              toVector<core::ExpressionPtr>(builder.deref(workItem), index, paramTypeToken, builder.getTypeLiteral(varType)));
 				varReplacements.insert(std::make_pair(cur, access));
 			});
 
@@ -763,7 +761,7 @@ namespace runtime {
 				//
 
 				// define parameter of resulting lambda
-				core::VariablePtr workItem = builder.variable(builder.refType(ext.getWorkItemType()));
+				core::VariablePtr workItem = builder.variable(builder.refType(builder.refType(ext.getWorkItemType())));
 
 				// create function triggering the computation of this variant (forming the entry point)
 				core::StatementList body;
@@ -774,7 +772,7 @@ namespace runtime {
 					core::TypePtr argType = arguments[i]->getType();
 					core::ExpressionPtr index = builder.uintLit(i);
 					newArgs.push_back(builder.callExpr(argType, ext.getGetWorkItemArgument(),
-					                                   toVector<core::ExpressionPtr>(workItem, index, paramTypeToken, builder.getTypeLiteral(argType))));
+					                                   toVector<core::ExpressionPtr>(builder.deref(workItem), index, paramTypeToken, builder.getTypeLiteral(argType))));
 				}
 
 				// add call to variant implementation

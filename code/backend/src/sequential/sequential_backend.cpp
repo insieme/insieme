@@ -58,9 +58,10 @@
 #include "insieme/backend/sequential/sequential_preprocessor.h"
 #include "insieme/backend/sequential/sequential_type_handler.h"
 
+#include "insieme/backend/addons/pointer_type.h"
+#include "insieme/backend/addons/cpp_casts.h"
 #include "insieme/backend/addons/cpp_memb_ptr.h"
 #include "insieme/backend/addons/complex_type.h"
-#include "insieme/backend/addons/enum_type.h"
 #include "insieme/backend/addons/longlong_type.h"
 #include "insieme/backend/addons/asm_stmt.h"
 #include "insieme/backend/addons/varargs.h"
@@ -72,9 +73,10 @@ namespace sequential {
 
 	SequentialBackendPtr SequentialBackend::getDefault() {
 		auto res = std::make_shared<SequentialBackend>();
+		res->addAddOn<addons::PointerType>();
+		res->addAddOn<addons::CppCastsAddon>();
 		res->addAddOn<addons::CppMembAddon>();
 		res->addAddOn<addons::ComplexType>();
-		res->addAddOn<addons::EnumTypes>();
 		res->addAddOn<addons::LongLongType>();
 		res->addAddOn<addons::AsmStmt>();
 		res->addAddOn<addons::VarArgs>();

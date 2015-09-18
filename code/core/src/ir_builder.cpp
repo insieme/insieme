@@ -40,6 +40,7 @@
 #include <limits>
 #include <set>
 #include <cmath>
+#include <iomanip>
 
 #include "insieme/core/ir_node.h"
 

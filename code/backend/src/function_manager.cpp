@@ -1014,17 +1014,18 @@ namespace backend {
 				if(candidate->getNodeType() != core::NT_CallExpr) { return NO_ACCESS; }
 				core::CallExprPtr call = candidate.as<core::CallExprPtr>();
 
-				// check whether it is a filed access
+				// check whether it is a field access
 				const auto& refs = thisVar->getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
 				if(core::analysis::isCallOf(call, refs.getRefAssign())) {
 					core::ExpressionPtr target = call->getArgument(0);
-					if(core::analysis::isCallOf(target, refs.getRefMemberAccess())) {
+					if(auto refAccess = refs.isCallOfRefMemberAccess(target)) {
 						// check whether it is accessing this
-						auto deref = target.as<core::CallExprPtr>();
-						if(deref->getArgument(0) != thisVar) { return NO_ACCESS; }
+						if(auto deref = refs.isCallOfRefDeref(refAccess[0])) {
+							if(deref[0] != thisVar) { return NO_ACCESS; }
 
-						// extract identifier name
-						return deref->getArgument(1);
+							// extract identifier name
+							return refAccess[1];
+						}
 					}
 				}
 
@@ -1034,16 +1035,19 @@ namespace backend {
 					auto target = call->getArgument(0);
 
 					// test whether argument is this (super-constructor call)
-					if(target == thisVar) { return funType->getObjectType(); }
+					if(auto deref = refs.isCallOfRefDeref(target)) {
+						if(deref[0] == thisVar) { return funType->getObjectType(); }
+					}
 
 					// test whether argument is a member (member initializer)
-					if(core::analysis::isCallOf(target, refs.getRefMemberAccess())) {
+					if(auto refAccess = refs.isCallOfRefMemberAccess(target)) {
 						// check whether it is accessing this
-						auto deref = target.as<core::CallExprPtr>();
-						if(deref->getArgument(0) != thisVar) { return NO_ACCESS; }
+						if(auto deref = refs.isCallOfRefDeref(refAccess[0])) {
+							if(deref[0] != thisVar) { return NO_ACCESS; }
 
-						// extract identifier name
-						return deref->getArgument(1);
+							// extract identifier name
+							return refAccess[1];
+						}
 					}
 				}
 
@@ -1345,7 +1349,7 @@ namespace backend {
 
 			// resolve return type
 			const TypeInfo& returnTypeInfo = typeManager.getTypeInfo(funType->getReturnType());
-			res.prototypeDependencies.insert(returnTypeInfo.declaration);
+			res.prototypeDependencies.insert(returnTypeInfo.definition);
 			res.definitionDependencies.insert(returnTypeInfo.definition);
 			c_ast::TypePtr returnType = (external) ? returnTypeInfo.externalType : returnTypeInfo.rValueType;
 
@@ -1365,7 +1369,7 @@ namespace backend {
 
 				// resolve parameter type
 				const TypeInfo& paramTypeInfo = typeManager.getTypeInfo(cur);
-				res.prototypeDependencies.insert(paramTypeInfo.declaration);
+				res.prototypeDependencies.insert(paramTypeInfo.definition);
 				res.definitionDependencies.insert(paramTypeInfo.definition);
 
 				c_ast::TypePtr paramType = (external) ? paramTypeInfo.externalType : paramTypeInfo.rValueType;
@@ -1397,8 +1401,7 @@ namespace backend {
 				// set up variable manager
 				ConversionContext context(converter, lambda);
 				for_each(lambda->getParameterList(), [&](const core::VariablePtr& cur) {
-					context.getVariableManager().addInfo(converter, cur,
-					                                     core::lang::isReference(cur) ? VariableInfo::INDIRECT : VariableInfo::NONE);
+					context.getVariableManager().addInfo(converter, cur, VariableInfo::DIRECT);
 				});
 
 				core::CompoundStmtPtr body = lambda->getBody();

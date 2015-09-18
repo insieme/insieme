@@ -41,6 +41,7 @@
 
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_visitor.h"
+#include "insieme/core/lang/parallel.h"
 #include "insieme/core/printer/pretty_printer.h"
 
 #include "insieme/backend/runtime/runtime_backend.h"
@@ -79,6 +80,7 @@ namespace insieme {
 
 	TEST(MetaInformationTest, Integration) {
 		core::NodeManager manager;
+		auto& parExt = manager.getLangExtension<core::lang::ParallelExtension>();
 
 		// obtain test case & check that it's available
 		driver::integration::IntegrationTestCaseOpt testCaseOpt = getCase("omp/meta_info_test");
@@ -93,7 +95,7 @@ namespace insieme {
 		// find parallel
 		core::CallExprPtr parallel;
 		core::visitDepthFirstOnceInterruptible(code, [&](const core::CallExprPtr& call) {
-			if(core::analysis::isCallOf(call, manager.getLangBasic().getParallel())) {
+			if(parExt.isCallOfParallel(call)) {
 				parallel = call;
 				return true;
 			}
@@ -163,7 +165,7 @@ namespace insieme {
 		// find parallel
 		core::ExpressionPtr postinc;
 		core::visitDepthFirstOnceInterruptible(code, [&](const core::ExpressionPtr& expr) {
-			if(expr == manager.getLangBasic().getGenPostInc()) {
+			if(expr == manager.getLangBasic().getSignedIntPostInc()) {
 				postinc = expr;
 				return true;
 			}

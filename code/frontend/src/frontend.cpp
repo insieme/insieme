@@ -59,6 +59,7 @@
 #include "insieme/frontend/extensions/semantic_check_extension.h"
 #include "insieme/frontend/extensions/significance_frontend_extension.h"
 #include "insieme/frontend/extensions/test_pragma_extension.h"
+#include "insieme/frontend/extensions/variable_argument_list_extension.h"
 
 namespace insieme {
 namespace frontend {
@@ -103,6 +104,9 @@ namespace frontend {
 				}
 			}
 		}
+
+		// extensions that always need to be loaded
+		extensionList.push_back(std::make_shared<extensions::VariableArgumentListExtension>());
 
 		// check pre-requisites
 		for(auto ext : getExtensions()) {

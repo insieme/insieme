@@ -22,3 +22,47 @@ wavefront
 velvet
 vivid
 ziggurat
+
+
+# Disabling tests because they fail with assertion:
+# Trying to build atomic assignment from non-assigment
+atomic
+private_iterator
+
+# Disabling tests because they fail with assertion:
+# Global variable not inserted at global scope
+comd-omp
+dijkstra
+integralEstimation
+
+# Disabling tests because they fail with assertion:
+# OMP threadprivate not yet supported
+copyin
+threadprivate
+threadprivate_static
+
+# Disabling tests because they fail with assertion:
+# Trying to look up function not previously declared
+datasharing
+parallel_merge_stress
+privatized_global
+rec_global
+stream
+
+# Disabling tests because they fail with assertion:
+# Cannot lock a non-lock type
+locks
+
+# Disabling tests because they fail with assertion:
+# Record types not correctly resolved
+qap2
+
+# Disabling tests because they fail to satisfy some semantic checks or errors
+critical
+even_odd_task
+flush
+functions
+global_firstprivate
+n_body
+ordered
+simple

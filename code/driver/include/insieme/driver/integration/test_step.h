@@ -40,6 +40,7 @@
 #include <set>
 #include <string>
 #include <functional>
+#include <signal.h>
 
 #include <boost/noncopyable.hpp>
 #include <boost/operators.hpp>

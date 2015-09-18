@@ -42,7 +42,7 @@
 
 /**
  * This header file defines the components required to be registered within
- * a backend instance to handle C++ references properly.
+ * a backend instance to handle C/C++ pointers.
  */
 namespace insieme {
 namespace backend {
@@ -50,11 +50,12 @@ namespace addons {
 
 
 	/**
-	 * An Add-On realizing support for enum types.
+	 * An Add-On realizing support for C/C++ pointers encoded utilizing
+	 * the core's pointer module.
 	 */
-	struct EnumTypes : public AddOn {
+	struct PointerType : public AddOn {
 		/**
-		 * Installs this Add-On within the given converter.
+		 * Installs the this Add-On within the given converter.
 		 */
 		virtual void installOn(Converter& converter) const;
 	};

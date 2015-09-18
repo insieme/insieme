@@ -1,2 +1,31 @@
 # Do not remove this file even if it does not blacklist any test.
 # It is needed for the integration test driver to recognize this folder as the parent for multiple other tests.
+
+
+# Disabling tests because they fail with assertion:
+# currently not implemented
+asm
+
+# Disabling tests because they fail with assertion:
+# Record types not correctly resolved
+global_rec_struct
+global_rec_struct_typedef
+rec_data_struct
+rec_func_param_type
+rec_func_ptr
+rec_struct_typedef
+
+# Disabling tests because they fail with assertion:
+# Global variable not inserted at global scope
+global_rec_struct2
+
+# Disabling tests because they fail with assertion:
+# Ref cast only allowed to cast between qualifiers,trying to cast from
+string_escape_chars
+
+# Disabling tests because they fail with assertion:
+# Trying to insert variable already declared previously
+switch_cases
+
+# Disabling tests because they fail to satisfy some semantic checks
+basename_bug

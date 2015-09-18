@@ -43,6 +43,7 @@
 
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/printer/pretty_printer.h"
+#include "insieme/core/printer/error_printer.h"
 
 #include "insieme/utils/compiler/compiler.h"
 
@@ -101,7 +102,7 @@ namespace backend {
 				v[1u] = 10;
 				v[2u] = 14;
 			
-				print("Equal: %d\n", o.b == v);
+				print("Equal: %d\n", ref_eq(o.b, v));
 				print("v[1] = %d \t v[2] = %d \t o.v[1] = %d \t o.v[2] = %d \t y = %d\n",
 						*v[1u], *v[2u], *o.b[1u], *o.b[2u], *y);
 			
@@ -122,7 +123,7 @@ namespace backend {
 		ASSERT_TRUE(prog);
 
 		// check input program
-		EXPECT_TRUE(core::checks::check(prog).empty()) << core::checks::check(prog);
+		EXPECT_TRUE(core::checks::check(prog).empty()) << core::printer::dumpErrors(core::checks::check(prog));
 
 		// print program using pretty printer
 		std::cout << core::printer::PrettyPrinter(prog);

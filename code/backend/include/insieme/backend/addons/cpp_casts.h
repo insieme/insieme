@@ -34,47 +34,62 @@
  * regarding third party software licenses.
  */
 
-#include <gtest/gtest.h>
+#pragma once
 
-#include "insieme/transform/versioning.h"
-#include "insieme/transform/primitives.h"
+#include "insieme/core/forward_decls.h"
 
-#include "insieme/core/ir_builder.h"
-#include "insieme/core/printer/pretty_printer.h"
-#include "insieme/core/checks/full_check.h"
+#include "insieme/backend/addon.h"
+#include "insieme/core/lang/extension.h"
 
-#include "insieme/utils/test/test_utils.h"
-
+/**
+ * This header file defines the components required to be registered within
+ * a backend instance to handle C++ casts.
+ */
 namespace insieme {
-namespace transform {
+namespace backend {
+namespace addons {
+
+	/**
+	 * A language module defining C++ cast operators within the backend.
+	 */
+	class CppCastExtension : public core::lang::Extension {
+
+		/**
+		 * Allow the node manager to create instances of this class.
+		 */
+		friend class core::NodeManager;
+
+		/**
+		 * Creates a new instance based on the given node manager.
+		 */
+		CppCastExtension(core::NodeManager& manager) : core::lang::Extension(manager) {}
+
+	  public:
+
+		/**
+		 * The literal utilized to represent static C++ casts.
+		 */
+		LANG_EXT_LITERAL(StaticCast, "static_cast", "(ref<'a,'c,'v>, type<ref<'b,'nc,'nv>>) -> ref<'b,'nc,'nv>")
+
+	    /**
+		 * The literal utilized to represent dynamic C++ casts.
+		 */
+	    LANG_EXT_LITERAL(DynamicCast, "dynamic_cast", "(ref<'a,'c,'v>, type<ref<'b,'nc,'nv>>) -> ref<'b,'nc,'nv>")
+
+	};
 
 
-	TEST(Versioning, SimpleVersioning) {
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
-
-		core::StatementPtr one = builder.intLit(1);
-		core::StatementPtr two = builder.intLit(2);
-
-
-		core::StatementPtr in = builder.compoundStmt(one, two);
-		core::StatementPtr out;
-
-		out = versioning(makeNoOp(), makeNoOp())->apply(in);
-		EXPECT_TRUE(core::checks::check(out).empty());
-		EXPECT_PRED2(containsSubString, toString(core::printer::PrettyPrinter(out)), "pick([0u,1u])");
-
-		// try special case - on transformation only
-		out = versioning(makeNoOp())->apply(in);
-		EXPECT_TRUE(core::checks::check(out).empty());
-		EXPECT_EQ(*in, *out);
-
-		// and a large number of versions
-		out = versioning(makeNoOp(), makeNoOp(), makeNoOp(), makeNoOp())->apply(in);
-		EXPECT_TRUE(core::checks::check(out).empty());
-		EXPECT_PRED2(containsSubString, toString(core::printer::PrettyPrinter(out)), "pick([0u,1u,2u,3u])");
-	}
+	/**
+	 * An Add-On realizing support for C++ casts.
+	 */
+	struct CppCastsAddon : public AddOn {
+		/**
+		 * Installs the this Add-On within the given converter.
+		 */
+		virtual void installOn(Converter& converter) const;
+	};
 
 
-} // end namespace transform
+} // end namespace addons
+} // end namespace backend
 } // end namespace insieme

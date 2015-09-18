@@ -59,7 +59,7 @@ namespace addons {
 
 			#include "insieme/backend/operator_converter_begin.inc"
 
-			res[ext.getAsmStmt()] = OP_CONVERTER({
+			res[ext.getAsmStmt()] = OP_CONVERTER {
 
 				std::string value("asm");
 
@@ -113,7 +113,7 @@ namespace addons {
 				value.append(ss.str());
 				value.append(")");
 				return C_NODE_MANAGER->create<c_ast::OpaqueExpr>(value);
-			});
+			};
 
 			#include "insieme/backend/operator_converter_end.inc"
 

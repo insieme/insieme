@@ -256,8 +256,8 @@ namespace backend {
 
 
 		template <typename T = TypeInfo>
-		T* createUnsupportedInfo(c_ast::CNodeManager& nodeManager, const std::string& name = "") {
-			return createInfo<T>(nodeManager, "/* UNSUPPORTED TYPE " + name + " */");
+		T* createUnsupportedInfo(c_ast::CNodeManager& nodeManager, const core::TypePtr& type) {
+			return createInfo<T>(nodeManager, "/* UNSUPPORTED TYPE: " + toString(*type) + " */");
 		}
 
 		template <typename T = TypeInfo>

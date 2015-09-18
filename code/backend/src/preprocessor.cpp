@@ -111,79 +111,68 @@ namespace backend {
 		PointwiseReplacer(core::NodeManager& manager) : manager(manager), basic(manager.getLangBasic()){};
 
 		const core::NodePtr resolveElement(const core::NodePtr& ptr) {
-			auto& arrayModule = manager.getLangExtension<core::lang::ArrayExtension>();
 
-			// check whether this node is of interest
-			if (arrayModule.isCallOfArrayPointwise(ptr)) {
-				assert_not_implemented() << "Update this to fit new array infrastructure.";
+			// check whether current node is a target of interest
+			auto call = ptr.isa<core::CallExprPtr>();
+			if (!call) return ptr->substitute(manager, *this);		// not of interest
+
+			// get the (potential) pointwise operator
+			auto pointwiseOp = call->getFunctionExpr();
+
+			// check whether it is a call to the right function
+			auto& arrayModule = manager.getLangExtension<core::lang::ArrayExtension>();
+			if (!arrayModule.isCallOfArrayPointwise(pointwiseOp)) return ptr->substitute(manager, *this);
+
+			// extract argument types
+			core::TypePtr arg0Type = call[0]->getType();
+			core::TypePtr arg1Type = call[1]->getType();
+			core::TypePtr resType = call->getType();
+
+			// check argument and result types!
+			assert_pred1(core::lang::isFixedSizedArray, arg0Type) << "First argument should be a fixed-sized array!";
+			assert_pred1(core::lang::isFixedSizedArray, arg1Type) << "First argument should be a fixed-sized array!";
+			assert_pred1(core::lang::isFixedSizedArray, resType) << "Result should be a fixed-sized array!";
+
+			// obtain the vector size
+			unsigned size = core::lang::ArrayType(arg0Type).getNumElements();
+
+			// obtain element types
+			core::TypePtr arg0ElementType = core::lang::ArrayType(arg0Type).getElementType();
+			core::TypePtr arg1ElementType = core::lang::ArrayType(arg1Type).getElementType();
+			core::TypePtr resElementType = core::lang::ArrayType(resType).getElementType();
+
+			// extract operator
+			core::ExpressionPtr op = pointwiseOp.as<core::CallExprPtr>()[0];
+
+			// create new lambda, realizing the point-wise operation
+			core::IRBuilder builder(manager);
+			core::FunctionTypePtr funType = builder.functionType(toVector<core::TypePtr>(arg0Type, arg1Type), resType);
+
+			core::VariablePtr v1 = builder.variable(builder.refType(arg0Type));
+			core::VariablePtr v2 = builder.variable(builder.refType(arg1Type));
+			core::VariablePtr res = builder.variable(resType);
+
+			// create vector init expression
+			vector<core::ExpressionPtr> elements;
+
+			// unroll the pointwise operation
+			core::TypePtr unitType = basic.getUnit();
+			core::TypePtr longType = basic.getInt8();
+			core::ExpressionPtr arraySubscript = arrayModule.getArraySubscript();
+			for(std::size_t i = 0; i < size; i++) {
+				core::LiteralPtr index = builder.literal(longType, boost::lexical_cast<std::string>(i));
+				core::ExpressionPtr a = builder.callExpr(arraySubscript, builder.deref(v1), index);
+				core::ExpressionPtr b = builder.callExpr(arraySubscript, builder.deref(v2), index);
+				elements.push_back(builder.callExpr(op, a, b));
 			}
 
-			return ptr;
-//			auto& arrayModule = manager.getLangExtension<core::lang::ArrayExtension>();
-//
-//			// check types => abort
-//			if(ptr->getNodeCategory() == core::NC_Type) { return ptr; }
-//
-//			// look for call expressions
-//			if(ptr->getNodeType() == core::NT_CallExpr) {
-//				// extract the call
-//				core::CallExprPtr call = static_pointer_cast<const core::CallExpr>(ptr);
-//
-//				// only care about calls to pointwise operations
-//				if(core::analysis::isCallOf(call->getFunctionExpr(), arrayModule.getArrayPointwise())) {
-//					// get argument and result types!
-//					assert_pred1(core::lang::isFixedSizedArray, call) << "Result should be a vector!";
-//					assert_eq(call->getArgument(0)->getType()->getNodeType(), core::NT_VectorType) << "Argument should be a vector!";
-//
-//					core::VectorTypePtr argType = static_pointer_cast<const core::VectorType>(call->getArgument(0)->getType());
-//					core::VectorTypePtr resType = static_pointer_cast<const core::VectorType>(call->getType());
-//
-//					// extract generic parameter types
-//					core::TypePtr in = argType->getElementType();
-//					core::TypePtr out = resType->getElementType();
-//
-//					assert_eq(resType->getSize()->getNodeType(), core::NT_ConcreteIntTypeParam) << "Result should be of fixed size!";
-//					core::ConcreteIntTypeParamPtr size = static_pointer_cast<const core::ConcreteIntTypeParam>(resType->getSize());
-//
-//					// extract operator
-//					core::ExpressionPtr op = static_pointer_cast<const core::CallExpr>(call->getFunctionExpr())->getArgument(0);
-//
-//					// create new lambda, realizing the point-wise operation
-//					core::IRBuilder builder(manager);
-//
-//					core::FunctionTypePtr funType = builder.functionType(toVector<core::TypePtr>(argType, argType), resType);
-//
-//					core::VariablePtr v1 = builder.variable(argType);
-//					core::VariablePtr v2 = builder.variable(argType);
-//					core::VariablePtr res = builder.variable(resType);
-//
-//					// create vector init expression
-//					vector<core::ExpressionPtr> fields;
-//
-//					// unroll the pointwise operation
-//					core::TypePtr unitType = basic.getUnit();
-//					core::TypePtr longType = basic.getUInt8();
-//					core::ExpressionPtr vectorSubscript = basic.getVectorSubscript();
-//					for(std::size_t i = 0; i < size->getValue(); i++) {
-//						core::LiteralPtr index = builder.literal(longType, boost::lexical_cast<std::string>(i));
-//
-//						core::ExpressionPtr a = builder.callExpr(in, vectorSubscript, v1, index);
-//						core::ExpressionPtr b = builder.callExpr(in, vectorSubscript, v2, index);
-//
-//						fields.push_back(builder.callExpr(out, op, a, b));
-//					}
-//
-//					// return result
-//					core::StatementPtr body = builder.returnStmt(builder.vectorExpr(resType, fields));
-//
-//					// construct substitute ...
-//					core::LambdaExprPtr substitute = builder.lambdaExpr(funType, toVector(v1, v2), body);
-//					return builder.callExpr(resType, substitute, call->getArguments());
-//				}
-//			}
-//
-//			// decent recursively
-//			return ptr->substitute(manager, *this);
+			// return result
+			auto sizeType = builder.numericType(core::lang::ArrayType(arg0Type).getSize().as<core::LiteralPtr>());
+			core::StatementPtr body = builder.returnStmt(core::lang::buildArrayCreate(resElementType, sizeType, elements));
+
+			// construct substitute ...
+			core::LambdaExprPtr substitute = builder.lambdaExpr(funType, toVector(v1, v2), body);
+			return builder.callExpr(resType, substitute, call->getArguments())->substitute(manager, *this);
 		}
 	};
 
@@ -316,20 +305,8 @@ namespace backend {
 	}
 
 	core::NodePtr RecursiveLambdaInstantiator::process(const Converter& converter, const core::NodePtr& code) {
-		auto elem = core::IRBuilder(converter.getNodeManager()).typeVariable("elem");
-		LOG(DEBUG) << "PRE ============ elem? " << core::analysis::contains(code, elem) << "\n";
-		LOG(DEBUG) << dumpColor(code) << "\n";
-		LOG(DEBUG) << "PRE DETAIL ============\n";
-		LOG(DEBUG) << dumpDetailColored(code) << "\n";
-
-		auto isLangOrOpBuiltin = [&](const core::NodePtr& node) { return core::lang::isBuiltIn(node) || converter.getFunctionManager().isBuiltIn(node); };
-		auto ret = core::transform::instantiateTypes(code, isLangOrOpBuiltin);
-
-		LOG(DEBUG) << "RET ============ elem? " << core::analysis::contains(ret, elem) << "\n";
-		LOG(DEBUG) << dumpColor(ret) << "\n";
-		LOG(DEBUG) << "RET DETAIL ============\n";
-		LOG(DEBUG) << dumpDetailColored(ret) << "\n";
-		return ret;
+		auto isCovered = [&](const core::NodePtr& node) { return converter.getFunctionManager().isBuiltIn(node); };
+		return core::transform::instantiateTypes(code, isCovered);
 	}
 
 } // end namespace backend

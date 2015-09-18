@@ -89,5 +89,5 @@
  *
  * @param FORMAT the function body realizing the formatting
  */
-#define OP_CONVERTER(Conversion)                                                                                                                               \
-	[](insieme::backend::ConversionContext & context, const insieme::core::CallExprPtr& call) -> insieme::backend::c_ast::ExpressionPtr Conversion
+#define OP_CONVERTER                                                                                                                               \
+	[](insieme::backend::ConversionContext & context, const insieme::core::CallExprPtr& call) -> insieme::backend::c_ast::ExpressionPtr

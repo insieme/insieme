@@ -99,7 +99,7 @@ namespace addons {
 
 			#include "insieme/backend/operator_converter_begin.inc"
 
-			res[ext.getVaarg()] = OP_CONVERTER({
+			res[ext.getVaarg()] = OP_CONVERTER {
 
 				// const FunctionInfo& info = getInfo(static_pointer_cast<const core::Literal>(fun));
 				c_ast::CallPtr res = c_ast::call(C_NODE_MANAGER->create("va_arg"));
@@ -108,7 +108,7 @@ namespace addons {
 				res->arguments.push_back(CONVERT_TYPE(core::analysis::getRepresentedType(ARG(1))));
 
 				return res;
-			});
+			};
 
 			#include "insieme/backend/operator_converter_end.inc"
 			return res;

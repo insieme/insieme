@@ -65,6 +65,7 @@
 #define assert_ge(_a, _b) _assert_ignore
 #define assert_fail() _assert_ignore
 #define assert_pred1(_a, _b) _assert_ignore
+#define assert_not_pred1(_a, _b) _assert_ignore
 
 #else
 #include <iostream>
@@ -131,6 +132,10 @@ namespace utils {
 #define assert_pred1(_P, _A)                                                                                                                                   \
 	if(__unused auto x = insieme::utils::detail::LazyAssertion((bool)((_P)(_A))))                                                                              \
 	std::cerr << "\nAssertion " #_P "(" #_A ") with " #_A " = " << (_A) << " in " __FILE__ ":" __xstr(__LINE__) " failed!\n"
+
+#define assert_not_pred1(_P, _A)                                                                                                                               \
+	if(__unused auto x = insieme::utils::detail::LazyAssertion(!(bool)((_P)(_A))))                                                                             \
+	std::cerr << "\nAssertion !" #_P "(" #_A ") with " #_A " = " << (_A) << " in " __FILE__ ":" __xstr(__LINE__) " failed!\n"
 
 #endif
 

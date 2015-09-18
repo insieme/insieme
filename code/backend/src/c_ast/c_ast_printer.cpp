@@ -238,10 +238,10 @@ namespace c_ast {
 
 					// special handling of initializer expressions
 					if(auto init = expr.isa<InitializerPtr>()) {
-						bool backup = init->explicitType;
-						init->explicitType = false;
+						auto backup = init->type;
+						init->type = TypePtr();
 						out << " = " << print(init);
-						init->explicitType = backup;
+						init->type = backup;
 					} else {
 						out << " = " << print(expr);
 					}
@@ -415,7 +415,7 @@ namespace c_ast {
 			}
 
 			PRINT(Initializer) {
-				if(!makeTypesImplicit && node->explicitType) { out << "(" << print(node->type) << ")"; }
+				if(!makeTypesImplicit && node->type) { out << "(" << print(node->type) << ")"; }
 				return out << "{" << join(", ", node->values, [&](std::ostream& out, const NodePtr& cur) { out << print(cur); }) << "}";
 			}
 
@@ -640,10 +640,10 @@ namespace c_ast {
 				if(node->init) {
 					// special handling of initializer expressions
 					if(auto init = node->init.isa<InitializerPtr>()) {
-						bool backup = init->explicitType;
-						init->explicitType = false;
+						auto backup = init->type;
+						init->type = TypePtr();
 						out << " = " << print(init);
-						init->explicitType = backup;
+						init->type = backup;
 					} else {
 						out << " = " << print(node->init);
 					}

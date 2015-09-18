@@ -34,47 +34,43 @@
  * regarding third party software licenses.
  */
 
-#include <gtest/gtest.h>
+#include "insieme/backend/addons/cpp_casts.h"
 
-#include "insieme/transform/versioning.h"
-#include "insieme/transform/primitives.h"
+#include "insieme/backend/converter.h"
+#include "insieme/backend/function_manager.h"
+#include "insieme/backend/operator_converter.h"
 
-#include "insieme/core/ir_builder.h"
-#include "insieme/core/printer/pretty_printer.h"
-#include "insieme/core/checks/full_check.h"
-
-#include "insieme/utils/test/test_utils.h"
+#include "insieme/backend/c_ast/c_ast_utils.h"
+#include "insieme/backend/statement_converter.h"
 
 namespace insieme {
-namespace transform {
+namespace backend {
+namespace addons {
 
+	namespace {
 
-	TEST(Versioning, SimpleVersioning) {
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
+		OperatorConverterTable getCppCastOperatorTable(core::NodeManager& manager) {
+			OperatorConverterTable res;
+			const auto& ext = manager.getLangExtension<CppCastExtension>();
 
-		core::StatementPtr one = builder.intLit(1);
-		core::StatementPtr two = builder.intLit(2);
+			#include "insieme/backend/operator_converter_begin.inc"
 
+			// ------------------------ casts -----------------------
 
-		core::StatementPtr in = builder.compoundStmt(one, two);
-		core::StatementPtr out;
+			res[ext.getStaticCast()] = OP_CONVERTER { return c_ast::staticCast(CONVERT_TYPE(call->getType()), CONVERT_ARG(0)); };
+			res[ext.getDynamicCast()] = OP_CONVERTER { return c_ast::dynamicCast(CONVERT_TYPE(call->getType()), CONVERT_ARG(0)); };
 
-		out = versioning(makeNoOp(), makeNoOp())->apply(in);
-		EXPECT_TRUE(core::checks::check(out).empty());
-		EXPECT_PRED2(containsSubString, toString(core::printer::PrettyPrinter(out)), "pick([0u,1u])");
+			#include "insieme/backend/operator_converter_end.inc"
 
-		// try special case - on transformation only
-		out = versioning(makeNoOp())->apply(in);
-		EXPECT_TRUE(core::checks::check(out).empty());
-		EXPECT_EQ(*in, *out);
-
-		// and a large number of versions
-		out = versioning(makeNoOp(), makeNoOp(), makeNoOp(), makeNoOp())->apply(in);
-		EXPECT_TRUE(core::checks::check(out).empty());
-		EXPECT_PRED2(containsSubString, toString(core::printer::PrettyPrinter(out)), "pick([0u,1u,2u,3u])");
+			return res;
+		}
 	}
 
+	void CppCastsAddon::installOn(Converter& converter) const {
+		// register additional operators
+		converter.getFunctionManager().getOperatorConverterTable().insertAll(getCppCastOperatorTable(converter.getNodeManager()));
+	}
 
-} // end namespace transform
+} // end namespace addons
+} // end namespace backend
 } // end namespace insieme

@@ -82,6 +82,10 @@ namespace lang {
 		return encoder::toIR<ExpressionList, encoder::DirectExprListConverter>(expressions.front().getNodeManager(), expressions);
 	}
 
+	ExpressionList parseListOfExpressions(const ExpressionPtr& list) {
+		return encoder::toValue<ExpressionList, encoder::DirectExprListConverter>(list);
+	}
+
 } // end namespace lang
 } // end namespace core
 } // end namespace insieme

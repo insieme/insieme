@@ -252,6 +252,7 @@ struct ir_to_value_converter<rbe::WorkItemVariant> {
 template <>
 struct is_encoding_of<rbe::WorkItemVariant> {
 	bool operator()(const core::ExpressionPtr& expr) const {
+
 		// check call expr
 		if(!expr || expr->getNodeType() != core::NT_CallExpr) { return false; }
 
@@ -267,8 +268,7 @@ struct is_encoding_of<rbe::WorkItemVariant> {
 
 		const auto& fun = call->getArgument(0);
 		res = res && fun->getNodeType() == core::NT_LambdaExpr;
-		res = res && *fun->getType() == *ext.getWorkItemVariantCtr();
-
+		res = res && *fun->getType() == *ext.getWorkItemVariantImplType();
 		return res;
 	}
 };

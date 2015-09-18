@@ -37,6 +37,7 @@
 #pragma once
 
 #include "insieme/core/lang/extension.h"
+#include "insieme/core/lang/reference.h"
 
 namespace insieme {
 namespace backend {
@@ -60,6 +61,9 @@ namespace runtime {
 		RuntimeExtension(core::NodeManager& manager) : core::lang::Extension(manager) {}
 
 	  public:
+
+		// import reference extension to utilize aliases
+		IMPORT_MODULE(core::lang::ReferenceExtension);
 
 		// -- Runtime entities ------
 	    LANG_EXT_TYPE(ContextType, "irt_context")
@@ -114,7 +118,7 @@ namespace runtime {
 		LANG_EXT_TYPE_WITH_NAME(WorkItemRange, "irt_work_item_range", "struct { int<4> begin; int<4> end; int<4> step; }")
 
 		LANG_EXT_LITERAL(GetWorkItemRange, "getRange", "(ref<irt_wi>)->struct { int<4> begin; int<4> end; int<4> step; }")
-		LANG_EXT_LITERAL(GetWorkItemArgument, "getArg", "(ref<irt_wi>, uint<#a>, type<irt_lwdi<'p>>, type<'a>)->'a")
+		LANG_EXT_LITERAL(GetWorkItemArgument, "getArg", "(ref<irt_wi>, uint<4>, type<irt_lwdi<'p>>, type<'a>)->'a")
 
 
 

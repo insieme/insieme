@@ -270,18 +270,24 @@ namespace lang {
 		 * @param factory a lazy factory for the creation of the call target to be tested
 		 * @return true if it is a call to the given literal, false otherwise
 		 */
-		static bool isCallOf(const NodePtr& candidate, const lazy_factory& factory) {
+		static CallExprPtr isCallOf(const NodePtr& candidate, const lazy_factory& factory) {
 			auto call = candidate.isa<CallExprPtr>();
-			return call && *(call->getFunctionExpr()) == *(factory());
+			return (call && *(call->getFunctionExpr()) == *(factory())) ? call : CallExprPtr();
 		}
 	};
 
 
 	/**
+	 * Two macros to create unique identifiers for import dummy variables.
+	 */
+	#define __UNIQUE_MODULE_IMPORT_VAR_NAME_AUX(LINE) _module_ ## LINE ## _import
+	#define __UNIQUE_MODULE_IMPORT_VAR_NAME(LINE) __UNIQUE_MODULE_IMPORT_VAR_NAME_AUX(LINE)
+
+	/**
 	 * A macro enabling the import of symbols of other language extensions.
 	 */
 	#define IMPORT_MODULE(NAME) \
-	  private: bool _module_##NAME##_import = importExtension<NAME>();
+	  private: bool __UNIQUE_MODULE_IMPORT_VAR_NAME(__LINE__) = importExtension<NAME>();
 
 
 	// Two auxiliary macros to concatenate tokens
@@ -364,7 +370,7 @@ namespace lang {
 		const bool is##NAME(const insieme::core::NodePtr& node) const {                                                                                        \
 			return node && (*node == *get##NAME());                                                                                                            \
 		} 																																					   \
-	    const bool isCallOf##NAME(const insieme::core::NodePtr& node) const {                                                                                  \
+	    const insieme::core::CallExprPtr isCallOf##NAME(const insieme::core::NodePtr& node) const {                                                                           \
 			return isCallOf(node,[&]()->insieme::core::NodePtr { return get##NAME(); });                                                             		   \
 		}
 
@@ -407,7 +413,7 @@ namespace lang {
 		const bool is##NAME(const insieme::core::NodePtr& node) const {                                                                                        \
 			return node && (*node == *get##NAME());                                                                                                            \
 		} 																																					   \
-		const bool isCallOf##NAME(const insieme::core::NodePtr& node) const {                                                                                  \
+		const insieme::core::CallExprPtr isCallOf##NAME(const insieme::core::NodePtr& node) const {                                                                           \
 			return isCallOf(node,[&]()->insieme::core::NodePtr { return get##NAME(); });                                                            		   \
 		}
 

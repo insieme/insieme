@@ -58,6 +58,47 @@
 namespace insieme {
 namespace backend {
 
+
+	TEST(FunctionCall, SimpleFunctions) {
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+
+		core::ProgramPtr program = builder.parseProgram(
+				R"(
+				let int = int<4>;
+				
+				let f = lambda(int a, int b)->int {
+					return a + b * a;
+				};
+				
+				int<4> main() {
+					f(12,15);
+					return 0;
+				}
+				)"
+		);
+
+		ASSERT_TRUE(program);
+
+		LOG(INFO) << "Printing the IR: " << core::printer::PrettyPrinter(program);
+
+		LOG(INFO) << "Converting IR to C...";
+		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
+		LOG(INFO) << "Printing converted code: " << *converted;
+
+		string code = toString(*converted);
+
+		EXPECT_PRED2(notContainsSubString, code, "<?>");
+		EXPECT_PRED2(notContainsSubString, code, "<a>");
+		EXPECT_PRED2(notContainsSubString, code, "UNSUPPORTED");
+
+		// try compiling the code fragment
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
+		compiler.addFlag("-lm");
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+	}
+
 	TEST(FunctionCall, Templates) {
 		core::NodeManager manager;
 		core::IRBuilder builder(manager);
@@ -93,58 +134,19 @@ namespace backend {
 	}
 
 
-	TEST(FunctionCall, ArrayReduction) {
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
-
-		// Operation: array.reduction
-		// Type: (array<'elem,'l>, 'res, ('elem, 'res) -> 'res) -> 'res
-
-		std::map<string, core::NodePtr> symbols;
-		symbols["v"] = builder.parseExpr("array_create(type(int<4>), type(4), [1,2,3,4])");
-
-		core::ProgramPtr program = builder.parseProgram("unit main() {"
-		                                                "	lambda ()->int<4> {"
-		                                                "		return vector_reduction(v, 0, int_add);"
-		                                                "	}();"
-		                                                "}",
-		                                                symbols);
-		ASSERT_TRUE(program);
-
-		LOG(INFO) << "Printing the IR: " << core::printer::PrettyPrinter(program);
-
-		LOG(INFO) << "Converting IR to C...";
-		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
-		LOG(INFO) << "Printing converted code: " << *converted;
-
-		string code = toString(*converted);
-
-		EXPECT_FALSE(code.find("<?>") != string::npos);
-
-		// test contracted form
-		EXPECT_PRED2(containsSubString, code, "0 + 1 + 2 + 3 + 4;");
-
-		// try compiling the code fragment
-		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
-		compiler.addFlag("-lm");
-		compiler.addFlag("-c"); // do not run the linker
-		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
-	}
-
-
 	TEST(FunctionCall, Pointwise) {
 		core::NodeManager manager;
 		core::IRBuilder builder(manager);
 
-		// Operation: vector.pointwise
-		// Type: (('elem, 'elem) -> 'res) -> (vector<'elem,#l>, vector<'elem,#l>) -> vector<'res, #l>
+		// Operation: array.pointwise
+		// Type: (('a,'b)->'c) -> (array<'a,'l>,array<'b,'l>)->array<'c,'l>
 
 		std::map<string, core::NodePtr> symbols;
-		symbols["v1"] = builder.parseExpr("array_create(type(int<4>), type(4), [1,2,3,4])");
-		symbols["v2"] = builder.parseExpr("array_create(type(int<4>), type(4), [5,6,7,8])");
+		symbols["v1"] = builder.parseExpr("array_create(lit(int<4>), lit(4), [1,2,3,4])");
+		symbols["v2"] = builder.parseExpr("array_create(lit(int<4>), lit(4), [5,6,7,8])");
 
 		core::ProgramPtr program = builder.parseProgram("unit main() {"
-		                                                "	vector_pointwise(int_add)(v1,v2);"
+		                                                "	array_pointwise(int_add)(v1,v2);"
 		                                                "}",
 		                                                symbols);
 		ASSERT_TRUE(program);
@@ -172,6 +174,7 @@ namespace backend {
 
 		core::ProgramPtr program = builder.parseProgram("int<4> main() {"
 		                                                "	lambda (type<'a> dtype)->int<4> {"
+		                                                "		return 5;"
 		                                                "	} (lit(real<4>));"
 		                                                "	return 0;"
 		                                                "}");
@@ -203,9 +206,9 @@ namespace backend {
 
 		core::ProgramPtr program = builder.parseProgram(R"(
     		int<4> main() {
-    			lambda (ref<array<'a,1>> data)->uint<8> {
+    			lambda (ref<array<'a,'l>> data)->uint<8> {
     				return sizeof(lit('a));
-    			} (ref_reinterpret(ref_null,lit(array<real<4>,1>)));
+    			} (ref_null(lit(array<real<4>,12>),lit(f),lit(f)));
     			return 0;
     		}
     )");
@@ -251,19 +254,19 @@ namespace backend {
 		EXPECT_PRED2(containsSubString, code, "int32_t* var_1 = (int32_t*)malloc(sizeof(int32_t))");
 	}
 
-	TEST(FunctionCall, VectorExpression) {
+	TEST(FunctionCall, FixedSizedArrayInit) {
 		core::NodeManager manager;
 		core::IRBuilder builder(manager);
 
 		core::ExpressionPtr zero = builder.literal(manager.getLangBasic().getUInt8(), "0");
-		core::ExpressionPtr offset = builder.parseExpr("var(array_create(type(int<4>),type(3),[0,0,0]))");
+		core::ExpressionPtr offset = builder.parseExpr("var(array_create(lit(uint<8>),lit(3),[0ul,0ul,0ul]))");
 		core::ExpressionPtr extFun = builder.parseExpr("lit(\"call_vector\" : (ref<array<uint<8>,3>>)->unit )");
 		core::ExpressionPtr call = builder.callExpr(manager.getLangBasic().getUnit(), extFun, toVector(offset));
 
 		auto converted = sequential::SequentialBackend::getDefault()->convert(call);
 		string code = toString(*converted);
 
-		EXPECT_PRED2(containsSubString, code, "call_vector((uint64_t*)(&(__insieme_type_1){{(uint64_t)0, (uint64_t)0, (uint64_t)0}}))");
+		EXPECT_PRED2(containsSubString, code, "call_vector((uint64_t(*)[3])(&(__insieme_type_0){{(uint64_t)0, (uint64_t)0, (uint64_t)0}}))");
 	}
 
 
@@ -346,32 +349,41 @@ namespace backend {
 			let uint = uint<4>;
 
 			int main() {
-				// determine array size
-				decl uint size = 10u;
 
-				// create two arrays on the stack and the heap
-				decl ref<array<int,1>> a = var(array_create_1D(lit(int), size));
-				decl ref<array<int,1>> b = new(array_create_1D(lit(int), size));
+				// get a size for the variable-sized arrays
+				decl uint<inf> size = num_cast(12,lit(uint<inf>));
 
-				// use the two arrays
+				// create two fixed-sized arrays on the stack and the heap
+				decl ref<array<int,10>> a = var(array_create(lit(int), lit(10), list_empty(lit(int))));
+				decl ref<array<int,10>> b = new(array_create(lit(int), lit(10), list_empty(lit(int))));
+
+//				// create two variable-sized arrays on the stack and the heap
+//				decl ref<array<int,size>> c = var(undefined(array<int,size>));
+//				decl ref<array<int,size>> d = new(undefined(array<int,size>));
+
+				// create two unknown-sized arrays on the stack and the heap
+				decl ref<array<int,inf>> e = ref_null(lit(array<int,inf>),lit(f),lit(f));
+				decl ref<array<int,inf>> f = ref_null(lit(array<int,inf>),lit(f),lit(f));
+
+				// use the arrays
 				a[2] = 123;
 				b[4] = 321;
+//				c[6] = 123;
+//				d[8] = 321;
+				e[7] = 123;
+				f[5] = 321;
+
+				return 0;
 			}
 			)");
 
 		ASSERT_TRUE(program);
 
-		std::cout << "Program: " << std::endl;
-		dump(program);
-		std::cout << std::endl;
-
 		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
 
-		std::cout << "Converted: \n" << *converted << std::endl;
-
 		string code = toString(*converted);
-		EXPECT_PRED2(containsSubString, code, "int32_t a[size];");
-		EXPECT_PRED2(containsSubString, code, "int32_t* b = malloc(sizeof(int32_t) * size)");
+		EXPECT_PRED2(containsSubString, code, "__insieme_type_1 a;");
+		EXPECT_PRED2(containsSubString, code, "__insieme_type_1* b = (__insieme_type_1*)malloc(sizeof(__insieme_type_1));");
 
 		// try compiling the code fragment
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
@@ -394,6 +406,7 @@ namespace backend {
 				decl int<16> a = 10l;
 				// just create a long-long variable
 				decl uint<16> b = 10ul;
+				return 0;
 			}
 			)");
 
@@ -408,49 +421,8 @@ namespace backend {
 		std::cout << "Converted: \n" << *converted << std::endl;
 
 		string code = toString(*converted);
-		EXPECT_PRED2(containsSubString, code, "long long a = (int64_t)10l;");
-		EXPECT_PRED2(containsSubString, code, "unsigned long long b = (uint64_t)10ul;");
-
-		// try compiling the code fragment
-		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
-		compiler.addFlag("-lm");
-		compiler.addFlag("-c"); // do not run the linker
-		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
-	}
-
-
-	TEST(References, RefAny) {
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
-
-		// create a code fragment allocating an array on the stack and using it
-		core::ProgramPtr program = builder.parseProgram(
-		    R"(
-			int<4> main() {
-				decl ref<any> x;
-				decl ref<ref<any>> y = var(x);
-				decl ref<ref<any>> z = new(x);
-
-				lit("w":ref<ref<any>>);
-			}
-			)");
-
-		ASSERT_TRUE(program);
-
-		std::cout << "Program: " << std::endl;
-		dump(program);
-		std::cout << std::endl;
-
-		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
-
-		std::cout << "Converted: \n" << *converted << std::endl;
-
-		string code = toString(*converted);
-		EXPECT_PRED2(containsSubString, code, "void* x;");
-		EXPECT_PRED2(containsSubString, code, "void* y = &x;");
-		EXPECT_PRED2(containsSubString, code, "void** z = _ref_new___insieme_type_2(&x);");
-		EXPECT_PRED2(containsSubString, code, "void* w;");
-		EXPECT_PRED2(containsSubString, code, "&w;");
+		EXPECT_PRED2(containsSubString, code, "long long a = (int64_t)10;");
+		EXPECT_PRED2(containsSubString, code, "unsigned long long b = (uint64_t)10;");
 
 		// try compiling the code fragment
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
@@ -466,23 +438,23 @@ namespace backend {
 
 		core::ProgramPtr program = builder.parseProgram(R"(
     	int<4> main() {
-    		
-    		let f = lambda (ref<'a> a, ('a)=>bool c, ()=>'a v)->ref<'a> {
-    			if(c(*a)) {
-    				a = v();
-    			}
-				return a;
-    		};
-    		
-    		decl ref<int<4>> a = var(1);
-    		decl ref<real<4>> b = var(2.0f);
-    		
-    		f(a, lambda (int<4> a)=> true, lambda ()=>3);
-			f(b, lambda (real<4> b)=> true, lambda ()=>4.0f);
-			
-    		return 0;
-    	}
-    )");
+				
+				let f = lambda (ref<'a> a, ('a)=>bool c, ()=>'a v)->ref<'a> {
+					if(c(*a)) {
+						a = v();
+					}
+					return a;
+				};
+				
+				decl ref<int<4>> a = var(1);
+				decl ref<real<4>> b = var(2.0f);
+				
+				f(a, lambda (int<4> a)=> true, lambda ()=>3);
+				f(b, lambda (real<4> b)=> true, lambda ()=>4.0f);
+				
+				return 0;
+			}
+		)");
 
 		ASSERT_TRUE(program);
 
@@ -578,7 +550,7 @@ namespace backend {
 			EXPECT_PRED2(notContainsSubString, code, "<?>");
 			EXPECT_PRED2(notContainsSubString, code, "<a>");
 			EXPECT_PRED2(notContainsSubString, code, "UNSUPPORTED");
-			EXPECT_PRED2(notContainsSubString, code, "{\n    v0 = fun() -> int<4> {\n        return g(f());\n    };\n}");
+			EXPECT_PRED2(notContainsSubString, code, "{\n    v0 = function() -> int<4> {\n        return g(f());\n    };\n}");
 
 			// try compiling the code fragment
 			utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
@@ -607,7 +579,7 @@ namespace backend {
 			EXPECT_PRED2(notContainsSubString, code, "<?>");
 			EXPECT_PRED2(notContainsSubString, code, "<a>");
 			EXPECT_PRED2(notContainsSubString, code, "UNSUPPORTED");
-			EXPECT_PRED2(containsSubString, code, "{\n    v0 = fun() -> int<4> {\n        return g(f());\n    };\n}");
+			EXPECT_PRED2(containsSubString, code, "{\n    v0 = function() -> int<4> {\n        return g(f());\n    };\n}");
 
 			// try compiling the code fragment
 			utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();

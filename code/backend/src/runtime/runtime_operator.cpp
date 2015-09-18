@@ -76,7 +76,7 @@ namespace runtime {
 
 		#include "insieme/backend/operator_converter_begin.inc"
 
-		table[ext.getRunStandalone()] = OP_CONVERTER({
+		table[ext.getRunStandalone()] = OP_CONVERTER {
 
 			// add dependencies
 			ADD_HEADER_FOR("irt_runtime_standalone");
@@ -97,9 +97,9 @@ namespace runtime {
 
 			// produce call
 			return c_ast::call(fun, numThreads, initContext, cleanupContext, impl, args);
-		});
+		};
 
-		table[ext.getRegisterWorkItemImpl()] = OP_CONVERTER({
+		table[ext.getRegisterWorkItemImpl()] = OP_CONVERTER {
 
 			// just register new work item
 			ImplementationTablePtr implTable = ImplementationTable::get(context.getConverter());
@@ -111,9 +111,9 @@ namespace runtime {
 
 			// no code substitute, only dependencies
 			return c_ast::ExpressionPtr();
-		});
+		};
 
-		table[ext.getWorkItemImplCtr()] = OP_CONVERTER({
+		table[ext.getWorkItemImplCtr()] = OP_CONVERTER {
 
 			// register work item
 			ImplementationTablePtr implTable = ImplementationTable::get(context.getConverter());
@@ -122,9 +122,9 @@ namespace runtime {
 			// produce work item id as a result
 			const RuntimeExtension& ext = NODE_MANAGER.getLangExtension<RuntimeExtension>();
 			return c_ast::lit(CONVERT_TYPE(ext.getWorkItemImplType()), utils::numeric_cast<string>(id));
-		});
+		};
 
-		table[ext.getWrapLWData()] = OP_CONVERTER({
+		table[ext.getWrapLWData()] = OP_CONVERTER {
 			// check arguments
 			assert_eq(ARG(0)->getNodeType(), core::NT_TupleExpr) << "Only supported for tuple expressions!";
 
@@ -145,21 +145,21 @@ namespace runtime {
 			// just forward the inner expression
 			c_ast::TypePtr resType = c_ast::ptr(C_NODE_MANAGER->create<c_ast::NamedType>(C_NODE_MANAGER->create("irt_lw_data_item")));
 			return c_ast::cast(resType, c_ast::ref(CONVERT_EXPR(dataItem)));
-		});
+		};
 
-		table[ext.getGetWorkItemArgument()] = OP_CONVERTER({
+		table[ext.getGetWorkItemArgument()] = OP_CONVERTER {
 			// access work item member and cast to proper value
 			c_ast::TypePtr paramPtr = c_ast::ptr(CONVERT_TYPE(core::analysis::getRepresentedType(ARG(2))));
 			c_ast::ExpressionPtr inner = c_ast::cast(paramPtr, c_ast::access(c_ast::deref(CONVERT_ARG(0)), "parameters"));
 			return c_ast::access(c_ast::deref(inner), format("c%d", core::encoder::toValue<unsigned>(ARG(1)) + 1));
-		});
+		};
 
-		table[ext.getGetWorkItemRange()] = OP_CONVERTER({
+		table[ext.getGetWorkItemRange()] = OP_CONVERTER {
 			// access work item range directly
 			return c_ast::access(c_ast::deref(CONVERT_ARG(0)), "range");
-		});
+		};
 
-		table[ext.getCreateJob()] = OP_CONVERTER({
+		table[ext.getCreateJob()] = OP_CONVERTER {
 			const RuntimeExtension& ext = NODE_MANAGER.getLangExtension<RuntimeExtension>();
 
 			// uint4, uint4, uint4, implType, data
@@ -171,29 +171,29 @@ namespace runtime {
 			c_ast::ExpressionPtr data = CONVERT_ARG(4);
 
 			return c_ast::init(CONVERT_TYPE(ext.getJobType()), min, max, mod, wi, data);
-		});
+		};
 
-		table[ext.getParallel()] = OP_CONVERTER({
+		table[ext.getParallel()] = OP_CONVERTER {
 			ADD_HEADER_FOR("irt_parallel");
 			return c_ast::call(C_NODE_MANAGER->create("irt_parallel"), c_ast::ref(CONVERT_ARG(0)));
-		});
+		};
 
-		table[ext.getTask()] = OP_CONVERTER({
+		table[ext.getTask()] = OP_CONVERTER {
 			ADD_HEADER_FOR("irt_task");
 			return c_ast::call(C_NODE_MANAGER->create("irt_task"), c_ast::ref(CONVERT_ARG(0)));
-		});
+		};
 
-		table[ext.getRegion()] = OP_CONVERTER({
+		table[ext.getRegion()] = OP_CONVERTER {
 			ADD_HEADER_FOR("irt_region");
 			return c_ast::call(C_NODE_MANAGER->create("irt_region"), c_ast::ref(CONVERT_ARG(0)));
-		});
+		};
 
-		table[ext.getMerge()] = OP_CONVERTER({
+		table[ext.getMerge()] = OP_CONVERTER {
 			ADD_HEADER_FOR("irt_merge");
 			return c_ast::call(C_NODE_MANAGER->create("irt_merge"), CONVERT_ARG(0));
-		});
+		};
 
-		table[ext.getPfor()] = OP_CONVERTER({
+		table[ext.getPfor()] = OP_CONVERTER {
 			ADD_HEADER_FOR("irt_pfor");
 			ADD_HEADER_FOR("irt_wi_get_current");
 
@@ -206,71 +206,71 @@ namespace runtime {
 			c_ast::ExpressionPtr body = getWorkItemPointer(context, CONVERT_ARG(4));
 			c_ast::ExpressionPtr data = CONVERT_ARG(5);
 			return c_ast::call(C_NODE_MANAGER->create("irt_pfor"), item, group, range, body, data);
-		});
+		};
 
-		table[parExt.getGetThreadGroup()] = OP_CONVERTER({
+		table[parExt.getGetThreadGroup()] = OP_CONVERTER {
 			ADD_HEADER_FOR("irt_wi_get_current");
 			ADD_HEADER_FOR("irt_wi_get_wg");
 			c_ast::ExpressionPtr item = c_ast::call(C_NODE_MANAGER->create("irt_wi_get_current"));
 			return c_ast::call(C_NODE_MANAGER->create("irt_wi_get_wg"), item, CONVERT_ARG(0));
-		});
+		};
 
-		table[parExt.getGetThreadId()] = OP_CONVERTER({
+		table[parExt.getGetThreadId()] = OP_CONVERTER {
 			ADD_HEADER_FOR("irt_wi_get_current");
 			ADD_HEADER_FOR("irt_wi_get_wg_num");
 			c_ast::ExpressionPtr item = c_ast::call(C_NODE_MANAGER->create("irt_wi_get_current"));
 			return c_ast::call(C_NODE_MANAGER->create("irt_wi_get_wg_num"), item, CONVERT_ARG(0));
-		});
+		};
 
-		table[parExt.getGetGroupSize()] = OP_CONVERTER({
+		table[parExt.getGetGroupSize()] = OP_CONVERTER {
 			ADD_HEADER_FOR("irt_wi_get_current");
 			ADD_HEADER_FOR("irt_wi_get_wg_size");
 			c_ast::ExpressionPtr item = c_ast::call(C_NODE_MANAGER->create("irt_wi_get_current"));
 			return c_ast::call(C_NODE_MANAGER->create("irt_wi_get_wg_size"), item, CONVERT_ARG(0));
-		});
+		};
 
-		table[parExt.getBarrier()] = OP_CONVERTER({
+		table[parExt.getBarrier()] = OP_CONVERTER {
 			ADD_HEADER_FOR("irt_wg_barrier");
 			return c_ast::call(C_NODE_MANAGER->create("irt_wg_barrier"), CONVERT_ARG(0));
-		});
+		};
 
-		table[parExt.getMergeAll()] = OP_CONVERTER({
+		table[parExt.getMergeAll()] = OP_CONVERTER {
 			ADD_HEADER_FOR("irt_wi_get_current");
 			ADD_HEADER_FOR("irt_wi_join_all");
 			c_ast::ExpressionPtr item = c_ast::call(C_NODE_MANAGER->create("irt_wi_get_current"));
 			return c_ast::call(C_NODE_MANAGER->create("irt_wi_join_all"), item);
-		});
+		};
 
-		table[basic.getFlush()] = OP_CONVERTER({ return c_ast::call(C_NODE_MANAGER->create("IRT_FLUSH"), CONVERT_ARG(0)); });
+		table[basic.getFlush()] = OP_CONVERTER { return c_ast::call(C_NODE_MANAGER->create("IRT_FLUSH"), CONVERT_ARG(0)); };
 
-		table[parExt.getBusyLoop()] = OP_CONVERTER({
+		table[parExt.getBusyLoop()] = OP_CONVERTER {
 			auto whileLoop = core::transform::evalLazy(NODE_MANAGER, ARG(0), true);
 			return c_ast::call(C_NODE_MANAGER->create("IRT_BUSYWHILE"), CONVERT_EXPR((whileLoop)));
-		});
+		};
 
 		// locks
 
-		table[parExt.getLockInit()] = OP_CONVERTER({
+		table[parExt.getLockInit()] = OP_CONVERTER {
 			ADD_HEADER_FOR("irt_lock_init");
 			return c_ast::call(C_NODE_MANAGER->create("irt_lock_init"), CONVERT_ARG(0));
-		});
-		table[parExt.getLockAcquire()] = OP_CONVERTER({
+		};
+		table[parExt.getLockAcquire()] = OP_CONVERTER {
 			ADD_HEADER_FOR("irt_lock_acquire");
 			return c_ast::call(C_NODE_MANAGER->create("irt_lock_acquire"), CONVERT_ARG(0));
-		});
-		table[parExt.getLockRelease()] = OP_CONVERTER({
+		};
+		table[parExt.getLockRelease()] = OP_CONVERTER {
 			ADD_HEADER_FOR("irt_lock_release");
 			return c_ast::call(C_NODE_MANAGER->create("irt_lock_release"), CONVERT_ARG(0));
-		});
+		};
 
 		// atomics
 
 		#define BIN_ATOMIC_CONVERTER(__IRNAME, __IRTNAME)                                                                                                      \
-			table[parExt.get##__IRNAME()] = OP_CONVERTER({                                                                                                      \
+			table[parExt.get##__IRNAME()] = OP_CONVERTER {                                                                                                      \
 		        ADD_HEADER_FOR(#__IRTNAME);                                                                                                                    \
 		        core::IRBuilder builder(NODE_MANAGER);                                                                                                         \
 		        return c_ast::call(C_NODE_MANAGER->create(#__IRTNAME), CONVERT_ARG(0), CONVERT_ARG(1), CONVERT_TYPE(builder.deref(ARG(0))->getType()));        \
-			});
+			};
 
 		BIN_ATOMIC_CONVERTER(AtomicFetchAndAdd, irt_atomic_fetch_and_add)
 		BIN_ATOMIC_CONVERTER(AtomicAddAndFetch, irt_atomic_add_and_fetch)
@@ -284,23 +284,23 @@ namespace runtime {
 		BIN_ATOMIC_CONVERTER(AtomicXorAndFetch, irt_atomic_xor_and_fetch)
 		#undef BIN_ATOMIC_CONVERTER
 
-		table[parExt.getAtomicValCompareAndSwap()] = OP_CONVERTER({
+		table[parExt.getAtomicValCompareAndSwap()] = OP_CONVERTER {
 			ADD_HEADER_FOR("irt_atomic_val_compare_and_swap");
 			core::IRBuilder builder(NODE_MANAGER);
 			return c_ast::call(C_NODE_MANAGER->create("irt_atomic_val_compare_and_swap"), CONVERT_ARG(0), CONVERT_ARG(1), CONVERT_ARG(2),
 			                   CONVERT_TYPE(builder.deref(ARG(0))->getType()));
-		});
+		};
 
-		table[parExt.getAtomicBoolCompareAndSwap()] = OP_CONVERTER({
+		table[parExt.getAtomicBoolCompareAndSwap()] = OP_CONVERTER {
 			ADD_HEADER_FOR("irt_atomic_bool_compare_and_swap");
 			core::IRBuilder builder(NODE_MANAGER);
 			return c_ast::call(C_NODE_MANAGER->create("irt_atomic_bool_compare_and_swap"), CONVERT_ARG(0), CONVERT_ARG(1), CONVERT_ARG(2),
 			                   CONVERT_TYPE(builder.deref(ARG(0))->getType()));
-		});
+		};
 
 		// special
 
-		table[basic.getPick()] = OP_CONVERTER({
+		table[basic.getPick()] = OP_CONVERTER {
 			// uint16 irt_variant_pick(uint16 knop_id, uint16 num_variants);
 			ADD_HEADER_FOR("irt_variant_pick");
 
@@ -310,39 +310,39 @@ namespace runtime {
 
 			c_ast::TypePtr uint16 = C_NODE_MANAGER->create<c_ast::PrimitiveType>(c_ast::PrimitiveType::UInt16);
 			return c_ast::call(C_NODE_MANAGER->create("irt_variant_pick"), c_ast::lit(uint16, "0"), c_ast::lit(uint16, toString(options.size())));
-		});
+		};
 
-		table[basic.getExit()] = OP_CONVERTER({
+		table[basic.getExit()] = OP_CONVERTER {
 			ADD_HEADER_FOR("irt_exit");
 			return c_ast::call(C_NODE_MANAGER->create("irt_exit"), CONVERT_ARG(0));
-		});
+		};
 
-		table[instExt.getInstrumentationInitRegions()] = OP_CONVERTER({
+		table[instExt.getInstrumentationInitRegions()] = OP_CONVERTER {
 			// just add info to context init
 			ContextHandlingFragment::get(context.getConverter())
 			    ->addInitExpression(format("    context->num_regions = %s;\n", call[0].as<core::LiteralPtr>()->getStringValue()));
 			return NULL; // this is not producing an expression
-		});
+		};
 
-		table[instExt.getInstrumentationRegionStart()] = OP_CONVERTER({ return c_ast::call(C_NODE_MANAGER->create("ir_inst_region_start"), CONVERT_ARG(0)); });
+		table[instExt.getInstrumentationRegionStart()] = OP_CONVERTER { return c_ast::call(C_NODE_MANAGER->create("ir_inst_region_start"), CONVERT_ARG(0)); };
 
-		table[instExt.getInstrumentationRegionEnd()] = OP_CONVERTER({ return c_ast::call(C_NODE_MANAGER->create("ir_inst_region_end"), CONVERT_ARG(0)); });
+		table[instExt.getInstrumentationRegionEnd()] = OP_CONVERTER { return c_ast::call(C_NODE_MANAGER->create("ir_inst_region_end"), CONVERT_ARG(0)); };
 
 		// param clause
 
-		table[basic.getPickInRange()] = OP_CONVERTER({
+		table[basic.getPickInRange()] = OP_CONVERTER {
 			return c_ast::call(C_NODE_MANAGER->create("irt_optimizer_pick_in_range"), CONVERT_ARG(0), CONVERT_ARG(1), CONVERT_ARG(2), CONVERT_ARG(3),
 			                   CONVERT_ARG(4));
-		});
+		};
 
 		if(!config.areShiftOpsSupported) {
 		// TODO: parenthesize ARG(0)
 		#define SHIFT_OP_CONVERTER(__IRNAME, __OP)                                                                                                             \
-			table[basic.get##__IRNAME()] = OP_CONVERTER({                                                                                                      \
+			table[basic.get##__IRNAME()] = OP_CONVERTER {                                                                                                      \
 		        ADD_HEADER("math.h");                                                                                                                          \
 		        c_ast::TypePtr uint16 = C_NODE_MANAGER->create<c_ast::PrimitiveType>(c_ast::PrimitiveType::UInt16);                                            \
 		        return c_ast::__OP(CONVERT_ARG(0), c_ast::call(C_NODE_MANAGER->create("pow"), c_ast::lit(uint16, "2"), CONVERT_ARG(1)));                       \
-			});
+			};
 
 			SHIFT_OP_CONVERTER(UnsignedIntLShift, mul);
 			SHIFT_OP_CONVERTER(SignedIntLShift, mul);

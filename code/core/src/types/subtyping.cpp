@@ -156,6 +156,26 @@ namespace types {
 			assert_fail() << "How could you get here?";
 		}
 
+		// check reference types
+		if(analysis::isRefType(subType) && analysis::isRefType(superType)) {
+
+			// check element type
+			auto srcElement = analysis::getReferencedType(subType);
+			auto trgElement = analysis::getReferencedType(superType);
+
+			// if element types are identical => it is fine
+			// if (srcElement == trgElement) return true;
+			if(core::analysis::compareTypes(srcElement, trgElement)) { return true; }
+
+			// support nested references
+			if(analysis::isRefType(srcElement) && analysis::isRefType(trgElement)) { return isSubTypeOf(srcElement, trgElement); }
+
+			// also support references of derived classes being passed to base-type pointer
+			if(core::analysis::isObjectType(srcElement) && core::analysis::isObjectType(trgElement)) {
+				if(isSubTypeOf(srcElement, trgElement)) { return true; }
+			}
+		}
+
 		// check whether the sub-type is generic
 		if(subType->getNodeType() == NT_GenericType || subType->getNodeType() == NT_StructType) {
 			// use the delta algorithm for computing all the super-types of the given sub-type
@@ -183,26 +203,6 @@ namespace types {
 				res = res && isSubTypeOf(funTypeB->getParameterTypes()[i], funTypeA->getParameterTypes()[i]);
 			}
 			return res;
-		}
-
-		// check reference types
-		if(analysis::isRefType(subType) && analysis::isRefType(superType)) {
-
-			// check element type
-			auto srcElement = analysis::getReferencedType(subType);
-			auto trgElement = analysis::getReferencedType(superType);
-
-			// if element types are identical => it is fine
-			// if (srcElement == trgElement) return true;
-			if(core::analysis::compareTypes(srcElement, trgElement)) { return true; }
-
-			// support nested references
-			if(analysis::isRefType(srcElement) && analysis::isRefType(trgElement)) { return isSubTypeOf(srcElement, trgElement); }
-
-			// also support references of derived classes being passed to base-type pointer
-			if(core::analysis::isObjectType(srcElement) && core::analysis::isObjectType(trgElement)) {
-				if(isSubTypeOf(srcElement, trgElement)) { return true; }
-			}
 		}
 
 		// no other relations are supported
