@@ -36,46 +36,26 @@
 
 #pragma once
 
-#include "insieme/core/lang/extension.h"
-#include "insieme/core/lang/reference.h"
+#include "insieme/core/forward_decls.h"
+
+#include "insieme/backend/addon.h"
 
 namespace insieme {
-namespace core {
-namespace lang {
+namespace backend {
+namespace addons {
+
 
 	/**
-	 * An extension covering IO primitives.
+	 * An Add-On realizing support for input and output functions as defined in the lang extension io.h
 	 */
-	class InputOutputExtension : public core::lang::Extension {
+	struct InputOutput : public AddOn {
 		/**
-		 * Allow the node manager to create instances of this class.
+		 * Installs the this Add-On within the given converter.
 		 */
-		friend class core::NodeManager;
-
-		/**
-		 * Creates a new instance based on the given node manager.
-		 */
-		InputOutputExtension(core::NodeManager& manager) : core::lang::Extension(manager) {}
-
-	  public:
-
-		// this extension is based upon the symbols defined by the pointer module
-		IMPORT_MODULE(ReferenceExtension);
-
-		// -------------------- basic IO operations ---------------------------
-
-		/**
-		 * An operation reading formated input from the command line (scanf)
-		 */
-		LANG_EXT_LITERAL(Scan, "scan", "(ref<array<char,'s>,t,f>, var_list)->int<4>")
-
-	  	/**
-		 * An operation writing formated output to the command line (printf)
-		 */
-		LANG_EXT_LITERAL(Print, "print", "(ref<array<char,'s>,t,f>, var_list)->int<4>")
-
+		virtual void installOn(Converter& converter) const;
 	};
-	
-} // end namespace lang
-} // end namespace core
+
+
+} // end namespace addons
+} // end namespace backend
 } // end namespace insieme
