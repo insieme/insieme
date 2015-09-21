@@ -321,7 +321,7 @@ namespace core {
 		ExpressionPtr unitConsume(const ExpressionPtr& toConsume) const;
 
 		// Literals
-		LiteralPtr stringLit(const std::string& str) const;
+		LiteralPtr stringLit(const std::string& str, const bool isConst = true) const;
 		LiteralPtr intLit(const int val, bool tight = false) const;
 		LiteralPtr uintLit(const unsigned int val, bool tight = false) const;
 		LiteralPtr integerLit(const int val, bool tight = false) const;

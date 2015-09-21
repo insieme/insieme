@@ -296,13 +296,13 @@ namespace lang {
 			"lambda (ptr<'a,'c,'v> p, int<8> i) -> ptr<'a,'c,'v> { return struct ptr<'a,'c,'v> { p.data, p.offset - i }; }"
 		)
 
-		LANG_EXT_DERIVED(PtrPostInc, "lambda (ref<ptr<'a,'c,'v>> p) -> ptr<'a,'c,'v> { decl ptr<'a,'c,'v> temp = *p; p = ptr_add(*p, 1l); return temp; }")
+		LANG_EXT_DERIVED_WITH_NAME(PtrPostInc, "ptr_post_inc", "lambda (ref<ptr<'a,'c,'v>> p) -> ptr<'a,'c,'v> { decl ptr<'a,'c,'v> temp = *p; p = ptr_add(*p, 1l); return temp; }")
 
-		LANG_EXT_DERIVED(PtrPostDec, "lambda (ref<ptr<'a,'c,'v>> p) -> ptr<'a,'c,'v> { decl ptr<'a,'c,'v> temp = *p; p = ptr_sub(*p, 1l); return temp; }")
+		LANG_EXT_DERIVED_WITH_NAME(PtrPostDec, "ptr_post_dec", "lambda (ref<ptr<'a,'c,'v>> p) -> ptr<'a,'c,'v> { decl ptr<'a,'c,'v> temp = *p; p = ptr_sub(*p, 1l); return temp; }")
 
-		LANG_EXT_DERIVED(PtrPreInc, "lambda (ref<ptr<'a,'c,'v>> p) -> ptr<'a,'c,'v> { p = ptr_add(*p, 1l); return *p; }")
+		LANG_EXT_DERIVED_WITH_NAME(PtrPreInc, "ptr_pre_inc", "lambda (ref<ptr<'a,'c,'v>> p) -> ptr<'a,'c,'v> { p = ptr_add(*p, 1l); return *p; }")
 
-		LANG_EXT_DERIVED(PtrPreDec, "lambda (ref<ptr<'a,'c,'v>> p) -> ptr<'a,'c,'v> { p = ptr_sub(*p, 1l); return *p; }")
+		LANG_EXT_DERIVED_WITH_NAME(PtrPreDec, "ptr_pre_dec", "lambda (ref<ptr<'a,'c,'v>> p) -> ptr<'a,'c,'v> { p = ptr_sub(*p, 1l); return *p; }")
 
 	};
 

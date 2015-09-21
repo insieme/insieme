@@ -246,7 +246,9 @@ namespace backend {
 		if(ptr.getNodeManager().getLangBasic().isBool(type)) { context.getIncludes().insert("stdbool.h"); }
 
 		// handle null pointer
-		if(converter.getNodeManager().getLangExtension<core::lang::ReferenceExtension>().isCallOfRefNull(ptr)) { return converter.getCNodeManager()->create<c_ast::Literal>("0"); }
+		if(converter.getNodeManager().getLangExtension<core::lang::ReferenceExtension>().isCallOfRefNull(ptr)) {
+			return converter.getCNodeManager()->create<c_ast::Literal>("0");
+		}
 
 		// handle pre-defined C identifiers (standard - 6.4.2.2)
 		const static vector<string> predefined = {"__func__", "__FUNCTION__", "__PRETTY_FUNCTION__"};
@@ -255,10 +257,9 @@ namespace backend {
 		}
 
 		// handle C string literals
-		// TODO: move this to an extension since it is a pointer
+		// TODO: move this to an extension since it is a reference
 		if(ptr->getStringValue()[0] == '"') {
-			assert_pred1(core::lang::isPointer, type);
-			core::TypePtr type = core::lang::PointerType(ptr).getElementType();
+			core::TypePtr type = core::lang::ReferenceType(ptr).getElementType();
 			if(core::lang::isArray(type) && basic.isWChar(core::lang::ArrayType(type).getElementType())) {
 				// reproduce the longstring signature for widechars, this is 16 in windows and 32 in unix
 				res = toLiteral("L" + ptr->getStringValue());

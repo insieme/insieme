@@ -37,7 +37,7 @@
 #pragma once
 
 #include "insieme/core/lang/extension.h"
-#include "insieme/core/lang/pointer.h"
+#include "insieme/core/lang/reference.h"
 
 namespace insieme {
 namespace core {
@@ -60,19 +60,19 @@ namespace lang {
 	  public:
 
 		// this extension is based upon the symbols defined by the pointer module
-		IMPORT_MODULE(PointerExtension);
+		IMPORT_MODULE(ReferenceExtension);
 
 		// -------------------- basic IO operations ---------------------------
 
 		/**
 		 * An operation reading formated input from the command line (scanf)
 		 */
-		LANG_EXT_LITERAL(Scan, "scan", "(ptr<char,t,f>, var_list)->int<4>")
+		LANG_EXT_LITERAL(Scan, "scan", "(ref<array<char,'s>,t,f>, var_list)->int<4>")
 
 	  	/**
 		 * An operation writing formated output to the command line (printf)
 		 */
-		LANG_EXT_LITERAL(Print, "print", "(ptr<char,t,f>, var_list)->int<4>")
+		LANG_EXT_LITERAL(Print, "print", "(ref<array<char,'s>,t,f>, var_list)->int<4>")
 
 	};
 	

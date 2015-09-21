@@ -36,55 +36,26 @@
 
 #pragma once
 
-#include "insieme/core/checks/ir_checks.h"
+#include "insieme/core/forward_decls.h"
+
+#include "insieme/backend/addon.h"
 
 namespace insieme {
-namespace core {
-namespace checks {
-
-// defines macros for generating CHECK declarations
-#include "insieme/core/checks/check_macros.inc"
-
-	SIMPLE_CHECK(Keyword, GenericType, true);
-	SIMPLE_CHECK(FunctionKind, FunctionType, true);
-
-	SIMPLE_CHECK(Parent, Parent, true);
-
-	SIMPLE_CHECK(CallExprType, CallExpr, false);
-	SIMPLE_CHECK(BindExprType, BindExpr, false);
-	SIMPLE_CHECK(ExternalFunctionType, Literal, false);
-	SIMPLE_CHECK(ReturnType, Lambda, false);
-	SIMPLE_CHECK(LambdaType, LambdaExpr, false);
-	SIMPLE_CHECK(ArrayType, Node, true);
-	SIMPLE_CHECK(GenericOps, CallExpr, false);
-
-	SIMPLE_CHECK(DeclarationStmtType, DeclarationStmt, false);
-	SIMPLE_CHECK(IfConditionType, IfStmt, false);
-	SIMPLE_CHECK(ForStmtType, ForStmt, false);
-	SIMPLE_CHECK(WhileConditionType, WhileStmt, false);
-	SIMPLE_CHECK(SwitchExpressionType, SwitchStmt, false);
-
-	SIMPLE_CHECK(StructExprType, StructExpr, false);
-	SIMPLE_CHECK(MemberAccessElementType, CallExpr, false);
-	SIMPLE_CHECK(ComponentAccessType, CallExpr, false);
-
-	SIMPLE_CHECK(BuiltInLiteral, Literal, false);
-
-	SIMPLE_CHECK(RefCast, CastExpr, false);
-	SIMPLE_CHECK(IllegalNumCast, CallExpr, false);
-	SIMPLE_CHECK(IllegalNumTypeToInt, CallExpr, false);
-	SIMPLE_CHECK(RefOfFunCast, CallExpr, false);
-
-	SIMPLE_CHECK(Cast, CastExpr, false);
-
-	SIMPLE_CHECK(GenericZero, CallExpr, false);
+namespace backend {
+namespace addons {
 
 
-	// TODO:
-	//	- check that only concrete types are used for variables
+	/**
+	 * An Add-On realizing support for input and output functions as defined in the lang extension io.h
+	 */
+	struct InputOutput : public AddOn {
+		/**
+		 * Installs the this Add-On within the given converter.
+		 */
+		virtual void installOn(Converter& converter) const;
+	};
 
-	#undef SIMPLE_CHECK
 
-} // end namespace check
-} // end namespace core
+} // end namespace addons
+} // end namespace backend
 } // end namespace insieme

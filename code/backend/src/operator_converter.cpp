@@ -258,7 +258,6 @@ namespace backend {
 		const core::lang::BasicGenerator& basic = manager.getLangBasic();
 		const core::lang::ArrayExtension& arrayExt = manager.getLangExtension<core::lang::ArrayExtension>();
 		const core::lang::ReferenceExtension& refExt = manager.getLangExtension<core::lang::ReferenceExtension>();
-		const core::lang::InputOutputExtension& ioExt = manager.getLangExtension<core::lang::InputOutputExtension>();
 
 		OperatorConverterTable res;
 
@@ -834,13 +833,6 @@ namespace backend {
 
 			// return size-of operator call
 			return c_ast::sizeOf(CONVERT_TYPE(target));
-		};
-
-		res[ioExt.getPrint()] = OP_CONVERTER {
-			// map to invoking the external function printf
-			core::IRBuilder builder(NODE_MANAGER);
-			auto printf = builder.literal("printf", call->getFunctionExpr()->getType());
-			return CONVERT_EXPR(builder.callExpr(LANG_BASIC.getUnit(), printf, ARG(0), ARG(1)));
 		};
 
 		// -- IR extensions --

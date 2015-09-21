@@ -296,7 +296,8 @@ namespace conversion {
 			expand('\0', "\\0");
 		}
 
-		retExpr = builder.literal(strValue, convertExprType(stringLit));
+		retExpr = builder.stringLit(strValue, stringLit->getType().isConstQualified());
+		frontend_assert(retExpr->getType() == convertExprType(stringLit));
 		return retExpr;
 	}
 
