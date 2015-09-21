@@ -51,6 +51,8 @@
 #include "insieme/core/printer/pretty_printer.h"
 
 #include "insieme/utils/timer.h"
+#include "insieme/core/checks/full_check.h"
+#include "insieme/core/printer/error_printer.h"
 
 namespace insieme {
 namespace driver {
@@ -65,7 +67,7 @@ namespace measure {
 		IRBuilder builder(manager);
 		StatementPtr stmt = builder.parseStmt("{"
 		                                      "	decl ref<int<4>> sum = var(0);"
-		                                      "	for(uint<4> i = 10 .. 50 : 1) {"
+		                                      "	for(int<4> i = 10 .. 50 : 1) {"
 		                                      "		sum = sum + 1;"
 		                                      "	}"
 		                                      "}");
@@ -91,7 +93,7 @@ namespace measure {
 
 		StatementPtr stmt = builder.parseStmt("{"
 		                                      "	decl ref<int<4>> sum = var(0);"
-		                                      "	for(uint<4> i = 10 .. 50 : 1) {"
+		                                      "	for(int<4> i = 10 .. 50 : 1) {"
 		                                      "		sum = sum + 1;"
 		                                      "	}"
 		                                      "}");
@@ -277,7 +279,7 @@ namespace measure {
 
 		EXPECT_TRUE(measure(builder.parseStmt("{ return; }"), Metric::WALL_TIME).isValid());
 
-		EXPECT_TRUE(measure(builder.parseAddressesStatement("{ for(int<4> i= 0 .. 10) { ${ break; }$ } }")[0].as<core::StatementAddress>(), Metric::WALL_TIME)
+		EXPECT_TRUE(measure(builder.parseAddressesStatement("{ for(int<4> i= 0 .. 10) { ${ return; }$ } }")[0].as<core::StatementAddress>(), Metric::WALL_TIME)
 		                .isValid());
 
 		EXPECT_TRUE(
@@ -290,13 +292,13 @@ namespace measure {
 		// a return with a n expression
 		EXPECT_TRUE(
 		    measure(
-		        builder.parseAddressesStatement("{ lambda ()->int<4> { for(int<4> i= 0 .. 10) { ${ return 1 + 2; }$ } } (); }")[0].as<core::StatementAddress>(),
+		        builder.parseAddressesStatement("{ lambda ()->int<4> { for(int<4> i= 0 .. 10) { ${ return 1 + 2; }$ }; return 0; } (); }")[0].as<core::StatementAddress>(),
 		        Metric::WALL_TIME)
 		        .isValid());
 
 
 		// two nested regions ending at the same point
-		vector<NodeAddress> addr = builder.parseAddressesStatement("{ lambda ()->int<4> { for(int<4> i= 0 .. 10) { ${ 2 + 3; ${ return 1 + 2; }$ }$ } } (); }");
+		vector<NodeAddress> addr = builder.parseAddressesStatement("{ lambda ()->int<4> { for(int<4> i= 0 .. 10) { ${ 2 + 3; ${ return 1 + 2; }$ }$ } ; return 0; } (); }");
 		auto res = measure(toVector(addr[0].as<core::StatementAddress>(), addr[1].as<core::StatementAddress>()), toVector(Metric::WALL_TIME));
 
 		EXPECT_TRUE(res[addr[0].as<core::StatementAddress>()][Metric::WALL_TIME].isValid());
@@ -309,7 +311,7 @@ namespace measure {
 		IRBuilder builder(manager);
 		StatementPtr stmt = builder.parseStmt("{"
 		                                      "	decl ref<int<4>> sum = var(0);"
-		                                      "	for(uint<4> i = 10 .. 50 : 1) {"
+		                                      "	for(int<4> i = 10 .. 50 : 1) {"
 		                                      "		sum = sum + 1;"
 		                                      "	}"
 		                                      "}");
@@ -439,17 +441,17 @@ namespace measure {
 		IRBuilder builder(manager);
 		StatementPtr stmt = builder.parseStmt("{"
 		                                      "	decl ref<int<4>> sum = var(0);"
-		                                      "	for(uint<4> i = 10 .. 50 : 1) {"
-		                                      "		for(uint<4> j = 0 .. 80 : 1) {"
+		                                      "	for(int<4> i = 10 .. 50 : 1) {"
+		                                      "		for(int<4> j = 0 .. 80 : 1) {"
 		                                      "			sum = sum + 1;"
 		                                      "		}"
-		                                      "		for(uint<4> k = 0 .. 160 : 1) {"
+		                                      "		for(int<4> k = 0 .. 160 : 1) {"
 		                                      "			sum = sum + 1;"
 		                                      "		}"
-		                                      "		for(uint<4> m = 0 .. 240 : 1) {"
+		                                      "		for(int<4> m = 0 .. 240 : 1) {"
 		                                      "			sum = sum + 1;"
 		                                      "		}"
-		                                      "		for(uint<4> n = 0 .. 320 : 1) {"
+		                                      "		for(int<4> n = 0 .. 320 : 1) {"
 		                                      "			sum = sum + 1;"
 		                                      "		}"
 		                                      "	}"
@@ -528,8 +530,8 @@ namespace measure {
 		IRBuilder builder(manager);
 		StatementPtr stmt = builder.parseStmt("{"
 		                                      "	decl ref<int<4>> sum = var(0);"
-		                                      "	for(uint<4> i = 1 .. 5000 : 1) {"
-		                                      "		for(uint<4> j = 1 .. 5000 : 1) {"
+		                                      "	for(int<4> i = 1 .. 5000 : 1) {"
+		                                      "		for(int<4> j = 1 .. 5000 : 1) {"
 		                                      "			sum = sum + 1;"
 		                                      "		}"
 		                                      "	}"
