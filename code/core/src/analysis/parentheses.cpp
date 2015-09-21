@@ -157,22 +157,6 @@ namespace analysis {
 		/**
 		 * This is a helper function for the "needsParentheses" function
 		 * @param toTest String to be checked
-		 * @return true, if toTest is a addition operation
-		 */
-		bool checkIfAdd(NodePtr toTest) {
-			auto& lang = toTest.getNodeManager().getLangBasic();
-			if (lang.isSignedIntAdd(toTest) ||
-				  lang.isGenAdd(toTest) ||
-				  lang.isUnsignedIntAdd(toTest) ||
-				  lang.isRealAdd(toTest) ||
-				  lang.isCharAdd(toTest))
-				return true;
-			return false;
-		}
-
-		/**
-		 * This is a helper function for the "needsParentheses" function
-		 * @param toTest String to be checked
 		 * @return true, if toTest is a subtraction operation
 		 */
 		bool checkIfSub(NodePtr toTest) {
@@ -198,22 +182,6 @@ namespace analysis {
 				  lang.isUnsignedIntDiv(toTest) ||
 				  lang.isRealDiv(toTest) ||
 				  lang.isCharDiv(toTest))
-				return true;
-			return false;
-		}
-
-		/**
-		 * This is a helper function for the "needsParentheses" function
-		 * @param toTest String to be checked
-		 * @return true, if toTest is a multiplication operation
-		 */
-		bool checkIfMul(NodePtr toTest) {
-			auto& lang = toTest.getNodeManager().getLangBasic();
-			if (lang.isSignedIntMul(toTest) ||
-				  lang.isGenMul(toTest) ||
-				  lang.isUnsignedIntMul(toTest) ||
-				  lang.isRealMul(toTest) ||
-				  lang.isCharMul(toTest))
 				return true;
 			return false;
 		}
