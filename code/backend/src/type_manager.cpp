@@ -971,6 +971,7 @@ namespace backend {
 			} else {
 				// requires a cast
 				res->externalize = [res](const c_ast::SharedCNodeManager& manager, const c_ast::ExpressionPtr& node) {
+					if (auto lit = node.isa<c_ast::LiteralPtr>()) if (lit->value[0] == '"') return node;  // for string literals
 					return c_ast::cast(res->externalType, node);
 				};
 				res->internalize = [res](const c_ast::SharedCNodeManager& manager, const c_ast::ExpressionPtr& node) {

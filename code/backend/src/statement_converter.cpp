@@ -246,7 +246,9 @@ namespace backend {
 		if(ptr.getNodeManager().getLangBasic().isBool(type)) { context.getIncludes().insert("stdbool.h"); }
 
 		// handle null pointer
-		if(converter.getNodeManager().getLangExtension<core::lang::ReferenceExtension>().isCallOfRefNull(ptr)) { return converter.getCNodeManager()->create<c_ast::Literal>("0"); }
+		if(converter.getNodeManager().getLangExtension<core::lang::ReferenceExtension>().isCallOfRefNull(ptr)) {
+			return converter.getCNodeManager()->create<c_ast::Literal>("0");
+		}
 
 		// handle pre-defined C identifiers (standard - 6.4.2.2)
 		const static vector<string> predefined = {"__func__", "__FUNCTION__", "__PRETTY_FUNCTION__"};
@@ -255,7 +257,7 @@ namespace backend {
 		}
 
 		// handle C string literals
-		// TODO: move this to an extension since it is a pointer
+		// TODO: move this to an extension since it is a reference
 		if(ptr->getStringValue()[0] == '"') {
 			core::TypePtr type = core::lang::ReferenceType(ptr).getElementType();
 			if(core::lang::isArray(type) && basic.isWChar(core::lang::ArrayType(type).getElementType())) {

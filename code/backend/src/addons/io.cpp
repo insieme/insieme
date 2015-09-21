@@ -79,12 +79,12 @@ namespace addons {
 			/**
 			 * An operation reading formated input from the command line (scanf)
 			 */
-			LANG_EXT_LITERAL(Scan, "scan", "(ptr<char,t,f>, var_list)->int<4>")
+			LANG_EXT_LITERAL(Scan, "scanf", "(ptr<char,t,f>, var_list)->int<4>")
 
 			/**
 			 * An operation writing formated output to the command line (printf)
 			 */
-			LANG_EXT_LITERAL(Print, "print", "(ptr<char,t,f>, var_list)->int<4>")
+			LANG_EXT_LITERAL(Print, "printf", "(ptr<char,t,f>, var_list)->int<4>")
 
 		};
 
@@ -102,7 +102,6 @@ namespace addons {
 			res[ext.getPrint()] = OP_CONVERTER {
 				core::IRBuilder builder(call->getNodeManager());
 				const auto& inputOutputExt = call->getNodeManager().getLangExtension<InputOutputExtension>();
-				std::cout << "foo\n";
 				return CONVERT_EXPR(builder.callExpr(call->getType(), inputOutputExt.getPrint(), call[0], call[1]));
 			};
 
