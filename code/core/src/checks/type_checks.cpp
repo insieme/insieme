@@ -935,6 +935,45 @@ namespace checks {
 		return res;
 	}
 
+	OptionalMessageList IllegalNumTypeToIntCheck::visitCallExpr(const CallExprAddress& callExpr) {
+		OptionalMessageList res;
+
+		auto& mgr = callExpr->getNodeManager();
+		auto& basic = mgr.getLangBasic();
+
+		//skip all calls which aren't numTypeToInt
+		if (!analysis::isCallOf(callExpr.getAddressedNode(), basic.getNumTypeToInt())) {
+			return res;
+		}
+
+		// check number of parameters
+		if (callExpr->size() != 1) {
+			return res; // => will be handled by general call parameter check
+		}
+
+		// get source type
+		TypePtr srcType = callExpr[0]->getType();
+
+		// check whether type is a type literal
+		if (!analysis::isTypeLiteralType(srcType)) {
+			return res; // => will be handled by general call parameter check
+		}
+
+		// extract actual source type
+		srcType = analysis::getRepresentedType(srcType);
+
+		// create a validity check for the argument types
+		auto isValidNumericType = [&](const TypePtr& type) {
+			return type.isa<TypeVariablePtr>() || basic.isNumeric(type);
+		};
+
+		if (!isValidNumericType(srcType)) {
+			add(res, Message(callExpr[0], EC_SEMANTIC_ILLEGAL_NUM_TYPE_TO_INT, format("given source type is not a numeric type  (%s).", *srcType), Message::ERROR));
+		}
+
+		return res;
+	}
+
 	OptionalMessageList RefOfFunCastCheck::visitCallExpr(const CallExprAddress& callExpr) {
 		OptionalMessageList res;
 

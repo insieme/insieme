@@ -1235,6 +1235,67 @@ namespace checks {
 	}
 
 
+	TEST(IllegalNumTypeToInt, Simple) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+		CheckPtr illegalNumTypeToIntCheck = makeRecursive(make_check<IllegalNumTypeToIntCheck>());
+
+		//legal conversion from integral type to integral type
+		{
+			auto expr = builder.parseExpr("type_to_int(type_lit(int<4>))");
+			EXPECT_TRUE(expr) << "parsing error";
+
+			auto checkResult = check(expr, illegalNumTypeToIntCheck);
+			EXPECT_TRUE(checkResult.empty());
+			EXPECT_EQ(toString(checkResult), "[]");
+		}
+
+		//legal conversion from real type to integral type
+		{
+			auto expr = builder.parseExpr("type_to_int(type_lit(real<4>))");
+			EXPECT_TRUE(expr) << "parsing error";
+
+			auto checkResult = check(expr, illegalNumTypeToIntCheck);
+			EXPECT_TRUE(checkResult.empty());
+			EXPECT_EQ(toString(checkResult), "[]");
+		}
+
+		//legal conversion from integral type to integral type
+		{
+			auto expr = builder.parseStmt("{ decl int<4> x = 0; type_to_int(type_of(x)); }");
+			EXPECT_TRUE(expr) << "parsing error";
+
+			auto checkResult = check(expr, illegalNumTypeToIntCheck);
+			EXPECT_TRUE(checkResult.empty());
+			EXPECT_EQ(toString(checkResult), "[]");
+		}
+
+		//illegal conversion from arbitrary type to integral type
+		{
+			auto expr = builder.parseExpr("type_to_int(lit(foo))");
+			EXPECT_TRUE(expr) << "parsing error";
+
+			auto checkResult = check(expr, illegalNumTypeToIntCheck);
+			EXPECT_FALSE(checkResult.empty());
+			auto errorString = toString(checkResult[0]);
+			EXPECT_TRUE(errorString.find("SEMANTIC / ILLEGAL_NUM_TYPE_TO_INT") != string::npos);
+			EXPECT_TRUE(errorString.find("MSG: given source type is not a numeric type") != string::npos);
+		}
+
+		//illegal conversion from arbitrary type to integral type
+		{
+			auto expr = builder.parseStmt("{ decl type_lit(foo) x = 0; type_to_int(type_of(x)); }");
+			EXPECT_TRUE(expr) << "parsing error";
+
+			auto checkResult = check(expr, illegalNumTypeToIntCheck);
+			EXPECT_FALSE(checkResult.empty());
+			auto errorString = toString(checkResult[0]);
+			EXPECT_TRUE(errorString.find("SEMANTIC / ILLEGAL_NUM_TYPE_TO_INT") != string::npos);
+			EXPECT_TRUE(errorString.find("MSG: given source type is not a numeric type") != string::npos);
+		}
+	}
+
+
 TEST(RefToFunCastCheck, Simple) {
 	NodeManager manager;
 	IRBuilder builder(manager);
