@@ -66,3 +66,6 @@ global_firstprivate
 n_body
 ordered
 simple
+
+# Disables tests for missing external function / header support (interceptor)
+pendulum

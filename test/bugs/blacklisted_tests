@@ -29,3 +29,6 @@ switch_cases
 
 # Disabling tests because they fail to satisfy some semantic checks
 basename_bug
+
+# Disabled for lack of support of multiple translation units
+extern_array

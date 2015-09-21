@@ -84,3 +84,14 @@ stack
 # Disabling tests because they fail in the backend:
 # Reason: unsupported type __insieme_enum
 anon_enum
+
+
+# Disables tests for missing external function / header support (interceptor)
+external
+file_io
+gettimeoftheday
+particlesim
+pendulum
+sigrt
+variable_sized_struct
+
