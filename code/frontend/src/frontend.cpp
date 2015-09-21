@@ -116,6 +116,9 @@ namespace frontend {
 				assert_fail() << "Aborting due to frontend extension prerequisite error.";
 			}
 		}
+
+		// FE cleanup wants to be last
+		extensionList.push_back(std::make_shared<extensions::FrontendCleanupExtension>());
 	}
 
 	void ConversionSetup::setStandard(const Standard& standard) {
@@ -223,8 +226,6 @@ namespace frontend {
 		registerFrontendExtension<extensions::SignificanceFrontendExtension>(options);
 		registerFrontendExtension<extensions::CilkFrontendExtension>(options);
 
-		// FE cleanup wants to be second-last
-		registerFrontendExtension<extensions::FrontendCleanupExtension>(options);
 	}
 
 	std::ostream& ConversionJob::printTo(std::ostream& out) const {
