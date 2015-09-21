@@ -143,13 +143,14 @@ namespace conversion {
 		if(var->isStaticLocal()) {
 			return;
 		}
-		
+
 		converter.trackSourceLocation(var);
 		auto convertedVar = convertVarDecl(var);
 		auto globalLit = builder.literal(convertedVar.first->getType(), utils::getNameForGlobal(var, converter.getSourceManager()));
 		globalLit = pragma::handlePragmas({globalLit}, var, converter).front().as<core::LiteralPtr>();
 		converter.getVarMan()->insert(var, globalLit);
-		if(var->getInit()) { converter.getIRTranslationUnit().addGlobal(globalLit, converter.convertExpr(var->getInit())); }
+		auto init = (var->getInit()) ? converter.convertExpr(var->getInit()) : builder.undefined(core::lang::ReferenceType(globalLit->getType()).getElementType());
+		converter.getIRTranslationUnit().addGlobal(globalLit, init);
 		// handle pragmas attached to decls
 		converter.untrackSourceLocation();
 	}
