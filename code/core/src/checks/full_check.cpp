@@ -69,6 +69,7 @@ namespace checks {
 			checks.push_back(make_check<BuiltInLiteralCheck>());
 			checks.push_back(make_check<RefCastCheck>());
 			checks.push_back(make_check<IllegalNumCastCheck>());
+			checks.push_back(make_check<IllegalNumTypeToIntCheck>());
 			checks.push_back(make_check<CastCheck>());
 			checks.push_back(make_check<GenericZeroCheck>());
 			checks.push_back(make_check<ArrayTypeCheck>());

@@ -96,7 +96,7 @@ namespace arithmetic {
 				if(Value::isValue(call)) { return Value(call); }
 
 				// handle casts
-				if(lang.isTypeCast(call->getFunctionExpr())) {
+				if(lang.isNumericCast(call->getFunctionExpr())) {
 					return visit(call[0]); // ignore casts
 				}
 

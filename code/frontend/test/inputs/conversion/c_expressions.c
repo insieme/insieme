@@ -84,19 +84,19 @@ int main() {
 		++v;
 	}
 
-	#pragma test expect_ir("{ decl ref<uint<2>,f,f> v1 = var(type_cast(0, type_lit(uint<2>))); uint_post_inc(v1); }")
+	#pragma test expect_ir("{ decl ref<uint<2>,f,f> v1 = var(num_cast(0, type_lit(uint<2>))); uint_post_inc(v1); }")
 	{
 		unsigned short v = 0;
 		v++;
 	}
 
-	#pragma test expect_ir("{ decl ref<char,f,f> v1 = var(type_cast(0, type_lit(char))); char_pre_dec(v1); }")
+	#pragma test expect_ir("{ decl ref<char,f,f> v1 = var(num_cast(0, type_lit(char))); char_pre_dec(v1); }")
 	{
 		char v = 0;
 		--v;
 	}
 
-	#pragma test expect_ir("{ decl ref<int<1>,f,f> v1 = var(type_cast(0, type_lit(int<1>))); int_post_dec(v1); }")
+	#pragma test expect_ir("{ decl ref<int<1>,f,f> v1 = var(num_cast(0, type_lit(int<1>))); int_post_dec(v1); }")
 	{
 		signed char v = 0;
 		v--;
