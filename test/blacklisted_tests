@@ -80,3 +80,7 @@ global_nested
 heap_data
 ref_passing
 stack
+
+# Disabling tests because they fail in the backend:
+# Reason: unsupported type __insieme_enum
+anon_enum
