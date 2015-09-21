@@ -90,7 +90,34 @@ NodePtr markAsDerived(const NodePtr& node, const string& name) {
 
 // ----------------------------------------------------
 
-struct BuiltInTag {};
+// the type of marker utilized to mark built-in literals and derived functions
+struct BuiltInTag : public core::value_annotation::copy_on_migration {};
+
+namespace {
+
+	/**
+	 * A Converter ensuring that built-in-tags are preserved within binary dumps.
+	 */
+	struct BuiltInTagConverter : public dump::AnnotationConverter {
+
+		BuiltInTagConverter() : AnnotationConverter("BuiltInTag") {}
+
+		virtual ExpressionPtr toIR(NodeManager& manager, const NodeAnnotationPtr& annotation) const override {
+			// the actual node here is not really important ... it just must not be null
+			return manager.getLangBasic().getTrue();
+		}
+
+		virtual NodeAnnotationPtr toAnnotation(const ExpressionPtr& node) const override {
+			return std::make_shared<typename core::value_node_annotation<BuiltInTag>::type>(BuiltInTag());
+		}
+
+	};
+
+	// register the converter into the central annotation converter registry
+	bool reg = dump::AnnotationConverterRegister::getDefault().registerConverter<BuiltInTagConverter,BuiltInTag>();
+
+}
+
 
 void markAsBuiltIn(const NodePtr& node) {
 	node->attachValue<BuiltInTag>();
