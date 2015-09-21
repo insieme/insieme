@@ -30,12 +30,18 @@ optparse.parse!
 testcases=`#{ARGV.first} --gtest_list_tests`
 
 list=testcases.split("\n").map{|x| x.split(" ")[0].strip }
+
 # remove gtest output header, merge test case names
 list.shift(1)
-prefix=list.shift(1)[0]
-list.map! do |x|
-	"#{prefix.to_s}#{x}"
+
+# parse output format of gtest test case lister
+cases=[]
+prefix=""
+list.each do |x|
+	if (x.end_with? ".") then prefix = x;
+	else cases << "#{prefix}#{x}" end
 end
+list=cases
 
 # shuffle test cases reproducibly to balance load
 list.shuffle!(random: Random.new(17))
@@ -73,7 +79,7 @@ chunks.each do |x|
 		time = ""
 		old_case_name = ""
 		selection = x.map{|x| "#{x}"}.join(":")
-		regex = /^\[\s*([A-Z]+)\s*\]\s([a-zA-Z0-9\.\/]+)(?:.*\(([0-9]+)\sms\))?/
+		regex = /^\[\s*([A-Z]+)\s*\]\s([a-zA-Z0-9_\.\/]+)(?:.*\(([0-9]+)\sms\))?/
 		Open3.popen3("#{ARGV.first} --gtest_filter=" + selection + " 2>/dev/null") do |stdin, stdout, stderr, wait_thr|
 		stdin.close
 		stdout.each do |line|
