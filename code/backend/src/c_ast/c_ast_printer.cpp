@@ -234,19 +234,10 @@ namespace c_ast {
 				auto printInit = [&](const c_ast::ExpressionPtr& expr) {
 					if(!expr) { return; }
 
-					if(node->isStatic) { makeTypesImplicit = true; }
-
-					// special handling of initializer expressions
-					if(auto init = expr.isa<InitializerPtr>()) {
-						auto backup = init->type;
-						init->type = TypePtr();
-						out << " = " << print(init);
-						init->type = backup;
-					} else {
-						out << " = " << print(expr);
-					}
-
-					if(node->isStatic) { makeTypesImplicit = false; }
+					// disable explicit types for init values since those are inferred automatically
+					makeTypesImplicit = true;
+					out << " = " << print(expr);
+					makeTypesImplicit = false;
 				};
 
 				// handle single-variable declaration ...
@@ -420,7 +411,8 @@ namespace c_ast {
 			}
 
 			PRINT(DesignatedInitializer) {
-				return out << "(" << print(node->type) << "){ ." << print(node->member) << " = " << print(node->value) << " }";
+				if(!makeTypesImplicit) out << "(" << print(node->type) << ")";
+				return out << "{ ." << print(node->member) << " = " << print(node->value) << " }";
 			}
 
 			PRINT(ArrayInit) {
@@ -638,15 +630,10 @@ namespace c_ast {
 				}
 
 				if(node->init) {
-					// special handling of initializer expressions
-					if(auto init = node->init.isa<InitializerPtr>()) {
-						auto backup = init->type;
-						init->type = TypePtr();
-						out << " = " << print(init);
-						init->type = backup;
-					} else {
-						out << " = " << print(node->init);
-					}
+					// disable explicit types for init values since those are inferred automatically
+					makeTypesImplicit = true;
+					out << " = " << print(node->init);
+					makeTypesImplicit = false;
 				}
 				return out << ";\n";
 			}
