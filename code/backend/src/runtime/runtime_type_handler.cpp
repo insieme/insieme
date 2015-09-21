@@ -100,7 +100,7 @@ namespace runtime {
 			// check for job types ...
 			if(basic.isJob(type)) { return type_info_utils::createInfo(converter.getFragmentManager(), "irt_parallel_job", "ir_interface.h"); }
 
-			if(basic.isThreadGroup(type)) { return type_info_utils::createInfo(converter.getFragmentManager(), "irt_work_group", "ir_interface.h"); }
+			if(basic.isThreadGroup(type)) { return type_info_utils::createInfo(converter.getFragmentManager(), "irt_work_group*", "ir_interface.h"); }
 
 			if(parExt.isLock(type)) { return type_info_utils::createInfo(converter.getFragmentManager(), "irt_lock", "irt_lock.h"); }
 

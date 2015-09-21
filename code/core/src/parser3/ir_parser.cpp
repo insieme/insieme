@@ -241,6 +241,7 @@ namespace parser3 {
 	                                                   const definition_map& definitions, const type_alias_map& aliases) {
 		inspire_driver driver(code, manager);
 		save_symbol_table(driver, definitions);
+		append_type_aliases(driver, aliases);
 		auto root = driver.parseExpression();
 
 		// check the result
@@ -256,6 +257,7 @@ namespace parser3 {
 	                                                   const definition_map& definitions, const type_alias_map& aliases) {
 		inspire_driver driver(code, manager);
 		save_symbol_table(driver, definitions);
+		append_type_aliases(driver, aliases);
 		auto root = driver.parseStmt();
 
 		// check the result
@@ -270,6 +272,7 @@ namespace parser3 {
 	std::vector<NodeAddress> parse_addresses_program(NodeManager& manager, const string& code, bool onFailThrow, const definition_map& definitions, const type_alias_map& aliases) {
 		inspire_driver driver(code, manager);
 		save_symbol_table(driver, definitions);
+		append_type_aliases(driver, aliases);
 		auto root = driver.parseProgram();
 
 		// check the result
