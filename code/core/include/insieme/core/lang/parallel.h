@@ -239,67 +239,67 @@ namespace lang {
 
 		// arithmetic
 
-		LANG_EXT_DERIVED_WITH_NAME(AtomicFetchAndAdd, "atomic_fetch_and_add", "lambda (ref<'a> v, 'a exp) -> 'a { "
+		LANG_EXT_DERIVED_WITH_NAME(AtomicFetchAndAdd, "atomic_fetch_and_add", "lambda (ref<'a,f,'v> v, 'a exp) -> 'a { "
 														   "	let test = lambda ('a _)=>true; "
 														   "	let apply = lambda ('a x)=>x+exp; "
 														   "	return atomic(v, test, apply); "
 														   "}  ")
 
-	   LANG_EXT_DERIVED_WITH_NAME(AtomicAddAndFetch, "atomic_add_and_fetch", "lambda (ref<'a> v, 'a exp) -> 'a { "
+	   LANG_EXT_DERIVED_WITH_NAME(AtomicAddAndFetch, "atomic_add_and_fetch", "lambda (ref<'a,f,'v> v, 'a exp) -> 'a { "
 														   "	return atomic_fetch_and_add(v, exp) + exp; "
 														   "}  ")
 
-		LANG_EXT_DERIVED_WITH_NAME(AtomicFetchAndSub, "atomic_fetch_and_sub", "lambda (ref<'a> v, 'a exp) -> 'a { "
+		LANG_EXT_DERIVED_WITH_NAME(AtomicFetchAndSub, "atomic_fetch_and_sub", "lambda (ref<'a,f,'v> v, 'a exp) -> 'a { "
 														   "	let test = lambda ('a _)=>true; "
 														   "	let apply = lambda ('a x)=>x-exp; "
 														   "	return atomic(v, test, apply); "
 														   "}  ")
 
-		LANG_EXT_DERIVED_WITH_NAME(AtomicSubAndFetch, "atomic_sub_and_fetch", "lambda (ref<'a> v, 'a exp) -> 'a { "
+		LANG_EXT_DERIVED_WITH_NAME(AtomicSubAndFetch, "atomic_sub_and_fetch", "lambda (ref<'a,f,'v> v, 'a exp) -> 'a { "
 														   "	return atomic_fetch_and_sub(v, exp) - exp; "
 														   "}  ")
 
 		// bitwise
 
-		LANG_EXT_DERIVED_WITH_NAME(AtomicFetchAndAnd, "atomic_fetch_and_and", "lambda (ref<'a> v, 'a exp) -> 'a { "
+		LANG_EXT_DERIVED_WITH_NAME(AtomicFetchAndAnd, "atomic_fetch_and_and", "lambda (ref<'a,f,'v> v, 'a exp) -> 'a { "
 														   "	let test = lambda ('a _) => true; "
 														   "	let apply = lambda ('a x) => x & exp; "
 														   "	return atomic(v, test, apply); "
 														   "}  ")
 
-		LANG_EXT_DERIVED_WITH_NAME(AtomicAndAndFetch, "atomic_and_and_fetch", "lambda (ref<'a> v, 'a exp) -> 'a { "
+		LANG_EXT_DERIVED_WITH_NAME(AtomicAndAndFetch, "atomic_and_and_fetch", "lambda (ref<'a,f,'v> v, 'a exp) -> 'a { "
 														   "	return atomic_fetch_and_and(v, exp) & exp; "
 														   "}  ")
 
-		LANG_EXT_DERIVED_WITH_NAME(AtomicFetchAndOr, "atomic_fetch_and_or", "lambda (ref<'a> v, 'a exp) -> 'a { "
+		LANG_EXT_DERIVED_WITH_NAME(AtomicFetchAndOr, "atomic_fetch_and_or", "lambda (ref<'a,f,'v> v, 'a exp) -> 'a { "
 														 "	let test = lambda ('a _) => true; "
 														 "	let apply = lambda ('a x) => x | exp; "
 														 "	return atomic(v, test, apply); "
 														 "}  ")
 
-		LANG_EXT_DERIVED_WITH_NAME(AtomicOrAndFetch, "atomic_or_and_fetch", "lambda (ref<'a> v, 'a exp) -> 'a { "
+		LANG_EXT_DERIVED_WITH_NAME(AtomicOrAndFetch, "atomic_or_and_fetch", "lambda (ref<'a,f,'v> v, 'a exp) -> 'a { "
 														 "	return atomic_fetch_and_or(v, exp) | exp; "
 														 "}  ")
 
-		LANG_EXT_DERIVED_WITH_NAME(AtomicFetchAndXor, "atomic_fetch_and_xor", "lambda (ref<'a> v, 'a exp) -> 'a { "
+		LANG_EXT_DERIVED_WITH_NAME(AtomicFetchAndXor, "atomic_fetch_and_xor", "lambda (ref<'a,f,'v> v, 'a exp) -> 'a { "
 														   "	let test = lambda ('a _) => true; "
 														   "	let apply = lambda ('a x) => x ^ exp; "
 														   "	return atomic(v, test, apply); "
 														   "}  ")
 
-		LANG_EXT_DERIVED_WITH_NAME(AtomicXorAndFetch, "atomic_xor_and_fetch", "lambda (ref<'a> v, 'a exp) -> 'a { "
+		LANG_EXT_DERIVED_WITH_NAME(AtomicXorAndFetch, "atomic_xor_and_fetch", "lambda (ref<'a,f,'v> v, 'a exp) -> 'a { "
 														   "	return atomic_fetch_and_xor(v, exp) ^ exp; "
 														   "}  ")
 
 		// test and set
 
-		LANG_EXT_DERIVED_WITH_NAME(AtomicValCompareAndSwap, "atomic_val_compare_and_swap", "lambda (ref<'a> v, 'a _old, 'a _new) -> 'a { "
+		LANG_EXT_DERIVED_WITH_NAME(AtomicValCompareAndSwap, "atomic_val_compare_and_swap", "lambda (ref<'a,f,'v> v, 'a _old, 'a _new) -> 'a { "
 																		"	let test = lambda ('a x) => x == _old; "
 																		"	let apply = lambda ('a _) => _new; "
 																		"	return atomic(v, test, apply); "
 																		"}  ")
 
-		LANG_EXT_DERIVED_WITH_NAME(AtomicBoolCompareAndSwap, "atomic_bool_compare_and_swap", "lambda (ref<'a> v, 'a _old, 'a _new) -> bool { "
+		LANG_EXT_DERIVED_WITH_NAME(AtomicBoolCompareAndSwap, "atomic_bool_compare_and_swap", "lambda (ref<'a,f,'v> v, 'a _old, 'a _new) -> bool { "
 																		  "	let test = lambda ('a x) => x == _old; "
 																		  "	let apply = lambda ('a _) => _new; "
 																		  "	return atomic(v, test, apply) == _new; "

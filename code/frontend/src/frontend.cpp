@@ -147,7 +147,7 @@ namespace frontend {
 		return singleTu;
 	}
 
-	core::ProgramPtr ConversionJob::execute(core::NodeManager& manager, core::ProgramPtr& program) {
+	core::ProgramPtr ConversionJob::applyPostProcessing(core::NodeManager& manager, core::ProgramPtr& program) const {
 		// strip of OMP annotation since those may contain references to local nodes
 		core::visitDepthFirstOnce(program, [](const core::NodePtr& cur) { cur->remAnnotation(omp::BaseAnnotation::KEY); });
 
@@ -178,7 +178,7 @@ namespace frontend {
 			res = tu::toProgram(tmpMgr, unit);
 		}
 
-		return execute(manager, res);
+		return applyPostProcessing(manager, res);
 	}
 
 	core::ProgramPtr ConversionJob::execute(core::NodeManager& manager, bool fullApp) {
@@ -195,7 +195,7 @@ namespace frontend {
 		// convert units to a single program
 		auto res = (fullApp) ? tu::toProgram(tmpMgr, unit) : tu::resolveEntryPoints(tmpMgr, unit);
 
-		return execute(manager, res);
+		return applyPostProcessing(manager, res);
 	}
 
 	bool ConversionJob::isCxx() const {

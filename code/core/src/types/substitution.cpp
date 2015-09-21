@@ -36,6 +36,7 @@
 
 #include "insieme/core/types/substitution.h"
 
+#include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/type_utils.h"
 #include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/transform/node_mapper_utils.h"
@@ -111,8 +112,10 @@ namespace types {
 				// make sure current limitations are not exceeded
 				assert_true(!element.isa<LambdaExprPtr>() ||
 						!element.as<LambdaExprPtr>()->isRecursive() ||
+						!analysis::isGeneric(element.as<ExpressionPtr>()->getType()) ||
 						element.as<LambdaExprPtr>()->getDefinition().size() == 1)
-						<< "Instantiation of generic recursive functions not supported yet!";
+						<< "Instantiation of generic recursive functions not supported yet!"
+						<< "Function:\n" << dumpColor(element);
 
 				// quick check - only variables are substituted
 				auto currentType = element->getNodeType();

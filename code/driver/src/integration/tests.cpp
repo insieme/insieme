@@ -358,23 +358,28 @@ namespace integration {
 	}
 
 	const IntegrationTestCaseOpt getCase(const string& name) {
-		// load list of test cases
-		const vector<IntegrationTestCase>& cases = getAllCases();
 
-		// search for case with given name
-		for(auto it = cases.begin(); it != cases.end(); ++it) {
-			// for base-only setups
-			if(it->getName() == name) {
-				return *it;
-				// for ext + base setups, check base and ext but prefer base
-			} else if(it->getName() == "base/" + name) {
-				return *it;
-			} else if(it->getName() == "ext/" + name) {
-				return *it;
+		// in case all test case have already been loaded ...
+		if (TEST_CASES) {
+			// load list of test cases
+			const vector<IntegrationTestCase>& cases = getAllCases();
+
+			// search for case with given name
+			for(auto it = cases.begin(); it != cases.end(); ++it) {
+				// for base-only setups
+				if(it->getName() == name) {
+					return *it;
+					// for ext + base setups, check base and ext but prefer base
+				} else if(it->getName() == "base/" + name) {
+					return *it;
+				} else if(it->getName() == "ext/" + name) {
+					return *it;
+				}
 			}
 		}
-		// no such test case present
-		return IntegrationTestCaseOpt();
+
+		// try loading test case directly (e.g if blacklisted)
+		return loadTestCase(name);
 	}
 
 	namespace {

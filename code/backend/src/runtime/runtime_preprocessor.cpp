@@ -105,17 +105,23 @@ namespace runtime {
 			if(job->getThreadNumRange().as<core::CallExprPtr>()->getArguments().size() == 1) { return false; }
 
 			// skipping casts
-			core::ExpressionPtr max = job->getThreadNumRange().as<core::CallExprPtr>()->getArgument(1);
-			core::visitDepthFirstPrunable(max, [&](const core::NodePtr& cur) -> bool {
-				if(cur.isa<core::LiteralPtr>()) {
-					max = cur.as<core::LiteralPtr>();
-					return true;
-				}
+			try {
 
-				return false;
-			});
+				// try to 'parse' the upper boundary as a integer constant
+				core::arithmetic::Formula max = core::arithmetic::toFormula(job->getThreadNumRange().as<core::CallExprPtr>()[1]);
 
-			return !hasGroupOperations(job) && (max.isa<core::LiteralPtr>() && max.as<core::LiteralPtr>()->getValueAs<unsigned>() == 1u);
+				// check that the constant is 1
+				if (!max.isInteger() || max.getIntegerValue() != 1) return false;
+
+			} catch(const core::arithmetic::NotAFormulaException& nafe) {
+				// ... nothing to do
+			}
+
+			// check for absence of group operators
+			if (hasGroupOperations(job)) return false;
+
+			// all fine
+			return true;
 		}
 
 		/**

@@ -503,17 +503,6 @@ namespace frontend {
 		core::ProgramPtr execute(core::NodeManager& manager, bool fullApp);
 
 		/**
-		 * Triggers the actual conversion. The previously set up parameters will be used to attempt a conversion.
-		 *
-		 * @param manager the node manager to be used for building the IR
-		 * @param program the partially processed program without any post-processing steps
-		 * @param the conversion setup holding any post-processing steps to be applied (i.e. extensions)
-		 * @return the resulting, converted program
-		 * @throws an exception if the conversion fails.
-		 */
-		core::ProgramPtr execute(core::NodeManager& manager, core::ProgramPtr& program);
-
-		/**
 		 * Triggers the conversion of the files covered by this job into a translation unit.
 		 *
 		 * @param manager the node manager to be used for building the IR
@@ -589,6 +578,13 @@ namespace frontend {
 		 *  Prints the conversion setup
 		 **/
 		std::ostream& printTo(std::ostream& out) const;
+
+	  private:
+
+		/**
+		 * An internal utility applying post-processing steps to the generated program.
+		 */
+		core::ProgramPtr applyPostProcessing(core::NodeManager& manager, core::ProgramPtr& program) const;
 	};
 
 

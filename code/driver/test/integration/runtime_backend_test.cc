@@ -125,7 +125,7 @@ namespace insieme {
 			compiler.addFlag("-l" + cur);
 		}
 
-		EXPECT_TRUE(utils::compiler::compile(*target, compiler)) << "\nCode: " << *target;
+		EXPECT_TRUE(utils::compiler::compile(*target, compiler));
 	}
 
 	// instantiate the test case
