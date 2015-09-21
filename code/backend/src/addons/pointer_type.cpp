@@ -44,7 +44,9 @@
 #include "insieme/backend/c_ast/c_ast_utils.h"
 #include "insieme/backend/statement_converter.h"
 
+#include "insieme/core/ir_builder.h"
 #include "insieme/core/lang/pointer.h"
+#include "insieme/core/lang/reference.h"
 
 
 namespace insieme {
@@ -84,8 +86,31 @@ namespace addons {
 
 			res[ext.getPtrToRef()] = OP_CONVERTER { return CONVERT_ARG(0); };
 			res[ext.getPtrFromRef()] = OP_CONVERTER { return CONVERT_ARG(0); };
-			res[ext.getPtrFromArray()] = OP_CONVERTER { return CONVERT_ARG(0); };
 			res[ext.getPtrOfFunction()] = OP_CONVERTER { return CONVERT_ARG(0); };
+
+			res[ext.getPtrFromArray()] = OP_CONVERTER {
+				// operator type: (ref<array<'a,'s>,'c,'v>) -> ptr<'a,'c,'v>
+
+				// add dependency to element type
+				core::lang::ReferenceType refType(ARG(0)->getType());
+				core::TypePtr elementType = refType.getElementType();
+				const TypeInfo& info = GET_TYPE_INFO(elementType);
+				context.getDependencies().insert(info.definition);
+
+				// access source
+				if (core::lang::isFixedSizedArray(elementType)) {
+					// special handling for string-literals ..
+					if (auto lit = ARG(0).isa<core::LiteralPtr>()) {
+						if (lit->getStringValue()[0] == '"') {
+							return CONVERT_ARG(0);   // the literal is already a pointer
+						}
+					}
+					return c_ast::access(c_ast::deref(CONVERT_ARG(0)), "data");
+				}
+
+				// otherwise references and pointers are the same
+				return c_ast::deref(CONVERT_ARG(0));
+			};
 
 
 			// ------------------------ casts -----------------------
@@ -113,7 +138,18 @@ namespace addons {
 			res[ext.getPtrComponentAccess()] =  OP_CONVERTER { assert_not_implemented(); return c_ast::ExpressionPtr(); };
 			res[ext.getPtrScalarToPtrArray()] = OP_CONVERTER { assert_not_implemented(); return c_ast::ExpressionPtr(); };
 
-			res[ext.getPtrSubscript()] = OP_CONVERTER { return c_ast::subscript(CONVERT_ARG(0), CONVERT_ARG(1)); };
+			res[ext.getPtrSubscript()] = OP_CONVERTER {
+				// operator type: (ptr<'a,'c,'v>, int<8>) -> ref<'a,'c,'v>
+
+				// add dependency to element type
+				core::lang::PointerType ptrType(ARG(0)->getType());
+				core::TypePtr elementType = ptrType.getElementType();
+				const TypeInfo& info = GET_TYPE_INFO(elementType);
+				context.getDependencies().insert(info.definition);
+
+				// generated code &(X[Y])
+				return c_ast::ref(c_ast::subscript(CONVERT_ARG(0), CONVERT_ARG(1)));
+			};
 
 
 			// ------------------------ de-referencing ------------------------

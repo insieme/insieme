@@ -122,6 +122,9 @@ namespace runtime {
 		symbols["x"] = [&]()->NodePtr { return builder.parseExpr("lit(\"x\":ptr<char,f,f>)"); };
 		symbols["y"] = [&]()->NodePtr { return builder.parseExpr("lit(\"y\":ptr<char,f,f>)"); };
 		symbols["r"] = [&]()->NodePtr { return builder.parseExpr("lit(\"r\":ref<ptr<char,f,f>>)"); };
+		symbols["m"] = [&]()->NodePtr { return builder.parseExpr("lit(\"m\":ref<array<char,12>>)"); };
+		symbols["n"] = [&]()->NodePtr { return builder.parseExpr("lit(\"n\":ref<array<char,inf>>)"); };
+
 
 		// load pointer extension
 		auto convert = [&](const std::string& ir) {
@@ -146,9 +149,12 @@ namespace runtime {
 		EXPECT_EQ(      "(volatile char*)x", convert("ptr_cast(x,lit(f),lit(t))"));
 		EXPECT_EQ("(const volatile char*)x", convert("ptr_cast(x,lit(t),lit(t))"));
 
+		EXPECT_EQ("m.data", convert("ptr_from_array(m)"));
+		EXPECT_EQ("n", convert("ptr_from_array(n)"));
+
 		// check pointer subscript
-		EXPECT_EQ("x[5]", convert("ptr_subscript(x,5)"));
-		EXPECT_EQ("x[a]", convert("ptr_subscript(x,a)"));
+		EXPECT_EQ("&x[5]", convert("ptr_subscript(x,5)"));
+		EXPECT_EQ("&x[a]", convert("ptr_subscript(x,a)"));
 
 		// check pointer operators
 		EXPECT_EQ("*x", convert("ptr_deref(x)"));
