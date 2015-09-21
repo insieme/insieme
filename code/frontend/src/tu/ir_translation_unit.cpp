@@ -600,7 +600,11 @@ namespace tu {
 
 				if(!contains(usedLiterals, newLit)) { continue; }
 
-				inits.push_back(builder.assign(resolver.apply(newLit), resolver.apply(cur.second)));
+				auto lit = resolver.apply(newLit);
+				core::lang::ReferenceType refType(lit->getType());
+				refType.setConst(false);
+				core::GenericTypePtr mutableType = refType;
+				inits.push_back(builder.assign(core::lang::buildRefCast(lit,mutableType), resolver.apply(cur.second)));
 			}
 
 			// ~~~~~~~~~~~~~~~~~~ PREPARE STATICS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
