@@ -71,6 +71,11 @@ namespace addons {
 			// create pointer type
 			auto cType = c_ast::ptr(c_ast::qualify(elementInfo.lValueType, ptr.isConst(), ptr.isVolatile()));
 
+			// function pointers must not be qualified (calls to const function pointers are ignored by GCC)
+			if (auto fun = ptr.getElementType().isa<core::FunctionTypePtr>()) {
+				if (fun.isPlain()) cType = c_ast::ptr(elementInfo.lValueType);
+			}
+
 			// build up and return resulting type information
 			return type_info_utils::createInfo(cType, elementInfo.declaration);
 		}
