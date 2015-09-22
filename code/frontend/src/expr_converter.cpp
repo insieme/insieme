@@ -486,7 +486,7 @@ namespace conversion {
 
 		// if the binary operator is a comma separated expression, we convert it into a function call which returns the value of the last expression --- COMMA -
 		if(binOp->getOpcode() == clang::BO_Comma) {
-			retIr = utils::buildCommaOperator(lhs, rhs);
+			retIr = utils::buildCommaOperator(builder.wrapLazy(lhs), builder.wrapLazy(rhs));
 			return retIr;
 		}
 

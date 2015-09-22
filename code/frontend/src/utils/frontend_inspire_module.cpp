@@ -56,7 +56,7 @@ namespace utils {
 		NodeManager& mgr = lhs->getNodeManager();
 		IRBuilder builder(mgr);
 		auto& inspMod = mgr.getLangExtension<FrontendInspireModule>();
-		return builder.callExpr(rhs->getType(), inspMod.getCommaOperator(), lhs, rhs);
+		return builder.callExpr(inspMod.getCommaOperator(), lhs, rhs);
 	}
 
 	core::ExpressionPtr buildBoolToInt(const core::ExpressionPtr& b) {

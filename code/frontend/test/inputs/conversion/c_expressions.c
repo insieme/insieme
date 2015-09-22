@@ -106,17 +106,17 @@ int main() {
 	
 	// COMMA OPERATOR //////////////////////////////////////////////////////////////
 	
-	#define C_STYLE_COMMA "let c_comma = lambda ('a lhs, 'b rhs) -> 'b { lhs; return rhs; };"
+	#define C_STYLE_COMMA "let c_comma = lambda (() => 'a lhs, () => 'b rhs) -> 'b { lhs(); return rhs(); };"
 
-	#pragma test expect_ir("{",C_STYLE_COMMA,"c_comma(2, 3); }")
+	#pragma test expect_ir("{",C_STYLE_COMMA,"c_comma(lambda () -> int<4> { return 2; }, lambda () -> int<4> { return 3; }); }")
 	{ 2, 3; }
 	#pragma test expect_ir("EXPR_TYPE", "int<4>")
 	2, 3;
 	
-	#pragma test expect_ir("{",C_STYLE_COMMA,"c_comma(c_comma(2, 3), 4); }")
+	#pragma test expect_ir("{",C_STYLE_COMMA,"c_comma(lambda() -> int<4> { return c_comma(lambda () -> int<4> { return 2; }, lambda () -> int<4> { return 3; }); }, lambda () -> int<4> { return 4; }); }")
 	{ 2, 3, 4; }
 	
-	#pragma test expect_ir("{",C_STYLE_COMMA,"c_comma(2, lit(\"3.0E+0\":real<8>)); }")
+	#pragma test expect_ir("{",C_STYLE_COMMA,"c_comma(lambda () -> int<4> { return 2; }, lambda () -> real<8> { return lit(\"3.0E+0\":real<8>); }); }")
 	{ 2, 3.0; }
 	#pragma test expect_ir("EXPR_TYPE", "real<8>")
 	2, 3.0;
