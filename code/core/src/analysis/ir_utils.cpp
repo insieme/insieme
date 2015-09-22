@@ -509,7 +509,7 @@ namespace analysis {
 		vector<StatementAddress> res;
 
 		// the statement must not contain a "free" return
-		visitDepthFirstOncePrunable(stmt, [&](const NodeAddress& cur) {
+		visitDepthFirstPrunable(stmt, [&](const NodeAddress& cur) {
 			if(cur->getNodeType() == NT_LambdaExpr) {
 				return true; // do not decent here
 			}
@@ -527,7 +527,7 @@ namespace analysis {
 		});
 
 		// search for "bound" break or continue statements
-		visitDepthFirstOncePrunable(stmt, [&](const NodeAddress& cur) {
+		visitDepthFirstPrunable(stmt, [&](const NodeAddress& cur) {
 			if(cur->getNodeType() == NT_ForStmt || cur->getNodeType() == NT_WhileStmt) {
 				return true; // do not decent here
 			}
