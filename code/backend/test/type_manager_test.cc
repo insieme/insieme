@@ -1009,9 +1009,9 @@ namespace backend {
 		info = typeManager.getTypeInfo(type);
 		EXPECT_EQ("((int<4>,bool)->real<4>)", toString(*type));
 		EXPECT_TRUE(info.plain);
-		EXPECT_EQ("name*", toC(info.lValueType)); // there is an implicit typedef, therefore the type is used with a symbol name
-		EXPECT_EQ("name*", toC(info.rValueType));
-		EXPECT_EQ("name*", toC(info.externalType)); // should this be this way?
+		EXPECT_EQ("name", toC(info.lValueType)); // there is an implicit typedef, therefore the type is used with a symbol name
+		EXPECT_EQ("name", toC(info.rValueType));
+		EXPECT_EQ("name", toC(info.externalType)); // should this be this way?
 		EXPECT_TRUE((bool)info.declaration);
 		EXPECT_TRUE((bool)info.definition);
 		EXPECT_FALSE((bool)info.callerName);
@@ -1027,7 +1027,7 @@ namespace backend {
 
 		// check variable declaration
 		auto decl = cManager->create<c_ast::VarDecl>(cManager->create<c_ast::Variable>(info.lValueType, cManager->create("var")));
-		EXPECT_EQ("name* var", toC(decl));
+		EXPECT_EQ("name var", toC(decl));
 
 		// test the same with a function not accepting any arguments
 		type = builder.functionType(core::TypeList(), typeA);
@@ -1035,7 +1035,7 @@ namespace backend {
 		EXPECT_EQ("(()->int<4>)", toString(*type));
 
 		decl = cManager->create<c_ast::VarDecl>(cManager->create<c_ast::Variable>(info.lValueType, cManager->create("var")));
-		EXPECT_EQ("name* var", toC(decl));
+		EXPECT_EQ("name var", toC(decl));
 
 
 		// -- test a member function type --

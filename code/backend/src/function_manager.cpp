@@ -751,7 +751,9 @@ namespace backend {
 			const FunctionTypeInfo& nestedClosureInfo = typeManager.getTypeInfo(nestedFunType);
 
 			// define variable / struct entry pointing to the nested closure variable
-			c_ast::VariablePtr varNested = c_ast::var(nestedClosureInfo.rValueType, "nested");
+			c_ast::TypePtr varNestedType = nestedClosureInfo.rValueType;
+			if (nestedFunType.isPlain()) varNestedType = c_ast::ptr(varNestedType);
+			c_ast::VariablePtr varNested = c_ast::var(varNestedType, "nested");
 
 			// finally, add fields to struct
 			closureStruct->elements.push_back(varCall);

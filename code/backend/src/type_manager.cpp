@@ -1061,7 +1061,7 @@ namespace backend {
 			// R / L value names
 			c_ast::NamedTypePtr funcType = manager->create<c_ast::NamedType>(funcTypeName);
 			funcType->isFunctionType = true;		// mark as function
-			res->rValueType = c_ast::ptr(funcType);
+			res->rValueType = funcType;
 			res->lValueType = res->rValueType;
 
 			// external type handling
