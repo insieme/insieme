@@ -716,8 +716,21 @@ namespace backend {
 				values.push_back(CONVERT_EXPR(cur));
 			}
 
-			// create a new array on the stack using an initializer expression
-			return c_ast::init(CONVERT_TYPE(call->getType()), c_ast::init(values));
+			// get the array type
+			auto arrayType = CONVERT_TYPE(call->getType());
+
+			// support empty initialization
+			if (values.empty()) {
+				return c_ast::init(arrayType);
+			}
+
+			// initialize fixed-sized arrays
+			if (core::lang::isFixedSizedArray(call)) {
+				return c_ast::init(arrayType, c_ast::init(values));
+			}
+
+			// and variable sized arrays
+			return c_ast::init(arrayType, values);
 		};
 
 

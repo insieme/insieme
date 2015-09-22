@@ -382,7 +382,7 @@ namespace backend {
 		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
 
 		string code = toString(*converted);
-		EXPECT_PRED2(containsSubString, code, "__insieme_type_1 a;");
+		EXPECT_PRED2(containsSubString, code, "__insieme_type_1 a = {};");
 		EXPECT_PRED2(containsSubString, code, "__insieme_type_1* b = (__insieme_type_1*)malloc(sizeof(__insieme_type_1));");
 
 		// try compiling the code fragment
