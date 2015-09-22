@@ -85,13 +85,13 @@ namespace transform {
 				       // handle getThreadID
 				       if(analysis::isCallOf(call, parExt.getGetThreadId())) {
 					       if(ExpressionPtr newLevel = decLevel(call[0])) { return builder.getThreadId(newLevel); }
-					       return builder.intLit(0);
+					       return builder.literal("0", call->getType());
 				       }
 
 				       // handle group size
 				       if(analysis::isCallOf(call, parExt.getGetGroupSize())) {
 					       if(ExpressionPtr newLevel = decLevel(call[0])) { return builder.getThreadGroupSize(newLevel); }
-					       return builder.intLit(1);
+					       return builder.literal("1", call->getType());
 				       }
 
 				       return cur;
