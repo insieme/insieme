@@ -134,7 +134,7 @@ namespace backend {
 			PrettyPrinterPlugin(NameManager& nameManager) : nameManager(nameManager) {}
 
 
-			virtual bool covers(const core::NodePtr& node) const {
+			virtual bool covers(const core::NodeAddress& node) const {
 				// it is covered if it is of a certain type
 				return node.isa<core::LambdaExprPtr>() || node.isa<core::StructTypePtr>();
 			}
@@ -142,7 +142,7 @@ namespace backend {
 			/**
 			 * A function triggered to print the given node to the given stream.
 			 */
-			virtual std::ostream& print(std::ostream& out, const core::NodePtr& node, const std::function<void(const core::NodePtr&)>&) const {
+			virtual std::ostream& print(std::ostream& out, const core::NodeAddress& node, const std::function<void(const core::NodeAddress&)>&) const {
 				return out << nameManager.getName(node);
 			}
 		};
