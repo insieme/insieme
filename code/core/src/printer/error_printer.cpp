@@ -71,13 +71,13 @@ namespace printer {
 				});
 			}
 
-			bool covers(const NodePtr& n) const {
+			bool covers(const NodeAddress& n) const {
 				if(annotations::hasAttachedError(n)) { return true; }
 
 				return false;
 			}
 
-			std::ostream& print(std::ostream& out, const NodePtr& n, const std::function<void(const NodePtr&)>& f) const {
+			std::ostream& print(std::ostream& out, const NodeAddress& n, const std::function<void(const NodeAddress&)>& f) const {
 				assert_true(annotations::hasAttachedError(n));
 
 				// get and attach next line error

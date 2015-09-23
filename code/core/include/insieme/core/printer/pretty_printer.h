@@ -55,12 +55,12 @@ namespace printer {
 		/**
 		 * A function testing whether this plug-in want's to handle the given node.
 		 */
-		virtual bool covers(const NodePtr&) const = 0;
+		virtual bool covers(const NodeAddress&) const = 0;
 
 		/**
 		 * A function triggered to print the given node to the given stream.
 		 */
-		virtual std::ostream& print(std::ostream&, const NodePtr&, const std::function<void(const NodePtr&)>&) const = 0;
+		virtual std::ostream& print(std::ostream&, const NodeAddress&, const std::function<void(const NodeAddress&)>&) const = 0;
 
 		/**
 		 * handler to perform actions after new line characters

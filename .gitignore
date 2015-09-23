@@ -17,3 +17,4 @@ worker_event_log.*
 Thumbs.db
 tags
 CMakeLists.txt.user
+code/.idea*
