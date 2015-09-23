@@ -73,7 +73,7 @@ namespace utils {
 		/**
 		 * Implements the C comma operator semantics
 		 */
-		LANG_EXT_DERIVED(CommaOperator, "lambda ('a lhs, 'b rhs) -> 'b { lhs; return rhs; }")
+		LANG_EXT_DERIVED(CommaOperator, "lambda (() => 'a lhs, () => 'b rhs) -> 'b { lhs(); return rhs(); }")
 
 		/**
 		 * Implements the C bool semantics

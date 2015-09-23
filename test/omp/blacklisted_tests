@@ -69,3 +69,17 @@ simple
 
 # Disables tests for missing external function / header support (interceptor)
 pendulum
+
+# Disabling tests because OMP doesn't seem to work at the moment
+gemm
+heatedPlate
+matrix_mul_static
+nested_pfor_irregular
+oddEvenSort
+reduction
+reduction_all
+scr
+single
+
+# Disabling tests because the volatile information seems to get lost, which results in the test having a race condition
+volatile

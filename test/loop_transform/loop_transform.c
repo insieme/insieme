@@ -544,7 +544,7 @@ void test_parallel() {
 	
 	#pragma insieme parallelize( 0 )
 	for (int i=0; i<4; i++) {
-		for (int j=0; j<4; j++) {
+		for (int j=0; j<3; j++) {
 			A[i][j+1] = A[i][j];
 		}
 	}
@@ -607,4 +607,6 @@ int main(int argc, char* argv[]) {
 
 	test_parallel();
 	test_stamping();
+
+	return 0;
 }

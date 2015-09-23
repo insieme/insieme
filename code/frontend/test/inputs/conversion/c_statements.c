@@ -149,6 +149,19 @@ int main() {
 		for(int k = 2; k < 5; k+=1) { }
 	}
 
+	#pragma test expect_ir("{" C_STYLE_ASSIGN "{ decl ref<int<4>,f,f> v0 = var(2); while(*v0 < 5) { { c_ass(v0, *v0+1); continue; } c_ass(v0, *v0+1); } } }")
+	{
+		for(int k = 2; k < 5; k+=1) { continue; }
+	}
+
+	#pragma test expect_ir("{" C_STYLE_ASSIGN "{ decl ref<int<4>,f,f> v0 = var(2); while(*v0 < 5) { { if (*v0 == 3) { c_ass(v0, *v0+1); continue; }; if (*v0 == 4) { c_ass(v0, *v0+1); continue; }; } c_ass(v0, *v0+1); } } }")
+	{
+		for(int k = 2; k < 5; k+=1) {
+			if (k==3) continue;
+			if (k==4) continue;
+		}
+	}
+
 	#pragma test expect_ir("{ decl ref<int<4>,f,f> v0 = var(0); { while(*v0 < 10) { *v0; int_post_inc(v0); } } }")
 	{
 		int i = 0;
@@ -162,6 +175,14 @@ int main() {
 		int i = 0;
 		for(;; i++) {
 			break;
+		}
+	}
+
+	#pragma test expect_ir("{ decl ref<int<4>,f,f> v0 = var(0); { while(true) { { int_post_inc(v0); continue; } int_post_inc(v0); } } }")
+	{
+		int i = 0;
+		for(;; i++) {
+			continue;
 		}
 	}
 

@@ -52,6 +52,7 @@
 #include "insieme/core/checks/full_check.h"
 
 #include "insieme/core/printer/pretty_printer.h"
+#include "insieme/core/printer/error_printer.h"
 
 namespace insieme {
 namespace backend {
@@ -75,7 +76,7 @@ namespace backend {
 		core::NodePtr processed = getPreProcessor()->process(*this, source);
 
 		assert_true(core::checks::check(processed).empty())
-			<< "Errors introduced by pre-processors: " << core::checks::check(processed);
+			<< "Errors introduced by pre-processors: " << core::printer::dumpErrors(core::checks::check(processed));
 
 		timer.stop();
 		LOG(INFO) << timer;

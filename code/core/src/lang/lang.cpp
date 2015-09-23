@@ -40,6 +40,8 @@
 #include "insieme/core/dump/annotations.h"
 #include "insieme/core/encoder/encoder.h"
 
+#include "insieme/utils/unused.h"
+
 namespace insieme {
 namespace core {
 namespace lang {
@@ -114,7 +116,7 @@ namespace {
 	};
 
 	// register the converter into the central annotation converter registry
-	bool reg = dump::AnnotationConverterRegister::getDefault().registerConverter<BuiltInTagConverter,BuiltInTag>();
+	__unused bool reg = dump::AnnotationConverterRegister::getDefault().registerConverter<BuiltInTagConverter,BuiltInTag>();
 
 }
 

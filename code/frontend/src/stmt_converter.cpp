@@ -36,6 +36,8 @@
 
 #include "insieme/frontend/stmt_converter.h"
 
+#include <algorithm>
+
 #include "insieme/frontend/converter.h"
 #include "insieme/frontend/decl_converter.h"
 #include "insieme/frontend/state/variable_manager.h"
@@ -52,8 +54,7 @@
 #include "insieme/core/ir_statements.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/transform/node_replacer.h"
-
-#include <algorithm>
+#include "insieme/core/transform/manipulation.h"
 
 using namespace clang;
 
@@ -190,15 +191,45 @@ namespace conversion {
 		clang::Stmt* clangBody = forStmt->getBody();
 		if(clangBody && !dyn_cast<clang::NullStmt>(clangBody)) {
 			stmtutils::StmtWrapper irOldBody = Visit(clangBody);
-			if(irOldBody.getSingleStmt().isa<core::CompoundStmtPtr>()) {
-				core::CompoundStmtPtr compound = irOldBody.getSingleStmt().as<core::CompoundStmtPtr>();
+			if(auto compound = irOldBody.getSingleStmt().isa<core::CompoundStmtPtr>()) {
 				if(!compound->empty()) { newBody.push_back(aggregateStmts(builder, irOldBody)); }
 			} else {
 				newBody.push_back(irOldBody.getSingleStmt());
 			}
 		}
 
-		if(forStmt->getInc()) { newBody.push_back(converter.convertExpr(forStmt->getInc()).as<core::StatementPtr>()); }
+		// at this point there should be a single-statement body
+		assert_le(newBody.size(),1);
+
+		if(forStmt->getInc()) {
+			// convert increment statement
+			auto incStmt = converter.convertExpr(forStmt->getInc()).as<core::StatementPtr>();
+			// add at the end of the statement
+			newBody.push_back(incStmt);
+
+			// if there was an original body ...
+			if (newBody.size() == 2) {
+				auto& origBody = newBody.front();
+
+				// and also in front of every continue statement
+				auto exitPoints = core::analysis::getExitPoints(origBody);
+
+				// sort those points in a reverse order
+				std::sort(exitPoints.rbegin(), exitPoints.rend());
+
+				// add increments in front of all continue calls
+				for(const auto& cur : exitPoints) {
+					if (cur.isa<core::ContinueStmtPtr>()) {
+						// insert increment before the continue stmt
+						if(cur.isRoot()) {
+							origBody = builder.compoundStmt(incStmt, cur.as<core::StatementPtr>());
+						} else {
+							origBody = core::transform::insertBefore(origBody->getNodeManager(), cur.switchRoot(origBody), incStmt).as<core::StatementPtr>();
+						}
+					}
+				}
+			}
+		}
 
 		retStmt.push_back(builder.whileStmt(condExpr, stmtutils::aggregateStmts(builder, newBody)));
 
