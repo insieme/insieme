@@ -319,7 +319,7 @@ namespace analysis {
 		EXPECT_EQ(toVector(A, B, C), getElementTypes(fun));
 
 		TypePtr structType = builder.structType(toVector(builder.field("a", A), builder.field("d", D)));
-		EXPECT_EQ(toVector(A, D), getElementTypes(structType));
+		EXPECT_EQ("[AP(^),AP(^),AP(A),AP(D<A,B>)]", toString(getElementTypes(structType)));
 	}
 
 	TEST(ExitPoints, Basic) {

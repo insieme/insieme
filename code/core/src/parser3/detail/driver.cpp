@@ -240,7 +240,7 @@ namespace parser3 {
 		TypePtr inspire_driver::findType(const location& l, const std::string& name) {
 			if(std::find(let_names.begin(), let_names.end(), name) != let_names.end()) {
 				// this is a type in a let binding usage, it might be recursive, so we "mark" it
-				return builder.typeVariable(name);
+				return builder.genericType(name);
 			}
 
 			// search types defined in current scope
@@ -686,10 +686,10 @@ namespace parser3 {
 
 		namespace {
 
-			bool contains_type_variables(const TypePtr& t, const TypeList& variables) {
+			bool contains_type_tag_references(const TypePtr& t, const TypeList& variables) {
 				bool contains = false;
 				visitDepthFirstOnce(t, [&](const TypePtr& t) {
-					if(t.isa<TypeVariablePtr>() && (std::find(variables.begin(), variables.end(), t) != variables.end())) { contains = true; }
+					if(std::find(variables.begin(), variables.end(), t) != variables.end()) { contains = true; }
 				});
 				return contains;
 			}
@@ -937,19 +937,23 @@ namespace parser3 {
 			std::vector<TagTypeBindingPtr> type_defs;
 			std::vector<std::string> names;
 			NodeMap non_recursive;
+			NodeMap tag_variables;
 			unsigned count = 0;
 
-			TypeList variables;
+			TypeList tagTypes;
 			for(const auto& name : let_names) {
-				variables.push_back(builder.typeVariable(name));
+				auto genType = builder.genericType(name);
+				auto tagType = builder.tagTypeReference(name);
+				tagTypes.push_back(genType);
+				tag_variables[genType] = tagType;
 			}
 
 			// check for non recursive types
 			// if the type has no recursion inside, replace all uses of the type variable by a full type
 			for(const auto& type : type_lets) {
 				const std::string& name = let_names[count];
-				if(!contains_type_variables(type, variables)) {
-					non_recursive[builder.typeVariable(name)] = type;
+				if(!contains_type_tag_references(type, tagTypes)) {
+					non_recursive[builder.genericType(name)] = type;
 					annotations::attachName(type, name);
 					add_type(l, name, type);
 				}
@@ -958,25 +962,30 @@ namespace parser3 {
 
 			count = 0;
 			// go over the types again and produce recursive type bindings for those who need it
-			for(const auto& type : type_lets) {
+			for(auto type : type_lets) {
 				const std::string& name = let_names[count];
 
-				if(contains_type_variables(type, variables)) {
-					auto tmp = transform::replaceAllGen(mgr, type, non_recursive);
+				// fix non-recursive types
+				if(contains_type_tag_references(type, tagTypes)) {
+					// replace non-recursive constructs ..
+					type = transform::replaceAllGen(mgr, type, non_recursive);
+					// .. and generic types with tag type references
+					type = transform::replaceAllGen(mgr, type, tag_variables);
 
-					if (auto tagType = tmp.isa<TagTypePtr>()) {
+					if (auto tagType = type.isa<TagTypePtr>()) {
 						type_defs.push_back(builder.tagTypeBinding(builder.tagTypeReference(name), tagType->getRecord()));
 						names.push_back(name);
 					} else {
-						error(l, format("Only structs or unions supported in recursive type definitions, found: %s", *tmp));
+						error(l, format("Only structs or unions supported in recursive type definitions, found: %s", *type));
 					}
-
 				}
+
 				count++;
 			}
 
 			// generate a full recursive type and one entry point for each type variable
 			TagTypeDefinitionPtr recDefinition = builder.tagTypeDefinition(type_defs);
+
 			for(const auto& n : names) {
 				auto t = builder.tagType(builder.tagTypeReference(n), recDefinition);
 				annotations::attachName(t, n);
