@@ -964,8 +964,13 @@ namespace parser3 {
 				if(contains_type_variables(type, variables)) {
 					auto tmp = transform::replaceAllGen(mgr, type, non_recursive);
 
-					type_defs.push_back(builder.tagTypeBinding(builder.tagTypeReference(name), tmp.as<TagTypePtr>()->getRecord()));
-					names.push_back(name);
+					if (auto tagType = tmp.isa<TagTypePtr>()) {
+						type_defs.push_back(builder.tagTypeBinding(builder.tagTypeReference(name), tagType->getRecord()));
+						names.push_back(name);
+					} else {
+						error(l, format("Only structs or unions supported in recursive type definitions, found: %s", *tmp));
+					}
+
 				}
 				count++;
 			}
