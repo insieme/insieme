@@ -78,6 +78,7 @@ namespace checks {
 			checks.push_back(make_check<UndeclaredVariableCheck>());
 
 			checks.push_back(make_check<ScalarArrayIndexRangeCheck>());
+			checks.push_back(make_check<ArrayCreateArgumentCheck>());
 			// checks.push_back(make_check<UndefinedCheck>());
 			checks.push_back(make_check<FreeBreakInsideForLoopCheck>());
 			checks.push_back(make_check<MissingReturnStmtCheck>());

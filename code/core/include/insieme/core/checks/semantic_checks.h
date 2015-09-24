@@ -66,6 +66,11 @@ namespace checks {
 	 */
 	SIMPLE_CHECK(MissingReturnStmt, LambdaExpr, false);
 
+	/**
+	 * This check verifies that the initializer argument of an array_create call is a list.
+	 */
+	SIMPLE_CHECK(ArrayCreateArgument, CallExpr, false);
+
 	#undef SIMPLE_CHECK
 
 } // end namespace check

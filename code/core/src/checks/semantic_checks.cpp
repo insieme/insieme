@@ -39,6 +39,7 @@
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/lang/enum_extension.h"
+#include "insieme/core/encoder/lists.h"
 
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/logging.h"
@@ -255,6 +256,23 @@ namespace checks {
 			}
 		}
 
+		return res;
+	}
+
+	OptionalMessageList ArrayCreateArgumentCheck::visitCallExpr(const CallExprAddress& callExpr) {
+		OptionalMessageList res;
+
+		auto& manager = callExpr->getNodeManager();
+		const core::lang::ArrayExtension& arrayExt = manager.getLangExtension<core::lang::ArrayExtension>();
+
+		// check if we have a call to array_create
+		CallExprPtr curPtr = callExpr.getAddressedNode();
+		if(arrayExt.isCallOfArrayCreate(curPtr)) {
+			if(!encoder::isEncodingOf<ExpressionList, encoder::DirectExprListConverter>(curPtr[1])) {
+				add(res, Message(callExpr, EC_SEMANTIC_ARRAY_CREATE_INVALID_ARGUMENT,
+				    format("Invalid initializer argument in array_create call."), Message::ERROR));
+			}
+		}
 		return res;
 	}
 

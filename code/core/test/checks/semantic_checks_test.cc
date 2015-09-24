@@ -148,7 +148,7 @@ namespace checks {
 		auto checkResult = check(stmt, missingReturnStmtCheck);
 		EXPECT_EQ(checkResult.size(), 1);
 		EXPECT_EQ(toString(checkResult[0]),
-		          "ERROR:   [00046] - SEMANTIC / MISSING_RETURN_STMT @ (0-0) - MSG: Not all control paths of non-unit lambdaExpr return a value.");
+		          "ERROR:   [00047] - SEMANTIC / MISSING_RETURN_STMT @ (0-0) - MSG: Not all control paths of non-unit lambdaExpr return a value.");
 	}
 
 	TEST(MissingReturnStmtCheck, IfCorrect) {
@@ -199,7 +199,7 @@ namespace checks {
 		auto checkResult = check(stmt, missingReturnStmtCheck);
 		EXPECT_EQ(checkResult.size(), 1);
 		EXPECT_EQ(toString(checkResult[0]),
-		          "ERROR:   [00046] - SEMANTIC / MISSING_RETURN_STMT @ (0-0) - MSG: Not all control paths of non-unit lambdaExpr return a value.");
+		          "ERROR:   [00047] - SEMANTIC / MISSING_RETURN_STMT @ (0-0) - MSG: Not all control paths of non-unit lambdaExpr return a value.");
 	}
 
 	TEST(MissingReturnStmtCheck, WhileCorrect) {
@@ -248,7 +248,7 @@ namespace checks {
 		auto checkResult = check(stmt, missingReturnStmtCheck);
 		EXPECT_EQ(checkResult.size(), 1);
 		EXPECT_EQ(toString(checkResult[0]),
-		          "ERROR:   [00046] - SEMANTIC / MISSING_RETURN_STMT @ (0-0) - MSG: Not all control paths of non-unit lambdaExpr return a value.");
+		          "ERROR:   [00047] - SEMANTIC / MISSING_RETURN_STMT @ (0-0) - MSG: Not all control paths of non-unit lambdaExpr return a value.");
 	}
 
 	TEST(MissingReturnStmtCheck, Throw) {
@@ -322,7 +322,7 @@ namespace checks {
 		auto checkResult = check(stmt, missingReturnStmtCheck);
 		EXPECT_EQ(checkResult.size(), 1);
 		EXPECT_EQ(toString(checkResult[0]),
-		          "ERROR:   [00046] - SEMANTIC / MISSING_RETURN_STMT @ (0-0) - MSG: Not all control paths of non-unit lambdaExpr return a value.");
+		          "ERROR:   [00047] - SEMANTIC / MISSING_RETURN_STMT @ (0-0) - MSG: Not all control paths of non-unit lambdaExpr return a value.");
 	}
 
 	TEST(MissingReturnStmtCheck, SwitchErrorDefaultMissing) {
@@ -348,7 +348,7 @@ namespace checks {
 		auto checkResult = check(stmt, missingReturnStmtCheck);
 		EXPECT_EQ(checkResult.size(), 1);
 		EXPECT_EQ(toString(checkResult[0]),
-		          "ERROR:   [00046] - SEMANTIC / MISSING_RETURN_STMT @ (0-0) - MSG: Not all control paths of non-unit lambdaExpr return a value.");
+		          "ERROR:   [00047] - SEMANTIC / MISSING_RETURN_STMT @ (0-0) - MSG: Not all control paths of non-unit lambdaExpr return a value.");
 	}
 
 	TEST(MissingReturnStmtCheck, SwitchCorrectInLoop) {
@@ -377,6 +377,45 @@ namespace checks {
 		auto checkResult = check(stmt, missingReturnStmtCheck);
 		EXPECT_TRUE(checkResult.empty());
 		EXPECT_EQ(toString(checkResult), "[]");
+	}
+
+	TEST(ArrayCreateArgumentCheck, Basic) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		{
+			StatementPtr stmt_ok = builder.normalize(builder.parseStmt(R"1N5P1RE(
+            {
+                let uint = uint<8>;
+                lambda () -> unit {
+					decl ref<array<int<4>,3>,f,f> v0 = var(array_create(lit(3), [0,1,2]));
+				};
+			}
+            )1N5P1RE"));
+			EXPECT_TRUE(stmt_ok) << "parsing error";
+			CheckPtr arrayCreateArgumentCheck = makeRecursive(make_check<ArrayCreateArgumentCheck>());
+			auto checkResult = check(stmt_ok, arrayCreateArgumentCheck);
+			EXPECT_TRUE(checkResult.empty());
+			EXPECT_EQ(toString(checkResult), "[]");
+		}
+
+		{
+			StatementPtr stmt_err = builder.normalize(builder.parseStmt(R"1N5P1RE(
+            {
+                let uint = uint<8>;
+                lambda () -> unit {
+					decl auto list = var([0,1,2]);
+					decl ref<array<int<4>,3>,f,f> v0 = var(array_create(lit(3), *list));
+				};
+			}
+            )1N5P1RE"));
+			EXPECT_TRUE(stmt_err) << "parsing error";
+			CheckPtr arrayCreateArgumentCheck = makeRecursive(make_check<ArrayCreateArgumentCheck>());
+			auto checkResult = check(stmt_err, arrayCreateArgumentCheck);
+			EXPECT_EQ(checkResult.size(), 1);
+			EXPECT_EQ(toString(checkResult[0]),
+					"ERROR:   [00044] - SEMANTIC / ARRAY_CREATE_INVALID_ARGUMENT @ (0-0-2-0-1-2-1-1-2) - MSG: Invalid initializer argument in array_create call.");
+		}
 	}
 
 } // end namespace checks
