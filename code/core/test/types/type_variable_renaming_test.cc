@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -130,10 +130,10 @@ namespace types {
 		TagTypeDefinitionPtr def = builder.tagTypeDefinition(defs);
 		TagTypePtr tagType = builder.tagType(tag, def);
 
-		EXPECT_EQ("rec ^X.{^X=ref<^X,f,f>}", toString(*tagType));
+		EXPECT_EQ("rec ^X.{^X=struct<f:ref<^X,f,f>>}", toString(*tagType));
 
 		VariableRenamer renamer;
-		EXPECT_EQ("rec ^X.{^X=ref<^X,f,f>}", toString(*renamer.rename(tagType)));
+		EXPECT_EQ("rec ^X.{^X=struct<f:ref<^X,f,f>>}", toString(*renamer.rename(tagType)));
 	}
 
 } // end namespace analysis
