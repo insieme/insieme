@@ -880,7 +880,7 @@ namespace core {
 	 * The accessor associated to a tag type. A tag type (formerly known as recursive type) is simply referencing
 	 * a tag binding within a tag type definition.
 	 */
-	IR_NODE_ACCESSOR(TagType, Type, TypeVariable, TagTypeDefinition)
+	IR_NODE_ACCESSOR(TagType, Type, TagTypeReference, TagTypeDefinition)
 		/**
 		 * Obtains the tag picked in the group of nested definitions by this tag type.
 		 */

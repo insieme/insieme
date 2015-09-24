@@ -346,11 +346,11 @@ namespace core {
 	}
 
 	TagTypePtr IRBuilderBaseModule::structType(const vector<ParentPtr>& parents, const vector<FieldPtr>& fields) const {
-		return structType(IRBuilderBaseModule::parents(parents), fields);
+		return structType(stringValue(""), IRBuilderBaseModule::parents(parents), fields);
 	}
 
 	TagTypePtr IRBuilderBaseModule::structType(const vector<TypePtr>& parents, const vector<FieldPtr>& fields) const {
-		return structType(IRBuilderBaseModule::parents(parents), fields);
+		return structType(stringValue(""), IRBuilderBaseModule::parents(parents), fields);
 	}
 
 	TagTypePtr IRBuilderBaseModule::structType(const vector<ParentPtr>& parents, const vector<std::pair<StringValuePtr, TypePtr>>& fields) const {
