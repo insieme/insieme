@@ -313,7 +313,7 @@ namespace printer {
 								if (!structType->getParents().empty()) {
 									out << " : [";
 									out << join(", ", structType->getParents(), [&](std::ostream& out, const ParentPtr& parent) {
-										this->visit(NodeAddress(parent));
+										this->visit(NodeAddress(parent->getType()));
 									});
 									out << "]";
 								}
@@ -322,12 +322,11 @@ namespace printer {
 							out << " { ";
 
 							// print fields
-							for(const auto& cur : tagType->getFields()) {
+							out << join("; ", tagType->getFields(), [&](std::ostream&,const FieldPtr& cur) {
 								this->visit(NodeAddress(cur->getType()));   //print type
 								out << " ";
 								this->visit(NodeAddress(cur->getName()));   //print field name
-								out << "; ";
-							}
+							});
 
 							out << " };" << std::endl;
 

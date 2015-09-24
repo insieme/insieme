@@ -287,7 +287,7 @@ namespace analysis {
 			auto listElem = builder.structRecord(toVector(builder.field("load", manager.getLangBasic().getInt4()), builder.field("next", builder.refType(tag))));
 			TypePtr constRecType = builder.tagType(tag, builder.tagTypeDefinition(toVector(builder.tagTypeBinding(tag, listElem))));
 
-			EXPECT_EQ("rec 'list.{'list=struct<load:int<4>,next:ref<'list,f,f>>}", toString(*constRecType));
+			EXPECT_EQ("rec ^list.{^list=struct<load:int<4>,next:ref<^list,f,f>>}", toString(*constRecType));
 			EXPECT_FALSE(isGeneric(constRecType));
 		}
 
@@ -297,7 +297,7 @@ namespace analysis {
 			auto listElem = builder.structRecord(toVector(builder.field("load", builder.typeVariable("b")), builder.field("next", builder.refType(tag))));
 			TypePtr constRecType = builder.tagType(tag, builder.tagTypeDefinition(toVector(builder.tagTypeBinding(tag, listElem))));
 
-			EXPECT_EQ("rec 'list.{'list=struct<load:'b,next:ref<'list,f,f>>}", toString(*constRecType));
+			EXPECT_EQ("rec ^list.{^list=struct<load:'b,next:ref<^list,f,f>>}", toString(*constRecType));
 			EXPECT_TRUE(isGeneric(constRecType));
 		}
 	}

@@ -233,6 +233,7 @@ namespace analysis {
 	TypeList getElementTypes(const TypePtr& type) {
 		TypeList res;
 		visitDepthFirstPrunable(type, [&](const TypePtr& cur) -> bool {
+			if (cur.isa<TagTypeReferencePtr>()) return true;
 			if(cur == type) {
 				return false; // exclude root
 			}
