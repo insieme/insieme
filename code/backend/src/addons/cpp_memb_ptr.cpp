@@ -69,7 +69,7 @@ namespace addons {
 			TypeManager& typeManager = converter.getTypeManager();
 			auto manager = converter.getCNodeManager();
 
-			core::StructTypePtr structType = type.isa<core::StructTypePtr>();
+			auto fields = core::analysis::isStruct(type)->getFields();
 
 			// get information regarding base type
 			// const TypeInfo& baseInfo = typeManager.getTypeInfo();
@@ -79,8 +79,8 @@ namespace addons {
 			// std::cout << "name of 2 " << structType[2]->getName().getValue() << std::endl;
 			// std::cout << "type of 2 " << structType[2]->getType() << std::endl;
 
-			TypeInfo baseInfo = typeManager.getTypeInfo(core::analysis::getRepresentedType(structType[0]->getType()));
-			TypeInfo fieldType = typeManager.getTypeInfo(core::analysis::getRepresentedType(structType[2]->getType()));
+			TypeInfo baseInfo = typeManager.getTypeInfo(core::analysis::getRepresentedType(fields[0]->getType()));
+			TypeInfo fieldType = typeManager.getTypeInfo(core::analysis::getRepresentedType(fields[2]->getType()));
 
 			c_ast::IdentifierPtr typeName = manager->create(converter.getNameManager().getName(type));
 			c_ast::MemberFieldPointerPtr memberPtrType = manager->create<c_ast::MemberFieldPointer>(baseInfo.rValueType, fieldType.rValueType);

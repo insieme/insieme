@@ -192,7 +192,7 @@ namespace backend {
 				context.addDependency(info.definition);
 
 				// update current type for following steps
-				curType = curType.as<core::NamedCompositeTypePtr>()->getNamedTypeEntryOf(memberName->getValue())->getType();
+				curType = curType.as<core::TagTypePtr>()->getFieldType(memberName->getValue());
 
 				// compute offset using offsetof macro
 				c_ast::ExpressionPtr offset =
@@ -396,8 +396,8 @@ namespace backend {
 			auto type = call->getType();
 
 			// 1) special case: an empty struct
-			if(const core::StructTypePtr& structType = type.isa<core::StructTypePtr>()) {
-				if(structType.empty() && structType->getParents().empty()) {
+			if(const auto& structType = core::analysis::isStruct(type)) {
+				if(structType->getFields().empty() && structType->getParents().empty()) {
 					auto cType = CONVERT_TYPE(type);
 					auto zero = C_NODE_MANAGER->create("0");
 					return c_ast::deref(c_ast::cast(c_ast::ptr(cType), zero));
@@ -503,7 +503,7 @@ namespace backend {
 			// lets try just to write the expression and let the backend compiler
 			// materialize it
 			// 	Classes && generic types (which are intercepted objects)
-			if(type.isa<core::StructTypePtr>() || (type.isa<core::GenericTypePtr>() && !isPrimitiveType(type))) { return c_ast::ref(res); }
+			if(type.isa<core::TagTypePtr>() || (type.isa<core::GenericTypePtr>() && !isPrimitiveType(type))) { return c_ast::ref(res); }
 
 			// creates a something of the format "(int[1]){x}"
 			return c_ast::init(c_ast::vec(valueTypeInfo.rValueType, 1), res);
@@ -550,8 +550,8 @@ namespace backend {
 			}
 
 			// special handling for variable sized structs
-			if(auto structType = initValue->getType().isa<core::StructTypePtr>()) {
-				if (core::lang::isUnknownSizedArray(structType->getEntries().back()->getType())) {
+			if(auto structType = core::analysis::isStruct(initValue->getType())) {
+				if (core::lang::isUnknownSizedArray(structType->getFields().back()->getType())) {
 					// Create code similar to this:
 					// 		(A*)memcpy(malloc(sizeof(A) + sizeof(float) * v2), &(struct A){ v2 }, sizeof(A))
 

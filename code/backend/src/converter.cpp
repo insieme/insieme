@@ -136,7 +136,7 @@ namespace backend {
 
 			virtual bool covers(const core::NodeAddress& node) const {
 				// it is covered if it is of a certain type
-				return node.isa<core::LambdaExprPtr>() || node.isa<core::StructTypePtr>();
+				return node.isa<core::LambdaExprPtr>() || node.isa<core::TagTypePtr>();
 			}
 
 			/**

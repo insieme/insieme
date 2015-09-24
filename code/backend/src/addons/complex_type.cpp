@@ -59,11 +59,11 @@ namespace addons {
 
 		bool isComplexType(const core::TypePtr& type) {
 			// check whether it is a cpp reference
-			const core::StructTypePtr& structType = type.isa<core::StructTypePtr>();
+			const core::StructPtr& structType = core::analysis::isStruct(type);
 			if(!structType) { return false; }
-			if(!(structType->getEntries().size() == 2)) { return false; }
-			const core::NamedTypePtr t1 = structType->getEntries()[0];
-			const core::NamedTypePtr t2 = structType->getEntries()[1];
+			if(!(structType->getFields().size() == 2)) { return false; }
+			const core::FieldPtr t1 = structType->getFields()[0];
+			const core::FieldPtr t2 = structType->getFields()[1];
 			if((t1->getName()->getValue().find("_real") == std::string::npos) || (t2->getName()->getValue().find("_img") == std::string::npos)) {
 				return false;
 			}
@@ -77,8 +77,8 @@ namespace addons {
 			// build up TypeInfo for complex type
 			TypeManager& typeManager = converter.getTypeManager();
 
-			const core::StructTypePtr& structType = type.isa<core::StructTypePtr>();
-			const core::NamedTypePtr t1 = structType->getEntries()[0];
+			const core::StructPtr& structType = core::analysis::isStruct(type);
+			const core::FieldPtr t1 = structType->getFields()[0];
 			const TypeInfo& baseInfo = typeManager.getTypeInfo(t1->getType());
 
 			// copy base information
