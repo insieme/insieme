@@ -77,31 +77,7 @@ namespace core {
 		EXPECT_EQ(builder.compoundStmt(lit), stmt->getChildList()[1]);
 		EXPECT_EQ(builder.compoundStmt(lit), stmt->getChildList()[2]);
 
-		EXPECT_EQ(lit, stmt->getChildNodeReference<0>());
-		EXPECT_EQ(builder.compoundStmt(lit), stmt->getChildNodeReference<1>());
-		EXPECT_EQ(builder.compoundStmt(lit), stmt->getChildNodeReference<2>());
-
-		EXPECT_TRUE(typeid(stmt->getChildNodeReference<0>()) == typeid(ExpressionPtr));
-		EXPECT_TRUE(typeid(stmt->getChildNodeReference<1>()) == typeid(CompoundStmtPtr));
-		EXPECT_TRUE(typeid(stmt->getChildNodeReference<2>()) == typeid(CompoundStmtPtr));
-
-		EXPECT_TRUE(typeid(&*stmt->getChildNodeReference<0>()) == typeid(const Expression*));
-		EXPECT_TRUE(typeid(&*stmt->getChildNodeReference<1>()) == typeid(const CompoundStmt*));
-		EXPECT_TRUE(typeid(&*stmt->getChildNodeReference<2>()) == typeid(const CompoundStmt*));
-
-		EXPECT_EQ(&*lit, &*stmt->getChildNodeReference<0>());
-		EXPECT_EQ(&*builder.compoundStmt(lit), &*stmt->getChildNodeReference<1>());
-		EXPECT_EQ(&*builder.compoundStmt(lit), &*stmt->getChildNodeReference<2>());
 	}
-
-	TEST(Node, MemberTypeTraits) {
-		EXPECT_TRUE(typeid(node_child_type<IfStmt, 0>::type) == typeid(Expression));
-		EXPECT_TRUE(typeid(node_child_type<IfStmt, 1>::type) == typeid(CompoundStmt));
-
-		EXPECT_TRUE(typeid(node_child_type<TupleType, 1>::type) == typeid(Type));
-		EXPECT_TRUE(typeid(node_child_type<TupleType, 100>::type) == typeid(Type));
-	}
-
 
 	TEST(Node, MemberAccess) {
 		NodeManager manager;
@@ -114,9 +90,6 @@ namespace core {
 
 		IfStmtPtr ptr(stmt);
 		IfStmtAddress adr(stmt);
-
-		ptr->getChildNodeReference<0>();
-		adr->getChildNodeReference<0>();
 
 		ExpressionPtr stmtPtr = ptr->getCondition();
 		ExpressionAddress stmtAdr = adr->getCondition();

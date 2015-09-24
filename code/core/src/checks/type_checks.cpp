@@ -124,22 +124,13 @@ namespace checks {
 		return res;
 	}
 
-	namespace {
-
-		bool isUnion(const TypePtr& type) {
-			if(type.isa<UnionTypePtr>()) { return true; }
-			if(auto recType = type.isa<RecTypePtr>()) { return isUnion(recType->getTypeDefinition()); }
-			return false;
-		}
-	}
-
 
 	OptionalMessageList ParentCheck::visitParent(const ParentAddress& address) {
 		OptionalMessageList res;
 
 		// just check whether parent type is a potential object type
 		auto type = address.as<ParentPtr>()->getType();
-		if(!analysis::isObjectType(type) || isUnion(type)) {
+		if(!analysis::isObjectType(type) || analysis::isUnion(type)) {
 			add(res, Message(address, EC_TYPE_ILLEGAL_OBJECT_TYPE, format("Invalid parent type - not an object: %s", toString(*type)), Message::ERROR));
 		}
 
@@ -365,16 +356,16 @@ namespace checks {
 
 
 		// check composition of struct types
-		if(address->getNodeType() == NT_StructType) {
-			StructTypePtr structType = address.as<StructTypePtr>();
-			if(structType.empty()) { return res; }
-			for(auto it = structType.begin(); it != structType.end(); ++it) {
-				if(lang::isVariableSizedArray(it->getType())) {
+		if(StructPtr structType = analysis::isStruct(address)) {
+			auto fields = structType->getFields();
+			if(fields.empty()) { return res; }
+			for(const auto& field : fields) {
+				if(lang::isVariableSizedArray(field->getType())) {
 					add(res, Message(address, EC_TYPE_INVALID_ARRAY_CONTEXT,
 									 "Variable sized array not allowed within struct types.", Message::ERROR));
 				}
 			}
-			for(auto it = structType.begin(); it != structType.end() - 1; ++it) {
+			for(auto it = fields.begin(); it != fields.end() - 1; ++it) {
 				if(lang::isUnknownSizedArray(it->getType())) {
 					add(res, Message(address, EC_TYPE_INVALID_ARRAY_CONTEXT,
 					                 "Unknown sized data structure has to be the last component of enclosing struct type.", Message::ERROR));
@@ -526,11 +517,8 @@ namespace checks {
 		// extract type
 		core::TypePtr type = address.getAddressedNode()->getType();
 
-		// unroll type if necessary
-		if(auto rec = type.isa<RecTypePtr>()) { type = rec->unroll(); }
-
 		// get struct type
-		core::StructTypePtr structType = type.isa<StructTypePtr>();
+		core::StructPtr structType = analysis::isStruct(type);
 
 		// check whether it is a struct type
 		if(!structType) {
@@ -541,7 +529,7 @@ namespace checks {
 
 		// check type of values within struct expression
 		for_each(address.getAddressedNode()->getMembers()->getNamedValues(), [&](const NamedValuePtr& cur) {
-			core::TypePtr requiredType = structType->getTypeOfMember(cur->getName());
+			core::TypePtr requiredType = structType->getFieldType(cur->getName());
 			core::TypePtr isType = cur->getValue()->getType();
 			if(!requiredType) {
 				add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
@@ -577,29 +565,23 @@ namespace checks {
 				}
 			}
 
-			// unroll recursive types if necessary
-			if(exprType->getNodeType() == NT_RecType) { exprType = static_pointer_cast<const RecType>(exprType)->unroll(); }
 
-			// Accessing an element from a generic type (intercepted)
-			// we should allow it, and we have no way to check the consistency of
-			// the requested element. just return
-			if(dynamic_pointer_cast<const GenericType>(exprType)) { return res; }
+			// Accessing an element from anything else than a tag type
+			// we allow; since we have no way to check the consistency of
+			// the requested element, everything is fine
+			auto tagType = exprType.isa<TagTypePtr>();
+			if(!tagType) return res;		// all fine
 
-			// check whether it is a composite type
-			const NamedCompositeTypePtr compositeType = dynamic_pointer_cast<const NamedCompositeType>(exprType);
-			if(!compositeType) {
-				add(res, Message(address, EC_TYPE_ACCESSING_MEMBER_OF_NON_NAMED_COMPOSITE_TYPE,
-				                 format("Cannot access member '%s' of non-named-composed type \n%s of type \n%s", *identifier,
-				                        *structExpr, *exprType),
-				                 Message::ERROR));
-				return res;
+			// resolve recursive types
+			if (tagType->isRecursive()) {
+				tagType = tagType->peel();
 			}
 
 			// get member type
-			const TypePtr& resultType = compositeType->getTypeOfMember(identifier);
+			const TypePtr& resultType = tagType->getFieldType(identifier);
 			if(!resultType) {
 				add(res, Message(address, EC_TYPE_NO_SUCH_MEMBER,
-				                 format("No member '%s' within composed type '%s'", *identifier, *compositeType),
+				                 format("No member '%s' within record type '%s'", *identifier, *tagType),
 				                 Message::ERROR));
 				return res;
 			}
@@ -689,9 +671,6 @@ namespace checks {
 					return res;
 				}
 			}
-
-			// unroll recursive types if necessary
-			if(exprType->getNodeType() == NT_RecType) { exprType = static_pointer_cast<const RecType>(exprType)->unroll(); }
 
 			// check whether it is a tuple type
 			const TupleTypePtr tupleType = dynamic_pointer_cast<const TupleType>(exprType);
@@ -862,9 +841,16 @@ namespace checks {
 			}
 
 			// allow casts between recursive version and unrolled version
-			if(src->getNodeType() == NT_RecType && trg->getNodeType() != NT_RecType) { return isValidCast(src.as<RecTypePtr>()->unroll(), trg); }
-
-			if(src->getNodeType() != NT_RecType && trg->getNodeType() == NT_RecType) { return isValidCast(src, trg.as<RecTypePtr>()->unroll()); }
+			TagTypePtr ts = src.isa<TagTypePtr>();
+			TagTypePtr tt = trg.isa<TagTypePtr>();
+			if (ts && tt) {
+				if (ts->isRecursive() && !tt->isRecursive()) {
+					return isValidCast(ts->peel(), tt);
+				}
+				if (!ts->isRecursive() && tt->isRecursive()) {
+					return isValidCast(ts, tt->peel());
+				}
+			}
 
 			// we also allow casts between references
 			if(analysis::isRefType(src) && analysis::isRefType(trg)) {

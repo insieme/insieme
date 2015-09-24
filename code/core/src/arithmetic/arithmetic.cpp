@@ -1328,7 +1328,7 @@ namespace arithmetic {
 			pieces_builder builder;
 
 			// create all combinations ...
-			for_range(make_product_range(a.getPieces(), b.getPieces()), [&](const pair<Piece, Piece>& cur) {
+			for_each(make_product_range(a.getPieces(), b.getPieces()), [&](const pair<Piece, Piece>& cur) {
 
 				// just add new piece to the builder
 

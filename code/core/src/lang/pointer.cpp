@@ -52,18 +52,18 @@ namespace lang {
 
 	namespace {
 
-		TypePtr extractReferencedType(const StructTypePtr& type) {
-			GenericTypePtr refType = type->getTypeOfMember("data").as<GenericTypePtr>();
+		TypePtr extractReferencedType(const TagTypePtr& type) {
+			GenericTypePtr refType = type->getFieldType("data").as<GenericTypePtr>();
 			return ArrayType(ReferenceType(refType).getElementType()).getElementType();
 		}
 
-		TypePtr extractConstMarker(const StructTypePtr& type) {
-			GenericTypePtr refType = type->getTypeOfMember("data").as<GenericTypePtr>();
+		TypePtr extractConstMarker(const TagTypePtr& type) {
+			GenericTypePtr refType = type->getFieldType("data").as<GenericTypePtr>();
 			return refType->getTypeParameter(1);
 		}
 
-		TypePtr extractVolatileMarker(const StructTypePtr& type) {
-			GenericTypePtr refType = type->getTypeOfMember("data").as<GenericTypePtr>();
+		TypePtr extractVolatileMarker(const TagTypePtr& type) {
+			GenericTypePtr refType = type->getFieldType("data").as<GenericTypePtr>();
 			return refType->getTypeParameter(2);
 		}
 
@@ -81,7 +81,7 @@ namespace lang {
 		if (auto expr = node.isa<ExpressionPtr>()) trg = expr->getType();
 
 		// process node type
-		StructTypePtr structType = trg.as<StructTypePtr>();
+		auto structType = trg.as<TagTypePtr>();
 		*this = PointerType(
 				extractReferencedType(structType),
 				isTrueMarker(extractConstMarker(structType)),
@@ -91,26 +91,21 @@ namespace lang {
 
 	TypePtr PointerType::create(const TypePtr& elementType, bool _const, bool _volatile) {
 		assert_true(elementType);
-		return PointerType(elementType, _const, _volatile).operator StructTypePtr();
+		return PointerType(elementType, _const, _volatile).operator TypePtr();
 	}
 
 
-	PointerType::operator StructTypePtr() const {
+	PointerType::operator TypePtr() const {
 		NodeManager& mgr = elementType.getNodeManager();
 		IRBuilder builder(mgr);
 
 		auto& ext = mgr.getLangBasic();
 
 		// build a struct representing this pointer
-		return StructType::get(
-				mgr,
-				builder.stringValue("_ir_pointer"),
-				{
-						builder.namedType( builder.stringValue("data"), ReferenceType::create(ArrayType::create(elementType), mConst, mVolatile) ),
-						builder.namedType( builder.stringValue("offset"), ext.getInt8() )
-				}
-		);
-
+		return builder.structType("_ir_pointer", {
+				builder.field( builder.stringValue("data"), ReferenceType::create(ArrayType::create(elementType), mConst, mVolatile) ),
+				builder.field( builder.stringValue("offset"), ext.getInt8() )
+		});
 	}
 
 	bool isPointer(const NodePtr& node) {
@@ -122,8 +117,8 @@ namespace lang {
 		if (auto expr = node.isa<ExpressionPtr>()) return isPointer(expr->getType());
 
 		// needs to be a struct type
-		auto type = node.isa<StructTypePtr>();
-		if(!type) return false;
+		auto type = node.isa<TagTypePtr>();
+		if(!type || !type.isStruct()) return false;
 
 		// simple approach: use unification
 		NodeManager& mgr = node.getNodeManager();

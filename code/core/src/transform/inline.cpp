@@ -166,7 +166,7 @@ namespace transform {
 			VariableList parameters = lambdaExpr->getParameterList()->getParameters();
 			ExpressionList arguments = call->getArguments();
 			auto parArgRange = make_paired_range(parameters, arguments);
-			for_range(make_paired_range(parameters, arguments), [&](const std::pair<VariablePtr, ExpressionPtr>& cur) {
+			for_each(make_paired_range(parameters, arguments), [&](const std::pair<VariablePtr, ExpressionPtr>& cur) {
 				if(LiteralPtr lit = dynamic_pointer_cast<LiteralPtr>(cur.second)) {
 					// this literal can be mapped directly
 					parReplacements.insert(make_pair(build.deref(cur.first), cur.second));

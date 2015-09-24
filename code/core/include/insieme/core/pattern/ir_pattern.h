@@ -116,8 +116,40 @@ namespace pattern {
 			return node(core::NT_TupleType, pattern);
 		}
 
+		inline TreePattern fields(const ListPattern& fields) {
+			return node(core::NT_Fields, fields);
+		}
+
+		inline TreePattern parents(const ListPattern& parents) {
+			return node(core::NT_Parents, parents);
+		}
+
+		inline TreePattern tagType(const TreePattern& tag, const TreePattern& def) {
+			return node(core::NT_TagType, single(tag) << single(def));
+		}
+
+		inline TreePattern tagTypeDefinition(const ListPattern& defs) {
+			return node(core::NT_TagTypeDefinition, defs);
+		}
+
+		inline TreePattern tagTypeBinding(const TreePattern& tag, const TreePattern& record) {
+			return node(core::NT_TagTypeBinding, single(tag) << single(record));
+		}
+
+		inline TreePattern structRecord(const TreePattern& name, const TreePattern& parent, const TreePattern& fields) {
+			return node(core::NT_Struct, single(name) << single(fields) << single(parent));
+		}
+
+		inline TreePattern unionRecord(const TreePattern& name, const TreePattern& fields) {
+			return node(core::NT_Union, single(name) << single(fields));
+		}
+
 		inline TreePattern structType(const ListPattern& pattern) {
-			return node(core::NT_StructType, pattern);
+			return tagType(any, tagTypeDefinition(single(tagTypeBinding(any, structRecord(any, any, fields(pattern))))));
+		}
+
+		inline TreePattern unionType(const ListPattern& pattern) {
+			return tagType(any, tagTypeDefinition(single(tagTypeBinding(any, unionRecord(any, fields(pattern))))));
 		}
 
 		inline TreePattern arrayType(const TreePattern& pattern, const TreePattern& size = any) {

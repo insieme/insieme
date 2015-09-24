@@ -312,9 +312,9 @@ namespace checks {
 		core::ExpressionPtr valueA = builder.literal(typeA, "a");
 		core::ExpressionPtr valueB = builder.literal(typeB, "b");
 
-		NamedTypeList entries;
-		entries.push_back(builder.namedType(name, typeA));
-		core::StructTypePtr structType = builder.structType(entries);
+		FieldList fields;
+		fields.push_back(builder.field(name, typeA));
+		TagTypePtr structType = builder.structType(fields);
 
 
 		// create struct expression
@@ -349,7 +349,7 @@ namespace checks {
 		core::ExpressionPtr valueA = builder.literal(typeA, "a");
 		NamedValueList members;
 		members.push_back(builder.namedValue(name, valueA));
-		core::StructExprPtr err = builder.structExpr(structType.as<core::StructTypePtr>(), members);
+		core::StructExprPtr err = builder.structExpr(structType.as<TagTypePtr>(), members);
 		EXPECT_FALSE(check(err, typeCheck).empty());
 		EXPECT_TRUE(check(err, typeCheck).size() == 1);
 	}
@@ -371,11 +371,11 @@ namespace checks {
 		StringValuePtr identB = builder.stringValue("b");
 		StringValuePtr identC = builder.stringValue("c");
 
-		NamedTypeList entries;
-		entries.push_back(builder.namedType(identA, typeA));
-		entries.push_back(builder.namedType(identB, typeB));
+		FieldList fields;
+		fields.push_back(builder.field(identA, typeA));
+		fields.push_back(builder.field(identB, typeB));
 
-		TypePtr structType = builder.structType(entries);
+		TypePtr structType = builder.structType(fields);
 		VariablePtr var = builder.variable(structType);
 		VariablePtr var2 = builder.variable(typeA);
 
@@ -422,11 +422,11 @@ namespace checks {
 		StringValuePtr identB = builder.stringValue("b");
 		StringValuePtr identC = builder.stringValue("c");
 
-		NamedCompositeType::Entries entries;
-		entries.push_back(builder.namedType(identA, typeA));
-		entries.push_back(builder.namedType(identB, typeB));
+		FieldList fields;
+		fields.push_back(builder.field(identA, typeA));
+		fields.push_back(builder.field(identB, typeB));
 
-		TypePtr structType = builder.structType(entries);
+		TypePtr structType = builder.structType(fields);
 		TypePtr structRefType = builder.refType(structType);
 
 		VariablePtr var = builder.variable(structRefType);
@@ -606,8 +606,8 @@ namespace checks {
 		IRBuilder builder(manager);
 
 		// OK ... create a function literal
-		RecTypePtr typeA = builder.parseType("let t = struct { A a; ref<t> next; } ; t").as<RecTypePtr>();
-		TypePtr typeB = typeA->unroll();
+		TagTypePtr typeA = builder.parseType("let t = struct { A a; ref<t> next; } ; t").as<TagTypePtr>();
+		TypePtr typeB = typeA->peel();
 
 		// all of the following should be supported
 		DeclarationStmtPtr ok0 = builder.declarationStmt(builder.variable(typeA), builder.literal(typeA, "X"));
@@ -973,31 +973,31 @@ namespace checks {
 		// ----- struct ------
 
 		// test it within a struct
-		cur = builder.structType(toVector(builder.namedType("a", arrayType)));
+		cur = builder.structType(toVector(builder.field("a", arrayType)));
 		errors = check(cur, typeCheck);
 		EXPECT_TRUE(errors.empty()) << errors;
 
 		// .. a bigger struct
-		cur = builder.structType(toVector(builder.namedType("c", element), builder.namedType("a", arrayType)));
+		cur = builder.structType(toVector(builder.field("c", element), builder.field("a", arrayType)));
 		errors = check(cur, typeCheck);
 		EXPECT_TRUE(errors.empty()) << errors;
 
 		// it has to be the last element
-		cur = builder.structType(toVector(builder.namedType("a", arrayType), builder.namedType("c", element)));
+		cur = builder.structType(toVector(builder.field("a", arrayType), builder.field("c", element)));
 		errors = check(cur, typeCheck);
 		EXPECT_FALSE(errors.empty()) << errors;
 		EXPECT_EQ(1u, errors.size());
 		EXPECT_PRED2(containsMSG, check(cur, typeCheck), Message(NodeAddress(cur), EC_TYPE_INVALID_ARRAY_CONTEXT, "", Message::ERROR));
 
 		// and must not be present multiple times
-		cur = builder.structType(toVector(builder.namedType("a", arrayType), builder.namedType("b", element), builder.namedType("c", arrayType)));
+		cur = builder.structType(toVector(builder.field("a", arrayType), builder.field("b", element), builder.field("c", arrayType)));
 		errors = check(cur, typeCheck);
 		EXPECT_FALSE(errors.empty()) << errors;
 		EXPECT_EQ(1u, errors.size());
 		EXPECT_PRED2(containsMSG, check(cur, typeCheck), Message(NodeAddress(cur), EC_TYPE_INVALID_ARRAY_CONTEXT, "", Message::ERROR));
 
 		// may be nested inside another struct
-		cur = builder.structType(toVector(builder.namedType("a", builder.structType(toVector(builder.namedType("a", arrayType))))));
+		cur = builder.structType(toVector(builder.field("a", builder.structType(toVector(builder.field("a", arrayType))))));
 		errors = check(cur, typeCheck);
 		EXPECT_TRUE(errors.empty()) << errors;
 
@@ -1005,12 +1005,12 @@ namespace checks {
 		// ----- union ------
 
 		// also union
-		cur = builder.unionType(toVector(builder.namedType("c", element), builder.namedType("a", arrayType)));
+		cur = builder.unionType(toVector(builder.field("c", element), builder.field("a", arrayType)));
 		errors = check(cur, typeCheck);
 		EXPECT_TRUE(errors.empty()) << errors;
 
 		// here the order is not important
-		cur = builder.unionType(toVector(builder.namedType("a", arrayType), builder.namedType("c", element)));
+		cur = builder.unionType(toVector(builder.field("a", arrayType), builder.field("c", element)));
 		errors = check(cur, typeCheck);
 		EXPECT_TRUE(errors.empty()) << errors;
 
@@ -1131,7 +1131,7 @@ namespace checks {
 		EXPECT_TRUE(errors.empty()) << cur << "\n" << errors;
 
 		// union expression
-		UnionTypePtr unionType = builder.unionType(toVector(builder.namedType("a", arrayType)));
+		TagTypePtr unionType = builder.unionType(toVector(builder.field("a", arrayType)));
 		cur = builder.unionExpr(unionType, builder.stringValue("a"), arrayPtr);
 		errors = check(cur, typeCheck);
 		EXPECT_TRUE(errors.empty()) << cur << "\n" << errors;

@@ -182,11 +182,33 @@ namespace types {
 				break;
 			}
 
-			case NT_StructType:
-			case NT_UnionType: {
+			case NT_TagType: {
+
+				// check for recursive types
+				auto tagTypeA = typeA.as<TagTypePtr>();
+				auto tagTypeB = typeB.as<TagTypePtr>();
+
+				// handle recursive type on side A
+				if (tagTypeA.isRecursive()) {
+					addEqualityConstraints(constraints, tagTypeA->peel(), tagTypeB);
+					return;
+				}
+
+				// handle recursive type on side B
+				if (tagTypeB.isRecursive()) {
+					addEqualityConstraints(constraints, tagTypeA, tagTypeB->peel());
+					return;
+				}
+
+				// has to be the same type
+				if (tagTypeA->getRecord()->getNodeType() != tagTypeB->getRecord()->getNodeType()) {
+					constraints.makeUnsatisfiable();
+					return;
+				}
+
 				// names and sub-types have to be checked
-				auto entriesA = static_pointer_cast<const NamedCompositeType>(typeA)->getEntries();
-				auto entriesB = static_pointer_cast<const NamedCompositeType>(typeB)->getEntries();
+				auto entriesA = tagTypeA->getFields();
+				auto entriesB = tagTypeB->getFields();
 
 				// check equality of names and types
 				// check number of entries
@@ -196,10 +218,10 @@ namespace types {
 				}
 
 				// check all child nodes
-				for(auto it = make_paired_iterator(entriesA.begin(), entriesB.begin()); it != make_paired_iterator(entriesA.end(), entriesB.end()); ++it) {
+				for(const auto& cur : make_paired_range(entriesA, entriesB)) {
 					// ensure identifiers are identical (those cannot be variable)
-					auto entryA = (*it).first;
-					auto entryB = (*it).second;
+					auto entryA = cur.first;
+					auto entryB = cur.second;
 					if(*entryA->getName() != *entryB->getName()) {
 						// unsatisfiable
 						constraints.makeUnsatisfiable();
@@ -210,20 +232,13 @@ namespace types {
 					addEqualityConstraints(constraints, entryA->getType(), entryB->getType());
 				}
 
-
-				break;
-			}
-
-			case NT_RecType: {
-				// TODO: implement RecType pattern matching
-				if(*typeA != *typeB) {
-					LOG(WARNING) << "Yet unhandled recursive type encountered while resolving subtype constraints:"
-					             << " Parameter Type: " << typeA << std::endl
-					             << "  Argument Type: " << typeB << std::endl
-					             << " => the argument will be considered equal!!!";
-					//						assert_not_implemented();
-					constraints.makeUnsatisfiable();
+				// also cover parents
+				if (tagTypeA->isStruct()) {
+					assert_eq(*tagTypeA->getStruct()->getParents(), *tagTypeB->getStruct()->getParents())
+							<< "TODO: implement type variable deduction with parent support!"
+									"Note: do not forget to check the parent fields virtual and access spec!";
 				}
+
 				break;
 			}
 
@@ -361,9 +376,8 @@ namespace types {
 					argumentMapping.addMapping(var, substitute);
 					break;
 				}
-				case NT_RecType:
 				case NT_FunctionType: {
-					// do not consider function types and recursive types (variables inside are bound)
+					// do not consider function types (variables inside are bound)
 					break;
 				}
 				default: {

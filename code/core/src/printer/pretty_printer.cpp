@@ -291,8 +291,7 @@ namespace printer {
 
 					NodeType type = cur->getNodeType();
 
-					if(type == NT_RecType || type == NT_StructType || type == NT_UnionType
-					   || (!printer.hasOption(PrettyPrinter::NO_LET_BOUND_FUNCTIONS) && type == NT_LambdaExpr)) {
+					if(type == NT_TagType || (!printer.hasOption(PrettyPrinter::NO_LET_BOUND_FUNCTIONS) && type == NT_LambdaExpr)) {
 						string name;
 
 						if(insieme::core::annotations::hasAttachedName(cur) &&
@@ -302,38 +301,32 @@ namespace printer {
 
 							name = (type == NT_LambdaExpr)?format("fun%03d", funCounter++):format("type%03d", typeCounter++);
 
-						if(type == NT_StructType) {
+						if(auto tagType = cur.isa<TagTypePtr>()) {
 
 
-							out << "let " << name << " = struct ";
-							this->visit(NodeAddress(cur.getChild(0)));
+							out << "let " << name << " = ";
+							out << ((tagType->isStruct()) ? "struct " : "union ");
+							this->visit(NodeAddress(tagType->getName()));
 
 							// include all inherited classes if there are any
-							if(!cur.getChild(1).getChildList().empty()) {
-								out << " : [";
-								int first = 1;
-								for(auto n : cur.getChild(1).getChildList()) {
-									if(first) {
-										first = 0;
-									} else {
-										out << ", ";
-									}
-									this->visit(NodeAddress(n.getChild(1)));
+							if (StructPtr structType = analysis::isStruct(tagType)) {
+								if (!structType->getParents().empty()) {
+									out << " : [";
+									out << join(", ", structType->getParents(), [&](std::ostream& out, const ParentPtr& parent) {
+										this->visit(NodeAddress(parent));
+									});
+									out << "]";
 								}
-								out << "]";
 							}
 
 							out << " { ";
 
-							// print the variable fields
-							int maxPara = cur.getChildList().size();
-							for(int i=2; i<maxPara; i++) {
-								auto actual = cur.getChild(i);
-								this->visit(NodeAddress(actual.getChild(1)));   //print type
+							// print fields
+							for(const auto& cur : tagType->getFields()) {
+								this->visit(NodeAddress(cur->getType()));   //print type
 								out << " ";
-								this->visit(NodeAddress(actual.getChild(0)));   //print variable name
-								if(i+1 < maxPara)
-									out << "; ";
+								this->visit(NodeAddress(cur->getName()));   //print field name
+								out << "; ";
 							}
 
 							out << " };" << std::endl;
@@ -344,7 +337,7 @@ namespace printer {
 						if(!printer.hasOption(PrettyPrinter::JUST_OUTERMOST_SCOPE)) {
 							// print a let binding
 
-							if (cur.getNodeType() == NT_LambdaExpr) {
+							if (auto lambda = cur.isa<LambdaExprPtr>()) {
 
 								if (name.compare("main") != 0) {
 									// not the main function
@@ -362,7 +355,7 @@ namespace printer {
 									out << std::endl;
 
 									// printing the return Value
-									visit(NodeAddress(cur.getChild(0).getChild(1)));
+									visit(NodeAddress(lambda->getType().as<FunctionTypePtr>()->getReturnType()));
 
 									// print the signature of the main function
 									out << " " << name << "(" << join(", ", cur.as<LambdaExprPtr>()->getParameterList(), paramPrinter) <<
@@ -427,10 +420,8 @@ namespace printer {
 			/**
 			 * A macro simplifying the definition for print routine of some node type.
 			 */
-			#define PRINT(NodeType, Print)                                                                                                                     \
-				virtual void visit##NodeType(const NodeType##Address& node) {                                                                                      \
-					Print                                                                                                                                      \
-				}
+			#define PRINT(NodeType)                                                                                                                      \
+				virtual void visit##NodeType(const NodeType##Address& node)
 
 			/**
 			 * A macro for visiting the NodePtr
@@ -438,21 +429,21 @@ namespace printer {
 			#define VISIT(VNode) this->visit(NodeAddress(VNode));
 
 
-			PRINT(Value, {
+			PRINT(Value) {
 				// identifiers can be directly printed
 				out << *node;
-			});
+			}
 
-			PRINT(GenericType, {
+			PRINT(GenericType) {
 				out << *node->getName();
 				const TypesPtr& types = node->getTypeParameter();
 
 				if(types->empty()) { return; }
 
 				out << "<" << join(",", types, [&](std::ostream&, const TypePtr& cur) { VISIT(cur); }) << ">";
-			});
+			}
 
-			PRINT(FunctionType, {
+			PRINT(FunctionType) {
 
 				auto printer = [&](std::ostream&, const TypePtr& cur) { VISIT(cur); };
 
@@ -481,11 +472,11 @@ namespace printer {
 					out << " ";
 					VISIT(node->getReturnType());
 				}
-			});
+			}
 
-			PRINT(RecType, {
+			PRINT(TagType) {
 				out << "rec ";
-				VISIT(node->getTypeVariable());
+				VISIT(node->getTag());
 
 				string newItem = "\n\t";
 				string newLine = "\n";
@@ -495,14 +486,14 @@ namespace printer {
 					newLine = "";
 				}
 
-				out << "{" << newItem << join(", " + newItem, node->getDefinition()->getDefinitions(), [&](std::ostream& jout, const RecTypeBindingPtr& cur) {
-					VISIT(cur->getVariable());
+				out << "{" << newItem << join(", " + newItem, node->getDefinition()->getDefinitions(), [&](std::ostream& jout, const TagTypeBindingPtr& cur) {
+					VISIT(cur->getTag());
 					jout << "=";
-					VISIT(cur->getType());
+					VISIT(cur->getRecord());
 				}) << newLine << "}";
-			});
+			}
 
-			PRINT(NamedCompositeType, {
+			PRINT(Record) {
 
 				string newItem = "\n\t";
 				string newLine = "\n";
@@ -512,68 +503,60 @@ namespace printer {
 					newLine = "";
 				}
 
-				out << ((node->getNodeType() == NT_UnionType) ? "union" : "struct");
+				auto strct = analysis::isStruct(node);
+
+				out << (strct ? "struct" : "union");
 
 				if(!node->getName()->getValue().empty()) {
 					out << " " << node->getName()->getValue();
-					if(node->getParents().empty()) { out << " "; }
+					if(strct && strct->getParents().empty()) { out << " "; }
 				}
 
-				if(!node->getParents().empty()) {
-					out << " : " << join(", ", node->getParents(), [&](std::ostream& out, const ParentPtr& parent) {
+				if(!strct->getParents().empty()) {
+					out << " : " << join(", ", strct->getParents(), [&](std::ostream& out, const ParentPtr& parent) {
 						if(parent->isVirtual()) { out << "virtual "; }
-					VISIT(parent->getType());
+						VISIT(parent->getType());
 					}) << " ";
 				}
 
-				out << "{" << newItem << join(";" + newItem, node->getEntries(), [&](std::ostream& out, const NamedTypePtr& cur) {
+				out << "{" << newItem << join(";" + newItem, node->getFields(), [&](std::ostream& out, const FieldPtr& cur) {
 					VISIT(cur->getType());
 					out << " ";
 					VISIT(cur->getName());
 				});
 
-				// TODO: finish
-				//
-				//			if(hasMetaInfo(node)){
-				//				const ClassMetaInfo& meta = getMetaInfo(node);
-				//				for (auto child: meta.getChildNodes()){
-				//					out << newLine;
-				//					this->visit(child);
-				//				}
-				//			}
-
 				out << newLine << "}";
-			});
+			}
 
-			PRINT(TupleType, { out << "" << join(",", node->getElementTypes(), [&](std::ostream&, const TypePtr& cur) { VISIT(cur); }) << ""; });
+			PRINT(TupleType) { out << "" << join(",", node->getElementTypes(), [&](std::ostream&, const TypePtr& cur) { VISIT(cur); }) << ""; }
 
-			PRINT(Type, { out << *node; });
+			PRINT(Type) { out << *node; }
 
-			PRINT(BreakStmt, { out << "break"; });
+			PRINT(BreakStmt) { out << "break"; }
 
-			PRINT(ContinueStmt, { out << "continue"; });
+			PRINT(ContinueStmt) { out << "continue"; }
 
-			PRINT(ReturnStmt, {
+			PRINT(ReturnStmt) {
 				out << "return ";
 				VISIT(node->getReturnExpr());
-			});
+			}
 
-			PRINT(ThrowStmt, {
+			PRINT(ThrowStmt) {
 				out << "throw ";
 				VISIT(node->getThrowExpr());
-			});
+			}
 
-			PRINT(GotoStmt, {
+			PRINT(GotoStmt) {
 				out << "goto ";
 				VISIT(node->getLabel());
-			});
+			}
 
-			PRINT(LabelStmt, {
+			PRINT(LabelStmt) {
 				VISIT(node->getLabel());
 				out << ":";
-			});
+			}
 
-			PRINT(DeclarationStmt, {
+			PRINT(DeclarationStmt) {
 				// print type
 				const VariablePtr& var = node->getVariable();
 				out << "decl ";
@@ -582,9 +565,9 @@ namespace printer {
 				VISIT(var);
 				out << " = ";
 				VISIT(node->getInitialization());
-			});
+			}
 
-			PRINT(CompoundStmt, {
+			PRINT(CompoundStmt) {
 				auto list = node->getStatements();
 				if(list.empty()) {
 					out << "{ }";
@@ -604,17 +587,17 @@ namespace printer {
 				decreaseIndent();
 				newLine();
 				out << "}";
-			});
+			}
 
-			PRINT(WhileStmt, {
+			PRINT(WhileStmt) {
 				// variables can be directly printed
 				out << "while(";
 				VISIT(node->getCondition());
 				out << ") ";
 				VISIT(node->getBody());
-			});
+			}
 
-			PRINT(ForStmt, {
+			PRINT(ForStmt) {
 				// variables can be directly printed
 				out << "for( ";
 				VISIT(node->getIterator()->getType());
@@ -638,9 +621,9 @@ namespace printer {
 				} else {
 					VISIT(body);
 				}
-			});
+			}
 
-			PRINT(IfStmt, {
+			PRINT(IfStmt) {
 				// variables can be directly printed
 				out << "if(";
 				VISIT(node->getCondition());
@@ -650,9 +633,9 @@ namespace printer {
 					out << " else ";
 					VISIT(node->getElseBody());
 				}
-			});
+			}
 
-			PRINT(SwitchStmt, {
+			PRINT(SwitchStmt) {
 				// variables can be directly printed
 				out << "switch(";
 				VISIT(node->getSwitchExpr());
@@ -671,9 +654,9 @@ namespace printer {
 				decreaseIndent();
 				this->newLine();
 				out << "}";
-			});
+			}
 
-			PRINT(TryCatchStmt, {
+			PRINT(TryCatchStmt) {
 				// variables can be directly printed
 				out << "try ";
 				VISIT(node->getBody());
@@ -685,9 +668,9 @@ namespace printer {
 					out << ") ";
 					VISIT(clause->getBody());
 				}
-			});
+			}
 
-			PRINT(Variable, {
+			PRINT(Variable) {
 
 				// print variale names if attached to the node... otherwise
 				// a variable like "v..." will be used
@@ -699,9 +682,9 @@ namespace printer {
 					out << *node;
 				}
 
-			});
+			}
 
-			PRINT(Literal, {
+			PRINT(Literal) {
 				// special handling of type literals (ignore value)
 				if(!printer.hasOption(PrettyPrinter::PRINT_LITERAL_TYPES) && analysis::isTypeLiteral(node.getParentNode(0))) {
 					out << "type_lit(";
@@ -736,9 +719,9 @@ namespace printer {
 					out << ":";
 					VISIT(node->getType());
 				}
-			});
+			}
 
-			PRINT(LambdaExpr, {
+			PRINT(LambdaExpr) {
 
 				if(!printer.hasOption(PrettyPrinter::PRINT_DERIVED_IMPL) && lang::isDerived(node)) {
 					out << lang::getConstructName(node);
@@ -765,10 +748,10 @@ namespace printer {
 				VISIT(node->getVariable());
 				out << " ";
 				VISIT(node->getDefinition());
-			});
+			}
 
 
-			PRINT(LambdaDefinition, {
+			PRINT(LambdaDefinition) {
 				auto defs = node->getDefinitions();
 				if(defs.empty()) { return; }
 
@@ -787,10 +770,10 @@ namespace printer {
 				decreaseIndent();
 				newLine();
 				out << "}";
-			});
+			}
 
 
-			PRINT(Lambda, {
+			PRINT(Lambda) {
 				auto paramPrinter = [&](std::ostream& out, const VariablePtr& cur) {
 					VISIT(cur->getType());
 					out << " ";
@@ -850,10 +833,10 @@ namespace printer {
 					// .. and body
 					VISIT(node->getBody());
 				}
-			});
+			}
 
 
-			PRINT(CallExpr, {
+			PRINT(CallExpr) {
 
 				// obtain flag indicating format
 				bool printBrackets = !printer.hasOption(PrettyPrinter::SKIP_BRACKETS);
@@ -898,18 +881,18 @@ namespace printer {
 					VISIT(cur);
 				});
 				out << ")";
-			});
+			}
 
-			PRINT(BindExpr, {
+			PRINT(BindExpr) {
 				out << "function(" << join(", ", node->getParameters(),[&](std::ostream& out, const ExpressionPtr& cur) {
 					VISIT(cur->getType());
 					out << " ";
 					VISIT(cur);
 				}) << ")=> ";
 				VISIT(node->getCall());                 // ???????????????????
-			});
+			}
 
-			PRINT(CastExpr, {
+			PRINT(CastExpr) {
 				if(printer.hasOption(PrettyPrinter::PRINT_CASTS)) {
 					out << "CAST(";
 					VISIT(node->getType());
@@ -918,12 +901,13 @@ namespace printer {
 				} else {
 					VISIT(node->getSubExpression());
 				}
-			});
+			}
 
-			PRINT(TupleExpr,
-			      { out << "(" << ::join(", ", node->getExpressions(), [&](std::ostream&, const ExpressionPtr& cur) { VISIT(cur); }) << ")"; });
+			PRINT(TupleExpr) {
+				out << "(" << ::join(", ", node->getExpressions(), [&](std::ostream&, const ExpressionPtr& cur) { VISIT(cur); }) << ")";
+			}
 
-			PRINT(JobExpr, {
+			PRINT(JobExpr) {
 				// prints the job expression quite similar to a switch expression
 				out << "job";
 				out << "(";
@@ -936,23 +920,23 @@ namespace printer {
 				decreaseIndent();
 				this->newLine();
 				out << "}";
-			});
+			}
 
-			PRINT(StructExpr, {
+			PRINT(StructExpr) {
 				out << "struct{" << ::join(", ", node->getMembers()->getElements(), [&](std::ostream& out, const NamedValuePtr& cur) {
 					VISIT(cur->getName());
 					out << "=";
 					VISIT(cur->getValue());
 				}) << "}";
-			});
+			}
 
-			PRINT(UnionExpr, {
+			PRINT(UnionExpr) {
 				out << "union{" << node->getMemberName()->getValue() << "=";
 				visit(node->getMember());
 				out << "}";
-			});
+			}
 
-			PRINT(RecTypeDefinition, {
+			PRINT(TagTypeDefinition) {
 				auto defs = node->getDefinitions();
 				if(defs.empty()) {
 					out << "{ }";
@@ -963,10 +947,10 @@ namespace printer {
 				increaseIndent();
 				newLine();
 				std::size_t count = 0;
-				for_each(defs.begin(), defs.end(), [&](const RecTypeBindingPtr& cur) {
-					VISIT(cur->getVariable());
+				for_each(defs.begin(), defs.end(), [&](const TagTypeBindingPtr& cur) {
+					VISIT(cur->getTag());
 					out << " = ";
-					VISIT(cur->getType());
+					VISIT(cur->getRecord());
 					out << ";";
 					if(count++ < defs.size() - 1) { this->newLine(); }
 				});
@@ -974,9 +958,9 @@ namespace printer {
 				decreaseIndent();
 				newLine();
 				out << "}";
-			});
+			}
 
-			PRINT(Program, {
+			PRINT(Program) {
 /*				out << "// Inspire Program ";
 				newLine();
 				for_each(node->getEntryPoints(), [&](const NodePtr& cur) {
@@ -988,27 +972,27 @@ namespace printer {
 					this->newLine();
 					this->newLine();
 				});
-*/			});
+*/			}
 
-			PRINT(MarkerExpr, {
+			PRINT(MarkerExpr) {
 				bool showMarker = printer.hasOption(PrettyPrinter::Option::PRINT_MARKERS);
 				if(showMarker) out << "<m id=" << node->getId() << ">";
 				visit(node->getSubExpression());
 				if(showMarker) out << "</m>";
-			});
+			}
 
-			PRINT(MarkerStmt, {
+			PRINT(MarkerStmt) {
 				bool showMarker = printer.hasOption(PrettyPrinter::Option::PRINT_MARKERS);
 				if(showMarker) out << "<m id=" << node->getId() << ">";
 				visit(node->getSubStatement());
 				if(showMarker) out << "</m>";
-			});
+			}
 
 			/**
 			 * A generic solution for unknown types. In this case, the
 			 * default debug print is forwarded to the output stream.
 			 */
-			PRINT(Node, { out << "<?>" << *node << "</?>"; });
+			PRINT(Node) { out << "<?>" << *node << "</?>"; }
 
 			/**
 			 * Creates a new line.

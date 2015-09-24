@@ -97,9 +97,66 @@ namespace types {
 				}
 
 				// handle recursive types (special treatment)
-				if(typeOfA == NT_RecType) {
-					// TODO: implement
-					assert_not_implemented() << "RECURSIVE TYPE SUPPORT NOT IMPLEMENTED!";
+				if(typeOfA == NT_TagType) {
+
+					// peel recursive types until no longer recursive
+					TagTypePtr ta = a.as<TagTypePtr>();
+					TagTypePtr tb = b.as<TagTypePtr>();
+
+					if (ta.isRecursive()) {
+						list.push_back({ta.peel(), b});
+						continue;
+					}
+
+					if (tb.isRecursive()) {
+						list.push_back({a, tb.peel()});
+						continue;
+					}
+
+					// check for same kind of record
+					if (ta->getRecord()->getNodeType() != tb->getRecord()->getNodeType()) {
+						// e.g. structs and unions can not be matched
+						return unmatchable;
+					}
+
+					// add pairs of field types to matched
+					FieldsPtr fa = ta->getFields();
+					FieldsPtr fb = tb->getFields();
+
+					// check number of fields
+					if (fa.size() != fb.size()) {
+						return unmatchable;
+					}
+
+					// for all pairs of fields ...
+					for(const auto& cur : make_paired_range(fa,fb)) {
+						// check name equivalence
+						if (*cur.first->getName() != *cur.second->getName()) {
+							return unmatchable;
+						}
+						// unify field types
+						list.push_back({cur.first->getType(), cur.second->getType()});
+					}
+
+					// also consider parent types
+					if (ta->isStruct()) {
+						ParentsPtr pa = ta->getStruct()->getParents();
+						ParentsPtr pb = tb->getStruct()->getParents();
+
+						if (pa.size() != pb.size()) return unmatchable;
+
+						// for all pairs of parents ...
+						for(const auto& cur : make_paired_range(pa,pb)) {
+							// check type of inheritance
+							if (cur.first->isVirtual() != cur.second->isVirtual()) return unmatchable;
+							if (cur.first->getAccessSpecifier() != cur.second->getAccessSpecifier()) return unmatchable;
+							// unify parent types
+							list.push_back({cur.first->getType(), cur.second->getType()});
+						}
+					}
+
+					// that's it
+					continue;
 				}
 
 				// => check family of generic type

@@ -61,8 +61,8 @@ namespace datapath {
 	DataPath DataPath::member(const string& name) const {
 		auto& mgr = path.getNodeManager();
 		auto& ext = mgr.getLangExtension<lang::DatapathExtension>();
-		assert_true(getTargetType().isa<NamedCompositeTypePtr>()) << "Current target must be a named composite type!";
-		auto elementType = getTargetType().as<NamedCompositeTypePtr>()->getTypeOfMember(name);
+		assert_true(getTargetType().isa<TagTypePtr>()) << "Current target must be a tag type!";
+		auto elementType = getTargetType().as<TagTypePtr>()->getFieldType(name);
 		assert_true(elementType) << "No member " << name << " in type " << *getTargetType() << "\n";
 		IRBuilder builder(mgr);
 		return DataPath(builder.callExpr(ext.getDataPathMember(), path, builder.getIdentifierLiteral(name), builder.getTypeLiteral(elementType)));

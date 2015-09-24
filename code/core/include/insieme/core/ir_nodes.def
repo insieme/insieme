@@ -161,7 +161,6 @@ ABSTRACT(Type)
 AST_TERMINAL(TypeVariable, Type)
 AST_TERMINAL(FunctionType, Type)
 AST_TERMINAL(TupleType, Type)
-AST_TERMINAL(RecType, Type)
 
 // + generic type
 AST_TERMINAL(GenericType, Type)
@@ -169,12 +168,9 @@ AST_TERMINAL(GenericType, Type)
 // + numeric types
 AST_TERMINAL(NumericType, Type)
 
-// + named composite types
-AST_NODE(NamedCompositeType, Type)
-ABSTRACT(NamedCompositeType)
-
-AST_TERMINAL(StructType, NamedCompositeType)
-AST_TERMINAL(UnionType, NamedCompositeType)
+// + recursive types (aka tag type)
+AST_TERMINAL(TagType, Type)
+AST_TERMINAL(TagTypeReference, Type)
 
 
 //
@@ -207,12 +203,12 @@ AST_TERMINAL(GotoStmt, Statement)
 
 AST_NODE(Expression, Statement)
 
+AST_TERMINAL(Literal, Expression)
 AST_TERMINAL(Variable, Expression)
 
 AST_TERMINAL(LambdaExpr, Expression)
 AST_TERMINAL(BindExpr, Expression)
 
-AST_TERMINAL(Literal, Expression)
 AST_TERMINAL(CallExpr, Expression)
 AST_TERMINAL(CastExpr, Expression)
 
@@ -236,19 +232,27 @@ AST_TERMINAL(Program, Node)
 AST_NODE(Support, Node)
 AST_TERMINAL(Types, Support)
 
-AST_TERMINAL(RecTypeBinding, Support)
-AST_TERMINAL(RecTypeDefinition, Support)
+AST_TERMINAL(TagTypeBinding, Support)
+AST_TERMINAL(TagTypeDefinition, Support)
+
+AST_NODE(Record, Support)
+ABSTRACT(Record)
+
+AST_TERMINAL(Struct, Record)
+AST_TERMINAL(Union, Record)
+
+AST_TERMINAL(Field, Support)
+AST_TERMINAL(Fields, Support)
+
+AST_TERMINAL(Parent, Support)
+AST_TERMINAL(Parents, Support)
 
 AST_TERMINAL(Lambda, Support)
 AST_TERMINAL(LambdaBinding, Support)
 AST_TERMINAL(LambdaDefinition, Support)
 
-AST_TERMINAL(NamedType, Support)
 AST_TERMINAL(NamedValue, Support)
 AST_TERMINAL(NamedValues, Support)
-
-AST_TERMINAL(Parent, Support)
-AST_TERMINAL(Parents, Support)
 
 AST_TERMINAL(SwitchCase, Support)
 AST_TERMINAL(SwitchCases, Support)

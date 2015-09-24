@@ -751,28 +751,6 @@ namespace core {
 		}
 
 		/**
-		 * Obtains access to the child associated to the given index.
-		 * @param index the index of the child node to be accessed
-		 */
-		Pointer<const Node> getChildNodeReference(std::size_t index) const {
-			return static_cast<const Derived*>(this)->getChildList()[index];
-		}
-
-		/**
-		 * The mayor contribution of this helper - a type save access to the
-		 * child nodes.
-		 *
-		 * @tparam index the index of the child to be accessed
-		 * @tparam Res the type of the child, automatically inferred
-		 */
-		template <unsigned index, typename Res = typename type_at<index, type_list<Children...>>::type>
-		Pointer<const Res> getChildNodeReference() const {
-			// access the child via static polymorthism and cast result to known type
-			return static_pointer_cast<const Res>(static_cast<const Derived*>(this)->getChild(index));
-		}
-
-
-		/**
 		 * Checks whether the nodes within the given list are valid to be child nodes of
 		 * an instance of this fixed sized node type.
 		 */
@@ -805,6 +783,63 @@ namespace core {
 		static bool checkTypes(const Iterator& begin, const Iterator& end) {
 			// the iterator has to have reached the end
 			return begin == end;
+		}
+	};
+
+	/**
+	 * A node utility supporting the implementation of abstract nodes having a fixed number
+	 * of child nodes. This utility is extended by the actual node (via multiple
+	 * inheritance) to inherit type save operations on the child nodes.
+	 *
+	 * @tparam Derived the derived class, for static polymorthism
+	 * @tparam Children the list of child node types
+	 */
+	template <typename Derived, typename... Children>
+	class AbstractFixedSizeNodeHelper {
+	  public:
+		/**
+		 * A constructor required for the uniform handling of helpers accepting
+		 * the child node list of the constructed node checking the composition
+		 * of the child nodes.
+		 */
+		AbstractFixedSizeNodeHelper(const NodeList& children) {
+			// verify the proper composition of the child node list
+			assert_true(checkChildList(children) || printChildListTypes(children)) << "Invalid composition of Child-Nodes discovered!";
+		}
+
+		/**
+		 * Checks whether the nodes within the given list are valid to be child nodes of
+		 * an instance of this fixed sized node type.
+		 */
+		static bool checkChildList(const NodeList& list) {
+			// the list has to have the correct length and composition of types
+			return list.size() >= sizeof...(Children) && checkTypes<NodeList::const_iterator, Children...>(list.begin(), list.end());
+		}
+
+	  private:
+		/**
+		 * Checks whether the given range is composed of node pointers of the given types.
+		 *
+		 * @tparam First the first type to be occuring within the list
+		 * @tparam Rest the remaining types to be occuring wihtin the list
+		 * @param begin the begin of the range
+		 * @param end the end of the range to be checked
+		 */
+		template <typename Iterator, typename First, typename... Rest>
+		static bool checkTypes(const Iterator& begin, const Iterator& end) {
+			return dynamic_pointer_cast<const First>(*begin) && checkTypes<Iterator, Rest...>(begin + 1, end);
+		}
+
+		/**
+		 * The terminal case of the type check, in case there are no more types to be checked.
+		 *
+		 * @param begin the begin of the range to be checked
+		 * @param end the end of the range to be checked
+		 */
+		template <typename Iterator>
+		static bool checkTypes(const Iterator& begin, const Iterator& end) {
+			// everything is fine (there may be excess elements)
+			return true;
 		}
 	};
 
@@ -848,44 +883,6 @@ namespace core {
 		 */
 		const vector<Pointer<const ListValueType>>& getElementList() const {
 			return listElements;
-		}
-
-		/**
-		 * Obtains access to the child associated to the given index.
-		 * @param index the index of the child node to be accessed
-		 */
-		Pointer<const Node> getChildNodeReference(std::size_t index) const {
-			return static_cast<const Derived*>(this)->getChildList()[index];
-		}
-
-		/**
-		 * The mayor contribution of this helper - a type save access to the
-		 * child nodes. The implementation is separated into two versions. The
-		 * first case handles accesses to nodes within the fixed child-node list
-		 * subrange (all but the last node). In this case, the resulting type
-		 * corresponds to the type at the corresponding position within the type
-		 * list.
-		 *
-		 * @tparam index the index of the child to be accessed
-		 * @return a pointer to the corresponding element of the corresponding type
-		 */
-		template <unsigned index, typename boost::enable_if_c<(index + 1 < type_list<First, Rest...>::length), int>::type = 0,
-		          typename Res = typename type_at<index, type_list<First, Rest...>>::type>
-		Pointer<const Res> getChildNodeReference() const {
-			// access the child via static polymorthism and cast result to known type
-			return static_pointer_cast<const Res>(static_cast<const Derived*>(this)->getChild(index));
-		}
-
-		/**
-		 * The second case of the getChildNodeReference() implementation accessing
-		 * nodes within the list-part of this ListNode.
-		 *
-		 * @tparam index the index of the element to be accessed
-		 */
-		template <unsigned index, typename boost::disable_if_c<(index + 1 < type_list<First, Rest...>::length), int>::type = 0>
-		Pointer<const ListValueType> getChildNodeReference() const {
-			// access the child via static polymorthism and cast result to known type
-			return static_pointer_cast<const ListValueType>(static_cast<const Derived*>(this)->getChild(index));
 		}
 
 		/**
@@ -1050,6 +1047,7 @@ namespace core {
 	#define IR_NODE(NAME, BASE)                                                                                                                                \
 		class NAME : public BASE, public NAME##Accessor<NAME, Pointer>, public NAME##Accessor<NAME, Pointer>::node_helper {                                    \
 			NAME(const NodeList& children) : BASE(NT_##NAME, children), NAME##Accessor<NAME, Pointer>::node_helper(getChildNodeList()) {}                      \
+                                                                                                                                                               \
 			template <typename... Children>                                                                                                                    \
 			NAME(const Pointer<const Children>&... children)                                                                                                   \
 			    : BASE(NT_##NAME, children...), NAME##Accessor<NAME, Pointer>::node_helper(getChildNodeList()) {}                                              \
@@ -1115,7 +1113,7 @@ namespace core {
 	 */
 	#define IR_NODE_PROPERTY(TYPE, NAME, INDEX)                                                                                                                \
 		Ptr<const TYPE> get##NAME() const {                                                                                                                    \
-			return static_cast<const Derived*>(this)->template getChildNodeReference<INDEX>();                                                                 \
+			return static_cast<const Derived*>(this)->getChildList()[INDEX].template as<Ptr<const TYPE>>();                                               \
 		}
 
 

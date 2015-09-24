@@ -356,12 +356,6 @@ namespace transform {
 	LambdaExprPtr instantiate(NodeManager& manager, const LambdaExprPtr& lambda, const types::SubstitutionOpt& variableInstantiation);
 
 	/**
-	 * Creates a top-level structure for the program prog.
-	 * Inserted *after* a (potential) existing top level struct
-	 */
-	DeclarationStmtPtr createGlobalStruct(NodeManager& manager, ProgramPtr& prog, const NamedValueList& globals);
-
-	/**
 	 * Replaces the given expression by the given variable of the root-node context. The variable will
 	 * be passed as an argument through all functions between the root node and the targeted expression. If the
 	 * variable is already passed along, it will not be added again.

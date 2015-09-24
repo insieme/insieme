@@ -331,37 +331,56 @@ namespace core {
 	}
 
 
-	StructTypePtr IRBuilderBaseModule::structType(const vector<std::pair<StringValuePtr, TypePtr>>& entries) const {
-		return structType(::transform(entries, [&](const pair<StringValuePtr, TypePtr>& cur) { return namedType(cur.first, cur.second); }));
+	TagTypePtr IRBuilderBaseModule::structType(const vector<std::pair<StringValuePtr, TypePtr>>& fields) const {
+		return structType(::transform(fields, [&](const pair<StringValuePtr, TypePtr>& cur) { return field(cur.first, cur.second); }));
 	}
 
-	UnionTypePtr IRBuilderBaseModule::unionType(const vector<std::pair<StringValuePtr, TypePtr>>& entries) const {
-		return unionType(::transform(entries, [&](const pair<StringValuePtr, TypePtr>& cur) { return namedType(cur.first, cur.second); }));
+	TagTypePtr IRBuilderBaseModule::unionType(const vector<FieldPtr>& fields) const {
+		auto tag = tagTypeReference("");
+		return tagType(tag, tagTypeDefinition({tagTypeBinding(tag, unionRecord(fields))}));
 	}
 
-	StructTypePtr IRBuilderBaseModule::structType(const vector<ParentPtr>& parents, const vector<NamedTypePtr>& entries) const {
-		return structType(IRBuilderBaseModule::parents(parents), entries);
+	TagTypePtr IRBuilderBaseModule::unionType(const vector<std::pair<StringValuePtr, TypePtr>>& union_fields) const {
+		auto fields = ::transform(union_fields, [&](const std::pair<StringValuePtr, TypePtr>& cur)->FieldPtr { return field(cur.first, cur.second); });
+		return unionType(fields);
 	}
 
-	StructTypePtr IRBuilderBaseModule::structType(const vector<TypePtr>& parents, const vector<NamedTypePtr>& entries) const {
-		return structType(IRBuilderBaseModule::parents(parents), entries);
+	TagTypePtr IRBuilderBaseModule::structType(const vector<ParentPtr>& parents, const vector<FieldPtr>& fields) const {
+		return structType(IRBuilderBaseModule::parents(parents), fields);
 	}
 
-	StructTypePtr IRBuilderBaseModule::structType(const vector<ParentPtr>& parents, const vector<std::pair<StringValuePtr, TypePtr>>& entries) const {
-		return structType(parents, ::transform(entries, [&](const pair<StringValuePtr, TypePtr>& cur) { return namedType(cur.first, cur.second); }));
+	TagTypePtr IRBuilderBaseModule::structType(const vector<TypePtr>& parents, const vector<FieldPtr>& fields) const {
+		return structType(IRBuilderBaseModule::parents(parents), fields);
 	}
 
-	StructTypePtr IRBuilderBaseModule::structType(const vector<TypePtr>& parents, const vector<std::pair<StringValuePtr, TypePtr>>& entries) const {
-		return structType(parents, ::transform(entries, [&](const pair<StringValuePtr, TypePtr>& cur) { return namedType(cur.first, cur.second); }));
+	TagTypePtr IRBuilderBaseModule::structType(const vector<ParentPtr>& parents, const vector<std::pair<StringValuePtr, TypePtr>>& fields) const {
+		return structType(parents, ::transform(fields, [&](const pair<StringValuePtr, TypePtr>& cur) { return field(cur.first, cur.second); }));
 	}
 
-	StructTypePtr IRBuilderBaseModule::structType(const StringValuePtr& name, const vector<ParentPtr>& parentsList, const vector<NamedTypePtr>& entries) const {
-		return StructType::get(manager, name, parents(parentsList), entries);
+	TagTypePtr IRBuilderBaseModule::structType(const vector<TypePtr>& parents, const vector<std::pair<StringValuePtr, TypePtr>>& fields) const {
+		return structType(parents, ::transform(fields, [&](const pair<StringValuePtr, TypePtr>& cur) { return field(cur.first, cur.second); }));
+	}
+
+	TagTypePtr IRBuilderBaseModule::structType(const vector<FieldPtr>& fields) const {
+		return structType("", fields);
+	}
+
+	TagTypePtr IRBuilderBaseModule::structType(const string& name, const vector<FieldPtr>& fields) const {
+		return structType(stringValue(name), fields);
+	}
+
+	TagTypePtr IRBuilderBaseModule::structType(const StringValuePtr& name, const vector<FieldPtr>& fields) const {
+		return structType(name, {}, fields);
+	}
+
+	TagTypePtr IRBuilderBaseModule::structType(const StringValuePtr& name, const vector<ParentPtr>& parentsList, const vector<FieldPtr>& fields) const {
+		auto tag = tagTypeReference(name->getValue());
+		return tagType(tag, tagTypeDefinition({tagTypeBinding(tag, structRecord(name, parents(parentsList), fields))}));
 	}
 
 
-	NamedTypePtr IRBuilderBaseModule::namedType(const string& name, const TypePtr& type) const {
-		return namedType(stringValue(name), type);
+	FieldPtr IRBuilderBaseModule::field(const string& name, const TypePtr& type) const {
+		return field(stringValue(name), type);
 	}
 
 	NamedValuePtr IRBuilderBaseModule::namedValue(const string& name, const ExpressionPtr& value) const {
@@ -373,23 +392,23 @@ namespace core {
 		return tupleExpr(type, Expressions::get(manager, values));
 	}
 
-	StructExprPtr IRBuilderBaseModule::structExpr(const StructTypePtr& structType, const vector<NamedValuePtr>& values) const {
+	StructExprPtr IRBuilderBaseModule::structExpr(const TypePtr& structType, const vector<NamedValuePtr>& values) const {
 		return structExpr(structType, namedValues(values));
 	}
 
 	StructExprPtr IRBuilderBaseModule::structExpr(const vector<std::pair<StringValuePtr, ExpressionPtr>>& members) const {
-		vector<NamedTypePtr> types;
+		vector<FieldPtr> types;
 		vector<NamedValuePtr> values;
 		for_each(members, [&](const pair<StringValuePtr, ExpressionPtr>& cur) {
-			types.push_back(namedType(cur.first, cur.second->getType()));
+			types.push_back(field(cur.first, cur.second->getType()));
 			values.push_back(namedValue(cur.first, cur.second));
 		});
 		return structExpr(structType(types), namedValues(values));
 	}
 
 	StructExprPtr IRBuilderBaseModule::structExpr(const vector<NamedValuePtr>& values) const {
-		vector<NamedTypePtr> types;
-		for_each(values, [&](const NamedValuePtr& cur) { types.push_back(namedType(cur->getName(), cur->getValue()->getType())); });
+		vector<FieldPtr> types;
+		for_each(values, [&](const NamedValuePtr& cur) { types.push_back(field(cur->getName(), cur->getValue()->getType())); });
 		return structExpr(structType(types), namedValues(values));
 	}
 
@@ -564,25 +583,23 @@ namespace core {
 		if(manager.getLangExtension<lang::ParallelExtension>().isLock(type)) { return undefined(type); }
 
 		// if it is a struct ...
-		if(type->getNodeType() == core::NT_StructType) {
-			// extract type and resolve members recursively
-			StructTypePtr structType = static_pointer_cast<const StructType>(type);
+		if(auto structType = analysis::isStruct(type)) {
 
 			vector<NamedValuePtr> members;
-			for_each(structType->getEntries(), [&](const NamedTypePtr& cur) { members.push_back(namedValue(cur->getName(), getZero(cur->getType()))); });
+			for_each(structType->getFields(), [&](const FieldPtr& cur) { members.push_back(namedValue(cur->getName(), getZero(cur->getType()))); });
 
-			return core::StructExpr::get(manager, structType, namedValues(members));
+			return core::StructExpr::get(manager, type, namedValues(members));
 		}
 
 		// if it is a union type ...
-		if(type->getNodeType() == core::NT_UnionType) {
-			UnionTypePtr unionType = type.as<UnionTypePtr>();
+		if(auto unionType = analysis::isUnion(type)) {
 
 			// in case it is a an empty union
-			if(unionType.empty() == 0) { return undefined(unionType); }
+			if(unionType->getFields().empty() == 0) { return undefined(type); }
 
 			// init the first member
-			return unionExpr(unionType, unionType[0]->getName(), getZero(unionType[0]->getType()));
+			auto first = unionType->getFields()[0];
+			return unionExpr(type, first->getName(), getZero(first->getType()));
 		}
 
 		// if it is a ref type ...
@@ -600,12 +617,6 @@ namespace core {
 
 		// add support for unit
 		if(manager.getLangBasic().isUnit(type)) { return manager.getLangBasic().getUnitConstant(); }
-
-		// FIXME:: this might not be enough, ferdinando fix it!
-		if(type->getNodeType() == core::NT_RecType) {
-			auto tmp = getZero(type.as<core::RecTypePtr>()->unroll());
-			return core::transform::replaceNode(manager, ExpressionAddress(tmp)->getType(), type).as<ExpressionPtr>();
-		}
 
 		// for all other generic types we return a generic zero value
 		if(type.isa<GenericTypePtr>()) { return callExpr(type, getLangBasic().getZero(), getTypeLiteral(type)); }
@@ -1027,18 +1038,24 @@ namespace core {
 
 	CallExprPtr IRBuilderBaseModule::accessMember(const ExpressionPtr& structExpr, const StringValuePtr& member) const {
 		core::TypePtr type = structExpr->getType();
-		if(type->getNodeType() == core::NT_RecType) { type = core::static_pointer_cast<const core::RecType>(type)->unroll(type.getNodeManager()); }
 
 		// if it is a ref type, use refMember function
 		if(analysis::isRefType(type)) { return refMember(structExpr, member); }
 
-		assert_true((type->getNodeType() == core::NT_StructType || type->getNodeType() == core::NT_UnionType)) << "Cannot access non-struct type!";
+		// must be a tag type at this point
+		auto tagType = type.isa<TagTypePtr>();
+		assert_true(tagType) << "Cannot access non-tag type!";
 
-		core::NamedCompositeTypePtr structType = static_pointer_cast<const core::NamedCompositeType>(type);
-		core::TypePtr memberType = structType->getTypeOfMember(member);
+		// handle recursions
+		if (tagType->isRecursive()) {
+			tagType = tagType->peel();
+		}
+
+		// get the type of the selected field
+		TypePtr memberType = tagType->getFieldType(member);
 
 		// create access instruction
-		core::ExpressionPtr access = getLangBasic().getCompositeMemberAccess();
+		ExpressionPtr access = getLangBasic().getCompositeMemberAccess();
 		return callExpr(memberType, access, structExpr, getIdentifierLiteral(member), getTypeLiteral(memberType));
 	}
 
@@ -1052,15 +1069,15 @@ namespace core {
 
 		core::TypePtr elementType = analysis::getReferencedType(type);
 
-		if(elementType->getNodeType() == core::NT_RecType) {
-			elementType = core::static_pointer_cast<const core::RecType>(elementType)->unroll(elementType.getNodeManager());
+		// handle recursive types
+		auto tagType = elementType.isa<TagTypePtr>();
+		assert_true(tagType) << "Can not access member of non-tag-type!";
+		if (tagType->isRecursive()) {
+			tagType = tagType->peel();
 		}
 
-		// assert_true((elementType->getNodeType() == core::NT_StructType || elementType->getNodeType() == core::NT_UnionType)) << "Cannot access non-struct
-		// type!";
-
-		core::NamedCompositeTypePtr structType = static_pointer_cast<const core::NamedCompositeType>(elementType);
-		core::TypePtr memberType = structType->getTypeOfMember(member);
+		// get member of addressed type
+		core::TypePtr memberType = tagType->getFieldType(member);
 
 		// create access instruction
 		core::ExpressionPtr access = manager.getLangExtension<lang::ReferenceExtension>().getRefMemberAccess();
@@ -1072,7 +1089,8 @@ namespace core {
 		TypePtr type = structExpr->getType();
 		assert_pred1(analysis::isRefType, type) << "Cannot deref non-ref type";
 		type = analysis::getReferencedType(type);
-		assert_true(type->getNodeType() == core::NT_StructType || type->getNodeType() == core::NT_GenericType || type->getNodeType() == core::NT_RecType);
+
+		assert_true(type->getNodeType() == core::NT_TagType || type->getNodeType() == core::NT_GenericType);
 
 		// compute result type
 		core::TypePtr resType = refType(parent);

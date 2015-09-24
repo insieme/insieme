@@ -283,10 +283,9 @@ namespace analysis {
 
 		// also make sure that recursive types are not recognized
 		{
-			TypeVariablePtr rec = builder.typeVariable("list");
-			TypePtr listElem =
-			    builder.structType(toVector(builder.namedType("load", manager.getLangBasic().getInt4()), builder.namedType("next", builder.refType(rec))));
-			TypePtr constRecType = builder.recType(rec, builder.recTypeDefinition(toVector(builder.recTypeBinding(rec, listElem))));
+			TagTypeReferencePtr tag = builder.tagTypeReference("list");
+			auto listElem = builder.structRecord(toVector(builder.field("load", manager.getLangBasic().getInt4()), builder.field("next", builder.refType(tag))));
+			TypePtr constRecType = builder.tagType(tag, builder.tagTypeDefinition(toVector(builder.tagTypeBinding(tag, listElem))));
 
 			EXPECT_EQ("rec 'list.{'list=struct<load:int<4>,next:ref<'list,f,f>>}", toString(*constRecType));
 			EXPECT_FALSE(isGeneric(constRecType));
@@ -294,10 +293,9 @@ namespace analysis {
 
 		// yet, a generic recursive type should be recognized
 		{
-			TypeVariablePtr rec = builder.typeVariable("list");
-			TypePtr listElem =
-			    builder.structType(toVector(builder.namedType("load", builder.typeVariable("b")), builder.namedType("next", builder.refType(rec))));
-			TypePtr constRecType = builder.recType(rec, builder.recTypeDefinition(toVector(builder.recTypeBinding(rec, listElem))));
+			TagTypeReferencePtr tag = builder.tagTypeReference("list");
+			auto listElem = builder.structRecord(toVector(builder.field("load", builder.typeVariable("b")), builder.field("next", builder.refType(tag))));
+			TypePtr constRecType = builder.tagType(tag, builder.tagTypeDefinition(toVector(builder.tagTypeBinding(tag, listElem))));
 
 			EXPECT_EQ("rec 'list.{'list=struct<load:'b,next:ref<'list,f,f>>}", toString(*constRecType));
 			EXPECT_TRUE(isGeneric(constRecType));
@@ -320,7 +318,7 @@ namespace analysis {
 		TypePtr fun = builder.functionType(toVector(A, B), C);
 		EXPECT_EQ(toVector(A, B, C), getElementTypes(fun));
 
-		TypePtr structType = builder.structType(toVector(builder.namedType("a", A), builder.namedType("d", D)));
+		TypePtr structType = builder.structType(toVector(builder.field("a", A), builder.field("d", D)));
 		EXPECT_EQ(toVector(A, D), getElementTypes(structType));
 	}
 

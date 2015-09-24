@@ -55,14 +55,23 @@ namespace types {
 		void addParents(const ParentsPtr& parents, TypeSet& res) {
 			for(auto cur : parents) {
 				res.insert(cur->getType());
-				if(auto recType = cur->getType().isa<RecTypePtr>()) { res.insert(recType->unroll()); }
+				if (auto tagType = cur->getType().isa<TagTypePtr>()) {
+					if (tagType.isRecursive()) {
+						res.insert(tagType->peel());
+					}
+				}
 			}
 		}
 
 		void addParents(const TypePtr& type, TypeSet& res) {
-			if(StructTypePtr cur = type.isa<StructTypePtr>()) { addParents(cur->getParents(), res); }
+			// only generic types ...
 			if(GenericTypePtr cur = type.isa<GenericTypePtr>()) { addParents(cur->getParents(), res); }
-			if(RecTypePtr cur = type.isa<RecTypePtr>()) { addParents(cur->unroll(), res); }
+			// .. and struct types may have parents
+			if(TagTypePtr cur = type.isa<TagTypePtr>()) {
+				if (cur->isStruct()) {
+					addParents(cur->getStruct()->getParents(), res);
+				}
+			}
 		}
 
 		const TypeSet getSuperTypes(const TypePtr& type) {
@@ -144,16 +153,11 @@ namespace types {
 		if(*subType == *superType) { return true; }
 
 		// check for recursive types
-		if(subType->getNodeType() == NT_RecType || superType->getNodeType() == NT_RecType) {
-			// since they are not equivalent we have to compare the unrolled version of the sub with the super type
-			if(subType->getNodeType() == NT_RecType) { return isSubTypeOf(subType.as<RecTypePtr>()->unroll(), superType); }
-
-			if(superType->getNodeType() == NT_RecType) {
-				assert_ne(subType->getNodeType(), NT_RecType);
-				return isSubTypeOf(subType, superType.as<RecTypePtr>()->unroll());
-			}
-
-			assert_fail() << "How could you get here?";
+		if (auto tagType = subType.isa<TagTypePtr>()) {
+			if(tagType->isRecursive()) return isSubTypeOf(tagType->peel(), superType);
+		}
+		if (auto tagType = superType.isa<TagTypePtr>()) {
+			if(tagType->isRecursive()) return isSubTypeOf(subType, tagType->peel());
 		}
 
 		// check reference types
@@ -177,7 +181,7 @@ namespace types {
 		}
 
 		// check whether the sub-type is generic
-		if(subType->getNodeType() == NT_GenericType || subType->getNodeType() == NT_StructType) {
+		if(subType->getNodeType() == NT_GenericType || analysis::isStruct(subType)) {
 			// use the delta algorithm for computing all the super-types of the given sub-type
 			return isSubTypeOfInternal(subType, superType);
 		}

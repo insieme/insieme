@@ -243,7 +243,7 @@
 %type <ParentList> parent_list
 %type <FunctionKind> func_tok
 
-%type <NamedTypeList> member_list tag_def union_type 
+%type <FieldList> member_list tag_def union_type 
 
 %type <std::string> namespaced_type
 
@@ -356,8 +356,8 @@ func_tok : "->" { RULE $$ = FK_PLAIN; }
          ;
 
 member_list : "}" {}
-            | type "identifier" "}" { RULE $$.insert($$.begin(), driver.builder.namedType($2, $1)); }
-            | type "identifier" ";" member_list { RULE $4.insert($4.begin(), driver.builder.namedType($2, $1)); std::swap($$, $4); }
+            | type "identifier" "}" { RULE $$.insert($$.begin(), driver.builder.field($2, $1)); }
+            | type "identifier" ";" member_list { RULE $4.insert($4.begin(), driver.builder.field($2, $1)); std::swap($$, $4); }
             ;
 
 tag_def : "{" member_list   { std::swap($$, $2); }

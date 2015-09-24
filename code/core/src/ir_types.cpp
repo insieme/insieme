@@ -38,6 +38,7 @@
 
 #include "insieme/core/transform/node_mapper_utils.h"
 
+#include "insieme/core/ir_visitor.h"
 #include "insieme/core/lang/reference.h"
 
 namespace insieme {
@@ -103,42 +104,44 @@ namespace core {
 		return out << ((isPlain()) ? "->" : "=>") << *getReturnType() << ")";
 	}
 
+	std::ostream& TagTypeBinding::printTo(std::ostream & out) const {
+		return out << *getTag() << "=" << *getRecord();
+	}
 
-	std::ostream& StructType::printTo(std::ostream& out) const {
+	std::ostream& Struct::printTo(std::ostream& out) const {
 		out << "struct";
 		if(!getName()->getValue().empty()) {
 			out << " " << *getName();
 			if(getParents()->empty()) { out << " "; }
 		}
 		if(!getParents()->empty()) { out << " : [" << join(", ", getParents(), print<deref<ParentPtr>>()) << "] "; }
-		return out << "<" << join(",", getEntries(), print<deref<NodePtr>>()) << ">";
+		return out << "<" << join(",", getFields(), print<deref<NodePtr>>()) << ">";
 	}
 
 
 	namespace {
 
-		class RecTypeUnroller : public transform::CachedNodeMapping {
+		class TagTypePeeler : public transform::CachedNodeMapping {
 			NodeManager& manager;
-			RecTypeDefinitionPtr definition;
+			TagTypeDefinitionPtr definition;
 
 
 		  public:
-			RecTypeUnroller(NodeManager& manager, const RecTypeDefinition& definition) : manager(manager), definition(&definition) {}
+			TagTypePeeler(NodeManager& manager, const TagTypeDefinition& definition) : manager(manager), definition(&definition) {}
 
 			virtual const NodePtr resolveElement(const NodePtr& ptr) {
 				// check whether it is a known variable
-				if(ptr->getNodeType() == NT_TypeVariable) {
-					TypeVariablePtr var = static_pointer_cast<const TypeVariable>(ptr);
+				if(auto tag = ptr.isa<TagTypeReferencePtr>()) {
 
 					// if there is a definition for the current variable ..
-					if(definition->getDefinitionOf(var)) {
+					if(definition->getDefinitionOf(tag)) {
 						// .. unroll the definition
-						return RecType::get(manager, var, definition);
+						return TagType::get(manager, tag, definition);
 					}
 				}
 
 				// check whether current node is a nested recursive type binding
-				if(auto binding = ptr.isa<RecTypeBindingPtr>()) {
+				if(auto binding = ptr.isa<TagTypeBindingPtr>()) {
 					return binding; // do not decent into this
 				}
 
@@ -146,44 +149,49 @@ namespace core {
 				return ptr->substitute(manager, *this);
 			}
 
-			TypePtr apply(const TypePtr& node) {
-				return static_pointer_cast<const Type>(node->substitute(manager, *this));
+			RecordPtr apply(const RecordPtr& node) {
+				return static_pointer_cast<const Record>(node->substitute(manager, *this));
 			}
 		};
 	}
 
-	TypePtr RecTypeDefinition::unrollDefinitionOnce(NodeManager& manager, const TypeVariablePtr& variable) const {
-		// unroll recursive type using helper
-		return RecTypeUnroller(manager, *this).apply(getDefinitionOf(variable));
+	TagTypePtr TagTypeDefinition::peelDefinitionOnce(NodeManager& manager, const TagTypeReferencePtr& tag) const {
+		// peel tag type using helper
+		return TagType::get(manager, tag,
+				TagTypeDefinition::get(manager, toVector(
+						TagTypeBinding::get(manager, tag, TagTypePeeler(manager, *this).apply(getDefinitionOf(tag)))
+				)));
 	}
 
-	namespace {
-
-		struct name_extractor {
-			typedef const string& result_type;
-			result_type operator()(const NamedTypePtr& name) const {
-				return name->getName()->getValue();
+	bool TagType::isRecursive() const {
+		bool found = false;
+		visitDepthFirstOncePrunable(TagTypePtr(this), [&](const NodePtr& cur) {
+			// check whether this is the tag
+			if (cur == getTag()) {
+				found = true;
+				return true;		// stop searching
 			}
-		};
 
-		void checkForNameCollisions(const vector<NamedTypePtr>& elements) {
-			// get projection to the name
-			auto start = boost::make_transform_iterator(elements.begin(), name_extractor()) + 2;
-			auto end = boost::make_transform_iterator(elements.end(), name_extractor());
+			// do not descent outside of tag-type definition
+			if (cur.isa<ExpressionPtr>()) return true;
 
-			if(hasDuplicates(start, end)) { // nice way using projections => but crashes in GCC
-				throw std::invalid_argument("No duplicates within identifiers are allowed!");
+			// stop search if same tag is re-definied in a nested scope
+			if (auto type = cur.isa<TagTypePtr>()) {
+				if (type->getDefinition()->getDefinitionOf(getTag())) {
+					return true;
+				}
 			}
-		}
+
+			// prune if found
+			return found;
+		});
+		return found;
 	}
 
-
-	NamedCompositeType::NamedCompositeType(const NodeType& type, const NodeList& elements)
-	    : Type(type, elements), NamedCompositeTypeAccessor<NamedCompositeType, Pointer>::node_helper(getChildNodeList()) {
-		checkChildList(elements);
-		checkForNameCollisions(convertList<NamedType>(elements));
+	std::ostream& TagType::printTo(std::ostream & out) const {
+		if (isRecursive()) { out << *getRecord(); }
+		return out << "rec " << *getTag() << "." << *getDefinition();
 	}
-
 
 	std::ostream& NumericType::printTo(std::ostream& out) const {
 		return out << *getValue();

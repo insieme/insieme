@@ -1001,41 +1001,6 @@ namespace transform {
 		return LambdaExpr::get(manager, funType, params, body);
 	}
 
-	DeclarationStmtPtr createGlobalStruct(NodeManager& manager, ProgramPtr& prog, const NamedValueList& globals) {
-		// if(!prog->isMain()) {
-		//	LOG(WARNING) << "createGlobalStruct called on non-main program.";
-		//}
-
-		LambdaExprPtr lambda = prog[0].as<LambdaExprPtr>(); // dynamic_pointer_cast<const LambdaExpr>(prog->getElement(0));
-		auto compound = lambda->getBody();
-		auto addr = CompoundStmtAddress::find(compound, prog);
-		IRBuilder build(manager);
-
-		// generate type list from initialization expression list in "globals"
-		NamedTypeList entries = ::transform(globals, [&](const NamedValuePtr& val) {
-			auto type = val->getValue()->getType();
-			return build.namedType(val->getName(), type);
-		});
-
-		auto structType = build.refType(build.structType(entries));
-		// TODO: fix backend problem with this
-		auto declStmt = build.declarationStmt(structType, /*build.refVar(build.undefined(structType))*/ build.refVar(build.structExpr(globals)));
-
-		// update program
-		int location = 0;
-		if(addr->getStatement(location)->getNodeType() == NT_DeclarationStmt) { ++location; }
-		auto newProg = static_pointer_cast<const Program>(insert(manager, addr, declStmt, location));
-		utils::migrateAnnotations(prog, newProg);
-		prog = newProg;
-
-		// migrate annotations on body
-		lambda = prog[0].as<LambdaExprPtr>();
-		compound = lambda->getBody();
-		utils::migrateAnnotations(addr.getAddressedNode(), compound);
-
-		return declStmt;
-	}
-
 
 	namespace {
 

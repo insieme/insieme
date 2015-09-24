@@ -78,7 +78,7 @@ namespace types {
 
 			// create result
 			Substitution res;
-			boost::optional<Substitution> unmatchable;
+			boost::optional<Substitution> ununifiable;
 
 			while(!list.empty()) {
 
@@ -119,7 +119,7 @@ namespace types {
 				if(typeOfA == NT_TypeVariable) {
 					if(analysis::contains(a, b)) {
 						// not unifiable (e.g. X = type<X> cannot be unified)
-						return unmatchable;
+						return ununifiable;
 					}
 
 					// convert current pair into substitution
@@ -136,13 +136,70 @@ namespace types {
 				// 4) function types / generic types / tuples / structs / unions / recursive types
 				if(typeOfA != typeOfB) {
 					// => not unifiable
-					return unmatchable;
+					return ununifiable;
 				}
 
 				// handle recursive types (special treatment)
-				if(typeOfA == NT_RecType) {
-					// TODO: implement
-					assert("RECURSIVE TYPE SUPPORT NOT IMPLEMENTED!");
+				if(typeOfA == NT_TagType) {
+
+					// peel recursive types until no longer recursive
+					TagTypePtr ta = a.as<TagTypePtr>();
+					TagTypePtr tb = b.as<TagTypePtr>();
+
+					if (ta.isRecursive()) {
+						list.push_back({ta.peel(), b});
+						continue;
+					}
+
+					if (tb.isRecursive()) {
+						list.push_back({a, tb.peel()});
+						continue;
+					}
+
+					// check for same kind of record
+					if (ta->getRecord()->getNodeType() != tb->getRecord()->getNodeType()) {
+						// e.g. structs and unions can not be unified
+						return ununifiable;
+					}
+
+					// add pairs of field types to unification
+					FieldsPtr fa = ta->getFields();
+					FieldsPtr fb = tb->getFields();
+
+					// check number of fields
+					if (fa.size() != fb.size()) {
+						return ununifiable;
+					}
+
+					// for all pairs of fields ...
+					for(const auto& cur : make_paired_range(fa,fb)) {
+						// check name equivalence
+						if (*cur.first->getName() != *cur.second->getName()) {
+							return ununifiable;
+						}
+						// unify field types
+						list.push_back({cur.first->getType(), cur.second->getType()});
+					}
+
+					// also consider parent types
+					if (ta->isStruct()) {
+						ParentsPtr pa = ta->getStruct()->getParents();
+						ParentsPtr pb = tb->getStruct()->getParents();
+
+						if (pa.size() != pb.size()) return ununifiable;
+
+						// for all pairs of parents ...
+						for(const auto& cur : make_paired_range(pa,pb)) {
+							// check type of inheritance
+							if (cur.first->isVirtual() != cur.second->isVirtual()) return ununifiable;
+							if (cur.first->getAccessSpecifier() != cur.second->getAccessSpecifier()) return ununifiable;
+							// unify parent types
+							list.push_back({cur.first->getType(), cur.second->getType()});
+						}
+					}
+
+					// that's it
+					continue;
 				}
 
 				// => check family of generic type
@@ -151,24 +208,24 @@ namespace types {
 					const GenericTypePtr& genericTypeB = static_pointer_cast<const GenericType>(b);
 
 					// check family names
-					if(*genericTypeA->getName() != *genericTypeB->getName()) { return unmatchable; }
+					if(*genericTypeA->getName() != *genericTypeB->getName()) { return ununifiable; }
 
 					// check same number of type parameters
-					if(genericTypeA->getTypeParameter().size() != genericTypeB->getTypeParameter().size()) { return unmatchable; }
+					if(genericTypeA->getTypeParameter().size() != genericTypeB->getTypeParameter().size()) { return ununifiable; }
 				}
 
 				// => check value of numeric types
 				if(typeOfA == NT_NumericType) {
 					// they need to be identical
-					if (*a != *b) return unmatchable;
+					if (*a != *b) return ununifiable;
 				}
 
 				// => check all child nodes
 				auto typeParamsA = analysis::getElementTypes(a);
 				auto typeParamsB = analysis::getElementTypes(b);
 				if(typeParamsA.size() != typeParamsB.size()) {
-					// => not matchable / unifyable
-					return unmatchable;
+					// => not unifiable
+					return ununifiable;
 				}
 
 				// add pairs of children to list to be processed

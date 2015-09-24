@@ -186,13 +186,13 @@ TEST(PrettyPrinter, StructSuperTypes) {
 	NodeManager manager;
 	IRBuilder builder(manager);
 
-	TypePtr classA = builder.structType(toVector(builder.namedType("a", builder.genericType("A"))));
+	TypePtr classA = builder.structType(toVector(builder.field("a", builder.genericType("A"))));
 	EXPECT_EQ("let type000 = struct  { A a };\ntype000", toString(PrettyPrinter(classA)));
 
-	TypePtr classB = builder.structType(toVector(classA), toVector(builder.namedType("b", builder.genericType("B"))));
+	TypePtr classB = builder.structType(toVector(classA), toVector(builder.field("b", builder.genericType("B"))));
 	EXPECT_EQ("let type000 = struct  { A a };\nlet type001 = struct  : [type000] { B b };\ntype001", toString(PrettyPrinter(classB)));
 
-	TypePtr classC = builder.structType(toVector(builder.parent(true, classB)), toVector(builder.namedType("c", builder.genericType("C"))));
+	TypePtr classC = builder.structType(toVector(builder.parent(true, classB)), toVector(builder.field("c", builder.genericType("C"))));
 	EXPECT_EQ(
 	    "let type000 = struct  { A a };\nlet type001 = struct  : [type000] { B b };\nlet type002 = struct  : [type001] { C c };\ntype002",
 	    toString(PrettyPrinter(classC)));

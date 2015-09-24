@@ -117,11 +117,21 @@ namespace core {
 
 	// ------------------------------------ A class representing a parent type  ------------------------------
 
+
+	/**
+	 * An enumeration used for distinguishing different inheritance access specifiers.
+	 */
+	enum AccessSpecifier {
+		AS_PUBLIC = 1,
+		AS_PROTECTED,
+		AS_PRIVATE
+	};
+
 	/**
 	 * The accessor associated to a parent type reference. A parent type reference is linking a
 	 * base type to a parent type via inheritance. The inheritance relation may be virtual.
 	 */
-	IR_NODE_ACCESSOR(Parent, Support, BoolValue, Type)
+	IR_NODE_ACCESSOR(Parent, Support, BoolValue, UIntValue, Type)
 
 		/**
 		 * Obtains the flag determining whether this parent type is a virtual or non-virtual parent type.
@@ -129,9 +139,21 @@ namespace core {
 		IR_NODE_PROPERTY(BoolValue, Virtual, 0);
 
 		/**
+		 * Obtains the flag determining whether this parent type is a virtual or non-virtual parent type.
+		 */
+		IR_NODE_PROPERTY(UIntValue, AccessSpecifierKind, 1);
+
+		/**
 		 * Obtains the parent type this parent node is referring to.
 		 */
-		IR_NODE_PROPERTY(Type, Type, 1);
+		IR_NODE_PROPERTY(Type, Type, 2);
+
+		/**
+		 * Obtains the kind of access specifier provided for this parent.
+		 */
+		AccessSpecifier getAccessSpecifier() const {
+			return (AccessSpecifier)(this->getAccessSpecifierKind()->getValue());
+		}
 
 		/**
 		 * Determines whether this parent node is referring to a type via virtual inheritance.
@@ -139,6 +161,28 @@ namespace core {
 		bool isVirtual() const {
 			return getVirtual().getValue();
 		}
+
+		/**
+		 * Determines whether this node is modeling a public inheritance.
+		 */
+		bool isPublic() const {
+			return this->getAccessSpecifier() == AS_PUBLIC;
+		}
+
+		/**
+		 * Determines whether this node is modeling a public inheritance.
+		 */
+		bool isProtected() const {
+			return this->getAccessSpecifier() == AS_PROTECTED;
+		}
+
+		/**
+		 * Determines whether this node is modeling a public inheritance.
+		 */
+		bool isPrivate() const {
+			return this->getAccessSpecifier() == AS_PRIVATE;
+		}
+
 	IR_NODE_END()
 
 	/**
@@ -155,6 +199,35 @@ namespace core {
 		}
 
 	  public:
+
+		/**
+		 * This static factory method allows to construct a new parent-link instance referencing
+		 * the given type.
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @param virtul a flag determining whether the result should be a virtual inheritance link
+		 * @param access the access specifier determining the kind of inheritance (public, private or protected)
+		 * @param type the type to be referenced as a parent class
+		 * @return the requested type instance managed by the given manager
+		 */
+		static ParentPtr get(NodeManager & manager, const BoolValuePtr& virtul, const UIntValuePtr& access, const TypePtr& type) {
+			return manager.get(Parent(virtul, access, type));
+		}
+
+		/**
+		 * This static factory method allows to construct a new parent-link instance referencing
+		 * the given type.
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @param virtul a flag determining whether the result should be a virtual inheritance link
+		 * @param access the access specifier determining the kind of inheritance (public, private or protected)
+		 * @param type the type to be referenced as a parent class
+		 * @return the requested type instance managed by the given manager
+		 */
+		static ParentPtr get(NodeManager & manager, const BoolValuePtr& virtul, const AccessSpecifier& access, const TypePtr& type) {
+			return manager.get(Parent(virtul, UIntValue::get(manager, (unsigned)access), type));
+		}
+
 		/**
 		 * This static factory method allows to construct a new parent-link instance referencing
 		 * the given type.
@@ -165,7 +238,7 @@ namespace core {
 		 * @return the requested type instance managed by the given manager
 		 */
 		static ParentPtr get(NodeManager & manager, const BoolValuePtr& virtul, const TypePtr& type) {
-			return manager.get(Parent(virtul, type));
+			return get(manager, virtul, AS_PUBLIC, type);
 		}
 
 		/**
@@ -642,83 +715,135 @@ namespace core {
 		}
 	IR_NODE_END()
 
-	// ---------------------------------------- Recursive Type ------------------------------
+
+	// ------------------------------------ Tag Type Reference  ------------------------------
 
 	/**
-	 * The accessor associated to a recursive type binding. Each binding maps a variable to
-	 * a type - potentially including a recursive usage of the bound variable.
+	 * The accessor associated to a tag type reference utilized within tag-types to form (optional) recursive
+	 * dependencies.
 	 */
-	IR_NODE_ACCESSOR(RecTypeBinding, Support, TypeVariable, Type)
+	IR_NODE_ACCESSOR(TagTypeReference, Type, StringValue)
 		/**
-		 * Obtains the variable being bound by this binding.
+		 * Obtains the name of this tag.
 		 */
-		IR_NODE_PROPERTY(TypeVariable, Variable, 0);
+		IR_NODE_PROPERTY(StringValue, Name, 0);
 
-		/**
-		 * Obtains a reference to the type being bound to the referenced variable.
-		 */
-		IR_NODE_PROPERTY(Type, Type, 1);
 	IR_NODE_END()
 
 	/**
-	 * A node type used to represent recursive type variable bindings.
+	 * A node type representing concrete type variables.
 	 */
-	IR_NODE(RecTypeBinding, Support)
+	IR_NODE(TagTypeReference, Type)
+
 	  protected:
 		/**
 		 * Prints a string representation of this node to the given output stream.
 		 */
 		virtual std::ostream& printTo(std::ostream & out) const {
-			return out << *getVariable() << "=" << *getType();
+			return out << "^" << *getName();
 		}
 
 	  public:
 		/**
-		 * This static factory method allows to construct a new binding between the given
-		 * variable and type.
+		 * This static factory method allows to construct a tag type reference based on a string value (its identifier).
 		 *
 		 * @param manager the manager used for maintaining instances of this class
-		 * @param var the variable to be bound
-		 * @param type the type to be bound to the given variable
+		 * @param name the identifier defining the name of the resulting tag type reference
 		 * @return the requested type instance managed by the given manager
 		 */
-		static RecTypeBindingPtr get(NodeManager & manager, const TypeVariablePtr& var, const TypePtr& type) {
-			return manager.get(RecTypeBinding(var, type));
+		static TagTypeReferencePtr get(NodeManager & manager, const StringValuePtr& name) {
+			return manager.get(TagTypeReference(name));
+		}
+
+		/**
+		 * This method provides a static factory method for this type of node. It will return
+		 * a tag type reference pointer pointing toward a tag with the given name maintained by the
+		 * given manager.
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @param name the identifier defining the name of the resulting tag type reference
+		 * @return the requested type instance managed by the given manager
+		 */
+		static TagTypeReferencePtr get(NodeManager & manager, const string& name) {
+			return get(manager, StringValue::get(manager, name));
+		}
+	IR_NODE_END()
+
+
+	// ---------------------------------------- Tag Type ------------------------------
+
+	/**
+	 * The accessor associated to a tag type binding. Each binding maps a tag-type reference to
+	 * a record - potentially including a recursive usage of the tag-type reference.
+	 */
+	IR_NODE_ACCESSOR(TagTypeBinding, Support, TagTypeReference, Record)
+		/**
+		 * Obtains the tag being bound by this binding.
+		 */
+		IR_NODE_PROPERTY(TagTypeReference, Tag, 0);
+
+		/**
+		 * Obtains a reference to the record being bound to the associated tag.
+		 */
+		IR_NODE_PROPERTY(Record, Record, 1);
+	IR_NODE_END()
+
+	/**
+	 * A node type used to represent tag type bindings.
+	 */
+	IR_NODE(TagTypeBinding, Support)
+	  protected:
+		/**
+		 * Prints a string representation of this node to the given output stream.
+		 */
+		virtual std::ostream& printTo(std::ostream & out) const;
+
+	  public:
+		/**
+		 * This static factory method allows to construct a new binding between the given
+		 * tag and record.
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @param tag the tag to be bound
+		 * @param record the record to be bound to the given tag
+		 * @return the requested bindign managed by the given manager
+		 */
+		static TagTypeBindingPtr get(NodeManager & manager, const TagTypeReferencePtr& tag, const RecordPtr& record) {
+			return manager.get(TagTypeBinding(tag, record));
 		}
 	IR_NODE_END()
 
 
 	/**
-	 * The accessor associated to a recursive type binding. Each binding maps a variable to
-	 * a type - potentially including a recursive usage of the bound variable.
+	 * The tag type definition is a a list of tag type bindings enumerating related
+	 * bindings in a recursive group (see: tag type).
 	 */
-	IR_LIST_NODE_ACCESSOR(RecTypeDefinition, Support, Definitions, RecTypeBinding)
+	IR_LIST_NODE_ACCESSOR(TagTypeDefinition, Support, Definitions, TagTypeBinding)
 
 		/**
 		 * Obtains a specific definition maintained within this node.
 		 */
-		Ptr<const Type> getDefinitionOf(const TypeVariablePtr& variable) const {
+		Ptr<const Record> getDefinitionOf(const TagTypeReferencePtr& tag) const {
 			const auto& list = getDefinitions();
-			auto pos = std::find_if(list.begin(), list.end(), [&](const RecTypeBindingPtr& cur) { return *cur->getVariable() == *variable; });
-			return (pos == list.end()) ? Ptr<const Type>() : (*pos)->getType();
+			auto pos = std::find_if(list.begin(), list.end(), [&](const TagTypeBindingPtr& cur) { return *cur->getTag() == *tag; });
+			return (pos == list.end()) ? Ptr<const Record>() : (*pos)->getRecord();
 		}
 
 		/**
-		 * Unrolls this definition once for the given variable.
+		 * Peels this definition once for the given variable.
 		 *
 		 * @param manager the manager to be used for maintaining the resulting type pointer
-		 * @param variable the variable defining the definition to be unrolled once
-		 * @return the resulting, unrolled type
+		 * @param tag the tag defining the definition to be unrolled once
+		 * @return the resulting, peeled type
 		 */
-		TypePtr unrollOnce(NodeManager & manager, const TypeVariablePtr& variable) const {
-			return RecTypeDefinitionAccessor<Derived, Ptr>::getNode().unrollDefinitionOnce(manager, variable);
-		}
+		TagTypePtr peelOnce(NodeManager & manager, const TagTypeReferencePtr& tag) const;
+
 	IR_NODE_END()
 
 	/**
-	 * A node type used to represent recursive type variable bindings.
+	 * A node type used to represent groups of tag type bindings.
 	 */
-	IR_NODE(RecTypeDefinition, Support)
+	IR_NODE(TagTypeDefinition, Support)
 	  protected:
 		/**
 		 * Prints a string representation of this node to the given output stream.
@@ -729,110 +854,206 @@ namespace core {
 
 	  public:
 		/**
-		 * This static factory method constructing a new recursive type definition based
-		 * on a given list of recursive-variable bindings.
+		 * This static factory method constructing a new tag type definition based
+		 * on a given list of tag type bindings.
 		 *
 		 * @param manager the manager used for maintaining instances of this class
 		 * @param bindings the bindings to be included within this definition
 		 * @return the requested type instance managed by the given manager
 		 */
-		static RecTypeDefinitionPtr get(NodeManager & manager, const vector<RecTypeBindingPtr>& bindings) {
-			return manager.get(RecTypeDefinition(convertList(bindings)));
+		static TagTypeDefinitionPtr get(NodeManager & manager, const vector<TagTypeBindingPtr>& bindings) {
+			return manager.get(TagTypeDefinition(convertList(bindings)));
 		}
 
 		/**
-		 * Unrolls this definition once for the given variable.
+		 * Peels this definition once for the given tag.
 		 *
 		 * @param manager the manager to be used for maintaining the resulting type pointer
-		 * @param variable the variable defining the definition to be unrolled once
-		 * @return the resulting, unrolled type
+		 * @param tag the tag selecting the definition to be peeled once
+		 * @return the resulting, peeled type
 		 */
-		TypePtr unrollDefinitionOnce(NodeManager & manager, const TypeVariablePtr& variable) const;
+		TagTypePtr peelDefinitionOnce(NodeManager & manager, const TagTypeReferencePtr& tag) const;
 	IR_NODE_END()
 
 
 	/**
-	 * The accessor associated to a recursive type. A recursive type is simply referencing
-	 * a bound type variable within a recursive type definitions.
+	 * The accessor associated to a tag type. A tag type (formerly known as recursive type) is simply referencing
+	 * a tag binding within a tag type definition.
 	 */
-	IR_NODE_ACCESSOR(RecType, Type, TypeVariable, RecTypeDefinition)
+	IR_NODE_ACCESSOR(TagType, Type, TypeVariable, TagTypeDefinition)
 		/**
-		 * Obtains the variable picked by this recursive type.
+		 * Obtains the tag picked in the group of nested definitions by this tag type.
 		 */
-		IR_NODE_PROPERTY(TypeVariable, TypeVariable, 0);
+		IR_NODE_PROPERTY(TagTypeReference, Tag, 0);
 
 		/**
-		 * Obtains a reference the underlying recursive type definition.
+		 * Obtains a reference the underlying tag type definition.
 		 */
-		IR_NODE_PROPERTY(RecTypeDefinition, Definition, 1);
+		IR_NODE_PROPERTY(TagTypeDefinition, Definition, 1);
 
 		/**
-		 * Obtains the definition of the recursive type defined by this
-		 * recursive type. It is accessing the internal recursive type definition
-		 * and obtaining the type associated to the variable defined within this
-		 * recursive type node.
+		 * Determines whether the represented type is a struct.
 		 */
-		Ptr<const Type> getTypeDefinition() const {
-			return getDefinition()->getDefinitionOf(getTypeVariable().template as<TypeVariablePtr>());
+		bool isStruct() const {
+			return getRecord()->getNodeType() == NT_Struct;
 		}
 
 		/**
-		 * Unrolls this recursive type.
+		 * Determines whether the represented type is a union.
 		 */
-		TypePtr unroll(NodeManager & manager) const {
-			return (*getDefinition()).unrollOnce(manager, getTypeVariable());
+		bool isUnion() const {
+			return getRecord()->getNodeType() == NT_Union;
 		}
 
 		/**
-		 * Unrolls this recursive type once.
+		 * Obtains the definition of the record defined by this
+		 * tag type. It is accessing the internal tag type definition
+		 * and obtaining the record associated to the tag associated to this
+		 * tag type node.
 		 */
-		TypePtr unroll() const {
-			return unroll(NodeAccessor<Derived, Ptr>::getNode().getNodeManager());
+		Ptr<const Record> getRecord() const {
+			return getDefinition()->getDefinitionOf(getTag().template as<TagTypeReferencePtr>());
 		}
+
+		/**
+		 * Obtains the definition in form of a struct.
+		 */
+		Ptr<const Struct> getStruct() const {
+			assert_true(isStruct());
+			return getRecord().template as<Ptr<const Struct>>();
+		}
+
+		/**
+		 * Obtains the definition in form of a union.
+		 */
+		Ptr<const Union> getUnion() const {
+			assert_true(isUnion());
+			return getRecord().template as<Ptr<const Union>>();
+		}
+
+		/**
+		 * Retrieves the name of the represented record.
+		 */
+		Ptr<const StringValue> getName() const {
+			return getRecord()->getName();
+		}
+
+		/**
+		 * Retrieves the list of fields of this tag type.
+		 */
+		Ptr<const Fields> getFields() const {
+			return getRecord()->getFields();
+		}
+
+		/**
+		 * Retrieves the field with the given name within this
+		 * record type or a null pointer if there is no such field.
+		 *
+		 * @param name the name to be searching for
+		 */
+		Ptr<const Field> getField(const string& name) const {
+			return getRecord()->getField(name);
+		}
+
+		/**
+		 * Retrieves the field with the given name within this
+		 * record type or a null pointer if there is no such field.
+		 *
+		 * @param name the name to be searching for
+		 */
+		Ptr<const Field> getField(const StringValuePtr& name) const {
+			return getField(name->getValue());
+		}
+
+		/**
+		 * Retrieves the type of a field of this record or a null pointer if there is no
+		 * such field.
+		 *
+		 * @param name the name to be searching for
+		 */
+		Ptr<const Type> getFieldType(const string& name) const {
+			Ptr<const Field> field = getField(name);
+			return (field) ? (field->getType()) : Ptr<const Type>();
+		}
+
+		/**
+		 * Retrieves the type of a field of this record or a null pointer if there is no
+		 * such field.
+		 *
+		 * @param name the name to be searching for
+		 */
+		Ptr<const Type> getFieldType(const StringValuePtr& name) const {
+			return getFieldType(name->getValue());
+		}
+
+		/**
+		 * Peels this tag type.
+		 */
+		TagTypePtr peel(NodeManager & manager) const {
+			return (*getDefinition()).peelOnce(manager, getTag());
+		}
+
+		/**
+		 * Peels this recursive type once.
+		 */
+		TagTypePtr peel() const {
+			return peel(NodeAccessor<Derived, Ptr>::getNode().getNodeManager());
+		}
+
+		/**
+		 * Determines whether the represented tag type is a recursive type.
+		 */
+		bool isRecursive() const {
+			return TagTypeAccessor<Derived, Ptr>::getNode().isRecursive();
+		}
+
 	IR_NODE_END()
 
 	/**
-	 * This type connector allows to define recursive type within the IR language. Recursive
-	 * types are types which are defined by referencing to their own type. The definition of
-	 * a list may be consisting of a pair, where the first element is corresponding to a head
-	 * element and the second to the remaining list. Therefore, a list is defined using its own
-	 * type.
+	 * This type connector allows the definition of tag types within the IR language. Tag
+	 * types are types which may be defined by referencing themselves. For instance, the definition of
+	 * a list type may consist of a pair, where the first element is corresponding to a head
+	 * element and the second to the remaining list. Such a type can only be defined through
+	 * self-referencing.
 	 *
-	 * This implementation allows to define mutually recursive data types, hence, situations
-	 * in which the definition of multiple recursive types are interleaved.
+	 * This implementation allows to define mutually recursive types, hence, situations
+	 * in which the definition of multiple types are interleaved.
 	 */
-	IR_NODE(RecType, Type)
+	IR_NODE(TagType, Type)
 	  protected:
 		/**
 		 * Prints a string representation of this node to the given output stream.
 		 */
-		virtual std::ostream& printTo(std::ostream & out) const {
-			return out << "rec " << *getTypeVariable() << "." << *getDefinition();
-		}
+		virtual std::ostream& printTo(std::ostream & out) const;
 
 	  public:
 		/**
-		 * A factory method for obtaining a new recursive type instance.
+		 * A factory method for obtaining a new tag type instance.
 		 *
 		 * @param manager the manager which should be maintaining the new instance
-		 * @param typeVariable the name of the variable used within the recursive type definition for representing the
-		 * 					   recursive type to be defined by the resulting type instance.
-		 * @param definition the definition of the recursive type.
+		 * @param tag the tag of the bindings to be referenced within the given tag type definition group
+		 * @param definition the tag type definition group providing the actual definition of of this tag type
 		 */
-		static RecTypePtr get(NodeManager & manager, const TypeVariablePtr& typeVariable, const RecTypeDefinitionPtr& definition) {
-			return manager.get(RecType(typeVariable, definition));
+		static TagTypePtr get(NodeManager & manager, const TagTypeReferencePtr& tag, const TagTypeDefinitionPtr& definition) {
+			return manager.get(TagType(tag, definition));
 		}
+
+		/**
+		 * Determines whether this tag type is a recursive type.
+		 */
+		bool isRecursive() const;
+
 	IR_NODE_END()
 
-	// --------------------------------- Named Composite Type ----------------------------
 
+	// --------------------------------- Fields ----------------------------
 
 	/**
-	 * The accessor associated to a named type. A named type is linking a name to
-	 * a type. Named types are the components named composite types (structs and unions)
+	 * The accessor associated to a field. A field is linking a name to
+	 * a type. Fields are the components records (structs and unions)
 	 * are build form.
 	 */
-	IR_NODE_ACCESSOR(NamedType, Support, StringValue, Type)
+	IR_NODE_ACCESSOR(Field, Support, StringValue, Type)
 		/**
 		 * Obtains the name bound by this binding.
 		 */
@@ -847,7 +1068,7 @@ namespace core {
 	/**
 	 * A node type used to represent a named type within a struct or an union.
 	 */
-	IR_NODE(NamedType, Support)
+	IR_NODE(Field, Support)
 	  protected:
 		/**
 		 * Prints a string representation of this node to the given output stream.
@@ -862,22 +1083,58 @@ namespace core {
 		 * name and type.
 		 *
 		 * @param manager the manager used for maintaining instances of this class
-		 * @param name the name to be bound
-		 * @param type the type to be bound to the given variable
-		 * @return the requested type instance managed by the given manager
+		 * @param name the name of the field
+		 * @param type the type of the field
+		 * @return the requested field instance managed by the given manager
 		 */
-		static NamedTypePtr get(NodeManager & manager, const StringValuePtr& name, const TypePtr& type) {
-			return manager.get(NamedType(name, type));
+		static FieldPtr get(NodeManager & manager, const StringValuePtr& name, const TypePtr& type) {
+			return manager.get(Field(name, type));
 		}
 	IR_NODE_END()
 
+	/**
+	 * The accessor associated to a list of fields.
+	 */
+	IR_LIST_NODE_ACCESSOR(Fields, Support, Fields, Field)
+	IR_NODE_END()
 
 	/**
-	 * The accessor associated to a named type. A named type is linking a name to
-	 * a type. Named types are the components named composite types (structs and unions)
-	 * are build form.
+	 * A node type representing a list of fields.
 	 */
-	IR_LIST_NODE_ACCESSOR(NamedCompositeType, Type, Entries, StringValue, Parents, NamedType)
+	IR_NODE(Fields, Support)
+	  protected:
+
+		/**
+		 * Prints a string representation of this node to the given output stream.
+		 */
+		virtual std::ostream& printTo(std::ostream & out) const {
+			return out << "[" << join(",", getChildList(), print<deref<NodePtr>>()) << "]";
+		}
+
+	  public:
+
+		/**
+		 * This static factory method allows to construct a field list based
+		 * on a given list of fields.
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @param fields the fields to be included within the resulting field list
+		 * @return the requested field list instance managed by the given manager
+		 */
+		static FieldsPtr get(NodeManager & manager, const FieldList& fields = FieldList()) {
+			return manager.get(Fields(convertList(fields)));
+		}
+
+	IR_NODE_END()
+
+
+	// --------------------------------- Records ----------------------------
+
+	/**
+	 * The accessor associated to a record. A record is a union or a struct/class type in C/C++.
+	 */
+	template <typename Derived, template <typename T> class Ptr>
+	struct RecordAccessor : public SupportAccessor<Derived, Ptr> {
 
 		/**
 		 * Obtains the name of this type - might be empty. Names can be used to distinguish
@@ -886,157 +1143,159 @@ namespace core {
 		IR_NODE_PROPERTY(StringValue, Name, 0);
 
 		/**
-		 * Obtains the list of parent classes associated to this named composite type (for unions
-		 * this list shell always be empty).
+		 * Obtains the list of fields contributing to this record type.
 		 */
-		IR_NODE_PROPERTY(Parents, Parents, 1);
+		IR_NODE_PROPERTY(Fields, Fields, 1);
 
 		/**
-		 * Retrieves the named type entry referencing the given member name within this
-		 * struct type or a null pointer if there is no such member.
+		 * Retrieves the field with the given name within this
+		 * record type or a null pointer if there is no such field.
 		 *
 		 * @param name the name to be searching for
 		 */
-		Ptr<const NamedType> getNamedTypeEntryOf(const StringValuePtr& name) const {
-			auto list = getEntries();
-			auto pos = std::find_if(list.begin(), list.end(), [&](const NamedTypePtr& cur) { return *cur->getName() == *name; });
-			return (pos == list.end()) ? Ptr<const NamedType>() : (*pos);
+		Ptr<const Field> getField(const string& name) const {
+			auto list = getFields();
+			auto pos = std::find_if(list.begin(), list.end(), [&](const FieldPtr& cur) { return cur->getName()->getValue() == name; });
+			return (pos == list.end()) ? Ptr<const Field>() : (*pos);
 		}
 
 		/**
-		 * Retrieves the named type entry referencing the given member name within this
-		 * struct type or a null pointer if there is no such member.
+		 * Retrieves the field with the given name within this
+		 * record type or a null pointer if there is no such field.
 		 *
 		 * @param name the name to be searching for
 		 */
-		Ptr<const NamedType> getNamedTypeEntryOf(const string& name) const {
-			auto list = getEntries();
-			auto pos = std::find_if(list.begin(), list.end(), [&](const NamedTypePtr& cur) { return cur->getName()->getValue() == name; });
-			return (pos == list.end()) ? Ptr<const NamedType>() : (*pos);
+		Ptr<const Field> getField(const StringValuePtr& name) const {
+			return getField(name->getValue());
 		}
 
 		/**
-		 * Retrieves the type of a member of this composite type or a null pointer if there is no
-		 * such entry.
+		 * Retrieves the type of a field of this record or a null pointer if there is no
+		 * such field.
 		 *
 		 * @param name the name to be searching for
 		 */
-		Ptr<const Type> getTypeOfMember(const StringValuePtr& name) const {
-			Ptr<const NamedType> entry = getNamedTypeEntryOf(name);
-			return (entry) ? (entry->getType()) : Ptr<const Type>();
+		Ptr<const Type> getFieldType(const string& name) const {
+			Ptr<const Field> field = getField(name);
+			return (field) ? (field->getType()) : Ptr<const Type>();
 		}
 
 		/**
-		 * Retrieves the type of a member of this composite type or a null pointer if there is no
-		 * such entry.
+		 * Retrieves the type of a field of this record or a null pointer if there is no
+		 * such field.
 		 *
 		 * @param name the name to be searching for
 		 */
-		Ptr<const Type> getTypeOfMember(const string& name) const {
-			Ptr<const NamedType> entry = getNamedTypeEntryOf(name);
-			return (entry) ? (entry->getType()) : Ptr<const Type>();
+		Ptr<const Type> getFieldType(const StringValuePtr& name) const {
+			return getFieldType(name->getValue());
 		}
-	IR_NODE_END()
-
-	/**
-	 * A node type used to represent a named type within a struct or an union.
-	 */
-	class NamedCompositeType : public Type,
-	                           public NamedCompositeTypeAccessor<NamedCompositeType, Pointer>,
-	                           public NamedCompositeTypeAccessor<NamedCompositeType, Pointer>::node_helper {
-	  public:
-		/**
-		 * A type definition defining the type of entries this composed type is consisting of.
-		 */
-		typedef NamedTypeList Entries;
-
-	  protected:
-		/**
-		 * A simple constructor creating a new named composite type based on the
-		 * given element types.
-		 *
-		 * @param elements the elements of the resulting composite type
-		 */
-		NamedCompositeType(const NodeType& type, const NodeList& elements);
 	};
 
-	/**
-	 * A macro creating named composite types.
-	 */
-	#define IR_NAMED_COMPOSITE_TYPE(NAME)                                                                                                                      \
-		class NAME : public NamedCompositeType {                                                                                                               \
-			NAME(const NodeList& children) : NamedCompositeType(NT_##NAME, children) {                                                                         \
-				assert_true(checkChildList(children)) << "Invalid composition of Child-Nodes discovered!";                                                     \
-			}                                                                                                                                                  \
-                                                                                                                                                               \
-		  protected:                                                                                                                                           \
-			/* The function required for the clone process. */                                                                                                 \
-			virtual NAME* createInstanceUsing(const NodeList& children) const {                                                                                \
-				return new NAME(children);                                                                                                                     \
-			}                                                                                                                                                  \
-                                                                                                                                                               \
-		  public:                                                                                                                                              \
-			/* A factory method creating instances based on a child list */                                                                                    \
-			static NAME##Ptr get(NodeManager& manager, const NodeList& children) {                                                                             \
-				return manager.get(NAME(children));                                                                                                            \
-			}                                                                                                                                                  \
-                                                                                                                                                               \
-		  private:
-
-
-	// --------------------------------- Struct Type ----------------------------
 
 	/**
-	 * The accessor for instances of struct types.
+	 * A node type used to represent a common base-class for structs and unions.
 	 */
-	template <typename D, template <typename T> class P>
-	struct StructTypeAccessor : public NamedCompositeTypeAccessor<D, P> {};
+	class Record : public Support, public AbstractFixedSizeNodeHelper<Record,StringValue,Fields> {
+	  protected:
+		/**
+		 * A constructor creating a new instance of this type based on a given child-node list.
+		 *
+		 * @param nodeType the actual node-type the resulting node will be representing
+		 * @param children the child nodes to be contained
+		 */
+		template <typename... Nodes>
+		Record(const NodeType nodeType, const Pointer<const Nodes>&... children)
+			: Support(nodeType, children...), AbstractFixedSizeNodeHelper(getChildNodeList()) {}
+
+		/**
+		 * A constructor creating a new instance of this type based on a given child-node list.
+		 *
+		 * @param nodeType the type of the newly created node
+		 * @param children the child nodes to be used to create the new node
+		 */
+		Record(const NodeType nodeType, const NodeList& children)
+			: Support(nodeType, children), AbstractFixedSizeNodeHelper(getChildNodeList()) {}
+	};
+
+
+	#define IR_RECORD_ACCESSOR(NAME, ...)                                                                                                                  \
+		IR_NODE_ACCESSOR(NAME, Record, StringValue, Fields, ##__VA_ARGS__)
+
+
+	// --------------------------------- Struct ----------------------------
+
+	/**
+	 * The accessor for instances of structs.
+	 */
+	IR_RECORD_ACCESSOR(Struct, Parents)
+
+		/**
+		 * Obtains the list of parent classes associated to this struct.
+		 */
+		IR_NODE_PROPERTY(Parents, Parents, 2);
+
+	IR_NODE_END();
+
 
 	/**
 	 * The type used to represent struct / records.
 	 */
-	IR_NAMED_COMPOSITE_TYPE(StructType)
+	IR_NODE(Struct, Record)
+
 	  protected:
+
 		/**
 		 * Prints a string representation of this node to the given output stream.
 		 */
 		virtual std::ostream& printTo(std::ostream & out) const;
 
 	  public:
+
 		/**
-		 * A factory method allowing to obtain a pointer to a struct type representing
+		 * A factory method allowing to obtain a pointer to a struct representing
 		 * an instance managed by the given manager.
 		 *
 		 * @param manager the manager which should be responsible for maintaining the new
 		 * 				  type instance and all its referenced elements.
-		 * @param name the name of the resulting struct type
+		 * @param name the name of the resulting struct
 		 * @param parents the list of parent types to be referenced by the resulting struct
-		 * @param entries the list of entries the new type should consist of
+		 * @param fields the list of fields the resulting struct should consist of
 		 * @return a pointer to a instance of the requested type. Multiple requests using
 		 * 		   the same parameters will lead to pointers addressing the same instance.
 		 */
-		static StructTypePtr get(NodeManager & manager, const StringValuePtr& name, const ParentsPtr& parents,
-		                         const vector<NamedTypePtr>& entries = vector<NamedTypePtr>()) {
-			NodeList children;
-			children.push_back(name);
-			children.push_back(parents);
-			children.insert(children.end(), entries.begin(), entries.end());
-			return manager.get(StructType(children));
+		static StructPtr get(NodeManager & manager, const StringValuePtr& name, const ParentsPtr& parents, const FieldsPtr& fields) {
+			return manager.get(Struct(name, fields, parents));
 		}
 
 		/**
-		 * A factory method allowing to obtain a pointer to an unnamed struct type representing
+		 * A factory method allowing to obtain a pointer to a struct representing
+		 * an instance managed by the given manager.
+		 *
+		 * @param manager the manager which should be responsible for maintaining the new
+		 * 				  type instance and all its referenced elements.
+		 * @param name the name of the resulting struct
+		 * @param parents the list of parent types to be referenced by the resulting struct
+		 * @param fields the list of fields the resulting struct should consist of
+		 * @return a pointer to a instance of the requested type. Multiple requests using
+		 * 		   the same parameters will lead to pointers addressing the same instance.
+		 */
+		static StructPtr get(NodeManager & manager, const StringValuePtr& name, const ParentsPtr& parents, const vector<FieldPtr>& fields = vector<FieldPtr>()) {
+			return manager.get(Struct(name, Fields::get(manager, fields), parents));
+		}
+
+		/**
+		 * A factory method allowing to obtain a pointer to an unnamed struct representing
 		 * an instance managed by the given manager.
 		 *
 		 * @param manager the manager which should be responsible for maintaining the new
 		 * 				  type instance and all its referenced elements.
 		 * @param parents the list of parent types to be referenced by the resulting struct
-		 * @param entries the list of entries the new type should consist of
+		 * @param fields the list of fields the new struct should consist of
 		 * @return a pointer to a instance of the requested type. Multiple requests using
 		 * 		   the same parameters will lead to pointers addressing the same instance.
 		 */
-		static StructTypePtr get(NodeManager & manager, const ParentsPtr& parents, const vector<NamedTypePtr>& entries = vector<NamedTypePtr>()) {
-			return get(manager, StringValue::get(manager, ""), parents, entries);
+		static StructPtr get(NodeManager & manager, const ParentsPtr& parents, const vector<FieldPtr>& fields = vector<FieldPtr>()) {
+			return get(manager, StringValue::get(manager, ""), parents, fields);
 		}
 
 		/**
@@ -1045,13 +1304,13 @@ namespace core {
 		 *
 		 * @param manager the manager which should be responsible for maintaining the new
 		 * 				  type instance and all its referenced elements.
-		 * @param name the name of the resulting struct type
-		 * @param entries the list of entries the new type should consist of
+		 * @param name the name of the resulting struct
+		 * @param fields the list of fields the new struct should consist of
 		 * @return a pointer to a instance of the requested type. Multiple requests using
 		 * 		   the same parameters will lead to pointers addressing the same instance.
 		 */
-		static StructTypePtr get(NodeManager & manager, const StringValuePtr& name, const vector<NamedTypePtr>& entries = vector<NamedTypePtr>()) {
-			return get(manager, name, Parents::get(manager), entries);
+		static StructPtr get(NodeManager & manager, const StringValuePtr& name, const vector<FieldPtr>& fields = vector<FieldPtr>()) {
+			return get(manager, name, Parents::get(manager), fields);
 		}
 
 		/**
@@ -1060,78 +1319,71 @@ namespace core {
 		 *
 		 * @param manager the manager which should be responsible for maintaining the new
 		 * 				  type instance and all its referenced elements.
-		 * @param entries the list of entries the new type should consist of
+		 * @param fields the list of fields the new struct should consist of
 		 * @return a pointer to a instance of the requested type. Multiple requests using
 		 * 		   the same parameters will lead to pointers addressing the same instance.
 		 */
-		static StructTypePtr get(NodeManager & manager, const vector<NamedTypePtr>& entries = vector<NamedTypePtr>()) {
-			return get(manager, Parents::get(manager), entries);
+		static StructPtr get(NodeManager & manager, const vector<FieldPtr>& fields = vector<FieldPtr>()) {
+			return get(manager, Parents::get(manager), fields);
 		}
+
 	IR_NODE_END()
 
 
-	// --------------------------------- Union Type ----------------------------
+	// --------------------------------- Union ----------------------------
 
 	/**
-	 * The accessor for instances of union types.
+	 * The accessor for instances of structs.
 	 */
-	template <typename D, template <typename T> class P>
-	struct UnionTypeAccessor : public NamedCompositeTypeAccessor<D, P> {};
+	IR_RECORD_ACCESSOR(Union)
+		/** nothing special so far */
+	IR_NODE_END();
 
 	/**
 	 * The type used to represent unions.
 	 */
-	IR_NAMED_COMPOSITE_TYPE(UnionType)
+	IR_NODE(Union, Record)
 	  protected:
 		/**
 		 * Prints a string representation of this node to the given output stream.
 		 */
 		virtual std::ostream& printTo(std::ostream & out) const {
-			assert_true(getParents()->empty()) << "Unions must not be derived!";
-			return out << "union<" << join(",", getEntries(), print<deref<NodePtr>>()) << ">";
+			return out << "union<" << join(",", getFields(), print<deref<NodePtr>>()) << ">";
 		}
 
 	  public:
 		/**
-		 * A factory method allowing to obtain a pointer to a union type representing
+		 * A factory method allowing to obtain a pointer to a union representing
 		 * an instance managed by the given manager.
 		 *
 		 * @param manager the manager which should be responsible for maintaining the new
 		 * 				  type instance and all its referenced elements.
-		 * @param the name given to the namedtype
-		 * @param entries the list of entries the new type should consist of
-		 * @return a pointer to a instance of the requested type. Multiple requests using
+		 * @param the name given to the union
+		 * @param fields the list of fields the new union should consist of
+		 * @return a pointer to a instance of the requested record. Multiple requests using
 		 * 		   the same parameters will lead to pointers addressing the same instance.
 		 */
-		static UnionTypePtr get(NodeManager & manager, const StringValuePtr& name, const vector<NamedTypePtr>& entries) {
-			NodeList children;
-			// children.push_back(StringValue::get(manager, ""));
-			children.push_back(name);
-			children.push_back(Parents::get(manager));
-			children.insert(children.end(), entries.begin(), entries.end());
-			return manager.get(UnionType(children));
+		static UnionPtr get(NodeManager & manager, const StringValuePtr& name, const vector<FieldPtr>& fields) {
+			return manager.get(Union(name, Fields::get(manager, fields)));
 		}
 
 		/**
-		 * A factory method allowing to obtain a pointer to a union type representing
-		 * an instance managed by the given manager. NO NAME
+		 * A factory method allowing to obtain a pointer to a union representing
+		 * an instance managed by the given manager.
 		 *
 		 * @param manager the manager which should be responsible for maintaining the new
 		 * 				  type instance and all its referenced elements.
-		 * @param entries the list of entries the new type should consist of
-		 * @return a pointer to a instance of the requested type. Multiple requests using
+		 * @param fields the list of fields the new union should consist of
+		 * @return a pointer to a instance of the requested record. Multiple requests using
 		 * 		   the same parameters will lead to pointers addressing the same instance.
 		 */
-		static UnionTypePtr get(NodeManager & manager, const vector<NamedTypePtr>& entries = vector<NamedTypePtr>()) {
-			return get(manager, StringValue::get(manager, ""), entries);
+		static UnionPtr get(NodeManager & manager, const vector<FieldPtr>& fields = vector<FieldPtr>()) {
+			return get(manager, StringValue::get(manager, ""), fields);
 		}
 	IR_NODE_END()
 
-	#undef IR_NAMED_COMPOSITE_TYPE
-
 
 	// --------------------------------------------- Numeric Type ---------------------------------------------
-
 
 	/**
 	 * The accessor associated to the number type class. A number type has a single element, an expression
@@ -1189,6 +1441,14 @@ namespace core {
 		 */
 		static NumericTypePtr get(NodeManager & manager, const VariablePtr& var);
 	IR_NODE_END()
+
+
+	// --------------------------- late definitions to resolve cyclic dependencies  ---------------------------------------
+
+	template<typename Derived, template<typename T> class Ptr>
+	TagTypePtr TagTypeDefinitionAccessor<Derived, Ptr>::peelOnce(NodeManager & manager, const TagTypeReferencePtr& tag) const {
+		return TagTypeDefinitionAccessor<Derived, Ptr>::getNode().peelDefinitionOnce(manager, tag);
+	}
 
 } // end namespace core
 } // end namespace insieme

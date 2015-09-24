@@ -121,19 +121,19 @@ namespace types {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
-		TypeVariablePtr var = builder.typeVariable("X");
-		TypePtr type = builder.refType(var);
+		TagTypeReferencePtr tag = builder.tagTypeReference("X");
+		RecordPtr type = builder.structRecord(toVector(builder.field("f", builder.refType(tag))));
 
-		vector<RecTypeBindingPtr> defs;
-		defs.push_back(builder.recTypeBinding(var, type));
+		vector<TagTypeBindingPtr> defs;
+		defs.push_back(builder.tagTypeBinding(tag, type));
 
-		RecTypeDefinitionPtr def = builder.recTypeDefinition(defs);
-		RecTypePtr recType = builder.recType(var, def);
+		TagTypeDefinitionPtr def = builder.tagTypeDefinition(defs);
+		TagTypePtr tagType = builder.tagType(tag, def);
 
-		EXPECT_EQ("rec 'X.{'X=ref<'X,f,f>}", toString(*recType));
+		EXPECT_EQ("rec ^X.{^X=ref<^X,f,f>}", toString(*tagType));
 
 		VariableRenamer renamer;
-		EXPECT_EQ("rec 'X.{'X=ref<'X,f,f>}", toString(*renamer.rename(recType)));
+		EXPECT_EQ("rec ^X.{^X=ref<^X,f,f>}", toString(*renamer.rename(tagType)));
 	}
 
 } // end namespace analysis
