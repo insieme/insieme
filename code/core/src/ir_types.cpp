@@ -165,11 +165,13 @@ namespace core {
 
 	bool TagType::isRecursive() const {
 		bool found = false;
-		visitDepthFirstOncePrunable(TagTypePtr(this), [&](const NodePtr& cur) {
+		visitDepthFirstOncePrunable(getRecord(), [&](const NodePtr& cur) {
 			// check whether this is the tag
-			if (cur == getTag()) {
-				found = true;
-				return true;		// stop searching
+			if (auto tag = cur.isa<TagTypeReferencePtr>() ) {
+				if (getDefinition().getDefinitionOf(tag)) {
+					found = true;
+					return true;
+				}
 			}
 
 			// do not descent outside of tag-type definition
@@ -177,9 +179,7 @@ namespace core {
 
 			// stop search if same tag is re-definied in a nested scope
 			if (auto type = cur.isa<TagTypePtr>()) {
-				if (type->getDefinition()->getDefinitionOf(getTag())) {
-					return true;
-				}
+				return true;
 			}
 
 			// prune if found
@@ -189,7 +189,7 @@ namespace core {
 	}
 
 	std::ostream& TagType::printTo(std::ostream & out) const {
-		if (isRecursive()) { out << *getRecord(); }
+		if (!isRecursive()) { return out << *getRecord(); }
 		return out << "rec " << *getTag() << "." << *getDefinition();
 	}
 
