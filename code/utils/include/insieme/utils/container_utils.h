@@ -101,10 +101,10 @@ inline void for_each(const Container& c, const Functor& f) {
 }
 
 /**
- * Convenience function for std::for_each.
+ * A for_each function accepting pairs of iterators as an input range.
  */
 template <typename Iterator, typename Functor>
-inline void for_range(const std::pair<Iterator, Iterator>& c, const Functor& f) {
+inline void for_each(const std::pair<Iterator,Iterator>& c, const Functor& f) {
 	std::for_each(c.first, c.second, f);
 }
 

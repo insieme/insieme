@@ -509,7 +509,7 @@ namespace properties {
 			if(values.size() != params.size()) { return false; }
 
 			auto paired = make_paired_range(values, params);
-			return all(paired.first, paired.second, [](const std::pair<Value, typename Property<Value>::ptr>& cur) { return cur.second->isValid(cur.first); });
+			return all(paired, [](const std::pair<Value, typename Property<Value>::ptr>& cur) { return cur.second->isValid(cur.first); });
 		}
 
 		/**
