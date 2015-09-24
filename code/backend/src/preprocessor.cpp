@@ -139,7 +139,6 @@ namespace backend {
 			// obtain element types
 			core::TypePtr arg0ElementType = core::lang::ArrayType(arg0Type).getElementType();
 			core::TypePtr arg1ElementType = core::lang::ArrayType(arg1Type).getElementType();
-			core::TypePtr resElementType = core::lang::ArrayType(resType).getElementType();
 
 			// extract operator
 			core::ExpressionPtr op = pointwiseOp.as<core::CallExprPtr>()[0];
@@ -168,7 +167,7 @@ namespace backend {
 
 			// return result
 			auto sizeType = builder.numericType(core::lang::ArrayType(arg0Type).getSize().as<core::LiteralPtr>());
-			core::StatementPtr body = builder.returnStmt(core::lang::buildArrayCreate(resElementType, sizeType, elements));
+			core::StatementPtr body = builder.returnStmt(core::lang::buildArrayCreate(sizeType, elements));
 
 			// construct substitute ...
 			core::LambdaExprPtr substitute = builder.lambdaExpr(funType, toVector(v1, v2), body);

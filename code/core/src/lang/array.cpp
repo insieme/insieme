@@ -184,13 +184,12 @@ namespace lang {
 		this->size = size;
 	}
 
-	ExpressionPtr buildArrayCreate(const TypePtr& elemType, const TypePtr& size, const ExpressionList& list) {
-		NodeManager& nm = elemType.getNodeManager();
+	ExpressionPtr buildArrayCreate(const TypePtr& size, const ExpressionList& list) {
+		NodeManager& nm = size.getNodeManager();
 		IRBuilder builder(nm);
 		auto& arrExt = nm.getLangExtension<ArrayExtension>();
 
-		return builder.callExpr(arrExt.getArrayCreate(), builder.getTypeLiteral(elemType), builder.getTypeLiteral(size),
-			                    core::lang::buildListOfExpressions(list));
+		return builder.callExpr(arrExt.getArrayCreate(), builder.getTypeLiteral(size), core::lang::buildListOfExpressions(list));
 	}
 
 } // end namespace lang

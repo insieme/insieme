@@ -86,7 +86,7 @@ namespace lang {
 		/**
 		 * A literal to create a (partially) initialized array instance.
 		 */
-		LANG_EXT_LITERAL(ArrayCreate, "array_create", "(type<'elem>, type<'size>, list<'elem>) -> array<'elem,'size>")
+		LANG_EXT_LITERAL(ArrayCreate, "array_create", "(type<'size>, list<'elem>) -> array<'elem,'size>")
 
 		/**
 		 * A literal to project arrays to single elements.
@@ -305,7 +305,7 @@ namespace lang {
 		return type->getTypeParameter(1).as<NumericTypePtr>();
 	}
 
-	ExpressionPtr buildArrayCreate(const TypePtr& elemType, const TypePtr& size, const ExpressionList& list);
+	ExpressionPtr buildArrayCreate(const TypePtr& size, const ExpressionList& list);
 
 } // end namespace lang
 } // end namespace core

@@ -47,24 +47,24 @@ int main() {
 
 	// ARRAY TYPES /////////////////////////////////////////////////////////////////
 
-	#pragma test expect_ir("decl ref<array<int<4>,5>,f,f> v0 = var(array_create(type_lit(int<4>), type_lit(5), [1,2,3,4,5]));")
+	#pragma test expect_ir("decl ref<array<int<4>,5>,f,f> v0 = var(array_create(type_lit(5), [1,2,3,4,5]));")
 	int arr_all[5] = {1,2,3,4,5};
 	
-	#pragma test expect_ir("decl ref<array<int<4>,5>,f,f> v0 = var(array_create(type_lit(int<4>), type_lit(5), [1,2]));")
+	#pragma test expect_ir("decl ref<array<int<4>,5>,f,f> v0 = var(array_create(type_lit(5), [1,2]));")
 	int arr_partial[5] = {1,2};
 	
-	#pragma test expect_ir("decl ref<array<int<4>,5>,f,f> v0 = var(array_create(type_lit(int<4>), type_lit(5), [0]));")
+	#pragma test expect_ir("decl ref<array<int<4>,5>,f,f> v0 = var(array_create(type_lit(5), [0]));")
 	int arr_zero[5] = {0};
 	
-	#pragma test expect_ir("decl ref<array<int<4>,3>,f,f> v0 = var(array_create(type_lit(int<4>), type_lit(3), [0,1,2]));")
+	#pragma test expect_ir("decl ref<array<int<4>,3>,f,f> v0 = var(array_create(type_lit(3), [0,1,2]));")
 	int arr_implied[] = {0,1,2};
 	
 	#pragma test expect_ir("decl ref<array<array<int<4>,3>,2>,f,f> v0 =",\
-		"var(array_create(type_lit(array<int<4>,3>), type_lit(2), [array_create(type_lit(int<4>), type_lit(3), [1,2,3]), array_create(type_lit(int<4>), type_lit(3), [4,5,6])]));")
+		"var(array_create(type_lit(2), [array_create(type_lit(3), [1,2,3]), array_create(type_lit(3), [4,5,6])]));")
 	int arr_multi[2][3] = {{1,2,3}, {4,5,6}};
 
 	#pragma test expect_ir("decl ref<array<array<int<4>,3>,2>,f,f> v0 =",\
-		"var(array_create(type_lit(array<int<4>,3>), type_lit(2), [array_create(type_lit(int<4>), type_lit(3), [1]), array_create(type_lit(int<4>), type_lit(3), [4,5])]));")
+		"var(array_create(type_lit(2), [array_create(type_lit(3), [1]), array_create(type_lit(3), [4,5])]));")
 	int arr_multi_partial[2][3] = {{1}, {4,5}};
 	
 	// STRUCT TYPES //////////////////////////////////////////////////////////////
@@ -103,7 +103,7 @@ int main() {
 	
 	#pragma test expect_ir(R"({ 
 		let s = struct { int<4> a; uint<4> b }; 
-		decl ref<array<s,2>,f,f> v0 = var(array_create(type_lit(s), type_lit(2), [struct s {1, 2u}, struct s{3, 4u}])); })")
+		decl ref<array<s,2>,f,f> v0 = var(array_create(type_lit(2), [struct s {1, 2u}, struct s{3, 4u}])); })")
 	{ struct { int a; unsigned b; } su[2] = { { 1, 2u }, { 3, 4u } }; }
 
 	// BOOL CONVERSION //////////////////////////////////////////////////////

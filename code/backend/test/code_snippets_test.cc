@@ -105,7 +105,7 @@ namespace backend {
 
 		core::ProgramPtr program = builder.parseProgram("int<4> main() {"
 		                                                "	lambda (type<'a> dtype, type<'s> size)->ref<array<'a,'s>> {"
-		                                                "		return ref_new(array_create(dtype, size, list_empty(dtype)));"
+		                                                "		return ref_new(array_create(size, list_empty(dtype)));"
 		                                                "	} (lit(real<4>), lit(7));"
 		                                                "	return 0;"
 		                                                "}");
@@ -142,8 +142,8 @@ namespace backend {
 		// Type: (('a,'b)->'c) -> (array<'a,'l>,array<'b,'l>)->array<'c,'l>
 
 		std::map<string, core::NodePtr> symbols;
-		symbols["v1"] = builder.parseExpr("array_create(lit(int<4>), lit(4), [1,2,3,4])");
-		symbols["v2"] = builder.parseExpr("array_create(lit(int<4>), lit(4), [5,6,7,8])");
+		symbols["v1"] = builder.parseExpr("array_create(lit(4), [1,2,3,4])");
+		symbols["v2"] = builder.parseExpr("array_create(lit(4), [5,6,7,8])");
 
 		core::ProgramPtr program = builder.parseProgram("unit main() {"
 		                                                "	array_pointwise(int_add)(v1,v2);"
@@ -259,7 +259,7 @@ namespace backend {
 		core::IRBuilder builder(manager);
 
 		core::ExpressionPtr zero = builder.literal(manager.getLangBasic().getUInt8(), "0");
-		core::ExpressionPtr offset = builder.parseExpr("var(array_create(lit(uint<8>),lit(3),[0ul,0ul,0ul]))");
+		core::ExpressionPtr offset = builder.parseExpr("var(array_create(lit(3),[0ul,0ul,0ul]))");
 		core::ExpressionPtr extFun = builder.parseExpr("lit(\"call_vector\" : (ref<array<uint<8>,3>>)->unit )");
 		core::ExpressionPtr call = builder.callExpr(manager.getLangBasic().getUnit(), extFun, toVector(offset));
 
@@ -354,8 +354,8 @@ namespace backend {
 				decl uint<inf> size = num_cast(12,lit(uint<inf>));
 
 				// create two fixed-sized arrays on the stack and the heap
-				decl ref<array<int,10>> a = var(array_create(lit(int), lit(10), list_empty(lit(int))));
-				decl ref<array<int,10>> b = new(array_create(lit(int), lit(10), list_empty(lit(int))));
+				decl ref<array<int,10>> a = var(array_create(lit(10), list_empty(lit(int))));
+				decl ref<array<int,10>> b = new(array_create(lit(10), list_empty(lit(int))));
 
 //				// create two variable-sized arrays on the stack and the heap
 //				decl ref<array<int,size>> c = var(undefined(array<int,size>));

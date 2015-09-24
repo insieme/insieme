@@ -760,7 +760,7 @@ namespace conversion {
 			for(unsigned i=0; i < initList->getNumInits(); ++i) { // yes, that is really the best way to do this in clang 3.6
 				initExps.push_back(converter.convertExpr(initList->getInit(i)));
 			}
-			retIr = core::lang::buildArrayCreate(core::lang::getArrayElementType(gT), core::lang::getArraySize(gT), initExps);
+			retIr = core::lang::buildArrayCreate(core::lang::getArraySize(gT), initExps);
 		}
 		else {
 			frontend_assert(false) << "Clang InitListExpr of unexpected type";

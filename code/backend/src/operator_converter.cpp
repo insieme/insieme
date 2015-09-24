@@ -536,7 +536,7 @@ namespace backend {
 			// special handling for arrays
 			if (LANG_EXT(core::lang::ArrayExtension).isCallOfArrayCreate(ARG(0))) {
 				assert_not_pred1(core::lang::isGenericSizedArray, call[0]->getType());
-				assert_true(core::lang::parseListOfExpressions(call[0].as<core::CallExprPtr>()[2]).empty()) << "(Partial) Initialization of heap-allocated arrays not supported!";
+				assert_true(core::lang::parseListOfExpressions(call[0].as<core::CallExprPtr>()[1]).empty()) << "(Partial) Initialization of heap-allocated arrays not supported!";
 
 				// parse resulting array type
 				core::lang::ArrayType array(call[0]);
@@ -707,12 +707,12 @@ namespace backend {
 		};
 
 		res[arrayExt.getArrayCreate()] = OP_CONVERTER {
-			// type of Operator: "(type<'elem>, type<'size>, list<'elem>) -> array<'elem,'size>"
+			// type of Operator: "(type<'size>, list<'elem>) -> array<'elem,'size>"
 			assert_not_pred1(core::lang::isGenericSizedArray, call->getType());
 
 			// convert initialization values
 			vector<c_ast::NodePtr> values;
-			for(const auto& cur : core::lang::parseListOfExpressions(call[2])) {
+			for(const auto& cur : core::lang::parseListOfExpressions(call[1])) {
 				values.push_back(CONVERT_EXPR(cur));
 			}
 
