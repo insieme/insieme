@@ -474,6 +474,13 @@ namespace printer {
 			}
 
 			PRINT(TagType) {
+
+				// support simpler output of non-recursive types
+				if (!node->isRecursive()) {
+					VISIT(node->getRecord());
+					return;
+				}
+
 				out << "rec ";
 				VISIT(node->getTag());
 
@@ -504,15 +511,14 @@ namespace printer {
 
 				auto strct = analysis::isStruct(node);
 
-				out << (strct ? "struct" : "union");
+				out << (strct ? "struct " : "union ");
 
 				if(!node->getName()->getValue().empty()) {
-					out << " " << node->getName()->getValue();
-					if(strct && strct->getParents().empty()) { out << " "; }
+					out << node->getName()->getValue() << " ";
 				}
 
-				if(!strct->getParents().empty()) {
-					out << " : " << join(", ", strct->getParents(), [&](std::ostream& out, const ParentPtr& parent) {
+				if(strct && !strct->getParents().empty()) {
+					out << ": " << join(", ", strct->getParents(), [&](std::ostream& out, const ParentPtr& parent) {
 						if(parent->isVirtual()) { out << "virtual "; }
 						VISIT(parent->getType());
 					}) << " ";

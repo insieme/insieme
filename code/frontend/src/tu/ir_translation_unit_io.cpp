@@ -53,8 +53,14 @@ namespace tu {
 
 
 	// the type used for encoding a translation unit
-	typedef std::tuple<IRTranslationUnit::TypeMap, IRTranslationUnit::FunctionMap, IRTranslationUnit::GlobalsList, IRTranslationUnit::Initializer,
-	                   IRTranslationUnit::EntryPointList, bool> WrapperType;
+	typedef std::tuple<
+			IRTranslationUnit::TypeMap,
+			IRTranslationUnit::FunctionMap,
+			IRTranslationUnit::GlobalsList,
+			IRTranslationUnit::Initializer,
+	        IRTranslationUnit::EntryPointList,
+			bool
+		> WrapperType;
 
 
 	core::ExpressionPtr toIR(core::NodeManager& manager, const IRTranslationUnit& unit) {

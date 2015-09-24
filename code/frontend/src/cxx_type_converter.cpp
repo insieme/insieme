@@ -79,9 +79,9 @@ namespace conversion {
 		LOG_TYPE_CONVERSION(tagType, ty);
 
 		// if not a struct type we don't need to do anything more
-		if(!ty.isa<core::StructTypePtr>()) { return ty; }
+		if(!ty.isa<core::TagTypePtr>()) { return ty; }
 
-		core::StructTypePtr classType = ty.as<core::StructTypePtr>();
+		core::TagTypePtr classType = ty.as<core::TagTypePtr>();
 
 		// if is a c++ class, we need to annotate some stuff
 		if(llvm::isa<clang::RecordType>(tagType)) {
@@ -107,11 +107,11 @@ namespace conversion {
 				}
 
 				// if we have base classes, update the classType
-				assert(classType.isa<core::StructTypePtr>());
+				assert(classType.isa<core::TagTypePtr>());
 
 				// implant new parents list
 				classType =
-				    core::transform::replaceNode(mgr, core::StructTypeAddress(classType)->getParents(), builder.parents(parents)).as<core::StructTypePtr>();
+				    core::transform::replaceNode(mgr, core::TagTypeAddress(classType)->getStruct()->getParents(), builder.parents(parents)).as<core::TagTypePtr>();
 			}
 
 			//		//update name of class type

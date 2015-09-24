@@ -512,6 +512,7 @@ namespace encoder {
 
 	ADD_TYPE_CONVERTER(TypePtr);
 	ADD_TYPE_CONVERTER(GenericTypePtr);
+	ADD_TYPE_CONVERTER(TagTypePtr);
 
 } // end namespace lists
 } // end namespace core

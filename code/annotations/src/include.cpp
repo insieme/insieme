@@ -59,8 +59,6 @@ namespace c {
 		bool migrate(const NodeAnnotationPtr& ptr, const NodePtr& before, const NodePtr& after) const {
 			//   ==== this code is for the general case
 			if(hasIncludeAttached(before)) {
-				if(after.isa<core::StructTypePtr>() && after.as<core::StructTypePtr>()->getName()->getValue() == "A") { assert_fail(); }
-
 				attachInclude(after, getAttachedInclude(before));
 				return true;
 			} else {

@@ -296,6 +296,7 @@ namespace core {
 		TagTypePtr structType(const StringValuePtr& name, const vector<ParentPtr>& parents, const vector<FieldPtr>& fields) const;
 
 		TagTypePtr unionType(const vector<std::pair<StringValuePtr, TypePtr>>& fields) const;
+		TagTypePtr unionType(const StringValuePtr& name, const vector<FieldPtr>& fields) const;
 		TagTypePtr unionType(const vector<FieldPtr>& fields) const;
 
 		NamedValuePtr namedValue(const string& name, const ExpressionPtr& value) const;

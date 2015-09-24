@@ -340,6 +340,11 @@ namespace core {
 		return tagType(tag, tagTypeDefinition({tagTypeBinding(tag, unionRecord(fields))}));
 	}
 
+	TagTypePtr IRBuilderBaseModule::unionType(const StringValuePtr& name, const vector<FieldPtr>& fields) const {
+		auto tag = tagTypeReference(name->getValue());
+		return tagType(tag, tagTypeDefinition({tagTypeBinding(tag, unionRecord(name, fields))}));
+	}
+
 	TagTypePtr IRBuilderBaseModule::unionType(const vector<std::pair<StringValuePtr, TypePtr>>& union_fields) const {
 		auto fields = ::transform(union_fields, [&](const std::pair<StringValuePtr, TypePtr>& cur)->FieldPtr { return field(cur.first, cur.second); });
 		return unionType(fields);
