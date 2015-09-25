@@ -44,6 +44,7 @@
 #include "insieme/core/ir_builder.h"
 
 #include "insieme/core/lang/reference.h"
+#include "insieme/core/transform/node_replacer.h"
 
 #include "ir_node_test.inc"
 
@@ -327,6 +328,51 @@ namespace core {
 		basicTypeTests(funTypeF, true, toList(subNodesF));
 		basicTypeTests(funTypeG, true, toList(subNodesG));
 	}
+
+	TEST(TypeTest, TagTypeRecord) {
+
+		// create a manager for this test
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		auto isRecursive = [&](const TypePtr& type) {
+			return type.isa<TagTypePtr>() && type.as<TagTypePtr>()->isRecursive();
+		};
+
+		auto isNotRecursive = [&](const TypePtr& type) {
+			return !isRecursive(type);
+		};
+
+		EXPECT_PRED1(isNotRecursive, builder.parseType("int<4>"));
+		EXPECT_PRED1(isNotRecursive, builder.parseType("ref<int<4>>"));
+		EXPECT_PRED1(isNotRecursive, builder.parseType("struct { int<4> x; }"));
+		EXPECT_PRED1(isNotRecursive, builder.parseType("let f = struct { int<4> x; } in f"));
+
+		EXPECT_PRED1(isRecursive, builder.parseType("let f = struct { ref<f> x; } in f"));
+		EXPECT_PRED1(isRecursive, builder.parseType("let data = struct { ptr<data> x; } in data"));
+		EXPECT_PRED1(isRecursive, builder.parseType("let A, B = struct { ref<B> x; }, struct { ref<A> x; } in A"));
+		EXPECT_PRED1(isRecursive, builder.parseType("let A, B = struct { ref<B> x; }, struct { ref<A> x; } in B"));
+
+		EXPECT_PRED1(isRecursive, builder.parseType("let A, B = struct { ptr<B> x; }, struct { ptr<A> x; } in A"));
+		EXPECT_PRED1(isRecursive, builder.parseType("let A, B = struct { ptr<B> x; }, struct { ptr<A> x; } in B"));
+
+		EXPECT_PRED1(isNotRecursive, builder.parseType(
+				"let A = struct { ref<A> x; } in "
+				"let B = struct { ref<A> y; } in "
+				"B"
+		));
+
+		// check overloaded tag-type variables
+		auto tagType = builder.parseType(
+				"let A = struct { ref<A> x; } in "
+				"let B = struct { ref<A> y; } in "
+				"B"
+		).as<TagTypePtr>();
+		tagType = core::transform::replaceNode(manager, TagTypeAddress(tagType)->getTag(), builder.tagTypeReference("A")).as<TagTypePtr>();
+		EXPECT_PRED1(isNotRecursive, tagType);
+
+	}
+
 	//
 	// TEST(TypeTest, RecType) {
 	//

@@ -36,8 +36,12 @@
 
 #include "insieme/core/ir_types.h"
 
-#include "insieme/core/transform/node_mapper_utils.h"
+#include <set>
 
+#include "insieme/core/transform/node_mapper_utils.h"
+#include "insieme/core/transform/manipulation_utils.h"
+
+#include "insieme/core/ir_node_annotation.h"
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/lang/reference.h"
 
@@ -140,13 +144,19 @@ namespace core {
 					}
 				}
 
-				// check whether current node is a nested recursive type binding
-				if(auto binding = ptr.isa<TagTypeBindingPtr>()) {
-					return binding; // do not decent into this
+				// check whether current node is a nested expression
+				if(ptr.isa<ExpressionPtr>()) {
+					return ptr; // do not decent into this
 				}
 
 				// replace recursively
-				return ptr->substitute(manager, *this);
+				auto res = ptr->substitute(manager, *this);
+
+				// migrate annotations
+				transform::utils::migrateAnnotations(ptr, res);
+
+				// done
+				return res;
 			}
 
 			RecordPtr apply(const RecordPtr& node) {
@@ -163,29 +173,90 @@ namespace core {
 				)));
 	}
 
-	bool TagType::isRecursive() const {
-		bool found = false;
-		visitDepthFirstOncePrunable(getRecord(), [&](const NodePtr& cur) {
-			// check whether this is the tag
-			if (auto tag = cur.isa<TagTypeReferencePtr>() ) {
-				if (getDefinition().getDefinitionOf(tag)) {
-					found = true;
-					return true;
+	namespace {
+
+		template<template<typename T> class Ptr, typename Set>
+		void appendFreeTagTypeReferences(const Ptr<const Node>& root, Set& set) {
+			// collect free tag type references
+			if (auto tag = root.template isa<Ptr<const TagTypeReference>>()) {
+				set.insert(tag);
+				return;
+			}
+
+			// prune search descent
+			if (root.template isa<Ptr<const Expression>>()) return;
+
+			// skip tag type variable bindings
+			if (auto tagType = root.template isa<Ptr<const TagType>>()) {
+				appendFreeTagTypeReferences(Ptr<const Node>(tagType->getDefinition()), set);
+				return;
+			}
+
+			// handle nested definitions
+			if (auto def = root.template isa<Ptr<const TagTypeDefinition>>()) {
+
+				Set nested;
+				for(const auto& cur : def) {
+					appendFreeTagTypeReferences(Ptr<const Node>(cur->getRecord()),nested);
 				}
+
+				for(const auto& cur : def) {
+					nested.erase(cur->getTag());
+				}
+
+				// add nested tags to
+				set.insert(nested.begin(), nested.end());
+
+				// done
+				return;
 			}
 
-			// do not descent outside of tag-type definition
-			if (cur.isa<ExpressionPtr>()) return true;
-
-			// stop search if same tag is re-definied in a nested scope
-			if (auto type = cur.isa<TagTypePtr>()) {
-				return true;
+			// descent recursively
+			for(const auto& cur : root.getChildList()) {
+				appendFreeTagTypeReferences(cur, set);
 			}
+		}
 
-			// prune if found
-			return found;
-		});
-		return found;
+		template<template<typename T> class Ptr>
+		std::set<Ptr<const TagTypeReference>> getFreeTagTypeReferences(const Ptr<const Node>& root) {
+			std::set<Ptr<const TagTypeReference>> res;
+			appendFreeTagTypeReferences(root, res);
+			return res;
+		}
+
+	}
+
+
+	bool TagType::isRecursive() const {
+
+		// the marker type to annotate the result of the is-recursive check
+		struct RecursiveTypeMarker {
+			bool value;
+			bool operator==(const RecursiveTypeMarker& other) const {
+				return value == other.value;
+			}
+		};
+
+		// check potential annotation
+		if (this->hasAttachedValue<RecursiveTypeMarker>()) {
+			return this->getAttachedValue<RecursiveTypeMarker>().value;
+		}
+
+		bool res = false;
+		for(const auto& cur : this->getDefinition()) {
+			auto set = getFreeTagTypeReferences(cur->getRecord().as<NodePtr>());
+			auto pos = set.find(getTag());
+			if (pos != set.end()) {
+				res = true;
+				break;
+			}
+		}
+
+		// attach result to node
+		this->attachValue((RecursiveTypeMarker){res});
+
+		// return result
+		return res;
 	}
 
 	std::ostream& TagType::printTo(std::ostream & out) const {
