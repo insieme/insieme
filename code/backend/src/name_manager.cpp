@@ -112,7 +112,7 @@ namespace backend {
 
 		// for recursive types => use record definition
 		if(auto tagType = ptr.isa<TagTypePtr>()) {
-			return getName(tagType->getRecord(), fragment);
+			return getName(tagType->getRecord(), ((fragment == "") ? "type" : fragment));
 		}
 
 		// test whether a name has already been picked

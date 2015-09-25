@@ -305,7 +305,6 @@ namespace backend {
 
 		const TypeInfo* TypeInfoStore::resolveTypeInternal(const core::TypePtr& type) {
 
-
 			// - Installed Type Handlers -------------------------------------------------------------------
 
 			// try resolving it using type handlers
@@ -1339,15 +1338,15 @@ namespace backend {
 			// B) unroll types and add definitions
 			for_each(ptr->getDefinitions(), [&](const core::TagTypeBindingPtr& cur) {
 				// obtain peeled type
-				core::TypePtr recType = core::TagType::get(nodeManager, cur->getTag(), ptr);
-				core::TypePtr peeled = ptr->peelOnce(nodeManager, cur->getTag());
+				core::TagTypePtr recType = core::TagType::get(nodeManager, cur->getTag(), ptr);
+				core::TagTypePtr peeled = ptr->peelOnce(nodeManager, cur->getTag());
 
 				// fix name of peeled struct
-				nameManager.setName(peeled, nameManager.getName(recType));
+				nameManager.setName(peeled->getRecord(), nameManager.getName(recType));
 
 				// get reference to pointer within map (needs to be updated)
 				TypeInfo*& curInfo = const_cast<TypeInfo*&>(typeInfos.at(recType));
-				TypeInfo* newInfo = const_cast<TypeInfo*>(resolveType(peeled));
+				TagTypeInfo* newInfo = const_cast<TagTypeInfo*>(resolveType(peeled));
 
 				assert_true(curInfo && newInfo) << "Both should be available now!";
 				assert(curInfo != newInfo);
