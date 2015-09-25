@@ -82,8 +82,8 @@ namespace checks {
 		EXPECT_EQ("0", toString(addr));
 		NodeAddress& adr2 = addr;
 		EXPECT_EQ("0", toString(adr2));
-		EXPECT_EQ("ERROR:   [00001] - TYPE / INVALID_NUMBER_OF_ARGUMENTS @ (0) - MSG: I hate it!", toString(msgA));
-		EXPECT_EQ("WARNING: [00002] - TYPE / INVALID_ARGUMENT_TYPE @ (0) - MSG: Don't know - I'm scared!", toString(msgB));
+		EXPECT_EQ("ERROR:   [00001] - Unknown Error CODE @ (0) - MSG: I hate it!", toString(msgA));
+		EXPECT_EQ("WARNING: [00002] - Unknown Error CODE @ (0) - MSG: Don't know - I'm scared!", toString(msgB));
 
 		MessageList res = check(type, make_check<AllFine>());
 		EXPECT_EQ(MessageList(), res);

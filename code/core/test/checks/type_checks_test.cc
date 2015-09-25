@@ -300,6 +300,39 @@ namespace checks {
 		EXPECT_PRED2(containsMSG, check(err5), Message(NodeAddress(err5), EC_TYPE_ILLEGAL_OBJECT_TYPE, "", Message::ERROR));
 	}
 
+	TEST(FreeTagTypeReferences, Basic) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		// create a few parent nodes
+		auto ok1 = builder.genericType("A");
+		auto ok2 = builder.parseType("struct { int<4> x; }");
+		auto ok3 = builder.parseType("let list = struct { ref<list> next; }; list");
+		auto ok4 = builder.parseType("let list = struct { ptr<list> next; }; list");
+
+		std::map<string,NodePtr> symbols;
+		symbols["a"] = builder.tagTypeReference("a");
+
+		auto err0 = builder.parseType("a", symbols);
+		auto err1 = builder.parseType("ref<a>", symbols);
+		auto err2 = builder.parseType("struct { ref<a> x; }", symbols);
+		auto err3 = builder.parseType("let list = struct { ref<list> next; ref<a> value; }; list", symbols);
+		auto err4 = builder.parseExpr("let list = struct { ref<list> next; ref<a> value; }; lit(\"A\" : list)", symbols);
+
+		// check the correct types
+		EXPECT_TRUE(check(ok1).empty()) << check(ok1);
+		EXPECT_TRUE(check(ok2).empty()) << check(ok2);
+		EXPECT_TRUE(check(ok3).empty()) << check(ok3);
+		EXPECT_TRUE(check(ok4).empty()) << check(ok4);
+
+		// check the invalid types
+		EXPECT_PRED2(containsMSG, check(err0), Message(NodeAddress(err0), EC_TYPE_FREE_TAG_TYPE_REFERENCE, "", Message::ERROR));
+		EXPECT_PRED2(containsMSG, check(err1), Message(NodeAddress(err1).getAddressOfChild(2,0), EC_TYPE_FREE_TAG_TYPE_REFERENCE, "", Message::ERROR));
+		EXPECT_PRED2(containsMSG, check(err2), Message(NodeAddress(err2).getAddressOfChild(1,0,1,1,0,1,2,0), EC_TYPE_FREE_TAG_TYPE_REFERENCE, "", Message::ERROR));
+		EXPECT_PRED2(containsMSG, check(err3), Message(NodeAddress(err3).getAddressOfChild(1,0,1,1,1,1,2,0), EC_TYPE_FREE_TAG_TYPE_REFERENCE, "", Message::ERROR));
+		EXPECT_PRED2(containsMSG, check(err4), Message(NodeAddress(err4).getAddressOfChild(0,1,0,1,1,1,1,2,0), EC_TYPE_FREE_TAG_TYPE_REFERENCE, "", Message::ERROR));
+	}
+
 	TEST(StructExprTypeCheck, Basic) {
 		NodeManager manager;
 		IRBuilder builder(manager);

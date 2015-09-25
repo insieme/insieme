@@ -44,6 +44,8 @@ namespace std {
 		out << "[" << format("%05d", (unsigned)code) << "] - ";
 		// clang-format off
 		switch(code) {
+		#define GROUP(KIND,NUM)                                                                                                                               \
+			case insieme::core::checks::EC_##KIND##_GROUP: return out << #KIND " - Group";
 		#define CODE(KIND, NAME)                                                                                                                               \
 			case insieme::core::checks::EC_##KIND##_##NAME: return out << #KIND " / " #NAME; 
 		#include "insieme/core/checks/error_codes.inc"

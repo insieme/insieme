@@ -137,6 +137,44 @@ namespace checks {
 		return res;
 	}
 
+	OptionalMessageList FreeTagTypeReferencesCheck::visitTagTypeReference(const TagTypeReferenceAddress& address) {
+		OptionalMessageList res;
+
+		// not interested in definition point
+		if (!address.isRoot() && address.getParentNode().isa<TagTypeBindingPtr>()) return res;
+		if (!address.isRoot() && address.getParentNode().isa<TagTypePtr>()) return res;
+
+		// find enclosing context
+		NodeAddress context = address;
+		while (true) {
+
+			// get next enclosing context
+			while(!context.isRoot() && !context.getParentNode().isa<ExpressionPtr>() && !context.isa<TagTypeDefinitionPtr>()) {
+				context = context.getParentAddress();
+			}
+
+			// check potential enclosing tag type definition
+			if (auto def = context.isa<TagTypeDefinitionPtr>()) {
+				if (def->getDefinitionOf(address)) {
+					return res;		// all fine
+				}
+				// => check next enclosing context
+				if (!context.isRoot()) {
+					context = context.getParentAddress();
+					continue;
+				}
+			}
+
+			// in all other cases there is a free definition
+			add(res, Message(address, EC_TYPE_FREE_TAG_TYPE_REFERENCE,
+					 format("Free tag type reference %s found in %s", *address, *context),
+					 Message::ERROR)
+			);
+
+			return res;
+		}
+	}
+
 	OptionalMessageList CallExprTypeCheck::visitCallExpr(const CallExprAddress& address) {
 		NodeManager& manager = address->getNodeManager();
 		OptionalMessageList res;

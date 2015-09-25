@@ -49,46 +49,51 @@ namespace checks {
 	namespace {
 
 		CheckPtr buildFullCheck() {
-			std::vector<CheckPtr> checks;
-			checks.push_back(make_check<KeywordCheck>());
-			checks.push_back(make_check<FunctionKindCheck>());
-			checks.push_back(make_check<ParentCheck>());
-			checks.push_back(make_check<CallExprTypeCheck>());
-			checks.push_back(make_check<BindExprTypeCheck>());
-			checks.push_back(make_check<ExternalFunctionTypeCheck>());
-			checks.push_back(make_check<ReturnTypeCheck>());
-			checks.push_back(make_check<LambdaTypeCheck>());
-			checks.push_back(make_check<DeclarationStmtTypeCheck>());
-			checks.push_back(make_check<IfConditionTypeCheck>());
-			checks.push_back(make_check<ForStmtTypeCheck>());
-			checks.push_back(make_check<WhileConditionTypeCheck>());
-			checks.push_back(make_check<SwitchExpressionTypeCheck>());
-			checks.push_back(make_check<StructExprTypeCheck>());
-			checks.push_back(make_check<MemberAccessElementTypeCheck>());
-			checks.push_back(make_check<ComponentAccessTypeCheck>());
-			checks.push_back(make_check<BuiltInLiteralCheck>());
-			checks.push_back(make_check<RefCastCheck>());
-			checks.push_back(make_check<IllegalNumCastCheck>());
-			checks.push_back(make_check<IllegalNumTypeToIntCheck>());
-			checks.push_back(make_check<CastCheck>());
-			checks.push_back(make_check<GenericZeroCheck>());
-			checks.push_back(make_check<ArrayTypeCheck>());
-			checks.push_back(make_check<GenericOpsCheck>());
+			std::vector<CheckPtr> context_free_checks;
+			context_free_checks.push_back(make_check<KeywordCheck>());
+			context_free_checks.push_back(make_check<FunctionKindCheck>());
+			context_free_checks.push_back(make_check<ParentCheck>());
+			context_free_checks.push_back(make_check<CallExprTypeCheck>());
+			context_free_checks.push_back(make_check<BindExprTypeCheck>());
+			context_free_checks.push_back(make_check<ExternalFunctionTypeCheck>());
+			context_free_checks.push_back(make_check<ReturnTypeCheck>());
+			context_free_checks.push_back(make_check<LambdaTypeCheck>());
+			context_free_checks.push_back(make_check<DeclarationStmtTypeCheck>());
+			context_free_checks.push_back(make_check<IfConditionTypeCheck>());
+			context_free_checks.push_back(make_check<ForStmtTypeCheck>());
+			context_free_checks.push_back(make_check<WhileConditionTypeCheck>());
+			context_free_checks.push_back(make_check<SwitchExpressionTypeCheck>());
+			context_free_checks.push_back(make_check<StructExprTypeCheck>());
+			context_free_checks.push_back(make_check<MemberAccessElementTypeCheck>());
+			context_free_checks.push_back(make_check<ComponentAccessTypeCheck>());
+			context_free_checks.push_back(make_check<BuiltInLiteralCheck>());
+			context_free_checks.push_back(make_check<RefCastCheck>());
+			context_free_checks.push_back(make_check<IllegalNumCastCheck>());
+			context_free_checks.push_back(make_check<IllegalNumTypeToIntCheck>());
+			context_free_checks.push_back(make_check<CastCheck>());
+			context_free_checks.push_back(make_check<GenericZeroCheck>());
+			context_free_checks.push_back(make_check<ArrayTypeCheck>());
+			context_free_checks.push_back(make_check<GenericOpsCheck>());
 
-			checks.push_back(make_check<UndeclaredVariableCheck>());
+			context_free_checks.push_back(make_check<UndeclaredVariableCheck>());
 
-			checks.push_back(make_check<ScalarArrayIndexRangeCheck>());
-			checks.push_back(make_check<ArrayCreateArgumentCheck>());
-			// checks.push_back(make_check<UndefinedCheck>());
-			checks.push_back(make_check<FreeBreakInsideForLoopCheck>());
-			checks.push_back(make_check<MissingReturnStmtCheck>());
+			context_free_checks.push_back(make_check<ScalarArrayIndexRangeCheck>());
+			context_free_checks.push_back(make_check<ArrayCreateArgumentCheck>());
+			// context_free_checks.push_back(make_check<UndefinedCheck>());
+			context_free_checks.push_back(make_check<FreeBreakInsideForLoopCheck>());
+			context_free_checks.push_back(make_check<MissingReturnStmtCheck>());
 
-			checks.push_back(make_check<LiteralFormatCheck>());
+			context_free_checks.push_back(make_check<LiteralFormatCheck>());
+
+			// some context-sensitive checks
+			std::vector<CheckPtr> context_sensitive_checks;
+			context_sensitive_checks.push_back(make_check<FreeTagTypeReferencesCheck>());
 
 			// assemble the IR check list
-			CheckPtr recursive = makeVisitOnce(combine(checks));
-
-			return combine(toVector<CheckPtr>(recursive));
+			return combine(toVector<CheckPtr>(
+					makeVisitOnce(combine(context_free_checks)),
+					makeRecursive(combine(context_sensitive_checks))
+			));
 		}
 	}
 

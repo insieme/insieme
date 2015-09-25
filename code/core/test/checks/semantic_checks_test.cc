@@ -148,7 +148,7 @@ namespace checks {
 		auto checkResult = check(stmt, missingReturnStmtCheck);
 		EXPECT_EQ(checkResult.size(), 1);
 		EXPECT_EQ(toString(checkResult[0]),
-		          "ERROR:   [00047] - SEMANTIC / MISSING_RETURN_STMT @ (0-0) - MSG: Not all control paths of non-unit lambdaExpr return a value.");
+		          "ERROR:   [04006] - SEMANTIC / MISSING_RETURN_STMT @ (0-0) - MSG: Not all control paths of non-unit lambdaExpr return a value.");
 	}
 
 	TEST(MissingReturnStmtCheck, IfCorrect) {
@@ -199,7 +199,7 @@ namespace checks {
 		auto checkResult = check(stmt, missingReturnStmtCheck);
 		EXPECT_EQ(checkResult.size(), 1);
 		EXPECT_EQ(toString(checkResult[0]),
-		          "ERROR:   [00047] - SEMANTIC / MISSING_RETURN_STMT @ (0-0) - MSG: Not all control paths of non-unit lambdaExpr return a value.");
+		          "ERROR:   [04006] - SEMANTIC / MISSING_RETURN_STMT @ (0-0) - MSG: Not all control paths of non-unit lambdaExpr return a value.");
 	}
 
 	TEST(MissingReturnStmtCheck, WhileCorrect) {
@@ -248,7 +248,7 @@ namespace checks {
 		auto checkResult = check(stmt, missingReturnStmtCheck);
 		EXPECT_EQ(checkResult.size(), 1);
 		EXPECT_EQ(toString(checkResult[0]),
-		          "ERROR:   [00047] - SEMANTIC / MISSING_RETURN_STMT @ (0-0) - MSG: Not all control paths of non-unit lambdaExpr return a value.");
+		          "ERROR:   [04006] - SEMANTIC / MISSING_RETURN_STMT @ (0-0) - MSG: Not all control paths of non-unit lambdaExpr return a value.");
 	}
 
 	TEST(MissingReturnStmtCheck, Throw) {
@@ -322,7 +322,7 @@ namespace checks {
 		auto checkResult = check(stmt, missingReturnStmtCheck);
 		EXPECT_EQ(checkResult.size(), 1);
 		EXPECT_EQ(toString(checkResult[0]),
-		          "ERROR:   [00047] - SEMANTIC / MISSING_RETURN_STMT @ (0-0) - MSG: Not all control paths of non-unit lambdaExpr return a value.");
+		          "ERROR:   [04006] - SEMANTIC / MISSING_RETURN_STMT @ (0-0) - MSG: Not all control paths of non-unit lambdaExpr return a value.");
 	}
 
 	TEST(MissingReturnStmtCheck, SwitchErrorDefaultMissing) {
@@ -348,7 +348,7 @@ namespace checks {
 		auto checkResult = check(stmt, missingReturnStmtCheck);
 		EXPECT_EQ(checkResult.size(), 1);
 		EXPECT_EQ(toString(checkResult[0]),
-		          "ERROR:   [00047] - SEMANTIC / MISSING_RETURN_STMT @ (0-0) - MSG: Not all control paths of non-unit lambdaExpr return a value.");
+		          "ERROR:   [04006] - SEMANTIC / MISSING_RETURN_STMT @ (0-0) - MSG: Not all control paths of non-unit lambdaExpr return a value.");
 	}
 
 	TEST(MissingReturnStmtCheck, SwitchCorrectInLoop) {
@@ -414,7 +414,7 @@ namespace checks {
 			auto checkResult = check(stmt_err, arrayCreateArgumentCheck);
 			EXPECT_EQ(checkResult.size(), 1);
 			EXPECT_EQ(toString(checkResult[0]),
-					"ERROR:   [00044] - SEMANTIC / ARRAY_CREATE_INVALID_ARGUMENT @ (0-0-2-0-1-2-1-1-2) - MSG: Invalid initializer argument in array_create call.");
+					"ERROR:   [04003] - SEMANTIC / ARRAY_CREATE_INVALID_ARGUMENT @ (0-0-2-0-1-2-1-1-2) - MSG: Invalid initializer argument in array_create call.");
 		}
 	}
 
