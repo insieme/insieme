@@ -223,42 +223,41 @@ namespace printer {
 		visitChildList(*builder, tupleTy->getElementTypes(), tupleTy, "elemTy");
 	}
 
-	void ASTPrinter::visitNamedCompositeType(const NamedCompositeTypePtr& compTy) {
+	void ASTPrinter::visitRecord(const RecordPtr& record) {
 		std::string name;
-		if(dynamic_pointer_cast<const StructType>(compTy)) {
+		if(dynamic_pointer_cast<const Struct>(record)) {
 			name = "struct";
 		} else {
 			name = "union";
 		}
 
-		TypeNode structNode(NODE_ID(compTy), name);
-		checkSemanticErrors(errors, structNode, compTy);
+		TypeNode structNode(NODE_ID(record), name);
+		checkSemanticErrors(errors, structNode, record);
 		builder->addNode(structNode);
 
-		std::for_each(compTy->getEntries().begin(), compTy->getEntries().end(), [this, compTy](const NamedTypePtr& cur) {
-			this->builder->addLink(DotLink(NODE_ID(compTy), NODE_ID(cur->getType()), cur->getName()->getValue()));
-			// TODO: VISIT ANNOTATIONS IN THE POINTER
+		for_each(record->getFields(), [this, record](const FieldPtr& cur) {
+			this->builder->addLink(DotLink(NODE_ID(record), NODE_ID(cur->getType()), cur->getName()->getValue()));
 		});
-		visitAnnotationList(*builder, NODE_ID(compTy), compTy->getAnnotations());
+		visitAnnotationList(*builder, NODE_ID(record), record->getAnnotations());
 	}
 
-	void ASTPrinter::visitRecType(const RecTypePtr& recTy) {
-		TypeNode recNode(NODE_ID(recTy), "rec");
-		checkSemanticErrors(errors, recNode, recTy);
-		builder->addNode(recNode);
+	void ASTPrinter::visitTagType(const TagTypePtr& tagTy) {
+		TypeNode tagNode(NODE_ID(tagTy), "tag");
+		checkSemanticErrors(errors, tagNode, tagTy);
+		builder->addNode(tagNode);
 
-		visitAnnotationList(*builder, NODE_ID(recTy), recTy->getAnnotations());
-		visitChildList(*builder, toVector(recTy->getTypeVariable()), recTy, "var");
-		visitChildList(*builder, toVector(recTy->getDefinition()), recTy, "def");
+		visitAnnotationList(*builder, NODE_ID(tagTy), tagTy->getAnnotations());
+		visitChildList(*builder, toVector(tagTy->getTag()), tagTy, "var");
+		visitChildList(*builder, toVector(tagTy->getDefinition()), tagTy, "def");
 	}
 
-	void ASTPrinter::visitRecTypeDefinition(const RecTypeDefinitionPtr& recTy) {
-		TypeNode recNode(NODE_ID(recTy), "rec_def");
-		checkSemanticErrors(errors, recNode, recTy);
-		builder->addNode(recNode);
+	void ASTPrinter::visitTagTypeDefinition(const TagTypeDefinitionPtr& tagTy) {
+		TypeNode tagNode(NODE_ID(tagTy), "tag_def");
+		checkSemanticErrors(errors, tagNode, tagTy);
+		builder->addNode(tagNode);
 
 		unsigned num = 0;
-		std::for_each(recTy->getDefinitions().begin(), recTy->getDefinitions().end(), [this, recTy, &num](const RecTypeBindingPtr& cur) {
+		for_each(tagTy->getDefinitions(), [this, tagTy, &num](const TagTypeBindingPtr& cur) {
 			size_t interId = dummyNodeID++;
 
 			JunctionNode node(interId);
@@ -267,16 +266,15 @@ namespace printer {
 			node[NodeProperty::WIDTH] = ".25";
 			this->builder->addNode(node);
 			std::string label = "def";
-			if(recTy->getDefinitions().size() > 1) { label += "_" + utils::numeric_cast<std::string>(num++); }
+			if(tagTy->getDefinitions().size() > 1) { label += "_" + utils::numeric_cast<std::string>(num++); }
 
-			DotLink link(NODE_ID(recTy), interId, label);
+			DotLink link(NODE_ID(tagTy), interId, label);
 			this->builder->addLink(link);
-			this->builder->addLink(DotLink(interId, NODE_ID(cur->getVariable()), ""));
-			this->builder->addLink(DotLink(interId, NODE_ID(cur->getType()), ""));
-			// TODO: VISIT ANNOTATIONS IN THE POINTER
+			this->builder->addLink(DotLink(interId, NODE_ID(cur->getTag()), ""));
+			this->builder->addLink(DotLink(interId, NODE_ID(cur->getRecord()), ""));
 		});
 
-		visitAnnotationList(*builder, NODE_ID(recTy), recTy->getAnnotations());
+		visitAnnotationList(*builder, NODE_ID(tagTy), tagTy->getAnnotations());
 	}
 
 	void ASTPrinter::visitCompoundStmt(const CompoundStmtPtr& comp) {

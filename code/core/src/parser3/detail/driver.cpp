@@ -667,6 +667,13 @@ namespace parser3 {
 			// ignore wildcard for unused variables
 			if(name == "_") { return; }
 
+			// annotate type name
+			auto node = factory();
+			annotations::attachName(node, name);
+			if(auto tagType = node.isa<TagTypePtr>()) {
+				annotations::attachName(tagType->getRecord(), name);
+			}
+
 			if(!scopes.add_type(name, factory)) { error(l, format("type name %s redefined", name)); }
 		}
 

@@ -138,7 +138,8 @@ namespace backend {
 			result_type resolveType(const T& type) {
 				// lookup type information using internal mechanism
 				const TypeInfo* info = resolveInternal(type);
-				assert(dynamic_cast<result_type>(info));
+				assert_true(info);
+				assert_true(dynamic_cast<result_type>(info));
 				return static_cast<result_type>(info);
 			}
 
@@ -1321,7 +1322,7 @@ namespace backend {
 				declaration->appendCode(manager->create<c_ast::TypeDeclaration>(cType));
 
 				// create type info block
-				TypeInfo* info = new TypeInfo();
+				TypeInfo* info = new TagTypeInfo();
 				info->declaration = declaration;
 				info->lValueType = cType;
 				info->rValueType = cType;

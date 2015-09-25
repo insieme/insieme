@@ -110,6 +110,11 @@ namespace backend {
 		// let variables be handled by the specialized variant
 		if(ptr->getNodeType() == core::NT_Variable) { return getName(ptr.as<core::VariablePtr>()); }
 
+		// for recursive types => use record definition
+		if(auto tagType = ptr.isa<TagTypePtr>()) {
+			return getName(tagType->getRecord(), fragment);
+		}
+
 		// test whether a name has already been picked
 		auto it = globalScope.names.find(ptr);
 		if(it != globalScope.names.end()) { return it->second; }
