@@ -147,7 +147,8 @@
   PARENT        ".as("
   CAST          "CAST("
   INFINITE      "#inf"
-  LET           "let"    
+  LET           "let"
+  IN            "in"  
   USING         "using"    
   AUTO          "auto"    
   LAMBDA        "lambda"
@@ -266,15 +267,17 @@ start_rule : TYPE_ONLY declarations type             { RULE if(!driver.where_err
 
 /* ~~~~~~~~~~~~~~~~~~~  LET ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-let_defs : "lambda" lambda_expression ";" 
+let_end : ";" | "in";
+           
+let_defs : "lambda" lambda_expression let_end 
          | "lambda" lambda_expression "," let_defs
-		     | "function" fun_expression ";"
-		     | "function" fun_expression "," let_defs
-         | "expr" expression ";" { RULE driver.add_let_expression(@1, $2); }
+		 | "function" fun_expression let_end
+		 | "function" fun_expression "," let_defs
+         | "expr" expression let_end { RULE driver.add_let_expression(@1, $2); }
          | "expr" expression "," let_defs { RULE driver.add_let_expression(@1, $2); }
-         | type ";" { RULE driver.add_let_type(@1, $1); }
+         | type let_end { RULE driver.add_let_type(@1, $1); }
          | type "," { RULE driver.add_let_type(@1, $1); } let_defs
-         | "recFunc" "identifier" {} "{" lambdaBindList "}" ";" { RULE
+         | "recFunc" "identifier" {} "{" lambdaBindList "}" let_end { RULE
                 driver.is_rec_func = 1;
                 driver.rec_call_func = $2;
                 }
