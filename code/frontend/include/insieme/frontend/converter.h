@@ -70,11 +70,14 @@ namespace frontend {
 	*/
 	tu::IRTranslationUnit convert(core::NodeManager& manager, const path& unit, const ConversionSetup& setup = ConversionSetup());
 
-	// Forward Declaration
+	// Forward Declarations
 	namespace state {
 		class VariableManager;
 		class FunctionManager;
 		class RecordManager;
+	}
+	namespace utils {
+		class HeaderTagger;
 	}
 } // end namespace frontend
 } // end namespace insieme
@@ -140,6 +143,10 @@ namespace conversion {
 		/// A state object which manages mappings from clang record types to IR GenericTypes
 		///
 		std::shared_ptr<state::RecordManager> recordManPtr;
+		
+		/// An object which handles attaching tags to literals generated from symbols defined in the standard library
+		///
+		std::shared_ptr<utils::HeaderTagger> headerTaggerPtr;
 
 		/**
 		 * IR building and managing tools
@@ -221,6 +228,13 @@ namespace conversion {
 		 */
 		core::TypePtr convertVarType(const clang::QualType& type) const;
 		
+		
+		/**
+		 * Tag symbols from std libs with the appropriate header information
+		 * @param node the node to (potentially) tag
+		 * @param decl the clang decl this node is derived from
+		 */
+		void applyHeaderTagging(const core::NodePtr& node, const clang::Decl* decl) const;
 
 		/**
 		 * Print diagnosis errors, warnings stored during translation

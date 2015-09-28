@@ -40,12 +40,6 @@
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wstrict-aliasing"
-#include <clang/AST/Decl.h>
-#include <clang/AST/ASTContext.h>
-#pragma GCC diagnostic pop
-
 #include "insieme/utils/logging.h"
 #include "insieme/core/ir_node.h"
 #include "insieme/annotations/c/include.h"
@@ -240,13 +234,6 @@ string HeaderTagger::getTopLevelInclude(const clang::SourceLocation& includeLoca
 
 		return ""; // this happens when is declared in a header which is not system header
 	}
-
-	/*
-	// we already visited all the headers and we are in the .c/.cpp file
-	if (!isHeaderFile(sm.getPresumedLoc(includeLoc).getFilename())) {
-	    return ploc.getFilename();
-	}
-	*/
 	return "";
 }
 
@@ -263,16 +250,6 @@ boost::optional<fs::path> HeaderTagger::toIntrinsicHeader(const fs::path& path) 
 	static const boost::optional<fs::path> fail;
 	fs::path filename = path.filename();
 	return (!filename.empty() && ba::ends_with(filename.string(), "intrin.h")) ? (filename) : fail;
-}
-
-namespace {
-
-	boost::optional<std::string> isOCLHeader(const fs::path& path) {
-		std::string name = path.filename().string();
-		if(name == "cl_platform.h") { return std::string("CL/cl_platform.h"); }
-		if(name == "cl.h") { return std::string("CL/cl.h"); }
-		return boost::optional<std::string>();
-	}
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -312,11 +289,6 @@ void HeaderTagger::addHeaderForDecl(const core::NodePtr& node, const clang::Decl
 	// get absolute path of header file
 	fs::path header = fs::canonical(fileName);
 
-	if(auto oclHeader = isOCLHeader(header)) {
-		VLOG(2) << "OCL		header to be attached: " << oclHeader;
-		insieme::annotations::c::attachInclude(node, *oclHeader);
-		return;
-	}
 	if(auto stdLibHeader = toStdLibHeader(header)) {
 		header = *stdLibHeader;
 	} else if(auto interceptedLibHeader = toInterceptedLibHeader(header)) {

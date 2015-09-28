@@ -135,6 +135,8 @@ namespace conversion {
 		varManPtr = std::make_shared<state::VariableManager>(*this);
 		funManPtr = std::make_shared<state::FunctionManager>(*this);
 		recordManPtr = std::make_shared<state::RecordManager>(*this);
+		headerTaggerPtr = std::make_shared<utils::HeaderTagger>(setup.getSystemHeadersDirectories(), setup.getInterceptedHeaderDirs(),
+			                                                    setup.getIncludeDirectories(), getCompiler().getSourceManager());
 
 		declConvPtr = std::make_shared<DeclConverter>(*this);
 		if(translationUnit.isCxx()) {
@@ -249,6 +251,19 @@ namespace conversion {
 		utils::attachLocationFromClang(node, getSourceManager(), loc.first, loc.second);
 
 		return node;
+	}
+	
+	void Converter::applyHeaderTagging(const core::NodePtr& node, const clang::Decl* decl) const {
+		VLOG(2) << "Apply header tagging on " << dumpDetailColored(node) << " with decl\n" << dumpClang(decl);
+		if(headerTaggerPtr->isDefinedInSystemHeader(decl)) {
+			VLOG(2) << "-> Is defined in system header!";
+ 			headerTaggerPtr->addHeaderForDecl(node, decl);
+			if(annotations::c::hasIncludeAttached(node)) {
+				VLOG(2) << "-> annotated with: " << annotations::c::getAttachedInclude(node);
+			} else {
+				VLOG(2) << "-> NOT annotated!";
+			}
+		}
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -371,6 +371,10 @@ namespace conversion {
 			auto compoundName = useName ? builder.stringValue(name) : builder.stringValue("");
 			core::TagTypePtr recordType = clangRecordTy->isUnionType() ? builder.unionType(compoundName, recordMembers)
 				                                                       : builder.structType(compoundName, recordMembers);
+			// attach necessary information for types defined in library headers
+			converter.applyHeaderTagging(recordType, clangRecordTy->getDecl());
+			core::annotations::attachName(recordType, clangRecordTy->getDecl()->getNameAsString());
+
 			// add type to ir translation unit
 			converter.getIRTranslationUnit().addType(genTy, recordType);
 			return genTy;
@@ -382,12 +386,14 @@ namespace conversion {
 		LOG_TYPE_CONVERSION(tagType, retTy);
 
 		if(auto clangRecTy = llvm::dyn_cast<RecordType>(tagType)) {
-			return handleRecordType(converter, clangRecTy);
+			retTy = handleRecordType(converter, clangRecTy);
 		} else if(auto clangEnumTy = llvm::dyn_cast<EnumType>(tagType)) {
-			return handleEnumType(converter, clangEnumTy);
+			retTy = handleEnumType(converter, clangEnumTy);
 		} else {
 			frontend_assert(false) << "TagType not implemented.";
 		}
+
+		converter.applyHeaderTagging(retTy, tagType->getDecl());
 
 		return retTy;
 	}

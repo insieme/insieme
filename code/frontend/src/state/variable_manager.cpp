@@ -68,6 +68,7 @@ namespace state {
 	void VariableManager::insert(const clang::VarDecl* varDecl, const core::ExpressionPtr& var) {
 		if(varDecl->hasGlobalStorage()) frontend_assert(storage.size() == 1) << "Global variable not inserted at global scope";
 		frontend_assert(!::containsKey(storage.back().variables, varDecl)) << "Trying to insert variable already declared previously: "<< dumpClang(varDecl);
+		converter.applyHeaderTagging(var, varDecl);
 		storage.back().variables[varDecl] = var;
 	}
 

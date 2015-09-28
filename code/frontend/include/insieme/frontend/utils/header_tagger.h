@@ -41,7 +41,6 @@
 #include <boost/algorithm/string.hpp>
 
 #include "insieme/frontend/clang.h"
-
 #include "insieme/core/forward_decls.h"
 
 namespace clang {
@@ -106,11 +105,10 @@ class HeaderTagger {
 	HeaderTagger(const vector<fs::path>& stdLibDirs, const vector<fs::path>& interceptedHeaderDirs, const vector<fs::path>& userIncludeDirs,
 	             const clang::SourceManager& srcMgr);
 
-
 	/**
-	 *	asks whenever this declaration is in a system header,
-	 *	@param the declaration we are asking for
-	 *	@whenever is a system header
+	 * Check whether this declaration is in a system header,
+	 * @param decl the declaration we are asking for
+	 * @return is a system header
 	 */
 	bool isDefinedInSystemHeader(const clang::Decl* decl) const;
 
@@ -120,8 +118,6 @@ class HeaderTagger {
 	 *
 	 * @param node the node to be annotated
 	 * @param decl the declaration this node has been derived from
-	 * @param the header tagger which stores all information about headers
-	 * @param whenever we want to annotate user defined headers, for explicit code sections interception
 	 */
 	void addHeaderForDecl(const core::NodePtr& node, const clang::Decl* decl, bool attachUserDefined = false) const;
 };

@@ -147,11 +147,12 @@ namespace conversion {
 		converter.trackSourceLocation(var);
 		auto convertedVar = convertVarDecl(var);
 		auto globalLit = builder.literal(convertedVar.first->getType(), utils::getNameForGlobal(var, converter.getSourceManager()));
+		converter.applyHeaderTagging(globalLit, var);
+		// handle pragmas attached to decls
 		globalLit = pragma::handlePragmas({globalLit}, var, converter).front().as<core::LiteralPtr>();
 		converter.getVarMan()->insert(var, globalLit);
 		auto init = (var->getInit()) ? converter.convertExpr(var->getInit()) : builder.undefined(core::lang::ReferenceType(globalLit->getType()).getElementType());
 		converter.getIRTranslationUnit().addGlobal(globalLit, init);
-		// handle pragmas attached to decls
 		converter.untrackSourceLocation();
 	}
 	
@@ -180,7 +181,9 @@ namespace conversion {
 		// convert prototype
 		auto funType = converter.convertType(funcDecl->getType()).as<core::FunctionTypePtr>();
 		core::LiteralPtr irLit = builder.literal(funcDecl->getNameAsString(), funType);
+		// add required annotations
 		if(inExternC) { annotations::c::markAsExternC(irLit); }
+		converter.applyHeaderTagging(irLit, funcDecl->getCanonicalDecl());
 		// insert first before converting the body - skip if we already handled this decl
 		if(!converter.getFunMan()->contains(funcDecl->getCanonicalDecl())) converter.getFunMan()->insert(funcDecl->getCanonicalDecl(), irLit);
 
@@ -192,7 +195,6 @@ namespace conversion {
 				converter.getIRTranslationUnit().addFunction(irLit, irFunc);
 			}
 		}
-
 
 		converter.untrackSourceLocation();
 	}
