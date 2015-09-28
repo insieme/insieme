@@ -472,6 +472,14 @@ namespace conversion {
 				return core::lang::buildPtrOperation(op, expr);
 			}
 
+			switch(op) {
+			case core::lang::BasicGenerator::Operator::PostInc: return builder.postInc(expr);
+			case core::lang::BasicGenerator::Operator::PostDec: return builder.postDec(expr);
+			case core::lang::BasicGenerator::Operator::PreInc: return builder.preInc(expr);
+			case core::lang::BasicGenerator::Operator::PreDec: return builder.preDec(expr);
+			default: break;
+			}
+
 			return builder.unaryOp(basic.getOperator(exprTy, op), expr);
 		}
 	}
@@ -579,8 +587,8 @@ namespace conversion {
 			retIr = builder.minus(subExpr);
 			return retIr;
 		}
-		
-		// A unary ! implies a conversion to bool in IR -------------------------------------------------------------------------------------------------- NOT -
+				
+		// A unary ! implies a conversion to bool in IR ------------------------------------------------------------------------------------------ LOGICAL NOT -
 		if(unOp->getOpcode() == clang::UO_LNot) {
 			retIr = builder.logicNeg(utils::exprToBool(subExpr));
 			return utils::buildBoolToInt(retIr);

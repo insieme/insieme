@@ -48,29 +48,21 @@ namespace analysis {
 		int associativity;
 	} precedence_container;
 
-	std::map<NodePtr,precedence_container> create_precedence_map(const NodeManager& nm)
+	std::map<NodePtr,precedence_container> create_precedence_map(NodeManager& nm)
 	{
 
 		auto& lang = nm.getLangBasic();
-		//auto& refs = nm.getLangExtension<lang::ReferenceExtension>();
+		auto& refs = nm.getLangExtension<lang::ReferenceExtension>();
 
 		std::map<NodePtr, precedence_container> m;
 
-		m[lang.getSignedIntPostInc()] = {2,0};
-		m[lang.getSignedIntPostDec()] = {2,0};
-		m[lang.getUnsignedIntPostInc()] = {2,0};
-		m[lang.getUnsignedIntPostDec()] = {2,0};
-		m[lang.getCharPostInc()] = {2,0};
-		m[lang.getCharPostDec()] = {2,0};
+		m[refs.getGenPostInc()] = {2,0};
+		m[refs.getGenPostDec()] = {2,0};
 		m[lang.getBoolLNot()] = {3,1};
 		m[lang.getSignedIntNot()] = {3,1};
 		m[lang.getUnsignedIntNot()] = {3,1};
-		m[lang.getSignedIntPreInc()] = {3,1};
-		m[lang.getSignedIntPreDec()] = {3,1};
-		m[lang.getUnsignedIntPreInc()] = {3,1};
-		m[lang.getUnsignedIntPreDec()] = {3,1};
-		m[lang.getCharPreInc()] = {3,1};
-		m[lang.getCharPreDec()] = {3,1};
+		m[refs.getGenPreInc()] = {3,1};
+		m[refs.getGenPreDec()] = {3,1};
 		m[lang.getSignedIntMul()] = {5,0};
 		m[lang.getGenMul()] = {5,0};
 		m[lang.getUnsignedIntMul()] = {5,0};

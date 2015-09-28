@@ -180,19 +180,13 @@ DERIVED_OP(Bool, LOr, "bool_or", "lambda (bool a, ()=>bool b)->bool { if (a) ret
 
 // Arithmetic operations ----------------------------------------------------------------------------------------------
 
-GROUP(IntArithOp, SignedIntAdd, SignedIntSub, SignedIntMul, SignedIntDiv, SignedIntMod,
-      SignedIntPreInc, SignedIntPostInc, SignedIntPreDec, SignedIntPostDec)
+GROUP(IntArithOp, SignedIntAdd, SignedIntSub, SignedIntMul, SignedIntDiv, SignedIntMod)
 
 OPERATION(SignedInt, Add, "int_add", "(int<'a>,int<'a>) -> int<'a>")
 OPERATION(SignedInt, Sub, "int_sub", "(int<'a>,int<'a>) -> int<'a>")
 OPERATION(SignedInt, Mul, "int_mul", "(int<'a>,int<'a>) -> int<'a>")
 OPERATION(SignedInt, Div, "int_div", "(int<'a>,int<'a>) -> int<'a>")
 OPERATION(SignedInt, Mod, "int_mod", "(int<'a>,int<'a>) -> int<'a>")
-
-DERIVED_OP(SignedInt, PreInc,  "int_pre_inc",  "lambda (ref<int<'a>,f,'b> val) -> int<'a> { val = *val+lit(\"1\":int<'a>); return *val; }")
-DERIVED_OP(SignedInt, PostInc, "int_post_inc", "lambda (ref<int<'a>,f,'b> val) -> int<'a> { decl int<'a> temp = *val; val = *val+lit(\"1\":int<'a>); return temp; }")
-DERIVED_OP(SignedInt, PreDec,  "int_pre_dec",  "lambda (ref<int<'a>,f,'b> val) -> int<'a> { val = *val-lit(\"1\":int<'a>); return *val; }")
-DERIVED_OP(SignedInt, PostDec, "int_post_dec", "lambda (ref<int<'a>,f,'b> val) -> int<'a> { decl int<'a> temp = *val; val = *val-lit(\"1\":int<'a>); return temp; }")
 
 GROUP(CharArithOp, CharAdd, CharSub, CharMul, CharDiv, CharMod)
 
@@ -202,24 +196,13 @@ OPERATION(Char, Mul, "char_mul", "(char,char) -> char")
 OPERATION(Char, Div, "char_div", "(char,char) -> char")
 OPERATION(Char, Mod, "char_mod", "(char,char) -> char")
 
-DERIVED_OP(Char, PreInc,  "char_pre_inc",  "lambda (ref<char,f,'b> val) -> char { val = *val+lit(\"1\":char); return *val; }")
-DERIVED_OP(Char, PostInc, "char_post_inc", "lambda (ref<char,f,'b> val) -> char { decl char temp = *val; val = *val+lit(\"1\":char); return temp; }")
-DERIVED_OP(Char, PreDec,  "char_pre_dec",  "lambda (ref<char,f,'b> val) -> char { val = *val-lit(\"1\":char); return *val; }")
-DERIVED_OP(Char, PostDec, "char_post_dec", "lambda (ref<char,f,'b> val) -> char { decl char temp = *val; val = *val-lit(\"1\":char); return temp; }")
-
-GROUP(UIntArithOp, UnsignedIntAdd, UnsignedIntSub, UnsignedIntMul, UnsignedIntDiv, UnsignedIntMod,
-        UnsignedIntPreInc, UnsignedIntPostInc, UnsignedIntPreDec, UnsignedIntPostDec)
+GROUP(UIntArithOp, UnsignedIntAdd, UnsignedIntSub, UnsignedIntMul, UnsignedIntDiv, UnsignedIntMod)
 
 OPERATION(UnsignedInt, Add, "uint_add", "(uint<'a>,uint<'a>) -> uint<'a>")
 OPERATION(UnsignedInt, Sub, "uint_sub", "(uint<'a>,uint<'a>) -> uint<'a>")
 OPERATION(UnsignedInt, Mul, "uint_mul", "(uint<'a>,uint<'a>) -> uint<'a>")
 OPERATION(UnsignedInt, Div, "uint_div", "(uint<'a>,uint<'a>) -> uint<'a>")
 OPERATION(UnsignedInt, Mod, "uint_mod", "(uint<'a>,uint<'a>) -> uint<'a>")
-
-DERIVED_OP(UnsignedInt, PreInc,  "uint_pre_inc",  "lambda (ref<uint<'a>,f,'b> val) -> uint<'a> { val = *val+lit(\"1\":uint<'a>); return *val; }")
-DERIVED_OP(UnsignedInt, PostInc, "uint_post_inc", "lambda (ref<uint<'a>,f,'b> val) -> uint<'a> { decl uint<'a> temp = *val; val = *val+lit(\"1\":uint<'a>); return temp; }")
-DERIVED_OP(UnsignedInt, PreDec,  "uint_pre_dec",  "lambda (ref<uint<'a>,f,'b> val) -> uint<'a> { val = *val-lit(\"1\":uint<'a>); return *val; }")
-DERIVED_OP(UnsignedInt, PostDec, "uint_post_dec", "lambda (ref<uint<'a>,f,'b> val) -> uint<'a> { decl uint<'a> temp = *val; val = *val-lit(\"1\":uint<'a>); return temp; }")
 
 GROUP(RealArithOp, RealAdd, RealSub, RealMul, RealDiv)
 
@@ -299,13 +282,12 @@ DERIVED(NumericCast, "num_cast", "lambda ('a x, type<'b> t)->'b { return CAST('b
 
 // Type Operations ----------------------------------------------------------------------------------------------------
 
-
 DERIVED(TypeOf, "type_of", "lambda ('a x)->type<'a> { return lit('a); }")
 LITERAL(TypeIsSubtype, "type_is_subtype", "(type<'a>, type<'b>)->bool")
 
-LITERAL(NumTypeToInt, "type_to_int", "(type<'a>)->int<8>")
-
 OPERATION(Type, Eq, "type_eq", "(type<'a>,type<'a>) -> bool")
+
+LITERAL(NumTypeToInt, "type_to_int", "(type<'a>)->int<8>")
 
 GROUP(TypeCompOp, TypeEq)
 

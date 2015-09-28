@@ -23,7 +23,7 @@ transpose
 
 # Disabling tests because they fail with assertion:
 # Operation "++" of type AP(real<8>) is not declared
-for_loops
+#for_loops
 
 # Disabling tests because they fail with assertion:
 # Clang InitListExpr of unexpected type
