@@ -59,7 +59,7 @@ namespace analysis {
 		std::cout << " =============== TEST =============== " << std::endl;
 
 		auto type = builder.parseExpr(input);
-		dumpText(type);
+		// dumpText(type);
 
 		if(type) {
 			insieme::core::printer::PrettyPrinter printer(type, 
@@ -76,11 +76,14 @@ namespace analysis {
 			std::ostringstream output;
 			output << printer;
 			if(!expected.compare(output.str())) {
+				dumpColor(type);
 				return true;
 			} else {
 				std::cout << "Error: Euqality check gone wrong..." << std::endl;
-				std::cout << "Input:  " << input << std::endl;
-				std::cout << "Output: " << printer << std::endl;
+				std::cout << "Input:    " << input << "[END]" << std::endl;
+				std::cout << "Printer:  " << printer << "[END]" << std::endl;
+				std::cout << "Expected: " << expected << "[END]" << std::endl;
+				//dumpColor(type);
 				return false;
 			}
 		}
@@ -100,6 +103,7 @@ TEST(Parentheses, Basic) {
 
 	EXPECT_PRED1(needsNoParentheses, builder.parseAddressesExpression("$1+2$")[0].as<CallExprAddress>());
 	EXPECT_PRED1(needsNoParentheses, builder.parseAddressesExpression("$1+2$+3")[0].as<CallExprAddress>());
+	EXPECT_PRED1(needsParentheses, builder.parseAddressesExpression("1+$2+3$")[0].as<CallExprAddress>());
 	EXPECT_PRED1(needsNoParentheses, builder.parseAddressesExpression("$1-2$+3")[0].as<CallExprAddress>());
 	EXPECT_PRED1(needsParentheses, builder.parseAddressesExpression("1-$2+3$")[0].as<CallExprAddress>());
 	EXPECT_PRED1(needsNoParentheses, builder.parseAddressesExpression("$1&2$|3")[0].as<CallExprAddress>());
@@ -116,6 +120,8 @@ TEST(Parentheses, Basic) {
 	EXPECT_PRED1(needsNoParentheses, builder.parseAddressesExpression("$3/4*5$")[0].as<CallExprAddress>()[0].as<CallExprAddress>());
 	EXPECT_PRED1(needsParentheses, builder.parseAddressesExpression("3/$4*5$")[0].as<CallExprAddress>());
 	EXPECT_PRED1(needsParentheses, builder.parseAddressesExpression("3*$4/5$")[0].as<CallExprAddress>());
+	EXPECT_PRED1(needsParentheses, builder.parseAddressesExpression("3/$4/5$")[0].as<CallExprAddress>());
+	EXPECT_PRED1(needsNoParentheses, builder.parseAddressesExpression("$3/4$/5")[0].as<CallExprAddress>());
 	EXPECT_PRED1(needsNoParentheses, builder.parseAddressesExpression("$1/2*3$")[0].as<CallExprAddress>()[0].as<CallExprAddress>());
 	EXPECT_PRED1(needsParentheses, builder.parseAddressesExpression("$1/(2*3)$")[0].as<CallExprAddress>()[1].as<CallExprAddress>());
 	EXPECT_PRED1(needsParentheses, builder.parseAddressesExpression("$1/(2/3)$")[0].as<CallExprAddress>()[1].as<CallExprAddress>());
@@ -127,27 +133,29 @@ TEST(Parentheses, Basic) {
 	EXPECT_PRED1(needsParentheses, builder.parseAddressesExpression("$true||false$&&true")[0].as<CallExprAddress>());
 	EXPECT_PRED1(needsNoParentheses, builder.parseAddressesExpression("$true&&false||true$")[0].as<CallExprAddress>()[0].as<CallExprAddress>());
 	// failure from parser!!
-	//EXPECT_PRED1(needsNoParentheses, builder.parseAddressesExpression("$true||false&&true$")[0].as<CallExprAddress>()[1].as<CallExprAddress>());
+	//EXPECT_PRED1(needsNoParentheses, builder.parseAddressesExpression("$true||false&&true$")[0].as<CallExprAddress>()[0].as<CallExprAddress>());
 
 }
 
-/*
+
 TEST(Parentheses, BasicArithmeticOp) {
 	NodeManager manager;
 
-	EXPECT_TRUE(checkEq(manager, "100-200+300", "100-(200+300)"));
-	EXPECT_TRUE(checkParentheses(manager, "(1+1)", "1+1"));
+	EXPECT_TRUE(checkParentheses(manager, "((((1))))", "((((1))))"));
+	EXPECT_TRUE(checkParentheses(manager, "100-200+300", "100-200+300"));
+	EXPECT_TRUE(checkParentheses(manager, "(1+1)", "(1+1)"));
+	EXPECT_TRUE(checkParentheses(manager, "(1+1)", "(1+1)"));
 	EXPECT_TRUE(checkParentheses(manager, "(1+1)*3", "(1+1)*3"));
 	EXPECT_TRUE(checkParentheses(manager, "(1)+(1)", "1+1"));
 	EXPECT_TRUE(checkParentheses(manager, "3*(1+2)", "3*(1+2)"));
-	EXPECT_TRUE(checkParentheses(manager, "(3*(1+2))", "3*(1+2)"));
+	EXPECT_TRUE(checkParentheses(manager, "(3*(1+2))", "(3*(1+2))"));
 	EXPECT_TRUE(checkParentheses(manager, "1+1+1", "1+1+1"));
 	EXPECT_TRUE(checkParentheses(manager, "(1+1)+1", "1+1+1"));
-	EXPECT_TRUE(checkParentheses(manager, "1+(1+1)", "1+1+1"));
+	EXPECT_TRUE(checkParentheses(manager, "1+(1+1)", "1+(1+1)"));
 	EXPECT_TRUE(checkParentheses(manager, "1-(1+1)", "1-(1+1)"));
 	EXPECT_TRUE(checkParentheses(manager, "1+(1-1)", "1+(1-1)"));
-	EXPECT_TRUE(checkParentheses(manager, "1-1-1)", "1-1-1"));
-	EXPECT_TRUE(checkParentheses(manager, "(1-1)-1)", "1-1-1"));
+	EXPECT_TRUE(checkParentheses(manager, "1-1-1", "1-1-1"));
+	EXPECT_TRUE(checkParentheses(manager, "(1-1)-1", "1-1-1"));
 	EXPECT_TRUE(checkParentheses(manager, "1-(1-1)", "1-(1-1)"));
 	EXPECT_TRUE(checkParentheses(manager, "1*1*1", "1*1*1"));
 	EXPECT_TRUE(checkParentheses(manager, "(1+2)/3", "(1+2)/3"));
@@ -155,44 +163,53 @@ TEST(Parentheses, BasicArithmeticOp) {
 	EXPECT_TRUE(checkParentheses(manager, "(1*2)/3", "1*2/3"));
 	EXPECT_TRUE(checkParentheses(manager, "1*(2/3)", "1*(2/3)"));
 
-	EXPECT_FALSE(checkParentheses(manager, "(1)", "(1)"));
-	EXPECT_FALSE(checkParentheses(manager, "(1+1)", "(1+1)"));
-	EXPECT_FALSE(checkParentheses(manager, "(1+1+1)", "(1+1+1)"));
+	EXPECT_FALSE(checkParentheses(manager, "(1)", "1"));
+	EXPECT_FALSE(checkParentheses(manager, "(1+1)", "1+1"));
+	EXPECT_FALSE(checkParentheses(manager, "(1+1+1)", "1+1+1"));
 	EXPECT_FALSE(checkParentheses(manager, "3*(1+2)", "3*1+2"));
 	EXPECT_FALSE(checkParentheses(manager, "(1*2)/3", "(1*2)/3"));
 	EXPECT_FALSE(checkParentheses(manager, "1*2/3", "(1*2)/3"));
 
 }
- */
+
+	// Not "testable" ... lazy eval is always adding the functions and thus
+	// its not compareable (except if we copy the whole thing).
+	// But checking by hand has shown, that the results are correct
 /*
-	TEST(Parentheses, BasicLogicOp) {
+TEST(Parentheses, BasicLogicOp) {
 	NodeManager manager;
 
-	EXPECT_TRUE(checkParentheses(manager, "(1&&1)", "1&&1"));
-	EXPECT_TRUE(checkParentheses(manager, "(1||1)", "1||1"));
-	EXPECT_TRUE(checkParentheses(manager, "(1&1)", "1&1"));
-	EXPECT_TRUE(checkParentheses(manager, "(1|1)", "1|1"));
-	EXPECT_TRUE(checkParentheses(manager, "(1^1)", "1^1"));
-	EXPECT_TRUE(checkParentheses(manager, "1&&1||1", "1&&1||1"));
-	EXPECT_TRUE(checkParentheses(manager, "1&1|0", "1&1|0"));
-	EXPECT_TRUE(checkParentheses(manager, "1^1|0", "1^1|0"));
-	EXPECT_TRUE(checkParentheses(manager, "1^1&0", "1^1&0"));
-	EXPECT_TRUE(checkParentheses(manager, "1&1^0", "1&1^0"));
+	EXPECT_TRUE(checkParentheses(manager, "(true&&true)", "true&&true"));
+	EXPECT_TRUE(checkParentheses(manager, "(true||false)", "true||false"));
+	EXPECT_TRUE(checkParentheses(manager, "true&&false||true", "true&&false||true"));
 }
+*/
 
+TEST(Parentheses, BasicBitwiseOp) {
+	NodeManager manager;
+
+	EXPECT_TRUE(checkParentheses(manager, "(true&false)", "(true&false)"));
+	EXPECT_TRUE(checkParentheses(manager, "(true|false)", "(true|false)"));
+	EXPECT_TRUE(checkParentheses(manager, "(true^false)", "(true^false)"));
+	EXPECT_TRUE(checkParentheses(manager, "true&true|false", "true&true|false"));
+	EXPECT_TRUE(checkParentheses(manager, "false^false|false", "false^false|false"));
+	EXPECT_TRUE(checkParentheses(manager, "true^true&false", "true^true&false"));
+	EXPECT_TRUE(checkParentheses(manager, "true&true^false", "true&true^false"));
+
+
+}
 TEST(Parentheses, BasicGeometricOp) {
 	NodeManager manager;
 
-	EXPECT_TRUE(checkParentheses(manager, "(1<2)", "1<2"));
-	EXPECT_TRUE(checkParentheses(manager, "(1>2)", "1>2"));
-	EXPECT_TRUE(checkParentheses(manager, "(1<=2)", "1<=2"));
-	EXPECT_TRUE(checkParentheses(manager, "(1>=2)", "1>=2"));
-	EXPECT_TRUE(checkParentheses(manager, "(1==2)", "1==2"));
-	EXPECT_TRUE(checkParentheses(manager, "(1!=2)", "1!=2"));
+	EXPECT_TRUE(checkParentheses(manager, "(1<2)", "(1<2)"));
+	EXPECT_TRUE(checkParentheses(manager, "(1>2)", "(1>2)"));
+	EXPECT_TRUE(checkParentheses(manager, "(1<=2)", "(1<=2)"));
+	EXPECT_TRUE(checkParentheses(manager, "(1>=2)", "(1>=2)"));
+	EXPECT_TRUE(checkParentheses(manager, "(1==2)", "(1==2)"));
+	EXPECT_TRUE(checkParentheses(manager, "(1!=2)", "(1!=2)"));
 	EXPECT_TRUE(checkParentheses(manager, "(1<2)==true", "1<2==true"));
 	EXPECT_TRUE(checkParentheses(manager, "(1==2)!=true", "1==2!=true"));
-	EXPECT_TRUE(checkParentheses(manager, "1==(2!=true)", "1==(2!=true)"));
-	EXPECT_TRUE(checkParentheses(manager, "1<(2!=true)", "1<(2!=true)"));
+	EXPECT_TRUE(checkParentheses(manager, "false==(2!=3)", "false==(2!=3)"));
 
 	EXPECT_FALSE(checkParentheses(manager, "(1==2)!=true", "(1==2)!=true"));
 	EXPECT_FALSE(checkParentheses(manager, "1==2!=true", "(1==2)!=true"));
@@ -202,21 +219,6 @@ TEST(Parentheses, BasicGeometricOp) {
 	EXPECT_FALSE(checkParentheses(manager, "(1==2)!=true", "(1==2)!=true"));
 }
 
-TEST(Parentheses, MixedOp) {
-	NodeManager manager;
-
-	EXPECT_TRUE(checkParentheses(manager, "1&&3+4|3", "1&&3+4|3"));
-	EXPECT_TRUE(checkParentheses(manager, "(1&&3)+4|3", "(1&&3)+4|3"));
-	EXPECT_TRUE(checkParentheses(manager, "1&&(3+4)|3", "1&&3+4|3"));
-	EXPECT_TRUE(checkParentheses(manager, "1&&3+(4|3)", "1&&3+(4|3)"));
-	EXPECT_TRUE(checkParentheses(manager, "1&&3+4|3", "1&&3+4|3"));
-
-	EXPECT_FALSE(checkParentheses(manager, "(1&&3+4|3)", "(1&&3+4|3)"));
-	EXPECT_FALSE(checkParentheses(manager, "1&&3+4|3", "1&&(3+4)|3"));
-	EXPECT_FALSE(checkParentheses(manager, "1&&3+4|3", "1&&3+(4|3)"));
-
-}
- */
 }
 }
 }

@@ -161,13 +161,25 @@ namespace analysis {
 		 */
 		bool checkIfSub(NodePtr toTest) {
 			auto& lang = toTest.getNodeManager().getLangBasic();
-			if (lang.isSignedIntSub(toTest) ||
-				  lang.isGenSub(toTest) ||
-				  lang.isUnsignedIntSub(toTest) ||
-				  lang.isRealSub(toTest) ||
-				  lang.isCharSub(toTest))
-				return true;
-			return false;
+			return lang.isSignedIntSub(toTest) ||
+			  lang.isGenSub(toTest) ||
+			  lang.isUnsignedIntSub(toTest) ||
+			  lang.isRealSub(toTest) ||
+			  lang.isCharSub(toTest);
+		}
+
+		/**
+		 * This is a helper function for the "needsParentheses" function
+		 * @param toTest String to be checked
+		 * @return true, if toTest is a multiplication operation
+		 */
+		bool checkIfMul(NodePtr toTest) {
+			auto& lang = toTest.getNodeManager().getLangBasic();
+			return lang.isSignedIntMul(toTest) ||
+			  lang.isGenMul(toTest) ||
+			  lang.isUnsignedIntMul(toTest) ||
+			  lang.isRealMul(toTest) ||
+			  lang.isCharMul(toTest);
 		}
 
 		/**
@@ -177,13 +189,11 @@ namespace analysis {
 		 */
 		bool checkIfDiv(NodePtr toTest) {
 			auto& lang = toTest.getNodeManager().getLangBasic();
-			if (lang.isSignedIntDiv(toTest) ||
-				  lang.isGenDiv(toTest) ||
-				  lang.isUnsignedIntDiv(toTest) ||
-				  lang.isRealDiv(toTest) ||
-				  lang.isCharDiv(toTest))
-				return true;
-			return false;
+			return lang.isSignedIntDiv(toTest) ||
+			lang.isGenDiv(toTest) ||
+			lang.isUnsignedIntDiv(toTest) ||
+			lang.isRealDiv(toTest) ||
+			lang.isCharDiv(toTest);
 		}
 
 		/**
@@ -193,12 +203,42 @@ namespace analysis {
 		 */
 		bool checkIfMod(NodePtr toTest) {
 			auto& lang = toTest.getNodeManager().getLangBasic();
-			if (lang.isSignedIntMod(toTest) ||
-				  lang.isGenMod(toTest) ||
-				  lang.isUnsignedIntMod(toTest) |
-				  lang.isCharMod(toTest))
-				return true;
-			return false;
+			return lang.isSignedIntMod(toTest) ||
+			  lang.isGenMod(toTest) ||
+			  lang.isUnsignedIntMod(toTest) |
+			  lang.isCharMod(toTest);
+		}
+
+		/**
+		 * This is a helper function for the "needsParentheses" function
+		 * @param toTest String to be checked
+		 * @return true, if toTest is a equal operation
+		 */
+		bool checkIfEq(NodePtr toTest) {
+			auto& lang = toTest.getNodeManager().getLangBasic();
+			return lang.isSignedIntEq(toTest) ||
+			lang.isGenEq(toTest) ||
+			lang.isUnsignedIntEq(toTest) ||
+			lang.isRealEq(toTest) ||
+			lang.isCharEq(toTest) ||
+			lang.isBoolEq(toTest) ||
+			lang.isTypeEq(toTest);
+		}
+
+		/**
+		 * This is a helper function for the "needsParentheses" function
+		 * @param toTest String to be checked
+		 * @return true, if toTest is a not-equal operation
+		 */
+		bool checkIfNe(NodePtr toTest) {
+			auto& lang = toTest.getNodeManager().getLangBasic();
+
+			return lang.isSignedIntNe(toTest) ||
+			lang.isGenNe(toTest) ||
+			lang.isUnsignedIntNe(toTest) ||
+			lang.isRealNe(toTest) ||
+			lang.isCharNe(toTest) ||
+			lang.isBoolNe(toTest);
 		}
 
 		/**
@@ -213,7 +253,9 @@ namespace analysis {
 			}
 
 			// check for root
-			if (!adr || adr.isRoot()) return CallExprAddress();
+			if (!adr || adr.isRoot()) {
+				return CallExprAddress();
+			}
 
 			// otherwise: keep walking
 			return getEnclosingOperatorCall(adr.getParentAddress());
@@ -236,43 +278,39 @@ namespace analysis {
 		// in the case, where the operation is already the root
 		// there is no need for parentheses
 		if(cur.isRoot()) {
+			//std::cout << "parentheses.cpp: isRoot()!\n";
 			return false;
 		}
 
 		// In every other case we need to check the parent,
 		// to determine, whether we need parentheses or not.
-		auto curOp = precedence_map.find(cur->getFunctionExpr());
-		auto parentOp= precedence_map.find(getEnclosingOperatorCall(cur.getParentAddress())->getFunctionExpr());
+		auto enclosingOp = getEnclosingOperatorCall(cur.getParentAddress());
 
-		auto parentAddress = cur.getParentAddress();
-		auto parentArgs = parentAddress.as<CallExprPtr>().getArguments();
+		if(enclosingOp.isValid()) {
 
-		// If the precedence of the parent element is higher,
-		// we need braces for the current
-		if(parentOp->second.precedence < curOp->second.precedence)
-			return true;
+			auto curOp = precedence_map.find(cur->getFunctionExpr());
+			auto parentOp = precedence_map.find(enclosingOp->getFunctionExpr());
 
-		// If the precedence of the two elements is the same,
-		// we need to determine other things
-		if(parentOp->second.precedence == curOp->second.precedence){
+			// If the precedence of the parent element is higher,
+			// we need braces for the current
+			if (parentOp->second.precedence < curOp->second.precedence)
+				return true;
 
-			// The first thing we check is, if cur is the same as
-			// the second ([1]) child-Node of the parent AND if
-			// the parent function expressions are NOT "sub", "div" or "mod"
+			// If the precedence of the two elements is the same,
+			// we need to determine other things
+			if (parentOp->second.precedence == curOp->second.precedence) {
 
-			if(cur.as<CallExprPtr>() == parentArgs[1]) {
-				if( checkIfSub(curOp->first) || checkIfSub(parentOp->first) ||
-					checkIfDiv(curOp->first) || checkIfDiv(parentOp->first) ||
-					checkIfMod(curOp->first) || checkIfMod(parentOp->first)
-						)
+				// The first thing we check is, if cur is the same as
+				// the second ([1]) child-Node of the parent AND if
+				// the parent function expressions are NOT "sub", "div" or "mod"
+
+				auto parentAddress = cur.getParentAddress();
+				auto parentArgs = parentAddress.as<CallExprPtr>().getArguments();
+
+				if (cur.as<CallExprPtr>() == parentArgs[1]) {
 					return true;
-				else
-					return false;
-
-			} else {
-				return false;
+				}
 			}
-
 		}
 
 		return false;
