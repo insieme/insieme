@@ -173,7 +173,7 @@ TEST(Parentheses, BasicArithmeticOp) {
 }
 
 	// Not "testable" ... lazy eval is always adding the functions and thus
-	// its not compareable (except if we copy the whole thing).
+	// its not comparable (except if we copy the whole thing).
 	// But checking by hand has shown, that the results are correct
 /*
 TEST(Parentheses, BasicLogicOp) {
