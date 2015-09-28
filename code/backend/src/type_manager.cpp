@@ -319,8 +319,11 @@ namespace backend {
 
 			// if type is annotated with an include file => use the include file
 			if(annotations::c::hasIncludeAttached(type) && core::annotations::hasAttachedName(type)) {
-				const string& name = core::annotations::getAttachedName(type);
 				const string& header = annotations::c::getAttachedInclude(type);
+				string name = core::annotations::getAttachedName(type);
+				// if it is a struct or union type, add the relevant keyword to the name
+				if(core::analysis::isStruct(type)) name = "struct " + name;
+				if(core::analysis::isUnion(type)) name = "union " + name;
 				return type_info_utils::createInfo(converter.getFragmentManager(), name, header);
 			}
 
