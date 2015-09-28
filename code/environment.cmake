@@ -259,15 +259,29 @@ if(GIT_FOUND)
 	set (git_arg "rev-parse;--short;HEAD")
 
 	execute_process(COMMAND ${git_cmd} ${git_arg}
-							  WORKING_DIRECTORY ${insieme_code_dir}
-							  RESULT_VARIABLE git_result
-							  OUTPUT_VARIABLE insieme_version)
+	                WORKING_DIRECTORY ${insieme_code_dir}
+	                RESULT_VARIABLE git_result
+	                OUTPUT_VARIABLE insieme_version)
 
 	# git returns space and newline, remove them to keep commands clean
 	string(REPLACE "\n" " " insieme_version ${insieme_version})
 	string(REPLACE " " "" insieme_version ${insieme_version})
+
+
+	# deduce the name of the currently checked out branch
+	set (git_arg "rev-parse;--abbrev-ref;HEAD")
+
+	execute_process(COMMAND ${git_cmd} ${git_arg}
+	                WORKING_DIRECTORY ${insieme_code_dir}
+	                RESULT_VARIABLE git_result
+	                OUTPUT_VARIABLE insieme_branch)
+
+	# git returns space and newline, remove them to keep commands clean
+	string(REPLACE "\n" " " insieme_branch ${insieme_branch})
+	string(REPLACE " " "" insieme_branch ${insieme_branch})
 else()
-	set ( insieme_version "unknown" )
+	set(insieme_version "unknown")
+	set(insieme_branch "unknown")
 endif()
 
 # add insieme version definition (add_definitions escapes back-quotes)
@@ -302,3 +316,25 @@ math(EXPR ALL_JOBS "${NB_PROCESSORS} + 2")
 set_property(GLOBAL PROPERTY JOB_POOLS cba_jobs=${CBA_JOBS} all_jobs=${ALL_JOBS} )
 set(CMAKE_JOB_POOL_COMPILE all_jobs)
 set(CMAKE_JOB_POOL_LINK all_jobs)
+
+
+# Define some colors for printing
+if(NOT WIN32)
+  string(ASCII 27 PrintEsc)
+  set(PrintColorReset       "${PrintEsc}[m")
+  set(PrintColorBold        "${PrintEsc}[1m")
+  set(PrintColorRed         "${PrintEsc}[31m")
+  set(PrintColorGreen       "${PrintEsc}[32m")
+  set(PrintColorYellow      "${PrintEsc}[33m")
+  set(PrintColorBlue        "${PrintEsc}[34m")
+  set(PrintColorMagenta     "${PrintEsc}[35m")
+  set(PrintColorCyan        "${PrintEsc}[36m")
+  set(PrintColorWhite       "${PrintEsc}[37m")
+  set(PrintColorBoldRed     "${PrintEsc}[1;31m")
+  set(PrintColorBoldGreen   "${PrintEsc}[1;32m")
+  set(PrintColorBoldYellow  "${PrintEsc}[1;33m")
+  set(PrintColorBoldBlue    "${PrintEsc}[1;34m")
+  set(PrintColorBoldMagenta "${PrintEsc}[1;35m")
+  set(PrintColorBoldCyan    "${PrintEsc}[1;36m")
+  set(PrintColorBoldWhite   "${PrintEsc}[1;37m")
+endif()

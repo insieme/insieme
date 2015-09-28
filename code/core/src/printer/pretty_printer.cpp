@@ -62,6 +62,7 @@
 #include <boost/iostreams/stream.hpp>
 #include <boost/iostreams/concepts.hpp>
 
+#include "insieme/core/analysis/parentheses.h"
 #include "insieme/core/printer/lexer.h"
 
 
@@ -140,7 +141,7 @@ namespace printer {
 			 * @param printer the pretty printer to be used for printing sub-expressions
 			 * @param call the call statement invoking the handled literal
 			 */
-			virtual void format(InspirePrinter& printer, const CallExprPtr& call) = 0;
+			virtual void format(InspirePrinter& printer, const CallExprAddress& call) = 0;
 		};
 
 		/**
@@ -177,7 +178,7 @@ namespace printer {
 			 * @param printer the printer to be used for printing sub-expressions
 			 * @param call the call expression to be formated by this formatter
 			 */
-			virtual void format(InspirePrinter& printer, const CallExprPtr& call) {
+			virtual void format(InspirePrinter& printer, const CallExprAddress& call) {
 				// TODO: re-enable when literals are no longer identified by their name
 				// assert(*call->getFunctionExpr() == *getLiteral() && "Invoked for wrong literal!");
 				lambda(printer, call);
@@ -357,8 +358,7 @@ namespace printer {
 									visit(NodeAddress(lambda->getType().as<FunctionTypePtr>()->getReturnType()));
 
 									// print the signature of the main function
-									out << " " << name << "(" << join(", ", cur.as<LambdaExprPtr>()->getParameterList(), paramPrinter) <<
-									")";
+									out << " " << name << "(" << join(", ", cur.as<LambdaExprPtr>()->getParameterList(), paramPrinter) << ")";
 
 									// print the body of the main function
 									visit(NodeAddress(cur.as<LambdaExprPtr>().getBody()));
@@ -677,7 +677,7 @@ namespace printer {
 
 			PRINT(Variable) {
 
-				// print variale names if attached to the node... otherwise
+				// print variable names if attached to the node... otherwise
 				// a variable like "v..." will be used
 		/*		if (insieme::core::annotations::hasAttachedName(node)) {
 					out << insieme::core::annotations::getAttachedName(node);;
@@ -859,7 +859,7 @@ namespace printer {
 				auto pos = formatTable.find(function);
 				if(pos != formatTable.end()) {
 					FormatterPtr formatter = (*pos).second;
-					formatter->format(*this, node);
+					formatter->format(*this, CallExprAddress(node));
 					return;
 				}
 
@@ -1134,9 +1134,23 @@ namespace printer {
 		 * @param n the index of the requested argument
 		 * @return the requested argument or a NULL pointer in case there is no such argument
 		 */
-		ExpressionPtr getArgument(const CallExprPtr& call, unsigned n) {
+		ExpressionPtr getArgument(const CallExprAddress& call, unsigned n) {
 			if(n < call.size()) { return call[n]; }
 			return ExpressionPtr();
+		}
+
+		/**
+		 * A utility function to obtain the n-th argument within the given call expression.
+		 *
+		 * @param call the expression from which the argument should be extracted
+		 * @param n the index of the requested argument
+		 * @return the requested argument or a NULL pointer in case there is no such argument
+		 */
+		NodeAddress getAddressedArgument(const CallExprAddress& call ,unsigned n) {
+			if (n < call.getChildAddresses().size()) {
+				return call[n];
+			}
+			return NodeAddress();
 		}
 
 		/**
@@ -1146,10 +1160,10 @@ namespace printer {
 		 * @param call the expression from which the argument should be extracted
 		 * @param n the index of the argument to be printed; in case there is no such argument a ? is printed.
 		 */
-		void printArgument(InspirePrinter& printer, const CallExprPtr& call, unsigned n) {
-			NodePtr&& argument = getArgument(call, n);
+		void printArgument(InspirePrinter& printer, const CallExprAddress& call, unsigned n) {
+			NodeAddress&& argument = getAddressedArgument(call, n);
 			if(argument) {
-				printer.visit(NodeAddress(argument));
+				printer.visit(argument);
 			} else {
 				printer.out << "?";
 			}
@@ -1172,19 +1186,22 @@ namespace printer {
 
 			#define OUT(Literal) printer.out << Literal
 			#define ARG(N) getArgument(call, N)
+			#define AARG(N) getAddressedArgument(call, N)
 			#define MGR call->getNodeManager()
 			#define PRINT_EXPR(E) printer.visit(NodeAddress(E))
 			#define PRINT_ARG(N) printArgument(printer, call, N)
 			#define HAS_OPTION(OPT) printer.getPrettyPrint().hasOption(PrettyPrinter::OPT)
 			#define ADD_FORMATTER(Literal, FORMAT)                                                                                                             \
-				res.insert(std::make_pair(Literal, make_formatter([](InspirePrinter & printer, const CallExprPtr& call)FORMAT))).second;
+				res.insert(std::make_pair(Literal, make_formatter([](InspirePrinter & printer, const CallExprAddress& call)FORMAT))).second;
 
 			#define ADD_BRACKET_FORMATTER(Literal, FORMAT) \
 					ADD_FORMATTER(Literal, { if(!HAS_OPTION(SKIP_BRACKETS)) OUT("("); FORMAT; if(!HAS_OPTION(SKIP_BRACKETS)) OUT(")"); })
-/*
-#define ADD_INTELLIGENT_BRACKET_FORMATTER(Literal, FORMAT) \
-			ADD_FORMATTER(Literal, { if(insieme::core::analysis::needParentheses()) OUT("("); FORMAT; if(insieme::core::analysis::needParentheses()) OUT(")"); })
-*/
+
+
+			#define ADD_INTELLIGENT_BRACKET_FORMATTER(Literal, FORMAT) \
+					ADD_FORMATTER(Literal, { auto needB = insieme::core::analysis::needsParentheses(call); if(needB) OUT("("); FORMAT; if(needB) OUT(")"); })
+
+
 			if(config.hasOption(PrettyPrinter::PRINT_DEREFS)) {
 				ADD_FORMATTER(refExt.getRefDeref(), {
 					OUT(" *");
@@ -1257,134 +1274,134 @@ namespace printer {
 				PRINT_ARG(1);
 			});
 
-			ADD_FORMATTER(basic.getRealAdd(), {
+			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getRealAdd(), {
 				PRINT_ARG(0);
 				OUT("+");
 				PRINT_ARG(1);
 			});
-			ADD_FORMATTER(basic.getRealSub(), {
+			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getRealSub(), {
 				PRINT_ARG(0);
 				OUT("-");
 				PRINT_ARG(1);
 			});
-			ADD_FORMATTER(basic.getRealMul(), {
+			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getRealMul(), {
 				PRINT_ARG(0);
 				OUT("*");
 				PRINT_ARG(1);
 			});
-			ADD_FORMATTER(basic.getRealDiv(), {
+			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getRealDiv(), {
 				PRINT_ARG(0);
 				OUT("/");
 				PRINT_ARG(1);
 			});
 
-			ADD_FORMATTER(basic.getUnsignedIntAdd(), {
+			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getUnsignedIntAdd(), {
 				PRINT_ARG(0);
 				OUT("+");
 				PRINT_ARG(1);
 			});
-			ADD_FORMATTER(basic.getUnsignedIntSub(), {
+			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getUnsignedIntSub(), {
 				PRINT_ARG(0);
 				OUT("-");
 				PRINT_ARG(1);
 			});
-			ADD_FORMATTER(basic.getUnsignedIntMul(), {
+			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getUnsignedIntMul(), {
 				PRINT_ARG(0);
 				OUT("*");
 				PRINT_ARG(1);
 			});
-			ADD_FORMATTER(basic.getUnsignedIntDiv(), {
+			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getUnsignedIntDiv(), {
 				PRINT_ARG(0);
 				OUT("/");
 				PRINT_ARG(1);
 			});
-			ADD_FORMATTER(basic.getUnsignedIntMod(), {
+			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getUnsignedIntMod(), {
 				PRINT_ARG(0);
 				OUT("%");
 				PRINT_ARG(1);
 			});
 
-			ADD_FORMATTER(basic.getSignedIntAdd(), {
+			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getSignedIntAdd(), {
 				PRINT_ARG(0);
 				OUT("+");
 				PRINT_ARG(1);
 			});
-			ADD_FORMATTER(basic.getSignedIntSub(), {
+			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getSignedIntSub(), {
 				PRINT_ARG(0);
 				OUT("-");
 				PRINT_ARG(1);
 			});
-			ADD_FORMATTER(basic.getSignedIntMul(), {
+			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getSignedIntMul(), {
 				PRINT_ARG(0);
 				OUT("*");
 				PRINT_ARG(1);
 			});
-			ADD_FORMATTER(basic.getSignedIntDiv(), {
+			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getSignedIntDiv(), {
 				PRINT_ARG(0);
 				OUT("/");
 				PRINT_ARG(1);
 			});
-			ADD_FORMATTER(basic.getSignedIntMod(), {
+			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getSignedIntMod(), {
 				PRINT_ARG(0);
 				OUT("%");
 				PRINT_ARG(1);
 			});
 
-			ADD_FORMATTER(basic.getUnsignedIntNot(), {
+			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getUnsignedIntNot(), {
 				OUT("~");
 				PRINT_ARG(0);
 			});
-			ADD_BRACKET_FORMATTER(basic.getUnsignedIntAnd(), {
+			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getUnsignedIntAnd(), {
 				PRINT_ARG(0);
 				OUT("&");
 				PRINT_ARG(1);
 			});
-			ADD_BRACKET_FORMATTER(basic.getUnsignedIntOr(), {
+			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getUnsignedIntOr(), {
 				PRINT_ARG(0);
 				OUT("|");
 				PRINT_ARG(1);
 			});
-			ADD_BRACKET_FORMATTER(basic.getUnsignedIntXor(), {
+			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getUnsignedIntXor(), {
 				PRINT_ARG(0);
 				OUT("^");
 				PRINT_ARG(1);
 			});
-			ADD_BRACKET_FORMATTER(basic.getUnsignedIntLShift(), {
+			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getUnsignedIntLShift(), {
 				PRINT_ARG(0);
 				OUT("<<");
 				PRINT_ARG(1);
 			});
-			ADD_BRACKET_FORMATTER(basic.getUnsignedIntRShift(), {
+			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getUnsignedIntRShift(), {
 				PRINT_ARG(0);
 				OUT(">>");
 				PRINT_ARG(1);
 			});
 
-			ADD_FORMATTER(basic.getSignedIntNot(), {
+			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getSignedIntNot(), {
 				OUT("~");
 				PRINT_ARG(0);
 			});
-			ADD_BRACKET_FORMATTER(basic.getSignedIntAnd(), {
+			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getSignedIntAnd(), {
 				PRINT_ARG(0);
 				OUT("&");
 				PRINT_ARG(1);
 			});
-			ADD_BRACKET_FORMATTER(basic.getSignedIntOr(), {
+			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getSignedIntOr(), {
 				PRINT_ARG(0);
 				OUT("|");
 				PRINT_ARG(1);
 			});
-			ADD_BRACKET_FORMATTER(basic.getSignedIntXor(), {
+			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getSignedIntXor(), {
 				PRINT_ARG(0);
 				OUT("^");
 				PRINT_ARG(1);
 			});
-			ADD_BRACKET_FORMATTER(basic.getSignedIntLShift(), {
+			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getSignedIntLShift(), {
 				PRINT_ARG(0);
 				OUT("<<");
 				PRINT_ARG(1);
 			});
-			ADD_BRACKET_FORMATTER(basic.getSignedIntRShift(), {
+			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getSignedIntRShift(), {
 				PRINT_ARG(0);
 				OUT(">>");
 				PRINT_ARG(1);
@@ -1392,7 +1409,7 @@ namespace printer {
 
 			// nicer inlined versions of the && and || operators
 			//		ADD_FORMATTER(basic.getBoolLAnd(), { PRINT_ARG(0); OUT(" && "); PRINT_ARG(1); });
-			ADD_BRACKET_FORMATTER(basic.getBoolLAnd(), {
+			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getBoolLAnd(), {
 				PRINT_ARG(0);
 				OUT(" && ");
 				if (HAS_OPTION(NO_EVAL_LAZY))
@@ -1401,7 +1418,7 @@ namespace printer {
 					PRINT_EXPR(transform::evalLazy(MGR, ARG(1)));
 			});
 			//		ADD_FORMATTER(basic.getBoolLOr(), { PRINT_ARG(0); OUT(" || "); PRINT_ARG(1); });
-			ADD_BRACKET_FORMATTER(basic.getBoolLOr(), {
+			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getBoolLOr(), {
 				PRINT_ARG(0);
 				OUT(" || ");
 				if (HAS_OPTION(NO_EVAL_LAZY))
@@ -1410,136 +1427,165 @@ namespace printer {
 					PRINT_EXPR(transform::evalLazy(MGR, ARG(1)));
 			});
 
-			ADD_BRACKET_FORMATTER(basic.getBoolEq(), {
+			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getBoolOr(), {
+				PRINT_ARG(0);
+				OUT("|");
+				PRINT_ARG(1);
+			});
+
+			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getBoolAnd(), {
+				PRINT_ARG(0);
+				OUT("&");
+				PRINT_ARG(1);
+			});
+
+			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getBoolEq(), {
 				PRINT_ARG(0);
 				OUT("==");
 				PRINT_ARG(1);
 			});
 
-			ADD_FORMATTER(basic.getBoolLNot(), {
+			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getBoolNe(), {
+				PRINT_ARG(0);
+				OUT("!=");
+				PRINT_ARG(1);
+			});
+
+			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getBoolXor(), {
+				PRINT_ARG(0);
+				OUT("^");
+				PRINT_ARG(1);
+			});
+
+			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getBoolLNot(), {
 				OUT("!");
 				PRINT_ARG(0);
 			});
 
-			ADD_BRACKET_FORMATTER(basic.getCharNe(), {
+			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getBoolNot(), {
+				OUT("!");
+				PRINT_ARG(0);
+			});
+
+			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getCharNe(), {
 				PRINT_ARG(0);
 				OUT("!=");
 				PRINT_ARG(1);
 			});
-			ADD_BRACKET_FORMATTER(basic.getCharEq(), {
+			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getCharEq(), {
 				PRINT_ARG(0);
 				OUT("==");
 				PRINT_ARG(1);
 			});
-			ADD_BRACKET_FORMATTER(basic.getCharGe(), {
+			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getCharGe(), {
 				PRINT_ARG(0);
 				OUT(">=");
 				PRINT_ARG(1);
 			});
-			ADD_BRACKET_FORMATTER(basic.getCharGt(), {
+			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getCharGt(), {
 				PRINT_ARG(0);
 				OUT(">");
 				PRINT_ARG(1);
 			});
-			ADD_BRACKET_FORMATTER(basic.getCharLt(), {
+			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getCharLt(), {
 				PRINT_ARG(0);
 				OUT("<");
 				PRINT_ARG(1);
 			});
-			ADD_BRACKET_FORMATTER(basic.getCharLe(), {
+			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getCharLe(), {
 				PRINT_ARG(0);
 				OUT("<=");
 				PRINT_ARG(1);
 			});
 
-			ADD_BRACKET_FORMATTER(basic.getUnsignedIntEq(), {
+			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getUnsignedIntEq(), {
 				PRINT_ARG(0);
 				OUT("==");
 				PRINT_ARG(1);
 			});
-			ADD_BRACKET_FORMATTER(basic.getUnsignedIntNe(), {
+			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getUnsignedIntNe(), {
 				PRINT_ARG(0);
 				OUT("!=");
 				PRINT_ARG(1);
 			});
-			ADD_BRACKET_FORMATTER(basic.getUnsignedIntGe(), {
+			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getUnsignedIntGe(), {
 				PRINT_ARG(0);
 				OUT(">=");
 				PRINT_ARG(1);
 			});
-			ADD_BRACKET_FORMATTER(basic.getUnsignedIntGt(), {
+			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getUnsignedIntGt(), {
 				PRINT_ARG(0);
 				OUT(">");
 				PRINT_ARG(1);
 			});
-			ADD_BRACKET_FORMATTER(basic.getUnsignedIntLt(), {
+			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getUnsignedIntLt(), {
 				PRINT_ARG(0);
 				OUT("<");
 				PRINT_ARG(1);
 			});
-			ADD_BRACKET_FORMATTER(basic.getUnsignedIntLe(), {
+			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getUnsignedIntLe(), {
 				PRINT_ARG(0);
 				OUT("<=");
 				PRINT_ARG(1);
 			});
 
-			ADD_BRACKET_FORMATTER(basic.getSignedIntEq(), {
+			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getSignedIntEq(), {
 				PRINT_ARG(0);
 				OUT("==");
 				PRINT_ARG(1);
 			});
-			ADD_BRACKET_FORMATTER(basic.getSignedIntNe(), {
+			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getSignedIntNe(), {
 				PRINT_ARG(0);
 				OUT("!=");
 				PRINT_ARG(1);
 			});
-			ADD_BRACKET_FORMATTER(basic.getSignedIntGe(), {
+			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getSignedIntGe(), {
 				PRINT_ARG(0);
 				OUT(">=");
 				PRINT_ARG(1);
 			});
-			ADD_BRACKET_FORMATTER(basic.getSignedIntGt(), {
+			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getSignedIntGt(), {
 				PRINT_ARG(0);
 				OUT(">");
 				PRINT_ARG(1);
 			});
-			ADD_BRACKET_FORMATTER(basic.getSignedIntLt(), {
+			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getSignedIntLt(), {
 				PRINT_ARG(0);
 				OUT("<");
 				PRINT_ARG(1);
 			});
-			ADD_BRACKET_FORMATTER(basic.getSignedIntLe(), {
+			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getSignedIntLe(), {
 				PRINT_ARG(0);
 				OUT("<=");
 				PRINT_ARG(1);
 			});
 
-			ADD_BRACKET_FORMATTER(basic.getRealEq(), {
+			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getRealEq(), {
 				PRINT_ARG(0);
 				OUT("==");
 				PRINT_ARG(1);
 			});
-			ADD_BRACKET_FORMATTER(basic.getRealNe(), {
+			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getRealNe(), {
 				PRINT_ARG(0);
 				OUT("!=");
 				PRINT_ARG(1);
 			});
-			ADD_BRACKET_FORMATTER(basic.getRealGe(), {
+			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getRealGe(), {
 				PRINT_ARG(0);
 				OUT(">=");
 				PRINT_ARG(1);
 			});
-			ADD_BRACKET_FORMATTER(basic.getRealGt(), {
+			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getRealGt(), {
 				PRINT_ARG(0);
 				OUT(">");
 				PRINT_ARG(1);
 			});
-			ADD_BRACKET_FORMATTER(basic.getRealLt(), {
+			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getRealLt(), {
 				PRINT_ARG(0);
 				OUT("<");
 				PRINT_ARG(1);
 			});
-			ADD_BRACKET_FORMATTER(basic.getRealLe(), {
+			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getRealLe(), {
 				PRINT_ARG(0);
 				OUT("<=");
 				PRINT_ARG(1);

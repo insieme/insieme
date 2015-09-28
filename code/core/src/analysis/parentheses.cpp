@@ -147,54 +147,7 @@ namespace analysis {
 	namespace {
 
 		/**
-		 * This is a helper function for the "needsParentheses" function
-		 * @param toTest String to be checked
-		 * @return true, if toTest is a subtraction operation
-		 */
-		bool checkIfSub(NodePtr toTest) {
-			auto& lang = toTest.getNodeManager().getLangBasic();
-			if (lang.isSignedIntSub(toTest) ||
-				  lang.isGenSub(toTest) ||
-				  lang.isUnsignedIntSub(toTest) ||
-				  lang.isRealSub(toTest) ||
-				  lang.isCharSub(toTest))
-				return true;
-			return false;
-		}
-
-		/**
-		 * This is a helper function for the "needsParentheses" function
-		 * @param toTest String to be checked
-		 * @return true, if toTest is a dividing operation
-		 */
-		bool checkIfDiv(NodePtr toTest) {
-			auto& lang = toTest.getNodeManager().getLangBasic();
-			if (lang.isSignedIntDiv(toTest) ||
-				  lang.isGenDiv(toTest) ||
-				  lang.isUnsignedIntDiv(toTest) ||
-				  lang.isRealDiv(toTest) ||
-				  lang.isCharDiv(toTest))
-				return true;
-			return false;
-		}
-
-		/**
-		 * This is a helper function for the "needsParentheses" function
-		 * @param toTest String to be checked
-		 * @return true, if toTest is a modulo operation
-		 */
-		bool checkIfMod(NodePtr toTest) {
-			auto& lang = toTest.getNodeManager().getLangBasic();
-			if (lang.isSignedIntMod(toTest) ||
-				  lang.isGenMod(toTest) ||
-				  lang.isUnsignedIntMod(toTest) |
-				  lang.isCharMod(toTest))
-				return true;
-			return false;
-		}
-
-		/**
-		 *
+		 * Helper-function to determine the closest operator
 		 */
 		CallExprAddress getEnclosingOperatorCall(const NodeAddress& adr) {
 			// check for target
@@ -205,7 +158,9 @@ namespace analysis {
 			}
 
 			// check for root
-			if (!adr || adr.isRoot()) return CallExprAddress();
+			if (!adr || adr.isRoot()) {
+				return CallExprAddress();
+			}
 
 			// otherwise: keep walking
 			return getEnclosingOperatorCall(adr.getParentAddress());
@@ -228,43 +183,39 @@ namespace analysis {
 		// in the case, where the operation is already the root
 		// there is no need for parentheses
 		if(cur.isRoot()) {
+			//std::cout << "parentheses.cpp: isRoot()!\n";
 			return false;
 		}
 
 		// In every other case we need to check the parent,
 		// to determine, whether we need parentheses or not.
-		auto curOp = precedence_map.find(cur->getFunctionExpr());
-		auto parentOp= precedence_map.find(getEnclosingOperatorCall(cur.getParentAddress())->getFunctionExpr());
+		auto enclosingOp = getEnclosingOperatorCall(cur.getParentAddress());
 
-		auto parentAddress = cur.getParentAddress();
-		auto parentArgs = parentAddress.as<CallExprPtr>().getArguments();
+		if(enclosingOp.isValid()) {
 
-		// If the precedence of the parent element is higher,
-		// we need braces for the current
-		if(parentOp->second.precedence < curOp->second.precedence)
-			return true;
+			auto curOp = precedence_map.find(cur->getFunctionExpr());
+			auto parentOp = precedence_map.find(enclosingOp->getFunctionExpr());
 
-		// If the precedence of the two elements is the same,
-		// we need to determine other things
-		if(parentOp->second.precedence == curOp->second.precedence){
+			// If the precedence of the parent element is higher,
+			// we need braces for the current
+			if (parentOp->second.precedence < curOp->second.precedence)
+				return true;
 
-			// The first thing we check is, if cur is the same as
-			// the second ([1]) child-Node of the parent AND if
-			// the parent function expressions are NOT "sub", "div" or "mod"
+			// If the precedence of the two elements is the same,
+			// we need to determine other things
+			if (parentOp->second.precedence == curOp->second.precedence) {
 
-			if(cur.as<CallExprPtr>() == parentArgs[1]) {
-				if( checkIfSub(curOp->first) || checkIfSub(parentOp->first) ||
-					checkIfDiv(curOp->first) || checkIfDiv(parentOp->first) ||
-					checkIfMod(curOp->first) || checkIfMod(parentOp->first)
-						)
+				// The first thing we check is, if cur is the same as
+				// the second ([1]) child-Node of the parent AND if
+				// the parent function expressions are NOT "sub", "div" or "mod"
+
+				auto parentAddress = cur.getParentAddress();
+				auto parentArgs = parentAddress.as<CallExprPtr>().getArguments();
+
+				if (cur.as<CallExprPtr>() == parentArgs[1]) {
 					return true;
-				else
-					return false;
-
-			} else {
-				return false;
+				}
 			}
-
 		}
 
 		return false;

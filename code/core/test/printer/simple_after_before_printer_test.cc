@@ -129,7 +129,7 @@ namespace insieme {
 			auto type1 = builder.parseExpr(x);
 
 			if (type1) {
-				dumpColor(type1);
+				//dumpColor(type1);
 				//dumpText(type1);
 				PrettyPrinter printerA(type1, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::PRINT_CASTS
 											  | PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_MARKERS
@@ -146,12 +146,15 @@ namespace insieme {
 												  | PrettyPrinter::PRINT_DERIVED_IMPL);
 
 					if (builder.normalize(type1) == builder.normalize(type2)) {
+						dumpColor(type2);
 						return true;
 					} else {
 						std::cout << "[equality check turned out false!]" << std::endl;
 						std::cout << "printerA[[ " << std::endl << printerA << std::endl << "]]" << std::endl;
-						dumpText(type1);
 						std::cout << "printerB[[ " << std::endl << printerB << std::endl << "]]" << std::endl;
+						std::cout << "dumpText(A):" << std::endl;
+						dumpText(type1);
+						std::cout << "dumpText(B):" << std::endl;
 						dumpText(type2);
 
 						return false;
@@ -174,7 +177,6 @@ namespace insieme {
 
 		EXPECT_TRUE(test_expression(nm, "1"));
 
-		EXPECT_TRUE(test_expression(nm, "((((1))))"));
 
 		EXPECT_TRUE(test_expression(nm, "1u"));
 		EXPECT_TRUE(test_expression(nm, "1l"));
@@ -194,12 +196,8 @@ namespace insieme {
 		EXPECT_TRUE(test_expression(nm, "1 + 0 * 5"));
 		EXPECT_TRUE(test_expression(nm, "1 * 0 + 5"));
 
-		EXPECT_TRUE(test_expression(nm, "(1.0)"));
-		EXPECT_TRUE(test_expression(nm, "((1.0))"));
-
-		EXPECT_TRUE(test_expression(nm, "((1.0) + 4.0)"));
-
 		EXPECT_TRUE(test_expression(nm, "lambda () -> unit { }"));
+		EXPECT_TRUE(test_expression(nm, "lambda (int<4> a) -> unit { }"));
 		EXPECT_TRUE(test_expression(nm, "lambda () -> unit { decl int<4> a = 1+1; }"));
 		EXPECT_TRUE(test_expression(nm, "lambda (bool a) -> bool { return a; }"));
 
@@ -223,7 +221,7 @@ namespace insieme {
 		EXPECT_TRUE(test_expression(nm, "100+200*300"));
 		EXPECT_TRUE(test_expression(nm, "100-200*300"));
 		EXPECT_TRUE(test_expression(nm, "100-200+300"));
-//		EXPECT_TRUE(test_expression(nm, "100-(200+300)"));
+		EXPECT_TRUE(test_expression(nm, "100-(200+300)"));
 		EXPECT_TRUE(test_expression(nm, "100-200-300"));
 
 	}
@@ -277,8 +275,8 @@ namespace insieme {
 
 	NodeManager nm;
 
-	EXPECT_TRUE(test_statement(nm, "{ decl int<4> x = 0; x+1; }"));
-	EXPECT_TRUE(test_statement(nm, "{ decl auto x = 0; x+1; }"));
+//	EXPECT_TRUE(test_statement(nm, "{ decl int<4> x = 0; x+1; }"));
+//	EXPECT_TRUE(test_statement(nm, "{ decl auto x = 0; x+1; }"));
 
 	EXPECT_TRUE(test_statement(nm, "if ( true ) {}"));
 	EXPECT_TRUE(test_statement(nm, "if ( true ) {} else {}"));
