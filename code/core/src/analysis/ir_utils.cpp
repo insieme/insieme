@@ -134,62 +134,61 @@ namespace analysis {
 		 * The visitor is used by the isGeneric(..) function. If one of those is present,
 		 * the type is generic.
 		 */
-		class IsGeneric : private IRVisitor<bool, Pointer, TypeVariableSet&> {
+		class IsGeneric : private IRVisitor<bool, Pointer> {
 		  public:
-			IsGeneric() : IRVisitor<bool, Pointer, TypeVariableSet&>(true) {}
+			IsGeneric() : IRVisitor<bool, Pointer>(true) {}
 
 			/**
 			 * An entry point for this visitor testing whether the given type
 			 * is a generic type or not.
 			 */
 			bool test(const TypePtr& type) {
-				TypeVariableSet boundVars;
-				return this->visit(type, boundVars);
+				return this->visit(type);
 			}
 
 		  private:
 			/**
 			 * When encountering a variable, check whether it is bound.
 			 */
-			bool visitTypeVariable(const TypeVariablePtr& var, TypeVariableSet& boundVars) {
-				return boundVars.find(var) == boundVars.end(); // if not, there is a free generic variable
+			bool visitTypeVariable(const TypeVariablePtr& var) {
+				return true; // there is a free generic variable
 			}
 
-			bool visitFunctionType(const FunctionTypePtr& funType, TypeVariableSet& boundVars) {
-				return any(funType->getParameterTypes(), [&](const TypePtr& type) { return this->visit(type, boundVars); })
-				       || this->visit(funType->getReturnType(), boundVars);
+			bool visitFunctionType(const FunctionTypePtr& funType) {
+				return any(funType->getParameterTypes(), [&](const TypePtr& type) { return this->visit(type); })
+				       || this->visit(funType->getReturnType());
 			}
 
-			bool visitNamedCompositeType(const NamedCompositeTypePtr& type, TypeVariableSet& boundVars) {
-				return any(type->getElements(), [&](const NamedTypePtr& element) { return this->visit(element->getType(), boundVars); });
+			bool visitTupleType(const TupleTypePtr& tuple) {
+				return any(tuple->getElements(), [&](const TypePtr& type) { return this->visit(type); });
 			}
 
-			bool visitTupleType(const TupleTypePtr& tuple, TypeVariableSet& boundVars) {
-				return any(tuple->getElements(), [&](const TypePtr& type) { return this->visit(type, boundVars); });
-			}
-
-			bool visitGenericType(const GenericTypePtr& type, TypeVariableSet& boundVars) {
+			bool visitGenericType(const GenericTypePtr& type) {
 				// generic type is generic if one of its parameters is
-				return any(type->getTypeParameter()->getTypes(), [&](const TypePtr& type) { return this->visit(type, boundVars); });
+				return any(type->getTypeParameter()->getTypes(), [&](const TypePtr& type) { return this->visit(type); });
 			}
 
-			bool visitNumericType(const NumericTypePtr&, TypeVariableSet&) {
+			bool visitNumericType(const NumericTypePtr&) {
 				// numeric types are never generic
 				return false;
 			}
 
-			bool visitRecType(const RecTypePtr& recType, TypeVariableSet& boundVars) {
-				TypeVariableSet local = boundVars;
-				for(const RecTypeBindingPtr& binding : recType->getDefinition()) {
-					local.insert(binding->getVariable());
-				}
-
+			bool visitTagType(const TagTypePtr& tagType) {
 				// check types within recursive bindings
-				return any(recType->getDefinition(), [&](const RecTypeBindingPtr& binding) { return this->visit(binding->getType(), local); });
+				return any(tagType->getDefinition(), [&](const TagTypeBindingPtr& binding) { return this->visit(binding->getRecord()); });
 			}
 
-			bool visitType(const TypePtr& type, TypeVariableSet& boundVars) {
-				return any(type->getChildList(), [&](const NodePtr& node) { return this->visit(node, boundVars); });
+			bool visitTagTypeReference(const TagTypeReferencePtr& tagType) {
+				// nothing generic here
+				return false;
+			}
+
+			bool visitRecord(const RecordPtr& record) {
+				return any(record->getFields(), [&](const FieldPtr& field) { return this->visit(field->getType()); });
+			}
+
+			bool visitType(const TypePtr& type) {
+				return any(type->getChildList(), [&](const NodePtr& node) { return this->visit(node); });
 			}
 
 			/**
@@ -212,6 +211,19 @@ namespace analysis {
 	}
 
 	// ------------------------------------ End :: isGeneric ----------------------------
+
+
+	StructPtr isStruct(const NodePtr& node) {
+		if (auto expr = node.isa<ExpressionPtr>()) return isStruct(expr->getType());
+		if (auto tagType = node.isa<TagTypePtr>()) return isStruct(tagType->getRecord());
+		return node.isa<StructPtr>();
+	}
+
+	UnionPtr isUnion(const NodePtr& node) {
+		if (auto expr = node.isa<ExpressionPtr>()) return isUnion(expr->getType());
+		if (auto tagType = node.isa<TagTypePtr>()) return isUnion(tagType->getRecord());
+		return node.isa<UnionPtr>();
+	}
 
 	bool isParallel(const NodePtr& node) {
 		return visitDepthFirstOnceInterruptible(
@@ -616,7 +628,7 @@ namespace analysis {
 
 			void visitCallExpr(const CallExprAddress& call) {
 				if(LambdaExprAddress lambda = dynamic_address_cast<const LambdaExpr>(call->getFunctionExpr())) {
-					for_range(make_paired_range(call->getArguments(), lambda->getLambda()->getParameters()),
+					for_each(make_paired_range(call->getArguments(), lambda->getLambda()->getParameters()),
 					          [&](const std::pair<const core::ExpressionAddress, const core::VariableAddress>& pair) {
 						          if(*varAddr == *pair.second) {
 							          if(VariableAddress tmp = dynamic_address_cast<const Variable>(extractVariable(pair.first))) { varAddr = tmp; }
@@ -656,7 +668,7 @@ namespace analysis {
 
 			void visitCallExpr(const CallExprAddress& call) {
 				if(LambdaExprAddress lambda = dynamic_address_cast<const LambdaExpr>(call->getFunctionExpr())) {
-					for_range(make_paired_range(call->getArguments(), lambda->getLambda()->getParameters()),
+					for_each(make_paired_range(call->getArguments(), lambda->getLambda()->getParameters()),
 					          [&](const std::pair<const core::ExpressionAddress, const core::VariableAddress>& pair) {
 						          if(*varAddr == *pair.second) {
 							          if(VariableAddress tmp = dynamic_address_cast<const Variable>(extractVariable(pair.first))) { varAddr = tmp; }
@@ -956,59 +968,47 @@ namespace analysis {
 			return res;
 		}
 
-		// RecType
-		if(a->getNodeType() == NT_RecType || b->getNodeType() == NT_RecType) {
-			// if both are they have to be equivalent
-			if(a->getNodeType() == NT_RecType && b->getNodeType() == NT_RecType) { return a == b; }
+		// TagTypes
+		if(a->getNodeType() == NT_TagType && b->getNodeType() == NT_TagType) {
 
-			// if only one is, it needs to be unrolled
-			if(a->getNodeType() == NT_RecType) {
-				assert_ne(b->getNodeType(), NT_RecType);
-				return compareTypes(a.as<RecTypePtr>()->unroll(), b);
+			// get access
+			TagTypePtr ta = a.as<TagTypePtr>();
+			TagTypePtr tb = b.as<TagTypePtr>();
+
+			// resolve recursive types by peeling them
+			if (ta->isRecursive()) {
+				return compareTypes(ta->peel(), b);
 			}
 
-			if(b->getNodeType() == NT_RecType) {
-				assert_ne(a->getNodeType(), NT_RecType);
-				return compareTypes(a, b.as<RecTypePtr>()->unroll());
+			if (tb->isRecursive()) {
+				return compareTypes(ta, tb->peel());
 			}
-			assert_fail() << "How could you get here?";
+
+			assert_false(ta->isRecursive());
+			assert_false(tb->isRecursive());
+
+			// compare types
+			if (ta->getRecord()->getNodeType() != tb->getRecord()->getNodeType()) return false;
+
+			// check name
+			if (ta->getName() != tb->getName()) return false;
+
+			// check fields
+			return equals(ta->getFields(), tb->getFields(),
+					[](const FieldPtr& a, const FieldPtr& b) { return compareTypes(a->getType(), b->getType()); }
+			);
 		}
 
 		// TypeVariable
-		if(a.isa<TypeVariablePtr>() || b.isa<TypeVariablePtr>()) { return a == b; }
+		if(a.isa<TypeVariablePtr>() && b.isa<TypeVariablePtr>()) { return a == b; }
 
 		// GenericType
 		if(a.isa<GenericTypePtr>() && b.isa<GenericTypePtr>()) { return a == b; }
 
 		// TupleType
 		if(a.isa<TupleTypePtr>() && b.isa<TupleTypePtr>()) { return a == b; }
-		// StructType
-		// if(a.isa<StructTypePtr>() && b.isa<StructTypePtr>()) { return a==b; }
-		// UnionType
-		// if(a.isa<UnionTypePtr>() && b.isa<UnionTypePtr>()) { return a==b; }
 
-		// StructType
-		// UnionType
-		if(a.isa<NamedCompositeTypePtr>() && b.isa<NamedCompositeTypePtr>()) {
-			// names and sub-types have to be checked
-			auto entriesA = static_pointer_cast<const NamedCompositeType>(a)->getEntries();
-			auto entriesB = static_pointer_cast<const NamedCompositeType>(b)->getEntries();
-
-			// check number of entries
-			if(entriesA.size() != entriesB.size()) { return false; }
-
-			// check all child nodes
-			bool res = true;
-			for(auto it = make_paired_iterator(entriesA.begin(), entriesB.begin()); it != make_paired_iterator(entriesA.end(), entriesB.end()); ++it) {
-				auto entryA = (*it).first;
-				auto entryB = (*it).second;
-				if(*entryA->getName() != *entryB->getName()) { return false; }
-
-				res = res && compareTypes(entryA->getType(), entryB->getType());
-			}
-			return res;
-		}
-
+		// all others are not equivalent
 		return false;
 	}
 

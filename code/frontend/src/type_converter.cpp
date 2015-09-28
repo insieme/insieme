@@ -364,13 +364,13 @@ namespace conversion {
 			auto genTy = builder.genericType(name);
 			rMan.insert(clangDecl, genTy);
 			// build actual struct type (after insert!)
-			core::NamedTypeList recordMembers;
+			core::FieldList recordMembers;
 			for(auto mem : clangDecl->fields()) {
-				recordMembers.push_back(builder.namedType(mem->getNameAsString(), converter.convertType(mem->getType())));
+				recordMembers.push_back(builder.field(mem->getNameAsString(), converter.convertType(mem->getType())));
 			}
 			auto compoundName = useName ? builder.stringValue(name) : builder.stringValue("");
-			core::TypePtr recordType = clangRecordTy->isUnionType() ? builder.unionType(compoundName, recordMembers).as<core::TypePtr>()
-				                                                    : builder.structType(compoundName, recordMembers).as<core::TypePtr>();
+			core::TagTypePtr recordType = clangRecordTy->isUnionType() ? builder.unionType(compoundName, recordMembers)
+				                                                       : builder.structType(compoundName, recordMembers);
 			// add type to ir translation unit
 			converter.getIRTranslationUnit().addType(genTy, recordType);
 			return genTy;

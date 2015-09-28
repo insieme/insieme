@@ -348,7 +348,7 @@ namespace tu {
 
 				// create a fresh recursive variable
 				if(const GenericTypePtr& type = symbol.isa<GenericTypePtr>()) {
-					return builder.typeVariable(type->getFamilyName());
+					return builder.tagTypeReference(type->getFamilyName());
 				} else if(const LiteralPtr& fun = symbol.isa<LiteralPtr>()) {
 					return builder.variable(map(fun->getType()));
 				}
@@ -403,17 +403,17 @@ namespace tu {
 						// close recursive types
 						if(first.isa<GenericTypePtr>()) {
 							// build recursive type definition
-							vector<RecTypeBindingPtr> bindings;
+							vector<TagTypeBindingPtr> bindings;
 							for(const auto& cur : vars) {
-								bindings.push_back(builder.recTypeBinding(resolutionCache[cur].as<TypeVariablePtr>(), resolved[cur].as<TypePtr>()));
+								bindings.push_back(builder.tagTypeBinding(resolutionCache[cur].as<TagTypeReferencePtr>(), resolved[cur].as<TagTypePtr>()->getRecord()));
 							}
 
 							// build recursive type definition
-							auto def = builder.recTypeDefinition(bindings);
+							auto def = builder.tagTypeDefinition(bindings);
 
 							// simply construct a recursive type
 							for(auto& cur : resolved) {
-								auto newType = builder.recType(resolutionCache[cur.first].as<TypeVariablePtr>(), def);
+								auto newType = builder.tagType(resolutionCache[cur.first].as<TagTypeReferencePtr>(), def);
 								core::transform::utils::migrateAnnotations(cur.second, newType);
 								cur.second = newType;
 							}

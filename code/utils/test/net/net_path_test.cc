@@ -158,7 +158,7 @@ namespace net {
 
 
 		// copy local to local
-		for_range(make_product_range(toVector(lsrcFile, rsrcFile), toVector(ltrgFile, rtrgFile)), [&](const std::pair<NetworkPath, NetworkPath>& cur) {
+		for_each(make_product_range(toVector(lsrcFile, rsrcFile), toVector(ltrgFile, rtrgFile)), [&](const std::pair<NetworkPath, NetworkPath>& cur) {
 			SCOPED_TRACE(cur);
 
 			EXPECT_TRUE(exists(lsrcFile));

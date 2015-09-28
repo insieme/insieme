@@ -43,6 +43,7 @@ namespace core {
 namespace checks {
 
 	enum ErrorCode {
+	#define GROUP(KIND,NUM) EC_##KIND##_GROUP = NUM,
 	#define CODE(KIND, NAME) EC_##KIND##_##NAME,
 	#include "error_codes.inc"
 	};

@@ -59,20 +59,8 @@ namespace analysis {
 				return !contains(knownVariables, cur);
 			}
 
-			bool visitRecTypeDefinition(const RecTypeDefinitionPtr& def, NodeSet& knownVariables) {
-				NodeSet local = knownVariables;
-				for(const RecTypeBindingPtr& binding : def) {
-					local.insert(binding->getVariable());
-				}
-				return visitNode(def, local);
-			}
-
 			bool visitFunctionType(const FunctionTypePtr& cur, NodeSet& knownVariables) {
 				return false; // function types are binding their free type variables
-			}
-
-			bool visitRecType(const RecTypePtr& cur, NodeSet& knownVariables) {
-				return visit(cur->getDefinition(), knownVariables);
 			}
 
 			bool visitNode(const NodePtr& cur, NodeSet& knownVariables) {

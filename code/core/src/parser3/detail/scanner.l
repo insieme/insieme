@@ -131,6 +131,7 @@ blank   [ \t]
 ".as("      return inspire_parser::make_PARENT(loc);
 "#inf"      return inspire_parser::make_INFINITE(loc);
 "let"       return inspire_parser::make_LET(loc);
+"in"        return inspire_parser::make_IN(loc);
 "using"     return inspire_parser::make_USING(loc);
 "auto"      return inspire_parser::make_AUTO(loc);
 "lambda"    return inspire_parser::make_LAMBDA(loc);

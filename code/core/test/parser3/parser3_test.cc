@@ -345,7 +345,7 @@ namespace parser3 {
 		EXPECT_FALSE(test_program(mgr, "let int , long = int<4>; int<4> main () { return 1; }"));
 		EXPECT_FALSE(test_program(mgr, "let a , b = a<4>; int<4> main () { return 1; }"));
 
-		EXPECT_TRUE(test_program(mgr, "let a , b = a<b>, b<a>; int<4> main () { decl a x = undefined(a); decl b y = undefined(b); return 1; }"));
+		EXPECT_TRUE(test_program(mgr, "let a , b = struct { a<b> x; }, struct { b<a> x; } ; int<4> main () { decl a x = undefined(a); decl b y = undefined(b); return 1; }"));
 		EXPECT_TRUE(test_program(mgr, "let f,g = lambda()->unit{g();},lambda()->unit{f();}; unit main() { f(); }"));
 
 		EXPECT_TRUE(test_program(mgr, "let class = struct name { int<4> a; int<5> b};"

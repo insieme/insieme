@@ -368,7 +368,7 @@ namespace lang {
 		static TypePtr create(const TypePtr& elementType, bool _const = false, bool _volatile = false);
 
 		// an implicit converter from this wrapper type to an IR type
-		operator StructTypePtr() const;
+		operator TypePtr() const;
 
 
 		// --- observers and mutators ---

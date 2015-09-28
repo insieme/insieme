@@ -194,7 +194,7 @@ namespace backend {
 		TypeInfo info;
 		auto lit = cManager->create<c_ast::Literal>("X");
 
-		core::TypePtr type = builder.structType(core::NamedCompositeType::Entries());
+		core::TypePtr type = builder.structType(core::FieldList());
 		info = typeManager.getTypeInfo(type);
 		EXPECT_EQ("name", toC(info.lValueType));
 		EXPECT_EQ("name", toC(info.rValueType));
@@ -205,9 +205,9 @@ namespace backend {
 		EXPECT_TRUE((bool)info.definition);
 
 		// members should not have an effect on the types
-		vector<core::NamedTypePtr> elements;
-		elements.push_back(builder.namedType(builder.stringValue("a"), basic.getInt4()));
-		elements.push_back(builder.namedType(builder.stringValue("b"), basic.getBool()));
+		vector<core::FieldPtr> elements;
+		elements.push_back(builder.field(builder.stringValue("a"), basic.getInt4()));
+		elements.push_back(builder.field(builder.stringValue("b"), basic.getBool()));
 		type = builder.structType(elements);
 		info = typeManager.getTypeInfo(type);
 		EXPECT_EQ("name", toC(info.lValueType));
@@ -405,7 +405,7 @@ namespace backend {
 
 		// TODO: check dependency on struct declaration
 
-		type = builder.refType(builder.structType(core::NamedCompositeType::Entries()));
+		type = builder.refType(builder.structType());
 		info = typeManager.getRefTypeInfo(type);
 		EXPECT_EQ("name", toC(info.lValueType));
 		EXPECT_EQ("name*", toC(info.rValueType));
@@ -1040,7 +1040,7 @@ namespace backend {
 
 		// -- test a member function type --
 
-		core::TypePtr classTy = builder.refType(builder.structType(toVector(builder.namedType("a", typeA), builder.namedType("b", typeA))));
+		core::TypePtr classTy = builder.refType(builder.structType(toVector(builder.field("a", typeA), builder.field("b", typeA))));
 
 		type = builder.functionType(toVector(classTy, typeA), typeC, core::FK_MEMBER_FUNCTION);
 		info = typeManager.getTypeInfo(type);
@@ -1087,18 +1087,19 @@ namespace backend {
 
 		// -- build a recursive type --------
 
-		core::TypeVariablePtr A = builder.typeVariable("A");
+		core::TagTypeReferencePtr A = builder.tagTypeReference("A");
 
-		vector<core::NamedTypePtr> entriesA;
-		entriesA.push_back(builder.namedType(builder.stringValue("value"), basic.getInt4()));
-		entriesA.push_back(builder.namedType(builder.stringValue("next"), builder.refType(A)));
-		core::StructTypePtr structA = builder.structType(entriesA);
+		vector<core::FieldPtr> entriesA;
+		entriesA.push_back(builder.field(builder.stringValue("value"), basic.getInt4()));
+		entriesA.push_back(builder.field(builder.stringValue("next"), builder.refType(A)));
+		core::StructPtr structA = builder.structRecord(entriesA);
 
-		vector<core::RecTypeBindingPtr> defs;
-		defs.push_back(builder.recTypeBinding(A, structA));
-		core::RecTypeDefinitionPtr def = builder.recTypeDefinition(defs);
+		vector<core::TagTypeBindingPtr> defs;
+		defs.push_back(builder.tagTypeBinding(A, structA));
+		core::TagTypeDefinitionPtr def = builder.tagTypeDefinition(defs);
 
-		core::RecTypePtr recTypeA = builder.recType(A, def);
+		core::TagTypePtr recTypeA = builder.tagType(A, def);
+		EXPECT_TRUE(recTypeA->isRecursive());
 
 		// do the checks
 
@@ -1131,26 +1132,29 @@ namespace backend {
 
 		// -- build a recursive type --------
 
-		core::TypeVariablePtr A = builder.typeVariable("A");
-		core::TypeVariablePtr B = builder.typeVariable("B");
+		auto A = builder.tagTypeReference("A");
+		auto B = builder.tagTypeReference("B");
 
-		vector<core::NamedTypePtr> entriesA;
-		entriesA.push_back(builder.namedType(builder.stringValue("value"), basic.getInt4()));
-		entriesA.push_back(builder.namedType(builder.stringValue("other"), builder.refType(B)));
-		core::StructTypePtr structA = builder.structType(entriesA);
+		vector<core::FieldPtr> entriesA;
+		entriesA.push_back(builder.field(builder.stringValue("value"), basic.getInt4()));
+		entriesA.push_back(builder.field(builder.stringValue("other"), builder.refType(B)));
+		auto structA = builder.structRecord(entriesA);
 
-		vector<core::NamedTypePtr> entriesB;
-		entriesB.push_back(builder.namedType(builder.stringValue("value"), basic.getBool()));
-		entriesB.push_back(builder.namedType(builder.stringValue("other"), builder.refType(A)));
-		core::StructTypePtr structB = builder.structType(entriesB);
+		vector<core::FieldPtr> entriesB;
+		entriesB.push_back(builder.field(builder.stringValue("value"), basic.getBool()));
+		entriesB.push_back(builder.field(builder.stringValue("other"), builder.refType(A)));
+		auto structB = builder.structRecord(entriesB);
 
-		vector<core::RecTypeBindingPtr> defs;
-		defs.push_back(builder.recTypeBinding(A, structA));
-		defs.push_back(builder.recTypeBinding(B, structB));
-		core::RecTypeDefinitionPtr def = builder.recTypeDefinition(defs);
+		vector<core::TagTypeBindingPtr> defs;
+		defs.push_back(builder.tagTypeBinding(A, structA));
+		defs.push_back(builder.tagTypeBinding(B, structB));
+		core::TagTypeDefinitionPtr def = builder.tagTypeDefinition(defs);
 
-		core::RecTypePtr recTypeA = builder.recType(A, def);
-		core::RecTypePtr recTypeB = builder.recType(B, def);
+		core::TagTypePtr recTypeA = builder.tagType(A, def);
+		core::TagTypePtr recTypeB = builder.tagType(B, def);
+
+		EXPECT_TRUE(recTypeA->isRecursive());
+		EXPECT_TRUE(recTypeB->isRecursive());
 
 		// do the checks
 

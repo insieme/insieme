@@ -73,12 +73,12 @@ namespace {
 		std::cout << " =======================================================" << std::endl;
 
 		for(const auto& pair : tu.getTypes()) {
-			if(pair.second.isa<core::StructTypePtr>()) {
+			if(pair.second.isa<core::TagTypePtr>()) {
 				// retrieve metainfo for the object.
 				//  those objects should not fail, this test does not really make sense, frontend assertion enforce the right behaviour of this,
 				//  it never failed, but i wont remove it since is not very expensive
 
-				// TODO: run semantic checks on member functions ...
+				// TODO: run semantic checks on member functions of records ...
 
 				// stop on 10
 				if(count > 10) {

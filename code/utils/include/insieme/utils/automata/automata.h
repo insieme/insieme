@@ -47,6 +47,7 @@
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/set_utils.h"
 #include "insieme/utils/functional_utils.h"
+#include "insieme/utils/range.h"
 
 namespace insieme {
 namespace utils {
@@ -343,8 +344,8 @@ namespace automata {
 		 * @param state the state which's outgoing transitions are requested
 		 * @return a pair containing the start / end of the requested range
 		 */
-		std::pair<transition_iterator, transition_iterator> getOutgoingTransitions(state_type state) const {
-			return std::make_pair(state->transitions.begin(), state->transitions.end());
+		utils::range<transition_iterator> getOutgoingTransitions(state_type state) const {
+			return utils::make_range(state->transitions.begin(), state->transitions.end());
 		}
 
 		/**
@@ -405,7 +406,7 @@ namespace automata {
 			}
 
 			// resolve successors
-			for_range(state->transitions.equal_range(epsilon), [&](const transition_type& cur) { this->buildEpsilonClosure(cur.second, res); });
+			for_each(state->transitions.equal_range(epsilon), [&](const transition_type& cur) { this->buildEpsilonClosure(cur.second, res); });
 		}
 
 	  public:
@@ -434,7 +435,7 @@ namespace automata {
 				// collect new set of states
 				StateSet newStates;
 				for_each(current, [&](const state_type& state) {
-					for_range(this->getOutgoingTransitions(state), [&](const transition_type& cur) {
+					for_each(this->getOutgoingTransitions(state), [&](const transition_type& cur) {
 						static Matcher matcher;
 						if(matcher(cur.first, character)) { set::insertAll(newStates, this->getEpsilonClosure(cur.second)); }
 					});
@@ -716,7 +717,7 @@ namespace automata {
 			unsigned from = cur.second;
 
 			for_each(set, [&](const typename Automata<>::state_type& elementState) {
-				for_range(automata.getOutgoingTransitions(elementState), [&](const typename Automata<>::transition_type& cur) {
+				for_each(automata.getOutgoingTransitions(elementState), [&](const typename Automata<>::transition_type& cur) {
 					static typename Automata<P, M>::pattern_extractor extractPattern;
 					static typename Automata<P, M>::target_extractor extractTarget;
 
@@ -804,7 +805,7 @@ namespace automata {
 
 				// handle individual transitons
 				vector<State> next;
-				for_range(automata.getOutgoingTransitions(cur), [&](const Transition& transition) {
+				for_each(automata.getOutgoingTransitions(cur), [&](const Transition& transition) {
 					out << "    " << from << " -> " << this->getStateIndex(transition.second);
 					if(transition.first) {
 						out << " [label=\"" << transition.first << "\"]\n";

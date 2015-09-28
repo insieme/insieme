@@ -119,7 +119,7 @@ int main() {
 	;
 	;;
 		
-	#pragma test expect_ir("{" C_STYLE_ASSIGN "decl ref<int<4>,f,f> v0; { c_ass(v0, 0); while(*v0 < 10) { *v0; int_post_inc(v0); } } }")
+	#pragma test expect_ir("{" C_STYLE_ASSIGN "decl ref<int<4>,f,f> v0; { c_ass(v0, 0); while(*v0 < 10) { *v0; gen_post_inc(v0); } } }")
 	{
 		int i;
 		for(i = 0; i < 10; i++) {
@@ -162,7 +162,7 @@ int main() {
 		}
 	}
 
-	#pragma test expect_ir("{ decl ref<int<4>,f,f> v0 = var(0); { while(*v0 < 10) { *v0; int_post_inc(v0); } } }")
+	#pragma test expect_ir("{ decl ref<int<4>,f,f> v0 = var(0); { while(*v0 < 10) { *v0; gen_post_inc(v0); } } }")
 	{
 		int i = 0;
 		for(; i < 10; i++) {
@@ -170,7 +170,7 @@ int main() {
 		}
 	}
 
-    #pragma test expect_ir("{ decl ref<int<4>,f,f> v0 = var(0); { while(true) { break; int_post_inc(v0); } } }")
+    #pragma test expect_ir("{ decl ref<int<4>,f,f> v0 = var(0); { while(true) { break; gen_post_inc(v0); } } }")
 	{
 		int i = 0;
 		for(;; i++) {
@@ -178,7 +178,7 @@ int main() {
 		}
 	}
 
-	#pragma test expect_ir("{ decl ref<int<4>,f,f> v0 = var(0); { while(true) { { int_post_inc(v0); continue; } int_post_inc(v0); } } }")
+	#pragma test expect_ir("{ decl ref<int<4>,f,f> v0 = var(0); { while(true) { { gen_post_inc(v0); continue; } gen_post_inc(v0); } } }")
 	{
 		int i = 0;
 		for(;; i++) {

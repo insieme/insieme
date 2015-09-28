@@ -62,17 +62,9 @@ namespace analysis {
 
 	/**
 	 * A shortcut for the isObjectType function above obtaining the result
-	 * statically since any struct type is a valid object type.
+	 * statically since any tag type is a valid object type.
 	 */
-	static inline bool isObjectType(const StructTypePtr& type) {
-		return true;
-	}
-
-	/**
-	 * a Union can also have member functions, therefore it should be also in the
-	 * Object clasification
-	 */
-	static inline bool isObjectType(const UnionTypePtr& type) {
+	static inline bool isObjectType(const TagTypePtr& type) {
 		return true;
 	}
 

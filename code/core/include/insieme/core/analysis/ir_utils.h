@@ -111,6 +111,20 @@ namespace analysis {
 	bool isGeneric(const TypePtr& type);
 
 	/**
+	 * Tests whether the given node is a struct type or an expression of a struct type.
+	 *
+	 * @return the struct it is representing or a null pointer if it is not a struct
+	 */
+	StructPtr isStruct(const NodePtr& node);
+
+	/**
+	 * Tests whether the given node is a union type or an expression of a union type.
+	 *
+	 * @return the union it is representing or a null pointer if it is not a union
+	 */
+	UnionPtr isUnion(const NodePtr& node);
+
+	/**
 	 * Determines whether the given node contains parallel code (that is, calls to "parallel").
 	 *
 	 * @param node the node to be checked
@@ -187,7 +201,8 @@ namespace analysis {
 	 */
 	static inline TypePtr getReferencedType(const NodePtr& node) {
 		if (auto expr = node.isa<ExpressionPtr>()) return getReferencedType(expr->getType());
-		assert_true(isRefType(node)) << "Cannot get the referenced type of a non ref type.";
+		assert_true(node) << "Cannot get the referenced type of null pointer";
+		assert_true(isRefType(node)) << "Cannot get the referenced type of a non ref type: " << *node;
 		return lang::ReferenceType(node).getElementType();
 	}
 

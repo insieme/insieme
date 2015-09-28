@@ -165,7 +165,7 @@ namespace insieme {
 		// find parallel
 		core::ExpressionPtr postinc;
 		core::visitDepthFirstOnceInterruptible(code, [&](const core::ExpressionPtr& expr) {
-			if(expr == manager.getLangBasic().getSignedIntPostInc()) {
+			if(expr == manager.getLangExtension<core::lang::ReferenceExtension>().getGenPostInc()) {
 				postinc = expr;
 				return true;
 			}

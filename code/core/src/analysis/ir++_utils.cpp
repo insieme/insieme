@@ -59,7 +59,7 @@ namespace analysis {
 		return visitDepthFirstOnceInterruptible(node, [](const NodePtr& cur) -> bool {
 
 			// check whether there are structs using inheritance
-			if(StructTypePtr structType = cur.isa<StructTypePtr>()) {
+			if(StructPtr structType = cur.isa<StructPtr>()) {
 				// if not empty => it is a IR++ code
 				if(!structType->getParents().empty()) { return true; }
 			}
@@ -90,10 +90,8 @@ namespace analysis {
 		case NT_GenericType:
 			// no built-in type is an object type
 			return !type->getNodeManager().getLangBasic().isPrimitive(type);
-		case NT_StructType:
-		case NT_TypeVariable:
-		case NT_UnionType: return true; // all this types are always object types
-		case NT_RecType: return isObjectType(type.as<RecTypePtr>()->getTypeDefinition());
+		case NT_TagType:
+		case NT_TypeVariable:  return true; // all this types are always object types
 		default: break;
 		}
 
@@ -117,21 +115,22 @@ namespace analysis {
 		if(!type) { return false; }
 
 		// must be a struct type
-		StructTypePtr structType = type.isa<StructTypePtr>();
-		if(!structType) { return false; }
+		TagTypePtr tagType = type.isa<TagTypePtr>();
+		if(!tagType || !tagType.isStruct()) { return false; }
 
 		// has 3 elements
-		if(structType.size() != 3u) { return false; }
+		auto fields = tagType->getFields();
+		if(fields.size() != 3u) { return false; }
 
-		NamedTypePtr element = structType[0];
+		FieldPtr element = fields[0];
 		if(!isTypeLiteralType(element->getType())) { return false; }
 		if(element->getName().getValue() != "objType") { return false; }
 
-		element = structType[1];
+		element = fields[1];
 		// if ( !isId(element->getType()))	return false; // TODO: ask if is an identifier
 		if(element->getName().getValue() != "id") { return false; }
 
-		element = structType[2];
+		element = fields[2];
 		if(!isTypeLiteralType(element->getType())) { return false; }
 		if(element->getName().getValue() != "membType") { return false; }
 
@@ -141,9 +140,9 @@ namespace analysis {
 	TypePtr getMemberPointer(const TypePtr& classType, const TypePtr& membTy) {
 		NodeManager& manager = classType.getNodeManager();
 		IRBuilder builder(manager);
-		return builder.structType(toVector(builder.namedType(builder.stringValue("objType"), builder.getTypeLiteralType(classType)),
-		                                   builder.namedType(builder.stringValue("id"), builder.getLangBasic().getIdentifier()),
-		                                   builder.namedType(builder.stringValue("membType"), builder.getTypeLiteralType(membTy))));
+		return builder.structType(toVector(builder.field(builder.stringValue("objType"), builder.getTypeLiteralType(classType)),
+		                                   builder.field(builder.stringValue("id"), builder.getLangBasic().getIdentifier()),
+		                                   builder.field(builder.stringValue("membType"), builder.getTypeLiteralType(membTy))));
 	}
 
 	ExpressionPtr getMemberPointerValue(const TypePtr& classType, const std::string& fieldName, const TypePtr& membType) {

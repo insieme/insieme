@@ -100,7 +100,7 @@ namespace core {
 	typedef std::vector<StatementPtr> StatementList;
 	typedef std::vector<ExpressionPtr> ExpressionList;
 	typedef std::vector<VariablePtr> VariableList;
-	typedef std::vector<NamedTypePtr> NamedTypeList;
+	typedef std::vector<FieldPtr> FieldList;
 	typedef std::vector<NamedValuePtr> NamedValueList;
 	typedef std::vector<ParentPtr> ParentList;
 

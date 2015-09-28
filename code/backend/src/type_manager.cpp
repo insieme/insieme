@@ -84,24 +84,16 @@ namespace backend {
 			typedef TypeInfo type;
 		};
 		template <>
-		struct info_trait<core::StructType> {
-			typedef StructTypeInfo type;
+		struct info_trait<core::TagType> {
+			typedef TagTypeInfo type;
 		};
 		template <>
 		struct info_trait<core::TupleType> {
-			typedef StructTypeInfo type;
-		};
-		template <>
-		struct info_trait<core::UnionType> {
-			typedef UnionTypeInfo type;
+			typedef TagTypeInfo type;
 		};
 		template <>
 		struct info_trait<core::FunctionType> {
 			typedef FunctionTypeInfo type;
-		};
-		template <>
-		struct info_trait<core::RecType> {
-			typedef TypeInfo type;
 		};
 
 		class TypeInfoStore {
@@ -146,7 +138,8 @@ namespace backend {
 			result_type resolveType(const T& type) {
 				// lookup type information using internal mechanism
 				const TypeInfo* info = resolveInternal(type);
-				assert(dynamic_cast<result_type>(info));
+				assert_true(info);
+				assert_true(dynamic_cast<result_type>(info));
 				return static_cast<result_type>(info);
 			}
 
@@ -168,10 +161,11 @@ namespace backend {
 			const TypeInfo* resolveTypeVariable(const core::TypeVariablePtr& ptr);
 			const TypeInfo* resolveGenericType(const core::GenericTypePtr& ptr);
 
-			const StructTypeInfo* resolveStructType(const core::StructTypePtr& ptr);
-			const StructTypeInfo* resolveTupleType(const core::TupleTypePtr& ptr);
+			const TagTypeInfo* resolveTagType(const core::TagTypePtr& ptr);
+			const TagTypeInfo* resolveStructType(const core::TagTypePtr& ptr);
+			const TagTypeInfo* resolveUnionType(const core::TagTypePtr& ptr);
 
-			const UnionTypeInfo* resolveUnionType(const core::UnionTypePtr& ptr);
+			const TagTypeInfo* resolveTupleType(const core::TupleTypePtr& ptr);
 
 			const ArrayTypeInfo* resolveArrayType(const core::GenericTypePtr& ptr);
 			const ArrayTypeInfo* resolveFixedSizedArrayType(const core::GenericTypePtr& ptr);
@@ -187,11 +181,11 @@ namespace backend {
 
 			const RefTypeInfo* resolveRefType(const core::GenericTypePtr& ptr);
 
-			const TypeInfo* resolveRecType(const core::RecTypePtr& ptr);
-			void resolveRecTypeDefinition(const core::RecTypeDefinitionPtr& ptr);
+			const TagTypeInfo* resolveRecType(const core::TagTypePtr& ptr);
+			void resolveRecTypeDefinition(const core::TagTypeDefinitionPtr& ptr);
 
 			template <typename ResInfo>
-			ResInfo* resolveNamedCompositType(const core::NamedCompositeTypePtr&, bool);
+			ResInfo* resolveRecordType(const core::RecordPtr&);
 		};
 	}
 
@@ -210,17 +204,12 @@ namespace backend {
 		return *(store->resolveType(type));
 	}
 
-	const StructTypeInfo& TypeManager::getTypeInfo(const core::StructTypePtr& type) {
+	const TagTypeInfo& TypeManager::getTypeInfo(const core::TagTypePtr& type) {
 		// take value from store
 		return *(store->resolveType(type));
 	}
 
-	const StructTypeInfo& TypeManager::getTypeInfo(const core::TupleTypePtr& type) {
-		// take value from store
-		return *(store->resolveType(type));
-	}
-
-	const UnionTypeInfo& TypeManager::getTypeInfo(const core::UnionTypePtr& type) {
+	const TagTypeInfo& TypeManager::getTypeInfo(const core::TupleTypePtr& type) {
 		// take value from store
 		return *(store->resolveType(type));
 	}
@@ -316,7 +305,6 @@ namespace backend {
 
 		const TypeInfo* TypeInfoStore::resolveTypeInternal(const core::TypePtr& type) {
 
-
 			// - Installed Type Handlers -------------------------------------------------------------------
 
 			// try resolving it using type handlers
@@ -374,13 +362,10 @@ namespace backend {
 					else info = resolveGenericType(genType);
 					break;
 				}
-				case core::NT_StructType: info = resolveStructType(static_pointer_cast<const core::StructType>(type)); break;
-				case core::NT_UnionType: info = resolveUnionType(static_pointer_cast<const core::UnionType>(type)); break;
-				case core::NT_TupleType: info = resolveTupleType(static_pointer_cast<const core::TupleType>(type)); break;
+				case core::NT_TagType:      info = resolveTagType(type.as<core::TagTypePtr>()); break;
+				case core::NT_TupleType:    info = resolveTupleType(static_pointer_cast<const core::TupleType>(type)); break;
 				case core::NT_FunctionType: info = resolveFunctionType(static_pointer_cast<const core::FunctionType>(type)); break;
-				case core::NT_RecType:
-					info = resolveRecType(static_pointer_cast<const core::RecType>(type));
-					break;
+
 				//			case core::NT_ChannelType:
 				case core::NT_TypeVariable: info = resolveTypeVariable(static_pointer_cast<const core::TypeVariable>(type)); break;
 				default:
@@ -500,12 +485,14 @@ namespace backend {
 		}
 
 		template <typename ResInfo>
-		ResInfo* TypeInfoStore::resolveNamedCompositType(const core::NamedCompositeTypePtr& ptr, bool isStruct) {
+		ResInfo* TypeInfoStore::resolveRecordType(const core::RecordPtr& ptr) {
 			// The resolution of a named composite type is based on 3 steps
 			//		- first, get a name for the resulting C struct / union
 			//		- create a code fragment including a declaration of the struct / union (no definition)
 			//		- create a code fragment including a defintion of the sturct / union
 			//		- the representation of the struct / union is the same internally and externally
+
+			bool isStruct = ptr.isa<core::StructPtr>();
 
 			// get C node manager
 			auto manager = converter.getCNodeManager();
@@ -529,7 +516,7 @@ namespace backend {
 			std::set<c_ast::CodeFragmentPtr> definitions;
 
 			// add elements
-			for(const core::NamedTypePtr& entry : ptr->getEntries()) {
+			for(const core::FieldPtr& entry : ptr->getFields()) {
 				// get the name of the member
 				c_ast::IdentifierPtr name = manager->create(entry->getName()->getValue());
 				core::TypePtr curType = entry->getType();
@@ -574,8 +561,20 @@ namespace backend {
 			return type_info_utils::createInfo<ResInfo>(type, declaration, definition);
 		}
 
-		const StructTypeInfo* TypeInfoStore::resolveStructType(const core::StructTypePtr& ptr) {
-			StructTypeInfo* res = resolveNamedCompositType<StructTypeInfo>(ptr, true);
+		const TagTypeInfo* TypeInfoStore::resolveTagType(const core::TagTypePtr& ptr) {
+			// handle recursive types
+			if (ptr->isRecursive()) return resolveRecType(ptr);
+
+			// handle struct and unions
+			if (ptr.isStruct()) return resolveStructType(ptr);
+			assert(ptr.isUnion());
+			return resolveUnionType(ptr);
+		}
+
+		const TagTypeInfo* TypeInfoStore::resolveStructType(const core::TagTypePtr& ptr) {
+			assert_true(ptr->isStruct()) << "Type: " << *ptr;
+
+			TagTypeInfo* res = resolveRecordType<TagTypeInfo>(ptr->getRecord());
 
 			// get C node manager
 			auto manager = converter.getCNodeManager();
@@ -592,7 +591,7 @@ namespace backend {
 			// create list of parameters
 			vector<c_ast::VariablePtr> params;
 			int i = 0;
-			for(const core::NamedTypePtr& cur : ptr) {
+			for(const core::FieldPtr& cur : ptr->getFields()) {
 				params.push_back(c_ast::var(resolveType(cur->getType())->rValueType, format("m%0d", i++)));
 			}
 
@@ -608,14 +607,14 @@ namespace backend {
 			c_ast::NodePtr ctr = manager->create<c_ast::Function>(c_ast::Function::INLINE, res->rValueType, manager->create(name + "_ctr"), params, body);
 
 			// add constructor (C-style)
-			res->constructor = c_ast::CCodeFragment::createNew(fragmentManager, toVector(ifdef, ctr, endif));
+			res->constructors.push_back(c_ast::CCodeFragment::createNew(fragmentManager, toVector(ifdef, ctr, endif)));
 
 
 			// ----------------- C++ ---------------------
 
 			// add parent types
 			c_ast::StructTypePtr type = static_pointer_cast<c_ast::StructType>(res->lValueType);
-			for(auto parent : ptr->getParents()) {
+			for(auto parent : ptr->getStruct()->getParents()) {
 				// resolve parent type
 				const TypeInfo* parentInfo = resolveType(parent->getType());
 
@@ -687,8 +686,10 @@ namespace backend {
 			return res;
 		}
 
-		const UnionTypeInfo* TypeInfoStore::resolveUnionType(const core::UnionTypePtr& ptr) {
-			UnionTypeInfo* res = resolveNamedCompositType<UnionTypeInfo>(ptr, false);
+		const TagTypeInfo* TypeInfoStore::resolveUnionType(const core::TagTypePtr& ptr) {
+			assert_true(ptr->isUnion()) << "Type: " << *ptr;
+
+			TagTypeInfo* res = resolveRecordType<TagTypeInfo>(ptr->getRecord());
 
 			// get C node manager
 			auto manager = converter.getCNodeManager();
@@ -696,7 +697,7 @@ namespace backend {
 
 			// create list of constructors for members
 			int i = 0;
-			for(const core::NamedTypePtr& cur : ptr) {
+			for(const core::FieldPtr& cur : ptr->getFields()) {
 				// define c ast nodes for constructor
 				c_ast::NodePtr ifdef = manager->create<c_ast::OpaqueCode>("#ifdef _MSC_VER");
 				c_ast::NodePtr endif = manager->create<c_ast::OpaqueCode>("#endif\n");
@@ -724,13 +725,13 @@ namespace backend {
 			return res;
 		}
 
-		const StructTypeInfo* TypeInfoStore::resolveTupleType(const core::TupleTypePtr& ptr) {
+		const TagTypeInfo* TypeInfoStore::resolveTupleType(const core::TupleTypePtr& ptr) {
 			// use struct conversion to resolve type => since tuple is represented using structs
 			core::IRBuilder builder(ptr->getNodeManager());
-			core::NamedCompositeType::Entries entries;
+			core::FieldList entries;
 			unsigned counter = 0;
 			transform(ptr->getElementTypes(), std::back_inserter(entries),
-			          [&](const core::TypePtr& cur) { return builder.namedType(builder.stringValue(format("c%d", counter++)), cur); });
+			          [&](const core::TypePtr& cur) { return builder.field(builder.stringValue(format("c%d", counter++)), cur); });
 
 			return resolveStructType(builder.structType(entries));
 		}
@@ -1278,7 +1279,9 @@ namespace backend {
 		}
 
 
-		const TypeInfo* TypeInfoStore::resolveRecType(const core::RecTypePtr& ptr) {
+		const TagTypeInfo* TypeInfoStore::resolveRecType(const core::TagTypePtr& ptr) {
+			assert_true(ptr->isRecursive());
+
 			// the magic is done by resolving the recursive type definition
 			resolveRecTypeDefinition(ptr->getDefinition());
 
@@ -1286,7 +1289,7 @@ namespace backend {
 			return resolveType(ptr);
 		}
 
-		void TypeInfoStore::resolveRecTypeDefinition(const core::RecTypeDefinitionPtr& ptr) {
+		void TypeInfoStore::resolveRecTypeDefinition(const core::TagTypeDefinitionPtr& ptr) {
 			// extract some managers required for the task
 			core::NodeManager& nodeManager = converter.getNodeManager();
 			auto manager = converter.getCNodeManager();
@@ -1296,27 +1299,29 @@ namespace backend {
 			c_ast::CCodeFragmentPtr declaration = c_ast::CCodeFragment::createNew(converter.getFragmentManager());
 
 			// A) create a type info instance for each defined type and add definition
-			for_each(ptr->getDefinitions(), [&](const core::RecTypeBindingPtr& cur) {
+			for_each(ptr->getDefinitions(), [&](const core::TagTypeBindingPtr& cur) {
 
 				// create recursive type represented by current type variable
-				core::RecTypePtr type = core::RecType::get(nodeManager, cur->getVariable(), ptr);
+				core::TagTypePtr type = core::TagType::get(nodeManager, cur->getTag(), ptr);
 
 				// create prototype
 				c_ast::IdentifierPtr name = manager->create(nameManager.getName(type, "userdefined_rec_type"));
 				// create declaration code
 				c_ast::TypePtr cType;
 
-				switch(cur->getType()->getNodeType()) {
-				case core::NT_StructType: cType = manager->create<c_ast::StructType>(name); break;
-				case core::NT_UnionType: cType = manager->create<c_ast::UnionType>(name); break;
-				default: assert_fail() << "Cannot support recursive type which isn't a struct or union!";
+				if (cur->getRecord().isa<core::StructPtr>()) {
+					cType = manager->create<c_ast::StructType>(name);
+				} else if (cur->getRecord().isa<core::UnionPtr>()) {
+					cType = manager->create<c_ast::UnionType>(name);
+				} else {
+					assert_fail() << "Cannot support recursive type which isn't a struct or union!";
 				}
 
 				// add declaration
 				declaration->appendCode(manager->create<c_ast::TypeDeclaration>(cType));
 
 				// create type info block
-				TypeInfo* info = new TypeInfo();
+				TypeInfo* info = new TagTypeInfo();
 				info->declaration = declaration;
 				info->lValueType = cType;
 				info->rValueType = cType;
@@ -1331,17 +1336,17 @@ namespace backend {
 			});
 
 			// B) unroll types and add definitions
-			for_each(ptr->getDefinitions(), [&](const core::RecTypeBindingPtr& cur) {
-				// obtain unrolled type
-				core::TypePtr recType = core::RecType::get(nodeManager, cur->getVariable(), ptr);
-				core::TypePtr unrolled = ptr->unrollOnce(nodeManager, cur->getVariable());
+			for_each(ptr->getDefinitions(), [&](const core::TagTypeBindingPtr& cur) {
+				// obtain peeled type
+				core::TagTypePtr recType = core::TagType::get(nodeManager, cur->getTag(), ptr);
+				core::TagTypePtr peeled = ptr->peelOnce(nodeManager, cur->getTag());
 
-				// fix name of unrolled struct
-				nameManager.setName(unrolled, nameManager.getName(recType));
+				// fix name of peeled struct
+				nameManager.setName(peeled->getRecord(), nameManager.getName(recType));
 
 				// get reference to pointer within map (needs to be updated)
 				TypeInfo*& curInfo = const_cast<TypeInfo*&>(typeInfos.at(recType));
-				TypeInfo* newInfo = const_cast<TypeInfo*>(resolveType(unrolled));
+				TagTypeInfo* newInfo = const_cast<TagTypeInfo*>(resolveType(peeled));
 
 				assert_true(curInfo && newInfo) << "Both should be available now!";
 				assert(curInfo != newInfo);
@@ -1357,7 +1362,7 @@ namespace backend {
 				curInfo->rValueType = newInfo->rValueType;
 				curInfo->externalType = newInfo->externalType;
 
-				// also re-direct the new setup (of the unrolled which might be used in the future)
+				// also re-direct the new setup (of the peeled which might be used in the future)
 				newInfo->declaration = curInfo->declaration;
 				newInfo->definition = curInfo->definition;
 			});

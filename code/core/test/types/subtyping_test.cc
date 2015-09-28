@@ -381,49 +381,49 @@ namespace types {
 	}
 
 	TEST(TypeUtils, RecursiveTypes) {
-		// To be tested: a recursive type should be equivalent to its unrolled version
+		// To be tested: a recursive type should be equivalent to its peeled version
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 
 		// create a recursive type
-		auto type = builder.parseType("let t = struct { A a; ref<t> next; }; t").as<RecTypePtr>();
+		auto type = builder.parseType("let t = struct { A a; ref<t> next; }; t").as<TagTypePtr>();
 		EXPECT_TRUE(type);
 
 		EXPECT_PRED2(isSubTypeOf, type, type);
-		EXPECT_PRED2(isSubTypeOf, type, type->unroll());
-		EXPECT_PRED2(isSubTypeOf, type->unroll(), type);
+		EXPECT_PRED2(isSubTypeOf, type, type->peel());
+		EXPECT_PRED2(isSubTypeOf, type->peel(), type);
 
 
 		// also a mutual recursive type
-		type = builder.parseType("let t,s = struct { A a; ref<s> next; }, struct { B b; ref<t> next; }; t").as<RecTypePtr>();
+		type = builder.parseType("let t,s = struct { A a; ref<s> next; }, struct { B b; ref<t> next; }; t").as<TagTypePtr>();
 		EXPECT_TRUE(type);
 
 		EXPECT_PRED2(isSubTypeOf, type, type);
-		EXPECT_PRED2(isSubTypeOf, type, type->unroll());
-		EXPECT_PRED2(isSubTypeOf, type->unroll(), type);
+		EXPECT_PRED2(isSubTypeOf, type, type->peel());
+		EXPECT_PRED2(isSubTypeOf, type->peel(), type);
 	}
 
 	TEST(TypeUtils, RecursiveTypesWithParents) {
-		// To be tested: a recursive type should be equivalent to its unrolled version
+		// To be tested: a recursive type should be equivalent to its peeled version
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 
 		// create a recursive type
 		auto baseType = builder.parseType("struct { A a; }");
 
-		auto type = builder.parseType("let t, s = struct : [ s ] { B b; ref<t> next; }, struct { A a; }; t").as<RecTypePtr>();
+		auto type = builder.parseType("let t, s = struct : [ s ] { B b; ref<t> next; }, struct { A a; }; t").as<TagTypePtr>();
 
 		EXPECT_PRED2(isSubTypeOf, type, type);
-		EXPECT_PRED2(isSubTypeOf, type, type->unroll());
-		EXPECT_PRED2(isSubTypeOf, type->unroll(), type);
+		EXPECT_PRED2(isSubTypeOf, type, type->peel());
+		EXPECT_PRED2(isSubTypeOf, type->peel(), type);
 
 		EXPECT_PRED2(isSubTypeOf, type, baseType);
-		EXPECT_PRED2(isSubTypeOf, type->unroll(), baseType);
+		EXPECT_PRED2(isSubTypeOf, type->peel(), baseType);
 
 
 		// also a mutual recursive type where one is the base of the other
-		auto typeA = builder.parseType("let t,s = struct : [s] { A a; ref<s> next; }, struct { B b; ref<t> next; }; t").as<RecTypePtr>();
-		auto typeB = builder.parseType("let t,s = struct : [s] { A a; ref<s> next; }, struct { B b; ref<t> next; }; s").as<RecTypePtr>();
+		auto typeA = builder.parseType("let t,s = struct : [s] { A a; ref<s> next; }, struct { B b; ref<t> next; }; t").as<TagTypePtr>();
+		auto typeB = builder.parseType("let t,s = struct : [s] { A a; ref<s> next; }, struct { B b; ref<t> next; }; s").as<TagTypePtr>();
 
 		EXPECT_PRED2(isSubTypeOf, typeA, typeB);
 		EXPECT_PRED2(isNotSubTypeOf, typeB, typeA);

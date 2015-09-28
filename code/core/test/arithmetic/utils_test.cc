@@ -182,9 +182,9 @@ namespace arithmetic {
 		VariablePtr varA = builder.variable(type, 1);
 		VariablePtr varB = builder.variable(type, 2);
 
-		vector<NamedTypePtr> entries;
-		entries.push_back(core::NamedType::get(manager, builder.stringValue("a"), type));
-		entries.push_back(core::NamedType::get(manager, builder.stringValue("b"), type));
+		vector<FieldPtr> entries;
+		entries.push_back(core::Field::get(manager, builder.stringValue("a"), type));
+		entries.push_back(core::Field::get(manager, builder.stringValue("b"), type));
 		TypePtr type2 = builder.structType(entries);
 
 		VariablePtr varX = builder.variable(type2, 3);

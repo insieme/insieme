@@ -240,7 +240,7 @@ namespace parser3 {
 		TypePtr inspire_driver::findType(const location& l, const std::string& name) {
 			if(std::find(let_names.begin(), let_names.end(), name) != let_names.end()) {
 				// this is a type in a let binding usage, it might be recursive, so we "mark" it
-				return builder.typeVariable(name);
+				return builder.genericType(name);
 			}
 
 			// search types defined in current scope
@@ -354,38 +354,43 @@ namespace parser3 {
 			return nullptr;
 		}
 
+		namespace {
+
+			TypePtr getFieldType(const TypePtr& type, const std::string& name) {
+
+				// remove references
+				if (analysis::isRefType(type)) return getFieldType(analysis::getReferencedType(type), name);
+
+				// check for a tag type
+				auto tagType = type.isa<TagTypePtr>();
+				if (!tagType) return TypePtr();
+
+				// unroll recursive types
+				if (tagType->isRecursive()) return getFieldType(tagType->peel(), name);
+
+				// get field type
+				return tagType->getFieldType(name);
+			}
+
+		}
+
+
 		ExpressionPtr inspire_driver::genFieldAccess(const location& l, const ExpressionPtr& expr, const std::string& fieldname) {
 			if(!expr) {
 				error(l, "no expression");
 				return nullptr;
 			}
 
-			NamedCompositeTypePtr compositeType;
-			if(expr->getType().isa<NamedCompositeTypePtr>()) {
-				compositeType = expr->getType().as<NamedCompositeTypePtr>();
-			} else if(analysis::isRefType(expr->getType())) {
-				TypePtr type = analysis::getReferencedType(expr->getType());
-
-				if(type.isa<RecTypePtr>()) { type = type.as<RecTypePtr>()->unroll(mgr); }
-
-				compositeType = type.isa<NamedCompositeTypePtr>();
-				if(!compositeType) {
-					error(l, format("Accessing element of non-named-composite type %s", *expr->getType()));
-					return nullptr;
-				}
-			} else {
-				error(l, format("Accessing element of non-named-composite type %s", *expr->getType()));
-				return nullptr;
-			}
-
-			// check field
-			if(!compositeType->getNamedTypeEntryOf(fieldname)) {
-				error(l, format("Accessing unknown field %s", fieldname));
+			// check that there is such a field
+			if (!getFieldType(expr->getType(), fieldname)) {
+				error(l, format("Unable to locate field %s in type %s", fieldname, *expr->getType()));
 				return nullptr;
 			}
 
 			// create access
-			if(analysis::isRefType(expr->getType())) { return builder.refMember(expr, fieldname); }
+			if(analysis::isRefType(expr->getType())) {
+				return builder.refMember(expr, fieldname);
+			}
 			return builder.accessMember(expr, fieldname);
 		}
 
@@ -396,8 +401,6 @@ namespace parser3 {
 				tupleType = expr->getType().as<TupleTypePtr>();
 			} else if(analysis::isRefType(expr->getType())) {
 				TypePtr type = analysis::getReferencedType(expr->getType());
-
-				if(type->getNodeType() == core::NT_RecType) { type = core::static_pointer_cast<const core::RecType>(type)->unroll(type.getNodeManager()); }
 
 				tupleType = type.isa<TupleTypePtr>();
 				if(!tupleType) {
@@ -559,32 +562,30 @@ namespace parser3 {
 		}
 
 		ExpressionPtr inspire_driver::genStructExpression(const location& l, const TypePtr& type, const ExpressionList& list) {
-			if(!type) {
-				error(l, "Not a struct type");
+			// check for null
+			if (!type) {
+				error(l, "Accessing null-type!");
 				return nullptr;
 			}
 
-			// retrieve struct type, (unroll rec types)
-			StructTypePtr structType = type.isa<StructTypePtr>();
-			if(type.isa<RecTypePtr>()) { structType = type.as<RecTypePtr>()->unroll(type.getNodeManager()).isa<StructTypePtr>(); }
-
-			if(!structType) {
+			// check for a struct type
+			TagTypePtr structType = type.isa<TagTypePtr>();
+			if(!structType || !structType->isStruct()) {
 				error(l, format("Not a struct type: %s", toString(type)));
 				return nullptr;
 			}
-			if(structType->size() != list.size()) {
+
+			// check fields
+			auto fields = structType->getFields();
+			if(fields->size() != list.size()) {
 				error(l, "init list does not match number of fields");
 				return nullptr;
 			}
 
-			// build up struct expression
-			auto begin = make_paired_iterator(structType->begin(), list.begin());
-			auto end = make_paired_iterator(structType->end(), list.end());
-
 			// extract name / value pairs
 			NamedValueList values;
-			for(auto it = begin; it != end; ++it) {
-				values.push_back(builder.namedValue(it->first->getName(), it->second.as<ExpressionPtr>()));
+			for(const auto& cur : make_paired_range(fields, list)) {
+				values.push_back(builder.namedValue(cur.first->getName(), cur.second.as<ExpressionPtr>()));
 			}
 
 			// build struct expression
@@ -593,17 +594,16 @@ namespace parser3 {
 
 		
 		ExpressionPtr inspire_driver::genUnionExpression(const location& l, const TypePtr& type, const std::string field, const ExpressionPtr& expr) {
-
-			// retrieve union type, (unroll rec types)
-			UnionTypePtr unionType = type.isa<UnionTypePtr>();
-			if(type.isa<RecTypePtr>()) { unionType = type.as<RecTypePtr>()->unroll(type.getNodeManager()).isa<UnionTypePtr>(); }
-
-			if(!unionType) {
-				error(l, format("Not a union type: %s", toString(type)));
+			// check for null
+			if (!type) {
+				error(l, "Accessing null-type!");
 				return nullptr;
 			}
-			if(!unionType->getNamedTypeEntryOf(field)) {
-				error(l, "field name does not appear in union");
+
+			// check for a union type
+			TagTypePtr unionType = type.isa<TagTypePtr>();
+			if(!unionType || !unionType->isUnion()) {
+				error(l, format("Not a union type: %s", toString(type)));
 				return nullptr;
 			}
 
@@ -667,6 +667,13 @@ namespace parser3 {
 			// ignore wildcard for unused variables
 			if(name == "_") { return; }
 
+			// annotate type name
+			auto node = factory();
+			annotations::attachName(node, name);
+			if(auto tagType = node.isa<TagTypePtr>()) {
+				annotations::attachName(tagType->getRecord(), name);
+			}
+
 			if(!scopes.add_type(name, factory)) { error(l, format("type name %s redefined", name)); }
 		}
 
@@ -686,10 +693,10 @@ namespace parser3 {
 
 		namespace {
 
-			bool contains_type_variables(const TypePtr& t, const TypeList& variables) {
+			bool contains_type_tag_references(const TypePtr& t, const TypeList& variables) {
 				bool contains = false;
 				visitDepthFirstOnce(t, [&](const TypePtr& t) {
-					if(t.isa<TypeVariablePtr>() && (std::find(variables.begin(), variables.end(), t) != variables.end())) { contains = true; }
+					if(std::find(variables.begin(), variables.end(), t) != variables.end()) { contains = true; }
 				});
 				return contains;
 			}
@@ -934,22 +941,26 @@ namespace parser3 {
 		}
 		// TYPE LETS
 		else if(let_names.size() == type_lets.size()) {
-			std::vector<RecTypeBindingPtr> type_defs;
+			std::vector<TagTypeBindingPtr> type_defs;
 			std::vector<std::string> names;
 			NodeMap non_recursive;
+			NodeMap tag_variables;
 			unsigned count = 0;
 
-			TypeList variables;
+			TypeList tagTypes;
 			for(const auto& name : let_names) {
-				variables.push_back(builder.typeVariable(name));
+				auto genType = builder.genericType(name);
+				auto tagType = builder.tagTypeReference(name);
+				tagTypes.push_back(genType);
+				tag_variables[genType] = tagType;
 			}
 
 			// check for non recursive types
 			// if the type has no recursion inside, replace all uses of the type variable by a full type
 			for(const auto& type : type_lets) {
 				const std::string& name = let_names[count];
-				if(!contains_type_variables(type, variables)) {
-					non_recursive[builder.typeVariable(name)] = type;
+				if(!contains_type_tag_references(type, tagTypes)) {
+					non_recursive[builder.genericType(name)] = type;
 					annotations::attachName(type, name);
 					add_type(l, name, type);
 				}
@@ -958,22 +969,32 @@ namespace parser3 {
 
 			count = 0;
 			// go over the types again and produce recursive type bindings for those who need it
-			for(const auto& type : type_lets) {
+			for(auto type : type_lets) {
 				const std::string& name = let_names[count];
 
-				if(contains_type_variables(type, variables)) {
-					auto tmp = transform::replaceAllGen(mgr, type, non_recursive);
+				// fix non-recursive types
+				if(contains_type_tag_references(type, tagTypes)) {
+					// replace non-recursive constructs ..
+					type = transform::replaceAllGen(mgr, type, non_recursive);
+					// .. and generic types with tag type references
+					type = transform::replaceAllGen(mgr, type, tag_variables);
 
-					type_defs.push_back(builder.recTypeBinding(builder.typeVariable(name), tmp));
-					names.push_back(name);
+					if (auto tagType = type.isa<TagTypePtr>()) {
+						type_defs.push_back(builder.tagTypeBinding(builder.tagTypeReference(name), tagType->getRecord()));
+						names.push_back(name);
+					} else {
+						error(l, format("Only structs or unions supported in recursive type definitions, found: %s", *type));
+					}
 				}
+
 				count++;
 			}
 
 			// generate a full recursive type and one entry point for each type variable
-			RecTypeDefinitionPtr fullType = builder.recTypeDefinition(type_defs);
+			TagTypeDefinitionPtr recDefinition = builder.tagTypeDefinition(type_defs);
+
 			for(const auto& n : names) {
-				auto t = builder.recType(builder.typeVariable(n), fullType);
+				auto t = builder.tagType(builder.tagTypeReference(n), recDefinition);
 				annotations::attachName(t, n);
 				add_type(l, n, t);
 			}

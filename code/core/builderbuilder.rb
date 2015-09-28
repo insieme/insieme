@@ -46,13 +46,16 @@ else
 	File.open("src/ir_builder_impl.inl", "w+") { |inlFileImpl|
 		signatures.each { |sig|
 			typeName = sig[0][0..-4]
+			funName = typeName.sub(/[A-Z]/) {|c| c.downcase}
+			if (funName == "struct" ) then funName = "structRecord" end
+			if (funName == "union"  ) then funName = "unionRecord" end
 			params = sig[2]
-			funDecl = "#{typeName.sub(/[A-Z]/) {|c| c.downcase}}(#{params})"
+			funDecl = "#{funName}(#{params})"
 			inlFile.puts("#{sig[0].ljust(30)} #{funDecl} const;")
 			if(params)
 				# remove default param assignments
 				params = params.split(",").map { |param| param.sub(/=.*/,"").strip }.join(", ")
-				funDecl = "#{typeName.sub(/[A-Z]/) {|c| c.downcase}}(#{params})"
+				funDecl = "#{funName}(#{params})"
 				paramNames = params.split(",").map { |param| param[/\w* *\z/].strip }.join(", ")
 				inlFileImpl.puts("#{sig[0].ljust(18)} IRBuilderBaseModule::#{funDecl} const { return #{typeName}::get(manager, #{paramNames}); }")
 			else

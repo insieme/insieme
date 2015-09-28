@@ -114,8 +114,7 @@ TEST(LangBasic, DerivedMembership) {
 	NodeManager nm;
 	const BasicGenerator& gen = nm.getLangBasic();
 
-	EXPECT_TRUE(gen.isArithOp(gen.getSignedIntPreInc()));
-	EXPECT_TRUE(gen.isArithOp(gen.getSignedIntPostInc()));
+	EXPECT_TRUE(gen.isArithOp(gen.getSignedIntAdd()));
 }
 
 

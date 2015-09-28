@@ -256,32 +256,6 @@ namespace core {
 				return *childList;
 			}
 
-			/**
-			 * This generic method allows to access child nodes in a type-safe way. It is also used
-			 * by node accessors to obtain instance addresses of child nodes.
-			 *
-			 * Note: this function is required by the node accessors
-			 *
-			 * @tparam index the index of the child node to be obtained
-			 * @tparam Res the type of the child node
-			 * @return the address of the requested child node
-			 */
-			template <unsigned index, typename Res = typename node_child_type<node_type, index>::type>
-			Instance<const Res> getChildNodeReference() const {
-				// access the child via static polymorthism and cast result to known type
-				return Instance<const Res>(getChildNodeReference(index).getPath());
-			}
-
-			/**
-			 * Obtains access to the child associated to the given index.
-			 *
-			 * Note: this function is required by the node accessors
-			 *
-			 * @param index the index of the child node to be accessed
-			 */
-			const NodeInstance& getChildNodeReference(std::size_t index) const {
-				return getChildList()[index];
-			}
 		};
 
 	} // end namespace detail

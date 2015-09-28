@@ -351,7 +351,7 @@ namespace {
 			// create replacement map
 			VariableList newParams;
 			VariableMap map = VariableMap();
-			for_range(make_paired_range(params, args), [&](const std::pair<VariablePtr, ExpressionPtr>& cur) {
+			for_each(make_paired_range(params, args), [&](const std::pair<VariablePtr, ExpressionPtr>& cur) {
 				VariablePtr param = cur.first;
 				if(!isSubTypeOf(cur.second->getType(), param->getType())) {
 					param = builder.variable(builder.refType(cur.second->getType()));
@@ -584,7 +584,7 @@ namespace {
 			VariableList newParams;
 			TypeMap tyMap;
 			ExpressionMap map = replacements;
-			for_range(make_paired_range(args, params), [&](const std::pair<ExpressionPtr, VariablePtr>& cur) {
+			for_each(make_paired_range(args, params), [&](const std::pair<ExpressionPtr, VariablePtr>& cur) {
 				/*				bool foundTypeVariable = visitDepthFirstInterruptable(param->getType(), [&](const NodePtr& type) -> bool {
 				                    if(type->getNodeType() == NT_TypeVariable) {
 				                        std::cerr << param->getType() << " - " << type << std::endl;
@@ -657,7 +657,7 @@ namespace {
 				if(funTy) {
 					TypeList newParamTys;
 					bool changed = false;
-					for_range(make_paired_range(params, funTy->getParameterTypeList()), [&](const std::pair<VariablePtr, TypePtr>& cur) {
+					for_each(make_paired_range(params, funTy->getParameterTypeList()), [&](const std::pair<VariablePtr, TypePtr>& cur) {
 						if(cur.first->getType() != cur.second) {
 							changed = true;
 							newParamTys.push_back(cur.first->getType());
@@ -862,10 +862,10 @@ namespace transform {
 
 				// deal with standard build-in funs
 				if(refExt.isRefMemberAccess(fun) && analysis::isRefType(args[0]->getType())
-				   && analysis::getReferencedType(args[0]->getType()).isa<NamedCompositeTypePtr>()) {
+				   && analysis::getReferencedType(args[0]->getType()).isa<TagTypePtr>()) {
 					return builder.refMember(args[0], args[1].as<LiteralPtr>()->getValue());
 				}
-				if(basic.isCompositeMemberAccess(fun) && args[0]->getType().isa<NamedCompositeTypePtr>()) {
+				if(basic.isCompositeMemberAccess(fun) && args[0]->getType().isa<TagTypePtr>()) {
 					return builder.accessMember(args[0], args[1].as<LiteralPtr>()->getValue());
 				}
 				if(refExt.isRefComponentAccess(fun)) { return builder.refComponent(args[0], args[1]); }

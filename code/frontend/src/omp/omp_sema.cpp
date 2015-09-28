@@ -94,8 +94,6 @@ namespace omp {
 
 		// the following vars handle global struct type adjustment due to threadprivate
 		bool fixStructType;              // when set, implies that the struct was just modified and needs to be adjusted
-		StructTypePtr adjustStruct;      // marks a struct that was modified and needs to be adjusted when encountered
-		StructTypePtr adjustedStruct;    // type that should replace the above
 		ExprVarMap thisLambdaTPAccesses; // threadprivate optimization map
 
 		// this stack is used to keep track of which variables are shared in enclosing constructs, to correctly parallelize
@@ -110,17 +108,10 @@ namespace omp {
 	  public:
 		OMPSemaMapper(NodeManager& nodeMan)
 			: nodeMan(nodeMan), build(nodeMan), basic(nodeMan.getLangBasic()), parExt(nodeMan.getLangExtension<lang::ParallelExtension>()), toFlatten(),
-			  fixStructType(false), adjustStruct(), adjustedStruct(), thisLambdaTPAccesses(),
+			  fixStructType(false), thisLambdaTPAccesses(),
 			  orderedCountLit(build.literal("ordered_counter", build.refType(basic.getInt8(), false, true))),
 			  orderedItLit(build.literal("ordered_loop_it", basic.getInt8())), orderedIncLit(build.literal("ordered_loop_inc", basic.getInt8())),
 			  paramCounter(0) {}
-
-		StructTypePtr getAdjustStruct() {
-			return adjustStruct;
-		}
-		StructTypePtr getAdjustedStruct() {
-			return adjustedStruct;
-		}
 
 	  protected:
 		// Identifies omp annotations and uses the correct methods to deal with them
@@ -264,14 +255,13 @@ namespace omp {
 			if(fixStructType) {
 				if(StructExprPtr structExpr = dynamic_pointer_cast<const StructExpr>(newNode)) {
 					// WHY doesn't StructExpr::getType() return a StructType?
-					adjustStruct = static_pointer_cast<const StructType>(structExpr->getType());
 					fixStructType = false;
 					NamedValuesPtr members = structExpr->getMembers();
 					// build new type from member initialization expressions' types
-					vector<NamedTypePtr> memberTypes;
+					vector<FieldPtr> memberTypes;
 					::transform(members, std::back_inserter(memberTypes),
-					            [&](const NamedValuePtr& cur) { return build.namedType(cur->getName(), cur->getValue()->getType()); });
-					adjustedStruct = build.structType(memberTypes);
+					            [&](const NamedValuePtr& cur) { return build.field(cur->getName(), cur->getValue()->getType()); });
+					auto adjustedStruct = build.structType(memberTypes);
 					return build.structExpr(adjustedStruct, members);
 				}
 			}
@@ -908,8 +898,8 @@ namespace omp {
 
 				type = core::analysis::getReferencedType(type);
 
-				// the element type has to be a struct type
-				if(type->getNodeType() != core::NT_StructType) {
+				// the element type has to be a struct or union type
+				if(type.isa<core::TagTypePtr>()) {
 					return true; // also, not a global
 				}
 

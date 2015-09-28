@@ -42,10 +42,7 @@
 #include <functional>
 #include "boost/operators.hpp"
 
-template <class T>
-struct Twin : public std::pair<T, T> {
-	Twin(const T& first, const T& second) : std::pair<T, T>(first, second) {}
-};
+#include "insieme/utils/range.h"
 
 template <typename ITypeA, typename ITypeB, typename ValueTypeA = typename std::iterator_traits<ITypeA>::value_type,
           typename ValueTypeB = typename std::iterator_traits<ITypeB>::value_type>
@@ -102,8 +99,8 @@ paired_iterator<A, B> make_paired_iterator(A a, B b) {
 
 template <typename ContainerA, typename ContainerB, typename IterA = typename ContainerA::const_iterator, typename IterB = typename ContainerB::const_iterator,
           typename ResIter = paired_iterator<IterA, IterB>>
-Twin<ResIter> make_paired_range(const ContainerA& first, const ContainerB& second) {
-	return Twin<ResIter>(paired_iterator<IterA, IterB>(first.begin(), second.begin()), paired_iterator<IterA, IterB>(first.end(), second.end()));
+insieme::utils::range<ResIter> make_paired_range(const ContainerA& first, const ContainerB& second) {
+	return insieme::utils::make_range(paired_iterator<IterA, IterB>(first.begin(), second.begin()), paired_iterator<IterA, IterB>(first.end(), second.end()));
 }
 
 
@@ -172,8 +169,8 @@ class product_iterator : public IteratorParentType<ITypeA, ITypeB> {
 
 template <typename ContainerA, typename ContainerB, typename IterA = typename ContainerA::const_iterator, typename IterB = typename ContainerB::const_iterator,
           typename ResIter = product_iterator<IterA, IterB>>
-Twin<ResIter> make_product_range(const ContainerA& first, const ContainerB& second) {
-	return Twin<ResIter>(ResIter(first.begin(), first.end(), second.begin(), second.end()), ResIter(first.end(), first.end(), second.end(), second.end()));
+insieme::utils::range<ResIter> make_product_range(const ContainerA& first, const ContainerB& second) {
+	return insieme::utils::make_range(ResIter(first.begin(), first.end(), second.begin(), second.end()), ResIter(first.end(), first.end(), second.end(), second.end()));
 }
 
 template <class IterT, class ValT = typename std::iterator_traits<IterT>::value_type, class PtrT = typename std::iterator_traits<IterT>::value_type*,
@@ -212,8 +209,8 @@ struct IteratorFilter : public boost::forward_iterator_helper<IteratorFilter<Ite
 
 template <class IterT, class ValT = typename std::iterator_traits<IterT>::value_type, class PtrT = typename std::iterator_traits<IterT>::value_type*,
           class RefT = typename std::iterator_traits<IterT>::value_type&>
-Twin<IteratorFilter<IterT, ValT, PtrT, RefT>> filterIterator(const IterT& begin, const IterT& end,
+insieme::utils::range<IteratorFilter<IterT, ValT, PtrT, RefT>> filterIterator(const IterT& begin, const IterT& end,
                                                              const typename IteratorFilter<IterT, ValT, PtrT, RefT>::Filter& filter) {
-	return Twin<IteratorFilter<IterT, ValT, PtrT, RefT>>(IteratorFilter<IterT, ValT, PtrT, RefT>(begin, end, filter),
+	return insieme::utils::range<IteratorFilter<IterT, ValT, PtrT, RefT>>(IteratorFilter<IterT, ValT, PtrT, RefT>(begin, end, filter),
 	                                                     IteratorFilter<IterT, ValT, PtrT, RefT>(end, end, filter));
 }

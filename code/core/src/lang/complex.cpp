@@ -48,8 +48,8 @@ namespace lang {
 		if (!node) return false;
 		if (auto expr = node.isa<ExpressionPtr>()) return isComplexType(node);
 
-		auto type = node.isa<StructTypePtr>();
-		if(!type) return false;
+		auto type = node.isa<TagTypePtr>();
+		if(!type || !type.isStruct()) return false;
 
 		// simple approach: use unification
 		NodeManager& mgr = node.getNodeManager();

@@ -99,11 +99,9 @@ namespace extensions {
 				} else if(basic.isSignedIntSub(rhsCallee) || basic.isUnsignedIntSub(rhsCallee) || basic.isCharSub(rhsCallee)) {
 					return std::make_pair(false, builder.minus(rhsCall->getArgument(1)));
 				}
-			} else if(basic.isSignedIntPreInc(callee) || basic.isSignedIntPostInc(callee) || basic.isUnsignedIntPreInc(callee)
-				      || basic.isUnsignedIntPostInc(callee) || basic.isCharPreInc(callee) || basic.isCharPostInc(callee)) {
+			} else if(rMod.isGenPreInc(callee) || rMod.isGenPostInc(callee)) {
 				return std::make_pair(false, builder.literal("1", call->getType()));
-			} else if(basic.isSignedIntPreDec(callee) || basic.isSignedIntPostDec(callee) || basic.isUnsignedIntPreDec(callee)
-				      || basic.isUnsignedIntPostDec(callee) || basic.isCharPreDec(callee) || basic.isCharPostDec(callee)) {
+			} else if(rMod.isGenPreDec(callee) || rMod.isGenPostDec(callee)) {
 				return std::make_pair(false, builder.literal("-1", call->getType()));
 			} else if(callee == rMod.getRefDeref()) {
 				// just a read, we can ignore this

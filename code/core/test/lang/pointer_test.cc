@@ -56,10 +56,10 @@ namespace lang {
 		const PointerExtension& ext = nm.getLangExtension<PointerExtension>();
 
 		// the generic pointer template should be a struct
-		EXPECT_EQ(NT_StructType, ext.getGenPtr()->getNodeType());
+		EXPECT_EQ(NT_TagType, ext.getGenPtr()->getNodeType());
 
 		// the arguments in the functions accepting a pointer should be expanded to a struct
-		EXPECT_EQ(NT_StructType, ext.getPtrCast()->getType().as<FunctionTypePtr>()->getParameterTypes()[0]->getNodeType());
+		EXPECT_EQ(NT_TagType, ext.getPtrCast()->getType().as<FunctionTypePtr>()->getParameterTypes()[0]->getNodeType());
 	}
 
 	TEST(Pointer, Alias) {
@@ -73,9 +73,9 @@ namespace lang {
 		auto t2 = builder.parseType("ptr<int<4>,f,f>");
 		auto t3 = builder.parseType("ptr<int<4>,f,t>");
 
-		EXPECT_EQ(t1->getNodeType(), NT_StructType);
-		EXPECT_EQ(t2->getNodeType(), NT_StructType);
-		EXPECT_EQ(t3->getNodeType(), NT_StructType);
+		EXPECT_EQ(t1->getNodeType(), NT_TagType);
+		EXPECT_EQ(t2->getNodeType(), NT_TagType);
+		EXPECT_EQ(t3->getNodeType(), NT_TagType);
 
 		EXPECT_EQ(t1, t2);
 		EXPECT_NE(t1, t3);

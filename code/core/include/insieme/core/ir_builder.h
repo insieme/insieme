@@ -283,19 +283,23 @@ namespace core {
 		GenericTypePtr arrayType(const TypePtr& elementType, const VariablePtr& size) const;
 		GenericTypePtr arrayType(const TypePtr& elementType, size_t size) const;
 		
-		StructTypePtr structType(const vector<std::pair<StringValuePtr, TypePtr>>& entries) const;
-		UnionTypePtr unionType(const vector<std::pair<StringValuePtr, TypePtr>>& entries) const;
+		FieldPtr field(const string& name, const TypePtr& type) const;
 
-		// some constructors for derived classes
-		StructTypePtr structType(const vector<ParentPtr>& parents, const vector<NamedTypePtr>& entries) const;
-		StructTypePtr structType(const vector<TypePtr>& parents, const vector<NamedTypePtr>& entries) const;
-		StructTypePtr structType(const vector<ParentPtr>& parents, const vector<std::pair<StringValuePtr, TypePtr>>& entries) const;
-		StructTypePtr structType(const vector<TypePtr>& parents, const vector<std::pair<StringValuePtr, TypePtr>>& entries) const;
-		StructTypePtr structType(const StringValuePtr& name, const vector<ParentPtr>& parents, const vector<NamedTypePtr>& entries) const;
+		TagTypePtr structType(const vector<std::pair<StringValuePtr, TypePtr>>& fields) const;
+		TagTypePtr structType(const vector<ParentPtr>& parents, const vector<FieldPtr>& fields) const;
+		TagTypePtr structType(const vector<TypePtr>& parents, const vector<FieldPtr>& fields) const;
+		TagTypePtr structType(const vector<ParentPtr>& parents, const vector<std::pair<StringValuePtr, TypePtr>>& fields) const;
+		TagTypePtr structType(const vector<TypePtr>& parents, const vector<std::pair<StringValuePtr, TypePtr>>& fields) const;
+		TagTypePtr structType(const vector<FieldPtr>& fields = vector<FieldPtr>()) const;
+		TagTypePtr structType(const string& name, const vector<FieldPtr>& fields) const;
+		TagTypePtr structType(const StringValuePtr& name, const vector<FieldPtr>& fields) const;
+		TagTypePtr structType(const StringValuePtr& name, const vector<ParentPtr>& parents, const vector<FieldPtr>& fields) const;
 
-		NamedTypePtr namedType(const string& name, const TypePtr& type) const;
+		TagTypePtr unionType(const vector<std::pair<StringValuePtr, TypePtr>>& fields) const;
+		TagTypePtr unionType(const StringValuePtr& name, const vector<FieldPtr>& fields) const;
+		TagTypePtr unionType(const vector<FieldPtr>& fields) const;
+
 		NamedValuePtr namedValue(const string& name, const ExpressionPtr& value) const;
-
 
 		TupleExprPtr tupleExpr(const ExpressionList& values = ExpressionList()) const;
 
@@ -305,7 +309,7 @@ namespace core {
 		}
 
 
-		StructExprPtr structExpr(const StructTypePtr& structType, const vector<NamedValuePtr>& values) const;
+		StructExprPtr structExpr(const TypePtr& structType, const vector<NamedValuePtr>& values) const;
 		StructExprPtr structExpr(const vector<std::pair<StringValuePtr, ExpressionPtr>>& values) const;
 		StructExprPtr structExpr(const vector<NamedValuePtr>& values) const;
 

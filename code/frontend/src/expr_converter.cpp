@@ -472,6 +472,14 @@ namespace conversion {
 				return core::lang::buildPtrOperation(op, expr);
 			}
 
+			switch(op) {
+			case core::lang::BasicGenerator::Operator::PostInc: return builder.postInc(expr);
+			case core::lang::BasicGenerator::Operator::PostDec: return builder.postDec(expr);
+			case core::lang::BasicGenerator::Operator::PreInc: return builder.preInc(expr);
+			case core::lang::BasicGenerator::Operator::PreDec: return builder.preDec(expr);
+			default: break;
+			}
+
 			return builder.unaryOp(basic.getOperator(exprTy, op), expr);
 		}
 	}
@@ -579,8 +587,8 @@ namespace conversion {
 			retIr = builder.minus(subExpr);
 			return retIr;
 		}
-		
-		// A unary ! implies a conversion to bool in IR -------------------------------------------------------------------------------------------------- NOT -
+				
+		// A unary ! implies a conversion to bool in IR ------------------------------------------------------------------------------------------ LOGICAL NOT -
 		if(unOp->getOpcode() == clang::UO_LNot) {
 			retIr = builder.logicNeg(utils::exprToBool(subExpr));
 			return utils::buildBoolToInt(retIr);
@@ -706,23 +714,23 @@ namespace conversion {
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	namespace {
-		std::pair<core::NamedCompositeTypePtr, core::GenericTypePtr> lookupRecordTypes(Converter& converter, const clang::InitListExpr* initList) {
+		std::pair<core::TagTypePtr, core::GenericTypePtr> lookupRecordTypes(Converter& converter, const clang::InitListExpr* initList) {
 			auto clangType = initList->getType();
 			auto clangRecordType = llvm::dyn_cast<clang::RecordType>(clangType->getCanonicalTypeUnqualified());
 			frontend_assert(clangRecordType);
 			auto irGenericType = converter.getRecordMan()->lookup(clangRecordType->getDecl());
 			auto irRecordTypeIt = converter.getIRTranslationUnit().getTypes().find(irGenericType);
 			frontend_assert(irRecordTypeIt != converter.getIRTranslationUnit().getTypes().end()) << "Initializing unregistered record type"; 
-			auto irRecordType = irRecordTypeIt->second.as<core::NamedCompositeTypePtr>();
+			auto irRecordType = irRecordTypeIt->second.as<core::TagTypePtr>();
 			return std::make_pair(irRecordType, irGenericType);
 		}
 
 		core::NamedValueList buildNamedValuesForStructInit(Converter& converter, const clang::InitListExpr* initList) {
-			core::NamedCompositeTypePtr irRecordType = lookupRecordTypes(converter, initList).first;
+			core::TagTypePtr irRecordType = lookupRecordTypes(converter, initList).first;
 			core::NamedValueList values;
-			core::NamedTypeList entries = irRecordType->getEntries();
+			core::FieldList fields = irRecordType->getFields();
 			unsigned i = 0;
-			for(auto entry : entries) {
+			for(auto entry : fields) {
 				core::ExpressionPtr initExp = converter.getIRBuilder().getZero(entry->getType());
 				if(i < initList->getNumInits()) initExp = converter.convertExpr(initList->getInit(i));
 				frontend_assert(initExp->getType() == entry->getType()) << "Type mismatch in record initialization expression"; 
@@ -745,13 +753,13 @@ namespace conversion {
 		if(clangType->isStructureType()) {
 			auto types = lookupRecordTypes(converter, initList);
 			auto values = buildNamedValuesForStructInit(converter, initList);
-			retIr = utils::buildRecordTypeFixup(builder.structExpr(types.first.as<core::StructTypePtr>(), values), types.second);
+			retIr = utils::buildRecordTypeFixup(builder.structExpr(types.first, values), types.second);
 		}
 		else if(clangType->isUnionType()) {
 			auto types = lookupRecordTypes(converter, initList);
 			auto member = builder.stringValue(initList->getInitializedFieldInUnion()->getNameAsString());
 			auto initExp = Visit(initList->getInit(0));
-			retIr = utils::buildRecordTypeFixup(builder.unionExpr(types.first.as<core::UnionTypePtr>(), member, initExp), types.second);
+			retIr = utils::buildRecordTypeFixup(builder.unionExpr(types.first, member, initExp), types.second);
 		}
 		else if(clangType->isArrayType()) {
 			auto gT = converter.convertType(clangType).as<core::GenericTypePtr>();

@@ -1111,11 +1111,13 @@ namespace core {
 	 * The accessor associated to a struct expression.
 	 */
 	IR_NODE_ACCESSOR(StructExpr, Expression, Type, NamedValues)
+
 		/**
 		 * Obtains a reference to the list of named values aggregated to a struct by
 		 * the represented node.
 		 */
 		IR_NODE_PROPERTY(NamedValues, Members, 1);
+
 	IR_NODE_END()
 
 	/**
@@ -1148,7 +1150,7 @@ namespace core {
 		 * @param values the values to be packed into a vector
 		 * @return the requested type instance managed by the given manager
 		 */
-		static StructExprPtr get(NodeManager & manager, const StructTypePtr& type, const NamedValuesPtr& values) {
+		static StructExprPtr get(NodeManager & manager, const TypePtr& type, const NamedValuesPtr& values) {
 			return manager.get(StructExpr(type, values));
 		}
 
@@ -1160,12 +1162,7 @@ namespace core {
 	/**
 	 * The accessor associated to a union expression.
 	 */
-	IR_NODE_ACCESSOR(UnionExpr, Expression, UnionType, StringValue, Expression)
-
-		/**
-		 * Obtains a reference to the type of union produced by this expression.
-		 */
-		IR_NODE_PROPERTY(UnionType, Type, 0);
+	IR_NODE_ACCESSOR(UnionExpr, Expression, Type, StringValue, Expression)
 
 		/**
 		 * Obtains a reference to the name of the field initialized by this union
@@ -1176,6 +1173,7 @@ namespace core {
 		 * Obtains a reference to the value associated to the addressed member of the resulting union.
 		 */
 		IR_NODE_PROPERTY(Expression, Member, 2);
+
 	IR_NODE_END()
 
 	/**
@@ -1202,7 +1200,7 @@ namespace core {
 		 * @param value the value to be used for the initialization
 		 * @return the requested type instance managed by the given manager
 		 */
-		static UnionExprPtr get(NodeManager & manager, const UnionTypePtr& type, const StringValuePtr& member, const ExpressionPtr& value) {
+		static UnionExprPtr get(NodeManager & manager, const TypePtr& type, const StringValuePtr& member, const ExpressionPtr& value) {
 			return manager.get(UnionExpr(type, member, value));
 		}
 

@@ -55,8 +55,7 @@ namespace backend {
 
 	class TypeInfo;
 	class FunctionTypeInfo;
-	class StructTypeInfo;
-	class UnionTypeInfo;
+	class TagTypeInfo;
 	class RefTypeInfo;
 	class ArrayTypeInfo;
 	class VectorTypeInfo;
@@ -92,11 +91,9 @@ namespace backend {
 
 		const TypeInfo& getTypeInfo(const core::TypePtr&);
 
-		const StructTypeInfo& getTypeInfo(const core::StructTypePtr&);
+		const TagTypeInfo& getTypeInfo(const core::TagTypePtr&);
 
-		const StructTypeInfo& getTypeInfo(const core::TupleTypePtr&);
-
-		const UnionTypeInfo& getTypeInfo(const core::UnionTypePtr&);
+		const TagTypeInfo& getTypeInfo(const core::TupleTypePtr&);
 
 		const FunctionTypeInfo& getTypeInfo(const core::FunctionTypePtr&);
 
@@ -159,16 +156,9 @@ namespace backend {
 		virtual ~TypeInfo(){};
 	};
 
-	struct StructTypeInfo : public TypeInfo {
+	struct TagTypeInfo : public TypeInfo {
 		// to be included:
 		//		- a constructor function
-
-		c_ast::CodeFragmentPtr constructor;
-	};
-
-	struct UnionTypeInfo : public TypeInfo {
-		// to be included:
-		//		- a constructor per member
 
 		std::vector<c_ast::CodeFragmentPtr> constructors;
 	};

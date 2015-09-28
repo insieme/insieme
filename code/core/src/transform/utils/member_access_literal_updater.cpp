@@ -67,20 +67,20 @@ namespace utils {
 			ExpressionPtr fun = call->getFunctionExpr();
 			// struct access
 			if(BASIC.isCompositeMemberAccess(fun)) {
-				const StructTypePtr& structTy = static_pointer_cast<const StructType>(call->getArgument(0)->getType());
+				const TagTypePtr& tagTy = call[0]->getType().as<TagTypePtr>();
 				// TODO find better way to extract Identifier from IdentifierLiteral
 				const StringValuePtr& id = static_pointer_cast<const Literal>(call->getArgument(1))->getValue();
-				const TypePtr& type = structTy->getTypeOfMember(id);
+				const TypePtr& type = tagTy->getFieldType(id);
 				if(call->getArgument(2)->getType() != type || call->getType() != type) {
 					res = builder.callExpr(type, fun, call->getArgument(0), call->getArgument(1), builder.getTypeLiteral(type));
 				}
 			}
 
 			if(refExt.isRefMemberAccess(fun)) {
-				const StructTypePtr& structTy = static_pointer_cast<const StructType>(analysis::getReferencedType(call->getArgument(0)->getType()));
+				const TagTypePtr& tagTy = analysis::getReferencedType(call[0]->getType()).as<TagTypePtr>();
 				// TODO find better way to extract Identifier from IdentifierLiteral
 				const StringValuePtr& id = static_pointer_cast<const Literal>(call->getArgument(1))->getValue();
-				const TypePtr& elemType = structTy->getTypeOfMember(id);
+				const TypePtr& elemType = tagTy->getFieldType(id);
 				const TypePtr& refTy = builder.refType(elemType);
 				if(call->getArgument(2)->getType() != elemType || call->getType() != refTy)
 					res = builder.callExpr(refTy, fun, call->getArgument(0), call->getArgument(1), builder.getTypeLiteral(elemType));

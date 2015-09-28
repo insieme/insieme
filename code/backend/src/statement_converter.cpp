@@ -326,8 +326,8 @@ namespace backend {
 		c_ast::TypePtr type = typeInfo.rValueType;
 
 		// special case.. empty struct: instead (<type>)(<members>) we use *((<type>*)(0))
-		if(auto stp = ptr->getType().isa<core::StructTypePtr>()) {
-			if(!stp.size()) {
+		if(auto stp = core::analysis::isStruct(ptr->getType())) {
+			if(!stp->getFields().size()) {
 				auto cmgr = context.getConverter().getCNodeManager();
 				auto zero = cmgr->create("0");
 				return c_ast::deref(c_ast::cast(c_ast::ptr(type), zero));

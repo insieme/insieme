@@ -119,9 +119,9 @@ namespace printer {
 		void visitGenericType(const GenericTypePtr& genTy);
 		void visitFunctionType(const FunctionTypePtr& funcType);
 		void visitTupleType(const TupleTypePtr& tupleTy);
-		void visitNamedCompositeType(const NamedCompositeTypePtr& compTy);
-		void visitRecType(const RecTypePtr& recTy);
-		void visitRecTypeDefinition(const RecTypeDefinitionPtr& recTy);
+		void visitTagType(const TagTypePtr& tagTy);
+		void visitTagTypeDefinition(const TagTypeDefinitionPtr& tagTy);
+		void visitRecord(const RecordPtr& record);
 
 		// Statements
 		void visitCompoundStmt(const CompoundStmtPtr& comp);

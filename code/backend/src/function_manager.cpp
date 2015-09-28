@@ -214,10 +214,14 @@ namespace backend {
 			for_each(arguments, [&](const core::ExpressionPtr& cur) { append(cur); });
 		}
 
-		core::StructTypePtr getClassType(const core::FunctionTypePtr& funType) {
+		core::TagTypePtr getClassType(const core::FunctionTypePtr& funType) {
 			core::TypePtr type = funType->getObjectType();
-			if(auto recType = type.isa<core::RecTypePtr>()) { type = recType->unroll(); }
-			return type.as<core::StructTypePtr>();
+			if (auto tagType = type.isa<core::TagTypePtr>()) {
+				if (tagType->isRecursive()) {
+					type = tagType->peel();
+				}
+			}
+			return type.as<core::TagTypePtr>();
 		}
 
 		c_ast::NodePtr handleMemberCall(const core::CallExprPtr& call, c_ast::CallPtr c_call, ConversionContext& context) {
@@ -1217,9 +1221,8 @@ namespace backend {
 			c_ast::IdentifierPtr getIdentifierFor(const Converter& converter, const core::NodePtr& node) {
 				auto mgr = converter.getCNodeManager();
 				switch(node->getNodeType()) {
-				case core::NT_StructType:
-				case core::NT_GenericType:
-				case core::NT_RecType: {
+				case core::NT_TagType:
+				case core::NT_GenericType: {
 					auto type = converter.getTypeManager().getTypeInfo(node.as<core::TypePtr>());
 					if(auto structType = type.lValueType.isa<c_ast::StructTypePtr>()) {
 						return mgr->create(toString(*structType));
@@ -1237,7 +1240,7 @@ namespace backend {
 					}
 					return mgr->create(converter.getNameManager().getName(node.as<core::ParentPtr>()->getType()));
 				}
-				case core::NT_NamedType: return mgr->create(node.as<core::NamedTypePtr>()->getName()->getValue());
+				case core::NT_Field: return mgr->create(node.as<core::FieldPtr>()->getName()->getValue());
 				case core::NT_Literal:
 					assert(node->getNodeManager().getLangBasic().isIdentifier(node.as<core::ExpressionPtr>()->getType()));
 					return mgr->create(node.as<core::LiteralPtr>()->getStringValue());
@@ -1258,17 +1261,19 @@ namespace backend {
 				c_ast::Constructor::InitializationList initializer;
 
 				// obtain class type
-				core::StructTypePtr classType = getClassType(ctor->getType());
+				core::TagTypePtr classType = getClassType(ctor->getType());
 
 				// obtain list of parameters
 				core::VariableList params(ctor->getParameters().begin() + 1, ctor->getParameters().end());
 
 				// get list of all parents and fields
 				std::vector<c_ast::IdentifierPtr> all;
-				for(const core::ParentPtr& cur : classType->getParents()) {
-					all.push_back(getIdentifierFor(converter, cur));
+				if (classType->isStruct()) {
+					for(const core::ParentPtr& cur : classType->getStruct()->getParents()) {
+						all.push_back(getIdentifierFor(converter, cur));
+					}
 				}
-				for(const core::NamedTypePtr& cur : classType) {
+				for(const core::FieldPtr& cur : classType->getFields()) {
 					all.push_back(getIdentifierFor(converter, cur));
 				}
 
@@ -1498,14 +1503,14 @@ namespace backend {
 			});
 
 			// add parameters for wrapper
-			::transform_range(make_paired_range(paramTypes, function->parameter), std::back_inserter(call->arguments),
-			                  [&](const std::pair<core::TypePtr, c_ast::VariablePtr>& cur) -> c_ast::ExpressionPtr {
-				                  if(external) {
-					                  assert_true(typeManager.getTypeInfo(cur.first).externalize) << "Missing externalizer for type " << *cur.first;
-					                  return typeManager.getTypeInfo(cur.first).externalize(manager, cur.second);
-				                  }
-				                  return cur.second;
-				              });
+			for(const auto& cur : make_paired_range(paramTypes, function->parameter)) {
+				if(external) {
+					assert_true(typeManager.getTypeInfo(cur.first).externalize) << "Missing externalizer for type " << *cur.first;
+					call->arguments.push_back(typeManager.getTypeInfo(cur.first).externalize(manager, cur.second));
+				} else {
+					call->arguments.push_back(cur.second);
+				}
+			}
 
 			c_ast::StatementPtr body = typeManager.getTypeInfo(closureType->getReturnType()).internalize(manager, call);
 			if(!c_ast::isVoid(function->returnType)) { body = manager->create<c_ast::Return>(call); }

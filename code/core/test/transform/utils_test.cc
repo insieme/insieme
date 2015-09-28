@@ -59,9 +59,9 @@ namespace transform {
 		StatementList saStmts;
 		// construct a struct variable
 		{
-			vector<NamedTypePtr> fields;
-			fields.push_back(builder.namedType("first", basic.getInt4()));
-			fields.push_back(builder.namedType("second", basic.getReal8()));
+			vector<FieldPtr> fields;
+			fields.push_back(builder.field("first", basic.getInt4()));
+			fields.push_back(builder.field("second", basic.getReal8()));
 			const VariablePtr& structVar = builder.variable(builder.refType(builder.structType(fields)));
 
 			vector<NamedValuePtr> init;

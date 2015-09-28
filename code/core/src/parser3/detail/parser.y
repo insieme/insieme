@@ -147,7 +147,8 @@
   PARENT        ".as("
   CAST          "CAST("
   INFINITE      "#inf"
-  LET           "let"    
+  LET           "let"
+  IN            "in"  
   USING         "using"    
   AUTO          "auto"    
   LAMBDA        "lambda"
@@ -243,7 +244,7 @@
 %type <ParentList> parent_list
 %type <FunctionKind> func_tok
 
-%type <NamedTypeList> member_list tag_def union_type 
+%type <FieldList> member_list tag_def union_type 
 
 %type <std::string> namespaced_type
 
@@ -266,15 +267,17 @@ start_rule : TYPE_ONLY declarations type             { RULE if(!driver.where_err
 
 /* ~~~~~~~~~~~~~~~~~~~  LET ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-let_defs : "lambda" lambda_expression ";" 
+let_end : ";" | "in";
+           
+let_defs : "lambda" lambda_expression let_end 
          | "lambda" lambda_expression "," let_defs
-		     | "function" fun_expression ";"
-		     | "function" fun_expression "," let_defs
-         | "expr" expression ";" { RULE driver.add_let_expression(@1, $2); }
+		 | "function" fun_expression let_end
+		 | "function" fun_expression "," let_defs
+         | "expr" expression let_end { RULE driver.add_let_expression(@1, $2); }
          | "expr" expression "," let_defs { RULE driver.add_let_expression(@1, $2); }
-         | type ";" { RULE driver.add_let_type(@1, $1); }
+         | type let_end { RULE driver.add_let_type(@1, $1); }
          | type "," { RULE driver.add_let_type(@1, $1); } let_defs
-         | "recFunc" "identifier" {} "{" lambdaBindList "}" ";" { RULE
+         | "recFunc" "identifier" {} "{" lambdaBindList "}" let_end { RULE
                 driver.is_rec_func = 1;
                 driver.rec_call_func = $2;
                 }
@@ -356,8 +359,8 @@ func_tok : "->" { RULE $$ = FK_PLAIN; }
          ;
 
 member_list : "}" {}
-            | type "identifier" "}" { RULE $$.insert($$.begin(), driver.builder.namedType($2, $1)); }
-            | type "identifier" ";" member_list { RULE $4.insert($4.begin(), driver.builder.namedType($2, $1)); std::swap($$, $4); }
+            | type "identifier" "}" { RULE $$.insert($$.begin(), driver.builder.field($2, $1)); }
+            | type "identifier" ";" member_list { RULE $4.insert($4.begin(), driver.builder.field($2, $1)); std::swap($$, $4); }
             ;
 
 tag_def : "{" member_list   { std::swap($$, $2); }

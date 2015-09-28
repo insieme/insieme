@@ -45,25 +45,27 @@ namespace lang {
 
 
 	bool StaticVariableExtension::isStaticType(const TypePtr& type) const {
-		if(!type || type->getNodeType() != NT_StructType) { return false; }
-		StructTypePtr structType = type.as<StructTypePtr>();
+		auto tagType = type.isa<TagTypePtr>();
+		if (!tagType || !tagType->isStruct()) return false;
+		StructPtr structType = tagType->getRecord().as<StructPtr>();
 		if(structType->getName()->getValue() != "__static_var") { return false; }
-		if(structType.size() != 2) { return false; }
-		if(structType[0]->getName()->getValue() != "initialized") { return false; }
-		if(structType[1]->getName()->getValue() != "value") { return false; }
-		if(!type.getNodeManager().getLangBasic().isBool(structType[0]->getType())) { return false; }
+		auto fields = structType->getFields();
+		if(fields.size() != 2) { return false; }
+		if(fields[0]->getName()->getValue() != "initialized") { return false; }
+		if(fields[1]->getName()->getValue() != "value") { return false; }
+		if(!type.getNodeManager().getLangBasic().isBool(fields[0]->getType())) { return false; }
 		return true;
 	}
 
 	TypePtr StaticVariableExtension::wrapStaticType(const TypePtr& type) const {
 		IRBuilder builder(type.getNodeManager());
 		return builder.structType(builder.stringValue("__static_var"), builder.parents(),
-		                          toVector(builder.namedType("initialized", builder.getLangBasic().getBool()), builder.namedType("value", type)));
+		                          toVector(builder.field("initialized", builder.getLangBasic().getBool()), builder.field("value", type)));
 	}
 
 	TypePtr StaticVariableExtension::unwrapStaticType(const TypePtr& type) const {
 		assert_true(isStaticType(type)) << "Unable to unwrap non-static type.";
-		return type.as<StructTypePtr>()[1]->getType();
+		return type.as<TagTypePtr>()->getRecord()->getFields()[1]->getType();
 	}
 
 
