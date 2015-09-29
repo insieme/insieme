@@ -66,7 +66,7 @@ namespace insieme {
 					dumpColor(type1);
 					PrettyPrinter printerA(type1, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::PRINT_CASTS
 												  | PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_MARKERS
-												  | PrettyPrinter::PRINT_ANNOTATIONS | PrettyPrinter::NO_LIST_SUGAR
+												  | PrettyPrinter::NO_LIST_SUGAR
 												  | PrettyPrinter::PRINT_ATTRIBUTES | PrettyPrinter::NO_EVAL_LAZY
 												  |
 												  /*PrettyPrinter::PRINT_LITERAL_TYPES |*/ PrettyPrinter::PRINT_DERIVED_IMPL);
@@ -76,7 +76,7 @@ namespace insieme {
 					if (type2) {
 						PrettyPrinter printerB(type2, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::PRINT_CASTS
 													  | PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_MARKERS
-													  | PrettyPrinter::PRINT_ANNOTATIONS | PrettyPrinter::NO_LIST_SUGAR
+													  | PrettyPrinter::NO_LIST_SUGAR
 													  | PrettyPrinter::PRINT_ATTRIBUTES | PrettyPrinter::NO_EVAL_LAZY
 													  |
 													  /*PrettyPrinter::PRINT_LITERAL_TYPES |*/ PrettyPrinter::PRINT_DERIVED_IMPL);

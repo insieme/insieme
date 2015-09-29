@@ -134,7 +134,6 @@ TEST(Parentheses, Basic) {
 	EXPECT_PRED1(needsNoParentheses, builder.parseAddressesExpression("$true&&false||true$")[0].as<CallExprAddress>()[0].as<CallExprAddress>());
 	// failure from parser!!
 	//EXPECT_PRED1(needsNoParentheses, builder.parseAddressesExpression("$true||false&&true$")[0].as<CallExprAddress>()[0].as<CallExprAddress>());
-
 }
 
 

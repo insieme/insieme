@@ -59,19 +59,16 @@ TEST(PrettyPrinter, Basic) {
 	PrettyPrinter printerA(ptr, PrettyPrinter::OPTIONS_DEFAULT);
 	EXPECT_FALSE(printerA.hasOption(PrettyPrinter::PRINT_DEREFS));
 	EXPECT_FALSE(printerA.hasOption(PrettyPrinter::PRINT_CASTS));
-	EXPECT_FALSE(printerA.hasOption(PrettyPrinter::SKIP_BRACKETS));
 	EXPECT_FALSE(printerA.hasOption(PrettyPrinter::PRINT_SINGLE_LINE));
 
 	PrettyPrinter printerB(ptr, PrettyPrinter::OPTIONS_DETAIL);
 	EXPECT_TRUE(printerB.hasOption(PrettyPrinter::PRINT_DEREFS));
 	EXPECT_TRUE(printerB.hasOption(PrettyPrinter::PRINT_CASTS));
-	EXPECT_FALSE(printerB.hasOption(PrettyPrinter::SKIP_BRACKETS));
 	EXPECT_FALSE(printerB.hasOption(PrettyPrinter::PRINT_SINGLE_LINE));
 
 	PrettyPrinter printerC(ptr, PrettyPrinter::OPTIONS_SINGLE_LINE);
 	EXPECT_TRUE(printerC.hasOption(PrettyPrinter::PRINT_DEREFS));
 	EXPECT_TRUE(printerC.hasOption(PrettyPrinter::PRINT_CASTS));
-	EXPECT_FALSE(printerC.hasOption(PrettyPrinter::SKIP_BRACKETS));
 	EXPECT_TRUE(printerC.hasOption(PrettyPrinter::PRINT_SINGLE_LINE));
 
 	printerC.setOption(PrettyPrinter::PRINT_DEREFS, false);

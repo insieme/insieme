@@ -183,18 +183,21 @@ namespace analysis {
 		// in the case, where the operation is already the root
 		// there is no need for parentheses
 		if(cur.isRoot()) {
-			//std::cout << "parentheses.cpp: isRoot()!\n";
 			return false;
 		}
 
 		// In every other case we need to check the parent,
 		// to determine, whether we need parentheses or not.
-		auto enclosingOp = getEnclosingOperatorCall(cur.getParentAddress());
+		if(auto enclosingOp = getEnclosingOperatorCall(cur.getParentAddress())) {
 
-		if(enclosingOp.isValid()) {
-
+			// look up precedences
 			auto curOp = precedence_map.find(cur->getFunctionExpr());
 			auto parentOp = precedence_map.find(enclosingOp->getFunctionExpr());
+
+			// check whether precedences could be obtained
+			if (curOp == precedence_map.end() || parentOp == precedence_map.end()) {
+				return false;
+			}
 
 			// If the precedence of the parent element is higher,
 			// we need braces for the current

@@ -129,76 +129,15 @@ namespace printer {
 		class InspirePrinter;
 
 		/**
-		 * This class allows the pretty printer to use special formats when printing the call of a specific function.
-		 * For instance, this formatter allows to write the add operation + in infix notation.
-		 */
-		class Formatter {
-		  public:
-			/**
-			 * Performs the actual code formating. This method is pure abstract and
-			 * has to be implemented within sub-classes.
-			 *
-			 * @param printer the pretty printer to be used for printing sub-expressions
-			 * @param call the call statement invoking the handled literal
-			 */
-			virtual void format(InspirePrinter& printer, const CallExprAddress& call) = 0;
-		};
-
-		/**
 		 * Since formatter instances are polymorphic, they need to be handled via pointer or
 		 * references. Further, the memory management needs to be considered. Therefore, formatter
 		 * should be passed using this pointer type, which is based on a shared pointer.
 		 */
-		typedef std::shared_ptr<Formatter> FormatterPtr;
+		typedef std::function<void(InspirePrinter&,const CallExprAddress&)> Formatter;
 
-		/**
-		 * The Lambda Formatter is a concrete generic implementation of the Formatter class. It uses
-		 * a lambda expression passed in during the construction to format the actual output. This
-		 * mechanism allows to write "anonymous inner" classes.
-		 */
-		template <typename Lambda>
-		class LambdaFormatter : public Formatter {
-			/**
-			 * The lambda used to perform the formatting.
-			 */
-			Lambda lambda;
-
-		  public:
-			/**
-			 * Creates a new instance of this type printing the given literal using the
-			 * given formating lambda.
-			 *
-			 * @param lambda the lambda performing the actual formatting
-			 */
-			LambdaFormatter(Lambda lambda) : lambda(lambda) {}
-
-			/**
-			 * Conducts the actual formatting of the given call expression.
-			 *
-			 * @param printer the printer to be used for printing sub-expressions
-			 * @param call the call expression to be formated by this formatter
-			 */
-			virtual void format(InspirePrinter& printer, const CallExprAddress& call) {
-				// TODO: re-enable when literals are no longer identified by their name
-				// assert(*call->getFunctionExpr() == *getLiteral() && "Invoked for wrong literal!");
-				lambda(printer, call);
-			}
-		};
-
-		/**
-		 * A utility function to create LiteralFormatter instances without the need of
-		 * specifying generic types. Those types will be inferred automatically.
-		 *
-		 * @param lambda the formatting routine
-		 * @return a new formatter handling the given literal using the given lambda
-		 */
-		template <typename Lambda>
-		FormatterPtr make_formatter(Lambda lambda) {
-			return std::make_shared<LambdaFormatter<Lambda>>(lambda);
-		}
 
 		// defines the table used for indexing formatter entries
-		typedef utils::map::PointerMap<ExpressionPtr, FormatterPtr> FormatTable;
+		typedef utils::map::PointerMap<ExpressionPtr, Formatter> FormatTable;
 
 		// a forward declaration for a method assembling formatter tables
 		FormatTable initFormatTable(const PrettyPrinter&);
@@ -241,7 +180,6 @@ namespace printer {
             std::stack<VariablePtr> thisStack;
 
 			bool singleLineTypes;
-			int funCounter = 0;
 
 		  public:
 			/**
@@ -279,6 +217,7 @@ namespace printer {
 				}
 
 				// compute set of substitutions
+				int funCounter = 0;
 				int typeCounter = 0;
 				singleLineTypes = false; // enable multiline type definitions
 
@@ -296,11 +235,11 @@ namespace printer {
 						string name;
 
 						if(insieme::core::annotations::hasAttachedName(cur) &&
-							!insieme::core::annotations::getAttachedName(cur).compare("main"))
+							!insieme::core::annotations::getAttachedName(cur).compare("main")) {
 							name = insieme::core::annotations::getAttachedName(cur);
-						else
-
+						} else {
 							name = (type == NT_LambdaExpr)?format("fun%03d", funCounter++):format("type%03d", typeCounter++);
+						}
 
 						if(auto tagType = cur.isa<TagTypePtr>()) {
 
@@ -379,6 +318,16 @@ namespace printer {
 				if(printer.hasOption(PrettyPrinter::JUST_OUTERMOST_SCOPE)) { letBindings.erase(node); }
 
 				singleLineTypes = true;
+
+				// skip program if let bindings have been used
+				if (auto program = node.isa<ProgramPtr>()) {
+					if (program->getEntryPoints().size() == 1u) {
+						// main has already been printed => we are done
+						return;
+					}
+				}
+
+				// otherwise: print the rest
 				visit(NodeAddress(node));
 			}
 
@@ -409,9 +358,9 @@ namespace printer {
 					return;
 				}
 				depth++;
-				//printAnnotations(element, true);
+				printAnnotations(element, true);
 				IRVisitor<void,Address>::visit(element);
-				//printAnnotations(element, false);
+				printAnnotations(element, false);
 				out.flush();
 				depth--;
 			}
@@ -425,7 +374,7 @@ namespace printer {
 			/**
 			 * A macro for visiting the NodePtr
 			 */
-			#define VISIT(VNode) this->visit(NodeAddress(VNode));
+			#define VISIT(VNode) this->visit(VNode);
 
 
 			PRINT(Value) {
@@ -435,32 +384,32 @@ namespace printer {
 
 			PRINT(GenericType) {
 				out << *node->getName();
-				const TypesPtr& types = node->getTypeParameter();
+				const auto& types = node->getTypeParameter();
 
 				if(types->empty()) { return; }
 
-				out << "<" << join(",", types, [&](std::ostream&, const TypePtr& cur) { VISIT(cur); }) << ">";
+				out << "<" << join(",", types, [&](std::ostream&, const TypeAddress& cur) { VISIT(cur); }) << ">";
 			}
 
 			PRINT(FunctionType) {
 
-				auto printer = [&](std::ostream&, const TypePtr& cur) { VISIT(cur); };
+				auto printer = [&](std::ostream&, const TypeAddress& cur) { VISIT(cur); };
 
 				if(node->isConstructor()) {
 					out << "ctor ";
-					VISIT(node->getObjectType()->getChild(0));
+					VISIT(node->getObjectType());
 					auto begin = node->getParameterTypes().begin() + 1;
 					auto end = node->getParameterTypes().end();
 					out << "::(" << join(", ", begin, end, printer) << ")";
 				} else if(node->isDestructor()) {
 					out << "~";
-					VISIT(node->getObjectType()->getChild(0));
+					VISIT(node->getObjectType());
 					out << "::()";
 				} else if(node->isMemberFunction()) {
 					out << "method ";
 					//out << std::endl;
 					//out << "node->getChildList(): " << node.getChildList() << std::endl;
-					VISIT(node->getObjectType()->getChild(0));
+					VISIT(node->getObjectType());
 					auto begin = node->getParameterTypes().begin() + 1;
 					auto end = node->getParameterTypes().end();
 					out << "::(" << join(", ", begin, end, printer) << ") -> ";
@@ -492,7 +441,7 @@ namespace printer {
 					newLine = "";
 				}
 
-				out << "{" << newItem << join(", " + newItem, node->getDefinition()->getDefinitions(), [&](std::ostream& jout, const TagTypeBindingPtr& cur) {
+				out << "{" << newItem << join(", " + newItem, node->getDefinition()->getDefinitions(), [&](std::ostream& jout, const TagTypeBindingAddress& cur) {
 					VISIT(cur->getTag());
 					jout << "=";
 					VISIT(cur->getRecord());
@@ -517,14 +466,17 @@ namespace printer {
 					out << node->getName()->getValue() << " ";
 				}
 
-				if(strct && !strct->getParents().empty()) {
-					out << ": " << join(", ", strct->getParents(), [&](std::ostream& out, const ParentPtr& parent) {
-						if(parent->isVirtual()) { out << "virtual "; }
-						VISIT(parent->getType());
-					}) << " ";
+				if(strct) {
+					auto parents = node.as<StructAddress>()->getParents();
+					if (!parents.empty()) {
+						out << ": " << join(", ", parents, [&](std::ostream& out, const ParentAddress& parent) {
+							if(parent->isVirtual()) { out << "virtual "; }
+							VISIT(parent->getType());
+						}) << " ";
+					}
 				}
 
-				out << "{" << newItem << join(";" + newItem, node->getFields(), [&](std::ostream& out, const FieldPtr& cur) {
+				out << "{" << newItem << join(";" + newItem, node->getFields(), [&](std::ostream& out, const FieldAddress& cur) {
 					VISIT(cur->getType());
 					out << " ";
 					VISIT(cur->getName());
@@ -533,7 +485,7 @@ namespace printer {
 				out << newLine << "}";
 			}
 
-			PRINT(TupleType) { out << "" << join(",", node->getElementTypes(), [&](std::ostream&, const TypePtr& cur) { VISIT(cur); }) << ""; }
+			PRINT(TupleType) { out << "" << join(",", node->getElementTypes(), [&](std::ostream&, const TypeAddress& cur) { VISIT(cur); }) << ""; }
 
 			PRINT(Type) { out << *node; }
 
@@ -563,7 +515,7 @@ namespace printer {
 
 			PRINT(DeclarationStmt) {
 				// print type
-				const VariablePtr& var = node->getVariable();
+				const auto& var = node->getVariable();
 				out << "decl ";
 				VISIT(var->getType());
 				out << " ";
@@ -582,7 +534,7 @@ namespace printer {
 				out << "{";
 				increaseIndent();
 				newLine();
-				for_each(list.begin(), list.end() - 1, [&](const NodePtr& cur) {
+				for_each(list.begin(), list.end() - 1, [&](const NodeAddress& cur) {
 					VISIT(cur);
 					out << ";";
 					this->newLine();
@@ -616,7 +568,7 @@ namespace printer {
 				VISIT(node->getStep());
 				out << ") ";
 
-				NodePtr&& body = node->getBody();
+				const auto& body = node->getBody();
 				if(body->getNodeType() != NT_CompoundStmt) {
 					increaseIndent();
 					this->newLine();
@@ -647,7 +599,7 @@ namespace printer {
 				out << ") {";
 				increaseIndent();
 				this->newLine();
-				for_each(node->getCases()->getCases(), [&](const SwitchCasePtr& cur) {
+				for_each(node->getCases()->getCases(), [&](const SwitchCaseAddress& cur) {
 					out << "case ";
 					VISIT(cur->getGuard());
 					out << ": ";
@@ -677,11 +629,8 @@ namespace printer {
 
 			PRINT(Variable) {
 
-				// print variable names if attached to the node... otherwise
-				// a variable like "v..." will be used
-		/*		if (insieme::core::annotations::hasAttachedName(node)) {
-					out << insieme::core::annotations::getAttachedName(node);;
-				} else*/ if(!thisStack.empty() && !(*node).toString().compare(thisStack.top().toString())) {
+				// print this references as 'this'
+				if(!thisStack.empty() && *node == *thisStack.top()) {
 					out << "this";
 				} else {
 					out << *node;
@@ -691,7 +640,7 @@ namespace printer {
 
 			PRINT(Literal) {
 				// special handling of type literals (ignore value)
-				if(!printer.hasOption(PrettyPrinter::PRINT_LITERAL_TYPES) && analysis::isTypeLiteral(node.getParentNode(0))) {
+				if(!printer.hasOption(PrettyPrinter::PRINT_LITERAL_TYPES) && analysis::isTypeLiteral(node.getAddressedNode())) {
 					out << "type_lit(";
 					visit(NodeAddress(node->getType().as<GenericTypePtr>()->getTypeParameter(0)));
 					out << ")";
@@ -702,21 +651,19 @@ namespace printer {
 					out << str.substr(0, 3) << "..." << str.substr(str.size() - 3, str.size());
 				} else {
 					out << str;
-					if(!node->getChild(0)->getChildList().empty() ) {
-						if (!node->getChild(0)->getChild(0)->toString().compare("real")) {
-							if (!node->getChild(0)->getChild(2)->getChild(0)->toString().compare("4"))
-								out << "f";
-						} else {
-							if (!node->getChild(0)->getChild(0)->toString().compare("uint"))
-								out << "u";
-							if(node->getChild(0)->getChildList().size() > 2 && node->getChild(0)->getChild(2)->getChildList().size() > 0) {
-								if (!node->getChild(0)->getChild(2)->getChild(0)->toString().compare("8"))
-									out << "l";
-								else if (!node->getChild(0)->getChild(2)->getChild(0)->toString().compare("16"))
-									out << "ll";
-							}
-						}
-					}
+
+					auto& basic = node->getNodeManager().getLangBasic();
+					auto type = node->getType();
+
+					if (basic.isFloat(type))  out << "f";
+					if (basic.isUInt4(type))  out << "u";
+					if (basic.isUInt8(type))  out << "ul";
+					if (basic.isUInt16(type)) out << "ull";
+
+					if (basic.isInt4(type))   out << "";
+					if (basic.isInt8(type))   out << "l";
+					if (basic.isInt16(type))  out << "ll";
+
 				}
 
 				// add type if requested
@@ -764,7 +711,7 @@ namespace printer {
 				increaseIndent();
 				newLine();
 				std::size_t count = 0;
-				for_each(defs.begin(), defs.end(), [&](const LambdaBindingPtr& cur) {
+				for_each(defs.begin(), defs.end(), [&](const LambdaBindingAddress& cur) {
 					VISIT(cur->getVariable());
 					out << " = ";
 					VISIT(cur->getLambda());
@@ -779,7 +726,7 @@ namespace printer {
 
 
 			PRINT(Lambda) {
-				auto paramPrinter = [&](std::ostream& out, const VariablePtr& cur) {
+				auto paramPrinter = [&](std::ostream& out, const VariableAddress& cur) {
 					VISIT(cur->getType());
 					out << " ";
 					VISIT(cur);
@@ -843,23 +790,15 @@ namespace printer {
 
 			PRINT(CallExpr) {
 
-				// obtain flag indicating format
-				bool printBrackets = !printer.hasOption(PrettyPrinter::SKIP_BRACKETS);
-
-				// don't print brackets for derefs
-				if(printBrackets && !printer.hasOption(PrettyPrinter::PRINT_DEREFS)) {
-					auto& refExt = node->getNodeManager().getLangExtension<lang::ReferenceExtension>();
-					if (analysis::isCallOf(node.getParentNode(0), refExt.getRefDeref())) {
-						printBrackets = false;
-					}
-				}
-
 				// test whether for the current call a special format has been registered
 				auto function = node->getFunctionExpr();
 				auto pos = formatTable.find(function);
 				if(pos != formatTable.end()) {
-					FormatterPtr formatter = (*pos).second;
-					formatter->format(*this, CallExprAddress(node));
+					auto formatter = (*pos).second;
+					auto needB = analysis::needsParentheses(node);
+					if (needB) out << "(";
+					formatter(*this, node);
+					if (needB) out << ")";
 					return;
 				}
 
@@ -878,18 +817,13 @@ namespace printer {
 					return;
 				}
 
-				out << "(";
-				auto begin = arguments.begin();
-				VISIT(*begin);
-				for_each(begin + 1, arguments.end(), [&](const NodePtr& cur) {
-					out << ", ";
+				out << "(" << join(", ", arguments, [&](std::ostream&, const NodeAddress& cur) {
 					VISIT(cur);
-				});
-				out << ")";
+				}) << ")";
 			}
 
 			PRINT(BindExpr) {
-				out << "function(" << join(", ", node->getParameters(),[&](std::ostream& out, const ExpressionPtr& cur) {
+				out << "function(" << join(", ", node->getParameters(),[&](std::ostream& out, const ExpressionAddress& cur) {
 					VISIT(cur->getType());
 					out << " ";
 					VISIT(cur);
@@ -909,7 +843,7 @@ namespace printer {
 			}
 
 			PRINT(TupleExpr) {
-				out << "(" << ::join(", ", node->getExpressions(), [&](std::ostream&, const ExpressionPtr& cur) { VISIT(cur); }) << ")";
+				out << "(" << ::join(", ", node->getExpressions(), [&](std::ostream&, const ExpressionAddress& cur) { VISIT(cur); }) << ")";
 			}
 
 			PRINT(JobExpr) {
@@ -928,7 +862,7 @@ namespace printer {
 			}
 
 			PRINT(StructExpr) {
-				out << "struct{" << ::join(", ", node->getMembers()->getElements(), [&](std::ostream& out, const NamedValuePtr& cur) {
+				out << "struct{" << ::join(", ", node->getMembers()->getElements(), [&](std::ostream& out, const NamedValueAddress& cur) {
 					VISIT(cur->getName());
 					out << "=";
 					VISIT(cur->getValue());
@@ -952,7 +886,7 @@ namespace printer {
 				increaseIndent();
 				newLine();
 				std::size_t count = 0;
-				for_each(defs.begin(), defs.end(), [&](const TagTypeBindingPtr& cur) {
+				for_each(defs.begin(), defs.end(), [&](const TagTypeBindingAddress& cur) {
 					VISIT(cur->getTag());
 					out << " = ";
 					VISIT(cur->getRecord());
@@ -966,9 +900,9 @@ namespace printer {
 			}
 
 			PRINT(Program) {
-/*				out << "// Inspire Program ";
+				out << "// Inspire Program ";
 				newLine();
-				for_each(node->getEntryPoints(), [&](const NodePtr& cur) {
+				for(const auto& cur : node->getEntryPoints()) {
 					this->out << "//  Entry Point: ";
 					this->newLine();
 					this->increaseIndent();
@@ -976,8 +910,8 @@ namespace printer {
 					this->decreaseIndent();
 					this->newLine();
 					this->newLine();
-				});
-*/			}
+				}
+			}
 
 			PRINT(MarkerExpr) {
 				bool showMarker = printer.hasOption(PrettyPrinter::Option::PRINT_MARKERS);
@@ -997,7 +931,7 @@ namespace printer {
 			 * A generic solution for unknown types. In this case, the
 			 * default debug print is forwarded to the output stream.
 			 */
-			PRINT(Node) { out << "<?>" << *node << "</?>"; }
+			PRINT(Node) { out << "<node type=" << node->getNodeType() << ">" << *node << "</node>"; }
 
 			/**
 			 * Creates a new line.
@@ -1118,40 +1052,14 @@ namespace printer {
 			void visit(const NodeAddress& node) {
 				out.flush();
 				SourceLocation start = wout.getSrcLoc();
-				InspirePrinter::visit(NodeAddress(node));
+				InspirePrinter::visit(node);
 				out.flush();
 				SourceLocation end = wout.getSrcLoc();
 
-				srcMap.insert(std::make_pair(SourceRange(start, end), node.getParentNode(0)));
+				srcMap.insert(std::make_pair(SourceRange(start, end), node));
 			}
 		};
 
-
-		/**
-		 * A utility function to obtain the n-th argument within the given call expression.
-		 *
-		 * @param call the expression from which the argument should be extracted
-		 * @param n the index of the requested argument
-		 * @return the requested argument or a NULL pointer in case there is no such argument
-		 */
-		ExpressionPtr getArgument(const CallExprAddress& call, unsigned n) {
-			if(n < call.size()) { return call[n]; }
-			return ExpressionPtr();
-		}
-
-		/**
-		 * A utility function to obtain the n-th argument within the given call expression.
-		 *
-		 * @param call the expression from which the argument should be extracted
-		 * @param n the index of the requested argument
-		 * @return the requested argument or a NULL pointer in case there is no such argument
-		 */
-		NodeAddress getAddressedArgument(const CallExprAddress& call ,unsigned n) {
-			if (n < call.getChildAddresses().size()) {
-				return call[n];
-			}
-			return NodeAddress();
-		}
 
 		/**
 		 * A utility function printing the n-th argument of a call expression.
@@ -1161,7 +1069,7 @@ namespace printer {
 		 * @param n the index of the argument to be printed; in case there is no such argument a ? is printed.
 		 */
 		void printArgument(InspirePrinter& printer, const CallExprAddress& call, unsigned n) {
-			NodeAddress&& argument = getAddressedArgument(call, n);
+			ExpressionAddress argument = call[n];
 			if(argument) {
 				printer.visit(argument);
 			} else {
@@ -1185,445 +1093,436 @@ namespace printer {
 
 
 			#define OUT(Literal) printer.out << Literal
-			#define ARG(N) getArgument(call, N)
-			#define AARG(N) getAddressedArgument(call, N)
+			#define ARG(N) call[N]
 			#define MGR call->getNodeManager()
-			#define PRINT_EXPR(E) printer.visit(NodeAddress(E))
+			#define PRINT_EXPR(E) printer.visit(E)
 			#define PRINT_ARG(N) printArgument(printer, call, N)
 			#define HAS_OPTION(OPT) printer.getPrettyPrint().hasOption(PrettyPrinter::OPT)
-			#define ADD_FORMATTER(Literal, FORMAT)                                                                                                             \
-				res.insert(std::make_pair(Literal, make_formatter([](InspirePrinter & printer, const CallExprAddress& call)FORMAT))).second;
-
-			#define ADD_BRACKET_FORMATTER(Literal, FORMAT) \
-					ADD_FORMATTER(Literal, { if(!HAS_OPTION(SKIP_BRACKETS)) OUT("("); FORMAT; if(!HAS_OPTION(SKIP_BRACKETS)) OUT(")"); })
-
-
-			#define ADD_INTELLIGENT_BRACKET_FORMATTER(Literal, FORMAT) \
-					ADD_FORMATTER(Literal, { auto needB = insieme::core::analysis::needsParentheses(call); if(needB) OUT("("); FORMAT; if(needB) OUT(")"); })
-
+			#define ADD_FORMATTER(Literal)                                                                                                             \
+				res[Literal] = [](InspirePrinter & printer, const CallExprAddress& call)
 
 			if(config.hasOption(PrettyPrinter::PRINT_DEREFS)) {
-				ADD_FORMATTER(refExt.getRefDeref(), {
+				ADD_FORMATTER(refExt.getRefDeref()) {
 					OUT(" *");
 					PRINT_ARG(0);
-				});
+				};
 			} else {
-				ADD_FORMATTER(refExt.getRefDeref(), { PRINT_ARG(0); });
+				ADD_FORMATTER(refExt.getRefDeref()) { PRINT_ARG(0); };
 			}
 
-			ADD_FORMATTER(refExt.getRefAssign(), {
+			ADD_FORMATTER(refExt.getRefAssign()) {
 				PRINT_ARG(0);
 				OUT(" = ");
 				PRINT_ARG(1);
-			});
-			ADD_FORMATTER(refExt.getRefVar(), {
+			};
+			ADD_FORMATTER(refExt.getRefVar()) {
 				OUT(" var(");
 				PRINT_ARG(0);
 				OUT(")");
-			});
-			ADD_FORMATTER(refExt.getRefNew(), {
+			};
+			ADD_FORMATTER(refExt.getRefNew()) {
 				OUT(" new(");
 				PRINT_ARG(0);
 				OUT(")");
-			});
-			ADD_FORMATTER(refExt.getRefDelete(), {
+			};
+			ADD_FORMATTER(refExt.getRefDelete()) {
 				OUT(" delete(");
 				PRINT_ARG(0);
 				OUT(")");
-			});
+			};
 
-			ADD_FORMATTER(dpExt.getDataPathRoot(), { OUT("<>"); });
-			ADD_FORMATTER(dpExt.getDataPathMember(), {
+			ADD_FORMATTER(dpExt.getDataPathRoot()) { OUT("<>"); };
+			ADD_FORMATTER(dpExt.getDataPathMember()) {
 				PRINT_ARG(0);
 				OUT(".");
 				PRINT_ARG(1);
-			});
-			ADD_FORMATTER(dpExt.getDataPathElement(), {
+			};
+			ADD_FORMATTER(dpExt.getDataPathElement()) {
 				PRINT_ARG(0);
 				OUT("[");
 				PRINT_ARG(1);
 				OUT("]");
-			});
-			ADD_FORMATTER(dpExt.getDataPathComponent(), {
+			};
+			ADD_FORMATTER(dpExt.getDataPathComponent()) {
 				PRINT_ARG(0);
 				OUT(".");
 				PRINT_ARG(1);
-			});
-			ADD_FORMATTER(dpExt.getDataPathParent(), {
+			};
+			ADD_FORMATTER(dpExt.getDataPathParent()) {
 				PRINT_ARG(0);
 				OUT(".as<");
 				PRINT_ARG(1);
 				OUT(">");
-			});
+			};
 
-			ADD_FORMATTER(refExt.getRefArrayElement(), {
+			ADD_FORMATTER(refExt.getRefArrayElement()) {
 				PRINT_ARG(0);
 				OUT("[");
 				PRINT_ARG(1);
 				OUT("]");
-			});
+			};
 
-			ADD_FORMATTER(refExt.getRefMemberAccess(), {
+			ADD_FORMATTER(refExt.getRefMemberAccess()) {
 				PRINT_ARG(0);
 				OUT(".");
 				PRINT_ARG(1);
-			});
-			ADD_FORMATTER(basic.getCompositeMemberAccess(), {
+			};
+			ADD_FORMATTER(basic.getCompositeMemberAccess()) {
 				PRINT_ARG(0);
 				OUT(".");
 				PRINT_ARG(1);
-			});
+			};
 
-			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getRealAdd(), {
+			ADD_FORMATTER(basic.getRealAdd()) {
 				PRINT_ARG(0);
 				OUT("+");
 				PRINT_ARG(1);
-			});
-			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getRealSub(), {
+			};
+			ADD_FORMATTER(basic.getRealSub()) {
 				PRINT_ARG(0);
 				OUT("-");
 				PRINT_ARG(1);
-			});
-			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getRealMul(), {
+			};
+			ADD_FORMATTER(basic.getRealMul()) {
 				PRINT_ARG(0);
 				OUT("*");
 				PRINT_ARG(1);
-			});
-			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getRealDiv(), {
+			};
+			ADD_FORMATTER(basic.getRealDiv()) {
 				PRINT_ARG(0);
 				OUT("/");
 				PRINT_ARG(1);
-			});
+			};
 
-			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getUnsignedIntAdd(), {
+			ADD_FORMATTER(basic.getUnsignedIntAdd()) {
 				PRINT_ARG(0);
 				OUT("+");
 				PRINT_ARG(1);
-			});
-			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getUnsignedIntSub(), {
+			};
+			ADD_FORMATTER(basic.getUnsignedIntSub()) {
 				PRINT_ARG(0);
 				OUT("-");
 				PRINT_ARG(1);
-			});
-			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getUnsignedIntMul(), {
+			};
+			ADD_FORMATTER(basic.getUnsignedIntMul()) {
 				PRINT_ARG(0);
 				OUT("*");
 				PRINT_ARG(1);
-			});
-			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getUnsignedIntDiv(), {
+			};
+			ADD_FORMATTER(basic.getUnsignedIntDiv()) {
 				PRINT_ARG(0);
 				OUT("/");
 				PRINT_ARG(1);
-			});
-			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getUnsignedIntMod(), {
+			};
+			ADD_FORMATTER(basic.getUnsignedIntMod()) {
 				PRINT_ARG(0);
 				OUT("%");
 				PRINT_ARG(1);
-			});
+			};
 
-			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getSignedIntAdd(), {
+			ADD_FORMATTER(basic.getSignedIntAdd()) {
 				PRINT_ARG(0);
 				OUT("+");
 				PRINT_ARG(1);
-			});
-			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getSignedIntSub(), {
+			};
+			ADD_FORMATTER(basic.getSignedIntSub()) {
 				PRINT_ARG(0);
 				OUT("-");
 				PRINT_ARG(1);
-			});
-			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getSignedIntMul(), {
+			};
+			ADD_FORMATTER(basic.getSignedIntMul()) {
 				PRINT_ARG(0);
 				OUT("*");
 				PRINT_ARG(1);
-			});
-			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getSignedIntDiv(), {
+			};
+			ADD_FORMATTER(basic.getSignedIntDiv()) {
 				PRINT_ARG(0);
 				OUT("/");
 				PRINT_ARG(1);
-			});
-			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getSignedIntMod(), {
+			};
+			ADD_FORMATTER(basic.getSignedIntMod()) {
 				PRINT_ARG(0);
 				OUT("%");
 				PRINT_ARG(1);
-			});
+			};
 
-			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getUnsignedIntNot(), {
+			ADD_FORMATTER(basic.getUnsignedIntNot()) {
 				OUT("~");
 				PRINT_ARG(0);
-			});
-			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getUnsignedIntAnd(), {
+			};
+			ADD_FORMATTER(basic.getUnsignedIntAnd()) {
 				PRINT_ARG(0);
 				OUT("&");
 				PRINT_ARG(1);
-			});
-			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getUnsignedIntOr(), {
+			};
+			ADD_FORMATTER(basic.getUnsignedIntOr()) {
 				PRINT_ARG(0);
 				OUT("|");
 				PRINT_ARG(1);
-			});
-			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getUnsignedIntXor(), {
+			};
+			ADD_FORMATTER(basic.getUnsignedIntXor()) {
 				PRINT_ARG(0);
 				OUT("^");
 				PRINT_ARG(1);
-			});
-			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getUnsignedIntLShift(), {
+			};
+			ADD_FORMATTER(basic.getUnsignedIntLShift()) {
 				PRINT_ARG(0);
 				OUT("<<");
 				PRINT_ARG(1);
-			});
-			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getUnsignedIntRShift(), {
+			};
+			ADD_FORMATTER(basic.getUnsignedIntRShift()) {
 				PRINT_ARG(0);
 				OUT(">>");
 				PRINT_ARG(1);
-			});
+			};
 
-			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getSignedIntNot(), {
+			ADD_FORMATTER(basic.getSignedIntNot()) {
 				OUT("~");
 				PRINT_ARG(0);
-			});
-			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getSignedIntAnd(), {
+			};
+			ADD_FORMATTER(basic.getSignedIntAnd()) {
 				PRINT_ARG(0);
 				OUT("&");
 				PRINT_ARG(1);
-			});
-			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getSignedIntOr(), {
+			};
+			ADD_FORMATTER(basic.getSignedIntOr()) {
 				PRINT_ARG(0);
 				OUT("|");
 				PRINT_ARG(1);
-			});
-			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getSignedIntXor(), {
+			};
+			ADD_FORMATTER(basic.getSignedIntXor()) {
 				PRINT_ARG(0);
 				OUT("^");
 				PRINT_ARG(1);
-			});
-			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getSignedIntLShift(), {
+			};
+			ADD_FORMATTER(basic.getSignedIntLShift()) {
 				PRINT_ARG(0);
 				OUT("<<");
 				PRINT_ARG(1);
-			});
-			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getSignedIntRShift(), {
+			};
+			ADD_FORMATTER(basic.getSignedIntRShift()) {
 				PRINT_ARG(0);
 				OUT(">>");
 				PRINT_ARG(1);
-			});
+			};
 
 			// nicer inlined versions of the && and || operators
-			//		ADD_FORMATTER(basic.getBoolLAnd(), { PRINT_ARG(0); OUT(" && "); PRINT_ARG(1); });
-			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getBoolLAnd(), {
+			//		ADD_FORMATTER(basic.getBoolLAnd()) { PRINT_ARG(0); OUT(" && "); PRINT_ARG(1); };
+			ADD_FORMATTER(basic.getBoolLAnd()) {
 				PRINT_ARG(0);
 				OUT(" && ");
 				if (HAS_OPTION(NO_EVAL_LAZY))
 					PRINT_ARG(1);
 				else
-					PRINT_EXPR(transform::evalLazy(MGR, ARG(1)));
-			});
-			//		ADD_FORMATTER(basic.getBoolLOr(), { PRINT_ARG(0); OUT(" || "); PRINT_ARG(1); });
-			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getBoolLOr(), {
+					PRINT_EXPR(ExpressionAddress(transform::evalLazy(MGR, ARG(1))));
+			};
+			//		ADD_FORMATTER(basic.getBoolLOr()) { PRINT_ARG(0); OUT(" || "); PRINT_ARG(1); };
+			ADD_FORMATTER(basic.getBoolLOr()) {
 				PRINT_ARG(0);
 				OUT(" || ");
 				if (HAS_OPTION(NO_EVAL_LAZY))
 					PRINT_ARG(1);
 				else
-					PRINT_EXPR(transform::evalLazy(MGR, ARG(1)));
-			});
+					PRINT_EXPR(ExpressionAddress(transform::evalLazy(MGR, ARG(1))));
+			};
 
-			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getBoolOr(), {
+			ADD_FORMATTER(basic.getBoolOr()) {
 				PRINT_ARG(0);
 				OUT("|");
 				PRINT_ARG(1);
-			});
+			};
 
-			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getBoolAnd(), {
+			ADD_FORMATTER(basic.getBoolAnd()) {
 				PRINT_ARG(0);
 				OUT("&");
 				PRINT_ARG(1);
-			});
+			};
 
-			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getBoolEq(), {
+			ADD_FORMATTER(basic.getBoolEq()) {
 				PRINT_ARG(0);
 				OUT("==");
 				PRINT_ARG(1);
-			});
+			};
 
-			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getBoolNe(), {
+			ADD_FORMATTER(basic.getBoolNe()) {
 				PRINT_ARG(0);
 				OUT("!=");
 				PRINT_ARG(1);
-			});
+			};
 
-			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getBoolXor(), {
+			ADD_FORMATTER(basic.getBoolXor()) {
 				PRINT_ARG(0);
 				OUT("^");
 				PRINT_ARG(1);
-			});
+			};
 
-			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getBoolLNot(), {
+			ADD_FORMATTER(basic.getBoolLNot()) {
 				OUT("!");
 				PRINT_ARG(0);
-			});
+			};
 
-			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getBoolNot(), {
+			ADD_FORMATTER(basic.getBoolNot()) {
 				OUT("!");
 				PRINT_ARG(0);
-			});
+			};
 
-			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getCharNe(), {
+			ADD_FORMATTER(basic.getCharNe()) {
 				PRINT_ARG(0);
 				OUT("!=");
 				PRINT_ARG(1);
-			});
-			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getCharEq(), {
+			};
+			ADD_FORMATTER(basic.getCharEq()) {
 				PRINT_ARG(0);
 				OUT("==");
 				PRINT_ARG(1);
-			});
-			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getCharGe(), {
+			};
+			ADD_FORMATTER(basic.getCharGe()) {
 				PRINT_ARG(0);
 				OUT(">=");
 				PRINT_ARG(1);
-			});
-			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getCharGt(), {
+			};
+			ADD_FORMATTER(basic.getCharGt()) {
 				PRINT_ARG(0);
 				OUT(">");
 				PRINT_ARG(1);
-			});
-			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getCharLt(), {
+			};
+			ADD_FORMATTER(basic.getCharLt()) {
 				PRINT_ARG(0);
 				OUT("<");
 				PRINT_ARG(1);
-			});
-			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getCharLe(), {
+			};
+			ADD_FORMATTER(basic.getCharLe()) {
 				PRINT_ARG(0);
 				OUT("<=");
 				PRINT_ARG(1);
-			});
+			};
 
-			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getUnsignedIntEq(), {
+			ADD_FORMATTER(basic.getUnsignedIntEq()) {
 				PRINT_ARG(0);
 				OUT("==");
 				PRINT_ARG(1);
-			});
-			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getUnsignedIntNe(), {
+			};
+			ADD_FORMATTER(basic.getUnsignedIntNe()) {
 				PRINT_ARG(0);
 				OUT("!=");
 				PRINT_ARG(1);
-			});
-			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getUnsignedIntGe(), {
+			};
+			ADD_FORMATTER(basic.getUnsignedIntGe()) {
 				PRINT_ARG(0);
 				OUT(">=");
 				PRINT_ARG(1);
-			});
-			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getUnsignedIntGt(), {
+			};
+			ADD_FORMATTER(basic.getUnsignedIntGt()) {
 				PRINT_ARG(0);
 				OUT(">");
 				PRINT_ARG(1);
-			});
-			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getUnsignedIntLt(), {
+			};
+			ADD_FORMATTER(basic.getUnsignedIntLt()) {
 				PRINT_ARG(0);
 				OUT("<");
 				PRINT_ARG(1);
-			});
-			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getUnsignedIntLe(), {
+			};
+			ADD_FORMATTER(basic.getUnsignedIntLe()) {
 				PRINT_ARG(0);
 				OUT("<=");
 				PRINT_ARG(1);
-			});
+			};
 
-			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getSignedIntEq(), {
+			ADD_FORMATTER(basic.getSignedIntEq()) {
 				PRINT_ARG(0);
 				OUT("==");
 				PRINT_ARG(1);
-			});
-			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getSignedIntNe(), {
+			};
+			ADD_FORMATTER(basic.getSignedIntNe()) {
 				PRINT_ARG(0);
 				OUT("!=");
 				PRINT_ARG(1);
-			});
-			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getSignedIntGe(), {
+			};
+			ADD_FORMATTER(basic.getSignedIntGe()) {
 				PRINT_ARG(0);
 				OUT(">=");
 				PRINT_ARG(1);
-			});
-			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getSignedIntGt(), {
+			};
+			ADD_FORMATTER(basic.getSignedIntGt()) {
 				PRINT_ARG(0);
 				OUT(">");
 				PRINT_ARG(1);
-			});
-			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getSignedIntLt(), {
+			};
+			ADD_FORMATTER(basic.getSignedIntLt()) {
 				PRINT_ARG(0);
 				OUT("<");
 				PRINT_ARG(1);
-			});
-			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getSignedIntLe(), {
+			};
+			ADD_FORMATTER(basic.getSignedIntLe()) {
 				PRINT_ARG(0);
 				OUT("<=");
 				PRINT_ARG(1);
-			});
+			};
 
-			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getRealEq(), {
+			ADD_FORMATTER(basic.getRealEq()) {
 				PRINT_ARG(0);
 				OUT("==");
 				PRINT_ARG(1);
-			});
-			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getRealNe(), {
+			};
+			ADD_FORMATTER(basic.getRealNe()) {
 				PRINT_ARG(0);
 				OUT("!=");
 				PRINT_ARG(1);
-			});
-			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getRealGe(), {
+			};
+			ADD_FORMATTER(basic.getRealGe()) {
 				PRINT_ARG(0);
 				OUT(">=");
 				PRINT_ARG(1);
-			});
-			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getRealGt(), {
+			};
+			ADD_FORMATTER(basic.getRealGt()) {
 				PRINT_ARG(0);
 				OUT(">");
 				PRINT_ARG(1);
-			});
-			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getRealLt(), {
+			};
+			ADD_FORMATTER(basic.getRealLt()) {
 				PRINT_ARG(0);
 				OUT("<");
 				PRINT_ARG(1);
-			});
-			ADD_INTELLIGENT_BRACKET_FORMATTER(basic.getRealLe(), {
+			};
+			ADD_FORMATTER(basic.getRealLe()) {
 				PRINT_ARG(0);
 				OUT("<=");
 				PRINT_ARG(1);
-			});
+			};
 
-			ADD_FORMATTER(parExt.getCreateMinRange(), {
+			ADD_FORMATTER(parExt.getCreateMinRange()) {
 				OUT("[");
 				PRINT_ARG(0);
 				OUT("-inf]");
-			});
-			ADD_FORMATTER(parExt.getCreateBoundRange(), {
+			};
+			ADD_FORMATTER(parExt.getCreateBoundRange()) {
 				OUT("[");
 				PRINT_ARG(0);
 				OUT("-");
 				PRINT_ARG(1);
 				OUT("]");
-			});
+			};
 
-			ADD_FORMATTER(basic.getIfThenElse(), {
+			ADD_FORMATTER(basic.getIfThenElse()) {
 				OUT("");
 				PRINT_ARG(0);
 				OUT("?");
 				if(HAS_OPTION(NO_EVAL_LAZY))
 					PRINT_ARG(1);
 				else {
-					PRINT_EXPR(transform::evalLazy(MGR, ARG(1)));
+					PRINT_EXPR(ExpressionAddress(transform::evalLazy(MGR, ARG(1))));
 				}
 				OUT(":");
 				if(HAS_OPTION(NO_EVAL_LAZY))
 					PRINT_ARG(2);
 				else {
-					PRINT_EXPR(transform::evalLazy(MGR, ARG(2)));
+					PRINT_EXPR(ExpressionAddress(transform::evalLazy(MGR, ARG(2))));
 				}
-			});
+			};
 
-			ADD_FORMATTER(parExt.getBarrier(), { OUT("barrier()"); });
+			ADD_FORMATTER(parExt.getBarrier()) { OUT("barrier()"); };
 
-			ADD_FORMATTER(parExt.getAtomic(), {
+			ADD_FORMATTER(parExt.getAtomic()) {
 				OUT("atomic(");
 				PRINT_ARG(0);
 				OUT(", ");
@@ -1631,7 +1530,7 @@ namespace printer {
 				OUT(", ");
 				PRINT_ARG(2);
 				OUT(")");
-			});
+			};
 
 			if(!config.hasOption(PrettyPrinter::NO_LIST_SUGAR)) {
 				// add semantic sugar for list handling
@@ -1640,8 +1539,8 @@ namespace printer {
 				typedef encoder::ListConverter<ExpressionPtr, encoder::DirectExprConverter> AttributConverter;
 				typedef AttributConverter::is_encoding_of is_encoding_of_type;
 
-				ADD_FORMATTER(ext.getListEmpty(), { OUT("[]"); });
-				ADD_FORMATTER(ext.getListCons(), {
+				ADD_FORMATTER(ext.getListEmpty()) { OUT("[]"); };
+				ADD_FORMATTER(ext.getListCons()) {
 					const is_encoding_of_type is_encoding_of{};
 					// check whether syntactic sugar is supported
 					if(is_encoding_of(call)) {
@@ -1650,20 +1549,19 @@ namespace printer {
 					} else {
 						// use fall-back solution
 						printer.out << "[";
-						printer.visit(NodeAddress(call[0]));
+						printer.visit(call[0]);
 						printer.out << ",";
-						printer.visit(NodeAddress(call[1]));
+						printer.visit(call[1]);
 						printer.out << "]";
 					}
-				});
+				};
 			}
 
 			if(!config.hasOption(PrettyPrinter::PRINT_ATTRIBUTES)) {
 				const analysis::AttributeExtension& ext = mgr.getLangExtension<analysis::AttributeExtension>();
-				ADD_FORMATTER(ext.getAttr(), { PRINT_ARG(0); });
+				ADD_FORMATTER(ext.getAttr()) { PRINT_ARG(0); };
 			}
 
-			#undef ADD_BRACKET_FORMATTER
 			#undef ADD_FORMATTER
 			#undef OUT
 			#undef ARG
