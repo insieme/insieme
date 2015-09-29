@@ -60,7 +60,6 @@ qap2
 # Disabling tests because they fail to satisfy some semantic checks or errors
 critical
 even_odd_task
-flush
 functions
 global_firstprivate
 n_body
@@ -78,7 +77,6 @@ nested_pfor_irregular
 oddEvenSort
 reduction
 reduction_all
-scr
 single
 
 # Disabling tests because the volatile information seems to get lost, which results in the test having a race condition
