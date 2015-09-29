@@ -189,14 +189,18 @@ namespace integration {
 				string caseName = boost::filesystem::path(testCaseDir).filename().string();
 
 				// add default file name
-				if(fs::exists(testCaseDir / (caseName + ".c")))
-				// This is a C test case
-				{
+				if(fs::exists(testCaseDir / (caseName + ".c"))) {
+					// This is a C test case
 					files.push_back((testCaseDir / (caseName + ".c")).string());
-				} else {
-					// this must be a c++ test case
-					assert_true(fs::exists(testCaseDir / (caseName + ".cpp"))) << "file doesn't exist: " << testCaseDir << "/" << caseName << ".cpp";
+
+					// this is a c++ test case
+				} else if (fs::exists(testCaseDir / (caseName + ".cpp"))) {
 					files.push_back((testCaseDir / (caseName + ".cpp")).string());
+
+					//otherwise we don't know how to handle this test case
+				} else {
+					LOG(WARNING) << "Directory " << testCaseDir << " doesn't contain a matching .c or .cpp file - Skipping";
+					return fail;
 				}
 			}
 
@@ -260,7 +264,13 @@ namespace integration {
 		}
 
 
-		vector<IntegrationTestCase> loadAllCases(const std::string& testDirStr, bool forceCommented = false) {
+		namespace {
+
+			enum LoadTestCaseMode { ENABLED_TESTS, BLACKLISTED_TESTS, ALL_TESTS };
+
+		}
+
+		vector<IntegrationTestCase> loadAllCases(const std::string& testDirStr, const LoadTestCaseMode loadMode = ENABLED_TESTS) {
 			// create a new result vector
 			vector<IntegrationTestCase> res;
 
@@ -280,15 +290,9 @@ namespace integration {
 				return res;
 			}
 
-			// Add all sub directories to the list of test cases to load
-			set<string> testCases;
-			for(fs::directory_iterator it(testDir); it != fs::directory_iterator(); ++it) {
-				const fs::path file = *it;
-				if(fs::is_directory(file)) { testCases.insert(file.filename().string()); }
-			}
-
-			// now exclude all the blacklisted test cases
+			// get all blacklisted test cases
 			fs::ifstream blacklistedTestsFile;
+			set<string> blacklistedTestCases;
 			blacklistedTestsFile.open(blacklistedTestsPath);
 			if(!blacklistedTestsFile.is_open()) {
 				LOG(WARNING) << "Unable to open blacklisted_tests file!";
@@ -297,48 +301,58 @@ namespace integration {
 
 			string testCase;
 			while(getline(blacklistedTestsFile, testCase)) {
-				// remove any comments, except if commented tests should be included
-				if(!forceCommented || !boost::starts_with(boost::algorithm::trim_copy(testCase), "#")) {
-					testCase = testCase.substr(0, testCase.find("#", 0));
-				} else { // only remove first "#"
-					testCase = testCase.substr(testCase.find("#") + 1);
+				//strip comments
+				if (testCase.find('#') != string::npos) {
+					testCase = testCase.substr(0, testCase.find("#"));
 				}
 
-				// trim
-				testCase.erase(0, testCase.find_first_not_of(" "));
-				testCase.erase(testCase.find_last_not_of(" ") + 1);
+				//and trim
+				testCase = boost::algorithm::trim_copy(testCase);
 
 				if(!testCase.empty()) {
 					if(!fs::is_directory(testDir / testCase)) {
 						LOG(WARNING) << "Blacklisted test case \"" << testCase << "\" does not exist.";
+
+						//insert all existing directory names into the list of blacklisted tests
 					} else {
-						testCases.erase(testCase);
+						blacklistedTestCases.insert(testCase);
 					}
 				}
 			}
 			blacklistedTestsFile.close();
 
-			// load individual test cases
-			for(const string& cur : testCases) {
-				// check test case directory
-				const fs::path testCaseDir = fs::canonical(fs::absolute(testDir / cur));
-				if(!fs::exists(testCaseDir)) {
-					LOG(WARNING) << "Directory for test case " + cur + " not found!";
-					continue;
-				}
+			// Add all sub directories to the list of test cases to load - consider blacklisted test cases
+			for(fs::directory_iterator it(testDir); it != fs::directory_iterator(); ++it) {
+				const fs::path testCaseDir = *it;
+				if(fs::is_directory(testCaseDir)) {
+					string testCaseName = testCaseDir.filename().string();
+					bool testIsBlacklisted = blacklistedTestCases.find(testCaseName) != blacklistedTestCases.end();
 
-				// check whether it is a test suite
-				const fs::path subTestBlacklist = testCaseDir / "blacklisted_tests";
-				if(fs::exists(subTestBlacklist)) {
-					LOG(DEBUG) << "Descending into sub-test-directory " << (testCaseDir).string();
-					vector<IntegrationTestCase>&& subCases = loadAllCases((testCaseDir).string(), forceCommented);
-					std::copy(subCases.begin(), subCases.end(), std::back_inserter(res));
-					continue;
-				}
+					//if this test is blacklisted and we should run only enabled tests, we don't add it
+					if (testIsBlacklisted && loadMode == ENABLED_TESTS) {
+						continue;
+					}
 
-				// load individual test case
-				auto testCase = loadTestCase(testCaseDir.string());
-				if(testCase) { res.push_back(*testCase); }
+					// check whether it is a test suite
+					if(fs::exists(testCaseDir / "blacklisted_tests")) {
+						LOG(DEBUG) << "Descending into sub-test-directory " << (testCaseDir).string();
+
+						//if the test suite is blacklisted and we should run blacklisted tests, we descend and schedule all tests
+						auto childLoadMode = (testIsBlacklisted && loadMode == BLACKLISTED_TESTS) ? ALL_TESTS : loadMode;
+						vector<IntegrationTestCase>&& subCases = loadAllCases((testCaseDir).string(), childLoadMode);
+						std::copy(subCases.begin(), subCases.end(), std::back_inserter(res));
+						continue;
+					}
+
+					//load the current test case according to the load mode we are supposed to apply
+					if (loadMode == ALL_TESTS
+							|| (loadMode == BLACKLISTED_TESTS && testIsBlacklisted)
+							|| (loadMode == ENABLED_TESTS && !testIsBlacklisted)) {
+						// load individual test case
+						auto testCase = loadTestCase(fs::canonical(fs::absolute(testDir / testCaseName)).string());
+						if(testCase) { res.push_back(*testCase); }
+					}
+				}
 			}
 
 			return res;
@@ -348,10 +362,10 @@ namespace integration {
 	// a global variable containing the list of test cases after they have been loaded the first time
 	boost::optional<vector<IntegrationTestCase>> TEST_CASES = 0;
 
-	const vector<IntegrationTestCase>& getAllCases(bool forceCommented) {
+	const vector<IntegrationTestCase>& getAllCases(const bool blacklistedOnly) {
 		// check whether cases have been loaded before
 		if(!TEST_CASES) {
-			TEST_CASES = boost::optional<vector<IntegrationTestCase>>(loadAllCases(TEST_ROOT_DIR, forceCommented));
+			TEST_CASES = boost::optional<vector<IntegrationTestCase>>(loadAllCases(TEST_ROOT_DIR, blacklistedOnly ? BLACKLISTED_TESTS : ENABLED_TESTS));
 			std::sort(TEST_CASES->begin(), TEST_CASES->end());
 		}
 		return *TEST_CASES;
@@ -400,7 +414,7 @@ namespace integration {
 		}
 	}
 
-	vector<IntegrationTestCase> getTestSuite(const string& path, bool forceCommented) {
+	vector<IntegrationTestCase> getTestSuite(const string& path) {
 		// convert the path into an absolute path
 		frontend::path absolute_path = fs::canonical(fs::absolute(path));
 
@@ -412,7 +426,7 @@ namespace integration {
 			if(testCase) { return toVector(*testCase); }
 		}
 
-		return loadAllCases(absolute_path.string(), forceCommented);
+		return loadAllCases(absolute_path.string());
 	}
 
 

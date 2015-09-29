@@ -66,7 +66,6 @@ namespace testFramework {
 		int statThreads = 0;
 		#endif
 		bool panic_mode;
-		bool force;
 		bool list_only;
 		bool no_clean;
 		bool color;
@@ -74,6 +73,7 @@ namespace testFramework {
 		vector<string> cases;
 		vector<string> steps;
 		vector<string> outputFormats;
+		bool blacklistedOnly;
 		bool preprocessingOnly;
 		bool postprocessingOnly;
 
@@ -86,12 +86,12 @@ namespace testFramework {
 
 		Options(bool valid = true)
 		    : valid(valid), mockrun(false), num_threads(1), num_repetitions(1), use_median(false), statistics(false), scheduling(false), print_configs(false),
-		      panic_mode(false), force(false), list_only(false), no_clean(false), color(true), overwrite(false), preprocessingOnly(false),
+		      panic_mode(false), list_only(false), no_clean(false), color(true), overwrite(false), blacklistedOnly(false), preprocessingOnly(false),
 		      postprocessingOnly(false), perf(false), load_miss(""), store_miss(""), flops("") {}
 
 		bool operator==(Options a) const {
 			return a.mockrun == mockrun && a.num_threads == num_threads && a.num_repetitions == num_repetitions && a.use_median == use_median
-			       && a.statistics == statistics && a.scheduling == scheduling && a.statThreads == statThreads && a.force == force && a.cases == cases
+			       && a.statistics == statistics && a.scheduling == scheduling && a.statThreads == statThreads && a.cases == cases && a.blacklistedOnly == blacklistedOnly
 			       && a.preprocessingOnly == preprocessingOnly && a.postprocessingOnly == postprocessingOnly && a.perf == perf && a.load_miss == load_miss
 			       && a.store_miss == store_miss && a.flops == flops && a.perf_metrics == perf_metrics && a.steps == steps;
 		}
@@ -107,7 +107,6 @@ namespace testFramework {
 			ar& statistics;
 			ar& scheduling;
 			ar& statThreads;
-			ar& force;
 			ar& cases;
 			ar& perf;
 			ar& load_miss;
@@ -115,6 +114,7 @@ namespace testFramework {
 			ar& flops;
 			ar& perf_metrics;
 			ar& steps;
+			ar& blacklistedOnly;
 			ar& preprocessingOnly;
 			ar& postprocessingOnly;
 		}
@@ -186,13 +186,13 @@ namespace testFramework {
 
 	vector<TestCase> loadCases(const Options& options) {
 		// if no test is specified explicitly load all of them
-		if(options.cases.empty()) { return itc::getAllCases(options.force); }
+		if(options.cases.empty()) { return itc::getAllCases(options.blacklistedOnly); }
 
 		// load selected test cases
 		vector<TestCase> cases;
 		for(const auto& cur : options.cases) {
 			// load test case based on the location
-			auto curSuite = itc::getTestSuite(cur, options.force);
+			auto curSuite = itc::getTestSuite(cur);
 			for(const auto& cur : curSuite) {
 				if(!contains(cases, cur)) { // make sure every test is only present once
 					cases.push_back(cur);

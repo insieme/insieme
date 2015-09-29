@@ -87,13 +87,23 @@ namespace {
 
 		// define options
 		bpo::options_description desc("Supported Parameters");
-		desc.add_options()("help,h", "produce help message")("config,c", "print the configuration of the selected test cases")(
-		    "mock,m", "make it a mock run just printing commands not really executing those")("panic,p", "panic on first sign of trouble and stop execution")(
-		    "list,l", "just list the targeted test cases")("worker,w", bpo::value<int>()->default_value(1), "the number of parallel workers to be utilized")(
-		    "cases", bpo::value<vector<string>>(), "the list of test cases to be executed")("step,s", bpo::value<string>(), "the test step to be applied")(
-		    "repeat,r", bpo::value<int>()->default_value(1), "the number of times the tests shell be repeated")("no-clean", "keep all output files")(
-		    "no-color", "no highlighting of output")("preprocessing", "perform all pre-processing steps")("postprocessing",
-		                                                                                                  "perform all post-processing steps");
+		// clang-format off
+		desc.add_options()
+		    ("help,h",           "produce help message")
+		    ("config,c",         "print the configuration of the selected test cases")
+		    ("mock,m",           "make it a mock run just printing commands not really executing those")
+		    ("panic,p",          "panic on first sign of trouble and stop execution")
+		    ("list,l",           "just list the targeted test cases")
+		    ("worker,w",         bpo::value<int>()->default_value(1), "the number of parallel workers to be utilized")
+		    ("cases",            bpo::value<vector<string>>(),        "the list of test cases to be executed")
+		    ("step,s",           bpo::value<string>(),                "the test step to be applied")
+		    ("repeat,r",         bpo::value<int>()->default_value(1), "the number of times the tests shell be repeated")
+		    ("no-clean",         "keep all output files")
+		    ("no-color",         "no highlighting of output")
+		    ("blacklisted-only", "only run the blacklisted test cases")
+		    ("preprocessing",    "perform all pre-processing steps")
+		    ("postprocessing",   "perform all post-processing steps");
+		// clang-format on
 
 		// define positional options (all options not being named)
 		bpo::positional_options_description pos;
@@ -144,6 +154,8 @@ namespace {
 
 		if(map.count("step")) { res.steps.push_back(map["step"].as<string>()); }
 
+		res.blacklistedOnly = map.count("blacklisted-only");
+
 		res.preprocessingOnly = map.count("preprocessing");
 		res.postprocessingOnly = map.count("postprocessing");
 
@@ -151,7 +163,11 @@ namespace {
 	}
 }
 
-void printSummary(const int totalTests, const int okCount, const int omittedCount, const std::map<TestCase, TestResult>& failedSteps, const int screenWidth,
+void printSummary(const int totalTests,
+                  const std::vector<TestCase>& okSteps, const bool blacklistedOnly,
+                  const int omittedCount,
+                  const std::map<TestCase, TestResult>& failedSteps,
+                  const int screenWidth,
                   const tf::Colorize& col) {
 	string footerSummaryFormat("%" + to_string(screenWidth - 12) + "d");
 	string centerAlign("%|=" + to_string(screenWidth - 2) + "|");
@@ -161,18 +177,26 @@ void printSummary(const int totalTests, const int okCount, const int omittedCoun
 	          << "#\n";
 	std::cout << "#" << string(screenWidth - 2, '-') << "#\n";
 	std::cout << "# TOTAL:  " << boost::format(footerSummaryFormat) % totalTests << " #\n";
-	std::cout << "# PASSED: " << col.green() << boost::format(footerSummaryFormat) % okCount << col.reset() << " #\n";
+	std::cout << "# PASSED: " << col.green() << boost::format(footerSummaryFormat) % okSteps.size() << col.reset() << " #\n";
+	if (blacklistedOnly) {
+		for(const auto& testCase : okSteps) {
+			string footerSuccessListFormat("%" + to_string(screenWidth - 10 - testCase.getName().length()) + "s");
+			std::cout << "#" << col.green() << "   - " << testCase.getName() << ": " << col.reset() << boost::format(footerSuccessListFormat) % "" << " #\n";
+		}
+	}
 	std::cout << "# OMITTED:" << (omittedCount != 0 ? col.yellow() : "") << boost::format(footerSummaryFormat) % omittedCount
 	          << (omittedCount != 0 ? col.reset() : "") << " #\n";
 	std::cout << "# FAILED: " << (failedSteps.size() != 0 ? col.red() : "") << boost::format(footerSummaryFormat) % failedSteps.size()
 	          << (failedSteps.size() != 0 ? col.reset() : "") << " #\n";
-	for(const auto& cur : failedSteps) {
-		TestCase testCase = cur.first;
-		TestResult testResult = cur.second;
-		string failedStepInfo(testResult.getStepName() + ": exit code " + to_string(testResult.getRetVal()));
-		string footerFailedListFormat("%" + to_string(screenWidth - 10 - testCase.getName().length()) + "s");
-		std::cout << "#" << col.red() << "   - " << testCase.getName() << ": " << col.reset() << boost::format(footerFailedListFormat) % failedStepInfo
-		          << " #\n";
+	if (!blacklistedOnly) {
+		for(const auto& cur : failedSteps) {
+			TestCase testCase = cur.first;
+			TestResult testResult = cur.second;
+			string failedStepInfo(testResult.getStepName() + ": exit code " + to_string(testResult.getRetVal()));
+			string footerFailedListFormat("%" + to_string(screenWidth - 10 - testCase.getName().length()) + "s");
+			std::cout << "#" << col.red() << "   - " << testCase.getName() << ": " << col.reset() << boost::format(footerFailedListFormat) % failedStepInfo
+								<< " #\n";
+		}
 	}
 	std::cout << "#" << string(screenWidth - 2, '-') << "#\n";
 }
@@ -277,7 +301,7 @@ int main(int argc, char** argv) {
 		// get instance of the test runner
 		itc::TestRunner& runner = itc::TestRunner::getInstance();
 		// set lambda to print some execution summary at the end
-		runner.attachExecuteOnKill([&]() { printSummary(totalTests, ok.size(), omittedTestsCount, failedSteps, screenWidth, colorize); });
+		runner.attachExecuteOnKill([&]() { printSummary(totalTests, ok, options.blacklistedOnly, omittedTestsCount, failedSteps, screenWidth, colorize); });
 		// set lambda to set panic mode before killing all the processes
 		runner.attachExecuteBeforeKill([&]() { panic = true; });
 
@@ -403,7 +427,7 @@ int main(int argc, char** argv) {
 
 	} // end repetition loop
 
-	if(!panic) { printSummary(totalTests, ok.size(), omittedTestsCount, failedSteps, screenWidth, colorize); }
+	if(!panic) { printSummary(totalTests, ok, options.blacklistedOnly, omittedTestsCount, failedSteps, screenWidth, colorize); }
 
 	// done
 	return (failed.empty()) ? 0 : 1;

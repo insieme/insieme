@@ -373,7 +373,7 @@ namespace integration {
 	/**
 	 * Obtains a full list of all test cases available within the system.
 	 */
-	const vector<IntegrationTestCase>& getAllCases(bool forceCommented = false);
+	const vector<IntegrationTestCase>& getAllCases(const bool blacklistedOnly = false);
 
 	/**
 	 * Obtains the test case matching the given name.
@@ -389,7 +389,7 @@ namespace integration {
 	 * @param path the directory representing the integration test
 	 * @return the list of test cases within this directory or below
 	 */
-	vector<IntegrationTestCase> getTestSuite(const string& path, bool forceCommented = false);
+	vector<IntegrationTestCase> getTestSuite(const string& path);
 
 	/**
 	 * This function is loading the integration test with the given name.
