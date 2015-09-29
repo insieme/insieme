@@ -656,13 +656,17 @@ namespace printer {
 					auto type = node->getType();
 
 					if (basic.isFloat(type))  out << "f";
-					if (basic.isUInt4(type))  out << "u";
-					if (basic.isUInt8(type))  out << "ul";
-					if (basic.isUInt16(type)) out << "ull";
 
-					if (basic.isInt4(type))   out << "";
-					if (basic.isInt8(type))   out << "l";
-					if (basic.isInt16(type))  out << "ll";
+					if (basic.isUInt1(type))    out << "u";
+					if (basic.isUInt2(type))    out << "u";
+					if (basic.isUInt4(type))    out << "u";
+					if (basic.isUInt8(type))    out << "ul";
+					if (basic.isUInt16(type))   out << "ull";
+					if (basic.isUIntGen(type))  out << "u";
+					if (basic.isUIntInf(type))  out << "u";
+
+					if (basic.isInt8(type))     out << "l";
+					if (basic.isInt16(type))    out << "ll";
 
 				}
 
