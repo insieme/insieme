@@ -66,7 +66,7 @@ namespace analysis {
 
 			// check function types
 			if(FunctionTypePtr funType = cur.isa<FunctionTypePtr>()) {
-				return funType->isConstructor() || funType->isDestructor() || funType->isMemberFunction();
+				return funType->isConstructor() || funType->isDestructor() || funType->isMemberFunction() || funType->isVirtualMemberFunction();
 			}
 
 			// if there are exceptions, it is IR++

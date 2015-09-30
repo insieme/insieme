@@ -229,12 +229,14 @@ TEST(PrettyPrinter, FunctionTypes) {
 	TypePtr funC = builder.functionType(toVector(objC, typeA, typeB), FK_CONSTRUCTOR);
 	TypePtr funD = builder.functionType(toVector(objC), FK_DESTRUCTOR);
 	TypePtr funE = builder.functionType(toVector(objC, typeA, typeB), typeR, FK_MEMBER_FUNCTION);
+	TypePtr funF = builder.functionType(toVector(objC, typeA, typeB), typeR, FK_VIRTUAL_MEMBER_FUNCTION);
 
 	EXPECT_EQ("(A, B) -> R", toString(PrettyPrinter(funA)));
 	EXPECT_EQ("(A, B) => R", toString(PrettyPrinter(funB)));
-//	EXPECT_EQ("ctor C::(A, B)", toString(PrettyPrinter(funC)));
-//	EXPECT_EQ("~C::()", toString(PrettyPrinter(funD)));
-//	EXPECT_EQ("method C::(A, B) -> R", toString(PrettyPrinter(funE)));
+	EXPECT_EQ("ctor C::(A, B)", toString(PrettyPrinter(funC)));
+	EXPECT_EQ("~C::()", toString(PrettyPrinter(funD)));
+	EXPECT_EQ("method C::(A, B) -> R", toString(PrettyPrinter(funE)));
+	EXPECT_EQ("method C::(A, B) ~> R", toString(PrettyPrinter(funF)));
 }
 
 TEST(PrettyPrinter, LambdaTypes) {
@@ -252,6 +254,7 @@ TEST(PrettyPrinter, LambdaTypes) {
 	FunctionTypePtr funB = builder.functionType(toVector(objC, typeA, typeB), FK_CONSTRUCTOR);
 	FunctionTypePtr funC = builder.functionType(toVector(objC), FK_DESTRUCTOR);
 	FunctionTypePtr funD = builder.functionType(toVector(objC, typeA, typeB), typeR, FK_MEMBER_FUNCTION);
+	FunctionTypePtr funE = builder.functionType(toVector(objC, typeA, typeB), typeR, FK_VIRTUAL_MEMBER_FUNCTION);
 
 	StatementPtr body = builder.compoundStmt();
 
@@ -265,11 +268,13 @@ TEST(PrettyPrinter, LambdaTypes) {
 	LambdaExprPtr lambdaB = builder.lambdaExpr(funB, toVector(varO, varA, varB), body);
 	LambdaExprPtr lambdaC = builder.lambdaExpr(funC, toVector(varO), body);
 	LambdaExprPtr lambdaD = builder.lambdaExpr(funD, toVector(varO, varA, varB), body);
+	LambdaExprPtr lambdaE = builder.lambdaExpr(funE, toVector(varO, varA, varB), body);
 
 	EXPECT_EQ("function(ref<ref<C,f,f,plain>,f,f,plain> v0, ref<A,f,f,plain> v1, ref<B,f,f,plain> v2) -> R { }", toString(PrettyPrinter(lambdaA, PrettyPrinter::NO_LET_BOUND_FUNCTIONS)));
-//	EXPECT_EQ("ctor C v0 :: (ref<A,f,f,plain> v1, ref<B,f,f,plain> v2) { }", toString(PrettyPrinter(lambdaB, PrettyPrinter::NO_LET_BOUND_FUNCTIONS)));
-//	EXPECT_EQ("~C v0 :: () { }", toString(PrettyPrinter(lambdaC, PrettyPrinter::NO_LET_BOUND_FUNCTIONS)));
-//	EXPECT_EQ("function C::(ref<A,f,f,plain> v1, ref<B,f,f,plain> v2) -> R { }", toString(PrettyPrinter(lambdaD, PrettyPrinter::NO_LET_BOUND_FUNCTIONS)));
+	EXPECT_EQ("ctor C v0 :: (ref<A,f,f,plain> v1, ref<B,f,f,plain> v2) { }", toString(PrettyPrinter(lambdaB, PrettyPrinter::NO_LET_BOUND_FUNCTIONS)));
+	EXPECT_EQ("~C v0 :: () { }", toString(PrettyPrinter(lambdaC, PrettyPrinter::NO_LET_BOUND_FUNCTIONS)));
+	EXPECT_EQ("function C::(ref<A,f,f,plain> v1, ref<B,f,f,plain> v2) -> R { }", toString(PrettyPrinter(lambdaD, PrettyPrinter::NO_LET_BOUND_FUNCTIONS)));
+	EXPECT_EQ("function C::(ref<A,f,f,plain> v1, ref<B,f,f,plain> v2) ~> R { }", toString(PrettyPrinter(lambdaE, PrettyPrinter::NO_LET_BOUND_FUNCTIONS)));
 }
 
 TEST(PrettyPrinter, DerivedLiterals) {

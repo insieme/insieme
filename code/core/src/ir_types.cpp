@@ -72,7 +72,7 @@ namespace core {
 	std::ostream& FunctionType::printTo(std::ostream& out) const {
 		// fetch object type if required
 		TypePtr objType;
-		if(isConstructor() || isDestructor() || isMemberFunction()) {
+		if(isConstructor() || isDestructor() || isMemberFunction() || isVirtualMemberFunction()) {
 			if(getParameterTypes().empty() || !lang::isReference(getParameterTypes()[0])) {
 				objType = GenericType::get(getNodeManager(), "%error%");
 			} else {
@@ -93,11 +93,12 @@ namespace core {
 			return out << "(~" << *objType << "::())";
 		}
 
-		// handle member function types
-		if(isMemberFunction()) {
+		// handle (virtual) member function types
+		if(isMemberFunction() || isVirtualMemberFunction()) {
 			auto paramBegin = getParameterTypes().begin() + 1;
 			auto paramEnd = getParameterTypes().end();
-			return out << "(" << *objType << "::(" << join(",", paramBegin, paramEnd, print<deref<NodePtr>>()) << ")->" << *getReturnType() << ")";
+			return out << "(" << *objType << "::(" << join(",", paramBegin, paramEnd, print<deref<NodePtr>>()) << ")"
+					<< (isMemberFunction() ? "->" : "~>") << *getReturnType() << ")";
 		}
 
 		out << "(";

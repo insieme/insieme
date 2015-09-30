@@ -252,6 +252,7 @@ namespace core {
 		FunctionTypePtr funTypeE = FunctionType::get(manager, toVector(obj, dummyA), FK_CONSTRUCTOR);
 		FunctionTypePtr funTypeF = FunctionType::get(manager, toVector(obj), FK_DESTRUCTOR);
 		FunctionTypePtr funTypeG = FunctionType::get(manager, toVector(obj, dummyA), resultA, FK_MEMBER_FUNCTION);
+		FunctionTypePtr funTypeH = FunctionType::get(manager, toVector(obj, dummyA), resultA, FK_VIRTUAL_MEMBER_FUNCTION);
 
 		EXPECT_EQ("((dummyA)->returnA)", toString(*funTypeA));
 		EXPECT_EQ("(('alpha)->returnB)", toString(*funTypeB));
@@ -261,6 +262,7 @@ namespace core {
 		EXPECT_EQ("(C::(dummyA))", toString(*funTypeE));
 		EXPECT_EQ("(~C::())", toString(*funTypeF));
 		EXPECT_EQ("(C::(dummyA)->returnA)", toString(*funTypeG));
+		EXPECT_EQ("(C::(dummyA)~>returnA)", toString(*funTypeH));
 
 		EXPECT_TRUE(funTypeA->isPlain());
 		EXPECT_TRUE(funTypeB->isPlain());
@@ -281,6 +283,7 @@ namespace core {
 		EXPECT_TRUE(funTypeE->isConstructor());
 		EXPECT_TRUE(funTypeF->isDestructor());
 		EXPECT_TRUE(funTypeG->isMemberFunction());
+		EXPECT_TRUE(funTypeH->isVirtualMemberFunction());
 
 		EXPECT_NE(funTypeA, funTypeD);
 
@@ -319,6 +322,11 @@ namespace core {
 		subNodesG.push_back(resultA);
 		subNodesG.push_back(UIntValue::get(manager, FK_MEMBER_FUNCTION));
 
+		vector<NodePtr> subNodesH;
+		subNodesH.push_back(Types::get(manager, toVector(obj, dummyA)));
+		subNodesH.push_back(resultA);
+		subNodesH.push_back(UIntValue::get(manager, FK_VIRTUAL_MEMBER_FUNCTION));
+
 		// perform basic type tests
 		basicTypeTests(funTypeA, true, toList(subNodesA));
 		basicTypeTests(funTypeB, true, toList(subNodesB));
@@ -327,6 +335,7 @@ namespace core {
 		basicTypeTests(funTypeE, true, toList(subNodesE));
 		basicTypeTests(funTypeF, true, toList(subNodesF));
 		basicTypeTests(funTypeG, true, toList(subNodesG));
+		basicTypeTests(funTypeH, true, toList(subNodesH));
 	}
 
 	TEST(TypeTest, TagTypeRecord) {

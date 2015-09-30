@@ -1025,6 +1025,8 @@ namespace backend {
 			// dispatch to pointer-specific type!
 			if(ptr->isPlain()) { return resolvePlainFunctionType(ptr); }
 			if(ptr->isMemberFunction()) { return resolveMemberFunctionType(ptr); }
+			//TODO
+			if(ptr->isVirtualMemberFunction()) { assert_not_implemented(); }
 			return resolveThickFunctionType(ptr);
 		}
 

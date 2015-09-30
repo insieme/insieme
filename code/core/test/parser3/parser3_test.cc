@@ -80,6 +80,8 @@ namespace parser3 {
 		EXPECT_TRUE(test_type(nm, "let class = struct name { int<4> a; int<5> b};"
 		                          "method class::()->int<4> "));
 		EXPECT_TRUE(test_type(nm, "let class = struct name { int<4> a; int<5> b};"
+		                          "method class::()~>int<4> "));
+		EXPECT_TRUE(test_type(nm, "let class = struct name { int<4> a; int<5> b};"
 		                          "~class::()"));
 		EXPECT_TRUE(test_type(nm, "let class = struct name { int<4> a; int<5> b};"
 		                          "ctor class::()"));
