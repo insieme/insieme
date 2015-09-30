@@ -160,12 +160,12 @@ namespace lang {
 		/**
 		 * A literal to obtain the data stored in the memory location referenced by a reference.
 		 */
-		LANG_EXT_LITERAL(RefDeref, "ref_deref", "(ref<'a,'c,'v>) -> 'a")
+		LANG_EXT_LITERAL(RefDeref, "ref_deref", "(ref<'a,'c,'v,'k>) -> 'a")
 
 		/**
 		 * A literal to update the value stored in a memory location referenced by a reference.
 		 */
-		LANG_EXT_LITERAL(RefAssign, "ref_assign", "(ref<'a,f,'v>, 'a) -> unit")
+		LANG_EXT_LITERAL(RefAssign, "ref_assign", "(ref<'a,f,'v,'k>, 'a) -> unit")
 
 
 		// -- casts --
@@ -173,25 +173,25 @@ namespace lang {
 		/**
 		 * A reinterpret cast altering the actual interpretation of the referenced memory cell.
 		 */
-		LANG_EXT_LITERAL(RefReinterpret, "ref_reinterpret", "(ref<'a,'c,'v>,type<'b>) -> ref<'b,'c,'v>")
+		LANG_EXT_LITERAL(RefReinterpret, "ref_reinterpret", "(ref<'a,'c,'v,'k>,type<'b>) -> ref<'b,'c,'v,'k>")
 
 		/**
 		 * A simpler reference cast merely altering the view on the otherwise untouched memory location. This
 		 * is the basis for e.g. const or volatile casts.
 		 */
-		LANG_EXT_LITERAL(RefCast, "ref_cast", "(ref<'a,'c,'v>,type<'new_const>,type<'new_volatile>) -> ref<'a,'new_const,'new_volatile>")
+		LANG_EXT_LITERAL(RefCast, "ref_cast", "(ref<'a,'c,'v,'k>,type<'new_const>,type<'new_volatile>,type<'new_kind>) -> ref<'a,'new_const,'new_volatile,'new_kind>")
 
 
 		/**
 		 * A specialization of the ref_cast operator for modeling const casts.
 		 */
-		LANG_EXT_DERIVED_WITH_NAME(RefConstCast, "ref_const_cast", "lambda (ref<'a,'c,'v> r, type<'nc> c) -> ref<'a,'nc,'v> { return ref_cast(r,c,type_lit('v)); }")
+		LANG_EXT_DERIVED_WITH_NAME(RefConstCast, "ref_const_cast", "lambda (ref<'a,'c,'v,'k> r, type<'nc> c) -> ref<'a,'nc,'v,'k> { return ref_cast(r,c,type_lit('v),lit('k)); }")
 
 		/**
 		 * A specialization of the ref_cast operator for modeling volatile casts.
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(RefVolatileCast, "ref_volatile_cast",
-		                           "lambda (ref<'a,'c,'v> r, type<'nv> v) -> ref<'a,'c,'nv> { return ref_cast(r,type_lit('c),v); }")
+		                           "lambda (ref<'a,'c,'v,'k> r, type<'nv> v) -> ref<'a,'c,'nv,'k> { return ref_cast(r,type_lit('c),v,lit('k)); }")
 
 
 		// -- sub-referencing --
@@ -199,12 +199,12 @@ namespace lang {
 		/**
 		 * The narrow operation is obtaining a reference to a sub-object within a referenced object.
 		 */
-		LANG_EXT_LITERAL(RefNarrow, "ref_narrow", "(ref<'a,'c,'v>, datapath<'a,'b>) -> ref<'b,'c,'v>")
+		LANG_EXT_LITERAL(RefNarrow, "ref_narrow", "(ref<'a,'c,'v,'k>, datapath<'a,'b>) -> ref<'b,'c,'v,'k>")
 
 		/**
 		 * The expand operation is the inverse operation of the narrow operation.
 		 */
-		LANG_EXT_LITERAL(RefExpand, "ref_expand", "(ref<'b,'c,'v>, datapath<'a,'b>) -> ref<'a,'c,'v>")
+		LANG_EXT_LITERAL(RefExpand, "ref_expand", "(ref<'b,'c,'v,'k>, datapath<'a,'b>) -> ref<'a,'c,'v,'k>")
 
 
 		/**
@@ -212,27 +212,27 @@ namespace lang {
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(
 		    RefArrayElement, "ref_array_elem",
-		    "lambda (ref<array<'a,'s>,'c,'v> r, int<8> i) -> ref<'a,'c,'v> { return ref_narrow(r, dp_element(dp_root(type_lit(array<'a,'s>)),i)); }")
+		    "lambda (ref<array<'a,'s>,'c,'v,plain> r, int<8> i) -> ref<'a,'c,'v,plain> { return ref_narrow(r, dp_element(dp_root(type_lit(array<'a,'s>)),i)); }")
 
 		/**
 		 * A derived reference navigation operator providing access to a member of a struct / union.
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(
 		    RefMemberAccess, "ref_member_access",
-		    "lambda (ref<'a,'c,'v> r, identifier name, type<'b> type) -> ref<'b,'c,'v> { return ref_narrow(r, dp_member(dp_root(type_lit('a)),name,type)); }")
+		    "lambda (ref<'a,'c,'v,'k> r, identifier name, type<'b> type) -> ref<'b,'c,'v,'k> { return ref_narrow(r, dp_member(dp_root(type_lit('a)),name,type)); }")
 
 		/**
 		 * A derived reference navigation operator providing access to a components of a tuple.
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(
 		    RefComponentAccess, "ref_component_access",
-		    "lambda (ref<'a,'c,'v> r, uint<8> pos, type<'b> type) -> ref<'b,'c,'v> { return ref_narrow(r, dp_component(dp_root(type_lit('a)),pos,type)); }")
+		    "lambda (ref<'a,'c,'v,'k> r, uint<8> pos, type<'b> type) -> ref<'b,'c,'v,'k> { return ref_narrow(r, dp_component(dp_root(type_lit('a)),pos,type)); }")
 
 		/**
 		 * A derived reference-navigation operation providing an array view on a scalar.
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(RefScalarToRefArray, "ref_scalar_to_ref_array",
-		    "lambda (ref<'a,'c,'v> a) -> ref<array<'a>,'c,'v> { return ref_expand(a, dp_element(dp_root(type_lit(array<'a>)),0u)); }")
+		    "lambda (ref<'a,'c,'v,plain> a) -> ref<array<'a>,'c,'v,plain> { return ref_expand(a, dp_element(dp_root(type_lit(array<'a>)),0u)); }")
 
 
 		// -- null --
@@ -241,7 +241,7 @@ namespace lang {
 		 * A literal to create a null-reference pointing to no memory location. Such a reference
 		 * must not be read or written.
 		 */
-		LANG_EXT_LITERAL(RefNull, "ref_null", "(type<'a>, type<'c>, type<'v>) -> ref<'a,'c,'v>")
+		LANG_EXT_LITERAL(RefNull, "ref_null", "(type<'a>, type<'c>, type<'v>) -> ref<'a,'c,'v,plain>")
 
 
 		// -- operators --
@@ -249,32 +249,32 @@ namespace lang {
 		/**
 		 * An operator to compare two references on equality.
 		 */
-		LANG_EXT_LITERAL(RefEqual, "ref_eq", "(ref<'a1,'c1,'v1>, ref<'a2,'c2,'v2>) -> bool")
+		LANG_EXT_LITERAL(RefEqual, "ref_eq", "(ref<'a1,'c1,'v1,'k1>, ref<'a2,'c2,'v2,'k2>) -> bool")
 
 		/**
 		 * An operator to compare two references for inequality.
 		 */
-		LANG_EXT_DERIVED_WITH_NAME(RefNotEqual, "ref_ne", "lambda (ref<'a1,'c1,'v1> a, ref<'a2,'c2,'v2> b) -> bool { return !ref_eq(a,b); }")
+		LANG_EXT_DERIVED_WITH_NAME(RefNotEqual, "ref_ne", "lambda (ref<'a1,'c1,'v1,'k1> a, ref<'a2,'c2,'v2,'k2> b) -> bool { return !ref_eq(a,b); }")
 
 		/**
 		 * A generic pre-order increment operator.
 		 */
-		LANG_EXT_DERIVED_WITH_NAME(GenPreInc,  "gen_pre_inc",  "lambda (ref<'a,f,'v> v)->'a { v=*v+lit(\"1\":'a); return *v; }")
+		LANG_EXT_DERIVED_WITH_NAME(GenPreInc,  "gen_pre_inc",  "lambda (ref<'a,f,'v,'k> v)->'a { v=*v+lit(\"1\":'a); return *v; }")
 
 		/**
 		 * A generic post-order increment operator.
 		 */
-		LANG_EXT_DERIVED_WITH_NAME(GenPostInc, "gen_post_inc", "lambda (ref<'a,f,'v> v)->'a { decl auto tmp=*v; v=*v+lit(\"1\":'a); return tmp; }")
+		LANG_EXT_DERIVED_WITH_NAME(GenPostInc, "gen_post_inc", "lambda (ref<'a,f,'v,'k> v)->'a { decl auto tmp=*v; v=*v+lit(\"1\":'a); return tmp; }")
 
 		/**
 		 * A generic pre-order decrement operator.
 		 */
-		LANG_EXT_DERIVED_WITH_NAME(GenPreDec,  "gen_pre_dec",  "lambda (ref<'a,f,'v> v)->'a { v=*v-lit(\"1\":'a); return *v; }")
+		LANG_EXT_DERIVED_WITH_NAME(GenPreDec,  "gen_pre_dec",  "lambda (ref<'a,f,'v,'k> v)->'a { v=*v-lit(\"1\":'a); return *v; }")
 
 		/**
 		 * A generic post-order decrement operator.
 		 */
-		LANG_EXT_DERIVED_WITH_NAME(GenPostDec, "gen_post_dec", "lambda (ref<'a,f,'v> v)->'a { decl auto tmp=*v; v=*v-lit(\"1\":'a); return tmp; }")
+		LANG_EXT_DERIVED_WITH_NAME(GenPostDec, "gen_post_dec", "lambda (ref<'a,f,'v,'k> v)->'a { decl auto tmp=*v; v=*v-lit(\"1\":'a); return tmp; }")
 
 
 	};
@@ -307,22 +307,22 @@ namespace lang {
 		/**
 		 * A marker indicating whether the referenced memory cell can be modified through this reference or not (const).
 		 */
-		bool mConst;
+		TypePtr mConst;
 
 		/**
 		 * A marker indicating whether the referenced memory cell might be concurrently modified or not.
 		 */
-		bool mVolatile;
+		TypePtr mVolatile;
 
 		/**
 		 * The kind of reference this type is representing.
 		 */
-		Kind kind;
+		TypePtr kind;
 
 		/**
 		 * Creates a new reference type based on the given parameters.
 		 */
-		ReferenceType(const TypePtr& elementType, bool mConst, bool mVolatile, const Kind& kind)
+		ReferenceType(const TypePtr& elementType, const TypePtr& mConst, const TypePtr& mVolatile, const TypePtr& kind)
 			: elementType(elementType), mConst(mConst), mVolatile(mVolatile), kind(kind) {}
 
 	  public:
@@ -364,41 +364,23 @@ namespace lang {
 			elementType = type;
 		}
 
-		bool isConst() const {
-			return mConst;
-		}
+		bool isConst() const;
 
-		void setConst(bool newState = true) {
-			mConst = newState;
-		}
+		void setConst(bool newState = true);
 
-		bool isVolatile() const {
-			return mVolatile;
-		}
+		bool isVolatile() const;
 
-		void setVolatile(bool newState = true) {
-			mVolatile = newState;
-		}
+		void setVolatile(bool newState = true);
 
-		Kind getKind() const {
-			return kind;
-		}
+		Kind getKind() const;
 
-		void setKind(const Kind& kind) {
-			this->kind = kind;
-		}
+		void setKind(const Kind& kind);
 
-		bool isPlain() const {
-			return kind == Kind::Plain;
-		}
+		bool isPlain() const;
 
-		bool isCppReference() const {
-			return kind == Kind::CppReference;
-		}
+		bool isCppReference() const;
 
-		bool isCppRValueReference() const {
-			return kind == Kind::CppRValueReference;
-		}
+		bool isCppRValueReference() const;
 
 	};
 

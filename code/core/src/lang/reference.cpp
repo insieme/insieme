@@ -51,6 +51,7 @@ namespace lang {
 
 		bool isRefMarker(const TypePtr& type) {
 			if (!type) return false;
+			if (type.isa<TypeVariablePtr>()) return true;
 			const ReferenceExtension& refExt = type->getNodeManager().getLangExtension<ReferenceExtension>();
 			return refExt.isMarkerPlain(type) || refExt.isMarkerCppReference(type) || refExt.isMarkerCppRValueReference(type);
 		}
@@ -97,29 +98,63 @@ namespace lang {
 		// initialize the local instance
 		*this = ReferenceType(
 				type->getTypeParameter(0),
-				isTrueMarker(type->getTypeParameter(1)),
-				isTrueMarker(type->getTypeParameter(2)),
-				parseKind(type->getTypeParameter(3))
-				);
+				type->getTypeParameter(1),
+				type->getTypeParameter(2),
+				type->getTypeParameter(3)
+		);
 	}
 
 	GenericTypePtr ReferenceType::create(const TypePtr& elementType, bool _const, bool _volatile, const Kind& kind) {
 		assert_true(elementType);
-		return ReferenceType(elementType, _const, _volatile, kind).operator GenericTypePtr();
+
+		NodeManager& mgr = elementType.getNodeManager();
+		const BooleanMarkerExtension& ext = mgr.getLangExtension<BooleanMarkerExtension>();
+
+		return ReferenceType(elementType, ext.getMarkerType(_const), ext.getMarkerType(_volatile), toType(mgr, kind)).operator GenericTypePtr();
 	}
 
 	ReferenceType::operator GenericTypePtr() const {
 		NodeManager& mgr = elementType.getNodeManager();
-		auto& ext = mgr.getLangExtension<BooleanMarkerExtension>();
+		return GenericType::get(mgr, "ref", ParentList(), toVector(elementType, mConst, mVolatile, kind));
+	}
 
-		return GenericType::get(mgr, "ref", ParentList(),
-		                        toVector(
-		                        		elementType,
-										(mConst ? ext.getTrue() : ext.getFalse()),
-										(mVolatile ? ext.getTrue() : ext.getFalse()),
-										toType(mgr, kind)
-								)
-							);
+
+	bool ReferenceType::isConst() const {
+		return isTrueMarker(mConst);
+	}
+
+	void ReferenceType::setConst(bool newState) {
+		const auto& ext = elementType->getNodeManager().getLangExtension<BooleanMarkerExtension>();
+		mConst = (newState) ? ext.getTrue() : ext.getFalse();
+	}
+
+	bool ReferenceType::isVolatile() const {
+		return mVolatile;
+	}
+
+	void ReferenceType::setVolatile(bool newState) {
+		const auto& ext = elementType->getNodeManager().getLangExtension<BooleanMarkerExtension>();
+		mVolatile = (newState) ? ext.getTrue() : ext.getFalse();
+	}
+
+	ReferenceType::Kind ReferenceType::getKind() const {
+		return parseKind(kind);
+	}
+
+	void ReferenceType::setKind(const Kind& kind) {
+		this->kind = toType(elementType.getNodeManager(), kind);
+	}
+
+	bool ReferenceType::isPlain() const {
+		return isRefMarker(kind) && getKind() == Kind::Plain;
+	}
+
+	bool ReferenceType::isCppReference() const {
+		return isRefMarker(kind) && getKind() == Kind::CppReference;
+	}
+
+	bool ReferenceType::isCppRValueReference() const {
+		return isRefMarker(kind) && getKind() == Kind::CppRValueReference;
 	}
 
 

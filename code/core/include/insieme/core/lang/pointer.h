@@ -140,7 +140,7 @@ namespace lang {
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(PtrCast, "ptr_cast",
 				"  lambda (ptr<'a,'c,'v> p, type<'new_const> c,type<'new_volatile> v) -> ptr<'a,'new_const,'new_volatile> {   "
-				"		return struct ptr<'a,'new_const,'new_volatile> { ref_cast(p.data, c, v), p.offset };                  "
+				"		return struct ptr<'a,'new_const,'new_volatile> { ref_cast(p.data, c, v, lit(plain)), p.offset };      "
 				"  }                                                                                                          "
 		)
 
