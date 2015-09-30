@@ -47,6 +47,43 @@ namespace insieme {
 namespace core {
 namespace lang {
 
+	namespace {
+
+		bool isRefMarker(const TypePtr& type) {
+			if (!type) return false;
+			const ReferenceExtension& refExt = type->getNodeManager().getLangExtension<ReferenceExtension>();
+			return refExt.isMarkerPlain(type) || refExt.isMarkerCppReference(type) || refExt.isMarkerCppRValueReference(type);
+		}
+
+		ReferenceType::Kind parseKind(const TypePtr& type) {
+			assert_pred1(isRefMarker, type);
+
+			const ReferenceExtension& refExt = type->getNodeManager().getLangExtension<ReferenceExtension>();
+			if (refExt.isMarkerPlain(type)) return ReferenceType::Kind::Plain;
+			if (refExt.isMarkerCppReference(type)) return ReferenceType::Kind::CppReference;
+			if (refExt.isMarkerCppRValueReference(type)) return ReferenceType::Kind::CppRValueReference;
+
+			// something went wrong
+		 	assert_fail() << "Unknown reference kind: " << type;
+			return ReferenceType::Kind::Plain;
+		}
+
+		TypePtr toType(NodeManager& mgr, const ReferenceType::Kind& kind) {
+
+			const ReferenceExtension& refExt = mgr.getLangExtension<ReferenceExtension>();
+			switch(kind) {
+				case ReferenceType::Kind::Plain: 				return refExt.getMarkerPlain();
+				case ReferenceType::Kind::CppReference: 		return refExt.getMarkerCppReference();
+				case ReferenceType::Kind::CppRValueReference: 	return refExt.getMarkerCppRValueReference();
+			}
+
+			// something went wrong
+			assert_fail() << "Unknown reference kind.";
+			return refExt.getMarkerPlain();
+		}
+
+	}
+
 
 	ReferenceType::ReferenceType(const NodePtr& node) {
 		// check given node type
@@ -58,12 +95,17 @@ namespace lang {
 		if (auto expr = node.isa<ExpressionPtr>()) type = expr->getType().as<GenericTypePtr>();
 
 		// initialize the local instance
-		*this = ReferenceType(type->getTypeParameter(0), isTrueMarker(type->getTypeParameter(1)), isTrueMarker(type->getTypeParameter(2)));
+		*this = ReferenceType(
+				type->getTypeParameter(0),
+				isTrueMarker(type->getTypeParameter(1)),
+				isTrueMarker(type->getTypeParameter(2)),
+				parseKind(type->getTypeParameter(3))
+				);
 	}
 
-	GenericTypePtr ReferenceType::create(const TypePtr& elementType, bool _const, bool _volatile) {
+	GenericTypePtr ReferenceType::create(const TypePtr& elementType, bool _const, bool _volatile, const Kind& kind) {
 		assert_true(elementType);
-		return ReferenceType(elementType, _const, _volatile).operator GenericTypePtr();
+		return ReferenceType(elementType, _const, _volatile, kind).operator GenericTypePtr();
 	}
 
 	ReferenceType::operator GenericTypePtr() const {
@@ -71,7 +113,13 @@ namespace lang {
 		auto& ext = mgr.getLangExtension<BooleanMarkerExtension>();
 
 		return GenericType::get(mgr, "ref", ParentList(),
-		                        toVector(elementType, (mConst ? ext.getTrue() : ext.getFalse()), (mVolatile ? ext.getTrue() : ext.getFalse())));
+		                        toVector(
+		                        		elementType,
+										(mConst ? ext.getTrue() : ext.getFalse()),
+										(mVolatile ? ext.getTrue() : ext.getFalse()),
+										toType(mgr, kind)
+								)
+							);
 	}
 
 
@@ -98,9 +146,23 @@ namespace lang {
 
 		// check instantiation
 		const types::Substitution& map = *sub;
-		return isValidBooleanMarker(map.applyTo(ref->getTypeParameter(1))) && isValidBooleanMarker(map.applyTo(ref->getTypeParameter(2)));
+		return isValidBooleanMarker(map.applyTo(ref->getTypeParameter(1))) &&
+				isValidBooleanMarker(map.applyTo(ref->getTypeParameter(2))) &&
+				isRefMarker(map.applyTo(ref->getTypeParameter(3)));
 	}
 	
+	bool isPlainReference(const NodePtr& node) {
+		return isReference(node) && ReferenceType(node).isPlain();
+	}
+
+	bool isCppReference(const NodePtr& node) {
+		return isReference(node) && ReferenceType(node).isCppReference();
+	}
+
+	bool isCppRValueReference(const NodePtr& node) {
+		return isReference(node) && ReferenceType(node).isCppRValueReference();
+	}
+
 	TypePtr buildRefType(const TypePtr& elementType, bool _const, bool _volatile) {
 		return ReferenceType::create(elementType, _const, _volatile);
 	}

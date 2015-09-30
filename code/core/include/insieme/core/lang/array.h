@@ -97,15 +97,15 @@ namespace lang {
 		 * A derived operator conducting a reduction over the elements of a given array.
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(ArrayReduce, "array_reduce",
-				    "                                                                                       "
-					"   lambda (ref<array<'a,'s>,'v,'c> data, int<8> size, ('b,'a)->'b op, 'b init)->'b {   "
-					"   	decl ref<'b,f,f> res = var(init);                                               "
-					"   	for(int<8> i = 0 .. size) {                                                     "
-					"   		res = op(*res, *(data[i]));                                                 "
-					"   	}                                                                               "
-					"   	return *res;                                                                    "
-					"   }                                                                                   "
-				    "                                                                                       "
+				    "                                                                                             "
+					"   lambda (ref<array<'a,'s>,'v,'c,plain> data, int<8> size, ('b,'a)->'b op, 'b init)->'b {   "
+					"   	decl ref<'b,f,f,plain> res = var(init);                                               "
+					"   	for(int<8> i = 0 .. size) {                                                           "
+					"   		res = op(*res, *(data[i]));                                                       "
+					"   	}                                                                                     "
+					"   	return *res;                                                                          "
+					"   }                                                                                         "
+				    "                                                                                             "
 		)
 
 		/**
@@ -114,7 +114,7 @@ namespace lang {
 		LANG_EXT_DERIVED_WITH_NAME(ArrayFold, "array_fold",
 					"                                                                                       "
 					"   lambda (array<'a,'s> data, 'b init, ('b,'a)->'b op)->'b {                           "
-					"   	decl ref<'b,f,f> res = var(init);                                               "
+					"   	decl ref<'b,f,f,plain> res = var(init);                                         "
 					"   	for(int<8> i = 0 .. type_to_int(lit('s))) {                                     "
 					"   		res = op(*res, data[i]);                                                    "
 					"   	}                                                                               "

@@ -38,6 +38,8 @@
 
 #include "insieme/core/lang/extension.h"
 
+#include "insieme/core/lang/reference.h"
+
 namespace insieme {
 namespace core {
 namespace lang {
@@ -59,8 +61,11 @@ namespace lang {
 
 	  public:
 
-		// -------------------- pointers ---------------------------
+		// import the reference module for ref-operations
+		IMPORT_MODULE(ReferenceExtension);
 
+
+		// -------------------- complex ---------------------------
 
 		/**
 		 * Defines a complex number as a pair of a real and imaginary value

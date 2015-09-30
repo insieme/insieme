@@ -200,10 +200,10 @@ namespace parser3 {
 		IRBuilder builder(mgr);
 
 		auto funA = builder.normalize(parse_expr(mgr, "lambda (int<4> x) -> int<4> { return x; }"));
-		auto funB = builder.normalize(parse_expr(mgr, "function (ref<int<4>,f,f> x) -> int<4> { return *x; }"));
+		auto funB = builder.normalize(parse_expr(mgr, "function (ref<int<4>,f,f,plain> x) -> int<4> { return *x; }"));
 
 		auto funC = builder.normalize(parse_expr(mgr, "let f = lambda (int<4> x) -> int<4> { return x; }; f"));
-		auto funD = builder.normalize(parse_expr(mgr, "let f = function (ref<int<4>,f,f> y) -> int<4> { return *y; }; f"));
+		auto funD = builder.normalize(parse_expr(mgr, "let f = function (ref<int<4>,f,f,plain> y) -> int<4> { return *y; }; f"));
 
 		EXPECT_EQ(funA, funB);
 		EXPECT_EQ(funB, funC);
@@ -288,7 +288,7 @@ namespace parser3 {
 		EXPECT_TRUE(test_statement(nm, "{"
 		                               "    let class = struct name { int<2> a};"
 		                               "    let collection = array<class, 10>;"
-		                               "    decl ref<collection,f,f> x;"
+		                               "    decl ref<collection,f,f,plain> x;"
 		                               "    decl int<2> y;"
 		                               "    x[5].a = y;"
 		                               "}"));
@@ -336,7 +336,7 @@ namespace parser3 {
 	TEST(IR_Parser3, Let) {
 		NodeManager mgr;
 		EXPECT_TRUE(test_program(mgr, "let int = int<4>; int main () { return 1; }"));
-		EXPECT_TRUE(test_program(mgr, "let int = int<4>; let long = int<8>; long main (ref<int,f,f> a) { return 1; }"));
+		EXPECT_TRUE(test_program(mgr, "let int = int<4>; let long = int<8>; long main (ref<int,f,f,plain> a) { return 1; }"));
 		EXPECT_TRUE(test_program(mgr, "let int , long = int<4> ,int<8>; int<4> main () { return 1; }"));
 		EXPECT_TRUE(test_program(mgr, "let f = lambda () -> unit { }; int<4> main () { f(); return 1; }"));
 		EXPECT_TRUE(test_program(mgr, "let int = int<4>; let f = lambda (int a) -> int { return a; }; int<4> main () { f(1); return 1; }"));
@@ -356,7 +356,7 @@ namespace parser3 {
 		                              "        f(this);"
 		                              "    }; "
 		                              "unit main() {  "
-		                              "    decl ref<class,f,f> x;"
+		                              "    decl ref<class,f,f,plain> x;"
 		                              "    f(x);"
 		                              "    g(x);"
 		                              "}"));
@@ -364,9 +364,9 @@ namespace parser3 {
 
 	TEST(IR_Parser3, Program) {
 		NodeManager nm;
-		EXPECT_TRUE(test_program(nm, "int<4> main (ref<int<4>,f,f> a, ref<int<4>,f,f> b)  { return 1+1; }"));
-		EXPECT_TRUE(test_program(nm, "let int = int<4>; int main (ref<int,f,f> a, ref<int,f,f> b) { return 1+1; }"));
-		EXPECT_TRUE(test_program(nm, "let int = int<4>; let f = lambda (int a) ->int { return a; }; int main (ref<int,f,f> a, ref<int,f,f> b) { return f(1); }"));
+		EXPECT_TRUE(test_program(nm, "int<4> main (ref<int<4>,f,f,plain> a, ref<int<4>,f,f,plain> b)  { return 1+1; }"));
+		EXPECT_TRUE(test_program(nm, "let int = int<4>; int main (ref<int,f,f,plain> a, ref<int,f,f,plain> b) { return 1+1; }"));
+		EXPECT_TRUE(test_program(nm, "let int = int<4>; let f = lambda (int a) ->int { return a; }; int main (ref<int,f,f,plain> a, ref<int,f,f,plain> b) { return f(1); }"));
 		EXPECT_TRUE(test_program(nm, "let int = int<4> ; "
 		                             "let h = lambda ((int)->int f)->int { return f(5); } ; "
 		                             "let f,g = "

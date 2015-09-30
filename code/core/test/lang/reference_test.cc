@@ -38,6 +38,7 @@
 
 #include "insieme/core/lang/reference.h"
 #include "insieme/core/test/test_utils.h"
+#include "insieme/core/ir_builder.h"
 
 namespace insieme {
 namespace core {
@@ -47,6 +48,41 @@ namespace lang {
 		NodeManager nm;
 		auto& ext = nm.getLangExtension<ReferenceExtension>();
 		semanticCheckSecond(ext.getSymbols());
+	}
+
+
+	TEST(Reference, IsReference) {
+		NodeManager nm;
+		IRBuilder builder(nm);
+
+		auto A = builder.parseType("A");
+		EXPECT_TRUE(isReference(ReferenceType::create(A)));
+		EXPECT_TRUE(isReference(ReferenceType::create(A, false, true)));
+
+		EXPECT_FALSE(isReference(builder.parseType("A")));
+		EXPECT_TRUE(isReference(builder.parseType("ref<A>")));
+		EXPECT_TRUE(isReference(builder.parseType("ref<A,f,t>")));
+		EXPECT_TRUE(isReference(builder.parseType("ref<A,f,t,plain>")));
+		EXPECT_TRUE(isReference(builder.parseType("ref<A,f,t,cpp_ref>")));
+		EXPECT_TRUE(isReference(builder.parseType("ref<A,f,t,cpp_rref>")));
+
+		EXPECT_FALSE(isReference(builder.parseType("ref<A,f,t,bla>")));
+		EXPECT_FALSE(isReference(builder.parseType("ref<A,c,t,cpp_rref>")));
+		EXPECT_FALSE(isReference(builder.parseType("ref<A,f,c,cpp_rref>")));
+
+
+		EXPECT_TRUE(isPlainReference(builder.parseType("ref<A,f,t,plain>")));
+		EXPECT_FALSE(isPlainReference(builder.parseType("ref<A,f,t,cpp_ref>")));
+		EXPECT_FALSE(isPlainReference(builder.parseType("ref<A,f,t,cpp_rref>")));
+
+		EXPECT_FALSE(isCppReference(builder.parseType("ref<A,f,t,plain>")));
+		EXPECT_TRUE(isCppReference(builder.parseType("ref<A,f,t,cpp_ref>")));
+		EXPECT_FALSE(isCppReference(builder.parseType("ref<A,f,t,cpp_rref>")));
+
+		EXPECT_FALSE(isCppRValueReference(builder.parseType("ref<A,f,t,plain>")));
+		EXPECT_FALSE(isCppRValueReference(builder.parseType("ref<A,f,t,cpp_ref>")));
+		EXPECT_TRUE(isCppRValueReference(builder.parseType("ref<A,f,t,cpp_rref>")));
+
 	}
 
 } // end namespace lang

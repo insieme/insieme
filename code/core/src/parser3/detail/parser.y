@@ -540,7 +540,8 @@ decl_stmt : var_decl ";" {RULE
           ;
 
 var_decl : type "identifier" { RULE
-		        $$ = driver.builder.variable($1);
+				auto type = driver.resolveTypeAliases(@$, $1);
+		        $$ = driver.builder.variable(type);
 				annotations::attachName( $$, $2);
                 driver.add_symb(@$, $2, $$);
             };

@@ -39,6 +39,7 @@
 #include "insieme/core/lang/extension.h"
 
 #include "insieme/core/lang/array.h"
+#include "insieme/core/lang/datapath.h"
 
 namespace insieme {
 namespace core {
@@ -46,50 +47,6 @@ namespace lang {
 
 
 	// --------------------- Extension ----------------------------
-
-
-	/**
-	 * An extension covering data paths. A data path describes the
-	 * access path when navigating within an object allocated by a single
-	 * memory allocation call (ref_alloc).
-	 */
-	class DatapathExtension : public core::lang::Extension {
-		/**
-		 * Allow the node manager to create instances of this class.
-		 */
-		friend class core::NodeManager;
-
-		/**
-		 * Creates a new instance based on the given node manager.
-		 */
-		DatapathExtension(core::NodeManager& manager) : core::lang::Extension(manager) {}
-
-	  public:
-		/**
-		 * The root path is modeling the empty path -- the identity when utilized for narrow / expand operations.
-		 */
-		LANG_EXT_LITERAL(DataPathRoot, "dp_root", "(type<'a>) -> datapath<'a,'a>")
-
-		/**
-		 * The member path extends a given path by accessing a member field  of type 'c of a struct / union 'a.
-		 */
-		LANG_EXT_LITERAL(DataPathMember, "dp_member", "(datapath<'a,'b>, identifier, type<'c>) -> datapath<'a,'c>")
-
-		/**
-		 * An element access operation extends a given path by an access to an element of an array.
-		 */
-		LANG_EXT_LITERAL(DataPathElement, "dp_element", "(datapath<'a,array<'b,'s>>, int<8>) -> datapath<'a,'b>")
-
-		/**
-		 * A component access is extend a data path by accessing an element of a tuple type.
-		 */
-		LANG_EXT_LITERAL(DataPathComponent, "dp_component", "(datapath<'a,'b>, uint<8>, type<'c>) -> datapath<'a,'c>")
-
-		/**
-		 * A parent access path is moving a reference to a base class.
-		 */
-		LANG_EXT_LITERAL(DataPathParent, "dp_parent", "(datapath<'a,'b>, type<'c>) -> datapath<'a,'c>")
-	};
 
 	/**
 	 * An extension covering the abstract reference type and all its
@@ -107,7 +64,6 @@ namespace lang {
 		ReferenceExtension(core::NodeManager& manager) : core::lang::Extension(manager) {}
 
 	  public:
-
 
 		// import data-path extension for defined literals
 		IMPORT_MODULE(DatapathExtension);
@@ -134,17 +90,40 @@ namespace lang {
 		LANG_EXT_LITERAL(MemLocHeap, "mem_loc_heap", "memloc")
 
 
+		// ------------------- reference kind ------------------------
+
+		/**
+		 * The marker for plain IR references.
+		 */
+		LANG_EXT_TYPE_WITH_NAME(MarkerPlain, "plain_marker", "plain");
+
+		/**
+		 * The marker for marking IR references as being C++ references.
+		 */
+		LANG_EXT_TYPE_WITH_NAME(MarkerCppReference, "reference_marker", "cpp_ref");
+
+		/**
+		 * The marker for marking IR references as being C++ r-value references.
+		 */
+		LANG_EXT_TYPE_WITH_NAME(MarkerCppRValueReference, "rvalue_reference_marker", "cpp_rref");
+
+
 		// -------------------- references ---------------------------
 
 		/**
 		 * The generic ref type template e.g. utilized as a reference for is-ref checks.
 		 */
-		LANG_EXT_TYPE_WITH_NAME(GenRef, "generic_ref_template", "ref<'a,'const,'volatile>");
+		LANG_EXT_TYPE_WITH_NAME(GenRef, "generic_ref_template", "ref<'a,'const,'volatile,'kind>");
 
 		/**
 		 * Add a type alias that maps all 'old' references to non-const, non-volatile references.
 		 */
-		TYPE_ALIAS("ref<'a>", "ref<'a,f,f>");
+		TYPE_ALIAS("ref<'a>", "ref<'a,f,f,plain>");
+
+		/**
+		 * Add a type alias that maps all 'C' references to plain references.
+		 */
+		TYPE_ALIAS("ref<'a,'const,'volatile>", "ref<'a,'const,'volatile,plain>");
 
 
 		// -- memory management --
@@ -309,6 +288,17 @@ namespace lang {
 	 */
 	class ReferenceType {
 
+	public:
+
+		/**
+		 * An enumeration of the supported reference types.
+		 */
+		enum class Kind {
+			Plain, CppReference, CppRValueReference
+		};
+
+	private:
+
 		/**
 		 * The type of data stored in the referenced memory location.
 		 */
@@ -325,10 +315,15 @@ namespace lang {
 		bool mVolatile;
 
 		/**
+		 * The kind of reference this type is representing.
+		 */
+		Kind kind;
+
+		/**
 		 * Creates a new reference type based on the given parameters.
 		 */
-		ReferenceType(const TypePtr& elementType, bool mConst, bool mVolatile)
-			: elementType(elementType), mConst(mConst), mVolatile(mVolatile) {}
+		ReferenceType(const TypePtr& elementType, bool mConst, bool mVolatile, const Kind& kind)
+			: elementType(elementType), mConst(mConst), mVolatile(mVolatile), kind(kind) {}
 
 	  public:
 
@@ -353,7 +348,7 @@ namespace lang {
 		 *
 		 * see: buildRefType(..) function in enclosing name space
 		 */
-		static GenericTypePtr create(const TypePtr& elementType, bool _const = false, bool _volatile = false);
+		static GenericTypePtr create(const TypePtr& elementType, bool _const = false, bool _volatile = false, const Kind& kind = Kind::Plain);
 
 		// an implicit converter of this wrapper to an IR type
 		operator GenericTypePtr() const;
@@ -384,12 +379,48 @@ namespace lang {
 		void setVolatile(bool newState = true) {
 			mVolatile = newState;
 		}
+
+		Kind getKind() const {
+			return kind;
+		}
+
+		void setKind(const Kind& kind) {
+			this->kind = kind;
+		}
+
+		bool isPlain() const {
+			return kind == Kind::Plain;
+		}
+
+		bool isCppReference() const {
+			return kind == Kind::CppReference;
+		}
+
+		bool isCppRValueReference() const {
+			return kind == Kind::CppRValueReference;
+		}
+
 	};
 
 	/**
-	 * Determines whether a given node is a reference type or an expression of a reference type.
+	 * Determines whether a given node is a reference type or an expression of a reference type of any kind.
 	 */
 	bool isReference(const NodePtr& node);
+
+	/**
+	 * Determines whether a given node is a reference type or an expression of a plain reference type.
+	 */
+	bool isPlainReference(const NodePtr& node);
+
+	/**
+	 * Determines whether a given node is a reference type or an expression of a C++ reference type.
+	 */
+	bool isCppReference(const NodePtr& node);
+
+	/**
+	 * Determines whether a given node is a reference type or an expression of a C++ R-Value reference type.
+	 */
+	bool isCppRValueReference(const NodePtr& node);
 
 	/**
 	 * A factory function creating a reference type utilizing the given element type and flag combination.

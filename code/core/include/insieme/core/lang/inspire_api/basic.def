@@ -41,7 +41,7 @@ TYPE(Unit, "unit")
 TYPE(Char, "char")
 TYPE(WChar16, "wchar<16>")
 TYPE(WChar32, "wchar<32>")
-TYPE(String, "ref<array<char,inf>,f,f>")
+TYPE(String, "ref<array<char,inf>,f,f,plain>")
 TYPE(Identifier, "identifier")
 
 GROUP(UnsignedInt, UInt1, UInt2, UInt4, UInt8, UInt16, UIntInf, UIntGen)
@@ -331,7 +331,7 @@ GROUP(BitwiseXorOp, GenXor, SignedIntXor, UnsignedIntXor)
 
 
 // TEMP FIX
-LITERAL(Flush, "flush", "(ref<'a,'c,'v>) -> unit")
+LITERAL(Flush, "flush", "(ref<'a,'c,'v,plain>) -> unit")
 
 // General ------------------------------------------------------------------------------------------------------------
 
