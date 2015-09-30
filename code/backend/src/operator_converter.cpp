@@ -768,7 +768,6 @@ namespace backend {
 
 			// handle implicit C array / pointer duality
 			if(core::lang::isVariableSizedArray(core::analysis::getReferencedType(call->getType()))) { return access; }
-			if(core::lang::isUnknownSizedArray(core::analysis::getReferencedType(call->getType()))) { return access; }
 
 			// access the type
 			return c_ast::ref(access);

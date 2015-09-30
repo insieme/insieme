@@ -80,6 +80,3 @@ stack
 anon_enum
 pendulum
 
-# Disables tests because of backend compiler error:
-# error: subscripted value is neither array nor pointer nor vector
-variable_sized_struct
