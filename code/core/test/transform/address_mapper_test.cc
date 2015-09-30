@@ -73,9 +73,9 @@ namespace transform {
 		auto addresses = builder.parseAddressesStatement(R"raw(
 		{		
 			let int = int<4>;
-			decl ref<int,f,f> x = var(2);
-			decl ref<int,f,f> a = var($2$+$2$);
-			decl ref<int,f,f> b = var(a + 6);
+			decl ref<int,f,f,plain> x = var(2);
+			decl ref<int,f,f,plain> a = var($2$+$2$);
+			decl ref<int,f,f,plain> b = var(a + 6);
 		}
 	)raw");
 
@@ -101,7 +101,7 @@ namespace transform {
 	{		
 		let int = int<4>;
 		$$lambda (int a, int b) -> int {
-			decl ref<int,f,f> ret = $a * b + a$;
+			decl ref<int,f,f,plain> ret = $a * b + a$;
 			return *ret;
 		}$(4,2)$;
 	}
@@ -133,7 +133,7 @@ namespace transform {
 
 		auto result = builder.normalize(mapper.mapFromRoot(addresses[0].getRootNode()));
 		EXPECT_EQ(
-		    R"raw({rec v0.{v0=fun(ref<int<4>,f,f> v1, ref<int<4>,f,f> v2, ref<int<4>,f,f> v3) {ref<int<4>,f,f> v4 = int_sub(int_add(int_mul(ref_deref(v1), ref_deref(v2)), ref_deref(v1)), ref_deref(v3)); return ref_deref(v4);}}(4, 2, 31337);})raw",
+		    R"raw({rec v0.{v0=fun(ref<int<4>,f,f,plain> v1, ref<int<4>,f,f,plain> v2, ref<int<4>,f,f,plain> v3) {ref<int<4>,f,f,plain> v4 = int_sub(int_add(int_mul(ref_deref(v1), ref_deref(v2)), ref_deref(v1)), ref_deref(v3)); return ref_deref(v4);}}(4, 2, 31337);})raw",
 		    result->toString());
 	}
 

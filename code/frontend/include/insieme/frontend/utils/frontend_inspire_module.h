@@ -37,6 +37,7 @@
 #pragma once
 
 #include "insieme/core/lang/extension.h"
+#include "insieme/core/lang/reference.h"
 
 namespace insieme {
 namespace frontend {
@@ -62,6 +63,10 @@ namespace utils {
 		FrontendInspireModule(core::NodeManager& manager) : core::lang::Extension(manager) {}
 
 	  public:		
+
+		// Import constructs from core's reference extension
+		IMPORT_MODULE(core::lang::ReferenceExtension);
+
 		// -------------------- operators ---------------------------
 
 		/**

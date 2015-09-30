@@ -150,8 +150,8 @@ namespace core {
 		LambdaPtr more = Lambda::get(manager, funType, toVector(varA, varB), body);
 
 		EXPECT_EQ("fun() {a;}", toString(*empty));
-		EXPECT_EQ("fun(ref<A,f,f> v1) {a;}", toString(*little));
-		EXPECT_EQ("fun(ref<A,f,f> v1, ref<A,f,f> v2) {a;}", toString(*more));
+		EXPECT_EQ("fun(ref<A,f,f,plain> v1) {a;}", toString(*little));
+		EXPECT_EQ("fun(ref<A,f,f,plain> v1, ref<A,f,f,plain> v2) {a;}", toString(*more));
 
 		// conduct basic node checks
 		basicNodeTests(empty, toVector<NodePtr>(funType, empty->getParameters(), body));
@@ -219,10 +219,10 @@ namespace core {
 		LambdaExprPtr simple = builder.lambdaExpr(functionType, toVector(x), builder.returnStmt(builder.boolLit("true")));
 		EXPECT_FALSE(simple->isRecursive());
 
-		EXPECT_EQ("rec v1.{v1=fun(ref<uint<4>,f,f> v3) {if(uint_eq(v3, 0)) {return true;} else {return bool_not(v2(v3));};}, v2=fun(ref<uint<4>,f,f> v3) {if(uint_eq(v3, 0)) "
+		EXPECT_EQ("rec v1.{v1=fun(ref<uint<4>,f,f,plain> v3) {if(uint_eq(v3, 0)) {return true;} else {return bool_not(v2(v3));};}, v2=fun(ref<uint<4>,f,f,plain> v3) {if(uint_eq(v3, 0)) "
 		          "{return false;} else {return bool_not(v1(v3));};}}",
 		          toString(*even));
-		EXPECT_EQ("rec v2.{v1=fun(ref<uint<4>,f,f> v3) {if(uint_eq(v3, 0)) {return true;} else {return bool_not(v2(v3));};}, v2=fun(ref<uint<4>,f,f> v3) {if(uint_eq(v3, 0)) "
+		EXPECT_EQ("rec v2.{v1=fun(ref<uint<4>,f,f,plain> v3) {if(uint_eq(v3, 0)) {return true;} else {return bool_not(v2(v3));};}, v2=fun(ref<uint<4>,f,f,plain> v3) {if(uint_eq(v3, 0)) "
 		          "{return false;} else {return bool_not(v1(v3));};}}",
 		          toString(*odd));
 	}

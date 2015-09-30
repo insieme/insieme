@@ -103,10 +103,10 @@ int main() {
 	// ENUM TYPES //////////////////////////////////////////////////////////////
 		
 	typedef enum { Bla, Alb } enum_t;
-	#pragma test expect_ir("REGEX", R"(decl ref<__insieme_enum<\w+enum_t\w+,Bla,Alb>,f,f> v0 = .*)")
+	#pragma test expect_ir("REGEX", R"(decl ref<__insieme_enum<\w+enum_t\w+,Bla,Alb>,f,f,plain> v0 = .*)")
 	enum_t enu;
 	
-	#pragma test expect_ir("REGEX", R"(decl ref<__insieme_enum<\w+,XY,ZR>,f,f> v0 = .*)")
+	#pragma test expect_ir("REGEX", R"(decl ref<__insieme_enum<\w+,XY,ZR>,f,f,plain> v0 = .*)")
 	enum { XY, ZR } bla; 
 
 	// STRUCT TYPES //////////////////////////////////////////////////////////////
@@ -115,12 +115,12 @@ int main() {
 	struct { int i; } swi_anon;
 	
 	typedef struct swi_s { int i; } swi_t;
-	#pragma test expect_ir("REGEX", R"(decl ref<struct \w+swi_s\w+ \{int<4> i\},f,f> v0 = .*)")
+	#pragma test expect_ir("REGEX", R"(decl ref<struct \w+swi_s\w+ \{int<4> i\},f,f,plain> v0 = .*)")
 	swi_t swi_1;
-	#pragma test expect_ir("REGEX", R"(decl ref<struct \w+swi_s\w+ \{int<4> i\},f,f> v0 = .*)")
+	#pragma test expect_ir("REGEX", R"(decl ref<struct \w+swi_s\w+ \{int<4> i\},f,f,plain> v0 = .*)")
 	struct swi_s swi_2; 
 	
 	typedef union { int i; } union_t;
-	#pragma test expect_ir("REGEX", R"(decl ref<union \w+ \{int<4> i\},f,f> v0 = .*)")
+	#pragma test expect_ir("REGEX", R"(decl ref<union \w+ \{int<4> i\},f,f,plain> v0 = .*)")
 	union_t uni;
 }

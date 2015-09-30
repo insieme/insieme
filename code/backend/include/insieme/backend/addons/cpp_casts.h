@@ -40,6 +40,7 @@
 
 #include "insieme/backend/addon.h"
 #include "insieme/core/lang/extension.h"
+#include "insieme/core/lang/reference.h"
 
 /**
  * This header file defines the components required to be registered within
@@ -65,6 +66,9 @@ namespace addons {
 		CppCastExtension(core::NodeManager& manager) : core::lang::Extension(manager) {}
 
 	  public:
+
+		// import reference extension to utilize aliases
+		IMPORT_MODULE(core::lang::ReferenceExtension);
 
 		/**
 		 * The literal utilized to represent static C++ casts.

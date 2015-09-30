@@ -736,7 +736,7 @@ namespace backend {
 		// ----- unknow sized arrays -----
 
 		type = builder.refType(builder.arrayType(basic.getInt4()));
-		EXPECT_EQ("ref<array<int<4>,inf>,f,f>", toString(*type));
+		EXPECT_EQ("ref<array<int<4>,inf>,f,f,plain>", toString(*type));
 		info = typeManager.getRefTypeInfo(type);
 		EXPECT_EQ("int32_t*", toC(info.lValueType));
 		EXPECT_EQ("int32_t*", toC(info.rValueType));
@@ -750,7 +750,7 @@ namespace backend {
 		EXPECT_EQ("_ref_new_name", toC(info.newOperatorName));
 
 		type = builder.refType(builder.arrayType(basic.getInt4()), true, false);
-		EXPECT_EQ("ref<array<int<4>,inf>,t,f>", toString(*type));
+		EXPECT_EQ("ref<array<int<4>,inf>,t,f,plain>", toString(*type));
 		info = typeManager.getRefTypeInfo(type);
 		EXPECT_EQ("const int32_t*", toC(info.lValueType));
 		EXPECT_EQ("const int32_t*", toC(info.rValueType));
@@ -764,7 +764,7 @@ namespace backend {
 		EXPECT_EQ("_ref_new_name", toC(info.newOperatorName));
 
 		type = builder.refType(builder.arrayType(basic.getInt4()), false, true);
-		EXPECT_EQ("ref<array<int<4>,inf>,f,t>", toString(*type));
+		EXPECT_EQ("ref<array<int<4>,inf>,f,t,plain>", toString(*type));
 		info = typeManager.getRefTypeInfo(type);
 		EXPECT_EQ("volatile int32_t*", toC(info.lValueType));
 		EXPECT_EQ("volatile int32_t*", toC(info.rValueType));
@@ -778,7 +778,7 @@ namespace backend {
 		EXPECT_EQ("_ref_new_name", toC(info.newOperatorName));
 
 		type = builder.refType(builder.arrayType(basic.getInt4()), true, true);
-		EXPECT_EQ("ref<array<int<4>,inf>,t,t>", toString(*type));
+		EXPECT_EQ("ref<array<int<4>,inf>,t,t,plain>", toString(*type));
 		info = typeManager.getRefTypeInfo(type);
 		EXPECT_EQ("const volatile int32_t*", toC(info.lValueType));
 		EXPECT_EQ("const volatile int32_t*", toC(info.rValueType));
@@ -796,7 +796,7 @@ namespace backend {
 //		// ref/vector combination
 //		type = builder.refType(builder.arrayType(basic.getInt4(), 4));
 //		info = typeManager.getRefTypeInfo(type);
-//		EXPECT_EQ("ref<array<int<4>,4>,f,f>", toString(*type));
+//		EXPECT_EQ("ref<array<int<4>,4>,f,f,plain>", toString(*type));
 //		EXPECT_EQ("name", toC(info.lValueType));
 //		EXPECT_EQ("name*", toC(info.rValueType));
 //		EXPECT_EQ("int32_t*", toC(info.externalType));
@@ -810,7 +810,7 @@ namespace backend {
 //		// ref/vector - multidimensional
 //		type = builder.refType(builder.arrayType(builder.arrayType(basic.getInt4(), 4), 2));
 //		info = typeManager.getRefTypeInfo(type);
-//		EXPECT_EQ("ref<array<array<int<4>,4>,2>,f,f>", toString(*type));
+//		EXPECT_EQ("ref<array<array<int<4>,4>,2>,f,f,plain>", toString(*type));
 //		EXPECT_EQ("name", toC(info.lValueType));
 //		EXPECT_EQ("name*", toC(info.rValueType));
 //		EXPECT_EQ("int32_t(*)[2]", toC(info.externalType));
@@ -824,7 +824,7 @@ namespace backend {
 //		// ref/ref combination
 //		type = builder.refType(builder.refType(basic.getInt4()));
 //		info = typeManager.getRefTypeInfo(type);
-//		EXPECT_EQ("ref<ref<int<4>,f,f>,f,f>", toString(*type));
+//		EXPECT_EQ("ref<ref<int<4>,f,f,plain>,f,f,plain>", toString(*type));
 //		EXPECT_EQ("int32_t*", toC(info.lValueType));
 //		EXPECT_EQ("int32_t**", toC(info.rValueType));
 //		EXPECT_EQ("int32_t**", toC(info.externalType));
@@ -852,7 +852,7 @@ namespace backend {
 //		// test ref/ref/array
 //		type = builder.refType(builder.refType(builder.arrayType(basic.getInt4())));
 //		info = typeManager.getRefTypeInfo(type);
-//		EXPECT_EQ("ref<ref<array<int<4>,inf>,f,f>,f,f>", toString(*type));
+//		EXPECT_EQ("ref<ref<array<int<4>,inf>,f,f,plain>,f,f,plain>", toString(*type));
 //		EXPECT_EQ("int32_t*", toC(info.lValueType));
 //		EXPECT_EQ("int32_t**", toC(info.rValueType));
 //		EXPECT_EQ("int32_t**", toC(info.externalType));
@@ -885,7 +885,7 @@ namespace backend {
 			// ----- unknow sized arrays -----
 
 			type = builder.refType(builder.arrayType(basic.getInt4(),12));
-			EXPECT_EQ("ref<array<int<4>,12>,f,f>", toString(*type));
+			EXPECT_EQ("ref<array<int<4>,12>,f,f,plain>", toString(*type));
 			info = typeManager.getRefTypeInfo(type);
 			EXPECT_EQ("name", toC(info.lValueType));
 			EXPECT_EQ("name*", toC(info.rValueType));
@@ -899,7 +899,7 @@ namespace backend {
 			EXPECT_EQ("_ref_new_name", toC(info.newOperatorName));
 
 			type = builder.refType(builder.arrayType(basic.getInt4(),12), true, false);
-			EXPECT_EQ("ref<array<int<4>,12>,t,f>", toString(*type));
+			EXPECT_EQ("ref<array<int<4>,12>,t,f,plain>", toString(*type));
 			info = typeManager.getRefTypeInfo(type);
 			EXPECT_EQ("const name", toC(info.lValueType));
 			EXPECT_EQ("const name*", toC(info.rValueType));
@@ -913,7 +913,7 @@ namespace backend {
 			EXPECT_EQ("_ref_new_name", toC(info.newOperatorName));
 
 			type = builder.refType(builder.arrayType(basic.getInt4(),12), false, true);
-			EXPECT_EQ("ref<array<int<4>,12>,f,t>", toString(*type));
+			EXPECT_EQ("ref<array<int<4>,12>,f,t,plain>", toString(*type));
 			info = typeManager.getRefTypeInfo(type);
 			EXPECT_EQ("volatile name", toC(info.lValueType));
 			EXPECT_EQ("volatile name*", toC(info.rValueType));
@@ -927,7 +927,7 @@ namespace backend {
 			EXPECT_EQ("_ref_new_name", toC(info.newOperatorName));
 
 			type = builder.refType(builder.arrayType(basic.getInt4(),12), true, true);
-			EXPECT_EQ("ref<array<int<4>,12>,t,t>", toString(*type));
+			EXPECT_EQ("ref<array<int<4>,12>,t,t,plain>", toString(*type));
 			info = typeManager.getRefTypeInfo(type);
 			EXPECT_EQ("const volatile name", toC(info.lValueType));
 			EXPECT_EQ("const volatile name*", toC(info.rValueType));

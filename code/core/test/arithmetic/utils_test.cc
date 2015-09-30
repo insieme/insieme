@@ -276,7 +276,7 @@ namespace arithmetic {
 		Constraint c = f > one && f < two;
 		EXPECT_EQ("(!(v0-1 <= 0) and !(-v0+2 <= 0))", toString(c));
 
-		EXPECT_EQ("rec v0.{v0=fun(ref<bool,f,f> v1, ref<(()=>bool),f,f> v2) {if(ref_deref(v1)) {return ref_deref(v2)();} else {}; return false;}}(bool_not(int_le(int_sub(v0, 1), 0)), bind(){rec v0.{v0=fun(ref<int<4>,f,f> v1) {return bool_not(int_le(int_add(int_mul(-1, ref_deref(v1)), 2), 0));}}(v0)})",
+		EXPECT_EQ("rec v0.{v0=fun(ref<bool,f,f,plain> v1, ref<(()=>bool),f,f,plain> v2) {if(ref_deref(v1)) {return ref_deref(v2)();} else {}; return false;}}(bool_not(int_le(int_sub(v0, 1), 0)), bind(){rec v0.{v0=fun(ref<int<4>,f,f,plain> v1) {return bool_not(int_le(int_add(int_mul(-1, ref_deref(v1)), 2), 0));}}(v0)})",
 		          toString(*builder.normalize(toIR(mgr, c))));
 		EXPECT_EQ(c, toConstraint(toIR(mgr, c)));
 
@@ -516,7 +516,7 @@ namespace arithmetic {
 
 		pw += Piecewise(v1 + v2 <= 0, 3 + 4 - v1);
 		EXPECT_EQ("-v1+7 -> if (v1+v2 <= 0); 0 -> if (!(v1+v2 <= 0))", toString(pw));
-		EXPECT_EQ("rec v0.{v0=fun(ref<bool,f,f> v1, ref<(()=>'b),f,f> v2, ref<(()=>'b),f,f> v3) {if(ref_deref(v1)) {return ref_deref(v2)();} else {return ref_deref(v3)();};}}(int_le(int_add(v1, v2), 0), bind(){rec v0.{v0=fun(ref<int<4>,f,f> v1) {return int_add(int_mul(-1, ref_deref(v1)), 7);}}(v1)}, rec v0.{v0=fun() {return 0;}})",
+		EXPECT_EQ("rec v0.{v0=fun(ref<bool,f,f,plain> v1, ref<(()=>'b),f,f,plain> v2, ref<(()=>'b),f,f,plain> v3) {if(ref_deref(v1)) {return ref_deref(v2)();} else {return ref_deref(v3)();};}}(int_le(int_add(v1, v2), 0), bind(){rec v0.{v0=fun(ref<int<4>,f,f,plain> v1) {return int_add(int_mul(-1, ref_deref(v1)), 7);}}(v1)}, rec v0.{v0=fun() {return 0;}})",
 		          toString(*builder.normalize(toIR(mgr, pw))));
 		EXPECT_PRED1(empty, check(toIR(mgr, pw), all));
 

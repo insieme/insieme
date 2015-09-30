@@ -921,7 +921,8 @@ namespace backend {
 		}
 
 		const RefTypeInfo* TypeInfoStore::resolveRefType(const core::GenericTypePtr& ptr) {
-			assert_true(core::lang::isReference(ptr)) << "Can only convert reference types.";
+			assert_pred1(core::lang::isReference, ptr) << "Can only convert reference types.";
+			assert_pred1(core::lang::isPlainReference, ptr) << "Yet unsupported non-plain reference type: " << *ptr;
 
 			auto manager = converter.getCNodeManager();
 

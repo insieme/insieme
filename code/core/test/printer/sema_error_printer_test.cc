@@ -63,16 +63,16 @@ TEST(ErrorPrinter, address) {
 	auto addrs = builder.parseAddressesStatement(R"1N5P1RE(
 		{
 			let fun = lambda (int<4> arg)->int<4> { return arg + 1; };
-			let lfun = expr lit("lfun":(ref<int<4>,f,f>)->int<4>);
-			let rfun = lambda (ref<int<4>,f,f> arg)->int<4> { return *$arg$;};
+			let lfun = expr lit("lfun":(ref<int<4>,f,f,plain>)->int<4>);
+			let rfun = lambda (ref<int<4>,f,f,plain> arg)->int<4> { return *$arg$;};
 		
-			$decl ref<int<4>,f,f> a;$
-			decl ref<int<4>,f,f> b;
-			decl ref<int<4>,f,f> c;
-			decl ref<int<4>,f,f> d;
-			decl ref<int<4>,f,f> e;
-			decl ref<int<4>,f,f> f;
-			decl ref<int<4>,f,f> g;
+			$decl ref<int<4>,f,f,plain> a;$
+			decl ref<int<4>,f,f,plain> b;
+			decl ref<int<4>,f,f,plain> c;
+			decl ref<int<4>,f,f,plain> d;
+			decl ref<int<4>,f,f,plain> e;
+			decl ref<int<4>,f,f,plain> f;
+			decl ref<int<4>,f,f,plain> g;
 			{
 				a = 7;
 				fun(*b);
@@ -154,7 +154,7 @@ TEST(ErrorPrinter, error) {
 
 	std::stringstream ss;
 	dumpErrors(msgs, ss);
-	EXPECT_EQ("\x1B[33mv1 = 1\x1B[0m\n------- \n\x1B[31mERROR: \x1B[37mInvalid argument type(s) \n\texpected: \n\t\t(ref<'a,f,'v>,'a)\n\tactual: \n\t\t(int<4>,int<4>)\n\tfunction type: \n\t\t((ref<'a,f,'v>,'a)->unit)\x1B[0m\n-------\n\n",
+	EXPECT_EQ("\x1B[33mv1 = 1\x1B[0m\n------- \n\x1B[31mERROR: \x1B[37mInvalid argument type(s) \n\texpected: \n\t\t(ref<'a,f,'v,'k>,'a)\n\tactual: \n\t\t(int<4>,int<4>)\n\tfunction type: \n\t\t((ref<'a,f,'v,'k>,'a)->unit)\x1B[0m\n-------\n\n",
 	          ss.str());
 
 	std::cout << ss.str() << std::endl;

@@ -66,7 +66,7 @@ namespace analysis {
 		ASSERT_TRUE(call);
 
 		// check free variables
-		EXPECT_EQ("rec v0.{v0=fun(ref<((int<4>)=>int<4>),f,f> v1) {return ref_deref(v1)(2);}}(bind(v0){int_add(int_add(2, v77), v0)})", toString(*call));
+		EXPECT_EQ("rec v0.{v0=fun(ref<((int<4>)=>int<4>),f,f,plain> v1) {return ref_deref(v1)(2);}}(bind(v0){int_add(int_add(2, v77), v0)})", toString(*call));
 		EXPECT_EQ("[AP(v77)]", toString(getFreeVariables(call)));
 	}
 
@@ -87,7 +87,7 @@ namespace analysis {
 		ASSERT_TRUE(call);
 
 		// check free variables
-		EXPECT_EQ("rec v0.{v0=fun(ref<((int<4>)=>int<4>),f,f> v1) {return ref_deref(v1)(2);}}(bind(v0){int_add(int_add(2, v77), v0)})", toString(*call));
+		EXPECT_EQ("rec v0.{v0=fun(ref<((int<4>)=>int<4>),f,f,plain> v1) {return ref_deref(v1)(2);}}(bind(v0){int_add(int_add(2, v77), v0)})", toString(*call));
 		EXPECT_EQ("[0-2-2-2-3]", toString(getFreeVariableAddresses(call)));
 	}
 
@@ -259,7 +259,7 @@ namespace analysis {
 		ASSERT_TRUE(call);
 
 		// check free variables
-		EXPECT_EQ("rec v0.{v0=fun(ref<((int<4>)=>int<4>),f,f> v1) {return ref_deref(v1)(2);}}(bind(v0){int_add(int_add(2, v77), v0)})", toString(*call));
+		EXPECT_EQ("rec v0.{v0=fun(ref<((int<4>)=>int<4>),f,f,plain> v1) {return ref_deref(v1)(2);}}(bind(v0){int_add(int_add(2, v77), v0)})", toString(*call));
 		EXPECT_EQ(utils::set::toSet<VariableSet>(builder.variable(int4, 0), builder.variable(builder.refType(builder.functionType(int4, int4, FK_CLOSURE)), 1),
 		                                         builder.variable(int4, 77),
 		                                         builder.variable(builder.functionType(builder.functionType(int4, int4, FK_CLOSURE), int4), 0)),
@@ -287,7 +287,7 @@ namespace analysis {
 			auto listElem = builder.structRecord(toVector(builder.field("load", manager.getLangBasic().getInt4()), builder.field("next", builder.refType(tag))));
 			TypePtr constRecType = builder.tagType(tag, builder.tagTypeDefinition(toVector(builder.tagTypeBinding(tag, listElem))));
 
-			EXPECT_EQ("rec ^list.{^list=struct<load:int<4>,next:ref<^list,f,f>>}", toString(*constRecType));
+			EXPECT_EQ("rec ^list.{^list=struct<load:int<4>,next:ref<^list,f,f,plain>>}", toString(*constRecType));
 			EXPECT_FALSE(isGeneric(constRecType));
 		}
 
@@ -297,7 +297,7 @@ namespace analysis {
 			auto listElem = builder.structRecord(toVector(builder.field("load", builder.typeVariable("b")), builder.field("next", builder.refType(tag))));
 			TypePtr constRecType = builder.tagType(tag, builder.tagTypeDefinition(toVector(builder.tagTypeBinding(tag, listElem))));
 
-			EXPECT_EQ("rec ^list.{^list=struct<load:'b,next:ref<^list,f,f>>}", toString(*constRecType));
+			EXPECT_EQ("rec ^list.{^list=struct<load:'b,next:ref<^list,f,f,plain>>}", toString(*constRecType));
 			EXPECT_TRUE(isGeneric(constRecType));
 		}
 	}

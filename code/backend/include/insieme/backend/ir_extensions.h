@@ -38,6 +38,7 @@
 
 #include "insieme/core/ir_expressions.h"
 #include "insieme/core/lang/extension.h"
+#include "insieme/core/lang/reference.h"
 
 namespace insieme {
 namespace backend {
@@ -66,6 +67,10 @@ namespace backend {
 		IRExtensions(core::NodeManager& manager);
 
 	  public:
+
+		// import reference definitions
+		IMPORT_MODULE(core::lang::ReferenceExtension);
+
 		/**
 		 * A special literal representing a function causing the initialization of the global variables.
 		 */

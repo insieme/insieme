@@ -129,7 +129,7 @@ namespace lang {
 	}
 
 	bool ReferenceType::isVolatile() const {
-		return mVolatile;
+		return isTrueMarker(mVolatile);
 	}
 
 	void ReferenceType::setVolatile(bool newState) {
@@ -198,20 +198,22 @@ namespace lang {
 		return isReference(node) && ReferenceType(node).isCppRValueReference();
 	}
 
-	TypePtr buildRefType(const TypePtr& elementType, bool _const, bool _volatile) {
-		return ReferenceType::create(elementType, _const, _volatile);
+	TypePtr buildRefType(const TypePtr& elementType, bool _const, bool _volatile, const ReferenceType::Kind& kind) {
+		return ReferenceType::create(elementType, _const, _volatile, kind);
 	}
 
 
 	bool doReferencesDifferOnlyInQualifiers(const TypePtr& typeA, const TypePtr& typeB) {
 		assert_true(isReference(typeA)) << "Can only check qualifiers on references, not on " << dumpColor(typeA);
 		assert_true(isReference(typeB)) << "Can only check qualifiers on references, not on " << dumpColor(typeB);
+
+		// check that they are not equal
+		if (typeA == typeB) return false;
 		
 		auto gA = typeA.as<GenericTypePtr>();
 		auto gB = typeB.as<GenericTypePtr>();
 
-		return gA->getTypeParameter(0) == gB->getTypeParameter(0)
-			   && (gA->getTypeParameter(1) != gB->getTypeParameter(1) || gA->getTypeParameter(2) != gB->getTypeParameter(2));
+		return gA->getTypeParameter(0) == gB->getTypeParameter(0) && gA->getTypeParameter(3) == gB->getTypeParameter(3);
 	}
 	
 	ExpressionPtr buildRefCast(const ExpressionPtr& refExpr, const TypePtr& targetTy) {
@@ -224,8 +226,10 @@ namespace lang {
 		auto& rExt = refExpr->getNodeManager().getLangExtension<ReferenceExtension>();
 		auto& bmExt = refExpr->getNodeManager().getLangExtension<BooleanMarkerExtension>();
 		ReferenceType referenceTy(targetTy);
-		return builder.callExpr(rExt.getRefCast(), refExpr, bmExt.getMarkerTypeLiteral(referenceTy.isConst()),
-			                    bmExt.getMarkerTypeLiteral(referenceTy.isVolatile()));
+		return builder.callExpr(rExt.getRefCast(), refExpr,
+						bmExt.getMarkerTypeLiteral(referenceTy.isConst()),
+			            bmExt.getMarkerTypeLiteral(referenceTy.isVolatile()),
+						builder.getTypeLiteral(toType(refExpr->getNodeManager(), referenceTy.getKind())));
 	}
 
 	ExpressionPtr buildRefNull(const TypePtr& type) {

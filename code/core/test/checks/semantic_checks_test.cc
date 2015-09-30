@@ -54,8 +54,8 @@ namespace checks {
             {
                 let uint = uint<8>;
                 lambda () -> unit { 
-                    decl ref<uint<8>,f,f> i = var(0u); 
-                    lambda (ref<array<uint<8>,inf>,f,f> arr) -> unit { 
+                    decl ref<uint<8>,f,f,plain> i = var(0u); 
+                    lambda (ref<array<uint<8>,inf>,f,f,plain> arr) -> unit { 
                         decl uint<8> b = 1u; 
                         arr[b]; 
                     } (ref_scalar_to_ref_array(i)); 
@@ -66,8 +66,8 @@ namespace checks {
             {
                 let uint = uint<8>;
                 lambda () -> unit { 
-                    decl ref<uint<8>,f,f> i = var(0u); 
-                    lambda (ref<array<uint<8>,inf>,f,f> arr) -> unit { 
+                    decl ref<uint<8>,f,f,plain> i = var(0u); 
+                    lambda (ref<array<uint<8>,inf>,f,f,plain> arr) -> unit { 
                         decl uint<8> b = 1u; 
                         $ arr[b] $; 
                     } (ref_scalar_to_ref_array(i)); 
@@ -96,8 +96,8 @@ namespace checks {
 		{
 			StatementPtr stmt_pass = builder.parseExpr("let uint = uint<8>;"
 			                                           "lambda () -> unit { "
-			                                           "	decl ref<uint<8>,f,f> i = var(0u); "
-			                                           "	lambda (ref<array<uint<8>,inf>,f,f> arr) -> unit { "
+			                                           "	decl ref<uint<8>,f,f,plain> i = var(0u); "
+			                                           "	lambda (ref<array<uint<8>,inf>,f,f,plain> arr) -> unit { "
 			                                           "		decl uint<8> b = 1; "
 			                                           "		arr[0u]; "
 			                                           "	} (ref_scalar_to_ref_array(i)); "
@@ -117,7 +117,7 @@ namespace checks {
 	{
 		let uint = uint<8>;
 		lambda () -> unit { 
-			decl ref<uint<8>,f,f> i = var(0u);
+			decl ref<uint<8>,f,f,plain> i = var(0u);
 		};
 	}
 	)1N5P1RE");
@@ -137,7 +137,7 @@ namespace checks {
 	{
 		let uint = uint<8>;
 		lambda () -> uint { 
-			decl ref<int<8>,f,f> i = var(0u);
+			decl ref<int<8>,f,f,plain> i = var(0u);
 		};
 	}
 	)1N5P1RE");
@@ -388,7 +388,7 @@ namespace checks {
             {
                 let uint = uint<8>;
                 lambda () -> unit {
-					decl ref<array<int<4>,3>,f,f> v0 = var(array_create(lit(3), [0,1,2]));
+					decl ref<array<int<4>,3>,f,f,plain> v0 = var(array_create(lit(3), [0,1,2]));
 				};
 			}
             )1N5P1RE"));
@@ -405,7 +405,7 @@ namespace checks {
                 let uint = uint<8>;
                 lambda () -> unit {
 					decl auto list = var([0,1,2]);
-					decl ref<array<int<4>,3>,f,f> v0 = var(array_create(lit(3), *list));
+					decl ref<array<int<4>,3>,f,f,plain> v0 = var(array_create(lit(3), *list));
 				};
 			}
             )1N5P1RE"));

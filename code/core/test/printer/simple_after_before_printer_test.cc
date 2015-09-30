@@ -412,7 +412,7 @@ TEST(After_Before_Test, Let
 NodeManager mgr;
 
 EXPECT_TRUE(test_program(mgr, "let int = int<4>; int main () { return 1; }"));
-EXPECT_TRUE(test_program(mgr, "let int = int<4>; let long = int<8>; long main (ref<int,f,f> a) { return 1; }"));
+EXPECT_TRUE(test_program(mgr, "let int = int<4>; let long = int<8>; long main (ref<int,f,f,plain> a) { return 1; }"));
 EXPECT_TRUE(test_program(mgr, "let int , long = int<4> ,int<8>; int<4> main () { return 1; }"));
 EXPECT_TRUE(test_program(mgr, "let f = lambda () -> unit { }; int<4> main () { f(); return 1; }"));
 EXPECT_TRUE(test_program(mgr,
@@ -528,7 +528,7 @@ EXPECT_TRUE(test_program(nm, ""
 		"}"));
 
 EXPECT_TRUE(test_program(nm, ""
-		"int<4> main(ref<int<4>,f,f> a) {"
+		"int<4> main(ref<int<4>,f,f,plain> a) {"
 		"   decl int <4> c = 5;"
 		"   return 42;"
 		"}"));
@@ -544,22 +544,22 @@ EXPECT_TRUE(test_program(nm, ""
 		"let f = lambda(int a)->int{"
 		"   return a;"
 		"};"
-		"unit main(ref<int<4>,f,f> a) {"
+		"unit main(ref<int<4>,f,f,plain> a) {"
 		"   f(6);"
 		"}"));
 
 EXPECT_TRUE(test_program(nm, ""
 		"let int = int<4>;"
-		"let f = function(ref<int,f,f> a)->unit{"
+		"let f = function(ref<int,f,f,plain> a)->unit{"
 		"   a = 5;"
 		"};"
-		"unit main(ref<int<4>,f,f> a) {"
+		"unit main(ref<int<4>,f,f,plain> a) {"
 		"   decl int b = 6;"
 		"   f(b);"
 		"}"));
 EXPECT_TRUE(test_program(nm, ""
 		"let int = int<4>;"
-		"let f = function(ref<int<4>,f,f> a)->int{"
+		"let f = function(ref<int<4>,f,f,plain> a)->int{"
 		"   return *a;"
 		"};"
 		"unit main() {"
@@ -567,24 +567,24 @@ EXPECT_TRUE(test_program(nm, ""
 		"}"));
 
 EXPECT_TRUE(test_program(nm, ""
-		"let f = function (ref<int<4>,f,f> a) -> int<4> { "
+		"let f = function (ref<int<4>,f,f,plain> a) -> int<4> { "
 		"   return *a; "
 		"}; "
-		"unit main (ref<int<8>,f,f> argc, ref<int<4>,f,f> argc2) {1;2;3;f(2);}"));
+		"unit main (ref<int<8>,f,f,plain> argc, ref<int<4>,f,f,plain> argc2) {1;2;3;f(2);}"));
 EXPECT_TRUE(test_program(nm, ""
-		"unit main (ref<int<4>,f,f> a, ref<int<4>,f,f> b)  { "
+		"unit main (ref<int<4>,f,f,plain> a, ref<int<4>,f,f,plain> b)  { "
 		"   decl int <4> c = *a;"
 		"   a = 5; "
 		"}"));
 EXPECT_TRUE(test_program(nm, ""
 		"let int = int<4>; "
-		"unit main (ref<int,f,f> a, ref<int,f,f> b) { 1+1; }"));
+		"unit main (ref<int,f,f,plain> a, ref<int,f,f,plain> b) { 1+1; }"));
 EXPECT_TRUE(test_program(nm,
 						 "let int = int<4>; "
-								 "let f = function (ref<int,f,f> a) ->int { "
+								 "let f = function (ref<int,f,f,plain> a) ->int { "
 								 "  return *a; "
 								 "}; "
-								 "unit main (ref<int,f,f> a, ref<int,f,f> b) { "
+								 "unit main (ref<int,f,f,plain> a, ref<int,f,f,plain> b) { "
 								 "  f(1); "
 								 "}"));
 
@@ -606,7 +606,7 @@ EXPECT_TRUE(test_program(nm,
 ));
 
 EXPECT_TRUE(test_program(nm,
-						 "let ffunc = function (ref<int<4>,f,f> a)->int<4> {"
+						 "let ffunc = function (ref<int<4>,f,f,plain> a)->int<4> {"
 								 "         ffunc(*a);"
 								 "         return 5;"
 								 "};"
@@ -614,7 +614,7 @@ EXPECT_TRUE(test_program(nm,
 								 "  return a;"
 								 "};"
 								 "unit main() { "
-								 "  decl ref<int<4>,f,f> s = var(5);"
+								 "  decl ref<int<4>,f,f,plain> s = var(5);"
 								 "  ffunc(*s);"
 								 "  gfunc(4);"
 								 " }"
@@ -633,11 +633,11 @@ EXPECT_TRUE(test_program(nm, ""
 		"}"));
 
 EXPECT_TRUE(test_program(nm,
-						 "let ffunc = function (ref<int<4>,f,f> a)->unit {"
+						 "let ffunc = function (ref<int<4>,f,f,plain> a)->unit {"
 								 "         ffunc(*a);"
 								 "};"
 								 "unit main() { "
-								 "  decl ref<int<4>,f,f> s = var(5);"
+								 "  decl ref<int<4>,f,f,plain> s = var(5);"
 								 "  ffunc(*s); "
 								 "}"
 ));
@@ -662,12 +662,12 @@ EXPECT_TRUE(test_program(nm, ""
 
 EXPECT_TRUE(test_program(nm,
 						 "let ffunc,gfunc = "
-								 "    function (ref<int<4>,f,f> a)->int<4> {"
+								 "    function (ref<int<4>,f,f,plain> a)->int<4> {"
 								 "         ffunc(*a);"
 								 "         gfunc(6);"
 								 "         return 5;"
 								 "    },"
-								 "    function (ref<int<4>,f,f> b)->int<4> {"
+								 "    function (ref<int<4>,f,f,plain> b)->int<4> {"
 								 "         ffunc(7);"
 								 "         gfunc(*b);"
 								 "         return 3;"
@@ -703,7 +703,7 @@ EXPECT_TRUE(test_program(nm,
 
 EXPECT_TRUE(test_program(nm,
 						 "let int = int<4>;"
-								 "let f = function (ref<int,f,f> a) -> int {"
+								 "let f = function (ref<int,f,f,plain> a) -> int {"
 								 "   return 5;"
 								 "};"
 								 "int main() {"
@@ -714,12 +714,12 @@ EXPECT_TRUE(test_program(nm,
 EXPECT_TRUE(test_program(nm,
 						 "let int = int<4>;"
 								 "let uint = uint<4>;"
-								 "let differentbla = function (ref<'b,f,f> x) -> unit {"
+								 "let differentbla = function (ref<'b,f,f,plain> x) -> unit {"
 								 "    decl auto m = x;"
 								 "    decl auto l = m;"
 								 "};"
-								 "let bla = function (ref<'a,f,f> f) -> unit {"
-								 "    let anotherbla = function (ref<'a,f,f> x) -> unit {"
+								 "let bla = function (ref<'a,f,f,plain> f) -> unit {"
+								 "    let anotherbla = function (ref<'a,f,f,plain> x) -> unit {"
 								 "        decl auto m = x;"
 								 "    };"
 								 "    anotherbla(f);"

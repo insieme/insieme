@@ -1372,7 +1372,7 @@ TEST(RefToFunCastCheck, Simple) {
 	}
 
 	{
-		auto expr = builder.parseExpr("ref_of_function(function (ref<int<4>,f,f> a) -> unit { })");
+		auto expr = builder.parseExpr("ref_of_function(function (ref<int<4>,f,f,plain> a) -> unit { })");
 		EXPECT_TRUE(expr) << "parsing error";
 		//if(getDetails)	std::cout << "detail: parsed expression: " << expr << std::endl;
 		auto checkResult = check(expr, RefToFunCastCheckCheck);
@@ -1460,7 +1460,7 @@ TEST(PtrToFunCastCheck, Simple) {
 	}
 
 	{
-		auto expr = builder.parseExpr("ptr_of_function(function (ref<int<4>,f,f> a) -> unit { })");
+		auto expr = builder.parseExpr("ptr_of_function(function (ref<int<4>,f,f,plain> a) -> unit { })");
 		EXPECT_TRUE(expr) << "parsing error";
 		//if(getDetails)	std::cout << "detail: parsed expression: " << expr << std::endl;
 		auto checkResult = check(expr, RefToFunCastCheckCheck);

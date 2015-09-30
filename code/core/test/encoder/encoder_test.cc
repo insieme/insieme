@@ -109,7 +109,7 @@ namespace encoder {
 		// check strings
 		string test = "Hello";
 		expr = toIR(manager, test);
-		EXPECT_EQ("ref<array<char,inf>,f,f>", toString(*expr->getType()));
+		EXPECT_EQ("ref<array<char,inf>,f,f,plain>", toString(*expr->getType()));
 		EXPECT_EQ("Hello", toString(*expr));
 		EXPECT_EQ(test, toValue<string>(expr));
 		EXPECT_TRUE(checks::check(expr).empty()) << checks::check(expr);

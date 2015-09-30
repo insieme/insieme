@@ -407,7 +407,7 @@ namespace lang {
 	/**
 	 * A factory function creating a reference type utilizing the given element type and flag combination.
 	 */
-	TypePtr buildRefType(const TypePtr& elementType, bool _const = false, bool _volatile = false);
+	TypePtr buildRefType(const TypePtr& elementType, bool _const = false, bool _volatile = false, const ReferenceType::Kind& kind = ReferenceType::Kind::Plain);
 		
 	bool doReferencesDifferOnlyInQualifiers(const TypePtr& typeA, const TypePtr& typeB);
 	

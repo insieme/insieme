@@ -212,7 +212,7 @@ namespace types {
 
 		TypePtr resType = deduceReturnType(funType, argTypes);
 
-		EXPECT_EQ("ref<array<'a,1>,f,f>", toString(*resType));
+		EXPECT_EQ("ref<array<'a,1>,f,f,plain>", toString(*resType));
 	}
 
 
@@ -232,7 +232,7 @@ namespace types {
 
 		TypePtr resType = deduceReturnType(funType, argTypes);
 
-		EXPECT_EQ("ref<X,f,f>", toString(*resType));
+		EXPECT_EQ("ref<X,f,f,plain>", toString(*resType));
 	}
 
 

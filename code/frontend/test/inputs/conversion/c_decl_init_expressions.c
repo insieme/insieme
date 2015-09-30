@@ -18,13 +18,13 @@ int main() {
 	
 	// QUALIFIERS ////////////////////////////////////////////////////////////// 
 	
-	#pragma test expect_ir("decl ref<int<4>,t,f> v0 = ref_cast(var(5), type_lit(t), type_lit(f));")
+	#pragma test expect_ir("decl ref<int<4>,t,f> v0 = ref_cast(var(5), type_lit(t), type_lit(f), type_lit(plain));")
 	const int ci = 5;
 	
-	#pragma test expect_ir("decl ref<int<4>,f,t> v0 = ref_cast(var(5), type_lit(f), type_lit(t));")
+	#pragma test expect_ir("decl ref<int<4>,f,t> v0 = ref_cast(var(5), type_lit(f), type_lit(t), type_lit(plain));")
 	volatile int vi = 5;
 	
-	#pragma test expect_ir("decl ref<int<4>,t,t> v0 = ref_cast(var(5), type_lit(t), type_lit(t));")
+	#pragma test expect_ir("decl ref<int<4>,t,t> v0 = ref_cast(var(5), type_lit(t), type_lit(t), type_lit(plain));")
 	const volatile int cvi = 5;
 		
 	// POINTER TYPES //////////////////////////////////////////////////////////////
