@@ -398,21 +398,18 @@ namespace printer {
 				if(node->isConstructor()) {
 					out << "ctor ";
 					VISIT(node->getObjectType());
-					auto begin = node->getParameterTypes().begin() + 1;
-					auto end = node->getParameterTypes().end();
-					out << "::(" << join(", ", begin, end, printer) << ")";
+					auto parameterTypes = node->getParameterTypes();
+					out << "::(" << join(", ", parameterTypes.begin() + 1, parameterTypes.end(), printer) << ")";
 				} else if(node->isDestructor()) {
 					out << "~";
 					VISIT(node->getObjectType());
 					out << "::()";
-				} else if(node->isMemberFunction()) {
+				} else if(node->isMemberFunction() || node->isVirtualMemberFunction()) {
 					out << "method ";
-					//out << std::endl;
-					//out << "node->getChildList(): " << node.getChildList() << std::endl;
 					VISIT(node->getObjectType());
-					auto begin = node->getParameterTypes().begin() + 1;
-					auto end = node->getParameterTypes().end();
-					out << "::(" << join(", ", begin, end, printer) << ") -> ";
+					auto parameterTypes = node->getParameterTypes();
+					out << "::(" << join(", ", parameterTypes.begin() + 1, parameterTypes.end(), printer) << ")"
+							<< (node->isMemberFunction() ? " -> " : " ~> ");
 					VISIT(node->getReturnType());
 				} else {
 					out << "(" << join(", ", node->getParameterTypes(), printer) << ") ";
@@ -745,7 +742,8 @@ namespace printer {
 					VISIT(funType->getObjectType());
 					out << " ";
 					VISIT(node->getParameters()->getElement(0));
-					out << " :: (" << join(", ", node->getParameters().begin() + 1, node->getParameters().end(), paramPrinter) << ") ";
+					auto parameters = node->getParameters();
+					out << " :: (" << join(", ", parameters.begin() + 1, parameters.end(), paramPrinter) << ") ";
 					if (!node->getParameterList().empty())
 						thisStack.push(node->getParameterList().front());
 					// .. and body
@@ -759,7 +757,8 @@ namespace printer {
 					VISIT(funType->getObjectType());
 					out << " ";
 					VISIT(node->getParameters()->getElement(0));
-					out << " :: (" << join(", ", node->getParameters().begin() + 1, node->getParameters().end(), paramPrinter) << ") ";
+					auto parameters = node->getParameters();
+					out << " :: (" << join(", ", parameters.begin() + 1, parameters.end(), paramPrinter) << ") ";
 					if (!node->getParameterList().empty())
 						thisStack.push(node->getParameterList().front());
 					// .. and body
@@ -767,11 +766,13 @@ namespace printer {
 					if (!node->getParameterList().empty())
 						thisStack.pop();
 
-				} else if(funType->isMemberFunction()) {
+				} else if(funType->isMemberFunction() || funType->isVirtualMemberFunction()) {
 					// print member function header
 					out << "function ";
 					VISIT(funType->getObjectType());
-					out << "::(" << join(", ", node->getParameters().begin() + 1, node->getParameters().end(), paramPrinter) << ") -> ";
+					auto parameters = node->getParameters();
+					out << "::(" << join(", ", parameters.begin() + 1, parameters.end(), paramPrinter) << ")"
+							<< (funType->isMemberFunction() ? " -> " : " ~> ");
 					VISIT(funType->getReturnType());
 					out << " ";
 					if (!node->getParameterList().empty())

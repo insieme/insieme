@@ -137,6 +137,7 @@
 
   ARROW   "->"
   DARROW  "=>"
+  TARROW  "~>"
 
   SEMIC   ";"
   COMA    ","
@@ -243,6 +244,7 @@
 %type <TypeList> type_list  type_list_aux
 %type <ParentList> parent_list
 %type <FunctionKind> func_tok
+%type <FunctionKind> member_func_tok
 
 %type <FieldList> member_list tag_def union_type 
 
@@ -358,6 +360,10 @@ func_tok : "->" { RULE $$ = FK_PLAIN; }
          | "=>" { RULE $$ = FK_CLOSURE; }
          ;
 
+member_func_tok : "->" { RULE $$ = FK_MEMBER_FUNCTION; }
+                | "~>" { RULE $$ = FK_VIRTUAL_MEMBER_FUNCTION; }
+                ;
+
 member_list : "}" {}
             | type "identifier" "}" { RULE $$.insert($$.begin(), driver.builder.field($2, $1)); }
             | type "identifier" ";" member_list { RULE $4.insert($4.begin(), driver.builder.field($2, $1)); std::swap($$, $4); }
@@ -409,11 +415,11 @@ type : "struct" struct_type { RULE $$ = $2; }
                             $5.insert($5.begin(), classType);
                             $$ = driver.builder.functionType($5, retType, FK_CONSTRUCTOR);
                        }
-     | "method" just_name "::" "(" type_list "->" type { RULE
+     | "method" just_name "::" "(" type_list member_func_tok type { RULE
                             TypePtr classType = driver.builder.refType($2);
                             TypePtr retType = $7;
                             $5.insert($5.begin(), classType);
-                            $$ = driver.builder.functionType($5, retType, FK_MEMBER_FUNCTION);
+                            $$ = driver.builder.functionType($5, retType, $6);
                        }
      | "~" just_name "::" "(" ")" { RULE
                             TypePtr classType = driver.builder.refType($2);
@@ -770,16 +776,16 @@ lambda_expression_aux :
                         } %prec LAMBDA
 
                             /* member functions */
-                      | just_name "::" { driver.add_this(@1, $1); } "(" variable_list "->" type 
+                      | just_name "::" { driver.add_this(@1, $1); } "(" variable_list member_func_tok type
                                         { driver.set_inhibit(driver.let_count);} markable_compound_stmt { 
 
                             auto thisvar = driver.findSymbol(@1, "this");
                             $5.insert($5.begin(), thisvar.as<VariablePtr>());
                             if (driver.let_count ==1 ){
-                                driver.add_let_lambda(@$, @1, @9, $7, $5, FK_MEMBER_FUNCTION);
+                                driver.add_let_lambda(@$, @1, @9, $7, $5, $6);
                             }
                             else{
-                                RULE $$ = driver.genLambda(@$, $5, $7, $9, FK_MEMBER_FUNCTION); 
+                                RULE $$ = driver.genLambda(@$, $5, $7, $9, $6);
                             }
                             driver.set_inhibit(false);
                         } %prec LAMBDA

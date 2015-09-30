@@ -299,6 +299,13 @@ namespace backend {
 				res = c_ast::memberCall(obj, c_call->function, args);
 			}
 
+			// --------------- virtual member function call -------------
+
+			// TODO
+			if(funType->isVirtualMemberFunction()) {
+				assert_not_implemented();
+			}
+
 			// use result
 			return res;
 		}
@@ -447,6 +454,11 @@ namespace backend {
 			args.erase(args.begin());
 			appendAsArguments(context, res, args, false);
 			return res;
+		}
+
+		// TODO
+		if(funType->isVirtualMemberFunction()) {
+			assert_not_implemented();
 		}
 
 		// Finally: the generic fall-back solution:
@@ -653,6 +665,10 @@ namespace backend {
 				c_ast::StructTypePtr classDecl = typeInfo.lValueType.as<c_ast::StructTypePtr>();
 				auto mFun = manager->create<c_ast::MemberFunction>(classDecl->name, fun.function, isConst);
 				classDecl->members.push_back(manager->create<c_ast::MemberFunctionPrototype>(mFun, true, true));
+
+				//TODO
+			} else if(funType->isVirtualMemberFunction()) {
+				assert_not_implemented();
 
 			} else if(literal->getStringValue().substr(0, 6) == "__sync") {
 				// => ignore built-in atomic operations
@@ -888,7 +904,7 @@ namespace backend {
 				const core::LambdaExprPtr& lambda = pair.second;
 
 				auto funType = lambda->getFunctionType();
-				bool isMember = funType->isConstructor() || funType->isDestructor() || funType->isMemberFunction();
+				bool isMember = funType->isConstructor() || funType->isDestructor() || funType->isMemberFunction() || funType->isVirtualMemberFunction();
 
 				// create information
 				LambdaInfo* info = new LambdaInfo();
@@ -947,6 +963,9 @@ namespace backend {
 						auto decl = cManager->create<c_ast::DestructorPrototype>(dtor);
 						decl->isVirtual = isVirtual;
 						classDecl->dtor = decl;
+					} else if(funType.isVirtualMemberFunction()) {
+						//TODO
+						assert_not_implemented();
 					} else {
 						// add member function
 						assert_true(funType.isMemberFunction());
@@ -1352,7 +1371,7 @@ namespace backend {
 			NameManager& nameManager = converter.getNameManager();
 
 			// check whether this is a member function
-			bool isMember = funType->isConstructor() || funType->isDestructor() || funType->isMemberFunction();
+			bool isMember = funType->isConstructor() || funType->isDestructor() || funType->isMemberFunction() || funType->isVirtualMemberFunction();
 
 			// resolve return type
 			const TypeInfo& returnTypeInfo = typeManager.getTypeInfo(funType->getReturnType());
@@ -1460,6 +1479,10 @@ namespace backend {
 			} else if(funType->isDestructor()) {
 				// update definition to define a member function
 				res.definition = manager->create<c_ast::Destructor>(getClassName(), res.function);
+
+				//TODO
+			} else if(funType->isVirtualMemberFunction()) {
+				assert_not_implemented();
 			}
 			return res;
 		}

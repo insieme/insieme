@@ -77,7 +77,8 @@ namespace checks {
 		case FK_CLOSURE:
 		case FK_CONSTRUCTOR:
 		case FK_DESTRUCTOR:
-		case FK_MEMBER_FUNCTION: break; // all valid values
+		case FK_MEMBER_FUNCTION:
+		case FK_VIRTUAL_MEMBER_FUNCTION: break; // all valid values
 		default:
 			// this is an invalid value
 			add(res, Message(address, EC_TYPE_ILLEGAL_FUNCTION_TYPE_KIND,
@@ -85,7 +86,7 @@ namespace checks {
 		}
 
 		// check object type for ctors / dtors / member functions
-		if(address->isConstructor() || address->isDestructor() || address->isMemberFunction()) {
+		if(address->isConstructor() || address->isDestructor() || address->isMemberFunction() || address->isVirtualMemberFunction()) {
 			if(address->getParameterTypes().empty()) {
 				add(res, Message(address, EC_TYPE_ILLEGAL_OBJECT_TYPE, format("Missing object type within ctor / dtor / member function."), Message::ERROR));
 			} else if(!analysis::isObjectReferenceType(address->getParameterType(0))) {

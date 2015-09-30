@@ -205,6 +205,10 @@ namespace checks {
 		issues = check(funType);
 		EXPECT_TRUE(issues.empty()) << issues;
 
+		funType = builder.functionType(toVector(refA), A, FK_VIRTUAL_MEMBER_FUNCTION);
+		issues = check(funType);
+		EXPECT_TRUE(issues.empty()) << issues;
+
 		// an few invalid example
 		funType = builder.functionType(toVector(A), A, FK_CONSTRUCTOR);
 		issues = check(funType);
@@ -218,6 +222,10 @@ namespace checks {
 		issues = check(funType);
 		EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(funType), EC_TYPE_ILLEGAL_OBJECT_TYPE, "", Message::ERROR));
 
+		funType = builder.functionType(toVector(A), A, FK_VIRTUAL_MEMBER_FUNCTION);
+		issues = check(funType);
+		EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(funType), EC_TYPE_ILLEGAL_OBJECT_TYPE, "", Message::ERROR));
+
 		funType = builder.functionType(TypeList(), A, FK_CONSTRUCTOR);
 		issues = check(funType);
 		EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(funType), EC_TYPE_ILLEGAL_OBJECT_TYPE, "", Message::ERROR));
@@ -227,6 +235,10 @@ namespace checks {
 		EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(funType), EC_TYPE_ILLEGAL_OBJECT_TYPE, "", Message::ERROR));
 
 		funType = builder.functionType(TypeList(), A, FK_MEMBER_FUNCTION);
+		issues = check(funType);
+		EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(funType), EC_TYPE_ILLEGAL_OBJECT_TYPE, "", Message::ERROR));
+
+		funType = builder.functionType(TypeList(), A, FK_VIRTUAL_MEMBER_FUNCTION);
 		issues = check(funType);
 		EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(funType), EC_TYPE_ILLEGAL_OBJECT_TYPE, "", Message::ERROR));
 

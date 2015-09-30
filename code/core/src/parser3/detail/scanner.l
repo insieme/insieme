@@ -120,6 +120,7 @@ blank   [ \t]
 
 "->"     return inspire_parser::make_ARROW(loc);
 "=>"     return inspire_parser::make_DARROW(loc);
+"~>"     return inspire_parser::make_TARROW(loc);
 
 ";"      return inspire_parser::make_SEMIC(loc);
 ","      return inspire_parser::make_COMA(loc);

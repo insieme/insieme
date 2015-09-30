@@ -529,11 +529,12 @@ namespace core {
 	 * An enumeration used for distinguishing the various kinds of function types.
 	 */
 	enum FunctionKind {
-		FK_PLAIN = 1,      /* < a plain function produced by a simple lambda */
-		FK_CLOSURE,        /* < a closure function produced by a binding */
-		FK_CONSTRUCTOR,    /* < a constructor used for creating object instances */
-		FK_DESTRUCTOR,     /* < a destructor used for destroying object instances */
-		FK_MEMBER_FUNCTION /* < a member function being associated to a class */
+		FK_PLAIN = 1,              /* < a plain function produced by a simple lambda */
+		FK_CLOSURE,                /* < a closure function produced by a binding */
+		FK_CONSTRUCTOR,            /* < a constructor used for creating object instances */
+		FK_DESTRUCTOR,             /* < a destructor used for destroying object instances */
+		FK_MEMBER_FUNCTION,        /* < a member function being associated to a class */
+		FK_VIRTUAL_MEMBER_FUNCTION /* < a member function being associated to a class */
 	};
 
 	/**
@@ -599,6 +600,14 @@ namespace core {
 
 		/**
 		 * A utility function allowing to determine directly whether a function
+		 * is a virtual member function or not.
+		 */
+		bool isVirtualMemberFunction() const {
+			return FunctionTypeAccessor<Derived, Ptr>::getKind() == FK_VIRTUAL_MEMBER_FUNCTION;
+		}
+
+		/**
+		 * A utility function allowing to determine directly whether a function
 		 * is a constructor, destructor or member function.
 		 */
 		bool isMember() const {
@@ -633,7 +642,7 @@ namespace core {
 		 * invalid.
 		 */
 		Ptr<const Type> getObjectType() const {
-			assert_true(isConstructor() || isDestructor() || isMemberFunction());
+			assert_true(isConstructor() || isDestructor() || isMemberFunction() || isVirtualMemberFunction());
 			assert_false(getParameterTypes().empty());
 			assert_eq(getParameterType(0)->getNodeType(), NT_GenericType);
 			static const auto caster = typename Ptr<const GenericType>::StaticCast();
