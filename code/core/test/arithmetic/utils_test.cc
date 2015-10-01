@@ -217,7 +217,7 @@ namespace arithmetic {
 		IRBuilder builder(mgr);
 
 		std::map<std::string, NodePtr> symbols;
-		symbols["v1"] = builder.variable(builder.parseType("int<4>"));
+		symbols["v1"] = builder.variable(builder.parseType("int<4>"),1);
 
 		// from expr: int_add(int_add(int__ul(int_mul(0, 4), 4), int_mul(0, 4)), v112)
 		auto expr = builder.parseExpr("0 * 4 * 4 + (0 * 4) + v1", symbols);

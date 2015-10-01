@@ -196,21 +196,23 @@ TEST(Rule, MultiplyAndAdd) {
 	auto p2 = aT(trg);
 	auto g2 = g::substitute(g::root, trg, g);
 
-	auto c2 = builder.parseStmt("{"
-	                            "	decl int<4> a = 12;"
-	                            "	decl int<4> b = 14;"
-	                            "	1+2;"
-	                            "	1*2+3;"
-	                            "	12 * (2*3+1) + (a*b+3);"
-	                            "	decl int<4> c = a * b + 123;"
-	                            "}");
+	auto c2 = builder.normalize(builder.parseStmt(
+			"{"
+			"	decl int<4> a = 12;"
+			"	decl int<4> b = 14;"
+			"	1+2;"
+			"	1*2+3;"
+			"	12 * (2*3+1) + (a*b+3);"
+			"	decl int<4> c = a * b + 123;"
+			"}"
+	));
 
 	ASSERT_TRUE(p2.matchPointer(c2));
 
 	Rule r2(p2, g2);
 	NodePtr res = r2.fixpoint(c2);
 
-	EXPECT_EQ("{int<4> v1 = 12; int<4> v2 = 14; int_add(1, 2); mad(1, 2, 3); mad(12, mad(2, 3, 1), mad(v1, v2, 3)); int<4> v3 = mad(v1, v2, 123);}",
+	EXPECT_EQ("{int<4> v0 = 12; int<4> v1 = 14; int_add(1, 2); mad(1, 2, 3); mad(12, mad(2, 3, 1), mad(v0, v1, 3)); int<4> v2 = mad(v0, v1, 123);}",
 	          toString(*res));
 }
 

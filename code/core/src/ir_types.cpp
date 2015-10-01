@@ -42,6 +42,7 @@
 #include "insieme/core/transform/manipulation_utils.h"
 
 #include "insieme/core/ir_node_annotation.h"
+#include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/lang/reference.h"
 
@@ -264,6 +265,25 @@ namespace core {
 		if (!isRecursive()) { return out << *getRecord(); }
 		return out << "rec " << *getTag() << "." << *getDefinition();
 	}
+
+	StructPtr Struct::get(NodeManager & manager, const StringValuePtr& name, const ParentsPtr& parents, const FieldsPtr& fields) {
+		return get(manager, name, parents, fields,
+				Expressions::get(manager, ExpressionList()),
+				IRBuilder(manager).getDefaultDestructor(),
+				MemberFunctions::get(manager, MemberFunctionList()),
+				PureVirtualMemberFunctions::get(manager, PureVirtualMemberFunctionList())
+			);
+	}
+
+	UnionPtr Union::get(NodeManager & manager, const StringValuePtr& name, const FieldsPtr& fields) {
+		return get(manager, name, fields,
+				Expressions::get(manager, ExpressionList()),
+				IRBuilder(manager).getDefaultDestructor(),
+				MemberFunctions::get(manager, MemberFunctionList()),
+				PureVirtualMemberFunctions::get(manager, PureVirtualMemberFunctionList())
+			);
+	}
+
 
 	std::ostream& NumericType::printTo(std::ostream& out) const {
 		return out << *getValue();

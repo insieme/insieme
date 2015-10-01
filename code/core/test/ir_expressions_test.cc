@@ -469,12 +469,12 @@ namespace core {
 
 		// check recursive lambda
 		manager.setNextFreshID(0);
-		lambda = builder.parseExpr("let f = lambda ()->unit { 5; f(); }; f").as<LambdaExprPtr>();
+		lambda = builder.normalize(builder.parseExpr("let f = lambda ()->unit { 5; f(); }; f").as<LambdaExprPtr>());
 		ASSERT_TRUE(lambda);
 
 		EXPECT_TRUE(lambda->isRecursive());
-		EXPECT_EQ("rec v2.{v2=fun() {5; v2();}}", toString(*lambda));
-		EXPECT_EQ("rec v0.{v0=fun() {5; rec v2.{v2=fun() {5; v2();}}();}}", toString(*lambda->peel()));
+		EXPECT_EQ("rec v0.{v0=fun() {5; v0();}}", toString(*lambda));
+		EXPECT_EQ("rec v0.{v0=fun() {5; rec v0.{v0=fun() {5; v0();}}();}}", toString(*lambda->peel()));
 
 
 		// check mutual recursive lambdas
@@ -536,11 +536,11 @@ namespace core {
 		 * 		an invalid node-composition assertion is triggered.
 		 */
 
-		LambdaExprPtr even = builder.parseExpr("let int = int<4> ; "
+		LambdaExprPtr even = builder.normalize(builder.parseExpr("let int = int<4> ; "
 		                                       "let even,odd = "
 		                                       "	lambda (int x)->bool { return (x==0)?true:(odd(x-1)); },"
 		                                       "	lambda (int x)->bool { return (x==0)?false:(even(x-1)); };"
-		                                       "even")
+		                                       "even"))
 		                         .as<LambdaExprPtr>();
 
 		ASSERT_TRUE(even);
@@ -594,11 +594,11 @@ namespace core {
 		 * 		an invalid node-composition assertion is triggered.
 		 */
 
-		LambdaExprPtr even = builder.parseExpr("let int = int<4> ; "
+		LambdaExprPtr even = builder.normalize(builder.parseExpr("let int = int<4> ; "
 		                                       "let even,odd = "
 		                                       "	lambda (int x)->bool { return (x==0)?true:(odd(x-1)); },"
 		                                       "	lambda (int x)->bool { return (x==0)?false:(even(x-1)); };"
-		                                       "even")
+		                                       "even"))
 		                         .as<LambdaExprPtr>();
 
 		ASSERT_TRUE(even);
@@ -614,9 +614,7 @@ namespace core {
 		// std::cout << "Unroll 5:\n" << core::printer::PrettyPrinter(even->unroll(5)) << "\n\n";
 
 		EXPECT_PRED2(containsSubString, toString(core::printer::PrettyPrinter(even->unroll(2))),
-		             "return v5==0?true:v5-1==0?false:v3(v5-1-1);");
-		EXPECT_PRED2(containsSubString, toString(core::printer::PrettyPrinter(even->unroll(2))),
-		             "return v9==0?false:v9-1==0?true:v4(v9-1-1);");
+		             "return v1==0?true:v1-1==0?false:v0(v1-1-1);");
 
 		res = check(even->unroll(manager, 2), core::checks::getFullCheck());
 		EXPECT_TRUE(res.empty()) << even->unroll(manager, 2) << res;
@@ -709,13 +707,13 @@ namespace core {
 
 		ASSERT_TRUE(fun);
 
-		std::cout << core::printer::PrettyPrinter(fun, core::printer::PrettyPrinter::NO_LET_BOUND_FUNCTIONS) << "\n";
+//		std::cout << core::printer::PrettyPrinter(fun, core::printer::PrettyPrinter::NO_LET_BOUND_FUNCTIONS) << "\n";
 		EXPECT_TRUE(fun->isRecursive());
 
 		// fix usage of recursive variables
 		fun = transform::correctRecursiveLambdaVariableUsage(manager, fun);
 
-		std::cout << core::printer::PrettyPrinter(fun, core::printer::PrettyPrinter::NO_LET_BOUND_FUNCTIONS) << "\n";
+//		std::cout << core::printer::PrettyPrinter(fun, core::printer::PrettyPrinter::NO_LET_BOUND_FUNCTIONS) << "\n";
 		EXPECT_TRUE(fun->isRecursive());
 	}
 

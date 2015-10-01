@@ -299,6 +299,8 @@ namespace core {
 		TagTypePtr unionType(const StringValuePtr& name, const vector<FieldPtr>& fields) const;
 		TagTypePtr unionType(const vector<FieldPtr>& fields) const;
 
+		ExpressionPtr getDefaultDestructor() const;
+
 		NamedValuePtr namedValue(const string& name, const ExpressionPtr& value) const;
 
 		TupleExprPtr tupleExpr(const ExpressionList& values = ExpressionList()) const;

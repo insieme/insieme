@@ -231,15 +231,40 @@ namespace analysis {
 	}
 
 	TypeList getElementTypes(const TypePtr& type) {
-		TypeList res;
-		visitDepthFirstPrunable(type, [&](const TypePtr& cur) -> bool {
-			if(cur == type) {
-				return false; // exclude root
+
+		struct Extractor : public IRVisitor<TypeList> {
+			Extractor() : IRVisitor(true) {}
+
+			TypeList visitGenericType(const GenericTypePtr& type) override {
+				return type->getTypeParameter()->getTypes();
 			}
-			res.push_back(cur);
-			return true;
-		}, true);
-		return res;
+
+			TypeList visitFunctionType(const FunctionTypePtr& type) override {
+				TypeList res;
+				for(const auto& cur : type->getParameterTypes()) res.push_back(cur);
+				res.push_back(type->getReturnType());
+				return res;
+			}
+
+			TypeList visitTupleType(const TupleTypePtr& type) override {
+				return type->getElementTypes();
+			}
+
+			TypeList visitTagType(const TagTypePtr& type) override {
+				TypeList res;
+				for(const auto& field : type->getFields()) {
+					res.push_back(field->getType());
+				}
+				return res;
+			}
+
+			TypeList visitType(const TypePtr& type) override {
+				assert_fail() << "Unsupported type encountered: " << *type << "\n";
+				return TypeList();
+			}
+		};
+
+		return Extractor()(type);
 	}
 
 	bool isRefOf(const NodePtr& candidate, const NodePtr& type) {

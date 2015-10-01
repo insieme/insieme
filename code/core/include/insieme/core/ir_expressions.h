@@ -46,41 +46,6 @@ namespace insieme {
 namespace core {
 
 
-	// ------------------------------------- Expressions -----------------------------------
-
-	/**
-	 * The accessor associated to a list of expressions.
-	 */
-	IR_LIST_NODE_ACCESSOR(Expressions, Support, Expressions, Expression)
-	IR_NODE_END()
-
-	/**
-	 * A node type representing a list of expressions.
-	 */
-	IR_NODE(Expressions, Support)
-	  protected:
-		/**
-		 * Prints a string representation of this node to the given output stream.
-		 */
-		virtual std::ostream& printTo(std::ostream & out) const {
-			return out << "[" << join(",", getChildList(), print<deref<NodePtr>>()) << "]";
-		}
-
-	  public:
-		/**
-		 * This static factory method allows to construct a expression list based
-		 * on the given expressions.
-		 *
-		 * @param manager the manager used for maintaining instances of this class
-		 * @param expressions the list of expressions to be included
-		 * @return the requested instance managed by the given manager
-		 */
-		static ExpressionsPtr get(NodeManager & manager, const ExpressionList& expressions) {
-			return manager.get(Expressions(convertList(expressions)));
-		}
-	IR_NODE_END()
-
-
 	// ------------------------------------- Literals -----------------------------------
 
 	/**
