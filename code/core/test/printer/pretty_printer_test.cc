@@ -187,11 +187,11 @@ TEST(PrettyPrinter, StructSuperTypes) {
 	EXPECT_EQ("let type000 = struct  { A a };\ntype000", toString(PrettyPrinter(classA)));
 
 	TypePtr classB = builder.structType(toVector(classA), toVector(builder.field("b", builder.genericType("B"))));
-	EXPECT_EQ("let type000 = struct  { A a };\nlet type001 = struct  : [type000] { B b };\ntype001", toString(PrettyPrinter(classB)));
+	EXPECT_EQ("let type000 = struct  { A a };\nlet type001 = struct  : [ public type000 ] { B b };\ntype001", toString(PrettyPrinter(classB)));
 
 	TypePtr classC = builder.structType(toVector(builder.parent(true, classB)), toVector(builder.field("c", builder.genericType("C"))));
 	EXPECT_EQ(
-	    "let type000 = struct  { A a };\nlet type001 = struct  : [type000] { B b };\nlet type002 = struct  : [type001] { C c };\ntype002",
+	    "let type000 = struct  { A a };\nlet type001 = struct  : [ public type000 ] { B b };\nlet type002 = struct  : [ virtual public type001 ] { C c };\ntype002",
 	    toString(PrettyPrinter(classC)));
 }
 /*

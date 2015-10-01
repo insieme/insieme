@@ -172,6 +172,12 @@ blank   [ \t]
 "struct"  return inspire_parser::make_STRUCT(loc);
 "union"   return inspire_parser::make_UNION(loc);
 
+"virtual"   return inspire_parser::make_VIRTUAL(loc);
+"private"   return inspire_parser::make_PRIVATE(loc);;
+"public"    return inspire_parser::make_PUBLIC(loc);; 
+"protected" return inspire_parser::make_PROTECTED(loc);;
+
+
 "spawn"   return inspire_parser::make_SPAWN(loc);
 "sync"    return inspire_parser::make_SYNC(loc);
 "syncAll" return inspire_parser::make_SYNCALL(loc);
