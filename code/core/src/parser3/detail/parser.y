@@ -189,6 +189,11 @@
   STRUCT        "struct"
   UNION         "union"
 
+  VIRTUAL       "virtual"
+  PRIVATE       "private"
+  PUBLIC        "public"
+  PROTECTED     "protected"
+
   SPAWN         "spawn"
   SYNC          "sync"
   SYNCALL       "syncAll"
@@ -245,6 +250,7 @@
 %type <ParentList> parent_list
 %type <FunctionKind> func_tok
 %type <FunctionKind> member_func_tok
+%type <AccessSpecifier> accessSpecifiers
 
 %type <FieldList> member_list tag_def union_type 
 
@@ -350,10 +356,16 @@ type_list : ")" { }
           | type_list_aux { RULE std::swap($$, $1); }
           ;
 
-parent_list : named_type                 { RULE  $$.insert($$.begin(), driver.builder.parent(false, $1));  }
-            | named_type "," parent_list { RULE  $3.insert($3.begin(), driver.builder.parent(false, $1)); std::swap($$, $3); }
-            | "virtual" named_type                 { RULE  $$.insert($$.begin(), driver.builder.parent(true, $2)); }
-            | "virtual" named_type "," parent_list { RULE  $4.insert($4.begin(), driver.builder.parent(true, $2)); std::swap($$, $4); }
+accessSpecifiers : "private"    { RULE $$ = AS_PRIVATE; }
+                 | "public"     { RULE $$ = AS_PUBLIC; }
+                 | "protected"  { RULE $$ = AS_PROTECTED; }
+                 |              { RULE $$ = AS_PUBLIC; }
+                 ; 
+
+parent_list : accessSpecifiers named_type                 { RULE  $$.insert($$.begin(), driver.builder.parent(false, $1, $2));  }
+            | accessSpecifiers named_type "," parent_list { RULE  $4.insert($4.begin(), driver.builder.parent(false, $1, $2)); std::swap($$, $4); }
+            | "virtual" accessSpecifiers named_type                 { RULE  $$.insert($$.begin(), driver.builder.parent(true, $2, $3)); }
+            | "virtual" accessSpecifiers named_type "," parent_list { RULE  $5.insert($5.begin(), driver.builder.parent(true, $2, $3)); std::swap($$, $5); }
             ;
 
 func_tok : "->" { RULE $$ = FK_PLAIN; }

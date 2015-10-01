@@ -210,8 +210,22 @@ namespace core {
 		 * @param type the type to be referenced as a parent class
 		 * @return the requested type instance managed by the given manager
 		 */
-		static ParentPtr get(NodeManager & manager, const BoolValuePtr& virtul, const UIntValuePtr& access, const TypePtr& type) {
+		static ParentPtr get(NodeManager & manager, const BoolValuePtr& virtul,  UIntValuePtr access, const TypePtr& type) {
 			return manager.get(Parent(virtul, access, type));
+		}
+
+		/**
+			* This static factory method allows to construct a new parent-link instance referencing
+			* the given type.
+			*
+			* @param manager the manager used for maintaining instances of this class
+			* @param virtul a flag determining whether the result should be a virtual inheritance link
+			* @param access the access specifier determining the kind of inheritance (public, private or protected)
+			* @param type the type to be referenced as a parent class
+			* @return the requested type instance managed by the given manager
+		*/
+		static ParentPtr get(NodeManager & manager,  bool virtul,  UIntValuePtr access, const TypePtr& type) {
+			return get(manager, BoolValue::get(manager, virtul), access, type);
 		}
 
 		/**

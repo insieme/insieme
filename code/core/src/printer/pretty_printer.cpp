@@ -251,11 +251,15 @@ namespace printer {
 							// include all inherited classes if there are any
 							if (StructPtr structType = analysis::isStruct(tagType)) {
 								if (!structType->getParents().empty()) {
-									out << " : [";
+									out << " : [ ";
 									out << join(", ", structType->getParents(), [&](std::ostream& out, const ParentPtr& parent) {
+										if(parent->isVirtual())   { out << "virtual ";   }
+										if(parent->isPrivate())   { out << "private ";   }
+										if(parent->isPublic())    { out << "public ";    }
+										if(parent->isProtected()) { out << "protected "; }
 										this->visit(NodeAddress(parent->getType()));
 									});
-									out << "]";
+									out << " ]";
 								}
 							}
 
@@ -467,7 +471,10 @@ namespace printer {
 					auto parents = node.as<StructAddress>()->getParents();
 					if (!parents.empty()) {
 						out << ": " << join(", ", parents, [&](std::ostream& out, const ParentAddress& parent) {
-							if(parent->isVirtual()) { out << "virtual "; }
+							if(parent->isVirtual())   { out << "virtual ";   }
+							if(parent->isPrivate())   { out << "private ";   }
+							if(parent->isPublic())    { out << "public ";    }
+							if(parent->isProtected()) { out << "protected "; }
 							VISIT(parent->getType());
 						}) << " ";
 					}
