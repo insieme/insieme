@@ -210,7 +210,7 @@ namespace core {
 		 * @param type the type to be referenced as a parent class
 		 * @return the requested type instance managed by the given manager
 		 */
-		static ParentPtr get(NodeManager & manager, const BoolValuePtr& virtul,  UIntValuePtr access, const TypePtr& type) {
+		static ParentPtr get(NodeManager & manager, const BoolValuePtr& virtul, const UIntValuePtr& access, const TypePtr& type) {
 			return manager.get(Parent(virtul, access, type));
 		}
 
@@ -224,7 +224,7 @@ namespace core {
 			* @param type the type to be referenced as a parent class
 			* @return the requested type instance managed by the given manager
 		*/
-		static ParentPtr get(NodeManager & manager,  bool virtul,  UIntValuePtr access, const TypePtr& type) {
+		static ParentPtr get(NodeManager & manager,  bool virtul, const UIntValuePtr& access, const TypePtr& type) {
 			return get(manager, BoolValue::get(manager, virtul), access, type);
 		}
 
