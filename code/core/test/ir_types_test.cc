@@ -382,6 +382,20 @@ namespace core {
 
 	}
 
+	TEST(TypeTest, TagTypePeeling) {
+
+		// create a manager for this test
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		EXPECT_EQ("struct<x:bla<int<4>>>", toString(*builder.parseType("let A = struct { bla<int<4>> x } in A")));
+		EXPECT_EQ("struct<x:bla<int<4>>>", toString(*builder.parseType("let A = struct { bla<int<4>> x } in A").as<TagTypePtr>()->peel()));
+
+		EXPECT_EQ(             "rec ^A.{^A=struct<x:bla<^A>>}",   toString(*builder.parseType("let A = struct { bla<A> x } in A")));
+		EXPECT_EQ("struct<x:bla<rec ^A.{^A=struct<x:bla<^A>>}>>", toString(*builder.parseType("let A = struct { bla<A> x } in A").as<TagTypePtr>()->peel()));
+
+	}
+
 	//
 	// TEST(TypeTest, RecType) {
 	//
@@ -801,44 +815,7 @@ namespace core {
 	//	basicTypeTests(srcType,  true,  toList(toVector<NodePtr>(elementTypeA, UIntValue::get(manager, RK_SOURCE))));
 	//	basicTypeTests(sinkType, false, toList(toVector<NodePtr>(elementTypeB, UIntValue::get(manager, RK_SINK))));
 	//}
-	//
-	//
-	// TEST(TypeTest, IntTypeParam) {
-	//
-	//	NodeManager manager;
-	//
-	//	// test toString format
-	//	ConcreteIntTypeParamPtr p12 = ConcreteIntTypeParam::get(manager, 12);
-	//	EXPECT_EQ(toString(*p12), "12");
-	//
-	//	InfiniteIntTypeParamPtr inf = InfiniteIntTypeParam::get(manager);
-	//	EXPECT_EQ(toString(*inf), "inf");
-	//
-	//	VariableIntTypeParamPtr pvp = VariableIntTypeParam::get(manager, 'p');
-	//	EXPECT_EQ(toString(*pvp), "#p");
-	//
-	//	// test == operator
-	//	IntTypeParamPtr params[] = {p12, inf, pvp};
-	//	for(int i=0; i<3; i++) {
-	//		for(int j=0; j<3; j++) {
-	//			EXPECT_EQ(params[i]==params[j], i==j);
-	//		}
-	//	}
-	//
-	//	IntTypeParamPtr p12b = ConcreteIntTypeParam::get(manager, 12);
-	//	EXPECT_TRUE(p12 == p12b);
-	//
-	//	IntTypeParamPtr pvpb = VariableIntTypeParam::get(manager, 'p');
-	//	EXPECT_TRUE(pvp == pvpb);
-	//
-	//	IntTypeParamPtr infb = InfiniteIntTypeParam::get(manager);
-	//	EXPECT_TRUE(inf == infb);
-	//
-	//	// conduct basic node checks
-	//	basicNodeTests(p12, toList(p12->getParam()));
-	//	basicNodeTests(inf);
-	//	basicNodeTests(pvp, toList(pvp->getSymbol()));
-	//}
+
 
 	template <typename PT>
 	void basicTypeTests(PT type, bool concrete, const NodeList& children) {

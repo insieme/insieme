@@ -171,7 +171,6 @@ AST_TERMINAL(NumericType, Type)
 // + recursive types (aka tag type)
 AST_TERMINAL(TagType, Type)
 AST_TERMINAL(TagTypeReference, Type)
-AST_TERMINAL(ThisTagTypeReference, Type)
 
 
 //

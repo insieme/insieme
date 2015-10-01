@@ -808,43 +808,6 @@ namespace core {
 	IR_NODE_END()
 
 
-	// ------------------------------------ This Tag Type Reference  ------------------------------
-
-	/**
-	 * The accessor associated to a this-tag-type reference, referencing the most closely nested reference.
-	 */
-	IR_NODE_ACCESSOR(ThisTagTypeReference, Type)
-		// no content
-	IR_NODE_END()
-
-	/**
-	 * A node type representing concrete this-tag-type reference.
-	 */
-	IR_NODE(ThisTagTypeReference, Type)
-
-	  protected:
-		/**
-		 * Prints a string representation of this node to the given output stream.
-		 */
-		virtual std::ostream& printTo(std::ostream & out) const {
-			return out << "^this";
-		}
-
-	  public:
-
-		/**
-		 * This static factory method allows to construct a this-tag-type reference based on a string value (its identifier).
-		 *
-		 * @param manager the manager used for maintaining instances of this class
-		 * @return the requested type instance managed by the given manager
-		 */
-		static ThisTagTypeReferencePtr get(NodeManager & manager) {
-			return manager.get(ThisTagTypeReference());
-		}
-
-	IR_NODE_END()
-
-
 	// ---------------------------------------- Tag Type ------------------------------
 
 	/**
@@ -987,6 +950,7 @@ namespace core {
 		 * tag type node.
 		 */
 		Ptr<const Record> getRecord() const {
+			assert_true(getDefinition()->getDefinitionOf(getTag().template as<TagTypeReferencePtr>()));
 			return getDefinition()->getDefinitionOf(getTag().template as<TagTypeReferencePtr>());
 		}
 

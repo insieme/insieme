@@ -184,14 +184,14 @@ TEST(PrettyPrinter, StructSuperTypes) {
 	IRBuilder builder(manager);
 
 	TypePtr classA = builder.structType(toVector(builder.field("a", builder.genericType("A"))));
-	EXPECT_EQ("let fun000 = ~^this v1 :: () { };\n\nlet type000 = struct  { A a };\ntype000", toString(PrettyPrinter(classA)));
+	EXPECT_EQ("let fun000 = ~^ v1 :: () { };\n\nlet type000 = struct  { A a };\ntype000", toString(PrettyPrinter(classA)));
 
 	TypePtr classB = builder.structType(toVector(classA), toVector(builder.field("b", builder.genericType("B"))));
-	EXPECT_EQ("let fun000 = ~^this v1 :: () { };\n\nlet type000 = struct  { A a };\nlet type001 = struct  : [ public type000 ] { B b };\ntype001", toString(PrettyPrinter(classB)));
+	EXPECT_EQ("let fun000 = ~^ v1 :: () { };\n\nlet type000 = struct  { A a };\nlet type001 = struct  : [ public type000 ] { B b };\ntype001", toString(PrettyPrinter(classB)));
 
 	TypePtr classC = builder.structType(toVector(builder.parent(true, classB)), toVector(builder.field("c", builder.genericType("C"))));
 	EXPECT_EQ(
-	    "let fun000 = ~^this v1 :: () { };\n\nlet type000 = struct  { A a };\nlet type001 = struct  : [ public type000 ] { B b };\nlet type002 = struct  : [ virtual public type001 ] { C c };\ntype002",
+	    "let fun000 = ~^ v1 :: () { };\n\nlet type000 = struct  { A a };\nlet type001 = struct  : [ public type000 ] { B b };\nlet type002 = struct  : [ virtual public type001 ] { C c };\ntype002",
 	    toString(PrettyPrinter(classC)));
 }
 /*
@@ -291,16 +291,16 @@ TEST(PrettyPrinter, DerivedLiterals) {
 
 	EXPECT_FALSE(lang::isDerived(fun));
 
-	EXPECT_EQ("let fun000 = ~^this v1 :: () { };\n\nlet type000 = struct  {  };\nlet fun001 = function(ref<type000,f,f,plain> v1) -> unit { };\n\nfun001(x)", toString(PrettyPrinter(call)));
+	EXPECT_EQ("let fun000 = ~^ v1 :: () { };\n\nlet type000 = struct  {  };\nlet fun001 = function(ref<type000,f,f,plain> v1) -> unit { };\n\nfun001(x)", toString(PrettyPrinter(call)));
 
 	// mark it derived
 	lang::markAsDerived(fun, "id");
 	EXPECT_TRUE(lang::isDerived(fun));
 
-	EXPECT_EQ("let fun000 = ~^this v1 :: () { };\n\nlet type000 = struct  {  };\nid(x)", toString(PrettyPrinter(call)));
+	EXPECT_EQ("let fun000 = ~^ v1 :: () { };\n\nlet type000 = struct  {  };\nid(x)", toString(PrettyPrinter(call)));
 
 	// without derived interception
-	EXPECT_EQ("let fun000 = ~^this v1 :: () { };\n\nlet type000 = struct  {  };\nlet fun001 = function(ref<type000,f,f,plain> v1) -> unit { };\n\nfun001(x)",
+	EXPECT_EQ("let fun000 = ~^ v1 :: () { };\n\nlet type000 = struct  {  };\nlet fun001 = function(ref<type000,f,f,plain> v1) -> unit { };\n\nfun001(x)",
 	          toString(PrettyPrinter(call, PrettyPrinter::PRINT_DERIVED_IMPL)));
 }
 

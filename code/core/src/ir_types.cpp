@@ -38,6 +38,7 @@
 
 #include <set>
 
+#include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/transform/manipulation_utils.h"
 
@@ -124,61 +125,10 @@ namespace core {
 		return out << "<" << join(",", getFields(), print<deref<NodePtr>>()) << ">";
 	}
 
-
-	namespace {
-
-		class TagTypePeeler : public transform::CachedNodeMapping {
-			NodeManager& manager;
-			TagTypeDefinitionPtr definition;
-
-
-		  public:
-			TagTypePeeler(NodeManager& manager, const TagTypeDefinition& definition) : manager(manager), definition(&definition) {}
-
-			virtual const NodePtr resolveElement(const NodePtr& ptr) {
-				// check whether it is a known variable
-				if(auto tag = ptr.isa<TagTypeReferencePtr>()) {
-
-					// if there is a definition for the current variable ..
-					if(definition->getDefinitionOf(tag)) {
-						// .. unroll the definition
-						return TagType::get(manager, tag, definition);
-					}
-				}
-
-				// check whether current node is a nested expression
-				if(ptr.isa<ExpressionPtr>()) {
-					return ptr; // do not decent into this
-				}
-
-				// replace recursively
-				auto res = ptr->substitute(manager, *this);
-
-				// migrate annotations
-				transform::utils::migrateAnnotations(ptr, res);
-
-				// done
-				return res;
-			}
-
-			RecordPtr apply(const RecordPtr& node) {
-				return static_pointer_cast<const Record>(node->substitute(manager, *this));
-			}
-		};
-	}
-
-	TagTypePtr TagTypeDefinition::peelDefinitionOnce(NodeManager& manager, const TagTypeReferencePtr& tag) const {
-		// peel tag type using helper
-		return TagType::get(manager, tag,
-				TagTypeDefinition::get(manager, toVector(
-						TagTypeBinding::get(manager, tag, TagTypePeeler(manager, *this).apply(getDefinitionOf(tag)))
-				)));
-	}
-
 	namespace {
 
 		template<template<typename T> class Ptr, typename Set>
-		void appendFreeTagTypeReferences(const Ptr<const Node>& root, Set& set) {
+		void appendFreeTagTypeReferences(const Ptr<const Node>& root, Set& set, bool fieldsOnly) {
 			// collect free tag type references
 			if (auto tag = root.template isa<Ptr<const TagTypeReference>>()) {
 				set.insert(tag);
@@ -186,11 +136,11 @@ namespace core {
 			}
 
 			// prune search descent
-			if (root.template isa<Ptr<const Expression>>()) return;
+			if (fieldsOnly && root.template isa<Ptr<const Expression>>()) return;
 
-			// skip tag type variable bindings
+			// skip tags in type variable bindings
 			if (auto tagType = root.template isa<Ptr<const TagType>>()) {
-				appendFreeTagTypeReferences(Ptr<const Node>(tagType->getDefinition()), set);
+				appendFreeTagTypeReferences(Ptr<const Node>(tagType->getDefinition()), set, fieldsOnly);
 				return;
 			}
 
@@ -199,15 +149,16 @@ namespace core {
 
 				Set nested;
 				for(const auto& cur : def) {
-					appendFreeTagTypeReferences(Ptr<const Node>(cur->getRecord()),nested);
+					appendFreeTagTypeReferences(Ptr<const Node>(cur->getRecord()),nested, fieldsOnly);
 				}
 
-				for(const auto& cur : def) {
-					nested.erase(cur->getTag());
+				Set filtered;
+				for(const auto& cur : nested) {
+					if (!def->getDefinitionOf(cur)) filtered.insert(cur);
 				}
 
 				// add nested tags to
-				set.insert(nested.begin(), nested.end());
+				set.insert(filtered.begin(), filtered.end());
 
 				// done
 				return;
@@ -215,19 +166,45 @@ namespace core {
 
 			// descent recursively
 			for(const auto& cur : root.getChildList()) {
-				appendFreeTagTypeReferences(cur, set);
+				appendFreeTagTypeReferences(cur, set, fieldsOnly);
 			}
 		}
 
 		template<template<typename T> class Ptr>
-		std::set<Ptr<const TagTypeReference>> getFreeTagTypeReferences(const Ptr<const Node>& root) {
+		std::set<Ptr<const TagTypeReference>> getFreeTagTypeReferences(const Ptr<const Node>& root, bool fieldsOnly = true) {
 			std::set<Ptr<const TagTypeReference>> res;
-			appendFreeTagTypeReferences(root, res);
+			appendFreeTagTypeReferences(root, res, fieldsOnly);
 			return res;
 		}
 
 	}
 
+	TagTypePtr TagTypeDefinition::peelDefinitionOnce(NodeManager& manager, const TagTypeReferencePtr& tag) const {
+
+		// start with unmodified definition
+		TagTypeDefinitionPtr definition(this);
+
+		// get list of free tag type references
+		auto tags = getFreeTagTypeReferences(NodeAddress(getDefinitionOf(tag)), false);
+
+		// if there are recursive references
+		if (!tags.empty()) {
+
+			// turn into a map of modifications
+			std::map<NodeAddress,NodePtr> mods;
+			for(const auto& cur : tags) {
+				mods[cur] = TagType::get(manager, cur.as<TagTypeReferencePtr>(), TagTypeDefinitionPtr(this));
+			}
+
+			// build peeled definition
+			definition = TagTypeDefinition::get(manager, toVector(
+					TagTypeBinding::get(manager,tag,transform::replaceAll(manager, mods).as<RecordPtr>())
+			));
+		}
+
+		// peel tag type using helper
+		return TagType::get(manager, tag, definition);
+	}
 
 	bool TagType::isRecursive() const {
 
@@ -269,7 +246,7 @@ namespace core {
 	StructPtr Struct::get(NodeManager & manager, const StringValuePtr& name, const ParentsPtr& parents, const FieldsPtr& fields) {
 		return get(manager, name, parents, fields,
 				Expressions::get(manager, ExpressionList()),
-				IRBuilder(manager).getDefaultDestructor(),
+				IRBuilder(manager).getDefaultDestructor(name),
 				MemberFunctions::get(manager, MemberFunctionList()),
 				PureVirtualMemberFunctions::get(manager, PureVirtualMemberFunctionList())
 			);
@@ -278,7 +255,7 @@ namespace core {
 	UnionPtr Union::get(NodeManager & manager, const StringValuePtr& name, const FieldsPtr& fields) {
 		return get(manager, name, fields,
 				Expressions::get(manager, ExpressionList()),
-				IRBuilder(manager).getDefaultDestructor(),
+				IRBuilder(manager).getDefaultDestructor(name),
 				MemberFunctions::get(manager, MemberFunctionList()),
 				PureVirtualMemberFunctions::get(manager, PureVirtualMemberFunctionList())
 			);

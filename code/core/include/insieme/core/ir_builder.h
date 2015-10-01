@@ -299,7 +299,10 @@ namespace core {
 		TagTypePtr unionType(const StringValuePtr& name, const vector<FieldPtr>& fields) const;
 		TagTypePtr unionType(const vector<FieldPtr>& fields) const;
 
-		ExpressionPtr getDefaultDestructor() const;
+		ExpressionPtr getDefaultDestructor(const StringValuePtr& recordName) const;
+		ExpressionPtr getDefaultDestructor(const string& recordName) const {
+			return getDefaultDestructor(stringValue(recordName));
+		}
 
 		NamedValuePtr namedValue(const string& name, const ExpressionPtr& value) const;
 

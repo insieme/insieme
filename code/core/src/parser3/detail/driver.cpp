@@ -980,7 +980,27 @@ namespace parser3 {
 					type = transform::replaceAllGen(mgr, type, tag_variables);
 
 					if (auto tagType = type.isa<TagTypePtr>()) {
-						type_defs.push_back(builder.tagTypeBinding(builder.tagTypeReference(name), tagType->getRecord()));
+
+						// fix tag type name
+						auto record = tagType->getRecord();
+						auto oldTagType = builder.tagTypeReference(record->getName());
+						auto newTagType = builder.tagTypeReference(name);
+						record = transform::replaceAllGen(builder.getNodeManager(), record, oldTagType, newTagType, [&](const NodePtr& cur) {
+							if (auto tt = cur.isa<TagTypePtr>()) {
+								if (tt.getTag() == oldTagType) {
+									return transform::ReplaceAction::Prune;
+								}
+							}
+							if (auto def = cur.isa<TagTypeDefinitionPtr>()) {
+								if (def.getDefinitionOf(oldTagType)) {
+									return transform::ReplaceAction::Prune;
+								}
+							}
+							return transform::ReplaceAction::Process;
+						});
+
+						// build up new definition
+						type_defs.push_back(builder.tagTypeBinding(builder.tagTypeReference(name), record));
 						names.push_back(name);
 					} else {
 						error(l, format("Only structs or unions supported in recursive type definitions, found: %s", *type));

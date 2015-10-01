@@ -413,13 +413,15 @@ namespace types {
 
 		auto type = builder.parseType("let t, s = struct : [ s ] { B b; ref<t> next; }, struct { A a; }; t").as<TagTypePtr>();
 
+		EXPECT_EQ(type->getStruct()->getParents()[0]->getType(), baseType);
+		EXPECT_EQ(type->peel()->getStruct()->getParents()[0]->getType(), baseType);
+
 		EXPECT_PRED2(isSubTypeOf, type, type);
 		EXPECT_PRED2(isSubTypeOf, type, type->peel());
 		EXPECT_PRED2(isSubTypeOf, type->peel(), type);
 
 		EXPECT_PRED2(isSubTypeOf, type, baseType);
 		EXPECT_PRED2(isSubTypeOf, type->peel(), baseType);
-
 
 		// also a mutual recursive type where one is the base of the other
 		auto typeA = builder.parseType("let t,s = struct : [s] { A a; ref<s> next; }, struct { B b; ref<t> next; }; t").as<TagTypePtr>();

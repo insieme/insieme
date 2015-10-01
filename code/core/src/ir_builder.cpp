@@ -383,33 +383,11 @@ namespace core {
 		return tagType(tag, tagTypeDefinition({tagTypeBinding(tag, structRecord(name, parents(parentsList), fields))}));
 	}
 
-	ExpressionPtr IRBuilderBaseModule::getDefaultDestructor() const {
-
-		// the annotation to cache the destructor in the node manager
-		struct DtorTag {
-			ExpressionPtr dtor;
-			bool operator==(const DtorTag& other) const {
-				return dtor == other.dtor;
-			}
-		};
-
-		// get the node this value is attached to
-		auto cacheNode = stringValue("dtor_cache");
-		if (cacheNode->hasAttachedValue<DtorTag>()) {
-			// use cached value
-			return cacheNode->getAttachedValue<DtorTag>().dtor;
-		}
-
+	ExpressionPtr IRBuilderBaseModule::getDefaultDestructor(const StringValuePtr& recordName) const {
 		// create default destructor
-		TypePtr thisType = refType(thisTagTypeReference());
+		TypePtr thisType = refType(tagTypeReference(recordName));
 		auto dtorType = functionType(toVector(thisType), thisType, FK_DESTRUCTOR);
-		auto dtor = normalize(lambdaExpr(dtorType, toVector(variable(refType(thisType))), getNoOp()));
-
-		// attach the value
-		cacheNode->attachValue((DtorTag) { dtor });
-
-		// done
-		return dtor;
+		return normalize(lambdaExpr(dtorType, toVector(variable(refType(thisType))), getNoOp()));
 	}
 
 	FieldPtr IRBuilderBaseModule::field(const string& name, const TypePtr& type) const {
