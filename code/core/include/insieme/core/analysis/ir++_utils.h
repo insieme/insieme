@@ -70,6 +70,14 @@ namespace analysis {
 
 	/**
 	 * A shortcut for the isObjectType function above obtaining the result
+	 * statically since any tag type is a valid object type.
+	 */
+	static inline bool isObjectType(const TagTypeReferencePtr& type) {
+		return true;
+	}
+
+	/**
+	 * A shortcut for the isObjectType function above obtaining the result
 	 * statically since any generic type is a valid object type.
 	 */
 	static inline bool isObjectType(const GenericTypePtr& type) {

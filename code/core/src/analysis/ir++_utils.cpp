@@ -91,6 +91,8 @@ namespace analysis {
 			// no built-in type is an object type
 			return !type->getNodeManager().getLangBasic().isPrimitive(type);
 		case NT_TagType:
+		case NT_TagTypeReference:
+		case NT_ThisTagTypeReference:
 		case NT_TypeVariable:  return true; // all this types are always object types
 		default: break;
 		}

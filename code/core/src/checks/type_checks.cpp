@@ -150,7 +150,7 @@ namespace checks {
 		while (true) {
 
 			// get next enclosing context
-			while(!context.isRoot() && !context.getParentNode().isa<ExpressionPtr>() && !context.isa<TagTypeDefinitionPtr>()) {
+			while(!context.isRoot() && !context.isa<TagTypeDefinitionPtr>()) {
 				context = context.getParentAddress();
 			}
 
@@ -168,7 +168,7 @@ namespace checks {
 
 			// in all other cases there is a free definition
 			add(res, Message(address, EC_TYPE_FREE_TAG_TYPE_REFERENCE,
-					 format("Free tag type reference %s found in %s", *address, *context),
+					 format("Free tag type reference %s found", *address),
 					 Message::ERROR)
 			);
 

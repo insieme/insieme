@@ -524,13 +524,13 @@ namespace core {
 		IRBuilder builder(manager);
 
 		// build a recursive function call
-		LambdaExprPtr lambda = builder.parseExpr("let int = int<4>; "
+		LambdaExprPtr lambda = builder.normalize(builder.parseExpr("let int = int<4>; "
 		                                         "let f = lambda (ref<int> x, int b)->unit {"
 		                                         "	if (b == 0) return;"
 		                                         "	x = x + b;"
 		                                         "	f(x,b-1);"
 		                                         "}; "
-		                                         " f ")
+		                                         " f "))
 		                           .as<LambdaExprPtr>();
 
 		ASSERT_TRUE(lambda);
@@ -544,14 +544,14 @@ namespace core {
 
 		// check whether something has changed
 		EXPECT_NE(lambda, fixed);
-		EXPECT_EQ("rec v3.{v3=fun(ref<int<4>,f,f,plain> v5) {if(int_eq(ref_deref(v5), 0)) {return unit;} else {}; ref_assign(global, int_add(ref_deref(global), ref_deref(v5))); v3(int_sub(ref_deref(v5), 1));}}",
+		EXPECT_EQ("rec v0.{v0=fun(ref<int<4>,f,f,plain> v2) {if(int_eq(ref_deref(v2), 0)) {return unit;} else {}; ref_assign(global, int_add(ref_deref(global), ref_deref(v2))); v0(int_sub(ref_deref(v2), 1));}}",
 		          toString(*fixed));
 		EXPECT_EQ("[]", toString(core::checks::check(fixed)));
 
 		// now, try fixing non-propagated parameter b
 		fixed = transform::tryFixParameter(manager, lambda, 1, builder.intLit(5));
 		EXPECT_NE(lambda, fixed);
-		EXPECT_EQ("rec v0.{v0=fun(ref<ref<int<4>,f,f,plain>,f,f,plain> v4) {if(int_eq(5, 0)) {return unit;} else {}; ref_assign(ref_deref(v4), int_add(ref_deref(ref_deref(v4)), 5)); rec v3.{v3=fun(ref<ref<int<4>,f,f,plain>,f,f,plain> v4, ref<int<4>,f,f,plain> v5) {if(int_eq(ref_deref(v5), 0)) {return unit;} else {}; ref_assign(ref_deref(v4), int_add(ref_deref(ref_deref(v4)), ref_deref(v5))); v3(ref_deref(v4), int_sub(ref_deref(v5), 1));}}(ref_deref(v4), int_sub(5, 1));}}",
+		EXPECT_EQ("rec v0.{v0=fun(ref<ref<int<4>,f,f,plain>,f,f,plain> v1) {if(int_eq(5, 0)) {return unit;} else {}; ref_assign(ref_deref(v1), int_add(ref_deref(ref_deref(v1)), 5)); rec v0.{v0=fun(ref<ref<int<4>,f,f,plain>,f,f,plain> v1, ref<int<4>,f,f,plain> v2) {if(int_eq(ref_deref(v2), 0)) {return unit;} else {}; ref_assign(ref_deref(v1), int_add(ref_deref(ref_deref(v1)), ref_deref(v2))); v0(ref_deref(v1), int_sub(ref_deref(v2), 1));}}(ref_deref(v1), int_sub(5, 1));}}",
 		          toString(*fixed));
 		EXPECT_EQ("[]", toString(core::checks::check(fixed)));
 	}

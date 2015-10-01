@@ -754,7 +754,7 @@ namespace core {
 	IR_NODE_END()
 
 	/**
-	 * A node type representing concrete type variables.
+	 * A node type representing concrete tag type reference.
 	 */
 	IR_NODE(TagTypeReference, Type)
 
@@ -767,6 +767,7 @@ namespace core {
 		}
 
 	  public:
+
 		/**
 		 * This static factory method allows to construct a tag type reference based on a string value (its identifier).
 		 *
@@ -790,6 +791,43 @@ namespace core {
 		static TagTypeReferencePtr get(NodeManager & manager, const string& name) {
 			return get(manager, StringValue::get(manager, name));
 		}
+	IR_NODE_END()
+
+
+	// ------------------------------------ This Tag Type Reference  ------------------------------
+
+	/**
+	 * The accessor associated to a this-tag-type reference, referencing the most closely nested reference.
+	 */
+	IR_NODE_ACCESSOR(ThisTagTypeReference, Type)
+		// no content
+	IR_NODE_END()
+
+	/**
+	 * A node type representing concrete this-tag-type reference.
+	 */
+	IR_NODE(ThisTagTypeReference, Type)
+
+	  protected:
+		/**
+		 * Prints a string representation of this node to the given output stream.
+		 */
+		virtual std::ostream& printTo(std::ostream & out) const {
+			return out << "^this";
+		}
+
+	  public:
+
+		/**
+		 * This static factory method allows to construct a this-tag-type reference based on a string value (its identifier).
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @return the requested type instance managed by the given manager
+		 */
+		static ThisTagTypeReferencePtr get(NodeManager & manager) {
+			return manager.get(ThisTagTypeReference());
+		}
+
 	IR_NODE_END()
 
 
@@ -1151,6 +1189,204 @@ namespace core {
 	IR_NODE_END()
 
 
+	// --------------------------------- Member Function ----------------------------
+
+	/**
+	 * The accessor associated to a member function. A member function is linking a name to
+	 * a member function expression. Member functions can be associated to records.
+	 */
+	IR_NODE_ACCESSOR(MemberFunction, Support, StringValue, BoolValue, Expression)
+
+		/**
+		 * Obtains the name of this member function.
+		 */
+		IR_NODE_PROPERTY(StringValue, Name, 0);
+
+		/**
+		 * Obtains the flag determining whether it is virtual.
+		 */
+		IR_NODE_PROPERTY(BoolValue, VirtualFlag, 1);
+
+		/**
+		 * Obtains the implementation of this member function.
+		 */
+		IR_NODE_PROPERTY(Expression, Implementation, 2);
+
+		/**
+		 * Obtains the name of this member function as a string.
+		 */
+		const std::string& getNameAsString() const {
+			return getName().getValue();
+		}
+
+		/**
+		 * Determines whether this member function is marked virtual or not.
+		 */
+		bool isVirtual() const {
+			return getVirtualFlag().getValue();
+		}
+
+	IR_NODE_END()
+
+	/**
+	 * The node type utilized to represent member functions.
+	 */
+	IR_NODE(MemberFunction, Support)
+	  protected:
+
+		/**
+		 * Prints a string representation of this node to the given output stream.
+		 */
+		virtual std::ostream& printTo(std::ostream & out) const {
+			return out << (isVirtual() ? "virtual " : "") << *getName() << ":" << *getImplementation();
+		}
+
+	  public:
+
+		/**
+		 * This static factory method allows to construct a new member function
+		 * based on the given ingredients.
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @param name the name of the member function
+		 * @param virtul the flag determining whether the member is virtual
+		 * @param impl the implementation of the member function
+		 * @return the requested member function instance managed by the given manager
+		 */
+		static MemberFunctionPtr get(NodeManager & manager, const StringValuePtr& name, const BoolValuePtr& virtul, const ExpressionPtr& impl) {
+			return manager.get(MemberFunction(name, virtul, impl));
+		}
+
+	IR_NODE_END()
+
+	/**
+	 * The accessor associated to a list of member functions.
+	 */
+	IR_LIST_NODE_ACCESSOR(MemberFunctions, Support, Members, MemberFunction)
+	IR_NODE_END()
+
+	/**
+	 * A node type representing a list of member functions.
+	 */
+	IR_NODE(MemberFunctions, Support)
+	  protected:
+
+		/**
+		 * Prints a string representation of this node to the given output stream.
+		 */
+		virtual std::ostream& printTo(std::ostream & out) const {
+			return out << "[" << join(",", getChildList(), print<deref<NodePtr>>()) << "]";
+		}
+
+	  public:
+
+		/**
+		 * This static factory method allows to construct a member function list based
+		 * on a given list of member functions.
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @param members the members to be included within the resulting member function list
+		 * @return the requested member function list instance managed by the given manager
+		 */
+		static MemberFunctionsPtr get(NodeManager & manager, const MemberFunctionList& fields = MemberFunctionList()) {
+			return manager.get(MemberFunctions(convertList(fields)));
+		}
+
+	IR_NODE_END()
+
+
+	// ------------------------------ Pure Virtual Member Function ----------------------------
+
+	/**
+	 * The accessor associated to pure virtual member functions. A pure virtual member function is linking a name to
+	 * function type. Pure virtual member functions can be associated to records.
+	 */
+	IR_NODE_ACCESSOR(PureVirtualMemberFunction, Support, StringValue, FunctionType)
+
+		/**
+		 * Obtains the name of this member function.
+		 */
+		IR_NODE_PROPERTY(StringValue, Name, 0);
+
+		/**
+		 * Obtains the type of this pure virtual member function.
+		 */
+		IR_NODE_PROPERTY(FunctionType, Type, 2);
+
+		/**
+		 * Obtains the name of this member function as a string.
+		 */
+		const std::string& getNameAsString() const {
+			return getName().getValue();
+		}
+
+	IR_NODE_END()
+
+	/**
+	 * The node type utilized to represent pure virtual member functions.
+	 */
+	IR_NODE(PureVirtualMemberFunction, Support)
+	  protected:
+
+		/**
+		 * Prints a string representation of this node to the given output stream.
+		 */
+		virtual std::ostream& printTo(std::ostream & out) const {
+			return out << "pure virtual " << *getName() << ":" << *getType();
+		}
+
+	  public:
+
+		/**
+		 * This static factory method allows to construct a new member function
+		 * based on the given ingredients.
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @param name the name of the pure virtual member function
+		 * @param type the type of the pure virtual member function
+		 * @return the requested pure virtual member function instance managed by the given manager
+		 */
+		static PureVirtualMemberFunctionPtr get(NodeManager & manager, const StringValuePtr& name, const FunctionTypePtr& type) {
+			return manager.get(PureVirtualMemberFunction(name, type));
+		}
+
+	IR_NODE_END()
+
+	/**
+	 * The accessor associated to a list of pure virtual member functions.
+	 */
+	IR_LIST_NODE_ACCESSOR(PureVirtualMemberFunctions, Support, Members, PureVirtualMemberFunction)
+	IR_NODE_END()
+
+	/**
+	 * A node type representing a list of pure virtual member functions.
+	 */
+	IR_NODE(PureVirtualMemberFunctions, Support)
+	  protected:
+
+		/**
+		 * Prints a string representation of this node to the given output stream.
+		 */
+		virtual std::ostream& printTo(std::ostream & out) const {
+			return out << "[" << join(",", getChildList(), print<deref<NodePtr>>()) << "]";
+		}
+
+	  public:
+
+		/**
+		 * This static factory method allows to construct a member function list based
+		 * on a given list of member functions.
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @param members the members to be included within the resulting member function list
+		 * @return the requested member function list instance managed by the given manager
+		 */
+		static PureVirtualMemberFunctionsPtr get(NodeManager & manager, const PureVirtualMemberFunctionList& fields = PureVirtualMemberFunctionList()) {
+			return manager.get(PureVirtualMemberFunctions(convertList(fields)));
+		}
+
+	IR_NODE_END()
+
 	// --------------------------------- Records ----------------------------
 
 	/**
@@ -1169,6 +1405,26 @@ namespace core {
 		 * Obtains the list of fields contributing to this record type.
 		 */
 		IR_NODE_PROPERTY(Fields, Fields, 1);
+
+		/**
+		 * Obtains the list of all constructors defined for this record type.
+		 */
+		IR_NODE_PROPERTY(Expressions, Constructors, 2);
+
+		/**
+		 * Obtains a reference to the destructor defined for this record type.
+		 */
+		IR_NODE_PROPERTY(Expression, Destructor, 3);
+
+		/**
+		 * Obtains the list of all member functions fined for this record type.
+		 */
+		IR_NODE_PROPERTY(MemberFunctions, MemberFunctions, 4);
+
+		/**
+		 * Obtains the list of all pure virtual member functions fined for this record type.
+		 */
+		IR_NODE_PROPERTY(PureVirtualMemberFunctions, PureVirtualMemberFunctions, 5);
 
 		/**
 		 * Retrieves the field with the given name within this
@@ -1218,7 +1474,7 @@ namespace core {
 	/**
 	 * A node type used to represent a common base-class for structs and unions.
 	 */
-	class Record : public Support, public AbstractFixedSizeNodeHelper<Record,StringValue,Fields> {
+	class Record : public Support, public AbstractFixedSizeNodeHelper<Record,StringValue,Fields,Expressions,Expression,MemberFunctions,PureVirtualMemberFunctions> {
 	  protected:
 		/**
 		 * A constructor creating a new instance of this type based on a given child-node list.
@@ -1242,7 +1498,7 @@ namespace core {
 
 
 	#define IR_RECORD_ACCESSOR(NAME, ...)                                                                                                                  \
-		IR_NODE_ACCESSOR(NAME, Record, StringValue, Fields, ##__VA_ARGS__)
+		IR_NODE_ACCESSOR(NAME, Record, StringValue, Fields, Expressions, Expression, MemberFunctions, PureVirtualMemberFunctions, ##__VA_ARGS__)
 
 
 	// --------------------------------- Struct ----------------------------
@@ -1255,7 +1511,7 @@ namespace core {
 		/**
 		 * Obtains the list of parent classes associated to this struct.
 		 */
-		IR_NODE_PROPERTY(Parents, Parents, 2);
+		IR_NODE_PROPERTY(Parents, Parents, 6);
 
 	IR_NODE_END();
 
@@ -1283,11 +1539,16 @@ namespace core {
 		 * @param name the name of the resulting struct
 		 * @param parents the list of parent types to be referenced by the resulting struct
 		 * @param fields the list of fields the resulting struct should consist of
+		 * @param ctors the list of constructors for this struct
+		 * @param dtor the destructor for this struct
+		 * @param mfuns the list of member functions associated to this struct
+		 * @param pvmfuns the list of pure virtual member functions of this struct
 		 * @return a pointer to a instance of the requested type. Multiple requests using
 		 * 		   the same parameters will lead to pointers addressing the same instance.
 		 */
-		static StructPtr get(NodeManager & manager, const StringValuePtr& name, const ParentsPtr& parents, const FieldsPtr& fields) {
-			return manager.get(Struct(name, fields, parents));
+		static StructPtr get(NodeManager & manager, const StringValuePtr& name, const ParentsPtr& parents, const FieldsPtr& fields,
+				const ExpressionsPtr& ctors, const ExpressionPtr& dtor, const MemberFunctionsPtr& mfuns, const PureVirtualMemberFunctionsPtr& pvfuns) {
+			return manager.get(Struct(name, fields, ctors, dtor, mfuns, pvfuns, parents));
 		}
 
 		/**
@@ -1302,8 +1563,22 @@ namespace core {
 		 * @return a pointer to a instance of the requested type. Multiple requests using
 		 * 		   the same parameters will lead to pointers addressing the same instance.
 		 */
+		static StructPtr get(NodeManager & manager, const StringValuePtr& name, const ParentsPtr& parents, const FieldsPtr& fields);
+
+		/**
+		 * A factory method allowing to obtain a pointer to a struct representing
+		 * an instance managed by the given manager.
+		 *
+		 * @param manager the manager which should be responsible for maintaining the new
+		 * 				  type instance and all its referenced elements.
+		 * @param name the name of the resulting struct
+		 * @param parents the list of parent types to be referenced by the resulting struct
+		 * @param fields the list of fields the resulting struct should consist of
+		 * @return a pointer to a instance of the requested type. Multiple requests using
+		 * 		   the same parameters will lead to pointers addressing the same instance.
+		 */
 		static StructPtr get(NodeManager & manager, const StringValuePtr& name, const ParentsPtr& parents, const vector<FieldPtr>& fields = vector<FieldPtr>()) {
-			return manager.get(Struct(name, Fields::get(manager, fields), parents));
+			return get(manager, name, parents, Fields::get(manager, fields));
 		}
 
 		/**
@@ -1375,6 +1650,40 @@ namespace core {
 		}
 
 	  public:
+
+		/**
+		 * A factory method allowing to obtain a pointer to a union representing
+		 * an instance managed by the given manager.
+		 *
+		 * @param manager the manager which should be responsible for maintaining the new
+		 * 				  type instance and all its referenced elements.
+		 * @param name the name of the resulting union
+		 * @param fields the list of fields the resulting union should consist of
+		 * @param ctors the list of constructors for this union
+		 * @param dtor the destructor for this union
+		 * @param mfuns the list of member functions associated to this union
+		 * @param pvmfuns the list of pure virtual member functions of this union
+		 * @return a pointer to a instance of the requested type. Multiple requests using
+		 * 		   the same parameters will lead to pointers addressing the same instance.
+		 */
+		static UnionPtr get(NodeManager & manager, const StringValuePtr& name, const FieldsPtr& fields, const ExpressionsPtr& ctors,
+				const ExpressionPtr& dtor, const MemberFunctionsPtr& mfuns, const PureVirtualMemberFunctionsPtr& pvfuns) {
+			return manager.get(Union(name, fields, ctors, dtor, mfuns, pvfuns));
+		}
+
+		/**
+		 * A factory method allowing to obtain a pointer to a union representing
+		 * an instance managed by the given manager.
+		 *
+		 * @param manager the manager which should be responsible for maintaining the new
+		 * 				  type instance and all its referenced elements.
+		 * @param the name given to the union
+		 * @param fields the list of fields the new union should consist of
+		 * @return a pointer to a instance of the requested record. Multiple requests using
+		 * 		   the same parameters will lead to pointers addressing the same instance.
+		 */
+		static UnionPtr get(NodeManager & manager, const StringValuePtr& name, const FieldsPtr& fields);
+
 		/**
 		 * A factory method allowing to obtain a pointer to a union representing
 		 * an instance managed by the given manager.
@@ -1387,7 +1696,7 @@ namespace core {
 		 * 		   the same parameters will lead to pointers addressing the same instance.
 		 */
 		static UnionPtr get(NodeManager & manager, const StringValuePtr& name, const vector<FieldPtr>& fields) {
-			return manager.get(Union(name, Fields::get(manager, fields)));
+			return get(manager, name, Fields::get(manager, fields));
 		}
 
 		/**

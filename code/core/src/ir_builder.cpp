@@ -341,7 +341,7 @@ namespace core {
 	}
 
 	TagTypePtr IRBuilderBaseModule::unionType(const StringValuePtr& name, const vector<FieldPtr>& fields) const {
-		auto tag = tagTypeReference(name->getValue());
+		auto tag = tagTypeReference(name);
 		return tagType(tag, tagTypeDefinition({tagTypeBinding(tag, unionRecord(name, fields))}));
 	}
 
@@ -379,10 +379,38 @@ namespace core {
 	}
 
 	TagTypePtr IRBuilderBaseModule::structType(const StringValuePtr& name, const vector<ParentPtr>& parentsList, const vector<FieldPtr>& fields) const {
-		auto tag = tagTypeReference(name->getValue());
+		auto tag = tagTypeReference(name);
 		return tagType(tag, tagTypeDefinition({tagTypeBinding(tag, structRecord(name, parents(parentsList), fields))}));
 	}
 
+	ExpressionPtr IRBuilderBaseModule::getDefaultDestructor() const {
+
+		// the annotation to cache the destructor in the node manager
+		struct DtorTag {
+			ExpressionPtr dtor;
+			bool operator==(const DtorTag& other) const {
+				return dtor == other.dtor;
+			}
+		};
+
+		// get the node this value is attached to
+		auto cacheNode = stringValue("dtor_cache");
+		if (cacheNode->hasAttachedValue<DtorTag>()) {
+			// use cached value
+			return cacheNode->getAttachedValue<DtorTag>().dtor;
+		}
+
+		// create default destructor
+		TypePtr thisType = refType(thisTagTypeReference());
+		auto dtorType = functionType(toVector(thisType), thisType, FK_DESTRUCTOR);
+		auto dtor = normalize(lambdaExpr(dtorType, toVector(variable(refType(thisType))), getNoOp()));
+
+		// attach the value
+		cacheNode->attachValue((DtorTag) { dtor });
+
+		// done
+		return dtor;
+	}
 
 	FieldPtr IRBuilderBaseModule::field(const string& name, const TypePtr& type) const {
 		return field(stringValue(name), type);
