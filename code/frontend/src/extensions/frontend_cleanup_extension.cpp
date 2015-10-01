@@ -98,22 +98,16 @@ namespace extensions {
 					auto lambdaExp = eP.as<LambdaExprPtr>();
 					auto funType = lambdaExp->getFunctionType();
 					if(basic.isInt(funType->getReturnType())) {
-						icp::TreePattern compoundPattern = icp::outermost(icp::var("compound", irp::compoundStmt(icp::anyList)));
+						auto compound = LambdaExprAddress(lambdaExp)->getBody();
 
-						auto optCompoundMatch = compoundPattern.matchAddress(LambdaExprAddress(lambdaExp));
-						if(optCompoundMatch) {
-							icp::AddressMatch compoundMatch = optCompoundMatch.get();
-							auto compound = compoundMatch.getVarBinding("compound").getFlattened()[0].as<CompoundStmtAddress>();
-
-							icp::TreePattern compoundPattern =
-								irp::compoundStmt(icp::empty | icp::single(!irp::returnStmt(icp::any)) | (icp::anyList << !irp::returnStmt(icp::any)));
-							if(compoundPattern.match(compound)) {
-								// outermost compound does not contain return, add it
-								auto newRoot = core::transform::append(mgr, compound, toVector<core::StatementPtr>(build.returnStmt(build.intLit(0))))
-									               .as<core::ExpressionPtr>();
-								prog = Program::remEntryPoint(mgr, prog, eP);
-								prog = Program::addEntryPoint(mgr, prog, newRoot);
-							}
+						icp::TreePattern compoundPattern =
+							irp::compoundStmt(icp::empty | icp::single(!irp::returnStmt(icp::any)) | (icp::anyList << !irp::returnStmt(icp::any)));
+						if(compoundPattern.match(compound)) {
+							// outermost compound does not contain return, add it
+							auto newRoot = core::transform::append(mgr, compound, toVector<core::StatementPtr>(build.returnStmt(build.intLit(0))))
+											   .as<core::ExpressionPtr>();
+							prog = Program::remEntryPoint(mgr, prog, eP);
+							prog = Program::addEntryPoint(mgr, prog, newRoot);
 						}
 					}
 				}

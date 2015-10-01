@@ -85,6 +85,8 @@ const string& getAttachedName(const NodePtr& node) {
 }
 
 void attachName(const NodePtr& node, const string& name) {
+//	assert_false(name.empty()) << "Annotated name must not be empty!";
+	if (name.empty()) std::cerr << "WARNING: Annotated empty name!! -- TODO: fix this and re-enable assertion\n";
 	node->attachValue(NameTag(name));
 }
 
