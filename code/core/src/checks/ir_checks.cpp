@@ -373,7 +373,7 @@ namespace checks {
 
 	MessageList check(const NodePtr& node, const CheckPtr& check) {
 		// check node for null
-		if(!node) { return MessageList(Message(NodeAddress(node), EC_STRUCTURE_NULL_NODE, "Checking Null node!", Message::WARNING)); }
+		if(!node) { return MessageList(Message(NodeAddress(), EC_STRUCTURE_NULL_NODE, "Checking Null node!", Message::WARNING)); }
 
 		// collect messages ..
 		auto res = check->visit(NodeAddress(node));
