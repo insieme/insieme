@@ -138,6 +138,7 @@ blank   [ \t]
 "function"  return inspire_parser::make_FUNCTION(loc);
 "lambda"    return inspire_parser::make_LAMBDA(loc);
 "ctor"      return inspire_parser::make_CTOR(loc);
+"type"      return inspire_parser::make_TYPE(loc);
 "method"    return inspire_parser::make_METHOD(loc);
 "expr"      return inspire_parser::make_EXPR(loc);
 "recFunc"   return inspire_parser::make_RECFUNC(loc);

@@ -148,17 +148,14 @@
   PARENT        "as"
   CAST          "CAST"
   INFINITE      "#inf"
-  LET           "let"
-  IN            "in"  
   USING         "using"    
   AUTO          "auto"
   FUNCTION      "function"
   LAMBDA        "lambda"
   CTOR          "ctor"    
   METHOD        "method"    
-  EXPR          "expr"    
-  RECFUNC       "recFunc"
-
+  TYPE			"type"
+  
   IF            "if"      
   ELSE          "else"    
   FOR           "for"     
@@ -174,10 +171,6 @@
   CONTINUE      "continue"  
   BREAK         "break"  
   
-  VAR           "var"
-  NEW           "new"
-  LOC           "loc"
-  DELETE        "delete"
   UNDEFINED     "undefined"
 
   TRUE          "true"  
@@ -269,7 +262,7 @@
 %type <CallExprPtr>					   call
 %type <LambdaExprPtr>                  lambda
 %type <BindExprPtr>                    bind
-%type <ExpressionPtr>                  reference_expression parallel_expression list_expression initializer unary_op binary_op ternary_op
+%type <ExpressionPtr>                  undefined_expression parallel_expression list_expression initializer unary_op binary_op ternary_op
 
 %type <VariablePtr>					   parameter
 %type <VariableList>				   parameters non_empty_parameters
@@ -515,7 +508,7 @@ plain_expression : variable                                             { $$ = $
 				 | call                                                 { $$ = $1; }
 				 | lambda                                               { $$ = $1; }
 				 | bind                                                 { $$ = $1; }
-				 | reference_expression                                 { $$ = $1; }
+				 | undefined_expression                                 { $$ = $1; }
 				 | parallel_expression                                  { $$ = $1; }
 				 | list_expression                                      { $$ = $1; }
 				 | initializer                                          { $$ = $1; }
@@ -524,7 +517,7 @@ plain_expression : variable                                             { $$ = $
 				 | ternary_op                                           { $$ = $1; }
 				 ;
 
-
+				 
 // -- variable --
 
 variable : "identifier"													{ $$ = VariablePtr(); } 
@@ -557,7 +550,8 @@ call : expression "(" expressions ")"									{ $$ = driver.builder.callExpr($1,
 
 // -- lambda --
 
-lambda : "(" parameters ")" "->" type compound_statement			    { $$ = LambdaExprPtr(); } 
+lambda : "(" ")" "->" type compound_statement							{ $$ = LambdaExprPtr(); }
+	   | "(" non_empty_parameters ")" "->" type compound_statement		{ $$ = LambdaExprPtr(); } 
 	   ;
 
 parameters : non_empty_parameters										{ $$ = $1; }
@@ -574,21 +568,20 @@ parameter : type "identifier"											{ $$ = VariablePtr(); }
 
 // -- bind --
 
-bind : "(" parameters ")" "=>" expression								{ $$ = BindExprPtr(); } 
+bind : "(" ")" "=>" expression											{ $$ = BindExprPtr(); }
+     | "(" non_empty_parameters ")" "=>" expression						{ $$ = BindExprPtr(); } 
 	 ;
 
 
 // -- reference expressions --
 
-reference_expression : "var" "(" expression ")"			               { $$ = ExpressionPtr(); }
-					 | "new" "(" expression ")"                        { $$ = ExpressionPtr(); }
-					 | "delete" "(" expression ")"                     { $$ = ExpressionPtr(); }
-					 | "undefined" "(" type ")"                        { $$ = ExpressionPtr(); }
+undefined_expression : "undefined" "(" type ")"                        { $$ = ExpressionPtr(); }
 					 ;
 					 
 // -- parallel expressions --
 
-parallel_expression : "job" "(" expression ")"      	               { $$ = ExpressionPtr(); }
+parallel_expression : "job" "[" expression "-" expression "]" "=>" expression        { $$ = ExpressionPtr(); }
+					| "job" "[" "]" "=>" expression         		   { $$ = ExpressionPtr(); }
 					| "spawn" expression                               { $$ = ExpressionPtr(); }
 					| "sync" expression                                { $$ = ExpressionPtr(); }
 					| "sync_all"                                       { $$ = ExpressionPtr(); }
@@ -602,17 +595,18 @@ list_expression : "[" non_empty_expressions "]"     	               { $$ = Expre
 
 // -- initializer --
 
-initializer : "(" object_type ")" "{" expressions "}"   	                   { $$ = ExpressionPtr(); }
-		    | "(" expressions ")"                                      { $$ = ExpressionPtr(); }
+initializer : "(" type ")" "{" expressions "}"   	           		   { $$ = ExpressionPtr(); }  
+			| "(" ")"												   { $$ = ExpressionPtr(); }
+		    | "(" non_empty_expressions ")"                            { $$ = ExpressionPtr(); }   
 			;                                                          
                                                                        
 unary_op : "-" expression                                              { $$ = ExpressionPtr(); }    %prec UMINUS
 	     | "*" expression                                              { $$ = ExpressionPtr(); }  	%prec UDEREF
 		 | "!" expression                                              { $$ = ExpressionPtr(); }    %prec UNOT
-		 | "++" expression                                             { $$ = ExpressionPtr(); }    %prec PRE_INC
-		 | "--" expression                                             { $$ = ExpressionPtr(); }    %prec PRE_DEC
-		 | expression "++"                                             { $$ = ExpressionPtr(); }    %prec POST_INC
-		 | expression "--"                                             { $$ = ExpressionPtr(); }    %prec POST_DEC
+//		 | "++" expression                                             { $$ = ExpressionPtr(); }    %prec PRE_INC
+//		 | "--" expression                                             { $$ = ExpressionPtr(); }    %prec PRE_DEC
+//		 | expression "++"                                             { $$ = ExpressionPtr(); }    %prec POST_INC
+//		 | expression "--"                                             { $$ = ExpressionPtr(); }    %prec POST_DEC
 		 | expression "." "identifier"                                 { $$ = ExpressionPtr(); }    
 		 | expression "." "int"                                        { $$ = ExpressionPtr(); }    
 		 | expression "->" "identifier"                                { $$ = ExpressionPtr(); }    
@@ -739,6 +733,7 @@ return : "return" expression ";"			                         { $$ = ReturnStmtPtr
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Precedence list ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // the lowest in list, the highest precedence
+
 
 %nonassoc "::" ;
 %left ":";
