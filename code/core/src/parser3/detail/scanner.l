@@ -34,13 +34,13 @@
 
 id       [a-zA-Z_][a-zA-Z0-9_]*
 type_var [\'][a-zA-Z0-9_]*
+tag_ref  [\^][a-zA-Z0-9_]*
 
-/* Note: the original stringlit regex was: \"(\\.|[^"])*\"
+/* Note: the original string regex was: \"(\\.|[^"])*\"
  * We had to create an alternative one which puts the strin in double quotes on each side, in order to enable the parsing of
  * string literals (which are real strings - not real values or so) and also pass on the enclosing quotes to the builder.
  */
-stringlit \"(\\.|[^"])*\"|\"(\"(\\.|[^"])*\")\"
-charlit   \'(\\.|[^"])\'
+string \"(\\.|[^"])*\"|\"(\"(\\.|[^"])*\")\"
 float   [0-9]+"."[0-9]+f
 double  [0-9]+"."[0-9]+
 ulong   [0-9]+ul
@@ -128,15 +128,15 @@ blank   [ \t]
 "."      return inspire_parser::make_DOT(loc);
 "$"      return inspire_parser::make_ADDRESS(loc);
 
-"CAST("     return inspire_parser::make_CAST(loc);
-".as("      return inspire_parser::make_PARENT(loc);
+"CAST"     return inspire_parser::make_CAST(loc);
+"as"      return inspire_parser::make_PARENT(loc);
 "#inf"      return inspire_parser::make_INFINITE(loc);
 "let"       return inspire_parser::make_LET(loc);
 "in"        return inspire_parser::make_IN(loc);
 "using"     return inspire_parser::make_USING(loc);
 "auto"      return inspire_parser::make_AUTO(loc);
-"lambda"    return inspire_parser::make_LAMBDA(loc);
 "function"  return inspire_parser::make_FUNCTION(loc);
+"lambda"    return inspire_parser::make_LAMBDA(loc);
 "ctor"      return inspire_parser::make_CTOR(loc);
 "method"    return inspire_parser::make_METHOD(loc);
 "expr"      return inspire_parser::make_EXPR(loc);
@@ -163,10 +163,6 @@ blank   [ \t]
 "delete"     return inspire_parser::make_DELETE(loc);
 "undefined"  return inspire_parser::make_UNDEFINED(loc);
 
-"type_lit("    return inspire_parser::make_TYPE_LITERAL(loc);
-"lit("     return inspire_parser::make_LITERAL(loc);
-"param("   return inspire_parser::make_PARAM(loc);
-
 "true"    return inspire_parser::make_BOOL(yytext, loc);
 "false"   return inspire_parser::make_BOOL(yytext, loc);
 "struct"  return inspire_parser::make_STRUCT(loc);
@@ -184,12 +180,9 @@ blank   [ \t]
 "job"     return inspire_parser::make_JOB(loc);
 "task"     return inspire_parser::make_TASK(loc);
 
-{stringlit}      {
+{string}      {
     std::string tmp(yytext);
     return inspire_parser::make_STRING(tmp, loc);
-}
-{charlit}      {
-  return inspire_parser::make_CHAR(yytext, loc);
 }
 {int}      {
   return inspire_parser::make_INT(yytext, loc);
@@ -218,6 +211,7 @@ blank   [ \t]
 
 {id}       return inspire_parser::make_IDENTIFIER(yytext, loc);
 {type_var}       return inspire_parser::make_TYPE_VAR(yytext+1, loc);
+{tag_ref}        return inspire_parser::make_TAG_REF(yytext+1, loc);
 .          driver.error (loc, "invalid character");
 <<EOF>>    return inspire_parser::make_END(loc);
 

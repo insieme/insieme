@@ -104,16 +104,16 @@
   STAR    "*"
   SLASH   "/"
   PERCENT "%"
-  HASH "#"
+  HASH 	  "#"
 
-  LPAREN  "("
-  RPAREN  ")"
+  LPAREN       "("
+  RPAREN       ")"
   LCURBRACKET  "{"
   RCURBRACKET  "}"
-  LBRACKET  "["
-  RBRACKET  "]"
-  DQUOTE  "\""
-  QUOTE  "\'"
+  LBRACKET     "["
+  RBRACKET     "]"
+  DQUOTE       "\""
+  QUOTE  	   "\'"
 
   LT        "<"     
   GT        ">"     
@@ -130,10 +130,10 @@
   LOR       "||"
   LNOT      "!"
                                          
-  QMARK   "?"
-  COLON   ":"
-  NAMESPACE "::"
-  FUNNY_BOY "~"
+  QMARK      "?"
+  COLON      ":"
+  NAMESPACE  "::"
+  FUNNY_BOY  "~"
 
   ARROW   "->"
   DARROW  "=>"
@@ -145,15 +145,15 @@
   DOT     "."
   ADDRESS "$"
   
-  PARENT        ".as("
-  CAST          "CAST("
+  PARENT        "as"
+  CAST          "CAST"
   INFINITE      "#inf"
   LET           "let"
   IN            "in"  
   USING         "using"    
-  AUTO          "auto"    
-  LAMBDA        "lambda"
+  AUTO          "auto"
   FUNCTION      "function"
+  LAMBDA        "lambda"
   CTOR          "ctor"    
   METHOD        "method"    
   EXPR          "expr"    
@@ -179,10 +179,6 @@
   LOC           "loc"
   DELETE        "delete"
   UNDEFINED     "undefined"
-
-  TYPE_LITERAL  "type_lit("
-  LITERAL       "lit("
-  PARAM         "param("
 
   TRUE          "true"  
   FALSE         "false"  
@@ -212,51 +208,87 @@
 
 
     /* Literals */
-%token <std::string> STRING "stringlit"
-%token <std::string> CHAR "charlit"
-%token <std::string> IDENTIFIER "identifier"
-%token <std::string> TYPE_VAR   "type_var"
-%token <std::string> BOOL "bool"
-%token <std::string> INT "int"
-%token <std::string> UINT "uint"
-%token <std::string> LONG "long"
-%token <std::string> ULONG "ulong"
-%token <std::string> LONGLONG "longlong"
-%token <std::string> ULONGLONG "ulonglong"
-%token <std::string> FLOAT "float"
-%token <std::string> DOUBLE "double"
+%token <std::string> STRING 			"string"
+%token <std::string> IDENTIFIER 		"identifier"
+%token <std::string> TYPE_VAR   		"type_var"
+%token <std::string> TAG_REF   			"tag_ref"
+%token <std::string> BOOL 				"bool"
+%token <std::string> INT 				"int"
+%token <std::string> UINT 				"uint"
+%token <std::string> LONG 				"long"
+%token <std::string> ULONG 				"ulong"
+%token <std::string> LONGLONG 			"longlong"
+%token <std::string> ULONGLONG 			"ulonglong"
+%token <std::string> FLOAT 				"float"
+%token <std::string> DOUBLE 			"double"
 
 %type  <std::string> "Number" 
 %type  <std::string> "indentifier" 
 
-%type <NodePtr> start_rule
-%type <ProgramPtr> program
+%type <NodeList> top_level
 
-%type <StatementPtr> statement decl_stmt compound_stmt markable_compound_stmt statement_aux 
-%type <StatementList>  statement_list
-%type <For_decl> for_decl
-%type <VariablePtr> var_decl
-%type <VariableList> variable_list  variable_list_aux
-%type <SwitchCasePtr> switch_case
-%type <std::vector<SwitchCasePtr> > switch_case_list
-%type <std::vector<CatchClausePtr> > catch_clause_list
+%type <TypePtr>                        type
+%type <TypeList>                       types non_empty_types abstract_param_list
+%type <ExpressionPtr>                  expression plain_expression
+%type <ExpressionList>                 expressions non_empty_expressions
+%type <StatementPtr>                   statement plain_statement
+%type <NodePtr>                        definition
+%type <NodeList>                       definitions
+                                       
+%type <NodePtr>                        record_definition
+%type <NodePtr>                        function_definition
+                                       
+%type <FieldPtr>		               field
+%type <FieldList>		               fields
+%type <LambdaExprPtr>	               constructor
+%type <LambdaExprList>	               constructors
+%type <LambdaExprPtr>	               destructor
+%type <MemberFunctionPtr>	           member_function
+%type <MemberFunctionList>	           member_functions
+%type <PureVirtualMemberFunctionPtr>   pure_virtual_member_function
+%type <PureVirtualMemberFunctionList>  pure_virtual_member_functions
 
-%type <ExpressionPtr> expression  lambda_expression markable_expression lambda_expression_aux fun_expression
-%type <ExpressionList> expression_list expression_list_non_empty
+%type <TypePtr>						   object_type
+%type <TypeVariablePtr>                type_variable
+%type <GenericTypePtr>                 abstract_type
+%type <FunctionTypePtr>                function_type pure_function_type closure_type constructor_type destructor_type member_function_type virtual_function_type
+%type <NumericTypePtr>                 numeric_type
+%type <TupleTypePtr>                   tuple_type
+%type <TagTypeReferencePtr>            tag_type_reference
 
-%type <Gen_type> type_param_list gen_type
-%type <TypePtr> type tuple_or_function  struct_type named_type just_name 
-%type <TypeList> type_list  type_list_aux
-%type <ParentList> parent_list
-%type <FunctionKind> func_tok
-%type <FunctionKind> member_func_tok
-%type <AccessSpecifier> accessSpecifiers
+%type <ParentPtr>					   parent
+%type <ParentList>					   parent_spec parents non_empty_parents
 
-%type <FieldList> member_list tag_def union_type 
+%type <AccessSpecifier>                access_specifier
+%type <NodeType>                       struct_or_union
+%type <bool>			               virtual_flag lambda_or_function
 
-%type <std::string> namespaced_type
 
-%type <std::vector<std::string>> string_list
+%type <VariablePtr>					   variable
+%type <LiteralPtr>					   literal
+%type <CallExprPtr>					   call
+%type <LambdaExprPtr>                  lambda
+%type <BindExprPtr>                    bind
+%type <ExpressionPtr>                  reference_expression parallel_expression list_expression initializer unary_op binary_op ternary_op
+
+%type <VariablePtr>					   parameter
+%type <VariableList>				   parameters non_empty_parameters
+
+
+%type<CompoundStmtPtr>                 compound_statement    
+%type<DeclarationStmtPtr>              variable_declaration  
+%type<IfStmtPtr>                       if_statement          
+%type<SwitchStmtPtr>                   switch_statement      
+%type<WhileStmtPtr>                    while_statement       
+%type<ForStmtPtr>                      for_statement         
+%type<BreakStmtPtr>                    break                 
+%type<ContinueStmtPtr>                 continue              
+%type<ReturnStmtPtr>                   return 
+		
+%type <StatementList>				   statement_list
+%type <SwitchCasePtr>				   switch_case
+%type <SwitchCaseList>				   switch_cases
+%type <StatementPtr>				   default_case
 
 %printer { yyoutput << $$; } <std::string>
 
@@ -264,596 +296,468 @@
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 %%
 
-/* ~~~~~~~~~~~~ Super rule, the lexer is prepared to return a spetial token and jump to the right rule ~~~~~~~~~~~~ */
 
-%start start_rule;
-start_rule : TYPE_ONLY declarations type             { RULE if(!driver.where_errors())  driver.result = $3; }
-           | STMT_ONLY statement                     { RULE if(!driver.where_errors())  driver.result = $2; }
-           | EXPRESSION_ONLY declarations expression { RULE if(!driver.where_errors())  driver.result = $3; }
-           | FULL_PROGRAM  declarations { RULE driver.open_scope(@$, "function"); }  program { RULE if(!driver.where_errors()) driver.result = $4; }
-           ;
+%start top_level;
 
-/* ~~~~~~~~~~~~~~~~~~~  LET ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-
-let_end : ";" | "in";
            
-let_defs : "lambda" lambda_expression let_end 
-         | "lambda" lambda_expression "," let_defs
-		 | "function" fun_expression let_end
-		 | "function" fun_expression "," let_defs
-         | "expr" expression let_end { RULE driver.add_let_expression(@1, $2); }
-         | "expr" expression "," let_defs { RULE driver.add_let_expression(@1, $2); }
-         | type let_end { RULE driver.add_let_type(@1, $1); }
-         | type "," { RULE driver.add_let_type(@1, $1); } let_defs
-         | "recFunc" "identifier" {} "{" lambdaBindList "}" let_end { RULE
-                driver.is_rec_func = 1;
-                driver.rec_call_func = $2;
-                }
-         ;
+//	-- top_level -------------------------------------
 
-let_decl : "identifier" { if(driver.let_count==1) driver.add_let_name(@1, $1); } "=" let_defs  { }
-         | "identifier" { if(driver.let_count==1) driver.add_let_name(@1, $1); } "," let_decl  { }
-         ;
 
-let_chain : let_decl { driver.close_let_statement(@$); } 
-          | let_decl { driver.close_let_statement(@$); } "let" { driver.let_count++; } let_chain { }
-          ;
+top_level : aliases declarations definitions { $$ = $3; };
+           
+top_level_seperator : ";" | ;
 
-string_list : "stringlit"  { RULE $$.push_back($1); }
-            | "stringlit" "," string_list { $3.insert($3.begin(), $1); std::swap($$, $3); }
-            ;
+aliases : alias top_level_seperator aliases 
+        | 
+		;
 
-declarations : /* empty */ { } 
-             | "let" { driver.let_count++; } let_chain { }
-             | "using" string_list { RULE driver.using_scope_handle(@$, $2); } ";" declarations 
-             ;
+alias : "alias" type "=" type 
+      ;
 
-lambdaBindList    : lambdaBind { }
-                  | lambdaBind lambdaBindList { }
-                  ;
+declarations : declaration top_level_seperator declarations
+			 | 															
+			 ;
 
-lambdaBind  : "identifier" "=" lambdaBind_aux { RULE driver.add_let_name(@1, $1); }
-            ;
+declaration : "decl" struct_or_union "identifier"
+			| "decl" "identifier" ":" type
+			| "decl" "identifier" "::" "identifier" ":" type
+			;
 
-lambdaBind_aux: "lambda" lambda_expression ";"
-              | "function" fun_expression ";"
 
-/* ~~~~~~~~~~~~~~~~~~~  PROGRAM ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+definitions : definition top_level_seperator definitions				{ $1.push_back($3); $$ = $1; } 
+			|															{ $$ = NodeList(); } 
+			;
 
-program : type "identifier" "(" variable_list markable_compound_stmt { RULE
-                             INSPIRE_GUARD(@1, $1); 
-                             auto main = driver.genLambda(@$,$4,$1,$5);
-                             annotations::attachName(main, $2);
-						     $$ = driver.builder.createProgram(toVector(main));
-                             driver.close_scope(@$, "function");
-                        }
-        ;
+definition : record_definition		 
+		   | function_definition 
+		   ;
 
 
-variable_list : ")" { }
-              | var_decl ")" { RULE $$.push_back($1); }
-              | var_decl "," variable_list_aux ")" {RULE  $3.insert($3.begin(), $1); std::swap($$, $3); } 
-              ;
+//	-- record_declarations -------------------------------------
 
-variable_list_aux : var_decl {  RULE $$.push_back($1); }
-                  | var_decl "," variable_list_aux { RULE $3.insert($3.begin(), $1); std::swap($$, $3); }
-                  ;
-
-/* ~~~~~~~~~~~~~~~~~~~  TYPES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-
-type_param_list : type       { RULE $$.typeParams.insert($$.typeParams.begin(), $1); }
-                | type "," type_param_list { RULE
-                        $3.typeParams.insert($3.typeParams.begin(), $1); 
-                        std::swap($$.typeParams, $3.typeParams);
-                    }
-                ;
-
-type_list_aux : type ")"           { RULE $$.insert($$.begin(), $1); }
-              | type "," type_list_aux { RULE $3.insert($3.begin(), $1); std::swap($$, $3); }
-              ;
-
-type_list : ")" { }
-          | type_list_aux { RULE std::swap($$, $1); }
-          ;
-
-accessSpecifiers : "private"    { RULE $$ = AS_PRIVATE; }
-                 | "public"     { RULE $$ = AS_PUBLIC; }
-                 | "protected"  { RULE $$ = AS_PROTECTED; }
-                 |              { RULE $$ = AS_PUBLIC; }
-                 ; 
-
-parent_list : accessSpecifiers named_type                 { RULE  $$.insert($$.begin(), driver.builder.parent(false, $1, $2));  }
-            | accessSpecifiers named_type "," parent_list { RULE  $4.insert($4.begin(), driver.builder.parent(false, $1, $2)); std::swap($$, $4); }
-            | "virtual" accessSpecifiers named_type                 { RULE  $$.insert($$.begin(), driver.builder.parent(true, $2, $3)); }
-            | "virtual" accessSpecifiers named_type "," parent_list { RULE  $5.insert($5.begin(), driver.builder.parent(true, $2, $3)); std::swap($$, $5); }
-            ;
-
-func_tok : "->" { RULE $$ = FK_PLAIN; }
-         | "=>" { RULE $$ = FK_CLOSURE; }
-         ;
-
-member_func_tok : "->" { RULE $$ = FK_MEMBER_FUNCTION; }
-                | "~>" { RULE $$ = FK_VIRTUAL_MEMBER_FUNCTION; }
-                ;
-
-member_list : "}" {}
-            | type "identifier" "}" { RULE $$.insert($$.begin(), driver.builder.field($2, $1)); }
-            | type "identifier" ";" member_list { RULE $4.insert($4.begin(), driver.builder.field($2, $1)); std::swap($$, $4); }
-            ;
-
-tag_def : "{" member_list   { std::swap($$, $2); }
-        ;
-
-                     /* tuple */
-tuple_or_function : type_list  { RULE 
-                            $$ = driver.builder.tupleType($1); 
-                        }
-                     /* function/closure type */
-                  | type_list func_tok type { RULE
-                            $$ = driver.genFuncType(@$, $1, $3, $2); 
-                            INSPIRE_GUARD(@$, $$);
-                        }
-                  ;
-
-gen_type : type_param_list ">" { RULE std::swap($$.typeParams, $1.typeParams); }
-         | ">"                 { }
-         ;
-
-union_type : tag_def   { RULE std::swap($$, $1); }
-           ;
-
-struct_type : tag_def              { RULE $$ = driver.builder.structType(driver.builder.stringValue(""), $1); }
-            | "identifier" tag_def { RULE $$ = driver.builder.structType(driver.builder.stringValue($1), $2); }
-            | "identifier" ":" "[" parent_list "]" tag_def { RULE 
-                        $$ = driver.builder.structType(driver.builder.stringValue($1), $4, $6); 
-                    }
-            | ":" "[" parent_list "]" tag_def { RULE 
-                        $$ = driver.builder.structType($3, $5); 
-                    }
-            ;
-
-
-type : "struct" struct_type { RULE $$ = $2; }
-     | "union"  union_type  { RULE $$ = driver.builder.unionType($2); }
-     | "#" "identifier" { RULE 
-    	 auto var = driver.findSymbol(@$, $2);
-    	 INSPIRE_MSG(@$, var, "undeclared variable");
-    	 INSPIRE_MSG(@$, var.isa<VariablePtr>(), "not a variable"); 
-    	 $$ = driver.genNumericType(@$, var); 
-       }
-     | "ctor" just_name "::" "(" type_list { RULE
-                            TypePtr classType = driver.builder.refType($2);
-                            TypePtr retType = classType;
-                            $5.insert($5.begin(), classType);
-                            $$ = driver.builder.functionType($5, retType, FK_CONSTRUCTOR);
-                       }
-     | "method" just_name "::" "(" type_list member_func_tok type { RULE
-                            TypePtr classType = driver.builder.refType($2);
-                            TypePtr retType = $7;
-                            $5.insert($5.begin(), classType);
-                            $$ = driver.builder.functionType($5, retType, $6);
-                       }
-     | "~" just_name "::" "(" ")" { RULE
-                            TypePtr classType = driver.builder.refType($2);
-                            $$ = driver.builder.functionType(toVector(classType), classType, FK_DESTRUCTOR);
-                       }
-     | "(" tuple_or_function { RULE $$ = $2; }
-     | named_type            { RULE $$ = driver.resolveTypeAliases(@$,$1); }  
-            /* job is a keyword for job expressions but it could also apear as type, */
-     | "job" { RULE $$ = driver.genGenericType(@$, "job", ParentList(), TypeList()); }
-     | "int" { RULE $$ = driver.genNumericType(@$, $1); }
-     ;
-
-just_name : "identifier" { RULE  $$ = driver.findType(@1, $1); 
-						   if (!$$) $$ = driver.genGenericType(@$, $1);
-                         }
-          | "type_var"   { RULE  $$ = driver.builder.typeVariable($1); }
-          ;
-
-namespaced_type : "identifier"  { RULE std::swap($$, $1); }
-                | "identifier" "::" namespaced_type  { RULE $$.append($1); $$.append("::"); $$.append($3); }
-                ;
-                
-named_type : "identifier" "<" gen_type { RULE $$ = driver.genGenericType(@$, $1, ParentList(), $3.typeParams); }
-           | "identifier" { RULE         
-                                  $$ = driver.findType(@1, $1);
-                                  if(!$$) $$ = driver.genGenericType(@$, $1, ParentList(), TypeList()); 
-                                  if(!$$) { driver.error(@$, format("undefined type %s", $1)); YYABORT; } 
-                          }
-           | "identifier" ":" "[" parent_list "]" { RULE
-                            $$ = driver.genGenericType(@$, $1, $4, TypeList());
-                        }
-           | "identifier" "<" gen_type ":" "[" parent_list "]" { RULE
-                            $$ = driver.genGenericType(@$, $1, $6, $3.typeParams);
-                         }
-           | "type_var"   { RULE $$ = driver.builder.typeVariable($1); }
-           | "type_lit(" type ")" { RULE $$ = $2; }
-           | "identifier" "::" namespaced_type { RULE
-                                    $1.append("::"); $1.append($3); 
-                                    $$ = driver.genGenericType(@$, $1, ParentList(), TypeList()); 
-                                }
-           | "identifier" "::" namespaced_type "<" gen_type { RULE
-                                    $1.append("::"); $1.append($3); 
-                                    $$ = driver.genGenericType(@$, $1, ParentList(), $5.typeParams); 
-                                }
-           ;
-
-/* ~~~~~~~~~~~~~~~~~~~  STATEMENTS  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-
-statement : statement_aux         { RULE INSPIRE_GUARD(@1, $1); $$ = $1; }
-          | "$" statement_aux "$" { RULE INSPIRE_GUARD(@2, $2); $$ = driver.mark_address(@2, $2); } 
-          ;
-
-statement_aux  : ";" { RULE $$ = driver.builder.getNoOp(); } 
-               | expression ";" { RULE $$ = $1; }
-               | "let" { driver.let_count++; } let_decl { driver.close_let_statement(@$); RULE $$ =  driver.builder.getNoOp(); }
-               | "using" string_list ";" { RULE driver.using_scope_handle(@$, $2); $$ = driver.builder.getNoOp(); }
-                     /* compound statement */ 
-               | { RULE driver.open_scope(@$, "compound"); } compound_stmt  {RULE  
-                                         driver.close_scope(@$, "compound_end"); $$ =$2; 
-                      }
-
-                     /* variable declarations */
-               | "decl" decl_stmt { RULE $$ = $2;  }
-
-                     /* if */
-               | "if" "(" expression ")" statement {  RULE $$ = driver.builder.ifStmt($3, $5); }
-               | "if" "(" expression ")" statement "else" statement { RULE $$ = driver.builder.ifStmt($3, $5, $7); }
-
-                     /* loops */
-               | "while" "(" expression ")" statement { RULE $$ = driver.builder.whileStmt($3, $5); }
-               | "for" { RULE driver.open_scope(@$, "forDecl"); } for_decl statement { RULE
-                     $$ = driver.builder.forStmt($3.it, $3.low, $3.up, $3.step, $4);
-                     driver.close_scope(@$, "for end");
-                 }
-                     /* switch */
-               | "switch" "(" expression ")" "{" switch_case_list "}" { RULE
-		             $$ = driver.builder.switchStmt(driver.getScalar($3), $6, driver.builder.getNoOp());
-                 }
-               | "switch" "(" expression ")" "{" switch_case_list "default" ":" statement "}" { RULE
-		             $$ = driver.builder.switchStmt(driver.getScalar($3), $6, $9);
-                 }
-                     /* exceptions */
-               | "try" statement "catch" catch_clause_list { RULE
-                     if(!$2.isa<CompoundStmtPtr>()) { driver.error(@2, "try body must be a compound"); YYABORT; }
-		             $$ = driver.builder.tryCatchStmt($2.as<CompoundStmtPtr>(), $4);
-                 }   
-                    /* end of control flow */
-               | "return" expression ";" { RULE $$ = driver.builder.returnStmt($2); }
-               | "return" ";" {  RULE $$ = driver.builder.returnStmt(driver.builder.getLangBasic().getUnitConstant()); }
-               | "continue" ";" { RULE $$ = driver.builder.continueStmt(); }
-               | "break" ";" { RULE $$ = driver.builder.breakStmt(); }
-               | "throw" expression ";" { RULE $$ = driver.builder.throwStmt($2); }
-               ;
-
-catch_clause_list : "catch" "(" ")" statement { RULE
-                            if(!$4.isa<CompoundStmtPtr>()) { driver.error(@4, "catch body must be a compound"); YYABORT; }
-                            $$.push_back(driver.builder.catchClause(VariablePtr(), $4.as<CompoundStmtPtr>())); 
-                    } 
-                  | "(" var_decl ")" statement {  RULE
-                            if(!$4.isa<CompoundStmtPtr>()) { driver.error(@4, "catch body must be a compound"); YYABORT; }
-                            $$.push_back(driver.builder.catchClause($2, $4.as<CompoundStmtPtr>())); 
-                    }
-                  | "(" var_decl ")" statement "catch" catch_clause_list{ RULE
-                            if(!$4.isa<CompoundStmtPtr>()) { driver.error(@4, "catch body must be a compound"); YYABORT; }
-                            $6.insert($6.begin(), driver.builder.catchClause($2, $4.as<CompoundStmtPtr>()));
-                            std::swap($$, $6);
-                    }
-                  ;
-
-decl_stmt : var_decl ";" {RULE
-                auto type = $1->getType();
-                ExpressionPtr value = driver.builder.undefinedVar(type);
-                $$ = driver.builder.declarationStmt($1, value);
-            }
-          | var_decl "=" expression ";" {RULE
-                $$ = driver.builder.declarationStmt($1, $3);
-            }
-          | "auto" "identifier" "=" expression ";" {RULE
-		        auto var = driver.builder.variable($4.getType());
-				annotations::attachName(var, $2);
-                driver.add_symb(@$, $2, var);
-                $$ = driver.builder.declarationStmt(var, $4);
-            }
-          ;
-
-var_decl : type "identifier" { RULE
-				auto type = driver.resolveTypeAliases(@$, $1);
-		        $$ = driver.builder.variable(type);
-				annotations::attachName( $$, $2);
-                driver.add_symb(@$, $2, $$);
-            };
-
-
-for_decl : "(" type "identifier" "=" expression ".." expression ")"  {RULE
-		        $$.it = driver.builder.variable($2);
-				annotations::attachName( $$.it, $3);
-                driver.add_symb(@$, $3, $$.it);
-                $$.low = $5;
-                $$.up = $7;
-                $$.step = driver.builder.literal($2, "1");
-           }
-         | "(" type "identifier" "=" expression ".." expression ":" expression ")" {RULE
-		        $$.it = driver.builder.variable($2);
-				annotations::attachName( $$.it, $3);
-                driver.add_symb(@$, $3, $$.it);
-                $$.low = $5;
-                $$.up = $7;
-                $$.step = $9;
-           }
-         ;
-
-switch_case_list : switch_case { RULE $$.push_back($1); }
-                 | switch_case switch_case_list { RULE $2.insert($2.begin(), $1); std::swap($$, $2); }
-                 ;
-
-
-switch_case :  "case" expression ":" statement { RULE
-                  if(!$2.isa<LiteralPtr>()) { driver.error(@2, "case value must be a literal"); YYABORT; }
-                  $$ = driver.builder.switchCase($2.as<LiteralPtr>(), $4); 
-               }
-            ;
-
-compound_stmt : "{" "}" { RULE $$ = driver.builder.compoundStmt(); }
-                  | "{" statement_list "}"{ RULE $$ = driver.builder.compoundStmt($2); }
-                  ;
-
-markable_compound_stmt :  compound_stmt         { RULE INSPIRE_GUARD(@1, $1); $$ = $1; } 
-                       | "$" compound_stmt "$" {  RULE INSPIRE_GUARD(@2, $2); $$ = driver.mark_address(@2, $2); } 
-                       ;
-
-statement_list : statement { RULE     
-                        if($1 != driver.builder.getNoOp())  $$.push_back($1); 
-                    }
-               | statement statement_list { RULE 
-                        if($1 != driver.builder.getNoOp())  $2.insert($2.begin(),$1); 
-                        std::swap($$, $2); 
-                    }
-               ;
-
-/* ~~~~~~~~~~~~~~~~~~~  EXPRESSIONS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-
-expression : markable_expression         { RULE INSPIRE_GUARD(@1, $1); $$ = $1; } 
-           | "$" markable_expression "$" {  RULE INSPIRE_GUARD(@2, $2); $$ = driver.mark_address(@2, $2); } 
-
-expression_list_non_empty : expression                      { RULE $$.push_back($1); }
-                | expression "," expression_list_non_empty  { RULE $3.insert($3.begin(), $1); std::swap($$, $3); }
-
-expression_list :                            { /* nothing - all by default */ }
-				| expression_list_non_empty  { RULE $$=$1; }
-
-                
-markable_expression : "identifier" { RULE $$ = driver.findSymbol(@$, $1); }
-
-            /* unary */
-           | "*" expression { RULE  
-                                          $2 = driver.getScalar($2);
-                                          INSPIRE_MSG(@2, analysis::isRefType($2->getType()), "cannot deref non ref type: " + toString($2->getType()));
-                                          $$ = driver.builder.deref($2); } %prec UDEREF
-           | "-" expression { RULE 
-                                          auto tmp = driver.getOperand($2);
-                                          $$ = driver.builder.minus(tmp); 
-                            } %prec UMINUS
-           | "!" expression { RULE 
-                                          auto tmp = driver.getOperand($2);
-                                          $$ = driver.builder.logicNeg(tmp); 
-                            }%prec UNOT
-           | expression "=" expression  { RULE $$ = driver.genBinaryExpression(@$, "=", $1, $3); }
-
-            /* bitwise / logic / arithmetic / geometric */
-           | expression "&" expression  { RULE $$ = driver.genBinaryExpression(@$, "&", $1, $3);  }
-           | expression "|" expression  { RULE $$ = driver.genBinaryExpression(@$, "|", $1, $3);  }
-           | expression "^" expression  { RULE $$ = driver.genBinaryExpression(@$, "^", $1, $3);  }
-           | expression "&&" expression { RULE $$ = driver.genBinaryExpression(@$, "&&", $1, $3);  }
-           | expression "||" expression { RULE $$ = driver.genBinaryExpression(@$, "||", $1, $3);  }
-           | expression "+" expression  { RULE $$ = driver.genBinaryExpression(@$, "+", $1, $3);  }
-           | expression "-" expression  { RULE $$ = driver.genBinaryExpression(@$, "-", $1, $3);  }
-           | expression "*" expression  { RULE $$ = driver.genBinaryExpression(@$, "*", $1, $3);  }
-           | expression "/" expression  { RULE $$ = driver.genBinaryExpression(@$, "/", $1, $3);  }
-           | expression "%" expression  { RULE $$ = driver.genBinaryExpression(@$, "%", $1, $3);  }
-           | expression "==" expression { RULE $$ = driver.genBinaryExpression(@$, "==", $1, $3);  }
-           | expression "!=" expression { RULE $$ = driver.genBinaryExpression(@$, "!=", $1, $3);  }
-           | expression "<" expression  { RULE $$ = driver.genBinaryExpression(@$, "<", $1, $3);  }
-           | expression ">" expression  { RULE $$ = driver.genBinaryExpression(@$, ">", $1, $3);  }
-           | expression "<=" expression { RULE $$ = driver.genBinaryExpression(@$, "<=", $1, $3);  }
-           | expression ">=" expression { RULE $$ = driver.genBinaryExpression(@$, ">=", $1, $3);  }
-            /* data access */
-           | expression "[" expression "]" { RULE $$ = driver.genBinaryExpression(@$, "[", $1, $3); }
-           | expression "." "identifier" { RULE $$ = driver.genFieldAccess(@1, $1, $3); }
-           | expression "." "int"        { RULE $$ = driver.genTupleAccess(@1, $1, $3); }
-                
-            /* ternary operator */
-           | expression "?" expression ":" expression { RULE
-						$$ =  driver.builder.ite(driver.getScalar($1), driver.builder.wrapLazy(driver.getScalar($3)), driver.builder.wrapLazy(driver.getScalar($5)));
-                    }
-
-            /* call expr */
-           | expression "->" "identifier" "(" expression_list ")"{ RULE 
-                                        auto mf = driver.findSymbol(@3, $3);
-                                        INSPIRE_TYPE(@1, mf->getType(), FunctionTypePtr, "non callable expr"); 
-                                        $5.insert($5.begin(), $1);
-                                        $$ = driver.genCall(@$, mf, $5);  
-                                }
-           | expression "(" expression_list ")" { RULE 
-                                        INSPIRE_TYPE(@1, $1->getType(), FunctionTypePtr, "non callable expr"); 
-                                        $$ = driver.genCall(@$, $1, $3); 
-                                }
-
-            /* tuple expressions - in the unary case it covers the parenthesis expression as well */
-           | "(" expression_list ")"  { RULE $$ = driver.builder.tupleExpr($2); }
-            /* lambda or closure expression: callable expression */
-           | "lambda" lambda_expression  { RULE $$ = $2; }
-           | "function" fun_expression { RULE $$ = $2; }
-            /* cast */ 
-           | "CAST(" type ")" expression  { RULE $$ = driver.builder.castExpr($2, $4); }
-           | expression ".as(" type ")"   { RULE 
-                              INSPIRE_MSG(@1, analysis::isRefType($1.getType()), "can not get parent-reference of non referenced expression");
-                              $$  = driver.builder.refParent($1, $3); 
-                          }
-            /* ref mamagement */
-           | "undefined" "(" type ")"     { RULE $$ =  driver.builder.undefined( $3 ); }
-           | "var" "(" expression ")"     { RULE $$ =  driver.builder.refVar( $3 ); }
-           | "new" "(" expression ")"     { RULE $$ =  driver.builder.refNew( $3 ); }
-           | "delete" "(" expression ")"  { RULE $$ =  driver.builder.refDelete( $3 ); }
-            /* literals */
-           | "bool"       { RULE $$ = driver.builder.literal(driver.mgr.getLangBasic().getBool(), $1); }
-           | "charlit"    { RULE $$ = driver.builder.literal(driver.mgr.getLangBasic().getChar(), $1); }
-           | "int"        { RULE $$ = driver.genNumericLiteral(@$, driver.mgr.getLangBasic().getInt4(), $1); }
-           | "uint"       { RULE $$ = driver.genNumericLiteral(@$, driver.mgr.getLangBasic().getUInt4(), $1); }
-           | "long"       { RULE $$ = driver.genNumericLiteral(@$, driver.mgr.getLangBasic().getInt8(), $1); }
-           | "ulong"      { RULE $$ = driver.genNumericLiteral(@$, driver.mgr.getLangBasic().getUInt8(), $1); }
-           | "longlong"   { RULE $$ = driver.genNumericLiteral(@$, driver.mgr.getLangBasic().getInt16(), $1); }
-           | "ulonglong"  { RULE $$ = driver.genNumericLiteral(@$, driver.mgr.getLangBasic().getUInt16(), $1); }
-           | "float"      { RULE $$ = driver.genNumericLiteral(@$, driver.mgr.getLangBasic().getReal4(), $1); }
-           | "double"     { RULE $$ = driver.genNumericLiteral(@$, driver.mgr.getLangBasic().getReal8(), $1); }
-           | "stringlit"  { RULE $$ = driver.builder.stringLit($1); }
-            /* constructed literals */
-           | "type_lit(" type ")"         { RULE $$ = driver.builder.getTypeLiteral($2); }
-           | "param(" "type_var" ")"  { RULE $$ = driver.builder.getTypeLiteral(driver.builder.typeVariable($2)); }
-           | "param(" "int" ")"       { RULE $$ = driver.builder.getTypeLiteral(driver.genNumericType(@$, $2)); }
-           | "lit(" "stringlit" ")"          { RULE 
-                                                    $2.replace(0,1,"");
-                                                    $2.replace($2.size()-1,1,"");
-                                                    $$ = driver.builder.getIdentifierLiteral($2); }
-           | "lit(" "stringlit" ":" type ")" { RULE 
-                                                    $2.replace(0,1,"");
-                                                    $2.replace($2.size()-1,1,"");
-                                                    $$ = driver.builder.literal($4, $2); }
-           | "lit(" type ")"                 { RULE $$ = driver.builder.getTypeLiteral($2); }
-            /* list expression */
-           | "[" expression_list_non_empty "]"         { RULE 
-                        $$ = encoder::toIR<ExpressionList, encoder::DirectExprListConverter>(driver.mgr, $2); }
-            /* struct / union expressions */
-           | "struct" type "{" expression_list "}" { RULE $$ = driver.genStructExpression(@$, $2, $4); }
-           | "union" type "{" "identifier" "=" expression  "}" { RULE $$ = driver.genUnionExpression(@$, $2, $4, $6); }
-            /* async */
-           | "spawn" expression { RULE 
-                        $$ = driver.builder.parallel($2, 1);  
-                }
-           | "spawn" markable_compound_stmt { RULE
-                        $$ = driver.builder.parallel($2, 1);
-                }
-           | "sync" expression  { RULE 
-                        $$ = driver.builder.callExpr(driver.builder.getLangBasic().getUnit(), 
-                                                     driver.builder.getExtension<lang::ParallelExtension>().getMerge(), $2);
-                }
-           | "syncAll" { RULE 
-                    $$ = driver.builder.callExpr(driver.builder.getLangBasic().getUnit(), driver.builder.getExtension<lang::ParallelExtension>().getMergeAll()); 
-                }
-            /* job expressions */
-           | "job" "(" "[" expression ":" expression "]" "," expression ")" { RULE
-                    INSPIRE_TYPE(@9, $9, CallExprPtr, "expresion in job must be a call expression");
-                    auto bind = driver.builder.bindExpr(VariableList(), $9.as<CallExprPtr>());
-                    $$ = driver.builder.jobExpr($4, $6, bind);
-             }
-           | "task" "{" statement "}" { RULE 
-                    $$ = driver.builder.jobExpr($3, 1);
-             }
-           | "job" "{" statement "}" { RULE 
-                    // builds a job for more than a sigle thread
-                    $$ = driver.builder.jobExpr($3, -1);
-             }
-           ;
-
-lambda_expression_aux : 
-                            /* closures */
-                       "(" variable_list "=>" expression { RULE
-
-                            if (driver.let_count == 1) {
-                                driver.add_let_expression(@$, driver.genClosure(@1, $2, $4));
-                            }
-                            else {
-                                $$ = driver.genClosure(@$, $2, $4);
-                            }
-                        } %prec LAMBDA
-
-                      | "(" variable_list "=>" markable_compound_stmt  { RULE
-                            
-                            if (driver.let_count == 1) {
-                                driver.add_let_expression(@$, driver.genClosure(@1, $2, $4));
-                            }
-                            else{
-                                 $$ = driver.genClosure(@$, $2, $4);
-                            }
-                        } %prec LAMBDA
-                            /* lambdas */
-                      | "(" variable_list "->" type { driver.set_inhibit(driver.let_count);} markable_compound_stmt { 
-
-                            if (driver.let_count ==1 ){
-                                driver.add_let_lambda(@$, @1, @6, $4, $2);
-                            }
-                            else{
-                                RULE $$ = driver.genLambda(@$, $2, $4, $6); 
-                            }
-                            driver.set_inhibit(false);
-                        } %prec LAMBDA
-
-                            /* member functions */
-                      | just_name "::" { driver.add_this(@1, $1); } "(" variable_list member_func_tok type
-                                        { driver.set_inhibit(driver.let_count);} markable_compound_stmt { 
-
-                            auto thisvar = driver.findSymbol(@1, "this");
-                            $5.insert($5.begin(), thisvar.as<VariablePtr>());
-                            if (driver.let_count ==1 ){
-                                driver.add_let_lambda(@$, @1, @9, $7, $5, $6);
-                            }
-                            else{
-                                RULE $$ = driver.genLambda(@$, $5, $7, $9, $6);
-                            }
-                            driver.set_inhibit(false);
-                        } %prec LAMBDA
-
-                      | "~" just_name "::" { driver.add_this(@1, $2); } "(" variable_list 
-                                            { driver.set_inhibit(driver.let_count);} markable_compound_stmt { 
-
-                            auto thisvar = driver.findSymbol(@1, "this");
-                            $6.insert($6.begin(),  thisvar.as<VariablePtr>());
-                            if (driver.let_count ==1 ){
-                                driver.add_let_lambda(@$, @1, @8, thisvar->getType(), $6, FK_DESTRUCTOR);
-                            }
-                            else{
-                                RULE $$ = driver.genLambda(@$, $6, thisvar->getType(), $8, FK_DESTRUCTOR); 
-                            }
-                            driver.set_inhibit(false);
-                        } %prec LAMBDA
-
-                      | "ctor" just_name "::" { driver.add_this(@2, $2); } "(" variable_list 
-                                               { driver.set_inhibit(driver.let_count);} markable_compound_stmt { 
-
-                            auto thisvar = driver.findSymbol(@2, "this");
-                            $6.insert($6.begin(), thisvar.as<VariablePtr>());
-                            if (driver.let_count ==1 ){
-                                driver.add_let_lambda(@$, @1, @8, thisvar->getType(), $6, FK_CONSTRUCTOR);
-                            }
-                            else{
-                                RULE $$ = driver.genLambda(@$, $6, thisvar->getType(), $8, FK_CONSTRUCTOR); 
-                            }
-                            driver.set_inhibit(false);
-                        }  %prec LAMBDA
-                     ;
-
-
-lambda_expression : { driver.open_scope(@$,"lambda expr"); } lambda_expression_aux
-                    { driver.close_scope(@$, "lambda expr"); $$ = $2; }
-                  ;
-
-fun_expression : { driver.open_scope(@$,"function"); } lambda_expression_aux
-				 { driver.close_scope(@$,"function"); $$ = $2; }
+struct_or_union : "struct"												{ $$ = NT_Struct; } 
+				| "union" 												{ $$ = NT_Union; }
 				;
+
+record_definition : struct_or_union "identifier" parent_spec "{" fields constructors destructor member_functions pure_virtual_member_functions "}"
+																		{ $$ = NodePtr(); }
+				  ;
+
+fields : fields field 													{ $1.push_back($2); $$ = $1; } 
+	   | 																{ $$ = FieldList(); }
+	   ;
+
+field : type "identifier"												{ $$ = driver.field($1, $2); } 
+	  ;
+
+constructors : constructors constructor									{ $1.push_back($2); $$ = $1; } 
+			 | 															{ $$ = LambdaExprList(); } 
+			 ;
+
+constructor : "ctor" "(" parameters ")" compound_statement				{ $$ = LambdaExprPtr(); }
+			;
+
+destructor : "dtor" "(" ")" compound_statement							{ $$ = LambdaExprPtr(); }
+		   ;
+
+member_functions : member_functions member_function						{ $1.push_back($2); $$ = $1; } 
+				 |  													{ $$ = MemberFunctionList(); }
+				 ;
+
+member_function : virtual_flag function_definition						{ $$ = MemberFunctionPtr(); } 
+				;
+
+virtual_flag : "virtual" 												{ $$ = true; }
+			 | 															{ $$ = false; }
+			 ;
+
+pure_virtual_member_functions : pure_virtual_member_functions pure_virtual_member_function		{ $1.push_back($2); $$=$1; } 
+							  |  																{ $$ = PureVirtualMemberFunctionList(); }
+							  ;
+
+pure_virtual_member_function : "pure" "virtual" "identifier" ":" pure_function_type 			{ $$ = PureVirtualMemberFunctionPtr(); }
+							 ;
+
+
+//	-- function_declarations -------------------------------------
+
+lambda_or_function : "lambda"											{ $$ = true; } 
+				   | "function" 										{ $$ = false; }
+				   ;
+
+function_definition : lambda_or_function "identifier" "=" lambda		{ $$ = $4; } 
+					;
+
+
+
+//	-- types -------------------------------------------
+
+type : object_type        											    { $$ = $1; }
+	 | function_type        											{ $$ = $1; }
+	 | numeric_type         											{ $$ = $1; }
+	 | tuple_type           											{ $$ = $1; }
+	 ;	
+
+
+object_type : type_variable                                             { $$ = $1; }
+		    | abstract_type                                             { $$ = $1; }
+		    | tag_type_reference                                        { $$ = $1; }
+	 	    ;
+		
+types : non_empty_types                                                 { $$ = $1; } 
+	  | 				                                                { $$ = TypeList(); }
+	  ;
+
+non_empty_types : non_empty_types "," type								{ $1.push_back($3); $$ = $1; } 
+				| type 													{ $$ = toVector<TypePtr>($1); }
+				;
+	
+
+// -- type variable --
+
+type_variable : "type_var"												{ $$ = driver.builder.typeVariable($1); } 
+			  ;
+
+// -- abstract type --
+
+abstract_type : "identifier" parent_spec abstract_param_list			{ $$ = driver.builder.genericType($1,$2,$3); }
+			  ;
+
+abstract_param_list : 						                            { $$ = TypeList(); }
+					| "<" types ">"  		                            { $$ = $2; } 
+					;
+
+parent_spec : 								                            { $$ = ParentList(); }
+			| ":" "[" parents "]" 			                            { $$ = $3; }
+			;
+			
+parents :																{ $$ = ParentList(); } 
+		| non_empty_parents 											{ $$ = $1; }
+		;
+
+non_empty_parents : non_empty_parents "," parent						{ $1.push_back($3); $$ = $1; } 
+				  | parent 												{ $$ = toVector($1); }
+				  ;
+
+parent : virtual_flag access_specifier abstract_type					{ $$ = ParentPtr(); } 
+	   ;
+					
+access_specifier : "public"												{ $$ =  AS_PUBLIC; }
+				 | "protected" 											{ $$ =  AS_PROTECTED; }
+				 | "private" 											{ $$ =  AS_PRIVATE; }
+				 | 														{ $$ =  AS_PUBLIC; }
+				 ;
+
+
+// -- function type --
+
+function_type : pure_function_type 
+			  | closure_type 
+			  | constructor_type 
+			  | destructor_type 
+			  | member_function_type 
+			  | virtual_function_type 
+			  ; 
+
+pure_function_type : "(" types ")" "->" type							{ $$ = FunctionTypePtr(); } 
+				   ;
+
+closure_type : "(" types ")" "=>" type									{ $$ = FunctionTypePtr(); } 
+			 ;
+
+constructor_type : object_type "::" "(" types ")"						{ $$ = FunctionTypePtr(); }
+				 ;
+
+destructor_type : "~" object_type "::" "(" ")" 							{ $$ = FunctionTypePtr(); } 
+				;
+	
+member_function_type : object_type "::" "(" types ")" "->" type 		{ $$ = FunctionTypePtr(); } 
+					 ;
+
+virtual_function_type : object_type "::" "(" types ")" "~>" type 		{ $$ = FunctionTypePtr(); } 
+					  ; 
+
+// -- numeric type --
+
+numeric_type : "int"													{ $$ = NumericTypePtr(); } 
+			 | "#" "identifier" 										{ $$ = NumericTypePtr(); }
+			 ;
+
+// -- tuple types --
+
+tuple_type : "(" types ")"												{ $$ = TupleTypePtr(); } 
+		   ;
+
+// -- tag reference --
+
+tag_type_reference : "tag_ref"											{ $$ = TagTypeReferencePtr(); } 
+				   ;
+
+
+
+
+//	-- expressions -------------------------------------
+
+expression : plain_expression											{ $$ = $1; } 
+		   | "$" plain_expression "$"									{ $$ = $2; } 
+		   ;
+
+expressions : non_empty_expressions										{ $$ = $1; }
+			|  															{ $$ = ExpressionList(); }
+			;
+
+non_empty_expressions : non_empty_expressions "," expression			{ $1.push_back($3); $$ = $1; } 
+					  | expression 										{ $$ = toVector($1); }
+					  ; 
+
+plain_expression : variable                                             { $$ = $1; }
+				 | literal                                              { $$ = $1; }
+				 | call                                                 { $$ = $1; }
+				 | lambda                                               { $$ = $1; }
+				 | bind                                                 { $$ = $1; }
+				 | reference_expression                                 { $$ = $1; }
+				 | parallel_expression                                  { $$ = $1; }
+				 | list_expression                                      { $$ = $1; }
+				 | initializer                                          { $$ = $1; }
+				 | unary_op                                             { $$ = $1; }
+				 | binary_op                                            { $$ = $1; }
+				 | ternary_op                                           { $$ = $1; }
+				 ;
+
+
+// -- variable --
+
+variable : "identifier"													{ $$ = VariablePtr(); } 
+		 ;
+
+
+// -- literal --
+
+literal : "true"                                                        { $$ = driver.builder.boolLiteral(true); }
+		| "false"                                                       { $$ = driver.builder.boolLiteral(true); }
+		| "int"                                                         { $$ = LiteralPtr(); }
+		| "uint"                                                        { $$ = LiteralPtr(); }
+		| "long"                                                        { $$ = LiteralPtr(); }
+		| "ulong"                                                       { $$ = LiteralPtr(); }
+		| "longlong"                                                    { $$ = LiteralPtr(); }
+		| "ulonglong"                                                   { $$ = LiteralPtr(); }
+		| "float"                                                       { $$ = LiteralPtr(); }
+		| "double"                                                      { $$ = LiteralPtr(); }
+		| "string"                                                      { $$ = LiteralPtr(); }
+		| "lit" "(" "string" ":" type ")"                               { $$ = LiteralPtr(); }
+		| "type" "(" type ")"                                           { $$ = LiteralPtr(); }
+		;
+	 
+		
+// -- call --
+		
+call : expression "(" expressions ")"									{ $$ = driver.builder.callExpr($1,$3); } 
+	 ;
+
+
+// -- lambda --
+
+lambda : "(" parameters ")" "->" type compound_statement			    { $$ = LambdaExprPtr(); } 
+	   ;
+
+parameters : non_empty_parameters										{ $$ = $1; }
+		   |  															{ $$ = VariableList(); }
+		   ;
+
+non_empty_parameters : non_empty_parameters "," parameter				{ $1.push_back($3); $$ = $1; } 
+					 | parameter 										{ $$ = toVector($1); }
+					 ;
+
+parameter : type "identifier"											{ $$ = VariablePtr(); } 
+		  ;
+
+
+// -- bind --
+
+bind : "(" parameters ")" "=>" expression								{ $$ = BindExprPtr(); } 
+	 ;
+
+
+// -- reference expressions --
+
+reference_expression : "var" "(" expression ")"			               { $$ = ExpressionPtr(); }
+					 | "new" "(" expression ")"                        { $$ = ExpressionPtr(); }
+					 | "delete" "(" expression ")"                     { $$ = ExpressionPtr(); }
+					 | "undefined" "(" type ")"                        { $$ = ExpressionPtr(); }
+					 ;
+					 
+// -- parallel expressions --
+
+parallel_expression : "job" "(" expression ")"      	               { $$ = ExpressionPtr(); }
+					| "spawn" expression                               { $$ = ExpressionPtr(); }
+					| "sync" expression                                { $$ = ExpressionPtr(); }
+					| "sync_all"                                       { $$ = ExpressionPtr(); }
+					;
+
+
+list_expression : "[" non_empty_expressions "]"     	               { $$ = ExpressionPtr(); }
+				| "[" expressions ":" type "]"                         { $$ = ExpressionPtr(); }
+				;                                                      
+                                                                       
+
+// -- initializer --
+
+initializer : "(" object_type ")" "{" expressions "}"   	                   { $$ = ExpressionPtr(); }
+		    | "(" expressions ")"                                      { $$ = ExpressionPtr(); }
+			;                                                          
+                                                                       
+unary_op : "-" expression                                              { $$ = ExpressionPtr(); }    %prec UMINUS
+	     | "*" expression                                              { $$ = ExpressionPtr(); }  	%prec UDEREF
+		 | "!" expression                                              { $$ = ExpressionPtr(); }    %prec UNOT
+		 | "++" expression                                             { $$ = ExpressionPtr(); }    %prec PRE_INC
+		 | "--" expression                                             { $$ = ExpressionPtr(); }    %prec PRE_DEC
+		 | expression "++"                                             { $$ = ExpressionPtr(); }    %prec POST_INC
+		 | expression "--"                                             { $$ = ExpressionPtr(); }    %prec POST_DEC
+		 | expression "." "identifier"                                 { $$ = ExpressionPtr(); }    
+		 | expression "." "int"                                        { $$ = ExpressionPtr(); }    
+		 | expression "->" "identifier"                                { $$ = ExpressionPtr(); }    
+		 | expression "->" "int"                                       { $$ = ExpressionPtr(); }    
+		 | "CAST" "(" type ")" expression                              { $$ = ExpressionPtr(); }
+		 | expression "." "as" "(" type ")"                            { $$ = ExpressionPtr(); }
+		 ;                                                             
+		                                                               
+binary_op : expression "=" expression                                  { $$ = ExpressionPtr(); }
+		  | expression "+" expression                                  { $$ = ExpressionPtr(); }
+		  | expression "-" expression                                  { $$ = ExpressionPtr(); }
+		  | expression "*" expression                                  { $$ = ExpressionPtr(); }
+		  | expression "/" expression                                  { $$ = ExpressionPtr(); }
+		  | expression "%" expression                                  { $$ = ExpressionPtr(); }
+		  | expression "&&" expression                                 { $$ = ExpressionPtr(); }
+		  | expression "||" expression                                 { $$ = ExpressionPtr(); }
+		  | expression "&" expression                                  { $$ = ExpressionPtr(); }
+		  | expression "|" expression                                  { $$ = ExpressionPtr(); }
+		  | expression "^" expression                                  { $$ = ExpressionPtr(); }
+		  | expression "==" expression                                 { $$ = ExpressionPtr(); }
+		  | expression "!=" expression                                 { $$ = ExpressionPtr(); }
+		  | expression "<" expression                                  { $$ = ExpressionPtr(); }
+		  | expression "<=" expression                                 { $$ = ExpressionPtr(); }
+		  | expression ">=" expression                                 { $$ = ExpressionPtr(); }
+		  | expression ">" expression                                  { $$ = ExpressionPtr(); }
+		  | expression "[" expression "]"                              { $$ = ExpressionPtr(); }
+		  ;
+		  		  
+ternary_op : expression "?" expression ":" expression                  { $$ = ExpressionPtr(); }
+		   ;	
+
+	 
+//	-- statemetns --------------------------------------
+
+
+statement : plain_statement											  { $$ = $1; } 
+  	  	  | "$" plain_statement "$" 								  { $$ = $2; }
+		  ;
+
+plain_statement : expression ";"									  { $$ = $1; }
+				| compound_statement                                  { $$ = $1; }
+				| variable_declaration                                { $$ = $1; }
+				| if_statement                                        { $$ = $1; }
+				| switch_statement                                    { $$ = $1; }
+				| while_statement                                     { $$ = $1; }
+				| for_statement                                       { $$ = $1; }
+				| break                                               { $$ = $1; }
+				| continue                                            { $$ = $1; }
+				| return                                              { $$ = $1; }
+				;
+
+
+// -- compound statement --
+
+compound_statement : "{" statement_list "}"							  { $$ = CompoundStmtPtr(); } 
+				   ;
+
+statement_list : 													  { $$ = StatementList(); }
+			   | statement_list statement 							  { $1.push_back($2); $$ = $1; }
+			   ; 
+
+
+// -- variable declaration --
+
+variable_declaration : "var" type "identifier" "=" expression 		  { $$ = DeclarationStmtPtr(); }
+					 | "auto" "identifier" "=" expression			  { $$ = DeclarationStmtPtr(); } 
+					 ;
+
+
+// -- if --
+
+if_statement : "if" "(" expression ")" compound_statement 			  { $$ = IfStmtPtr(); }
+			 | "if" "(" expression ")" compound_statement "else" compound_statement
+			 	 	 	 	 	 	 	 	 	 	 	 	 	 	  { $$ = IfStmtPtr(); }
+			 ;
+           
+
+// -- switch --
+
+switch_statement : "switch" "(" expression ")" "{" switch_cases default_case "}"   { $$ = SwitchStmtPtr(); } 
+				 ;
+
+switch_cases : switch_cases switch_case								  { $1.push_back($2); $$ = $1; } 
+			 | 														  { $$ = SwitchCaseList(); }
+			 ;
+
+switch_case : "case" literal ":" statement							  { $$ = SwitchCasePtr(); } 
+			;
+
+default_case : "default" ":" statement								  { $$ = $3; }
+			 ;
+
+// -- while --
+
+while_statement : "while" "(" expression ")" compound_statement       { $$ = WhileStmtPtr(); } 
+				;
+
+
+// -- for --
+
+for_statement : "for" "(" type "identifier" "=" expression ".." expression ")" compound_statement
+																	 { $$ = ForStmtPtr(); }
+			  | "for" "(" type "identifier" "=" expression ".." expression ":" expression ")" compound_statement
+				 	 	 	 	 	 	 	 	 	 	 	 	 	 { $$ = ForStmtPtr(); }			  
+			  ;
+
+
+// -- break --
+
+break : "break" ";"							                         { $$ = BreakStmtPtr(); }
+	  ;                                                              
+                                                                     
+// -- continue --                                                    
+                                                                     
+continue : "continue" ";"					                         { $$ = ContinueStmtPtr(); }
+		 ;                                                           
+                                                                     
+// -- return --                                                      
+                                                                     
+return : "return" expression ";"			                         { $$ = ReturnStmtPtr(); }
+	   ;
+
+
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Precedence list ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // the lowest in list, the highest precedence
 
 %nonassoc "::" ;
+%left ":";
 %nonassoc ")";
+
+%nonassoc UDEREF;
+%nonassoc UMINUS;
+%nonassoc UNOT;
+%nonassoc POST_INC POST_DEC;
+%nonassoc PRE_INC PRE_DEC; 
+%nonassoc ".";
+%nonassoc "->";   
+
 %nonassoc "else";
 %right "=>";
 %left "spawn" "sync" "syncAll";
 %right "?";
 %right "catch";
 %left "=";
-%left "->";
-%nonassoc ":";
 %left LAMBDA;
 %left "||";
 %left "&&";
@@ -864,13 +768,8 @@ fun_expression : { driver.open_scope(@$,"function"); } lambda_expression_aux
 %left "<" "<=" ">" ">=";
 %left "+" "-";
 %left "*" "/" "%";
-%nonassoc UDEREF;
-%nonassoc UMINUS;
 %nonassoc BOOL_OP;
-%nonassoc UNOT;
 %right "[";
-%left ".as(";
-%nonassoc ".";
 %right "(";
 
 %%
