@@ -387,13 +387,13 @@ lambda_or_function : "lambda"											  { $$ = true; }
                                                                           
 type : plain_type                                                         { $$ = $1; }
 	 | "$" plain_type "$"                                                 { $$ = $2; }
+	 | let_type													          { $$ = $1; }
 	 ;                                                                    
 				                                                          
 plain_type : object_type        									      { $$ = $1; }
 	       | function_type        									      { $$ = $1; }
 	       | numeric_type         									      { $$ = $1; }
 	       | tuple_type           									      { $$ = $1; }
-	       | let_type													  { $$ = $1; }
 	       ;	                                                          
                                                                           
                                                                           
@@ -503,7 +503,8 @@ let_type : "let" "identifier" "=" type "in" type						  { $$ = $6; }
 //	-- expressions -------------------------------------                  
                                                                           
 expression : plain_expression											  { $$ = $1; } 
-		   | "$" plain_expression "$"									  { $$ = $2; } 
+		   | "$" plain_expression "$"									  { $$ = $2; }
+		   | let_expression										          { $$ = $1; }
 		   ;                                                              
                                                                           
 expressions : non_empty_expressions										  { $$ = $1; }
@@ -519,7 +520,6 @@ plain_expression : variable                                               { $$ =
 				 | call                                                   { $$ = $1; }
 				 | lambda                                                 { $$ = $1; }
 				 | bind                                                   { $$ = $1; }
-				 | let_expression										  { $$ = $1; }
 				 | undefined_expression                                   { $$ = $1; }
 				 | parallel_expression                                    { $$ = $1; }
 				 | list_expression                                        { $$ = $1; }
@@ -662,6 +662,8 @@ ternary_op : expression "?" expression ":" expression                     { $$ =
 
 statement : plain_statement											      { $$ = $1; } 
   	  	  | "$" plain_statement "$" 								      { $$ = $2; }
+  	  	  | let_statement                                                 { $$ = $1; }
+		  | ";"													          { $$ = StatementPtr(); }
 		  ;                                                               
                                                                           
 plain_statement : expression ";"									      { $$ = $1; }
@@ -674,8 +676,6 @@ plain_statement : expression ";"									      { $$ = $1; }
 				| break                                                   { $$ = $1; }
 				| continue                                                { $$ = $1; }
 				| return                                                  { $$ = $1; }
-				| let_statement                                           { $$ = $1; }
-				| ";"													  { $$ = StatementPtr(); }
 				;                                                         
                                                                           
                                                                           
