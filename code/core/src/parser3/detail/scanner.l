@@ -130,19 +130,14 @@ blank   [ \t]
 
 "CAST"     return inspire_parser::make_CAST(loc);
 "as"      return inspire_parser::make_PARENT(loc);
-"#inf"      return inspire_parser::make_INFINITE(loc);
 "let"       return inspire_parser::make_LET(loc);
 "in"        return inspire_parser::make_IN(loc);
 "using"     return inspire_parser::make_USING(loc);
 "auto"      return inspire_parser::make_AUTO(loc);
-"fun"       return inspire_parser::make_FUN(loc);
 "function"  return inspire_parser::make_FUNCTION(loc);
 "lambda"    return inspire_parser::make_LAMBDA(loc);
 "ctor"      return inspire_parser::make_CTOR(loc);
 "type"      return inspire_parser::make_TYPE(loc);
-"method"    return inspire_parser::make_METHOD(loc);
-"expr"      return inspire_parser::make_EXPR(loc);
-"recFunc"   return inspire_parser::make_RECFUNC(loc);
 
 "if"      return inspire_parser::make_IF(loc);
 "else"    return inspire_parser::make_ELSE(loc);
@@ -160,13 +155,10 @@ blank   [ \t]
 "break"   return inspire_parser::make_BREAK(loc);
 
 "var"     return inspire_parser::make_VAR(loc);
-"new"     return inspire_parser::make_NEW(loc);
-"loc"     return inspire_parser::make_LOC(loc);
-"delete"     return inspire_parser::make_DELETE(loc);
 "undefined"  return inspire_parser::make_UNDEFINED(loc);
 
-"true"    return inspire_parser::make_TRUE(yytext, loc);
-"false"   return inspire_parser::make_FALSE(yytext, loc);
+"true"    return inspire_parser::make_TRUE(loc);
+"false"   return inspire_parser::make_FALSE(loc);
 "struct"  return inspire_parser::make_STRUCT(loc);
 "union"   return inspire_parser::make_UNION(loc);
 

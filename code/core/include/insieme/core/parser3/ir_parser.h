@@ -191,7 +191,7 @@ namespace parser3 {
 	                                                   const definition_map& definitions = definition_map(), const type_alias_map& aliases = type_alias_map());
 
 	/**
-	 * equivalent to parse_addresses_statement but parsing a program, this avoids ambiguity in the grammar, allows us to use a sympler parser
+	 * equivalent to parse_addresses_statement but parsing a program, this avoids ambiguity in the grammar, allows us to use a simpler parser
 	 */
 	std::vector<NodeAddress> parse_addresses_program(NodeManager& manager, const string& code, bool onFailThrow = false,
 	                                                 const definition_map& definitions = definition_map(), const type_alias_map& aliases = type_alias_map());

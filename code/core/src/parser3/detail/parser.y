@@ -145,44 +145,48 @@
   DOT     "."
   ADDRESS "$"
   
-  PARENT        "as"
-  CAST          "CAST"
-  INFINITE      "#inf"
   USING         "using"    
-  AUTO          "auto"
-  FUN           "fun"
-  FUNCTION      "function"
-  LAMBDA        "lambda"
-  CTOR          "ctor"    
-  METHOD        "method"    
-  TYPE			"type"
   
-  IF            "if"      
-  ELSE          "else"    
-  FOR           "for"     
-  WHILE         "while"   
   DECL          "decl"
-  TRY           "try"   
-  THROW         "throw"   
-  CATCH         "catch"   
-  RETURN        "return"  
-  DEFAULT       "default"  
-  CASE          "case"  
-  SWITCH        "switch"  
-  CONTINUE      "continue"  
-  BREAK         "break"  
   
-  UNDEFINED     "undefined"
-
-  TRUE          "true"  
-  FALSE         "false"  
-  STRUCT        "struct"
-  UNION         "union"
-
   VIRTUAL       "virtual"
   PRIVATE       "private"
   PUBLIC        "public"
   PROTECTED     "protected"
+
+  FUNCTION      "function"
+  LAMBDA        "lambda"
+  CTOR          "ctor"    
+  TYPE			"type"
+  STRUCT        "struct"
+  UNION         "union"
+  
+  LET           "let"  
+  IN            "in"  
+  PARENT        "as"
+
+  TRUE          "true"  
+  FALSE         "false"  
+
+  CAST          "CAST"
+  AUTO          "auto"
+  UNDEFINED     "undefined"
+  
+  VAR			"var"
+  IF            "if"      
+  ELSE          "else"    
+  FOR           "for"     
+  WHILE         "while"   
+  TRY           "try"   
+  THROW         "throw"   
+  CATCH         "catch"   
+  RETURN        "return"  
+  CONTINUE      "continue"  
+  BREAK         "break"  
+  SWITCH        "switch"  
+  CASE          "case"  
+  DEFAULT       "default"  
+
 
   SPAWN         "spawn"
   SYNC          "sync"
@@ -305,6 +309,7 @@ top_level_elements : top_level_element top_level_elements
 				   | ";"
 				   |
 				   ;
+
 top_level_element : using | alias | declaration | definition ;
 
 using : "using" "identifier" ";" ;
@@ -327,7 +332,14 @@ main : type "identifier" "(" parameters ")" compound_statement			  { $$ = Progra
 //	-- record_declarations -------------------------------------
 
 record_definition : struct_or_union "identifier" parent_spec "{" fields constructors destructor member_functions pure_virtual_member_functions "}"
-																		  { $$ = NodePtr(); }
+																		  { 
+																			if ($1 == NT_Struct) { 
+																				$$ = driver.builder.structType($2,$3,$5,$6,$7,$8,$9);
+																			} else {
+																				if (!$3.empty()) driver.error(@$, "Inheritance not supported for Unions!");
+																				$$ = driver.builder.unionType($2,$5,$6,$7,$8,$9);
+																			}
+																		  }
 				  ;                                                       
                                                                           
 struct_or_union : "struct"												  { $$ = NT_Struct; } 
@@ -338,7 +350,7 @@ fields : fields field 													  { $1.push_back($2); $$ = $1; }
 	   | 																  { $$ = FieldList(); }
 	   ;                                                                  
                                                                           
-field : type "identifier"												  { $$ = driver.field($1, $2); } 
+field : type "identifier"												  { $$ = driver.builder.field($1, $2); } 
 	  ;                                                                   
                                                                           
 constructors : constructors constructor									  { $1.push_back($2); $$ = $1; } 
@@ -419,8 +431,8 @@ abstract_type : "identifier" parent_spec type_param_list			      { $$ = driver.b
 			  ;                                                           
                                                                           
 type_param_list : 						                                  { $$ = TypeList(); }
-					| "<" types ">"  		                              { $$ = $2; } 
-					;                                                     
+				| "<" types ">"  		                                  { $$ = $2; } 
+				;                                                     
                                                                           
 parent_spec : 								                              { $$ = ParentList(); }
 			| ":" "[" parents "]" 			                              { $$ = $3; }

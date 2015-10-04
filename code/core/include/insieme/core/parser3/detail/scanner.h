@@ -70,8 +70,8 @@ namespace parser3 {
 
 		  public:
 			inspire_scanner(std::istream* stream)
-			    : Trick_Lexer(stream), type_token(inspire_parser::make_TYPE_ONLY(loc)), expression_token(inspire_parser::make_EXPRESSION_ONLY(loc)),
-			      statement_token(inspire_parser::make_STMT_ONLY(loc)), program_token(inspire_parser::make_FULL_PROGRAM(loc)) {
+			    : Trick_Lexer(stream), type_token(inspire_parser::make_TYPE_ONLY(loc)), expression_token(inspire_parser::make_EXPR_ONLY(loc)),
+			      statement_token(inspire_parser::make_STMT_ONLY(loc)), program_token(inspire_parser::make_FULL_PROG(loc)) {
 				loc.initialize();
 			}
 
