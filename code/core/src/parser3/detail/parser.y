@@ -191,10 +191,10 @@
   JOB           "job"
   TASK          "task"
 
-  TYPE_ONLY
-  EXPRESSION_ONLY
-  STMT_ONLY
-  FULL_PROGRAM
+  TYPE_ONLY		"initial-type-parser-marker"
+  EXPR_ONLY		"initial-expression-parser-marker"
+  STMT_ONLY		"initial-statement-parser-marker"
+  FULL_PROG		"initial-program-parser-marker"
 ;
 
     /* operators: they use string for convenience, instead of creating million rules */
@@ -219,15 +219,13 @@
 %type  <std::string> "Number" 
 %type  <std::string> "indentifier" 
 
-%type <NodeList> top_level
-
 %type <TypePtr>                        type plain_type let_type
-%type <TypeList>                       types non_empty_types abstract_param_list
-%type <ExpressionPtr>                  expression plain_expression let_expression
+%type <TypeList>                       types non_empty_types type_param_list
+%type <ExpressionPtr>                  expression plain_expression let_expression 
 %type <ExpressionList>                 expressions non_empty_expressions
 %type <StatementPtr>                   statement plain_statement let_statement
+%type <ProgramPtr>					   main
 %type <NodePtr>                        definition
-%type <NodeList>                       definitions
                                        
 %type <NodePtr>                        record_definition
 %type <NodePtr>                        function_definition
@@ -297,35 +295,34 @@
 //	-- top_level -------------------------------------
 
 
-top_level : aliases declarations definitions                              { $$ = $3; };
-           
-top_level_seperator : ";" | ;
+top_level : TYPE_ONLY top_level_elements type 							  { driver.result = $3; }
+		  | EXPR_ONLY top_level_elements expression   					  { driver.result = $3; }
+		  | STMT_ONLY top_level_elements statement  					  { driver.result = $3; }
+		  | FULL_PROG top_level_elements main							  { driver.result = $3; }
+		  ;
 
-aliases : alias top_level_seperator aliases 
-        | 
-		;
+top_level_elements : top_level_element top_level_elements 
+				   | ";"
+				   |
+				   ;
+top_level_element : using | alias | declaration | definition ;
 
-alias : "alias" type "=" type 
+using : "using" "identifier" ";" ;
+
+alias : "alias" type "=" type ";"
       ;
 
-declarations : declaration top_level_seperator declarations
-			 | 															
-			 ;
-
-declaration : "decl" struct_or_union "identifier"
-			| "decl" "identifier" ":" type
-			| "decl" "identifier" "::" "identifier" ":" type
-			;
-
-
-definitions : definition top_level_seperator definitions				  { $1.push_back($3); $$ = $1; } 
-			|															  { $$ = NodeList(); } 
+declaration : "decl" struct_or_union "identifier" ";"
+			| "decl" "identifier" ":" type ";"
+			| "decl" "identifier" "::" "identifier" ":" type ";"
 			;
 
 definition : record_definition		 
 		   | function_definition 
 		   ;
 
+main : type "identifier" "(" parameters ")" compound_statement			  { $$ = ProgramPtr(); } 
+	 ;
 
 //	-- record_declarations -------------------------------------
 
@@ -418,10 +415,10 @@ type_variable : "type_var"												  { $$ = driver.builder.typeVariable($1); 
                                                                           
 // -- abstract type --                                                    
                                                                           
-abstract_type : "identifier" parent_spec abstract_param_list			  { $$ = driver.builder.genericType($1,$2,$3); }
+abstract_type : "identifier" parent_spec type_param_list			      { $$ = driver.builder.genericType($1,$2,$3); }
 			  ;                                                           
                                                                           
-abstract_param_list : 						                              { $$ = TypeList(); }
+type_param_list : 						                                  { $$ = TypeList(); }
 					| "<" types ">"  		                              { $$ = $2; } 
 					;                                                     
                                                                           
@@ -663,7 +660,6 @@ ternary_op : expression "?" expression ":" expression                     { $$ =
 statement : plain_statement											      { $$ = $1; } 
   	  	  | "$" plain_statement "$" 								      { $$ = $2; }
   	  	  | let_statement                                                 { $$ = $1; }
-		  | ";"													          { $$ = StatementPtr(); }
 		  ;                                                               
                                                                           
 plain_statement : expression ";"									      { $$ = $1; }
@@ -686,6 +682,7 @@ compound_statement : "{" statement_list "}"							      { $$ = CompoundStmtPtr()
                                                                           
 statement_list : 													      { $$ = StatementList(); }
 			   | statement_list statement 							      { $1.push_back($2); $$ = $1; }
+			   | statement_list ";" 		                              { $$ = $1; }
 			   ;                                                          
                                                                           
                                                                           
