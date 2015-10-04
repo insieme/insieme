@@ -150,6 +150,7 @@
   INFINITE      "#inf"
   USING         "using"    
   AUTO          "auto"
+  FUN           "fun"
   FUNCTION      "function"
   LAMBDA        "lambda"
   CTOR          "ctor"    
@@ -220,7 +221,7 @@
 
 %type <NodeList> top_level
 
-%type <TypePtr>                        type
+%type <TypePtr>                        type plain_type
 %type <TypeList>                       types non_empty_types abstract_param_list
 %type <ExpressionPtr>                  expression plain_expression
 %type <ExpressionList>                 expressions non_empty_expressions
@@ -328,13 +329,13 @@ definition : record_definition
 
 //	-- record_declarations -------------------------------------
 
-struct_or_union : "struct"												{ $$ = NT_Struct; } 
-				| "union" 												{ $$ = NT_Union; }
-				;
-
 record_definition : struct_or_union "identifier" parent_spec "{" fields constructors destructor member_functions pure_virtual_member_functions "}"
 																		{ $$ = NodePtr(); }
 				  ;
+
+struct_or_union : "struct"												{ $$ = NT_Struct; } 
+				| "union" 												{ $$ = NT_Union; }
+				;
 
 fields : fields field 													{ $1.push_back($2); $$ = $1; } 
 	   | 																{ $$ = FieldList(); }
@@ -374,22 +375,25 @@ pure_virtual_member_function : "pure" "virtual" "identifier" ":" pure_function_t
 
 //	-- function_declarations -------------------------------------
 
+function_definition : lambda_or_function "identifier" "=" lambda		{ $$ = $4; } 
+					;
+
 lambda_or_function : "lambda"											{ $$ = true; } 
 				   | "function" 										{ $$ = false; }
 				   ;
 
-function_definition : lambda_or_function "identifier" "=" lambda		{ $$ = $4; } 
-					;
-
-
 
 //	-- types -------------------------------------------
 
-type : object_type        											    { $$ = $1; }
-	 | function_type        											{ $$ = $1; }
-	 | numeric_type         											{ $$ = $1; }
-	 | tuple_type           											{ $$ = $1; }
-	 ;	
+type : plain_type                                                       { $$ = $1; }
+	 | "$" plain_type "$"                                               { $$ = $2; }
+	 ;
+				   
+plain_type : object_type        									    { $$ = $1; }
+	       | function_type        									    { $$ = $1; }
+	       | numeric_type         									    { $$ = $1; }
+	       | tuple_type           									    { $$ = $1; }
+	       ;	
 
 
 object_type : type_variable                                             { $$ = $1; }
@@ -452,10 +456,12 @@ function_type : pure_function_type
 			  | virtual_function_type 
 			  ; 
 
-pure_function_type : "(" types ")" "->" type							{ $$ = FunctionTypePtr(); } 
+pure_function_type : "(" ")" "->" type									{ $$ = FunctionTypePtr(); }
+				   | "(" non_empty_types ")" "->" type							{ $$ = FunctionTypePtr(); } 
 				   ;
 
-closure_type : "(" types ")" "=>" type									{ $$ = FunctionTypePtr(); } 
+closure_type : "(" ")" "=>" type									    { $$ = FunctionTypePtr(); }
+			 | "(" non_empty_types ")" "=>" type									{ $$ = FunctionTypePtr(); } 
 			 ;
 
 constructor_type : object_type "::" "(" types ")"						{ $$ = FunctionTypePtr(); }
@@ -478,7 +484,8 @@ numeric_type : "int"													{ $$ = NumericTypePtr(); }
 
 // -- tuple types --
 
-tuple_type : "(" types ")"												{ $$ = TupleTypePtr(); } 
+tuple_type : "(" ")"													{ $$ = TupleTypePtr(); }
+		   | "(" non_empty_types ")"									{ $$ = TupleTypePtr(); } 
 		   ;
 
 // -- tag reference --
@@ -527,7 +534,7 @@ variable : "identifier"													{ $$ = VariablePtr(); }
 // -- literal --
 
 literal : "true"                                                        { $$ = driver.builder.boolLiteral(true); }
-		| "false"                                                       { $$ = driver.builder.boolLiteral(true); }
+		| "false"                                                       { $$ = driver.builder.boolLiteral(false); }
 		| "int"                                                         { $$ = LiteralPtr(); }
 		| "uint"                                                        { $$ = LiteralPtr(); }
 		| "long"                                                        { $$ = LiteralPtr(); }
@@ -562,7 +569,7 @@ non_empty_parameters : non_empty_parameters "," parameter				{ $1.push_back($3);
 					 | parameter 										{ $$ = toVector($1); }
 					 ;
 
-parameter : type "identifier"											{ $$ = VariablePtr(); } 
+parameter : "identifier" ":" type 										{ $$ = VariablePtr(); } 
 		  ;
 
 
@@ -595,7 +602,7 @@ list_expression : "[" non_empty_expressions "]"     	               { $$ = Expre
 
 // -- initializer --
 
-initializer : "(" type ")" "{" expressions "}"   	           		   { $$ = ExpressionPtr(); }  
+initializer : "<" type ">" "{" expressions "}"   	           		   { $$ = ExpressionPtr(); }  
 			| "(" ")"												   { $$ = ExpressionPtr(); }
 		    | "(" non_empty_expressions ")"                            { $$ = ExpressionPtr(); }   
 			;                                                          
@@ -639,7 +646,7 @@ ternary_op : expression "?" expression ":" expression                  { $$ = Ex
 		   ;	
 
 	 
-//	-- statemetns --------------------------------------
+//	-- statements --------------------------------------
 
 
 statement : plain_statement											  { $$ = $1; } 
