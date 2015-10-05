@@ -219,7 +219,7 @@ namespace parser3{
 namespace detail{
 
 
-    inspire_parser::symbol_type yylex (inspire_driver& driver, inspire_scanner& scanner){
+    inspire_parser::symbol_type yylex (InspireDriver& driver, inspire_scanner& scanner){
         return scanner.yylex(driver);
     }
 

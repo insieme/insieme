@@ -53,7 +53,7 @@ namespace core {
 namespace parser3 {
 	namespace detail {
 
-		class inspire_driver;
+		class InspireDriver;
 
 		/**
 		 *  the scanner wrapper is an interface to implement differen inputs for the scanner
@@ -76,8 +76,8 @@ namespace parser3 {
 			}
 
 			#undef YY_DECL
-			#define YY_DECL inspire_parser::symbol_type inspire_scanner::yylex(inspire_driver& driver)
-			inspire_parser::symbol_type yylex(inspire_driver& driver);
+			#define YY_DECL inspire_parser::symbol_type inspire_scanner::yylex(InspireDriver& driver)
+			inspire_parser::symbol_type yylex(InspireDriver& driver);
 
 			void set_start_program() {
 				start_token = &program_token;
@@ -104,7 +104,7 @@ namespace parser3 {
 		 * Bison will call a function yylex, and to keep an unique instance of the scanner, we pass it by argument
 		 * this function bridges the bison flex interaction.
 		 */
-		inspire_parser::symbol_type yylex(inspire_driver& driver, inspire_scanner& scanner);
+		inspire_parser::symbol_type yylex(InspireDriver& driver, inspire_scanner& scanner);
 
 	} // namespace detail
 } // namespace parser3

@@ -49,7 +49,7 @@ namespace parser3 {
 	using namespace detail;
 
 	bool test_type(NodeManager& nm, const std::string& x) {
-		inspire_driver driver(x, nm);
+		InspireDriver driver(x, nm);
 		driver.parseType();
 		if(driver.result) {
 //			dumpColor(driver.result);
@@ -94,7 +94,7 @@ namespace parser3 {
 	}
 
 	bool test_expression(NodeManager& nm, const std::string& x) {
-		inspire_driver driver(x, nm);
+		InspireDriver driver(x, nm);
 		driver.parseExpression();
 		if(driver.result) {
 //			std::cout << driver.result << std::endl;
@@ -213,7 +213,7 @@ namespace parser3 {
 	}
 
 	bool test_statement(NodeManager& nm, const std::string& x) {
-		inspire_driver driver(x, nm);
+		InspireDriver driver(x, nm);
 		driver.parseStmt();
 		if(driver.result) {
 //			dumpColor(driver.result);
@@ -318,7 +318,7 @@ namespace parser3 {
 
 	bool test_program(NodeManager& nm, const std::string& x) {
 
-		inspire_driver driver(x, nm);
+		InspireDriver driver(x, nm);
 	   	std::cout << " ============== TEST ============ " << std::endl;
 
 		driver.parseProgram();

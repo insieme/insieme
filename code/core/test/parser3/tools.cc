@@ -133,7 +133,7 @@ namespace parser3 {
 			{
 				std::stringstream ss;
 				std::string text("#hello, this is just a text");
-				inspire_driver driver(text, mgr);
+				InspireDriver driver(text, mgr);
 
 				position beg(&filename, 1, 2);
 				position end(&filename, 1, 10);
@@ -148,7 +148,7 @@ namespace parser3 {
 			{
 				std::stringstream ss;
 				std::string text("int<4.");
-				inspire_driver driver(text, mgr);
+				InspireDriver driver(text, mgr);
 				driver.parseExpression();
 				driver.print_errors(ss, false);
 				EXPECT_EQ(ss.str(),
@@ -158,7 +158,7 @@ namespace parser3 {
 			{
 				std::stringstream ss;
 				std::string text("int<4.");
-				inspire_driver driver(text, mgr);
+				InspireDriver driver(text, mgr);
 				driver.parseType();
 				driver.print_errors(ss, false);
 				EXPECT_EQ(ss.str(), "ERROR: 1.6 syntax error, unexpected ., expecting >\nint<4.\n     ^\n");
@@ -171,7 +171,7 @@ namespace parser3 {
 			{
 				std::stringstream ss;
 				std::string text("\t\t\tx");
-				inspire_driver driver(text, mgr);
+				InspireDriver driver(text, mgr);
 				driver.parseExpression();
 				driver.print_errors(ss, false);
 				EXPECT_EQ(ss.str(), "ERROR: 1.4 the symbol x was not declared in this context\n   x\n   ^\nERROR: 1.4 unrecoverable error\n   x\n   ^\n");
@@ -181,7 +181,7 @@ namespace parser3 {
 			{
 				std::stringstream ss;
 				std::string text("\t\t\n\tx");
-				inspire_driver driver(text, mgr);
+				InspireDriver driver(text, mgr);
 				driver.parseExpression();
 				driver.print_errors(ss, false);
 				EXPECT_EQ(ss.str(), "ERROR: 2.2 the symbol x was not declared in this context\n x\n ^\nERROR: 2.2 unrecoverable error\n x\n ^\n");

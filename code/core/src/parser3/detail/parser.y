@@ -26,7 +26,7 @@
     namespace parser3{
     namespace detail{
 
-        class inspire_driver;
+        class InspireDriver;
         class inspire_scanner;
 
     } // detail
@@ -52,7 +52,7 @@
 }
 
 // The parsing context.
-%param { parser3::detail::inspire_driver& driver }
+%param { parser3::detail::InspireDriver& driver }
 %param { parser3::detail::inspire_scanner& scanner }
 %locations
 %initial-action
@@ -332,14 +332,7 @@ main : type "identifier" "(" parameters ")" compound_statement			  { $$ = Progra
 //	-- record_declarations -------------------------------------
 
 record_definition : struct_or_union "identifier" parent_spec "{" fields constructors destructor member_functions pure_virtual_member_functions "}"
-																		  { 
-																			if ($1 == NT_Struct) { 
-																				$$ = driver.builder.structType($2,$3,$5,$6,$7,$8,$9);
-																			} else {
-																				if (!$3.empty()) driver.error(@$, "Inheritance not supported for Unions!");
-																				$$ = driver.builder.unionType($2,$5,$6,$7,$8,$9);
-																			}
-																		  }
+																		  { $$ = driver.genRecordType(@$,$1,$2,$3,$5,$6,$7,$8,$9); }
 				  ;                                                       
                                                                           
 struct_or_union : "struct"												  { $$ = NT_Struct; } 
@@ -350,7 +343,7 @@ fields : fields field 													  { $1.push_back($2); $$ = $1; }
 	   | 																  { $$ = FieldList(); }
 	   ;                                                                  
                                                                           
-field : type "identifier"												  { $$ = driver.builder.field($1, $2); } 
+field : type "identifier"												  { $$ = driver.builder.field($2, $1); } 
 	  ;                                                                   
                                                                           
 constructors : constructors constructor									  { $1.push_back($2); $$ = $1; } 
@@ -547,8 +540,8 @@ variable : "identifier"													  { $$ = VariablePtr(); }
                                                                           
 // -- literal --                                                          
                                                                           
-literal : "true"                                                          { $$ = driver.builder.boolLiteral(true); }
-		| "false"                                                         { $$ = driver.builder.boolLiteral(false); }
+literal : "true"                                                          { $$ = driver.builder.boolLit(true); }
+		| "false"                                                         { $$ = driver.builder.boolLit(false); }
 		| "int"                                                           { $$ = LiteralPtr(); }
 		| "uint"                                                          { $$ = LiteralPtr(); }
 		| "long"                                                          { $$ = LiteralPtr(); }

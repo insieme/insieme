@@ -48,7 +48,7 @@ namespace parser3{
     using namespace detail;
 
     bool test_program(NodeManager& nm, const std::string& x){
-        inspire_driver driver(x, nm);
+        InspireDriver driver(x, nm);
         driver.parseProgram();
         if (driver.result) {
             std::cout << " ============== TEST ============ " << std::endl;

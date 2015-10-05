@@ -71,11 +71,10 @@ namespace parser3 {
 		/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ scope manager ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 
-		void DeclarationContext::open_scope(const std::string& msg) {
+		void DeclarationContext::open_scope() {
 			stack.push_back(Scope());
-			stack.back().isFunction = (msg == "function");
 		}
-		void DeclarationContext::close_scope(const std::string& msg) {
+		void DeclarationContext::close_scope() {
 			assert_gt(stack.size(), 1) << "Attempted to pop global scope!";
 			stack.pop_back();
 		}
@@ -102,6 +101,7 @@ namespace parser3 {
 				auto pos = cur.find(name);
 				if (pos != cur.end()) return pos->second();
 			}
+			// nothing found
 			return nullptr;
 		}
 
@@ -112,21 +112,13 @@ namespace parser3 {
 				auto pos = cur.find(name);
 				if (pos != cur.end()) return pos->second();
 			}
-
-			// check symbol table too -- as it might have been defined by the user
-			NodePtr res = find_symb(name);
-			if (auto type = res.isa<TypePtr>()) return type;
-
 			// nothing found
 			return nullptr;
 		}
 
-		bool DeclarationContext::isInFunctionDefinition() const {
-			return stack.back().isFunction;
-		}
-
 		void DeclarationContext::add_type_alias(const GenericTypePtr& pattern, const TypePtr& substitute) {
 			auto& aliases = stack.back().alias;
+			assert_true(aliases.find(pattern) == aliases.end());
 			aliases[pattern] = substitute;
 		}
 
@@ -159,17 +151,17 @@ namespace parser3 {
 			return type;
 		}
 
-		/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ inspire_driver ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+		/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ InspireDriver ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-		inspire_driver::inspire_driver(const std::string& str, NodeManager& mgr, const DeclarationContext& ctx)
-		    : scopes(ctx), mgr(mgr), builder(mgr), file("global scope"), str(str), result(nullptr), glob_loc(&file), ss(str), scanner(&ss),
-		      parser(*this, scanner), let_count(0), is_rec_func(0), inhibit_building_count(false) {
+		InspireDriver::InspireDriver(const std::string& str, NodeManager& mgr)
+		    : scopes(), mgr(mgr), builder(mgr), file("global scope"), str(str), result(nullptr), glob_loc(&file), ss(str), scanner(&ss),
+		      parser(*this, scanner) {
 		}
 
-		inspire_driver::~inspire_driver() {}
+		InspireDriver::~InspireDriver() {}
 
-		ProgramPtr inspire_driver::parseProgram() {
+		ProgramPtr InspireDriver::parseProgram() {
 			scanner.set_start_program();
 			int fail = parser.parse();
 			if(fail) {
@@ -179,7 +171,7 @@ namespace parser3 {
 			return result.as<ProgramPtr>();
 		}
 
-		TypePtr inspire_driver::parseType() {
+		TypePtr InspireDriver::parseType() {
 			scanner.set_start_type();
 			inspire_parser parser(*this, scanner);
 			int fail = parser.parse();
@@ -190,7 +182,7 @@ namespace parser3 {
 			return result.as<TypePtr>();
 		}
 
-		StatementPtr inspire_driver::parseStmt() {
+		StatementPtr InspireDriver::parseStmt() {
 			scanner.set_start_statement();
 			inspire_parser parser(*this, scanner);
 			int fail = parser.parse();
@@ -201,7 +193,7 @@ namespace parser3 {
 			return result.as<StatementPtr>();
 		}
 
-		ExpressionPtr inspire_driver::parseExpression() {
+		ExpressionPtr InspireDriver::parseExpression() {
 			scanner.set_start_expression();
 			inspire_parser parser(*this, scanner);
 			int fail = parser.parse();
@@ -214,7 +206,7 @@ namespace parser3 {
 
 		// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Some tools ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-		ExpressionPtr inspire_driver::findSymbol(const location& l, const std::string& name) {
+		ExpressionPtr InspireDriver::findSymbol(const location& l, const std::string& name) {
 			auto x = scopes.find_symb(name);
 
 			if(!x) {
@@ -230,18 +222,14 @@ namespace parser3 {
 				return nullptr;
 			}
 			if(!x.isa<ExpressionPtr>()) {
-				error(l, format("the symbol %s is not an expression (var/func)", name));
+				error(l, format("the symbol %s is not an expression but of type %s", name, x->getNodeType()));
 				return nullptr;
 			}
 
 			return x.as<ExpressionPtr>();
 		}
 
-		TypePtr inspire_driver::findType(const location& l, const std::string& name) {
-			if(std::find(let_names.begin(), let_names.end(), name) != let_names.end()) {
-				// this is a type in a let binding usage, it might be recursive, so we "mark" it
-				return builder.genericType(name);
-			}
+		TypePtr InspireDriver::findType(const location& l, const std::string& name) {
 
 			// search types defined in current scope
 			auto x = scopes.find_type(name);
@@ -250,22 +238,11 @@ namespace parser3 {
 				return nullptr;
 			}
 
-			// also: check for variable (for numeric literals)
-			if (!x) {
-				// lookup variable
-				auto var = scopes.find_symb(name).isa<VariablePtr>();
-
-				// if it is a valid numeric type value => wrap it up
-				if (var && builder.getLangBasic().isUIntInf(var->getType())) {
-					x = builder.numericType(var);
-				}
-			}
-
 			// done
 			return x.as<TypePtr>();
 		}
 
-		ExpressionPtr inspire_driver::getScalar(ExpressionPtr expr) {
+		ExpressionPtr InspireDriver::getScalar(ExpressionPtr expr) {
 			// auto-unwrap tuple
 			if(auto tuple = expr.isa<TupleExprPtr>()) {
 				const auto& elements = tuple->getExpressions();
@@ -277,11 +254,11 @@ namespace parser3 {
 			return expr;
 		}
 
-		ExpressionPtr inspire_driver::getOperand(ExpressionPtr expr) {
+		ExpressionPtr InspireDriver::getOperand(ExpressionPtr expr) {
 			return builder.tryDeref(getScalar(expr));
 		}
 
-		ExpressionPtr inspire_driver::genBinaryExpression(const location& l, const std::string& op, ExpressionPtr left, ExpressionPtr right) {
+		ExpressionPtr InspireDriver::genBinaryExpression(const location& l, const std::string& op, ExpressionPtr left, ExpressionPtr right) {
 			// Interpret operator
 			//  std::cout << op << std::endl;
 			//  std::cout << " " << left << " : " << left->getType() << std::endl;
@@ -375,7 +352,7 @@ namespace parser3 {
 		}
 
 
-		ExpressionPtr inspire_driver::genFieldAccess(const location& l, const ExpressionPtr& expr, const std::string& fieldname) {
+		ExpressionPtr InspireDriver::genFieldAccess(const location& l, const ExpressionPtr& expr, const std::string& fieldname) {
 			if(!expr) {
 				error(l, "no expression");
 				return nullptr;
@@ -394,7 +371,7 @@ namespace parser3 {
 			return builder.accessMember(expr, fieldname);
 		}
 
-		ExpressionPtr inspire_driver::genTupleAccess(const location& l, const ExpressionPtr& expr, const std::string& member) {
+		ExpressionPtr InspireDriver::genTupleAccess(const location& l, const ExpressionPtr& expr, const std::string& member) {
 			// check whether access is valid
 			TupleTypePtr tupleType;
 			if(expr->getType()->getNodeType() == NT_TupleType) {
@@ -426,12 +403,12 @@ namespace parser3 {
 			return builder.accessComponent(expr, index);
 		}
 
-		LiteralPtr inspire_driver::genNumericLiteral(const location& l, const TypePtr& type, const std::string& lit) {
+		LiteralPtr InspireDriver::genNumericLiteral(const location& l, const TypePtr& type, const std::string& lit) {
 			// remove any type modifier suffixes since they're already encoded in "type"
 			return builder.literal(type, lit.substr(0, lit.find_first_not_of("0123456789-.+eE")));
 		}
 
-		TypePtr inspire_driver::genGenericType(const location& l, const std::string& name, const ParentList& parents, const TypeList& params) {
+		TypePtr InspireDriver::genGenericType(const location& l, const std::string& name, const ParentList& parents, const TypeList& params) {
 			if(name == "int") {
 				if(params.size() != 1) { error(l, "wrong int size"); }
 			}
@@ -448,27 +425,37 @@ namespace parser3 {
 			return builder.genericType(name, parents, params);
 		}
 
-		TypePtr inspire_driver::genNumericType(const location& l, const ExpressionPtr& variable) const {
+		TypePtr InspireDriver::genNumericType(const location& l, const ExpressionPtr& variable) const {
 			if(!variable.isa<VariablePtr>()) {
 				error(l, "not a variable");
 			}
 			return builder.numericType(variable.as<core::VariablePtr>());
 		}
 
-		TypePtr inspire_driver::genNumericType(const location& l, const string& value) const {
+		TypePtr InspireDriver::genNumericType(const location& l, const string& value) const {
 			return builder.numericType(builder.literal(value, builder.getLangBasic().getUIntInf()));
 		}
 
-		TypePtr inspire_driver::genFuncType(const location& l, const TypeList& params, const TypePtr& retType, const FunctionKind& fk) {
+		TypePtr InspireDriver::genFuncType(const location& l, const TypeList& params, const TypePtr& retType, const FunctionKind& fk) {
 			return builder.functionType(params, retType, fk);
 		}
 
-		TypePtr inspire_driver::resolveTypeAliases(const location& l, const TypePtr& type) {
+		TypePtr InspireDriver::genRecordType(const location& l, const NodeType& type, const string& name, const ParentList& parents, const FieldList& fields, const LambdaExprList& ctors,
+				const LambdaExprPtr& dtor, const MemberFunctionList& mfuns, const PureVirtualMemberFunctionList& pvmfuns) {
+			if (type == NT_Struct) {
+				return builder.structType(name,parents,fields,ctors,dtor,mfuns,pvmfuns);
+			} else {
+				if (!parents.empty()) error(l, "Inheritance not supported for unions!");
+				return builder.unionType(name,fields,ctors,dtor,mfuns,pvmfuns);
+			}
+		}
+
+		TypePtr InspireDriver::resolveTypeAliases(const location& l, const TypePtr& type) {
 			return scopes.resolve(type);
 		}
 
-		ExpressionPtr inspire_driver::genLambda(const location& l, const VariableList& params, const TypePtr& retType, const StatementPtr& body,
-		                                        const FunctionKind& fk) {
+		ExpressionPtr InspireDriver::genLambda(const location& l, const VariableList& params, const TypePtr& retType, const StatementPtr& body,
+		                                        const FunctionKind& fk, bool isLambda) {
 			// TODO: cast returns to appropriate type
 			TypeList paramTys;
 			for(const auto& var : params) {
@@ -476,7 +463,7 @@ namespace parser3 {
 			}
 
 			// if it is a function that is defined
-			if (scopes.isInFunctionDefinition()) {
+			if (!isLambda) {
 				// => skip materialization of parameters
 				return builder.lambdaExpr(retType, params, body);
 			}
@@ -489,7 +476,7 @@ namespace parser3 {
 			return builder.lambdaExpr(funcType.as<FunctionTypePtr>(), lambdaIngredients.params, lambdaIngredients.body);
 		}
 
-		ExpressionPtr inspire_driver::genClosure(const location& l, const VariableList& params, StatementPtr stmt) {
+		ExpressionPtr InspireDriver::genClosure(const location& l, const VariableList& params, StatementPtr stmt) {
 			if(!stmt) {
 				error(l, "closure statement malformed");
 				return nullptr;
@@ -513,7 +500,7 @@ namespace parser3 {
 			return builder.bindExpr(params, call);
 		}
 
-		ExpressionPtr inspire_driver::genCall(const location& l, const ExpressionPtr& callable, ExpressionList args) {
+		ExpressionPtr InspireDriver::genCall(const location& l, const ExpressionPtr& callable, ExpressionList args) {
 			ExpressionPtr func = callable;
 
 			auto ftype = func->getType();
@@ -545,7 +532,7 @@ namespace parser3 {
 			TypePtr retType;
 			try {
 				retType = types::tryDeduceReturnType(ftype.as<FunctionTypePtr>(), argumentTypes);
-			} catch(types::ReturnTypeDeductionException e) {
+			} catch(const types::ReturnTypeDeductionException& e) {
 				error(l, format("Error in call expression :\n%s", e.what()));
 				return nullptr;
 			}
@@ -561,7 +548,7 @@ namespace parser3 {
 			return res;
 		}
 
-		ExpressionPtr inspire_driver::genStructExpression(const location& l, const TypePtr& type, const ExpressionList& list) {
+		ExpressionPtr InspireDriver::genStructExpression(const location& l, const TypePtr& type, const ExpressionList& list) {
 			// check for null
 			if (!type) {
 				error(l, "Accessing null-type!");
@@ -593,7 +580,7 @@ namespace parser3 {
 		}
 
 		
-		ExpressionPtr inspire_driver::genUnionExpression(const location& l, const TypePtr& type, const std::string field, const ExpressionPtr& expr) {
+		ExpressionPtr InspireDriver::genUnionExpression(const location& l, const TypePtr& type, const std::string field, const ExpressionPtr& expr) {
 			// check for null
 			if (!type) {
 				error(l, "Accessing null-type!");
@@ -613,13 +600,13 @@ namespace parser3 {
 
 		// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Address marking   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-		ExpressionPtr inspire_driver::mark_address(const location& l, const ExpressionPtr& expr) {
+		ExpressionPtr InspireDriver::mark_address(const location& l, const ExpressionPtr& expr) {
 			NodePtr res = builder.markerExpr(expr);
 			res->attachValue<AddressMark>();
 			return res.as<ExpressionPtr>();
 		}
 
-		StatementPtr inspire_driver::mark_address(const location& l, const StatementPtr& stmt) {
+		StatementPtr InspireDriver::mark_address(const location& l, const StatementPtr& stmt) {
 			NodePtr res = builder.markerStmt(stmt);
 			res->attachValue<AddressMark>();
 			return res.as<StatementPtr>();
@@ -627,7 +614,7 @@ namespace parser3 {
 
 		// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Scope management  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-		void inspire_driver::add_symb(const location& l, const std::string& name, const node_factory&  factory) {
+		void InspireDriver::add_symb(const location& l, const std::string& name, const node_factory&  factory) {
 
 			if(name.find(".") != std::string::npos) {
 				error(l, format("symbol names can not contain dot chars: %s", name));
@@ -640,24 +627,24 @@ namespace parser3 {
 			if(!scopes.add_symb(name, factory)) { error(l, format("symbol %s redefined", name)); }
 		}
 
-		void inspire_driver::add_symb(const location& l, const std::string& name, const NodePtr& node) {
-			add_symb(l, name, [=]() { return node; });
+		void InspireDriver::add_symb(const location& l, const std::string& name, const ExpressionPtr& node) {
+			add_symb(l, name, [=]() -> NodePtr { return node; });
 		}
 
 
-		void inspire_driver::add_symb(const std::string& name, const node_factory& factory) {
+		void InspireDriver::add_symb(const std::string& name, const node_factory& factory) {
 			add_symb(glob_loc, name, factory);
 		}
 
-		void inspire_driver::add_symb(const std::string& name, const NodePtr& node) {
-			add_symb(name, [=]() { return node; });
+		void InspireDriver::add_symb(const std::string& name, const ExpressionPtr& node) {
+			add_symb(name, [=]() -> NodePtr { return node; });
 		}
 
-		void inspire_driver::add_type_alias(const GenericTypePtr& pattern, const TypePtr& substitute) {
+		void InspireDriver::add_type_alias(const GenericTypePtr& pattern, const TypePtr& substitute) {
 			scopes.add_type_alias(pattern, substitute);
 		}
 
-		void inspire_driver::add_type(const location& l, const std::string& name, const node_factory&  factory) {
+		void InspireDriver::add_type(const location& l, const std::string& name, const node_factory&  factory) {
 
 			if(name.find(".") != std::string::npos) {
 				error(l, format("symbol names can not contain dot chars: %s", name));
@@ -677,29 +664,82 @@ namespace parser3 {
 			if(!scopes.add_type(name, factory)) { error(l, format("type name %s redefined", name)); }
 		}
 
-		void inspire_driver::add_type(const location& l, const std::string& name, const NodePtr& node) {
-			add_type(l, name, [=]() { return node; });
+		void InspireDriver::add_type(const location& l, const std::string& name, const TypePtr& node) {
+			add_type(l, name, [=]() -> NodePtr { return node; });
 		}
 
 
-		void inspire_driver::add_type(const std::string& name, const node_factory& factory) {
+		void InspireDriver::add_type(const std::string& name, const node_factory& factory) {
 			add_type(glob_loc, name, factory);
 		}
 
-		void inspire_driver::add_type(const std::string& name, const NodePtr& node) {
-			add_type(name, [=]() { return node; });
+		void InspireDriver::add_type(const std::string& name, const TypePtr& node) {
+			add_type(name, [=]() -> NodePtr { return node; });
+		}
+
+		void InspireDriver::add_this(const location& l, const TypePtr& classType) {
+			// gen ref type
+			auto refThis = builder.refType(classType);
+			// gen var
+			auto thisVar = builder.variable(refThis);
+			// save in scope
+			add_symb(l, "this", thisVar);
 		}
 
 
+		void InspireDriver::open_scope(const location& l) {
+			scopes.open_scope();
+		}
+
+		void InspireDriver::close_scope(const location& l) {
+			scopes.close_scope();
+		}
+
+
+		void InspireDriver::import_extension(const location& l, const std::string& extension_name) {
+			auto name = extension_name;
+			name.replace(0, 1, "");
+			name.replace(name.size() - 1, 1, "");
+
+			// get extension factory from the registry
+			auto optFactory = lang::ExtensionRegistry::getInstance().lookupExtensionFactory(name);
+			if (optFactory) {
+				import_extension((*optFactory)(mgr));
+			} else {
+				error(l, format("Unable to locate module: %s", name));
+			}
+		}
+
+		void InspireDriver::import_extension(const lang::Extension& extension) {
+
+			// import symbols
+			for(const auto& cur : extension.getSymbols()) {
+				add_symb(cur.first, cur.second);
+			}
+
+			// import type aliases
+			for(const auto& cur : extension.getTypeAliases()) {
+				add_type_alias(cur.first, cur.second);
+			}
+
+		}
+
+		// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Debug tools  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 		namespace {
 
-			bool contains_type_tag_references(const TypePtr& t, const TypeList& variables) {
-				bool contains = false;
-				visitDepthFirstOnce(t, [&](const TypePtr& t) {
-					if(std::find(variables.begin(), variables.end(), t) != variables.end()) { contains = true; }
-				});
-				return contains;
-			}
+			// TODO: move this to  utils
+			const std::string RED = "\033[31m";
+			const std::string GREEN = "\033[32m";
+			const std::string BLUE = "\033[34m";
+			const std::string BLACK = "\033[30m";
+			const std::string CYAN = "\033[96m";
+			const std::string YELLOW = "\033[33m";
+			const std::string GREY = "\033[37m";
+
+			const std::string RESET = "\033[0m";
+			const std::string BOLD = "\033[1m";
+
 
 			// TODO: move this to string utils
 			std::vector<std::string> split_string(const std::string& s) {
@@ -732,396 +772,9 @@ namespace parser3 {
 				return res;
 			}
 
-			std::string get_body_string(const std::string& text, const location& b, const location& e, bool isFunction) {
-				auto tmp = text;
-
-				auto strings = split_string(text);
-				for(auto& s : strings) {
-					s.append("\n");
-				}
-
-				std::vector<std::string> subset(strings.begin() + b.begin.line - 1, strings.begin() + e.end.line);
-				std::string res;
-
-				subset[subset.size() - 1] = subset[subset.size() - 1].substr(0, e.end.column - 1);
-				for(auto it = subset.begin(); it < subset.end(); ++it) {
-					res.append(*it);
-				}
-				res = res.substr(b.begin.column - 1, res.size());
-				// the lambda or function keyword is lost during parsing, ammend
-				return std::string((isFunction)?"function ":"lambda ").append(res);
-			}
-		}
-		void inspire_driver::add_let_name(const location& l, const std::string& name) {
-			let_names.push_back(name);
-		}
-
-		void inspire_driver::add_let_lambda(const location& l, const location& begin, const location& end, const TypePtr& retType, const VariableList& params,
-		                                    const FunctionKind& fk) {
-			if(inhibit_building_count > 1) { return; }
-			lambda_lets.push_back(Lambda_let(retType, params, get_body_string(str, begin, end, scopes.isInFunctionDefinition()), fk, scopes.isInFunctionDefinition()));
-		}
-
-		void inspire_driver::add_this(const location& l, const TypePtr& classType) {
-			// gen ref type
-			auto refThis = builder.refType(classType);
-			// gen var
-			auto thisVar = builder.variable(refThis);
-			// save in scope
-			add_symb(l, "this", thisVar);
-		}
-
-		void inspire_driver::add_let_type(const location& l, const TypePtr& type) {
-			type_lets.push_back(type);
-		}
-
-		void inspire_driver::add_let_expression(const location& l, const ExpressionPtr& expr) {
-			if(!expr) {
-				error(l, "no expression translated");
-				return;
-			}
-			expr_lets.insert(expr_lets.begin(), expr);
-		}
-
-		void inspire_driver::add_rec_lambda(const location& l, const std::string recFuncName,
-		                                    const std::vector<std::pair<std::string, ExpressionPtr>> body) {
-		}
-
-
-	void inspire_driver::close_let_statement(const location& l) {
-		// if we are inside of a let in a let
-		if(let_count > 1) {
-			let_count--;
-			set_inhibit(false);
-			return;
-		}
-		//std::cout << "let_names: " << let_names << std::endl;
-	   if(is_rec_func && !rec_call_func.empty()){
-		   std::map<std::string, VariablePtr> funcVars;
-		   unsigned count = 0;
-		   for (const auto& name :  let_names) {
-			   if (count == 0){
-				   count++;
-				   continue;
-			   }
-			   Lambda_let& tmp = lambda_lets[count-1];
-
-			   TypeList types;
-			   for(const auto& v : tmp.params) {
-				   if(tmp.isFunction) {
-					   types.push_back(analysis::getReferencedType(v->getType()));
-				   } else {
-					   types.push_back(v->getType());
-				   }
-			   }
-			   funcVars[name] = builder.variable(builder.functionType(types, tmp.retType, tmp.fk));
-			   //std::cout << "name: " << name << ", type: " << *builder.functionType(types, tmp.retType, tmp.fk) << std::endl;
-			   //std::cout << "isFunction(): " << tmp.isFunction << std::endl;
-			   count ++;
-		   }
-		   // generate a nested parser to parse the body with the right types
-		   std::vector<std::pair<VariablePtr, LambdaExprPtr>> funcs;
-		   count =1;
-		   for(const auto& let : lambda_lets){
-			   inspire_driver let_driver(let.expression, mgr, scopes);
-			   for (const auto pair : funcVars) let_driver.add_symb(pair.first, pair.second);
-			   try{
-				   ExpressionPtr lambda = let_driver.parseExpression();
-				   if (!lambda) {
-					   // write the location with the offset of the current call site
-					   // FIXME: due to the new string, locations get messed up
-					   let_driver.print_errors(std::cerr);
-					   error(l, "lambda expression is wrong");
-					   return;
-				   }
-				   if(let_names.size() < count && !(let_names[count]).compare(rec_call_func)) {
-					   VariablePtr temp;
-					   Lambda_let& tmp = lambda_lets[count-1];
-					   TypeList types;
-					   for(const auto& v : tmp.params) {
-						   types.push_back(v->getType());
-					   }
-					   temp = builder.variable(builder.functionType(types, tmp.retType, tmp.fk));
-					   funcs.push_back({funcVars[let_names[count]], lambda.as<LambdaExprPtr>()});
-				   } else {
-					   funcs.push_back({funcVars[let_names[count]], lambda.as<LambdaExprPtr>()});
-				   }
-			   }catch(...){
-				   error(l, "something went really wrong parsing lambda body");
-			   }
-			   count ++;
-		   }
-		   // generate funcs and bound them to the var types
-		   std::vector<LambdaBindingPtr> lambdas;
-		   for (const auto& lf : funcs){
-			   auto var = lf.first;
-			   auto params = lf.second->getParameterList();
-			   auto type = lf.second->getType();
-			   auto body = lf.second->getBody();
-			   lambdas.push_back(builder.lambdaBinding(var, builder.lambda(type.as<FunctionTypePtr>(), params, body)));
-		   }
-		   LambdaDefinitionPtr lambdaDef = builder.lambdaDefinition(lambdas);
-		   add_symb(l, let_names[0], builder.lambdaExpr(funcVars.find(rec_call_func)->second, lambdaDef));
-		   is_rec_func=0;
-		   rec_call_func = "";
-		   lambda_lets.clear();
-	   }
-
-		// LAMBDA LETS (functions):
-		else if(let_names.size() == lambda_lets.size()) {
-			// DeclarationContext temp_scope (scopes);
-
-			std::map<std::string, VariablePtr> funcVars;
-			unsigned count = 0;
-			for(const auto& name : let_names) {
-				Lambda_let& tmp = lambda_lets[count];
-
-				TypeList types;
-				for(const auto& v : tmp.params) {
-					if(tmp.isFunction) {
-						types.push_back(analysis::getReferencedType(v->getType()));
-					} else {
-						types.push_back(v->getType());
-					}
-				}
-
-				funcVars[name] = builder.variable(builder.functionType(types, tmp.retType, tmp.fk));
-				//std::cout << "name: " << name << ", type: " << *builder.functionType(types, tmp.retType, tmp.fk) << std::endl;
-				//std::cout << "isFunction(): " << tmp.isFunction << std::endl;
-				count++;
-			}
-
-			// generate a nested parser to parse the body with the right types
-			std::vector<std::pair<VariablePtr, LambdaExprPtr>> funcs;
-			count = 0;
-			for(const auto& let : lambda_lets) {
-				inspire_driver let_driver(let.expression, mgr, scopes);
-				for(const auto pair : funcVars) {
-					let_driver.add_symb(pair.first, pair.second);
-				}
-				try {
-					ExpressionPtr lambda = let_driver.parseExpression();
-
-					if(!lambda) {
-						// write the location with the offset of the current call site
-						// FIXME: due to the new string, locations get messed up
-						let_driver.print_errors(std::cerr);
-						error(l, "lambda expression is wrong");
-
-						return;
-					}
-
-					funcs.push_back({funcVars[let_names[count]], lambda.as<LambdaExprPtr>()});
-				} catch(...) { error(l, "something went really wrong parsing lambda body"); }
-
-				count++;
-			}
-
-			// if all variables in body are defined, this is regular function
-			if(funcs.size() == 1 && analysis::getFreeVariables(funcs[0].second).empty()) {
-				annotations::attachName(funcs[0].second, let_names[0]);
-				add_symb(l, let_names[0], funcs[0].second);
-			} else {
-				// generate funcs and bound them to the var types
-				std::vector<LambdaBindingPtr> lambdas;
-				for(const auto& lf : funcs) {
-					auto var = lf.first;
-					auto params = lf.second->getParameterList();
-					auto type = lf.second->getType();
-					auto body = lf.second->getBody();
-					lambdas.push_back(builder.lambdaBinding(var, builder.lambda(type.as<FunctionTypePtr>(), params, body)));
-				}
-				LambdaDefinitionPtr lambdaDef = builder.lambdaDefinition(lambdas);
-				for(const auto& fv : funcVars) {
-					add_symb(l, fv.first, builder.lambdaExpr(fv.second, lambdaDef));
-				}
-			}
-
-			lambda_lets.clear();
-		}
-		// TYPE LETS
-		else if(let_names.size() == type_lets.size()) {
-			std::vector<TagTypeBindingPtr> type_defs;
-			std::vector<std::string> names;
-			NodeMap non_recursive;
-			NodeMap tag_variables;
-			unsigned count = 0;
-
-			TypeList tagTypes;
-			for(const auto& name : let_names) {
-				auto genType = builder.genericType(name);
-				auto tagType = builder.tagTypeReference(name);
-				tagTypes.push_back(genType);
-				tag_variables[genType] = tagType;
-			}
-
-			// check for non recursive types
-			// if the type has no recursion inside, replace all uses of the type variable by a full type
-			for(const auto& type : type_lets) {
-				const std::string& name = let_names[count];
-				if(!contains_type_tag_references(type, tagTypes)) {
-					non_recursive[builder.genericType(name)] = type;
-					annotations::attachName(type, name);
-					add_type(l, name, type);
-				}
-				count++;
-			}
-
-			count = 0;
-			// go over the types again and produce recursive type bindings for those who need it
-			for(auto type : type_lets) {
-				const std::string& name = let_names[count];
-
-				// fix non-recursive types
-				if(contains_type_tag_references(type, tagTypes)) {
-					// replace non-recursive constructs ..
-					type = transform::replaceAllGen(mgr, type, non_recursive);
-					// .. and generic types with tag type references
-					type = transform::replaceAllGen(mgr, type, tag_variables);
-
-					if (auto tagType = type.isa<TagTypePtr>()) {
-
-						// fix tag type name
-						auto record = tagType->getRecord();
-						auto oldTagType = builder.tagTypeReference(record->getName());
-						auto newTagType = builder.tagTypeReference(name);
-						record = transform::replaceAllGen(builder.getNodeManager(), record, oldTagType, newTagType, [&](const NodePtr& cur) {
-							if (auto tt = cur.isa<TagTypePtr>()) {
-								if (tt.getTag() == oldTagType) {
-									return transform::ReplaceAction::Prune;
-								}
-							}
-							if (auto def = cur.isa<TagTypeDefinitionPtr>()) {
-								if (def.getDefinitionOf(oldTagType)) {
-									return transform::ReplaceAction::Prune;
-								}
-							}
-							return transform::ReplaceAction::Process;
-						});
-
-						// build up new definition
-						type_defs.push_back(builder.tagTypeBinding(builder.tagTypeReference(name), record));
-						names.push_back(name);
-					} else {
-						error(l, format("Only structs or unions supported in recursive type definitions, found: %s", *type));
-					}
-				}
-
-				count++;
-			}
-
-			// generate a full recursive type and one entry point for each type variable
-			TagTypeDefinitionPtr recDefinition = builder.tagTypeDefinition(type_defs);
-
-			for(const auto& n : names) {
-				auto t = builder.tagType(builder.tagTypeReference(n), recDefinition);
-				annotations::attachName(t, n);
-				add_type(l, n, t);
-			}
-
-			type_lets.clear();
-		}
-		// Expression LETS (includes closures)
-		else if(let_names.size() == expr_lets.size()) {
-			unsigned count = 0;
-			for(const auto& name : let_names) {
-				add_symb(l, name, expr_lets[count]);
-				count++;
-			}
-
-			expr_lets.clear();
-		} else {
-			//            std::cout << "let count: " << let_count << std::endl;
-			//            std::cout << " ihibit? " << inhibit_building_count <<  std::endl;
-			//
-			//            std::cout << "let_mames " << let_names << std::endl;
-			//            std::cout << "let_type " << type_lets << std::endl;
-			//            std::cout << "let_expr " << expr_lets << std::endl;
-			//            std::cout << "let_lambd " << lambda_lets.size() << std::endl;
-
-			if(lambda_lets.size() + type_lets.size() + expr_lets.size() != let_names.size()) {
-				error(l, "not all let names were defined");
-				return;
-			}
-
-			error(l, "mixed type/function/closure let not allowed");
-		}
-
-
-		let_names.clear();
-		let_count--;
-		set_inhibit(false);
-	}
-
-	void inspire_driver::open_scope(const location& l, const std::string& name) {
-		scopes.open_scope(name);
-	}
-
-	void inspire_driver::close_scope(const location& l, const std::string& name) {
-		scopes.close_scope(name);
-	}
-
-
-	void inspire_driver::set_inhibit(bool flag) {
-		if(!flag) {
-			if(inhibit_building_count > 0) { inhibit_building_count--; }
-		} else {
-			inhibit_building_count++;
-		}
-	}
-	bool inspire_driver::inhibit_building() const {
-		return inhibit_building_count > 0;
-	}
-
-
-	void inspire_driver::using_scope_handle(const location& l, const std::vector<std::string>& extension_names) {
-		for(std::string extensionName : extension_names) {
-			extensionName.replace(0, 1, "");
-			extensionName.replace(extensionName.size() - 1, 1, "");
-
-			// get extension factory from the registry
-			auto optFactory = lang::ExtensionRegistry::getInstance().lookupExtensionFactory(extensionName);
-			if (optFactory) {
-				import_extension((*optFactory)(mgr));
-			} else {
-				error(l, format("Unable to locate module: %s", extensionName.c_str()));
-			}
-		}
-	}
-
-	void inspire_driver::import_extension(const lang::Extension& extension) {
-
-		// import symbols
-		for(const auto& cur : extension.getSymbols()) {
-			add_symb(cur.first, cur.second);
-		}
-
-		// import type aliases
-		for(const auto& cur : extension.getTypeAliases()) {
-			add_type_alias(cur.first, cur.second);
-		}
-
-	}
-
-		// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Debug tools  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-		namespace {
-
-			// TODO: move this to  utils
-			const std::string RED = "\033[31m";
-			const std::string GREEN = "\033[32m";
-			const std::string BLUE = "\033[34m";
-			const std::string BLACK = "\033[30m";
-			const std::string CYAN = "\033[96m";
-			const std::string YELLOW = "\033[33m";
-			const std::string GREY = "\033[37m";
-
-			const std::string RESET = "\033[0m";
-			const std::string BOLD = "\033[1m";
-
 		} // annon
 
-		void inspire_driver::print_location(const location& l) const {
+		void InspireDriver::print_location(const location& l) const {
 			auto buffer = split_string(str);
 			int line = 1;
 
@@ -1148,21 +801,21 @@ namespace parser3 {
 		}
 		// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Error management  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-		void inspire_driver::error(const location& l, const std::string& m) const {
-			errors.push_back(t_error(l, m));
+		void InspireDriver::error(const location& l, const std::string& m) const {
+			errors.push_back(ParserError(l, m));
 		}
 
-		void inspire_driver::error(const std::string& m) const {
-			errors.push_back(t_error(glob_loc, m));
+		void InspireDriver::error(const std::string& m) const {
+			errors.push_back(ParserError(glob_loc, m));
 		}
 
-		bool inspire_driver::where_errors() const {
+		bool InspireDriver::where_errors() const {
 			if(!errors.empty()) { print_errors(); }
 			return !errors.empty();
 		}
 
 
-		void inspire_driver::print_errors(std::ostream& out, bool color) const {
+		void InspireDriver::print_errors(std::ostream& out, bool color) const {
 			auto buffer = split_string(str);
 			int line = 1;
 			for(const auto& err : errors) {

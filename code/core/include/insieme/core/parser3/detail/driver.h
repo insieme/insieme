@@ -64,10 +64,9 @@ namespace parser3 {
 		struct DeclarationContext {
 
 			struct Scope {
-				definition_map symbols;
-				definition_map types;
 				type_alias_map alias;
-				bool isFunction;
+				definition_map types;
+				definition_map symbols;
 			};
 
 			std::vector<Scope> stack;
@@ -75,40 +74,51 @@ namespace parser3 {
 			// public:
 
 			DeclarationContext() { open_scope(); /* global scope */ }
-			DeclarationContext(const DeclarationContext& o) =default;
+			DeclarationContext(const DeclarationContext& o) =delete;
 
 			// ~~~~~~~~~~~~~~~~~~~~~ scope ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
 
-			void open_scope(const std::string& msg = "");
-			void close_scope(const std::string& msg = "");
-
-			bool add_symb(const std::string& name, const node_factory& factory);
-			bool add_type(const std::string& name, const node_factory& factory);
-
-			NodePtr find_symb(const std::string& name) const;
-			NodePtr find_type(const std::string& name) const;
-
-			bool isInFunctionDefinition() const;
+			void open_scope();
+			void close_scope();
 
 			void add_type_alias(const GenericTypePtr& pattern, const TypePtr& substitute);
 			TypePtr resolve(const TypePtr& type) const;
+
+			bool add_type(const std::string& name, const node_factory& factory);
+			bool add_type(const std::string& name, const TypePtr& type);
+
+			bool add_symb(const std::string& name, const node_factory& factory);
+			bool add_symb(const std::string& name, const ExpressionPtr& expr);
+
+			NodePtr find_type(const std::string& name) const;
+			NodePtr find_symb(const std::string& name) const;
+
 		};
 
+		/**
+		 * A struct summarizing an error encountered during parsing.
+		 */
+		struct ParserError {
+			location l;
+			std::string msg;
+			ParserError(const location& l, const std::string& msg) : l(l), msg(msg) {}
+		};
 
-		// Conducting the whole scanning and parsing of Calc++.
-		class inspire_driver {
-			struct t_error {
-				location l;
-				std::string msg;
-				t_error(const location& l, const std::string& msg) : l(l), msg(msg) {}
-			};
-			mutable std::vector<t_error> errors;
+		/**
+		 * The driver of the inspire parser providing the context for the parsing process
+		 * and recording the result.
+		 */
+		class InspireDriver {
+
+			mutable std::vector<ParserError> errors;
 
 			DeclarationContext scopes;
 
 		  public:
-			inspire_driver(const std::string& f, NodeManager& nk, const DeclarationContext& ctx = DeclarationContext());
-			virtual ~inspire_driver();
+
+			InspireDriver(const std::string& f, NodeManager& mgr);
+
+			virtual ~InspireDriver();
 
 			NodeManager& mgr;
 			IRBuilder builder;
@@ -119,40 +129,24 @@ namespace parser3 {
 			location glob_loc;
 
 		  private:
+
 			std::stringstream ss;
 			inspire_scanner scanner;
 			inspire_parser parser;
 
 		  public:
-			unsigned let_count;
-		    unsigned is_rec_func;
-		    std::string rec_call_func;
-			unsigned inhibit_building_count;
 
-		  private:
-			struct Lambda_let {
-				TypePtr retType;
-				VariableList params;
-				std::string expression;
-				FunctionKind fk;
-				bool isFunction;
-
-				Lambda_let(const TypePtr& retType, const VariableList& params, const std::string& expression, const FunctionKind& fk, bool isFunc)
-				    : retType(retType), params(params.begin(), params.end()), expression(expression), fk(fk), isFunction(isFunc) {}
-			};
-			std::vector<std::string> let_names;
-			std::vector<Lambda_let> lambda_lets;
-			std::vector<TypePtr> type_lets;
-			std::vector<ExpressionPtr> expr_lets;
-
-
-		  public:
 			ProgramPtr parseProgram();
+
 			TypePtr parseType();
+
 			StatementPtr parseStmt();
+
 			ExpressionPtr parseExpression();
 
+
 			// ~~~~~~~~~~~~~~~~~~~~~~~~  tools  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 			/**
 			 * finds an expression symbol previously defined in the scope
 			 */
@@ -225,6 +219,12 @@ namespace parser3 {
 			TypePtr genFuncType(const location& l, const TypeList& params, const TypePtr& retType, const FunctionKind& fk = FK_PLAIN);
 
 			/**
+			 * generate a record type
+			 */
+			TypePtr genRecordType(const location& l, const NodeType& type, const string& name, const ParentList& parents, const FieldList& fields, const LambdaExprList& ctors,
+					const LambdaExprPtr& dtor, const MemberFunctionList& mfuns, const PureVirtualMemberFunctionList& pvmfuns);
+
+			/**
 			 * check whether type alias can be applied to the given type and applies those.
 			 */
 			TypePtr resolveTypeAliases(const location& l, const TypePtr& type);
@@ -233,7 +233,7 @@ namespace parser3 {
 			 * generates a lambda expression
 			 */
 			ExpressionPtr genLambda(const location& l, const VariableList& params, const TypePtr& retType, const StatementPtr& body,
-			                        const FunctionKind& = FK_PLAIN);
+			                        const FunctionKind& = FK_PLAIN, bool isLambda = true);
 
 			/**
 			 * generates a closure
@@ -256,43 +256,10 @@ namespace parser3 {
 			ExpressionPtr genUnionExpression(const location& l, const TypePtr& type, const std::string field, const ExpressionPtr& expr);
 
 
-			/* ~~~~~~~~~~~~~~~~~~~~~~~ let bindings management ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-
-			/**
-			 * stores in the current state a name for a let binding being defined
-			 */
-			void add_let_name(const location& l, const std::string& name);
-
-			/**
-			 * stores in the current state the type and code (text) for a lambda being defined
-			 */
-			void add_let_lambda(const location& l, const location& bodyb, const location& bodye, const TypePtr& retType,
-			                    const VariableList& params = VariableList(), const FunctionKind& fk = FK_PLAIN);
-			/**
-			 * stores in the current state the type for a let type being defined
-			 */
-			void add_let_type(const location& l, const TypePtr& type);
-
-			/**
-			 * stores a explicit defined recursive function
-     		 */
-			void add_rec_lambda(const location& l, const std::string recFuncName,
-			                    const std::vector<std::pair<std::string, ExpressionPtr>> body);
-
-			/**
- 			 * stores in the current state the expression for a let expression being defined
-			 */
-			void add_let_expression(const location& l, const ExpressionPtr& expr);
-
 			/**
 			 * stores in the current scope the "this" variable with the given type
 			 */
 			void add_this(const location& l, const TypePtr& classType);
-
-			/**
-			 * finish the let statement, matches names and definitions of types/lambdas/expressions
-			 */
-			void close_let_statement(const location& l);
 
 			/**
 			 * add a symbol into the scope
@@ -302,7 +269,7 @@ namespace parser3 {
 			/**
 			 * add a symbol into the scope
 			 */
-			void add_symb(const location& l, const std::string& name, const NodePtr& node);
+			void add_symb(const location& l, const std::string& name, const ExpressionPtr& node);
 
 			/**
 			 * add a symbol into the scope (no location, used when setting up the inspire_parser)
@@ -312,7 +279,7 @@ namespace parser3 {
 			/**
 			 * add a symbol into the scope (no location, used when setting up the inspire_parser)
 			 */
-			void add_symb(const std::string& name, const NodePtr& node);
+			void add_symb(const std::string& name, const ExpressionPtr& node);
 
 			/**
 			 * add a symbol into the scope
@@ -322,7 +289,7 @@ namespace parser3 {
 			/**
 			 * add a symbol into the scope
 			 */
-			void add_type(const location& l, const std::string& name, const NodePtr& node);
+			void add_type(const location& l, const std::string& name, const TypePtr& node);
 
 			/**
 			 * add a symbol into the scope (no location, used when setting up the inspire_parser)
@@ -332,7 +299,7 @@ namespace parser3 {
 			/**
 			 * add a symbol into the scope (no location, used when setting up the inspire_parser)
 			 */
-			void add_type(const std::string& name, const NodePtr& node);
+			void add_type(const std::string& name, const TypePtr& node);
 
 			/**
 			 * add a type alias to the current scope
@@ -340,14 +307,14 @@ namespace parser3 {
 			void add_type_alias(const GenericTypePtr& pattern, const TypePtr& substitute);
 
 			/**
-			 *  Open a frame in the scope manager
+			 *  Open a nested scope.
 			 */
-			void open_scope(const location& l, const std::string&);
+			void open_scope(const location& l);
 
 			/**
-			 *  Close a frame in the scope manager
+			 *  Close a nested scope.
 			 */
-			void close_scope(const location& l, const std::string&);
+			void close_scope(const location& l);
 
 			/**
 			 * Utility to mark addresses when parsing addresses (expression overload)
@@ -360,20 +327,9 @@ namespace parser3 {
 			StatementPtr mark_address(const location& l, const StatementPtr& stmt);
 
 			/**
-			 * queries whenever the core generation is inhibited
-			 * syntactic parsing, no build (this can be used to jump over large ranges of code to do subscoping)
-			 */
-			bool inhibit_building() const;
-
-			/**
-			 *  enables code generation inhibition
-			 */
-			void set_inhibit(bool flag = true);
-
-			/**
 			 *  support for using keyword (allows to include extensions)
 			 */
-			void using_scope_handle(const location& l, const std::vector<std::string>& extension_names);
+			void import_extension(const location& l, const std::string& extension_name);
 
 			/**
 			 * supports the import of all the symbols and aliases of an extension.

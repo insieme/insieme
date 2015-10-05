@@ -58,7 +58,7 @@ namespace parser3 {
 
 	namespace {
 
-		void checkErrors(inspire_driver& driver, bool onFailThrow) {
+		void checkErrors(InspireDriver& driver, bool onFailThrow) {
 			if(!driver.result) {
 				if(onFailThrow) {
 					std::stringstream ss;
@@ -70,7 +70,7 @@ namespace parser3 {
 			}
 		}
 
-		void save_symbol_table(inspire_driver& driver, const definition_map& definitions) {
+		void save_symbol_table(InspireDriver& driver, const definition_map& definitions) {
 			for(const auto& def : definitions) {
 				// the use of the line: symbols["name"] = builder.parseX("....", symbols);
 				// will append a symbols with a null ptr inside. this is not good
@@ -78,7 +78,7 @@ namespace parser3 {
 			}
 		}
 
-		void append_type_aliases(inspire_driver& driver, const type_alias_map& aliases) {
+		void append_type_aliases(InspireDriver& driver, const type_alias_map& aliases) {
 			for(const auto& cur : aliases) {
 				driver.add_type_alias(cur.first, cur.second);
 			}
@@ -86,7 +86,7 @@ namespace parser3 {
 	}
 
 	TypePtr parse_type(NodeManager& manager, const string& code, bool onFailThrow, const definition_map& definitions, const type_alias_map& aliases) {
-		inspire_driver driver(code, manager);
+		InspireDriver driver(code, manager);
 		save_symbol_table(driver, definitions);
 		append_type_aliases(driver, aliases);
 		auto x = driver.parseType();
@@ -95,7 +95,7 @@ namespace parser3 {
 	}
 
 	ExpressionPtr parse_expr(NodeManager& manager, const string& code, bool onFailThrow, const definition_map& definitions, const type_alias_map& aliases) {
-		inspire_driver driver(code, manager);
+		InspireDriver driver(code, manager);
 		save_symbol_table(driver, definitions);
 		append_type_aliases(driver, aliases);
 		auto x = driver.parseExpression();
@@ -104,7 +104,7 @@ namespace parser3 {
 	}
 
 	StatementPtr parse_stmt(NodeManager& manager, const string& code, bool onFailThrow, const definition_map& definitions, const type_alias_map& aliases) {
-		inspire_driver driver(code, manager);
+		InspireDriver driver(code, manager);
 		save_symbol_table(driver, definitions);
 		append_type_aliases(driver, aliases);
 		auto x = driver.parseStmt();
@@ -113,7 +113,7 @@ namespace parser3 {
 	}
 
 	ProgramPtr parse_program(NodeManager& manager, const string& code, bool onFailThrow, const definition_map& definitions, const type_alias_map& aliases) {
-		inspire_driver driver(code, manager);
+		InspireDriver driver(code, manager);
 		save_symbol_table(driver, definitions);
 		append_type_aliases(driver, aliases);
 		auto x = driver.parseProgram();
@@ -124,25 +124,25 @@ namespace parser3 {
 	NodePtr parse_any(NodeManager& manager, const string& code, bool onFailThrow, const definition_map& definitions, const type_alias_map& aliases) {
 		NodePtr x;
 		{
-			inspire_driver driver(code, manager);
+			InspireDriver driver(code, manager);
 			save_symbol_table(driver, definitions);
 			append_type_aliases(driver, aliases);
 			x = driver.parseExpression();
 		}
 		if(!x) {
-			inspire_driver driver(code, manager);
+			InspireDriver driver(code, manager);
 			save_symbol_table(driver, definitions);
 			append_type_aliases(driver, aliases);
 			x = driver.parseType();
 		}
 		if(!x) {
-			inspire_driver driver(code, manager);
+			InspireDriver driver(code, manager);
 			save_symbol_table(driver, definitions);
 			append_type_aliases(driver, aliases);
 			x = driver.parseStmt();
 		}
 		if(!x) {
-			inspire_driver driver(code, manager);
+			InspireDriver driver(code, manager);
 			save_symbol_table(driver, definitions);
 			append_type_aliases(driver, aliases);
 			x = driver.parseProgram();
@@ -239,7 +239,7 @@ namespace parser3 {
 
 	std::vector<NodeAddress> parse_addresses_expression(NodeManager& manager, const string& code, bool onFailThrow,
 	                                                   const definition_map& definitions, const type_alias_map& aliases) {
-		inspire_driver driver(code, manager);
+		InspireDriver driver(code, manager);
 		save_symbol_table(driver, definitions);
 		append_type_aliases(driver, aliases);
 		auto root = driver.parseExpression();
@@ -255,7 +255,7 @@ namespace parser3 {
 
 	std::vector<NodeAddress> parse_addresses_statement(NodeManager& manager, const string& code, bool onFailThrow,
 	                                                   const definition_map& definitions, const type_alias_map& aliases) {
-		inspire_driver driver(code, manager);
+		InspireDriver driver(code, manager);
 		save_symbol_table(driver, definitions);
 		append_type_aliases(driver, aliases);
 		auto root = driver.parseStmt();
@@ -270,7 +270,7 @@ namespace parser3 {
 	}
 
 	std::vector<NodeAddress> parse_addresses_program(NodeManager& manager, const string& code, bool onFailThrow, const definition_map& definitions, const type_alias_map& aliases) {
-		inspire_driver driver(code, manager);
+		InspireDriver driver(code, manager);
 		save_symbol_table(driver, definitions);
 		append_type_aliases(driver, aliases);
 		auto root = driver.parseProgram();

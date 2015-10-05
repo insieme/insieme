@@ -294,10 +294,19 @@ namespace core {
 		TagTypePtr structType(const string& name, const vector<FieldPtr>& fields) const;
 		TagTypePtr structType(const StringValuePtr& name, const vector<FieldPtr>& fields) const;
 		TagTypePtr structType(const StringValuePtr& name, const vector<ParentPtr>& parents, const vector<FieldPtr>& fields) const;
+		TagTypePtr structType(const string& name, const ParentList& parents, const FieldList& fields, const LambdaExprList& ctors,
+				const LambdaExprPtr& dtor, const MemberFunctionList& mfuns, const PureVirtualMemberFunctionList& pvmfuns) const;
+		TagTypePtr structType(const StringValuePtr& name, const ParentsPtr& parents, const FieldsPtr& fields, const ExpressionsPtr& ctors,
+				const ExpressionPtr& dtor, const MemberFunctionsPtr& mfuns, const PureVirtualMemberFunctionsPtr& pvmfuns) const;
 
 		TagTypePtr unionType(const vector<std::pair<StringValuePtr, TypePtr>>& fields) const;
 		TagTypePtr unionType(const StringValuePtr& name, const vector<FieldPtr>& fields) const;
 		TagTypePtr unionType(const vector<FieldPtr>& fields) const;
+		TagTypePtr unionType(const string& name, const FieldList& fields, const LambdaExprList& ctors, const LambdaExprPtr& dtor,
+				const MemberFunctionList& mfuns, const PureVirtualMemberFunctionList& pvmfuns) const;
+		TagTypePtr unionType(const StringValuePtr& name, const FieldsPtr& fields, const ExpressionsPtr& ctors,
+				const ExpressionPtr& dtor, const MemberFunctionsPtr& mfuns, const PureVirtualMemberFunctionsPtr& pvmfuns) const;
+
 
 		ExpressionPtr getDefaultDestructor(const StringValuePtr& recordName) const;
 		ExpressionPtr getDefaultDestructor(const string& recordName) const {

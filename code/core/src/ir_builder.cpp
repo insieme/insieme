@@ -350,6 +350,18 @@ namespace core {
 		return unionType(fields);
 	}
 
+	TagTypePtr IRBuilderBaseModule::unionType(const string& name, const FieldList& filds, const LambdaExprList& ctors,
+			const LambdaExprPtr& dtor, const MemberFunctionList& mfuns, const PureVirtualMemberFunctionList& pvmfuns) const {
+		return unionType(stringValue(name), fields(filds), expressions(convertList<Expression>(ctors)), dtor, memberFunctions(mfuns), pureVirtualMemberFunctions(pvmfuns));
+	}
+
+	TagTypePtr IRBuilderBaseModule::unionType(const StringValuePtr& name, const FieldsPtr& fields, const ExpressionsPtr& ctors,
+			const ExpressionPtr& dtor, const MemberFunctionsPtr& mfuns, const PureVirtualMemberFunctionsPtr& pvmfuns) const {
+		auto tag = tagTypeReference(name);
+				return tagType(tag, tagTypeDefinition({tagTypeBinding(tag, unionRecord(name, fields, ctors, dtor, mfuns, pvmfuns))}));
+	}
+
+
 	TagTypePtr IRBuilderBaseModule::structType(const vector<ParentPtr>& parents, const vector<FieldPtr>& fields) const {
 		return structType(stringValue(""), IRBuilderBaseModule::parents(parents), fields);
 	}
@@ -382,6 +394,19 @@ namespace core {
 		auto tag = tagTypeReference(name);
 		return tagType(tag, tagTypeDefinition({tagTypeBinding(tag, structRecord(name, parents(parentsList), fields))}));
 	}
+
+	TagTypePtr IRBuilderBaseModule::structType(const string& name, const ParentList& prents, const FieldList& filds, const LambdaExprList& ctors,
+			const LambdaExprPtr& dtor, const MemberFunctionList& mfuns, const PureVirtualMemberFunctionList& pvmfuns) const {
+		return structType(stringValue(name), parents(prents), fields(filds), expressions(convertList<Expression>(ctors)), dtor, memberFunctions(mfuns), pureVirtualMemberFunctions(pvmfuns));
+	}
+
+	TagTypePtr IRBuilderBaseModule::structType(const StringValuePtr& name, const ParentsPtr& parents, const FieldsPtr& fields, const ExpressionsPtr& ctors,
+			const ExpressionPtr& dtor, const MemberFunctionsPtr& mfuns, const PureVirtualMemberFunctionsPtr& pvmfuns) const {
+		auto tag = tagTypeReference(name);
+				return tagType(tag, tagTypeDefinition({tagTypeBinding(tag, structRecord(name, parents, fields, ctors, dtor, mfuns, pvmfuns))}));
+	}
+
+
 
 	ExpressionPtr IRBuilderBaseModule::getDefaultDestructor(const StringValuePtr& recordName) const {
 		// create default destructor
