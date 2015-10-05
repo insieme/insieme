@@ -225,6 +225,11 @@ namespace frontend {
 		
 		registerFrontendExtension<extensions::FrontendCleanupExtension>(options);
 	}
+	
+	void ConversionJob::registerDefaultExtensions()	{
+		boost::program_options::options_description opt;
+		registerExtensionFlags(opt);
+	}
 
 	std::ostream& ConversionJob::printTo(std::ostream& out) const {
 		out << "~~~~~~CONVERSION SETUP~~~~~~\n";
