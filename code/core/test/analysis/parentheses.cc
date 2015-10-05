@@ -35,6 +35,7 @@
  */
 
 #include <gtest/gtest.h>
+
 #include <iostream>
 
 #include "insieme/core/analysis/parentheses.h"
@@ -44,8 +45,7 @@
 #include "insieme/core/ir_expressions.h"
 #include "insieme/core/ir_address.h"
 #include "insieme/core/printer/pretty_printer.h"
-#include "insieme/core/parser3/ir_parser.h"
-
+#include "insieme/core/parser/ir_parser.h"
 
 namespace insieme {
 namespace core {

@@ -4,8 +4,8 @@
 # include <cstdlib>
 # include <string>
 
-#include "insieme/core/parser3/detail/driver.h"
-#include "insieme/core/parser3/detail/scanner.h"
+#include "insieme/core/parser/detail/driver.h"
+#include "insieme/core/parser/detail/scanner.h"
 #include "insieme/core/ir.h"
 
 // this file is generated and the path is provided
@@ -55,7 +55,7 @@ blank   [ \t]
 %{
   // Code run each time a pattern is matched.
   # define YY_USER_ACTION  loc.columns (yyleng);
-  using namespace insieme::core::parser3::detail;
+  using namespace insieme::core::parser::detail;
 %}
 
 %%
@@ -215,7 +215,7 @@ blank   [ \t]
 
 namespace insieme{
 namespace core{
-namespace parser3{
+namespace parser{
 namespace detail{
 
 
@@ -224,7 +224,7 @@ namespace detail{
     }
 
 } // detail namespace
-} // parser3 namespace
+} // parser namespace
 } // core namespace
 } // insieme namespace
 

@@ -55,7 +55,7 @@
 
 namespace insieme {
 namespace core {
-namespace parser3 {
+namespace parser {
 
 	/**
 	 * A type for an entity producing a node.
@@ -234,6 +234,6 @@ namespace parser3 {
 		}
 	};
 
-} // end namespace parser3
+} // end namespace parser
 } // end namespace core
 } // end namespace insieme

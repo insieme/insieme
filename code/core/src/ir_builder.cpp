@@ -72,7 +72,7 @@
 #include "insieme/core/lang/static_vars.h"
 #include "insieme/core/lang/varargs_extension.h"
 
-#include "insieme/core/parser3/ir_parser.h"
+#include "insieme/core/parser/ir_parser.h"
 
 #include "insieme/core/printer/pretty_printer.h"
 
@@ -169,8 +169,8 @@ namespace core {
 			return res;
 		}
 
-		parser3::type_alias_map getStandardAliasMap(NodeManager& mgr) {
-			parser3::type_alias_map res;
+		parser::type_alias_map getStandardAliasMap(NodeManager& mgr) {
+			parser::type_alias_map res;
 
 			// load standard modules
 			for(const auto& cur : mgr.getLangExtension<lang::ArrayExtension>().getTypeAliases()) res.insert(cur);
@@ -187,7 +187,7 @@ namespace core {
 	// ---------------------------- Parser Integration -----------------------------------
 
 	NodePtr IRBuilderBaseModule::parse(const string& code, const lazy_definition_map& symbols) const {
-		return parser3::parse_any(manager, code, true, addStandardSymbols(manager, symbols), getStandardAliasMap(manager));
+		return parser::parse_any(manager, code, true, addStandardSymbols(manager, symbols), getStandardAliasMap(manager));
 	}
 
 	NodePtr IRBuilderBaseModule::parse(const string& code, const eager_definition_map& symbols) const {
@@ -195,7 +195,7 @@ namespace core {
 	}
 
 	TypePtr IRBuilderBaseModule::parseType(const string& code, const lazy_definition_map& symbols) const {
-		return parser3::parse_type(manager, code, true, addStandardSymbols(manager, symbols), getStandardAliasMap(manager));
+		return parser::parse_type(manager, code, true, addStandardSymbols(manager, symbols), getStandardAliasMap(manager));
 	}
 
 	TypePtr IRBuilderBaseModule::parseType(const string& code, const eager_definition_map& symbols) const {
@@ -203,7 +203,7 @@ namespace core {
 	}
 
 	ExpressionPtr IRBuilderBaseModule::parseExpr(const string& code, const lazy_definition_map& symbols) const {
-		return parser3::parse_expr(manager, code, true, addStandardSymbols(manager, symbols), getStandardAliasMap(manager));
+		return parser::parse_expr(manager, code, true, addStandardSymbols(manager, symbols), getStandardAliasMap(manager));
 	}
 
 	ExpressionPtr IRBuilderBaseModule::parseExpr(const string& code, const eager_definition_map& symbols) const {
@@ -211,7 +211,7 @@ namespace core {
 	}
 
 	StatementPtr IRBuilderBaseModule::parseStmt(const string& code, const lazy_definition_map& symbols) const {
-		return parser3::parse_stmt(manager, code, true, addStandardSymbols(manager, symbols), getStandardAliasMap(manager));
+		return parser::parse_stmt(manager, code, true, addStandardSymbols(manager, symbols), getStandardAliasMap(manager));
 	}
 
 	StatementPtr IRBuilderBaseModule::parseStmt(const string& code, const eager_definition_map& symbols) const {
@@ -219,7 +219,7 @@ namespace core {
 	}
 
 	ProgramPtr IRBuilderBaseModule::parseProgram(const string& code, const lazy_definition_map& symbols) const {
-		return parser3::parse_program(manager, code, true, addStandardSymbols(manager, symbols), getStandardAliasMap(manager));
+		return parser::parse_program(manager, code, true, addStandardSymbols(manager, symbols), getStandardAliasMap(manager));
 	}
 
 	ProgramPtr IRBuilderBaseModule::parseProgram(const string& code, const eager_definition_map& symbols) const {
@@ -227,7 +227,7 @@ namespace core {
 	}
 
 	vector<NodeAddress> IRBuilderBaseModule::parseAddressesExpression(const string& code, const lazy_definition_map& symbols) const {
-		return parser3::parse_addresses_expression(manager, code, true, addStandardSymbols(manager, symbols), getStandardAliasMap(manager));
+		return parser::parse_addresses_expression(manager, code, true, addStandardSymbols(manager, symbols), getStandardAliasMap(manager));
 	}
 
 	vector<NodeAddress> IRBuilderBaseModule::parseAddressesExpression(const string& code, const eager_definition_map& symbols) const {
@@ -235,7 +235,7 @@ namespace core {
 	}
 
 	vector<NodeAddress> IRBuilderBaseModule::parseAddressesStatement(const string& code, const lazy_definition_map& symbols) const {
-		return parser3::parse_addresses_statement(manager, code, true, addStandardSymbols(manager, symbols), getStandardAliasMap(manager));
+		return parser::parse_addresses_statement(manager, code, true, addStandardSymbols(manager, symbols), getStandardAliasMap(manager));
 	}
 
 	vector<NodeAddress> IRBuilderBaseModule::parseAddressesStatement(const string& code, const eager_definition_map& symbols) const {
@@ -243,7 +243,7 @@ namespace core {
 	}
 
 	vector<NodeAddress> IRBuilderBaseModule::parseAddressesProgram(const string& code, const lazy_definition_map& symbols) const {
-		return parser3::parse_addresses_program(manager, code, true, addStandardSymbols(manager, symbols), getStandardAliasMap(manager));
+		return parser::parse_addresses_program(manager, code, true, addStandardSymbols(manager, symbols), getStandardAliasMap(manager));
 	}
 
 	vector<NodeAddress> IRBuilderBaseModule::parseAddressesProgram(const string& code, const eager_definition_map& symbols) const {

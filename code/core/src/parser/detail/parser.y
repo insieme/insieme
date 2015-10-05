@@ -6,7 +6,7 @@
 %require "3.0.0"
 %defines
 %define parser_class_name {inspire_parser}
-%define api.namespace {insieme::core::parser3::detail}
+%define api.namespace {insieme::core::parser::detail}
 %define api.token.constructor
 %define api.value.type variant
 %define parse.assert
@@ -23,14 +23,14 @@
 
     namespace insieme{
     namespace core{
-    namespace parser3{
+    namespace parser{
     namespace detail{
 
         class InspireDriver;
         class inspire_scanner;
 
     } // detail
-    } // parser3
+    } // parser
     } // core
     } // insieme
 
@@ -52,8 +52,8 @@
 }
 
 // The parsing context.
-%param { parser3::detail::InspireDriver& driver }
-%param { parser3::detail::inspire_scanner& scanner }
+%param { parser::detail::InspireDriver& driver }
+%param { parser::detail::inspire_scanner& scanner }
 %locations
 %initial-action
 {
@@ -70,8 +70,8 @@
      * this code goes in the cpp file
      */
 
-    #include "insieme/core/parser3/detail/driver.h"
-    #include "insieme/core/parser3/detail/scanner.h"
+    #include "insieme/core/parser/detail/driver.h"
+    #include "insieme/core/parser/detail/scanner.h"
     #include "insieme/core/ir.h"
 
     #include "insieme/core/annotations/naming.h"
@@ -800,7 +800,7 @@ let_statement : "let" "identifier" "=" expression ";"			          { $$ = Stateme
 
 namespace insieme{
 namespace core{
-namespace parser3{
+namespace parser{
 namespace detail{
 
     using namespace insieme::core;
@@ -811,7 +811,7 @@ namespace detail{
 
 
 } // detail
-} // parser3
+} // parser
 } // core
 } // insieme
 

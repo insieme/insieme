@@ -34,10 +34,11 @@
  * regarding third party software licenses.
  */
 
+#include "insieme/core/parser/detail/driver.h"
+
 #include <algorithm>
 #include <string>
 
-#include "insieme/core/parser3/detail/driver.h"
 #include "insieme/core/ir.h"
 
 #include "insieme/core/transform/manipulation.h"
@@ -49,7 +50,7 @@
 #include "insieme/core/types/match.h"
 #include "insieme/core/types/return_type_deduction.h"
 
-#include "insieme/core/parser3/detail/scanner.h"
+#include "insieme/core/parser/detail/scanner.h"
 
 #include "insieme/core/lang/array.h"
 #include "insieme/core/lang/reference.h"
@@ -65,7 +66,7 @@
 
 namespace insieme {
 namespace core {
-namespace parser3 {
+namespace parser {
 	namespace detail {
 
 		/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ scope manager ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -861,6 +862,6 @@ namespace parser3 {
 
 
 	} // namespace detail
-} // namespace parser3
+} // namespace parser
 } // namespace core
 } // namespace insieme

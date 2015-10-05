@@ -36,7 +36,7 @@
 
 #include <iostream>
 #include <gtest/gtest.h>
-#include "insieme/core/parser3/detail/driver.h"
+#include "insieme/core/parser/detail/driver.h"
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/checks/full_check.h"
@@ -44,7 +44,7 @@
 
 namespace insieme {
 namespace core {
-namespace parser3 {
+namespace parser {
 
 	using namespace detail;
 
@@ -60,7 +60,7 @@ namespace parser3 {
 		return driver.result;
 	}
 
-	TEST(IR_Parser3, Types) {
+	TEST(IR_Parser, Types) {
 		NodeManager nm;
 		EXPECT_TRUE(test_type(nm, "int<4>"));
 		EXPECT_TRUE(test_type(nm, "someweirdname<>"));
@@ -108,7 +108,7 @@ namespace parser3 {
 		return driver.result;
 	}
 
-	TEST(IR_Parser3, Strings) {
+	TEST(IR_Parser, Strings) {
 		NodeManager nm;
 		EXPECT_TRUE(test_expression(nm, "lit(\"foo\")"));
 		EXPECT_TRUE(test_expression(nm, "lit(\"\"foo\"\")"));
@@ -116,7 +116,7 @@ namespace parser3 {
 		EXPECT_TRUE(test_expression(nm, "lit(\"\"foo\\nbar\"\")"));
 	}
 
-	TEST(IR_Parser3, Expressions) {
+	TEST(IR_Parser, Expressions) {
 		NodeManager nm;
 		EXPECT_TRUE(test_expression(nm, "true?1:0"));
 		EXPECT_TRUE(test_expression(nm, "param(1)"));
@@ -190,14 +190,14 @@ namespace parser3 {
 		                                "    lambda  ~class::() { }"));
 	}
 
-	TEST(IR_Parser3, Precedence) {
+	TEST(IR_Parser, Precedence) {
 		NodeManager mgr;
 		EXPECT_EQ("int_add(1, int_mul(2, 3))", toString(*parse_expr(mgr, "1+2*3")));
 		EXPECT_EQ("int_mul(int_add(1, 2), 3)", toString(*parse_expr(mgr, "(1+2)*3")));
 		EXPECT_EQ("int_add(1, int_mul(2, 3))", toString(*parse_expr(mgr, "1+(2*3)")));
 	}
 
-	TEST(IR_Parser3, LambdasAndFunctions) {
+	TEST(IR_Parser, LambdasAndFunctions) {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 
@@ -226,7 +226,7 @@ namespace parser3 {
 		return driver.result;
 	}
 
-	TEST(IR_Parser3, Statements) {
+	TEST(IR_Parser, Statements) {
 		NodeManager nm;
 		EXPECT_TRUE(test_statement(nm, ";"));
 
@@ -297,7 +297,7 @@ namespace parser3 {
 	}
 
 
-	TEST(IR_Parser3, Tuples) {
+	TEST(IR_Parser, Tuples) {
 		NodeManager nm;
 
 		EXPECT_TRUE(test_statement(nm,
@@ -335,7 +335,7 @@ namespace parser3 {
 		return driver.result;
 	}
 
-	TEST(IR_Parser3, Let) {
+	TEST(IR_Parser, Let) {
 		NodeManager mgr;
 		EXPECT_TRUE(test_program(mgr, "let int = int<4>; int main () { return 1; }"));
 		EXPECT_TRUE(test_program(mgr, "let int = int<4>; let long = int<8>; long main (ref<int,f,f,plain> a) { return 1; }"));
@@ -364,7 +364,7 @@ namespace parser3 {
 		                              "}"));
 	}
 
-	TEST(IR_Parser3, Program) {
+	TEST(IR_Parser, Program) {
 		NodeManager nm;
 		EXPECT_TRUE(test_program(nm, "int<4> main (ref<int<4>,f,f,plain> a, ref<int<4>,f,f,plain> b)  { return 1+1; }"));
 		EXPECT_TRUE(test_program(nm, "let int = int<4>; int main (ref<int,f,f,plain> a, ref<int,f,f,plain> b) { return 1+1; }"));
@@ -409,7 +409,7 @@ namespace parser3 {
 	}
 
 
-	TEST(IR_Parser3, Scopes) {
+	TEST(IR_Parser, Scopes) {
 		NodeManager nm;
 		//        EXPECT_FALSE (test_expression(nm, R"(
 		//            let a = lambda()->unit {};  let a = lambda ()->int<4>{ return 0; };  a
@@ -421,6 +421,6 @@ namespace parser3 {
 		EXPECT_FALSE(test_expression(nm, " let a = int<4>;  let a = float<4>;  1 "));
 	}
 
-} // parser3
+} // parser
 } // core
 } // insieme

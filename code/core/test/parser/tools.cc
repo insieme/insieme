@@ -42,7 +42,7 @@
 #include <fstream>
 #include <sstream>
 
-#include "insieme/core/parser3/detail/driver.h"
+#include "insieme/core/parser/detail/driver.h"
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_builder.h"
 
@@ -51,7 +51,7 @@
 
 namespace insieme {
 namespace core {
-namespace parser3 {
+namespace parser {
 	namespace detail {
 
 		namespace {
@@ -189,6 +189,6 @@ namespace parser3 {
 		}
 
 	} // detail
-} // parser3
+} // parser
 } // core
 } // insieme

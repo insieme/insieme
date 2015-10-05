@@ -43,8 +43,8 @@
 
 #include "insieme/core/forward_decls.h"
 #include "insieme/core/ir_builder.h"
-#include "insieme/core/parser3/ir_parser.h"
-#include "insieme/core/parser3/detail/scanner.h"
+#include "insieme/core/parser/detail/scanner.h"
+#include "insieme/core/parser/ir_parser.h"
 
 #include "insieme/core/ir_node_annotation.h"
 
@@ -53,7 +53,7 @@
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 namespace insieme {
 namespace core {
-namespace parser3 {
+namespace parser {
 	namespace detail {
 
 
@@ -359,6 +359,6 @@ namespace parser3 {
 		class AddressMark : public core::value_annotation::copy_on_migration {};
 
 	} // namespace detail
-} // namespace parser3
+} // namespace parser
 } // namespace core
 } // namespace insieme

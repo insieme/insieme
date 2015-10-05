@@ -44,7 +44,7 @@
 
 #include <boost/filesystem.hpp>
 
-#include "insieme/core/parser3/ir_parser.h"
+#include "insieme/core/parser/ir_parser.h"
 #include "insieme/core/checks/full_check.h"
 
 #include "insieme/core/lang/array.h"
@@ -57,10 +57,10 @@
 
 namespace insieme {
 namespace core {
-namespace parser3 {
+namespace parser {
 
 	// the directory to load input files from
-	const auto ROOT_DIR = SRC_ROOT_DIR "core/test/parser3/inputs/";
+	const auto ROOT_DIR = SRC_ROOT_DIR "core/test/parser/inputs/";
 
 
 	using std::string;

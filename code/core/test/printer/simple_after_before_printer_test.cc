@@ -34,24 +34,25 @@
 * regarding third party software licenses.
 */
 
-#include <iostream>
 #include <gtest/gtest.h>
+
+#include <iostream>
 #include <sstream>
 #include <fstream>
+
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/checks/full_check.h"
 
-
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_expressions.h"
 #include "insieme/core/printer/pretty_printer.h"
-#include "insieme/core/parser3/ir_parser.h"
-#include "../../include/insieme/core/ir_node.h"
+#include "insieme/core/parser/ir_parser.h"
+#include "insieme/core/ir_node.h"
 
 namespace insieme {
 	namespace core {
-		namespace parser3 {
+		namespace parser {
 
 			using namespace detail;
 			using namespace insieme::core::printer;
@@ -781,6 +782,6 @@ EXPECT_TRUE(test_program(nm,
 */
 }
 
-} // parser3
+} // parser
 } // core
 } // insieme

@@ -50,7 +50,7 @@
 
 namespace insieme {
 namespace core {
-namespace parser3 {
+namespace parser {
 	namespace detail {
 
 		class InspireDriver;
@@ -107,6 +107,6 @@ namespace parser3 {
 		inspire_parser::symbol_type yylex(InspireDriver& driver, inspire_scanner& scanner);
 
 	} // namespace detail
-} // namespace parser3
+} // namespace parser
 } // namespace core
 } // namespace insieme

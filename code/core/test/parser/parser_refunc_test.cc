@@ -36,14 +36,14 @@
 
 #include <iostream>
 #include <gtest/gtest.h>
-#include "insieme/core/parser3/detail/driver.h"
+#include "insieme/core/parser/detail/driver.h"
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/checks/full_check.h"
 
 namespace insieme{
 namespace core{
-namespace parser3{
+namespace parser{
 
     using namespace detail;
 
@@ -62,7 +62,7 @@ namespace parser3{
 
 
     // test comment
-    TEST(IR_Parser3, Program) {
+    TEST(IR_Parser, Program) {
         NodeManager nm;
         std::cout << "Starting testing parser" << std::endl;
     EXPECT_TRUE(test_program(nm, "int<4> main () { return 1; }"));
@@ -104,6 +104,6 @@ namespace parser3{
                 "}"
         ));*/
     }
-} // parser3
+} // parser
 } // core
 } // insieme

@@ -34,11 +34,12 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/core/parser3/ir_parser.h"
+#include "insieme/core/parser/ir_parser.h"
 
 #include <sstream>
 
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/parser/detail/driver.h"
 
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"
@@ -48,11 +49,10 @@
 #include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/encoder/lists.h"
 
-#include "insieme/core/parser3/detail/driver.h"
 
 namespace insieme {
 namespace core {
-namespace parser3 {
+namespace parser {
 
 	using namespace detail;
 
@@ -285,6 +285,6 @@ namespace parser3 {
 	}
 
 
-} //  parser3
+} //  parser
 } //  core
 } // insime

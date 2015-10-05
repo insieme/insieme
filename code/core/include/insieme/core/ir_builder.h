@@ -51,7 +51,7 @@
 
 #include "insieme/core/analysis/normalize.h"
 
-#include "insieme/core/parser3/ir_parser.h"
+#include "insieme/core/parser/ir_parser.h"
 
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/reference.h"
@@ -152,7 +152,7 @@ namespace core {
 		// --- Add parser support ---
 
 		// the type utilized for forwarding literal definitions to the parser functions
-		typedef parser3::definition_map lazy_definition_map;
+		typedef parser::definition_map lazy_definition_map;
 
 		// a convenience type for forwarding literal definitions to the parser functions
 		typedef std::map<std::string, NodePtr> eager_definition_map;
