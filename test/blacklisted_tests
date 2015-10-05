@@ -34,10 +34,6 @@ longlong
 simd_vector
 
 # Disabling tests because they fail with assertion:
-# Trying to build a ptr add/sub with non-int
-pointer_arith
-
-# Disabling tests because they fail with assertion:
 # Unable to deduce return type!
 ptr_offset
 
@@ -51,9 +47,9 @@ rec_struct
 ref_vector_array_pointer
 vector_partial_init
 
-# Disabling tests because they fail with assertion:
-# Variable arrays are handled in a separate FE extension, which does not appear to be loaded.
+# Disabling tests because VLAs are not implemented in the FE
 variable_arrays
+pointer_arith_vla
 
 # Disabling tests because they fail with assertion:
 # Illegal: dereferencing a NULL pointer!
