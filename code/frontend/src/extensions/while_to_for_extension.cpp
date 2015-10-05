@@ -66,6 +66,7 @@ namespace irp = insieme::core::pattern::irp;
 // - Also support more ways to write the increment expression
 // - Handle the case where the original loop variable is used after the while (by assigning to it either in or after the for)
 // - Handle non-int loops (e.g. for C++) by constructing the required int range, looping over it and setting the iterator variable internally
+// - check that there are no continue or break statements before converting
 
 namespace insieme {
 namespace frontend {

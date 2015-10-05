@@ -253,6 +253,12 @@ int main() {
 		a-5;
 	}
 	
+	#pragma test expect_ir("{ decl ref<ptr<unit,f,f>,f,f> v0; decl ref<ptr<unit,f,f>,f,f> v1; ptr_diff(*v0, *v1); }")
+	{
+		void *a, *b;
+		a-b;
+	}
+	
 	#pragma test expect_ir("{ decl ref<ptr<unit,f,f>,f,f> v0; ptr_gt(*v0,*v0); ptr_lt(*v0,*v0); ptr_le(*v0,*v0); ptr_ge(*v0,*v0); }")
 	{
 		void* a;
