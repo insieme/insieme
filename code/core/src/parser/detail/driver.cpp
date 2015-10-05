@@ -464,8 +464,8 @@ namespace parser {
 			return scopes.resolve(type);
 		}
 
-		ExpressionPtr InspireDriver::genLambda(const location& l, const VariableList& params, const TypePtr& retType, const StatementPtr& body,
-		                                        const FunctionKind& fk, bool isLambda) {
+		LambdaExprPtr InspireDriver::genLambda(const location& l, const VariableList& params, const TypePtr& retType, const StatementPtr& body,
+		                                       const FunctionKind& fk, bool isLambda) {
 			// TODO: cast returns to appropriate type
 			TypeList paramTys;
 			for(const auto& var : params) {
@@ -486,7 +486,7 @@ namespace parser {
 			return builder.lambdaExpr(funcType.as<FunctionTypePtr>(), lambdaIngredients.params, lambdaIngredients.body);
 		}
 
-		ExpressionPtr InspireDriver::genClosure(const location& l, const VariableList& params, StatementPtr stmt) {
+		BindExprPtr InspireDriver::genClosure(const location& l, const VariableList& params, StatementPtr stmt) {
 			if(!stmt) {
 				error(l, "closure statement malformed");
 				return nullptr;
@@ -608,15 +608,87 @@ namespace parser {
 			return builder.unionExpr(unionType, builder.stringValue(field), expr);
 		}
 
+		VariablePtr InspireDriver::genParameter(const location& l, const std::string& name, const TypePtr& type) {
+			auto resolvedType = resolveTypeAliases(l, type);
+			VariablePtr variable = builder.variable(resolvedType);
+			annotations::attachName(variable, name);
+			add_symb(l, name, variable);
+			return variable;
+		}
+
+		ExpressionPtr InspireDriver::genJobExpr(const location& l, const ExpressionPtr& lowerBound, const ExpressionPtr& upperBound, const ExpressionPtr& expr) {
+			auto scalarExpr = getScalar(expr);
+			if (!scalarExpr.isa<CallExprPtr>()) {
+				error(l, "expression in job must be a call expression");
+				return nullptr;
+			}
+			auto bind = builder.bindExpr(VariableList(), scalarExpr.as<CallExprPtr>());
+			return builder.jobExpr(getScalar(lowerBound), getScalar(upperBound), bind);
+		}
+
+		ExpressionPtr InspireDriver::genJobExpr(const location& l, const ExpressionPtr& expr) {
+			auto scalarExpr = getScalar(expr);
+			if (!scalarExpr.isa<CallExprPtr>()) {
+				error(l, "expression in job must be a call expression");
+				return nullptr;
+			}
+			auto bind = builder.bindExpr(VariableList(), scalarExpr.as<CallExprPtr>());
+			return builder.jobExpr(builder.getThreadNumRange(1), bind.as<ExpressionPtr>());
+		}
+
+		ExpressionPtr InspireDriver::genSync(const location& l, const ExpressionPtr& expr) {
+			return builder.callExpr(builder.getLangBasic().getUnit(), builder.getExtension<lang::ParallelExtension>().getMerge(), getScalar(expr));
+		}
+
+		ExpressionPtr InspireDriver::genSyncAll(const location& l) {
+			return builder.callExpr(builder.getLangBasic().getUnit(), builder.getExtension<lang::ParallelExtension>().getMergeAll());
+		}
+
+		ExpressionPtr InspireDriver::genDerefExpr(const location& l, const ExpressionPtr& expr) {
+			auto scalarExpr = getScalar(expr);
+			if (!analysis::isRefType(scalarExpr->getType())) {
+				error(l, format("cannot deref non ref type: %s", toString(scalarExpr->getType())));
+				return nullptr;
+			}
+
+			return builder.deref(scalarExpr);
+		}
+
+		ExpressionPtr InspireDriver::genAsExpr(const location& l, const ExpressionPtr& expr, const TypePtr& type) {
+			auto scalarExpr = getScalar(expr);
+			if (!scalarExpr->getType()) {
+				error(l, "can not get parent-reference of non referenced expression");
+				return nullptr;
+			}
+
+			return builder.refParent(scalarExpr, type);
+		}
+
+		DeclarationStmtPtr InspireDriver::genVariableDeclaration(const location& l, const TypePtr& type, const std::string name, const ExpressionPtr& init) {
+			auto resolvedType = resolveTypeAliases(l, type);
+			auto variable = builder.variable(resolvedType);
+			annotations::attachName(variable, name);
+			add_symb(l, name, variable);
+			return builder.declarationStmt(variable, getScalar(init));
+		}
+
+		ForStmtPtr InspireDriver::genForStmt(const location& l, const TypePtr& iteratorType, const std::string iteratorName,
+		                                     const ExpressionPtr& lowerBound, const ExpressionPtr& upperBound, const ExpressionPtr& stepExpr, const StatementPtr& body) {
+			VariablePtr iteratorVariable = builder.variable(iteratorType);
+			annotations::attachName(iteratorVariable, iteratorName);
+			add_symb(l, iteratorName, iteratorVariable);
+			return builder.forStmt(iteratorVariable, getScalar(lowerBound), getScalar(upperBound), getScalar(stepExpr), body);
+		}
+
 		// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Address marking   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-		ExpressionPtr InspireDriver::mark_address(const location& l, const ExpressionPtr& expr) {
+		ExpressionPtr InspireDriver::markAddress(const location& l, const ExpressionPtr& expr) {
 			NodePtr res = builder.markerExpr(expr);
 			res->attachValue<AddressMark>();
 			return res.as<ExpressionPtr>();
 		}
 
-		StatementPtr InspireDriver::mark_address(const location& l, const StatementPtr& stmt) {
+		StatementPtr InspireDriver::markAddress(const location& l, const StatementPtr& stmt) {
 			NodePtr res = builder.markerStmt(stmt);
 			res->attachValue<AddressMark>();
 			return res.as<StatementPtr>();

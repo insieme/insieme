@@ -35,20 +35,6 @@
 	} // insieme
 
 	using namespace insieme::core;
-
-	namespace {
-		struct ForDecl {
-			VariablePtr it;
-			ExpressionPtr low;
-			ExpressionPtr up;
-			ExpressionPtr step;
-		};
-
-		struct GenType {
-			ParentList parents;
-			TypeList typeParams;
-		};
-	}
 }
 
 // The parsing context.
@@ -79,20 +65,6 @@
 	#include "insieme/core/encoder/lists.h"
 
 	#include "insieme/core/lang/parallel.h"
-
-	#define INSPIRE_MSG(l, n, msg) \
-			if(!n) { driver.error(l, msg); YYABORT; }
-
-	#define INSPIRE_TYPE(l, n, t, msg) \
-			if(!n.isa<t>()) { driver.error(l, msg); YYABORT; }
-
-	#define INSPIRE_GUARD(l, n) \
-			if(!n) { driver.error(l, "unrecoverable error"); YYABORT; }
-
-	#define INSPIRE_NOT_IMPLEMENTED(l) \
-			{ driver.error(l, "not supported yet "); YYABORT; }
-
-	#define RULE if(driver.inhibit_building()) { break; }
 }
 
 %define api.token.prefix {TOK_}
@@ -172,6 +144,7 @@
 
 	VAR          "var"
 	IF           "if"
+
 	ELSE         "else"
 	FOR          "for"
 	WHILE        "while"
@@ -252,7 +225,7 @@
 %type <bool>                           virtual_flag lambda_or_function
 
 
-%type <VariablePtr>                    variable
+%type <ExpressionPtr>                  variable
 %type <LiteralPtr>                     literal
 %type <CallExprPtr>                    call
 %type <LambdaExprPtr>                  lambda
@@ -263,20 +236,20 @@
 %type <VariableList>                   parameters non_empty_parameters
 
 
-%type<CompoundStmtPtr>                 compound_statement
-%type<DeclarationStmtPtr>              variable_declaration
-%type<IfStmtPtr>                       if_statement
-%type<SwitchStmtPtr>                   switch_statement
-%type<WhileStmtPtr>                    while_statement
-%type<ForStmtPtr>                      for_statement
-%type<BreakStmtPtr>                    break
-%type<ContinueStmtPtr>                 continue
-%type<ReturnStmtPtr>                   return
+%type <CompoundStmtPtr>                compound_statement
+%type <DeclarationStmtPtr>             variable_declaration
+%type <IfStmtPtr>                      if_statement
+%type <SwitchStmtPtr>                  switch_statement
+%type <WhileStmtPtr>                   while_statement
+%type <ForStmtPtr>                     for_statement
+%type <BreakStmtPtr>                   break
+%type <ContinueStmtPtr>                continue
+%type <ReturnStmtPtr>                  return
 
 %type <StatementList>                  statement_list
-%type <SwitchCasePtr>                  switch_case
 %type <SwitchCaseList>                 switch_cases
-%type <StatementPtr>                   default_case
+%type <SwitchCasePtr>                  switch_case
+%type <CompoundStmtPtr>                default_case
 
 %printer { yyoutput << $$; } <std::string>
 
@@ -306,11 +279,11 @@ top_level_element : using | alias | declaration | definition ;
 
 using : "using" "identifier" ";" ;
 
-alias : "alias" abstract_type "=" type ";"							      { driver.add_type_alias($2,$4); } 		
+alias : "alias" abstract_type "=" type ";"                                  { driver.add_type_alias($2,$4); }
       ;
 
-declaration : "decl" struct_or_union "identifier" ";"           { driver.add_type($3, driver.builder.tagTypeReference($3)); }
-            | "decl" "identifier" ":" type ";"                  { driver.add_symb($2, driver.builder.literal($2, $4)); }
+declaration : "decl" struct_or_union "identifier" ";"                       { driver.add_type($3, driver.builder.tagTypeReference($3)); }
+            | "decl" "identifier" ":" type ";"                              { driver.add_symb($2, driver.builder.literal($2, $4)); }
             | "decl" "identifier" "::" "identifier" ":" type ";"
             ;
 
@@ -360,7 +333,7 @@ virtual_flag : "virtual"                                                   { $$ 
              |                                                             { $$ = false; }
              ;
 
-pure_virtual_member_functions : pure_virtual_member_functions pure_virtual_member_function  { $1.push_back($2); $$=$1; }
+pure_virtual_member_functions : pure_virtual_member_functions pure_virtual_member_function  { $1.push_back($2); $$ = $1; }
                               |                                                             { $$ = PureVirtualMemberFunctionList(); }
                               ;
 
@@ -417,7 +390,7 @@ type_variable : "type_var"                                                { $$ =
 
 // -- abstract type --
 
-abstract_type : "identifier" parent_spec type_param_list                  { $$ = driver.builder.genericType($1,$2,$3); }
+abstract_type : "identifier" parent_spec type_param_list                  { $$ = driver.builder.genericType($1, $2, $3); }
               ;
 
 type_param_list :                                                         { $$ = TypeList(); }
@@ -532,7 +505,7 @@ plain_expression : variable                                               { $$ =
 
 // -- variable --
 
-variable : "identifier"                                                   { $$ = VariablePtr(); }
+variable : "identifier"                                                   { $$ = driver.findSymbol(@$, $1); }
          ;
 
 
@@ -540,30 +513,30 @@ variable : "identifier"                                                   { $$ =
 
 literal : "true"                                                          { $$ = driver.builder.boolLit(true); }
         | "false"                                                         { $$ = driver.builder.boolLit(false); }
-        | "int"                                                           { $$ = LiteralPtr(); }
-        | "uint"                                                          { $$ = LiteralPtr(); }
-        | "long"                                                          { $$ = LiteralPtr(); }
-        | "ulong"                                                         { $$ = LiteralPtr(); }
-        | "longlong"                                                      { $$ = LiteralPtr(); }
-        | "ulonglong"                                                     { $$ = LiteralPtr(); }
-        | "float"                                                         { $$ = LiteralPtr(); }
-        | "double"                                                        { $$ = LiteralPtr(); }
-        | "string"                                                        { $$ = LiteralPtr(); }
-        | "lit" "(" "string" ":" type ")"                                 { $$ = LiteralPtr(); }
-        | "type" "(" type ")"                                             { $$ = LiteralPtr(); }
+        | "int"                                                           { $$ = driver.genNumericLiteral(@$, driver.mgr.getLangBasic().getInt4(), $1); }
+        | "uint"                                                          { $$ = driver.genNumericLiteral(@$, driver.mgr.getLangBasic().getUInt4(), $1); }
+        | "long"                                                          { $$ = driver.genNumericLiteral(@$, driver.mgr.getLangBasic().getInt8(), $1); }
+        | "ulong"                                                         { $$ = driver.genNumericLiteral(@$, driver.mgr.getLangBasic().getUInt8(), $1); }
+        | "longlong"                                                      { $$ = driver.genNumericLiteral(@$, driver.mgr.getLangBasic().getInt16(), $1); }
+        | "ulonglong"                                                     { $$ = driver.genNumericLiteral(@$, driver.mgr.getLangBasic().getUInt16(), $1); }
+        | "float"                                                         { $$ = driver.genNumericLiteral(@$, driver.mgr.getLangBasic().getReal4(), $1); }
+        | "double"                                                        { $$ = driver.genNumericLiteral(@$, driver.mgr.getLangBasic().getReal8(), $1); }
+        | "string"                                                        { $$ = driver.builder.stringLit($1); }
+        | "lit" "(" "string" ":" type ")"                                 { $$ = driver.builder.literal($5, $3.substr(1, $3.size() - 1)); }
+        | "type" "(" type ")"                                             { $$ = driver.builder.getTypeLiteral($3); }
         ;
 
 
 // -- call --
 
-call : expression "(" expressions ")"                                     { $$ = driver.builder.callExpr($1,$3); }
+call : expression "(" expressions ")"                                     { $$ = driver.builder.callExpr($1, $3); }
      ;
 
 
 // -- lambda --
 
-lambda : "(" ")" "->" type compound_statement                             { $$ = LambdaExprPtr(); }
-       | "(" non_empty_parameters ")" "->" type compound_statement        { $$ = LambdaExprPtr(); }
+lambda : "(" ")" "->" type compound_statement                             { $$ = driver.genLambda(@$, VariableList(), $4, $5); }
+       | "(" non_empty_parameters ")" "->" type compound_statement        { $$ = driver.genLambda(@$, $2, $5, $6); }
        ;
 
 parameters : non_empty_parameters                                         { $$ = $1; }
@@ -574,14 +547,14 @@ non_empty_parameters : non_empty_parameters "," parameter                 { $1.p
                      | parameter                                          { $$ = toVector($1); }
                      ;
 
-parameter : "identifier" ":" type                                         { $$ = VariablePtr(); }
+parameter : "identifier" ":" type                                         { $$ = driver.genParameter(@$, $1, $3); }
           ;
 
 
 // -- bind --
 
-bind : "(" ")" "=>" expression                                            { $$ = BindExprPtr(); }
-     | "(" non_empty_parameters ")" "=>" expression                       { $$ = BindExprPtr(); }
+bind : "(" ")" "=>" expression                                            { $$ = driver.genClosure(@$, VariableList(), driver.getScalar($4)); }
+     | "(" non_empty_parameters ")" "=>" expression                       { $$ = driver.genClosure(@$, $2, driver.getScalar($5)); }
      ;
 
 
@@ -593,16 +566,16 @@ let_expression : "let" "identifier" "=" expression                        { driv
 
 // -- reference expressions --
 
-undefined_expression : "undefined" "(" type ")"                           { $$ = ExpressionPtr(); }
+undefined_expression : "undefined" "(" type ")"                           { $$ = driver.builder.undefined($3); }
                      ;
 
 // -- parallel expressions --
 
-parallel_expression : "job" "[" expression "-" expression "]" "=>" expression  { $$ = ExpressionPtr(); }
-                    | "job" "[" "]" "=>" expression                            { $$ = ExpressionPtr(); }
-                    | "spawn" expression                                       { $$ = ExpressionPtr(); }
-                    | "sync" expression                                        { $$ = ExpressionPtr(); }
-                    | "sync_all"                                               { $$ = ExpressionPtr(); }
+parallel_expression : "job" "[" expression ".." expression "]" "=>" expression  { $$ = driver.genJobExpr(@$, $3, $5, $8); }
+                    | "job" "[" "]" "=>" expression                             { $$ = driver.genJobExpr(@$, $5); }
+                    | "spawn" expression                                        { $$ = driver.builder.parallel(driver.getScalar($2), 1); }
+                    | "sync" expression                                         { $$ = driver.genSync(@$, $2); }
+                    | "sync_all"                                                { $$ = driver.genSyncAll(@$); }
                     ;
 
 
@@ -614,46 +587,42 @@ list_expression : "[" non_empty_expressions "]"                           { $$ =
 // -- initializer --
 
 initializer : "<" type ">" "{" expressions "}"                            { $$ = ExpressionPtr(); }
-            | "(" ")"                                                     { $$ = ExpressionPtr(); }
-            | "(" non_empty_expressions ")"                               { $$ = ExpressionPtr(); }
+            | "(" ")"                                                     { $$ = driver.builder.tupleExpr(); }
+            | "(" non_empty_expressions ")"                               { $$ = driver.builder.tupleExpr($2); }
             ;
 
-unary_op : "-" expression                                                 { $$ = ExpressionPtr(); }    %prec UMINUS
-         | "*" expression                                                 { $$ = ExpressionPtr(); }    %prec UDEREF
-         | "!" expression                                                 { $$ = ExpressionPtr(); }    %prec UNOT
-//         | "++" expression                                                { $$ = ExpressionPtr(); }    %prec PRE_INC
-//         | "--" expression                                                { $$ = ExpressionPtr(); }    %prec PRE_DEC
-//         | expression "++"                                                { $$ = ExpressionPtr(); }    %prec POST_INC
-//         | expression "--"                                                { $$ = ExpressionPtr(); }    %prec POST_DEC
-         | expression "." "identifier"                                    { $$ = ExpressionPtr(); }
-         | expression "." "int"                                           { $$ = ExpressionPtr(); }
-         | expression "->" "identifier"                                   { $$ = ExpressionPtr(); }
-         | expression "->" "int"                                          { $$ = ExpressionPtr(); }
-         | "CAST" "(" type ")" expression                                 { $$ = ExpressionPtr(); }
-         | expression "." "as" "(" type ")"                               { $$ = ExpressionPtr(); }
+unary_op : "-" expression                                                 { $$ = driver.builder.minus(driver.getScalar($2)); }       %prec UMINUS
+         | "*" expression                                                 { $$ = driver.genDerefExpr(@1, $2); }                      %prec UDEREF
+         | "!" expression                                                 { $$ = driver.builder.logicNeg(driver.getScalar($2)); }    %prec UNOT
+         | expression "." "identifier"                                    { $$ = driver.genFieldAccess(@1, $1, $3); }
+         | expression "." "int"                                           { $$ = driver.genTupleAccess(@1, $1, $3); }
+         | expression "->" "identifier"                                   { $$ = driver.genFieldAccess(@1, $1, $3); }
+         | expression "->" "int"                                          { $$ = driver.genTupleAccess(@1, $1, $3); }
+         | "CAST" "(" type ")" expression                                 { $$ = driver.builder.castExpr($3, $5); }
+         | expression "." "as" "(" type ")"                               { $$ = driver.genAsExpr(@1, $1, $5); }
          ;
 
-binary_op : expression "=" expression                                     { $$ = ExpressionPtr(); }
-          | expression "+" expression                                     { $$ = ExpressionPtr(); }
-          | expression "-" expression                                     { $$ = ExpressionPtr(); }
-          | expression "*" expression                                     { $$ = ExpressionPtr(); }
-          | expression "/" expression                                     { $$ = ExpressionPtr(); }
-          | expression "%" expression                                     { $$ = ExpressionPtr(); }
-          | expression "&&" expression                                    { $$ = ExpressionPtr(); }
-          | expression "||" expression                                    { $$ = ExpressionPtr(); }
-          | expression "&" expression                                     { $$ = ExpressionPtr(); }
-          | expression "|" expression                                     { $$ = ExpressionPtr(); }
-          | expression "^" expression                                     { $$ = ExpressionPtr(); }
-          | expression "==" expression                                    { $$ = ExpressionPtr(); }
-          | expression "!=" expression                                    { $$ = ExpressionPtr(); }
-          | expression "<" expression                                     { $$ = ExpressionPtr(); }
-          | expression "<=" expression                                    { $$ = ExpressionPtr(); }
-          | expression ">=" expression                                    { $$ = ExpressionPtr(); }
-          | expression ">" expression                                     { $$ = ExpressionPtr(); }
-          | expression "[" expression "]"                                 { $$ = ExpressionPtr(); }
+binary_op : expression "="  expression                                    { $$ = driver.genBinaryExpression(@$, "=",  $1, $3); }
+          | expression "+"  expression                                    { $$ = driver.genBinaryExpression(@$, "+",  $1, $3); }
+          | expression "-"  expression                                    { $$ = driver.genBinaryExpression(@$, "-",  $1, $3); }
+          | expression "*"  expression                                    { $$ = driver.genBinaryExpression(@$, "*",  $1, $3); }
+          | expression "/"  expression                                    { $$ = driver.genBinaryExpression(@$, "/",  $1, $3); }
+          | expression "%"  expression                                    { $$ = driver.genBinaryExpression(@$, "%",  $1, $3); }
+          | expression "&&" expression                                    { $$ = driver.genBinaryExpression(@$, "&&", $1, $3); }
+          | expression "||" expression                                    { $$ = driver.genBinaryExpression(@$, "||", $1, $3); }
+          | expression "&"  expression                                    { $$ = driver.genBinaryExpression(@$, "&",  $1, $3); }
+          | expression "|"  expression                                    { $$ = driver.genBinaryExpression(@$, "|",  $1, $3); }
+          | expression "^"  expression                                    { $$ = driver.genBinaryExpression(@$, "^",  $1, $3); }
+          | expression "==" expression                                    { $$ = driver.genBinaryExpression(@$, "==", $1, $3); }
+          | expression "!=" expression                                    { $$ = driver.genBinaryExpression(@$, "!=", $1, $3); }
+          | expression "<"  expression                                    { $$ = driver.genBinaryExpression(@$, "<",  $1, $3); }
+          | expression "<=" expression                                    { $$ = driver.genBinaryExpression(@$, "<=", $1, $3); }
+          | expression ">=" expression                                    { $$ = driver.genBinaryExpression(@$, ">=", $1, $3); }
+          | expression ">"  expression                                    { $$ = driver.genBinaryExpression(@$, ">",  $1, $3); }
+          | expression "["  expression "]"                                { $$ = driver.genBinaryExpression(@$, "[",  $1, $3); }
           ;
 
-ternary_op : expression "?" expression ":" expression                     { $$ = ExpressionPtr(); }
+ternary_op : expression "?" expression ":" expression                     { $$ = driver.builder.ite(driver.getScalar($1), driver.builder.wrapLazy($3), driver.builder.wrapLazy($5)); }
            ;
 
 
@@ -661,8 +630,8 @@ ternary_op : expression "?" expression ":" expression                     { $$ =
 
 
 statement : plain_statement                                               { $$ = $1; }
-              | "$" plain_statement "$"                                   { $$ = $2; }
-              | let_statement                                             { $$ = $1; }
+          | "$" plain_statement "$"                                       { $$ = driver.markAddress(@2, $2); }
+          | let_statement                                                 { $$ = $1; }
           ;
 
 plain_statement : expression ";"                                          { $$ = $1; }
@@ -672,15 +641,15 @@ plain_statement : expression ";"                                          { $$ =
                 | switch_statement                                        { $$ = $1; }
                 | while_statement                                         { $$ = $1; }
                 | for_statement                                           { $$ = $1; }
-                | break                                                   { $$ = $1; }
-                | continue                                                { $$ = $1; }
-                | return                                                  { $$ = $1; }
+                | break                                                   { $$ = driver.builder.breakStmt();}
+                | continue                                                { $$ = driver.builder.continueStmt(); }
+                | return                                                  { $$ = driver.builder.returnStmt(); }
                 ;
 
 
 // -- compound statement --
 
-compound_statement : "{" statement_list "}"                               { $$ = CompoundStmtPtr(); }
+compound_statement : "{" statement_list "}"                               { $$ = driver.builder.compoundStmt($2); }
                    ;
 
 statement_list :                                                          { $$ = StatementList(); }
@@ -691,59 +660,62 @@ statement_list :                                                          { $$ =
 
 // -- variable declaration --
 
-variable_declaration : "var" type "identifier" "=" expression ";"         { $$ = DeclarationStmtPtr(); }
-                     | "auto" "identifier" "=" expression ";"             { $$ = DeclarationStmtPtr(); }
+variable_declaration : "var" type "identifier" "=" expression ";"         { $$ = driver.genVariableDeclaration(@$, $2, $3, $5); }
+                     | "auto" "identifier" "=" expression ";"             { $$ = driver.genVariableDeclaration(@$, driver.getScalar($4).getType(), $2, driver.getScalar($4)); }
                      ;
 
 
 // -- if --
 
-if_statement : "if" "(" expression ")" compound_statement                            { $$ = IfStmtPtr(); }
-             | "if" "(" expression ")" compound_statement "else" compound_statement  { $$ = IfStmtPtr(); }
+if_statement : "if" "(" expression ")" compound_statement                            { $$ = driver.builder.ifStmt(driver.getScalar($3), $5); }
+             | "if" "(" expression ")" compound_statement "else" compound_statement  { $$ = driver.builder.ifStmt(driver.getScalar($3), $5, $7); }
              ;
 
 
 // -- switch --
 
-switch_statement : "switch" "(" expression ")" "{" switch_cases default_case "}"  { $$ = SwitchStmtPtr(); }
+switch_statement : "switch" "(" expression ")" "{" switch_cases default_case "}"  { $$ = driver.builder.switchStmt(driver.getScalar($3), $6, $7); }
                  ;
 
 switch_cases : switch_cases switch_case                                   { $1.push_back($2); $$ = $1; }
              |                                                            { $$ = SwitchCaseList(); }
              ;
 
-switch_case : "case" literal ":" statement                                { $$ = SwitchCasePtr(); }
+switch_case : "case" literal ":" compound_statement                       { $$ = driver.builder.switchCase($2, $4); }
             ;
 
-default_case : "default" ":" statement                                    { $$ = $3; }
+default_case : "default" ":" compound_statement                           { $$ = $3; }
+             |                                                            { $$ = driver.builder.getNoOp(); }
              ;
 
 // -- while --
 
-while_statement : "while" "(" expression ")" compound_statement           { $$ = WhileStmtPtr(); }
+while_statement : "while" "(" expression ")" compound_statement           { $$ = driver.builder.whileStmt(driver.getScalar($3), $5); }
                 ;
 
 
 // -- for --
 
-for_statement : "for" "(" type "identifier" "=" expression ".." expression ")" compound_statement                 { $$ = ForStmtPtr(); }
-              | "for" "(" type "identifier" "=" expression ".." expression ":" expression ")" compound_statement  { $$ = ForStmtPtr(); }
+for_statement : "for" "(" type "identifier" "=" expression ".." expression ")" compound_statement
+                                                             { $$ = driver.genForStmt(@$, $3, $4, $6, $8, driver.builder.literal($3, "1"), $10); }
+              | "for" "(" type "identifier" "=" expression ".." expression ":" expression ")" compound_statement
+                                                             { $$ = driver.genForStmt(@$, $3, $4, $6, $8, $10, $12); }
               ;
 
 
 // -- break --
 
-break : "break" ";"                                                       { $$ = BreakStmtPtr(); }
+break : "break" ";"                                                       { $$ = driver.builder.breakStmt(); }
       ;
 
 // -- continue --
 
-continue : "continue" ";"                                                 { $$ = ContinueStmtPtr(); }
+continue : "continue" ";"                                                 { $$ = driver.builder.continueStmt(); }
          ;
 
 // -- return --
 
-return : "return" expression ";"                                          { $$ = ReturnStmtPtr(); }
+return : "return" expression ";"                                          { $$ = driver.builder.returnStmt(driver.getScalar($2)); }
        ;
 
 

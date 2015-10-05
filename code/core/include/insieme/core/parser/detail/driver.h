@@ -238,13 +238,13 @@ namespace parser {
 			/**
 			 * generates a lambda expression
 			 */
-			ExpressionPtr genLambda(const location& l, const VariableList& params, const TypePtr& retType, const StatementPtr& body,
+			LambdaExprPtr genLambda(const location& l, const VariableList& params, const TypePtr& retType, const StatementPtr& body,
 			                        const FunctionKind& = FK_PLAIN, bool isLambda = true);
 
 			/**
 			 * generates a closure
 			 */
-			ExpressionPtr genClosure(const location& l, const VariableList& params, StatementPtr body);
+			BindExprPtr genClosure(const location& l, const VariableList& params, StatementPtr body);
 
 			/**
 			 * generates a call expression
@@ -260,6 +260,52 @@ namespace parser {
 			 * constructs a union expression
 			 */
 			ExpressionPtr genUnionExpression(const location& l, const TypePtr& type, const std::string field, const ExpressionPtr& expr);
+
+			/**
+			 * constructs a parameter
+			 */
+			VariablePtr genParameter(const location& l, const std::string& name, const TypePtr& type);
+
+			/**
+			 * constructs a job expression with the given range
+			 */
+			ExpressionPtr genJobExpr(const location& l, const ExpressionPtr& lowerBound, const ExpressionPtr& upperBound, const ExpressionPtr& expr);
+
+			/**
+			 * constructs a job expression with a range from one to infinite
+			 */
+			ExpressionPtr genJobExpr(const location& l, const ExpressionPtr& expr);
+
+			/**
+			 * constructs a sync expression
+			 */
+			ExpressionPtr genSync(const location& l, const ExpressionPtr& expr);
+
+			/**
+			 * constructs a syncAll expression
+			 */
+			ExpressionPtr genSyncAll(const location& l);
+
+			/**
+			 * constructs a deref expression
+			 */
+			ExpressionPtr genDerefExpr(const location& l, const ExpressionPtr& expr);
+
+			/**
+			 * constructs an as-expression
+			 */
+			ExpressionPtr genAsExpr(const location& l, const ExpressionPtr& expr, const TypePtr& type);
+
+			/**
+			 * constructs a new variable declaration with a given type
+			 */
+			DeclarationStmtPtr genVariableDeclaration(const location& l, const TypePtr& type, const std::string name, const ExpressionPtr& init);
+
+			/**
+			 * constructs a new for loop
+			 */
+			ForStmtPtr genForStmt(const location& l, const TypePtr& iteratorType, const std::string iteratorName,
+			                      const ExpressionPtr& lowerBound, const ExpressionPtr& upperBound, const ExpressionPtr& stepExpr, const StatementPtr& body);
 
 
 			/**
@@ -325,12 +371,12 @@ namespace parser {
 			/**
 			 * Utility to mark addresses when parsing addresses (expression overload)
 			 */
-			ExpressionPtr mark_address(const location& l, const ExpressionPtr& expr);
+			ExpressionPtr markAddress(const location& l, const ExpressionPtr& expr);
 
 			/**
 			 * Utility to mark addresses when parsing addresses (stmt overload)
 			 */
-			StatementPtr mark_address(const location& l, const StatementPtr& stmt);
+			StatementPtr markAddress(const location& l, const StatementPtr& stmt);
 
 			/**
 			 *  support for using keyword (allows to include extensions)
