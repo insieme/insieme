@@ -289,10 +289,10 @@
 //	-- top_level -------------------------------------
 
 
-top_level : TYPE_ONLY top_level_elements type 							  { driver.result = $3; }
-		  | EXPR_ONLY top_level_elements expression   					  { driver.result = $3; }
-		  | STMT_ONLY top_level_elements statement  					  { driver.result = $3; }
-		  | FULL_PROG top_level_elements main							  { driver.result = $3; }
+top_level : TYPE_ONLY top_level_elements type 							  { driver.result = driver.tu.resolve($3); }
+		  | EXPR_ONLY top_level_elements expression   					  { driver.result = driver.tu.resolve($3); }
+		  | STMT_ONLY top_level_elements statement  					  { driver.result = driver.tu.resolve($3); }
+		  | FULL_PROG top_level_elements main							  { driver.result = driver.tu.resolve($3); }
 		  ;
 
 top_level_elements : top_level_element top_level_elements 
@@ -308,7 +308,7 @@ alias : "alias" abstract_type "=" type ";"							      { driver.add_type_alias($
       ;
 
 declaration : "decl" struct_or_union "identifier" ";"					  { driver.add_type($3,driver.builder.tagTypeReference($3)); }
-			| "decl" "identifier" ":" type ";"							  { driver.add_type($2,$4); }
+			| "decl" "identifier" ":" type ";"							  { driver.add_symb($2,driver.builder.literal($2,$4)); }
 			| "decl" "identifier" "::" "identifier" ":" type ";"		  
 			;
 
@@ -321,8 +321,9 @@ main : type "identifier" "(" parameters ")" compound_statement			  { $$ = Progra
 
 //	-- record_declarations -------------------------------------
 
-record_definition : struct_or_union "identifier" parent_spec "{" fields constructors destructor member_functions pure_virtual_member_functions "}"
-																		  { $$ = driver.genRecordType(@$,$1,$2,$3,$5,$6,$7,$8,$9); }
+record_definition : struct_or_union "identifier" parent_spec "{" 		  { driver.add_type(@$,$2,driver.builder.genericType($2)); }
+									fields constructors destructor member_functions pure_virtual_member_functions 
+						"}"												  { $$ = driver.genRecordType(@$,$1,$2,$3,$6,$7,$8,$9,$10); }
 				  ;                                                       
                                                                           
 struct_or_union : "struct"												  { $$ = NT_Struct; } 
@@ -367,7 +368,11 @@ pure_virtual_member_function : "pure" "virtual" "identifier" ":" pure_function_t
 
 //	-- function_declarations -------------------------------------
 
-function_definition : lambda_or_function "identifier" "=" lambda		  { $$ = $4; } 
+function_definition : lambda_or_function "identifier" "=" lambda		  { 
+																			$$ = $4; 
+																			driver.add_symb($2,$4); 
+																			driver.tu.addFunction(driver.builder.literal($2,$4->getType()), $4); 
+																		  } 
 					;                                                     
                                                                           
 lambda_or_function : "lambda"											  { $$ = true; } 
@@ -488,7 +493,8 @@ tag_type_reference : "tag_ref"											  { $$ = TagTypeReferencePtr(); }
                                                                           
 // -- let --                                                              
                                                                           
-let_type : "let" "identifier" "=" type "in" type						  { $$ = $6; }
+let_type : "let" "identifier" "="  type									  { driver.open_scope(); driver.add_type($2,$4); } 
+							  "in" type						  			  { $$ = $7; driver.close_scope(); }
          ;                                                                
                                                                           
                                                                           
@@ -579,7 +585,8 @@ bind : "(" ")" "=>" expression											  { $$ = BindExprPtr(); }
                                                                           
 // -- let --                                                              
                                                                           
-let_expression : "let" "identifier" "=" expression "in" expression		  { $$ = $6; }
+let_expression : "let" "identifier" "=" expression						  { driver.open_scope(); driver.add_symb($2,$4); } 
+									"in" expression		                  { $$ = $7; driver.close_scope(); }
                ;                                                          
                                                                           
 // -- reference expressions --                                            
@@ -745,7 +752,7 @@ return : "return" expression ";"			                              { $$ = ReturnSt
 
 // -- let --                                                           
                                                                           
-let_statement : "let" "identifier" "=" expression ";"			          { $$ = StatementPtr(); }
+let_statement : "let" "identifier" "=" expression ";"			          {  driver.add_symb(@$, $2,$4); $$ = StatementPtr(); }
 	          ;
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Precedence list ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

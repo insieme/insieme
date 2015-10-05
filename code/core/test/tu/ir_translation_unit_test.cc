@@ -38,14 +38,14 @@
 
 #include <sstream>
 
-#include "insieme/frontend/tu/ir_translation_unit.h"
-#include "insieme/frontend/tu/ir_translation_unit_io.h"
+#include "insieme/core/tu/ir_translation_unit.h"
+#include "insieme/core/tu/ir_translation_unit_io.h"
 
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/analysis/type_utils.h"
 
 namespace insieme {
-namespace frontend {
+namespace core {
 namespace tu {
 
 	using namespace std;
@@ -57,8 +57,8 @@ namespace tu {
 		IRTranslationUnit unit(mgr);
 
 		// check adding types
-		unit.addType(builder.parseType("A").as<core::GenericTypePtr>(), builder.parseType("struct { int<4> x; }"));
-		unit.addType(builder.parseType("B").as<core::GenericTypePtr>(), builder.parseType("struct { real<8> y; ref<A> a; }"));
+		unit.addType(builder.parseType("A").as<core::GenericTypePtr>(), builder.parseType("struct { int<4> x; }").as<TagTypePtr>());
+		unit.addType(builder.parseType("B").as<core::GenericTypePtr>(), builder.parseType("struct { real<8> y; ref<A> a; }").as<TagTypePtr>());
 
 		// check adding functions
 		unit.addFunction(builder.parseExpr("lit(\"X\":()->unit)").as<core::LiteralPtr>(),
@@ -82,7 +82,7 @@ namespace tu {
 		IRTranslationUnit unit(mgr);
 
 		// check adding types
-		unit.addType(builder.parseType("A").as<core::GenericTypePtr>(), builder.parseType("struct { int<4> x; }"));
+		unit.addType(builder.parseType("A").as<core::GenericTypePtr>(), builder.parseType("struct { int<4> x; }").as<TagTypePtr>());
 
 		// check adding functions
 		unit.addFunction(builder.parseExpr("lit(\"X\":()->unit)").as<core::LiteralPtr>(),
@@ -115,7 +115,7 @@ namespace tu {
 		IRTranslationUnit unit(mgr);
 
 		// check adding types
-		unit.addType(builder.parseType("A").as<core::GenericTypePtr>(), builder.parseType("struct { int<4> x; }"));
+		unit.addType(builder.parseType("A").as<core::GenericTypePtr>(), builder.parseType("struct { int<4> x; }").as<TagTypePtr>());
 
 		// check adding functions
 		unit.addFunction(builder.parseExpr("lit(\"X\":()->unit)").as<core::LiteralPtr>(),
@@ -144,18 +144,18 @@ namespace tu {
 
 		IRTranslationUnit tu(mgr);
 
-		tu.addType(builder.genericType("a"), builder.parseType("struct a { int<4> x; }"));
+		tu.addType(builder.genericType("a"), builder.parseType("struct a { int<4> x; }").as<TagTypePtr>());
 
 		std::cout << tu << "\n";
 
 		// resolve the recursive type
-		auto res = tu.resolve(builder.genericType("a")).as<core::TypePtr>();
+		auto res = tu.resolve(builder.genericType("a")).as<core::TagTypePtr>();
 
 		// there should not be any free type variables left
 		EXPECT_FALSE(core::analysis::hasFreeTypeVariables(res));
 
 		// and it should be a recursive type!
-		EXPECT_TRUE(res.isa<core::StructTypePtr>()) << res;
+		EXPECT_TRUE(res->isStruct()) << res;
 	}
 
 	TEST(TranslationUnit, RecursiveTypeExtraction) {
@@ -163,26 +163,26 @@ namespace tu {
 		core::IRBuilder builder(mgr);
 
 		IRTranslationUnit tu(mgr);
-		tu.addType(builder.genericType("d"), builder.parseType("struct d { ref<array<e,1>> x; }"));
-		tu.addType(builder.genericType("e"), builder.parseType("struct e { ref<array<f,1>> x; ref<array<d,1>> y; }"));
-		tu.addType(builder.genericType("f"), builder.parseType("struct f { ref<array<g,1>> x; ref<array<e,1>> y; }"));
-		tu.addType(builder.genericType("g"), builder.parseType("struct g { ref<array<f,1>> x; ref<array<a,1>> y; }"));
+		tu.addType(builder.genericType("d"), builder.parseType("struct d { ref<array<e,1>> x; }").as<TagTypePtr>());
+		tu.addType(builder.genericType("e"), builder.parseType("struct e { ref<array<f,1>> x; ref<array<d,1>> y; }").as<TagTypePtr>());
+		tu.addType(builder.genericType("f"), builder.parseType("struct f { ref<array<g,1>> x; ref<array<e,1>> y; }").as<TagTypePtr>());
+		tu.addType(builder.genericType("g"), builder.parseType("struct g { ref<array<f,1>> x; ref<array<a,1>> y; }").as<TagTypePtr>());
 
-		tu.addType(builder.genericType("a"), builder.parseType("struct a { int<4> x; }"));
+		tu.addType(builder.genericType("a"), builder.parseType("struct a { int<4> x; }").as<TagTypePtr>());
 
 		std::cout << tu << "\n";
 
 		// resolve the recursive type
-		auto res = tu.resolve(builder.genericType("d")).as<core::TypePtr>();
+		auto res = tu.resolve(builder.genericType("d")).as<core::TagTypePtr>();
 
 		// there should not be any free type variables left
 		EXPECT_FALSE(core::analysis::hasFreeTypeVariables(res));
 
 		// and it should be a recursive type!
-		EXPECT_TRUE(res.isa<core::RecTypePtr>()) << res;
+		EXPECT_TRUE(res->isRecursive()) << res;
 	}
 
 
 } // end namespace tu
-} // end namespace frontend
+} // end namespace core
 } // end namespace insieme

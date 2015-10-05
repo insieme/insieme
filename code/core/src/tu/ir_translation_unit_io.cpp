@@ -48,7 +48,7 @@
 
 
 namespace insieme {
-namespace frontend {
+namespace core {
 namespace tu {
 
 
@@ -96,5 +96,5 @@ namespace tu {
 
 
 } // end namespace tu
-} // end namespace frontend
+} // end namespace core
 } // end namespace insieme

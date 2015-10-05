@@ -39,7 +39,7 @@
 #include "insieme/core/tu/ir_translation_unit.h"
 
 namespace insieme {
-namespace frontend {
+namespace core {
 namespace tu {
 
 	/**
@@ -71,5 +71,5 @@ namespace tu {
 	IRTranslationUnit load(std::istream& in, core::NodeManager& manager);
 
 } // end namespace tu
-} // end namespace frontend
+} // end namespace core
 } // end namespace insieme

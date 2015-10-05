@@ -43,6 +43,9 @@
 
 #include "insieme/core/forward_decls.h"
 #include "insieme/core/ir_builder.h"
+
+#include "insieme/core/tu/ir_translation_unit.h"
+
 #include "insieme/core/parser/detail/scanner.h"
 #include "insieme/core/parser/ir_parser.h"
 
@@ -124,6 +127,9 @@ namespace parser {
 			IRBuilder builder;
 			std::string file;
 			const std::string& str;
+
+			tu::IRTranslationUnit tu;
+
 			NodePtr result;
 
 			location glob_loc;
@@ -309,12 +315,12 @@ namespace parser {
 			/**
 			 *  Open a nested scope.
 			 */
-			void open_scope(const location& l);
+			void open_scope();
 
 			/**
 			 *  Close a nested scope.
 			 */
-			void close_scope(const location& l);
+			void close_scope();
 
 			/**
 			 * Utility to mark addresses when parsing addresses (expression overload)
