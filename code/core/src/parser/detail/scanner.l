@@ -93,8 +93,6 @@ blank   [ \t]
 "}"      return inspire_parser::make_RCURBRACKET(loc);
 "["      return inspire_parser::make_LBRACKET(loc);
 "]"      return inspire_parser::make_RBRACKET(loc);
-"\""     return inspire_parser::make_DQUOTE(loc);
-"\'"     return inspire_parser::make_QUOTE(loc);
 
 "&"     return inspire_parser::make_BAND(loc);
 "|"     return inspire_parser::make_BOR(loc);
@@ -168,11 +166,10 @@ blank   [ \t]
 "protected" return inspire_parser::make_PROTECTED(loc);;
 
 
-"spawn"   return inspire_parser::make_SPAWN(loc);
-"sync"    return inspire_parser::make_SYNC(loc);
-"syncAll" return inspire_parser::make_SYNCALL(loc);
-"job"     return inspire_parser::make_JOB(loc);
-"task"     return inspire_parser::make_TASK(loc);
+"spawn"    return inspire_parser::make_SPAWN(loc);
+"sync"     return inspire_parser::make_SYNC(loc);
+"sync_all" return inspire_parser::make_SYNCALL(loc);
+"job"      return inspire_parser::make_JOB(loc);
 
 {string}      {
     std::string tmp(yytext);

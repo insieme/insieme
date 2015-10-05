@@ -38,7 +38,7 @@
 
 #include <boost/filesystem/path.hpp>
 
-#include "insieme/frontend/tu/ir_translation_unit.h"
+#include "insieme/core/tu/ir_translation_unit.h"
 
 namespace insieme {
 namespace driver {

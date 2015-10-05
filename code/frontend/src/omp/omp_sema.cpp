@@ -57,8 +57,8 @@
 #include "insieme/utils/timer.h"
 
 #include "insieme/frontend/utils/clang_cast.h"
-#include "insieme/frontend/tu/ir_translation_unit.h"
-#include "insieme/frontend/tu/ir_translation_unit_io.h"
+#include "insieme/core/tu/ir_translation_unit.h"
+#include "insieme/core/tu/ir_translation_unit_io.h"
 
 #include "insieme/annotations/omp/omp_annotations.h"
 #include "insieme/annotations/meta_info/meta_infos.h"

@@ -40,7 +40,7 @@
 
 #include "insieme/driver/object_file_utils.h"
 
-#include "insieme/frontend/tu/ir_translation_unit_io.h"
+#include "insieme/core/tu/ir_translation_unit_io.h"
 
 namespace insieme {
 namespace driver {

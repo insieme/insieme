@@ -37,7 +37,7 @@
 #include "insieme/frontend/cilk/cilk_sema.h"
 
 #include "insieme/frontend/cilk/cilk_annotation.h"
-#include "insieme/frontend/tu/ir_translation_unit.h"
+#include "insieme/core/tu/ir_translation_unit.h"
 
 #include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/ir_builder.h"

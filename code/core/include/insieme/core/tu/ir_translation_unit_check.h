@@ -37,7 +37,7 @@
 
 #pragma once
 
-#include "insieme/frontend/tu/ir_translation_unit.h"
+#include "insieme/core/tu/ir_translation_unit.h"
 #include "insieme/core/checks/full_check.h"
 
 namespace insieme {

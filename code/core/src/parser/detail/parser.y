@@ -112,8 +112,6 @@
   RCURBRACKET  "}"
   LBRACKET     "["
   RBRACKET     "]"
-  DQUOTE       "\""
-  QUOTE  	   "\'"
 
   LT        "<"     
   GT        ">"     
@@ -190,10 +188,9 @@
 
   SPAWN         "spawn"
   SYNC          "sync"
-  SYNCALL       "syncAll"
+  SYNCALL       "sync_all"
 
   JOB           "job"
-  TASK          "task"
 
   TYPE_ONLY		"initial-type-parser-marker"
   EXPR_ONLY		"initial-expression-parser-marker"
@@ -201,16 +198,12 @@
   FULL_PROG		"initial-program-parser-marker"
 ;
 
-    /* operators: they use string for convenience, instead of creating million rules */
-%token <std::string> BIN_OP 
-
 
     /* Literals */
 %token <std::string> STRING 			"string"
 %token <std::string> IDENTIFIER 		"identifier"
 %token <std::string> TYPE_VAR   		"type_var"
 %token <std::string> TAG_REF   			"tag_ref"
-%token <std::string> BOOL 				"bool"
 %token <std::string> INT 				"int"
 %token <std::string> UINT 				"uint"
 %token <std::string> LONG 				"long"
@@ -219,9 +212,6 @@
 %token <std::string> ULONGLONG 			"ulonglong"
 %token <std::string> FLOAT 				"float"
 %token <std::string> DOUBLE 			"double"
-
-%type  <std::string> "Number" 
-%type  <std::string> "indentifier" 
 
 %type <TypePtr>                        type plain_type let_type
 %type <TypeList>                       types non_empty_types type_param_list
@@ -314,12 +304,12 @@ top_level_element : using | alias | declaration | definition ;
 
 using : "using" "identifier" ";" ;
 
-alias : "alias" type "=" type ";"
+alias : "alias" abstract_type "=" type ";"							      { driver.add_type_alias($2,$4); } 		
       ;
 
-declaration : "decl" struct_or_union "identifier" ";"
-			| "decl" "identifier" ":" type ";"
-			| "decl" "identifier" "::" "identifier" ":" type ";"
+declaration : "decl" struct_or_union "identifier" ";"					  { driver.add_type($3,driver.builder.tagTypeReference($3)); }
+			| "decl" "identifier" ":" type ";"							  { driver.add_type($2,$4); }
+			| "decl" "identifier" "::" "identifier" ":" type ";"		  
 			;
 
 definition : record_definition		 
@@ -776,7 +766,7 @@ let_statement : "let" "identifier" "=" expression ";"			          { $$ = Stateme
 
 %nonassoc "else";
 %right "=>";
-%left "spawn" "sync" "syncAll";
+%left "spawn" "sync" "sync_all";
 %right "?";
 %right "catch";
 %left "=";
@@ -790,7 +780,6 @@ let_statement : "let" "identifier" "=" expression ";"			          { $$ = Stateme
 %left "<" "<=" ">" ">=";
 %left "+" "-";
 %left "*" "/" "%";
-%nonassoc BOOL_OP;
 %right "[";
 %right "(";
 %right "in";

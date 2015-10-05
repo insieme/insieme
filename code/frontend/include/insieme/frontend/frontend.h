@@ -45,7 +45,7 @@
 #include "insieme/core/forward_decls.h"
 #include "insieme/core/ir_program.h"
 
-#include "insieme/frontend/tu/ir_translation_unit.h"
+#include "insieme/core/tu/ir_translation_unit.h"
 #include "insieme/frontend/extensions/frontend_extension.h"
 #include "insieme/frontend/extensions/frontend_cleanup_extension.h"
 

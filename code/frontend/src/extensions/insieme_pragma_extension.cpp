@@ -53,7 +53,7 @@
 #include "insieme/frontend/extensions/frontend_extension.h"
 #include "insieme/frontend/pragma/handler.h"
 #include "insieme/frontend/pragma/matcher.h"
-#include "insieme/frontend/tu/ir_translation_unit_io.h"
+#include "insieme/core/tu/ir_translation_unit_io.h"
 #include "insieme/frontend/utils/name_manager.h"
 #include "insieme/frontend/utils/stmt_wrapper.h"
 

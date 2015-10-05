@@ -34,8 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/frontend/tu/ir_translation_unit.h"
-#include "insieme/frontend/utils/macros.h"
+#include "insieme/core/tu/ir_translation_unit.h"
 
 #include "insieme/utils/assert.h"
 
@@ -57,9 +56,6 @@
 #include "insieme/core/transform/manipulation_utils.h"
 
 #include "insieme/core/ir_statistic.h"
-
-#include "insieme/annotations/c/extern.h"
-#include "insieme/annotations/c/include.h"
 
 #include "insieme/utils/graph_utils.h"
 
@@ -616,16 +612,6 @@ namespace tu {
 				if(!core::analysis::isRefType(type) || !ext.isStaticType(core::analysis::getReferencedType(type))) { continue; }
 				// add creation statement
 				inits.push_back(builder.createStaticVariable(lit));
-			}
-
-			// fix the external markings
-			for(auto cur : usedLiterals) {
-				auto type = cur.as<LiteralPtr>()->getType();
-				insieme::annotations::c::markExtern(
-				    cur.as<LiteralPtr>(),
-				    core::analysis::isRefType(type) && cur.as<LiteralPtr>()->getStringValue()[0] != '\"' && // not an string literal -> "hello world\n"
-				        !insieme::annotations::c::hasIncludeAttached(cur) && !ext.isStaticType(core::analysis::getReferencedType(type))
-				        && !any(unit.getGlobals(), [&](const IRTranslationUnit::Global& global) { return *resolver.apply(global.first) == *cur; }));
 			}
 
 			// build resulting lambda

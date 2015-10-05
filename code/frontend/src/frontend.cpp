@@ -40,7 +40,7 @@
 
 #include "insieme/frontend/converter.h"
 #include "insieme/frontend/omp/omp_annotation.h"
-#include "insieme/frontend/tu/ir_translation_unit.h"
+#include "insieme/core/tu/ir_translation_unit.h"
 
 #include "insieme/utils/config.h"
 #include "insieme/utils/container_utils.h"
