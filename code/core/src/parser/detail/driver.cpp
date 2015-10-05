@@ -426,14 +426,14 @@ namespace parser {
 			return builder.genericType(name, parents, params);
 		}
 
-		TypePtr InspireDriver::genNumericType(const location& l, const ExpressionPtr& variable) const {
+		NumericTypePtr InspireDriver::genNumericType(const location& l, const ExpressionPtr& variable) const {
 			if(!variable.isa<VariablePtr>()) {
 				error(l, "not a variable");
 			}
 			return builder.numericType(variable.as<core::VariablePtr>());
 		}
 
-		TypePtr InspireDriver::genNumericType(const location& l, const string& value) const {
+		NumericTypePtr InspireDriver::genNumericType(const location& l, const string& value) const {
 			return builder.numericType(builder.literal(value, builder.getLangBasic().getUIntInf()));
 		}
 
@@ -464,8 +464,7 @@ namespace parser {
 			return scopes.resolve(type);
 		}
 
-		ExpressionPtr InspireDriver::genLambda(const location& l, const VariableList& params, const TypePtr& retType, const StatementPtr& body,
-		                                        const FunctionKind& fk, bool isLambda) {
+		LambdaExprPtr InspireDriver::genLambda(const location& l, const VariableList& params, const TypePtr& retType, const StatementPtr& body, bool isLambda) {
 			// TODO: cast returns to appropriate type
 			TypeList paramTys;
 			for(const auto& var : params) {
@@ -482,11 +481,11 @@ namespace parser {
 			auto lambdaIngredients = transform::materialize({params, body});
 
 			// build resulting function type
-			auto funcType = genFuncType(l, paramTys, retType, fk);
+			auto funcType = genFuncType(l, paramTys, retType);
 			return builder.lambdaExpr(funcType.as<FunctionTypePtr>(), lambdaIngredients.params, lambdaIngredients.body);
 		}
 
-		ExpressionPtr InspireDriver::genClosure(const location& l, const VariableList& params, StatementPtr stmt) {
+		BindExprPtr InspireDriver::genClosure(const location& l, const VariableList& params, StatementPtr stmt) {
 			if(!stmt) {
 				error(l, "closure statement malformed");
 				return nullptr;
@@ -509,6 +508,55 @@ namespace parser {
 			// build bind expression
 			return builder.bindExpr(params, call);
 		}
+
+		/**
+		 * generates a constructor for the currently defined record type
+		 */
+		LambdaExprPtr InspireDriver::genConstructor(const location& l, const VariableList& params, const StatementPtr& body) {
+
+			// get this-type
+			auto thisParam = builder.variable(builder.refType(current_record));
+
+			// create full parameter list
+			VariableList ctor_params;
+			ctor_params.push_back(thisParam);
+			for(const auto& cur : params) ctor_params.push_back(cur);
+
+			// update body
+			auto new_body = transform::replaceAll(mgr, body, genThis(l), thisParam).as<StatementPtr>();
+
+			// create constructor type
+			auto ctorType = builder.functionType(extractTypes(ctor_params), thisParam->getType(), FK_CONSTRUCTOR);
+
+			// replace all variables in the body by their implicitly materialized version
+			auto ingredients = transform::materialize({ctor_params, new_body});
+
+			// create the constructor
+			return builder.lambdaExpr(ctorType, ingredients.params, ingredients.body);
+		}
+
+		/**
+		 * generates a destructor for the currently defined record type
+		 */
+		LambdaExprPtr InspireDriver::genDestructor(const location& l, const StatementPtr& body) {
+
+		}
+
+		/**
+		 * generates a member function for the currently defined record type
+		 */
+		MemberFunctionPtr InspireDriver::genMemberFunction(const location& l, bool virtl, bool cnst, bool voltile, const std::string& name, const LambdaExprPtr& lambda, bool isLambda) {
+
+		}
+
+		/**
+		 * generates a member function for the currently defined record type
+		 */
+		MemberFunctionPtr InspireDriver::genPureVirtualMemberFunction(const location& l,  bool cnst, bool voltile, const std::string& name, const TypePtr& type) {
+
+		}
+
+
 
 		ExpressionPtr InspireDriver::genCall(const location& l, const ExpressionPtr& callable, ExpressionList args) {
 			ExpressionPtr func = callable;
@@ -608,6 +656,18 @@ namespace parser {
 			return builder.unionExpr(unionType, builder.stringValue(field), expr);
 		}
 
+		ExpressionPtr InspireDriver::genThis(const location& l) {
+			// check valid scope
+			if (!current_record) {
+				error(l, "This-pointer in non-record context!");
+				return nullptr;
+			}
+
+			// build a literal
+			return builder.literal("this", builder.refType(current_record));
+		}
+
+
 		// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Address marking   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 		ExpressionPtr InspireDriver::mark_address(const location& l, const ExpressionPtr& expr) {
@@ -705,6 +765,20 @@ namespace parser {
 			scopes.close_scope();
 		}
 
+		void InspireDriver::begin_record(const std::string& name) {
+			assert_false(current_record);
+			current_record = builder.tagTypeReference(name);
+		}
+
+		void InspireDriver::end_record() {
+			assert_true(current_record);
+			current_record = nullptr;
+		}
+
+		TagTypeReferencePtr InspireDriver::getThisType() {
+			assert_true(current_record);
+			return current_record;
+		}
 
 		void InspireDriver::import_extension(const location& l, const std::string& extension_name) {
 			auto name = extension_name;

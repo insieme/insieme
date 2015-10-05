@@ -136,6 +136,7 @@ blank   [ \t]
 "lambda"    return inspire_parser::make_LAMBDA(loc);
 "ctor"      return inspire_parser::make_CTOR(loc);
 "type"      return inspire_parser::make_TYPE(loc);
+"this"		return inspire_parser::make_THIS(loc);
 
 "if"      return inspire_parser::make_IF(loc);
 "else"    return inspire_parser::make_ELSE(loc);
@@ -161,6 +162,8 @@ blank   [ \t]
 "union"   return inspire_parser::make_UNION(loc);
 
 "virtual"   return inspire_parser::make_VIRTUAL(loc);
+"const"     return inspire_parser::make_CONST(loc);
+"volatile"  return inspire_parser::make_VOLATILE(loc);
 "private"   return inspire_parser::make_PRIVATE(loc);;
 "public"    return inspire_parser::make_PUBLIC(loc);; 
 "protected" return inspire_parser::make_PROTECTED(loc);;

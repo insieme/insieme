@@ -148,6 +148,8 @@
   DECL          "decl"
   
   VIRTUAL       "virtual"
+  CONST         "const"
+  VOLATILE      "volatile"
   PRIVATE       "private"
   PUBLIC        "public"
   PROTECTED     "protected"
@@ -161,7 +163,9 @@
   
   LET           "let"  
   IN            "in"  
+  
   PARENT        "as"
+  THIS          "this"
 
   TRUE          "true"  
   FALSE         "false"  
@@ -234,7 +238,7 @@
 %type <PureVirtualMemberFunctionPtr>   pure_virtual_member_function
 %type <PureVirtualMemberFunctionList>  pure_virtual_member_functions
 
-%type <TypePtr>						   object_type
+%type <TypePtr>						   object_type qual_object_type
 %type <TypeVariablePtr>                type_variable
 %type <GenericTypePtr>                 abstract_type
 %type <FunctionTypePtr>                function_type pure_function_type closure_type constructor_type destructor_type member_function_type virtual_function_type
@@ -247,15 +251,15 @@
 
 %type <AccessSpecifier>                access_specifier
 %type <NodeType>                       struct_or_union
-%type <bool>			               virtual_flag lambda_or_function
+%type <bool>			               virtual_flag const_flag volatile_flag lambda_or_function
 
 
 %type <VariablePtr>					   variable
-%type <LiteralPtr>					   literal
+%type <LiteralPtr>					   literal 
 %type <CallExprPtr>					   call
 %type <LambdaExprPtr>                  lambda
 %type <BindExprPtr>                    bind
-%type <ExpressionPtr>                  undefined_expression parallel_expression list_expression initializer unary_op binary_op ternary_op
+%type <ExpressionPtr>                  undefined_expression parallel_expression list_expression initializer unary_op binary_op ternary_op this_expression
 
 %type <VariablePtr>					   parameter
 %type <VariableList>				   parameters non_empty_parameters
@@ -316,7 +320,7 @@ definition : record_definition
 		   | function_definition 
 		   ;
 
-main : type "identifier" "(" parameters ")" compound_statement			  { $$ = ProgramPtr(); } 
+main : type "identifier" "(" parameters ")" compound_statement			  { $$ = driver.builder.createProgram({driver.genLambda(@$,$4,$1,$6)}); } 
 	 ;
 
 //	-- record_declarations -------------------------------------
@@ -341,28 +345,37 @@ constructors : constructors constructor									  { $1.push_back($2); $$ = $1; }
 			 | 															  { $$ = LambdaExprList(); } 
 			 ;                                                            
                                                                           
-constructor : "ctor" "(" parameters ")" compound_statement				  { $$ = LambdaExprPtr(); }
+constructor : "ctor" "(" parameters ")" compound_statement				  { $$ = driver.genConstructor(@$,$3,$5); }
 			;                                                             
                                                                           
-destructor : "dtor" "(" ")" compound_statement							  { $$ = LambdaExprPtr(); }
+destructor : "dtor" "(" ")" compound_statement							  { $$ = driver.genDestructor(@$,$4); }
 		   ;                                                              
                                                                           
 member_functions : member_functions member_function						  { $1.push_back($2); $$ = $1; } 
 				 |  													  { $$ = MemberFunctionList(); }
 				 ;                                                        
                                                                           
-member_function : virtual_flag function_definition						  { $$ = MemberFunctionPtr(); } 
+member_function : virtual_flag const_flag volatile_flag lambda_or_function "identifier" "=" lambda						  
+																		  { $$ = driver.genMemberFunction(@$,$1,$2,$3,$5,$7,$4); } 
 				;                                                         
                                                                           
 virtual_flag : "virtual" 												  { $$ = true; }
 			 | 															  { $$ = false; }
 			 ;
 
+const_flag : "const"   												      { $$ = true; }
+		   | 															  { $$ = false; }
+		   ;
+
+volatile_flag : "volatile"   											  { $$ = true; }
+	          | 														  { $$ = false; }
+	          ;
+	   
 pure_virtual_member_functions : pure_virtual_member_functions pure_virtual_member_function		{ $1.push_back($2); $$=$1; } 
 							  |  																{ $$ = PureVirtualMemberFunctionList(); }
 							  ;
 
-pure_virtual_member_function : "pure" "virtual" "identifier" ":" pure_function_type 			{ $$ = PureVirtualMemberFunctionPtr(); }
+pure_virtual_member_function : "pure" "virtual" const_flag "identifier" ":" pure_function_type 			{ $$ = PureVirtualMemberFunctionPtr(); }
 							 ;
 
 
@@ -434,7 +447,7 @@ non_empty_parents : non_empty_parents "," parent						  { $1.push_back($3); $$ =
 				  | parent 												  { $$ = toVector($1); }
 				  ;                                                       
                                                                           
-parent : virtual_flag access_specifier abstract_type					  { $$ = ParentPtr(); } 
+parent : virtual_flag access_specifier abstract_type					  { $$ = driver.builder.parent($1,$2,$3); } 
 	   ;                                                                  
 					                                                      
 access_specifier : "public"												  { $$ =  AS_PUBLIC; }
@@ -454,41 +467,49 @@ function_type : pure_function_type
 			  | virtual_function_type                                     
 			  ;                                                           
                                                                           
-pure_function_type : "(" ")" "->" type									  { $$ = FunctionTypePtr(); }
-				   | "(" non_empty_types ")" "->" type					  { $$ = FunctionTypePtr(); } 
+pure_function_type : "(" ")" "->" type									  { $$ = driver.builder.functionType(TypeList(), $4, FK_PLAIN); }
+				   | "(" non_empty_types ")" "->" type					  { $$ = driver.builder.functionType($2, $5, FK_PLAIN); } 
 				   ;                                                      
                                                                           
-closure_type : "(" ")" "=>" type									      { $$ = FunctionTypePtr(); }
-			 | "(" non_empty_types ")" "=>" type						  { $$ = FunctionTypePtr(); } 
+closure_type : "(" ")" "=>" type									      { $$ = driver.builder.functionType(TypeList(), $4, FK_CLOSURE); }
+			 | "(" non_empty_types ")" "=>" type						  { $$ = driver.builder.functionType($2, $5, FK_CLOSURE); } 
 			 ;                                                            
                                                                           
-constructor_type : object_type "::" "(" types ")"						  { $$ = FunctionTypePtr(); }
+constructor_type : qual_object_type "::" "(" types ")"					  { $4.insert($4.begin(), $1); $$ = driver.builder.functionType($4,$1,FK_CONSTRUCTOR); }
 				 ;                                                        
                                                                           
-destructor_type : "~" object_type "::" "(" ")" 							  { $$ = FunctionTypePtr(); } 
+destructor_type : "~" qual_object_type "::" "(" ")" 					  { $$ = driver.builder.functionType(toVector($2),$2,FK_DESTRUCTOR); } 
 				;                                                         
 	                                                                      
-member_function_type : object_type "::" "(" types ")" "->" type 		  { $$ = FunctionTypePtr(); } 
+member_function_type : qual_object_type "::" "(" types ")" "->" type 	  { $4.insert($4.begin(), $1); $$ = driver.builder.functionType($4,$7,FK_MEMBER_FUNCTION); } 
 					 ;                                                    
-                                                                          
-virtual_function_type : object_type "::" "(" types ")" "~>" type 		  { $$ = FunctionTypePtr(); } 
+                                                                         
+virtual_function_type : qual_object_type "::" "(" types ")" "~>" type 	  { $4.insert($4.begin(), $1); $$ = driver.builder.functionType($4,$7,FK_VIRTUAL_MEMBER_FUNCTION); } 
 					  ;                                                   
-                                                                          
+
+qual_object_type : object_type					                          { $$ = lang::ReferenceType::create($1); }
+                 | "const" object_type					                  { $$ = lang::ReferenceType::create($2,true,false); }
+                 | "volatile" object_type					              { $$ = lang::ReferenceType::create($2,false,true); }
+                 | "const" "volatile" object_type					      { $$ = lang::ReferenceType::create($3,true,true); }
+                 | "volatile" "const" object_type					      { $$ = lang::ReferenceType::create($3,true,true); }
+                 ;
+
+                 
 // -- numeric type --                                                     
                                                                           
-numeric_type : "int"													  { $$ = NumericTypePtr(); } 
-			 | "#" "identifier" 										  { $$ = NumericTypePtr(); }
+numeric_type : "int"													  { $$ = driver.genNumericType(@$,$1); } 
+			 | "#" "identifier" 										  { $$ = driver.genNumericType(@$,$2); }
 			 ;                                                            
                                                                           
 // -- tuple types --                                                      
                                                                           
-tuple_type : "(" ")"													  { $$ = TupleTypePtr(); }
-		   | "(" non_empty_types ")"									  { $$ = TupleTypePtr(); } 
+tuple_type : "(" ")"													  { $$ = driver.builder.tupleType(); }
+		   | "(" non_empty_types ")"									  { $$ = driver.builder.tupleType($2); } 
 		   ;                                                              
                                                                           
 // -- tag reference --                                                    
                                                                           
-tag_type_reference : "tag_ref"											  { $$ = TagTypeReferencePtr(); } 
+tag_type_reference : "tag_ref"											  { $$ = driver.builder.tagTypeReference($1); } 
 				   ;                                                      
                                                                           
 // -- let --                                                              
@@ -525,6 +546,7 @@ plain_expression : variable                                               { $$ =
 				 | unary_op                                               { $$ = $1; }
 				 | binary_op                                              { $$ = $1; }
 				 | ternary_op                                             { $$ = $1; }
+				 | this_expression                                        { $$ = $1; }
 				 ;                                                        
                                                                           
 				                                                          
@@ -655,6 +677,8 @@ binary_op : expression "=" expression                                     { $$ =
 ternary_op : expression "?" expression ":" expression                     { $$ = ExpressionPtr(); }
 		   ;	
 
+this_expression : "this"                                        		  { $$ = driver.genThis(@$); }
+				;
 	 
 //	-- statements --------------------------------------
 

@@ -407,7 +407,6 @@ namespace core {
 	}
 
 
-
 	ExpressionPtr IRBuilderBaseModule::getDefaultDestructor(const StringValuePtr& recordName) const {
 		// create default destructor
 		TypePtr thisType = refType(tagTypeReference(recordName));

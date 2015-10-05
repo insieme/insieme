@@ -246,6 +246,9 @@ namespace tu {
 			mutable utils::map::PointerMap<NodePtr, bool> containsSymbolsCache;
 
 			bool containsSymbols(const NodePtr& node) const {
+				// handle null-pointers
+				if (!node) return false;
+
 				// check cache
 				auto pos = containsSymbolsCache.find(node);
 				if(pos != containsSymbolsCache.end()) { return pos->second; }

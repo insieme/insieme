@@ -68,23 +68,22 @@ namespace parser {
 		EXPECT_TRUE(test_type(nm, "vector<'a, 4>"));
 		EXPECT_TRUE(test_type(nm, "struct { int<4> a; int<5> b}"));
 		EXPECT_TRUE(test_type(nm, "struct name { int<4> a; int<5> b}"));
-		EXPECT_TRUE(test_type(nm, "let papa, mama = t<11>, t<4>; struct name : [papa, mama] { int<4> a; int<5> b}"));
-		EXPECT_TRUE(test_type(nm, "let papa = t<11>; struct name : [papa] { int<4> a; int<5> b}"));
+		EXPECT_TRUE(test_type(nm, "let papa = t<11> in struct name : [papa] { int<4> a; int<5> b}"));
 		EXPECT_TRUE(test_type(nm, "struct { int<4> a; int<5> b;}"));
-		EXPECT_TRUE(test_type(nm, "let int = int<4>; int"));
+		EXPECT_TRUE(test_type(nm, "let int = int<4> in int"));
 
 		EXPECT_TRUE(test_type(nm, "( int<4> , rf<int<4>>) -> int<4>"));
 		EXPECT_TRUE(test_type(nm, "( int<4> , rf<int<4>>) => int<4>"));
 		EXPECT_TRUE(test_type(nm, "(ary<'elem,'n>, vector<uint<8>,'n>) -> 'elem"));
 
-		EXPECT_TRUE(test_type(nm, "let class = struct name { int<4> a; int<5> b};"
-		                          "method class::()->int<4> "));
-		EXPECT_TRUE(test_type(nm, "let class = struct name { int<4> a; int<5> b};"
-		                          "method class::()~>int<4> "));
-		EXPECT_TRUE(test_type(nm, "let class = struct name { int<4> a; int<5> b};"
+		EXPECT_TRUE(test_type(nm, "let class = struct name { int<4> a; int<5> b} in"
+		                          "class::()->int<4> "));
+		EXPECT_TRUE(test_type(nm, "let class = struct name { int<4> a; int<5> b} in"
+		                          "class::()~>int<4> "));
+		EXPECT_TRUE(test_type(nm, "let class = struct name { int<4> a; int<5> b} in"
 		                          "~class::()"));
-		EXPECT_TRUE(test_type(nm, "let class = struct name { int<4> a; int<5> b};"
-		                          "ctor class::()"));
+		EXPECT_TRUE(test_type(nm, "let class = struct name { int<4> a; int<5> b} in"
+		                          "class::()"));
 
 		EXPECT_TRUE(test_type(nm, "struct C { int<4> field; }"));
 		EXPECT_TRUE(test_type(nm, "(rf<ary<rf<ary<struct{int<4> int; real<4> float },1>>,1>>,"
