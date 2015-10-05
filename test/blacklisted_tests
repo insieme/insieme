@@ -65,8 +65,6 @@ anonymous
 
 # Disabling tests because they fail to satisfy some semantic checks or errors
 enum
-heap_data
-ref_passing
 
 # Disabling tests because they fail in the backend:
 # Reason: unsupported type __insieme_enum
