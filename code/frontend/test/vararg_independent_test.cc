@@ -40,13 +40,18 @@
 
 namespace insieme {
 namespace frontend {
+	static inline void runVarargIndependentTestOn(const string& fn) {
+		runIndependentTestOn(fn, [&](ConversionJob& job) {
+			job.registerFrontendExtension<extensions::VariableArgumentListExtension>();
+		});
+	}
 	
 	TEST(VarargIndependentTest, Basic) {
-		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_variable_argument_lists.c");
+		runVarargIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_variable_argument_lists.c");
 	}
 
 	TEST(VarargIndependentTest, HelloWorld) {
-		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_hello_world.c");
+		runVarargIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_hello_world.c");
 	}
 
 } // fe namespace

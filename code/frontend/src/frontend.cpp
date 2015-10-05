@@ -105,11 +105,6 @@ namespace frontend {
 				}
 			}
 		}
-
-		// extensions that always need to be loaded
-		extensionList.push_back(std::make_shared<extensions::VariableArgumentListExtension>());
-		extensionList.push_back(std::make_shared<extensions::VariableLengthArrayExtension>());
-
 		// check pre-requisites
 		for(auto ext : getExtensions()) {
 			auto isMissing = ext->isPrerequisiteMissing(*this);
@@ -118,9 +113,6 @@ namespace frontend {
 				assert_fail() << "Aborting due to frontend extension prerequisite error.";
 			}
 		}
-
-		// FE cleanup wants to be last
-		extensionList.push_back(std::make_shared<extensions::FrontendCleanupExtension>());
 	}
 
 	void ConversionSetup::setStandard(const Standard& standard) {
@@ -227,7 +219,11 @@ namespace frontend {
 		registerFrontendExtension<extensions::OmpFrontendExtension>(options);
 		registerFrontendExtension<extensions::SignificanceFrontendExtension>(options);
 		registerFrontendExtension<extensions::CilkFrontendExtension>(options);
-
+		
+		registerFrontendExtension<extensions::VariableArgumentListExtension>(options);
+		registerFrontendExtension<extensions::VariableLengthArrayExtension>(options);
+		
+		registerFrontendExtension<extensions::FrontendCleanupExtension>(options);
 	}
 
 	std::ostream& ConversionJob::printTo(std::ostream& out) const {

@@ -92,7 +92,7 @@ namespace frontend {
 			EXPECT_EQ(num, converter.getVarMan()->numVisibleDeclarations()) << "Location: " << converter.getLastTrackableLocation() << "\n";
 		});
 		job.registerFrontendExtension<FrontendCleanupExtension>();
-		jobModifier(job); 
+		jobModifier(job);
 		auto res = builder.normalize(job.execute(mgr));
 
 		// iterate over res and check pragma expectations
