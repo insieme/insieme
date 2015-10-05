@@ -127,7 +127,11 @@ namespace conversion {
 			// check if we have an init expression
 			core::ExpressionPtr initExp;
 			if(convertedDecl.second) {
-				initExp = core::lang::buildRefCast(builder.refVar(*convertedDecl.second), convertedDecl.first->getType());
+				auto refVar = builder.refVar(*convertedDecl.second);
+				initExp = core::lang::buildRefCast(refVar, convertedDecl.first->getType());
+				if(initExp != refVar) {
+					VLOG(2) << "Initialization: casting ref from\n" << dumpPretty(refVar->getType()) << " to \n" << convertedDecl.first->getType();
+				}
 			} else {
 				// generate undefined initializer
 				initExp = builder.undefinedVar(convertedDecl.first.getType());

@@ -3,7 +3,7 @@
 
 #include <stdlib.h>
 
-extern int printf(char *, ...);
+extern int printf(const char *, ...);
 
 // define a simple linked list containing integers
 typedef struct elem {

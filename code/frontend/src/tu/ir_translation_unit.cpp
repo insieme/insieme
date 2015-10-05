@@ -38,30 +38,29 @@
 #include "insieme/frontend/utils/macros.h"
 
 #include "insieme/utils/assert.h"
+#include "insieme/utils/graph_utils.h"
+#include "insieme/utils/logging.h"
 
-#include "insieme/core/ir.h"
-#include "insieme/core/types/subtyping.h"
-
+#include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/analysis/type_utils.h"
 #include "insieme/core/annotations/naming.h"
-#include "insieme/core/ir_builder.h"
 #include "insieme/core/frontend_ir_builder.h"
+#include "insieme/core/ir.h"
+#include "insieme/core/ir_builder.h"
+#include "insieme/core/ir_statistic.h"
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/lang/array.h"
 #include "insieme/core/lang/ir++_extension.h"
 #include "insieme/core/lang/static_vars.h"
-#include "insieme/core/analysis/ir_utils.h"
-#include "insieme/core/analysis/type_utils.h"
 #include "insieme/core/printer/pretty_printer.h"
-#include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/manipulation_utils.h"
-
-#include "insieme/core/ir_statistic.h"
+#include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/types/subtyping.h"
 
 #include "insieme/annotations/c/extern.h"
 #include "insieme/annotations/c/include.h"
 
-#include "insieme/utils/graph_utils.h"
 
 namespace insieme {
 namespace frontend {
@@ -604,7 +603,10 @@ namespace tu {
 				core::lang::ReferenceType refType(lit->getType());
 				refType.setConst(false);
 				core::GenericTypePtr mutableType = refType;
-				inits.push_back(builder.assign(core::lang::buildRefCast(lit,mutableType), resolver.apply(cur.second)));
+				auto initExp = resolver.apply(cur.second);
+				auto castedLit = core::lang::buildRefCast(lit, mutableType);
+				if(castedLit != lit) { VLOG(2) << "Global Literal: casting ref from\n" << dumpPretty(lit->getType()) << " to \n" << castedLit->getType(); }
+				inits.push_back(builder.assign(castedLit, initExp));
 			}
 
 			// ~~~~~~~~~~~~~~~~~~ PREPARE STATICS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
