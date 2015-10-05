@@ -156,7 +156,7 @@ namespace parser {
 		/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ InspireDriver ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 		InspireDriver::InspireDriver(const std::string& str, NodeManager& mgr)
-		    : scopes(), mgr(mgr), builder(mgr), file("global scope"), str(str), result(nullptr), glob_loc(&file), ss(str), scanner(&ss),
+		    : scopes(), mgr(mgr), builder(mgr), file("global scope"), str(str), tu(mgr), result(nullptr), glob_loc(&file), ss(str), scanner(&ss),
 		      parser(*this, scanner) {
 		}
 
@@ -174,7 +174,7 @@ namespace parser {
 
 		TypePtr InspireDriver::parseType() {
 			scanner.set_start_type();
-			inspire_parser parser(*this, scanner);
+			InspireParser parser(*this, scanner);
 			int fail = parser.parse();
 			if(fail) {
 				// print_errors();
@@ -185,7 +185,7 @@ namespace parser {
 
 		StatementPtr InspireDriver::parseStmt() {
 			scanner.set_start_statement();
-			inspire_parser parser(*this, scanner);
+			InspireParser parser(*this, scanner);
 			int fail = parser.parse();
 			if(fail) {
 				// print_errors();
@@ -196,7 +196,7 @@ namespace parser {
 
 		ExpressionPtr InspireDriver::parseExpression() {
 			scanner.set_start_expression();
-			inspire_parser parser(*this, scanner);
+			InspireParser parser(*this, scanner);
 			int fail = parser.parse();
 			if(fail) {
 				// print_errors();
@@ -443,12 +443,21 @@ namespace parser {
 
 		TypePtr InspireDriver::genRecordType(const location& l, const NodeType& type, const string& name, const ParentList& parents, const FieldList& fields, const LambdaExprList& ctors,
 				const LambdaExprPtr& dtor, const MemberFunctionList& mfuns, const PureVirtualMemberFunctionList& pvmfuns) {
+
+			TagTypePtr res;
+
 			if (type == NT_Struct) {
-				return builder.structType(name,parents,fields,ctors,dtor,mfuns,pvmfuns);
+				res = builder.structType(name,parents,fields,ctors,dtor,mfuns,pvmfuns);
 			} else {
 				if (!parents.empty()) error(l, "Inheritance not supported for unions!");
-				return builder.unionType(name,fields,ctors,dtor,mfuns,pvmfuns);
+				res = builder.unionType(name,fields,ctors,dtor,mfuns,pvmfuns);
 			}
+
+			// register type in translation unit
+			tu.addType(builder.genericType(name), res);
+
+			// done
+			return res;
 		}
 
 		TypePtr InspireDriver::resolveTypeAliases(const location& l, const TypePtr& type) {
@@ -688,11 +697,11 @@ namespace parser {
 		}
 
 
-		void InspireDriver::open_scope(const location& l) {
+		void InspireDriver::open_scope() {
 			scopes.open_scope();
 		}
 
-		void InspireDriver::close_scope(const location& l) {
+		void InspireDriver::close_scope() {
 			scopes.close_scope();
 		}
 

@@ -50,7 +50,7 @@
 
 
 namespace insieme {
-namespace frontend {
+namespace core {
 namespace tu {
 
 	core::checks::MessageList checkTU(const IRTranslationUnit& unit) {
@@ -65,5 +65,5 @@ namespace tu {
 	}
 
 } // end namespace tu
-} // end namespace frontend
+} // end namespace core
 } // end namespace insieme

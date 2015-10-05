@@ -60,7 +60,7 @@
 #include "insieme/utils/graph_utils.h"
 
 namespace insieme {
-namespace frontend {
+namespace core {
 namespace tu {
 
 	void IRTranslationUnit::addGlobal(const Global& newGlobal) {
@@ -684,5 +684,5 @@ namespace tu {
 
 
 } // end namespace tu
-} // end namespace frontend
+} // end namespace core
 } // end namespace insieme

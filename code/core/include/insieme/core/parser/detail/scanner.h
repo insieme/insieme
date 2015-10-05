@@ -58,26 +58,26 @@ namespace parser {
 		/**
 		 *  the scanner wrapper is an interface to implement differen inputs for the scanner
 		 */
-		class inspire_scanner : public Trick_Lexer {
+		class InspireScanner : public Trick_Lexer {
 			location loc;
 
-			inspire_parser::symbol_type type_token;
-			inspire_parser::symbol_type expression_token;
-			inspire_parser::symbol_type statement_token;
-			inspire_parser::symbol_type program_token;
+			InspireParser::symbol_type type_token;
+			InspireParser::symbol_type expression_token;
+			InspireParser::symbol_type statement_token;
+			InspireParser::symbol_type program_token;
 
-			inspire_parser::symbol_type* start_token;
+			InspireParser::symbol_type* start_token;
 
 		  public:
-			inspire_scanner(std::istream* stream)
-			    : Trick_Lexer(stream), type_token(inspire_parser::make_TYPE_ONLY(loc)), expression_token(inspire_parser::make_EXPR_ONLY(loc)),
-			      statement_token(inspire_parser::make_STMT_ONLY(loc)), program_token(inspire_parser::make_FULL_PROG(loc)) {
+			InspireScanner(std::istream* stream)
+			    : Trick_Lexer(stream), type_token(InspireParser::make_TYPE_ONLY(loc)), expression_token(InspireParser::make_EXPR_ONLY(loc)),
+			      statement_token(InspireParser::make_STMT_ONLY(loc)), program_token(InspireParser::make_FULL_PROG(loc)) {
 				loc.initialize();
 			}
 
 			#undef YY_DECL
-			#define YY_DECL inspire_parser::symbol_type inspire_scanner::yylex(InspireDriver& driver)
-			inspire_parser::symbol_type yylex(InspireDriver& driver);
+			#define YY_DECL InspireParser::symbol_type InspireScanner::yylex(InspireDriver& driver)
+			InspireParser::symbol_type yylex(InspireDriver& driver);
 
 			void set_start_program() {
 				start_token = &program_token;
@@ -96,7 +96,7 @@ namespace parser {
 				return 1;
 			}
 
-			virtual ~inspire_scanner() {}
+			virtual ~InspireScanner() {}
 		};
 
 		/**
@@ -104,7 +104,7 @@ namespace parser {
 		 * Bison will call a function yylex, and to keep an unique instance of the scanner, we pass it by argument
 		 * this function bridges the bison flex interaction.
 		 */
-		inspire_parser::symbol_type yylex(InspireDriver& driver, inspire_scanner& scanner);
+		InspireParser::symbol_type yylex(InspireDriver& driver, InspireScanner& scanner);
 
 	} // namespace detail
 } // namespace parser

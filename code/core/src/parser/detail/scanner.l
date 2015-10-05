@@ -26,185 +26,169 @@
 
 
 %option noyywrap c++ batch nounput
-%option yyclass="inspire_scanner"
+%option yyclass="InspireScanner"
 %option noyywrap
 /*%option prefix="inspire_"*/
 /*nounput batch debug noinput */
 /*reentrant bison-bridge noyywrap */
 
-id       [a-zA-Z_][a-zA-Z0-9_]*
-type_var [\'][a-zA-Z0-9_]*
-tag_ref  [\^][a-zA-Z0-9_]*
+id            [a-zA-Z_][a-zA-Z0-9_]*
+type_var      [\'][a-zA-Z0-9_]*
+tag_ref       [\^][a-zA-Z0-9_]*
 
 /* Note: the original string regex was: \"(\\.|[^"])*\"
  * We had to create an alternative one which puts the strin in double quotes on each side, in order to enable the parsing of
  * string literals (which are real strings - not real values or so) and also pass on the enclosing quotes to the builder.
  */
-string \"(\\.|[^"])*\"|\"(\"(\\.|[^"])*\")\"
-float   [0-9]+"."[0-9]+f
-double  [0-9]+"."[0-9]+
-ulong   [0-9]+ul
-long    [0-9]+l
-longlong [0-9]+ll
-ulonglong [0-9]+ull
-uint    [0-9]+u
-int     [0-9]+
-blank   [ \t]
+string        \"(\\.|[^"])*\"|\"(\"(\\.|[^"])*\")\"
+float         [0-9]+"."[0-9]+f
+double        [0-9]+"."[0-9]+
+ulong         [0-9]+ul
+long          [0-9]+l
+longlong      [0-9]+ll
+ulonglong     [0-9]+ull
+uint          [0-9]+u
+int           [0-9]+
+blank         [ \t]
 
 
 %{
-  // Code run each time a pattern is matched.
-  # define YY_USER_ACTION  loc.columns (yyleng);
-  using namespace insieme::core::parser::detail;
+	// Code run each time a pattern is matched.
+	# define YY_USER_ACTION  loc.columns (yyleng);
+	using namespace insieme::core::parser::detail;
 %}
 
 %%
 
 %{
-  // Code run each time yylex is called.
+	// Code run each time yylex is called.
 
-  // this allows the use of DUMMY start symbols to parse subtrees of the grammar without conflicst  
-  //  http://www.gnu.org/software/bison/manual/html_node/Multiple-start_002dsymbols.html
-  //  There is somehow something different, start_token is passed to the lexer from the parser and is never modified,
-  //  I  use a double ptr to alter the original value
-  if (start_token){
-      auto t = start_token;
-      start_token = nullptr;
-      return *t;
-  }
+	// this allows the use of DUMMY start symbols to parse subtrees of the grammar without conflicst
+	//  http://www.gnu.org/software/bison/manual/html_node/Multiple-start_002dsymbols.html
+	//  There is somehow something different, start_token is passed to the lexer from the parser and is never modified,
+	//  I  use a double ptr to alter the original value
+	if (start_token){
+		auto t = start_token;
+		start_token = nullptr;
+		return *t;
+	}
 
-  // update location;
-  loc.step ();
+	// update location;
+	loc.step ();
 %}
 
-"//"+.*    loc.step ();
-{blank}+   loc.step ();
-[\n]+      loc.lines (yyleng); loc.step ();
-"-"      return inspire_parser::make_MINUS(loc);
-"+"      return inspire_parser::make_PLUS(loc);
-"*"      return inspire_parser::make_STAR(loc);
-"/"      return inspire_parser::make_SLASH(loc);
-"%"      return inspire_parser::make_PERCENT(loc);
-"#"      return inspire_parser::make_HASH(loc);
+"//"+.*       loc.step ();
+{blank}+      loc.step ();
+[\n]+         loc.lines (yyleng); loc.step ();
+"-"           return InspireParser::make_MINUS(loc);
+"+"           return InspireParser::make_PLUS(loc);
+"*"           return InspireParser::make_STAR(loc);
+"/"           return InspireParser::make_SLASH(loc);
+"%"           return InspireParser::make_PERCENT(loc);
+"#"           return InspireParser::make_HASH(loc);
 
-"("      return inspire_parser::make_LPAREN(loc);
-")"      return inspire_parser::make_RPAREN(loc);
-"{"      return inspire_parser::make_LCURBRACKET(loc);
-"}"      return inspire_parser::make_RCURBRACKET(loc);
-"["      return inspire_parser::make_LBRACKET(loc);
-"]"      return inspire_parser::make_RBRACKET(loc);
+"("           return InspireParser::make_LPAREN(loc);
+")"           return InspireParser::make_RPAREN(loc);
+"{"           return InspireParser::make_LCURBRACKET(loc);
+"}"           return InspireParser::make_RCURBRACKET(loc);
+"["           return InspireParser::make_LBRACKET(loc);
+"]"           return InspireParser::make_RBRACKET(loc);
 
-"&"     return inspire_parser::make_BAND(loc);
-"|"     return inspire_parser::make_BOR(loc);
-"^"     return inspire_parser::make_BXOR(loc);
+"&"           return InspireParser::make_BAND(loc);
+"|"           return InspireParser::make_BOR(loc);
+"^"           return InspireParser::make_BXOR(loc);
 
-"&&"     return inspire_parser::make_LAND(loc);
-"||"     return inspire_parser::make_LOR(loc);
-"!"      return inspire_parser::make_LNOT(loc);
+"&&"          return InspireParser::make_LAND(loc);
+"||"          return InspireParser::make_LOR(loc);
+"!"           return InspireParser::make_LNOT(loc);
 
-"<"      return inspire_parser::make_LT(loc);
-">"      return inspire_parser::make_GT(loc);
-"<="     return inspire_parser::make_LEQ(loc);
-">="     return inspire_parser::make_GEQ(loc);
-"=="     return inspire_parser::make_EQ(loc);
-"!="     return inspire_parser::make_NEQ(loc);
-
-
-"="      return inspire_parser::make_ASSIGN(loc);
-"?"      return inspire_parser::make_QMARK(loc);
-"::"     return inspire_parser::make_NAMESPACE(loc);
-"~"      return inspire_parser::make_FUNNY_BOY(loc);
-":"      return inspire_parser::make_COLON(loc);
-
-"->"     return inspire_parser::make_ARROW(loc);
-"=>"     return inspire_parser::make_DARROW(loc);
-"~>"     return inspire_parser::make_TARROW(loc);
-
-";"      return inspire_parser::make_SEMIC(loc);
-","      return inspire_parser::make_COMA(loc);
-".."     return inspire_parser::make_RANGE(loc);
-"."      return inspire_parser::make_DOT(loc);
-"$"      return inspire_parser::make_ADDRESS(loc);
-
-"CAST"     return inspire_parser::make_CAST(loc);
-"as"      return inspire_parser::make_PARENT(loc);
-"let"       return inspire_parser::make_LET(loc);
-"in"        return inspire_parser::make_IN(loc);
-"using"     return inspire_parser::make_USING(loc);
-"auto"      return inspire_parser::make_AUTO(loc);
-"function"  return inspire_parser::make_FUNCTION(loc);
-"lambda"    return inspire_parser::make_LAMBDA(loc);
-"ctor"      return inspire_parser::make_CTOR(loc);
-"type"      return inspire_parser::make_TYPE(loc);
-
-"if"      return inspire_parser::make_IF(loc);
-"else"    return inspire_parser::make_ELSE(loc);
-"for"     return inspire_parser::make_FOR(loc);
-"while"   return inspire_parser::make_WHILE(loc);
-"decl"    return inspire_parser::make_DECL(loc);
-"try"     return inspire_parser::make_TRY(loc);
-"throw"   return inspire_parser::make_THROW(loc);
-"catch"   return inspire_parser::make_CATCH(loc);
-"return"  return inspire_parser::make_RETURN(loc);
-"switch"  return inspire_parser::make_SWITCH(loc);
-"case"    return inspire_parser::make_CASE(loc);
-"default" return inspire_parser::make_DEFAULT(loc);
-"continue" return inspire_parser::make_CONTINUE(loc);
-"break"   return inspire_parser::make_BREAK(loc);
-
-"var"     return inspire_parser::make_VAR(loc);
-"undefined"  return inspire_parser::make_UNDEFINED(loc);
-
-"true"    return inspire_parser::make_TRUE(loc);
-"false"   return inspire_parser::make_FALSE(loc);
-"struct"  return inspire_parser::make_STRUCT(loc);
-"union"   return inspire_parser::make_UNION(loc);
-
-"virtual"   return inspire_parser::make_VIRTUAL(loc);
-"private"   return inspire_parser::make_PRIVATE(loc);;
-"public"    return inspire_parser::make_PUBLIC(loc);; 
-"protected" return inspire_parser::make_PROTECTED(loc);;
+"<"           return InspireParser::make_LT(loc);
+">"           return InspireParser::make_GT(loc);
+"<="          return InspireParser::make_LEQ(loc);
+">="          return InspireParser::make_GEQ(loc);
+"=="          return InspireParser::make_EQ(loc);
+"!="          return InspireParser::make_NEQ(loc);
 
 
-"spawn"    return inspire_parser::make_SPAWN(loc);
-"sync"     return inspire_parser::make_SYNC(loc);
-"sync_all" return inspire_parser::make_SYNCALL(loc);
-"job"      return inspire_parser::make_JOB(loc);
+"="           return InspireParser::make_ASSIGN(loc);
+"?"           return InspireParser::make_QMARK(loc);
+"::"          return InspireParser::make_NAMESPACE(loc);
+"~"           return InspireParser::make_FUNNY_BOY(loc);
+":"           return InspireParser::make_COLON(loc);
 
-{string}      {
-    std::string tmp(yytext);
-    return inspire_parser::make_STRING(tmp, loc);
+"->"          return InspireParser::make_ARROW(loc);
+"=>"          return InspireParser::make_DARROW(loc);
+"~>"          return InspireParser::make_TARROW(loc);
+
+";"           return InspireParser::make_SEMIC(loc);
+","           return InspireParser::make_COMA(loc);
+".."          return InspireParser::make_RANGE(loc);
+"."           return InspireParser::make_DOT(loc);
+"$"           return InspireParser::make_ADDRESS(loc);
+
+"CAST"        return InspireParser::make_CAST(loc);
+"as"          return InspireParser::make_PARENT(loc);
+"let"         return InspireParser::make_LET(loc);
+"in"          return InspireParser::make_IN(loc);
+"using"       return InspireParser::make_USING(loc);
+"auto"        return InspireParser::make_AUTO(loc);
+"function"    return InspireParser::make_FUNCTION(loc);
+"lambda"      return InspireParser::make_LAMBDA(loc);
+"ctor"        return InspireParser::make_CTOR(loc);
+"type"        return InspireParser::make_TYPE(loc);
+
+"if"          return InspireParser::make_IF(loc);
+"else"        return InspireParser::make_ELSE(loc);
+"for"         return InspireParser::make_FOR(loc);
+"while"       return InspireParser::make_WHILE(loc);
+"decl"        return InspireParser::make_DECL(loc);
+"try"         return InspireParser::make_TRY(loc);
+"throw"       return InspireParser::make_THROW(loc);
+"catch"       return InspireParser::make_CATCH(loc);
+"return"      return InspireParser::make_RETURN(loc);
+"switch"      return InspireParser::make_SWITCH(loc);
+"case"        return InspireParser::make_CASE(loc);
+"default"     return InspireParser::make_DEFAULT(loc);
+"continue"    return InspireParser::make_CONTINUE(loc);
+"break"       return InspireParser::make_BREAK(loc);
+
+"var"         return InspireParser::make_VAR(loc);
+"undefined"   return InspireParser::make_UNDEFINED(loc);
+
+"true"        return InspireParser::make_TRUE(loc);
+"false"       return InspireParser::make_FALSE(loc);
+"struct"      return InspireParser::make_STRUCT(loc);
+"union"       return InspireParser::make_UNION(loc);
+
+"virtual"     return InspireParser::make_VIRTUAL(loc);
+"private"     return InspireParser::make_PRIVATE(loc);;
+"public"      return InspireParser::make_PUBLIC(loc);;
+"protected"   return InspireParser::make_PROTECTED(loc);;
+
+
+"spawn"       return InspireParser::make_SPAWN(loc);
+"sync"        return InspireParser::make_SYNC(loc);
+"sync_all"    return InspireParser::make_SYNCALL(loc);
+"job"         return InspireParser::make_JOB(loc);
+
+{string} {
+	std::string tmp(yytext);
+	return InspireParser::make_STRING(tmp, loc);
 }
-{int}      {
-  return inspire_parser::make_INT(yytext, loc);
-}
-{uint}      {
-  return inspire_parser::make_UINT(yytext, loc);
-}
-{long}      {
-  return inspire_parser::make_LONG(yytext, loc);
-}
-{ulong}      {
-  return inspire_parser::make_ULONG(yytext, loc);
-}
-{longlong}      {
-  return inspire_parser::make_LONGLONG(yytext, loc);
-}
-{ulonglong}      {
-  return inspire_parser::make_ULONGLONG(yytext, loc);
-}
-{float}      {
-  return inspire_parser::make_FLOAT(yytext, loc);
-}
-{double}      {
-  return inspire_parser::make_DOUBLE(yytext, loc);
-}
+{int}         return InspireParser::make_INT(yytext, loc);
+{uint}        return InspireParser::make_UINT(yytext, loc);
+{long}        return InspireParser::make_LONG(yytext, loc);
+{ulong}       return InspireParser::make_ULONG(yytext, loc);
+{longlong}    return InspireParser::make_LONGLONG(yytext, loc);
+{ulonglong}   return InspireParser::make_ULONGLONG(yytext, loc);
+{float}       return InspireParser::make_FLOAT(yytext, loc);
+{double}      return InspireParser::make_DOUBLE(yytext, loc);
 
-{id}       return inspire_parser::make_IDENTIFIER(yytext, loc);
-{type_var}       return inspire_parser::make_TYPE_VAR(yytext+1, loc);
-{tag_ref}        return inspire_parser::make_TAG_REF(yytext+1, loc);
-.          driver.error (loc, "invalid character");
-<<EOF>>    return inspire_parser::make_END(loc);
+{id}          return InspireParser::make_IDENTIFIER(yytext, loc);
+{type_var}    return InspireParser::make_TYPE_VAR(yytext+1, loc);
+{tag_ref}     return InspireParser::make_TAG_REF(yytext+1, loc);
+.             driver.error (loc, "invalid character");
+<<EOF>>       return InspireParser::make_END(loc);
 
 %%
 
@@ -216,9 +200,9 @@ namespace parser{
 namespace detail{
 
 
-    inspire_parser::symbol_type yylex (InspireDriver& driver, inspire_scanner& scanner){
-        return scanner.yylex(driver);
-    }
+	InspireParser::symbol_type yylex (InspireDriver& driver, InspireScanner& scanner){
+		return scanner.yylex(driver);
+	}
 
 } // detail namespace
 } // parser namespace
@@ -228,12 +212,12 @@ namespace detail{
 
 /* ~~~~~~~~~~~~~~~~~ UNUSED BUT REQUIRED ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 int Trick_Lexer::yywrap(){
-        std::cout << "this should not be called" << std::endl;
-        abort();
-    return 1;
+	std::cout << "this should not be called" << std::endl;
+	abort();
+	return 1;
 }
 int Trick_Lexer::yylex(){
-        std::cout << "this is overloaded and should not be called" << std::endl;
-        abort();
-    return 0;
+	std::cout << "this is overloaded and should not be called" << std::endl;
+	abort();
+	return 0;
 }

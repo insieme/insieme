@@ -50,7 +50,7 @@
 #include "insieme/core/printer/pretty_printer.h"
 
 namespace insieme {
-namespace frontend {
+namespace core {
 namespace tu {
 
 	class IRTranslationUnit : public insieme::utils::Printable {
@@ -306,5 +306,5 @@ namespace tu {
 	core::ProgramPtr resolveEntryPoints(core::NodeManager& mgr, const IRTranslationUnit& a);
 
 } // end namespace tu
-} // end namespace frontend
+} // end namespace core
 } // end namespace insieme
