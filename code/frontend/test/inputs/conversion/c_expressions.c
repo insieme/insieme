@@ -41,6 +41,10 @@ void nameCheck() {
 	__func__;
 }
 
+typedef struct { int i; } simple_struct;
+
+simple_struct generate_struct() { return (simple_struct){0}; };
+
 int main() {
 	nameCheck();
 	
@@ -399,6 +403,10 @@ int main() {
 		} *ts;
 		ts->i;
 	}
+
+	// check direct R-value access
+	#pragma test expect_ir("function() -> struct IMP_simple_struct {int<4> i} { return *var(struct struct IMP_simple_struct {int<4> i} {0}); }().i+5")
+	generate_struct().i + 5;
 	
 	//===---------------------------------------------------------------------------------------------------------------------------------- MISCELLANEOUS ---===
 	

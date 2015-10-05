@@ -56,10 +56,6 @@ pointer_arith_vla
 variadic_functions
 
 # Disabling tests because they fail with exception:
-# Cannot match arguments
-n_body
-
-# Disabling tests because they fail with exception:
 # No duplicates within identifiers are allowed!
 anonymous
 
