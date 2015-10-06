@@ -13,14 +13,6 @@ cpp
 interceptor
 
 # Disabling tests because they fail with assertion:
-# Global variable not inserted at global scope
-assign_expr
-capture_global
-global_multi
-static_init
-transpose
-
-# Disabling tests because they fail with assertion:
 # Clang InitListExpr of unexpected type
 initialization
 

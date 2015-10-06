@@ -6,7 +6,7 @@
 #define true 1
 #define false 0
 
-extern int printf(char *, ...);
+extern int printf(const char *, ...);
 
 int count = 0;
 int a[50];
