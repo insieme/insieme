@@ -136,12 +136,14 @@ blank         [ \t]
 "lambda"      return InspireParser::make_LAMBDA(loc);
 "ctor"        return InspireParser::make_CTOR(loc);
 "type"        return InspireParser::make_TYPE(loc);
+"this"        return InspireParser::make_THIS(loc);
 
 "if"          return InspireParser::make_IF(loc);
 "else"        return InspireParser::make_ELSE(loc);
 "for"         return InspireParser::make_FOR(loc);
 "while"       return InspireParser::make_WHILE(loc);
 "decl"        return InspireParser::make_DECL(loc);
+"def"         return InspireParser::make_DEF(loc);
 "try"         return InspireParser::make_TRY(loc);
 "throw"       return InspireParser::make_THROW(loc);
 "catch"       return InspireParser::make_CATCH(loc);
@@ -161,9 +163,11 @@ blank         [ \t]
 "union"       return InspireParser::make_UNION(loc);
 
 "virtual"     return InspireParser::make_VIRTUAL(loc);
-"private"     return InspireParser::make_PRIVATE(loc);;
-"public"      return InspireParser::make_PUBLIC(loc);;
-"protected"   return InspireParser::make_PROTECTED(loc);;
+"const"       return InspireParser::make_CONST(loc);
+"volatile"    return InspireParser::make_VOLATILE(loc);
+"private"     return InspireParser::make_PRIVATE(loc);
+"public"      return InspireParser::make_PUBLIC(loc);
+"protected"   return InspireParser::make_PROTECTED(loc);
 
 
 "spawn"       return InspireParser::make_SPAWN(loc);

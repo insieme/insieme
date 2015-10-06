@@ -307,9 +307,8 @@ namespace core {
 		TagTypePtr unionType(const StringValuePtr& name, const FieldsPtr& fields, const ExpressionsPtr& ctors,
 				const ExpressionPtr& dtor, const MemberFunctionsPtr& mfuns, const PureVirtualMemberFunctionsPtr& pvmfuns) const;
 
-
-		ExpressionPtr getDefaultDestructor(const StringValuePtr& recordName) const;
-		ExpressionPtr getDefaultDestructor(const string& recordName) const {
+		LambdaExprPtr getDefaultDestructor(const StringValuePtr& recordName) const;
+		LambdaExprPtr getDefaultDestructor(const string& recordName) const {
 			return getDefaultDestructor(stringValue(recordName));
 		}
 

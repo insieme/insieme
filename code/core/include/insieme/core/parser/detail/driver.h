@@ -140,6 +140,8 @@ namespace parser {
 			InspireScanner scanner;
 			InspireParser parser;
 
+			TagTypeReferencePtr current_record;
+
 		  public:
 
 			ProgramPtr parseProgram();
@@ -209,7 +211,7 @@ namespace parser {
 			 * @param value: the value to be represented
 			 * @return the corresponding type node
 			 */
-			TypePtr genNumericType(const location& l, const string& value) const;
+			NumericTypePtr genNumericType(const location& l, const string& value) const;
 
 			/**
 			 * generates a numeric type representing the given value
@@ -217,7 +219,7 @@ namespace parser {
 			 * @param variable: the variable to be represented
 			 * @return the corresponding type node
 			 */
-			TypePtr genNumericType(const location& l, const ExpressionPtr& variable) const;
+			NumericTypePtr genNumericType(const location& l, const ExpressionPtr& variable) const;
 
 			/**
 			 *  generates a function type
@@ -227,7 +229,7 @@ namespace parser {
 			/**
 			 * generate a record type
 			 */
-			TypePtr genRecordType(const location& l, const NodeType& type, const string& name, const ParentList& parents, const FieldList& fields, const LambdaExprList& ctors,
+			TagTypePtr genRecordType(const location& l, const NodeType& type, const string& name, const ParentList& parents, const FieldList& fields, const LambdaExprList& ctors,
 					const LambdaExprPtr& dtor, const MemberFunctionList& mfuns, const PureVirtualMemberFunctionList& pvmfuns);
 
 			/**
@@ -238,13 +240,32 @@ namespace parser {
 			/**
 			 * generates a lambda expression
 			 */
-			LambdaExprPtr genLambda(const location& l, const VariableList& params, const TypePtr& retType, const StatementPtr& body,
-			                        const FunctionKind& = FK_PLAIN, bool isLambda = true);
+			LambdaExprPtr genLambda(const location& l, const VariableList& params, const TypePtr& retType, const StatementPtr& body, bool isLambda = true);
 
 			/**
 			 * generates a closure
 			 */
 			BindExprPtr genClosure(const location& l, const VariableList& params, StatementPtr body);
+
+			/**
+			 * generates a constructor for the currently defined record type
+			 */
+			LambdaExprPtr genConstructor(const location& l, const VariableList& params, const StatementPtr& body);
+
+			/**
+			 * generates a destructor for the currently defined record type
+			 */
+			LambdaExprPtr genDestructor(const location& l, const StatementPtr& body);
+
+			/**
+			 * generates a member function for the currently defined record type
+			 */
+			MemberFunctionPtr genMemberFunction(const location& l, bool virtl, bool cnst, bool voltile, const std::string& name, const LambdaExprPtr& lambda, bool isLambda = true);
+
+			/**
+			 * generates a member function for the currently defined record type
+			 */
+			MemberFunctionPtr genPureVirtualMemberFunction(const location& l, bool cnst, bool voltile, const std::string& name, const TypePtr& type);
 
 			/**
 			 * generates a call expression
@@ -307,6 +328,10 @@ namespace parser {
 			ForStmtPtr genForStmt(const location& l, const TypePtr& iteratorType, const std::string iteratorName,
 			                      const ExpressionPtr& lowerBound, const ExpressionPtr& upperBound, const ExpressionPtr& stepExpr, const StatementPtr& body);
 
+			/**
+			 * constructs a literal referencing the current object
+			 */
+			ExpressionPtr genThis(const location& l);
 
 			/**
 			 * stores in the current scope the "this" variable with the given type
@@ -367,6 +392,21 @@ namespace parser {
 			 *  Close a nested scope.
 			 */
 			void close_scope();
+
+			/**
+			 * Opens a new record definition.
+			 */
+			void begin_record(const std::string& name);
+
+			/**
+			 * Ends a record definition.
+			 */
+			void end_record();
+
+			/**
+			 * Obtains the type of a this pointer in the currently defined record.
+			 */
+			TagTypeReferencePtr getThisType();
 
 			/**
 			 * Utility to mark addresses when parsing addresses (expression overload)
