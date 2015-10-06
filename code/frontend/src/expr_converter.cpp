@@ -434,11 +434,19 @@ namespace conversion {
 
 		string memName(membExpr->getMemberDecl()->getName());
 		auto retType = converter.convertType(membExpr->getType());
+		auto retTypeLit = builder.getTypeLiteral(retType);
 		frontend_assert(retType);
 
-		core::ExpressionPtr access = mgr.getLangExtension<core::lang::ReferenceExtension>().getRefMemberAccess();
+		core::ExpressionPtr access = mgr.getLangBasic().getCompositeMemberAccess();
 		frontend_assert(access);
-		retIr = builder.callExpr(builder.refType(retType), access, base, builder.getIdentifierLiteral(memName), builder.getTypeLiteral(retType));
+
+		// if a ref struct is accessed, we get a ref to its member
+		if(core::lang::isReference(base)) {
+			access = mgr.getLangExtension<core::lang::ReferenceExtension>().getRefMemberAccess();
+			retType = builder.refType(retType);
+		}
+
+		retIr = builder.callExpr(retType, access, base, builder.getIdentifierLiteral(memName), retTypeLit);
 		frontend_assert(retIr);
 		return retIr;
 	}

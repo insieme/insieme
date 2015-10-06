@@ -57,6 +57,7 @@ namespace parser3 {
 	using namespace insieme::core::printer;
 
 	bool test_type(NodeManager &nm, const std::string &x) {
+
 		IRBuilder builder(nm);
 
 		std::cout << " ============== TEST ============== " << std::endl;
@@ -228,17 +229,16 @@ namespace parser3 {
 		EXPECT_TRUE(test_expression(nm, "100-200+300"));
 		EXPECT_TRUE(test_expression(nm, "100-(200+300)"));
 		EXPECT_TRUE(test_expression(nm, "100-200-300"));
-
 	}
 
 
-	bool test_statement(NodeManager &nm, const std::string &x) {
+	bool test_statement(NodeManager& nm, const std::string& x) {
 		IRBuilder builder(nm);
 
 		std::cout << " ============== TEST ============ " << std::endl;
 		auto type1 = builder.parseStmt(x);
 
-		if (type1) {
+		if(type1) {
 			dumpColor(type1);
 			PrettyPrinter printerA(type1, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::PRINT_CASTS
 										  | PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_MARKERS
@@ -249,13 +249,12 @@ namespace parser3 {
 			std::cout << printerA << std::endl;
 			ss << printerA;
 			auto type2 = builder.parseStmt(ss.str());
-			if (type2) {
-				PrettyPrinter printerB(type2, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::PRINT_CASTS
-											  | PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_MARKERS
-											  | PrettyPrinter::NO_LIST_SUGAR | PrettyPrinter::PRINT_ATTRIBUTES
-											  | PrettyPrinter::NO_EVAL_LAZY | PrettyPrinter::PRINT_DERIVED_IMPL);
+			if(type2) {
+				PrettyPrinter printerB(type2, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::PRINT_CASTS | PrettyPrinter::PRINT_DEREFS
+					                              | PrettyPrinter::PRINT_MARKERS | PrettyPrinter::NO_LIST_SUGAR | PrettyPrinter::PRINT_ATTRIBUTES
+					                              | PrettyPrinter::NO_EVAL_LAZY | PrettyPrinter::PRINT_DERIVED_IMPL);
 
-				if (builder.normalize(type1) == builder.normalize(type2)) {
+				if(builder.normalize(type1) == builder.normalize(type2)) {
 					return true;
 				} else {
 					std::cout << "[equality check turned out false!]" << std::endl;
@@ -267,8 +266,7 @@ namespace parser3 {
 				std::cout << "[parsing type2 went wrong!]" << std::endl;
 				return false;
 			}
-		}
-		else {
+		} else {
 			std::cout << "[parsing type1 went wrong!]" << std::endl;
 			return false;
 		}
@@ -276,68 +274,66 @@ namespace parser3 {
 
 
 	TEST(After_Before_Test, Statements) {
+		NodeManager nm;
 
-	NodeManager nm;
+		EXPECT_TRUE(test_statement(nm, "{ decl int<4> x = 0; x+1; }"));
+		EXPECT_TRUE(test_statement(nm, "{ decl auto x = 0; x+1; }"));
 
-	EXPECT_TRUE(test_statement(nm, "{ decl int<4> x = 0; x+1; }"));
-	EXPECT_TRUE(test_statement(nm, "{ decl auto x = 0; x+1; }"));
+		EXPECT_TRUE(test_statement(nm, "if ( true ) {}"));
+		EXPECT_TRUE(test_statement(nm, "if ( true ) {} else {}"));
+		EXPECT_TRUE(test_statement(nm, "if ( true ) if ( false ) { } else 1 ;"));
+		EXPECT_TRUE(test_statement(nm, "if ( true ) if ( false ) { } else 1 ; else 2; "));
+		EXPECT_TRUE(test_statement(nm, "if( false ) { return 0; } else { return 1+2; }"));
+		EXPECT_TRUE(test_statement(nm, "if( false ) { return 0; }"));
+		EXPECT_TRUE(test_statement(nm, "while ( true ) 1+1;"));
+		EXPECT_TRUE(test_statement(nm, "while ( false ) 1+1;"));
 
-	EXPECT_TRUE(test_statement(nm, "if ( true ) {}"));
-	EXPECT_TRUE(test_statement(nm, "if ( true ) {} else {}"));
-	EXPECT_TRUE(test_statement(nm, "if ( true ) if ( false ) { } else 1 ;"));
-	EXPECT_TRUE(test_statement(nm, "if ( true ) if ( false ) { } else 1 ; else 2; "));
-	EXPECT_TRUE(test_statement(nm, "if( false ) { return 0; } else { return 1+2; }"));
-	EXPECT_TRUE(test_statement(nm, "if( false ) { return 0; }"));
-	EXPECT_TRUE(test_statement(nm, "while ( true ) 1+1;"));
-	EXPECT_TRUE(test_statement(nm, "while ( false ) 1+1;"));
+		EXPECT_TRUE(test_statement(nm, "for ( int<4> it = 1 .. 3) 1+1;"));
+		EXPECT_TRUE(test_statement(nm, "for ( int<4> it = 1 .. 3: 2) 1+1;"));
+		EXPECT_TRUE(test_statement(nm, "for ( int<4> it = 1 .. 3: 2) { 1+1; }"));
 
-	EXPECT_TRUE(test_statement(nm, "for ( int<4> it = 1 .. 3) 1+1;"));
-	EXPECT_TRUE(test_statement(nm, "for ( int<4> it = 1 .. 3: 2) 1+1;"));
-	EXPECT_TRUE(test_statement(nm, "for ( int<4> it = 1 .. 3: 2) { 1+1; }"));
+		EXPECT_TRUE(test_statement(nm, "switch (2) { case 1: 1; case 2: 2; }"));
 
-	EXPECT_TRUE(test_statement(nm, "switch (2) { case 1: 1; case 2: 2; }"));
+		EXPECT_TRUE(test_statement(nm, "try  {2;} catch( int<4> e) { 1+1; }"));
+		EXPECT_TRUE(test_statement(nm, "try  {2;} catch( int<4> e) { 1+1; } catch (ref<int<4>> r) { 3+4; }"));
 
-	EXPECT_TRUE(test_statement(nm, "try  {2;} catch( int<4> e) { 1+1; }"));
-	EXPECT_TRUE(test_statement(nm, "try  {2;} catch( int<4> e) { 1+1; } catch (ref<int<4>> r) { 3+4; }"));
+		EXPECT_TRUE(test_statement(nm, "{ }"));
 
-	EXPECT_TRUE(test_statement(nm, "{ }"));
+		EXPECT_TRUE(test_statement(nm,
+		"{"
+		"    let class = struct name { int<2> a};"
+		"}"
+		));
 
-	EXPECT_TRUE(test_statement(nm,
-	"{"
-	"    let class = struct name { int<2> a};"
-	"}"
-	));
+		EXPECT_TRUE(test_statement(nm,
+		"{"
+		"    let class = struct name { int<2> a};"
+		"    let collection = vector<class, 10>;"
+		"}"
+		));
 
-	EXPECT_TRUE(test_statement(nm,
-	"{"
-	"    let class = struct name { int<2> a};"
-	"    let collection = vector<class, 10>;"
-	"}"
-	));
+		EXPECT_TRUE(test_statement(nm,
+		"{"
+		"    let class = struct somenewname { int<2> a};"
+		"    let collection = vector<int<2>,5>;"
+		"    decl ref<collection> x;"
+		"    decl ref<somenewname> y;"
+		"}"
+		));
 
-	EXPECT_TRUE(test_statement(nm,
-	"{"
-	"    let class = struct somenewname { int<2> a};"
-	"    let collection = vector<int<2>,5>;"
-	"    decl ref<collection> x;"
-	"    decl ref<somenewname> y;"
-	"}"
-	));
-
-	EXPECT_TRUE(test_statement(nm,
-	"{"
-	"    let class = struct somenewname { int<2> a};"
-	"    let collection = vector<int<2>,5>;"
-	"    decl ref<collection> x;"
-	"    decl ref<someoldname> y;"
-	"}"
-	));
+		EXPECT_TRUE(test_statement(nm,
+		"{"
+		"    let class = struct somenewname { int<2> a};"
+		"    let collection = vector<int<2>,5>;"
+		"    decl ref<collection> x;"
+		"    decl ref<someoldname> y;"
+		"}"
+		));
 
 	}
 
 
 	bool test_program(NodeManager &nm, const std::string &x) {
-
 		IRBuilder builder1(nm);
 
 		std::ofstream ostreamA, ostreamB;
@@ -378,13 +374,13 @@ namespace parser3 {
 				std::cout << "[parsing type2 went wrong!]" << std::endl;
 				return false;
 			}
-		}
-		else {
+		} else {
 			std::cout << "[parsing type1 went wrong!]" << std::endl;
 			return false;
 		}
 	}
 
+<<<<<<< HEAD
 	TEST(After_Before_Test, Let) {
 		NodeManager mgr;
 

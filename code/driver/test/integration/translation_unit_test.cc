@@ -108,6 +108,7 @@ namespace insieme {
 
 		// load TU using the frontend (and all its potential extensions)
 		insieme::frontend::ConversionJob job;
+		job.registerDefaultExtensions();
 		job.addLib(insieme::driver::loadLib(manager, filename));
 		core::ProgramPtr code = job.execute(manager);
 

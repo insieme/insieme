@@ -60,6 +60,7 @@
 #include "insieme/frontend/extensions/significance_frontend_extension.h"
 #include "insieme/frontend/extensions/test_pragma_extension.h"
 #include "insieme/frontend/extensions/variable_argument_list_extension.h"
+#include "insieme/frontend/extensions/variable_length_array_extension.h"
 
 namespace insieme {
 namespace frontend {
@@ -104,10 +105,6 @@ namespace frontend {
 				}
 			}
 		}
-
-		// extensions that always need to be loaded
-		extensionList.push_back(std::make_shared<extensions::VariableArgumentListExtension>());
-
 		// check pre-requisites
 		for(auto ext : getExtensions()) {
 			auto isMissing = ext->isPrerequisiteMissing(*this);
@@ -116,9 +113,6 @@ namespace frontend {
 				assert_fail() << "Aborting due to frontend extension prerequisite error.";
 			}
 		}
-
-		// FE cleanup wants to be last
-		extensionList.push_back(std::make_shared<extensions::FrontendCleanupExtension>());
 	}
 
 	void ConversionSetup::setStandard(const Standard& standard) {
@@ -225,7 +219,16 @@ namespace frontend {
 		registerFrontendExtension<extensions::OmpFrontendExtension>(options);
 		registerFrontendExtension<extensions::SignificanceFrontendExtension>(options);
 		registerFrontendExtension<extensions::CilkFrontendExtension>(options);
-
+		
+		registerFrontendExtension<extensions::VariableArgumentListExtension>(options);
+		registerFrontendExtension<extensions::VariableLengthArrayExtension>(options);
+		
+		registerFrontendExtension<extensions::FrontendCleanupExtension>(options);
+	}
+	
+	void ConversionJob::registerDefaultExtensions()	{
+		boost::program_options::options_description opt;
+		registerExtensionFlags(opt);
 	}
 
 	std::ostream& ConversionJob::printTo(std::ostream& out) const {

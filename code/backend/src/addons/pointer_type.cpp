@@ -179,15 +179,16 @@ namespace addons {
 
 			// ------------------------ pointer arithmetic ------------------------
 
-			res[ext.getPtrAdd()] =     OP_CONVERTER { return c_ast::add(CONVERT_ARG(0), CONVERT_ARG(1)); };
-			res[ext.getPtrSub()] =     OP_CONVERTER { return c_ast::sub(CONVERT_ARG(0), CONVERT_ARG(1)); };
+			res[ext.getPtrAdd()] = OP_CONVERTER { return c_ast::add(CONVERT_ARG(0), CONVERT_ARG(1)); };
+			res[ext.getPtrSub()] = OP_CONVERTER { return c_ast::sub(CONVERT_ARG(0), CONVERT_ARG(1)); };
+			res[ext.getPtrDiff()] = OP_CONVERTER { return c_ast::sub(CONVERT_ARG(0), CONVERT_ARG(1)); };
 			res[ext.getPtrPostInc()] = OP_CONVERTER { return c_ast::postInc(c_ast::deref(CONVERT_ARG(0))); };
 			res[ext.getPtrPostDec()] = OP_CONVERTER { return c_ast::postDec(c_ast::deref(CONVERT_ARG(0))); };
-			res[ext.getPtrPreInc()] =  OP_CONVERTER { return c_ast::preInc(c_ast::deref(CONVERT_ARG(0))); };
-			res[ext.getPtrPreDec()] =  OP_CONVERTER { return c_ast::preDec(c_ast::deref(CONVERT_ARG(0))); };
+			res[ext.getPtrPreInc()] = OP_CONVERTER { return c_ast::preInc(c_ast::deref(CONVERT_ARG(0))); };
+			res[ext.getPtrPreDec()] = OP_CONVERTER { return c_ast::preDec(c_ast::deref(CONVERT_ARG(0))); };
 
 
-			#include "insieme/backend/operator_converter_end.inc"
+            #include "insieme/backend/operator_converter_end.inc"
 
 			return res;
 		}

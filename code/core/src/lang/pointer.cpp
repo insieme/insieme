@@ -261,8 +261,12 @@ namespace lang {
 		}
 		case BasicGenerator::Operator::Sub: { // minus is only supported with ptr on the lhs
 			assertPtr(lhs);
-			assertInt(rhs);
-			return builder.callExpr(pExt.getPtrSub(), lhs, rhs);
+			if(!isPointer(rhs)) {
+				assertInt(rhs);
+				return builder.callExpr(pExt.getPtrSub(), lhs, rhs);
+			} else {
+				return builder.callExpr(pExt.getPtrDiff(), lhs, rhs);
+			}
 		}
 		default: break;
 		}

@@ -1,5 +1,5 @@
 
-int printf(char* arg, ...);
+int printf(const char* arg, ...);
 
 int f(int* a) {
 	return (*a)++;
