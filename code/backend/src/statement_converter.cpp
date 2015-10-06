@@ -535,8 +535,10 @@ namespace backend {
 
 		// TODO: handle initUndefine and init struct cases
 
-		// drop ref.var ...
 		core::ExpressionPtr initValue = init;
+		// drop ref_cast
+		if(core::analysis::isCallOf(initValue, refExt.getRefCast())) { initValue = core::analysis::getArgument(initValue, 0); }
+		// drop ref.var ...
 		if(core::analysis::isCallOf(initValue, refExt.getRefVar())) { initValue = core::analysis::getArgument(initValue, 0); }
 
 		return convertExpression(context, initValue);
