@@ -95,7 +95,7 @@ namespace checks {
 
 	CheckPtr makeVisitOnce(const CheckPtr& check);
 
-	CheckPtr combine(const CheckList& list);
+	CheckPtr combine(const CheckList& list, bool isFullCheck = false);
 
 	template <typename... Checks>
 	CheckPtr combine(const Checks&... checks) {

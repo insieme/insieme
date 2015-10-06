@@ -91,9 +91,8 @@ namespace checks {
 
 			// assemble the IR check list
 			return combine(toVector<CheckPtr>(
-					makeVisitOnce(combine(context_free_checks)),
-					makeRecursive(combine(context_sensitive_checks))
-			));
+				makeVisitOnce(combine(context_free_checks)), 
+				makeRecursive(combine(context_sensitive_checks))), true);
 		}
 	}
 
