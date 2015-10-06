@@ -76,8 +76,8 @@ namespace utils {
 			path = boost::filesystem::canonical(path);
 
 			ss << path.string();
-			ss << sm.getExpansionLineNumber(decl->getLocStart());
-			ss << sm.getExpansionColumnNumber(decl->getLocStart());
+			ss << "_" << sm.getExpansionLineNumber(decl->getLocStart());
+			ss << "_" << sm.getExpansionColumnNumber(decl->getLocStart());
 
 			std::string name = removeSymbols(ss.str());
 			return name;
@@ -282,6 +282,9 @@ namespace utils {
 
 	std::string getNameForGlobal(const clang::VarDecl* varDecl, const clang::SourceManager& sm) {
 		string s = varDecl->getNameAsString();
+		if(varDecl->isStaticLocal()) {
+			return createNameForAnon(s + "_static_local", varDecl, sm);
+		}
 		if(!s.empty()) { return s; }
 		return createNameForAnon("_global", varDecl, sm);
 	}

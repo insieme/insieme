@@ -121,6 +121,11 @@ namespace conversion {
 			const core::IRBuilder& builder = converter.getIRBuilder();
 			// external declaration statement as per very early K&R C -> ignore
 			if(varDecl->hasExternalStorage()) { return builder.getNoOp(); }
+			// global storage handled in decl visit
+			if(varDecl->hasGlobalStorage()) {
+				converter.getDeclConverter()->VisitVarDecl(varDecl);
+				return builder.getNoOp();
+			}
 			// convert decl
 			auto convertedDecl = converter.getDeclConverter()->convertVarDecl(varDecl);
 			converter.getVarMan()->insert(varDecl, convertedDecl.first);

@@ -86,6 +86,10 @@ namespace frontend {
 	TEST(IndependentTest, FunctionPointers) {
 		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_function_pointers.c");
 	}
+	
+	TEST(IndependentTest, Static) {
+		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_static.c");
+	}
 
 } // fe namespace
 } // insieme namespace
