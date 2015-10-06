@@ -146,6 +146,7 @@
   USING         "using"    
   
   DECL          "decl"
+  DEF           "def"
   
   VIRTUAL       "virtual"
   CONST         "const"
@@ -225,7 +226,7 @@
 %type <ProgramPtr>					   main
 %type <NodePtr>                        definition
                                        
-%type <NodePtr>                        record_definition
+%type <TagTypePtr>                     record_definition
 %type <NodePtr>                        function_definition
                                        
 %type <FieldPtr>		               field
@@ -251,7 +252,8 @@
 
 %type <AccessSpecifier>                access_specifier
 %type <NodeType>                       struct_or_union
-%type <bool>			               virtual_flag const_flag volatile_flag lambda_or_function
+%type <bool>			               virtual_flag lambda_or_function
+%type <pair<bool,bool>>                cv_flags
 
 
 %type <VariablePtr>					   variable
@@ -316,8 +318,8 @@ declaration : "decl" struct_or_union "identifier" ";"					  { driver.add_type($3
 			| "decl" "identifier" "::" "identifier" ":" type ";"		  
 			;
 
-definition : record_definition		 
-		   | function_definition 
+definition : "def" record_definition                                      { $$ = $2; }		 
+		   | "def" function_definition                                    { $$ = $2; }
 		   ;
 
 main : type "identifier" "(" parameters ")" compound_statement			  { $$ = driver.builder.createProgram({driver.genLambda(@$,$4,$1,$6)}); } 
@@ -328,6 +330,7 @@ main : type "identifier" "(" parameters ")" compound_statement			  { $$ = driver
 record_definition : struct_or_union "identifier" parent_spec "{" 		  { driver.add_type(@$,$2,driver.builder.genericType($2)); }
 									fields constructors destructor member_functions pure_virtual_member_functions 
 						"}"												  { $$ = driver.genRecordType(@$,$1,$2,$3,$6,$7,$8,$9,$10); }
+				  | struct_or_union "{" fields "}"						  { $$ = driver.builder.structType($3); }
 				  ;                                                       
                                                                           
 struct_or_union : "struct"												  { $$ = NT_Struct; } 
@@ -335,10 +338,11 @@ struct_or_union : "struct"												  { $$ = NT_Struct; }
 				;                                                         
                                                                           
 fields : fields field 													  { $1.push_back($2); $$ = $1; } 
+	   | fields ";"                                                       { $$ = $1; }
 	   | 																  { $$ = FieldList(); }
 	   ;                                                                  
                                                                           
-field : type "identifier"												  { $$ = driver.builder.field($2, $1); } 
+field : "identifier" ":" type 											  { $$ = driver.builder.field($1, $3); } 
 	  ;                                                                   
                                                                           
 constructors : constructors constructor									  { $1.push_back($2); $$ = $1; } 
@@ -349,33 +353,41 @@ constructor : "ctor" "(" parameters ")" compound_statement				  { $$ = driver.ge
 			;                                                             
                                                                           
 destructor : "dtor" "(" ")" compound_statement							  { $$ = driver.genDestructor(@$,$4); }
+		   |															  { $$ = LambdaExprPtr(); }
 		   ;                                                              
                                                                           
 member_functions : member_functions member_function						  { $1.push_back($2); $$ = $1; } 
 				 |  													  { $$ = MemberFunctionList(); }
 				 ;                                                        
                                                                           
-member_function : virtual_flag const_flag volatile_flag lambda_or_function "identifier" "=" lambda						  
-																		  { $$ = driver.genMemberFunction(@$,$1,$2,$3,$5,$7,$4); } 
+member_function : virtual_flag lambda_or_function "identifier" "=" lambda						  
+																		  { $$ = driver.genMemberFunction(@$,$1,false,false,$3,$5,$2); } 
+				| virtual_flag "const" lambda_or_function "identifier" "=" lambda						  
+																		  { $$ = driver.genMemberFunction(@$,$1,true,false,$4,$6,$3); }
+				| virtual_flag "volatile" lambda_or_function "identifier" "=" lambda						  
+																		  { $$ = driver.genMemberFunction(@$,$1,false,true,$4,$6,$3); }
+				| virtual_flag "const" "volatile" lambda_or_function "identifier" "=" lambda						  
+																		  { $$ = driver.genMemberFunction(@$,$1,true,true,$5,$7,$4); }
+				| virtual_flag "volatile" "const" lambda_or_function "identifier" "=" lambda						  
+																		  { $$ = driver.genMemberFunction(@$,$1,true,true,$5,$7,$4); }
 				;                                                         
                                                                           
 virtual_flag : "virtual" 												  { $$ = true; }
 			 | 															  { $$ = false; }
 			 ;
 
-const_flag : "const"   												      { $$ = true; }
-		   | 															  { $$ = false; }
-		   ;
-
-volatile_flag : "volatile"   											  { $$ = true; }
-	          | 														  { $$ = false; }
-	          ;
+cv_flags :                                                                { $$ = {false,false}; }
+         | "const"                                                        { $$ = {true,false}; }
+		 | "volatile"                                                     { $$ = {false,true}; }
+		 | "const" "volatile"                                             { $$ = {true,true}; }
+		 | "volatile" "const"                                             { $$ = {true,true}; }
+		 ;
 	   
 pure_virtual_member_functions : pure_virtual_member_functions pure_virtual_member_function		{ $1.push_back($2); $$=$1; } 
 							  |  																{ $$ = PureVirtualMemberFunctionList(); }
 							  ;
 
-pure_virtual_member_function : "pure" "virtual" const_flag "identifier" ":" pure_function_type 			{ $$ = PureVirtualMemberFunctionPtr(); }
+pure_virtual_member_function : "pure" "virtual" cv_flags "identifier" ":" pure_function_type 			{ $$ = PureVirtualMemberFunctionPtr(); }
 							 ;
 
 
@@ -410,6 +422,7 @@ plain_type : object_type        									      { $$ = $1; }
 object_type : type_variable                                               { $$ = $1; }
 		    | abstract_type                                               { $$ = $1; }
 		    | tag_type_reference                                          { $$ = $1; }
+		    | record_definition											  { $$ = $1; }
 	 	    ;                                                             
 		                                                                  
 types : non_empty_types                                                   { $$ = $1; } 

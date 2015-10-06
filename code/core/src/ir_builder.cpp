@@ -407,7 +407,7 @@ namespace core {
 	}
 
 
-	ExpressionPtr IRBuilderBaseModule::getDefaultDestructor(const StringValuePtr& recordName) const {
+	LambdaExprPtr IRBuilderBaseModule::getDefaultDestructor(const StringValuePtr& recordName) const {
 		// create default destructor
 		TypePtr thisType = refType(tagTypeReference(recordName));
 		auto dtorType = functionType(toVector(thisType), thisType, FK_DESTRUCTOR);

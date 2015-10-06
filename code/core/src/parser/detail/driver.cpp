@@ -441,10 +441,13 @@ namespace parser {
 			return builder.functionType(params, retType, fk);
 		}
 
-		TypePtr InspireDriver::genRecordType(const location& l, const NodeType& type, const string& name, const ParentList& parents, const FieldList& fields, const LambdaExprList& ctors,
-				const LambdaExprPtr& dtor, const MemberFunctionList& mfuns, const PureVirtualMemberFunctionList& pvmfuns) {
+		TagTypePtr InspireDriver::genRecordType(const location& l, const NodeType& type, const string& name, const ParentList& parents, const FieldList& fields, const LambdaExprList& ctors,
+				const LambdaExprPtr& dtor_in, const MemberFunctionList& mfuns, const PureVirtualMemberFunctionList& pvmfuns) {
 
 			TagTypePtr res;
+
+			// check whether a default constructor is required
+			LambdaExprPtr dtor = (dtor_in) ? dtor_in : builder.getDefaultDestructor(name);
 
 			if (type == NT_Struct) {
 				res = builder.structType(name,parents,fields,ctors,dtor,mfuns,pvmfuns);

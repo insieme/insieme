@@ -143,6 +143,7 @@ blank   [ \t]
 "for"     return inspire_parser::make_FOR(loc);
 "while"   return inspire_parser::make_WHILE(loc);
 "decl"    return inspire_parser::make_DECL(loc);
+"def"    return inspire_parser::make_DEF(loc);
 "try"     return inspire_parser::make_TRY(loc);
 "throw"   return inspire_parser::make_THROW(loc);
 "catch"   return inspire_parser::make_CATCH(loc);
