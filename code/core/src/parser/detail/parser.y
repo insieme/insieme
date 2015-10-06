@@ -448,12 +448,12 @@ access_specifier : "public"                                               { $$ =
 
 // -- function type --
 
-function_type : pure_function_type
-              | closure_type
-              | constructor_type
-              | destructor_type
-              | member_function_type
-              | virtual_function_type
+function_type : pure_function_type                                        { $$ = $1; }
+              | closure_type                                              { $$ = $1; }
+              | constructor_type                                          { $$ = $1; }
+              | destructor_type                                           { $$ = $1; }
+              | member_function_type                                      { $$ = $1; }
+              | virtual_function_type                                     { $$ = $1; }
               ;
 
 pure_function_type : "(" ")" "->" type                                    { $$ = driver.builder.functionType(TypeList(), $4, FK_PLAIN); }
