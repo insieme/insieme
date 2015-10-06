@@ -66,6 +66,8 @@
 #define assert_fail() _assert_ignore
 #define assert_pred1(_a, _b) _assert_ignore
 #define assert_not_pred1(_a, _b) _assert_ignore
+#define assert_pred2(_a, _b, _c) _assert_ignore
+#define assert_not_pred2(_a, _b, _c) _assert_ignore
 
 #else
 #include <iostream>
@@ -125,7 +127,6 @@ namespace utils {
 	if(__unused auto x = insieme::utils::detail::LazyAssertion((_A) >= (_B)))                                                                                  \
 	std::cerr << "\nAssertion " #_A " >= " #_B " of " __FILE__ ":" __xstr(__LINE__) " failed!\n\t" #_A " = " << (_A) << "\n\t" #_B " = " << (_B) << "\n"
 
-// the << "" part is to suppress no-effect statement warnings
 #define assert_fail()                                                                                                                                          \
 	if(__unused auto x = insieme::utils::detail::LazyAssertion(false)) std::cerr << "\nAssertion failed in " __FILE__ ":" __xstr(__LINE__) " - "
 
@@ -136,6 +137,16 @@ namespace utils {
 #define assert_not_pred1(_P, _A)                                                                                                                               \
 	if(__unused auto x = insieme::utils::detail::LazyAssertion(!(bool)((_P)(_A))))                                                                             \
 	std::cerr << "\nAssertion !" #_P "(" #_A ") with " #_A " = " << (_A) << " in " __FILE__ ":" __xstr(__LINE__) " failed!\n"
+
+#define assert_pred2(_P, _A, _B)                                                                                                                               \
+	if(__unused auto x = insieme::utils::detail::LazyAssertion((bool)((_P)(_A, _B))))                                                                          \
+	std::cerr << "\nAssertion " #_P "(" #_A ", " #_B ") with\n " #_A " = " << (_A) << "\n " #_B " = " << (_B)                                                  \
+	          << "\n in " __FILE__ ":" __xstr(__LINE__) " failed!\n"
+
+#define assert_not_pred2(_P, _A, _B)                                                                                                                           \
+	if(__unused auto x = insieme::utils::detail::LazyAssertion(!(bool)((_P)(_A, _B))))                                                                         \
+	std::cerr << "\nAssertion !" #_P "(" #_A ", " #_B ") with\n " #_A " = " << (_A) << "\n " #_B " = " << (_B)                                                 \
+	          << "\n in " __FILE__ ":" __xstr(__LINE__) " failed!\n"
 
 #endif
 
