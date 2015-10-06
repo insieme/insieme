@@ -265,7 +265,7 @@ namespace parser {
 			/**
 			 * generates a member function for the currently defined record type
 			 */
-			MemberFunctionPtr genPureVirtualMemberFunction(const location& l, bool cnst, bool voltile, const std::string& name, const TypePtr& type);
+			PureVirtualMemberFunctionPtr genPureVirtualMemberFunction(const location& l, bool cnst, bool voltile, const std::string& name, const FunctionTypePtr& type);
 
 			/**
 			 * generates a call expression

@@ -516,6 +516,7 @@ namespace parser {
 		 * generates a constructor for the currently defined record type
 		 */
 		LambdaExprPtr InspireDriver::genConstructor(const location& l, const VariableList& params, const StatementPtr& body) {
+			assert_true(current_record) << "Not within record definition!";
 
 			// get this-type
 			auto thisParam = builder.variable(builder.refType(current_record));
@@ -542,21 +543,80 @@ namespace parser {
 		 * generates a destructor for the currently defined record type
 		 */
 		LambdaExprPtr InspireDriver::genDestructor(const location& l, const StatementPtr& body) {
+			assert_true(current_record) << "Not within record definition!";
 
+			// get this-type
+			auto thisParam = builder.variable(builder.refType(current_record));
+
+			// create full parameter list
+			VariableList params = { thisParam };
+
+			// update body
+			auto new_body = transform::replaceAll(mgr, body, genThis(l), thisParam).as<StatementPtr>();
+
+			// create destructor type
+			auto dtorType = builder.functionType(extractTypes(params), thisParam->getType(), FK_DESTRUCTOR);
+
+			// replace all variables in the body by their implicitly materialized version
+			auto ingredients = transform::materialize({params, new_body});
+
+			// create the destructor
+			return builder.lambdaExpr(dtorType, ingredients.params, ingredients.body);
 		}
 
 		/**
 		 * generates a member function for the currently defined record type
 		 */
 		MemberFunctionPtr InspireDriver::genMemberFunction(const location& l, bool virtl, bool cnst, bool voltile, const std::string& name, const LambdaExprPtr& lambda, bool isLambda) {
+			assert_false(lambda->isRecursive()) << "The parser should not produce recursive functions!";
+			assert_true(current_record) << "Not within record definition!";
 
+			// get this-type
+			auto thisType = builder.refType(current_record, cnst, voltile);
+			if (!isLambda) thisType = builder.refType(thisType);
+			auto thisParam = builder.variable(thisType);
+
+			// create full parameter list
+			VariableList full_params;
+			full_params.push_back(thisParam);
+			for(const auto& cur : lambda.getParameterList()) full_params.push_back(cur);
+
+			// update body
+			auto new_body = transform::replaceAll(mgr, lambda->getBody(), genThis(l), thisParam).as<StatementPtr>();
+
+			// create member function type
+			auto memberFunType = builder.functionType(extractTypes(full_params), lambda->getFunctionType()->getReturnType(), FK_MEMBER_FUNCTION);
+
+			// replace all variables in the body by their implicitly materialized version
+			auto ingredients = (isLambda) ? transform::materialize({full_params, new_body}) : (transform::LambdaIngredients){full_params, new_body};
+
+			// create the member function
+			auto fun = builder.lambdaExpr(memberFunType, ingredients.params, ingredients.body);
+
+			// create the member function entry
+			return builder.memberFunction(virtl, name, lambda);
 		}
 
 		/**
-		 * generates a member function for the currently defined record type
+		 * generates a pure virtual member function for the currently defined record type
 		 */
-		MemberFunctionPtr InspireDriver::genPureVirtualMemberFunction(const location& l,  bool cnst, bool voltile, const std::string& name, const TypePtr& type) {
+		PureVirtualMemberFunctionPtr InspireDriver::genPureVirtualMemberFunction(const location& l,  bool cnst, bool voltile, const std::string& name, const FunctionTypePtr& type) {
+			assert_true(type->isPlain()) << "Only plain function types should be covered here!";
+			assert_true(current_record) << "Not within record definition!";
 
+			// get this-type
+			auto thisType = builder.refType(current_record, cnst, voltile);
+
+			// create full parameter type list
+			TypeList full_params;
+			full_params.push_back(thisType);
+			for(const auto& cur : type->getParameterTypes()) full_params.push_back(cur);
+
+			// create member function type type
+			auto memberFunType = builder.functionType(full_params, type->getReturnType(), FK_MEMBER_FUNCTION);
+
+			// create the member function entry
+			return builder.pureVirtualMemberFunction(name, type);
 		}
 
 
