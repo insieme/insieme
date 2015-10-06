@@ -13,10 +13,6 @@ cpp
 interceptor
 
 # Disabling tests because they fail with assertion:
-# Clang InitListExpr of unexpected type
-initialization
-
-# Disabling tests because they fail with assertion:
 # Goto not implemented
 label_goto
 

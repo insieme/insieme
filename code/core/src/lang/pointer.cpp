@@ -232,6 +232,10 @@ namespace lang {
 	}
 
 	ExpressionPtr buildPtrOperation(BasicGenerator::Operator op, const ExpressionPtr& lhs, const ExpressionPtr& rhs) {
+		auto& basic = lhs->getNodeManager().getLangBasic();
+		auto& pExt = lhs->getNodeManager().getLangExtension<PointerExtension>();
+		IRBuilder builder(lhs->getNodeManager());
+
 		auto assertPtr = [&](const ExpressionPtr& exp) {
 			assert_pred1(isPointer, exp) << "Trying to build a ptr operation from non-ptr:"
 				<< "\n lhs: " << *lhs << "\n  - of type: " << *lhs->getType() 
@@ -239,13 +243,17 @@ namespace lang {
 				<< "\n op: " << op;
 		};
 		auto assertInt = [&](const ExpressionPtr& exp) {
-			assert_pred1(exp->getNodeManager().getLangBasic().isInt, exp->getType()) << "Trying to build a ptr add/sub with non-int"
+			assert_pred1(basic.isInt, exp->getType()) << "Trying to build a ptr add/sub with non-int"
 				<< "\n lhs: " << *lhs << "\n  - of type: " << *lhs->getType() 
 				<< "\n rhs: " << *rhs << "\n  - of type: " << *rhs->getType()
 				<< "\n op: " << op;
 		};
-		auto& pExt = lhs->getNodeManager().getLangExtension<PointerExtension>();
-		IRBuilder builder(lhs->getNodeManager());
+		auto buildInt8Cast = [&](const ExpressionPtr& exp) {
+			if(!core::types::isSubTypeOf(exp->getType(), basic.getInt8())) {
+				return builder.numericCast(exp, basic.getInt8());
+			}
+			return exp;
+		};
 
 		// arithmetic operations
 		switch(op) {
@@ -253,17 +261,17 @@ namespace lang {
 			if(!isPointer(lhs)) {
 				assertPtr(rhs);
 				assertInt(lhs);
-				return builder.callExpr(pExt.getPtrAdd(), rhs, lhs);
+				return builder.callExpr(pExt.getPtrAdd(), rhs, buildInt8Cast(lhs));
 			}
 			assertPtr(lhs);
 			assertInt(rhs);
-			return builder.callExpr(pExt.getPtrAdd(), lhs, rhs);
+			return builder.callExpr(pExt.getPtrAdd(), lhs, buildInt8Cast(rhs));
 		}
 		case BasicGenerator::Operator::Sub: { // minus is only supported with ptr on the lhs
 			assertPtr(lhs);
 			if(!isPointer(rhs)) {
 				assertInt(rhs);
-				return builder.callExpr(pExt.getPtrSub(), lhs, rhs);
+				return builder.callExpr(pExt.getPtrSub(), lhs, buildInt8Cast(rhs));
 			} else {
 				return builder.callExpr(pExt.getPtrDiff(), lhs, rhs);
 			}
