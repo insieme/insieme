@@ -1226,13 +1226,27 @@ namespace core {
 		 * based on the given ingredients.
 		 *
 		 * @param manager the manager used for maintaining instances of this class
-		 * @param name the name of the member function
 		 * @param virtul the flag determining whether the member is virtual
+		 * @param name the name of the member function
 		 * @param impl the implementation of the member function
 		 * @return the requested member function instance managed by the given manager
 		 */
-		static MemberFunctionPtr get(NodeManager & manager, const StringValuePtr& name, const BoolValuePtr& virtul, const ExpressionPtr& impl) {
+		static MemberFunctionPtr get(NodeManager & manager, const BoolValuePtr& virtul, const StringValuePtr& name, const ExpressionPtr& impl) {
 			return manager.get(MemberFunction(name, virtul, impl));
+		}
+
+		/**
+		 * This static factory method allows to construct a new member function
+		 * based on the given ingredients.
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @param virtul the flag determining whether the member is virtual
+		 * @param name the name of the member function
+		 * @param impl the implementation of the member function
+		 * @return the requested member function instance managed by the given manager
+		 */
+		static MemberFunctionPtr get(NodeManager & manager, bool virtul, const std::string& name, const ExpressionPtr& impl) {
+			return get(manager, BoolValue::get(manager, virtul), StringValue::get(manager, name), impl);
 		}
 
 	IR_NODE_END()
@@ -1326,6 +1340,19 @@ namespace core {
 		 */
 		static PureVirtualMemberFunctionPtr get(NodeManager & manager, const StringValuePtr& name, const FunctionTypePtr& type) {
 			return manager.get(PureVirtualMemberFunction(name, type));
+		}
+
+		/**
+		 * This static factory method allows to construct a new member function
+		 * based on the given ingredients.
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @param name the name of the pure virtual member function
+		 * @param type the type of the pure virtual member function
+		 * @return the requested pure virtual member function instance managed by the given manager
+		 */
+		static PureVirtualMemberFunctionPtr get(NodeManager & manager, const std::string& name, const FunctionTypePtr& type) {
+			return get(manager, StringValue::get(manager, name), type);
 		}
 
 	IR_NODE_END()
