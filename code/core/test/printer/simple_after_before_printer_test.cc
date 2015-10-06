@@ -380,7 +380,6 @@ namespace parser3 {
 		}
 	}
 
-<<<<<<< HEAD
 	TEST(After_Before_Test, Let) {
 		NodeManager mgr;
 
