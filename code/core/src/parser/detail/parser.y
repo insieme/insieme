@@ -294,11 +294,11 @@ alias : "alias" abstract_type "=" type ";"                                  { dr
 
 declaration : "decl" struct_or_union "identifier" ";"                       { driver.addType($3, driver.builder.tagTypeReference($3)); }
             | "decl" "identifier" ":" type ";"                              { driver.addSymb($2, driver.builder.literal($2, $4)); }
-            | "decl" "identifier" "::" "identifier" ":" type ";"
+            | "decl" "identifier" "::" "identifier" ":" type ";"            { assert_not_implemented(); }
             ;
 
-definition : "def" record_definition                                        { $$ = $2; }
-           | "def" function_definition                                      { $$ = $2; }
+definition : "def" record_definition                                        { $$ = $2; assert_not_implemented(); /* need to register the symbol here */ }
+           | "def" function_definition                                      { $$ = $2; assert_not_implemented(); /* need to register the symbol here */ }
            ;
 
 main : type "identifier" "(" parameters ")" compound_statement              { $$ = driver.builder.createProgram({driver.genLambda(@$, $4, $1, $6)}); }
@@ -700,7 +700,7 @@ plain_statement : expression ";"                                          { $$ =
 
 // -- compound statement --
 
-compound_statement : { driver.openScope(); } "{" statement_list "}"      { $$ = driver.builder.compoundStmt($3); driver.closeScope(); }
+compound_statement : { driver.openScope(); } "{" statement_list "}"       { $$ = driver.builder.compoundStmt($3); driver.closeScope(); }
                    ;
 
 statement_list :                                                          { $$ = StatementList(); }
