@@ -706,7 +706,7 @@ statement_list :                                                          { $$ =
 // -- variable declaration --
 
 variable_declaration : "var" type "identifier" "=" expression ";"         { $$ = driver.genVariableDeclaration(@$, $2, $3, $5); }
-                     | "auto" "identifier" "=" expression ";"             { $$ = driver.genVariableDeclaration(@$, driver.getScalar($4)->getType(), $2, driver.getScalar($4)); }
+                     | "auto" "identifier" "=" expression ";"             { $$ = driver.genVariableDeclaration(@$, driver.getScalar($4)->getType(), $2, $4); }
                      ;
 
 
