@@ -307,9 +307,9 @@ main : type "identifier" "(" parameters ")" compound_statement              { $$
 
 //    -- record_declarations -------------------------------------
 
-record_definition : struct_or_union "identifier" parent_spec "{"            { driver.addType(@$, $2, driver.builder.genericType($2)); }
+record_definition : struct_or_union "identifier" parent_spec "{"            { driver.addType(@$, $2, driver.builder.genericType($2)); driver.beginRecord($2); }
                                     fields constructors destructor member_functions pure_virtual_member_functions "}"
-                                                                            { $$ = driver.genRecordType(@$, $1, $2, $3, $6, $7, $8, $9, $10); }
+                                                                            { $$ = driver.genRecordType(@$, $1, $2, $3, $6, $7, $8, $9, $10); driver.endRecord(); }
                   | struct_or_union "{" fields "}"                          { $$ = driver.genSimpleStructOrUnionType(@$, $1, $3); }
                   ;
 
