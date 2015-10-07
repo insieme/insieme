@@ -145,6 +145,16 @@ namespace parser {
 
 			TagTypeReferencePtr currentRecord;
 
+			/**
+			 * constructs a struct expression
+			 */
+			ExpressionPtr genStructExpression(const location& l, const TypePtr& structType, const ExpressionList& list);
+
+			/**
+			 * constructs a union expression
+			 */
+			ExpressionPtr genUnionExpression(const location& l, const TypePtr& type, const std::string field, const ExpressionPtr& expr);
+
 		  public:
 
 			ProgramPtr parseProgram();
@@ -236,6 +246,11 @@ namespace parser {
 					const LambdaExprPtr& dtor, const MemberFunctionList& mfuns, const PureVirtualMemberFunctionList& pvmfuns);
 
 			/**
+			 * generate a simple struct or union consisting only of fields. The decision between sctuct or union will be made based on the given node type.
+			 */
+			TagTypePtr genSimpleStructOrUnionType(const location& l, const NodeType& type, const FieldList& fields);
+
+			/**
 			 * check whether type alias can be applied to the given type and applies those.
 			 */
 			TypePtr resolveTypeAliases(const location& l, const TypePtr& type);
@@ -274,16 +289,6 @@ namespace parser {
 			 * generates a call expression
 			 */
 			ExpressionPtr genCall(const location& l, const ExpressionPtr& func, ExpressionList params);
-
-			/**
-			 * constructs a struct expression
-			 */
-			ExpressionPtr genStructExpression(const location& l, const TypePtr& structType, const ExpressionList& list);
-
-			/**
-			 * constructs a union expression
-			 */
-			ExpressionPtr genUnionExpression(const location& l, const TypePtr& type, const std::string field, const ExpressionPtr& expr);
 
 			/**
 			 * constructs an initializer expression according to the given type and expression list

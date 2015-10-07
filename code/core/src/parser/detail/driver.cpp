@@ -478,6 +478,14 @@ namespace parser {
 			return res;
 		}
 
+		TagTypePtr InspireDriver::genSimpleStructOrUnionType(const location& l, const NodeType& type, const FieldList& fields) {
+			if (type == NT_Struct) {
+				return builder.structType(fields);
+			} else {
+				return builder.unionType(fields);
+			}
+		}
+
 		TypePtr InspireDriver::resolveTypeAliases(const location& l, const TypePtr& type) {
 			return scopes.resolve(type);
 		}
@@ -715,7 +723,6 @@ namespace parser {
 			return builder.structExpr(structType, values);
 		}
 
-		
 		ExpressionPtr InspireDriver::genUnionExpression(const location& l, const TypePtr& type, const std::string field, const ExpressionPtr& expr) {
 			// check for null
 			if (!type) {
@@ -739,6 +746,27 @@ namespace parser {
 			TagTypePtr tagType = type.isa<TagTypePtr>();
 			if (tagType && tagType->isStruct()) {
 				return genStructExpression(l, type, list);
+
+				//check for union type, which has to be initialized differently
+			} else if (tagType && tagType->isUnion()) {
+				//there must only be one expression in the initializer
+				if (list.size() != 1) {
+					error(l, "A union initialization expression must only contain one expression");
+					return nullptr;
+				}
+
+				//we have to find the member of the union which has the same type as the given expression
+				ExpressionPtr init = list[0];
+				auto unionType = tagType->getUnion();
+				for (auto cur : unionType->getFields()) {
+					if (cur->getType() == init.getType()) {
+						return genUnionExpression(l, type, cur->getName()->getValue(), init);
+					}
+				}
+
+				//if we end up here we didn't find a matching field
+				error(l, "The given expression does not match any of the union's field types");
+				return nullptr;
 			}
 
 			assert_not_implemented();

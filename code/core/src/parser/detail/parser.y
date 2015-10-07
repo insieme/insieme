@@ -309,7 +309,7 @@ main : type "identifier" "(" parameters ")" compound_statement              { $$
 record_definition : struct_or_union "identifier" parent_spec "{"            { driver.addType(@$, $2, driver.builder.genericType($2)); }
                                     fields constructors destructor member_functions pure_virtual_member_functions "}"
                                                                             { $$ = driver.genRecordType(@$, $1, $2, $3, $6, $7, $8, $9, $10); }
-                  | struct_or_union "{" fields "}"                          { $$ = driver.builder.structType($3); }
+                  | struct_or_union "{" fields "}"                          { $$ = driver.genSimpleStructOrUnionType(@$, $1, $3); }
                   ;
 
 struct_or_union : "struct"                                                  { $$ = NT_Struct; }
