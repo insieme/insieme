@@ -71,11 +71,11 @@ namespace transform {
 		IRBuilder builder(mgr);
 
 		auto addresses = builder.parseAddressesStatement(R"raw(
+		alias int = int<4>;
 		{		
-			let int = int<4>;
-			decl ref<int,f,f,plain> x = var(2);
-			decl ref<int,f,f,plain> a = var($2$+$2$);
-			decl ref<int,f,f,plain> b = var(a + 6);
+			var ref<int,f,f,plain> x = ref_var(2);
+			var ref<int,f,f,plain> a = ref_var($2$+$2$);
+			var ref<int,f,f,plain> b = ref_var(a + 6);
 		}
 	)raw");
 
@@ -88,8 +88,8 @@ namespace transform {
 		});
 
 		auto result = mapper.mapFromRoot(addresses[0].getRootNode());
-		EXPECT_TRUE(core::analysis::contains(result, builder.parseExpr("var(31337+42)")));
-		EXPECT_TRUE(core::analysis::contains(result, builder.parseExpr("var(2)")));
+		EXPECT_TRUE(core::analysis::contains(result, builder.parseExpr("ref_var(31337+42)")));
+		EXPECT_TRUE(core::analysis::contains(result, builder.parseExpr("ref_var(2)")));
 	}
 
 	TEST(AddressMapper, Nested) {
@@ -98,10 +98,10 @@ namespace transform {
 		auto& basic = builder.getLangBasic();
 
 		auto addresses = builder.parseAddressesStatement(R"raw(
+	alias int = int<4>;
 	{		
-		let int = int<4>;
-		$$lambda (int a, int b) -> int {
-			decl ref<int,f,f,plain> ret = $a * b + a$;
+		$$(a : int, b : int) -> int {
+			var ref<int,f,f,plain> ret = $a * b + a$;
 			return *ret;
 		}$(4,2)$;
 	}
