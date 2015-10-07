@@ -92,7 +92,7 @@ namespace lang {
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(PtrFromRef, "ptr_from_ref",
 				"  (r : ref<'a,'c,'v>) -> ptr<'a,'c,'v> {                           "
-				"		return <struct ptr<'a,'c,'v>> { ref_scalar_to_ref_array(r), 0l };  "
+				"		return <ptr<'a,'c,'v>> { ref_scalar_to_ref_array(r), 0l };  "
 				"  }                                                                     "
 		)
 
@@ -101,7 +101,7 @@ namespace lang {
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(PtrFromArray, "ptr_from_array",
 				"  (r : ref<array<'a,'s>,'c,'v>) -> ptr<'a,'c,'v> {                             "
-				"		return <struct ptr<'a,'c,'v>> { ref_reinterpret(r,type_lit(array<'a,inf>)), 0l };  "
+				"		return <ptr<'a,'c,'v>> { ref_reinterpret(r,type_lit(array<'a,inf>)), 0l };  "
 				"  }                                                                                 "
 		)
 
@@ -140,7 +140,7 @@ namespace lang {
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(PtrCast, "ptr_cast",
 				"  (p : ptr<'a,'c,'v>, c : type<'new_const>, v : type<'new_volatile>) -> ptr<'a,'new_const,'new_volatile> {   "
-				"		return <struct ptr<'a,'new_const,'new_volatile>> { ref_cast(p.data, c, v, lit(plain)), p.offset };      "
+				"		return <ptr<'a,'new_const,'new_volatile>> { ref_cast(p.data, c, v, lit(plain)), p.offset };      "
 				"  }                                                                                                          "
 		)
 
@@ -149,7 +149,7 @@ namespace lang {
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(PtrConstCast, "ptr_const_cast",
 				"  (p : ptr<'a,'c,'v>, c : type<'nc>) -> ptr<'a,'nc,'v> {                    "
-				"		return <struct ptr<'a,'nc,'v>> { ref_const_cast(p.data, c), p.offset };   "
+				"		return <ptr<'a,'nc,'v>> { ref_const_cast(p.data, c), p.offset };   "
 				"  }                                                                            "
 		)
 
@@ -158,7 +158,7 @@ namespace lang {
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(PtrVolatileCast, "ptr_volatile_cast",
 				"  (p : ptr<'a,'c,'v>, v : type<'nv>) -> ptr<'a,'c,'nv> {                       "
-				"		return <struct ptr<'a,'c,'nv>> { ref_volatile_cast(p.data, v), p.offset };   "
+				"		return <ptr<'a,'c,'nv>> { ref_volatile_cast(p.data, v), p.offset };   "
 				"  }                                                                               "
 		)
 			
