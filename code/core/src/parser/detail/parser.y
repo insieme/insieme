@@ -297,8 +297,8 @@ declaration : "decl" struct_or_union "identifier" ";"                       { dr
             | "decl" "identifier" "::" "identifier" ":" type ";"            { assert_not_implemented(); }
             ;
 
-definition : "def" record_definition                                        { $$ = $2; assert_not_implemented(); /* need to register the symbol here */ }
-           | "def" function_definition                                      { $$ = $2; assert_not_implemented(); /* need to register the symbol here */ }
+definition : "def" record_definition                                        { $$ = $2; }
+           | "def" function_definition                                      { $$ = $2; }
            ;
 
 main : type "identifier" "(" parameters ")" compound_statement              { $$ = driver.builder.createProgram({driver.genLambda(@$, $4, $1, $6)}); }
