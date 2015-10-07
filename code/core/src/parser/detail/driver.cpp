@@ -166,7 +166,7 @@ namespace parser {
 			scanner.set_start_program();
 			int fail = parser.parse();
 			if(fail) {
-				// print_errors();
+				print_errors();
 				return nullptr;
 			}
 			return result.as<ProgramPtr>();
@@ -177,7 +177,7 @@ namespace parser {
 			InspireParser parser(*this, scanner);
 			int fail = parser.parse();
 			if(fail) {
-				// print_errors();
+				print_errors();
 				return nullptr;
 			}
 			return result.as<TypePtr>();
@@ -188,7 +188,7 @@ namespace parser {
 			InspireParser parser(*this, scanner);
 			int fail = parser.parse();
 			if(fail) {
-				// print_errors();
+				print_errors();
 				return nullptr;
 			}
 			return result.as<StatementPtr>();
@@ -199,7 +199,7 @@ namespace parser {
 			InspireParser parser(*this, scanner);
 			int fail = parser.parse();
 			if(fail) {
-				// print_errors();
+				print_errors();
 				return nullptr;
 			}
 			return result.as<ExpressionPtr>();
@@ -208,8 +208,10 @@ namespace parser {
 		// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Some tools ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 		ExpressionPtr InspireDriver::findSymbol(const location& l, const std::string& name) {
+			//look in the already defined symbols
 			auto x = scopes.find_symb(name);
 
+			//look in lang basic
 			if(!x) {
 				try {
 					x = builder.getLangBasic().getBuiltIn(name);
@@ -218,6 +220,16 @@ namespace parser {
 				}
 			}
 
+			//look in the Reference extension
+			if(!x) {
+				auto symbols = mgr.getLangExtension<core::lang::ReferenceExtension>().getDefinedSymbols();
+				auto pos = symbols.find(name);
+				if (pos != symbols.end()) {
+					x = pos->second();
+				}
+			}
+
+			//fail if not found
 			if(!x) {
 				error(l, format("the symbol %s was not declared in this context", name));
 				return nullptr;
@@ -719,6 +731,17 @@ namespace parser {
 			return builder.unionExpr(unionType, builder.stringValue(field), expr);
 		}
 
+		ExpressionPtr InspireDriver::getInitiaizerExpr(const location& l, const TypePtr& type, const ExpressionList& list) {
+			// check for a struct type
+			TagTypePtr tagType = type.isa<TagTypePtr>();
+			if (tagType && tagType->isStruct()) {
+				return genStructExpression(l, type, list);
+			}
+
+			assert_not_implemented();
+			return nullptr;
+		}
+
 		VariablePtr InspireDriver::genParameter(const location& l, const std::string& name, const TypePtr& type) {
 			auto resolvedType = resolveTypeAliases(l, type);
 			VariablePtr variable = builder.variable(resolvedType);
@@ -785,9 +808,8 @@ namespace parser {
 
 		ForStmtPtr InspireDriver::genForStmt(const location& l, const TypePtr& iteratorType, const std::string iteratorName,
 		                                     const ExpressionPtr& lowerBound, const ExpressionPtr& upperBound, const ExpressionPtr& stepExpr, const StatementPtr& body) {
-			VariablePtr iteratorVariable = builder.variable(iteratorType);
-			annotations::attachName(iteratorVariable, iteratorName);
-			add_symb(l, iteratorName, iteratorVariable);
+			VariablePtr iteratorVariable = findSymbol(l, iteratorName).isa<VariablePtr>();
+			assert_true(iteratorVariable) << "Variable doesn't exist or isn't a VariablePtr";
 			return builder.forStmt(iteratorVariable, getScalar(lowerBound), getScalar(upperBound), getScalar(stepExpr), body);
 		}
 

@@ -283,6 +283,11 @@ namespace parser {
 			ExpressionPtr genUnionExpression(const location& l, const TypePtr& type, const std::string field, const ExpressionPtr& expr);
 
 			/**
+			 * constructs an initializer expression according to the given type and expression list
+			 */
+			ExpressionPtr getInitiaizerExpr(const location& l, const TypePtr& type, const ExpressionList& list);
+
+			/**
 			 * constructs a parameter
 			 */
 			VariablePtr genParameter(const location& l, const std::string& name, const TypePtr& type);

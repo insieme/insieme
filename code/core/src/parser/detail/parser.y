@@ -116,6 +116,7 @@
 	ADDRESS      "$"
 
 	USING        "using"
+	ALIAS        "alias"
 
 	DECL         "decl"
 	DEF          "def"
@@ -130,7 +131,7 @@
 	FUNCTION     "function"
 	LAMBDA       "lambda"
 	CTOR         "ctor"
-	TYPE         "type"
+	TYPE_LIT     "type_lit"
 	STRUCT       "struct"
 	UNION        "union"
 
@@ -149,7 +150,6 @@
 
 	VAR          "var"
 	IF           "if"
-
 	ELSE         "else"
 	FOR          "for"
 	WHILE        "while"
@@ -191,6 +191,7 @@
 %token <std::string> ULONGLONG         "ulonglong"
 %token <std::string> FLOAT             "float"
 %token <std::string> DOUBLE            "double"
+%token <std::string> LIT               "lit"
 
 
 %type <TypePtr>                        type plain_type let_type
@@ -214,7 +215,7 @@
 %type <PureVirtualMemberFunctionPtr>   pure_virtual_member_function
 %type <PureVirtualMemberFunctionList>  pure_virtual_member_functions
 
-%type <TypePtr>                        object_type qual_object_type
+%type <TypePtr>                        object_type qual_object_type generic_type parallel_type
 %type <TypeVariablePtr>                type_variable
 %type <GenericTypePtr>                 abstract_type
 %type <FunctionTypePtr>                function_type pure_function_type closure_type constructor_type destructor_type member_function_type virtual_function_type
@@ -233,7 +234,7 @@
 
 %type <ExpressionPtr>                  variable
 %type <LiteralPtr>                     literal
-%type <CallExprPtr>                    call
+%type <ExpressionPtr>                  call
 %type <LambdaExprPtr>                  lambda
 %type <BindExprPtr>                    bind
 %type <ExpressionPtr>                  undefined_expression parallel_expression list_expression initializer unary_op binary_op ternary_op this_expression
@@ -392,11 +393,12 @@ plain_type : object_type                                                  { $$ =
            | function_type                                                { $$ = $1; }
            | numeric_type                                                 { $$ = $1; }
            | tuple_type                                                   { $$ = $1; }
+           | parallel_type                                                { $$ = $1; }
            ;
 
 
 object_type : type_variable                                               { $$ = $1; }
-            | abstract_type                                               { $$ = $1; }
+            | generic_type                                                { $$ = $1; }
             | tag_type_reference                                          { $$ = $1; }
             | record_definition                                           { $$ = $1; }
             ;
@@ -420,6 +422,9 @@ type_variable : "type_var"                                                { $$ =
 abstract_type : "identifier" parent_spec type_param_list                  { $$ = driver.builder.genericType($1, $2, $3); }
               ;
 
+generic_type : abstract_type                                              { $$ = driver.resolveTypeAliases(@$, $1); }
+             ;
+
 type_param_list :                                                         { $$ = TypeList(); }
                 | "<" types ">"                                           { $$ = $2; }
                 ;
@@ -436,7 +441,7 @@ non_empty_parents : non_empty_parents "," parent                          { $1.p
                   | parent                                                { $$ = toVector($1); }
                   ;
 
-parent : virtual_flag access_specifier abstract_type                      { $$ = driver.builder.parent($1, $2, $3); }
+parent : virtual_flag access_specifier object_type                        { $$ = driver.builder.parent($1, $2, $3); }
        ;
 
 access_specifier : "public"                                               { $$ =  AS_PUBLIC; }
@@ -487,7 +492,7 @@ qual_object_type : object_type                                            { $$ =
 // -- numeric type --
 
 numeric_type : "int"                                                      { $$ = driver.genNumericType(@$, $1); }
-             | "#" "identifier"                                           { $$ = driver.genNumericType(@$,$2); }
+             | "#" "identifier"                                           { $$ = driver.genNumericType(@$, $2); }
              ;
 
 // -- tuple types --
@@ -495,6 +500,11 @@ numeric_type : "int"                                                      { $$ =
 tuple_type : "(" ")"                                                      { $$ = driver.builder.tupleType(); }
            | "(" non_empty_types ")"                                      { $$ = driver.builder.tupleType($2); }
            ;
+
+// -- parallel types --
+
+parallel_type : "job"                                                     { $$ = driver.genGenericType(@$, "job", ParentList(), TypeList()); }
+              ;
 
 // -- tag reference --
 
@@ -559,13 +569,13 @@ literal : "true"                                                          { $$ =
         | "double"                                                        { $$ = driver.genNumericLiteral(@$, driver.mgr.getLangBasic().getReal8(), $1); }
         | "string"                                                        { $$ = driver.builder.stringLit($1); }
         | "lit" "(" "string" ":" type ")"                                 { $$ = driver.builder.literal($5, $3.substr(1, $3.size() - 1)); }
-        | "type" "(" type ")"                                             { $$ = driver.builder.getTypeLiteral($3); }
+        | "type_lit" "(" type ")"                                         { $$ = driver.builder.getTypeLiteral($3); }
         ;
 
 
 // -- call --
 
-call : expression "(" expressions ")"                                     { $$ = driver.builder.callExpr($1, $3); }
+call : expression "(" expressions ")"                                     { $$ = driver.genCall(@$, $1, $3); }
      ;
 
 
@@ -622,7 +632,7 @@ list_expression : "[" non_empty_expressions "]"                           { $$ =
 
 // -- initializer --
 
-initializer : "<" type ">" "{" expressions "}"                            { $$ = ExpressionPtr(); }
+initializer : "<" type ">" "{" expressions "}"                            { $$ = driver.getInitiaizerExpr(@$, $2, $5); }
             | "(" ")"                                                     { $$ = driver.builder.tupleExpr(); }
             | "(" non_empty_expressions ")"                               { $$ = driver.builder.tupleExpr($2); }
             ;
@@ -662,6 +672,7 @@ ternary_op : expression "?" expression ":" expression                     { $$ =
            ;
 
 this_expression : "this"                                                  { $$ = driver.genThis(@$); }
+                ;
 
 
 //    -- statements --------------------------------------
@@ -679,15 +690,15 @@ plain_statement : expression ";"                                          { $$ =
                 | switch_statement                                        { $$ = $1; }
                 | while_statement                                         { $$ = $1; }
                 | for_statement                                           { $$ = $1; }
-                | break                                                   { $$ = driver.builder.breakStmt();}
-                | continue                                                { $$ = driver.builder.continueStmt(); }
-                | return                                                  { $$ = driver.builder.returnStmt(); }
+                | break                                                   { $$ = $1; }
+                | continue                                                { $$ = $1; }
+                | return                                                  { $$ = $1; }
                 ;
 
 
 // -- compound statement --
 
-compound_statement : "{" statement_list "}"                               { $$ = driver.builder.compoundStmt($2); }
+compound_statement : { driver.open_scope(); } "{" statement_list "}"      { $$ = driver.builder.compoundStmt($3); driver.close_scope(); }
                    ;
 
 statement_list :                                                          { $$ = StatementList(); }
@@ -699,7 +710,7 @@ statement_list :                                                          { $$ =
 // -- variable declaration --
 
 variable_declaration : "var" type "identifier" "=" expression ";"         { $$ = driver.genVariableDeclaration(@$, $2, $3, $5); }
-                     | "auto" "identifier" "=" expression ";"             { $$ = driver.genVariableDeclaration(@$, driver.getScalar($4).getType(), $2, driver.getScalar($4)); }
+                     | "auto" "identifier" "=" expression ";"             { $$ = driver.genVariableDeclaration(@$, driver.getScalar($4)->getType(), $2, driver.getScalar($4)); }
                      ;
 
 
@@ -734,10 +745,12 @@ while_statement : "while" "(" expression ")" compound_statement           { $$ =
 
 // -- for --
 
-for_statement : "for" "(" type "identifier" "=" expression ".." expression ")" compound_statement
-                                                             { $$ = driver.genForStmt(@$, $3, $4, $6, $8, driver.builder.literal($3, "1"), $10); }
-              | "for" "(" type "identifier" "=" expression ".." expression ":" expression ")" compound_statement
-                                                             { $$ = driver.genForStmt(@$, $3, $4, $6, $8, $10, $12); }
+for_statement : "for" "(" type "identifier" "=" expression ".." expression ")"
+                                                                          { driver.open_scope(); driver.genVariableDeclaration(@6, $3, $4, $6); }
+                               compound_statement                         { $$ = driver.genForStmt(@$, $3, $4, $6, $8, driver.builder.literal($3, "1"), $11); driver.close_scope(); }
+              | "for" "(" type "identifier" "=" expression ".." expression ":" expression ")"
+                                                                          { driver.open_scope(); driver.genVariableDeclaration(@6, $3, $4, $6); }
+                               compound_statement                         { $$ = driver.genForStmt(@$, $3, $4, $6, $8, $10, $13); driver.close_scope(); }
               ;
 
 
@@ -759,7 +772,7 @@ return : "return" expression ";"                                          { $$ =
 
 // -- let --
 
-let_statement : "let" "identifier" "=" expression ";"                     {  driver.add_symb(@$, $2, $4); $$ = StatementPtr(); }
+let_statement : "let" "identifier" "=" expression ";"                     {  driver.add_symb(@$, $2, $4); $$ = $4; }
               ;
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Precedence list ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

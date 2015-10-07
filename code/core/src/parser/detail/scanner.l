@@ -131,11 +131,12 @@ blank         [ \t]
 "let"         return InspireParser::make_LET(loc);
 "in"          return InspireParser::make_IN(loc);
 "using"       return InspireParser::make_USING(loc);
+"alias"       return InspireParser::make_ALIAS(loc);
 "auto"        return InspireParser::make_AUTO(loc);
 "function"    return InspireParser::make_FUNCTION(loc);
 "lambda"      return InspireParser::make_LAMBDA(loc);
 "ctor"        return InspireParser::make_CTOR(loc);
-"type"        return InspireParser::make_TYPE(loc);
+"type_lit"    return InspireParser::make_TYPE_LIT(loc);
 "this"        return InspireParser::make_THIS(loc);
 
 "if"          return InspireParser::make_IF(loc);
@@ -187,6 +188,7 @@ blank         [ \t]
 {ulonglong}   return InspireParser::make_ULONGLONG(yytext, loc);
 {float}       return InspireParser::make_FLOAT(yytext, loc);
 {double}      return InspireParser::make_DOUBLE(yytext, loc);
+"lit"         return InspireParser::make_LIT(yytext, loc);
 
 {id}          return InspireParser::make_IDENTIFIER(yytext, loc);
 {type_var}    return InspireParser::make_TYPE_VAR(yytext+1, loc);
