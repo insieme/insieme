@@ -602,7 +602,9 @@ parameter : "identifier" ":" type                                         { $$ =
 // -- bind --
 
 bind : "(" ")" "=>" expression                                            { $$ = driver.genClosure(@$, VariableList(), driver.getScalar($4)); }
+     | "(" ")" "=>" compound_statement                                    { $$ = driver.genClosure(@$, VariableList(), $4); }
      | "(" non_empty_parameters ")" "=>" expression                       { $$ = driver.genClosure(@$, $2, driver.getScalar($5)); }
+     | "(" non_empty_parameters ")" "=>" compound_statement               { $$ = driver.genClosure(@$, $2, $5); }
      ;
 
 
