@@ -140,7 +140,7 @@ namespace lang {
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(PtrCast, "ptr_cast",
 				"  (p : ptr<'a,'c,'v>, c : type<'new_const>, v : type<'new_volatile>) -> ptr<'a,'new_const,'new_volatile> {   "
-				"		return <ptr<'a,'new_const,'new_volatile>> { ref_cast(p.data, c, v, lit(plain)), p.offset };      "
+				"		return <ptr<'a,'new_const,'new_volatile>> { ref_cast(p.data, c, v, type_lit(plain)), p.offset };      "
 				"  }                                                                                                          "
 		)
 
@@ -183,7 +183,7 @@ namespace lang {
 		 * The expand operation is the inverse operation of the narrow operation.
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(PtrExpand, "ptr_expand",
-				"  lambda (p : ptr<'b,'c,'v>, dp : datapath<'a,'b>) -> ptr<'a,'c,'v> {                 "
+				"  (p : ptr<'b,'c,'v>, dp : datapath<'a,'b>) -> ptr<'a,'c,'v> {                 "
 				"		return ptr_from_ref(ref_expand(ptr_to_ref(p), dp));                        "
 				"  }                                                                               "
 		)
@@ -243,7 +243,7 @@ namespace lang {
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(
 				PtrNull, "ptr_null",
-				"(a : type<'a>, c : type<'c>, v : type<'v>) -> ptr<'a,'c,'v> { return struct ptr<'a,'c,'v> { ref_null(type_lit(array<'a,inf>),c,v), 0 }; }"
+				"(a : type<'a>, c : type<'c>, v : type<'v>) -> ptr<'a,'c,'v> { return <ptr<'a,'c,'v>> { ref_null(type_lit(array<'a,inf>),c,v), 0 }; }"
 		)
 
 
@@ -288,17 +288,17 @@ namespace lang {
 
 		LANG_EXT_DERIVED_WITH_NAME(
 			PtrAdd, "ptr_add",
-			"(p : ptr<'a,'c,'v>, i : int<8>) -> ptr<'a,'c,'v> { return struct ptr<'a,'c,'v> { p.data, p.offset + i }; }"
+			"(p : ptr<'a,'c,'v>, i : int<8>) -> ptr<'a,'c,'v> { return <ptr<'a,'c,'v>> { p.data, p.offset + i }; }"
 		)
 
 		LANG_EXT_DERIVED_WITH_NAME(
 			PtrSub, "ptr_sub",
-			"(p : ptr<'a,'c,'v>, i : int<8>) -> ptr<'a,'c,'v> { return struct ptr<'a,'c,'v> { p.data, p.offset - i }; }"
+			"(p : ptr<'a,'c,'v>, i : int<8>) -> ptr<'a,'c,'v> { return <ptr<'a,'c,'v>> { p.data, p.offset - i }; }"
 		)
 
-		LANG_EXT_DERIVED_WITH_NAME(PtrPostInc, "ptr_post_inc", "(p : ref<ptr<'a,'c,'v>>) -> ptr<'a,'c,'v> { decl ptr<'a,'c,'v> temp = *p; p = ptr_add(*p, 1l); return temp; }")
+		LANG_EXT_DERIVED_WITH_NAME(PtrPostInc, "ptr_post_inc", "(p : ref<ptr<'a,'c,'v>>) -> ptr<'a,'c,'v> { var ptr<'a,'c,'v> temp = *p; p = ptr_add(*p, 1l); return temp; }")
 
-		LANG_EXT_DERIVED_WITH_NAME(PtrPostDec, "ptr_post_dec", "(p : ref<ptr<'a,'c,'v>>) -> ptr<'a,'c,'v> { decl ptr<'a,'c,'v> temp = *p; p = ptr_sub(*p, 1l); return temp; }")
+		LANG_EXT_DERIVED_WITH_NAME(PtrPostDec, "ptr_post_dec", "(p : ref<ptr<'a,'c,'v>>) -> ptr<'a,'c,'v> { var ptr<'a,'c,'v> temp = *p; p = ptr_sub(*p, 1l); return temp; }")
 
 		LANG_EXT_DERIVED_WITH_NAME(PtrPreInc, "ptr_pre_inc", "(p : ref<ptr<'a,'c,'v>>) -> ptr<'a,'c,'v> { p = ptr_add(*p, 1l); return *p; }")
 
