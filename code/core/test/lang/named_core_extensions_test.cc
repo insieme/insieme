@@ -58,21 +58,21 @@ namespace lang {
 
 	  public:
 
-		TYPE_ALIAS("NamedType", "struct { 'a foo; }")
+		TYPE_ALIAS("NamedType", "struct { foo : 'a; }")
 
-		LANG_EXT_TYPE_WITH_NAME(NamedTypeUsingBelow, "NamedTypeUsingBelow", "struct { NamedType foo; }")
+		LANG_EXT_TYPE_WITH_NAME(NamedTypeUsingBelow, "NamedTypeUsingBelow", "struct { foo : NamedType; }")
 
-		LANG_EXT_TYPE_WITH_NAME(NamedTypeReusingUnknown, "NamedTypeReusingUnknown", "struct { FooType foo; }")
+		LANG_EXT_TYPE_WITH_NAME(NamedTypeReusingUnknown, "NamedTypeReusingUnknown", "struct { foo : FooType; }")
 
-		LANG_EXT_TYPE_WITH_NAME(NamedTypeReusingKnown, "NamedTypeReusingKnown", "struct { NamedType foo; }")
+		LANG_EXT_TYPE_WITH_NAME(NamedTypeReusingKnown, "NamedTypeReusingKnown", "struct { foo : NamedType; }")
 
 		LANG_EXT_LITERAL_WITH_NAME(NamedLiteralUnknown, "NamedLiteralUnknown", "named_lit_unknown", "(FooType)->unit")
 
 		LANG_EXT_LITERAL_WITH_NAME(NamedLiteral, "NamedLiteral", "named_lit", "(NamedType)->unit")
 
-		LANG_EXT_DERIVED_WITH_NAME(NamedDerivedUnknown, "NamedDerivedUnknown", "let foo = FooType; lambda (foo x)->foo { return x; }")
+		LANG_EXT_DERIVED_WITH_NAME(NamedDerivedUnknown, "NamedDerivedUnknown", "alias foo = FooType; (x : foo)->foo { return x; }")
 
-		LANG_EXT_DERIVED(NamedDerived, "let foo = NamedType; lambda (foo x)->foo { return x; }")
+		LANG_EXT_DERIVED(NamedDerived, "alias foo = NamedType; (x : foo)->foo { return x; }")
 	};
 
 	TEST(NamedCoreExtensionTest, NamedLookup) {

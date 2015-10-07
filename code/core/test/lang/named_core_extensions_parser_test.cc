@@ -125,7 +125,7 @@ namespace lang {
 		NamedCoreExtensionParserTestExtension(core::NodeManager& manager) : core::lang::Extension(manager) {}
 
 	  public:
-		TYPE_ALIAS("complex","struct { NamedType foo; }")
+		TYPE_ALIAS("complex","struct { foo : NamedType; }")
 	};
 
 	TEST(NamedCoreExtensionParserTest, ParserAlreadyExistingNameDeathTest) {
