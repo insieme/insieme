@@ -59,6 +59,9 @@ namespace core {
 namespace parser {
 	namespace detail {
 
+	class location;
+	class InspireParser;
+
 
 		/**
 		 *  The declaration context keeps track of all the symbols available in the scope,

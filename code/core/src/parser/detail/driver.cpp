@@ -69,6 +69,9 @@ namespace core {
 namespace parser {
 	namespace detail {
 
+		class location;
+		class InspireParser;
+
 		/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ scope manager ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 
