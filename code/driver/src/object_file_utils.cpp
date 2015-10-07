@@ -40,6 +40,7 @@
 
 #include "insieme/driver/object_file_utils.h"
 
+#include "insieme/core/tu/ir_translation_unit.h"
 #include "insieme/core/tu/ir_translation_unit_io.h"
 
 namespace insieme {
@@ -66,7 +67,7 @@ namespace driver {
 		return x == MAGIC_NUMBER;
 	}
 
-	frontend::tu::IRTranslationUnit loadLib(core::NodeManager& mgr, const boost::filesystem::path& file) {
+	core::tu::IRTranslationUnit loadLib(core::NodeManager& mgr, const boost::filesystem::path& file) {
 		assert_true(isInsiemeLib(file));
 
 		// open file
@@ -78,16 +79,16 @@ namespace driver {
 		assert(x == MAGIC_NUMBER);
 
 		// load content
-		return frontend::tu::load(in, mgr);
+		return core::tu::load(in, mgr);
 	}
 
-	void saveLib(const frontend::tu::IRTranslationUnit& unit, const boost::filesystem::path& file) {
+	void saveLib(const core::tu::IRTranslationUnit& unit, const boost::filesystem::path& file) {
 		// create all necessary directory
 		boost::filesystem::create_directories(boost::filesystem::absolute(file).parent_path());
 
 		std::ofstream out(file.string(), std::ios::out | std::ios::binary);
 		out << MAGIC_NUMBER;           // start with magic number
-		frontend::tu::dump(out, unit); // dump the rest
+		core::tu::dump(out, unit); // dump the rest
 
 		assert_true(boost::filesystem::exists(file));
 	}

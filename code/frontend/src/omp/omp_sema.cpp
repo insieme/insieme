@@ -927,7 +927,7 @@ namespace omp {
 			}
 		};
 
-		void collectAndRegisterLocks(core::NodeManager& mgr, tu::IRTranslationUnit& unit, const core::ExpressionPtr& fragment) {
+		void collectAndRegisterLocks(core::NodeManager& mgr, core::tu::IRTranslationUnit& unit, const core::ExpressionPtr& fragment) {
 			// search locks
 			visitDepthFirstOnce(fragment, [&](const LiteralPtr& lit) {
 				const string& gname = lit->getStringValue();
@@ -944,12 +944,12 @@ namespace omp {
 	}
 
 
-	tu::IRTranslationUnit applySema(const tu::IRTranslationUnit& unit, core::NodeManager& mgr) {
+	core::tu::IRTranslationUnit applySema(const core::tu::IRTranslationUnit& unit, core::NodeManager& mgr) {
 		// everything has to run through the OMP sema mapper
 		OMPSemaMapper semaMapper(mgr);
 
 		// resulting tu
-		tu::IRTranslationUnit res(mgr);
+		core::tu::IRTranslationUnit res(mgr);
 
 		// process the contained types ...
 		for(auto& cur : unit.getTypes()) {

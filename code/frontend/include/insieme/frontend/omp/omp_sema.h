@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -44,11 +44,12 @@
 //#include "insieme/frontend/omp/omp_annotation.h"
 
 namespace insieme {
-namespace frontend {
-
+namespace core {
 namespace tu {
 	class IRTranslationUnit;
 }
+}
+namespace frontend {
 
 namespace omp {
 
@@ -59,7 +60,7 @@ namespace omp {
 	 * @param mgr the node manager to be utilized for creating IR nodes
 	 * @return the modified translation unit
 	 */
-	tu::IRTranslationUnit applySema(const tu::IRTranslationUnit& unit, core::NodeManager& mgr);
+	core::tu::IRTranslationUnit applySema(const core::tu::IRTranslationUnit& unit, core::NodeManager& mgr);
 
 
 } // namespace omp

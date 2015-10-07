@@ -95,7 +95,7 @@ namespace insieme {
 		{
 			core::NodeManager tmpManager;
 			// load program and create IR TU
-			frontend::tu::IRTranslationUnit code = testCase.loadTU(tmpManager);
+			core::tu::IRTranslationUnit code = testCase.loadTU(tmpManager);
 			char tmpname[] = "tmp.XXXXXX";
 			int src = mkstemp(tmpname);
 			assert_ne(src, -1);

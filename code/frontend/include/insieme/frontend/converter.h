@@ -68,7 +68,7 @@ namespace frontend {
 	* @param setup the setup for the conversion process to be respected
 	* @return the resulting translation unit
 	*/
-	tu::IRTranslationUnit convert(core::NodeManager& manager, const path& unit, const ConversionSetup& setup = ConversionSetup());
+	core::tu::IRTranslationUnit convert(core::NodeManager& manager, const path& unit, const ConversionSetup& setup = ConversionSetup());
 
 	// Forward Declarations
 	namespace state {
@@ -154,7 +154,7 @@ namespace conversion {
 		core::NodeManager& mgr;
 		const core::FrontendIRBuilder builder;
 		const frontend::ir::FrontendIr feIR;
-		tu::IRTranslationUnit irTranslationUnit;
+		core::tu::IRTranslationUnit irTranslationUnit;
 
 		/**
 		 * Attach annotations to a C function of the input translation unit.
@@ -172,7 +172,7 @@ namespace conversion {
 		Converter(core::NodeManager& mgr, const TranslationUnit& translationUnit, const ConversionSetup& setup = ConversionSetup());
 
 		// should only be run once
-		tu::IRTranslationUnit convert();
+		core::tu::IRTranslationUnit convert();
 
 		// Getters & Setters
 		const core::FrontendIRBuilder& getIRBuilder() const { return builder; }
@@ -186,8 +186,8 @@ namespace conversion {
 		clang::Preprocessor& getPreprocessor() const { return getCompiler().getPreprocessor(); }
 		clang::SourceManager& getSourceManager() const { return getCompiler().getSourceManager(); }
 
-		tu::IRTranslationUnit& getIRTranslationUnit() { return irTranslationUnit; }
-		const tu::IRTranslationUnit& getIRTranslationUnit() const { return irTranslationUnit; }
+		core::tu::IRTranslationUnit& getIRTranslationUnit() { return irTranslationUnit; }
+		const core::tu::IRTranslationUnit& getIRTranslationUnit() const { return irTranslationUnit; }
 
 		std::shared_ptr<DeclConverter> getDeclConverter() const { return declConvPtr; }
 		std::shared_ptr<ExprConverter> getExprConverter() const { return exprConvPtr; }

@@ -126,12 +126,12 @@ namespace frontend {
 	}
 
 
-	tu::IRTranslationUnit ConversionJob::toIRTranslationUnit(core::NodeManager& manager) {
+	core::tu::IRTranslationUnit ConversionJob::toIRTranslationUnit(core::NodeManager& manager) {
 		// extension initialization
 		frontendExtensionInit();
 
 		// convert files to translation units
-		auto units = ::transform(files, [&](const path& file) -> tu::IRTranslationUnit {
+		auto units = ::transform(files, [&](const path& file) -> core::tu::IRTranslationUnit {
 			auto res = convert(manager, file, *this);
 
 			// maybe a visitor wants to manipulate the IR program
@@ -143,7 +143,7 @@ namespace frontend {
 		});
 
 		// merge the translation units
-		auto singleTu = tu::merge(manager, tu::merge(manager, libs), tu::merge(manager, units));
+		auto singleTu = core::tu::merge(manager, core::tu::merge(manager, libs), core::tu::merge(manager, units));
 
 		// forward the C++ flag
 		singleTu.setCXX(this->isCxx());
@@ -176,9 +176,9 @@ namespace frontend {
 		core::ProgramPtr res;
 
 		if(unit.getEntryPoints().size() > 1) {
-			res = tu::resolveEntryPoints(tmpMgr, unit);
+			res = core::tu::resolveEntryPoints(tmpMgr, unit);
 		} else {
-			res = tu::toProgram(tmpMgr, unit);
+			res = core::tu::toProgram(tmpMgr, unit);
 		}
 
 		return applyPostProcessing(manager, res);
@@ -196,7 +196,7 @@ namespace frontend {
 		auto unit = toIRTranslationUnit(tmpMgr);
 
 		// convert units to a single program
-		auto res = (fullApp) ? tu::toProgram(tmpMgr, unit) : tu::resolveEntryPoints(tmpMgr, unit);
+		auto res = (fullApp) ? core::tu::toProgram(tmpMgr, unit) : core::tu::resolveEntryPoints(tmpMgr, unit);
 
 		return applyPostProcessing(manager, res);
 	}
@@ -207,7 +207,7 @@ namespace frontend {
 
 		bool cppFile = any(files, [&](const path& cur) { return static_cast<const ConversionSetup&>(*this).isCxx(cur); });
 
-		bool cppLibs = any(libs, [&](const tu::IRTranslationUnit& tu) -> bool { return tu.isCXX(); });
+		bool cppLibs = any(libs, [&](const core::tu::IRTranslationUnit& tu) -> bool { return tu.isCXX(); });
 
 		return cppFile || cppLibs;
 	}

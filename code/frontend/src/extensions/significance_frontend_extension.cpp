@@ -118,7 +118,7 @@ namespace extensions {
 			})));
 	}
 
-	insieme::frontend::tu::IRTranslationUnit SignificanceFrontendExtension::IRVisit(tu::IRTranslationUnit& tu) {
+	core::tu::IRTranslationUnit SignificanceFrontendExtension::IRVisit(core::tu::IRTranslationUnit& tu) {
 		OmpFrontendExtension::IRVisit(tu);
 
 		return tu;
