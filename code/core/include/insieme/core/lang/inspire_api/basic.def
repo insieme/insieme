@@ -282,7 +282,7 @@ DERIVED(NumericCast, "num_cast", "(x : 'a, t : type<'b>)->'b { return CAST('b)x;
 
 // Type Operations ----------------------------------------------------------------------------------------------------
 
-DERIVED(TypeOf, "type_of", "(x : 'a)->type<'a> { return lit('a); }")
+DERIVED(TypeOf, "type_of", "(x : 'a)->type<'a> { return type_lit('a); }")
 LITERAL(TypeIsSubtype, "type_is_subtype", "(type<'a>, type<'b>)->bool")
 
 OPERATION(Type, Eq, "type_eq", "(type<'a>, type<'a>) -> bool")
