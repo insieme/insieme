@@ -185,13 +185,13 @@ namespace lang {
 		/**
 		 * A specialization of the ref_cast operator for modeling const casts.
 		 */
-		LANG_EXT_DERIVED_WITH_NAME(RefConstCast, "ref_const_cast", "(r : ref<'a,'c,'v,'k>, c : type<'nc>) -> ref<'a,'nc,'v,'k> { return ref_cast(r, c, type_lit('v), lit('k)); }")
+		LANG_EXT_DERIVED_WITH_NAME(RefConstCast, "ref_const_cast", "(r : ref<'a,'c,'v,'k>, c : type<'nc>) -> ref<'a,'nc,'v,'k> { return ref_cast(r, c, type_lit('v), type_lit('k)); }")
 
 		/**
 		 * A specialization of the ref_cast operator for modeling volatile casts.
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(RefVolatileCast, "ref_volatile_cast",
-		                           "(r : ref<'a,'c,'v,'k>, v : type<'nv>) -> ref<'a,'c,'nv,'k> { return ref_cast(r, type_lit('c), v, lit('k)); }")
+		                           "(r : ref<'a,'c,'v,'k>, v : type<'nv>) -> ref<'a,'c,'nv,'k> { return ref_cast(r, type_lit('c), v, type_lit('k)); }")
 
 
 		// -- sub-referencing --
