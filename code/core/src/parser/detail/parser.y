@@ -775,25 +775,20 @@ let_statement : "let" "identifier" "=" expression ";"                     {  dri
 // the lowest in list, the highest precedence
 
 
+%right    "in";
 %nonassoc "::" ;
 %left     ":";
 %nonassoc ")";
 
-%nonassoc UDEREF;
-%nonassoc UMINUS;
-%nonassoc UNOT;
-%nonassoc POST_INC POST_DEC;
-%nonassoc PRE_INC PRE_DEC;
-%nonassoc ".";
-%nonassoc "->";
 
 %nonassoc "else";
 %right    "=>";
 %left     "spawn" "sync" "sync_all";
-%right    "?";
 %right    "catch";
-%left     "=";
 %left     LAMBDA;
+
+%left     "=";
+%right    "?";
 %left     "||";
 %left     "&&";
 %left     "|";
@@ -803,9 +798,15 @@ let_statement : "let" "identifier" "=" expression ";"                     {  dri
 %left     "<" "<=" ">" ">=";
 %left     "+" "-";
 %left     "*" "/" "%";
+
+%nonassoc UDEREF;
+%nonassoc UNOT;
+%nonassoc UMINUS;
+
+%nonassoc "->";
+%nonassoc ".";
 %right    "[";
 %right    "(";
-%right    "in";
 
 %%
 // code after the second %% is copyed verbatim at the end of the parser .cpp file
