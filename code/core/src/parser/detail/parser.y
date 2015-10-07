@@ -134,6 +134,7 @@
 	FUNCTION     "function"
 	LAMBDA       "lambda"
 	CTOR         "ctor"
+	DTOR         "dtor"
 	TYPE_LIT     "type_lit"
 	STRUCT       "struct"
 	UNION        "union"

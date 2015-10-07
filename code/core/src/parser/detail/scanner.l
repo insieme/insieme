@@ -163,6 +163,9 @@ blank         [ \t]
 "struct"      return InspireParser::make_STRUCT(loc);
 "union"       return InspireParser::make_UNION(loc);
 
+"ctor"        return InspireParser::make_CTOR(loc);
+"dtor"        return InspireParser::make_DTOR(loc);
+
 "virtual"     return InspireParser::make_VIRTUAL(loc);
 "const"       return InspireParser::make_CONST(loc);
 "volatile"    return InspireParser::make_VOLATILE(loc);
