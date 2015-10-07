@@ -65,6 +65,9 @@
 	#include "insieme/core/encoder/lists.h"
 
 	#include "insieme/core/lang/parallel.h"
+
+	#define INSPIRE_GUARD(l, n) \
+		if(!n) { driver.error(l, "unrecoverable error"); YYABORT; }
 }
 
 %define api.token.prefix {TOK_}
@@ -519,9 +522,9 @@ let_type : "let" "identifier" "="  type                                   { driv
 
 //    -- expressions -------------------------------------
 
-expression : plain_expression                                             { $$ = $1; }
-           | "$" plain_expression "$"                                     { $$ = driver.markAddress(@2, $2); }
-           | let_expression                                               { $$ = $1; }
+expression : plain_expression                                             { INSPIRE_GUARD(@1, $1); $$ = $1; }
+           | "$" plain_expression "$"                                     { INSPIRE_GUARD(@2, $2); $$ = driver.markAddress(@2, $2); }
+           | let_expression                                               { INSPIRE_GUARD(@1, $1); $$ = $1; }
            ;
 
 expressions : non_empty_expressions                                       { $$ = $1; }
@@ -677,9 +680,9 @@ this_expression : "this"                                                  { $$ =
 //    -- statements --------------------------------------
 
 
-statement : plain_statement                                               { $$ = $1; }
-          | "$" plain_statement "$"                                       { $$ = driver.markAddress(@2, $2); }
-          | let_statement                                                 { $$ = $1; }
+statement : plain_statement                                               { INSPIRE_GUARD(@1, $1); $$ = $1; }
+          | "$" plain_statement "$"                                       { INSPIRE_GUARD(@2, $2); $$ = driver.markAddress(@2, $2); }
+          | let_statement                                                 { INSPIRE_GUARD(@1, $1); $$ = $1; }
           ;
 
 plain_statement : expression ";"                                          { $$ = $1; }
