@@ -61,17 +61,17 @@ namespace parser {
 		class InspireScanner : public Trick_Lexer {
 			location loc;
 
-			InspireParser::symbol_type type_token;
-			InspireParser::symbol_type expression_token;
-			InspireParser::symbol_type statement_token;
-			InspireParser::symbol_type program_token;
+			InspireParser::symbol_type typeToken;
+			InspireParser::symbol_type expressionToken;
+			InspireParser::symbol_type statementToken;
+			InspireParser::symbol_type programToken;
 
-			InspireParser::symbol_type* start_token;
+			InspireParser::symbol_type* startToken;
 
 		  public:
 			InspireScanner(std::istream* stream)
-			    : Trick_Lexer(stream), type_token(InspireParser::make_TYPE_ONLY(loc)), expression_token(InspireParser::make_EXPR_ONLY(loc)),
-			      statement_token(InspireParser::make_STMT_ONLY(loc)), program_token(InspireParser::make_FULL_PROG(loc)) {
+			    : Trick_Lexer(stream), typeToken(InspireParser::make_TYPE_ONLY(loc)), expressionToken(InspireParser::make_EXPR_ONLY(loc)),
+			      statementToken(InspireParser::make_STMT_ONLY(loc)), programToken(InspireParser::make_FULL_PROG(loc)) {
 				loc.initialize();
 			}
 
@@ -79,17 +79,17 @@ namespace parser {
 			#define YY_DECL InspireParser::symbol_type InspireScanner::yylex(InspireDriver& driver)
 			InspireParser::symbol_type yylex(InspireDriver& driver);
 
-			void set_start_program() {
-				start_token = &program_token;
+			void setStartProgram() {
+				startToken = &programToken;
 			}
-			void set_start_statement() {
-				start_token = &statement_token;
+			void setStartStatement() {
+				startToken = &statementToken;
 			}
-			void set_start_expression() {
-				start_token = &expression_token;
+			void setStartExpression() {
+				startToken = &expressionToken;
 			}
-			void set_start_type() {
-				start_token = &type_token;
+			void setStartType() {
+				startToken = &typeToken;
 			}
 
 			int yywrap() {

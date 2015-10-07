@@ -146,14 +146,14 @@ namespace core {
 		/**
 		 * Converts a eager map into a lazy map.
 		 */
-		IRBuilderBaseModule::lazy_definition_map toLazy(const IRBuilderBaseModule::eager_definition_map& map) {
-			IRBuilderBaseModule::lazy_definition_map res;
+		IRBuilderBaseModule::lazyDefinitionMap toLazy(const IRBuilderBaseModule::eagerDefinitionMap& map) {
+			IRBuilderBaseModule::lazyDefinitionMap res;
 			for(const auto& cur : map) res.insert({cur.first, [=]() { return cur.second; }});
 			return res;
 		}
 
-		IRBuilderBaseModule::lazy_definition_map addStandardSymbols(NodeManager& mgr, const IRBuilderBaseModule::lazy_definition_map& init = IRBuilderBaseModule::lazy_definition_map()) {
-			IRBuilderBaseModule::lazy_definition_map res;
+		IRBuilderBaseModule::lazyDefinitionMap addStandardSymbols(NodeManager& mgr, const IRBuilderBaseModule::lazyDefinitionMap& init = IRBuilderBaseModule::lazyDefinitionMap()) {
+			IRBuilderBaseModule::lazyDefinitionMap res;
 
 			// load standard modules
 			for(const auto& cur : mgr.getLangExtension<lang::ArrayExtension>().getSymbols()) res.insert(cur);
@@ -169,8 +169,8 @@ namespace core {
 			return res;
 		}
 
-		parser::type_alias_map getStandardAliasMap(NodeManager& mgr) {
-			parser::type_alias_map res;
+		parser::typeAliasMap getStandardAliasMap(NodeManager& mgr) {
+			parser::typeAliasMap res;
 
 			// load standard modules
 			for(const auto& cur : mgr.getLangExtension<lang::ArrayExtension>().getTypeAliases()) res.insert(cur);
@@ -186,67 +186,67 @@ namespace core {
 
 	// ---------------------------- Parser Integration -----------------------------------
 
-	NodePtr IRBuilderBaseModule::parse(const string& code, const lazy_definition_map& symbols) const {
-		return parser::parse_any(manager, code, true, addStandardSymbols(manager, symbols), getStandardAliasMap(manager));
+	NodePtr IRBuilderBaseModule::parse(const string& code, const lazyDefinitionMap& symbols) const {
+		return parser::parseAny(manager, code, true, addStandardSymbols(manager, symbols), getStandardAliasMap(manager));
 	}
 
-	NodePtr IRBuilderBaseModule::parse(const string& code, const eager_definition_map& symbols) const {
+	NodePtr IRBuilderBaseModule::parse(const string& code, const eagerDefinitionMap& symbols) const {
 		return parse(code, toLazy(symbols));
 	}
 
-	TypePtr IRBuilderBaseModule::parseType(const string& code, const lazy_definition_map& symbols) const {
-		return parser::parse_type(manager, code, true, addStandardSymbols(manager, symbols), getStandardAliasMap(manager));
+	TypePtr IRBuilderBaseModule::parseType(const string& code, const lazyDefinitionMap& symbols) const {
+		return parser::parseType(manager, code, true, addStandardSymbols(manager, symbols), getStandardAliasMap(manager));
 	}
 
-	TypePtr IRBuilderBaseModule::parseType(const string& code, const eager_definition_map& symbols) const {
+	TypePtr IRBuilderBaseModule::parseType(const string& code, const eagerDefinitionMap& symbols) const {
 		return parseType(code, toLazy(symbols));
 	}
 
-	ExpressionPtr IRBuilderBaseModule::parseExpr(const string& code, const lazy_definition_map& symbols) const {
-		return parser::parse_expr(manager, code, true, addStandardSymbols(manager, symbols), getStandardAliasMap(manager));
+	ExpressionPtr IRBuilderBaseModule::parseExpr(const string& code, const lazyDefinitionMap& symbols) const {
+		return parser::parseExpr(manager, code, true, addStandardSymbols(manager, symbols), getStandardAliasMap(manager));
 	}
 
-	ExpressionPtr IRBuilderBaseModule::parseExpr(const string& code, const eager_definition_map& symbols) const {
+	ExpressionPtr IRBuilderBaseModule::parseExpr(const string& code, const eagerDefinitionMap& symbols) const {
 		return parseExpr(code, toLazy(symbols));
 	}
 
-	StatementPtr IRBuilderBaseModule::parseStmt(const string& code, const lazy_definition_map& symbols) const {
-		return parser::parse_stmt(manager, code, true, addStandardSymbols(manager, symbols), getStandardAliasMap(manager));
+	StatementPtr IRBuilderBaseModule::parseStmt(const string& code, const lazyDefinitionMap& symbols) const {
+		return parser::parseStmt(manager, code, true, addStandardSymbols(manager, symbols), getStandardAliasMap(manager));
 	}
 
-	StatementPtr IRBuilderBaseModule::parseStmt(const string& code, const eager_definition_map& symbols) const {
+	StatementPtr IRBuilderBaseModule::parseStmt(const string& code, const eagerDefinitionMap& symbols) const {
 		return parseStmt(code, toLazy(symbols));
 	}
 
-	ProgramPtr IRBuilderBaseModule::parseProgram(const string& code, const lazy_definition_map& symbols) const {
-		return parser::parse_program(manager, code, true, addStandardSymbols(manager, symbols), getStandardAliasMap(manager));
+	ProgramPtr IRBuilderBaseModule::parseProgram(const string& code, const lazyDefinitionMap& symbols) const {
+		return parser::parseProgram(manager, code, true, addStandardSymbols(manager, symbols), getStandardAliasMap(manager));
 	}
 
-	ProgramPtr IRBuilderBaseModule::parseProgram(const string& code, const eager_definition_map& symbols) const {
+	ProgramPtr IRBuilderBaseModule::parseProgram(const string& code, const eagerDefinitionMap& symbols) const {
 		return parseProgram(code, toLazy(symbols));
 	}
 
-	vector<NodeAddress> IRBuilderBaseModule::parseAddressesExpression(const string& code, const lazy_definition_map& symbols) const {
-		return parser::parse_addresses_expression(manager, code, true, addStandardSymbols(manager, symbols), getStandardAliasMap(manager));
+	vector<NodeAddress> IRBuilderBaseModule::parseAddressesExpression(const string& code, const lazyDefinitionMap& symbols) const {
+		return parser::parseAddressesExpression(manager, code, true, addStandardSymbols(manager, symbols), getStandardAliasMap(manager));
 	}
 
-	vector<NodeAddress> IRBuilderBaseModule::parseAddressesExpression(const string& code, const eager_definition_map& symbols) const {
+	vector<NodeAddress> IRBuilderBaseModule::parseAddressesExpression(const string& code, const eagerDefinitionMap& symbols) const {
 		return parseAddressesExpression(code, toLazy(symbols));
 	}
 
-	vector<NodeAddress> IRBuilderBaseModule::parseAddressesStatement(const string& code, const lazy_definition_map& symbols) const {
-		return parser::parse_addresses_statement(manager, code, true, addStandardSymbols(manager, symbols), getStandardAliasMap(manager));
+	vector<NodeAddress> IRBuilderBaseModule::parseAddressesStatement(const string& code, const lazyDefinitionMap& symbols) const {
+		return parser::parseAddressesStatement(manager, code, true, addStandardSymbols(manager, symbols), getStandardAliasMap(manager));
 	}
 
-	vector<NodeAddress> IRBuilderBaseModule::parseAddressesStatement(const string& code, const eager_definition_map& symbols) const {
+	vector<NodeAddress> IRBuilderBaseModule::parseAddressesStatement(const string& code, const eagerDefinitionMap& symbols) const {
 		return parseAddressesStatement(code, toLazy(symbols));
 	}
 
-	vector<NodeAddress> IRBuilderBaseModule::parseAddressesProgram(const string& code, const lazy_definition_map& symbols) const {
-		return parser::parse_addresses_program(manager, code, true, addStandardSymbols(manager, symbols), getStandardAliasMap(manager));
+	vector<NodeAddress> IRBuilderBaseModule::parseAddressesProgram(const string& code, const lazyDefinitionMap& symbols) const {
+		return parser::parseAddressesProgram(manager, code, true, addStandardSymbols(manager, symbols), getStandardAliasMap(manager));
 	}
 
-	vector<NodeAddress> IRBuilderBaseModule::parseAddressesProgram(const string& code, const eager_definition_map& symbols) const {
+	vector<NodeAddress> IRBuilderBaseModule::parseAddressesProgram(const string& code, const eagerDefinitionMap& symbols) const {
 		return parseAddressesProgram(code, toLazy(symbols));
 	}
 

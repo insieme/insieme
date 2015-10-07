@@ -62,89 +62,89 @@ namespace parser {
 			if(!driver.result) {
 				if(onFailThrow) {
 					std::stringstream ss;
-					driver.print_errors(ss);
+					driver.printErrors(ss);
 					throw IRParserException(ss.str());
 				} else {
-					driver.print_errors();
+					driver.printErrors();
 				}
 			}
 		}
 
-		void save_symbol_table(InspireDriver& driver, const definition_map& definitions) {
+		void saveSymbolTable(InspireDriver& driver, const definitionMap& definitions) {
 			for(const auto& def : definitions) {
 				// the use of the line: symbols["name"] = builder.parseX("....", symbols);
 				// will append a symbols with a null ptr inside. this is not good
-				driver.add_symb(def.first, def.second);
+				driver.addSymb(def.first, def.second);
 			}
 		}
 
-		void append_type_aliases(InspireDriver& driver, const type_alias_map& aliases) {
+		void appendTypeAliases(InspireDriver& driver, const typeAliasMap& aliases) {
 			for(const auto& cur : aliases) {
-				driver.add_type_alias(cur.first, cur.second);
+				driver.addTypeAlias(cur.first, cur.second);
 			}
 		}
 	}
 
-	TypePtr parse_type(NodeManager& manager, const string& code, bool onFailThrow, const definition_map& definitions, const type_alias_map& aliases) {
+	TypePtr parseType(NodeManager& manager, const string& code, bool onFailThrow, const definitionMap& definitions, const typeAliasMap& aliases) {
 		InspireDriver driver(code, manager);
-		save_symbol_table(driver, definitions);
-		append_type_aliases(driver, aliases);
+		saveSymbolTable(driver, definitions);
+		appendTypeAliases(driver, aliases);
 		auto x = driver.parseType();
 		if(!x) { checkErrors(driver, onFailThrow); }
 		return x;
 	}
 
-	ExpressionPtr parse_expr(NodeManager& manager, const string& code, bool onFailThrow, const definition_map& definitions, const type_alias_map& aliases) {
+	ExpressionPtr parseExpr(NodeManager& manager, const string& code, bool onFailThrow, const definitionMap& definitions, const typeAliasMap& aliases) {
 		InspireDriver driver(code, manager);
-		save_symbol_table(driver, definitions);
-		append_type_aliases(driver, aliases);
+		saveSymbolTable(driver, definitions);
+		appendTypeAliases(driver, aliases);
 		auto x = driver.parseExpression();
 		if(!x) { checkErrors(driver, onFailThrow); }
 		return x;
 	}
 
-	StatementPtr parse_stmt(NodeManager& manager, const string& code, bool onFailThrow, const definition_map& definitions, const type_alias_map& aliases) {
+	StatementPtr parseStmt(NodeManager& manager, const string& code, bool onFailThrow, const definitionMap& definitions, const typeAliasMap& aliases) {
 		InspireDriver driver(code, manager);
-		save_symbol_table(driver, definitions);
-		append_type_aliases(driver, aliases);
+		saveSymbolTable(driver, definitions);
+		appendTypeAliases(driver, aliases);
 		auto x = driver.parseStmt();
 		if(!x) { checkErrors(driver, onFailThrow); }
 		return x;
 	}
 
-	ProgramPtr parse_program(NodeManager& manager, const string& code, bool onFailThrow, const definition_map& definitions, const type_alias_map& aliases) {
+	ProgramPtr parseProgram(NodeManager& manager, const string& code, bool onFailThrow, const definitionMap& definitions, const typeAliasMap& aliases) {
 		InspireDriver driver(code, manager);
-		save_symbol_table(driver, definitions);
-		append_type_aliases(driver, aliases);
+		saveSymbolTable(driver, definitions);
+		appendTypeAliases(driver, aliases);
 		auto x = driver.parseProgram();
 		if(!x) { checkErrors(driver, onFailThrow); }
 		return x;
 	}
 
-	NodePtr parse_any(NodeManager& manager, const string& code, bool onFailThrow, const definition_map& definitions, const type_alias_map& aliases) {
+	NodePtr parseAny(NodeManager& manager, const string& code, bool onFailThrow, const definitionMap& definitions, const typeAliasMap& aliases) {
 		NodePtr x;
 		{
 			InspireDriver driver(code, manager);
-			save_symbol_table(driver, definitions);
-			append_type_aliases(driver, aliases);
+			saveSymbolTable(driver, definitions);
+			appendTypeAliases(driver, aliases);
 			x = driver.parseExpression();
 		}
 		if(!x) {
 			InspireDriver driver(code, manager);
-			save_symbol_table(driver, definitions);
-			append_type_aliases(driver, aliases);
+			saveSymbolTable(driver, definitions);
+			appendTypeAliases(driver, aliases);
 			x = driver.parseType();
 		}
 		if(!x) {
 			InspireDriver driver(code, manager);
-			save_symbol_table(driver, definitions);
-			append_type_aliases(driver, aliases);
+			saveSymbolTable(driver, definitions);
+			appendTypeAliases(driver, aliases);
 			x = driver.parseStmt();
 		}
 		if(!x) {
 			InspireDriver driver(code, manager);
-			save_symbol_table(driver, definitions);
-			append_type_aliases(driver, aliases);
+			saveSymbolTable(driver, definitions);
+			appendTypeAliases(driver, aliases);
 			x = driver.parseProgram();
 		}
 
@@ -207,7 +207,7 @@ namespace parser {
 		}
 
 
-		std::vector<NodeAddress> extract_addresses(NodePtr root) {
+		std::vector<NodeAddress> extractAddresses(NodePtr root) {
 			// search all marked locations within the parsed code fragment
 			std::vector<NodeAddress> res;
 			core::visitDepthFirst(NodeAddress(root), [&](const NodeAddress& cur) {
@@ -237,11 +237,11 @@ namespace parser {
 
 	} // annon namespace
 
-	std::vector<NodeAddress> parse_addresses_expression(NodeManager& manager, const string& code, bool onFailThrow,
-	                                                   const definition_map& definitions, const type_alias_map& aliases) {
+	std::vector<NodeAddress> parseAddressesExpression(NodeManager& manager, const string& code, bool onFailThrow,
+	                                                   const definitionMap& definitions, const typeAliasMap& aliases) {
 		InspireDriver driver(code, manager);
-		save_symbol_table(driver, definitions);
-		append_type_aliases(driver, aliases);
+		saveSymbolTable(driver, definitions);
+		appendTypeAliases(driver, aliases);
 		auto root = driver.parseExpression();
 
 		// check the result
@@ -250,14 +250,14 @@ namespace parser {
 			return std::vector<NodeAddress>();
 		}
 
-		return extract_addresses(root);
+		return extractAddresses(root);
 	}
 
-	std::vector<NodeAddress> parse_addresses_statement(NodeManager& manager, const string& code, bool onFailThrow,
-	                                                   const definition_map& definitions, const type_alias_map& aliases) {
+	std::vector<NodeAddress> parseAddressesStatement(NodeManager& manager, const string& code, bool onFailThrow,
+	                                                   const definitionMap& definitions, const typeAliasMap& aliases) {
 		InspireDriver driver(code, manager);
-		save_symbol_table(driver, definitions);
-		append_type_aliases(driver, aliases);
+		saveSymbolTable(driver, definitions);
+		appendTypeAliases(driver, aliases);
 		auto root = driver.parseStmt();
 
 		// check the result
@@ -266,13 +266,13 @@ namespace parser {
 			return std::vector<NodeAddress>();
 		}
 
-		return extract_addresses(root);
+		return extractAddresses(root);
 	}
 
-	std::vector<NodeAddress> parse_addresses_program(NodeManager& manager, const string& code, bool onFailThrow, const definition_map& definitions, const type_alias_map& aliases) {
+	std::vector<NodeAddress> parseAddressesProgram(NodeManager& manager, const string& code, bool onFailThrow, const definitionMap& definitions, const typeAliasMap& aliases) {
 		InspireDriver driver(code, manager);
-		save_symbol_table(driver, definitions);
-		append_type_aliases(driver, aliases);
+		saveSymbolTable(driver, definitions);
+		appendTypeAliases(driver, aliases);
 		auto root = driver.parseProgram();
 
 		// check the result
@@ -281,7 +281,7 @@ namespace parser {
 			return std::vector<NodeAddress>();
 		}
 
-		return extract_addresses(root);
+		return extractAddresses(root);
 	}
 
 

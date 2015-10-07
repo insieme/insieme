@@ -67,9 +67,9 @@ blank         [ \t]
 	//  http://www.gnu.org/software/bison/manual/html_node/Multiple-start_002dsymbols.html
 	//  There is somehow something different, start_token is passed to the lexer from the parser and is never modified,
 	//  I  use a double ptr to alter the original value
-	if (start_token){
-		auto t = start_token;
-		start_token = nullptr;
+	if (startToken){
+		auto t = startToken;
+		startToken = nullptr;
 		return *t;
 	}
 

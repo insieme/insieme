@@ -67,34 +67,34 @@ namespace parser {
 		struct DeclarationContext {
 
 			struct Scope {
-				type_alias_map alias;
-				definition_map types;
-				definition_map symbols;
+				typeAliasMap alias;
+				definitionMap types;
+				definitionMap symbols;
 			};
 
 			std::vector<Scope> stack;
 
 			// public:
 
-			DeclarationContext() { open_scope(); /* global scope */ }
+			DeclarationContext() { openScope(); /* global scope */ }
 			DeclarationContext(const DeclarationContext& o) =delete;
 
 			// ~~~~~~~~~~~~~~~~~~~~~ scope ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
 
-			void open_scope();
-			void close_scope();
+			void openScope();
+			void closeScope();
 
-			void add_type_alias(const GenericTypePtr& pattern, const TypePtr& substitute);
+			void addTypeAlias(const GenericTypePtr& pattern, const TypePtr& substitute);
 			TypePtr resolve(const TypePtr& type) const;
 
-			bool add_type(const std::string& name, const node_factory& factory);
-			bool add_type(const std::string& name, const TypePtr& type);
+			bool addType(const std::string& name, const nodeFactory& factory);
+			bool addType(const std::string& name, const TypePtr& type);
 
-			bool add_symb(const std::string& name, const node_factory& factory);
-			bool add_symb(const std::string& name, const ExpressionPtr& expr);
+			bool addSymb(const std::string& name, const nodeFactory& factory);
+			bool addSymb(const std::string& name, const ExpressionPtr& expr);
 
-			NodePtr find_type(const std::string& name) const;
-			NodePtr find_symb(const std::string& name) const;
+			NodePtr findType(const std::string& name) const;
+			NodePtr findSymb(const std::string& name) const;
 
 		};
 
@@ -132,7 +132,7 @@ namespace parser {
 
 			NodePtr result;
 
-			location glob_loc;
+			location globLoc;
 
 		  private:
 
@@ -140,7 +140,7 @@ namespace parser {
 			InspireScanner scanner;
 			InspireParser parser;
 
-			TagTypeReferencePtr current_record;
+			TagTypeReferencePtr currentRecord;
 
 		  public:
 
@@ -341,72 +341,72 @@ namespace parser {
 			/**
 			 * stores in the current scope the "this" variable with the given type
 			 */
-			void add_this(const location& l, const TypePtr& classType);
+			void addThis(const location& l, const TypePtr& classType);
 
 			/**
 			 * add a symbol into the scope
 			 */
-			void add_symb(const location& l, const std::string& name, const node_factory& factory);
+			void addSymb(const location& l, const std::string& name, const nodeFactory& factory);
 
 			/**
 			 * add a symbol into the scope
 			 */
-			void add_symb(const location& l, const std::string& name, const ExpressionPtr& node);
+			void addSymb(const location& l, const std::string& name, const ExpressionPtr& node);
 
 			/**
 			 * add a symbol into the scope (no location, used when setting up the InspireParser)
 			 */
-			void add_symb(const std::string& name, const node_factory& factory);
+			void addSymb(const std::string& name, const nodeFactory& factory);
 
 			/**
 			 * add a symbol into the scope (no location, used when setting up the InspireParser)
 			 */
-			void add_symb(const std::string& name, const ExpressionPtr& node);
+			void addSymb(const std::string& name, const ExpressionPtr& node);
 
 			/**
 			 * add a symbol into the scope
  			*/
-			void add_type(const location& l, const std::string& name, const node_factory& factory);
+			void addType(const location& l, const std::string& name, const nodeFactory& factory);
 
 			/**
 			 * add a symbol into the scope
 			 */
-			void add_type(const location& l, const std::string& name, const TypePtr& node);
+			void addType(const location& l, const std::string& name, const TypePtr& node);
 
 			/**
 			 * add a symbol into the scope (no location, used when setting up the InspireParser)
 			 */
-			void add_type(const std::string& name, const node_factory& factory);
+			void addType(const std::string& name, const nodeFactory& factory);
 
 			/**
 			 * add a symbol into the scope (no location, used when setting up the InspireParser)
 			 */
-			void add_type(const std::string& name, const TypePtr& node);
+			void addType(const std::string& name, const TypePtr& node);
 
 			/**
 			 * add a type alias to the current scope
 			 */
-			void add_type_alias(const GenericTypePtr& pattern, const TypePtr& substitute);
+			void addTypeAlias(const GenericTypePtr& pattern, const TypePtr& substitute);
 
 			/**
 			 *  Open a nested scope.
 			 */
-			void open_scope();
+			void openScope();
 
 			/**
 			 *  Close a nested scope.
 			 */
-			void close_scope();
+			void closeScope();
 
 			/**
 			 * Opens a new record definition.
 			 */
-			void begin_record(const std::string& name);
+			void beginRecord(const std::string& name);
 
 			/**
 			 * Ends a record definition.
 			 */
-			void end_record();
+			void endRecord();
 
 			/**
 			 * Obtains the type of a this pointer in the currently defined record.
@@ -426,31 +426,31 @@ namespace parser {
 			/**
 			 *  support for using keyword (allows to include extensions)
 			 */
-			void import_extension(const location& l, const std::string& extension_name);
+			void importExtension(const location& l, const std::string& extensionName);
 
 			/**
 			 * supports the import of all the symbols and aliases of an extension.
 			 */
-			void import_extension(const lang::Extension& extension);
+			void importExtension(const lang::Extension& extension);
 
 			/**
 			 * supports the import of an extension.
 			 */
 			template<typename Extension>
-			void import_extension() {
-				import_extension(mgr.getLangExtension<Extension>());
+			void importExtension() {
+				importExtension(mgr.getLangExtension<Extension>());
 			}
 
 			/**
 			 *  debug: prints location in parsed text
 			 */
-			void print_location(const location& l) const;
+			void printLocation(const location& l) const;
 
 			// Error handling.
 			void error(const location& l, const std::string& m) const;
 			void error(const std::string& m) const;
-			bool where_errors() const;
-			void print_errors(std::ostream& out = std::cout, bool color = true) const;
+			bool whereErrors() const;
+			void printErrors(std::ostream& out = std::cout, bool color = true) const;
 		};
 
 		class AddressMark : public core::value_annotation::copy_on_migration {};

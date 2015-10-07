@@ -72,22 +72,22 @@ namespace parser {
 		/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ scope manager ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 
-		void DeclarationContext::open_scope() {
+		void DeclarationContext::openScope() {
 			stack.push_back(Scope());
 		}
-		void DeclarationContext::close_scope() {
+		void DeclarationContext::closeScope() {
 			assert_gt(stack.size(), 1) << "Attempted to pop global scope!";
 			stack.pop_back();
 		}
 
-		bool DeclarationContext::add_symb(const std::string& name, const node_factory& factory) {
+		bool DeclarationContext::addSymb(const std::string& name, const nodeFactory& factory) {
 			auto& symbols = stack.back().symbols;
 			if (symbols.find(name) != symbols.end()) return false;
 			symbols[name] = factory;
 			return true;
 		}
 
-		bool DeclarationContext::add_type(const std::string& name, const node_factory& factory) {
+		bool DeclarationContext::addType(const std::string& name, const nodeFactory& factory) {
 			auto& types = stack.back().types;
 			if (types.find(name) != types.end()) return false;
 			types[name] = factory;
@@ -95,10 +95,10 @@ namespace parser {
 		}
 
 
-		NodePtr DeclarationContext::find_symb(const std::string& name) const {
+		NodePtr DeclarationContext::findSymb(const std::string& name) const {
 			// lookup symbols throughout scopes
 			for(auto it = stack.rbegin(); it != stack.rend(); ++it) {
-				const definition_map& cur = it->symbols;
+				const definitionMap& cur = it->symbols;
 				auto pos = cur.find(name);
 				if (pos != cur.end()) return pos->second();
 			}
@@ -106,10 +106,10 @@ namespace parser {
 			return nullptr;
 		}
 
-		NodePtr DeclarationContext::find_type(const std::string& name) const {
+		NodePtr DeclarationContext::findType(const std::string& name) const {
 			// lookup symbols throughout scopes
 			for(auto it = stack.rbegin(); it != stack.rend(); ++it) {
-				const definition_map& cur = it->types;
+				const definitionMap& cur = it->types;
 				auto pos = cur.find(name);
 				if (pos != cur.end()) return pos->second();
 			}
@@ -117,7 +117,7 @@ namespace parser {
 			return nullptr;
 		}
 
-		void DeclarationContext::add_type_alias(const GenericTypePtr& pattern, const TypePtr& substitute) {
+		void DeclarationContext::addTypeAlias(const GenericTypePtr& pattern, const TypePtr& substitute) {
 			auto& aliases = stack.back().alias;
 			assert_true(aliases.find(pattern) == aliases.end());
 			aliases[pattern] = substitute;
@@ -156,50 +156,50 @@ namespace parser {
 		/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ InspireDriver ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 		InspireDriver::InspireDriver(const std::string& str, NodeManager& mgr)
-		    : scopes(), mgr(mgr), builder(mgr), file("global scope"), str(str), tu(mgr), result(nullptr), glob_loc(&file), ss(str), scanner(&ss),
+		    : scopes(), mgr(mgr), builder(mgr), file("global scope"), str(str), tu(mgr), result(nullptr), globLoc(&file), ss(str), scanner(&ss),
 		      parser(*this, scanner) {
 		}
 
 		InspireDriver::~InspireDriver() {}
 
 		ProgramPtr InspireDriver::parseProgram() {
-			scanner.set_start_program();
+			scanner.setStartProgram();
 			int fail = parser.parse();
 			if(fail) {
-				print_errors();
+				printErrors();
 				return nullptr;
 			}
 			return result.as<ProgramPtr>();
 		}
 
 		TypePtr InspireDriver::parseType() {
-			scanner.set_start_type();
+			scanner.setStartType();
 			InspireParser parser(*this, scanner);
 			int fail = parser.parse();
 			if(fail) {
-				print_errors();
+				printErrors();
 				return nullptr;
 			}
 			return result.as<TypePtr>();
 		}
 
 		StatementPtr InspireDriver::parseStmt() {
-			scanner.set_start_statement();
+			scanner.setStartStatement();
 			InspireParser parser(*this, scanner);
 			int fail = parser.parse();
 			if(fail) {
-				print_errors();
+				printErrors();
 				return nullptr;
 			}
 			return result.as<StatementPtr>();
 		}
 
 		ExpressionPtr InspireDriver::parseExpression() {
-			scanner.set_start_expression();
+			scanner.setStartExpression();
 			InspireParser parser(*this, scanner);
 			int fail = parser.parse();
 			if(fail) {
-				print_errors();
+				printErrors();
 				return nullptr;
 			}
 			return result.as<ExpressionPtr>();
@@ -209,7 +209,7 @@ namespace parser {
 
 		ExpressionPtr InspireDriver::findSymbol(const location& l, const std::string& name) {
 			//look in the already defined symbols
-			auto x = scopes.find_symb(name);
+			auto x = scopes.findSymb(name);
 
 			//look in lang basic
 			if(!x) {
@@ -245,7 +245,7 @@ namespace parser {
 		TypePtr InspireDriver::findType(const location& l, const std::string& name) {
 
 			// search types defined in current scope
-			auto x = scopes.find_type(name);
+			auto x = scopes.findType(name);
 			if(x && !x.isa<TypePtr>()) {
 				error(l, format("the symbol %s is not a type", name));
 				return nullptr;
@@ -454,12 +454,12 @@ namespace parser {
 		}
 
 		TagTypePtr InspireDriver::genRecordType(const location& l, const NodeType& type, const string& name, const ParentList& parents, const FieldList& fields, const LambdaExprList& ctors,
-				const LambdaExprPtr& dtor_in, const MemberFunctionList& mfuns, const PureVirtualMemberFunctionList& pvmfuns) {
+				const LambdaExprPtr& dtorIn, const MemberFunctionList& mfuns, const PureVirtualMemberFunctionList& pvmfuns) {
 
 			TagTypePtr res;
 
 			// check whether a default constructor is required
-			LambdaExprPtr dtor = (dtor_in) ? dtor_in : builder.getDefaultDestructor(name);
+			LambdaExprPtr dtor = (dtorIn) ? dtorIn : builder.getDefaultDestructor(name);
 
 			if (type == NT_Struct) {
 				res = builder.structType(name,parents,fields,ctors,dtor,mfuns,pvmfuns);
@@ -528,24 +528,24 @@ namespace parser {
 		 * generates a constructor for the currently defined record type
 		 */
 		LambdaExprPtr InspireDriver::genConstructor(const location& l, const VariableList& params, const StatementPtr& body) {
-			assert_true(current_record) << "Not within record definition!";
+			assert_true(currentRecord) << "Not within record definition!";
 
 			// get this-type
-			auto thisParam = builder.variable(builder.refType(current_record));
+			auto thisParam = builder.variable(builder.refType(currentRecord));
 
 			// create full parameter list
-			VariableList ctor_params;
-			ctor_params.push_back(thisParam);
-			for(const auto& cur : params) ctor_params.push_back(cur);
+			VariableList ctorParams;
+			ctorParams.push_back(thisParam);
+			for(const auto& cur : params) ctorParams.push_back(cur);
 
 			// update body
-			auto new_body = transform::replaceAll(mgr, body, genThis(l), thisParam).as<StatementPtr>();
+			auto newBody = transform::replaceAll(mgr, body, genThis(l), thisParam).as<StatementPtr>();
 
 			// create constructor type
-			auto ctorType = builder.functionType(extractTypes(ctor_params), thisParam->getType(), FK_CONSTRUCTOR);
+			auto ctorType = builder.functionType(extractTypes(ctorParams), thisParam->getType(), FK_CONSTRUCTOR);
 
 			// replace all variables in the body by their implicitly materialized version
-			auto ingredients = transform::materialize({ctor_params, new_body});
+			auto ingredients = transform::materialize({ctorParams, newBody});
 
 			// create the constructor
 			return builder.lambdaExpr(ctorType, ingredients.params, ingredients.body);
@@ -555,22 +555,22 @@ namespace parser {
 		 * generates a destructor for the currently defined record type
 		 */
 		LambdaExprPtr InspireDriver::genDestructor(const location& l, const StatementPtr& body) {
-			assert_true(current_record) << "Not within record definition!";
+			assert_true(currentRecord) << "Not within record definition!";
 
 			// get this-type
-			auto thisParam = builder.variable(builder.refType(current_record));
+			auto thisParam = builder.variable(builder.refType(currentRecord));
 
 			// create full parameter list
 			VariableList params = { thisParam };
 
 			// update body
-			auto new_body = transform::replaceAll(mgr, body, genThis(l), thisParam).as<StatementPtr>();
+			auto newBody = transform::replaceAll(mgr, body, genThis(l), thisParam).as<StatementPtr>();
 
 			// create destructor type
 			auto dtorType = builder.functionType(extractTypes(params), thisParam->getType(), FK_DESTRUCTOR);
 
 			// replace all variables in the body by their implicitly materialized version
-			auto ingredients = transform::materialize({params, new_body});
+			auto ingredients = transform::materialize({params, newBody});
 
 			// create the destructor
 			return builder.lambdaExpr(dtorType, ingredients.params, ingredients.body);
@@ -581,26 +581,26 @@ namespace parser {
 		 */
 		MemberFunctionPtr InspireDriver::genMemberFunction(const location& l, bool virtl, bool cnst, bool voltile, const std::string& name, const LambdaExprPtr& lambda, bool isLambda) {
 			assert_false(lambda->isRecursive()) << "The parser should not produce recursive functions!";
-			assert_true(current_record) << "Not within record definition!";
+			assert_true(currentRecord) << "Not within record definition!";
 
 			// get this-type
-			auto thisType = builder.refType(current_record, cnst, voltile);
+			auto thisType = builder.refType(currentRecord, cnst, voltile);
 			if (!isLambda) thisType = builder.refType(thisType);
 			auto thisParam = builder.variable(thisType);
 
 			// create full parameter list
-			VariableList full_params;
-			full_params.push_back(thisParam);
-			for(const auto& cur : lambda.getParameterList()) full_params.push_back(cur);
+			VariableList fullParams;
+			fullParams.push_back(thisParam);
+			for(const auto& cur : lambda.getParameterList()) fullParams.push_back(cur);
 
 			// update body
-			auto new_body = transform::replaceAll(mgr, lambda->getBody(), genThis(l), thisParam).as<StatementPtr>();
+			auto newBody = transform::replaceAll(mgr, lambda->getBody(), genThis(l), thisParam).as<StatementPtr>();
 
 			// create member function type
-			auto memberFunType = builder.functionType(extractTypes(full_params), lambda->getFunctionType()->getReturnType(), FK_MEMBER_FUNCTION);
+			auto memberFunType = builder.functionType(extractTypes(fullParams), lambda->getFunctionType()->getReturnType(), FK_MEMBER_FUNCTION);
 
 			// replace all variables in the body by their implicitly materialized version
-			auto ingredients = (isLambda) ? transform::materialize({full_params, new_body}) : (transform::LambdaIngredients){full_params, new_body};
+			auto ingredients = (isLambda) ? transform::materialize({fullParams, newBody}) : (transform::LambdaIngredients){fullParams, newBody};
 
 			// create the member function
 			auto fun = builder.lambdaExpr(memberFunType, ingredients.params, ingredients.body);
@@ -614,18 +614,18 @@ namespace parser {
 		 */
 		PureVirtualMemberFunctionPtr InspireDriver::genPureVirtualMemberFunction(const location& l,  bool cnst, bool voltile, const std::string& name, const FunctionTypePtr& type) {
 			assert_true(type->isPlain()) << "Only plain function types should be covered here!";
-			assert_true(current_record) << "Not within record definition!";
+			assert_true(currentRecord) << "Not within record definition!";
 
 			// get this-type
-			auto thisType = builder.refType(current_record, cnst, voltile);
+			auto thisType = builder.refType(currentRecord, cnst, voltile);
 
 			// create full parameter type list
-			TypeList full_params;
-			full_params.push_back(thisType);
-			for(const auto& cur : type->getParameterTypes()) full_params.push_back(cur);
+			TypeList fullParams;
+			fullParams.push_back(thisType);
+			for(const auto& cur : type->getParameterTypes()) fullParams.push_back(cur);
 
 			// create member function type type
-			auto memberFunType = builder.functionType(full_params, type->getReturnType(), FK_MEMBER_FUNCTION);
+			auto memberFunType = builder.functionType(fullParams, type->getReturnType(), FK_MEMBER_FUNCTION);
 
 			// create the member function entry
 			return builder.pureVirtualMemberFunction(name, type);
@@ -746,7 +746,7 @@ namespace parser {
 			auto resolvedType = resolveTypeAliases(l, type);
 			VariablePtr variable = builder.variable(resolvedType);
 			annotations::attachName(variable, name);
-			add_symb(l, name, variable);
+			addSymb(l, name, variable);
 			return variable;
 		}
 
@@ -802,7 +802,7 @@ namespace parser {
 			auto resolvedType = resolveTypeAliases(l, type);
 			auto variable = builder.variable(resolvedType);
 			annotations::attachName(variable, name);
-			add_symb(l, name, variable);
+			addSymb(l, name, variable);
 			return builder.declarationStmt(variable, getScalar(init));
 		}
 
@@ -815,13 +815,13 @@ namespace parser {
 
 		ExpressionPtr InspireDriver::genThis(const location& l) {
 			// check valid scope
-			if (!current_record) {
+			if (!currentRecord) {
 				error(l, "This-pointer in non-record context!");
 				return nullptr;
 			}
 
 			// build a literal
-			return builder.literal("this", builder.refType(current_record));
+			return builder.literal("this", builder.refType(currentRecord));
 		}
 
 
@@ -841,7 +841,7 @@ namespace parser {
 
 		// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Scope management  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-		void InspireDriver::add_symb(const location& l, const std::string& name, const node_factory&  factory) {
+		void InspireDriver::addSymb(const location& l, const std::string& name, const nodeFactory&  factory) {
 
 			if(name.find(".") != std::string::npos) {
 				error(l, format("symbol names can not contain dot chars: %s", name));
@@ -851,27 +851,27 @@ namespace parser {
 			// ignore wildcard for unused variables
 			if(name == "_") { return; }
 
-			if(!scopes.add_symb(name, factory)) { error(l, format("symbol %s redefined", name)); }
+			if(!scopes.addSymb(name, factory)) { error(l, format("symbol %s redefined", name)); }
 		}
 
-		void InspireDriver::add_symb(const location& l, const std::string& name, const ExpressionPtr& node) {
-			add_symb(l, name, [=]() -> NodePtr { return node; });
+		void InspireDriver::addSymb(const location& l, const std::string& name, const ExpressionPtr& node) {
+			addSymb(l, name, [=]() -> NodePtr { return node; });
 		}
 
 
-		void InspireDriver::add_symb(const std::string& name, const node_factory& factory) {
-			add_symb(glob_loc, name, factory);
+		void InspireDriver::addSymb(const std::string& name, const nodeFactory& factory) {
+			addSymb(globLoc, name, factory);
 		}
 
-		void InspireDriver::add_symb(const std::string& name, const ExpressionPtr& node) {
-			add_symb(name, [=]() -> NodePtr { return node; });
+		void InspireDriver::addSymb(const std::string& name, const ExpressionPtr& node) {
+			addSymb(name, [=]() -> NodePtr { return node; });
 		}
 
-		void InspireDriver::add_type_alias(const GenericTypePtr& pattern, const TypePtr& substitute) {
-			scopes.add_type_alias(pattern, substitute);
+		void InspireDriver::addTypeAlias(const GenericTypePtr& pattern, const TypePtr& substitute) {
+			scopes.addTypeAlias(pattern, substitute);
 		}
 
-		void InspireDriver::add_type(const location& l, const std::string& name, const node_factory&  factory) {
+		void InspireDriver::addType(const location& l, const std::string& name, const nodeFactory&  factory) {
 
 			if(name.find(".") != std::string::npos) {
 				error(l, format("symbol names can not contain dot chars: %s", name));
@@ -888,79 +888,79 @@ namespace parser {
 				annotations::attachName(tagType->getRecord(), name);
 			}
 
-			if(!scopes.add_type(name, factory)) { error(l, format("type name %s redefined", name)); }
+			if(!scopes.addType(name, factory)) { error(l, format("type name %s redefined", name)); }
 		}
 
-		void InspireDriver::add_type(const location& l, const std::string& name, const TypePtr& node) {
-			add_type(l, name, [=]() -> NodePtr { return node; });
+		void InspireDriver::addType(const location& l, const std::string& name, const TypePtr& node) {
+			addType(l, name, [=]() -> NodePtr { return node; });
 		}
 
 
-		void InspireDriver::add_type(const std::string& name, const node_factory& factory) {
-			add_type(glob_loc, name, factory);
+		void InspireDriver::addType(const std::string& name, const nodeFactory& factory) {
+			addType(globLoc, name, factory);
 		}
 
-		void InspireDriver::add_type(const std::string& name, const TypePtr& node) {
-			add_type(name, [=]() -> NodePtr { return node; });
+		void InspireDriver::addType(const std::string& name, const TypePtr& node) {
+			addType(name, [=]() -> NodePtr { return node; });
 		}
 
-		void InspireDriver::add_this(const location& l, const TypePtr& classType) {
+		void InspireDriver::addThis(const location& l, const TypePtr& classType) {
 			// gen ref type
 			auto refThis = builder.refType(classType);
 			// gen var
 			auto thisVar = builder.variable(refThis);
 			// save in scope
-			add_symb(l, "this", thisVar);
+			addSymb(l, "this", thisVar);
 		}
 
 
-		void InspireDriver::open_scope() {
-			scopes.open_scope();
+		void InspireDriver::openScope() {
+			scopes.openScope();
 		}
 
-		void InspireDriver::close_scope() {
-			scopes.close_scope();
+		void InspireDriver::closeScope() {
+			scopes.closeScope();
 		}
 
-		void InspireDriver::begin_record(const std::string& name) {
-			assert_false(current_record);
-			current_record = builder.tagTypeReference(name);
+		void InspireDriver::beginRecord(const std::string& name) {
+			assert_false(currentRecord);
+			currentRecord = builder.tagTypeReference(name);
 		}
 
-		void InspireDriver::end_record() {
-			assert_true(current_record);
-			current_record = nullptr;
+		void InspireDriver::endRecord() {
+			assert_true(currentRecord);
+			currentRecord = nullptr;
 		}
 
 		TagTypeReferencePtr InspireDriver::getThisType() {
-			assert_true(current_record);
-			return current_record;
+			assert_true(currentRecord);
+			return currentRecord;
 		}
 
-		void InspireDriver::import_extension(const location& l, const std::string& extension_name) {
-			auto name = extension_name;
+		void InspireDriver::importExtension(const location& l, const std::string& extensionName) {
+			auto name = extensionName;
 			name.replace(0, 1, "");
 			name.replace(name.size() - 1, 1, "");
 
 			// get extension factory from the registry
 			auto optFactory = lang::ExtensionRegistry::getInstance().lookupExtensionFactory(name);
 			if (optFactory) {
-				import_extension((*optFactory)(mgr));
+				importExtension((*optFactory)(mgr));
 			} else {
 				error(l, format("Unable to locate module: %s", name));
 			}
 		}
 
-		void InspireDriver::import_extension(const lang::Extension& extension) {
+		void InspireDriver::importExtension(const lang::Extension& extension) {
 
 			// import symbols
 			for(const auto& cur : extension.getSymbols()) {
-				add_symb(cur.first, cur.second);
+				addSymb(cur.first, cur.second);
 			}
 
 			// import type aliases
 			for(const auto& cur : extension.getTypeAliases()) {
-				add_type_alias(cur.first, cur.second);
+				addTypeAlias(cur.first, cur.second);
 			}
 
 		}
@@ -983,7 +983,7 @@ namespace parser {
 
 
 			// TODO: move this to string utils
-			std::vector<std::string> split_string(const std::string& s) {
+			std::vector<std::string> splitString(const std::string& s) {
 				std::vector<std::string> res;
 				std::string delim = "\n";
 
@@ -1015,8 +1015,8 @@ namespace parser {
 
 		} // annon
 
-		void InspireDriver::print_location(const location& l) const {
-			auto buffer = split_string(str);
+		void InspireDriver::printLocation(const location& l) const {
+			auto buffer = splitString(str);
 			int line = 1;
 
 			//  int lineb = l.begin.line;
@@ -1047,17 +1047,17 @@ namespace parser {
 		}
 
 		void InspireDriver::error(const std::string& m) const {
-			errors.push_back(ParserError(glob_loc, m));
+			errors.push_back(ParserError(globLoc, m));
 		}
 
-		bool InspireDriver::where_errors() const {
-			if(!errors.empty()) { print_errors(); }
+		bool InspireDriver::whereErrors() const {
+			if(!errors.empty()) { printErrors(); }
 			return !errors.empty();
 		}
 
 
-		void InspireDriver::print_errors(std::ostream& out, bool color) const {
-			auto buffer = split_string(str);
+		void InspireDriver::printErrors(std::ostream& out, bool color) const {
+			auto buffer = splitString(str);
 			int line = 1;
 			for(const auto& err : errors) {
 				int lineb = err.l.begin.line;
