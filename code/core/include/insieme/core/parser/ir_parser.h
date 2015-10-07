@@ -60,17 +60,17 @@ namespace parser {
 	/**
 	 * A type for an entity producing a node.
 	 */
-	typedef std::function<NodePtr()> nodeFactory;
+	typedef std::function<NodePtr()> NodeFactory;
 
 	/**
 	 * A type defining a mapping form symbol names to factories producing the corresponding IR node.
 	 */
-	typedef std::map<std::string, nodeFactory> definitionMap;
+	typedef std::map<std::string, NodeFactory> DefinitionMap;
 
 	/**
 	 * A type defining a mapping between generic types and type aliases.
 	 */
-	typedef std::map<GenericTypePtr, TypePtr> typeAliasMap;
+	typedef std::map<GenericTypePtr, TypePtr> TypeAliasMap;
 
 	/**
 	 * Parses an IR fragment and creates the corresponding IR DAG using the given node manager. The given
@@ -93,7 +93,7 @@ namespace parser {
 	 * @throw an IRParserException if the parsing failed and the onFailThrow flag was set; the Exception tries to explain the reason for the parsing error.
 	 */
 	NodePtr parseAny(NodeManager& manager, const string& code, bool onFailThrow = false,
-	                 const definitionMap& definitions = definitionMap(), const typeAliasMap& aliases = typeAliasMap());
+	                 const DefinitionMap& definitions = DefinitionMap(), const TypeAliasMap& aliases = TypeAliasMap());
 
 	/**
 	 * A specialized version of the general parse function focusing specifically on types.
@@ -109,7 +109,7 @@ namespace parser {
 	 * @throw an IRParserException if the parsing failed and the onFailThrow flag was set; the Exception tries to explain the reason for the parsing error.
 	 */
 	TypePtr parseType(NodeManager& manager, const string& code, bool onFailThrow = false,
-	                  const definitionMap& definitions = definitionMap(), const typeAliasMap& aliases = typeAliasMap());
+	                  const DefinitionMap& definitions = DefinitionMap(), const TypeAliasMap& aliases = TypeAliasMap());
 
 	/**
 	 * A specialized version of the general parse function focusing specifically on expressions. Using the specialized variant
@@ -124,7 +124,7 @@ namespace parser {
 	 * @throw an IRParserException if the parsing failed and the onFailThrow flag was set; the Exception tries to explain the reason for the parsing error.
 	 */
 	ExpressionPtr parseExpr(NodeManager& manager, const string& code, bool onFailThrow = false,
-	                        const definitionMap& definitions = definitionMap(), const typeAliasMap& aliases = typeAliasMap());
+	                        const DefinitionMap& definitions = DefinitionMap(), const TypeAliasMap& aliases = TypeAliasMap());
 
 	/**
 	 * A specialized version of the general parse function which is focusing specifically on statements. Using the specialized variant
@@ -139,7 +139,7 @@ namespace parser {
 	 * @throw an IRParserException if the parsing failed and the onFailThrow flag was set; the Exception tries to explain the reason for the parsing error.
 	 */
 	StatementPtr parseStmt(NodeManager& manager, const string& code, bool onFailThrow = false,
-	                       const definitionMap& definitions = definitionMap(), const typeAliasMap& aliases = typeAliasMap());
+	                       const DefinitionMap& definitions = DefinitionMap(), const TypeAliasMap& aliases = TypeAliasMap());
 
 	/**
 	 * A specialized version of the general parse function which is focusing specifically on full applications. Using the specialized variant
@@ -154,7 +154,7 @@ namespace parser {
 	 * @throw an IRParserException if the parsing failed and the onFailThrow flag was set; the Exception tries to explain the reason for the parsing error.
 	 */
 	ProgramPtr parseProgram(NodeManager& manager, const string& code, bool onFailThrow = false,
-	                        const definitionMap& definitions = definitionMap(), const typeAliasMap& aliases = typeAliasMap());
+	                        const DefinitionMap& definitions = DefinitionMap(), const TypeAliasMap& aliases = TypeAliasMap());
 
 	/**
 	 * A specialized version of the general parse function which is considering labels within the IR marking constructs
@@ -171,7 +171,7 @@ namespace parser {
 	 * @throw an IRParserException if the parsing failed and the onFailThrow flag was set; the Exception tries to explain the reason for the parsing error.
 	 */
 	std::vector<NodeAddress> parseAddressesExpression(NodeManager& manager, const string& code, bool onFailThrow = false,
-	                                                 const definitionMap& definitions = definitionMap(), const typeAliasMap& aliases = typeAliasMap());
+	                                                 const DefinitionMap& definitions = DefinitionMap(), const TypeAliasMap& aliases = TypeAliasMap());
 
 	/**
 	 * A specialized version of the general parse function which is considering labels within the IR marking constructs
@@ -188,13 +188,13 @@ namespace parser {
 	 * @throw an IRParserException if the parsing failed and the onFailThrow flag was set; the Exception tries to explain the reason for the parsing error.
 	 */
 	std::vector<NodeAddress> parseAddressesStatement(NodeManager& manager, const string& code, bool onFailThrow = false,
-	                                                 const definitionMap& definitions = definitionMap(), const typeAliasMap& aliases = typeAliasMap());
+	                                                 const DefinitionMap& definitions = DefinitionMap(), const TypeAliasMap& aliases = TypeAliasMap());
 
 	/**
 	 * equivalent to parse_addresses_statement but parsing a program, this avoids ambiguity in the grammar, allows us to use a simpler parser
 	 */
 	std::vector<NodeAddress> parseAddressesProgram(NodeManager& manager, const string& code, bool onFailThrow = false,
-	                                               const definitionMap& definitions = definitionMap(), const typeAliasMap& aliases = typeAliasMap());
+	                                               const DefinitionMap& definitions = DefinitionMap(), const TypeAliasMap& aliases = TypeAliasMap());
 
 	/**
 	 * The type of exception to be thrown by the parser in case the parsing was not successful.

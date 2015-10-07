@@ -90,8 +90,8 @@ namespace parser {
 		NodeManager manager;
 
 		// create default definitions and alias maps
-		definitionMap definitions;
-		typeAliasMap aliases;
+		DefinitionMap definitions;
+		TypeAliasMap aliases;
 
 		// add up definitions
 		for(const auto& cur : manager.getLangExtension<lang::ArrayExtension>().getDefinedSymbols()) definitions.insert(cur);

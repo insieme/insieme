@@ -152,10 +152,10 @@ namespace core {
 		// --- Add parser support ---
 
 		// the type utilized for forwarding literal definitions to the parser functions
-		typedef parser::definitionMap lazyDefinitionMap;
+		typedef parser::DefinitionMap LazyDefinitionMap;
 
 		// a convenience type for forwarding literal definitions to the parser functions
-		typedef std::map<std::string, NodePtr> eagerDefinitionMap;
+		typedef std::map<std::string, NodePtr> EagerDefinitionMap;
 
 		/**
 		 * Parses any kind of IR fragment encoded within the given code. The given symbol table
@@ -168,88 +168,88 @@ namespace core {
 		 * @param code the code to be parsed and returned as a node
 		 * @param symbols a set of pre-defined symbols to be used within the code
 		 */
-		NodePtr parse(const string& code, const lazyDefinitionMap& symbols = lazyDefinitionMap()) const;
+		NodePtr parse(const string& code, const LazyDefinitionMap& symbols = LazyDefinitionMap()) const;
 
 		/**
 		 * The same as above, but utilizing a eager definition map (will be internally converted into a lazy map).
 		 */
-		NodePtr parse(const string& code, const eagerDefinitionMap& symbols) const;
+		NodePtr parse(const string& code, const EagerDefinitionMap& symbols) const;
 
 		/**
 		 * The same as the parse member function yet interpreting the given code as a type.
 		 */
-		TypePtr parseType(const string& code, const lazyDefinitionMap& symbols = lazyDefinitionMap()) const;
+		TypePtr parseType(const string& code, const LazyDefinitionMap& symbols = LazyDefinitionMap()) const;
 
 		/**
 		 * The same as above, but utilizing a eager definition map (will be internally converted into a lazy map).
 		 */
-		TypePtr parseType(const string& code, const eagerDefinitionMap& symbols) const;
+		TypePtr parseType(const string& code, const EagerDefinitionMap& symbols) const;
 
 		/**
 		 * The same as the parse member function yet interpreting the given code as an expression.
 		 */
-		ExpressionPtr parseExpr(const string& code, const lazyDefinitionMap& symbols = lazyDefinitionMap()) const;
+		ExpressionPtr parseExpr(const string& code, const LazyDefinitionMap& symbols = LazyDefinitionMap()) const;
 
 		/**
 		 * The same as above, but utilizing a eager definition map (will be internally converted into a lazy map).
 		 */
-		ExpressionPtr parseExpr(const string& code, const eagerDefinitionMap& symbols) const;
+		ExpressionPtr parseExpr(const string& code, const EagerDefinitionMap& symbols) const;
 
 		/**
 		 * The same as the parse member function yet interpreting the given code as a statement.
 		 */
-		StatementPtr parseStmt(const string& code, const lazyDefinitionMap& symbols = lazyDefinitionMap()) const;
+		StatementPtr parseStmt(const string& code, const LazyDefinitionMap& symbols = LazyDefinitionMap()) const;
 
 		/**
 		 * The same as above, but utilizing a eager definition map (will be internally converted into a lazy map).
 		 */
-		StatementPtr parseStmt(const string& code, const eagerDefinitionMap& symbols) const;
+		StatementPtr parseStmt(const string& code, const EagerDefinitionMap& symbols) const;
 
 		/**
 		 * The same as the parse member function yet interpreting the given code as a full program.
 		 */
-		ProgramPtr parseProgram(const string& code, const lazyDefinitionMap& symbols = lazyDefinitionMap()) const;
+		ProgramPtr parseProgram(const string& code, const LazyDefinitionMap& symbols = LazyDefinitionMap()) const;
 
 		/**
 		 * The same as above, but utilizing a eager definition map (will be internally converted into a lazy map).
 		 */
-		ProgramPtr parseProgram(const string& code, const eagerDefinitionMap& symbols) const;
+		ProgramPtr parseProgram(const string& code, const EagerDefinitionMap& symbols) const;
 
 		/**
 		 * Allows lists of addresses to be parsed in an expression. This parser supports the same grammar + allows constructs to be enclosed
 		 * within $ .. $ signs. Addresses referencing constructs enclosed like this will be returned. The resulting list is
 		 * ordered according to the order of node-addresses (lexicographical).
 		 */
-		vector<NodeAddress> parseAddressesExpression(const string& code, const lazyDefinitionMap& symbols = lazyDefinitionMap()) const;
+		vector<NodeAddress> parseAddressesExpression(const string& code, const LazyDefinitionMap& symbols = LazyDefinitionMap()) const;
 
 		/**
 		 * The same as above, but utilizing a eager definition map (will be internally converted into a lazy map).
 		 */
-		vector<NodeAddress> parseAddressesExpression(const string& code, const eagerDefinitionMap& symbols) const;
+		vector<NodeAddress> parseAddressesExpression(const string& code, const EagerDefinitionMap& symbols) const;
 
 		/**
 		 * Allows lists of addresses to be parsed in a Statement. This parser supports the same grammar + allows constructs to be enclosed
 		 * within $ .. $ signs. Addresses referencing constructs enclosed like this will be returned. The resulting list is
 		 * ordered according to the order of node-addresses (lexicographical).
 		 */
-		vector<NodeAddress> parseAddressesStatement(const string& code, const lazyDefinitionMap& symbols = lazyDefinitionMap()) const;
+		vector<NodeAddress> parseAddressesStatement(const string& code, const LazyDefinitionMap& symbols = LazyDefinitionMap()) const;
 
 		/**
 		 * The same as above, but utilizing a eager definition map (will be internally converted into a lazy map).
 		 */
-		vector<NodeAddress> parseAddressesStatement(const string& code, const eagerDefinitionMap& symbols) const;
+		vector<NodeAddress> parseAddressesStatement(const string& code, const EagerDefinitionMap& symbols) const;
 
 		/**
 		 * Allows lists of addresses to be parsed in an IR program. This parser supports the same grammar + allows constructs to be enclosed
 		 * within $ .. $ signs. Addresses referencing constructs enclosed like this will be returned. The resulting list is
 		 * ordered according to the order of node-addresses (lexicographical).
 		 */
-		vector<NodeAddress> parseAddressesProgram(const string& code, const lazyDefinitionMap& symbols = lazyDefinitionMap()) const;
+		vector<NodeAddress> parseAddressesProgram(const string& code, const LazyDefinitionMap& symbols = LazyDefinitionMap()) const;
 
 		/**
 		 * The same as above, but utilizing a eager definition map (will be internally converted into a lazy map).
 		 */
-		vector<NodeAddress> parseAddressesProgram(const string& code, const eagerDefinitionMap& symbols) const;
+		vector<NodeAddress> parseAddressesProgram(const string& code, const EagerDefinitionMap& symbols) const;
 
 
 		// --- Imported Standard Factory Methods from Node Types ---

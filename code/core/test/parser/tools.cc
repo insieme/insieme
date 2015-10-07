@@ -56,7 +56,7 @@ namespace parser {
 
 		namespace {
 
-			nodeFactory toFactory(const NodePtr& node) {
+			NodeFactory toFactory(const NodePtr& node) {
 				return [=]() { return node; };
 			}
 

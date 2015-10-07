@@ -80,14 +80,14 @@ namespace parser {
 			stack.pop_back();
 		}
 
-		bool DeclarationContext::addSymb(const std::string& name, const nodeFactory& factory) {
+		bool DeclarationContext::addSymb(const std::string& name, const NodeFactory& factory) {
 			auto& symbols = stack.back().symbols;
 			if (symbols.find(name) != symbols.end()) return false;
 			symbols[name] = factory;
 			return true;
 		}
 
-		bool DeclarationContext::addType(const std::string& name, const nodeFactory& factory) {
+		bool DeclarationContext::addType(const std::string& name, const NodeFactory& factory) {
 			auto& types = stack.back().types;
 			if (types.find(name) != types.end()) return false;
 			types[name] = factory;
@@ -98,7 +98,7 @@ namespace parser {
 		NodePtr DeclarationContext::findSymb(const std::string& name) const {
 			// lookup symbols throughout scopes
 			for(auto it = stack.rbegin(); it != stack.rend(); ++it) {
-				const definitionMap& cur = it->symbols;
+				const DefinitionMap& cur = it->symbols;
 				auto pos = cur.find(name);
 				if (pos != cur.end()) return pos->second();
 			}
@@ -109,7 +109,7 @@ namespace parser {
 		NodePtr DeclarationContext::findType(const std::string& name) const {
 			// lookup symbols throughout scopes
 			for(auto it = stack.rbegin(); it != stack.rend(); ++it) {
-				const definitionMap& cur = it->types;
+				const DefinitionMap& cur = it->types;
 				auto pos = cur.find(name);
 				if (pos != cur.end()) return pos->second();
 			}
@@ -841,7 +841,7 @@ namespace parser {
 
 		// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Scope management  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-		void InspireDriver::addSymb(const location& l, const std::string& name, const nodeFactory&  factory) {
+		void InspireDriver::addSymb(const location& l, const std::string& name, const NodeFactory&  factory) {
 
 			if(name.find(".") != std::string::npos) {
 				error(l, format("symbol names can not contain dot chars: %s", name));
@@ -859,7 +859,7 @@ namespace parser {
 		}
 
 
-		void InspireDriver::addSymb(const std::string& name, const nodeFactory& factory) {
+		void InspireDriver::addSymb(const std::string& name, const NodeFactory& factory) {
 			addSymb(globLoc, name, factory);
 		}
 
@@ -871,7 +871,7 @@ namespace parser {
 			scopes.addTypeAlias(pattern, substitute);
 		}
 
-		void InspireDriver::addType(const location& l, const std::string& name, const nodeFactory&  factory) {
+		void InspireDriver::addType(const location& l, const std::string& name, const NodeFactory&  factory) {
 
 			if(name.find(".") != std::string::npos) {
 				error(l, format("symbol names can not contain dot chars: %s", name));
@@ -896,7 +896,7 @@ namespace parser {
 		}
 
 
-		void InspireDriver::addType(const std::string& name, const nodeFactory& factory) {
+		void InspireDriver::addType(const std::string& name, const NodeFactory& factory) {
 			addType(globLoc, name, factory);
 		}
 

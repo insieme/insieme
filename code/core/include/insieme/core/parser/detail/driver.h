@@ -67,9 +67,9 @@ namespace parser {
 		struct DeclarationContext {
 
 			struct Scope {
-				typeAliasMap alias;
-				definitionMap types;
-				definitionMap symbols;
+				TypeAliasMap alias;
+				DefinitionMap types;
+				DefinitionMap symbols;
 			};
 
 			std::vector<Scope> stack;
@@ -87,10 +87,10 @@ namespace parser {
 			void addTypeAlias(const GenericTypePtr& pattern, const TypePtr& substitute);
 			TypePtr resolve(const TypePtr& type) const;
 
-			bool addType(const std::string& name, const nodeFactory& factory);
+			bool addType(const std::string& name, const NodeFactory& factory);
 			bool addType(const std::string& name, const TypePtr& type);
 
-			bool addSymb(const std::string& name, const nodeFactory& factory);
+			bool addSymb(const std::string& name, const NodeFactory& factory);
 			bool addSymb(const std::string& name, const ExpressionPtr& expr);
 
 			NodePtr findType(const std::string& name) const;
@@ -346,7 +346,7 @@ namespace parser {
 			/**
 			 * add a symbol into the scope
 			 */
-			void addSymb(const location& l, const std::string& name, const nodeFactory& factory);
+			void addSymb(const location& l, const std::string& name, const NodeFactory& factory);
 
 			/**
 			 * add a symbol into the scope
@@ -356,7 +356,7 @@ namespace parser {
 			/**
 			 * add a symbol into the scope (no location, used when setting up the InspireParser)
 			 */
-			void addSymb(const std::string& name, const nodeFactory& factory);
+			void addSymb(const std::string& name, const NodeFactory& factory);
 
 			/**
 			 * add a symbol into the scope (no location, used when setting up the InspireParser)
@@ -366,7 +366,7 @@ namespace parser {
 			/**
 			 * add a symbol into the scope
  			*/
-			void addType(const location& l, const std::string& name, const nodeFactory& factory);
+			void addType(const location& l, const std::string& name, const NodeFactory& factory);
 
 			/**
 			 * add a symbol into the scope
@@ -376,7 +376,7 @@ namespace parser {
 			/**
 			 * add a symbol into the scope (no location, used when setting up the InspireParser)
 			 */
-			void addType(const std::string& name, const nodeFactory& factory);
+			void addType(const std::string& name, const NodeFactory& factory);
 
 			/**
 			 * add a symbol into the scope (no location, used when setting up the InspireParser)

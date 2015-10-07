@@ -70,7 +70,7 @@ namespace parser {
 			}
 		}
 
-		void saveSymbolTable(InspireDriver& driver, const definitionMap& definitions) {
+		void saveSymbolTable(InspireDriver& driver, const DefinitionMap& definitions) {
 			for(const auto& def : definitions) {
 				// the use of the line: symbols["name"] = builder.parseX("....", symbols);
 				// will append a symbols with a null ptr inside. this is not good
@@ -78,14 +78,14 @@ namespace parser {
 			}
 		}
 
-		void appendTypeAliases(InspireDriver& driver, const typeAliasMap& aliases) {
+		void appendTypeAliases(InspireDriver& driver, const TypeAliasMap& aliases) {
 			for(const auto& cur : aliases) {
 				driver.addTypeAlias(cur.first, cur.second);
 			}
 		}
 	}
 
-	TypePtr parseType(NodeManager& manager, const string& code, bool onFailThrow, const definitionMap& definitions, const typeAliasMap& aliases) {
+	TypePtr parseType(NodeManager& manager, const string& code, bool onFailThrow, const DefinitionMap& definitions, const TypeAliasMap& aliases) {
 		InspireDriver driver(code, manager);
 		saveSymbolTable(driver, definitions);
 		appendTypeAliases(driver, aliases);
@@ -94,7 +94,7 @@ namespace parser {
 		return x;
 	}
 
-	ExpressionPtr parseExpr(NodeManager& manager, const string& code, bool onFailThrow, const definitionMap& definitions, const typeAliasMap& aliases) {
+	ExpressionPtr parseExpr(NodeManager& manager, const string& code, bool onFailThrow, const DefinitionMap& definitions, const TypeAliasMap& aliases) {
 		InspireDriver driver(code, manager);
 		saveSymbolTable(driver, definitions);
 		appendTypeAliases(driver, aliases);
@@ -103,7 +103,7 @@ namespace parser {
 		return x;
 	}
 
-	StatementPtr parseStmt(NodeManager& manager, const string& code, bool onFailThrow, const definitionMap& definitions, const typeAliasMap& aliases) {
+	StatementPtr parseStmt(NodeManager& manager, const string& code, bool onFailThrow, const DefinitionMap& definitions, const TypeAliasMap& aliases) {
 		InspireDriver driver(code, manager);
 		saveSymbolTable(driver, definitions);
 		appendTypeAliases(driver, aliases);
@@ -112,7 +112,7 @@ namespace parser {
 		return x;
 	}
 
-	ProgramPtr parseProgram(NodeManager& manager, const string& code, bool onFailThrow, const definitionMap& definitions, const typeAliasMap& aliases) {
+	ProgramPtr parseProgram(NodeManager& manager, const string& code, bool onFailThrow, const DefinitionMap& definitions, const TypeAliasMap& aliases) {
 		InspireDriver driver(code, manager);
 		saveSymbolTable(driver, definitions);
 		appendTypeAliases(driver, aliases);
@@ -121,7 +121,7 @@ namespace parser {
 		return x;
 	}
 
-	NodePtr parseAny(NodeManager& manager, const string& code, bool onFailThrow, const definitionMap& definitions, const typeAliasMap& aliases) {
+	NodePtr parseAny(NodeManager& manager, const string& code, bool onFailThrow, const DefinitionMap& definitions, const TypeAliasMap& aliases) {
 		NodePtr x;
 		{
 			InspireDriver driver(code, manager);
@@ -238,7 +238,7 @@ namespace parser {
 	} // annon namespace
 
 	std::vector<NodeAddress> parseAddressesExpression(NodeManager& manager, const string& code, bool onFailThrow,
-	                                                   const definitionMap& definitions, const typeAliasMap& aliases) {
+	                                                   const DefinitionMap& definitions, const TypeAliasMap& aliases) {
 		InspireDriver driver(code, manager);
 		saveSymbolTable(driver, definitions);
 		appendTypeAliases(driver, aliases);
@@ -254,7 +254,7 @@ namespace parser {
 	}
 
 	std::vector<NodeAddress> parseAddressesStatement(NodeManager& manager, const string& code, bool onFailThrow,
-	                                                   const definitionMap& definitions, const typeAliasMap& aliases) {
+	                                                   const DefinitionMap& definitions, const TypeAliasMap& aliases) {
 		InspireDriver driver(code, manager);
 		saveSymbolTable(driver, definitions);
 		appendTypeAliases(driver, aliases);
@@ -269,7 +269,7 @@ namespace parser {
 		return extractAddresses(root);
 	}
 
-	std::vector<NodeAddress> parseAddressesProgram(NodeManager& manager, const string& code, bool onFailThrow, const definitionMap& definitions, const typeAliasMap& aliases) {
+	std::vector<NodeAddress> parseAddressesProgram(NodeManager& manager, const string& code, bool onFailThrow, const DefinitionMap& definitions, const TypeAliasMap& aliases) {
 		InspireDriver driver(code, manager);
 		saveSymbolTable(driver, definitions);
 		appendTypeAliases(driver, aliases);
