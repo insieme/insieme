@@ -366,7 +366,7 @@ LITERAL(PickInRange, "pickInRange", "(int<4>, 'a, int<4>, int<4>, int<4>)->'a")
 
 // Misc. --------------------------------------------------------------------------------------------------------------
 
-DERIVED(IfThenElse, "ite", "lambda (c : bool, a : () => 'b, b : () => 'b) -> 'b { if (c) { return a(); } else { return b(); } }")
+DERIVED(IfThenElse, "ite", "(c : bool, a : () => 'b, b : () => 'b) -> 'b { if (c) { return a(); } else { return b(); } }")
 
 // Semantic Grouping --------------------------------------------------------------------------------
 
