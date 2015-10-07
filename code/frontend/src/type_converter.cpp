@@ -375,8 +375,6 @@ namespace conversion {
 			converter.applyHeaderTagging(recordType, clangRecordTy->getDecl());
 			core::annotations::attachName(recordType, clangRecordTy->getDecl()->getNameAsString());
 
-			std::cout << "\n========\nbuilt compound ( " << name << " ) :\n" << "genTy: " << dumpColor(genTy) << "recordTy: " << dumpColor(recordType);
-
 			// add type to ir translation unit
 			converter.getIRTranslationUnit().addType(genTy, recordType);
 			return genTy;

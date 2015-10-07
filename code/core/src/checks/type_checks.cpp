@@ -571,13 +571,12 @@ namespace checks {
 			core::TypePtr requiredType = structType->getFieldType(cur->getName());
 			core::TypePtr isType = cur->getValue()->getType();
 			if(!requiredType) {
-				add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
-				                 format("No member %s in struct type %s", cur->getName(), *structType), Message::ERROR));
+				add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR, format("No member %s in struct type %s", cur->getName(), *structType),
+					             Message::ERROR));
 			} else if(!types::isSubTypeOf(isType, requiredType)) {
-				add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
-				                 format("Invalid type of struct-member initalization - expected type: \n%s, actual: \n%s", *requiredType,
-				                        *isType),
-				                 Message::ERROR));
+				add(res,
+					Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
+					        format("Invalid type of struct-member initalization - expected type: \n%s, actual: \n%s", *requiredType, *isType), Message::ERROR));
 			}
 		});
 
@@ -625,11 +624,21 @@ namespace checks {
 				return res;
 			}
 
+			// handle anonymous fields
+			if(identifier->getValue().empty()) {
+				// iterate through fields to find correct
+				for(auto field : tagType->getFields()) {
+					if(!field->getName()->getValue().empty()) continue;
+					if(field->getType() == elementType) return res;
+				}
+				add(res, Message(address, EC_TYPE_INVALID_TYPE_OF_MEMBER, format("No anonymous member of type '%s' in record", *elementType), Message::ERROR));
+				return res;
+			}
+
 			// check for correct member type
 			if(!core::analysis::compareTypes(elementType, resultType)) {
 				add(res, Message(address, EC_TYPE_INVALID_TYPE_OF_MEMBER,
-				                 format("Invalid type of extracted member '%s' - expected '%s'", *resultType, *elementType),
-				                 Message::ERROR));
+					             format("Invalid type of extracted member '%s' - expected '%s'", *resultType, *elementType), Message::ERROR));
 				return res;
 			}
 

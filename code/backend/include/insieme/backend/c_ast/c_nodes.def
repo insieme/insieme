@@ -209,7 +209,6 @@ AST_TERMINAL(Initializer, Expression)
 AST_TERMINAL(DesignatedInitializer, Expression)
 AST_TERMINAL(ArrayInit, Expression)
 AST_TERMINAL(VectorInit, Expression)
-AST_TERMINAL(OCLVectorInit, Expression)
 
 AST_TERMINAL(UnaryOperation, Expression)
 AST_TERMINAL(BinaryOperation, Expression)

@@ -377,8 +377,11 @@ namespace backend {
 		// special handling for vector initialization (should not be turned into a struct)
 		auto value = convertExpression(context, ptr->getMember());
 		if(core::lang::isFixedSizedArray(ptr->getMember())) {
-			assert(dynamic_pointer_cast<c_ast::Initializer>(value));
-			value = cmgr->create<c_ast::VectorInit>(static_pointer_cast<c_ast::VectorInit>(static_pointer_cast<c_ast::Initializer>(value)->values[0])->values);
+			auto initValue = value.isa<c_ast::InitializerPtr>();
+			assert_true(initValue);
+			auto init0 = initValue->values[0].isa<c_ast::InitializerPtr>();
+			assert_true(init0);
+			value = cmgr->create<c_ast::VectorInit>(init0->values);
 		}
 
 		return c_ast::init(type, cmgr->create(ptr->getMemberName()->getValue()), value);

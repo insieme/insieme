@@ -420,6 +420,7 @@ namespace c_ast {
 				}
 				out << print(node->value) << " }";
 				if(node->member->name.empty()) makeTypesImplicit = false;
+				return out;
 			}
 
 			PRINT(ArrayInit) {
