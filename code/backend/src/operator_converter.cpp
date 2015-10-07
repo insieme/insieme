@@ -551,7 +551,7 @@ namespace backend {
 
 			// special handling for variable sized structs
 			if(auto structType = core::analysis::isStruct(initValue->getType())) {
-				if (core::lang::isUnknownSizedArray(structType->getFields().back()->getType())) {
+				if(core::lang::isUnknownSizedArray(structType->getFields().back()->getType())) {
 					// Create code similar to this:
 					// 		(A*)memcpy(malloc(sizeof(A) + sizeof(float) * v2), &(struct A){ v2 }, sizeof(A))
 

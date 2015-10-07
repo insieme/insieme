@@ -65,23 +65,21 @@ namespace utils {
 		return str;
 	}
 	
-	namespace {
-		std::string createNameForAnon(const std::string& prefix, const clang::Decl* decl, const clang::SourceManager& sm) {
-			std::stringstream ss;
-			ss << prefix;
+	std::string createNameForAnon(const std::string& prefix, const clang::Decl* decl, const clang::SourceManager& sm) {
+		std::stringstream ss;
+		ss << prefix;
 
-			// canonicalize filename in case we refer to it from different relative locations
-			std::string filename = sm.getFilename(decl->getLocStart()).str();
-			boost::filesystem::path path(filename);
-			path = boost::filesystem::canonical(path);
+		// canonicalize filename in case we refer to it from different relative locations
+		std::string filename = sm.getFilename(decl->getLocStart()).str();
+		boost::filesystem::path path(filename);
+		path = boost::filesystem::canonical(path);
 
-			ss << path.string();
-			ss << "_" << sm.getExpansionLineNumber(decl->getLocStart());
-			ss << "_" << sm.getExpansionColumnNumber(decl->getLocStart());
+		ss << path.string();
+		ss << "_" << sm.getExpansionLineNumber(decl->getLocStart());
+		ss << "_" << sm.getExpansionColumnNumber(decl->getLocStart());
 
-			std::string name = removeSymbols(ss.str());
-			return name;
-		}
+		std::string name = removeSymbols(ss.str());
+		return name;
 	}
 
 	/* we build a complete name for the class,

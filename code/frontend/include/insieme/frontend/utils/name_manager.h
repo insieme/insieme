@@ -50,6 +50,11 @@ namespace utils {
 	std::string removeSymbols(std::string str);
 
 	/**
+	 * Create a name for an anonymous object (encodes location)
+	 */
+	std::string createNameForAnon(const std::string& prefix, const clang::Decl* decl, const clang::SourceManager& sm);
+
+	/**
 	 * we build a complete name for the class,
 	 * qualified name does not have the specific types of the spetialization
 	 * the record provides que qualified name, the type the spetialization for the type

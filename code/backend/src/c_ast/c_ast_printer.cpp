@@ -63,7 +63,6 @@ namespace c_ast {
 			std::ostream& printTo(std::ostream& out) const;
 		};
 
-
 		// the actual printer of the C AST
 		class CPrinter {
 			string indentStep;
@@ -412,7 +411,15 @@ namespace c_ast {
 
 			PRINT(DesignatedInitializer) {
 				if(!makeTypesImplicit) out << "(" << print(node->type) << ")";
-				return out << "{ ." << print(node->member) << " = " << print(node->value) << " }";
+				out << "{ ";
+				// special handling for anonymous inner records
+				if(!node->member->name.empty()) {
+					out << "." << print(node->member) << " = ";
+				} else {
+					makeTypesImplicit = true;
+				}
+				out << print(node->value) << " }";
+				if(node->member->name.empty()) makeTypesImplicit = false;
 			}
 
 			PRINT(ArrayInit) {
@@ -492,9 +499,7 @@ namespace c_ast {
 				case BinaryOperation::BitwiseRightShiftAssign: op = ">>="; break;
 				case BinaryOperation::MemberAccess: op = "."; break;
 				case BinaryOperation::IndirectMemberAccess: op = "->"; break;
-				case BinaryOperation::Comma:
-					op = ",";
-					break;
+				case BinaryOperation::Comma: op = ","; break;
 
 				// special handling for subscript and cast
 				case BinaryOperation::Subscript: return out << print(node->operandA) << "[" << print(node->operandB) << "]";
@@ -642,26 +647,17 @@ namespace c_ast {
 				return out << (node->isVirtual ? "virtual " : "") << print(node->parent);
 			}
 
-			PRINT(TypeDefinition) {
-				// handle type definitions
-				if((bool)(node->name)) {
-					// since here is the only place where we have type + name, we have to take care of
-					// function type declarations
-
-					// function type declaration need to be parametrized
-					//	if (node->type->getNodeType() == NT_FunctionType  || node->type->getNodeType() == NT_PointerType ){
-					return out << "typedef " << ParameterPrinter(node->type, node->name) << ";\n";
-				}
-
+			std::ostream& printRecordDefinition(c_ast::TypePtr type, std::ostream& out, bool anonymous = false) {
 				// handle struct / union types
-				c_ast::NamedCompositeTypePtr composite = dynamic_pointer_cast<c_ast::NamedCompositeType>(node->type);
+				c_ast::NamedCompositeTypePtr composite = dynamic_pointer_cast<c_ast::NamedCompositeType>(type);
 				assert_true(composite) << "Must be a struct or union type!";
 
 				// special handling for struct types
 				c_ast::StructTypePtr structType = dynamic_pointer_cast<c_ast::StructType>(composite);
 
 				// define struct / type as part of a type definition (C/C++ compatible)
-				out << ((structType) ? "struct" : "union") << " " << print(composite->name);
+				out << ((structType) ? "struct" : "union") << " ";
+				if(!anonymous) out << print(composite->name);
 
 				// print parents
 				if(structType && !structType->parents.empty()) {
@@ -673,7 +669,14 @@ namespace c_ast {
 
 				// add fields
 				if(!composite->elements.empty()) { out << "\n    "; }
-				out << join(";\n    ", composite->elements, [&](std::ostream& out, const VariablePtr& cur) { out << printParam(cur); });
+				out << join("\n    ", composite->elements, [&](std::ostream& out, const VariablePtr& cur) {
+					// special handling for anonymous struct/union members
+					if(cur->name->name.empty()) {
+						printRecordDefinition(cur->type, out, true);
+						return;
+					}
+					out << printParam(cur) << ";";
+				});
 				if(!composite->elements.empty()) { out << ";"; }
 
 				// add member functions
@@ -697,6 +700,20 @@ namespace c_ast {
 
 				// finish type definition
 				return out << "\n};\n";
+			}
+
+			PRINT(TypeDefinition) {
+				// handle type definitions
+				if((bool)(node->name)) {
+					// since here is the only place where we have type + name, we have to take care of
+					// function type declarations
+
+					// function type declaration need to be parametrized
+					//	if (node->type->getNodeType() == NT_FunctionType  || node->type->getNodeType() == NT_PointerType ){
+					return out << "typedef " << ParameterPrinter(node->type, node->name) << ";\n";
+				}
+
+				return printRecordDefinition(node->type, out);
 			}
 
 			c_ast::StatementPtr wrapBody(const c_ast::StatementPtr& body) {

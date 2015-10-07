@@ -741,7 +741,8 @@ namespace conversion {
 			for(auto entry : fields) {
 				core::ExpressionPtr initExp = converter.getIRBuilder().getZero(entry->getType());
 				if(i < initList->getNumInits()) initExp = converter.convertExpr(initList->getInit(i));
-				frontend_assert(initExp->getType() == entry->getType()) << "Type mismatch in record initialization expression"; 
+				frontend_assert(initExp->getType() == entry->getType()) << "Type mismatch in record initialization expression:\n"
+					<< "expected: " << dumpColor(entry->getType()) << "got: " << dumpColor(initExp->getType());
 				values.push_back(converter.getIRBuilder().namedValue(entry->getName(), initExp));
 				++i;
 			}
