@@ -101,7 +101,7 @@ namespace parser {
 			auto msg = checks::check(driver.result);
 			EXPECT_TRUE(msg.empty()) << msg;
 		} else {
-			driver.print_errors();
+			driver.printErrors();
 		}
 		//   std::cout << " ============== TEST ============ " << std::endl;
 		return driver.result;
@@ -191,20 +191,20 @@ namespace parser {
 
 	TEST(IR_Parser, Precedence) {
 		NodeManager mgr;
-		EXPECT_EQ("int_add(1, int_mul(2, 3))", toString(*parse_expr(mgr, "1+2*3")));
-		EXPECT_EQ("int_mul(int_add(1, 2), 3)", toString(*parse_expr(mgr, "(1+2)*3")));
-		EXPECT_EQ("int_add(1, int_mul(2, 3))", toString(*parse_expr(mgr, "1+(2*3)")));
+		EXPECT_EQ("int_add(1, int_mul(2, 3))", toString(*parseExpr(mgr, "1+2*3")));
+		EXPECT_EQ("int_mul(int_add(1, 2), 3)", toString(*parseExpr(mgr, "(1+2)*3")));
+		EXPECT_EQ("int_add(1, int_mul(2, 3))", toString(*parseExpr(mgr, "1+(2*3)")));
 	}
 
 	TEST(IR_Parser, LambdasAndFunctions) {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 
-		auto funA = builder.normalize(parse_expr(mgr, "lambda (int<4> x) -> int<4> { return x; }"));
-		auto funB = builder.normalize(parse_expr(mgr, "function (ref<int<4>,f,f,plain> x) -> int<4> { return *x; }"));
+		auto funA = builder.normalize(parseExpr(mgr, "lambda (int<4> x) -> int<4> { return x; }"));
+		auto funB = builder.normalize(parseExpr(mgr, "function (ref<int<4>,f,f,plain> x) -> int<4> { return *x; }"));
 
-		auto funC = builder.normalize(parse_expr(mgr, "let f = lambda (int<4> x) -> int<4> { return x; }; f"));
-		auto funD = builder.normalize(parse_expr(mgr, "let f = function (ref<int<4>,f,f,plain> y) -> int<4> { return *y; }; f"));
+		auto funC = builder.normalize(parseExpr(mgr, "let f = lambda (int<4> x) -> int<4> { return x; }; f"));
+		auto funD = builder.normalize(parseExpr(mgr, "let f = function (ref<int<4>,f,f,plain> y) -> int<4> { return *y; }; f"));
 
 		EXPECT_EQ(funA, funB);
 		EXPECT_EQ(funB, funC);
@@ -219,7 +219,7 @@ namespace parser {
 			auto msg = checks::check(driver.result);
 			EXPECT_TRUE(msg.empty()) << msg;
 		} else {
-			driver.print_errors();
+			driver.printErrors();
 		}
 //		std::cout << " ============== TEST ============ " << std::endl;
 		return driver.result;
@@ -328,7 +328,7 @@ namespace parser {
 			auto msg = checks::check(driver.result);
 			EXPECT_TRUE(msg.empty()) << msg;
 		} else {
-			driver.print_errors();
+			driver.printErrors();
 		}
 //		   std::cout << " ============== TEST ============ " << std::endl;
 		return driver.result;

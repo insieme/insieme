@@ -106,7 +106,7 @@ int main(int argc, char** argv) {
 	NodePtr res;
 	insieme::utils::Timer timer;
 	try {
-		res = core::parser::parse_program(manager, ss.str(), true);
+		res = core::parser::parseProgram(manager, ss.str(), true);
 		if(!res) {
 			std::cout << "Unknown parsing error!\n";
 			return 1;

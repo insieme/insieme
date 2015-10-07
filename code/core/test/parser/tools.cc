@@ -56,7 +56,7 @@ namespace parser {
 
 		namespace {
 
-			node_factory toFactory(const NodePtr& node) {
+			nodeFactory toFactory(const NodePtr& node) {
 				return [=]() { return node; };
 			}
 
@@ -73,57 +73,57 @@ namespace parser {
 
 			EXPECT_NE(one, two);
 
-			dc.add_symb("one", toFactory(one));
-			dc.add_symb("two", toFactory(two));
+			dc.addSymb("one", toFactory(one));
+			dc.addSymb("two", toFactory(two));
 
-			EXPECT_NE(dc.find_symb("one"), dc.find_symb("two"));
-			EXPECT_NE(dc.find_symb("one"), two);
-			EXPECT_NE(dc.find_symb("twp"), one);
-			EXPECT_EQ(dc.find_symb("one"), one);
-			EXPECT_EQ(dc.find_symb("two"), two);
+			EXPECT_NE(dc.findSymb("one"), dc.findSymb("two"));
+			EXPECT_NE(dc.findSymb("one"), two);
+			EXPECT_NE(dc.findSymb("twp"), one);
+			EXPECT_EQ(dc.findSymb("one"), one);
+			EXPECT_EQ(dc.findSymb("two"), two);
 
 			// enter an scope
-			dc.open_scope();
+			dc.openScope();
 
 			auto three = builder.intLit(3);
-			dc.add_symb("three", toFactory(three));
+			dc.addSymb("three", toFactory(three));
 
-			EXPECT_NE(dc.find_symb("one"), dc.find_symb("two"));
-			EXPECT_NE(dc.find_symb("one"), two);
-			EXPECT_NE(dc.find_symb("twp"), one);
-			EXPECT_EQ(dc.find_symb("one"), one);
-			EXPECT_EQ(dc.find_symb("two"), two);
-			EXPECT_EQ(dc.find_symb("three"), three);
+			EXPECT_NE(dc.findSymb("one"), dc.findSymb("two"));
+			EXPECT_NE(dc.findSymb("one"), two);
+			EXPECT_NE(dc.findSymb("twp"), one);
+			EXPECT_EQ(dc.findSymb("one"), one);
+			EXPECT_EQ(dc.findSymb("two"), two);
+			EXPECT_EQ(dc.findSymb("three"), three);
 
 			// declare a shadow name
 			auto notOne = builder.intLit(4);
-			dc.add_symb("one", toFactory(notOne));
+			dc.addSymb("one", toFactory(notOne));
 
-			EXPECT_NE(dc.find_symb("one"), one);
-			EXPECT_EQ(dc.find_symb("one"), notOne);
+			EXPECT_NE(dc.findSymb("one"), one);
+			EXPECT_EQ(dc.findSymb("one"), notOne);
 
 			// once again
-			dc.open_scope();
+			dc.openScope();
 
 			// declare a shadow name
 			auto notTwo = builder.intLit(5);
-			dc.add_symb("two", toFactory(notTwo));
+			dc.addSymb("two", toFactory(notTwo));
 
-			EXPECT_NE(dc.find_symb("two"), two);
-			EXPECT_EQ(dc.find_symb("two"), notTwo);
-			EXPECT_NE(dc.find_symb("one"), one);
-			EXPECT_EQ(dc.find_symb("one"), notOne);
+			EXPECT_NE(dc.findSymb("two"), two);
+			EXPECT_EQ(dc.findSymb("two"), notTwo);
+			EXPECT_NE(dc.findSymb("one"), one);
+			EXPECT_EQ(dc.findSymb("one"), notOne);
 
-			dc.close_scope();
+			dc.closeScope();
 
-			EXPECT_NE(dc.find_symb("one"), one);
-			EXPECT_EQ(dc.find_symb("one"), notOne);
+			EXPECT_NE(dc.findSymb("one"), one);
+			EXPECT_EQ(dc.findSymb("one"), notOne);
 
 			// close the scope
-			dc.close_scope();
+			dc.closeScope();
 
-			EXPECT_EQ(dc.find_symb("one"), one);
-			EXPECT_NE(dc.find_symb("one"), notOne);
+			EXPECT_EQ(dc.findSymb("one"), one);
+			EXPECT_NE(dc.findSymb("one"), notOne);
 		}
 
 		TEST(Parser_Tools, error_locations) {
@@ -140,7 +140,7 @@ namespace parser {
 				location errorloc(beg, end);
 
 				driver.error(errorloc, "here is the error");
-				driver.print_errors(ss, false);
+				driver.printErrors(ss, false);
 
 				EXPECT_EQ(ss.str(), "ERROR: unknown:1.2-9 here is the error\n#hello, this is just a text\n ^~~~~~~~\n");
 			}
@@ -150,7 +150,7 @@ namespace parser {
 				std::string text("int<4.");
 				InspireDriver driver(text, mgr);
 				driver.parseExpression();
-				driver.print_errors(ss, false);
+				driver.printErrors(ss, false);
 				EXPECT_EQ(ss.str(),
 				          "ERROR: 1.1-3 the symbol int was not declared in this context\nint<4.\n^~~\nERROR: 1.1-3 unrecoverable error\nint<4.\n^~~\n");
 			}
@@ -160,7 +160,7 @@ namespace parser {
 				std::string text("int<4.");
 				InspireDriver driver(text, mgr);
 				driver.parseType();
-				driver.print_errors(ss, false);
+				driver.printErrors(ss, false);
 				EXPECT_EQ(ss.str(), "ERROR: 1.6 syntax error, unexpected ., expecting >\nint<4.\n     ^\n");
 			}
 
@@ -173,7 +173,7 @@ namespace parser {
 				std::string text("\t\t\tx");
 				InspireDriver driver(text, mgr);
 				driver.parseExpression();
-				driver.print_errors(ss, false);
+				driver.printErrors(ss, false);
 				EXPECT_EQ(ss.str(), "ERROR: 1.4 the symbol x was not declared in this context\n   x\n   ^\nERROR: 1.4 unrecoverable error\n   x\n   ^\n");
 			}
 
@@ -183,7 +183,7 @@ namespace parser {
 				std::string text("\t\t\n\tx");
 				InspireDriver driver(text, mgr);
 				driver.parseExpression();
-				driver.print_errors(ss, false);
+				driver.printErrors(ss, false);
 				EXPECT_EQ(ss.str(), "ERROR: 2.2 the symbol x was not declared in this context\n x\n ^\nERROR: 2.2 unrecoverable error\n x\n ^\n");
 			}
 		}

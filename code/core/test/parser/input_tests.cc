@@ -90,8 +90,8 @@ namespace parser {
 		NodeManager manager;
 
 		// create default definitions and alias maps
-		definition_map definitions;
-		type_alias_map aliases;
+		definitionMap definitions;
+		typeAliasMap aliases;
 
 		// add up definitions
 		for(const auto& cur : manager.getLangExtension<lang::ArrayExtension>().getDefinedSymbols()) definitions.insert(cur);
@@ -107,7 +107,7 @@ namespace parser {
 		for(const auto& cur : manager.getLangExtension<lang::InputOutputExtension>().getTypeAliases()) aliases.insert(cur);
 
 
-		NodePtr res = parse_program(manager, ss.str(), true, definitions, aliases);
+		NodePtr res = parseProgram(manager, ss.str(), true, definitions, aliases);
 
 		// if(res) dumpColor(res);
 
