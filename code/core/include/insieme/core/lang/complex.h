@@ -111,7 +111,7 @@ namespace lang {
 		 * Create a Complex out of a constant value.
 		 */
 		LANG_EXT_DERIVED(ConstantToComplex,
-							"alias res_t = struct _ir_complex {_real : 'a; _img : 'a};"
+							"alias res_t = struct _ir_complex {_real : 'a; _img : 'a; };"
 							"(c : 'a)->res_t {"
 								"return <res_t> {c, CAST('a) 0};"
 							"}");
@@ -127,8 +127,8 @@ namespace lang {
 		 * Cast a complex number of type a to a complex number of type b
 		 */
 		LANG_EXT_DERIVED(ComplexToComplex,
-							"alias res_t = struct _ir_complex {_real : 'b; _img : 'b};"
-							"(c : struct _ir_complex {_real : 'a; _img : 'a}, t : type<'b>)->struct _ir_complex {_real : 'b; _img : 'b} {"
+							"alias res_t = struct _ir_complex {_real : 'b; _img : 'b; };"
+							"(c : struct _ir_complex {_real : 'a; _img : 'a; }, t : type<'b>)->struct _ir_complex {_real : 'b; _img : 'b; } {"
 								"return <res_t> { num_cast(c._real, type_lit('b)), num_cast(c._img, type_lit('b)) };"
 							"}");
 

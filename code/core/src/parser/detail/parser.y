@@ -317,11 +317,10 @@ struct_or_union : "struct"                                                  { $$
                 ;
 
 fields : fields field                                                       { $1.push_back($2); $$ = $1; }
-       | fields ";"                                                         { $$ = $1; }
        |                                                                    { $$ = FieldList(); }
        ;
 
-field : "identifier" ":" type                                               { $$ = driver.builder.field($1, $3); }
+field : "identifier" ":" type ";"                                           { $$ = driver.builder.field($1, $3); }
       ;
 
 constructors : constructors constructor                                     { $1.push_back($2); $$ = $1; }
