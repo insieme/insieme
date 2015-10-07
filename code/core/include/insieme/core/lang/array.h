@@ -115,7 +115,7 @@ namespace lang {
 					"                                                                                       "
 					"   (data : array<'a,'s>, init : 'b, op : ('b,'a)->'b)->'b {                           "
 					"   	var ref<'b,f,f,plain> res = ref_var(init);                                         "
-					"   	for(int<8> i = 0 .. type_to_int(lit('s))) {                                     "
+					"   	for(int<8> i = 0 .. type_to_int(type_lit('s))) {                                     "
 					"   		res = op(*res, data[i]);                                                    "
 					"   	}                                                                               "
 					"   	return *res;                                                                    "
