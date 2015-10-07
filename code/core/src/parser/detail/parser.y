@@ -339,16 +339,8 @@ member_functions : member_functions member_function                         { $1
                  |                                                          { $$ = MemberFunctionList(); }
                  ;
 
-member_function : virtual_flag lambda_or_function "identifier" "=" lambda
-                                                                            { $$ = driver.genMemberFunction(@$, $1, false, false, $3, $5, $2); }
-                | virtual_flag "const" lambda_or_function "identifier" "=" lambda
-                                                                            { $$ = driver.genMemberFunction(@$, $1, true, false, $4, $6, $3); }
-                | virtual_flag "volatile" lambda_or_function "identifier" "=" lambda
-                                                                            { $$ = driver.genMemberFunction(@$, $1, false, true, $4, $6, $3); }
-                | virtual_flag "const" "volatile" lambda_or_function "identifier" "=" lambda
-                                                                            { $$ = driver.genMemberFunction(@$, $1, true, true, $5, $7, $4); }
-                | virtual_flag "volatile" "const" lambda_or_function "identifier" "=" lambda
-                                                                            { $$ = driver.genMemberFunction(@$, $1, true, true, $5, $7, $4); }
+member_function : virtual_flag cv_flags lambda_or_function "identifier" "=" lambda
+                                                                            { $$ = driver.genMemberFunction(@$, $1, $2.first, $2.second, $4, $6, $3); }
                 ;
 
 virtual_flag : "virtual"                                                    { $$ = true; }
