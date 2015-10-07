@@ -122,7 +122,7 @@ namespace lang {
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(PFor, "pfor",
                 "                                                                                                        "
-				"	lambda (threadgroup g, int<'a> a, int<'a> b, int<'a> c, (int<'a>, int<'a>, int<'a>)=>'b f)->unit {   "
+				"	(g : threadgroup, a : int<'a>, b : int<'a>, c : int<'a>, f : (int<'a>, int<'a>, int<'a>)=>'b)->unit {   "
 				"				f(a,b,c);                                                                                "
 				"	}                                                                                                    "
 	            "                                                                                                        "
@@ -143,8 +143,8 @@ namespace lang {
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(Barrier, "barrier",
 				    "                                                                                                    "
-					"	lambda (threadgroup g)->unit {                                                                   "
-					"		redistribute(g, 0, lambda (ref<array<int<4>>> _, uint<8> _, uint<8> _)->unit { return; });   "
+					"	(g : threadgroup)->unit {                                                                   "
+					"		redistribute(g, 0, (_ : ref<array<int<4>>>, _ : uint<8>, _ : uint<8>)->unit { });   "
 					"	}                                                                                                "
 		            "                                                                                                    "
 		)
@@ -155,9 +155,9 @@ namespace lang {
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(PReduce, "preduce",
 				    "                                                                                                                                        "
-					"	lambda (threadgroup g, 'a v, ('b,'a)->'b op, 'b init)->'b {                                                                          "
+					"	(g : threadgroup, v : 'a, op : ('b,'a)->'b, init : 'b)->'b {                                                                          "
 					"	   return redistribute(g, v,                                                                                                         "
-					"				  lambda (ref<array<'a>> data, uint<8> size, uint<8> tid) => array_reduce(data, num_cast(size,type_lit(int<8>)), op, init)   "
+					"				  (data : ref<array<'a>>, size : uint<8>, tid : uint<8>) => array_reduce(data, num_cast(size, type_lit(int<8>)), op, init)   "
 					"	          );                                                                                                                         "
 					"	}                                                                                                                                    "
 		            "                                                                                                                                        "
@@ -223,8 +223,8 @@ namespace lang {
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(Atomic, "atomic",
 				    "                                                              "
-					"	lambda (ref<'a, f,'v> v, ('a)=>bool p, ('a)=>'a f)->'a {   "
-					"		decl auto res = *v;                                    "
+					"	(v : ref<'a, f,'v>, p : ('a)=>bool, f : ('a)=>'a)->'a {   "
+					"		auto res = *v;                                    "
 					"		if (p(*v)) {                                           "
 					"			v = f(*v);                                         "
 					"		}                                                      "
@@ -239,75 +239,75 @@ namespace lang {
 
 		// arithmetic
 
-		LANG_EXT_DERIVED_WITH_NAME(AtomicFetchAndAdd, "atomic_fetch_and_add", "lambda (ref<'a,f,'v> v, 'a exp) -> 'a { "
-														   "	let test = lambda ('a _)=>true; "
-														   "	let apply = lambda ('a x)=>x+exp; "
+		LANG_EXT_DERIVED_WITH_NAME(AtomicFetchAndAdd, "atomic_fetch_and_add", "(v : ref<'a,f,'v>, exp : 'a) -> 'a { "
+														   "	let test = (_ : 'a)=>true; "
+														   "	let apply = (x : 'a)=>x+exp; "
 														   "	return atomic(v, test, apply); "
 														   "}  ")
 
-	   LANG_EXT_DERIVED_WITH_NAME(AtomicAddAndFetch, "atomic_add_and_fetch", "lambda (ref<'a,f,'v> v, 'a exp) -> 'a { "
+	   LANG_EXT_DERIVED_WITH_NAME(AtomicAddAndFetch, "atomic_add_and_fetch", "(v : ref<'a,f,'v>, exp : 'a) -> 'a { "
 														   "	return atomic_fetch_and_add(v, exp) + exp; "
 														   "}  ")
 
-		LANG_EXT_DERIVED_WITH_NAME(AtomicFetchAndSub, "atomic_fetch_and_sub", "lambda (ref<'a,f,'v> v, 'a exp) -> 'a { "
-														   "	let test = lambda ('a _)=>true; "
-														   "	let apply = lambda ('a x)=>x-exp; "
+		LANG_EXT_DERIVED_WITH_NAME(AtomicFetchAndSub, "atomic_fetch_and_sub", "(v : ref<'a,f,'v>, exp : 'a) -> 'a { "
+														   "	let test = (_ : 'a)=>true; "
+														   "	let apply = (x : 'a)=>x-exp; "
 														   "	return atomic(v, test, apply); "
 														   "}  ")
 
-		LANG_EXT_DERIVED_WITH_NAME(AtomicSubAndFetch, "atomic_sub_and_fetch", "lambda (ref<'a,f,'v> v, 'a exp) -> 'a { "
+		LANG_EXT_DERIVED_WITH_NAME(AtomicSubAndFetch, "atomic_sub_and_fetch", "(v : ref<'a,f,'v>, exp : 'a) -> 'a { "
 														   "	return atomic_fetch_and_sub(v, exp) - exp; "
 														   "}  ")
 
 		// bitwise
 
-		LANG_EXT_DERIVED_WITH_NAME(AtomicFetchAndAnd, "atomic_fetch_and_and", "lambda (ref<'a,f,'v> v, 'a exp) -> 'a { "
-														   "	let test = lambda ('a _) => true; "
-														   "	let apply = lambda ('a x) => x & exp; "
+		LANG_EXT_DERIVED_WITH_NAME(AtomicFetchAndAnd, "atomic_fetch_and_and", "(v : ref<'a,f,'v>, exp : 'a) -> 'a { "
+														   "	let test = (_ : 'a) => true; "
+														   "	let apply = (x : 'a) => x & exp; "
 														   "	return atomic(v, test, apply); "
 														   "}  ")
 
-		LANG_EXT_DERIVED_WITH_NAME(AtomicAndAndFetch, "atomic_and_and_fetch", "lambda (ref<'a,f,'v> v, 'a exp) -> 'a { "
+		LANG_EXT_DERIVED_WITH_NAME(AtomicAndAndFetch, "atomic_and_and_fetch", "(v : ref<'a,f,'v>, exp : 'a) -> 'a { "
 														   "	return atomic_fetch_and_and(v, exp) & exp; "
 														   "}  ")
 
-		LANG_EXT_DERIVED_WITH_NAME(AtomicFetchAndOr, "atomic_fetch_and_or", "lambda (ref<'a,f,'v> v, 'a exp) -> 'a { "
-														 "	let test = lambda ('a _) => true; "
-														 "	let apply = lambda ('a x) => x | exp; "
+		LANG_EXT_DERIVED_WITH_NAME(AtomicFetchAndOr, "atomic_fetch_and_or", "(v : ref<'a,f,'v>, exp : 'a) -> 'a { "
+														 "	let test = (_ : 'a) => true; "
+														 "	let apply = (x : 'a) => x | exp; "
 														 "	return atomic(v, test, apply); "
 														 "}  ")
 
-		LANG_EXT_DERIVED_WITH_NAME(AtomicOrAndFetch, "atomic_or_and_fetch", "lambda (ref<'a,f,'v> v, 'a exp) -> 'a { "
+		LANG_EXT_DERIVED_WITH_NAME(AtomicOrAndFetch, "atomic_or_and_fetch", "(v : ref<'a,f,'v>, exp : 'a) -> 'a { "
 														 "	return atomic_fetch_and_or(v, exp) | exp; "
 														 "}  ")
 
-		LANG_EXT_DERIVED_WITH_NAME(AtomicFetchAndXor, "atomic_fetch_and_xor", "lambda (ref<'a,f,'v> v, 'a exp) -> 'a { "
-														   "	let test = lambda ('a _) => true; "
-														   "	let apply = lambda ('a x) => x ^ exp; "
+		LANG_EXT_DERIVED_WITH_NAME(AtomicFetchAndXor, "atomic_fetch_and_xor", "(v : ref<'a,f,'v>, exp : 'a) -> 'a { "
+														   "	let test = (_ : 'a) => true; "
+														   "	let apply = (x : 'a) => x ^ exp; "
 														   "	return atomic(v, test, apply); "
 														   "}  ")
 
-		LANG_EXT_DERIVED_WITH_NAME(AtomicXorAndFetch, "atomic_xor_and_fetch", "lambda (ref<'a,f,'v> v, 'a exp) -> 'a { "
+		LANG_EXT_DERIVED_WITH_NAME(AtomicXorAndFetch, "atomic_xor_and_fetch", "(v : ref<'a,f,'v>, exp : 'a) -> 'a { "
 														   "	return atomic_fetch_and_xor(v, exp) ^ exp; "
 														   "}  ")
 
 		// test and set
 
-		LANG_EXT_DERIVED_WITH_NAME(AtomicValCompareAndSwap, "atomic_val_compare_and_swap", "lambda (ref<'a,f,'v> v, 'a _old, 'a _new) -> 'a { "
-																		"	let test = lambda ('a x) => x == _old; "
-																		"	let apply = lambda ('a _) => _new; "
+		LANG_EXT_DERIVED_WITH_NAME(AtomicValCompareAndSwap, "atomic_val_compare_and_swap", "(v : ref<'a,f,'v>, _old : 'a, _new : 'a) -> 'a { "
+																		"	let test = (x : 'a) => x == _old; "
+																		"	let apply = (_ : 'a) => _new; "
 																		"	return atomic(v, test, apply); "
 																		"}  ")
 
-		LANG_EXT_DERIVED_WITH_NAME(AtomicBoolCompareAndSwap, "atomic_bool_compare_and_swap", "lambda (ref<'a,f,'v> v, 'a _old, 'a _new) -> bool { "
-																		  "	let test = lambda ('a x) => x == _old; "
-																		  "	let apply = lambda ('a _) => _new; "
+		LANG_EXT_DERIVED_WITH_NAME(AtomicBoolCompareAndSwap, "atomic_bool_compare_and_swap", "(v : ref<'a,f,'v>, _old : 'a, _new : 'a) -> bool { "
+																		  "	let test = (x : 'a) => x == _old; "
+																		  "	let apply = (_ : 'a) => _new; "
 																		  "	return atomic(v, test, apply) == _new; "
 																		  "}  ")
 
 
 		// An extension representing a busy waiting loop
-		LANG_EXT_DERIVED(BusyLoop, "lambda (()=>bool condition) -> unit { while(condition()) { } }");
+		LANG_EXT_DERIVED(BusyLoop, "(condition : ()=>bool) -> unit { while(condition()) { } }");
 
 //
 //		GROUP(ParallelOp, Parallel, ParallelDetached)
@@ -328,16 +328,16 @@ namespace lang {
 //		LITERAL(GetGroupSize, "getGroupSize", "(uint<#a>) -> int<4>")
 //
 //		// the work-sharing construct
-//		DERIVED(PFor, "pfor", "lambda (threadgroup g, int<#a> a, int<#a> b, int<#a> c, (int<#a>, int<#a>, int<#a>)=>'a f)->unit { f(a,b,c); }")
+//		DERIVED(PFor, "pfor", "(threadgroup g, int<#a> a, int<#a> b, int<#a> c, (int<#a>, int<#a>, int<#a>)=>'a f)->unit { f(a,b,c); }")
 //
 //		// the data-sharing construct
 //		LITERAL(Redistribute, "redistribute", "(threadgroup, 'a, (ref<array<'a,1>>, uint<8>, uint<8>)=>'b )->'b")
 //
 //		// some derivades
-//		DERIVED(Barrier, "barrier", "lambda (threadgroup g)->unit { redistribute(g, 0, lambda (ref<array<int<4>,1>> _, uint<8> _, uint<8> _)->unit { return; }); }")
-//		DERIVED(PReduce, "preduce", "lambda (threadgroup g, 'a v, ('b,'a)->'b op, 'b init)->'b { "
+//		DERIVED(Barrier, "barrier", "(threadgroup g)->unit { redistribute(g, 0, (ref<array<int<4>,1>> _, uint<8> _, uint<8> _)->unit { return; }); }")
+//		DERIVED(PReduce, "preduce", "(threadgroup g, 'a v, ('b,'a)->'b op, 'b init)->'b { "
 //		                            "   return redistribute(g, v, "
-//		                            "              lambda (ref<array<'a,1>> data, uint<8> size, uint<8> pid)=> array_reduce(data, size, op, init) );"
+//		                            "              (ref<array<'a,1>> data, uint<8> size, uint<8> pid)=> array_reduce(data, size, op, init) );"
 //		                            "}")
 //
 //		// Channels -----------------------------------------------------------------------------------------------------------
@@ -351,7 +351,7 @@ namespace lang {
 //
 //		// Atomics ------------------------------------------------------------------------------------------------------------
 //
-//		DERIVED(Atomic, "atomic", "lambda (ref<'a> v, ('a)=>bool p, ('a)=>'a f)->'a { "
+//		DERIVED(Atomic, "atomic", "(ref<'a> v, ('a)=>bool p, ('a)=>'a f)->'a { "
 //		                          "	decl auto res = *v; "
 //		                          "	if (p(*v)) { "
 //		                          "		v = f(*v); "
@@ -361,69 +361,69 @@ namespace lang {
 //
 //		// arithmetic
 //
-//		DERIVED(AtomicFetchAndAdd, "atomic_fetch_and_add", "lambda (ref<'a> v, 'a exp) -> 'a { "
-//		                                                   "	let test = lambda ('a _)=>true; "
-//		                                                   "	let apply = lambda ('a x)=>x+exp; "
+//		DERIVED(AtomicFetchAndAdd, "atomic_fetch_and_add", "(ref<'a> v, 'a exp) -> 'a { "
+//		                                                   "	let test = (_ : 'a)=>true; "
+//		                                                   "	let apply = (x : 'a)=>x+exp; "
 //		                                                   "	return atomic(v, test, apply); "
 //		                                                   "}  ")
 //
-//		DERIVED(AtomicAddAndFetch, "atomic_add_and_fetch", "lambda (ref<'a> v, 'a exp) -> 'a { "
+//		DERIVED(AtomicAddAndFetch, "atomic_add_and_fetch", "(ref<'a> v, 'a exp) -> 'a { "
 //		                                                   "	return atomic_fetch_and_add(v, exp) + exp; "
 //		                                                   "}  ")
 //
-//		DERIVED(AtomicFetchAndSub, "atomic_fetch_and_sub", "lambda (ref<'a> v, 'a exp) -> 'a { "
-//		                                                   "	let test = lambda ('a _)=>true; "
-//		                                                   "	let apply = lambda ('a x)=>x-exp; "
+//		DERIVED(AtomicFetchAndSub, "atomic_fetch_and_sub", "(ref<'a> v, 'a exp) -> 'a { "
+//		                                                   "	let test = (_ : 'a)=>true; "
+//		                                                   "	let apply = (x : 'a)=>x-exp; "
 //		                                                   "	return atomic(v, test, apply); "
 //		                                                   "}  ")
 //
-//		DERIVED(AtomicSubAndFetch, "atomic_sub_and_fetch", "lambda (ref<'a> v, 'a exp) -> 'a { "
+//		DERIVED(AtomicSubAndFetch, "atomic_sub_and_fetch", "(ref<'a> v, 'a exp) -> 'a { "
 //		                                                   "	return atomic_fetch_and_sub(v, exp) - exp; "
 //		                                                   "}  ")
 //
 //		// bitwise
 //
-//		DERIVED(AtomicFetchAndAnd, "atomic_fetch_and_and", "lambda (ref<'a> v, 'a exp) -> 'a { "
-//		                                                   "	let test = lambda ('a _) => true; "
-//		                                                   "	let apply = lambda ('a x) => x & exp; "
+//		DERIVED(AtomicFetchAndAnd, "atomic_fetch_and_and", "(ref<'a> v, 'a exp) -> 'a { "
+//		                                                   "	let test = (_ : 'a) => true; "
+//		                                                   "	let apply = (x : 'a) => x & exp; "
 //		                                                   "	return atomic(v, test, apply); "
 //		                                                   "}  ")
 //
-//		DERIVED(AtomicAndAndFetch, "atomic_and_and_fetch", "lambda (ref<'a> v, 'a exp) -> 'a { "
+//		DERIVED(AtomicAndAndFetch, "atomic_and_and_fetch", "(ref<'a> v, 'a exp) -> 'a { "
 //		                                                   "	return atomic_fetch_and_and(v, exp) & exp; "
 //		                                                   "}  ")
 //
-//		DERIVED(AtomicFetchAndOr, "atomic_fetch_and_or", "lambda (ref<'a> v, 'a exp) -> 'a { "
-//		                                                 "	let test = lambda ('a _) => true; "
-//		                                                 "	let apply = lambda ('a x) => x | exp; "
+//		DERIVED(AtomicFetchAndOr, "atomic_fetch_and_or", "(ref<'a> v, 'a exp) -> 'a { "
+//		                                                 "	let test = (_ : 'a) => true; "
+//		                                                 "	let apply = (x : 'a) => x | exp; "
 //		                                                 "	return atomic(v, test, apply); "
 //		                                                 "}  ")
 //
-//		DERIVED(AtomicOrAndFetch, "atomic_or_and_fetch", "lambda (ref<'a> v, 'a exp) -> 'a { "
+//		DERIVED(AtomicOrAndFetch, "atomic_or_and_fetch", "(ref<'a> v, 'a exp) -> 'a { "
 //		                                                 "	return atomic_fetch_and_or(v, exp) | exp; "
 //		                                                 "}  ")
 //
-//		DERIVED(AtomicFetchAndXor, "atomic_fetch_and_xor", "lambda (ref<'a> v, 'a exp) -> 'a { "
-//		                                                   "	let test = lambda ('a _) => true; "
-//		                                                   "	let apply = lambda ('a x) => x ^ exp; "
+//		DERIVED(AtomicFetchAndXor, "atomic_fetch_and_xor", "(ref<'a> v, 'a exp) -> 'a { "
+//		                                                   "	let test = (_ : 'a) => true; "
+//		                                                   "	let apply = (x : 'a) => x ^ exp; "
 //		                                                   "	return atomic(v, test, apply); "
 //		                                                   "}  ")
 //
-//		DERIVED(AtomicXorAndFetch, "atomic_xor_and_fetch", "lambda (ref<'a> v, 'a exp) -> 'a { "
+//		DERIVED(AtomicXorAndFetch, "atomic_xor_and_fetch", "(ref<'a> v, 'a exp) -> 'a { "
 //		                                                   "	return atomic_fetch_and_xor(v, exp) ^ exp; "
 //		                                                   "}  ")
 //
 //		// test and set
 //
-//		DERIVED(AtomicValCompareAndSwap, "atomic_val_compare_and_swap", "lambda (ref<'a> v, 'a _old, 'a _new) -> 'a { "
-//		                                                                "	let test = lambda ('a x) => x == _old; "
-//		                                                                "	let apply = lambda ('a _) => _new; "
+//		DERIVED(AtomicValCompareAndSwap, "atomic_val_compare_and_swap", "(ref<'a> v, 'a _old, 'a _new) -> 'a { "
+//		                                                                "	let test = (x : 'a) => x == _old; "
+//		                                                                "	let apply = (_ : 'a) => _new; "
 //		                                                                "	return atomic(v, test, apply); "
 //		                                                                "}  ")
 //
-//		DERIVED(AtomicBoolCompareAndSwap, "atomic_bool_compare_and_swap", "lambda (ref<'a> v, 'a _old, 'a _new) -> bool { "
-//		                                                                  "	let test = lambda ('a x) => x == _old; "
-//		                                                                  "	let apply = lambda ('a _) => _new; "
+//		DERIVED(AtomicBoolCompareAndSwap, "atomic_bool_compare_and_swap", "(ref<'a> v, 'a _old, 'a _new) -> bool { "
+//		                                                                  "	let test = (x : 'a) => x == _old; "
+//		                                                                  "	let apply = (_ : 'a) => _new; "
 //		                                                                  "	return atomic(v, test, apply) == _new; "
 //		                                                                  "}  ")
 //

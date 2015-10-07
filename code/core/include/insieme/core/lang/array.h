@@ -98,8 +98,8 @@ namespace lang {
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(ArrayReduce, "array_reduce",
 				    "                                                                                             "
-					"   lambda (ref<array<'a,'s>,'v,'c,plain> data, int<8> size, ('b,'a)->'b op, 'b init)->'b {   "
-					"   	decl ref<'b,f,f,plain> res = var(init);                                               "
+					"   (data : ref<array<'a,'s>,'v,'c,plain>, size : int<8>, op : ('b,'a)->'b, init : 'b)->'b {   "
+					"   	var ref<'b,f,f,plain> res = ref_var(init);                                               "
 					"   	for(int<8> i = 0 .. size) {                                                           "
 					"   		res = op(*res, *(data[i]));                                                       "
 					"   	}                                                                                     "
@@ -113,8 +113,8 @@ namespace lang {
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(ArrayFold, "array_fold",
 					"                                                                                       "
-					"   lambda (array<'a,'s> data, 'b init, ('b,'a)->'b op)->'b {                           "
-					"   	decl ref<'b,f,f,plain> res = var(init);                                         "
+					"   (data : array<'a,'s>, init : 'b, op : ('b,'a)->'b)->'b {                           "
+					"   	var ref<'b,f,f,plain> res = ref_var(init);                                         "
 					"   	for(int<8> i = 0 .. type_to_int(lit('s))) {                                     "
 					"   		res = op(*res, data[i]);                                                    "
 					"   	}                                                                               "

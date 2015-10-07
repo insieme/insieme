@@ -65,6 +65,10 @@ namespace lang {
 		DatapathExtension(core::NodeManager& manager) : core::lang::Extension(manager) {}
 
 	  public:
+
+		// import array extension for defined literals
+		IMPORT_MODULE(ArrayExtension);
+
 		/**
 		 * The root path is modeling the empty path -- the identity when utilized for narrow / expand operations.
 		 */

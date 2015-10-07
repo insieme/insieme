@@ -70,12 +70,12 @@ namespace lang {
 		/**
 		 * Defines a complex number as a pair of a real and imaginary value
 		 */
-		TYPE_ALIAS("complex", "struct _ir_complex { 'a rel; 'a img; }");
+		TYPE_ALIAS("complex", "struct _ir_complex { rel : 'a; img : 'a; }");
 
 		/**
 		 * Defines the generic complex type.
 		 */
-		LANG_EXT_TYPE(GenComplex, "struct _ir_complex { 'a rel; 'a img; }")
+		LANG_EXT_TYPE(GenComplex, "struct _ir_complex { rel : 'a; img : 'a; }")
 
 
 
@@ -83,53 +83,53 @@ namespace lang {
 		 * Get real part of complex.
 		 */
 		LANG_EXT_DERIVED(ComplexReal,
-			"lambda (struct _ir_complex { 'a _real; 'a _img; } x)->'a { return x._real; }"
+			"(x : struct _ir_complex { _real : 'a; _img : 'a; })->'a { return x._real; }"
 		);
 
 		/**
 		 * Get real part of complex ref.
 		 */
 		LANG_EXT_DERIVED(RefComplexReal,
-			"lambda (ref<struct _ir_complex { 'a _real; 'a _img; },'c,'v> x)->ref<'a,'c,'v> { return x._real; }"
+			"(x : ref<struct _ir_complex { _real : 'a; _img : 'a; },'c,'v>)->ref<'a,'c,'v> { return x._real; }"
 		);
 
 		/**
 		 * Get imaginary part of complex.
 		 */
 		LANG_EXT_DERIVED(ComplexImg,
-			"lambda (struct _ir_complex { 'a _real; 'a _img; } x)->'a { return x._img; }"
+			"(x : struct _ir_complex { _real : 'a; _img : 'a; })->'a { return x._img; }"
 		);
 
 		/**
 		 * Get imaginary part of complex ref.
 		 */
 		LANG_EXT_DERIVED(RefComplexImg,
-			"lambda (ref<struct _ir_complex { 'a _real; 'a _img; },'c,'v> x)->ref<'a,'c,'v> { return x._img; }"
+			"(x : ref<struct _ir_complex { _real : 'a; _img : 'a; },'c,'v>)->ref<'a,'c,'v> { return x._img; }"
 		);
 
 		/**
 		 * Create a Complex out of a constant value.
 		 */
 		LANG_EXT_DERIVED(ConstantToComplex,
-							"let res_t = struct _ir_complex {'a _real; 'a _img};"
-							"lambda ('a c)->res_t {"
-								"return struct res_t {c, CAST('a) 0};"
+							"alias res_t = struct _ir_complex {_real : 'a; _img : 'a};"
+							"(c : 'a)->res_t {"
+								"return <res_t> {c, CAST('a) 0};"
 							"}");
 
 		/**
 		 * Check if the real and imaginary part of the complex number are zero.
 		 */
 		LANG_EXT_DERIVED(ComplexToBool,
-			"lambda (struct _ir_complex { 'a _real; 'a _img; } x)->bool { return (x._img != num_cast(0.0, type_lit('a))) || (x._real != num_cast(0.0, type_lit('a))); }"
+			"(x : struct _ir_complex { _real : 'a; _img : 'a; })->bool { return (x._img != num_cast(0.0, type_lit('a))) || (x._real != num_cast(0.0, type_lit('a))); }"
 		);
 
 		/**
 		 * Cast a complex number of type a to a complex number of type b
 		 */
 		LANG_EXT_DERIVED(ComplexToComplex,
-							"let res_t = struct _ir_complex {'b _real; 'b _img};"
-							"lambda (struct _ir_complex {'a _real; 'a _img} c, type<'b> t)->struct _ir_complex {'b _real; 'b _img} {"
-								"return struct res_t { num_cast(c._real, type_lit('b)), num_cast(c._img, type_lit('b)) };"
+							"alias res_t = struct _ir_complex {_real : 'b; _img : 'b};"
+							"(c : struct _ir_complex {_real : 'a; _img : 'a}, t : type<'b>)->struct _ir_complex {_real : 'b; _img : 'b} {"
+								"return <res_t> { num_cast(c._real, type_lit('b)), num_cast(c._img, type_lit('b)) };"
 							"}");
 
 	};
