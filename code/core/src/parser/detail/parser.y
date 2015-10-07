@@ -385,7 +385,6 @@ lambda_or_function : "lambda"                                             { $$ =
 
 
 type : plain_type                                                         { $$ = $1; }
-     | "$" plain_type "$"                                                 { $$ = $2; }
      | let_type                                                           { $$ = $1; }
      ;
 
@@ -521,7 +520,7 @@ let_type : "let" "identifier" "="  type                                   { driv
 //    -- expressions -------------------------------------
 
 expression : plain_expression                                             { $$ = $1; }
-           | "$" plain_expression "$"                                     { $$ = $2; }
+           | "$" plain_expression "$"                                     { $$ = driver.markAddress(@2, $2); }
            | let_expression                                               { $$ = $1; }
            ;
 
