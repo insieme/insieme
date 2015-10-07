@@ -81,7 +81,7 @@ fi
 #echo "*******************************************"
 #echo "* Removing old compilation and installing "
 #echo "*******************************************"
-make clang-only install
+make clang-only install -j$SLOTS
 
 cd ../
 echo "****************************************"
