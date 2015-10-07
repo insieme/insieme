@@ -773,15 +773,17 @@ namespace conversion {
 			auto gT = converter.convertType(clangType).as<core::GenericTypePtr>();
 			frontend_assert(core::lang::isArray(gT)) << "Clang InitListExpr of unexpected generic type (should be array):\n" << dumpColor(gT);
 			ExpressionList initExps;
-			for(unsigned i=0; i < initList->getNumInits(); ++i) { // yes, that is really the best way to do this in clang 3.6
+			for(unsigned i = 0; i < initList->getNumInits(); ++i) { // yes, that is really the best way to do this in clang 3.6
 				initExps.push_back(converter.convertExpr(initList->getInit(i)));
 			}
 			retIr = core::lang::buildArrayCreate(core::lang::getArraySize(gT), initExps);
-		}
-		else {
+		} 
+		else if(clangType->isScalarType()) {
+			retIr = Visit(initList->getInit(0));
+		} else {
 			frontend_assert(false) << "Clang InitListExpr of unexpected type";
 		}
-		
+
 		return retIr;
 	}
 

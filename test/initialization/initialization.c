@@ -87,7 +87,7 @@ int main(){
 	// initialize parameters
 	{	
 		function (getValue(), getStruct(), getPointer());
-	function (0, (struct A){0,1}, (int*){0});
+		function (0, (struct A){0,1}, (int*){0});
 	}	
 	return 0;
 }

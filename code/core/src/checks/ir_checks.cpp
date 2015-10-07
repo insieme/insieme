@@ -44,7 +44,6 @@ namespace insieme {
 namespace core {
 namespace checks {
 
-
 	CodeLocation CodeLocation::shift(const NodeAddress& outer, const utils::AnnotationKeyPtr& key) const {
 		// make some assumptions
 		assert_true(outer.hasAnnotation(key));
@@ -74,8 +73,8 @@ namespace checks {
 		// ... followed by the annotation path ...
 		if(!annotationPath.empty()) {
 			out << " / "
-			    << join(" / ", annotationPath, [](std::ostream& out, const std::pair<insieme::utils::AnnotationKeyPtr, insieme::core::NodeAddress>& cur) {
-				       out << *cur.first << ":" << cur.second;
+				<< join(" / ", annotationPath, [](std::ostream& out, const std::pair<insieme::utils::AnnotationKeyPtr, insieme::core::NodeAddress>& cur) {
+					   out << *cur.first << ":" << cur.second;
 				   });
 		}
 
@@ -93,9 +92,7 @@ namespace checks {
 		return Message(location.shift(outer, key), errorCode, message, type);
 	}
 
-	bool Message::operator==(const Message& other) const {
-		return type == other.type && location == other.location && errorCode == other.errorCode;
-	}
+	bool Message::operator==(const Message& other) const { return type == other.type && location == other.location && errorCode == other.errorCode; }
 
 	bool Message::operator<(const Message& other) const {
 		if(type != other.type) { return type < other.type; }
@@ -130,6 +127,12 @@ namespace checks {
 			 * The list of checks to be represented.
 			 */
 			CheckList checks;
+			/**
+			 * Whether this is a full check (which can tag nodes as error-free).
+			 */
+			bool isFullCheck;
+
+			struct FullyCorrectTag {};
 
 		  public:
 			/**
@@ -138,17 +141,19 @@ namespace checks {
 			 *
 			 * @param checks the checks to be conducted by the resulting check
 			 */
-			CombinedIRCheck(const CheckList& checks = CheckList())
-			    : IRCheck(any(checks, [](const CheckPtr& cur) { return cur->isVisitingTypes(); })), checks(checks){};
+			CombinedIRCheck(const CheckList& checks = CheckList(), bool isFullCheck = false)
+				: IRCheck(any(checks, [](const CheckPtr& cur) { return cur->isVisitingTypes(); })), checks(checks), isFullCheck(isFullCheck) { };
 
 		  protected:
 			OptionalMessageList visit(const NodeAddress& node) {
+				if(node->hasAttachedValue<FullyCorrectTag>()) { return OptionalMessageList(); }
 				// aggregate list of all error / warning messages
 				OptionalMessageList list;
 				for_each(checks.begin(), checks.end(), [&list, &node](const CheckPtr& cur) {
 					// merge overall list and messages of current visitor
 					addAll(list, cur->visit(node));
 				});
+				if(isFullCheck && (!list || list->empty())) { node->attachValue<FullyCorrectTag>(); }
 				return list;
 			}
 		};
@@ -346,8 +351,8 @@ namespace checks {
 	std::ostream& MessageList::printTo(std::ostream& out) const {
 		if(empty()) { return out << "[]"; }
 		return out << "[\n\t" << join("\n\t", getAll()) << "\n]"
-		                                                   // add some advertishements to improve tool usage
-		                                                   "\n problems to read this error? use dumpErrors in \"insime/core/printer/error_printer.h\"";
+			                                               // add some advertisements to improve tool usage
+			                                               "\n problems to read this error? use dumpErrors in \"insime/core/printer/error_printer.h\"";
 	}
 
 
@@ -385,29 +390,17 @@ namespace checks {
 		return MessageList();
 	}
 
-	CheckPtr makeRecursive(const CheckPtr& check) {
-		return make_check<RecursiveIRCheck>(check);
-	}
+	CheckPtr makeRecursive(const CheckPtr& check) { return make_check<RecursiveIRCheck>(check); }
 
-	CheckPtr makeVisitOnce(const CheckPtr& check) {
-		return make_check<VisitOnceIRCheck>(check);
-	}
+	CheckPtr makeVisitOnce(const CheckPtr& check) { return make_check<VisitOnceIRCheck>(check); }
 
-	CheckPtr combine(const CheckPtr& a) {
-		return combine(toVector<CheckPtr>(a));
-	}
+	CheckPtr combine(const CheckPtr& a) { return combine(toVector<CheckPtr>(a)); }
 
-	CheckPtr combine(const CheckPtr& a, const CheckPtr& b) {
-		return combine(toVector<CheckPtr>(a, b));
-	}
+	CheckPtr combine(const CheckPtr& a, const CheckPtr& b) { return combine(toVector<CheckPtr>(a, b)); }
 
-	CheckPtr combine(const CheckPtr& a, const CheckPtr& b, const CheckPtr& c) {
-		return combine(toVector<CheckPtr>(a, b, c));
-	}
+	CheckPtr combine(const CheckPtr& a, const CheckPtr& b, const CheckPtr& c) { return combine(toVector<CheckPtr>(a, b, c)); }
 
-	CheckPtr combine(const CheckList& list) {
-		return make_check<CombinedIRCheck>(list);
-	}
+	CheckPtr combine(const CheckList& list, bool isFullCheck) { return make_check<CombinedIRCheck>(list, isFullCheck); }
 
 } // end namespace checks
 } // end namespace core
