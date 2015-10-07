@@ -25,22 +25,17 @@ simd_vector
 ref_vector_array_pointer
 vector_partial_init
 
-# Disabling tests because VLAs are not implemented in the BE
-variable_arrays
-pointer_arith_vla
-
 # Disabling tests because they fail with assertion:
 # Illegal: dereferencing a NULL pointer!
 variadic_functions
 
-# Disabling tests because they fail with exception:
-# No duplicates within identifiers are allowed!
-anonymous
-
-# Disabling tests because they fail to satisfy some semantic checks or errors
-enum
+# Disabling tests because VLAs are not implemented in the BE
+variable_arrays
+pointer_arith_vla
 
 # Disabling tests because they fail in the backend:
 # Reason: unsupported type __insieme_enum
 anon_enum
 pendulum
+enum
+

@@ -142,38 +142,52 @@ namespace checks {
 		OptionalMessageList res;
 
 		// not interested in definition point
-		if (!address.isRoot() && address.getParentNode().isa<TagTypeBindingPtr>()) return res;
-		if (!address.isRoot() && address.getParentNode().isa<TagTypePtr>()) return res;
+		if(!address.isRoot() && address.getParentNode().isa<TagTypeBindingPtr>()) return res;
+		if(!address.isRoot() && address.getParentNode().isa<TagTypePtr>()) return res;
 
 		// find enclosing context
 		NodeAddress context = address;
-		while (true) {
-
+		while(true) {
 			// get next enclosing context
 			while(!context.isRoot() && !context.isa<TagTypeDefinitionPtr>()) {
 				context = context.getParentAddress();
 			}
 
 			// check potential enclosing tag type definition
-			if (auto def = context.isa<TagTypeDefinitionPtr>()) {
-				if (def->getDefinitionOf(address)) {
-					return res;		// all fine
+			if(auto def = context.isa<TagTypeDefinitionPtr>()) {
+				if(def->getDefinitionOf(address)) {
+					return res; // all fine
 				}
 				// => check next enclosing context
-				if (!context.isRoot()) {
+				if(!context.isRoot()) {
 					context = context.getParentAddress();
 					continue;
 				}
 			}
 
 			// in all other cases there is a free definition
-			add(res, Message(address, EC_TYPE_FREE_TAG_TYPE_REFERENCE,
-					 format("Free tag type reference %s found", *address),
-					 Message::ERROR)
-			);
+			add(res, Message(address, EC_TYPE_FREE_TAG_TYPE_REFERENCE, format("Free tag type reference %s found", *address), Message::ERROR));
 
 			return res;
 		}
+	}
+
+	OptionalMessageList TagTypeFieldsCheck::visitTagType(const TagTypeAddress& address) {
+		OptionalMessageList res;
+
+		// check for duplicate field names
+		utils::set::PointerSet<StringValuePtr> identifiers;
+		auto fields = address.getAddressedNode()->getFields();
+		for(auto field : fields) {
+			auto id = field->getName();
+			if(id->getValue().empty()) continue;
+			if(identifiers.contains(id)) {
+				add(res, Message(address, EC_TYPE_MALFORMED_TAG_TYPE, format("Tag type contains duplicate field name: ", *id), Message::ERROR));
+			}
+			identifiers.insert(id);
+		}
+
+		return res;
 	}
 
 	OptionalMessageList CallExprTypeCheck::visitCallExpr(const CallExprAddress& address) {
