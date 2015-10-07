@@ -434,11 +434,6 @@ namespace c_ast {
 				return out << "{" << join(", ", node->values, [&](std::ostream& out, const NodePtr& cur) { out << print(cur); }) << "}";
 			}
 
-			PRINT(OCLVectorInit) {
-				return out << "(" << print(node->type) << ")(" << join(", ", node->values, [&](std::ostream& out, const NodePtr& cur) { out << print(cur); })
-				           << ")";
-			}
-
 			PRINT(UnaryOperation) {
 				// handle operations
 				switch(node->operation) {

@@ -123,4 +123,10 @@ int main() {
 	typedef union { int i; } union_t;
 	#pragma test expect_ir("REGEX", R"(decl ref<union \w+ \{int<4> i\},f,f,plain> v0 = .*)")
 	union_t uni;
+	
+	#pragma test expect_ir("REGEX_S", R"(decl ref<union \{struct \{int<4> a ; int<4> b\} ; array<int<4>,2> v\},f,f,plain> v0.*)")
+	union { struct { int a; int b; }; int v[2]; } anonymous_inner;
+	
+	#pragma test expect_ir("REGEX", R"(.*\*v\d+\.\.a.*)")
+	anonymous_inner.a;
 }
