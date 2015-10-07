@@ -5,13 +5,12 @@
  *
  */
 
-//typedef int bool;
 #define bool int
 
 #define true 1
 #define false 0
 
-extern int printf(char *, ...);
+extern int printf(const char *, ...);
 
 
 typedef struct _data {
@@ -98,7 +97,6 @@ int main(int argc, char* argv[]) {
 	printf("Letter Pointer: %c\n", funPointer(a1, c1, c2, c3));
 	printf("Letter Struct:  %c\n", funStruct(s));
 
-/* - not yet properly supported by the insieme compiler -
 	char *strings[] = { "This", "is", "a", "little", "test"};
 
 	printf("String:  %s\n", strings[0]);
@@ -106,6 +104,6 @@ int main(int argc, char* argv[]) {
 	printf("String:  %s\n", strings[2]);
 	printf("String:  %s\n", strings[3]);
 	printf("String:  %s\n", strings[4]);
-*/
+
 	return 0;
 }

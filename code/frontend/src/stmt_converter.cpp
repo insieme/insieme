@@ -132,7 +132,11 @@ namespace conversion {
 			// check if we have an init expression
 			core::ExpressionPtr initExp;
 			if(convertedDecl.second) {
-				auto refVar = builder.refVar(*convertedDecl.second);
+				core::ExpressionPtr refVar = builder.refVar(*convertedDecl.second);
+				// exception for string literals (appear here as plain lvalues)
+				if(varDecl->getInit()->isLValue()) {
+					refVar = *convertedDecl.second;
+				}
 				initExp = core::lang::buildRefCast(refVar, convertedDecl.first->getType());
 				if(initExp != refVar) {
 					VLOG(2) << "Initialization: casting ref from\n" << dumpPretty(refVar->getType()) << " to \n" << convertedDecl.first->getType();
