@@ -73,6 +73,7 @@ namespace state {
 		void popScope() { storage.pop_back(); }
 
 		core::ExpressionPtr lookup(const clang::VarDecl* varDecl) const;
+		void undefine(const clang::VarDecl* varDecl);
 		void insert(const clang::VarDecl* varDecl, const core::ExpressionPtr& var);
 
 		/// get the number of visible declarations in current scope (for testing)

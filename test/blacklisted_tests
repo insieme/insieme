@@ -20,8 +20,7 @@ label_goto
 longlong
 simd_vector
 
-# Disabling tests because they fail with assertion:
-# Illegal: dereferencing a NULL pointer!
+# Disabling tests because the variadic fucntions plugin is incomplete
 variadic_functions
 
 # Disabling tests because VLAs are not implemented in the BE
