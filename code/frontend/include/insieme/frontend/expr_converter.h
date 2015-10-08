@@ -70,6 +70,8 @@ namespace conversion {
 	  public:
 		ExprConverter(Converter& converter) : converter(converter), mgr(converter.mgr), builder(converter.builder), basic(converter.builder.getLangBasic()) {}
 		virtual ~ExprConverter() {}
+
+		core::ExpressionPtr convertInitExpr(const clang::Expr* original);
 		
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		//  Literals
