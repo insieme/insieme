@@ -296,8 +296,7 @@ namespace conversion {
 			expand('\0', "\\0");
 		}
 
-		retExpr = builder.stringLit(strValue, stringLit->getType().isConstQualified());
-		frontend_assert(retExpr->getType() == convertExprType(stringLit));
+		retExpr = builder.literal(convertExprType(stringLit), "\"" + strValue + "\"");
 		return retExpr;
 	}
 
@@ -726,6 +725,7 @@ namespace conversion {
 		core::ExpressionPtr translateInitExpr(Converter& converter, const clang::Expr* original) {
 			auto expr = converter.convertExpr(original);
 			if(original->isLValue()) {
+				auto origLit = llvm::dyn_cast<clang::StringLiteral>(original);
 				auto lit = expr.isa<core::LiteralPtr>();
 				if(!lit) return expr;
 				string s = lit->getValue()->getValue();
@@ -736,7 +736,7 @@ namespace conversion {
 					initExps.push_back(builder.literal(format("'%s'",toString(c)), mgr.getLangBasic().getChar()));
 				}
 				initExps.push_back(builder.literal("'\\0'", mgr.getLangBasic().getChar()));
-				expr = core::lang::buildArrayCreate(lit->getNodeManager(), s.size()-1, initExps);
+				expr = core::lang::buildArrayCreate(lit->getNodeManager(), origLit->getLength()+1, initExps);
 			}
 			return expr;
 		}
