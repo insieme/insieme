@@ -165,6 +165,7 @@ blank         [ \t]
 "union"       return InspireParser::make_UNION(loc);
 
 "virtual"     return InspireParser::make_VIRTUAL(loc);
+"pure"        return InspireParser::make_PURE(loc);
 "const"       return InspireParser::make_CONST(loc);
 "volatile"    return InspireParser::make_VOLATILE(loc);
 "private"     return InspireParser::make_PRIVATE(loc);

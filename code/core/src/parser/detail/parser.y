@@ -125,6 +125,7 @@
 	DEF          "def"
 
 	VIRTUAL      "virtual"
+	PURE         "pure"
 	CONST        "const"
 	VOLATILE     "volatile"
 	PRIVATE      "private"
@@ -358,7 +359,7 @@ pure_virtual_member_functions : pure_virtual_member_functions pure_virtual_membe
                               |                                                             { $$ = PureVirtualMemberFunctionList(); }
                               ;
 
-pure_virtual_member_function : "pure" "virtual" cv_flags "identifier" ":" pure_function_type    { $$ = PureVirtualMemberFunctionPtr(); }
+pure_virtual_member_function : "pure" "virtual" cv_flags "identifier" "=" pure_function_type    { $$ = driver.genPureVirtualMemberFunction(@$, $3.first, $3.second, $4, $6); }
                              ;
 
 
