@@ -199,6 +199,7 @@ namespace conversion {
 		LOG_EXPR_CONVERSION(declRef, retIr);
 		
 		if(const clang::FieldDecl* field = llvm::dyn_cast<clang::FieldDecl>(declRef->getDecl())) {
+			field->dump(); // prevent unused warning
 			assert_not_implemented();
 			// this is the direct access to a member field in a generic way: something like Obj::a
 		}
