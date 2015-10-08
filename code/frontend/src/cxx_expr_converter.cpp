@@ -197,21 +197,11 @@ namespace conversion {
 	core::ExpressionPtr Converter::CXXExprConverter::VisitDeclRefExpr(const clang::DeclRefExpr* declRef) {
 		core::ExpressionPtr retIr;
 		LOG_EXPR_CONVERSION(declRef, retIr);
-
-		//// if is a parameter and is a cpp ref, avoid going further to avoid wrapping issues
-		//if(const ParmVarDecl* parmDecl = dyn_cast<ParmVarDecl>(declRef->getDecl())) {
-		//	retIr = converter.lookUpVariable(parmDecl);
-		//	if(core::analysis::isAnyCppRef(retIr->getType())) { return retIr; }
-		//}
-
-		//if(const clang::FieldDecl* field = llvm::dyn_cast<clang::FieldDecl>(declRef->getDecl())) {
-		//	// this is the direct access to a member field in a generic way: something like Obj::a
-		//	core::TypePtr classTy = converter.convertType(field->getParent()->getTypeForDecl()->getCanonicalTypeInternal());
-		//	core::TypePtr membType = converter.convertType(declRef->getType());
-		//	return retIr = core::analysis::getMemberPointerValue(classTy, field->getNameAsString(), membType);
-		//}
-
-		assert_not_implemented();
+		
+		if(const clang::FieldDecl* field = llvm::dyn_cast<clang::FieldDecl>(declRef->getDecl())) {
+			assert_not_implemented();
+			// this is the direct access to a member field in a generic way: something like Obj::a
+		}
 
 		return retIr = Converter::ExprConverter::VisitDeclRefExpr(declRef);
 	}

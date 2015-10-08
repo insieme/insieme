@@ -208,12 +208,12 @@ namespace lang {
 		assert_true(isReference(typeB)) << "Can only check qualifiers on references, not on " << dumpColor(typeB);
 
 		// check that they are not equal
-		if (typeA == typeB) return false;
+		if(typeA == typeB) return false;
 		
 		auto gA = typeA.as<GenericTypePtr>();
 		auto gB = typeB.as<GenericTypePtr>();
 
-		return gA->getTypeParameter(0) == gB->getTypeParameter(0) && gA->getTypeParameter(3) == gB->getTypeParameter(3);
+		return gA->getTypeParameter(0) == gB->getTypeParameter(0);
 	}
 	
 	ExpressionPtr buildRefCast(const ExpressionPtr& refExpr, const TypePtr& targetTy) {

@@ -96,8 +96,11 @@ namespace conversion {
 	}
 	
 	core::TypePtr Converter::TypeConverter::convertVarType(const clang::QualType& type) {
+		auto irt = convert(type);
+		// if it's already a ref, we come from C++ and are fine
+		if(core::lang::isReference(irt)) return irt;
 		// add correctly qualified "ref" to inner type
-		return builder.refType(convert(type), type.isConstQualified(), type.isVolatileQualified());
+		return builder.refType(irt, type.isConstQualified(), type.isVolatileQualified());
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
