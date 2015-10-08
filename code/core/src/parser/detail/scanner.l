@@ -136,6 +136,7 @@ blank         [ \t]
 "function"    return InspireParser::make_FUNCTION(loc);
 "lambda"      return InspireParser::make_LAMBDA(loc);
 "ctor"        return InspireParser::make_CTOR(loc);
+"dtor"        return InspireParser::make_DTOR(loc);
 "type_lit"    return InspireParser::make_TYPE_LIT(loc);
 "this"        return InspireParser::make_THIS(loc);
 
@@ -162,9 +163,6 @@ blank         [ \t]
 "false"       return InspireParser::make_FALSE(loc);
 "struct"      return InspireParser::make_STRUCT(loc);
 "union"       return InspireParser::make_UNION(loc);
-
-"ctor"        return InspireParser::make_CTOR(loc);
-"dtor"        return InspireParser::make_DTOR(loc);
 
 "virtual"     return InspireParser::make_VIRTUAL(loc);
 "const"       return InspireParser::make_CONST(loc);
