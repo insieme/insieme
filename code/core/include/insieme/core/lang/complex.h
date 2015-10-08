@@ -83,28 +83,28 @@ namespace lang {
 		 * Get real part of complex.
 		 */
 		LANG_EXT_DERIVED(ComplexReal,
-			"(x : struct _ir_complex { _real : 'a; _img : 'a; })->'a { return x._real; }"
+			"lambda (x : struct _ir_complex { _real : 'a; _img : 'a; })->'a { return x._real; }"
 		);
 
 		/**
 		 * Get real part of complex ref.
 		 */
 		LANG_EXT_DERIVED(RefComplexReal,
-			"(x : ref<struct _ir_complex { _real : 'a; _img : 'a; },'c,'v>)->ref<'a,'c,'v> { return x._real; }"
+			"lambda (x : ref<struct _ir_complex { _real : 'a; _img : 'a; },'c,'v>)->ref<'a,'c,'v> { return x._real; }"
 		);
 
 		/**
 		 * Get imaginary part of complex.
 		 */
 		LANG_EXT_DERIVED(ComplexImg,
-			"(x : struct _ir_complex { _real : 'a; _img : 'a; })->'a { return x._img; }"
+			"lambda (x : struct _ir_complex { _real : 'a; _img : 'a; })->'a { return x._img; }"
 		);
 
 		/**
 		 * Get imaginary part of complex ref.
 		 */
 		LANG_EXT_DERIVED(RefComplexImg,
-			"(x : ref<struct _ir_complex { _real : 'a; _img : 'a; },'c,'v>)->ref<'a,'c,'v> { return x._img; }"
+			"lambda (x : ref<struct _ir_complex { _real : 'a; _img : 'a; },'c,'v>)->ref<'a,'c,'v> { return x._img; }"
 		);
 
 		/**
@@ -112,7 +112,7 @@ namespace lang {
 		 */
 		LANG_EXT_DERIVED(ConstantToComplex,
 							"alias res_t = struct _ir_complex {_real : 'a; _img : 'a; };"
-							"(c : 'a)->res_t {"
+							"lambda (c : 'a)->res_t {"
 								"return <res_t> {c, CAST('a) 0};"
 							"}");
 
@@ -120,7 +120,7 @@ namespace lang {
 		 * Check if the real and imaginary part of the complex number are zero.
 		 */
 		LANG_EXT_DERIVED(ComplexToBool,
-			"(x : struct _ir_complex { _real : 'a; _img : 'a; })->bool { return (x._img != num_cast(0.0, type_lit('a))) || (x._real != num_cast(0.0, type_lit('a))); }"
+			"lambda (x : struct _ir_complex { _real : 'a; _img : 'a; })->bool { return (x._img != num_cast(0.0, type_lit('a))) || (x._real != num_cast(0.0, type_lit('a))); }"
 		);
 
 		/**
@@ -128,7 +128,7 @@ namespace lang {
 		 */
 		LANG_EXT_DERIVED(ComplexToComplex,
 							"alias res_t = struct _ir_complex {_real : 'b; _img : 'b; };"
-							"(c : struct _ir_complex {_real : 'a; _img : 'a; }, t : type<'b>)->struct _ir_complex {_real : 'b; _img : 'b; } {"
+							"lambda (c : struct _ir_complex {_real : 'a; _img : 'a; }, t : type<'b>)->res_t {"
 								"return <res_t> { num_cast(c._real, type_lit('b)), num_cast(c._img, type_lit('b)) };"
 							"}");
 
