@@ -956,10 +956,12 @@ namespace parser {
 		void InspireDriver::beginRecord(const std::string& name) {
 			assert_false(currentRecord);
 			currentRecord = builder.tagTypeReference(name);
+			openScope();
 		}
 
 		void InspireDriver::endRecord() {
 			assert_true(currentRecord);
+			closeScope();
 			currentRecord = nullptr;
 		}
 
