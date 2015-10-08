@@ -143,7 +143,7 @@ namespace parser {
 			InspireScanner scanner;
 			InspireParser parser;
 
-			TagTypeReferencePtr currentRecord;
+			std::vector<TagTypeReferencePtr> currentRecordStack;
 
 			/**
 			 * constructs a struct expression

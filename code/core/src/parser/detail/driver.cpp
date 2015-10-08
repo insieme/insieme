@@ -539,10 +539,10 @@ namespace parser {
 		 * generates a constructor for the currently defined record type
 		 */
 		LambdaExprPtr InspireDriver::genConstructor(const location& l, const VariableList& params, const StatementPtr& body) {
-			assert_true(currentRecord) << "Not within record definition!";
+			assert_false(currentRecordStack.empty()) << "Not within record definition!";
 
 			// get this-type
-			auto thisParam = builder.variable(builder.refType(currentRecord));
+			auto thisParam = builder.variable(builder.refType(getThisType()));
 
 			// create full parameter list
 			VariableList ctorParams;
@@ -566,10 +566,10 @@ namespace parser {
 		 * generates a destructor for the currently defined record type
 		 */
 		LambdaExprPtr InspireDriver::genDestructor(const location& l, const StatementPtr& body) {
-			assert_true(currentRecord) << "Not within record definition!";
+			assert_false(currentRecordStack.empty()) << "Not within record definition!";
 
 			// get this-type
-			auto thisParam = builder.variable(builder.refType(currentRecord));
+			auto thisParam = builder.variable(builder.refType(getThisType()));
 
 			// create full parameter list
 			VariableList params = { thisParam };
@@ -592,10 +592,10 @@ namespace parser {
 		 */
 		MemberFunctionPtr InspireDriver::genMemberFunction(const location& l, bool virtl, bool cnst, bool voltile, const std::string& name, const LambdaExprPtr& lambda, bool isLambda) {
 			assert_false(lambda->isRecursive()) << "The parser should not produce recursive functions!";
-			assert_true(currentRecord) << "Not within record definition!";
+			assert_false(currentRecordStack.empty()) << "Not within record definition!";
 
 			// get this-type
-			auto thisType = builder.refType(currentRecord, cnst, voltile);
+			auto thisType = builder.refType(getThisType(), cnst, voltile);
 			if (!isLambda) thisType = builder.refType(thisType);
 			auto thisParam = builder.variable(thisType);
 
@@ -625,10 +625,10 @@ namespace parser {
 		 */
 		PureVirtualMemberFunctionPtr InspireDriver::genPureVirtualMemberFunction(const location& l,  bool cnst, bool voltile, const std::string& name, const FunctionTypePtr& type) {
 			assert_true(type->isPlain()) << "Only plain function types should be covered here!";
-			assert_true(currentRecord) << "Not within record definition!";
+			assert_false(currentRecordStack.empty()) << "Not within record definition!";
 
 			// get this-type
-			auto thisType = builder.refType(currentRecord, cnst, voltile);
+			auto thisType = builder.refType(getThisType(), cnst, voltile);
 
 			// create full parameter type list
 			TypeList fullParams;
@@ -846,13 +846,13 @@ namespace parser {
 
 		ExpressionPtr InspireDriver::genThis(const location& l) {
 			// check valid scope
-			if (!currentRecord) {
+			if (currentRecordStack.empty()) {
 				error(l, "This-pointer in non-record context!");
 				return nullptr;
 			}
 
 			// build a literal
-			return builder.literal("this", builder.refType(currentRecord));
+			return builder.literal("this", builder.refType(getThisType()));
 		}
 
 
@@ -954,20 +954,19 @@ namespace parser {
 		}
 
 		void InspireDriver::beginRecord(const std::string& name) {
-			assert_false(currentRecord);
-			currentRecord = builder.tagTypeReference(name);
+			currentRecordStack.push_back(builder.tagTypeReference(name));
 			openScope();
 		}
 
 		void InspireDriver::endRecord() {
-			assert_true(currentRecord);
+			assert_false(currentRecordStack.empty());
 			closeScope();
-			currentRecord = nullptr;
+			currentRecordStack.pop_back();
 		}
 
 		TagTypeReferencePtr InspireDriver::getThisType() {
-			assert_true(currentRecord);
-			return currentRecord;
+			assert_false(currentRecordStack.empty());
+			return currentRecordStack.back();
 		}
 
 		void InspireDriver::importExtension(const location& l, const std::string& extensionName) {
