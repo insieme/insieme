@@ -248,7 +248,7 @@
 %type <VariableList>                   parameters non_empty_parameters
 
 
-%type <CompoundStmtPtr>                compound_statement
+%type <CompoundStmtPtr>                compound_statement compound_statement_no_scope
 %type <DeclarationStmtPtr>             variable_declaration
 %type <IfStmtPtr>                      if_statement
 %type <SwitchStmtPtr>                  switch_statement
@@ -329,7 +329,8 @@ constructors : constructors constructor                                     { $1
              |                                                              { $$ = LambdaExprList(); }
              ;
 
-constructor : "ctor" "(" parameters ")" compound_statement                  { $$ = driver.genConstructor(@$, $3, $5); }
+constructor : "ctor"                                                        { driver.openScope(); }
+                     "(" parameters ")" compound_statement_no_scope         { $$ = driver.genConstructor(@$, $4, $6); driver.closeScope(); }
             ;
 
 destructor : "dtor" "(" ")" compound_statement                              { $$ = driver.genDestructor(@$, $4); }
@@ -576,8 +577,10 @@ call : expression "(" expressions ")"                                     { $$ =
 
 // -- lambda --
 
-lambda : "(" ")" "->" type compound_statement                             { $$ = driver.genLambda(@$, VariableList(), $4, $5); }
-       | "(" non_empty_parameters ")" "->" type compound_statement        { $$ = driver.genLambda(@$, $2, $5, $6); }
+lambda : lambda_or_function "(" ")" "->" type compound_statement          { $$ = driver.genLambda(@$, VariableList(), $5, $6, $1); }
+       | lambda_or_function "("                                           { driver.openScope(); }
+                                non_empty_parameters ")" "->" type compound_statement_no_scope
+                                                                          { $$ = driver.genLambda(@$, $4, $7, $8, $1); driver.closeScope(); }
        ;
 
 parameters : non_empty_parameters                                         { $$ = $1; }
@@ -696,6 +699,9 @@ plain_statement : expression ";"                                          { $$ =
 // -- compound statement --
 
 compound_statement : { driver.openScope(); } "{" statement_list "}"       { $$ = driver.builder.compoundStmt($3); driver.closeScope(); }
+                   ;
+
+compound_statement_no_scope : "{" statement_list "}"                      { $$ = driver.builder.compoundStmt($2); }
                    ;
 
 statement_list :                                                          { $$ = StatementList(); }
