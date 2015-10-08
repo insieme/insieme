@@ -722,16 +722,23 @@ namespace conversion {
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	namespace {
-		core::ExpressionPtr translateStringLiteralToValue(const core::LiteralPtr& lit) {
-			string s = lit->getValue()->getValue();
-			core::NodeManager& mgr = lit->getNodeManager();
-			core::IRBuilder builder(mgr);
-			ExpressionList initExps;
-			for(char c : s.substr(1, s.size()-2)) {
-				initExps.push_back(builder.literal(format("'%s'",toString(c)), mgr.getLangBasic().getChar()));
+		// translate expression as usual, but convert translated string literals to r-values rather than l-values
+		core::ExpressionPtr translateInitExpr(Converter& converter, const clang::Expr* original) {
+			auto expr = converter.convertExpr(original);
+			if(original->isLValue()) {
+				auto lit = expr.isa<core::LiteralPtr>();
+				if(!lit) return expr;
+				string s = lit->getValue()->getValue();
+				core::NodeManager& mgr = lit->getNodeManager();
+				core::IRBuilder builder(mgr);
+				ExpressionList initExps;
+				for(char c : s.substr(1, s.size()-2)) {
+					initExps.push_back(builder.literal(format("'%s'",toString(c)), mgr.getLangBasic().getChar()));
+				}
+				initExps.push_back(builder.literal("'\\0'", mgr.getLangBasic().getChar()));
+				expr = core::lang::buildArrayCreate(lit->getNodeManager(), s.size()-1, initExps);
 			}
-			initExps.push_back(builder.literal("'\\0'", mgr.getLangBasic().getChar()));
-			return core::lang::buildArrayCreate(lit->getNodeManager(), s.size()-1, initExps);
+			return expr;
 		}
 
 		std::pair<core::TagTypePtr, core::GenericTypePtr> lookupRecordTypes(Converter& converter, const clang::InitListExpr* initList) {
@@ -752,7 +759,7 @@ namespace conversion {
 			unsigned i = 0;
 			for(auto entry : fields) {
 				core::ExpressionPtr initExp = converter.getIRBuilder().getZero(entry->getType());
-				if(i < initList->getNumInits()) initExp = converter.convertExpr(initList->getInit(i));
+				if(i < initList->getNumInits()) initExp = translateInitExpr(converter, initList->getInit(i));
 				frontend_assert(initExp->getType() == entry->getType()) << "Type mismatch in record initialization expression:\n"
 					<< "expected: " << dumpColor(entry->getType()) << "got: " << dumpColor(initExp->getType());
 				values.push_back(converter.getIRBuilder().namedValue(entry->getName(), initExp));
@@ -787,17 +794,12 @@ namespace conversion {
 			frontend_assert(core::lang::isArray(gT)) << "Clang InitListExpr of unexpected generic type (should be array):\n" << dumpColor(gT);
 			ExpressionList initExps;
 			for(unsigned i = 0; i < initList->getNumInits(); ++i) { // yes, that is really the best way to do this in clang 3.6
-				// special handling for string literals (appear as l values)
-				auto initExp = converter.convertExpr(initList->getInit(i));
-				if(initList->getInit(i)->isLValue()) {
-					initExp = translateStringLiteralToValue(initExp.as<core::LiteralPtr>());
-				}
-				initExps.push_back(initExp);
+				initExps.push_back(translateInitExpr(converter, initList->getInit(i)));
 			}
 			retIr = core::lang::buildArrayCreate(core::lang::getArraySize(gT), initExps);
 		} 
 		else if(clangType->isScalarType()) {
-			retIr = Visit(initList->getInit(0));
+			retIr = translateInitExpr(converter, initList->getInit(0));
 		} else {
 			frontend_assert(false) << "Clang InitListExpr of unexpected type";
 		}

@@ -49,8 +49,7 @@ int main(int argc, char* argv[]) {
 	// single / multidimensional C-arrays
 	char b1[6] = "Hallo";
 	char b2[3][2] = {"X", "Y", "Z" };
-	char b3[5][3][2];
-	//char b3[5][3][2] = { {"X", "Y", "Z" } };
+	char b3[5][3][2] = { {"X", "Y", "Z" } };
 
 	// arrays / pointer
 	char* c1 = b1;
