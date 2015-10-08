@@ -205,8 +205,15 @@ void printSummary(const int totalTests,
 int main(int argc, char** argv) {
 	// TODO custom root config file
 	// set OMP/IRT environment variables if not already set
-	setenv("IRT_NUM_WORKERS", "3", 0);
-	setenv("OMP_NUM_THREADS", "3", 0);
+	auto checkAndSetEnv = [](const char* identifier, const char* defaultValue){
+		if(!getenv(identifier)) {
+			std::cout << identifier << " environment variable not set, defaulting to " << defaultValue << "\n";
+			setenv(identifier, defaultValue, 1);
+		}
+	};
+
+	checkAndSetEnv("IRT_NUM_WORKERS", "3");
+	checkAndSetEnv("OMP_NUM_THREADS", "3");
 
 	// parse parameters
 	tf::Options options = parseCommandLine(argc, argv);
