@@ -180,7 +180,7 @@ namespace lang {
 	}
 
 	void ArrayType::setSize(const VariablePtr& size) {
-		if (size) assert_pred1(size->getNodeManager().getLangBasic().isUIntInf, size->getType());
+		if(size) assert_pred1(size->getNodeManager().getLangBasic().isUIntInf, size->getType());
 		this->size = size;
 	}
 

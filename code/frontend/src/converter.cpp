@@ -275,6 +275,11 @@ namespace conversion {
 		return exprConvPtr->Visit(const_cast<Expr*>(expr));
 	}
 
+	core::ExpressionPtr Converter::convertInitExpr(const clang::Expr* expr) const {
+		assert_true(expr) << "Calling convertExpr with a NULL pointer";
+		return exprConvPtr->convertInitExpr(const_cast<Expr*>(expr));
+	}
+
 	core::StatementPtr Converter::convertStmt(const clang::Stmt* stmt) const {
 		assert_true(stmt) << "Calling convertStmt with a NULL pointer";
 		return stmtutils::aggregateStmts(builder, stmtConvPtr->Visit(const_cast<Stmt*>(stmt)));

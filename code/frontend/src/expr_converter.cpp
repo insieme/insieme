@@ -89,6 +89,26 @@ namespace conversion {
 		if(expr->getValueKind() == clang::VK_LValue) irType = builder.refType(irType, qType.isConstQualified(), qType.isVolatileQualified());
 		return irType;
 	}
+	
+	// translate expression as usual, but convert translated string literals to r-values rather than l-values
+	core::ExpressionPtr Converter::ExprConverter::convertInitExpr(const clang::Expr* original) {
+		auto expr = converter.convertExpr(original);
+		if(original->isLValue()) {
+			auto origType = llvm::dyn_cast_or_null<clang::ConstantArrayType>(original->getType()->getAsArrayTypeUnsafe());
+			auto lit = expr.isa<core::LiteralPtr>();
+			if(!origType || !lit) return expr;
+			string s = insieme::utils::unescapeString(lit->getValue()->getValue());
+			core::NodeManager& mgr = lit->getNodeManager();
+			core::IRBuilder builder(mgr);
+			ExpressionList initExps;
+			for(char c : s) {
+				initExps.push_back(builder.literal(format("'%s'",toString(insieme::utils::escapeChar(c))), mgr.getLangBasic().getChar()));
+			}
+			expr = core::lang::buildArrayCreate(lit->getNodeManager(), origType->getSize().getLimitedValue(), initExps);
+			VLOG(2) << "convertInitExpr: translated string literal\n" << dumpClang(original, converter.getSourceManager()) << " - to - \n" << dumpColor(expr);
+		}
+		return expr;
+	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// Overwrite the basic visit method for expression in order to automatically
@@ -184,42 +204,9 @@ namespace conversion {
 		core::ExpressionPtr retExpr;
 		LOG_EXPR_CONVERSION(charLit, retExpr);
 
-		std::string value;
-		unsigned int v = charLit->getValue();
-		
+		std::string value;		
 		if(charLit->getKind() == clang::CharacterLiteral::Ascii) {
-			value.append("\'");
-			if(v == '\\') {
-				value.append("\\\\");
-			} else if(v == '\n') {
-				value.append("\\n");
-			} else if(v == '\t') {
-				value.append("\\t");
-			} else if(v == '\b') {
-				value.append("\\b");
-			} else if(v == '\a') {
-				value.append("\\a");
-			} else if(v == '\v') {
-				value.append("\\v");
-			} else if(v == '\r') {
-				value.append("\\r");
-			} else if(v == '\f') {
-				value.append("\\f");
-			} else if(v == '\?') {
-				value.append("\\\?");
-			} else if(v == '\'') {
-				value.append("\\\'");
-			} else if(v == '\"')
-				value.append("\\\"");
-			else if(v == '\0') {
-				value.append("\\0");
-			} else {
-				char cad[2];
-				cad[0] = v;
-				cad[1] = '\0';
-				value.append(cad);
-			}
-			value.append("\'");
+			value = "\'" + insieme::utils::escapeChar(charLit->getValue()) + "\'";
 		} else {
 			frontend_assert(false) << "Non-ASCII character literals unsupported";
 		}
@@ -236,21 +223,21 @@ namespace conversion {
 
 		// retrieve data itself
 		std::string strValue = stringLit->getBytes().str();
-		int vectorLenght = strValue.length();
+		int vectorLength = strValue.length();
 		core::TypePtr elemType;
 		switch(stringLit->getKind()) {
 		case clang::StringLiteral::Ascii:
 		case clang::StringLiteral::UTF8: elemType = basic.getChar(); break;
 		case clang::StringLiteral::UTF16:
 			elemType = basic.getWChar16();
-			vectorLenght /= 2;
+			vectorLength /= 2;
 			converter.warnings.insert("Insieme widechar support is experimental, check on windows");
 			break;
 		case clang::StringLiteral::UTF32:
 		case clang::StringLiteral::Wide: {
 			// some literature about encodings transformation
 			// http://www.joelonsoftware.com/articles/Unicode.html
-			vectorLenght = stringLit->getBytes().size() / 4;
+			vectorLength = stringLit->getBytes().size() / 4;
 			elemType = basic.getWChar32();
 
 			size_t size = stringLit->getBytes().size();
@@ -263,37 +250,16 @@ namespace conversion {
 			iconv_t cd = iconv_open("UTF-8", "UTF-32");
 			iconv(cd, &rptr, &size, &wptr, &outSize);
 			frontend_assert(size == 0) << "encoding modification failed.... \n";
-			strValue = std::string(out, vectorLenght);
+			strValue = std::string(out, vectorLength);
 			converter.warnings.insert("Insieme widechar support is experimental");
 			break;
 		}
 		}
 		frontend_assert(elemType);
-		vectorLenght += 1; // add the null char
-
-		auto expand = [&](char lookup, const char* replacement) {
-			unsigned last = 0;
-			unsigned it;
-			string rep = replacement;
-			while((it = strValue.find(lookup, last)) < strValue.length()) {
-				last = it + rep.length();
-				strValue.replace(it, 1, rep);
-			}
-		};
-
+		vectorLength += 1; // add the null char
+		
 		if(stringLit->getKind() == clang::StringLiteral::Ascii) {
-			expand('\\', "\\\\");
-			expand('\n', "\\n");
-			expand('\t', "\\t");
-			expand('\b', "\\b");
-			expand('\a', "\\a");
-			expand('\v', "\\v");
-			expand('\r', "\\r");
-			expand('\f', "\\f");
-			expand('\?', "\\\?");
-			expand('\'', "\\\'");
-			expand('\"', "\\\"");
-			expand('\0', "\\0");
+			strValue = insieme::utils::escapeString(strValue);
 		}
 
 		retExpr = builder.literal(convertExprType(stringLit), "\"" + strValue + "\"");
@@ -721,26 +687,6 @@ namespace conversion {
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	namespace {
-		// translate expression as usual, but convert translated string literals to r-values rather than l-values
-		core::ExpressionPtr translateInitExpr(Converter& converter, const clang::Expr* original) {
-			auto expr = converter.convertExpr(original);
-			if(original->isLValue()) {
-				auto origLit = llvm::dyn_cast<clang::StringLiteral>(original);
-				auto lit = expr.isa<core::LiteralPtr>();
-				if(!lit) return expr;
-				string s = lit->getValue()->getValue();
-				core::NodeManager& mgr = lit->getNodeManager();
-				core::IRBuilder builder(mgr);
-				ExpressionList initExps;
-				for(char c : s.substr(1, s.size()-2)) {
-					initExps.push_back(builder.literal(format("'%s'",toString(c)), mgr.getLangBasic().getChar()));
-				}
-				initExps.push_back(builder.literal("'\\0'", mgr.getLangBasic().getChar()));
-				expr = core::lang::buildArrayCreate(lit->getNodeManager(), origLit->getLength()+1, initExps);
-			}
-			return expr;
-		}
-
 		std::pair<core::TagTypePtr, core::GenericTypePtr> lookupRecordTypes(Converter& converter, const clang::InitListExpr* initList) {
 			auto clangType = initList->getType();
 			auto clangRecordType = llvm::dyn_cast<clang::RecordType>(clangType->getCanonicalTypeUnqualified());
@@ -759,7 +705,7 @@ namespace conversion {
 			unsigned i = 0;
 			for(auto entry : fields) {
 				core::ExpressionPtr initExp = converter.getIRBuilder().getZero(entry->getType());
-				if(i < initList->getNumInits()) initExp = translateInitExpr(converter, initList->getInit(i));
+				if(i < initList->getNumInits()) initExp = converter.convertInitExpr(initList->getInit(i));
 				frontend_assert(initExp->getType() == entry->getType()) << "Type mismatch in record initialization expression:\n"
 					<< "expected: " << dumpColor(entry->getType()) << "got: " << dumpColor(initExp->getType());
 				values.push_back(converter.getIRBuilder().namedValue(entry->getName(), initExp));
@@ -794,12 +740,12 @@ namespace conversion {
 			frontend_assert(core::lang::isArray(gT)) << "Clang InitListExpr of unexpected generic type (should be array):\n" << dumpColor(gT);
 			ExpressionList initExps;
 			for(unsigned i = 0; i < initList->getNumInits(); ++i) { // yes, that is really the best way to do this in clang 3.6
-				initExps.push_back(translateInitExpr(converter, initList->getInit(i)));
+				initExps.push_back(convertInitExpr(initList->getInit(i)));
 			}
 			retIr = core::lang::buildArrayCreate(core::lang::getArraySize(gT), initExps);
 		} 
 		else if(clangType->isScalarType()) {
-			retIr = translateInitExpr(converter, initList->getInit(0));
+			retIr = convertInitExpr(initList->getInit(0));
 		} else {
 			frontend_assert(false) << "Clang InitListExpr of unexpected type";
 		}

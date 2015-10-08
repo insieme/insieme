@@ -213,6 +213,14 @@ namespace conversion {
 		 * @return the corresponding IR expression
 		 */
 		core::ExpressionPtr convertExpr(const clang::Expr* expr) const;
+		
+		/**
+		 * Entry point for converting clang initialization expressions to IR expressions
+		 * - the difference is relevant in the case of string literals
+		 * @param expr is a clang expression of the AST
+		 * @return the corresponding IR initialization expression
+		 */
+		core::ExpressionPtr convertInitExpr(const clang::Expr* expr) const;
 
 		/**
 		 * Entry point for converting clang types into an IR types
