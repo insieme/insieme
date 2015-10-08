@@ -5,14 +5,9 @@
 # currently not implemented
 asm
 
-# Disabling tests because they fail with assertion:
-# Record types not correctly resolved
-global_rec_struct
-global_rec_struct_typedef
+# Disabling tests because they fail in the backend
+# -> rec types are sometimes peeled, sometimes not
 rec_func_param_type
-
-# Disabling tests because they fail with assertion:
-# Global variable not inserted at global scope
 global_rec_struct2
 
 # Disabled for lack of support of multiple translation units
