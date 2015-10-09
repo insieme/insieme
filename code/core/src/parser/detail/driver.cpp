@@ -168,7 +168,7 @@ namespace parser {
 		ProgramPtr InspireDriver::parseProgram() {
 			scanner.setStartProgram();
 			int fail = parser.parse();
-			if(fail || whereErrors()) {
+			if(whereErrors() || fail) {
 				//printErrors();
 				return nullptr;
 			}
@@ -179,7 +179,7 @@ namespace parser {
 			scanner.setStartType();
 			InspireParser parser(*this, scanner);
 			int fail = parser.parse();
-			if(fail || whereErrors()) {
+			if(whereErrors() || fail) {
 				//printErrors();
 				return nullptr;
 			}
@@ -190,7 +190,7 @@ namespace parser {
 			scanner.setStartStatement();
 			InspireParser parser(*this, scanner);
 			int fail = parser.parse();
-			if(fail || whereErrors()) {
+			if(whereErrors() || fail) {
 				//printErrors();
 				return nullptr;
 			}
@@ -201,7 +201,7 @@ namespace parser {
 			scanner.setStartExpression();
 			InspireParser parser(*this, scanner);
 			int fail = parser.parse();
-			if(fail || whereErrors()) {
+			if(whereErrors() || fail) {
 				//printErrors();
 				return nullptr;
 			}
