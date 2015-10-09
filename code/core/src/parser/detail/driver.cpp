@@ -590,7 +590,10 @@ namespace parser {
 		/**
 		 * generates a member function for the currently defined record type
 		 */
-		MemberFunctionPtr InspireDriver::genMemberFunction(const location& l, bool virtl, bool cnst, bool voltile, const std::string& name, const LambdaExprPtr& lambda, bool isLambda) {
+		MemberFunctionPtr InspireDriver::genMemberFunction(const location& l, bool virtl, bool cnst, bool voltile, const std::string& name, const VariableList& params, const TypePtr& retType, const StatementPtr& body, bool isLambda) {
+			//build the lambda
+			auto lambda = genLambda(l, params, retType, body, isLambda);
+
 			assert_false(lambda->isRecursive()) << "The parser should not produce recursive functions!";
 			assert_false(currentRecordStack.empty()) << "Not within record definition!";
 

@@ -341,8 +341,11 @@ member_functions : member_functions member_function                         { $1
                  |                                                          { $$ = MemberFunctionList(); }
                  ;
 
-member_function : virtual_flag cv_flags lambda_or_function "identifier" "=" lambda
-                                                                            { $$ = driver.genMemberFunction(@$, $1, $2.first, $2.second, $4, $6, $3); }
+member_function : virtual_flag cv_flags lambda_or_function "identifier" ":" "(" ")" "->" type compound_statement
+                                                                                   { $$ = driver.genMemberFunction(@$, $1, $2.first, $2.second, $4, VariableList(), $9, $10, $3); }
+                | virtual_flag cv_flags lambda_or_function "identifier" ":" "("    { driver.openScope(); }
+                                                                                non_empty_parameters ")" "->" type compound_statement_no_scope
+                                                                                   { $$ = driver.genMemberFunction(@$, $1, $2.first, $2.second, $4, $8, $11, $12, $3); driver.closeScope(); }
                 ;
 
 virtual_flag : "virtual"                                                    { $$ = true; }
@@ -360,7 +363,7 @@ pure_virtual_member_functions : pure_virtual_member_functions pure_virtual_membe
                               |                                                             { $$ = PureVirtualMemberFunctionList(); }
                               ;
 
-pure_virtual_member_function : "pure" "virtual" cv_flags "identifier" "=" pure_function_type    { $$ = driver.genPureVirtualMemberFunction(@$, $3.first, $3.second, $4, $6); }
+pure_virtual_member_function : "pure" "virtual" cv_flags "identifier" ":" pure_function_type    { $$ = driver.genPureVirtualMemberFunction(@$, $3.first, $3.second, $4, $6); }
                              ;
 
 

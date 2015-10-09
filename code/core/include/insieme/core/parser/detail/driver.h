@@ -278,7 +278,7 @@ namespace parser {
 			/**
 			 * generates a member function for the currently defined record type
 			 */
-			MemberFunctionPtr genMemberFunction(const location& l, bool virtl, bool cnst, bool voltile, const std::string& name, const LambdaExprPtr& lambda, bool isLambda = true);
+			MemberFunctionPtr genMemberFunction(const location& l, bool virtl, bool cnst, bool voltile, const std::string& name, const VariableList& params, const TypePtr& retType, const StatementPtr& body, bool isLambda);
 
 			/**
 			 * generates a member function for the currently defined record type
