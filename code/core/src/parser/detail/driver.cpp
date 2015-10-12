@@ -78,6 +78,7 @@ namespace parser {
 		void DeclarationContext::openScope() {
 			stack.push_back(Scope());
 		}
+
 		void DeclarationContext::closeScope() {
 			assert_gt(stack.size(), 1) << "Attempted to pop global scope!";
 			stack.pop_back();
@@ -623,9 +624,6 @@ namespace parser {
 			return builder.memberFunction(virtl, name, lambda);
 		}
 
-		/**
-		 * generates a pure virtual member function for the currently defined record type
-		 */
 		PureVirtualMemberFunctionPtr InspireDriver::genPureVirtualMemberFunction(const location& l,  bool cnst, bool voltile, const std::string& name, const FunctionTypePtr& type) {
 			assert_true(type->isPlain()) << "Only plain function types should be covered here!";
 			assert_false(currentRecordStack.empty()) << "Not within record definition!";
@@ -779,7 +777,7 @@ namespace parser {
 				return nullptr;
 			}
 
-			assert_not_implemented();
+			assert_not_implemented() << "Unimplemented functionality. Can't initialize type " << type;
 			return nullptr;
 		}
 

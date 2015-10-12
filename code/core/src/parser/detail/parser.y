@@ -288,7 +288,8 @@ top_level_elements : top_level_element top_level_elements
 
 top_level_element : using | alias | declaration | definition ;
 
-using : "using" "identifier" ";" ;
+using : "using" "identifier" ";"                                            { assert_not_implemented(); }
+      ;
 
 alias : "alias" abstract_type "=" type ";"                                  { driver.addTypeAlias($2,$4); }
       ;
