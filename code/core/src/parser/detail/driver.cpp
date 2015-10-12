@@ -120,14 +120,14 @@ namespace parser {
 			return nullptr;
 		}
 
-		void DeclarationContext::addTypeAlias(const GenericTypePtr& pattern, const TypePtr& substitute) {
+		void DeclarationContext::addTypeAlias(const TypePtr& pattern, const TypePtr& substitute) {
 			auto& aliases = stack.back().alias;
 			assert_true(aliases.find(pattern) == aliases.end());
 			aliases[pattern] = substitute;
 		}
 
 		TypePtr DeclarationContext::resolve(const TypePtr& type) const {
-			if (!type || !type.isa<GenericTypePtr>()) return type;
+			if (!type) return type;
 
 			NodeManager& mgr = type.getNodeManager();
 
@@ -645,7 +645,14 @@ namespace parser {
 			return builder.pureVirtualMemberFunction(name, type);
 		}
 
+		TypePtr InspireDriver::findOrGenAbstractType(const location& l, const std::string& name, const ParentList& parents, const TypeList& typeList) {
+			auto foundType = findType(l, name);
+			if (foundType) {
+				return foundType;
+			}
 
+			return builder.genericType(name, parents, typeList);
+		}
 
 		ExpressionPtr InspireDriver::genCall(const location& l, const ExpressionPtr& callable, ExpressionList args) {
 			ExpressionPtr func = callable;
@@ -901,7 +908,7 @@ namespace parser {
 			addSymb(name, [=]() -> NodePtr { return node; });
 		}
 
-		void InspireDriver::addTypeAlias(const GenericTypePtr& pattern, const TypePtr& substitute) {
+		void InspireDriver::addTypeAlias(const TypePtr& pattern, const TypePtr& substitute) {
 			scopes.addTypeAlias(pattern, substitute);
 		}
 

@@ -220,9 +220,8 @@
 %type <PureVirtualMemberFunctionPtr>   pure_virtual_member_function
 %type <PureVirtualMemberFunctionList>  pure_virtual_member_functions
 
-%type <TypePtr>                        object_type qual_object_type generic_type parallel_type
+%type <TypePtr>                        object_type qual_object_type generic_type abstract_type parallel_type
 %type <TypeVariablePtr>                type_variable
-%type <GenericTypePtr>                 abstract_type
 %type <FunctionTypePtr>                function_type pure_function_type closure_type constructor_type destructor_type member_function_type virtual_function_type
 %type <NumericTypePtr>                 numeric_type
 %type <TupleTypePtr>                   tuple_type
@@ -418,7 +417,7 @@ type_variable : "type_var"                                                { $$ =
 
 // -- abstract type --
 
-abstract_type : "identifier" parent_spec type_param_list                  { $$ = driver.builder.genericType($1, $2, $3); }
+abstract_type : "identifier" parent_spec type_param_list                  { $$ = driver.findOrGenAbstractType(@$, $1, $2, $3); }
               ;
 
 generic_type : abstract_type                                              { $$ = driver.resolveTypeAliases(@$, $1); }

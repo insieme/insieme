@@ -70,7 +70,7 @@ namespace parser {
 		struct DeclarationContext {
 
 			struct Scope {
-				TypeAliasMap alias;
+				std::map<TypePtr, TypePtr> alias;
 				DefinitionMap types;
 				DefinitionMap symbols;
 			};
@@ -87,7 +87,7 @@ namespace parser {
 			void openScope();
 			void closeScope();
 
-			void addTypeAlias(const GenericTypePtr& pattern, const TypePtr& substitute);
+			void addTypeAlias(const TypePtr& pattern, const TypePtr& substitute);
 			TypePtr resolve(const TypePtr& type) const;
 
 			bool addType(const std::string& name, const NodeFactory& factory);
@@ -286,6 +286,11 @@ namespace parser {
 			PureVirtualMemberFunctionPtr genPureVirtualMemberFunction(const location& l, bool cnst, bool voltile, const std::string& name, const FunctionTypePtr& type);
 
 			/**
+			 * generates an abstract type
+			 */
+			TypePtr findOrGenAbstractType(const location& l, const std::string& name, const ParentList& parents, const TypeList& typeList);
+
+			/**
 			 * generates a call expression
 			 */
 			ExpressionPtr genCall(const location& l, const ExpressionPtr& func, ExpressionList params);
@@ -394,7 +399,7 @@ namespace parser {
 			/**
 			 * add a type alias to the current scope
 			 */
-			void addTypeAlias(const GenericTypePtr& pattern, const TypePtr& substitute);
+			void addTypeAlias(const TypePtr& pattern, const TypePtr& substitute);
 
 			/**
 			 *  Open a nested scope.
