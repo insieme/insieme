@@ -536,6 +536,21 @@ namespace parser {
 			return builder.bindExpr(params, call);
 		}
 
+		void InspireDriver::registerFields(const location& l, const FieldList& fields) {
+			assert_false(currentRecordStack.empty()) << "Not within record definition!";
+
+			//iterate over all the fields
+			for (const auto& field : fields) {
+				const auto& name = field->getName()->getValue();
+				const auto& type = field->getType();
+				// create the member access call to store in the symbol table
+				ExpressionPtr access = builder.getLangBasic().getCompositeMemberAccess();
+				auto accessExpr = builder.callExpr(type, access, genThis(l), builder.getIdentifierLiteral(name), builder.getTypeLiteral(type));
+				annotations::attachName(field, name);
+				addSymb(l, name, accessExpr);
+			}
+		}
+
 		/**
 		 * generates a constructor for the currently defined record type
 		 */

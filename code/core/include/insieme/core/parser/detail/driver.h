@@ -266,6 +266,11 @@ namespace parser {
 			BindExprPtr genClosure(const location& l, const VariableList& params, StatementPtr body);
 
 			/**
+			 * registers the given fields in the current record type
+			 */
+			void registerFields(const location& l, const FieldList& fields);
+
+			/**
 			 * generates a constructor for the currently defined record type
 			 */
 			LambdaExprPtr genConstructor(const location& l, const VariableList& params, const StatementPtr& body);
