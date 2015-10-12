@@ -636,7 +636,7 @@ namespace parser {
 			auto fun = builder.lambdaExpr(memberFunType, ingredients.params, ingredients.body);
 
 			// create the member function entry
-			return builder.memberFunction(virtl, name, lambda);
+			return builder.memberFunction(virtl, name, fun);
 		}
 
 		PureVirtualMemberFunctionPtr InspireDriver::genPureVirtualMemberFunction(const location& l,  bool cnst, bool voltile, const std::string& name, const FunctionTypePtr& type) {
