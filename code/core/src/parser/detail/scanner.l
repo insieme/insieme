@@ -137,6 +137,7 @@ blank         [ \t]
 "lambda"      return InspireParser::make_LAMBDA(loc);
 "ctor"        return InspireParser::make_CTOR(loc);
 "dtor"        return InspireParser::make_DTOR(loc);
+"lit"         return InspireParser::make_LIT(loc);
 "type_lit"    return InspireParser::make_TYPE_LIT(loc);
 "this"        return InspireParser::make_THIS(loc);
 
@@ -146,9 +147,6 @@ blank         [ \t]
 "while"       return InspireParser::make_WHILE(loc);
 "decl"        return InspireParser::make_DECL(loc);
 "def"         return InspireParser::make_DEF(loc);
-"try"         return InspireParser::make_TRY(loc);
-"throw"       return InspireParser::make_THROW(loc);
-"catch"       return InspireParser::make_CATCH(loc);
 "return"      return InspireParser::make_RETURN(loc);
 "switch"      return InspireParser::make_SWITCH(loc);
 "case"        return InspireParser::make_CASE(loc);
@@ -172,7 +170,6 @@ blank         [ \t]
 "public"      return InspireParser::make_PUBLIC(loc);
 "protected"   return InspireParser::make_PROTECTED(loc);
 
-
 "spawn"       return InspireParser::make_SPAWN(loc);
 "sync"        return InspireParser::make_SYNC(loc);
 "sync_all"    return InspireParser::make_SYNCALL(loc);
@@ -190,7 +187,6 @@ blank         [ \t]
 {ulonglong}   return InspireParser::make_ULONGLONG(yytext, loc);
 {float}       return InspireParser::make_FLOAT(yytext, loc);
 {double}      return InspireParser::make_DOUBLE(yytext, loc);
-"lit"         return InspireParser::make_LIT(yytext, loc);
 
 {id}          return InspireParser::make_IDENTIFIER(yytext, loc);
 {type_var}    return InspireParser::make_TYPE_VAR(yytext+1, loc);

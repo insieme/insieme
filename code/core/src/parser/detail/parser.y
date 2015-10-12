@@ -136,6 +136,7 @@
 	LAMBDA       "lambda"
 	CTOR         "ctor"
 	DTOR         "dtor"
+	LIT          "lit"
 	TYPE_LIT     "type_lit"
 	STRUCT       "struct"
 	UNION        "union"
@@ -158,9 +159,6 @@
 	ELSE         "else"
 	FOR          "for"
 	WHILE        "while"
-	TRY          "try"
-	THROW        "throw"
-	CATCH        "catch"
 	RETURN       "return"
 	CONTINUE     "continue"
 	BREAK        "break"
@@ -196,7 +194,6 @@
 %token <std::string> ULONGLONG         "ulonglong"
 %token <std::string> FLOAT             "float"
 %token <std::string> DOUBLE            "double"
-%token <std::string> LIT               "lit"
 
 
 %type <TypePtr>                        type plain_type let_type
