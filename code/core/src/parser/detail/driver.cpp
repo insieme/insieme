@@ -863,7 +863,7 @@ namespace parser {
 					error(l, format("Can not initialize generic type %s, since it isn't registered in the translation unit", type));
 					return nullptr;
 				}
-				return getInitiaizerExpr(l, tuType, list);
+				return genInitializerExpr(l, tuType, list);
 			}
 
 			assert_not_implemented() << "Unimplemented functionality. Can't initialize type " << type;
