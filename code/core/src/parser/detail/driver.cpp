@@ -764,7 +764,7 @@ namespace parser {
 			return builder.unionExpr(unionType, builder.stringValue(field), expr);
 		}
 
-		ExpressionPtr InspireDriver::getInitiaizerExpr(const location& l, const TypePtr& type, const ExpressionList& list) {
+		ExpressionPtr InspireDriver::genInitializerExpr(const location& l, const TypePtr& type, const ExpressionList& list) {
 			// check for a struct type
 			TagTypePtr tagType = type.isa<TagTypePtr>();
 			if (tagType && tagType->isStruct()) {

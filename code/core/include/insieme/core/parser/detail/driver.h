@@ -303,7 +303,7 @@ namespace parser {
 			/**
 			 * constructs an initializer expression according to the given type and expression list
 			 */
-			ExpressionPtr getInitiaizerExpr(const location& l, const TypePtr& type, const ExpressionList& list);
+			ExpressionPtr genInitializerExpr(const location& l, const TypePtr& type, const ExpressionList& list);
 
 			/**
 			 * constructs a parameter

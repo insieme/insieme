@@ -633,7 +633,7 @@ list_expression : "[" non_empty_expressions "]"                           { $$ =
 
 // -- initializer --
 
-initializer : "<" type ">" "{" expressions "}"                            { $$ = driver.getInitiaizerExpr(@$, $2, $5); }
+initializer : "<" type ">" "{" expressions "}"                            { $$ = driver.genInitializerExpr(@$, $2, $5); }
             | "(" ")"                                                     { $$ = driver.builder.tupleExpr(); }
             | "(" non_empty_expressions ")"                               { $$ = driver.builder.tupleExpr($2); }
             ;
