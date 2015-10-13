@@ -143,7 +143,7 @@ namespace parser {
 			InspireScanner scanner;
 			InspireParser parser;
 
-			std::vector<TagTypeReferencePtr> currentRecordStack;
+			std::vector<GenericTypePtr> currentRecordStack;
 
 			/**
 			 * constructs a struct expression
@@ -194,9 +194,9 @@ namespace parser {
 			ExpressionPtr genBinaryExpression(const location& l, const std::string& op, ExpressionPtr left, ExpressionPtr right);
 
 			/**
-			 * generate a field access in tagtype (struct/union)
+			 * generate a member access in tagtype (struct/union)
 			 */
-			ExpressionPtr genFieldAccess(const location& l, const ExpressionPtr&, const std::string& fieldname);
+			ExpressionPtr genMemberAccess(const location& l, const ExpressionPtr&, const std::string& memberName);
 
 			/**
 			 * generates a tuple access based on index
@@ -429,7 +429,7 @@ namespace parser {
 			/**
 			 * Obtains the type of a this pointer in the currently defined record.
 			 */
-			TagTypeReferencePtr getThisType();
+			GenericTypePtr getThisType();
 
 			/**
 			 * Utility to mark addresses when parsing addresses (expression overload)

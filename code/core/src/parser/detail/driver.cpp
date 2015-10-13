@@ -369,23 +369,66 @@ namespace parser {
 		}
 
 
-		ExpressionPtr InspireDriver::genFieldAccess(const location& l, const ExpressionPtr& expr, const std::string& fieldname) {
+		ExpressionPtr InspireDriver::genMemberAccess(const location& l, const ExpressionPtr& expr, const std::string& memberName) {
 			if(!expr) {
 				error(l, "no expression");
 				return nullptr;
 			}
 
-			// check that there is such a field
-			if (!getFieldType(expr->getType(), fieldname)) {
-				error(l, format("Unable to locate field %s in type %s", fieldname, *expr->getType()));
-				return nullptr;
+			auto type = expr->getType();
+
+			if (auto genericType = type.isa<GenericTypePtr>()) {
+				auto tuType = tu[genericType];
+				if (tuType) {
+					type = tuType;
+				}
 			}
 
-			// create access
-			if(analysis::isRefType(expr->getType())) {
-				return builder.refMember(expr, fieldname);
+			const auto& fieldAccess = builder.getLangBasic().getCompositeMemberAccess();
+			const auto& memberFunctionAccess = builder.getLangBasic().getCompositeMemberFunctionAccess();
+
+			// check whether there is such a field
+			if (auto fieldType = getFieldType(type, memberName)) {
+				// create access
+				if(analysis::isRefType(type)) {
+					assert_not_implemented();
+					return nullptr;
+				}
+				return builder.callExpr(fieldType, fieldAccess, expr, builder.getIdentifierLiteral(memberName), builder.getTypeLiteral(fieldType));
+
+				// check for the this literal
+			} else if (expr == genThis(l)) {
+				// search for the symbol with that name
+				const auto& access = findSymbol(l, memberName);
+				// if the symbol we found is a member access call
+				if (analysis::isCallOf(access, fieldAccess) || analysis::isCallOf(access, memberFunctionAccess)) {
+					CallExprPtr callExpr = access.as<CallExprPtr>();
+					// and accesses the this pointer
+					if (callExpr->getArgument(0) == genThis(l)) {
+						// we can return the access call
+						return access;
+					}
+				}
+
+				//if our callable is a tag type
+			} else if (const auto& tagType = type.isa<TagTypePtr>()) {
+
+				// check for member access calls
+				// lookup the function to call by name
+				// TODO  here we assume that each name is only used exactly once
+				for (const auto& function : tagType->getRecord()->getMemberFunctions()) {
+					if (function->getNameAsString() == memberName) {
+						// return a member function access call
+						const auto& functionType = function->getImplementation().as<LambdaExprPtr>()->getFunctionType();
+						return builder.callExpr(functionType, memberFunctionAccess, expr, builder.getIdentifierLiteral(memberName), builder.getTypeLiteral(functionType));
+					}
+				}
+
 			}
-			return builder.accessMember(expr, fieldname);
+
+			//otherwise we fail
+			error(l, format("Unable to locate member %s in type %s", memberName, *type));
+			return nullptr;
 		}
 
 		ExpressionPtr InspireDriver::genTupleAccess(const location& l, const ExpressionPtr& expr, const std::string& member) {
@@ -608,32 +651,31 @@ namespace parser {
 		 */
 		MemberFunctionPtr InspireDriver::genMemberFunction(const location& l, bool virtl, bool cnst, bool voltile, const std::string& name, const VariableList& params, const TypePtr& retType, const StatementPtr& body, bool isLambda) {
 			//build the lambda
-			auto lambda = genLambda(l, params, retType, body, isLambda);
 
-			assert_false(lambda->isRecursive()) << "The parser should not produce recursive functions!";
 			assert_false(currentRecordStack.empty()) << "Not within record definition!";
 
 			// get this-type
 			auto thisType = builder.refType(getThisType(), cnst, voltile);
-			if (!isLambda) thisType = builder.refType(thisType);
 			auto thisParam = builder.variable(thisType);
 
 			// create full parameter list
 			VariableList fullParams;
 			fullParams.push_back(thisParam);
-			for(const auto& cur : lambda.getParameterList()) fullParams.push_back(cur);
+			for(const auto& cur : params) fullParams.push_back(cur);
 
 			// update body
-			auto newBody = transform::replaceAll(mgr, lambda->getBody(), genThis(l), thisParam).as<StatementPtr>();
-
-			// create member function type
-			auto memberFunType = builder.functionType(extractTypes(fullParams), lambda->getFunctionType()->getReturnType(), FK_MEMBER_FUNCTION);
-
-			// replace all variables in the body by their implicitly materialized version
-			auto ingredients = (isLambda) ? transform::materialize({fullParams, newBody}) : (transform::LambdaIngredients){fullParams, newBody};
+			auto newBody = transform::replaceAll(mgr, body, genThis(l), thisParam).as<StatementPtr>();
 
 			// create the member function
-			auto fun = builder.lambdaExpr(memberFunType, ingredients.params, ingredients.body);
+			auto fun = genLambda(l, fullParams, retType, newBody, isLambda);
+			auto memberFunType = fun->getFunctionType();
+			assert_false(fun->isRecursive()) << "The parser should not produce recursive functions!";
+
+			// generate call expression which is used to call this function in the current tag type context
+			ExpressionPtr access = builder.getLangBasic().getCompositeMemberFunctionAccess();
+			auto accessExpr = builder.callExpr(memberFunType, access, genThis(l), builder.getIdentifierLiteral(name), builder.getTypeLiteral(memberFunType));
+			annotations::attachName(fun, name);
+			addSymb(l, name, accessExpr);
 
 			// create the member function entry
 			return builder.memberFunction(virtl, name, fun);
@@ -672,6 +714,30 @@ namespace parser {
 
 			auto ftype = func->getType();
 			if(!ftype.isa<FunctionTypePtr>()) { error(l, "attempt to call non function expression"); }
+
+			// if this is a member function call we prepend the implicit this parameter
+			if (analysis::isCallOf(callable, builder.getLangBasic().getCompositeMemberFunctionAccess())) {
+
+				// we add the callable itself as the first argument of the call
+				auto thisParam = callable.as<CallExprPtr>()->getArgument(0);
+				auto thisParamType = thisParam->getType();
+				if (auto genericType = thisParamType.isa<GenericTypePtr>()) {
+					auto tuType = tu[genericType];
+					if (tuType) {
+						thisParamType = tuType;
+					}
+				}
+
+				// calling a member function of another struct
+				if (auto tagType = thisParamType.isa<TagTypePtr>()) {
+					//args.insert(args.begin(), builder.literal("ref", builder.refType(tagType->getTag())));
+					args.insert(args.begin(), builder.refVar(thisParam));
+
+					// this case
+				} else {
+					args.insert(args.begin(), thisParam);
+				}
+			}
 
 			auto funcParamTypes = ftype.as<FunctionTypePtr>()->getParameterTypeList();
 			if(!funcParamTypes.empty()) {
@@ -790,6 +856,14 @@ namespace parser {
 				//if we end up here we didn't find a matching field
 				error(l, "The given expression does not match any of the union's field types");
 				return nullptr;
+
+			} else if (auto genericType = type.isa<GenericTypePtr>()) {
+				auto tuType = tu[genericType];
+				if (!tuType) {
+					error(l, format("Can not initialize generic type %s, since it isn't registered in the translation unit", type));
+					return nullptr;
+				}
+				return getInitiaizerExpr(l, tuType, list);
 			}
 
 			assert_not_implemented() << "Unimplemented functionality. Can't initialize type " << type;
@@ -977,7 +1051,7 @@ namespace parser {
 		}
 
 		void InspireDriver::beginRecord(const std::string& name) {
-			currentRecordStack.push_back(builder.tagTypeReference(name));
+			currentRecordStack.push_back(builder.genericType(name));
 			openScope();
 		}
 
@@ -987,7 +1061,7 @@ namespace parser {
 			currentRecordStack.pop_back();
 		}
 
-		TagTypeReferencePtr InspireDriver::getThisType() {
+		GenericTypePtr InspireDriver::getThisType() {
 			assert_false(currentRecordStack.empty());
 			return currentRecordStack.back();
 		}
