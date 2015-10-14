@@ -52,7 +52,7 @@ namespace core {
 		 */
 		const NodeValue& getValue() const {
 			// forward call to protected parent method
-			return NodeAccessor<D, P>::getNodeValue();
+			return Accessor<Node, D, P>::getNodeValue();
 		}
 	};
 

@@ -63,8 +63,9 @@ namespace core {
 		class NAME;                                                                                                                                            \
 		typedef Pointer<const NAME> NAME##Ptr;                                                                                                                 \
 		typedef Address<const NAME> NAME##Address;                                                                                                             \
-		template <typename D, template <typename P> class P>                                                                                                   \
-		class NAME##Accessor;
+		typedef std::vector<NAME##Ptr> NAME##List;                                                                                                             \
+		typedef utils::set::PointerSet<NAME##Ptr> NAME##Set;
+
 
 	// take all nodes from within the definition file
 	#include "insieme/core/ir_nodes.def"
@@ -95,23 +96,6 @@ namespace core {
 	/**
 	 * Typedefs for some widely used base type collections.
 	 */
-	typedef std::vector<NodePtr> NodeList;
-	typedef std::vector<TypePtr> TypeList;
-	typedef std::vector<StatementPtr> StatementList;
-	typedef std::vector<ExpressionPtr> ExpressionList;
-	typedef std::vector<VariablePtr> VariableList;
-	typedef std::vector<FieldPtr> FieldList;
-	typedef std::vector<MemberFunctionPtr> MemberFunctionList;
-	typedef std::vector<PureVirtualMemberFunctionPtr> PureVirtualMemberFunctionList;
-	typedef std::vector<NamedValuePtr> NamedValueList;
-	typedef std::vector<ParentPtr> ParentList;
-
-	typedef utils::set::PointerSet<NodePtr> NodeSet;
-	typedef utils::set::PointerSet<TypePtr> TypeSet;
-	typedef utils::set::PointerSet<TypeVariablePtr> TypeVariableSet;
-	typedef utils::set::PointerSet<VariablePtr> VariableSet;
-	typedef utils::set::PointerSet<StatementPtr> StatementSet;
-	typedef utils::set::PointerSet<ExpressionPtr> ExpressionSet;
 
 	typedef utils::map::PointerMap<NodePtr, NodePtr> NodeMap;
 	typedef utils::map::PointerMap<TypePtr, TypePtr> TypeMap;
@@ -125,3 +109,5 @@ namespace core {
 
 } // end namespace core
 } // end namespace insieme
+
+
