@@ -241,7 +241,7 @@
 %type <ExpressionPtr>                  undefined_expression parallel_expression list_expression initializer unary_op binary_op ternary_op this_expression
 
 %type <VariablePtr>                    parameter
-%type <VariableList>                   parameters non_empty_parameters
+%type <VariableList>                   parameters non_empty_parameters non_empty_bind_parameters
 
 
 %type <CompoundStmtPtr>                compound_statement compound_statement_no_scope
@@ -599,10 +599,12 @@ parameter : "identifier" ":" type                                         { $$ =
 
 bind : "(" ")" "=>" expression                                            { $$ = driver.genClosure(@$, VariableList(), driver.getScalar($4)); }
      | "(" ")" "=>" compound_statement                                    { $$ = driver.genClosure(@$, VariableList(), $4); }
-     | "(" non_empty_parameters ")" "=>" expression                       { $$ = driver.genClosure(@$, $2, driver.getScalar($5)); }
-     | "(" non_empty_parameters ")" "=>" compound_statement               { $$ = driver.genClosure(@$, $2, $5); }
+     | non_empty_bind_parameters "=>" expression                          { $$ = driver.genClosure(@$, $1, driver.getScalar($3)); driver.closeScope(); }
+     | non_empty_bind_parameters "=>" compound_statement                  { $$ = driver.genClosure(@$, $1, $3); driver.closeScope(); }
      ;
 
+non_empty_bind_parameters : "(" non_empty_parameters ")"                  { driver.openScope(); driver.registerParameters(@$, $2); $$ = $2; }
+                          ;
 
 // -- let --
 
