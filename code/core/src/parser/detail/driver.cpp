@@ -381,9 +381,9 @@ namespace parser {
 			// check whether there is such a field
 			if (auto fieldType = getFieldType(type, memberName)) {
 				// create access
-				if(analysis::isRefType(type)) {
-					assert_not_implemented();
-					return nullptr;
+				if(analysis::isRefType(exprType)) {
+					const auto& refAccess = expr->getNodeManager().getLangExtension<core::lang::ReferenceExtension>().getRefMemberAccess();
+					return builder.callExpr(builder.refType(fieldType), refAccess, expr, builder.getIdentifierLiteral(memberName), builder.getTypeLiteral(fieldType));
 				}
 				return builder.callExpr(fieldType, fieldAccess, expr, builder.getIdentifierLiteral(memberName), builder.getTypeLiteral(fieldType));
 
