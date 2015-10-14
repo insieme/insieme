@@ -122,7 +122,7 @@ TYPE(ThreadGroup, "threadgroup")
 
 LITERAL(UnitConstant, "unit", "unit")
 
-DERIVED(UnitConsume, "unit_consume", "lambda (a : 'a) -> unit { }")
+DERIVED(UnitConsume, "unit_consume", "(a : 'a) -> unit { }")
 
 // No Argument -> Unit Type -------------------------------------------------------------------------------------------
 
@@ -175,8 +175,8 @@ OPERATION(Bool, Or,   "bool_bor",  "(bool, bool) -> bool")
 OPERATION(Bool, Xor,  "bool_bxor", "(bool, bool) -> bool")
 OPERATION(Bool, Not,  "bool_bnot", "(bool) -> bool")
 
-DERIVED_OP(Bool, LAnd, "bool_and", "lambda (a : bool, b : ()=>bool)->bool { if (a) { return b(); } return false; }")
-DERIVED_OP(Bool, LOr,  "bool_or",  "lambda (a : bool, b : ()=>bool)->bool { if (a) { return true; } return b(); }")
+DERIVED_OP(Bool, LAnd, "bool_and", "(a : bool, b : ()=>bool)->bool { if (a) { return b(); } return false; }")
+DERIVED_OP(Bool, LOr,  "bool_or",  "(a : bool, b : ()=>bool)->bool { if (a) { return true; } return b(); }")
 
 // Arithmetic operations ----------------------------------------------------------------------------------------------
 
@@ -277,12 +277,12 @@ GROUP(BitwiseOp, BitwiseIntOp, BitwiseUIntOp)
 
 // Generic Numeric Cast -----------------------------------------------------------------------------------------------
 
-DERIVED(NumericCast, "num_cast", "lambda (x : 'a, t : type<'b>)->'b { return CAST('b)x; }")
+DERIVED(NumericCast, "num_cast", "(x : 'a, t : type<'b>)->'b { return CAST('b)x; }")
 
 
 // Type Operations ----------------------------------------------------------------------------------------------------
 
-DERIVED(TypeOf, "type_of", "lambda (x : 'a)->type<'a> { return type_lit('a); }")
+DERIVED(TypeOf, "type_of", "(x : 'a)->type<'a> { return type_lit('a); }")
 LITERAL(TypeIsSubtype, "type_is_subtype", "(type<'a>, type<'b>)->bool")
 
 OPERATION(Type, Eq, "type_eq", "(type<'a>, type<'a>) -> bool")
@@ -337,7 +337,7 @@ LITERAL(Flush, "flush", "(ref<'a,'c,'v,plain>) -> unit")
 
 GROUP(GeneralOp, Undefined, Sizeof, IntTypeParamToInt)
 
-DERIVED(Id, "id", "lambda (x : 'a)->'a { return x; }")
+DERIVED(Id, "id", "(x : 'a)->'a { return x; }")
 
 LITERAL(Undefined, "undefined", "(type<'a>) -> 'a")
 LITERAL(Zero, "zero", "(type<'a>) -> 'a")
@@ -369,7 +369,7 @@ LITERAL(PickInRange, "pickInRange", "(int<4>, 'a, int<4>, int<4>, int<4>)->'a")
 
 // Misc. --------------------------------------------------------------------------------------------------------------
 
-DERIVED(IfThenElse, "ite", "lambda (c : bool, a : () => 'b, b : () => 'b) -> 'b { if (c) { return a(); } else { return b(); } }")
+DERIVED(IfThenElse, "ite", "(c : bool, a : () => 'b, b : () => 'b) -> 'b { if (c) { return a(); } else { return b(); } }")
 
 // Semantic Grouping --------------------------------------------------------------------------------
 

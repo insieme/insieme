@@ -297,7 +297,7 @@ namespace lang {
 		 * the access is done by narrowing the given object to the defined element
 		 */
 		LANG_EXT_DERIVED(MemberPointerCtor, "alias memb_ptr = struct { objType : type<'a>; id : identifier; membType : type<'b>; }; "
-		                                    "lambda (classTy : type<'a>, id : identifier, ty : type<'b>) -> memb_ptr { "
+		                                    "(classTy : type<'a>, id : identifier, ty : type<'b>) -> memb_ptr { "
 		                                    " return <memb_ptr> { classTy, id, ty };"
 		                                    "}");
 
@@ -305,7 +305,7 @@ namespace lang {
 		 * the access is done by narrowing the given object to the defined element
 		 */
 		LANG_EXT_DERIVED(MemberPointerAccess, "alias memb_ptr = struct { objType : type<'a>; id : identifier; membType : type<'b>; }; "
-		                                      "lambda (obj : ref<'a,'c,'v>, m : memb_ptr) -> ref<'b,'c,'v> { "
+		                                      "(obj : ref<'a,'c,'v>, m : memb_ptr) -> ref<'b,'c,'v> { "
 		                                      " return ref_narrow(obj, dp_member(dp_root(type_lit('a)), m.id, type_lit('b)) );"
 		                                      "}");
 

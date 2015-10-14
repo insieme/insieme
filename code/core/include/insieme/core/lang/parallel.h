@@ -120,7 +120,7 @@ namespace lang {
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(PFor, "pfor",
                 "                                                                                                        "
-				"	lambda (g : threadgroup, a : int<'a>, b : int<'a>, c : int<'a>, f : (int<'a>, int<'a>, int<'a>)=>'b)->unit {   "
+				"	(g : threadgroup, a : int<'a>, b : int<'a>, c : int<'a>, f : (int<'a>, int<'a>, int<'a>)=>'b)->unit {   "
 				"				f(a,b,c);                                                                                "
 				"	}                                                                                                    "
 	            "                                                                                                        "
@@ -141,8 +141,8 @@ namespace lang {
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(Barrier, "barrier",
 				    "                                                                                                    "
-					"	lambda (g : threadgroup)->unit {                                                                   "
-					"		redistribute(g, 0, lambda (_ : ref<array<int<4>>>, _ : uint<8>, _ : uint<8>)->unit { });   "
+					"	(g : threadgroup)->unit {                                                                   "
+					"		redistribute(g, 0, (_ : ref<array<int<4>>>, _ : uint<8>, _ : uint<8>)->unit { });   "
 					"	}                                                                                                "
 		            "                                                                                                    "
 		)
@@ -153,7 +153,7 @@ namespace lang {
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(PReduce, "preduce",
 				    "                                                                                                                                        "
-					"	lambda (g : threadgroup, v : 'a, op : ('b,'a)->'b, init : 'b)->'b {                                                                          "
+					"	(g : threadgroup, v : 'a, op : ('b,'a)->'b, init : 'b)->'b {                                                                          "
 					"	   return redistribute(g, v,                                                                                                         "
 					"				  (data : ref<array<'a>>, size : uint<8>, tid : uint<8>) => array_reduce(data, num_cast(size, type_lit(int<8>)), op, init)   "
 					"	          );                                                                                                                         "
@@ -221,7 +221,7 @@ namespace lang {
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(Atomic, "atomic",
 				    "                                                              "
-					"	lambda (v : ref<'a, f,'v>, p : ('a)=>bool, f : ('a)=>'a)->'a {   "
+					"	(v : ref<'a, f,'v>, p : ('a)=>bool, f : ('a)=>'a)->'a {   "
 					"		auto res = *v;                                    "
 					"		if (p(*v)) {                                           "
 					"			v = f(*v);                                         "
@@ -237,67 +237,67 @@ namespace lang {
 
 		// arithmetic
 
-		LANG_EXT_DERIVED_WITH_NAME(AtomicFetchAndAdd, "atomic_fetch_and_add", "lambda (v : ref<'a,f,'v>, exp : 'a) -> 'a { "
+		LANG_EXT_DERIVED_WITH_NAME(AtomicFetchAndAdd, "atomic_fetch_and_add", "(v : ref<'a,f,'v>, exp : 'a) -> 'a { "
 														   "	let test = (_ : 'a)=>true; "
 														   "	let apply = (x : 'a)=>x+exp; "
 														   "	return atomic(v, test, apply); "
 														   "}  ")
 
-	   LANG_EXT_DERIVED_WITH_NAME(AtomicAddAndFetch, "atomic_add_and_fetch", "lambda (v : ref<'a,f,'v>, exp : 'a) -> 'a { "
+	   LANG_EXT_DERIVED_WITH_NAME(AtomicAddAndFetch, "atomic_add_and_fetch", "(v : ref<'a,f,'v>, exp : 'a) -> 'a { "
 														   "	return atomic_fetch_and_add(v, exp) + exp; "
 														   "}  ")
 
-		LANG_EXT_DERIVED_WITH_NAME(AtomicFetchAndSub, "atomic_fetch_and_sub", "lambda (v : ref<'a,f,'v>, exp : 'a) -> 'a { "
+		LANG_EXT_DERIVED_WITH_NAME(AtomicFetchAndSub, "atomic_fetch_and_sub", "(v : ref<'a,f,'v>, exp : 'a) -> 'a { "
 														   "	let test = (_ : 'a)=>true; "
 														   "	let apply = (x : 'a)=>x-exp; "
 														   "	return atomic(v, test, apply); "
 														   "}  ")
 
-		LANG_EXT_DERIVED_WITH_NAME(AtomicSubAndFetch, "atomic_sub_and_fetch", "lambda (v : ref<'a,f,'v>, exp : 'a) -> 'a { "
+		LANG_EXT_DERIVED_WITH_NAME(AtomicSubAndFetch, "atomic_sub_and_fetch", "(v : ref<'a,f,'v>, exp : 'a) -> 'a { "
 														   "	return atomic_fetch_and_sub(v, exp) - exp; "
 														   "}  ")
 
 		// bitwise
 
-		LANG_EXT_DERIVED_WITH_NAME(AtomicFetchAndAnd, "atomic_fetch_and_and", "lambda (v : ref<'a,f,'v>, exp : 'a) -> 'a { "
+		LANG_EXT_DERIVED_WITH_NAME(AtomicFetchAndAnd, "atomic_fetch_and_and", "(v : ref<'a,f,'v>, exp : 'a) -> 'a { "
 														   "	let test = (_ : 'a) => true; "
 														   "	let apply = (x : 'a) => x & exp; "
 														   "	return atomic(v, test, apply); "
 														   "}  ")
 
-		LANG_EXT_DERIVED_WITH_NAME(AtomicAndAndFetch, "atomic_and_and_fetch", "lambda (v : ref<'a,f,'v>, exp : 'a) -> 'a { "
+		LANG_EXT_DERIVED_WITH_NAME(AtomicAndAndFetch, "atomic_and_and_fetch", "(v : ref<'a,f,'v>, exp : 'a) -> 'a { "
 														   "	return atomic_fetch_and_and(v, exp) & exp; "
 														   "}  ")
 
-		LANG_EXT_DERIVED_WITH_NAME(AtomicFetchAndOr, "atomic_fetch_and_or", "lambda (v : ref<'a,f,'v>, exp : 'a) -> 'a { "
+		LANG_EXT_DERIVED_WITH_NAME(AtomicFetchAndOr, "atomic_fetch_and_or", "(v : ref<'a,f,'v>, exp : 'a) -> 'a { "
 														 "	let test = (_ : 'a) => true; "
 														 "	let apply = (x : 'a) => x | exp; "
 														 "	return atomic(v, test, apply); "
 														 "}  ")
 
-		LANG_EXT_DERIVED_WITH_NAME(AtomicOrAndFetch, "atomic_or_and_fetch", "lambda (v : ref<'a,f,'v>, exp : 'a) -> 'a { "
+		LANG_EXT_DERIVED_WITH_NAME(AtomicOrAndFetch, "atomic_or_and_fetch", "(v : ref<'a,f,'v>, exp : 'a) -> 'a { "
 														 "	return atomic_fetch_and_or(v, exp) | exp; "
 														 "}  ")
 
-		LANG_EXT_DERIVED_WITH_NAME(AtomicFetchAndXor, "atomic_fetch_and_xor", "lambda (v : ref<'a,f,'v>, exp : 'a) -> 'a { "
+		LANG_EXT_DERIVED_WITH_NAME(AtomicFetchAndXor, "atomic_fetch_and_xor", "(v : ref<'a,f,'v>, exp : 'a) -> 'a { "
 														   "	let test = (_ : 'a) => true; "
 														   "	let apply = (x : 'a) => x ^ exp; "
 														   "	return atomic(v, test, apply); "
 														   "}  ")
 
-		LANG_EXT_DERIVED_WITH_NAME(AtomicXorAndFetch, "atomic_xor_and_fetch", "lambda (v : ref<'a,f,'v>, exp : 'a) -> 'a { "
+		LANG_EXT_DERIVED_WITH_NAME(AtomicXorAndFetch, "atomic_xor_and_fetch", "(v : ref<'a,f,'v>, exp : 'a) -> 'a { "
 														   "	return atomic_fetch_and_xor(v, exp) ^ exp; "
 														   "}  ")
 
 		// test and set
 
-		LANG_EXT_DERIVED_WITH_NAME(AtomicValCompareAndSwap, "atomic_val_compare_and_swap", "lambda (v : ref<'a,f,'v>, _old : 'a, _new : 'a) -> 'a { "
+		LANG_EXT_DERIVED_WITH_NAME(AtomicValCompareAndSwap, "atomic_val_compare_and_swap", "(v : ref<'a,f,'v>, _old : 'a, _new : 'a) -> 'a { "
 																		"	let test = (x : 'a) => x == _old; "
 																		"	let apply = (_ : 'a) => _new; "
 																		"	return atomic(v, test, apply); "
 																		"}  ")
 
-		LANG_EXT_DERIVED_WITH_NAME(AtomicBoolCompareAndSwap, "atomic_bool_compare_and_swap", "lambda (v : ref<'a,f,'v>, _old : 'a, _new : 'a) -> bool { "
+		LANG_EXT_DERIVED_WITH_NAME(AtomicBoolCompareAndSwap, "atomic_bool_compare_and_swap", "(v : ref<'a,f,'v>, _old : 'a, _new : 'a) -> bool { "
 																		  "	let test = (x : 'a) => x == _old; "
 																		  "	let apply = (_ : 'a) => _new; "
 																		  "	return atomic(v, test, apply) == _new; "
@@ -305,7 +305,7 @@ namespace lang {
 
 
 		// An extension representing a busy waiting loop
-		LANG_EXT_DERIVED(BusyLoop, "lambda (condition : ()=>bool) -> unit { while(condition()) { } }");
+		LANG_EXT_DERIVED(BusyLoop, "(condition : ()=>bool) -> unit { while(condition()) { } }");
 
 //
 //		GROUP(ParallelOp, Parallel, ParallelDetached)

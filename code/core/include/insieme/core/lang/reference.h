@@ -144,12 +144,12 @@ namespace lang {
 		/**
 		 * A built-in derived operator allocating memory on the stack.
 		 */
-		LANG_EXT_DERIVED_WITH_NAME(RefVar, "ref_var", "lambda (v : 'a) -> ref<'a,f,f> { auto r = ref_alloc(type_lit('a), mem_loc_stack); r = v; return r; }")
+		LANG_EXT_DERIVED_WITH_NAME(RefVar, "ref_var", "(v : 'a) -> ref<'a,f,f> { auto r = ref_alloc(type_lit('a), mem_loc_stack); r = v; return r; }")
 
 		/**
 		 * A built-in derived operator allocating memory on the heap.
 		 */
-		LANG_EXT_DERIVED_WITH_NAME(RefNew, "ref_new", "lambda (v : 'a) -> ref<'a,f,f> { auto r = ref_alloc(type_lit('a), mem_loc_heap ); r = v; return r; }")
+		LANG_EXT_DERIVED_WITH_NAME(RefNew, "ref_new", "(v : 'a) -> ref<'a,f,f> { auto r = ref_alloc(type_lit('a), mem_loc_heap ); r = v; return r; }")
 
 		/**
 		 * A built-in abstract operator obtaining references to functions.
@@ -187,13 +187,13 @@ namespace lang {
 		/**
 		 * A specialization of the ref_cast operator for modeling const casts.
 		 */
-		LANG_EXT_DERIVED_WITH_NAME(RefConstCast, "ref_const_cast", "lambda (r : ref<'a,'c,'v,'k>, c : type<'nc>) -> ref<'a,'nc,'v,'k> { return ref_cast(r, c, type_lit('v), type_lit('k)); }")
+		LANG_EXT_DERIVED_WITH_NAME(RefConstCast, "ref_const_cast", "(r : ref<'a,'c,'v,'k>, c : type<'nc>) -> ref<'a,'nc,'v,'k> { return ref_cast(r, c, type_lit('v), type_lit('k)); }")
 
 		/**
 		 * A specialization of the ref_cast operator for modeling volatile casts.
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(RefVolatileCast, "ref_volatile_cast",
-		                           "lambda (r : ref<'a,'c,'v,'k>, v : type<'nv>) -> ref<'a,'c,'nv,'k> { return ref_cast(r, type_lit('c), v, type_lit('k)); }")
+		                           "(r : ref<'a,'c,'v,'k>, v : type<'nv>) -> ref<'a,'c,'nv,'k> { return ref_cast(r, type_lit('c), v, type_lit('k)); }")
 
 
 		// -- sub-referencing --
@@ -214,27 +214,27 @@ namespace lang {
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(
 		    RefArrayElement, "ref_array_elem",
-		    "lambda (r : ref<array<'a,'s>,'c,'v,plain>, i : int<8>) -> ref<'a,'c,'v,plain> { return ref_narrow(r, dp_element(dp_root(type_lit(array<'a,'s>)), i)); }")
+		    "(r : ref<array<'a,'s>,'c,'v,plain>, i : int<8>) -> ref<'a,'c,'v,plain> { return ref_narrow(r, dp_element(dp_root(type_lit(array<'a,'s>)), i)); }")
 
 		/**
 		 * A derived reference navigation operator providing access to a member of a struct / union.
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(
 		    RefMemberAccess, "ref_member_access",
-		    "lambda (r : ref<'a,'c,'v,'k>, name : identifier, type : type<'b>) -> ref<'b,'c,'v,'k> { return ref_narrow(r, dp_member(dp_root(type_lit('a)), name, type)); }")
+		    "(r : ref<'a,'c,'v,'k>, name : identifier, type : type<'b>) -> ref<'b,'c,'v,'k> { return ref_narrow(r, dp_member(dp_root(type_lit('a)), name, type)); }")
 
 		/**
 		 * A derived reference navigation operator providing access to a components of a tuple.
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(
 		    RefComponentAccess, "ref_component_access",
-		    "lambda (r : ref<'a,'c,'v,'k>, pos : uint<8>, type : type<'b>) -> ref<'b,'c,'v,'k> { return ref_narrow(r, dp_component(dp_root(type_lit('a)), pos, type)); }")
+		    "(r : ref<'a,'c,'v,'k>, pos : uint<8>, type : type<'b>) -> ref<'b,'c,'v,'k> { return ref_narrow(r, dp_component(dp_root(type_lit('a)), pos, type)); }")
 
 		/**
 		 * A derived reference-navigation operation providing an array view on a scalar.
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(RefScalarToRefArray, "ref_scalar_to_ref_array",
-		    "lambda (a : ref<'a,'c,'v,plain>) -> ref<array<'a>,'c,'v,plain> { return ref_expand(a, dp_element(dp_root(type_lit(array<'a>)), 0u)); }")
+		    "(a : ref<'a,'c,'v,plain>) -> ref<array<'a>,'c,'v,plain> { return ref_expand(a, dp_element(dp_root(type_lit(array<'a>)), 0u)); }")
 
 
 		// -- null --
@@ -256,27 +256,27 @@ namespace lang {
 		/**
 		 * An operator to compare two references for inequality.
 		 */
-		LANG_EXT_DERIVED_WITH_NAME(RefNotEqual, "ref_ne", "lambda (a : ref<'a1,'c1,'v1,'k1>, b : ref<'a2,'c2,'v2,'k2>) -> bool { return !ref_eq(a, b); }")
+		LANG_EXT_DERIVED_WITH_NAME(RefNotEqual, "ref_ne", "(a : ref<'a1,'c1,'v1,'k1>, b : ref<'a2,'c2,'v2,'k2>) -> bool { return !ref_eq(a, b); }")
 
 		/**
 		 * A generic pre-order increment operator.
 		 */
-		LANG_EXT_DERIVED_WITH_NAME(GenPreInc,  "gen_pre_inc",  "lambda (v : ref<'a,f,'v,'k>)->'a { v=*v+lit(\"1\":'a); return *v; }")
+		LANG_EXT_DERIVED_WITH_NAME(GenPreInc,  "gen_pre_inc",  "(v : ref<'a,f,'v,'k>)->'a { v=*v+lit(\"1\":'a); return *v; }")
 
 		/**
 		 * A generic post-order increment operator.
 		 */
-		LANG_EXT_DERIVED_WITH_NAME(GenPostInc, "gen_post_inc", "lambda (v : ref<'a,f,'v,'k>)->'a { auto tmp=*v; v=*v+lit(\"1\":'a); return tmp; }")
+		LANG_EXT_DERIVED_WITH_NAME(GenPostInc, "gen_post_inc", "(v : ref<'a,f,'v,'k>)->'a { auto tmp=*v; v=*v+lit(\"1\":'a); return tmp; }")
 
 		/**
 		 * A generic pre-order decrement operator.
 		 */
-		LANG_EXT_DERIVED_WITH_NAME(GenPreDec,  "gen_pre_dec",  "lambda (v : ref<'a,f,'v,'k>)->'a { v=*v-lit(\"1\":'a); return *v; }")
+		LANG_EXT_DERIVED_WITH_NAME(GenPreDec,  "gen_pre_dec",  "(v : ref<'a,f,'v,'k>)->'a { v=*v-lit(\"1\":'a); return *v; }")
 
 		/**
 		 * A generic post-order decrement operator.
 		 */
-		LANG_EXT_DERIVED_WITH_NAME(GenPostDec, "gen_post_dec", "lambda (v : ref<'a,f,'v,'k>)->'a { auto tmp=*v; v=*v-lit(\"1\":'a); return tmp; }")
+		LANG_EXT_DERIVED_WITH_NAME(GenPostDec, "gen_post_dec", "(v : ref<'a,f,'v,'k>)->'a { auto tmp=*v; v=*v-lit(\"1\":'a); return tmp; }")
 
 
 	};

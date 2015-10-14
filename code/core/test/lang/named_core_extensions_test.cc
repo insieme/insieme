@@ -70,9 +70,9 @@ namespace lang {
 
 		LANG_EXT_LITERAL_WITH_NAME(NamedLiteral, "NamedLiteral", "named_lit", "(NamedType)->unit")
 
-		LANG_EXT_DERIVED_WITH_NAME(NamedDerivedUnknown, "NamedDerivedUnknown", "alias foo = FooType; lambda (x : foo)->foo { return x; }")
+		LANG_EXT_DERIVED_WITH_NAME(NamedDerivedUnknown, "NamedDerivedUnknown", "alias foo = FooType; (x : foo)->foo { return x; }")
 
-		LANG_EXT_DERIVED(NamedDerived, "alias foo = NamedType; lambda (x : foo)->foo { return x; }")
+		LANG_EXT_DERIVED(NamedDerived, "alias foo = NamedType; (x : foo)->foo { return x; }")
 	};
 
 	TEST(NamedCoreExtensionTest, NamedLookup) {
