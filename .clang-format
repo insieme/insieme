@@ -17,8 +17,6 @@ Cpp11BracedListStyle: true
 IndentCaseLabels: false
 IndentWidth: 4
 KeepEmptyLinesAtTheStartOfBlocks: false
-MacroBlockBegin: "^IR_NODE$|^IR_.*NODE_ACCESSOR$|^IR_.*_TYPE$"
-MacroBlockEnd: "^IR_NODE_END$"
 MaxEmptyLinesToKeep: 2
 NamespaceIndentation: Inner
 PointerAlignment: Left

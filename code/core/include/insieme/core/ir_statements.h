@@ -284,7 +284,7 @@ namespace core {
 		 * Obtains a reference to the statement with the given index.
 		 */
 		Ptr<const Statement> getStatement(std::size_t index) const {
-			return CompoundStmtAccessor<Derived, Ptr>::getElement(index);
+			return this->getElement(index);
 		}
 	IR_NODE_END()
 

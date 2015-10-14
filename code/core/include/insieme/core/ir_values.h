@@ -42,7 +42,7 @@ namespace insieme {
 namespace core {
 
 	template <typename D, template <typename T> class P>
-	struct ValueAccessor : public NodeAccessor<D, P> {
+	struct Accessor<Value,D,P> : public Accessor<Node, D, P> {
 		/**
 		 * Obtains a reference to the value represented by this node if
 		 * it is representing a value. This method is overloading the version
@@ -77,13 +77,13 @@ namespace core {
 	#define VALUE_NODE(NAME, TYPE)                                                                                                                             \
                                                                                                                                                                \
 		template <typename D, template <typename T> class P>                                                                                                   \
-		struct NAME##ValueAccessor : public ValueAccessor<D, P> {                                                                                              \
+		struct Accessor<NAME##Value,D,P> : public Accessor<Value, D, P> {                                                                                      \
 			const TYPE& getValue() const {                                                                                                                     \
-				return boost::get<TYPE>(ValueAccessor<D, P>::getValue());                                                                                      \
+				return boost::get<TYPE>(this->getNodeValue());                                                                                                 \
 			}                                                                                                                                                  \
 		};                                                                                                                                                     \
                                                                                                                                                                \
-		class NAME##Value : public Value, public NAME##ValueAccessor<NAME##Value, Pointer> {                                                                   \
+		class NAME##Value : public Value, public Accessor<NAME##Value, NAME##Value, Pointer> {                                                                 \
 			NAME##Value(const TYPE value) : Value(NT_##NAME##Value, value) {}                                                                                  \
                                                                                                                                                                \
 		  public:                                                                                                                                              \

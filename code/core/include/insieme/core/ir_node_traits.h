@@ -54,23 +54,15 @@ namespace core {
 		/**
 		 * A helper for defining node traits ...
 		 */
-		template <typename T, template <typename D, template <typename P> class P> class A>
+		template <typename T>
 		struct node_type_helper {
 			typedef T type;
 			typedef Pointer<const T> ptr_type;
 			typedef Address<const T> adr_type;
-
-			template <template <typename P> class P>
-			struct accessor {
-				typedef A<P<const T>, P> type;
-			};
-
-			typedef typename accessor<Pointer>::type ptr_accessor_type;
-			typedef typename accessor<Address>::type adr_accessor_type;
 		};
 
-		template <typename T, NodeType N, template <typename D, template <typename P> class P> class Accessor>
-		struct concrete_node_type_helper : public node_type_helper<T, Accessor> {
+		template <typename T, NodeType N>
+		struct concrete_node_type_helper : public node_type_helper<T> {
 			BOOST_STATIC_CONSTANT(NodeType, nt_value = N);
 		};
 	}
@@ -92,7 +84,7 @@ namespace core {
 
 	#define CONCRETE(NAME)                                                                                                                                     \
 		template <>                                                                                                                                            \
-		struct concrete_node_type<NAME> : public detail::concrete_node_type_helper<NAME, NT_##NAME, NAME##Accessor> {};                                        \
+		struct concrete_node_type<NAME> : public detail::concrete_node_type_helper<NAME, NT_##NAME> {};                                        \
 		template <>                                                                                                                                            \
 		struct to_node_type<NT_##NAME> : public concrete_node_type<NAME> {};
 	#include "insieme/core/ir_nodes.def"
@@ -100,7 +92,7 @@ namespace core {
 
 	#define NODE(NAME)                                                                                                                                         \
 		template <>                                                                                                                                            \
-		struct node_type<NAME> : public detail::node_type_helper<NAME, NAME##Accessor> {                                                                       \
+		struct node_type<NAME> : public detail::node_type_helper<NAME> {                                                                       \
 			static const std::string& getName() {                                                                                                              \
 				static const std::string name = #NAME;                                                                                                         \
 				return name;                                                                                                                                   \

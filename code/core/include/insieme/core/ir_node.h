@@ -76,7 +76,7 @@ namespace core {
 	 * Hence, a tree is either a Value or a node with a type and a list of child nodes.
 	 */
 	class Node : public utils::HashableImmutableData<Node>, // Nodes are immutable data objects!
-	             public utils::VirtualPrintable {           // Allows instances to be printed
+	             public utils::VirtualPrintable	{		    // Allows instances to be printed
 
 		/**
 		 * Allow the instance manager to access private methods to create / destroy nodes.
@@ -86,8 +86,8 @@ namespace core {
 		/**
 		 * The Node Accessor may access any internal data element.
 		 */
-		template <typename Derived, template <typename T> class Ptr>
-		friend struct NodeAccessor;
+		template <typename Type, typename LeafType, template <typename T> class Ptr>
+		friend struct Accessor;
 
 	  public:
 		/**
@@ -699,6 +699,7 @@ namespace core {
 	// 							    Node Utilities
 	// **********************************************************************************
 
+
 	/**
 	 * A utility allowing to convert constant vectors of pointers to derived types to vectors
 	 * of pointers to base types.
@@ -930,9 +931,9 @@ namespace core {
 		NodeRange(const Iter& begin, const Iter& end) : utils::range<Iter>(begin, end) {}
 	};
 
-	template <typename Derived, template <typename T> class Ptr, template <typename D, template <typename T> class P> class BaseAccessor, typename First,
-	          typename... Rest>
-	struct ListNodeAccessor : public BaseAccessor<Derived, Ptr> {
+	template <typename BaseAccessor, template <typename T> class Ptr, typename First, typename... Rest>
+	struct ListNodeAccessor : public BaseAccessor {
+
 		// extract last type from list => this is the list type
 		typedef typename type_at<type_list<First, Rest...>::length - 1, type_list<First, Rest...>>::type ElementType;
 
@@ -952,7 +953,7 @@ namespace core {
 		 */
 		const Ptr<const ElementType>& getElement(std::size_t index) const {
 			assert_lt(index, size()) << "Element index " << index << " is out of bound: [0.." << size() << ")";
-			return convertList<ElementType>(BaseAccessor<Derived, Ptr>::getChildList())[offset + index];
+			return convertList<ElementType>(this->getChildList())[offset + index];
 		}
 
 		/**
@@ -968,7 +969,7 @@ namespace core {
 		 */
 		const NodeRange<Ptr<const ElementType>> getElements() const {
 			// obtain the sub-range covering the actual elements of this list node
-			const auto& all = convertList<ElementType>(BaseAccessor<Derived, Ptr>::getChildList());
+			const auto& all = convertList<ElementType>(this->getChildList());
 			return NodeRange<Ptr<const ElementType>>(all.begin() + offset, all.end());
 		}
 
@@ -1027,7 +1028,7 @@ namespace core {
 		 * @return a reference to the contained elements
 		 */
 		const vector<Pointer<const ElementType>>& getList() const {
-			return convertList<ElementType>(BaseAccessor<Derived, Ptr>::getNode().getElementList());
+			return convertList<ElementType>(this->getNode().getElementList());
 		}
 	};
 
@@ -1045,12 +1046,12 @@ namespace core {
 	 * A macro starting a node declaration with the given name and base type.
 	 */
 	#define IR_NODE(NAME, BASE)                                                                                                                                \
-		class NAME : public BASE, public NAME##Accessor<NAME, Pointer>, public NAME##Accessor<NAME, Pointer>::node_helper {                                    \
-			NAME(const NodeList& children) : BASE(NT_##NAME, children), NAME##Accessor<NAME, Pointer>::node_helper(getChildNodeList()) {}                      \
+		class NAME : public BASE, public Accessor<NAME, NAME, Pointer>, public Accessor<NAME, NAME, Pointer>::node_helper {                                    \
+			NAME(const NodeList& children) : BASE(NT_##NAME, children), Accessor<NAME, NAME, Pointer>::node_helper(getChildNodeList()) {}                      \
                                                                                                                                                                \
 			template <typename... Children>                                                                                                                    \
 			NAME(const Pointer<const Children>&... children)                                                                                                   \
-			    : BASE(NT_##NAME, children...), NAME##Accessor<NAME, Pointer>::node_helper(getChildNodeList()) {}                                              \
+			    : BASE(NT_##NAME, children...), Accessor<NAME, NAME, Pointer>::node_helper(getChildNodeList()) {}                                              \
                                                                                                                                                                \
 		  protected:                                                                                                                                           \
 			/* The function required for the clone process. */                                                                                                 \
@@ -1082,28 +1083,28 @@ namespace core {
 	 * @param ... the types of the child nodes of the associated node
 	 */
 	#define IR_NODE_ACCESSOR(NAME, BASE, ...)                                                                                                                  \
-		template <typename Derived, template <typename T> class Ptr>                                                                                           \
-		struct NAME##Accessor : public BASE##Accessor<Derived, Ptr> {                                                                                          \
-			typedef FixedSizeNodeHelper<Derived, ##__VA_ARGS__> node_helper;
+		template <typename LeafType, template <typename T> class Ptr>                                                                                          \
+		struct Accessor<NAME, LeafType, Ptr> : public Accessor<BASE, LeafType, Ptr> {                                                                          \
+			typedef FixedSizeNodeHelper<NAME, ##__VA_ARGS__> node_helper;
 
 	#define IR_LIST_NODE_ACCESSOR(NAME, BASE, LIST_NAME, ...)                                                                                                  \
-		template <typename Derived, template <typename T> class Ptr>                                                                                           \
-		struct NAME##Accessor : public ListNodeAccessor<Derived, Ptr, BASE##Accessor, ##__VA_ARGS__> {                                                         \
-			typedef ListNodeHelper<Derived, ##__VA_ARGS__> node_helper;                                                                                        \
-                                                                                                                                                               \
-			const NodeRange<Ptr<const typename ListNodeAccessor<Derived, Ptr, BASE##Accessor, ##__VA_ARGS__>::ElementType>> get##LIST_NAME() const {           \
-				return ListNodeAccessor<Derived, Ptr, BASE##Accessor, ##__VA_ARGS__>::getElements();                                                           \
+		template <typename LeafType, template <typename T> class Ptr>                                                                                          \
+		struct Accessor<NAME, LeafType, Ptr> : public ListNodeAccessor<Accessor<BASE, LeafType, Ptr>, Ptr, ##__VA_ARGS__> {                                    \
+			typedef ListNodeHelper<NAME, ##__VA_ARGS__> node_helper;                                                                                           \
+																																							   \
+			const NodeRange<Ptr<const typename ListNodeAccessor<Accessor<BASE, LeafType, Ptr>, Ptr, ##__VA_ARGS__>::ElementType>> get##LIST_NAME() const {     \
+				return ListNodeAccessor<Accessor<BASE, LeafType, Ptr>, Ptr, ##__VA_ARGS__>::getElements();                                                     \
 			}                                                                                                                                                  \
-                                                                                                                                                               \
-			operator NodeRange<Ptr<const typename ListNodeAccessor<Derived, Ptr, BASE##Accessor, ##__VA_ARGS__>::ElementType>>() const {                       \
-				return ListNodeAccessor<Derived, Ptr, BASE##Accessor, ##__VA_ARGS__>::getElements();                                                           \
+																																							   \
+			operator NodeRange<Ptr<const typename ListNodeAccessor<Accessor<BASE, LeafType, Ptr>, Ptr, ##__VA_ARGS__>::ElementType>>() const {                 \
+				return ListNodeAccessor<Accessor<BASE, LeafType, Ptr>, Ptr, ##__VA_ARGS__>::getElements();                                                     \
 			}                                                                                                                                                  \
-			operator vector<Ptr<const typename ListNodeAccessor<Derived, Ptr, BASE##Accessor, ##__VA_ARGS__>::ElementType>>() const {                          \
-				return ListNodeAccessor<Derived, Ptr, BASE##Accessor, ##__VA_ARGS__>::getElements();                                                           \
-			}
+			operator vector<Ptr<const typename ListNodeAccessor<Accessor<BASE, LeafType, Ptr>, Ptr, ##__VA_ARGS__>::ElementType>>() const {                    \
+				return ListNodeAccessor<Accessor<BASE, LeafType, Ptr>, Ptr, ##__VA_ARGS__>::getElements();                                                     \
+		}
 
 
-	/**
+    /**
 	 * A macro adding new properties to an accessor by linking a name to a
 	 * type and an index within the child list.
 	 *
@@ -1113,7 +1114,7 @@ namespace core {
 	 */
 	#define IR_NODE_PROPERTY(TYPE, NAME, INDEX)                                                                                                                \
 		Ptr<const TYPE> get##NAME() const {                                                                                                                    \
-			return static_cast<const Derived*>(this)->getChildList()[INDEX].template as<Ptr<const TYPE>>();                                               \
+			return this->getChildList()[INDEX].template as<Ptr<const TYPE>>();                                               \
 		}
 
 
@@ -1122,8 +1123,8 @@ namespace core {
 	/**
 	 * The accessor for instances of type expressions.
 	 */
-	template <typename D, template <typename T> class P>
-	struct SupportAccessor : public NodeAccessor<D, P> {};
+	template <typename LeafType, template <typename T> class P>
+	struct Accessor<Support,LeafType,P> : public Accessor<Node,LeafType,P> {};
 
 	/**
 	 * The base type for all support nodes. Support nodes do not represent actual language constructs.
@@ -1157,8 +1158,8 @@ namespace core {
 	/**
 	 * The accessor for instances of statements.
 	 */
-	template <typename D, template <typename T> class P>
-	struct StatementAccessor : public NodeAccessor<D, P> {};
+	template <typename LeafType, template <typename T> class P>
+	struct Accessor<Statement,LeafType,P> : public Accessor<Node, LeafType, P> {};
 
 	/**
 	 * The abstract statement class provides the foundation for all nodes representing statements
@@ -1213,11 +1214,12 @@ namespace core {
 
 	// ---------------------------------------- An abstract base expression ------------------------------
 
+
 	/**
 	 * The accessor for instances of statements.
 	 */
-	template <typename Derived, template <typename T> class Ptr>
-	struct ExpressionAccessor : public StatementAccessor<Derived, Ptr> {
+	template <typename LeafType, template <typename T> class Ptr>
+	struct Accessor<Expression,LeafType,Ptr> : public Accessor<Statement, LeafType, Ptr> {
 		/**
 		 * Obtains the type of this expression. The first child node
 		 * of every expression has to be its type.
@@ -1250,7 +1252,6 @@ namespace core {
 		 */
 		Expression(const NodeType nodeType, const NodeList& children) : Statement(nodeType, NC_Expression, children) {}
 	};
-
 
 	// ------------------------------------- Expressions -----------------------------------
 
