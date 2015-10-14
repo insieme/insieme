@@ -39,7 +39,7 @@
 #include "insieme/core/ir_node.h"
 #include "insieme/core/lang/extension.h"
 
-#include "insieme/core/lang/enum_extension.h"
+#include "insieme/core/lang/enum.h"
 #include "insieme/core/lang/ir++_extension.h"
 #include "insieme/core/lang/parallel.h"
 #include "insieme/core/lang/io.h"

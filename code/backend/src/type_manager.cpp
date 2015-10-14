@@ -61,7 +61,7 @@
 #include "insieme/core/lang/array.h"
 #include "insieme/core/lang/reference.h"
 #include "insieme/core/lang/channel.h"
-#include "insieme/core/lang/enum_extension.h"
+#include "insieme/core/lang/enum.h"
 #include "insieme/core/lang/const_extension.h"
 
 #include "insieme/utils/logging.h"
@@ -258,6 +258,18 @@ namespace backend {
 
 	namespace type_info_utils {
 
+		const TypeInfo* headerAnnotatedTypeHandler(const Converter& converter, const core::TypePtr& type,
+			std::function<void(std::string&, const core::TypePtr&)> nameModifier) {
+			if(annotations::c::hasIncludeAttached(type) && core::annotations::hasAttachedName(type)) {
+				const string& header = annotations::c::getAttachedInclude(type);
+				string name = core::annotations::getAttachedName(type);
+				// modify name. E.g., if it is a struct or union type, add the relevant keyword to the name
+				nameModifier(name, type);
+				return type_info_utils::createInfo(converter.getFragmentManager(), name, header);
+			}
+			return NULL;
+		}
+
 		c_ast::ExpressionPtr NoOp(const c_ast::SharedCNodeManager&, const c_ast::ExpressionPtr& node) {
 			return node;
 		}
@@ -317,15 +329,14 @@ namespace backend {
 
 			// - Header Annotation ------------------------------------------------------------------------
 
-			// if type is annotated with an include file => use the include file
-			if(annotations::c::hasIncludeAttached(type) && core::annotations::hasAttachedName(type)) {
-				const string& header = annotations::c::getAttachedInclude(type);
-				string name = core::annotations::getAttachedName(type);
-				// if it is a struct or union type, add the relevant keyword to the name
-				if(core::analysis::isStruct(type)) name = "struct " + name;
-				if(core::analysis::isUnion(type)) name = "union " + name;
-				return type_info_utils::createInfo(converter.getFragmentManager(), name, header);
-			}
+			// if we have a struct or union type that is annotated
+			// with an include file => use the include file
+			const TypeInfo* t = NULL;
+			t = type_info_utils::headerAnnotatedTypeHandler(converter, type, [](std::string& s, const core::TypePtr& type) {
+				if(core::analysis::isStruct(type)) s = "struct " + s;
+				if(core::analysis::isUnion(type)) s = "union " + s;
+			});
+			if(t) { return t; }
 
 
 			// - Include Table ----------------------------------------------------------------------------

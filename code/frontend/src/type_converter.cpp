@@ -52,7 +52,7 @@
 #include "insieme/core/annotations/naming.h"
 #include "insieme/core/ir_cached_visitor.h"
 #include "insieme/core/ir_types.h"
-#include "insieme/core/lang/enum_extension.h"
+#include "insieme/core/lang/enum.h"
 #include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/transform/node_replacer.h"
 
@@ -344,12 +344,30 @@ namespace conversion {
 			core::NodeManager& mgr = converter.getNodeManager();
 			core::IRBuilder builder(mgr);
 			auto enumDecl = clangEnumTy->getDecl();
-			auto& enumExt = mgr.getLangExtension<core::lang::EnumExtension>();
-			core::TypeList enumMembers;
+			auto enumClassType = converter.convertType(enumDecl->getIntegerType());
+			std::string enumName = getNameFor(converter, enumDecl).first;
+			// collect enum constant decls
+			std::vector<core::GenericTypePtr> enumElements;
 			for(auto m : enumDecl->enumerators()) {
-				enumMembers.push_back(builder.genericType(m->getNameAsString()));
+				//get value of enum element
+				core::ExpressionPtr val = builder.literal(builder.getLangBasic().getInt8(), m->getInitVal().toString(10));
+				std::string enumConstantDeclName = m->getNameAsString();
+				//hashing needed?
+				if(!llvm::dyn_cast<clang::TranslationUnitDecl>(enumDecl->getDeclContext()))
+					enumConstantDeclName += std::to_string(std::hash<std::string>()(enumName));
+				//create enum element
+				enumElements.push_back(core::lang::getEnumElement(builder.genericType(enumConstantDeclName), val));
 			}
-			return enumExt.getEnumType(getNameFor(converter, enumDecl).first, enumMembers);
+			//generate enum type
+			core::GenericTypePtr et = core::lang::getEnumDef(builder.genericType(enumName), enumElements);
+			// build struct {enumty t; val v;}
+			auto enumResTy = core::lang::getEnumType(enumClassType, et);
+
+			// attach necessary information for types defined in library headers
+			converter.applyHeaderTagging(enumResTy, enumDecl);
+			core::annotations::attachName(enumResTy, enumDecl->getNameAsString());
+
+			return enumResTy;
 		}
 
 		core::TypePtr handleRecordType(Converter& converter, const RecordType* clangRecordTy) {

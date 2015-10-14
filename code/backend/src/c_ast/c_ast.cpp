@@ -235,7 +235,15 @@ namespace c_ast {
 	bool EnumType::equals(const Node& node) const {
 		assert(dynamic_cast<const EnumType*>(&node));
 		auto other = static_cast<const EnumType&>(node);
-		return ((name == other.name) && (annotation == other.annotation));
+		if(values.size() != other.values.size())
+			return false;
+		for(unsigned i=0; i<values.size(); ++i) {
+			if(values[i].first != other.values[i].first)
+				return false;
+			if(values[i].second != other.values[i].second)
+				return false;
+		}
+		return ((name == other.name) && (classTy == other.classTy));
 	}
 
 	bool MemberFieldPointer::equals(const Node& node) const {

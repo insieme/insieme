@@ -26,10 +26,3 @@ variadic_functions
 # Disabling tests because VLAs are not implemented in the BE
 variable_arrays
 pointer_arith_vla
-
-# Disabling tests because they fail in the backend:
-# Reason: unsupported type __insieme_enum
-anon_enum
-pendulum
-enum
-
