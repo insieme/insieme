@@ -39,6 +39,8 @@
 #include "insieme/core/lang/extension.h"
 
 #include "insieme/core/lang/list.h"
+#include "insieme/core/lang/reference.h"
+
 
 namespace insieme {
 namespace core {
@@ -64,6 +66,9 @@ namespace lang {
 
 	  public:
 
+		// import reference extension
+		IMPORT_MODULE(ReferenceExtension);
+
 		// import list extension for list operations
 		IMPORT_MODULE(ListExtension);
 
@@ -78,7 +83,9 @@ namespace lang {
 		/**
 		 * A type alias for arrays with undefined size.
 		 */
-		TYPE_ALIAS("array<'a>", "array<'a,inf>");
+		// NOTE: This alias must not be defined here, but in the reference extension, since that one uses the alias already.
+		//       If this alias is re-defined here we get a cycle.
+		//TYPE_ALIAS("array<'a>", "array<'a,inf>");
 
 
 		// -------------------- operators ---------------------------

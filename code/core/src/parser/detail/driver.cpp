@@ -224,15 +224,6 @@ namespace parser {
 				}
 			}
 
-			//look in the Reference extension
-			if(!x) {
-				auto symbols = mgr.getLangExtension<core::lang::ReferenceExtension>().getDefinedSymbols();
-				auto pos = symbols.find(name);
-				if (pos != symbols.end()) {
-					x = pos->second();
-				}
-			}
-
 			//fail if not found
 			if(!x) {
 				error(l, format("the symbol %s was not declared in this context", name));

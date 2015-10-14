@@ -38,7 +38,6 @@
 
 #include "insieme/core/lang/extension.h"
 
-#include "insieme/core/lang/reference.h"
 #include "insieme/core/lang/array.h"
 
 namespace insieme {
@@ -67,7 +66,6 @@ namespace lang {
 	  public:
 
 		// import required modules
-		IMPORT_MODULE(ReferenceExtension);
 		IMPORT_MODULE(ArrayExtension);
 
 

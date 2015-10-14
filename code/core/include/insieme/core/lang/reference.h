@@ -38,7 +38,6 @@
 
 #include "insieme/core/lang/extension.h"
 
-#include "insieme/core/lang/array.h"
 #include "insieme/core/lang/datapath.h"
 
 namespace insieme {
@@ -68,8 +67,11 @@ namespace lang {
 		// import data-path extension for defined literals
 		IMPORT_MODULE(DatapathExtension);
 
-		// import array extension for defined literals
-		IMPORT_MODULE(ArrayExtension);
+		/**
+		 * A type alias for arrays with undefined size.
+		 */
+		// We need to define this alias here in order to avoid a cyclic dependency
+		TYPE_ALIAS("array<'a>", "array<'a,inf>");
 
 
 		// ------------------ memory location ------------------------
