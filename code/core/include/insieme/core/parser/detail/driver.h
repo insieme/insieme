@@ -392,6 +392,16 @@ namespace parser {
 			void addSymb(const std::string& name, const ExpressionPtr& node);
 
 			/**
+			 * add a symbol into the scope if it isn't already defined there
+			 */
+			bool addTypeIfNotExists(const location& l, const std::string& name, const NodeFactory& factory);
+
+			/**
+			 * add a symbol into the scope if it isn't already defined there
+			 */
+			bool addTypeIfNotExists(const location& l, const std::string& name, const TypePtr& node);
+
+			/**
 			 * add a symbol into the scope
  			*/
 			void addType(const location& l, const std::string& name, const NodeFactory& factory);

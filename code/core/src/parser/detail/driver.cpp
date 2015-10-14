@@ -998,15 +998,14 @@ namespace parser {
 			scopes.addTypeAlias(pattern, substitute);
 		}
 
-		void InspireDriver::addType(const location& l, const std::string& name, const NodeFactory&  factory) {
-
+		bool InspireDriver::addTypeIfNotExists(const location& l, const std::string& name, const NodeFactory& factory) {
 			if(name.find(".") != std::string::npos) {
 				error(l, format("symbol names can not contain dot chars: %s", name));
-				return;
+				return false;
 			}
 
 			// ignore wildcard for unused variables
-			if(name == "_") { return; }
+			if(name == "_") { return false; }
 
 			// annotate type name
 			auto node = factory();
@@ -1015,7 +1014,15 @@ namespace parser {
 				annotations::attachName(tagType->getRecord(), name);
 			}
 
-			if(!scopes.addType(name, factory)) { error(l, format("type name %s redefined", name)); }
+			return scopes.addType(name, factory);
+		}
+
+		bool InspireDriver::addTypeIfNotExists(const location& l, const std::string& name, const TypePtr& node) {
+			return addTypeIfNotExists(l, name, [=]() -> NodePtr { return node; });
+		}
+
+		void InspireDriver::addType(const location& l, const std::string& name, const NodeFactory&  factory) {
+			if(!addTypeIfNotExists(l, name, factory)) { error(l, format("type name %s redefined", name)); }
 		}
 
 		void InspireDriver::addType(const location& l, const std::string& name, const TypePtr& node) {

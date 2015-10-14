@@ -291,7 +291,7 @@ using : "using" "identifier" ";"                                            { as
 alias : "alias" abstract_type "=" type ";"                                  { driver.addTypeAlias($2,$4); }
       ;
 
-declaration : "decl" struct_or_union "identifier" ";"                       { driver.addType($3, driver.builder.tagTypeReference($3)); }
+declaration : "decl" struct_or_union "identifier" ";"                       { driver.addType(@$, $3, driver.builder.genericType($3)); }
             | "decl" "identifier" ":" type ";"                              { driver.addSymb($2, driver.builder.literal($2, $4)); }
             | "decl" "identifier" "::" "identifier" ":" type ";"            { assert_not_implemented(); }
             ;
@@ -305,7 +305,7 @@ main : type "identifier" "(" parameters ")" compound_statement              { $$
 
 //    -- record_declarations -------------------------------------
 
-record_definition : struct_or_union "identifier" parent_spec "{"            { driver.addType(@$, $2, driver.builder.genericType($2)); driver.beginRecord($2); }
+record_definition : struct_or_union "identifier" parent_spec "{"            { driver.addTypeIfNotExists(@$, $2, driver.builder.genericType($2)); driver.beginRecord($2); }
                                     fields                                  { driver.registerFields(@$, $6); }
                                            constructors destructor member_functions pure_virtual_member_functions "}"
                                                                             { $$ = driver.genRecordType(@$, $1, $2, $3, $6, $8, $9, $10, $11); driver.endRecord(); }
