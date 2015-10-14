@@ -155,6 +155,11 @@ namespace parser {
 			 */
 			ExpressionPtr genUnionExpression(const location& l, const TypePtr& type, const std::string field, const ExpressionPtr& expr);
 
+			/**
+			 * Retrieves the tag type stored in the TU with the given generic type as key. also unwraps ref types
+			 */
+			TypePtr getTypeFromGenericTypeInTu(const TypePtr& type);
+
 		  public:
 
 			ProgramPtr parseProgram();

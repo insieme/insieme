@@ -359,6 +359,20 @@ namespace parser {
 
 		}
 
+		TypePtr InspireDriver::getTypeFromGenericTypeInTu(const TypePtr& type) {
+			// handle ref types
+			if (analysis::isRefType(type)) return getTypeFromGenericTypeInTu(analysis::getReferencedType(type));
+
+			if (auto genericType = type.isa<GenericTypePtr>()) {
+				auto tuType = tu[genericType];
+				if (tuType) {
+					return tuType;
+				}
+			}
+
+			return type;
+		}
+
 
 		ExpressionPtr InspireDriver::genMemberAccess(const location& l, const ExpressionPtr& expr, const std::string& memberName) {
 			if(!expr) {
@@ -366,14 +380,9 @@ namespace parser {
 				return nullptr;
 			}
 
-			auto type = expr->getType();
-
-			if (auto genericType = type.isa<GenericTypePtr>()) {
-				auto tuType = tu[genericType];
-				if (tuType) {
-					type = tuType;
-				}
-			}
+			auto exprType = expr->getType();
+			// get the actual tag type registered in the TU
+			auto type = getTypeFromGenericTypeInTu(exprType);
 
 			const auto& fieldAccess = builder.getLangBasic().getCompositeMemberAccess();
 			const auto& memberFunctionAccess = builder.getLangBasic().getCompositeMemberFunctionAccess();
@@ -403,7 +412,6 @@ namespace parser {
 
 				//if our callable is a tag type
 			} else if (const auto& tagType = type.isa<TagTypePtr>()) {
-
 				// check for member access calls
 				// lookup the function to call by name
 				// TODO  here we assume that each name is only used exactly once
@@ -712,12 +720,7 @@ namespace parser {
 				// we add the callable itself as the first argument of the call
 				auto thisParam = callable.as<CallExprPtr>()->getArgument(0);
 				auto thisParamType = thisParam->getType();
-				if (auto genericType = thisParamType.isa<GenericTypePtr>()) {
-					auto tuType = tu[genericType];
-					if (tuType) {
-						thisParamType = tuType;
-					}
-				}
+				thisParamType = getTypeFromGenericTypeInTu(thisParamType);
 
 				// calling a member function of another struct
 				if (auto tagType = thisParamType.isa<TagTypePtr>()) {
