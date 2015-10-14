@@ -868,8 +868,13 @@ namespace parser {
 			auto resolvedType = resolveTypeAliases(l, type);
 			VariablePtr variable = builder.variable(resolvedType);
 			annotations::attachName(variable, name);
-			addSymb(l, name, variable);
 			return variable;
+		}
+
+		void InspireDriver::registerParameters(const location& l, const VariableList& params) {
+			for (const auto& variable : params) {
+				addSymb(l, annotations::getAttachedName(variable), variable);
+			}
 		}
 
 		ExpressionPtr InspireDriver::genJobExpr(const location& l, const ExpressionPtr& lowerBound, const ExpressionPtr& upperBound, const ExpressionPtr& expr) {

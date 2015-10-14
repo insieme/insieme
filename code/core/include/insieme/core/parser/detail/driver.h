@@ -316,6 +316,11 @@ namespace parser {
 			VariablePtr genParameter(const location& l, const std::string& name, const TypePtr& type);
 
 			/**
+			 * registers the given parameters in the current scope using the names attached to them
+			 */
+			void registerParameters(const location& l, const VariableList& params);
+
+			/**
 			 * constructs a job expression with the given range
 			 */
 			ExpressionPtr genJobExpr(const location& l, const ExpressionPtr& lowerBound, const ExpressionPtr& upperBound, const ExpressionPtr& expr);

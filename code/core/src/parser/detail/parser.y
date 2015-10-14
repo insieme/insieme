@@ -367,10 +367,10 @@ pure_virtual_member_function : "pure" "virtual" cv_flags "identifier" ":" pure_f
 
 //    -- function_declarations -------------------------------------
 
-function_definition : lambda_or_function "identifier" "=" lambda          {
-                                                                            $$ = $4;
-                                                                            driver.addSymb($2, $4);
-                                                                            driver.tu.addFunction(driver.builder.literal($2, $4->getType()), $4);
+function_definition : "identifier" "=" lambda                             {
+                                                                            $$ = $3;
+                                                                            driver.addSymb($1, $3);
+                                                                            driver.tu.addFunction(driver.builder.literal($1, $3->getType()), $3);
                                                                           }
                     ;
 
@@ -578,10 +578,9 @@ call : expression "(" expressions ")"                                     { $$ =
 
 // -- lambda --
 
-lambda : lambda_or_function "(" ")" "->" type compound_statement          { $$ = driver.genLambda(@$, VariableList(), $5, $6, $1); }
-       | lambda_or_function "("                                           { driver.openScope(); }
-                                non_empty_parameters ")" "->" type compound_statement_no_scope
-                                                                          { $$ = driver.genLambda(@$, $4, $7, $8, $1); driver.closeScope(); }
+lambda : "(" ")" "->" type compound_statement                                  { $$ = driver.genLambda(@$, VariableList(), $4, $5); }
+       | "(" non_empty_parameters ")"                                          { driver.openScope(); driver.registerParameters(@$, $2); }
+                                      "->" type compound_statement_no_scope    { $$ = driver.genLambda(@$, $2, $6, $7); driver.closeScope(); }
        ;
 
 parameters : non_empty_parameters                                         { $$ = $1; }
