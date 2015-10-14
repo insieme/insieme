@@ -115,7 +115,7 @@ namespace core {
 			 *
 			 * @return a reference to the internally maintained child list
 			 */
-			const vector<NodeAddress>& getChildList() const {
+			const vector<NodeAddress>& getChildList() const & {
 				if(!bool(childList)) {
 					// produce child list
 					const NodeList& children = getNode().getChildNodeList();
@@ -128,6 +128,14 @@ namespace core {
 				return *childList;
 			}
 
+			/**
+			 * Obtains the entire list of children by value (to keep them alive).
+			 *
+			 * @return a list of child nodes
+			 */
+			vector<NodeAddress> getChildList() const && {
+				return getChildList(); // return by value
+			}
 		};
 
 	} // end namespace detail
