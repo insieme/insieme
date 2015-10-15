@@ -75,7 +75,7 @@ namespace lang {
 		/**
 		 * Defines the generic complex type.
 		 */
-		LANG_EXT_TYPE(GenComplex, "struct _ir_complex { rel : 'a; img : 'a; }")
+		LANG_EXT_TYPE(GenComplex, "complex")
 
 
 
@@ -83,54 +83,50 @@ namespace lang {
 		 * Get real part of complex.
 		 */
 		LANG_EXT_DERIVED(ComplexReal,
-			"(x : struct _ir_complex { _real : 'a; _img : 'a; })->'a { return x._real; }"
+			"(x : complex)->'a { return x.rel; }"
 		);
 
 		/**
 		 * Get real part of complex ref.
 		 */
 		LANG_EXT_DERIVED(RefComplexReal,
-			"(x : ref<struct _ir_complex { _real : 'a; _img : 'a; },'c,'v>)->ref<'a,'c,'v> { return x._real; }"
+			"(x : ref<complex,'c,'v>)->ref<'a,'c,'v> { return x.rel; }"
 		);
 
 		/**
 		 * Get imaginary part of complex.
 		 */
 		LANG_EXT_DERIVED(ComplexImg,
-			"(x : struct _ir_complex { _real : 'a; _img : 'a; })->'a { return x._img; }"
+			"(x : complex)->'a { return x.img; }"
 		);
 
 		/**
 		 * Get imaginary part of complex ref.
 		 */
 		LANG_EXT_DERIVED(RefComplexImg,
-			"(x : ref<struct _ir_complex { _real : 'a; _img : 'a; },'c,'v>)->ref<'a,'c,'v> { return x._img; }"
+			"(x : ref<complex,'c,'v>)->ref<'a,'c,'v> { return x.img; }"
 		);
 
 		/**
 		 * Create a Complex out of a constant value.
 		 */
 		LANG_EXT_DERIVED(ConstantToComplex,
-							"alias res_t = struct _ir_complex {_real : 'a; _img : 'a; };"
-							"(c : 'a)->res_t {"
-								"return <res_t> {c, CAST('a) 0};"
+							"(c : 'a)-> complex {"
+								"return <complex> {c, CAST('a) 0};"
 							"}");
 
 		/**
 		 * Check if the real and imaginary part of the complex number are zero.
 		 */
 		LANG_EXT_DERIVED(ComplexToBool,
-			"(x : struct _ir_complex { _real : 'a; _img : 'a; })->bool { return (x._img != num_cast(0.0, type_lit('a))) || (x._real != num_cast(0.0, type_lit('a))); }"
+			"(x : complex)->bool { return (x.img != num_cast(0.0, type_lit('a))) || (x.rel != num_cast(0.0, type_lit('a))); }"
 		);
 
 		/**
 		 * Cast a complex number of type a to a complex number of type b
 		 */
 		LANG_EXT_DERIVED(ComplexToComplex,
-							"alias res_t = struct _ir_complex {_real : 'b; _img : 'b; };"
-							"(c : struct _ir_complex {_real : 'a; _img : 'a; }, t : type<'b>)->res_t {"
-								"return <res_t> { num_cast(c._real, type_lit('b)), num_cast(c._img, type_lit('b)) };"
-							"}");
+							"(c : complex, t : type<'a>) -> complex { return <complex> { num_cast(c.rel, type_lit('a)), num_cast(c.img, type_lit('a)) }; }");
 
 	};
 
