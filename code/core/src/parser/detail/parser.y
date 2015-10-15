@@ -368,11 +368,7 @@ pure_virtual_member_function : "pure" "virtual" cv_flags "identifier" ":" pure_f
 
 //    -- function_declarations -------------------------------------
 
-function_definition : "identifier" "=" lambda                             {
-                                                                            $$ = $3;
-                                                                            driver.defineSymbol(@1, $1, $3);
-                                                                            driver.tu.addFunction(driver.builder.literal($1, $3->getType()), $3);
-                                                                          }
+function_definition : "identifier" "=" lambda                             { $$ = driver.genFunctionDefinition(@$, $1, $3); }
                     ;
 
 lambda_or_function : "lambda"                                             { $$ = true; }

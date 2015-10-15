@@ -573,6 +573,12 @@ namespace parser {
 			return builder.pureVirtualMemberFunction(name, type);
 		}
 
+		LambdaExprPtr InspireDriver::genFunctionDefinition(const location& l, const std::string name, const LambdaExprPtr& lambda)  {
+			defineSymbol(l, name, lambda);
+			tu.addFunction(builder.literal(name, lambda->getType()), lambda);
+			return lambda;
+		}
+
 		TypePtr InspireDriver::findOrGenAbstractType(const location& l, const std::string& name, const ParentList& parents, const TypeList& typeList) {
 			auto foundType = findType(l, name);
 			if (foundType) {

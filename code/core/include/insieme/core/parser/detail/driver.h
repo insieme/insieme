@@ -256,6 +256,11 @@ namespace parser {
 			PureVirtualMemberFunctionPtr genPureVirtualMemberFunction(const location& l, bool cnst, bool voltile, const std::string& name, const FunctionTypePtr& type);
 
 			/**
+			 * generates a function definition
+			 */
+			LambdaExprPtr genFunctionDefinition(const location& l, const std::string name, const LambdaExprPtr& lambda);
+
+			/**
 			 * generates an abstract type
 			 */
 			TypePtr findOrGenAbstractType(const location& l, const std::string& name, const ParentList& parents, const TypeList& typeList);
