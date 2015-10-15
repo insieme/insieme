@@ -340,10 +340,11 @@ member_functions : member_functions member_function                         { $1
                  ;
 
 member_function : virtual_flag cv_flags lambda_or_function "identifier" ":" "(" ")" "->" type compound_statement
-                                                                                   { $$ = driver.genMemberFunction(@$, $1, $2.first, $2.second, $4, VariableList(), $9, $10, $3); }
-                | virtual_flag cv_flags lambda_or_function "identifier" ":" "("    { driver.openScope(); }
-                                                                                non_empty_parameters ")" "->" type compound_statement_no_scope
-                                                                                   { $$ = driver.genMemberFunction(@$, $1, $2.first, $2.second, $4, $8, $11, $12, $3); driver.closeScope(); }
+                                                                            { $$ = driver.genMemberFunction(@$, $1, $2.first, $2.second, $4, VariableList(), $9, $10, $3); }
+                | virtual_flag cv_flags lambda_or_function "identifier" ":" "(" non_empty_parameters
+                                                                            { driver.openScope(); driver.registerParameters(@7, $7); }
+                                                                                                     ")" "->" type compound_statement_no_scope
+                                                                            { $$ = driver.genMemberFunction(@$, $1, $2.first, $2.second, $4, $7, $11, $12, $3); driver.closeScope(); }
                 ;
 
 virtual_flag : "virtual"                                                    { $$ = true; }
@@ -579,7 +580,7 @@ call : expression "(" expressions ")"                                     { $$ =
 // -- lambda --
 
 lambda : "(" ")" "->" type compound_statement                                  { $$ = driver.genLambda(@$, VariableList(), $4, $5); }
-       | "(" non_empty_parameters ")"                                          { driver.openScope(); driver.registerParameters(@$, $2); }
+       | "(" non_empty_parameters ")"                                          { driver.openScope(); driver.registerParameters(@2, $2); }
                                       "->" type compound_statement_no_scope    { $$ = driver.genLambda(@$, $2, $6, $7); driver.closeScope(); }
        ;
 
@@ -603,7 +604,7 @@ bind : "(" ")" "=>" expression                                            { $$ =
      | non_empty_bind_parameters "=>" compound_statement                  { $$ = driver.genClosure(@$, $1, $3); driver.closeScope(); }
      ;
 
-non_empty_bind_parameters : "(" non_empty_parameters ")"                  { driver.openScope(); driver.registerParameters(@$, $2); $$ = $2; }
+non_empty_bind_parameters : "(" non_empty_parameters ")"                  { driver.openScope(); driver.registerParameters(@2, $2); $$ = $2; }
                           ;
 
 // -- let --
