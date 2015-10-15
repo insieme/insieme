@@ -370,7 +370,7 @@ pure_virtual_member_function : "pure" "virtual" cv_flags "identifier" ":" pure_f
 
 function_definition : "identifier" "=" lambda                             {
                                                                             $$ = $3;
-                                                                            driver.addSymb($1, $3);
+                                                                            driver.addSymbIfNotExists(@1, $1, $3);
                                                                             driver.tu.addFunction(driver.builder.literal($1, $3->getType()), $3);
                                                                           }
                     ;

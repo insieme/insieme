@@ -968,17 +968,24 @@ namespace parser {
 
 		// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Scope management  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-		void InspireDriver::addSymb(const location& l, const std::string& name, const NodeFactory&  factory) {
-
+		bool InspireDriver::addSymbIfNotExists(const location& l, const std::string& name, const NodeFactory&  factory) {
 			if(name.find(".") != std::string::npos) {
 				error(l, format("symbol names can not contain dot chars: %s", name));
-				return;
+				return false;
 			}
 
 			// ignore wildcard for unused variables
-			if(name == "_") { return; }
+			if(name == "_") { return true; }
 
-			if(!scopes.addSymb(name, factory)) { error(l, format("symbol %s redefined", name)); }
+			return scopes.addSymb(name, factory);
+		}
+
+		bool InspireDriver::addSymbIfNotExists(const location& l, const std::string& name, const ExpressionPtr& node) {
+			return addSymbIfNotExists(l, name, [=]() -> NodePtr { return node; });
+		}
+
+		void InspireDriver::addSymb(const location& l, const std::string& name, const NodeFactory&  factory) {
+			if(!addSymbIfNotExists(l, name, factory)) { error(l, format("symbol %s redefined", name)); }
 		}
 
 		void InspireDriver::addSymb(const location& l, const std::string& name, const ExpressionPtr& node) {
