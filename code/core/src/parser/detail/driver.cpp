@@ -72,96 +72,13 @@ namespace parser {
 		class location;
 		class InspireParser;
 
-		/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ scope manager ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-
-
-		void DeclarationContext::openScope() {
-			stack.push_back(Scope());
-		}
-
-		void DeclarationContext::closeScope() {
-			assert_gt(stack.size(), 1) << "Attempted to pop global scope!";
-			stack.pop_back();
-		}
-
-		bool DeclarationContext::addSymb(const std::string& name, const NodeFactory& factory) {
-			auto& symbols = stack.back().symbols;
-			if (symbols.find(name) != symbols.end()) return false;
-			symbols[name] = factory;
-			return true;
-		}
-
-		bool DeclarationContext::addType(const std::string& name, const NodeFactory& factory) {
-			auto& types = stack.back().types;
-			if (types.find(name) != types.end()) return false;
-			types[name] = factory;
-			return true;
-		}
-
-
-		NodePtr DeclarationContext::findSymb(const std::string& name) const {
-			// lookup symbols throughout scopes
-			for(auto it = stack.rbegin(); it != stack.rend(); ++it) {
-				const DefinitionMap& cur = it->symbols;
-				auto pos = cur.find(name);
-				if (pos != cur.end()) return pos->second();
-			}
-			// nothing found
-			return nullptr;
-		}
-
-		NodePtr DeclarationContext::findType(const std::string& name) const {
-			// lookup symbols throughout scopes
-			for(auto it = stack.rbegin(); it != stack.rend(); ++it) {
-				const DefinitionMap& cur = it->types;
-				auto pos = cur.find(name);
-				if (pos != cur.end()) return pos->second();
-			}
-			// nothing found
-			return nullptr;
-		}
-
-		void DeclarationContext::addTypeAlias(const TypePtr& pattern, const TypePtr& substitute) {
-			auto& aliases = stack.back().alias;
-			assert_true(aliases.find(pattern) == aliases.end());
-			aliases[pattern] = substitute;
-		}
-
-		TypePtr DeclarationContext::resolve(const TypePtr& type) const {
-			if (!type) return type;
-
-			NodeManager& mgr = type.getNodeManager();
-
-			// run through alias lists
-			for(auto it = stack.rbegin(); it != stack.rend(); ++it) {
-				for(const auto& cur : it->alias) {
-					// check whether pattern matches
-					if (auto sub = types::match(mgr, type, cur.first)) {
-						// compute substitution
-						auto next = (*sub).applyTo(cur.second);
-						assert_ne(type, next) << "Invalid pattern matching:\n"
-								"Target:     " << *type << "\n"
-								"Pattern:    " << *cur.first << "\n"
-								"Substitute: " << *cur.first << "\n"
-								"Match:      " << *sub << "\n"
-								"Next:       " << *next << "\n";
-
-						// apply pattern and start over again
-						return resolve(next);
-					}
-				}
-			}
-
-			// no matching alias fond => done
-			return type;
-		}
-
-
 		/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ InspireDriver ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 		InspireDriver::InspireDriver(const std::string& str, NodeManager& mgr)
 		    : scopes(), mgr(mgr), builder(mgr), file("global scope"), str(str), tu(mgr), result(nullptr), globLoc(&file), ss(str), scanner(&ss),
 		      parser(*this, scanner) {
+			//begin the global scope
+			openScope();
 		}
 
 		InspireDriver::~InspireDriver() {}
@@ -210,45 +127,6 @@ namespace parser {
 		}
 
 		// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Some tools ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-		ExpressionPtr InspireDriver::findSymbol(const location& l, const std::string& name) {
-			//look in the already defined symbols
-			auto x = scopes.findSymb(name);
-
-			//look in lang basic
-			if(!x) {
-				try {
-					x = builder.getLangBasic().getBuiltIn(name);
-				} catch(...) {
-					// pass, nothing to do really
-				}
-			}
-
-			//fail if not found
-			if(!x) {
-				error(l, format("the symbol %s was not declared in this context", name));
-				return nullptr;
-			}
-			if(!x.isa<ExpressionPtr>()) {
-				error(l, format("the symbol %s is not an expression but of type %s", name, x->getNodeType()));
-				return nullptr;
-			}
-
-			return x.as<ExpressionPtr>();
-		}
-
-		TypePtr InspireDriver::findType(const location& l, const std::string& name) {
-
-			// search types defined in current scope
-			auto x = scopes.findType(name);
-			if(x && !x.isa<TypePtr>()) {
-				error(l, format("the symbol %s is not a type", name));
-				return nullptr;
-			}
-
-			// done
-			return x.as<TypePtr>();
-		}
 
 		ExpressionPtr InspireDriver::getScalar(ExpressionPtr expr) {
 			// auto-unwrap tuple
@@ -529,10 +407,6 @@ namespace parser {
 			}
 		}
 
-		TypePtr InspireDriver::resolveTypeAliases(const location& l, const TypePtr& type) {
-			return scopes.resolve(type);
-		}
-
 		LambdaExprPtr InspireDriver::genLambda(const location& l, const VariableList& params, const TypePtr& retType, const StatementPtr& body, bool isLambda) {
 			// TODO: cast returns to appropriate type
 			TypeList paramTys;
@@ -589,7 +463,7 @@ namespace parser {
 				ExpressionPtr access = builder.getLangBasic().getCompositeMemberAccess();
 				auto accessExpr = builder.callExpr(type, access, genThis(l), builder.getIdentifierLiteral(name), builder.getTypeLiteral(type));
 				annotations::attachName(field, name);
-				addSymb(l, name, accessExpr);
+				defineSymbol(l, name, accessExpr);
 			}
 		}
 
@@ -674,7 +548,7 @@ namespace parser {
 			ExpressionPtr access = builder.getLangBasic().getCompositeMemberFunctionAccess();
 			auto accessExpr = builder.callExpr(memberFunType, access, genThis(l), builder.getIdentifierLiteral(name), builder.getTypeLiteral(memberFunType));
 			annotations::attachName(fun, name);
-			addSymb(l, name, accessExpr);
+			defineSymbol(l, name, accessExpr);
 
 			// create the member function entry
 			return builder.memberFunction(virtl, name, fun);
@@ -873,7 +747,7 @@ namespace parser {
 
 		void InspireDriver::registerParameters(const location& l, const VariableList& params) {
 			for (const auto& variable : params) {
-				addSymb(l, annotations::getAttachedName(variable), variable);
+				defineSymbol(l, annotations::getAttachedName(variable), variable);
 			}
 		}
 
@@ -925,11 +799,11 @@ namespace parser {
 			return builder.refParent(scalarExpr, type);
 		}
 
-		DeclarationStmtPtr InspireDriver::genVariableDeclaration(const location& l, const TypePtr& type, const std::string name, const ExpressionPtr& init) {
+		DeclarationStmtPtr InspireDriver::genVariableDefinition(const location& l, const TypePtr& type, const std::string name, const ExpressionPtr& init) {
 			auto resolvedType = resolveTypeAliases(l, type);
 			auto variable = builder.variable(resolvedType);
 			annotations::attachName(variable, name);
-			addSymb(l, name, variable);
+			defineSymbol(l, name, variable);
 			return builder.declarationStmt(variable, getScalar(init));
 		}
 
@@ -968,82 +842,244 @@ namespace parser {
 
 		// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Scope management  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-		bool InspireDriver::addSymbIfNotExists(const location& l, const std::string& name, const NodeFactory&  factory) {
+		ExpressionPtr InspireDriver::findSymbol(const location& l, const std::string& name) {
+			assert_false(scopes.empty()) << "Missing global scope!";
+
+			NodePtr result;
+
+			//look in defined symbols
+			for(auto it = scopes.rbegin(); it != scopes.rend(); ++it) {
+				const DefinitionMap& cur = it->definedSymbols;
+				auto pos = cur.find(name);
+				if (pos != cur.end()) {
+					result = pos->second();
+					break;
+				}
+			}
+
+			//otherwise we look in the declared symbols
+			if (!result) {
+				for(auto it = scopes.rbegin(); it != scopes.rend(); ++it) {
+					const DefinitionMap& cur = it->declaredSymbols;
+					auto pos = cur.find(name);
+					if (pos != cur.end()) {
+						result = pos->second();
+						break;
+					}
+				}
+			}
+
+			//look in lang basic
+			if (!result) {
+				try {
+					result = builder.getLangBasic().getBuiltIn(name);
+				} catch(...) {
+					// pass, nothing to do really
+				}
+			}
+
+			//fail if not found
+			if (!result) {
+				error(l, format("the symbol %s was not declared in this context", name));
+				return nullptr;
+			}
+			if (!result.isa<ExpressionPtr>()) {
+				error(l, format("the symbol %s is not an expression but of type %s", name, result->getNodeType()));
+				return nullptr;
+			}
+
+			return result.as<ExpressionPtr>();
+		}
+
+		TypePtr InspireDriver::findType(const location& l, const std::string& name) {
+			assert_false(scopes.empty()) << "Missing global scope!";
+
+			NodePtr result;
+
+			//look in defined types
+			for(auto it = scopes.rbegin(); it != scopes.rend(); ++it) {
+				const DefinitionMap& cur = it->definedTypes;
+				auto pos = cur.find(name);
+				if (pos != cur.end()) {
+					result = pos->second();
+					break;
+				}
+			}
+
+			//otherwise we look in the declared types
+			if (!result) {
+				for(auto it = scopes.rbegin(); it != scopes.rend(); ++it) {
+					const DefinitionMap& cur = it->declaredTypes;
+					auto pos = cur.find(name);
+					if (pos != cur.end()) {
+						result = pos->second();
+						break;
+					}
+				}
+			}
+
+			// check the type
+			if (result && !result.isa<TypePtr>()) {
+				error(l, format("the symbol %s is not a type", name));
+				return nullptr;
+			}
+
+			// done
+			return result.as<TypePtr>();
+		}
+
+		void InspireDriver::openScope() {
+			scopes.push_back(Scope());
+		}
+
+		void InspireDriver::closeScope() {
+			assert_gt(scopes.size(), 1) << "Attempted to pop global scope!";
+			scopes.pop_back();
+		}
+
+		InspireDriver::Scope& InspireDriver::getCurrentScope() {
+			assert_false(scopes.empty()) << "Missing global scope!";
+			return scopes.back();
+		}
+
+		bool InspireDriver::checkSymbolName(const location& l, const std::string& name) {
+			//check symbol name for validity
 			if(name.find(".") != std::string::npos) {
 				error(l, format("symbol names can not contain dot chars: %s", name));
 				return false;
 			}
+			return true;
+		}
+
+		void InspireDriver::declareSymbol(const location& l, const std::string& name, const ExpressionPtr& node) {
+			assert_false(scopes.empty()) << "Missing global scope!";
+			//check name for validity
+			if (!checkSymbolName(l, name)) { return; }
 
 			// ignore wildcard for unused variables
-			if(name == "_") { return true; }
+			if(name == "_") { return; }
 
-			return scopes.addSymb(name, factory);
-		}
-
-		bool InspireDriver::addSymbIfNotExists(const location& l, const std::string& name, const ExpressionPtr& node) {
-			return addSymbIfNotExists(l, name, [=]() -> NodePtr { return node; });
-		}
-
-		void InspireDriver::addSymb(const location& l, const std::string& name, const NodeFactory&  factory) {
-			if(!addSymbIfNotExists(l, name, factory)) { error(l, format("symbol %s redefined", name)); }
-		}
-
-		void InspireDriver::addSymb(const location& l, const std::string& name, const ExpressionPtr& node) {
-			addSymb(l, name, [=]() -> NodePtr { return node; });
-		}
-
-
-		void InspireDriver::addSymb(const std::string& name, const NodeFactory& factory) {
-			addSymb(globLoc, name, factory);
-		}
-
-		void InspireDriver::addSymb(const std::string& name, const ExpressionPtr& node) {
-			addSymb(name, [=]() -> NodePtr { return node; });
-		}
-
-		void InspireDriver::addTypeAlias(const TypePtr& pattern, const TypePtr& substitute) {
-			scopes.addTypeAlias(pattern, substitute);
-		}
-
-		bool InspireDriver::addTypeIfNotExists(const location& l, const std::string& name, const NodeFactory& factory) {
-			if(name.find(".") != std::string::npos) {
-				error(l, format("symbol names can not contain dot chars: %s", name));
-				return false;
+			//make sure that there isn't already a definition for this symbol
+			if (getCurrentScope().definedSymbols.find(name) != getCurrentScope().definedSymbols.end()) {
+				error(l, format("Symbol %s has already been defined", name));
+				return;
 			}
 
+			//make sure that there isn't already a declaration for this symbol
+			if (getCurrentScope().declaredSymbols.find(name) != getCurrentScope().declaredSymbols.end()) {
+				error(l, format("Symbol %s has already been declared", name));
+				return;
+			}
+
+			//insert it into the declared symbols
+			getCurrentScope().declaredSymbols[name] = [=]() -> NodePtr { return node; };
+		}
+
+		void InspireDriver::defineSymbol(const location& l, const std::string& name, const NodeFactory& factory) {
+			assert_false(scopes.empty()) << "Missing global scope!";
+			//check name for validity
+			if (!checkSymbolName(l, name)) { return; }
+
 			// ignore wildcard for unused variables
-			if(name == "_") { return false; }
+			if(name == "_") { return; }
+
+			//make sure that there isn't already a definition for this symbol
+			if (getCurrentScope().definedSymbols.find(name) != getCurrentScope().definedSymbols.end()) {
+				error(l, format("Symbol %s has already been defined", name));
+				return;
+			}
+
+			//remove the symbol from the defined symbols if it exists
+			getCurrentScope().declaredSymbols.erase(name);
+
+			//insert it into the defined symbols
+			getCurrentScope().definedSymbols[name] = factory;
+		}
+
+		void InspireDriver::defineSymbol(const location& l, const std::string& name, const ExpressionPtr& node) {
+			defineSymbol(l, name, [=] () -> NodePtr { return node; });
+		}
+
+		void InspireDriver::declareType(const location& l, const std::string& name, const TypePtr& node) {
+			assert_false(scopes.empty()) << "Missing global scope!";
+			//check name for validity
+			if (!checkSymbolName(l, name)) { return; }
+
+			//make sure that there isn't already a definition for this type
+			if (getCurrentScope().definedTypes.find(name) != getCurrentScope().definedTypes.end()) {
+				error(l, format("Type %s has already been defined", name));
+				return;
+			}
+
+			//make sure that there isn't already a declaration for this type
+			if (getCurrentScope().declaredTypes.find(name) != getCurrentScope().declaredTypes.end()) {
+				error(l, format("Type %s has already been declared", name));
+				return;
+			}
+
+			//insert it into the declared types
+			getCurrentScope().declaredTypes[name] = [=]() -> NodePtr { return node; };
+		}
+
+		void InspireDriver::defineType(const location& l, const std::string& name, const TypePtr& node) {
+			assert_false(scopes.empty()) << "Missing global scope!";
+			//check name for validity
+			if (!checkSymbolName(l, name)) { return; }
+
+			//make sure that there isn't already a definition for this type
+			if (getCurrentScope().definedTypes.find(name) != getCurrentScope().definedTypes.end()) {
+				error(l, format("Type %s has already been defined", name));
+				return;
+			}
+
+			//remove the symbol from the defined types if it exists
+			getCurrentScope().declaredTypes.erase(name);
+
+			//insert it into the defined types
+			getCurrentScope().definedTypes[name] = [=]() -> NodePtr { return node; };
 
 			// annotate type name
-			auto node = factory();
 			annotations::attachName(node, name);
 			if(auto tagType = node.isa<TagTypePtr>()) {
 				annotations::attachName(tagType->getRecord(), name);
 			}
-
-			return scopes.addType(name, factory);
 		}
 
-		bool InspireDriver::addTypeIfNotExists(const location& l, const std::string& name, const TypePtr& node) {
-			return addTypeIfNotExists(l, name, [=]() -> NodePtr { return node; });
+		void InspireDriver::addTypeAlias(const TypePtr& pattern, const TypePtr& substitute) {
+			auto& aliases = getCurrentScope().aliases;
+			assert_true(aliases.find(pattern) == aliases.end());
+			aliases[pattern] = substitute;
 		}
 
-		void InspireDriver::addType(const location& l, const std::string& name, const NodeFactory&  factory) {
-			if(!addTypeIfNotExists(l, name, factory)) { error(l, format("type name %s redefined", name)); }
+		TypePtr InspireDriver::resolveTypeAliases(const location& l, const TypePtr& type) {
+			if (!type) return type;
+
+			NodeManager& mgr = type.getNodeManager();
+
+			// run through alias lists
+			for(auto it = scopes.rbegin(); it != scopes.rend(); ++it) {
+				for(const auto& cur : it->aliases) {
+					// check whether pattern matches
+					if (auto sub = types::match(mgr, type, cur.first)) {
+						// compute substitution
+						auto next = (*sub).applyTo(cur.second);
+						assert_ne(type, next) << "Invalid pattern matching:\n"
+								"Target:     " << *type << "\n"
+								"Pattern:    " << *cur.first << "\n"
+								"Substitute: " << *cur.first << "\n"
+								"Match:      " << *sub << "\n"
+								"Next:       " << *next << "\n";
+
+						// apply pattern and start over again
+						return resolveTypeAliases(l, next);
+					}
+				}
+			}
+
+			// no matching alias fond => done
+			return type;
 		}
 
-		void InspireDriver::addType(const location& l, const std::string& name, const TypePtr& node) {
-			addType(l, name, [=]() -> NodePtr { return node; });
-		}
-
-
-		void InspireDriver::addType(const std::string& name, const NodeFactory& factory) {
-			addType(globLoc, name, factory);
-		}
-
-		void InspireDriver::addType(const std::string& name, const TypePtr& node) {
-			addType(name, [=]() -> NodePtr { return node; });
-		}
 
 		void InspireDriver::addThis(const location& l, const TypePtr& classType) {
 			// gen ref type
@@ -1051,16 +1087,7 @@ namespace parser {
 			// gen var
 			auto thisVar = builder.variable(refThis);
 			// save in scope
-			addSymb(l, "this", thisVar);
-		}
-
-
-		void InspireDriver::openScope() {
-			scopes.openScope();
-		}
-
-		void InspireDriver::closeScope() {
-			scopes.closeScope();
+			defineSymbol(l, "this", thisVar);
 		}
 
 		void InspireDriver::beginRecord(const std::string& name) {
@@ -1097,7 +1124,7 @@ namespace parser {
 
 			// import symbols
 			for(const auto& cur : extension.getSymbols()) {
-				addSymb(cur.first, cur.second);
+				defineSymbol(location(), cur.first, cur.second);
 			}
 
 			// import type aliases

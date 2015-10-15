@@ -245,7 +245,7 @@
 
 
 %type <CompoundStmtPtr>                compound_statement compound_statement_no_scope
-%type <DeclarationStmtPtr>             variable_declaration
+%type <DeclarationStmtPtr>             variable_definition
 %type <IfStmtPtr>                      if_statement
 %type <SwitchStmtPtr>                  switch_statement
 %type <WhileStmtPtr>                   while_statement
@@ -291,8 +291,8 @@ using : "using" "identifier" ";"                                            { as
 alias : "alias" abstract_type "=" type ";"                                  { driver.addTypeAlias($2,$4); }
       ;
 
-declaration : "decl" struct_or_union "identifier" ";"                       { driver.addType(@$, $3, driver.builder.genericType($3)); }
-            | "decl" "identifier" ":" type ";"                              { driver.addSymb($2, driver.builder.literal($2, $4)); }
+declaration : "decl" struct_or_union "identifier" ";"                       { driver.declareType(@3, $3, driver.builder.genericType($3)); }
+            | "decl" "identifier" ":" type ";"                              { driver.declareSymbol(@2, $2, driver.builder.literal($2, $4)); }
             | "decl" "identifier" "::" "identifier" ":" type ";"            { assert_not_implemented(); }
             ;
 
@@ -305,7 +305,7 @@ main : type "identifier" "(" parameters ")" compound_statement              { $$
 
 //    -- record_declarations -------------------------------------
 
-record_definition : struct_or_union "identifier" parent_spec "{"            { driver.addTypeIfNotExists(@$, $2, driver.builder.genericType($2)); driver.beginRecord($2); }
+record_definition : struct_or_union "identifier" parent_spec "{"            { driver.defineType(@2, $2, driver.builder.genericType($2)); driver.beginRecord($2); }
                                     fields                                  { driver.registerFields(@$, $6); }
                                            constructors destructor member_functions pure_virtual_member_functions "}"
                                                                             { $$ = driver.genRecordType(@$, $1, $2, $3, $6, $8, $9, $10, $11); driver.endRecord(); }
@@ -370,7 +370,7 @@ pure_virtual_member_function : "pure" "virtual" cv_flags "identifier" ":" pure_f
 
 function_definition : "identifier" "=" lambda                             {
                                                                             $$ = $3;
-                                                                            driver.addSymbIfNotExists(@1, $1, $3);
+                                                                            driver.defineSymbol(@1, $1, $3);
                                                                             driver.tu.addFunction(driver.builder.literal($1, $3->getType()), $3);
                                                                           }
                     ;
@@ -511,7 +511,7 @@ tag_type_reference : "tag_ref"                                            { $$ =
 
 // -- let --
 
-let_type : "let" "identifier" "="  type                                   { driver.openScope(); driver.addType($2, $4); }
+let_type : "let" "identifier" "="  type                                   { driver.openScope(); driver.defineType(@2, $2, $4); }
                               "in" type                                   { $$ = $7; driver.closeScope(); }
          ;
 
@@ -609,7 +609,7 @@ non_empty_bind_parameters : "(" non_empty_parameters ")"                  { driv
 
 // -- let --
 
-let_expression : "let" "identifier" "=" expression                        { driver.openScope(); driver.addSymb($2, $4); }
+let_expression : "let" "identifier" "=" expression                        { driver.openScope(); driver.defineSymbol(@2, $2, $4); }
                                     "in" expression                       { $$ = $7; driver.closeScope(); }
                ;
 
@@ -688,7 +688,7 @@ statement : plain_statement                                               { INSP
 
 plain_statement : expression ";"                                          { $$ = $1; }
                 | compound_statement                                      { $$ = $1; }
-                | variable_declaration                                    { $$ = $1; }
+                | variable_definition                                     { $$ = $1; }
                 | if_statement                                            { $$ = $1; }
                 | switch_statement                                        { $$ = $1; }
                 | while_statement                                         { $$ = $1; }
@@ -715,9 +715,9 @@ statement_list :                                                          { $$ =
 
 // -- variable declaration --
 
-variable_declaration : "var" type "identifier" "=" expression ";"         { $$ = driver.genVariableDeclaration(@$, $2, $3, $5); }
-                     | "auto" "identifier" "=" expression ";"             { $$ = driver.genVariableDeclaration(@$, driver.getScalar($4)->getType(), $2, $4); }
-                     ;
+variable_definition : "var" type "identifier" "=" expression ";"          { $$ = driver.genVariableDefinition(@$, $2, $3, $5); }
+                    | "auto" "identifier" "=" expression ";"              { $$ = driver.genVariableDefinition(@$, driver.getScalar($4)->getType(), $2, $4); }
+                    ;
 
 
 // -- if --
@@ -752,10 +752,10 @@ while_statement : "while" "(" expression ")" compound_statement           { $$ =
 // -- for --
 
 for_statement : "for" "(" type "identifier" "=" expression ".." expression ")"
-                                                                          { driver.openScope(); driver.genVariableDeclaration(@6, $3, $4, $6); }
+                                                                          { driver.openScope(); driver.genVariableDefinition(@6, $3, $4, $6); }
                                compound_statement                         { $$ = driver.genForStmt(@$, $3, $4, $6, $8, driver.builder.literal($3, "1"), $11); driver.closeScope(); }
               | "for" "(" type "identifier" "=" expression ".." expression ":" expression ")"
-                                                                          { driver.openScope(); driver.genVariableDeclaration(@6, $3, $4, $6); }
+                                                                          { driver.openScope(); driver.genVariableDefinition(@6, $3, $4, $6); }
                                compound_statement                         { $$ = driver.genForStmt(@$, $3, $4, $6, $8, $10, $13); driver.closeScope(); }
               ;
 
@@ -778,7 +778,7 @@ return : "return" expression ";"                                          { $$ =
 
 // -- let --
 
-let_statement : "let" "identifier" "=" expression ";"                     {  driver.addSymb(@$, $2, $4); $$ = $4; }
+let_statement : "let" "identifier" "=" expression ";"                     {  driver.defineSymbol(@2, $2, $4); $$ = $4; }
               ;
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Precedence list ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

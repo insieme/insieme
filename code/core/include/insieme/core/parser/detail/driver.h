@@ -62,45 +62,6 @@ namespace parser {
 	class location;
 	class InspireParser;
 
-
-		/**
-		 *  The declaration context keeps track of all the symbols available in the scope,
-		 *  it is useful to keep track of the let bindings
-		 */
-		struct DeclarationContext {
-
-			struct Scope {
-				std::map<TypePtr, TypePtr> alias;
-				DefinitionMap types;
-				DefinitionMap symbols;
-			};
-
-			std::vector<Scope> stack;
-
-			// public:
-
-			DeclarationContext() { openScope(); /* global scope */ }
-			DeclarationContext(const DeclarationContext& o) =delete;
-
-			// ~~~~~~~~~~~~~~~~~~~~~ scope ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
-
-			void openScope();
-			void closeScope();
-
-			void addTypeAlias(const TypePtr& pattern, const TypePtr& substitute);
-			TypePtr resolve(const TypePtr& type) const;
-
-			bool addType(const std::string& name, const NodeFactory& factory);
-			bool addType(const std::string& name, const TypePtr& type);
-
-			bool addSymb(const std::string& name, const NodeFactory& factory);
-			bool addSymb(const std::string& name, const ExpressionPtr& expr);
-
-			NodePtr findType(const std::string& name) const;
-			NodePtr findSymb(const std::string& name) const;
-
-		};
-
 		/**
 		 * A struct summarizing an error encountered during parsing.
 		 */
@@ -116,9 +77,18 @@ namespace parser {
 		 */
 		class InspireDriver {
 
+			// scope management
+			struct Scope {
+				std::map<TypePtr, TypePtr> aliases;
+				DefinitionMap definedTypes;
+				DefinitionMap definedSymbols;
+				DefinitionMap declaredTypes;
+				DefinitionMap declaredSymbols;
+			};
+
 			mutable std::vector<ParserError> errors;
 
-			DeclarationContext scopes;
+			std::vector<Scope> scopes;
 
 		  public:
 
@@ -172,16 +142,6 @@ namespace parser {
 
 
 			// ~~~~~~~~~~~~~~~~~~~~~~~~  tools  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-			/**
-			 * finds an expression symbol previously defined in the scope
-			 */
-			ExpressionPtr findSymbol(const location& l, const std::string& name);
-
-			/**
-			 * finds a type symbol previously defined in the scope
-			 */
-			TypePtr findType(const location& l, const std::string& name);
 
 			/**
 			 *  removes potential tuple wrappers from the given expression (if it is a single element)
@@ -353,7 +313,7 @@ namespace parser {
 			/**
 			 * constructs a new variable declaration with a given type
 			 */
-			DeclarationStmtPtr genVariableDeclaration(const location& l, const TypePtr& type, const std::string name, const ExpressionPtr& init);
+			DeclarationStmtPtr genVariableDefinition(const location& l, const TypePtr& type, const std::string name, const ExpressionPtr& init);
 
 			/**
 			 * constructs a new for loop
@@ -371,65 +331,58 @@ namespace parser {
 			 */
 			void addThis(const location& l, const TypePtr& classType);
 
-			/**
-			 * add a symbol into the scope if it isn't already defined there
-			 */
-			bool addSymbIfNotExists(const location& l, const std::string& name, const NodeFactory&  factory);
+			// ------------- scope management -------------------
 
 			/**
-			 * add a symbol into the scope if it isn't already defined there
+			 * finds an previously defined expression symbol
 			 */
-			bool addSymbIfNotExists(const location& l, const std::string& name, const ExpressionPtr& node);
+			ExpressionPtr findSymbol(const location& l, const std::string& name);
 
 			/**
-			 * add a symbol into the scope
+			 * finds a previously defined type symbol
 			 */
-			void addSymb(const location& l, const std::string& name, const NodeFactory& factory);
+			TypePtr findType(const location& l, const std::string& name);
 
 			/**
-			 * add a symbol into the scope
+			 *  Open a nested scope
 			 */
-			void addSymb(const location& l, const std::string& name, const ExpressionPtr& node);
+			void openScope();
 
 			/**
-			 * add a symbol into the scope (no location, used when setting up the InspireParser)
+			 *  Close a nested scope
 			 */
-			void addSymb(const std::string& name, const NodeFactory& factory);
+			void closeScope();
 
 			/**
-			 * add a symbol into the scope (no location, used when setting up the InspireParser)
+			 * returns the current scope
 			 */
-			void addSymb(const std::string& name, const ExpressionPtr& node);
+			Scope& getCurrentScope();
 
 			/**
-			 * add a symbol into the scope if it isn't already defined there
+			 * Checks the given symbol name for validity
 			 */
-			bool addTypeIfNotExists(const location& l, const std::string& name, const NodeFactory& factory);
+			bool checkSymbolName(const location& l, const std::string& name);
 
 			/**
-			 * add a symbol into the scope if it isn't already defined there
+			 * add a symbol declaration to the current scope
 			 */
-			bool addTypeIfNotExists(const location& l, const std::string& name, const TypePtr& node);
+			void declareSymbol(const location& l, const std::string& name, const ExpressionPtr& node);
 
 			/**
-			 * add a symbol into the scope
- 			*/
-			void addType(const location& l, const std::string& name, const NodeFactory& factory);
+			 * add a symbol definition to the current scope
+			 */
+			void defineSymbol(const location& l, const std::string& name, const NodeFactory& factory);
+			void defineSymbol(const location& l, const std::string& name, const ExpressionPtr& node);
 
 			/**
-			 * add a symbol into the scope
+			 * add a type declaration to the current scope
 			 */
-			void addType(const location& l, const std::string& name, const TypePtr& node);
+			void declareType(const location& l, const std::string& name, const TypePtr& node);
 
 			/**
-			 * add a symbol into the scope (no location, used when setting up the InspireParser)
+			 * add a type definition to the current scope
 			 */
-			void addType(const std::string& name, const NodeFactory& factory);
-
-			/**
-			 * add a symbol into the scope (no location, used when setting up the InspireParser)
-			 */
-			void addType(const std::string& name, const TypePtr& node);
+			void defineType(const location& l, const std::string& name, const TypePtr& node);
 
 			/**
 			 * add a type alias to the current scope
@@ -437,22 +390,12 @@ namespace parser {
 			void addTypeAlias(const TypePtr& pattern, const TypePtr& substitute);
 
 			/**
-			 *  Open a nested scope.
-			 */
-			void openScope();
-
-			/**
-			 *  Close a nested scope.
-			 */
-			void closeScope();
-
-			/**
-			 * Opens a new record definition.
+			 * Opens a new record definition (implies opening a new scope)
 			 */
 			void beginRecord(const std::string& name);
 
 			/**
-			 * Ends a record definition.
+			 * Ends a record definition (implies closing the current scope)
 			 */
 			void endRecord();
 

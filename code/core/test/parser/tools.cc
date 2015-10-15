@@ -63,67 +63,67 @@ namespace parser {
 		}
 
 
-		TEST(Parser_Tools, ctx_manager) {
+		TEST(Parser_Tools, context) {
 			NodeManager mgr;
 			IRBuilder builder(mgr);
-			DeclarationContext dc;
+			InspireDriver dc("", mgr);
 
 			auto one = builder.intLit(1);
 			auto two = builder.intLit(2);
 
 			EXPECT_NE(one, two);
 
-			dc.addSymb("one", toFactory(one));
-			dc.addSymb("two", toFactory(two));
+			dc.defineSymbol(location(), "one", toFactory(one));
+			dc.defineSymbol(location(), "two", toFactory(two));
 
-			EXPECT_NE(dc.findSymb("one"), dc.findSymb("two"));
-			EXPECT_NE(dc.findSymb("one"), two);
-			EXPECT_NE(dc.findSymb("twp"), one);
-			EXPECT_EQ(dc.findSymb("one"), one);
-			EXPECT_EQ(dc.findSymb("two"), two);
+			EXPECT_NE(dc.findSymbol(location(), "one"), dc.findSymbol(location(), "two"));
+			EXPECT_NE(dc.findSymbol(location(), "one"), two);
+			EXPECT_NE(dc.findSymbol(location(), "twp"), one);
+			EXPECT_EQ(dc.findSymbol(location(), "one"), one);
+			EXPECT_EQ(dc.findSymbol(location(), "two"), two);
 
 			// enter an scope
 			dc.openScope();
 
 			auto three = builder.intLit(3);
-			dc.addSymb("three", toFactory(three));
+			dc.defineSymbol(location(), "three", toFactory(three));
 
-			EXPECT_NE(dc.findSymb("one"), dc.findSymb("two"));
-			EXPECT_NE(dc.findSymb("one"), two);
-			EXPECT_NE(dc.findSymb("twp"), one);
-			EXPECT_EQ(dc.findSymb("one"), one);
-			EXPECT_EQ(dc.findSymb("two"), two);
-			EXPECT_EQ(dc.findSymb("three"), three);
+			EXPECT_NE(dc.findSymbol(location(), "one"), dc.findSymbol(location(), "two"));
+			EXPECT_NE(dc.findSymbol(location(), "one"), two);
+			EXPECT_NE(dc.findSymbol(location(), "twp"), one);
+			EXPECT_EQ(dc.findSymbol(location(), "one"), one);
+			EXPECT_EQ(dc.findSymbol(location(), "two"), two);
+			EXPECT_EQ(dc.findSymbol(location(), "three"), three);
 
 			// declare a shadow name
 			auto notOne = builder.intLit(4);
-			dc.addSymb("one", toFactory(notOne));
+			dc.defineSymbol(location(), "one", toFactory(notOne));
 
-			EXPECT_NE(dc.findSymb("one"), one);
-			EXPECT_EQ(dc.findSymb("one"), notOne);
+			EXPECT_NE(dc.findSymbol(location(), "one"), one);
+			EXPECT_EQ(dc.findSymbol(location(), "one"), notOne);
 
 			// once again
 			dc.openScope();
 
 			// declare a shadow name
 			auto notTwo = builder.intLit(5);
-			dc.addSymb("two", toFactory(notTwo));
+			dc.defineSymbol(location(), "two", toFactory(notTwo));
 
-			EXPECT_NE(dc.findSymb("two"), two);
-			EXPECT_EQ(dc.findSymb("two"), notTwo);
-			EXPECT_NE(dc.findSymb("one"), one);
-			EXPECT_EQ(dc.findSymb("one"), notOne);
+			EXPECT_NE(dc.findSymbol(location(), "two"), two);
+			EXPECT_EQ(dc.findSymbol(location(), "two"), notTwo);
+			EXPECT_NE(dc.findSymbol(location(), "one"), one);
+			EXPECT_EQ(dc.findSymbol(location(), "one"), notOne);
 
 			dc.closeScope();
 
-			EXPECT_NE(dc.findSymb("one"), one);
-			EXPECT_EQ(dc.findSymb("one"), notOne);
+			EXPECT_NE(dc.findSymbol(location(), "one"), one);
+			EXPECT_EQ(dc.findSymbol(location(), "one"), notOne);
 
 			// close the scope
 			dc.closeScope();
 
-			EXPECT_EQ(dc.findSymb("one"), one);
-			EXPECT_NE(dc.findSymb("one"), notOne);
+			EXPECT_EQ(dc.findSymbol(location(), "one"), one);
+			EXPECT_NE(dc.findSymbol(location(), "one"), notOne);
 		}
 
 		TEST(Parser_Tools, error_locations) {
