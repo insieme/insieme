@@ -853,9 +853,9 @@ namespace parser {
 
 			NodePtr result;
 
-			//look in defined symbols
+			//look in declared symbols
 			for(auto it = scopes.rbegin(); it != scopes.rend(); ++it) {
-				const DefinitionMap& cur = it->definedSymbols;
+				const DefinitionMap& cur = it->declaredSymbols;
 				auto pos = cur.find(name);
 				if (pos != cur.end()) {
 					result = pos->second();
@@ -863,10 +863,10 @@ namespace parser {
 				}
 			}
 
-			//otherwise we look in the declared symbols
+			//otherwise we look in the defined symbols
 			if (!result) {
 				for(auto it = scopes.rbegin(); it != scopes.rend(); ++it) {
-					const DefinitionMap& cur = it->declaredSymbols;
+					const DefinitionMap& cur = it->definedSymbols;
 					auto pos = cur.find(name);
 					if (pos != cur.end()) {
 						result = pos->second();
@@ -902,9 +902,9 @@ namespace parser {
 
 			NodePtr result;
 
-			//look in defined types
+			//look in declared types
 			for(auto it = scopes.rbegin(); it != scopes.rend(); ++it) {
-				const DefinitionMap& cur = it->definedTypes;
+				const DefinitionMap& cur = it->declaredTypes;
 				auto pos = cur.find(name);
 				if (pos != cur.end()) {
 					result = pos->second();
@@ -912,10 +912,10 @@ namespace parser {
 				}
 			}
 
-			//otherwise we look in the declared types
+			//otherwise we look in the defined types
 			if (!result) {
 				for(auto it = scopes.rbegin(); it != scopes.rend(); ++it) {
-					const DefinitionMap& cur = it->declaredTypes;
+					const DefinitionMap& cur = it->definedTypes;
 					auto pos = cur.find(name);
 					if (pos != cur.end()) {
 						result = pos->second();
@@ -995,15 +995,12 @@ namespace parser {
 				return;
 			}
 
-			//remove the symbol from the defined symbols if it exists
-			getCurrentScope().declaredSymbols.erase(name);
-
 			//insert it into the defined symbols
 			getCurrentScope().definedSymbols[name] = factory;
 		}
 
 		void InspireDriver::defineSymbol(const location& l, const std::string& name, const ExpressionPtr& node) {
-			defineSymbol(l, name, [=] () -> NodePtr { return node; });
+			defineSymbol(l, name, [=]() -> NodePtr { return node; });
 		}
 
 		void InspireDriver::declareType(const location& l, const std::string& name, const TypePtr& node) {
@@ -1037,9 +1034,6 @@ namespace parser {
 				error(l, format("Type %s has already been defined", name));
 				return;
 			}
-
-			//remove the symbol from the defined types if it exists
-			getCurrentScope().declaredTypes.erase(name);
 
 			//insert it into the defined types
 			getCurrentScope().definedTypes[name] = [=]() -> NodePtr { return node; };
