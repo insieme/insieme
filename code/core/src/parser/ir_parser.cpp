@@ -74,7 +74,7 @@ namespace parser {
 			for(const auto& def : definitions) {
 				// the use of the line: symbols["name"] = builder.parseX("....", symbols);
 				// will append a symbols with a null ptr inside. this is not good
-				driver.defineSymbol(location(), def.first, def.second);
+				driver.declareSymbol(location(), def.first, def.second);
 			}
 		}
 

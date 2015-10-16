@@ -80,10 +80,8 @@ namespace parser {
 			// scope management
 			struct Scope {
 				std::map<TypePtr, TypePtr> aliases;
-				DefinitionMap definedTypes;
-				DefinitionMap definedSymbols;
-				DefinitionMap declaredTypes;
 				DefinitionMap declaredSymbols;
+				DefinitionMap declaredTypes;
 			};
 
 			mutable std::vector<ParserError> errors;
@@ -372,12 +370,12 @@ namespace parser {
 			 * add a symbol declaration to the current scope
 			 */
 			void declareSymbol(const location& l, const std::string& name, const ExpressionPtr& node);
+			void declareSymbol(const location& l, const std::string& name, const NodeFactory& factory);
 
 			/**
-			 * add a symbol definition to the current scope
+			 * checks whether the given symbol is declared in the current scope
 			 */
-			void defineSymbol(const location& l, const std::string& name, const NodeFactory& factory);
-			void defineSymbol(const location& l, const std::string& name, const ExpressionPtr& node);
+			bool isSymbolDeclaredInCurrentScope(const std::string name);
 
 			/**
 			 * add a type declaration to the current scope
@@ -385,9 +383,9 @@ namespace parser {
 			void declareType(const location& l, const std::string& name, const TypePtr& node);
 
 			/**
-			 * add a type definition to the current scope
+			 * checks whether the given type is declared in the current scope
 			 */
-			void defineType(const location& l, const std::string& name, const TypePtr& node);
+			bool isTypeDeclaredInCurrentScope(const std::string name);
 
 			/**
 			 * add a type alias to the current scope
@@ -397,7 +395,7 @@ namespace parser {
 			/**
 			 * Opens a new record definition (implies opening a new scope)
 			 */
-			void beginRecord(const std::string& name);
+			void beginRecord(const location& l, const std::string& name);
 
 			/**
 			 * Ends a record definition (implies closing the current scope)

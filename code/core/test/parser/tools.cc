@@ -73,8 +73,8 @@ namespace parser {
 
 			EXPECT_NE(one, two);
 
-			dc.defineSymbol(location(), "one", toFactory(one));
-			dc.defineSymbol(location(), "two", toFactory(two));
+			dc.declareSymbol(location(), "one", toFactory(one));
+			dc.declareSymbol(location(), "two", toFactory(two));
 
 			EXPECT_NE(dc.findSymbol(location(), "one"), dc.findSymbol(location(), "two"));
 			EXPECT_NE(dc.findSymbol(location(), "one"), two);
@@ -86,7 +86,7 @@ namespace parser {
 			dc.openScope();
 
 			auto three = builder.intLit(3);
-			dc.defineSymbol(location(), "three", toFactory(three));
+			dc.declareSymbol(location(), "three", toFactory(three));
 
 			EXPECT_NE(dc.findSymbol(location(), "one"), dc.findSymbol(location(), "two"));
 			EXPECT_NE(dc.findSymbol(location(), "one"), two);
@@ -97,7 +97,7 @@ namespace parser {
 
 			// declare a shadow name
 			auto notOne = builder.intLit(4);
-			dc.defineSymbol(location(), "one", toFactory(notOne));
+			dc.declareSymbol(location(), "one", toFactory(notOne));
 
 			EXPECT_NE(dc.findSymbol(location(), "one"), one);
 			EXPECT_EQ(dc.findSymbol(location(), "one"), notOne);
@@ -107,7 +107,7 @@ namespace parser {
 
 			// declare a shadow name
 			auto notTwo = builder.intLit(5);
-			dc.defineSymbol(location(), "two", toFactory(notTwo));
+			dc.declareSymbol(location(), "two", toFactory(notTwo));
 
 			EXPECT_NE(dc.findSymbol(location(), "two"), two);
 			EXPECT_EQ(dc.findSymbol(location(), "two"), notTwo);

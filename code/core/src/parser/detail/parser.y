@@ -305,7 +305,7 @@ main : type "identifier" "(" parameters ")" compound_statement              { $$
 
 //    -- record_declarations -------------------------------------
 
-record_definition : struct_or_union "identifier" parent_spec "{"            { driver.defineType(@2, $2, driver.builder.genericType($2)); driver.beginRecord($2); }
+record_definition : struct_or_union "identifier" parent_spec "{"            { driver.beginRecord(@$, $2); }
                                     fields                                  { driver.registerFields(@$, $6); }
                                            constructors destructor member_functions pure_virtual_member_functions "}"
                                                                             { $$ = driver.genRecordType(@$, $1, $2, $3, $6, $8, $9, $10, $11); driver.endRecord(); }
@@ -507,7 +507,7 @@ tag_type_reference : "tag_ref"                                            { $$ =
 
 // -- let --
 
-let_type : "let" "identifier" "="  type                                   { driver.openScope(); driver.defineType(@2, $2, $4); }
+let_type : "let" "identifier" "="  type                                   { driver.openScope(); driver.declareType(@2, $2, $4); }
                               "in" type                                   { $$ = $7; driver.closeScope(); }
          ;
 
@@ -605,7 +605,7 @@ non_empty_bind_parameters : "(" non_empty_parameters ")"                  { driv
 
 // -- let --
 
-let_expression : "let" "identifier" "=" expression                        { driver.openScope(); driver.defineSymbol(@2, $2, $4); }
+let_expression : "let" "identifier" "=" expression                        { driver.openScope(); driver.declareSymbol(@2, $2, $4); }
                                     "in" expression                       { $$ = $7; driver.closeScope(); }
                ;
 
@@ -774,7 +774,7 @@ return : "return" expression ";"                                          { $$ =
 
 // -- let --
 
-let_statement : "let" "identifier" "=" expression ";"                     {  driver.defineSymbol(@2, $2, $4); $$ = $4; }
+let_statement : "let" "identifier" "=" expression ";"                     {  driver.declareSymbol(@2, $2, $4); $$ = $4; }
               ;
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Precedence list ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
