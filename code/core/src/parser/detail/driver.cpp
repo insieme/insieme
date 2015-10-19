@@ -1039,10 +1039,12 @@ namespace parser {
 		}
 
 		void InspireDriver::beginRecord(const location& l, const std::string& name) {
-			currentRecordStack.push_back(builder.genericType(name));
+			const auto key = builder.genericType(name);
 
 			// only declare the type implicitly if it hasn't already been declared
-			if(!isTypeDeclaredInCurrentScope(name)) { declareType(l, name, getThisType()); }
+			if(!isTypeDeclaredInCurrentScope(name)) { declareType(l, name, key); }
+
+			currentRecordStack.push_back(key);
 
 			openScope();
 		}
