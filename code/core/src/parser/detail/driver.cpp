@@ -596,6 +596,9 @@ namespace parser {
 
 		TypePtr InspireDriver::findOrGenAbstractType(const location& l, const std::string& name, const ParentList& parents, const TypeList& typeList) {
 			auto foundType = findType(l, name);
+			if(!foundType) {
+				foundType = lookupDeclared(name).isa<TypePtr>();
+			}
 			if(foundType) { return foundType; }
 
 			return builder.genericType(name, parents, typeList);
@@ -861,20 +864,22 @@ namespace parser {
 
 		// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Scope management  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-		ExpressionPtr InspireDriver::findSymbol(const location& l, const std::string& name) {
-			assert_false(scopes.empty()) << "Missing global scope!";
-
-			NodePtr result;
-
+		NodePtr InspireDriver::lookupDeclared(const std::string& name) {		
 			// look in declared symbols
 			for(auto it = scopes.rbegin(); it != scopes.rend(); ++it) {
 				const DefinitionMap& cur = it->declaredSymbols;
 				auto pos = cur.find(name);
 				if(pos != cur.end()) {
-					result = pos->second();
-					break;
+					return pos->second();
 				}
 			}
+			return nullptr;
+		}
+
+		ExpressionPtr InspireDriver::findSymbol(const location& l, const std::string& name) {
+			assert_false(scopes.empty()) << "Missing global scope!";
+
+			NodePtr result = lookupDeclared(name);
 
 			// look in lang basic
 			if(!result) {

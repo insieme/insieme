@@ -338,6 +338,11 @@ namespace parser {
 			// ------------- scope management -------------------
 
 			/**
+			 * looks up a declared or defined symbol
+			 */
+			NodePtr lookupDeclared(const std::string& name);
+
+			/**
 			 * finds an previously defined expression symbol
 			 */
 			ExpressionPtr findSymbol(const location& l, const std::string& name);

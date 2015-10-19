@@ -486,7 +486,7 @@ qual_object_type : object_type                                            { $$ =
 // -- numeric type --
 
 numeric_type : "int"                                                      { $$ = driver.genNumericType(@$, $1); }
-             | "#" "identifier"                                           { $$ = driver.genNumericType(@$, $2); }
+             | "#" variable                                               { $$ = driver.genNumericType(@$, $2); }
              ;
 
 // -- tuple types --
