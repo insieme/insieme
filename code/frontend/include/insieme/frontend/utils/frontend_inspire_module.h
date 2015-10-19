@@ -73,17 +73,17 @@ namespace utils {
 		 * Implements a C style assignment (returning the assigned value)
 		 */
 		// TODO FE NG call semantic
-		LANG_EXT_DERIVED(CStyleAssignment, "lambda (ref<'a,f,'b> lhs, 'a rhs) -> 'a { lhs = rhs; return *lhs; }")
+		LANG_EXT_DERIVED(CStyleAssignment, "(lhs : ref<'a,f,'b>, rhs : 'a) -> 'a { lhs = rhs; return *lhs; }")
 
 		/**
 		 * Implements the C comma operator semantics
 		 */
-		LANG_EXT_DERIVED(CommaOperator, "lambda (() => 'a lhs, () => 'b rhs) -> 'b { lhs(); return rhs(); }")
+		LANG_EXT_DERIVED(CommaOperator, "(lhs : () => 'a, rhs : () => 'b) -> 'b { lhs(); return rhs(); }")
 
 		/**
 		 * Implements the C bool semantics
 		 */
-		LANG_EXT_DERIVED(BoolToInt, "lambda (bool b) -> int<4> { if(b) return 1; else return 0; }")
+		LANG_EXT_DERIVED(BoolToInt, "(b : bool) -> int<4> { if(b) { return 1; } else { return 0; } }")
 
 		/**
 		 * Temporary operator to fix record types before resolver pass
