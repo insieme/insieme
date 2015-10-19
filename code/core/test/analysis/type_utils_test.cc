@@ -59,14 +59,14 @@ namespace analysis {
 		EXPECT_PRED1(hasFreeTypeVariables, builder.parseType("'a"));
 		EXPECT_PRED1(hasFreeTypeVariables, builder.parseType("set<'a>"));
 		EXPECT_PRED1(hasFreeTypeVariables, builder.parseType("array<'a,1>"));
-		EXPECT_PRED1(hasFreeTypeVariables, builder.parseType("struct { 'a data; }"));
-		EXPECT_PRED1(hasFreeTypeVariables, builder.parseType("struct { struct { 'a data; } x }"));
+		EXPECT_PRED1(hasFreeTypeVariables, builder.parseType("struct { data : 'a; }"));
+		EXPECT_PRED1(hasFreeTypeVariables, builder.parseType("struct { x : struct { data : 'a; }; }"));
 
 		EXPECT_PRED1(hasNoFreeTypeVariables, builder.parseType("int<4>"));
 		EXPECT_PRED1(hasNoFreeTypeVariables, builder.parseType("set<int<4>>"));
 		EXPECT_PRED1(hasNoFreeTypeVariables, builder.parseType("array<int<4>,1>"));
-		EXPECT_PRED1(hasNoFreeTypeVariables, builder.parseType("struct { int<4> data; }"));
-		EXPECT_PRED1(hasNoFreeTypeVariables, builder.parseType("struct { struct { int<4> data; } x }"));
+		EXPECT_PRED1(hasNoFreeTypeVariables, builder.parseType("struct { data : int<4>; }"));
+		EXPECT_PRED1(hasNoFreeTypeVariables, builder.parseType("struct { x : struct { data : int<4>; }; }"));
 		EXPECT_PRED1(hasNoFreeTypeVariables, builder.parseType("('a)->'a"));
 	}
 

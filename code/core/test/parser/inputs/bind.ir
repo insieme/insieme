@@ -1,19 +1,16 @@
 
-let int = int<4>;
+alias int = int<4>;
 
-let sum = lambda (int h, int j)->int { return h + j; };
+def sum = (h : int, j : int)->int { return h + j; };
 
 unit main() {
-	
-	// let's define some function sum
-	let sum = lambda (int a, int b)->int { return a + b; };
-	
+
 	// define a variable
-	decl ref<int> a  = var(0);
+	var ref<int> a  = ref_var(0);
 	
-	decl auto acc = lambda (int v)=> {a = a + v; };
+	auto acc = (v : int) => { a = a + v; };
 	
-	let doSomething = lambda ((int)=>unit fun)->unit {
+	let doSomething = (fun : (int)=>unit)->unit {
 		fun(4);
 	};
 
@@ -24,6 +21,5 @@ unit main() {
 	print("a = %d\n", *a);
 
 	doSomething(acc);
-	print("a = %d\n", *a);
-	
+	print("a = %d\n", *a);	
 }

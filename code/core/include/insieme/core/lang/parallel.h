@@ -151,15 +151,15 @@ namespace lang {
 		 * A derived operator implementing a reduction among the threads of a thread group where every thread
 		 * is contributing an element and a reduction operation and all threads receive the aggregated value.
 		 */
-		LANG_EXT_DERIVED_WITH_NAME(PReduce, "preduce",
-				    "                                                                                                                                        "
-					"	(g : threadgroup, v : 'a, op : ('b,'a)->'b, init : 'b)->'b {                                                                          "
-					"	   return redistribute(g, v,                                                                                                         "
-					"				  (data : ref<array<'a>>, size : uint<8>, tid : uint<8>) => array_reduce(data, num_cast(size, type_lit(int<8>)), op, init)   "
-					"	          );                                                                                                                         "
-					"	}                                                                                                                                    "
-		            "                                                                                                                                        "
-		)
+		LANG_EXT_DERIVED_WITH_NAME(
+			PReduce, "preduce",
+			"                                                                                                                                         "
+			"	(g : threadgroup, v : 'a, op : ('b,'a)->'b, init : 'b)->'b {                                                                          "
+			"	   return redistribute(g, v,                                                                                                          "
+			"				  (data : ref<array<'a>>, size : uint<8>, tid : uint<8>) => array_reduce(data, num_cast(size, type_lit(int<8>)), op, init)"
+			"	          );                                                                                                                          "
+			"	}                                                                                                                                     "
+			"                                                                                                                                         ")
 
 
 		// -- Thread Group Size Handling ------------------------------------------------------------------------------------
@@ -221,8 +221,8 @@ namespace lang {
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(Atomic, "atomic",
 				    "                                                              "
-					"	(v : ref<'a, f,'v>, p : ('a)=>bool, f : ('a)=>'a)->'a {   "
-					"		auto res = *v;                                    "
+					"	(v : ref<'a, f,'v>, p : ('a)=>bool, f : ('a)=>'a)->'a {    "
+					"		auto res = *v;                                         "
 					"		if (p(*v)) {                                           "
 					"			v = f(*v);                                         "
 					"		}                                                      "

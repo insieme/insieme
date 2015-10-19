@@ -1,17 +1,17 @@
 
-let int = int<4>;
+alias int = int<4>;
 
 unit main() {
 	
-	decl auto x = new(array_create(type_lit(50), [1]));
+	auto x = ref_new(array_create(type_lit(50), [1]));
 
 	for(int i=0..10) {
 		x[i] = i;
 	}
-//	
-//	for(int i=0..10) {
-//		print("x[%d]=%d\n", i, *(x[i]));
-//	}
-//	
-//	delete(x);
+	
+	for(int i=0..10) {
+		print("x[%d]=%d\n", i, *(x[i]));
+	}
+	
+	ref_delete(x);
 }

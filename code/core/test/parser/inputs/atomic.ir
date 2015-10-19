@@ -1,17 +1,16 @@
 
-let int = int<4>;
+alias int = int<4>;
+
+// an atomic increment
+def atomicInc = (v : ref<'a>)->unit {
+	atomic(v, (_ : 'a)=>true, (x : 'a)=>x+CAST('a)1);
+}
 
 unit main() {
-
-	// an atomic increment
-	let atomicInc = lambda (ref<'a> v)->unit {
-		atomic(v, lambda ('a _)=>true, lambda ('a x)=>x+CAST('a)1);
-	};
-
 	// create an int and increment
-	decl ref<int> x = var(0);
+	var ref<int> x = ref_var(0);
 	atomicInc(x);
 	
-	decl ref<int<8>> y = var(0l);
+	var ref<int<8>> y = ref_var(0l);
 	atomicInc(y);
 }

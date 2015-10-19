@@ -278,22 +278,21 @@ top_level : TYPE_ONLY top_level_elements type                               { dr
           | FULL_PROG top_level_elements main                               { driver.result = driver.tu.resolve($3); }
           ;
 
-top_level_elements : top_level_element top_level_elements
-                   | ";"
+top_level_elements : top_level_element ";" top_level_elements
                    |
                    ;
 
-top_level_element : using | alias | declaration | definition ;
+top_level_element : using | alias | declaration | definition;
 
-using : "using" "string" ";"                                            { driver.importExtension(@$, $2); }
+using : "using" "string"                                                    { driver.importExtension(@$, $2); }
       ;
 
-alias : "alias" abstract_type "=" type ";"                                  { driver.addTypeAlias($2,$4); }
+alias : "alias" abstract_type "=" type                                      { driver.addTypeAlias($2,$4); }
       ;
 
-declaration : "decl" struct_or_union "identifier" ";"                       { driver.declareType(@3, $3, driver.builder.genericType($3)); }
-            | "decl" "identifier" ":" type ";"                              { driver.declareSymbol(@2, $2, driver.builder.literal($2, $4)); }
-            | "decl" "identifier" "::" "identifier" ":" type ";"            { assert_not_implemented(); }
+declaration : "decl" struct_or_union "identifier"                           { driver.declareType(@3, $3, driver.builder.genericType($3)); }
+            | "decl" "identifier" ":" type                                  { driver.declareSymbol(@2, $2, driver.builder.literal($2, $4)); }
+            | "decl" "identifier" "::" "identifier" ":" type                { assert_not_implemented(); }
             ;
 
 definition : "def" record_definition                                        { $$ = $2; }
@@ -307,7 +306,7 @@ main : type "identifier" "(" parameters ")" compound_statement              { $$
 
 record_definition : struct_or_union "identifier" parent_spec "{"            { driver.beginRecord(@$, $2); }
                                     fields                                  { driver.registerFields(@$, $6); }
-                                           constructors destructor member_functions pure_virtual_member_functions "}"
+                                           constructors destructor member_functions pure_virtual_member_functions "}" 
                                                                             { $$ = driver.genRecordType(@$, $1, $2, $3, $6, $8, $9, $10, $11); driver.endRecord(); }
                   | struct_or_union "{" fields "}"                          { $$ = driver.genSimpleStructOrUnionType(@$, $1, $3); }
                   ;
