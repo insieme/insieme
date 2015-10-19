@@ -290,12 +290,12 @@ namespace checks {
 		auto ok1 = builder.parent(builder.genericType("A"));
 		auto ok2 = builder.parent(builder.structType());
 		auto ok3 = builder.parent(builder.typeVariable("a"));
-		auto ok4 = builder.parent(builder.parseType("let a,b = struct { ref<b> x; }, struct { ref<a> x; } ; a"));
+		auto ok4 = builder.parent(builder.parseType("def struct a { x : ref<b>; } def struct b { x : ref<a>; } a"));
 
 
 		dumpText(ok4);
 
-		auto err1 = builder.parent(builder.parseType("union { int<4> x; }"));
+		auto err1 = builder.parent(builder.parseType("union { x : int<4>; }"));
 		auto err2 = builder.parent(builder.parseType("(A,B)->R"));
 		auto err3 = builder.parent(builder.parseType("ref<A>"));
 		auto err4 = builder.parent(builder.parseType("array<A,1>"));
@@ -321,18 +321,18 @@ namespace checks {
 
 		// create a few parent nodes
 		auto ok1 = builder.genericType("A");
-		auto ok2 = builder.parseType("struct { int<4> x; }");
-		auto ok3 = builder.parseType("let list = struct { ref<list> next; }; list");
-		auto ok4 = builder.parseType("let list = struct { ptr<list> next; }; list");
+		auto ok2 = builder.parseType("struct { x : int<4>; }");
+		auto ok3 = builder.parseType("let list = struct { next : ref<list>; } in list");
+		auto ok4 = builder.parseType("let list = struct { next : ptr<list>; } in list");
 
 		std::map<string,NodePtr> symbols;
 		symbols["a"] = builder.tagTypeReference("a");
 
 		auto err0 = builder.parseType("a", symbols);
 		auto err1 = builder.parseType("ref<a>", symbols);
-		auto err2 = builder.parseType("struct { ref<a> x; }", symbols);
-		auto err3 = builder.parseType("let list = struct { ref<list> next; ref<a> value; }; list", symbols);
-		auto err4 = builder.parseExpr("let list = struct { ref<list> next; ref<a> value; }; lit(\"A\" : list)", symbols);
+		auto err2 = builder.parseType("struct { x : ref<a>; }", symbols);
+		auto err3 = builder.parseType("let list = struct { next : ref<list>; value : ref<a>; } in list", symbols);
+		auto err4 = builder.parseExpr("decl struct list; def struct list { next : ref<list>; value : ref<a>; } lit(\"A\" : list)", symbols);
 
 		// check the correct types
 		EXPECT_TRUE(check(ok1).empty()) << check(ok1);
@@ -389,7 +389,7 @@ namespace checks {
 
 		// conduct checks
 		CheckPtr typeCheck = make_check<StructExprTypeCheck>();
-		core::TypePtr structType = builder.parseType("struct { A a; B b; }");
+		core::TypePtr structType = builder.parseType("struct { a : A; b : B; }");
 
 		// Create a example expressions
 		core::StringValuePtr name = builder.stringValue("x");
@@ -654,7 +654,7 @@ namespace checks {
 		IRBuilder builder(manager);
 
 		// OK ... create a function literal
-		TagTypePtr typeA = builder.parseType("let t = struct { A a; ref<t> next; } ; t").as<TagTypePtr>();
+		TagTypePtr typeA = builder.parseType("decl struct t; def struct t { a : A; next : ref<t>; } t").as<TagTypePtr>();
 		TypePtr typeB = typeA->peel();
 
 		// all of the following should be supported
@@ -939,7 +939,7 @@ namespace checks {
 		auto& basic = manager.getLangBasic();
 
 		// build a lambda expression which is fine
-		LambdaExprPtr lambda = builder.parseExpr("let int = int<4> ; lambda(int a)->int { return a; }").as<LambdaExprPtr>();
+		LambdaExprPtr lambda = builder.parseExpr("alias int = int<4> ; (a : int)->int { return a; }").as<LambdaExprPtr>();
 
 		ASSERT_TRUE(lambda);
 
@@ -1271,7 +1271,7 @@ namespace checks {
 
 		//illegal numeric cast to arbitrary type
 		{
-			auto expr = builder.parseExpr("num_cast(3, lit(foo))");
+			auto expr = builder.parseExpr("num_cast(3, type_lit(foo))");
 			EXPECT_TRUE(expr) << "parsing error";
 
 			auto checkResult = check(expr, illegalNumCastCheckCheck);
@@ -1310,7 +1310,7 @@ namespace checks {
 
 		//legal conversion from integral type to integral type
 		{
-			auto expr = builder.parseStmt("{ decl int<4> x = 0; type_to_int(type_of(x)); }");
+			auto expr = builder.parseStmt("{ var int<4> x = 0; type_to_int(type_of(x)); }");
 			EXPECT_TRUE(expr) << "parsing error";
 
 			auto checkResult = check(expr, illegalNumTypeToIntCheck);
@@ -1320,7 +1320,7 @@ namespace checks {
 
 		//illegal conversion from arbitrary type to integral type
 		{
-			auto expr = builder.parseExpr("type_to_int(lit(foo))");
+			auto expr = builder.parseExpr("type_to_int(type_lit(foo))");
 			EXPECT_TRUE(expr) << "parsing error";
 
 			auto checkResult = check(expr, illegalNumTypeToIntCheck);
@@ -1332,7 +1332,7 @@ namespace checks {
 
 		//illegal conversion from arbitrary type to integral type
 		{
-			auto expr = builder.parseStmt("{ decl type_lit(foo) x = 0; type_to_int(type_of(x)); }");
+			auto expr = builder.parseStmt("{ var foo x = 0; type_to_int(type_of(x)); }");
 			EXPECT_TRUE(expr) << "parsing error";
 
 			auto checkResult = check(expr, illegalNumTypeToIntCheck);
@@ -1351,7 +1351,7 @@ TEST(RefToFunCastCheck, Simple) {
 
 	//legal checks
 	{
-		auto expr = builder.parseExpr("ref_of_function(lambda () -> unit { })");
+		auto expr = builder.parseExpr("ref_of_function(() -> unit { })");
 		EXPECT_TRUE(expr) << "parsing error";
 		//if(getDetails)	std::cout << "detail: parsed expression: " << expr << std::endl;
 		auto checkResult = check(expr, RefToFunCastCheckCheck);
@@ -1360,7 +1360,7 @@ TEST(RefToFunCastCheck, Simple) {
 	}
 
 	{
-		auto expr = builder.parseExpr("ref_of_function(lambda (bool a) -> bool { return a; })");
+		auto expr = builder.parseExpr("ref_of_function((a : bool) -> bool { return a; })");
 		EXPECT_TRUE(expr) << "parsing error";
 		//if(getDetails)	std::cout << "detail: parsed expression: " << expr << std::endl;
 		auto checkResult = check(expr, RefToFunCastCheckCheck);
@@ -1369,7 +1369,7 @@ TEST(RefToFunCastCheck, Simple) {
 	}
 
 	{
-		auto expr = builder.parseExpr("ref_of_function(lambda ('a _) -> bool { return true; })");
+		auto expr = builder.parseExpr("ref_of_function((_ : 'a) -> bool { return true; })");
 		EXPECT_TRUE(expr) << "parsing error";
 		//if(getDetails)	std::cout << "detail: parsed expression: " << expr << std::endl;
 		auto checkResult = check(expr, RefToFunCastCheckCheck);
@@ -1378,16 +1378,7 @@ TEST(RefToFunCastCheck, Simple) {
 	}
 
 	{
-		auto expr = builder.parseExpr("ref_of_function(lambda ('a x) -> 'a { return x+CAST('a) 3; })");
-		EXPECT_TRUE(expr) << "parsing error";
-		//if(getDetails)	std::cout << "detail: parsed expression: " << expr << std::endl;
-		auto checkResult = check(expr, RefToFunCastCheckCheck);
-		EXPECT_TRUE(checkResult.empty());
-		EXPECT_EQ(toString(checkResult), "[]");
-	}
-
-	{
-		auto expr = builder.parseExpr("ref_of_function(function (ref<int<4>,f,f,plain> a) -> unit { })");
+		auto expr = builder.parseExpr("ref_of_function((x : 'a) -> 'a { return x+CAST('a) 3; })");
 		EXPECT_TRUE(expr) << "parsing error";
 		//if(getDetails)	std::cout << "detail: parsed expression: " << expr << std::endl;
 		auto checkResult = check(expr, RefToFunCastCheckCheck);
@@ -1405,7 +1396,7 @@ TEST(RefToFunCastCheck, Simple) {
 
 	// illegal checks
 	{
-		auto expr = builder.parseExpr("ref_of_function(lambda ('a x) => x+CAST('a) 3)");
+		auto expr = builder.parseExpr("ref_of_function((x : 'a) => x+CAST('a) 3)");
 		EXPECT_TRUE(expr) << "parsing error: " << expr;
 		//if(getDetails)	std::cout << "detail: parsed expression: " << expr << std::endl;
 		auto checkResult = check(expr, RefToFunCastCheckCheck);
@@ -1422,15 +1413,6 @@ TEST(RefToFunCastCheck, Simple) {
 		auto errorString = toString(checkResult[0]);
 		EXPECT_TRUE(errorString.find("MSG: this is a illegal ref_to_fun() cast!") != string::npos);
 	}
-	{
-		auto expr = builder.parseExpr("ref_of_function(struct struct {} {})");
-		EXPECT_TRUE(expr) << "parsing error: " << expr;
-		//if(getDetails)	std::cout << "detail: parsed expression: " << expr << std::endl;
-		auto checkResult = check(expr, RefToFunCastCheckCheck);
-		EXPECT_FALSE(checkResult.empty());
-		auto errorString = toString(checkResult[0]);
-		EXPECT_TRUE(errorString.find("MSG: this is a illegal ref_to_fun() cast!") != string::npos);
-	}
 }
 TEST(PtrToFunCastCheck, Simple) {
 	NodeManager manager;
@@ -1439,7 +1421,7 @@ TEST(PtrToFunCastCheck, Simple) {
 
 	//legal checks
 	{
-		auto expr = builder.parseExpr("ptr_of_function(lambda () -> unit { })");
+		auto expr = builder.parseExpr("ptr_of_function(() -> unit { })");
 		EXPECT_TRUE(expr) << "parsing error";
 		//if(getDetails)	std::cout << "detail: parsed expression: " << expr << std::endl;
 		auto checkResult = check(expr, RefToFunCastCheckCheck);
@@ -1448,7 +1430,7 @@ TEST(PtrToFunCastCheck, Simple) {
 	}
 
 	{
-		auto expr = builder.parseExpr("ptr_of_function(lambda (bool a) -> bool { return a; })");
+		auto expr = builder.parseExpr("ptr_of_function((a : bool) -> bool { return a; })");
 		EXPECT_TRUE(expr) << "parsing error";
 		//if(getDetails)	std::cout << "detail: parsed expression: " << expr << std::endl;
 		auto checkResult = check(expr, RefToFunCastCheckCheck);
@@ -1457,7 +1439,7 @@ TEST(PtrToFunCastCheck, Simple) {
 	}
 
 	{
-		auto expr = builder.parseExpr("ptr_of_function(lambda ('a _) -> bool { return true; })");
+		auto expr = builder.parseExpr("ptr_of_function((_ : 'a) -> bool { return true; })");
 		EXPECT_TRUE(expr) << "parsing error";
 		//if(getDetails)	std::cout << "detail: parsed expression: " << expr << std::endl;
 		auto checkResult = check(expr, RefToFunCastCheckCheck);
@@ -1466,16 +1448,7 @@ TEST(PtrToFunCastCheck, Simple) {
 	}
 
 	{
-		auto expr = builder.parseExpr("ptr_of_function(lambda ('a x) -> 'a { return x+CAST('a) 3; })");
-		EXPECT_TRUE(expr) << "parsing error";
-		//if(getDetails)	std::cout << "detail: parsed expression: " << expr << std::endl;
-		auto checkResult = check(expr, RefToFunCastCheckCheck);
-		EXPECT_TRUE(checkResult.empty());
-		EXPECT_EQ(toString(checkResult), "[]");
-	}
-
-	{
-		auto expr = builder.parseExpr("ptr_of_function(function (ref<int<4>,f,f,plain> a) -> unit { })");
+		auto expr = builder.parseExpr("ptr_of_function((x : 'a) -> 'a { return x+CAST('a) 3; })");
 		EXPECT_TRUE(expr) << "parsing error";
 		//if(getDetails)	std::cout << "detail: parsed expression: " << expr << std::endl;
 		auto checkResult = check(expr, RefToFunCastCheckCheck);
@@ -1493,7 +1466,7 @@ TEST(PtrToFunCastCheck, Simple) {
 
 	// illegal checks
 	{
-		auto expr = builder.parseExpr("ptr_of_function(lambda ('a x) => x+CAST('a) 3)");
+		auto expr = builder.parseExpr("ptr_of_function((x : 'a) => x+CAST('a) 3)");
 		EXPECT_TRUE(expr) << "parsing error: " << expr;
 		//if(getDetails)	std::cout << "detail: parsed expression: " << expr << std::endl;
 		auto checkResult = check(expr, RefToFunCastCheckCheck);
