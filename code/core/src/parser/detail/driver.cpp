@@ -76,7 +76,7 @@ namespace parser {
 
 		InspireDriver::InspireDriver(const std::string& str, NodeManager& mgr)
 		    : scopes(), mgr(mgr), builder(mgr), file("global scope"), str(str), tu(mgr), result(nullptr), globLoc(&file), ss(str), scanner(&ss),
-		      parser(*this, scanner) {
+		      parser(*this, scanner), printedErrors(false) {
 			//begin the global scope
 			openScope();
 		}
@@ -87,7 +87,6 @@ namespace parser {
 			scanner.setStartProgram();
 			int fail = parser.parse();
 			if(whereErrors() || fail) {
-				//printErrors();
 				return nullptr;
 			}
 			return result.as<ProgramPtr>();
@@ -98,7 +97,6 @@ namespace parser {
 			InspireParser parser(*this, scanner);
 			int fail = parser.parse();
 			if(whereErrors() || fail) {
-				//printErrors();
 				return nullptr;
 			}
 			return result.as<TypePtr>();
@@ -109,7 +107,6 @@ namespace parser {
 			InspireParser parser(*this, scanner);
 			int fail = parser.parse();
 			if(whereErrors() || fail) {
-				//printErrors();
 				return nullptr;
 			}
 			return result.as<StatementPtr>();
@@ -120,7 +117,6 @@ namespace parser {
 			InspireParser parser(*this, scanner);
 			int fail = parser.parse();
 			if(whereErrors() || fail) {
-				//printErrors();
 				return nullptr;
 			}
 			return result.as<ExpressionPtr>();
@@ -1183,6 +1179,14 @@ namespace parser {
 
 
 		void InspireDriver::printErrors(std::ostream& out, bool color) const {
+			if (out == std::cout) {
+				//print the errors only once to stdout
+				if (printedErrors) {
+					return;
+				}
+				printedErrors = true;
+			}
+
 			auto buffer = splitString(str);
 			int line = 1;
 			for(const auto& err : errors) {

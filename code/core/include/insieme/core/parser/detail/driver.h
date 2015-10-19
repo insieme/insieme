@@ -110,6 +110,7 @@ namespace parser {
 			std::stringstream ss;
 			InspireScanner scanner;
 			InspireParser parser;
+			mutable bool printedErrors;
 
 			std::vector<GenericTypePtr> currentRecordStack;
 

@@ -59,7 +59,7 @@ namespace parser {
 	namespace {
 
 		void checkErrors(InspireDriver& driver, bool onFailThrow) {
-			if(!driver.result) {
+			if(driver.whereErrors() || !driver.result) {
 				if(onFailThrow) {
 					std::stringstream ss;
 					driver.printErrors(ss);
