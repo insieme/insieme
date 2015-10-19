@@ -596,9 +596,7 @@ namespace parser {
 
 		TypePtr InspireDriver::findOrGenAbstractType(const location& l, const std::string& name, const ParentList& parents, const TypeList& typeList) {
 			auto foundType = findType(l, name);
-			if (foundType) {
-				return foundType;
-			}
+			if(foundType) { return foundType; }
 
 			return builder.genericType(name, parents, typeList);
 		}
@@ -610,16 +608,15 @@ namespace parser {
 			if(!ftype.isa<FunctionTypePtr>()) { error(l, "attempt to call non function expression"); }
 
 			// if this is a member function call we prepend the implicit this parameter
-			if (analysis::isCallOf(callable, builder.getLangBasic().getCompositeMemberFunctionAccess())) {
-
+			if(analysis::isCallOf(callable, builder.getLangBasic().getCompositeMemberFunctionAccess())) {
 				// we add the callable itself as the first argument of the call
 				auto thisParam = callable.as<CallExprPtr>()->getArgument(0);
 				auto thisParamType = thisParam->getType();
 				thisParamType = getTypeFromGenericTypeInTu(thisParamType);
 
 				// calling a member function of another struct
-				if (auto tagType = thisParamType.isa<TagTypePtr>()) {
-					//args.insert(args.begin(), builder.literal("ref", builder.refType(tagType->getTag())));
+				if(auto tagType = thisParamType.isa<TagTypePtr>()) {
+					// args.insert(args.begin(), builder.literal("ref", builder.refType(tagType->getTag())));
 					args.insert(args.begin(), builder.refVar(thisParam));
 
 					// this case
@@ -672,7 +669,7 @@ namespace parser {
 
 		ExpressionPtr InspireDriver::genStructExpression(const location& l, const TypePtr& type, const ExpressionList& list) {
 			// check for null
-			if (!type) {
+			if(!type) {
 				error(l, "Accessing null-type!");
 				return nullptr;
 			}
@@ -703,7 +700,7 @@ namespace parser {
 
 		ExpressionPtr InspireDriver::genUnionExpression(const location& l, const TypePtr& type, const std::string field, const ExpressionPtr& expr) {
 			// check for null
-			if (!type) {
+			if(!type) {
 				error(l, "Accessing null-type!");
 				return nullptr;
 			}
@@ -722,11 +719,11 @@ namespace parser {
 		ExpressionPtr InspireDriver::genInitializerExpr(const location& l, const TypePtr& type, const ExpressionList& list) {
 			// check for a struct type
 			TagTypePtr tagType = type.isa<TagTypePtr>();
-			if (tagType && tagType->isStruct()) {
+			if(tagType && tagType->isStruct()) {
 				return genStructExpression(l, type, list);
 
 				//check for union type, which has to be initialized differently
-			} else if (tagType && tagType->isUnion()) {
+			} else if(tagType && tagType->isUnion()) {
 				//there must only be one expression in the initializer
 				if (list.size() != 1) {
 					error(l, "A union initialization expression must only contain one expression");
@@ -746,7 +743,7 @@ namespace parser {
 				error(l, "The given expression does not match any of the union's field types");
 				return nullptr;
 
-			} else if (auto genericType = type.isa<GenericTypePtr>()) {
+			} else if(auto genericType = type.isa<GenericTypePtr>()) {
 				auto tuType = tu[genericType];
 				if (!tuType) {
 					error(l, format("Can not initialize generic type %s, since it isn't registered in the translation unit", type));
@@ -767,14 +764,15 @@ namespace parser {
 		}
 
 		void InspireDriver::registerParameters(const location& l, const VariableList& params) {
-			for (const auto& variable : params) {
+			for(const auto& variable : params) {
 				declareSymbol(l, annotations::getAttachedName(variable), variable);
 			}
 		}
 
-		ExpressionPtr InspireDriver::genJobExpr(const location& l, const ExpressionPtr& lowerBound, const ExpressionPtr& upperBound, const ExpressionPtr& expr) {
+		ExpressionPtr InspireDriver::genJobExpr(const location& l, const ExpressionPtr& lowerBound, const ExpressionPtr& upperBound,
+			                                    const ExpressionPtr& expr) {
 			auto scalarExpr = getScalar(expr);
-			if (!scalarExpr.isa<CallExprPtr>()) {
+			if(!scalarExpr.isa<CallExprPtr>()) {
 				error(l, "expression in job must be a call expression");
 				return nullptr;
 			}
@@ -784,7 +782,7 @@ namespace parser {
 
 		ExpressionPtr InspireDriver::genJobExpr(const location& l, const ExpressionPtr& expr) {
 			auto scalarExpr = getScalar(expr);
-			if (!scalarExpr.isa<CallExprPtr>()) {
+			if(!scalarExpr.isa<CallExprPtr>()) {
 				error(l, "expression in job must be a call expression");
 				return nullptr;
 			}
@@ -802,7 +800,7 @@ namespace parser {
 
 		ExpressionPtr InspireDriver::genDerefExpr(const location& l, const ExpressionPtr& expr) {
 			auto scalarExpr = getScalar(expr);
-			if (!analysis::isRefType(scalarExpr->getType())) {
+			if(!analysis::isRefType(scalarExpr->getType())) {
 				error(l, format("cannot deref non ref type: %s", toString(scalarExpr->getType())));
 				return nullptr;
 			}
@@ -812,7 +810,7 @@ namespace parser {
 
 		ExpressionPtr InspireDriver::genAsExpr(const location& l, const ExpressionPtr& expr, const TypePtr& type) {
 			auto scalarExpr = getScalar(expr);
-			if (!scalarExpr->getType()) {
+			if(!scalarExpr->getType()) {
 				error(l, "can not get parent-reference of non referenced expression");
 				return nullptr;
 			}
@@ -828,8 +826,8 @@ namespace parser {
 			return builder.declarationStmt(variable, getScalar(init));
 		}
 
-		ForStmtPtr InspireDriver::genForStmt(const location& l, const TypePtr& iteratorType, const std::string iteratorName,
-		                                     const ExpressionPtr& lowerBound, const ExpressionPtr& upperBound, const ExpressionPtr& stepExpr, const StatementPtr& body) {
+		ForStmtPtr InspireDriver::genForStmt(const location& l, const TypePtr& iteratorType, const std::string iteratorName, const ExpressionPtr& lowerBound,
+			                                 const ExpressionPtr& upperBound, const ExpressionPtr& stepExpr, const StatementPtr& body) {
 			VariablePtr iteratorVariable = findSymbol(l, iteratorName).isa<VariablePtr>();
 			assert_true(iteratorVariable) << "Variable doesn't exist or isn't a VariablePtr";
 			return builder.forStmt(iteratorVariable, getScalar(lowerBound), getScalar(upperBound), getScalar(stepExpr), body);
@@ -837,7 +835,7 @@ namespace parser {
 
 		ExpressionPtr InspireDriver::genThis(const location& l) {
 			// check valid scope
-			if (currentRecordStack.empty()) {
+			if(currentRecordStack.empty()) {
 				error(l, "This-pointer in non-record context!");
 				return nullptr;
 			}
@@ -868,18 +866,18 @@ namespace parser {
 
 			NodePtr result;
 
-			//look in declared symbols
+			// look in declared symbols
 			for(auto it = scopes.rbegin(); it != scopes.rend(); ++it) {
 				const DefinitionMap& cur = it->declaredSymbols;
 				auto pos = cur.find(name);
-				if (pos != cur.end()) {
+				if(pos != cur.end()) {
 					result = pos->second();
 					break;
 				}
 			}
 
-			//look in lang basic
-			if (!result) {
+			// look in lang basic
+			if(!result) {
 				try {
 					result = builder.getLangBasic().getBuiltIn(name);
 				} catch(...) {
@@ -887,12 +885,12 @@ namespace parser {
 				}
 			}
 
-			//fail if not found
-			if (!result) {
+			// fail if not found
+			if(!result) {
 				error(l, format("the symbol %s was not declared in this context", name));
 				return nullptr;
 			}
-			if (!result.isa<ExpressionPtr>()) {
+			if(!result.isa<ExpressionPtr>()) {
 				error(l, format("the symbol %s is not an expression but of type %s", name, result->getNodeType()));
 				return nullptr;
 			}
@@ -905,18 +903,18 @@ namespace parser {
 
 			NodePtr result;
 
-			//look in declared types
+			// look in declared types
 			for(auto it = scopes.rbegin(); it != scopes.rend(); ++it) {
 				const DefinitionMap& cur = it->declaredTypes;
 				auto pos = cur.find(name);
-				if (pos != cur.end()) {
+				if(pos != cur.end()) {
 					result = pos->second();
 					break;
 				}
 			}
 
 			// check the type
-			if (result && !result.isa<TypePtr>()) {
+			if(result && !result.isa<TypePtr>()) {
 				error(l, format("the symbol %s is not a type", name));
 				return nullptr;
 			}
@@ -925,9 +923,7 @@ namespace parser {
 			return result.as<TypePtr>();
 		}
 
-		void InspireDriver::openScope() {
-			scopes.push_back(Scope());
-		}
+		void InspireDriver::openScope() { scopes.push_back(Scope()); }
 
 		void InspireDriver::closeScope() {
 			assert_gt(scopes.size(), 1) << "Attempted to pop global scope!";
@@ -940,7 +936,7 @@ namespace parser {
 		}
 
 		bool InspireDriver::checkSymbolName(const location& l, const std::string& name) {
-			//check symbol name for validity
+			// check symbol name for validity
 			if(name.find(".") != std::string::npos) {
 				error(l, format("symbol names can not contain dot chars: %s", name));
 				return false;
@@ -950,14 +946,14 @@ namespace parser {
 
 		void InspireDriver::declareSymbol(const location& l, const std::string& name, const NodeFactory& factory) {
 			assert_false(scopes.empty()) << "Missing global scope!";
-			//check name for validity
-			if (!checkSymbolName(l, name)) { return; }
+			// check name for validity
+			if(!checkSymbolName(l, name)) { return; }
 
 			// ignore wildcard for unused variables
 			if(name == "_") { return; }
 
-			//make sure that there isn't already a declaration for this symbol
-			if (getCurrentScope().declaredSymbols.find(name) != getCurrentScope().declaredSymbols.end()) {
+			// make sure that there isn't already a declaration for this symbol
+			if(getCurrentScope().declaredSymbols.find(name) != getCurrentScope().declaredSymbols.end()) {
 				error(l, format("Symbol %s has already been declared", name));
 				return;
 			}
@@ -975,16 +971,16 @@ namespace parser {
 
 		void InspireDriver::declareType(const location& l, const std::string& name, const TypePtr& node) {
 			assert_false(scopes.empty()) << "Missing global scope!";
-			//check name for validity
-			if (!checkSymbolName(l, name)) { return; }
+			// check name for validity
+			if(!checkSymbolName(l, name)) { return; }
 
-			//make sure that there isn't already a declaration for this type
-			if (getCurrentScope().declaredTypes.find(name) != getCurrentScope().declaredTypes.end()) {
+			// make sure that there isn't already a declaration for this type
+			if(getCurrentScope().declaredTypes.find(name) != getCurrentScope().declaredTypes.end()) {
 				error(l, format("Type %s has already been declared", name));
 				return;
 			}
 
-			//insert it into the declared types
+			// insert it into the declared types
 			getCurrentScope().declaredTypes[name] = [=]() -> NodePtr { return node; };
 		}
 
@@ -999,7 +995,7 @@ namespace parser {
 		}
 
 		TypePtr InspireDriver::resolveTypeAliases(const location& l, const TypePtr& type) {
-			if (!type) return type;
+			if(!type) return type;
 
 			NodeManager& mgr = type.getNodeManager();
 
@@ -1007,15 +1003,15 @@ namespace parser {
 			for(auto it = scopes.rbegin(); it != scopes.rend(); ++it) {
 				for(const auto& cur : it->aliases) {
 					// check whether pattern matches
-					if (auto sub = types::match(mgr, type, cur.first)) {
+					if(auto sub = types::match(mgr, type, cur.first)) {
 						// compute substitution
 						auto next = (*sub).applyTo(cur.second);
 						assert_ne(type, next) << "Invalid pattern matching:\n"
-								"Target:     " << *type << "\n"
-								"Pattern:    " << *cur.first << "\n"
-								"Substitute: " << *cur.first << "\n"
-								"Match:      " << *sub << "\n"
-								"Next:       " << *next << "\n";
+							                  << "Target:     " << *type << "\n"
+							                  << "Pattern:    " << *cur.first << "\n"
+							                  << "Substitute: " << *cur.first << "\n"
+							                  << "Match:      " << *sub << "\n"
+							                  << "Next:       " << *next << "\n";
 
 						// apply pattern and start over again
 						return resolveTypeAliases(l, next);
@@ -1040,10 +1036,8 @@ namespace parser {
 		void InspireDriver::beginRecord(const location& l, const std::string& name) {
 			currentRecordStack.push_back(builder.genericType(name));
 
-			//only declare the type implicitly if it hasn't already been declared
-			if (!isTypeDeclaredInCurrentScope(name)) {
-				declareType(l, name, getThisType());
-			}
+			// only declare the type implicitly if it hasn't already been declared
+			if(!isTypeDeclaredInCurrentScope(name)) { declareType(l, name, getThisType()); }
 
 			openScope();
 		}
@@ -1066,7 +1060,7 @@ namespace parser {
 
 			// get extension factory from the registry
 			auto optFactory = lang::ExtensionRegistry::getInstance().lookupExtensionFactory(name);
-			if (optFactory) {
+			if(optFactory) {
 				importExtension((*optFactory)(mgr));
 			} else {
 				error(l, format("Unable to locate module: %s", name));
@@ -1074,7 +1068,6 @@ namespace parser {
 		}
 
 		void InspireDriver::importExtension(const lang::Extension& extension) {
-
 			// import symbols
 			for(const auto& cur : extension.getSymbols()) {
 				declareSymbol(location(), cur.first, cur.second);
@@ -1084,7 +1077,6 @@ namespace parser {
 			for(const auto& cur : extension.getTypeAliases()) {
 				addTypeAlias(cur.first, cur.second);
 			}
-
 		}
 
 		// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Debug tools  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1164,13 +1156,9 @@ namespace parser {
 		}
 		// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Error management  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-		void InspireDriver::error(const location& l, const std::string& m) const {
-			errors.push_back(ParserError(l, m));
-		}
+		void InspireDriver::error(const location& l, const std::string& m) const { errors.push_back(ParserError(l, m)); }
 
-		void InspireDriver::error(const std::string& m) const {
-			errors.push_back(ParserError(globLoc, m));
-		}
+		void InspireDriver::error(const std::string& m) const { errors.push_back(ParserError(globLoc, m)); }
 
 		bool InspireDriver::whereErrors() const {
 			if(!errors.empty()) { printErrors(); }
@@ -1179,11 +1167,9 @@ namespace parser {
 
 
 		void InspireDriver::printErrors(std::ostream& out, bool color) const {
-			if (out == std::cout) {
-				//print the errors only once to stdout
-				if (printedErrors) {
-					return;
-				}
+			if(&out == &std::cout) {
+				// print the errors only once to stdout
+				if(printedErrors) { return; }
 				printedErrors = true;
 			}
 
