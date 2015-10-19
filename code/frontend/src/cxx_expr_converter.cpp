@@ -136,9 +136,7 @@ namespace conversion {
 	core::ExpressionPtr Converter::CXXExprConverter::VisitCallExpr(const clang::CallExpr* callExpr) {
 		core::CallExprPtr irCall = ExprConverter::VisitCallExpr(callExpr).as<core::CallExprPtr>();
 		LOG_EXPR_CONVERSION(callExpr, irCall);
-
-		assert_not_implemented();
-
+		
 		return irCall;
 	}
 
@@ -801,8 +799,13 @@ namespace conversion {
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr Converter::CXXExprConverter::VisitMaterializeTemporaryExpr(const clang::MaterializeTemporaryExpr* materTempExpr) {
 		core::ExpressionPtr retIr;
-		//LOG_EXPR_CONVERSION(materTempExpr, retIr);
-		//retIr = Visit(materTempExpr->GetTemporaryExpr());
+		LOG_EXPR_CONVERSION(materTempExpr, retIr);
+		retIr = Visit(materTempExpr->GetTemporaryExpr());
+
+		// we don't need to materialize POD types, Inspire semantics allow implicit materialization
+		if(materTempExpr->getType().isPODType(converter.getCompiler().getASTContext())) {
+			return retIr;
+		}
 
 		//if(VLOG_IS_ON(2)) {
 		//	VLOG(2) << " =============== Materialize! =================" << std::endl;

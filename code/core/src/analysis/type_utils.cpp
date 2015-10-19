@@ -125,6 +125,24 @@ namespace analysis {
 		return newReturnType;
 	}
 
+	/* A trivial class or struct is defined as one that:
+	 *
+     * - Has a trivial default constructor. This may use the default constructor syntax (SomeConstructor() = default;).
+     * - Has trivial copy and move constructors, which may use the default syntax.
+     * - Has trivial copy and move assignment operators, which may use the default syntax.
+     * - Has a trivial destructor, which must not be virtual.
+	 *
+	 * Constructors are trivial only if there are no virtual member functions of the class and no virtual base classes. 
+	 * Copy/move operations also require that all the non-static data members be trivial.
+	 */
+	bool isTrivial(const TypePtr& type) {
+		auto ttype = type.isa<TagTypePtr>();
+
+		// non-tag-types are always trivial
+		if(!ttype) return true;
+		
+		return false;
+	}
 
 } // end namespace analysis
 } // end namespace core
