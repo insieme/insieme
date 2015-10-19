@@ -770,6 +770,7 @@ continue : "continue" ";"                                                 { $$ =
 // -- return --
 
 return : "return" expression ";"                                          { $$ = driver.builder.returnStmt(driver.getScalar($2)); }
+       | "return" ";"                                                     { $$ = driver.builder.returnStmt(); }
        ;
 
 

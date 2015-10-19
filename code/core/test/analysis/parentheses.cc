@@ -79,7 +79,7 @@ namespace analysis {
 				dumpColor(type);
 				return true;
 			} else {
-				std::cout << "Error: Euqality check gone wrong..." << std::endl;
+				std::cout << "Error: Equality check gone wrong..." << std::endl;
 				std::cout << "Input:    " << input << "[END]" << std::endl;
 				std::cout << "Printer:  " << printer << "[END]" << std::endl;
 				std::cout << "Expected: " << expected << "[END]" << std::endl;
@@ -189,11 +189,11 @@ TEST(Parentheses, BasicBitwiseOp) {
 
 	EXPECT_TRUE(checkParentheses(manager, "(true&false)", "(true&false)"));
 	EXPECT_TRUE(checkParentheses(manager, "(true|false)", "(true|false)"));
-	EXPECT_TRUE(checkParentheses(manager, "(true^false)", "(true^false)"));
+	EXPECT_TRUE(checkParentheses(manager, "(true ^ false)", "(true^false)"));
 	EXPECT_TRUE(checkParentheses(manager, "true&true|false", "true&true|false"));
-	EXPECT_TRUE(checkParentheses(manager, "false^false|false", "false^false|false"));
-	EXPECT_TRUE(checkParentheses(manager, "true^true&false", "true^true&false"));
-	EXPECT_TRUE(checkParentheses(manager, "true&true^false", "true&true^false"));
+	EXPECT_TRUE(checkParentheses(manager, "false ^ false|false", "false^false|false"));
+	EXPECT_TRUE(checkParentheses(manager, "true ^ true&false", "true^true&false"));
+	EXPECT_TRUE(checkParentheses(manager, "true&true ^ false", "true&true^false"));
 
 
 }

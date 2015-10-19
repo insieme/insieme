@@ -61,8 +61,8 @@ namespace analysis {
 		symbols["v"] = builder.variable(manager.getLangBasic().getInt4(), 77);
 
 		CallExprPtr call =
-		    analysis::normalize(builder.parseExpr("let int = int<4>;  lambda ((int)=>int a)->int { return a(2); } (lambda (int x)=> (2+v) + x)", symbols))
-		        .as<CallExprPtr>();
+			analysis::normalize(builder.parseExpr("alias int = int<4>;  (a : (int)=>int)->int { return a(2); } ((x : int)=> (2+v) + x)", symbols))
+			    .as<CallExprPtr>();
 		ASSERT_TRUE(call);
 
 		// check free variables
@@ -82,7 +82,7 @@ namespace analysis {
 		symbols["v"] = builder.variable(manager.getLangBasic().getInt4(), 77);
 
 		CallExprPtr call =
-		    analysis::normalize(builder.parseExpr("let int = int<4>; lambda ((int)=>int a)->int { return a(2); } (lambda (int x)=> (2+v) + x)", symbols))
+		    analysis::normalize(builder.parseExpr("alias int = int<4>; (a: (int)=>int)->int { return a(2); } ((x : int)=> (2+v) + x)", symbols))
 		        .as<CallExprPtr>();
 		ASSERT_TRUE(call);
 
@@ -123,10 +123,11 @@ namespace analysis {
 		// have not been handled correctly by the "getFreeVariable" utility
 
 		// create example
-		auto fun = builder.parseExpr("let f = lambda (int<4> x)->int<4> {"
-		                             "	return (x==0)?1:f(x-1)*x;"
-		                             "}; f")
-		               .as<LambdaExprPtr>();
+		auto fun = builder.parseExpr("decl f : (int<4>)->int<4>;"
+			                         "def f = (x : int<4>)->int<4> {"
+			                         "	return (x==0)?1:f(x-1)*x;"
+			                         "} f")
+			           .as<LambdaExprPtr>();
 
 		fun = transform::correctRecursiveLambdaVariableUsage(manager, fun);
 
@@ -145,11 +146,12 @@ namespace analysis {
 		// Reason: the normalize operation is broken - recursive variables are not preserved properly!!
 
 		// create example
-		auto code = builder.parseExpr("let f = lambda (int<4> x)->int<4> {"
-		                              "	return lambda (int<4> y)->int<4> {"
-		                              "		return f(y);"
-		                              "	}(x);"
-		                              "};  f(3)");
+		auto code = builder.parseExpr("decl f : (int<4>)->int<4>;"
+			                          " def f = (x : int<4>)->int<4> {"
+			                          "		return (y : int<4>)->int<4> {"
+			                          "			return f(y);"
+			                          "		}(x);"
+			                          "	} f(3)");
 
 		ASSERT_TRUE(code);
 
@@ -254,7 +256,7 @@ namespace analysis {
 		symbols["v"] = builder.variable(int4, 77);
 
 		CallExprPtr call =
-		    analysis::normalize(builder.parseExpr("let int = int<4>; lambda ((int)=>int a)->int { return a(2); } (lambda (int x)=> (2+v) + x)", symbols))
+		    analysis::normalize(builder.parseExpr("alias int = int<4>; (a : (int)=>int)->int { return a(2); } ((x : int)=> (2+v) + x)", symbols))
 		        .as<CallExprPtr>();
 		ASSERT_TRUE(call);
 
@@ -332,7 +334,7 @@ namespace analysis {
 		res = getExitPoints(builder.parseStmt(" { } "));
 		EXPECT_TRUE(res.empty());
 
-		res = getExitPoints(builder.parseStmt(" { decl int<4> x = 4; } "));
+		res = getExitPoints(builder.parseStmt(" { var int<4> x = 4; } "));
 		EXPECT_TRUE(res.empty());
 
 		res = getExitPoints(builder.parseStmt(" { for(int<4> i = 1 .. 10 ) { continue; } } "));
@@ -347,7 +349,7 @@ namespace analysis {
 		res = getExitPoints(builder.parseStmt(" { while(true) { break; } } "));
 		EXPECT_TRUE(res.empty());
 
-		res = getExitPoints(builder.parseStmt(" { let f = lambda ()->int<4> { return 0; }; f(); } "));
+		res = getExitPoints(builder.parseStmt(" { ()->int<4> { return 0; }(); } "));
 		EXPECT_TRUE(res.empty());
 
 		// ----------- return exit points -----------------------
@@ -364,7 +366,7 @@ namespace analysis {
 		res = getExitPoints(builder.parseStmt(" { while(true) { if (false) { return 0; } else { return 1; } } } "));
 		EXPECT_EQ("[0-0-1-0-1-0,0-0-1-0-2-0]", toString(res));
 
-		res = getExitPoints(builder.parseStmt(" { let f = lambda ()->int<4> { return 0; }; f(); return 0; } "));
+		res = getExitPoints(builder.parseStmt(" { ()->int<4> { return 0; }(); return 0; } "));
 		EXPECT_EQ("[0-1]", toString(res));
 
 		// ------------ break and continue ------------------------
@@ -404,16 +406,16 @@ namespace analysis {
 		EXPECT_PRED2(readOnly, builder.parseStmt("{ *x; }", symbols), x);
 
 		EXPECT_PRED2(notReadOnly, builder.parseStmt("{ x = 4; }", symbols), x);
-		EXPECT_PRED2(notReadOnly, builder.parseStmt("{ let f = lambda (ref<int<4>> x)->unit { x = 3; }; f(x); }", symbols), x);
+		EXPECT_PRED2(notReadOnly, builder.parseStmt("{ (x : ref<int<4>>) -> unit { x = 3; }(x); }", symbols), x);
 
-		EXPECT_PRED2(readOnly, builder.parseStmt("{ let f = lambda (int<4> x)->unit {}; f(*x); }", symbols), x);
+		EXPECT_PRED2(readOnly, builder.parseStmt("{ (x : int<4>) -> unit {}(*x); }", symbols), x);
 	}
 
 	TEST(IsReadOnly, Bug) {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 
-		VariablePtr x = builder.variable(builder.parseType("ref<struct { int<4> a; }>"), 1);
+		VariablePtr x = builder.variable(builder.parseType("ref<struct { a : int<4>; }>"), 1);
 		std::map<string, NodePtr> symbols;
 		symbols["x"] = x;
 
@@ -447,8 +449,8 @@ namespace analysis {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 
-		ExpressionPtr none = builder.parseExpr("lambda (ref<int<4>> x)->unit { *x; }");
-		ExpressionPtr used = builder.parseExpr("lambda (ref<int<4>> x)->unit { x = 4; }");
+		ExpressionPtr none = builder.parseExpr("(x : ref<int<4>>)->unit { *x; }");
+		ExpressionPtr used = builder.parseExpr("(x : ref<int<4>>)->unit { x = 4; }");
 
 		VariablePtr var = builder.variable(builder.refType(mgr.getLangBasic().getInt4()), 5);
 
@@ -459,7 +461,7 @@ namespace analysis {
 		EXPECT_PRED2(notReadOnly, call2, var) << dumpColor(call2);
 
 		// check two parameters
-		ExpressionPtr fun = builder.parseExpr("lambda (ref<int<4>> a, ref<int<4>> b)->unit { a = *b; }");
+		ExpressionPtr fun = builder.parseExpr("(a : ref<int<4>>, b : ref<int<4>>)->unit { a = *b; }");
 
 		VariablePtr varA = builder.variable(builder.refType(mgr.getLangBasic().getInt4()), 6);
 		VariablePtr varB = builder.variable(builder.refType(mgr.getLangBasic().getInt4()), 7);
@@ -475,10 +477,12 @@ namespace analysis {
 		//  b ... written in f, not in g
 		//  c ... written in g, not in f
 		//  d ... written in both
-		ExpressionPtr recFun = builder.parseExpr("let f,g = "
-		                                         "	lambda (ref<int<4>> a, ref<int<4>> b, ref<int<4>> c, ref<int<4>> d)->unit { b = *a; d = *b; g(a,b,c,d); },"
-		                                         "	lambda (ref<int<4>> a, ref<int<4>> b, ref<int<4>> c, ref<int<4>> d)->unit { c = *a; d = *c; f(a,b,c,d); };"
-		                                         "f");
+		ExpressionPtr recFun =
+			builder.parseExpr("alias ftype = (ref<int<4>>, ref<int<4>>, ref<int<4>>, ref<int<4>>)->unit;"
+			                  "decl f : ftype; decl g : ftype;"
+			                  "def f = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { b = *a; d = *b; g(a,b,c,d); }"
+			                  "def g = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { c = *a; d = *c; f(a,b,c,d); }"
+			                  "f");
 
 		VariablePtr varC = builder.variable(builder.refType(mgr.getLangBasic().getInt4()), 8);
 		VariablePtr varD = builder.variable(builder.refType(mgr.getLangBasic().getInt4()), 9);
@@ -500,8 +504,8 @@ namespace analysis {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 
-		ExpressionPtr none = builder.parseExpr("lambda (ref<int<4>> x)->unit { *x; }");
-		ExpressionPtr used = builder.parseExpr("lambda (ref<int<4>> x)->unit { x = 4; }");
+		ExpressionPtr none = builder.parseExpr("(x : ref<int<4>>)->unit { *x; }");
+		ExpressionPtr used = builder.parseExpr("(x : ref<int<4>>)->unit { x = 4; }");
 
 		VariablePtr var = builder.variable(builder.refType(mgr.getLangBasic().getInt4()), 5);
 
@@ -512,7 +516,7 @@ namespace analysis {
 		EXPECT_PRED2(notReadOnly, call2, var);
 
 		// check two parameters
-		ExpressionPtr fun = builder.parseExpr("lambda (ref<int<4>> a, ref<int<4>> b)->unit { a = *b; }");
+		ExpressionPtr fun = builder.parseExpr("(a : ref<int<4>>, b : ref<int<4>>)->unit { a = *b; }");
 
 		VariablePtr varA = builder.variable(builder.refType(mgr.getLangBasic().getInt4()), 6);
 		VariablePtr varB = builder.variable(builder.refType(mgr.getLangBasic().getInt4()), 7);
@@ -528,10 +532,12 @@ namespace analysis {
 		//  b ... written in f, not in g
 		//  c ... written in g, not in f
 		//  d ... written in both
-		ExpressionPtr recFun = builder.parseExpr("let f,g = "
-		                                         "	lambda (ref<int<4>> a, ref<int<4>> b, ref<int<4>> c, ref<int<4>> d)->unit { b = *a; d = *b; g(a,b,c,d); },"
-		                                         "	lambda (ref<int<4>> a, ref<int<4>> b, ref<int<4>> c, ref<int<4>> d)->unit { c = *a; d = *c; f(a,b,c,d); };"
-		                                         "f");
+		ExpressionPtr recFun =
+			builder.parseExpr("alias ftype = (ref<int<4>>, ref<int<4>>, ref<int<4>>, ref<int<4>>)->unit;"
+			                  "decl f : ftype; decl g : ftype;"
+			                  "def f = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { b = *a; d = *b; g(a,b,c,d); }"
+			                  "def g = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { c = *a; d = *c; f(a,b,c,d); }"
+			                  "f");
 
 		VariablePtr varC = builder.variable(builder.refType(mgr.getLangBasic().getInt4()), 8);
 		VariablePtr varD = builder.variable(builder.refType(mgr.getLangBasic().getInt4()), 9);
@@ -547,15 +553,17 @@ namespace analysis {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 
-		ExpressionPtr funA =
-		    builder.parseExpr("let f = "
-		                      "	lambda (ref<int<4>> a, ref<int<4>> b, ref<int<4>> c, ref<int<4>> d)->unit { decl ref<int<4>> x = var(*d); f(x,a,b,c); };"
-		                      "f");
+		ExpressionPtr funA = builder.parseExpr(
+			"alias ftype = (ref<int<4>>, ref<int<4>>, ref<int<4>>, ref<int<4>>)->unit;"
+			"decl f : ftype;"
+			"def f = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { var ref<int<4>> x = ref_var(*d); f(x,a,b,c); };"
+			"f");
 
-		ExpressionPtr funB =
-		    builder.parseExpr("let f = "
-		                      "	lambda (ref<int<4>> a, ref<int<4>> b, ref<int<4>> c, ref<int<4>> d)->unit { decl ref<int<4>> x = var(*d); d = 2; f(x,a,b,c); };"
-		                      "f");
+		ExpressionPtr funB = builder.parseExpr(
+			"alias ftype = (ref<int<4>>, ref<int<4>>, ref<int<4>>, ref<int<4>>)->unit;"
+			"decl f : ftype;"
+			"def f = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { var ref<int<4>> x = ref_var(*d); d = 2; f(x,a,b,c); };"
+			"f");
 
 		VariablePtr varA = builder.variable(builder.refType(mgr.getLangBasic().getInt4()), 6);
 		VariablePtr varB = builder.variable(builder.refType(mgr.getLangBasic().getInt4()), 7);
@@ -573,17 +581,20 @@ namespace analysis {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 
-		ExpressionPtr funA =
-		    builder.parseExpr("let f,g = "
-		                      "	lambda (ref<int<4>> a, ref<int<4>> b, ref<int<4>> c, ref<int<4>> d)->unit { decl ref<int<4>> x = var(*d); g(x,a,b,c); },"
-		                      "	lambda (ref<int<4>> a, ref<int<4>> b, ref<int<4>> c, ref<int<4>> d)->unit { decl ref<int<4>> x = var(*d); f(x,a,b,c); };"
-		                      " f");
+		ExpressionPtr funA = builder.parseExpr(
+			"alias ftype = (ref<int<4>>, ref<int<4>>, ref<int<4>>, ref<int<4>>)->unit;"
+			"decl f : ftype; decl g : ftype;"
+			"def f = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { var ref<int<4>> x = ref_var(*d); g(x,a,b,c); }"
+			"def g = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { var ref<int<4>> x = ref_var(*d); f(x,a,b,c); }"
+			"f");
 
 		ExpressionPtr funB =
-		    builder.parseExpr("let f,g = "
-		                      "	lambda (ref<int<4>> a, ref<int<4>> b, ref<int<4>> c, ref<int<4>> d)->unit { decl ref<int<4>> x = var(*d); d = 2; g(x,a,b,c); },"
-		                      "	lambda (ref<int<4>> a, ref<int<4>> b, ref<int<4>> c, ref<int<4>> d)->unit { decl ref<int<4>> x = var(*d); d = 2; f(x,a,b,c); };"
-		                      "f");
+		    builder.parseExpr(
+			"alias ftype = (ref<int<4>>, ref<int<4>>, ref<int<4>>, ref<int<4>>)->unit;"
+			"decl f : ftype; decl g : ftype;"
+			"def f = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { var ref<int<4>> x = ref_var(*d); d = 2; g(x,a,b,c); }"
+			"def g = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { var ref<int<4>> x = ref_var(*d); d = 2; f(x,a,b,c); }"
+			"f");
 
 		VariablePtr varA = builder.variable(builder.refType(mgr.getLangBasic().getInt4()), 6);
 		VariablePtr varB = builder.variable(builder.refType(mgr.getLangBasic().getInt4()), 7);
@@ -608,12 +619,13 @@ namespace analysis {
 		IRBuilder builder(mgr);
 
 		auto prog = builder.parseProgram(R"1N5P1RE(
-			let int = int<4>;
-			let taskfun = lambda (int v) -> unit {
-				if(v == 0) return;
+			alias int = int<4>;
+			decl taskfun : (int) -> unit;
+			def taskfun = (v : int) -> unit {
+				if(v == 0) { return; }
 				taskfun(v-1);
 				mergeAll();
-			};
+			}
 			unit main() {
 				taskfun(1);
 			}
@@ -626,12 +638,13 @@ namespace analysis {
 		IRBuilder builder(mgr);
 
 		auto prog = builder.parseProgram(R"1N5P1RE(
-			let int = int<4>;
-			let taskfun = lambda (int v) -> unit {
-				if(v == 0) return;
-				parallel(job([1:1], taskfun(v-1)));
+			alias int = int<4>;
+			decl taskfun : (int) -> unit;
+			def taskfun = (v : int) -> unit {
+				if(v == 0) { return; }
+				parallel(job [1..1] => taskfun(v-1));
 				mergeAll();
-			};
+			}
 			unit main() {
 				taskfun(1);
 			}
@@ -645,10 +658,10 @@ namespace analysis {
 		IRBuilder builder(mgr);
 
 		auto prog = builder.parseProgram(R"1N5P1RE(
-			let int = int<4>;
-			let fun = lambda () -> unit {
-				decl int x = 1;
-				decl int y;
+			alias int = int<4>;
+			def fun = () -> unit {
+				var int x = 1;
+				var int y;
 			};
 			unit main() {
 				fun();
