@@ -58,13 +58,13 @@ namespace transform {
 		IRBuilder builder(mgr);
 
 		CallExprAddress code = builder.parseAddressesStatement(R"1N5P1RE(
-			{ 
-				let int = int<4>; 
-				let fun = lambda (int a, int b) -> int { 
-                    if(a<4) { return a + 2*b; } 
-			        return a - b; 
-                }; 
-				decl ref<int,f,f,plain> x = var(0); 
+			alias int = int<4>;
+			def fun = (a : int, b : int) -> int { 
+			  if(a<4) { return a + 2*b; } 
+			  return a - b; 
+			};
+			{
+				var ref<int,f,f,plain> x = ref_var(0); 
 				$x = fun(3,6)$; 
 			}
         )1N5P1RE")[0].as<CallExprAddress>();
@@ -76,7 +76,7 @@ namespace transform {
 
 		// std::cout << printer::PrettyPrinter(code.getRootNode()) << "\n\ninlined:\n" << printer::PrettyPrinter(inlined) << "\n****\n";
 
-		EXPECT_EQ("{{decl ref<bool,f,f,plain> v0 =  var(false);{if(3<4) {{v7 = 3+2*6;v0 = true;};};if(!v0) {{v7 = 3-6;v0 = true;};};};};}",
+		EXPECT_EQ("{{decl ref<bool,f,f,plain> v0 =  var(false);{if(3<4) {{v6 = 3+2*6;v0 = true;};};if(!v0) {{v6 = 3-6;v0 = true;};};};};}",
 		          toString(printer::PrettyPrinter(core::analysis::normalize(inlined), printer::PrettyPrinter::PRINT_SINGLE_LINE)));
 		EXPECT_TRUE(check(inlined, checks::getFullCheck()).empty()) << check(inlined, checks::getFullCheck());
 	}
@@ -86,17 +86,17 @@ namespace transform {
 		IRBuilder builder(mgr);
 
 		CallExprAddress code = builder.parseAddressesStatement(R"1N5P1RE(
-			{ 
-				let int = int<4>; 
-				let fun = lambda (int a, int b) -> int { 
-				    if(a<4) { return a + 2*b; } 
-				    decl ref<int,f,f,plain> x = var(a); 
-			        while(true) { 
-						x = x+1; 
-						if(x>b) { return x - b; } 
-					} 
-				}; 
-				decl ref<int,f,f,plain> x = var(0); 
+			alias int = int<4>;
+			def fun = (a : int, b : int) -> int { 
+				if(a<4) { return a + 2*b; } 
+				var ref<int,f,f,plain> x = ref_var(a); 
+				while(true) { 
+					x = x+1; 
+					if(x>b) { return x - b; } 
+				} 
+			}
+			{
+				var ref<int,f,f,plain> x = ref_var(0); 
 				$x = fun(3,6)$; 
 			}
         )1N5P1RE")[0].as<CallExprAddress>();
@@ -108,8 +108,8 @@ namespace transform {
 
 		// std::cout << printer::PrettyPrinter(code.getRootNode()) << "\n\ninlined:\n" << printer::PrettyPrinter(inlined) << "\n****\n";
 
-		EXPECT_EQ("{{decl ref<bool,f,f,plain> v0 =  var(false);{if(3<4) {{v10 = 3+2*6;v0 = true;};};if(!v0) {decl ref<int<4>,f,f,plain> v1 =  "
-		          "var(3);while(true && !v0) {v1 = v1+1;if(v1>6) {{v10 = v1-6;v0 = true;};};};};};};}",
+		EXPECT_EQ("{{decl ref<bool,f,f,plain> v0 =  var(false);{if(3<4) {{v7 = 3+2*6;v0 = true;};};if(!v0) {decl ref<int<4>,f,f,plain> v1 =  "
+		          "var(3);while(true && !v0) {v1 = v1+1;if(v1>6) {{v7 = v1-6;v0 = true;};};};};};};}",
 		          toString(printer::PrettyPrinter(core::analysis::normalize(inlined), printer::PrettyPrinter::PRINT_SINGLE_LINE)));
 		EXPECT_TRUE(check(inlined, checks::getFullCheck()).empty()) << check(inlined, checks::getFullCheck());
 	}
@@ -119,17 +119,17 @@ namespace transform {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 
-		CallExprAddress code = builder.parseAddressesStatement("{ "
-		                                                       "	let int = int<4>; "
-		                                                       "	let fun = lambda (int a, int b) -> int { "
-		                                                       "		if(a<4) { return a + 2*b; } "
-		                                                       "		decl ref<int,f,f,plain> x = var(a); "
-		                                                       "       while(true) { "
-		                                                       "			x = x+1; "
-		                                                       "			if(x>b) { return x - b; } "
-		                                                       "		} "
-		                                                       "	}; "
-		                                                       "	decl ref<int,f,f,plain> x = var(0); "
+		CallExprAddress code = builder.parseAddressesStatement("alias int = int<4>;"
+		                                                       "def fun = (a : int, b : int) -> int { "
+		                                                       "	if(a<4) { return a + 2*b; } "
+		                                                       "	var ref<int,f,f,plain> x = ref_var(a); "
+		                                                       "	while(true) { "
+		                                                       "		x = x+1; "
+		                                                       "		if(x>b) { return x - b; } "
+		                                                       "	} "
+		                                                       "} "
+		                                                       "{"
+		                                                       "	var ref<int,f,f,plain> x = ref_var(0); "
 		                                                       "	$fun(3,6)$; "
 		                                                       "}")[0]
 		                           .as<CallExprAddress>();
