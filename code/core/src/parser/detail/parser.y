@@ -624,8 +624,8 @@ parallel_expression : "job" "[" expression ".." expression "]" "=>" expression  
                     ;
 
 
-list_expression : "[" non_empty_expressions "]"                           { $$ = ExpressionPtr(); }
-                | "[" expressions ":" type "]"                            { $$ = ExpressionPtr(); }
+list_expression : "[" non_empty_expressions "]"                           { $$ = encoder::toIR<ExpressionList, encoder::DirectExprListConverter>(driver.mgr, $2); }
+                | "[" expressions ":" type "]"                            { assert_not_implemented(); }
                 ;
 
 

@@ -388,7 +388,7 @@ namespace checks {
             alias uint = uint<8>;
             {
                 () -> unit {
-					var ref<array<int<4>,3>,f,f,plain> v0 = ref_var(array_create(3, [0,1,2]));
+					var ref<array<int<4>,3>,f,f,plain> v0 = ref_var(array_create(type_lit(3), [0,1,2]));
 				};
 			}
             )1N5P1RE"));
@@ -404,8 +404,8 @@ namespace checks {
             alias uint = uint<8>;
             {
                 () -> unit {
-					var auto list = ref_var([0,1,2]);
-					var ref<array<int<4>,3>,f,f,plain> v0 = ref_var(array_create(3, *list));
+					auto list = ref_var([0,1,2]);
+					var ref<array<int<4>,3>,f,f,plain> v0 = ref_var(array_create(type_lit(3), *list));
 				};
 			}
             )1N5P1RE"));
