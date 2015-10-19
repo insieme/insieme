@@ -1,7 +1,5 @@
 #include <stdio.h>
 
-
-
 int f(){
 	static int v = 0;
 	return v++;

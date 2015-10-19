@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -48,6 +48,11 @@ namespace utils {
 	 * Remove all symbols which are not allowed in a C identifier from the given string
 	 */
 	std::string removeSymbols(std::string str);
+
+	/**
+	 * Create a name for an anonymous object (encodes location)
+	 */
+	std::string createNameForAnon(const std::string& prefix, const clang::Decl* decl, const clang::SourceManager& sm);
 
 	/**
 	 * we build a complete name for the class,

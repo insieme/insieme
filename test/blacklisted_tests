@@ -4,25 +4,12 @@
 gemsclaim # disabled here because the test takes quite long
 indirection_test
 mpi
-mqap
 vectors
 vivid
 
 # Disabling cpp test cases for the time being
 cpp
 interceptor
-
-# Disabling tests because they fail with assertion:
-# Global variable not inserted at global scope
-assign_expr
-capture_global
-global_multi
-static_init
-transpose
-
-# Disabling tests because they fail with assertion:
-# Clang InitListExpr of unexpected type
-initialization
 
 # Disabling tests because they fail with assertion:
 # Goto not implemented
@@ -34,49 +21,21 @@ longlong
 simd_vector
 
 # Disabling tests because they fail with assertion:
-# Trying to build a ptr add/sub with non-int
-pointer_arith
-
-# Disabling tests because they fail with assertion:
-# Unable to deduce return type!
-ptr_offset
-
-# Disabling tests because they fail with assertion:
-# Record types not correctly resolved
-qap
-rec_struct
-
-# Disabling tests because they fail with assertion:
 # Ref cast only allowed to cast between qualifiers,trying to cast from
 ref_vector_array_pointer
 vector_partial_init
 
 # Disabling tests because they fail with assertion:
-# Variable arrays are handled in a separate FE extension, which does not appear to be loaded.
-variable_arrays
-
-# Disabling tests because they fail with assertion:
 # Illegal: dereferencing a NULL pointer!
 variadic_functions
 
-# Disabling tests because they fail with exception:
-# Cannot match arguments
-n_body
-
-# Disabling tests because they fail with exception:
-# No duplicates within identifiers are allowed!
-anonymous
-
-# Disabling tests because they fail to satisfy some semantic checks or errors
-enum
-even_odd
-global_nested
-heap_data
-ref_passing
-stack
+# Disabling tests because VLAs are not implemented in the BE
+variable_arrays
+pointer_arith_vla
 
 # Disabling tests because they fail in the backend:
 # Reason: unsupported type __insieme_enum
 anon_enum
 pendulum
+enum
 

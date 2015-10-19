@@ -44,6 +44,7 @@
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/lang/pointer.h"
+#include "insieme/core/annotations/naming.h"
 
 #include "insieme/annotations/c/extern.h"
 #include "insieme/annotations/c/extern_c.h"
@@ -134,28 +135,24 @@ namespace conversion {
 	void DeclConverter::VisitVarDecl(const clang::VarDecl* var) {
 		VLOG(2) << "~~~~~~~~~~~~~~~~ VisitVarDecl: " << dumpClang(var);
 		// variables to be skipped
-		if(!var->hasGlobalStorage()) {
-			return;
-		}
-		if(var->hasExternalStorage()) {
-			return;
-		}
-		if(var->isStaticLocal()) {
-			return;
-		}
+		if(!var->hasGlobalStorage()) { return; }
+		if(var->hasExternalStorage()) { return; }
 
 		converter.trackSourceLocation(var);
 		auto convertedVar = convertVarDecl(var);
-		auto globalLit = builder.literal(convertedVar.first->getType(), utils::getNameForGlobal(var, converter.getSourceManager()));
+		auto name = utils::getNameForGlobal(var, converter.getSourceManager());
+		auto globalLit = builder.literal(convertedVar.first->getType(), name);
 		converter.applyHeaderTagging(globalLit, var);
 		// handle pragmas attached to decls
 		globalLit = pragma::handlePragmas({globalLit}, var, converter).front().as<core::LiteralPtr>();
 		converter.getVarMan()->insert(var, globalLit);
-		auto init = (var->getInit()) ? converter.convertExpr(var->getInit()) : builder.undefined(core::lang::ReferenceType(globalLit->getType()).getElementType());
+		auto init =
+			(var->getInit()) ? converter.convertExpr(var->getInit()) : builder.undefined(core::lang::ReferenceType(globalLit->getType()).getElementType());
+		core::annotations::attachName(globalLit, name);
 		converter.getIRTranslationUnit().addGlobal(globalLit, init);
 		converter.untrackSourceLocation();
 	}
-	
+
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//					 Linkage spec, e.g. extern "C"
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

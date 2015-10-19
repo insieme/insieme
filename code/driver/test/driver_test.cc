@@ -62,6 +62,7 @@ TEST(DriverTest, HelloWorldTest) {
 	LOG(INFO) << "Converting input program '" << std::string(DRIVER_TEST_DIR) << "/inputs/hello_world.c"
 	          << "' to IR...";
 	fe::ConversionJob job(DRIVER_TEST_DIR "/inputs/hello_world.c");
+	job.registerDefaultExtensions();
 	core::ProgramPtr program = job.execute(manager);
 	LOG(INFO) << "Done.";
 

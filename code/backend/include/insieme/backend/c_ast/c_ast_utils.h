@@ -505,6 +505,10 @@ namespace c_ast {
 	}
 
 	inline ExpressionPtr access(ExpressionPtr expr, NodePtr element) {
+		// special handling for anonymous inner structs/unions
+		if(auto lit = element.isa<c_ast::IdentifierPtr>()) {
+			if(lit->name.empty()) return expr;
+		}
 		return binaryOp(BinaryOperation::MemberAccess, expr, element);
 	}
 
@@ -559,16 +563,6 @@ namespace c_ast {
 
 	inline ArrayInitPtr initArray(TypePtr type, ExpressionPtr sizeA, ExpressionPtr sizeB) {
 		return type->getManager()->create<c_ast::ArrayInit>(type, toVector(sizeA, sizeB));
-	}
-
-	template <typename... E>
-	inline OCLVectorInitPtr initOCLVector(TypePtr type, E... elements) {
-		return type->getManager()->create<c_ast::OCLVectorInit>(type, toVector<c_ast::NodePtr>(elements...));
-	}
-
-	template <typename... E>
-	inline OCLVectorInitPtr initOCLVector(TypePtr type, const vector<c_ast::NodePtr>& elements) {
-		return type->getManager()->create<c_ast::OCLVectorInit>(type, elements);
 	}
 
 	// -- Ternary Operations -------------------------------------

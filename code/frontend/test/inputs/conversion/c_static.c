@@ -34,48 +34,13 @@
  * regarding third party software licenses.
  */
 
-#include "independent_test_utils.h"
+int f() {
+	static int x = 5;
+	#pragma test expect_ir("REGEX",R"(return\s*\*x_static_local_.*c_static_dot_c_3_2)")
+	return x;
+}
 
-#include "insieme/frontend/extensions/variable_argument_list_extension.h"
-#include "insieme/frontend/extensions/variable_length_array_extension.h"
-
-namespace insieme {
-namespace frontend {
-
-	static inline void runLargeIndependentTestOn(const string& fn, std::vector<std::string> includeDirs = toVector<std::string>()) {
-		runIndependentTestOn(fn, [&](ConversionJob& job) {
-			job.registerFrontendExtension<extensions::VariableLengthArrayExtension>();
-			job.registerFrontendExtension<extensions::VariableArgumentListExtension>();
-			for(auto inc : includeDirs) {
-				job.addIncludeDirectory(inc);
-			}
-		});
-	}
-
-	TEST(LargeIndependentTest, HelloWorld) {
-		runLargeIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_hello_world.c");
-	}
-
-	TEST(IndependentTest, MatrixMul) {
-		runLargeIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_matrix_mul.c");
-	}
-
-	TEST(IndependentTest, Pendulum) {
-		runLargeIndependentTestOn(FRONTEND_TEST_DIR "../../../test/pendulum/pendulum.c");
-	}
-
-	TEST(IndependentTest, Pyramids) {
-		runLargeIndependentTestOn(FRONTEND_TEST_DIR "../../../test/pyramids/pyramids.c");
-	}
-	
-	TEST(IndependentTest, Stencil3D) {
-		runLargeIndependentTestOn(FRONTEND_TEST_DIR "../../../test/stencil3d/stencil3d.c");
-	}
-
-	// enable after checking recursive struct resolve
-	//TEST(IndependentTest, QAP) {
-	//	runLargeIndependentTestOn(FRONTEND_TEST_DIR "../../../test/qap/qap.c");
-	//}
-
-} // fe namespace
-} // insieme namespace
+#pragma test expect_ir("REGEX",R"(.*x_static_local_.*c_static_dot_c_3_2 = 5;.*return.*)")
+int main() {
+	return f();
+}

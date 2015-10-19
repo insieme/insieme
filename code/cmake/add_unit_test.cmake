@@ -28,6 +28,7 @@ macro ( add_unit_test case_name ut_prefix )
 
 		ExternalProject_Add(googletest
 			URL http://googletest.googlecode.com/files/gtest-${GTEST_VERSION}.zip
+			URL_HASH SHA256=247ca18dd83f53deb1328be17e4b1be31514cedfc1e3424f672bf11fd7e0d60d
 			PREFIX ${GTEST_PREFIX} 
 			INSTALL_COMMAND "" #make gtest gtest_main
 			CMAKE_ARGS -DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}

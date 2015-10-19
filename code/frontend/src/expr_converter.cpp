@@ -435,11 +435,19 @@ namespace conversion {
 
 		string memName(membExpr->getMemberDecl()->getName());
 		auto retType = converter.convertType(membExpr->getType());
+		auto retTypeLit = builder.getTypeLiteral(retType);
 		frontend_assert(retType);
 
-		core::ExpressionPtr access = mgr.getLangExtension<core::lang::ReferenceExtension>().getRefMemberAccess();
+		core::ExpressionPtr access = mgr.getLangBasic().getCompositeMemberAccess();
 		frontend_assert(access);
-		retIr = builder.callExpr(builder.refType(retType), access, base, builder.getIdentifierLiteral(memName), builder.getTypeLiteral(retType));
+
+		// if a ref struct is accessed, we get a ref to its member
+		if(core::lang::isReference(base)) {
+			access = mgr.getLangExtension<core::lang::ReferenceExtension>().getRefMemberAccess();
+			retType = builder.refType(retType);
+		}
+
+		retIr = builder.callExpr(retType, access, base, builder.getIdentifierLiteral(memName), retTypeLit);
 		frontend_assert(retIr);
 		return retIr;
 	}
@@ -734,7 +742,8 @@ namespace conversion {
 			for(auto entry : fields) {
 				core::ExpressionPtr initExp = converter.getIRBuilder().getZero(entry->getType());
 				if(i < initList->getNumInits()) initExp = converter.convertExpr(initList->getInit(i));
-				frontend_assert(initExp->getType() == entry->getType()) << "Type mismatch in record initialization expression"; 
+				frontend_assert(initExp->getType() == entry->getType()) << "Type mismatch in record initialization expression:\n"
+					<< "expected: " << dumpColor(entry->getType()) << "got: " << dumpColor(initExp->getType());
 				values.push_back(converter.getIRBuilder().namedValue(entry->getName(), initExp));
 				++i;
 			}
@@ -766,15 +775,17 @@ namespace conversion {
 			auto gT = converter.convertType(clangType).as<core::GenericTypePtr>();
 			frontend_assert(core::lang::isArray(gT)) << "Clang InitListExpr of unexpected generic type (should be array):\n" << dumpColor(gT);
 			ExpressionList initExps;
-			for(unsigned i=0; i < initList->getNumInits(); ++i) { // yes, that is really the best way to do this in clang 3.6
+			for(unsigned i = 0; i < initList->getNumInits(); ++i) { // yes, that is really the best way to do this in clang 3.6
 				initExps.push_back(converter.convertExpr(initList->getInit(i)));
 			}
 			retIr = core::lang::buildArrayCreate(core::lang::getArraySize(gT), initExps);
-		}
-		else {
+		} 
+		else if(clangType->isScalarType()) {
+			retIr = Visit(initList->getInit(0));
+		} else {
 			frontend_assert(false) << "Clang InitListExpr of unexpected type";
 		}
-		
+
 		return retIr;
 	}
 

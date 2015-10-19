@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -58,7 +58,9 @@ namespace backend {
 		ASSERT_TRUE(testCase) << "Could not load hello world test case!";
 
 		// convert test case into IR using the frontend
-		auto code = frontend::ConversionJob(testCase->getFiles(), testCase->getIncludeDirs()).execute(manager);
+		auto job = frontend::ConversionJob(testCase->getFiles(), testCase->getIncludeDirs());
+		job.registerDefaultExtensions();
+		auto code = job.execute(manager);
 		ASSERT_TRUE(code) << "Unable to load input code!";
 
 		// create target code using real backend

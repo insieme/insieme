@@ -154,10 +154,14 @@ namespace logger_details {
 using namespace insieme::utils::log;
 
 #define LOG(LEVEL)                                                                                                                                             \
-	if(insieme::utils::logger_details::level > LEVEL || !insieme::utils::logger_details::isIncludedInFilter(__PRETTY_FUNCTION__)) { /* nothing */ }  											   \
-	else insieme::utils::logger_details::getLogStreamFor(LEVEL,__FILE__,__LINE__).getStream()                                                              								   \
+	if(insieme::utils::logger_details::level > LEVEL || !insieme::utils::logger_details::isIncludedInFilter(__PRETTY_FUNCTION__)) {/* nothing */               \
+	} else                                                                                                                                                     \
+	insieme::utils::logger_details::getLogStreamFor(LEVEL, __FILE__, __LINE__).getStream()
 
-#define VLOG(VerbLevel) \
-	if(VerbLevel > insieme::utils::logger_details::getVerbosityLevel()) {} else LOG(DEBUG)
+#define VLOG(VerbLevel)                                                                                                                                        \
+	if(VerbLevel > insieme::utils::logger_details::getVerbosityLevel()) {                                                                                      \
+	} else                                                                                                                                                     \
+	LOG(DEBUG)
 
-#define VLOG_IS_ON(VerbLevel) (VerbLevel <= insieme::utils::logger_details::getVerbosityLevel())
+#define VLOG_IS_ON(VerbLevel)                                                                                                                                  \
+	(VerbLevel <= insieme::utils::logger_details::getVerbosityLevel() && insieme::utils::logger_details::isIncludedInFilter(__PRETTY_FUNCTION__))

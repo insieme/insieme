@@ -519,6 +519,8 @@ namespace frontend {
 		}
 
 		void registerExtensionFlags(boost::program_options::options_description& options);
+		
+		void registerDefaultExtensions();
 
 		/**
 		 *  Frontend extension initialization method

@@ -6,7 +6,7 @@
 #define true 1
 #define false 0
 
-extern int printf(char *, ...);
+extern int printf(const char *, ...);
 
 bool even(unsigned x);
 bool odd(unsigned x);

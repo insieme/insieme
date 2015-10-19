@@ -296,6 +296,12 @@ namespace lang {
 			"(p : ptr<'a,'c,'v>, i : int<8>) -> ptr<'a,'c,'v> { return <ptr<'a,'c,'v>> { p.data, p.offset - i }; }"
 		)
 
+		// pointer difference is not defined for unrelated pointers
+		LANG_EXT_DERIVED_WITH_NAME(
+			PtrDiff, "ptr_diff",
+			"(l : ptr<'a,'c,'v>, r : ptr<'a,'c,'v>) -> int<8> { return l.offset - r.offset; }"
+		)
+
 		LANG_EXT_DERIVED_WITH_NAME(PtrPostInc, "ptr_post_inc", "(p : ref<ptr<'a,'c,'v>>) -> ptr<'a,'c,'v> { var ptr<'a,'c,'v> temp = *p; p = ptr_add(*p, 1l); return temp; }")
 
 		LANG_EXT_DERIVED_WITH_NAME(PtrPostDec, "ptr_post_dec", "(p : ref<ptr<'a,'c,'v>>) -> ptr<'a,'c,'v> { var ptr<'a,'c,'v> temp = *p; p = ptr_sub(*p, 1l); return temp; }")

@@ -92,7 +92,7 @@ namespace frontend {
 			EXPECT_EQ(num, converter.getVarMan()->numVisibleDeclarations()) << "Location: " << converter.getLastTrackableLocation() << "\n";
 		});
 		job.registerFrontendExtension<FrontendCleanupExtension>();
-		jobModifier(job); 
+		jobModifier(job);
 		auto res = builder.normalize(job.execute(mgr));
 
 		// iterate over res and check pragma expectations
@@ -104,6 +104,7 @@ namespace frontend {
 				auto ex = ann->getExpected();
 				
 				const string regexKey = "REGEX";
+				const string regexKeyS = "REGEX_S";
 				const string stringKey = "STRING";
 				const string exprTypeKey = "EXPR_TYPE";
 
@@ -111,7 +112,14 @@ namespace frontend {
 
 				// Regex expect
 				if(boost::starts_with(ex, regexKey)) {
-					boost::regex re(ex.substr(regexKey.size()));
+					boost::regex re;
+					if(boost::starts_with(ex, regexKeyS)) {
+						auto res = ex.substr(regexKeyS.size());
+						boost::replace_all(res, " ", "\\s*");
+						re = boost::regex(res);
+					} else {
+						re = boost::regex(ex.substr(regexKey.size()));
+					}
 					auto irString = ::toString(printer::PrettyPrinter(
 					    builder.normalize(node), printer::PrettyPrinter::OPTIONS_DEFAULT | printer::PrettyPrinter::NO_LET_BINDINGS
 					                                 | printer::PrettyPrinter::NO_LET_BOUND_FUNCTIONS | printer::PrettyPrinter::PRINT_DEREFS));

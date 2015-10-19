@@ -551,7 +551,7 @@ namespace backend {
 
 			// special handling for variable sized structs
 			if(auto structType = core::analysis::isStruct(initValue->getType())) {
-				if (core::lang::isUnknownSizedArray(structType->getFields().back()->getType())) {
+				if(core::lang::isUnknownSizedArray(structType->getFields().back()->getType())) {
 					// Create code similar to this:
 					// 		(A*)memcpy(malloc(sizeof(A) + sizeof(float) * v2), &(struct A){ v2 }, sizeof(A))
 
@@ -634,6 +634,11 @@ namespace backend {
 
 			c_ast::ExpressionPtr value = GET_TYPE_INFO(ARG(0)->getType()).externalize(C_NODE_MANAGER, CONVERT_ARG(0));
 			return GET_TYPE_INFO(call->getType()).internalize(C_NODE_MANAGER, c_ast::cast(type, value));
+		};
+		
+		res[refExt.getRefCast()] = OP_CONVERTER {
+			// in C, this should always be implicit
+			return CONVERT_ARG(0);
 		};
 
 		// -- support narrow and expand --

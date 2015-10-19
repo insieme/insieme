@@ -50,6 +50,7 @@ namespace checks {
 
 	SIMPLE_CHECK(Parent, Parent, true);
 	SIMPLE_CHECK(FreeTagTypeReferences, TagTypeReference, true);
+	SIMPLE_CHECK(TagTypeFields, TagType, true);
 
 	SIMPLE_CHECK(CallExprType, CallExpr, false);
 	SIMPLE_CHECK(BindExprType, BindExpr, false);

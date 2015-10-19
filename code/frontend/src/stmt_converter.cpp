@@ -121,13 +121,22 @@ namespace conversion {
 			const core::IRBuilder& builder = converter.getIRBuilder();
 			// external declaration statement as per very early K&R C -> ignore
 			if(varDecl->hasExternalStorage()) { return builder.getNoOp(); }
+			// global storage handled in decl visit
+			if(varDecl->hasGlobalStorage()) {
+				converter.getDeclConverter()->VisitVarDecl(varDecl);
+				return builder.getNoOp();
+			}
 			// convert decl
 			auto convertedDecl = converter.getDeclConverter()->convertVarDecl(varDecl);
 			converter.getVarMan()->insert(varDecl, convertedDecl.first);
 			// check if we have an init expression
 			core::ExpressionPtr initExp;
 			if(convertedDecl.second) {
-				initExp = core::lang::buildRefCast(builder.refVar(*convertedDecl.second), convertedDecl.first->getType());
+				auto refVar = builder.refVar(*convertedDecl.second);
+				initExp = core::lang::buildRefCast(refVar, convertedDecl.first->getType());
+				if(initExp != refVar) {
+					VLOG(2) << "Initialization: casting ref from\n" << dumpPretty(refVar->getType()) << " to \n" << convertedDecl.first->getType();
+				}
 			} else {
 				// generate undefined initializer
 				initExp = builder.undefinedVar(convertedDecl.first.getType());
