@@ -175,6 +175,40 @@ namespace checks {
 	OptionalMessageList TagTypeFieldsCheck::visitTagType(const TagTypeAddress& address) {
 		OptionalMessageList res;
 
+		// check if enum type
+		if(lang::isEnumType(address.getAddressedNode())) {
+			auto fields = address.getAddressedNode()->getFields();
+			//only check if non generic enum type?!
+			if(!fields[0]->getType().isa<TypeVariablePtr>()) {
+				// enum definition has to be a generic type ptr
+				// that has >= 1 type param and the name "enum_def<...>"
+				auto enumDefType = fields[0]->getType().isa<GenericTypePtr>();
+				if(enumDefType && enumDefType->getTypeParameter().size() &&
+					(enumDefType->getName()->getValue().find("enum_def") != std::string::npos)) {
+					//first field of enum_def has to be a string lit
+					if(GenericTypePtr enumName = enumDefType->getTypeParameter(0).isa<GenericTypePtr>()) {
+						if(enumName->getTypeParameter()->size()) {
+							add(res, Message(address, EC_TYPE_MALFORMED_ENUM_TYPE_DEFINITION_NAME,
+								format("Enum definition contains invalid name: ", *(enumDefType->getTypeParameter(0)), Message::ERROR)));
+						}
+					} else {
+							add(res, Message(address, EC_TYPE_MALFORMED_ENUM_TYPE_DEFINITION_NAME,
+								format("Enum definition contains invalid name: ", *(enumDefType->getTypeParameter(0)), Message::ERROR)));
+					}
+					//all following fields must be enum entries
+					for(unsigned i=1; i<enumDefType->getTypeParameter()->size(); ++i) {
+						if(!lang::EnumEntry::isEnumEntry(enumDefType->getTypeParameter(i))) {
+							add(res, Message(address, EC_TYPE_MALFORMED_ENUM_ENTRY,
+								format("Enum definition contains invalid enum entry: ", *(enumDefType->getTypeParameter(i)), Message::ERROR)));
+						}
+					}
+				} else {
+					add(res, Message(address, EC_TYPE_MALFORMED_ENUM_TYPE, format("Invalid enum type: ",
+						*(address.getAddressedNode()), Message::ERROR)));
+				}
+			}
+		}
+
 		// check for duplicate field names
 		utils::set::PointerSet<StringValuePtr> identifiers;
 		auto fields = address.getAddressedNode()->getFields();

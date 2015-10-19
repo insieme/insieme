@@ -60,21 +60,21 @@ namespace lang {
 		EnumExtension(core::NodeManager& manager) : core::lang::Extension(manager) {}
 
 		LANG_EXT_DERIVED_WITH_NAME(EnumEquals, "enum_eq",
-			"let enum = struct { 'a enum_type; 'b value; };	"
+			"let enum = struct enum { 'a enum_type; 'b value; };	"
 			"lambda (enum a, enum b) -> bool {				"
 			"    return a.value == b.value;					"
 			"}												"
 		);
 
 		LANG_EXT_DERIVED_WITH_NAME(IntToEnum, "int_to_enum",
-			"let enum = struct { 'a enum_type; 'b value; };		"
+			"let enum = struct enum { 'a enum_type; 'b value; };		"
 			"lambda (type<enum> t, 'b v) -> enum {				"
 			"	return struct enum { lit(\"enum_type\" : 'a), v };	"
 			"}														"
 		);
 
 		LANG_EXT_DERIVED_WITH_NAME(EnumToInt, "enum_to_int",
-			"lambda (struct { 'a enum_type; 'b value; } e) -> 'b {	"
+			"lambda (struct enum { 'a enum_type; 'b value; } e) -> 'b {	"
 			"	return e.value;										"
 			"}														"
 		);

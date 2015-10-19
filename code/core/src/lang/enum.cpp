@@ -82,7 +82,7 @@ namespace lang {
 		} else {
 			return false;
 		}
-		//all following fields have to be enum entries
+		//all following fields must be enum entries
 		for(unsigned i=1; i<gt->getTypeParameter()->size(); ++i) {
 			if(!EnumEntry::isEnumEntry(gt->getTypeParameter(i)))
 				return false;
@@ -157,6 +157,9 @@ namespace lang {
 		if(!type.isa<core::TagTypePtr>())
 			return false;
 		const core::TagTypePtr tt = type.as<core::TagTypePtr>();
+		//name of struct has to be enum
+		if(tt->getName()->getValue() != "enum")
+			return false;
 		//with exactly 2 fields (value and enum_type)
 		if(tt->getFields().size() != 2)
 			return false;
@@ -166,7 +169,7 @@ namespace lang {
 			return false;
 		if(t2->getName()->getValue().find("value") == std::string::npos)
 			return false;
-		return core::lang::EnumDefinition::isEnumDefinition(t1->getType());
+		return true;
 	}
 
 
@@ -182,7 +185,7 @@ namespace lang {
 			builder.field(builder.stringValue("enum_type"), enumDef),
 			builder.field(builder.stringValue("value"), valueType)
 		};
-		return builder.structType(elements);
+		return builder.structType("enum", elements);
 	}
 
 	GenericTypePtr getEnumElement(const GenericTypePtr& name, const ExpressionPtr& val) {
