@@ -57,24 +57,15 @@ namespace lang {
 	TEST(NamedCoreExtensionParserTest, ParserAssertsDeathTest) {
 		NodeManager manager;
 
-		EXPECT_THROW(parser::parseStmt(manager, "using \"ext.unknown_extension\"; decl complex a;", true), parser::IRParserException);
+		EXPECT_THROW(parser::parseStmt(manager, "using \"ext.unknown_extension\"; auto a = undefined(complex);", true), parser::IRParserException);
 	}
 
 	TEST(NamedCoreExtensionParserTest, ParserSingleStatement) {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
-		EXPECT_EQ("AP({struct _ir_complex <rel:'a,img:'a> v0 = undefined(type<struct _ir_complex <rel:'a,img:'a>>);})",
-		          toString(builder.normalize(parser::parseStmt(manager, "{ using \"ext.complex\"; decl complex a; }"))));
-	}
-
-	TEST(NamedCoreExtensionParserTest, ParserMultipleStatements) {
-		NodeManager manager;
-		IRBuilder builder(manager);
-
-		// the second instance of type complex shouldn't be expanded
-		EXPECT_EQ("AP({{struct _ir_complex <rel:'a,img:'a> v0 = undefined(type<struct _ir_complex <rel:'a,img:'a>>);}; complex v1 = undefined(type<complex>);})",
-		          toString(builder.normalize(parser::parseStmt(manager, "{ {using \"ext.complex\"; decl complex a;} decl complex b;}"))));
+		EXPECT_EQ("AP(struct _ir_complex <rel:'a,img:'a> v0 = undefined(type<struct _ir_complex <rel:'a,img:'a>>))",
+		          toString(builder.normalize(parser::parseStmt(manager, "using \"ext.complex\"; auto a = undefined(complex);"))));
 	}
 
 	TEST(NamedCoreExtensionParserTest, ParserCompoundStatement) {
@@ -84,7 +75,7 @@ namespace lang {
 		// both instances of type complex should be expanded
 		EXPECT_EQ("AP({struct _ir_complex <rel:'a,img:'a> v0 = undefined(type<struct _ir_complex <rel:'a,img:'a>>); struct _ir_complex <rel:'a,img:'a> v1 = "
 		          "undefined(type<struct _ir_complex <rel:'a,img:'a>>);})",
-		          toString(builder.normalize(parser::parseStmt(manager, "{using \"ext.complex\"; decl complex a; decl complex b;}"))));
+		          toString(builder.normalize(parser::parseStmt(manager, "using \"ext.complex\"; { auto a = undefined(complex); auto b = undefined(complex); }"))));
 	}
 
 	TEST(NamedCoreExtensionParserTest, ParserCompoundNestedStatement) {
@@ -94,16 +85,7 @@ namespace lang {
 		// the nested instance of complex should also be expanded
 		EXPECT_EQ("AP({struct _ir_complex <rel:'a,img:'a> v0 = undefined(type<struct _ir_complex <rel:'a,img:'a>>); {struct _ir_complex <rel:'a,img:'a> v1 = "
 		          "undefined(type<struct _ir_complex <rel:'a,img:'a>>);};})",
-		          toString(builder.normalize(parser::parseStmt(manager, "{ using \"ext.complex\"; decl complex a; { decl complex b; }}"))));
-	}
-
-	TEST(NamedCoreExtensionParserTest, ParserCompoundNestedStatementOutside) {
-		NodeManager manager;
-		IRBuilder builder(manager);
-
-		// only the nested instance of complex should be expanded
-		EXPECT_EQ("AP({{struct _ir_complex <rel:'a,img:'a> v0 = undefined(type<struct _ir_complex <rel:'a,img:'a>>);}; complex v1 = undefined(type<complex>);})",
-		          toString(builder.normalize(parser::parseStmt(manager, "{ { using \"ext.complex\"; decl complex a; } decl complex b;}"))));
+		          toString(builder.normalize(parser::parseStmt(manager, "using \"ext.complex\"; { auto a = undefined(complex); { auto b = undefined(complex); }}"))));
 	}
 
 	TEST(NamedCoreExtensionParserTest, ParserMultipleUsing) {
@@ -111,10 +93,10 @@ namespace lang {
 		IRBuilder builder(manager);
 
 		// both named extensions should be expanded
-		EXPECT_EQ("AP({bool v0 = rec v0.{v0=fun(ref<'a,f,f,plain> v1) {return int_ne(enum_to_int(ref_deref(v1)), 0);}}; struct _ir_complex <rel:'a,img:'a> v1 = "
-		          "undefined(type<struct _ir_complex <rel:'a,img:'a>>);})",
+		EXPECT_EQ("AP({(('a)->bool) v0 = rec v0.{v0=fun(ref<'a,f,f,plain> v1) {return int_ne(enum_to_int\"(ref_deref(v1)), 0);}}; "
+		          "struct _ir_complex <rel:'a,img:'a> v1 = undefined(type<struct _ir_complex <rel:'a,img:'a>>);})",
 		          toString(builder.normalize(
-		              parser::parseStmt(manager, "{ using \"ext.complex\",\"ext.enum\"; decl bool a = enum_element_as_bool; decl complex b; }"))));
+		              parser::parseStmt(manager, "using \"ext.complex\"; using \"ext.enum\"; { auto a = enum_element_as_bool; auto b = undefined(complex); }"))));
 	}
 
 
@@ -136,11 +118,11 @@ namespace lang {
 		const auto& typeAlises = manager.getLangExtension<NamedCoreExtensionParserTestExtension>().getTypeAliases();
 
 		// As I passed the extension with the name "complex" already defined this should be expanded
-		EXPECT_EQ("AP({struct<foo:NamedType> v0 = undefined(type<struct<foo:NamedType>>);})",
-		          toString(builder.normalize(parser::parseStmt(manager, "{ decl complex a; }", false, existingNames, typeAlises))));
+		EXPECT_EQ("AP(struct<foo:NamedType> v0 = undefined(type<struct<foo:NamedType>>))",
+		          toString(builder.normalize(parser::parseStmt(manager, "auto a = undefined(complex);", false, existingNames, typeAlises))));
 
 		// inside of a compound stmt we shadow previous declarations
-		EXPECT_TRUE(parser::parseStmt(manager, " { using \"ext.complex\"; decl complex a; }", false, existingNames));
+		EXPECT_TRUE(parser::parseStmt(manager, "using \"ext.complex\"; auto a = undefined(complex);", false, existingNames));
 
 	}
 
