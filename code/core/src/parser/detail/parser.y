@@ -562,7 +562,7 @@ literal : "true"                                                          { $$ =
         | "float"                                                         { $$ = driver.genNumericLiteral(@$, driver.mgr.getLangBasic().getReal4(), $1); }
         | "double"                                                        { $$ = driver.genNumericLiteral(@$, driver.mgr.getLangBasic().getReal8(), $1); }
         | "string"                                                        { $$ = driver.builder.stringLit($1); }
-        | "lit" "(" "string" ":" type ")"                                 { $$ = driver.builder.literal($5, $3.substr(1, $3.size() - 1)); }
+        | "lit" "(" "string" ":" type ")"                                 { $$ = driver.builder.literal($5, $3.substr(1, $3.size() - 2)); }
         | "type_lit" "(" type ")"                                         { $$ = driver.builder.getTypeLiteral($3); }
         ;
 
