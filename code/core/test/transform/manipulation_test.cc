@@ -481,7 +481,7 @@ namespace core {
 		TypePtr type = builder.genericType("T");
 
 		LambdaExprPtr lambda = builder.normalize(builder.parseExpr(
-				"lambda (T a, T b)->T { let op = expr lit(\"op\":(T,T)->T); return op(a,b); }"
+				"(a : T, b : T)->T { return let op = lit(\"op\":(T,T)->T) in op(a,b); }"
 		)).as<LambdaExprPtr>();
 
 		// ... now, fix first parameter to be X
@@ -501,7 +501,7 @@ namespace core {
 		std::map<string, NodePtr> symbols;
 		symbols["f"] = lambda;
 		LambdaExprPtr outer1 = builder.normalize(builder.parseExpr(
-				"lambda (T a, T b)->T { return f(a,b); }", symbols
+				"(a : T, b : T)->T { return f(a,b); }", symbols
 		)).as<LambdaExprPtr>();
 
 		res = transform::tryFixParameter(manager, outer1, 0, value);
@@ -510,7 +510,7 @@ namespace core {
 
 		// multiple nested lambdas
 		LambdaExprPtr outer2 = builder.normalize(builder.parseExpr(
-				"lambda (T a, T b)->T { return f(a,f(a,b)); }", symbols
+				"(a : T, b : T)->T { return f(a,f(a,b)); }", symbols
 		)).as<LambdaExprPtr>();
 
 		res = transform::tryFixParameter(manager, outer2, 0, value);
@@ -524,12 +524,13 @@ namespace core {
 		IRBuilder builder(manager);
 
 		// build a recursive function call
-		LambdaExprPtr lambda = builder.normalize(builder.parseExpr("let int = int<4>; "
-		                                         "let f = lambda (ref<int> x, int b)->unit {"
-		                                         "	if (b == 0) return;"
+		LambdaExprPtr lambda = builder.normalize(builder.parseExpr("alias int = int<4>;"
+		                                         "decl f : (ref<int>, int) -> unit;"
+		                                         "def f = (x : ref<int>, b : int)->unit {"
+		                                         "	if (b == 0) { return; }"
 		                                         "	x = x + b;"
 		                                         "	f(x,b-1);"
-		                                         "}; "
+		                                         "}"
 		                                         " f "))
 		                           .as<LambdaExprPtr>();
 
@@ -682,7 +683,7 @@ namespace core {
 
 		// -- create a function --
 
-		ExpressionPtr fun = builder.normalize(builder.parseExpr("lambda (int<4> x, int<4> y) -> unit { x+y; y-x; }"));
+		ExpressionPtr fun = builder.normalize(builder.parseExpr("(x : int<4>, y : int<4>) -> unit { x+y; y-x; }"));
 		EXPECT_EQ("rec v0.{v0=fun(ref<int<4>,f,f,plain> v1, ref<int<4>,f,f,plain> v2) {int_add(ref_deref(v1), ref_deref(v2)); int_sub(ref_deref(v2), ref_deref(v1));}}", toString(*fun));
 
 
@@ -705,7 +706,7 @@ namespace core {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 
-		auto call = builder.parseExpr("lambda (int<4> x)->int<4> {"
+		auto call = builder.parseExpr("(x : int<4>)->int<4> {"
 		                              "	return (x<10)?(x-1):(x+1);"
 		                              "}(3)")
 		                .as<CallExprPtr>();
@@ -727,10 +728,10 @@ namespace core {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 
-		auto fun = builder.parseExpr("lambda (int<4> a, int<4> b, int<4> c) -> int<4> { return a + c + c; }");
+		auto fun = builder.parseExpr("(a : int<4>, b : int<4>, c : int<4>) -> int<4> { return a + c + c; }");
 
 		auto argPure = builder.parseExpr("1+2*3");
-		auto argSideEffects = builder.parseExpr("let bad = expr lit(\"bad\":(int<4>)->int<4>); bad(12)");
+		auto argSideEffects = builder.parseExpr("let bad = lit(\"bad\":(int<4>)->int<4>) in bad(12)");
 
 		// check arguments
 		auto hasSideEffects = [](const ExpressionPtr& cur) { return !analysis::isSideEffectFree(cur); };
@@ -761,12 +762,13 @@ namespace core {
 		IRBuilder builder(manager);
 
 		// an easy case
-		LambdaExprPtr in = builder.parseExpr("let int = int<4> ; "
-		                                     "let f = lambda (int a)->int {"
-		                                     "	lambda ((int)->int g)->unit {"
+		LambdaExprPtr in = builder.parseExpr("alias int = int<4>;"
+		                                     "decl f : (int)->int;"
+		                                     "def f = (a : int)->int {"
+		                                     "	(g : (int)->int)->unit {"
 		                                     "		g(5);"
 		                                     "	}(f);"
-		                                     "} ; f")
+		                                     "} f")
 		                       .as<LambdaExprPtr>();
 
 		ASSERT_TRUE(in);
@@ -778,23 +780,24 @@ namespace core {
 		          toString(*analysis::normalize(transform::correctRecursiveLambdaVariableUsage(manager, in))));
 
 		// an advanced case
-		in = builder.parseExpr("let int = int<4> ; "
-		                       "let h = lambda ((int)->int f)->int { return f(5); } ; "
-		                       "let f,g = "
-		                       "	lambda (int a)->int {"
+		in = builder.parseExpr("alias int = int<4>;"
+		                       "decl f : (int)->int;"
+		                       "decl g : (int)->int;"
+		                       "def h = (f : (int)->int)->int { return f(5); }"
+		                       "def f = (a : int)->int {"
 		                       "		1;"
 		                       "		h(f);"
 		                       "		f(4);"
 		                       "		g(f(4));"
 		                       "		h(g);"
-		                       "	},"
-		                       "	lambda (int a)->int {"
+		                       "}"
+		                       "def g = (a : int)->int {"
 		                       "		2;"
 		                       "		h(f);"
 		                       "		f(g(4));"
 		                       "		g(4);"
 		                       "		h(g);"
-		                       "	};"
+		                       "}"
 		                       "g")
 		         .as<LambdaExprPtr>();
 
@@ -821,7 +824,7 @@ namespace core {
 		symbols["v"] = builder.variable(manager.getLangBasic().getInt4(), 77);
 
 		CallExprPtr call =
-		    analysis::normalize(builder.parseExpr("let int = int<4> ; lambda ((int)=>int a)->int { return a(2); } (lambda (int x)=> (2+v) + x)", symbols))
+		    analysis::normalize(builder.parseExpr("alias int = int<4>; (a : (int)=>int)->int { return a(2); } ((x : int)=> (2+v) + x)", symbols))
 		        .as<CallExprPtr>();
 
 		ASSERT_TRUE(call);
@@ -839,7 +842,7 @@ namespace core {
 
 		// ---- special case - no free variables in bounded expressions -----
 
-		call = analysis::normalize(builder.parseExpr("let int = int<4> ; lambda ((int)=>int a)->int { return a(2); } (lambda (int x)=> (2+3) + x)"))
+		call = analysis::normalize(builder.parseExpr("alias int = int<4>; (a : (int)=>int)->int { return a(2); } ((x : int)=> (2+3) + x)"))
 		           .as<CallExprPtr>();
 
 		ASSERT_TRUE(call);
@@ -860,12 +863,10 @@ namespace core {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
-		auto addresses = builder.parseAddressesStatement("{"
-		                                                 "let int = int<4>; "
-		                                                 "let f = lambda (int a)->int { return a + $1$ + $2$; }; "
-		                                                 "let g = lambda (int a)->int { return a - f(a); }; "
-		                                                 "g(10);"
-		                                                 "}");
+		auto addresses = builder.parseAddressesStatement("alias int = int<4>;"
+		                                                 "def f = (a : int)->int { return a + $1$ + $2$; }"
+		                                                 "def g = (a : int)->int { return a - f(a); }"
+		                                                 "{ g(10); }");
 
 		ASSERT_EQ(2u, addresses.size());
 		NodePtr code = analysis::normalize(addresses[0].getRootNode());
@@ -898,12 +899,10 @@ namespace core {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
-		auto addresses = builder.parseAddressesStatement("{"
-		                                                 "let int = int<4>; "
-		                                                 "let f = lambda (int a)->int { return a + $1$; }; "
-		                                                 "let g = lambda (int a)->int { return a - f(a) + $2$; }; "
-		                                                 "g(10);"
-		                                                 "}");
+		auto addresses = builder.parseAddressesStatement("alias int = int<4>;"
+		                                                 "def f = (a : int)->int { return a + $1$; }"
+		                                                 "def g = (a : int)->int { return a - f(a) + $2$; }"
+		                                                 "{ g(10); }");
 
 		ASSERT_EQ(2u, addresses.size());
 		NodePtr code = analysis::normalize(addresses[0].getRootNode());
@@ -970,10 +969,10 @@ namespace core {
 		IRBuilder builder(mgr);
 
 		auto addr = builder.parseAddressesStatement("{"
-		                                            "	decl ref<int<4>,f,f,plain> A = var(0);"
-		                                            "	decl ref<int<4>,f,f,plain> B = var(0);"
-		                                            "	lambda (int<4> arg)->int<4> { return arg; }(* $ A $);"
-													"	lambda (int<4> arg)->int<4> { return arg; }(* $ B $);"
+		                                            "	var ref<int<4>,f,f,plain> A = ref_var(0);"
+		                                            "	var ref<int<4>,f,f,plain> B = ref_var(0);"
+		                                            "	(arg : int<4>)->int<4> { return arg; }(* $ A $);"
+													"	(arg : int<4>)->int<4> { return arg; }(* $ B $);"
 		                                            "}");
 
 		CompoundStmtPtr code = addr[0].getRootNode().as<CompoundStmtPtr>();
@@ -981,11 +980,9 @@ namespace core {
 		VariablePtr varA = addr[0].as<VariablePtr>();
 		VariablePtr varB = addr[1].as<VariablePtr>();
 
-		VariablePtr charA = builder.variable(builder.refType(mgr.getLangBasic().getChar()));
 		VariablePtr uintB = builder.variable(builder.refType(mgr.getLangBasic().getUInt4()));
 
 		ExpressionMap replacements;
-		replacements[varA] = charA;
 		replacements[varB] = uintB;
 
 		transform::TypeHandler th = [&](const StatementPtr& stmt) -> StatementPtr {
@@ -999,8 +996,7 @@ namespace core {
 		};
 
 		utils::map::PointerMap<VariablePtr, ExpressionPtr> declInitReplacements;
-		declInitReplacements[charA] = builder.parseExpr("var(\'c\')");
-		declInitReplacements[uintB] = builder.parseExpr("var(0u)");
+		declInitReplacements[uintB] = builder.parseExpr("ref_var(0u)");
 
 		auto code1 = transform::replaceVarsRecursiveGen(mgr, code, replacements, true, transform::defaultTypeRecovery, th, declInitReplacements);
 
