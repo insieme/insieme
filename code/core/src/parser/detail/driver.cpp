@@ -87,6 +87,7 @@ namespace parser {
 			scanner.setStartProgram();
 			int fail = parser.parse();
 			if(whereErrors() || fail) {
+				result = nullptr;
 				return nullptr;
 			}
 			return result.as<ProgramPtr>();
@@ -97,6 +98,7 @@ namespace parser {
 			InspireParser parser(*this, scanner);
 			int fail = parser.parse();
 			if(whereErrors() || fail) {
+				result = nullptr;
 				return nullptr;
 			}
 			return result.as<TypePtr>();
@@ -107,6 +109,7 @@ namespace parser {
 			InspireParser parser(*this, scanner);
 			int fail = parser.parse();
 			if(whereErrors() || fail) {
+				result = nullptr;
 				return nullptr;
 			}
 			return result.as<StatementPtr>();
@@ -117,6 +120,7 @@ namespace parser {
 			InspireParser parser(*this, scanner);
 			int fail = parser.parse();
 			if(whereErrors() || fail) {
+				result = nullptr;
 				return nullptr;
 			}
 			return result.as<ExpressionPtr>();
