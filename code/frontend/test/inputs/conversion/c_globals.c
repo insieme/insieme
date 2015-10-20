@@ -10,7 +10,7 @@ typedef enum { Bla, Alb } enum_t;
 enum_t globalEnum;
 
 typedef struct { int x; } IAmTheTagType;
-#pragma test expect_ir("lit(\"tt\": ref<struct IMP_IAmTheTagType { int<4> x; },f,f>)")
+#pragma test expect_ir("lit(\"tt\": ref<struct IMP_IAmTheTagType { x: int<4>; },f,f>)")
 IAmTheTagType tt;
 
 int main() {
