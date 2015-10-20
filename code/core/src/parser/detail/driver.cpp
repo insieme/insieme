@@ -1168,7 +1168,6 @@ namespace parser {
 		void InspireDriver::error(const std::string& m) const { errors.push_back(ParserError(globLoc, m)); }
 
 		bool InspireDriver::whereErrors() const {
-			if(!errors.empty()) { printErrors(); }
 			return !errors.empty();
 		}
 
