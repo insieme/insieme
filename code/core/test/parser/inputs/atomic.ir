@@ -4,7 +4,7 @@ alias int = int<4>;
 // an atomic increment
 def atomicInc = (v : ref<'a>)->unit {
 	atomic(v, (_ : 'a)=>true, (x : 'a)=>x+CAST('a)1);
-}
+};
 
 unit main() {
 	// create an int and increment

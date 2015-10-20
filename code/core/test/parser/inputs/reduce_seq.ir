@@ -1,5 +1,5 @@
-let reduce = lambda (ref<array<'a,1>> data, uint<8> size, ('b,'a)->'b op, 'b init)->'b {
-	decl ref<'b> res = var(init);
+def reduce = (data : ref<array<'a,1>>, size : uint<8>, op : ('b,'a)->'b, init : 'b)->'b {
+	var ref<'b> res = ref_var(init);
 	for(uint<8> i = 0ul .. size) {
 		res = op(*res, *(data[i]));
 	}

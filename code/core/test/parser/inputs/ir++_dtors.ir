@@ -1,26 +1,29 @@
-let int = int<4>;
+alias int = int<4>;
 
-let A = struct { int x; };
+def struct A {
 
-let ctorA = lambda ctor A::(int<4> x) { 
-	this.x = x; 
-	print("Creating: %d\n", x);
-};
-
-let dtorA = lambda  ~A::() { 
-	print("Clearing: %d\n", *this.x);
-	this.x = 0; 
+	x : ref<int>;
+	
+	ctor (x : int) {
+		this.x = x;
+		print("Creating: %d\n", x);
+	}
+	
+	dtor () {
+		print("Clearing: %d\n", *x);
+		x = 0;
+	}
 };
 
 int main() {
 
 	// create an un-initialized memory location
-	decl ref<A> a = ctorA(var(undefined(A)), 1);
+	var ref<A> a = ctorA(ref_var(undefined(A)), 1);
 	
 	// init using in-place constructor
 	ctorA(a, 2);
 
-	// invoce destructor
+	// invoke destructor
 	dtorA(a);
 
 	return 0;
