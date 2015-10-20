@@ -198,12 +198,12 @@ TEST(Rule, MultiplyAndAdd) {
 
 	auto c2 = builder.normalize(builder.parseStmt(
 			"{"
-			"	decl int<4> a = 12;"
-			"	decl int<4> b = 14;"
+			"	var int<4> a = 12;"
+			"	var int<4> b = 14;"
 			"	1+2;"
 			"	1*2+3;"
 			"	12 * (2*3+1) + (a*b+3);"
-			"	decl int<4> c = a * b + 123;"
+			"	var int<4> c = a * b + 123;"
 			"}"
 	));
 
