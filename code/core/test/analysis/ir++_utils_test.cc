@@ -53,7 +53,7 @@ namespace analysis {
 		IRBuilder builder(manager);
 
 		// create a struct type
-		TypePtr type = builder.parseType("struct { int<4> x; int<4> y; }");
+		TypePtr type = builder.parseType("struct { x : int<4>; y : int<4>; }");
 		ASSERT_TRUE(type);
 
 		// create a default constructor for this type
