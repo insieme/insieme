@@ -530,7 +530,7 @@ namespace core {
 		                                         "	if (b == 0) { return; }"
 		                                         "	x = x + b;"
 		                                         "	f(x,b-1);"
-		                                         "}"
+		                                         "};"
 		                                         " f "))
 		                           .as<LambdaExprPtr>();
 
@@ -768,7 +768,7 @@ namespace core {
 		                                     "	(g : (int)->int)->unit {"
 		                                     "		g(5);"
 		                                     "	}(f);"
-		                                     "} f")
+		                                     "}; f")
 		                       .as<LambdaExprPtr>();
 
 		ASSERT_TRUE(in);
@@ -783,21 +783,21 @@ namespace core {
 		in = builder.parseExpr("alias int = int<4>;"
 		                       "decl f : (int)->int;"
 		                       "decl g : (int)->int;"
-		                       "def h = (f : (int)->int)->int { return f(5); }"
+		                       "def h = (f : (int)->int)->int { return f(5); };"
 		                       "def f = (a : int)->int {"
 		                       "		1;"
 		                       "		h(f);"
 		                       "		f(4);"
 		                       "		g(f(4));"
 		                       "		h(g);"
-		                       "}"
+		                       "};"
 		                       "def g = (a : int)->int {"
 		                       "		2;"
 		                       "		h(f);"
 		                       "		f(g(4));"
 		                       "		g(4);"
 		                       "		h(g);"
-		                       "}"
+		                       "};"
 		                       "g")
 		         .as<LambdaExprPtr>();
 
@@ -864,8 +864,8 @@ namespace core {
 		IRBuilder builder(manager);
 
 		auto addresses = builder.parseAddressesStatement("alias int = int<4>;"
-		                                                 "def f = (a : int)->int { return a + $1$ + $2$; }"
-		                                                 "def g = (a : int)->int { return a - f(a); }"
+		                                                 "def f = (a : int)->int { return a + $1$ + $2$; };"
+		                                                 "def g = (a : int)->int { return a - f(a); };"
 		                                                 "{ g(10); }");
 
 		ASSERT_EQ(2u, addresses.size());
@@ -900,8 +900,8 @@ namespace core {
 		IRBuilder builder(manager);
 
 		auto addresses = builder.parseAddressesStatement("alias int = int<4>;"
-		                                                 "def f = (a : int)->int { return a + $1$; }"
-		                                                 "def g = (a : int)->int { return a - f(a) + $2$; }"
+		                                                 "def f = (a : int)->int { return a + $1$; };"
+		                                                 "def g = (a : int)->int { return a - f(a) + $2$; };"
 		                                                 "{ g(10); }");
 
 		ASSERT_EQ(2u, addresses.size());
