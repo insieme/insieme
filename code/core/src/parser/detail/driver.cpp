@@ -1079,13 +1079,23 @@ namespace parser {
 		}
 
 		void InspireDriver::importExtension(const lang::Extension& extension) {
+			assert_true(scopes.size() == 1) << "Cannot import extension in non global scope!";
+
 			// import symbols
 			for(const auto& cur : extension.getSymbols()) {
-				declareSymbol(location(), cur.first, cur.second);
+				if (!isSymbolDeclaredInCurrentScope(cur.first)) {
+					declareSymbol(location(), cur.first, cur.second);
+				}
 			}
 
 			// import type aliases
+			auto& aliases = getCurrentScope().aliases;
 			for(const auto& cur : extension.getTypeAliases()) {
+				if(aliases.find(cur.first) != aliases.end()) {
+					assert_true(aliases[cur.first] == cur.second) << "Confliction type alias for " << *(cur.first)
+							<< ". " << *(aliases[cur.first]) << " vs. " << *(cur.second);
+					continue;
+				}
 				addTypeAlias(cur.first, cur.second);
 			}
 		}
