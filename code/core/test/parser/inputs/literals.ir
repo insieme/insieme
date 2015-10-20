@@ -13,10 +13,4 @@ unit main() {
 	// string literals
 	"Hello World!";
 	
-	// char values
-	'a';
-	
-	'\n';
-	'\0';
-	
 }

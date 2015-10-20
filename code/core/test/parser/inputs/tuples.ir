@@ -1,15 +1,15 @@
 
 unit main() {
 	
-	decl auto e = ();
+	auto e = ();
 
-	decl auto a = (1, 2, "hello");
+	auto a = (1, 2, "hello");
 	
 	a.0;
 	a.1;
 	a.2;
 
-	decl auto r = new(a);
+	auto r = ref_new(a);
 	
 	r.0;
 	r.1;

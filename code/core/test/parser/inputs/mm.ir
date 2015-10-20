@@ -1,27 +1,27 @@
 
-let int = int<4>;
-let uint = uint<4>;
+alias int = int<4>;
+alias uint = uint<4>;
 
-let double = real<8>;
+alias double = real<8>;
 
-let matrix = array<array<double,100>,100>;
+alias matrix = array<array<double,100>,100>;
 
-let initUniform = lambda ('elem elem, type<'a> size) -> array<'elem,'a>{
-					decl ref<array<'elem,'a>> res;
+def initUniform = (elem : 'elem, size : type<'a>) -> array<'elem,'a>{
+					var ref<array<'elem,'a>> res;
 					for(int i=0 .. 100) {
 						res[i] = elem;
 					}
 					return *res;
-                  };
+};
 
 
 
 int main() {
 
 	// create matrices
-	decl ref<matrix> a = var(initUniform(initUniform(0.0,param(100)),param(100)));
-	decl ref<matrix> b = var(initUniform(initUniform(0.0,param(100)),param(100)));
-	decl ref<matrix> c = var(initUniform(initUniform(0.0,param(100)),param(100)));
+	var ref<matrix> a = ref_var(initUniform(initUniform(0.0,type_lit(100)),type_lit(100)));
+	var ref<matrix> b = ref_var(initUniform(initUniform(0.0,type_lit(100)),type_lit(100)));
+	var ref<matrix> c = ref_var(initUniform(initUniform(0.0,type_lit(100)),type_lit(100)));
 	
 	// initialize a and b
 	for(uint i= 0u .. 100u) {
@@ -47,7 +47,7 @@ int main() {
 	}
 	
 	// check results		
-	decl ref<bool> success = var(true);
+	var ref<bool> success = ref_var(true);
 	for(uint i = 0u .. 100u) {
 		for(uint j = 0u .. 100u) {
 			success = success && c[i][j] == 2.0;
