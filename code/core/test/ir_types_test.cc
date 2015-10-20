@@ -355,14 +355,14 @@ namespace core {
 		EXPECT_PRED1(isNotRecursive, builder.parseType("int<4>"));
 		EXPECT_PRED1(isNotRecursive, builder.parseType("ref<int<4>>"));
 		EXPECT_PRED1(isNotRecursive, builder.parseType("struct { x : int<4>; }"));
-		EXPECT_PRED1(isNotRecursive, builder.parseType("decl struct B; def struct B { x : int<4>; } B"));
+		EXPECT_PRED1(isNotRecursive, builder.parseType("decl struct B; def struct B { x : int<4>; }; B"));
 
-		EXPECT_PRED1(isRecursive, builder.parseType("decl struct B; def struct B { x : ref<B>; } B"));
-		EXPECT_PRED1(isRecursive, builder.parseType("decl struct data; def struct data { x : ptr<data>; } data"));
-		EXPECT_PRED1(isRecursive, builder.parseType("decl struct A; decl struct B; def struct A { x : ref<B>; } def struct B { x : ref<A>; } B"));
-		EXPECT_PRED1(isRecursive, builder.parseType("decl struct A; decl struct B; def struct A { x : ptr<B>; } def struct B { x : ptr<A>; } A"));
+		EXPECT_PRED1(isRecursive, builder.parseType("decl struct B; def struct B { x : ref<B>; }; B"));
+		EXPECT_PRED1(isRecursive, builder.parseType("decl struct data; def struct data { x : ptr<data>; }; data"));
+		EXPECT_PRED1(isRecursive, builder.parseType("decl struct A; decl struct B; def struct A { x : ref<B>; }; def struct B { x : ref<A>; }; B"));
+		EXPECT_PRED1(isRecursive, builder.parseType("decl struct A; decl struct B; def struct A { x : ptr<B>; }; def struct B { x : ptr<A>; }; A"));
 
-		EXPECT_PRED1(isNotRecursive, builder.parseType("decl struct A; decl struct B; def struct A { x : ref<A>; } def struct B { y : ref<A>; } B"));
+		EXPECT_PRED1(isNotRecursive, builder.parseType("decl struct A; decl struct B; def struct A { x : ref<A>; }; def struct B { y : ref<A>; }; B"));
 
 		// check overloaded tag-type variables
 		auto tagType = builder.parseType(
@@ -384,9 +384,9 @@ namespace core {
 		EXPECT_EQ("struct<x:bla<int<4>>>", toString(*builder.parseType("let A = struct { x : bla<int<4>>; } in A")));
 		EXPECT_EQ("struct<x:bla<int<4>>>", toString(*builder.parseType("let A = struct { x : bla<int<4>>; } in A").as<TagTypePtr>()->peel()));
 
-		EXPECT_EQ("rec ^A.{^A=struct A <x:bla<^A>>}", toString(*builder.parseType("decl struct A; def struct A { x : bla<A>; } A")));
+		EXPECT_EQ("rec ^A.{^A=struct A <x:bla<^A>>}", toString(*builder.parseType("decl struct A; def struct A { x : bla<A>; }; A")));
 		EXPECT_EQ("struct A <x:bla<rec ^A.{^A=struct A <x:bla<^A>>}>>",
-		          toString(*builder.parseType("decl struct A; def struct A { x : bla<A>; } A").as<TagTypePtr>()->peel()));
+		          toString(*builder.parseType("decl struct A; def struct A { x : bla<A>; }; A").as<TagTypePtr>()->peel()));
 	}
 
 	//
