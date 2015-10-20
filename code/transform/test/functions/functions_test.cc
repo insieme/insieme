@@ -67,9 +67,10 @@ namespace functions {
 		core::IRBuilder builder(manager);
 
 		// create a recursive function
-		auto lambda = builder.parseExpr("let f = lambda (int<4> x)->int<4> {"
-		                                "	if (x==0) return 0;"
-		                                "	if (x==1) return 1;"
+		auto lambda = builder.parseExpr("decl f: (int<4>)->int<4>;"
+										"def f = (x: int<4>)->int<4> {"
+		                                "	if (x==0) { return 0; }"
+		                                "	if (x==1) { return 1; }"
 		                                "	return f(x-1) + f(x-2);"
 		                                "}; f")
 		                  .as<core::LambdaExprPtr>();
@@ -95,7 +96,8 @@ namespace functions {
 		core::IRBuilder builder(manager);
 
 		// create a recursive function
-		auto lambda = builder.parseExpr("let f = lambda(int<4> x)->int<4> {"
+		auto lambda = builder.parseExpr("decl f: (int<4>)->int<4>;"
+										"def f = (x: int<4>)->int<4> {"
 		                                "	return (x==0)?0:((x==1)?1:f(x-1)+f(x-2));"
 		                                "}; f")
 		                  .as<core::LambdaExprPtr>();
