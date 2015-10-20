@@ -1,8 +1,8 @@
 
-let int = int<4>;
+alias int = int<4>;
 
 unit main() {
 	
-	decl list<int> l = [1,2,3];
+	var list<int> l = [1,2,3];
 	
 }

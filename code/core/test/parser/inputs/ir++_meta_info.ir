@@ -1,8 +1,8 @@
 
-let int = int<4>;
+alias int = int<4>;
 
-let Counter = struct {
-	int value;
+def struct Counter {
+	value : int;
 	
 	// add constructors
 	
@@ -43,7 +43,7 @@ let Counter = struct {
 };
 
 int main() {
-	decl ref<Counter> c;
+	var ref<Counter> c;
 //	c.reset();
 //	c.p();
 //	c.inc();

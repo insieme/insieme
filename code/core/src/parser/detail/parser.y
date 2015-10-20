@@ -561,6 +561,7 @@ literal : "true"                                                          { $$ =
         | "float"                                                         { $$ = driver.genNumericLiteral(@$, driver.mgr.getLangBasic().getReal4(), $1); }
         | "double"                                                        { $$ = driver.genNumericLiteral(@$, driver.mgr.getLangBasic().getReal8(), $1); }
         | "string"                                                        { $$ = driver.builder.stringLit($1); }
+        | "lit" "(" "string" ")"                                          { $$ = driver.builder.getIdentifierLiteral($3.substr(1, $3.size() - 2)); }
         | "lit" "(" "string" ":" type ")"                                 { $$ = driver.builder.literal($5, $3.substr(1, $3.size() - 2)); }
         | "type_lit" "(" type ")"                                         { $$ = driver.builder.getTypeLiteral($3); }
         ;
@@ -617,6 +618,7 @@ undefined_expression : "undefined" "(" type ")"                           { $$ =
 
 parallel_expression : "job" "[" expression ".." expression "]" "=>" expression  { $$ = driver.genJobExpr(@$, $3, $5, $8); }
                     | "job" "[" "]" "=>" expression                             { $$ = driver.genJobExpr(@$, $5); }
+                    | "job" compound_statement                                  { $$ = driver.builder.jobExpr($2, -1); }
                     | "spawn" expression                                        { $$ = driver.builder.parallel(driver.getScalar($2), 1); }
                     | "sync" expression                                         { $$ = driver.genSync(@$, $2); }
                     | "sync_all"                                                { $$ = driver.genSyncAll(@$); }

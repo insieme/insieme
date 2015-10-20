@@ -133,8 +133,8 @@ namespace pattern {
 		auto pt = [&builder](const string& typespec) { return builder.parseType(typespec); };
 
 		TypePtr int4Type = pt("int<4>");
-		TypePtr structScalar = pt("ref<struct{int<4> int; real<4> float;}>");
-		TypePtr structArray = pt("ref<ref<array<struct{int<4> int; real<4> float;},1>>>");
+		TypePtr structScalar = pt("ref<struct{int : int<4>; float : real<4>;}>");
+		TypePtr structArray = pt("ref<ref<array<struct{int : int<4>; float : real<4>;},1>>>");
 
 		TreePattern patternA = aT(irp::structType(*any));
 		EXPECT_PRED2(noMatch, patternA, int4Type);
@@ -177,6 +177,7 @@ namespace pattern {
 
 		StatementPtr var1 = builder.parseExpr("x", symbols);
 
+
 		TreePattern pattern1 = irp::variable(at("int<8>"), any);
 		EXPECT_PRED2(isMatch, pattern1, var1);
 	}
@@ -184,7 +185,7 @@ namespace pattern {
 	TEST(IRPattern, lambdaExpr) {
 		NodeManager manager;
 
-		ExpressionPtr exp1 = IRBuilder(manager).parseExpr("lambda (int<4> i, int<8> v) -> int<4> { return i; }");
+		ExpressionPtr exp1 = IRBuilder(manager).parseExpr("( i : int<4>, v : int<8>) -> int<4> { return i; }");
 
 		TreePattern pattern1 = irp::lambdaExpr(any, irp::lambdaDefinition(*any));
 		EXPECT_PRED2(isMatch, pattern1, exp1);
@@ -193,7 +194,7 @@ namespace pattern {
 	TEST(IRPattern, lambda) {
 		NodeManager manager;
 
-		NodePtr node = IRBuilder(manager).parseExpr("lambda (int<8> i, int<8> v) -> int<8> { return i; }").as<core::LambdaExprPtr>()->getLambda();
+		NodePtr node = IRBuilder(manager).parseExpr("(i : int<8>, v : int<8>) -> int<8> { return i; }").as<core::LambdaExprPtr>()->getLambda();
 
 		TreePattern pattern1 = irp::lambda(any, irp::variable(var("x"), any) << irp::variable(var("x"), any), any);
 		EXPECT_PRED2(isMatch, pattern1, node);
@@ -212,7 +213,7 @@ namespace pattern {
 		NodeManager manager;
 		auto at = [&manager](const string& str) { return irp::atom(manager, str); };
 
-		StatementPtr stmt1 = IRBuilder(manager).parseStmt("decl int<4> i = 3;");
+		StatementPtr stmt1 = IRBuilder(manager).parseStmt("var int<4> i = 3;");
 
 		TreePattern pattern1 = irp::declarationStmt(any, any);
 		TreePattern pattern2 = irp::declarationStmt(irp::variable(at("int<4>"), any), at("3"));
@@ -263,7 +264,7 @@ namespace pattern {
 		auto at = [&manager](const string& str) { return irp::atom(manager, str); };
 		auto ps = [&manager](const string& str) { return IRBuilder(manager).parseStmt(str); };
 
-		StatementPtr stmt1 = ps("for(int<4> i = 30 .. 5 : -5) { decl int<4> i = 3;}");
+		StatementPtr stmt1 = ps("for(int<4> i = 30 .. 5 : -5) { var int<4> i = 3;}");
 		StatementPtr stmt2 = ps("for(int<4> i = 0 .. 10 : 2) { return 0; }");
 		StatementPtr stmt3 = ps("for(int<4> i = 0 .. 5) { 7; 6; continue; 8; }");
 		StatementPtr stmt4 = ps("for(int<4> i = 0 .. 2) { for(int<4> j = 0 .. 2){ return 0; } }");
@@ -285,7 +286,7 @@ namespace pattern {
 		auto at = [&manager](const string& str) { return irp::atom(manager, str); };
 		auto ps = [&manager](const string& str) { return StatementAddress(IRBuilder(manager).parseStmt(str)); };
 
-		StatementAddress stmt1 = ps("for(int<4> i = 30 .. 5 : -5) { decl int<4> i = 3;}");
+		StatementAddress stmt1 = ps("for(int<4> i = 30 .. 5 : -5) { var int<4> i = 3;}");
 		StatementAddress stmt2 = ps("for(int<4> i = 0 .. 2) { for(int<4> j = 0 .. 2){ 7; return 0; } }");
 
 		TreePattern pattern1 = irp::forStmt(var("x"), any, at("5"), at("-5"), irp::declarationStmt(var("y"), at("3")));
@@ -401,7 +402,7 @@ namespace pattern {
 		                                       "			for(uint<4> k = 2u .. 100u ) { "
 		                                       "				v[i+j]; "
 		                                       "			} "
-		                                       "           decl ref<uint<4>> a = var(3u); "
+		                                       "           var ref<uint<4>> a = ref_var(3u); "
 		                                       "			a = i; "
 		                                       "		} "
 		                                       "	} "
@@ -471,7 +472,7 @@ namespace pattern {
 		                                       "			for(uint<4> k = 2u .. 100u) { "
 		                                       "				v[i+j]; "
 		                                       "			}; "
-		                                       "           decl ref<uint<4>> a = var(3u); "
+		                                       "           var ref<uint<4>> a = ref_var(3u); "
 		                                       "			a = i; "
 		                                       "		}"
 		                                       "	}"
@@ -546,7 +547,7 @@ namespace pattern {
 		                                       "			for(uint<4> k = 2u .. 100u) { "
 		                                       "				v[i+j]; "
 		                                       "			}; "
-		                                       "           decl ref<uint<4>> a = var(3u); "
+		                                       "           var ref<uint<4>> a = ref_var(3u); "
 		                                       "			a = i; "
 		                                       "		}"
 		                                       "	}"
@@ -586,10 +587,10 @@ namespace pattern {
 		core::NodePtr node = builder.normalize(builder.parseStmt(
 		    R"(
 				{
-					decl int<4> a = 1;
-					decl int<4> b = 2;
+					var int<4> a = 1;
+					var int<4> b = 2;
 					a;
-					decl int<4> c = a + b;
+					var int<4> c = a + b;
 				}
 			)"));
 
@@ -615,13 +616,13 @@ namespace pattern {
 		core::NodePtr code = builder.normalize(builder.parseStmt(
 		    R"(
 				{
-					decl int<4> a = 1;
-					decl int<4> b = 2;
+					var int<4> a = 1;
+					var int<4> b = 2;
 					//a;
-					decl int<4> c = a + b;
+					var int<4> c = a + b;
 
-					decl int<4> d = 3;
-					decl int<4> e = d + a;
+					var int<4> d = 3;
+					var int<4> e = d + a;
 				}
 			)"));
 
@@ -665,7 +666,7 @@ namespace pattern {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
-		ForStmtPtr forStmt = IRBuilder(manager).parseStmt("for(int<4> i = 30 .. 5 : -5) { decl int<4> i = 3;}").as<ForStmtPtr>();
+		ForStmtPtr forStmt = IRBuilder(manager).parseStmt("for(int<4> i = 30 .. 5 : -5) { var int<4> i = 3;}").as<ForStmtPtr>();
 		CallExprPtr pforStmt = builder.pfor(forStmt);
 
 		TreePattern pattern = irp::pfor();
@@ -680,11 +681,11 @@ namespace pattern {
 		core::NodePtr node = builder.normalize(builder.parseStmt(
 		    R"(
 			{
-				decl int<4> foo = 17;
-				decl int<4> a = 1;
-				decl int<4> b = 2;
+				var int<4> foo = 17;
+				var int<4> a = 1;
+				var int<4> b = 2;
 				a;
-				decl int<4> c = 5;
+				var int<4> c = 5;
 			}
 		)"));
 
@@ -713,11 +714,11 @@ namespace pattern {
 		auto addresses = builder.parseAddressesStatement(
 		    R"(
 			{
-				decl int<4> foo = 17;
-				decl int<4> a = 1;
-				decl int<4> b = $2$;
+				var int<4> foo = 17;
+				var int<4> a = 1;
+				var int<4> b = $2$;
 				a;
-				decl int<4> c = 5;
+				var int<4> c = 5;
 			}
 		)");
 

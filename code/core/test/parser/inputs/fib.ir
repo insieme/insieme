@@ -1,17 +1,19 @@
 
-let int = int<4>;
+alias int = int<4>;
 
-let fib = lambda (int x)->int {
+decl fib : (int)->int;
 
-	if (x == 0) return 0;
-	if (x == 1) return 1;
+def fib = (x : int)->int {
+
+	if (x == 0) { return 0; };
+	if (x == 1) { return 1; };
 	
-	decl ref<int> a; 
-	decl ref<int> b;
+	var ref<int> a; 
+	var ref<int> b;
 	
 	spawn a = fib(x-1);
 	spawn b = fib(x-2);
-	syncAll;
+	sync_all;
 	
 	return a+b;
 };

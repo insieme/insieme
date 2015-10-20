@@ -590,6 +590,7 @@ namespace parser {
 
 			//only declare the symbol implicitly if it hasn't already been declared
 			if (!isSymbolDeclaredInCurrentScope(name)) {
+				annotations::attachName(lambda, name);
 				declareSymbol(l, name, key);
 			}
 

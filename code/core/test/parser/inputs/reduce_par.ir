@@ -1,7 +1,7 @@
 
 
-let red_par = lambda (threadgroup g, 'a v, ('b,'a)->'b op, 'b init)->'b {
-	return redistribute(g, v, lambda (ref<array<'a,inf>> data, uint<8> size, uint<8> _)=> array_reduce(data, num_cast(size,type_lit(int<8>)), op, init) );
+def red_par = (g : threadgroup, v : 'a, op : ('b,'a)->'b, init : 'b)->'b {
+	return redistribute(g, v, (data : ref<array<'a,inf>>, size : uint<8>, _ : uint<8>)=> array_reduce(data, num_cast(size,type_lit(int<8>)), op, init) );
 };
 
 unit main() {

@@ -126,7 +126,7 @@ namespace analysis {
 		auto fun = builder.parseExpr("decl f : (int<4>)->int<4>;"
 			                         "def f = (x : int<4>)->int<4> {"
 			                         "	return (x==0)?1:f(x-1)*x;"
-			                         "} f")
+			                         "}; f")
 			           .as<LambdaExprPtr>();
 
 		fun = transform::correctRecursiveLambdaVariableUsage(manager, fun);
@@ -151,7 +151,7 @@ namespace analysis {
 			                          "		return (y : int<4>)->int<4> {"
 			                          "			return f(y);"
 			                          "		}(x);"
-			                          "	} f(3)");
+			                          "	}; f(3)");
 
 		ASSERT_TRUE(code);
 
@@ -480,8 +480,8 @@ namespace analysis {
 		ExpressionPtr recFun =
 			builder.parseExpr("alias ftype = (ref<int<4>>, ref<int<4>>, ref<int<4>>, ref<int<4>>)->unit;"
 			                  "decl f : ftype; decl g : ftype;"
-			                  "def f = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { b = *a; d = *b; g(a,b,c,d); }"
-			                  "def g = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { c = *a; d = *c; f(a,b,c,d); }"
+			                  "def f = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { b = *a; d = *b; g(a,b,c,d); };"
+			                  "def g = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { c = *a; d = *c; f(a,b,c,d); };"
 			                  "f");
 
 		VariablePtr varC = builder.variable(builder.refType(mgr.getLangBasic().getInt4()), 8);
@@ -535,8 +535,8 @@ namespace analysis {
 		ExpressionPtr recFun =
 			builder.parseExpr("alias ftype = (ref<int<4>>, ref<int<4>>, ref<int<4>>, ref<int<4>>)->unit;"
 			                  "decl f : ftype; decl g : ftype;"
-			                  "def f = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { b = *a; d = *b; g(a,b,c,d); }"
-			                  "def g = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { c = *a; d = *c; f(a,b,c,d); }"
+			                  "def f = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { b = *a; d = *b; g(a,b,c,d); };"
+			                  "def g = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { c = *a; d = *c; f(a,b,c,d); };"
 			                  "f");
 
 		VariablePtr varC = builder.variable(builder.refType(mgr.getLangBasic().getInt4()), 8);
@@ -584,16 +584,16 @@ namespace analysis {
 		ExpressionPtr funA = builder.parseExpr(
 			"alias ftype = (ref<int<4>>, ref<int<4>>, ref<int<4>>, ref<int<4>>)->unit;"
 			"decl f : ftype; decl g : ftype;"
-			"def f = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { var ref<int<4>> x = ref_var(*d); g(x,a,b,c); }"
-			"def g = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { var ref<int<4>> x = ref_var(*d); f(x,a,b,c); }"
+			"def f = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { var ref<int<4>> x = ref_var(*d); g(x,a,b,c); };"
+			"def g = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { var ref<int<4>> x = ref_var(*d); f(x,a,b,c); };"
 			"f");
 
 		ExpressionPtr funB =
 		    builder.parseExpr(
 			"alias ftype = (ref<int<4>>, ref<int<4>>, ref<int<4>>, ref<int<4>>)->unit;"
 			"decl f : ftype; decl g : ftype;"
-			"def f = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { var ref<int<4>> x = ref_var(*d); d = 2; g(x,a,b,c); }"
-			"def g = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { var ref<int<4>> x = ref_var(*d); d = 2; f(x,a,b,c); }"
+			"def f = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { var ref<int<4>> x = ref_var(*d); d = 2; g(x,a,b,c); };"
+			"def g = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { var ref<int<4>> x = ref_var(*d); d = 2; f(x,a,b,c); };"
 			"f");
 
 		VariablePtr varA = builder.variable(builder.refType(mgr.getLangBasic().getInt4()), 6);
@@ -625,7 +625,7 @@ namespace analysis {
 				if(v == 0) { return; }
 				taskfun(v-1);
 				mergeAll();
-			}
+			};
 			unit main() {
 				taskfun(1);
 			}
@@ -644,7 +644,7 @@ namespace analysis {
 				if(v == 0) { return; }
 				parallel(job [1..1] => taskfun(v-1));
 				mergeAll();
-			}
+			};
 			unit main() {
 				taskfun(1);
 			}
