@@ -65,9 +65,9 @@ namespace backend {
 
 		core::ProgramPtr program = builder.parseProgram(
 				R"(
-				let int = int<4>;
+				alias int = int<4>;
 				
-				let f = lambda(int a, int b)->int {
+				def f = (a : int, b : int)->int {
 					return a + b * a;
 				};
 				
@@ -104,9 +104,9 @@ namespace backend {
 		core::IRBuilder builder(manager);
 
 		core::ProgramPtr program = builder.parseProgram("int<4> main() {"
-		                                                "	lambda (type<'a> dtype, type<'s> size)->ref<array<'a,'s>> {"
+		                                                "	(dtype : type<'a>, size : type<'s>)->ref<array<'a,'s>> {"
 		                                                "		return ref_new(array_create(size, list_empty(dtype)));"
-		                                                "	} (lit(real<4>), lit(7));"
+		                                                "	} (type_lit(real<4>), type_lit(7));"
 		                                                "	return 0;"
 		                                                "}");
 
@@ -142,8 +142,8 @@ namespace backend {
 		// Type: (('a,'b)->'c) -> (array<'a,'l>,array<'b,'l>)->array<'c,'l>
 
 		std::map<string, core::NodePtr> symbols;
-		symbols["v1"] = builder.parseExpr("array_create(lit(4), [1,2,3,4])");
-		symbols["v2"] = builder.parseExpr("array_create(lit(4), [5,6,7,8])");
+		symbols["v1"] = builder.parseExpr("array_create(type_lit(4), [1,2,3,4])");
+		symbols["v2"] = builder.parseExpr("array_create(type_lit(4), [5,6,7,8])");
 
 		core::ProgramPtr program = builder.parseProgram("unit main() {"
 		                                                "	array_pointwise(int_add)(v1,v2);"
@@ -173,9 +173,9 @@ namespace backend {
 		// create a function accepting a type literal
 
 		core::ProgramPtr program = builder.parseProgram("int<4> main() {"
-		                                                "	lambda (type<'a> dtype)->int<4> {"
+		                                                "	(stype : type<'a>)->int<4> {"
 		                                                "		return 5;"
-		                                                "	} (lit(real<4>));"
+		                                                "	} (type_lit(real<4>));"
 		                                                "	return 0;"
 		                                                "}");
 		ASSERT_TRUE(program);
@@ -206,9 +206,9 @@ namespace backend {
 
 		core::ProgramPtr program = builder.parseProgram(R"(
     		int<4> main() {
-    			lambda (ref<array<'a,'l>> data)->uint<8> {
-    				return sizeof(lit('a));
-    			} (ref_null(lit(array<real<4>,12>),lit(f),lit(f)));
+    			(data : ref<array<'a,'l>>)->uint<8> {
+    				return sizeof(type_lit('a));
+    			} (ref_null(type_lit(array<real<4>,12>),type_lit(f),type_lit(f)));
     			return 0;
     		}
     )");
@@ -259,7 +259,7 @@ namespace backend {
 		core::IRBuilder builder(manager);
 
 		core::ExpressionPtr zero = builder.literal(manager.getLangBasic().getUInt8(), "0");
-		core::ExpressionPtr offset = builder.parseExpr("var(array_create(lit(3),[0ul,0ul,0ul]))");
+		core::ExpressionPtr offset = builder.parseExpr("ref_var(array_create(type_lit(3),[0ul,0ul,0ul]))");
 		core::ExpressionPtr extFun = builder.parseExpr("lit(\"call_vector\" : (ref<array<uint<8>,3>>)->unit )");
 		core::ExpressionPtr call = builder.callExpr(manager.getLangBasic().getUnit(), extFun, toVector(offset));
 
@@ -305,26 +305,26 @@ namespace backend {
 
 		core::ProgramPtr program = builder.parseProgram(
 		    R"(
-			let int = int<4>;
-			let uint = uint<4>;
+			alias int = int<4>;
+			alias uint = uint<4>;
 
-			let differentbla = lambda ('b x) -> unit {
-				decl auto m = x;
-				decl auto l = m;
+			def differentbla = (x : 'b) -> unit {
+				auto m = x;
+				auto l = m;
 			};
 
-			let bla = lambda ('a f) -> unit {
-				let anotherbla = lambda ('a x) -> unit {
-					decl auto m = x;
+			def bla = (f : 'a) -> unit {
+				let anotherbla = (x : 'a) -> unit {
+					auto m = x;
 				};
 				anotherbla(f);
 				differentbla(f);
-				parallel(job { decl auto l = f; });
+				parallel(job { auto l = f; });
 			};
 
 			int main() {
 				// some bla
-				decl int x = 10;
+				var int x = 10;
 				bla(x);
 				return 0;
 			}
@@ -345,25 +345,25 @@ namespace backend {
 		// create a code fragment allocating an array on the stack and using it
 		core::ProgramPtr program = builder.parseProgram(
 		    R"(
-			let int = int<4>;
-			let uint = uint<4>;
+			alias int = int<4>;
+			alias uint = uint<4>;
 
 			int main() {
 
 				// get a size for the variable-sized arrays
-				decl uint<inf> size = num_cast(12,lit(uint<inf>));
+				var uint<inf> size = num_cast(12,type_lit(uint<inf>));
 
 				// create two fixed-sized arrays on the stack and the heap
-				decl ref<array<int,10>> a = var(array_create(lit(10), list_empty(lit(int))));
-				decl ref<array<int,10>> b = new(array_create(lit(10), list_empty(lit(int))));
+				var ref<array<int,10>> a = ref_var(array_create(type_lit(10), list_empty(type_lit(int))));
+				var ref<array<int,10>> b = ref_new(array_create(type_lit(10), list_empty(type_lit(int))));
 
 //				// create two variable-sized arrays on the stack and the heap
-//				decl ref<array<int,size>> c = var(undefined(array<int,size>));
-//				decl ref<array<int,size>> d = new(undefined(array<int,size>));
+//				var ref<array<int,size>> c = ref_var(undefined(array<int,size>));
+//				var ref<array<int,size>> d = ref_new(undefined(array<int,size>));
 
 				// create two unknown-sized arrays on the stack and the heap
-				decl ref<array<int,inf>> e = ref_null(lit(array<int,inf>),lit(f),lit(f));
-				decl ref<array<int,inf>> f = ref_null(lit(array<int,inf>),lit(f),lit(f));
+				var ref<array<int,inf>> e = ref_null(type_lit(array<int,inf>),type_lit(f),type_lit(f));
+				var ref<array<int,inf>> f = ref_null(type_lit(array<int,inf>),type_lit(f),type_lit(f));
 
 				// use the arrays
 				a[2] = 123;
@@ -399,13 +399,13 @@ namespace backend {
 		// create a code fragment allocating an array on the stack and using it
 		core::ProgramPtr program = builder.parseProgram(
 		    R"(
-			let longlong = int<16>;
+			alias longlong = int<16>;
 
 			int<4> main() {
 				// just create a long-long variable
-				decl int<16> a = 10l;
+				var int<16> a = 10l;
 				// just create a long-long variable
-				decl uint<16> b = 10ul;
+				var uint<16> b = 10ul;
 				return 0;
 			}
 			)");
@@ -437,20 +437,19 @@ namespace backend {
 		core::IRBuilder builder(manager);
 
 		core::ProgramPtr program = builder.parseProgram(R"(
-    	int<4> main() {
-				
-				let f = lambda (ref<'a> a, ('a)=>bool c, ()=>'a v)->ref<'a> {
+				def f = (a : ref<'a>, c : ('a)=>bool, v : ()=>'a)->ref<'a> {
 					if(c(*a)) {
 						a = v();
 					}
 					return a;
 				};
+				int<4> main() {
 				
-				decl ref<int<4>> a = var(1);
-				decl ref<real<4>> b = var(2.0f);
+				var ref<int<4>> a = ref_var(1);
+				var ref<real<4>> b = ref_var(2.0f);
 				
-				f(a, lambda (int<4> a)=> true, lambda ()=>3);
-				f(b, lambda (real<4> b)=> true, lambda ()=>4.0f);
+				f(a, (a : int<4>)=> true, ()=>3);
+				f(b, (b : real<4>)=> true, ()=>4.0f);
 				
 				return 0;
 			}
@@ -482,13 +481,10 @@ namespace backend {
 		core::NodeManager manager;
 		core::IRBuilder builder(manager);
 
-		core::ProgramPtr program = builder.parseProgram("int<4> main() {"
-		                                                "	"
-		                                                "	let f = lambda ()->int<4> { return 4; };"
-		                                                "	let g = lambda (()=>'a a)->'a { return a(); };"
-		                                                "	"
+		core::ProgramPtr program = builder.parseProgram("def f = ()->int<4> { return 4; };"
+		                                                "def g = (a : ()=>'a)->'a { return a(); };"
+		                                                "int<4> main() {"
 		                                                "	g(f);"
-		                                                "	"
 		                                                "	return 0;"
 		                                                "}");
 
@@ -518,11 +514,11 @@ namespace backend {
 		core::NodeManager manager;
 		core::IRBuilder builder(manager);
 
-		core::ProgramPtr program = builder.parseProgram("let int = int<4>;"
+		core::ProgramPtr program = builder.parseProgram("alias int = int<4>;"
 		                                                ""
-		                                                "let f = lambda ()->int { return 4; };"
+		                                                "def f = ()->int { return 4; };"
 		                                                ""
-		                                                "let g = lambda (int x)->int { return x + 2; };"
+		                                                "def g = (x : int)->int { return x + 2; };"
 		                                                ""
 		                                                "int main() {"
 		                                                "	return g(f());"
@@ -595,12 +591,12 @@ namespace backend {
 
 		core::ProgramPtr program = builder.parseProgram(
 				R"(
-					let int = int<4>;
+					alias int = int<4>;
 		
-					let List = struct { int<4> value; ref<List> next; };
+					def struct List { value : int<4>; next : ref<List>; };
 				
 					int main() {
-						decl ref<List> x;
+						var ref<List> x;
 						return 0;
 					}
 				)"
@@ -638,15 +634,14 @@ namespace backend {
 
 		core::ProgramPtr program = builder.parseProgram(
 				R"(
-					let int = int<4>;
+					alias int = int<4>;
 		
-					let A, B = 
-							struct { int<4> value; ref<B> next; },
-							struct { int<4> value; ref<A> next; }
-					;
+					decl struct B;
+					def struct A { value : int<4>; next : ref<B>; };
+					def struct B { value : int<4>; next : ref<A>; };
 				
 					int main() {
-						decl ref<A> x;
+						var ref<A> x;
 						return 0;
 					}
 				)"
