@@ -290,7 +290,7 @@ namespace checks {
 		auto ok1 = builder.parent(builder.genericType("A"));
 		auto ok2 = builder.parent(builder.structType());
 		auto ok3 = builder.parent(builder.typeVariable("a"));
-		auto ok4 = builder.parent(builder.parseType("def struct a { x : ref<b>; } def struct b { x : ref<a>; } a"));
+		auto ok4 = builder.parent(builder.parseType("def struct a { x : ref<b>; }; def struct b { x : ref<a>; }; a"));
 
 
 		dumpText(ok4);
@@ -332,7 +332,7 @@ namespace checks {
 		auto err1 = builder.parseType("ref<a>", symbols);
 		auto err2 = builder.parseType("struct { x : ref<a>; }", symbols);
 		auto err3 = builder.parseType("let list = struct { next : ref<list>; value : ref<a>; } in list", symbols);
-		auto err4 = builder.parseExpr("decl struct list; def struct list { next : ref<list>; value : ref<a>; } lit(\"A\" : list)", symbols);
+		auto err4 = builder.parseExpr("decl struct list; def struct list { next : ref<list>; value : ref<a>; }; lit(\"A\" : list)", symbols);
 
 		// check the correct types
 		EXPECT_TRUE(check(ok1).empty()) << check(ok1);
@@ -654,7 +654,7 @@ namespace checks {
 		IRBuilder builder(manager);
 
 		// OK ... create a function literal
-		TagTypePtr typeA = builder.parseType("decl struct t; def struct t { a : A; next : ref<t>; } t").as<TagTypePtr>();
+		TagTypePtr typeA = builder.parseType("decl struct t; def struct t { a : A; next : ref<t>; }; t").as<TagTypePtr>();
 		TypePtr typeB = typeA->peel();
 
 		// all of the following should be supported

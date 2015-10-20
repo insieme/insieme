@@ -94,7 +94,7 @@ namespace transform {
 					x = x+1; 
 					if(x>b) { return x - b; } 
 				} 
-			}
+			};
 			{
 				var ref<int,f,f,plain> x = ref_var(0); 
 				$x = fun(3,6)$; 
@@ -127,7 +127,7 @@ namespace transform {
 		                                                       "		x = x+1; "
 		                                                       "		if(x>b) { return x - b; } "
 		                                                       "	} "
-		                                                       "} "
+		                                                       "}; "
 		                                                       "{"
 		                                                       "	var ref<int,f,f,plain> x = ref_var(0); "
 		                                                       "	$fun(3,6)$; "
