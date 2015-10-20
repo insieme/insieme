@@ -666,7 +666,7 @@ binary_op : expression "="  expression                                    { $$ =
           | expression "["  expression "]"                                { $$ = driver.genBinaryExpression(@$, "[",  $1, $3); }
           ;
 
-ternary_op : expression "?" expression ":" expression                     { $$ = driver.builder.ite(driver.getScalar($1), driver.builder.wrapLazy($3), driver.builder.wrapLazy($5)); }
+ternary_op : expression "?" expression ":" expression                     { $$ = driver.builder.ite(driver.getScalar($1), driver.builder.wrapLazy(driver.getScalar($3)), driver.builder.wrapLazy(driver.getScalar($5))); }
            ;
 
 this_expression : "this"                                                  { $$ = driver.genThis(@$); }
