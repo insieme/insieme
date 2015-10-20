@@ -62,15 +62,15 @@ namespace backend {
 		                                                                builder.namedValue("f", builder.undefined(builder.parseType("real<8>")))));
 
 		core::ProgramPtr program = builder.parseProgram(R"(
-			let gstruct = struct { vector<int<4>,20> a; real<8> f; };
+			alias gstruct = struct { a: vector<int<4>,20>; f : real<8>; };
 			
 			int<4> main() {
-				decl ref<gstruct> v1 = new(A);
+				var ref<gstruct> v1;
 				v1.a;
-				composite_member_access(*v1, lit("a" : identifier), lit(vector<int<4>,20>));
-				lambda (ref<gstruct> v2) -> unit {
+				composite_member_access(*v1, lit("a"), type_lit(vector<int<4>,20>));
+				(v2: ref<gstruct>) -> unit {
 					v2.a;
-					composite_member_access(*v2, lit("a" : identifier), lit(vector<int<4>,20>));
+					composite_member_access(*v2, lit("a"), type_lit(vector<int<4>,20>));
 				} (v1);
 				{
 					v1.a = lit("X":vector<int<4>,20>);
