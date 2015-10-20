@@ -275,7 +275,7 @@ namespace parser {
 				return builder.callExpr(fieldType, fieldAccess, expr, builder.getIdentifierLiteral(memberName), builder.getTypeLiteral(fieldType));
 
 				// check for the this literal
-			} else if (expr == genThis(l)) {
+			} else if (isInRecordType() && expr == genThis(l)) {
 				// search for the symbol with that name
 				const auto& access = findSymbol(l, memberName);
 				// if the symbol we found is a member access call
@@ -621,15 +621,7 @@ namespace parser {
 				auto thisParamType = thisParam->getType();
 				thisParamType = getTypeFromGenericTypeInTu(thisParamType);
 
-				// calling a member function of another struct
-				if(auto tagType = thisParamType.isa<TagTypePtr>()) {
-					// args.insert(args.begin(), builder.literal("ref", builder.refType(tagType->getTag())));
-					args.insert(args.begin(), builder.refVar(thisParam));
-
-					// this case
-				} else {
-					args.insert(args.begin(), thisParam);
-				}
+				args.insert(args.begin(), thisParam);
 			}
 
 			auto funcParamTypes = ftype.as<FunctionTypePtr>()->getParameterTypeList();
@@ -1059,6 +1051,10 @@ namespace parser {
 			currentRecordStack.pop_back();
 		}
 
+		bool InspireDriver::isInRecordType() {
+			return !currentRecordStack.empty();
+		}
+
 		GenericTypePtr InspireDriver::getThisType() {
 			assert_false(currentRecordStack.empty());
 			return currentRecordStack.back();
@@ -1182,7 +1178,6 @@ namespace parser {
 		void InspireDriver::error(const std::string& m) const { errors.push_back(ParserError(globLoc, m)); }
 
 		bool InspireDriver::whereErrors() const {
-			if(!errors.empty()) { printErrors(); }
 			return !errors.empty();
 		}
 
