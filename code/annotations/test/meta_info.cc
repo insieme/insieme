@@ -56,8 +56,8 @@ namespace annotations {
 		IRBuilder builder(manager);
 
 
-		auto fun = builder.parseExpr("let int = int<4>;"
-		                             "lambda (int a, int b)->int { return a*b; }");
+		auto fun = builder.parseExpr("alias int = int<4>;"
+		                             "(a: int, b: int)->int { return a*b; }");
 
 		// build annotation
 		test_info info;
