@@ -66,7 +66,7 @@ namespace measure {
 		NodeManager manager;
 		IRBuilder builder(manager);
 		StatementPtr stmt = builder.parseStmt("{"
-		                                      "	decl ref<int<4>> sum = var(0);"
+		                                      "	var ref<int<4>> sum = ref_var(0);"
 		                                      "	for(int<4> i = 10 .. 50 : 1) {"
 		                                      "		sum = sum + 1;"
 		                                      "	}"
@@ -92,7 +92,7 @@ namespace measure {
 		IRBuilder builder(manager);
 
 		StatementPtr stmt = builder.parseStmt("{"
-		                                      "	decl ref<int<4>> sum = var(0);"
+		                                      "	var ref<int<4>> sum = ref_var(0);"
 		                                      "	for(int<4> i = 10 .. 50 : 1) {"
 		                                      "		sum = sum + 1;"
 		                                      "	}"
@@ -170,19 +170,19 @@ namespace measure {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
-		vector<NodeAddress> stmts = builder.parseAddressesStatement("{"
-		                                                            "	let load = lambda (int<4> n)->int<4> {"
-		                                                            "		decl ref<int<4>> sum = var(0);"
-		                                                            "		for(int<4> i = 0 .. n) {"
-		                                                            " 			sum = sum / i;"
-		                                                            "			for(int<4> j = 0 .. 100000) {"
-		                                                            "				sum = sum + j;"
-		                                                            "			}"
-		                                                            "		}"
-		                                                            "		return *sum;"
-		                                                            "	};"
-		                                                            "	"
-		                                                            "	decl ref<int<4>> res = var(0);"
+		vector<NodeAddress> stmts = builder.parseAddressesStatement(""
+																	"def load = (n : int<4>)->int<4> {"
+																	"	var ref<int<4>> sum = ref_var(0);"
+																	"	for(int<4> i = 0 .. n) {"
+																	"			sum = sum / i;"
+																	"		for(int<4> j = 0 .. 100000) {"
+																	"			sum = sum + j;"
+																	"		}"
+																	"	}"
+																	"	return *sum;"
+																	"};"
+																	"{"
+		                                                            "	var ref<int<4>> res = ref_var(0);"
 		                                                            "	$for(int<4> i = 0 .. 5000) {"
 		                                                            "		$for(int<4> j = 0 .. 5000) {"
 		                                                            "			res = res + load(100000);"
@@ -292,13 +292,13 @@ namespace measure {
 		// a return with a n expression
 		EXPECT_TRUE(
 		    measure(
-		        builder.parseAddressesStatement("{ lambda ()->int<4> { for(int<4> i= 0 .. 10) { ${ return 1 + 2; }$ }; return 0; } (); }")[0].as<core::StatementAddress>(),
+		        builder.parseAddressesStatement("{ ()->int<4> { for(int<4> i= 0 .. 10) { ${ return 1 + 2; }$ }; return 0; } (); }")[0].as<core::StatementAddress>(),
 		        Metric::WALL_TIME)
 		        .isValid());
 
 
 		// two nested regions ending at the same point
-		vector<NodeAddress> addr = builder.parseAddressesStatement("{ lambda ()->int<4> { for(int<4> i= 0 .. 10) { ${ 2 + 3; ${ return 1 + 2; }$ }$ } ; return 0; } (); }");
+		vector<NodeAddress> addr = builder.parseAddressesStatement("{ ()->int<4> { for(int<4> i= 0 .. 10) { ${ 2 + 3; ${ return 1 + 2; }$ }$ } ; return 0; } (); }");
 		auto res = measure(toVector(addr[0].as<core::StatementAddress>(), addr[1].as<core::StatementAddress>()), toVector(Metric::WALL_TIME));
 
 		EXPECT_TRUE(res[addr[0].as<core::StatementAddress>()][Metric::WALL_TIME].isValid());
@@ -310,7 +310,7 @@ namespace measure {
 		NodeManager manager;
 		IRBuilder builder(manager);
 		StatementPtr stmt = builder.parseStmt("{"
-		                                      "	decl ref<int<4>> sum = var(0);"
+		                                      "	var ref<int<4>> sum = ref_var(0);"
 		                                      "	for(int<4> i = 10 .. 50 : 1) {"
 		                                      "		sum = sum + 1;"
 		                                      "	}"
@@ -440,7 +440,7 @@ namespace measure {
 		NodeManager manager;
 		IRBuilder builder(manager);
 		StatementPtr stmt = builder.parseStmt("{"
-		                                      "	decl ref<int<4>> sum = var(0);"
+		                                      "	var ref<int<4>> sum = ref_var(0);"
 		                                      "	for(int<4> i = 10 .. 50 : 1) {"
 		                                      "		for(int<4> j = 0 .. 80 : 1) {"
 		                                      "			sum = sum + 1;"
@@ -529,7 +529,7 @@ namespace measure {
 		NodeManager manager;
 		IRBuilder builder(manager);
 		StatementPtr stmt = builder.parseStmt("{"
-		                                      "	decl ref<int<4>> sum = var(0);"
+		                                      "	var ref<int<4>> sum = ref_var(0);"
 		                                      "	for(int<4> i = 1 .. 5000 : 1) {"
 		                                      "		for(int<4> j = 1 .. 5000 : 1) {"
 		                                      "			sum = sum + 1;"
