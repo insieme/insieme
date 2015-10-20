@@ -65,7 +65,7 @@ namespace backend {
 			alias gstruct = struct { a: vector<int<4>,20>; f : real<8>; };
 			
 			int<4> main() {
-				var ref<gstruct> v1;
+				var ref<gstruct> v1 = ref_new(A);
 				v1.a;
 				composite_member_access(*v1, lit("a"), type_lit(vector<int<4>,20>));
 				(v2: ref<gstruct>) -> unit {
