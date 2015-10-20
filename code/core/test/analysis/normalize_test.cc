@@ -120,7 +120,7 @@ namespace analysis {
 			                          "	return (y : int<4>)->int<4> {"
 			                          "		return f(y);"
 			                          "	}(x);"
-			                          "} f(3)");
+			                          "}; f(3)");
 
 		EXPECT_EQ("rec v0.{v0=fun(ref<int<4>,f,f,plain> v1) {return rec v2.{v2=fun(ref<int<4>,f,f,plain> v3) {return v0(ref_deref(v3));}}(ref_deref(v1));}}(3)", toString(*normalize(code)));
 	}
@@ -132,7 +132,7 @@ namespace analysis {
 		auto code = builder.parseExpr("def x = () -> unit {"
 		                              "	var int<inf> v40 = 3;"
 		                              "	var ref<array<int<4>,#v40>,f,f,plain> v50;"
-		                              "} x()");
+		                              "}; x()");
 
 		EXPECT_EQ("rec v0.{v0=fun() {int<inf> v1 = 3; ref<array<int<4>,v1>,f,f,plain> v2 = rec v0.{v0=fun(ref<'a,f,f,plain> v1) {ref<'a,f,f,plain> v2 = ref_alloc(type<'a>, mem_loc_stack); ref_assign(v2, ref_deref(v1)); return v2;}}(undefined(type<array<int<4>,v1>>));}}()", toString(*normalize(code)));
 	}
