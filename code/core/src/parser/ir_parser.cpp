@@ -123,33 +123,39 @@ namespace parser {
 
 	NodePtr parseAny(NodeManager& manager, const string& code, bool onFailThrow, const DefinitionMap& definitions, const TypeAliasMap& aliases) {
 		NodePtr x;
-		{
-			InspireDriver driver(code, manager);
-			saveSymbolTable(driver, definitions);
-			appendTypeAliases(driver, aliases);
-			x = driver.parseExpression();
-		}
-		if(!x) {
-			InspireDriver driver(code, manager);
-			saveSymbolTable(driver, definitions);
-			appendTypeAliases(driver, aliases);
-			x = driver.parseType();
-		}
-		if(!x) {
-			InspireDriver driver(code, manager);
-			saveSymbolTable(driver, definitions);
-			appendTypeAliases(driver, aliases);
-			x = driver.parseStmt();
-		}
-		if(!x) {
-			InspireDriver driver(code, manager);
-			saveSymbolTable(driver, definitions);
-			appendTypeAliases(driver, aliases);
-			x = driver.parseProgram();
-		}
+		try {
+			//first try to parse as an expression
+			x = parseExpr(manager, code, onFailThrow, definitions, aliases);
+			return x;
+		} catch (const IRParserException& ex) {
 
-		if(!x) {
-			std::cerr << "No way to parse the string, and because you use generic parse there is no way to provide errors, good luck there!" << std::endl;
+			//then try to parse as a type
+			try {
+				x = parseType(manager, code, onFailThrow, definitions, aliases);
+				return x;
+			} catch (const IRParserException& ex) {
+
+				//then try to parse as a statement
+				try {
+					x = parseStmt(manager, code, onFailThrow, definitions, aliases);
+					return x;
+				} catch (const IRParserException& ex) {
+
+					//finally try to parse as program
+					try {
+						x = parseProgram(manager, code, onFailThrow, definitions, aliases);
+						return x;
+					} catch (const IRParserException& ex) {
+
+						//if this failed and we should throw exceptions, then we do so
+						if (onFailThrow) {
+							throw IRParserException("No way to parse the string, and because you use generic parse there is no way to provide errors, good luck there!");
+						} else {
+							std::cerr << "No way to parse the string, and because you use generic parse there is no way to provide errors, good luck there!" << std::endl;
+						}
+					}
+				}
+			}
 		}
 		return x;
 	}

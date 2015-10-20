@@ -635,9 +635,9 @@ initializer : "<" type ">" "{" expressions "}"                            { $$ =
             | "(" non_empty_expressions ")"                               { $$ = driver.builder.tupleExpr($2); }
             ;
 
-unary_op : "-" expression                                                 { $$ = driver.builder.minus(driver.getScalar($2)); }       %prec UMINUS
-         | "*" expression                                                 { $$ = driver.genDerefExpr(@1, $2); }                      %prec UDEREF
-         | "!" expression                                                 { $$ = driver.builder.logicNeg(driver.getScalar($2)); }    %prec UNOT
+unary_op : "-" expression                                                 { $$ = driver.builder.minus(driver.getScalar(driver.getOperand($2))); }       %prec UMINUS
+         | "*" expression                                                 { $$ = driver.genDerefExpr(@1, $2); }                                         %prec UDEREF
+         | "!" expression                                                 { $$ = driver.builder.logicNeg(driver.getScalar(driver.getOperand($2))); }    %prec UNOT
          | expression "." "identifier"                                    { $$ = driver.genMemberAccess(@1, $1, $3); }
          | expression "." "int"                                           { $$ = driver.genTupleAccess(@1, $1, $3); }
          | expression "->" "identifier"                                   { $$ = driver.genMemberAccess(@1, $1, $3); }
@@ -666,7 +666,7 @@ binary_op : expression "="  expression                                    { $$ =
           | expression "["  expression "]"                                { $$ = driver.genBinaryExpression(@$, "[",  $1, $3); }
           ;
 
-ternary_op : expression "?" expression ":" expression                     { $$ = driver.builder.ite(driver.getScalar($1), driver.builder.wrapLazy($3), driver.builder.wrapLazy($5)); }
+ternary_op : expression "?" expression ":" expression                     { $$ = driver.builder.ite(driver.getScalar($1), driver.builder.wrapLazy(driver.getScalar($3)), driver.builder.wrapLazy(driver.getScalar($5))); }
            ;
 
 this_expression : "this"                                                  { $$ = driver.genThis(@$); }

@@ -409,6 +409,11 @@ namespace parser {
 			void endRecord();
 
 			/**
+			 * returns whether we currently are within a record type definition
+			 */
+			bool isInRecordType();
+
+			/**
 			 * Obtains the type of a this pointer in the currently defined record.
 			 */
 			GenericTypePtr getThisType();
