@@ -88,7 +88,7 @@ namespace pattern {
 					for(uint<4> k = 2u .. 100u) { 
 						v[i+j]; 
 					}; 
-		           decl ref<uint<4>> a = var(3u); 
+		            var ref<uint<4>> a = ref_var(3u);
 					a = i; 
 				}
 			}
@@ -151,7 +151,7 @@ namespace pattern {
 		IRBuilder builder(manager);
 
 		core::StatementPtr node = builder.parseStmt("for(uint<4> k = 2u .. 100u) { "
-		                                            "	decl ref<uint<4>> a = var(3u); "
+		                                            "	var ref<uint<4>> a = ref_var(3u);"
 		                                            "} ");
 
 		EXPECT_TRUE(node);
