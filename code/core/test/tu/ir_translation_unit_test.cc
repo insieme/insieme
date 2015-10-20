@@ -57,14 +57,14 @@ namespace tu {
 		IRTranslationUnit unit(mgr);
 
 		// check adding types
-		unit.addType(builder.parseType("A").as<core::GenericTypePtr>(), builder.parseType("struct { int<4> x; }").as<TagTypePtr>());
-		unit.addType(builder.parseType("B").as<core::GenericTypePtr>(), builder.parseType("struct { real<8> y; ref<A> a; }").as<TagTypePtr>());
+		unit.addType(builder.parseType("A").as<core::GenericTypePtr>(), builder.parseType("struct { x: int<4>; }").as<TagTypePtr>());
+		unit.addType(builder.parseType("B").as<core::GenericTypePtr>(), builder.parseType("struct { y: real<8>; a: ref<A>; }").as<TagTypePtr>());
 
 		// check adding functions
 		unit.addFunction(builder.parseExpr("lit(\"X\":()->unit)").as<core::LiteralPtr>(),
-		                 builder.parseExpr("lambda ()->unit { return; }").as<core::LambdaExprPtr>());
+		                 builder.parseExpr("()->unit { return; }").as<core::LambdaExprPtr>());
 		unit.addFunction(builder.parseExpr("lit(\"Y\":()->unit)").as<core::LiteralPtr>(),
-		                 builder.parseExpr("lambda ()->unit { decl int<4> x; return; }").as<core::LambdaExprPtr>());
+		                 builder.parseExpr("()->unit { var int<4> x; return; }").as<core::LambdaExprPtr>());
 
 		// check adding globals
 		unit.addGlobal(builder.parseExpr("lit(\"a\":ref<int<4>>)").as<core::LiteralPtr>(), builder.parseExpr("12"));
@@ -82,11 +82,11 @@ namespace tu {
 		IRTranslationUnit unit(mgr);
 
 		// check adding types
-		unit.addType(builder.parseType("A").as<core::GenericTypePtr>(), builder.parseType("struct { int<4> x; }").as<TagTypePtr>());
+		unit.addType(builder.parseType("A").as<core::GenericTypePtr>(), builder.parseType("struct { x: int<4>; }").as<TagTypePtr>());
 
 		// check adding functions
 		unit.addFunction(builder.parseExpr("lit(\"X\":()->unit)").as<core::LiteralPtr>(),
-		                 builder.parseExpr("lambda ()->unit { return; }").as<core::LambdaExprPtr>());
+		                 builder.parseExpr("()->unit { return; }").as<core::LambdaExprPtr>());
 
 		// check adding globals
 		unit.addGlobal(builder.parseExpr("lit(\"a\":ref<int<4>>)").as<core::LiteralPtr>(), builder.parseExpr("12"));
@@ -115,11 +115,11 @@ namespace tu {
 		IRTranslationUnit unit(mgr);
 
 		// check adding types
-		unit.addType(builder.parseType("A").as<core::GenericTypePtr>(), builder.parseType("struct { int<4> x; }").as<TagTypePtr>());
+		unit.addType(builder.parseType("A").as<core::GenericTypePtr>(), builder.parseType("struct { x : int<4>; }").as<TagTypePtr>());
 
 		// check adding functions
 		unit.addFunction(builder.parseExpr("lit(\"X\":()->unit)").as<core::LiteralPtr>(),
-		                 builder.parseExpr("lambda ()->unit { return; }").as<core::LambdaExprPtr>());
+		                 builder.parseExpr("()->unit { return; }").as<core::LambdaExprPtr>());
 
 		// check adding globals
 		unit.addGlobal(builder.parseExpr("lit(\"a\":ref<int<4>>)").as<core::LiteralPtr>(), builder.parseExpr("12"));
@@ -144,7 +144,7 @@ namespace tu {
 
 		IRTranslationUnit tu(mgr);
 
-		tu.addType(builder.genericType("a"), builder.parseType("struct a { int<4> x; }").as<TagTypePtr>());
+		tu.addType(builder.genericType("a"), builder.parseType("struct a { x : int<4>; }").as<TagTypePtr>());
 
 		std::cout << tu << "\n";
 
@@ -163,12 +163,12 @@ namespace tu {
 		core::IRBuilder builder(mgr);
 
 		IRTranslationUnit tu(mgr);
-		tu.addType(builder.genericType("d"), builder.parseType("struct d { ref<array<e,1>> x; }").as<TagTypePtr>());
-		tu.addType(builder.genericType("e"), builder.parseType("struct e { ref<array<f,1>> x; ref<array<d,1>> y; }").as<TagTypePtr>());
-		tu.addType(builder.genericType("f"), builder.parseType("struct f { ref<array<g,1>> x; ref<array<e,1>> y; }").as<TagTypePtr>());
-		tu.addType(builder.genericType("g"), builder.parseType("struct g { ref<array<f,1>> x; ref<array<a,1>> y; }").as<TagTypePtr>());
+		tu.addType(builder.genericType("d"), builder.parseType("struct d { x : ref<array<e,1>>; }").as<TagTypePtr>());
+		tu.addType(builder.genericType("e"), builder.parseType("struct e { x : ref<array<f,1>>; y : ref<array<d,1>>; }").as<TagTypePtr>());
+		tu.addType(builder.genericType("f"), builder.parseType("struct f { x : ref<array<g,1>>; y : ref<array<e,1>>; }").as<TagTypePtr>());
+		tu.addType(builder.genericType("g"), builder.parseType("struct g { x : ref<array<f,1>>; y : ref<array<a,1>>; }").as<TagTypePtr>());
 
-		tu.addType(builder.genericType("a"), builder.parseType("struct a { int<4> x; }").as<TagTypePtr>());
+		tu.addType(builder.genericType("a"), builder.parseType("struct a { x : int<4>; }").as<TagTypePtr>());
 
 		std::cout << tu << "\n";
 
