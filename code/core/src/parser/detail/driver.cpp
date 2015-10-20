@@ -275,7 +275,7 @@ namespace parser {
 				return builder.callExpr(fieldType, fieldAccess, expr, builder.getIdentifierLiteral(memberName), builder.getTypeLiteral(fieldType));
 
 				// check for the this literal
-			} else if (expr == genThis(l)) {
+			} else if (isInRecordType() && expr == genThis(l)) {
 				// search for the symbol with that name
 				const auto& access = findSymbol(l, memberName);
 				// if the symbol we found is a member access call
@@ -1057,6 +1057,10 @@ namespace parser {
 			assert_false(currentRecordStack.empty());
 			closeScope();
 			currentRecordStack.pop_back();
+		}
+
+		bool InspireDriver::isInRecordType() {
+			return !currentRecordStack.empty();
 		}
 
 		GenericTypePtr InspireDriver::getThisType() {
