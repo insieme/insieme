@@ -621,15 +621,7 @@ namespace parser {
 				auto thisParamType = thisParam->getType();
 				thisParamType = getTypeFromGenericTypeInTu(thisParamType);
 
-				// calling a member function of another struct
-				if(auto tagType = thisParamType.isa<TagTypePtr>()) {
-					// args.insert(args.begin(), builder.literal("ref", builder.refType(tagType->getTag())));
-					args.insert(args.begin(), builder.refVar(thisParam));
-
-					// this case
-				} else {
-					args.insert(args.begin(), thisParam);
-				}
+				args.insert(args.begin(), thisParam);
 			}
 
 			auto funcParamTypes = ftype.as<FunctionTypePtr>()->getParameterTypeList();

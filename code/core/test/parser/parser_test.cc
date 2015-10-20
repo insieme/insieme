@@ -216,8 +216,8 @@ namespace parser {
 		                          "};"
 		                          "def struct B {"
 		                          "  lambda f : () -> int<4> {"
-		                          "    auto a = <A> { 5 };"
-		                          "    return a.a;"
+		                          "    var ref<A,f,f,plain> a;"
+		                          "    return *(a.a);"
 		                          "  }"
 		                          "}; B"));
 
@@ -225,9 +225,9 @@ namespace parser {
 		                          "  a : int<4>;"
 		                          "};"
 		                          "def struct B {"
-		                          "  a : A;"
+		                          "  a : ref<A,f,f,plain>;"
 		                          "  lambda f : () -> int<4> {"
-		                          "    return a.a;"
+		                          "    return *(a.a);"
 		                          "  }"
 		                          "}; B"));
 
@@ -245,9 +245,9 @@ namespace parser {
 		                          "  a : int<4>;"
 		                          "};"
 		                          "def struct B {"
-		                          "  a : A;"
+		                          "  a : ref<A,f,f,plain>;"
 		                          "  lambda f : () -> int<4> {"
-		                          "    return this.a.a;"
+		                          "    return *(this.a.a);"
 		                          "  }"
 		                          "}; B"));
 
@@ -267,7 +267,7 @@ namespace parser {
 		                          "  }"
 		                          "};"
 		                          "def struct B {"
-		                          "  lambda g : (a : A) -> int<4> {"
+		                          "  lambda g : (a : ref<A,f,f,plain>) -> int<4> {"
 		                          "    return a.f();"
 		                          "  }"
 		                          "}; B"));
@@ -276,7 +276,7 @@ namespace parser {
 		                          "  lambda f : () -> int<4> { return 1; }"
 		                          "};"
 		                          "def struct B {"
-		                          "  a : A;"
+		                          "  a : ref<A,f,f,plain>;"
 		                          "  lambda g : () -> int<4> {"
 		                          "    return a.f();"
 		                          "  }"
@@ -286,7 +286,7 @@ namespace parser {
 		                          "  lambda f : () -> int<4> { return 1; }"
 		                          "};"
 		                          "def struct B {"
-		                          "  a : A;"
+		                          "  a : ref<A,f,f,plain>;"
 		                          "  lambda g : () -> int<4> {"
 		                          "    return this.a.f();"
 		                          "  }"
