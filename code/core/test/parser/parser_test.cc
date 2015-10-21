@@ -585,17 +585,19 @@ namespace parser {
 		                                "}"));
 
 
-		auto addresses1 = builder.parseAddressesStatement("{" //correct opening of scope before the parameters of the lambda
+		{
+		auto addresses = builder.parseAddressesStatement("{" //correct opening of scope before the parameters of the lambda
 		                                                  "  var int<4> a = 0;"
 		                                                  "  (a : int<8>) -> unit { $a$; };"
 		                                                  "  $a$;"
 		                                                  "}");
-		ASSERT_EQ(2, addresses1.size());
-		EXPECT_EQ(nm.getLangBasic().getInt8(), addresses1[0].getAddressedNode().as<CallExprPtr>()->getType());
-		EXPECT_EQ(nm.getLangBasic().getInt4(), addresses1[1].getAddressedNode().as<VariablePtr>()->getType());
+		ASSERT_EQ(2, addresses.size());
+		EXPECT_EQ(nm.getLangBasic().getInt8(), addresses[0].getAddressedNode().as<CallExprPtr>()->getType());
+		EXPECT_EQ(nm.getLangBasic().getInt4(), addresses[1].getAddressedNode().as<VariablePtr>()->getType());
+		}
 
-
-		auto addresses2 = builder.parseAddressesStatement("{" //correct opening of scope before the parameters of the lambda as well as in compound statements
+		{
+		auto addresses = builder.parseAddressesStatement("{" //correct opening of scope before the parameters of the lambda as well as in compound statements
 		                                                  "  var int<4> a = 0;"
 		                                                  "  (a : int<8>) -> unit {"
 		                                                  "    $a$;"
@@ -606,10 +608,29 @@ namespace parser {
 		                                                  "  };"
 		                                                  "  $a$;"
 		                                                  "}");
-		ASSERT_EQ(3, addresses2.size());
-		EXPECT_EQ(nm.getLangBasic().getInt8(),  addresses2[0].getAddressedNode().as<CallExprPtr>()->getType());
-		EXPECT_EQ(nm.getLangBasic().getInt16(), addresses2[1].getAddressedNode().as<VariablePtr>()->getType());
-		EXPECT_EQ(nm.getLangBasic().getInt4(),  addresses2[2].getAddressedNode().as<VariablePtr>()->getType());
+		ASSERT_EQ(3, addresses.size());
+		EXPECT_EQ(nm.getLangBasic().getInt8(),  addresses[0].getAddressedNode().as<CallExprPtr>()->getType());
+		EXPECT_EQ(nm.getLangBasic().getInt16(), addresses[1].getAddressedNode().as<VariablePtr>()->getType());
+		EXPECT_EQ(nm.getLangBasic().getInt4(),  addresses[2].getAddressedNode().as<VariablePtr>()->getType());
+		}
+
+		{
+		auto type = builder.parseType("struct A {" //correct access to field and param with the same name
+		                              "  a : int<4>;"
+		                              "  lambda f : (a : int<8>) -> unit {"
+		                              "    a;"
+		                              "    this.a;"
+		                              "  }"
+		                              "}");
+		auto memberFunction = type.as<TagTypePtr>()->getRecord()->getMemberFunctions()[0];
+		auto body = memberFunction->getImplementation().as<LambdaExprPtr>()->getBody();
+
+		auto stmt1 = body[0];
+		auto stmt2 = body[1];
+
+		EXPECT_EQ(nm.getLangBasic().getInt8(), stmt1.as<CallExprPtr>()->getType());
+		EXPECT_EQ(nm.getLangBasic().getInt4(), stmt2.as<CallExprPtr>()->getType());
+		}
 
 
 		EXPECT_FALSE(test_expression(nm, "decl a : int<4>;" //declaring the same variable twice
