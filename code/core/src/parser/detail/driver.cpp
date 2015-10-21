@@ -277,7 +277,7 @@ namespace parser {
 				// check for the this literal
 			} else if (isInRecordType() && expr == genThis(l)) {
 				// search for the symbol with that name
-				const auto& access = findSymbol(l, memberName);
+				const auto& access = findSymbolInRecordDefiniton(l, memberName);
 				// if the symbol we found is a member access call
 				if (analysis::isCallOf(access, fieldAccess) || analysis::isCallOf(access, memberFunctionAccess)) {
 					CallExprPtr callExpr = access.as<CallExprPtr>();
@@ -861,10 +861,10 @@ namespace parser {
 
 		// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Scope management  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-		NodePtr InspireDriver::lookupDeclared(const std::string& name) {		
+		NodePtr InspireDriver::lookupDeclared(const std::string& name) {
 			// look in declared symbols
 			for(auto it = scopes.rbegin(); it != scopes.rend(); ++it) {
-				const DefinitionMap& cur = it->declaredSymbols;
+				const DefinitionMap& cur = (*it)->declaredSymbols;
 				auto pos = cur.find(name);
 				if(pos != cur.end()) {
 					return pos->second();
@@ -900,6 +900,16 @@ namespace parser {
 			return result.as<ExpressionPtr>();
 		}
 
+		ExpressionPtr InspireDriver::findSymbolInRecordDefiniton(const location& l, const std::string& name) {
+			assert_false(currentRecordStack.empty());
+			const auto& symbols = currentRecordStack.back().scope->declaredSymbols;
+			auto pos = symbols.find(name);
+			if(pos != symbols.end()) {
+				return pos->second().as<ExpressionPtr>();
+			}
+			return nullptr;
+		}
+
 		TypePtr InspireDriver::findType(const location& l, const std::string& name) {
 			assert_false(scopes.empty()) << "Missing global scope!";
 
@@ -907,7 +917,7 @@ namespace parser {
 
 			// look in declared types
 			for(auto it = scopes.rbegin(); it != scopes.rend(); ++it) {
-				const DefinitionMap& cur = it->declaredTypes;
+				const DefinitionMap& cur = (*it)->declaredTypes;
 				auto pos = cur.find(name);
 				if(pos != cur.end()) {
 					result = pos->second();
@@ -925,14 +935,16 @@ namespace parser {
 			return result.as<TypePtr>();
 		}
 
-		void InspireDriver::openScope() { scopes.push_back(Scope()); }
+		void InspireDriver::openScope() {
+			scopes.push_back(std::make_shared<Scope>());
+		}
 
 		void InspireDriver::closeScope() {
 			assert_gt(scopes.size(), 1) << "Attempted to pop global scope!";
 			scopes.pop_back();
 		}
 
-		InspireDriver::Scope& InspireDriver::getCurrentScope() {
+		std::shared_ptr<InspireDriver::Scope> InspireDriver::getCurrentScope() {
 			assert_false(scopes.empty()) << "Missing global scope!";
 			return scopes.back();
 		}
@@ -955,12 +967,12 @@ namespace parser {
 			if(name == "_") { return; }
 
 			// make sure that there isn't already a declaration for this symbol
-			if(getCurrentScope().declaredSymbols.find(name) != getCurrentScope().declaredSymbols.end()) {
+			if(getCurrentScope()->declaredSymbols.find(name) != getCurrentScope()->declaredSymbols.end()) {
 				error(l, format("Symbol %s has already been declared", name));
 				return;
 			}
 
-			getCurrentScope().declaredSymbols[name] = factory;
+			getCurrentScope()->declaredSymbols[name] = factory;
 		}
 
 		void InspireDriver::declareSymbol(const location& l, const std::string& name, const ExpressionPtr& node) {
@@ -968,7 +980,7 @@ namespace parser {
 		}
 
 		bool InspireDriver::isSymbolDeclaredInCurrentScope(const std::string name) {
-			return getCurrentScope().declaredSymbols.find(name) != getCurrentScope().declaredSymbols.end();
+			return getCurrentScope()->declaredSymbols.find(name) != getCurrentScope()->declaredSymbols.end();
 		}
 
 		void InspireDriver::declareType(const location& l, const std::string& name, const TypePtr& node) {
@@ -977,21 +989,21 @@ namespace parser {
 			if(!checkSymbolName(l, name)) { return; }
 
 			// make sure that there isn't already a declaration for this type
-			if(getCurrentScope().declaredTypes.find(name) != getCurrentScope().declaredTypes.end()) {
+			if(getCurrentScope()->declaredTypes.find(name) != getCurrentScope()->declaredTypes.end()) {
 				error(l, format("Type %s has already been declared", name));
 				return;
 			}
 
 			// insert it into the declared types
-			getCurrentScope().declaredTypes[name] = [=]() -> NodePtr { return node; };
+			getCurrentScope()->declaredTypes[name] = [=]() -> NodePtr { return node; };
 		}
 
 		bool InspireDriver::isTypeDeclaredInCurrentScope(const std::string name) {
-			return getCurrentScope().declaredTypes.find(name) != getCurrentScope().declaredTypes.end();
+			return getCurrentScope()->declaredTypes.find(name) != getCurrentScope()->declaredTypes.end();
 		}
 
 		void InspireDriver::addTypeAlias(const TypePtr& pattern, const TypePtr& substitute) {
-			auto& aliases = getCurrentScope().aliases;
+			auto& aliases = getCurrentScope()->aliases;
 			assert_true(aliases.find(pattern) == aliases.end());
 			aliases[pattern] = substitute;
 		}
@@ -1003,7 +1015,7 @@ namespace parser {
 
 			// run through alias lists
 			for(auto it = scopes.rbegin(); it != scopes.rend(); ++it) {
-				for(const auto& cur : it->aliases) {
+				for(const auto& cur : (*it)->aliases) {
 					// check whether pattern matches
 					if(auto sub = types::match(mgr, type, cur.first)) {
 						// compute substitution
@@ -1036,14 +1048,13 @@ namespace parser {
 		}
 
 		void InspireDriver::beginRecord(const location& l, const std::string& name) {
-			const auto key = builder.genericType(name);
+			auto key = builder.genericType(name);
 
 			// only declare the type implicitly if it hasn't already been declared
 			if(!isTypeDeclaredInCurrentScope(name)) { declareType(l, name, key); }
 
-			currentRecordStack.push_back(key);
-
 			openScope();
+			currentRecordStack.push_back({ key, getCurrentScope() });
 		}
 
 		void InspireDriver::endRecord() {
@@ -1058,7 +1069,7 @@ namespace parser {
 
 		GenericTypePtr InspireDriver::getThisType() {
 			assert_false(currentRecordStack.empty());
-			return currentRecordStack.back();
+			return currentRecordStack.back().record;
 		}
 
 		void InspireDriver::importExtension(const location& l, const std::string& extensionName) {
@@ -1086,7 +1097,7 @@ namespace parser {
 			}
 
 			// import type aliases
-			auto& aliases = getCurrentScope().aliases;
+			auto& aliases = getCurrentScope()->aliases;
 			for(const auto& cur : extension.getTypeAliases()) {
 				if(aliases.find(cur.first) != aliases.end()) {
 					assert_true(aliases[cur.first] == cur.second) << "Confliction type alias for " << *(cur.first)

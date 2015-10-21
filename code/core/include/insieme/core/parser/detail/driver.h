@@ -86,7 +86,7 @@ namespace parser {
 
 			mutable std::vector<ParserError> errors;
 
-			std::vector<Scope> scopes;
+			std::vector<std::shared_ptr<Scope>> scopes;
 
 		  public:
 
@@ -112,7 +112,12 @@ namespace parser {
 			InspireParser parser;
 			mutable bool printedErrors;
 
-			std::vector<GenericTypePtr> currentRecordStack;
+			struct RecordStackEntry {
+				GenericTypePtr record;
+				std::shared_ptr<Scope> scope;
+			};
+
+			std::vector<RecordStackEntry> currentRecordStack;
 
 			/**
 			 * constructs a struct expression
@@ -348,6 +353,11 @@ namespace parser {
 			ExpressionPtr findSymbol(const location& l, const std::string& name);
 
 			/**
+			 * finds a symbol declaration for a member in the current record definition scope
+			 */
+			ExpressionPtr findSymbolInRecordDefiniton(const location& l, const std::string& name);
+
+			/**
 			 * finds a previously defined type symbol
 			 */
 			TypePtr findType(const location& l, const std::string& name);
@@ -365,7 +375,7 @@ namespace parser {
 			/**
 			 * returns the current scope
 			 */
-			Scope& getCurrentScope();
+			std::shared_ptr<InspireDriver::Scope> getCurrentScope();
 
 			/**
 			 * Checks the given symbol name for validity
