@@ -731,6 +731,27 @@ namespace parser {
 			return genCall(l, callable, params);
 		}
 
+		ExpressionPtr InspireDriver::genDestructorCall(const location& l, const std::string name, const ExpressionPtr param) {
+			//lookup the type in the translation unit
+			auto key = builder.genericType(name);
+			TagTypePtr type = tu[key].as<TagTypePtr>();
+
+			if (!type) {
+				error(l, format("Type %s hasn't been defined", name));
+				return nullptr;
+			}
+
+			const auto& destructor = type->getRecord()->getDestructor();
+
+			//check argument type
+			if (!types::isSubTypeOf(param->getType(), analysis::getReferencedType(destructor.as<LambdaExprPtr>()->getParameterList()[0]->getType()))) {
+				error(l, "This-pointer argument for destructor call is of wrong type");
+				return nullptr;
+			}
+
+			return genCall(l, destructor, toVector(param));
+		}
+
 		ExpressionPtr InspireDriver::genStructExpression(const location& l, const TypePtr& type, const ExpressionList& list) {
 			// check for null
 			if(!type) {
