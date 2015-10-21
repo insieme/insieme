@@ -1,34 +1,30 @@
 
-let int = int<4>;
+alias int = int<4>;
 
-let C = struct {
-	int sum;
-};
+def struct C {
 
-let Ctor = lambda ctor C::() {
-	this.sum = 0;
-};
+	sum : ref<int>;
 
-let add = lambda C::(int x)->unit {
-	this.sum = this.sum + x;
-};
+	ctor () {
+		sum = 0;
+	}
 
-let getSum = lambda C::()->int {
-	return *this.sum;
-};
-
-let newObj = lambda (ctor 'a::() x)->ref<'a> {
-	return x(new(undefined('a)));
+	lambda add : (x : int)->unit {
+		this.sum = this.sum + x;
+	}
+	
+	lambda getSum : ()->int {
+		return *sum;
+	}
 };
 
 unit main() {
 
 	// create a new object instance
-    decl ref<C> c = newObj(Ctor);
+	var ref<C> c = C::(ref_new(undefined(C)));
 	
 	// work with the object
 	print("%d\n", c->getSum());
 	print("%d\n", c->add(3));
 	print("%d\n", c->getSum());
-	
 }
