@@ -1,23 +1,21 @@
 
-let int = int<4>;
+alias int = int<4>;
 
-let intRef = struct { ref<int> _cpp_ref; };
-let refType = struct { ref<'a> _cpp_ref; };
+alias intRef = struct { _cpp_ref : ref<int>; };
+alias refType = struct { _cpp_ref : ref<'a>; };
 
-let cpp2ir = lambda (struct { ref<'a> _cpp_ref; } x)->ref<'a> { return x._cpp_ref; };
+def cpp2ir = (x : refType)->ref<'a> { return x._cpp_ref; };
 
-let ir2cpp = lambda (ref<'a> x)->struct { ref<'a> _cpp_ref; } { return struct refType { x }; };
-
-let dummy = lambda (struct {} x) -> struct {} { return x; };
+def ir2cpp = (x : ref<'a>)->refType { return <refType> { x }; };
 
 unit main() {
 	
 	// create a reference
-	decl ref<int> x;
+	var ref<int> x;
 	
 	// should work with explict type ..
-	decl intRef y = ir2cpp(x);
+	var intRef y = ir2cpp(x);
 
 	// ... and auto
-	decl auto z = ir2cpp(x);
+	auto z = ir2cpp(x);
 }
