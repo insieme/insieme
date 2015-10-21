@@ -667,6 +667,70 @@ namespace parser {
 			return res;
 		}
 
+		ExpressionPtr InspireDriver::genConstructorCall(const location& l, const std::string name, ExpressionList params) {
+			//lookup the type in the translation unit
+			auto key = builder.genericType(name);
+			TagTypePtr type = tu[key].as<TagTypePtr>();
+
+			if (!type) {
+				error(l, format("Type %s hasn't been defined", name));
+				return nullptr;
+			}
+
+			//get a list of all the constructors of the class
+			const auto& constructors = type->getRecord()->getConstructors();
+
+			//the final constructor we will call
+			ExpressionPtr callable;
+
+			//search in all the constructors
+			for (const auto& constructor : constructors) {
+				const auto& constructorParams = constructor.as<LambdaExprPtr>()->getParameterList();
+
+				//first check the number of params
+				if (constructorParams.size() != params.size()) {
+					continue;
+				}
+
+				//then try to find an exact match
+				bool match = true;
+				for (unsigned i = 0; i < params.size(); ++i) {
+					if (params[i]->getType() != analysis::getReferencedType(constructorParams[i]->getType())) {
+						match = false;
+						break;
+					}
+				}
+				if (match) {
+					callable = constructor;
+					break;
+				}
+
+				//otherwise try to find a match using sub-typing rules
+				match = true;
+				for (unsigned i = 0; i < params.size(); ++i) {
+					if (!types::isSubTypeOf(params[i]->getType(), analysis::getReferencedType(constructorParams[i]->getType()))) {
+						match = false;
+						break;
+					}
+				}
+				if (match) {
+					//don't overwrite the first partial match we found
+					if (!callable) {
+						callable = constructor;
+					}
+				}
+			}
+
+			//if we didn find a valid constructor to call
+			if (!callable) {
+				error(l, "Couldn't find a constructor to call with the given arguments");
+				return nullptr;
+			}
+
+			//re-use the already existing functionality in genCall for creating the actual call
+			return genCall(l, callable, params);
+		}
+
 		ExpressionPtr InspireDriver::genStructExpression(const location& l, const TypePtr& type, const ExpressionList& list) {
 			// check for null
 			if(!type) {

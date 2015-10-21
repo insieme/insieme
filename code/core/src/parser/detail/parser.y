@@ -326,8 +326,8 @@ constructors : constructors constructor                                     { $1
              |                                                              { $$ = LambdaExprList(); }
              ;
 
-constructor : "ctor"                                                        { driver.openScope(); }
-                     "(" parameters ")" compound_statement_no_scope         { $$ = driver.genConstructor(@$, $4, $6); driver.closeScope(); }
+constructor : "ctor" "(" parameters                                         { driver.openScope(); driver.registerParameters(@3, $3); }
+                                    ")" compound_statement_no_scope         { $$ = driver.genConstructor(@$, $3, $6); driver.closeScope(); }
             ;
 
 destructor : "dtor" "(" ")" compound_statement                              { $$ = driver.genDestructor(@$, $4); }
@@ -570,6 +570,7 @@ literal : "true"                                                          { $$ =
 // -- call --
 
 call : expression "(" expressions ")"                                     { $$ = driver.genCall(@$, $1, $3); }
+     | "identifier" "::" "(" expressions ")"                              { $$ = driver.genConstructorCall(@$, $1, $4); }
      ;
 
 

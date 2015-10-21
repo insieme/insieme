@@ -275,6 +275,11 @@ namespace parser {
 			ExpressionPtr genCall(const location& l, const ExpressionPtr& func, ExpressionList params);
 
 			/**
+			 * generates a call expression
+			 */
+			ExpressionPtr genConstructorCall(const location& l, const std::string name, ExpressionList params);
+
+			/**
 			 * constructs an initializer expression according to the given type and expression list
 			 */
 			ExpressionPtr genInitializerExpr(const location& l, const TypePtr& type, const ExpressionList& list);
