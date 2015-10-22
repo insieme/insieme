@@ -387,6 +387,16 @@ namespace parser {
 				return nullptr;
 			}
 
+			//check for duplicate member function names
+			//TODO remove this restriction
+			std::set<std::string> memberFunctionNames;
+			for_each(mfuns, [&](const MemberFunctionPtr& fun) { memberFunctionNames.insert(fun->getName()->getValue()); });
+			for_each(pvmfuns, [&](const PureVirtualMemberFunctionPtr& fun) { memberFunctionNames.insert(fun->getName()->getValue()); });
+			if (memberFunctionNames.size() != mfuns.size() + pvmfuns.size()) {
+				error(l, "Duplicate member function names detected");
+				return nullptr;
+			}
+
 			TagTypePtr res;
 
 			// check whether a default constructor is required
@@ -531,8 +541,6 @@ namespace parser {
 		 * generates a member function for the currently defined record type
 		 */
 		MemberFunctionPtr InspireDriver::genMemberFunction(const location& l, bool virtl, bool cnst, bool voltile, const std::string& name, const VariableList& params, const TypePtr& retType, const StatementPtr& body, bool isLambda) {
-			//build the lambda
-
 			assert_false(currentRecordStack.empty()) << "Not within record definition!";
 
 			// get this-type
