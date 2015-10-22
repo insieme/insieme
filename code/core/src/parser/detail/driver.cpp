@@ -270,9 +270,9 @@ namespace parser {
 				// create access
 				if(analysis::isRefType(exprType)) {
 					const auto& refAccess = expr->getNodeManager().getLangExtension<core::lang::ReferenceExtension>().getRefMemberAccess();
-					return builder.callExpr(builder.refType(fieldType), refAccess, expr, builder.getIdentifierLiteral(memberName), builder.getTypeLiteral(fieldType));
+					return builder.callExpr(refAccess, expr, builder.getIdentifierLiteral(memberName), builder.getTypeLiteral(fieldType));
 				}
-				return builder.callExpr(fieldType, fieldAccess, expr, builder.getIdentifierLiteral(memberName), builder.getTypeLiteral(fieldType));
+				return builder.callExpr(fieldAccess, expr, builder.getIdentifierLiteral(memberName), builder.getTypeLiteral(fieldType));
 
 				// check for the this literal
 			} else if (isInRecordType() && expr == genThis(l)) {

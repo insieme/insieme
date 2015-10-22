@@ -661,6 +661,62 @@ namespace parser {
 		                           "A"));
 	}
 
+	TEST(IR_Parser, References) {
+		NodeManager nm;
+		IRBuilder builder(nm);
+
+		{
+			auto addresses = builder.parseAddressesStatement("def struct A {" //check that member access returns the correct ref/non-ref variant
+			                                                 "  a : int<4>;"
+			                                                 "};"
+			                                                 "{"
+			                                                 "  var A a;"
+			                                                 "  var ref<A,f,f,plain> ra;"
+			                                                 "  $a.a$;"
+			                                                 "  $ra.a$;"
+			                                                 "}");
+			ASSERT_EQ(2, addresses.size());
+			EXPECT_FALSE(analysis::isRefType(addresses[0].getAddressedNode().as<ExpressionPtr>()->getType()));
+			EXPECT_TRUE( analysis::isRefType(addresses[1].getAddressedNode().as<ExpressionPtr>()->getType()));
+		}
+
+		{
+			auto addresses = builder.parseAddressesStatement("def struct A {" //check that member access returns the correct ref variant
+			                                                 "  a : int<4>;"
+			                                                 "};"
+			                                                 "{"
+			                                                 "  var ref<A,f,f,plain> ra;"
+			                                                 "  var ref<A,t,f,plain> ca;"
+			                                                 "  var ref<A,f,t,plain> va;"
+			                                                 "  var ref<A,t,t,plain> cva;"
+			                                                 "  $ra.a$;"
+			                                                 "  $ca.a$;"
+			                                                 "  $va.a$;"
+			                                                 "  $cva.a$;"
+			                                                 "}");
+			ASSERT_EQ(4, addresses.size());
+			auto reference0 = lang::ReferenceType(addresses[0].getAddressedNode().as<ExpressionPtr>()->getType());
+			EXPECT_FALSE(reference0.isConst());
+			EXPECT_FALSE(reference0.isVolatile());
+			EXPECT_TRUE (reference0.isPlain());
+
+			auto reference1 = lang::ReferenceType(addresses[1].getAddressedNode().as<ExpressionPtr>()->getType());
+			EXPECT_TRUE (reference1.isConst());
+			EXPECT_FALSE(reference1.isVolatile());
+			EXPECT_TRUE (reference1.isPlain());
+
+			auto reference2 = lang::ReferenceType(addresses[2].getAddressedNode().as<ExpressionPtr>()->getType());
+			EXPECT_FALSE(reference2.isConst());
+			EXPECT_TRUE (reference2.isVolatile());
+			EXPECT_TRUE (reference2.isPlain());
+
+			auto reference3 = lang::ReferenceType(addresses[3].getAddressedNode().as<ExpressionPtr>()->getType());
+			EXPECT_TRUE (reference3.isConst());
+			EXPECT_TRUE (reference3.isVolatile());
+			EXPECT_TRUE (reference3.isPlain());
+		}
+	}
+
 } // parser
 } // core
 } // insieme
