@@ -1072,6 +1072,43 @@ namespace analysis {
 		return false;
 	}
 
+	bool hasFreeControlStatement(const StatementPtr& stmt, NodeType controlStmt, const vector<NodeType>& pruneStmts) {
+		bool hasFree = false;
+		visitDepthFirstOncePrunable(stmt, [&](const NodePtr& cur) {
+			auto curType = cur->getNodeType();
+			if(::contains(pruneStmts, curType)) {
+				return true; // do not descent here
+			}
+			if(cur->getNodeType() == controlStmt) {
+				hasFree = true; // "bound" stmt found
+			}
+			return hasFree;
+		});
+		return hasFree;
+	}
+
+	bool isOutlineAble(const StatementPtr& stmt, bool allowReturns) {
+		if(!allowReturns) {
+			// the statement must not contain a "free" return
+			if(hasFreeReturnStatement(stmt)) { return false; }
+		}
+		// search for "bound" break or continue statements
+		bool hasFreeBreakOrContinue = hasFreeContinueStatement(stmt) || hasFreeBreakStatement(stmt);
+		return !hasFreeBreakOrContinue;
+	}
+
+	bool hasFreeBreakStatement(const StatementPtr& stmt) {
+		return hasFreeControlStatement(stmt, NT_BreakStmt, { NT_ForStmt, NT_SwitchStmt, NT_WhileStmt, NT_LambdaExpr });
+	}
+
+	bool hasFreeContinueStatement(const StatementPtr& stmt) {
+		return hasFreeControlStatement(stmt, NT_ContinueStmt, { NT_ForStmt, NT_WhileStmt, NT_LambdaExpr });
+	}
+
+	bool hasFreeReturnStatement(const StatementPtr& stmt) {
+		return hasFreeControlStatement(stmt, NT_ReturnStmt, { NT_LambdaExpr });
+	}
+
 } // end namespace utils
 } // end namespace core
 } // end namespace insieme

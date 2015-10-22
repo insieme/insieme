@@ -66,7 +66,6 @@ namespace irp = insieme::core::pattern::irp;
 // - Also support more ways to write the increment expression
 // - Handle the case where the original loop variable is used after the while (by assigning to it either in or after the for)
 // - Handle non-int loops (e.g. for C++) by constructing the required int range, looping over it and setting the iterator variable internally
-// - check that there are no continue or break statements before converting
 
 namespace insieme {
 namespace frontend {
@@ -201,10 +200,14 @@ namespace extensions {
 			auto body = whileAddr.getAddressedNode()->getBody();
 			VLOG(1) << "======= START WHILE TO FOR ===========\n" << dumpColor(match.getRoot().getAddressedNode());
 			
-			auto cvars = core::analysis::getFreeVariables(condition);
-			VLOG(1) << "--- cvars:\n " << cvars << "\n";
+			// check if body contains flow alterating stmts (break or return. continue is allowed.)
+			bool flowAlteration = core::analysis::hasFreeBreakStatement(body) || core::analysis::hasFreeReturnStatement(body);
+			VLOG(1) << "--- flow alteration: " << flowAlteration << "\n";
+			if(flowAlteration) return original;
 
 			// if more than one free variable in the condition -> we certainly can't create a for for this
+			auto cvars = core::analysis::getFreeVariables(condition);
+			VLOG(1) << "--- cvars:\n " << cvars << "\n";
 			if(cvars.size() > 1) return original;
 
 			auto cvar = cvars.front();
