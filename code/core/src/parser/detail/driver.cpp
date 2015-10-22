@@ -414,24 +414,25 @@ namespace parser {
 			}
 		}
 
-		LambdaExprPtr InspireDriver::genLambda(const location& l, const VariableList& params, const TypePtr& retType, const StatementPtr& body, bool isLambda) {
+		LambdaExprPtr InspireDriver::genLambda(const location& l, const VariableList& params, const TypePtr& retType, const StatementPtr& body, bool isLambda, const FunctionKind functionKind) {
 			// TODO: cast returns to appropriate type
 			TypeList paramTys;
 			for(const auto& var : params) {
 				paramTys.push_back(var.getType());
 			}
 
+			// build resulting function type
+			auto funcType = genFuncType(l, paramTys, retType, functionKind);
+
 			// if it is a function that is defined
 			if (!isLambda) {
 				// => skip materialization of parameters
-				return builder.lambdaExpr(retType, params, body);
+				return builder.lambdaExpr(funcType, params, body);
 			}
 
 			// replace all variables in the body by their implicitly materialized version
 			auto lambdaIngredients = transform::materialize({params, body});
 
-			// build resulting function type
-			auto funcType = genFuncType(l, paramTys, retType);
 			return builder.lambdaExpr(funcType.as<FunctionTypePtr>(), lambdaIngredients.params, lambdaIngredients.body);
 		}
 
@@ -547,7 +548,7 @@ namespace parser {
 			auto newBody = transform::replaceAll(mgr, body, genThis(l), thisParam).as<StatementPtr>();
 
 			// create the member function
-			auto fun = genLambda(l, fullParams, retType, newBody, isLambda);
+			auto fun = genLambda(l, fullParams, retType, newBody, isLambda, FK_MEMBER_FUNCTION);
 			auto memberFunType = fun->getFunctionType();
 			assert_false(fun->isRecursive()) << "The parser should not produce recursive functions!";
 

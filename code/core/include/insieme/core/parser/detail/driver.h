@@ -227,7 +227,7 @@ namespace parser {
 			/**
 			 * generates a lambda expression
 			 */
-			LambdaExprPtr genLambda(const location& l, const VariableList& params, const TypePtr& retType, const StatementPtr& body, bool isLambda = true);
+			LambdaExprPtr genLambda(const location& l, const VariableList& params, const TypePtr& retType, const StatementPtr& body, bool isLambda = true, const FunctionKind functionKind = FK_PLAIN);
 
 			/**
 			 * generates a closure
