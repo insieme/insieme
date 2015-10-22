@@ -2,7 +2,7 @@ alias int = int<4>;
 
 def struct A {
 
-	x : ref<int>;
+	x : int;
 	
 	ctor (x : int) {
 		this.x = x;

@@ -36,9 +36,14 @@
 
 #include <iostream>
 #include <gtest/gtest.h>
+
 #include "insieme/core/parser/detail/driver.h"
+
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_builder.h"
+
+#include "insieme/core/analysis/ir_utils.h"
+
 #include "insieme/core/checks/full_check.h"
 
 
@@ -58,6 +63,8 @@ namespace parser {
 //			std::cout << " ============== TEST ============ " << std::endl;
 			auto msg = checks::check(driver.result);
 			EXPECT_TRUE(msg.empty()) << msg;
+		} else {
+			driver.printErrors();
 		}
 		return driver.result;
 	}
@@ -203,12 +210,12 @@ namespace parser {
 
 		EXPECT_TRUE(test_type(nm, "def struct A {" //reference our own field
 		                          "  a : int<4>;"
-		                          "  lambda f : () -> int<4> { return a; }"
+		                          "  lambda f : () -> int<4> { return *a; }"
 		                          "}; A"));
 
 		EXPECT_TRUE(test_type(nm, "def struct A {" //reference our own field using the this pointer
 		                          "  a : int<4>;"
-		                          "  lambda f : () -> int<4> { return this.a; }"
+		                          "  lambda f : () -> int<4> { return *this.a; }"
 		                          "}; A"));
 
 		EXPECT_TRUE(test_type(nm, "def struct A {" //reference the field of another struct - that struct is created locally. this also tests the init expression
@@ -225,17 +232,17 @@ namespace parser {
 		                          "  a : int<4>;"
 		                          "};"
 		                          "def struct B {"
-		                          "  a : ref<A,f,f,plain>;"
+		                          "  a : A;"
 		                          "  lambda f : () -> int<4> {"
 		                          "    return *(a.a);"
 		                          "  }"
 		                          "}; B"));
 
-		EXPECT_TRUE(test_type(nm, "def struct A {" //reference the field of another struct - that struct is held as a field of ref type
+		EXPECT_TRUE(test_type(nm, "def struct A {" //reference the field of another struct - that struct is held as a field and used in an expression
 		                          "  a : int<4>;"
 		                          "};"
 		                          "def struct B {"
-		                          "  a : ref<A,f,f,plain>;"
+		                          "  a : A;"
 		                          "  lambda f : () -> int<4> {"
 		                          "    return a.a + 5;"
 		                          "  }"
@@ -245,7 +252,7 @@ namespace parser {
 		                          "  a : int<4>;"
 		                          "};"
 		                          "def struct B {"
-		                          "  a : ref<A,f,f,plain>;"
+		                          "  a : A;"
 		                          "  lambda f : () -> int<4> {"
 		                          "    return *(this.a.a);"
 		                          "  }"
@@ -276,7 +283,7 @@ namespace parser {
 		                          "  lambda f : () -> int<4> { return 1; }"
 		                          "};"
 		                          "def struct B {"
-		                          "  a : ref<A,f,f,plain>;"
+		                          "  a : A;"
 		                          "  lambda g : () -> int<4> {"
 		                          "    return a.f();"
 		                          "  }"
@@ -286,7 +293,7 @@ namespace parser {
 		                          "  lambda f : () -> int<4> { return 1; }"
 		                          "};"
 		                          "def struct B {"
-		                          "  a : ref<A,f,f,plain>;"
+		                          "  a : A;"
 		                          "  lambda g : () -> int<4> {"
 		                          "    return this.a.f();"
 		                          "  }"
@@ -294,7 +301,7 @@ namespace parser {
 
 		EXPECT_TRUE(test_type(nm, "decl struct B;" //reference another struct which has been declared using a forward declaration
 		                          "def struct A {"
-		                          "  lambda f : (b : B) -> int<4> {"
+		                          "  lambda f : (b : ref<B,f,f,plain>) -> int<4> {"
 		                          "    return 1;"
 		                          "  }"
 		                          "};"
@@ -587,10 +594,10 @@ namespace parser {
 
 		{
 		auto addresses = builder.parseAddressesStatement("{" //correct opening of scope before the parameters of the lambda
-		                                                  "  var int<4> a = 0;"
-		                                                  "  (a : int<8>) -> unit { $a$; };"
-		                                                  "  $a$;"
-		                                                  "}");
+		                                                 "  var int<4> a = 0;"
+		                                                 "  (a : int<8>) -> unit { $a$; };"
+		                                                 "  $a$;"
+		                                                 "}");
 		ASSERT_EQ(2, addresses.size());
 		EXPECT_EQ(nm.getLangBasic().getInt8(), addresses[0].getAddressedNode().as<CallExprPtr>()->getType());
 		EXPECT_EQ(nm.getLangBasic().getInt4(), addresses[1].getAddressedNode().as<VariablePtr>()->getType());
@@ -629,7 +636,7 @@ namespace parser {
 		auto stmt2 = body[1];
 
 		EXPECT_EQ(nm.getLangBasic().getInt8(), stmt1.as<CallExprPtr>()->getType());
-		EXPECT_EQ(nm.getLangBasic().getInt4(), stmt2.as<CallExprPtr>()->getType());
+		EXPECT_EQ(nm.getLangBasic().getInt4(), analysis::getReferencedType(stmt2.as<CallExprPtr>()->getType()));
 		}
 
 

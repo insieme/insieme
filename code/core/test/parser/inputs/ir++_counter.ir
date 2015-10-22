@@ -3,7 +3,7 @@ alias int = int<4>;
 
 def struct Counter {
 
-	value : ref<int>;
+	value : int;
 	
 	lambda reset : ()->unit {
 		value = 0;

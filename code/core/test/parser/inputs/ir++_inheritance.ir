@@ -1,39 +1,39 @@
 
-let int = int<4>;
+alias int = int<4>;
 
-let A = struct {
-	int x;
+def struct A {
+	x : int;
 };
 
-let B = struct : [A] {
-	int y;
+def struct B : [A] {
+	y : int;
 };
 
-let C = struct : [B] {
-	int z;
+def struct C : [B] {
+	z : int;
 };
 
 int main() {
 
 	// -------- handle an instance of A --------
-	decl ref<A> a;
+	var ref<A> a;
 	a.x = 1;
 	
 	
 	// -------- handle an instance of B --------
-	decl ref<B> b;
+	var ref<B> b;
 	
 	// direct access
 	b.as(A).x = 1;
 	b.y = 2;
 	
 	// indirect access of A's x
-	decl auto bA = b.as(A);
+	auto bA = b.as(A);
 	bA.x = 3;
 	
 	
 	// -------- handle an instance of C --------
-	decl ref<C> c;
+	var ref<C> c;
 	
 	// access B's A's x
 	c.as(B).as(A).x = 1;

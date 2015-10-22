@@ -3,7 +3,7 @@ alias int = int<4>;
 
 def struct C {
 
-	sum : ref<int>;
+	sum : int;
 
 	ctor () {
 		sum = 0;
@@ -26,5 +26,7 @@ unit main() {
 	// work with the object
 	print("%d\n", c->getSum());
 	print("%d\n", c->add(3));
+	print("%d\n", c->add(*c->sum));
+	c->sum = 5;
 	print("%d\n", c->getSum());
 }
