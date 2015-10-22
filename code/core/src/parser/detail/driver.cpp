@@ -685,7 +685,7 @@ namespace parser {
 
 			//search in all the constructors
 			for (const auto& constructor : constructors) {
-				const auto& constructorParams = constructor.as<LambdaExprPtr>()->getParameterList();
+				const auto& constructorParams = constructor.as<LambdaExprPtr>()->getLambda()->getType()->getParameterTypeList();
 
 				//first check the number of params
 				if (constructorParams.size() != params.size()) {
@@ -695,7 +695,7 @@ namespace parser {
 				//then try to find an exact match
 				bool match = true;
 				for (unsigned i = 0; i < params.size(); ++i) {
-					if (params[i]->getType() != analysis::getReferencedType(constructorParams[i]->getType())) {
+					if (params[i]->getType() != constructorParams[i]) {
 						match = false;
 						break;
 					}
@@ -708,7 +708,7 @@ namespace parser {
 				//otherwise try to find a match using sub-typing rules
 				match = true;
 				for (unsigned i = 0; i < params.size(); ++i) {
-					if (!types::isSubTypeOf(params[i]->getType(), analysis::getReferencedType(constructorParams[i]->getType()))) {
+					if (!types::isSubTypeOf(params[i]->getType(), constructorParams[i])) {
 						match = false;
 						break;
 					}
