@@ -465,7 +465,7 @@ namespace parser {
 			//iterate over all the fields
 			for (const auto& field : fields) {
 				const auto& name = field->getName()->getValue();
-				const auto& type = field->getType();
+				const auto& type = builder.refType(field->getType());
 				// create the member access call to store in the symbol table
 				ExpressionPtr access = builder.getLangBasic().getCompositeMemberAccess();
 				auto accessExpr = builder.callExpr(type, access, genThis(l), builder.getIdentifierLiteral(name), builder.getTypeLiteral(type));
