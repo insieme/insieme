@@ -13,9 +13,18 @@ typedef struct { int x; } IAmTheTagType;
 #pragma test expect_ir("lit(\"tt\": ref<struct IMP_IAmTheTagType { int<4> x; },f,f>)")
 IAmTheTagType tt;
 
+typedef struct _omp_lock_t { int x; } omp_lock_t;
+void omp_set_lock(omp_lock_t* lock);
+#pragma test expect_ir("lit(\"lck\": ref<struct IMP__omp_lock_t { int<4> x; },f,f>)")
+omp_lock_t lck;
+
 int main() {
 	globalEnum;
 	y;
 	tt;
+	#pragma test expect_ir("STRING","ptr_from_ref(lck)")
+	&lck;
+	#pragma test expect_ir("STRING","omp_set_lock(ptr_from_ref(lck))")
+	omp_set_lock(&lck);
 	return x;
 }
