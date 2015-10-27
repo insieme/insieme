@@ -165,6 +165,9 @@
 	SWITCH       "switch"
 	CASE         "case"
 	DEFAULT      "default"
+	TRY          "try"
+	CATCH        "catch"
+	THROW        "throw"
 
 
 	SPAWN        "spawn"
@@ -250,6 +253,10 @@
 %type <SwitchStmtPtr>                  switch_statement
 %type <WhileStmtPtr>                   while_statement
 %type <ForStmtPtr>                     for_statement
+%type <TryCatchStmtPtr>                try_catch_statement
+%type <CatchClauseList>                catch_clauses
+%type <CatchClausePtr>                 catch_clause
+%type <ThrowStmtPtr>                   throw_statement
 %type <BreakStmtPtr>                   break
 %type <ContinueStmtPtr>                continue
 %type <ReturnStmtPtr>                  return
@@ -692,6 +699,8 @@ plain_statement : expression ";"                                          { $$ =
                 | switch_statement                                        { $$ = $1; }
                 | while_statement                                         { $$ = $1; }
                 | for_statement                                           { $$ = $1; }
+                | try_catch_statement                                     { $$ = $1; }
+                | throw_statement                                         { $$ = $1; }
                 | break                                                   { $$ = $1; }
                 | continue                                                { $$ = $1; }
                 | return                                                  { $$ = $1; }
@@ -759,6 +768,23 @@ for_statement : "for" "(" type "identifier" "=" expression ".." expression ")"
                                compound_statement                         { $$ = driver.genForStmt(@$, $3, $4, $6, $8, $10, $13); driver.closeScope(); }
               ;
 
+
+// -- try / catch --
+
+try_catch_statement : "try" compound_statement catch_clauses              { $$ = driver.builder.tryCatchStmt($2, $3); }
+                    ;
+
+catch_clauses : catch_clauses catch_clause                                { $1.push_back($2); $$ = $1; }
+              |                                                           { $$ = CatchClauseList(); }
+              ;
+
+catch_clause : "catch" "(" ")" compound_statement                         { $$ = driver.builder.catchClause(VariablePtr(), $4); }
+             | "catch" "(" parameter ")"                                  { driver.openScope(); driver.registerParameters(@3, toVector($3)); }
+                                         compound_statement_no_scope      { $$ = driver.builder.catchClause($3, $6); driver.closeScope(); }
+             ;
+
+throw_statement : "throw" expression ";"                                  { $$ = driver.builder.throwStmt($2); }
+                ;
 
 // -- break --
 

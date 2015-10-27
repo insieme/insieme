@@ -150,6 +150,9 @@ blank         [ \t]
 "return"      return InspireParser::make_RETURN(loc);
 "switch"      return InspireParser::make_SWITCH(loc);
 "case"        return InspireParser::make_CASE(loc);
+"try"         return InspireParser::make_TRY(loc);
+"catch"       return InspireParser::make_CATCH(loc);
+"throw"       return InspireParser::make_THROW(loc);
 "default"     return InspireParser::make_DEFAULT(loc);
 "continue"    return InspireParser::make_CONTINUE(loc);
 "break"       return InspireParser::make_BREAK(loc);
