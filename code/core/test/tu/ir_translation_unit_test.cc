@@ -182,6 +182,48 @@ namespace tu {
 		EXPECT_TRUE(res->isRecursive()) << res;
 	}
 
+	TEST(TranslationUnit, MemberFunctionCall) {
+		core::NodeManager mgr;
+		core::IRBuilder builder(mgr);
+
+		IRTranslationUnit tu(mgr);
+
+		auto genericType = builder.genericType("A");
+		auto thisVariable = builder.variable(builder.refType(builder.refType(genericType)));
+
+		auto paramsF = toVector(thisVariable);
+		auto bodyF = builder.compoundStmt(builder.returnStmt(builder.intLit(1)));
+		auto lambdaF = builder.lambdaExpr(builder.functionType(toVector(builder.refType(genericType).as<TypePtr>()), builder.getLangBasic().getInt4(), FK_MEMBER_FUNCTION), paramsF, bodyF);
+		auto memberFunctionF = builder.memberFunction(false, "f", lambdaF);
+		auto literalMemberFunctionF = builder.literal("A::f", lambdaF->getFunctionType());
+		tu.addFunction(literalMemberFunctionF, lambdaF);
+		std::cout << "Registered member function " << literalMemberFunctionF << " of type " << literalMemberFunctionF->getType() << "\n";
+
+		auto paramsG = toVector(thisVariable);
+		auto bodyG = builder.compoundStmt(builder.returnStmt(builder.callExpr(literalMemberFunctionF, builder.deref(thisVariable))));
+		auto lambdaG = builder.lambdaExpr(builder.functionType(toVector(builder.refType(genericType).as<TypePtr>()), builder.getLangBasic().getInt4(), FK_MEMBER_FUNCTION), paramsG, bodyG);
+		auto memberFunctionG = builder.memberFunction(false, "g", lambdaG);
+		auto literalMemberFunctionG = builder.literal("A::g", lambdaG->getFunctionType());
+		tu.addFunction(literalMemberFunctionG, lambdaG);
+		std::cout << "Registered member function " << literalMemberFunctionG << " of type " << literalMemberFunctionG->getType() << "\n";
+
+		auto recordType = builder.structType("A", ParentList(), FieldList(), LambdaExprList(), builder.getDefaultDestructor("A"), toVector(memberFunctionF, memberFunctionG), PureVirtualMemberFunctionList());
+		tu.addType(genericType, recordType);
+
+		std::cout << "\nContents of TU:\n";
+		std::cout << "Functions:\n";
+		for (const auto& pair : tu.getFunctions()) {
+			std::cout << "  " << pair.first << " -> " << pair.second << " (with type " << pair.second->getType() << " )\n";
+		}
+		std::cout << "Types:\n";
+		for (const auto& pair : tu.getTypes()) {
+			std::cout << "  " << pair.first << " -> " << pair.second << "\n";
+		}
+
+		std::cout << "\n\nTrying to resolve the type...\n";
+		EXPECT_TRUE(tu.resolve(genericType));
+	}
+
 
 } // end namespace tu
 } // end namespace core
