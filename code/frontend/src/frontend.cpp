@@ -61,6 +61,7 @@
 #include "insieme/frontend/extensions/test_pragma_extension.h"
 #include "insieme/frontend/extensions/variable_argument_list_extension.h"
 #include "insieme/frontend/extensions/variable_length_array_extension.h"
+#include "insieme/frontend/extensions/while_to_for_extension.h"
 
 namespace insieme {
 namespace frontend {
@@ -219,7 +220,8 @@ namespace frontend {
 		registerFrontendExtension<extensions::OmpFrontendExtension>(options);
 		registerFrontendExtension<extensions::SignificanceFrontendExtension>(options);
 		registerFrontendExtension<extensions::CilkFrontendExtension>(options);
-		
+		registerFrontendExtension<extensions::WhileToForExtension>(options);
+
 		registerFrontendExtension<extensions::VariableArgumentListExtension>(options);
 		registerFrontendExtension<extensions::VariableLengthArrayExtension>(options);
 		

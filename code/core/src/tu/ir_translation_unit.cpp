@@ -337,7 +337,7 @@ namespace tu {
 			// --- Step 4: Component resolution ---
 
 			std::map<NodePtr, NodePtr> resolutionCache;
-			bool cachingEnabled;
+			bool cachingEnabled = true;
 
 			bool isResolved(const NodePtr& symbol) const {
 				assert_true(isSymbol(symbol)) << "Should only be queried for symbols!";
@@ -375,6 +375,7 @@ namespace tu {
 					// sort variables
 					vector<NodePtr> vars(cur.begin(), cur.end());
 					std::sort(vars.begin(), vars.end(), compare_target<NodePtr>());
+
 
 					// get first element
 					auto first = vars.front();
@@ -416,6 +417,7 @@ namespace tu {
 						for(const auto& s : vars) {
 							resolved[s] = map(getDefinition(s));
 						}
+
 						// re-enable caching again
 						cachingEnabled = true;
 
@@ -490,39 +492,6 @@ namespace tu {
 						// check whether cast can be skipped
 						if(types::isSubTypeOf(cast->getSubExpression()->getType(), cast->getType())) { res = cast->getSubExpression(); }
 					}
-
-					// if this is a call to ref member access we rebuild the whole expression to return a correct reference type
-					//if(core::analysis::isCallOf(res, mgr.getLangExtension<core::lang::ReferenceExtension>().getRefMemberAccess())) {
-					//	auto call = res.as<CallExprPtr>();
-
-					//	if(core::analysis::getReferencedType(call[0]->getType()).isa<StructTypePtr>()) {
-					//		assert_true(call[0]);
-					//		assert_true(call[1]);
-
-					//		auto tmp = builder.refMember(call[0], call[1].as<LiteralPtr>()->getValue());
-					//		// type changed... do we have any cppRef to unwrap?
-					//		if(*(tmp->getType()) != *(call->getType())) {
-					//			res = builder.toIRRef(builder.deref(tmp));
-					//		} else {
-					//			res = tmp;
-					//		}
-					//	}
-					//}
-
-					// also if this is a call to member access we rebuild the whole expression to return
-					// NON ref type
-					//if(core::analysis::isCallOf(res, mgr.getLangExtension<core::lang::ReferenceExtension>().getRefMemberAccess())) {
-					//	auto call = res.as<CallExprPtr>();
-					//	if(call[0]->getType().isa<StructTypePtr>()) {
-					//		auto tmp = builder.accessMember(call[0], call[1].as<LiteralPtr>()->getValue());
-					//		// type might changed, we have to unwrap it
-					//		if(core::analysis::isAnyCppRef(tmp->getType())) {
-					//			res = builder.deref(builder.toIRRef(tmp));
-					//		} else {
-					//			res = tmp;
-					//		}
-					//	}
-					//}
 
 					// also fix type literals
 					if(core::analysis::isTypeLiteral(res)) { res = builder.getTypeLiteral(core::analysis::getRepresentedType(res.as<ExpressionPtr>())); }

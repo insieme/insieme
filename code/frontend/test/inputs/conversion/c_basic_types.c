@@ -138,10 +138,17 @@ int main() {
 	// ENUM TYPES //////////////////////////////////////////////////////////////
 		
 	typedef enum { Bla, Alb } enum_t;
+//<<<<<<< HEAD
 	#pragma test expect_ir("REGEX", R"(.*ref<__insieme_enum<\w+enum_t\w+,Bla,Alb>,f,f,plain> v0 = .*)")
 	enum_t enu;
 	
 	#pragma test expect_ir("REGEX", R"(.*ref<__insieme_enum<\w+,XY,ZR>,f,f,plain> v0 = .*)")
+//=======
+	#pragma test expect_ir("REGEX", R"(decl ref<struct.*enum_def<IMP_enum_t_IMLOC__.*,enum_entry<Bla.*0>,enum_entry<Alb.*1>> enum_type;uint<4> value.*,f,f,plain> v0.*)")
+	enum_t enu;
+	
+	#pragma test expect_ir("REGEX", R"(decl ref<struct.*enum_def<IMP___anon_tagtype__.*,enum_entry<XY.*0>,enum_entry<ZR.*1>> enum_type;uint<4> value.*,f,f,plain> v0.*)")
+//>>>>>>> master
 	enum { XY, ZR } bla; 
 
 	// STRUCT TYPES //////////////////////////////////////////////////////////////

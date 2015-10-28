@@ -407,11 +407,17 @@ namespace core {
 	}
 
 
+	FunctionTypePtr IRBuilderBaseModule::getDestructorType(const TagTypeReferencePtr& tag) const {
+		// create default destructor
+		TypePtr thisType = refType(tag);
+		return functionType(toVector(thisType), thisType, FK_DESTRUCTOR);
+	}
+
 	LambdaExprPtr IRBuilderBaseModule::getDefaultDestructor(const StringValuePtr& recordName) const {
 		// create default destructor
-		TypePtr thisType = refType(tagTypeReference(recordName));
-		auto dtorType = functionType(toVector(thisType), thisType, FK_DESTRUCTOR);
-		return normalize(lambdaExpr(dtorType, toVector(variable(refType(thisType))), getNoOp()));
+		auto dtorType = getDestructorType(tagTypeReference(recordName));
+		TypePtr thisType = dtorType->getParameterType(0);
+		return normalize(lambdaExpr(dtorType, toVector(variable(refType(thisType))), getNoOp())).as<LambdaExprPtr>();
 	}
 
 	FieldPtr IRBuilderBaseModule::field(const string& name, const TypePtr& type) const {

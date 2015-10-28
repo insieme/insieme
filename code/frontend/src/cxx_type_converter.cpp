@@ -162,32 +162,8 @@ namespace conversion {
 	//						REFERENCE TYPE
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::TypePtr Converter::CXXTypeConverter::VisitReferenceType(const ReferenceType* refTy) {
-		core::TypePtr retTy;
-		LOG_TYPE_CONVERSION(refTy, retTy);
-
-		//// get inner type
-		//core::TypePtr inTy = converter.convertType(refTy->getPointeeType()->getCanonicalTypeInternal());
-
-		//// find out if is a const ref or not
-		//QualType qual;
-		//bool isConst;
-		//if(llvm::isa<clang::RValueReferenceType>(refTy)) {
-		//	qual = llvm::cast<clang::RValueReferenceType>(refTy)->desugar();
-		//	isConst = llvm::cast<clang::RValueReferenceType>(refTy)->getPointeeType().isConstQualified();
-		//} else {
-		//	qual = llvm::cast<clang::LValueReferenceType>(refTy)->desugar();
-		//	isConst = llvm::cast<clang::LValueReferenceType>(refTy)->getPointeeType().isConstQualified();
-		//}
-
-		//if(isConst) {
-		//	retTy = core::analysis::getConstCppRef(inTy);
-		//} else {
-		//	retTy = core::analysis::getCppRef(inTy);
-		//}
-
-		assert_not_implemented();
-
-		return retTy;
+		assert_fail() << "CPP Reference type should have been handled upstream already!";		
+		return core::TypePtr();
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -351,6 +327,17 @@ namespace conversion {
 	//			The visitor itself
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::TypePtr Converter::CXXTypeConverter::convertInternal(const clang::QualType& type) {
+
+		if(type->isReferenceType()) {
+			auto rType = type->getAs<clang::ReferenceType>();
+			auto pointeeType = rType->getPointeeType();
+			auto irInnerType = converter.convertType(pointeeType);
+			auto refKind = llvm::isa<clang::RValueReferenceType>(rType) ? core::lang::ReferenceType::Kind::CppRValueReference
+				                                                        : core::lang::ReferenceType::Kind::CppReference;
+			return core::lang::buildRefType(irInnerType, pointeeType.isConstQualified(), pointeeType.isVolatileQualified(), refKind);
+		}
+
+
 		return TypeVisitor<CXXTypeConverter, core::TypePtr>::Visit(type.getTypePtr());
 	}
 

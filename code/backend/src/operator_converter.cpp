@@ -57,7 +57,6 @@
 #include "insieme/core/lang/complex.h"
 #include "insieme/core/lang/io.h"
 #include "insieme/core/lang/ir++_extension.h"
-#include "insieme/core/lang/enum_extension.h"
 
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"
@@ -995,13 +994,6 @@ namespace backend {
 			}
 
 			return C_NODE_MANAGER->create<c_ast::Initializer>(CONVERT_TYPE(call->getType()), v);
-		};
-
-		// ----------------------------  Enum extension ----------------------------
-		auto& enumExt = manager.getLangExtension<core::lang::EnumExtension>();
-		res[enumExt.getEnumElementAsBool()] = OP_CONVERTER {
-			// write it out as we got it in
-			return CONVERT_ARG(0);
 		};
 
 		// ----------------------------  Attribute extension --------------------------

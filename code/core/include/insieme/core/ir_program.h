@@ -56,7 +56,7 @@ namespace core {
 	/**
 	 * This class implements an IR Node which can be used to represent entire programs.
 	 */
-	class Program : public Node, public ProgramAccessor<Program, Pointer>, public ProgramAccessor<Program, Pointer>::node_helper {
+	class Program : public Node, public Accessor<Program, Program, Pointer>, public Accessor<Program, Program, Pointer>::node_helper {
 	  private:
 		/**
 		 * Creates a new program based on the given entry points.
@@ -64,14 +64,14 @@ namespace core {
 		 * @param entryPoints the list of entry points resulting program should be consisting of.
 		 */
 		Program(const ExpressionList& entryPoints)
-		    : Node(NT_Program, NC_Program, convertList(entryPoints)), ProgramAccessor<Program, Pointer>::node_helper(getChildNodeList()) {}
+		    : Node(NT_Program, NC_Program, convertList(entryPoints)), Accessor<Program, Program, Pointer>::node_helper(getChildNodeList()) {}
 
 		/**
 		 * Creates a new program node based on the given child list.
 		 *
 		 * @param children the list of children to be used within the resulting program
 		 */
-		Program(const NodeList& children) : Node(NT_Program, NC_Program, children), ProgramAccessor<Program, Pointer>::node_helper(getChildNodeList()) {}
+		Program(const NodeList& children) : Node(NT_Program, NC_Program, children), Accessor<Program, Program, Pointer>::node_helper(getChildNodeList()) {}
 
 	  protected:
 		/**

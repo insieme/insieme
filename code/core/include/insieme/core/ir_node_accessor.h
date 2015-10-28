@@ -86,6 +86,17 @@ namespace core {
 	}
 
 	/**
+	 * The definition of all accessors which will be used for adding observer functions
+	 * to Nodes, Node Pointers, Node Addresses or other ways of referencing nodes.
+	 *
+	 * @tparam Type the type for which this node accessor is adding functionality
+	 * @tparam Derived the type of node inheriting this accessor
+	 * @tparam Ptr the kind of pointer to be used for referencing element types
+	 */
+	template<typename Type, typename Derived, template <typename X> class Ptr>
+	struct Accessor { /* default: no extra features */ };
+
+	/**
 	 * A default implementation for a node accessor to be used whenever the derived
 	 * type is a node itself. Derivations of this class should be used as the base type
 	 * for all node accessors.
@@ -93,8 +104,11 @@ namespace core {
 	 * @tparam Derived the type which is extended by this accessor (static polymorthism)
 	 * @tparam Ptr the type of pointer to be obtained by
 	 */
-	template <typename Derived, template <typename T> class Ptr>
-	struct NodeAccessor : public detail::node_access_helper<Derived> {
+	template<
+		typename Derived,
+		template <typename X> class Ptr
+	>
+	struct Accessor<Node,Derived,Ptr> : public detail::node_access_helper<Derived> {
 		/**
 		 * A type definition for the type of the handled node.
 		 */
@@ -125,10 +139,6 @@ namespace core {
 		 */
 		bool isValue() const {
 			return getNode().nodeCategory == NC_Value;
-		}
-
-		bool isReference() const {
-			return true; //getNode().nodeCategory == NC_
 		}
 
 		/**

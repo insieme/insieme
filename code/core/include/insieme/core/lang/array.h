@@ -313,6 +313,7 @@ namespace lang {
 	}
 
 	ExpressionPtr buildArrayCreate(const TypePtr& size, const ExpressionList& list);
+	ExpressionPtr buildArrayCreate(NodeManager& mgr, size_t size, const ExpressionList& list);
 
 } // end namespace lang
 } // end namespace core

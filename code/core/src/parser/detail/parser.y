@@ -207,7 +207,7 @@
 %type <ProgramPtr>                     main
 %type <NodePtr>                        definition
 
-%type <TagTypePtr>                     record_definition
+%type <TypePtr>                        record_definition
 %type <NodePtr>                        function_definition
 
 %type <FieldPtr>                       field

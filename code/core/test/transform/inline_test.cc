@@ -57,13 +57,13 @@ namespace transform {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 
-		CallExprAddress code = builder.parseAddressesStatement(R"1N5P1RE(
+		CallExprAddress code = builder.parseAddressesProgram(R"1N5P1RE(
 			alias int = int<4>;
 			def fun = (a : int, b : int) -> int { 
 			  if(a<4) { return a + 2*b; } 
 			  return a - b; 
 			};
-			{
+			int main() {
 				var ref<int,f,f,plain> x = ref_var(0); 
 				$x = fun(3,6)$; 
 			}
@@ -72,12 +72,14 @@ namespace transform {
 		ASSERT_TRUE(code);
 		EXPECT_TRUE(check(code, checks::getFullCheck()).empty()) << check(code, checks::getFullCheck());
 
+		code = code.switchRoot(builder.normalize(code.getRootNode()));
+
 		CompoundStmtPtr inlined = builder.normalize(inlineMultiReturnAssignment(mgr, code.getAddressedNode()));
 
 		// std::cout << printer::PrettyPrinter(code.getRootNode()) << "\n\ninlined:\n" << printer::PrettyPrinter(inlined) << "\n****\n";
 
-		EXPECT_EQ("{{decl ref<bool,f,f,plain> v0 =  var(false);{if(3<4) {{v28 = 3+2*6;v0 = true;};};if(!v0) {{v28 = 3-6;v0 = true;};};};};}",
-		          toString(printer::PrettyPrinter(core::analysis::normalize(inlined), printer::PrettyPrinter::PRINT_SINGLE_LINE)));
+		EXPECT_EQ("{{decl ref<bool,f,f,plain> v0 =  var(false);{if(3<4) {{v1 = 3+2*6;v0 = true;};};if(!v0) {{v1 = 3-6;v0 = true;};};};};}",
+		          toString(printer::PrettyPrinter(inlined, printer::PrettyPrinter::PRINT_SINGLE_LINE)));
 		EXPECT_TRUE(check(inlined, checks::getFullCheck()).empty()) << check(inlined, checks::getFullCheck());
 	}
 
@@ -104,13 +106,15 @@ namespace transform {
 		ASSERT_TRUE(code);
 		EXPECT_TRUE(check(code, checks::getFullCheck()).empty()) << check(code, checks::getFullCheck());
 
+		code = code.switchRoot(builder.normalize(code.getRootNode()));
+
 		CompoundStmtPtr inlined = builder.normalize(inlineMultiReturnAssignment(mgr, code.getAddressedNode()));
 
 		// std::cout << printer::PrettyPrinter(code.getRootNode()) << "\n\ninlined:\n" << printer::PrettyPrinter(inlined) << "\n****\n";
 
-		EXPECT_EQ("{{decl ref<bool,f,f,plain> v0 =  var(false);{if(3<4) {{v29 = 3+2*6;v0 = true;};};if(!v0) {decl ref<int<4>,f,f,plain> v1 =  "
-		          "var(3);while(true && !v0) {v1 = v1+1;if(v1>6) {{v29 = v1-6;v0 = true;};};};};};};}",
-		          toString(printer::PrettyPrinter(core::analysis::normalize(inlined), printer::PrettyPrinter::PRINT_SINGLE_LINE)));
+		EXPECT_EQ("{{decl ref<bool,f,f,plain> v1 =  var(false);{if(3<4) {{v0 = 3+2*6;v1 = true;};};if(!v1) {decl ref<int<4>,f,f,plain> v2 =  var(3);while(true "
+			      "&& !v1) {v2 = v2+1;if(v2>6) {{v0 = v2-6;v1 = true;};};};};};};}",
+			      toString(printer::PrettyPrinter(core::analysis::normalize(inlined), printer::PrettyPrinter::PRINT_SINGLE_LINE)));
 		EXPECT_TRUE(check(inlined, checks::getFullCheck()).empty()) << check(inlined, checks::getFullCheck());
 	}
 

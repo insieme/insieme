@@ -115,7 +115,7 @@ namespace core {
 			 *
 			 * @return a reference to the internally maintained child list
 			 */
-			const vector<NodeAddress>& getChildList() const {
+			const vector<NodeAddress>& getChildList() const & {
 				if(!bool(childList)) {
 					// produce child list
 					const NodeList& children = getNode().getChildNodeList();
@@ -128,6 +128,14 @@ namespace core {
 				return *childList;
 			}
 
+			/**
+			 * Obtains the entire list of children by value (to keep them alive).
+			 *
+			 * @return a list of child nodes
+			 */
+			vector<NodeAddress> getChildList() const && {
+				return getChildList(); // return by value
+			}
 		};
 
 	} // end namespace detail
@@ -142,7 +150,7 @@ namespace core {
 	 * TODO: extend documentation with usage scenarios
 	 */
 	template <typename T>
-	class Address : public node_type<typename boost::remove_const<T>::type>::adr_accessor_type {
+	class Address : public Accessor<typename boost::remove_const<T>::type,Address<const typename boost::remove_const<T>::type>,Address>  {
 	  public:
 		/**
 		 * The kind of node path utilized by addresses.
@@ -164,7 +172,7 @@ namespace core {
 		/**
 		 * The accessor offered to gain convenient access to members of the referenced node
 		 */
-		typedef typename node_type<typename boost::remove_const<T>::type>::adr_accessor_type accessor_type;
+		typedef Accessor<typename boost::remove_const<T>::type,Address<const typename boost::remove_const<T>::type>,Address> accessor_type;
 
 
 		/**

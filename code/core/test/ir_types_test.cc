@@ -46,6 +46,8 @@
 #include "insieme/core/lang/reference.h"
 #include "insieme/core/transform/node_replacer.h"
 
+#include "insieme/core/checks/full_check.h"
+
 #include "ir_node_test.inc"
 
 using std::vector;
@@ -387,6 +389,15 @@ namespace core {
 		EXPECT_EQ("rec ^A.{^A=struct A <x:bla<^A>>}", toString(*builder.parseType("decl struct A; def struct A { x : bla<A>; }; A")));
 		EXPECT_EQ("struct A <x:bla<rec ^A.{^A=struct A <x:bla<^A>>}>>",
 		          toString(*builder.parseType("decl struct A; def struct A { x : bla<A>; }; A").as<TagTypePtr>()->peel()));
+
+		TagTypePtr tagType = builder.parseType("decl struct A; def struct A { x : bla<A>; }; A").as<TagTypePtr>();
+		EXPECT_TRUE(tagType->isRecursive());
+
+		EXPECT_TRUE(checks::check(tagType).empty()) << checks::check(tagType);
+		EXPECT_TRUE(checks::check(tagType->peel(0)).empty()) << checks::check(tagType->peel(0));
+		EXPECT_TRUE(checks::check(tagType->peel(1)).empty()) << checks::check(tagType->peel(1));
+		EXPECT_TRUE(checks::check(tagType->peel(2)).empty()) << checks::check(tagType->peel(2));
+
 	}
 
 	//

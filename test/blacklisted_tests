@@ -20,22 +20,9 @@ label_goto
 longlong
 simd_vector
 
-# Disabling tests because they fail with assertion:
-# Ref cast only allowed to cast between qualifiers,trying to cast from
-ref_vector_array_pointer
-vector_partial_init
-
-# Disabling tests because they fail with assertion:
-# Illegal: dereferencing a NULL pointer!
+# Disabling tests because the variadic fucntions plugin is incomplete
 variadic_functions
 
 # Disabling tests because VLAs are not implemented in the BE
 variable_arrays
 pointer_arith_vla
-
-# Disabling tests because they fail in the backend:
-# Reason: unsupported type __insieme_enum
-anon_enum
-pendulum
-enum
-

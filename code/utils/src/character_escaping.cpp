@@ -39,8 +39,11 @@
 #include <utility>
 #include <string>
 #include <vector>
+#include <sstream>
+#include <boost/algorithm/string.hpp>
 
 #include "insieme/utils/assert.h"
+#include "insieme/utils/string_utils.h"
 
 namespace insieme {
 namespace utils {
@@ -83,6 +86,37 @@ namespace utils {
 		return std::string();
 	}
 
+	std::string escapeChar(char input) {
+		for(auto p : escapedCharMapping) {
+			if(p.second == input) return p.first;
+		}
+		return toString(input);
+	}
+
+	std::string escapeString(const std::string& input) {
+		std::stringstream ss;
+		for(size_t i=0; i<input.length(); ++i) {
+			ss << escapeChar(input[i]);
+		}
+		return ss.str();
+	}
+
+	std::string unescapeString(const std::string& escapedString) {
+		std::stringstream ss;
+		auto str = escapedString;
+		if(boost::starts_with(str, "\"") && boost::ends_with(str, "\"")) str = str.substr(1, str.size()-2);
+		for(size_t i=0; i<str.length(); ++i) {
+			for(auto p : escapedCharMapping) {
+				if(boost::starts_with(str.substr(i), p.first)) {
+					ss << p.second;
+					i += p.first.size();
+					continue;
+				}
+			}
+			ss << str[i];
+		}
+		return ss.str();
+	}
 
 } // end namespace utils
 } // end namespace insieme

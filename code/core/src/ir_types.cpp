@@ -128,19 +128,37 @@ namespace core {
 	namespace {
 
 		template<template<typename T> class Ptr, typename Set>
-		void appendFreeTagTypeReferences(const Ptr<const Node>& root, Set& set, bool fieldsOnly) {
+		void appendFreeTagTypeReferences(const Ptr<const Node>& root, Set& set, bool fieldsOnly, const TagTypeReferencePtr& origin) {
 			// collect free tag type references
 			if (auto tag = root.template isa<Ptr<const TagTypeReference>>()) {
 				set.insert(tag);
 				return;
 			}
 
-			// prune search descent
-			if (fieldsOnly && root.template isa<Ptr<const Expression>>()) return;
+			// handle nested expressions
+			if (auto expr = root.template isa<Ptr<const Expression>>()) {
+				// stop here if only fields should be covered
+				if (fieldsOnly) return;
+
+				// extract nested references
+				if (origin) {
+					// filter out origin from references in the expressions
+					Set nested;
+					appendFreeTagTypeReferences(Ptr<const Node>(expr), nested, false, TagTypeReferencePtr());
+
+					// filter nested elements to exclude origin
+					for(const auto& cur : nested) {
+						if (*cur != *origin) set.insert(cur);
+					}
+
+					// done
+					return;
+				}
+			}
 
 			// skip tags in type variable bindings
 			if (auto tagType = root.template isa<Ptr<const TagType>>()) {
-				appendFreeTagTypeReferences(Ptr<const Node>(tagType->getDefinition()), set, fieldsOnly);
+				appendFreeTagTypeReferences(Ptr<const Node>(tagType->getDefinition()), set, fieldsOnly, origin);
 				return;
 			}
 
@@ -149,7 +167,7 @@ namespace core {
 
 				Set nested;
 				for(const auto& cur : def) {
-					appendFreeTagTypeReferences(Ptr<const Node>(cur->getRecord()),nested, fieldsOnly);
+					appendFreeTagTypeReferences(Ptr<const Node>(cur->getRecord()),nested, fieldsOnly, origin);
 				}
 
 				Set filtered;
@@ -166,26 +184,39 @@ namespace core {
 
 			// descent recursively
 			for(const auto& cur : root.getChildList()) {
-				appendFreeTagTypeReferences(cur, set, fieldsOnly);
+				appendFreeTagTypeReferences(cur, set, fieldsOnly, origin);
 			}
 		}
 
 		template<template<typename T> class Ptr>
-		std::set<Ptr<const TagTypeReference>> getFreeTagTypeReferences(const Ptr<const Node>& root, bool fieldsOnly = true) {
+		std::set<Ptr<const TagTypeReference>> getFreeTagTypeReferences(const Ptr<const Node>& root, const TagTypeReferencePtr& origin) {
 			std::set<Ptr<const TagTypeReference>> res;
-			appendFreeTagTypeReferences(root, res, fieldsOnly);
+			appendFreeTagTypeReferences(root, res, false, origin);
+			return res;
+		}
+
+		template<template<typename T> class Ptr>
+		std::set<Ptr<const TagTypeReference>> getFreeTagTypeReferencesInFields(const Ptr<const Node>& root) {
+			std::set<Ptr<const TagTypeReference>> res;
+			appendFreeTagTypeReferences(root, res, true, TagTypeReferencePtr());
 			return res;
 		}
 
 	}
 
-	TagTypePtr TagTypeDefinition::peelDefinitionOnce(NodeManager& manager, const TagTypeReferencePtr& tag) const {
+	TagTypePtr TagTypeDefinition::peelDefinition(NodeManager& manager, const TagTypeReferencePtr& tag, unsigned times) const {
+
 
 		// start with unmodified definition
 		TagTypeDefinitionPtr definition(this);
 
+		// if peeling factor is 0, we are done
+		if (times == 0) {
+			return TagType::get(manager, tag, definition);
+		}
+
 		// get list of free tag type references
-		auto tags = getFreeTagTypeReferences(NodeAddress(getDefinitionOf(tag)), false);
+		auto tags = getFreeTagTypeReferences(NodeAddress(getDefinitionOf(tag)), tag);
 
 		// if there are recursive references
 		if (!tags.empty()) {
@@ -193,7 +224,7 @@ namespace core {
 			// turn into a map of modifications
 			std::map<NodeAddress,NodePtr> mods;
 			for(const auto& cur : tags) {
-				mods[cur] = TagType::get(manager, cur.as<TagTypeReferencePtr>(), TagTypeDefinitionPtr(this));
+				mods[cur] = TagType::get(manager, cur.as<TagTypeReferencePtr>(), TagTypeDefinitionPtr(this))->peel(times-1);
 			}
 
 			// build peeled definition
@@ -223,7 +254,7 @@ namespace core {
 
 		bool res = false;
 		for(const auto& cur : this->getDefinition()) {
-			auto set = getFreeTagTypeReferences(cur->getRecord().as<NodePtr>());
+			auto set = getFreeTagTypeReferencesInFields(cur->getRecord().as<NodePtr>());
 			auto pos = set.find(getTag());
 			if (pos != set.end()) {
 				res = true;

@@ -266,7 +266,7 @@ namespace core {
 	 * statements and expressions (similar to addresses + loop iterations).
 	 */
 	template <typename T>
-	class Instance : public node_type<typename std::remove_const<T>::type>::template accessor<Instance>::type,
+	class Instance : public Accessor<typename std::remove_const<T>::type,Instance<const typename std::remove_const<T>::type>,Instance>,
 	                 public utils::Printable,
 	                 public boost::equality_comparable<Instance<T>>,
 	                 public boost::less_than_comparable<Instance<T>> {
@@ -291,7 +291,7 @@ namespace core {
 		/**
 		 * The accessor offered to gain convenient access to members of the referenced node
 		 */
-		typedef typename node_type<typename std::remove_const<T>::type>::template accessor<::insieme::core::Instance>::type accessor_type;
+		typedef Accessor<typename std::remove_const<T>::type,Instance<const typename std::remove_const<T>::type>,Instance> accessor_type;
 
 
 		/**

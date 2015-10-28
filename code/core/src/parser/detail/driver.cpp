@@ -377,7 +377,7 @@ namespace parser {
 			return builder.functionType(params, retType, fk);
 		}
 
-		TagTypePtr InspireDriver::genRecordType(const location& l, const NodeType& type, const string& name, const ParentList& parents, const FieldList& fields, const LambdaExprList& ctors,
+		TypePtr InspireDriver::genRecordType(const location& l, const NodeType& type, const string& name, const ParentList& parents, const FieldList& fields, const LambdaExprList& ctors,
 				const LambdaExprPtr& dtorIn, const MemberFunctionList& mfuns, const PureVirtualMemberFunctionList& pvmfuns) {
 
 			//check if this type has already been defined before
@@ -413,7 +413,7 @@ namespace parser {
 			tu.addType(key, res);
 
 			// done
-			return res;
+			return key;
 		}
 
 		TagTypePtr InspireDriver::genSimpleStructOrUnionType(const location& l, const NodeType& type, const FieldList& fields) {
@@ -456,7 +456,7 @@ namespace parser {
 				call = stmt.as<CallExprPtr>();
 			} else if(stmt->getNodeCategory() == NC_Expression) {
 				call = builder.id(stmt.as<ExpressionPtr>());
-			} else if(transform::isOutlineAble(stmt, true)) {
+			} else if(analysis::isOutlineAble(stmt, true)) {
 				call = transform::outline(builder.getNodeManager(), stmt, true);
 			}
 
@@ -1142,6 +1142,7 @@ namespace parser {
 		}
 
 		void InspireDriver::addTypeAlias(const TypePtr& pattern, const TypePtr& substitute) {
+			if (*pattern == *substitute) return;
 			auto& aliases = getCurrentScope()->aliases;
 			assert_true(aliases.find(pattern) == aliases.end());
 			aliases[pattern] = substitute;

@@ -216,7 +216,17 @@ namespace c_ast {
 			}
 
 			PRINT(EnumType) {
-				return out << "enum " << node->name << " { " << node->annotation << " };";
+				out << "typedef enum " << print(node->name);
+				//class type should only be printed when using c++11 enum classes
+				//if(node->classTy) { out << " : " << print(node->classTy); }
+				out << " { " << 
+					join(", ", node->values, [&](std::ostream& out, const std::pair<IdentifierPtr,LiteralPtr>& cur) { 
+						out << print(cur.first);
+						if(!cur.second->value.empty()) {
+							out << "=" << print(cur.second);
+						}
+				}); 
+				return out << " } " << print(node->name) << ";";
 			}
 
 			PRINT(MemberFieldPointer) {

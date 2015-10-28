@@ -47,12 +47,7 @@
 
 #include "insieme/utils/functional_utils.h"
 
-#include "insieme/core/ir_node.h"
-#include "insieme/core/ir_values.h"
-#include "insieme/core/ir_types.h"
-#include "insieme/core/ir_expressions.h"
-#include "insieme/core/ir_statements.h"
-#include "insieme/core/ir_program.h"
+#include "insieme/core/ir.h"
 
 
 // syntax accepted by visual studio is not accepted by gcc

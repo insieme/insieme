@@ -267,27 +267,6 @@ namespace transform {
 	 */
 	StatementPtr tryInlineToStmt(NodeManager& manager, const CallExprPtr& call, bool inlineDerivedBuiltIns = false);
 
-
-	/**
-	 * Tests whether the given statement contains a free node of type controlStmt.
-	 * A node is free if it is not enclosed by any node of the types listed in pruneStmts.
-	 *
-	 * @param stmt the statement to be tested
-	 * @return true it has free control stmts, false otherwise
-	 */
-	bool hasFreeControlStatement(const StatementPtr& stmt, NodeType controlStmt, const vector<NodeType>& pruneStmts);
-
-	/**
-	 * Tests whether the given statement can be outlined. Statements can only be outlined if they
-	 * do not contain any 'free' return, break or continue statements. Hence, every return, break
-	 * or continue has to target a node within the given code fragment.
-	 *
-	 * @param stmt the statement to be tested
-	 * @param allowReturns allow free returns, generating a lambda which returns that value. Used e.g. in the parser
-	 * @return true if it could be outlined, false otherwise
-	 */
-	bool isOutlineAble(const StatementPtr& stmt, bool allowReturns = false);
-
 	/**
 	 * Outlines the given stmt by moving it into a lambda. The lambda will be requesting all free
 	 * variables within the statement as an argument. The call passing those parameters to the generated

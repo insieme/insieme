@@ -229,7 +229,7 @@ namespace core {
 		 * Obtains a reference to the requested argument.
 		 */
 		Ptr<const Expression> getArgument(unsigned index) const {
-			return CallExprAccessor<Derived, Ptr>::getElement(index);
+			return this->getElement(index);
 		}
 		
 		/**
@@ -459,8 +459,7 @@ namespace core {
 		 * Obtains the function type of this
 		 */
 		Ptr<const FunctionType> getFunctionType() const {
-			static const typename Ptr<const FunctionType>::StaticCast caster = typename Ptr<const FunctionType>::StaticCast();
-			return caster.template operator()<const FunctionType>(ExpressionAccessor<Derived, Ptr>::getType());
+			return this->getType().template as<Ptr<const FunctionType>>();
 		}
 
 		/**
@@ -488,7 +487,7 @@ namespace core {
 		 * Determines whether this function is recursively defined or not.
 		 */
 		bool isRecursive() const {
-			return ExpressionAccessor<Derived, Ptr>::getNode().isRecursiveInternal();
+			return this->getNode().isRecursiveInternal();
 		}
 
 		/**
@@ -499,7 +498,7 @@ namespace core {
 		 * @return the resulting, peeled lambda expression
 		 */
 		LambdaExprPtr peel(unsigned numTimes = 1) const {
-			return peel(ExpressionAccessor<Derived, Ptr>::getNodeManager(), numTimes);
+			return peel(this->getNodeManager(), numTimes);
 		}
 
 		/**
@@ -511,7 +510,7 @@ namespace core {
 		 * @return the resulting, peeled lambda expression
 		 */
 		LambdaExprPtr peel(NodeManager & manager, unsigned numTimes = 1) const {
-			if(!isRecursive()) { return manager.get(ExpressionAccessor<Derived, Ptr>::getNode()); }
+			if(!isRecursive()) { return manager.get(this->getNode()); }
 			return getDefinition()->peel(manager, getVariable(), numTimes);
 		}
 
@@ -524,7 +523,7 @@ namespace core {
 		 * @return the resulting, unrolled lambda expression
 		 */
 		LambdaExprPtr unroll(unsigned numTimes) const {
-			return unroll(ExpressionAccessor<Derived, Ptr>::getNodeManager(), numTimes);
+			return unroll(this->getNodeManager(), numTimes);
 		}
 
 		/**
@@ -536,7 +535,7 @@ namespace core {
 		 * @return the resulting, unrolled lambda expression
 		 */
 		LambdaExprPtr unroll(NodeManager & manager, unsigned numTimes) const {
-			return ExpressionAccessor<Derived, Ptr>::getNode().unroll(manager, numTimes);
+			return this->getNode().unroll(manager, numTimes);
 		}
 	IR_NODE_END()
 
@@ -727,7 +726,7 @@ namespace core {
 		 * @return true if recursive, false otherwise
 		 */
 		bool isRecursive(const VariablePtr& variable) const {
-			return SupportAccessor<Derived, Ptr>::getNode().isRecursivelyDefined(variable);
+			return this->getNode().isRecursivelyDefined(variable);
 		}
 
 		/**
@@ -747,7 +746,7 @@ namespace core {
 		 * @return the list of recursive references within this definition, rooted by this definition.
 		 */
 		const vector<VariableAddress>& getRecursiveCallsOf(const VariablePtr& variable) const {
-			return SupportAccessor<Derived, Ptr>::getNode().getRecursiveCallsOf(variable);
+			return this->getNode().getRecursiveCallsOf(variable);
 		}
 
 		/**
@@ -759,7 +758,7 @@ namespace core {
 		 * @return the resulting, peeled lambda expression
 		 */
 		LambdaExprPtr peel(NodeManager & manager, const VariablePtr& variable, unsigned numTimes = 1) const {
-			return SupportAccessor<Derived, Ptr>::getNode().peel(manager, variable, numTimes);
+			return this->getNode().peel(manager, variable, numTimes);
 		}
 
 		/**
@@ -770,7 +769,7 @@ namespace core {
 		 * @return the resulting, unrolled lambda definition
 		 */
 		LambdaDefinitionPtr unroll(NodeManager & manager, unsigned numTimes) const {
-			return SupportAccessor<Derived, Ptr>::getNode().unroll(manager, numTimes);
+			return this->getNode().unroll(manager, numTimes);
 		}
 	IR_NODE_END()
 
