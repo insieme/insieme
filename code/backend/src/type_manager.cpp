@@ -1345,7 +1345,7 @@ namespace backend {
 			for_each(ptr->getDefinitions(), [&](const core::TagTypeBindingPtr& cur) {
 				// obtain peeled type
 				core::TagTypePtr recType = core::TagType::get(nodeManager, cur->getTag(), ptr);
-				core::TagTypePtr peeled = ptr->peelOnce(nodeManager, cur->getTag());
+				core::TagTypePtr peeled = ptr->peel(nodeManager, cur->getTag());
 
 				// fix name of peeled struct
 				nameManager.setName(peeled->getRecord(), nameManager.getName(recType));

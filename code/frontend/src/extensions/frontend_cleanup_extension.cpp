@@ -130,7 +130,7 @@ namespace extensions {
 				auto call = matchingAddress.getAddressedNode().as<CallExprPtr>();
 				auto arg0 = call->getArgument(0);
 				// ensure correct typing
-				assert_pred2(core::analysis::compareTypes, call->getType(), arg0->getType()) << "Record types not correctly resolved";
+				assert_pred2(core::analysis::equalTypes, call->getType(), arg0->getType()) << "Record types not correctly resolved";
 				// remove call
 				return arg0;
 			}).as<ProgramPtr>();

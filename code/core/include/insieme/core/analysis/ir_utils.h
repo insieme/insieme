@@ -421,9 +421,17 @@ namespace analysis {
 	bool isStaticVar(const ExpressionPtr& var);
 
 	/**
-	 * compare given typePtrs, trying to unroll rectypes
+	 * Obtains the canonical representation of the given type. For instance,
+	 * generic parameters will be normalized and recursive types presented
+	 * in their most compact form.
 	 */
-	bool compareTypes(const TypePtr& a, const TypePtr& b);
+	TypePtr getCanonicalType(const TypePtr& a);
+
+	/**
+	 * Compare two types whether they are semantically equivalent.
+	 * In particular, this comparison is handling the unrolling of recursive types.
+	 */
+	bool equalTypes(const TypePtr& a, const TypePtr& b);
 
 
 	// ----------------------------------- Jobs ----------------------------

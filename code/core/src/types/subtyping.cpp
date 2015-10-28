@@ -150,7 +150,7 @@ namespace types {
 
 	bool isSubTypeOf(const TypePtr& subType, const TypePtr& superType) {
 		// quick check - reflexivity
-		if(*subType == *superType) { return true; }
+		if (*subType == *superType) return true;
 
 		// check for recursive types
 		if (auto tagType = subType.isa<TagTypePtr>()) {
@@ -169,7 +169,7 @@ namespace types {
 
 			// if element types are identical => it is fine
 			// if (srcElement == trgElement) return true;
-			if(core::analysis::compareTypes(srcElement, trgElement)) { return true; }
+			if(core::analysis::equalTypes(srcElement, trgElement)) { return true; }
 
 			// support nested references
 			if(analysis::isRefType(srcElement) && analysis::isRefType(trgElement)) { return isSubTypeOf(srcElement, trgElement); }

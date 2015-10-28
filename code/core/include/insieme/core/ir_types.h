@@ -872,9 +872,10 @@ namespace core {
 		 *
 		 * @param manager the manager to be used for maintaining the resulting type pointer
 		 * @param tag the tag defining the definition to be unrolled once
+		 * @param times the number of times it shall be peeled
 		 * @return the resulting, peeled type
 		 */
-		TagTypePtr peelOnce(NodeManager & manager, const TagTypeReferencePtr& tag) const;
+		TagTypePtr peel(NodeManager & manager, const TagTypeReferencePtr& tag, unsigned times = 1) const;
 
 	IR_NODE_END()
 
@@ -904,13 +905,14 @@ namespace core {
 		}
 
 		/**
-		 * Peels this definition once for the given tag.
+		 * Peels this definition for the given tag for the given number of times.
 		 *
 		 * @param manager the manager to be used for maintaining the resulting type pointer
 		 * @param tag the tag selecting the definition to be peeled once
+		 * @param times the number of times to be peeled
 		 * @return the resulting, peeled type
 		 */
-		TagTypePtr peelDefinitionOnce(NodeManager & manager, const TagTypeReferencePtr& tag) const;
+		TagTypePtr peelDefinition(NodeManager & manager, const TagTypeReferencePtr& tag, unsigned times = 1) const;
 	IR_NODE_END()
 
 
@@ -1028,15 +1030,15 @@ namespace core {
 		/**
 		 * Peels this tag type.
 		 */
-		TagTypePtr peel(NodeManager & manager) const {
-			return (*getDefinition()).peelOnce(manager, getTag());
+		TagTypePtr peel(NodeManager & manager, unsigned times = 1) const {
+			return (*getDefinition()).peel(manager, getTag(), times);
 		}
 
 		/**
 		 * Peels this recursive type once.
 		 */
-		TagTypePtr peel() const {
-			return peel(this->getNode().getNodeManager());
+		TagTypePtr peel(unsigned times = 1) const {
+			return peel(this->getNode().getNodeManager(), times);
 		}
 
 		/**
@@ -1756,8 +1758,8 @@ namespace core {
 	// --------------------------- late definitions to resolve cyclic dependencies  ---------------------------------------
 
 	template<typename LeafType, template<typename T> class Ptr>
-	TagTypePtr Accessor<TagTypeDefinition, LeafType, Ptr>::peelOnce(NodeManager & manager, const TagTypeReferencePtr& tag) const {
-		return Accessor<TagTypeDefinition, LeafType, Ptr>::getNode().peelDefinitionOnce(manager, tag);
+	TagTypePtr Accessor<TagTypeDefinition, LeafType, Ptr>::peel(NodeManager & manager, const TagTypeReferencePtr& tag, unsigned times) const {
+		return Accessor<TagTypeDefinition, LeafType, Ptr>::getNode().peelDefinition(manager, tag, times);
 	}
 
 } // end namespace core

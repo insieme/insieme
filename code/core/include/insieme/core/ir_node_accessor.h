@@ -141,10 +141,6 @@ namespace core {
 			return getNode().nodeCategory == NC_Value;
 		}
 
-		bool isReference() const {
-			return true; //getNode().nodeCategory == NC_
-		}
-
 		/**
 		 * Obtains access to a concrete child of this node.
 		 *
