@@ -64,8 +64,8 @@ namespace irp = insieme::core::pattern::irp;
 // TODO (in order of precedence):
 // - Support more operations for boundary extraction (LT, LE, variables on the RHS)
 // - Also support more ways to write the increment expression
-// - Handle the case where the original loop variable is used after the while (by assigning to it either in or after the for)
 // - Handle non-int loops (e.g. for C++) by constructing the required int range, looping over it and setting the iterator variable internally
+// - replace stupid "use after loop" check by more sophisticated def use analysis.
 
 namespace insieme {
 namespace frontend {
@@ -180,6 +180,15 @@ namespace extensions {
 		}
 	}
 
+	bool isUsedAfterLoop(const core::StatementList& stmts,
+			const core::WhileStmtPtr& whileStmt, const core::NodePtr& predecessor) {
+		if(((stmts.size()>=1) && (stmts[stmts.size()-1] != whileStmt))
+			|| !predecessor.isa<core::DeclarationStmtPtr>()) {
+			return true;
+		}
+		return false;
+	}
+
 	/// while statements can be for statements iff only one variable used in the condition is
 	/// altered within the statement, and this alteration satisfies certain conditions
 	core::ProgramPtr WhileToForExtension::IRVisit(insieme::core::ProgramPtr& prog) {
@@ -189,15 +198,25 @@ namespace extensions {
 		auto& basic = mgr.getLangBasic();
 
 		auto whilePat = irp::compoundStmt(pattern::anyList << pattern::var("predecessor", (irp::declarationStmt() | irp::callExpr(pattern::any)))
-			                                               << pattern::var("while", irp::whileStmt()) << pattern::anyList);
+			                                               << pattern::var("while", irp::whileStmt()) 
+														   << pattern::anyList);
 
 		// match (and potentially replace) all generated while statements
 		prog = irp::replaceAll(whilePat, core::NodeAddress(prog), [&](pattern::AddressMatch match) -> core::StatementPtr {
-			
 			auto original = match.getRoot().getAddressedNode().as<core::CompoundStmtPtr>();
 			auto whileAddr = match["while"].getFlattened().front().as<core::WhileStmtAddress>();
 			auto condition = whileAddr.getAddressedNode()->getCondition();
 			auto body = whileAddr.getAddressedNode()->getBody();
+			auto pred = match["predecessor"].getFlattened().front();
+
+			// check if loop variable is used after the loop
+			// at the moment this check is very simple. 
+			// TODO: replace stupid "use after loop" check by more sophisticated def use analysis.
+			if(isUsedAfterLoop(original->getStatements(), whileAddr.getAddressedNode(), 
+				pred.getAddressedNode())) {
+				return original;
+			}
+
 			VLOG(1) << "======= START WHILE TO FOR ===========\n" << dumpColor(match.getRoot().getAddressedNode());
 			
 			// check if body contains flow alterating stmts (break or return. continue is allowed.)
@@ -245,7 +264,6 @@ namespace extensions {
 			
 			/////////////////////////////////////////////////////////////////////////////////////// figuring out start
 			
-			auto pred = match["predecessor"].getFlattened().front();
 			auto convertedStartPair = mapToStart(cvar, pred);
 			VLOG(1) << "StartPair: " << convertedStartPair.first << " // " << convertedStartPair.second << "\n";
 
@@ -271,6 +289,8 @@ namespace extensions {
 			for(auto stmt : body->getStatements()) {
 				if(!::contains(toRemoveFromBody, stmt)) newBodyStmts.push_back(core::transform::replaceAllGen(mgr, stmt, loopVarReplacement));
 			}
+			//synchronize cvar and new forVar
+			//newBodyStmts.push_back(builder.callExpr(cvar->getType(), fMod.getCStyleAssignment(), forVar, cvar));
 			auto newBody = builder.compoundStmt(newBodyStmts);
 
 			// if the old loop variable is free in the new body, we messed up and should bail
