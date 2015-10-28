@@ -243,9 +243,12 @@ namespace c_ast {
 	};
 
 	struct EnumType : public Type {
-		string name;
-		string annotation;
-		EnumType(const string& identifier, const string& elements) : Type(NT_EnumType), name(identifier), annotation(elements) {}
+		using EnumElements = std::vector<std::pair<IdentifierPtr, LiteralPtr>>;
+		IdentifierPtr name;
+		EnumElements values;
+		TypePtr	classTy;
+		EnumType(const IdentifierPtr& identifier, const EnumElements& elements, const TypePtr& enumClassType)
+			: Type(NT_EnumType), name(identifier), values(elements), classTy(enumClassType) {}
 		virtual bool equals(const Node& node) const;
 	};
 

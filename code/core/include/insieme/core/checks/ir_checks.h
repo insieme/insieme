@@ -40,7 +40,6 @@
 
 #include <boost/optional/optional.hpp>
 
-#include "insieme/utils/enum.h"
 #include "insieme/utils/printable.h"
 
 #include "insieme/core/ir_address.h"

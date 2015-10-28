@@ -52,7 +52,7 @@
 #include "insieme/core/ir_expressions.h"
 #include "insieme/core/ir_types.h"
 #include "insieme/core/lang/basic.h"
-#include "insieme/core/lang/enum_extension.h"
+#include "insieme/core/lang/enum.h"
 #include "insieme/core/lang/ir++_extension.h"
 #include "insieme/core/lang/pointer.h"
 

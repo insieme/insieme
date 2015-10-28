@@ -441,6 +441,33 @@ namespace analysis {
 	 */
 	bool isZero(const core::ExpressionPtr& value);
 
+	// ----------------------------------- Lambda extraction + helpers ----------------------------
+
+	/**
+	 * Tests whether the given statement contains a control statement (e.g., NT_BreakStmt).
+	 * The search is pruned at given node types listed in pruneStmts.
+	 */
+	bool hasFreeControlStatement(const StatementPtr& stmt, NodeType controlStmt, const vector<NodeType>& pruneStmts);
+
+	/**
+	 * Tests whether the given statement is outline-able or not.
+	 */
+	bool isOutlineAble(const StatementPtr& stmt, bool allowReturns = false);
+
+	/**
+	 * Tests whether the given statement contains a free break statement.
+	 */
+	bool hasFreeBreakStatement(const StatementPtr& stmt);
+
+	/**
+	 * Tests whether the given statement contains a free continue statement.
+	 */
+	bool hasFreeContinueStatement(const StatementPtr& stmt);
+
+	/**
+	 * Tests whether the given statement contains a free return statement.
+	 */
+	bool hasFreeReturnStatement(const StatementPtr& stmt);
 
 } // end namespace utils
 } // end namespace core

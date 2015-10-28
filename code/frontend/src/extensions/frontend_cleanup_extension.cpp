@@ -41,7 +41,7 @@
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_visitor.h"
-#include "insieme/core/lang/enum_extension.h"
+#include "insieme/core/lang/enum.h"
 #include "insieme/core/lang/ir++_extension.h"
 #include "insieme/core/pattern/ir_generator.h"
 #include "insieme/core/pattern/ir_pattern.h"

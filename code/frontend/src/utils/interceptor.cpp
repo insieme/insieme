@@ -51,7 +51,7 @@
 #include "insieme/frontend/converter.h"
 #include "insieme/frontend/utils/header_tagger.h"
 #include "insieme/frontend/utils/name_manager.h"
-#include "insieme/core/lang/enum_extension.h"
+#include "insieme/core/lang/enum.h"
 #include "insieme/core/lang/const_extension.h"
 
 namespace insieme {
@@ -144,7 +144,6 @@ namespace utils {
 	} // end anonymous namespace
 
 	insieme::core::TypePtr Interceptor::intercept(const clang::QualType& type, insieme::frontend::conversion::Converter& converter) const {
-		auto builder = converter.getIRBuilder();
 		core::TypePtr irType;
 
 		if(const clang::TagType* tagType = llvm::dyn_cast<clang::TagType>(type.getTypePtr())) {
@@ -170,8 +169,9 @@ namespace utils {
 			std::string typeName = fixQualifiedName(tagDecl->getQualifiedNameAsString());
 
 			if(tagDecl->getTagKind() == clang::TTK_Enum) {
-				auto type = builder.getNodeManager().getLangExtension<core::lang::EnumExtension>().getEnumType(typeName);
-				return type;
+				//auto type = builder.getNodeManager().getLangExtension<core::lang::EnumExtension>().getEnumType(typeName);
+				//return type;
+				assert_not_implemented();
 			} else {
 				// generate a type with the inner elements, and no integer literal
 				//irType = builder.genericType(typeName, typeList, insieme::core::IntParamList());

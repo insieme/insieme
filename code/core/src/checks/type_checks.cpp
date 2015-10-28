@@ -43,7 +43,7 @@
 #include "insieme/core/types/subtyping.h"
 #include "insieme/core/types/type_variable_deduction.h"
 #include "insieme/core/printer/pretty_printer.h"
-#include "insieme/core/lang/enum_extension.h"
+#include "insieme/core/lang/enum.h"
 
 #include "insieme/core/lang/array.h"
 #include "insieme/core/lang/channel.h"
@@ -174,6 +174,40 @@ namespace checks {
 
 	OptionalMessageList TagTypeFieldsCheck::visitTagType(const TagTypeAddress& address) {
 		OptionalMessageList res;
+
+		// check if enum type
+		if(lang::isEnumType(address.getAddressedNode())) {
+			auto fields = address.getAddressedNode()->getFields();
+			//only check if non generic enum type?!
+			if(!fields[0]->getType().isa<TypeVariablePtr>()) {
+				// enum definition has to be a generic type ptr
+				// that has >= 1 type param and the name "enum_def<...>"
+				auto enumDefType = fields[0]->getType().isa<GenericTypePtr>();
+				if(enumDefType && enumDefType->getTypeParameter().size() &&
+					(enumDefType->getName()->getValue().find("enum_def") != std::string::npos)) {
+					//first field of enum_def has to be a string lit
+					if(GenericTypePtr enumName = enumDefType->getTypeParameter(0).isa<GenericTypePtr>()) {
+						if(enumName->getTypeParameter()->size()) {
+							add(res, Message(address, EC_TYPE_MALFORMED_ENUM_TYPE_DEFINITION_NAME,
+								format("Enum definition contains invalid name: ", *(enumDefType->getTypeParameter(0)), Message::ERROR)));
+						}
+					} else {
+							add(res, Message(address, EC_TYPE_MALFORMED_ENUM_TYPE_DEFINITION_NAME,
+								format("Enum definition contains invalid name: ", *(enumDefType->getTypeParameter(0)), Message::ERROR)));
+					}
+					//all following fields must be enum entries
+					for(unsigned i=1; i<enumDefType->getTypeParameter()->size(); ++i) {
+						if(!lang::EnumEntry::isEnumEntry(enumDefType->getTypeParameter(i))) {
+							add(res, Message(address, EC_TYPE_MALFORMED_ENUM_ENTRY,
+								format("Enum definition contains invalid enum entry: ", *(enumDefType->getTypeParameter(i)), Message::ERROR)));
+						}
+					}
+				} else {
+					add(res, Message(address, EC_TYPE_MALFORMED_ENUM_TYPE, format("Invalid enum type: ",
+						*(address.getAddressedNode()), Message::ERROR)));
+				}
+			}
+		}
 
 		// check for duplicate field names
 		utils::set::PointerSet<StringValuePtr> identifiers;
@@ -470,7 +504,6 @@ namespace checks {
 		// get as pointer
 		CallExprPtr call = address;
 		auto& base = call->getNodeManager().getLangBasic();
-		auto& enumExt = call->getNodeManager().getLangExtension<lang::EnumExtension>();
 
 		OptionalMessageList res;
 
@@ -482,7 +515,7 @@ namespace checks {
 		// arguments need to be arithmetic types or function types
 		for(auto arg : call) {
 			auto type = arg->getType();
-			if(!type.isa<TypeVariablePtr>() && !base.isScalarType(type) && !type.isa<FunctionTypePtr>() && !enumExt.isEnumType(type)) {
+			if(!type.isa<TypeVariablePtr>() && !base.isScalarType(type) && !type.isa<FunctionTypePtr>() && !core::lang::isEnumType(type)) {
 				add(res, Message(address, EC_TYPE_INVALID_GENERIC_OPERATOR_APPLICATION,
 				                 format("Generic operators must only be applied on arithmetic types - found: %s", toString(*type)), Message::ERROR));
 			}
@@ -984,12 +1017,9 @@ namespace checks {
 		// extract actual target type
 		trgType = analysis::getRepresentedType(trgType);
 
-		//TODO we need a special case handling enum types here, until this is implemented
-		auto& enumExt = mgr.getLangExtension<lang::EnumExtension>();
-
 		// create a validity check for the argument types
 		auto isValidNumericType = [&](const TypePtr& type) {
-			return type.isa<TypeVariablePtr>() || basic.isNumeric(type) || enumExt.isEnumType(type);
+			return type.isa<TypeVariablePtr>() || basic.isNumeric(type) || core::lang::isEnumType(type);
 		};
 
 		//check expression type

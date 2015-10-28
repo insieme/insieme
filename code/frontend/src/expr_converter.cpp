@@ -65,7 +65,7 @@
 #include "insieme/core/datapath/datapath.h"
 #include "insieme/core/encoder/lists.h"
 #include "insieme/core/lang/basic.h"
-#include "insieme/core/lang/enum_extension.h"
+#include "insieme/core/lang/enum.h"
 #include "insieme/core/lang/ir++_extension.h"
 #include "insieme/core/lang/pointer.h"
 #include "insieme/core/transform/manipulation.h"
@@ -672,10 +672,21 @@ namespace conversion {
 		}
 
 		if(const clang::EnumConstantDecl* decl = llvm::dyn_cast<clang::EnumConstantDecl>(declRef->getDecl())) {
-			string enumConstantname = decl->getNameAsString();
 			const clang::EnumType* enumType = llvm::dyn_cast<clang::EnumType>(llvm::cast<clang::TypeDecl>(decl->getDeclContext())->getTypeForDecl());
-			auto expType = converter.convertType(enumType->getCanonicalTypeInternal());
-			return builder.literal(enumConstantname, expType);
+			auto enumDecl = enumType->getDecl();
+			auto enumClassType = converter.convertType(enumDecl->getIntegerType());
+			//get the init val of the enum constant decl
+			core::ExpressionPtr val;
+			std::string value = decl->getInitVal().toString(10);
+			val = builder.literal(enumClassType, value);
+			if(val->getType() != enumClassType) {
+				val = builder.numericCast(val, enumClassType);
+			}
+
+			//convert and return the struct init expr
+			auto enumDef = converter.convertType(enumType->getCanonicalTypeInternal());
+			assert_true(enumDef.isa<core::TagTypePtr>()) << "enum type conversion failed.";
+			return builder.numericCast(core::lang::getEnumInit(val, enumDef.as<core::TagTypePtr>()), builder.getLangBasic().getInt4());
 		}
 
 		frontend_assert(false) << "DeclRefExpr not handled: " << dumpClang(declRef, converter.getSourceManager());

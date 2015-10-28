@@ -38,7 +38,7 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/analysis/ir_utils.h"
-#include "insieme/core/lang/enum_extension.h"
+#include "insieme/core/lang/enum.h"
 #include "insieme/core/encoder/lists.h"
 
 #include "insieme/utils/container_utils.h"
