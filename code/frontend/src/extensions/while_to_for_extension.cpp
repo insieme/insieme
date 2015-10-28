@@ -227,7 +227,7 @@ namespace extensions {
 			// if more than one free variable in the condition -> we certainly can't create a for for this
 			auto cvars = core::analysis::getFreeVariables(condition);
 			VLOG(1) << "--- cvars:\n " << cvars << "\n";
-			if(cvars.size() > 1) return original;
+			if(cvars.size() > 1 || cvars.size() == 0) return original;
 
 			auto cvar = cvars.front();
 			core::TypePtr cvarType = core::analysis::getReferencedType(cvar->getType());
