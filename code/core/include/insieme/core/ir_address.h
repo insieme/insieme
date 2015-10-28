@@ -150,7 +150,7 @@ namespace core {
 	 * TODO: extend documentation with usage scenarios
 	 */
 	template <typename T>
-	class Address : public Accessor<typename boost::remove_const<T>::type,Address<const typename boost::remove_const<T>::type>,Address>  {
+	class Address : public Accessor<typename std::remove_const<T>::type,Address<const typename std::remove_const<T>::type>,Address>  {
 	  public:
 		/**
 		 * The kind of node path utilized by addresses.
@@ -172,7 +172,7 @@ namespace core {
 		/**
 		 * The accessor offered to gain convenient access to members of the referenced node
 		 */
-		typedef Accessor<typename boost::remove_const<T>::type,Address<const typename boost::remove_const<T>::type>,Address> accessor_type;
+		typedef Accessor<typename std::remove_const<T>::type,Address<const typename std::remove_const<T>::type>,Address> accessor_type;
 
 
 		/**

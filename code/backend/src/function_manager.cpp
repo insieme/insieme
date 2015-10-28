@@ -111,7 +111,7 @@ namespace backend {
 				for_each(funInfos, [](const std::pair<core::ExpressionPtr, ElementInfo*>& cur) { delete cur.second; });
 			}
 
-			template <typename T, typename result_type = typename info_trait<typename boost::remove_const<typename T::element_type>::type>::type*>
+			template <typename T, typename result_type = typename info_trait<typename std::remove_const<typename T::element_type>::type>::type*>
 			result_type resolve(const T& expression, bool isConst = false, bool isVirtual = false) {
 				// lookup information using internal mechanism and cast statically
 				ElementInfo* info = resolveInternal(expression, isConst, isVirtual);

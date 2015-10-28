@@ -96,11 +96,11 @@ namespace core {
 
 
 	template <typename T>
-	class Pointer : public Ptr<T>, public Accessor<typename boost::remove_const<T>::type,Pointer<const typename boost::remove_const<T>::type>,Pointer> {
+	class Pointer : public Ptr<T>, public Accessor<typename std::remove_const<T>::type,Pointer<const typename std::remove_const<T>::type>,Pointer> {
 		/**
 		 * The accessor offered to gain convenient access to members of the referenced node
 		 */
-		typedef Accessor<typename boost::remove_const<T>::type,Pointer<const typename boost::remove_const<T>::type>,Pointer> accessor_type;
+		typedef Accessor<typename std::remove_const<T>::type,Pointer<const typename std::remove_const<T>::type>,Pointer> accessor_type;
 
 	  public:
 		typedef StaticPointerCast StaticCast;
