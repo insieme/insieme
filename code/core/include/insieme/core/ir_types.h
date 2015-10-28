@@ -1395,14 +1395,19 @@ namespace core {
 		IR_NODE_PROPERTY(Expression, Destructor, 3);
 
 		/**
+		 * Whether or not the destructor is virtual.
+		 */
+		IR_NODE_PROPERTY(BoolValue, DestructorVirtual, 4);
+
+		/**
 		 * Obtains the list of all member functions fined for this record type.
 		 */
-		IR_NODE_PROPERTY(MemberFunctions, MemberFunctions, 4);
+		IR_NODE_PROPERTY(MemberFunctions, MemberFunctions, 5);
 
 		/**
 		 * Obtains the list of all pure virtual member functions fined for this record type.
 		 */
-		IR_NODE_PROPERTY(PureVirtualMemberFunctions, PureVirtualMemberFunctions, 5);
+		IR_NODE_PROPERTY(PureVirtualMemberFunctions, PureVirtualMemberFunctions, 6);
 
 		/**
 		 * Retrieves the field with the given name within this
