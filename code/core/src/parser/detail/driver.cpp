@@ -557,6 +557,7 @@ namespace parser {
 
 			// create the member function
 			auto fun = genLambda(l, fullParams, retType, newBody, isLambda, FK_MEMBER_FUNCTION);
+
 			auto memberFunType = fun->getFunctionType();
 			assert_false(fun->isRecursive()) << "The parser should not produce recursive functions!";
 
@@ -565,6 +566,16 @@ namespace parser {
 			auto accessExpr = builder.callExpr(memberFunType, access, genThis(l), builder.getIdentifierLiteral(name), builder.getTypeLiteral(memberFunType));
 			annotations::attachName(fun, name);
 			declareSymbol(l, name, accessExpr);
+
+			std::string memberName = getThisType()->getName()->getValue() + "::" + name;
+			auto key = builder.literal(memberName, memberFunType);
+
+			//only declare the symbol implicitly if it hasn't already been declared
+			if (!isSymbolDeclaredInGlobalScope(memberName)) {
+				declareSymbolInGlobalScope(l, memberName, key);
+			}
+
+			tu.addFunction(key, fun);
 
 			// create the member function entry
 			return builder.memberFunction(virtl, name, fun);
@@ -621,9 +632,6 @@ namespace parser {
 		ExpressionPtr InspireDriver::genCall(const location& l, const ExpressionPtr& callable, ExpressionList args) {
 			ExpressionPtr func = callable;
 
-			auto ftype = func->getType();
-			if(!ftype.isa<FunctionTypePtr>()) { error(l, "attempt to call non function expression"); }
-
 			// if this is a member function call we prepend the implicit this parameter
 			if(analysis::isCallOf(callable, builder.getLangBasic().getCompositeMemberFunctionAccess())) {
 				// we add the callable itself as the first argument of the call
@@ -632,7 +640,25 @@ namespace parser {
 				thisParamType = getTypeFromGenericTypeInTu(thisParamType);
 
 				args.insert(args.begin(), thisParam);
+
+				//replace func with the lookup of the literal
+				std::string typeName;
+				if (auto tagType = thisParamType.isa<TagTypePtr>()) {
+					typeName = tagType->getName()->getValue();
+				} else {
+					typeName = thisParamType.as<GenericTypePtr>()->getName()->getValue();
+				}
+				auto functionName = callable.as<CallExprPtr>()->getArgument(1).as<LiteralPtr>()->getValue()->getValue();
+				auto memberName = typeName + "::" + functionName;
+				func = findSymbol(l, memberName);
+				if (!func) {
+					error(l, format("Couldn't find symbol %s", memberName));
+					return nullptr;
+				}
 			}
+
+			auto ftype = func->getType();
+			if(!ftype.isa<FunctionTypePtr>()) { error(l, "attempt to call non function expression"); }
 
 			auto funcParamTypes = ftype.as<FunctionTypePtr>()->getParameterTypeList();
 			if(!funcParamTypes.empty()) {
@@ -1073,8 +1099,27 @@ namespace parser {
 			declareSymbol(l, name, [=]() -> NodePtr { return node; });
 		}
 
+		void InspireDriver::declareSymbolInGlobalScope(const location& l, const std::string& name, const ExpressionPtr& node) {
+			assert_false(scopes.empty()) << "Missing global scope!";
+			// check name for validity
+			if(!checkSymbolName(l, name)) { return; }
+
+			// make sure that there isn't already a declaration for this symbol
+			if(scopes[0]->declaredSymbols.find(name) != scopes[0]->declaredSymbols.end()) {
+				error(l, format("Symbol %s has already been declared", name));
+				return;
+			}
+
+			scopes[0]->declaredSymbols[name] = [=]() -> NodePtr { return node; };
+		}
+
 		bool InspireDriver::isSymbolDeclaredInCurrentScope(const std::string name) {
 			return getCurrentScope()->declaredSymbols.find(name) != getCurrentScope()->declaredSymbols.end();
+		}
+
+		bool InspireDriver::isSymbolDeclaredInGlobalScope(const std::string name) {
+			assert_false(scopes.empty()) << "Missing global scope!";
+			return scopes[0]->declaredSymbols.find(name) != scopes[0]->declaredSymbols.end();
 		}
 
 		void InspireDriver::declareType(const location& l, const std::string& name, const TypePtr& node) {

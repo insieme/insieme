@@ -399,9 +399,19 @@ namespace parser {
 			void declareSymbol(const location& l, const std::string& name, const NodeFactory& factory);
 
 			/**
+			 * add a symbol declaration to the global scope
+			 */
+			void declareSymbolInGlobalScope(const location& l, const std::string& name, const ExpressionPtr& node);
+
+			/**
 			 * checks whether the given symbol is declared in the current scope
 			 */
 			bool isSymbolDeclaredInCurrentScope(const std::string name);
+
+			/**
+			 * checks whether the given symbol is declared in the global scope
+			 */
+			bool isSymbolDeclaredInGlobalScope(const std::string name);
 
 			/**
 			 * add a type declaration to the current scope
