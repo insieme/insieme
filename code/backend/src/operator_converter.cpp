@@ -756,21 +756,6 @@ namespace backend {
 			return c_ast::access(CONVERT_ARG(0), field);
 		};
 
-		res[basic.getCompositeMemberFunctionAccess()] = OP_CONVERTER {
-			// signature of operation:
-			//		('a, identifier, type<'b>) -> 'b
-
-			// add a dependency to the accessed type definition before accessing the type
-			const core::TypePtr structType = ARG(0)->getType();
-			const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(structType);
-			context.getDependencies().insert(info.definition);
-
-			// create member access
-			assert_eq(ARG(1)->getNodeType(), core::NT_Literal);
-			c_ast::IdentifierPtr field = C_NODE_MANAGER->create(static_pointer_cast<const core::Literal>(ARG(1))->getStringValue());
-			return c_ast::access(CONVERT_ARG(0), field);
-		};
-
 		res[refExt.getRefMemberAccess()] = OP_CONVERTER {
 			// signature of operation:
 			//		(ref<'a>, identifier, type<'b>) -> ref<'b>
