@@ -96,6 +96,7 @@ typedef struct _omp_lock_t { int insieme_omp_lock_struct_marker; } omp_lock_t;
 
 void omp_init_lock(omp_lock_t* lock);
 void omp_set_lock(omp_lock_t* lock);
+int omp_test_lock(omp_lock_t* lock);
 void omp_unset_lock(omp_lock_t* lock);
 
 

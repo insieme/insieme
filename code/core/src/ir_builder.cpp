@@ -768,15 +768,19 @@ namespace core {
 	}
 
 	CallExprPtr IRBuilderBaseModule::acquireLock(const ExpressionPtr& lock) const {
-		assert_true(analysis::isRefOf(lock, manager.getLangExtension<lang::ParallelExtension>().getLock())) << "Cannot lock a non-lock type.";
+		assert_true(analysis::isRefOf(lock, manager.getLangExtension<lang::ParallelExtension>().getLock())) << "Cannot lock a non-lock type: " << dumpColor(lock) << " of type " << dumpColor(lock->getType());
 		return callExpr(manager.getLangBasic().getUnit(), manager.getLangExtension<lang::ParallelExtension>().getLockAcquire(), lock);
 	}
+	CallExprPtr IRBuilderBaseModule::tryAcquireLock(const ExpressionPtr& lock) const {
+		assert_true(analysis::isRefOf(lock, manager.getLangExtension<lang::ParallelExtension>().getLock())) << "Cannot tryLock a non-lock type: "  << dumpColor(lock) << " of type " << dumpColor(lock->getType());
+		return callExpr(manager.getLangBasic().getBool(), manager.getLangExtension<lang::ParallelExtension>().getLockTryAcquire(), lock);
+	}
 	CallExprPtr IRBuilderBaseModule::releaseLock(const ExpressionPtr& lock) const {
-		assert_true(analysis::isRefOf(lock, manager.getLangExtension<lang::ParallelExtension>().getLock())) << "Cannot unlock a non-lock type.";
+		assert_true(analysis::isRefOf(lock, manager.getLangExtension<lang::ParallelExtension>().getLock())) << "Cannot unlock a non-lock type: " << dumpColor(lock) << " of type " << dumpColor(lock->getType());
 		return callExpr(manager.getLangBasic().getUnit(), manager.getLangExtension<lang::ParallelExtension>().getLockRelease(), lock);
 	}
 	CallExprPtr IRBuilderBaseModule::initLock(const ExpressionPtr& lock) const {
-		assert_true(analysis::isRefOf(lock, manager.getLangExtension<lang::ParallelExtension>().getLock())) << "Cannot init a non-lock type.";
+		assert_true(analysis::isRefOf(lock, manager.getLangExtension<lang::ParallelExtension>().getLock())) << "Cannot init a non-lock type: " << dumpColor(lock) << " of type " << dumpColor(lock->getType());
 		return callExpr(manager.getLangBasic().getUnit(), manager.getLangExtension<lang::ParallelExtension>().getLockInit(), lock);
 	}
 

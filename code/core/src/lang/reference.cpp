@@ -161,10 +161,10 @@ namespace lang {
 	bool isReference(const NodePtr& node) {
 
 		// check for null
-		if (!node) return false;
+		if(!node) return false;
 
 		// check for expressions
-		if (auto expr = node.isa<ExpressionPtr>()) return isReference(expr->getType());
+		if(auto expr = node.isa<ExpressionPtr>()) return isReference(expr->getType());
 
 		// check type
 		auto type = node.isa<GenericTypePtr>();
@@ -185,7 +185,17 @@ namespace lang {
 				isValidBooleanMarker(map.applyTo(ref->getTypeParameter(2))) &&
 				isRefMarker(map.applyTo(ref->getTypeParameter(3)));
 	}
-	
+
+	bool isReferenceTo(const NodePtr& node, const TypePtr& type) {
+		// check for expressions
+		if(auto expr = node.isa<ExpressionPtr>()) return isReferenceTo(expr->getType(), type);
+		// check type
+		auto nodeType = node.isa<GenericTypePtr>();
+		if(!nodeType) return false;
+		// check referenced type
+		return isReference(nodeType) && ReferenceType(nodeType).getElementType() == type;
+	}
+
 	bool isPlainReference(const NodePtr& node) {
 		return isReference(node) && ReferenceType(node).isPlain();
 	}
@@ -209,13 +219,13 @@ namespace lang {
 
 		// check that they are not equal
 		if(typeA == typeB) return false;
-		
+
 		auto gA = typeA.as<GenericTypePtr>();
 		auto gB = typeB.as<GenericTypePtr>();
 
 		return gA->getTypeParameter(0) == gB->getTypeParameter(0);
 	}
-	
+
 	ExpressionPtr buildRefCast(const ExpressionPtr& refExpr, const TypePtr& targetTy) {
 		assert_pred1(isReference, refExpr) << "Trying to build a ref cast from non-ref.";
 		assert_pred1(isReference, targetTy) << "Trying to build a ref cast to non-ref type.";

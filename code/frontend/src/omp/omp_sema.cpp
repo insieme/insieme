@@ -43,6 +43,7 @@
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/array.h"
 #include "insieme/core/lang/parallel.h"
+#include "insieme/core/lang/pointer.h"
 #include "insieme/core/ir_mapper.h"
 #include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/printer/pretty_printer.h"
@@ -55,8 +56,10 @@
 #include "insieme/utils/logging.h"
 #include "insieme/utils/annotation.h"
 #include "insieme/utils/timer.h"
+#include "insieme/utils/name_mangling.h"
 
 #include "insieme/frontend/utils/clang_cast.h"
+#include "insieme/frontend/utils/frontend_inspire_module.h"
 #include "insieme/frontend/tu/ir_translation_unit.h"
 #include "insieme/frontend/tu/ir_translation_unit_io.h"
 
@@ -293,6 +296,31 @@ namespace omp {
 			return newNode;
 		}
 
+		ExpressionPtr buildLockArgument(const CallExprPtr& callExp) {
+			ExpressionPtr arg = callExp->getArgument(0);
+			// nothing to do in this case, eg. ref<lock,f,f>
+			if(core::lang::isReferenceTo(arg, parExt.getLock()))
+				return arg;
+
+			auto& ptrExt = nodeMan.getLangExtension<core::lang::PointerExtension>();
+			auto& refExt = nodeMan.getLangExtension<core::lang::ReferenceExtension>();
+			// we get a pointer created from a ref, simply strip off conversion
+			if(analysis::isCallOf(arg, ptrExt.getPtrFromRef()))
+				return analysis::getArgument(arg, 0);
+			// we get a pointer, convert to ref
+			if(core::lang::isPointer(arg))
+				return core::lang::buildPtrToRef(arg);
+			// we get a deref of a ref, check if enclosed node is a pointer and convert it to a ref if required
+			if(analysis::isCallOf(arg, refExt.getRefDeref())) {
+				auto argOfDeref = arg.as<CallExprPtr>()->getArgument(0);
+				if(core::lang::isPointer(argOfDeref)) {
+					return core::lang::buildPtrToRef(argOfDeref);
+				}
+			}
+			assert_fail() << "OMP FE: unexpected lock function argument type: " << dumpColor(arg->getType());
+			return CallExprPtr();
+		}
+
 		// implements OpenMP built-in functions by replacing the call expression
 		NodePtr handleFunctions(const NodePtr& newNode) {
 			if(CallExprPtr callExp = dynamic_pointer_cast<const CallExpr>(newNode)) {
@@ -320,17 +348,14 @@ namespace omp {
 					}
 					// OMP Locks --------------------------------------------
 					else if(funName == "omp_init_lock") {
-						ExpressionPtr arg = callExp->getArgument(0);
-						if(analysis::isCallOf(arg, refExt.getRefScalarToRefArray())) { arg = analysis::getArgument(arg, 0); }
-						return build.initLock(arg);
+						return build.initLock(buildLockArgument(callExp));
 					} else if(funName == "omp_set_lock") {
-						ExpressionPtr arg = callExp->getArgument(0);
-						if(analysis::isCallOf(arg, refExt.getRefScalarToRefArray())) { arg = analysis::getArgument(arg, 0); }
-						return build.acquireLock(arg);
+						return build.acquireLock(buildLockArgument(callExp));
 					} else if(funName == "omp_unset_lock") {
-						ExpressionPtr arg = callExp->getArgument(0);
-						if(analysis::isCallOf(arg, refExt.getRefScalarToRefArray())) { arg = analysis::getArgument(arg, 0); }
-						return build.releaseLock(arg);
+						return build.releaseLock(buildLockArgument(callExp));
+					} else if(funName == "omp_test_lock") {
+						// as omp_test_lock is delared as 'int omp_test_lock(omp_lock_t *)' we need to convert the return value
+						return utils::buildBoolToInt(build.tryAcquireLock(buildLockArgument(callExp)));
 					}
 					// Unhandled OMP functions
 					else if(funName.substr(0, 4) == "omp_") {
@@ -342,20 +367,19 @@ namespace omp {
 		}
 
 		bool isLockStructType(TypePtr type) {
-			return type.isa<core::GenericTypePtr>() && (type.as<core::GenericTypePtr>()->getName()->getValue() == "omp_lock_t"
-			                                            || type.as<core::GenericTypePtr>()->getName()->getValue() == "_omp_lock_t");
+			if(type.isa<core::GenericTypePtr>()) {
+				auto typeName = insieme::utils::demangle(type.as<core::GenericTypePtr>()->getName()->getValue());
+				return typeName == "omp_lock_t" || typeName == "_omp_lock_t";
+			}
+
+			return false;
 		}
 
 		// implements OpenMP built-in types by replacing them with the correct IR constructs
 		NodePtr handleTypes(const NodePtr& newNode) {
 			if(TypePtr type = newNode.isa<core::TypePtr>()) {
-				if(core::analysis::isRefType(type)) {
-					type = core::analysis::getReferencedType(type);
-				}
-				if(core::lang::isArray(type)) {
-					type = core::lang::getArrayElementType(type);
-				}
-				if(isLockStructType(type)) { return parExt.getLock(); }
+				if(isLockStructType(type))
+					return parExt.getLock();
 			}
 			return newNode;
 		}
