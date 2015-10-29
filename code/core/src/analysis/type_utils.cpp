@@ -39,6 +39,7 @@
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/lang/basic.h"
+#include "insieme/core/lang/pointer.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/types/subtype_constraints.h"
 
@@ -127,21 +128,91 @@ namespace analysis {
 
 	/* A trivial class or struct is defined as one that:
 	 *
-     * - Has a trivial default constructor. This may use the default constructor syntax (SomeConstructor() = default;).
-     * - Has trivial copy and move constructors, which may use the default syntax.
-     * - Has trivial copy and move assignment operators, which may use the default syntax.
-     * - Has a trivial destructor, which must not be virtual.
+	 * - Has a trivial default constructor. This may use the default constructor syntax (SomeConstructor() = default;).
+	 * - Has trivial copy and move constructors, which may use the default syntax.
+	 * - Has trivial copy and move assignment operators, which may use the default syntax.
+	 * - Has a trivial destructor, which must not be virtual.
 	 *
-	 * Constructors are trivial only if there are no virtual member functions of the class and no virtual base classes. 
+	 * Constructors are trivial only if there are no virtual member functions of the class and no virtual base classes.
 	 * Copy/move operations also require that all the non-static data members be trivial.
 	 */
+	/* The copy assignment operator for class T is trivial if all of the following is true:
+	 *
+	 * - It is not user-provided (meaning, it is implicitly-defined or defaulted), and if it is defaulted, its signature is the same as implicitly-defined
+	 * - T has no virtual member functions
+	 * - T has no virtual base classes
+	 * - The copy assignment operator selected for every direct base of T is trivial
+	 * - The copy assignment operator selected for every non-static class type (or array of class type) member of T is trivial
+	 * - T has no non-static data members of volatile-qualified type (since C++14)
+	 */
+	/// TODO: add trivial marker for tagtypes
 	bool isTrivial(const TypePtr& type) {
 		auto ttype = type.isa<TagTypePtr>();
 
 		// non-tag-types are always trivial
 		if(!ttype) return true;
+
+		auto rtype = ttype->getRecord();
+
+		// check for trivial constructors
+		bool trivialConstructor = false;
+		bool trivialCopyConstructor = false;
+		bool trivialMoveConstructor = false;
+		for(auto con : rtype->getConstructors()) {
+			auto l = con.as<LambdaExprPtr>();
+			auto params = l->getParameterList();
+			if(params.size() == 1) {
+				if(l->getBody()->getStatements().size() == 0) trivialConstructor = true;
+			}
+			if(params.size() == 2) {
+				if(core::lang::isReference(params[1]->getType())) { 
+					auto myType = core::lang::PointerType(params[0]->getType()).getElementType();
+					auto refType = core::lang::ReferenceType(params[1]->getType());
+					if(refType.isCppReference() && refType.getElementType() == myType) {
+						// this is a copy constructor
+						if(l->getBody()->getStatements().size() == 0) trivialCopyConstructor = true;
+					}
+					if(refType.isCppRValueReference() && refType.getElementType() == myType) {
+						// this is a move constructor
+						if(l->getBody()->getStatements().size() == 0) trivialMoveConstructor = true;
+					}
+				}
+			}
+		}
+		if(!trivialConstructor || !trivialCopyConstructor || !trivialMoveConstructor) return false;
+
+		// check for trivial copy and move assignments
+		bool trivialCopyAssignment = false;
+		bool trivialMoveAssignment = false;
+		for(auto mem : rtype->getMemberFunctions()) {
+			if(mem->getNameAsString() == "operator_assign") {
+				// TODO check against body generated for default assignment
+			}
+		}
+		if(!trivialCopyAssignment || !trivialMoveAssignment) return false;
+
+		// check for trivial, non-virtual destructor
+		if(rtype->getDestructor().as<LambdaExprPtr>()->getBody().size() != 0 || rtype->getDestructorVirtual().getValue()) return false;
+
+		// check for virtual member functions
+		for(auto memFun : rtype->getMemberFunctions()) {
+			if(memFun->getVirtualFlag().getValue()) return false;
+		}
+
+		// check for virtual base classes
+		if(ttype->isStruct()) {
+			auto stype = ttype->getStruct();
+			for(auto par : stype->getParents()) {
+				if(par->getVirtual().getValue()) return false;
+			}
+		}
+
+		// check that all non-static members are trivial
+		for(auto field : rtype->getFields()) {
+			if(!isTrivial(field->getType())) return false;
+		}
 		
-		return false;
+		return true;
 	}
 
 } // end namespace analysis
