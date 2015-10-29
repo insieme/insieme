@@ -17,8 +17,8 @@ int main() {
 		const int& ref_i = i;
 	}
 	
-	#pragma test expect_ir(R"(function (ref<int<4>,f,f,cpp_rref> v1) -> unit { }(function () -> int<4> { return 5; }()))")
-	consumer(producer());
+	//pragma test expect_ir(R"(function (ref<int<4>,f,f,cpp_rref> v1) -> unit { }(function () -> int<4> { return 5; }()))")
+	//consumer(producer());
 
 	return 0;
 }
