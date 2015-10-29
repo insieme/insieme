@@ -1046,7 +1046,7 @@ namespace backend {
 		info = typeManager.getTypeInfo(type);
 
 
-		EXPECT_EQ("(struct<a:int<4>,b:int<4>>::(int<4>)->real<4>)", toString(*type));
+		EXPECT_EQ("(struct{a:int<4>,b:int<4>,dtor()}::(int<4>)->real<4>)", toString(*type));
 		EXPECT_TRUE(info.plain);
 		EXPECT_EQ("name", toC(info.lValueType)); // there is an implicit typedef, therefore the type is used with a symbol name
 		EXPECT_EQ("name", toC(info.rValueType));
