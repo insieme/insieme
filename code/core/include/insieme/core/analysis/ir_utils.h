@@ -421,9 +421,17 @@ namespace analysis {
 	bool isStaticVar(const ExpressionPtr& var);
 
 	/**
-	 * compare given typePtrs, trying to unroll rectypes
+	 * Obtains the canonical representation of the given type. For instance,
+	 * generic parameters will be normalized and recursive types presented
+	 * in their most compact form.
 	 */
-	bool compareTypes(const TypePtr& a, const TypePtr& b);
+	TypePtr getCanonicalType(const TypePtr& a);
+
+	/**
+	 * Compare two types whether they are semantically equivalent.
+	 * In particular, this comparison is handling the unrolling of recursive types.
+	 */
+	bool equalTypes(const TypePtr& a, const TypePtr& b);
 
 
 	// ----------------------------------- Jobs ----------------------------
@@ -433,6 +441,33 @@ namespace analysis {
 	 */
 	bool isZero(const core::ExpressionPtr& value);
 
+	// ----------------------------------- Lambda extraction + helpers ----------------------------
+
+	/**
+	 * Tests whether the given statement contains a control statement (e.g., NT_BreakStmt).
+	 * The search is pruned at given node types listed in pruneStmts.
+	 */
+	bool hasFreeControlStatement(const StatementPtr& stmt, NodeType controlStmt, const vector<NodeType>& pruneStmts);
+
+	/**
+	 * Tests whether the given statement is outline-able or not.
+	 */
+	bool isOutlineAble(const StatementPtr& stmt, bool allowReturns = false);
+
+	/**
+	 * Tests whether the given statement contains a free break statement.
+	 */
+	bool hasFreeBreakStatement(const StatementPtr& stmt);
+
+	/**
+	 * Tests whether the given statement contains a free continue statement.
+	 */
+	bool hasFreeContinueStatement(const StatementPtr& stmt);
+
+	/**
+	 * Tests whether the given statement contains a free return statement.
+	 */
+	bool hasFreeReturnStatement(const StatementPtr& stmt);
 
 } // end namespace utils
 } // end namespace core

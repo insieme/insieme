@@ -283,7 +283,7 @@ namespace core {
 		GenericTypePtr arrayType(const TypePtr& elementType, const LiteralPtr& size) const;
 		GenericTypePtr arrayType(const TypePtr& elementType, const VariablePtr& size) const;
 		GenericTypePtr arrayType(const TypePtr& elementType, size_t size) const;
-		
+
 		FieldPtr field(const string& name, const TypePtr& type) const;
 
 		TagTypePtr structType(const vector<std::pair<StringValuePtr, TypePtr>>& fields) const;
@@ -299,6 +299,8 @@ namespace core {
 		TagTypePtr unionType(const vector<std::pair<StringValuePtr, TypePtr>>& fields) const;
 		TagTypePtr unionType(const StringValuePtr& name, const vector<FieldPtr>& fields) const;
 		TagTypePtr unionType(const vector<FieldPtr>& fields) const;
+
+		FunctionTypePtr getDestructorType(const TagTypeReferencePtr& tag) const;
 
 		ExpressionPtr getDefaultDestructor(const StringValuePtr& recordName) const;
 		ExpressionPtr getDefaultDestructor(const string& recordName) const {
@@ -525,6 +527,7 @@ namespace core {
 
 		// Locks
 		CallExprPtr acquireLock(const ExpressionPtr& lock) const;
+		CallExprPtr tryAcquireLock(const ExpressionPtr& lock) const;
 		CallExprPtr releaseLock(const ExpressionPtr& lock) const;
 		CallExprPtr initLock(const ExpressionPtr& lock) const;
 

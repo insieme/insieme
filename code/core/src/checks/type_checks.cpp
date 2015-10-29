@@ -224,6 +224,28 @@ namespace checks {
 		return res;
 	}
 
+	OptionalMessageList DestructorTypeCheck::visitTagTypeBinding(const TagTypeBindingAddress& address) {
+			OptionalMessageList res;
+
+			NodeManager& mgr = address->getNodeManager();
+			IRBuilder builder(mgr);
+
+			// get the tag
+			auto tag = address.as<TagTypeBindingPtr>()->getTag();
+
+			// get destructor address
+			auto dtor = address->getRecord()->getDestructor();
+
+			auto is = dtor->getType();
+			auto expected = builder.getDestructorType(tag);
+
+			if (*expected != *is) {
+				add(res, Message(address, EC_TYPE_INVALID_DESTRUCTOR_TYPE, format("Invalid destructor type: %s - expected: %s", *is, *expected), Message::ERROR));
+			}
+
+			return res;
+	}
+
 	OptionalMessageList CallExprTypeCheck::visitCallExpr(const CallExprAddress& address) {
 		NodeManager& manager = address->getNodeManager();
 		OptionalMessageList res;
@@ -683,7 +705,7 @@ namespace checks {
 			}
 
 			// check for correct member type
-			if(!core::analysis::compareTypes(elementType, resultType)) {
+			if(!core::analysis::equalTypes(elementType, resultType)) {
 				add(res, Message(address, EC_TYPE_INVALID_TYPE_OF_MEMBER,
 					             format("Invalid type of extracted member '%s' - expected '%s'", *resultType, *elementType), Message::ERROR));
 				return res;

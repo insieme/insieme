@@ -420,7 +420,7 @@ namespace transform {
 		}
 
 		LambdaExprPtr fun = static_pointer_cast<LambdaExprPtr>(call->getFunctionExpr());
-		if(fun->isRecursive() || !isOutlineAble(fun->getBody())) {
+		if(fun->isRecursive() || !analysis::isOutlineAble(fun->getBody())) {
 			return call; // recursive functions and free return / break / continue can not be supported
 		}
 
@@ -818,43 +818,9 @@ namespace transform {
 
 	// ------------------------------ lambda extraction -------------------------------------------------------------------
 
-
-	bool hasFreeControlStatement(const StatementPtr& stmt, NodeType controlStmt, const vector<NodeType>& pruneStmts) {
-		bool hasFree = false;
-		visitDepthFirstOncePrunable(stmt, [&](const NodePtr& cur) {
-			auto curType = cur->getNodeType();
-			if(::contains(pruneStmts, curType)) {
-				return true; // do not descent here
-			}
-			if(cur->getNodeType() == controlStmt) {
-				hasFree = true; // "bound" stmt found
-			}
-			return hasFree;
-		});
-		return hasFree;
-	}
-
-	bool isOutlineAble(const StatementPtr& stmt, bool allowReturns) {
-		if(!allowReturns) {
-			// the statement must not contain a "free" return
-			if(hasFreeControlStatement(stmt, NT_ReturnStmt, toVector(NT_LambdaExpr))) { return false; }
-		}
-
-		// search for "bound" break or continue statements
-		vector<NodeType> pruneStmts;
-		pruneStmts.push_back(NT_ForStmt);
-		pruneStmts.push_back(NT_WhileStmt);
-		bool hasFreeBreakOrContinue = hasFreeControlStatement(stmt, NT_ContinueStmt, pruneStmts);
-		pruneStmts.push_back(NT_SwitchStmt);
-		hasFreeBreakOrContinue = hasFreeBreakOrContinue || hasFreeControlStatement(stmt, NT_BreakStmt, pruneStmts);
-
-		return !hasFreeBreakOrContinue;
-	}
-
-
 	CallExprPtr outline(NodeManager& manager, const StatementPtr& stmt, bool allowReturns) {
 		// check whether it is allowed
-		assert_true(isOutlineAble(stmt, allowReturns)) << "Cannot outline given code - it contains 'free' return, break or continue stmts.";
+		assert_true(analysis::isOutlineAble(stmt, allowReturns)) << "Cannot outline given code - it contains 'free' return, break or continue stmts.";
 
 		// Obtain list of free variables
 		VariableList free = analysis::getFreeVariables(manager.get(stmt));

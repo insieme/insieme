@@ -52,6 +52,8 @@ namespace checks {
 	SIMPLE_CHECK(FreeTagTypeReferences, TagTypeReference, true);
 	SIMPLE_CHECK(TagTypeFields, TagType, true);
 
+	SIMPLE_CHECK(DestructorType, TagTypeBinding, true);
+
 	SIMPLE_CHECK(CallExprType, CallExpr, false);
 	SIMPLE_CHECK(BindExprType, BindExpr, false);
 	SIMPLE_CHECK(ExternalFunctionType, Literal, false);

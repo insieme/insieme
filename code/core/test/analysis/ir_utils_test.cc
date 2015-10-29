@@ -660,6 +660,71 @@ namespace analysis {
 		EXPECT_EQ(countInstances(prog, builder.intLit(1)), 2);
 	}
 
+	TEST(Types, CanonicalType) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		// some basic types
+		EXPECT_EQ("A", 				toString(*getCanonicalType(builder.parseType("A"))));
+		EXPECT_EQ("int<4>", 		toString(*getCanonicalType(builder.parseType("int<4>"))));
+
+		// generic types
+		EXPECT_EQ("'a", 			toString(*getCanonicalType(builder.parseType("'a"))));
+		EXPECT_EQ("'a", 			toString(*getCanonicalType(builder.parseType("'b"))));
+
+		EXPECT_EQ("(('a)->'a)", 	toString(*getCanonicalType(builder.parseType("('a)->'a"))));
+		EXPECT_EQ("(('a)->'a)", 	toString(*getCanonicalType(builder.parseType("('b)->'b"))));
+
+		EXPECT_EQ("(('a,(('a)->'b))->'a)", 	toString(*getCanonicalType(builder.parseType("('b, ('b)->'c )->'b"))));
+		EXPECT_EQ("(('a)->'b)", 	toString(*getCanonicalType(builder.parseType("('c)->'d"))));
+
+
+		// recursive types
+		TagTypePtr recType = builder.parseType("let f = struct { int<4> x; link<f> next; } in f").as<TagTypePtr>();
+		EXPECT_EQ(recType, getCanonicalType(recType));
+		EXPECT_EQ(recType, getCanonicalType(recType->peel(0)));
+		EXPECT_EQ(recType, getCanonicalType(recType->peel(1)));
+		EXPECT_EQ(recType, getCanonicalType(recType->peel(2)));
+		EXPECT_EQ(recType, getCanonicalType(recType->peel(3)));
+
+
+		// mutual recursive types
+		TagTypePtr typeA = builder.parseType("let f,g = struct { int<4> x; link<g> next; }, struct { double y; link<f> next; } in f").as<TagTypePtr>();
+		TagTypePtr typeB = builder.parseType("let f,g = struct { int<4> x; link<g> next; }, struct { double y; link<f> next; } in g").as<TagTypePtr>();
+
+//		std::cout << *typeA << "\n";
+//		std::cout << *typeA->peel(0) << " = \n\t\t" << *getCanonicalType(typeA->peel(0)) << "\n";
+//		std::cout << *typeA->peel(1) << " = \n\t\t" << *getCanonicalType(typeA->peel(1)) << "\n";
+//		std::cout << *typeA->peel(2) << " = \n\t\t" << *getCanonicalType(typeA->peel(2)) << "\n";
+//		std::cout << *typeA->peel(3) << " = \n\t\t" << *getCanonicalType(typeA->peel(3)) << "\n";
+
+		EXPECT_EQ(typeA, getCanonicalType(typeA));
+		EXPECT_EQ(typeA, getCanonicalType(typeA->peel(0)));
+		EXPECT_EQ(typeA, getCanonicalType(typeA->peel(1)));
+		EXPECT_EQ(typeA, getCanonicalType(typeA->peel(2)));
+		EXPECT_EQ(typeA, getCanonicalType(typeA->peel(3)));
+
+		EXPECT_EQ(typeB, getCanonicalType(typeB));
+		EXPECT_EQ(typeB, getCanonicalType(typeB->peel(0)));
+		EXPECT_EQ(typeB, getCanonicalType(typeB->peel(1)));
+		EXPECT_EQ(typeB, getCanonicalType(typeB->peel(2)));
+		EXPECT_EQ(typeB, getCanonicalType(typeB->peel(3)));
+
+
+		// test nested
+		std::map<string,NodePtr> symbols;
+		symbols["A0"] = typeA->peel(0);
+		symbols["A1"] = typeA->peel(1);
+		symbols["A2"] = typeA->peel(2);
+		symbols["A3"] = typeA->peel(3);
+
+		auto ref = builder.parseType("ref<A0>", symbols);
+		EXPECT_EQ(ref, getCanonicalType(builder.parseType("ref<A0>", symbols)));
+		EXPECT_EQ(ref, getCanonicalType(builder.parseType("ref<A1>", symbols)));
+		EXPECT_EQ(ref, getCanonicalType(builder.parseType("ref<A2>", symbols)));
+		EXPECT_EQ(ref, getCanonicalType(builder.parseType("ref<A3>", symbols)));
+	}
+
 } // end namespace analysis
 } // end namespace core
 } // end namespace insieme

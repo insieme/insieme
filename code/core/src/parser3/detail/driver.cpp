@@ -499,7 +499,7 @@ namespace parser3 {
 				call = stmt.as<CallExprPtr>();
 			} else if(stmt->getNodeCategory() == NC_Expression) {
 				call = builder.id(stmt.as<ExpressionPtr>());
-			} else if(transform::isOutlineAble(stmt, true)) {
+			} else if(analysis::isOutlineAble(stmt, true)) {
 				call = transform::outline(builder.getNodeManager(), stmt, true);
 			}
 

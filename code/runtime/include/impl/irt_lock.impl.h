@@ -92,5 +92,17 @@ void irt_lock_release(irt_lock* lock) {
 	irt_spin_unlock(&lock->mutex);
 }
 
+bool irt_lock_tryacquire(irt_lock* lock) {
+	irt_spin_lock(&lock->mutex);
+	if(lock->locked) {
+		// return immediately as lock is already acquired
+		irt_spin_unlock(&lock->mutex);
+		return false;
+	}
+
+	lock->locked = 1;
+	irt_spin_unlock(&lock->mutex);
+	return true;
+}
 
 #endif // ifndef __GUARD_IMPL_IRT_LOCK_IMPL_H
