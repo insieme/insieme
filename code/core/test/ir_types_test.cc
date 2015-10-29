@@ -383,8 +383,8 @@ namespace core {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
-		EXPECT_EQ("struct{x:bla<int<4>>,dtor()}", toString(*builder.parseType("let A = struct { x : bla<int<4>>; } in A")));
-		EXPECT_EQ("struct{x:bla<int<4>>,dtor()}", toString(*builder.parseType("let A = struct { x : bla<int<4>>; } in A").as<TagTypePtr>()->peel()));
+		EXPECT_EQ("struct {x:bla<int<4>>,dtor()}", toString(*builder.parseType("let A = struct { x : bla<int<4>>; } in A")));
+		EXPECT_EQ("struct {x:bla<int<4>>,dtor()}", toString(*builder.parseType("let A = struct { x : bla<int<4>>; } in A").as<TagTypePtr>()->peel()));
 
 		EXPECT_EQ("rec ^A.{^A=struct A {x:bla<^A>,dtor()}}", toString(*builder.parseType("decl struct A; def struct A { x : bla<A>; }; A")));
 		EXPECT_EQ("struct A {x:bla<rec ^A.{^A=struct A {x:bla<^A>,dtor()}}>,dtor()}",

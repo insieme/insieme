@@ -118,7 +118,7 @@ namespace lang {
 		const auto& typeAlises = manager.getLangExtension<NamedCoreExtensionParserTestExtension>().getTypeAliases();
 
 		// As I passed the extension with the name "complex" already defined this should be expanded
-		EXPECT_EQ("AP(struct{foo:NamedType,dtor()} v0 = undefined(type<struct{foo:NamedType,dtor()}>))",
+		EXPECT_EQ("AP(struct {foo:NamedType,dtor()} v0 = undefined(type<struct {foo:NamedType,dtor()}>))",
 		          toString(builder.normalize(parser::parseStmt(manager, "auto a = undefined(complex);", false, existingNames, typeAlises))));
 
 		// inside of a compound stmt we shadow previous declarations

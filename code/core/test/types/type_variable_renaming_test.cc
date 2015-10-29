@@ -130,10 +130,10 @@ namespace types {
 		TagTypeDefinitionPtr def = builder.tagTypeDefinition(defs);
 		TagTypePtr tagType = builder.tagType(tag, def);
 
-		EXPECT_EQ("rec ^X.{^X=struct{f:ref<^X,f,f,plain>,dtor()}}", toString(*tagType));
+		EXPECT_EQ("rec ^X.{^X=struct {f:ref<^X,f,f,plain>,dtor()}}", toString(*tagType));
 
 		VariableRenamer renamer;
-		EXPECT_EQ("rec ^X.{^X=struct{f:ref<^X,f,f,plain>,dtor()}}", toString(*renamer.rename(tagType)));
+		EXPECT_EQ("rec ^X.{^X=struct {f:ref<^X,f,f,plain>,dtor()}}", toString(*renamer.rename(tagType)));
 	}
 
 } // end namespace analysis
