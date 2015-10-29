@@ -597,7 +597,7 @@ namespace parser {
 			auto memberFunType = builder.functionType(fullParams, type->getReturnType(), FK_MEMBER_FUNCTION);
 
 			// create the member function entry
-			return builder.pureVirtualMemberFunction(name, type);
+			return builder.pureVirtualMemberFunction(name, memberFunType);
 		}
 
 		LambdaExprPtr InspireDriver::genFunctionDefinition(const location& l, const std::string name, const LambdaExprPtr& lambda)  {
