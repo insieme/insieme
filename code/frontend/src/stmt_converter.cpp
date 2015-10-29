@@ -132,7 +132,11 @@ namespace conversion {
 			// check if we have an init expression
 			core::ExpressionPtr initExp;
 			if(convertedDecl.second) {
-				auto refVar = builder.refVar(*convertedDecl.second);
+				core::ExpressionPtr refVar = builder.refVar(*convertedDecl.second);
+				// exception for string literals (appear here as plain lvalues)
+				if(varDecl->getInit()->isLValue()) {
+					refVar = *convertedDecl.second;
+				}
 				initExp = core::lang::buildRefCast(refVar, convertedDecl.first->getType());
 				if(initExp != refVar) {
 					VLOG(2) << "Initialization: casting ref from\n" << dumpPretty(refVar->getType()) << " to \n" << convertedDecl.first->getType();
@@ -413,6 +417,11 @@ namespace conversion {
 		};
 
 		auto handleDeclStmt = [this, &decls](const clang::DeclStmt* declStmt) {
+			// first, remove existing mappings (we may have a 1:N mapping
+			for(auto decl: declStmt->decls()) {
+				if(clang::VarDecl* varDecl = dyn_cast<clang::VarDecl>(decl)) converter.getVarMan()->undefine(varDecl);
+			}
+			// then, convert
 			auto result = converter.convertStmt(declStmt);
 			core::DeclarationStmtPtr decl;
 			if(result.isa<core::CompoundStmtPtr>()) {
@@ -426,7 +435,7 @@ namespace conversion {
 					decls.push_back(decl);
 				}
 			} else {
-				decl = converter.convertStmt(declStmt).as<core::DeclarationStmtPtr>();
+				decl = result.as<core::DeclarationStmtPtr>();
 				// remove the init, use undefinedvar
 				// this is what GCC does, VC simply errors out
 				decl = builder.declarationStmt(decl->getVariable(), builder.undefinedVar(decl->getInitialization()->getType()));
@@ -465,7 +474,7 @@ namespace conversion {
 
 		// iterate throw statements inside of switch
 		clang::CompoundStmt* compStmt = dyn_cast<clang::CompoundStmt>(switchStmt->getBody());
-		frontend_assert(compStmt) << "Switch statements doesn't contain a compound stmt";
+		frontend_assert(compStmt) << "Switch statement doesn't contain a compound stmt";
 		for(auto it = compStmt->body_begin(), end = compStmt->body_end(); it != end; ++it) {
 			clang::Stmt* currStmt = *it;
 			// if is a case stmt, create a literal and open it

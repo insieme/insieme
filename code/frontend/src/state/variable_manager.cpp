@@ -64,6 +64,12 @@ namespace state {
 		frontend_assert(false) << "Trying to look up local variable not previously declared: " << dumpClang(varDecl);
 		return core::ExpressionPtr();
 	}
+	
+	void VariableManager::undefine(const clang::VarDecl* varDecl) {
+		if(::containsKey(storage.back().variables, varDecl)) {
+			storage.back().variables.erase(varDecl);
+		}
+	}
 
 	void VariableManager::insert(const clang::VarDecl* varDecl, const core::ExpressionPtr& var) {
 		if(varDecl->hasGlobalStorage() && !varDecl->isStaticLocal()) frontend_assert(storage.size() == 1) << "Global variable not inserted at global scope";

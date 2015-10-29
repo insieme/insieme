@@ -180,7 +180,7 @@ namespace lang {
 	}
 
 	void ArrayType::setSize(const VariablePtr& size) {
-		if (size) assert_pred1(size->getNodeManager().getLangBasic().isUIntInf, size->getType());
+		if(size) assert_pred1(size->getNodeManager().getLangBasic().isUIntInf, size->getType());
 		this->size = size;
 	}
 
@@ -190,6 +190,13 @@ namespace lang {
 		auto& arrExt = nm.getLangExtension<ArrayExtension>();
 
 		return builder.callExpr(arrExt.getArrayCreate(), builder.getTypeLiteral(size), core::lang::buildListOfExpressions(list));
+	}
+	
+	ExpressionPtr buildArrayCreate(NodeManager& mgr, size_t size, const ExpressionList& list) {
+		auto& basic = mgr.getLangBasic();
+		IRBuilder builder(mgr);
+		auto sizeType = builder.numericType(Literal::get(mgr, basic.getUIntInf(), toString(size)));
+		return buildArrayCreate(sizeType, list);
 	}
 
 } // end namespace lang

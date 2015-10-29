@@ -36,6 +36,12 @@
 
 #pragma once
 
+
+#include <functional>
+#include <string>
+#include <map>
+#include <boost/optional.hpp>
+
 #include "insieme/core/ir_node.h"
 #include "insieme/core/lang/extension.h"
 
@@ -43,7 +49,6 @@
 #include "insieme/core/lang/asm_extension.h"
 #include "insieme/core/lang/complex.h"
 #include "insieme/core/lang/datapath.h"
-#include "insieme/core/lang/enum_extension.h"
 #include "insieme/core/lang/instrumentation_extension.h"
 #include "insieme/core/lang/io.h"
 #include "insieme/core/lang/ir++_extension.h"
@@ -55,10 +60,6 @@
 
 #include "insieme/utils/assert.h"
 
-#include <functional>
-#include <string>
-#include <map>
-#include <boost/optional.hpp>
 
 namespace insieme {
 namespace core {

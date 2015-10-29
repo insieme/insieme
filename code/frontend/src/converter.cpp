@@ -77,7 +77,7 @@
 #include "insieme/core/encoder/lists.h"
 #include "insieme/core/ir_program.h"
 #include "insieme/core/lang/basic.h"
-#include "insieme/core/lang/enum_extension.h"
+#include "insieme/core/lang/enum.h"
 #include "insieme/core/lang/ir++_extension.h"
 #include "insieme/core/lang/static_vars.h"
 #include "insieme/core/transform/manipulation.h"
@@ -273,6 +273,11 @@ namespace conversion {
 	core::ExpressionPtr Converter::convertExpr(const clang::Expr* expr) const {
 		assert_true(expr) << "Calling convertExpr with a NULL pointer";
 		return exprConvPtr->Visit(const_cast<Expr*>(expr));
+	}
+
+	core::ExpressionPtr Converter::convertInitExpr(const clang::Expr* expr) const {
+		assert_true(expr) << "Calling convertExpr with a NULL pointer";
+		return exprConvPtr->convertInitExpr(const_cast<Expr*>(expr));
 	}
 
 	core::StatementPtr Converter::convertStmt(const clang::Stmt* stmt) const {

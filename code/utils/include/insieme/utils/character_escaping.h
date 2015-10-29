@@ -57,5 +57,14 @@ namespace utils {
 	 */
 	std::string escapedCharToString(char character);
 
+	/// Escapes the input character if required, otherwise returns a string with the character
+	std::string escapeChar(char input);
+	
+	/// Escapes all escape sequences in the given string
+	std::string escapeString(const std::string& input);
+	
+	/// Replaces all escaped escape sequences in the given string with the corresponding literal
+	std::string unescapeString(const std::string& escapedString);
+
 } // end namespace utils
 } // end namespace insieme

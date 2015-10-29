@@ -55,6 +55,7 @@
 
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/reference.h"
+#include "insieme/core/lang/enum.h"
 
 #include "insieme/core/types/subtyping.h"
 
@@ -306,6 +307,8 @@ namespace core {
 				const MemberFunctionList& mfuns, const PureVirtualMemberFunctionList& pvmfuns) const;
 		TagTypePtr unionType(const StringValuePtr& name, const FieldsPtr& fields, const ExpressionsPtr& ctors,
 				const ExpressionPtr& dtor, const MemberFunctionsPtr& mfuns, const PureVirtualMemberFunctionsPtr& pvmfuns) const;
+
+		FunctionTypePtr getDestructorType(const TagTypeReferencePtr& tag) const;
 
 		LambdaExprPtr getDefaultDestructor(const StringValuePtr& recordName) const;
 		LambdaExprPtr getDefaultDestructor(const string& recordName) const {
@@ -626,6 +629,19 @@ namespace core {
 
 		ExpressionPtr numericCast(const core::ExpressionPtr& expr, const core::TypePtr& targetType) const  {
 			if(expr->getType() == targetType) return expr;
+
+			//special case for enum to numeric
+			if(lang::isEnumType(expr)) {
+				auto realTargetType = expr->getType().as<core::TagTypePtr>()->getFields()[1]->getType();
+				return numericCast(callExpr(realTargetType, getExtension<lang::EnumExtension>().getEnumToInt(), expr), targetType);
+			}
+			//special case for numeric to enum
+			if(lang::isEnumType(targetType)) {
+				auto innerTargetType = targetType.as<core::TagTypePtr>()->getFields()[1]->getType();
+				auto preCast = numericCast(expr, innerTargetType);
+				return callExpr(targetType, getExtension<lang::EnumExtension>().getIntToEnum(), getTypeLiteral(targetType), preCast);
+			}
+
 			return callExpr(targetType, getLangBasic().getNumericCast(), expr, getTypeLiteral(targetType));
 		}
 

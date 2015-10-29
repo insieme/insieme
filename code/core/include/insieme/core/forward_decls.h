@@ -63,10 +63,8 @@ namespace core {
 		class NAME;                                                                                                                                            \
 		typedef Pointer<const NAME> NAME##Ptr;                                                                                                                 \
 		typedef Address<const NAME> NAME##Address;                                                                                                             \
-		template <typename D, template <typename P> class P>                                                                                                   \
-		class NAME##Accessor;                                                                                                                                  \
 		typedef std::vector<NAME##Ptr> NAME##List;                                                                                                             \
-		typedef utils::set::PointerSet<NAME##Ptr> NAME##Set;                                                                                                   \
+		typedef utils::set::PointerSet<NAME##Ptr> NAME##Set;
 
 	// take all nodes from within the definition file
 	#include "insieme/core/ir_nodes.def"
@@ -110,3 +108,5 @@ namespace core {
 
 } // end namespace core
 } // end namespace insieme
+
+

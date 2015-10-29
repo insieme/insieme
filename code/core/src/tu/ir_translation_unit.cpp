@@ -214,6 +214,7 @@ namespace tu {
 			}
 
 			NodePtr apply(const NodePtr& node) {
+
 				// 1. get set of contained symbols
 				const NodeSet& init = getContainedSymbols(node);
 
@@ -336,7 +337,7 @@ namespace tu {
 			// --- Step 4: Component resolution ---
 
 			std::map<NodePtr, NodePtr> resolutionCache;
-			bool cachingEnabled;
+			bool cachingEnabled = true;
 
 			bool isResolved(const NodePtr& symbol) const {
 				assert_true(isSymbol(symbol)) << "Should only be queried for symbols!";
@@ -375,6 +376,7 @@ namespace tu {
 					vector<NodePtr> vars(cur.begin(), cur.end());
 					std::sort(vars.begin(), vars.end(), compare_target<NodePtr>());
 
+
 					// get first element
 					auto first = vars.front();
 
@@ -388,66 +390,89 @@ namespace tu {
 
 					assert_true(isResolved(first));
 
-					// resolve definitions (without caching temporal values)
-					cachingEnabled = false;
-
-					std::map<NodePtr, NodePtr> resolved;
-					for(const auto& s : vars) {
-						resolved[s] = map(getDefinition(s));
-					}
-					// re-enable caching again
-					cachingEnabled = true;
-
-					// close recursion if necessary
-					if(vars.size() > 1 || isDirectRecursive(first)) {
-						// close recursive types
-						if(first.isa<GenericTypePtr>()) {
-							// build recursive type definition
-							vector<TagTypeBindingPtr> bindings;
-							for(const auto& cur : vars) {
-								bindings.push_back(builder.tagTypeBinding(resolutionCache[cur].as<TagTypeReferencePtr>(), resolved[cur].as<TagTypePtr>()->getRecord()));
-							}
-
-							// build recursive type definition
-							auto def = builder.tagTypeDefinition(bindings);
-
-							// simply construct a recursive type
-							for(auto& cur : resolved) {
-								auto newType = builder.tagType(resolutionCache[cur.first].as<TagTypeReferencePtr>(), def);
-								core::transform::utils::migrateAnnotations(cur.second, newType);
-								cur.second = newType;
-							}
-
-						} else if(first.isa<LiteralPtr>()) {
-							// build recursive lambda definition
-							vector<LambdaBindingPtr> bindings;
-							for(const auto& cur : vars) {
-								bindings.push_back(
-								    builder.lambdaBinding(resolutionCache[cur].as<VariablePtr>(), resolved[cur].as<LambdaExprPtr>()->getLambda()));
-							}
-
-							// build recursive type definition
-							auto def = builder.lambdaDefinition(bindings);
-
-							// simply construct a recursive type
-							for(auto& cur : resolved) {
-								auto newFun = builder.lambdaExpr(resolutionCache[cur.first].as<VariablePtr>(), def);
-								core::transform::utils::migrateAnnotations(cur.second, newFun);
-								cur.second = newFun;
-							}
-
+					// split recursive variables in expressions and types
+					vector<NodePtr> typeVars;
+					vector<NodePtr> exprVars;
+					for(const auto& cur : vars) {
+						if (auto type = cur.isa<GenericTypePtr>()) {
+							typeVars.push_back(type);
 						} else {
-							assert_fail() << "Unsupported Symbol encountered: " << first << " - " << first.getNodeType() << "\n";
+							exprVars.push_back(cur.as<LiteralPtr>());
 						}
 					}
 
-					// replace bindings with resolved definitions
-					for(const auto& s : vars) {
-						// migrate annotations
-						core::transform::utils::migrateAnnotations(s, resolved[s]);
+					// process expr variables first, then type variables
+					for(const auto& vars : { exprVars, typeVars } ) {
 
-						// and add to cache
-						resolutionCache[s] = resolved[s];
+						// skip empty parts
+						if (vars.empty()) continue;
+
+						// get first element
+						auto first = vars.front();
+
+						// resolve definitions (without caching temporal values)
+						cachingEnabled = false;
+
+						std::map<NodePtr, NodePtr> resolved;
+						for(const auto& s : vars) {
+							resolved[s] = map(getDefinition(s));
+						}
+
+						// re-enable caching again
+						cachingEnabled = true;
+
+						// close recursion if necessary
+						if(vars.size() > 1 || isDirectRecursive(first)) {
+
+							// close recursive types
+							if(first.isa<GenericTypePtr>()) {
+								// build recursive type definition
+								vector<TagTypeBindingPtr> bindings;
+								for(const auto& cur : vars) {
+									bindings.push_back(builder.tagTypeBinding(resolutionCache[cur].as<TagTypeReferencePtr>(), resolved[cur].as<TagTypePtr>()->getRecord()));
+								}
+
+								// build recursive type definition
+								auto def = builder.tagTypeDefinition(bindings);
+
+								// simply construct a recursive type
+								for(auto& cur : resolved) {
+									auto newType = builder.tagType(resolutionCache[cur.first].as<TagTypeReferencePtr>(), def);
+									core::transform::utils::migrateAnnotations(cur.second, newType);
+									cur.second = newType;
+								}
+
+							} else if(first.isa<LiteralPtr>()) {
+								// build recursive lambda definition
+								vector<LambdaBindingPtr> bindings;
+								for(const auto& cur : vars) {
+									bindings.push_back(
+										builder.lambdaBinding(resolutionCache[cur].as<VariablePtr>(), resolved[cur].as<LambdaExprPtr>()->getLambda()));
+								}
+
+								// build recursive type definition
+								auto def = builder.lambdaDefinition(bindings);
+
+								// simply construct a recursive type
+								for(auto& cur : resolved) {
+									auto newFun = builder.lambdaExpr(resolutionCache[cur.first].as<VariablePtr>(), def);
+									core::transform::utils::migrateAnnotations(cur.second, newFun);
+									cur.second = newFun;
+								}
+
+							} else {
+								assert_fail() << "Unsupported Symbol encountered: " << first << " - " << first.getNodeType() << "\n";
+							}
+						}
+
+						// replace bindings with resolved definitions
+						for(const auto& s : vars) {
+							// migrate annotations
+							core::transform::utils::migrateAnnotations(s, resolved[s]);
+
+							// and add to cache
+							resolutionCache[s] = resolved[s];
+						}
 					}
 				}
 			}
@@ -467,39 +492,6 @@ namespace tu {
 						// check whether cast can be skipped
 						if(types::isSubTypeOf(cast->getSubExpression()->getType(), cast->getType())) { res = cast->getSubExpression(); }
 					}
-
-					// if this is a call to ref member access we rebuild the whole expression to return a correct reference type
-					//if(core::analysis::isCallOf(res, mgr.getLangExtension<core::lang::ReferenceExtension>().getRefMemberAccess())) {
-					//	auto call = res.as<CallExprPtr>();
-
-					//	if(core::analysis::getReferencedType(call[0]->getType()).isa<StructTypePtr>()) {
-					//		assert_true(call[0]);
-					//		assert_true(call[1]);
-
-					//		auto tmp = builder.refMember(call[0], call[1].as<LiteralPtr>()->getValue());
-					//		// type changed... do we have any cppRef to unwrap?
-					//		if(*(tmp->getType()) != *(call->getType())) {
-					//			res = builder.toIRRef(builder.deref(tmp));
-					//		} else {
-					//			res = tmp;
-					//		}
-					//	}
-					//}
-
-					// also if this is a call to member access we rebuild the whole expression to return
-					// NON ref type
-					//if(core::analysis::isCallOf(res, mgr.getLangExtension<core::lang::ReferenceExtension>().getRefMemberAccess())) {
-					//	auto call = res.as<CallExprPtr>();
-					//	if(call[0]->getType().isa<StructTypePtr>()) {
-					//		auto tmp = builder.accessMember(call[0], call[1].as<LiteralPtr>()->getValue());
-					//		// type might changed, we have to unwrap it
-					//		if(core::analysis::isAnyCppRef(tmp->getType())) {
-					//			res = builder.deref(builder.toIRRef(tmp));
-					//		} else {
-					//			res = tmp;
-					//		}
-					//	}
-					//}
 
 					// also fix type literals
 					if(core::analysis::isTypeLiteral(res)) { res = builder.getTypeLiteral(core::analysis::getRepresentedType(res.as<ExpressionPtr>())); }

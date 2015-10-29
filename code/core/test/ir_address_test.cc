@@ -514,5 +514,17 @@ namespace core {
 	}
 
 
+	TEST(Address, MultiLevelIndirectionSegfaultBug) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto lit = builder.intLit(12);
+
+		LiteralAddress a(lit);
+		NodeAddress x = a->getChildList()[0]->getChildList()[0];
+
+		EXPECT_EQ("int", toString(*x));
+	}
+
 } // end namespace core
 } // end namespace insieme

@@ -51,7 +51,7 @@ namespace core {
 	 * The accessor for instances of type expressions.
 	 */
 	template <typename D, template <typename T> class P>
-	struct TypeAccessor : public NodeAccessor<D, P> {};
+	struct Accessor<Type,D,P> : public Accessor<Node,D, P> {};
 
 	/**
 	 * The base type for all type nodes. Type nodes are used to represent the type of data elements, literals
@@ -577,7 +577,7 @@ namespace core {
 		 * is plain or not.
 		 */
 		bool isPlain() const {
-			return FunctionTypeAccessor<Derived, Ptr>::getKind() == FK_PLAIN;
+			return getKind() == FK_PLAIN;
 		}
 
 		/**
@@ -585,7 +585,7 @@ namespace core {
 		 * is a closure or not.
 		 */
 		bool isClosure() const {
-			return FunctionTypeAccessor<Derived, Ptr>::getKind() == FK_CLOSURE;
+			return getKind() == FK_CLOSURE;
 		}
 
 		/**
@@ -593,7 +593,7 @@ namespace core {
 		 * is a constructor or not.
 		 */
 		bool isConstructor() const {
-			return FunctionTypeAccessor<Derived, Ptr>::getKind() == FK_CONSTRUCTOR;
+			return getKind() == FK_CONSTRUCTOR;
 		}
 
 		/**
@@ -601,7 +601,7 @@ namespace core {
 		 * is a destructor or not.
 		 */
 		bool isDestructor() const {
-			return FunctionTypeAccessor<Derived, Ptr>::getKind() == FK_DESTRUCTOR;
+			return getKind() == FK_DESTRUCTOR;
 		}
 
 		/**
@@ -609,7 +609,7 @@ namespace core {
 		 * is a member function or not.
 		 */
 		bool isMemberFunction() const {
-			return FunctionTypeAccessor<Derived, Ptr>::getKind() == FK_MEMBER_FUNCTION;
+			return getKind() == FK_MEMBER_FUNCTION;
 		}
 
 		/**
@@ -617,7 +617,7 @@ namespace core {
 		 * is a virtual member function or not.
 		 */
 		bool isVirtualMemberFunction() const {
-			return FunctionTypeAccessor<Derived, Ptr>::getKind() == FK_VIRTUAL_MEMBER_FUNCTION;
+			return getKind() == FK_VIRTUAL_MEMBER_FUNCTION;
 		}
 
 		/**
@@ -625,8 +625,8 @@ namespace core {
 		 * is a constructor, destructor or member function.
 		 */
 		bool isMember() const {
-			return FunctionTypeAccessor<Derived, Ptr>::isConstructor() || FunctionTypeAccessor<Derived, Ptr>::isDestructor()
-			       || FunctionTypeAccessor<Derived, Ptr>::isMemberFunction();
+			return isConstructor() || isDestructor()
+			       || isMemberFunction();
 		}
 
 		/**
@@ -640,7 +640,7 @@ namespace core {
 		 * Obtains a reference to the requested parameter type.
 		 */
 		Ptr<const Type> getParameterType(unsigned index) const {
-			return FunctionTypeAccessor<Derived, Ptr>::getParameterTypes()->getElement(index);
+			return getParameterTypes()->getElement(index);
 		}
 
 		/**
@@ -872,9 +872,10 @@ namespace core {
 		 *
 		 * @param manager the manager to be used for maintaining the resulting type pointer
 		 * @param tag the tag defining the definition to be unrolled once
+		 * @param times the number of times it shall be peeled
 		 * @return the resulting, peeled type
 		 */
-		TagTypePtr peelOnce(NodeManager & manager, const TagTypeReferencePtr& tag) const;
+		TagTypePtr peel(NodeManager & manager, const TagTypeReferencePtr& tag, unsigned times = 1) const;
 
 	IR_NODE_END()
 
@@ -904,13 +905,14 @@ namespace core {
 		}
 
 		/**
-		 * Peels this definition once for the given tag.
+		 * Peels this definition for the given tag for the given number of times.
 		 *
 		 * @param manager the manager to be used for maintaining the resulting type pointer
 		 * @param tag the tag selecting the definition to be peeled once
+		 * @param times the number of times to be peeled
 		 * @return the resulting, peeled type
 		 */
-		TagTypePtr peelDefinitionOnce(NodeManager & manager, const TagTypeReferencePtr& tag) const;
+		TagTypePtr peelDefinition(NodeManager & manager, const TagTypeReferencePtr& tag, unsigned times = 1) const;
 	IR_NODE_END()
 
 
@@ -1028,22 +1030,22 @@ namespace core {
 		/**
 		 * Peels this tag type.
 		 */
-		TagTypePtr peel(NodeManager & manager) const {
-			return (*getDefinition()).peelOnce(manager, getTag());
+		TagTypePtr peel(NodeManager & manager, unsigned times = 1) const {
+			return (*getDefinition()).peel(manager, getTag(), times);
 		}
 
 		/**
 		 * Peels this recursive type once.
 		 */
-		TagTypePtr peel() const {
-			return peel(NodeAccessor<Derived, Ptr>::getNode().getNodeManager());
+		TagTypePtr peel(unsigned times = 1) const {
+			return peel(this->getNode().getNodeManager(), times);
 		}
 
 		/**
 		 * Determines whether the represented tag type is a recursive type.
 		 */
 		bool isRecursive() const {
-			return TagTypeAccessor<Derived, Ptr>::getNode().isRecursive();
+			return this->getNode().isRecursive();
 		}
 
 	IR_NODE_END()
@@ -1397,8 +1399,8 @@ namespace core {
 	/**
 	 * The accessor associated to a record. A record is a union or a struct/class type in C/C++.
 	 */
-	template <typename Derived, template <typename T> class Ptr>
-	struct RecordAccessor : public SupportAccessor<Derived, Ptr> {
+	template <typename LeafType, template <typename T> class Ptr>
+	struct Accessor<Record,LeafType,Ptr> : public Accessor<Support,LeafType, Ptr> {
 
 		/**
 		 * Obtains the name of this type - might be empty. Names can be used to distinguish
@@ -1782,9 +1784,9 @@ namespace core {
 
 	// --------------------------- late definitions to resolve cyclic dependencies  ---------------------------------------
 
-	template<typename Derived, template<typename T> class Ptr>
-	TagTypePtr TagTypeDefinitionAccessor<Derived, Ptr>::peelOnce(NodeManager & manager, const TagTypeReferencePtr& tag) const {
-		return TagTypeDefinitionAccessor<Derived, Ptr>::getNode().peelDefinitionOnce(manager, tag);
+	template<typename LeafType, template<typename T> class Ptr>
+	TagTypePtr Accessor<TagTypeDefinition, LeafType, Ptr>::peel(NodeManager & manager, const TagTypeReferencePtr& tag, unsigned times) const {
+		return Accessor<TagTypeDefinition, LeafType, Ptr>::getNode().peelDefinition(manager, tag, times);
 	}
 
 } // end namespace core

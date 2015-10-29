@@ -16,6 +16,13 @@ int main() {
 	#pragma test expect_ir("var ref<int<4>,f,f> v0 = ref_var(2);")
 	int i = 2;
 	
+	#pragma test expect_ir(R"(decl ref<struct _ir_pointer {ref<array<char,inf>,f,f,plain> data;int<8> offset},f,f,plain> v0 = 
+							  var(ptr_from_array(lit(""Hallo"":ref<array<char,6>,f,f>)));)")
+	char* hallo = "Hallo";
+	
+	#pragma test expect_ir(R"(decl ref<array<char,6>,f,f,plain> v0 = lit(""Hallo"":ref<array<char,6>,f,f>);)")
+	char hallo2[6] = "Hallo";
+	
 	// QUALIFIERS ////////////////////////////////////////////////////////////// 
 	
 	#pragma test expect_ir("var ref<int<4>,t,f> v0 = ref_cast(ref_var(5), type_lit(t), type_lit(f), type_lit(plain));")

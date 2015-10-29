@@ -34,30 +34,32 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/utils/enum.h"
+#pragma once
 
-std::vector<std::string> getListOutOfCommaSeperated(std::string str, std::size_t enumMax) {
-	std::vector<std::string> res;
-	if(str.empty()) { return res; }
-	std::size_t oldFound = 0;
-	std::size_t found;
-	while((found = str.find(',', oldFound + 1)) != std::string::npos) {
-		res.push_back(enumTrimName(str.substr(oldFound, found - oldFound)));
-		oldFound = found;
-	}
-	res.push_back(enumTrimName(str.substr(oldFound)));
-	assert(res.size() == (size_t)enumMax);
-	return res;
-}
+#include "insieme/core/forward_decls.h"
 
-std::string enumTrimName(std::string s) {
-	std::size_t j = 0, i = 0;
-	while((ENUM_BAD_CHARS.find(s.at(j))) != std::string::npos) {
-		j++;
-	}
-	i = s.length() - 1;
-	while((ENUM_BAD_CHARS.find(s.at(i))) != std::string::npos) {
-		i--;
-	}
-	return s.substr(j, i + 1 - j);
-}
+#include "insieme/backend/addon.h"
+
+/**
+ * This header file defines the components required to be registered within
+ * a backend instance to handle C++ references properly.
+ */
+namespace insieme {
+namespace backend {
+namespace addons {
+
+
+	/**
+	 * An Add-On realizing support for C++ style reference types.
+	 */
+	struct EnumType : public AddOn {
+		/**
+		 * Installs the this Add-On within the given converter.
+		 */
+		virtual void installOn(Converter& converter) const;
+	};
+
+
+} // end namespace addons
+} // end namespace backend
+} // end namespace insieme

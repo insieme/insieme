@@ -34,52 +34,14 @@
  * regarding third party software licenses.
  */
 
-#pragma once
-
-#include <map>
-
-#include "insieme/frontend/converter.h"
-
-#include "insieme/core/forward_decls.h"
+#include "independent_test_utils.h"
 
 namespace insieme {
 namespace frontend {
-namespace state {
-	using namespace conversion;
 
-	/// Manages variable identities from clang to its INSPIRE translation
-	class VariableManager {
-	private:
-		Converter& converter;
+	TEST(CppIndependentTest, BasicTypes) {
+		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/cpp_basic_types.cpp");
+	}
 
-		struct Scope {
-			Scope(bool n) : nested(n) {}
-			/// stores variables declared in this scope
-			std::map<const clang::VarDecl*, core::ExpressionPtr> variables;
-			/// determines whether variables from upper scopes are visible
-			bool nested;
-		};
-
-		/// Internal storage for mappings from clang variable declarations to 
-		/// IR variables for locals and literals for globals
-		std::vector<Scope> storage;
-
-	public:
-		VariableManager(Converter& converter);
-
-		/// Push a new scope for declared local variables
-		void pushScope(bool nested) { storage.push_back(Scope{nested}); }
-		/// Pop a scope after closing it
-		void popScope() { storage.pop_back(); }
-
-		core::ExpressionPtr lookup(const clang::VarDecl* varDecl) const;
-		void undefine(const clang::VarDecl* varDecl);
-		void insert(const clang::VarDecl* varDecl, const core::ExpressionPtr& var);
-
-		/// get the number of visible declarations in current scope (for testing)
-		size_t numVisibleDeclarations() const;
-	};
-
-} // end namespace state
-} // end namespace frontend
-} // end namespace insieme
+} // fe namespace
+} // insieme namespace

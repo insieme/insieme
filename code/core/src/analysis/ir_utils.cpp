@@ -46,6 +46,7 @@
 #include "insieme/core/ir_cached_visitor.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/analysis/attributes.h"
+#include "insieme/core/transform/node_replacer.h"
 
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/reference.h"
@@ -973,68 +974,135 @@ namespace analysis {
 		}
 	}
 
-	bool compareTypes(const TypePtr& a, const TypePtr& b) {
-		if(*a == *b) { return true; }
 
-		// FunctionType
-		if(a->getNodeType() == NT_FunctionType && b->getNodeType() == NT_FunctionType) {
-			FunctionTypePtr funTypeA = static_pointer_cast<const FunctionType>(a);
-			FunctionTypePtr funTypeB = static_pointer_cast<const FunctionType>(b);
+	namespace {
 
-			// check kind of functions
-			if(funTypeA->getKind() != funTypeB->getKind()) { return false; }
+		// TODO: move this to the normalizer
+		// TODO: remove canonical type function and use normalizer instead
 
-			bool res = true;
-			res = res && funTypeA->getParameterTypes().size() == funTypeB->getParameterTypes().size();
-			res = res && compareTypes(funTypeA->getReturnType(), funTypeB->getReturnType());
-			for(std::size_t i = 0; res && i < funTypeB->getParameterTypes().size(); i++) {
-				res = res && compareTypes(funTypeB->getParameterTypes()[i], funTypeA->getParameterTypes()[i]);
-			}
+		TypePtr normalizeTypeVariables(const TypePtr& type) {
+
+			// get type variable substitution
+			NodeMap mapping;
+
+			char letter = 'a';
+			auto& mgr = type.getNodeManager();
+			visitDepthFirstOncePrunable(type, [&](const NodePtr& node) {
+				// record variables
+				if (auto var = node.isa<TypeVariablePtr>()) {
+					mapping[var] = TypeVariable::get(mgr, toString(letter++));
+				}
+				// prune nested expressions
+				if (node.isa<ExpressionPtr>()) return true;
+				// otherwise continue
+				return false;
+			}, true);
+
+			// check that there have been enouth variable names
+			assert_le(letter,'z') << "Sorry, needs more than " << (letter - 'a') << " variable names!";
+
+			// apply mapping
+			return transform::replaceAll(mgr, type, mapping, transform::localReplacement).as<TypePtr>();
+		}
+
+		TagTypeSet getNestedTagTypes(const TypePtr& type) {
+			TagTypeSet res;
+			visitDepthFirstOnce(type, [&](const TagTypePtr& tagType) {
+				// record types
+				res.insert(tagType);
+			}, true);
 			return res;
 		}
 
-		// TagTypes
-		if(a->getNodeType() == NT_TagType && b->getNodeType() == NT_TagType) {
+		TagTypePtr tryUnpeelingType(const TagTypePtr& type) {
 
-			// get access
-			TagTypePtr ta = a.as<TagTypePtr>();
-			TagTypePtr tb = b.as<TagTypePtr>();
+			// for recursive types this is done
+			if (type->isRecursive()) return type;
 
-			// resolve recursive types by peeling them
-			if (ta->isRecursive()) {
-				return compareTypes(ta->peel(), b);
+			// get set of nested tag types
+			TagTypeSet tagTypes = getNestedTagTypes(type);
+
+			// if there are non, done
+			if (tagTypes.empty()) return type;
+
+			// walk through candidate list
+			auto& mgr = type.getNodeManager();
+			for(TagTypePtr cur : tagTypes) {
+
+				// check whether current candidate is recursive
+				if (!cur->isRecursive()) continue;
+
+				// if not contained => skip
+				if (!tagTypes.contains(cur)) continue;
+
+				// get list of all recursive types based on this definition
+				TagTypeList recTypes;
+				for(const auto& def : cur->getDefinition()) {
+					recTypes.push_back(TagType::get(mgr, def->getTag(), cur->getDefinition()));
+				}
+
+				// start with unpeeled types
+				int peelFactor = 0;
+				TagTypeList peeled = recTypes;
+
+				// while any of the types is still present
+				while(any(peeled, [&](const TagTypePtr& cur) { return tagTypes.contains(cur); })) {
+					// check whether we have a match
+					for(const auto& cur : make_paired_range(peeled, recTypes)) {
+						if (*cur.first == *type) return cur.second;
+					}
+
+					// peel one more level
+					peelFactor++;
+					peeled.clear();
+					for(const auto& cur : recTypes) {
+						peeled.push_back(cur->peel(mgr,peelFactor));
+					}
+				}
 			}
 
-			if (tb->isRecursive()) {
-				return compareTypes(ta, tb->peel());
-			}
-
-			assert_false(ta->isRecursive());
-			assert_false(tb->isRecursive());
-
-			// compare types
-			if (ta->getRecord()->getNodeType() != tb->getRecord()->getNodeType()) return false;
-
-			// check name
-			if (ta->getName() != tb->getName()) return false;
-
-			// check fields
-			return equals(ta->getFields(), tb->getFields(),
-					[](const FieldPtr& a, const FieldPtr& b) { return compareTypes(a->getType(), b->getType()); }
-			);
+			// no corresponding recursive type found
+			return type;
 		}
 
-		// TypeVariable
-		if(a.isa<TypeVariablePtr>() && b.isa<TypeVariablePtr>()) { return a == b; }
+		TypePtr normalizeRecursiveTypes(const TypePtr& type) {
 
-		// GenericType
-		if(a.isa<GenericTypePtr>() && b.isa<GenericTypePtr>()) { return a == b; }
+			// get a set of all nested types
+			TagTypeSet types = getNestedTagTypes(type);
 
-		// TupleType
-		if(a.isa<TupleTypePtr>() && b.isa<TupleTypePtr>()) { return a == b; }
+			// check for all tag types whether they are peeled recursive types
+			NodeMap map;
+			for(const auto& cur : types) {
+				auto unpeeled = tryUnpeelingType(cur);
+				if (*cur != *unpeeled) {
+					map[cur] = unpeeled;
+				}
+			}
 
-		// all others are not equivalent
-		return false;
+			// apply replacement
+			return transform::replaceAll(type.getNodeManager(), type, map).as<TypePtr>();
+		}
+
+	}
+
+
+	TypePtr getCanonicalType(const TypePtr& a) {
+		TypePtr res = a;
+
+		// step 1 - normalize type variables
+		res = normalizeTypeVariables(res);
+
+		// step 2 - normalize recursions
+		res = normalizeRecursiveTypes(res);
+
+		// done
+		return res;
+	}
+
+
+	bool equalTypes(const TypePtr& a, const TypePtr& b) {
+		// simply compare the canonical types
+		return *a == *b || getCanonicalType(a) == getCanonicalType(b);
 	}
 
 	bool isZero(const core::ExpressionPtr& value) {
@@ -1059,9 +1127,6 @@ namespace analysis {
 		// ... or the ref_null literal
 		if(refExt.isRefNull(value)) { return true; }
 
-//		// ... or a vector initialization with a zero value
-//		if(core::analysis::isCallOf(value, base.getVectorInitUniform())) { return isZero(core::analysis::getArgument(value, 0)); }
-
 		// TODO: remove this when frontend is fixed!!
 		// => compensate for silly stuff like var(*getNull()) or NULL aka ref_deref(ref_null)
 		if(core::analysis::isCallOf(value, refExt.getRefVar()) || core::analysis::isCallOf(value, refExt.getRefDeref())) {
@@ -1070,6 +1135,43 @@ namespace analysis {
 
 		// otherwise, it is not zero
 		return false;
+	}
+
+	bool hasFreeControlStatement(const StatementPtr& stmt, NodeType controlStmt, const vector<NodeType>& pruneStmts) {
+		bool hasFree = false;
+		visitDepthFirstOncePrunable(stmt, [&](const NodePtr& cur) {
+			auto curType = cur->getNodeType();
+			if(::contains(pruneStmts, curType)) {
+				return true; // do not descent here
+			}
+			if(cur->getNodeType() == controlStmt) {
+				hasFree = true; // "bound" stmt found
+			}
+			return hasFree;
+		});
+		return hasFree;
+	}
+
+	bool isOutlineAble(const StatementPtr& stmt, bool allowReturns) {
+		if(!allowReturns) {
+			// the statement must not contain a "free" return
+			if(hasFreeReturnStatement(stmt)) { return false; }
+		}
+		// search for "bound" break or continue statements
+		bool hasFreeBreakOrContinue = hasFreeContinueStatement(stmt) || hasFreeBreakStatement(stmt);
+		return !hasFreeBreakOrContinue;
+	}
+
+	bool hasFreeBreakStatement(const StatementPtr& stmt) {
+		return hasFreeControlStatement(stmt, NT_BreakStmt, { NT_ForStmt, NT_SwitchStmt, NT_WhileStmt, NT_LambdaExpr });
+	}
+
+	bool hasFreeContinueStatement(const StatementPtr& stmt) {
+		return hasFreeControlStatement(stmt, NT_ContinueStmt, { NT_ForStmt, NT_WhileStmt, NT_LambdaExpr });
+	}
+
+	bool hasFreeReturnStatement(const StatementPtr& stmt) {
+		return hasFreeControlStatement(stmt, NT_ReturnStmt, { NT_LambdaExpr });
 	}
 
 } // end namespace utils

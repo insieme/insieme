@@ -269,6 +269,9 @@ namespace backend {
 			res->declaration->addRequirement(definition);
 			return res;
 		}
+
+		const TypeInfo* headerAnnotatedTypeHandler(const Converter& converter, const core::TypePtr& type,
+			std::function<void(std::string&, const core::TypePtr&)> nameModifier = [](std::string& s, const core::TypePtr& p) {});
 	}
 
 } // end namespace backend

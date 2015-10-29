@@ -68,12 +68,13 @@ namespace datapath {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 		TypePtr root = builder.parseType(
-				"alias A = struct A {};"
-				"alias E = struct E : [A] {};"
-				"alias T = (int<4>,bool,int<4>,E);"
-				"alias S = struct { test: T; };"
+				"let A = struct A {} in "
+				"let E = struct E : [A] {} in "
+				"let T = (int<4>,bool,int<4>,E) in "
+				"let S = struct { test: T; } in "
 				"array<S,50>"
 		);
+
 		TypePtr typeA = GenericType::get(mgr, "A");
 
 		DataPath path(root);

@@ -93,10 +93,9 @@ namespace lang {
 		IRBuilder builder(manager);
 
 		// both named extensions should be expanded
-		EXPECT_EQ("AP({(('a)->bool) v0 = rec v0.{v0=fun(ref<'a,f,f,plain> v1) {return int_ne(enum_to_int(ref_deref(v1)), 0);}}; "
-		          "struct _ir_complex <rel:'a,img:'a> v1 = undefined(type<struct _ir_complex <rel:'a,img:'a>>);})",
+		EXPECT_EQ("AP({((struct enum <enum_type:'a,value:'b>)->'b) v0 = rec v0.{v0=fun(ref<struct enum <enum_type:'a,value:'b>,f,f,plain> v1) {return composite_member_access(ref_deref(v1), value, type<'b>);}}; struct _ir_complex <rel:'a,img:'a> v1 = undefined(type<struct _ir_complex <rel:'a,img:'a>>);})",
 		          toString(builder.normalize(
-		              parser::parseStmt(manager, "using \"ext.complex\"; using \"ext.enum\"; { auto a = enum_element_as_bool; auto b = undefined(complex); }"))));
+		              parser::parseStmt(manager, "using \"ext.complex\"; using \"ext.enum\"; { auto a = enum_to_int; auto b = undefined(complex); }"))));
 	}
 
 
