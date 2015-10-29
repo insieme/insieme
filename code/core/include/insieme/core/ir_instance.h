@@ -291,7 +291,7 @@ namespace core {
 		/**
 		 * The accessor offered to gain convenient access to members of the referenced node
 		 */
-		typedef Accessor<typename std::remove_const<T>::type,Instance<const typename std::remove_const<T>::type>,Instance> accessor_type;
+		typedef Accessor<typename std::remove_const<T>::type,Instance<const typename std::remove_const<T>::type>,insieme::core::Instance> accessor_type;
 
 
 		/**
