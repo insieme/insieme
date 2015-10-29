@@ -122,7 +122,44 @@ namespace core {
 			if(getParents()->empty()) { out << " "; }
 		}
 		if(!getParents()->empty()) { out << " : [" << join(", ", getParents(), print<deref<ParentPtr>>()) << "] "; }
-		return out << "<" << join(",", getFields(), print<deref<NodePtr>>()) << ">";
+
+		bool first = true;
+		auto printSeparator = [&]() { out << (first ? "" : ","); first = false; };
+
+		//print fields
+		if (getFields().size() > 0) { first = false; }
+		out << "{" << join(",", getFields(), print<deref<NodePtr>>());
+
+		//print constructor types
+		for (const auto& constructor : getConstructors()) {
+			printSeparator();
+			const auto& parameterTypes = constructor.as<LambdaExprPtr>()->getFunctionType()->getParameterTypes();
+			out << "ctor(" << join(",", ++parameterTypes.begin(), parameterTypes.end(), print<deref<NodePtr>>()) << ")";
+		}
+
+		//print destructor type
+		printSeparator();
+		out << "dtor()";
+
+		//print member function types
+		for (const auto& memberFunction : getMemberFunctions()) {
+			printSeparator();
+			const auto& implementationType = memberFunction->getImplementation().as<LambdaExprPtr>()->getFunctionType();
+			const auto& parameterTypes = implementationType->getParameterTypes();
+			out << *memberFunction->getName() << "("
+			    << join(",", ++parameterTypes.begin(), parameterTypes.end(), print<deref<NodePtr>>()) << ")->" << *implementationType->getReturnType();
+		}
+
+		//print pure virtual member function types
+		for (const auto& memberFunction : getPureVirtualMemberFunctions()) {
+			printSeparator();
+			const auto& implementationType = memberFunction->getType();
+			const auto& parameterTypes = implementationType->getParameterTypes();
+			out << "pure virtual " << *memberFunction->getName() << "("
+			    << join(",", ++parameterTypes.begin(), parameterTypes.end(), print<deref<NodePtr>>()) << ")->" << *implementationType->getReturnType();
+		}
+
+		return out << "}";
 	}
 
 	namespace {
