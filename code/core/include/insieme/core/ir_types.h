@@ -1652,9 +1652,7 @@ namespace core {
 		/**
 		 * Prints a string representation of this node to the given output stream.
 		 */
-		virtual std::ostream& printTo(std::ostream & out) const {
-			return out << "union<" << join(",", getFields(), print<deref<NodePtr>>()) << ">";
-		}
+		virtual std::ostream& printTo(std::ostream & out) const;
 
 	  public:
 

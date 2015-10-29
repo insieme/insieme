@@ -115,51 +115,73 @@ namespace core {
 		return out << *getTag() << "=" << *getRecord();
 	}
 
+	namespace {
+
+		std::ostream& printRecordTypeContents(const RecordPtr& record, std::ostream& out) {
+			bool first = true;
+			auto printSeparator = [&]() { out << (first ? "" : ","); first = false; };
+
+			out << "{";
+
+			//print fields
+			if (record->getFields().size() > 0) { first = false; }
+			out << join(",", record->getFields(), print<deref<NodePtr>>());
+
+			//print constructor types
+			for (const auto& constructor : record->getConstructors()) {
+				printSeparator();
+				const auto& parameterTypes = constructor.as<LambdaExprPtr>()->getFunctionType()->getParameterTypes();
+				out << "ctor(" << join(",", ++parameterTypes.begin(), parameterTypes.end(), print<deref<NodePtr>>()) << ")";
+			}
+
+			//print destructor type
+			printSeparator();
+			out << "dtor()";
+
+			//print member function types
+			for (const auto& memberFunction : record->getMemberFunctions()) {
+				printSeparator();
+				const auto& implementationType = memberFunction->getImplementation().as<LambdaExprPtr>()->getFunctionType();
+				const auto& parameterTypes = implementationType->getParameterTypes();
+				out << *memberFunction->getName() << "("
+						<< join(",", ++parameterTypes.begin(), parameterTypes.end(), print<deref<NodePtr>>()) << ")->" << *implementationType->getReturnType();
+			}
+
+			//print pure virtual member function types
+			for (const auto& memberFunction : record->getPureVirtualMemberFunctions()) {
+				printSeparator();
+				const auto& implementationType = memberFunction->getType();
+				const auto& parameterTypes = implementationType->getParameterTypes();
+				out << "pure virtual " << *memberFunction->getName() << "("
+						<< join(",", ++parameterTypes.begin(), parameterTypes.end(), print<deref<NodePtr>>()) << ")->" << *implementationType->getReturnType();
+			}
+
+			return out << "}";
+		}
+
+	}
+
 	std::ostream& Struct::printTo(std::ostream& out) const {
 		out << "struct";
 		if(!getName()->getValue().empty()) {
 			out << " " << *getName();
-			if(getParents()->empty()) { out << " "; }
 		}
-		if(!getParents()->empty()) { out << " : [" << join(", ", getParents(), print<deref<ParentPtr>>()) << "] "; }
-
-		bool first = true;
-		auto printSeparator = [&]() { out << (first ? "" : ","); first = false; };
-
-		//print fields
-		if (getFields().size() > 0) { first = false; }
-		out << "{" << join(",", getFields(), print<deref<NodePtr>>());
-
-		//print constructor types
-		for (const auto& constructor : getConstructors()) {
-			printSeparator();
-			const auto& parameterTypes = constructor.as<LambdaExprPtr>()->getFunctionType()->getParameterTypes();
-			out << "ctor(" << join(",", ++parameterTypes.begin(), parameterTypes.end(), print<deref<NodePtr>>()) << ")";
+		if(!getParents()->empty()) {
+			out << " : [" << join(", ", getParents(), print<deref<ParentPtr>>()) << "]";
 		}
+		out << " ";
 
-		//print destructor type
-		printSeparator();
-		out << "dtor()";
+		return printRecordTypeContents(this, out);
+	}
 
-		//print member function types
-		for (const auto& memberFunction : getMemberFunctions()) {
-			printSeparator();
-			const auto& implementationType = memberFunction->getImplementation().as<LambdaExprPtr>()->getFunctionType();
-			const auto& parameterTypes = implementationType->getParameterTypes();
-			out << *memberFunction->getName() << "("
-			    << join(",", ++parameterTypes.begin(), parameterTypes.end(), print<deref<NodePtr>>()) << ")->" << *implementationType->getReturnType();
+	std::ostream& Union::printTo(std::ostream& out) const {
+		out << "union";
+		if(!getName()->getValue().empty()) {
+			out << " " << *getName();
 		}
+		out << " ";
 
-		//print pure virtual member function types
-		for (const auto& memberFunction : getPureVirtualMemberFunctions()) {
-			printSeparator();
-			const auto& implementationType = memberFunction->getType();
-			const auto& parameterTypes = implementationType->getParameterTypes();
-			out << "pure virtual " << *memberFunction->getName() << "("
-			    << join(",", ++parameterTypes.begin(), parameterTypes.end(), print<deref<NodePtr>>()) << ")->" << *implementationType->getReturnType();
-		}
-
-		return out << "}";
+		return printRecordTypeContents(this, out);
 	}
 
 	namespace {
