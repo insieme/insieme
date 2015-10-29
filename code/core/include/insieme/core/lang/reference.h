@@ -390,6 +390,11 @@ namespace lang {
 	bool isReference(const NodePtr& node);
 
 	/**
+	 * Determines whether a given node is a reference type or an expression of a reference type to a certain kind.
+	 */
+	bool isReferenceTo(const NodePtr& node, const TypePtr& type);
+
+	/**
 	 * Determines whether a given node is a reference type or an expression of a plain reference type.
 	 */
 	bool isPlainReference(const NodePtr& node);
@@ -404,13 +409,14 @@ namespace lang {
 	 */
 	bool isCppRValueReference(const NodePtr& node);
 
+
 	/**
 	 * A factory function creating a reference type utilizing the given element type and flag combination.
 	 */
 	TypePtr buildRefType(const TypePtr& elementType, bool _const = false, bool _volatile = false, const ReferenceType::Kind& kind = ReferenceType::Kind::Plain);
-		
+
 	bool doReferencesDifferOnlyInQualifiers(const TypePtr& typeA, const TypePtr& typeB);
-	
+
 	ExpressionPtr buildRefCast(const ExpressionPtr& refExpr, const TypePtr& targetTy);
 
 	ExpressionPtr buildRefNull(const TypePtr& type);

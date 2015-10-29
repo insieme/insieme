@@ -170,6 +170,7 @@ LITERAL(CreateBoundRangeMod, "BoundRangeMod", "(uint<8>, uint<8>, uint<8>)->JobR
 TYPE(Lock, "lock")
 
 LITERAL(LockAcquire, "lock_acquire", "(ref<lock>)->unit")
+LITERAL(LockTryAcquire, "lock_tryacquire", "(ref<lock>)->bool")
 LITERAL(LockRelease, "lock_release", "(ref<lock>)->unit")
 LITERAL(LockInit, "lock_init", "(ref<lock>)->unit")
 

@@ -283,7 +283,7 @@ namespace core {
 		GenericTypePtr arrayType(const TypePtr& elementType, const LiteralPtr& size) const;
 		GenericTypePtr arrayType(const TypePtr& elementType, const VariablePtr& size) const;
 		GenericTypePtr arrayType(const TypePtr& elementType, size_t size) const;
-		
+
 		FieldPtr field(const string& name, const TypePtr& type) const;
 
 		TagTypePtr structType(const vector<std::pair<StringValuePtr, TypePtr>>& fields) const;
@@ -525,6 +525,7 @@ namespace core {
 
 		// Locks
 		CallExprPtr acquireLock(const ExpressionPtr& lock) const;
+		CallExprPtr tryAcquireLock(const ExpressionPtr& lock) const;
 		CallExprPtr releaseLock(const ExpressionPtr& lock) const;
 		CallExprPtr initLock(const ExpressionPtr& lock) const;
 
