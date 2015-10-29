@@ -1305,7 +1305,7 @@ namespace core {
 		/**
 		 * Obtains the type of this pure virtual member function.
 		 */
-		IR_NODE_PROPERTY(FunctionType, Type, 2);
+		IR_NODE_PROPERTY(FunctionType, Type, 1);
 
 		/**
 		 * Obtains the name of this member function as a string.
