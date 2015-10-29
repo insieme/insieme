@@ -128,7 +128,7 @@ namespace parser {
 		vector<string> res;
 
 		fs::path root(ROOT_DIR);
-		assert_true(fs::is_directory(root));
+		assert_true(fs::is_directory(root)) << root;
 
 		for(auto it = fs::directory_iterator(root); it != fs::directory_iterator(); ++it) {
 			fs::path file = it->path();

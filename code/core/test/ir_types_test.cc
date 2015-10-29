@@ -400,6 +400,24 @@ namespace core {
 
 	}
 
+
+	TEST(TypeTest, TagTypeMemberPeeling) {
+
+		// create a manager for this test
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		auto tagType = builder.parseType("let A = struct { x : bla<int<4>>; } in A").as<TagTypePtr>();
+		EXPECT_TRUE(checks::check(tagType).empty()) << checks::check(tagType);
+
+		// get destructor (the wrong way)
+		auto dtor = tagType->getRecord()->getDestructor();
+		EXPECT_FALSE(checks::check(dtor).empty());
+
+		auto fixedDtor = tagType->peel(dtor);
+		EXPECT_TRUE(checks::check(fixedDtor).empty()) << checks::check(fixedDtor);
+	}
+
 	//
 	// TEST(TypeTest, RecType) {
 	//

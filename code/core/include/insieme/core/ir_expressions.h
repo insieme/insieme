@@ -1096,6 +1096,7 @@ namespace core {
 		typedef NamedValueList Members;
 
 	  protected:
+
 		/**
 		 * Prints a string representation of this node to the given output stream.
 		 */

@@ -350,8 +350,8 @@ namespace core {
 		return unionType(fields);
 	}
 
-	TagTypePtr IRBuilderBaseModule::unionType(const string& name, const FieldList& filds, const LambdaExprList& ctors,
-			const LambdaExprPtr& dtor, const MemberFunctionList& mfuns, const PureVirtualMemberFunctionList& pvmfuns) const {
+	TagTypePtr IRBuilderBaseModule::unionType(const string& name, const FieldList& filds, const ExpressionList& ctors,
+			const ExpressionPtr& dtor, const MemberFunctionList& mfuns, const PureVirtualMemberFunctionList& pvmfuns) const {
 		return unionType(stringValue(name), fields(filds), expressions(convertList<Expression>(ctors)), dtor, memberFunctions(mfuns), pureVirtualMemberFunctions(pvmfuns));
 	}
 
@@ -395,8 +395,8 @@ namespace core {
 		return tagType(tag, tagTypeDefinition({tagTypeBinding(tag, structRecord(name, parents(parentsList), fields))}));
 	}
 
-	TagTypePtr IRBuilderBaseModule::structType(const string& name, const ParentList& prents, const FieldList& filds, const LambdaExprList& ctors,
-			const LambdaExprPtr& dtor, const MemberFunctionList& mfuns, const PureVirtualMemberFunctionList& pvmfuns) const {
+	TagTypePtr IRBuilderBaseModule::structType(const string& name, const ParentList& prents, const FieldList& filds, const ExpressionList& ctors,
+			const ExpressionPtr& dtor, const MemberFunctionList& mfuns, const PureVirtualMemberFunctionList& pvmfuns) const {
 		return structType(stringValue(name), parents(prents), fields(filds), expressions(convertList<Expression>(ctors)), dtor, memberFunctions(mfuns), pureVirtualMemberFunctions(pvmfuns));
 	}
 
