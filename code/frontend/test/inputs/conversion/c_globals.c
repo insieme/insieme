@@ -50,7 +50,7 @@ IAmTheTagType tt;
 
 typedef struct _omp_lock_t { int x; } omp_lock_t;
 void omp_set_lock(omp_lock_t* lock);
-#pragma test expect_ir("lit(\"lck\": ref<struct IMP__omp_lock_t { int<4> x; },f,f>)")
+#pragma test expect_ir("lit(\"lck\": ref<struct IMP__omp_lock_t { x : int<4>; },f,f>)")
 omp_lock_t lck;
 
 int main() {
