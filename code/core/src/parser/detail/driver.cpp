@@ -411,10 +411,10 @@ namespace parser {
 			}
 
 			if (type == NT_Struct) {
-				res = builder.structType(name,parents,fields,ctors,dtor,mfuns,pvmfuns);
+				res = builder.structType(name,parents,fields,ctors,dtor,false,mfuns,pvmfuns);
 			} else {
 				if (!parents.empty()) error(l, "Inheritance not supported for unions!");
-				res = builder.unionType(name,fields,ctors,dtor,mfuns,pvmfuns);
+				res = builder.unionType(name,fields,ctors,dtor,false,mfuns,pvmfuns);
 			}
 
 			// register type in translation unit

@@ -1521,7 +1521,7 @@ namespace core {
 	/**
 	 * A node type used to represent a common base-class for structs and unions.
 	 */
-	class Record : public Support, public AbstractFixedSizeNodeHelper<Record,StringValue,Fields,Expressions,Expression,MemberFunctions,PureVirtualMemberFunctions> {
+	class Record : public Support, public AbstractFixedSizeNodeHelper<Record,StringValue,Fields,Expressions,Expression,BoolValue,MemberFunctions,PureVirtualMemberFunctions> {
 	  protected:
 		/**
 		 * A constructor creating a new instance of this type based on a given child-node list.
@@ -1545,7 +1545,7 @@ namespace core {
 
 
 	#define IR_RECORD_ACCESSOR(NAME, ...)                                                                                                                  \
-		IR_NODE_ACCESSOR(NAME, Record, StringValue, Fields, Expressions, Expression, MemberFunctions, PureVirtualMemberFunctions, ##__VA_ARGS__)
+		IR_NODE_ACCESSOR(NAME, Record, StringValue, Fields, Expressions, Expression, BoolValue, MemberFunctions, PureVirtualMemberFunctions, ##__VA_ARGS__)
 
 
 	// --------------------------------- Struct ----------------------------
@@ -1558,7 +1558,7 @@ namespace core {
 		/**
 		 * Obtains the list of parent classes associated to this struct.
 		 */
-		IR_NODE_PROPERTY(Parents, Parents, 6);
+		IR_NODE_PROPERTY(Parents, Parents, 7);
 
 	IR_NODE_END();
 
@@ -1594,8 +1594,9 @@ namespace core {
 		 * 		   the same parameters will lead to pointers addressing the same instance.
 		 */
 		static StructPtr get(NodeManager& manager, const StringValuePtr& name, const ParentsPtr& parents, const FieldsPtr& fields,
-				const ExpressionsPtr& ctors, const ExpressionPtr& dtor, const MemberFunctionsPtr& mfuns, const PureVirtualMemberFunctionsPtr& pvfuns) {
-			return manager.get(Struct(name, fields, ctors, dtor, mfuns, pvfuns, parents));
+		                     const ExpressionsPtr& ctors, const ExpressionPtr& dtor, const BoolValuePtr& dtorIsVirtual,
+		                     const MemberFunctionsPtr& mfuns, const PureVirtualMemberFunctionsPtr& pvfuns) {
+			return manager.get(Struct(name, fields, ctors, dtor, dtorIsVirtual, mfuns, pvfuns, parents));
 		}
 
 		/**
@@ -1711,9 +1712,10 @@ namespace core {
 		 * @return a pointer to a instance of the requested type. Multiple requests using
 		 * 		   the same parameters will lead to pointers addressing the same instance.
 		 */
-		static UnionPtr get(NodeManager& manager, const StringValuePtr& name, const FieldsPtr& fields, const ExpressionsPtr& ctors,
-				const ExpressionPtr& dtor, const MemberFunctionsPtr& mfuns, const PureVirtualMemberFunctionsPtr& pvfuns) {
-			return manager.get(Union(name, fields, ctors, dtor, mfuns, pvfuns));
+		static UnionPtr get(NodeManager& manager, const StringValuePtr& name, const FieldsPtr& fields,
+		                    const ExpressionsPtr& ctors, const ExpressionPtr& dtor, const BoolValuePtr& dtorIsVirtual,
+		                    const MemberFunctionsPtr& mfuns, const PureVirtualMemberFunctionsPtr& pvfuns) {
+			return manager.get(Union(name, fields, ctors, dtor, dtorIsVirtual, mfuns, pvfuns));
 		}
 
 		/**

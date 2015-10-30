@@ -207,7 +207,7 @@ namespace tu {
 		tu.addFunction(literalMemberFunctionG, lambdaG);
 		std::cout << "Registered member function " << literalMemberFunctionG << " of type " << literalMemberFunctionG->getType() << "\n";
 
-		auto recordType = builder.structType("A", ParentList(), FieldList(), ExpressionList(), builder.getDefaultDestructor("A"), toVector(memberFunctionF, memberFunctionG), PureVirtualMemberFunctionList());
+		auto recordType = builder.structType("A", ParentList(), FieldList(), ExpressionList(), builder.getDefaultDestructor("A"), false, toVector(memberFunctionF, memberFunctionG), PureVirtualMemberFunctionList());
 		tu.addType(genericType, recordType);
 
 		std::cout << "\nContents of TU:\n";

@@ -351,7 +351,7 @@ namespace core {
 	StructPtr Struct::get(NodeManager & manager, const StringValuePtr& name, const ParentsPtr& parents, const FieldsPtr& fields) {
 		return get(manager, name, parents, fields,
 				Expressions::get(manager, ExpressionList()),
-				IRBuilder(manager).getDefaultDestructor(name),
+				IRBuilder(manager).getDefaultDestructor(name), BoolValue::get(manager, false),
 				MemberFunctions::get(manager, MemberFunctionList()),
 				PureVirtualMemberFunctions::get(manager, PureVirtualMemberFunctionList())
 			);
@@ -360,7 +360,7 @@ namespace core {
 	UnionPtr Union::get(NodeManager & manager, const StringValuePtr& name, const FieldsPtr& fields) {
 		return get(manager, name, fields,
 				Expressions::get(manager, ExpressionList()),
-				IRBuilder(manager).getDefaultDestructor(name),
+				IRBuilder(manager).getDefaultDestructor(name), BoolValue::get(manager, false),
 				MemberFunctions::get(manager, MemberFunctionList()),
 				PureVirtualMemberFunctions::get(manager, PureVirtualMemberFunctionList())
 			);
