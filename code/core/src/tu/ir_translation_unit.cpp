@@ -214,6 +214,7 @@ namespace tu {
 			}
 
 			NodePtr apply(const NodePtr& node) {
+				if (!node) return node;
 
 				// 1. get set of contained symbols
 				const NodeSet& init = getContainedSymbols(node);
@@ -372,23 +373,16 @@ namespace tu {
 
 				// process in reverse order
 				for(const auto& cur : components) {
+
 					// sort variables
 					vector<NodePtr> vars(cur.begin(), cur.end());
 					std::sort(vars.begin(), vars.end(), compare_target<NodePtr>());
-
 
 					// get first element
 					auto first = vars.front();
 
 					// skip this component if it has already been resolved as a side effect of another operation
 					if(isResolved(first)) { continue; }
-
-					// add variables for current components to resolution Cache
-					for(const auto& s : vars) {
-						resolutionCache[s] = getRecVar(s);
-					}
-
-					assert_true(isResolved(first));
 
 					// split recursive variables in expressions and types
 					vector<NodePtr> typeVars;
@@ -400,6 +394,19 @@ namespace tu {
 							exprVars.push_back(cur.as<LiteralPtr>());
 						}
 					}
+
+					// add variables for current components to resolution Cache
+					cachingEnabled = false;					// no caching for this part
+					for(const auto& s : typeVars) {			// first type variables
+						resolutionCache[s] = getRecVar(s);
+					}
+					for(const auto& s : exprVars) {			// then expression variables
+						resolutionCache[s] = getRecVar(s);
+					}
+					cachingEnabled = true;
+
+
+					assert_true(isResolved(first));
 
 					// process expr variables first, then type variables
 					for(const auto& vars : { exprVars, typeVars } ) {
@@ -421,6 +428,9 @@ namespace tu {
 						// re-enable caching again
 						cachingEnabled = true;
 
+						// remember the tag-type definition for post-processing
+						TagTypeDefinitionPtr tagTypeDefinition;
+
 						// close recursion if necessary
 						if(vars.size() > 1 || isDirectRecursive(first)) {
 
@@ -441,6 +451,9 @@ namespace tu {
 									core::transform::utils::migrateAnnotations(cur.second, newType);
 									cur.second = newType;
 								}
+
+								// remember definition
+								tagTypeDefinition = def;
 
 							} else if(first.isa<LiteralPtr>()) {
 								// build recursive lambda definition
@@ -473,6 +486,17 @@ namespace tu {
 							// and add to cache
 							resolutionCache[s] = resolved[s];
 						}
+
+						// peel expressions out of their types if necessary
+						if (tagTypeDefinition) {
+
+							// peel all the members so that they can be used in the global context
+							for(const auto& cur : exprVars) {
+								resolutionCache[cur] = tagTypeDefinition->peel(mgr, resolutionCache[cur].as<ExpressionPtr>());
+							}
+
+						}
+
 					}
 				}
 			}
@@ -546,7 +570,7 @@ namespace tu {
 				prevAddedLiterals = currAddedLiterals;
 				currAddedLiterals.clear();
 			};
-			
+
 			core::FrontendIRBuilder builder(internalMainFunc->getNodeManager());
 			core::StatementList inits;
 
@@ -635,7 +659,7 @@ namespace tu {
 	core::NodePtr IRTranslationUnit::resolve(const core::NodePtr& node) const {
 		return Resolver(getNodeManager(), *this).apply(node);
 	}
-	
+
 
 	core::ProgramPtr toProgram(core::NodeManager& mgr, const IRTranslationUnit& a, const string& entryPoint) {
 		// search for entry point
@@ -649,7 +673,7 @@ namespace tu {
 
 				// extract lambda expression
 				core::LambdaExprPtr lambda = resolver.apply(symbol).as<core::LambdaExprPtr>();
-				
+
 				// add initializer
 				//				std::cout << "Adding initializers ...\n";
 				lambda = addInitializer(a, lambda);

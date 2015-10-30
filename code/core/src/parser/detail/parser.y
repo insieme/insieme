@@ -212,9 +212,9 @@
 
 %type <FieldPtr>                       field
 %type <FieldList>                      fields
-%type <LambdaExprPtr>                  constructor
-%type <LambdaExprList>                 constructors
-%type <LambdaExprPtr>                  destructor
+%type <ExpressionPtr>                  constructor
+%type <ExpressionList>                 constructors
+%type <ExpressionPtr>                  destructor
 %type <MemberFunctionPtr>              member_function
 %type <MemberFunctionList>             member_functions
 %type <PureVirtualMemberFunctionPtr>   pure_virtual_member_function
@@ -330,7 +330,7 @@ field : "identifier" ":" type ";"                                           { $$
       ;
 
 constructors : constructors constructor                                     { $1.push_back($2); $$ = $1; }
-             |                                                              { $$ = LambdaExprList(); }
+             |                                                              { $$ = ExpressionList(); }
              ;
 
 constructor : "ctor" "(" parameters                                         { driver.openScope(); driver.registerParameters(@3, $3); }

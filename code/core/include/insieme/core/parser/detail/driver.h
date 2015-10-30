@@ -211,8 +211,8 @@ namespace parser {
 			/**
 			 * generate a record type
 			 */
-			TypePtr genRecordType(const location& l, const NodeType& type, const string& name, const ParentList& parents, const FieldList& fields, const LambdaExprList& ctors,
-					const LambdaExprPtr& dtor, const MemberFunctionList& mfuns, const PureVirtualMemberFunctionList& pvmfuns);
+			TypePtr genRecordType(const location& l, const NodeType& type, const string& name, const ParentList& parents, const FieldList& fields, const ExpressionList& ctors,
+					const ExpressionPtr& dtor, const MemberFunctionList& mfuns, const PureVirtualMemberFunctionList& pvmfuns);
 
 			/**
 			 * generate a simple struct or union consisting only of fields. The decision between sctuct or union will be made based on the given node type.
@@ -247,7 +247,7 @@ namespace parser {
 			/**
 			 * generates a destructor for the currently defined record type
 			 */
-			LambdaExprPtr genDestructor(const location& l, const StatementPtr& body);
+			ExpressionPtr genDestructor(const location& l, const StatementPtr& body);
 
 			/**
 			 * generates a member function for the currently defined record type
