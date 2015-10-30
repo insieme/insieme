@@ -72,7 +72,7 @@
 #include "insieme/core/lang/static_vars.h"
 #include "insieme/core/lang/varargs_extension.h"
 
-#include "insieme/core/parser3/ir_parser.h"
+#include "insieme/core/parser/ir_parser.h"
 
 #include "insieme/core/printer/pretty_printer.h"
 
@@ -146,14 +146,14 @@ namespace core {
 		/**
 		 * Converts a eager map into a lazy map.
 		 */
-		IRBuilderBaseModule::lazy_definition_map toLazy(const IRBuilderBaseModule::eager_definition_map& map) {
-			IRBuilderBaseModule::lazy_definition_map res;
+		IRBuilderBaseModule::LazyDefinitionMap toLazy(const IRBuilderBaseModule::EagerDefinitionMap& map) {
+			IRBuilderBaseModule::LazyDefinitionMap res;
 			for(const auto& cur : map) res.insert({cur.first, [=]() { return cur.second; }});
 			return res;
 		}
 
-		IRBuilderBaseModule::lazy_definition_map addStandardSymbols(NodeManager& mgr, const IRBuilderBaseModule::lazy_definition_map& init = IRBuilderBaseModule::lazy_definition_map()) {
-			IRBuilderBaseModule::lazy_definition_map res;
+		IRBuilderBaseModule::LazyDefinitionMap addStandardSymbols(NodeManager& mgr, const IRBuilderBaseModule::LazyDefinitionMap& init = IRBuilderBaseModule::LazyDefinitionMap()) {
+			IRBuilderBaseModule::LazyDefinitionMap res;
 
 			// load standard modules
 			for(const auto& cur : mgr.getLangExtension<lang::ArrayExtension>().getSymbols()) res.insert(cur);
@@ -169,8 +169,8 @@ namespace core {
 			return res;
 		}
 
-		parser3::type_alias_map getStandardAliasMap(NodeManager& mgr) {
-			parser3::type_alias_map res;
+		parser::TypeAliasMap getStandardAliasMap(NodeManager& mgr) {
+			parser::TypeAliasMap res;
 
 			// load standard modules
 			for(const auto& cur : mgr.getLangExtension<lang::ArrayExtension>().getTypeAliases()) res.insert(cur);
@@ -186,67 +186,67 @@ namespace core {
 
 	// ---------------------------- Parser Integration -----------------------------------
 
-	NodePtr IRBuilderBaseModule::parse(const string& code, const lazy_definition_map& symbols) const {
-		return parser3::parse_any(manager, code, true, addStandardSymbols(manager, symbols), getStandardAliasMap(manager));
+	NodePtr IRBuilderBaseModule::parse(const string& code, const LazyDefinitionMap& symbols) const {
+		return parser::parseAny(manager, code, true, addStandardSymbols(manager, symbols), getStandardAliasMap(manager));
 	}
 
-	NodePtr IRBuilderBaseModule::parse(const string& code, const eager_definition_map& symbols) const {
+	NodePtr IRBuilderBaseModule::parse(const string& code, const EagerDefinitionMap& symbols) const {
 		return parse(code, toLazy(symbols));
 	}
 
-	TypePtr IRBuilderBaseModule::parseType(const string& code, const lazy_definition_map& symbols) const {
-		return parser3::parse_type(manager, code, true, addStandardSymbols(manager, symbols), getStandardAliasMap(manager));
+	TypePtr IRBuilderBaseModule::parseType(const string& code, const LazyDefinitionMap& symbols) const {
+		return parser::parseType(manager, code, true, addStandardSymbols(manager, symbols), getStandardAliasMap(manager));
 	}
 
-	TypePtr IRBuilderBaseModule::parseType(const string& code, const eager_definition_map& symbols) const {
+	TypePtr IRBuilderBaseModule::parseType(const string& code, const EagerDefinitionMap& symbols) const {
 		return parseType(code, toLazy(symbols));
 	}
 
-	ExpressionPtr IRBuilderBaseModule::parseExpr(const string& code, const lazy_definition_map& symbols) const {
-		return parser3::parse_expr(manager, code, true, addStandardSymbols(manager, symbols), getStandardAliasMap(manager));
+	ExpressionPtr IRBuilderBaseModule::parseExpr(const string& code, const LazyDefinitionMap& symbols) const {
+		return parser::parseExpr(manager, code, true, addStandardSymbols(manager, symbols), getStandardAliasMap(manager));
 	}
 
-	ExpressionPtr IRBuilderBaseModule::parseExpr(const string& code, const eager_definition_map& symbols) const {
+	ExpressionPtr IRBuilderBaseModule::parseExpr(const string& code, const EagerDefinitionMap& symbols) const {
 		return parseExpr(code, toLazy(symbols));
 	}
 
-	StatementPtr IRBuilderBaseModule::parseStmt(const string& code, const lazy_definition_map& symbols) const {
-		return parser3::parse_stmt(manager, code, true, addStandardSymbols(manager, symbols), getStandardAliasMap(manager));
+	StatementPtr IRBuilderBaseModule::parseStmt(const string& code, const LazyDefinitionMap& symbols) const {
+		return parser::parseStmt(manager, code, true, addStandardSymbols(manager, symbols), getStandardAliasMap(manager));
 	}
 
-	StatementPtr IRBuilderBaseModule::parseStmt(const string& code, const eager_definition_map& symbols) const {
+	StatementPtr IRBuilderBaseModule::parseStmt(const string& code, const EagerDefinitionMap& symbols) const {
 		return parseStmt(code, toLazy(symbols));
 	}
 
-	ProgramPtr IRBuilderBaseModule::parseProgram(const string& code, const lazy_definition_map& symbols) const {
-		return parser3::parse_program(manager, code, true, addStandardSymbols(manager, symbols), getStandardAliasMap(manager));
+	ProgramPtr IRBuilderBaseModule::parseProgram(const string& code, const LazyDefinitionMap& symbols) const {
+		return parser::parseProgram(manager, code, true, addStandardSymbols(manager, symbols), getStandardAliasMap(manager));
 	}
 
-	ProgramPtr IRBuilderBaseModule::parseProgram(const string& code, const eager_definition_map& symbols) const {
+	ProgramPtr IRBuilderBaseModule::parseProgram(const string& code, const EagerDefinitionMap& symbols) const {
 		return parseProgram(code, toLazy(symbols));
 	}
 
-	vector<NodeAddress> IRBuilderBaseModule::parseAddressesExpression(const string& code, const lazy_definition_map& symbols) const {
-		return parser3::parse_addresses_expression(manager, code, true, addStandardSymbols(manager, symbols), getStandardAliasMap(manager));
+	vector<NodeAddress> IRBuilderBaseModule::parseAddressesExpression(const string& code, const LazyDefinitionMap& symbols) const {
+		return parser::parseAddressesExpression(manager, code, true, addStandardSymbols(manager, symbols), getStandardAliasMap(manager));
 	}
 
-	vector<NodeAddress> IRBuilderBaseModule::parseAddressesExpression(const string& code, const eager_definition_map& symbols) const {
+	vector<NodeAddress> IRBuilderBaseModule::parseAddressesExpression(const string& code, const EagerDefinitionMap& symbols) const {
 		return parseAddressesExpression(code, toLazy(symbols));
 	}
 
-	vector<NodeAddress> IRBuilderBaseModule::parseAddressesStatement(const string& code, const lazy_definition_map& symbols) const {
-		return parser3::parse_addresses_statement(manager, code, true, addStandardSymbols(manager, symbols), getStandardAliasMap(manager));
+	vector<NodeAddress> IRBuilderBaseModule::parseAddressesStatement(const string& code, const LazyDefinitionMap& symbols) const {
+		return parser::parseAddressesStatement(manager, code, true, addStandardSymbols(manager, symbols), getStandardAliasMap(manager));
 	}
 
-	vector<NodeAddress> IRBuilderBaseModule::parseAddressesStatement(const string& code, const eager_definition_map& symbols) const {
+	vector<NodeAddress> IRBuilderBaseModule::parseAddressesStatement(const string& code, const EagerDefinitionMap& symbols) const {
 		return parseAddressesStatement(code, toLazy(symbols));
 	}
 
-	vector<NodeAddress> IRBuilderBaseModule::parseAddressesProgram(const string& code, const lazy_definition_map& symbols) const {
-		return parser3::parse_addresses_program(manager, code, true, addStandardSymbols(manager, symbols), getStandardAliasMap(manager));
+	vector<NodeAddress> IRBuilderBaseModule::parseAddressesProgram(const string& code, const LazyDefinitionMap& symbols) const {
+		return parser::parseAddressesProgram(manager, code, true, addStandardSymbols(manager, symbols), getStandardAliasMap(manager));
 	}
 
-	vector<NodeAddress> IRBuilderBaseModule::parseAddressesProgram(const string& code, const eager_definition_map& symbols) const {
+	vector<NodeAddress> IRBuilderBaseModule::parseAddressesProgram(const string& code, const EagerDefinitionMap& symbols) const {
 		return parseAddressesProgram(code, toLazy(symbols));
 	}
 
@@ -350,6 +350,22 @@ namespace core {
 		return unionType(fields);
 	}
 
+	TagTypePtr IRBuilderBaseModule::unionType(const string& name, const FieldList& filds,
+	                                          const ExpressionList& ctors, const ExpressionPtr& dtor, const bool dtorIsVirtual,
+	                                          const MemberFunctionList& mfuns, const PureVirtualMemberFunctionList& pvmfuns) const {
+		return unionType(stringValue(name), fields(filds),
+		                 expressions(convertList<Expression>(ctors)), dtor, boolValue(dtorIsVirtual),
+		                 memberFunctions(mfuns), pureVirtualMemberFunctions(pvmfuns));
+	}
+
+	TagTypePtr IRBuilderBaseModule::unionType(const StringValuePtr& name, const FieldsPtr& fields,
+	                                          const ExpressionsPtr& ctors, const ExpressionPtr& dtor, const BoolValuePtr& dtorIsVirtual,
+	                                          const MemberFunctionsPtr& mfuns, const PureVirtualMemberFunctionsPtr& pvmfuns) const {
+		auto tag = tagTypeReference(name);
+				return tagType(tag, tagTypeDefinition({tagTypeBinding(tag, unionRecord(name, fields, ctors, dtor, dtorIsVirtual, mfuns, pvmfuns))}));
+	}
+
+
 	TagTypePtr IRBuilderBaseModule::structType(const vector<ParentPtr>& parents, const vector<FieldPtr>& fields) const {
 		return structType(stringValue(""), IRBuilderBaseModule::parents(parents), fields);
 	}
@@ -383,17 +399,33 @@ namespace core {
 		return tagType(tag, tagTypeDefinition({tagTypeBinding(tag, structRecord(name, parents(parentsList), fields))}));
 	}
 
+	TagTypePtr IRBuilderBaseModule::structType(const string& name, const ParentList& prents, const FieldList& filds,
+	                                           const ExpressionList& ctors, const ExpressionPtr& dtor, const bool dtorIsVirtual,
+	                                           const MemberFunctionList& mfuns, const PureVirtualMemberFunctionList& pvmfuns) const {
+		return structType(stringValue(name), parents(prents), fields(filds),
+		                  expressions(convertList<Expression>(ctors)), dtor, boolValue(dtorIsVirtual),
+		                  memberFunctions(mfuns), pureVirtualMemberFunctions(pvmfuns));
+	}
+
+	TagTypePtr IRBuilderBaseModule::structType(const StringValuePtr& name, const ParentsPtr& parents, const FieldsPtr& fields,
+	                                           const ExpressionsPtr& ctors, const ExpressionPtr& dtor, const BoolValuePtr& dtorIsVirtual,
+	                                           const MemberFunctionsPtr& mfuns, const PureVirtualMemberFunctionsPtr& pvmfuns) const {
+		auto tag = tagTypeReference(name);
+				return tagType(tag, tagTypeDefinition({tagTypeBinding(tag, structRecord(name, parents, fields, ctors, dtor, dtorIsVirtual, mfuns, pvmfuns))}));
+	}
+
+
 	FunctionTypePtr IRBuilderBaseModule::getDestructorType(const TagTypeReferencePtr& tag) const {
 		// create default destructor
 		TypePtr thisType = refType(tag);
 		return functionType(toVector(thisType), thisType, FK_DESTRUCTOR);
 	}
 
-	ExpressionPtr IRBuilderBaseModule::getDefaultDestructor(const StringValuePtr& recordName) const {
+	LambdaExprPtr IRBuilderBaseModule::getDefaultDestructor(const StringValuePtr& recordName) const {
 		// create default destructor
 		auto dtorType = getDestructorType(tagTypeReference(recordName));
 		TypePtr thisType = dtorType->getParameterType(0);
-		return normalize(lambdaExpr(dtorType, toVector(variable(refType(thisType))), getNoOp()));
+		return normalize(lambdaExpr(dtorType, toVector(variable(refType(thisType))), getNoOp())).as<LambdaExprPtr>();
 	}
 
 	FieldPtr IRBuilderBaseModule::field(const string& name, const TypePtr& type) const {

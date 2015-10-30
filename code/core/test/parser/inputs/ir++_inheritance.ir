@@ -1,0 +1,62 @@
+
+alias int = int<4>;
+
+def struct A {
+	x : int;
+	lambda a : ()->unit { }
+};
+
+def struct B : [A] {
+	y : int;
+	lambda b : ()->unit { }
+};
+
+def struct C : [B] {
+	z : int;
+	lambda c : ()->unit { }
+};
+
+int main() {
+
+	// -------- handle an instance of A --------
+	var ref<A> a;
+	a.x = 1;
+	a.a();
+	
+	
+	// -------- handle an instance of B --------
+	var ref<B> b;
+	
+	// direct access
+	b.as(A).x = 1;
+	b.y = 2;
+	b.as(A).a();
+	b.b();
+	
+	// indirect access of A's x
+	auto bA = b.as(A);
+	bA.x = 3;
+	bA.a();
+	
+	
+	// -------- handle an instance of C --------
+	var ref<C> c;
+	
+	// access B's A's x
+	c.as(B).as(A).x = 1;
+	c.as(B).as(A).a();
+
+	// access B's y
+	c.as(B).y = 2;
+	c.as(B).b();
+	
+	// access C's z
+	c.z = 3;
+	c.c();
+	
+	print("x = %d\n", *(c.as(B).as(A).x));
+	print("y = %d\n", *(c.as(B).y));
+	print("z = %d\n", *c.z);
+	
+	return 0;
+}

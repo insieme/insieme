@@ -70,7 +70,7 @@ namespace extensions {
 		/**
 		 * Used for adding previously identified entry points
 		 */
-		virtual insieme::frontend::tu::IRTranslationUnit IRVisit(insieme::frontend::tu::IRTranslationUnit& tu);
+		virtual core::tu::IRTranslationUnit IRVisit(core::tu::IRTranslationUnit& tu);
 
 		/**
 		 * Visits the entire program to look for and process transformation annotations

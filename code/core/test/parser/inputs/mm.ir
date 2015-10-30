@@ -1,0 +1,64 @@
+
+alias int = int<4>;
+alias uint = uint<4>;
+
+alias double = real<8>;
+
+alias matrix = array<array<double,100>,100>;
+
+def initUniform = (elem : 'elem, size : type<'a>) -> array<'elem,'a>{
+					var ref<array<'elem,'a>> res;
+					for(int i=0 .. 100) {
+						res[i] = elem;
+					}
+					return *res;
+};
+
+
+
+int main() {
+
+	// create matrices
+	var ref<matrix> a = ref_var(initUniform(initUniform(0.0,type_lit(100)),type_lit(100)));
+	var ref<matrix> b = ref_var(initUniform(initUniform(0.0,type_lit(100)),type_lit(100)));
+	var ref<matrix> c = ref_var(initUniform(initUniform(0.0,type_lit(100)),type_lit(100)));
+	
+	// initialize a and b
+	for(uint i= 0u .. 100u) {
+		for(uint j= 0u .. 100u) {
+			if (i == j) {
+				a[i][j] = 1.0;
+			} else {
+				a[i][j] = 0.0;
+			}
+			b[i][j] = 2.0;
+		}
+	}
+	
+	
+	// muliply a and b => c
+	for(uint i = 0u .. 100u) {
+		for(uint j = 0u .. 100u) {
+			c[i][j] = 0.0;
+			for(uint k = 0u .. 100u) {
+				c[i][j] = c[i][j] + a[i][k] * b[i][j];
+			}
+		}
+	}
+	
+	// check results		
+	var ref<bool> success = ref_var(true);
+	for(uint i = 0u .. 100u) {
+		for(uint j = 0u .. 100u) {
+			success = success && c[i][j] == 2.0;
+		}
+	}
+	
+	// print verification check result
+	if (!success) {
+		print("Fail\n");
+		return 1;
+	}
+	print("OK\n");
+	return 0;
+}

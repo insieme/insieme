@@ -77,7 +77,6 @@ namespace lang {
 		EXPECT_EQ(ArrayType::create(A,15), builder.parseType("array<A,15>"));
 		EXPECT_EQ(ArrayType::create(A,v), builder.parseType("array<A,#x>", symbols));
 
-
 		EXPECT_PRED1(isUnknownSizedArray, builder.parseType("array<A>"));
 		EXPECT_PRED1(isFixedSizedArray, builder.parseType("array<A,12>"));
 		EXPECT_PRED1(isVariableSizedArray, builder.parseType("array<A,#x>", symbols));

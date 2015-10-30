@@ -38,8 +38,6 @@
 
 #include "insieme/core/lang/extension.h"
 
-#include "insieme/core/lang/array.h"
-
 namespace insieme {
 namespace core {
 namespace lang {
@@ -65,6 +63,7 @@ namespace lang {
 		DatapathExtension(core::NodeManager& manager) : core::lang::Extension(manager) {}
 
 	  public:
+
 		/**
 		 * The root path is modeling the empty path -- the identity when utilized for narrow / expand operations.
 		 */

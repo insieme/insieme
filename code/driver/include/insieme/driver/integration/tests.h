@@ -54,6 +54,11 @@
 #include "insieme/driver/integration/properties.h"
 
 namespace insieme {
+namespace core {
+namespace tu {
+	class IRTranslationUnit;
+}
+}
 namespace driver {
 namespace integration {
 
@@ -274,7 +279,7 @@ namespace integration {
 		/**
 		 * Loads the translation unit for this test case.
 		 */
-		frontend::tu::IRTranslationUnit loadTU(core::NodeManager& manager) const;
+		core::tu::IRTranslationUnit loadTU(core::NodeManager& manager) const;
 
 		/**
 		 * Obtains the list of macro definitions to be passed on the the frontend.

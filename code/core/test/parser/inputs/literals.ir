@@ -1,0 +1,16 @@
+
+unit main() {
+	
+	// integer literals
+	0;
+	1u;
+	2l;
+	
+	// float values
+	0.0;
+	0.1f;
+	
+	// string literals
+	"Hello World!";
+	
+}

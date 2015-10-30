@@ -1,0 +1,16 @@
+
+alias int = int<4>;
+
+// an atomic increment
+def atomicInc = (v : ref<'a>)->unit {
+	atomic(v, (_ : 'a)=>true, (x : 'a)=>x+CAST('a)1);
+};
+
+unit main() {
+	// create an int and increment
+	var ref<int> x = ref_var(0);
+	atomicInc(x);
+	
+	var ref<int<8>> y = ref_var(0l);
+	atomicInc(y);
+}

@@ -115,14 +115,73 @@ namespace core {
 		return out << *getTag() << "=" << *getRecord();
 	}
 
+	namespace {
+
+		std::ostream& printRecordTypeContents(const RecordPtr& record, std::ostream& out) {
+			bool first = true;
+			auto printSeparator = [&]() { out << (first ? "" : ","); first = false; };
+
+			out << "{";
+
+			//print fields
+			if (record->getFields().size() > 0) { first = false; }
+			out << join(",", record->getFields(), print<deref<NodePtr>>());
+
+			//print constructor types
+			for (const auto& constructor : record->getConstructors()) {
+				printSeparator();
+				const auto& parameterTypes = constructor.as<LambdaExprPtr>()->getFunctionType()->getParameterTypes();
+				out << "ctor(" << join(",", ++parameterTypes.begin(), parameterTypes.end(), print<deref<NodePtr>>()) << ")";
+			}
+
+			//print destructor type
+			printSeparator();
+			out << "dtor()";
+
+			//print member function types
+			for (const auto& memberFunction : record->getMemberFunctions()) {
+				printSeparator();
+				const auto& implementationType = memberFunction->getImplementation().as<LambdaExprPtr>()->getFunctionType();
+				const auto& parameterTypes = implementationType->getParameterTypes();
+				out << *memberFunction->getName() << "("
+						<< join(",", ++parameterTypes.begin(), parameterTypes.end(), print<deref<NodePtr>>()) << ")->" << *implementationType->getReturnType();
+			}
+
+			//print pure virtual member function types
+			for (const auto& memberFunction : record->getPureVirtualMemberFunctions()) {
+				printSeparator();
+				const auto& implementationType = memberFunction->getType();
+				const auto& parameterTypes = implementationType->getParameterTypes();
+				out << "pure virtual " << *memberFunction->getName() << "("
+						<< join(",", ++parameterTypes.begin(), parameterTypes.end(), print<deref<NodePtr>>()) << ")->" << *implementationType->getReturnType();
+			}
+
+			return out << "}";
+		}
+
+	}
+
 	std::ostream& Struct::printTo(std::ostream& out) const {
 		out << "struct";
 		if(!getName()->getValue().empty()) {
 			out << " " << *getName();
-			if(getParents()->empty()) { out << " "; }
 		}
-		if(!getParents()->empty()) { out << " : [" << join(", ", getParents(), print<deref<ParentPtr>>()) << "] "; }
-		return out << "<" << join(",", getFields(), print<deref<NodePtr>>()) << ">";
+		if(!getParents()->empty()) {
+			out << " : [" << join(", ", getParents(), print<deref<ParentPtr>>()) << "]";
+		}
+		out << " ";
+
+		return printRecordTypeContents(this, out);
+	}
+
+	std::ostream& Union::printTo(std::ostream& out) const {
+		out << "union";
+		if(!getName()->getValue().empty()) {
+			out << " " << *getName();
+		}
+		out << " ";
+
+		return printRecordTypeContents(this, out);
 	}
 
 	namespace {
@@ -188,6 +247,9 @@ namespace core {
 			}
 		}
 
+		/**
+		 * Collects all free tag-type references in the given code fragment by excluding the given origin-reference.
+		 */
 		template<template<typename T> class Ptr>
 		std::set<Ptr<const TagTypeReference>> getFreeTagTypeReferences(const Ptr<const Node>& root, const TagTypeReferencePtr& origin) {
 			std::set<Ptr<const TagTypeReference>> res;
@@ -237,6 +299,18 @@ namespace core {
 		return TagType::get(manager, tag, definition);
 	}
 
+	ExpressionPtr TagTypeDefinition::peelMember(NodeManager& manager, const ExpressionPtr& member) const {
+
+		// create a replacement map from of the tag-type bindings
+		NodeMap replacements;
+		for(const auto& cur : *this) {
+			replacements[cur->getTag()] = TagType::get(manager, cur->getTag(),this);
+		}
+
+		// apply replacement
+		return transform::replaceAllGen(manager, member, replacements, transform::globalReplacement);
+	}
+
 	bool TagType::isRecursive() const {
 
 		// the marker type to annotate the result of the is-recursive check
@@ -277,7 +351,7 @@ namespace core {
 	StructPtr Struct::get(NodeManager & manager, const StringValuePtr& name, const ParentsPtr& parents, const FieldsPtr& fields) {
 		return get(manager, name, parents, fields,
 				Expressions::get(manager, ExpressionList()),
-				IRBuilder(manager).getDefaultDestructor(name),
+				IRBuilder(manager).getDefaultDestructor(name), BoolValue::get(manager, false),
 				MemberFunctions::get(manager, MemberFunctionList()),
 				PureVirtualMemberFunctions::get(manager, PureVirtualMemberFunctionList())
 			);
@@ -286,7 +360,7 @@ namespace core {
 	UnionPtr Union::get(NodeManager & manager, const StringValuePtr& name, const FieldsPtr& fields) {
 		return get(manager, name, fields,
 				Expressions::get(manager, ExpressionList()),
-				IRBuilder(manager).getDefaultDestructor(name),
+				IRBuilder(manager).getDefaultDestructor(name), BoolValue::get(manager, false),
 				MemberFunctions::get(manager, MemberFunctionList()),
 				PureVirtualMemberFunctions::get(manager, PureVirtualMemberFunctionList())
 			);

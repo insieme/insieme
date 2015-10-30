@@ -1,0 +1,23 @@
+
+alias int = int<4>;
+
+decl fib : (int)->int;
+
+def fib = (x : int)->int {
+
+	if (x == 0) { return 0; };
+	if (x == 1) { return 1; };
+	
+	var ref<int> a; 
+	var ref<int> b;
+	
+	spawn a = fib(x-1);
+	spawn b = fib(x-2);
+	sync_all;
+	
+	return a+b;
+};
+
+unit main() {
+	print("fib(10) = %d = 55\n", fib(10));
+}

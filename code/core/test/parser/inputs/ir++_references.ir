@@ -1,0 +1,21 @@
+
+alias int = int<4>;
+
+alias intRef = struct { _cpp_ref : ref<int>; };
+alias refType = struct { _cpp_ref : ref<'a>; };
+
+def cpp2ir = (x : refType)->ref<'a> { return x._cpp_ref; };
+
+def ir2cpp = (x : ref<'a>)->refType { return <refType> { x }; };
+
+unit main() {
+	
+	// create a reference
+	var ref<int> x;
+	
+	// should work with explict type ..
+	var intRef y = ir2cpp(x);
+
+	// ... and auto
+	auto z = ir2cpp(x);
+}

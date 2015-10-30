@@ -49,7 +49,7 @@ namespace checks {
 	SIMPLE_CHECK(FunctionKind, FunctionType, true);
 
 	SIMPLE_CHECK(Parent, Parent, true);
-	SIMPLE_CHECK(FreeTagTypeReferences, TagTypeReference, true);
+	SIMPLE_CHECK(FreeTagTypeReferences, Node, true);
 	SIMPLE_CHECK(TagTypeFields, TagType, true);
 
 	SIMPLE_CHECK(DestructorType, TagTypeBinding, true);

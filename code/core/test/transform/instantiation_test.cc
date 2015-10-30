@@ -56,18 +56,18 @@ namespace transform {
 		IRBuilder builder(mgr);
 
 		auto addresses = builder.parseAddressesStatement(R"raw(
-	{
-		let test = lambda ('a f) -> unit {
-			decl auto y = f;
-			let x = lambda ('a a)->unit {
-				decl auto z = a; 
-				$z$; 
-			};
+		def x = (a : 'a)->unit {
+			auto z = a; 
+			$z$; 
+		};
+		def test = (f : 'a) -> unit {
+			auto y = f;
 			x(f);
 		};
-		decl int<4> x = 1;
-		test(x);
-	}
+		{
+			var int<4> x = 1;
+			test(x);
+		}
 	)raw");
 
 		EXPECT_EQ(addresses.size(), 1);
@@ -83,18 +83,18 @@ namespace transform {
 		IRBuilder builder(mgr);
 
 		auto addresses = builder.parseAddressesStatement(R"raw(
-	{
-		let test = lambda ('a f) -> unit {
-			decl auto y = f;
-			let x = lambda ('a a)->unit {
-				decl auto z = a; 
-				$z$; 
-			};
+		def x = (a : 'a)->unit {
+			auto z = a; 
+			$z$; 
+		};
+		def test = (f : 'a) -> unit {
+			auto y = f;
 			x(f);
 		};
-		decl int<4> x = 1;
-		test(x*5);
-	}
+		{
+			var int<4> x = 1;
+			test(x*5);
+		}
 	)raw");
 
 		EXPECT_EQ(addresses.size(), 1);
@@ -110,14 +110,13 @@ namespace transform {
 		IRBuilder builder(mgr);
 
 		auto addresses = builder.parseAddressesStatement(R"raw(
-	{		
-		let test = lambda (vector<'res,'l> a) -> unit {
-			$decl vector<'res, 'l> res;$
+		def test = (a : vector<'res,'l>) -> unit {
+			$var vector<'res, 'l> res;$
 		};
-
-		decl vector<int<4>, 8> a;
-		test(a);
-	}
+		{
+			var vector<int<4>, 8> a;
+			test(a);
+		}
 	)raw");
 
 		EXPECT_EQ(addresses.size(), 1);
@@ -126,7 +125,7 @@ namespace transform {
 
 		auto newAddr = addresses[0].switchRoot(result);
 
-		EXPECT_EQ(builder.normalize(builder.parseStmt("decl vector<int<4>, 8> res;")), builder.normalize(newAddr.getAddressedNode()));
+		EXPECT_EQ(builder.normalize(builder.parseStmt("var vector<int<4>, 8> res;")), builder.normalize(newAddr.getAddressedNode()));
 	}
 
 
@@ -135,17 +134,16 @@ namespace transform {
 		IRBuilder builder(mgr);
 
 		auto addresses = builder.parseAddressesStatement(R"raw(
-	{		
-		let test = lambda (vector<'res,'l> a) -> unit {
-			$decl vector<'res, 'l> res;$
-			decl int<4> x = 0;
+		def test = (a : vector<'res,'l>) -> unit {
+			$var vector<'res, 'l> res;$
+			var int<4> x = 0;
 			$x$;
 			$res$;
 		};
-
-		decl vector<int<4>, 8> a;
-		test(a);
-	}
+		{
+			var vector<int<4>, 8> a;
+			test(a);
+		}
 	)raw");
 
 		EXPECT_EQ(addresses.size(), 3);
@@ -155,7 +153,7 @@ namespace transform {
 		auto newAddr = addresses[0].switchRoot(result);
 		auto newAnnAddr = addresses[1].switchRoot(result);
 		auto newAnnAddr2 = addresses[2].switchRoot(result);
-		EXPECT_EQ(builder.normalize(builder.parseStmt("decl vector<int<4>, 8> res;")), builder.normalize(newAddr.getAddressedNode()));
+		EXPECT_EQ(builder.normalize(builder.parseStmt("var vector<int<4>, 8> res;")), builder.normalize(newAddr.getAddressedNode()));
 		EXPECT_TRUE(annotations::hasAttachedName(addresses[1].getAddressedNode()));
 		EXPECT_TRUE(annotations::hasAttachedName(newAnnAddr.getAddressedNode()));
 		EXPECT_TRUE(annotations::hasAttachedName(newAnnAddr2.getAddressedNode()));
@@ -168,14 +166,13 @@ namespace transform {
 		IRBuilder builder(mgr);
 
 		auto addresses = builder.parseAddressesStatement(R"raw(
-	{		
-		let test = lambda (vector<'res,'l> a) -> unit {
-			$decl vector<'res, 'l> res;$
+		def test = (a : vector<'res,'l>) -> unit {
+			$var vector<'res, 'l> res;$
 		};
-
-		decl vector<int<4>, 8> a;
-		test(a);
-	}
+		{
+			var vector<int<4>, 8> a;
+			test(a);
+		}
 	)raw");
 
 		EXPECT_EQ(addresses.size(), 1);
@@ -197,14 +194,14 @@ namespace transform {
 		IRBuilder builder(mgr);
 
 		auto addresses = builder.parseAddressesStatement(R"raw(
-	{
-		let test = lambda (vector<'res,'l> a) -> unit {
-			decl vector<'res, 'l> res;
+		def test = (a : vector<'res,'l>) -> unit {
+			var vector<'res, 'l> res;
 		};
 
-		decl vector<int<4>, 8> a;
-		$test(a)$;
-	}
+		{
+			var vector<int<4>, 8> a;
+			$test(a)$;
+		}
 	)raw");
 
 		EXPECT_EQ(addresses.size(), 1);
@@ -225,18 +222,18 @@ namespace transform {
 		IRBuilder builder(mgr);
 
 		auto addresses = builder.parseAddressesStatement(R"raw(
-	{
-		let foo = lambda ('a v) -> 'a {
+		def foo = (v : 'a) -> 'a {
 			return $v$;
 		};
 		
-		let test = lambda (array<'res,'l> v, ('res) -> 'res f) -> unit {
+		def test = (v : array<'res,'l>, f : ('res) -> 'res) -> unit {
 			f(v[0]);
 		};
 		
-		decl array<int<4>, 8> a;
-		test(a, foo);
-	}
+		{
+			var array<int<4>, 8> a;
+			test(a, foo);
+		}
 	)raw");
 
 		EXPECT_EQ(addresses.size(), 1);
@@ -252,7 +249,7 @@ namespace transform {
 		IRBuilder build(mgr);
 
 		auto expr = build.parseExpr(R"(
-		lambda ('a arg) -> 'a {
+		(arg : 'a) -> 'a {
 				return arg;
 		}(5)
 		)");
@@ -271,10 +268,10 @@ namespace transform {
 		IRBuilder build(mgr);
 
 		auto expr = build.parseExpr(R"(
-		lambda ('_type_ x) -> unit {
-			decl ref<'_type_> b;
-			lambda () => {
-				decl auto y = b;
+		(x : '_type_) -> unit {
+			var ref<'_type_> b;
+			() => {
+				auto y = b;
 				return y;
 			};
 		}(5)
@@ -296,12 +293,12 @@ namespace transform {
 		IRBuilder build(mgr);
 
 		auto expr = build.parseExpr(R"(
-		lambda ('_type_ x) -> unit {
-			decl ref<'_type_> b;
-			lambda () => {
-				decl auto y = b;
-				lambda () => {
-					decl auto z = y;
+		(x : '_type_) -> unit {
+			var ref<'_type_> b;
+			() => {
+				auto y = b;
+				() => {
+					auto z = y;
 					return z;
 				};
 				return y;
@@ -324,10 +321,10 @@ namespace transform {
 		IRBuilder build(mgr);
 
 		auto expr = build.parseExpr(R"(
-		lambda ('_type_ x) -> unit {
-			decl ref<'_type_> b;		
+		(x : '_type_) -> unit {
+			var ref<'_type_> b;		
 			parallel(job {
-				decl auto y = b;
+				auto y = b;
 			});
 		}(5)
 	)");
@@ -348,26 +345,27 @@ namespace transform {
 
 		core::ProgramPtr program = build.parseProgram(
 		    R"(
-            let int = int<4>;
-            let uint = uint<4>;
+            alias int = int<4>;
+            alias uint = uint<4>;
 
-            let differentbla = lambda ('_type_b x) -> unit {
-                decl auto m = x;
-                decl auto l = m;
+            def differentbla = (x : '_type_b) -> unit {
+                auto m = x;
+                auto l = m;
             };
 
-            let bla = lambda ('_type_a f) -> unit {
-                let anotherbla = lambda ('_type_a x) -> unit {
-                    decl auto m = x;
-                };
+            def anotherbla = (x : '_type_a) -> unit {
+                auto m = x;
+            };
+
+            def bla = (f : '_type_a) -> unit {
                 anotherbla(f);
                 differentbla(f);
-                parallel(job { decl auto l = f; });
+                parallel(job { auto l = f; });
             };
 
             int main() {
                 // some bla
-                decl int x = 10;
+                var int x = 10;
                 bla(x);
                 return 0;
             }
@@ -392,12 +390,13 @@ namespace transform {
 		IRBuilder build(mgr);
 
 		auto addresses = build.parseAddressesStatement(R"raw(
-	{
-		let x = lambda ('_type_ a)->unit {
+		decl x : ('_type_)->unit;
+		def x = (a : '_type_)->unit {
 			$x$(a); // address 1
 		};
-		$x$(5); // address 0
-	}
+		{
+			$x$(5); // address 0
+		}
 	)raw");
 
 		EXPECT_EQ(addresses.size(), 2);
@@ -414,42 +413,30 @@ namespace transform {
 		EXPECT_EQ(build.parseType("(int<4>)->unit"), add0res->getVariable()->getType());
 	}
 
-	// ********** The following tests should be enabled / completed once instantiation
-	// ********** of mutually recursive functions is supported
-
 	TEST(InRecFunc, Simple) {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 
 		auto addresses = builder.parseAddressesStatement(R"raw(
-	{
-	    let x, test = lambda ('a a)->unit {
-			decl auto z = a; 
+		def x = (a : 'a)->unit {
+			auto z = a; 
 			$z$; 
-		},
-		lambda ('a f) -> unit {
-			decl auto y = f;
+		};
+		def test = (f : 'a) -> unit {
+			auto y = f;
 			x(f);
 		};
-		decl int<4> v = 1;
-		test(v);
-	}
+		{
+			var int<4> v = 1;
+			test(v);
+		}
 	)raw");
 
-		EXPECT_EQ(addresses.size(), 1);
+		auto result = instantiateTypes(addresses[0].getRootNode());
 
-		// dumpColor(addresses[0].getRootNode());
-
-		#ifndef NDEBUG
-		ASSERT_DEATH_IF_SUPPORTED(instantiateTypes(addresses[0].getRootNode()), "Instantiation of generic recursive functions not supported yet!");
-		#endif
-
-		// auto result = instantiateTypes(addresses[0].getRootNode());
-
-		// auto newAddr = addresses[0].switchRoot(result);
-		// EXPECT_EQ(builder.parseType("int<4>"), newAddr.getAddressedNode().as<ExpressionPtr>()->getType());
+		auto newAddr = addresses[0].switchRoot(result);
+		EXPECT_EQ(builder.parseType("int<4>"), newAddr.getAddressedNode().as<ExpressionPtr>()->getType());
 	}
-
 
 	TEST(TypeInstantiation, ReturnTypeBug) {
 
@@ -462,9 +449,9 @@ namespace transform {
 		IRBuilder builder(mgr);
 
 		core::ProgramPtr code = builder.parseProgram("int<4> main() {"
-														"	lambda (type<'a> dtype, type<'s> size)->ref<array<'a,'s>> {"
+														"	(dtype : type<'a>, size : type<'s>)->ref<array<'a,'s>> {"
 														"		return ref_new(array_create(size, list_empty(dtype)));"
-														"	} (lit(real<4>), lit(7));"
+														"	} (type_lit(real<4>), type_lit(7));"
 														"	return 0;"
 														"}");
 
@@ -499,6 +486,9 @@ namespace transform {
 		ret = core::transform::instantiateTypes(code, core::lang::isBuiltIn);
 		EXPECT_TRUE(checks::check(ret).empty()) << printer::dumpErrors(checks::check(ret));
 	}
+
+	// ********** The following tests should be enabled / completed once instantiation
+	// ********** of mutually recursive functions is supported
 
 	/*
 	TEST(InRecFunc, ExpressionArgument) {

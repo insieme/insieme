@@ -52,6 +52,7 @@
 #include "insieme/driver/object_file_utils.h"
 
 #include "insieme/core/checks/full_check.h"
+#include "insieme/core/tu/ir_translation_unit.h"
 
 
 using namespace std;
@@ -66,7 +67,7 @@ namespace bfs = boost::filesystem;
 
 namespace {
 
-	void PerformChecks(const frontend::tu::IRTranslationUnit& tu) {
+	void PerformChecks(const core::tu::IRTranslationUnit& tu) {
 		unsigned count = 0;
 		std::cout << " =======================================================" << std::endl;
 		std::cout << "  checking " << tu.getTypes().size() << " types" << std::endl;

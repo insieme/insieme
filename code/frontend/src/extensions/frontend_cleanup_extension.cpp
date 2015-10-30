@@ -57,8 +57,8 @@
 #include "insieme/annotations/data_annotations.h"
 
 #include "insieme/frontend/converter.h"
-#include "insieme/frontend/tu/ir_translation_unit.h"
-#include "insieme/frontend/tu/ir_translation_unit_io.h"
+#include "insieme/core/tu/ir_translation_unit.h"
+#include "insieme/core/tu/ir_translation_unit_io.h"
 #include "insieme/frontend/utils/frontend_inspire_module.h"
 #include "insieme/frontend/utils/memalloc.h"
 #include "insieme/frontend/utils/stmt_wrapper.h"

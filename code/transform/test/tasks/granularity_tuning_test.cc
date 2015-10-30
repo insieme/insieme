@@ -54,10 +54,11 @@ namespace tasks {
 		core::IRBuilder builder(manager);
 
 		auto addresses = builder.parseAddressesProgram(R"1N5P1RE(
-            let int = int<4>;
-            let taskfun = lambda (int v) -> unit {
-                if(v == 0) return;
-                parallel(job([1:1], taskfun(v-1)));
+            alias int = int<4>;
+			decl taskfun: (int)->unit;
+            def taskfun = (v: int) -> unit {
+                if(v == 0) {return;}
+                parallel(job [1..1] => taskfun(v-1));
 				mergeAll();
             };
 
@@ -90,14 +91,16 @@ namespace tasks {
 		core::IRBuilder builder(manager);
 
 		auto addresses = builder.parseAddressesProgram(R"1N5P1RE(
-			let int = int<4>;
-			let tf1,tf2 = lambda (int v) -> unit {
-				if(v == 0) return;
-				parallel(job([1:1], tf2(v-1)));
+			alias int = int<4>;
+			decl tf2: (int)->unit;
+			def tf1 = (v: int) -> unit {
+				if(v == 0) {return;}
+				parallel(job [1..1] => tf2(v-1));
 				mergeAll();
-			}, lambda (int v) -> unit {
-				if(v == 0) return;
-				parallel(job([1:1], tf1(v-1)));
+			};
+			def tf2 = (v: int) -> unit {
+				if(v == 0) {return;}
+				parallel(job [1..1] => tf1(v-1));
 				mergeAll();
 			};
 

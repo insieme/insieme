@@ -37,11 +37,12 @@
 #include "insieme/frontend/cilk/cilk_sema.h"
 
 #include "insieme/frontend/cilk/cilk_annotation.h"
-#include "insieme/frontend/tu/ir_translation_unit.h"
+#include "insieme/core/tu/ir_translation_unit.h"
 
 #include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/tu/ir_translation_unit.h"
 
 namespace insieme {
 namespace frontend {
@@ -131,9 +132,9 @@ namespace cilk {
 		};
 	}
 
-	tu::IRTranslationUnit applySema(const tu::IRTranslationUnit& unit, core::NodeManager& mgr) {
+	core::tu::IRTranslationUnit applySema(const core::tu::IRTranslationUnit& unit, core::NodeManager& mgr) {
 		// copy translation unit
-		tu::IRTranslationUnit res = unit;
+		core::tu::IRTranslationUnit res = unit;
 
 		// and update functions - that's all
 		Cilkifyer cilkifyer(mgr);

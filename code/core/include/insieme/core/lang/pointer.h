@@ -70,7 +70,7 @@ namespace lang {
 		/**
 		 * Define pointers as a struct with a alias-shortcut.
 		 */
-		TYPE_ALIAS("ptr<'a,'c,'v>", "struct _ir_pointer { ref<array<'a>,'c,'v> data; int<8> offset; }");
+		TYPE_ALIAS("ptr<'a,'c,'v>", "struct _ir_pointer { data : ref<array<'a>,'c,'v>; offset : int<8>; }");
 
 		/**
 		 * Any non-qualified pointer is a pointer to a non-const, non volatile data element.
@@ -91,8 +91,8 @@ namespace lang {
 		 * A built-in operator to convert a reference into a pointer
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(PtrFromRef, "ptr_from_ref",
-				"  lambda (ref<'a,'c,'v> r) -> ptr<'a,'c,'v> {                           "
-				"		return struct ptr<'a,'c,'v> { ref_scalar_to_ref_array(r), 0l };  "
+				"  (r : ref<'a,'c,'v>) -> ptr<'a,'c,'v> {                           "
+				"		return <ptr<'a,'c,'v>> { ref_scalar_to_ref_array(r), 0l };  "
 				"  }                                                                     "
 		)
 
@@ -100,8 +100,8 @@ namespace lang {
 		 * A built-in operator to convert an array to a pointer
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(PtrFromArray, "ptr_from_array",
-				"  lambda (ref<array<'a,'s>,'c,'v> r) -> ptr<'a,'c,'v> {                             "
-				"		return struct ptr<'a,'c,'v> { ref_reinterpret(r,type_lit(array<'a,inf>)), 0l };  "
+				"  (r : ref<array<'a,'s>,'c,'v>) -> ptr<'a,'c,'v> {                             "
+				"		return <ptr<'a,'c,'v>> { ref_reinterpret(r,type_lit(array<'a,inf>)), 0l };  "
 				"  }                                                                                 "
 		)
 
@@ -109,7 +109,7 @@ namespace lang {
 		 * A built-in derived operator allocating memory on the heap.
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(PtrToRef, "ptr_to_ref",
-				"  lambda (ptr<'a,'c,'v> p) -> ref<'a,'c,'v> {   "
+				"  (p : ptr<'a,'c,'v>) -> ref<'a,'c,'v> {   "
 				"		return p.data[p.offset];                 "
 				"  }                                             "
 		)
@@ -118,7 +118,7 @@ namespace lang {
 		 * A built-in derived operator for obtaining pointers to functions.
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(PtrOfFunction, "ptr_of_function",
-				"lambda ('a fun) -> ptr<'a,t,f> {"
+				"(fun : 'a) -> ptr<'a,t,f> {"
 				"	return ptr_from_ref(ref_of_function(fun));"
 				"}"
 		)
@@ -129,7 +129,7 @@ namespace lang {
 		 * A reinterpret cast altering the actual interpretation of the referenced memory cell.
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(PtrReinterpret, "ptr_reinterpret",
-				"  lambda (ptr<'a,'c,'v> p, type<'b> t) -> ptr<'b,'c,'v> {               "
+				"  (p : ptr<'a,'c,'v>, t : type<'b>) -> ptr<'b,'c,'v> {               "
 				"		return ptr_from_ref(ref_reinterpret(ptr_to_ref(p), type_lit('b)));   "
 				"  }                                                                     "
 		)
@@ -139,8 +139,8 @@ namespace lang {
 		 * is the basis for e.g. const or volatile casts.
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(PtrCast, "ptr_cast",
-				"  lambda (ptr<'a,'c,'v> p, type<'new_const> c,type<'new_volatile> v) -> ptr<'a,'new_const,'new_volatile> {   "
-				"		return struct ptr<'a,'new_const,'new_volatile> { ref_cast(p.data, c, v, lit(plain)), p.offset };      "
+				"  (p : ptr<'a,'c,'v>, c : type<'new_const>, v : type<'new_volatile>) -> ptr<'a,'new_const,'new_volatile> {   "
+				"		return <ptr<'a,'new_const,'new_volatile>> { ref_cast(p.data, c, v, type_lit(plain)), p.offset };      "
 				"  }                                                                                                          "
 		)
 
@@ -148,8 +148,8 @@ namespace lang {
 		 * A specialization of the ref_cast operator for modeling const casts.
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(PtrConstCast, "ptr_const_cast",
-				"  lambda (ptr<'a,'c,'v> p, type<'nc> c) -> ptr<'a,'nc,'v> {                    "
-				"		return struct ptr<'a,'nc,'v> { ref_const_cast(p.data, c), p.offset };   "
+				"  (p : ptr<'a,'c,'v>, c : type<'nc>) -> ptr<'a,'nc,'v> {                    "
+				"		return <ptr<'a,'nc,'v>> { ref_const_cast(p.data, c), p.offset };   "
 				"  }                                                                            "
 		)
 
@@ -157,8 +157,8 @@ namespace lang {
 		 * A specialization of the ref_cast operator for modeling volatile casts.
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(PtrVolatileCast, "ptr_volatile_cast",
-				"  lambda (ptr<'a,'c,'v> p, type<'nv> v) -> ptr<'a,'c,'nv> {                       "
-				"		return struct ptr<'a,'c,'nv> { ref_volatile_cast(p.data, v), p.offset };   "
+				"  (p : ptr<'a,'c,'v>, v : type<'nv>) -> ptr<'a,'c,'nv> {                       "
+				"		return <ptr<'a,'c,'nv>> { ref_volatile_cast(p.data, v), p.offset };   "
 				"  }                                                                               "
 		)
 			
@@ -174,7 +174,7 @@ namespace lang {
 		 * The narrow operation is obtaining a reference to a sub-object within a referenced object.
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(PtrNarrow, "ptr_narrow",
-				"  lambda (ptr<'a,'c,'v> p, datapath<'a,'b> dp) -> ptr<'b,'c,'v> {                 "
+				"  (p : ptr<'a,'c,'v>, dp : datapath<'a,'b>) -> ptr<'b,'c,'v> {                 "
 				"		return ptr_from_ref(ref_narrow(ptr_to_ref(p), dp));                        "
 				"  }                                                                               "
 		)
@@ -183,7 +183,7 @@ namespace lang {
 		 * The expand operation is the inverse operation of the narrow operation.
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(PtrExpand, "ptr_expand",
-				"  lambda (ptr<'b,'c,'v> p, datapath<'a,'b> dp) -> ptr<'a,'c,'v> {                 "
+				"  (p : ptr<'b,'c,'v>, dp : datapath<'a,'b>) -> ptr<'a,'c,'v> {                 "
 				"		return ptr_from_ref(ref_expand(ptr_to_ref(p), dp));                        "
 				"  }                                                                               "
 		)
@@ -193,7 +193,7 @@ namespace lang {
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(
 		    PtrArrayElement, "ptr_array_elem",
-		    "lambda (ptr<array<'a,'s>,'c,'v> r, int<8> i) -> ptr<'a,'c,'v> { return ptr_narrow(r, dp_element(dp_root(type_lit(array<'a,'s>)),i)); }"
+		    "(r : ptr<array<'a,'s>,'c,'v>, i : int<8>) -> ptr<'a,'c,'v> { return ptr_narrow(r, dp_element(dp_root(type_lit(array<'a,'s>)),i)); }"
 		)
 
 		/**
@@ -201,7 +201,7 @@ namespace lang {
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(
 		    PtrMemberAccess, "ptr_member_access",
-		    "lambda (ptr<'a,'c,'v> r, identifier name, type<'b> type) -> ptr<'b,'c,'v> { return ptr_narrow(r, dp_member(dp_root(type_lit('a)),name,type)); }"
+		    "(r : ptr<'a,'c,'v>, name : identifier, type : type<'b>) -> ptr<'b,'c,'v> { return ptr_narrow(r, dp_member(dp_root(type_lit('a)),name,type)); }"
 		)
 
 		/**
@@ -209,7 +209,7 @@ namespace lang {
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(
 		    PtrComponentAccess, "ptr_component_access",
-		    "lambda (ptr<'a,'c,'v> r, uint<8> pos, type<'b> type) -> ptr<'b,'c,'v> { return ptr_narrow(r, dp_component(dp_root(type_lit('a)),pos,type)); }"
+		    "(r : ptr<'a,'c,'v>, pos : uint<8>, type : type<'b>) -> ptr<'b,'c,'v> { return ptr_narrow(r, dp_component(dp_root(type_lit('a)),pos,type)); }"
 		)
 
 		/**
@@ -217,7 +217,7 @@ namespace lang {
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(
 			PtrScalarToPtrArray, "ptr_scalar_to_ptr_array",
-		    "lambda (ptr<'a,'c,'v> a) -> ptr<array<'a>,'c,'v> { return ptr_expand(a, dp_element(dp_root(type_lit(array<'a>)),0u)); }"
+		    "(a : ptr<'a,'c,'v>) -> ptr<array<'a>,'c,'v> { return ptr_expand(a, dp_element(dp_root(type_lit(array<'a>)),0u)); }"
 		)
 
 		/**
@@ -225,7 +225,7 @@ namespace lang {
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(
 			PtrSubscript, "ptr_subscript",
-			"lambda (ptr<'a,'c,'v> p, int<8> i) -> ref<'a,'c,'v> { return p.data[p.offset + i]; }"
+			"(p : ptr<'a,'c,'v>, i : int<8>) -> ref<'a,'c,'v> { return p.data[p.offset + i]; }"
 		)
 
 		/**
@@ -233,7 +233,7 @@ namespace lang {
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(
 			PtrDeref, "ptr_deref",
-			"lambda (ptr<'a,'c,'v> p) -> 'a { return ref_deref(ptr_to_ref(p)); }"
+			"(p : ptr<'a,'c,'v>) -> 'a { return ref_deref(ptr_to_ref(p)); }"
 		)
 
 		// -- null --
@@ -243,7 +243,7 @@ namespace lang {
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(
 				PtrNull, "ptr_null",
-				"lambda (type<'a> a, type<'c> c, type<'v> v) -> ptr<'a,'c,'v> { return struct ptr<'a,'c,'v> { ref_null(type_lit(array<'a,inf>),c,v), 0 }; }"
+				"(a : type<'a>, c : type<'c>, v : type<'v>) -> ptr<'a,'c,'v> { return <ptr<'a,'c,'v>> { ref_null(type_lit(array<'a,inf>),c,v), 0 }; }"
 		)
 
 
@@ -254,33 +254,33 @@ namespace lang {
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(
 			PtrEqual, "ptr_eq",
-			"lambda (ptr<'a,'c1,'v1> p1, ptr<'a,'c2,'v2> p2) -> bool { return ref_eq(p1.data,p2.data) && p1.offset == p2.offset; }"
+			"(p1 : ptr<'a,'c1,'v1>, p2 : ptr<'a,'c2,'v2>) -> bool { return ref_eq(p1.data,p2.data) && p1.offset == p2.offset; }"
 		)
 
 		/**
 		 * An operator to compare two references for inequality.
 		 */
-		LANG_EXT_DERIVED_WITH_NAME(PtrNotEqual, "ptr_ne", "lambda (ptr<'a,'c1,'v1> a, ptr<'a,'c2,'v2> b) -> bool { return !ptr_eq(a,b); }")
+		LANG_EXT_DERIVED_WITH_NAME(PtrNotEqual, "ptr_ne", "(a : ptr<'a,'c1,'v1>, b : ptr<'a,'c2,'v2>) -> bool { return !ptr_eq(a,b); }")
 
 
 		LANG_EXT_DERIVED_WITH_NAME(
 			PtrLessThan, "ptr_lt",
-			"lambda (ptr<'a,'c1,'v1> p1, ptr<'a,'c2,'v2> p2) -> bool { return ref_eq(p1.data,p2.data) && p1.offset < p2.offset; }"
+			"(p1 : ptr<'a,'c1,'v1>, p2 : ptr<'a,'c2,'v2>) -> bool { return ref_eq(p1.data,p2.data) && p1.offset < p2.offset; }"
 		)
 
 		LANG_EXT_DERIVED_WITH_NAME(
 			PtrLessEqual, "ptr_le",
-			"lambda (ptr<'a,'c1,'v1> p1, ptr<'a,'c2,'v2> p2) -> bool { return ref_eq(p1.data,p2.data) && p1.offset <= p2.offset; }"
+			"(p1 : ptr<'a,'c1,'v1>, p2 : ptr<'a,'c2,'v2>) -> bool { return ref_eq(p1.data,p2.data) && p1.offset <= p2.offset; }"
 		)
 
 		LANG_EXT_DERIVED_WITH_NAME(
 			PtrGreaterEqual, "ptr_ge",
-			"lambda (ptr<'a,'c1,'v1> p1, ptr<'a,'c2,'v2> p2) -> bool { return ref_eq(p1.data,p2.data) && p1.offset >= p2.offset; }"
+			"(p1 : ptr<'a,'c1,'v1>, p2 : ptr<'a,'c2,'v2>) -> bool { return ref_eq(p1.data,p2.data) && p1.offset >= p2.offset; }"
 		)
 
 		LANG_EXT_DERIVED_WITH_NAME(
 			PtrGreaterThan, "ptr_gt",
-			"lambda (ptr<'a,'c1,'v1> p1, ptr<'a,'c2,'v2> p2) -> bool { return ref_eq(p1.data,p2.data) && p1.offset > p2.offset; }"
+			"(p1 : ptr<'a,'c1,'v1>, p2 : ptr<'a,'c2,'v2>) -> bool { return ref_eq(p1.data,p2.data) && p1.offset > p2.offset; }"
 		)
 
 
@@ -288,27 +288,27 @@ namespace lang {
 
 		LANG_EXT_DERIVED_WITH_NAME(
 			PtrAdd, "ptr_add",
-			"lambda (ptr<'a,'c,'v> p, int<8> i) -> ptr<'a,'c,'v> { return struct ptr<'a,'c,'v> { p.data, p.offset + i }; }"
+			"(p : ptr<'a,'c,'v>, i : int<8>) -> ptr<'a,'c,'v> { return <ptr<'a,'c,'v>> { p.data, p.offset + i }; }"
 		)
 
 		LANG_EXT_DERIVED_WITH_NAME(
 			PtrSub, "ptr_sub",
-			"lambda (ptr<'a,'c,'v> p, int<8> i) -> ptr<'a,'c,'v> { return struct ptr<'a,'c,'v> { p.data, p.offset - i }; }"
+			"(p : ptr<'a,'c,'v>, i : int<8>) -> ptr<'a,'c,'v> { return <ptr<'a,'c,'v>> { p.data, p.offset - i }; }"
 		)
 
 		// pointer difference is not defined for unrelated pointers
 		LANG_EXT_DERIVED_WITH_NAME(
 			PtrDiff, "ptr_diff",
-			"lambda (ptr<'a,'c,'v> l, ptr<'a,'c,'v> r) -> int<8> { return l.offset - r.offset; }"
+			"(l : ptr<'a,'c,'v>, r : ptr<'a,'c,'v>) -> int<8> { return l.offset - r.offset; }"
 		)
 
-		LANG_EXT_DERIVED_WITH_NAME(PtrPostInc, "ptr_post_inc", "lambda (ref<ptr<'a,'c,'v>> p) -> ptr<'a,'c,'v> { decl ptr<'a,'c,'v> temp = *p; p = ptr_add(*p, 1l); return temp; }")
+		LANG_EXT_DERIVED_WITH_NAME(PtrPostInc, "ptr_post_inc", "(p : ref<ptr<'a,'c,'v>>) -> ptr<'a,'c,'v> { var ptr<'a,'c,'v> temp = *p; p = ptr_add(*p, 1l); return temp; }")
 
-		LANG_EXT_DERIVED_WITH_NAME(PtrPostDec, "ptr_post_dec", "lambda (ref<ptr<'a,'c,'v>> p) -> ptr<'a,'c,'v> { decl ptr<'a,'c,'v> temp = *p; p = ptr_sub(*p, 1l); return temp; }")
+		LANG_EXT_DERIVED_WITH_NAME(PtrPostDec, "ptr_post_dec", "(p : ref<ptr<'a,'c,'v>>) -> ptr<'a,'c,'v> { var ptr<'a,'c,'v> temp = *p; p = ptr_sub(*p, 1l); return temp; }")
 
-		LANG_EXT_DERIVED_WITH_NAME(PtrPreInc, "ptr_pre_inc", "lambda (ref<ptr<'a,'c,'v>> p) -> ptr<'a,'c,'v> { p = ptr_add(*p, 1l); return *p; }")
+		LANG_EXT_DERIVED_WITH_NAME(PtrPreInc, "ptr_pre_inc", "(p : ref<ptr<'a,'c,'v>>) -> ptr<'a,'c,'v> { p = ptr_add(*p, 1l); return *p; }")
 
-		LANG_EXT_DERIVED_WITH_NAME(PtrPreDec, "ptr_pre_dec", "lambda (ref<ptr<'a,'c,'v>> p) -> ptr<'a,'c,'v> { p = ptr_sub(*p, 1l); return *p; }")
+		LANG_EXT_DERIVED_WITH_NAME(PtrPreDec, "ptr_pre_dec", "(p : ref<ptr<'a,'c,'v>>) -> ptr<'a,'c,'v> { p = ptr_sub(*p, 1l); return *p; }")
 
 	};
 

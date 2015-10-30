@@ -39,6 +39,11 @@
 #include "insieme/frontend/extensions/frontend_extension.h"
 
 namespace insieme {
+namespace core {
+namespace tu {
+	class IRTranslationUnit;
+}
+}
 namespace frontend {
 namespace extensions {
 
@@ -48,7 +53,7 @@ namespace extensions {
 	  public:
 		CilkFrontendExtension();
 
-		virtual tu::IRTranslationUnit IRVisit(tu::IRTranslationUnit& tu);
+		virtual core::tu::IRTranslationUnit IRVisit(core::tu::IRTranslationUnit& tu);
 		virtual FrontendExtension::flagHandler registerFlag(boost::program_options::options_description& options);
 	};
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -38,9 +38,14 @@
 
 #include <boost/filesystem/path.hpp>
 
-#include "insieme/frontend/tu/ir_translation_unit.h"
 
 namespace insieme {
+namespace core {
+	class NodeManager;
+namespace tu {
+	class IRTranslationUnit;
+}
+}
 namespace driver {
 
 	/**
@@ -58,7 +63,7 @@ namespace driver {
 	 * @param file the library to be loaded
 	 * @return the loaded translation unit
 	 */
-	frontend::tu::IRTranslationUnit loadLib(core::NodeManager& mgr, const boost::filesystem::path& file);
+	core::tu::IRTranslationUnit loadLib(core::NodeManager& mgr, const boost::filesystem::path& file);
 
 	/**
 	 * Saves an Insieme library to a file.
@@ -66,7 +71,7 @@ namespace driver {
 	 * @param unit the translation unit to be saved
 	 * @param file the target location
 	 */
-	void saveLib(const frontend::tu::IRTranslationUnit& unit, const boost::filesystem::path& file);
+	void saveLib(const core::tu::IRTranslationUnit& unit, const boost::filesystem::path& file);
 
 } // end namespace driver
 } // end namespace insieme

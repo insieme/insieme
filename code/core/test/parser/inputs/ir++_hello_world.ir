@@ -1,0 +1,32 @@
+
+alias int = int<4>;
+
+def struct C {
+
+	sum : int;
+
+	ctor () {
+		sum = 0;
+	}
+
+	lambda add : (x : int)->unit {
+		this.sum = this.sum + x;
+	}
+	
+	lambda getSum : ()->int {
+		return *sum;
+	}
+};
+
+unit main() {
+
+	// create a new object instance
+	var ref<C> c = C::(ref_new(undefined(C)));
+	
+	// work with the object
+	print("%d\n", c->getSum());
+	print("%d\n", c->add(3));
+	print("%d\n", c->add(*c->sum));
+	c->sum = 5;
+	print("%d\n", c->getSum());
+}

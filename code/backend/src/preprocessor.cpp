@@ -46,6 +46,7 @@
 
 #include "insieme/core/encoder/encoder.h"
 
+#include "insieme/core/lang/array.h"
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/static_vars.h"
 

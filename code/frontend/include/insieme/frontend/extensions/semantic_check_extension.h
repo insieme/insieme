@@ -165,7 +165,7 @@ namespace extensions {
 			return expr;
 		}
 
-		virtual insieme::frontend::tu::IRTranslationUnit IRVisit(insieme::frontend::tu::IRTranslationUnit& tu) {
+		virtual core::tu::IRTranslationUnit IRVisit(core::tu::IRTranslationUnit& tu) {
 			std::cout << "##############STRICT SEMANTIC CHECK##############\n";
 			handledErrors.clear();
 			std::map<core::checks::ErrorCode, int> errorCount;

@@ -51,24 +51,24 @@ namespace checks {
 
 		{
 			StatementPtr stmt_err = builder.normalize(builder.parseStmt(R"1N5P1RE(
+            alias uint = uint<8>;
             {
-                let uint = uint<8>;
-                lambda () -> unit { 
-                    decl ref<uint<8>,f,f,plain> i = var(0u); 
-                    lambda (ref<array<uint<8>,inf>,f,f,plain> arr) -> unit { 
-                        decl uint<8> b = 1u; 
+                () -> unit { 
+                    var ref<uint<8>,f,f,plain> i = ref_var(0u); 
+                    (arr : ref<array<uint<8>,inf>,f,f,plain>) -> unit { 
+                        var uint<8> b = 1u; 
                         arr[b]; 
                     } (ref_scalar_to_ref_array(i)); 
                  };
 			}
             )1N5P1RE"));
 			auto addrlist = builder.parseAddressesStatement(R"1N5P1RE(
+            alias uint = uint<8>;
             {
-                let uint = uint<8>;
-                lambda () -> unit { 
-                    decl ref<uint<8>,f,f,plain> i = var(0u); 
-                    lambda (ref<array<uint<8>,inf>,f,f,plain> arr) -> unit { 
-                        decl uint<8> b = 1u; 
+                () -> unit { 
+                    var ref<uint<8>,f,f,plain> i = ref_var(0u); 
+                    (arr : ref<array<uint<8>,inf>,f,f,plain>) -> unit { 
+                        var uint<8> b = 1u; 
                         $ arr[b] $; 
                     } (ref_scalar_to_ref_array(i)); 
                  };
@@ -94,11 +94,11 @@ namespace checks {
 		}
 
 		{
-			StatementPtr stmt_pass = builder.parseExpr("let uint = uint<8>;"
-			                                           "lambda () -> unit { "
-			                                           "	decl ref<uint<8>,f,f,plain> i = var(0u); "
-			                                           "	lambda (ref<array<uint<8>,inf>,f,f,plain> arr) -> unit { "
-			                                           "		decl uint<8> b = 1; "
+			StatementPtr stmt_pass = builder.parseExpr("alias uint = uint<8>;"
+			                                           "() -> unit { "
+			                                           "	var ref<uint<8>,f,f,plain> i = ref_var(0u); "
+			                                           "	(arr : ref<array<uint<8>,inf>,f,f,plain>) -> unit { "
+			                                           "		var uint<8> b = 1; "
 			                                           "		arr[0u]; "
 			                                           "	} (ref_scalar_to_ref_array(i)); "
 			                                           "}");
@@ -114,10 +114,10 @@ namespace checks {
 		IRBuilder builder(manager);
 
 		auto stmt = builder.parseStmt(R"1N5P1RE(
+	alias uint = uint<8>;
 	{
-		let uint = uint<8>;
-		lambda () -> unit { 
-			decl ref<uint<8>,f,f,plain> i = var(0u);
+		() -> unit { 
+			var ref<uint<8>,f,f,plain> i = ref_var(0u);
 		};
 	}
 	)1N5P1RE");
@@ -134,10 +134,10 @@ namespace checks {
 		IRBuilder builder(manager);
 
 		auto stmt = builder.parseStmt(R"1N5P1RE(
+	alias uint = uint<8>;
 	{
-		let uint = uint<8>;
-		lambda () -> uint { 
-			decl ref<int<8>,f,f,plain> i = var(0u);
+		() -> uint { 
+			var ref<int<8>,f,f,plain> i = ref_var(0u);
 		};
 	}
 	)1N5P1RE");
@@ -156,10 +156,10 @@ namespace checks {
 		IRBuilder builder(manager);
 
 		auto stmt = builder.parseStmt(R"1N5P1RE(
+	alias uint = uint<8>;
 	{
-		let uint = uint<8>;
-		lambda () -> uint { 
-			decl bool a = var(true);
+		() -> uint { 
+			var bool a = ref_var(true);
 			if(a) {
 				return 1u;
 			} else {
@@ -182,10 +182,10 @@ namespace checks {
 		IRBuilder builder(manager);
 
 		auto stmt = builder.parseStmt(R"1N5P1RE(
+	alias uint = uint<8>;
 	{
-		let uint = uint<8>;
-		lambda () -> uint { 
-			decl bool a = var(true);
+		() -> uint { 
+			var bool a = ref_var(true);
 			if(a) {
 				return 1u;
 			}
@@ -207,12 +207,12 @@ namespace checks {
 		IRBuilder builder(manager);
 
 		auto stmt = builder.parseStmt(R"1N5P1RE(
+	alias uint = uint<8>;
 	{
-		let uint = uint<8>;
-		lambda () -> uint {
-			decl bool a = var(true);			
+		() -> uint {
+			var bool a = ref_var(true);			
 			while(true) {
-				if(a) return 1u;
+				if(a) { return 1u; }
 			}
 		};
 	}
@@ -231,12 +231,12 @@ namespace checks {
 		IRBuilder builder(manager);
 
 		auto stmt = builder.parseStmt(R"1N5P1RE(
+	alias uint = uint<8>;
 	{
-		let uint = uint<8>;
-		lambda (bool b) -> uint {
-			decl bool a = var(true);			
+		(b : bool) -> uint {
+			var bool a = ref_var(true);			
 			while(b) {
-				if(a) return 1u;
+				if(a) { return 1u; }
 			}
 		};
 	}
@@ -256,9 +256,9 @@ namespace checks {
 		IRBuilder builder(manager);
 
 		auto stmt = builder.parseStmt(R"1N5P1RE(
+	alias uint = uint<8>;
 	{
-		let uint = uint<8>;
-		lambda () -> uint {
+		() -> uint {
 			throw 5;
 		};
 	}
@@ -277,14 +277,14 @@ namespace checks {
 		IRBuilder builder(manager);
 
 		auto stmt = builder.parseStmt(R"1N5P1RE(
+	alias uint = uint<8>;
 	{
-		let uint = uint<8>;
-		lambda () -> uint {
-			decl int<4> a;			
+		() -> uint {
+			var int<4> a;
 			switch(a) {
-			case 0: return 5;
-			case 1: return 10;
-			default: throw "Ugh";
+			case 0: { return 5; }
+			case 1: { return 10; }
+			default: { throw "Ugh"; }
 			}
 		};
 	}
@@ -303,14 +303,14 @@ namespace checks {
 		IRBuilder builder(manager);
 
 		auto stmt = builder.parseStmt(R"1N5P1RE(
+	alias uint = uint<8>;
 	{
-		let uint = uint<8>;
-		lambda () -> uint {
-			decl int<4> a;			
+		() -> uint {
+			var int<4> a;
 			switch(a) {
-			case 0: return 5;
-			case 1: 10;
-			default: throw "Ugh";
+			case 0: { return 5; }
+			case 1: { 10; }
+			default: { throw "Ugh"; }
 			}
 		};
 	}
@@ -330,13 +330,13 @@ namespace checks {
 		IRBuilder builder(manager);
 
 		auto stmt = builder.parseStmt(R"1N5P1RE(
+	alias uint = uint<8>;
 	{
-		let uint = uint<8>;
-		lambda () -> uint {
-			decl int<4> a;			
+		() -> uint {
+			var int<4> a;
 			switch(a) {
-			case 0: return 5;
-			case 1: return 10;
+			case 0: { return 5; }
+			case 1: { return 10; }
 			}
 		};
 	}
@@ -356,15 +356,15 @@ namespace checks {
 		IRBuilder builder(manager);
 
 		auto stmt = builder.parseStmt(R"1N5P1RE(
+	alias uint = uint<8>;
 	{
-		let uint = uint<8>;
-		lambda () -> uint {
-			decl int<4> a;
+		() -> uint {
+			var int<4> a;
 			while(true) {
 				switch(a) {
-				case 0: return 5;
-				case 1: 10;
-				default: "Ugh";
+				case 0: { return 5; }
+				case 1: { 10; }
+				default: { "Ugh"; }
 				}
 			}
 		};
@@ -385,10 +385,10 @@ namespace checks {
 
 		{
 			StatementPtr stmt_ok = builder.normalize(builder.parseStmt(R"1N5P1RE(
+            alias uint = uint<8>;
             {
-                let uint = uint<8>;
-                lambda () -> unit {
-					decl ref<array<int<4>,3>,f,f,plain> v0 = var(array_create(lit(3), [0,1,2]));
+                () -> unit {
+					var ref<array<int<4>,3>,f,f,plain> v0 = ref_var(array_create(type_lit(3), [0,1,2]));
 				};
 			}
             )1N5P1RE"));
@@ -401,11 +401,11 @@ namespace checks {
 
 		{
 			StatementPtr stmt_err = builder.normalize(builder.parseStmt(R"1N5P1RE(
+            alias uint = uint<8>;
             {
-                let uint = uint<8>;
-                lambda () -> unit {
-					decl auto list = var([0,1,2]);
-					decl ref<array<int<4>,3>,f,f,plain> v0 = var(array_create(lit(3), *list));
+                () -> unit {
+					auto list = ref_var([0,1,2]);
+					var ref<array<int<4>,3>,f,f,plain> v0 = ref_var(array_create(type_lit(3), *list));
 				};
 			}
             )1N5P1RE"));

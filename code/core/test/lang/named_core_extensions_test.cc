@@ -58,21 +58,21 @@ namespace lang {
 
 	  public:
 
-		TYPE_ALIAS("NamedType", "struct { 'a foo; }")
+		TYPE_ALIAS("NamedType", "struct { foo : 'a; }")
 
-		LANG_EXT_TYPE_WITH_NAME(NamedTypeUsingBelow, "NamedTypeUsingBelow", "struct { NamedType foo; }")
+		LANG_EXT_TYPE_WITH_NAME(NamedTypeUsingBelow, "NamedTypeUsingBelow", "struct { foo : NamedType; }")
 
-		LANG_EXT_TYPE_WITH_NAME(NamedTypeReusingUnknown, "NamedTypeReusingUnknown", "struct { FooType foo; }")
+		LANG_EXT_TYPE_WITH_NAME(NamedTypeReusingUnknown, "NamedTypeReusingUnknown", "struct { foo : FooType; }")
 
-		LANG_EXT_TYPE_WITH_NAME(NamedTypeReusingKnown, "NamedTypeReusingKnown", "struct { NamedType foo; }")
+		LANG_EXT_TYPE_WITH_NAME(NamedTypeReusingKnown, "NamedTypeReusingKnown", "struct { foo : NamedType; }")
 
 		LANG_EXT_LITERAL_WITH_NAME(NamedLiteralUnknown, "NamedLiteralUnknown", "named_lit_unknown", "(FooType)->unit")
 
 		LANG_EXT_LITERAL_WITH_NAME(NamedLiteral, "NamedLiteral", "named_lit", "(NamedType)->unit")
 
-		LANG_EXT_DERIVED_WITH_NAME(NamedDerivedUnknown, "NamedDerivedUnknown", "let foo = FooType; lambda (foo x)->foo { return x; }")
+		LANG_EXT_DERIVED_WITH_NAME(NamedDerivedUnknown, "NamedDerivedUnknown", "alias foo = FooType; (x : foo)->foo { return x; }")
 
-		LANG_EXT_DERIVED(NamedDerived, "let foo = NamedType; lambda (foo x)->foo { return x; }")
+		LANG_EXT_DERIVED(NamedDerived, "alias foo = NamedType; (x : foo)->foo { return x; }")
 	};
 
 	TEST(NamedCoreExtensionTest, NamedLookup) {
@@ -98,15 +98,15 @@ namespace lang {
 
 		// Test for the re-use of a named extension which is defined below the current one and therefore won't be found
 		auto& namedTypeUsingBelow = extension.getNamedTypeUsingBelow();
-		EXPECT_EQ("struct<foo:struct<foo:'a>>", toString(*namedTypeUsingBelow));
+		EXPECT_EQ("struct {foo:struct {foo:'a,dtor()},dtor()}", toString(*namedTypeUsingBelow));
 
 		// Test for the re-use of an unknown named extension
 		auto& namedTypeReusingUnknown = extension.getNamedTypeReusingUnknown();
-		EXPECT_EQ("struct<foo:FooType>", toString(*namedTypeReusingUnknown));
+		EXPECT_EQ("struct {foo:FooType,dtor()}", toString(*namedTypeReusingUnknown));
 
 		// Test for correct handling of a known named extension
 		auto& namedTypeReusingKnown = extension.getNamedTypeReusingKnown();
-		EXPECT_EQ("struct<foo:struct<foo:'a>>", toString(*namedTypeReusingKnown));
+		EXPECT_EQ("struct {foo:struct {foo:'a,dtor()},dtor()}", toString(*namedTypeReusingKnown));
 	}
 
 	TEST(NamedCoreExtensionTest, NamedLiterals) {
@@ -122,7 +122,7 @@ namespace lang {
 		// Test for correct handling of a known named extension
 		auto& namedLiteral = extension.getNamedLiteral();
 		EXPECT_EQ("named_lit", toString(*namedLiteral));
-		EXPECT_EQ("((struct<foo:'a>)->unit)", toString(*namedLiteral.getType()));
+		EXPECT_EQ("((struct {foo:'a,dtor()})->unit)", toString(*namedLiteral.getType()));
 	}
 
 	TEST(NamedCoreExtensionTest, NamedDerived) {
@@ -137,8 +137,8 @@ namespace lang {
 
 		// Test for correct handling of a known named extension
 		auto& namedDerived = extension.getNamedDerived();
-		EXPECT_EQ("rec v0.{v0=fun(ref<struct<foo:'a>,f,f,plain> v1) {return ref_deref(v1);}}", toString(*namedDerived));
-		EXPECT_EQ("((struct<foo:'a>)->struct<foo:'a>)", toString(*namedDerived.getType()));
+		EXPECT_EQ("rec v0.{v0=fun(ref<struct {foo:'a,dtor()},f,f,plain> v1) {return ref_deref(v1);}}", toString(*namedDerived));
+		EXPECT_EQ("((struct {foo:'a,dtor()})->struct {foo:'a,dtor()})", toString(*namedDerived.getType()));
 	}
 
 

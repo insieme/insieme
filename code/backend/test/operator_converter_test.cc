@@ -59,29 +59,29 @@ namespace backend {
 
 		ProgramPtr prog = builder.parseProgram(R"(
 			
-			let int = int<4>;
+			alias int = int<4>;
 			
-			let pair = struct {
-				int first;
-				int second;
+			alias pair = struct {
+				first : int;
+				second : int;
 			};
 			
-			let obj = struct {
-				int a;
-				array<int,4> b;
-				pair c;
+			alias obj = struct {
+				a : int;
+				b : array<int,4>;
+				c : pair;
 			};
 			
 			unit main() {
 			
-				decl ref<obj> o;
+				var ref<obj> o;
 			
 				// check element o.a
 				o.a = 0;
 				print("o.a = %d\n", *o.a);
 			
 				// updated member a directly
-				decl ref<int> x = ref_narrow(o, dp_member(dp_root(lit(obj)), lit("a"), lit(int)));
+				var ref<int> x = ref_narrow(o, dp_member(dp_root(type_lit(obj)), lit("a"), type_lit(int)));
 				x = 12;
 				print("Equal: %d\n", ref_eq(o.a, x));
 				print("x = %d \t o.a = %d\n", *x, *o.a);
@@ -91,14 +91,14 @@ namespace backend {
 				o.b[2u] = 0;
 				print("o.b[2] = %d\n", *o.b[2u]);
 			
-				decl ref<int> y = ref_narrow(o, dp_element(dp_member(dp_root(lit(obj)), lit("b"), lit(array<int,4>)), 2u));
+				var ref<int> y = ref_narrow(o, dp_element(dp_member(dp_root(type_lit(obj)), lit("b"), type_lit(array<int,4>)), 2u));
 				y = 12;
 				print("Equal: %d\n", ref_eq(o.b[2u], y));
 				print("y = %d \t o.b[2] = %d\n", *y, *o.b[2u]);
 		
 			
 				// expand a definition
-				decl ref<array<int,4>> v = ref_expand(y, dp_element(dp_root(lit(array<int,4>)), 2u));
+				var ref<array<int,4>> v = ref_expand(y, dp_element(dp_root(type_lit(array<int,4>)), 2u));
 				v[1u] = 10;
 				v[2u] = 14;
 			
@@ -108,13 +108,13 @@ namespace backend {
 			
 			
 				// handle nested element
-				decl ref<int> first = ref_narrow(o, dp_member(dp_member(dp_root(lit(obj)), lit("c"), lit(pair)), lit("first"), lit(int)));
+				var ref<int> first = ref_narrow(o, dp_member(dp_member(dp_root(type_lit(obj)), lit("c"), type_lit(pair)), lit("first"), type_lit(int)));
 			
 				// check reference equality
 				print("Equal: %d\n", ref_eq(o.c.first, first));
 			
 				// and the reverse
-				decl ref<obj> full = ref_expand(first, dp_member(dp_member(dp_root(lit(obj)), lit("c"), lit(pair)), lit("first"), lit(int)));
+				var ref<obj> full = ref_expand(first, dp_member(dp_member(dp_root(type_lit(obj)), lit("c"), type_lit(pair)), lit("first"), type_lit(int)));
 				print("Equal: %d\n", ref_eq(o,full));
 			}
 		)").as<core::ProgramPtr>();

@@ -115,9 +115,9 @@ namespace runtime {
 		LANG_EXT_LITERAL(RunStandalone, "runStandalone", "(irt_wi_implementation_id, irt_lwdi<'a>)->unit")
 
 		// -- Code Utilities ------
-		LANG_EXT_TYPE_WITH_NAME(WorkItemRange, "irt_work_item_range", "struct { int<4> begin; int<4> end; int<4> step; }")
+		LANG_EXT_TYPE_WITH_NAME(WorkItemRange, "irt_work_item_range", "struct { begin : int<4>; end : int<4>; step : int<4>; }")
 
-		LANG_EXT_LITERAL(GetWorkItemRange, "getRange", "(ref<irt_wi>)->struct { int<4> begin; int<4> end; int<4> step; }")
+		LANG_EXT_LITERAL(GetWorkItemRange, "getRange", "(ref<irt_wi>)->struct { begin : int<4>; end : int<4>; step : int<4>; }")
 		LANG_EXT_LITERAL(GetWorkItemArgument, "getArg", "(ref<irt_wi>, uint<4>, type<irt_lwdi<'p>>, type<'a>)->'a")
 
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -38,12 +38,15 @@
 
 #include "insieme/core/ir_program.h"
 
-namespace insieme {
-namespace frontend {
+#include "insieme/core/tu/ir_translation_unit.h"
 
+namespace insieme {
+namespace core {
 namespace tu {
 	class IRTranslationUnit;
 }
+}
+namespace frontend {
 
 namespace cilk {
 
@@ -54,7 +57,7 @@ namespace cilk {
 	 * @param mgr the node manager to be utilized for creating IR nodes
 	 * @return the modified translation unit
 	 */
-	tu::IRTranslationUnit applySema(const tu::IRTranslationUnit& unit, core::NodeManager& mgr);
+	core::tu::IRTranslationUnit applySema(const core::tu::IRTranslationUnit& unit, core::NodeManager& mgr);
 
 } // namespace cilk
 } // namespace frontend

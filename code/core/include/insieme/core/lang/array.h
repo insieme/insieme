@@ -39,6 +39,8 @@
 #include "insieme/core/lang/extension.h"
 
 #include "insieme/core/lang/list.h"
+#include "insieme/core/lang/reference.h"
+
 
 namespace insieme {
 namespace core {
@@ -64,6 +66,9 @@ namespace lang {
 
 	  public:
 
+		// import reference extension
+		IMPORT_MODULE(ReferenceExtension);
+
 		// import list extension for list operations
 		IMPORT_MODULE(ListExtension);
 
@@ -78,7 +83,9 @@ namespace lang {
 		/**
 		 * A type alias for arrays with undefined size.
 		 */
-		TYPE_ALIAS("array<'a>", "array<'a,inf>");
+		// NOTE: This alias must not be defined here, but in the reference extension, since that one uses the alias already.
+		//       If this alias is re-defined here we get a cycle.
+		//TYPE_ALIAS("array<'a>", "array<'a,inf>");
 
 
 		// -------------------- operators ---------------------------
@@ -98,8 +105,8 @@ namespace lang {
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(ArrayReduce, "array_reduce",
 				    "                                                                                             "
-					"   lambda (ref<array<'a,'s>,'v,'c,plain> data, int<8> size, ('b,'a)->'b op, 'b init)->'b {   "
-					"   	decl ref<'b,f,f,plain> res = var(init);                                               "
+					"   (data : ref<array<'a,'s>,'v,'c,plain>, size : int<8>, op : ('b,'a)->'b, init : 'b)->'b {   "
+					"   	var ref<'b,f,f,plain> res = ref_var(init);                                               "
 					"   	for(int<8> i = 0 .. size) {                                                           "
 					"   		res = op(*res, *(data[i]));                                                       "
 					"   	}                                                                                     "
@@ -113,9 +120,9 @@ namespace lang {
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(ArrayFold, "array_fold",
 					"                                                                                       "
-					"   lambda (array<'a,'s> data, 'b init, ('b,'a)->'b op)->'b {                           "
-					"   	decl ref<'b,f,f,plain> res = var(init);                                         "
-					"   	for(int<8> i = 0 .. type_to_int(lit('s))) {                                     "
+					"   (data : array<'a,'s>, init : 'b, op : ('b,'a)->'b)->'b {                           "
+					"   	var ref<'b,f,f,plain> res = ref_var(init);                                         "
+					"   	for(int<8> i = 0 .. type_to_int(type_lit('s))) {                                     "
 					"   		res = op(*res, data[i]);                                                    "
 					"   	}                                                                               "
 					"   	return *res;                                                                    "
@@ -140,7 +147,7 @@ namespace lang {
 		//		LITERAL(ArraySubscript1D,      "array_subscript_1D",   "(array<'elem,1>, uint<8>) -> 'elem")
 		//		LITERAL(ArraySubscriptND,      "array_subscript_ND",   "(array<'elem,'n>, vector<uint<8>,'n>) -> 'elem")
 		//
-		//		DERIVED(ArrayRefElem1D,     "array_ref_elem_1D",    "lambda (ref<array<'elem,1>> a, uint<8> i) -> ref<'elem> { return ref_narrow(a,
+		//		DERIVED(ArrayRefElem1D,     "array_ref_elem_1D",    "(ref<array<'elem,1>> a, uint<8> i) -> ref<'elem> { return ref_narrow(a,
 		// dp_element(dp_root, i), lit('elem)); }")
 		//		LITERAL(ArrayRefElemND, 	"array_ref_elem_ND", 	"(ref<array<'elem,'n>>, vector<uint<8>,'n>) -> ref<'elem>")
 		//
@@ -150,11 +157,11 @@ namespace lang {
 		//									  "(ref<array<'elem,'n>>,vector<uint<8>,'n>,vector<uint<8>,'n>) -> ref<array<'elem,'n>>")
 		//
 		//		LITERAL(ArrayRefDistance, 		"array_ref_distance", 	"(ref<array<'elem,1>>, ref<array<'elem,1>>) -> int<8>")
-		//		DERIVED(ScalarToArray, 			"scalar_to_array", 		"lambda (ref<'a> a) -> ref<array<'a,1>> { return ref_expand(a, dp_element(dp_root,0u),
+		//		DERIVED(ScalarToArray, 			"scalar_to_array", 		"(ref<'a> a) -> ref<array<'a,1>> { return ref_expand(a, dp_element(dp_root,0u),
 		// lit(array<'a,1>)); }")
 		//
 		//		DERIVED(ArrayReduce, "array_reduce",
-		//			"	lambda (ref<array<'a,1>> data, uint<8> size, ('b,'a)->'b op, 'b init)->'b {"
+		//			"	(ref<array<'a,1>> data, uint<8> size, ('b,'a)->'b op, 'b init)->'b {"
 		//			"		decl ref<'b> res = var(init);"
 		//			"		for(uint<8> i = 0ul .. size) {"
 		//			"			res = op(*res, *(data[i]));"

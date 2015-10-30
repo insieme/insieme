@@ -41,6 +41,7 @@
 #include "insieme/frontend/converter.h"
 #include "insieme/annotations/c/include.h"
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/lang/array.h"
 
 namespace insieme {
 namespace frontend {

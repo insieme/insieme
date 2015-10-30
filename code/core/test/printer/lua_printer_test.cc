@@ -81,15 +81,13 @@ namespace printer {
 		auto forStmt = analysis::normalize(builder.parseStmt(R"(
 			for(int<4> k = 0 .. 10) {
 				for(int<4> i = 0 .. 20) {
-					decl ref<int<4>> m = var(10);
+					var ref<int<4>> m = 10;
 					for(int<4> j = 0 .. 30) {
 						v[i] = *m;
-			           x = x + 1;
+						x = x + 1;
 					}
 				}
-			})",
-		                                                     symbols)
-		                                       .as<ForStmtPtr>());
+			})", symbols).as<ForStmtPtr>());
 
 
 		string script = toLuaScript(forStmt);

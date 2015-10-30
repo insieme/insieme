@@ -66,21 +66,21 @@ namespace lang {
 		auto enumTy = core::lang::getEnumType(builder.getLangBasic().getInt4(), finalEnum);
 		EXPECT_TRUE(core::lang::isEnumType(enumTy));
 		/****ENUM TAG TYPE SEMA CHECKS*****/
-		auto correct = builder.parseType("struct enum { enum_def<Color,enum_entry<Blue,3>> enum_type; int<8> value; }");
+		auto correct = builder.parseType("struct enum { enum_type : enum_def<Color,enum_entry<Blue,3>>; value : int<8>; }");
 		auto c = core::checks::check(correct);
 		EXPECT_FALSE(c.getErrors().size());
 		//missing name sema fail
-		auto incorrectName = builder.parseType("struct enum { enum_def<enum_entry<Blue,3>> enum_type; int<8> value; }");
+		auto incorrectName = builder.parseType("struct enum { enum_type : enum_def<enum_entry<Blue,3>>; value : int<8>; }");
 		c = core::checks::check(incorrectName);
 		EXPECT_TRUE(c.getErrors().size() == 1);
 		EXPECT_TRUE(c.getErrors()[0].getMessage().find("Enum definition contains invalid name") != std::string::npos);
 		//malformed enum type
-		auto incorrectET = builder.parseType("struct enum { int<8> enum_type; int<8> value; }");
+		auto incorrectET = builder.parseType("struct enum { enum_type : int<8>; value : int<8>; }");
 		c = core::checks::check(incorrectET);
 		EXPECT_TRUE(c.getErrors().size() == 1);
 		EXPECT_TRUE(c.getErrors()[0].getMessage().find("Invalid enum type") != std::string::npos);
 		//enum entry sema fail
-		auto incorrectEntry = builder.parseType("struct enum { enum_def<Name, enum_entry<Blue>> enum_type; int<8> value; }");
+		auto incorrectEntry = builder.parseType("struct enum { enum_type : enum_def<Name, enum_entry<Blue>>; value : int<8>; }");
 		c = core::checks::check(incorrectEntry);
 		EXPECT_TRUE(c.getErrors().size() == 1);
 		EXPECT_TRUE(c.getErrors()[0].getMessage().find("Enum definition contains invalid enum entry") != std::string::npos);
@@ -105,8 +105,8 @@ namespace lang {
 		auto y = lang::getEnumInit(builder.intLit(3), enumTy);
 		EXPECT_EQ("struct{value=5}", toString(*x));
 		EXPECT_EQ("struct{value=3}", toString(*y));
-		EXPECT_EQ("struct enum <enum_type:enum_def<Color,enum_entry<Blue,3>,enum_entry<Green,7>,enum_entry<Red,5>>,value:int<4>>", toString(*(x->getType())));
-		EXPECT_EQ("struct enum <enum_type:enum_def<Color,enum_entry<Blue,3>,enum_entry<Green,7>,enum_entry<Red,5>>,value:int<4>>", toString(*(y->getType())));
+		EXPECT_EQ("struct enum {enum_type:enum_def<Color,enum_entry<Blue,3>,enum_entry<Green,7>,enum_entry<Red,5>>,value:int<4>,dtor()}", toString(*(x->getType())));
+		EXPECT_EQ("struct enum {enum_type:enum_def<Color,enum_entry<Blue,3>,enum_entry<Green,7>,enum_entry<Red,5>>,value:int<4>,dtor()}", toString(*(y->getType())));
 		auto c1 = core::checks::check(x);
 		EXPECT_TRUE(c1.getErrors().empty());
 		auto c2 = core::checks::check(y);

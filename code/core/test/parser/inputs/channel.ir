@@ -1,0 +1,25 @@
+
+alias int = int<4>;
+alias channel = channel<int,1>;
+
+unit main() {
+	
+	// check creation
+	auto c = channel_create(type_lit(int),type_lit(1));
+	
+	// check assignment
+	auto c2 = c;
+	
+	// try sending stuff
+	channel_send(c, 12);
+	
+	// try receiving stuff
+	auto v = channel_recv(c);
+	
+	// check empty
+	if(channel_empty(c)) {};
+	
+	// and release
+	channel_release(c);
+		
+}
