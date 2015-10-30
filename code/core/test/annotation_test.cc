@@ -374,6 +374,52 @@ namespace core {
 		EXPECT_EQ(33, nodeB->getAttachedValue<AnnotationMigrate>().x);
 	}
 
+	TEST(Annotation, NodeManagerAnnotation) {
+		NodeManager manager;
+
+		// Just try to add an annotation to a node manager
+		std::shared_ptr<DummyAnnotation> annotation(new DummyAnnotation(1));
+		manager.addAnnotation(annotation);
+		EXPECT_TRUE(manager.hasAnnotation(DummyAnnotation::DummyKey));
+		manager.remAnnotation(DummyAnnotation::DummyKey);
+		EXPECT_FALSE(manager.hasAnnotation(DummyAnnotation::DummyKey));
+	}
+
+	TEST(Annotation, NodeManagerValueAnnotations) {
+		NodeManager manager;
+		EXPECT_FALSE(manager.hasAttachedValue<int>());
+
+		manager.attachValue<int>(12);
+
+		EXPECT_TRUE(manager.hasAttachedValue<int>());
+		EXPECT_EQ(12, manager.getAttachedValue<int>());
+
+		manager.detachValue<int>();
+
+		EXPECT_FALSE(manager.hasAttachedValue<int>());
+	}
+
+	TEST(Annotation, NodeManagerChainingAnnotations) {
+		// Just try to add an annotation to a node manager
+		std::shared_ptr<DummyAnnotation> annotation(new DummyAnnotation(1));
+
+		NodeManager manager;
+		NodeManager manager2(manager);
+		EXPECT_FALSE(manager.hasAnnotation(DummyAnnotation::DummyKey));
+		EXPECT_FALSE(manager2.hasAnnotation(DummyAnnotation::DummyKey));
+		EXPECT_TRUE(manager2.getBaseManager() != nullptr);
+		EXPECT_TRUE(manager.getBaseManager() == nullptr);
+
+		// add annotation to manager2
+		manager2.addAnnotation(annotation);
+
+		// should be contained in both
+		EXPECT_TRUE(manager.hasAnnotation(DummyAnnotation::DummyKey));
+		EXPECT_TRUE(manager2.hasAnnotation(DummyAnnotation::DummyKey));
+
+		// containter addresses should be the same
+		EXPECT_EQ(&manager.getAnnotationContainer(), &manager2.getAnnotationContainer());
+	}
 
 } // end namespace core
 } // end namespace insieme
