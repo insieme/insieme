@@ -87,14 +87,11 @@ namespace checks {
 
 			context_free_checks.push_back(make_check<LiteralFormatCheck>());
 
-			// some context-sensitive checks
-			std::vector<CheckPtr> context_sensitive_checks;
-			context_sensitive_checks.push_back(make_check<FreeTagTypeReferencesCheck>());
-
 			// assemble the IR check list
 			return combine(toVector<CheckPtr>(
-				makeVisitOnce(combine(context_free_checks)), 
-				makeRecursive(combine(context_sensitive_checks))), true);
+				makeVisitOnce(combine(context_free_checks)),
+				make_check<FreeTagTypeReferencesCheck>()
+			), true);
 		}
 	}
 

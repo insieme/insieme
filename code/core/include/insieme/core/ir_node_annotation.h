@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -231,6 +231,98 @@ namespace core {
 		typedef utils::detail::ValueAnnotation<ValueType, core::NodeAnnotation, utils::AnnotationKey> type;
 	};
 
+	template<typename Derived>
+	struct NodeAnnotationAccessHelper {
+
+		const utils::Annotatable<NodeAnnotation>& getAnnotationContainer() const {
+			return static_cast<const Derived*>(this)->getAnnotationContainer();
+		}
+
+		// -----------------------------------
+		//  Forward Annotation related calls
+		// -----------------------------------
+
+		typedef typename utils::Annotatable<NodeAnnotation>::key_type KeyType;
+		typedef typename utils::Annotatable<NodeAnnotation>::annotation_ptr_type annotation_ptr_type;
+		typedef typename utils::Annotatable<NodeAnnotation>::annotation_map_type annotation_map_type;
+
+		void addAnnotation(const annotation_ptr_type& annotation) const {
+			getAnnotationContainer().addAnnotation(annotation);
+		}
+
+		template <typename Annotation, typename... Params>
+		void addAnnotation(Params... p) const {
+			getAnnotationContainer().template addAnnotation<Annotation>(p...);
+		}
+
+		const std::shared_ptr<NodeAnnotation>& getAnnotation(const utils::AnnotationKeyPtr& key) const {
+			return getAnnotationContainer().getAnnotation(key);
+		}
+
+		template <typename Key>
+		typename std::shared_ptr<typename Key::annotation_type> getAnnotation(const Key* key) const {
+			return getAnnotationContainer().getAnnotation(key);
+		}
+
+		template <typename Key>
+		typename std::shared_ptr<typename Key::annotation_type> getAnnotation(const Key& key) const {
+			return getAnnotation(&key);
+		}
+
+		void remAnnotation(const KeyType* key) const {
+			getAnnotationContainer().remAnnotation(key);
+		}
+
+		void remAnnotation(const KeyType& key) const {
+			getAnnotationContainer().remAnnotation(key);
+		}
+
+		bool hasAnnotation(const KeyType* key) const {
+			return getAnnotationContainer().hasAnnotation(key);
+		}
+
+		bool hasAnnotation(const KeyType& key) const {
+			return getAnnotationContainer().hasAnnotation(key);
+		}
+
+		const annotation_map_type& getAnnotations() const {
+			return getAnnotationContainer().getAnnotations();
+		}
+
+		void setAnnotations(const annotation_map_type& annotations) const {
+			getAnnotationContainer().setAnnotations(annotations);
+		}
+
+		bool hasAnnotations() const {
+			return getAnnotationContainer().hasAnnotations();
+		}
+
+		// -- Value Attachments ---------------------
+		template <typename V>
+		bool hasAttachedValue() const {
+			return getAnnotationContainer().template hasAttachedValue<V>();
+		}
+
+		template <typename V>
+		void attachValue(const V& value = V()) const {
+			return getAnnotationContainer().template attachValue<V>(value);
+		}
+
+		template <typename V, typename... Args>
+		void attachValue(const Args&... args) const {
+			return getAnnotationContainer().template attachValue<V>(args...);
+		}
+
+		template <typename V>
+		void detachValue() const {
+			getAnnotationContainer().template detachValue<V>();
+		}
+
+		template <typename V>
+		const V& getAttachedValue() const {
+			return getAnnotationContainer().template getAttachedValue<V>();
+		}
+	};
 
 } // end namespace core
 

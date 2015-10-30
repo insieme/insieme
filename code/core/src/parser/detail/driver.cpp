@@ -296,7 +296,7 @@ namespace parser {
 				for (const auto& function : tagType->getRecord()->getMemberFunctions()) {
 					if (function->getNameAsString() == memberName) {
 						// return a member function access call
-						const auto& functionType = function->getImplementation().as<LambdaExprPtr>()->getFunctionType();
+						const auto& functionType = function->getImplementation()->getType();
 						return builder.callExpr(functionType, memberFunctionAccess, expr, builder.getIdentifierLiteral(memberName), builder.getTypeLiteral(functionType));
 					}
 				}
@@ -377,8 +377,8 @@ namespace parser {
 			return builder.functionType(params, retType, fk);
 		}
 
-		TypePtr InspireDriver::genRecordType(const location& l, const NodeType& type, const string& name, const ParentList& parents, const FieldList& fields, const LambdaExprList& ctors,
-				const LambdaExprPtr& dtorIn, const MemberFunctionList& mfuns, const PureVirtualMemberFunctionList& pvmfuns) {
+		TypePtr InspireDriver::genRecordType(const location& l, const NodeType& type, const string& name, const ParentList& parents, const FieldList& fields, const ExpressionList& ctors,
+				const ExpressionPtr& dtorIn, const MemberFunctionList& mfuns, const PureVirtualMemberFunctionList& pvmfuns) {
 
 			//check if this type has already been defined before
 			const GenericTypePtr key = builder.genericType(name);
@@ -400,13 +400,21 @@ namespace parser {
 			TagTypePtr res;
 
 			// check whether a default constructor is required
-			LambdaExprPtr dtor = (dtorIn) ? dtorIn : builder.getDefaultDestructor(name);
+			ExpressionPtr dtor = dtorIn;
+
+			// create default destructor if necessary
+			if (!dtor) {
+				auto defaultDtor = builder.getDefaultDestructor(name);
+				auto dtorSymbol = builder.literal("dtor", defaultDtor->getType());
+				tu.addFunction(dtorSymbol, defaultDtor);
+				dtor = dtorSymbol;
+			}
 
 			if (type == NT_Struct) {
-				res = builder.structType(name,parents,fields,ctors,dtor,mfuns,pvmfuns);
+				res = builder.structType(name,parents,fields,ctors,dtor,false,mfuns,pvmfuns);
 			} else {
 				if (!parents.empty()) error(l, "Inheritance not supported for unions!");
-				res = builder.unionType(name,fields,ctors,dtor,mfuns,pvmfuns);
+				res = builder.unionType(name,fields,ctors,dtor,false,mfuns,pvmfuns);
 			}
 
 			// register type in translation unit
@@ -515,7 +523,7 @@ namespace parser {
 		/**
 		 * generates a destructor for the currently defined record type
 		 */
-		LambdaExprPtr InspireDriver::genDestructor(const location& l, const StatementPtr& body) {
+		ExpressionPtr InspireDriver::genDestructor(const location& l, const StatementPtr& body) {
 			assert_false(currentRecordStack.empty()) << "Not within record definition!";
 
 			// get this-type
@@ -534,7 +542,14 @@ namespace parser {
 			auto ingredients = transform::materialize({params, newBody});
 
 			// create the destructor
-			return builder.lambdaExpr(dtorType, ingredients.params, ingredients.body);
+			auto dtor = builder.lambdaExpr(dtorType, ingredients.params, ingredients.body);
+
+			// create a symbol in the translation unit
+			auto dtorSymbol = builder.literal("Dtor", dtor->getType());
+			tu.addFunction(dtorSymbol, dtor);
+
+			// return symbol
+			return dtorSymbol;
 		}
 
 		/**
@@ -578,7 +593,7 @@ namespace parser {
 			tu.addFunction(key, fun);
 
 			// create the member function entry
-			return builder.memberFunction(virtl, name, fun);
+			return builder.memberFunction(virtl, name, key);
 		}
 
 		PureVirtualMemberFunctionPtr InspireDriver::genPureVirtualMemberFunction(const location& l,  bool cnst, bool voltile, const std::string& name, const FunctionTypePtr& type) {
@@ -597,7 +612,7 @@ namespace parser {
 			auto memberFunType = builder.functionType(fullParams, type->getReturnType(), FK_MEMBER_FUNCTION);
 
 			// create the member function entry
-			return builder.pureVirtualMemberFunction(name, type);
+			return builder.pureVirtualMemberFunction(name, memberFunType);
 		}
 
 		LambdaExprPtr InspireDriver::genFunctionDefinition(const location& l, const std::string name, const LambdaExprPtr& lambda)  {
@@ -779,7 +794,7 @@ namespace parser {
 			const auto& destructor = type->getRecord()->getDestructor();
 
 			//check argument type
-			if (!types::isSubTypeOf(param->getType(), analysis::getReferencedType(destructor.as<LambdaExprPtr>()->getParameterList()[0]->getType()))) {
+			if (!types::isSubTypeOf(param->getType(), destructor->getType().as<FunctionTypePtr>()->getParameterTypes()[0])) {
 				error(l, "This-pointer argument for destructor call is of wrong type");
 				return nullptr;
 			}

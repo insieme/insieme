@@ -203,6 +203,13 @@ namespace lang {
 		LANG_EXT_LITERAL(LockAcquire, "lock_acquire", "(ref<lock>)->unit")
 
 		/**
+		 * An operator for acquiring a mutex lock.
+		 * In contrast to LockAcquire, this function returns immediately,
+		 * if the lock has already been acquired by any thread
+		 */
+		LANG_EXT_LITERAL(LockTryAcquire, "lock_tryacquire", "(ref<lock>)->bool")
+
+		/**
 		 * An operator for releasing a mutex lock.
 		 */
 		LANG_EXT_LITERAL(LockRelease, "lock_release", "(ref<lock>)->unit")

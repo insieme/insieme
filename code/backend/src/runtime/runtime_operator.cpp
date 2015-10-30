@@ -258,6 +258,10 @@ namespace runtime {
 			ADD_HEADER_FOR("irt_lock_acquire");
 			return c_ast::call(C_NODE_MANAGER->create("irt_lock_acquire"), CONVERT_ARG(0));
 		};
+		table[parExt.getLockTryAcquire()] = OP_CONVERTER {
+			ADD_HEADER_FOR("irt_lock_tryacquire");
+			return c_ast::call(C_NODE_MANAGER->create("irt_lock_tryacquire"), CONVERT_ARG(0));
+		};
 		table[parExt.getLockRelease()] = OP_CONVERTER {
 			ADD_HEADER_FOR("irt_lock_release");
 			return c_ast::call(C_NODE_MANAGER->create("irt_lock_release"), CONVERT_ARG(0));

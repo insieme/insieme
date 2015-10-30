@@ -1,4 +1,4 @@
-/**
+	/**
  * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
@@ -383,11 +383,11 @@ namespace core {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
-		EXPECT_EQ("struct<x:bla<int<4>>>", toString(*builder.parseType("let A = struct { x : bla<int<4>>; } in A")));
-		EXPECT_EQ("struct<x:bla<int<4>>>", toString(*builder.parseType("let A = struct { x : bla<int<4>>; } in A").as<TagTypePtr>()->peel()));
+		EXPECT_EQ("struct {x:bla<int<4>>,dtor()}", toString(*builder.parseType("let A = struct { x : bla<int<4>>; } in A")));
+		EXPECT_EQ("struct {x:bla<int<4>>,dtor()}", toString(*builder.parseType("let A = struct { x : bla<int<4>>; } in A").as<TagTypePtr>()->peel()));
 
-		EXPECT_EQ("rec ^A.{^A=struct A <x:bla<^A>>}", toString(*builder.parseType("decl struct A; def struct A { x : bla<A>; }; A")));
-		EXPECT_EQ("struct A <x:bla<rec ^A.{^A=struct A <x:bla<^A>>}>>",
+		EXPECT_EQ("rec ^A.{^A=struct A {x:bla<^A>,dtor()}}", toString(*builder.parseType("decl struct A; def struct A { x : bla<A>; }; A")));
+		EXPECT_EQ("struct A {x:bla<rec ^A.{^A=struct A {x:bla<^A>,dtor()}}>,dtor()}",
 		          toString(*builder.parseType("decl struct A; def struct A { x : bla<A>; }; A").as<TagTypePtr>()->peel()));
 
 		TagTypePtr tagType = builder.parseType("decl struct A; def struct A { x : bla<A>; }; A").as<TagTypePtr>();
@@ -398,6 +398,24 @@ namespace core {
 		EXPECT_TRUE(checks::check(tagType->peel(1)).empty()) << checks::check(tagType->peel(1));
 		EXPECT_TRUE(checks::check(tagType->peel(2)).empty()) << checks::check(tagType->peel(2));
 
+	}
+
+
+	TEST(TypeTest, TagTypeMemberPeeling) {
+
+		// create a manager for this test
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		auto tagType = builder.parseType("let A = struct { x : bla<int<4>>; } in A").as<TagTypePtr>();
+		EXPECT_TRUE(checks::check(tagType).empty()) << checks::check(tagType);
+
+		// get destructor (the wrong way)
+		auto dtor = tagType->getRecord()->getDestructor();
+		EXPECT_FALSE(checks::check(dtor).empty());
+
+		auto fixedDtor = tagType->peel(dtor);
+		EXPECT_TRUE(checks::check(fixedDtor).empty()) << checks::check(fixedDtor);
 	}
 
 	//

@@ -69,13 +69,19 @@ namespace detail {
 		}
 	};
 
-	template <> struct to_printable<bool>  : public id<bool> {};
-	template <> struct to_printable<char>  : public id<char> {};
-	template <> struct to_printable<short> : public id<short> {};
-	template <> struct to_printable<long>  : public id<long> {};
+	template <> struct to_printable<bool>       : public id<bool> {};
 
-	template <> struct to_printable<signed>    : public id<signed> {};
-	template <> struct to_printable<unsigned>  : public id<unsigned> {};
+	template <> struct to_printable<char>       : public id<char> {};
+	template <> struct to_printable<short>      : public id<short> {};
+	template <> struct to_printable<int>        : public id<int> {};
+	template <> struct to_printable<long>       : public id<long> {};
+	template <> struct to_printable<long long>  : public id<long long> {};
+
+	template <> struct to_printable<unsigned char>       : public id<unsigned char> {};
+	template <> struct to_printable<unsigned short>      : public id<unsigned short> {};
+	template <> struct to_printable<unsigned int>        : public id<unsigned int> {};
+	template <> struct to_printable<unsigned long>       : public id<unsigned long> {};
+	template <> struct to_printable<unsigned long long>  : public id<unsigned long long> {};
 
 	template <> struct to_printable<float>  : public id<float> {};
 	template <> struct to_printable<double> : public id<double> {};

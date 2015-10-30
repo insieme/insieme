@@ -109,7 +109,7 @@ namespace core {
 		 * @param types the types to be included within the requested type parameter list
 		 * @return the requested type instance managed by the given manager
 		 */
-		static TypesPtr get(NodeManager & manager, const TypeList& types) {
+		static TypesPtr get(NodeManager& manager, const TypeList& types) {
 			return manager.get(Types(convertList(types)));
 		}
 	IR_NODE_END()
@@ -210,7 +210,7 @@ namespace core {
 		 * @param type the type to be referenced as a parent class
 		 * @return the requested type instance managed by the given manager
 		 */
-		static ParentPtr get(NodeManager & manager, const BoolValuePtr& virtul, const UIntValuePtr& access, const TypePtr& type) {
+		static ParentPtr get(NodeManager& manager, const BoolValuePtr& virtul, const UIntValuePtr& access, const TypePtr& type) {
 			return manager.get(Parent(virtul, access, type));
 		}
 
@@ -224,7 +224,7 @@ namespace core {
 			* @param type the type to be referenced as a parent class
 			* @return the requested type instance managed by the given manager
 		*/
-		static ParentPtr get(NodeManager & manager,  bool virtul, const UIntValuePtr& access, const TypePtr& type) {
+		static ParentPtr get(NodeManager& manager,  bool virtul, const UIntValuePtr& access, const TypePtr& type) {
 			return get(manager, BoolValue::get(manager, virtul), access, type);
 		}
 
@@ -238,7 +238,7 @@ namespace core {
 		 * @param type the type to be referenced as a parent class
 		 * @return the requested type instance managed by the given manager
 		 */
-		static ParentPtr get(NodeManager & manager, const BoolValuePtr& virtul, AccessSpecifier access, const TypePtr& type) {
+		static ParentPtr get(NodeManager& manager, const BoolValuePtr& virtul, AccessSpecifier access, const TypePtr& type) {
 			return manager.get(Parent(virtul, UIntValue::get(manager, (unsigned)access), type));
 		}
 
@@ -252,7 +252,7 @@ namespace core {
 		 * @param type the type to be referenced as a parent class
 		 * @return the requested type instance managed by the given manager
 		 */
-		static ParentPtr get(NodeManager & manager, bool virtul, AccessSpecifier access, const TypePtr& type) {
+		static ParentPtr get(NodeManager& manager, bool virtul, AccessSpecifier access, const TypePtr& type) {
 			return get(manager, BoolValue::get(manager, virtul), UIntValue::get(manager, (unsigned)access), type);
 		}
 
@@ -265,7 +265,7 @@ namespace core {
 		 * @param type the type to be referenced as a parent class
 		 * @return the requested type instance managed by the given manager
 		 */
-		static ParentPtr get(NodeManager & manager, const BoolValuePtr& virtul, const TypePtr& type) {
+		static ParentPtr get(NodeManager& manager, const BoolValuePtr& virtul, const TypePtr& type) {
 			return get(manager, virtul, AS_PUBLIC, type);
 		}
 
@@ -278,7 +278,7 @@ namespace core {
 		 * @param type the type to be referenced as a parent class
 		 * @return the requested type instance managed by the given manager
 		 */
-		static ParentPtr get(NodeManager & manager, bool virtul, const TypePtr& type) {
+		static ParentPtr get(NodeManager& manager, bool virtul, const TypePtr& type) {
 			return get(manager, BoolValue::get(manager, virtul), type);
 		}
 
@@ -290,7 +290,7 @@ namespace core {
 		 * @param type the type to be referenced as a parent class
 		 * @return the requested type instance managed by the given manager
 		 */
-		static ParentPtr get(NodeManager & manager, const TypePtr& type) {
+		static ParentPtr get(NodeManager& manager, const TypePtr& type) {
 			return get(manager, false, type);
 		}
 	IR_NODE_END()
@@ -324,7 +324,7 @@ namespace core {
 		 * @param parents the parents to be included within the resulting parents list
 		 * @return the requested parents list instance managed by the given manager
 		 */
-		static ParentsPtr get(NodeManager & manager, const ParentList& parents = ParentList()) {
+		static ParentsPtr get(NodeManager& manager, const ParentList& parents = ParentList()) {
 			return manager.get(Parents(convertList(parents)));
 		}
 
@@ -336,7 +336,7 @@ namespace core {
 		 * @param types the types to be included within the requested type parameter list
 		 * @return the requested type instance managed by the given manager
 		 */
-		static ParentsPtr get(NodeManager & manager, const TypeList& types) {
+		static ParentsPtr get(NodeManager& manager, const TypeList& types) {
 			return get(manager, ::transform(types, [&](const TypePtr& type) { return Parent::get(manager, type); }));
 		}
 	IR_NODE_END()
@@ -401,7 +401,7 @@ namespace core {
 		 * @param parents		the list of parent types (for the inheritance hierarchy)
 		 * @param typeParams	the type parameters of this type, concrete or variable
 		 */
-		static GenericTypePtr get(NodeManager & manager, const StringValuePtr& name, const ParentsPtr& parents, const TypesPtr& typeParams) {
+		static GenericTypePtr get(NodeManager& manager, const StringValuePtr& name, const ParentsPtr& parents, const TypesPtr& typeParams) {
 			return manager.get(GenericType(name, parents, typeParams));
 		}
 
@@ -414,7 +414,7 @@ namespace core {
 		 * @param name 			the name of the new type (only the prefix)
 		 * @param typeParams	the type parameters of this type, concrete or variable
 		 */
-		static GenericTypePtr get(NodeManager & manager, const StringValuePtr& name, const TypesPtr& typeParams) {
+		static GenericTypePtr get(NodeManager& manager, const StringValuePtr& name, const TypesPtr& typeParams) {
 			return get(manager, name, Parents::get(manager), typeParams);
 		}
 
@@ -429,7 +429,7 @@ namespace core {
 		 * @param typeParams	the type parameters of this type, concrete or variable
 		 * @param intTypeParams	the integer-type parameters of this type, concrete or variable
 		 */
-		static GenericTypePtr get(NodeManager & manager, const string& name, const ParentList& parentTypes, const TypeList& typeParams = TypeList()) {
+		static GenericTypePtr get(NodeManager& manager, const string& name, const ParentList& parentTypes, const TypeList& typeParams = TypeList()) {
 			return get(manager, StringValue::get(manager, name), Parents::get(manager, parentTypes), Types::get(manager, typeParams));
 		}
 
@@ -443,7 +443,7 @@ namespace core {
 		 * @param typeParams	the type parameters of this type, concrete or variable
 		 * @param intTypeParams	the integer-type parameters of this type, concrete or variable
 		 */
-		static GenericTypePtr get(NodeManager & manager, const string& name, const TypeList& typeParams = TypeList()) {
+		static GenericTypePtr get(NodeManager& manager, const string& name, const TypeList& typeParams = TypeList()) {
 			return get(manager, StringValue::get(manager, name), Types::get(manager, typeParams));
 		}
 	IR_NODE_END()
@@ -482,7 +482,7 @@ namespace core {
 		 * @param name the identifier defining the name of the resulting type variable
 		 * @return the requested type instance managed by the given manager
 		 */
-		static TypeVariablePtr get(NodeManager & manager, const StringValuePtr& name) {
+		static TypeVariablePtr get(NodeManager& manager, const StringValuePtr& name) {
 			return manager.get(TypeVariable(name));
 		}
 
@@ -495,7 +495,7 @@ namespace core {
 		 * @param name the identifier defining the name of the resulting type variable
 		 * @return the requested type instance managed by the given manager
 		 */
-		static TypeVariablePtr get(NodeManager & manager, const string& name) {
+		static TypeVariablePtr get(NodeManager& manager, const string& name) {
 			return get(manager, StringValue::get(manager, name));
 		}
 	IR_NODE_END()
@@ -531,7 +531,7 @@ namespace core {
 		 * @param manager the manager to obtain the new type reference from
 		 * @param elementTypes the list of element types to be used to form the tuple
 		 */
-		static TupleTypePtr get(NodeManager & manager, const TypeList& elementTypes = TypeList()) {
+		static TupleTypePtr get(NodeManager& manager, const TypeList& elementTypes = TypeList()) {
 			return get(manager, convertList(elementTypes));
 		}
 	IR_NODE_END()
@@ -689,7 +689,7 @@ namespace core {
 		 * @param kind determining the kind of function type to be constructed
 		 * @return a pointer to a instance of the required type maintained by the given manager
 		 */
-		static FunctionTypePtr get(NodeManager & manager, const TypesPtr& paramType, const TypePtr& returnType, FunctionKind kind = FK_PLAIN) {
+		static FunctionTypePtr get(NodeManager& manager, const TypesPtr& paramType, const TypePtr& returnType, FunctionKind kind = FK_PLAIN) {
 			return manager.get(FunctionType(paramType, returnType, UIntValue::get(manager, kind)));
 		}
 
@@ -703,7 +703,7 @@ namespace core {
 		 * @param kind determining the kind of function type to be constructed
 		 * @return a pointer to a instance of the required type maintained by the given manager
 		 */
-		static FunctionTypePtr get(NodeManager & manager, const TypesPtr& paramType, FunctionKind kind = FK_PLAIN) {
+		static FunctionTypePtr get(NodeManager& manager, const TypesPtr& paramType, FunctionKind kind = FK_PLAIN) {
 			return get(manager, paramType, GenericType::get(manager, "unit"), kind);
 		}
 
@@ -718,7 +718,7 @@ namespace core {
 		 * @param kind determining the kind of function type to be constructed
 		 * @return a pointer to a instance of the required type maintained by the given manager
 		 */
-		static FunctionTypePtr get(NodeManager & manager, const TypeList& parameterTypes, const TypePtr& returnType, FunctionKind kind = FK_PLAIN) {
+		static FunctionTypePtr get(NodeManager& manager, const TypeList& parameterTypes, const TypePtr& returnType, FunctionKind kind = FK_PLAIN) {
 			return get(manager, Types::get(manager, parameterTypes), returnType, kind);
 		}
 
@@ -732,7 +732,7 @@ namespace core {
 		 * @param kind determining the kind of function type to be constructed
 		 * @return a pointer to a instance of the required type maintained by the given manager
 		 */
-		static FunctionTypePtr get(NodeManager & manager, const TypeList& parameterTypes, FunctionKind kind = FK_PLAIN) {
+		static FunctionTypePtr get(NodeManager& manager, const TypeList& parameterTypes, FunctionKind kind = FK_PLAIN) {
 			return get(manager, Types::get(manager, parameterTypes), GenericType::get(manager, "unit"), kind);
 		}
 
@@ -747,7 +747,7 @@ namespace core {
 		 * @param kind determining the kind of function type to be constructed
 		 * @return a pointer to a instance of the required type maintained by the given manager
 		 */
-		static FunctionTypePtr get(NodeManager & manager, const TypePtr& paramType, const TypePtr& returnType, FunctionKind kind = FK_PLAIN) {
+		static FunctionTypePtr get(NodeManager& manager, const TypePtr& paramType, const TypePtr& returnType, FunctionKind kind = FK_PLAIN) {
 			return get(manager, Types::get(manager, toVector(paramType)), returnType, kind);
 		}
 	IR_NODE_END()
@@ -789,7 +789,7 @@ namespace core {
 		 * @param name the identifier defining the name of the resulting tag type reference
 		 * @return the requested type instance managed by the given manager
 		 */
-		static TagTypeReferencePtr get(NodeManager & manager, const StringValuePtr& name) {
+		static TagTypeReferencePtr get(NodeManager& manager, const StringValuePtr& name) {
 			return manager.get(TagTypeReference(name));
 		}
 
@@ -802,7 +802,7 @@ namespace core {
 		 * @param name the identifier defining the name of the resulting tag type reference
 		 * @return the requested type instance managed by the given manager
 		 */
-		static TagTypeReferencePtr get(NodeManager & manager, const string& name) {
+		static TagTypeReferencePtr get(NodeManager& manager, const string& name) {
 			return get(manager, StringValue::get(manager, name));
 		}
 	IR_NODE_END()
@@ -846,7 +846,7 @@ namespace core {
 		 * @param record the record to be bound to the given tag
 		 * @return the requested bindign managed by the given manager
 		 */
-		static TagTypeBindingPtr get(NodeManager & manager, const TagTypeReferencePtr& tag, const RecordPtr& record) {
+		static TagTypeBindingPtr get(NodeManager& manager, const TagTypeReferencePtr& tag, const RecordPtr& record) {
 			return manager.get(TagTypeBinding(tag, record));
 		}
 	IR_NODE_END()
@@ -875,7 +875,17 @@ namespace core {
 		 * @param times the number of times it shall be peeled
 		 * @return the resulting, peeled type
 		 */
-		TagTypePtr peel(NodeManager & manager, const TagTypeReferencePtr& tag, unsigned times = 1) const;
+		TagTypePtr peel(NodeManager& manager, const TagTypeReferencePtr& tag, unsigned times = 1) const;
+
+		/**
+		 * Peels the given member out of this definition. The member might be a member function,
+		 * a constructor or destructor.
+		 *
+		 * @param manager the manager to be used for maintaining the resulting type pointer
+		 * @param member the member to be peeled out
+		 * @return the peeled out member
+		 */
+		ExpressionPtr peel(NodeManager& manager, const ExpressionPtr& member) const;
 
 	IR_NODE_END()
 
@@ -900,7 +910,7 @@ namespace core {
 		 * @param bindings the bindings to be included within this definition
 		 * @return the requested type instance managed by the given manager
 		 */
-		static TagTypeDefinitionPtr get(NodeManager & manager, const vector<TagTypeBindingPtr>& bindings) {
+		static TagTypeDefinitionPtr get(NodeManager& manager, const vector<TagTypeBindingPtr>& bindings) {
 			return manager.get(TagTypeDefinition(convertList(bindings)));
 		}
 
@@ -912,7 +922,18 @@ namespace core {
 		 * @param times the number of times to be peeled
 		 * @return the resulting, peeled type
 		 */
-		TagTypePtr peelDefinition(NodeManager & manager, const TagTypeReferencePtr& tag, unsigned times = 1) const;
+		TagTypePtr peelDefinition(NodeManager& manager, const TagTypeReferencePtr& tag, unsigned times = 1) const;
+
+		/**
+		 * Peels the given member out of this definition. The member might be a member function,
+		 * a constructor or destructor.
+		 *
+		 * @param manager the manager to be used for maintaining the resulting type pointer
+		 * @param member the member to be peeled out
+		 * @return the peeled out member
+		 */
+		ExpressionPtr peelMember(NodeManager& manager, const ExpressionPtr& member) const;
+
 	IR_NODE_END()
 
 
@@ -1030,7 +1051,7 @@ namespace core {
 		/**
 		 * Peels this tag type.
 		 */
-		TagTypePtr peel(NodeManager & manager, unsigned times = 1) const {
+		TagTypePtr peel(NodeManager& manager, unsigned times = 1) const {
 			return (*getDefinition()).peel(manager, getTag(), times);
 		}
 
@@ -1039,6 +1060,20 @@ namespace core {
 		 */
 		TagTypePtr peel(unsigned times = 1) const {
 			return peel(this->getNode().getNodeManager(), times);
+		}
+
+		/**
+		 * Peels out the given member.
+		 */
+		ExpressionPtr peel(NodeManager& manager, const ExpressionPtr& member) const {
+			return (*getDefinition()).peel(manager, member);
+		}
+
+		/**
+		 * Peels out the given member.
+		 */
+		ExpressionPtr peel(const ExpressionPtr& member) const {
+			return peel(this->getNode().getNodeManager(), member);
 		}
 
 		/**
@@ -1075,7 +1110,7 @@ namespace core {
 		 * @param tag the tag of the bindings to be referenced within the given tag type definition group
 		 * @param definition the tag type definition group providing the actual definition of of this tag type
 		 */
-		static TagTypePtr get(NodeManager & manager, const TagTypeReferencePtr& tag, const TagTypeDefinitionPtr& definition) {
+		static TagTypePtr get(NodeManager& manager, const TagTypeReferencePtr& tag, const TagTypeDefinitionPtr& definition) {
 			return manager.get(TagType(tag, definition));
 		}
 
@@ -1128,7 +1163,7 @@ namespace core {
 		 * @param type the type of the field
 		 * @return the requested field instance managed by the given manager
 		 */
-		static FieldPtr get(NodeManager & manager, const StringValuePtr& name, const TypePtr& type) {
+		static FieldPtr get(NodeManager& manager, const StringValuePtr& name, const TypePtr& type) {
 			return manager.get(Field(name, type));
 		}
 	IR_NODE_END()
@@ -1162,7 +1197,7 @@ namespace core {
 		 * @param fields the fields to be included within the resulting field list
 		 * @return the requested field list instance managed by the given manager
 		 */
-		static FieldsPtr get(NodeManager & manager, const FieldList& fields = FieldList()) {
+		static FieldsPtr get(NodeManager& manager, const FieldList& fields = FieldList()) {
 			return manager.get(Fields(convertList(fields)));
 		}
 
@@ -1233,7 +1268,7 @@ namespace core {
 		 * @param impl the implementation of the member function
 		 * @return the requested member function instance managed by the given manager
 		 */
-		static MemberFunctionPtr get(NodeManager & manager, const BoolValuePtr& virtul, const StringValuePtr& name, const ExpressionPtr& impl) {
+		static MemberFunctionPtr get(NodeManager& manager, const BoolValuePtr& virtul, const StringValuePtr& name, const ExpressionPtr& impl) {
 			return manager.get(MemberFunction(name, virtul, impl));
 		}
 
@@ -1247,7 +1282,7 @@ namespace core {
 		 * @param impl the implementation of the member function
 		 * @return the requested member function instance managed by the given manager
 		 */
-		static MemberFunctionPtr get(NodeManager & manager, bool virtul, const std::string& name, const ExpressionPtr& impl) {
+		static MemberFunctionPtr get(NodeManager& manager, bool virtul, const std::string& name, const ExpressionPtr& impl) {
 			return get(manager, BoolValue::get(manager, virtul), StringValue::get(manager, name), impl);
 		}
 
@@ -1282,7 +1317,7 @@ namespace core {
 		 * @param members the members to be included within the resulting member function list
 		 * @return the requested member function list instance managed by the given manager
 		 */
-		static MemberFunctionsPtr get(NodeManager & manager, const MemberFunctionList& fields = MemberFunctionList()) {
+		static MemberFunctionsPtr get(NodeManager& manager, const MemberFunctionList& fields = MemberFunctionList()) {
 			return manager.get(MemberFunctions(convertList(fields)));
 		}
 
@@ -1305,7 +1340,7 @@ namespace core {
 		/**
 		 * Obtains the type of this pure virtual member function.
 		 */
-		IR_NODE_PROPERTY(FunctionType, Type, 2);
+		IR_NODE_PROPERTY(FunctionType, Type, 1);
 
 		/**
 		 * Obtains the name of this member function as a string.
@@ -1340,7 +1375,7 @@ namespace core {
 		 * @param type the type of the pure virtual member function
 		 * @return the requested pure virtual member function instance managed by the given manager
 		 */
-		static PureVirtualMemberFunctionPtr get(NodeManager & manager, const StringValuePtr& name, const FunctionTypePtr& type) {
+		static PureVirtualMemberFunctionPtr get(NodeManager& manager, const StringValuePtr& name, const FunctionTypePtr& type) {
 			return manager.get(PureVirtualMemberFunction(name, type));
 		}
 
@@ -1353,7 +1388,7 @@ namespace core {
 		 * @param type the type of the pure virtual member function
 		 * @return the requested pure virtual member function instance managed by the given manager
 		 */
-		static PureVirtualMemberFunctionPtr get(NodeManager & manager, const std::string& name, const FunctionTypePtr& type) {
+		static PureVirtualMemberFunctionPtr get(NodeManager& manager, const std::string& name, const FunctionTypePtr& type) {
 			return get(manager, StringValue::get(manager, name), type);
 		}
 
@@ -1388,7 +1423,7 @@ namespace core {
 		 * @param members the members to be included within the resulting member function list
 		 * @return the requested member function list instance managed by the given manager
 		 */
-		static PureVirtualMemberFunctionsPtr get(NodeManager & manager, const PureVirtualMemberFunctionList& fields = PureVirtualMemberFunctionList()) {
+		static PureVirtualMemberFunctionsPtr get(NodeManager& manager, const PureVirtualMemberFunctionList& fields = PureVirtualMemberFunctionList()) {
 			return manager.get(PureVirtualMemberFunctions(convertList(fields)));
 		}
 
@@ -1424,14 +1459,19 @@ namespace core {
 		IR_NODE_PROPERTY(Expression, Destructor, 3);
 
 		/**
+		 * Whether or not the destructor is virtual.
+		 */
+		IR_NODE_PROPERTY(BoolValue, DestructorVirtual, 4);
+
+		/**
 		 * Obtains the list of all member functions fined for this record type.
 		 */
-		IR_NODE_PROPERTY(MemberFunctions, MemberFunctions, 4);
+		IR_NODE_PROPERTY(MemberFunctions, MemberFunctions, 5);
 
 		/**
 		 * Obtains the list of all pure virtual member functions fined for this record type.
 		 */
-		IR_NODE_PROPERTY(PureVirtualMemberFunctions, PureVirtualMemberFunctions, 5);
+		IR_NODE_PROPERTY(PureVirtualMemberFunctions, PureVirtualMemberFunctions, 6);
 
 		/**
 		 * Retrieves the field with the given name within this
@@ -1481,7 +1521,7 @@ namespace core {
 	/**
 	 * A node type used to represent a common base-class for structs and unions.
 	 */
-	class Record : public Support, public AbstractFixedSizeNodeHelper<Record,StringValue,Fields,Expressions,Expression,MemberFunctions,PureVirtualMemberFunctions> {
+	class Record : public Support, public AbstractFixedSizeNodeHelper<Record,StringValue,Fields,Expressions,Expression,BoolValue,MemberFunctions,PureVirtualMemberFunctions> {
 	  protected:
 		/**
 		 * A constructor creating a new instance of this type based on a given child-node list.
@@ -1505,7 +1545,7 @@ namespace core {
 
 
 	#define IR_RECORD_ACCESSOR(NAME, ...)                                                                                                                  \
-		IR_NODE_ACCESSOR(NAME, Record, StringValue, Fields, Expressions, Expression, MemberFunctions, PureVirtualMemberFunctions, ##__VA_ARGS__)
+		IR_NODE_ACCESSOR(NAME, Record, StringValue, Fields, Expressions, Expression, BoolValue, MemberFunctions, PureVirtualMemberFunctions, ##__VA_ARGS__)
 
 
 	// --------------------------------- Struct ----------------------------
@@ -1518,7 +1558,7 @@ namespace core {
 		/**
 		 * Obtains the list of parent classes associated to this struct.
 		 */
-		IR_NODE_PROPERTY(Parents, Parents, 6);
+		IR_NODE_PROPERTY(Parents, Parents, 7);
 
 	IR_NODE_END();
 
@@ -1553,9 +1593,10 @@ namespace core {
 		 * @return a pointer to a instance of the requested type. Multiple requests using
 		 * 		   the same parameters will lead to pointers addressing the same instance.
 		 */
-		static StructPtr get(NodeManager & manager, const StringValuePtr& name, const ParentsPtr& parents, const FieldsPtr& fields,
-				const ExpressionsPtr& ctors, const ExpressionPtr& dtor, const MemberFunctionsPtr& mfuns, const PureVirtualMemberFunctionsPtr& pvfuns) {
-			return manager.get(Struct(name, fields, ctors, dtor, mfuns, pvfuns, parents));
+		static StructPtr get(NodeManager& manager, const StringValuePtr& name, const ParentsPtr& parents, const FieldsPtr& fields,
+		                     const ExpressionsPtr& ctors, const ExpressionPtr& dtor, const BoolValuePtr& dtorIsVirtual,
+		                     const MemberFunctionsPtr& mfuns, const PureVirtualMemberFunctionsPtr& pvfuns) {
+			return manager.get(Struct(name, fields, ctors, dtor, dtorIsVirtual, mfuns, pvfuns, parents));
 		}
 
 		/**
@@ -1570,7 +1611,7 @@ namespace core {
 		 * @return a pointer to a instance of the requested type. Multiple requests using
 		 * 		   the same parameters will lead to pointers addressing the same instance.
 		 */
-		static StructPtr get(NodeManager & manager, const StringValuePtr& name, const ParentsPtr& parents, const FieldsPtr& fields);
+		static StructPtr get(NodeManager& manager, const StringValuePtr& name, const ParentsPtr& parents, const FieldsPtr& fields);
 
 		/**
 		 * A factory method allowing to obtain a pointer to a struct representing
@@ -1584,7 +1625,7 @@ namespace core {
 		 * @return a pointer to a instance of the requested type. Multiple requests using
 		 * 		   the same parameters will lead to pointers addressing the same instance.
 		 */
-		static StructPtr get(NodeManager & manager, const StringValuePtr& name, const ParentsPtr& parents, const vector<FieldPtr>& fields = vector<FieldPtr>()) {
+		static StructPtr get(NodeManager& manager, const StringValuePtr& name, const ParentsPtr& parents, const vector<FieldPtr>& fields = vector<FieldPtr>()) {
 			return get(manager, name, parents, Fields::get(manager, fields));
 		}
 
@@ -1599,7 +1640,7 @@ namespace core {
 		 * @return a pointer to a instance of the requested type. Multiple requests using
 		 * 		   the same parameters will lead to pointers addressing the same instance.
 		 */
-		static StructPtr get(NodeManager & manager, const ParentsPtr& parents, const vector<FieldPtr>& fields = vector<FieldPtr>()) {
+		static StructPtr get(NodeManager& manager, const ParentsPtr& parents, const vector<FieldPtr>& fields = vector<FieldPtr>()) {
 			return get(manager, StringValue::get(manager, ""), parents, fields);
 		}
 
@@ -1614,7 +1655,7 @@ namespace core {
 		 * @return a pointer to a instance of the requested type. Multiple requests using
 		 * 		   the same parameters will lead to pointers addressing the same instance.
 		 */
-		static StructPtr get(NodeManager & manager, const StringValuePtr& name, const vector<FieldPtr>& fields = vector<FieldPtr>()) {
+		static StructPtr get(NodeManager& manager, const StringValuePtr& name, const vector<FieldPtr>& fields = vector<FieldPtr>()) {
 			return get(manager, name, Parents::get(manager), fields);
 		}
 
@@ -1628,7 +1669,7 @@ namespace core {
 		 * @return a pointer to a instance of the requested type. Multiple requests using
 		 * 		   the same parameters will lead to pointers addressing the same instance.
 		 */
-		static StructPtr get(NodeManager & manager, const vector<FieldPtr>& fields = vector<FieldPtr>()) {
+		static StructPtr get(NodeManager& manager, const vector<FieldPtr>& fields = vector<FieldPtr>()) {
 			return get(manager, Parents::get(manager), fields);
 		}
 
@@ -1652,9 +1693,7 @@ namespace core {
 		/**
 		 * Prints a string representation of this node to the given output stream.
 		 */
-		virtual std::ostream& printTo(std::ostream & out) const {
-			return out << "union<" << join(",", getFields(), print<deref<NodePtr>>()) << ">";
-		}
+		virtual std::ostream& printTo(std::ostream & out) const;
 
 	  public:
 
@@ -1673,9 +1712,10 @@ namespace core {
 		 * @return a pointer to a instance of the requested type. Multiple requests using
 		 * 		   the same parameters will lead to pointers addressing the same instance.
 		 */
-		static UnionPtr get(NodeManager & manager, const StringValuePtr& name, const FieldsPtr& fields, const ExpressionsPtr& ctors,
-				const ExpressionPtr& dtor, const MemberFunctionsPtr& mfuns, const PureVirtualMemberFunctionsPtr& pvfuns) {
-			return manager.get(Union(name, fields, ctors, dtor, mfuns, pvfuns));
+		static UnionPtr get(NodeManager& manager, const StringValuePtr& name, const FieldsPtr& fields,
+		                    const ExpressionsPtr& ctors, const ExpressionPtr& dtor, const BoolValuePtr& dtorIsVirtual,
+		                    const MemberFunctionsPtr& mfuns, const PureVirtualMemberFunctionsPtr& pvfuns) {
+			return manager.get(Union(name, fields, ctors, dtor, dtorIsVirtual, mfuns, pvfuns));
 		}
 
 		/**
@@ -1689,7 +1729,7 @@ namespace core {
 		 * @return a pointer to a instance of the requested record. Multiple requests using
 		 * 		   the same parameters will lead to pointers addressing the same instance.
 		 */
-		static UnionPtr get(NodeManager & manager, const StringValuePtr& name, const FieldsPtr& fields);
+		static UnionPtr get(NodeManager& manager, const StringValuePtr& name, const FieldsPtr& fields);
 
 		/**
 		 * A factory method allowing to obtain a pointer to a union representing
@@ -1702,7 +1742,7 @@ namespace core {
 		 * @return a pointer to a instance of the requested record. Multiple requests using
 		 * 		   the same parameters will lead to pointers addressing the same instance.
 		 */
-		static UnionPtr get(NodeManager & manager, const StringValuePtr& name, const vector<FieldPtr>& fields) {
+		static UnionPtr get(NodeManager& manager, const StringValuePtr& name, const vector<FieldPtr>& fields) {
 			return get(manager, name, Fields::get(manager, fields));
 		}
 
@@ -1716,7 +1756,7 @@ namespace core {
 		 * @return a pointer to a instance of the requested record. Multiple requests using
 		 * 		   the same parameters will lead to pointers addressing the same instance.
 		 */
-		static UnionPtr get(NodeManager & manager, const vector<FieldPtr>& fields = vector<FieldPtr>()) {
+		static UnionPtr get(NodeManager& manager, const vector<FieldPtr>& fields = vector<FieldPtr>()) {
 			return get(manager, StringValue::get(manager, ""), fields);
 		}
 	IR_NODE_END()
@@ -1769,7 +1809,7 @@ namespace core {
 		 * @param value the value to be represented
 		 * @return the requested type instance managed by the given manager
 		 */
-		static NumericTypePtr get(NodeManager & manager, const LiteralPtr& value);
+		static NumericTypePtr get(NodeManager& manager, const LiteralPtr& value);
 
 		/**
 		 * This static factory method allows to construct a numeric type based on a variable.
@@ -1778,16 +1818,22 @@ namespace core {
 		 * @param var the variable to be represented
 		 * @return the requested type instance managed by the given manager
 		 */
-		static NumericTypePtr get(NodeManager & manager, const VariablePtr& var);
+		static NumericTypePtr get(NodeManager& manager, const VariablePtr& var);
 	IR_NODE_END()
 
 
 	// --------------------------- late definitions to resolve cyclic dependencies  ---------------------------------------
 
 	template<typename LeafType, template<typename T> class Ptr>
-	TagTypePtr Accessor<TagTypeDefinition, LeafType, Ptr>::peel(NodeManager & manager, const TagTypeReferencePtr& tag, unsigned times) const {
+	TagTypePtr Accessor<TagTypeDefinition, LeafType, Ptr>::peel(NodeManager& manager, const TagTypeReferencePtr& tag, unsigned times) const {
 		return Accessor<TagTypeDefinition, LeafType, Ptr>::getNode().peelDefinition(manager, tag, times);
 	}
+
+	template<typename LeafType, template<typename T> class Ptr>
+	ExpressionPtr Accessor<TagTypeDefinition, LeafType, Ptr>::peel(NodeManager& manager, const ExpressionPtr& member) const {
+		return Accessor<TagTypeDefinition, LeafType, Ptr>::getNode().peelMember(manager, member);
+	}
+
 
 } // end namespace core
 } // end namespace insieme

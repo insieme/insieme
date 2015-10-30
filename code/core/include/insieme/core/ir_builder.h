@@ -283,7 +283,7 @@ namespace core {
 		GenericTypePtr arrayType(const TypePtr& elementType, const LiteralPtr& size) const;
 		GenericTypePtr arrayType(const TypePtr& elementType, const VariablePtr& size) const;
 		GenericTypePtr arrayType(const TypePtr& elementType, size_t size) const;
-		
+
 		FieldPtr field(const string& name, const TypePtr& type) const;
 
 		TagTypePtr structType(const vector<std::pair<StringValuePtr, TypePtr>>& fields) const;
@@ -295,18 +295,22 @@ namespace core {
 		TagTypePtr structType(const string& name, const vector<FieldPtr>& fields) const;
 		TagTypePtr structType(const StringValuePtr& name, const vector<FieldPtr>& fields) const;
 		TagTypePtr structType(const StringValuePtr& name, const vector<ParentPtr>& parents, const vector<FieldPtr>& fields) const;
-		TagTypePtr structType(const string& name, const ParentList& parents, const FieldList& fields, const LambdaExprList& ctors,
-				const LambdaExprPtr& dtor, const MemberFunctionList& mfuns, const PureVirtualMemberFunctionList& pvmfuns) const;
-		TagTypePtr structType(const StringValuePtr& name, const ParentsPtr& parents, const FieldsPtr& fields, const ExpressionsPtr& ctors,
-				const ExpressionPtr& dtor, const MemberFunctionsPtr& mfuns, const PureVirtualMemberFunctionsPtr& pvmfuns) const;
+		TagTypePtr structType(const string& name, const ParentList& parents, const FieldList& fields,
+		                      const ExpressionList& ctors, const ExpressionPtr& dtor, const bool dtorIsVirtual,
+		                      const MemberFunctionList& mfuns, const PureVirtualMemberFunctionList& pvmfuns) const;
+		TagTypePtr structType(const StringValuePtr& name, const ParentsPtr& parents, const FieldsPtr& fields,
+		                      const ExpressionsPtr& ctors, const ExpressionPtr& dtor, const BoolValuePtr& dtorIsVirtual,
+		                      const MemberFunctionsPtr& mfuns, const PureVirtualMemberFunctionsPtr& pvmfuns) const;
 
 		TagTypePtr unionType(const vector<std::pair<StringValuePtr, TypePtr>>& fields) const;
 		TagTypePtr unionType(const StringValuePtr& name, const vector<FieldPtr>& fields) const;
 		TagTypePtr unionType(const vector<FieldPtr>& fields) const;
-		TagTypePtr unionType(const string& name, const FieldList& fields, const LambdaExprList& ctors, const LambdaExprPtr& dtor,
-				const MemberFunctionList& mfuns, const PureVirtualMemberFunctionList& pvmfuns) const;
-		TagTypePtr unionType(const StringValuePtr& name, const FieldsPtr& fields, const ExpressionsPtr& ctors,
-				const ExpressionPtr& dtor, const MemberFunctionsPtr& mfuns, const PureVirtualMemberFunctionsPtr& pvmfuns) const;
+		TagTypePtr unionType(const string& name, const FieldList& fields,
+		                     const ExpressionList& ctors, const ExpressionPtr& dtor, const bool dtorIsVirtual,
+		                     const MemberFunctionList& mfuns, const PureVirtualMemberFunctionList& pvmfuns) const;
+		TagTypePtr unionType(const StringValuePtr& name, const FieldsPtr& fields,
+		                     const ExpressionsPtr& ctors, const ExpressionPtr& dtor, const BoolValuePtr& dtorIsVirtual,
+		                     const MemberFunctionsPtr& mfuns, const PureVirtualMemberFunctionsPtr& pvmfuns) const;
 
 		FunctionTypePtr getDestructorType(const TagTypeReferencePtr& tag) const;
 
@@ -535,6 +539,7 @@ namespace core {
 
 		// Locks
 		CallExprPtr acquireLock(const ExpressionPtr& lock) const;
+		CallExprPtr tryAcquireLock(const ExpressionPtr& lock) const;
 		CallExprPtr releaseLock(const ExpressionPtr& lock) const;
 		CallExprPtr initLock(const ExpressionPtr& lock) const;
 
@@ -802,7 +807,7 @@ namespace core {
 
 	// Utilities
 
-	template <typename Iter, typename T = typename boost::remove_const<typename Iter::value_type::element_type>::type,
+	template <typename Iter, typename T = typename std::remove_const<typename Iter::value_type::element_type>::type,
 	          typename boost::enable_if<boost::is_base_of<Expression, T>, int>::type = 0>
 	static TypeList extractTypes(const Iter& begin, const Iter& end) {
 		TypeList types;
@@ -810,7 +815,7 @@ namespace core {
 		return types;
 	}
 
-	template <typename Container, typename T = typename boost::remove_const<typename Container::value_type::element_type>::type,
+	template <typename Container, typename T = typename std::remove_const<typename Container::value_type::element_type>::type,
 	          typename boost::enable_if<boost::is_base_of<Expression, T>, int>::type = 0>
 	static TypeList extractTypes(const Container& exprs) {
 		return extractTypes(exprs.begin(), exprs.end());

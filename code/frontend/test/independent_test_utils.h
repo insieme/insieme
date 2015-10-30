@@ -88,6 +88,7 @@ namespace frontend {
 		core::NodeManager mgr;
 		core::IRBuilder builder(mgr);
 		ConversionJob job(fn);
+		if(job.isCxx()) job.setStandard(ConversionSetup::Cxx11);
 		job.registerFrontendExtension<TestPragmaExtension>([](conversion::Converter& converter, int num) {
 			EXPECT_EQ(num, converter.getVarMan()->numVisibleDeclarations()) << "Location: " << converter.getLastTrackableLocation() << "\n";
 		});

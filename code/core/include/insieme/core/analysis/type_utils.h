@@ -72,6 +72,15 @@ namespace analysis {
 	 */
 	TypePtr autoReturnType(NodeManager& nodeMan, const CompoundStmtPtr& body);
 
+	/**
+	 * Determines whether the given type is trivial. A trivial type is one which can be statically
+	 * initialized and copied by simply copying its memory contents (without constructor/destructor/copy constructor calls).
+	 *
+	 * @param type the type to check
+	 * @return true if the type is trivial, false otherwise
+	 */
+	bool isTrivial(const TypePtr& type);
+
 } // end namespace analysis
 } // end namespace core
 } // end namespace insieme

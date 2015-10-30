@@ -105,8 +105,8 @@ namespace lang {
 		auto y = lang::getEnumInit(builder.intLit(3), enumTy);
 		EXPECT_EQ("struct{value=5}", toString(*x));
 		EXPECT_EQ("struct{value=3}", toString(*y));
-		EXPECT_EQ("struct enum <enum_type:enum_def<Color,enum_entry<Blue,3>,enum_entry<Green,7>,enum_entry<Red,5>>,value:int<4>>", toString(*(x->getType())));
-		EXPECT_EQ("struct enum <enum_type:enum_def<Color,enum_entry<Blue,3>,enum_entry<Green,7>,enum_entry<Red,5>>,value:int<4>>", toString(*(y->getType())));
+		EXPECT_EQ("struct enum {enum_type:enum_def<Color,enum_entry<Blue,3>,enum_entry<Green,7>,enum_entry<Red,5>>,value:int<4>,dtor()}", toString(*(x->getType())));
+		EXPECT_EQ("struct enum {enum_type:enum_def<Color,enum_entry<Blue,3>,enum_entry<Green,7>,enum_entry<Red,5>>,value:int<4>,dtor()}", toString(*(y->getType())));
 		auto c1 = core::checks::check(x);
 		EXPECT_TRUE(c1.getErrors().empty());
 		auto c2 = core::checks::check(y);
