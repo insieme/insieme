@@ -138,38 +138,95 @@ namespace checks {
 		return res;
 	}
 
-	OptionalMessageList FreeTagTypeReferencesCheck::visitTagTypeReference(const TagTypeReferenceAddress& address) {
+
+	OptionalMessageList FreeTagTypeReferencesCheck::visitNode(const NodeAddress& address) {
 		OptionalMessageList res;
 
-		// not interested in definition point
-		if(!address.isRoot() && address.getParentNode().isa<TagTypeBindingPtr>()) return res;
-		if(!address.isRoot() && address.getParentNode().isa<TagTypePtr>()) return res;
+		using TagTypeRefs = std::vector<TagTypeReferenceAddress>;
 
-		// find enclosing context
-		NodeAddress context = address;
-		while(true) {
-			// get next enclosing context
-			while(!context.isRoot() && !context.isa<TagTypeDefinitionPtr>()) {
-				context = context.getParentAddress();
+		// an internal reference collector
+		struct FreeTagTypeCollector : public IRVisitor<TagTypeRefs> {
+
+			std::map<NodePtr,TagTypeRefs> cache;
+
+			FreeTagTypeCollector() : IRVisitor<TagTypeRefs>(true) {}
+
+			TagTypeRefs visit(const NodePtr& cur) override {
+				// check cache
+				auto pos = cache.find(cur);
+				if (pos != cache.end()) {
+					return pos->second;
+				}
+
+				// dispatch & cache
+				return cache[cur] = IRVisitor<TagTypeRefs>::visit(cur);
 			}
 
-			// check potential enclosing tag type definition
-			if(auto def = context.isa<TagTypeDefinitionPtr>()) {
-				if(def->getDefinitionOf(address)) {
-					return res; // all fine
-				}
-				// => check next enclosing context
-				if(!context.isRoot()) {
-					context = context.getParentAddress();
-					continue;
-				}
+			TagTypeRefs visitTagTypeReference(const TagTypeReferencePtr& ref) override {
+				TagTypeRefs res;
+				res.push_back(TagTypeReferenceAddress(ref));
+				return res;
 			}
 
-			// in all other cases there is a free definition
-			add(res, Message(address, EC_TYPE_FREE_TAG_TYPE_REFERENCE, format("Free tag type reference %s found", *address), Message::ERROR));
+			TagTypeRefs visitTagTypeDefinition(const TagTypeDefinitionPtr& def) override {
+				// aggregate references of child nodes - filtered by definitions
+				TagTypeRefs res;
+				for(const auto& cur : TagTypeDefinitionAddress(def)) {
+					RecordAddress recordAdr = cur->getRecord();
+					for(const auto& ref : visit(recordAdr)) {
+						if (!def->getDefinitionOf(ref)) {
+							res.push_back(concat(recordAdr, ref));
+						}
+					}
+				}
+				return res;
+			}
 
-			return res;
+			TagTypeRefs visitTagType(const TagTypePtr& type) override {
+				// skipping the tag-type reference in the tag type
+				TagTypeRefs res;
+				TagTypeDefinitionAddress defAddr = TagTypeAddress(type)->getDefinition();
+				for(const auto& cur : visit(defAddr)) {
+					res.push_back(concat(defAddr, cur));
+				}
+				return res;
+			}
+
+			TagTypeRefs visitNode(const NodePtr& cur) override {
+				// default: aggregate free references of children
+				TagTypeRefs res;
+				NodeAddress addr(cur);
+				for(const auto& child : addr.getChildList()) {
+					for(const auto& ref : visit(child)) {
+						res.push_back(concat(child,ref));
+					}
+				}
+				return res;
+			}
+
+		};
+
+		// get free references
+		auto free = FreeTagTypeCollector()(address);
+
+		// check if there are free references
+		if (free.empty()) return res;
+
+		// correct address
+		if (!address.isRoot()) {
+			for(auto& cur : free) {
+				cur = concat(address, cur);
+			}
 		}
+
+		// add errors
+		for(const auto& cur : free) {
+			// in all other cases there is a free definition
+			add(res, Message(cur, EC_TYPE_FREE_TAG_TYPE_REFERENCE, format("Free tag type reference %s found", *cur), Message::ERROR));
+		}
+
+		// done
+		return res;
 	}
 
 	OptionalMessageList TagTypeFieldsCheck::visitTagType(const TagTypeAddress& address) {
