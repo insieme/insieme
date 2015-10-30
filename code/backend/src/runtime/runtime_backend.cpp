@@ -173,6 +173,7 @@ namespace runtime {
 
 			table["irt_lock_init"] = "irt_all_impls.h";
 			table["irt_lock_acquire"] = "irt_all_impls.h";
+			table["irt_lock_tryacquire"] = "irt_all_impls.h";
 			table["irt_lock_release"] = "irt_all_impls.h";
 
 			table["irt_atomic_fetch_and_add"] = "irt_all_impls.h";

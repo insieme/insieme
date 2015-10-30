@@ -50,10 +50,6 @@ rec_global
 stream
 
 # Disabling tests because they fail with assertion:
-# Cannot lock a non-lock type
-locks
-
-# Disabling tests because they fail with assertion:
 # Record types not correctly resolved
 qap2
 

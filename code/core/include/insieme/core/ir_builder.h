@@ -283,7 +283,7 @@ namespace core {
 		GenericTypePtr arrayType(const TypePtr& elementType, const LiteralPtr& size) const;
 		GenericTypePtr arrayType(const TypePtr& elementType, const VariablePtr& size) const;
 		GenericTypePtr arrayType(const TypePtr& elementType, size_t size) const;
-		
+
 		FieldPtr field(const string& name, const TypePtr& type) const;
 
 		TagTypePtr structType(const vector<std::pair<StringValuePtr, TypePtr>>& fields) const;
@@ -535,6 +535,7 @@ namespace core {
 
 		// Locks
 		CallExprPtr acquireLock(const ExpressionPtr& lock) const;
+		CallExprPtr tryAcquireLock(const ExpressionPtr& lock) const;
 		CallExprPtr releaseLock(const ExpressionPtr& lock) const;
 		CallExprPtr initLock(const ExpressionPtr& lock) const;
 
@@ -802,7 +803,7 @@ namespace core {
 
 	// Utilities
 
-	template <typename Iter, typename T = typename boost::remove_const<typename Iter::value_type::element_type>::type,
+	template <typename Iter, typename T = typename std::remove_const<typename Iter::value_type::element_type>::type,
 	          typename boost::enable_if<boost::is_base_of<Expression, T>, int>::type = 0>
 	static TypeList extractTypes(const Iter& begin, const Iter& end) {
 		TypeList types;
@@ -810,7 +811,7 @@ namespace core {
 		return types;
 	}
 
-	template <typename Container, typename T = typename boost::remove_const<typename Container::value_type::element_type>::type,
+	template <typename Container, typename T = typename std::remove_const<typename Container::value_type::element_type>::type,
 	          typename boost::enable_if<boost::is_base_of<Expression, T>, int>::type = 0>
 	static TypeList extractTypes(const Container& exprs) {
 		return extractTypes(exprs.begin(), exprs.end());

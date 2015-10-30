@@ -165,6 +165,8 @@ namespace transform {
 				// and locks
 				if(parExt.isLockAcquire(fun)) { return builder.getNoOp(); }
 
+				if(parExt.isLockTryAcquire(fun)) { return builder.boolLit(true); }
+
 				if(parExt.isLockRelease(fun)) { return builder.getNoOp(); }
 
 				if(parExt.isLockInit(fun)) { return builder.getNoOp(); }
