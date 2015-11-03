@@ -281,6 +281,40 @@ namespace checks {
 		return res;
 	}
 
+	OptionalMessageList ConstructorTypeCheck::visitTagTypeBinding(const TagTypeBindingAddress& address) {
+		OptionalMessageList res;
+
+		NodeManager& mgr = address->getNodeManager();
+		IRBuilder builder(mgr);
+
+		// get the tag
+		auto tag = address.as<TagTypeBindingPtr>()->getTag();
+		TypePtr thisType = builder.refType(tag);
+
+		// iterate over all the constructors and check their types
+		for (auto& constructor : address->getRecord()->getConstructors()) {
+			auto ctor = constructor.getAddressedNode().as<LambdaExprPtr>();
+			auto is = ctor->getFunctionType();
+			auto params = is->getParameterTypeList();
+
+			TypeList paramTypes;
+			if (params.size() == 0) {
+				//generic check should handle this case
+				return res;
+			}
+			paramTypes.push_back(thisType);
+			paramTypes.insert(paramTypes.end(), ++(params.begin()), params.end());
+
+			auto expected = builder.functionType(paramTypes, thisType, FK_CONSTRUCTOR);
+
+			if (*expected != *is) {
+				add(res, Message(address, EC_TYPE_INVALID_CONSTRUCTOR_TYPE, format("Invalid constructor type: %s - expected: %s", *is, *expected), Message::ERROR));
+			}
+		}
+
+		return res;
+	}
+
 	OptionalMessageList DestructorTypeCheck::visitTagTypeBinding(const TagTypeBindingAddress& address) {
 		OptionalMessageList res;
 

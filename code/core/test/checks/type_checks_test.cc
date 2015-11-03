@@ -348,6 +348,30 @@ namespace checks {
 		EXPECT_PRED2(containsMSG, check(err4), Message(NodeAddress(err4).getAddressOfChild(0,1,0,1,1,1,1,2,0), EC_TYPE_FREE_TAG_TYPE_REFERENCE, "", Message::ERROR));
 	}
 
+	TEST(ConstructorTypeCheck, Basic) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		//create structs with correct constructors
+		auto ok1 = builder.parseType("struct A { ctor () {} }");
+		auto ok2 = builder.parseType("struct A { ctor (a : int<4>) {} }");
+		auto ok3 = builder.parseType("struct A { ctor (a : int<4>, b : int<4>) {} }");
+
+		EXPECT_TRUE(check(ok1).empty()) << check(ok1);
+		EXPECT_TRUE(check(ok2).empty()) << check(ok2);
+		EXPECT_TRUE(check(ok3).empty()) << check(ok3);
+
+		{
+			//create a custom constructor of the wrong type
+			TypePtr thisType = builder.refType(builder.tagTypeReference("A"));
+			auto functionType = builder.functionType(toVector(thisType), thisType, FK_PLAIN);
+			auto ctor = builder.lambdaExpr(functionType, toVector(builder.variable(builder.refType(thisType))), builder.getNoOp());
+			auto err = builder.structType("A", ParentList(), FieldList(), toVector(ctor.as<ExpressionPtr>()), builder.getDefaultDestructor("A"), false, MemberFunctionList(), PureVirtualMemberFunctionList());
+
+			EXPECT_PRED2(containsMSG, check(err), Message(NodeAddress(err).getAddressOfChild(1,0), EC_TYPE_INVALID_CONSTRUCTOR_TYPE, "", Message::ERROR));
+		}
+	}
+
 	TEST(DestructorTypeCheck, Basic) {
 		NodeManager manager;
 		IRBuilder builder(manager);
