@@ -377,8 +377,8 @@ namespace parser {
 			return builder.functionType(params, retType, fk);
 		}
 
-		TypePtr InspireDriver::genRecordType(const location& l, const NodeType& type, const string& name, const ParentList& parents, const FieldList& fields, const ExpressionList& ctors,
-				const ExpressionPtr& dtorIn, const MemberFunctionList& mfuns, const PureVirtualMemberFunctionList& pvmfuns) {
+		TypePtr InspireDriver::genRecordType(const location& l, const NodeType& type, const string& name, const ParentList& parents, const FieldList& fields, const ExpressionList& ctorsIn,
+				const ExpressionPtr& dtorIn, const MemberFunctionList& mfunsIn, const PureVirtualMemberFunctionList& pvmfuns) {
 
 			//check if this type has already been defined before
 			const GenericTypePtr key = builder.genericType(name);
@@ -390,17 +390,55 @@ namespace parser {
 			//check for duplicate member function names
 			//TODO remove this restriction
 			std::set<std::string> memberFunctionNames;
-			for_each(mfuns, [&](const MemberFunctionPtr& fun) { memberFunctionNames.insert(fun->getName()->getValue()); });
+			for_each(mfunsIn, [&](const MemberFunctionPtr& fun) { memberFunctionNames.insert(fun->getName()->getValue()); });
 			for_each(pvmfuns, [&](const PureVirtualMemberFunctionPtr& fun) { memberFunctionNames.insert(fun->getName()->getValue()); });
-			if (memberFunctionNames.size() != mfuns.size() + pvmfuns.size()) {
+			if (memberFunctionNames.size() != mfunsIn.size() + pvmfuns.size()) {
 				error(l, "Duplicate member function names detected");
 				return nullptr;
 			}
 
 			TagTypePtr res;
 
-			// check whether a default constructor is required
+			//check whether the created record is trivial
+			bool isTrivial = true;
+
+			auto defaultName = builder.stringValue(name);
+			auto defaultParents = builder.parents(parents);
+			auto defaultFields = builder.fields(fields);
+			auto defaultCopyAssignment = builder.getDefaultCopyAssignOperator(defaultName, defaultParents, defaultFields);
+			auto defaultMoveAssignment = builder.getDefaultMoveAssignOperator(defaultName, defaultParents, defaultFields);
+
+			if (!ctorsIn.empty() || dtorIn) {
+				isTrivial = false;
+			}
+			for (const auto& member : mfunsIn) {
+				if (member == defaultCopyAssignment || member == defaultMoveAssignment) {
+					isTrivial = false;
+				}
+			}
+
+			//if it is, we add all the default constructs
+			ExpressionList ctors = ctorsIn;
 			ExpressionPtr dtor = dtorIn;
+			MemberFunctionList mfuns = mfunsIn;
+
+			if (isTrivial) {
+				//constructors
+				ctors = ExpressionList();
+				ctors.push_back(builder.getDefaultConstructor(defaultName, defaultParents, defaultFields));
+				ctors.push_back(builder.getDefaultCopyConstructor(defaultName, defaultParents, defaultFields));
+				ctors.push_back(builder.getDefaultMoveConstructor(defaultName, defaultParents, defaultFields));
+
+				//destructor
+				auto defaultDtor = builder.getDefaultDestructor(name);
+				auto dtorSymbol = builder.literal("dtor", defaultDtor->getType());
+				tu.addFunction(dtorSymbol, defaultDtor);
+				dtor = dtorSymbol;
+
+				//members
+				mfuns.push_back(builder.getDefaultCopyAssignOperator(defaultName, defaultParents, defaultFields));
+				mfuns.push_back(builder.getDefaultMoveAssignOperator(defaultName, defaultParents, defaultFields));
+			}
 
 			// create default destructor if necessary
 			if (!dtor) {
