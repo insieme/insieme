@@ -457,7 +457,7 @@ namespace core {
 		auto thisParam = variable(refType(thisType));
 		auto res = returnStmt(lang::buildRefCast(deref(thisParam),resType));
 		auto fun = normalize(lambdaExpr(funType, toVector(thisParam, variable(refType(otherType))), res)).as<LambdaExprPtr>();
-		return memberFunction(false, "operator=", fun);
+		return memberFunction(false, "operator_assign", fun);
 	}
 
 	MemberFunctionPtr IRBuilderBaseModule::getDefaultMoveAssignOperator(const StringValuePtr& recordName, const ParentsPtr& parents, const FieldsPtr& fields) const {
@@ -468,7 +468,7 @@ namespace core {
 		auto thisParam = variable(refType(thisType));
 		auto res = returnStmt(lang::buildRefCast(deref(thisParam),resType));
 		auto fun = normalize(lambdaExpr(ctorType, toVector(thisParam, variable(refType(otherType))), res)).as<LambdaExprPtr>();
-		return memberFunction(false, "operator=", fun);
+		return memberFunction(false, "operator_assign", fun);
 	}
 
 	FieldPtr IRBuilderBaseModule::field(const string& name, const TypePtr& type) const {
