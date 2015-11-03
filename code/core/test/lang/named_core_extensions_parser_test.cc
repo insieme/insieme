@@ -64,7 +64,8 @@ namespace lang {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
-		EXPECT_EQ("AP(struct _ir_complex {rel:'a,img:'a,dtor()} v0 = undefined(type<struct _ir_complex {rel:'a,img:'a,dtor()}>))",
+		EXPECT_EQ("AP(struct _ir_complex {rel:'a,img:'a,ctor(),ctor(ref<^_ir_complex,t,f,cpp_ref>),ctor(ref<^_ir_complex,f,f,cpp_rref>),dtor(),operator_assign(ref<^_ir_complex,t,f,cpp_ref>)->ref<^_ir_complex,f,f,cpp_ref>,operator_assign(ref<^_ir_complex,f,f,cpp_rref>)->ref<^_ir_complex,f,f,cpp_ref>}"
+		          " v0 = undefined(type<struct _ir_complex {rel:'a,img:'a,ctor(),ctor(ref<^_ir_complex,t,f,cpp_ref>),ctor(ref<^_ir_complex,f,f,cpp_rref>),dtor(),operator_assign(ref<^_ir_complex,t,f,cpp_ref>)->ref<^_ir_complex,f,f,cpp_ref>,operator_assign(ref<^_ir_complex,f,f,cpp_rref>)->ref<^_ir_complex,f,f,cpp_ref>}>))",
 		          toString(builder.normalize(parser::parseStmt(manager, "using \"ext.complex\"; auto a = undefined(complex);"))));
 	}
 
@@ -73,8 +74,10 @@ namespace lang {
 		IRBuilder builder(manager);
 
 		// both instances of type complex should be expanded
-		EXPECT_EQ("AP({struct _ir_complex {rel:'a,img:'a,dtor()} v0 = undefined(type<struct _ir_complex {rel:'a,img:'a,dtor()}>); struct _ir_complex {rel:'a,img:'a,dtor()} v1 = "
-		          "undefined(type<struct _ir_complex {rel:'a,img:'a,dtor()}>);})",
+		EXPECT_EQ("AP({struct _ir_complex {rel:'a,img:'a,ctor(),ctor(ref<^_ir_complex,t,f,cpp_ref>),ctor(ref<^_ir_complex,f,f,cpp_rref>),dtor(),operator_assign(ref<^_ir_complex,t,f,cpp_ref>)->ref<^_ir_complex,f,f,cpp_ref>,operator_assign(ref<^_ir_complex,f,f,cpp_rref>)->ref<^_ir_complex,f,f,cpp_ref>}"
+		          " v0 = undefined(type<struct _ir_complex {rel:'a,img:'a,ctor(),ctor(ref<^_ir_complex,t,f,cpp_ref>),ctor(ref<^_ir_complex,f,f,cpp_rref>),dtor(),operator_assign(ref<^_ir_complex,t,f,cpp_ref>)->ref<^_ir_complex,f,f,cpp_ref>,operator_assign(ref<^_ir_complex,f,f,cpp_rref>)->ref<^_ir_complex,f,f,cpp_ref>}>);"
+		          " struct _ir_complex {rel:'a,img:'a,ctor(),ctor(ref<^_ir_complex,t,f,cpp_ref>),ctor(ref<^_ir_complex,f,f,cpp_rref>),dtor(),operator_assign(ref<^_ir_complex,t,f,cpp_ref>)->ref<^_ir_complex,f,f,cpp_ref>,operator_assign(ref<^_ir_complex,f,f,cpp_rref>)->ref<^_ir_complex,f,f,cpp_ref>}"
+		          " v1 = undefined(type<struct _ir_complex {rel:'a,img:'a,ctor(),ctor(ref<^_ir_complex,t,f,cpp_ref>),ctor(ref<^_ir_complex,f,f,cpp_rref>),dtor(),operator_assign(ref<^_ir_complex,t,f,cpp_ref>)->ref<^_ir_complex,f,f,cpp_ref>,operator_assign(ref<^_ir_complex,f,f,cpp_rref>)->ref<^_ir_complex,f,f,cpp_ref>}>);})",
 		          toString(builder.normalize(parser::parseStmt(manager, "using \"ext.complex\"; { auto a = undefined(complex); auto b = undefined(complex); }"))));
 	}
 
@@ -83,8 +86,10 @@ namespace lang {
 		IRBuilder builder(manager);
 
 		// the nested instance of complex should also be expanded
-		EXPECT_EQ("AP({struct _ir_complex {rel:'a,img:'a,dtor()} v0 = undefined(type<struct _ir_complex {rel:'a,img:'a,dtor()}>); {struct _ir_complex {rel:'a,img:'a,dtor()} v1 = "
-		          "undefined(type<struct _ir_complex {rel:'a,img:'a,dtor()}>);};})",
+		EXPECT_EQ("AP({struct _ir_complex {rel:'a,img:'a,ctor(),ctor(ref<^_ir_complex,t,f,cpp_ref>),ctor(ref<^_ir_complex,f,f,cpp_rref>),dtor(),operator_assign(ref<^_ir_complex,t,f,cpp_ref>)->ref<^_ir_complex,f,f,cpp_ref>,operator_assign(ref<^_ir_complex,f,f,cpp_rref>)->ref<^_ir_complex,f,f,cpp_ref>}"
+		          " v0 = undefined(type<struct _ir_complex {rel:'a,img:'a,ctor(),ctor(ref<^_ir_complex,t,f,cpp_ref>),ctor(ref<^_ir_complex,f,f,cpp_rref>),dtor(),operator_assign(ref<^_ir_complex,t,f,cpp_ref>)->ref<^_ir_complex,f,f,cpp_ref>,operator_assign(ref<^_ir_complex,f,f,cpp_rref>)->ref<^_ir_complex,f,f,cpp_ref>}>);"
+		          " {struct _ir_complex {rel:'a,img:'a,ctor(),ctor(ref<^_ir_complex,t,f,cpp_ref>),ctor(ref<^_ir_complex,f,f,cpp_rref>),dtor(),operator_assign(ref<^_ir_complex,t,f,cpp_ref>)->ref<^_ir_complex,f,f,cpp_ref>,operator_assign(ref<^_ir_complex,f,f,cpp_rref>)->ref<^_ir_complex,f,f,cpp_ref>}"
+		          " v1 = undefined(type<struct _ir_complex {rel:'a,img:'a,ctor(),ctor(ref<^_ir_complex,t,f,cpp_ref>),ctor(ref<^_ir_complex,f,f,cpp_rref>),dtor(),operator_assign(ref<^_ir_complex,t,f,cpp_ref>)->ref<^_ir_complex,f,f,cpp_ref>,operator_assign(ref<^_ir_complex,f,f,cpp_rref>)->ref<^_ir_complex,f,f,cpp_ref>}>);};})",
 		          toString(builder.normalize(parser::parseStmt(manager, "using \"ext.complex\"; { auto a = undefined(complex); { auto b = undefined(complex); }}"))));
 	}
 
@@ -93,8 +98,10 @@ namespace lang {
 		IRBuilder builder(manager);
 
 		// both named extensions should be expanded
-		EXPECT_EQ("AP({((struct enum {enum_type:'a,value:'b,dtor()})->'b) v0 = rec v0.{v0=fun(ref<struct enum {enum_type:'a,value:'b,dtor()},f,f,plain> v1) {return composite_member_access("
-		          "ref_deref(v1), value, type<'b>);}}; struct _ir_complex {rel:'a,img:'a,dtor()} v1 = undefined(type<struct _ir_complex {rel:'a,img:'a,dtor()}>);})",
+		EXPECT_EQ("AP({((struct enum {enum_type:'a,value:'b,ctor(),ctor(ref<^enum,t,f,cpp_ref>),ctor(ref<^enum,f,f,cpp_rref>),dtor(),operator_assign(ref<^enum,t,f,cpp_ref>)->ref<^enum,f,f,cpp_ref>,operator_assign(ref<^enum,f,f,cpp_rref>)->ref<^enum,f,f,cpp_ref>})->'b)"
+		          " v0 = rec v0.{v0=fun(ref<struct enum {enum_type:'a,value:'b,ctor(),ctor(ref<^enum,t,f,cpp_ref>),ctor(ref<^enum,f,f,cpp_rref>),dtor(),operator_assign(ref<^enum,t,f,cpp_ref>)->ref<^enum,f,f,cpp_ref>,operator_assign(ref<^enum,f,f,cpp_rref>)->ref<^enum,f,f,cpp_ref>},f,f,plain> v1) {return composite_member_access(ref_deref(v1), value, type<'b>);}};"
+		          " struct _ir_complex {rel:'a,img:'a,ctor(),ctor(ref<^_ir_complex,t,f,cpp_ref>),ctor(ref<^_ir_complex,f,f,cpp_rref>),dtor(),operator_assign(ref<^_ir_complex,t,f,cpp_ref>)->ref<^_ir_complex,f,f,cpp_ref>,operator_assign(ref<^_ir_complex,f,f,cpp_rref>)->ref<^_ir_complex,f,f,cpp_ref>}"
+		          " v1 = undefined(type<struct _ir_complex {rel:'a,img:'a,ctor(),ctor(ref<^_ir_complex,t,f,cpp_ref>),ctor(ref<^_ir_complex,f,f,cpp_rref>),dtor(),operator_assign(ref<^_ir_complex,t,f,cpp_ref>)->ref<^_ir_complex,f,f,cpp_ref>,operator_assign(ref<^_ir_complex,f,f,cpp_rref>)->ref<^_ir_complex,f,f,cpp_ref>}>);})",
 		          toString(builder.normalize(
 		              parser::parseStmt(manager, "using \"ext.complex\"; using \"ext.enum\"; { auto a = enum_to_int; auto b = undefined(complex); }"))));
 	}
@@ -118,7 +125,8 @@ namespace lang {
 		const auto& typeAlises = manager.getLangExtension<NamedCoreExtensionParserTestExtension>().getTypeAliases();
 
 		// As I passed the extension with the name "complex" already defined this should be expanded
-		EXPECT_EQ("AP(struct {foo:NamedType,dtor()} v0 = undefined(type<struct {foo:NamedType,dtor()}>))",
+		EXPECT_EQ("AP(struct {foo:NamedType,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}"
+		          " v0 = undefined(type<struct {foo:NamedType,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}>))",
 		          toString(builder.normalize(parser::parseStmt(manager, "auto a = undefined(complex);", false, existingNames, typeAlises))));
 
 		// inside of a compound stmt we shadow previous declarations
