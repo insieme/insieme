@@ -36,9 +36,11 @@
 
 #include "insieme/frontend/type_converter.h"
 
+#include "insieme/frontend/decl_converter.h"
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/name_manager.h"
 #include "insieme/frontend/utils/macros.h"
+#include "insieme/frontend/state/record_manager.h"
 
 #include "insieme/utils/numeric_cast.h"
 #include "insieme/utils/container_utils.h"
@@ -73,47 +75,58 @@ namespace conversion {
 	//					TAG TYPE: STRUCT | UNION | CLASS | ENUM
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::TypePtr Converter::CXXTypeConverter::VisitTagType(const TagType* tagType) {
-		VLOG(2) << "VisitTagType " << tagType << std::endl;
-		// base conversion
-		core::TypePtr ty = TypeConverter::VisitTagType(tagType);
-		LOG_TYPE_CONVERSION(tagType, ty);
-
-		// if not a struct type we don't need to do anything more
-		if(!ty.isa<core::TagTypePtr>()) { return ty; }
-
-		core::TagTypePtr classType = ty.as<core::TagTypePtr>();
-
-		// for C++ classes/structs, we need to add members and parents
-		const clang::CXXRecordDecl* classDecl = llvm::dyn_cast_or_null<clang::CXXRecordDecl>(tagType->getDecl());
-		if(!classDecl || !classDecl->getDefinition()) { return classType; }
-
-		//~~~~~ base classes if any ~~~~~
-		if(classDecl->getNumBases() > 0) {
-			std::vector<core::ParentPtr> parents;
-
-			clang::CXXRecordDecl::base_class_const_iterator it = classDecl->bases_begin();
-			for(; it != classDecl->bases_end(); it++) {
-				// visit the parent to build its type
-				auto parentIrType = convert((it)->getType());
-				parents.push_back(builder.parent(it->isVirtual(), parentIrType));
+		VLOG(2) << "CXXTypeConverter::VisitTagType " << tagType << std::endl;
+		
+		// first, try lookup
+		if(auto clangRecTy = llvm::dyn_cast<RecordType>(tagType)) {
+			if(converter.getRecordMan()->contains(clangRecTy->getDecl())) {
+				return converter.getRecordMan()->lookup(clangRecTy->getDecl());
 			}
-
-			// if we have base classes, update the classType
-			assert(classType.isa<core::TagTypePtr>());
-
-			// implant new parents list
-			classType =
-				core::transform::replaceNode(mgr, core::TagTypeAddress(classType)->getStruct()->getParents(), builder.parents(parents)).as<core::TagTypePtr>();
 		}
 
-		//		//update name of class type
-		//		classType = core::transform::replaceNode(mgr,
-		//												 core::StructTypeAddress(classType)->getName(),
-		//												 builder.stringValue(classDecl->getNameAsString())).as<core::StructTypePtr>();
+		// base conversion
+		core::TypePtr retTy = TypeConverter::VisitTagType(tagType);
+		LOG_TYPE_CONVERSION(tagType, retTy);
 
-		// if classDecl has a name add it
-		if(!classDecl->getNameAsString().empty()) { core::annotations::attachName(classType, classDecl->getNameAsString()); }
-		return classType;
+		// if not a GenericType mapping to a TagType (generated for struct type) we don't need to do anything more
+		auto genTy = retTy.isa<core::GenericTypePtr>();
+		if(!genTy) return retTy;
+		auto& tuTypes = converter.getIRTranslationUnit().getTypes();
+		auto irTuIt = tuTypes.find(genTy);
+		if(irTuIt == tuTypes.end()) return retTy;
+		retTy = irTuIt->second;
+		
+		// for C++ classes/structs, we need to add members and parents
+		const clang::CXXRecordDecl* classDecl = llvm::dyn_cast_or_null<clang::CXXRecordDecl>(tagType->getDecl());
+		if(!classDecl || !classDecl->getDefinition()) { return genTy; }
+
+		// add parents if any
+		if(classDecl->getNumBases() > 0) {
+			std::vector<core::ParentPtr> parents;
+			for(auto base : classDecl->bases()) {
+				// visit the parent to build its type
+				auto parentIrType = convert(base.getType());
+				parents.push_back(builder.parent(base.isVirtual(), parentIrType));
+			}
+			retTy = core::transform::replaceNode(mgr, core::TagTypeAddress(retTy.as<core::TagTypePtr>())->getStruct()->getParents(), builder.parents(parents))
+				        .as<core::TagTypePtr>();
+		}
+
+		// add methods
+		std::vector<core::MemberFunctionPtr> members;
+		for(auto mem : classDecl->methods()) {
+			if(mem->isVirtual() && mem->isPure()) continue;
+			auto memFun = converter.getDeclConverter()->convertMethodDecl(mem);
+			members.push_back(memFun);
+		}
+		VLOG(2) << " - Members: " << members;
+		retTy = core::transform::replaceNode(mgr, core::TagTypeAddress(retTy.as<core::TagTypePtr>())->getRecord()->getMemberFunctions(),
+			                                 builder.memberFunctions(members)).as<core::TagTypePtr>();
+
+		// update associated type in irTu
+		converter.getIRTranslationUnit().replaceType(genTy, retTy.as<core::TagTypePtr>());
+
+		return genTy;
 	}
 	
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
