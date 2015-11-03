@@ -372,6 +372,27 @@ namespace checks {
 		}
 	}
 
+	TEST(DuplicateConstructorTypeCheck, Basic) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		//correct constructors
+		auto ok1 = builder.parseType("struct A { ctor () {} }");
+		auto ok2 = builder.parseType("struct A { ctor (a : int<4>) {} }");
+		auto ok3 = builder.parseType("struct A { ctor (a : int<4>, b : int<4>) {} }");
+
+		EXPECT_TRUE(check(ok1).empty()) << check(ok1);
+		EXPECT_TRUE(check(ok2).empty()) << check(ok2);
+		EXPECT_TRUE(check(ok3).empty()) << check(ok3);
+
+		//duplicate constructor types
+		auto err1 = builder.parseType("struct A { ctor () {} ctor () {} }");
+		auto err2 = builder.parseType("struct A { ctor (a : int<4>) {} ctor (b : int<4>) {} }");
+
+		EXPECT_PRED2(containsMSG, check(err1), Message(NodeAddress(err1).getAddressOfChild(1,0), EC_TYPE_DUPLICATE_CONSTRUCTOR_TYPE, "", Message::ERROR));
+		EXPECT_PRED2(containsMSG, check(err2), Message(NodeAddress(err2).getAddressOfChild(1,0), EC_TYPE_DUPLICATE_CONSTRUCTOR_TYPE, "", Message::ERROR));
+	}
+
 	TEST(DestructorTypeCheck, Basic) {
 		NodeManager manager;
 		IRBuilder builder(manager);

@@ -53,6 +53,7 @@ namespace checks {
 	SIMPLE_CHECK(TagTypeFields, TagType, true);
 
 	SIMPLE_CHECK(ConstructorType, TagTypeBinding, true);
+	SIMPLE_CHECK(DuplicateConstructorType, TagTypeBinding, true);
 	SIMPLE_CHECK(DestructorType, TagTypeBinding, true);
 
 	SIMPLE_CHECK(CallExprType, CallExpr, false);

@@ -77,6 +77,7 @@ namespace checks {
 			context_free_checks.push_back(make_check<GenericOpsCheck>());
 
 			context_free_checks.push_back(make_check<ConstructorTypeCheck>());
+			context_free_checks.push_back(make_check<DuplicateConstructorTypeCheck>());
 			context_free_checks.push_back(make_check<DestructorTypeCheck>());
 
 			context_free_checks.push_back(make_check<UndeclaredVariableCheck>());

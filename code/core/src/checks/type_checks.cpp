@@ -315,6 +315,25 @@ namespace checks {
 		return res;
 	}
 
+	OptionalMessageList DuplicateConstructorTypeCheck::visitTagTypeBinding(const TagTypeBindingAddress& address) {
+		OptionalMessageList res;
+
+		NodeManager& mgr = address->getNodeManager();
+		IRBuilder builder(mgr);
+
+		std::set<FunctionTypePtr> constructorTypes;
+		for (const auto& ctor : address->getRecord()->getConstructors()) {
+			const auto& type = ctor.getAddressedNode().as<LambdaExprPtr>()->getFunctionType();
+			auto inserted = constructorTypes.insert(type);
+
+			if (!inserted.second) {
+				add(res, Message(address, EC_TYPE_DUPLICATE_CONSTRUCTOR_TYPE, format("Duplicate constructor type: %s", *type), Message::ERROR));
+			}
+		}
+
+		return res;
+	}
+
 	OptionalMessageList DestructorTypeCheck::visitTagTypeBinding(const TagTypeBindingAddress& address) {
 		OptionalMessageList res;
 
