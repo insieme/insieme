@@ -45,7 +45,7 @@
 #include "insieme/core/forward_decls.h"
 #include "insieme/core/ir_program.h"
 
-#include "insieme/frontend/tu/ir_translation_unit.h"
+#include "insieme/core/tu/ir_translation_unit.h"
 #include "insieme/frontend/extensions/frontend_extension.h"
 #include "insieme/frontend/extensions/frontend_cleanup_extension.h"
 
@@ -397,7 +397,7 @@ namespace frontend {
 		/**
 		 * Extra libraries to be considered for the conversion.
 		 */
-		vector<tu::IRTranslationUnit> libs;
+		vector<core::tu::IRTranslationUnit> libs;
 
 		/**
 		 * A vector of pairs. Each pair contains a frontend extension pointer and a
@@ -458,21 +458,21 @@ namespace frontend {
 		/**
 		 * Obtains a reference to the libs to be considered by this conversion job.
 		 */
-		const vector<tu::IRTranslationUnit>& getLibs() const {
+		const vector<core::tu::IRTranslationUnit>& getLibs() const {
 			return libs;
 		}
 
 		/**
 		 * Sets the libs to be considered by this conversion job.
 		 */
-		void setLibs(const vector<tu::IRTranslationUnit>& libs) {
+		void setLibs(const vector<core::tu::IRTranslationUnit>& libs) {
 			this->libs = libs;
 		}
 
 		/**
 		 * Appends a library to the list of libraries considered by this conversion job.
 		 */
-		void addLib(const tu::IRTranslationUnit& unit) {
+		void addLib(const core::tu::IRTranslationUnit& unit) {
 			libs.push_back(unit);
 		}
 
@@ -509,7 +509,7 @@ namespace frontend {
 		 * @return the resulting, converted program
 		 * @throws an exception if the conversion fails.
 		 */
-		tu::IRTranslationUnit toIRTranslationUnit(core::NodeManager& manager);
+		core::tu::IRTranslationUnit toIRTranslationUnit(core::NodeManager& manager);
 
 		/**
 		 *

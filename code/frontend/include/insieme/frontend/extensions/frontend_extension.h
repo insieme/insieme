@@ -51,6 +51,11 @@
 #include <boost/filesystem/path.hpp>
 
 namespace insieme {
+namespace core {
+namespace tu {
+	class IRTranslationUnit;
+}
+}
 namespace frontend {
 
 namespace stmtutils {
@@ -60,10 +65,6 @@ namespace stmtutils {
 namespace pragma {
 	class MatchObject;
 	struct node;
-}
-
-namespace tu {
-	class IRTranslationUnit;
 }
 
 namespace conversion {
@@ -347,7 +348,7 @@ namespace extensions {
 		 *  @param tu insieme translation unit
 		 *  @return modified insieme translation unit. If tu is returned no modification is done
 		 */
-		virtual insieme::frontend::tu::IRTranslationUnit IRVisit(insieme::frontend::tu::IRTranslationUnit& tu);
+		virtual core::tu::IRTranslationUnit IRVisit(core::tu::IRTranslationUnit& tu);
 
 		/*****************PRAGMA HANDLING*****************/
 		/**

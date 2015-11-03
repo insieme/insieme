@@ -1,0 +1,48 @@
+
+alias int = int<4>;
+
+def struct Counter {
+
+	value : int;
+	
+	lambda reset : ()->unit {
+		value = 0;
+	}
+	
+	lambda inc : ()->int {
+		value = value + 1;
+		return *value;
+	}
+	
+	lambda dec : ()->int {
+		value = value - 1;
+		return *value;
+	}
+	
+	lambda get : ()->int {
+		return *value;
+	}
+	
+	lambda set : (x : int)->unit {
+		value = x;
+	}
+	
+	lambda p : ()-> unit {
+		print("%d\n", get());
+	}
+};
+
+int main() {
+	var ref<Counter> c;
+	c->reset();
+	c->p();
+	c->inc();
+	c->p();
+	c->inc();
+	c->p();
+	c->dec();
+	c->p();
+	c->set(14);
+	c->p();
+	return 0;
+}

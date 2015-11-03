@@ -175,7 +175,7 @@ namespace extensions {
 		return prog;
 	}
 
-	insieme::frontend::tu::IRTranslationUnit FrontendExtension::IRVisit(insieme::frontend::tu::IRTranslationUnit& tu) {
+	core::tu::IRTranslationUnit FrontendExtension::IRVisit(core::tu::IRTranslationUnit& tu) {
 		return tu;
 	}
 

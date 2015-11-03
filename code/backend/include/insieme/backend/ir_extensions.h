@@ -80,7 +80,7 @@ namespace backend {
 		 * An operator marking the initial initialization of global values - those will be turned into
 		 * initial values at the definition of global variables.
 		 */
-		LANG_EXT_DERIVED(InitGlobal, "lambda (ref<'a,f,'v> g, 'a v)->unit { g=v; }");
+		LANG_EXT_DERIVED(InitGlobal, "(g : ref<'a,f,'v>, v : 'a)->unit { g=v; }");
 	};
 
 

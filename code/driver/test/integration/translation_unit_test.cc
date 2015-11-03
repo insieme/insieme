@@ -39,7 +39,7 @@
 #include <cstdio>
 
 #include "insieme/frontend/frontend.h"
-#include "insieme/frontend/tu/ir_translation_unit.h"
+#include "insieme/core/tu/ir_translation_unit.h"
 
 #include "insieme/core/ir_node.h"
 #include "insieme/core/analysis/ir++_utils.h"
@@ -95,7 +95,7 @@ namespace insieme {
 		{
 			core::NodeManager tmpManager;
 			// load program and create IR TU
-			frontend::tu::IRTranslationUnit code = testCase.loadTU(tmpManager);
+			core::tu::IRTranslationUnit code = testCase.loadTU(tmpManager);
 			char tmpname[] = "tmp.XXXXXX";
 			int src = mkstemp(tmpname);
 			assert_ne(src, -1);

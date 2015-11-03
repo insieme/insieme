@@ -93,7 +93,7 @@ using namespace insieme;
 namespace insieme {
 namespace frontend {
 	// ----------- conversion -----------
-	tu::IRTranslationUnit convert(core::NodeManager& manager, const path& unit, const ConversionSetup& setup) {
+	core::tu::IRTranslationUnit convert(core::NodeManager& manager, const path& unit, const ConversionSetup& setup) {
 		// just delegate operation to converter
 		TranslationUnit tu(manager, unit, setup);
 		conversion::Converter c(manager, tu, setup);
@@ -170,7 +170,7 @@ namespace conversion {
 		}
 	}
 
-	tu::IRTranslationUnit Converter::convert() {
+	core::tu::IRTranslationUnit Converter::convert() {
 		assert_true(getCompiler().getASTContext().getTranslationUnitDecl());
 	
 		// collect all type definitions

@@ -274,22 +274,22 @@ namespace types {
 		std::map<string, NodePtr> symbols;
 
 		// create a type hierarchy
-		TypePtr A = builder.parseType("struct { int<4> a; }");
+		TypePtr A = builder.parseType("struct { a : int<4>; }");
 		symbols["A"] = A;
 
-		TypePtr B = builder.parseType("struct : [ A ] { int<4> b; }", symbols);
+		TypePtr B = builder.parseType("struct B : [ A ] { b : int<4>; }", symbols);
 		symbols["B"] = B;
 
-		TypePtr C = builder.parseType("struct : [ B ] { int<4> c; }", symbols);
+		TypePtr C = builder.parseType("struct C : [ B ] { c : int<4>; }", symbols);
 		symbols["C"] = C;
 
 		TypePtr D = builder.parseType("D");
 		symbols["D"] = D;
 
-		TypePtr E = builder.parseType("E <> : [ D ]", symbols);
+		TypePtr E = builder.parseType("E : [ D ]", symbols);
 		symbols["E"] = E;
 
-		TypePtr F = builder.parseType("F <> : [ B, E ]", symbols);
+		TypePtr F = builder.parseType("F : [ B, E ]", symbols);
 
 		/*
 		std::cout << "A: " << A << std::endl;
@@ -386,7 +386,7 @@ namespace types {
 		IRBuilder builder(mgr);
 
 		// create a recursive type
-		auto type = builder.parseType("let t = struct { A a; ref<t> next; }; t").as<TagTypePtr>();
+		auto type = builder.parseType("decl struct A; def struct A { a : A; next : ref<t>; }; A").as<TagTypePtr>();
 		EXPECT_TRUE(type);
 
 		EXPECT_PRED2(isSubTypeOf, type, type);
@@ -395,7 +395,7 @@ namespace types {
 
 
 		// also a mutual recursive type
-		type = builder.parseType("let t,s = struct { A a; ref<s> next; }, struct { B b; ref<t> next; }; t").as<TagTypePtr>();
+		type = builder.parseType("decl struct t; decl struct s; def struct t { a : A; next : ref<s>; }; def struct s { b : B; next : ref<t>; }; t").as<TagTypePtr>();
 		EXPECT_TRUE(type);
 
 		EXPECT_PRED2(isSubTypeOf, type, type);
@@ -409,9 +409,9 @@ namespace types {
 		IRBuilder builder(mgr);
 
 		// create a recursive type
-		auto baseType = builder.parseType("struct { A a; }");
+		auto baseType = builder.parseType("struct s { a : A; }");
 
-		auto type = builder.parseType("let t, s = struct : [ s ] { B b; ref<t> next; }, struct { A a; }; t").as<TagTypePtr>();
+		auto type = builder.parseType("decl struct t; decl struct s; def struct t : [ s ] { b : B; next : ref<t>; }; def struct s { a : A; }; t").as<TagTypePtr>();
 
 		EXPECT_EQ(type->getStruct()->getParents()[0]->getType(), baseType);
 		EXPECT_EQ(type->peel()->getStruct()->getParents()[0]->getType(), baseType);
@@ -424,8 +424,8 @@ namespace types {
 		EXPECT_PRED2(isSubTypeOf, type->peel(), baseType);
 
 		// also a mutual recursive type where one is the base of the other
-		auto typeA = builder.parseType("let t,s = struct : [s] { A a; ref<s> next; }, struct { B b; ref<t> next; }; t").as<TagTypePtr>();
-		auto typeB = builder.parseType("let t,s = struct : [s] { A a; ref<s> next; }, struct { B b; ref<t> next; }; s").as<TagTypePtr>();
+		auto typeA = builder.parseType("decl struct t; decl struct s; def struct t : [s] { a : A; next : ref<s>; }; def struct s { b : B; next : ref<t>; }; t").as<TagTypePtr>();
+		auto typeB = builder.parseType("decl struct t; decl struct s; def struct t : [s] { a : A; next : ref<s>; }; def struct s { b : B; next : ref<t>; }; s").as<TagTypePtr>();
 
 		EXPECT_PRED2(isSubTypeOf, typeA, typeB);
 		EXPECT_PRED2(isNotSubTypeOf, typeB, typeA);

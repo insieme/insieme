@@ -130,7 +130,7 @@ namespace backend {
 
 		// create the lambda
 		core::LambdaExprPtr lambda = builder.parseExpr(
-				"lambda (real<4> a, bool b)->int<4> { return 12; }"
+				"(a: real<4>, b: bool)->int<4> { return 12; }"
 		).as<core::LambdaExprPtr>();
 
 		// obtain information
@@ -173,9 +173,10 @@ namespace backend {
 
 		// create the recursive
 		core::LambdaExprPtr lambda = builder.parseExpr(
-				"let even,odd = "
-				"	lambda (int<4> a)->bool { return odd(a); }, "
-				"	lambda (int<4> a)->bool { return even(a); }; "
+				"decl even : (int<4>)->bool;"
+				"decl odd  : (int<4>)->bool;"
+				"def even = (a : int<4>)->bool { return odd(a); }; "
+				"def odd  = (a : int<4>)->bool { return even(a); }; "
 				"even"
 		).as<core::LambdaExprPtr>();
 

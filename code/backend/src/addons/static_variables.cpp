@@ -47,6 +47,7 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_node_annotation.h"
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/lang/array.h"
 #include "insieme/core/lang/static_vars.h"
 #include "insieme/core/lang/reference.h"
 #include "insieme/core/transform/manipulation.h"

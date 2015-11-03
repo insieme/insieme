@@ -1,0 +1,8 @@
+
+alias int = int<4>;
+
+unit main() {
+	
+	var list<int> l = [1,2,3];
+	
+}

@@ -38,9 +38,16 @@
 
 #include "insieme/frontend/extensions/frontend_extension.h"
 
+
 using namespace insieme::frontend;
 
 namespace insieme {
+namespace core {
+namespace tu {
+	class IRTranslationUnit;
+}
+}
+
 namespace frontend {
 namespace extensions {
 
@@ -51,7 +58,7 @@ namespace extensions {
 	  public:
 		OmpFrontendExtension();
 		virtual flagHandler registerFlag(boost::program_options::options_description& options);
-		virtual insieme::frontend::tu::IRTranslationUnit IRVisit(insieme::frontend::tu::IRTranslationUnit& tu);
+		virtual core::tu::IRTranslationUnit IRVisit(core::tu::IRTranslationUnit& tu);
 	};
 
 } // end namespace extensions

@@ -537,7 +537,8 @@ namespace core {
 	 * all children of the node have to be bound to the same manager. This constraint
 	 * is automatically enforced by the node implementations.
 	 */
-	class NodeManager : public InstanceManager<Node, Pointer, move_annotation_on_clone> {
+	class NodeManager : public InstanceManager<Node, Pointer, move_annotation_on_clone>,
+						public NodeAnnotationAccessHelper<NodeManager> {
 		/**
 		 * The data type used to maintain language extensions. Language extensions
 		 * are collections of additional types and literals to be integrated within
@@ -547,6 +548,11 @@ namespace core {
 		 * since ownership is never leafing the object.
 		 */
 		typedef std::map<std::type_index, lang::Extension*> ExtensionMap;
+
+		/**
+		 * The container used to handle annotations.
+		 */
+		typedef utils::Annotatable<NodeAnnotation> annotation_container;
 
 		/**
 		 * A struct summarizing data managed by the root of a node manager hierarchy.
@@ -567,6 +573,11 @@ namespace core {
 			 * The store maintaining language extensions.
 			 */
 			ExtensionMap extensions;
+
+			/**
+			 * The store maintaining node manager annotations.
+			 */
+			const utils::Annotatable<NodeAnnotation> annotations;
 
 			/**
 			 * A static generator for generating IDs
@@ -614,7 +625,7 @@ namespace core {
 		 * Obtains a pointer to the base manager this manager is attached to or
 		 * Null if this manager is the root of the manager hierarchy.
 		 */
-		NodeManager* getBaseManager() {
+		NodeManager* getBaseManager() const {
 			return static_cast<NodeManager*>(InstanceManager<Node, Pointer, move_annotation_on_clone>::getBaseManager());
 		}
 
@@ -660,6 +671,15 @@ namespace core {
 		void setNextFreshID(unsigned value) {
 			data->idGenerator.setNext(value);
 		}
+
+		/**
+		 * Obtains a reference to the associated annotation container
+		 * of the root node manager.
+		 */
+		const annotation_container& getAnnotationContainer() const {
+			return getBaseManager() ? getBaseManager()->getAnnotationContainer() : data->annotations;
+		}
+
 	};
 
 	// **********************************************************************************

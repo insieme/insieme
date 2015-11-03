@@ -47,6 +47,8 @@
 #include <boost/optional.hpp>
 #include <boost/algorithm/string.hpp>
 
+#include "insieme/core/tu/ir_translation_unit.h"
+
 #include "insieme/utils/config.h"
 #include "insieme/utils/logging.h"
 #include "insieme/utils/string_utils.h"
@@ -55,7 +57,6 @@
 
 #include "insieme/driver/cmd/insiemecc_options.h"
 #include "insieme/driver/integration/test_step.h"
-#include "insieme/frontend/translation_unit.h"
 
 namespace insieme {
 namespace driver {
@@ -102,7 +103,7 @@ namespace integration {
 		return toJob(*this).execute(manager);
 	}
 
-	frontend::tu::IRTranslationUnit IntegrationTestCase::loadTU(core::NodeManager& manager) const {
+	core::tu::IRTranslationUnit IntegrationTestCase::loadTU(core::NodeManager& manager) const {
 		return toJob(*this).toIRTranslationUnit(manager);
 	}
 

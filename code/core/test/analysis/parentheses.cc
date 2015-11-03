@@ -35,6 +35,7 @@
  */
 
 #include <gtest/gtest.h>
+
 #include <iostream>
 
 #include "insieme/core/analysis/parentheses.h"
@@ -44,8 +45,7 @@
 #include "insieme/core/ir_expressions.h"
 #include "insieme/core/ir_address.h"
 #include "insieme/core/printer/pretty_printer.h"
-#include "insieme/core/parser3/ir_parser.h"
-
+#include "insieme/core/parser/ir_parser.h"
 
 namespace insieme {
 namespace core {
@@ -79,7 +79,7 @@ namespace analysis {
 				dumpColor(type);
 				return true;
 			} else {
-				std::cout << "Error: Euqality check gone wrong..." << std::endl;
+				std::cout << "Error: Equality check gone wrong..." << std::endl;
 				std::cout << "Input:    " << input << "[END]" << std::endl;
 				std::cout << "Printer:  " << printer << "[END]" << std::endl;
 				std::cout << "Expected: " << expected << "[END]" << std::endl;
@@ -189,11 +189,11 @@ TEST(Parentheses, BasicBitwiseOp) {
 
 	EXPECT_TRUE(checkParentheses(manager, "(true&false)", "(true&false)"));
 	EXPECT_TRUE(checkParentheses(manager, "(true|false)", "(true|false)"));
-	EXPECT_TRUE(checkParentheses(manager, "(true^false)", "(true^false)"));
+	EXPECT_TRUE(checkParentheses(manager, "(true ^ false)", "(true^false)"));
 	EXPECT_TRUE(checkParentheses(manager, "true&true|false", "true&true|false"));
-	EXPECT_TRUE(checkParentheses(manager, "false^false|false", "false^false|false"));
-	EXPECT_TRUE(checkParentheses(manager, "true^true&false", "true^true&false"));
-	EXPECT_TRUE(checkParentheses(manager, "true&true^false", "true&true^false"));
+	EXPECT_TRUE(checkParentheses(manager, "false ^ false|false", "false^false|false"));
+	EXPECT_TRUE(checkParentheses(manager, "true ^ true&false", "true^true&false"));
+	EXPECT_TRUE(checkParentheses(manager, "true&true ^ false", "true&true^false"));
 
 
 }

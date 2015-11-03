@@ -54,6 +54,7 @@
 #include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/types/subtyping.h"
+#include "insieme/core/lang/array.h"
 #include "insieme/core/lang/pointer.h"
 #include "insieme/core/lang/ir++_extension.h"
 #include "insieme/core/transform/node_replacer.h"

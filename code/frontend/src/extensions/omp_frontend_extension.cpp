@@ -40,6 +40,7 @@
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/tu/ir_translation_unit.h"
 
 #include "insieme/frontend/omp/omp_annotation.h"
 #include "insieme/frontend/omp/omp_sema.h"
@@ -702,7 +703,7 @@ namespace extensions {
 	 *  All thread_private variables are annotated with the threadprivate annotation and finally
 	 *  the omp sema is called.
 	 */
-	insieme::frontend::tu::IRTranslationUnit OmpFrontendExtension::IRVisit(insieme::frontend::tu::IRTranslationUnit& tu) {
+	core::tu::IRTranslationUnit OmpFrontendExtension::IRVisit(core::tu::IRTranslationUnit& tu) {
 		for(auto& pair : tu.getGlobals()) {
 			if(std::find(thread_privates.begin(), thread_privates.end(), pair.first) != thread_privates.end()) {
 				core::LiteralPtr lit = pair.first;

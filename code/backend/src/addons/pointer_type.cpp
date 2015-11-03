@@ -45,6 +45,7 @@
 #include "insieme/backend/statement_converter.h"
 
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/lang/array.h"
 #include "insieme/core/lang/pointer.h"
 #include "insieme/core/lang/reference.h"
 

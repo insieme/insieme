@@ -321,6 +321,7 @@ namespace lang {
 		const insieme::core::TypePtr& get##NAME() const {                                                                                                      \
 		    if(!type_##NAME) {                                                                                                                                 \
 				type_##NAME = getType(getNodeManager(), TYPE, getSymbols(), getTypeAliases());                                                                 \
+				assert_true(type_##NAME) << "Unable to parse IR for type " #NAME;                                                                            \
 				insieme::core::lang::markAsBuiltIn(type_##NAME);                                                                                               \
 			}                                                                                                                                                  \
 			return type_##NAME;                                                                                                                                \
@@ -362,6 +363,7 @@ namespace lang {
 		const insieme::core::LiteralPtr& get##NAME() const {                                                                                                   \
 		    if (!lit_##NAME) {                                                                                                                                 \
 				lit_##NAME = getLiteral(getNodeManager(), TYPE, VALUE, getSymbols(), getTypeAliases());                                                        \
+				assert_true(lit_##NAME) << "Unable to parse IR for literal " #NAME;                                                                          \
 				insieme::core::lang::markAsDerived(lit_##NAME, VALUE);                                                                                         \
 				insieme::core::lang::markAsBuiltIn(lit_##NAME);                                                                                                \
 			}                                                                                                                                                  \
@@ -404,7 +406,8 @@ namespace lang {
 	  public:                                                                                                                                                  \
 		const insieme::core::ExpressionPtr& get##NAME() const {                                                                                                \
 		    if (!expr_##NAME) {                                                                                                                                \
-		    	expr_##NAME = getExpression(getNodeManager(), SPEC, getSymbols(), getTypeAliases()); \
+				expr_##NAME = getExpression(getNodeManager(), SPEC, getSymbols(), getTypeAliases());                                                             \
+				assert_true(expr_##NAME) << "Unable to parse IR for derived " #NAME;                                                                           \
 				insieme::core::lang::markAsDerived(expr_##NAME, IR_NAME);                                                                                        \
 				insieme::core::lang::markAsBuiltIn(expr_##NAME);                                                                                               \
 	        }                                                                                                                                                  \

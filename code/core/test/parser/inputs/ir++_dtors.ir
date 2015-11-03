@@ -1,0 +1,30 @@
+alias int = int<4>;
+
+def struct A {
+
+	x : int;
+	
+	ctor (x : int) {
+		this.x = x;
+		print("Creating: %d\n", x);
+	}
+	
+	dtor () {
+		print("Clearing: %d\n", *x);
+		x = 0;
+	}
+};
+
+int main() {
+
+	// create an un-initialized memory location
+	var ref<A> a = A::(ref_var(undefined(A)), 1);
+	
+	// init using in-place constructor
+	A::(a, 2);
+
+	// invoke destructor
+	A::~(a);
+
+	return 0;
+}

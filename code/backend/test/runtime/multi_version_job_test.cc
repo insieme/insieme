@@ -63,15 +63,15 @@ TEST(MultiVersionJob, Generation) {
 	// create a multi-version job
 	auto code = builder.parseProgram(R"(
 			unit main() {
-				decl ref<int<4>> a;
-				spawn lambda ()=> { a = 3; };
+				var ref<int<4>> a;
+				spawn ()=> { a = 3; };
 				spawn pick([
-					lambda ()=> { a = 3; },
-					lambda ()=> { a = 3*2; },
-					lambda ()=> { a = 1+2; },
-					lambda ()=> { a = 1*3; }
+					()=> { a = 3; },
+					()=> { a = 3*2; },
+					()=> { a = 1+2; },
+					()=> { a = 1*3; }
 				]);
-				syncAll;
+				sync_all;
 			}
 		)").as<core::ProgramPtr>();
 
@@ -104,11 +104,11 @@ TEST(MultiVersion, ImplementationHints) {
 	// create a multi-version job
 	auto code = builder.parseProgram(R"(
 			int<4> main() {
-				decl ref<int<4>> a;
+				var ref<int<4>> a;
 				pick([
-					lambda (ref<int<4>> a) -> unit { a = 3; },
-					lambda (ref<int<4>> a) -> unit { a = 1+2; },
-					lambda (ref<int<4>> a) -> unit { a = 1*3; }
+					(a : ref<int<4>>) -> unit { a = 3; },
+					(a : ref<int<4>>) -> unit { a = 1+2; },
+					(a : ref<int<4>>) -> unit { a = 1*3; }
 				])(a);
 				return ref_deref(a);
 		}

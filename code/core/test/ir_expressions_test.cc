@@ -460,7 +460,7 @@ namespace core {
 		LambdaExprPtr lambda;
 
 		// check ordinary lambda
-		lambda = builder.parseExpr("let f = lambda ()->unit { 5; } ; f").as<LambdaExprPtr>();
+		lambda = builder.parseExpr("let f = ()->unit { 5; } in f").as<LambdaExprPtr>();
 		ASSERT_TRUE(lambda);
 
 		EXPECT_FALSE(lambda->isRecursive());
@@ -469,7 +469,9 @@ namespace core {
 
 		// check recursive lambda
 		manager.setNextFreshID(0);
-		lambda = builder.normalize(builder.parseExpr("let f = lambda ()->unit { 5; f(); }; f").as<LambdaExprPtr>());
+		lambda = builder.normalize(
+			builder.parseExpr("decl f: ()->unit;"
+							  "def f = ()->unit { 5; f(); }; f").as<LambdaExprPtr>());
 		ASSERT_TRUE(lambda);
 
 		EXPECT_TRUE(lambda->isRecursive());
@@ -479,51 +481,54 @@ namespace core {
 
 		// check mutual recursive lambdas
 		manager.setNextFreshID(0);
-		lambda = builder.parseExpr("let f,g = "
-		                           "	lambda ()->unit { 1; g(); }, "
-		                           "	lambda ()->unit { 2; f(); };"
+		lambda = builder.parseExpr("decl g: ()->unit;"
+								   "def f = ()->unit { 1; g(); }; "
+		                           "def g = ()->unit { 2; f(); }; "
 		                           " f")
 		             .as<LambdaExprPtr>();
 		ASSERT_TRUE(lambda);
 
 		EXPECT_TRUE(lambda->isRecursive());
-		EXPECT_EQ("rec v3.{v3=fun() {1; v4();}, v4=fun() {2; v3();}}", toString(*lambda));
-		EXPECT_EQ("rec v0.{v0=fun() {1; rec v4.{v3=fun() {1; v4();}, v4=fun() {2; v3();}}();}}", toString(*lambda->peel()));
+		EXPECT_EQ("rec v2.{v2=fun() {1; v3();}, v3=fun() {2; v2();}}", toString(*lambda));
+		EXPECT_EQ("rec v0.{v0=fun() {1; rec v3.{v2=fun() {1; v3();}, v3=fun() {2; v2();}}();}}", toString(*lambda->peel()));
 
 
 		// check nested recursive lambda
 		manager.setNextFreshID(0);
-		lambda = builder.parseExpr("let f = lambda ()->unit { "
+		lambda = builder.parseExpr("decl f: ()->unit;"
+								   "def f = ()->unit { "
 		                           "	5; "
-		                           "	lambda ()->unit { f(); } (); "
+		                           "	()->unit { f(); } (); "
 		                           "}; f")
 		             .as<LambdaExprPtr>();
 		ASSERT_TRUE(lambda);
 
 		EXPECT_TRUE(lambda->isRecursive());
-		EXPECT_EQ("rec v5.{v5=fun() {5; rec v0.{v0=fun() {v5();}}();}}", toString(*lambda));
-		EXPECT_EQ("rec v0.{v0=fun() {5; rec v0.{v0=fun() {rec v5.{v5=fun() {5; rec v0.{v0=fun() {v5();}}();}}();}}();}}", toString(*lambda->peel()));
+		EXPECT_EQ("rec v4.{v4=fun() {5; rec v0.{v0=fun() {v4();}}();}}", toString(*lambda));
+		EXPECT_EQ("rec v0.{v0=fun() {5; rec v0.{v0=fun() {rec v4.{v4=fun() {5; rec v0.{v0=fun() {v4();}}();}}();}}();}}", toString(*lambda->peel()));
 		EXPECT_PRED2(containsSubString, toString(*lambda->peel()), toString(*lambda));
 
 		// check nested mutual recursive lambdas
 		manager.setNextFreshID(0);
-		lambda = builder.parseExpr("let f,g = "
-		                           "	lambda ()->unit { "
+		lambda = builder.parseExpr("decl g: ()->unit;"
+								   "def f = "
+		                           "	()->unit { "
 		                           "		1; "
-		                           "		lambda ()->unit { g(); } (); "
-		                           "	}, "
-		                           "	lambda ()->unit { "
+		                           "		()->unit { g(); } (); "
+		                           "	}; "
+		                           "def g = "
+								   "	()->unit { "
 		                           "		2; "
-		                           "		lambda ()->unit { f(); } (); "
+		                           "		()->unit { f(); } (); "
 		                           "	}; "
 		                           "f")
 		             .as<LambdaExprPtr>();
 		ASSERT_TRUE(lambda);
 
 		EXPECT_TRUE(lambda->isRecursive());
-		EXPECT_EQ("rec v6.{v6=fun() {1; rec v0.{v0=fun() {v7();}}();}, v7=fun() {2; rec v0.{v0=fun() {v6();}}();}}", toString(*lambda));
+		EXPECT_EQ("rec v5.{v5=fun() {1; rec v0.{v0=fun() {v6();}}();}, v6=fun() {2; rec v0.{v0=fun() {v5();}}();}}", toString(*lambda));
 		EXPECT_EQ(
-		    "rec v0.{v0=fun() {1; rec v0.{v0=fun() {rec v7.{v6=fun() {1; rec v0.{v0=fun() {v7();}}();}, v7=fun() {2; rec v0.{v0=fun() {v6();}}();}}();}}();}}",
+		    "rec v0.{v0=fun() {1; rec v0.{v0=fun() {rec v6.{v5=fun() {1; rec v0.{v0=fun() {v6();}}();}, v6=fun() {2; rec v0.{v0=fun() {v5();}}();}}();}}();}}",
 		    toString(*lambda->peel()));
 	}
 
@@ -536,10 +541,10 @@ namespace core {
 		 * 		an invalid node-composition assertion is triggered.
 		 */
 
-		LambdaExprPtr even = builder.normalize(builder.parseExpr("let int = int<4> ; "
-		                                       "let even,odd = "
-		                                       "	lambda (int x)->bool { return (x==0)?true:(odd(x-1)); },"
-		                                       "	lambda (int x)->bool { return (x==0)?false:(even(x-1)); };"
+		LambdaExprPtr even = builder.normalize(builder.parseExpr("alias int = int<4>; "
+		                                       "decl odd: (int)->bool;"
+											   "def even = (x: int)->bool { return (x==0)?true:odd(x-1); };"
+		                                       "def odd = (x: int)->bool { return (x==0)?false:even(x-1); };"
 		                                       "even"))
 		                         .as<LambdaExprPtr>();
 
@@ -594,10 +599,10 @@ namespace core {
 		 * 		an invalid node-composition assertion is triggered.
 		 */
 
-		LambdaExprPtr even = builder.normalize(builder.parseExpr("let int = int<4> ; "
-		                                       "let even,odd = "
-		                                       "	lambda (int x)->bool { return (x==0)?true:(odd(x-1)); },"
-		                                       "	lambda (int x)->bool { return (x==0)?false:(even(x-1)); };"
+		LambdaExprPtr even = builder.normalize(builder.parseExpr("alias int = int<4>; "
+		                                       "decl odd: (int)->bool;"
+											   "def even = (x: int)->bool { return (x==0)?true:(odd(x-1)); };"
+		                                       "def odd = (x: int)->bool { return (x==0)?false:(even(x-1)); };"
 		                                       "even"))
 		                         .as<LambdaExprPtr>();
 
@@ -614,7 +619,7 @@ namespace core {
 		// std::cout << "Unroll 5:\n" << core::printer::PrettyPrinter(even->unroll(5)) << "\n\n";
 
 		EXPECT_PRED2(containsSubString, toString(core::printer::PrettyPrinter(even->unroll(2))),
-		             "return v1==0?true:v1-1==0?false:v0(v1-1-1);");
+		             "return v4==0?true:v4-1==0?false:v0(v4-1-1);");
 
 		res = check(even->unroll(manager, 2), core::checks::getFullCheck());
 		EXPECT_TRUE(res.empty()) << even->unroll(manager, 2) << res;
@@ -654,7 +659,7 @@ namespace core {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
-		LambdaExprPtr simple = builder.parseExpr("lambda (int<4> x)->bool { return (x==0); }").as<LambdaExprPtr>();
+		LambdaExprPtr simple = builder.parseExpr("(x: int<4>)->bool { return (x==0); }").as<LambdaExprPtr>();
 
 		ASSERT_TRUE(simple);
 
@@ -673,8 +678,9 @@ namespace core {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
-		LambdaExprPtr fun = builder.parseExpr("let int = int<4> ; "
-		                                      "let fun = lambda (int x)->int { fun(x-2) + fun(x-1); };"
+		LambdaExprPtr fun = builder.parseExpr("alias int = int<4> ; "
+		                                      "decl fun: (int)->int; "
+											  "def fun = (x: int)->int { fun(x-2) + fun(x-1); };"
 		                                      "fun")
 		                        .as<LambdaExprPtr>();
 
@@ -700,7 +706,8 @@ namespace core {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
-		LambdaExprPtr fun = builder.parseExpr("let f = lambda (int<4> x)->int<4> {"
+		LambdaExprPtr fun = builder.parseExpr("decl f: (int<4>)->int<4>;	"
+											  "def f = (x: int<4>)->int<4> {"
 		                                      "	return (x==0)?0:((x==1)?1:f(x-1)+f(x-2));"
 		                                      "};  f")
 		                        .as<LambdaExprPtr>();
@@ -720,7 +727,8 @@ namespace core {
 	TEST(ExpressionTest, UnrollCompactFib) {
 		NodeManager manager;
 		IRBuilder builder(manager);
-		LambdaExprPtr fun = builder.parseExpr("let f = lambda (int<4> x)->int<4> {"
+		LambdaExprPtr fun = builder.parseExpr("decl f: (int<4>)->int<4>;"
+											  "def f = (x: int<4>)->int<4> {"
 		                                      "	return (x==0)?0:((x==1)?1:f(x-1)+f(x-2));"
 		                                      "}; f")
 		                        .as<LambdaExprPtr>();

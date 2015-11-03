@@ -66,7 +66,6 @@ namespace core {
 		typedef std::vector<NAME##Ptr> NAME##List;                                                                                                             \
 		typedef utils::set::PointerSet<NAME##Ptr> NAME##Set;
 
-
 	// take all nodes from within the definition file
 	#include "insieme/core/ir_nodes.def"
 

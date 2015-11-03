@@ -53,7 +53,7 @@
 #include "insieme/frontend/extensions/frontend_extension.h"
 #include "insieme/frontend/pragma/handler.h"
 #include "insieme/frontend/pragma/matcher.h"
-#include "insieme/frontend/tu/ir_translation_unit_io.h"
+#include "insieme/core/tu/ir_translation_unit_io.h"
 #include "insieme/frontend/utils/name_manager.h"
 #include "insieme/frontend/utils/stmt_wrapper.h"
 
@@ -106,12 +106,12 @@ namespace extensions {
 		return program;
 	}
 
-	frontend::tu::IRTranslationUnit InsiemePragmaExtension::IRVisit(frontend::tu::IRTranslationUnit& tu) {
+	core::tu::IRTranslationUnit InsiemePragmaExtension::IRVisit(core::tu::IRTranslationUnit& tu) {
 		// if there are no previously marked entry points, there's nothing to be done
 		if(entryPoints.size() < 1) { return tu; }
 
 		// get IR for checking whether nodes are still valid
-		core::ExpressionPtr&& singlenode = frontend::tu::toIR(tu.getNodeManager(), tu);
+		core::ExpressionPtr&& singlenode = core::tu::toIR(tu.getNodeManager(), tu);
 		assert_true(singlenode) << "Conversion of IRTranslationUnit to IR failed!";
 		IRBuilder builder(singlenode->getNodeManager());
 

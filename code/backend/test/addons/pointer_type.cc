@@ -138,16 +138,16 @@ namespace runtime {
 		EXPECT_EQ("x", convert("x"));
 
 		// check constructors
-		EXPECT_EQ(               "(char*)0", convert("ptr_null(lit(char),lit(f),lit(f))"));
-		EXPECT_EQ(         "(const char*)0", convert("ptr_null(lit(char),lit(t),lit(f))"));
-		EXPECT_EQ(      "(volatile char*)0", convert("ptr_null(lit(char),lit(f),lit(t))"));
-		EXPECT_EQ("(const volatile char*)0", convert("ptr_null(lit(char),lit(t),lit(t))"));
+		EXPECT_EQ(               "(char*)0", convert("ptr_null(type_lit(char),type_lit(f),type_lit(f))"));
+		EXPECT_EQ(         "(const char*)0", convert("ptr_null(type_lit(char),type_lit(t),type_lit(f))"));
+		EXPECT_EQ(      "(volatile char*)0", convert("ptr_null(type_lit(char),type_lit(f),type_lit(t))"));
+		EXPECT_EQ("(const volatile char*)0", convert("ptr_null(type_lit(char),type_lit(t),type_lit(t))"));
 
 		// check casts
-		EXPECT_EQ(                      "x", convert("ptr_cast(x,lit(f),lit(f))"));
-		EXPECT_EQ(         "(const char*)x", convert("ptr_cast(x,lit(t),lit(f))"));
-		EXPECT_EQ(      "(volatile char*)x", convert("ptr_cast(x,lit(f),lit(t))"));
-		EXPECT_EQ("(const volatile char*)x", convert("ptr_cast(x,lit(t),lit(t))"));
+		EXPECT_EQ(                      "x", convert("ptr_cast(x,type_lit(f),type_lit(f))"));
+		EXPECT_EQ(         "(const char*)x", convert("ptr_cast(x,type_lit(t),type_lit(f))"));
+		EXPECT_EQ(      "(volatile char*)x", convert("ptr_cast(x,type_lit(f),type_lit(t))"));
+		EXPECT_EQ("(const volatile char*)x", convert("ptr_cast(x,type_lit(t),type_lit(t))"));
 
 		EXPECT_EQ("m.data", convert("ptr_from_array(m)"));
 		EXPECT_EQ("n", convert("ptr_from_array(n)"));

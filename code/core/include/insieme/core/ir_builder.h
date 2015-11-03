@@ -51,7 +51,7 @@
 
 #include "insieme/core/analysis/normalize.h"
 
-#include "insieme/core/parser3/ir_parser.h"
+#include "insieme/core/parser/ir_parser.h"
 
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/reference.h"
@@ -153,10 +153,10 @@ namespace core {
 		// --- Add parser support ---
 
 		// the type utilized for forwarding literal definitions to the parser functions
-		typedef parser3::definition_map lazy_definition_map;
+		typedef parser::DefinitionMap LazyDefinitionMap;
 
 		// a convenience type for forwarding literal definitions to the parser functions
-		typedef std::map<std::string, NodePtr> eager_definition_map;
+		typedef std::map<std::string, NodePtr> EagerDefinitionMap;
 
 		/**
 		 * Parses any kind of IR fragment encoded within the given code. The given symbol table
@@ -169,88 +169,88 @@ namespace core {
 		 * @param code the code to be parsed and returned as a node
 		 * @param symbols a set of pre-defined symbols to be used within the code
 		 */
-		NodePtr parse(const string& code, const lazy_definition_map& symbols = lazy_definition_map()) const;
+		NodePtr parse(const string& code, const LazyDefinitionMap& symbols = LazyDefinitionMap()) const;
 
 		/**
 		 * The same as above, but utilizing a eager definition map (will be internally converted into a lazy map).
 		 */
-		NodePtr parse(const string& code, const eager_definition_map& symbols) const;
+		NodePtr parse(const string& code, const EagerDefinitionMap& symbols) const;
 
 		/**
 		 * The same as the parse member function yet interpreting the given code as a type.
 		 */
-		TypePtr parseType(const string& code, const lazy_definition_map& symbols = lazy_definition_map()) const;
+		TypePtr parseType(const string& code, const LazyDefinitionMap& symbols = LazyDefinitionMap()) const;
 
 		/**
 		 * The same as above, but utilizing a eager definition map (will be internally converted into a lazy map).
 		 */
-		TypePtr parseType(const string& code, const eager_definition_map& symbols) const;
+		TypePtr parseType(const string& code, const EagerDefinitionMap& symbols) const;
 
 		/**
 		 * The same as the parse member function yet interpreting the given code as an expression.
 		 */
-		ExpressionPtr parseExpr(const string& code, const lazy_definition_map& symbols = lazy_definition_map()) const;
+		ExpressionPtr parseExpr(const string& code, const LazyDefinitionMap& symbols = LazyDefinitionMap()) const;
 
 		/**
 		 * The same as above, but utilizing a eager definition map (will be internally converted into a lazy map).
 		 */
-		ExpressionPtr parseExpr(const string& code, const eager_definition_map& symbols) const;
+		ExpressionPtr parseExpr(const string& code, const EagerDefinitionMap& symbols) const;
 
 		/**
 		 * The same as the parse member function yet interpreting the given code as a statement.
 		 */
-		StatementPtr parseStmt(const string& code, const lazy_definition_map& symbols = lazy_definition_map()) const;
+		StatementPtr parseStmt(const string& code, const LazyDefinitionMap& symbols = LazyDefinitionMap()) const;
 
 		/**
 		 * The same as above, but utilizing a eager definition map (will be internally converted into a lazy map).
 		 */
-		StatementPtr parseStmt(const string& code, const eager_definition_map& symbols) const;
+		StatementPtr parseStmt(const string& code, const EagerDefinitionMap& symbols) const;
 
 		/**
 		 * The same as the parse member function yet interpreting the given code as a full program.
 		 */
-		ProgramPtr parseProgram(const string& code, const lazy_definition_map& symbols = lazy_definition_map()) const;
+		ProgramPtr parseProgram(const string& code, const LazyDefinitionMap& symbols = LazyDefinitionMap()) const;
 
 		/**
 		 * The same as above, but utilizing a eager definition map (will be internally converted into a lazy map).
 		 */
-		ProgramPtr parseProgram(const string& code, const eager_definition_map& symbols) const;
+		ProgramPtr parseProgram(const string& code, const EagerDefinitionMap& symbols) const;
 
 		/**
 		 * Allows lists of addresses to be parsed in an expression. This parser supports the same grammar + allows constructs to be enclosed
 		 * within $ .. $ signs. Addresses referencing constructs enclosed like this will be returned. The resulting list is
 		 * ordered according to the order of node-addresses (lexicographical).
 		 */
-		vector<NodeAddress> parseAddressesExpression(const string& code, const lazy_definition_map& symbols = lazy_definition_map()) const;
+		vector<NodeAddress> parseAddressesExpression(const string& code, const LazyDefinitionMap& symbols = LazyDefinitionMap()) const;
 
 		/**
 		 * The same as above, but utilizing a eager definition map (will be internally converted into a lazy map).
 		 */
-		vector<NodeAddress> parseAddressesExpression(const string& code, const eager_definition_map& symbols) const;
+		vector<NodeAddress> parseAddressesExpression(const string& code, const EagerDefinitionMap& symbols) const;
 
 		/**
 		 * Allows lists of addresses to be parsed in a Statement. This parser supports the same grammar + allows constructs to be enclosed
 		 * within $ .. $ signs. Addresses referencing constructs enclosed like this will be returned. The resulting list is
 		 * ordered according to the order of node-addresses (lexicographical).
 		 */
-		vector<NodeAddress> parseAddressesStatement(const string& code, const lazy_definition_map& symbols = lazy_definition_map()) const;
+		vector<NodeAddress> parseAddressesStatement(const string& code, const LazyDefinitionMap& symbols = LazyDefinitionMap()) const;
 
 		/**
 		 * The same as above, but utilizing a eager definition map (will be internally converted into a lazy map).
 		 */
-		vector<NodeAddress> parseAddressesStatement(const string& code, const eager_definition_map& symbols) const;
+		vector<NodeAddress> parseAddressesStatement(const string& code, const EagerDefinitionMap& symbols) const;
 
 		/**
 		 * Allows lists of addresses to be parsed in an IR program. This parser supports the same grammar + allows constructs to be enclosed
 		 * within $ .. $ signs. Addresses referencing constructs enclosed like this will be returned. The resulting list is
 		 * ordered according to the order of node-addresses (lexicographical).
 		 */
-		vector<NodeAddress> parseAddressesProgram(const string& code, const lazy_definition_map& symbols = lazy_definition_map()) const;
+		vector<NodeAddress> parseAddressesProgram(const string& code, const LazyDefinitionMap& symbols = LazyDefinitionMap()) const;
 
 		/**
 		 * The same as above, but utilizing a eager definition map (will be internally converted into a lazy map).
 		 */
-		vector<NodeAddress> parseAddressesProgram(const string& code, const eager_definition_map& symbols) const;
+		vector<NodeAddress> parseAddressesProgram(const string& code, const EagerDefinitionMap& symbols) const;
 
 
 		// --- Imported Standard Factory Methods from Node Types ---
@@ -295,15 +295,27 @@ namespace core {
 		TagTypePtr structType(const string& name, const vector<FieldPtr>& fields) const;
 		TagTypePtr structType(const StringValuePtr& name, const vector<FieldPtr>& fields) const;
 		TagTypePtr structType(const StringValuePtr& name, const vector<ParentPtr>& parents, const vector<FieldPtr>& fields) const;
+		TagTypePtr structType(const string& name, const ParentList& parents, const FieldList& fields,
+		                      const ExpressionList& ctors, const ExpressionPtr& dtor, const bool dtorIsVirtual,
+		                      const MemberFunctionList& mfuns, const PureVirtualMemberFunctionList& pvmfuns) const;
+		TagTypePtr structType(const StringValuePtr& name, const ParentsPtr& parents, const FieldsPtr& fields,
+		                      const ExpressionsPtr& ctors, const ExpressionPtr& dtor, const BoolValuePtr& dtorIsVirtual,
+		                      const MemberFunctionsPtr& mfuns, const PureVirtualMemberFunctionsPtr& pvmfuns) const;
 
 		TagTypePtr unionType(const vector<std::pair<StringValuePtr, TypePtr>>& fields) const;
 		TagTypePtr unionType(const StringValuePtr& name, const vector<FieldPtr>& fields) const;
 		TagTypePtr unionType(const vector<FieldPtr>& fields) const;
+		TagTypePtr unionType(const string& name, const FieldList& fields,
+		                     const ExpressionList& ctors, const ExpressionPtr& dtor, const bool dtorIsVirtual,
+		                     const MemberFunctionList& mfuns, const PureVirtualMemberFunctionList& pvmfuns) const;
+		TagTypePtr unionType(const StringValuePtr& name, const FieldsPtr& fields,
+		                     const ExpressionsPtr& ctors, const ExpressionPtr& dtor, const BoolValuePtr& dtorIsVirtual,
+		                     const MemberFunctionsPtr& mfuns, const PureVirtualMemberFunctionsPtr& pvmfuns) const;
 
 		FunctionTypePtr getDestructorType(const TagTypeReferencePtr& tag) const;
 
-		ExpressionPtr getDefaultDestructor(const StringValuePtr& recordName) const;
-		ExpressionPtr getDefaultDestructor(const string& recordName) const {
+		LambdaExprPtr getDefaultDestructor(const StringValuePtr& recordName) const;
+		LambdaExprPtr getDefaultDestructor(const string& recordName) const {
 			return getDefaultDestructor(stringValue(recordName));
 		}
 
