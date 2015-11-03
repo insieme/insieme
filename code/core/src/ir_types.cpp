@@ -349,10 +349,19 @@ namespace core {
 	}
 
 	StructPtr Struct::get(NodeManager & manager, const StringValuePtr& name, const ParentsPtr& parents, const FieldsPtr& fields) {
+		IRBuilder builder(manager);
 		return get(manager, name, parents, fields,
-				Expressions::get(manager, ExpressionList()),
-				IRBuilder(manager).getDefaultDestructor(name), BoolValue::get(manager, false),
-				MemberFunctions::get(manager, MemberFunctionList()),
+				Expressions::get(manager, toVector<ExpressionPtr>(
+						builder.getDefaultConstructor(name, parents, fields),
+						builder.getDefaultCopyConstructor(name, parents, fields),
+						builder.getDefaultMoveConstructor(name, parents, fields)
+				)),
+				builder.getDefaultDestructor(name),
+				BoolValue::get(manager, false),
+				MemberFunctions::get(manager, toVector<MemberFunctionPtr>(
+						builder.getDefaultCopyAssignOperator(name, parents, fields),
+						builder.getDefaultMoveAssignOperator(name, parents, fields)
+				)),
 				PureVirtualMemberFunctions::get(manager, PureVirtualMemberFunctionList())
 			);
 	}

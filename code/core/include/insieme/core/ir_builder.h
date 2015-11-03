@@ -276,7 +276,7 @@ namespace core {
 			return core::analysis::normalize(root);
 		}
 
-		GenericTypePtr refType(const TypePtr& elementType, bool _const = false, bool _volatile = false) const;
+		GenericTypePtr refType(const TypePtr& elementType, bool _const = false, bool _volatile = false, lang::ReferenceType::Kind kind = lang::ReferenceType::Kind::Plain) const;
 		TypePtr ptrType(const TypePtr& elementType, bool _const = false, bool _volatile = false) const;
 
 		GenericTypePtr arrayType(const TypePtr& elementType) const;
@@ -314,10 +314,39 @@ namespace core {
 
 		FunctionTypePtr getDestructorType(const TagTypeReferencePtr& tag) const;
 
+		// -- special functions for classes --
+
+		LambdaExprPtr getDefaultConstructor(const StringValuePtr& recordName, const ParentsPtr& parents, const FieldsPtr& fields) const;
+		LambdaExprPtr getDefaultConstructor(const string& recordName, const ParentsPtr& parents, const FieldsPtr& fields) const {
+			return getDefaultConstructor(stringValue(recordName), parents, fields);
+		}
+
+		LambdaExprPtr getDefaultCopyConstructor(const StringValuePtr& recordName, const ParentsPtr& parents, const FieldsPtr& fields) const;
+		LambdaExprPtr getDefaultCopyConstructor(const string& recordName, const ParentsPtr& parents, const FieldsPtr& fields) const {
+			return getDefaultCopyConstructor(stringValue(recordName), parents, fields);
+		}
+
+		LambdaExprPtr getDefaultMoveConstructor(const StringValuePtr& recordName, const ParentsPtr& parents, const FieldsPtr& fields) const;
+		LambdaExprPtr getDefaultMoveConstructor(const string& recordName, const ParentsPtr& parents, const FieldsPtr& fields) const {
+			return getDefaultMoveConstructor(stringValue(recordName), parents, fields);
+		}
+
 		LambdaExprPtr getDefaultDestructor(const StringValuePtr& recordName) const;
 		LambdaExprPtr getDefaultDestructor(const string& recordName) const {
 			return getDefaultDestructor(stringValue(recordName));
 		}
+
+		MemberFunctionPtr getDefaultCopyAssignOperator(const StringValuePtr& recordName, const ParentsPtr& parents, const FieldsPtr& fields) const;
+		MemberFunctionPtr getDefaultCopyAssignOperator(const string& recordName, const ParentsPtr& parents, const FieldsPtr& fields) const {
+			return getDefaultCopyAssignOperator(stringValue(recordName), parents, fields);
+		}
+
+		MemberFunctionPtr getDefaultMoveAssignOperator(const StringValuePtr& recordName, const ParentsPtr& parents, const FieldsPtr& fields) const;
+		MemberFunctionPtr getDefaultMoveAssignOperator(const string& recordName, const ParentsPtr& parents, const FieldsPtr& fields) const {
+			return getDefaultMoveAssignOperator(stringValue(recordName), parents, fields);
+		}
+
+		// -----------------------------------
 
 		NamedValuePtr namedValue(const string& name, const ExpressionPtr& value) const;
 

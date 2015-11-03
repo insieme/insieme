@@ -306,8 +306,8 @@ namespace core {
 		return types::unify(manager, type, irType);
 	}
 
-	GenericTypePtr IRBuilderBaseModule::refType(const TypePtr& elementType, bool _const, bool _volatile) const {
-		return lang::ReferenceType::create(elementType, _const, _volatile);
+	GenericTypePtr IRBuilderBaseModule::refType(const TypePtr& elementType, bool _const, bool _volatile, lang::ReferenceType::Kind kind) const {
+		return lang::ReferenceType::create(elementType, _const, _volatile, kind);
 	}
 
 	TypePtr IRBuilderBaseModule::ptrType(const TypePtr& elementType, bool _const, bool _volatile) const {
@@ -421,11 +421,54 @@ namespace core {
 		return functionType(toVector(thisType), thisType, FK_DESTRUCTOR);
 	}
 
+
+	LambdaExprPtr IRBuilderBaseModule::getDefaultConstructor(const StringValuePtr& recordName, const ParentsPtr& parents, const FieldsPtr& fields) const {
+		TypePtr thisType = refType(tagTypeReference(recordName));
+		auto ctorType = functionType(toVector(thisType), thisType, FK_CONSTRUCTOR);
+		return normalize(lambdaExpr(ctorType, toVector(variable(refType(thisType))), getNoOp())).as<LambdaExprPtr>();
+	}
+
+	LambdaExprPtr IRBuilderBaseModule::getDefaultCopyConstructor(const StringValuePtr& recordName, const ParentsPtr& parents, const FieldsPtr& fields) const {
+		TypePtr thisType = refType(tagTypeReference(recordName));
+		TypePtr otherType = refType(tagTypeReference(recordName), true, false, lang::ReferenceType::Kind::CppReference);
+		auto ctorType = functionType(toVector(thisType, otherType), thisType, FK_CONSTRUCTOR);
+		return normalize(lambdaExpr(ctorType, toVector(variable(refType(thisType)), variable(refType(otherType))), getNoOp())).as<LambdaExprPtr>();
+	}
+
+	LambdaExprPtr IRBuilderBaseModule::getDefaultMoveConstructor(const StringValuePtr& recordName, const ParentsPtr& parents, const FieldsPtr& fields) const {
+		TypePtr thisType = refType(tagTypeReference(recordName));
+		TypePtr otherType = refType(tagTypeReference(recordName), false, false, lang::ReferenceType::Kind::CppRValueReference);
+		auto ctorType = functionType(toVector(thisType, otherType), thisType, FK_CONSTRUCTOR);
+		return normalize(lambdaExpr(ctorType, toVector(variable(refType(thisType)), variable(refType(otherType))), getNoOp())).as<LambdaExprPtr>();
+	}
+
 	LambdaExprPtr IRBuilderBaseModule::getDefaultDestructor(const StringValuePtr& recordName) const {
 		// create default destructor
 		auto dtorType = getDestructorType(tagTypeReference(recordName));
 		TypePtr thisType = dtorType->getParameterType(0);
 		return normalize(lambdaExpr(dtorType, toVector(variable(refType(thisType))), getNoOp())).as<LambdaExprPtr>();
+	}
+
+	MemberFunctionPtr IRBuilderBaseModule::getDefaultCopyAssignOperator(const StringValuePtr& recordName, const ParentsPtr& parents, const FieldsPtr& fields) const {
+		TypePtr thisType = refType(tagTypeReference(recordName));
+		TypePtr otherType = refType(tagTypeReference(recordName), true, false, lang::ReferenceType::Kind::CppReference);
+		TypePtr resType = refType(tagTypeReference(recordName), false, false, lang::ReferenceType::Kind::CppReference);
+		auto funType = functionType(toVector(thisType, otherType), resType, FK_MEMBER_FUNCTION);
+		auto thisParam = variable(refType(thisType));
+		auto res = returnStmt(lang::buildRefCast(deref(thisParam),resType));
+		auto fun = normalize(lambdaExpr(funType, toVector(thisParam, variable(refType(otherType))), res)).as<LambdaExprPtr>();
+		return memberFunction(false, "operator=", fun);
+	}
+
+	MemberFunctionPtr IRBuilderBaseModule::getDefaultMoveAssignOperator(const StringValuePtr& recordName, const ParentsPtr& parents, const FieldsPtr& fields) const {
+		TypePtr thisType = refType(tagTypeReference(recordName));
+		TypePtr otherType = refType(tagTypeReference(recordName), false, false, lang::ReferenceType::Kind::CppRValueReference);
+		TypePtr resType = refType(tagTypeReference(recordName), false, false, lang::ReferenceType::Kind::CppReference);
+		auto ctorType = functionType(toVector(thisType, otherType), resType, FK_MEMBER_FUNCTION);
+		auto thisParam = variable(refType(thisType));
+		auto res = returnStmt(lang::buildRefCast(deref(thisParam),resType));
+		auto fun = normalize(lambdaExpr(ctorType, toVector(thisParam, variable(refType(otherType))), res)).as<LambdaExprPtr>();
+		return memberFunction(false, "operator=", fun);
 	}
 
 	FieldPtr IRBuilderBaseModule::field(const string& name, const TypePtr& type) const {

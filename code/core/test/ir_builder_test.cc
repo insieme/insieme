@@ -93,5 +93,16 @@ namespace core {
 	}
 
 
+	TEST(BuilderTest, Struct) {
+
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto type = builder.structType(FieldList());
+		EXPECT_TRUE(checks::check(type).empty())
+			<< "Struct: " << *type << "\n"
+			<< checks::check(type);
+	}
+
 }
 }
