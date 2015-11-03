@@ -282,25 +282,25 @@ namespace checks {
 	}
 
 	OptionalMessageList DestructorTypeCheck::visitTagTypeBinding(const TagTypeBindingAddress& address) {
-			OptionalMessageList res;
+		OptionalMessageList res;
 
-			NodeManager& mgr = address->getNodeManager();
-			IRBuilder builder(mgr);
+		NodeManager& mgr = address->getNodeManager();
+		IRBuilder builder(mgr);
 
-			// get the tag
-			auto tag = address.as<TagTypeBindingPtr>()->getTag();
+		// get the tag
+		auto tag = address.as<TagTypeBindingPtr>()->getTag();
 
-			// get destructor address
-			auto dtor = address->getRecord()->getDestructor();
+		// get destructor address
+		auto dtor = address->getRecord()->getDestructor();
 
-			auto is = dtor->getType();
-			auto expected = builder.getDestructorType(tag);
+		auto is = dtor->getType();
+		auto expected = builder.getDestructorType(tag);
 
-			if (*expected != *is) {
-				add(res, Message(address, EC_TYPE_INVALID_DESTRUCTOR_TYPE, format("Invalid destructor type: %s - expected: %s", *is, *expected), Message::ERROR));
-			}
+		if (*expected != *is) {
+			add(res, Message(address, EC_TYPE_INVALID_DESTRUCTOR_TYPE, format("Invalid destructor type: %s - expected: %s", *is, *expected), Message::ERROR));
+		}
 
-			return res;
+		return res;
 	}
 
 	OptionalMessageList CallExprTypeCheck::visitCallExpr(const CallExprAddress& address) {
