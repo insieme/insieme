@@ -74,7 +74,7 @@ namespace conversion {
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::TypePtr Converter::CXXTypeConverter::VisitTagType(const TagType* tagType) {
 		VLOG(2) << "VisitTagType " << tagType << std::endl;
-
+		// base conversion
 		core::TypePtr ty = TypeConverter::VisitTagType(tagType);
 		LOG_TYPE_CONVERSION(tagType, ty);
 
@@ -83,62 +83,39 @@ namespace conversion {
 
 		core::TagTypePtr classType = ty.as<core::TagTypePtr>();
 
-		// if is a c++ class, we need to annotate some stuff
-		if(llvm::isa<clang::RecordType>(tagType)) {
-			if(!llvm::isa<clang::CXXRecordDecl>(llvm::cast<clang::RecordType>(tagType)->getDecl())) { return classType; }
+		// for C++ classes/structs, we need to add members and parents
+		const clang::CXXRecordDecl* classDecl = llvm::dyn_cast_or_null<clang::CXXRecordDecl>(tagType->getDecl());
+		if(!classDecl || !classDecl->getDefinition()) { return classType; }
 
-			const clang::CXXRecordDecl* classDecl = llvm::cast<clang::CXXRecordDecl>(tagType->getDecl());
+		//~~~~~ base classes if any ~~~~~
+		if(classDecl->getNumBases() > 0) {
+			std::vector<core::ParentPtr> parents;
 
-			if(!classDecl->getDefinition()) {
-				// check if the classDeclaration has a definition, if not we just use the the type
-				// returned by the TypeConverter
-				return classType;
+			clang::CXXRecordDecl::base_class_const_iterator it = classDecl->bases_begin();
+			for(; it != classDecl->bases_end(); it++) {
+				// visit the parent to build its type
+				auto parentIrType = convert((it)->getType());
+				parents.push_back(builder.parent(it->isVirtual(), parentIrType));
 			}
 
-			//~~~~~ base classes if any ~~~~~
-			if(classDecl->getNumBases() > 0) {
-				std::vector<core::ParentPtr> parents;
+			// if we have base classes, update the classType
+			assert(classType.isa<core::TagTypePtr>());
 
-				clang::CXXRecordDecl::base_class_const_iterator it = classDecl->bases_begin();
-				for(; it != classDecl->bases_end(); it++) {
-					// visit the parent to build its type
-					auto parentIrType = convert((it)->getType());
-					parents.push_back(builder.parent(it->isVirtual(), parentIrType));
-				}
-
-				// if we have base classes, update the classType
-				assert(classType.isa<core::TagTypePtr>());
-
-				// implant new parents list
-				classType =
-				    core::transform::replaceNode(mgr, core::TagTypeAddress(classType)->getStruct()->getParents(), builder.parents(parents)).as<core::TagTypePtr>();
-			}
-
-			//		//update name of class type
-			//		classType = core::transform::replaceNode(mgr,
-			//												 core::StructTypeAddress(classType)->getName(),
-			//												 builder.stringValue(classDecl->getNameAsString())).as<core::StructTypePtr>();
-
-			// if classDecl has a name add it
-			if(!classDecl->getNameAsString().empty()) { core::annotations::attachName(classType, classDecl->getNameAsString()); }
+			// implant new parents list
+			classType =
+				core::transform::replaceNode(mgr, core::TagTypeAddress(classType)->getStruct()->getParents(), builder.parents(parents)).as<core::TagTypePtr>();
 		}
+
+		//		//update name of class type
+		//		classType = core::transform::replaceNode(mgr,
+		//												 core::StructTypeAddress(classType)->getName(),
+		//												 builder.stringValue(classDecl->getNameAsString())).as<core::StructTypePtr>();
+
+		// if classDecl has a name add it
+		if(!classDecl->getNameAsString().empty()) { core::annotations::attachName(classType, classDecl->getNameAsString()); }
 		return classType;
 	}
-
-	// Returns all bases of a c++ record declaration
-	vector<RecordDecl*> Converter::CXXTypeConverter::getAllBases(const clang::CXXRecordDecl* recDeclCXX) {
-		vector<RecordDecl*> bases;
-
-		for(CXXRecordDecl::base_class_const_iterator bit = recDeclCXX->bases_begin(), bend = recDeclCXX->bases_end(); bit != bend; ++bit) {
-			const CXXBaseSpecifier* base = bit;
-			RecordDecl* baseRecord = base->getType()->getAs<RecordType>()->getDecl();
-			bases.push_back(baseRecord);
-			vector<RecordDecl*> subBases = getAllBases(dyn_cast<clang::CXXRecordDecl>(baseRecord));
-			bases.insert(bases.end(), subBases.begin(), subBases.end());
-		}
-		return bases;
-	}
-
+	
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// 						DEPENDENT SIZED ARRAY TYPE
 	// This type represents an array type in C++ whose size is a value-dependent

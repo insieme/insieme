@@ -37,19 +37,20 @@
 #include "insieme/frontend/expr_converter.h"
 
 #include "insieme/frontend/clang.h"
-#include "insieme/frontend/utils/source_locations.h"
-#include "insieme/frontend/utils/name_manager.h"
-#include "insieme/frontend/utils/temporaries_lookup.h"
-#include "insieme/frontend/utils/clang_cast.h"
-#include "insieme/frontend/utils/macros.h"
-#include "insieme/frontend/utils/debug.h"
 #include "insieme/frontend/omp/omp_annotation.h"
+#include "insieme/frontend/state/record_manager.h"
+#include "insieme/frontend/utils/clang_cast.h"
+#include "insieme/frontend/utils/debug.h"
+#include "insieme/frontend/utils/macros.h"
+#include "insieme/frontend/utils/name_manager.h"
+#include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/stmt_wrapper.h"
+#include "insieme/frontend/utils/temporaries_lookup.h"
 
 #include "insieme/utils/container_utils.h"
+#include "insieme/utils/functional_utils.h"
 #include "insieme/utils/logging.h"
 #include "insieme/utils/numeric_cast.h"
-#include "insieme/utils/functional_utils.h"
 
 #include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/analysis/ir_utils.h"
@@ -346,18 +347,19 @@ namespace conversion {
 	core::ExpressionPtr Converter::CXXExprConverter::VisitCXXConstructExpr(const clang::CXXConstructExpr* callExpr) {
 		core::ExpressionPtr retIr;
 		LOG_EXPR_CONVERSION(callExpr, retIr);
-		//const core::FrontendIRBuilder& builder = converter.builder;
+		const core::FrontendIRBuilder& builder = converter.builder;
 
-		//// TODO:  array constructor with no default initialization (CXX11)
-		//const CXXConstructorDecl* ctorDecl = callExpr->getConstructor();
-		//core::TypePtr resType = converter.convertType(callExpr->getType());
-		//core::TypePtr irClassType = resType;
-		//core::TypePtr refToResTy = builder.refType(irClassType);
+		const CXXConstructorDecl* ctorDecl = callExpr->getConstructor();
+		core::TypePtr resType = converter.convertType(callExpr->getType());
+
+
+		LOG(INFO) << "ResType: \n" << dumpDetailColored(resType) << " recType:\n"
+			      << dumpColor((*converter.getIRTranslationUnit().getTypes().find(resType.as<core::GenericTypePtr>())).second) << "\n";
 
 		//// it might be an array construction
-		//std::vector<size_t> numElements;
-		//int numLevels = 0;
-		//while(auto vectorType = irClassType.isa<core::VectorTypePtr>()) {
+		// std::vector<size_t> numElements;
+		// int numLevels = 0;
+		// while(auto vectorType = irClassType.isa<core::VectorTypePtr>()) {
 		//	numLevels++;
 		//	numElements.push_back(irClassType.as<core::VectorTypePtr>()->getSize().as<core::ConcreteIntTypeParamPtr>()->getValue());
 		//	irClassType = vectorType->getElementType();

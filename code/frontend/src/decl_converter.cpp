@@ -106,11 +106,11 @@ namespace conversion {
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	void DeclConverter::VisitRecordDecl(const clang::RecordDecl* typeDecl) {
 		VLOG(2) << "~~~~~~~~~~~~~~~~ VisitRecordDecl: " << dumpClang(typeDecl);
+		// we do not convert templates or partial specialized classes/functions, the full
+		// type will be found and converted once the instantiation is found
 		if(!typeDecl->isCompleteDefinition()) { return; }
 		if(typeDecl->isDependentType()) { return; }
 
-		// we do not convert templates or partial specialized classes/functions, the full
-		// type will be found and converted once the instantiation is found
 		converter.trackSourceLocation(typeDecl);
 		//convertTypeDecl(typeDecl);
 		converter.untrackSourceLocation();
