@@ -70,7 +70,7 @@ namespace conversion {
 	}
 
 	namespace {
-		core::FunctionType getMethodType(Converter& converter, const clang::CXXMethodDecl* methDecl) {
+		core::FunctionTypePtr getMethodType(Converter& converter, const clang::CXXMethodDecl* methDecl) {
 			// first get function type
 			auto funType = converter.convertType(methDecl->getType()).as<core::FunctionTypePtr>();
 			// now build "this" type
@@ -79,12 +79,15 @@ namespace conversion {
 			switch(methDecl->getRefQualifier()) {
 			case clang::RefQualifierKind::RQ_LValue: refKind = core::lang::ReferenceType::Kind::CppReference; break;
 			case clang::RefQualifierKind::RQ_RValue: refKind = core::lang::ReferenceType::Kind::CppRValueReference; break;
+			case clang::RefQualifierKind::RQ_None: break; // stop warnings
 			}
 			auto thisType = core::lang::buildRefType(parentType, methDecl->isConst(), methDecl->isVolatile(), refKind);
 			// build new function type with "this" parameter
 			auto paramList = funType->getParameterTypeList();
 			paramList.insert(paramList.begin(), thisType);
-			//auto newFunType = 
+			auto newFunType = converter.getIRBuilder().functionType(paramList, funType->getReturnType(), funType->getKind());
+			VLOG(2) << "Converted method type from: " << dumpClang(methDecl) << "\n to: " << dumpColor(newFunType);
+			return newFunType;
 		}
 
 		core::LambdaExprPtr convertFunMethodInternal(Converter& converter, const core::FunctionTypePtr& funType, const clang::FunctionDecl* funcDecl) {
@@ -123,6 +126,7 @@ namespace conversion {
 	
 	core::MemberFunctionPtr DeclConverter::convertMethodDecl(const clang::CXXMethodDecl* methDecl, bool lit) const {
 		string name = insieme::utils::mangle(methDecl->getNameAsString());
+		auto funType = getMethodType(converter, methDecl);
 		core::ExpressionPtr func = builder.literal(name, funType);
 		if(!lit) {
 			auto lambda = convertFunMethodInternal(converter, funType, methDecl);

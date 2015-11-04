@@ -37,6 +37,7 @@
 #include "insieme/frontend/expr_converter.h"
 
 #include "insieme/frontend/clang.h"
+#include "insieme/frontend/decl_converter.h"
 #include "insieme/frontend/omp/omp_annotation.h"
 #include "insieme/frontend/state/record_manager.h"
 #include "insieme/frontend/utils/clang_cast.h"
@@ -341,108 +342,40 @@ namespace conversion {
 		return retIr;
 	}
 
+	namespace {
+		core::ExpressionPtr convertConstructExprInternal(Converter& converter, const clang::CXXConstructExpr* constructExpr, bool onStack) {
+			auto& builder = converter.getIRBuilder();
+			core::TypePtr resType = converter.convertType(constructExpr->getType());
+
+			VLOG(2) << "convertConstructExprInternal - ResType: \n" << dumpDetailColored(resType) << " recType:\n"
+				    << (*converter.getIRTranslationUnit().getTypes().find(resType.as<core::GenericTypePtr>())).second << "\n";
+
+			// first constructor argument is the object memory location -- we need to build this either on the stack or heap
+			auto irMemLoc = onStack ? builder.undefinedVar(resType) : builder.undefinedNew(resType);
+
+			// the constructor is then simply a call with the mem location and all its arguments
+			core::ExpressionList arguments { irMemLoc };
+			for(auto arg : constructExpr->arguments()) {
+				arguments.push_back(converter.convertExpr(arg));
+			}
+
+			// get constructor lambda
+			auto constructorLambda = converter.getDeclConverter()->convertMethodDecl(constructExpr->getConstructor())->getImplementation();
+
+			// return call
+			return builder.callExpr(converter.convertType(constructExpr->getType()), constructorLambda, arguments);
+		}
+	}
+
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//						CXX CONSTRUCTOR CALL EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr Converter::CXXExprConverter::VisitCXXConstructExpr(const clang::CXXConstructExpr* callExpr) {
 		core::ExpressionPtr retIr;
 		LOG_EXPR_CONVERSION(callExpr, retIr);
-		const core::FrontendIRBuilder& builder = converter.builder;
 
-		const CXXConstructorDecl* ctorDecl = callExpr->getConstructor();
-		core::TypePtr resType = converter.convertType(callExpr->getType());
-
-
-		LOG(INFO) << "ResType: \n" << dumpDetailColored(resType) << " recType:\n"
-			      << dumpColor((*converter.getIRTranslationUnit().getTypes().find(resType.as<core::GenericTypePtr>())).second) << "\n";
-
-		//// it might be an array construction
-		// std::vector<size_t> numElements;
-		// int numLevels = 0;
-		// while(auto vectorType = irClassType.isa<core::VectorTypePtr>()) {
-		//	numLevels++;
-		//	numElements.push_back(irClassType.as<core::VectorTypePtr>()->getSize().as<core::ConcreteIntTypeParamPtr>()->getValue());
-		//	irClassType = vectorType->getElementType();
-		//}
-
-		//if(!ctorDecl->isUserProvided()) {
-		//	if(ctorDecl->isDefaultConstructor()) {
-		//		// TODO find better solution to sovle problems with standard-layout/trivial-copyable
-		//		// classes
-		//		// if it is a POD we do not call ctor, we just
-		//		// instantiate enough memory to hold the structure
-		//		if(ctorDecl->getParent()->isPOD()) {
-		//			if(numLevels > 2) {
-		//				frontend_assert(false) << "Unsupport number of dimensions! - " << numLevels;
-		//			} else if(numLevels == 2) {
-		//				return (retIr = builder.callExpr(builder.getLangBasic().getVectorInitUniform(),
-		//				                                 builder.callExpr(builder.getLangBasic().getVectorInitUniform(), builder.undefinedVar(irClassType),
-		//				                                                  builder.getIntParamLiteral(numElements[1])),
-		//				                                 builder.getIntParamLiteral(numElements[0])));
-		//			} else if(numLevels == 1) {
-		//				return (retIr = builder.callExpr(builder.getLangBasic().getVectorInitUniform(), builder.undefinedVar(irClassType),
-		//				                                 builder.getIntParamLiteral(numElements[0])));
-		//			} else {
-		//				retIr = builder.undefinedVar(refToResTy);
-		//				return retIr;
-		//			}
-		//		} else {
-		//			VLOG(2) << "HERE";
-		//			// if not POD we are forced to call the constructor
-		//			core::ExpressionPtr ctor = core::analysis::createDefaultConstructor(irClassType);
-		//			// return (retIr = (builder.callExpr(refToResTy, ctor, builder.undefinedVar(refToResTy))));
-		//		}
-		//	} else if((ctorDecl->isMoveConstructor() || ctorDecl->isCopyConstructor()) && ctorDecl->getParent()->isPOD()) {
-		//		// if not userprovided we don't need to add a constructor just create the object to work
-		//		// with -- for the rest the BE-compiler takes care of
-		//		return (retIr = Visit(callExpr->getArg(0)));
-		//	}
-		//}
-
-		//// if the thing below is an xvalue... just use the inner element
-		//if(ctorDecl->isMoveConstructor() || ctorDecl->isCopyConstructor())
-		//	if(callExpr->getArg(0)->isXValue()) { return (retIr = Visit(callExpr->getArg(0))); }
-
-		//// to begin with we translate the constructor as a regular function but with initialization list
-		//core::ExpressionPtr ctorFunc = converter.getCallableExpression(ctorDecl);
-
-		//// update parameter list with a class-typed parameter in the first position
-		//core::FunctionTypePtr funcTy = ctorFunc.getType().as<core::FunctionTypePtr>();
-
-		//// reconstruct Arguments list, fist one is a scope location for the object
-		//ExpressionList&& args = ExprConverter::getFunctionArguments(callExpr, llvm::cast<clang::FunctionDecl>(ctorDecl));
-
-		//// first paramenter is the memory storage, the this location
-		//args.insert(args.begin(), builder.undefinedVar(refToResTy));
-
-		//// build expression and we are done!!!
-
-		//// check whether there is a nested vector
-		//if(auto outer = resType.isa<core::VectorTypePtr>()) {
-		//	if(auto inner = outer->getElementType().isa<core::VectorTypePtr>()) {
-		//		// only two levels are supported yet
-		//		if(inner->getElementType().isa<core::VectorTypePtr>()) {
-		//			// 3 or more - not supported yet
-		//			assert_fail() << "Not more than two nested levels supported yet!";
-		//			abort();
-		//		} else {
-		//			// 2 dimensional:
-		//			retIr = builder.callExpr(refToResTy, mgr.getLangExtension<core::lang::IRppExtensions>().getVectorCtor2D(), mgr.getLangBasic().getRefVar(),
-		//			                         ctorFunc, builder.getIntParamLiteral(inner->getSize().as<core::ConcreteIntTypeParamPtr>()->getValue()),
-		//			                         builder.getIntParamLiteral(outer->getSize().as<core::ConcreteIntTypeParamPtr>()->getValue()));
-		//		}
-
-		//	} else {
-		//		// 1 dimensional:
-		//		retIr = builder.callExpr(refToResTy, mgr.getLangExtension<core::lang::IRppExtensions>().getVectorCtor(), mgr.getLangBasic().getRefVar(),
-		//		                         ctorFunc, builder.getIntParamLiteral(outer->getSize().as<core::ConcreteIntTypeParamPtr>()->getValue()));
-		//	}
-		//} else {
-		//	// single object constructor
-		//	retIr = builder.callExpr(funcTy.getReturnType(), ctorFunc, args);
-		//}
-
-
+		retIr = convertConstructExprInternal(converter, callExpr, true);
+		
 		frontend_assert(retIr) << "ConstructExpr could not be translated\n";
 		return retIr;
 	}
