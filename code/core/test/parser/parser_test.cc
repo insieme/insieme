@@ -129,6 +129,11 @@ namespace parser {
 		                          "  dtor () { }"
 		                          "}"));
 
+		EXPECT_TRUE(test_type(nm, "struct class {"
+		                          "  a : int<4>;"
+		                          "  dtor virtual () { }"
+		                          "}"));
+
 		EXPECT_FALSE(test_type(nm, "struct class {" //multiple destructors
 		                           "  a : int<4>;"
 		                           "  dtor () { }"

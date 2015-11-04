@@ -378,7 +378,7 @@ namespace parser {
 		}
 
 		TypePtr InspireDriver::genRecordType(const location& l, const NodeType& type, const string& name, const ParentList& parents, const FieldList& fields, const ExpressionList& ctors,
-				const ExpressionPtr& dtorIn, const MemberFunctionList& mfuns, const PureVirtualMemberFunctionList& pvmfuns) {
+				const ExpressionPtr& dtorIn, const bool dtorIsVirtual, const MemberFunctionList& mfuns, const PureVirtualMemberFunctionList& pvmfuns) {
 
 			//check if this type has already been defined before
 			const GenericTypePtr key = builder.genericType(name);
@@ -411,10 +411,10 @@ namespace parser {
 			}
 
 			if (type == NT_Struct) {
-				res = builder.structType(name,parents,fields,ctors,dtor,false,mfuns,pvmfuns);
+				res = builder.structType(name,parents,fields,ctors,dtor,dtorIsVirtual,mfuns,pvmfuns);
 			} else {
 				if (!parents.empty()) error(l, "Inheritance not supported for unions!");
-				res = builder.unionType(name,fields,ctors,dtor,false,mfuns,pvmfuns);
+				res = builder.unionType(name,fields,ctors,dtor,dtorIsVirtual,mfuns,pvmfuns);
 			}
 
 			// register type in translation unit
