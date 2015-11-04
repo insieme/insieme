@@ -281,35 +281,43 @@ namespace checks {
 		return res;
 	}
 
-	OptionalMessageList ConstructorTypeCheck::visitTagTypeBinding(const TagTypeBindingAddress& address) {
-		OptionalMessageList res;
+	namespace {
 
-		NodeManager& mgr = address->getNodeManager();
-		IRBuilder builder(mgr);
+		void checkMemberType(const TagTypeBindingAddress& address, const LambdaExprPtr& lambda, const enum FunctionKind functionKind,
+		                     OptionalMessageList& res, const enum ErrorCode errorCode, const std::string& msg) {
+			NodeManager& mgr = address->getNodeManager();
+			IRBuilder builder(mgr);
 
-		// get the tag
-		auto tag = address.as<TagTypeBindingPtr>()->getTag();
-		TypePtr thisType = builder.refType(tag);
+			// get the tag
+			auto tag = address.as<TagTypeBindingPtr>()->getTag();
+			TypePtr thisType = builder.refType(tag);
 
-		// iterate over all the constructors and check their types
-		for (auto& constructor : address->getRecord()->getConstructors()) {
-			auto ctor = constructor.getAddressedNode().as<LambdaExprPtr>();
-			auto is = ctor->getFunctionType();
+			auto is = lambda->getFunctionType();
 			auto params = is->getParameterTypeList();
 
 			TypeList paramTypes;
 			if (params.size() == 0) {
 				//generic check should handle this case
-				return res;
+				return;
 			}
 			paramTypes.push_back(thisType);
 			paramTypes.insert(paramTypes.end(), ++(params.begin()), params.end());
 
-			auto expected = builder.functionType(paramTypes, thisType, FK_CONSTRUCTOR);
+			auto expected = builder.functionType(paramTypes, thisType, functionKind);
 
 			if (*expected != *is) {
-				add(res, Message(address, EC_TYPE_INVALID_CONSTRUCTOR_TYPE, format("Invalid constructor type: %s - expected: %s", *is, *expected), Message::ERROR));
+				add(res, Message(address, errorCode, format("%s: %s - expected: %s", msg, *is, *expected), Message::ERROR));
 			}
+		}
+
+	}
+
+	OptionalMessageList ConstructorTypeCheck::visitTagTypeBinding(const TagTypeBindingAddress& address) {
+		OptionalMessageList res;
+
+		// iterate over all the constructors and check their types
+		for (auto& constructor : address->getRecord()->getConstructors()) {
+			checkMemberType(address, constructor.getAddressedNode().as<LambdaExprPtr>(), FK_CONSTRUCTOR, res, EC_TYPE_INVALID_CONSTRUCTOR_TYPE, "Invalid constructor type");
 		}
 
 		return res;
@@ -337,21 +345,7 @@ namespace checks {
 	OptionalMessageList DestructorTypeCheck::visitTagTypeBinding(const TagTypeBindingAddress& address) {
 		OptionalMessageList res;
 
-		NodeManager& mgr = address->getNodeManager();
-		IRBuilder builder(mgr);
-
-		// get the tag
-		auto tag = address.as<TagTypeBindingPtr>()->getTag();
-
-		// get destructor address
-		auto dtor = address->getRecord()->getDestructor();
-
-		auto is = dtor->getType();
-		auto expected = builder.getDestructorType(tag);
-
-		if (*expected != *is) {
-			add(res, Message(address, EC_TYPE_INVALID_DESTRUCTOR_TYPE, format("Invalid destructor type: %s - expected: %s", *is, *expected), Message::ERROR));
-		}
+		checkMemberType(address, address.getAddressedNode()->getRecord()->getDestructor().as<LambdaExprPtr>(), FK_DESTRUCTOR, res, EC_TYPE_INVALID_DESTRUCTOR_TYPE, "Invalid destructor type");
 
 		return res;
 	}
