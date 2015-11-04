@@ -362,9 +362,29 @@ namespace checks {
 		EXPECT_TRUE(check(ok3).empty()) << check(ok3);
 
 		{
-			//create a custom constructor of the wrong type
+			//create a custom constructor of the wrong function type
 			TypePtr thisType = builder.refType(builder.tagTypeReference("A"));
 			auto functionType = builder.functionType(toVector(thisType), thisType, FK_PLAIN);
+			auto ctor = builder.lambdaExpr(functionType, toVector(builder.variable(builder.refType(thisType))), builder.getNoOp());
+			auto err = builder.structType("A", ParentList(), FieldList(), toVector(ctor.as<ExpressionPtr>()), builder.getDefaultDestructor("A"), false, MemberFunctionList(), PureVirtualMemberFunctionList());
+
+			EXPECT_PRED2(containsMSG, check(err), Message(NodeAddress(err).getAddressOfChild(1,0), EC_TYPE_INVALID_CONSTRUCTOR_TYPE, "", Message::ERROR));
+		}
+
+		{
+			//create a custom constructor of the wrong type (wrong this parameter type)
+			TypePtr thisType = builder.refType(builder.tagTypeReference("A"));
+			auto functionType = builder.functionType(toVector(builder.refType(thisType).as<TypePtr>()), thisType, FK_CONSTRUCTOR);
+			auto ctor = builder.lambdaExpr(functionType, toVector(builder.variable(builder.refType(thisType))), builder.getNoOp());
+			auto err = builder.structType("A", ParentList(), FieldList(), toVector(ctor.as<ExpressionPtr>()), builder.getDefaultDestructor("A"), false, MemberFunctionList(), PureVirtualMemberFunctionList());
+
+			EXPECT_PRED2(containsMSG, check(err), Message(NodeAddress(err).getAddressOfChild(1,0), EC_TYPE_INVALID_CONSTRUCTOR_TYPE, "", Message::ERROR));
+		}
+
+		{
+			//create a custom constructor of the wrong type (wrong return type)
+			TypePtr thisType = builder.refType(builder.tagTypeReference("A"));
+			auto functionType = builder.functionType(toVector(thisType), builder.genericType("A"), FK_CONSTRUCTOR);
 			auto ctor = builder.lambdaExpr(functionType, toVector(builder.variable(builder.refType(thisType))), builder.getNoOp());
 			auto err = builder.structType("A", ParentList(), FieldList(), toVector(ctor.as<ExpressionPtr>()), builder.getDefaultDestructor("A"), false, MemberFunctionList(), PureVirtualMemberFunctionList());
 
@@ -411,6 +431,26 @@ namespace checks {
 			//create a custom destructor of the wrong type
 			TypePtr thisType = builder.refType(builder.tagTypeReference("A"));
 			auto functionType = builder.functionType(toVector(thisType), thisType, FK_PLAIN);
+			auto dtor = builder.lambdaExpr(functionType, toVector(builder.variable(builder.refType(thisType))), builder.getNoOp());
+			auto err = builder.structType("A", ParentList(), FieldList(), ExpressionList(), dtor, false, MemberFunctionList(), PureVirtualMemberFunctionList());
+
+			EXPECT_PRED2(containsMSG, check(err), Message(NodeAddress(err).getAddressOfChild(1,0), EC_TYPE_INVALID_DESTRUCTOR_TYPE, "", Message::ERROR));
+		}
+
+		{
+			//create a custom destructor of the wrong type (wrong this parameter type)
+			TypePtr thisType = builder.refType(builder.tagTypeReference("A"));
+			auto functionType = builder.functionType(toVector(builder.refType(thisType).as<TypePtr>()), thisType, FK_DESTRUCTOR);
+			auto dtor = builder.lambdaExpr(functionType, toVector(builder.variable(builder.refType(thisType))), builder.getNoOp());
+			auto err = builder.structType("A", ParentList(), FieldList(), ExpressionList(), dtor, false, MemberFunctionList(), PureVirtualMemberFunctionList());
+
+			EXPECT_PRED2(containsMSG, check(err), Message(NodeAddress(err).getAddressOfChild(1,0), EC_TYPE_INVALID_DESTRUCTOR_TYPE, "", Message::ERROR));
+		}
+
+		{
+			//create a custom destructor of the wrong type (wrong return type)
+			TypePtr thisType = builder.refType(builder.tagTypeReference("A"));
+			auto functionType = builder.functionType(toVector(thisType), builder.genericType("A"), FK_DESTRUCTOR);
 			auto dtor = builder.lambdaExpr(functionType, toVector(builder.variable(builder.refType(thisType))), builder.getNoOp());
 			auto err = builder.structType("A", ParentList(), FieldList(), ExpressionList(), dtor, false, MemberFunctionList(), PureVirtualMemberFunctionList());
 
