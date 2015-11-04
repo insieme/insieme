@@ -288,17 +288,18 @@ namespace checks {
 			NodeManager& mgr = address->getNodeManager();
 			IRBuilder builder(mgr);
 
-			// get the tag
-			auto tag = address.as<TagTypeBindingPtr>()->getTag();
-			TypePtr thisType = builder.refType(tag);
-
 			auto params = functionType->getParameterTypeList();
-
-			TypeList paramTypes;
-			if (params.size() == 0) {
+			if (params.size() == 0 || !analysis::isRefType(params[0])) {
 				//generic check should handle this case
 				return;
 			}
+
+			// get the tag
+			auto originalThisReference = lang::ReferenceType(params[0]);
+			auto tag = address.as<TagTypeBindingPtr>()->getTag();
+			TypePtr thisType = builder.refType(tag, originalThisReference.isConst(), originalThisReference.isVolatile());
+
+			TypeList paramTypes;
 			paramTypes.push_back(thisType);
 			paramTypes.insert(paramTypes.end(), ++(params.begin()), params.end());
 
