@@ -365,6 +365,35 @@ namespace checks {
 		return res;
 	}
 
+	OptionalMessageList DuplicateMemberFunctionCheck::visitTagTypeBinding(const TagTypeBindingAddress& address) {
+		OptionalMessageList res;
+
+		NodeManager& mgr = address->getNodeManager();
+		IRBuilder builder(mgr);
+
+		std::map<std::string, std::set<FunctionTypePtr>> memberFunctionTypes;
+		for (const auto& memberFunction : address->getRecord()->getMemberFunctions()) {
+			const auto& type = memberFunction.getAddressedNode()->getImplementation().as<LambdaExprPtr>()->getFunctionType();
+			const auto& name = memberFunction->getName()->getValue();
+			auto inserted = memberFunctionTypes[name].insert(type);
+
+			if (!inserted.second) {
+				add(res, Message(address, EC_TYPE_DUPLICATE_MEMBER_FUNCTION, format("Duplicate member function type: %s for name %s", *type, name), Message::ERROR));
+			}
+		}
+		for (const auto& memberFunction : address->getRecord()->getPureVirtualMemberFunctions()) {
+			const auto& type = memberFunction.getAddressedNode()->getType();
+			const auto& name = memberFunction->getName()->getValue();
+			auto inserted = memberFunctionTypes[name].insert(type);
+
+			if (!inserted.second) {
+				add(res, Message(address, EC_TYPE_DUPLICATE_MEMBER_FUNCTION, format("Duplicate member function type: %s for name %s", *type, name), Message::ERROR));
+			}
+		}
+
+		return res;
+	}
+
 	OptionalMessageList CallExprTypeCheck::visitCallExpr(const CallExprAddress& address) {
 		NodeManager& manager = address->getNodeManager();
 		OptionalMessageList res;
