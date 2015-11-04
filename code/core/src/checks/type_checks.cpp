@@ -283,7 +283,7 @@ namespace checks {
 
 	namespace {
 
-		void checkMemberType(const TagTypeBindingAddress& address, const LambdaExprPtr& lambda, const enum FunctionKind functionKind,
+		void checkMemberType(const TagTypeBindingAddress& address, const FunctionTypePtr& functionType, const enum FunctionKind expectedFunctionKind, const bool expectSameReturnType,
 		                     OptionalMessageList& res, const enum ErrorCode errorCode, const std::string& msg) {
 			NodeManager& mgr = address->getNodeManager();
 			IRBuilder builder(mgr);
@@ -292,8 +292,7 @@ namespace checks {
 			auto tag = address.as<TagTypeBindingPtr>()->getTag();
 			TypePtr thisType = builder.refType(tag);
 
-			auto is = lambda->getFunctionType();
-			auto params = is->getParameterTypeList();
+			auto params = functionType->getParameterTypeList();
 
 			TypeList paramTypes;
 			if (params.size() == 0) {
@@ -303,10 +302,10 @@ namespace checks {
 			paramTypes.push_back(thisType);
 			paramTypes.insert(paramTypes.end(), ++(params.begin()), params.end());
 
-			auto expected = builder.functionType(paramTypes, thisType, functionKind);
+			auto expected = builder.functionType(paramTypes, expectSameReturnType ? functionType->getReturnType() : thisType, expectedFunctionKind);
 
-			if (*expected != *is) {
-				add(res, Message(address, errorCode, format("%s: %s - expected: %s", msg, *is, *expected), Message::ERROR));
+			if (*expected != *functionType) {
+				add(res, Message(address, errorCode, format("%s: %s - expected: %s", msg, *functionType, *expected), Message::ERROR));
 			}
 		}
 
@@ -317,7 +316,7 @@ namespace checks {
 
 		// iterate over all the constructors and check their types
 		for (auto& constructor : address->getRecord()->getConstructors()) {
-			checkMemberType(address, constructor.getAddressedNode().as<LambdaExprPtr>(), FK_CONSTRUCTOR, res, EC_TYPE_INVALID_CONSTRUCTOR_TYPE, "Invalid constructor type");
+			checkMemberType(address, constructor.getAddressedNode().as<LambdaExprPtr>()->getFunctionType(), FK_CONSTRUCTOR, false, res, EC_TYPE_INVALID_CONSTRUCTOR_TYPE, "Invalid constructor type");
 		}
 
 		return res;
@@ -345,7 +344,23 @@ namespace checks {
 	OptionalMessageList DestructorTypeCheck::visitTagTypeBinding(const TagTypeBindingAddress& address) {
 		OptionalMessageList res;
 
-		checkMemberType(address, address.getAddressedNode()->getRecord()->getDestructor().as<LambdaExprPtr>(), FK_DESTRUCTOR, res, EC_TYPE_INVALID_DESTRUCTOR_TYPE, "Invalid destructor type");
+		checkMemberType(address, address.getAddressedNode()->getRecord()->getDestructor().as<LambdaExprPtr>()->getFunctionType(), FK_DESTRUCTOR, false, res, EC_TYPE_INVALID_DESTRUCTOR_TYPE, "Invalid destructor type");
+
+		return res;
+	}
+
+	OptionalMessageList MemberFunctionTypeCheck::visitTagTypeBinding(const TagTypeBindingAddress& address) {
+		OptionalMessageList res;
+
+		// iterate over all the member functions and check their type
+		for (auto& memberFunction : address->getRecord()->getMemberFunctions()) {
+			checkMemberType(address, memberFunction.getAddressedNode()->getImplementation().as<LambdaExprPtr>()->getFunctionType(), FK_MEMBER_FUNCTION, true, res, EC_TYPE_INVALID_MEMBER_FUNCTION_TYPE, "Invalid member function type");
+		}
+
+		// iterate over all the pure virtual member functions and check their type
+		for (auto& memberFunction : address->getRecord()->getPureVirtualMemberFunctions()) {
+			checkMemberType(address, memberFunction.getAddressedNode()->getType(), FK_MEMBER_FUNCTION, true, res, EC_TYPE_INVALID_MEMBER_FUNCTION_TYPE, "Invalid pure virtual member function type");
+		}
 
 		return res;
 	}

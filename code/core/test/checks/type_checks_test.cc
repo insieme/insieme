@@ -458,6 +458,64 @@ namespace checks {
 		}
 	}
 
+	TEST(MemberFunctionTypeCheck, Basic) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		//create structs with correct member functions
+		auto ok1 = builder.parseType("struct A { lambda f : () -> unit {} }");
+		auto ok2 = builder.parseType("struct A { lambda f : () -> unit {} lambda g : () -> unit {} }");
+		auto ok3 = builder.parseType("struct A { lambda f : (a : int<4>) -> unit {} lambda g : (a : int<4>) -> unit {} }");
+		auto ok4 = builder.parseType("struct A { lambda f : () -> unit {} pure virtual g : () -> unit }");
+		auto ok5 = builder.parseType("struct A { lambda f : (a : int<4>) -> unit {} pure virtual g : (int<4>) -> unit }");
+
+		EXPECT_TRUE(check(ok1).empty()) << check(ok1);
+		EXPECT_TRUE(check(ok2).empty()) << check(ok2);
+		EXPECT_TRUE(check(ok3).empty()) << check(ok3);
+		EXPECT_TRUE(check(ok4).empty()) << check(ok4);
+		EXPECT_TRUE(check(ok5).empty()) << check(ok5);
+
+		{
+			//create a custom member function of the wrong function type
+			TypePtr thisType = builder.refType(builder.tagTypeReference("A"));
+			auto functionType = builder.functionType(toVector(thisType), builder.getLangBasic().getUnit(), FK_PLAIN);
+			auto memberFunction = builder.memberFunction(false, "f", builder.lambdaExpr(functionType, toVector(builder.variable(builder.refType(thisType))), builder.getNoOp()));
+			auto err = builder.structType("A", ParentList(), FieldList(), ExpressionList(), builder.getDefaultDestructor("A"), false, toVector(memberFunction), PureVirtualMemberFunctionList());
+
+			EXPECT_PRED2(containsMSG, check(err), Message(NodeAddress(err).getAddressOfChild(1,0), EC_TYPE_INVALID_MEMBER_FUNCTION_TYPE, "", Message::ERROR));
+		}
+
+		{
+			//create a custom member function of the wrong type (wrong this parameter type)
+			TypePtr thisType = builder.refType(builder.tagTypeReference("A"));
+			auto functionType = builder.functionType(toVector(builder.refType(thisType).as<TypePtr>()), builder.getLangBasic().getUnit(), FK_MEMBER_FUNCTION);
+			auto memberFunction = builder.memberFunction(false, "f", builder.lambdaExpr(functionType, toVector(builder.variable(builder.refType(thisType))), builder.getNoOp()));
+			auto err = builder.structType("A", ParentList(), FieldList(), ExpressionList(), builder.getDefaultDestructor("A"), false, toVector(memberFunction), PureVirtualMemberFunctionList());
+
+			EXPECT_PRED2(containsMSG, check(err), Message(NodeAddress(err).getAddressOfChild(1,0), EC_TYPE_INVALID_MEMBER_FUNCTION_TYPE, "", Message::ERROR));
+		}
+
+		{
+			//create a custom pure virtual member function of the wrong function type
+			TypePtr thisType = builder.refType(builder.tagTypeReference("A"));
+			auto functionType = builder.functionType(toVector(thisType), builder.getLangBasic().getUnit(), FK_PLAIN);
+			auto memberFunction = builder.pureVirtualMemberFunction("f", functionType);
+			auto err = builder.structType("A", ParentList(), FieldList(), ExpressionList(), builder.getDefaultDestructor("A"), false, MemberFunctionList(), toVector(memberFunction));
+
+			EXPECT_PRED2(containsMSG, check(err), Message(NodeAddress(err).getAddressOfChild(1,0), EC_TYPE_INVALID_MEMBER_FUNCTION_TYPE, "", Message::ERROR));
+		}
+
+		{
+			//create a custom pure virtual member function of the wrong function type (wrong this parameter type)
+			TypePtr thisType = builder.refType(builder.tagTypeReference("A"));
+			auto functionType = builder.functionType(toVector(builder.refType(thisType).as<TypePtr>()), builder.getLangBasic().getUnit(), FK_MEMBER_FUNCTION);
+			auto memberFunction = builder.pureVirtualMemberFunction("f", functionType);
+			auto err = builder.structType("A", ParentList(), FieldList(), ExpressionList(), builder.getDefaultDestructor("A"), false, MemberFunctionList(), toVector(memberFunction));
+
+			EXPECT_PRED2(containsMSG, check(err), Message(NodeAddress(err).getAddressOfChild(1,0), EC_TYPE_INVALID_MEMBER_FUNCTION_TYPE, "", Message::ERROR));
+		}
+	}
+
 	TEST(StructExprTypeCheck, Basic) {
 		NodeManager manager;
 		IRBuilder builder(manager);
