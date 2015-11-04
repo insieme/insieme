@@ -82,10 +82,19 @@ namespace conversion {
 			case clang::RefQualifierKind::RQ_None: break; // stop warnings
 			}
 			auto thisType = core::lang::buildRefType(parentType, methDecl->isConst(), methDecl->isVolatile(), refKind);
-			// build new function type with "this" parameter
+			// add "this" parameter to param list
 			auto paramList = funType->getParameterTypeList();
 			paramList.insert(paramList.begin(), thisType);
-			auto newFunType = converter.getIRBuilder().functionType(paramList, funType->getReturnType(), funType->getKind());
+			// handle return type for constructors
+			auto retType = funType->getReturnType();
+			const clang::CXXConstructorDecl* constrDecl = llvm::dyn_cast<clang::CXXConstructorDecl>(methDecl);
+			if(constrDecl) { retType = thisType; }
+			// determine kind
+			auto kind = core::FunctionKind::FK_MEMBER_FUNCTION;
+			if(constrDecl) { kind = core::FunctionKind::FK_CONSTRUCTOR; }
+			else if(llvm::dyn_cast<clang::CXXDestructorDecl>(methDecl)) { kind = core::FunctionKind::FK_DESTRUCTOR; }
+			// build type
+			auto newFunType = converter.getIRBuilder().functionType(paramList, retType, kind);
 			VLOG(2) << "Converted method type from: " << dumpClang(methDecl) << "\n to: " << dumpColor(newFunType);
 			return newFunType;
 		}
@@ -98,8 +107,8 @@ namespace conversion {
 				// handle implicit "this" for methods
 				if(methDecl) {
 					auto thisType = converter.convertVarType(methDecl->getThisType(converter.getCompiler().getASTContext()));
-					params.push_back(converter.getIRBuilder().variable(thisType));
-				}
+					params.push_back(converter.getIRBuilder().variable(thisType));					
+				}				
 				// handle other parameters
 				for(auto param : funcDecl->parameters()) {
 					auto irParam = converter.getDeclConverter()->convertVarDecl(param);
