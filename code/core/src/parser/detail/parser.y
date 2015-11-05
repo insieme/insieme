@@ -214,7 +214,7 @@
 %type <FieldList>                      fields
 %type <ExpressionPtr>                  constructor
 %type <ExpressionList>                 constructors
-%type <ExpressionPtr>                  destructor
+%type <pair<ExpressionPtr,bool>>       destructor
 %type <MemberFunctionPtr>              member_function
 %type <MemberFunctionList>             member_functions
 %type <PureVirtualMemberFunctionPtr>   pure_virtual_member_function
@@ -314,7 +314,7 @@ main : type "identifier" "(" parameters ")" compound_statement              { $$
 record_definition : struct_or_union "identifier" parent_spec "{"            { driver.beginRecord(@$, $2); }
                                     fields                                  { driver.registerFields(@$, $6); }
                                            constructors destructor member_functions pure_virtual_member_functions "}" 
-                                                                            { $$ = driver.genRecordType(@$, $1, $2, $3, $6, $8, $9, $10, $11); driver.endRecord(); }
+                                                                            { $$ = driver.genRecordType(@$, $1, $2, $3, $6, $8, $9.first, $9.second, $10, $11); driver.endRecord(); }
                   | struct_or_union "{" fields "}"                          { $$ = driver.genSimpleStructOrUnionType(@$, $1, $3); }
                   ;
 
@@ -337,8 +337,8 @@ constructor : "ctor" "(" parameters                                         { dr
                                     ")" compound_statement_no_scope         { $$ = driver.genConstructor(@$, $3, $6); driver.closeScope(); }
             ;
 
-destructor : "dtor" "(" ")" compound_statement                              { $$ = driver.genDestructor(@$, $4); }
-           |                                                                { $$ = LambdaExprPtr(); }
+destructor : "dtor" virtual_flag "(" ")" compound_statement                 { $$ = std::make_pair(driver.genDestructor(@$, $5), $2); }
+           |                                                                { $$ = std::make_pair(LambdaExprPtr(), false); }
            ;
 
 member_functions : member_functions member_function                         { $1.push_back($2); $$ = $1; }
