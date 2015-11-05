@@ -407,11 +407,11 @@ namespace core {
 		                  memberFunctions(mfuns), pureVirtualMemberFunctions(pvmfuns));
 	}
 
-	TagTypePtr IRBuilderBaseModule::structType(const StringValuePtr& name, const ParentsPtr& parents, const FieldsPtr& fields,
-	                                           const ExpressionsPtr& ctors, const ExpressionPtr& dtor, const BoolValuePtr& dtorIsVirtual,
-	                                           const MemberFunctionsPtr& mfuns, const PureVirtualMemberFunctionsPtr& pvmfuns) const {
+	TagTypePtr IRBuilderBaseModule::structType(const StringValuePtr& name, const ParentsPtr& parents, const FieldsPtr& fields, const ExpressionsPtr& ctors,
+	                                           const ExpressionPtr& dtor, const BoolValuePtr& dtorIsVirtual, const MemberFunctionsPtr& mfuns,
+	                                           const PureVirtualMemberFunctionsPtr& pvmfuns) const {
 		auto tag = tagTypeReference(name);
-				return tagType(tag, tagTypeDefinition({tagTypeBinding(tag, structRecord(name, parents, fields, ctors, dtor, dtorIsVirtual, mfuns, pvmfuns))}));
+		return tagType(tag, tagTypeDefinition({tagTypeBinding(tag, structRecord(name, parents, fields, ctors, dtor, dtorIsVirtual, mfuns, pvmfuns))}));
 	}
 
 

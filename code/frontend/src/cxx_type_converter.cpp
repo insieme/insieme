@@ -67,7 +67,6 @@ namespace conversion {
 	//								BUILTIN TYPES
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::TypePtr Converter::CXXTypeConverter::VisitPointerType(const PointerType* ptrTy) {
-		// writte warnning on const pointers
 		return TypeConverter::VisitPointerType(ptrTy);
 	}
 
@@ -100,29 +99,41 @@ namespace conversion {
 		const clang::CXXRecordDecl* classDecl = llvm::dyn_cast_or_null<clang::CXXRecordDecl>(tagType->getDecl());
 		if(!classDecl || !classDecl->getDefinition()) { return genTy; }
 
-		// add parents if any
-		if(classDecl->getNumBases() > 0) {
-			std::vector<core::ParentPtr> parents;
-			for(auto base : classDecl->bases()) {
-				// visit the parent to build its type
-				auto parentIrType = convert(base.getType());
-				parents.push_back(builder.parent(base.isVirtual(), parentIrType));
-			}
-			retTy = core::transform::replaceNode(mgr, core::TagTypeAddress(retTy.as<core::TagTypePtr>())->getStruct()->getParents(), builder.parents(parents))
-				        .as<core::TagTypePtr>();
+		// get struct type for easier manipulation
+		auto structTy = retTy.as<core::TagTypePtr>()->getStruct();
+
+		// get parents if any
+		std::vector<core::ParentPtr> parents;
+		for(auto base : classDecl->bases()) {
+			// visit the parent to build its type
+			auto parentIrType = convert(base.getType());
+			parents.push_back(builder.parent(base.isVirtual(), parentIrType));
 		}
 
-		// add methods
+		// get methods, constructors and destructor
 		std::vector<core::MemberFunctionPtr> members;
+		std::vector<core::PureVirtualMemberFunctionPtr> pvMembers;
+		std::vector<core::ExpressionPtr> constructors;
+		auto destructor = structTy->getDestructor();
+		bool destructorVirtual = false;
 		for(auto mem : classDecl->methods()) {
-			if(mem->isVirtual() && mem->isPure()) continue;
 			auto memFun = converter.getDeclConverter()->convertMethodDecl(mem);
-			members.push_back(memFun);
+			if(mem->isVirtual() && mem->isPure()) {
+				pvMembers.push_back(builder.pureVirtualMemberFunction(memFun->getName(), memFun->getImplementation()->getType().as<core::FunctionTypePtr>()));
+			} else if(llvm::dyn_cast<clang::CXXConstructorDecl>(mem)) {
+				constructors.push_back(memFun->getImplementation());
+			} else if(llvm::dyn_cast<clang::CXXDestructorDecl>(mem)) {
+				destructor = memFun->getImplementation();
+				if(mem->isVirtual()) { destructorVirtual = true; }
+			} else {
+				members.push_back(memFun);
+			}
 		}
-		VLOG(2) << " - Members: " << members;
-		retTy = core::transform::replaceNode(mgr, core::TagTypeAddress(retTy.as<core::TagTypePtr>())->getRecord()->getMemberFunctions(),
-			                                 builder.memberFunctions(members)).as<core::TagTypePtr>();
 
+		// create new structTy
+		retTy = builder.structType(structTy->getName(), builder.parents(parents), structTy->getFields(), builder.expressions(constructors), destructor,
+			                          builder.boolValue(destructorVirtual), builder.memberFunctions(members), builder.pureVirtualMemberFunctions(pvMembers));
+		
 		// update associated type in irTu
 		converter.getIRTranslationUnit().replaceType(genTy, retTy.as<core::TagTypePtr>());
 
