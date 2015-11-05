@@ -152,7 +152,6 @@
 
 	CAST         "CAST"
 	AUTO         "auto"
-	UNDEFINED    "undefined"
 
 	VAR          "var"
 	IF           "if"
@@ -241,7 +240,7 @@
 %type <ExpressionPtr>                  call
 %type <LambdaExprPtr>                  lambda
 %type <BindExprPtr>                    bind
-%type <ExpressionPtr>                  undefined_expression parallel_expression list_expression initializer unary_op binary_op ternary_op this_expression
+%type <ExpressionPtr>                  parallel_expression list_expression initializer unary_op binary_op ternary_op this_expression
 
 %type <VariablePtr>                    parameter
 %type <VariableList>                   parameters non_empty_parameters non_empty_bind_parameters
@@ -538,7 +537,6 @@ plain_expression : variable                                               { $$ =
                  | call                                                   { $$ = $1; }
                  | lambda                                                 { $$ = $1; }
                  | bind                                                   { $$ = $1; }
-                 | undefined_expression                                   { $$ = $1; }
                  | parallel_expression                                    { $$ = $1; }
                  | list_expression                                        { $$ = $1; }
                  | initializer                                            { $$ = $1; }
@@ -617,11 +615,6 @@ non_empty_bind_parameters : "(" non_empty_parameters ")"                  { driv
 let_expression : "let" "identifier" "=" expression                        { driver.openScope(); driver.declareSymbol(@2, $2, $4); }
                                     "in" expression                       { $$ = $7; driver.closeScope(); }
                ;
-
-// -- reference expressions --
-
-undefined_expression : "undefined" "(" type ")"                           { $$ = driver.builder.undefined($3); }
-                     ;
 
 // -- parallel expressions --
 

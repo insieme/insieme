@@ -483,6 +483,7 @@ namespace parser {
 		EXPECT_FALSE(test_statement(nm, "x;"));
 
 		EXPECT_TRUE(test_statement(nm, "{ var int<4> x = 0; x+1; }"));
+		EXPECT_TRUE(test_statement(nm, "{ var ref<int<4>,f,f,plain> x; }"));
 		EXPECT_TRUE(test_statement(nm, "{ auto x = 0; x+1; }"));
 
 		EXPECT_TRUE(test_statement(nm, "if ( true ) {}"));
@@ -508,16 +509,16 @@ namespace parser {
 
 		EXPECT_TRUE(test_statement(nm, "alias type = struct a { a : int<4>; b : int<8>; };"
 		                               "{"
-		                               "    var type varable = undefined(type);"
-		                               "    var rf<type> var2 = undefined(rf<type>);"
-		                               "    auto var3 = undefined(type);"
+		                               "    var ref<type,f,f,plain> variable;"
+		                               "    var ref<rf<type>,f,f,plain> var2;"
+		                               "    auto var3 = var2;"
 		                               "}"));
 
 		EXPECT_TRUE(test_statement(nm, "alias class = struct name { a : int<2>; };"
 		                               "alias collection = array<class, 10>;"
 		                               "{"
-		                               "    var ref<collection,f,f,plain> x = undefined(ref<collection,f,f,plain>);"
-		                               "    var int<2> y = undefined(int<2>);"
+		                               "    var ref<collection,f,f,plain> x;"
+		                               "    var int<2> y = CAST(int<2>) 5;"
 		                               "    x[5].a = y;"
 		                               "}"));
 	}

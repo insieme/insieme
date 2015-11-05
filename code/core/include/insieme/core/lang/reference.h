@@ -140,16 +140,25 @@ namespace lang {
 		 */
 		LANG_EXT_LITERAL(RefDelete, "ref_delete", "(ref<'a,f,'v>) -> unit")
 
-
 		/**
 		 * A built-in derived operator allocating memory on the stack.
 		 */
-		LANG_EXT_DERIVED_WITH_NAME(RefVar, "ref_var", "(v : 'a) -> ref<'a,f,f> { auto r = ref_alloc(type_lit('a), mem_loc_stack); r = v; return r; }")
+		LANG_EXT_DERIVED_WITH_NAME(RefVar, "ref_var", "(t : type<'a>) -> ref<'a,f,f> { return ref_alloc(t, mem_loc_stack); }")
+
+		/**
+		 * A built-in derived operator allocating memory on the stack and initializing it.
+		 */
+		LANG_EXT_DERIVED_WITH_NAME(RefVarInit, "ref_var_init", "(v : 'a) -> ref<'a,f,f> { auto r = ref_var(type_lit('a)); r = v; return r; }")
 
 		/**
 		 * A built-in derived operator allocating memory on the heap.
 		 */
-		LANG_EXT_DERIVED_WITH_NAME(RefNew, "ref_new", "(v : 'a) -> ref<'a,f,f> { auto r = ref_alloc(type_lit('a), mem_loc_heap ); r = v; return r; }")
+		LANG_EXT_DERIVED_WITH_NAME(RefNew, "ref_new", "(t : type<'a>) -> ref<'a,f,f> { return ref_alloc(t, mem_loc_heap ); }")
+
+		/**
+		 * A built-in derived operator allocating memory on the heap and initializing it.
+		 */
+		LANG_EXT_DERIVED_WITH_NAME(RefNewInit, "ref_new_init", "(v : 'a) -> ref<'a,f,f> { auto r = ref_new(type_lit('a)); r = v; return r; }")
 
 		/**
 		 * A built-in abstract operator obtaining references to functions.

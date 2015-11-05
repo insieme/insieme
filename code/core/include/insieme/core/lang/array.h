@@ -106,7 +106,7 @@ namespace lang {
 		LANG_EXT_DERIVED_WITH_NAME(ArrayReduce, "array_reduce",
 				    "                                                                                             "
 					"   (data : ref<array<'a,'s>,'v,'c,plain>, size : int<8>, op : ('b,'a)->'b, init : 'b)->'b {   "
-					"   	var ref<'b,f,f,plain> res = ref_var(init);                                               "
+					"   	var ref<'b,f,f,plain> res = ref_var_init(init);                                               "
 					"   	for(int<8> i = 0 .. size) {                                                           "
 					"   		res = op(*res, *(data[i]));                                                       "
 					"   	}                                                                                     "
@@ -121,7 +121,7 @@ namespace lang {
 		LANG_EXT_DERIVED_WITH_NAME(ArrayFold, "array_fold",
 					"                                                                                       "
 					"   (data : array<'a,'s>, init : 'b, op : ('b,'a)->'b)->'b {                           "
-					"   	var ref<'b,f,f,plain> res = ref_var(init);                                         "
+					"   	var ref<'b,f,f,plain> res = ref_var_init(init);                                         "
 					"   	for(int<8> i = 0 .. type_to_int(type_lit('s))) {                                     "
 					"   		res = op(*res, data[i]);                                                    "
 					"   	}                                                                               "

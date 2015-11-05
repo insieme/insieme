@@ -54,7 +54,7 @@ namespace checks {
             alias uint = uint<8>;
             {
                 () -> unit { 
-                    var ref<uint<8>,f,f,plain> i = ref_var(0u); 
+                    var ref<uint<8>,f,f,plain> i = ref_var_init(0u); 
                     (arr : ref<array<uint<8>,inf>,f,f,plain>) -> unit { 
                         var uint<8> b = 1u; 
                         arr[b]; 
@@ -66,7 +66,7 @@ namespace checks {
             alias uint = uint<8>;
             {
                 () -> unit { 
-                    var ref<uint<8>,f,f,plain> i = ref_var(0u); 
+                    var ref<uint<8>,f,f,plain> i = ref_var_init(0u); 
                     (arr : ref<array<uint<8>,inf>,f,f,plain>) -> unit { 
                         var uint<8> b = 1u; 
                         $ arr[b] $; 
@@ -96,7 +96,7 @@ namespace checks {
 		{
 			StatementPtr stmt_pass = builder.parseExpr("alias uint = uint<8>;"
 			                                           "() -> unit { "
-			                                           "	var ref<uint<8>,f,f,plain> i = ref_var(0u); "
+			                                           "	var ref<uint<8>,f,f,plain> i = ref_var_init(0u); "
 			                                           "	(arr : ref<array<uint<8>,inf>,f,f,plain>) -> unit { "
 			                                           "		var uint<8> b = 1; "
 			                                           "		arr[0u]; "
@@ -117,7 +117,7 @@ namespace checks {
 	alias uint = uint<8>;
 	{
 		() -> unit { 
-			var ref<uint<8>,f,f,plain> i = ref_var(0u);
+			var ref<uint<8>,f,f,plain> i = ref_var_init(0u);
 		};
 	}
 	)1N5P1RE");
@@ -137,7 +137,7 @@ namespace checks {
 	alias uint = uint<8>;
 	{
 		() -> uint { 
-			var ref<int<8>,f,f,plain> i = ref_var(0u);
+			var ref<int<8>,f,f,plain> i = ref_var_init(0u);
 		};
 	}
 	)1N5P1RE");
@@ -159,7 +159,7 @@ namespace checks {
 	alias uint = uint<8>;
 	{
 		() -> uint { 
-			var bool a = ref_var(true);
+			var bool a = ref_var_init(true);
 			if(a) {
 				return 1u;
 			} else {
@@ -185,7 +185,7 @@ namespace checks {
 	alias uint = uint<8>;
 	{
 		() -> uint { 
-			var bool a = ref_var(true);
+			var bool a = ref_var_init(true);
 			if(a) {
 				return 1u;
 			}
@@ -210,7 +210,7 @@ namespace checks {
 	alias uint = uint<8>;
 	{
 		() -> uint {
-			var bool a = ref_var(true);			
+			var bool a = ref_var_init(true);			
 			while(true) {
 				if(a) { return 1u; }
 			}
@@ -234,7 +234,7 @@ namespace checks {
 	alias uint = uint<8>;
 	{
 		(b : bool) -> uint {
-			var bool a = ref_var(true);			
+			var bool a = ref_var_init(true);			
 			while(b) {
 				if(a) { return 1u; }
 			}
@@ -388,7 +388,7 @@ namespace checks {
             alias uint = uint<8>;
             {
                 () -> unit {
-					var ref<array<int<4>,3>,f,f,plain> v0 = ref_var(array_create(type_lit(3), [0,1,2]));
+					var ref<array<int<4>,3>,f,f,plain> v0 = ref_var_init(array_create(type_lit(3), [0,1,2]));
 				};
 			}
             )1N5P1RE"));
@@ -404,8 +404,8 @@ namespace checks {
             alias uint = uint<8>;
             {
                 () -> unit {
-					auto list = ref_var([0,1,2]);
-					var ref<array<int<4>,3>,f,f,plain> v0 = ref_var(array_create(type_lit(3), *list));
+					auto list = ref_var_init([0,1,2]);
+					var ref<array<int<4>,3>,f,f,plain> v0 = ref_var_init(array_create(type_lit(3), *list));
 				};
 			}
             )1N5P1RE"));

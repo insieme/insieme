@@ -594,90 +594,24 @@ namespace core {
 		return doubleLit(out.str());
 	}
 
-	ExpressionPtr IRBuilderBaseModule::undefined(const TypePtr& type) const {
-		return callExpr(type, getLangBasic().getUndefined(), getTypeLiteral(type));
-	}
-
 	ExpressionPtr IRBuilderBaseModule::undefinedVar(const TypePtr& type) const {
+		auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
+		core::TypePtr elementType = type;
 		if(analysis::isRefType(type)) {
-			core::TypePtr elementType = core::analysis::getReferencedType(type);
-			return core::lang::buildRefCast(refVar(undefined(elementType)), type);
+			elementType = core::analysis::getReferencedType(type);
 		}
-		return undefined(type);
+		return callExpr(refType(elementType), refExt.getRefVar(), getTypeLiteral(elementType));
 	}
-
+	
 	ExpressionPtr IRBuilderBaseModule::undefinedNew(const TypePtr& type) const {
+		auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
+		core::TypePtr elementType = type;
 		if(analysis::isRefType(type)) {
-			core::TypePtr elementType = core::analysis::getReferencedType(type);
-			return core::lang::buildRefCast(refNew(undefined(elementType)), type);
+			elementType = core::analysis::getReferencedType(type);
 		}
-		return undefined(type);
+		return callExpr(refType(elementType), refExt.getRefNew(), getTypeLiteral(elementType));
 	}
-
-
-	core::ExpressionPtr IRBuilderBaseModule::getZero(const core::TypePtr& type) const {
-		// if it is an integer ...
-		if(manager.getLangBasic().isInt(type)) { return literal(type, "0"); }
-
-		// if it is a real ..
-		if(manager.getLangBasic().isReal(type)) { return literal(type, "0.0"); }
-
-		// if it is the bool type
-		if(manager.getLangBasic().isBool(type)) { return boolLit(false); }
-
-		// if it is the char type
-		if(manager.getLangBasic().isChar(type)) { return literal(type, "'\\0'"); }
-
-		// if it is a lock, keep it undefined
-		if(manager.getLangExtension<lang::ParallelExtension>().isLock(type)) { return undefined(type); }
-
-		// if it is a struct ...
-		if(auto structType = analysis::isStruct(type)) {
-
-			vector<NamedValuePtr> members;
-			for_each(structType->getFields(), [&](const FieldPtr& cur) { members.push_back(namedValue(cur->getName(), getZero(cur->getType()))); });
-
-			return core::StructExpr::get(manager, type, namedValues(members));
-		}
-
-		// if it is a union type ...
-		if(auto unionType = analysis::isUnion(type)) {
-
-			// in case it is a an empty union
-			if(unionType->getFields().empty() == 0) { return undefined(type); }
-
-			// init the first member
-			auto first = unionType->getFields()[0];
-			return unionExpr(type, first->getName(), getZero(first->getType()));
-		}
-
-		// if it is a ref type ...
-		if(analysis::isRefType(type)) {
-			// return NULL for the specific type
-			return lang::buildRefNull(type);
-		}
-
-		// if it is a function type -- used for function pointers
-		if(type.isa<core::FunctionTypePtr>()) {
-			// return NULL for the specific type
-			auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
-			return deref(refReinterpret(refExt.getRefNull(), type));
-		}
-
-		// add support for unit
-		if(manager.getLangBasic().isUnit(type)) { return manager.getLangBasic().getUnitConstant(); }
-
-		// for all other generic types we return a generic zero value
-		if(type.isa<GenericTypePtr>()) { return callExpr(type, getLangBasic().getZero(), getTypeLiteral(type)); }
-
-		// TODO: extend for more types
-		LOG(FATAL) << "Encountered unsupported type: " << *type;
-		assert_fail() << "Given type not supported yet!";
-
-		// fall-back => return a literal 0 of the corresponding type
-		return literal(type, "0");
-	}
-
+	
 	CallExprPtr IRBuilderBaseModule::deref(const ExpressionPtr& subExpr) const {
 		assert_pred1(analysis::isRefType, subExpr->getType());
 		auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
@@ -691,12 +625,12 @@ namespace core {
 
 	CallExprPtr IRBuilderBaseModule::refVar(const ExpressionPtr& subExpr) const {
 		auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
-		return callExpr(refType(subExpr->getType()), refExt.getRefVar(), subExpr);
+		return callExpr(refType(subExpr->getType()), refExt.getRefVarInit(), subExpr);
 	}
 
 	CallExprPtr IRBuilderBaseModule::refNew(const ExpressionPtr& subExpr) const {
 		auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
-		return callExpr(refType(subExpr->getType()), refExt.getRefNew(), subExpr);
+		return callExpr(refType(subExpr->getType()), refExt.getRefNewInit(), subExpr);
 	}
 
 	CallExprPtr IRBuilderBaseModule::refDelete(const ExpressionPtr& subExpr) const {
@@ -1352,7 +1286,63 @@ namespace core {
 		return sub(getZero(type), a);
 	}
 
+	core::ExpressionPtr IRBuilderBaseModule::getZero(const core::TypePtr& type) const {
+			// if it is an integer ...
+			if(manager.getLangBasic().isInt(type)) { return literal(type, "0"); }
 
+			// if it is a real ..
+			if(manager.getLangBasic().isReal(type)) { return literal(type, "0.0"); }
+
+			// if it is the bool type
+			if(manager.getLangBasic().isBool(type)) { return boolLit(false); }
+
+			// if it is the char type
+			if(manager.getLangBasic().isChar(type)) { return literal(type, "'\\0'"); }
+
+			// if it is a ref type ...
+			if(analysis::isRefType(type)) {
+					// return NULL for the specific type
+					return lang::buildRefNull(type);
+			}
+
+			// if it is a struct ...
+			if(auto structType = analysis::isStruct(type)) {
+				vector<NamedValuePtr> members;
+				for_each(structType->getFields(), [&](const FieldPtr& cur) { members.push_back(namedValue(cur->getName(), getZero(cur->getType()))); });
+				return core::StructExpr::get(manager, type, namedValues(members));
+			}
+
+			// if it is a union type ...
+			if(auto unionType = analysis::isUnion(type)) {
+				// in case it is a an empty union
+				if(unionType->getFields().empty() == 0) { assert_fail() << "Empty Unions are not allowed!"; }
+
+				// init the first member
+				auto first = unionType->getFields()[0];
+				return unionExpr(type, first->getName(), getZero(first->getType()));
+			}
+
+			// if it is a function type -- used for function pointers
+			if(type.isa<core::FunctionTypePtr>()) {
+					// return NULL for the specific type
+					auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
+					return deref(refReinterpret(refExt.getRefNull(), type));
+			}
+
+			// add support for unit
+			if(manager.getLangBasic().isUnit(type)) { return manager.getLangBasic().getUnitConstant(); }
+
+			// for all other generic types we return a generic zero value
+			if(type.isa<GenericTypePtr>()) { return callExpr(type, getLangBasic().getZero(), getTypeLiteral(type)); }
+
+			// TODO: extend for more types
+			LOG(FATAL) << "Encountered unsupported type: " << *type;
+			assert_fail() << "Given type not supported yet!";
+
+			// fall-back => return a literal 0 of the corresponding type
+			return literal(type, "0");
+	}
+	
 	// ---------------------------- Utilities ---------------------------------------
 
 
@@ -1377,8 +1367,7 @@ namespace core {
 
 		return idx;
 	}
-
-
+	
 	/**
 	 * A utility function wrapping a given statement into a compound statement (if necessary).
 	 */
