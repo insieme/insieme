@@ -258,54 +258,46 @@ namespace parser {
 				return nullptr;
 			}
 
-			auto exprType = expr->getType();
-			// get the actual tag type registered in the TU
-			auto type = getTypeFromGenericTypeInTu(exprType);
-
-			const auto& fieldAccess = builder.getLangBasic().getCompositeMemberAccess();
-			const auto& memberFunctionAccess = builder.getLangBasic().getCompositeMemberFunctionAccess();
-
-			// check whether there is such a field
-			if (auto fieldType = getFieldType(type, memberName)) {
-				// create access
-				if(analysis::isRefType(exprType)) {
-					const auto& refAccess = expr->getNodeManager().getLangExtension<core::lang::ReferenceExtension>().getRefMemberAccess();
-					return builder.callExpr(refAccess, expr, builder.getIdentifierLiteral(memberName), builder.getTypeLiteral(fieldType));
-				}
-				return builder.callExpr(fieldAccess, expr, builder.getIdentifierLiteral(memberName), builder.getTypeLiteral(fieldType));
-
-				// check for the this literal
-			} else if (isInRecordType() && expr == genThis(l)) {
-				// search for the symbol with that name
-				const auto& access = findSymbolInRecordDefiniton(l, memberName);
-				// if the symbol we found is a member access call
-				if (analysis::isCallOf(access, fieldAccess) || analysis::isCallOf(access, memberFunctionAccess)) {
-					CallExprPtr callExpr = access.as<CallExprPtr>();
-					// and accesses the this pointer
-					if (callExpr->getArgument(0) == genThis(l)) {
-						// we can return the access call
-						return access;
-					}
-				}
-
-				//if our callable is a tag type
-			} else if (const auto& tagType = type.isa<TagTypePtr>()) {
-				// check for member access calls
-				// lookup the function to call by name
-				// TODO  here we assume that each name is only used exactly once
-				for (const auto& function : tagType->getRecord()->getMemberFunctions()) {
-					if (function->getNameAsString() == memberName) {
-						// return a member function access call
-						const auto& functionType = function->getImplementation()->getType();
-						return builder.callExpr(functionType, memberFunctionAccess, expr, builder.getIdentifierLiteral(memberName), builder.getTypeLiteral(functionType));
-					}
-				}
-
+			//the type of the expression
+			TypePtr exprType = expr->getType();
+			//the actual type - maybe stripped of one ref
+			TypePtr objectType = exprType;
+			if (analysis::isRefType(exprType)) {
+				objectType = analysis::getReferencedType(exprType);
 			}
 
-			//otherwise we fail
-			error(l, format("Unable to locate member %s in type %s", memberName, *type));
-			return nullptr;
+			//get the generic type
+			GenericTypePtr genericObjectType = objectType.isa<GenericTypePtr>();
+			if (!genericObjectType) {
+				error(l, format("Expression is not of generic (ref) type but of type %s", *objectType));
+				return nullptr;
+			}
+
+			//create a key to look up the symbol in the global scope
+			std::string keyName = genericObjectType->getName()->getValue() + "::" + memberName;
+
+			//look for the key in the global scope
+			auto lookupResult = lookupDeclaredInGlobalScope(keyName);
+			if (!lookupResult) {
+				error(l, format("Unable to locate member %s in type %s", memberName, *genericObjectType));
+				return nullptr;
+
+			} else if (!lookupResult.isa<LiteralPtr>()) {
+				error(l, format("member %s in type %s is not a literal", memberName, *genericObjectType));
+				return nullptr;
+			}
+
+			//now that we found the given member, create a member field access expression to return
+			TypePtr fieldType = lookupResult.as<LiteralPtr>()->getType();
+			if (analysis::isRefType(fieldType)) {
+				fieldType = analysis::getReferencedType(fieldType);
+			}
+			if(analysis::isRefType(exprType)) {
+				const auto& refAccess = expr->getNodeManager().getLangExtension<core::lang::ReferenceExtension>().getRefMemberAccess();
+				return builder.callExpr(refAccess, expr, builder.getIdentifierLiteral(memberName), builder.getTypeLiteral(fieldType));
+			}
+			const auto& fieldAccess = builder.getLangBasic().getCompositeMemberAccess();
+			return builder.callExpr(fieldAccess, expr, builder.getIdentifierLiteral(memberName), builder.getTypeLiteral(fieldType));
 		}
 
 		ExpressionPtr InspireDriver::genTupleAccess(const location& l, const ExpressionPtr& expr, const std::string& member) {
@@ -485,7 +477,18 @@ namespace parser {
 			for (const auto& field : fields) {
 				const auto& name = field->getName()->getValue();
 				const auto& type = builder.refType(field->getType());
-				// create the member access call to store in the symbol table
+
+				const std::string memberName = getThisType()->getName()->getValue() + "::" + name;
+
+				//create literal to store in the lookup table
+				const auto key = builder.literal(memberName, type);
+
+				//only declare the symbol implicitly if it hasn't already been declared
+				if (!isSymbolDeclaredInGlobalScope(memberName)) {
+					declareSymbolInGlobalScope(l, memberName, key);
+				}
+
+				//create the member access call to store in the symbol table for accessing this symbol within this current record _without_ the this pointer
 				ExpressionPtr access = builder.getLangBasic().getCompositeMemberAccess();
 				auto accessExpr = builder.callExpr(type, access, genThis(l), builder.getIdentifierLiteral(name), builder.getTypeLiteral(type));
 				annotations::attachName(field, name);
@@ -1004,6 +1007,15 @@ namespace parser {
 				if(pos != cur.end()) {
 					return pos->second();
 				}
+			}
+			return nullptr;
+		}
+
+		NodePtr InspireDriver::lookupDeclaredInGlobalScope(const std::string& name) {
+			const DefinitionMap& cur = scopes[0]->declaredSymbols;
+			auto pos = cur.find(name);
+			if(pos != cur.end()) {
+				return pos->second();
 			}
 			return nullptr;
 		}

@@ -353,9 +353,14 @@ namespace parser {
 			// ------------- scope management -------------------
 
 			/**
-			 * looks up a declared or defined symbol
+			 * looks up a declared symbol
 			 */
 			NodePtr lookupDeclared(const std::string& name);
+
+			/**
+			 * looks up a declared symbol in the global scope
+			 */
+			NodePtr lookupDeclaredInGlobalScope(const std::string& name);
 
 			/**
 			 * finds an previously defined expression symbol
