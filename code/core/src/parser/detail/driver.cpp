@@ -445,7 +445,7 @@ namespace parser {
 			// if it is a function that is defined
 			if (!isLambda) {
 				// => skip materialization of parameters
-				return builder.lambdaExpr(funcType, params, body);
+				return builder.lambdaExpr(funcType.as<FunctionTypePtr>(), params, body);
 			}
 
 			// replace all variables in the body by their implicitly materialized version
