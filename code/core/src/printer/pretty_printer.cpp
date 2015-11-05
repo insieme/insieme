@@ -358,7 +358,9 @@ namespace printer {
 							if (!fields.empty()) {
 								out << join(";", fields, [&](std::ostream &out, const FieldPtr &field) {
 									newLine();
-									out << field->getName() << " : " << field->getType();
+									visit(NodeAddress(field->getName()));
+									out << " : ";
+									visit(NodeAddress(field->getType()));
 								}) << ";";
 							}
 
