@@ -61,18 +61,17 @@ TEST(ErrorPrinter, address) {
 	IRBuilder builder(mgr);
 
 	auto addrs = builder.parseAddressesStatement(R"1N5P1RE(
-		{
-			let fun = lambda (int<4> arg)->int<4> { return arg + 1; };
-			let lfun = expr lit("lfun":(ref<int<4>,f,f,plain>)->int<4>);
-			let rfun = lambda (ref<int<4>,f,f,plain> arg)->int<4> { return *$arg$;};
-		
-			$decl ref<int<4>,f,f,plain> a;$
-			decl ref<int<4>,f,f,plain> b;
-			decl ref<int<4>,f,f,plain> c;
-			decl ref<int<4>,f,f,plain> d;
-			decl ref<int<4>,f,f,plain> e;
-			decl ref<int<4>,f,f,plain> f;
-			decl ref<int<4>,f,f,plain> g;
+			decl lfun : (ref<int<4>>)->int<4>;
+			def fun = (arg : int<4>)->int<4> { return arg + 1; };
+			def rfun = (arg : ref<int<4>>)->int<4> { return *arg;};
+            {
+			$var ref<int<4>,f,f,plain> a;$
+			var ref<int<4>,f,f,plain> b;
+			var ref<int<4>,f,f,plain> c;
+			var ref<int<4>,f,f,plain> d;
+			var ref<int<4>,f,f,plain> e;
+			var ref<int<4>,f,f,plain> f;
+			var ref<int<4>,f,f,plain> g;
 			{
 				a = 7;
 				fun(*b);
@@ -80,11 +79,11 @@ TEST(ErrorPrinter, address) {
 				fun(fun(*d));
 				fun(rfun(e));
 				$lfun$(f);
-				rfun(var(lfun(g)));
+				rfun(ref_var(lfun(g)));
 			}
 		}
 	)1N5P1RE");
-	EXPECT_EQ(5, addrs.size());
+	EXPECT_EQ(2, addrs.size());
 
 	auto stmt = addrs[0].getRootNode();
 
