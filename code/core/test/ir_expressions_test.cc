@@ -619,7 +619,7 @@ namespace core {
 		// std::cout << "Unroll 5:\n" << core::printer::PrettyPrinter(even->unroll(5)) << "\n\n";
 
 		EXPECT_PRED2(containsSubString, toString(core::printer::PrettyPrinter(even->unroll(2))),
-		             "return v4==0?true:v4-1==0?false:v0(v4-1-1);");
+		             "return  *v4==0?true: *v4-1==0?false:v0( *v4-1-1)");
 
 		res = check(even->unroll(manager, 2), core::checks::getFullCheck());
 		EXPECT_TRUE(res.empty()) << even->unroll(manager, 2) << res;
