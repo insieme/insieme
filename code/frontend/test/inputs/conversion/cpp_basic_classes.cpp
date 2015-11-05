@@ -6,7 +6,7 @@ class A {
 
 int main() {
 	{};
-	#pragma test expect_ir(R"(
+	/*pragma test expect_ir(R"(
 		def struct IMP_A {
 			i : int<4>;
 			ctor() {}
@@ -16,7 +16,7 @@ int main() {
 			lambda IMP_f : () -> real<4> {}
 		};
 		{ var ref<IMP_A> a; }
-	)")
-	{ A a; }
+	)")*/
+	//{ A a; }
 	return 0;
 }
