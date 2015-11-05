@@ -90,7 +90,7 @@ namespace cilk {
 
 							// initialize the variable using an undefined
 							newStmts.push_back(
-							    builder.declarationStmt(decl.getVariable(), builder.refVar(builder.undefined(core::analysis::getReferencedType(type)))));
+							    builder.declarationStmt(decl.getVariable(), builder.undefinedVar(core::analysis::getReferencedType(type))));
 
 							// assign the value
 							core::ExpressionPtr init = decl->getInitialization();

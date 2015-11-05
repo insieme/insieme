@@ -60,12 +60,12 @@ int main() {
 
 	// INIT EXPRESSIONS ///////////////////////////////////////////////////////////
 	
-	#pragma test expect_ir(FOO_FUN C_STYLE_ASSIGN "{ var ref<foo_ptr_type,f,f> v0 = ref_var(ptr_of_function(foo)); }")
+	#pragma test expect_ir(FOO_FUN C_STYLE_ASSIGN "{ var ref<foo_ptr_type,f,f> v0 = ref_var_init(ptr_of_function(foo)); }")
 	{
 		int (*ptr)(int) = foo;
 	}
 
-	#pragma test expect_ir(FOO_FUN C_STYLE_ASSIGN "{ var ref<foo_ptr_type,f,f> v0 = ref_var(ptr_of_function(foo)); }")
+	#pragma test expect_ir(FOO_FUN C_STYLE_ASSIGN "{ var ref<foo_ptr_type,f,f> v0 = ref_var_init(ptr_of_function(foo)); }")
 	{
 		int (*ptr)(int) = &foo;
 	}

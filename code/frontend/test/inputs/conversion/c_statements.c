@@ -58,13 +58,13 @@ int main() {
 		while(i = 1) { break; }
 	}
 
-	#pragma test expect_ir("{ var ref<bool,f,f> v0 = ref_var(false);  while(!*v0 || 0!=0) { v0 = true; { var ref<int<4>,f,f> v1; } } }")
+	#pragma test expect_ir("{ var ref<bool,f,f> v0 = ref_var_init(false);  while(!*v0 || 0!=0) { v0 = true; { var ref<int<4>,f,f> v1; } } }")
 	do {
 		int x;
 	} while(0);
 	
 	#pragma test expect_ir(C_STYLE_ASSIGN "{" R"(var ref<int<4>,f,f> v0; { 
-		var ref<bool,f,f> v1 = ref_var(false); 
+		var ref<bool,f,f> v1 = ref_var_init(false); 
 		while(!*v1 || int_ne(c_ass(v0, 1), 0)) { 
 			v1 = true; 
 			{ break; } 
@@ -127,34 +127,34 @@ int main() {
 		}
 	}
 
-	#pragma test expect_ir(C_STYLE_ASSIGN "{{ var ref<int<4>,f,f> v0 = ref_var(2); while(*v0 < 5) { *v0; c_ass(v0, *v0+1); } } }")
+	#pragma test expect_ir(C_STYLE_ASSIGN "{{ var ref<int<4>,f,f> v0 = ref_var_init(2); while(*v0 < 5) { *v0; c_ass(v0, *v0+1); } } }")
 	{
 		for(int k = 2; k < 5; k+=1) {
 			k;
 		}
 	}
 
-	#pragma test expect_ir(C_STYLE_ASSIGN "{{ var ref<int<4>,f,f> v0 = ref_var(2); while(*v0 < 5) { *v0; c_ass(v0, *v0+1); } } }")
+	#pragma test expect_ir(C_STYLE_ASSIGN "{{ var ref<int<4>,f,f> v0 = ref_var_init(2); while(*v0 < 5) { *v0; c_ass(v0, *v0+1); } } }")
 	{
 		for(int k = 2; k < 5; k+=1) k;
 	}
 
-	#pragma test expect_ir(C_STYLE_ASSIGN "{{ var ref<int<4>,f,f> v0 = ref_var(2); while(*v0 < 5) { c_ass(v0, *v0+1); } } }")
+	#pragma test expect_ir(C_STYLE_ASSIGN "{{ var ref<int<4>,f,f> v0 = ref_var_init(2); while(*v0 < 5) { c_ass(v0, *v0+1); } } }")
 	{
 		for(int k = 2; k < 5; k+=1);
 	}
 
-	#pragma test expect_ir(C_STYLE_ASSIGN "{{ var ref<int<4>,f,f> v0 = ref_var(2); while(*v0 < 5) { c_ass(v0, *v0+1); } } }")
+	#pragma test expect_ir(C_STYLE_ASSIGN "{{ var ref<int<4>,f,f> v0 = ref_var_init(2); while(*v0 < 5) { c_ass(v0, *v0+1); } } }")
 	{
 		for(int k = 2; k < 5; k+=1) { }
 	}
 
-	#pragma test expect_ir(C_STYLE_ASSIGN "{{ var ref<int<4>,f,f> v0 = ref_var(2); while(*v0 < 5) { { c_ass(v0, *v0+1); continue; } c_ass(v0, *v0+1); } } }")
+	#pragma test expect_ir(C_STYLE_ASSIGN "{{ var ref<int<4>,f,f> v0 = ref_var_init(2); while(*v0 < 5) { { c_ass(v0, *v0+1); continue; } c_ass(v0, *v0+1); } } }")
 	{
 		for(int k = 2; k < 5; k+=1) { continue; }
 	}
 
-	#pragma test expect_ir(C_STYLE_ASSIGN "{{ var ref<int<4>,f,f> v0 = ref_var(2); while(*v0 < 5) { { if (*v0 == 3) { c_ass(v0, *v0+1); continue; }; if (*v0 == 4) { c_ass(v0, *v0+1); continue; }; } c_ass(v0, *v0+1); } } }")
+	#pragma test expect_ir(C_STYLE_ASSIGN "{{ var ref<int<4>,f,f> v0 = ref_var_init(2); while(*v0 < 5) { { if (*v0 == 3) { c_ass(v0, *v0+1); continue; }; if (*v0 == 4) { c_ass(v0, *v0+1); continue; }; } c_ass(v0, *v0+1); } } }")
 	{
 		for(int k = 2; k < 5; k+=1) {
 			if (k==3) continue;
@@ -162,7 +162,7 @@ int main() {
 		}
 	}
 
-	#pragma test expect_ir("{ var ref<int<4>,f,f> v0 = ref_var(0); { while(*v0 < 10) { *v0; gen_post_inc(v0); } } }")
+	#pragma test expect_ir("{ var ref<int<4>,f,f> v0 = ref_var_init(0); { while(*v0 < 10) { *v0; gen_post_inc(v0); } } }")
 	{
 		int i = 0;
 		for(; i < 10; i++) {
@@ -170,7 +170,7 @@ int main() {
 		}
 	}
 
-    #pragma test expect_ir("{ var ref<int<4>,f,f> v0 = ref_var(0); { while(true) { break; gen_post_inc(v0); } } }")
+    #pragma test expect_ir("{ var ref<int<4>,f,f> v0 = ref_var_init(0); { while(true) { break; gen_post_inc(v0); } } }")
 	{
 		int i = 0;
 		for(;; i++) {
@@ -178,7 +178,7 @@ int main() {
 		}
 	}
 
-	#pragma test expect_ir("{ var ref<int<4>,f,f> v0 = ref_var(0); { while(true) { { gen_post_inc(v0); continue; } gen_post_inc(v0); } } }")
+	#pragma test expect_ir("{ var ref<int<4>,f,f> v0 = ref_var_init(0); { while(true) { { gen_post_inc(v0); continue; } gen_post_inc(v0); } } }")
 	{
 		int i = 0;
 		for(;; i++) {
@@ -193,7 +193,7 @@ int main() {
 		}
 	}
 
-	#pragma test expect_ir("{ { var ref<int<4>,f,f> v0 = ref_var(0); while(*v0 < 0) {}; } }")
+	#pragma test expect_ir("{ { var ref<int<4>,f,f> v0 = ref_var_init(0); while(*v0 < 0) {}; } }")
 	{
 		for(int i = 0; i < 0;) {
 		}

@@ -147,7 +147,7 @@ namespace conversion {
 		globalLit = pragma::handlePragmas({globalLit}, var, converter).front().as<core::LiteralPtr>();
 		converter.getVarMan()->insert(var, globalLit);
 		auto init =
-			(var->getInit()) ? converter.convertInitExpr(var->getInit()) : builder.undefined(core::lang::ReferenceType(globalLit->getType()).getElementType());
+			(var->getInit()) ? converter.convertInitExpr(var->getInit()) : builder.getZero(core::lang::ReferenceType(globalLit->getType()).getElementType());
 		core::annotations::attachName(globalLit, name);
 		converter.getIRTranslationUnit().addGlobal(globalLit, init);
 		converter.untrackSourceLocation();

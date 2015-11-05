@@ -1332,9 +1332,14 @@ namespace core {
 			// add support for unit
 			if(manager.getLangBasic().isUnit(type)) { return manager.getLangBasic().getUnitConstant(); }
 
+			// for array types
+			if(lang::isArray(type)) {
+				return lang::buildArrayCreate(lang::getArraySize(type), { getZero(lang::getArrayElementType(type)) });
+			}
+
 			// for all other generic types we return a generic zero value
 			if(type.isa<GenericTypePtr>()) { return callExpr(type, getLangBasic().getZero(), getTypeLiteral(type)); }
-
+			
 			// TODO: extend for more types
 			LOG(FATAL) << "Encountered unsupported type: " << *type;
 			assert_fail() << "Given type not supported yet!";
