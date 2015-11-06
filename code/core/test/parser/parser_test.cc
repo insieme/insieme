@@ -145,11 +145,11 @@ namespace parser {
 		                          "  lambda f : () -> int<4> { return 1; }"
 		                          "}"));
 
-		EXPECT_FALSE(test_type(nm, "struct class {" //multiple functions with the same name
-		                           "  a : int<4>;"
-		                           "  lambda f : () -> int<4> { return 1; }"
-		                           "  lambda f : (a : int<4>) -> int<4> { return 1; }"
-		                           "}"));
+		EXPECT_TRUE(test_type(nm, "struct class {" //multiple functions with the same name
+		                          "  a : int<4>;"
+		                          "  lambda f : () -> int<4> { return 1; }"
+		                          "  lambda f : (a : int<4>) -> int<4> { return 1; }"
+		                          "}"));
 
 		EXPECT_TRUE(test_type(nm, "struct class {"
 		                          "  a : int<4>;"
@@ -725,6 +725,69 @@ namespace parser {
 			EXPECT_TRUE (reference3.isConst());
 			EXPECT_TRUE (reference3.isVolatile());
 			EXPECT_TRUE (reference3.isPlain());
+		}
+	}
+
+	TEST(IR_Parser, MemberFunctionLookup) {
+		NodeManager nm;
+		IRBuilder builder(nm);
+
+		EXPECT_TRUE(test_type(nm, "def struct A {" //referencing a member function which has been declared
+		                          "  lambda f : () -> unit { }"
+		                          "  lambda g : () -> unit { f(); }"
+		                          "}; A"));
+
+		EXPECT_TRUE(test_type(nm, "def struct A {" //referencing a member function which has been declared using the this pointer
+		                          "  lambda f : () -> unit { }"
+		                          "  lambda g : () -> unit { this.f(); }"
+		                          "}; A"));
+
+		EXPECT_FALSE(test_type(nm, "def struct A {" //referencing a member function which has not been declared
+		                           "  lambda f : () -> unit { f(); }"
+		                           "}; A"));
+
+		EXPECT_FALSE(test_type(nm, "def struct A {" //referencing a member function which has not been declared using the this pointer
+		                           "  lambda f : () -> unit { this.f(); }"
+		                           "}; A"));
+
+		EXPECT_TRUE(test_statement(nm, "def struct A {" //externally referencing a member function which has been declared
+		                               "  lambda f : () -> unit { }"
+		                               "};"
+		                               "{"
+		                               "  var ref<A,f,f,plain> a;"
+		                               "  a.f();"
+		                               "}"));
+
+		{
+			auto addresses = builder.parseAddressesStatement("def struct A {" //externally referencing a member function which has been declared multiple times
+			                                                 "  lambda f : () -> bool { return false; }"
+			                                                 "  lambda f : (a : int<4>) -> int<4> { return a; }"
+			                                                 "};"
+			                                                 "{"
+			                                                 "  var ref<A,f,f,plain> a;"
+			                                                 "  $a.f()$;"
+			                                                 "  $a.f(5)$;"
+			                                                 "}");
+
+			ASSERT_EQ(2, addresses.size());
+			EXPECT_EQ(nm.getLangBasic().getBool(), addresses[0].getAddressedNode().as<CallExprPtr>()->getType());
+			EXPECT_EQ(nm.getLangBasic().getInt4(), addresses[1].getAddressedNode().as<CallExprPtr>()->getType());
+		}
+
+		{
+			auto addresses = builder.parseAddressesStatement("def struct A {" //externally referencing a member function which has been declared multiple times
+			                                                 "  lambda f : (a : bool) -> bool { return a; }"
+			                                                 "  lambda f : (a : int<4>) -> int<4> { return a; }"
+			                                                 "};"
+			                                                 "{"
+			                                                 "  var ref<A,f,f,plain> a;"
+			                                                 "  $a.f(false)$;"
+			                                                 "  $a.f(5)$;"
+			                                                 "}");
+
+			ASSERT_EQ(2, addresses.size());
+			EXPECT_EQ(nm.getLangBasic().getBool(), addresses[0].getAddressedNode().as<CallExprPtr>()->getType());
+			EXPECT_EQ(nm.getLangBasic().getInt4(), addresses[1].getAddressedNode().as<CallExprPtr>()->getType());
 		}
 	}
 

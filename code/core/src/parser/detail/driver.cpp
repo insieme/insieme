@@ -258,6 +258,9 @@ namespace parser {
 				return nullptr;
 			}
 
+			const auto& fieldAccess = builder.getLangBasic().getCompositeMemberAccess();
+			const auto& refAccess = expr->getNodeManager().getLangExtension<core::lang::ReferenceExtension>().getRefMemberAccess();
+
 			//the type of the expression
 			TypePtr exprType = expr->getType();
 			//the actual type - maybe stripped of one ref
@@ -266,38 +269,55 @@ namespace parser {
 				objectType = analysis::getReferencedType(exprType);
 			}
 
-			//get the generic type
-			GenericTypePtr genericObjectType = objectType.isa<GenericTypePtr>();
-			if (!genericObjectType) {
-				error(l, format("Expression is not of generic (ref) type but of type %s", *objectType));
-				return nullptr;
+			//if the type is a generic type, we can proceed with the literal lookup here
+			if (auto genericObjectType = objectType.isa<GenericTypePtr>()) {
+				//create a key to look up the symbol in the global scope
+				std::string keyName = genericObjectType->getName()->getValue() + "::" + memberName;
+
+				//look for the key in the global scope
+				auto lookupResult = lookupDeclaredInGlobalScope(keyName);
+				if (!lookupResult) {
+					error(l, format("Unable to locate member %s in type %s", memberName, *genericObjectType));
+					return nullptr;
+
+				} else if (!lookupResult.isa<LiteralPtr>()) {
+					error(l, format("Member %s in type %s is not a literal", memberName, *genericObjectType));
+					return nullptr;
+				}
+
+				//now that we found the given member, create a member access expression to return
+				TypePtr memberType = lookupResult.as<LiteralPtr>()->getType();
+				if (analysis::isRefType(memberType)) {
+					memberType = analysis::getReferencedType(memberType);
+				}
+
+				//if the member is a member function
+				if (auto functionType = memberType.isa<FunctionTypePtr>()) {
+					if (functionType->getKind() == FK_MEMBER_FUNCTION) {
+						return builder.callExpr(builder.getLangBasic().getCompositeMemberFunctionAccess(), expr, builder.getIdentifierLiteral(memberName));
+					}
+				}
+
+				//otherwise it is a field
+				if(analysis::isRefType(exprType)) {
+					return builder.callExpr(refAccess, expr, builder.getIdentifierLiteral(memberName), builder.getTypeLiteral(memberType));
+				}
+				return builder.callExpr(fieldAccess, expr, builder.getIdentifierLiteral(memberName), builder.getTypeLiteral(memberType));
+
+				//otherwise we have to create the member lookup differently
+			} else {
+				// check whether there is such a field
+				if (auto fieldType = getFieldType(exprType, memberName)) {
+					// create access
+					if(analysis::isRefType(exprType)) {
+						return builder.callExpr(refAccess, expr, builder.getIdentifierLiteral(memberName), builder.getTypeLiteral(fieldType));
+					}
+					return builder.callExpr(fieldAccess, expr, builder.getIdentifierLiteral(memberName), builder.getTypeLiteral(fieldType));
+				}
 			}
 
-			//create a key to look up the symbol in the global scope
-			std::string keyName = genericObjectType->getName()->getValue() + "::" + memberName;
-
-			//look for the key in the global scope
-			auto lookupResult = lookupDeclaredInGlobalScope(keyName);
-			if (!lookupResult) {
-				error(l, format("Unable to locate member %s in type %s", memberName, *genericObjectType));
-				return nullptr;
-
-			} else if (!lookupResult.isa<LiteralPtr>()) {
-				error(l, format("member %s in type %s is not a literal", memberName, *genericObjectType));
-				return nullptr;
-			}
-
-			//now that we found the given member, create a member field access expression to return
-			TypePtr fieldType = lookupResult.as<LiteralPtr>()->getType();
-			if (analysis::isRefType(fieldType)) {
-				fieldType = analysis::getReferencedType(fieldType);
-			}
-			if(analysis::isRefType(exprType)) {
-				const auto& refAccess = expr->getNodeManager().getLangExtension<core::lang::ReferenceExtension>().getRefMemberAccess();
-				return builder.callExpr(refAccess, expr, builder.getIdentifierLiteral(memberName), builder.getTypeLiteral(fieldType));
-			}
-			const auto& fieldAccess = builder.getLangBasic().getCompositeMemberAccess();
-			return builder.callExpr(fieldAccess, expr, builder.getIdentifierLiteral(memberName), builder.getTypeLiteral(fieldType));
+			error(l, format("Unable to locate member %s in type %s", memberName, *exprType));
+			return nullptr;
 		}
 
 		ExpressionPtr InspireDriver::genTupleAccess(const location& l, const ExpressionPtr& expr, const std::string& member) {
@@ -376,16 +396,6 @@ namespace parser {
 			const GenericTypePtr key = builder.genericType(name);
 			if (tu[key]) {
 				error(l, format("Type %s has already been defined", name));
-				return nullptr;
-			}
-
-			//check for duplicate member function names
-			//TODO remove this restriction
-			std::set<std::string> memberFunctionNames;
-			for_each(mfuns, [&](const MemberFunctionPtr& fun) { memberFunctionNames.insert(fun->getName()->getValue()); });
-			for_each(pvmfuns, [&](const PureVirtualMemberFunctionPtr& fun) { memberFunctionNames.insert(fun->getName()->getValue()); });
-			if (memberFunctionNames.size() != mfuns.size() + pvmfuns.size()) {
-				error(l, "Duplicate member function names detected");
 				return nullptr;
 			}
 
@@ -579,9 +589,9 @@ namespace parser {
 			auto memberFunType = fun->getFunctionType();
 			assert_false(fun->isRecursive()) << "The parser should not produce recursive functions!";
 
-			// generate call expression which is used to call this function in the current tag type context
+			// generate call expression which is used to call this function in the current tag type context _without_ the this pointer
 			ExpressionPtr access = builder.getLangBasic().getCompositeMemberFunctionAccess();
-			auto accessExpr = builder.callExpr(memberFunType, access, genThis(l), builder.getIdentifierLiteral(name), builder.getTypeLiteral(memberFunType));
+			auto accessExpr = builder.callExpr(memberFunType, access, genThis(l), builder.getIdentifierLiteral(name));
 			annotations::attachName(fun, name);
 			declareSymbol(l, name, accessExpr);
 
@@ -655,28 +665,43 @@ namespace parser {
 				// we add the callable itself as the first argument of the call
 				auto thisParam = callable.as<CallExprPtr>()->getArgument(0);
 				auto thisParamType = thisParam->getType();
-				thisParamType = getTypeFromGenericTypeInTu(thisParamType);
+				if (analysis::isRefType(thisParamType)) {
+					thisParamType = analysis::getReferencedType(thisParamType);
+				}
 
 				args.insert(args.begin(), thisParam);
 
-				//replace func with the lookup of the literal
-				std::string typeName;
-				if (auto tagType = thisParamType.isa<TagTypePtr>()) {
-					typeName = tagType->getName()->getValue();
-				} else {
-					typeName = thisParamType.as<GenericTypePtr>()->getName()->getValue();
+				//replace func with the lookup of the literal. first create the name of the literal
+				std::string typeName = thisParamType.as<GenericTypePtr>()->getName()->getValue();
+				std::string functionName = callable.as<CallExprPtr>()->getArgument(1).as<LiteralPtr>()->getValue()->getValue();
+				std::string memberName = typeName + "::" + functionName;
+
+				//now we have to find a function registered in the TU which has the same literal name and the same parameter types. we have to ignore the result type
+				const auto argumentTypes = extractTypes(args);
+				for (const auto& mapEntry : tu.getFunctions()) {
+					const auto& key = mapEntry.first;
+					if (key.getValue()->getValue() == memberName) {
+						if (const auto& keyType = key->getType().isa<FunctionTypePtr>()) {
+							if (keyType->getKind() == FK_MEMBER_FUNCTION && keyType->getParameterTypeList() == argumentTypes) {
+								func = key;
+								break;
+							}
+						}
+					}
 				}
-				auto functionName = callable.as<CallExprPtr>()->getArgument(1).as<LiteralPtr>()->getValue()->getValue();
-				auto memberName = typeName + "::" + functionName;
-				func = findSymbol(l, memberName);
-				if (!func) {
-					error(l, format("Couldn't find symbol %s", memberName));
+
+				//if we didn'T change the function, we didn't find a suitable one
+				if (func == callable) {
+					error(l, format("Couldn't find member function %s in type %s for argument types", memberName, typeName, argumentTypes));
 					return nullptr;
 				}
 			}
 
 			auto ftype = func->getType();
-			if(!ftype.isa<FunctionTypePtr>()) { error(l, "attempt to call non function expression"); }
+			if(!ftype.isa<FunctionTypePtr>()) {
+				error(l, format("attempt to call non function expression of type %s", *ftype));
+				return nullptr;
+			}
 
 			auto funcParamTypes = ftype.as<FunctionTypePtr>()->getParameterTypeList();
 			if(!funcParamTypes.empty()) {
