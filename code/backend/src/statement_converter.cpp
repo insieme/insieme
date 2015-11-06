@@ -345,7 +345,7 @@ namespace backend {
 		::transform(ptr->getMembers()->getElements(), std::back_inserter(init->values), [&](const core::NamedValuePtr& cur) {
 			core::ExpressionPtr arg = cur->getValue();
 			// skip ref.var if present
-			if(core::analysis::isCallOf(cur->getValue(), refExt.getRefVar())) {
+			if(core::analysis::isCallOf(cur->getValue(), refExt.getRefVarInit())) {
 				arg = static_pointer_cast<const core::CallExpr>(cur->getValue())->getArgument(0);
 				if(core::analysis::isCallOf(arg, refExt.getRefDeref())) { arg = static_pointer_cast<const core::CallExpr>(arg)->getArgument(0); }
 			}
@@ -445,10 +445,10 @@ namespace backend {
 			auto& refExt = initValue->getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
 
 			// if it is a call to a ref.var => put it on the stack
-			if (refExt.isCallOfRefVar(initValue)) return true;
+			if (refExt.isCallOfRefVar(initValue) || refExt.isCallOfRefVarInit(initValue)) return true;
 
 			// if it is a constructor call ..
-			if(core::CallExprPtr call = initValue.isa<core::CallExprPtr>()) { return core::analysis::isCallOf(call[0], refExt.getRefVar()); }
+			if(core::CallExprPtr call = initValue.isa<core::CallExprPtr>()) { return core::analysis::isCallOf(call[0], refExt.getRefVarInit()); }
 
 			// everything else is heap based
 			return false;
@@ -462,6 +462,7 @@ namespace backend {
 		core::IRBuilder builder(ptr->getNodeManager());
 
 		core::VariablePtr var = ptr->getVariable();
+		
 		core::ExpressionPtr init = ptr->getInitialization();
 
 		core::TypePtr plainType = var->getType();
@@ -512,29 +513,12 @@ namespace backend {
 	}
 
 	c_ast::ExpressionPtr StmtConverter::convertInitExpression(ConversionContext& context, const core::ExpressionPtr& init) {
-		auto& basic = converter.getNodeManager().getLangBasic();
 		auto& refExt = converter.getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
 		auto manager = converter.getCNodeManager();
 
 		// test whether initialization is required ...
 		if(core::analysis::isCallOf(init, refExt.getRefVar())) {
-			core::CallExprPtr call = static_pointer_cast<const core::CallExpr>(init);
-			core::ExpressionPtr init = call->getArgument(0);
-			if(core::analysis::isCallOf(init, basic.getUndefined())) {
-				// => undefined initialization, hence no initialization!
-				return c_ast::ExpressionPtr();
-			}
-
-			if(init->getNodeType() == core::NT_StructExpr) {
-				auto isUndefined = [&](const core::NamedValuePtr& cur) { return core::analysis::isCallOf(cur->getValue(), basic.getUndefined()); };
-				if(all(init.as<core::StructExprPtr>()->getMembers(), isUndefined)) {
-					// no init required
-					return c_ast::ExpressionPtr();
-				}
-
-				// this is not supported yet - TODO: update struct expression to use names and initialize members individually
-				assert(!any(init.as<core::StructExprPtr>()->getMembers(), isUndefined) && "Unsupported combination of defined and undefined values!");
-			}
+			return c_ast::ExpressionPtr();
 		}
 
 		// TODO: handle initUndefine and init struct cases
@@ -543,7 +527,7 @@ namespace backend {
 		// drop ref_cast
 		if(core::analysis::isCallOf(initValue, refExt.getRefCast())) { initValue = core::analysis::getArgument(initValue, 0); }
 		// drop ref.var ...
-		if(core::analysis::isCallOf(initValue, refExt.getRefVar())) { initValue = core::analysis::getArgument(initValue, 0); }
+		if(core::analysis::isCallOf(initValue, refExt.getRefVarInit())) { initValue = core::analysis::getArgument(initValue, 0); }
 
 		return convertExpression(context, initValue);
 	}
