@@ -49,6 +49,8 @@
 #include "insieme/annotations/c/extern.h"
 #include "insieme/annotations/c/extern_c.h"
 
+#include "insieme/utils/name_mangling.h"
+
 namespace insieme {
 namespace frontend {
 namespace conversion {
@@ -67,29 +69,81 @@ namespace conversion {
 		}
 	}
 
-	core::LambdaExprPtr DeclConverter::convertFunctionDecl(const core::FunctionTypePtr& funType, const clang::FunctionDecl* funcDecl) const {
-		core::LiteralPtr funLit = builder.literal(funcDecl->getNameAsString(), funType);
-		
-		if(funcDecl->hasBody()) {
-			converter.getVarMan()->pushScope(false);
-			core::VariableList params;
-			for(auto param : funcDecl->parameters()) {
-				auto irParam = convertVarDecl(param);
-				params.push_back(irParam.first);
-				converter.getVarMan()->insert(param, irParam.first);
+	namespace {
+		core::FunctionTypePtr getMethodType(Converter& converter, const clang::CXXMethodDecl* methDecl) {
+			// first get function type
+			auto funType = converter.convertType(methDecl->getType()).as<core::FunctionTypePtr>();
+			// now build "this" type
+			auto parentType = converter.convertType(converter.getCompiler().getASTContext().getRecordType(methDecl->getParent()));
+			auto refKind = core::lang::ReferenceType::Kind::Plain;
+			switch(methDecl->getRefQualifier()) {
+			case clang::RefQualifierKind::RQ_LValue: refKind = core::lang::ReferenceType::Kind::CppReference; break;
+			case clang::RefQualifierKind::RQ_RValue: refKind = core::lang::ReferenceType::Kind::CppRValueReference; break;
+			case clang::RefQualifierKind::RQ_None: break; // stop warnings
 			}
-			auto body = converter.convertStmt(funcDecl->getBody());
-			converter.getVarMan()->popScope();
-			auto funExp = builder.lambdaExpr(funType, params, body);
-			return funExp;
-		} else {
-			return core::LambdaExprPtr();
+			auto thisType = core::lang::buildRefType(parentType, methDecl->isConst(), methDecl->isVolatile(), refKind);
+			// add "this" parameter to param list
+			auto paramList = funType->getParameterTypeList();
+			paramList.insert(paramList.begin(), thisType);
+			// handle return type for constructors
+			auto retType = funType->getReturnType();
+			const clang::CXXConstructorDecl* constrDecl = llvm::dyn_cast<clang::CXXConstructorDecl>(methDecl);
+			if(constrDecl) { retType = thisType; }
+			// determine kind
+			auto kind = core::FunctionKind::FK_MEMBER_FUNCTION;
+			if(constrDecl) { kind = core::FunctionKind::FK_CONSTRUCTOR; }
+			else if(llvm::dyn_cast<clang::CXXDestructorDecl>(methDecl)) { kind = core::FunctionKind::FK_DESTRUCTOR; }
+			// build type
+			auto newFunType = converter.getIRBuilder().functionType(paramList, retType, kind);
+			VLOG(2) << "Converted method type from: " << dumpClang(methDecl) << "\n to: " << dumpColor(newFunType);
+			return newFunType;
 		}
 
-		assert_not_implemented();
-		return core::LambdaExprPtr();
+		core::LambdaExprPtr convertFunMethodInternal(Converter& converter, const core::FunctionTypePtr& funType, const clang::FunctionDecl* funcDecl) {
+			const clang::CXXMethodDecl* methDecl = llvm::dyn_cast<clang::CXXMethodDecl>(funcDecl);
+			if(funcDecl->hasBody()) {
+				converter.getVarMan()->pushScope(false);
+				core::VariableList params;
+				// handle implicit "this" for methods
+				if(methDecl) {
+					auto thisType = converter.convertVarType(methDecl->getThisType(converter.getCompiler().getASTContext()));
+					params.push_back(converter.getIRBuilder().variable(thisType));					
+				}				
+				// handle other parameters
+				for(auto param : funcDecl->parameters()) {
+					auto irParam = converter.getDeclConverter()->convertVarDecl(param);
+					params.push_back(irParam.first);
+					converter.getVarMan()->insert(param, irParam.first);
+				}
+				// convert body and build full expression
+				auto body = converter.convertStmt(funcDecl->getBody());
+				converter.getVarMan()->popScope();
+				auto funExp = converter.getIRBuilder().lambdaExpr(funType, params, body);
+				return funExp;
+			} else {
+				return core::LambdaExprPtr();
+			}
+
+			assert_not_implemented();
+			return core::LambdaExprPtr();
+		}
+	}
+
+	core::LambdaExprPtr DeclConverter::convertFunctionDecl(const core::FunctionTypePtr& funType, const clang::FunctionDecl* funcDecl) const {
+		return convertFunMethodInternal(converter, funType, funcDecl);
 	}
 	
+	core::MemberFunctionPtr DeclConverter::convertMethodDecl(const clang::CXXMethodDecl* methDecl, bool lit) const {
+		string name = insieme::utils::mangle(methDecl->getNameAsString());
+		auto funType = getMethodType(converter, methDecl);
+		core::ExpressionPtr func = builder.literal(name, funType);
+		if(!lit) {
+			auto lambda = convertFunMethodInternal(converter, funType, methDecl);
+			if(lambda) func = lambda;
+		}
+		return builder.memberFunction(methDecl->isVirtual(), name, func);
+	}
+
 	// Visitors -------------------------------------------------------------------------------------------------------
 	
 	void DeclConverter::VisitDeclContext(const clang::DeclContext* context) {
@@ -106,11 +160,11 @@ namespace conversion {
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	void DeclConverter::VisitRecordDecl(const clang::RecordDecl* typeDecl) {
 		VLOG(2) << "~~~~~~~~~~~~~~~~ VisitRecordDecl: " << dumpClang(typeDecl);
+		// we do not convert templates or partial specialized classes/functions, the full
+		// type will be found and converted once the instantiation is found
 		if(!typeDecl->isCompleteDefinition()) { return; }
 		if(typeDecl->isDependentType()) { return; }
 
-		// we do not convert templates or partial specialized classes/functions, the full
-		// type will be found and converted once the instantiation is found
 		converter.trackSourceLocation(typeDecl);
 		//convertTypeDecl(typeDecl);
 		converter.untrackSourceLocation();

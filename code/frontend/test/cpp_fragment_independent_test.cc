@@ -42,6 +42,10 @@ namespace frontend {
 	TEST(CppIndependentTest, BasicTypes) {
 		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/cpp_basic_types.cpp");
 	}
+	
+	TEST(CppIndependentTest, BasicClasses) {
+		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/cpp_basic_classes.cpp");
+	}
 
 } // fe namespace
 } // insieme namespace

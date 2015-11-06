@@ -135,9 +135,7 @@ namespace conversion {
 		CXXTypeConverter(Converter& fact) : TypeConverter(fact) {}
 
 		virtual ~CXXTypeConverter(){};
-
-		vector<clang::RecordDecl*> getAllBases(const clang::CXXRecordDecl* recDeclCXX);
-
+		
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		//  COMMON TYPES
 		CALL_BASE_TYPE_VISIT(TypeConverter, BuiltinType)

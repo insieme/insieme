@@ -403,6 +403,7 @@ namespace conversion {
 	}
 
 	core::TypePtr Converter::TypeConverter::VisitTagType(const TagType* tagType) {
+		VLOG(2) << "Converter::TypeConverter::VisitTagType " << tagType << std::endl;
 		core::TypePtr retTy;
 		LOG_TYPE_CONVERSION(tagType, retTy);
 
