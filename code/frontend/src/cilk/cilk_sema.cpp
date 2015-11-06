@@ -94,7 +94,7 @@ namespace cilk {
 
 							// assign the value
 							core::ExpressionPtr init = decl->getInitialization();
-							assert_true(core::analysis::isCallOf(init, manager.getLangExtension<core::lang::ReferenceExtension>().getRefVar()));
+							assert_true(core::analysis::isCallOf(init, manager.getLangExtension<core::lang::ReferenceExtension>().getRefVarInit()));
 							init = init.as<core::CallExprPtr>()->getArgument(0);
 							newStmts.push_back(builder.parallel(builder.assign(decl.getVariable(), init), 1));
 

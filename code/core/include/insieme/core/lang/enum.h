@@ -173,6 +173,8 @@ namespace lang {
 
 	GenericTypePtr getEnumElement(const GenericTypePtr& name, const ExpressionPtr& val);
 
+	TypePtr getEnumElementType(const TypePtr& type);	
+	
 	GenericTypePtr getEnumDef(const GenericTypePtr& name, const std::vector<GenericTypePtr>& entries);	
 
 } // lang

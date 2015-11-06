@@ -288,7 +288,7 @@ namespace core {
 
 		EXPECT_EQ("[]", toString(check(stmt2, all)));
 		
-		EXPECT_PRED2(containsSubString, toString(printer::PrettyPrinter(stmt2)), "decl ref<bool,f,f,plain> v2 = ref_var_init(false);");
+		EXPECT_PRED2(containsSubString, toString(printer::PrettyPrinter(stmt2)), "decl ref<bool,f,f,plain> v2 =  ref_var_init(false);");
 		EXPECT_PRED2(containsSubString, toString(printer::PrettyPrinter(stmt2)), "function(ref<bool,f,f,plain>");
 	}
 

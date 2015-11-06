@@ -192,6 +192,12 @@ namespace lang {
 		return EnumEntry::create(name, val);
 	}
 
+	TypePtr getEnumElementType(const TypePtr& type) {
+		assert_true(isEnumType(type)) << "Passed type is not an enum type.";
+		const core::TagTypePtr tt = type.as<core::TagTypePtr>();
+		const core::FieldPtr t2 = tt->getFields()[1];		
+		return t2->getType();
+	}
 	GenericTypePtr getEnumDef(const GenericTypePtr& name, const std::vector<GenericTypePtr>& entries) {
 		return EnumDefinition::create(name, entries);
 	}

@@ -82,6 +82,7 @@
 #include "insieme/utils/logging.h"
 #include "insieme/utils/functional_utils.h"
 #include "insieme/utils/assert.h"
+#include "insieme/utils/name_mangling.h"
 
 namespace insieme {
 namespace core {
@@ -1305,6 +1306,13 @@ namespace core {
 					return lang::buildRefNull(type);
 			}
 
+			// if it is an enum ...
+			if(lang::isEnumType(type)) {
+				auto& enumExt = manager.getLangExtension<lang::EnumExtension>();
+				// this is what gcc does: { enum { A=1 } var1; cout << var1; }. Prints 0.
+				return callExpr(type, enumExt.getIntToEnum(), getTypeLiteral(type), getZero(lang::getEnumElementType(type)));
+			}
+
 			// if it is a struct ...
 			if(auto structType = analysis::isStruct(type)) {
 				vector<NamedValuePtr> members;
@@ -1315,7 +1323,7 @@ namespace core {
 			// if it is a union type ...
 			if(auto unionType = analysis::isUnion(type)) {
 				// in case it is a an empty union
-				if(unionType->getFields().empty() == 0) { assert_fail() << "Empty Unions are not allowed!"; }
+				if(unionType->getFields().empty()) { assert_fail() << "Empty Unions are not allowed!"; }
 
 				// init the first member
 				auto first = unionType->getFields()[0];
@@ -1338,7 +1346,15 @@ namespace core {
 			}
 
 			// for all other generic types we return a generic zero value
-			if(type.isa<GenericTypePtr>()) { return callExpr(type, getLangBasic().getZero(), getTypeLiteral(type)); }
+			if(type.isa<GenericTypePtr>()) {
+				//check for omp lock types and ignore the zero init
+				auto typeName = insieme::utils::demangle(type.as<core::GenericTypePtr>()->getName()->getValue());
+				if(typeName == "omp_lock_t" || typeName == "_omp_lock_t") {
+					//TODO: works for now, but check if this is always valid
+					return ExpressionPtr();
+				}
+				return callExpr(type, getLangBasic().getZero(), getTypeLiteral(type));
+			}
 			
 			// TODO: extend for more types
 			LOG(FATAL) << "Encountered unsupported type: " << *type;

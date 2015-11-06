@@ -434,10 +434,10 @@ int main() {
 		int x, y;
 	} Image;
 
-	#pragma test expect_ir("STRING", "c_style_assignment(ref_var_init(struct{data=0u, x=0, y=0}),  *ref_var_init(struct{data=1u, x=1, y=1}))")
+	#pragma test expect_ir("STRING", "c_style_assignment( ref_var_init(struct{data=0u, x=0, y=0}),  * ref_var_init(struct{data=1u, x=1, y=1}))")
 	(Image){0u, 0, 0} = (Image){1u,1,1};
 
-	#pragma test expect_ir("STRING", "c_style_assignment(ref_var_init(struct{data=0u, x=0, y=0}).x, 1)")
+	#pragma test expect_ir("STRING", "c_style_assignment( ref_var_init(struct{data=0u, x=0, y=0}).x, 1)")
 	(Image){0u, 0, 0}.x = 1;
 	
 	// bool to int conversion	

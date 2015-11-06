@@ -181,7 +181,8 @@ namespace omp {
 				// check whether it is a struct-init expression of a lock
 				if(node->getNodeType() == NT_StructExpr && isLockStructType(node.as<ExpressionPtr>()->getType())) {
 					// replace with uninitialized lock
-					newNode = build.getZero(parExt.getLock());
+					abort();
+					newNode = build.getZero(parExt.getLock());					
 				} else {
 					// no changes required at this level, recurse
 					newNode = node->substitute(nodeMan, *this);
@@ -379,8 +380,9 @@ namespace omp {
 		// implements OpenMP built-in types by replacing them with the correct IR constructs
 		NodePtr handleTypes(const NodePtr& newNode) {
 			if(TypePtr type = newNode.isa<core::TypePtr>()) {
-				if(isLockStructType(type))
+				if(isLockStructType(type)) {
 					return parExt.getLock();
+				}
 			}
 			return newNode;
 		}
@@ -931,7 +933,7 @@ namespace omp {
 				// check initialization
 				auto& refExt = decl->getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
 				core::ExpressionPtr init = decl->getInitialization();
-				if(!(core::analysis::isCallOf(init, refExt.getRefNew()) || core::analysis::isCallOf(init, refExt.getRefVar()))) {
+				if(!(core::analysis::isCallOf(init, refExt.getRefNewInit()) || core::analysis::isCallOf(init, refExt.getRefVarInit()))) {
 					return true; // again, not a global
 				}
 
