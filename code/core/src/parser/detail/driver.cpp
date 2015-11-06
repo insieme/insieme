@@ -58,6 +58,7 @@
 #include "insieme/core/lang/pointer.h"
 #include "insieme/core/lang/varargs_extension.h"
 
+#include "insieme/core/lang/extension.h"
 #include "insieme/core/lang/extension_registry.h"
 
 // this last one is generated and the path will be provided to the command
@@ -71,6 +72,24 @@ namespace parser {
 
 		class location;
 		class InspireParser;
+
+		namespace {
+
+			class ParserMemberFunctionExtension : public core::lang::Extension {
+				/**
+				 * Allow the node manager to create instances of this class.
+				 */
+				friend class core::NodeManager;
+
+				/**
+				 * Creates a new instance based on the given node manager.
+				 */
+				ParserMemberFunctionExtension(core::NodeManager& manager) : core::lang::Extension(manager) {}
+
+				LANG_EXT_LITERAL_WITH_NAME(MemberFunctionAccess, "parser_member_function_access", "parser_member_function_access", "('a, identifier) -> unit")
+			};
+
+		}
 
 		/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ InspireDriver ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
@@ -259,7 +278,8 @@ namespace parser {
 			}
 
 			const auto& fieldAccess = builder.getLangBasic().getCompositeMemberAccess();
-			const auto& refAccess = expr->getNodeManager().getLangExtension<core::lang::ReferenceExtension>().getRefMemberAccess();
+			const auto& refAccess = mgr.getLangExtension<core::lang::ReferenceExtension>().getRefMemberAccess();
+			const auto& memberFunctionAccess = mgr.getLangExtension<ParserMemberFunctionExtension>().getMemberFunctionAccess();
 
 			//the type of the expression
 			TypePtr exprType = expr->getType();
@@ -294,7 +314,7 @@ namespace parser {
 				//if the member is a member function
 				if (auto functionType = memberType.isa<FunctionTypePtr>()) {
 					if (functionType->getKind() == FK_MEMBER_FUNCTION) {
-						return builder.callExpr(builder.getLangBasic().getCompositeMemberFunctionAccess(), expr, builder.getIdentifierLiteral(memberName));
+						return builder.callExpr(memberFunctionAccess, expr, builder.getIdentifierLiteral(memberName));
 					}
 				}
 
@@ -590,7 +610,7 @@ namespace parser {
 			assert_false(fun->isRecursive()) << "The parser should not produce recursive functions!";
 
 			// generate call expression which is used to call this function in the current tag type context _without_ the this pointer
-			ExpressionPtr access = builder.getLangBasic().getCompositeMemberFunctionAccess();
+			ExpressionPtr access = mgr.getLangExtension<ParserMemberFunctionExtension>().getMemberFunctionAccess();
 			auto accessExpr = builder.callExpr(memberFunType, access, genThis(l), builder.getIdentifierLiteral(name));
 			annotations::attachName(fun, name);
 			declareSymbol(l, name, accessExpr);
@@ -661,7 +681,7 @@ namespace parser {
 			ExpressionPtr func = callable;
 
 			// if this is a member function call we prepend the implicit this parameter
-			if(analysis::isCallOf(callable, builder.getLangBasic().getCompositeMemberFunctionAccess())) {
+			if(analysis::isCallOf(callable, mgr.getLangExtension<ParserMemberFunctionExtension>().getMemberFunctionAccess())) {
 				// we add the callable itself as the first argument of the call
 				auto thisParam = callable.as<CallExprPtr>()->getArgument(0);
 				auto thisParamType = thisParam->getType();
