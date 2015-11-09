@@ -29,8 +29,8 @@ unit main() {
 	var ref<A> a4 = A::(ref_new(type_lit(A)), 3);
 	
 	// re-initialize an existing variable (placement new)
-	//var ref<A> a5;
-	//A::(a5, 4);
+	var ref<A> a5;
+	A::(a5, 4);
 	
 	print("a1.x = %d\n", *a1.x);
 	print("a2.x = %d\n", *a2.x);

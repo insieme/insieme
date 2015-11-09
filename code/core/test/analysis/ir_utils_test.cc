@@ -289,7 +289,8 @@ namespace analysis {
 			auto listElem = builder.structRecord(toVector(builder.field("load", manager.getLangBasic().getInt4()), builder.field("next", builder.refType(tag))));
 			TypePtr constRecType = builder.tagType(tag, builder.tagTypeDefinition(toVector(builder.tagTypeBinding(tag, listElem))));
 
-			EXPECT_EQ("rec ^list.{^list=struct {load:int<4>,next:ref<^list,f,f,plain>,dtor()}}", toString(*constRecType));
+			EXPECT_EQ("rec ^list.{^list=struct {load:int<4>,next:ref<^list,f,f,plain>,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}}",
+			          toString(*constRecType));
 			EXPECT_FALSE(isGeneric(constRecType));
 		}
 
@@ -299,7 +300,8 @@ namespace analysis {
 			auto listElem = builder.structRecord(toVector(builder.field("load", builder.typeVariable("b")), builder.field("next", builder.refType(tag))));
 			TypePtr constRecType = builder.tagType(tag, builder.tagTypeDefinition(toVector(builder.tagTypeBinding(tag, listElem))));
 
-			EXPECT_EQ("rec ^list.{^list=struct {load:'b,next:ref<^list,f,f,plain>,dtor()}}", toString(*constRecType));
+			EXPECT_EQ("rec ^list.{^list=struct {load:'b,next:ref<^list,f,f,plain>,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}}",
+			          toString(*constRecType));
 			EXPECT_TRUE(isGeneric(constRecType));
 		}
 	}

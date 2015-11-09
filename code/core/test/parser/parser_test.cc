@@ -145,11 +145,11 @@ namespace parser {
 		                          "  lambda f : () -> int<4> { return 1; }"
 		                          "}"));
 
-		EXPECT_FALSE(test_type(nm, "struct class {" //multiple functions with the same name
-		                           "  a : int<4>;"
-		                           "  lambda f : () -> int<4> { return 1; }"
-		                           "  lambda f : (a : int<4>) -> int<4> { return 1; }"
-		                           "}"));
+		EXPECT_TRUE(test_type(nm, "struct class {" //multiple functions with the same name
+		                          "  a : int<4>;"
+		                          "  lambda f : () -> int<4> { return 1; }"
+		                          "  lambda f : (a : int<4>) -> int<4> { return 1; }"
+		                          "}"));
 
 		EXPECT_TRUE(test_type(nm, "struct class {"
 		                          "  a : int<4>;"
