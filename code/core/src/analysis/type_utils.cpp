@@ -170,7 +170,14 @@ namespace analysis {
 
 		auto containsCtor = [&](const LambdaExprPtr& ctor)->bool {
 			return any(record->getConstructors(), [&](const ExpressionPtr& cur) {
-				return *cur == *ctor;
+				return *builder.normalize(cur) == *builder.normalize(ctor);
+			});
+		};
+
+		auto containsMemberFunction = [&](const MemberFunctionPtr& member)->bool {
+			return any(record->getMemberFunctions(), [&](const MemberFunctionPtr& cur) {
+				std::cout << "comparing " << *builder.normalize(cur) << " with " << *builder.normalize(member) << "\n";
+				return *builder.normalize(cur) == *builder.normalize(member);
 			});
 		};
 
@@ -194,12 +201,6 @@ namespace analysis {
 		if (!trivialMoveConstructor) return false;
 		std::cout << "C\n";
 
-
-		auto containsMemberFunction = [&](const MemberFunctionPtr& member)->bool {
-			return any(record->getMemberFunctions(), [&](const MemberFunctionPtr& cur) {
-				return *cur == *member;
-			});
-		};
 
 		// check for trivial copy and move assignments
 		bool trivialCopyAssignment = containsMemberFunction(builder.getDefaultCopyAssignOperator(thisType, parents, record->getFields()));
