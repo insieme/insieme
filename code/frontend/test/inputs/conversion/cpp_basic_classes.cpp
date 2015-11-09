@@ -1,11 +1,11 @@
 
-class A {
+struct A {
 	int i;
 	float f();
 };
 
 int main() {
-	{};
+	; // this is required because of the clang compound source location bug
 	/*pragma test expect_ir(R"(
 		def struct IMP_A {
 			i : int<4>;
@@ -17,6 +17,11 @@ int main() {
 		};
 		{ var ref<IMP_A> a; }
 	)")*/
-	//{ A a; }
+	{ A a; }
+
+	{
+		A a;
+		a.f();
+	}
 	return 0;
 }

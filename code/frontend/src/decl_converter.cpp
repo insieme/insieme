@@ -95,7 +95,8 @@ namespace conversion {
 			else if(llvm::dyn_cast<clang::CXXDestructorDecl>(methDecl)) { kind = core::FunctionKind::FK_DESTRUCTOR; }
 			// build type
 			auto newFunType = converter.getIRBuilder().functionType(paramList, retType, kind);
-			VLOG(2) << "Converted method type from: " << dumpClang(methDecl) << "\n to: " << dumpColor(newFunType);
+			VLOG(2) << "Converted method type from: " << dumpClang(methDecl) << "\n to: " << dumpColor(newFunType)
+				    << "(retType: " << *newFunType->getReturnType() << ")\n";
 			return newFunType;
 		}
 
