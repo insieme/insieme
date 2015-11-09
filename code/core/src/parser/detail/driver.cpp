@@ -377,8 +377,8 @@ namespace parser {
 			return builder.functionType(params, retType, fk);
 		}
 
-		TypePtr InspireDriver::genRecordType(const location& l, const NodeType& type, const string& name, const ParentList& parents, const FieldList& fields, const ExpressionList& ctorsIn,
-				const ExpressionPtr& dtorIn, const bool dtorIsVirtual, const MemberFunctionList& mfunsIn, const PureVirtualMemberFunctionList& pvmfuns) {
+		TypePtr InspireDriver::genRecordType(const location& l, const NodeType& type, const string& name, const ParentList& parents, const FieldList& fields, const ExpressionList& ctors,
+				const ExpressionPtr& dtor, const bool dtorIsVirtual, const MemberFunctionList& mfuns, const PureVirtualMemberFunctionList& pvmfuns) {
 
 			//check if this type has already been defined before
 			const GenericTypePtr key = builder.genericType(name);
@@ -399,63 +399,14 @@ namespace parser {
 
 			TagTypePtr res;
 
-			//check whether the created record is trivial
-			bool isTrivial = true;
-
-			auto defaultName = builder.stringValue(name);
-			auto defaultParents = builder.parents(parents);
-			auto defaultFields = builder.fields(fields);
-			auto defaultCopyAssignment = builder.getDefaultCopyAssignOperator(defaultName, defaultParents, defaultFields);
-			auto defaultMoveAssignment = builder.getDefaultMoveAssignOperator(defaultName, defaultParents, defaultFields);
-
-			if (!ctorsIn.empty() || dtorIn) {
-				isTrivial = false;
-			}
-			for (const auto& member : mfunsIn) {
-				if (member == defaultCopyAssignment || member == defaultMoveAssignment) {
-					isTrivial = false;
-				}
-			}
-
-			//if it is, we add all the default constructs
-			ExpressionList ctors = ctorsIn;
-			ExpressionPtr dtor = dtorIn;
-			MemberFunctionList mfuns = mfunsIn;
-
-			if (isTrivial) {
-				//constructors
-				ctors = ExpressionList();
-				ctors.push_back(builder.getDefaultConstructor(defaultName, defaultParents, defaultFields));
-				ctors.push_back(builder.getDefaultCopyConstructor(defaultName, defaultParents, defaultFields));
-				ctors.push_back(builder.getDefaultMoveConstructor(defaultName, defaultParents, defaultFields));
-
-				//destructor
-				auto defaultDtor = builder.getDefaultDestructor(name);
-				auto dtorSymbol = builder.literal("dtor", defaultDtor->getType());
-				tu.addFunction(dtorSymbol, defaultDtor);
-				dtor = dtorSymbol;
-
-				//members
-				mfuns.push_back(defaultCopyAssignment);
-				mfuns.push_back(defaultMoveAssignment);
-			}
-
-			// create default destructor if necessary
-			if (!dtor) {
-				auto defaultDtor = builder.getDefaultDestructor(name);
-				auto dtorSymbol = builder.literal("dtor", defaultDtor->getType());
-				tu.addFunction(dtorSymbol, defaultDtor);
-				dtor = dtorSymbol;
-			}
-
 			if (type == NT_Struct) {
-				res = builder.structType(name,parents,fields,ctors,dtor,dtorIsVirtual,mfuns,pvmfuns);
+				res = builder.structTypeWithDefaults(builder.refType(getThisType()), parents, fields, ctors, dtor, dtorIsVirtual, mfuns, pvmfuns);
 			} else {
 				if (!parents.empty()) {
 					error(l, "Inheritance not supported for unions!");
 					return nullptr;
 				}
-				res = builder.unionType(name,fields,ctors,dtor,dtorIsVirtual,mfuns,pvmfuns);
+				res = builder.unionTypeWithDefaults(builder.refType(getThisType()), fields, ctors, dtor, dtorIsVirtual, mfuns, pvmfuns);
 			}
 
 			// register type in translation unit

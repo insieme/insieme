@@ -174,21 +174,23 @@ namespace analysis {
 			});
 		};
 
+		auto thisType = builder.refType(builder.tagTypeReference(record->getName()));
+
 		ParentsPtr parents =
 				(record.isa<StructPtr>()) ?
 				record.as<StructPtr>()->getParents() :
 				builder.parents();
 
 		// check for trivial constructors
-		bool trivialDefaultConstructor = containsCtor(builder.getDefaultConstructor(record->getName(), parents, record->getFields()));
+		bool trivialDefaultConstructor = containsCtor(builder.getDefaultConstructor(thisType, parents, record->getFields()));
 		if (!trivialDefaultConstructor) return false;
 		std::cout << "A\n";
 
-		bool trivialCopyConstructor = containsCtor(builder.getDefaultCopyConstructor(record->getName(), parents, record->getFields()));
+		bool trivialCopyConstructor = containsCtor(builder.getDefaultCopyConstructor(thisType, parents, record->getFields()));
 		if (!trivialCopyConstructor) return false;
 		std::cout << "B\n";
 
-		bool trivialMoveConstructor = containsCtor(builder.getDefaultMoveConstructor(record->getName(), parents, record->getFields()));
+		bool trivialMoveConstructor = containsCtor(builder.getDefaultMoveConstructor(thisType, parents, record->getFields()));
 		if (!trivialMoveConstructor) return false;
 		std::cout << "C\n";
 
@@ -200,11 +202,11 @@ namespace analysis {
 		};
 
 		// check for trivial copy and move assignments
-		bool trivialCopyAssignment = containsMemberFunction(builder.getDefaultCopyAssignOperator(record->getName(), parents, record->getFields()));
+		bool trivialCopyAssignment = containsMemberFunction(builder.getDefaultCopyAssignOperator(thisType, parents, record->getFields()));
 		if (!trivialCopyAssignment) return false;
 		std::cout << "D\n";
 
-		bool trivialMoveAssignment = containsMemberFunction(builder.getDefaultMoveAssignOperator(record->getName(), parents, record->getFields()));
+		bool trivialMoveAssignment = containsMemberFunction(builder.getDefaultMoveAssignOperator(thisType, parents, record->getFields()));
 		if (!trivialMoveAssignment) return false;
 		std::cout << "E\n";
 
