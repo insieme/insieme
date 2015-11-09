@@ -99,20 +99,54 @@ namespace backend {
 		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
 	}
 
+	TEST(FunctionCall, SimpleVarDecl) {
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+
+		core::ProgramPtr program = builder.parseProgram(
+				R"(
+				int<4> main() {
+					var ref<int<4>,f,f,plain> c;
+					var ref<int<4>,f,f,plain> v = ref_var_init(3);
+					return c+v;
+				}
+				)"
+		);
+
+		ASSERT_TRUE(program);
+
+		LOG(INFO) << "Printing the IR: " << core::printer::PrettyPrinter(program);
+
+		LOG(INFO) << "Converting IR to C...";
+		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
+		LOG(INFO) << "Printing converted code: " << *converted;
+
+		string code = toString(*converted);
+
+		EXPECT_PRED2(notContainsSubString, code, "<?>");
+		EXPECT_PRED2(notContainsSubString, code, "<a>");
+		EXPECT_PRED2(notContainsSubString, code, "UNSUPPORTED");
+
+		// try compiling the code fragment
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
+		compiler.addFlag("-lm");
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+	}
+
 	TEST(FunctionCall, Templates) {
 		core::NodeManager manager;
 		core::IRBuilder builder(manager);
 
 		core::ProgramPtr program = builder.parseProgram("int<4> main() {"
 		                                                "	(dtype : type<'a>, size : type<'s>)->ref<array<'a,'s>> {"
-		                                                "		return ref_new(array_create(size, list_empty(dtype)));"
+		                                                "		return ref_new_init(array_create(size, list_empty(dtype)));"
 		                                                "	} (type_lit(real<4>), type_lit(7));"
 		                                                "	return 0;"
 		                                                "}");
 
 		ASSERT_TRUE(program);
 
-		dumpColor(program);
 
 		LOG(INFO) << "Printing the IR: " << core::printer::PrettyPrinter(program);
 
@@ -241,9 +275,8 @@ namespace backend {
 		core::TypePtr type = builder.refType(intType);
 		core::VariablePtr var = builder.variable(type, 1);
 
-		core::ExpressionPtr init = builder.refNew(builder.undefinedNew(intType));
+		core::ExpressionPtr init = builder.undefinedNew(intType);
 		core::DeclarationStmtPtr decl = builder.declarationStmt(var, init);
-
 
 		auto converted = sequential::SequentialBackend::getDefault()->convert(decl);
 
@@ -259,7 +292,7 @@ namespace backend {
 		core::IRBuilder builder(manager);
 
 		core::ExpressionPtr zero = builder.literal(manager.getLangBasic().getUInt8(), "0");
-		core::ExpressionPtr offset = builder.parseExpr("ref_var(array_create(type_lit(3),[0ul,0ul,0ul]))");
+		core::ExpressionPtr offset = builder.parseExpr("ref_var_init(array_create(type_lit(3),[0ul,0ul,0ul]))");
 		core::ExpressionPtr extFun = builder.parseExpr("lit(\"call_vector\" : (ref<array<uint<8>,3>>)->unit )");
 		core::ExpressionPtr call = builder.callExpr(manager.getLangBasic().getUnit(), extFun, toVector(offset));
 
@@ -354,12 +387,12 @@ namespace backend {
 				var uint<inf> size = num_cast(12,type_lit(uint<inf>));
 
 				// create two fixed-sized arrays on the stack and the heap
-				var ref<array<int,10>> a = ref_var(array_create(type_lit(10), list_empty(type_lit(int))));
-				var ref<array<int,10>> b = ref_new(array_create(type_lit(10), list_empty(type_lit(int))));
+				var ref<array<int,10>> a = ref_var_init(array_create(type_lit(10), list_empty(type_lit(int))));
+				var ref<array<int,10>> b = ref_new_init(array_create(type_lit(10), list_empty(type_lit(int))));
 
 //				// create two variable-sized arrays on the stack and the heap
-//				var ref<array<int,size>> c = ref_var(undefined(array<int,size>));
-//				var ref<array<int,size>> d = ref_new(undefined(array<int,size>));
+//				var ref<array<int,size>> c = ref_var(type_lit(array<int,size>));
+//				var ref<array<int,size>> d = ref_new(type_lit(array<int,size>));
 
 				// create two unknown-sized arrays on the stack and the heap
 				var ref<array<int,inf>> e = ref_null(type_lit(array<int,inf>),type_lit(f),type_lit(f));
@@ -445,8 +478,8 @@ namespace backend {
 				};
 				int<4> main() {
 				
-				var ref<int<4>> a = ref_var(1);
-				var ref<real<4>> b = ref_var(2.0f);
+				var ref<int<4>> a = ref_var_init(1);
+				var ref<real<4>> b = ref_var_init(2.0f);
 				
 				f(a, (a : int<4>)=> true, ()=>3);
 				f(b, (b : real<4>)=> true, ()=>4.0f);

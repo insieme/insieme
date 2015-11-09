@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -135,9 +135,7 @@ namespace conversion {
 		CXXTypeConverter(Converter& fact) : TypeConverter(fact) {}
 
 		virtual ~CXXTypeConverter(){};
-
-		vector<clang::RecordDecl*> getAllBases(const clang::CXXRecordDecl* recDeclCXX);
-
+		
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		//  COMMON TYPES
 		CALL_BASE_TYPE_VISIT(TypeConverter, BuiltinType)

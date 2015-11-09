@@ -64,7 +64,7 @@ int main() {
 	#pragma test expect_ir("-3")
 	-3;
 	
-	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = ref_var(0); ptr_from_ref(v1); }")
+	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = ref_var_init(0); ptr_from_ref(v1); }")
 	{
 		int x = 0;
 		&x;
@@ -76,31 +76,31 @@ int main() {
 		*x;
 	}
 	
-	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = ref_var(0); 0-v1; }")
+	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = ref_var_init(0); 0-v1; }")
 	{
 		int x = 0;
 		-x;
 	}
 
-	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = ref_var(0); gen_pre_inc(v1); }")
+	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = ref_var_init(0); gen_pre_inc(v1); }")
 	{
 		int v = 0;
 		++v;
 	}
 
-	#pragma test expect_ir("{ var ref<uint<2>,f,f> v1 = ref_var(num_cast(0, type_lit(uint<2>))); gen_post_inc(v1); }")
+	#pragma test expect_ir("{ var ref<uint<2>,f,f> v1 = ref_var_init(num_cast(0, type_lit(uint<2>))); gen_post_inc(v1); }")
 	{
 		unsigned short v = 0;
 		v++;
 	}
 
-	#pragma test expect_ir("{ var ref<char,f,f> v1 = ref_var(num_cast(0, type_lit(char))); gen_pre_dec(v1); }")
+	#pragma test expect_ir("{ var ref<char,f,f> v1 = ref_var_init(num_cast(0, type_lit(char))); gen_pre_dec(v1); }")
 	{
 		char v = 0;
 		--v;
 	}
 
-	#pragma test expect_ir("{ var ref<int<1>,f,f> v1 = ref_var(num_cast(0, type_lit(int<1>))); gen_post_dec(v1); }")
+	#pragma test expect_ir("{ var ref<int<1>,f,f> v1 = ref_var_init(num_cast(0, type_lit(int<1>))); gen_post_dec(v1); }")
 	{
 		signed char v = 0;
 		v--;
@@ -291,61 +291,61 @@ int main() {
 
 	#define C_STYLE_ASSIGN "def c_ass = (v1: ref<'a,f,'b>, v2: 'a) -> 'a { v1 = v2; return *v1; };"
 
-	#pragma test expect_ir(C_STYLE_ASSIGN, "{ var ref<int<4>,f,f> v1 = ref_var(1); c_ass(v1, *v1+1); }")
+	#pragma test expect_ir(C_STYLE_ASSIGN, "{ var ref<int<4>,f,f> v1 = ref_var_init(1); c_ass(v1, *v1+1); }")
 	{
 		int a = 1;
 		a += 1;
 	}
 	
-	#pragma test expect_ir(C_STYLE_ASSIGN, "{ var ref<int<4>,f,f> v1 = ref_var(1); c_ass(v1, *v1-2); }")
+	#pragma test expect_ir(C_STYLE_ASSIGN, "{ var ref<int<4>,f,f> v1 = ref_var_init(1); c_ass(v1, *v1-2); }")
 	{
 		int a = 1;
 		a -= 2;
 	}
 	
-	#pragma test expect_ir(C_STYLE_ASSIGN, "{ var ref<int<4>,f,f> v1 = ref_var(1); c_ass(v1, *v1/1); }")
+	#pragma test expect_ir(C_STYLE_ASSIGN, "{ var ref<int<4>,f,f> v1 = ref_var_init(1); c_ass(v1, *v1/1); }")
 	{
 		int a = 1;
 		a /= 1;
 	}
 	
-	#pragma test expect_ir(C_STYLE_ASSIGN, "{ var ref<int<4>,f,f> v1 = ref_var(1); c_ass(v1, *v1*5); }")
+	#pragma test expect_ir(C_STYLE_ASSIGN, "{ var ref<int<4>,f,f> v1 = ref_var_init(1); c_ass(v1, *v1*5); }")
 	{
 		int a = 1;
 		a *= 5;
 	}
 
-	#pragma test expect_ir(C_STYLE_ASSIGN, "{ var ref<int<4>,f,f> v1 = ref_var(1); c_ass(v1, *v1%5); }")
+	#pragma test expect_ir(C_STYLE_ASSIGN, "{ var ref<int<4>,f,f> v1 = ref_var_init(1); c_ass(v1, *v1%5); }")
 	{
 		int a = 1;
 		a %= 5;
 	}
 
-	#pragma test expect_ir(C_STYLE_ASSIGN, "{ var ref<int<4>,f,f> v1 = ref_var(1); c_ass(v1, *v1&5); }")
+	#pragma test expect_ir(C_STYLE_ASSIGN, "{ var ref<int<4>,f,f> v1 = ref_var_init(1); c_ass(v1, *v1&5); }")
 	{
 		int a = 1;
 		a &= 5;
 	}
 
-	#pragma test expect_ir(C_STYLE_ASSIGN, "{ var ref<int<4>,f,f> v1 = ref_var(1); c_ass(v1, *v1|5); }")
+	#pragma test expect_ir(C_STYLE_ASSIGN, "{ var ref<int<4>,f,f> v1 = ref_var_init(1); c_ass(v1, *v1|5); }")
 	{
 		int a = 1;
 		a |= 5;
 	}
 
-	#pragma test expect_ir(C_STYLE_ASSIGN, "{ var ref<int<4>,f,f> v1 = ref_var(1); c_ass(v1, *v1 ^ 5); }")
+	#pragma test expect_ir(C_STYLE_ASSIGN, "{ var ref<int<4>,f,f> v1 = ref_var_init(1); c_ass(v1, *v1 ^ 5); }")
 	{
 		int a = 1;
 		a ^= 5;
 	}
 
-	#pragma test expect_ir(C_STYLE_ASSIGN, "{ var ref<int<4>,f,f> v1 = ref_var(1); c_ass(v1, int_lshift(*v1, 5)); }")
+	#pragma test expect_ir(C_STYLE_ASSIGN, "{ var ref<int<4>,f,f> v1 = ref_var_init(1); c_ass(v1, int_lshift(*v1, 5)); }")
 	{
 		int a = 1;
 		a <<= 5;
 	}
 
-	#pragma test expect_ir(C_STYLE_ASSIGN, "{ var ref<int<4>,f,f> v1 = ref_var(1); c_ass(v1, int_rshift(*v1, 5)); }")
+	#pragma test expect_ir(C_STYLE_ASSIGN, "{ var ref<int<4>,f,f> v1 = ref_var_init(1); c_ass(v1, int_rshift(*v1, 5)); }")
 	{
 		int a = 1;
 		a >>= 5;
@@ -405,7 +405,7 @@ int main() {
 	}
 
 	// check direct R-value access
-	#pragma test expect_ir("() -> struct IMP_simple_struct {i: int<4>;} { return *ref_var(<IMP_simple_struct>{0}); }().i+5")
+	#pragma test expect_ir("() -> struct IMP_simple_struct {i: int<4>;} { return *ref_var_init(<IMP_simple_struct>{0}); }().i+5")
 	generate_struct().i + 5;
 	
 	//===---------------------------------------------------------------------------------------------------------------------------------- MISCELLANEOUS ---===
@@ -434,10 +434,10 @@ int main() {
 		int x, y;
 	} Image;
 
-	#pragma test expect_ir("STRING", "c_style_assignment( var(struct{data=0u, x=0, y=0}),  * var(struct{data=1u, x=1, y=1}))")
+	#pragma test expect_ir("STRING", "c_style_assignment( ref_var_init(struct{data=0u, x=0, y=0}),  * ref_var_init(struct{data=1u, x=1, y=1}))")
 	(Image){0u, 0, 0} = (Image){1u,1,1};
 
-	#pragma test expect_ir("STRING", "c_style_assignment( var(struct{data=0u, x=0, y=0}).x, 1)")
+	#pragma test expect_ir("STRING", "c_style_assignment( ref_var_init(struct{data=0u, x=0, y=0}).x, 1)")
 	(Image){0u, 0, 0}.x = 1;
 	
 	// bool to int conversion	

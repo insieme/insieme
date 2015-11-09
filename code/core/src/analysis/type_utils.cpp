@@ -41,6 +41,7 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/pointer.h"
+#include "insieme/core/lang/array.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/types/subtype_constraints.h"
 
@@ -151,10 +152,17 @@ namespace analysis {
 	 */
 	/// TODO: add trivial marker for tagtypes
 	bool isTrivial(const TypePtr& type) {
+		std::cout << "0: " << *type << "\n";
 		auto ttype = type.isa<TagTypePtr>();
-
-		// non-tag-types are always trivial
-		if(!ttype) return true;
+		if(!ttype) {
+			if (core::lang::isArray(type)) {
+				// in case of an array, check the enclosed type for triviality
+				return isTrivial(core::lang::ArrayType(type).getElementType());
+			}
+			// non-tag-type & non-array types are always trivial
+			return true;
+		}
+		std::cout << "1\n";
 
 		auto record = ttype->getRecord();
 
@@ -174,12 +182,15 @@ namespace analysis {
 		// check for trivial constructors
 		bool trivialDefaultConstructor = containsCtor(builder.getDefaultConstructor(record->getName(), parents, record->getFields()));
 		if (!trivialDefaultConstructor) return false;
+		std::cout << "A\n";
 
 		bool trivialCopyConstructor = containsCtor(builder.getDefaultCopyConstructor(record->getName(), parents, record->getFields()));
 		if (!trivialCopyConstructor) return false;
+		std::cout << "B\n";
 
 		bool trivialMoveConstructor = containsCtor(builder.getDefaultMoveConstructor(record->getName(), parents, record->getFields()));
 		if (!trivialMoveConstructor) return false;
+		std::cout << "C\n";
 
 
 		auto containsMemberFunction = [&](const MemberFunctionPtr& member)->bool {
@@ -191,9 +202,11 @@ namespace analysis {
 		// check for trivial copy and move assignments
 		bool trivialCopyAssignment = containsMemberFunction(builder.getDefaultCopyAssignOperator(record->getName(), parents, record->getFields()));
 		if (!trivialCopyAssignment) return false;
+		std::cout << "D\n";
 
 		bool trivialMoveAssignment = containsMemberFunction(builder.getDefaultMoveAssignOperator(record->getName(), parents, record->getFields()));
 		if (!trivialMoveAssignment) return false;
+		std::cout << "E\n";
 
 		// check for trivial, non-virtual destructor
 		if(record->getDestructor().as<LambdaExprPtr>()->getBody().size() != 0 || record->getDestructorVirtual().getValue()) return false;
@@ -202,20 +215,27 @@ namespace analysis {
 		for(auto memFun : record->getMemberFunctions()) {
 			if(memFun->getVirtualFlag().getValue()) return false;
 		}
+		std::cout << "F\n";
 
-		// check for virtual base classes
+		if(!record->getPureVirtualMemberFunctions().empty()) return false;
+		std::cout << "G\n";
+
+		// check for virtual & non-trivial base classes
 		if(ttype->isStruct()) {
 			auto stype = ttype->getStruct();
 			for(auto par : stype->getParents()) {
 				if(par->getVirtual().getValue()) return false;
+				// if our direct base class is non-trivial, we cannot be trivial per-se
+				if(!isTrivial(par->getType())) return false;
 			}
 		}
+		std::cout << "H\n";
 
 		// check that all non-static members are trivial
 		for(auto field : record->getFields()) {
 			if(!isTrivial(field->getType())) return false;
 		}
-		
+
 		return true;
 	}
 

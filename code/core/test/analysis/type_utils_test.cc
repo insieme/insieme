@@ -70,6 +70,320 @@ namespace analysis {
 		EXPECT_PRED1(hasNoFreeTypeVariables, builder.parseType("('a)->'a"));
 	}
 
+	TEST(TrivialType, Basic) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+		EXPECT_TRUE(isTrivial(builder.parseType("int<4>")));
+	}
+
+	TEST(ArrayOfTrivialType, Basic) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+		EXPECT_TRUE(isTrivial(builder.parseType("array<int<4>,1>")));
+	}
+
+	TEST(ArrayOfNonTrivialType, Basic) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+		EXPECT_FALSE(isTrivial(builder.parseType("array<struct s { x: ref<'a,f,f>; ctor() {} },1>")));
+	}
+
+	TEST(TrivialStruct, Basic) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+		EXPECT_TRUE(isTrivial(builder.parseType("struct class {}")));
+	}
+
+	TEST(TrivialUnion, Basic) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+		EXPECT_TRUE(isTrivial(builder.parseType("union { data: int<4>; }")));
+	}
+
+	TEST(TrivialMember, Basic) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+		// a struct with a trivial member must also be trivial, iff no user-defined ctor is in place
+		EXPECT_TRUE(isTrivial(builder.parseType(
+			"struct class {"
+			"  data: int<4>;"
+			"}")));
+	}
+
+	TEST(NonTrivialMember, DISABLED_Basic) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+		// a member of type reference without initialization is non-trivial
+		EXPECT_FALSE(isTrivial(builder.parseType(
+			"struct class {"
+			"  data: ref<'a,f,f>;"
+			"}")));
+	}
+
+	TEST(NoneTrivialMemberNested, DISABLED_Basic) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+		EXPECT_FALSE(isTrivial(builder.parseType(
+			"struct class {"
+			"  data: struct {"
+			"    data: ref<'a,f,f>;"
+			"  };"
+			"}")));
+	}
+
+	TEST(NoneVirtualLambda, Basic) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+		EXPECT_TRUE(isTrivial(builder.parseType(
+			"struct class {"
+			"  lambda fn : () -> unit { }"
+			"}")));
+	}
+
+	TEST(VirtualLambda, Basic) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+		EXPECT_FALSE(isTrivial(builder.parseType(
+			"struct class {"
+			"  virtual lambda fn : () -> unit { }"
+			"}")));
+	}
+
+	TEST(PureVirtualLambda, Basic) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+		EXPECT_FALSE(isTrivial(builder.parseType(
+			"struct class {"
+			"  pure virtual fn : () -> unit"
+			"}")));
+	}
+
+	TEST(VirtualDestructor, UserDefined) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		// this is the 'base'-struct which is used to generate the actual struct with a virtual dtor
+		auto recordType = builder.parseType(
+			"struct class {"
+			"  ctor() {}"
+			"  ctor(other: ref<class,t,f,cpp_ref>) {}"
+			"  ctor(other: ref<class,t,f,cpp_rref>) {}"
+			"  lambda operator_assign : (rhs: ref<class,f,f,cpp_ref>) -> ref<class,f,f,cpp_ref> {}"
+			"  lambda operator_assign : (rhs: ref<class,f,f,cpp_rref>) -> ref<class,f,f,cpp_ref> {}"
+			"}").isa<TagTypePtr>()->getRecord();
+
+		core::ExpressionList ctors;
+		for (auto ctor : recordType->getConstructors())
+			ctors.push_back(ctor.as<LambdaExprPtr>());
+
+		core::MemberFunctionList members;
+		for(auto memFun : recordType->getMemberFunctions())
+			members.push_back(memFun);
+
+		ParentList parents;
+		FieldList fields;
+		PureVirtualMemberFunctionList pvmfuns;
+		EXPECT_FALSE(isTrivial(builder.structType("class", parents, fields, ctors, builder.getDefaultDestructor("class"), true, members, pvmfuns)));
+	}
+
+	TEST(Constructor, UserDefined) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+		EXPECT_FALSE(isTrivial(builder.parseType(
+			"struct class {"
+			"  ctor() { return; }"
+			"}")));
+	}
+
+	TEST(Constructor, UserDefaulted) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+		EXPECT_TRUE(isTrivial(builder.parseType(
+			"struct class {"
+			"  ctor() {}"
+			"}")));
+	}
+
+	TEST(CopyConstructor, UserDefined) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+		EXPECT_FALSE(isTrivial(builder.parseType(
+			"struct class {"
+			"  ctor(other: ref<class,t,f,cpp_ref>) { return; }"
+			"}")));
+	}
+
+	TEST(CopyConstructor, UserDefaulted) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+		EXPECT_TRUE(isTrivial(builder.parseType(
+			"struct class {"
+			"  ctor(other: ref<class,t,f,cpp_ref>) {}"
+			"}")));
+	}
+
+	TEST(MoveConstructor, UserDefined) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+		EXPECT_FALSE(isTrivial(builder.parseType(
+			"struct class {"
+			"  ctor(other: ref<class,t,f,cpp_rref>) { return; }"
+			"}")));
+	}
+
+	TEST(MoveConstructor, UserDefaulted) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+		EXPECT_TRUE(isTrivial(builder.parseType(
+			"struct class {"
+			"  ctor(other: ref<class,t,f,cpp_rref>) {}"
+			"}")));
+	}
+
+	TEST(Constructors, UserDefined) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+		EXPECT_FALSE(isTrivial(builder.parseType(
+			"struct class {"
+			"  ctor() { return; }"
+			"  ctor(other: ref<class,t,f,cpp_ref>) { return; }"
+			"  ctor(other: ref<class,t,f,cpp_rref>) { return; }"
+			"}")));
+	}
+
+	TEST(Constructors, UserDefaulted) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+		EXPECT_TRUE(isTrivial(builder.parseType(
+			"struct class {"
+			"  ctor() {}"
+			"  ctor(other: ref<class,t,f,cpp_ref>) {}"
+			"  ctor(other: ref<class,t,f,cpp_rref>) {}"
+			"}")));
+	}
+
+	TEST(NonTrivialConstructor, UserDefined) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+		EXPECT_FALSE(isTrivial(builder.parseType(
+			"struct class {"
+			"  ctor(data: int<4>) { return; }"
+			"}")));
+	}
+
+	TEST(TrivialStructWithTrivialBase, Basic) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+		EXPECT_TRUE(isTrivial(builder.parseType(
+			"let base = struct base_class {} in struct class : [public base] {}")));
+	}
+
+	TEST(TrivialStructWithNonTrivialBase, Basic) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+		EXPECT_FALSE(isTrivial(builder.parseType(
+			"let base = struct base_class {"
+			"  ctor() {}"
+			"} in struct class : [public base] {}")));
+	}
+
+	TEST(CopyAssignment, UserDefined) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+		EXPECT_FALSE(isTrivial(builder.parseType(
+			"struct class {"
+			"  lambda operator_assign : (rhs: ref<class,t,f,cpp_ref>) -> ref<class,f,f,cpp_ref> { return; }"
+			"}")));
+	}
+
+	TEST(CopyAssignment, UserDefaulted) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+		EXPECT_TRUE(isTrivial(builder.parseType(
+			"struct class {"
+			"  lambda operator_assign : (rhs: ref<class,t,f,cpp_ref>) -> ref<class,f,f,cpp_ref> { }"
+			"}")));
+	}
+
+	TEST(MoveAssignment, UserDefaulted) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+		EXPECT_TRUE(isTrivial(builder.parseType(
+			"struct class {"
+			"  lambda operator_assign : (rhs: ref<class,f,f,cpp_rref>) -> ref<class,f,f,cpp_ref> {}"
+			"}")));
+	}
+
+	TEST(MoveAssignment, UserDefined) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+		EXPECT_FALSE(isTrivial(builder.parseType(
+			"struct class {"
+			"  lambda operator_assign : (rhs: ref<class,f,f,cpp_rref>) -> ref<class,f,f,cpp_ref> { return; }"
+			"}")));
+	}
+
+	TEST(ConstructorsAndAssignments, UserDefaulted) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+		EXPECT_TRUE(isTrivial(builder.parseType(
+			"struct class {"
+			"  ctor() {}"
+			"  ctor(other: ref<class,t,f,cpp_ref>) {}"
+			"  ctor(other: ref<class,t,f,cpp_rref>) {}"
+			"  lambda operator_assign : (rhs: ref<class,f,f,cpp_ref>) -> ref<class,f,f,cpp_ref> {}"
+			"  lambda operator_assign : (rhs: ref<class,f,f,cpp_rref>) -> ref<class,f,f,cpp_ref> {}"
+			"}")));
+	}
+
+	TEST(ConstructorsAndAssignmentsWithNonTrivialBaseCopyConstructor, UserDefaulted) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+		EXPECT_FALSE(isTrivial(builder.parseType(
+			"let base = struct base_class {"
+			"  ctor(other: ref<base_class,t,f,cpp_ref>) { return; }"
+			"} in struct class : [public base] {"
+			"  ctor() {}"
+			"  ctor(other: ref<class,t,f,cpp_ref>) {}"
+			"  ctor(other: ref<class,t,f,cpp_rref>) {}"
+			"  lambda operator_assign : (rhs: ref<class,f,f,cpp_ref>) -> ref<class,f,f,cpp_ref> {}"
+			"  lambda operator_assign : (rhs: ref<class,f,f,cpp_rref>) -> ref<class,f,f,cpp_ref> {}"
+			"}")));
+	}
+
+	TEST(ConstructorsAndAssignmentsWithNonTrivialBaseCopyAssignment, UserDefaulted) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+		EXPECT_FALSE(isTrivial(builder.parseType(
+			"let base = struct base_class {"
+			"  lambda operator_assign : (rhs: ref<base_class,f,f,cpp_ref>) -> ref<nase_class,f,f,cpp_ref> { return; }"
+			"} in struct class : [public base] {"
+			"  ctor() {}"
+			"  ctor(other: ref<class,t,f,cpp_ref>) {}"
+			"  ctor(other: ref<class,t,f,cpp_rref>) {}"
+			"  lambda operator_assign : (rhs: ref<class,f,f,cpp_ref>) -> ref<class,f,f,cpp_ref> {}"
+			"  lambda operator_assign : (rhs: ref<class,f,f,cpp_rref>) -> ref<class,f,f,cpp_ref> {}"
+			"}")));
+	}
+
+	TEST(TrivialStructWithNonTrivialBaseCopyConstructor, Basic) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+		EXPECT_FALSE(isTrivial(builder.parseType(
+			"let base = struct base_class {"
+			"  ctor(other: ref<base_class,t,f,cpp_ref>) { return; }"
+			"} in struct class : [public base] { }")));
+	}
+
+	TEST(TrivialStructWithNonTrivialBaseCopyAssignment, Basic) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+		EXPECT_FALSE(isTrivial(builder.parseType(
+			"let base = struct base_class {"
+			"  lambda operator_assign : (rhs: ref<base_class,f,f,cpp_ref>) -> ref<base_class,f,f,cpp_ref> { return; }"
+			"} in struct class : [public base] { }")));
+	}
+
 	/*
 	TEST(GlobalRec, InitBug) {
 	    NodeManager manager;

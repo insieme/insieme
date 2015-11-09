@@ -34,18 +34,24 @@
  * regarding third party software licenses.
  */
 
-#include "independent_test_utils.h"
+class A {
+	int i;
+	float f();
+};
 
-namespace insieme {
-namespace frontend {
-
-	TEST(CppIndependentTest, BasicTypes) {
-		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/cpp_basic_types.cpp");
-	}
-	
-	TEST(CppIndependentTest, BasicClasses) {
-		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/cpp_basic_classes.cpp");
-	}
-
-} // fe namespace
-} // insieme namespace
+int main() {
+	{};
+	/*pragma test expect_ir(R"(
+		def struct IMP_A {
+			i : int<4>;
+			ctor() {}
+			ctor(other : ref<IMP_A,t,f,cpp_ref>) {}
+			ctor(other : ref<IMP_A,f,f,cpp_rref>) {}
+			dtor() {}
+			lambda IMP_f : () -> real<4> {}
+		};
+		{ var ref<IMP_A> a; }
+	)")*/
+	//{ A a; }
+	return 0;
+}

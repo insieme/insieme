@@ -3,7 +3,7 @@ alias int = int<4>;
 
 unit main() {
 	
-	auto x = ref_new(array_create(type_lit(50), [1]));
+	auto x = ref_new_init(array_create(type_lit(50), [1]));
 
 	for(int i=0..10) {
 		x[i] = i;

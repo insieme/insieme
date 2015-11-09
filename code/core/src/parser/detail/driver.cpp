@@ -378,7 +378,7 @@ namespace parser {
 		}
 
 		TypePtr InspireDriver::genRecordType(const location& l, const NodeType& type, const string& name, const ParentList& parents, const FieldList& fields, const ExpressionList& ctorsIn,
-				const ExpressionPtr& dtorIn, const MemberFunctionList& mfunsIn, const PureVirtualMemberFunctionList& pvmfuns) {
+				const ExpressionPtr& dtorIn, const bool dtorIsVirtual, const MemberFunctionList& mfunsIn, const PureVirtualMemberFunctionList& pvmfuns) {
 
 			//check if this type has already been defined before
 			const GenericTypePtr key = builder.genericType(name);
@@ -389,13 +389,13 @@ namespace parser {
 
 			//check for duplicate member function names
 			//TODO remove this restriction
-			std::set<std::string> memberFunctionNames;
+			/*std::set<std::string> memberFunctionNames;
 			for_each(mfunsIn, [&](const MemberFunctionPtr& fun) { memberFunctionNames.insert(fun->getName()->getValue()); });
 			for_each(pvmfuns, [&](const PureVirtualMemberFunctionPtr& fun) { memberFunctionNames.insert(fun->getName()->getValue()); });
 			if (memberFunctionNames.size() != mfunsIn.size() + pvmfuns.size()) {
 				error(l, "Duplicate member function names detected");
 				return nullptr;
-			}
+			}*/
 
 			TagTypePtr res;
 
@@ -436,8 +436,8 @@ namespace parser {
 				dtor = dtorSymbol;
 
 				//members
-				mfuns.push_back(builder.getDefaultCopyAssignOperator(defaultName, defaultParents, defaultFields));
-				mfuns.push_back(builder.getDefaultMoveAssignOperator(defaultName, defaultParents, defaultFields));
+				mfuns.push_back(defaultCopyAssignment);
+				mfuns.push_back(defaultMoveAssignment);
 			}
 
 			// create default destructor if necessary
@@ -449,10 +449,13 @@ namespace parser {
 			}
 
 			if (type == NT_Struct) {
-				res = builder.structType(name,parents,fields,ctors,dtor,false,mfuns,pvmfuns);
+				res = builder.structType(name,parents,fields,ctors,dtor,dtorIsVirtual,mfuns,pvmfuns);
 			} else {
-				if (!parents.empty()) error(l, "Inheritance not supported for unions!");
-				res = builder.unionType(name,fields,ctors,dtor,false,mfuns,pvmfuns);
+				if (!parents.empty()) {
+					error(l, "Inheritance not supported for unions!");
+					return nullptr;
+				}
+				res = builder.unionType(name,fields,ctors,dtor,dtorIsVirtual,mfuns,pvmfuns);
 			}
 
 			// register type in translation unit
@@ -463,10 +466,25 @@ namespace parser {
 		}
 
 		TagTypePtr InspireDriver::genSimpleStructOrUnionType(const location& l, const NodeType& type, const FieldList& fields) {
+			auto defaultName = builder.stringValue("");
+			auto defaultParents = builder.parents(ParentList());
+			auto defaultFields = builder.fields(fields);
+			auto defaultDestructor = builder.getDefaultDestructor(defaultName);
+			ExpressionList ctors;
+			ctors.push_back(builder.getDefaultConstructor(defaultName, defaultParents, defaultFields));
+			ctors.push_back(builder.getDefaultCopyConstructor(defaultName, defaultParents, defaultFields));
+			ctors.push_back(builder.getDefaultMoveConstructor(defaultName, defaultParents, defaultFields));
+			ExpressionPtr dtor = builder.getDefaultDestructor(defaultName);
+			MemberFunctionList mfuns;
+			auto defaultCopyAssignment = builder.getDefaultCopyAssignOperator(defaultName, defaultParents, defaultFields);
+			auto defaultMoveAssignment = builder.getDefaultMoveAssignOperator(defaultName, defaultParents, defaultFields);
+			mfuns.push_back(defaultCopyAssignment);
+			mfuns.push_back(defaultMoveAssignment);
+
 			if (type == NT_Struct) {
-				return builder.structType(fields);
+				return builder.structType("", ParentList(), fields, ctors, dtor, false, mfuns, PureVirtualMemberFunctionList());
 			} else {
-				return builder.unionType(fields);
+				return builder.unionType("", fields, ctors, dtor, false, mfuns, PureVirtualMemberFunctionList());
 			}
 		}
 

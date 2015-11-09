@@ -19,9 +19,9 @@ def initUniform = (elem : 'elem, size : type<'a>) -> array<'elem,'a>{
 int main() {
 
 	// create matrices
-	var ref<matrix> a = ref_var(initUniform(initUniform(0.0,type_lit(100)),type_lit(100)));
-	var ref<matrix> b = ref_var(initUniform(initUniform(0.0,type_lit(100)),type_lit(100)));
-	var ref<matrix> c = ref_var(initUniform(initUniform(0.0,type_lit(100)),type_lit(100)));
+	var ref<matrix> a = ref_var_init(initUniform(initUniform(0.0,type_lit(100)),type_lit(100)));
+	var ref<matrix> b = ref_var_init(initUniform(initUniform(0.0,type_lit(100)),type_lit(100)));
+	var ref<matrix> c = ref_var_init(initUniform(initUniform(0.0,type_lit(100)),type_lit(100)));
 	
 	// initialize a and b
 	for(uint i= 0u .. 100u) {
@@ -47,7 +47,7 @@ int main() {
 	}
 	
 	// check results		
-	var ref<bool> success = ref_var(true);
+	var ref<bool> success = ref_var_init(true);
 	for(uint i = 0u .. 100u) {
 		for(uint j = 0u .. 100u) {
 			success = success && c[i][j] == 2.0;

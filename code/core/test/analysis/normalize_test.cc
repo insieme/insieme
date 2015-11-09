@@ -133,8 +133,7 @@ namespace analysis {
 		                              "	var int<inf> v40 = 3;"
 		                              "	var ref<array<int<4>,#v40>,f,f,plain> v50;"
 		                              "}; x()");
-
-		EXPECT_EQ("rec v0.{v0=fun() {int<inf> v1 = 3; ref<array<int<4>,v1>,f,f,plain> v2 = rec v0.{v0=fun(ref<'a,f,f,plain> v1) {ref<'a,f,f,plain> v2 = ref_alloc(type<'a>, mem_loc_stack); ref_assign(v2, ref_deref(v1)); return v2;}}(undefined(type<array<int<4>,v1>>));}}()", toString(*normalize(code)));
+		EXPECT_EQ("rec v0.{v0=fun() {int<inf> v1 = 3; ref<array<int<4>,v1>,f,f,plain> v2 = rec v0.{v0=fun(ref<type<'a>,f,f,plain> v1) {return ref_alloc(ref_deref(v1), mem_loc_stack);}}(type<array<int<4>,v1>>);}}()", toString(*normalize(code)));
 	}
 
 

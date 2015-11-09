@@ -152,7 +152,6 @@
 
 	CAST         "CAST"
 	AUTO         "auto"
-	UNDEFINED    "undefined"
 
 	VAR          "var"
 	IF           "if"
@@ -214,7 +213,7 @@
 %type <FieldList>                      fields
 %type <ExpressionPtr>                  constructor
 %type <ExpressionList>                 constructors
-%type <ExpressionPtr>                  destructor
+%type <pair<ExpressionPtr,bool>>       destructor
 %type <MemberFunctionPtr>              member_function
 %type <MemberFunctionList>             member_functions
 %type <PureVirtualMemberFunctionPtr>   pure_virtual_member_function
@@ -241,7 +240,7 @@
 %type <ExpressionPtr>                  call
 %type <LambdaExprPtr>                  lambda
 %type <BindExprPtr>                    bind
-%type <ExpressionPtr>                  undefined_expression parallel_expression list_expression initializer unary_op binary_op ternary_op this_expression
+%type <ExpressionPtr>                  parallel_expression list_expression initializer unary_op binary_op ternary_op this_expression
 
 %type <VariablePtr>                    parameter
 %type <VariableList>                   parameters non_empty_parameters non_empty_bind_parameters
@@ -314,7 +313,7 @@ main : type "identifier" "(" parameters ")" compound_statement              { $$
 record_definition : struct_or_union "identifier" parent_spec "{"            { driver.beginRecord(@$, $2); }
                                     fields                                  { driver.registerFields(@$, $6); }
                                            constructors destructor member_functions pure_virtual_member_functions "}" 
-                                                                            { $$ = driver.genRecordType(@$, $1, $2, $3, $6, $8, $9, $10, $11); driver.endRecord(); }
+                                                                            { $$ = driver.genRecordType(@$, $1, $2, $3, $6, $8, $9.first, $9.second, $10, $11); driver.endRecord(); }
                   | struct_or_union "{" fields "}"                          { $$ = driver.genSimpleStructOrUnionType(@$, $1, $3); }
                   ;
 
@@ -337,8 +336,8 @@ constructor : "ctor" "(" parameters                                         { dr
                                     ")" compound_statement_no_scope         { $$ = driver.genConstructor(@$, $3, $6); driver.closeScope(); }
             ;
 
-destructor : "dtor" "(" ")" compound_statement                              { $$ = driver.genDestructor(@$, $4); }
-           |                                                                { $$ = LambdaExprPtr(); }
+destructor : "dtor" virtual_flag "(" ")" compound_statement                 { $$ = std::make_pair(driver.genDestructor(@$, $5), $2); }
+           |                                                                { $$ = std::make_pair(LambdaExprPtr(), false); }
            ;
 
 member_functions : member_functions member_function                         { $1.push_back($2); $$ = $1; }
@@ -538,7 +537,6 @@ plain_expression : variable                                               { $$ =
                  | call                                                   { $$ = $1; }
                  | lambda                                                 { $$ = $1; }
                  | bind                                                   { $$ = $1; }
-                 | undefined_expression                                   { $$ = $1; }
                  | parallel_expression                                    { $$ = $1; }
                  | list_expression                                        { $$ = $1; }
                  | initializer                                            { $$ = $1; }
@@ -617,11 +615,6 @@ non_empty_bind_parameters : "(" non_empty_parameters ")"                  { driv
 let_expression : "let" "identifier" "=" expression                        { driver.openScope(); driver.declareSymbol(@2, $2, $4); }
                                     "in" expression                       { $$ = $7; driver.closeScope(); }
                ;
-
-// -- reference expressions --
-
-undefined_expression : "undefined" "(" type ")"                           { $$ = driver.builder.undefined($3); }
-                     ;
 
 // -- parallel expressions --
 

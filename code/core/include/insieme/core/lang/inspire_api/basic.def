@@ -335,11 +335,10 @@ LITERAL(Flush, "flush", "(ref<'a,'c,'v,plain>) -> unit")
 
 // General ------------------------------------------------------------------------------------------------------------
 
-GROUP(GeneralOp, Undefined, Sizeof, IntTypeParamToInt)
+GROUP(GeneralOp, Sizeof, IntTypeParamToInt)
 
 DERIVED(Id, "id", "(x : 'a)->'a { return x; }")
 
-LITERAL(Undefined, "undefined", "(type<'a>) -> 'a")
 LITERAL(Zero, "zero", "(type<'a>) -> 'a")
 LITERAL(Sizeof, "sizeof", "(type<'a>) -> uint<8>")
 LITERAL(IntTypeParamToInt, "to_uint", "(type<'n>)->uint<8>")

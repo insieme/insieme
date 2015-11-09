@@ -519,11 +519,6 @@ namespace tu {
 
 					// also fix type literals
 					if(core::analysis::isTypeLiteral(res)) { res = builder.getTypeLiteral(core::analysis::getRepresentedType(res.as<ExpressionPtr>())); }
-
-					// and also fix generic-zero constructor
-					if(core::analysis::isCallOf(res, mgr.getLangBasic().getZero())) {
-						res = builder.getZero(core::analysis::getRepresentedType(res.as<CallExprPtr>()[0]));
-					}
 				}
 
 				// if nothing has changed ..

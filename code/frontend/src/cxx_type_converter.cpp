@@ -36,9 +36,11 @@
 
 #include "insieme/frontend/type_converter.h"
 
+#include "insieme/frontend/decl_converter.h"
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/name_manager.h"
 #include "insieme/frontend/utils/macros.h"
+#include "insieme/frontend/state/record_manager.h"
 
 #include "insieme/utils/numeric_cast.h"
 #include "insieme/utils/container_utils.h"
@@ -65,7 +67,6 @@ namespace conversion {
 	//								BUILTIN TYPES
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::TypePtr Converter::CXXTypeConverter::VisitPointerType(const PointerType* ptrTy) {
-		// writte warnning on const pointers
 		return TypeConverter::VisitPointerType(ptrTy);
 	}
 
@@ -73,72 +74,72 @@ namespace conversion {
 	//					TAG TYPE: STRUCT | UNION | CLASS | ENUM
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::TypePtr Converter::CXXTypeConverter::VisitTagType(const TagType* tagType) {
-		VLOG(2) << "VisitTagType " << tagType << std::endl;
-
-		core::TypePtr ty = TypeConverter::VisitTagType(tagType);
-		LOG_TYPE_CONVERSION(tagType, ty);
-
-		// if not a struct type we don't need to do anything more
-		if(!ty.isa<core::TagTypePtr>()) { return ty; }
-
-		core::TagTypePtr classType = ty.as<core::TagTypePtr>();
-
-		// if is a c++ class, we need to annotate some stuff
-		if(llvm::isa<clang::RecordType>(tagType)) {
-			if(!llvm::isa<clang::CXXRecordDecl>(llvm::cast<clang::RecordType>(tagType)->getDecl())) { return classType; }
-
-			const clang::CXXRecordDecl* classDecl = llvm::cast<clang::CXXRecordDecl>(tagType->getDecl());
-
-			if(!classDecl->getDefinition()) {
-				// check if the classDeclaration has a definition, if not we just use the the type
-				// returned by the TypeConverter
-				return classType;
+		VLOG(2) << "CXXTypeConverter::VisitTagType " << tagType << std::endl;
+		
+		// first, try lookup
+		if(auto clangRecTy = llvm::dyn_cast<RecordType>(tagType)) {
+			if(converter.getRecordMan()->contains(clangRecTy->getDecl())) {
+				return converter.getRecordMan()->lookup(clangRecTy->getDecl());
 			}
+		}
 
-			//~~~~~ base classes if any ~~~~~
-			if(classDecl->getNumBases() > 0) {
-				std::vector<core::ParentPtr> parents;
+		// base conversion
+		core::TypePtr retTy = TypeConverter::VisitTagType(tagType);
+		LOG_TYPE_CONVERSION(tagType, retTy);
 
-				clang::CXXRecordDecl::base_class_const_iterator it = classDecl->bases_begin();
-				for(; it != classDecl->bases_end(); it++) {
-					// visit the parent to build its type
-					auto parentIrType = convert((it)->getType());
-					parents.push_back(builder.parent(it->isVirtual(), parentIrType));
-				}
+		// if not a GenericType mapping to a TagType (generated for struct type) we don't need to do anything more
+		auto genTy = retTy.isa<core::GenericTypePtr>();
+		if(!genTy) return retTy;
+		auto& tuTypes = converter.getIRTranslationUnit().getTypes();
+		auto irTuIt = tuTypes.find(genTy);
+		if(irTuIt == tuTypes.end()) return retTy;
+		retTy = irTuIt->second;
+		
+		// for C++ classes/structs, we need to add members and parents
+		const clang::CXXRecordDecl* classDecl = llvm::dyn_cast_or_null<clang::CXXRecordDecl>(tagType->getDecl());
+		if(!classDecl || !classDecl->getDefinition()) { return genTy; }
 
-				// if we have base classes, update the classType
-				assert(classType.isa<core::TagTypePtr>());
+		// get struct type for easier manipulation
+		auto structTy = retTy.as<core::TagTypePtr>()->getStruct();
 
-				// implant new parents list
-				classType =
-				    core::transform::replaceNode(mgr, core::TagTypeAddress(classType)->getStruct()->getParents(), builder.parents(parents)).as<core::TagTypePtr>();
+		// get parents if any
+		std::vector<core::ParentPtr> parents;
+		for(auto base : classDecl->bases()) {
+			// visit the parent to build its type
+			auto parentIrType = convert(base.getType());
+			parents.push_back(builder.parent(base.isVirtual(), parentIrType));
+		}
+
+		// get methods, constructors and destructor
+		std::vector<core::MemberFunctionPtr> members;
+		std::vector<core::PureVirtualMemberFunctionPtr> pvMembers;
+		std::vector<core::ExpressionPtr> constructors;
+		auto destructor = structTy->getDestructor();
+		bool destructorVirtual = false;
+		for(auto mem : classDecl->methods()) {
+			auto memFun = converter.getDeclConverter()->convertMethodDecl(mem);
+			if(mem->isVirtual() && mem->isPure()) {
+				pvMembers.push_back(builder.pureVirtualMemberFunction(memFun->getName(), memFun->getImplementation()->getType().as<core::FunctionTypePtr>()));
+			} else if(llvm::dyn_cast<clang::CXXConstructorDecl>(mem)) {
+				constructors.push_back(memFun->getImplementation());
+			} else if(llvm::dyn_cast<clang::CXXDestructorDecl>(mem)) {
+				destructor = memFun->getImplementation();
+				if(mem->isVirtual()) { destructorVirtual = true; }
+			} else {
+				members.push_back(memFun);
 			}
-
-			//		//update name of class type
-			//		classType = core::transform::replaceNode(mgr,
-			//												 core::StructTypeAddress(classType)->getName(),
-			//												 builder.stringValue(classDecl->getNameAsString())).as<core::StructTypePtr>();
-
-			// if classDecl has a name add it
-			if(!classDecl->getNameAsString().empty()) { core::annotations::attachName(classType, classDecl->getNameAsString()); }
 		}
-		return classType;
+
+		// create new structTy
+		retTy = builder.structType(structTy->getName(), builder.parents(parents), structTy->getFields(), builder.expressions(constructors), destructor,
+			                          builder.boolValue(destructorVirtual), builder.memberFunctions(members), builder.pureVirtualMemberFunctions(pvMembers));
+		
+		// update associated type in irTu
+		converter.getIRTranslationUnit().replaceType(genTy, retTy.as<core::TagTypePtr>());
+
+		return genTy;
 	}
-
-	// Returns all bases of a c++ record declaration
-	vector<RecordDecl*> Converter::CXXTypeConverter::getAllBases(const clang::CXXRecordDecl* recDeclCXX) {
-		vector<RecordDecl*> bases;
-
-		for(CXXRecordDecl::base_class_const_iterator bit = recDeclCXX->bases_begin(), bend = recDeclCXX->bases_end(); bit != bend; ++bit) {
-			const CXXBaseSpecifier* base = bit;
-			RecordDecl* baseRecord = base->getType()->getAs<RecordType>()->getDecl();
-			bases.push_back(baseRecord);
-			vector<RecordDecl*> subBases = getAllBases(dyn_cast<clang::CXXRecordDecl>(baseRecord));
-			bases.insert(bases.end(), subBases.begin(), subBases.end());
-		}
-		return bases;
-	}
-
+	
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// 						DEPENDENT SIZED ARRAY TYPE
 	// This type represents an array type in C++ whose size is a value-dependent

@@ -130,7 +130,8 @@ namespace core {
 			//print constructor types
 			for (const auto& constructor : record->getConstructors()) {
 				printSeparator();
-				const auto& parameterTypes = constructor.as<LambdaExprPtr>()->getFunctionType()->getParameterTypes();
+				const auto& parameterTypes = constructor.getType().as<FunctionTypePtr>()->getParameterTypes();
+				assert_ge(parameterTypes->size(), 1) << "Invalid constructor, no parameters (should at least have this)";
 				out << "ctor(" << join(",", ++parameterTypes.begin(), parameterTypes.end(), print<deref<NodePtr>>()) << ")";
 			}
 
@@ -141,10 +142,11 @@ namespace core {
 			//print member function types
 			for (const auto& memberFunction : record->getMemberFunctions()) {
 				printSeparator();
-				const auto& implementationType = memberFunction->getImplementation().as<LambdaExprPtr>()->getFunctionType();
+				const auto& implementationType = memberFunction->getImplementation().getType().as<FunctionTypePtr>();
 				const auto& parameterTypes = implementationType->getParameterTypes();
-				out << *memberFunction->getName() << "("
-						<< join(",", ++parameterTypes.begin(), parameterTypes.end(), print<deref<NodePtr>>()) << ")->" << *implementationType->getReturnType();
+				assert_ge(parameterTypes->size(), 1) << "Invalid method, no parameters (should at least have this)";
+				out << *memberFunction->getName() << "(" << join(",", ++parameterTypes.begin(), parameterTypes.end(), print<deref<NodePtr>>()) << ")->"
+				    << *implementationType->getReturnType();
 			}
 
 			//print pure virtual member function types
@@ -152,6 +154,7 @@ namespace core {
 				printSeparator();
 				const auto& implementationType = memberFunction->getType();
 				const auto& parameterTypes = implementationType->getParameterTypes();
+				assert_ge(parameterTypes->size(), 1) << "Invalid pure virtual method, no parameters (should at least have this)";
 				out << "pure virtual " << *memberFunction->getName() << "("
 						<< join(",", ++parameterTypes.begin(), parameterTypes.end(), print<deref<NodePtr>>()) << ")->" << *implementationType->getReturnType();
 			}

@@ -245,15 +245,15 @@ TEST(Rule, VarDeref) {
 
 	Variable x;
 
-	auto r = Rule(irp::callExpr(ext.getRefDeref(), irp::callExpr((irp::atom(ext.getRefVar()) | irp::atom(ext.getRefNew())), x)), x);
+	auto r = Rule(irp::callExpr(ext.getRefDeref(), irp::callExpr((irp::atom(ext.getRefVarInit()) | irp::atom(ext.getRefNewInit())), x)), x);
 
 	auto a = builder.intLit(1);
 	auto b = builder.deref(builder.refVar(a));
 	auto c = builder.deref(builder.refNew(a));
 
-	EXPECT_EQ("ref_deref(rec v0.{v0=fun(ref<'a,f,f,plain> v1) {ref<'a,f,f,plain> v2 = ref_alloc(type<'a>, mem_loc_stack); ref_assign(v2, ref_deref(v1)); return v2;}}(1))",
+	EXPECT_EQ("ref_deref(rec v0.{v0=fun(ref<'a,f,f,plain> v1) {ref<'a,f,f,plain> v2 = rec v0.{v0=fun(ref<type<'a>,f,f,plain> v1) {return ref_alloc(ref_deref(v1), mem_loc_stack);}}(type<'a>); ref_assign(v2, ref_deref(v1)); return v2;}}(1))",
 	          toString(*b));
-	EXPECT_EQ("ref_deref(rec v0.{v0=fun(ref<'a,f,f,plain> v1) {ref<'a,f,f,plain> v2 = ref_alloc(type<'a>, mem_loc_heap); ref_assign(v2, ref_deref(v1)); return v2;}}(1))",
+	EXPECT_EQ("ref_deref(rec v0.{v0=fun(ref<'a,f,f,plain> v1) {ref<'a,f,f,plain> v2 = rec v0.{v0=fun(ref<type<'a>,f,f,plain> v1) {return ref_alloc(ref_deref(v1), mem_loc_heap);}}(type<'a>); ref_assign(v2, ref_deref(v1)); return v2;}}(1))",
 	          toString(*c));
 	EXPECT_EQ("1", toString(*r.fixpoint(b)));
 	EXPECT_EQ("1", toString(*r.fixpoint(c)));

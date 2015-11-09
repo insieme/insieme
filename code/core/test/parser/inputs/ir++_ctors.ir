@@ -17,25 +17,25 @@ def struct A {
 unit main() {
 
 	// create a stack based A
-	var ref<A> a1 = A::(ref_var(undefined(A)));
+	var ref<A> a1 = A::(ref_var(type_lit(A)));
 	
 	// create a heap based A
-	//var ref<A> a2 = A::(ref_new(undefined(A)));
+	var ref<A> a2 = A::(ref_new(type_lit(A)));
 	
 	// create a stack based A with initial value
-	//var ref<A> a3 = A::(ref_var(undefined(A)), 2);
+	var ref<A> a3 = A::(ref_var(type_lit(A)), 2);
 	
 	// create a stack based A with initial value
-	//var ref<A> a4 = A::(ref_new(undefined(A)), 3);
+	var ref<A> a4 = A::(ref_new(type_lit(A)), 3);
 	
 	// re-initialize an existing variable (placement new)
 	//var ref<A> a5;
 	//A::(a5, 4);
 	
 	print("a1.x = %d\n", *a1.x);
-	//print("a2.x = %d\n", *a2.x);
-	//print("a3.x = %d\n", *a3.x);
-	//print("a4.x = %d\n", *a4.x);
-	//print("a5.x = %d\n", *a5.x);
+	print("a2.x = %d\n", *a2.x);
+	print("a3.x = %d\n", *a3.x);
+	print("a4.x = %d\n", *a4.x);
+	print("a5.x = %d\n", *a5.x);
 			
 }

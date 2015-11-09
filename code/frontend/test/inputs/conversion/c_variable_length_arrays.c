@@ -38,7 +38,7 @@ int main() {
 	
 	// VARIABLE LENGTH ARRAY TYPES //////////////////////////////////////////////////////////////
 	#pragma test expect_ir(R"({
-			var ref<int<4>,f,f> v0 = ref_var(3);
+			var ref<int<4>,f,f> v0 = ref_var_init(3);
 			var uint<inf> v1 = num_cast(*v0,type_lit(uint<inf>));
 			var ref<array<real<4>,#v1>,f,f> v2;
 		})")
@@ -48,7 +48,7 @@ int main() {
 	}
 
 	#pragma test expect_ir(R"({
-			var ref<int<4>,f,f> v0 = ref_var(3);
+			var ref<int<4>,f,f> v0 = ref_var_init(3);
 			var uint<inf> v1 = num_cast(*v0, type_lit(uint<inf>));
 			var ref<real<4>,f,f> v2;
 			var ref<real<4>,f,f> v3;
@@ -60,7 +60,7 @@ int main() {
 	}
 	
 	#pragma test expect_ir(R"({
-			var ref<int<4>,f,f> v0 = ref_var(3);
+			var ref<int<4>,f,f> v0 = ref_var_init(3);
 			var uint<inf> v1 = num_cast(*v0+3, type_lit(uint<inf>));
 			var ref<array<real<4>,#v1>,f,f> v2;
 		})")
@@ -70,7 +70,7 @@ int main() {
 	}
 	
 	#pragma test expect_ir(R"({
-			var ref<int<4>,f,f> v0 = ref_var(3);
+			var ref<int<4>,f,f> v0 = ref_var_init(3);
 			var uint<inf> v1 = num_cast(*v0, type_lit(uint<inf>));
 			var ref<array<real<4>,#v1>,t,f> v2;
 		})")
@@ -80,7 +80,7 @@ int main() {
 	}
 
 	#pragma test expect_ir(R"({
-			var ref<int<4>,f,f> v0 = ref_var(3);
+			var ref<int<4>,f,f> v0 = ref_var_init(3);
 			var uint<inf> v1 = num_cast(*v0, type_lit(uint<inf>));
 			var ref<array<real<4>,#v1>,t,f> v2; ptr_from_array(v2);
 		})")
@@ -91,7 +91,7 @@ int main() {
 	}	
 
 	#pragma test expect_ir(R"({
-			var ref<int<4>,f,f> v0 = ref_var(3);
+			var ref<int<4>,f,f> v0 = ref_var_init(3);
 			var uint<inf> v1 = num_cast(*v0, type_lit(uint<inf>));
 			var ref<array<real<4>,#v1>,f,t> v2;
 		})")
@@ -101,8 +101,8 @@ int main() {
 	}
 	
 	#pragma test expect_ir(R"({
-			var ref<int<4>,f,f> v0 = ref_var(3);
-			var ref<int<4>,f,f> v1 = ref_var(6);
+			var ref<int<4>,f,f> v0 = ref_var_init(3);
+			var ref<int<4>,f,f> v1 = ref_var_init(6);
 			var uint<inf> v2 = num_cast(*v0, type_lit(uint<inf>));
 			var uint<inf> v3 = num_cast(*v1, type_lit(uint<inf>));
 			var ref<array<array<real<4>,#v3>,#v2>,f,f> v4;
@@ -114,8 +114,8 @@ int main() {
 	}
 
 	#pragma test expect_ir(R"({
-			var ref<int<4>,f,f> v0 = ref_var(3);
-			var ref<int<4>,f,f> v1 = ref_var(6);
+			var ref<int<4>,f,f> v0 = ref_var_init(3);
+			var ref<int<4>,f,f> v1 = ref_var_init(6);
 			var uint<inf> v2 = num_cast(*v0+2, type_lit(uint<inf>));
 			var uint<inf> v3 = num_cast(*v1+5, type_lit(uint<inf>));
 			var ref<array<array<real<4>,#v3>,#v2>,f,f> v4;
@@ -127,9 +127,9 @@ int main() {
 	}
 
 	#pragma test expect_ir(R"({
-			var ref<int<4>,f,f> v0 = ref_var(3);
-			var ref<int<4>,f,f> v1 = ref_var(6);
-			var ref<int<4>,f,f> v2 = ref_var(10);
+			var ref<int<4>,f,f> v0 = ref_var_init(3);
+			var ref<int<4>,f,f> v1 = ref_var_init(6);
+			var ref<int<4>,f,f> v2 = ref_var_init(10);
 			var uint<inf> v3 = num_cast(*v0, type_lit(uint<inf>));
 			var uint<inf> v4 = num_cast(*v1, type_lit(uint<inf>));
 			var uint<inf> v5 = num_cast(*v2, type_lit(uint<inf>));
@@ -143,9 +143,9 @@ int main() {
 	}
 
 	#pragma test expect_ir(R"({
-			var ref<int<4>,f,f> v0 = ref_var(3);
-			var ref<int<4>,f,f> v1 = ref_var(6);
-			var ref<int<4>,f,f> v2 = ref_var(10);
+			var ref<int<4>,f,f> v0 = ref_var_init(3);
+			var ref<int<4>,f,f> v1 = ref_var_init(6);
+			var ref<int<4>,f,f> v2 = ref_var_init(10);
 			var uint<inf> v3 = num_cast(*v0+2, type_lit(uint<inf>));
 			var uint<inf> v4 = num_cast(*v1, type_lit(uint<inf>));
 			var uint<inf> v5 = num_cast(*v2+1, type_lit(uint<inf>));
@@ -159,7 +159,7 @@ int main() {
 	}
 
 	#pragma test expect_ir(R"({
-			var ref<int<4>,f,f> v0 = ref_var(61);
+			var ref<int<4>,f,f> v0 = ref_var_init(61);
 			var uint<inf> v1 = num_cast(10, type_lit(uint<inf>));
 			var uint<inf> v2 = num_cast(*v0+2, type_lit(uint<inf>));
 			var ref<array<array<array<real<4>,10>,#v2>,#v1>,t,t> v3;
@@ -170,7 +170,7 @@ int main() {
 	}
 	
 	#pragma test expect_ir(R"({
-			var ref<int<4>,f,f> v0 = ref_var(4);
+			var ref<int<4>,f,f> v0 = ref_var_init(4);
 			var uint<inf> v1 = num_cast(*v0,type_lit(uint<inf>));
 			var ref<array<ptr<real<4>,f,f>,#v1>,f,f> v2;
 		})")
@@ -179,7 +179,7 @@ int main() {
 		float* arrpf[i];
 	}
 	#pragma test expect_ir(R"({
-			var ref<int<4>,f,f> v0 = ref_var(4);
+			var ref<int<4>,f,f> v0 = ref_var_init(4);
 			var uint<inf> v1 = num_cast(*v0,type_lit(uint<inf>));
 			var ref<array<ptr<real<4>,t,f>,#v1>,f,f> v2;
 		})")
@@ -188,7 +188,7 @@ int main() {
 		const float* arrpcf[i];
 	}
 	#pragma test expect_ir(R"({
-			var ref<int<4>,f,f> v0 = ref_var(4);
+			var ref<int<4>,f,f> v0 = ref_var_init(4);
 			var uint<inf> v1 = num_cast(*v0,type_lit(uint<inf>));
 			var ref<array<ptr<real<4>,t,f>,#v1>,f,t> v2;
 		})")
@@ -219,7 +219,7 @@ int main() {
 	}
 
 	#pragma test expect_ir(R"({
-			var ref<int<4>> v0 = ref_var(10);
+			var ref<int<4>> v0 = ref_var_init(10);
 			var uint<inf> v1 = num_cast(*v0, type_lit(uint<inf>));
 			var ref<array<int<4>,#v1>> v2;
 			sizeof(type_lit(array<int<4>,#v1>));
@@ -231,8 +231,8 @@ int main() {
 	}
 	
 	#pragma test expect_ir(R"({ 
-			var ref<int<4>> v0 = ref_var(10); 
-			var ref<int<4>> v1 = ref_var(20); 
+			var ref<int<4>> v0 = ref_var_init(10); 
+			var ref<int<4>> v1 = ref_var_init(20); 
 			var uint<inf> v2 = num_cast(*v0, type_lit(uint<inf>));
 			var uint<inf> v3 = num_cast(*v1, type_lit(uint<inf>));
 			var ref<array<array<int<4>,#v3>,#v2>> v4; sizeof(type_lit(array<array<int<4>,#v3>,#v2>));
@@ -245,8 +245,8 @@ int main() {
 	}
 
 	#pragma test expect_ir(R"({ 
-			var ref<int<4>> v0 = ref_var(10); 
-			var ref<int<4>> v1 = ref_var(20); 
+			var ref<int<4>> v0 = ref_var_init(10); 
+			var ref<int<4>> v1 = ref_var_init(20); 
 			var uint<inf> v2 = num_cast(*v0, type_lit(uint<inf>));
 			var uint<inf> v3 = num_cast(*v1, type_lit(uint<inf>));
 			var ref<array<array<int<4>,#v3>,#v2>> v4; 
