@@ -440,7 +440,7 @@ namespace parser {
 			}
 
 			// build resulting function type
-			auto funcType = genFuncType(l, paramTys, retType, functionKind);
+			auto funcType = genFuncType(l, paramTys, retType, functionKind).as<FunctionTypePtr>();
 
 			// if it is a function that is defined
 			if (!isLambda) {
@@ -451,7 +451,7 @@ namespace parser {
 			// replace all variables in the body by their implicitly materialized version
 			auto lambdaIngredients = transform::materialize({params, body});
 
-			return builder.lambdaExpr(funcType.as<FunctionTypePtr>(), lambdaIngredients.params, lambdaIngredients.body);
+			return builder.lambdaExpr(funcType, lambdaIngredients.params, lambdaIngredients.body);
 		}
 
 		BindExprPtr InspireDriver::genClosure(const location& l, const VariableList& params, StatementPtr stmt) {
