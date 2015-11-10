@@ -1133,7 +1133,7 @@ namespace measure {
 			// migrate autotuning information (and other annotations if present)
 			core::transform::utils::migrateAnnotations(cur.first, tmp);
 			// instrument the new region
-			core::StatementPtr instrumentedTmp = instrument(tmp, cur.second);
+			core::StatementPtr instrumentedTmp = instrument(cur.first, cur.second);
 			// replace region
 			root = core::transform::replaceNode(manager, tmp, instrumentedTmp);
 		});
