@@ -436,7 +436,18 @@ namespace parser {
 			// TODO: cast returns to appropriate type
 			TypeList paramTys;
 			for(const auto& var : params) {
-				paramTys.push_back(var.getType());
+				//if we are building a lambda, the function type is already the correct one and the body will be materialized
+				if (isLambda) {
+					paramTys.push_back(var.getType());
+
+					//if we are building a function, we have to calculate the function type differently and leave the body untouched
+				} else {
+					if (!analysis::isRefType(var.getType())) {
+						error(l, format("Parameter %s is not of ref type", var));
+						return nullptr;
+					}
+					paramTys.push_back(analysis::getReferencedType(var.getType()));
+				}
 			}
 
 			// build resulting function type
@@ -558,8 +569,8 @@ namespace parser {
 		MemberFunctionPtr InspireDriver::genMemberFunction(const location& l, bool virtl, bool cnst, bool voltile, const std::string& name, const VariableList& params, const TypePtr& retType, const StatementPtr& body, bool isLambda) {
 			assert_false(currentRecordStack.empty()) << "Not within record definition!";
 
-			// get this-type
-			auto thisType = builder.refType(getThisType(), cnst, voltile);
+			// get this-type (which is ref<ref in case of a function
+			auto thisType = isLambda ? builder.refType(getThisType(), cnst, voltile) : builder.refType(builder.refType(getThisType(), cnst, voltile));
 			auto thisParam = builder.variable(thisType);
 
 			// create full parameter list

@@ -449,6 +449,26 @@ namespace parser {
 		                                "def baz = (a : int<4>) -> int<4> { return bar(a); };"
 		                                "def foo = (a : int<4>) -> int<4> { return baz(a); };"
 		                                "foo"));
+
+		{ //ensure that functions and lambdas end up the same when written correctly
+			auto type1 = builder.parseType("def struct s { lambda a : ()->unit { } }; s");
+			auto type2 = builder.parseType("def struct s { function a : ()->unit { } }; s");
+
+			ASSERT_TRUE(checks::check(type1).empty()) << checks::check(type1);
+			ASSERT_TRUE(checks::check(type2).empty()) << checks::check(type2);
+
+			EXPECT_EQ(builder.normalize(type1), builder.normalize(type2));
+		}
+
+		{ //ensure that functions and lambdas end up the same when written correctly
+			auto type1 = builder.parseType("def struct s { lambda a : (b : int<4>)->int<4> { return b; } }; s");
+			auto type2 = builder.parseType("def struct s { function a : (b : ref<int<4>,f,f,plain>)->int<4> { return *b; } }; s");
+
+			ASSERT_TRUE(checks::check(type1).empty()) << checks::check(type1);
+			ASSERT_TRUE(checks::check(type2).empty()) << checks::check(type2);
+
+			EXPECT_EQ(builder.normalize(type1), builder.normalize(type2));
+		}
 	}
 
 	bool test_statement(NodeManager& nm, const std::string& x) {
