@@ -181,7 +181,6 @@ namespace omp {
 				// check whether it is a struct-init expression of a lock
 				if(node->getNodeType() == NT_StructExpr && isLockStructType(node.as<ExpressionPtr>()->getType())) {
 					// replace with uninitialized lock
-					abort();
 					newNode = build.getZero(parExt.getLock());					
 				} else {
 					// no changes required at this level, recurse
