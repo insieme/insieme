@@ -73,9 +73,9 @@ namespace transform {
 		auto addresses = builder.parseAddressesStatement(R"raw(
 		alias int = int<4>;
 		{		
-			var ref<int,f,f,plain> x = ref_var(2);
-			var ref<int,f,f,plain> a = ref_var($2$+$2$);
-			var ref<int,f,f,plain> b = ref_var(a + 6);
+			var ref<int,f,f,plain> x = ref_var_init(2);
+			var ref<int,f,f,plain> a = ref_var_init($2$+$2$);
+			var ref<int,f,f,plain> b = ref_var_init(a + 6);
 		}
 	)raw");
 
@@ -88,8 +88,8 @@ namespace transform {
 		});
 
 		auto result = mapper.mapFromRoot(addresses[0].getRootNode());
-		EXPECT_TRUE(core::analysis::contains(result, builder.parseExpr("ref_var(31337+42)")));
-		EXPECT_TRUE(core::analysis::contains(result, builder.parseExpr("ref_var(2)")));
+		EXPECT_TRUE(core::analysis::contains(result, builder.parseExpr("ref_var_init(31337+42)")));
+		EXPECT_TRUE(core::analysis::contains(result, builder.parseExpr("ref_var_init(2)")));
 	}
 
 	TEST(AddressMapper, Nested) {

@@ -58,14 +58,14 @@ namespace backend {
 		core::IRBuilder builder(manager);
 
 		std::map<string, core::NodePtr> symbols;
-		symbols["A"] = builder.structExpr(toVector<core::NamedValuePtr>(builder.namedValue("a", builder.undefined(builder.parseType("vector<int<4>,20>"))),
-		                                                                builder.namedValue("f", builder.undefined(builder.parseType("real<8>")))));
+		symbols["A"] = builder.structExpr(toVector<core::NamedValuePtr>(builder.namedValue("a", builder.getZero(builder.parseType("vector<int<4>,20>"))),
+		                                                                builder.namedValue("f", builder.getZero(builder.parseType("real<8>")))));
 
 		core::ProgramPtr program = builder.parseProgram(R"(
 			alias gstruct = struct { a: vector<int<4>,20>; f : real<8>; };
 			
 			int<4> main() {
-				var ref<gstruct> v1 = ref_new(A);
+				var ref<gstruct> v1 = ref_new_init(A);
 				v1.a;
 				composite_member_access(*v1, lit("a"), type_lit(vector<int<4>,20>));
 				(v2: ref<gstruct>) -> unit {

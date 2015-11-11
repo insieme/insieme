@@ -40,6 +40,7 @@
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/pointer.h"
+#include "insieme/core/lang/array.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/types/subtype_constraints.h"
 
@@ -148,9 +149,14 @@ namespace analysis {
 	/// TODO: add trivial marker for tagtypes
 	bool isTrivial(const TypePtr& type) {
 		auto ttype = type.isa<TagTypePtr>();
-
-		// non-tag-types are always trivial
-		if(!ttype) return true;
+		if(!ttype) {
+			if (core::lang::isArray(type)) {
+				// in case of an array, check the enclosed type for triviality
+				return isTrivial(core::lang::ArrayType(type).getElementType());
+			}
+			// non-tag-type & non-array types are always trivial
+			return true;
+		}
 
 		auto rtype = ttype->getRecord();
 
@@ -160,14 +166,14 @@ namespace analysis {
 		bool trivialMoveConstructor = false;
 		for(auto con : rtype->getConstructors()) {
 			auto l = con.as<LambdaExprPtr>();
-			auto params = l->getParameterList();
+			auto params = l->getFunctionType()->getParameterTypeList();
 			if(params.size() == 1) {
 				if(l->getBody()->getStatements().size() == 0) trivialConstructor = true;
 			}
 			if(params.size() == 2) {
-				if(core::lang::isReference(params[1]->getType())) { 
-					auto myType = core::lang::PointerType(params[0]->getType()).getElementType();
-					auto refType = core::lang::ReferenceType(params[1]->getType());
+				if(core::lang::isReference(params[1])) {
+					auto myType = core::lang::ReferenceType(params[0]).getElementType();
+					auto refType = core::lang::ReferenceType(params[1]);
 					if(refType.isCppReference() && refType.getElementType() == myType) {
 						// this is a copy constructor
 						if(l->getBody()->getStatements().size() == 0) trivialCopyConstructor = true;
@@ -184,10 +190,39 @@ namespace analysis {
 		// check for trivial copy and move assignments
 		bool trivialCopyAssignment = false;
 		bool trivialMoveAssignment = false;
-		for(auto mem : rtype->getMemberFunctions()) {
-			if(mem->getNameAsString() == "operator_assign") {
-				// TODO check against body generated for default assignment
+		for(auto memFun : rtype->getMemberFunctions()) {
+			if(memFun->getNameAsString() != "operator_assign") continue;
+
+			auto lambda = memFun->getImplementation().as<LambdaExprPtr>();
+			auto paramTypeList = lambda->getFunctionType()->getParameterTypeList();
+			// verify the function parameter signature, there must exist exactly two
+			if(paramTypeList.size() != 2) continue;
+			// verify if the body is empty, if not skip all further checks as it is user-defined
+			if(lambda->getBody()->getStatements().size() != 0) continue;
+
+			// check the first argument and get the type of '*this'
+			auto thisType = core::lang::ReferenceType(paramTypeList[0]).getElementType();
+			// the return value must be a reference
+			if(!core::analysis::isRefType(lambda->getFunctionType()->getReturnType())) continue;
+			// construct the ReferenceType and check for invalid type-modifier usage
+			auto returnType = core::lang::ReferenceType(lambda->getFunctionType()->getReturnType());
+			if(!returnType.isCppReference() || returnType.isConst() || returnType.isVolatile() || !(returnType.getElementType() == thisType)) continue;
+
+			// assure that arg1 is as well of ref<'a,...>
+			if(!core::lang::isReference(paramTypeList[1])) continue;
+
+			auto refType = core::lang::ReferenceType(paramTypeList[1]);
+			// regardless of kind or modifiers, it must reference 'thisType'
+			if(!(refType.getElementType() == thisType)) continue;
+
+			if(refType.isCppReference()) {
+				// this is a copy constructor
+				trivialCopyAssignment = true;
+			} else if(refType.isCppRValueReference()) {
+				// this is a move constructor
+				trivialMoveAssignment = true;
 			}
+			// a normal ref<class,f,f,plain> can never be trivial, so just fall through
 		}
 		if(!trivialCopyAssignment || !trivialMoveAssignment) return false;
 
@@ -199,11 +234,13 @@ namespace analysis {
 			if(memFun->getVirtualFlag().getValue()) return false;
 		}
 
-		// check for virtual base classes
+		// check for virtual & non-trivial base classes
 		if(ttype->isStruct()) {
 			auto stype = ttype->getStruct();
 			for(auto par : stype->getParents()) {
 				if(par->getVirtual().getValue()) return false;
+				// if our direct base class is non-trivial, we cannot be trivial per-se
+				if(!isTrivial(par->getType())) return false;
 			}
 		}
 
@@ -211,7 +248,7 @@ namespace analysis {
 		for(auto field : rtype->getFields()) {
 			if(!isTrivial(field->getType())) return false;
 		}
-		
+
 		return true;
 	}
 

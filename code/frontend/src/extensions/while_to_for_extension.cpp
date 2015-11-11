@@ -123,7 +123,7 @@ namespace extensions {
 			// first check if declaration
 			if(auto decl = operation.isa<core::DeclarationStmtPtr>()) {
 				auto initCall = decl->getInitialization().isa<core::CallExprPtr>();
-				if(!initCall || !core::analysis::isCallOf(initCall, rMod.getRefVar())) return invalid;
+				if(!initCall || !core::analysis::isCallOf(initCall, rMod.getRefVarInit())) return invalid;
 				return std::make_pair(decl->getVariable() == var, initCall->getArgument(0));
 			}
 

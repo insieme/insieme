@@ -1328,7 +1328,17 @@ namespace printer {
 				OUT(")");
 			};
 			ADD_FORMATTER(refExt.getRefNew()) {
-				OUT(" new(");
+				OUT(" ref_new(");
+				PRINT_ARG(0);
+				OUT(")");
+			};
+			ADD_FORMATTER(refExt.getRefVarInit()) {
+				OUT(" ref_var_init(");
+				PRINT_ARG(0);
+				OUT(")");
+			};
+			ADD_FORMATTER(refExt.getRefNewInit()) {
+				OUT(" ref_new_init(");
 				PRINT_ARG(0);
 				OUT(")");
 			};

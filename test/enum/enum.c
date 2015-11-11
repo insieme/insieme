@@ -25,7 +25,7 @@ struct EnumStruct {
 	enum ThingWithE e;
 };
 
-// two annonymous enums to test names aliasing
+// two anonymous enums to test names aliasing
 enum {ZERO, ONE, TWO} var1;
 enum {GREEN, BLUE, RED} var2;
 

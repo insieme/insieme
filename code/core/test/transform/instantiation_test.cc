@@ -450,7 +450,7 @@ namespace transform {
 
 		core::ProgramPtr code = builder.parseProgram("int<4> main() {"
 														"	(dtype : type<'a>, size : type<'s>)->ref<array<'a,'s>> {"
-														"		return ref_new(array_create(size, list_empty(dtype)));"
+														"		return ref_new_init(array_create(size, list_empty(dtype)));"
 														"	} (type_lit(real<4>), type_lit(7));"
 														"	return 0;"
 														"}");

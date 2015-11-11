@@ -129,6 +129,11 @@ namespace parser {
 		                          "  dtor () { }"
 		                          "}"));
 
+		EXPECT_TRUE(test_type(nm, "struct class {"
+		                          "  a : int<4>;"
+		                          "  dtor virtual () { }"
+		                          "}"));
+
 		EXPECT_FALSE(test_type(nm, "struct class {" //multiple destructors
 		                           "  a : int<4>;"
 		                           "  dtor () { }"
@@ -444,6 +449,87 @@ namespace parser {
 		                                "def baz = (a : int<4>) -> int<4> { return bar(a); };"
 		                                "def foo = (a : int<4>) -> int<4> { return baz(a); };"
 		                                "foo"));
+
+		{ //ensure that functions and lambdas end up the same when written correctly
+			auto type1 = builder.parseType("def a = ()->unit { }; a");
+			auto type2 = builder.parseType("def a = function ()->unit { }; a");
+
+			ASSERT_TRUE(checks::check(type1).empty()) << checks::check(type1);
+			ASSERT_TRUE(checks::check(type2).empty()) << checks::check(type2);
+
+			EXPECT_EQ(builder.normalize(type1), builder.normalize(type2));
+		}
+
+		{ //ensure that functions and lambdas end up the same when written correctly
+			auto type1 = builder.parseType("def a = (b : int<4>)->int<4> { return b; }; a");
+			auto type2 = builder.parseType("def a = function (b : ref<int<4>,f,f,plain>)->int<4> { return *b; }; a");
+
+			ASSERT_TRUE(checks::check(type1).empty()) << checks::check(type1);
+			ASSERT_TRUE(checks::check(type2).empty()) << checks::check(type2);
+
+			EXPECT_EQ(builder.normalize(type1), builder.normalize(type2));
+		}
+
+		{ //ensure that functions and lambdas end up the same when written correctly
+			auto type1 = builder.parseType("def struct s { lambda a : ()->unit { } }; s");
+			auto type2 = builder.parseType("def struct s { function a : ()->unit { } }; s");
+
+			ASSERT_TRUE(checks::check(type1).empty()) << checks::check(type1);
+			ASSERT_TRUE(checks::check(type2).empty()) << checks::check(type2);
+
+			EXPECT_EQ(builder.normalize(type1), builder.normalize(type2));
+		}
+
+		{ //ensure that functions and lambdas end up the same when written correctly
+			auto type1 = builder.parseType("def struct s { lambda a : (b : int<4>)->int<4> { return b; } }; s");
+			auto type2 = builder.parseType("def struct s { function a : (b : ref<int<4>,f,f,plain>)->int<4> { return *b; } }; s");
+
+			ASSERT_TRUE(checks::check(type1).empty()) << checks::check(type1);
+			ASSERT_TRUE(checks::check(type2).empty()) << checks::check(type2);
+
+			EXPECT_EQ(builder.normalize(type1), builder.normalize(type2));
+		}
+
+		{ //ensure that functions and lambdas end up the same when written correctly
+			auto type1 = builder.parseType("decl struct s; def struct s { lambda a : ()->ref<s,f,f,plain> { return this; } }; s");
+			auto type2 = builder.parseType("decl struct s; def struct s { function a : ()->ref<s,f,f,plain> { return *this; } }; s");
+
+			ASSERT_TRUE(checks::check(type1).empty()) << checks::check(type1);
+			ASSERT_TRUE(checks::check(type2).empty()) << checks::check(type2);
+
+			EXPECT_EQ(builder.normalize(type1), builder.normalize(type2));
+		}
+
+		{ //ensure that functions and lambdas end up the same when written correctly
+			auto type1 = builder.parseType("def struct s { ctor () { } }; s");
+			auto type2 = builder.parseType("def struct s { ctor function () { } }; s");
+
+			ASSERT_TRUE(checks::check(type1).empty()) << checks::check(type1);
+			ASSERT_TRUE(checks::check(type2).empty()) << checks::check(type2);
+
+			EXPECT_EQ(builder.normalize(type1), builder.normalize(type2));
+		}
+
+		{ //ensure that functions and lambdas end up the same when written correctly
+			auto type1 = builder.parseType("def struct s { ctor (b : int<4>) { } }; s");
+			auto type2 = builder.parseType("def struct s { ctor function (b : ref<int<4>,f,f,plain>) { } }; s");
+
+			ASSERT_TRUE(checks::check(type1).empty()) << checks::check(type1);
+			ASSERT_TRUE(checks::check(type2).empty()) << checks::check(type2);
+
+			EXPECT_EQ(builder.normalize(type1), builder.normalize(type2));
+		}
+
+		{ //ensure that functions and lambdas end up the same when written correctly
+			auto type1 = builder.parseType("def struct s { dtor () { } }; s");
+			auto type2 = builder.parseType("def struct s { dtor function () { } }; s");
+
+			ASSERT_TRUE(checks::check(type1).empty()) << checks::check(type1);
+			ASSERT_TRUE(checks::check(type2).empty()) << checks::check(type2);
+
+			EXPECT_EQ(builder.normalize(type1), builder.normalize(type2));
+		}
+
 	}
 
 	bool test_statement(NodeManager& nm, const std::string& x) {
@@ -483,6 +569,7 @@ namespace parser {
 		EXPECT_FALSE(test_statement(nm, "x;"));
 
 		EXPECT_TRUE(test_statement(nm, "{ var int<4> x = 0; x+1; }"));
+		EXPECT_TRUE(test_statement(nm, "{ var ref<int<4>,f,f,plain> x; }"));
 		EXPECT_TRUE(test_statement(nm, "{ auto x = 0; x+1; }"));
 
 		EXPECT_TRUE(test_statement(nm, "if ( true ) {}"));
@@ -508,16 +595,16 @@ namespace parser {
 
 		EXPECT_TRUE(test_statement(nm, "alias type = struct a { a : int<4>; b : int<8>; };"
 		                               "{"
-		                               "    var type varable = undefined(type);"
-		                               "    var rf<type> var2 = undefined(rf<type>);"
-		                               "    auto var3 = undefined(type);"
+		                               "    var ref<type,f,f,plain> variable;"
+		                               "    var ref<rf<type>,f,f,plain> var2;"
+		                               "    auto var3 = var2;"
 		                               "}"));
 
 		EXPECT_TRUE(test_statement(nm, "alias class = struct name { a : int<2>; };"
 		                               "alias collection = array<class, 10>;"
 		                               "{"
-		                               "    var ref<collection,f,f,plain> x = undefined(ref<collection,f,f,plain>);"
-		                               "    var int<2> y = undefined(int<2>);"
+		                               "    var ref<collection,f,f,plain> x;"
+		                               "    var int<2> y = CAST(int<2>) 5;"
 		                               "    x[5].a = y;"
 		                               "}"));
 	}

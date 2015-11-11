@@ -64,7 +64,7 @@ namespace transform {
 			  return a - b; 
 			};
 			int main() {
-				var ref<int,f,f,plain> x = ref_var(0); 
+				var ref<int,f,f,plain> x = ref_var_init(0); 
 				$x = fun(3,6)$; 
 			}
         )1N5P1RE")[0].as<CallExprAddress>();
@@ -91,14 +91,14 @@ namespace transform {
 			alias int = int<4>;
 			def fun = (a : int, b : int) -> int { 
 				if(a<4) { return a + 2*b; } 
-				var ref<int,f,f,plain> x = ref_var(a); 
+				var ref<int,f,f,plain> x = ref_var_init(a); 
 				while(true) { 
 					x = x+1; 
 					if(x>b) { return x - b; } 
 				} 
 			};
 			{
-				var ref<int,f,f,plain> x = ref_var(0); 
+				var ref<int,f,f,plain> x = ref_var_init(0); 
 				$x = fun(3,6)$; 
 			}
         )1N5P1RE")[0].as<CallExprAddress>();
@@ -126,14 +126,14 @@ namespace transform {
 		CallExprAddress code = builder.parseAddressesStatement("alias int = int<4>;"
 		                                                       "def fun = (a : int, b : int) -> int { "
 		                                                       "	if(a<4) { return a + 2*b; } "
-		                                                       "	var ref<int,f,f,plain> x = ref_var(a); "
+		                                                       "	var ref<int,f,f,plain> x = ref_var_init(a); "
 		                                                       "	while(true) { "
 		                                                       "		x = x+1; "
 		                                                       "		if(x>b) { return x - b; } "
 		                                                       "	} "
 		                                                       "}; "
 		                                                       "{"
-		                                                       "	var ref<int,f,f,plain> x = ref_var(0); "
+		                                                       "	var ref<int,f,f,plain> x = ref_var_init(0); "
 		                                                       "	$fun(3,6)$; "
 		                                                       "}")[0]
 		                           .as<CallExprAddress>();

@@ -365,7 +365,6 @@ namespace core {
 		}
 
 		// Build undefined initializers
-		ExpressionPtr undefined(const TypePtr& type) const;
 		ExpressionPtr undefinedVar(const TypePtr& type) const;
 		ExpressionPtr undefinedNew(const TypePtr& type) const;
 
