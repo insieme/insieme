@@ -560,23 +560,34 @@ namespace parser {
 		ExpressionPtr InspireDriver::genDestructor(const location& l, const StatementPtr& body) {
 			assert_false(currentRecordStack.empty()) << "Not within record definition!";
 
-			// get this-type
-			auto thisParam = builder.variable(builder.refType(getThisType()));
+			// get this-type (which is ref<ref in case of a function
+			auto thisType = getThisTypeForLambdaAndFunction(false, false);
+			auto thisParam = builder.variable(thisType);
 
 			// create full parameter list
 			VariableList params = { thisParam };
+
+			auto paramTypes = getParamTypesForLambdaAndFunction(l, params);
+			if (paramTypes.size() != 1) {
+				return nullptr;
+			}
 
 			// update body
 			auto newBody = transform::replaceAll(mgr, body, genThis(l), thisParam).as<StatementPtr>();
 
 			// create destructor type
-			auto dtorType = builder.functionType(extractTypes(params), thisParam->getType(), FK_DESTRUCTOR);
+			auto dtorType = builder.functionType(paramTypes, builder.refType(getThisType()), FK_DESTRUCTOR);
 
-			// replace all variables in the body by their implicitly materialized version
-			auto ingredients = transform::materialize({params, newBody});
-
-			// create the destructor
-			auto dtor = builder.lambdaExpr(dtorType, ingredients.params, ingredients.body);
+			LambdaExprPtr dtor;
+			if (inLambda) {
+				// replace all variables in the body by their implicitly materialized version
+				auto ingredients = transform::materialize({params, newBody});
+				// create the destructor
+				dtor = builder.lambdaExpr(dtorType, ingredients.params, ingredients.body);
+			} else {
+				// create the destructor
+				dtor = builder.lambdaExpr(dtorType, params, body);
+			}
 
 			// create a symbol in the translation unit
 			auto dtorSymbol = builder.literal("Dtor", dtor->getType());

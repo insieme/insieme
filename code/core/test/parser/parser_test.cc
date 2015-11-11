@@ -519,6 +519,17 @@ namespace parser {
 
 			EXPECT_EQ(builder.normalize(type1), builder.normalize(type2));
 		}
+
+		{ //ensure that functions and lambdas end up the same when written correctly
+			auto type1 = builder.parseType("def struct s { dtor () { } }; s");
+			auto type2 = builder.parseType("def struct s { dtor function () { } }; s");
+
+			ASSERT_TRUE(checks::check(type1).empty()) << checks::check(type1);
+			ASSERT_TRUE(checks::check(type2).empty()) << checks::check(type2);
+
+			EXPECT_EQ(builder.normalize(type1), builder.normalize(type2));
+		}
+
 	}
 
 	bool test_statement(NodeManager& nm, const std::string& x) {

@@ -339,6 +339,8 @@ constructor : "ctor" "(" parameters                                         { dr
             ;
 
 destructor : "dtor" virtual_flag "(" ")" compound_statement                 { $$ = std::make_pair(driver.genDestructor(@$, $5), $2); }
+           | "dtor" virtual_flag "function"                                 { driver.inLambda = false; }
+                                            "(" ")" compound_statement      { $$ = std::make_pair(driver.genDestructor(@$, $7), $2); driver.inLambda = true; }
            |                                                                { $$ = std::make_pair(LambdaExprPtr(), false); }
            ;
 
