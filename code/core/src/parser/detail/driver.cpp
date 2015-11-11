@@ -589,7 +589,7 @@ namespace parser {
 
 			// generate call expression which is used to call this function in the current tag type context
 			ExpressionPtr access = builder.getLangBasic().getCompositeMemberFunctionAccess();
-			auto accessExpr = builder.callExpr(memberFunType, access, genThis(l), builder.getIdentifierLiteral(name), builder.getTypeLiteral(memberFunType));
+			auto accessExpr = builder.callExpr(memberFunType, access, genThisInLambda(l), builder.getIdentifierLiteral(name), builder.getTypeLiteral(memberFunType));
 			annotations::attachName(fun, name);
 			declareSymbol(l, name, accessExpr);
 
@@ -980,6 +980,14 @@ namespace parser {
 		}
 
 		ExpressionPtr InspireDriver::genThis(const location& l) {
+			if (inLambda) {
+				return genThisInLambda(l);
+			} else {
+				return genThisInFunction(l);
+			}
+		}
+
+		ExpressionPtr InspireDriver::genThisInLambda(const location& l) {
 			// check valid scope
 			if(currentRecordStack.empty()) {
 				error(l, "This-pointer in non-record context!");
@@ -988,6 +996,17 @@ namespace parser {
 
 			// build a literal
 			return builder.literal("this", builder.refType(getThisType()));
+		}
+
+		ExpressionPtr InspireDriver::genThisInFunction(const location& l) {
+			// check valid scope
+			if(currentRecordStack.empty()) {
+				error(l, "This-pointer in non-record context!");
+				return nullptr;
+			}
+
+			// build a literal
+			return builder.literal("this", builder.refType(builder.refType(getThisType())));
 		}
 
 

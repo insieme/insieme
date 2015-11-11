@@ -105,6 +105,8 @@ namespace parser {
 
 			location globLoc;
 
+			bool inLambda = true;
+
 		  private:
 
 			std::stringstream ss;
@@ -227,7 +229,7 @@ namespace parser {
 			/**
 			 * generates a lambda expression
 			 */
-			LambdaExprPtr genLambda(const location& l, const VariableList& params, const TypePtr& retType, const StatementPtr& body, bool isLambda = true, const FunctionKind functionKind = FK_PLAIN);
+			LambdaExprPtr genLambda(const location& l, const VariableList& params, const TypePtr& retType, const StatementPtr& body, bool isLambda, const FunctionKind functionKind = FK_PLAIN);
 
 			/**
 			 * generates a closure
@@ -344,6 +346,16 @@ namespace parser {
 			 * constructs a literal referencing the current object
 			 */
 			ExpressionPtr genThis(const location& l);
+
+			/**
+			 * constructs a literal referencing the current object in a lambda
+			 */
+			ExpressionPtr genThisInLambda(const location& l);
+
+			/**
+			 * constructs a literal referencing the current object in a function
+			 */
+			ExpressionPtr genThisInFunction(const location& l);
 
 			/**
 			 * stores in the current scope the "this" variable with the given type

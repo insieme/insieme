@@ -451,6 +451,26 @@ namespace parser {
 		                                "foo"));
 
 		{ //ensure that functions and lambdas end up the same when written correctly
+			auto type1 = builder.parseType("def a = ()->unit { }; a");
+			auto type2 = builder.parseType("def a = function ()->unit { }; a");
+
+			ASSERT_TRUE(checks::check(type1).empty()) << checks::check(type1);
+			ASSERT_TRUE(checks::check(type2).empty()) << checks::check(type2);
+
+			EXPECT_EQ(builder.normalize(type1), builder.normalize(type2));
+		}
+
+		{ //ensure that functions and lambdas end up the same when written correctly
+			auto type1 = builder.parseType("def a = (b : int<4>)->int<4> { return b; }; a");
+			auto type2 = builder.parseType("def a = function (b : ref<int<4>,f,f,plain>)->int<4> { return *b; }; a");
+
+			ASSERT_TRUE(checks::check(type1).empty()) << checks::check(type1);
+			ASSERT_TRUE(checks::check(type2).empty()) << checks::check(type2);
+
+			EXPECT_EQ(builder.normalize(type1), builder.normalize(type2));
+		}
+
+		{ //ensure that functions and lambdas end up the same when written correctly
 			auto type1 = builder.parseType("def struct s { lambda a : ()->unit { } }; s");
 			auto type2 = builder.parseType("def struct s { function a : ()->unit { } }; s");
 
@@ -463,6 +483,16 @@ namespace parser {
 		{ //ensure that functions and lambdas end up the same when written correctly
 			auto type1 = builder.parseType("def struct s { lambda a : (b : int<4>)->int<4> { return b; } }; s");
 			auto type2 = builder.parseType("def struct s { function a : (b : ref<int<4>,f,f,plain>)->int<4> { return *b; } }; s");
+
+			ASSERT_TRUE(checks::check(type1).empty()) << checks::check(type1);
+			ASSERT_TRUE(checks::check(type2).empty()) << checks::check(type2);
+
+			EXPECT_EQ(builder.normalize(type1), builder.normalize(type2));
+		}
+
+		{ //ensure that functions and lambdas end up the same when written correctly
+			auto type1 = builder.parseType("decl struct s; def struct s { lambda a : ()->ref<s,f,f,plain> { return this; } }; s");
+			auto type2 = builder.parseType("decl struct s; def struct s { function a : ()->ref<s,f,f,plain> { return *this; } }; s");
 
 			ASSERT_TRUE(checks::check(type1).empty()) << checks::check(type1);
 			ASSERT_TRUE(checks::check(type2).empty()) << checks::check(type2);
