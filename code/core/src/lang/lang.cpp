@@ -93,7 +93,7 @@ NodePtr markAsDerived(const NodePtr& node, const string& name) {
 // ----------------------------------------------------
 
 // the type of marker utilized to mark built-in literals and derived functions
-struct BuiltInTag : public core::value_annotation::copy_on_migration {};
+struct BuiltInTag {};
 
 namespace {
 

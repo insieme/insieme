@@ -181,6 +181,43 @@ TEST(PrettyPrinter, HiddenAttributes) {
 	EXPECT_EQ("attr(1, [unordered])", toString(PrettyPrinter(expr, PrettyPrinter::OPTIONS_DETAIL)));
 }
 
+TEST(PrettyPrinter, This) {
+	NodeManager nm;
+IRBuilder builder(nm);
+
+auto type0 = builder.parseType(""
+									   "def struct A { "
+									   "    a : int<4>;"
+									   "    lambda f : () -> int<4> {"
+									   "        return *a;"
+									   "    }"
+									   "}; A");
+PrettyPrinter printer0(type0, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::PRINT_CASTS
+							  | PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_MARKERS
+							  | PrettyPrinter::NO_LIST_SUGAR
+							  | PrettyPrinter::PRINT_ATTRIBUTES | PrettyPrinter::NO_EVAL_LAZY
+							  | PrettyPrinter::PRINT_DERIVED_IMPL);
+
+std::cout << printer0;
+
+auto type1 = builder.parseType(""
+									   "def struct A { "
+									   "    a : int<4>;"
+									   "    lambda f : () -> int<4> {"
+									   "        return *this.a;"
+									   "    }"
+									   "}; A");
+PrettyPrinter printer0(type1, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::PRINT_CASTS
+							  | PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_MARKERS
+							  | PrettyPrinter::NO_LIST_SUGAR
+							  | PrettyPrinter::PRINT_ATTRIBUTES | PrettyPrinter::NO_EVAL_LAZY
+							  | PrettyPrinter::PRINT_DERIVED_IMPL);
+
+std::cout << printer1;
+
+
+}
+
 TEST(PrettyPrinter, Declarations) {
 NodeManager nm;
 IRBuilder builder(nm);
@@ -400,7 +437,7 @@ TEST(PrettyPrinter, LambdaTypes) {
 //dumpText(builder.parseExpr("decl v0 : (ref<C,f,f,plain>,A,B) -> R;\ndef v0 = (v1 : ref<C,f,f,plain>,v2 : A,v3 : B) -> R {};\nv0"));
 
 
-	EXPECT_EQ("decl fun000 : (ref<ref<C,f,f,plain>,f,f,plain>, ref<A,f,f,plain>, ref<B,f,f,plain>) -> R;\ndef fun000 = (v0 : ref<ref<C,f,f,plain>,f,f,plain>, v1 : ref<A,f,f,plain>, v2 : ref<B,f,f,plain>) -> R { };\nfun000", toString(PrettyPrinter(lambdaA, PrettyPrinter::NO_LET_BOUND_FUNCTIONS)));
+	EXPECT_EQ("decl fun000 : (ref<C,f,f,plain>, A, B) -> R;\ndef fun000 = (v0 : ref<C,f,f,plain>, v1 : A, v2 : B) -> R { };\nfun000", toString(PrettyPrinter(lambdaA, PrettyPrinter::NO_LET_BOUND_FUNCTIONS)));
 //	EXPECT_EQ("ctor C v0 :: (ref<A,f,f,plain> v1, ref<B,f,f,plain> v2) { }", toString(PrettyPrinter(lambdaB, PrettyPrinter::NO_LET_BOUND_FUNCTIONS)));
 //	EXPECT_EQ("~C v0 :: () { }", toString(PrettyPrinter(lambdaC, PrettyPrinter::NO_LET_BOUND_FUNCTIONS)));
 	EXPECT_EQ("decl fun000 : (ref<ref<C,f,f,plain>,f,f,plain>, ref<A,f,f,plain>, ref<B,f,f,plain>) ~> R;\ndef fun000 = (v0 : ref<ref<C,f,f,plain>,f,f,plain>, v1 : ref<A,f,f,plain>, v2 : ref<B,f,f,plain>) ~> R { };\nfun000", toString(PrettyPrinter(lambdaE, PrettyPrinter::NO_LET_BOUND_FUNCTIONS)));
