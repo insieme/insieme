@@ -79,7 +79,7 @@ TEST(ErrorPrinter, address) {
 				fun(fun(*d));
 				fun(rfun(e));
 				$lfun$(f);
-				rfun(ref_var(lfun(g)));
+				rfun(ref_var_init(lfun(g)));
 			}
 		}
 	)1N5P1RE");
