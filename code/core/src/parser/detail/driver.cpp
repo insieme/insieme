@@ -432,12 +432,12 @@ namespace parser {
 			}
 		}
 
-		LambdaExprPtr InspireDriver::genLambda(const location& l, const VariableList& params, const TypePtr& retType, const StatementPtr& body, bool isLambda, const FunctionKind functionKind) {
+		LambdaExprPtr InspireDriver::genLambda(const location& l, const VariableList& params, const TypePtr& retType, const StatementPtr& body, const FunctionKind functionKind) {
 			// TODO: cast returns to appropriate type
 			TypeList paramTys;
 			for(const auto& var : params) {
 				//if we are building a lambda, the function type is already the correct one and the body will be materialized
-				if (isLambda) {
+				if (inLambda) {
 					paramTys.push_back(var.getType());
 
 					//if we are building a function, we have to calculate the function type differently and leave the body untouched
@@ -454,7 +454,7 @@ namespace parser {
 			auto funcType = genFuncType(l, paramTys, retType, functionKind).as<FunctionTypePtr>();
 
 			// if it is a function that is defined
-			if (!isLambda) {
+			if (!inLambda) {
 				// => skip materialization of parameters
 				return builder.lambdaExpr(funcType, params, body);
 			}
@@ -566,11 +566,11 @@ namespace parser {
 		/**
 		 * generates a member function for the currently defined record type
 		 */
-		MemberFunctionPtr InspireDriver::genMemberFunction(const location& l, bool virtl, bool cnst, bool voltile, const std::string& name, const VariableList& params, const TypePtr& retType, const StatementPtr& body, bool isLambda) {
+		MemberFunctionPtr InspireDriver::genMemberFunction(const location& l, bool virtl, bool cnst, bool voltile, const std::string& name, const VariableList& params, const TypePtr& retType, const StatementPtr& body) {
 			assert_false(currentRecordStack.empty()) << "Not within record definition!";
 
 			// get this-type (which is ref<ref in case of a function
-			auto thisType = isLambda ? builder.refType(getThisType(), cnst, voltile) : builder.refType(builder.refType(getThisType(), cnst, voltile));
+			auto thisType = inLambda ? builder.refType(getThisType(), cnst, voltile) : builder.refType(builder.refType(getThisType(), cnst, voltile));
 			auto thisParam = builder.variable(thisType);
 
 			// create full parameter list
@@ -582,7 +582,7 @@ namespace parser {
 			auto newBody = transform::replaceAll(mgr, body, genThis(l), thisParam).as<StatementPtr>();
 
 			// create the member function
-			auto fun = genLambda(l, fullParams, retType, newBody, isLambda, FK_MEMBER_FUNCTION);
+			auto fun = genLambda(l, fullParams, retType, newBody, FK_MEMBER_FUNCTION);
 
 			auto memberFunType = fun->getFunctionType();
 			assert_false(fun->isRecursive()) << "The parser should not produce recursive functions!";

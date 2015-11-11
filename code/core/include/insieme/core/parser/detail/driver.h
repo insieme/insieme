@@ -229,7 +229,7 @@ namespace parser {
 			/**
 			 * generates a lambda expression
 			 */
-			LambdaExprPtr genLambda(const location& l, const VariableList& params, const TypePtr& retType, const StatementPtr& body, bool isLambda, const FunctionKind functionKind = FK_PLAIN);
+			LambdaExprPtr genLambda(const location& l, const VariableList& params, const TypePtr& retType, const StatementPtr& body, const FunctionKind functionKind = FK_PLAIN);
 
 			/**
 			 * generates a closure
@@ -254,7 +254,7 @@ namespace parser {
 			/**
 			 * generates a member function for the currently defined record type
 			 */
-			MemberFunctionPtr genMemberFunction(const location& l, bool virtl, bool cnst, bool voltile, const std::string& name, const VariableList& params, const TypePtr& retType, const StatementPtr& body, bool isLambda);
+			MemberFunctionPtr genMemberFunction(const location& l, bool virtl, bool cnst, bool voltile, const std::string& name, const VariableList& params, const TypePtr& retType, const StatementPtr& body);
 
 			/**
 			 * generates a member function for the currently defined record type
