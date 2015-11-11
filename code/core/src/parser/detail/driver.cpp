@@ -432,26 +432,39 @@ namespace parser {
 			}
 		}
 
-		LambdaExprPtr InspireDriver::genLambda(const location& l, const VariableList& params, const TypePtr& retType, const StatementPtr& body, const FunctionKind functionKind) {
-			// TODO: cast returns to appropriate type
-			TypeList paramTys;
+		GenericTypePtr InspireDriver::getThisTypeForLambdaAndFunction(const bool cnst, const bool voltile) {
+			return inLambda ? builder.refType(getThisType(), cnst, voltile) : builder.refType(builder.refType(getThisType(), cnst, voltile));
+		}
+
+		TypeList InspireDriver::getParamTypesForLambdaAndFunction(const location& l, const VariableList& params) {
+			TypeList paramTypes;
 			for(const auto& var : params) {
 				//if we are building a lambda, the function type is already the correct one and the body will be materialized
 				if (inLambda) {
-					paramTys.push_back(var.getType());
+					paramTypes.push_back(var.getType());
 
 					//if we are building a function, we have to calculate the function type differently and leave the body untouched
 				} else {
 					if (!analysis::isRefType(var.getType())) {
 						error(l, format("Parameter %s is not of ref type", var));
-						return nullptr;
+						return TypeList();
 					}
-					paramTys.push_back(analysis::getReferencedType(var.getType()));
+					paramTypes.push_back(analysis::getReferencedType(var.getType()));
 				}
+			}
+			return paramTypes;
+		}
+
+		LambdaExprPtr InspireDriver::genLambda(const location& l, const VariableList& params, const TypePtr& retType, const StatementPtr& body, const FunctionKind functionKind) {
+			// TODO: cast returns to appropriate type
+
+			auto paramTypes = getParamTypesForLambdaAndFunction(l, params);
+			if (paramTypes.size() != params.size()) {
+				return nullptr;
 			}
 
 			// build resulting function type
-			auto funcType = genFuncType(l, paramTys, retType, functionKind).as<FunctionTypePtr>();
+			auto funcType = builder.functionType(paramTypes, retType, functionKind);
 
 			// if it is a function that is defined
 			if (!inLambda) {
@@ -510,25 +523,35 @@ namespace parser {
 		LambdaExprPtr InspireDriver::genConstructor(const location& l, const VariableList& params, const StatementPtr& body) {
 			assert_false(currentRecordStack.empty()) << "Not within record definition!";
 
-			// get this-type
-			auto thisParam = builder.variable(builder.refType(getThisType()));
+			// get this-type (which is ref<ref in case of a function
+			auto thisType = getThisTypeForLambdaAndFunction(false, false);
+			auto thisParam = builder.variable(thisType);
 
 			// create full parameter list
 			VariableList ctorParams;
 			ctorParams.push_back(thisParam);
 			for(const auto& cur : params) ctorParams.push_back(cur);
 
+			auto paramTypes = getParamTypesForLambdaAndFunction(l, ctorParams);
+			if (paramTypes.size() != params.size() + 1) {
+				return nullptr;
+			}
+
 			// update body
 			auto newBody = transform::replaceAll(mgr, body, genThis(l), thisParam).as<StatementPtr>();
 
 			// create constructor type
-			auto ctorType = builder.functionType(extractTypes(ctorParams), thisParam->getType(), FK_CONSTRUCTOR);
+			auto ctorType = builder.functionType(paramTypes, builder.refType(getThisType()), FK_CONSTRUCTOR);
 
-			// replace all variables in the body by their implicitly materialized version
-			auto ingredients = transform::materialize({ctorParams, newBody});
+			if (inLambda) {
+				// replace all variables in the body by their implicitly materialized version
+				auto ingredients = transform::materialize({ctorParams, newBody});
+				// create the constructor
+				return builder.lambdaExpr(ctorType, ingredients.params, ingredients.body);
+			}
 
 			// create the constructor
-			return builder.lambdaExpr(ctorType, ingredients.params, ingredients.body);
+			return builder.lambdaExpr(ctorType, ctorParams, body);
 		}
 
 		/**
@@ -570,7 +593,7 @@ namespace parser {
 			assert_false(currentRecordStack.empty()) << "Not within record definition!";
 
 			// get this-type (which is ref<ref in case of a function
-			auto thisType = inLambda ? builder.refType(getThisType(), cnst, voltile) : builder.refType(builder.refType(getThisType(), cnst, voltile));
+			auto thisType = getThisTypeForLambdaAndFunction(cnst, voltile);
 			auto thisParam = builder.variable(thisType);
 
 			// create full parameter list

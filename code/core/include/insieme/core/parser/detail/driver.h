@@ -357,6 +357,13 @@ namespace parser {
 			 */
 			ExpressionPtr genThisInFunction(const location& l);
 
+		  private:
+			GenericTypePtr getThisTypeForLambdaAndFunction(const bool cnst, const bool voltile);
+
+			TypeList getParamTypesForLambdaAndFunction(const location& l, const VariableList& params);
+
+		  public:
+
 			/**
 			 * stores in the current scope the "this" variable with the given type
 			 */
