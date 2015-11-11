@@ -1126,14 +1126,22 @@ namespace measure {
 			return first.second > second.second;
 		});
 
-		// replace all regions with instrumented and optimized versions
+		// replace all regions with optimized versions
 		for_each(sorted_regions, [&](const pair<core::StatementAddress, region_id>& cur) {
 			// obtain address with current root
 			core::StatementAddress tmp = cur.first.switchRoot(root);
 			// migrate autotuning information (and other annotations if present)
 			core::transform::utils::migrateAnnotations(cur.first, tmp);
+			// replace region
+			root = core::transform::replaceNode(manager, tmp, cur.first);
+		});
+
+		// replace all regions with instrumented versions
+		for_each(sorted_regions, [&](const pair<core::StatementAddress, region_id>& cur) {
+			// obtain address with current root
+			core::StatementAddress tmp = cur.first.switchRoot(root);
 			// instrument the new region
-			core::StatementPtr instrumentedTmp = instrument(cur.first, cur.second);
+			core::StatementPtr instrumentedTmp = instrument(tmp, cur.second);
 			// replace region
 			root = core::transform::replaceNode(manager, tmp, instrumentedTmp);
 		});
