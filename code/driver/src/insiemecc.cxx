@@ -190,7 +190,7 @@ int checkSema(const core::NodePtr& program, core::checks::MessageList& list) {
 			fun = fun.getParentAddress();
 		}
 		if(fun->getNodeType() == core::NT_LambdaExpr) {
-			LOG(ERROR) << "\t Context:\n" << PrettyPrinter(fun, PrettyPrinter::PRINT_DEREFS | PrettyPrinter::JUST_OUTERMOST_SCOPE | PrettyPrinter::PRINT_CASTS)
+			LOG(ERROR) << "\t Context:\n" << PrettyPrinter(fun, PrettyPrinter::PRINT_DEREFS | PrettyPrinter::JUST_LOCAL_CONTEXT | PrettyPrinter::PRINT_CASTS)
 			           << std::endl;
 		}
 

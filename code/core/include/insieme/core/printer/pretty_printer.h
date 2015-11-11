@@ -110,7 +110,7 @@ namespace printer {
 			PRINT_LITERAL_TYPES = 1 << 13,
 			USE_COLOR = 1 << 14,
 			PRINT_DERIVED_IMPL = 1 << 15,
-			JUST_OUTERMOST_SCOPE = 1 << 16
+			JUST_LOCAL_CONTEXT = 1 << 16
 		};
 
 		/**

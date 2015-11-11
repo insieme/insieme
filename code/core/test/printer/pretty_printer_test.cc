@@ -545,5 +545,5 @@ TEST(PrettyPrinter, JustOutermostScope) {
 			"    };\n"
 			"}";
 
-	EXPECT_EQ(res2, toString(PrettyPrinter(stmt, PrettyPrinter::JUST_OUTERMOST_SCOPE))) << toString(PrettyPrinter(stmt, PrettyPrinter::JUST_OUTERMOST_SCOPE));
+	EXPECT_EQ(res2, toString(PrettyPrinter(stmt, PrettyPrinter::JUST_LOCAL_CONTEXT))) << toString(PrettyPrinter(stmt, PrettyPrinter::JUST_LOCAL_CONTEXT));
 }

@@ -227,7 +227,22 @@ namespace printer {
 
 				singleLineTypes = false; // enable multiline type definitions
 
-				if(!printer.hasOption(PrettyPrinter::JUST_OUTERMOST_SCOPE)) {
+				// get all lambda/function names
+				visitDepthFirstOnce(node, [&](const LambdaExprPtr &cur) {
+					string name;
+
+					if (insieme::core::annotations::hasAttachedName(cur)) {
+						name = insieme::core::annotations::getAttachedName(cur);
+					} else if (lang::isDerived(cur)) {
+						name = lang::getConstructName(cur);
+					} else {
+						name = format("fun%03d", funCounter++);
+					}
+
+					this->lambdaNames[cur] = name;
+				});
+
+				if(!printer.hasOption(PrettyPrinter::JUST_LOCAL_CONTEXT)) {
 					//first: print all type declarations
 					visitDepthFirstOnce(node, [&](const TagTypePtr &cur) {
 						if (cur->getName()->getValue().compare("")) {
@@ -242,24 +257,25 @@ namespace printer {
 
 					//second: print all function declarations
 					visitDepthFirstOnce(node, [&](const LambdaExprPtr &cur) {
-						auto funType = cur->getFunctionType();
-						if (!funType->isMember()) {
-							string name;
+						// jump over this part, if lambda is derived, but printer don't have the option to print them
+						if(lang::isDerived(cur) && !printer.hasOption(PrettyPrinter::PRINT_DERIVED_IMPL)) {
+							return;
+						}
 
-							if (insieme::core::annotations::hasAttachedName(cur)) {
-								name = insieme::core::annotations::getAttachedName(cur);
-							} else if (lang::isBuiltIn(cur)) {
+						auto funType = cur->getFunctionType();
+						//cur->getLambdaBinding()->getFunctionType();
+						if (!funType->isMember()) {
+							if (lang::isBuiltIn(cur)) {
 								return;
-							} else {
-								name = format("fun%03d", funCounter++);
 							}
-							this->lambdaNames[cur] = name;
 
 							newLine();
-							out << "decl " << name << " : ";
+							out << "decl " << lambdaNames[cur] << " : ";
+							auto params = cur->getParameterList();
+
 							out << "(" <<
-							join(", ", cur->getParameterList(), [&](std::ostream &out, const VariablePtr &curVar) {
-								visit(NodeAddress(curVar->getType()));
+							join(", ", params.begin(), params.end(), [&](std::ostream& out, const VariablePtr& curVar) {
+										visit(NodeAddress(curVar->getType()));
 							}) << ")" << (funType->isVirtualMemberFunction() ? " ~> " : " -> ");
 							visit(NodeAddress(cur->getFunctionType()->getReturnType()));
 							out << ";";
@@ -274,7 +290,7 @@ namespace printer {
 						// print all constructors declarations
 						auto constructors = cur->getConstructors();
 						if (!constructors.empty()) {
-							out << join(";", constructors, [&](std::ostream &out, const ExpressionPtr &constr) {
+							out << join(";", constructors, [&](std::ostream& out, const ExpressionPtr& constr) {
 								if (auto ctor = constr.isa<LambdaExprPtr>()) {
 									if (cur->getName()->getValue().compare("")) {
 										newLine();
@@ -433,6 +449,11 @@ namespace printer {
 
 					//fourth: print all definitions for functions
 					visitDepthFirstOnce(node, [&](const LambdaExprPtr &cur) {
+						// jump over this part, if lambda is derived, but printer don't have the option to print them
+						if(lang::isDerived(cur) && !printer.hasOption(PrettyPrinter::PRINT_DERIVED_IMPL)) {
+								return;
+						}
+
 						auto funType = cur->getFunctionType();
 						if (!funType->isMember()) {
 							if (lang::isBuiltIn(cur)) {
@@ -456,7 +477,7 @@ namespace printer {
 					newLine();
 				}
 
-				if(printer.hasOption(PrettyPrinter::JUST_OUTERMOST_SCOPE)) { letBindings.erase(node); }
+				if(printer.hasOption(PrettyPrinter::JUST_LOCAL_CONTEXT)) { letBindings.erase(node); }
 
 				singleLineTypes = true;
 
@@ -904,7 +925,6 @@ namespace printer {
 					return;
 				}
 				out << lambdaNames[node];
-				//VISIT(node->getVariable());
 			}
 
 
@@ -938,7 +958,6 @@ namespace printer {
 				};
 
 				auto funType = node->getType();
-
 				// print header ...
 				if(funType->isConstructor()) {
 					// print constructor header
@@ -1008,7 +1027,7 @@ namespace printer {
 				}
 
 				// test whether function is a derived literal
-				if(!printer.hasOption(PrettyPrinter::PRINT_DERIVED_IMPL) && lang::isDerived(function)) {
+				if(printer.hasOption(PrettyPrinter::PRINT_DERIVED_IMPL) && lang::isDerived(function)) {
 					out << lang::getConstructName(function);
 				} else {
 					// default formating
@@ -1328,22 +1347,22 @@ namespace printer {
 				OUT(")");
 			};
 			ADD_FORMATTER(refExt.getRefNew()) {
-				OUT(" ref_new(");
+				OUT("ref_new(");
 				PRINT_ARG(0);
 				OUT(")");
 			};
 			ADD_FORMATTER(refExt.getRefVarInit()) {
-				OUT(" ref_var_init(");
+				OUT("ref_var_init(");
 				PRINT_ARG(0);
 				OUT(")");
 			};
 			ADD_FORMATTER(refExt.getRefNewInit()) {
-				OUT(" ref_new_init(");
+				OUT("ref_new_init(");
 				PRINT_ARG(0);
 				OUT(")");
 			};
 			ADD_FORMATTER(refExt.getRefDelete()) {
-				OUT(" delete(");
+				OUT("delete(");
 				PRINT_ARG(0);
 				OUT(")");
 			};
