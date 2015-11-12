@@ -110,10 +110,10 @@ namespace lang {
 		NodeManager& mgr = elementType.getNodeManager();
 		const BooleanMarkerExtension& ext = mgr.getLangExtension<BooleanMarkerExtension>();
 
-		return ReferenceType(elementType, ext.getMarkerType(_const), ext.getMarkerType(_volatile), toType(mgr, kind)).operator GenericTypePtr();
+		return ReferenceType(elementType, ext.getMarkerType(_const), ext.getMarkerType(_volatile), lang::toType(mgr, kind)).operator GenericTypePtr();
 	}
 
-	ReferenceType::operator GenericTypePtr() const {
+	GenericTypePtr ReferenceType::toType() const {
 		NodeManager& mgr = elementType.getNodeManager();
 		return GenericType::get(mgr, "ref", ParentList(), toVector(elementType, mConst, mVolatile, kind));
 	}
@@ -142,7 +142,7 @@ namespace lang {
 	}
 
 	void ReferenceType::setKind(const Kind& kind) {
-		this->kind = toType(elementType.getNodeManager(), kind);
+		this->kind = lang::toType(elementType.getNodeManager(), kind);
 	}
 
 	bool ReferenceType::isPlain() const {
@@ -239,7 +239,7 @@ namespace lang {
 		return builder.callExpr(rExt.getRefCast(), refExpr,
 						bmExt.getMarkerTypeLiteral(referenceTy.isConst()),
 			            bmExt.getMarkerTypeLiteral(referenceTy.isVolatile()),
-						builder.getTypeLiteral(toType(refExpr->getNodeManager(), referenceTy.getKind())));
+						builder.getTypeLiteral(lang::toType(refExpr->getNodeManager(), referenceTy.getKind())));
 	}
 
 	ExpressionPtr buildRefNull(const TypePtr& type) {

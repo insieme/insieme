@@ -378,7 +378,7 @@ namespace parser {
 		}
 
 		TypePtr InspireDriver::genRecordType(const location& l, const NodeType& type, const string& name, const ParentList& parents, const FieldList& fields, const ExpressionList& ctors,
-				const ExpressionPtr& dtorIn, const bool dtorIsVirtual, const MemberFunctionList& mfuns, const PureVirtualMemberFunctionList& pvmfuns) {
+				const ExpressionPtr& dtor, const bool dtorIsVirtual, const MemberFunctionList& mfuns, const PureVirtualMemberFunctionList& pvmfuns) {
 
 			//check if this type has already been defined before
 			const GenericTypePtr key = builder.genericType(name);
@@ -389,32 +389,24 @@ namespace parser {
 
 			//check for duplicate member function names
 			//TODO remove this restriction
-			std::set<std::string> memberFunctionNames;
-			for_each(mfuns, [&](const MemberFunctionPtr& fun) { memberFunctionNames.insert(fun->getName()->getValue()); });
+			/*std::set<std::string> memberFunctionNames;
+			for_each(mfunsIn, [&](const MemberFunctionPtr& fun) { memberFunctionNames.insert(fun->getName()->getValue()); });
 			for_each(pvmfuns, [&](const PureVirtualMemberFunctionPtr& fun) { memberFunctionNames.insert(fun->getName()->getValue()); });
-			if (memberFunctionNames.size() != mfuns.size() + pvmfuns.size()) {
+			if (memberFunctionNames.size() != mfunsIn.size() + pvmfuns.size()) {
 				error(l, "Duplicate member function names detected");
 				return nullptr;
-			}
+			}*/
 
 			TagTypePtr res;
 
-			// check whether a default constructor is required
-			ExpressionPtr dtor = dtorIn;
-
-			// create default destructor if necessary
-			if (!dtor) {
-				auto defaultDtor = builder.getDefaultDestructor(name);
-				auto dtorSymbol = builder.literal("dtor", defaultDtor->getType());
-				tu.addFunction(dtorSymbol, defaultDtor);
-				dtor = dtorSymbol;
-			}
-
 			if (type == NT_Struct) {
-				res = builder.structType(name,parents,fields,ctors,dtor,dtorIsVirtual,mfuns,pvmfuns);
+				res = builder.structTypeWithDefaults(builder.refType(getThisType()), parents, fields, ctors, dtor, dtorIsVirtual, mfuns, pvmfuns);
 			} else {
-				if (!parents.empty()) error(l, "Inheritance not supported for unions!");
-				res = builder.unionType(name,fields,ctors,dtor,dtorIsVirtual,mfuns,pvmfuns);
+				if (!parents.empty()) {
+					error(l, "Inheritance not supported for unions!");
+					return nullptr;
+				}
+				res = builder.unionTypeWithDefaults(builder.refType(getThisType()), fields, ctors, dtor, dtorIsVirtual, mfuns, pvmfuns);
 			}
 
 			// register type in translation unit
@@ -424,12 +416,24 @@ namespace parser {
 			return key;
 		}
 
-		TagTypePtr InspireDriver::genSimpleStructOrUnionType(const location& l, const NodeType& type, const FieldList& fields) {
+		TypePtr InspireDriver::genSimpleStructOrUnionType(const location& l, const NodeType& type, const FieldList& fields) {
+			//create a unique dummy name for this anonymous record.
+			//this is needed in order to put this record into the TU also.
+			//the name will be set to "" before returning the final parsed IR.
+			auto name = builder.stringValue("__insieme_anonymous_record_" + l.begin.line);
+			temporaryAnonymousNames.push_back(name);
+
+			const GenericTypePtr key = builder.genericType(name->getValue());
+			TagTypePtr res;
 			if (type == NT_Struct) {
-				return builder.structType(fields);
+				res = builder.structTypeWithDefaults(builder.refType(key), ParentList(), fields,
+				                                     ExpressionList(), ExpressionPtr(), false, MemberFunctionList(), PureVirtualMemberFunctionList());
 			} else {
-				return builder.unionType(fields);
+				res =  builder.unionTypeWithDefaults(builder.refType(key), fields,
+				                                     ExpressionList(), ExpressionPtr(), false, MemberFunctionList(), PureVirtualMemberFunctionList());
 			}
+			tu.addType(key, res);
+			return key;
 		}
 
 		LambdaExprPtr InspireDriver::genLambda(const location& l, const VariableList& params, const TypePtr& retType, const StatementPtr& body, bool isLambda, const FunctionKind functionKind) {
@@ -829,8 +833,8 @@ namespace parser {
 				values.push_back(builder.namedValue(cur.first->getName(), cur.second.as<ExpressionPtr>()));
 			}
 
-			// build struct expression
-			return builder.structExpr(structType, values);
+			// build struct expression with generic type
+			return builder.structExpr(builder.genericType(structType->getName()->getValue()), values);
 		}
 
 		ExpressionPtr InspireDriver::genUnionExpression(const location& l, const TypePtr& type, const std::string field, const ExpressionPtr& expr) {
@@ -847,8 +851,8 @@ namespace parser {
 				return nullptr;
 			}
 
-			// build union expression
-			return builder.unionExpr(unionType, builder.stringValue(field), expr);
+			// build union expression with generic type
+			return builder.unionExpr(builder.genericType(unionType->getName()->getValue()), builder.stringValue(field), expr);
 		}
 
 		ExpressionPtr InspireDriver::genInitializerExpr(const location& l, const TypePtr& type, const ExpressionList& list) {
@@ -977,6 +981,18 @@ namespace parser {
 
 			// build a literal
 			return builder.literal("this", builder.refType(getThisType()));
+		}
+
+		void InspireDriver::computeResult(const NodePtr& fragment) {
+			result = tu.resolve(fragment);
+
+			//replace all temporaries generated for anonymous records
+			NodeMap replacements;
+			auto emptyName = builder.stringValue("");
+			for (auto temporaryName : temporaryAnonymousNames) {
+				replacements[temporaryName] = emptyName;
+			}
+			result = transform::replaceAll(mgr, result, replacements, transform::globalReplacement);
 		}
 
 
