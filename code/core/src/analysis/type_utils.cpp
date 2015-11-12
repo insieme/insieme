@@ -225,7 +225,13 @@ namespace analysis {
 
 		// check that all non-static members are trivial
 		for(auto field : record->getFields()) {
-			if(!isTrivial(field->getType())) return false;
+			auto fieldType = field->getType();
+			if(!isTrivial(fieldType)) return false;
+			//check cpp_ref field types
+			if(analysis::isRefType(fieldType) && lang::isCppReference(fieldType)) {
+				//TODO this is an over approximation which has to be refined
+				return false;
+			}
 		}
 
 		return true;

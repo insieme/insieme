@@ -85,7 +85,7 @@ namespace analysis {
 	TEST(ArrayOfNonTrivialType, Basic) {
 		NodeManager manager;
 		IRBuilder builder(manager);
-		EXPECT_FALSE(isTrivial(builder.parseType("array<struct s { x: ref<'a,f,f>; ctor() {} },1>")));
+		EXPECT_FALSE(isTrivial(builder.parseType("array<struct s { ctor(a : int<4>) {} },1>")));
 	}
 
 	TEST(TrivialStruct, Basic) {
@@ -110,20 +110,30 @@ namespace analysis {
 			"}")));
 	}
 
-	TEST(NonTrivialMember, DISABLED_Basic) {
+	TEST(TrivialMember, Reference) {
 		NodeManager manager;
 		IRBuilder builder(manager);
-		// a member of type reference without initialization is non-trivial
-		EXPECT_FALSE(isTrivial(builder.parseType(
+		// a member of type reference is non-trivial
+		EXPECT_TRUE(isTrivial(builder.parseType(
 			"struct class {"
 			"  data: ref<'a,f,f>;"
 			"}")));
 	}
 
-	TEST(NoneTrivialMemberNested, DISABLED_Basic) {
+	TEST(NonTrivialMember, Reference) {
 		NodeManager manager;
 		IRBuilder builder(manager);
+		// a member of type reference without initialization is non-trivial
 		EXPECT_FALSE(isTrivial(builder.parseType(
+			"struct class {"
+			"  data: ref<'a,f,f,cpp_ref>;"
+			"}")));
+	}
+
+	TEST(TrivialMemberNested, Reference) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+		EXPECT_TRUE(isTrivial(builder.parseType(
 			"struct class {"
 			"  data: struct {"
 			"    data: ref<'a,f,f>;"
@@ -131,7 +141,18 @@ namespace analysis {
 			"}")));
 	}
 
-	TEST(NoneVirtualLambda, Basic) {
+	TEST(NonTrivialMemberNested, Reference) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+		EXPECT_FALSE(isTrivial(builder.parseType(
+			"struct class {"
+			"  data: struct {"
+			"    data: ref<'a,f,f,cpp_ref>;"
+			"  };"
+			"}")));
+	}
+
+	TEST(NonVirtualLambda, Basic) {
 		NodeManager manager;
 		IRBuilder builder(manager);
 		EXPECT_TRUE(isTrivial(builder.parseType(
@@ -162,28 +183,15 @@ namespace analysis {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
-		// this is the 'base'-struct which is used to generate the actual struct with a virtual dtor
-		auto recordType = builder.parseType(
+		EXPECT_FALSE(isTrivial(builder.parseType(
 			"struct class {"
 			"  ctor() {}"
 			"  ctor(other: ref<class,t,f,cpp_ref>) {}"
 			"  ctor(other: ref<class,t,f,cpp_rref>) {}"
+			"  dtor virtual() {}"
 			"  lambda operator_assign : (rhs: ref<class,f,f,cpp_ref>) -> ref<class,f,f,cpp_ref> {}"
 			"  lambda operator_assign : (rhs: ref<class,f,f,cpp_rref>) -> ref<class,f,f,cpp_ref> {}"
-			"}").isa<TagTypePtr>()->getRecord();
-
-		core::ExpressionList ctors;
-		for (auto ctor : recordType->getConstructors())
-			ctors.push_back(ctor.as<LambdaExprPtr>());
-
-		core::MemberFunctionList members;
-		for(auto memFun : recordType->getMemberFunctions())
-			members.push_back(memFun);
-
-		ParentList parents;
-		FieldList fields;
-		PureVirtualMemberFunctionList pvmfuns;
-		EXPECT_FALSE(isTrivial(builder.structType("class", parents, fields, ctors, builder.getDefaultDestructor("class"), true, members, pvmfuns)));
+			"}")));
 	}
 
 	TEST(Constructor, UserDefined) {
@@ -209,6 +217,7 @@ namespace analysis {
 		IRBuilder builder(manager);
 		EXPECT_FALSE(isTrivial(builder.parseType(
 			"struct class {"
+			"  ctor() {}"
 			"  ctor(other: ref<class,t,f,cpp_ref>) { return; }"
 			"}")));
 	}
@@ -218,6 +227,7 @@ namespace analysis {
 		IRBuilder builder(manager);
 		EXPECT_TRUE(isTrivial(builder.parseType(
 			"struct class {"
+			"  ctor() {}"
 			"  ctor(other: ref<class,t,f,cpp_ref>) {}"
 			"}")));
 	}
@@ -227,7 +237,8 @@ namespace analysis {
 		IRBuilder builder(manager);
 		EXPECT_FALSE(isTrivial(builder.parseType(
 			"struct class {"
-			"  ctor(other: ref<class,t,f,cpp_rref>) { return; }"
+			"  ctor() {}"
+			"  ctor(other: ref<class,f,f,cpp_rref>) { return; }"
 			"}")));
 	}
 
@@ -236,7 +247,8 @@ namespace analysis {
 		IRBuilder builder(manager);
 		EXPECT_TRUE(isTrivial(builder.parseType(
 			"struct class {"
-			"  ctor(other: ref<class,t,f,cpp_rref>) {}"
+			"  ctor() {}"
+			"  ctor(other: ref<class,f,f,cpp_rref>) {}"
 			"}")));
 	}
 
@@ -247,7 +259,7 @@ namespace analysis {
 			"struct class {"
 			"  ctor() { return; }"
 			"  ctor(other: ref<class,t,f,cpp_ref>) { return; }"
-			"  ctor(other: ref<class,t,f,cpp_rref>) { return; }"
+			"  ctor(other: ref<class,f,f,cpp_rref>) { return; }"
 			"}")));
 	}
 
@@ -258,7 +270,7 @@ namespace analysis {
 			"struct class {"
 			"  ctor() {}"
 			"  ctor(other: ref<class,t,f,cpp_ref>) {}"
-			"  ctor(other: ref<class,t,f,cpp_rref>) {}"
+			"  ctor(other: ref<class,f,f,cpp_rref>) {}"
 			"}")));
 	}
 
@@ -283,7 +295,7 @@ namespace analysis {
 		IRBuilder builder(manager);
 		EXPECT_FALSE(isTrivial(builder.parseType(
 			"let base = struct base_class {"
-			"  ctor() {}"
+			"  ctor(a : int<4>) {}"
 			"} in struct class : [public base] {}")));
 	}
 
@@ -301,16 +313,7 @@ namespace analysis {
 		IRBuilder builder(manager);
 		EXPECT_TRUE(isTrivial(builder.parseType(
 			"struct class {"
-			"  lambda operator_assign : (rhs: ref<class,t,f,cpp_ref>) -> ref<class,f,f,cpp_ref> { }"
-			"}")));
-	}
-
-	TEST(MoveAssignment, UserDefaulted) {
-		NodeManager manager;
-		IRBuilder builder(manager);
-		EXPECT_TRUE(isTrivial(builder.parseType(
-			"struct class {"
-			"  lambda operator_assign : (rhs: ref<class,f,f,cpp_rref>) -> ref<class,f,f,cpp_ref> {}"
+			"  lambda operator_assign : (rhs: ref<class,t,f,cpp_ref>) -> ref<class,f,f,cpp_ref> { return ref_cast(this, type_lit(f), type_lit(f), type_lit(cpp_ref)); }"
 			"}")));
 	}
 
@@ -323,16 +326,25 @@ namespace analysis {
 			"}")));
 	}
 
-	TEST(ConstructorsAndAssignments, UserDefaulted) {
+	TEST(MoveAssignment, UserDefaulted) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+		EXPECT_TRUE(isTrivial(builder.parseType(
+			"struct class {"
+			"  lambda operator_assign : (rhs: ref<class,f,f,cpp_rref>) -> ref<class,f,f,cpp_ref> { return ref_cast(this, type_lit(f), type_lit(f), type_lit(cpp_ref)); }"
+			"}")));
+	}
+
+	TEST(ConstructorsAndAssignments, DISABLED_UserDefaulted) {
 		NodeManager manager;
 		IRBuilder builder(manager);
 		EXPECT_TRUE(isTrivial(builder.parseType(
 			"struct class {"
 			"  ctor() {}"
 			"  ctor(other: ref<class,t,f,cpp_ref>) {}"
-			"  ctor(other: ref<class,t,f,cpp_rref>) {}"
-			"  lambda operator_assign : (rhs: ref<class,f,f,cpp_ref>) -> ref<class,f,f,cpp_ref> {}"
-			"  lambda operator_assign : (rhs: ref<class,f,f,cpp_rref>) -> ref<class,f,f,cpp_ref> {}"
+			"  ctor(other: ref<class,f,f,cpp_rref>) {}"
+			"  lambda operator_assign : (rhs: ref<class,t,f,cpp_ref>) -> ref<class,f,f,cpp_ref> { return ref_cast(this, type_lit(f), type_lit(f), type_lit(cpp_ref)); }"
+			"  lambda operator_assign : (rhs: ref<class,f,f,cpp_rref>) -> ref<class,f,f,cpp_ref> { return ref_cast(this, type_lit(f), type_lit(f), type_lit(cpp_ref)); }"
 			"}")));
 	}
 
@@ -345,8 +357,8 @@ namespace analysis {
 			"} in struct class : [public base] {"
 			"  ctor() {}"
 			"  ctor(other: ref<class,t,f,cpp_ref>) {}"
-			"  ctor(other: ref<class,t,f,cpp_rref>) {}"
-			"  lambda operator_assign : (rhs: ref<class,f,f,cpp_ref>) -> ref<class,f,f,cpp_ref> {}"
+			"  ctor(other: ref<class,f,f,cpp_rref>) {}"
+			"  lambda operator_assign : (rhs: ref<class,t,f,cpp_ref>) -> ref<class,f,f,cpp_ref> {}"
 			"  lambda operator_assign : (rhs: ref<class,f,f,cpp_rref>) -> ref<class,f,f,cpp_ref> {}"
 			"}")));
 	}
@@ -380,7 +392,7 @@ namespace analysis {
 		IRBuilder builder(manager);
 		EXPECT_FALSE(isTrivial(builder.parseType(
 			"let base = struct base_class {"
-			"  lambda operator_assign : (rhs: ref<base_class,f,f,cpp_ref>) -> ref<base_class,f,f,cpp_ref> { return; }"
+			"  lambda operator_assign : (rhs: ref<base_class,t,f,cpp_ref>) -> ref<base_class,f,f,cpp_ref> { 5; return ref_cast(this, type_lit(f), type_lit(f), type_lit(cpp_ref)); }"
 			"} in struct class : [public base] { }")));
 	}
 
