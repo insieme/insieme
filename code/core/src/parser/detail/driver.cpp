@@ -833,8 +833,8 @@ namespace parser {
 				values.push_back(builder.namedValue(cur.first->getName(), cur.second.as<ExpressionPtr>()));
 			}
 
-			// build struct expression
-			return builder.structExpr(structType, values);
+			// build struct expression with generic type
+			return builder.structExpr(builder.genericType(structType->getName()->getValue()), values);
 		}
 
 		ExpressionPtr InspireDriver::genUnionExpression(const location& l, const TypePtr& type, const std::string field, const ExpressionPtr& expr) {
@@ -851,8 +851,8 @@ namespace parser {
 				return nullptr;
 			}
 
-			// build union expression
-			return builder.unionExpr(unionType, builder.stringValue(field), expr);
+			// build union expression with generic type
+			return builder.unionExpr(builder.genericType(unionType->getName()->getValue()), builder.stringValue(field), expr);
 		}
 
 		ExpressionPtr InspireDriver::genInitializerExpr(const location& l, const TypePtr& type, const ExpressionList& list) {
