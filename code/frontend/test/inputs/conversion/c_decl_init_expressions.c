@@ -51,7 +51,7 @@ int main() {
 	#pragma test expect_ir("var ref<int<4>,f,f> v0 = ref_var_init(2);")
 	int i = 2;
 	
-	#pragma test expect_ir(R"(var ref<struct _ir_pointer {data : ref<array<char,inf>,f,f,plain>;offset : int<8>;},f,f,plain> v0 =
+	#pragma test expect_ir(R"(var ref<(ref<array<char,inf>,f,f,plain>,int<8>),f,f,plain> v0 =
 							  ref_var_init(ptr_from_array(lit(""Hallo"":ref<array<char,6>,f,f>)));)")
 	char* hallo = "Hallo";
 	

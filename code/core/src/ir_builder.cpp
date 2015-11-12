@@ -1306,6 +1306,11 @@ namespace core {
 					return lang::buildRefNull(type);
 			}
 
+			// if it is a pointer type ...
+			if(lang::isPointer(type)) {
+				return lang::buildPtrNull(type);
+			}
+
 			// if it is an enum ...
 			if(lang::isEnumType(type)) {
 				auto& enumExt = manager.getLangExtension<lang::EnumExtension>();
@@ -1347,12 +1352,6 @@ namespace core {
 
 			// for all other generic types we return a generic zero value
 			if(type.isa<GenericTypePtr>()) {
-				//check for omp lock types and ignore the zero init
-				auto typeName = insieme::utils::demangle(type.as<core::GenericTypePtr>()->getName()->getValue());
-				if(typeName == "omp_lock_t" || typeName == "_omp_lock_t") {
-					//TODO: works for now, but check if this is always valid
-					return ExpressionPtr();
-				}
 				return callExpr(type, getLangBasic().getZero(), getTypeLiteral(type));
 			}
 			
