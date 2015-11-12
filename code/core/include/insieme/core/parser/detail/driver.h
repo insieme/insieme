@@ -121,6 +121,8 @@ namespace parser {
 
 			std::vector<RecordStackEntry> currentRecordStack;
 
+			std::vector<StringValuePtr> temporaryAnonymousNames;
+
 			/**
 			 * constructs a struct expression
 			 */
@@ -219,7 +221,7 @@ namespace parser {
 			/**
 			 * generate a simple struct or union consisting only of fields. The decision between sctuct or union will be made based on the given node type.
 			 */
-			TagTypePtr genSimpleStructOrUnionType(const location& l, const NodeType& type, const FieldList& fields);
+			TypePtr genSimpleStructOrUnionType(const location& l, const NodeType& type, const FieldList& fields);
 
 			/**
 			 * check whether type alias can be applied to the given type and applies those.
@@ -368,6 +370,13 @@ namespace parser {
 			 * stores in the current scope the "this" variable with the given type
 			 */
 			void addThis(const location& l, const TypePtr& classType);
+
+			/*
+			 * Computes the final result of parsing by using the TU to resolve all symbols and applying some post-processing actions.
+			 *
+			 * Calling this method will set the variable result to the resulting IR.
+			 */
+			void computeResult(const NodePtr& fragment);
 
 			// ------------- scope management -------------------
 

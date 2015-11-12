@@ -69,6 +69,10 @@ namespace parser {
 		return driver.result;
 	}
 
+	bool test_statement(NodeManager& nm, const std::string& x);
+	bool test_expression(NodeManager& nm, const std::string& x);
+	bool test_program(NodeManager& nm, const std::string& x);
+
 	TEST(IR_Parser, Types) {
 		NodeManager nm;
 		EXPECT_TRUE(test_type(nm, "int<4>"));
@@ -76,12 +80,11 @@ namespace parser {
 		EXPECT_TRUE(test_type(nm, "vector<int<4>, 4>"));
 		EXPECT_TRUE(test_type(nm, "vector<'a, 4>"));
 		EXPECT_TRUE(test_type(nm, "struct { a : int<4>; b : int<5>; }"));
-		EXPECT_TRUE(test_type(nm, "struct name { a : int<4> ; b : int<5>; }"));
+		EXPECT_TRUE(test_type(nm, "struct name { a : int<4>; b : int<5>; }"));
 		EXPECT_TRUE(test_type(nm, "let papa = t<11> in struct name : [papa] { a : int<4>; b : int<5>; }"));
 		EXPECT_TRUE(test_type(nm, "let papa = t<11> in struct name : [private papa] { a : int<4>; b : int<5>; }"));
 		EXPECT_TRUE(test_type(nm, "let papa = t<11> in struct name : [protected papa] { a : int<4>; b : int<5>; }"));
 		EXPECT_TRUE(test_type(nm, "let papa = t<11> in struct name : [public papa] { a : int<4>; b : int<5>; }"));
-		EXPECT_TRUE(test_type(nm, "struct { a : int<4>; b : int<5>; }"));
 		EXPECT_TRUE(test_type(nm, "let int = int<4> in int"));
 
 		EXPECT_TRUE(test_type(nm, "rf<int<4>>"));
@@ -145,11 +148,11 @@ namespace parser {
 		                          "  lambda f : () -> int<4> { return 1; }"
 		                          "}"));
 
-		EXPECT_FALSE(test_type(nm, "struct class {" //multiple functions with the same name
-		                           "  a : int<4>;"
-		                           "  lambda f : () -> int<4> { return 1; }"
-		                           "  lambda f : (a : int<4>) -> int<4> { return 1; }"
-		                           "}"));
+		EXPECT_TRUE(test_type(nm, "struct class {" //multiple functions with the same name
+		                          "  a : int<4>;"
+		                          "  lambda f : () -> int<4> { return 1; }"
+		                          "  lambda f : (a : int<4>) -> int<4> { return 1; }"
+		                          "}"));
 
 		EXPECT_TRUE(test_type(nm, "struct class {"
 		                          "  a : int<4>;"
@@ -375,11 +378,15 @@ namespace parser {
 		EXPECT_TRUE(test_expression(nm, "1 + 2 * 3"));
 		EXPECT_TRUE(test_expression(nm, "(1 + 2) * 3"));
 
-		EXPECT_TRUE(test_expression(nm, "alias uni = union{ a : int<4>; }; <uni> { 4 }"));
-		EXPECT_FALSE(test_expression(nm, "alias uni = union{ a : int<4>; }; <uni> { \"4\" }"));
-		EXPECT_FALSE(test_expression(nm, "alias uni = union{ a : int<4>; }; <uni> { 4, 5 }"));
-		EXPECT_TRUE(test_expression(nm, "alias x = struct{ a : int<4>; }; <x> { 4 }"));
-		EXPECT_TRUE(test_expression(nm, "alias x = struct{ }; <x> { }"));
+		EXPECT_FALSE(test_expression(nm, "def union uni { a : int<4>; }; <uni> { \"4\" }"));
+		EXPECT_FALSE(test_expression(nm, "def union uni { a : int<4>; }; <uni> { 4, 5 }"));
+		EXPECT_TRUE(test_expression(nm, "def struct x { a : int<4>; b : int<4>; }; <x> { 4, 5 }"));
+		EXPECT_TRUE(test_expression(nm, "def struct x { a : int<4>; }; <x> { 4 }"));
+		EXPECT_TRUE(test_expression(nm, "def struct x { }; <x> { }"));
+
+		EXPECT_TRUE(test_type(nm, "def union uni { a : int<4>; lambda f : ()->unit {} }; uni"));
+		EXPECT_TRUE(test_statement(nm, "def union uni { a : int<4>; lambda f : ()->unit {} }; { var ref<uni,f,f,plain> a; }"));
+		EXPECT_TRUE(test_statement(nm, "def union uni { a : int<4>; lambda f : ()->unit {} }; { <uni> { 4 }; }"));
 
 		EXPECT_FALSE(test_expression(nm, "x"));
 
