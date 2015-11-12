@@ -420,7 +420,7 @@ namespace parser {
 			//create a unique dummy name for this anonymous record.
 			//this is needed in order to put this record into the TU also.
 			//the name will be set to "" before returning the final parsed IR.
-			auto name = builder.stringValue("__insieme_anonymous_record_" + l.begin.line);
+			auto name = builder.stringValue(format("__insieme_anonymous_record_%d", l.begin.line));
 			temporaryAnonymousNames.push_back(name);
 
 			const GenericTypePtr key = builder.genericType(name->getValue());
