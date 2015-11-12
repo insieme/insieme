@@ -70,9 +70,12 @@ namespace conversion {
 	}
 
 	namespace {
-		core::FunctionTypePtr getMethodType(Converter& converter, const clang::CXXMethodDecl* methDecl) {
+		core::FunctionTypePtr getFunMethodTypeInternal(Converter& converter, const clang::FunctionDecl* funDecl) {
 			// first get function type
-			auto funType = converter.convertType(methDecl->getType()).as<core::FunctionTypePtr>();
+			auto funType = converter.convertType(funDecl->getType()).as<core::FunctionTypePtr>();
+			// is this a method? if not, we are done
+			const clang::CXXMethodDecl* methDecl = llvm::dyn_cast<clang::CXXMethodDecl>(funDecl);
+			if(methDecl == nullptr) return funType;
 			// now build "this" type
 			auto parentType = converter.convertType(converter.getCompiler().getASTContext().getRecordType(methDecl->getParent()));
 			auto refKind = core::lang::ReferenceType::Kind::Plain;
@@ -95,7 +98,8 @@ namespace conversion {
 			else if(llvm::dyn_cast<clang::CXXDestructorDecl>(methDecl)) { kind = core::FunctionKind::FK_DESTRUCTOR; }
 			// build type
 			auto newFunType = converter.getIRBuilder().functionType(paramList, retType, kind);
-			VLOG(2) << "Converted method type from: " << dumpClang(methDecl) << "\n to: " << dumpColor(newFunType);
+			VLOG(2) << "Converted method type from: " << dumpClang(methDecl) << "\n to: " << dumpColor(newFunType)
+				    << "(retType: " << *newFunType->getReturnType() << ")\n";
 			return newFunType;
 		}
 
@@ -129,13 +133,14 @@ namespace conversion {
 		}
 	}
 
-	core::LambdaExprPtr DeclConverter::convertFunctionDecl(const core::FunctionTypePtr& funType, const clang::FunctionDecl* funcDecl) const {
+	core::LambdaExprPtr DeclConverter::convertFunctionDecl(const clang::FunctionDecl* funcDecl) const {
+		auto funType = getFunMethodTypeInternal(converter, funcDecl);
 		return convertFunMethodInternal(converter, funType, funcDecl);
 	}
 	
 	core::MemberFunctionPtr DeclConverter::convertMethodDecl(const clang::CXXMethodDecl* methDecl, bool lit) const {
 		string name = insieme::utils::mangle(methDecl->getNameAsString());
-		auto funType = getMethodType(converter, methDecl);
+		auto funType = getFunMethodTypeInternal(converter, methDecl);
 		core::ExpressionPtr func = builder.literal(name, funType);
 		if(!lit) {
 			auto lambda = convertFunMethodInternal(converter, funType, methDecl);
@@ -230,8 +235,8 @@ namespace conversion {
 		funcDecl->hasBody(funcDecl); // yes, right, this one has the side effect of updating funcDecl!!
 
 		// convert prototype
-		auto funType = converter.convertType(funcDecl->getType()).as<core::FunctionTypePtr>();
-		core::LiteralPtr irLit = builder.literal(funcDecl->getNameAsString(), funType);
+		auto funType = getFunMethodTypeInternal(converter, funcDecl);
+		core::LiteralPtr irLit = builder.literal(insieme::utils::mangle(funcDecl->getNameAsString()), funType);
 		// add required annotations
 		if(inExternC) { annotations::c::markAsExternC(irLit); }
 		converter.applyHeaderTagging(irLit, funcDecl->getCanonicalDecl());
@@ -240,7 +245,8 @@ namespace conversion {
 
 		// if definition, convert body
 		if(isDefinition) {
-			core::LambdaExprPtr irFunc = convertFunctionDecl(funType, funcDecl);
+			VLOG(2) << "~~~~~~~~~~~~~~~~ VisitFunctionDecl - isDefinition: " << dumpClang(funcDecl);
+			core::LambdaExprPtr irFunc = convertFunctionDecl(funcDecl);
 			if(irFunc) { 
 				irFunc = pragma::handlePragmas({irFunc}, funcDecl, converter).front().as<core::LambdaExprPtr>();
 				converter.getIRTranslationUnit().addFunction(irLit, irFunc);
@@ -249,7 +255,16 @@ namespace conversion {
 
 		converter.untrackSourceLocation();
 	}
-
+	
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//					 Function template declarations
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	void DeclConverter::VisitFunctionTemplateDecl(const clang::FunctionTemplateDecl* funcTempDecl) {
+		for(auto spec : funcTempDecl->specializations()) {
+			Visit(spec);
+		}
+	}
+	
 } // End conversion namespace
 } // End frontend namespace
 } // End insieme namespace

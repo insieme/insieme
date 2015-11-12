@@ -221,57 +221,30 @@ namespace conversion {
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr Converter::CXXExprConverter::VisitCXXMemberCallExpr(const clang::CXXMemberCallExpr* callExpr) {
 		core::ExpressionPtr ret;
-		//LOG_EXPR_CONVERSION(callExpr, ret);
+		LOG_EXPR_CONVERSION(callExpr, ret);
 
-		//const core::FrontendIRBuilder& builder = converter.builder;
-		//const CXXMethodDecl* methodDecl = callExpr->getMethodDecl();
+		const core::FrontendIRBuilder& builder = converter.builder;
+		const CXXMethodDecl* methodDecl = callExpr->getMethodDecl();
 
-		//if(!methodDecl) {
-		//	// no method declaration... this is call to something else.
-		//	// what else is callable??? just a pointer,
-		//	//  INTRODUCING: member function pointer!
+		if(!methodDecl) {
+			// member function pointer call
+			frontend_assert(false) << "Member function pointer call not implemented";
+		} else {			
+			// get method lambda
+			auto methodLambda = converter.getDeclConverter()->convertMethodDecl(methodDecl)->getImplementation();
 
-		//	// now we have the function to call, we create the call expression with the right paramenters
-		//	// the member pointer executor operator will return to us a fucntion call with the "this" parameter
-		//	// as first param
-		//	frontend_assert(callExpr->getCallee());
-		//	core::CallExprPtr inner = converter.convertExpr(callExpr->getCallee()).as<core::CallExprPtr>();
-		//	ExpressionList&& args = ExprConverter::getFunctionArguments(callExpr, inner->getFunctionExpr()->getType().as<core::FunctionTypePtr>());
-		//	core::ExpressionPtr thisArg = inner->getArgument(0);
-		//	args.insert(args.begin(), thisArg);
+			// get the "this" object and add to arguments
+			core::ExpressionPtr thisObj = Visit(callExpr->getImplicitObjectArgument());
+			core::ExpressionList arguments { thisObj };
+			for(auto arg : callExpr->arguments()) {
+				arguments.push_back(converter.convertExpr(arg));
+			}
 
-		//	ret = builder.callExpr(inner->getType(), inner->getFunctionExpr(), args);
-		//} else {
-		//	// to begin with we translate the constructor as a regular function
-		//	auto func = converter.getCallableExpression(llvm::cast<clang::FunctionDecl>(methodDecl));
-		//	core::FunctionTypePtr funcTy = func.getType().as<core::FunctionTypePtr>();
-
-		//	// get the this-Object
-		//	core::ExpressionPtr ownerObj = Visit(callExpr->getImplicitObjectArgument());
-		//	// correct the owner object reference, in case of pointer (ref<array<struct<...>,1>>) we need to
-		//	// index the first element
-		//	ownerObj = getCArrayElemRef(builder, ownerObj);
-		//	if(core::analysis::isAnyCppRef(converter.lookupTypeDetails(ownerObj->getType()))) { ownerObj = builder.toIRRef(ownerObj); }
-
-		//	// if owner object is not a ref is the case of a call on a return value which has not
-		//	// being identified as temporary expression, because in IR classes are always a left side
-		//	// we have to materialize
-		//	if(!ownerObj.getType().isa<core::RefTypePtr>()) {
-		//		// ownerObj =  builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), ownerObj);
-		//		ownerObj = builder.refVar(ownerObj);
-		//	}
-
-		//	// reconstruct Arguments list, fist one is a scope location for the object
-		//	ExpressionList&& args = ExprConverter::getFunctionArguments(callExpr, llvm::cast<clang::FunctionDecl>(methodDecl));
-		//	args.insert(args.begin(), ownerObj);
-		//	core::TypePtr retTy = funcTy.getReturnType();
-
-		//	// build expression and we are done!!!
-		//	ret = builder.callExpr(retTy, func, args);
-		//}
-
-		assert_not_implemented();
-
+			// build call and we are done
+			auto retType = methodLambda->getType().as<core::FunctionTypePtr>()->getReturnType();
+			ret = builder.callExpr(retType, methodLambda, arguments);
+		}
+		
 		return ret;
 	}
 
@@ -363,7 +336,8 @@ namespace conversion {
 			auto constructorLambda = converter.getDeclConverter()->convertMethodDecl(constructExpr->getConstructor())->getImplementation();
 
 			// return call
-			return builder.callExpr(converter.convertType(constructExpr->getType()), constructorLambda, arguments);
+			auto retType = constructorLambda->getType().as<core::FunctionTypePtr>()->getReturnType();
+			return builder.callExpr(retType, constructorLambda, arguments);
 		}
 	}
 

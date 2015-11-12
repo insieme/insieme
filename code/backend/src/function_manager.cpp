@@ -45,7 +45,6 @@
 #include "insieme/backend/statement_converter.h"
 #include "insieme/backend/name_manager.h"
 #include "insieme/backend/variable_manager.h"
-
 #include "insieme/backend/c_ast/c_ast_utils.h"
 
 #include "insieme/core/ir_expressions.h"
@@ -59,7 +58,6 @@
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/instantiate.h"
-
 #include "insieme/core/types/type_variable_deduction.h"
 
 #include "insieme/annotations/c/include.h"
@@ -68,6 +66,7 @@
 #include "insieme/utils/map_utils.h"
 #include "insieme/utils/logging.h"
 #include "insieme/utils/assert.h"
+#include "insieme/utils/name_mangling.h"
 
 namespace insieme {
 namespace backend {
@@ -644,7 +643,7 @@ namespace backend {
 
 			// ------------------------ resolve function ---------------------
 
-			FunctionCodeInfo fun = resolveFunction(manager->create(literal->getStringValue()), funType, core::LambdaPtr(), true);
+			FunctionCodeInfo fun = resolveFunction(manager->create(insieme::utils::demangle(literal->getStringValue())), funType, core::LambdaPtr(), true);
 
 			res->function = fun.function;
 

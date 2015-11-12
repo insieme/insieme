@@ -7,8 +7,8 @@ void foo(int a, ...);
 int main() {
 
 	#define PREAMBLE "using \"ext.varargs\";"
-	#define BLA "lit(\"bla\":(int<4>,int<4>,var_list)->unit)"
-	#define FOO "lit(\"foo\":(int<4>,var_list)->unit)"
+	#define BLA "lit(\"IMP_bla\":(int<4>,int<4>,var_list)->unit)"
+	#define FOO "lit(\"IMP_foo\":(int<4>,var_list)->unit)"
 
 	#pragma test expect_ir(PREAMBLE "{",BLA,"(1, 2, varlist_pack(())); }")
 	{ bla(1,2); }

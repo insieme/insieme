@@ -133,8 +133,8 @@ namespace conversion {
 			core::ExpressionPtr initExp;
 			if(convertedDecl.second) {
 				core::ExpressionPtr refVar = builder.refVar(*convertedDecl.second);
-				// exception for string literals (appear here as plain lvalues)
-				if(varDecl->getInit()->isLValue()) {
+				// exception for string literals (appear here as plain lvalues) and CXX constructor calls
+				if(varDecl->getInit()->isLValue() || llvm::isa<clang::CXXConstructExpr>(varDecl->getInit())) {
 					refVar = *convertedDecl.second;
 				}
 				initExp = core::lang::buildRefCast(refVar, convertedDecl.first->getType());
