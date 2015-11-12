@@ -4,6 +4,10 @@ struct A {
 	float f();
 };
 
+float A::f() {
+	return 1.0f;
+}
+
 int main() {
 	; // this is required because of the clang compound source location bug
 	/*pragma test expect_ir(R"(
