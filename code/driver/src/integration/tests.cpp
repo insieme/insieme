@@ -65,20 +65,11 @@ namespace integration {
 	namespace {
 
 		frontend::ConversionJob toJob(const IntegrationTestCase& testCase) {
-			// load code using frontend
-			std::vector<std::string> args = {"compiler"};
-			for(auto file : testCase.getFiles()) {
-				args.push_back(file.string());
-			}
-			for(auto includeDir : testCase.getIncludeDirs()) {
-				std::string include = "-I" + includeDir.string();
-				args.push_back(include);
-			}
-			if(testCase.isEnableOpenMP()) { args.push_back("-fopenmp"); }
-			if(testCase.isEnableOpenCL()) { args.push_back("--flib-icl -lOpenCL"); }
-
-			driver::cmd::Options options = driver::cmd::Options::parse(args);
+			driver::cmd::Options options = testCase.getOptions();
 			options.job.setOption(insieme::frontend::ConversionSetup::ProgressBar);
+			for(auto file : testCase.getFiles()) {
+				options.job.addFile(file.string());
+			}
 
 			std::string step = TEST_STEP_INSIEMECC_RUN_C_CONVERT;
 			if(testCase.isCXX11()) {
@@ -99,6 +90,21 @@ namespace integration {
 	}
 
 
+	driver::cmd::Options IntegrationTestCase::getOptions() const {
+		// load code using frontend
+		std::vector<std::string> args = {"compiler"};
+		for(auto includeDir : getIncludeDirs()) {
+			std::string include = "-I" + includeDir.string();
+			args.push_back(include);
+		}
+		if(isEnableOpenMP()) { args.push_back("-fopenmp"); }
+		if(isEnableOpenCL()) { args.push_back("--flib-icl -lOpenCL"); }
+
+		driver::cmd::Options options = driver::cmd::Options::parse(args);
+		return options;
+	}
+	
+	
 	core::ProgramPtr IntegrationTestCase::load(core::NodeManager& manager) const {
 		return toJob(*this).execute(manager);
 	}
