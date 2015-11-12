@@ -21,11 +21,11 @@ int main() {
 		};
 		{ var ref<IMP_A> a; }
 	)")*/
-	{ A a; }
+	//{ A a; }
 
-	{
+	/*{
 		A a;
 		a.f();
-	}
+	}*/
 	return 0;
 }

@@ -59,7 +59,7 @@ int main() {
 	tt;
 	#pragma test expect_ir("STRING","ptr_from_ref(lck)")
 	&lck;
-	#pragma test expect_ir("STRING","omp_set_lock(ptr_from_ref(lck))")
+	#pragma test expect_ir("STRING","IMP_omp_set_lock(ptr_from_ref(lck))")
 	omp_set_lock(&lck);
 	return x;
 }
