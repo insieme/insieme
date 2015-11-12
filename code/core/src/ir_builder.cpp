@@ -1306,6 +1306,11 @@ namespace core {
 					return lang::buildRefNull(type);
 			}
 
+			// if it is a pointer type ...
+			if(lang::isPointer(type)) {
+				return lang::buildPtrNull(type);
+			}
+
 			// if it is an enum ...
 			if(lang::isEnumType(type)) {
 				auto& enumExt = manager.getLangExtension<lang::EnumExtension>();
