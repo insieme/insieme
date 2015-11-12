@@ -362,7 +362,9 @@ namespace lang {
 		static GenericTypePtr create(const TypePtr& elementType, bool _const = false, bool _volatile = false, const Kind& kind = Kind::Plain);
 
 		// an implicit converter of this wrapper to an IR type
-		operator GenericTypePtr() const;
+		operator GenericTypePtr() const {
+			return toType();
+		}
 
 		// --- observers and mutators ---
 
@@ -392,6 +394,8 @@ namespace lang {
 		bool isCppReference() const;
 
 		bool isCppRValueReference() const;
+
+		GenericTypePtr toType() const;
 
 	};
 

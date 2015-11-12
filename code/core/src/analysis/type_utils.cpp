@@ -38,6 +38,7 @@
 
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_visitor.h"
+#include "insieme/core/ir_builder.h"
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/pointer.h"
 #include "insieme/core/lang/array.h"
@@ -127,7 +128,10 @@ namespace analysis {
 		return newReturnType;
 	}
 
-	/* A trivial class or struct is defined as one that:
+	/**
+	 * This function tests whether the given type is a 'trivial' class/struct type in the C++ interpretation.
+	 *
+	 * In C++, a trivial class or struct is defined as one that:
 	 *
 	 * - Has a trivial default constructor. This may use the default constructor syntax (SomeConstructor() = default;).
 	 * - Has trivial copy and move constructors, which may use the default syntax.
@@ -136,8 +140,8 @@ namespace analysis {
 	 *
 	 * Constructors are trivial only if there are no virtual member functions of the class and no virtual base classes.
 	 * Copy/move operations also require that all the non-static data members be trivial.
-	 */
-	/* The copy assignment operator for class T is trivial if all of the following is true:
+	 *
+	 * The copy assignment operator for class T is trivial if all of the following is true:
 	 *
 	 * - It is not user-provided (meaning, it is implicitly-defined or defaulted), and if it is defaulted, its signature is the same as implicitly-defined
 	 * - T has no virtual member functions
@@ -158,81 +162,56 @@ namespace analysis {
 			return true;
 		}
 
-		auto rtype = ttype->getRecord();
+		auto record = ttype->getRecord();
+
+		IRBuilder builder(type->getNodeManager());
+
+		auto containsCtor = [&](const LambdaExprPtr& ctor)->bool {
+			return any(record->getConstructors(), [&](const ExpressionPtr& cur) {
+				return *builder.normalize(cur) == *builder.normalize(ctor);
+			});
+		};
+
+		auto containsMemberFunction = [&](const MemberFunctionPtr& member)->bool {
+			return any(record->getMemberFunctions(), [&](const MemberFunctionPtr& cur) {
+				return *builder.normalize(cur) == *builder.normalize(member);
+			});
+		};
+
+		auto thisType = builder.refType(builder.tagTypeReference(record->getName()));
+
+		ParentsPtr parents =
+				(record.isa<StructPtr>()) ?
+				record.as<StructPtr>()->getParents() :
+				builder.parents();
 
 		// check for trivial constructors
-		bool trivialConstructor = false;
-		bool trivialCopyConstructor = false;
-		bool trivialMoveConstructor = false;
-		for(auto con : rtype->getConstructors()) {
-			auto l = con.as<LambdaExprPtr>();
-			auto params = l->getFunctionType()->getParameterTypeList();
-			if(params.size() == 1) {
-				if(l->getBody()->getStatements().size() == 0) trivialConstructor = true;
-			}
-			if(params.size() == 2) {
-				if(core::lang::isReference(params[1])) {
-					auto myType = core::lang::ReferenceType(params[0]).getElementType();
-					auto refType = core::lang::ReferenceType(params[1]);
-					if(refType.isCppReference() && refType.getElementType() == myType) {
-						// this is a copy constructor
-						if(l->getBody()->getStatements().size() == 0) trivialCopyConstructor = true;
-					}
-					if(refType.isCppRValueReference() && refType.getElementType() == myType) {
-						// this is a move constructor
-						if(l->getBody()->getStatements().size() == 0) trivialMoveConstructor = true;
-					}
-				}
-			}
-		}
-		if(!trivialConstructor || !trivialCopyConstructor || !trivialMoveConstructor) return false;
+		bool trivialDefaultConstructor = containsCtor(builder.getDefaultConstructor(thisType, parents, record->getFields()));
+		if (!trivialDefaultConstructor) return false;
+
+		bool trivialCopyConstructor = containsCtor(builder.getDefaultCopyConstructor(thisType, parents, record->getFields()));
+		if (!trivialCopyConstructor) return false;
+
+		bool trivialMoveConstructor = containsCtor(builder.getDefaultMoveConstructor(thisType, parents, record->getFields()));
+		if (!trivialMoveConstructor) return false;
+
 
 		// check for trivial copy and move assignments
-		bool trivialCopyAssignment = false;
-		bool trivialMoveAssignment = false;
-		for(auto memFun : rtype->getMemberFunctions()) {
-			if(memFun->getNameAsString() != "operator_assign") continue;
+		bool trivialCopyAssignment = containsMemberFunction(builder.getDefaultCopyAssignOperator(thisType, parents, record->getFields()));
+		if (!trivialCopyAssignment) return false;
 
-			auto lambda = memFun->getImplementation().as<LambdaExprPtr>();
-			auto paramTypeList = lambda->getFunctionType()->getParameterTypeList();
-			// verify the function parameter signature, there must exist exactly two
-			if(paramTypeList.size() != 2) continue;
-			// verify if the body is empty, if not skip all further checks as it is user-defined
-			if(lambda->getBody()->getStatements().size() != 0) continue;
-
-			// check the first argument and get the type of '*this'
-			auto thisType = core::lang::ReferenceType(paramTypeList[0]).getElementType();
-			// the return value must be a reference
-			if(!core::analysis::isRefType(lambda->getFunctionType()->getReturnType())) continue;
-			// construct the ReferenceType and check for invalid type-modifier usage
-			auto returnType = core::lang::ReferenceType(lambda->getFunctionType()->getReturnType());
-			if(!returnType.isCppReference() || returnType.isConst() || returnType.isVolatile() || !(returnType.getElementType() == thisType)) continue;
-
-			// assure that arg1 is as well of ref<'a,...>
-			if(!core::lang::isReference(paramTypeList[1])) continue;
-
-			auto refType = core::lang::ReferenceType(paramTypeList[1]);
-			// regardless of kind or modifiers, it must reference 'thisType'
-			if(!(refType.getElementType() == thisType)) continue;
-
-			if(refType.isCppReference()) {
-				// this is a copy constructor
-				trivialCopyAssignment = true;
-			} else if(refType.isCppRValueReference()) {
-				// this is a move constructor
-				trivialMoveAssignment = true;
-			}
-			// a normal ref<class,f,f,plain> can never be trivial, so just fall through
-		}
-		if(!trivialCopyAssignment || !trivialMoveAssignment) return false;
+		bool trivialMoveAssignment = containsMemberFunction(builder.getDefaultMoveAssignOperator(thisType, parents, record->getFields()));
+		if (!trivialMoveAssignment) return false;
 
 		// check for trivial, non-virtual destructor
-		if(rtype->getDestructor().as<LambdaExprPtr>()->getBody().size() != 0 || rtype->getDestructorVirtual().getValue()) return false;
+		if(record->getDestructor().as<LambdaExprPtr>()->getBody().size() != 0 || record->getDestructorVirtual().getValue()) return false;
 
 		// check for virtual member functions
-		for(auto memFun : rtype->getMemberFunctions()) {
+		for(auto memFun : record->getMemberFunctions()) {
 			if(memFun->getVirtualFlag().getValue()) return false;
 		}
+
+		if(!record->getPureVirtualMemberFunctions().empty()) return false;
 
 		// check for virtual & non-trivial base classes
 		if(ttype->isStruct()) {
@@ -245,8 +224,14 @@ namespace analysis {
 		}
 
 		// check that all non-static members are trivial
-		for(auto field : rtype->getFields()) {
-			if(!isTrivial(field->getType())) return false;
+		for(auto field : record->getFields()) {
+			auto fieldType = field->getType();
+			if(!isTrivial(fieldType)) return false;
+			//check cpp_ref field types
+			if(analysis::isRefType(fieldType) && lang::isCppReference(fieldType)) {
+				//TODO this is an over approximation which has to be refined
+				return false;
+			}
 		}
 
 		return true;
