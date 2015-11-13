@@ -445,6 +445,11 @@ namespace parser {
 			auto name = builder.stringValue(format("__insieme_anonymous_record_%d_%d", l.begin.line, l.begin.column));
 			temporaryAnonymousNames.push_back(name);
 
+			//now we begin a new record with that name
+			beginRecord(l, name->getValue());
+			//and register the fields here
+			registerFields(l, fields);
+
 			const GenericTypePtr key = builder.genericType(name->getValue());
 			TagTypePtr res;
 			if (type == NT_Struct) {
@@ -455,6 +460,10 @@ namespace parser {
 				                                     ExpressionList(), ExpressionPtr(), false, MemberFunctionList(), PureVirtualMemberFunctionList());
 			}
 			tu.addType(key, res);
+
+			//end the record here
+			endRecord();
+
 			return key;
 		}
 
