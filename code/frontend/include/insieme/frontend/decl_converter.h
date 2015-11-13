@@ -75,10 +75,9 @@ namespace conversion {
 		ConvertedVarDecl convertVarDecl(const clang::VarDecl* varDecl) const;
 
 		/// Converts a function declaration into an IR lambda.
-		/// @param funType the ir type of the function
 		/// @param funcDecl is a clang FunctionDecl which represent a definition for the function
 		/// @return Converted lambda
-		core::LambdaExprPtr convertFunctionDecl(const core::FunctionTypePtr& funType, const clang::FunctionDecl* funcDecl) const;
+		core::LambdaExprPtr convertFunctionDecl(const clang::FunctionDecl* funcDecl) const;
 		
 		/// Converts a method declaration into an IR MemberFunction.
 		/// @param methDecl is a clang CXXMethodDecl which represent a definition for the method
@@ -95,6 +94,7 @@ namespace conversion {
 		void VisitVarDecl(const clang::VarDecl* var);
 		void VisitLinkageSpec(const clang::LinkageSpecDecl* link);
 		void VisitFunctionDecl(const clang::FunctionDecl* funcDecl);
+		void VisitFunctionTemplateDecl(const clang::FunctionTemplateDecl* funcTempDecl);
 
 	};
 

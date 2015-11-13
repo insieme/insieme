@@ -39,6 +39,7 @@
 #include "insieme/utils/assert.h"
 #include "insieme/utils/graph_utils.h"
 #include "insieme/utils/logging.h"
+#include "insieme/utils/name_mangling.h"
 
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/type_utils.h"
@@ -661,7 +662,7 @@ namespace tu {
 		Resolver resolver(mgr, a);
 		core::IRBuilder builder(mgr);
 		for(auto cur : a.getFunctions()) {
-			if(cur.first->getStringValue() == entryPoint) {
+			if(cur.first->getStringValue() == entryPoint || insieme::utils::demangle(cur.first->getStringValue()) == entryPoint) {
 				// get the symbol
 				core::NodePtr symbol = cur.first;
 				//				std::cout << "Starting resolving symbol " << symbol << " ...\n";
