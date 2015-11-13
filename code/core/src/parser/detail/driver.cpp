@@ -716,7 +716,7 @@ namespace parser {
 		}
 
 		ExpressionPtr InspireDriver::genCall(const location& l, const ExpressionPtr& callable, ExpressionList args) {
-			ExpressionPtr func = callable;
+			ExpressionPtr func = getScalar(callable);
 
 			// if this is a member function call we prepend the implicit this parameter
 			if(analysis::isCallOf(callable, parserIRExtension.getMemberFunctionAccess())) {
