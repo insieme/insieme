@@ -673,17 +673,15 @@ namespace parser {
 			annotations::attachName(fun, name);
 			declareSymbol(l, name, accessExpr);
 
-			std::string memberName = getThisType()->getName()->getValue() + "::" + name;
-			auto key = builder.literal(memberName, memberFunType);
+			auto key = builder.getLiteralForMemberFunction(fun->getFunctionType(), name);
+			auto memberName = key->getValue()->getValue();
+			tu.addFunction(key, fun);
 
 			//only declare the symbol implicitly if it hasn't already been declared
 			if (!isSymbolDeclaredInGlobalScope(memberName)) {
 				declareSymbolInGlobalScope(l, memberName, key);
 			}
 
-			tu.addFunction(key, fun);
-
-			// create the member function entry
 			return builder.memberFunction(virtl, name, key);
 		}
 
