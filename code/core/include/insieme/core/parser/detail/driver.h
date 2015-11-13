@@ -266,7 +266,7 @@ namespace parser {
 			/**
 			 * generates a function definition
 			 */
-			LambdaExprPtr genFunctionDefinition(const location& l, const std::string name, const LambdaExprPtr& lambda);
+			ExpressionPtr genFunctionDefinition(const location& l, const std::string name, const LambdaExprPtr& lambda);
 
 			/**
 			 * generates an abstract type

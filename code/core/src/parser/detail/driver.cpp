@@ -706,7 +706,7 @@ namespace parser {
 			return builder.pureVirtualMemberFunction(name, memberFunType);
 		}
 
-		LambdaExprPtr InspireDriver::genFunctionDefinition(const location& l, const std::string name, const LambdaExprPtr& lambda)  {
+		ExpressionPtr InspireDriver::genFunctionDefinition(const location& l, const std::string name, const LambdaExprPtr& lambda)  {
 			//check if this type has already been defined before
 			const LiteralPtr key = builder.literal(name, lambda->getType());
 			if (tu[key]) {
@@ -722,7 +722,7 @@ namespace parser {
 			tu.addFunction(key, lambda);
 			annotations::attachName(lambda, name);
 
-			return lambda;
+			return key;
 		}
 
 		TypePtr InspireDriver::findOrGenAbstractType(const location& l, const std::string& name, const ParentList& parents, const TypeList& typeList) {
