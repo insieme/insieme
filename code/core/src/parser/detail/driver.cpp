@@ -690,7 +690,7 @@ namespace parser {
 		}
 
 		ExpressionPtr InspireDriver::genCall(const location& l, const ExpressionPtr& callable, ExpressionList args) {
-			ExpressionPtr func = callable;
+			ExpressionPtr func = getScalar(callable);
 
 			// if this is a member function call we prepend the implicit this parameter
 			if(analysis::isCallOf(callable, builder.getLangBasic().getCompositeMemberFunctionAccess())) {
@@ -718,7 +718,7 @@ namespace parser {
 			}
 
 			auto ftype = func->getType();
-			if(!ftype.isa<FunctionTypePtr>()) { error(l, "attempt to call non function expression"); }
+			if(!ftype.isa<FunctionTypePtr>()) { error(l, "attempt to call non function expression"); return nullptr;}
 
 			auto funcParamTypes = ftype.as<FunctionTypePtr>()->getParameterTypeList();
 			if(!funcParamTypes.empty()) {

@@ -305,7 +305,7 @@ definition : "def" record_definition                                        { $$
            | "def" function_definition                                      { $$ = $2; }
            ;
 
-main : type "identifier" "(" parameters ")" compound_statement              { $$ = driver.builder.createProgram({driver.genLambda(@$, $4, $1, $6)}); }
+main : type "identifier" "(" parameters ")" compound_statement              { $$ = driver.builder.createProgram({driver.genFunctionDefinition(@$, $2, driver.genLambda(@$, $4, $1, $6))}); }
      ;
 
 //    -- record_declarations -------------------------------------
