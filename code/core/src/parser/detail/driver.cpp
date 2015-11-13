@@ -548,7 +548,7 @@ namespace parser {
 		/**
 		 * generates a constructor for the currently defined record type
 		 */
-		LambdaExprPtr InspireDriver::genConstructor(const location& l, const VariableList& params, const StatementPtr& body) {
+		ExpressionPtr InspireDriver::genConstructor(const location& l, const VariableList& params, const StatementPtr& body) {
 			assert_false(currentRecordStack.empty()) << "Not within record definition!";
 
 			// get this-type (which is ref<ref in case of a function
@@ -571,15 +571,24 @@ namespace parser {
 			// create constructor type
 			auto ctorType = builder.functionType(paramTypes, builder.refType(getThisType()), FK_CONSTRUCTOR);
 
+			// create the constructor
+			transform::LambdaIngredients ingredients{ctorParams, newBody};
 			if (inLambda) {
 				// replace all variables in the body by their implicitly materialized version
-				auto ingredients = transform::materialize({ctorParams, newBody});
-				// create the constructor
-				return builder.lambdaExpr(ctorType, ingredients.params, ingredients.body);
+				ingredients = transform::materialize(ingredients);
+			}
+			auto fun = builder.lambdaExpr(ctorType, ingredients.params, ingredients.body);
+
+			auto key = builder.getLiteralForConstructor(ctorType);
+			auto memberName = key->getValue()->getValue();
+			tu.addFunction(key, fun);
+
+			//only declare the symbol implicitly if it hasn't already been declared
+			if (!isSymbolDeclaredInGlobalScope(memberName)) {
+				declareSymbolInGlobalScope(l, memberName, key);
 			}
 
-			// create the constructor
-			return builder.lambdaExpr(ctorType, ctorParams, body);
+			return key;
 		}
 
 		/**
@@ -740,7 +749,7 @@ namespace parser {
 					const auto& key = mapEntry.first;
 					if (key.getValue()->getValue() == memberName) {
 						if (const auto& keyType = key->getType().isa<FunctionTypePtr>()) {
-							if (keyType->getKind() == FK_MEMBER_FUNCTION && keyType->getParameterTypeList() == argumentTypes) {
+							if (keyType->isMember() && keyType->getParameterTypeList() == argumentTypes) {
 								func = key;
 								break;
 							}
@@ -750,7 +759,7 @@ namespace parser {
 
 				//if we didn'T change the function, we didn't find a suitable one
 				if (func == callable) {
-					error(l, format("Couldn't find member function %s in type %s for argument types", memberName, typeName, argumentTypes));
+					error(l, format("Couldn't find member %s in type %s for argument types %s", memberName, typeName, argumentTypes));
 					return nullptr;
 				}
 			}
@@ -804,70 +813,20 @@ namespace parser {
 		}
 
 		ExpressionPtr InspireDriver::genConstructorCall(const location& l, const std::string name, ExpressionList params) {
-			//lookup the type in the translation unit
-			auto key = builder.genericType(name);
-			TagTypePtr type = tu[key].as<TagTypePtr>();
+			assert_true(params.size() >= 1) << "Constructor calls must have at least the this parameter argument";
 
-			if (!type) {
-				error(l, format("Type %s hasn't been defined", name));
-				return nullptr;
-			}
+			//extract the this parameter from the params
+			auto thisParam = params[0];
 
-			//get a list of all the constructors of the class
-			const auto& constructors = type->getRecord()->getConstructors();
+			//and remove it from the parameter list
+			params.erase(params.begin());
 
-			//the final constructor we will call
-			ExpressionPtr callable;
-
-			//search in all the constructors
-			for (const auto& constructor : constructors) {
-				const auto& constructorParams = constructor.as<LambdaExprPtr>()->getLambda()->getType()->getParameterTypeList();
-
-				//first check the number of params
-				if (constructorParams.size() != params.size()) {
-					continue;
-				}
-
-				//then try to find an exact match
-				bool match = true;
-				for (unsigned i = 0; i < params.size(); ++i) {
-					if (params[i]->getType() != constructorParams[i]) {
-						match = false;
-						break;
-					}
-				}
-				if (match) {
-					callable = constructor;
-					break;
-				}
-
-				//otherwise try to find a match using sub-typing rules
-				match = true;
-				for (unsigned i = 0; i < params.size(); ++i) {
-					if (!types::isSubTypeOf(params[i]->getType(), constructorParams[i])) {
-						match = false;
-						break;
-					}
-				}
-				if (match) {
-					//don't overwrite the first partial match we found
-					if (!callable) {
-						callable = constructor;
-					}
-				}
-			}
-
-			//if we didn find a valid constructor to call
-			if (!callable) {
-				error(l, "Couldn't find a constructor to call with the given arguments");
-				return nullptr;
-			}
-
-			//re-use the already existing functionality in genCall for creating the actual call
+			//genCall will do everything else
+			const auto callable = builder.callExpr(parserIRExtension.getMemberFunctionAccess(), thisParam, builder.getIdentifierLiteral("ctor"));
 			return genCall(l, callable, params);
 		}
 
-		ExpressionPtr InspireDriver::genDestructorCall(const location& l, const std::string name, const ExpressionPtr param) {
+		ExpressionPtr InspireDriver::genDestructorCall(const location& l, const std::string name, const ExpressionPtr& param) {
 			//lookup the type in the translation unit
 			auto key = builder.genericType(name);
 			TagTypePtr type = tu[key].as<TagTypePtr>();

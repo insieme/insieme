@@ -578,7 +578,7 @@ literal : "true"                                                          { $$ =
 // -- call --
 
 call : expression "(" expressions ")"                                     { $$ = driver.genCall(@$, $1, $3); }
-     | "identifier" "::" "(" expressions ")"                              { $$ = driver.genConstructorCall(@$, $1, $4); }
+     | "identifier" "::" "(" non_empty_expressions ")"                    { $$ = driver.genConstructorCall(@$, $1, $4); }
      | "identifier" "::" "~" "(" expression ")"                           { $$ = driver.genDestructorCall(@$, $1, $5); }
      ;
 

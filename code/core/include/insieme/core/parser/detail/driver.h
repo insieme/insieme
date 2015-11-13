@@ -262,7 +262,7 @@ namespace parser {
 			/**
 			 * generates a constructor for the currently defined record type
 			 */
-			LambdaExprPtr genConstructor(const location& l, const VariableList& params, const StatementPtr& body);
+			ExpressionPtr genConstructor(const location& l, const VariableList& params, const StatementPtr& body);
 
 			/**
 			 * generates a destructor for the currently defined record type
@@ -302,7 +302,7 @@ namespace parser {
 			/**
 			 * generates a destructor call expression
 			 */
-			ExpressionPtr genDestructorCall(const location& l, const std::string name, const ExpressionPtr param);
+			ExpressionPtr genDestructorCall(const location& l, const std::string name, const ExpressionPtr& param);
 
 			/**
 			 * constructs an initializer expression according to the given type and expression list
