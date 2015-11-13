@@ -107,10 +107,9 @@ namespace insieme {
 		}
 
 		// load TU using the frontend (and all its potential extensions)
-		insieme::frontend::ConversionJob job;
-		job.registerDefaultExtensions();
-		job.addLib(insieme::driver::loadLib(manager, filename));
-		core::ProgramPtr code = job.execute(manager);
+		auto options = testCase.getOptions();
+		options.job.addLib(insieme::driver::loadLib(manager, filename));
+		core::ProgramPtr code = options.job.execute(manager);
 
 		// create target code using the runtime backend
 		auto target = backend::runtime::RuntimeBackend::getDefault()->convert(code);

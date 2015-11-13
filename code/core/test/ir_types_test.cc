@@ -383,11 +383,15 @@ namespace core {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
-		EXPECT_EQ("struct {x:bla<int<4>>,dtor()}", toString(*builder.parseType("let A = struct { x : bla<int<4>>; } in A")));
-		EXPECT_EQ("struct {x:bla<int<4>>,dtor()}", toString(*builder.parseType("let A = struct { x : bla<int<4>>; } in A").as<TagTypePtr>()->peel()));
+		EXPECT_EQ("struct {x:bla<int<4>>,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}",
+		          toString(*builder.parseType("let A = struct { x : bla<int<4>>; } in A")));
+		EXPECT_EQ("struct {x:bla<int<4>>,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}",
+		          toString(*builder.parseType("let A = struct { x : bla<int<4>>; } in A").as<TagTypePtr>()->peel()));
 
-		EXPECT_EQ("rec ^A.{^A=struct A {x:bla<^A>,dtor()}}", toString(*builder.parseType("decl struct A; def struct A { x : bla<A>; }; A")));
-		EXPECT_EQ("struct A {x:bla<rec ^A.{^A=struct A {x:bla<^A>,dtor()}}>,dtor()}",
+		EXPECT_EQ("rec ^A.{^A=struct A {x:bla<^A>,ctor(),ctor(ref<^A,t,f,cpp_ref>),ctor(ref<^A,f,f,cpp_rref>),dtor(),operator_assign(ref<^A,t,f,cpp_ref>)->ref<^A,f,f,cpp_ref>,operator_assign(ref<^A,f,f,cpp_rref>)->ref<^A,f,f,cpp_ref>}}",
+		          toString(*builder.parseType("decl struct A; def struct A { x : bla<A>; }; A")));
+		EXPECT_EQ("struct A {x:bla<rec ^A.{^A=struct A {x:bla<^A>,ctor(),ctor(ref<^A,t,f,cpp_ref>),ctor(ref<^A,f,f,cpp_rref>),dtor(),operator_assign(ref<^A,t,f,cpp_ref>)->ref<^A,f,f,cpp_ref>,operator_assign(ref<^A,f,f,cpp_rref>)->ref<^A,f,f,cpp_ref>}}>,"
+		          "ctor(),ctor(ref<^A,t,f,cpp_ref>),ctor(ref<^A,f,f,cpp_rref>),dtor(),operator_assign(ref<^A,t,f,cpp_ref>)->ref<^A,f,f,cpp_ref>,operator_assign(ref<^A,f,f,cpp_rref>)->ref<^A,f,f,cpp_ref>}",
 		          toString(*builder.parseType("decl struct A; def struct A { x : bla<A>; }; A").as<TagTypePtr>()->peel()));
 
 		TagTypePtr tagType = builder.parseType("decl struct A; def struct A { x : bla<A>; }; A").as<TagTypePtr>();

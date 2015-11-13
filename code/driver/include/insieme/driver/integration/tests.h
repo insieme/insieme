@@ -51,6 +51,7 @@
 #include "insieme/core/ir_program.h"
 #include "insieme/frontend/frontend.h"
 
+#include "insieme/driver/cmd/insiemecc_options.h"
 #include "insieme/driver/integration/properties.h"
 
 namespace insieme {
@@ -271,6 +272,13 @@ namespace integration {
 			return name < other.name;
 		}
 
+		/**
+		 * A method that gives an options object that is configured and can be
+		 * passed to e.g., conversion job. The options object does not contain
+		 * any files that may be used as input sources for this test case.
+		 */
+		driver::cmd::Options getOptions() const;
+		
 		/**
 		 * Loads this test case.
 		 */

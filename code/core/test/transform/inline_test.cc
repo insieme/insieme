@@ -64,7 +64,7 @@ namespace transform {
 			  return a - b; 
 			};
 			int main() {
-				var ref<int,f,f,plain> x = ref_var(0); 
+				var ref<int,f,f,plain> x = ref_var_init(0); 
 				$x = fun(3,6)$; 
 			}
         )1N5P1RE")[0].as<CallExprAddress>();
@@ -78,7 +78,7 @@ namespace transform {
 
 		// std::cout << printer::PrettyPrinter(code.getRootNode()) << "\n\ninlined:\n" << printer::PrettyPrinter(inlined) << "\n****\n";
 
-		EXPECT_EQ("{{decl ref<bool,f,f,plain> v0 =  var(false);{if(3<4) {{v1 = 3+2*6;v0 = true;};};if(!v0) {{v1 = 3-6;v0 = true;};};};};}",
+		EXPECT_EQ("{{decl ref<bool,f,f,plain> v0 =  ref_var_init(false);{if(3<4) {{v1 = 3+2*6;v0 = true;};};if(!v0) {{v1 = 3-6;v0 = true;};};};};}",
 		          toString(printer::PrettyPrinter(inlined, printer::PrettyPrinter::PRINT_SINGLE_LINE)));
 		EXPECT_TRUE(check(inlined, checks::getFullCheck()).empty()) << check(inlined, checks::getFullCheck());
 	}
@@ -91,14 +91,14 @@ namespace transform {
 			alias int = int<4>;
 			def fun = (a : int, b : int) -> int { 
 				if(a<4) { return a + 2*b; } 
-				var ref<int,f,f,plain> x = ref_var(a); 
+				var ref<int,f,f,plain> x = ref_var_init(a); 
 				while(true) { 
 					x = x+1; 
 					if(x>b) { return x - b; } 
 				} 
 			};
 			{
-				var ref<int,f,f,plain> x = ref_var(0); 
+				var ref<int,f,f,plain> x = ref_var_init(0); 
 				$x = fun(3,6)$; 
 			}
         )1N5P1RE")[0].as<CallExprAddress>();
@@ -112,7 +112,7 @@ namespace transform {
 
 		// std::cout << printer::PrettyPrinter(code.getRootNode()) << "\n\ninlined:\n" << printer::PrettyPrinter(inlined) << "\n****\n";
 
-		EXPECT_EQ("{{decl ref<bool,f,f,plain> v1 =  var(false);{if(3<4) {{v0 = 3+2*6;v1 = true;};};if(!v1) {decl ref<int<4>,f,f,plain> v2 =  var(3);while(true "
+		EXPECT_EQ("{{decl ref<bool,f,f,plain> v1 =  ref_var_init(false);{if(3<4) {{v0 = 3+2*6;v1 = true;};};if(!v1) {decl ref<int<4>,f,f,plain> v2 =  ref_var_init(3);while(true "
 			      "&& !v1) {v2 = v2+1;if(v2>6) {{v0 = v2-6;v1 = true;};};};};};};}",
 			      toString(printer::PrettyPrinter(core::analysis::normalize(inlined), printer::PrettyPrinter::PRINT_SINGLE_LINE)));
 		EXPECT_TRUE(check(inlined, checks::getFullCheck()).empty()) << check(inlined, checks::getFullCheck());
@@ -126,14 +126,14 @@ namespace transform {
 		CallExprAddress code = builder.parseAddressesStatement("alias int = int<4>;"
 		                                                       "def fun = (a : int, b : int) -> int { "
 		                                                       "	if(a<4) { return a + 2*b; } "
-		                                                       "	var ref<int,f,f,plain> x = ref_var(a); "
+		                                                       "	var ref<int,f,f,plain> x = ref_var_init(a); "
 		                                                       "	while(true) { "
 		                                                       "		x = x+1; "
 		                                                       "		if(x>b) { return x - b; } "
 		                                                       "	} "
 		                                                       "}; "
 		                                                       "{"
-		                                                       "	var ref<int,f,f,plain> x = ref_var(0); "
+		                                                       "	var ref<int,f,f,plain> x = ref_var_init(0); "
 		                                                       "	$fun(3,6)$; "
 		                                                       "}")[0]
 		                           .as<CallExprAddress>();
@@ -145,7 +145,7 @@ namespace transform {
 
 		// std::cout << printer::PrettyPrinter(code.getRootNode()) << "\n\ninlined:\n" << printer::PrettyPrinter(inlined) << "\n****\n";
 
-		EXPECT_EQ("{{decl ref<bool,f,f,plain> v0 =  var(false);{if(3<4) {{v0 = true;};};if(!v0) {decl ref<int<4>,f,f,plain> v1 =  var(3);while(true && !v0) "
+		EXPECT_EQ("{{decl ref<bool,f,f,plain> v0 =  ref_var_init(false);{if(3<4) {{v0 = true;};};if(!v0) {decl ref<int<4>,f,f,plain> v1 =  ref_var_init(3);while(true && !v0) "
 		          "{v1 = v1+1;if(v1>6) {{v0 = true;};};};};};};}",
 		          toString(printer::PrettyPrinter(core::analysis::normalize(inlined), printer::PrettyPrinter::PRINT_SINGLE_LINE)));
 		EXPECT_TRUE(check(inlined, checks::getFullCheck()).empty()) << check(inlined, checks::getFullCheck());

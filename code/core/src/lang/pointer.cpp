@@ -52,18 +52,18 @@ namespace lang {
 
 	namespace {
 
-		TypePtr extractReferencedType(const TagTypePtr& type) {
-			GenericTypePtr refType = type->getFieldType("data").as<GenericTypePtr>();
+		TypePtr extractReferencedType(const TupleTypePtr& type) {
+			GenericTypePtr refType = type->getElement(0).as<GenericTypePtr>();
 			return ArrayType(ReferenceType(refType).getElementType()).getElementType();
 		}
 
-		TypePtr extractConstMarker(const TagTypePtr& type) {
-			GenericTypePtr refType = type->getFieldType("data").as<GenericTypePtr>();
+		TypePtr extractConstMarker(const TupleTypePtr& type) {
+			GenericTypePtr refType = type->getElement(0).as<GenericTypePtr>();
 			return refType->getTypeParameter(1);
 		}
 
-		TypePtr extractVolatileMarker(const TagTypePtr& type) {
-			GenericTypePtr refType = type->getFieldType("data").as<GenericTypePtr>();
+		TypePtr extractVolatileMarker(const TupleTypePtr& type) {
+			GenericTypePtr refType = type->getElement(0).as<GenericTypePtr>();
 			return refType->getTypeParameter(2);
 		}
 
@@ -81,11 +81,11 @@ namespace lang {
 		if (auto expr = node.isa<ExpressionPtr>()) trg = expr->getType();
 
 		// process node type
-		auto structType = trg.as<TagTypePtr>();
+		auto tupleType = trg.as<TupleTypePtr>();
 		*this = PointerType(
-				extractReferencedType(structType),
-				isTrueMarker(extractConstMarker(structType)),
-				isTrueMarker(extractVolatileMarker(structType))
+				extractReferencedType(tupleType),
+				isTrueMarker(extractConstMarker(tupleType)),
+				isTrueMarker(extractVolatileMarker(tupleType))
 		);
 	}
 
@@ -101,11 +101,8 @@ namespace lang {
 
 		auto& ext = mgr.getLangBasic();
 
-		// build a struct representing this pointer
-		return builder.structType("_ir_pointer", {
-				builder.field( builder.stringValue("data"), ReferenceType::create(ArrayType::create(elementType), mConst, mVolatile) ),
-				builder.field( builder.stringValue("offset"), ext.getInt8() )
-		});
+		// build a tuple representing this pointer
+		return builder.tupleType(toVector(ReferenceType::create(ArrayType::create(elementType), mConst, mVolatile).as<TypePtr>(), ext.getInt8().as<TypePtr>()));
 	}
 
 	bool isPointer(const NodePtr& node) {
@@ -116,9 +113,9 @@ namespace lang {
 		// check for an expression
 		if (auto expr = node.isa<ExpressionPtr>()) return isPointer(expr->getType());
 
-		// needs to be a struct type
-		auto type = node.isa<TagTypePtr>();
-		if(!type || !type.isStruct()) return false;
+		// needs to be a tuple type
+		auto type = node.isa<TupleTypePtr>();
+		if(!type) return false;
 
 		// simple approach: use unification
 		NodeManager& mgr = node.getNodeManager();

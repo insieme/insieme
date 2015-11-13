@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -68,7 +68,7 @@ namespace transform {
 			init.push_back(builder.namedValue("first", builder.intLit(1)));
 			init.push_back(builder.namedValue("second", builder.literal(basic.getReal8(), "0.0")));
 
-			saStmts.push_back(builder.declarationStmt(structVar, builder.callExpr(structVar->getType(), refExt.getRefVar(), builder.structExpr(init))));
+			saStmts.push_back(builder.declarationStmt(structVar, builder.callExpr(structVar->getType(), refExt.getRefVarInit(), builder.structExpr(init))));
 
 			// CompositeMemberAccess
 			saStmts.push_back(builder.callExpr(basic.getInt8(), basic.getCompositeMemberAccess(),
@@ -102,7 +102,7 @@ namespace transform {
 			std::vector<ExpressionPtr> init;
 			init.push_back(builder.intLit(1));
 			init.push_back(builder.literal(basic.getChar(), "'a'"));
-			saStmts.push_back(builder.declarationStmt(tupleVar, builder.callExpr(tupleVar->getType(), refExt.getRefVar(), builder.tupleExpr(init))));
+			saStmts.push_back(builder.declarationStmt(tupleVar, builder.callExpr(tupleVar->getType(), refExt.getRefVarInit(), builder.tupleExpr(init))));
 			// TupleMemberAcces
 			saStmts.push_back(builder.callExpr(basic.getUInt2(), basic.getTupleMemberAccess(), builder.callExpr(tupleTy, refExt.getRefDeref(), tupleVar),
 			                                   builder.literal(basic.getUInt8(), "0"), builder.getTypeLiteral(basic.getInt4())));

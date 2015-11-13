@@ -82,6 +82,7 @@
 #include "insieme/utils/logging.h"
 #include "insieme/utils/functional_utils.h"
 #include "insieme/utils/assert.h"
+#include "insieme/utils/name_mangling.h"
 
 namespace insieme {
 namespace core {
@@ -306,8 +307,8 @@ namespace core {
 		return types::unify(manager, type, irType);
 	}
 
-	GenericTypePtr IRBuilderBaseModule::refType(const TypePtr& elementType, bool _const, bool _volatile) const {
-		return lang::ReferenceType::create(elementType, _const, _volatile);
+	GenericTypePtr IRBuilderBaseModule::refType(const TypePtr& elementType, bool _const, bool _volatile, lang::ReferenceType::Kind kind) const {
+		return lang::ReferenceType::create(elementType, _const, _volatile, kind);
 	}
 
 	TypePtr IRBuilderBaseModule::ptrType(const TypePtr& elementType, bool _const, bool _volatile) const {
@@ -330,6 +331,80 @@ namespace core {
 		return lang::ArrayType::create(elementType, size);
 	}
 
+
+	namespace {
+
+		TagTypePtr getStructOrUnionWithDefaults(const IRBuilderBaseModule& builder, const bool generateStruct,
+		                                        const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields,
+		                                        const ExpressionList& ctors, const ExpressionPtr& dtor, const BoolValuePtr& dtorIsVirtual,
+		                                        const MemberFunctionList& mfuns, const PureVirtualMemberFunctionsPtr& pvmfuns) {
+
+			//make sure the passed this type is of the correct type and extract the name
+			assert_true(analysis::isRefType(thisType)) << "thisType has to be a ref type";
+			auto elementType = analysis::getReferencedType(thisType);
+			assert_true(elementType.isa<TagTypeReferencePtr>() || elementType.isa<GenericTypePtr>()) << "thisType must be either a TagTypeReference or a GenericType";
+			auto name = elementType.isa<TagTypeReferencePtr>() ? elementType.as<TagTypeReferencePtr>()->getName() : elementType.as<GenericTypePtr>()->getName();
+
+			//lambda to check for the presence of a specific constructor type
+			auto containsCtorType = [&](const ExpressionPtr& ctor)->bool {
+				return any(ctors, [&](const ExpressionPtr& cur) {
+					return *(cur->getType()) == *(ctor->getType());
+				});
+			};
+
+			//lambda to check for the presence of a specific member function (with the same name and type as the passed one)
+			auto containsMemberFunction = [&](const MemberFunctionPtr& member)->bool {
+				return any(mfuns, [&](const MemberFunctionPtr& cur) {
+					return cur->getName() == member->getName() && *(cur->getImplementation()->getType()) == *(member->getImplementation()->getType());
+				});
+			};
+
+			//all the default constructs
+			auto defaultConstructor = builder.getDefaultConstructor(thisType, parents, fields);
+			auto defaultCopyConstructor = builder.getDefaultCopyConstructor(thisType, parents, fields);
+			auto defaultMoveConstructor = builder.getDefaultMoveConstructor(thisType, parents, fields);
+			auto defaultDestructor = builder.getDefaultDestructor(thisType);
+			auto defaultCopyAssignment = builder.getDefaultCopyAssignOperator(thisType, parents, fields);
+			auto defaultMoveAssignment = builder.getDefaultMoveAssignOperator(thisType, parents, fields);
+
+			ExpressionList ctorsOut = ctors;
+			ExpressionPtr dtorOut = dtor;
+			MemberFunctionList mfunsOut = mfuns;
+
+			//if the user didn't provide any destructor we create the default constructor
+			if (ctors.empty()) {
+				ctorsOut.push_back(defaultConstructor);
+			}
+
+			//both the other default constructs are created if the user didn't provide them
+			if (!containsCtorType(defaultCopyConstructor)) {
+				ctorsOut.push_back(defaultCopyConstructor);
+			}
+			if (!containsCtorType(defaultMoveConstructor)) {
+				ctorsOut.push_back(defaultMoveConstructor);
+			}
+
+			//as are the default assignment operators
+			if (!containsMemberFunction(defaultCopyAssignment)) {
+				mfunsOut.push_back(defaultCopyAssignment);
+			}
+			if (!containsMemberFunction(defaultMoveAssignment)) {
+				mfunsOut.push_back(defaultMoveAssignment);
+			}
+
+			//finally handle the default destructor. If the user provided one we don't create the default one
+			if (!dtor) {
+				dtorOut = defaultDestructor;
+			}
+
+			//create a new struct or union with the (maybe) modified parameters
+			if (generateStruct) {
+				return builder.structType(name, parents, fields, builder.expressions(ctorsOut), dtorOut, dtorIsVirtual, builder.memberFunctions(mfunsOut), pvmfuns);
+			}
+			return builder.unionType(name, fields, builder.expressions(ctorsOut), dtorOut, dtorIsVirtual, builder.memberFunctions(mfunsOut), pvmfuns);
+		}
+
+	}
 
 	TagTypePtr IRBuilderBaseModule::structType(const vector<std::pair<StringValuePtr, TypePtr>>& fields) const {
 		return structType(::transform(fields, [&](const pair<StringValuePtr, TypePtr>& cur) { return field(cur.first, cur.second); }));
@@ -363,6 +438,13 @@ namespace core {
 	                                          const MemberFunctionsPtr& mfuns, const PureVirtualMemberFunctionsPtr& pvmfuns) const {
 		auto tag = tagTypeReference(name);
 				return tagType(tag, tagTypeDefinition({tagTypeBinding(tag, unionRecord(name, fields, ctors, dtor, dtorIsVirtual, mfuns, pvmfuns))}));
+	}
+
+	TagTypePtr IRBuilderBaseModule::unionTypeWithDefaults(const TypePtr& thisType, const FieldList& fields,
+	                                                      const ExpressionList& ctors, const ExpressionPtr& dtor, const bool dtorIsVirtual,
+	                                                      const MemberFunctionList& mfuns, const PureVirtualMemberFunctionList& pvmfuns) const {
+		return getStructOrUnionWithDefaults(*this, false, thisType, parents(), this->fields(fields), ctors,
+		                                    dtor, boolValue(dtorIsVirtual), mfuns, pureVirtualMemberFunctions(pvmfuns));
 	}
 
 
@@ -407,25 +489,67 @@ namespace core {
 		                  memberFunctions(mfuns), pureVirtualMemberFunctions(pvmfuns));
 	}
 
-	TagTypePtr IRBuilderBaseModule::structType(const StringValuePtr& name, const ParentsPtr& parents, const FieldsPtr& fields,
-	                                           const ExpressionsPtr& ctors, const ExpressionPtr& dtor, const BoolValuePtr& dtorIsVirtual,
-	                                           const MemberFunctionsPtr& mfuns, const PureVirtualMemberFunctionsPtr& pvmfuns) const {
+	TagTypePtr IRBuilderBaseModule::structType(const StringValuePtr& name, const ParentsPtr& parents, const FieldsPtr& fields, const ExpressionsPtr& ctors,
+	                                           const ExpressionPtr& dtor, const BoolValuePtr& dtorIsVirtual, const MemberFunctionsPtr& mfuns,
+	                                           const PureVirtualMemberFunctionsPtr& pvmfuns) const {
 		auto tag = tagTypeReference(name);
-				return tagType(tag, tagTypeDefinition({tagTypeBinding(tag, structRecord(name, parents, fields, ctors, dtor, dtorIsVirtual, mfuns, pvmfuns))}));
+		return tagType(tag, tagTypeDefinition({tagTypeBinding(tag, structRecord(name, parents, fields, ctors, dtor, dtorIsVirtual, mfuns, pvmfuns))}));
+	}
+
+	TagTypePtr IRBuilderBaseModule::structTypeWithDefaults(const TypePtr& thisType, const ParentList& parents, const FieldList& fields,
+	                                                       const ExpressionList& ctors, const ExpressionPtr& dtor, const bool dtorIsVirtual,
+	                                                       const MemberFunctionList& mfuns, const PureVirtualMemberFunctionList& pvmfuns) const {
+		return getStructOrUnionWithDefaults(*this, true, thisType, this->parents(parents), this->fields(fields), ctors,
+		                                    dtor, boolValue(dtorIsVirtual), mfuns, pureVirtualMemberFunctions(pvmfuns));
 	}
 
 
-	FunctionTypePtr IRBuilderBaseModule::getDestructorType(const TagTypeReferencePtr& tag) const {
-		// create default destructor
-		TypePtr thisType = refType(tag);
-		return functionType(toVector(thisType), thisType, FK_DESTRUCTOR);
+	LambdaExprPtr IRBuilderBaseModule::getDefaultConstructor(const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields) const {
+		assert_true(analysis::isRefType(thisType)) << "thisType has to be a ref type";
+		auto ctorType = functionType(toVector(thisType), thisType, FK_CONSTRUCTOR);
+		return normalize(lambdaExpr(ctorType, toVector(variable(refType(thisType))), getNoOp())).as<LambdaExprPtr>();
 	}
 
-	LambdaExprPtr IRBuilderBaseModule::getDefaultDestructor(const StringValuePtr& recordName) const {
+	LambdaExprPtr IRBuilderBaseModule::getDefaultCopyConstructor(const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields) const {
+		assert_true(analysis::isRefType(thisType)) << "thisType has to be a ref type";
+		TypePtr otherType = refType(analysis::getReferencedType(thisType), true, false, lang::ReferenceType::Kind::CppReference);
+		auto ctorType = functionType(toVector(thisType, otherType), thisType, FK_CONSTRUCTOR);
+		return normalize(lambdaExpr(ctorType, toVector(variable(refType(thisType)), variable(refType(otherType))), getNoOp())).as<LambdaExprPtr>();
+	}
+
+	LambdaExprPtr IRBuilderBaseModule::getDefaultMoveConstructor(const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields) const {
+		assert_true(analysis::isRefType(thisType)) << "thisType has to be a ref type";
+		TypePtr otherType = refType(analysis::getReferencedType(thisType), false, false, lang::ReferenceType::Kind::CppRValueReference);
+		auto ctorType = functionType(toVector(thisType, otherType), thisType, FK_CONSTRUCTOR);
+		return normalize(lambdaExpr(ctorType, toVector(variable(refType(thisType)), variable(refType(otherType))), getNoOp())).as<LambdaExprPtr>();
+	}
+
+	LambdaExprPtr IRBuilderBaseModule::getDefaultDestructor(const TypePtr& thisType) const {
 		// create default destructor
-		auto dtorType = getDestructorType(tagTypeReference(recordName));
-		TypePtr thisType = dtorType->getParameterType(0);
+		auto dtorType = functionType(toVector(thisType), thisType, FK_DESTRUCTOR);
 		return normalize(lambdaExpr(dtorType, toVector(variable(refType(thisType))), getNoOp())).as<LambdaExprPtr>();
+	}
+
+	MemberFunctionPtr IRBuilderBaseModule::getDefaultCopyAssignOperator(const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields) const {
+		assert_true(analysis::isRefType(thisType)) << "thisType has to be a ref type";
+		TypePtr otherType = refType(analysis::getReferencedType(thisType), true, false, lang::ReferenceType::Kind::CppReference);
+		TypePtr resType = refType(analysis::getReferencedType(thisType), false, false, lang::ReferenceType::Kind::CppReference);
+		auto funType = functionType(toVector(thisType, otherType), resType, FK_MEMBER_FUNCTION);
+		auto thisParam = variable(refType(thisType));
+		auto res = returnStmt(lang::buildRefCast(deref(thisParam),resType));
+		auto fun = normalize(lambdaExpr(funType, toVector(thisParam, variable(refType(otherType))), res)).as<LambdaExprPtr>();
+		return memberFunction(false, "operator_assign", fun);
+	}
+
+	MemberFunctionPtr IRBuilderBaseModule::getDefaultMoveAssignOperator(const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields) const {
+		assert_true(analysis::isRefType(thisType)) << "thisType has to be a ref type";
+		TypePtr otherType = refType(analysis::getReferencedType(thisType), false, false, lang::ReferenceType::Kind::CppRValueReference);
+		TypePtr resType = refType(analysis::getReferencedType(thisType), false, false, lang::ReferenceType::Kind::CppReference);
+		auto ctorType = functionType(toVector(thisType, otherType), resType, FK_MEMBER_FUNCTION);
+		auto thisParam = variable(refType(thisType));
+		auto res = returnStmt(lang::buildRefCast(deref(thisParam),resType));
+		auto fun = normalize(lambdaExpr(ctorType, toVector(thisParam, variable(refType(otherType))), res)).as<LambdaExprPtr>();
+		return memberFunction(false, "operator_assign", fun);
 	}
 
 	FieldPtr IRBuilderBaseModule::field(const string& name, const TypePtr& type) const {
@@ -594,90 +718,24 @@ namespace core {
 		return doubleLit(out.str());
 	}
 
-	ExpressionPtr IRBuilderBaseModule::undefined(const TypePtr& type) const {
-		return callExpr(type, getLangBasic().getUndefined(), getTypeLiteral(type));
-	}
-
 	ExpressionPtr IRBuilderBaseModule::undefinedVar(const TypePtr& type) const {
+		auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
+		core::TypePtr elementType = type;
 		if(analysis::isRefType(type)) {
-			core::TypePtr elementType = core::analysis::getReferencedType(type);
-			return core::lang::buildRefCast(refVar(undefined(elementType)), type);
+			elementType = core::analysis::getReferencedType(type);
 		}
-		return undefined(type);
+		return callExpr(refType(elementType), refExt.getRefVar(), getTypeLiteral(elementType));
 	}
-
+	
 	ExpressionPtr IRBuilderBaseModule::undefinedNew(const TypePtr& type) const {
+		auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
+		core::TypePtr elementType = type;
 		if(analysis::isRefType(type)) {
-			core::TypePtr elementType = core::analysis::getReferencedType(type);
-			return core::lang::buildRefCast(refNew(undefined(elementType)), type);
+			elementType = core::analysis::getReferencedType(type);
 		}
-		return undefined(type);
+		return callExpr(refType(elementType), refExt.getRefNew(), getTypeLiteral(elementType));
 	}
-
-
-	core::ExpressionPtr IRBuilderBaseModule::getZero(const core::TypePtr& type) const {
-		// if it is an integer ...
-		if(manager.getLangBasic().isInt(type)) { return literal(type, "0"); }
-
-		// if it is a real ..
-		if(manager.getLangBasic().isReal(type)) { return literal(type, "0.0"); }
-
-		// if it is the bool type
-		if(manager.getLangBasic().isBool(type)) { return boolLit(false); }
-
-		// if it is the char type
-		if(manager.getLangBasic().isChar(type)) { return literal(type, "'\\0'"); }
-
-		// if it is a lock, keep it undefined
-		if(manager.getLangExtension<lang::ParallelExtension>().isLock(type)) { return undefined(type); }
-
-		// if it is a struct ...
-		if(auto structType = analysis::isStruct(type)) {
-
-			vector<NamedValuePtr> members;
-			for_each(structType->getFields(), [&](const FieldPtr& cur) { members.push_back(namedValue(cur->getName(), getZero(cur->getType()))); });
-
-			return core::StructExpr::get(manager, type, namedValues(members));
-		}
-
-		// if it is a union type ...
-		if(auto unionType = analysis::isUnion(type)) {
-
-			// in case it is a an empty union
-			if(unionType->getFields().empty() == 0) { return undefined(type); }
-
-			// init the first member
-			auto first = unionType->getFields()[0];
-			return unionExpr(type, first->getName(), getZero(first->getType()));
-		}
-
-		// if it is a ref type ...
-		if(analysis::isRefType(type)) {
-			// return NULL for the specific type
-			return lang::buildRefNull(type);
-		}
-
-		// if it is a function type -- used for function pointers
-		if(type.isa<core::FunctionTypePtr>()) {
-			// return NULL for the specific type
-			auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
-			return deref(refReinterpret(refExt.getRefNull(), type));
-		}
-
-		// add support for unit
-		if(manager.getLangBasic().isUnit(type)) { return manager.getLangBasic().getUnitConstant(); }
-
-		// for all other generic types we return a generic zero value
-		if(type.isa<GenericTypePtr>()) { return callExpr(type, getLangBasic().getZero(), getTypeLiteral(type)); }
-
-		// TODO: extend for more types
-		LOG(FATAL) << "Encountered unsupported type: " << *type;
-		assert_fail() << "Given type not supported yet!";
-
-		// fall-back => return a literal 0 of the corresponding type
-		return literal(type, "0");
-	}
-
+	
 	CallExprPtr IRBuilderBaseModule::deref(const ExpressionPtr& subExpr) const {
 		assert_pred1(analysis::isRefType, subExpr->getType());
 		auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
@@ -691,12 +749,12 @@ namespace core {
 
 	CallExprPtr IRBuilderBaseModule::refVar(const ExpressionPtr& subExpr) const {
 		auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
-		return callExpr(refType(subExpr->getType()), refExt.getRefVar(), subExpr);
+		return callExpr(refType(subExpr->getType()), refExt.getRefVarInit(), subExpr);
 	}
 
 	CallExprPtr IRBuilderBaseModule::refNew(const ExpressionPtr& subExpr) const {
 		auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
-		return callExpr(refType(subExpr->getType()), refExt.getRefNew(), subExpr);
+		return callExpr(refType(subExpr->getType()), refExt.getRefNewInit(), subExpr);
 	}
 
 	CallExprPtr IRBuilderBaseModule::refDelete(const ExpressionPtr& subExpr) const {
@@ -1352,7 +1410,82 @@ namespace core {
 		return sub(getZero(type), a);
 	}
 
+	core::ExpressionPtr IRBuilderBaseModule::getZero(const core::TypePtr& type) const {
+			// if it is an integer ...
+			if(manager.getLangBasic().isInt(type)) { return literal(type, "0"); }
 
+			// if it is a real ..
+			if(manager.getLangBasic().isReal(type)) { return literal(type, "0.0"); }
+
+			// if it is the bool type
+			if(manager.getLangBasic().isBool(type)) { return boolLit(false); }
+
+			// if it is the char type
+			if(manager.getLangBasic().isChar(type)) { return literal(type, "'\\0'"); }
+
+			// if it is a ref type ...
+			if(analysis::isRefType(type)) {
+					// return NULL for the specific type
+					return lang::buildRefNull(type);
+			}
+
+			// if it is a pointer type ...
+			if(lang::isPointer(type)) {
+				return lang::buildPtrNull(type);
+			}
+
+			// if it is an enum ...
+			if(lang::isEnumType(type)) {
+				auto& enumExt = manager.getLangExtension<lang::EnumExtension>();
+				// this is what gcc does: { enum { A=1 } var1; cout << var1; }. Prints 0.
+				return callExpr(type, enumExt.getIntToEnum(), getTypeLiteral(type), getZero(lang::getEnumElementType(type)));
+			}
+
+			// if it is a struct ...
+			if(auto structType = analysis::isStruct(type)) {
+				vector<NamedValuePtr> members;
+				for_each(structType->getFields(), [&](const FieldPtr& cur) { members.push_back(namedValue(cur->getName(), getZero(cur->getType()))); });
+				return core::StructExpr::get(manager, type, namedValues(members));
+			}
+
+			// if it is a union type ...
+			if(auto unionType = analysis::isUnion(type)) {
+				// in case it is a an empty union
+				if(unionType->getFields().empty()) { assert_fail() << "Empty Unions are not allowed!"; }
+
+				// init the first member
+				auto first = unionType->getFields()[0];
+				return unionExpr(type, first->getName(), getZero(first->getType()));
+			}
+
+			// if it is a function type -- used for function pointers
+			if(type.isa<core::FunctionTypePtr>()) {
+					// return NULL for the specific type
+					auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
+					return deref(refReinterpret(refExt.getRefNull(), type));
+			}
+
+			// add support for unit
+			if(manager.getLangBasic().isUnit(type)) { return manager.getLangBasic().getUnitConstant(); }
+
+			// for array types
+			if(lang::isArray(type)) {
+				return lang::buildArrayCreate(lang::getArraySize(type), { getZero(lang::getArrayElementType(type)) });
+			}
+
+			// for all other generic types we return a generic zero value
+			if(type.isa<GenericTypePtr>()) {
+				return callExpr(type, getLangBasic().getZero(), getTypeLiteral(type));
+			}
+			
+			// TODO: extend for more types
+			LOG(FATAL) << "Encountered unsupported type: " << *type;
+			assert_fail() << "Given type not supported yet!";
+
+			// fall-back => return a literal 0 of the corresponding type
+			return literal(type, "0");
+	}
+	
 	// ---------------------------- Utilities ---------------------------------------
 
 
@@ -1377,8 +1510,7 @@ namespace core {
 
 		return idx;
 	}
-
-
+	
 	/**
 	 * A utility function wrapping a given statement into a compound statement (if necessary).
 	 */

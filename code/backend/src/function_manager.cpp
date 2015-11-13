@@ -249,10 +249,10 @@ namespace backend {
 				// case a) create object on stack => default
 
 				// case b) create object on heap
-				bool isOnHeap = core::analysis::isCallOf(call[0], refs.getRefNew());
+				bool isOnHeap = core::analysis::isCallOf(call[0], refs.getRefNewInit());
 
 				// case c) create object in-place (placement new)
-				c_ast::ExpressionPtr loc = (!core::analysis::isCallOf(call[0], refs.getRefVar()) && !core::analysis::isCallOf(call[0], refs.getRefNew()))
+				c_ast::ExpressionPtr loc = (!core::analysis::isCallOf(call[0], refs.getRefVarInit()) && !core::analysis::isCallOf(call[0], refs.getRefNewInit()))
 				                               ? location.as<c_ast::ExpressionPtr>()
 				                               : c_ast::ExpressionPtr();
 
@@ -1317,8 +1317,7 @@ namespace backend {
 							// add filed assignment
 							if(core::analysis::isCallOf(call, refExt.getRefAssign())) {
 								// avoid default inits, those will be done anyway
-								if(core::analysis::isCallOf(call[1], call->getNodeManager().getLangBasic().getZero())
-								   || core::analysis::isCallOf(call[1], call->getNodeManager().getLangBasic().getUndefined())) {
+								if(core::analysis::isCallOf(call[1], call->getNodeManager().getLangBasic().getZero())) {
 									continue;
 								}
 
@@ -1329,8 +1328,7 @@ namespace backend {
 								assert(call->getFunctionExpr()->getType().as<core::FunctionTypePtr>()->isConstructor());
 
 								// avoid default inits, those will be done anyway
-								if(core::analysis::isCallOf(call, call->getNodeManager().getLangBasic().getZero())
-								   || core::analysis::isCallOf(call, call->getNodeManager().getLangBasic().getUndefined())) {
+								if(core::analysis::isCallOf(call, call->getNodeManager().getLangBasic().getZero())) {
 									continue;
 								}
 

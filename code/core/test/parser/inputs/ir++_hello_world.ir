@@ -21,7 +21,7 @@ def struct C {
 unit main() {
 
 	// create a new object instance
-	var ref<C> c = C::(ref_new(undefined(C)));
+	var ref<C> c = C::(ref_new(type_lit(C)));
 	
 	// work with the object
 	print("%d\n", c->getSum());

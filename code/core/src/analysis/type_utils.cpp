@@ -38,8 +38,10 @@
 
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_visitor.h"
+#include "insieme/core/ir_builder.h"
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/pointer.h"
+#include "insieme/core/lang/array.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/types/subtype_constraints.h"
 
@@ -126,7 +128,10 @@ namespace analysis {
 		return newReturnType;
 	}
 
-	/* A trivial class or struct is defined as one that:
+	/**
+	 * This function tests whether the given type is a 'trivial' class/struct type in the C++ interpretation.
+	 *
+	 * In C++, a trivial class or struct is defined as one that:
 	 *
 	 * - Has a trivial default constructor. This may use the default constructor syntax (SomeConstructor() = default;).
 	 * - Has trivial copy and move constructors, which may use the default syntax.
@@ -135,8 +140,8 @@ namespace analysis {
 	 *
 	 * Constructors are trivial only if there are no virtual member functions of the class and no virtual base classes.
 	 * Copy/move operations also require that all the non-static data members be trivial.
-	 */
-	/* The copy assignment operator for class T is trivial if all of the following is true:
+	 *
+	 * The copy assignment operator for class T is trivial if all of the following is true:
 	 *
 	 * - It is not user-provided (meaning, it is implicitly-defined or defaulted), and if it is defaulted, its signature is the same as implicitly-defined
 	 * - T has no virtual member functions
@@ -148,70 +153,87 @@ namespace analysis {
 	/// TODO: add trivial marker for tagtypes
 	bool isTrivial(const TypePtr& type) {
 		auto ttype = type.isa<TagTypePtr>();
+		if(!ttype) {
+			if (core::lang::isArray(type)) {
+				// in case of an array, check the enclosed type for triviality
+				return isTrivial(core::lang::ArrayType(type).getElementType());
+			}
+			// non-tag-type & non-array types are always trivial
+			return true;
+		}
 
-		// non-tag-types are always trivial
-		if(!ttype) return true;
+		auto record = ttype->getRecord();
 
-		auto rtype = ttype->getRecord();
+		IRBuilder builder(type->getNodeManager());
+
+		auto containsCtor = [&](const LambdaExprPtr& ctor)->bool {
+			return any(record->getConstructors(), [&](const ExpressionPtr& cur) {
+				return *builder.normalize(cur) == *builder.normalize(ctor);
+			});
+		};
+
+		auto containsMemberFunction = [&](const MemberFunctionPtr& member)->bool {
+			return any(record->getMemberFunctions(), [&](const MemberFunctionPtr& cur) {
+				return *builder.normalize(cur) == *builder.normalize(member);
+			});
+		};
+
+		auto thisType = builder.refType(builder.tagTypeReference(record->getName()));
+
+		ParentsPtr parents =
+				(record.isa<StructPtr>()) ?
+				record.as<StructPtr>()->getParents() :
+				builder.parents();
 
 		// check for trivial constructors
-		bool trivialConstructor = false;
-		bool trivialCopyConstructor = false;
-		bool trivialMoveConstructor = false;
-		for(auto con : rtype->getConstructors()) {
-			auto l = con.as<LambdaExprPtr>();
-			auto params = l->getParameterList();
-			if(params.size() == 1) {
-				if(l->getBody()->getStatements().size() == 0) trivialConstructor = true;
-			}
-			if(params.size() == 2) {
-				if(core::lang::isReference(params[1]->getType())) { 
-					auto myType = core::lang::PointerType(params[0]->getType()).getElementType();
-					auto refType = core::lang::ReferenceType(params[1]->getType());
-					if(refType.isCppReference() && refType.getElementType() == myType) {
-						// this is a copy constructor
-						if(l->getBody()->getStatements().size() == 0) trivialCopyConstructor = true;
-					}
-					if(refType.isCppRValueReference() && refType.getElementType() == myType) {
-						// this is a move constructor
-						if(l->getBody()->getStatements().size() == 0) trivialMoveConstructor = true;
-					}
-				}
-			}
-		}
-		if(!trivialConstructor || !trivialCopyConstructor || !trivialMoveConstructor) return false;
+		bool trivialDefaultConstructor = containsCtor(builder.getDefaultConstructor(thisType, parents, record->getFields()));
+		if (!trivialDefaultConstructor) return false;
+
+		bool trivialCopyConstructor = containsCtor(builder.getDefaultCopyConstructor(thisType, parents, record->getFields()));
+		if (!trivialCopyConstructor) return false;
+
+		bool trivialMoveConstructor = containsCtor(builder.getDefaultMoveConstructor(thisType, parents, record->getFields()));
+		if (!trivialMoveConstructor) return false;
+
 
 		// check for trivial copy and move assignments
-		bool trivialCopyAssignment = false;
-		bool trivialMoveAssignment = false;
-		for(auto mem : rtype->getMemberFunctions()) {
-			if(mem->getNameAsString() == "operator_assign") {
-				// TODO check against body generated for default assignment
-			}
-		}
-		if(!trivialCopyAssignment || !trivialMoveAssignment) return false;
+		bool trivialCopyAssignment = containsMemberFunction(builder.getDefaultCopyAssignOperator(thisType, parents, record->getFields()));
+		if (!trivialCopyAssignment) return false;
+
+		bool trivialMoveAssignment = containsMemberFunction(builder.getDefaultMoveAssignOperator(thisType, parents, record->getFields()));
+		if (!trivialMoveAssignment) return false;
 
 		// check for trivial, non-virtual destructor
-		if(rtype->getDestructor().as<LambdaExprPtr>()->getBody().size() != 0 || rtype->getDestructorVirtual().getValue()) return false;
+		if(record->getDestructor().as<LambdaExprPtr>()->getBody().size() != 0 || record->getDestructorVirtual().getValue()) return false;
 
 		// check for virtual member functions
-		for(auto memFun : rtype->getMemberFunctions()) {
+		for(auto memFun : record->getMemberFunctions()) {
 			if(memFun->getVirtualFlag().getValue()) return false;
 		}
 
-		// check for virtual base classes
+		if(!record->getPureVirtualMemberFunctions().empty()) return false;
+
+		// check for virtual & non-trivial base classes
 		if(ttype->isStruct()) {
 			auto stype = ttype->getStruct();
 			for(auto par : stype->getParents()) {
 				if(par->getVirtual().getValue()) return false;
+				// if our direct base class is non-trivial, we cannot be trivial per-se
+				if(!isTrivial(par->getType())) return false;
 			}
 		}
 
 		// check that all non-static members are trivial
-		for(auto field : rtype->getFields()) {
-			if(!isTrivial(field->getType())) return false;
+		for(auto field : record->getFields()) {
+			auto fieldType = field->getType();
+			if(!isTrivial(fieldType)) return false;
+			//check cpp_ref field types
+			if(analysis::isRefType(fieldType) && lang::isCppReference(fieldType)) {
+				//TODO this is an over approximation which has to be refined
+				return false;
+			}
 		}
-		
+
 		return true;
 	}
 

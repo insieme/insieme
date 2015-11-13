@@ -390,35 +390,6 @@ namespace backend {
 			return nullptr;
 		};
 
-		res[basic.getUndefined()] = OP_CONVERTER {
-
-			auto type = call->getType();
-
-			// 1) special case: an empty struct
-			if(const auto& structType = core::analysis::isStruct(type)) {
-				if(structType->getFields().empty() && structType->getParents().empty()) {
-					auto cType = CONVERT_TYPE(type);
-					auto zero = C_NODE_MANAGER->create("0");
-					return c_ast::deref(c_ast::cast(c_ast::ptr(cType), zero));
-				}
-			}
-
-			// convert target type
-			auto cType = CONVERT_TYPE(type);
-
-			// 2) special case: intercepted object
-			if(type.isa<core::GenericTypePtr>()) {
-				// write a string witch is the whole type
-				return c_ast::call(cType);
-			}
-
-			// return a initializer expression (Type){}
-			return c_ast::init(cType);
-
-//			// the rest is handled like a *var(undefined(..))
-//			return c_ast::deref(CONVERT_EXPR(core::IRBuilder(call->getNodeManager()).refVar(call)));
-		};
-
 		res[basic.getNumTypeToInt()] = OP_CONVERTER {
 			auto type = call->getType().isa<core::GenericTypePtr>();
 			assert_true(type) << "Invalid result type: " << *type;
@@ -434,7 +405,7 @@ namespace backend {
 
 			// special handling of derefing result of ref.new or ref.var => bogus
 			core::ExpressionPtr arg = ARG(0);
-			if(core::analysis::isCallOf(arg, LANG_EXT_REF.getRefVar()) || core::analysis::isCallOf(arg, LANG_EXT_REF.getRefNew())) {
+			if(core::analysis::isCallOf(arg, LANG_EXT_REF.getRefVarInit()) || core::analysis::isCallOf(arg, LANG_EXT_REF.getRefNewInit())) {
 				// skip ref.var / ref.new => stupid
 				core::CallExprPtr call = static_pointer_cast<const core::CallExpr>(arg);
 				return CONVERT_EXPR(call->getArgument(0));
@@ -477,7 +448,12 @@ namespace backend {
 			return c_ast::assign(getAssignmentTarget(context, ARG(0)), CONVERT_ARG(1));
 		};
 
-		res[refExt.getRefVar()] = OP_CONVERTER {
+		res[refExt.getRefVar()] = OP_CONVERTER { 
+			assert_not_implemented() << "This point should not be reached."; 
+			return c_ast::ExpressionPtr();
+		};
+		
+		res[refExt.getRefVarInit()] = OP_CONVERTER {
 
 			// extract type
 			core::ExpressionPtr initValue = call->getArgument(0);
@@ -508,7 +484,16 @@ namespace backend {
 			return c_ast::init(c_ast::vec(valueTypeInfo.rValueType, 1), res);
 		};
 
-		res[refExt.getRefNew()] = OP_CONVERTER {
+		res[refExt.getRefNew()] = OP_CONVERTER { 
+			ADD_HEADER("stdlib.h"); // for 'malloc'
+			core::GenericTypePtr resType = call->getType().as<core::GenericTypePtr>();
+			c_ast::ExpressionPtr size = c_ast::sizeOf(CONVERT_TYPE(core::analysis::getReferencedType(resType)));
+			auto cType = CONVERT_TYPE(resType);
+			auto mallocNode = c_ast::call(C_NODE_MANAGER->create("malloc"), size);
+			return c_ast::cast(cType, mallocNode);
+		};
+
+		res[refExt.getRefNewInit()] = OP_CONVERTER {
 
 			// get result type information
 			core::GenericTypePtr resType = call->getType().as<core::GenericTypePtr>();
@@ -521,16 +506,6 @@ namespace backend {
 
 			// fix dependency
 			context.getDependencies().insert(valueTypeInfo.definition);
-
-			// special handling for requesting a un-initialized memory cell
-			if(core::analysis::isCallOf(ARG(0), LANG_BASIC.getUndefined())) {
-				ADD_HEADER("stdlib.h"); // for 'malloc'
-
-				c_ast::ExpressionPtr size = c_ast::sizeOf(CONVERT_TYPE(core::analysis::getReferencedType(resType)));
-				auto cType = CONVERT_TYPE(resType);
-				auto mallocNode = c_ast::call(C_NODE_MANAGER->create("malloc"), size);
-				return c_ast::cast(cType, mallocNode);
-			}
 
 			// special handling for arrays
 			if (LANG_EXT(core::lang::ArrayExtension).isCallOfArrayCreate(ARG(0))) {
@@ -875,8 +850,7 @@ namespace backend {
 			assert_false(decl->external) << "Can not initialize external declaration!";
 
 			// avoid zero inits, those are implicit
-			if(core::analysis::isCallOf(call[1], call->getNodeManager().getLangBasic().getZero())
-			   || core::analysis::isCallOf(call[1], call->getNodeManager().getLangBasic().getUndefined())) {
+			if(core::analysis::isCallOf(call[1], call->getNodeManager().getLangBasic().getZero())) {
 				return none;
 			}
 

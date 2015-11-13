@@ -2,7 +2,7 @@
 alias int = int<4>;
 
 def sum = (n : int)->int {
-	var ref<int> sum = ref_var(0);
+	var ref<int> sum = ref_var_init(0);
 	for(int i=0..n+1) {
 		sum = sum + i;
 	}
@@ -23,7 +23,7 @@ unit main() {
 	print("Sum: %d\n", lsum(100));
 
 	// compute it inline
-	var ref<int> sum = ref_var(0);
+	var ref<int> sum = ref_var_init(0);
 	for(int i=0..101) {
 		sum = sum + i;
 	}

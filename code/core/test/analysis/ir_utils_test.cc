@@ -289,7 +289,8 @@ namespace analysis {
 			auto listElem = builder.structRecord(toVector(builder.field("load", manager.getLangBasic().getInt4()), builder.field("next", builder.refType(tag))));
 			TypePtr constRecType = builder.tagType(tag, builder.tagTypeDefinition(toVector(builder.tagTypeBinding(tag, listElem))));
 
-			EXPECT_EQ("rec ^list.{^list=struct {load:int<4>,next:ref<^list,f,f,plain>,dtor()}}", toString(*constRecType));
+			EXPECT_EQ("rec ^list.{^list=struct {load:int<4>,next:ref<^list,f,f,plain>,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}}",
+			          toString(*constRecType));
 			EXPECT_FALSE(isGeneric(constRecType));
 		}
 
@@ -299,7 +300,8 @@ namespace analysis {
 			auto listElem = builder.structRecord(toVector(builder.field("load", builder.typeVariable("b")), builder.field("next", builder.refType(tag))));
 			TypePtr constRecType = builder.tagType(tag, builder.tagTypeDefinition(toVector(builder.tagTypeBinding(tag, listElem))));
 
-			EXPECT_EQ("rec ^list.{^list=struct {load:'b,next:ref<^list,f,f,plain>,dtor()}}", toString(*constRecType));
+			EXPECT_EQ("rec ^list.{^list=struct {load:'b,next:ref<^list,f,f,plain>,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}}",
+			          toString(*constRecType));
 			EXPECT_TRUE(isGeneric(constRecType));
 		}
 	}
@@ -556,13 +558,13 @@ namespace analysis {
 		ExpressionPtr funA = builder.parseExpr(
 			"alias ftype = (ref<int<4>>, ref<int<4>>, ref<int<4>>, ref<int<4>>)->unit;"
 			"decl f : ftype;"
-			"def f = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { var ref<int<4>> x = ref_var(*d); f(x,a,b,c); };"
+			"def f = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { var ref<int<4>> x = ref_var_init(*d); f(x,a,b,c); };"
 			"f");
 
 		ExpressionPtr funB = builder.parseExpr(
 			"alias ftype = (ref<int<4>>, ref<int<4>>, ref<int<4>>, ref<int<4>>)->unit;"
 			"decl f : ftype;"
-			"def f = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { var ref<int<4>> x = ref_var(*d); d = 2; f(x,a,b,c); };"
+			"def f = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { var ref<int<4>> x = ref_var_init(*d); d = 2; f(x,a,b,c); };"
 			"f");
 
 		VariablePtr varA = builder.variable(builder.refType(mgr.getLangBasic().getInt4()), 6);
@@ -584,16 +586,16 @@ namespace analysis {
 		ExpressionPtr funA = builder.parseExpr(
 			"alias ftype = (ref<int<4>>, ref<int<4>>, ref<int<4>>, ref<int<4>>)->unit;"
 			"decl f : ftype; decl g : ftype;"
-			"def f = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { var ref<int<4>> x = ref_var(*d); g(x,a,b,c); };"
-			"def g = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { var ref<int<4>> x = ref_var(*d); f(x,a,b,c); };"
+			"def f = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { var ref<int<4>> x = ref_var_init(*d); g(x,a,b,c); };"
+			"def g = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { var ref<int<4>> x = ref_var_init(*d); f(x,a,b,c); };"
 			"f");
 
 		ExpressionPtr funB =
 		    builder.parseExpr(
 			"alias ftype = (ref<int<4>>, ref<int<4>>, ref<int<4>>, ref<int<4>>)->unit;"
 			"decl f : ftype; decl g : ftype;"
-			"def f = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { var ref<int<4>> x = ref_var(*d); d = 2; g(x,a,b,c); };"
-			"def g = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { var ref<int<4>> x = ref_var(*d); d = 2; f(x,a,b,c); };"
+			"def f = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { var ref<int<4>> x = ref_var_init(*d); d = 2; g(x,a,b,c); };"
+			"def g = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { var ref<int<4>> x = ref_var_init(*d); d = 2; f(x,a,b,c); };"
 			"f");
 
 		VariablePtr varA = builder.variable(builder.refType(mgr.getLangBasic().getInt4()), 6);

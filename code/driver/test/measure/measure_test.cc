@@ -66,7 +66,7 @@ namespace measure {
 		NodeManager manager;
 		IRBuilder builder(manager);
 		StatementPtr stmt = builder.parseStmt("{"
-		                                      "	var ref<int<4>> sum = ref_var(0);"
+		                                      "	var ref<int<4>> sum = ref_var_init(0);"
 		                                      "	for(int<4> i = 10 .. 50 : 1) {"
 		                                      "		sum = sum + 1;"
 		                                      "	}"
@@ -92,7 +92,7 @@ namespace measure {
 		IRBuilder builder(manager);
 
 		StatementPtr stmt = builder.parseStmt("{"
-		                                      "	var ref<int<4>> sum = ref_var(0);"
+		                                      "	var ref<int<4>> sum = ref_var_init(0);"
 		                                      "	for(int<4> i = 10 .. 50 : 1) {"
 		                                      "		sum = sum + 1;"
 		                                      "	}"
@@ -172,7 +172,7 @@ namespace measure {
 
 		vector<NodeAddress> stmts = builder.parseAddressesStatement(""
 																	"def load = (n : int<4>)->int<4> {"
-																	"	var ref<int<4>> sum = ref_var(0);"
+																	"	var ref<int<4>> sum = ref_var_init(0);"
 																	"	for(int<4> i = 0 .. n) {"
 																	"			sum = sum / i;"
 																	"		for(int<4> j = 0 .. 100000) {"
@@ -182,7 +182,7 @@ namespace measure {
 																	"	return *sum;"
 																	"};"
 																	"{"
-		                                                            "	var ref<int<4>> res = ref_var(0);"
+		                                                            "	var ref<int<4>> res = ref_var_init(0);"
 		                                                            "	$for(int<4> i = 0 .. 5000) {"
 		                                                            "		$for(int<4> j = 0 .. 5000) {"
 		                                                            "			res = res + load(100000);"
@@ -310,7 +310,7 @@ namespace measure {
 		NodeManager manager;
 		IRBuilder builder(manager);
 		StatementPtr stmt = builder.parseStmt("{"
-		                                      "	var ref<int<4>> sum = ref_var(0);"
+		                                      "	var ref<int<4>> sum = ref_var_init(0);"
 		                                      "	for(int<4> i = 10 .. 50 : 1) {"
 		                                      "		sum = sum + 1;"
 		                                      "	}"
@@ -440,7 +440,7 @@ namespace measure {
 		NodeManager manager;
 		IRBuilder builder(manager);
 		StatementPtr stmt = builder.parseStmt("{"
-		                                      "	var ref<int<4>> sum = ref_var(0);"
+		                                      "	var ref<int<4>> sum = ref_var_init(0);"
 		                                      "	for(int<4> i = 10 .. 50 : 1) {"
 		                                      "		for(int<4> j = 0 .. 80 : 1) {"
 		                                      "			sum = sum + 1;"
@@ -529,7 +529,7 @@ namespace measure {
 		NodeManager manager;
 		IRBuilder builder(manager);
 		StatementPtr stmt = builder.parseStmt("{"
-		                                      "	var ref<int<4>> sum = ref_var(0);"
+		                                      "	var ref<int<4>> sum = ref_var_init(0);"
 		                                      "	for(int<4> i = 1 .. 5000 : 1) {"
 		                                      "		for(int<4> j = 1 .. 5000 : 1) {"
 		                                      "			sum = sum + 1;"

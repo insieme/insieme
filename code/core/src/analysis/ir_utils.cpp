@@ -1129,7 +1129,7 @@ namespace analysis {
 
 		// TODO: remove this when frontend is fixed!!
 		// => compensate for silly stuff like var(*getNull()) or NULL aka ref_deref(ref_null)
-		if(core::analysis::isCallOf(value, refExt.getRefVar()) || core::analysis::isCallOf(value, refExt.getRefDeref())) {
+		if(core::analysis::isCallOf(value, refExt.getRefVarInit()) || core::analysis::isCallOf(value, refExt.getRefDeref())) {
 			return isZero(core::analysis::getArgument(value, 0));
 		}
 

@@ -43,6 +43,8 @@
 
 #include "insieme/utils/set_utils.h"
 
+#include "insieme/core/checks/full_check.h"
+
 namespace insieme {
 namespace core {
 namespace types {
@@ -411,7 +413,9 @@ namespace types {
 		// create a recursive type
 		auto baseType = builder.parseType("struct s { a : A; }");
 
-		auto type = builder.parseType("decl struct t; decl struct s; def struct t : [ s ] { b : B; next : ref<t>; }; def struct s { a : A; }; t").as<TagTypePtr>();
+		auto type = builder.parseType("decl struct u; decl struct s; def struct u : [ s ] { b : B; next : ref<u>; }; def struct s { a : A; }; u").as<TagTypePtr>();
+
+		EXPECT_TRUE(checks::check(type).empty()) << checks::check(type);
 
 		EXPECT_EQ(type->getStruct()->getParents()[0]->getType(), baseType);
 		EXPECT_EQ(type->peel()->getStruct()->getParents()[0]->getType(), baseType);
@@ -424,8 +428,11 @@ namespace types {
 		EXPECT_PRED2(isSubTypeOf, type->peel(), baseType);
 
 		// also a mutual recursive type where one is the base of the other
-		auto typeA = builder.parseType("decl struct t; decl struct s; def struct t : [s] { a : A; next : ref<s>; }; def struct s { b : B; next : ref<t>; }; t").as<TagTypePtr>();
-		auto typeB = builder.parseType("decl struct t; decl struct s; def struct t : [s] { a : A; next : ref<s>; }; def struct s { b : B; next : ref<t>; }; s").as<TagTypePtr>();
+		auto typeA = builder.parseType("decl struct u; decl struct s; def struct u : [s] { a : A; next : ref<s>; }; def struct s { b : B; next : ref<u>; }; u").as<TagTypePtr>();
+		auto typeB = builder.parseType("decl struct u; decl struct s; def struct u : [s] { a : A; next : ref<s>; }; def struct s { b : B; next : ref<u>; }; s").as<TagTypePtr>();
+
+		EXPECT_TRUE(checks::check(typeA).empty()) << checks::check(typeA);
+		EXPECT_TRUE(checks::check(typeB).empty()) << checks::check(typeB);
 
 		EXPECT_PRED2(isSubTypeOf, typeA, typeB);
 		EXPECT_PRED2(isNotSubTypeOf, typeB, typeA);

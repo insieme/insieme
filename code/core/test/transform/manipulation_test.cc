@@ -969,8 +969,8 @@ namespace core {
 		IRBuilder builder(mgr);
 
 		auto addr = builder.parseAddressesStatement("{"
-		                                            "	var ref<int<4>,f,f,plain> A = ref_var(0);"
-		                                            "	var ref<int<4>,f,f,plain> B = ref_var(0);"
+		                                            "	var ref<int<4>,f,f,plain> A = ref_var_init(0);"
+		                                            "	var ref<int<4>,f,f,plain> B = ref_var_init(0);"
 		                                            "	(arg : int<4>)->int<4> { return arg; }(* $ A $);"
 													"	(arg : int<4>)->int<4> { return arg; }(* $ B $);"
 		                                            "}");
@@ -996,7 +996,7 @@ namespace core {
 		};
 
 		utils::map::PointerMap<VariablePtr, ExpressionPtr> declInitReplacements;
-		declInitReplacements[uintB] = builder.parseExpr("ref_var(0u)");
+		declInitReplacements[uintB] = builder.parseExpr("ref_var_init(0u)");
 
 		auto code1 = transform::replaceVarsRecursiveGen(mgr, code, replacements, true, transform::defaultTypeRecovery, th, declInitReplacements);
 

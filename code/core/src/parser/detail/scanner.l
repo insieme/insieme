@@ -158,7 +158,6 @@ blank         [ \t]
 "break"       return InspireParser::make_BREAK(loc);
 
 "var"         return InspireParser::make_VAR(loc);
-"undefined"   return InspireParser::make_UNDEFINED(loc);
 
 "true"        return InspireParser::make_TRUE(loc);
 "false"       return InspireParser::make_FALSE(loc);

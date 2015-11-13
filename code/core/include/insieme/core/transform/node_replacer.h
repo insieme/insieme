@@ -162,9 +162,6 @@ namespace core {
 		ExpressionPtr no_type_fixes(const ExpressionPtr&, const ExpressionPtr&);
 		ExpressionPtr defaultTypeRecovery(const ExpressionPtr& oldExpr, const ExpressionPtr& newExpr);
 
-		// functor which updates the type literal inside a call to undefined in a declaration
-		TypeHandler getVarInitUpdater(NodeManager& manager);
-
 		/**
 		 * Replaces all variables within the given map within the current scope by the associated elements. If
 		 * variables are passed to functions accepting different types, a new version of the function accepting

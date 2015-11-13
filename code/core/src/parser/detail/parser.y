@@ -152,7 +152,6 @@
 
 	CAST         "CAST"
 	AUTO         "auto"
-	UNDEFINED    "undefined"
 
 	VAR          "var"
 	IF           "if"
@@ -241,7 +240,7 @@
 %type <ExpressionPtr>                  call
 %type <LambdaExprPtr>                  lambda
 %type <BindExprPtr>                    bind
-%type <ExpressionPtr>                  undefined_expression parallel_expression list_expression initializer unary_op binary_op ternary_op this_expression
+%type <ExpressionPtr>                  parallel_expression list_expression initializer unary_op binary_op ternary_op this_expression
 
 %type <VariablePtr>                    parameter
 %type <VariableList>                   parameters non_empty_parameters non_empty_bind_parameters
@@ -279,10 +278,10 @@
 //    -- top_level -------------------------------------
 
 
-top_level : TYPE_ONLY top_level_elements type                               { driver.result = driver.tu.resolve($3); }
-          | EXPR_ONLY top_level_elements expression                         { driver.result = driver.tu.resolve($3); }
-          | STMT_ONLY top_level_elements statement                          { driver.result = driver.tu.resolve($3); }
-          | FULL_PROG top_level_elements main                               { driver.result = driver.tu.resolve($3); }
+top_level : TYPE_ONLY top_level_elements type                               { driver.computeResult($3); }
+          | EXPR_ONLY top_level_elements expression                         { driver.computeResult($3); }
+          | STMT_ONLY top_level_elements statement                          { driver.computeResult($3); }
+          | FULL_PROG top_level_elements main                               { driver.computeResult($3); }
           ;
 
 top_level_elements : top_level_element ";" top_level_elements
@@ -329,28 +328,31 @@ fields : fields field                                                       { $1
 field : "identifier" ":" type ";"                                           { $$ = driver.builder.field($1, $3); }
       ;
 
-constructors : constructors constructor                                     { $1.push_back($2); $$ = $1; }
+constructors : constructors constructor                                     { INSPIRE_GUARD(@2, $2) $1.push_back($2); $$ = $1; }
              |                                                              { $$ = ExpressionList(); }
              ;
 
 constructor : "ctor" "(" parameters                                         { driver.openScope(); driver.registerParameters(@3, $3); }
                                     ")" compound_statement_no_scope         { $$ = driver.genConstructor(@$, $3, $6); driver.closeScope(); }
+            | "ctor" "function" "(" parameters                              { driver.openScope(); driver.registerParameters(@3, $4); driver.inLambda = false; }
+                                    ")" compound_statement_no_scope         { $$ = driver.genConstructor(@$, $4, $7); driver.closeScope(); driver.inLambda = true; }
             ;
 
 destructor : "dtor" virtual_flag "(" ")" compound_statement                 { $$ = std::make_pair(driver.genDestructor(@$, $5), $2); }
+           | "dtor" virtual_flag "function"                                 { driver.inLambda = false; }
+                                            "(" ")" compound_statement      { $$ = std::make_pair(driver.genDestructor(@$, $7), $2); driver.inLambda = true; }
            |                                                                { $$ = std::make_pair(LambdaExprPtr(), false); }
            ;
 
-member_functions : member_functions member_function                         { $1.push_back($2); $$ = $1; }
+member_functions : member_functions member_function                         { INSPIRE_GUARD(@2, $2) $1.push_back($2); $$ = $1; }
                  |                                                          { $$ = MemberFunctionList(); }
                  ;
 
-member_function : virtual_flag cv_flags lambda_or_function "identifier" ":" "(" ")" "->" type compound_statement
-                                                                            { $$ = driver.genMemberFunction(@$, $1, $2.first, $2.second, $4, VariableList(), $9, $10, $3); }
+member_function : virtual_flag cv_flags lambda_or_function "identifier" ":" "(" ")"    { driver.inLambda = $3; }
+                          "->" type compound_statement                      { $$ = driver.genMemberFunction(@$, $1, $2.first, $2.second, $4, VariableList(), $10, $11); driver.inLambda = true; }
                 | virtual_flag cv_flags lambda_or_function "identifier" ":" "(" non_empty_parameters
-                                                                            { driver.openScope(); driver.registerParameters(@7, $7); }
-                                                                                                     ")" "->" type compound_statement_no_scope
-                                                                            { $$ = driver.genMemberFunction(@$, $1, $2.first, $2.second, $4, $7, $11, $12, $3); driver.closeScope(); }
+                                                                            { driver.openScope(); driver.registerParameters(@7, $7); driver.inLambda = $3; }
+                      ")" "->" type compound_statement_no_scope             { $$ = driver.genMemberFunction(@$, $1, $2.first, $2.second, $4, $7, $11, $12); driver.closeScope(); driver.inLambda = true; }
                 ;
 
 virtual_flag : "virtual"                                                    { $$ = true; }
@@ -538,7 +540,6 @@ plain_expression : variable                                               { $$ =
                  | call                                                   { $$ = $1; }
                  | lambda                                                 { $$ = $1; }
                  | bind                                                   { $$ = $1; }
-                 | undefined_expression                                   { $$ = $1; }
                  | parallel_expression                                    { $$ = $1; }
                  | list_expression                                        { $$ = $1; }
                  | initializer                                            { $$ = $1; }
@@ -585,8 +586,12 @@ call : expression "(" expressions ")"                                     { $$ =
 // -- lambda --
 
 lambda : "(" ")" "->" type compound_statement                                  { $$ = driver.genLambda(@$, VariableList(), $4, $5); }
+       | "function" "(" ")"                                                    { driver.inLambda = false; }
+                            "->" type compound_statement                       { $$ = driver.genLambda(@$, VariableList(), $6, $7); driver.inLambda = true; }
        | "(" non_empty_parameters ")"                                          { driver.openScope(); driver.registerParameters(@2, $2); }
                                       "->" type compound_statement_no_scope    { $$ = driver.genLambda(@$, $2, $6, $7); driver.closeScope(); }
+       | "function" "(" non_empty_parameters ")"                               { driver.openScope(); driver.registerParameters(@3, $3); driver.inLambda = false; }
+                                      "->" type compound_statement_no_scope    { $$ = driver.genLambda(@$, $3, $7, $8); driver.closeScope(); driver.inLambda = true; }
        ;
 
 parameters : non_empty_parameters                                         { $$ = $1; }
@@ -617,11 +622,6 @@ non_empty_bind_parameters : "(" non_empty_parameters ")"                  { driv
 let_expression : "let" "identifier" "=" expression                        { driver.openScope(); driver.declareSymbol(@2, $2, $4); }
                                     "in" expression                       { $$ = $7; driver.closeScope(); }
                ;
-
-// -- reference expressions --
-
-undefined_expression : "undefined" "(" type ")"                           { $$ = driver.builder.undefined($3); }
-                     ;
 
 // -- parallel expressions --
 

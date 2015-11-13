@@ -34,34 +34,24 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+class A {
+	int i;
+	float f();
+};
 
-#include "insieme/frontend/extensions/frontend_extension.h"
-
-
-using namespace insieme::frontend;
-
-namespace insieme {
-namespace core {
-namespace tu {
-	class IRTranslationUnit;
+int main() {
+	{};
+	/*pragma test expect_ir(R"(
+		def struct IMP_A {
+			i : int<4>;
+			ctor() {}
+			ctor(other : ref<IMP_A,t,f,cpp_ref>) {}
+			ctor(other : ref<IMP_A,f,f,cpp_rref>) {}
+			dtor() {}
+			lambda IMP_f : () -> real<4> {}
+		};
+		{ var ref<IMP_A> a; }
+	)")*/
+	//{ A a; }
+	return 0;
 }
-}
-
-namespace frontend {
-namespace extensions {
-
-	class OmpFrontendExtension : public FrontendExtension {
-		std::list<core::ExpressionPtr> thread_privates;
-		bool flagActivated;
-
-	  public:
-		OmpFrontendExtension();
-		virtual flagHandler registerFlag(boost::program_options::options_description& options);
-		virtual core::tu::IRTranslationUnit IRVisit(core::tu::IRTranslationUnit& tu);
-		virtual core::ProgramPtr IRVisit(core::ProgramPtr& prog);
-	};
-
-} // end namespace extensions
-} // end namespace frontend
-} // end namespace insieme

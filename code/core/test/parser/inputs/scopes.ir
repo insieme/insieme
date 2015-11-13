@@ -3,14 +3,14 @@ alias int = int<4>;
 
 int main (){
 
-    var ref<int> a = ref_var(0);
+    var ref<int> a = ref_var_init(0);
     a + 1;
     { 
-        var ref<int> a = ref_var(1);
+        var ref<int> a = ref_var_init(1);
         a + 1;
         {
             a + 1;
-            var ref<int> a = ref_var(2);
+            var ref<int> a = ref_var_init(2);
             a + 1;
         }
     a + 1;
@@ -21,11 +21,11 @@ int main (){
     f(*a);
     f(a + 1);
     { 
-        var ref<int> a = ref_var(1);
+        var ref<int> a = ref_var_init(1);
         f(a + 1);
         {
             f(a + 1);
-            var ref<int> a = ref_var(2);
+            var ref<int> a = ref_var_init(2);
             f(a + 1);
         }
         f(a + 1);

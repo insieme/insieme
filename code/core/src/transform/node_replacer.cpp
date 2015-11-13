@@ -1007,53 +1007,6 @@ namespace transform {
 		return newExpr;
 	}
 
-	// functor which updates the type literal inside a call to undefined in a declaration
-	TypeHandler getVarInitUpdater(NodeManager& manager) {
-		return [&](const StatementPtr& node) -> StatementPtr {
-			IRBuilder builder(manager);
-			StatementPtr res = node;
-			const lang::BasicGenerator& basic = builder.getLangBasic();
-			const lang::ReferenceExtension& refExt = manager.getLangExtension<lang::ReferenceExtension>();
-
-			// update init undefined
-			if(const DeclarationStmtPtr& decl = dynamic_pointer_cast<const DeclarationStmt>(node)) {
-				if(const CallExprPtr& init = dynamic_pointer_cast<const CallExpr>(decl->getInitialization())) {
-					const VariablePtr& var = decl->getVariable();
-					const ExpressionPtr& fun = init->getFunctionExpr();
-					// handle ref variables
-					if((init->getType() != var->getType()) && (refExt.isRefVar(fun) || refExt.isRefNew(fun))) {
-						auto varTy = var->getType();
-						auto elemTy = analysis::getReferencedType(varTy);
-						if(const CallExprPtr& undefined = dynamic_pointer_cast<const CallExpr>(init->getArgument(0))) {
-							if(basic.isUndefined(undefined->getFunctionExpr()))
-								res = builder.declarationStmt(
-								    var, builder.callExpr(varTy, fun, builder.callExpr(elemTy, basic.getUndefined(), builder.getTypeLiteral(elemTy))));
-						}
-					}
-					// handle non ref variables
-					if((init->getType() != var->getType()) && basic.isUndefined(fun)) {
-						const TypePtr varTy = var->getType();
-						res = builder.declarationStmt(var, builder.callExpr(varTy, fun, builder.getTypeLiteral(varTy)));
-					}
-				}
-			}
-
-			// check whether something has changed ...
-			if(res == node) {
-				// => nothing changed
-				return node;
-			}
-
-			// preserve annotations
-			transform::utils::migrateAnnotations(node, res);
-
-			// done
-			return res;
-
-		};
-	}
-
-
 	NodePtr replaceVarsRecursive(NodeManager& mgr, const NodePtr& root, const ExpressionMap& replacements, bool limitScope,
 	                             const TypeRecoveryHandler& recoveryHandler, const TypeHandler& typeHandler,
 	                             const PointerMap<VariablePtr, ExpressionPtr>& declInitReplacements) {

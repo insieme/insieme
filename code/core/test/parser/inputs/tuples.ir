@@ -9,7 +9,7 @@ unit main() {
 	a.1;
 	a.2;
 
-	auto r = ref_new(a);
+	auto r = ref_new_init(a);
 	
 	r.0;
 	r.1;

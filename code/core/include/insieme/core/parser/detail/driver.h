@@ -105,6 +105,8 @@ namespace parser {
 
 			location globLoc;
 
+			bool inLambda = true;
+
 		  private:
 
 			std::stringstream ss;
@@ -118,6 +120,8 @@ namespace parser {
 			};
 
 			std::vector<RecordStackEntry> currentRecordStack;
+
+			std::vector<StringValuePtr> temporaryAnonymousNames;
 
 			/**
 			 * constructs a struct expression
@@ -217,7 +221,7 @@ namespace parser {
 			/**
 			 * generate a simple struct or union consisting only of fields. The decision between sctuct or union will be made based on the given node type.
 			 */
-			TagTypePtr genSimpleStructOrUnionType(const location& l, const NodeType& type, const FieldList& fields);
+			TypePtr genSimpleStructOrUnionType(const location& l, const NodeType& type, const FieldList& fields);
 
 			/**
 			 * check whether type alias can be applied to the given type and applies those.
@@ -227,7 +231,7 @@ namespace parser {
 			/**
 			 * generates a lambda expression
 			 */
-			LambdaExprPtr genLambda(const location& l, const VariableList& params, const TypePtr& retType, const StatementPtr& body, bool isLambda = true, const FunctionKind functionKind = FK_PLAIN);
+			LambdaExprPtr genLambda(const location& l, const VariableList& params, const TypePtr& retType, const StatementPtr& body, const FunctionKind functionKind = FK_PLAIN);
 
 			/**
 			 * generates a closure
@@ -252,7 +256,7 @@ namespace parser {
 			/**
 			 * generates a member function for the currently defined record type
 			 */
-			MemberFunctionPtr genMemberFunction(const location& l, bool virtl, bool cnst, bool voltile, const std::string& name, const VariableList& params, const TypePtr& retType, const StatementPtr& body, bool isLambda);
+			MemberFunctionPtr genMemberFunction(const location& l, bool virtl, bool cnst, bool voltile, const std::string& name, const VariableList& params, const TypePtr& retType, const StatementPtr& body);
 
 			/**
 			 * generates a member function for the currently defined record type
@@ -346,9 +350,33 @@ namespace parser {
 			ExpressionPtr genThis(const location& l);
 
 			/**
+			 * constructs a literal referencing the current object in a lambda
+			 */
+			ExpressionPtr genThisInLambda(const location& l);
+
+			/**
+			 * constructs a literal referencing the current object in a function
+			 */
+			ExpressionPtr genThisInFunction(const location& l);
+
+		  private:
+			GenericTypePtr getThisTypeForLambdaAndFunction(const bool cnst, const bool voltile);
+
+			TypeList getParamTypesForLambdaAndFunction(const location& l, const VariableList& params);
+
+		  public:
+
+			/**
 			 * stores in the current scope the "this" variable with the given type
 			 */
 			void addThis(const location& l, const TypePtr& classType);
+
+			/*
+			 * Computes the final result of parsing by using the TU to resolve all symbols and applying some post-processing actions.
+			 *
+			 * Calling this method will set the variable result to the resulting IR.
+			 */
+			void computeResult(const NodePtr& fragment);
 
 			// ------------- scope management -------------------
 

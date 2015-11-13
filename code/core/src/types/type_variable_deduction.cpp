@@ -40,8 +40,12 @@
 
 #include "insieme/utils/annotation.h"
 
+#include "insieme/core/analysis/type_utils.h"
+
 #include "insieme/core/types/type_variable_renamer.h"
 #include "insieme/core/types/subtype_constraints.h"
+
+#include "insieme/core/lang/reference.h"
 
 #include "insieme/core/transform/node_replacer.h"
 
@@ -399,11 +403,80 @@ namespace types {
 	SubstitutionOpt getTypeVariableInstantiation(NodeManager& manager, const TypeList& parameter, const TypeList& arguments) {
 		const bool debug = false;
 
+		// the result to be returned upon failure
+		const static SubstitutionOpt fail;
+
 		// check length of parameter and arguments
-		if(parameter.size() != arguments.size()) { return 0; }
+		if(parameter.size() != arguments.size()) { return fail; }
 
 		// use private node manager for computing results
 		NodeManager internalManager(manager);
+
+
+		// -------------------------------- Invalid Call By Value ---------------------------------------
+		//
+		// Non-Trivial types must not be passed by value.
+		//
+		// ----------------------------------------------------------------------------------------------
+
+		// check all arguments
+		for(const auto& cur : arguments) {
+			if (!analysis::isTrivial(cur)) return fail;
+		}
+
+
+		// ------------------------------ Implicit Materialization --------------------------------------
+		//
+		// In C++ it is allowed to pass values to function parameters accepting references. In this case,
+		// an implicit temporary object initialized by a copy-constructor is created at the call-site.
+		// This is supported for all 'trivial' types.
+		//
+		// ----------------------------------------------------------------------------------------------
+
+		TypeList materializedArguments = arguments;
+		for(size_t i=0; i<parameter.size(); i++) {
+
+			bool isRefArg   = lang::isReference(arguments[i]);
+			bool isRefParam = lang::isReference(parameter[i]);
+
+			// implicit materialization
+			if (!isRefArg && isRefParam) {
+				lang::ReferenceType refParam(parameter[i]);
+				switch(refParam.getKind()) {
+				case lang::ReferenceType::Kind::Plain: return fail;
+				case lang::ReferenceType::Kind::CppReference: {
+					/* the cpp reference must be const */
+					if (!refParam.isConst()) return fail;
+					break;
+				}
+				case lang::ReferenceType::Kind::CppRValueReference: {
+					/* all fine */
+				}
+				}
+
+				// check whether the argument is trivial
+				if (!analysis::isTrivial(arguments[i])) {
+					return fail;
+				}
+
+				// all checks out => materialize
+				materializedArguments[i] = lang::ReferenceType::create(
+						arguments[i], refParam.isConst(), refParam.isVolatile(), refParam.getKind()
+				);
+			}
+
+			// implicit copy construction
+			if (isRefArg && !isRefParam) {
+				if (lang::isCppReference(arguments[i]) || lang::isCppRValueReference(arguments[i])) {
+					lang::ReferenceType refArg(arguments[i]);
+					materializedArguments[i] = refArg.getElementType();
+				}
+			}
+		}
+
+		if(debug) { std::cout << "    Arguments: " << arguments << std::endl; }
+		if(debug) { std::cout << " Materialized: " << materializedArguments << std::endl; }
+
 
 		// ---------------------------------- Variable Renaming -----------------------------------------
 		//
@@ -430,13 +503,13 @@ namespace types {
 
 		// collects the mapping of free variables to constant replacements (to protect them
 		// from being substituted during some unification process)
-		TypeMapping&& argumentMapping = substituteFreeVariablesWithConstants(internalManager, arguments);
+		TypeMapping&& argumentMapping = substituteFreeVariablesWithConstants(internalManager, materializedArguments);
 
-		if(debug) { std::cout << " Arguments: " << arguments << std::endl; }
+		if(debug) { std::cout << " Arguments: " << materializedArguments << std::endl; }
 		if(debug) { std::cout << "   Mapping: " << argumentMapping << std::endl; }
 
 		// apply renaming to arguments
-		TypeList renamedArguments = arguments;
+		TypeList renamedArguments = materializedArguments;
 		vector<TypeMapping> argumentRenaming;
 		for(std::size_t i = 0; i < renamedArguments.size(); ++i) {
 			TypePtr& cur = renamedArguments[i];

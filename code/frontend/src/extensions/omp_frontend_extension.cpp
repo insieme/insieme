@@ -41,6 +41,8 @@
 #include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/tu/ir_translation_unit.h"
+#include "insieme/core/lang/reference.h"
+#include "insieme/core/lang/parallel.h"
 
 #include "insieme/frontend/omp/omp_annotation.h"
 #include "insieme/frontend/omp/omp_sema.h"
@@ -754,6 +756,30 @@ namespace extensions {
 		// create lambda
 		auto lambda = [&](const ConversionJob& job) { return flagActivated; };
 		return lambda;
+	}
+
+	core::ProgramPtr OmpFrontendExtension::IRVisit(core::ProgramPtr& prog) {
+		std::map<core::NodeAddress, core::NodePtr> replacements;
+		auto& mgr = prog->getNodeManager();
+		auto builder = core::IRBuilder(mgr);
+		auto& refExt = mgr.getLangExtension<core::lang::ReferenceExtension>();
+		auto& parExt = mgr.getLangExtension<core::lang::ParallelExtension>();
+
+		// Collect and replace all zero inits of global locks with noOps.
+		core::visitDepthFirstOnce(core::NodeAddress(prog), [&](const core::CallExprAddress& cA){
+			core::CallExprPtr call = cA.getAddressedNode();
+			if(core::analysis::isCallOf(call, refExt.getRefAssign())) {
+				//check if rhs is a literal (global)
+				//check if lhs is a zero(type_lit(lock))
+				if(call->getArgument(0).isa<core::LiteralPtr>() &&
+					(call->getArgument(1) == builder.getZero(parExt.getLock()))) {
+						replacements.insert({ cA, builder.getNoOp() });
+				}
+			}
+		});
+		// replace all occurrences
+		if(!replacements.empty()) prog = core::transform::replaceAll(mgr, replacements).as<core::ProgramPtr>();
+		return prog;
 	}
 
 
