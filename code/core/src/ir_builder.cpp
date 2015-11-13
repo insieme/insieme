@@ -552,6 +552,27 @@ namespace core {
 		return memberFunction(false, "operator_assign", fun);
 	}
 
+	LiteralPtr IRBuilderBaseModule::getLiteralForMember(const FunctionTypePtr& functionType, const std::string& memberName) {
+		if (!functionType->isMember()) {
+			return LiteralPtr();
+		}
+
+		auto recordName = functionType->getObjectType().as<GenericTypePtr>()->getName()->getValue();
+		return literal(recordName + "::" + memberName, functionType);
+	}
+
+	LiteralPtr IRBuilderBaseModule::getLiteralForConstructor(const FunctionTypePtr& functionType) {
+		return getLiteralForMember(functionType, "ctor");
+	}
+
+	LiteralPtr IRBuilderBaseModule::getLiteralForDestructor(const FunctionTypePtr& functionType) {
+		return getLiteralForMember(functionType, "dtor");
+	}
+
+	LiteralPtr IRBuilderBaseModule::getLiteralForMemberFunction(const FunctionTypePtr& functionType, const std::string& memberName) {
+		return getLiteralForMember(functionType, memberName);
+	}
+
 	FieldPtr IRBuilderBaseModule::field(const string& name, const TypePtr& type) const {
 		return field(stringValue(name), type);
 	}

@@ -332,6 +332,16 @@ namespace core {
 
 		MemberFunctionPtr getDefaultMoveAssignOperator(const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields) const;
 
+	  private:
+		LiteralPtr getLiteralForMember(const FunctionTypePtr& functionType, const std::string& memberName);
+	  public:
+
+		LiteralPtr getLiteralForConstructor(const FunctionTypePtr& functionType);
+
+		LiteralPtr getLiteralForDestructor(const FunctionTypePtr& functionType);
+
+		LiteralPtr getLiteralForMemberFunction(const FunctionTypePtr& functionType, const std::string& memberName);
+
 		// -----------------------------------
 
 		NamedValuePtr namedValue(const string& name, const ExpressionPtr& value) const;
