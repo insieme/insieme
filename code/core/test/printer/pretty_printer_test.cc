@@ -178,13 +178,27 @@ TEST(PrettyPrinter, HiddenAttributes) {
 	//dumpText(expr);
 
 	EXPECT_EQ("1", toString(PrettyPrinter(expr)));
-	EXPECT_EQ("attr(1, [unordered])", toString(PrettyPrinter(expr, PrettyPrinter::OPTIONS_DETAIL)));
+	EXPECT_EQ("attr(1,[unordered])", toString(PrettyPrinter(expr, PrettyPrinter::OPTIONS_DETAIL)));
 }
 
 TEST(PrettyPrinter, This) {
-	NodeManager nm;
-	IRBuilder builder(nm);
+NodeManager nm;
+IRBuilder builder(nm);
 
+
+	std::string res = ""
+			"decl struct A;\n"
+			"decl A::dtor();\n"
+			"decl A::f() -> int<4>;\n"
+			"def struct A {\n"
+			"    a : int<4>;\n"
+			"    dtor () { }\n"
+			"    function f : () -> int<4> {\n"
+			"        return *(*this).a;\n"
+			"    }\n"
+			"};\n"
+			"A";
+{
 	auto type0 = builder.parseType(""
 										   "def struct A { "
 										   "    a : int<4>;"
@@ -198,8 +212,10 @@ TEST(PrettyPrinter, This) {
 								  | PrettyPrinter::PRINT_ATTRIBUTES | PrettyPrinter::NO_EVAL_LAZY
 								  | PrettyPrinter::PRINT_DERIVED_IMPL);
 
-	std::cout << printer0;
+	EXPECT_EQ(res, toString(printer0)) << printer0;
+}
 
+{
 	auto type1 = builder.parseType(""
 										   "def struct A { "
 										   "    a : int<4>;"
@@ -213,16 +229,38 @@ TEST(PrettyPrinter, This) {
 								  | PrettyPrinter::PRINT_ATTRIBUTES | PrettyPrinter::NO_EVAL_LAZY
 								  | PrettyPrinter::PRINT_DERIVED_IMPL);
 
-	std::cout << printer1;
+	EXPECT_EQ(res, toString(printer1)) <<printer1;
+}
+/*
+{
+auto type1 = builder.parseType(""
+									   "def struct A { "
+									   "    a : int<4>;"
+									   "    lambda f : () -> int<4> {"
+									   "        return *this.a;"
+									   "    }"
+									   "    lambda g : (b : ()->int<4>)->unit {"
+									   "        var ()->int<4> c = this.f;"
+									   "        b();"
+									   "        c();"
+									   "    }"
+									   "}; A");
+PrettyPrinter printer1(type1, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::PRINT_CASTS
+							  | PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_MARKERS
+							  | PrettyPrinter::NO_LIST_SUGAR
+							  | PrettyPrinter::PRINT_ATTRIBUTES | PrettyPrinter::NO_EVAL_LAZY
+							  | PrettyPrinter::PRINT_DERIVED_IMPL);
 
-
+EXPECT_EQ(res, toString(printer1)) <<printer1;
+}
+*/
 }
 
 TEST(PrettyPrinter, Declarations) {
 	NodeManager nm;
 	IRBuilder builder(nm);
 
-	auto type0 = builder.parseType("def struct A { }; A");
+	auto type0 = builder.normalize(builder.parseType("def struct A { }; A"));
 	PrettyPrinter printer0(type0, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::PRINT_CASTS
 								  | PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_MARKERS
 								  | PrettyPrinter::NO_LIST_SUGAR
@@ -237,7 +275,7 @@ TEST(PrettyPrinter, Declarations) {
 		"};\n"
 		"A") << printer0;
 
-	auto type2 = builder.parseType("def struct A { }; def struct B : [ A ] { }; B");
+	auto type2 = builder.normalize(builder.parseType("def struct A { }; def struct B : [ A ] { }; B"));
 	PrettyPrinter printer2(type2, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::PRINT_CASTS
 								  | PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_MARKERS
 								  | PrettyPrinter::NO_LIST_SUGAR
@@ -258,12 +296,12 @@ TEST(PrettyPrinter, Declarations) {
 		"B") << printer2;
 
 
-	auto type1 = builder.parseType("def struct A { "
+	auto type1 = builder.normalize(builder.parseType("def struct A { "
 										   "lambda f : () -> unit {} "
 										   "virtual lambda g : (a : int<4>) -> unit {}"
 										   "const lambda h : (a : ref<int<4>,f,f,plain>, b : int<8>) -> unit  {}"
 										   "volatile lambda i : (a : int<4>) -> int<4> {return a;}"
-										   "}; A");
+										   "}; A"));
 	PrettyPrinter printer1(type1, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::PRINT_CASTS
 								  | PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_MARKERS
 								  | PrettyPrinter::NO_LIST_SUGAR
@@ -280,22 +318,22 @@ TEST(PrettyPrinter, Declarations) {
 		"def struct A {\n"
 		"    dtor () { }\n"
 		"    function f : () -> unit { }\n"
-		"    virtual function g : (v36 : ref<int<4>,f,f,plain>) -> unit { }\n"
-		"    const function h : (v38 : ref<ref<int<4>,f,f,plain>,f,f,plain>,v39 : ref<int<8>,f,f,plain>) -> unit { }\n"
-		"    volatile function i : (v41 : ref<int<4>,f,f,plain>) -> int<4> {\n"
-		"        return  *v41;\n"
+		"    virtual function g : (v7 : ref<int<4>,f,f,plain>) -> unit { }\n"
+		"    const function h : (v10 : ref<ref<int<4>,f,f,plain>,f,f,plain>,v11 : ref<int<8>,f,f,plain>) -> unit { }\n"
+		"    volatile function i : (v4 : ref<int<4>,f,f,plain>) -> int<4> {\n"
+		"        return *v4;\n"
 		"    }\n"
 		"};\n"
 		"A") << printer1;
 
 
-	auto type3 = builder.parseType("def struct A { "
+	auto type3 = builder.normalize(builder.parseType("def struct A { "
 										   "function f : () -> unit {} "
 										   "lambda j : () -> unit {} "
 										   "virtual function g : (a : ref<int<4>,f,f,plain>) -> unit {}"
 										   "const function h : (a : ref<int<4>,f,f,plain>, b : ref<int<8>,f,f,plain>) -> unit  {}"
 										   "volatile function i : (a : ref<int<4>,f,f,plain>) -> int<4> {return *a;}"
-										   "}; A");
+										   "}; A"));
 	PrettyPrinter printer3(type3, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::PRINT_CASTS
 								  | PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_MARKERS
 								  | PrettyPrinter::NO_LIST_SUGAR
@@ -314,31 +352,31 @@ TEST(PrettyPrinter, Declarations) {
 		"    dtor () { }\n"
 		"    function f : () -> unit { }\n"
 		"    function j : () -> unit { }\n"
-		"    virtual function g : (v57 : ref<int<4>,f,f,plain>) -> unit { }\n"
-		"    const function h : (v59 : ref<int<4>,f,f,plain>,v60 : ref<int<8>,f,f,plain>) -> unit { }\n"
-		"    volatile function i : (v62 : ref<int<4>,f,f,plain>) -> int<4> {\n"
-		"        return  *v62;\n"
+		"    virtual function g : (v13 : ref<int<4>,f,f,plain>) -> unit { }\n"
+		"    const function h : (v6 : ref<int<4>,f,f,plain>,v7 : ref<int<8>,f,f,plain>) -> unit { }\n"
+		"    volatile function i : (v10 : ref<int<4>,f,f,plain>) -> int<4> {\n"
+		"        return *v10;\n"
 		"    }\n"
 		"};\n"
 		"A") << printer3;
 
-	auto type4 = builder.parseStmt("def struct A {}; def f = ()->unit {}; {f();}");
+	auto type4 = builder.normalize(builder.parseStmt("def struct A {}; def f = ()->unit {}; {f();}"));
 	PrettyPrinter printer4(type4, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::PRINT_CASTS
 								  | PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_MARKERS
 								  | PrettyPrinter::NO_LIST_SUGAR
 								  | PrettyPrinter::PRINT_ATTRIBUTES | PrettyPrinter::NO_EVAL_LAZY
 								  | PrettyPrinter::PRINT_DERIVED_IMPL);
 
-	EXPECT_EQ("decl f : () -> unit;\ndef f = () -> unit { };\n{\n    f();\n}", toString(printer4)) << printer4;
+	EXPECT_EQ("decl f : () -> unit;\ndef f = function () -> unit { };\n{\n    f();\n}", toString(printer4)) << printer4;
 
-	auto type5 = builder.parseStmt("def struct A {}; def f = ()->int<4> {return 1;}; def g = ()->int<4> {return f();}; {f();}");
+	auto type5 = builder.normalize(builder.parseStmt("def struct A {}; def f = ()->int<4> {return 1;}; def g = ()->int<4> {return f();}; {f();}"));
 	PrettyPrinter printer5(type5, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::PRINT_CASTS
 								  | PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_MARKERS
 								  | PrettyPrinter::NO_LIST_SUGAR
 								  | PrettyPrinter::PRINT_ATTRIBUTES | PrettyPrinter::NO_EVAL_LAZY
 								  | PrettyPrinter::PRINT_DERIVED_IMPL);
 
-	EXPECT_EQ("decl f : () -> int<4>;\ndef f = () -> int<4> {\n    return 1;\n};\n{\n    f();\n}",toString(printer5)) << printer5;
+	EXPECT_EQ("decl f : () -> int<4>;\ndef f = function () -> int<4> {\n    return 1;\n};\n{\n    f();\n}",toString(printer5)) << printer5;
 
 }
 
@@ -432,10 +470,40 @@ TEST(PrettyPrinter, LambdaTypes) {
 	LambdaExprPtr lambdaD = builder.lambdaExpr(funD, toVector(varO, varA, varB), body);
 	LambdaExprPtr lambdaE = builder.lambdaExpr(funE, toVector(varO, varA, varB), body);
 
-	EXPECT_EQ("decl fun000 : (ref<ref<C,f,f,plain>,f,f,plain>, ref<A,f,f,plain>, ref<B,f,f,plain>) -> R;\ndef fun000 = (v0 : ref<ref<C,f,f,plain>,f,f,plain>, v1 : ref<A,f,f,plain>, v2 : ref<B,f,f,plain>) -> R { };\nfun000", toString(PrettyPrinter(lambdaA, PrettyPrinter::NO_LET_BOUND_FUNCTIONS)));
+	EXPECT_EQ("decl fun000 : (ref<C,f,f,plain>,A,B) -> R;\ndef fun000 = function (v0 : ref<ref<C,f,f,plain>,f,f,plain>,v1 : ref<A,f,f,plain>,v2 : ref<B,f,f,plain>) -> R { };\nfun000", toString(PrettyPrinter(lambdaA, PrettyPrinter::NO_LET_BOUND_FUNCTIONS)));
 //	EXPECT_EQ("ctor C v0 :: (ref<A,f,f,plain> v1, ref<B,f,f,plain> v2) { }", toString(PrettyPrinter(lambdaB, PrettyPrinter::NO_LET_BOUND_FUNCTIONS)));
 //	EXPECT_EQ("~C v0 :: () { }", toString(PrettyPrinter(lambdaC, PrettyPrinter::NO_LET_BOUND_FUNCTIONS)));
-	EXPECT_EQ("decl fun000 : (ref<ref<C,f,f,plain>,f,f,plain>, ref<A,f,f,plain>, ref<B,f,f,plain>) ~> R;\ndef fun000 = (v0 : ref<ref<C,f,f,plain>,f,f,plain>, v1 : ref<A,f,f,plain>, v2 : ref<B,f,f,plain>) ~> R { };\nfun000", toString(PrettyPrinter(lambdaE, PrettyPrinter::NO_LET_BOUND_FUNCTIONS)));
+	EXPECT_EQ("decl fun000 : (ref<C,f,f,plain>,A,B) ~> R;\ndef fun000 = function (v0 : ref<ref<C,f,f,plain>,f,f,plain>,v1 : ref<A,f,f,plain>,v2 : ref<B,f,f,plain>) ~> R { };\nfun000", toString(PrettyPrinter(lambdaE, PrettyPrinter::NO_LET_BOUND_FUNCTIONS)));
+}
+
+TEST(PrettyPrinter, HigherOrderFunction) {
+	NodeManager nm;
+	IRBuilder builder(nm);
+
+	{
+		auto type0 = builder.normalize(builder.parseStmt("def id = (a : int<4>) -> int<4> {return a;}; "
+											   "def foo = (b : (int<4>)->int<4>) -> unit { var (int<4>)->int<4> c = id; c(42); b(43);}; "
+											   "{ foo(id); }"));
+
+		PrettyPrinter printer0 = PrettyPrinter(type0, PrettyPrinter::PRINT_DEREFS);
+
+		std::string res = ""
+				"decl foo : ((int<4>) -> int<4>) -> unit;\n"
+				"decl id : (int<4>) -> int<4>;\n"
+				"def foo = function (v1 : ref<(int<4>) -> int<4>,f,f,plain>) -> unit {\n"
+				"    var (int<4>) -> int<4> v2 = id;\n"
+				"    v2(42);\n"
+				"    (*v1)(43);\n"
+				"};\n"
+				"def id = function (v1 : ref<int<4>,f,f,plain>) -> int<4> {\n"
+				"    return *v1;\n"
+				"};\n"
+				"{\n"
+				"    foo(id);\n"
+				"}";
+
+		EXPECT_EQ(res, toString(printer0)) << printer0;
+	}
 }
 
 TEST(PrettyPrinter, DerivedLiterals) {
@@ -452,13 +520,13 @@ TEST(PrettyPrinter, DerivedLiterals) {
 
 	EXPECT_FALSE(lang::isDerived(fun));
 
-	EXPECT_EQ("decl fun000 : (ref<struct {\n    dtor (){ }\n},f,f,plain>) -> unit;\ndef fun000 = (v1 : ref<struct {\n    dtor (){ }\n},f,f,plain>) -> unit { };\nfun000(x)", toString(PrettyPrinter(call, PrettyPrinter::PRINT_DERIVED_IMPL)));
+	EXPECT_EQ("decl fun000 : (struct {\n    dtor (){ }\n}) -> unit;\ndef fun000 = function (v1 : ref<struct {\n    dtor (){ }\n},f,f,plain>) -> unit { };\nfun000(x)", toString(PrettyPrinter(call, PrettyPrinter::PRINT_DERIVED_IMPL)));
 
 	// mark it derived
 	lang::markAsDerived(fun, "id");
 	EXPECT_TRUE(lang::isDerived(fun));
 
-	EXPECT_EQ("decl id : (ref<struct {\n    dtor (){ }\n},f,f,plain>) -> unit;\ndef id = (v1 : ref<struct {\n    dtor (){ }\n},f,f,plain>) -> unit { };\nid(x)", toString(PrettyPrinter(call, PrettyPrinter::PRINT_DERIVED_IMPL)));
+	EXPECT_EQ("decl id : (struct {\n    dtor (){ }\n}) -> unit;\ndef id = function (v1 : ref<struct {\n    dtor (){ }\n},f,f,plain>) -> unit { };\nid(x)", toString(PrettyPrinter(call, PrettyPrinter::PRINT_DERIVED_IMPL)));
 
 	// without derived interception
 	EXPECT_EQ("id(x)", toString(PrettyPrinter(call)));
@@ -498,13 +566,13 @@ TEST(PrettyPrinter, JustOutermostScope) {
 	EXPECT_TRUE(stmt);
 
 	std::string res = ""
-			"decl fun : (ref<int<4>,f,f,plain>) -> int<4>;\n"
-			"decl rfun : (ref<ref<int<4>,f,f,plain>,f,f,plain>) -> int<4>;\n"
-			"def fun = (v1 : ref<int<4>,f,f,plain>) -> int<4> {\n"
-			"    return  *v1+1;\n"
+			"decl fun : (int<4>) -> int<4>;\n"
+			"decl rfun : (ref<int<4>,f,f,plain>) -> int<4>;\n"
+			"def fun = function (v1 : ref<int<4>,f,f,plain>) -> int<4> {\n"
+			"    return *v1+1;\n"
 			"};\n"
-			"def rfun = (v1 : ref<ref<int<4>,f,f,plain>,f,f,plain>) -> int<4> {\n"
-			"    return  * *v1;\n"
+			"def rfun = function (v1 : ref<ref<int<4>,f,f,plain>,f,f,plain>) -> int<4> {\n"
+			"    return **v1;\n"
 			"};\n"
 			"{\n"
 			"    var ref<int<4>,f,f,plain> v0 = ref_var(type_lit(int<4>));\n"
@@ -516,9 +584,9 @@ TEST(PrettyPrinter, JustOutermostScope) {
 			"    var ref<int<4>,f,f,plain> v6 = ref_var(type_lit(int<4>));\n"
 			"    {\n"
 			"        v0 = 7;\n"
-			"        fun( *v1);\n"
+			"        fun(*v1);\n"
 			"        rfun(v2);\n"
-			"        fun(fun( *v3));\n"
+			"        fun(fun(*v3));\n"
 			"        fun(rfun(v4));\n"
 			"        lfun(v5);\n"
 			"        rfun(ref_var_init(lfun(v6)));\n"
@@ -536,9 +604,9 @@ TEST(PrettyPrinter, JustOutermostScope) {
 			"    var ref<int<4>,f,f,plain> v6 = ref_var(type_lit(int<4>));\n"
 			"    {\n"
 			"        v0 = 7;\n"
-			"        fun( *v1);\n"
+			"        fun(*v1);\n"
 			"        rfun(v2);\n"
-			"        fun(fun( *v3));\n"
+			"        fun(fun(*v3));\n"
 			"        fun(rfun(v4));\n"
 			"        lfun(v5);\n"
 			"        rfun(ref_var_init(lfun(v6)));\n"
