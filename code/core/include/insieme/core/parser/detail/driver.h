@@ -62,6 +62,20 @@ namespace parser {
 	class location;
 	class InspireParser;
 
+		class ParserIRExtension : public core::lang::Extension {
+			/**
+			 * Allow the node manager to create instances of this class.
+			 */
+			friend class core::NodeManager;
+
+			/**
+			 * Creates a new instance based on the given node manager.
+			 */
+			ParserIRExtension(core::NodeManager& manager) : core::lang::Extension(manager) {}
+
+			LANG_EXT_LITERAL_WITH_NAME(MemberFunctionAccess, "parser_member_function_access", "parser_member_function_access", "('a, identifier) -> unit")
+		};
+
 		/**
 		 * A struct summarizing an error encountered during parsing.
 		 */
@@ -122,6 +136,8 @@ namespace parser {
 			std::vector<RecordStackEntry> currentRecordStack;
 
 			std::vector<StringValuePtr> temporaryAnonymousNames;
+
+			const ParserIRExtension& parserIRExtension;
 
 			/**
 			 * constructs a struct expression

@@ -73,29 +73,11 @@ namespace parser {
 		class location;
 		class InspireParser;
 
-		namespace {
-
-			class ParserMemberFunctionExtension : public core::lang::Extension {
-				/**
-				 * Allow the node manager to create instances of this class.
-				 */
-				friend class core::NodeManager;
-
-				/**
-				 * Creates a new instance based on the given node manager.
-				 */
-				ParserMemberFunctionExtension(core::NodeManager& manager) : core::lang::Extension(manager) {}
-
-				LANG_EXT_LITERAL_WITH_NAME(MemberFunctionAccess, "parser_member_function_access", "parser_member_function_access", "('a, identifier) -> unit")
-			};
-
-		}
-
 		/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ InspireDriver ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 		InspireDriver::InspireDriver(const std::string& str, NodeManager& mgr)
 		    : scopes(), mgr(mgr), builder(mgr), file("global scope"), str(str), tu(mgr), result(nullptr), globLoc(&file), ss(str), scanner(&ss),
-		      parser(*this, scanner), printedErrors(false) {
+		      parser(*this, scanner), printedErrors(false), parserIRExtension(mgr.getLangExtension<ParserIRExtension>()) {
 			//begin the global scope
 			openScope();
 		}
@@ -279,7 +261,7 @@ namespace parser {
 
 			const auto& fieldAccess = builder.getLangBasic().getCompositeMemberAccess();
 			const auto& refAccess = mgr.getLangExtension<core::lang::ReferenceExtension>().getRefMemberAccess();
-			const auto& memberFunctionAccess = mgr.getLangExtension<ParserMemberFunctionExtension>().getMemberFunctionAccess();
+			const auto& memberFunctionAccess = parserIRExtension.getMemberFunctionAccess();
 
 			//the type of the expression
 			TypePtr exprType = expr->getType();
@@ -668,7 +650,7 @@ namespace parser {
 			assert_false(fun->isRecursive()) << "The parser should not produce recursive functions!";
 
 			// generate call expression which is used to call this function in the current tag type context _without_ the this pointer
-			ExpressionPtr access = mgr.getLangExtension<ParserMemberFunctionExtension>().getMemberFunctionAccess();
+			ExpressionPtr access = parserIRExtension.getMemberFunctionAccess();
 			auto accessExpr = builder.callExpr(memberFunType, access, genThisInLambda(l), builder.getIdentifierLiteral(name));
 			annotations::attachName(fun, name);
 			declareSymbol(l, name, accessExpr);
@@ -737,7 +719,7 @@ namespace parser {
 			ExpressionPtr func = callable;
 
 			// if this is a member function call we prepend the implicit this parameter
-			if(analysis::isCallOf(callable, mgr.getLangExtension<ParserMemberFunctionExtension>().getMemberFunctionAccess())) {
+			if(analysis::isCallOf(callable, parserIRExtension.getMemberFunctionAccess())) {
 				// we add the callable itself as the first argument of the call
 				auto thisParam = callable.as<CallExprPtr>()->getArgument(0);
 				auto thisParamType = thisParam->getType();
