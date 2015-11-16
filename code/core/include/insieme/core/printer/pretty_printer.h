@@ -100,7 +100,6 @@ namespace printer {
 			PRINT_SINGLE_LINE = 1 << 3,
 			PRINT_MARKERS = 1 << 4,
 			PRINT_ANNOTATIONS = 1 << 5,
-			NO_EXPAND_LAMBDAS = 1 << 6,
 			NO_LIST_SUGAR = 1 << 7,
 			PRINT_ATTRIBUTES = 1 << 8,
 			NAME_CONTRACTION = 1 << 9,
