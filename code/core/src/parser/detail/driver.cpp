@@ -58,6 +58,7 @@
 #include "insieme/core/lang/pointer.h"
 #include "insieme/core/lang/varargs_extension.h"
 
+#include "insieme/core/lang/extension.h"
 #include "insieme/core/lang/extension_registry.h"
 
 // this last one is generated and the path will be provided to the command
@@ -76,7 +77,7 @@ namespace parser {
 
 		InspireDriver::InspireDriver(const std::string& str, NodeManager& mgr)
 		    : scopes(), mgr(mgr), builder(mgr), file("global scope"), str(str), tu(mgr), result(nullptr), globLoc(&file), ss(str), scanner(&ss),
-		      parser(*this, scanner), printedErrors(false) {
+		      parser(*this, scanner), printedErrors(false), parserIRExtension(mgr.getLangExtension<ParserIRExtension>()) {
 			//begin the global scope
 			openScope();
 		}
@@ -237,20 +238,6 @@ namespace parser {
 
 		}
 
-		TypePtr InspireDriver::getTypeFromGenericTypeInTu(const TypePtr& type) {
-			// handle ref types
-			if (analysis::isRefType(type)) return getTypeFromGenericTypeInTu(analysis::getReferencedType(type));
-
-			if (auto genericType = type.isa<GenericTypePtr>()) {
-				auto tuType = tu[genericType];
-				if (tuType) {
-					return tuType;
-				}
-			}
-
-			return type;
-		}
-
 
 		ExpressionPtr InspireDriver::genMemberAccess(const location& l, const ExpressionPtr& expr, const std::string& memberName) {
 			if(!expr) {
@@ -258,53 +245,66 @@ namespace parser {
 				return nullptr;
 			}
 
-			auto exprType = expr->getType();
-			// get the actual tag type registered in the TU
-			auto type = getTypeFromGenericTypeInTu(exprType);
-
 			const auto& fieldAccess = builder.getLangBasic().getCompositeMemberAccess();
-			const auto& memberFunctionAccess = builder.getLangBasic().getCompositeMemberFunctionAccess();
+			const auto& refAccess = mgr.getLangExtension<core::lang::ReferenceExtension>().getRefMemberAccess();
+			const auto& memberFunctionAccess = parserIRExtension.getMemberFunctionAccess();
 
-			// check whether there is such a field
-			if (auto fieldType = getFieldType(type, memberName)) {
-				// create access
-				if(analysis::isRefType(exprType)) {
-					const auto& refAccess = expr->getNodeManager().getLangExtension<core::lang::ReferenceExtension>().getRefMemberAccess();
-					return builder.callExpr(refAccess, expr, builder.getIdentifierLiteral(memberName), builder.getTypeLiteral(fieldType));
-				}
-				return builder.callExpr(fieldAccess, expr, builder.getIdentifierLiteral(memberName), builder.getTypeLiteral(fieldType));
-
-				// check for the this literal
-			} else if (isInRecordType() && expr == genThis(l)) {
-				// search for the symbol with that name
-				const auto& access = findSymbolInRecordDefiniton(l, memberName);
-				// if the symbol we found is a member access call
-				if (analysis::isCallOf(access, fieldAccess) || analysis::isCallOf(access, memberFunctionAccess)) {
-					CallExprPtr callExpr = access.as<CallExprPtr>();
-					// and accesses the this pointer
-					if (callExpr->getArgument(0) == genThis(l)) {
-						// we can return the access call
-						return access;
-					}
-				}
-
-				//if our callable is a tag type
-			} else if (const auto& tagType = type.isa<TagTypePtr>()) {
-				// check for member access calls
-				// lookup the function to call by name
-				// TODO  here we assume that each name is only used exactly once
-				for (const auto& function : tagType->getRecord()->getMemberFunctions()) {
-					if (function->getNameAsString() == memberName) {
-						// return a member function access call
-						const auto& functionType = function->getImplementation()->getType();
-						return builder.callExpr(functionType, memberFunctionAccess, expr, builder.getIdentifierLiteral(memberName), builder.getTypeLiteral(functionType));
-					}
-				}
-
+			//the type of the expression
+			TypePtr exprType = expr->getType();
+			//the actual type - maybe stripped of one ref
+			TypePtr objectType = exprType;
+			if (analysis::isRefType(exprType)) {
+				objectType = analysis::getReferencedType(exprType);
 			}
 
-			//otherwise we fail
-			error(l, format("Unable to locate member %s in type %s", memberName, *type));
+			//if the type is a generic type, we can proceed with the literal lookup here
+			if (auto genericObjectType = objectType.isa<GenericTypePtr>()) {
+				//create a key to look up the symbol in the global scope
+				std::string keyName = genericObjectType->getName()->getValue() + "::" + memberName;
+
+				//look for the key in the global scope
+				auto lookupResult = lookupDeclaredInGlobalScope(keyName);
+				if (!lookupResult) {
+					error(l, format("Unable to locate member %s in type %s", memberName, *genericObjectType));
+					return nullptr;
+
+				} else if (!lookupResult.isa<LiteralPtr>()) {
+					error(l, format("Member %s in type %s is not a literal", memberName, *genericObjectType));
+					return nullptr;
+				}
+
+				//now that we found the given member, create a member access expression to return
+				TypePtr memberType = lookupResult.as<LiteralPtr>()->getType();
+				if (analysis::isRefType(memberType)) {
+					memberType = analysis::getReferencedType(memberType);
+				}
+
+				//if the member is a member function
+				if (auto functionType = memberType.isa<FunctionTypePtr>()) {
+					if (functionType->getKind() == FK_MEMBER_FUNCTION) {
+						return builder.callExpr(memberFunctionAccess, expr, builder.getIdentifierLiteral(memberName));
+					}
+				}
+
+				//otherwise it is a field
+				if(analysis::isRefType(exprType)) {
+					return builder.callExpr(refAccess, expr, builder.getIdentifierLiteral(memberName), builder.getTypeLiteral(memberType));
+				}
+				return builder.callExpr(fieldAccess, expr, builder.getIdentifierLiteral(memberName), builder.getTypeLiteral(memberType));
+
+				//otherwise we have to create the member lookup differently
+			} else {
+				// check whether there is such a field
+				if (auto fieldType = getFieldType(exprType, memberName)) {
+					// create access
+					if(analysis::isRefType(exprType)) {
+						return builder.callExpr(refAccess, expr, builder.getIdentifierLiteral(memberName), builder.getTypeLiteral(fieldType));
+					}
+					return builder.callExpr(fieldAccess, expr, builder.getIdentifierLiteral(memberName), builder.getTypeLiteral(fieldType));
+				}
+			}
+
+			error(l, format("Unable to locate member %s in type %s", memberName, *exprType));
 			return nullptr;
 		}
 
@@ -387,16 +387,6 @@ namespace parser {
 				return nullptr;
 			}
 
-			//check for duplicate member function names
-			//TODO remove this restriction
-			/*std::set<std::string> memberFunctionNames;
-			for_each(mfunsIn, [&](const MemberFunctionPtr& fun) { memberFunctionNames.insert(fun->getName()->getValue()); });
-			for_each(pvmfuns, [&](const PureVirtualMemberFunctionPtr& fun) { memberFunctionNames.insert(fun->getName()->getValue()); });
-			if (memberFunctionNames.size() != mfunsIn.size() + pvmfuns.size()) {
-				error(l, "Duplicate member function names detected");
-				return nullptr;
-			}*/
-
 			TagTypePtr res;
 
 			if (type == NT_Struct) {
@@ -420,8 +410,13 @@ namespace parser {
 			//create a unique dummy name for this anonymous record.
 			//this is needed in order to put this record into the TU also.
 			//the name will be set to "" before returning the final parsed IR.
-			auto name = builder.stringValue(format("__insieme_anonymous_record_%d", l.begin.line));
+			auto name = builder.stringValue(format("__insieme_anonymous_record_%d_%d", l.begin.line, l.begin.column));
 			temporaryAnonymousNames.push_back(name);
+
+			//now we begin a new record with that name
+			beginRecord(l, name->getValue());
+			//and register the fields here
+			registerFields(l, fields);
 
 			const GenericTypePtr key = builder.genericType(name->getValue());
 			TagTypePtr res;
@@ -433,6 +428,10 @@ namespace parser {
 				                                     ExpressionList(), ExpressionPtr(), false, MemberFunctionList(), PureVirtualMemberFunctionList());
 			}
 			tu.addType(key, res);
+
+			//end the record here
+			endRecord();
+
 			return key;
 		}
 
@@ -513,7 +512,18 @@ namespace parser {
 			for (const auto& field : fields) {
 				const auto& name = field->getName()->getValue();
 				const auto& type = builder.refType(field->getType());
-				// create the member access call to store in the symbol table
+
+				const std::string memberName = getThisType()->getName()->getValue() + "::" + name;
+
+				//create literal to store in the lookup table
+				const auto key = builder.literal(memberName, type);
+
+				//only declare the symbol implicitly if it hasn't already been declared
+				if (!isSymbolDeclaredInGlobalScope(memberName)) {
+					declareSymbolInGlobalScope(l, memberName, key);
+				}
+
+				//create the member access call to store in the symbol table for accessing this symbol within this current record _without_ the this pointer
 				ExpressionPtr access = builder.getLangBasic().getCompositeMemberAccess();
 				auto accessExpr = builder.callExpr(type, access, genThis(l), builder.getIdentifierLiteral(name), builder.getTypeLiteral(type));
 				annotations::attachName(field, name);
@@ -524,7 +534,7 @@ namespace parser {
 		/**
 		 * generates a constructor for the currently defined record type
 		 */
-		LambdaExprPtr InspireDriver::genConstructor(const location& l, const VariableList& params, const StatementPtr& body) {
+		ExpressionPtr InspireDriver::genConstructor(const location& l, const VariableList& params, const StatementPtr& body) {
 			assert_false(currentRecordStack.empty()) << "Not within record definition!";
 
 			// get this-type (which is ref<ref in case of a function
@@ -547,15 +557,24 @@ namespace parser {
 			// create constructor type
 			auto ctorType = builder.functionType(paramTypes, builder.refType(getThisType()), FK_CONSTRUCTOR);
 
+			// create the constructor
+			transform::LambdaIngredients ingredients{ctorParams, newBody};
 			if (inLambda) {
 				// replace all variables in the body by their implicitly materialized version
-				auto ingredients = transform::materialize({ctorParams, newBody});
-				// create the constructor
-				return builder.lambdaExpr(ctorType, ingredients.params, ingredients.body);
+				ingredients = transform::materialize(ingredients);
+			}
+			auto fun = builder.lambdaExpr(ctorType, ingredients.params, ingredients.body);
+
+			auto key = builder.getLiteralForConstructor(ctorType);
+			auto memberName = key->getValue()->getValue();
+			tu.addFunction(key, fun);
+
+			//only declare the symbol implicitly if it hasn't already been declared
+			if (!isSymbolDeclaredInGlobalScope(memberName)) {
+				declareSymbolInGlobalScope(l, memberName, key);
 			}
 
-			// create the constructor
-			return builder.lambdaExpr(ctorType, ctorParams, body);
+			return key;
 		}
 
 		/**
@@ -582,23 +601,24 @@ namespace parser {
 			// create destructor type
 			auto dtorType = builder.functionType(paramTypes, builder.refType(getThisType()), FK_DESTRUCTOR);
 
-			LambdaExprPtr dtor;
+			// create the destructor
+			transform::LambdaIngredients ingredients{params, newBody};
 			if (inLambda) {
 				// replace all variables in the body by their implicitly materialized version
-				auto ingredients = transform::materialize({params, newBody});
-				// create the destructor
-				dtor = builder.lambdaExpr(dtorType, ingredients.params, ingredients.body);
-			} else {
-				// create the destructor
-				dtor = builder.lambdaExpr(dtorType, params, body);
+				ingredients = transform::materialize(ingredients);
+			}
+			auto fun = builder.lambdaExpr(dtorType, ingredients.params, ingredients.body);
+
+			auto key = builder.getLiteralForDestructor(dtorType);
+			auto memberName = key->getValue()->getValue();
+			tu.addFunction(key, fun);
+
+			//only declare the symbol implicitly if it hasn't already been declared
+			if (!isSymbolDeclaredInGlobalScope(memberName)) {
+				declareSymbolInGlobalScope(l, memberName, key);
 			}
 
-			// create a symbol in the translation unit
-			auto dtorSymbol = builder.literal("Dtor", dtor->getType());
-			tu.addFunction(dtorSymbol, dtor);
-
-			// return symbol
-			return dtorSymbol;
+			return key;
 		}
 
 		/**
@@ -625,23 +645,21 @@ namespace parser {
 			auto memberFunType = fun->getFunctionType();
 			assert_false(fun->isRecursive()) << "The parser should not produce recursive functions!";
 
-			// generate call expression which is used to call this function in the current tag type context
-			ExpressionPtr access = builder.getLangBasic().getCompositeMemberFunctionAccess();
-			auto accessExpr = builder.callExpr(memberFunType, access, genThisInLambda(l), builder.getIdentifierLiteral(name), builder.getTypeLiteral(memberFunType));
+			// generate call expression which is used to call this function in the current tag type context _without_ the this pointer
+			ExpressionPtr access = parserIRExtension.getMemberFunctionAccess();
+			auto accessExpr = builder.callExpr(memberFunType, access, genThisInLambda(l), builder.getIdentifierLiteral(name));
 			annotations::attachName(fun, name);
 			declareSymbol(l, name, accessExpr);
 
-			std::string memberName = getThisType()->getName()->getValue() + "::" + name;
-			auto key = builder.literal(memberName, memberFunType);
+			auto key = builder.getLiteralForMemberFunction(fun->getFunctionType(), name);
+			auto memberName = key->getValue()->getValue();
+			tu.addFunction(key, fun);
 
 			//only declare the symbol implicitly if it hasn't already been declared
 			if (!isSymbolDeclaredInGlobalScope(memberName)) {
 				declareSymbolInGlobalScope(l, memberName, key);
 			}
 
-			tu.addFunction(key, fun);
-
-			// create the member function entry
 			return builder.memberFunction(virtl, name, key);
 		}
 
@@ -664,7 +682,7 @@ namespace parser {
 			return builder.pureVirtualMemberFunction(name, memberFunType);
 		}
 
-		LambdaExprPtr InspireDriver::genFunctionDefinition(const location& l, const std::string name, const LambdaExprPtr& lambda)  {
+		ExpressionPtr InspireDriver::genFunctionDefinition(const location& l, const std::string name, const LambdaExprPtr& lambda)  {
 			//check if this type has already been defined before
 			const LiteralPtr key = builder.literal(name, lambda->getType());
 			if (tu[key]) {
@@ -680,7 +698,7 @@ namespace parser {
 			tu.addFunction(key, lambda);
 			annotations::attachName(lambda, name);
 
-			return lambda;
+			return key;
 		}
 
 		TypePtr InspireDriver::findOrGenAbstractType(const location& l, const std::string& name, const ParentList& parents, const TypeList& typeList) {
@@ -694,35 +712,50 @@ namespace parser {
 		}
 
 		ExpressionPtr InspireDriver::genCall(const location& l, const ExpressionPtr& callable, ExpressionList args) {
-			ExpressionPtr func = callable;
+			ExpressionPtr func = getScalar(callable);
 
 			// if this is a member function call we prepend the implicit this parameter
-			if(analysis::isCallOf(callable, builder.getLangBasic().getCompositeMemberFunctionAccess())) {
+			if(analysis::isCallOf(callable, parserIRExtension.getMemberFunctionAccess())) {
 				// we add the callable itself as the first argument of the call
 				auto thisParam = callable.as<CallExprPtr>()->getArgument(0);
 				auto thisParamType = thisParam->getType();
-				thisParamType = getTypeFromGenericTypeInTu(thisParamType);
+				if (analysis::isRefType(thisParamType)) {
+					thisParamType = analysis::getReferencedType(thisParamType);
+				}
 
 				args.insert(args.begin(), thisParam);
 
-				//replace func with the lookup of the literal
-				std::string typeName;
-				if (auto tagType = thisParamType.isa<TagTypePtr>()) {
-					typeName = tagType->getName()->getValue();
-				} else {
-					typeName = thisParamType.as<GenericTypePtr>()->getName()->getValue();
+				//replace func with the lookup of the literal. first create the name of the literal
+				std::string typeName = thisParamType.as<GenericTypePtr>()->getName()->getValue();
+				std::string functionName = callable.as<CallExprPtr>()->getArgument(1).as<LiteralPtr>()->getValue()->getValue();
+				std::string memberName = typeName + "::" + functionName;
+
+				//now we have to find a function registered in the TU which has the same literal name and the same parameter types. we have to ignore the result type
+				const auto argumentTypes = extractTypes(args);
+				for (const auto& mapEntry : tu.getFunctions()) {
+					const auto& key = mapEntry.first;
+					if (key.getValue()->getValue() == memberName) {
+						if (const auto& keyType = key->getType().isa<FunctionTypePtr>()) {
+							if (keyType->isMember() && keyType->getParameterTypeList() == argumentTypes) {
+								func = key;
+								break;
+							}
+						}
+					}
 				}
-				auto functionName = callable.as<CallExprPtr>()->getArgument(1).as<LiteralPtr>()->getValue()->getValue();
-				auto memberName = typeName + "::" + functionName;
-				func = findSymbol(l, memberName);
-				if (!func) {
-					error(l, format("Couldn't find symbol %s", memberName));
+
+				//if we didn'T change the function, we didn't find a suitable one
+				if (func == callable) {
+					error(l, format("Couldn't find member %s in type %s for argument types %s", memberName, typeName, argumentTypes));
 					return nullptr;
 				}
 			}
 
 			auto ftype = func->getType();
-			if(!ftype.isa<FunctionTypePtr>()) { error(l, "attempt to call non function expression"); }
+			if(!ftype.isa<FunctionTypePtr>()) {
+				error(l, format("attempt to call non function expression of type %s", *ftype));
+				return nullptr;
+			}
 
 			auto funcParamTypes = ftype.as<FunctionTypePtr>()->getParameterTypeList();
 			if(!funcParamTypes.empty()) {
@@ -767,88 +800,23 @@ namespace parser {
 		}
 
 		ExpressionPtr InspireDriver::genConstructorCall(const location& l, const std::string name, ExpressionList params) {
-			//lookup the type in the translation unit
-			auto key = builder.genericType(name);
-			TagTypePtr type = tu[key].as<TagTypePtr>();
+			assert_true(params.size() >= 1) << "Constructor calls must have at least the this parameter argument";
 
-			if (!type) {
-				error(l, format("Type %s hasn't been defined", name));
-				return nullptr;
-			}
+			//extract the this parameter from the params
+			auto thisParam = params[0];
 
-			//get a list of all the constructors of the class
-			const auto& constructors = type->getRecord()->getConstructors();
+			//and remove it from the parameter list
+			params.erase(params.begin());
 
-			//the final constructor we will call
-			ExpressionPtr callable;
-
-			//search in all the constructors
-			for (const auto& constructor : constructors) {
-				const auto& constructorParams = constructor.as<LambdaExprPtr>()->getLambda()->getType()->getParameterTypeList();
-
-				//first check the number of params
-				if (constructorParams.size() != params.size()) {
-					continue;
-				}
-
-				//then try to find an exact match
-				bool match = true;
-				for (unsigned i = 0; i < params.size(); ++i) {
-					if (params[i]->getType() != constructorParams[i]) {
-						match = false;
-						break;
-					}
-				}
-				if (match) {
-					callable = constructor;
-					break;
-				}
-
-				//otherwise try to find a match using sub-typing rules
-				match = true;
-				for (unsigned i = 0; i < params.size(); ++i) {
-					if (!types::isSubTypeOf(params[i]->getType(), constructorParams[i])) {
-						match = false;
-						break;
-					}
-				}
-				if (match) {
-					//don't overwrite the first partial match we found
-					if (!callable) {
-						callable = constructor;
-					}
-				}
-			}
-
-			//if we didn find a valid constructor to call
-			if (!callable) {
-				error(l, "Couldn't find a constructor to call with the given arguments");
-				return nullptr;
-			}
-
-			//re-use the already existing functionality in genCall for creating the actual call
+			//genCall will do everything else
+			const auto callable = builder.callExpr(parserIRExtension.getMemberFunctionAccess(), thisParam, builder.getIdentifierLiteral("ctor"));
 			return genCall(l, callable, params);
 		}
 
-		ExpressionPtr InspireDriver::genDestructorCall(const location& l, const std::string name, const ExpressionPtr param) {
-			//lookup the type in the translation unit
-			auto key = builder.genericType(name);
-			TagTypePtr type = tu[key].as<TagTypePtr>();
-
-			if (!type) {
-				error(l, format("Type %s hasn't been defined", name));
-				return nullptr;
-			}
-
-			const auto& destructor = type->getRecord()->getDestructor();
-
-			//check argument type
-			if (!types::isSubTypeOf(param->getType(), destructor->getType().as<FunctionTypePtr>()->getParameterTypes()[0])) {
-				error(l, "This-pointer argument for destructor call is of wrong type");
-				return nullptr;
-			}
-
-			return genCall(l, destructor, toVector(param));
+		ExpressionPtr InspireDriver::genDestructorCall(const location& l, const std::string name, const ExpressionPtr& param) {
+			//genCall will do everything else
+			const auto callable = builder.callExpr(parserIRExtension.getMemberFunctionAccess(), param, builder.getIdentifierLiteral("dtor"));
+			return genCall(l, callable, ExpressionList());
 		}
 
 		ExpressionPtr InspireDriver::genStructExpression(const location& l, const TypePtr& type, const ExpressionList& list) {
@@ -1084,6 +1052,15 @@ namespace parser {
 				if(pos != cur.end()) {
 					return pos->second();
 				}
+			}
+			return nullptr;
+		}
+
+		NodePtr InspireDriver::lookupDeclaredInGlobalScope(const std::string& name) {
+			const DefinitionMap& cur = scopes[0]->declaredSymbols;
+			auto pos = cur.find(name);
+			if(pos != cur.end()) {
+				return pos->second();
 			}
 			return nullptr;
 		}
