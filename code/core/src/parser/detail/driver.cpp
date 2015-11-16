@@ -238,20 +238,6 @@ namespace parser {
 
 		}
 
-		TypePtr InspireDriver::getTypeFromGenericTypeInTu(const TypePtr& type) {
-			// handle ref types
-			if (analysis::isRefType(type)) return getTypeFromGenericTypeInTu(analysis::getReferencedType(type));
-
-			if (auto genericType = type.isa<GenericTypePtr>()) {
-				auto tuType = tu[genericType];
-				if (tuType) {
-					return tuType;
-				}
-			}
-
-			return type;
-		}
-
 
 		ExpressionPtr InspireDriver::genMemberAccess(const location& l, const ExpressionPtr& expr, const std::string& memberName) {
 			if(!expr) {
