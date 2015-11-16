@@ -185,7 +185,6 @@ namespace printer {
 			/**
 			 * Used to format the printout
 			 */
-			bool singleLineTypes;
 			mutable bool isFirstLine=true;
 
 			/**
@@ -219,7 +218,6 @@ namespace printer {
 			void print(const NodePtr& node) {
 				// reset setup
 				letBindings.clear();
-				singleLineTypes = true;
 
 				int funCounter = 0;
 				auto extractName = [&](const NodePtr& cur) {
@@ -255,9 +253,6 @@ namespace printer {
 					return;
 				}
 
-				singleLineTypes = false; // enable multiline type definitions
-
-
 				if(!printer.hasOption(PrettyPrinter::JUST_LOCAL_CONTEXT)) {
 					//first: print all type declarations
 					visitDepthFirstOnce(node, [&](const TagTypePtr& cur) {
@@ -271,9 +266,25 @@ namespace printer {
 						}
 					});
 
+					utils::set::PointerSet<LiteralPtr> visitedLiterals;
+					// print all declarations for NOT-defined functions
+					visitDepthFirstOnce(node, [&](const CallExprPtr& cur) {
+						auto literalExpr = cur->getFunctionExpr().isa<LiteralPtr>();
+						if (literalExpr && !lang::isBuiltIn(literalExpr)) {
+							if(!visitedLiterals.insert(literalExpr).second) {
+								return;
+							}
+							newLine();
+							out << "decl ";
+							visit(NodeAddress(literalExpr));
+							out << " : ";
+							visit(NodeAddress(literalExpr->getType()));
+							out << ";";
+						}
+					});
+
 					//second: print all function declarations
 					utils::set::PointerSet<LambdaBindingPtr> visitedBindings;
-
 					visitDepthFirstOnce(node, [&](const LambdaExprPtr& cur) {
 						// jump over this part, if lambda is derived, but printer don't have the option to print them
 						if(lang::isDerived(cur) && !printer.hasOption(PrettyPrinter::PRINT_DERIVED_IMPL)) {
@@ -287,14 +298,11 @@ namespace printer {
 							if(!visitedBindings.insert(binding).second) {
 								continue;
 							}
-
 							const auto& lambda = binding->getLambda();
 							const auto& funType = lambda->getType();
-
 							if (!funType->isMember()) {
 								newLine();
 								out << "decl " << lambdaNames[binding] << " : ";
-
 								out << "(" <<
 								join(", ", funType->getParameterTypes(), [&](std::ostream& out, const TypePtr& curVar) {
 									visit(NodeAddress(curVar));
@@ -472,7 +480,6 @@ namespace printer {
 						}
 					});
 
-
 					//fourth: print all definitions for functions
 					visitedBindings.clear();
 					visitDepthFirstOnce(node, [&](const LambdaExprPtr& cur) {
@@ -539,8 +546,6 @@ namespace printer {
 				}
 
 				if(printer.hasOption(PrettyPrinter::JUST_LOCAL_CONTEXT)) { letBindings.erase(node); }
-
-				singleLineTypes = true;
 
 				// skip program if let bindings have been used
 				if (auto program = node.isa<ProgramPtr>()) {

@@ -507,6 +507,50 @@ TEST(PrettyPrinter, HigherOrderFunction) {
 	}
 }
 
+TEST(PrettyPrinter, NotDefinedDecls) {
+NodeManager nm;
+IRBuilder builder(nm);
+
+{
+	auto type0 = builder.normalize(builder.parseStmt(""
+													 "decl lfun : (int<4>) -> int<4>;"
+													 "def lfun = (a: int<4>) -> int<4> { return a; };"
+													 "{"
+													 "    var int<4> a = lfun(5);"
+													 "}"));
+	PrettyPrinter printer0(type0, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::PRINT_CASTS
+								  | PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_ATTRIBUTES
+								  | PrettyPrinter::PRINT_DERIVED_IMPL);
+
+	std::string res = "decl lfun : (int<4>) -> int<4>;\n"
+						"def lfun = function (v1 : ref<int<4>,f,f,plain>) -> int<4> {\n"
+						"    return *v1;\n"
+						"};\n"
+						"{\n"
+						"    var int<4> v0 = lfun(5);\n"
+						"}";
+	EXPECT_EQ(res, toString(printer0)) << printer0;
+}
+
+{
+	auto type0 = builder.normalize(builder.parseStmt(""
+													 "decl lfun : (int<4>) -> int<4>;"
+													 "{"
+													 "    var int<4> a = lfun(5);"
+													 "}"));
+	PrettyPrinter printer0(type0, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::PRINT_CASTS
+								  | PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_ATTRIBUTES
+								  | PrettyPrinter::PRINT_DERIVED_IMPL);
+
+	std::string res = "decl lfun : (int<4>) -> int<4>;\n"
+						"{\n"
+						"    var int<4> v0 = lfun(5);\n"
+						"}";
+	EXPECT_EQ(res, toString(printer0)) << printer0;
+}
+
+}
+
 TEST(PrettyPrinter, DerivedLiterals) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
@@ -567,6 +611,7 @@ TEST(PrettyPrinter, JustOutermostScope) {
 	EXPECT_TRUE(stmt);
 
 	std::string res = ""
+			"decl lfun : (ref<int<4>,f,f,plain>) -> int<4>;\n"
 			"decl fun : (int<4>) -> int<4>;\n"
 			"decl rfun : (ref<int<4>,f,f,plain>) -> int<4>;\n"
 			"def fun = function (v1 : ref<int<4>,f,f,plain>) -> int<4> {\n"

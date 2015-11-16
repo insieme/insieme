@@ -143,7 +143,7 @@ namespace transform {
 
 		// std::cout << printer::PrettyPrinter(code.getRootNode()) << "\n\ninlined:\n" << printer::PrettyPrinter(inlined) << "\n****\n";
 
-		EXPECT_EQ("{{var ref<bool,f,f,plain> v0 = ref_var_init(false);{if(3<4) {{v0 = true;};};if(!*v0) {var ref<int<4>,f,f,plain> v1 = ref_var_init(3);while(true && !*v0) {v1 = *v1+1;if(*v1>6) {{v0 = true;};};};};};};}",
+		EXPECT_EQ("decl fun000 : (ref<bool,f,f,plain>) -> bool;def fun000 = function (v1 : ref<ref<bool,f,f,plain>,f,f,plain>) -> bool {return !**v1;};{{var ref<bool,f,f,plain> v0 = ref_var_init(false);{if(3<4) {{v0 = true;};};if(!*v0) {var ref<int<4>,f,f,plain> v1 = ref_var_init(3);while(true && !*v0) {v1 = *v1+1;if(*v1>6) {{v0 = true;};};};};};};}",
 		          toString(printer::PrettyPrinter(core::analysis::normalize(inlined), printer::PrettyPrinter::PRINT_SINGLE_LINE)));
 		EXPECT_TRUE(check(inlined, checks::getFullCheck()).empty()) << check(inlined, checks::getFullCheck());
 	}
