@@ -76,15 +76,16 @@ namespace frontend {
 			actual = builder.normalize(actual);
 			EXPECT_EQ(expected, actual) << "Location     : " << locationOf(addr) << "\n"
 			                            << "Actual Pretty: " << dumpColor(actual, std::cout, true) << "\n"
+			                            << "Expect Pretty: " << dumpColor(expected, std::cout, true) << "\n"
 			                            << "Expected type: " << (eIsExp ? toString(dumpColor(expected.as<ExpressionPtr>()->getType())) : toString("-")) << "\n"
 			                            << "Actual type  : " << (aIsExp ? toString(dumpColor(actual.as<ExpressionPtr>()->getType())) : toString("-")) << "\n"
-			    //<< "Text expected:\n" << dumpText(expected) << "\n"
-			    //<< "Text actual  :\n" << dumpText(actual) << "\n"
-			    ;
+			                            //<< "Text expected:\n" << dumpText(expected) << "\n"
+			                            //<< "Text actual  :\n" << dumpText(actual) << "\n"
+										;
 		}
 	}
 
-	static inline void runIndependentTestOn(const string& fn, std::function<void(ConversionJob&)> jobModifier = [](ConversionJob& job){ }) {
+	static inline void runIndependentTestOn(const string& fn, std::function<void(ConversionJob&)> jobModifier = [](ConversionJob& job) {}) {
 		core::NodeManager mgr;
 		core::IRBuilder builder(mgr);
 		ConversionJob job(fn);

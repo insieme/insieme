@@ -231,7 +231,7 @@ namespace conversion {
 			frontend_assert(false) << "Member function pointer call not implemented";
 		} else {			
 			// get method lambda
-			auto methodLambda = converter.getDeclConverter()->convertMethodDecl(methodDecl)->getImplementation();
+			auto methodLambda = converter.getDeclConverter()->convertMethodDecl(methodDecl).lit;
 
 			// get the "this" object and add to arguments
 			core::ExpressionPtr thisObj = Visit(callExpr->getImplicitObjectArgument());
@@ -333,7 +333,7 @@ namespace conversion {
 			}
 
 			// get constructor lambda
-			auto constructorLambda = converter.getDeclConverter()->convertMethodDecl(constructExpr->getConstructor())->getImplementation();
+			auto constructorLambda = converter.getDeclConverter()->convertMethodDecl(constructExpr->getConstructor()).lit;
 
 			// return call
 			auto retType = constructorLambda->getType().as<core::FunctionTypePtr>()->getReturnType();
