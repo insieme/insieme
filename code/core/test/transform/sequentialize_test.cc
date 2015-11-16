@@ -71,7 +71,7 @@ namespace transform {
 
 
 		auto res = analysis::normalize(transform::trySequentialize(mgr, code));
-		EXPECT_EQ("decl fun000 : (ref<ref<'a,f,'v,plain>,f,f,plain>, ref<'a,f,f,plain>) -> 'a;\ndecl fun001 : (ref<ref<'a,f,'v,plain>,f,f,plain>, ref<'a,f,f,plain>) -> 'a;\ndef fun000 = (v1 : ref<ref<'a,f,'v,plain>,f,f,plain>, v2 : ref<'a,f,f,plain>) -> 'a {\n    ('a v3)=> id(true);\n    ('a v4)=> gen_add(v4,  *v2);\n    return fun001( *v1,  *v2);\n};\ndef fun001 = (v1 : ref<ref<'a,f,'v,plain>,f,f,plain>, v2 : ref<'a,f,f,plain>) -> 'a {\n    var 'a v3 =  * *v1;\n     *v1 = gen_add( * *v1,  *v2);\n    return v3;\n};\n{\n    var ref<int<4>,f,f,plain> v0 = ref_var_init(2);\n    fun000(v0, 10);\n}", toString(printer::PrettyPrinter(res))) << printer::PrettyPrinter(res);
+		EXPECT_EQ("decl fun000 : (ref<'a,f,'v,plain>, 'a) -> 'a;\ndecl fun001 : (ref<'a,f,'v,plain>, 'a) -> 'a;\ndef fun000 = function (v1 : ref<ref<'a,f,'v,plain>,f,f,plain>, v2 : ref<'a,f,f,plain>) -> 'a {\n    (v3 : 'a)=> id(true);\n    (v4 : 'a)=> gen_add(v4, *v2);\n    return fun001(*v1, *v2);\n};\ndef fun001 = function (v1 : ref<ref<'a,f,'v,plain>,f,f,plain>, v2 : ref<'a,f,f,plain>) -> 'a {\n    var 'a v3 = **v1;\n    *v1 = gen_add(**v1, *v2);\n    return v3;\n};\n{\n    var ref<int<4>,f,f,plain> v0 = ref_var_init(2);\n    fun000(v0, 10);\n}", toString(printer::PrettyPrinter(res))) << printer::PrettyPrinter(res);
 		EXPECT_TRUE(check(res, checks::getFullCheck()).empty()) << check(res, checks::getFullCheck());
 
 	}

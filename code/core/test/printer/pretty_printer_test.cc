@@ -178,7 +178,7 @@ TEST(PrettyPrinter, HiddenAttributes) {
 	//dumpText(expr);
 
 	EXPECT_EQ("1", toString(PrettyPrinter(expr)));
-	EXPECT_EQ("attr(1,[unordered])", toString(PrettyPrinter(expr, PrettyPrinter::OPTIONS_DETAIL)));
+	EXPECT_EQ("attr(1, [unordered])", toString(PrettyPrinter(expr, PrettyPrinter::OPTIONS_DETAIL)));
 }
 
 TEST(PrettyPrinter, This) {
@@ -231,6 +231,7 @@ IRBuilder builder(nm);
 
 	EXPECT_EQ(res, toString(printer1)) <<printer1;
 }
+// TODO: member function access test!
 /*
 {
 auto type1 = builder.parseType(""
@@ -313,13 +314,13 @@ TEST(PrettyPrinter, Declarations) {
 		"decl A::dtor();\n"
 		"decl A::f() -> unit;\n"
 		"decl A::g(ref<int<4>,f,f,plain>) -> unit;\n"
-		"decl A::h(ref<ref<int<4>,f,f,plain>,f,f,plain>,ref<int<8>,f,f,plain>) -> unit;\n"
+		"decl A::h(ref<ref<int<4>,f,f,plain>,f,f,plain>, ref<int<8>,f,f,plain>) -> unit;\n"
 		"decl A::i(ref<int<4>,f,f,plain>) -> int<4>;\n"
 		"def struct A {\n"
 		"    dtor () { }\n"
 		"    function f : () -> unit { }\n"
 		"    virtual function g : (v7 : ref<int<4>,f,f,plain>) -> unit { }\n"
-		"    const function h : (v10 : ref<ref<int<4>,f,f,plain>,f,f,plain>,v11 : ref<int<8>,f,f,plain>) -> unit { }\n"
+		"    const function h : (v10 : ref<ref<int<4>,f,f,plain>,f,f,plain>, v11 : ref<int<8>,f,f,plain>) -> unit { }\n"
 		"    volatile function i : (v4 : ref<int<4>,f,f,plain>) -> int<4> {\n"
 		"        return *v4;\n"
 		"    }\n"
@@ -346,14 +347,14 @@ TEST(PrettyPrinter, Declarations) {
 		"decl A::f() -> unit;\n"
 		"decl A::j() -> unit;\n"
 		"decl A::g(ref<int<4>,f,f,plain>) -> unit;\n"
-		"decl A::h(ref<int<4>,f,f,plain>,ref<int<8>,f,f,plain>) -> unit;\n"
+		"decl A::h(ref<int<4>,f,f,plain>, ref<int<8>,f,f,plain>) -> unit;\n"
 		"decl A::i(ref<int<4>,f,f,plain>) -> int<4>;\n"
 		"def struct A {\n"
 		"    dtor () { }\n"
 		"    function f : () -> unit { }\n"
 		"    function j : () -> unit { }\n"
 		"    virtual function g : (v13 : ref<int<4>,f,f,plain>) -> unit { }\n"
-		"    const function h : (v6 : ref<int<4>,f,f,plain>,v7 : ref<int<8>,f,f,plain>) -> unit { }\n"
+		"    const function h : (v6 : ref<int<4>,f,f,plain>, v7 : ref<int<8>,f,f,plain>) -> unit { }\n"
 		"    volatile function i : (v10 : ref<int<4>,f,f,plain>) -> int<4> {\n"
 		"        return *v10;\n"
 		"    }\n"
@@ -431,8 +432,8 @@ TEST(PrettyPrinter, FunctionTypes) {
 	TypePtr funE = builder.functionType(toVector(objC, typeA, typeB), typeR, FK_MEMBER_FUNCTION);
 	TypePtr funF = builder.functionType(toVector(objC, typeA, typeB), typeR, FK_VIRTUAL_MEMBER_FUNCTION);
 
-	EXPECT_EQ("(A,B) -> R", toString(PrettyPrinter(funA)));
-	EXPECT_EQ("(A,B) => R", toString(PrettyPrinter(funB)));
+	EXPECT_EQ("(A, B) -> R", toString(PrettyPrinter(funA)));
+	EXPECT_EQ("(A, B) => R", toString(PrettyPrinter(funB)));
 //	EXPECT_EQ("ctor C::(A, B)", toString(PrettyPrinter(funC)));
 //	EXPECT_EQ("~C::()", toString(PrettyPrinter(funD)));
 //	EXPECT_EQ("method C::(A, B) -> R", toString(PrettyPrinter(funE)));
@@ -470,10 +471,10 @@ TEST(PrettyPrinter, LambdaTypes) {
 	LambdaExprPtr lambdaD = builder.lambdaExpr(funD, toVector(varO, varA, varB), body);
 	LambdaExprPtr lambdaE = builder.lambdaExpr(funE, toVector(varO, varA, varB), body);
 
-	EXPECT_EQ("decl fun000 : (ref<C,f,f,plain>,A,B) -> R;\ndef fun000 = function (v0 : ref<ref<C,f,f,plain>,f,f,plain>,v1 : ref<A,f,f,plain>,v2 : ref<B,f,f,plain>) -> R { };\nfun000", toString(PrettyPrinter(lambdaA, PrettyPrinter::NO_LET_BOUND_FUNCTIONS)));
+	EXPECT_EQ("decl fun000 : (ref<C,f,f,plain>, A, B) -> R;\ndef fun000 = function (v0 : ref<ref<C,f,f,plain>,f,f,plain>, v1 : ref<A,f,f,plain>, v2 : ref<B,f,f,plain>) -> R { };\nfun000", toString(PrettyPrinter(lambdaA, PrettyPrinter::NO_LET_BOUND_FUNCTIONS)));
 //	EXPECT_EQ("ctor C v0 :: (ref<A,f,f,plain> v1, ref<B,f,f,plain> v2) { }", toString(PrettyPrinter(lambdaB, PrettyPrinter::NO_LET_BOUND_FUNCTIONS)));
 //	EXPECT_EQ("~C v0 :: () { }", toString(PrettyPrinter(lambdaC, PrettyPrinter::NO_LET_BOUND_FUNCTIONS)));
-	EXPECT_EQ("decl fun000 : (ref<C,f,f,plain>,A,B) ~> R;\ndef fun000 = function (v0 : ref<ref<C,f,f,plain>,f,f,plain>,v1 : ref<A,f,f,plain>,v2 : ref<B,f,f,plain>) ~> R { };\nfun000", toString(PrettyPrinter(lambdaE, PrettyPrinter::NO_LET_BOUND_FUNCTIONS)));
+	EXPECT_EQ("decl fun000 : (ref<C,f,f,plain>, A, B) ~> R;\ndef fun000 = function (v0 : ref<ref<C,f,f,plain>,f,f,plain>, v1 : ref<A,f,f,plain>, v2 : ref<B,f,f,plain>) ~> R { };\nfun000", toString(PrettyPrinter(lambdaE, PrettyPrinter::NO_LET_BOUND_FUNCTIONS)));
 }
 
 TEST(PrettyPrinter, HigherOrderFunction) {
