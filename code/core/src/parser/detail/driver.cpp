@@ -615,23 +615,24 @@ namespace parser {
 			// create destructor type
 			auto dtorType = builder.functionType(paramTypes, builder.refType(getThisType()), FK_DESTRUCTOR);
 
-			LambdaExprPtr dtor;
+			// create the destructor
+			transform::LambdaIngredients ingredients{params, newBody};
 			if (inLambda) {
 				// replace all variables in the body by their implicitly materialized version
-				auto ingredients = transform::materialize({params, newBody});
-				// create the destructor
-				dtor = builder.lambdaExpr(dtorType, ingredients.params, ingredients.body);
-			} else {
-				// create the destructor
-				dtor = builder.lambdaExpr(dtorType, params, body);
+				ingredients = transform::materialize(ingredients);
+			}
+			auto fun = builder.lambdaExpr(dtorType, ingredients.params, ingredients.body);
+
+			auto key = builder.getLiteralForDestructor(dtorType);
+			auto memberName = key->getValue()->getValue();
+			tu.addFunction(key, fun);
+
+			//only declare the symbol implicitly if it hasn't already been declared
+			if (!isSymbolDeclaredInGlobalScope(memberName)) {
+				declareSymbolInGlobalScope(l, memberName, key);
 			}
 
-			// create a symbol in the translation unit
-			auto dtorSymbol = builder.literal("Dtor", dtor->getType());
-			tu.addFunction(dtorSymbol, dtor);
-
-			// return symbol
-			return dtorSymbol;
+			return key;
 		}
 
 		/**
@@ -827,24 +828,9 @@ namespace parser {
 		}
 
 		ExpressionPtr InspireDriver::genDestructorCall(const location& l, const std::string name, const ExpressionPtr& param) {
-			//lookup the type in the translation unit
-			auto key = builder.genericType(name);
-			TagTypePtr type = tu[key].as<TagTypePtr>();
-
-			if (!type) {
-				error(l, format("Type %s hasn't been defined", name));
-				return nullptr;
-			}
-
-			const auto& destructor = type->getRecord()->getDestructor();
-
-			//check argument type
-			if (!types::isSubTypeOf(param->getType(), destructor->getType().as<FunctionTypePtr>()->getParameterTypes()[0])) {
-				error(l, "This-pointer argument for destructor call is of wrong type");
-				return nullptr;
-			}
-
-			return genCall(l, destructor, toVector(param));
+			//genCall will do everything else
+			const auto callable = builder.callExpr(parserIRExtension.getMemberFunctionAccess(), param, builder.getIdentifierLiteral("dtor"));
+			return genCall(l, callable, ExpressionList());
 		}
 
 		ExpressionPtr InspireDriver::genStructExpression(const location& l, const TypePtr& type, const ExpressionList& list) {
