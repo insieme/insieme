@@ -221,6 +221,7 @@ namespace parser {
 
 	TEST(IR_Parser, RecordTypes) {
 		NodeManager nm;
+		IRBuilder builder(nm);
 
 		EXPECT_TRUE(test_type(nm, "def struct A {" //reference our own field
 		                          "  a : int<4>;"
@@ -334,6 +335,25 @@ namespace parser {
 //		                          "    return 1;"
 //		                          "  }"
 //		                          "}; A"));
+
+		{
+			auto addresses = builder.parseAddressesStatement("def struct A {" //check that member calls get translated to calls of the actual lambda
+			                                                 "  ctor() {}"
+			                                                 "  dtor() {}"
+			                                                 "  lambda f : ()->unit {}"
+			                                                 "};"
+			                                                 "{"
+			                                                 "  var ref<A,f,f,plain> ra;"
+			                                                 "  $A::(ra)$;"
+			                                                 "  $ra.f()$;"
+			                                                 "  $A::~(ra)$;"
+			                                                 "}");
+
+			ASSERT_EQ(3, addresses.size());
+			EXPECT_EQ(NT_LambdaExpr, addresses[0].getAddressedNode().as<CallExprPtr>()->getFunctionExpr()->getNodeType());
+			EXPECT_EQ(NT_LambdaExpr, addresses[1].getAddressedNode().as<CallExprPtr>()->getFunctionExpr()->getNodeType());
+			EXPECT_EQ(NT_LambdaExpr, addresses[2].getAddressedNode().as<CallExprPtr>()->getFunctionExpr()->getNodeType());
+		}
 	}
 
 	TEST(IR_Parser, Strings) {
