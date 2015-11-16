@@ -47,6 +47,8 @@
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_expressions.h"
 #include "insieme/core/printer/pretty_printer.h"
+#include "insieme/core/annotations/naming.h"
+
 #include "insieme/core/parser/ir_parser.h"
 #include "insieme/core/ir_node.h"
 
@@ -132,27 +134,26 @@ namespace parser {
 		IRBuilder builder(nm);
 
 		std::cout << " ============== TEST ============ " << std::endl;
-		auto type1 = builder.parseExpr(x);
+		auto type1 = builder.normalize(builder.parseExpr(x));
 
 		if(type1) {
-			PrettyPrinter printerA(type1, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::PRINT_CASTS | PrettyPrinter::PRINT_DEREFS
-				                              | PrettyPrinter::PRINT_MARKERS | PrettyPrinter::NO_LIST_SUGAR | PrettyPrinter::PRINT_ATTRIBUTES
-				                              | PrettyPrinter::NO_EVAL_LAZY | PrettyPrinter::PRINT_DERIVED_IMPL);
+			PrettyPrinter printerA(type1, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::PRINT_CASTS
+										  | PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_ATTRIBUTES
+										  | PrettyPrinter::PRINT_DERIVED_IMPL);
 			std::ostringstream ss;
 			ss << printerA;
-			auto type2 = builder.parseExpr(ss.str());
+			std::cout << printerA << std::endl;
+			auto type2 = builder.normalize(builder.parseExpr(ss.str()));
 			if(type2) {
-				PrettyPrinter printerB(type1, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::PRINT_CASTS | PrettyPrinter::PRINT_DEREFS
-					                              | PrettyPrinter::PRINT_MARKERS | PrettyPrinter::NO_LIST_SUGAR | PrettyPrinter::PRINT_ATTRIBUTES
-					                              | PrettyPrinter::NO_EVAL_LAZY | PrettyPrinter::PRINT_DERIVED_IMPL);
+				PrettyPrinter printerB(type1, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::PRINT_CASTS
+											  | PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_ATTRIBUTES
+											  | PrettyPrinter::PRINT_DERIVED_IMPL);
 
 				std::ostringstream ss1;
 				ss1 << printerA;
-				auto type3 = builder.parseExpr(ss1.str());
 
-				if(builder.normalize(type2) == builder.normalize(type3)) {
-					std::cout << "check this shit out... its working =)\n";
-				}
+				auto type3 = builder.normalize(builder.parseExpr(ss1.str()));
+
 
 				if(builder.normalize(type1) == builder.normalize(type2)) {
 					dumpColor(type2);
@@ -165,7 +166,9 @@ namespace parser {
 					dumpText(type1);
 					std::cout << "dumpText(B):" << std::endl;
 					dumpText(type2);
-
+					if(builder.normalize(type2) == builder.normalize(type3)) {
+						std::cout << "type 2-3 equivalent!\n";
+					}
 					return false;
 				}
 			} else {
@@ -180,10 +183,10 @@ namespace parser {
 	}
 
 	TEST(After_Before_Test, Expressions) {
-		NodeManager nm;
-
+	NodeManager nm;
 //		EXPECT_TRUE(test_expression(nm, "param(123456789)"));
 
+/*
 		EXPECT_TRUE(test_expression(nm, "1"));
 
 
@@ -207,26 +210,46 @@ namespace parser {
 
 		EXPECT_TRUE(test_expression(nm, "() -> unit { }"));
 		EXPECT_TRUE(test_expression(nm, "( a : int<4>) -> unit { }"));
-//		EXPECT_TRUE(test_expression(nm, "() -> unit { var int<4> a = 1+1; }"));
-//		EXPECT_TRUE(test_expression(nm, "( a : bool) -> bool { return a; }"));
-//
-//		EXPECT_TRUE(test_expression(nm, "( _ : 'a ) -> bool { return true; }"));
-//		EXPECT_TRUE(test_expression(nm, "( x : 'a ) -> bool { return true; }"));
-//		EXPECT_TRUE(test_expression(nm, "( x : 'a ) -> 'a { return x+CAST('a) 3; }"));
-//		EXPECT_TRUE(test_expression(nm, "( x : 'a ) -> 'a { return(x+CAST('a) 3); }"));
-//		EXPECT_TRUE(test_expression(nm, "( x : 'a ) -> 'a { return x+CAST('a) 3; }"));
-//		EXPECT_TRUE(test_expression(nm, "( x : 'a ) => x+CAST('a) 3"));
-//
-//
-//		EXPECT_TRUE(test_expression(nm, "type_lit(int<4>)"));
-//
-//		EXPECT_TRUE(test_expression(nm, "100+200*300"));
-//		EXPECT_TRUE(test_expression(nm, "100-200*300"));
-//		EXPECT_TRUE(test_expression(nm, "100-200+300"));
-//		EXPECT_TRUE(test_expression(nm, "100-(200+300)"));
-//		EXPECT_TRUE(test_expression(nm, "100-200-300"));
-	}
+		EXPECT_TRUE(test_expression(nm, "() -> unit { var int<4> a = 1+1; }"));
+		EXPECT_TRUE(test_expression(nm, "( a : bool) -> bool { return a; }"));
 
+		EXPECT_TRUE(test_expression(nm, "( _ : 'a ) -> bool { return true; }"));
+		EXPECT_TRUE(test_expression(nm, "( x : 'a ) -> bool { return true; }"));
+		EXPECT_TRUE(test_expression(nm, "( x : 'a ) -> 'a { return x+CAST('a) 3; }"));
+		EXPECT_TRUE(test_expression(nm, "( x : 'a ) -> 'a { return(x+CAST('a) 3); }"));
+		EXPECT_TRUE(test_expression(nm, "( x : 'a ) -> 'a { return x+CAST('a) 3; }"));
+		EXPECT_TRUE(test_expression(nm, "( x : 'a ) => x+CAST('a) 3"));
+
+
+		EXPECT_TRUE(test_expression(nm, "type_lit(int<4>)"));
+
+		EXPECT_TRUE(test_expression(nm, "100+200*300"));
+		EXPECT_TRUE(test_expression(nm, "100-200*300"));
+		EXPECT_TRUE(test_expression(nm, "100-200+300"));
+		EXPECT_TRUE(test_expression(nm, "100-(200+300)"));
+		EXPECT_TRUE(test_expression(nm, "100-200-300"));
+*/
+/*
+		EXPECT_TRUE(test_expression(nm, ""
+				"decl foo : () -> unit; "
+				"def bar = () -> unit { foo(); }; "
+				"def foo = () -> unit { bar(); }; "
+				"foo"));
+
+		EXPECT_TRUE(test_expression(nm, ""
+				"decl foo : () -> unit; "
+				"def bar = () -> unit { foo(); }; "
+				"def foo = () -> unit { bar(); }; "
+				"bar"));
+*/
+		EXPECT_TRUE(test_expression(nm, ""
+				"decl foo : (int<4>) -> int<4>; "
+				"def bar = (a : int<4>) -> int<4> { return foo(a); }; "
+				"def foo = (b : int<4>) -> int<4> { return bar(b); }; "
+				"foo"));
+
+
+	}
 
 	bool test_statement(NodeManager& nm, const std::string& x) {
 		IRBuilder builder(nm);
@@ -272,30 +295,31 @@ namespace parser {
 		NodeManager nm;
 
 		EXPECT_TRUE(test_statement(nm, "{ var int<4> x = 0; x+1; }"));
-		EXPECT_TRUE(test_statement(nm, "{ var auto x = 0; x+1; }"));
+		EXPECT_TRUE(test_statement(nm, "{ auto x = 0; x+1; }"));
 
 		EXPECT_TRUE(test_statement(nm, "if ( true ) {}"));
 		EXPECT_TRUE(test_statement(nm, "if ( true ) {} else {}"));
-		EXPECT_TRUE(test_statement(nm, "if ( true ) if ( false ) { } else 1 ;"));
-		EXPECT_TRUE(test_statement(nm, "if ( true ) if ( false ) { } else 1 ; else 2; "));
+		EXPECT_TRUE(test_statement(nm, "if ( true ) { if ( false ) { } else { 1; } }"));
+		EXPECT_TRUE(test_statement(nm, "if ( true ) { if ( false ) { } else { 1; } } else { 2; }"));
 		EXPECT_TRUE(test_statement(nm, "if( false ) { return 0; } else { return 1+2; }"));
 		EXPECT_TRUE(test_statement(nm, "if( false ) { return 0; }"));
-		EXPECT_TRUE(test_statement(nm, "while ( true ) 1+1;"));
-		EXPECT_TRUE(test_statement(nm, "while ( false ) 1+1;"));
+		EXPECT_TRUE(test_statement(nm, "while ( true ) { 1+1; }"));
+		EXPECT_TRUE(test_statement(nm, "while ( false ) { 1+1; }"));
 
-		EXPECT_TRUE(test_statement(nm, "for ( int<4> it = 1 .. 3) 1+1;"));
-		EXPECT_TRUE(test_statement(nm, "for ( int<4> it = 1 .. 3: 2) 1+1;"));
+		EXPECT_TRUE(test_statement(nm, "for ( int<4> it = 1 .. 3) { 1+1; }"));
+		EXPECT_TRUE(test_statement(nm, "for ( int<4> it = 1 .. 3: 2) { 1+1; }"));
 		EXPECT_TRUE(test_statement(nm, "for ( int<4> it = 1 .. 3: 2) { 1+1; }"));
 
-		EXPECT_TRUE(test_statement(nm, "switch (2) { case 1: 1; case 2: 2; }"));
+		EXPECT_TRUE(test_statement(nm, "switch (2) { case 1: {1;} case 2: {2;} }"));
 
-		EXPECT_TRUE(test_statement(nm, "try  {2;} catch( int<4> e) { 1+1; }"));
-		EXPECT_TRUE(test_statement(nm, "try  {2;} catch( int<4> e) { 1+1; } catch (ref<int<4>> r) { 3+4; }"));
+		EXPECT_TRUE(test_statement(nm, "try  {2;} catch( e : int<4>) { 1+1; }"));
+		EXPECT_TRUE(test_statement(nm, "try  {2;} catch( e : int<4>) { 1+1; } catch (r : ref<int<4>>) { 3+4; }"));
 
 		EXPECT_TRUE(test_statement(nm, "{ }"));
-
-		EXPECT_TRUE(test_statement(nm, "{"
-			                           "    let class = struct name { int<2> a};"
+/*
+		EXPECT_TRUE(test_statement(nm, "def struct name { a : int<2>; };"
+				                       "{"
+			                           "    var name a;"
 			                           "}"));
 
 		EXPECT_TRUE(test_statement(nm, "{"
@@ -316,6 +340,7 @@ namespace parser {
 			                           "    decl ref<collection> x;"
 			                           "    decl ref<someoldname> y;"
 			                           "}"));
+*/
 	}
 
 
@@ -364,113 +389,108 @@ namespace parser {
 		}
 	}
 
-	//TEST(After_Before_Test, Let) {
-	//	NodeManager mgr;
-
-	//	EXPECT_TRUE(test_program(mgr, "let int = int<4>; int main () { return 1; }"));
-	//	EXPECT_TRUE(test_program(mgr, "let int = int<4>; let long = int<8>; long main (ref<int,f,f,plain> a) { return 1; }"));
-	//	EXPECT_TRUE(test_program(mgr, "let int , long = int<4> ,int<8>; int<4> main () { return 1; }"));
-	//	EXPECT_TRUE(test_program(mgr, "let f = lambda () -> unit { }; int<4> main () { f(); return 1; }"));
-	//	EXPECT_TRUE(test_program(mgr, "let int = int<4>; let f = lambda (int a) -> int { return a; }; int<4> main () { f(1); return 1; }"));
-
-	//	EXPECT_TRUE(test_program(mgr, "let f,g = lambda()->unit{g();},lambda()->unit{f();}; unit main() { f(); }"));
-
-	//	EXPECT_TRUE(test_program(mgr, ""
-	//		                          "let int = int<4>;"
-	//		                          "let f = lambda (int a) -> int {"
-	//		                          "   return 0;"
-	//		                          "};"
-	//		                          "let g = lambda (int a, int b) -> unit {};"
-	//		                          "unit main() {"
-	//		                          "   f(3);"
-	//		                          "   decl int x = 4;"
-	//		                          "   decl int<4> y = 2;"
-	//		                          "   g(1,2);"
-	//		                          "   g(x,y);"
-	//		                          "}"));
-	//	/*
-	//	EXPECT_TRUE(test_program(mgr, ""
-	//	"let class = struct name {int<4> a};"
-	//	"let f = lambda class::()->unit {"
-	//	"   this.a = 5;"
-	//	"};"
-	//	"unit main() {"
-	//	"   decl ref<class> x;"
-	//	"   f(x);"
-	//	"}"));
-
-	//	EXPECT_TRUE(test_program(mgr, ""
-	//	"let class = struct name {int<4> a};"
-	//	"let f = lambda class::()->unit {"
-	//	"   f(this);"
-	//	"};"
-	//	"unit main() {"
-	//	"   decl ref<class> x;"
-	//	"   f(x);"
-	//	"}"));
-
-	//	EXPECT_TRUE(test_program(mgr,
-	//	"let int = int<4>;"
-	//	"let class = struct name { int a; int b};"
-	//	"let f = lambda class::()->int {"
-	//	"   return 0;"
-	//	"};"
-	//	"let g = lambda class::(int a)->int {"
-	//	"   return 1;"
-	//	"};"
-	//	"unit main() {"
-	//	"   decl ref<class> x;"
-	//	"   f(x);"
-	//	"   g(x, 1);"
-	//	"}"));
-	//	*/
-	//	EXPECT_TRUE(test_program(mgr, ""
-	//		                          "let class = struct name { int<4> a; int<5> b};"
-	//		                          "unit main() {"
-	//		                          "   decl ref<class> x;"
-	//		                          "   decl ref<int<4>> y;"
-	//		                          "}"));
-	//	/*
-	//	EXPECT_TRUE(test_program(mgr, ""
-	//	"let fancy = struct name { int<4> a; };"
-	//	"let f = lambda fancy::()->unit {"
-	//	"   f(this);"
-	//	"};"
-	//	"unit main () {"
-	//	"   decl ref<fancy> x;"
-	//	"   f(x);"
-	//	"}"));
-
-	//	EXPECT_TRUE(test_program(mgr,
-	//	"let fancy = struct shoe { int<8> a; int<9> c; int<4> d; int<1> g;};"
-	//	"let fency = struct hair { int<3> f; int<2> a; int<16> z;};"
-	//	"let class = struct name : fancy,fency { int<4> a; int<5> b};"
-	//	"let f,g = lambda class :: ()->unit{"
-	//	"        g(this);"
-	//	"    },"
-	//	"    lambda class ::()->unit{"
-	//	"        f(this);"
-	//	"    }; "
-	//	"unit main() {  "
-	//	"    decl ref<class> x;"
-	//	"    decl fancy y;"
-	//	"    f(x);"
-	//	"    g(x);"
-	//	"}" ));
-
-	//	EXPECT_TRUE(test_program(mgr,
-	//	"let fancy = struct name { int<8> a; };"
-	//	"let f = method fancy::(int<8>)->unit;"
-	//	"let g = ctor fancy::();"
-	//	"unit main() {"
-	//	"decl fancy y;"
-	//	""
-	//	"}"
-	//	));
-	//	*/
-	//}
-
-	//TEST(After_Before_Test, Program) {
+	TEST(After_Before_Test, Let) {
+		NodeManager mgr;
+    	EXPECT_TRUE(test_program(mgr, "alias int = int<4>; int main () { return 1; }"));
+		EXPECT_TRUE(test_program(mgr, "alias int = int<4>; alias long = int<8>; long main ( a : int) { return 1; }"));
+		EXPECT_TRUE(test_program(mgr, "alias int = int<4>; alias long = int<8>; int<4> main () { return 1; }"));
+		EXPECT_TRUE(test_program(mgr, "def f = () -> unit { }; int<4> main () { f(); return 1; }"));
+		EXPECT_TRUE(test_program(mgr, "alias int = int<4>; def f = (a : int) -> int { return a; }; int main () { f(1); return 1; }"));
+EXPECT_TRUE(test_program(mgr, "decl f : ()->unit; decl g : ()->unit; def f = ()->unit{g();}; def g = ()->unit{f();}; unit main() { f(); }"));
+EXPECT_TRUE(test_program(mgr, "decl f : ()->unit; decl g : ()->unit; def f = ()->unit{g();}; def g = ()->unit{f();}; unit main() { f(); 5;}"));
+EXPECT_TRUE(test_program(mgr, "decl f : ()->unit; decl g : ()->unit; def f = ()->unit{g();}; def g = ()->unit{f();}; unit main() { f(); g(); }"));
+    	EXPECT_TRUE(test_program(mgr, ""
+			                          "alias int = int<4>;"
+			                          "def f = (a : int) -> int {"
+			                          "   return 0;"
+			                          "};"
+			                          "def g = (a : int, b : int) -> unit {};"
+			                          "unit main() {"
+			                          "   f(3);"
+			                          "   var int x = 4;"
+			                          "   var int<4> y = 2;"
+			                          "   g(1,2);"
+			                          "   g(x,y);"
+			                          "}"));
+		/*
+		EXPECT_TRUE(test_program(mgr, ""
+		"let class = struct name {int<4> a};"
+		"let f = lambda class::()->unit {"
+		"   this.a = 5;"
+		"};"
+		"unit main() {"
+		"   decl ref<class> x;"
+		"   f(x);"
+		"}"));
+    	EXPECT_TRUE(test_program(mgr, ""
+		"let class = struct name {int<4> a};"
+		"let f = lambda class::()->unit {"
+		"   f(this);"
+		"};"
+		"unit main() {"
+		"   decl ref<class> x;"
+		"   f(x);"
+		"}"));
+    	EXPECT_TRUE(test_program(mgr,
+		"let int = int<4>;"
+		"let class = struct name { int a; int b};"
+		"let f = lambda class::()->int {"
+		"   return 0;"
+		"};"
+		"let g = lambda class::(int a)->int {"
+		"   return 1;"
+		"};"
+		"unit main() {"
+		"   decl ref<class> x;"
+		"   f(x);"
+		"   g(x, 1);"
+		"}"));
+		*/
+//		EXPECT_TRUE(test_program(mgr, ""
+//			                          "def struct name { a: int<4>; b : int<5>;};"
+//									  "alias class = name;"
+//			                          "unit main() {"
+//			                          "   var ref<class> x;"
+//			                          "   var ref<int<4>> y;"
+//			                          "}"));
+		/*
+		EXPECT_TRUE(test_program(mgr, ""
+		"let fancy = struct name { int<4> a; };"
+		"let f = lambda fancy::()->unit {"
+		"   f(this);"
+		"};"
+		"unit main () {"
+		"   decl ref<fancy> x;"
+		"   f(x);"
+		"}"));
+    	EXPECT_TRUE(test_program(mgr,
+		"let fancy = struct shoe { int<8> a; int<9> c; int<4> d; int<1> g;};"
+		"let fency = struct hair { int<3> f; int<2> a; int<16> z;};"
+		"let class = struct name : fancy,fency { int<4> a; int<5> b};"
+		"let f,g = lambda class :: ()->unit{"
+		"        g(this);"
+		"    },"
+		"    lambda class ::()->unit{"
+		"        f(this);"
+		"    }; "
+		"unit main() {  "
+		"    decl ref<class> x;"
+		"    decl fancy y;"
+		"    f(x);"
+		"    g(x);"
+		"}" ));
+    	EXPECT_TRUE(test_program(mgr,
+		"let fancy = struct name { int<8> a; };"
+		"let f = method fancy::(int<8>)->unit;"
+		"let g = ctor fancy::();"
+		"unit main() {"
+		"decl fancy y;"
+		""
+		"}"
+		));
+		*/
+	}
+    //TEST(After_Before_Test, Program) {
 	//	NodeManager nm;
 
 	//	EXPECT_TRUE(test_program(nm, "unit main() {}"));

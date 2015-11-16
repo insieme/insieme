@@ -511,14 +511,14 @@ namespace printer {
 									newLine();
 									out << "def " << lambdaNames[binding];
 
-									auto parameters = cur.getParameterList();
+									auto parameters = lambda.getParameterList();
 									out << " = function (" <<
 									join(", ", parameters, [&](std::ostream& out, const VariablePtr& curVar) {
 										visit(NodeAddress(curVar));
 										out << " : ";
 										visit(NodeAddress(curVar->getType()));
 									}) << ")" << (funType->isVirtualMemberFunction() ? " ~> " : " -> ");
-									visit(NodeAddress(cur->getFunctionType()->getReturnType()));
+									visit(NodeAddress(funType->getReturnType()));
 									out << " ";
 									visit(bindingAddress->getLambda()->getBody());
 									out << ";";
@@ -1140,8 +1140,8 @@ namespace printer {
 				if(args.empty()) {
 					out << "()";
 				} else {
-					out << "(" << join(", ", args, [&](std::ostream& out, const NodePtr& curParam) {
-						VISIT(NodeAddress(curParam));
+					out << "(" << join(", ", args, [&](std::ostream& out, const NodeAddress& curParam) {
+						VISIT(curParam);
 					}) << ")";
 				}
 			}
