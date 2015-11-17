@@ -269,6 +269,14 @@ namespace core {
 
 	}
 
+	TagTypeDefinitionPtr TagTypeDefinition::get(NodeManager& manager, const vector<TagTypeBindingPtr>& bindings) {
+		auto sorted = bindings;
+		std::sort(sorted.begin(), sorted.end(), [](const TagTypeBindingPtr& a, const TagTypeBindingPtr& b) {
+			return a->getTag()->getName()->getValue() < b->getTag()->getName()->getValue();
+		});
+		return manager.get(TagTypeDefinition(convertList(sorted)));
+	}
+
 	TagTypePtr TagTypeDefinition::peelDefinition(NodeManager& manager, const TagTypeReferencePtr& tag, unsigned times) const {
 
 

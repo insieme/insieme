@@ -255,6 +255,13 @@ namespace core {
 		return LambdaExpr::get(manager, getReference(), getDefinition()->unroll(manager, numTimes));
 	}
 
+	LambdaDefinitionPtr LambdaDefinition::get(NodeManager & manager, const vector<LambdaBindingPtr>& bindings) {
+		auto sorted = bindings;
+		std::sort(sorted.begin(), sorted.end(), [](const LambdaBindingPtr& a, const LambdaBindingPtr& b) {
+			return a->getReference()->getNameAsString() < b->getReference()->getNameAsString();
+ 		});
+		return manager.get(LambdaDefinition(convertList(sorted)));
+	}
 
 	bool LambdaDefinition::isRecursivelyDefined(const LambdaReferencePtr& reference) const {
 		return !getRecursiveCallLocationsInternal(this, reference).empty();
