@@ -469,6 +469,20 @@ namespace analysis {
 	 */
 	bool hasFreeReturnStatement(const StatementPtr& stmt);
 
+	// ------------------------------- utilities for recursive constructs -------------------------
+
+	/**
+	 * Computes equivalent definitions of the given tag type definition only containing
+	 * minimal definition group sizes.
+	 */
+	std::map<TagTypeReferencePtr, TagTypePtr> minimizeRecursiveGroup(const TagTypeDefinitionPtr& def);
+
+	/**
+	 * Computes equivalent definitions of the given lambda definitions only containing
+	 * minimal definition group sizes.
+	 */
+	std::map<VariablePtr, LambdaExprPtr> minimizeRecursiveGroup(const LambdaDefinitionPtr& def);
+
 } // end namespace utils
 } // end namespace core
 } // end namespace insieme

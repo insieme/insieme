@@ -48,9 +48,26 @@
 
 #include "insieme/utils/test/test_utils.h"
 
+#include "insieme/core/lang/parallel.h"
+
 namespace insieme {
 namespace core {
 namespace transform {
+
+	TEST(Manipulation, SequentializeBug) {
+
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto op = mgr.getLangExtension<lang::ParallelExtension>().getAtomicFetchAndAdd();
+		EXPECT_TRUE(lang::isBuiltIn(op));
+
+		auto seq = transform::sequentialize(mgr, op);
+
+		EXPECT_NE(op, seq);
+		EXPECT_FALSE(lang::isBuiltIn(seq));
+
+	}
 
 	TEST(Manipulation, SequentializeAtomic) {
 		NodeManager mgr;

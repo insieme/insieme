@@ -446,9 +446,12 @@ namespace tu {
 								// build recursive type definition
 								auto def = builder.tagTypeDefinition(bindings);
 
+								// de-compose type definition
+								auto types = analysis::minimizeRecursiveGroup(def);
+
 								// simply construct a recursive type
-								for(auto& cur : resolved) {
-									auto newType = builder.tagType(resolutionCache[cur.first].as<TagTypeReferencePtr>(), def);
+								for (auto& cur : resolved) {
+									auto newType = types[resolutionCache[cur.first].as<TagTypeReferencePtr>()];
 									core::transform::utils::migrateAnnotations(cur.second, newType);
 									cur.second = newType;
 								}
@@ -467,9 +470,12 @@ namespace tu {
 								// build recursive type definition
 								auto def = builder.lambdaDefinition(bindings);
 
-								// simply construct a recursive type
+								// de-compose lambda definition
+								auto funs = analysis::minimizeRecursiveGroup(def);
+
+								// simply construct a recursive function
 								for(auto& cur : resolved) {
-									auto newFun = builder.lambdaExpr(resolutionCache[cur.first].as<VariablePtr>(), def);
+									auto newFun = funs[resolutionCache[cur.first].as<VariablePtr>()];
 									core::transform::utils::migrateAnnotations(cur.second, newFun);
 									cur.second = newFun;
 								}
