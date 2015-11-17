@@ -20,9 +20,14 @@ int main() {
 	)")
 	{ A a; }
 
-	/*{
+	{
 		A a;
 		a.f();
-	}*/
+	}
+
+	{
+		A* a = new A();
+		delete a;
+	}
 	return 0;
 }

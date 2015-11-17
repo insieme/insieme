@@ -124,7 +124,7 @@ namespace conversion {
 			if(mem->isVirtual() && mem->isPure()) {
 				pvMembers.push_back(builder.pureVirtualMemberFunction(convDecl.memFun->getName(), convDecl.lit->getType().as<core::FunctionTypePtr>()));
 			} else if(llvm::dyn_cast<clang::CXXConstructorDecl>(mem)) {
-				constructors.push_back(convDecl.lit.as<core::ExpressionPtr>());
+				if(!mem->isDefaulted()) constructors.push_back(convDecl.lit.as<core::ExpressionPtr>());
 			} else if(llvm::dyn_cast<clang::CXXDestructorDecl>(mem)) {
 				destructor = convDecl.lit;
 				if(mem->isVirtual()) { destructorVirtual = true; }
