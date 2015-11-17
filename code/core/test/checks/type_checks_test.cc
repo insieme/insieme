@@ -1152,8 +1152,8 @@ namespace checks {
 		ASSERT_TRUE(lambda);
 
 		// get addresses to all kind of variables
-		VariableAddress outer = LambdaExprAddress(lambda)->getVariable();
-		VariableAddress inner = LambdaExprAddress(lambda)->getDefinition()[0]->getVariable();
+		LambdaReferenceAddress outer = LambdaExprAddress(lambda)->getReference();
+		LambdaReferenceAddress inner = LambdaExprAddress(lambda)->getDefinition()[0]->getReference();
 
 		// check a correct version
 		CheckPtr typeCheck = make_check<LambdaTypeCheck>();
@@ -1161,7 +1161,7 @@ namespace checks {
 
 
 		// build an invalid variable as a replacement
-		VariablePtr invalid = builder.variable(outer->getType());
+		LambdaReferencePtr invalid = builder.lambdaReference(outer->getType(),"-non-existing-");
 
 		// case 1 - lambda expression selects non-existing body
 		auto err = transform::replaceNode(manager, outer, invalid).as<LambdaExprPtr>();
@@ -1179,7 +1179,7 @@ namespace checks {
 		EXPECT_PRED2(containsMSG, errors, Message(NodeAddress(err), EC_TYPE_INVALID_LAMBDA_EXPR_TYPE, "", Message::ERROR));
 
 		// case 3 - use invalid variable type in lambda
-		invalid = builder.variable(invalidType);
+		invalid = builder.lambdaReference(invalidType,"_");
 		err = transform::replaceNode(manager, inner.switchRoot(transform::replaceNode(manager, outer.switchRoot(err), invalid).as<LambdaExprPtr>()), invalid)
 		          .as<LambdaExprPtr>();
 		errors = check(err, typeCheck);

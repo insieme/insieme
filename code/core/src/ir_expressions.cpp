@@ -84,23 +84,23 @@ namespace core {
 			LambdaDefinitionPtr root;
 
 			// the internal store for the recursive call locations
-			map<LambdaBindingPtr, vector<VariableAddress>> bind2var;
-			map<VariablePtr, vector<VariableAddress>> var2var;
+			map<LambdaBindingPtr, vector<LambdaReferenceAddress>> bind2ref;
+			map<LambdaReferencePtr, vector<LambdaReferenceAddress>> ref2ref;
 
-			RecursiveCallLocations(const LambdaDefinitionPtr& root) : root(root), bind2var(), var2var(){};
+			RecursiveCallLocations(const LambdaDefinitionPtr& root) : root(root) {};
 
 			bool operator==(const RecursiveCallLocations& other) const {
-				return this == &other || bind2var == other.bind2var;
+				return this == &other || bind2ref == other.bind2ref;
 			}
 
 			bool empty() const {
-				return bind2var.empty();
+				return bind2ref.empty();
 			}
 		};
 
 
-		class RecursiveCallCollector : private IRVisitor<void, Address, vector<VariableAddress>&, VariableSet&> {
-			typedef IRVisitor<void, Address, vector<VariableAddress>&, VariableSet&> super;
+		class RecursiveCallCollector : private IRVisitor<void, Address, vector<LambdaReferenceAddress>&, LambdaReferenceSet&> {
+			typedef IRVisitor<void, Address, vector<LambdaReferenceAddress>&, LambdaReferenceSet&> super;
 
 		  public:
 			/**
@@ -114,16 +114,16 @@ namespace core {
 			 */
 			RecursiveCallLocations findLocations(const LambdaDefinitionPtr& definition) {
 				// set up set of recursive variables
-				VariableSet recVarSet;
+				LambdaReferenceSet recRefSet;
 				for(const LambdaBindingPtr& cur : definition) {
-					recVarSet.insert(cur->getVariable());
+					recRefSet.insert(cur->getReference());
 				}
 
 				// search locations
 				RecursiveCallLocations res(definition);
 				for(auto cur : definition) {
-					vector<VariableAddress>& curList = res.bind2var[cur];
-					visit(NodeAddress(cur->getLambda()), curList, recVarSet);
+					vector<LambdaReferenceAddress>& curList = res.bind2ref[cur];
+					visit(NodeAddress(cur->getLambda()), curList, recRefSet);
 				}
 
 				// check whether some recursive calls have been
@@ -136,10 +136,10 @@ namespace core {
 				}
 
 				// complete var2call index
-				for(auto cur : res.bind2var) {
+				for(auto cur : res.bind2ref) {
 					auto head = lambdas[cur.first];
-					for(auto var : cur.second) {
-						res.var2var[var.as<VariablePtr>()].push_back(concat(head, var));
+					for(auto ref : cur.second) {
+						res.ref2ref[ref.as<LambdaReferencePtr>()].push_back(concat(head, ref));
 					}
 				}
 
@@ -148,18 +148,24 @@ namespace core {
 			}
 
 		  private:
-			void visitVariable(const VariableAddress& var, vector<VariableAddress>& res, VariableSet& recVars) {
+
+			void visitLambdaReference(const LambdaReferenceAddress& ref, vector<LambdaReferenceAddress>& res, LambdaReferenceSet& recRefs) override {
 				// if a recursive variable has been encountered => record the address
-				if(recVars.contains(var)) { res.push_back(var); }
+				if(recRefs.contains(ref)) { res.push_back(ref); }
 			}
 
-			void visitLambdaDefinition(const LambdaDefinitionAddress& def, vector<VariableAddress>& res, VariableSet& recVars) {
+			void visitLambdaExpr(const LambdaExprAddress& lambda, vector<LambdaReferenceAddress>& res, LambdaReferenceSet& recRefs) override {
+				// skip over this reference
+				visit(lambda->getDefinition(), res, recRefs);
+			}
+
+			void visitLambdaDefinition(const LambdaDefinitionAddress& def, vector<LambdaReferenceAddress>& res, LambdaReferenceSet& recRefs) override {
 				// eliminate re-defined recursive variables from recVar set
-				VariableSet subSet;
+				LambdaReferenceSet subSet;
 
 				// filter recursive variables by eliminating re-defined variables
-				for(const VariablePtr& var : recVars) {
-					if(!def->getDefinitionOf(var)) { subSet.insert(var); }
+				for(const LambdaReferencePtr& ref : recRefs) {
+					if(!def->getDefinitionOf(ref)) { subSet.insert(ref); }
 				}
 
 				// see whether there is still something to search
@@ -169,22 +175,10 @@ namespace core {
 				visitAll(def->getChildList(), res, subSet);
 			}
 
-			void visitLambdaExpr(const LambdaExprAddress& lambda, vector<VariableAddress>& res, VariableSet& recVars) {
-				// check whether there are free variables matching the recursive variables
-				VariableList freeVars = analysis::getFreeVariables(lambda);
-				if(!any(freeVars, [&](const VariablePtr& cur) { return recVars.contains(cur); })) {
-					// we can stop here (prune search space)
-					return;
-				}
-
-				// continue by processing the definitions
-				visitLambdaDefinition(lambda->getDefinition(), res, recVars);
-			}
-
-			void visitNode(const NodeAddress& node, vector<VariableAddress>& res, VariableSet& recVars) {
+			void visitNode(const NodeAddress& node, vector<LambdaReferenceAddress>& res, LambdaReferenceSet& recRefs) override {
 				if(node->getNodeCategory() == NC_Type) { return; }
 				// a general forwarding to all child nodes
-				visitAll(node->getChildList(), res, recVars);
+				visitAll(node->getChildList(), res, recRefs);
 			}
 		};
 
@@ -206,42 +200,42 @@ namespace core {
 			return res;
 		}
 
-		const vector<VariableAddress>& getRecursiveCallLocationsInternal(const LambdaDefinitionPtr& definition, const VariablePtr& var) {
-			static const vector<VariableAddress> empty;
+		const vector<LambdaReferenceAddress>& getRecursiveCallLocationsInternal(const LambdaDefinitionPtr& definition, const LambdaReferencePtr& ref) {
+			static const vector<LambdaReferenceAddress> empty;
 
 			// get lambda binding
-			auto binding = definition->getBindingOf(var);
+			auto binding = definition->getBindingOf(ref);
 			assert_true(binding) << "Requesting recursive status of invalid rec-lambda variable!";
 
 			// return a reference to the call location set
-			const auto& locs = getRecursiveCallLocations(definition).bind2var;
+			const auto& locs = getRecursiveCallLocations(definition).bind2ref;
 			auto pos = locs.find(binding);
 			return (pos == locs.end()) ? empty : pos->second;
 		}
 
-		const vector<VariableAddress>& getRecursiveCallsOfInternal(const LambdaDefinitionPtr& definition, const VariablePtr& var) {
-			static const vector<VariableAddress> empty;
+		const vector<LambdaReferenceAddress>& getRecursiveCallsOfInternal(const LambdaDefinitionPtr& definition, const LambdaReferencePtr& ref) {
+			static const vector<LambdaReferenceAddress> empty;
 
 			// check if this variable is even covered
-			if(!definition->getBindingOf(var)) { return empty; }
+			if(!definition->getBindingOf(ref)) { return empty; }
 
 			// get all
-			const auto& locs = getRecursiveCallLocations(definition).var2var;
-			auto pos = locs.find(var);
+			const auto& locs = getRecursiveCallLocations(definition).ref2ref;
+			auto pos = locs.find(ref);
 			return (pos == locs.end()) ? empty : pos->second;
 		}
 	}
 
 	std::ostream& LambdaExpr::printTo(std::ostream& out) const {
-		return out << "rec " << *getVariable() << "." << *getDefinition();
+		return out << "rec " << *getReference() << "." << *getDefinition();
 	}
 
 	LambdaExprPtr LambdaExpr::get(NodeManager& manager, const LambdaPtr& lambda) {
-		VariablePtr var = Variable::get(manager, lambda->getType(), 0);
-		LambdaBindingPtr binding = LambdaBinding::get(manager, var, lambda);
+		LambdaReferencePtr ref = LambdaReference::get(manager, lambda->getType(), "_");
+		LambdaBindingPtr binding = LambdaBinding::get(manager, ref, lambda);
 		LambdaDefinitionPtr def = LambdaDefinition::get(manager, toVector(binding));
 		def->attachValue(RecursiveCallLocations(def)); // this is not a recursive function!
-		return get(manager, lambda->getType(), var, def);
+		return get(manager, lambda->getType(), ref, def);
 	}
 
 	LambdaExprPtr LambdaExpr::get(NodeManager& manager, const FunctionTypePtr& type, const ParametersPtr& params, const CompoundStmtPtr& body) {
@@ -251,40 +245,40 @@ namespace core {
 
 	bool LambdaExpr::isRecursiveInternal() const {
 		// evaluate lazily
-		if(!recursive.isEvaluated()) { recursive.setValue(getDefinition()->isRecursive(getVariable())); }
+		if(!recursive.isEvaluated()) { recursive.setValue(getDefinition()->isRecursive(getReference())); }
 		return recursive.getValue();
 	}
 
 	LambdaExprPtr LambdaExpr::unroll(NodeManager& manager, unsigned numTimes) const {
 		// TODO: check whether unrolled definitions are still mutual recursive!
 		if(!isRecursive()) { return manager.get(this); }
-		return LambdaExpr::get(manager, getVariable(), getDefinition()->unroll(manager, numTimes));
+		return LambdaExpr::get(manager, getReference(), getDefinition()->unroll(manager, numTimes));
 	}
 
 
-	bool LambdaDefinition::isRecursivelyDefined(const VariablePtr& variable) const {
-		return !getRecursiveCallLocationsInternal(this, variable).empty();
+	bool LambdaDefinition::isRecursivelyDefined(const LambdaReferencePtr& reference) const {
+		return !getRecursiveCallLocationsInternal(this, reference).empty();
 	}
 
-	const vector<VariableAddress>& LambdaDefinition::getRecursiveCallsOf(const VariablePtr& variable) const {
-		return getRecursiveCallsOfInternal(this, variable);
+	const vector<LambdaReferenceAddress>& LambdaDefinition::getRecursiveCallsOf(const LambdaReferencePtr& reference) const {
+		return getRecursiveCallsOfInternal(this, reference);
 	}
 
-	LambdaExprPtr LambdaDefinition::peel(NodeManager& manager, const VariablePtr& variable, unsigned numTimes) const {
-		assert_true(getBindingOf(variable)) << "Referencing undefined recursive lambda binding!";
+	LambdaExprPtr LambdaDefinition::peel(NodeManager& manager, const LambdaReferencePtr& reference, unsigned numTimes) const {
+		assert_true(getBindingOf(reference)) << "Referencing undefined recursive lambda binding!";
 
 		// terminal case => no peeling at all
-		if(numTimes == 0 || !isRecursive(variable)) { return LambdaExpr::get(manager, variable, this); }
-		// compute peeled code versions for each variable
-		std::map<VariablePtr, LambdaExprPtr> peeled;
-		for(const VariableAddress& cur : getRecursiveCallLocationsInternal(this, variable)) {
+		if(numTimes == 0 || !isRecursive(reference)) { return LambdaExpr::get(manager, reference, this); }
+		// compute peeled code versions for each reference
+		std::map<LambdaReferencePtr, LambdaExprPtr> peeled;
+		for(const auto& cur : getRecursiveCallLocationsInternal(this, reference)) {
 			auto pos = peeled.find(cur);
 			if(pos == peeled.end()) { peeled[cur] = peel(manager, cur, numTimes - 1); }
 		}
 
 		// build up replacement map
 		std::map<NodeAddress, NodePtr> replacements;
-		for(const VariableAddress& cur : getRecursiveCallLocationsInternal(this, variable)) {
+		for(const auto& cur : getRecursiveCallLocationsInternal(this, reference)) {
 			replacements[cur] = peeled[cur];
 		}
 
@@ -297,27 +291,27 @@ namespace core {
 		if(numTimes < 2 || !isRecursive()) { return this; }
 
 		// conduct the unrolling one time less => use results
-		std::map<VariablePtr, LambdaExprPtr> unrolled;
+		std::map<LambdaReferencePtr, LambdaExprPtr> unrolled;
 		for(const LambdaBindingPtr& cur : unroll(manager, numTimes - 1)) {
-			unrolled[cur->getVariable()] = LambdaExpr::get(manager, cur->getLambda());
+			unrolled[cur->getReference()] = LambdaExpr::get(manager, cur->getLambda());
 		}
 
 		vector<LambdaBindingPtr> newBindings;
 		for(const LambdaBindingPtr& cur : *this) {
 			// skip non-recursive definitions
-			if(!isRecursive(cur->getVariable())) {
+			if(!isRecursive(cur->getReference())) {
 				newBindings.push_back(cur);
 				continue;
 			}
 
 			// build up replacement map
 			std::map<NodeAddress, NodePtr> replacements;
-			for(const VariableAddress& var : getRecursiveCallLocationsInternal(this, cur->getVariable())) {
+			for(const auto& var : getRecursiveCallLocationsInternal(this, cur->getReference())) {
 				replacements[var] = unrolled[var];
 			}
 
 			// convert current lambda
-			newBindings.push_back(LambdaBinding::get(manager, cur->getVariable(), transform::replaceAll(manager, replacements).as<LambdaPtr>()));
+			newBindings.push_back(LambdaBinding::get(manager, cur->getReference(), transform::replaceAll(manager, replacements).as<LambdaPtr>()));
 		}
 
 		// build up resulting definitions

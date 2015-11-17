@@ -409,8 +409,8 @@ namespace transform {
 
 		auto add0res = addresses[0].switchRoot(result).getAddressedNode().as<LambdaExprPtr>();
 		auto add1res = addresses[1].switchRoot(result);
-		EXPECT_EQ(add0res->getVariable(), add1res);
-		EXPECT_EQ(build.parseType("(int<4>)->unit"), add0res->getVariable()->getType());
+		EXPECT_EQ(add0res->getReference(), add1res);
+		EXPECT_EQ(build.parseType("(int<4>)->unit"), add0res->getReference()->getType());
 	}
 
 	TEST(InRecFunc, Simple) {

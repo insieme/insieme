@@ -68,7 +68,7 @@ namespace analysis {
 		ASSERT_TRUE(call);
 
 		// check free variables
-		EXPECT_EQ("rec v0.{v0=fun(ref<((int<4>)=>int<4>),f,f,plain> v1) {return ref_deref(v1)(2);}}(bind(v0){int_add(int_add(2, v77), v0)})", toString(*call));
+		EXPECT_EQ("rec _.{_=fun(ref<((int<4>)=>int<4>),f,f,plain> v0) {return ref_deref(v0)(2);}}(bind(v0){int_add(int_add(2, v77), v0)})", toString(*call));
 		EXPECT_EQ("[AP(v77)]", toString(getFreeVariables(call)));
 	}
 
@@ -89,7 +89,7 @@ namespace analysis {
 		ASSERT_TRUE(call);
 
 		// check free variables
-		EXPECT_EQ("rec v0.{v0=fun(ref<((int<4>)=>int<4>),f,f,plain> v1) {return ref_deref(v1)(2);}}(bind(v0){int_add(int_add(2, v77), v0)})", toString(*call));
+		EXPECT_EQ("rec _.{_=fun(ref<((int<4>)=>int<4>),f,f,plain> v0) {return ref_deref(v0)(2);}}(bind(v0){int_add(int_add(2, v77), v0)})", toString(*call));
 		EXPECT_EQ("[0-2-2-2-3]", toString(getFreeVariableAddresses(call)));
 	}
 
@@ -133,7 +133,7 @@ namespace analysis {
 
 		fun = transform::correctRecursiveLambdaVariableUsage(manager, fun);
 
-		EXPECT_EQ(toVector(fun->getVariable()), getFreeVariables(fun->getLambda()))
+		EXPECT_EQ(VariableList(), getFreeVariables(fun->getLambda()))
 		    << "Lambda:   " << core::printer::PrettyPrinter(fun->getLambda(),
 		                                                    core::printer::PrettyPrinter::NO_LET_BOUND_FUNCTIONS | core::printer::PrettyPrinter::NO_EVAL_LAZY);
 	}
@@ -263,10 +263,10 @@ namespace analysis {
 		ASSERT_TRUE(call);
 
 		// check free variables
-		EXPECT_EQ("rec v0.{v0=fun(ref<((int<4>)=>int<4>),f,f,plain> v1) {return ref_deref(v1)(2);}}(bind(v0){int_add(int_add(2, v77), v0)})", toString(*call));
-		EXPECT_EQ(utils::set::toSet<VariableSet>(builder.variable(int4, 0), builder.variable(builder.refType(builder.functionType(int4, int4, FK_CLOSURE)), 1),
+		EXPECT_EQ("rec _.{_=fun(ref<((int<4>)=>int<4>),f,f,plain> v0) {return ref_deref(v0)(2);}}(bind(v0){int_add(int_add(2, v77), v0)})", toString(*call));
+		EXPECT_EQ(utils::set::toSet<VariableSet>(builder.variable(int4, 0),
 		                                         builder.variable(int4, 77),
-		                                         builder.variable(builder.functionType(builder.functionType(int4, int4, FK_CLOSURE), int4), 0)),
+		                                         builder.variable(builder.refType(builder.functionType(int4, int4, FK_CLOSURE)), 0)),
 		          getAllVariables(call));
 	}
 
@@ -805,10 +805,10 @@ namespace analysis {
 
 		auto funType = builder.parseType("() -> int<4>").as<FunctionTypePtr>();
 
-		auto a = builder.variable(funType, 1);
-		auto b = builder.variable(funType, 2);
-		auto c = builder.variable(funType, 3);
-		auto d = builder.variable(funType, 4);
+		auto a = builder.lambdaReference(funType, "A");
+		auto b = builder.lambdaReference(funType, "B");
+		auto c = builder.lambdaReference(funType, "C");
+		auto d = builder.lambdaReference(funType, "D");
 
 		auto lA = builder.lambda(funType, VariableList(), builder.returnStmt(builder.intLit(1)));
 		auto lB = builder.lambda(funType, VariableList(), builder.returnStmt(builder.add(builder.callExpr(a),builder.callExpr(c))));

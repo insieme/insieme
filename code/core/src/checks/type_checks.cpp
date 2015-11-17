@@ -526,18 +526,18 @@ namespace checks {
 		LambdaExprPtr lambda = address.getAddressedNode();
 
 		// check that rec-lambda variable does exist within definitions
-		if(!lambda->getDefinition()->getDefinitionOf(lambda->getVariable())) {
+		if(!lambda->getDefinition()->getDefinitionOf(lambda->getReference())) {
 			add(res, Message(address, EC_TYPE_INVALID_LAMBDA_EXPR_NO_SUCH_DEFINITION,
-			                 format("No definition found for rec-lambda variable %s", toString(*lambda->getVariable())), Message::ERROR));
+			                 format("No definition found for rec-lambda variable %s", toString(*lambda->getReference())), Message::ERROR));
 
-			// no further checks usefull
+			// no further checks useful
 			return res;
 		}
 
 
 		// check type of lambda expression compared to rec-lambda variable type
 		TypePtr is = lambda->getType();
-		TypePtr should = lambda->getVariable()->getType();
+		TypePtr should = lambda->getReference()->getType();
 		if(*is != *should) {
 			add(res, Message(address, EC_TYPE_INVALID_LAMBDA_EXPR_TYPE,
 			                 format("Lambda-Expression Type does not match rec-lambda Variable Type - is: %s, should: %s", toString(*is), toString(*should)),
@@ -545,12 +545,12 @@ namespace checks {
 		}
 
 		// check type of recursive variable
-		assert_true(lambda->getDefinition()->getDefinitionOf(lambda->getVariable()));
-		is = lambda->getVariable()->getType();
-		should = lambda->getDefinition()->getDefinitionOf(lambda->getVariable())->getType();
+		assert_true(lambda->getDefinition()->getDefinitionOf(lambda->getReference()));
+		is = lambda->getReference()->getType();
+		should = lambda->getDefinition()->getDefinitionOf(lambda->getReference())->getType();
 		if(*is != *should) {
 			add(res, Message(address, EC_TYPE_INVALID_LAMBDA_REC_VAR_TYPE,
-			                 format("Type of recursive lambda variable %s does not fit type of lambda - is: %s, should: %s", toString(*lambda->getVariable()),
+			                 format("Type of recursive lambda variable %s does not fit type of lambda - is: %s, should: %s", toString(*lambda->getReference()),
 			                        toString(*is), toString(*should)),
 			                 Message::ERROR));
 		}
@@ -576,7 +576,7 @@ namespace checks {
 		                         funTypeIs->getReturnType(), funTypeIs->getKind());
 		if(*funTypeIs != *funTypeShould) {
 			add(res, Message(address, EC_TYPE_INVALID_LAMBDA_TYPE, format("Invalid type of lambda definition for variable %s - is: %s, should %s",
-			                                                              toString(*lambda->getVariable()), toString(*funTypeIs), toString(*funTypeShould)),
+			                                                              toString(*lambda->getReference()), toString(*funTypeIs), toString(*funTypeShould)),
 			                 Message::ERROR));
 		}
 

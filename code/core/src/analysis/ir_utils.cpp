@@ -437,19 +437,6 @@ namespace analysis {
 				visitNode(lambda, innerBound, free);
 			}
 
-			void visitLambdaDefinition(const Ptr<const LambdaDefinition>& definition, VariableSet& bound, ResultSet& free) {
-				// a lambda creates a new scope
-				VariableSet innerBound = bound;
-
-				// register recursive lambda variables
-				for(const LambdaBindingPtr& bind : definition) {
-					innerBound.insert(bind->getVariable());
-				}
-
-				// process child nodes
-				visitNode(definition, innerBound, free);
-			}
-
 
 			// due to the structure of the IR, nested lambdas can never reuse outer variables
 			//  - also prevents variables in LamdaDefinition from being inadvertently captured
@@ -494,7 +481,7 @@ namespace analysis {
 				// add free variables to result set
 				for(const auto& cur : definition->template getAttachedValue<FreeVariableSet>()) {
 					// if variable is not defined by the enclosed lambda definition block
-					if(!definition->getDefinitionOf(cur)) { free.insert(collectRecursive.extend(definition, cur)); }
+					free.insert(collectRecursive.extend(definition, cur));
 				}
 			}
 
@@ -799,20 +786,20 @@ namespace analysis {
 		private:
 
 			/**
-			 * A map mapping recursive variables and parameter positions to a flag
+			 * A map mapping lambda references and parameter positions to a flag
 			 * indicating whether the corresponding parameter is a read-only parameter.
 			 */
-			map<pair<VariablePtr, int>, bool> cache;
+			map<pair<LambdaReferencePtr, int>, bool> cache;
 
-			map<VariablePtr, LambdaPtr> bodyMap;
+			map<LambdaReferencePtr, LambdaPtr> bodyMap;
 
-			bool isReadOnly(const VariablePtr& var, int paramPos) {
+			bool isReadOnly(const LambdaReferencePtr& ref, int paramPos) {
 				// check whether this is a known variable
-				auto bodyPair = bodyMap.find(var);
+				auto bodyPair = bodyMap.find(ref);
 				if(bodyPair == bodyMap.end()) { return false; }
 
 				// check cache
-				auto pos = cache.find(std::make_pair(var, paramPos));
+				auto pos = cache.find(std::make_pair(ref, paramPos));
 				if(pos != cache.end()) { return pos->second; }
 
 				// evaluation is necessary
@@ -821,7 +808,7 @@ namespace analysis {
 				bool res = isReadOnly(lambda, param);
 
 				// safe result in cache
-				cache.insert({{var, paramPos}, res});
+				cache.insert({{ref, paramPos}, res});
 
 				return res;
 			}
@@ -852,7 +839,7 @@ namespace analysis {
 				// remember bodies
 				for(const LambdaBindingPtr& cur : lambda->getDefinition()) {
 					// add body
-					bodyMap[cur->getVariable()] = cur->getLambda();
+					bodyMap[cur->getReference()] = cur->getLambda();
 				}
 
 				// assume parameter is save (co-induction)
@@ -861,13 +848,13 @@ namespace analysis {
 				while(*params[pos] != *param) {
 					pos++;
 				}
-				cache[std::make_pair(lambda->getVariable(), pos)] = true;
+				cache[std::make_pair(lambda->getReference(), pos)] = true;
 
 				// compute result
 				bool res = isReadOnly(lambda->getLambda(), param);
 
 				// update cache
-				cache[std::make_pair(lambda->getVariable(), pos)] = res;
+				cache[std::make_pair(lambda->getReference(), pos)] = res;
 
 				// done
 				return res;
@@ -920,8 +907,8 @@ namespace analysis {
 							}
 
 							// check calls to recursive functions
-							if(VariablePtr var = call->getFunctionExpr().isa<VariablePtr>()) {
-								if(!isReadOnly(var, cur.getIndex() - 2)) { // -1 for type, -1 for function expr
+							if(auto ref = call->getFunctionExpr().isa<LambdaReferencePtr>()) {
+								if(!isReadOnly(ref, cur.getIndex() - 2)) { // -1 for type, -1 for function expr
 									readOnly = false;                      // it is no longer read-only
 								}
 								// we can stop the decent here
@@ -1216,35 +1203,34 @@ namespace analysis {
 		};
 
 		template<>
-		struct free_reference_collector<VariablePtr> : public IRVisitor<void,Address,VariableAddressList&,const VariableSet&>  {
+		struct free_reference_collector<LambdaReferencePtr> : public IRVisitor<void,Address,VariableAddressList&,const VariableSet&>  {
 
-			using reference_list_type = VariableAddressList;
+			using reference_list_type = LambdaReferenceAddressList;
 
-			std::map<LambdaPtr, VariableAddressList> index;
+			std::map<LambdaPtr, LambdaReferenceAddressList> index;
 			
 			free_reference_collector(const LambdaDefinitionPtr& def) : IRVisitor(true) {
 				for (const auto& cur : def) {
-					for (const auto& var : def->getRecursiveCallsOf(cur->getVariable())) {
+					for (const auto& ref : def->getRecursiveCallsOf(cur->getReference())) {
 
 						// lower root
 						LambdaAddress lambda;
-						visitPathTopDownInterruptible(var, [&](const NodeAddress& cur)->bool {
+						visitPathTopDownInterruptible(ref, [&](const NodeAddress& cur)->bool {
 							return lambda = cur.isa<LambdaAddress>();
 						});
 
 						// add to index
 						if (!lambda) continue;
-						index[lambda].push_back(cropRootNode(var, lambda));
+						index[lambda].push_back(cropRootNode(ref, lambda));
 					}
 				}
 			}
 
-			VariableAddressList operator()(const NodePtr& node) {
+			LambdaReferenceAddressList operator()(const NodePtr& node) {
 				if (auto lambda = node.as<LambdaPtr>()) {
 					return index[lambda];
 				}
-				return VariableAddressList();
-				VariableAddressList res;
+				return LambdaReferenceAddressList();
 			}
 
 		};
@@ -1347,31 +1333,13 @@ namespace analysis {
 	}
 
 	std::map<TagTypeReferencePtr, TagTypePtr> minimizeRecursiveGroup(const TagTypeDefinitionPtr& def) {
-
 		// conduct minimization
 		return minimizeRecursiveGroupsGen<TagTypeReferencePtr, TagType, TagTypeBinding>(def);
-//
-//		// build up the result
-//		IRBuilder builder(def.getNodeManager());
-//		std::map<TagTypeReferencePtr, TagTypePtr> res;
-//		for(const auto& cur : defs) {
-//			res[cur.first] = builder.tagType(cur.first, cur.second);
-//		}
-//		return res;
 	}
 
-	std::map<VariablePtr, LambdaExprPtr> minimizeRecursiveGroup(const LambdaDefinitionPtr& def) {
-
+	std::map<LambdaReferencePtr, LambdaExprPtr> minimizeRecursiveGroup(const LambdaDefinitionPtr& def) {
 		// conduct minimization
-		return minimizeRecursiveGroupsGen<VariablePtr, LambdaExpr, LambdaBinding>(def);
-//
-//		// build up the result
-//		IRBuilder builder(def.getNodeManager());
-//		std::map<VariablePtr, LambdaExprPtr> res;
-//		for(const auto& cur : defs) {
-//			res[cur.first] = builder.lambdaExpr(cur.first, cur.second);
-//		}
-//		return res;
+		return minimizeRecursiveGroupsGen<LambdaReferencePtr, LambdaExpr, LambdaBinding>(def);
 	}
 
 
