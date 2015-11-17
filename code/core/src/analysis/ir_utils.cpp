@@ -47,6 +47,7 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/analysis/attributes.h"
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/transform/manipulation_utils.h"
 
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/reference.h"
@@ -54,6 +55,7 @@
 #include "insieme/core/lang/static_vars.h"
 
 #include "insieme/utils/logging.h"
+#include "insieme/utils/graph_utils.h"
 
 namespace insieme {
 namespace core {
@@ -1173,6 +1175,205 @@ namespace analysis {
 	bool hasFreeReturnStatement(const StatementPtr& stmt) {
 		return hasFreeControlStatement(stmt, NT_ReturnStmt, { NT_LambdaExpr });
 	}
+
+	namespace {
+
+		template<typename T>
+		struct free_reference_collector;
+
+		template<>
+		struct free_reference_collector<TagTypeReferencePtr> : public IRVisitor<void,Address,TagTypeReferenceAddressList&,const TagTypeReferenceSet&> {
+
+			using reference_list_type = TagTypeReferenceAddressList;
+
+			free_reference_collector(const TagTypeDefinitionPtr&) : IRVisitor(true) {}
+
+			TagTypeReferenceAddressList operator()(const NodePtr& node) {
+				TagTypeReferenceAddressList res;
+				TagTypeReferenceSet bound;
+				visit(NodeAddress(node),res,bound);
+				return res;
+			}
+
+			void visitTagTypeReference(const TagTypeReferenceAddress& ref, TagTypeReferenceAddressList& res, const TagTypeReferenceSet& bound) override {
+				if (!bound.contains(ref)) res.push_back(ref);
+			}
+
+			void visitTagTypeDefinition(const TagTypeDefinitionAddress& def, TagTypeReferenceAddressList& res, const TagTypeReferenceSet& bound) override {
+				TagTypeReferenceSet nestedBound = bound;
+				for(const auto& cur : def) nestedBound.insert(cur->getTag());
+				for(const auto& cur : def) visit(cur->getRecord(), res, nestedBound);
+			}
+
+			void visitTagType(const TagTypeAddress& def, TagTypeReferenceAddressList& res, const TagTypeReferenceSet& bound) override {
+				visit(def->getDefinition(), res, bound);
+			}
+
+			void visitNode(const NodeAddress& node, TagTypeReferenceAddressList& res, const TagTypeReferenceSet& bound) override {
+				visitAll(node->getChildList(), res, bound);
+			}
+
+		};
+
+		template<>
+		struct free_reference_collector<VariablePtr> : public IRVisitor<void,Address,VariableAddressList&,const VariableSet&>  {
+
+			using reference_list_type = VariableAddressList;
+
+			std::map<LambdaPtr, VariableAddressList> index;
+			
+			free_reference_collector(const LambdaDefinitionPtr& def) : IRVisitor(true) {
+				for (const auto& cur : def) {
+					for (const auto& var : def->getRecursiveCallsOf(cur->getVariable())) {
+
+						// lower root
+						LambdaAddress lambda;
+						visitPathTopDownInterruptible(var, [&](const NodeAddress& cur)->bool {
+							return lambda = cur.isa<LambdaAddress>();
+						});
+
+						// add to index
+						if (!lambda) continue;
+						index[lambda].push_back(cropRootNode(var, lambda));
+					}
+				}
+			}
+
+			VariableAddressList operator()(const NodePtr& node) {
+				if (auto lambda = node.as<LambdaPtr>()) {
+					return index[lambda];
+				}
+				return VariableAddressList();
+				VariableAddressList res;
+			}
+
+		};
+
+		template<
+			typename Var,
+			typename Construct,
+			typename Binding,
+			typename Def
+		>
+		std::map<Var,Pointer<const Construct>> minimizeRecursiveGroupsGen(const Pointer<const Def>& def) {
+
+			using Collector = free_reference_collector<Var>;
+			using RefAddressList = typename Collector::reference_list_type;
+
+			// instantiate reference collector
+			Collector collector(def);
+
+			// collect references
+			std::map<NodePtr,RefAddressList> references;
+			for(const auto& cur : def) {
+				references[cur->getChild(0)] = collector(cur->getChild(1));
+			}
+
+			// extract dependency graph
+			utils::graph::PointerGraph<NodePtr> depGraph;
+			for(const auto& a : def) {
+				auto var = a->getChild(0);
+				depGraph.addEdge(var, var);
+				for(const auto& c : references[var]) {
+					if (def->getDefinitionOf(c)) {
+						depGraph.addEdge(var, c);
+					}
+				}
+			}
+
+			// compute strongly connected components order
+			auto compGraph = utils::graph::computeSCCGraph(depGraph.asBoostGraph());
+
+			// compute topological order -- there is a utility for this too
+			auto components = utils::graph::getTopologicalOrder(compGraph);
+			
+			// build up resulting map
+			NodeManager& mgr = def.getNodeManager();
+			std::map<Var, Pointer<const Construct>> res;
+			
+			// process in reverse order
+			for(auto it = components.rbegin(); it != components.rend(); ++it) {
+				auto& comp = *it;
+
+				// build new bindings
+				std::vector<Pointer<const Binding>> bindings;
+				for(const auto& var : comp) {
+					auto v = var.as<Var>();
+
+					// get old definition
+					auto oldDef = def->getDefinitionOf(v);
+
+					// if there is no old definition for this variable => skip
+					if (!oldDef) continue;
+
+					// create replacement map
+					std::map<NodeAddress, NodePtr> replacements;
+					for(const auto& ref : references[var]) {
+						// if this recursive variable has already been resolved
+						if (res[ref]) {
+							// us the resolved version
+							replacements[ref] = res[ref];
+						}
+					}
+
+					// fix definition
+					auto fixedDef =
+							(replacements.empty()) ? oldDef :
+							(transform::replaceAll(mgr, replacements).as<decltype(oldDef)>());
+
+					assert_true(fixedDef) << "No new version for " << v;
+
+					// move annotations
+					transform::utils::migrateAnnotations(oldDef,fixedDef);
+
+					// add binding
+					bindings.push_back(Binding::get(mgr, v, fixedDef));
+				}
+
+				// build reduced definition group
+				auto def = Def::get(mgr, bindings);
+
+				// add definitions to result
+				for(const auto& var : comp) {
+					auto v = var.as<Var>();
+					res[v] = Construct::get(mgr, v, def);
+				}
+			}
+
+			// done
+			return res;
+		}
+
+	}
+
+	std::map<TagTypeReferencePtr, TagTypePtr> minimizeRecursiveGroup(const TagTypeDefinitionPtr& def) {
+
+		// conduct minimization
+		return minimizeRecursiveGroupsGen<TagTypeReferencePtr, TagType, TagTypeBinding>(def);
+//
+//		// build up the result
+//		IRBuilder builder(def.getNodeManager());
+//		std::map<TagTypeReferencePtr, TagTypePtr> res;
+//		for(const auto& cur : defs) {
+//			res[cur.first] = builder.tagType(cur.first, cur.second);
+//		}
+//		return res;
+	}
+
+	std::map<VariablePtr, LambdaExprPtr> minimizeRecursiveGroup(const LambdaDefinitionPtr& def) {
+
+		// conduct minimization
+		return minimizeRecursiveGroupsGen<VariablePtr, LambdaExpr, LambdaBinding>(def);
+//
+//		// build up the result
+//		IRBuilder builder(def.getNodeManager());
+//		std::map<VariablePtr, LambdaExprPtr> res;
+//		for(const auto& cur : defs) {
+//			res[cur.first] = builder.lambdaExpr(cur.first, cur.second);
+//		}
+//		return res;
+	}
+
 
 } // end namespace utils
 } // end namespace core

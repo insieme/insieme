@@ -292,9 +292,6 @@ namespace checks {
 		auto ok3 = builder.parent(builder.typeVariable("a"));
 		auto ok4 = builder.parent(builder.parseType("def struct a { x : ref<b>; }; def struct b { x : ref<a>; }; a"));
 
-
-		dumpText(ok4);
-
 		auto err1 = builder.parent(builder.parseType("union { x : int<4>; }"));
 		auto err2 = builder.parent(builder.parseType("(A,B)->R"));
 		auto err3 = builder.parent(builder.parseType("ref<A>"));
