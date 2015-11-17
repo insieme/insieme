@@ -233,15 +233,15 @@ namespace tasks {
 
 			LambdaDefinitionPtr buildReplacement(const LambdaDefinitionPtr& lamDef) {
 				// gather all required option variables
-				vector<VariableList> varOptionsList; // list of options for each original lambda definition
+				vector<LambdaReferenceList> varOptionsList; // list of options for each original lambda definition
 				NodeMap sequentialVarReplacements;   // replacement map for recursive calls in sequentialized version
 				for(const LambdaBindingPtr& lb : lamDef->getDefinitions()) {
-					VariablePtr rVar = lb->getVariable();
-					VariableList varOptions;
+					LambdaReferencePtr rVar = lb->getReference();
+					LambdaReferenceList varOptions;
 					varOptions.push_back(rVar);                            // original version is the first option
-					varOptions.push_back(build.variable(rVar->getType())); // var for 2 unroll
-					varOptions.push_back(build.variable(rVar->getType())); // var for 4 unroll
-					varOptions.push_back(build.variable(rVar->getType())); // var for sequential
+					varOptions.push_back(build.lambdaReference(rVar->getType(),"u2")); // var for 2 unroll
+					varOptions.push_back(build.lambdaReference(rVar->getType(),"u4")); // var for 4 unroll
+					varOptions.push_back(build.lambdaReference(rVar->getType(),"us")); // var for sequential
 					varOptionsList.push_back(varOptions);
 					sequentialVarReplacements.insert(make_pair(rVar, varOptions.back()));
 				}
@@ -258,7 +258,7 @@ namespace tasks {
 				int lbi = 0;
 				// for every lambda
 				for(const LambdaBindingPtr& lb : lamDef->getDefinitions()) {
-					VariablePtr rVar = lb->getVariable();
+					LambdaReferencePtr rVar = lb->getReference();
 					// for every option
 					for(size_t opti = 0; opti < varOptionsList[0].size(); ++opti) {
 						LambdaPtr lam = lambdaDefOptionsList[opti]->getDefinitionOf(rVar);
