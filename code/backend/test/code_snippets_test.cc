@@ -608,7 +608,10 @@ namespace backend {
 			EXPECT_PRED2(notContainsSubString, code, "<?>");
 			EXPECT_PRED2(notContainsSubString, code, "<a>");
 			EXPECT_PRED2(notContainsSubString, code, "UNSUPPORTED");
-			EXPECT_PRED2(containsSubString, code, "{\n    v0 = function() -> int<4> {\n        return g(f());\n    };\n}");
+			EXPECT_PRED2(containsSubString, code, "{v0 = () -> int<4> {\n"
+													"        return g(f());\n"
+													"    };\n"
+													"}");
 
 			// try compiling the code fragment
 			utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
