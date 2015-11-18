@@ -113,6 +113,9 @@ namespace printer {
 		return IRDump([&](std::ostream& out) -> std::ostream& {
 			// for each message: split warnig/error save with address
 			addr2msg errors;
+			if(msgs.getAll().empty()) {
+				return out << "No Error Messages to print" << std::endl;
+			}
 			for(auto msg : msgs.getAll()) {
 				std::stringstream ss;
 				auto addrs = msg.getOrigin();
