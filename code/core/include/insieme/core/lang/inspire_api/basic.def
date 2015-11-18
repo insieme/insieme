@@ -348,9 +348,6 @@ LITERAL(IntTypeParamToInt, "to_uint", "(type<'n>)->uint<8>")
 // first argument has to be a struct or a union, 'b has to be the type of the requested member
 LITERAL(CompositeMemberAccess, "composite_member_access", "('a, identifier, type<'b>) -> 'b")
 
-// first argument has to be a struct or a union, 'b has to be the type of the requested member
-LITERAL(CompositeMemberFunctionAccess, "composite_member_function_access", "('a, identifier, type<'b>) -> 'b")
-
 // Tuple --------------------------------------------------------------------------------------------------------------
 // first argument has to be a tuple or a union, 'b has to be the type of the requested member
 LITERAL(TupleMemberAccess, "tuple_member_access", "('a, uint<8>, type<'b>) -> 'b")

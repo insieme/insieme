@@ -278,10 +278,10 @@
 //    -- top_level -------------------------------------
 
 
-top_level : TYPE_ONLY top_level_elements type                               { driver.result = driver.tu.resolve($3); }
-          | EXPR_ONLY top_level_elements expression                         { driver.result = driver.tu.resolve($3); }
-          | STMT_ONLY top_level_elements statement                          { driver.result = driver.tu.resolve($3); }
-          | FULL_PROG top_level_elements main                               { driver.result = driver.tu.resolve($3); }
+top_level : TYPE_ONLY top_level_elements type                               { driver.computeResult($3); }
+          | EXPR_ONLY top_level_elements expression                         { driver.computeResult($3); }
+          | STMT_ONLY top_level_elements statement                          { driver.computeResult($3); }
+          | FULL_PROG top_level_elements main                               { driver.computeResult($3); }
           ;
 
 top_level_elements : top_level_element ";" top_level_elements
@@ -578,7 +578,7 @@ literal : "true"                                                          { $$ =
 // -- call --
 
 call : expression "(" expressions ")"                                     { $$ = driver.genCall(@$, $1, $3); }
-     | "identifier" "::" "(" expressions ")"                              { $$ = driver.genConstructorCall(@$, $1, $4); }
+     | "identifier" "::" "(" non_empty_expressions ")"                    { $$ = driver.genConstructorCall(@$, $1, $4); }
      | "identifier" "::" "~" "(" expression ")"                           { $$ = driver.genDestructorCall(@$, $1, $5); }
      ;
 

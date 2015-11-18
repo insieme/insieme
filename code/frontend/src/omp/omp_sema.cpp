@@ -181,7 +181,6 @@ namespace omp {
 				// check whether it is a struct-init expression of a lock
 				if(node->getNodeType() == NT_StructExpr && isLockStructType(node.as<ExpressionPtr>()->getType())) {
 					// replace with uninitialized lock
-					abort();
 					newNode = build.getZero(parExt.getLock());					
 				} else {
 					// no changes required at this level, recurse
@@ -334,7 +333,7 @@ namespace omp {
 					if(analysis::isRefOf(arg, parExt.getLock())) { return arg; }
 					return newNode;
 				} else if(LiteralPtr litFunExp = dynamic_pointer_cast<const Literal>(fun)) {
-					const string& funName = litFunExp->getStringValue();
+					const string& funName = insieme::utils::demangle(litFunExp->getStringValue());
 					if(funName == "omp_get_thread_num") {
 						return build.getThreadId();
 					} else if(funName == "omp_get_num_threads") {

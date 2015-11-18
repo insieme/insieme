@@ -276,7 +276,7 @@ namespace core {
 			return core::analysis::normalize(root);
 		}
 
-		GenericTypePtr refType(const TypePtr& elementType, bool _const = false, bool _volatile = false) const;
+		GenericTypePtr refType(const TypePtr& elementType, bool _const = false, bool _volatile = false, lang::ReferenceType::Kind kind = lang::ReferenceType::Kind::Plain) const;
 		TypePtr ptrType(const TypePtr& elementType, bool _const = false, bool _volatile = false) const;
 
 		GenericTypePtr arrayType(const TypePtr& elementType) const;
@@ -301,6 +301,9 @@ namespace core {
 		TagTypePtr structType(const StringValuePtr& name, const ParentsPtr& parents, const FieldsPtr& fields,
 		                      const ExpressionsPtr& ctors, const ExpressionPtr& dtor, const BoolValuePtr& dtorIsVirtual,
 		                      const MemberFunctionsPtr& mfuns, const PureVirtualMemberFunctionsPtr& pvmfuns) const;
+		TagTypePtr structTypeWithDefaults(const TypePtr& thisType, const ParentList& parents, const FieldList& fields,
+		                                  const ExpressionList& ctors, const ExpressionPtr& dtor, const bool dtorIsVirtual,
+		                                  const MemberFunctionList& mfuns, const PureVirtualMemberFunctionList& pvmfuns) const;
 
 		TagTypePtr unionType(const vector<std::pair<StringValuePtr, TypePtr>>& fields) const;
 		TagTypePtr unionType(const StringValuePtr& name, const vector<FieldPtr>& fields) const;
@@ -311,13 +314,35 @@ namespace core {
 		TagTypePtr unionType(const StringValuePtr& name, const FieldsPtr& fields,
 		                     const ExpressionsPtr& ctors, const ExpressionPtr& dtor, const BoolValuePtr& dtorIsVirtual,
 		                     const MemberFunctionsPtr& mfuns, const PureVirtualMemberFunctionsPtr& pvmfuns) const;
+		TagTypePtr unionTypeWithDefaults(const TypePtr& thisType, const FieldList& fields,
+		                                 const ExpressionList& ctors, const ExpressionPtr& dtor, const bool dtorIsVirtual,
+		                                 const MemberFunctionList& mfuns, const PureVirtualMemberFunctionList& pvmfuns) const;
 
-		FunctionTypePtr getDestructorType(const TagTypeReferencePtr& tag) const;
+		// -- special functions for classes --
 
-		LambdaExprPtr getDefaultDestructor(const StringValuePtr& recordName) const;
-		LambdaExprPtr getDefaultDestructor(const string& recordName) const {
-			return getDefaultDestructor(stringValue(recordName));
-		}
+		LambdaExprPtr getDefaultConstructor(const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields) const;
+
+		LambdaExprPtr getDefaultCopyConstructor(const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields) const;
+
+		LambdaExprPtr getDefaultMoveConstructor(const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields) const;
+
+		LambdaExprPtr getDefaultDestructor(const TypePtr& thisType) const;
+
+		MemberFunctionPtr getDefaultCopyAssignOperator(const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields) const;
+
+		MemberFunctionPtr getDefaultMoveAssignOperator(const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields) const;
+
+	  private:
+		LiteralPtr getLiteralForMember(const FunctionTypePtr& functionType, const std::string& memberName);
+	  public:
+
+		LiteralPtr getLiteralForConstructor(const FunctionTypePtr& functionType);
+
+		LiteralPtr getLiteralForDestructor(const FunctionTypePtr& functionType);
+
+		LiteralPtr getLiteralForMemberFunction(const FunctionTypePtr& functionType, const std::string& memberName);
+
+		// -----------------------------------
 
 		NamedValuePtr namedValue(const string& name, const ExpressionPtr& value) const;
 

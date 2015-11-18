@@ -39,6 +39,7 @@
 #include "insieme/core/types/return_type_deduction.h"
 #include "insieme/core/ir_builder.h"
 
+#include "insieme/core/analysis/type_utils.h"
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/checks/type_checks.h"
 
@@ -305,6 +306,96 @@ namespace types {
 
 		arfType = builder.parseType("(ref<array<'a>>, uint<8>, uint<8>)=>'b");
 		EXPECT_EQ("'b", toString(*deduceReturnType(funType, toVector(argType, arfType))));
+	}
+
+	TEST(ImplicitMaterialization, List) {
+
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		std::map<string,NodePtr> symbols;
+
+		// a simple case for starters
+		EXPECT_TRUE(analysis::isTrivial(builder.parseType("int<4>")));
+
+		auto argType = builder.parseType("int<4>");
+		auto funType = builder.parseType("(int<4>)->bool").as<FunctionTypePtr>();
+		EXPECT_EQ("bool",toString(*deduceReturnType(funType, {argType})));
+
+		// now, a little more sophisticated
+		argType = builder.parseType("int<4>");
+		funType = builder.parseType("(ref<int<4>,t,f,cpp_ref>)->bool").as<FunctionTypePtr>();
+		EXPECT_EQ("bool",toString(*deduceReturnType(funType, {argType})));
+
+		// also for r-value references
+		argType = builder.parseType("int<4>");
+		funType = builder.parseType("(ref<int<4>,t,f,cpp_rref>)->bool").as<FunctionTypePtr>();
+		EXPECT_EQ("bool",toString(*deduceReturnType(funType, {argType})));
+
+		// but not for non-const references
+		argType = builder.parseType("int<4>");
+		funType = builder.parseType("(ref<int<4>,f,f,cpp_ref>)->bool").as<FunctionTypePtr>();
+		EXPECT_EQ("unit",toString(*deduceReturnType(funType, {argType})));
+
+		// -- check a non-trivial --
+		symbols["A"] = builder.parseType("struct A { a : int<4>; ctor () { a = 5; } }");
+		EXPECT_FALSE(analysis::isTrivial(symbols["A"].as<TypePtr>()));
+
+		// pass by value should not be possible
+		argType = builder.parseType("A", symbols);
+		funType = builder.parseType("(A)->bool", symbols).as<FunctionTypePtr>();
+		EXPECT_EQ("unit",toString(*deduceReturnType(funType, {argType})));
+
+		// pass by reference should be possible
+		argType = builder.parseType("ref<A>", symbols);
+		funType = builder.parseType("(ref<A>)->bool", symbols).as<FunctionTypePtr>();
+		EXPECT_EQ("bool",toString(*deduceReturnType(funType, {argType})));
+
+		argType = builder.parseType("ref<A,f,f,cpp_ref>", symbols);
+		funType = builder.parseType("(ref<A,f,f,cpp_ref>)->bool", symbols).as<FunctionTypePtr>();
+		EXPECT_EQ("bool",toString(*deduceReturnType(funType, {argType})));
+
+		argType = builder.parseType("ref<A,t,f,cpp_ref>", symbols);
+		funType = builder.parseType("(ref<A,t,f,cpp_ref>)->bool", symbols).as<FunctionTypePtr>();
+		EXPECT_EQ("bool",toString(*deduceReturnType(funType, {argType})));
+
+		argType = builder.parseType("ref<A,f,t,cpp_ref>", symbols);
+		funType = builder.parseType("(ref<A,f,t,cpp_ref>)->bool", symbols).as<FunctionTypePtr>();
+		EXPECT_EQ("bool",toString(*deduceReturnType(funType, {argType})));
+
+		argType = builder.parseType("ref<A,t,t,cpp_ref>", symbols);
+		funType = builder.parseType("(ref<A,t,t,cpp_ref>)->bool", symbols).as<FunctionTypePtr>();
+		EXPECT_EQ("bool",toString(*deduceReturnType(funType, {argType})));
+
+		// pass by rvalue reference should also be supported
+		argType = builder.parseType("ref<A,f,f,cpp_rref>", symbols);
+		funType = builder.parseType("(ref<A,f,f,cpp_rref>)->bool", symbols).as<FunctionTypePtr>();
+		EXPECT_EQ("bool",toString(*deduceReturnType(funType, {argType})));
+
+
+		// passing a value to a reference should not be possible
+		argType = builder.parseType("A", symbols);
+		funType = builder.parseType("(ref<A,f,f,cpp_ref>)->bool", symbols).as<FunctionTypePtr>();
+		EXPECT_EQ("unit",toString(*deduceReturnType(funType, {argType})));
+
+		argType = builder.parseType("A", symbols);
+		funType = builder.parseType("(ref<A,f,f,cpp_rref>)->bool", symbols).as<FunctionTypePtr>();
+		EXPECT_EQ("unit",toString(*deduceReturnType(funType, {argType})));
+
+
+		// also, non-trivial objects must be passed by reference to value parameters
+		argType = builder.parseType("A", symbols);
+		funType = builder.parseType("(A)->bool", symbols).as<FunctionTypePtr>();
+		EXPECT_EQ("unit",toString(*deduceReturnType(funType, {argType})));
+
+		argType = builder.parseType("ref<A,t,f,cpp_ref>", symbols);
+		funType = builder.parseType("(A)->bool", symbols).as<FunctionTypePtr>();
+		EXPECT_EQ("bool",toString(*deduceReturnType(funType, {argType})));
+
+		argType = builder.parseType("ref<A,t,f,cpp_rref>", symbols);
+		funType = builder.parseType("(A)->bool", symbols).as<FunctionTypePtr>();
+		EXPECT_EQ("bool",toString(*deduceReturnType(funType, {argType})));
+
 	}
 
 } // end namespace types

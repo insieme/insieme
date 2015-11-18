@@ -62,6 +62,20 @@ namespace parser {
 	class location;
 	class InspireParser;
 
+		class ParserIRExtension : public core::lang::Extension {
+			/**
+			 * Allow the node manager to create instances of this class.
+			 */
+			friend class core::NodeManager;
+
+			/**
+			 * Creates a new instance based on the given node manager.
+			 */
+			ParserIRExtension(core::NodeManager& manager) : core::lang::Extension(manager) {}
+
+			LANG_EXT_LITERAL_WITH_NAME(MemberFunctionAccess, "parser_member_function_access", "parser_member_function_access", "('a, identifier) -> unit")
+		};
+
 		/**
 		 * A struct summarizing an error encountered during parsing.
 		 */
@@ -121,6 +135,10 @@ namespace parser {
 
 			std::vector<RecordStackEntry> currentRecordStack;
 
+			std::vector<StringValuePtr> temporaryAnonymousNames;
+
+			const ParserIRExtension& parserIRExtension;
+
 			/**
 			 * constructs a struct expression
 			 */
@@ -130,11 +148,6 @@ namespace parser {
 			 * constructs a union expression
 			 */
 			ExpressionPtr genUnionExpression(const location& l, const TypePtr& type, const std::string field, const ExpressionPtr& expr);
-
-			/**
-			 * Retrieves the tag type stored in the TU with the given generic type as key. also unwraps ref types
-			 */
-			TypePtr getTypeFromGenericTypeInTu(const TypePtr& type);
 
 		  public:
 
@@ -219,7 +232,7 @@ namespace parser {
 			/**
 			 * generate a simple struct or union consisting only of fields. The decision between sctuct or union will be made based on the given node type.
 			 */
-			TagTypePtr genSimpleStructOrUnionType(const location& l, const NodeType& type, const FieldList& fields);
+			TypePtr genSimpleStructOrUnionType(const location& l, const NodeType& type, const FieldList& fields);
 
 			/**
 			 * check whether type alias can be applied to the given type and applies those.
@@ -244,7 +257,7 @@ namespace parser {
 			/**
 			 * generates a constructor for the currently defined record type
 			 */
-			LambdaExprPtr genConstructor(const location& l, const VariableList& params, const StatementPtr& body);
+			ExpressionPtr genConstructor(const location& l, const VariableList& params, const StatementPtr& body);
 
 			/**
 			 * generates a destructor for the currently defined record type
@@ -264,7 +277,7 @@ namespace parser {
 			/**
 			 * generates a function definition
 			 */
-			LambdaExprPtr genFunctionDefinition(const location& l, const std::string name, const LambdaExprPtr& lambda);
+			ExpressionPtr genFunctionDefinition(const location& l, const std::string name, const LambdaExprPtr& lambda);
 
 			/**
 			 * generates an abstract type
@@ -284,7 +297,7 @@ namespace parser {
 			/**
 			 * generates a destructor call expression
 			 */
-			ExpressionPtr genDestructorCall(const location& l, const std::string name, const ExpressionPtr param);
+			ExpressionPtr genDestructorCall(const location& l, const std::string name, const ExpressionPtr& param);
 
 			/**
 			 * constructs an initializer expression according to the given type and expression list
@@ -369,12 +382,24 @@ namespace parser {
 			 */
 			void addThis(const location& l, const TypePtr& classType);
 
+			/*
+			 * Computes the final result of parsing by using the TU to resolve all symbols and applying some post-processing actions.
+			 *
+			 * Calling this method will set the variable result to the resulting IR.
+			 */
+			void computeResult(const NodePtr& fragment);
+
 			// ------------- scope management -------------------
 
 			/**
-			 * looks up a declared or defined symbol
+			 * looks up a declared symbol
 			 */
 			NodePtr lookupDeclared(const std::string& name);
+
+			/**
+			 * looks up a declared symbol in the global scope
+			 */
+			NodePtr lookupDeclaredInGlobalScope(const std::string& name);
 
 			/**
 			 * finds an previously defined expression symbol
