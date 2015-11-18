@@ -100,7 +100,7 @@ namespace analysis {
 	 * @param type the TagType to check
 	 * @param memberFunction the memberFunction to check
 	 */
-	bool isaDefaultMember(const TagTypePtr& type, const ExpressionPtr& memberFunction);
+	bool isaDefaultMember(const TagTypePtr& type, const MemberFunctionPtr& memberFunction);
 
 } // end namespace analysis
 } // end namespace core
