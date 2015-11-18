@@ -327,7 +327,7 @@ namespace printer {
 							auto constructors = cur->getConstructors();
 							if (!constructors.empty()) {
 								for (auto constr : constructors) {
-									if (analysis::isaDefaultConstructor(tagType, constr)) continue;
+									if (!printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) && analysis::isaDefaultConstructor(tagType, constr)) continue;
 									if (auto ctor = constr.isa<LambdaExprPtr>()) {
 										newLine();
 										out << "decl " << cur->getName()->getValue() << "::ctor";
@@ -341,7 +341,7 @@ namespace printer {
 							}
 
 							// print the destructor declaration
-							if (!analysis::hasDefaultDestructor(tagType)) {
+							if (!printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) && !analysis::hasDefaultDestructor(tagType)) {
 								auto destructor = cur->getDestructor();
 								if (auto dtor = destructor.isa<LambdaExprPtr>()) {
 									newLine();
@@ -353,7 +353,7 @@ namespace printer {
 							auto memberFunctions = cur->getMemberFunctions();
 							if (!memberFunctions.empty()) {
 								for (auto memberFun : memberFunctions) {
-									if (analysis::isaDefaultMember(tagType, memberFun)) continue;
+									if (!printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) && analysis::isaDefaultMember(tagType, memberFun)) continue;
 									if (auto member = memberFun->getImplementation().isa<LambdaExprPtr>()) {
 										newLine();
 										out << "decl " << cur->getName()->getValue() << "::" <<
@@ -418,7 +418,7 @@ namespace printer {
 							// print all constructors definitions
 							auto constructors = cur->getConstructors();
 							for(auto constr : constructors) {
-								if (analysis::isaDefaultConstructor(tagType, constr)) continue;
+								if (!printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) && analysis::isaDefaultConstructor(tagType, constr)) continue;
 								if (auto ctor = constr.isa<LambdaExprPtr>()) {
 									newLine();
 									auto params = ctor->getParameterList();
@@ -429,7 +429,7 @@ namespace printer {
 							}
 
 							// print the destructor definitions
-							if (!analysis::hasDefaultDestructor(tagType)) {
+							if (!printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) && !analysis::hasDefaultDestructor(tagType)) {
 								auto destructor = cur->getDestructor();
 								if (auto dtor = destructor.isa<LambdaExprPtr>()) {
 									newLine();
@@ -441,7 +441,7 @@ namespace printer {
 							// print all memberFunctions definitions
 							auto memberFunctions = cur->getMemberFunctions();
 							for (auto memberFun : memberFunctions) {
-								if (analysis::isaDefaultMember(tagType, memberFun)) continue;
+								if (!printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) && analysis::isaDefaultMember(tagType, memberFun)) continue;
 								if (auto impl = memberFun->getImplementation().isa<LambdaExprPtr>()) {
 									newLine();
 									if (memberFun->isVirtual()) out << "virtual ";
@@ -731,7 +731,7 @@ namespace printer {
 					// print all constructors
 					auto constructors = node->getConstructors();
 					for(auto constr : constructors) {
-						if (analysis::isaDefaultConstructor(tagType, constr.getAddressedNode())) continue;
+						if (!printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) && analysis::isaDefaultConstructor(tagType, constr.getAddressedNode())) continue;
 						if (auto ctor = constr.isa<LambdaExprAddress>()) {
 							this->newLine();
 							out << "ctor ";
@@ -742,7 +742,7 @@ namespace printer {
 					}
 
 					// print all destructors
-					if (!analysis::hasDefaultDestructor(tagType)) {
+					if (!printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) && !analysis::hasDefaultDestructor(tagType)) {
 						auto destructor = node->getDestructor();
 						if (auto dtor = destructor.isa<LambdaExprAddress>()) {
 							this->newLine();
@@ -753,33 +753,8 @@ namespace printer {
 
 					// print all member functions
 					auto memberfuns = node->getMemberFunctions();
-					/*
-					if (!memberfuns.empty()) {
-						out << join("", memberfuns, [&](std::ostream &out, const MemberFunctionAddress &member) {
-							this->newLine();
-							if (member->isVirtual()) { out << "virtual "; }
-							const auto &impl = member->getImplementation().as<LambdaExprAddress>();
-							const auto &params = impl->getParameterList();
-							assert_true(params.size() >= 1);
-							TypePtr thisParam = params[0]->getType();
-							assert_true (analysis::isRefType(thisParam));
-							if (analysis::isRefType(analysis::getReferencedType(thisParam))) {
-								thisParam = analysis::getReferencedType(thisParam);
-							}
-							const auto thisParamRef = lang::ReferenceType(thisParam);
-							if (thisParamRef.isConst()) { out << "const "; }
-							if (thisParamRef.isVolatile()) { out << "volatile "; }
-							out << "function ";
-							out << member->getName()->getValue();
-							out << " : (" << join(", ", params.begin() + 1, params.end(), paramPrinter) << ") -> ";
-							VISIT(impl->getFunctionType()->getReturnType());
-							out << " ";
-							VISIT(impl->getBody());
-						});
-					}
-					*/
 					for (auto memberFun : memberfuns) {
-						if (analysis::isaDefaultMember(tagType, memberFun.getAddressedNode())) continue;
+						if (!printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) && analysis::isaDefaultMember(tagType, memberFun.getAddressedNode())) continue;
 						if (auto impl = memberFun->getImplementation().isa<LambdaExprAddress>()) {
 							newLine();
 							if (memberFun->isVirtual()) out << "virtual ";

@@ -539,6 +539,40 @@ IRBuilder builder(nm);
 
 }
 
+TEST(PrettyPrinter, PrintDefinedDecls) {
+NodeManager nm;
+IRBuilder builder(nm);
+
+{
+auto type0 = builder.normalize(builder.parseType("def struct A {}; A"));
+PrettyPrinter printer0(type0, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::PRINT_CASTS
+							  | PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_ATTRIBUTES
+							  | PrettyPrinter::PRINT_DERIVED_IMPL | PrettyPrinter::PRINT_DEFAULT_MEMBERS);
+
+std::string res = "decl struct A;\n"
+		"decl A::ctor();\n"
+		"decl A::ctor(ref<ref<^A,t,f,cpp_ref>,f,f,plain>);\n"
+		"decl A::ctor(ref<ref<^A,f,f,cpp_rref>,f,f,plain>);\n"
+		"decl A::operator_assign(ref<ref<^A,t,f,cpp_ref>,f,f,plain>) -> ref<^A,f,f,cpp_ref>;\n"
+		"decl A::operator_assign(ref<ref<^A,f,f,cpp_rref>,f,f,plain>) -> ref<^A,f,f,cpp_ref>;\n"
+		"def struct A {\n"
+		"    ctor () { }\n"
+		"    ctor (v2 : ref<ref<^A,t,f,cpp_ref>,f,f,plain>) { }\n"
+		"    ctor (v2 : ref<ref<^A,f,f,cpp_rref>,f,f,plain>) { }\n"
+		"    function operator_assign : (v2 : ref<ref<^A,t,f,cpp_ref>,f,f,plain>) -> ref<^A,f,f,cpp_ref> {\n"
+		"        return ref_cast(*this, type_lit(f), type_lit(f), type_lit(cpp_ref));\n"
+		"    }\n"
+		"    function operator_assign : (v2 : ref<ref<^A,f,f,cpp_rref>,f,f,plain>) -> ref<^A,f,f,cpp_ref> {\n"
+		"        return ref_cast(*this, type_lit(f), type_lit(f), type_lit(cpp_ref));\n"
+		"    }\n"
+		"};\n"
+		"A";
+
+EXPECT_EQ(res, toString(printer0)) << printer0;
+}
+
+}
+
 TEST(PrettyPrinter, DerivedLiterals) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
