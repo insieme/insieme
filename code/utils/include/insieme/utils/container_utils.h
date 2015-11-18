@@ -514,7 +514,6 @@ bool hasDuplicates(InputIterator first, InputIterator last) {
 	});
 }
 
-
 /**
  * Checks whether the given container includes duplicated values.
  * The complexity of this operation is at most O(n). It aborts as soon
@@ -529,6 +528,26 @@ bool hasDuplicates(InputIterator first, InputIterator last) {
 template <class ContainerType>
 bool hasDuplicates(const ContainerType& list) {
 	return hasDuplicates(list.begin(), list.end());
+}
+
+/**
+ * Checks whether the given container includes values with duplicate characteristics.
+ * The complexity of this operation is at most O(n). It aborts as soon
+ * as two equivalent elements have been discovered.
+ *
+ * WARNING: The element type of the container has to implement the operator== and
+ * has to be boost-hash-able so that they can be used within unordered sets.
+ *
+ * @param list the list to be checked for duplicates
+ * @param extractor a functor which extracts some characteristic to check for duplicates
+ * @return true if duplicates could be found, false otherwise.
+ */
+template <template <typename, typename...> class ContainerType, typename CharacteristicExtractor, 
+	typename CharacteristicType = typename lambda_traits<CharacteristicExtractor>::result_type, typename... ContainerParams>
+bool hasDuplicates(const ContainerType<ContainerParams...>& list, CharacteristicExtractor extractor) {
+	std::vector<CharacteristicType> characteristics;
+	std::transform(list.begin(), list.end(), std::back_inserter(characteristics), extractor);
+	return hasDuplicates(characteristics);
 }
 
 /**
