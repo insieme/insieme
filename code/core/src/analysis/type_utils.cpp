@@ -195,6 +195,8 @@ namespace analysis {
 		bool trivialMoveConstructor = containsCtor(builder.getDefaultMoveConstructor(thisType, parents, record->getFields()));
 		if (!trivialMoveConstructor) return false;
 
+		// check for trivial, non-virtual destructor
+		if(record->getDestructorVirtual().getValue() || *builder.normalize(record->getDestructor()) != *builder.normalize(builder.getDefaultDestructor(thisType))) return false;
 
 		// check for trivial copy and move assignments
 		bool trivialCopyAssignment = containsMemberFunction(builder.getDefaultCopyAssignOperator(thisType, parents, record->getFields()));
@@ -202,9 +204,6 @@ namespace analysis {
 
 		bool trivialMoveAssignment = containsMemberFunction(builder.getDefaultMoveAssignOperator(thisType, parents, record->getFields()));
 		if (!trivialMoveAssignment) return false;
-
-		// check for trivial, non-virtual destructor
-		if(record->getDestructor().as<LambdaExprPtr>()->getBody().size() != 0 || record->getDestructorVirtual().getValue()) return false;
 
 		// check for virtual member functions
 		for(auto memFun : record->getMemberFunctions()) {
