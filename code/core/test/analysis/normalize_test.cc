@@ -39,6 +39,7 @@
 #include <gtest/gtest.h>
 
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/normalize.h"
 #include "insieme/core/transform/manipulation.h"
 
@@ -215,6 +216,64 @@ namespace analysis {
 		EXPECT_NE(*a, *b);
 
 		EXPECT_EQ(normalize(a), normalize(b));
+	}
+
+	TEST(Normalizing, Method) {
+        NodeManager mgr;
+        IRBuilder builder(mgr);
+
+        auto thisTy = builder.refType(builder.tagTypeReference("foo"));
+        auto thisVar = builder.variable(thisTy);
+        auto funTy = builder.functionType(toVector(thisTy.as<core::TypePtr>()), core::FK_CONSTRUCTOR);
+        auto lambda = builder.lambda(funTy, toVector(thisVar), builder.getNoOp());
+        auto variable = builder.variable(funTy, 192);
+        auto binding = builder.lambdaBinding(variable, lambda);
+        auto definition = builder.lambdaDefinition({binding});
+        auto lambdaExpr = builder.lambdaExpr(variable, definition);
+        auto str = builder.structType("foo", ParentList(), FieldList(), toVector(lambdaExpr.as<core::ExpressionPtr>()),
+                                      builder.getDefaultDestructor(thisTy),
+                                      false, MemberFunctionList(), PureVirtualMemberFunctionList());
+		auto testVar = builder.variable(builder.refType(str));
+
+        EXPECT_TRUE(analysis::contains(testVar, variable));
+        EXPECT_FALSE(analysis::contains(builder.normalize(testVar), variable));
+    }
+
+	TEST(Normalizing, VarInType) {
+        NodeManager mgr;
+        IRBuilder builder(mgr);
+		
+		auto v192 = builder.variable(mgr.getLangBasic().getInt4(), 192);
+		auto testVar = builder.variable(builder.numericType(v192));
+		auto testCompound = builder.compoundStmt(builder.declarationStmt(v192, builder.intLit(4)), testVar);
+        EXPECT_TRUE(analysis::contains(testCompound, v192));
+        EXPECT_FALSE(analysis::contains(builder.normalize(testCompound), v192));
+	}
+	
+	TEST(Normalizing, FreeVarInType) {
+        NodeManager mgr;
+        IRBuilder builder(mgr);
+		
+		auto v192 = builder.variable(mgr.getLangBasic().getInt4(), 192);
+		auto testVar = builder.variable(builder.numericType(v192));
+		auto testCompound = builder.compoundStmt(testVar);
+        EXPECT_TRUE(analysis::contains(testCompound, v192));
+        EXPECT_TRUE(analysis::contains(builder.normalize(testCompound), v192));
+	}
+
+	TEST(Normalizing, VarInTypeNested) {
+        NodeManager mgr;
+        IRBuilder builder(mgr);
+		
+		auto v192 = builder.variable(mgr.getLangBasic().getInt4(), 192);
+		auto genType = builder.genericType("bla", toVector<TypePtr>(builder.numericType(v192)));
+		auto outerType = builder.genericType("alb", toVector<TypePtr>(genType));
+		auto testVar = builder.variable(outerType);
+		auto testCompound = builder.compoundStmt(builder.declarationStmt(v192, builder.intLit(4)), testVar);
+		//std::cout << dumpText(testCompound);
+        EXPECT_TRUE(analysis::contains(testCompound, v192));
+        EXPECT_FALSE(analysis::contains(builder.normalize(testCompound), v192));
+		//std::cout << dumpText(builder.normalize(testCompound));
 	}
 
 } // end namespace analysis

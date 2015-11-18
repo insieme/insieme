@@ -46,6 +46,8 @@
 #include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/transform/manipulation_utils.h"
 
+#include "insieme/utils/debug/backtrace.h"
+
 namespace insieme {
 namespace core {
 namespace analysis {
@@ -191,14 +193,15 @@ namespace analysis {
 				if(type == NT_Variable) {
 					// replace with normalized variables
 					auto pos = vars.find(cur.as<VariablePtr>());
-					if(pos != vars.end()) { return pos->second; }
+					if(pos != vars.end()) { return pos->second->substitute(cur.getNodeManager(), *this); }
 					// it is a free variable, no replacement!
-					return cur;
+					return cur->substitute(cur.getNodeManager(), *this);
 				}
 
 				// invoke normalization recursively on lambda expressions
-				if(type == NT_LambdaExpr && getFreeVariables(cur).empty()) {
-					return normalize(cur); // entering new scope
+				if(type == NT_LambdaExpr) {
+					auto freeVarsEmpty = getFreeVariables(cur).empty();
+					if(freeVarsEmpty) return normalize(cur); // entering new scope
 				}
 
 				// invoke this normalizer on anything else
@@ -224,6 +227,9 @@ namespace analysis {
 
 			// get set of free variables
 			VariableList freeVarList = getFreeVariables(node);
+			std::cout << utils::debug::getBacktraceString();
+			std::cout << "Normalizing: " << node << "\n";
+			std::cout << "Free vars: " << freeVarList << "\n";
 
 			// provide a mechanism to generate variable substitutions
 			int index = 0;
@@ -260,7 +266,7 @@ namespace analysis {
 				}
 				default: break;
 				}
-				// decent further
+				// descend further
 				return false;
 			}, true);
 
@@ -274,7 +280,7 @@ namespace analysis {
 	}
 
 
-	NodePtr normalize(const NodePtr& node) {
+	NodePtr normalize(const NodePtr& node) {		
 		// handle null pointer
 		if(!node) { return node; }
 
