@@ -452,6 +452,9 @@ namespace types {
 				case lang::ReferenceType::Kind::CppRValueReference: {
 					/* all fine */
 				}
+				case lang::ReferenceType::Kind::Undefined: {
+					return fail;
+				}
 				}
 
 				// check whether the argument is trivial

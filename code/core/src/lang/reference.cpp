@@ -63,6 +63,7 @@ namespace lang {
 			if (refExt.isMarkerPlain(type)) return ReferenceType::Kind::Plain;
 			if (refExt.isMarkerCppReference(type)) return ReferenceType::Kind::CppReference;
 			if (refExt.isMarkerCppRValueReference(type)) return ReferenceType::Kind::CppRValueReference;
+			if (type.isa<TypeVariablePtr>()) return ReferenceType::Kind::Undefined;
 
 			// something went wrong
 		 	assert_fail() << "Unknown reference kind: " << type;
@@ -76,6 +77,7 @@ namespace lang {
 				case ReferenceType::Kind::Plain: 				return refExt.getMarkerPlain();
 				case ReferenceType::Kind::CppReference: 		return refExt.getMarkerCppReference();
 				case ReferenceType::Kind::CppRValueReference: 	return refExt.getMarkerCppRValueReference();
+				case ReferenceType::Kind::Undefined:            return TypeVariable::get(mgr, "k");
 			}
 
 			// something went wrong
