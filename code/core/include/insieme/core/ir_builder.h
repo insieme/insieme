@@ -56,6 +56,7 @@
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/reference.h"
 #include "insieme/core/lang/enum.h"
+#include "insieme/core/lang/channel.h"
 
 #include "insieme/core/types/subtyping.h"
 
@@ -278,6 +279,7 @@ namespace core {
 
 		GenericTypePtr refType(const TypePtr& elementType, bool _const = false, bool _volatile = false) const;
 		TypePtr ptrType(const TypePtr& elementType, bool _const = false, bool _volatile = false) const;
+		GenericTypePtr channelType(const TypePtr& elementType, const ExpressionPtr& size) const;
 
 		GenericTypePtr arrayType(const TypePtr& elementType) const;
 		GenericTypePtr arrayType(const TypePtr& elementType, const LiteralPtr& size) const;

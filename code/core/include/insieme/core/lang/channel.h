@@ -148,7 +148,7 @@ namespace lang {
 
 		// --- utilities ---
 
-		TypePtr create(const TypePtr& elementType, const ExpressionPtr& size);
+		static GenericTypePtr create(const TypePtr& elementType, const ExpressionPtr& size);
 
 		operator GenericTypePtr() const;
 

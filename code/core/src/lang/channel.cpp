@@ -36,10 +36,54 @@
 
 #include "insieme/core/lang/channel.h"
 #include "insieme/core/types/match.h"
+#include "insieme/core/lang/basic.h"
+#include "insieme/core/ir_builder.h"
 
 namespace insieme {
 namespace core {
 namespace lang {
+
+	ChannelType::ChannelType(const NodePtr& node) {
+		// check given node type
+		assert_true(node) << "Given node is null!";
+		assert_true(isChannel(node)) << "Given node " << *node << " is not a channel type!";
+
+		// extract the type
+		GenericTypePtr type = node.isa<GenericTypePtr>();
+		if(auto expr = node.isa<ExpressionPtr>()) type = expr->getType().as<GenericTypePtr>();
+
+		// copy over the internal fields
+		*this = ChannelType(
+			type->getTypeParameter(0),
+			type->getTypeParameter(1).as<NumericTypePtr>()->getValue().as<LiteralPtr>()
+		);
+	}
+
+	ChannelType::operator GenericTypePtr() const {
+		NodeManager& mgr = elementType.getNodeManager();
+		IRBuilder builder(mgr);
+
+		TypePtr sz;
+		if(auto lit = size.isa<LiteralPtr>()) {
+			assert_pred1(builder.getLangBasic().isUnsignedInt, lit->getType());
+			sz = NumericType::get(mgr, lit);
+		} else if(auto var = size.isa<VariablePtr>()) {
+			assert_pred1(builder.getLangBasic().isUnsignedInt, var->getType());
+			sz = NumericType::get(mgr, var);
+		} else {
+			// .. oh dear
+			assert_fail() << "channel size must be either literal or variable";
+		}
+
+		return GenericType::get(mgr, "channel", ParentList(), toVector(elementType, sz));
+	}
+
+	GenericTypePtr ChannelType::create(const TypePtr& elementType, const ExpressionPtr& size) {
+		assert_true(elementType);
+		assert_true(size);
+		assert_pred1(size->getNodeManager().getLangBasic().isUnsignedInt, size->getType()) << "Trying to build channel from non-unsigned-integral.";
+		return ChannelType(elementType, size);
+	}
 
 	bool isChannel(const NodePtr& node) {
 		// check for null
