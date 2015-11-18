@@ -488,13 +488,13 @@ namespace core {
 		LiteralPtr value = builder.literal(type, "X");
 		LambdaExprPtr res = transform::tryFixParameter(manager, lambda, 0, value);
 		EXPECT_NE(*res, *lambda);
-		EXPECT_EQ("{return op(X, ref_deref(v2));}", toString(*res->getBody()));
+		EXPECT_EQ("{return op(X, ref_deref(v1));}", toString(*res->getBody()));
 
 		EXPECT_EQ("[]", toString(core::checks::check(res)));
 
 		res = transform::tryFixParameter(manager, lambda, 1, value);
 		EXPECT_NE(*res, *lambda);
-		EXPECT_EQ("{return op(ref_deref(v1), X);}", toString(*res->getBody()));
+		EXPECT_EQ("{return op(ref_deref(v0), X);}", toString(*res->getBody()));
 		EXPECT_EQ("[]", toString(core::checks::check(res)));
 
 		// nested lambdas
@@ -505,7 +505,7 @@ namespace core {
 		)).as<LambdaExprPtr>();
 
 		res = transform::tryFixParameter(manager, outer1, 0, value);
-		EXPECT_PRED2(isSubString, "return op(X, ref_deref(v2))", toString(*res));
+		EXPECT_PRED2(isSubString, "return op(X, ref_deref(v1))", toString(*res));
 		EXPECT_EQ("[]", toString(core::checks::check(res)));
 
 		// multiple nested lambdas
@@ -514,7 +514,7 @@ namespace core {
 		)).as<LambdaExprPtr>();
 
 		res = transform::tryFixParameter(manager, outer2, 0, value);
-		EXPECT_PRED3(containsSubstring, "return op(X, ref_deref(v2))", toString(*res), 2);
+		EXPECT_PRED3(containsSubstring, "return op(X, ref_deref(v1))", toString(*res), 2);
 		EXPECT_EQ("[]", toString(core::checks::check(res)));
 
 	}
@@ -545,14 +545,14 @@ namespace core {
 
 		// check whether something has changed
 		EXPECT_NE(lambda, fixed);
-		EXPECT_EQ("rec v0.{v0=fun(ref<int<4>,f,f,plain> v2) {if(int_eq(ref_deref(v2), 0)) {return unit;} else {}; ref_assign(global, int_add(ref_deref(global), ref_deref(v2))); v0(int_sub(ref_deref(v2), 1));}}",
+		EXPECT_EQ("rec f.{f=fun(ref<int<4>,f,f,plain> v1) {if(int_eq(ref_deref(v1), 0)) {return unit;} else {}; ref_assign(global, int_add(ref_deref(global), ref_deref(v1))); f(int_sub(ref_deref(v1), 1));}}",
 		          toString(*fixed));
 		EXPECT_EQ("[]", toString(core::checks::check(fixed)));
 
 		// now, try fixing non-propagated parameter b
 		fixed = transform::tryFixParameter(manager, lambda, 1, builder.intLit(5));
 		EXPECT_NE(lambda, fixed);
-		EXPECT_EQ("rec v0.{v0=fun(ref<ref<int<4>,f,f,plain>,f,f,plain> v1) {if(int_eq(5, 0)) {return unit;} else {}; ref_assign(ref_deref(v1), int_add(ref_deref(ref_deref(v1)), 5)); rec v0.{v0=fun(ref<ref<int<4>,f,f,plain>,f,f,plain> v1, ref<int<4>,f,f,plain> v2) {if(int_eq(ref_deref(v2), 0)) {return unit;} else {}; ref_assign(ref_deref(v1), int_add(ref_deref(ref_deref(v1)), ref_deref(v2))); v0(ref_deref(v1), int_sub(ref_deref(v2), 1));}}(ref_deref(v1), int_sub(5, 1));}}",
+		EXPECT_EQ("rec _.{_=fun(ref<ref<int<4>,f,f,plain>,f,f,plain> v0) {if(int_eq(5, 0)) {return unit;} else {}; ref_assign(ref_deref(v0), int_add(ref_deref(ref_deref(v0)), 5)); rec f.{f=fun(ref<ref<int<4>,f,f,plain>,f,f,plain> v0, ref<int<4>,f,f,plain> v1) {if(int_eq(ref_deref(v1), 0)) {return unit;} else {}; ref_assign(ref_deref(v0), int_add(ref_deref(ref_deref(v0)), ref_deref(v1))); f(ref_deref(v0), int_sub(ref_deref(v1), 1));}}(ref_deref(v0), int_sub(5, 1));}}",
 		          toString(*fixed));
 		EXPECT_EQ("[]", toString(core::checks::check(fixed)));
 	}
@@ -640,7 +640,7 @@ namespace core {
 		ExpressionPtr sum = builder.add(a, b);
 
 		EXPECT_EQ("int_add(v1, v2)", toString(*sum));
-		EXPECT_EQ("rec v0.{v0=fun(ref<int<4>,f,f,plain> v3, ref<int<4>,f,f,plain> v4) {return int_add(ref_deref(v3), ref_deref(v4));}}(v1, v2)", toString(*transform::outline(mgr, sum)));
+		EXPECT_EQ("rec _.{_=fun(ref<int<4>,f,f,plain> v3, ref<int<4>,f,f,plain> v4) {return int_add(ref_deref(v3), ref_deref(v4));}}(v1, v2)", toString(*transform::outline(mgr, sum)));
 
 		EXPECT_EQ(sum, transform::tryInlineToExpr(mgr, transform::outline(mgr, sum)));
 	}
@@ -684,7 +684,7 @@ namespace core {
 		// -- create a function --
 
 		ExpressionPtr fun = builder.normalize(builder.parseExpr("(x : int<4>, y : int<4>) -> unit { x+y; y-x; }"));
-		EXPECT_EQ("rec v0.{v0=fun(ref<int<4>,f,f,plain> v1, ref<int<4>,f,f,plain> v2) {int_add(ref_deref(v1), ref_deref(v2)); int_sub(ref_deref(v2), ref_deref(v1));}}", toString(*fun));
+		EXPECT_EQ("rec _.{_=fun(ref<int<4>,f,f,plain> v0, ref<int<4>,f,f,plain> v1) {int_add(ref_deref(v0), ref_deref(v1)); int_sub(ref_deref(v1), ref_deref(v0));}}", toString(*fun));
 
 
 		// -- create a call --
@@ -693,7 +693,7 @@ namespace core {
 		VariablePtr v2 = builder.variable(type, 20);
 
 		CallExprPtr call = builder.callExpr(fun, v1, builder.add(v1, v2));
-		EXPECT_EQ("rec v0.{v0=fun(ref<int<4>,f,f,plain> v1, ref<int<4>,f,f,plain> v2) {int_add(ref_deref(v1), ref_deref(v2)); int_sub(ref_deref(v2), ref_deref(v1));}}(v10, int_add(v10, v20))", toString(*call));
+		EXPECT_EQ("rec _.{_=fun(ref<int<4>,f,f,plain> v0, ref<int<4>,f,f,plain> v1) {int_add(ref_deref(v0), ref_deref(v1)); int_sub(ref_deref(v1), ref_deref(v0));}}(v10, int_add(v10, v20))", toString(*call));
 
 		auto inlined = builder.normalize(transform::tryInlineToStmt(mgr, call));
 		EXPECT_EQ("{int<4> v0 = int_add(v10, v20); int_add(v10, v0); int_sub(v0, v10);}", toString(*inlined));
@@ -776,7 +776,7 @@ namespace core {
 		// normalize representation (since parser is not deterministic)
 		in = analysis::normalize(in);
 
-		EXPECT_EQ("rec v0.{v0=fun(ref<int<4>,f,f,plain> v1) {rec v2.{v2=fun() {v0(5);}}();}}",
+		EXPECT_EQ("rec f.{f=fun(ref<int<4>,f,f,plain> v0) {rec _.{_=fun() {f(5);}}();}}",
 		          toString(*analysis::normalize(transform::correctRecursiveLambdaVariableUsage(manager, in))));
 
 		// an advanced case
@@ -806,9 +806,9 @@ namespace core {
 		// normalize representation (since parser is not deterministic)
 		in = analysis::normalize(in);
 
-		EXPECT_EQ("rec v0.{"
-		          "v1=fun(ref<int<4>,f,f,plain> v2) {1; rec v3.{v3=fun() {return v1(5);}}(); v1(4); v0(v1(4)); rec v3.{v3=fun() {return v0(5);}}();}, "
-		          "v0=fun(ref<int<4>,f,f,plain> v4) {2; rec v3.{v3=fun() {return v1(5);}}(); v1(v0(4)); v0(4); rec v3.{v3=fun() {return v0(5);}}();}"
+		EXPECT_EQ("rec g.{"
+		          "f=fun(ref<int<4>,f,f,plain> v0) {1; rec _.{_=fun() {return f(5);}}(); f(4); g(f(4)); rec _.{_=fun() {return g(5);}}();}, "
+		          "g=fun(ref<int<4>,f,f,plain> v1) {2; rec _.{_=fun() {return f(5);}}(); f(g(4)); g(4); rec _.{_=fun() {return g(5);}}();}"
 		          "}",
 		          toString(*analysis::normalize(transform::correctRecursiveLambdaVariableUsage(manager, in))));
 	}
@@ -829,12 +829,12 @@ namespace core {
 
 		ASSERT_TRUE(call);
 
-		EXPECT_EQ("rec v0.{v0=fun(ref<((int<4>)=>int<4>),f,f,plain> v1) {return ref_deref(v1)(2);}}(bind(v0){int_add(int_add(2, v77), v0)})", toString(*call));
+		EXPECT_EQ("rec _.{_=fun(ref<((int<4>)=>int<4>),f,f,plain> v0) {return ref_deref(v0)(2);}}(bind(v0){int_add(int_add(2, v77), v0)})", toString(*call));
 
 		// push bind inside
 		CallExprPtr res = analysis::normalize(transform::pushBindIntoLambda(manager, call, 0));
 
-		EXPECT_EQ("rec v0.{v0=fun(ref<int<4>,f,f,plain> v1) {return bind(v2){int_add(ref_deref(v1), v2)}(2);}}(int_add(2, v77))", toString(*res));
+		EXPECT_EQ("rec _.{_=fun(ref<int<4>,f,f,plain> v0) {return bind(v1){int_add(ref_deref(v0), v1)}(2);}}(int_add(2, v77))", toString(*res));
 		EXPECT_EQ("int_add(v77, 4)", toString(*transform::simplify(manager, res)));
 
 		EXPECT_TRUE(check(res, checks::getFullCheck()).empty()) << check(res, checks::getFullCheck());
@@ -847,12 +847,12 @@ namespace core {
 
 		ASSERT_TRUE(call);
 
-		EXPECT_EQ("rec v0.{v0=fun(ref<((int<4>)=>int<4>),f,f,plain> v1) {return ref_deref(v1)(2);}}(bind(v0){int_add(int_add(2, 3), v0)})", toString(*call));
+		EXPECT_EQ("rec _.{_=fun(ref<((int<4>)=>int<4>),f,f,plain> v0) {return ref_deref(v0)(2);}}(bind(v0){int_add(int_add(2, 3), v0)})", toString(*call));
 
 		// push bind inside
 		res = analysis::normalize(transform::pushBindIntoLambda(manager, call, 0));
 
-		EXPECT_EQ("rec v0.{v0=fun() {return bind(v1){int_add(int_add(2, 3), v1)}(2);}}()", toString(*res));
+		EXPECT_EQ("rec _.{_=fun() {return bind(v0){int_add(int_add(2, 3), v0)}(2);}}()", toString(*res));
 		EXPECT_EQ("7", toString(*transform::simplify(manager, res.as<NodePtr>())));
 
 		EXPECT_TRUE(check(res, checks::getFullCheck()).empty()) << check(res, checks::getFullCheck());
@@ -875,7 +875,7 @@ namespace core {
 
 		EXPECT_TRUE(core::checks::check(code).empty()) << core::checks::check(code);
 
-		EXPECT_EQ("{rec v0.{v0=fun(ref<int<4>,f,f,plain> v1) {return int_sub(ref_deref(v1), rec v0.{v0=fun(ref<int<4>,f,f,plain> v1) {return int_add(int_add(ref_deref(v1), 1), 2);}}(ref_deref(v1)));}}(10);}",
+		EXPECT_EQ("{rec _.{_=fun(ref<int<4>,f,f,plain> v0) {return int_sub(ref_deref(v0), rec _.{_=fun(ref<int<4>,f,f,plain> v0) {return int_add(int_add(ref_deref(v0), 1), 2);}}(ref_deref(v0)));}}(10);}",
 		          toString(*code));
 
 		// implant var
@@ -883,14 +883,14 @@ namespace core {
 		EXPECT_EQ("v1", toString(*var));
 
 		auto resA = analysis::normalize(transform::pushInto(manager, exprA, var));
-		EXPECT_EQ("{rec v0.{v0=fun(ref<int<4>,f,f,plain> v1, ref<int<4>,f,f,plain> v2) {return int_sub(ref_deref(v1), rec v0.{v0=fun(ref<int<4>,f,f,plain> v1, ref<int<4>,f,f,plain> v2) {return int_add(int_add(ref_deref(v1), ref_deref(v2)), 2);}}(ref_deref(v1), "
-		          "ref_deref(v2)));}}(10, v1);}",
+		EXPECT_EQ("{rec _.{_=fun(ref<int<4>,f,f,plain> v0, ref<int<4>,f,f,plain> v1) {return int_sub(ref_deref(v0), rec _.{_=fun(ref<int<4>,f,f,plain> v0, ref<int<4>,f,f,plain> v1) {return int_add(int_add(ref_deref(v0), ref_deref(v1)), 2);}}(ref_deref(v0), "
+		          "ref_deref(v1)));}}(10, v1);}",
 		          toString(*resA.getRootNode()));
 		EXPECT_TRUE(core::checks::check(resA.getRootNode()).empty()) << core::checks::check(resA.getRootNode());
 
 		auto resB = analysis::normalize(transform::pushInto(manager, exprB.switchRoot(resA.getRootNode()), var));
-		EXPECT_EQ("{rec v0.{v0=fun(ref<int<4>,f,f,plain> v1, ref<int<4>,f,f,plain> v2) {return int_sub(ref_deref(v1), rec v0.{v0=fun(ref<int<4>,f,f,plain> v1, ref<int<4>,f,f,plain> v2) {return int_add(int_add(ref_deref(v1), ref_deref(v2)), ref_deref(v2));}}(ref_deref(v1), "
-		          "ref_deref(v2)));}}(10, v1);}",
+		EXPECT_EQ("{rec _.{_=fun(ref<int<4>,f,f,plain> v0, ref<int<4>,f,f,plain> v1) {return int_sub(ref_deref(v0), rec _.{_=fun(ref<int<4>,f,f,plain> v0, ref<int<4>,f,f,plain> v1) {return int_add(int_add(ref_deref(v0), ref_deref(v1)), ref_deref(v1));}}(ref_deref(v0), "
+		          "ref_deref(v1)));}}(10, v1);}",
 		          toString(*resB.getRootNode()));
 		EXPECT_TRUE(core::checks::check(resB.getRootNode()).empty()) << core::checks::check(resB.getRootNode());
 	}
@@ -911,7 +911,7 @@ namespace core {
 
 		EXPECT_TRUE(core::checks::check(code).empty()) << core::checks::check(code);
 
-		EXPECT_EQ("{rec v0.{v0=fun(ref<int<4>,f,f,plain> v1) {return int_add(int_sub(ref_deref(v1), rec v0.{v0=fun(ref<int<4>,f,f,plain> v1) {return int_add(ref_deref(v1), 1);}}(ref_deref(v1))), 2);}}(10);}",
+		EXPECT_EQ("{rec _.{_=fun(ref<int<4>,f,f,plain> v0) {return int_add(int_sub(ref_deref(v0), rec _.{_=fun(ref<int<4>,f,f,plain> v0) {return int_add(ref_deref(v0), 1);}}(ref_deref(v0))), 2);}}(10);}",
 		          toString(*code));
 
 		// variables to be implanted
@@ -925,8 +925,8 @@ namespace core {
 		elements[exprB] = varB;
 
 		auto res = analysis::normalize(transform::pushInto(manager, elements));
-		EXPECT_EQ("{rec v0.{v0=fun(ref<int<4>,f,f,plain> v1, ref<int<4>,f,f,plain> v2, ref<int<4>,f,f,plain> v3) {return int_add(int_sub(ref_deref(v1), rec v0.{v0=fun(ref<int<4>,f,f,plain> v1, ref<int<4>,f,f,plain> v2) {return int_add(ref_deref(v1), "
-		          "ref_deref(v2));}}(ref_deref(v1), ref_deref(v3))), ref_deref(v2));}}(10, v2, v1);}",
+		EXPECT_EQ("{rec _.{_=fun(ref<int<4>,f,f,plain> v0, ref<int<4>,f,f,plain> v1, ref<int<4>,f,f,plain> v2) {return int_add(int_sub(ref_deref(v0), rec _.{_=fun(ref<int<4>,f,f,plain> v0, ref<int<4>,f,f,plain> v1) {return int_add(ref_deref(v0), "
+		          "ref_deref(v1));}}(ref_deref(v0), ref_deref(v2))), ref_deref(v1));}}(10, v2, v1);}",
 		          toString(*res));
 		EXPECT_TRUE(core::checks::check(res).empty()) << core::checks::check(res);
 	}

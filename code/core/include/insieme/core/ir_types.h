@@ -910,9 +910,7 @@ namespace core {
 		 * @param bindings the bindings to be included within this definition
 		 * @return the requested type instance managed by the given manager
 		 */
-		static TagTypeDefinitionPtr get(NodeManager& manager, const vector<TagTypeBindingPtr>& bindings) {
-			return manager.get(TagTypeDefinition(convertList(bindings)));
-		}
+		  static TagTypeDefinitionPtr get(NodeManager& manager, const vector<TagTypeBindingPtr>& bindings);
 
 		/**
 		 * Peels this definition for the given tag for the given number of times.

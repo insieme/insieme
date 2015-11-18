@@ -78,7 +78,7 @@ namespace transform {
 
 		// std::cout << printer::PrettyPrinter(code.getRootNode()) << "\n\ninlined:\n" << printer::PrettyPrinter(inlined) << "\n****\n";
 
-		EXPECT_EQ("{{decl ref<bool,f,f,plain> v0 =  ref_var_init(false);{if(3<4) {{v1 = 3+2*6;v0 = true;};};if(!v0) {{v1 = 3-6;v0 = true;};};};};}",
+		EXPECT_EQ("{{decl ref<bool,f,f,plain> v1 =  ref_var_init(false);{if(3<4) {{v0 = 3+2*6;v1 = true;};};if(!v1) {{v0 = 3-6;v1 = true;};};};};}",
 		          toString(printer::PrettyPrinter(inlined, printer::PrettyPrinter::PRINT_SINGLE_LINE)));
 		EXPECT_TRUE(check(inlined, checks::getFullCheck()).empty()) << check(inlined, checks::getFullCheck());
 	}

@@ -133,7 +133,7 @@ namespace transform {
 
 		auto result = builder.normalize(mapper.mapFromRoot(addresses[0].getRootNode()));
 		EXPECT_EQ(
-		    R"raw({rec v0.{v0=fun(ref<int<4>,f,f,plain> v1, ref<int<4>,f,f,plain> v2, ref<int<4>,f,f,plain> v3) {ref<int<4>,f,f,plain> v4 = int_sub(int_add(int_mul(ref_deref(v1), ref_deref(v2)), ref_deref(v1)), ref_deref(v3)); return ref_deref(v4);}}(4, 2, 31337);})raw",
+		    R"raw({rec _.{_=fun(ref<int<4>,f,f,plain> v0, ref<int<4>,f,f,plain> v1, ref<int<4>,f,f,plain> v2) {ref<int<4>,f,f,plain> v3 = int_sub(int_add(int_mul(ref_deref(v0), ref_deref(v1)), ref_deref(v0)), ref_deref(v2)); return ref_deref(v3);}}(4, 2, 31337);})raw",
 		    result->toString());
 	}
 

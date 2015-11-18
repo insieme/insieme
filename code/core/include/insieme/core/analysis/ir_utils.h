@@ -481,7 +481,7 @@ namespace analysis {
 	 * Computes equivalent definitions of the given lambda definitions only containing
 	 * minimal definition group sizes.
 	 */
-	std::map<VariablePtr, LambdaExprPtr> minimizeRecursiveGroup(const LambdaDefinitionPtr& def);
+	std::map<LambdaReferencePtr, LambdaExprPtr> minimizeRecursiveGroup(const LambdaDefinitionPtr& def);
 
 } // end namespace utils
 } // end namespace core

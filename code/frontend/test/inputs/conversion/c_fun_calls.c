@@ -43,7 +43,7 @@ int main() {
 	#pragma test expect_ir("EXPR_TYPE","int<4>")
 	ii_to_i(i_to_i(2),ii_to_i(i_to_i(3),4));
 
-	#pragma test expect_ir("decl rec: (int<4>)->int<4>; def rec = (v1: int<4>) -> int<4> { if(v1<1) { return v1; }; return rec(v1-1); }; { rec(3); }")
+	#pragma test expect_ir("decl IMP_rec: (int<4>)->int<4>; def IMP_rec = (v1: int<4>) -> int<4> { if(v1<1) { return v1; }; return IMP_rec(v1-1); }; { IMP_rec(3); }")
 	{ rec(3); }
 	#pragma test expect_ir("EXPR_TYPE","int<4>")
 	rec(4);

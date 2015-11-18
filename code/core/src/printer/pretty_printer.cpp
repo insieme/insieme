@@ -705,11 +705,14 @@ namespace printer {
 
 				// general case: recursive function
 				out << "recFunc ";
-				VISIT(node->getVariable());
+				VISIT(node->getReference());
 				out << " ";
 				VISIT(node->getDefinition());
 			}
 
+			PRINT(LambdaReference) {
+				out << node->getNameAsString();
+			}
 
 			PRINT(LambdaDefinition) {
 				auto defs = node->getDefinitions();
@@ -720,7 +723,7 @@ namespace printer {
 				newLine();
 				std::size_t count = 0;
 				for_each(defs.begin(), defs.end(), [&](const LambdaBindingAddress& cur) {
-					VISIT(cur->getVariable());
+					VISIT(cur->getReference());
 					out << " = ";
 					VISIT(cur->getLambda());
 					out << ";";

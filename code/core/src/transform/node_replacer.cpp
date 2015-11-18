@@ -976,11 +976,11 @@ namespace transform {
 					LambdaPtr lambda = builder.lambda(funType, newLambda->getParameters(), newLambda->getBody());
 
 					// re-build recursive variable
-					VariablePtr recVar = builder.variable(funType, newBinding->getVariable()->getID());
-					recVarMap[newBinding->getVariable()] = recVar;
+					LambdaReferencePtr lambdaRef = builder.lambdaReference(funType, newBinding->getReference()->getName());
+					recVarMap[newBinding->getReference()] = lambdaRef;
 
 					// add new binding
-					bindings.push_back(builder.lambdaBinding(recVar, lambda));
+					bindings.push_back(builder.lambdaBinding(lambdaRef, lambda));
 				}
 
 				// 2. update recursive variables
@@ -992,7 +992,7 @@ namespace transform {
 
 						auto newBody = replaceAllGen(newExpr->getNodeManager(), curBody, recVarMap, transform::globalReplacement);
 
-						cur = builder.lambdaBinding(cur->getVariable(), builder.lambda(curLambda->getType(), curLambda->getParameters(), newBody));
+						cur = builder.lambdaBinding(cur->getReference(), builder.lambda(curLambda->getType(), curLambda->getParameters(), newBody));
 					}
 				}
 
@@ -1000,7 +1000,7 @@ namespace transform {
 				LambdaDefinitionPtr resDef = builder.lambdaDefinition(bindings);
 
 				// 3. re-build lambda expression
-				return builder.lambdaExpr(recVarMap[lambda->getVariable()].as<VariablePtr>(), resDef);
+				return builder.lambdaExpr(recVarMap[lambda->getReference()].as<LambdaReferencePtr>(), resDef);
 			}
 		}
 

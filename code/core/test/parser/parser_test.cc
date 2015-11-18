@@ -116,7 +116,7 @@ namespace parser {
 		                          "  a : int<4>;"
 		                          "  b : int<4>;"
 		                          "}"));
-
+		
 		EXPECT_TRUE(test_type(nm, "struct class {"
 		                          "  a : int<4>;"
 		                          "  ctor () { }"

@@ -81,11 +81,11 @@ namespace checks {
 
 			// construct lambda
 			FunctionTypePtr funType = builder.functionType(toVector<TypePtr>(), manager.getLangBasic().getUnit());
-			VariablePtr var = builder.variable(funType);
+			LambdaReferencePtr lambdaRef = builder.lambdaReference(funType,"f");
 			LambdaPtr lambda = builder.lambda(funType, toVector<VariablePtr>(), body);
 
 			// create and lambda definitions
-			return LambdaDefinition::get(manager, toVector(LambdaBinding::get(manager, var, lambda)));
+			return LambdaDefinition::get(manager, toVector(LambdaBinding::get(manager, lambdaRef, lambda)));
 		}
 
 		bool isUndeclaredVariableError(const MessageList& msgs, const NodePtr& target) {

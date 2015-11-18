@@ -353,7 +353,7 @@ namespace tu {
 				if(const GenericTypePtr& type = symbol.isa<GenericTypePtr>()) {
 					return builder.tagTypeReference(type->getFamilyName());
 				} else if(const LiteralPtr& fun = symbol.isa<LiteralPtr>()) {
-					return builder.variable(map(fun->getType()));
+					return builder.lambdaReference(map(fun->getType().as<FunctionTypePtr>()), fun->getValue());
 				}
 
 				// otherwise fail!
@@ -377,7 +377,6 @@ namespace tu {
 
 					// sort variables
 					vector<NodePtr> vars(cur.begin(), cur.end());
-					std::sort(vars.begin(), vars.end(), compare_target<NodePtr>());
 
 					// get first element
 					auto first = vars.front();
@@ -464,7 +463,7 @@ namespace tu {
 								vector<LambdaBindingPtr> bindings;
 								for(const auto& cur : vars) {
 									bindings.push_back(
-										builder.lambdaBinding(resolutionCache[cur].as<VariablePtr>(), resolved[cur].as<LambdaExprPtr>()->getLambda()));
+										builder.lambdaBinding(resolutionCache[cur].as<LambdaReferencePtr>(), resolved[cur].as<LambdaExprPtr>()->getLambda()));
 								}
 
 								// build recursive type definition
@@ -475,7 +474,7 @@ namespace tu {
 
 								// simply construct a recursive function
 								for(auto& cur : resolved) {
-									auto newFun = funs[resolutionCache[cur.first].as<VariablePtr>()];
+									auto newFun = funs[resolutionCache[cur.first].as<LambdaReferencePtr>()];
 									core::transform::utils::migrateAnnotations(cur.second, newFun);
 									cur.second = newFun;
 								}
