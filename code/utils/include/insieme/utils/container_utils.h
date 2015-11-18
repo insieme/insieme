@@ -60,6 +60,23 @@ using std::function;
 using boost::is_convertible;
 using boost::enable_if;
 
+// Type trait to check for STL-like container types
+
+template <typename T, typename _ = void>
+struct is_container : std::false_type {};
+
+namespace detail {
+	template <typename... Ts>
+	struct is_container_helper {};
+}
+
+template <typename T>
+struct is_container<T, std::conditional<false, detail::is_container_helper<typename T::value_type, typename T::size_type, typename T::allocator_type,
+                                                                           typename T::iterator, typename T::const_iterator, decltype(std::declval<T>().size()),
+                                                                           decltype(std::declval<T>().begin()), decltype(std::declval<T>().end()),
+                                                                           decltype(std::declval<T>().cbegin()), decltype(std::declval<T>().cend())>,
+                                        void>> : public std::true_type {};
+
 /** Checks whether a condition is true for any element of the supplied iteration range.
  *
  *  @param first iterator designating the start of the iteration range
@@ -499,10 +516,8 @@ void hashPtrRange(size_t& seed, const ContainerType& container) {
  * @param last the iterator pointing to the end of the range
  * @return true if duplicates could be found, false otherwise.
  */
-template <class InputIterator>
+template <class InputIterator, class Element = typename std::iterator_traits<InputIterator>::value_type>
 bool hasDuplicates(InputIterator first, InputIterator last) {
-	typedef typename std::iterator_traits<InputIterator>::value_type Element;
-
 	// NOTE: uses the boost hasher instead of the default hasher!
 	// see: http://stackoverflow.com/questions/647967/how-to-extend-stdtr1hash-for-custom-types
 	std::unordered_set<Element, boost::hash<Element>> set(std::distance(first, last));
@@ -542,10 +557,9 @@ bool hasDuplicates(const ContainerType& list) {
  * @param extractor a functor which extracts some characteristic to check for duplicates
  * @return true if duplicates could be found, false otherwise.
  */
-template <template <typename, typename...> class ContainerType, typename CharacteristicExtractor, 
-	typename CharacteristicType = typename lambda_traits<CharacteristicExtractor>::result_type, typename... ContainerParams>
-bool hasDuplicates(const ContainerType<ContainerParams...>& list, CharacteristicExtractor extractor) {
-	std::vector<CharacteristicType> characteristics;
+template <class ContainerType, typename CharacteristicExtractor, typename SFINAE = typename is_container<ContainerType>::type>
+bool hasDuplicates(const ContainerType& list, CharacteristicExtractor extractor) {
+	std::vector<typename lambda_traits<CharacteristicExtractor>::result_type> characteristics;
 	std::transform(list.begin(), list.end(), std::back_inserter(characteristics), extractor);
 	return hasDuplicates(characteristics);
 }
