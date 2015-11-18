@@ -41,8 +41,10 @@
 
 namespace insieme {
 namespace utils {
-	class Printable;
-	class VirtualPrintable;
+
+	struct Printable;
+	struct VirtualPrintable;
+
 }
 }
 
@@ -50,12 +52,6 @@ namespace std {
 
 	inline std::ostream& operator<<(std::ostream& out, const insieme::utils::VirtualPrintable& printable);
 
-	template <typename T>
-	typename std::enable_if<std::is_base_of<insieme::utils::Printable, T>::value && !std::is_base_of<insieme::utils::VirtualPrintable, T>::value,
-	                        std::ostream&>::type
-	operator<<(std::ostream& out, const T& printable) {
-		return printable.printTo(out);
-	}
 }
 
 namespace insieme {
@@ -95,6 +91,22 @@ namespace utils {
 		 */
 		virtual std::ostream& printTo(std::ostream& out) const = 0;
 	};
+
+} // end of namespace utils
+} // end of namespace insieme
+
+namespace std {
+
+	template <typename T>
+	typename std::enable_if<std::is_base_of<insieme::utils::Printable, T>::value && !std::is_base_of<insieme::utils::VirtualPrintable, T>::value,
+	                        std::ostream&>::type
+	operator<<(std::ostream& out, const T& printable) {
+		return printable.printTo(out);
+	}
+}
+
+namespace insieme {
+namespace utils {
 
 
 	/**

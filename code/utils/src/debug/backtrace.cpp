@@ -90,7 +90,7 @@ namespace debug {
 
 	#else
 
-	std::string getBacktraceString(int offset) {
+	std::string getBacktraceString(int /*offset*/) {
 		return "Backtrace not supported on this compiler\n";
 	}
 

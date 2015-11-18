@@ -84,13 +84,13 @@ namespace constraint {
 			}
 		}
 
-		virtual UpdateResult update(Assignment& ass) const {
+		virtual UpdateResult update(Assignment& /*ass*/) const {
 			return Unchanged;
 		};
 		virtual bool check(const Assignment& ass) const = 0;
 
 		virtual std::ostream& writeDotEdge(std::ostream& out) const = 0;
-		virtual std::ostream& writeDotEdge(std::ostream& out, const Assignment& ass) const {
+		virtual std::ostream& writeDotEdge(std::ostream& out, const Assignment& /*ass*/) const {
 			return writeDotEdge(out);
 		}
 
@@ -108,11 +108,11 @@ namespace constraint {
 			return dynamicDependencies;
 		}
 
-		virtual bool updateDynamicDependencies(const Assignment& ass) const {
+		virtual bool updateDynamicDependencies(const Assignment& /*ass*/) const {
 			return dynamicDependencies; // return whether something might have changed
 		}
 
-		virtual const vector<Variable>& getUsedInputs(const Assignment& ass) const {
+		virtual const vector<Variable>& getUsedInputs(const Assignment& /*ass*/) const {
 			assert_false(assignmentDependentDependencies) << "Needs to be implemented by constraints exhibiting assignment based dependencies.";
 			return inputs;
 		}
@@ -214,7 +214,7 @@ namespace constraint {
 		};
 
 		struct TrueFilter : public Filter<true> {
-			bool operator()(const Assignment& ass) const {
+			bool operator()(const Assignment& /*ass*/) const {
 				return true;
 			}
 			void print(std::ostream& out) const {
@@ -224,7 +224,7 @@ namespace constraint {
 				static const Variables empty;
 				return empty;
 			}
-			void addUsedInputs(const Assignment& ass, vector<Variable>& used) const {}
+			void addUsedInputs(const Assignment& /*ass*/, vector<Variable>& /*used*/) const {}
 		};
 
 		template <typename A, typename B>
@@ -699,7 +699,7 @@ namespace constraint {
 	class Constraints : public Printable {
 	  public:
 		typedef vector<ConstraintPtr> data_type;
-		typedef typename data_type::const_iterator const_iterator;
+		typedef data_type::const_iterator const_iterator;
 
 	  private:
 		// think about making this a set

@@ -126,8 +126,9 @@ namespace detail {
 template <typename... Args>
 string format(const char* formatString, const Args&... args) {
 	string retval;
-	int BUFFER_SIZE = 2048;
-	char buffer[BUFFER_SIZE];
+	const int BUFFER_SIZE_FIXED = 2048;
+	int BUFFER_SIZE = BUFFER_SIZE_FIXED;
+	char buffer[BUFFER_SIZE_FIXED];
 
 	#pragma GCC diagnostic push
 	#pragma GCC diagnostic ignored "-Wformat-security"
@@ -193,7 +194,7 @@ inline string camelcaseToUnderscore(const string input) {
 	for(char s : input) {
 		if(std::isupper(s)) {
 			if(!output.empty()) { output.push_back('_'); }
-			output.push_back(tolower(s));
+			output.push_back((char)tolower(s));
 		} else {
 			output.push_back(s);
 		}
