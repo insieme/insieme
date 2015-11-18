@@ -58,6 +58,7 @@
 
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/analysis/type_utils.h"
 #include "insieme/core/analysis/attributes.h"
 #include "insieme/core/annotations/naming.h"
 
@@ -315,64 +316,66 @@ namespace printer {
 					});
 
 					//third: print all declarations for memberFields, constructors, destructors, memberFunctions...
-					visitDepthFirstOnce(node, [&](const RecordPtr &cur) {
+					visitDepthFirstOnce(node, [&](const TagTypePtr &tagType) {
 
+						auto cur = tagType.getRecord();
 						// TODO: print all memberFields declarations
 
-						// print all constructors declarations
-						auto constructors = cur->getConstructors();
-						if (!constructors.empty()) {
-							out << join(";", constructors, [&](std::ostream& out, const ExpressionPtr& constr) {
-								if (auto ctor = constr.isa<LambdaExprPtr>()) {
-									if (cur->getName()->getValue().compare("")) {
+						if (cur->getName()->getValue().compare("")) {
+
+							// print all constructors declarations
+							auto constructors = cur->getConstructors();
+							if (!constructors.empty()) {
+								for (auto constr : constructors) {
+									if (analysis::isaDefaultConstructor(tagType, constr)) continue;
+									if (auto ctor = constr.isa<LambdaExprPtr>()) {
 										newLine();
 										out << "decl " << cur->getName()->getValue() << "::ctor";
 										auto params = ctor->getParameterList();
 										out << "(" << join(", ", params.begin() + 1, params.end(),
-														   [&](std::ostream &out, const VariablePtr &curVar) {
+														   [&](std::ostream& out, const VariablePtr& curVar) {
 															   visit(NodeAddress(curVar->getType()));
-														   });
+														   }) << ");";
 									}
 								}
-							}) << ";";
-						}
-
-						// print the destructor declaration
-						auto destructor = cur->getDestructor();
-						if (auto dtor = destructor.isa<LambdaExprPtr>()) {
-							if (cur->getName()->getValue().compare("")) {
-								newLine();
-								out << "decl " << cur->getName()->getValue() << "::dtor();";
 							}
-						}
 
-						// print all memberFunctions declarations
-						auto memberFunctions = cur->getMemberFunctions();
-						if (!memberFunctions.empty()) {
-							out <<
-							join(";", memberFunctions, [&](std::ostream &out, const MemberFunctionPtr &memberFun) {
-								if (auto member = memberFun->getImplementation().isa<LambdaExprPtr>()) {
-									if (cur->getName()->getValue().compare("")) {
+							// print the destructor declaration
+							if (!analysis::hasDefaultDestructor(tagType)) {
+								auto destructor = cur->getDestructor();
+								if (auto dtor = destructor.isa<LambdaExprPtr>()) {
+									newLine();
+									out << "decl " << cur->getName()->getValue() << "::dtor();";
+								}
+							}
+
+							// print all memberFunctions declarations
+							auto memberFunctions = cur->getMemberFunctions();
+							if (!memberFunctions.empty()) {
+								for (auto memberFun : memberFunctions) {
+									if (analysis::isaDefaultMember(tagType, memberFun)) continue;
+									if (auto member = memberFun->getImplementation().isa<LambdaExprPtr>()) {
 										newLine();
 										out << "decl " << cur->getName()->getValue() << "::" <<
 										memberFun->getName()->getValue();
 										auto params = member->getParameterList();
 
 										out << "(" << join(", ", params.begin() + 1, params.end(),
-														   [&](std::ostream &out, const VariablePtr &curVar) {
+														   [&](std::ostream& out, const VariablePtr& curVar) {
 															   visit(NodeAddress(curVar->getType()));
 														   }) << ") -> ";
 										visit(NodeAddress(member->getFunctionType()->getReturnType()));
+										out << ";";
 									}
 								}
-							}) << ";";
-						}
-						// TODO: wait unit pure virtual member funcs are implemented in the nodemanager
-
+							}
+							// TODO: wait unit pure virtual member funcs are implemented in the nodemanager
+					}
 					});
 
 					//third: print all record definitions
-					visitDepthFirstOnce(node, [&](const RecordPtr &cur) {
+					visitDepthFirstOnce(node, [&](const TagTypePtr &tagType) {
+						auto cur = tagType.getRecord();
 						// only print named record types
 						if (cur->getName()->getValue().compare("")) {
 
@@ -414,63 +417,62 @@ namespace printer {
 
 							// print all constructors definitions
 							auto constructors = cur->getConstructors();
-							if (!constructors.empty()) {
-								out << join(";", constructors, [&](std::ostream &out, const ExpressionPtr &constr) {
-									if (auto ctor = constr.isa<LambdaExprPtr>()) {
-										newLine();
-										auto params = ctor->getParameterList();
-										out << "ctor (" << join(", ", params.begin() + 1, params.end(), paramPrinter);
-										out << ") ";
-										visit(NodeAddress(ctor->getBody()));
-									}
-								}) << ";";
+							for(auto constr : constructors) {
+								if (analysis::isaDefaultConstructor(tagType, constr)) continue;
+								if (auto ctor = constr.isa<LambdaExprPtr>()) {
+									newLine();
+									auto params = ctor->getParameterList();
+									out << "ctor (" << join(", ", params.begin() + 1, params.end(), paramPrinter);
+									out << ") ";
+									visit(NodeAddress(ctor->getBody()));
+								}
 							}
 
 							// print the destructor definitions
-							auto destructor = cur->getDestructor();
-							if (auto dtor = destructor.isa<LambdaExprPtr>()) {
-								newLine();
-								out << "dtor () ";
-								visit(NodeAddress(dtor->getBody()));
+							if (!analysis::hasDefaultDestructor(tagType)) {
+								auto destructor = cur->getDestructor();
+								if (auto dtor = destructor.isa<LambdaExprPtr>()) {
+									newLine();
+									out << "dtor () ";
+									visit(NodeAddress(dtor->getBody()));
+								}
 							}
 
 							// print all memberFunctions definitions
 							auto memberFunctions = cur->getMemberFunctions();
-							if (!memberFunctions.empty()) {
-								out <<
-								join("", memberFunctions, [&](std::ostream &out, const MemberFunctionPtr &memberFun) {
-									if (auto impl = memberFun->getImplementation().isa<LambdaExprPtr>()) {
-										newLine();
-										if (memberFun->isVirtual()) out << "virtual ";
+							for (auto memberFun : memberFunctions) {
+								if (analysis::isaDefaultMember(tagType, memberFun)) continue;
+								if (auto impl = memberFun->getImplementation().isa<LambdaExprPtr>()) {
+									newLine();
+									if (memberFun->isVirtual()) out << "virtual ";
 
-										const auto &params = impl->getParameterList();
-										assert_true(params.size() >= 1);
+									const auto &params = impl->getParameterList();
+									assert_true(params.size() >= 1);
 
-										TypePtr thisParam = params[0]->getType();
-										assert_true (analysis::isRefType(thisParam));
-										if (analysis::isRefType(analysis::getReferencedType(thisParam))) {
-											thisParam = analysis::getReferencedType(thisParam);
-										}
-										const auto thisParamRef = lang::ReferenceType(thisParam);
-										if (thisParamRef.isConst()) { out << "const "; }
-										if (thisParamRef.isVolatile()) { out << "volatile "; }
-
-										out << "function " << memberFun->getName()->getValue();
-										auto parameters = impl->getParameterList();
-										thisStack.push(parameters.front());
-
-										out << " : (" << join(", ", parameters.begin() + 1, parameters.end(),
-															  [&](std::ostream &out, const VariablePtr &curVar) {
-																  visit(NodeAddress(curVar));
-																  out << " : ";
-																  visit(NodeAddress(curVar->getType()));
-															  }) << ") -> ";
-										visit(NodeAddress(impl->getFunctionType()->getReturnType()));
-										out << " ";
-										visit(NodeAddress(impl->getBody()));
-										thisStack.pop();
+									TypePtr thisParam = params[0]->getType();
+									assert_true (analysis::isRefType(thisParam));
+									if (analysis::isRefType(analysis::getReferencedType(thisParam))) {
+										thisParam = analysis::getReferencedType(thisParam);
 									}
-								});
+									const auto thisParamRef = lang::ReferenceType(thisParam);
+									if (thisParamRef.isConst()) { out << "const "; }
+									if (thisParamRef.isVolatile()) { out << "volatile "; }
+
+									out << "function " << memberFun->getName()->getValue();
+									auto parameters = impl->getParameterList();
+									thisStack.push(parameters.front());
+
+									out << " : (" << join(", ", parameters.begin() + 1, parameters.end(),
+														  [&](std::ostream &out, const VariablePtr &curVar) {
+															  visit(NodeAddress(curVar));
+															  out << " : ";
+															  visit(NodeAddress(curVar->getType()));
+														  }) << ") -> ";
+									visit(NodeAddress(impl->getFunctionType()->getReturnType()));
+									out << " ";
+									visit(NodeAddress(impl->getBody()));
+									thisStack.pop();
+								}
 							}
 							// TODO: wait unit pure virtual member funcs are implemented in the nodemanager
 
@@ -686,6 +688,8 @@ namespace printer {
 
 				if(!node->getName()->getValue().compare("")) {
 
+					const auto& tagType = node.getFirstParentOfType(NT_TagType).getAddressedNode().as<TagTypePtr>();
+
 					auto paramPrinter = [&](std::ostream &out, const VariableAddress &cur) {
 						VISIT(cur);
 						out << " : ";
@@ -726,27 +730,30 @@ namespace printer {
 
 					// print all constructors
 					auto constructors = node->getConstructors();
-					if (!constructors.empty()) {
-						out << join("", constructors, [&](std::ostream &out, const ExpressionAddress &cur) {
-							if (auto ctor = cur.isa<LambdaExprAddress>()) {
-								this->newLine();
-								out << "ctor ";
-								auto parameters = ctor->getParameterList();
-								out << "(" << join(", ", parameters.begin() + 1, parameters.end(), paramPrinter) << ") ";
-								VISIT(ctor->getBody());
-							}
-						});
+					for(auto constr : constructors) {
+						if (analysis::isaDefaultConstructor(tagType, constr.getAddressedNode())) continue;
+						if (auto ctor = constr.isa<LambdaExprAddress>()) {
+							this->newLine();
+							out << "ctor ";
+							auto parameters = ctor->getParameterList();
+							out << "(" << join(", ", parameters.begin() + 1, parameters.end(), paramPrinter) << ") ";
+							VISIT(ctor->getBody());
+						}
 					}
 
 					// print all destructors
-					auto destructor = node->getDestructor();
-					if (auto dtor = destructor.isa<LambdaExprAddress>()) {
-						this->newLine();
-						out << "dtor ()";
-						VISIT(dtor->getBody());
+					if (!analysis::hasDefaultDestructor(tagType)) {
+						auto destructor = node->getDestructor();
+						if (auto dtor = destructor.isa<LambdaExprAddress>()) {
+							this->newLine();
+							out << "dtor ()";
+							VISIT(dtor->getBody());
+						}
 					}
+
 					// print all member functions
 					auto memberfuns = node->getMemberFunctions();
+					/*
 					if (!memberfuns.empty()) {
 						out << join("", memberfuns, [&](std::ostream &out, const MemberFunctionAddress &member) {
 							this->newLine();
@@ -764,9 +771,46 @@ namespace printer {
 							if (thisParamRef.isVolatile()) { out << "volatile "; }
 							out << "function ";
 							out << member->getName()->getValue();
-							out << " : (" << join(", ", params.begin() + 1, params.end(), paramPrinter) << ") ";
+							out << " : (" << join(", ", params.begin() + 1, params.end(), paramPrinter) << ") -> ";
+							VISIT(impl->getFunctionType()->getReturnType());
+							out << " ";
 							VISIT(impl->getBody());
 						});
+					}
+					*/
+					for (auto memberFun : memberfuns) {
+						if (analysis::isaDefaultMember(tagType, memberFun.getAddressedNode())) continue;
+						if (auto impl = memberFun->getImplementation().isa<LambdaExprAddress>()) {
+							newLine();
+							if (memberFun->isVirtual()) out << "virtual ";
+
+							const auto &params = impl->getParameterList();
+							assert_true(params.size() >= 1);
+
+							TypePtr thisParam = params[0].getAddressedNode()->getType();
+							assert_true (analysis::isRefType(thisParam));
+							if (analysis::isRefType(analysis::getReferencedType(thisParam))) {
+								thisParam = analysis::getReferencedType(thisParam);
+							}
+							const auto thisParamRef = lang::ReferenceType(thisParam);
+							if (thisParamRef.isConst()) { out << "const "; }
+							if (thisParamRef.isVolatile()) { out << "volatile "; }
+
+							out << "function " << memberFun->getName()->getValue();
+							auto parameters = impl->getParameterList();
+							thisStack.push(parameters.front().getAddressedNode());
+
+							out << " : (" << join(", ", parameters.begin() + 1, parameters.end(),
+												  [&](std::ostream &out, const VariableAddress &curVar) {
+													  VISIT(curVar);
+													  out << " : ";
+													  VISIT(curVar->getType());
+												  }) << ") -> ";
+							VISIT(impl->getFunctionType()->getReturnType());
+							out << " ";
+							VISIT(impl->getBody());
+							thisStack.pop();
+						}
 					}
 					// print all pur virtual member functions
 

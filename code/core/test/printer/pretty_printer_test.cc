@@ -188,11 +188,9 @@ IRBuilder builder(nm);
 
 	std::string res = ""
 			"decl struct A;\n"
-			"decl A::dtor();\n"
 			"decl A::f() -> int<4>;\n"
 			"def struct A {\n"
 			"    a : int<4>;\n"
-			"    dtor () { }\n"
 			"    function f : () -> int<4> {\n"
 			"        return *(*this).a;\n"
 			"    }\n"
@@ -270,9 +268,7 @@ TEST(PrettyPrinter, Declarations) {
 
 	EXPECT_EQ(toString(printer0), ""
 		"decl struct A;\n"
-		"decl A::dtor();\n"
 		"def struct A {\n"
-		"    dtor () { }\n"
 		"};\n"
 		"A") << printer0;
 
@@ -286,13 +282,9 @@ TEST(PrettyPrinter, Declarations) {
 	EXPECT_EQ(toString(printer2), ""
 		"decl struct B;\n"
 		"decl struct A;\n"
-		"decl B::dtor();\n"
-		"decl A::dtor();\n"
 		"def struct B: [ public A ] {\n"
-		"    dtor () { }\n"
 		"};\n"
 		"def struct A {\n"
-		"    dtor () { }\n"
 		"};\n"
 		"B") << printer2;
 
@@ -311,13 +303,11 @@ TEST(PrettyPrinter, Declarations) {
 
 	EXPECT_EQ(toString(printer1), ""
 		"decl struct A;\n"
-		"decl A::dtor();\n"
 		"decl A::f() -> unit;\n"
 		"decl A::g(ref<int<4>,f,f,plain>) -> unit;\n"
 		"decl A::h(ref<ref<int<4>,f,f,plain>,f,f,plain>, ref<int<8>,f,f,plain>) -> unit;\n"
 		"decl A::i(ref<int<4>,f,f,plain>) -> int<4>;\n"
 		"def struct A {\n"
-		"    dtor () { }\n"
 		"    function f : () -> unit { }\n"
 		"    virtual function g : (v7 : ref<int<4>,f,f,plain>) -> unit { }\n"
 		"    const function h : (v10 : ref<ref<int<4>,f,f,plain>,f,f,plain>, v11 : ref<int<8>,f,f,plain>) -> unit { }\n"
@@ -343,14 +333,12 @@ TEST(PrettyPrinter, Declarations) {
 
 	EXPECT_EQ(toString(printer3), ""
 		"decl struct A;\n"
-		"decl A::dtor();\n"
 		"decl A::f() -> unit;\n"
 		"decl A::j() -> unit;\n"
 		"decl A::g(ref<int<4>,f,f,plain>) -> unit;\n"
 		"decl A::h(ref<int<4>,f,f,plain>, ref<int<8>,f,f,plain>) -> unit;\n"
 		"decl A::i(ref<int<4>,f,f,plain>) -> int<4>;\n"
 		"def struct A {\n"
-		"    dtor () { }\n"
 		"    function f : () -> unit { }\n"
 		"    function j : () -> unit { }\n"
 		"    virtual function g : (v13 : ref<int<4>,f,f,plain>) -> unit { }\n"
@@ -386,14 +374,14 @@ TEST(PrettyPrinter, StructSuperTypes) {
 	IRBuilder builder(manager);
 
 	TypePtr classA = builder.structType(toVector(builder.field("a", builder.genericType("A"))));
-	EXPECT_EQ("struct {\n    a : A;\n    dtor (){ }\n}", toString(PrettyPrinter(classA)));
+	EXPECT_EQ("struct {\n    a : A;\n}", toString(PrettyPrinter(classA))) << toString(PrettyPrinter(classA));
 
 	TypePtr classB = builder.structType(toVector(classA), toVector(builder.field("b", builder.genericType("B"))));
-	EXPECT_EQ("struct : [ public struct {\n    a : A;\n    dtor (){ }\n} ] {\n    b : B;\n    dtor (){ }\n}", toString(PrettyPrinter(classB)));
+	EXPECT_EQ("struct : [ public struct {\n    a : A;\n} ] {\n    b : B;\n}", toString(PrettyPrinter(classB)));
 
 	TypePtr classC = builder.structType(toVector(builder.parent(true, classB)), toVector(builder.field("c", builder.genericType("C"))));
 	EXPECT_EQ(
-	    "struct : [ virtual public struct : [ public struct {\n    a : A;\n    dtor (){ }\n} ] {\n    b : B;\n    dtor (){ }\n} ] {\n    c : C;\n    dtor (){ }\n}",
+	    "struct : [ virtual public struct : [ public struct {\n    a : A;\n} ] {\n    b : B;\n} ] {\n    c : C;\n}",
 	    toString(PrettyPrinter(classC)));
 }
 
@@ -565,13 +553,13 @@ TEST(PrettyPrinter, DerivedLiterals) {
 
 	EXPECT_FALSE(lang::isDerived(fun));
 
-	EXPECT_EQ("decl fun000 : (struct {\n    dtor (){ }\n}) -> unit;\ndef fun000 = function (v1 : ref<struct {\n    dtor (){ }\n},f,f,plain>) -> unit { };\nfun000(x)", toString(PrettyPrinter(call, PrettyPrinter::PRINT_DERIVED_IMPL)));
+	EXPECT_EQ("decl fun000 : (struct {\n}) -> unit;\ndef fun000 = function (v1 : ref<struct {\n},f,f,plain>) -> unit { };\nfun000(x)", toString(PrettyPrinter(call, PrettyPrinter::PRINT_DERIVED_IMPL)));
 
 	// mark it derived
 	lang::markAsDerived(fun, "id");
 	EXPECT_TRUE(lang::isDerived(fun));
 
-	EXPECT_EQ("decl id : (struct {\n    dtor (){ }\n}) -> unit;\ndef id = function (v1 : ref<struct {\n    dtor (){ }\n},f,f,plain>) -> unit { };\nid(x)", toString(PrettyPrinter(call, PrettyPrinter::PRINT_DERIVED_IMPL)));
+	EXPECT_EQ("decl id : (struct {\n}) -> unit;\ndef id = function (v1 : ref<struct {\n},f,f,plain>) -> unit { };\nid(x)", toString(PrettyPrinter(call, PrettyPrinter::PRINT_DERIVED_IMPL)));
 
 	// without derived interception
 	EXPECT_EQ("id(x)", toString(PrettyPrinter(call)));
