@@ -239,9 +239,9 @@ namespace tasks {
 					LambdaReferencePtr rVar = lb->getReference();
 					LambdaReferenceList varOptions;
 					varOptions.push_back(rVar);                            // original version is the first option
-					varOptions.push_back(build.lambdaReference(rVar->getType(),"u2")); // var for 2 unroll
-					varOptions.push_back(build.lambdaReference(rVar->getType(),"u4")); // var for 4 unroll
-					varOptions.push_back(build.lambdaReference(rVar->getType(),"us")); // var for sequential
+					varOptions.push_back(build.lambdaReference(rVar->getType(),rVar->getNameAsString() + "_unroll_2")); // var for 2 unroll
+					varOptions.push_back(build.lambdaReference(rVar->getType(), rVar->getNameAsString() + "_unroll_4")); // var for 4 unroll
+					varOptions.push_back(build.lambdaReference(rVar->getType(), rVar->getNameAsString() + "_unroll_inf")); // var for sequential
 					varOptionsList.push_back(varOptions);
 					sequentialVarReplacements.insert(make_pair(rVar, varOptions.back()));
 				}
