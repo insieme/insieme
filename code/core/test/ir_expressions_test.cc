@@ -190,14 +190,21 @@ namespace core {
 		LambdaPtr oddLambda = builder.lambda(functionType, param, oddBody);
 
 		// finish definition
-		vector<LambdaBindingPtr> bindings;
-		bindings.push_back(builder.lambdaBinding(evenVar, evenLambda));
-		bindings.push_back(builder.lambdaBinding(oddVar, oddLambda));
+		LambdaBindingMap bindings;
+		bindings.insert({ evenVar, evenLambda });
+		bindings.insert({ oddVar, oddLambda });
 		LambdaDefinitionPtr definition = builder.lambdaDefinition(bindings);
 
+		vector<LambdaBindingPtr> compVal;
+		for(auto b : bindings) {
+			compVal.push_back(builder.lambdaBinding(b.first, b.second));
+		}
+		
 		// test definition node
-		EXPECT_TRUE(equals(convertList(bindings), definition->getChildList()));
-
+		for(auto c : compVal) {
+			EXPECT_TRUE(analysis::contains(definition, c));
+		}
+		
 		// create recursive lambda nodes
 		LambdaExprPtr even = builder.lambdaExpr(evenVar, definition);
 		LambdaExprPtr odd = builder.lambdaExpr(oddVar, definition);

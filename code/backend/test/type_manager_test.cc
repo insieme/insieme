@@ -1095,9 +1095,7 @@ namespace backend {
 		entriesA.push_back(builder.field(builder.stringValue("next"), builder.refType(A)));
 		core::StructPtr structA = builder.structRecord(entriesA);
 
-		vector<core::TagTypeBindingPtr> defs;
-		defs.push_back(builder.tagTypeBinding(A, structA));
-		core::TagTypeDefinitionPtr def = builder.tagTypeDefinition(defs);
+		core::TagTypeDefinitionPtr def = builder.tagTypeDefinition({ { A, structA } });
 
 		core::TagTypePtr recTypeA = builder.tagType(A, def);
 		EXPECT_TRUE(recTypeA->isRecursive());
@@ -1146,10 +1144,7 @@ namespace backend {
 		entriesB.push_back(builder.field(builder.stringValue("other"), builder.refType(A)));
 		auto structB = builder.structRecord(entriesB);
 
-		vector<core::TagTypeBindingPtr> defs;
-		defs.push_back(builder.tagTypeBinding(A, structA));
-		defs.push_back(builder.tagTypeBinding(B, structB));
-		core::TagTypeDefinitionPtr def = builder.tagTypeDefinition(defs);
+		core::TagTypeDefinitionPtr def = builder.tagTypeDefinition({ { A, structA }, { B, structB } });
 
 		core::TagTypePtr recTypeA = builder.tagType(A, def);
 		core::TagTypePtr recTypeB = builder.tagType(B, def);

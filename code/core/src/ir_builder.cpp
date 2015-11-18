@@ -412,12 +412,12 @@ namespace core {
 
 	TagTypePtr IRBuilderBaseModule::unionType(const vector<FieldPtr>& fields) const {
 		auto tag = tagTypeReference("");
-		return tagType(tag, tagTypeDefinition({tagTypeBinding(tag, unionRecord(fields))}));
+		return tagType(tag, tagTypeDefinition({ { tag, unionRecord(fields) } }));
 	}
 
 	TagTypePtr IRBuilderBaseModule::unionType(const StringValuePtr& name, const vector<FieldPtr>& fields) const {
 		auto tag = tagTypeReference(name);
-		return tagType(tag, tagTypeDefinition({tagTypeBinding(tag, unionRecord(name, fields))}));
+		return tagType(tag, tagTypeDefinition({ { tag, unionRecord(name, fields) } }));
 	}
 
 	TagTypePtr IRBuilderBaseModule::unionType(const vector<std::pair<StringValuePtr, TypePtr>>& union_fields) const {
@@ -437,7 +437,7 @@ namespace core {
 	                                          const ExpressionsPtr& ctors, const ExpressionPtr& dtor, const BoolValuePtr& dtorIsVirtual,
 	                                          const MemberFunctionsPtr& mfuns, const PureVirtualMemberFunctionsPtr& pvmfuns) const {
 		auto tag = tagTypeReference(name);
-				return tagType(tag, tagTypeDefinition({tagTypeBinding(tag, unionRecord(name, fields, ctors, dtor, dtorIsVirtual, mfuns, pvmfuns))}));
+				return tagType(tag, tagTypeDefinition({ { tag, unionRecord(name, fields, ctors, dtor, dtorIsVirtual, mfuns, pvmfuns) } }));
 	}
 
 	TagTypePtr IRBuilderBaseModule::unionTypeWithDefaults(const TypePtr& thisType, const FieldList& fields,
@@ -478,7 +478,7 @@ namespace core {
 
 	TagTypePtr IRBuilderBaseModule::structType(const StringValuePtr& name, const vector<ParentPtr>& parentsList, const vector<FieldPtr>& fields) const {
 		auto tag = tagTypeReference(name);
-		return tagType(tag, tagTypeDefinition({tagTypeBinding(tag, structRecord(name, parents(parentsList), fields))}));
+		return tagType(tag, tagTypeDefinition({ { tag, structRecord(name, parents(parentsList), fields) } }));
 	}
 
 	TagTypePtr IRBuilderBaseModule::structType(const string& name, const ParentList& prents, const FieldList& filds,
@@ -493,7 +493,7 @@ namespace core {
 	                                           const ExpressionPtr& dtor, const BoolValuePtr& dtorIsVirtual, const MemberFunctionsPtr& mfuns,
 	                                           const PureVirtualMemberFunctionsPtr& pvmfuns) const {
 		auto tag = tagTypeReference(name);
-		return tagType(tag, tagTypeDefinition({tagTypeBinding(tag, structRecord(name, parents, fields, ctors, dtor, dtorIsVirtual, mfuns, pvmfuns))}));
+		return tagType(tag, tagTypeDefinition({ { tag, structRecord(name, parents, fields, ctors, dtor, dtorIsVirtual, mfuns, pvmfuns) } }));
 	}
 
 	TagTypePtr IRBuilderBaseModule::structTypeWithDefaults(const TypePtr& thisType, const ParentList& parents, const FieldList& fields,

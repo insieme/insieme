@@ -873,7 +873,7 @@ namespace core {
 		 * @param bindings the bindings to be included within this definition
 		 * @return the requested type instance managed by the given manager
 		 */
-		static LambdaDefinitionPtr get(NodeManager & manager, const vector<LambdaBindingPtr>& bindings);
+		static LambdaDefinitionPtr get(NodeManager & manager, const LambdaBindingMap& bindings);
 
 		/**
 		 * Determines whether the definition of the function referenced by the given variable within

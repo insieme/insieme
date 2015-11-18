@@ -437,9 +437,9 @@ namespace tu {
 							// close recursive types
 							if(first.isa<GenericTypePtr>()) {
 								// build recursive type definition
-								vector<TagTypeBindingPtr> bindings;
+								TagTypeBindingMap bindings;
 								for(const auto& cur : vars) {
-									bindings.push_back(builder.tagTypeBinding(resolutionCache[cur].as<TagTypeReferencePtr>(), resolved[cur].as<TagTypePtr>()->getRecord()));
+									bindings.insert({ resolutionCache[cur].as<TagTypeReferencePtr>(), resolved[cur].as<TagTypePtr>()->getRecord() });
 								}
 
 								// build recursive type definition
@@ -460,10 +460,9 @@ namespace tu {
 
 							} else if(first.isa<LiteralPtr>()) {
 								// build recursive lambda definition
-								vector<LambdaBindingPtr> bindings;
+								LambdaBindingMap bindings;
 								for(const auto& cur : vars) {
-									bindings.push_back(
-										builder.lambdaBinding(resolutionCache[cur].as<LambdaReferencePtr>(), resolved[cur].as<LambdaExprPtr>()->getLambda()));
+									bindings.insert({ resolutionCache[cur].as<LambdaReferencePtr>(), resolved[cur].as<LambdaExprPtr>()->getLambda() });
 								}
 
 								// build recursive type definition

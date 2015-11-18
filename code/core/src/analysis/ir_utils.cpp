@@ -1238,7 +1238,7 @@ namespace analysis {
 		template<
 			typename Var,
 			typename Construct,
-			typename Binding,
+			typename Value,
 			typename Def
 		>
 		std::map<Var,Pointer<const Construct>> minimizeRecursiveGroupsGen(const Pointer<const Def>& def) {
@@ -1282,7 +1282,7 @@ namespace analysis {
 				auto& comp = *it;
 
 				// build new bindings
-				std::vector<Pointer<const Binding>> bindings;
+				utils::map::PointerMap<Var, Value> bindings;
 				for(const auto& var : comp) {
 					auto v = var.as<Var>();
 
@@ -1313,7 +1313,7 @@ namespace analysis {
 					transform::utils::migrateAnnotations(oldDef,fixedDef);
 
 					// add binding
-					bindings.push_back(Binding::get(mgr, v, fixedDef));
+					bindings.insert({ v, fixedDef });
 				}
 
 				// build reduced definition group
@@ -1334,12 +1334,12 @@ namespace analysis {
 
 	std::map<TagTypeReferencePtr, TagTypePtr> minimizeRecursiveGroup(const TagTypeDefinitionPtr& def) {
 		// conduct minimization
-		return minimizeRecursiveGroupsGen<TagTypeReferencePtr, TagType, TagTypeBinding>(def);
+		return minimizeRecursiveGroupsGen<TagTypeReferencePtr, TagType, RecordPtr>(def);
 	}
 
 	std::map<LambdaReferencePtr, LambdaExprPtr> minimizeRecursiveGroup(const LambdaDefinitionPtr& def) {
 		// conduct minimization
-		return minimizeRecursiveGroupsGen<LambdaReferencePtr, LambdaExpr, LambdaBinding>(def);
+		return minimizeRecursiveGroupsGen<LambdaReferencePtr, LambdaExpr, LambdaPtr>(def);
 	}
 
 
