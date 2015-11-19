@@ -42,11 +42,15 @@ namespace utils {
 	/// Format string "name" to be usable as an identifier, and encode file, line and column information in it
 	///
 	std::string mangle(std::string name, std::string file, unsigned line, unsigned column);
-	
+
+	/// Retrieve a mangled "name" for an anonymous identifier
+	///
+	std::string mangle(std::string file, unsigned line, unsigned column);
+
 	/// Format string "name" to be usable as an identifier
 	///
 	std::string mangle(std::string name);
-	
+
 	/// Retrieve the original name from the mangled representation.
 	///
 	std::string demangle(std::string name);

@@ -70,7 +70,7 @@ namespace utils {
 	 * @return unique string value
 	 */
 	std::string buildNameForFunction(const clang::FunctionDecl* funcDecl);
-	
+
 	std::string getNameForGlobal(const clang::VarDecl* varDecl, const clang::SourceManager& sm);
 
 	/**
@@ -79,6 +79,13 @@ namespace utils {
 	 * @return name for enumeration
 	 */
 	std::string getNameForEnum(const clang::EnumDecl* enumDecl, const clang::SourceManager& sm);
+
+	/**
+	 * Get name for field (named or anonymous)
+	 * @param fieldDecl the field declaration given by clang
+	 * @return name for the field
+	 */
+	std::string getNameForField(const clang::FieldDecl* fieldDecl, const clang::SourceManager& sm);
 
 } // End utils namespace
 } // End frontend namespace

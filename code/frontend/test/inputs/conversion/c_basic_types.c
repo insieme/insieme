@@ -159,9 +159,9 @@ int main() {
 	#pragma test expect_ir("REGEX", R"(.*ref<union \w+ \{int<4> i\},f,f,plain> v0 = .*)")
 	union_t uni;
 	
-	#pragma test expect_ir("REGEX_S", R"(.*ref<union \{struct \{int<4> a; int<4> b\} ;array<int<4>,2> v\},f,f,plain> v0.*)")
+	#pragma test expect_ir("REGEX_S", R"(.*ref<union \{struct \{int<4> a; int<4> b\} \w+EMPTY\w+;array<int<4>,2> v\},f,f,plain> v0.*)")
 	union { struct { int a; int b; }; int v[2]; } anonymous_inner;
 	
-	#pragma test expect_ir("REGEX", R"(.*\*v\d+\.\.a.*)")
+	#pragma test expect_ir("REGEX", R"(.*\*v\d+\.\w+EMPTY\w+\.a.*)")
 	anonymous_inner.a;
 }

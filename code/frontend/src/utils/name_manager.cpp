@@ -35,6 +35,7 @@
  */
 
 #include "insieme/frontend/clang.h"
+#include "insieme/utils/name_mangling.h"
 
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
@@ -47,7 +48,7 @@ namespace utils {
 
 	using namespace llvm;
 	using std::string;
-	
+
 	std::string removeSymbols(std::string str) {
 		boost::replace_all(str, "<", "_lt_");
 		boost::replace_all(str, ">", "_gt_");
@@ -64,7 +65,7 @@ namespace utils {
 		boost::replace_all(str, "-", "_minus_");
 		return str;
 	}
-	
+
 	std::string createNameForAnon(const std::string& prefix, const clang::Decl* decl, const clang::SourceManager& sm) {
 		std::stringstream ss;
 		ss << prefix;
@@ -294,6 +295,20 @@ namespace utils {
 		}
 
 		return createNameForAnon("_enum", enumDecl, sm);
+	}
+
+	std::string getNameForField(const clang::FieldDecl* fieldDecl, const clang::SourceManager& sm) {
+        string fieldName = fieldDecl->getNameAsString();
+		if(fieldName.empty() || fieldDecl->isAnonymousStructOrUnion()) {
+			auto fileName = sm.getFilename(fieldDecl->getLocStart()).str();
+			auto line = sm.getExpansionLineNumber(fieldDecl->getLocStart());
+			auto column = sm.getExpansionColumnNumber(fieldDecl->getLocStart());
+			// in this case we must mangle the name as "" is not allowed
+			return insieme::utils::mangle(fileName, line, column);
+		}
+
+		// in this case we return the original name itself
+		return fieldName;
 	}
 
 } // End utils namespace
