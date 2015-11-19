@@ -57,8 +57,8 @@ namespace datapath {
 		TypePtr typeA = GenericType::get(mgr, "A");
 
 		EXPECT_EQ("dp_root(type<R>)", toString(*build("R").getPath()));
-		EXPECT_EQ("dp_member(dp_root(type<struct {hello:bool,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),"
-		          "dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}>), hello, type<bool>)",
+		EXPECT_EQ("dp_member(dp_root(type<struct __insieme_anonymous_record_1_1 {hello:bool,ctor(),ctor(ref<^__insieme_anonymous_record_1_1,t,f,cpp_ref>),ctor(ref<^__insieme_anonymous_record_1_1,f,f,cpp_rref>),"
+		          "dtor(),operator_assign(ref<^__insieme_anonymous_record_1_1,t,f,cpp_ref>)->ref<^__insieme_anonymous_record_1_1,f,f,cpp_ref>,operator_assign(ref<^__insieme_anonymous_record_1_1,f,f,cpp_rref>)->ref<^__insieme_anonymous_record_1_1,f,f,cpp_ref>}>), hello, type<bool>)",
 		          toString(*build("struct { hello: bool; }").member("hello").getPath()));
 		EXPECT_EQ("dp_element(dp_root(type<array<int<4>,20>>), 12)", toString(*build("array<int<4>,20>").element(12).getPath()));
 		EXPECT_EQ("dp_component(dp_root(type<(bool,int<4>,real<4>,R)>), 3, type<R>)", toString(*build("(bool,int<4>,real<4>,R)").component(3).getPath()));
@@ -85,37 +85,37 @@ namespace datapath {
 
 		DataPath path(root);
 
-		EXPECT_EQ("<array<struct {test:(int<4>,bool,int<4>,struct E : [struct A {ctor(),ctor(ref<^A,t,f,cpp_ref>),ctor(ref<^A,f,f,cpp_rref>),"
+		EXPECT_EQ("<array<struct __insieme_anonymous_record_1_95 {test:(int<4>,bool,int<4>,struct E : [struct A {ctor(),ctor(ref<^A,t,f,cpp_ref>),ctor(ref<^A,f,f,cpp_rref>),"
 		          "dtor(),operator_assign(ref<^A,t,f,cpp_ref>)->ref<^A,f,f,cpp_ref>,operator_assign(ref<^A,f,f,cpp_rref>)->ref<^A,f,f,cpp_ref>}] {"
 		          "ctor(),ctor(ref<^E,t,f,cpp_ref>),ctor(ref<^E,f,f,cpp_rref>),dtor(),operator_assign(ref<^E,t,f,cpp_ref>)->ref<^E,f,f,cpp_ref>,"
-		          "operator_assign(ref<^E,f,f,cpp_rref>)->ref<^E,f,f,cpp_ref>}),ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor(),"
-		          "operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>},50>>",
+		          "operator_assign(ref<^E,f,f,cpp_rref>)->ref<^E,f,f,cpp_ref>}),ctor(),ctor(ref<^__insieme_anonymous_record_1_95,t,f,cpp_ref>),ctor(ref<^__insieme_anonymous_record_1_95,f,f,cpp_rref>),dtor(),"
+		          "operator_assign(ref<^__insieme_anonymous_record_1_95,t,f,cpp_ref>)->ref<^__insieme_anonymous_record_1_95,f,f,cpp_ref>,operator_assign(ref<^__insieme_anonymous_record_1_95,f,f,cpp_rref>)->ref<^__insieme_anonymous_record_1_95,f,f,cpp_ref>},50>>",
 		          toString(path));
-		EXPECT_EQ("<array<struct {test:(int<4>,bool,int<4>,struct E : [struct A {ctor(),ctor(ref<^A,t,f,cpp_ref>),ctor(ref<^A,f,f,cpp_rref>),"
+		EXPECT_EQ("<array<struct __insieme_anonymous_record_1_95 {test:(int<4>,bool,int<4>,struct E : [struct A {ctor(),ctor(ref<^A,t,f,cpp_ref>),ctor(ref<^A,f,f,cpp_rref>),"
 		          "dtor(),operator_assign(ref<^A,t,f,cpp_ref>)->ref<^A,f,f,cpp_ref>,operator_assign(ref<^A,f,f,cpp_rref>)->ref<^A,f,f,cpp_ref>}] {"
 		          "ctor(),ctor(ref<^E,t,f,cpp_ref>),ctor(ref<^E,f,f,cpp_rref>),dtor(),operator_assign(ref<^E,t,f,cpp_ref>)->ref<^E,f,f,cpp_ref>,"
-		          "operator_assign(ref<^E,f,f,cpp_rref>)->ref<^E,f,f,cpp_ref>}),ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor(),"
-		          "operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>},50>>[4]",
+		          "operator_assign(ref<^E,f,f,cpp_rref>)->ref<^E,f,f,cpp_ref>}),ctor(),ctor(ref<^__insieme_anonymous_record_1_95,t,f,cpp_ref>),ctor(ref<^__insieme_anonymous_record_1_95,f,f,cpp_rref>),dtor(),"
+		          "operator_assign(ref<^__insieme_anonymous_record_1_95,t,f,cpp_ref>)->ref<^__insieme_anonymous_record_1_95,f,f,cpp_ref>,operator_assign(ref<^__insieme_anonymous_record_1_95,f,f,cpp_rref>)->ref<^__insieme_anonymous_record_1_95,f,f,cpp_ref>},50>>[4]",
 		          toString(path.element(4)));
-		EXPECT_EQ("<array<struct {test:(int<4>,bool,int<4>,struct E : [struct A {ctor(),ctor(ref<^A,t,f,cpp_ref>),ctor(ref<^A,f,f,cpp_rref>),"
+		EXPECT_EQ("<array<struct __insieme_anonymous_record_1_95 {test:(int<4>,bool,int<4>,struct E : [struct A {ctor(),ctor(ref<^A,t,f,cpp_ref>),ctor(ref<^A,f,f,cpp_rref>),"
 		          "dtor(),operator_assign(ref<^A,t,f,cpp_ref>)->ref<^A,f,f,cpp_ref>,operator_assign(ref<^A,f,f,cpp_rref>)->ref<^A,f,f,cpp_ref>}] {"
 		          "ctor(),ctor(ref<^E,t,f,cpp_ref>),ctor(ref<^E,f,f,cpp_rref>),dtor(),operator_assign(ref<^E,t,f,cpp_ref>)->ref<^E,f,f,cpp_ref>,"
-		          "operator_assign(ref<^E,f,f,cpp_rref>)->ref<^E,f,f,cpp_ref>}),ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor(),"
-		          "operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>},50>>[4].test",
+		          "operator_assign(ref<^E,f,f,cpp_rref>)->ref<^E,f,f,cpp_ref>}),ctor(),ctor(ref<^__insieme_anonymous_record_1_95,t,f,cpp_ref>),ctor(ref<^__insieme_anonymous_record_1_95,f,f,cpp_rref>),dtor(),"
+		          "operator_assign(ref<^__insieme_anonymous_record_1_95,t,f,cpp_ref>)->ref<^__insieme_anonymous_record_1_95,f,f,cpp_ref>,operator_assign(ref<^__insieme_anonymous_record_1_95,f,f,cpp_rref>)->ref<^__insieme_anonymous_record_1_95,f,f,cpp_ref>},50>>[4].test",
 		          toString(path.element(4).member("test")));
 
 		// "u" after "c3" added to match the printer
-		EXPECT_EQ("<array<struct {test:(int<4>,bool,int<4>,struct E : [struct A {ctor(),ctor(ref<^A,t,f,cpp_ref>),ctor(ref<^A,f,f,cpp_rref>),"
+		EXPECT_EQ("<array<struct __insieme_anonymous_record_1_95 {test:(int<4>,bool,int<4>,struct E : [struct A {ctor(),ctor(ref<^A,t,f,cpp_ref>),ctor(ref<^A,f,f,cpp_rref>),"
 		          "dtor(),operator_assign(ref<^A,t,f,cpp_ref>)->ref<^A,f,f,cpp_ref>,operator_assign(ref<^A,f,f,cpp_rref>)->ref<^A,f,f,cpp_ref>}] {"
 		          "ctor(),ctor(ref<^E,t,f,cpp_ref>),ctor(ref<^E,f,f,cpp_rref>),dtor(),operator_assign(ref<^E,t,f,cpp_ref>)->ref<^E,f,f,cpp_ref>,"
-		          "operator_assign(ref<^E,f,f,cpp_rref>)->ref<^E,f,f,cpp_ref>}),ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor(),"
-		          "operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>},50>>[4].test.c3u",
+		          "operator_assign(ref<^E,f,f,cpp_rref>)->ref<^E,f,f,cpp_ref>}),ctor(),ctor(ref<^__insieme_anonymous_record_1_95,t,f,cpp_ref>),ctor(ref<^__insieme_anonymous_record_1_95,f,f,cpp_rref>),dtor(),"
+		          "operator_assign(ref<^__insieme_anonymous_record_1_95,t,f,cpp_ref>)->ref<^__insieme_anonymous_record_1_95,f,f,cpp_ref>,operator_assign(ref<^__insieme_anonymous_record_1_95,f,f,cpp_rref>)->ref<^__insieme_anonymous_record_1_95,f,f,cpp_ref>},50>>[4].test.c3u",
 		          toString(path.element(4).member("test").component(3)));
-		EXPECT_EQ("<array<struct {test:(int<4>,bool,int<4>,struct E : [struct A {ctor(),ctor(ref<^A,t,f,cpp_ref>),ctor(ref<^A,f,f,cpp_rref>),"
+		EXPECT_EQ("<array<struct __insieme_anonymous_record_1_95 {test:(int<4>,bool,int<4>,struct E : [struct A {ctor(),ctor(ref<^A,t,f,cpp_ref>),ctor(ref<^A,f,f,cpp_rref>),"
 		          "dtor(),operator_assign(ref<^A,t,f,cpp_ref>)->ref<^A,f,f,cpp_ref>,operator_assign(ref<^A,f,f,cpp_rref>)->ref<^A,f,f,cpp_ref>}] {"
 		          "ctor(),ctor(ref<^E,t,f,cpp_ref>),ctor(ref<^E,f,f,cpp_rref>),dtor(),operator_assign(ref<^E,t,f,cpp_ref>)->ref<^E,f,f,cpp_ref>,"
-		          "operator_assign(ref<^E,f,f,cpp_rref>)->ref<^E,f,f,cpp_ref>}),ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor(),"
-		          "operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>},50>>[4].test.c3u.as<A>",
+		          "operator_assign(ref<^E,f,f,cpp_rref>)->ref<^E,f,f,cpp_ref>}),ctor(),ctor(ref<^__insieme_anonymous_record_1_95,t,f,cpp_ref>),ctor(ref<^__insieme_anonymous_record_1_95,f,f,cpp_rref>),dtor(),"
+		          "operator_assign(ref<^__insieme_anonymous_record_1_95,t,f,cpp_ref>)->ref<^__insieme_anonymous_record_1_95,f,f,cpp_ref>,operator_assign(ref<^__insieme_anonymous_record_1_95,f,f,cpp_rref>)->ref<^__insieme_anonymous_record_1_95,f,f,cpp_ref>},50>>[4].test.c3u.as<A>",
 		          toString(path.element(4).member("test").component(3).parent(typeA)));
 	}
 
