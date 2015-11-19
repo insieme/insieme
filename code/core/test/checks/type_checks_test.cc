@@ -556,6 +556,18 @@ namespace checks {
 		}
 	}
 
+	TEST(DuplicateMemberFieldCheck, Basic) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		{
+			vector<FieldPtr> fields;
+			fields.push_back(builder.field("", GenericType::get(manager, "a")));
+			auto err = builder.structType(fields);
+			EXPECT_PRED2(containsMSG, check(err), Message(NodeAddress(err).getAddressOfChild(1,0,1,1), EC_TYPE_INVALID_IDENTIFIER, "", Message::ERROR));
+		}
+	}
+
 	TEST(StructExprTypeCheck, Basic) {
 		NodeManager manager;
 		IRBuilder builder(manager);

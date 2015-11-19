@@ -394,6 +394,26 @@ namespace checks {
 
 		return res;
 	}
+	
+	OptionalMessageList DuplicateMemberFieldCheck::visitFields(const FieldsAddress& address) {
+		OptionalMessageList res;
+
+		std::set<std::string> fieldNames;
+		for (const auto& field : address->getFields()) {
+			const auto& fieldName = field->getName()->getValue();
+			if (fieldName.empty()) {
+				add(res, Message(address, EC_TYPE_INVALID_IDENTIFIER, format("Empty member field name for type: %s", *field->getType()), Message::ERROR));
+				// as we do not want to insert an empty string into the set
+				continue;
+			}
+			// store the name of the field in the unique set (no duplicates)
+			auto inserted = fieldNames.insert(fieldName);
+			if(!inserted.second) {
+				add(res, Message(address, EC_TYPE_DUPLICATE_MEMBER_FIELD, format("Duplicate member field type: %s for name %s", *field->getType(), fieldName), Message::ERROR));
+			}
+		}
+		return res;
+	}
 
 	OptionalMessageList CallExprTypeCheck::visitCallExpr(const CallExprAddress& address) {
 		NodeManager& manager = address->getNodeManager();

@@ -315,6 +315,10 @@ namespace core {
 		return lang::PointerType::create(elementType, _const, _volatile);
 	}
 
+	GenericTypePtr IRBuilderBaseModule::channelType(const TypePtr& elementType, const ExpressionPtr& size) const {
+		return lang::ChannelType::create(elementType, size);
+	}
+
 	GenericTypePtr IRBuilderBaseModule::arrayType(const TypePtr& elementType) const {
 		return lang::ArrayType::create(elementType);
 	}
@@ -747,7 +751,7 @@ namespace core {
 		}
 		return callExpr(refType(elementType), refExt.getRefVar(), getTypeLiteral(elementType));
 	}
-	
+
 	ExpressionPtr IRBuilderBaseModule::undefinedNew(const TypePtr& type) const {
 		auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
 		core::TypePtr elementType = type;
@@ -756,7 +760,7 @@ namespace core {
 		}
 		return callExpr(refType(elementType), refExt.getRefNew(), getTypeLiteral(elementType));
 	}
-	
+
 	CallExprPtr IRBuilderBaseModule::deref(const ExpressionPtr& subExpr) const {
 		assert_pred1(analysis::isRefType, subExpr->getType());
 		auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
@@ -1498,7 +1502,7 @@ namespace core {
 			if(type.isa<GenericTypePtr>()) {
 				return callExpr(type, getLangBasic().getZero(), getTypeLiteral(type));
 			}
-			
+
 			// TODO: extend for more types
 			LOG(FATAL) << "Encountered unsupported type: " << *type;
 			assert_fail() << "Given type not supported yet!";
@@ -1506,7 +1510,7 @@ namespace core {
 			// fall-back => return a literal 0 of the corresponding type
 			return literal(type, "0");
 	}
-	
+
 	// ---------------------------- Utilities ---------------------------------------
 
 
@@ -1531,7 +1535,7 @@ namespace core {
 
 		return idx;
 	}
-	
+
 	/**
 	 * A utility function wrapping a given statement into a compound statement (if necessary).
 	 */

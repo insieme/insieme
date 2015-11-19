@@ -43,6 +43,7 @@
 
 #include "insieme/backend/c_ast/c_ast.h"
 #include "insieme/utils/container_utils.h"
+#include "insieme/utils/name_mangling.h"
 
 namespace insieme {
 namespace backend {
@@ -507,7 +508,7 @@ namespace c_ast {
 	inline ExpressionPtr access(ExpressionPtr expr, NodePtr element) {
 		// special handling for anonymous inner structs/unions
 		if(auto lit = element.isa<c_ast::IdentifierPtr>()) {
-			if(lit->name.empty()) return expr;
+			if(insieme::utils::demangle(lit->name).empty()) return expr;
 		}
 		return binaryOp(BinaryOperation::MemberAccess, expr, element);
 	}

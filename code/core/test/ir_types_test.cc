@@ -44,6 +44,8 @@
 #include "insieme/core/ir_builder.h"
 
 #include "insieme/core/lang/reference.h"
+#include "insieme/core/lang/channel.h"
+#include "insieme/core/lang/array.h"
 #include "insieme/core/transform/node_replacer.h"
 
 #include "insieme/core/checks/full_check.h"
@@ -422,425 +424,371 @@ namespace core {
 		EXPECT_TRUE(checks::check(fixedDtor).empty()) << checks::check(fixedDtor);
 	}
 
-	//
-	// TEST(TypeTest, RecType) {
-	//
-	//	// create a manager for this test
-	//	NodeManager manager;
-	//
-	//
-	//	// TODO: test whether order of definitions is important ... (it should not)
-	//
-	//	// create a simple recursive type uX.X (no actual type)
-	//	TypeVariablePtr varX = TypeVariable::get(manager, "X");
-	//
-	//	// create definition
-	//	RecTypeBindingPtr binding = RecTypeBinding::get(manager, varX, varX);
-	//	RecTypeDefinitionPtr definition = RecTypeDefinition::get(manager, toVector(binding));
-	//	EXPECT_EQ("{'X='X}", toString(*definition));
-	//
-	//
-	//	RecTypePtr type = RecType::get(manager, varX, definition);
-	//	EXPECT_EQ("rec 'X.{'X='X}", toString(*type));
-	//	basicTypeTests(type, true, toList(varX, definition));
-	//
-	//
-	//	// create mutually recursive type
-	//	TypeVariablePtr varY = TypeVariable::get(manager, "Y");
-	//
-	//	definition = RecTypeDefinition::get(manager, toVector(
-	//	                                        RecTypeBinding::get(manager, varX, varY),
-	//	                                        RecTypeBinding::get(manager, varY, varX)
-	//	                                    ));
-	//	EXPECT_TRUE(toString(*definition)=="{'Y='X,'X='Y}" || toString(*definition)=="{'X='Y,'Y='X}");
-	//
-	//	RecTypePtr typeX = RecType::get(manager, varX, definition);
-	//	RecTypePtr typeY = RecType::get(manager, varY, definition);
-	//
-	//	EXPECT_NE(typeX, typeY);
-	//	EXPECT_NE(typeX, type);
-	//
-	//	EXPECT_TRUE(toString(*typeX)=="rec 'X.{'Y='X,'X='Y}" || toString(*typeX)=="rec 'X.{'X='Y,'Y='X}");
-	//
-	//	basicTypeTests(typeX, true, toList(toVector<NodePtr>(varX, definition)));
-	//	basicTypeTests(typeY, true, toList(toVector<NodePtr>(varY, definition)));
-	//}
-	//
-	// TEST(TypeTest, RecTypeTest) {
-	//	// test accessing the definition of a recursive type using addresses
-	//
-	//	NodeManager mgr;
-	//	IRBuilder builder(mgr);
-	//
-	//	auto type = builder.parseType("let f = struct { ref<f> next; }; f").as<RecTypePtr>();
-	//	EXPECT_TRUE(type);
-	//
-	//	// get pointer to definition
-	//	auto def = type->getTypeDefinition();
-	//
-	//	// get address of definition
-	//	core::RecTypeAddress address(type);
-	//	core::TypeAddress defAdr = address->getTypeDefinition();
-	//
-	//	EXPECT_EQ("0-1-0-1", toString(defAdr));
-	//	EXPECT_EQ(def, defAdr.getAddressedNode());
-	//}
-	//
-	// namespace {
-	//
-	// NodeList merge() {
-	//	return NodeList();
-	//}
-	//
-	// template<typename ... Rest>
-	// NodeList merge(const NodeList& list, const Rest& ... rest);
-	//
-	// template<typename ... Rest>
-	// NodeList merge(const NodePtr& node, const Rest& ... rest) {
-	//	NodeList res;
-	//	res.push_back(node);
-	//	for(const NodePtr& cur : merge(rest...)) {
-	//		res.push_back(cur);
-	//	}
-	//	return res;
-	//}
-	//
-	// template<typename ... Rest>
-	// NodeList merge(const NodeList& list, const Rest& ... rest) {
-	//	NodeList res = list;
-	//	for(const NodePtr& cur : merge(rest...)) {
-	//		res.push_back(cur);
-	//	}
-	//	return res;
-	//}
-	//
-	//}
-	//
-	// TEST(TypeTest, StructType) {
-	//
-	//	NodeManager manager;
-	//
-	//	StringValuePtr identA = StringValue::get(manager, "a");
-	//	StringValuePtr identB = StringValue::get(manager, "b");
-	//
-	//	vector<NamedTypePtr> entriesA;
-	//	entriesA.push_back(NamedType::get(manager, identA, GenericType::get(manager, "A")));
-	//	entriesA.push_back(NamedType::get(manager, identB, GenericType::get(manager, "B")));
-	//
-	//	StructTypePtr structA = StructType::get(manager, entriesA);
-	//	EXPECT_EQ("struct<a:A,b:B>", toString(*structA));
-	//
-	//	vector<NamedTypePtr> entriesB;
-	//	StructTypePtr structB = StructType::get(manager, entriesB);
-	//	EXPECT_EQ("struct<>", toString(*structB));
-	//
-	//	vector<NamedTypePtr> entriesC;
-	//	entriesC.push_back(NamedType::get(manager, identA, TypeVariable::get(manager,"alpha")));
-	//	entriesC.push_back(NamedType::get(manager, identB, GenericType::get(manager, "B")));
-	//	StructTypePtr structC = StructType::get(manager, entriesC);
-	//	EXPECT_EQ("struct<a:'alpha,b:B>", toString(*structC));
-	//
-	//	// test for elements with same name
-	//	vector<NamedTypePtr> entriesD;
-	//	entriesD.push_back(NamedType::get(manager, identA, GenericType::get(manager,"A")));
-	//	entriesD.push_back(NamedType::get(manager, identB, GenericType::get(manager,"A")));
-	//	entriesD.push_back(NamedType::get(manager, identA, GenericType::get(manager,"A")));
-	//	EXPECT_THROW(StructType::get(manager, entriesD), std::invalid_argument);
-	//
-	//	// .. same type should not be a problem
-	//	entriesD.pop_back();
-	//	EXPECT_NO_THROW(StructType::get(manager, entriesD));
-	//
-	//	// perform basic type tests
-	//	StringValuePtr name = StringValue::get(manager, "");
-	//	basicTypeTests(structA, true, merge(name, Parents::get(manager), convertList(entriesA)));
-	//	basicTypeTests(structB, true, merge(name, Parents::get(manager), convertList(entriesB)));
-	//	basicTypeTests(structC, false, merge(name, Parents::get(manager), convertList(entriesC)));
-	//}
-	//
-	// TEST(TypeTest, StructTypeParents) {
-	//
-	//	NodeManager manager;
-	//
-	//	StringValuePtr identA = StringValue::get(manager, "a");
-	//	StringValuePtr identB = StringValue::get(manager, "b");
-	//	StringValuePtr identC = StringValue::get(manager, "c");
-	//
-	//	// create base type A
-	//	vector<NamedTypePtr> entriesA;
-	//	entriesA.push_back(NamedType::get(manager, identA, GenericType::get(manager, "A")));
-	//	StructTypePtr structA = StructType::get(manager, entriesA);
-	//	EXPECT_EQ("struct<a:A>", toString(*structA));
-	//
-	//	// create derived type B : A
-	//	vector<NamedTypePtr> entriesB;
-	//	entriesB.push_back(NamedType::get(manager, identB, GenericType::get(manager, "B")));
-	//	ParentsPtr parentsB = Parents::get(manager, toVector(Parent::get(manager, structA)));
-	//	StructTypePtr structB = StructType::get(manager, parentsB, entriesB);
-	//	EXPECT_EQ("struct : [struct<a:A>] <b:B>", toString(*structB));
-	//
-	//
-	//	// create derived type C : A, B
-	//	vector<NamedTypePtr> entriesC;
-	//	entriesC.push_back(NamedType::get(manager, identC, GenericType::get(manager, "C")));
-	//	ParentsPtr parentsC = Parents::get(manager, toVector(Parent::get(manager, structA), Parent::get(manager, true, structB)));
-	//	StructTypePtr structC = StructType::get(manager, parentsC, entriesC);
-	//	EXPECT_EQ("struct : [struct<a:A>, virtual struct : [struct<a:A>] <b:B>] <c:C>", toString(*structC));
-	//
-	//	// perform basic type tests
-	//	StringValuePtr name = StringValue::get(manager, "");
-	//	basicTypeTests(structA, true, merge(name, Parents::get(manager), convertList(entriesA)));
-	//	basicTypeTests(structB, true, merge(name, parentsB, convertList(entriesB)));
-	//	basicTypeTests(structC, true, merge(name, parentsC, convertList(entriesC)));
-	//}
-	//
-	// TEST(TypeTest, StructTypeNames) {
-	//
-	//	NodeManager manager;
-	//
-	//	StringValuePtr identA = StringValue::get(manager, "a");
-	//	StringValuePtr identB = StringValue::get(manager, "b");
-	//	StringValuePtr identC = StringValue::get(manager, "c");
-	//
-	//	StringValuePtr name = StringValue::get(manager, "xy");
-	//
-	//	// create base type A
-	//	vector<NamedTypePtr> entriesA;
-	//	entriesA.push_back(NamedType::get(manager, identA, GenericType::get(manager, "A")));
-	//	StructTypePtr structA = StructType::get(manager, name, entriesA);
-	//	EXPECT_EQ("struct xy <a:A>", toString(*structA));
-	//
-	//	// create derived type B : A
-	//	vector<NamedTypePtr> entriesB;
-	//	entriesB.push_back(NamedType::get(manager, identB, GenericType::get(manager, "B")));
-	//	ParentsPtr parentsB = Parents::get(manager, toVector(Parent::get(manager, structA)));
-	//	StructTypePtr structB = StructType::get(manager, name, parentsB, entriesB);
-	//	EXPECT_EQ("struct xy : [struct xy <a:A>] <b:B>", toString(*structB));
-	//
-	//
-	//	// create derived type C : A, B
-	//	vector<NamedTypePtr> entriesC;
-	//	entriesC.push_back(NamedType::get(manager, identC, GenericType::get(manager, "C")));
-	//	ParentsPtr parentsC = Parents::get(manager, toVector(Parent::get(manager, structA), Parent::get(manager, true, structB)));
-	//	StructTypePtr structC = StructType::get(manager, name, parentsC, entriesC);
-	//	EXPECT_EQ("struct xy : [struct xy <a:A>, virtual struct xy : [struct xy <a:A>] <b:B>] <c:C>", toString(*structC));
-	//
-	//	// perform basic type tests
-	//	basicTypeTests(structA, true, merge(name, Parents::get(manager), convertList(entriesA)));
-	//	basicTypeTests(structB, true, merge(name, parentsB, convertList(entriesB)));
-	//	basicTypeTests(structC, true, merge(name, parentsC, convertList(entriesC)));
-	//}
-	//
-	// TEST(TypeTest, RecStructType) {
-	//	// create a manager for this test
-	//	NodeManager manager;
-	//
-	//	// TODO: test whether order of definitions is important ... (it should not)
-	//
-	//	StringValuePtr identA = StringValue::get(manager, "a");
-	//	StringValuePtr identB = StringValue::get(manager, "b");
-	//
-	//	// create a simple recursive type uX.X (no actual type)
-	//	TypeVariablePtr varX = TypeVariable::get(manager, "X");
-	//
-	//	vector<NamedTypePtr> entriesA;
-	//	entriesA.push_back(NamedType::get(manager, identA, GenericType::get(manager, "A")));
-	//	entriesA.push_back(NamedType::get(manager, identB, RefType::get(manager, varX)));
-	//
-	//	StructTypePtr structA = StructType::get(manager, entriesA);
-	//
-	//	// create definition
-	//	vector<RecTypeBindingPtr> definitions;
-	//	definitions.push_back(RecTypeBinding::get(manager, varX, structA));
-	//	RecTypeDefinitionPtr definition = RecTypeDefinition::get(manager, definitions);
-	//	EXPECT_EQ("{'X=struct<a:A,b:ref<'X>>}", toString(*definition));
-	//
-	//	RecTypePtr type = RecType::get(manager, varX, definition);
-	//	EXPECT_EQ("rec 'X.{'X=struct<a:A,b:ref<'X>>}", toString(*type));
-	//	basicTypeTests(type, true, toList(toVector<NodePtr>(varX, definition)));
-	//
-	//	EXPECT_EQ("struct<a:A,b:ref<'X>>", toString(*type->getDefinition()->getDefinitionOf(varX)));
-	//}
-	//
-	//
-	// TEST(TypeTest, UnionType) {
-	//
-	//	NodeManager manager;
-	//
-	//	StringValuePtr identA = StringValue::get(manager, "a");
-	//	StringValuePtr identB = StringValue::get(manager, "b");
-	//
-	//	UnionType::Entries entriesA;
-	//	entriesA.push_back(NamedType::get(manager, identA, GenericType::get(manager, "A")));
-	//	entriesA.push_back(NamedType::get(manager, identB, GenericType::get(manager, "B")));
-	//
-	//	UnionTypePtr unionA = UnionType::get(manager, entriesA);
-	//	EXPECT_EQ("union<a:A,b:B>", toString(*unionA));
-	//
-	//	UnionType::Entries entriesB;
-	//	UnionTypePtr unionB = UnionType::get(manager, entriesB);
-	//	EXPECT_EQ("union<>", toString(*unionB));
-	//
-	//	UnionType::Entries entriesC;
-	//	entriesC.push_back(NamedType::get(manager, identA, TypeVariable::get(manager,"alpha")));
-	//	entriesC.push_back(NamedType::get(manager, identB, GenericType::get(manager, "B")));
-	//	UnionTypePtr unionC = UnionType::get(manager, entriesC);
-	//	EXPECT_EQ("union<a:'alpha,b:B>", toString(*unionC));
-	//
-	//
-	//	// perform basic type tests
-	//	StringValuePtr name = StringValue::get(manager, "");
-	//	basicTypeTests(unionA, true, merge(name, Parents::get(manager), convertList(entriesA)));
-	//	basicTypeTests(unionB, true, merge(name, Parents::get(manager), convertList(entriesB)));
-	//	basicTypeTests(unionC, false, merge(name, Parents::get(manager), convertList(entriesC)));
-	//}
-	//
-	// TEST(TypeTest, ArrayType) {
-	//
-	//	// create type manager and element types
-	//	NodeManager manager;
-	//	TypePtr elementTypeA = GenericType::get(manager,"A");
-	//	TypePtr elementTypeB = TypeVariable::get(manager,"a");
-	//
-	//	// obtain array types
-	//	IntTypeParamPtr param1 = ConcreteIntTypeParam::get(manager, 1);
-	//	IntTypeParamPtr param3 = ConcreteIntTypeParam::get(manager, 3);
-	//	ArrayTypePtr arrayTypeA = ArrayType::get(manager, elementTypeA);
-	//	ArrayTypePtr arrayTypeB = ArrayType::get(manager, elementTypeB, param3);
-	//
-	//	// check names
-	//	EXPECT_EQ("array<A,1>", toString(*arrayTypeA));
-	//	EXPECT_EQ("array<'a,3>", toString(*arrayTypeB));
-	//
-	//	// check element types
-	//	EXPECT_EQ(elementTypeA, arrayTypeA->getElementType());
-	//	EXPECT_EQ(elementTypeB, arrayTypeB->getElementType());
-	//
-	//	// check dimensions
-	//	ASSERT_TRUE(arrayTypeA->getDimension()->getNodeType()==NT_ConcreteIntTypeParam);
-	//	ASSERT_TRUE(arrayTypeB->getDimension()->getNodeType()==NT_ConcreteIntTypeParam);
-	//	EXPECT_EQ(static_cast<unsigned>(1), static_pointer_cast<ConcreteIntTypeParamPtr>(arrayTypeA->getDimension())->getParam()->getValue());
-	//	EXPECT_EQ(static_cast<unsigned>(3), static_pointer_cast<ConcreteIntTypeParamPtr>(arrayTypeB->getDimension())->getParam()->getValue());
-	//
-	//	// check remaining type properties
-	//	basicTypeTests(arrayTypeA, true, toList(arrayTypeA->getElementType(), arrayTypeA->getDimension()));
-	//	basicTypeTests(arrayTypeB, false, toList(arrayTypeB->getElementType(), arrayTypeB->getDimension()));
-	//}
-	//
-	// TEST(TypeTest, VectorType) {
-	//
-	//	// create type manager and element types
-	//	NodeManager manager;
-	//	TypePtr elementTypeA = GenericType::get(manager,"A");
-	//	TypePtr elementTypeB = TypeVariable::get(manager,"a");
-	//
-	//	// obtain array types
-	//	IntTypeParamPtr param1 = ConcreteIntTypeParam::get(manager, 1);
-	//	IntTypeParamPtr param3 = ConcreteIntTypeParam::get(manager, 3);
-	//	VectorTypePtr vectorTypeA = VectorType::get(manager, elementTypeA, param1);
-	//	VectorTypePtr vectorTypeB = VectorType::get(manager, elementTypeB, param3);
-	//
-	//	// check names
-	//	EXPECT_EQ("vector<A,1>", toString(*vectorTypeA));
-	//	EXPECT_EQ("vector<'a,3>", toString(*vectorTypeB));
-	//
-	//	// check element types
-	//	EXPECT_EQ(elementTypeA, vectorTypeA->getElementType());
-	//	EXPECT_EQ(elementTypeB, vectorTypeB->getElementType());
-	//
-	//	// check dimensions
-	//	ASSERT_TRUE(vectorTypeA->getSize()->getNodeType()==NT_ConcreteIntTypeParam);
-	//	ASSERT_TRUE(vectorTypeB->getSize()->getNodeType()==NT_ConcreteIntTypeParam);
-	//	EXPECT_EQ(static_cast<unsigned>(1), static_pointer_cast<const ConcreteIntTypeParam>(vectorTypeA->getSize())->getValue());
-	//	EXPECT_EQ(static_cast<unsigned>(3), static_pointer_cast<const ConcreteIntTypeParam>(vectorTypeB->getSize())->getValue());
-	//
-	//	// check remaining type properties
-	//	basicTypeTests(vectorTypeA, true, toList(vectorTypeA->getElementType(), vectorTypeA->getSize()));
-	//	basicTypeTests(vectorTypeB, false, toList(vectorTypeB->getElementType(), vectorTypeB->getSize()));
-	//}
-	//
-	// TEST(TypeTest, ChannelType) {
-	//
-	//	// create type manager and element types
-	//	NodeManager manager;
-	//	TypePtr elementTypeA = GenericType::get(manager,"A");
-	//	TypePtr elementTypeB = TypeVariable::get(manager,"a");
-	//
-	//	// obtain array types
-	//	IntTypeParamPtr param1 = ConcreteIntTypeParam::get(manager, 1);
-	//	IntTypeParamPtr param3 = ConcreteIntTypeParam::get(manager, 3);
-	//	ChannelTypePtr channelTypeA = ChannelType::get(manager, elementTypeA, param1);
-	//	ChannelTypePtr channelTypeB = ChannelType::get(manager, elementTypeB, param3);
-	//
-	//	// check names
-	//	EXPECT_EQ("channel<A,1>", toString(*channelTypeA));
-	//	EXPECT_EQ("channel<'a,3>", toString(*channelTypeB));
-	//
-	//	// check element types
-	//	EXPECT_EQ(elementTypeA, channelTypeA->getElementType());
-	//	EXPECT_EQ(elementTypeB, channelTypeB->getElementType());
-	//
-	//	// check dimensions
-	//	ASSERT_TRUE(channelTypeA->getSize()->getNodeType()==NT_ConcreteIntTypeParam);
-	//	ASSERT_TRUE(channelTypeB->getSize()->getNodeType()==NT_ConcreteIntTypeParam);
-	//	EXPECT_EQ(static_cast<unsigned>(1), static_pointer_cast<const ConcreteIntTypeParam>(channelTypeA->getSize())->getValue());
-	//	EXPECT_EQ(static_cast<unsigned>(3), static_pointer_cast<const ConcreteIntTypeParam>(channelTypeB->getSize())->getValue());
-	//
-	//	// check remaining type properties
-	//	basicTypeTests(channelTypeA, true, toList(channelTypeA->getElementType(), channelTypeA->getSize()));
-	//	basicTypeTests(channelTypeB, false, toList(channelTypeB->getElementType(), channelTypeB->getSize()));
-	//}
-	//
-	// TEST(TypeTest, RefType) {
-	//
-	//	// create type manager and element types
-	//	NodeManager manager;
-	//	TypePtr elementTypeA = GenericType::get(manager,"A");
-	//	TypePtr elementTypeB = TypeVariable::get(manager,"a");
-	//
-	//	// obtain array types
-	//	RefTypePtr refTypeA = RefType::get(manager, elementTypeA);
-	//	RefTypePtr refTypeB = RefType::get(manager, elementTypeB);
-	//
-	//	RefTypePtr srcType  = RefType::get(manager, elementTypeA, RK_SOURCE);
-	//	RefTypePtr sinkType = RefType::get(manager, elementTypeB, RK_SINK);
-	//
-	//	// check names
-	//	EXPECT_EQ("ref<A>", toString(*refTypeA));
-	//	EXPECT_EQ("ref<'a>", toString(*refTypeB));
-	//	EXPECT_EQ("src<A>", toString(*srcType));
-	//	EXPECT_EQ("sink<'a>", toString(*sinkType));
-	//
-	//	// check element types
-	//	EXPECT_EQ(elementTypeA, refTypeA->getElementType());
-	//	EXPECT_EQ(elementTypeB, refTypeB->getElementType());
-	//	EXPECT_EQ(elementTypeA, srcType->getElementType());
-	//	EXPECT_EQ(elementTypeB, sinkType->getElementType());
-	//
-	//	EXPECT_TRUE(refTypeA->isReference());
-	//	EXPECT_FALSE(refTypeA->isSource());
-	//	EXPECT_FALSE(refTypeA->isSink());
-	//	EXPECT_TRUE(refTypeA->isRead());
-	//	EXPECT_TRUE(refTypeA->isWrite());
-	//
-	//	EXPECT_FALSE(srcType->isReference());
-	//	EXPECT_TRUE(srcType->isSource());
-	//	EXPECT_FALSE(srcType->isSink());
-	//	EXPECT_TRUE(srcType->isRead());
-	//	EXPECT_FALSE(srcType->isWrite());
-	//
-	//	EXPECT_FALSE(sinkType->isReference());
-	//	EXPECT_FALSE(sinkType->isSource());
-	//	EXPECT_TRUE(sinkType->isSink());
-	//	EXPECT_FALSE(sinkType->isRead());
-	//	EXPECT_TRUE(sinkType->isWrite());
-	//
-	//	// check remaining type properties
-	//	basicTypeTests(refTypeA, true,  toList(toVector<NodePtr>(elementTypeA, UIntValue::get(manager, RK_REFERENCE))));
-	//	basicTypeTests(refTypeB, false, toList(toVector<NodePtr>(elementTypeB, UIntValue::get(manager, RK_REFERENCE))));
-	//	basicTypeTests(srcType,  true,  toList(toVector<NodePtr>(elementTypeA, UIntValue::get(manager, RK_SOURCE))));
-	//	basicTypeTests(sinkType, false, toList(toVector<NodePtr>(elementTypeB, UIntValue::get(manager, RK_SINK))));
-	//}
+	 TEST(TypeTest, RecTypeTest) {
+		// test accessing the definition of a recursive type using addresses
+
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto tagType = builder.parseType("let type = struct class { next: ref<class,f,f,plain> ; } in type").isa<TagTypePtr>();
+		EXPECT_TRUE(tagType);
+		EXPECT_TRUE(tagType->isRecursive());
+
+		auto recType = tagType->getRecord();
+		auto recAddr = core::Address<const core::Node>::find(recType, tagType);
+		EXPECT_EQ("0-1-0-1", toString(recAddr));
+		EXPECT_TRUE(recAddr);
+	}
+
+	 namespace {
+
+	 NodeList merge() {
+		return NodeList();
+	}
+
+	 template<typename ... Rest>
+	 NodeList merge(const NodeList& list, const Rest& ... rest);
+
+	 template<typename ... Rest>
+	 NodeList merge(const NodePtr& node, const Rest& ... rest) {
+		NodeList res;
+		res.push_back(node);
+		for(const NodePtr& cur : merge(rest...)) {
+			res.push_back(cur);
+		}
+		return res;
+	}
+
+	 template<typename ... Rest>
+	 NodeList merge(const NodeList& list, const Rest& ... rest) {
+		NodeList res = list;
+		for(const NodePtr& cur : merge(rest...)) {
+			res.push_back(cur);
+		}
+		return res;
+	}
+
+	}
+
+	 TEST(TypeTest, DISABLED_StructType) {
+
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		vector<FieldPtr> entriesA;
+		entriesA.push_back(builder.field("a", GenericType::get(manager, "A")));
+		entriesA.push_back(builder.field("b", GenericType::get(manager, "B")));
+
+		auto genStructA = builder.structType(entriesA);
+		EXPECT_EQ("struct {a:A,b:B,dtor()}", toString(*genStructA));
+
+		vector<FieldPtr> entriesB;
+		auto genStructB = builder.structType(entriesB);
+		EXPECT_EQ("struct {dtor()}", toString(*genStructB));
+
+		vector<FieldPtr> entriesC;
+		entriesC.push_back(builder.field("a", TypeVariable::get(manager,"alpha")));
+		entriesC.push_back(builder.field("b", GenericType::get(manager, "B")));
+		auto genStructC = builder.structType(entriesC);
+		EXPECT_EQ("struct {a:'alpha,b:B,dtor()}", toString(*genStructC));
+
+		// test for elements with same name
+		vector<FieldPtr> entriesD;
+		entriesD.push_back(builder.field("a", GenericType::get(manager,"A")));
+		entriesD.push_back(builder.field("b", GenericType::get(manager,"A")));
+		entriesD.push_back(builder.field("a", GenericType::get(manager,"A")));
+		// this check produces the following warning issued by gtest
+		// 'Death tests use fork(), which is unsafe particularly in a threaded context.
+		//  For this test, Google Test couldn't detect the number of threads.'
+		//
+		// in agreement with 'the others' this warning can be ignored 'safely'
+		EXPECT_DEATH_IF_SUPPORTED(builder.structType(entriesD), "field names must be unique");
+
+		// .. same type should not be a problem
+		entriesD.pop_back();
+		builder.structType(entriesD);
+
+		// this is an anonymous tagType reference
+		auto tagType = builder.tagTypeReference("");
+		// build the tagTypeDefinition for each struct
+		auto tagDefinitionA = builder.tagTypeDefinition({{tagType, genStructA->getRecord()}});
+		basicTypeTests(genStructA, true, toList(toVector<NodePtr>(tagType, tagDefinitionA)));
+
+		auto tagDefinitionB = builder.tagTypeDefinition({{tagType, genStructB->getRecord()}});
+		basicTypeTests(genStructB, true, toList(toVector<NodePtr>(tagType, tagDefinitionB)));
+
+		auto tagDefinitionC = builder.tagTypeDefinition({{tagType, genStructC->getRecord()}});
+		basicTypeTests(genStructC, false, toList(toVector<NodePtr>(tagType, tagDefinitionC)));
+	}
+
+	 TEST(TypeTest, DISABLED_StructTypeParents) {
+
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		// create base type A
+		vector<FieldPtr> entriesA;
+		entriesA.push_back(builder.field("a", GenericType::get(manager, "A")));
+		auto genStructA = builder.structType(entriesA);
+		EXPECT_EQ("struct {a:A,dtor()}", toString(*genStructA));
+
+		// create derived type B : A
+		vector<FieldPtr> entriesB;
+		entriesB.push_back(builder.field("b", GenericType::get(manager, "B")));
+		ParentsPtr parentsB = Parents::get(manager, toVector(Parent::get(manager, genStructA)));
+		auto genStructB = builder.structType(parentsB, entriesB);
+		EXPECT_EQ("struct : [struct {a:A,dtor()}] {b:B,dtor()}", toString(*genStructB));
+
+		// create derived type C : A, B
+		vector<FieldPtr> entriesC;
+		entriesC.push_back(builder.field("c", GenericType::get(manager, "C")));
+		ParentsPtr parentsC = Parents::get(manager, toVector(Parent::get(manager, genStructA), Parent::get(manager, true, genStructB)));
+		auto genStructC = builder.structType(parentsC, entriesC);
+		EXPECT_EQ("struct : [struct {a:A,dtor()}, virtual struct : [struct {a:A,dtor()}] {b:B,dtor()}] {c:C,dtor()}", toString(*genStructC));
+
+		// this is an anonymous tagType reference
+        auto tagType = builder.tagTypeReference("");
+        // build the tagTypeDefinition for each struct
+        auto tagDefinitionA = builder.tagTypeDefinition({{tagType, genStructA->getRecord()}});
+		basicTypeTests(genStructA, true, toList(toVector<NodePtr>(tagType, tagDefinitionA)));
+
+		auto tagDefinitionB = builder.tagTypeDefinition({{tagType, genStructB->getRecord()}});
+		basicTypeTests(genStructB, true, toList(toVector<NodePtr>(tagType, tagDefinitionB)));
+
+		auto tagDefinitionC = builder.tagTypeDefinition({{tagType, genStructC->getRecord()}});
+		basicTypeTests(genStructC, true, toList(toVector<NodePtr>(tagType, tagDefinitionC)));
+	}
+
+	 TEST(TypeTest, DISABLED_StructTypeNames) {
+
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		// create base type A
+		vector<FieldPtr> entriesA;
+		entriesA.push_back(builder.field("a", GenericType::get(manager, "A")));
+		auto genStructA = builder.structType("xy", entriesA);
+		EXPECT_EQ("struct xy {a:A,dtor()}", toString(*genStructA));
+
+		// create derived type B : A
+		vector<FieldPtr> entriesB;
+		entriesB.push_back(builder.field("b", GenericType::get(manager, "B")));
+		ParentsPtr parentsB = Parents::get(manager, toVector(Parent::get(manager, genStructA)));
+		auto genStructB = builder.structType(builder.stringValue("xy"), parentsB, entriesB);
+		EXPECT_EQ("struct xy : [struct xy {a:A,dtor()}] {b:B,dtor()}", toString(*genStructB));
+
+		// create derived type C : A, B
+		vector<FieldPtr> entriesC;
+		entriesC.push_back(builder.field("c", GenericType::get(manager, "C")));
+		ParentsPtr parentsC = Parents::get(manager, toVector(Parent::get(manager, genStructA), Parent::get(manager, true, genStructB)));
+		auto genStructC = builder.structType(builder.stringValue("xy"), parentsC, entriesC);
+		EXPECT_EQ("struct xy : [struct xy {a:A,dtor()}, virtual struct xy : [struct xy {a:A,dtor()}] {b:B,dtor()}] {c:C,dtor()}", toString(*genStructC));
+
+		// this is a named tagType reference
+		auto tagType = builder.tagTypeReference("xy");
+		// build the tagTypeDefinition for each struct
+		auto tagDefinitionA = builder.tagTypeDefinition({{tagType, genStructA->getRecord()}});
+		basicTypeTests(genStructA, true, toList(toVector<NodePtr>(tagType, tagDefinitionA)));
+
+		auto tagDefinitionB = builder.tagTypeDefinition({{tagType, genStructB->getRecord()}});
+		basicTypeTests(genStructB, true, toList(toVector<NodePtr>(tagType, tagDefinitionB)));
+
+		auto tagDefinitionC = builder.tagTypeDefinition({{tagType, genStructC->getRecord()}});
+		basicTypeTests(genStructC, true, toList(toVector<NodePtr>(tagType, tagDefinitionC)));
+	}
+
+	 TEST(TypeTest, DISABLED_RecStructType) {
+		// create a manager for this test
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		// TODO: test whether order of definitions is important ... (it should not)
+
+		// create a simple recursive type uX.X (no actual type)
+		auto varX = builder.tagTypeReference("X");
+
+		vector<FieldPtr> entriesA;
+		entriesA.push_back(builder.field("a", GenericType::get(manager, "A")));
+		entriesA.push_back(builder.field("b", builder.refType(varX)));
+
+		auto genStructA = builder.structType(entriesA);
+		EXPECT_EQ("struct {a:A,b:ref<^X,f,f,plain>,dtor()}", toString(*genStructA));
+
+		auto definition = builder.tagTypeDefinition({{varX, genStructA.as<TagTypePtr>()->getRecord()}});
+		EXPECT_EQ("{^X=struct {a:A,b:ref<^X,f,f,plain>,dtor()}}", toString(*definition));
+
+		auto tagType = builder.tagType(varX, definition);
+		EXPECT_EQ("rec ^X.{^X=struct {a:A,b:ref<^X,f,f,plain>,dtor()}}", toString(*tagType));
+		EXPECT_EQ("struct {a:A,b:ref<^X,f,f,plain>,dtor()}", toString(*tagType->getDefinition()->getDefinitionOf(varX)));
+
+		// perform basic type tests
+		basicTypeTests(tagType, true, toList(toVector<NodePtr>(varX, definition)));
+	}
+
+	 TEST(TypeTest, DISABLED_UnionType) {
+
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		vector<FieldPtr> entriesA;
+		entriesA.push_back(builder.field("a", GenericType::get(manager, "A")));
+		entriesA.push_back(builder.field("b", GenericType::get(manager, "B")));
+
+		auto genUnionA = builder.unionType(entriesA);
+		EXPECT_EQ("union {a:A,b:B,dtor()}", toString(*genUnionA));
+
+		vector<FieldPtr> entriesB;
+		auto genUnionB = builder.unionType(entriesB);
+		EXPECT_EQ("union {dtor()}", toString(*genUnionB));
+
+		vector<FieldPtr> entriesC;
+		entriesC.push_back(builder.field("a", TypeVariable::get(manager,"alpha")));
+		entriesC.push_back(builder.field("b", GenericType::get(manager, "B")));
+		auto genUnionC = builder.unionType(entriesC);
+		EXPECT_EQ("union {a:'alpha,b:B,dtor()}", toString(*genUnionC));
+
+		// this is an anonymous tagType reference
+        auto tagType = builder.tagTypeReference("");
+        // build the tagTypeDefinition for each struct
+        auto tagDefinitionA = builder.tagTypeDefinition({{tagType, genUnionA->getRecord()}});
+		basicTypeTests(genUnionA, true, toList(toVector<NodePtr>(tagType, tagDefinitionA)));
+
+		auto tagDefinitionB = builder.tagTypeDefinition({{tagType, genUnionB->getRecord()}});
+		basicTypeTests(genUnionB, true, toList(toVector<NodePtr>(tagType, tagDefinitionB)));
+
+		auto tagDefinitionC = builder.tagTypeDefinition({{tagType, genUnionC->getRecord()}});
+		basicTypeTests(genUnionC, true, toList(toVector<NodePtr>(tagType, tagDefinitionC)));
+	}
+
+	 TEST(TypeTest, ArrayType) {
+
+		// create type manager and element types
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		auto elementTypeA = GenericType::get(manager,"A");
+		auto elementTypeB = TypeVariable::get(manager,"a");
+
+		// obtain array types
+		auto param1 = builder.intLit(1);
+		auto param3 = builder.intLit(3);
+		GenericTypePtr genArrayTypeA = builder.arrayType(elementTypeA, param1);
+		GenericTypePtr genArrayTypeB = builder.arrayType(elementTypeB, param3);
+
+		// check names
+		EXPECT_EQ("array<A,1>", toString(*genArrayTypeA));
+		EXPECT_EQ("array<'a,3>", toString(*genArrayTypeB));
+
+		auto arrayTypeA = core::lang::ArrayType(genArrayTypeA);
+		auto arrayTypeB = core::lang::ArrayType(genArrayTypeB);
+
+		// check element types
+		EXPECT_EQ(elementTypeA, arrayTypeA.getElementType());
+		EXPECT_EQ(elementTypeB, arrayTypeB.getElementType());
+
+		// check dimensions
+		auto sizeA = arrayTypeA.getSize();
+		auto sizeB = arrayTypeB.getSize();
+
+		ASSERT_TRUE(sizeA->getNodeType() == core::NT_Literal);
+		ASSERT_TRUE(sizeB->getNodeType() == core::NT_Literal);
+
+		EXPECT_TRUE(manager.getLangBasic().isInt(sizeA.as<LiteralPtr>()->getType()));
+		EXPECT_TRUE(manager.getLangBasic().isInt(sizeB.as<LiteralPtr>()->getType()));
+
+		EXPECT_EQ("1", sizeA.as<LiteralPtr>()->getStringValue());
+		EXPECT_EQ("3", sizeB.as<LiteralPtr>()->getStringValue());
+
+		// check remaining type properties
+		basicTypeTests(genArrayTypeA, true, toList(genArrayTypeA.getName(), builder.parents(), genArrayTypeA.getTypeParameter()));
+		basicTypeTests(genArrayTypeB, false, toList(genArrayTypeB.getName(), builder.parents(), genArrayTypeB.getTypeParameter()));
+	}
+
+	 TEST(TypeTest, ChannelType) {
+
+		// create type manager and element types
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		auto elementTypeA = GenericType::get(manager,"A");
+		auto elementTypeB = TypeVariable::get(manager,"a");
+
+		// obtain array types
+		auto param1 = builder.uintLit(1);
+		auto param3 = builder.uintLit(3);
+		GenericTypePtr genChannelTypeA = builder.channelType(elementTypeA, param1);
+		GenericTypePtr genChannelTypeB = builder.channelType(elementTypeB, param3);
+
+		// check names
+		EXPECT_EQ("channel<A,1>", toString(*genChannelTypeA));
+		EXPECT_EQ("channel<'a,3>", toString(*genChannelTypeB));
+
+		auto channelTypeA = core::lang::ChannelType(genChannelTypeA);
+		auto channelTypeB = core::lang::ChannelType(genChannelTypeB);
+
+		// check element types
+		EXPECT_EQ(elementTypeA, channelTypeA.getElementType());
+		EXPECT_EQ(elementTypeB, channelTypeB.getElementType());
+
+		// check dimensions
+		auto sizeA = channelTypeA.getSize();
+		auto sizeB = channelTypeB.getSize();
+
+		ASSERT_TRUE(sizeA->getNodeType() == core::NT_Literal);
+		ASSERT_TRUE(sizeB->getNodeType() == core::NT_Literal);
+
+		EXPECT_TRUE(manager.getLangBasic().isInt(sizeA.as<LiteralPtr>()->getType()));
+		EXPECT_TRUE(manager.getLangBasic().isInt(sizeB.as<LiteralPtr>()->getType()));
+
+		EXPECT_EQ("1", sizeA.as<LiteralPtr>()->getStringValue());
+		EXPECT_EQ("3", sizeB.as<LiteralPtr>()->getStringValue());
+
+		// check remaining type properties
+		basicTypeTests(genChannelTypeA, true, toList(genChannelTypeA.getName(), builder.parents(), genChannelTypeA.getTypeParameter()));
+		basicTypeTests(genChannelTypeB, false, toList(genChannelTypeB.getName(), builder.parents(), genChannelTypeB.getTypeParameter()));
+	}
+
+	 TEST(TypeTest, RefType) {
+
+		// create type manager and element types
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		auto elementTypeA = GenericType::get(manager,"A");
+		auto elementTypeB = TypeVariable::get(manager,"a");
+
+		// obtain array types
+		auto apTypeA = builder.refType(elementTypeA, false, false);
+		auto apTypeB = builder.refType(elementTypeB, false, false);
+		// obtain plain reference types
+		auto refTypeA = core::lang::ReferenceType(apTypeA);
+		auto refTypeB = core::lang::ReferenceType(apTypeB);
+
+		// check names
+		EXPECT_EQ("AP(ref<A,f,f,plain>)", toString(apTypeA));
+		EXPECT_EQ("ref<A,f,f,plain>", toString(*apTypeA));
+		EXPECT_EQ("AP(ref<'a,f,f,plain>)", toString(apTypeB));
+		EXPECT_EQ("ref<'a,f,f,plain>", toString(*apTypeB));
+
+		// check element types
+		EXPECT_EQ(elementTypeA, refTypeA.getElementType());
+		EXPECT_EQ(elementTypeB, refTypeB.getElementType());
+
+		// check properties of the reference
+		EXPECT_TRUE(refTypeA.isPlain());
+		EXPECT_FALSE(refTypeA.isConst());
+		EXPECT_FALSE(refTypeA.isVolatile());
+		EXPECT_EQ(core::lang::ReferenceType::Kind::Plain, refTypeA.getKind());
+		EXPECT_FALSE(refTypeA.isCppReference());
+		EXPECT_FALSE(refTypeA.isCppRValueReference());
+
+		EXPECT_TRUE(refTypeB.isPlain());
+		EXPECT_FALSE(refTypeB.isConst());
+		EXPECT_FALSE(refTypeB.isVolatile());
+		EXPECT_EQ(core::lang::ReferenceType::Kind::Plain, refTypeB.getKind());
+		EXPECT_FALSE(refTypeB.isCppReference());
+		EXPECT_FALSE(refTypeB.isCppRValueReference());
+	}
 
 
 	template <typename PT>

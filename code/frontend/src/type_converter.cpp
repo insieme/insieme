@@ -94,7 +94,7 @@ namespace conversion {
 
 		return retTy;
 	}
-	
+
 	core::TypePtr Converter::TypeConverter::convertVarType(const clang::QualType& type) {
 		auto irt = convert(type);
 		// if it's already a ref, we come from C++ and are fine
@@ -111,7 +111,7 @@ namespace conversion {
 		LOG_TYPE_CONVERSION(buldInTy, retTy);
 
 		switch(buldInTy->getKind()) {
-		case BuiltinType::Void: retTy = basic.getUnit(); break; 
+		case BuiltinType::Void: retTy = basic.getUnit(); break;
 		case BuiltinType::Bool: retTy = basic.getBool(); break;
 
 		// char types
@@ -144,9 +144,9 @@ namespace conversion {
 
 		// not supported types
 		case BuiltinType::NullPtr: retTy = builder.typeVariable("nullptr_t"); break; // TODO c++11 specific builtin type for nullptr literal
-		default: 
+		default:
 			buldInTy->dump();
-			frontend_assert(false) << "Built-in type conversion not supported for this type."; 
+			frontend_assert(false) << "Built-in type conversion not supported for this type.";
 			break;
 		}
 		return retTy;
@@ -175,7 +175,7 @@ namespace conversion {
 	core::TypePtr Converter::TypeConverter::VisitConstantArrayType(const ConstantArrayType* arrTy) {
 		core::TypePtr retTy;
 		LOG_TYPE_CONVERSION(arrTy, retTy);
-		
+
 		size_t arrSize = *arrTy->getSize().getRawData();
 		core::TypePtr&& elemTy = convert(arrTy->getElementType());
 		frontend_assert(elemTy) << "Conversion of array element type failed.";
@@ -250,7 +250,7 @@ namespace conversion {
 			// we have only 1 argument, and it is a unit type (void), remove it from the list
 			argTypes.clear();
 		}
-		
+
 		retTy = builder.functionType(argTypes, funRetTy);
 		return retTy;
 	}
@@ -387,7 +387,7 @@ namespace conversion {
 			// build actual struct type (after insert!)
 			core::FieldList recordMembers;
 			for(auto mem : clangDecl->fields()) {
-				recordMembers.push_back(builder.field(mem->getNameAsString(), converter.convertType(mem->getType())));
+				recordMembers.push_back(builder.field(insieme::frontend::utils::getNameForField(mem, converter.getSourceManager()), converter.convertType(mem->getType())));
 			}
 			auto compoundName = useName ? builder.stringValue(name) : builder.stringValue("");
 			core::TagTypePtr recordType = clangRecordTy->isUnionType() ? builder.unionType(compoundName, recordMembers)
@@ -490,7 +490,7 @@ namespace conversion {
 		frontend_assert(retTy) << "Conversion of DecayedType failed.";
 		return retTy;
 	}
-	
+
 } // End conversion namespace
 } // End frontend namespace
 } // End insieme namespace

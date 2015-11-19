@@ -155,8 +155,9 @@ namespace core {
 		// --------------- Annotations -------------
 
 		// check whether annotations become isolated when migrating nodes between managers
-
-		EXPECT_TRUE(node->getAnnotations().empty());
+		// do not check for emptyness here, as we might be called with a node which indeed
+		// has already annotations attached. to cope with this, the total number must be eq
+		auto sizeOfAnnotations = node->getAnnotations().size();
 
 		node->addAnnotation(std::make_shared<DummyAnnotation>(12));
 		EXPECT_TRUE(node->hasAnnotation(DummyAnnotation::DummyKey));
@@ -237,7 +238,7 @@ namespace core {
 
 		// check whether annotation is preservered during copy process
 
-		EXPECT_TRUE(node->getAnnotations().empty());
+		EXPECT_EQ(node->getAnnotations().size(), sizeOfAnnotations);
 
 		node->addAnnotation(std::make_shared<DummyAnnotation>(12));
 		EXPECT_TRUE(node->hasAnnotation(DummyAnnotation::DummyKey));
