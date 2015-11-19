@@ -383,9 +383,15 @@ namespace core {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
-		EXPECT_EQ("struct {x:bla<int<4>>,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}",
+		EXPECT_EQ("struct __insieme_anonymous_record_1_9 {x:bla<int<4>>,ctor(),"
+	  			  "ctor(ref<^__insieme_anonymous_record_1_9,t,f,cpp_ref>),ctor(ref<^__insieme_anonymous_record_1_9,f,f,cpp_rref>),"
+	  			  "dtor(),operator_assign(ref<^__insieme_anonymous_record_1_9,t,f,cpp_ref>)->ref<^__insieme_anonymous_record_1_9,f,f,cpp_ref>,"
+	  			  "operator_assign(ref<^__insieme_anonymous_record_1_9,f,f,cpp_rref>)->ref<^__insieme_anonymous_record_1_9,f,f,cpp_ref>}",
 		          toString(*builder.parseType("let A = struct { x : bla<int<4>>; } in A")));
-		EXPECT_EQ("struct {x:bla<int<4>>,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}",
+		EXPECT_EQ("struct __insieme_anonymous_record_1_9 {x:bla<int<4>>,ctor(),"
+				  "ctor(ref<^__insieme_anonymous_record_1_9,t,f,cpp_ref>),ctor(ref<^__insieme_anonymous_record_1_9,f,f,cpp_rref>),"
+				  "dtor(),operator_assign(ref<^__insieme_anonymous_record_1_9,t,f,cpp_ref>)->ref<^__insieme_anonymous_record_1_9,f,f,cpp_ref>,"
+				  "operator_assign(ref<^__insieme_anonymous_record_1_9,f,f,cpp_rref>)->ref<^__insieme_anonymous_record_1_9,f,f,cpp_ref>}",
 		          toString(*builder.parseType("let A = struct { x : bla<int<4>>; } in A").as<TagTypePtr>()->peel()));
 
 		EXPECT_EQ("rec ^A.{^A=struct A {x:bla<^A>,ctor(),ctor(ref<^A,t,f,cpp_ref>),ctor(ref<^A,f,f,cpp_rref>),dtor(),operator_assign(ref<^A,t,f,cpp_ref>)->ref<^A,f,f,cpp_ref>,operator_assign(ref<^A,f,f,cpp_rref>)->ref<^A,f,f,cpp_ref>}}",
