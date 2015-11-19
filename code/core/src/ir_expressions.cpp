@@ -232,8 +232,8 @@ namespace core {
 
 	LambdaExprPtr LambdaExpr::get(NodeManager& manager, const LambdaPtr& lambda) {
 		LambdaReferencePtr ref = LambdaReference::get(manager, lambda->getType(), "_");
-		LambdaBindingPtr binding = LambdaBinding::get(manager, ref, lambda);
-		LambdaDefinitionPtr def = LambdaDefinition::get(manager, toVector(binding));
+		LambdaBindingMap bindings = { { ref, lambda } };
+		LambdaDefinitionPtr def = LambdaDefinition::get(manager, bindings);
 		def->attachValue(RecursiveCallLocations(def)); // this is not a recursive function!
 		return get(manager, lambda->getType(), ref, def);
 	}
@@ -255,12 +255,15 @@ namespace core {
 		return LambdaExpr::get(manager, getReference(), getDefinition()->unroll(manager, numTimes));
 	}
 
-	LambdaDefinitionPtr LambdaDefinition::get(NodeManager & manager, const vector<LambdaBindingPtr>& bindings) {
-		auto sorted = bindings;
-		std::sort(sorted.begin(), sorted.end(), [](const LambdaBindingPtr& a, const LambdaBindingPtr& b) {
+	LambdaDefinitionPtr LambdaDefinition::get(NodeManager & manager, const LambdaBindingMap& bindings) {
+		vector<LambdaBindingPtr> lambdaBindings;
+		for(auto p : bindings) {
+			lambdaBindings.push_back(LambdaBinding::get(manager, p.first, p.second));
+		}
+		std::sort(lambdaBindings.begin(), lambdaBindings.end(), [](const LambdaBindingPtr& a, const LambdaBindingPtr& b) {
 			return a->getReference()->getNameAsString() < b->getReference()->getNameAsString();
- 		});
-		return manager.get(LambdaDefinition(convertList(sorted)));
+		});
+		return manager.get(LambdaDefinition(convertList(lambdaBindings)));
 	}
 
 	bool LambdaDefinition::isRecursivelyDefined(const LambdaReferencePtr& reference) const {
@@ -303,11 +306,11 @@ namespace core {
 			unrolled[cur->getReference()] = LambdaExpr::get(manager, cur->getLambda());
 		}
 
-		vector<LambdaBindingPtr> newBindings;
+		LambdaBindingMap newBindings;
 		for(const LambdaBindingPtr& cur : *this) {
 			// skip non-recursive definitions
 			if(!isRecursive(cur->getReference())) {
-				newBindings.push_back(cur);
+				newBindings.insert({ cur->getReference(), cur->getLambda() });
 				continue;
 			}
 
@@ -318,7 +321,7 @@ namespace core {
 			}
 
 			// convert current lambda
-			newBindings.push_back(LambdaBinding::get(manager, cur->getReference(), transform::replaceAll(manager, replacements).as<LambdaPtr>()));
+			newBindings.insert({ cur->getReference(), transform::replaceAll(manager, replacements).as<LambdaPtr>() });
 		}
 
 		// build up resulting definitions

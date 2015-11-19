@@ -131,7 +131,7 @@ string Compiler::getCommand(const vector<string>& inputFiles, const string& outp
 const vector<string> getDefaultIncludePaths(string cmd) {
 	vector<string> paths;
 	char line[256];
-	FILE* file = popen(cmd.c_str(), "r");
+	FILE* file = POPEN_WRAPPER(cmd.c_str(), "r");
 	if(file == NULL) { return paths; }
 	bool capture = false;
 	string input;
@@ -158,7 +158,7 @@ const vector<string> getDefaultIncludePaths(string cmd) {
 			paths.push_back(input);
 		}
 	}
-	pclose(file);
+	PCLOSE_WRAPPER(file);
 	if(paths.empty()) { std::cerr << "ATTENTION: No default include paths found. Terminal local language has to be set to en_XX.\n"; }
 	return paths;
 }

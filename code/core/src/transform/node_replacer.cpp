@@ -945,7 +945,7 @@ namespace transform {
 
 				// 1. rebuild definition
 				NodeMap recVarMap;
-				vector<LambdaBindingPtr> bindings;
+				LambdaBindingMap bindings;
 
 				for(decltype(oldDef.size()) i = 0; i < oldDef.size(); i++) {
 					LambdaBindingPtr oldBinding = oldDef[i];
@@ -953,7 +953,7 @@ namespace transform {
 
 					// check whether something has changed
 					if(oldBinding == newBinding) {
-						bindings.push_back(newBinding);
+						bindings.insert({ newBinding->getReference(), newBinding->getLambda() });
 						continue;
 					}
 
@@ -980,19 +980,15 @@ namespace transform {
 					recVarMap[newBinding->getReference()] = lambdaRef;
 
 					// add new binding
-					bindings.push_back(builder.lambdaBinding(lambdaRef, lambda));
+					bindings.insert({ lambdaRef, lambda });
 				}
 
 				// 2. update recursive variables
 				if(oldLambda->isRecursive()) {
 					// update all lambda bodies to reflect new recursive variables
-					for(auto cur : bindings) {
-						auto curLambda = cur->getLambda();
-						auto curBody = curLambda->getBody();
-
-						auto newBody = replaceAllGen(newExpr->getNodeManager(), curBody, recVarMap, transform::globalReplacement);
-
-						cur = builder.lambdaBinding(cur->getReference(), builder.lambda(curLambda->getType(), curLambda->getParameters(), newBody));
+					for(auto& cur : bindings) {
+						auto newBody = replaceAllGen(newExpr->getNodeManager(), cur.second->getBody(), recVarMap, transform::globalReplacement);
+						cur.second = builder.lambda(cur.second->getType(), cur.second->getParameters(), newBody);
 					}
 				}
 

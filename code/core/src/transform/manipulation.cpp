@@ -710,8 +710,8 @@ namespace transform {
 		params.erase(params.begin() + index);
 
 		// build resulting lambda (preserving recursive variable ID)
-		auto binding = LambdaBinding::get(manager, newLambdaRef, Lambda::get(manager, newFunType, params, body));
-		auto def = LambdaDefinition::get(manager, toVector(binding));
+		LambdaBindingMap bindings = { {newLambdaRef, Lambda::get(manager, newFunType, params, body)} };
+		auto def = LambdaDefinition::get(manager, bindings);
 		return LambdaExpr::get(manager, newLambdaRef, def);
 	}
 

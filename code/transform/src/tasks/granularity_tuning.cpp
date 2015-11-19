@@ -253,7 +253,7 @@ namespace tasks {
 				lambdaDefOptionsList.push_back(core::transform::trySequentialize(nodeMan, lambdaDefOptionsList.back(), false));
 
 				// replace recursive jobs in lambdas with pick from available options, generating new bindings
-				vector<LambdaBindingPtr> newBindings;
+				LambdaBindingMap newBindings;
 				// replace in originals
 				int lbi = 0;
 				// for every lambda
@@ -291,7 +291,7 @@ namespace tasks {
 						if(opti == varOptionsList[0].size() - 1)
 							lam = core::transform::replaceAll(nodeMan, lam, sequentialVarReplacements, core::transform::globalReplacement).as<LambdaPtr>();
 						// add this option to the new bindings
-						newBindings.push_back(build.lambdaBinding(varOptionsList[lbi][opti], lam));
+						newBindings.insert( { varOptionsList[lbi][opti], lam } );
 					}
 					++lbi;
 				}

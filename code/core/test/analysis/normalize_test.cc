@@ -170,8 +170,8 @@ namespace analysis {
 		VariablePtr var1 = builder.variable(builder.refType(builder.parseType("A")), 12);
 		LambdaReferencePtr lambdaRef = builder.lambdaReference(funType, "f");
 
-		LambdaBindingPtr binding = builder.lambdaBinding(lambdaRef, builder.lambda(funType, toVector(var1), builder.compoundStmt()));
-		LambdaExprPtr lambda = builder.lambdaExpr(lambdaRef, builder.lambdaDefinition(toVector(binding)));
+		LambdaBindingMap bindings = { { lambdaRef, builder.lambda(funType, toVector(var1), builder.compoundStmt()) } };
+		LambdaExprPtr lambda = builder.lambdaExpr(lambdaRef, builder.lambdaDefinition(bindings));
 
 		EXPECT_EQ("rec f.{f=fun(ref<A,f,f,plain> v12) {}}", toString(*lambda));
 		EXPECT_EQ("rec f.{f=fun(ref<A,f,f,plain> v0) {}}", toString(*normalize(lambda)));

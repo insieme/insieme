@@ -39,6 +39,8 @@
 #include <iostream>
 #include <mutex>
 
+#include "insieme/utils/abstraction.h"
+
 namespace insieme {
 namespace utils {
 namespace log {
@@ -62,11 +64,11 @@ namespace log {
 
 	/**
 	 * The name of the environment variable to set up a regular expression filtering
-	 * log bessages by function names.
+	 * log messages by function names.
 	 */
 	#define LOG_FILTER_ENV "INSIEME_LOG_FILTER"
 
-} // end namespac log
+} // end namespace log
 
 /**
  * Another namespace to avoid the import of those symbols
@@ -77,7 +79,7 @@ namespace logger_details {
 	/**
 	 * A globally visible variable determining the logging level.
 	 */
-	extern log::Level level;
+	extern log::Level g_level;
 
 	/**
 	 * Temporary object used to wrap the log stream. This object is responsible to
@@ -154,7 +156,7 @@ namespace logger_details {
 using namespace insieme::utils::log;
 
 #define LOG(LEVEL)                                                                                                                                             \
-	if(insieme::utils::logger_details::level > LEVEL || !insieme::utils::logger_details::isIncludedInFilter(__PRETTY_FUNCTION__)) {/* nothing */               \
+	if(insieme::utils::logger_details::g_level > LEVEL || !insieme::utils::logger_details::isIncludedInFilter(FUNCTION_SIGNATURE)) {/* nothing */               \
 	} else                                                                                                                                                     \
 	insieme::utils::logger_details::getLogStreamFor(LEVEL, __FILE__, __LINE__).getStream()
 
@@ -164,4 +166,4 @@ using namespace insieme::utils::log;
 	LOG(DEBUG)
 
 #define VLOG_IS_ON(VerbLevel)                                                                                                                                  \
-	(VerbLevel <= insieme::utils::logger_details::getVerbosityLevel() && insieme::utils::logger_details::isIncludedInFilter(__PRETTY_FUNCTION__))
+	(VerbLevel <= insieme::utils::logger_details::getVerbosityLevel() && insieme::utils::logger_details::isIncludedInFilter(FUNCTION_SIGNATURE))

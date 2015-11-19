@@ -269,12 +269,15 @@ namespace core {
 
 	}
 
-	TagTypeDefinitionPtr TagTypeDefinition::get(NodeManager& manager, const vector<TagTypeBindingPtr>& bindings) {
-		auto sorted = bindings;
-		std::sort(sorted.begin(), sorted.end(), [](const TagTypeBindingPtr& a, const TagTypeBindingPtr& b) {
+	TagTypeDefinitionPtr TagTypeDefinition::get(NodeManager& manager, const TagTypeBindingMap& bindings) {
+		vector<TagTypeBindingPtr> tagTypeBindings;
+		for(auto p : bindings) {
+			tagTypeBindings.push_back(TagTypeBinding::get(manager, p.first, p.second));
+		}
+		std::sort(tagTypeBindings.begin(), tagTypeBindings.end(), [](const TagTypeBindingPtr& a, const TagTypeBindingPtr& b) {
 			return a->getTag()->getName()->getValue() < b->getTag()->getName()->getValue();
-		});
-		return manager.get(TagTypeDefinition(convertList(sorted)));
+		});	
+		return manager.get(TagTypeDefinition(convertList(tagTypeBindings)));
 	}
 
 	TagTypePtr TagTypeDefinition::peelDefinition(NodeManager& manager, const TagTypeReferencePtr& tag, unsigned times) const {
@@ -301,9 +304,8 @@ namespace core {
 			}
 
 			// build peeled definition
-			definition = TagTypeDefinition::get(manager, toVector(
-					TagTypeBinding::get(manager,tag,transform::replaceAll(manager, mods).as<RecordPtr>())
-			));
+			TagTypeBindingMap tm = { { tag, transform::replaceAll(manager, mods).as<RecordPtr>() } };
+			definition = TagTypeDefinition::get(manager, tm);
 		}
 
 		// peel tag type using helper

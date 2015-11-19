@@ -141,6 +141,12 @@ if(MSVC)
 	add_definitions( /wd"4512" )
 	# disable warning "nonstandard extension: enum '[EnumName::ENUM]' used in qualified name"	
 	add_definitions( /wd"4482" )
+	# disable warning "unkown pragma"
+	add_definitions( /wd"4068" )
+	# disable warning "declaration hides class member"
+	add_definitions( /wd"4458" )
+	# disable warning "forcing value to bool 'true' or 'false' (performance warning)"
+	add_definitions( /wd"4800" )
 	# statically link with runtime library (required for gtest)
 	foreach(flag_var
 		CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE

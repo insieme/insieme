@@ -116,8 +116,8 @@ namespace constraint {
 			workList.pop_back();
 
 			// process outgoing edges
-			for(const Constraint* cur : edges[head]) {
-				const Constraint& cc = *cur;
+			for(const Constraint* curConstraint : edges[head]) {
+				const Constraint& cc = *curConstraint;
 
 				// update dynamic dependencies if necessary
 				if(cc.hasDynamicDependencies() && cc.updateDynamicDependencies(res)) {
@@ -182,8 +182,8 @@ namespace constraint {
 			worklist.pop_back();
 
 			// process outgoing edges
-			for(const Constraint* cur : edges[head]) {
-				const Constraint& cc = *cur;
+			for(const Constraint* curConstraint : edges[head]) {
+				const Constraint& cc = *curConstraint;
 
 				// update dynamic dependencies if necessary
 				if(cc.hasDynamicDependencies() && cc.updateDynamicDependencies(ass)) {

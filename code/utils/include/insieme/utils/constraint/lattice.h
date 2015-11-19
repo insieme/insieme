@@ -90,7 +90,7 @@ namespace constraint {
 
 	// the special set type utilized for intersection lattices (supporting the representation of all elements)
 	template <typename E>
-	class iset;
+	struct iset;
 
 	template <typename E>
 	struct SetIntersectLattice : public Lattice<iset<E>, set_intersect_meet_assign_op<E>, set_intersect_less_op<E>> {};

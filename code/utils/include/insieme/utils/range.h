@@ -287,7 +287,7 @@ namespace utils {
 	 * Compares an arbitrary container with a range for equality.
 	 */
 	template <typename Container, typename Iter>
-	typename std::enable_if<!std::is_same<Container, range<Iter>>(), bool>::type operator==(const Container& other, const range<Iter>& range) {
+	typename std::enable_if<!std::is_same<Container, range<Iter>>::value, bool>::type operator==(const Container& other, const range<Iter>& range) {
 		return range.template operator==(other);
 	}
 

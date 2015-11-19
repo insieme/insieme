@@ -63,8 +63,8 @@ namespace {
 
 		auto copyLine = [&in, &out, &line]() -> size_t {
 			in.getline(line, std::numeric_limits<std::streamsize>::max());
-			size_t readCount = in.gcount() - 1;
-			out.write(line, readCount); // the -1 represent the new-line characther
+			size_t readCount = (size_t)(in.gcount() - 1);
+			out.write(line, readCount); // the -1 represent the new-line character
 			out << std::endl;
 			return readCount;
 		};
@@ -84,7 +84,7 @@ namespace {
 			}
 
 			in.getline(line, std::numeric_limits<std::streamsize>::max());
-			return in.gcount() - 1;
+			return (size_t)(in.gcount() - 1);
 		};
 
 		while(modIt != end && modIt->getFileName() == currFile) {
@@ -96,7 +96,7 @@ namespace {
 			}
 			// read the line where to apply the code modification
 			in.getline(line, std::numeric_limits<std::streamsize>::max());
-			columns = in.gcount() - 1;
+			columns = (size_t)(in.gcount() - 1);
 			// copy until column
 			if(columns && modIt->getStartLoc().getColumn() > 0) { out.write(line, modIt->getStartLoc().getColumn() - 1); }
 
@@ -166,7 +166,7 @@ namespace utils {
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//								Rewriter
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	void Rewriter::writeBack(const CodeModificationList& list, const std::string& insiemeFileName) {
+	void Rewriter::writeBack(const CodeModificationList& list, const std::string& /*insiemeFileName*/) {
 		LOG(DEBUG) << "List of modifications ";
 
 		if(list.empty()) {

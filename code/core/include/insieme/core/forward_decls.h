@@ -105,6 +105,8 @@ namespace core {
 	typedef utils::map::PointerMap<VariablePtr, VariablePtr> VariableMap;
 	typedef utils::map::PointerMap<VariablePtr, ExpressionPtr> VarExprMap;
 	typedef utils::map::PointerMap<ExpressionPtr, VariablePtr> ExprVarMap;
+	typedef utils::map::PointerMap<LambdaReferencePtr, LambdaPtr> LambdaBindingMap;
+	typedef utils::map::PointerMap<TagTypeReferencePtr, RecordPtr> TagTypeBindingMap;
 
 	typedef std::function<bool(NodePtr)> NodeFilter;
 

@@ -289,7 +289,7 @@ namespace analysis {
 		{
 			TagTypeReferencePtr tag = builder.tagTypeReference("list");
 			auto listElem = builder.structRecord(toVector(builder.field("load", manager.getLangBasic().getInt4()), builder.field("next", builder.refType(tag))));
-			TypePtr constRecType = builder.tagType(tag, builder.tagTypeDefinition(toVector(builder.tagTypeBinding(tag, listElem))));
+			TypePtr constRecType = builder.tagType(tag, builder.tagTypeDefinition({ { tag, listElem } }));
 
 			EXPECT_EQ("rec ^list.{^list=struct {load:int<4>,next:ref<^list,f,f,plain>,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}}",
 			          toString(*constRecType));
@@ -300,7 +300,7 @@ namespace analysis {
 		{
 			TagTypeReferencePtr tag = builder.tagTypeReference("list");
 			auto listElem = builder.structRecord(toVector(builder.field("load", builder.typeVariable("b")), builder.field("next", builder.refType(tag))));
-			TypePtr constRecType = builder.tagType(tag, builder.tagTypeDefinition(toVector(builder.tagTypeBinding(tag, listElem))));
+			TypePtr constRecType = builder.tagType(tag, builder.tagTypeDefinition( { { tag, listElem } }));
 
 			EXPECT_EQ("rec ^list.{^list=struct {load:'b,next:ref<^list,f,f,plain>,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}}",
 			          toString(*constRecType));
@@ -759,10 +759,10 @@ namespace analysis {
 		auto sD = builder.structRecord("D", { builder.field("b", b), builder.field("c", c) });
 
 		auto def = builder.tagTypeDefinition({
-			builder.tagTypeBinding(a,sA),
-			builder.tagTypeBinding(b,sB),
-			builder.tagTypeBinding(c,sC),
-			builder.tagTypeBinding(d,sD)
+			{ a,sA },
+			{ b,sB },
+			{ c,sC },
+			{ d,sD }
 		});
 
 		auto D = builder.tagType(d, def);
@@ -816,10 +816,10 @@ namespace analysis {
 		auto lD = builder.lambda(funType, VariableList(), builder.returnStmt(builder.add(builder.callExpr(b), builder.callExpr(c))));
 
 		auto def = builder.lambdaDefinition({
-			builder.lambdaBinding(a,lA),
-			builder.lambdaBinding(b,lB),
-			builder.lambdaBinding(c,lC),
-			builder.lambdaBinding(d,lD)
+			{ a,lA },
+			{ b,lB },
+			{ c,lC },
+			{ d,lD }
 		});
 
 		auto D = builder.lambdaExpr(d, def);
