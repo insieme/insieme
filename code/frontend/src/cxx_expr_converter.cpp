@@ -368,21 +368,14 @@ namespace conversion {
 			core::ExpressionPtr placeHolder;
 			if(callExpr->hasInitializer()) {
 				const clang::Expr* initializer = callExpr->getInitializer();
-				core::ExpressionPtr initializerExpr = converter.convertExpr(initializer);
+				core::ExpressionPtr initializerExpr = converter.convertInitExpr(initializer);
 				frontend_assert(initializerExpr);
 				placeHolder = builder.refNew(initializerExpr);
 			} else {
 				placeHolder = builder.undefinedNew(type);
 			}
 
-			if(callExpr->isArray()) {
-			//	core::ExpressionPtr&& arrSizeExpr = converter.convertExpr(callExpr->getArraySize());
-			//	placeHolder = builder.callExpr(builder.arrayType(type), builder.getLangBasic().getArrayCreate1D(), builder.getTypeLiteral(type),
-			//	                               core::types::smartCast(arrSizeExpr, gen.getUInt4()));
-			//	retExpr = builder.refNew(placeHolder);
-			} else {
-				retExpr = core::lang::buildPtrFromRef(placeHolder);
-			}
+			retExpr = core::lang::buildPtrFromRef(placeHolder);
 		}// else {
 		//	core::ExpressionPtr ctorCall = Visit(callExpr->getConstructExpr());
 		//	frontend_assert(ctorCall.isa<core::CallExprPtr>()) << "aint constructor call in here, no way to translate NEW\n";

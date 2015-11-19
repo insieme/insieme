@@ -51,7 +51,7 @@ namespace frontend {
 		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/cpp_basic_templates.cpp");
 	}
 
-	TEST(CppIndependentTest, NewDelete) {
+	TEST(CppIndependentTest, DISABLED_NewDelete) {
 		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/cpp_new_delete.cpp");
 	}
 
