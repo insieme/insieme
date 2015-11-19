@@ -343,18 +343,13 @@ namespace core {
 	}
 
 	TEST(TypeTest, TagTypeRecord) {
-
 		// create a manager for this test
 		NodeManager manager;
 		IRBuilder builder(manager);
 
-		auto isRecursive = [&](const TypePtr& type) {
-			return type.isa<TagTypePtr>() && type.as<TagTypePtr>()->isRecursive();
-		};
+		auto isRecursive = [&](const TypePtr& type) { return type.isa<TagTypePtr>() && type.as<TagTypePtr>()->isRecursive(); };
 
-		auto isNotRecursive = [&](const TypePtr& type) {
-			return !isRecursive(type);
-		};
+		auto isNotRecursive = [&](const TypePtr& type) { return !isRecursive(type); };
 
 		EXPECT_PRED1(isNotRecursive, builder.parseType("int<4>"));
 		EXPECT_PRED1(isNotRecursive, builder.parseType("ref<int<4>>"));
@@ -369,31 +364,37 @@ namespace core {
 		EXPECT_PRED1(isNotRecursive, builder.parseType("decl struct A; decl struct B; def struct A { x : ref<A>; }; def struct B { y : ref<A>; }; B"));
 
 		// check overloaded tag-type variables
-		auto tagType = builder.parseType(
-			"let A = struct { x : ref<A>; } in "
-			"let B = struct { y : ref<A>; } in "
-			"B"
-		).as<TagTypePtr>();
+		auto tagType = builder.parseType("let A = struct { x : ref<A>; } in "
+		                                 "let B = struct { y : ref<A>; } in "
+		                                 "B")
+		                   .as<TagTypePtr>();
 		tagType = core::transform::replaceNode(manager, TagTypeAddress(tagType)->getTag(), builder.tagTypeReference("A")).as<TagTypePtr>();
 		EXPECT_PRED1(isNotRecursive, tagType);
-
 	}
 
 	TEST(TypeTest, TagTypePeeling) {
-
 		// create a manager for this test
 		NodeManager manager;
 		IRBuilder builder(manager);
 
-		EXPECT_EQ("struct {x:bla<int<4>>,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}",
+		EXPECT_EQ("struct "
+		          "{x:bla<int<4>>,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,"
+		          "operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}",
 		          toString(*builder.parseType("let A = struct { x : bla<int<4>>; } in A")));
-		EXPECT_EQ("struct {x:bla<int<4>>,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}",
+		EXPECT_EQ("struct "
+		          "{x:bla<int<4>>,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,"
+		          "operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}",
 		          toString(*builder.parseType("let A = struct { x : bla<int<4>>; } in A").as<TagTypePtr>()->peel()));
 
-		EXPECT_EQ("rec ^A.{^A=struct A {x:bla<^A>,ctor(),ctor(ref<^A,t,f,cpp_ref>),ctor(ref<^A,f,f,cpp_rref>),dtor(),operator_assign(ref<^A,t,f,cpp_ref>)->ref<^A,f,f,cpp_ref>,operator_assign(ref<^A,f,f,cpp_rref>)->ref<^A,f,f,cpp_ref>}}",
+		EXPECT_EQ("rec ^A.{^A=struct A "
+		          "{x:bla<^A>,ctor(),ctor(ref<^A,t,f,cpp_ref>),ctor(ref<^A,f,f,cpp_rref>),dtor(),operator_assign(ref<^A,t,f,cpp_ref>)->ref<^A,f,f,cpp_ref>,"
+		          "operator_assign(ref<^A,f,f,cpp_rref>)->ref<^A,f,f,cpp_ref>}}",
 		          toString(*builder.parseType("decl struct A; def struct A { x : bla<A>; }; A")));
-		EXPECT_EQ("struct A {x:bla<rec ^A.{^A=struct A {x:bla<^A>,ctor(),ctor(ref<^A,t,f,cpp_ref>),ctor(ref<^A,f,f,cpp_rref>),dtor(),operator_assign(ref<^A,t,f,cpp_ref>)->ref<^A,f,f,cpp_ref>,operator_assign(ref<^A,f,f,cpp_rref>)->ref<^A,f,f,cpp_ref>}}>,"
-		          "ctor(),ctor(ref<^A,t,f,cpp_ref>),ctor(ref<^A,f,f,cpp_rref>),dtor(),operator_assign(ref<^A,t,f,cpp_ref>)->ref<^A,f,f,cpp_ref>,operator_assign(ref<^A,f,f,cpp_rref>)->ref<^A,f,f,cpp_ref>}",
+		EXPECT_EQ("struct A {x:bla<rec ^A.{^A=struct A "
+		          "{x:bla<^A>,ctor(),ctor(ref<^A,t,f,cpp_ref>),ctor(ref<^A,f,f,cpp_rref>),dtor(),operator_assign(ref<^A,t,f,cpp_ref>)->ref<^A,f,f,cpp_ref>,"
+		          "operator_assign(ref<^A,f,f,cpp_rref>)->ref<^A,f,f,cpp_ref>}}>,"
+		          "ctor(),ctor(ref<^A,t,f,cpp_ref>),ctor(ref<^A,f,f,cpp_rref>),dtor(),operator_assign(ref<^A,t,f,cpp_ref>)->ref<^A,f,f,cpp_ref>,operator_"
+		          "assign(ref<^A,f,f,cpp_rref>)->ref<^A,f,f,cpp_ref>}",
 		          toString(*builder.parseType("decl struct A; def struct A { x : bla<A>; }; A").as<TagTypePtr>()->peel()));
 
 		TagTypePtr tagType = builder.parseType("decl struct A; def struct A { x : bla<A>; }; A").as<TagTypePtr>();
@@ -403,12 +404,10 @@ namespace core {
 		EXPECT_TRUE(checks::check(tagType->peel(0)).empty()) << checks::check(tagType->peel(0));
 		EXPECT_TRUE(checks::check(tagType->peel(1)).empty()) << checks::check(tagType->peel(1));
 		EXPECT_TRUE(checks::check(tagType->peel(2)).empty()) << checks::check(tagType->peel(2));
-
 	}
 
 
 	TEST(TypeTest, TagTypeMemberPeeling) {
-
 		// create a manager for this test
 		NodeManager manager;
 		IRBuilder builder(manager);
@@ -424,7 +423,7 @@ namespace core {
 		EXPECT_TRUE(checks::check(fixedDtor).empty()) << checks::check(fixedDtor);
 	}
 
-	 TEST(TypeTest, RecTypeTest) {
+	TEST(TypeTest, RecTypeTest) {
 		// test accessing the definition of a recursive type using addresses
 
 		NodeManager mgr;
@@ -440,38 +439,7 @@ namespace core {
 		EXPECT_TRUE(recAddr);
 	}
 
-	 namespace {
-
-	 NodeList merge() {
-		return NodeList();
-	}
-
-	 template<typename ... Rest>
-	 NodeList merge(const NodeList& list, const Rest& ... rest);
-
-	 template<typename ... Rest>
-	 NodeList merge(const NodePtr& node, const Rest& ... rest) {
-		NodeList res;
-		res.push_back(node);
-		for(const NodePtr& cur : merge(rest...)) {
-			res.push_back(cur);
-		}
-		return res;
-	}
-
-	 template<typename ... Rest>
-	 NodeList merge(const NodeList& list, const Rest& ... rest) {
-		NodeList res = list;
-		for(const NodePtr& cur : merge(rest...)) {
-			res.push_back(cur);
-		}
-		return res;
-	}
-
-	}
-
-	 TEST(TypeTest, DISABLED_StructType) {
-
+	TEST(TypeTest, DISABLED_StructType) {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
@@ -487,16 +455,16 @@ namespace core {
 		EXPECT_EQ("struct {dtor()}", toString(*genStructB));
 
 		vector<FieldPtr> entriesC;
-		entriesC.push_back(builder.field("a", TypeVariable::get(manager,"alpha")));
+		entriesC.push_back(builder.field("a", TypeVariable::get(manager, "alpha")));
 		entriesC.push_back(builder.field("b", GenericType::get(manager, "B")));
 		auto genStructC = builder.structType(entriesC);
 		EXPECT_EQ("struct {a:'alpha,b:B,dtor()}", toString(*genStructC));
 
 		// test for elements with same name
 		vector<FieldPtr> entriesD;
-		entriesD.push_back(builder.field("a", GenericType::get(manager,"A")));
-		entriesD.push_back(builder.field("b", GenericType::get(manager,"A")));
-		entriesD.push_back(builder.field("a", GenericType::get(manager,"A")));
+		entriesD.push_back(builder.field("a", GenericType::get(manager, "A")));
+		entriesD.push_back(builder.field("b", GenericType::get(manager, "A")));
+		entriesD.push_back(builder.field("a", GenericType::get(manager, "A")));
 		// this check produces the following warning issued by gtest
 		// 'Death tests use fork(), which is unsafe particularly in a threaded context.
 		//  For this test, Google Test couldn't detect the number of threads.'
@@ -521,8 +489,7 @@ namespace core {
 		basicTypeTests(genStructC, false, toList(toVector<NodePtr>(tagType, tagDefinitionC)));
 	}
 
-	 TEST(TypeTest, DISABLED_StructTypeParents) {
-
+	TEST(TypeTest, DISABLED_StructTypeParents) {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
@@ -547,9 +514,9 @@ namespace core {
 		EXPECT_EQ("struct : [struct {a:A,dtor()}, virtual struct : [struct {a:A,dtor()}] {b:B,dtor()}] {c:C,dtor()}", toString(*genStructC));
 
 		// this is an anonymous tagType reference
-        auto tagType = builder.tagTypeReference("");
-        // build the tagTypeDefinition for each struct
-        auto tagDefinitionA = builder.tagTypeDefinition({{tagType, genStructA->getRecord()}});
+		auto tagType = builder.tagTypeReference("");
+		// build the tagTypeDefinition for each struct
+		auto tagDefinitionA = builder.tagTypeDefinition({{tagType, genStructA->getRecord()}});
 		basicTypeTests(genStructA, true, toList(toVector<NodePtr>(tagType, tagDefinitionA)));
 
 		auto tagDefinitionB = builder.tagTypeDefinition({{tagType, genStructB->getRecord()}});
@@ -559,8 +526,7 @@ namespace core {
 		basicTypeTests(genStructC, true, toList(toVector<NodePtr>(tagType, tagDefinitionC)));
 	}
 
-	 TEST(TypeTest, DISABLED_StructTypeNames) {
-
+	TEST(TypeTest, DISABLED_StructTypeNames) {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
@@ -597,7 +563,7 @@ namespace core {
 		basicTypeTests(genStructC, true, toList(toVector<NodePtr>(tagType, tagDefinitionC)));
 	}
 
-	 TEST(TypeTest, DISABLED_RecStructType) {
+	TEST(TypeTest, DISABLED_RecStructType) {
 		// create a manager for this test
 		NodeManager manager;
 		IRBuilder builder(manager);
@@ -625,8 +591,7 @@ namespace core {
 		basicTypeTests(tagType, true, toList(toVector<NodePtr>(varX, definition)));
 	}
 
-	 TEST(TypeTest, DISABLED_UnionType) {
-
+	TEST(TypeTest, DISABLED_UnionType) {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
@@ -642,15 +607,15 @@ namespace core {
 		EXPECT_EQ("union {dtor()}", toString(*genUnionB));
 
 		vector<FieldPtr> entriesC;
-		entriesC.push_back(builder.field("a", TypeVariable::get(manager,"alpha")));
+		entriesC.push_back(builder.field("a", TypeVariable::get(manager, "alpha")));
 		entriesC.push_back(builder.field("b", GenericType::get(manager, "B")));
 		auto genUnionC = builder.unionType(entriesC);
 		EXPECT_EQ("union {a:'alpha,b:B,dtor()}", toString(*genUnionC));
 
 		// this is an anonymous tagType reference
-        auto tagType = builder.tagTypeReference("");
-        // build the tagTypeDefinition for each struct
-        auto tagDefinitionA = builder.tagTypeDefinition({{tagType, genUnionA->getRecord()}});
+		auto tagType = builder.tagTypeReference("");
+		// build the tagTypeDefinition for each struct
+		auto tagDefinitionA = builder.tagTypeDefinition({{tagType, genUnionA->getRecord()}});
 		basicTypeTests(genUnionA, true, toList(toVector<NodePtr>(tagType, tagDefinitionA)));
 
 		auto tagDefinitionB = builder.tagTypeDefinition({{tagType, genUnionB->getRecord()}});
@@ -660,14 +625,13 @@ namespace core {
 		basicTypeTests(genUnionC, true, toList(toVector<NodePtr>(tagType, tagDefinitionC)));
 	}
 
-	 TEST(TypeTest, ArrayType) {
-
+	TEST(TypeTest, ArrayType) {
 		// create type manager and element types
 		NodeManager manager;
 		IRBuilder builder(manager);
 
-		auto elementTypeA = GenericType::get(manager,"A");
-		auto elementTypeB = TypeVariable::get(manager,"a");
+		auto elementTypeA = GenericType::get(manager, "A");
+		auto elementTypeB = TypeVariable::get(manager, "a");
 
 		// obtain array types
 		auto param1 = builder.intLit(1);
@@ -704,14 +668,13 @@ namespace core {
 		basicTypeTests(genArrayTypeB, false, toList(genArrayTypeB.getName(), builder.parents(), genArrayTypeB.getTypeParameter()));
 	}
 
-	 TEST(TypeTest, ChannelType) {
-
+	TEST(TypeTest, ChannelType) {
 		// create type manager and element types
 		NodeManager manager;
 		IRBuilder builder(manager);
 
-		auto elementTypeA = GenericType::get(manager,"A");
-		auto elementTypeB = TypeVariable::get(manager,"a");
+		auto elementTypeA = GenericType::get(manager, "A");
+		auto elementTypeB = TypeVariable::get(manager, "a");
 
 		// obtain array types
 		auto param1 = builder.uintLit(1);
@@ -748,14 +711,13 @@ namespace core {
 		basicTypeTests(genChannelTypeB, false, toList(genChannelTypeB.getName(), builder.parents(), genChannelTypeB.getTypeParameter()));
 	}
 
-	 TEST(TypeTest, RefType) {
-
+	TEST(TypeTest, RefType) {
 		// create type manager and element types
 		NodeManager manager;
 		IRBuilder builder(manager);
 
-		auto elementTypeA = GenericType::get(manager,"A");
-		auto elementTypeB = TypeVariable::get(manager,"a");
+		auto elementTypeA = GenericType::get(manager, "A");
+		auto elementTypeB = TypeVariable::get(manager, "a");
 
 		// obtain array types
 		auto apTypeA = builder.refType(elementTypeA, false, false);
