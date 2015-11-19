@@ -98,19 +98,33 @@ namespace lang {
 
 		// Test for the re-use of a named extension which is defined below the current one and therefore won't be found
 		auto& namedTypeUsingBelow = extension.getNamedTypeUsingBelow();
-		EXPECT_EQ("struct {foo:struct {foo:'a,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>},"
-		          "ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}",
+		EXPECT_EQ("struct __insieme_anonymous_record_1_1 {foo:struct __insieme_anonymous_record_1_1 "
+				  "{foo:'a,ctor(),ctor(ref<^__insieme_anonymous_record_1_1,t,f,cpp_ref>),ctor(ref<^__insieme_anonymous_record_1_1,f,f,cpp_rref>),"
+				  "dtor(),operator_assign(ref<^__insieme_anonymous_record_1_1,t,f,cpp_ref>)->ref<^__insieme_anonymous_record_1_1,f,f,cpp_ref>,"
+				  "operator_assign(ref<^__insieme_anonymous_record_1_1,f,f,cpp_rref>)->ref<^__insieme_anonymous_record_1_1,f,f,cpp_ref>},"
+				  "ctor(),ctor(ref<^__insieme_anonymous_record_1_1,t,f,cpp_ref>),ctor(ref<^__insieme_anonymous_record_1_1,f,f,cpp_rref>),"
+				  "dtor(),operator_assign(ref<^__insieme_anonymous_record_1_1,t,f,cpp_ref>)->ref<^__insieme_anonymous_record_1_1,f,f,cpp_ref>,"
+				  "operator_assign(ref<^__insieme_anonymous_record_1_1,f,f,cpp_rref>)->ref<^__insieme_anonymous_record_1_1,f,f,cpp_ref>}",
 		          toString(*namedTypeUsingBelow));
 
 		// Test for the re-use of an unknown named extension
 		auto& namedTypeReusingUnknown = extension.getNamedTypeReusingUnknown();
-		EXPECT_EQ("struct {foo:FooType,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}",
+		EXPECT_EQ("struct __insieme_anonymous_record_1_1 {foo:FooType,ctor(),ctor(ref<^__insieme_anonymous_record_1_1,t,f,cpp_ref>),"
+				  "ctor(ref<^__insieme_anonymous_record_1_1,f,f,cpp_rref>),dtor(),"
+				  "operator_assign(ref<^__insieme_anonymous_record_1_1,t,f,cpp_ref>)->ref<^__insieme_anonymous_record_1_1,f,f,cpp_ref>,"
+				  "operator_assign(ref<^__insieme_anonymous_record_1_1,f,f,cpp_rref>)->ref<^__insieme_anonymous_record_1_1,f,f,cpp_ref>}",
 		          toString(*namedTypeReusingUnknown));
 
 		// Test for correct handling of a known named extension
 		auto& namedTypeReusingKnown = extension.getNamedTypeReusingKnown();
-		EXPECT_EQ("struct {foo:struct {foo:'a,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>},"
-		          "ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}",
+		EXPECT_EQ("struct __insieme_anonymous_record_1_1 {foo:struct __insieme_anonymous_record_1_1 {foo:'a,ctor(),"
+				  "ctor(ref<^__insieme_anonymous_record_1_1,t,f,cpp_ref>),ctor(ref<^__insieme_anonymous_record_1_1,f,f,cpp_rref>),"
+				  "dtor(),operator_assign(ref<^__insieme_anonymous_record_1_1,t,f,cpp_ref>)->ref<^__insieme_anonymous_record_1_1,f,f,cpp_ref>,"
+				  "operator_assign(ref<^__insieme_anonymous_record_1_1,f,f,cpp_rref>)->ref<^__insieme_anonymous_record_1_1,f,f,cpp_ref>},"
+		          "ctor(),ctor(ref<^__insieme_anonymous_record_1_1,t,f,cpp_ref>),"
+				  "ctor(ref<^__insieme_anonymous_record_1_1,f,f,cpp_rref>),dtor(),"
+				  "operator_assign(ref<^__insieme_anonymous_record_1_1,t,f,cpp_ref>)->ref<^__insieme_anonymous_record_1_1,f,f,cpp_ref>,"
+				  "operator_assign(ref<^__insieme_anonymous_record_1_1,f,f,cpp_rref>)->ref<^__insieme_anonymous_record_1_1,f,f,cpp_ref>}",
 		          toString(*namedTypeReusingKnown));
 	}
 
@@ -127,7 +141,10 @@ namespace lang {
 		// Test for correct handling of a known named extension
 		auto& namedLiteral = extension.getNamedLiteral();
 		EXPECT_EQ("named_lit", toString(*namedLiteral));
-		EXPECT_EQ("((struct {foo:'a,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>})->unit)",
+		EXPECT_EQ("((struct __insieme_anonymous_record_1_1 {foo:'a,ctor(),ctor(ref<^__insieme_anonymous_record_1_1,t,f,cpp_ref>),"
+				  "ctor(ref<^__insieme_anonymous_record_1_1,f,f,cpp_rref>),dtor(),"
+				  "operator_assign(ref<^__insieme_anonymous_record_1_1,t,f,cpp_ref>)->ref<^__insieme_anonymous_record_1_1,f,f,cpp_ref>,"
+				  "operator_assign(ref<^__insieme_anonymous_record_1_1,f,f,cpp_rref>)->ref<^__insieme_anonymous_record_1_1,f,f,cpp_ref>})->unit)",
 		          toString(*namedLiteral.getType()));
 	}
 
@@ -144,9 +161,19 @@ namespace lang {
 
 		// Test for correct handling of a known named extension
 		auto& namedDerived = extension.getNamedDerived();
-		EXPECT_EQ("rec v0.{v0=fun(ref<struct {foo:'a,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>},f,f,plain> v1) {return ref_deref(v1);}}",
+		EXPECT_EQ("rec v0.{v0=fun(ref<struct __insieme_anonymous_record_1_1 {foo:'a,ctor(),"
+				  "ctor(ref<^__insieme_anonymous_record_1_1,t,f,cpp_ref>),ctor(ref<^__insieme_anonymous_record_1_1,f,f,cpp_rref>),"
+				  "dtor(),operator_assign(ref<^__insieme_anonymous_record_1_1,t,f,cpp_ref>)->ref<^__insieme_anonymous_record_1_1,f,f,cpp_ref>,"
+				  "operator_assign(ref<^__insieme_anonymous_record_1_1,f,f,cpp_rref>)->ref<^__insieme_anonymous_record_1_1,f,f,cpp_ref>},f,f,plain> v1) "
+				  "{return ref_deref(v1);}}",
 		          toString(*namedDerived));
-		EXPECT_EQ("((struct {foo:'a,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>})->struct {foo:'a,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>})",
+		EXPECT_EQ("((struct __insieme_anonymous_record_1_1 {foo:'a,ctor(),ctor(ref<^__insieme_anonymous_record_1_1,t,f,cpp_ref>),"
+				  "ctor(ref<^__insieme_anonymous_record_1_1,f,f,cpp_rref>),dtor(),"
+				  "operator_assign(ref<^__insieme_anonymous_record_1_1,t,f,cpp_ref>)->ref<^__insieme_anonymous_record_1_1,f,f,cpp_ref>,"
+				  "operator_assign(ref<^__insieme_anonymous_record_1_1,f,f,cpp_rref>)->ref<^__insieme_anonymous_record_1_1,f,f,cpp_ref>})->struct __insieme_anonymous_record_1_1 "
+				  "{foo:'a,ctor(),ctor(ref<^__insieme_anonymous_record_1_1,t,f,cpp_ref>),ctor(ref<^__insieme_anonymous_record_1_1,f,f,cpp_rref>),"
+				  "dtor(),operator_assign(ref<^__insieme_anonymous_record_1_1,t,f,cpp_ref>)->ref<^__insieme_anonymous_record_1_1,f,f,cpp_ref>,"
+				  "operator_assign(ref<^__insieme_anonymous_record_1_1,f,f,cpp_rref>)->ref<^__insieme_anonymous_record_1_1,f,f,cpp_ref>})",
 		          toString(*namedDerived.getType()));
 	}
 
