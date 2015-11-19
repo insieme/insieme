@@ -87,7 +87,7 @@ namespace logger_details {
 
 		unsigned short getVerbosityFromEnv() {
 			auto verb = getenv(LOG_VERBOSITY_ENV);
-			if(verb != nullptr) { return atoi(verb); }
+			if(verb != nullptr) { return (unsigned short)atoi(verb); }
 			return 0;
 		}
 
@@ -135,7 +135,7 @@ namespace logger_details {
 
 	// -- the log level instance --
 
-	Level level = getLevelFromEnv();
+	Level g_level = getLevelFromEnv();
 
 	// -- log filter handling --
 
@@ -158,7 +158,7 @@ namespace logger_details {
 	}
 
 	void reloadConfiguration() {
-		level = getLevelFromEnv();
+		g_level = getLevelFromEnv();
 		Setup::reload();
 	}
 

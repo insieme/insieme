@@ -39,8 +39,10 @@
 #include <gtest/gtest.h>
 
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/normalize.h"
 #include "insieme/core/transform/manipulation.h"
+#include "insieme/core/lang/array.h"
 
 namespace insieme {
 namespace core {
@@ -215,6 +217,104 @@ namespace analysis {
 		EXPECT_NE(*a, *b);
 
 		EXPECT_EQ(normalize(a), normalize(b));
+	}
+	
+	TEST(Normalizing, VarInType) {
+        NodeManager mgr;
+        IRBuilder builder(mgr);
+		
+		auto v192 = builder.variable(mgr.getLangBasic().getInt4(), 192);
+		auto testVar = builder.variable(builder.numericType(v192));
+		auto testCompound = builder.compoundStmt(builder.declarationStmt(v192, builder.intLit(4)), testVar);
+        EXPECT_TRUE(analysis::contains(testCompound, v192));
+        EXPECT_FALSE(analysis::contains(builder.normalize(testCompound), v192));
+	}
+	
+	TEST(Normalizing, FreeVarInType) {
+        NodeManager mgr;
+        IRBuilder builder(mgr);
+		
+		auto v192 = builder.variable(mgr.getLangBasic().getInt4(), 192);
+		auto testVar = builder.variable(builder.numericType(v192));
+		auto testCompound = builder.compoundStmt(testVar);
+        EXPECT_TRUE(analysis::contains(testCompound, v192));
+        EXPECT_TRUE(analysis::contains(builder.normalize(testCompound), v192));
+	}
+
+	TEST(Normalizing, VarInTypeNested) {
+        NodeManager mgr;
+        IRBuilder builder(mgr);
+		
+		auto v192 = builder.variable(mgr.getLangBasic().getInt4(), 192);
+		auto genType = builder.genericType("bla", toVector<TypePtr>(builder.numericType(v192)));
+		auto outerType = builder.genericType("alb", toVector<TypePtr>(genType));
+		auto testVar = builder.variable(outerType);
+		auto testCompound = builder.compoundStmt(builder.declarationStmt(v192, builder.intLit(4)), testVar);
+		//std::cout << dumpText(testCompound);
+        EXPECT_TRUE(analysis::contains(testCompound, v192));
+        EXPECT_FALSE(analysis::contains(builder.normalize(testCompound), v192));
+		//std::cout << dumpText(builder.normalize(testCompound));
+	}
+
+	TEST(Normalizing, ArrayType) {
+        NodeManager mgr;
+        IRBuilder builder(mgr);
+		auto& basic = mgr.getLangBasic();
+		
+		auto v192 = builder.variable(mgr.getLangBasic().getUIntInf(), 192);
+		auto v193 = builder.variable(mgr.getLangBasic().getUIntInf(), 193);
+		auto arrType1 = builder.arrayType(basic.getInt4(), v192);
+		auto arrType2 = builder.arrayType(arrType1, v193);
+		
+        EXPECT_TRUE(analysis::contains(arrType1, v192));
+        EXPECT_TRUE(analysis::contains(builder.normalize(arrType1), v192));
+		
+        EXPECT_TRUE(analysis::contains(arrType2, v192));
+        EXPECT_TRUE(analysis::contains(arrType2, v193));
+        EXPECT_TRUE(analysis::contains(builder.normalize(arrType2), v192));
+        EXPECT_TRUE(analysis::contains(builder.normalize(arrType2), v193));
+		
+		auto arrVar1 = builder.variable(arrType1);
+		auto arrVar2 = builder.variable(arrType2);
+
+		auto compound1 = builder.compoundStmt(builder.declarationStmt(v192, builder.intLit(4)), arrVar1, arrVar2);
+        EXPECT_TRUE(analysis::contains(compound1, v192));
+		EXPECT_TRUE(analysis::contains(compound1, v193));
+		auto compound1N = builder.normalize(compound1);
+		EXPECT_FALSE(analysis::contains(compound1N, v192));
+		EXPECT_TRUE(analysis::contains(compound1N, v193));
+		EXPECT_EQ(compound1N->getStatement(0).as<DeclarationStmtPtr>()->getVariable(),
+			      lang::ArrayType(compound1N->getStatement(1).as<VariablePtr>()->getType()).getSize());
+		EXPECT_EQ(v193, lang::ArrayType(compound1N->getStatement(2).as<VariablePtr>()->getType()).getSize());
+
+		auto compound2 = builder.compoundStmt(builder.declarationStmt(v193, builder.intLit(4)), compound1);
+		EXPECT_TRUE(analysis::contains(compound2, v192));
+        EXPECT_TRUE(analysis::contains(compound2, v193));
+		auto compound2N = builder.normalize(compound2);
+        EXPECT_FALSE(analysis::contains(compound2N, v192));
+        EXPECT_FALSE(analysis::contains(compound2N, v193));		
+		EXPECT_EQ(compound2N->getStatement(0).as<DeclarationStmtPtr>()->getVariable(),
+			      lang::ArrayType(compound2N->getStatement(1).as<CompoundStmtPtr>()->getStatement(2).as<VariablePtr>()->getType()).getSize());
+		//std::cout << dumpColor(compound2N) << dumpColor(compound2N->getStatement(1).as<CompoundStmtPtr>()->getStatement(2).as<VariablePtr>()->getType());
+	}
+
+	
+	TEST(Normalizing, Special) {
+        NodeManager mgr;
+        IRBuilder builder(mgr);
+		auto& basic = mgr.getLangBasic();
+
+		auto testcode = builder.parseStmt(R"({
+			{
+				var uint<inf> v2 = 1;
+				var uint<inf> v3 = 2;
+				var ref<array<array<real<4>,#v3>,#v2>,f,f> v4;
+			}
+		})");
+		
+		std::cout << "INPUT: ----------------------\n" << testcode << "-------------------------\n";
+		std::cout << "OUTPUT: ----------------------\n" << builder.normalize(testcode) << "-------------------------\n";
+
 	}
 
 } // end namespace analysis

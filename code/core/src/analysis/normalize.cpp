@@ -46,6 +46,8 @@
 #include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/transform/manipulation_utils.h"
 
+#include "insieme/utils/debug/backtrace.h"
+
 namespace insieme {
 namespace core {
 namespace analysis {
@@ -168,19 +170,7 @@ namespace analysis {
 			 *
 			 * @param vars the map mapping every variable within a scope to their normalized counterpart.
 			 */
-			Normalizer(const VariableMap& varMap) : vars(varMap){
-				// apply all mappings for each type (except its own) on the RHS of the "vars" map, in order to catch changed array types
-				NodeMap nm;
-				for(auto varPair : vars) {
-					nm.insert(varPair);
-				}
-				//iterate trough rhs
-				for(auto& varPair : vars) {
-					auto newType = transform::replaceAllGen(varPair.second->getNodeManager(), varPair.second->getType(), nm);
-					//replace type of varPair.second
-					varPair.second = transform::replaceAllGen(varPair.second->getNodeManager(), varPair.second, varPair.second->getType(), newType);
-				}
-			};
+			Normalizer(const VariableMap& varMap) : vars(varMap) { };
 
 			/**
 			 * Conducts the actual replacement.
@@ -191,14 +181,15 @@ namespace analysis {
 				if(type == NT_Variable) {
 					// replace with normalized variables
 					auto pos = vars.find(cur.as<VariablePtr>());
-					if(pos != vars.end()) { return pos->second; }
+					if(pos != vars.end()) { return pos->second->substitute(cur.getNodeManager(), *this); }
 					// it is a free variable, no replacement!
-					return cur;
+					return cur->substitute(cur.getNodeManager(), *this);
 				}
 
 				// invoke normalization recursively on lambda expressions
-				if(type == NT_LambdaExpr && getFreeVariables(cur).empty()) {
-					return normalize(cur); // entering new scope
+				if(type == NT_LambdaExpr) {
+					auto freeVarsEmpty = getFreeVariables(cur).empty();
+					if(freeVarsEmpty) return normalize(cur); // entering new scope
 				}
 
 				// invoke this normalizer on anything else
@@ -221,7 +212,7 @@ namespace analysis {
 		NodePtr normalizeInternal(const NodePtr& node) {
 			NodeManager& manager = node.getNodeManager();
 			IRBuilder builder(manager);
-
+			
 			// get set of free variables
 			VariableList freeVarList = getFreeVariables(node);
 
@@ -260,21 +251,22 @@ namespace analysis {
 				}
 				default: break;
 				}
-				// decent further
+				// descend further
 				return false;
 			}, true);
-
+			
 			// special handling for LambdaExpression (to break recursive loop)
 			Normalizer normalizer(varMap);
 			if(node->getNodeType() == NT_LambdaExpr) { return node->substitute(manager, normalizer); }
 
 			// use recursive normalizer and be done
-			return normalizer.map(node);
+			auto result = normalizer.map(node);
+			return result;
 		}
 	}
 
 
-	NodePtr normalize(const NodePtr& node) {
+	NodePtr normalize(const NodePtr& node) {		
 		// handle null pointer
 		if(!node) { return node; }
 

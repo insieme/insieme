@@ -370,8 +370,7 @@ namespace analysis {
 			typedef std::set<Ptr<const Variable>> ResultSet;
 			typedef vector<Ptr<const Variable>> ResultList;
 
-			// do not visit types
-			FreeVariableCollector() : IRVisitor<void, Ptr, VariableSet&, std::set<Ptr<const Variable>>&>(false) {}
+			FreeVariableCollector() : IRVisitor<void, Ptr, VariableSet&, std::set<Ptr<const Variable>>&>(true) {}
 
 			ResultSet run(const Ptr<const Node>& root) {
 				// run visitor
@@ -387,9 +386,6 @@ namespace analysis {
 
 		  private:
 			void visitNode(const Ptr<const Node>& node, VariableSet& bound, ResultSet& free) {
-				// ignore types
-				if(node->getNodeCategory() == NC_Type) { return; }
-
 				// visit all sub-nodes
 				this->visitAll(node->getChildList(), bound, free);
 			}
@@ -423,6 +419,9 @@ namespace analysis {
 
 			void visitVariable(const Ptr<const Variable>& var, VariableSet& bound, ResultSet& free) {
 				if(bound.find(var) == bound.end()) { free.insert(var); }
+				
+				// continue visiting variable type
+				visitNode(var->getType(), bound, free);
 			}
 
 			void visitLambda(const Ptr<const Lambda>& lambda, VariableSet& bound, ResultSet& free) {
@@ -747,15 +746,13 @@ namespace analysis {
 
 	bool contains(const NodePtr& code, const NodePtr& element) {
 		assert_true(element) << "Element to be searched must not be empty!";
-		bool checkTypes = element->getNodeCategory() == NC_Type || element->getNodeCategory() == NC_IntTypeParam;
 		return code && makeCachedLambdaVisitor([&](const NodePtr& cur, rec_call<bool>::type& rec) -> bool {
 			       return *cur == *element || any(cur->getChildList(), rec);
-			   }, checkTypes)(code);
+			   }, true)(code);
 	}
 
 	unsigned countInstances(const NodePtr& code, const NodePtr& element) {
 		assert_true(element) << "Element to be searched must not be empty!";
-		bool checkTypes = element->getNodeCategory() == NC_Type || element->getNodeCategory() == NC_IntTypeParam;
 		return code ? makeCachedLambdaVisitor([&](const NodePtr& cur, rec_call<unsigned>::type& rec) -> unsigned {
 			if(*cur == *element) return 1;
 			auto children = cur->getChildList();
@@ -764,7 +761,7 @@ namespace analysis {
 				ret += rec(c);
 			}
 			return ret;
-		}, checkTypes)(code) : 0;
+		}, true)(code) : 0;
 	}
 
 

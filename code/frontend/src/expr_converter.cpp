@@ -38,6 +38,7 @@
 
 #include "insieme/frontend/expr_converter.h"
 
+#include "insieme/frontend/decl_converter.h"
 #include "insieme/frontend/state/function_manager.h"
 #include "insieme/frontend/state/record_manager.h"
 #include "insieme/frontend/state/variable_manager.h"
@@ -667,6 +668,9 @@ namespace conversion {
 				auto clangTy = vd ? vd->getType() : declRef->getType();
 				retIr = builder.literal(declRef->getDecl()->getNameAsString(), converter.convertType(clangTy));
 			} else {
+				if(!converter.getFunMan()->contains(funcDecl->getCanonicalDecl())) {
+					converter.getDeclConverter()->Visit(const_cast<clang::FunctionDecl*>(funcDecl));
+				}
 				retIr = converter.getFunMan()->lookup(funcDecl->getCanonicalDecl());
 			}
 			return retIr;

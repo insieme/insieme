@@ -117,23 +117,27 @@ namespace conversion {
 		auto destructor = structTy->getDestructor();
 		bool destructorVirtual = false;
 		for(auto mem : classDecl->methods()) {
-			auto memFun = converter.getDeclConverter()->convertMethodDecl(mem);
+			auto convDecl = converter.getDeclConverter()->convertMethodDecl(mem);
+			if(convDecl.lambda) {
+				converter.getIRTranslationUnit().addFunction(convDecl.lit, convDecl.lambda);
+			}
 			if(mem->isVirtual() && mem->isPure()) {
-				pvMembers.push_back(builder.pureVirtualMemberFunction(memFun->getName(), memFun->getImplementation()->getType().as<core::FunctionTypePtr>()));
+				pvMembers.push_back(builder.pureVirtualMemberFunction(convDecl.memFun->getName(), convDecl.lit->getType().as<core::FunctionTypePtr>()));
 			} else if(llvm::dyn_cast<clang::CXXConstructorDecl>(mem)) {
-				constructors.push_back(memFun->getImplementation());
+				if(!mem->isDefaulted()) constructors.push_back(convDecl.lit.as<core::ExpressionPtr>());
 			} else if(llvm::dyn_cast<clang::CXXDestructorDecl>(mem)) {
-				destructor = memFun->getImplementation();
+				destructor = convDecl.lit;
 				if(mem->isVirtual()) { destructorVirtual = true; }
 			} else {
-				members.push_back(memFun);
+				members.push_back(convDecl.memFun);
 			}
 		}
 
 		// create new structTy
-		retTy = builder.structType(structTy->getName(), builder.parents(parents), structTy->getFields(), builder.expressions(constructors), destructor,
-			                          builder.boolValue(destructorVirtual), builder.memberFunctions(members), builder.pureVirtualMemberFunctions(pvMembers));
-		
+		retTy = builder.structTypeWithDefaults(builder.refType(genTy), builder.parents(parents), structTy->getFields(), builder.expressions(constructors),
+			                                   destructor, builder.boolValue(destructorVirtual), builder.memberFunctions(members),
+			                                   builder.pureVirtualMemberFunctions(pvMembers));
+
 		// update associated type in irTu
 		converter.getIRTranslationUnit().replaceType(genTy, retTy.as<core::TagTypePtr>());
 
@@ -322,6 +326,11 @@ namespace conversion {
 
 		assert_not_implemented();
 		return retTy;
+	}
+	
+	core::TypePtr Converter::CXXTypeConverter::VisitAutoType(const clang::AutoType* autoTy) {
+		frontend_assert(autoTy->isDeduced()) << "Non-deduced auto type unsupported.";
+		return convertInternal(autoTy->getDeducedType());	
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
