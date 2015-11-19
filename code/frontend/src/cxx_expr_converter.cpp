@@ -61,6 +61,7 @@
 #include "insieme/core/encoder/lists.h"
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/ir++_extension.h"
+#include "insieme/core/lang/pointer.h"
 #include "insieme/core/transform/node_replacer.h"
 
 using namespace clang;
@@ -369,7 +370,7 @@ namespace conversion {
 				const clang::Expr* initializer = callExpr->getInitializer();
 				core::ExpressionPtr initializerExpr = converter.convertExpr(initializer);
 				frontend_assert(initializerExpr);
-				placeHolder = initializerExpr;
+				placeHolder = builder.refNew(initializerExpr);
 			} else {
 				placeHolder = builder.undefinedNew(type);
 			}
@@ -380,7 +381,7 @@ namespace conversion {
 			//	                               core::types::smartCast(arrSizeExpr, gen.getUInt4()));
 			//	retExpr = builder.refNew(placeHolder);
 			} else {
-				//retExpr = builder.callExpr(builder.getLangBasic().getScalarToArray(), builder.refNew(placeHolder));
+				retExpr = core::lang::buildPtrFromRef(placeHolder);
 			}
 		}// else {
 		//	core::ExpressionPtr ctorCall = Visit(callExpr->getConstructExpr());
@@ -447,56 +448,12 @@ namespace conversion {
 		core::ExpressionPtr retExpr;
 		LOG_EXPR_CONVERSION(deleteExpr, retExpr);
 
-		//// convert the target of our delete expr
-		//core::ExpressionPtr exprToDelete = Visit(deleteExpr->getArgument());
+		// convert the target of our delete expr
+		core::ExpressionPtr exprToDelete = Visit(deleteExpr->getArgument());
+		frontend_assert(core::lang::isPointer(exprToDelete)) << "\"delete\" called on non-pointer, not supported.";
 
-		//core::ExpressionPtr dtor;
-		//clang::CXXDestructorDecl* dtorDecl = nullptr;
-		//// since destructor might be defined in a different translation unit or even in this one but after the usage
-		//// we should retrieve a callable symbol and delay the conversion
-		//auto ty = deleteExpr->getDestroyedType().getTypePtr();
-		//const clang::CXXRecordDecl* classDecl = nullptr;
-		//// if it is a tag type everything is straight forward, but
-		//// if we have a template specialization here we need to call something different to get the record decl
-		//if(const clang::TagType* record = llvm::dyn_cast<clang::TagType>(ty)) {
-		//	classDecl = llvm::dyn_cast<clang::CXXRecordDecl>(record->getDecl());
-		//} else if(const clang::TemplateSpecializationType* templType = llvm::dyn_cast<clang::TemplateSpecializationType>(ty)) {
-		//	classDecl = llvm::dyn_cast<clang::CXXRecordDecl>(templType->getAsCXXRecordDecl());
-		//}
-
-		//if(classDecl) {
-		//	dtorDecl = classDecl->getDestructor();
-		//	if(dtorDecl) { dtor = converter.getCallableExpression(dtorDecl); }
-		//}
-
-		//if(deleteExpr->isArrayForm()) {
-		//	// we need to call arratDtor, with the object, refdelete and the dtorFunc
-		//	if(dtor) {
-		//		// FIXME: why mem_alloc dtor has being marked as virtual????
-		//		frontend_assert(dtorDecl && !dtorDecl->isVirtual()) << "no virtual dtor allowed for array dtor\n";
-
-		//		std::vector<core::ExpressionPtr> args;
-		//		args.push_back(exprToDelete);
-		//		args.push_back(builder.getLangBasic().getRefDelete());
-		//		args.push_back(dtor);
-		//		retExpr = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getArrayDtor(), args);
-		//	} else {
-		//		exprToDelete = getCArrayElemRef(builder, exprToDelete);
-
-		//		// this is a built in type, we need to build a empty dtor with the right type
-		//		retExpr = builder.callExpr(builder.getLangBasic().getRefDelete(), exprToDelete);
-		//	}
-		//} else {
-		//	exprToDelete = getCArrayElemRef(builder, exprToDelete);
-
-		//	if(dtor) {
-		//		retExpr = builder.callExpr(builder.getLangBasic().getRefDelete(), builder.callExpr(dtor, toVector(exprToDelete)));
-		//	} else {
-		//		retExpr = builder.callExpr(builder.getLangBasic().getRefDelete(), exprToDelete);
-		//	}
-		//}
-
-		assert_not_implemented();
+		// destructor calls are implicit in inspire 2.0, just like C++
+		retExpr = converter.getIRBuilder().refDelete(core::lang::buildPtrToRef(exprToDelete));
 
 		return retExpr;
 	}

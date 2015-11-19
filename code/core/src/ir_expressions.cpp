@@ -231,11 +231,15 @@ namespace core {
 	}
 
 	LambdaExprPtr LambdaExpr::get(NodeManager& manager, const LambdaPtr& lambda) {
-		LambdaReferencePtr ref = LambdaReference::get(manager, lambda->getType(), "_");
+		return get(manager, lambda, "_");
+	}
+	
+	LambdaExprPtr LambdaExpr::get(NodeManager & manager, const LambdaPtr& lambda, const string& name) {
+		LambdaReferencePtr ref = LambdaReference::get(manager, lambda->getType(), name);
 		LambdaBindingMap bindings = { { ref, lambda } };
 		LambdaDefinitionPtr def = LambdaDefinition::get(manager, bindings);
 		def->attachValue(RecursiveCallLocations(def)); // this is not a recursive function!
-		return get(manager, lambda->getType(), ref, def);
+		return get(manager, lambda->getType(), ref, def);		
 	}
 
 	LambdaExprPtr LambdaExpr::get(NodeManager& manager, const FunctionTypePtr& type, const ParametersPtr& params, const CompoundStmtPtr& body) {

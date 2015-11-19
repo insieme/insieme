@@ -662,7 +662,7 @@ namespace core {
 		static LambdaExprPtr get(NodeManager & manager, const LambdaReferencePtr& ref, const LambdaDefinitionPtr& definition) {
 			return get(manager, ref->getType(), ref, definition);
 		}
-
+		
 		/**
 		 * Obtains a simple, non-recursive Lambda based on the given definition.
 		 *
@@ -671,6 +671,16 @@ namespace core {
 		 * @return the requested lambda expression managed by the given manager
 		 */
 		static LambdaExprPtr get(NodeManager & manager, const LambdaPtr& lambda);
+
+		/**
+		 * Obtains a simple, non-recursive Lambda based on the given definition, with the given name.
+		 *
+		 * @param manager the manager maintaining the resulting node instance
+		 * @param lambda the lambda to be referenced by the resulting expression
+		 * @param name the name to use for the lambda reference
+		 * @return the requested lambda expression managed by the given manager
+		 */
+		static LambdaExprPtr get(NodeManager & manager, const LambdaPtr& lambda, const string& name);
 
 		/**
 		 * Obtains a simple, non-recursive Lambda expression exposing the given type, parameters and body.
