@@ -302,19 +302,28 @@ namespace analysis {
 	TEST(Normalizing, Special) {
         NodeManager mgr;
         IRBuilder builder(mgr);
-		auto& basic = mgr.getLangBasic();
 
-		auto testcode = builder.parseStmt(R"({
+		auto testAddrs = builder.parseAddressesStatement(R"({
 			{
 				var uint<inf> v2 = 1;
 				var uint<inf> v3 = 2;
-				var ref<array<array<real<4>,#v3>,#v2>,f,f> v4;
+				$var ref<array<array<real<4>,#v3>,#v2>,f,f> v4;$
 			}
 		})");
-		
-		std::cout << "INPUT: ----------------------\n" << testcode << "-------------------------\n";
-		std::cout << "OUTPUT: ----------------------\n" << builder.normalize(testcode) << "-------------------------\n";
 
+		ASSERT_EQ(testAddrs.size(), 1);
+
+		auto testcode = testAddrs[0].getRootNode();
+		
+		//std::cout << "INPUT: ----------------------\n" << testcode << "-------------------------\n";
+		//std::cout << "OUTPUT: ----------------------\n" << builder.normalize(testcode) << "-------------------------\n";
+
+		auto testNormalized = builder.normalize(testcode);
+		auto addrNorm = testAddrs[0].switchRoot(testNormalized);
+		auto arrType = lang::ArrayType(analysis::getReferencedType(addrNorm.getAddressedNode().as<DeclarationStmtPtr>().getVariable().getType()));
+		auto size1 = arrType.getSize();
+		auto size2 = lang::ArrayType(arrType.getElementType()).getSize();
+		EXPECT_NE(size1, size2);
 	}
 
 } // end namespace analysis
