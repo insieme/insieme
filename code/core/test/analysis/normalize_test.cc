@@ -298,6 +298,25 @@ namespace analysis {
 		//std::cout << dumpColor(compound2N) << dumpColor(compound2N->getStatement(1).as<CompoundStmtPtr>()->getStatement(2).as<VariablePtr>()->getType());
 	}
 
+	
+	TEST(Normalizing, Special) {
+        NodeManager mgr;
+        IRBuilder builder(mgr);
+		auto& basic = mgr.getLangBasic();
+
+		auto testcode = builder.parseStmt(R"({
+			{
+				var uint<inf> v2 = 1;
+				var uint<inf> v3 = 2;
+				var ref<array<array<real<4>,#v3>,#v2>,f,f> v4;
+			}
+		})");
+		
+		std::cout << "INPUT: ----------------------\n" << testcode << "-------------------------\n";
+		std::cout << "OUTPUT: ----------------------\n" << builder.normalize(testcode) << "-------------------------\n";
+
+	}
+
 } // end namespace analysis
 } // end namespace core
 } // end namespace insieme

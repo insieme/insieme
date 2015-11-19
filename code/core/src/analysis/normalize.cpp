@@ -170,19 +170,7 @@ namespace analysis {
 			 *
 			 * @param vars the map mapping every variable within a scope to their normalized counterpart.
 			 */
-			Normalizer(const VariableMap& varMap) : vars(varMap){
-				// apply all mappings for each type (except its own) on the RHS of the "vars" map, in order to catch changed array types
-				NodeMap nm;
-				for(auto varPair : vars) {
-					nm.insert(varPair);
-				}
-				//iterate trough rhs
-				for(auto& varPair : vars) {
-					auto newType = transform::replaceAllGen(varPair.second->getNodeManager(), varPair.second->getType(), nm);
-					//replace type of varPair.second
-					varPair.second = transform::replaceAllGen(varPair.second->getNodeManager(), varPair.second, varPair.second->getType(), newType);
-				}
-			};
+			Normalizer(const VariableMap& varMap) : vars(varMap) { };
 
 			/**
 			 * Conducts the actual replacement.
@@ -224,12 +212,9 @@ namespace analysis {
 		NodePtr normalizeInternal(const NodePtr& node) {
 			NodeManager& manager = node.getNodeManager();
 			IRBuilder builder(manager);
-
+			
 			// get set of free variables
 			VariableList freeVarList = getFreeVariables(node);
-			std::cout << utils::debug::getBacktraceString();
-			std::cout << "Normalizing: " << node << "\n";
-			std::cout << "Free vars: " << freeVarList << "\n";
 
 			// provide a mechanism to generate variable substitutions
 			int index = 0;
@@ -269,13 +254,14 @@ namespace analysis {
 				// descend further
 				return false;
 			}, true);
-
+			
 			// special handling for LambdaExpression (to break recursive loop)
 			Normalizer normalizer(varMap);
 			if(node->getNodeType() == NT_LambdaExpr) { return node->substitute(manager, normalizer); }
 
 			// use recursive normalizer and be done
-			return normalizer.map(node);
+			auto result = normalizer.map(node);
+			return result;
 		}
 	}
 
