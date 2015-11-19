@@ -122,10 +122,10 @@ namespace lang {
 		const auto& typeAlises = manager.getLangExtension<NamedCoreExtensionParserTestExtension>().getTypeAliases();
 
 		// As I passed the extension with the name "complex" already defined this should be expanded
-		EXPECT_EQ("AP(struct {foo:NamedType,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,"
-		          "operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>} v0 = rec v0.{v0=fun(ref<type<'a>,f,f,plain> v1) {return ref_alloc(ref_deref(v1), mem_loc_stack);}}("
-		          "type<struct {foo:NamedType,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,"
-		          "operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}>))",
+		EXPECT_EQ("AP(struct __insieme_anonymous_record_1_1 {foo:NamedType,ctor(),ctor(ref<^__insieme_anonymous_record_1_1,t,f,cpp_ref>),ctor(ref<^__insieme_anonymous_record_1_1,f,f,cpp_rref>),dtor(),operator_assign(ref<^__insieme_anonymous_record_1_1,t,f,cpp_ref>)->ref<^__insieme_anonymous_record_1_1,f,f,cpp_ref>,"
+		          "operator_assign(ref<^__insieme_anonymous_record_1_1,f,f,cpp_rref>)->ref<^__insieme_anonymous_record_1_1,f,f,cpp_ref>} v0 = rec v0.{v0=fun(ref<type<'a>,f,f,plain> v1) {return ref_alloc(ref_deref(v1), mem_loc_stack);}}("
+		          "type<struct __insieme_anonymous_record_1_1 {foo:NamedType,ctor(),ctor(ref<^__insieme_anonymous_record_1_1,t,f,cpp_ref>),ctor(ref<^__insieme_anonymous_record_1_1,f,f,cpp_rref>),dtor(),operator_assign(ref<^__insieme_anonymous_record_1_1,t,f,cpp_ref>)->ref<^__insieme_anonymous_record_1_1,f,f,cpp_ref>,"
+		          "operator_assign(ref<^__insieme_anonymous_record_1_1,f,f,cpp_rref>)->ref<^__insieme_anonymous_record_1_1,f,f,cpp_ref>}>))",
 		          toString(builder.normalize(parser::parseStmt(manager, "var complex a;", false, existingNames, typeAlises))));
 
 		// inside of a compound stmt we shadow previous vararations
