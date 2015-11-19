@@ -398,7 +398,9 @@ namespace conversion {
 			base = core::lang::buildPtrToRef(base);
 		}
 
-		string memName(membExpr->getMemberDecl()->getName());
+		auto memberDecl = membExpr->getMemberDecl();
+		frontend_assert(llvm::isa<clang::FieldDecl>(memberDecl)) << "non-field member in c";
+		string memName = frontend::utils::getNameForField(llvm::dyn_cast<clang::FieldDecl>(memberDecl), converter.getSourceManager());
 		auto retType = converter.convertType(membExpr->getType());
 		auto retTypeLit = builder.getTypeLiteral(retType);
 		frontend_assert(retType);
