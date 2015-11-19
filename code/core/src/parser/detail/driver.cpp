@@ -699,9 +699,9 @@ namespace parser {
 			ExpressionPtr func = getScalar(callable);
 
 			// if this is a member function call we prepend the implicit this parameter
-			if(analysis::isCallOf(callable, parserIRExtension.getMemberFunctionAccess())) {
+			if(analysis::isCallOf(func, parserIRExtension.getMemberFunctionAccess())) {
 				// we add the callable itself as the first argument of the call
-				auto thisParam = callable.as<CallExprPtr>()->getArgument(0);
+				auto thisParam = func.as<CallExprPtr>()->getArgument(0);
 				auto thisParamType = thisParam->getType();
 				if(analysis::isRefType(thisParamType)) { thisParamType = analysis::getReferencedType(thisParamType); }
 
@@ -709,7 +709,7 @@ namespace parser {
 
 				// replace func with the lookup of the literal. first create the name of the literal
 				std::string typeName = thisParamType.as<GenericTypePtr>()->getName()->getValue();
-				std::string functionName = callable.as<CallExprPtr>()->getArgument(1).as<LiteralPtr>()->getValue()->getValue();
+				std::string functionName = func.as<CallExprPtr>()->getArgument(1).as<LiteralPtr>()->getValue()->getValue();
 				std::string memberName = typeName + "::" + functionName;
 
 				// now we have to find a function registered in the TU which has the same literal name and the same parameter types. we have to ignore the
@@ -727,8 +727,8 @@ namespace parser {
 					}
 				}
 
-				// if we didn'T change the function, we didn't find a suitable one
-				if(func == callable) {
+				//if we didn't change the function, we didn't find a suitable one
+				if (func == getScalar(callable)) {
 					error(l, format("Couldn't find member %s in type %s for argument types %s", memberName, typeName, argumentTypes));
 					return nullptr;
 				}
