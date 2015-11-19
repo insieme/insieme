@@ -50,9 +50,10 @@ namespace utils {
 
 
 	namespace {
-		
+
 		static const string manglePrefix = "IMP";
 		static const string mangleLocation = "IMLOC";
+		static const string mangleEmpty = "EMPTY";
 
 		std::vector<std::pair<string, string>> replacements = {{"<", "_lt_"},
 		                                                       {">", "_gt_"},
@@ -69,7 +70,8 @@ namespace utils {
 		                                                       {"-", "_minus_"},
 		                                                       {"~", "_wave_"},
 		                                                       {manglePrefix, "_not_really_an_imp_philipp_what_are_you_talking_about_sorry_"},
-		                                                       {mangleLocation, "_not_really_mangle_location_"}};
+		                                                       {mangleLocation, "_not_really_mangle_location_"},
+		                                                       {mangleEmpty, "_not_really_mangle_empty_"}};
 
 		string applyReplacements(string in) {
 			for(auto& mapping : replacements) {
@@ -77,7 +79,7 @@ namespace utils {
 			}
 			return in;
 		}
-		
+
 		string reverseReplacements(string in) {
 			for(auto& mapping : replacements) {
 				boost::replace_all(in, mapping.second, mapping.first);
@@ -88,16 +90,24 @@ namespace utils {
 	}
 
 	string mangle(string name, string file, unsigned line, unsigned column) {
+		// in order to correctly handle empty names
+		if (name.empty()) return mangle(file, line, column);
 		return format("%s_%s_%s_%s_%u_%u", manglePrefix, applyReplacements(name), mangleLocation, applyReplacements(file), line, column);
 	}
-	
+
+	string mangle(string file, unsigned line, unsigned column) {
+		// we cannot call the other mangle function here as it would replace mangleEmpty
+		return format("%s_%s_%s_%s_%u_%u", manglePrefix, mangleEmpty, mangleLocation, applyReplacements(file), line, column);
+	}
+
 	std::string mangle(std::string name) {
 		return format("%s_%s", manglePrefix, applyReplacements(name));
 	}
-	
+
 	string demangle(string name) {
 		if(!boost::starts_with(name, manglePrefix)) return name;
 		auto ret = name.substr(manglePrefix.size()+1);
+		if(boost::starts_with(ret, mangleEmpty)) return "";
 		auto loc = ret.find(mangleLocation);
 		if(loc != string::npos) {
 			ret = ret.substr(0,	loc-1);

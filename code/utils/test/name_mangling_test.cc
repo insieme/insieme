@@ -53,3 +53,11 @@ TEST(NameMangling, Special) {
 	EXPECT_EQ("IMP_bla_colon_klu_plus_r_wave__slash_", mangle("bla:klu+r~/"));
 	EXPECT_EQ("bla:klu+r~/", demangle("IMP_bla_colon_klu_plus_r_wave__slash_"));
 }
+
+TEST(NameMangling, Empty) {
+	EXPECT_EQ("IMP_EMPTY_IMLOC_foo_dot_cpp_42_7", mangle("", "foo.cpp", 42, 7));
+	EXPECT_EQ("IMP_EMPTY_IMLOC_foo_dot_cpp_42_7", mangle("foo.cpp", 42, 7));
+	EXPECT_EQ("", demangle("IMP_EMPTY_IMLOC_foo_dot_cpp_42_7"));
+	EXPECT_EQ("IMP__not_really_mangle_empty__IMLOC_foo_dot_cpp_42_7", mangle("EMPTY", "foo.cpp", 42, 7));
+	EXPECT_EQ("EMPTY", demangle("IMP__not_really_mangle_empty__IMLOC_foo_dot_cpp_42_7"));
+}
