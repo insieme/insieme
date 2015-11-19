@@ -1196,13 +1196,8 @@ namespace core {
 		 * @return the requested field list instance managed by the given manager
 		 */
 		static FieldsPtr get(NodeManager& manager, const FieldList& fields = FieldList()) {
-			std::set<std::string> fieldNames;
-			for (const auto& field : fields) {
-				const auto& fieldName = field->getName()->getValue();
-				// store the name of the field in the unique set (no duplicates)
-				fieldNames.insert(fieldName);
-			}
-			assert_eq(fieldNames.size(), fields.size()) << "field names must be unique";
+			auto result = hasDuplicates(fields, [](const FieldPtr& field) { return field->getName()->getValue(); });
+			assert_false(result)  << "field names must be unique";
 			return manager.get(Fields(convertList(fields)));
 		}
 
