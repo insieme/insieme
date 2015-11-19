@@ -98,7 +98,7 @@ namespace frontend {
 					return;
 			}
 
-			for(int i=0; i<aChildren.size(); ++i) {
+			for(size_t i=0; i<aChildren.size(); ++i) {
 				irDiff(aChildren[i], bChildren[i]);
 			}
 		}
@@ -115,15 +115,19 @@ namespace frontend {
 			IRBuilder builder(expected->getNodeManager());
 			bool eIsExp = expected.isa<ExpressionPtr>();
 			bool aIsExp = actual.isa<ExpressionPtr>();
+			auto expNN = expected;
+			auto actNN = actual;
 			expected = builder.normalize(expected);
 			actual = builder.normalize(actual);
 			EXPECT_EQ(expected, actual) << "Location     : " << locationOf(addr) << "\n"
 			                            << "Actual Pretty: " << dumpColor(actual, std::cout, true) << "\n"
 			                            << "Expect Pretty: " << dumpColor(expected, std::cout, true) << "\n"
-			                            << "Expected type: " << (eIsExp ? toString(dumpColor(expected.as<ExpressionPtr>()->getType())) : toString("-")) << "\n"
+			                            //<< "Actual NN: " << dumpColor(actNN, std::cout, true) << "\n"
+			                            //<< "Expect NN: " << dumpColor(expNN, std::cout, true) << "\n"
 			                            << "Actual type  : " << (aIsExp ? toString(dumpColor(actual.as<ExpressionPtr>()->getType())) : toString("-")) << "\n"
-			                            //<< "Text expected:\n" << dumpText(expected) << "\n"
+			                            << "Expected type: " << (eIsExp ? toString(dumpColor(expected.as<ExpressionPtr>()->getType())) : toString("-")) << "\n"
 			                            //<< "Text actual  :\n" << dumpText(actual) << "\n"
+			                            //<< "Text expected:\n" << dumpText(expected) << "\n"
 										;
 			if(expected != actual) irDiff(actual, expected);
 		}

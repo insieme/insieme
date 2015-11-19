@@ -358,33 +358,31 @@ namespace conversion {
 	//						CXX NEW CALL EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr Converter::CXXExprConverter::VisitCXXNewExpr(const clang::CXXNewExpr* callExpr) {
-		// TODO:  - inplace allocation - non default ctor array?
 		core::ExpressionPtr retExpr;
 		LOG_EXPR_CONVERSION(callExpr, retExpr);
 
-		//// if no constructor is found, it is a new over an non-class type, can be any kind of pointer of array
-		//// spetialy double pointer
-		//if(!callExpr->getConstructExpr()) {
-		//	core::TypePtr type = converter.convertType(callExpr->getAllocatedType());
-		//	core::ExpressionPtr placeHolder;
-		//	if(callExpr->hasInitializer()) {
-		//		const clang::Expr* initializer = callExpr->getInitializer();
-		//		core::ExpressionPtr initializerExpr = converter.convertExpr(initializer);
-		//		frontend_assert(initializerExpr);
-		//		placeHolder = initializerExpr;
-		//	} else {
-		//		placeHolder = builder.undefinedNew(type);
-		//	}
+		// if no constructor is found, it is a new over a non-class type, can be any kind of pointer of array
+		if(!callExpr->getConstructExpr()) {
+			core::TypePtr type = converter.convertType(callExpr->getAllocatedType());
+			core::ExpressionPtr placeHolder;
+			if(callExpr->hasInitializer()) {
+				const clang::Expr* initializer = callExpr->getInitializer();
+				core::ExpressionPtr initializerExpr = converter.convertExpr(initializer);
+				frontend_assert(initializerExpr);
+				placeHolder = initializerExpr;
+			} else {
+				placeHolder = builder.undefinedNew(type);
+			}
 
-		//	if(callExpr->isArray()) {
-		//		core::ExpressionPtr&& arrSizeExpr = converter.convertExpr(callExpr->getArraySize());
-		//		placeHolder = builder.callExpr(builder.arrayType(type), builder.getLangBasic().getArrayCreate1D(), builder.getTypeLiteral(type),
-		//		                               core::types::smartCast(arrSizeExpr, gen.getUInt4()));
-		//		retExpr = builder.refNew(placeHolder);
-		//	} else {
-		//		retExpr = builder.callExpr(builder.getLangBasic().getScalarToArray(), builder.refNew(placeHolder));
-		//	}
-		//} else {
+			if(callExpr->isArray()) {
+			//	core::ExpressionPtr&& arrSizeExpr = converter.convertExpr(callExpr->getArraySize());
+			//	placeHolder = builder.callExpr(builder.arrayType(type), builder.getLangBasic().getArrayCreate1D(), builder.getTypeLiteral(type),
+			//	                               core::types::smartCast(arrSizeExpr, gen.getUInt4()));
+			//	retExpr = builder.refNew(placeHolder);
+			} else {
+				//retExpr = builder.callExpr(builder.getLangBasic().getScalarToArray(), builder.refNew(placeHolder));
+			}
+		}// else {
 		//	core::ExpressionPtr ctorCall = Visit(callExpr->getConstructExpr());
 		//	frontend_assert(ctorCall.isa<core::CallExprPtr>()) << "aint constructor call in here, no way to translate NEW\n";
 
@@ -437,7 +435,7 @@ namespace conversion {
 		//	}
 		//}
 
-		assert_not_implemented();
+		if(!retExpr) assert_not_implemented();
 
 		return retExpr;
 	}
