@@ -390,17 +390,19 @@ namespace printer {
 							out << ((analysis::isStruct(cur)) ? "struct " : "union ");
 							out << cur->getName()->getValue();
 
-							auto parents = cur.as<StructPtr>()->getParents();
-							if (!parents.empty()) {
-								out << ": [ " << join(",", parents, [&](std::ostream &out, const ParentPtr &parent) {
-									if (parent->isVirtual()) { out << "virtual "; }
-									if (parent->isPrivate()) { out << "private "; }
-									if (parent->isPublic()) { out << "public "; }
-									if (parent->isProtected()) { out << "protected "; }
-									visit(NodeAddress(parent->getType()));
-								}) << " ]";
+							if(analysis::isStruct(cur)) {
+								auto parents = cur.as<StructPtr>()->getParents();
+								if (!parents.empty()) {
+									out << ": [ " <<
+									join(",", parents, [&](std::ostream& out, const ParentPtr& parent) {
+										if (parent->isVirtual()) { out << "virtual "; }
+										if (parent->isPrivate()) { out << "private "; }
+										if (parent->isPublic()) { out << "public "; }
+										if (parent->isProtected()) { out << "protected "; }
+										visit(NodeAddress(parent->getType()));
+									}) << " ]";
+								}
 							}
-
 							out << " {";
 							increaseIndent();
 
