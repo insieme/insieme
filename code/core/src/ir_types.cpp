@@ -269,6 +269,17 @@ namespace core {
 
 	}
 
+	TagTypeDefinitionPtr TagTypeDefinition::get(NodeManager& manager, const TagTypeBindingMap& bindings) {
+		vector<TagTypeBindingPtr> tagTypeBindings;
+		for(auto p : bindings) {
+			tagTypeBindings.push_back(TagTypeBinding::get(manager, p.first, p.second));
+		}
+		std::sort(tagTypeBindings.begin(), tagTypeBindings.end(), [](const TagTypeBindingPtr& a, const TagTypeBindingPtr& b) {
+			return a->getTag()->getName()->getValue() < b->getTag()->getName()->getValue();
+		});	
+		return manager.get(TagTypeDefinition(convertList(tagTypeBindings)));
+	}
+
 	TagTypePtr TagTypeDefinition::peelDefinition(NodeManager& manager, const TagTypeReferencePtr& tag, unsigned times) const {
 
 
@@ -286,16 +297,25 @@ namespace core {
 		// if there are recursive references
 		if (!tags.empty()) {
 
+			// peel recursive definitions
+			std::map<TagTypeReferencePtr, TagTypePtr> peeled;
+			for (const auto& cur : tags) {
+				auto curPtr = cur.as<TagTypeReferencePtr>();
+				auto& peeledCur = peeled[curPtr];
+				if (!peeledCur) {
+					peeledCur = TagType::get(manager, curPtr, TagTypeDefinitionPtr(this))->peel(times - 1);
+				}
+			}
+
 			// turn into a map of modifications
 			std::map<NodeAddress,NodePtr> mods;
 			for(const auto& cur : tags) {
-				mods[cur] = TagType::get(manager, cur.as<TagTypeReferencePtr>(), TagTypeDefinitionPtr(this))->peel(times-1);
+				mods[cur] = peeled[cur.as<TagTypeReferencePtr>()];
 			}
 
 			// build peeled definition
-			definition = TagTypeDefinition::get(manager, toVector(
-					TagTypeBinding::get(manager,tag,transform::replaceAll(manager, mods).as<RecordPtr>())
-			));
+			TagTypeBindingMap tm = { { tag, transform::replaceAll(manager, mods).as<RecordPtr>() } };
+			definition = TagTypeDefinition::get(manager, tm);
 		}
 
 		// peel tag type using helper

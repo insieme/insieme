@@ -945,7 +945,7 @@ namespace transform {
 
 				// 1. rebuild definition
 				NodeMap recVarMap;
-				vector<LambdaBindingPtr> bindings;
+				LambdaBindingMap bindings;
 
 				for(decltype(oldDef.size()) i = 0; i < oldDef.size(); i++) {
 					LambdaBindingPtr oldBinding = oldDef[i];
@@ -953,7 +953,7 @@ namespace transform {
 
 					// check whether something has changed
 					if(oldBinding == newBinding) {
-						bindings.push_back(newBinding);
+						bindings.insert({ newBinding->getReference(), newBinding->getLambda() });
 						continue;
 					}
 
@@ -976,23 +976,19 @@ namespace transform {
 					LambdaPtr lambda = builder.lambda(funType, newLambda->getParameters(), newLambda->getBody());
 
 					// re-build recursive variable
-					VariablePtr recVar = builder.variable(funType, newBinding->getVariable()->getID());
-					recVarMap[newBinding->getVariable()] = recVar;
+					LambdaReferencePtr lambdaRef = builder.lambdaReference(funType, newBinding->getReference()->getName());
+					recVarMap[newBinding->getReference()] = lambdaRef;
 
 					// add new binding
-					bindings.push_back(builder.lambdaBinding(recVar, lambda));
+					bindings.insert({ lambdaRef, lambda });
 				}
 
 				// 2. update recursive variables
 				if(oldLambda->isRecursive()) {
 					// update all lambda bodies to reflect new recursive variables
-					for(auto cur : bindings) {
-						auto curLambda = cur->getLambda();
-						auto curBody = curLambda->getBody();
-
-						auto newBody = replaceAllGen(newExpr->getNodeManager(), curBody, recVarMap, transform::globalReplacement);
-
-						cur = builder.lambdaBinding(cur->getVariable(), builder.lambda(curLambda->getType(), curLambda->getParameters(), newBody));
+					for(auto& cur : bindings) {
+						auto newBody = replaceAllGen(newExpr->getNodeManager(), cur.second->getBody(), recVarMap, transform::globalReplacement);
+						cur.second = builder.lambda(cur.second->getType(), cur.second->getParameters(), newBody);
 					}
 				}
 
@@ -1000,7 +996,7 @@ namespace transform {
 				LambdaDefinitionPtr resDef = builder.lambdaDefinition(bindings);
 
 				// 3. re-build lambda expression
-				return builder.lambdaExpr(recVarMap[lambda->getVariable()].as<VariablePtr>(), resDef);
+				return builder.lambdaExpr(recVarMap[lambda->getReference()].as<LambdaReferencePtr>(), resDef);
 			}
 		}
 

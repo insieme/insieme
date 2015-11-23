@@ -81,6 +81,7 @@ namespace checks {
 			context_free_checks.push_back(make_check<DestructorTypeCheck>());
 			context_free_checks.push_back(make_check<MemberFunctionTypeCheck>());
 			context_free_checks.push_back(make_check<DuplicateMemberFunctionCheck>());
+			context_free_checks.push_back(make_check<DuplicateMemberFieldCheck>());
 
 			context_free_checks.push_back(make_check<UndeclaredVariableCheck>());
 

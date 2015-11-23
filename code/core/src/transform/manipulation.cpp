@@ -653,8 +653,8 @@ namespace transform {
 		paramTypes.erase(paramTypes.begin() + index);
 		FunctionTypePtr newFunType = FunctionType::get(manager, paramTypes, funType->getReturnType(), funType->getKind());
 
-		// create new recursive variable
-		auto newRecVar = Variable::get(manager, newFunType, lambda->getVariable()->getId());
+		// create new lambda reference
+		auto newLambdaRef = LambdaReference::get(manager, newFunType, lambda->getReference()->getName());
 
 		// handle recursive functions
 		if(lambda->isRecursive()) {
@@ -664,10 +664,10 @@ namespace transform {
 			}
 
 			// collect all recursive calls (addresses to support a faster replacement later on)
-			VariablePtr recVar = lambda->getVariable();
+			LambdaReferencePtr lambdaRef = lambda->getReference();
 			vector<CallExprAddress> calls;
 			visitDepthFirst(NodeAddress(body), [&](const CallExprAddress& call) {
-				if(call.as<CallExprPtr>()->getFunctionExpr() == recVar) { calls.push_back(call); }
+				if(call.as<CallExprPtr>()->getFunctionExpr() == lambdaRef) { calls.push_back(call); }
 			});
 
 			// check whether parameter is propagated
@@ -696,7 +696,7 @@ namespace transform {
 
 
 				// build and register updated call
-				CallExprPtr newCall = builder.callExpr(cur->getType(), newRecVar, newArgs);
+				CallExprPtr newCall = builder.callExpr(cur->getType(), newLambdaRef, newArgs);
 				replacements.insert({cur, newCall});
 			}
 
@@ -710,13 +710,13 @@ namespace transform {
 		params.erase(params.begin() + index);
 
 		// build resulting lambda (preserving recursive variable ID)
-		auto binding = LambdaBinding::get(manager, newRecVar, Lambda::get(manager, newFunType, params, body));
-		auto def = LambdaDefinition::get(manager, toVector(binding));
-		return LambdaExpr::get(manager, newRecVar, def);
+		LambdaBindingMap bindings = { {newLambdaRef, Lambda::get(manager, newFunType, params, body)} };
+		auto def = LambdaDefinition::get(manager, bindings);
+		return LambdaExpr::get(manager, newLambdaRef, def);
 	}
 
-	NodePtr fixVariable(NodeManager& manager, const NodePtr& node, const VariablePtr& var, const ExpressionPtr& value) {
-		return ConstantPropagater(manager, var, value).map(node);
+	NodePtr fixLambdaReference(NodeManager& manager, const NodePtr& node, const LambdaReferencePtr& ref, const ExpressionPtr& value) {
+		return ConstantPropagater(manager, ref, value).map(node);
 	}
 
 	NodePtr fixParameter(NodeManager& manager, const NodePtr& node, const VariablePtr& param, const ExpressionPtr& value) {
@@ -977,7 +977,7 @@ namespace transform {
 			 * access the value of the new parameter within the lambda's body.
 			 */
 			std::pair<LambdaExprPtr, ExpressionPtr> addNewParameter(const LambdaExprPtr& lambda, const TypePtr& paramType) {
-				assert_false(lambda->isRecursive()) << "Recursive functions not supported yet!";
+				assert_false(lambda->isRecursive()) << "Recursive functions not supported yet!\n" << "Lambda: " << *lambda << "\n";
 
 				IRBuilder builder(lambda.getNodeManager());
 
@@ -1165,10 +1165,10 @@ namespace transform {
 		LambdaDefinitionPtr defs = lambda->getDefinition();
 		LambdaDefinitionPtr res = defs;
 		for(auto def : defs->getDefinitions()) {
-			auto var = def->getVariable();
-			res = fixVariable(manager, res, var, var).as<LambdaDefinitionPtr>();
+			auto ref = def->getReference();
+			res = fixLambdaReference(manager, res, ref, ref).as<LambdaDefinitionPtr>();
 		}
-		return IRBuilder(manager).lambdaExpr(lambda->getVariable(), res);
+		return IRBuilder(manager).lambdaExpr(lambda->getReference(), res);
 	}
 
 	namespace {

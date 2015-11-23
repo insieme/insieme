@@ -233,15 +233,15 @@ namespace tasks {
 
 			LambdaDefinitionPtr buildReplacement(const LambdaDefinitionPtr& lamDef) {
 				// gather all required option variables
-				vector<VariableList> varOptionsList; // list of options for each original lambda definition
+				vector<LambdaReferenceList> varOptionsList; // list of options for each original lambda definition
 				NodeMap sequentialVarReplacements;   // replacement map for recursive calls in sequentialized version
 				for(const LambdaBindingPtr& lb : lamDef->getDefinitions()) {
-					VariablePtr rVar = lb->getVariable();
-					VariableList varOptions;
+					LambdaReferencePtr rVar = lb->getReference();
+					LambdaReferenceList varOptions;
 					varOptions.push_back(rVar);                            // original version is the first option
-					varOptions.push_back(build.variable(rVar->getType())); // var for 2 unroll
-					varOptions.push_back(build.variable(rVar->getType())); // var for 4 unroll
-					varOptions.push_back(build.variable(rVar->getType())); // var for sequential
+					varOptions.push_back(build.lambdaReference(rVar->getType(),rVar->getNameAsString() + "_unroll_2")); // var for 2 unroll
+					varOptions.push_back(build.lambdaReference(rVar->getType(), rVar->getNameAsString() + "_unroll_4")); // var for 4 unroll
+					varOptions.push_back(build.lambdaReference(rVar->getType(), rVar->getNameAsString() + "_unroll_inf")); // var for sequential
 					varOptionsList.push_back(varOptions);
 					sequentialVarReplacements.insert(make_pair(rVar, varOptions.back()));
 				}
@@ -253,12 +253,12 @@ namespace tasks {
 				lambdaDefOptionsList.push_back(core::transform::trySequentialize(nodeMan, lambdaDefOptionsList.back(), false));
 
 				// replace recursive jobs in lambdas with pick from available options, generating new bindings
-				vector<LambdaBindingPtr> newBindings;
+				LambdaBindingMap newBindings;
 				// replace in originals
 				int lbi = 0;
 				// for every lambda
 				for(const LambdaBindingPtr& lb : lamDef->getDefinitions()) {
-					VariablePtr rVar = lb->getVariable();
+					LambdaReferencePtr rVar = lb->getReference();
 					// for every option
 					for(size_t opti = 0; opti < varOptionsList[0].size(); ++opti) {
 						LambdaPtr lam = lambdaDefOptionsList[opti]->getDefinitionOf(rVar);
@@ -291,7 +291,7 @@ namespace tasks {
 						if(opti == varOptionsList[0].size() - 1)
 							lam = core::transform::replaceAll(nodeMan, lam, sequentialVarReplacements, core::transform::globalReplacement).as<LambdaPtr>();
 						// add this option to the new bindings
-						newBindings.push_back(build.lambdaBinding(varOptionsList[lbi][opti], lam));
+						newBindings.insert( { varOptionsList[lbi][opti], lam } );
 					}
 					++lbi;
 				}

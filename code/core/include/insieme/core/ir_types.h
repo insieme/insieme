@@ -910,9 +910,7 @@ namespace core {
 		 * @param bindings the bindings to be included within this definition
 		 * @return the requested type instance managed by the given manager
 		 */
-		static TagTypeDefinitionPtr get(NodeManager& manager, const vector<TagTypeBindingPtr>& bindings) {
-			return manager.get(TagTypeDefinition(convertList(bindings)));
-		}
+		  static TagTypeDefinitionPtr get(NodeManager& manager, const TagTypeBindingMap& bindings);
 
 		/**
 		 * Peels this definition for the given tag for the given number of times.
@@ -1198,6 +1196,8 @@ namespace core {
 		 * @return the requested field list instance managed by the given manager
 		 */
 		static FieldsPtr get(NodeManager& manager, const FieldList& fields = FieldList()) {
+			auto result = hasDuplicates(fields, [](const FieldPtr& field) { return field->getName()->getValue(); });
+			assert_false(result)  << "field names must be unique";
 			return manager.get(Fields(convertList(fields)));
 		}
 
@@ -1657,6 +1657,21 @@ namespace core {
 		 */
 		static StructPtr get(NodeManager& manager, const StringValuePtr& name, const vector<FieldPtr>& fields = vector<FieldPtr>()) {
 			return get(manager, name, Parents::get(manager), fields);
+		}
+
+		/**
+		 * A factory method allowing to obtain a pointer to a named struct type representing
+		 * an instance managed by the given manager.
+		 *
+		 * @param manager the manager which should be responsible for maintaining the new
+		 * 				  type instance and all its referenced elements.
+		 * @param name the name of the resulting struct
+		 * @param fields the list of fields the new struct should consist of
+		 * @return a pointer to a instance of the requested type. Multiple requests using
+		 * 		   the same parameters will lead to pointers addressing the same instance.
+		 */
+		static StructPtr get(NodeManager& manager, const std::string& name, const vector<FieldPtr>& fields = vector<FieldPtr>()) {
+			return get(manager, StringValue::get(manager,name), fields);
 		}
 
 		/**

@@ -353,7 +353,7 @@ namespace tu {
 				if(const GenericTypePtr& type = symbol.isa<GenericTypePtr>()) {
 					return builder.tagTypeReference(type->getFamilyName());
 				} else if(const LiteralPtr& fun = symbol.isa<LiteralPtr>()) {
-					return builder.variable(map(fun->getType()));
+					return builder.lambdaReference(map(fun->getType().as<FunctionTypePtr>()), fun->getValue());
 				}
 
 				// otherwise fail!
@@ -377,7 +377,6 @@ namespace tu {
 
 					// sort variables
 					vector<NodePtr> vars(cur.begin(), cur.end());
-					std::sort(vars.begin(), vars.end(), compare_target<NodePtr>());
 
 					// get first element
 					auto first = vars.front();
@@ -438,17 +437,20 @@ namespace tu {
 							// close recursive types
 							if(first.isa<GenericTypePtr>()) {
 								// build recursive type definition
-								vector<TagTypeBindingPtr> bindings;
+								TagTypeBindingMap bindings;
 								for(const auto& cur : vars) {
-									bindings.push_back(builder.tagTypeBinding(resolutionCache[cur].as<TagTypeReferencePtr>(), resolved[cur].as<TagTypePtr>()->getRecord()));
+									bindings.insert({ resolutionCache[cur].as<TagTypeReferencePtr>(), resolved[cur].as<TagTypePtr>()->getRecord() });
 								}
 
 								// build recursive type definition
 								auto def = builder.tagTypeDefinition(bindings);
 
+								// de-compose type definition
+								auto types = analysis::minimizeRecursiveGroup(def);
+
 								// simply construct a recursive type
-								for(auto& cur : resolved) {
-									auto newType = builder.tagType(resolutionCache[cur.first].as<TagTypeReferencePtr>(), def);
+								for (auto& cur : resolved) {
+									auto newType = types[resolutionCache[cur.first].as<TagTypeReferencePtr>()];
 									core::transform::utils::migrateAnnotations(cur.second, newType);
 									cur.second = newType;
 								}
@@ -458,18 +460,20 @@ namespace tu {
 
 							} else if(first.isa<LiteralPtr>()) {
 								// build recursive lambda definition
-								vector<LambdaBindingPtr> bindings;
+								LambdaBindingMap bindings;
 								for(const auto& cur : vars) {
-									bindings.push_back(
-										builder.lambdaBinding(resolutionCache[cur].as<VariablePtr>(), resolved[cur].as<LambdaExprPtr>()->getLambda()));
+									bindings.insert({ resolutionCache[cur].as<LambdaReferencePtr>(), resolved[cur].as<LambdaExprPtr>()->getLambda() });
 								}
 
 								// build recursive type definition
 								auto def = builder.lambdaDefinition(bindings);
 
-								// simply construct a recursive type
+								// de-compose lambda definition
+								auto funs = analysis::minimizeRecursiveGroup(def);
+
+								// simply construct a recursive function
 								for(auto& cur : resolved) {
-									auto newFun = builder.lambdaExpr(resolutionCache[cur.first].as<VariablePtr>(), def);
+									auto newFun = funs[resolutionCache[cur.first].as<LambdaReferencePtr>()];
 									core::transform::utils::migrateAnnotations(cur.second, newFun);
 									cur.second = newFun;
 								}

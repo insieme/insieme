@@ -47,6 +47,7 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/analysis/attributes.h"
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/transform/manipulation_utils.h"
 
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/reference.h"
@@ -54,6 +55,7 @@
 #include "insieme/core/lang/static_vars.h"
 
 #include "insieme/utils/logging.h"
+#include "insieme/utils/graph_utils.h"
 
 namespace insieme {
 namespace core {
@@ -368,8 +370,7 @@ namespace analysis {
 			typedef std::set<Ptr<const Variable>> ResultSet;
 			typedef vector<Ptr<const Variable>> ResultList;
 
-			// do not visit types
-			FreeVariableCollector() : IRVisitor<void, Ptr, VariableSet&, std::set<Ptr<const Variable>>&>(false) {}
+			FreeVariableCollector() : IRVisitor<void, Ptr, VariableSet&, std::set<Ptr<const Variable>>&>(true) {}
 
 			ResultSet run(const Ptr<const Node>& root) {
 				// run visitor
@@ -385,9 +386,6 @@ namespace analysis {
 
 		  private:
 			void visitNode(const Ptr<const Node>& node, VariableSet& bound, ResultSet& free) {
-				// ignore types
-				if(node->getNodeCategory() == NC_Type) { return; }
-
 				// visit all sub-nodes
 				this->visitAll(node->getChildList(), bound, free);
 			}
@@ -421,6 +419,9 @@ namespace analysis {
 
 			void visitVariable(const Ptr<const Variable>& var, VariableSet& bound, ResultSet& free) {
 				if(bound.find(var) == bound.end()) { free.insert(var); }
+				
+				// continue visiting variable type
+				visitNode(var->getType(), bound, free);
 			}
 
 			void visitLambda(const Ptr<const Lambda>& lambda, VariableSet& bound, ResultSet& free) {
@@ -433,19 +434,6 @@ namespace analysis {
 
 				// continue visiting with the limited scope
 				visitNode(lambda, innerBound, free);
-			}
-
-			void visitLambdaDefinition(const Ptr<const LambdaDefinition>& definition, VariableSet& bound, ResultSet& free) {
-				// a lambda creates a new scope
-				VariableSet innerBound = bound;
-
-				// register recursive lambda variables
-				for(const LambdaBindingPtr& bind : definition) {
-					innerBound.insert(bind->getVariable());
-				}
-
-				// process child nodes
-				visitNode(definition, innerBound, free);
 			}
 
 
@@ -492,7 +480,7 @@ namespace analysis {
 				// add free variables to result set
 				for(const auto& cur : definition->template getAttachedValue<FreeVariableSet>()) {
 					// if variable is not defined by the enclosed lambda definition block
-					if(!definition->getDefinitionOf(cur)) { free.insert(collectRecursive.extend(definition, cur)); }
+					free.insert(collectRecursive.extend(definition, cur));
 				}
 			}
 
@@ -758,15 +746,13 @@ namespace analysis {
 
 	bool contains(const NodePtr& code, const NodePtr& element) {
 		assert_true(element) << "Element to be searched must not be empty!";
-		bool checkTypes = element->getNodeCategory() == NC_Type || element->getNodeCategory() == NC_IntTypeParam;
 		return code && makeCachedLambdaVisitor([&](const NodePtr& cur, rec_call<bool>::type& rec) -> bool {
 			       return *cur == *element || any(cur->getChildList(), rec);
-			   }, checkTypes)(code);
+			   }, true)(code);
 	}
 
 	unsigned countInstances(const NodePtr& code, const NodePtr& element) {
 		assert_true(element) << "Element to be searched must not be empty!";
-		bool checkTypes = element->getNodeCategory() == NC_Type || element->getNodeCategory() == NC_IntTypeParam;
 		return code ? makeCachedLambdaVisitor([&](const NodePtr& cur, rec_call<unsigned>::type& rec) -> unsigned {
 			if(*cur == *element) return 1;
 			auto children = cur->getChildList();
@@ -775,7 +761,7 @@ namespace analysis {
 				ret += rec(c);
 			}
 			return ret;
-		}, checkTypes)(code) : 0;
+		}, true)(code) : 0;
 	}
 
 
@@ -797,20 +783,20 @@ namespace analysis {
 		private:
 
 			/**
-			 * A map mapping recursive variables and parameter positions to a flag
+			 * A map mapping lambda references and parameter positions to a flag
 			 * indicating whether the corresponding parameter is a read-only parameter.
 			 */
-			map<pair<VariablePtr, int>, bool> cache;
+			map<pair<LambdaReferencePtr, int>, bool> cache;
 
-			map<VariablePtr, LambdaPtr> bodyMap;
+			map<LambdaReferencePtr, LambdaPtr> bodyMap;
 
-			bool isReadOnly(const VariablePtr& var, int paramPos) {
+			bool isReadOnly(const LambdaReferencePtr& ref, int paramPos) {
 				// check whether this is a known variable
-				auto bodyPair = bodyMap.find(var);
+				auto bodyPair = bodyMap.find(ref);
 				if(bodyPair == bodyMap.end()) { return false; }
 
 				// check cache
-				auto pos = cache.find(std::make_pair(var, paramPos));
+				auto pos = cache.find(std::make_pair(ref, paramPos));
 				if(pos != cache.end()) { return pos->second; }
 
 				// evaluation is necessary
@@ -819,7 +805,7 @@ namespace analysis {
 				bool res = isReadOnly(lambda, param);
 
 				// safe result in cache
-				cache.insert({{var, paramPos}, res});
+				cache.insert({{ref, paramPos}, res});
 
 				return res;
 			}
@@ -850,7 +836,7 @@ namespace analysis {
 				// remember bodies
 				for(const LambdaBindingPtr& cur : lambda->getDefinition()) {
 					// add body
-					bodyMap[cur->getVariable()] = cur->getLambda();
+					bodyMap[cur->getReference()] = cur->getLambda();
 				}
 
 				// assume parameter is save (co-induction)
@@ -859,13 +845,13 @@ namespace analysis {
 				while(*params[pos] != *param) {
 					pos++;
 				}
-				cache[std::make_pair(lambda->getVariable(), pos)] = true;
+				cache[std::make_pair(lambda->getReference(), pos)] = true;
 
 				// compute result
 				bool res = isReadOnly(lambda->getLambda(), param);
 
 				// update cache
-				cache[std::make_pair(lambda->getVariable(), pos)] = res;
+				cache[std::make_pair(lambda->getReference(), pos)] = res;
 
 				// done
 				return res;
@@ -918,8 +904,8 @@ namespace analysis {
 							}
 
 							// check calls to recursive functions
-							if(VariablePtr var = call->getFunctionExpr().isa<VariablePtr>()) {
-								if(!isReadOnly(var, cur.getIndex() - 2)) { // -1 for type, -1 for function expr
+							if(auto ref = call->getFunctionExpr().isa<LambdaReferencePtr>()) {
+								if(!isReadOnly(ref, cur.getIndex() - 2)) { // -1 for type, -1 for function expr
 									readOnly = false;                      // it is no longer read-only
 								}
 								// we can stop the decent here
@@ -1173,6 +1159,186 @@ namespace analysis {
 	bool hasFreeReturnStatement(const StatementPtr& stmt) {
 		return hasFreeControlStatement(stmt, NT_ReturnStmt, { NT_LambdaExpr });
 	}
+
+	namespace {
+
+		template<typename T>
+		struct free_reference_collector;
+
+		template<>
+		struct free_reference_collector<TagTypeReferencePtr> : public IRVisitor<void,Address,TagTypeReferenceAddressList&,const TagTypeReferenceSet&> {
+
+			using reference_list_type = TagTypeReferenceAddressList;
+
+			free_reference_collector(const TagTypeDefinitionPtr&) : IRVisitor(true) {}
+
+			TagTypeReferenceAddressList operator()(const NodePtr& node) {
+				TagTypeReferenceAddressList res;
+				TagTypeReferenceSet bound;
+				visit(NodeAddress(node),res,bound);
+				return res;
+			}
+
+			void visitTagTypeReference(const TagTypeReferenceAddress& ref, TagTypeReferenceAddressList& res, const TagTypeReferenceSet& bound) override {
+				if (!bound.contains(ref)) res.push_back(ref);
+			}
+
+			void visitTagTypeDefinition(const TagTypeDefinitionAddress& def, TagTypeReferenceAddressList& res, const TagTypeReferenceSet& bound) override {
+				TagTypeReferenceSet nestedBound = bound;
+				for(const auto& cur : def) nestedBound.insert(cur->getTag());
+				for(const auto& cur : def) visit(cur->getRecord(), res, nestedBound);
+			}
+
+			void visitTagType(const TagTypeAddress& def, TagTypeReferenceAddressList& res, const TagTypeReferenceSet& bound) override {
+				visit(def->getDefinition(), res, bound);
+			}
+
+			void visitNode(const NodeAddress& node, TagTypeReferenceAddressList& res, const TagTypeReferenceSet& bound) override {
+				visitAll(node->getChildList(), res, bound);
+			}
+
+		};
+
+		template<>
+		struct free_reference_collector<LambdaReferencePtr> : public IRVisitor<void,Address,VariableAddressList&,const VariableSet&>  {
+
+			using reference_list_type = LambdaReferenceAddressList;
+
+			std::map<LambdaPtr, LambdaReferenceAddressList> index;
+			
+			free_reference_collector(const LambdaDefinitionPtr& def) : IRVisitor(true) {
+				for (const auto& cur : def) {
+					for (const auto& ref : def->getRecursiveCallsOf(cur->getReference())) {
+
+						// lower root
+						LambdaAddress lambda;
+						visitPathTopDownInterruptible(ref, [&](const NodeAddress& cur)->bool {
+							return lambda = cur.isa<LambdaAddress>();
+						});
+
+						// add to index
+						if (!lambda) continue;
+						index[lambda].push_back(cropRootNode(ref, lambda));
+					}
+				}
+			}
+
+			LambdaReferenceAddressList operator()(const NodePtr& node) {
+				if (auto lambda = node.as<LambdaPtr>()) {
+					return index[lambda];
+				}
+				return LambdaReferenceAddressList();
+			}
+
+		};
+
+		template<
+			typename Var,
+			typename Construct,
+			typename Value,
+			typename Def
+		>
+		std::map<Var,Pointer<const Construct>> minimizeRecursiveGroupsGen(const Pointer<const Def>& def) {
+
+			using Collector = free_reference_collector<Var>;
+			using RefAddressList = typename Collector::reference_list_type;
+
+			// instantiate reference collector
+			Collector collector(def);
+
+			// collect references
+			std::map<NodePtr,RefAddressList> references;
+			for(const auto& cur : def) {
+				references[cur->getChild(0)] = collector(cur->getChild(1));
+			}
+
+			// extract dependency graph
+			utils::graph::PointerGraph<NodePtr> depGraph;
+			for(const auto& a : def) {
+				auto var = a->getChild(0);
+				depGraph.addEdge(var, var);
+				for(const auto& c : references[var]) {
+					if (def->getDefinitionOf(c)) {
+						depGraph.addEdge(var, c);
+					}
+				}
+			}
+
+			// compute strongly connected components order
+			auto compGraph = utils::graph::computeSCCGraph(depGraph.asBoostGraph());
+
+			// compute topological order -- there is a utility for this too
+			auto components = utils::graph::getTopologicalOrder(compGraph);
+			
+			// build up resulting map
+			NodeManager& mgr = def.getNodeManager();
+			std::map<Var, Pointer<const Construct>> res;
+			
+			// process in reverse order
+			for(auto it = components.rbegin(); it != components.rend(); ++it) {
+				auto& comp = *it;
+
+				// build new bindings
+				utils::map::PointerMap<Var, Value> bindings;
+				for(const auto& var : comp) {
+					auto v = var.as<Var>();
+
+					// get old definition
+					auto oldDef = def->getDefinitionOf(v);
+
+					// if there is no old definition for this variable => skip
+					if (!oldDef) continue;
+
+					// create replacement map
+					std::map<NodeAddress, NodePtr> replacements;
+					for(const auto& ref : references[var]) {
+						// if this recursive variable has already been resolved
+						if (res[ref]) {
+							// us the resolved version
+							replacements[ref] = res[ref];
+						}
+					}
+
+					// fix definition
+					auto fixedDef =
+							(replacements.empty()) ? oldDef :
+							(transform::replaceAll(mgr, replacements).as<decltype(oldDef)>());
+
+					assert_true(fixedDef) << "No new version for " << v;
+
+					// move annotations
+					transform::utils::migrateAnnotations(oldDef,fixedDef);
+
+					// add binding
+					bindings.insert({ v, fixedDef });
+				}
+
+				// build reduced definition group
+				auto def = Def::get(mgr, bindings);
+
+				// add definitions to result
+				for(const auto& var : comp) {
+					auto v = var.as<Var>();
+					res[v] = Construct::get(mgr, v, def);
+				}
+			}
+
+			// done
+			return res;
+		}
+
+	}
+
+	std::map<TagTypeReferencePtr, TagTypePtr> minimizeRecursiveGroup(const TagTypeDefinitionPtr& def) {
+		// conduct minimization
+		return minimizeRecursiveGroupsGen<TagTypeReferencePtr, TagType, RecordPtr>(def);
+	}
+
+	std::map<LambdaReferencePtr, LambdaExprPtr> minimizeRecursiveGroup(const LambdaDefinitionPtr& def) {
+		// conduct minimization
+		return minimizeRecursiveGroupsGen<LambdaReferencePtr, LambdaExpr, LambdaPtr>(def);
+	}
+
 
 } // end namespace utils
 } // end namespace core

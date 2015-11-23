@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -166,7 +166,7 @@ namespace conversion {
 		core::TypePtr VisitSubstTemplateTypeParmType(const clang::SubstTemplateTypeParmType* substTy);
 		core::TypePtr VisitTemplateTypeParmType(const clang::TemplateTypeParmType* templParamTy);
 		//core::TypePtr VisitDecltypeType(const clang::DecltypeType* declTy);
-		//core::TypePtr VisitAutoType(const clang::AutoType* autoTy);
+		core::TypePtr VisitAutoType(const clang::AutoType* autoTy);
 		core::TypePtr VisitMemberPointerType(const clang::MemberPointerType* memPointerTy);
 
 	  protected:

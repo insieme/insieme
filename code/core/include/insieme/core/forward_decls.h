@@ -64,7 +64,9 @@ namespace core {
 		typedef Pointer<const NAME> NAME##Ptr;                                                                                                                 \
 		typedef Address<const NAME> NAME##Address;                                                                                                             \
 		typedef std::vector<NAME##Ptr> NAME##List;                                                                                                             \
-		typedef utils::set::PointerSet<NAME##Ptr> NAME##Set;
+		typedef utils::set::PointerSet<NAME##Ptr> NAME##Set;																								   \
+		typedef std::vector<NAME##Address> NAME##AddressList;                                                                                                  \
+
 
 	// take all nodes from within the definition file
 	#include "insieme/core/ir_nodes.def"
@@ -103,6 +105,8 @@ namespace core {
 	typedef utils::map::PointerMap<VariablePtr, VariablePtr> VariableMap;
 	typedef utils::map::PointerMap<VariablePtr, ExpressionPtr> VarExprMap;
 	typedef utils::map::PointerMap<ExpressionPtr, VariablePtr> ExprVarMap;
+	typedef utils::map::PointerMap<LambdaReferencePtr, LambdaPtr> LambdaBindingMap;
+	typedef utils::map::PointerMap<TagTypeReferencePtr, RecordPtr> TagTypeBindingMap;
 
 	typedef std::function<bool(NodePtr)> NodeFilter;
 

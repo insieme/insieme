@@ -892,7 +892,7 @@ namespace backend {
 
 			::transform(lambdaDefinition->getDefinitions(), std::back_inserter(lambdas),
 			            [&](const core::LambdaBindingPtr& cur) -> std::pair<c_ast::IdentifierPtr, core::LambdaExprPtr> {
-				            auto lambda = core::LambdaExpr::get(manager, cur->getVariable(), lambdaDefinition);
+				            auto lambda = core::LambdaExpr::get(manager, cur->getReference(), lambdaDefinition);
 				            return std::make_pair(cManager->create(nameManager.getName(lambda)), lambda);
 				        });
 
@@ -1007,7 +1007,7 @@ namespace backend {
 				const core::LambdaExprPtr& lambda = pair.second;
 
 				// peel function and create function definition
-				core::LambdaExprPtr unrolled = lambdaDefinition->peel(manager, lambda->getVariable());
+				core::LambdaExprPtr unrolled = lambdaDefinition->peel(manager, lambda->getReference());
 				assert_false(unrolled->isRecursive()) << "Peeled function must not be recursive!";
 
 				// resolve function ... now with body

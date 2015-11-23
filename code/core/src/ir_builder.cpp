@@ -315,6 +315,10 @@ namespace core {
 		return lang::PointerType::create(elementType, _const, _volatile);
 	}
 
+	GenericTypePtr IRBuilderBaseModule::channelType(const TypePtr& elementType, const ExpressionPtr& size) const {
+		return lang::ChannelType::create(elementType, size);
+	}
+
 	GenericTypePtr IRBuilderBaseModule::arrayType(const TypePtr& elementType) const {
 		return lang::ArrayType::create(elementType);
 	}
@@ -412,12 +416,12 @@ namespace core {
 
 	TagTypePtr IRBuilderBaseModule::unionType(const vector<FieldPtr>& fields) const {
 		auto tag = tagTypeReference("");
-		return tagType(tag, tagTypeDefinition({tagTypeBinding(tag, unionRecord(fields))}));
+		return tagType(tag, tagTypeDefinition({ { tag, unionRecord(fields) } }));
 	}
 
 	TagTypePtr IRBuilderBaseModule::unionType(const StringValuePtr& name, const vector<FieldPtr>& fields) const {
 		auto tag = tagTypeReference(name);
-		return tagType(tag, tagTypeDefinition({tagTypeBinding(tag, unionRecord(name, fields))}));
+		return tagType(tag, tagTypeDefinition({ { tag, unionRecord(name, fields) } }));
 	}
 
 	TagTypePtr IRBuilderBaseModule::unionType(const vector<std::pair<StringValuePtr, TypePtr>>& union_fields) const {
@@ -437,7 +441,7 @@ namespace core {
 	                                          const ExpressionsPtr& ctors, const ExpressionPtr& dtor, const BoolValuePtr& dtorIsVirtual,
 	                                          const MemberFunctionsPtr& mfuns, const PureVirtualMemberFunctionsPtr& pvmfuns) const {
 		auto tag = tagTypeReference(name);
-				return tagType(tag, tagTypeDefinition({tagTypeBinding(tag, unionRecord(name, fields, ctors, dtor, dtorIsVirtual, mfuns, pvmfuns))}));
+				return tagType(tag, tagTypeDefinition({ { tag, unionRecord(name, fields, ctors, dtor, dtorIsVirtual, mfuns, pvmfuns) } }));
 	}
 
 	TagTypePtr IRBuilderBaseModule::unionTypeWithDefaults(const TypePtr& thisType, const FieldList& fields,
@@ -478,7 +482,7 @@ namespace core {
 
 	TagTypePtr IRBuilderBaseModule::structType(const StringValuePtr& name, const vector<ParentPtr>& parentsList, const vector<FieldPtr>& fields) const {
 		auto tag = tagTypeReference(name);
-		return tagType(tag, tagTypeDefinition({tagTypeBinding(tag, structRecord(name, parents(parentsList), fields))}));
+		return tagType(tag, tagTypeDefinition({ { tag, structRecord(name, parents(parentsList), fields) } }));
 	}
 
 	TagTypePtr IRBuilderBaseModule::structType(const string& name, const ParentList& prents, const FieldList& filds,
@@ -493,7 +497,7 @@ namespace core {
 	                                           const ExpressionPtr& dtor, const BoolValuePtr& dtorIsVirtual, const MemberFunctionsPtr& mfuns,
 	                                           const PureVirtualMemberFunctionsPtr& pvmfuns) const {
 		auto tag = tagTypeReference(name);
-		return tagType(tag, tagTypeDefinition({tagTypeBinding(tag, structRecord(name, parents, fields, ctors, dtor, dtorIsVirtual, mfuns, pvmfuns))}));
+		return tagType(tag, tagTypeDefinition({ { tag, structRecord(name, parents, fields, ctors, dtor, dtorIsVirtual, mfuns, pvmfuns) } }));
 	}
 
 	TagTypePtr IRBuilderBaseModule::structTypeWithDefaults(const TypePtr& thisType, const ParentList& parents, const FieldList& fields,
@@ -747,7 +751,7 @@ namespace core {
 		}
 		return callExpr(refType(elementType), refExt.getRefVar(), getTypeLiteral(elementType));
 	}
-	
+
 	ExpressionPtr IRBuilderBaseModule::undefinedNew(const TypePtr& type) const {
 		auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
 		core::TypePtr elementType = type;
@@ -756,7 +760,7 @@ namespace core {
 		}
 		return callExpr(refType(elementType), refExt.getRefNew(), getTypeLiteral(elementType));
 	}
-	
+
 	CallExprPtr IRBuilderBaseModule::deref(const ExpressionPtr& subExpr) const {
 		assert_pred1(analysis::isRefType, subExpr->getType());
 		auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
@@ -1498,7 +1502,7 @@ namespace core {
 			if(type.isa<GenericTypePtr>()) {
 				return callExpr(type, getLangBasic().getZero(), getTypeLiteral(type));
 			}
-			
+
 			// TODO: extend for more types
 			LOG(FATAL) << "Encountered unsupported type: " << *type;
 			assert_fail() << "Given type not supported yet!";
@@ -1506,7 +1510,7 @@ namespace core {
 			// fall-back => return a literal 0 of the corresponding type
 			return literal(type, "0");
 	}
-	
+
 	// ---------------------------- Utilities ---------------------------------------
 
 
@@ -1531,7 +1535,7 @@ namespace core {
 
 		return idx;
 	}
-	
+
 	/**
 	 * A utility function wrapping a given statement into a compound statement (if necessary).
 	 */

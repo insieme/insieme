@@ -166,8 +166,8 @@ namespace core {
 
 		// create a recursive even/odd example
 		FunctionTypePtr functionType = builder.functionType(toVector<TypePtr>(gen.getUInt4()), gen.getBool());
-		VariablePtr evenVar = builder.variable(functionType, 1);
-		VariablePtr oddVar = builder.variable(functionType, 2);
+		LambdaReferencePtr evenVar = builder.lambdaReference(functionType, "even");
+		LambdaReferencePtr oddVar = builder.lambdaReference(functionType, "odd");
 
 
 		VariableList param;
@@ -190,14 +190,21 @@ namespace core {
 		LambdaPtr oddLambda = builder.lambda(functionType, param, oddBody);
 
 		// finish definition
-		vector<LambdaBindingPtr> bindings;
-		bindings.push_back(builder.lambdaBinding(evenVar, evenLambda));
-		bindings.push_back(builder.lambdaBinding(oddVar, oddLambda));
+		LambdaBindingMap bindings;
+		bindings.insert({ evenVar, evenLambda });
+		bindings.insert({ oddVar, oddLambda });
 		LambdaDefinitionPtr definition = builder.lambdaDefinition(bindings);
 
+		vector<LambdaBindingPtr> compVal;
+		for(auto b : bindings) {
+			compVal.push_back(builder.lambdaBinding(b.first, b.second));
+		}
+		
 		// test definition node
-		EXPECT_TRUE(equals(convertList(bindings), definition->getChildList()));
-
+		for(auto c : compVal) {
+			EXPECT_TRUE(analysis::contains(definition, c));
+		}
+		
 		// create recursive lambda nodes
 		LambdaExprPtr even = builder.lambdaExpr(evenVar, definition);
 		LambdaExprPtr odd = builder.lambdaExpr(oddVar, definition);
@@ -219,11 +226,11 @@ namespace core {
 		LambdaExprPtr simple = builder.lambdaExpr(functionType, toVector(x), builder.returnStmt(builder.boolLit("true")));
 		EXPECT_FALSE(simple->isRecursive());
 
-		EXPECT_EQ("rec v1.{v1=fun(ref<uint<4>,f,f,plain> v3) {if(uint_eq(v3, 0)) {return true;} else {return bool_not(v2(v3));};}, v2=fun(ref<uint<4>,f,f,plain> v3) {if(uint_eq(v3, 0)) "
-		          "{return false;} else {return bool_not(v1(v3));};}}",
+		EXPECT_EQ("rec even.{even=fun(ref<uint<4>,f,f,plain> v3) {if(uint_eq(v3, 0)) {return true;} else {return bool_not(odd(v3));};}, odd=fun(ref<uint<4>,f,f,plain> v3) {if(uint_eq(v3, 0)) "
+		          "{return false;} else {return bool_not(even(v3));};}}",
 		          toString(*even));
-		EXPECT_EQ("rec v2.{v1=fun(ref<uint<4>,f,f,plain> v3) {if(uint_eq(v3, 0)) {return true;} else {return bool_not(v2(v3));};}, v2=fun(ref<uint<4>,f,f,plain> v3) {if(uint_eq(v3, 0)) "
-		          "{return false;} else {return bool_not(v1(v3));};}}",
+		EXPECT_EQ("rec odd.{even=fun(ref<uint<4>,f,f,plain> v3) {if(uint_eq(v3, 0)) {return true;} else {return bool_not(odd(v3));};}, odd=fun(ref<uint<4>,f,f,plain> v3) {if(uint_eq(v3, 0)) "
+		          "{return false;} else {return bool_not(even(v3));};}}",
 		          toString(*odd));
 	}
 
@@ -475,8 +482,8 @@ namespace core {
 		ASSERT_TRUE(lambda);
 
 		EXPECT_TRUE(lambda->isRecursive());
-		EXPECT_EQ("rec v0.{v0=fun() {5; v0();}}", toString(*lambda));
-		EXPECT_EQ("rec v0.{v0=fun() {5; rec v0.{v0=fun() {5; v0();}}();}}", toString(*lambda->peel()));
+		EXPECT_EQ("rec f.{f=fun() {5; f();}}", toString(*lambda));
+		EXPECT_EQ("rec _.{_=fun() {5; rec f.{f=fun() {5; f();}}();}}", toString(*lambda->peel()));
 
 
 		// check mutual recursive lambdas
@@ -489,8 +496,8 @@ namespace core {
 		ASSERT_TRUE(lambda);
 
 		EXPECT_TRUE(lambda->isRecursive());
-		EXPECT_EQ("rec v2.{v2=fun() {1; v3();}, v3=fun() {2; v2();}}", toString(*lambda));
-		EXPECT_EQ("rec v0.{v0=fun() {1; rec v3.{v2=fun() {1; v3();}, v3=fun() {2; v2();}}();}}", toString(*lambda->peel()));
+		EXPECT_EQ("rec f.{f=fun() {1; g();}, g=fun() {2; f();}}", toString(*lambda));
+		EXPECT_EQ("rec _.{_=fun() {1; rec g.{f=fun() {1; g();}, g=fun() {2; f();}}();}}", toString(*lambda->peel()));
 
 
 		// check nested recursive lambda
@@ -504,8 +511,8 @@ namespace core {
 		ASSERT_TRUE(lambda);
 
 		EXPECT_TRUE(lambda->isRecursive());
-		EXPECT_EQ("rec v4.{v4=fun() {5; rec v0.{v0=fun() {v4();}}();}}", toString(*lambda));
-		EXPECT_EQ("rec v0.{v0=fun() {5; rec v0.{v0=fun() {rec v4.{v4=fun() {5; rec v0.{v0=fun() {v4();}}();}}();}}();}}", toString(*lambda->peel()));
+		EXPECT_EQ("rec f.{f=fun() {5; rec _.{_=fun() {f();}}();}}", toString(*lambda));
+		EXPECT_EQ("rec _.{_=fun() {5; rec _.{_=fun() {rec f.{f=fun() {5; rec _.{_=fun() {f();}}();}}();}}();}}", toString(*lambda->peel()));
 		EXPECT_PRED2(containsSubString, toString(*lambda->peel()), toString(*lambda));
 
 		// check nested mutual recursive lambdas
@@ -526,9 +533,9 @@ namespace core {
 		ASSERT_TRUE(lambda);
 
 		EXPECT_TRUE(lambda->isRecursive());
-		EXPECT_EQ("rec v5.{v5=fun() {1; rec v0.{v0=fun() {v6();}}();}, v6=fun() {2; rec v0.{v0=fun() {v5();}}();}}", toString(*lambda));
+		EXPECT_EQ("rec f.{f=fun() {1; rec _.{_=fun() {g();}}();}, g=fun() {2; rec _.{_=fun() {f();}}();}}", toString(*lambda));
 		EXPECT_EQ(
-		    "rec v0.{v0=fun() {1; rec v0.{v0=fun() {rec v6.{v5=fun() {1; rec v0.{v0=fun() {v6();}}();}, v6=fun() {2; rec v0.{v0=fun() {v5();}}();}}();}}();}}",
+		    "rec _.{_=fun() {1; rec _.{_=fun() {rec g.{f=fun() {1; rec _.{_=fun() {g();}}();}, g=fun() {2; rec _.{_=fun() {f();}}();}}();}}();}}",
 		    toString(*lambda->peel()));
 	}
 
@@ -619,7 +626,7 @@ namespace core {
 		// std::cout << "Unroll 5:\n" << core::printer::PrettyPrinter(even->unroll(5)) << "\n\n";
 
 		EXPECT_PRED2(containsSubString, toString(core::printer::PrettyPrinter(even->unroll(2))),
-		             "return *v4==0?true:*v4-1==0?false:v0(*v4-1-1)");
+		             "return *v0==0?true:*v0-1==0?false:even(*v0-1-1);");
 
 		res = check(even->unroll(manager, 2), core::checks::getFullCheck());
 		EXPECT_TRUE(res.empty()) << even->unroll(manager, 2) << res;
@@ -687,12 +694,13 @@ namespace core {
 		ASSERT_TRUE(fun);
 
 		// count number of recursive calls
-		EXPECT_EQ(2u, analysis::getFreeVariableAddresses(fun->getLambda()).size());
+		auto ref = fun->getReference();
+		EXPECT_EQ(2u, fun->getDefinition()->getRecursiveCallsOf(ref).size());
 
 		// this number should grow when unrolling the function
-		EXPECT_EQ(4u, analysis::getFreeVariableAddresses(fun->unroll(2)->getLambda()).size());
-		EXPECT_EQ(8u, analysis::getFreeVariableAddresses(fun->unroll(3)->getLambda()).size());
-		EXPECT_EQ(16u, analysis::getFreeVariableAddresses(fun->unroll(4)->getLambda()).size());
+		EXPECT_EQ(4u, fun->unroll(2)->getDefinition()->getRecursiveCallsOf(ref).size());
+		EXPECT_EQ(8u, fun->unroll(3)->getDefinition()->getRecursiveCallsOf(ref).size());
+		EXPECT_EQ(16u, fun->unroll(4)->getDefinition()->getRecursiveCallsOf(ref).size());
 
 
 		// number of free variables should be 0 in case of a peeling

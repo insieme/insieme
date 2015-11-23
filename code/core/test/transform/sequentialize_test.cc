@@ -48,9 +48,26 @@
 
 #include "insieme/utils/test/test_utils.h"
 
+#include "insieme/core/lang/parallel.h"
+
 namespace insieme {
 namespace core {
 namespace transform {
+
+	TEST(Manipulation, SequentializeBug) {
+
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto op = mgr.getLangExtension<lang::ParallelExtension>().getAtomicFetchAndAdd();
+		EXPECT_TRUE(lang::isBuiltIn(op));
+
+		auto seq = transform::sequentialize(mgr, op);
+
+		EXPECT_NE(op, seq);
+		EXPECT_FALSE(lang::isBuiltIn(seq));
+
+	}
 
 	TEST(Manipulation, SequentializeAtomic) {
 		NodeManager mgr;
@@ -71,7 +88,23 @@ namespace transform {
 
 
 		auto res = analysis::normalize(transform::trySequentialize(mgr, code));
-		EXPECT_EQ("decl fun000 : (ref<'a,f,'v,plain>, 'a) -> 'a;\ndecl fun001 : (ref<'a,f,'v,plain>, 'a) -> 'a;\ndef fun000 = function (v1 : ref<ref<'a,f,'v,plain>,f,f,plain>, v2 : ref<'a,f,f,plain>) -> 'a {\n    (v3 : 'a)=> id(true);\n    (v4 : 'a)=> gen_add(v4, *v2);\n    return fun001(*v1, *v2);\n};\ndef fun001 = function (v1 : ref<ref<'a,f,'v,plain>,f,f,plain>, v2 : ref<'a,f,f,plain>) -> 'a {\n    var 'a v3 = **v1;\n    *v1 = gen_add(**v1, *v2);\n    return v3;\n};\n{\n    var ref<int<4>,f,f,plain> v0 = ref_var_init(2);\n    fun000(v0, 10);\n}", toString(printer::PrettyPrinter(res))) << printer::PrettyPrinter(res);
+		EXPECT_EQ("decl fun000 : (ref<'a,f,'v,plain>, 'a) -> 'a;\n"
+				  "decl fun001 : (ref<'a,f,'v,plain>, 'a) -> 'a;\n"
+				  "def fun000 = function (v0 : ref<ref<'a,f,'v,plain>,f,f,plain>, v1 : ref<'a,f,f,plain>) -> 'a {\n"
+				  "    (v2 : 'a)=> id(true);\n"
+				  "    (v3 : 'a)=> gen_add(v3, *v1);\n"
+				  "    return fun001(*v0, *v1);\n"
+				  "};\n"
+				  "def fun001 = function (v0 : ref<ref<'a,f,'v,plain>,f,f,plain>, v1 : ref<'a,f,f,plain>) -> 'a {\n"
+				  "    var 'a v2 = **v0;\n"
+				  "    *v0 = gen_add(**v0, *v1);\n"
+				  "    return v2;\n"
+				  "};\n"
+				  "{\n"
+				  "    var ref<int<4>,f,f,plain> v0 = ref_var_init(2);\n"
+				  "    fun000(v0, 10);\n"
+				  "}", toString(printer::PrettyPrinter(res))) << printer::PrettyPrinter(res);
+
 		EXPECT_TRUE(check(res, checks::getFullCheck()).empty()) << check(res, checks::getFullCheck());
 
 	}

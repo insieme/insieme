@@ -352,7 +352,7 @@ namespace printer {
 		visitAnnotationList(*builder, NODE_ID(lambdaExpr), lambdaExpr->getAnnotations());
 
 		visitChildList(*builder, toVector(lambdaExpr->getType()), lambdaExpr, "type");
-		visitChildList(*builder, toVector(lambdaExpr->getVariable()), lambdaExpr, "var");
+		visitChildList(*builder, toVector(lambdaExpr->getReference()), lambdaExpr, "var");
 		visitChildList(*builder, toVector(lambdaExpr->getDefinition()), lambdaExpr, "definition");
 		visitChildList(*builder, toVector(lambdaExpr->getLambda()), lambdaExpr, "lambda");
 	}
@@ -391,7 +391,7 @@ namespace printer {
 
 			DotLink link(NODE_ID(lambdaDef), interId, label);
 			this->builder->addLink(link);
-			this->builder->addLink(DotLink(interId, NODE_ID(curr->getVariable()), "var"));
+			this->builder->addLink(DotLink(interId, NODE_ID(curr->getReference()), "var"));
 			this->builder->addLink(DotLink(interId, NODE_ID(curr->getLambda()), "lambda"));
 		});
 	}

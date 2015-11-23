@@ -292,9 +292,6 @@ namespace checks {
 		auto ok3 = builder.parent(builder.typeVariable("a"));
 		auto ok4 = builder.parent(builder.parseType("def struct a { x : ref<b>; }; def struct b { x : ref<a>; }; a"));
 
-
-		dumpText(ok4);
-
 		auto err1 = builder.parent(builder.parseType("union { x : int<4>; }"));
 		auto err2 = builder.parent(builder.parseType("(A,B)->R"));
 		auto err3 = builder.parent(builder.parseType("ref<A>"));
@@ -556,6 +553,18 @@ namespace checks {
 			auto err = builder.structType("A", ParentList(), FieldList(), ExpressionList(), builder.getDefaultDestructor(builder.tagTypeReference("A")), false, toVector(memberFunction), toVector(pureVirtualMemberFunction));
 
 			EXPECT_PRED2(containsMSG, check(err), Message(NodeAddress(err).getAddressOfChild(1,0), EC_TYPE_DUPLICATE_MEMBER_FUNCTION, "", Message::ERROR));
+		}
+	}
+
+	TEST(DuplicateMemberFieldCheck, Basic) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		{
+			vector<FieldPtr> fields;
+			fields.push_back(builder.field("", GenericType::get(manager, "a")));
+			auto err = builder.structType(fields);
+			EXPECT_PRED2(containsMSG, check(err), Message(NodeAddress(err).getAddressOfChild(1,0,1,1), EC_TYPE_INVALID_IDENTIFIER, "", Message::ERROR));
 		}
 	}
 
@@ -1155,8 +1164,8 @@ namespace checks {
 		ASSERT_TRUE(lambda);
 
 		// get addresses to all kind of variables
-		VariableAddress outer = LambdaExprAddress(lambda)->getVariable();
-		VariableAddress inner = LambdaExprAddress(lambda)->getDefinition()[0]->getVariable();
+		LambdaReferenceAddress outer = LambdaExprAddress(lambda)->getReference();
+		LambdaReferenceAddress inner = LambdaExprAddress(lambda)->getDefinition()[0]->getReference();
 
 		// check a correct version
 		CheckPtr typeCheck = make_check<LambdaTypeCheck>();
@@ -1164,7 +1173,7 @@ namespace checks {
 
 
 		// build an invalid variable as a replacement
-		VariablePtr invalid = builder.variable(outer->getType());
+		LambdaReferencePtr invalid = builder.lambdaReference(outer->getType(),"-non-existing-");
 
 		// case 1 - lambda expression selects non-existing body
 		auto err = transform::replaceNode(manager, outer, invalid).as<LambdaExprPtr>();
@@ -1182,7 +1191,7 @@ namespace checks {
 		EXPECT_PRED2(containsMSG, errors, Message(NodeAddress(err), EC_TYPE_INVALID_LAMBDA_EXPR_TYPE, "", Message::ERROR));
 
 		// case 3 - use invalid variable type in lambda
-		invalid = builder.variable(invalidType);
+		invalid = builder.lambdaReference(invalidType,"_");
 		err = transform::replaceNode(manager, inner.switchRoot(transform::replaceNode(manager, outer.switchRoot(err), invalid).as<LambdaExprPtr>()), invalid)
 		          .as<LambdaExprPtr>();
 		errors = check(err, typeCheck);

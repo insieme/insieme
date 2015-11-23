@@ -226,6 +226,8 @@ namespace printer {
 						return annotations::getAttachedName(cur);
 					} else if (lang::isDerived(cur)) {
 						return lang::getConstructName(cur);
+					} else if (auto binding = cur.isa<LambdaBindingPtr>()) {
+						return binding->getReference()->getNameAsString();
 					} else {
 						return format("fun%03d", funCounter++);
 					}
@@ -234,7 +236,7 @@ namespace printer {
 				// get all lambda/function names
 				// visit all lambdas to get names of all non-recursive functions
 				visitDepthFirstOnce(node, [&](const LambdaExprPtr &cur) {
-					const auto& defaultBinding = cur->getDefinition()->getBindingOf(cur->getVariable());
+					const auto& defaultBinding = cur->getDefinition()->getBindingOf(cur->getReference());
 					if (lambdaNames.find(defaultBinding) != lambdaNames.end()) {
 						return;
 					}
@@ -534,7 +536,7 @@ namespace printer {
 					// print finally the main function, if there is one
 					visitDepthFirstOnce(node, [&](const LambdaExprPtr& cur) {
 						auto funType = cur->getFunctionType();
-						if(!funType.isMember() && !lang::isBuiltIn(cur) && !lambdaNames[cur->getDefinition()->getBindingOf(cur->getVariable())].compare("main")) {
+						if(!funType.isMember() && !lang::isBuiltIn(cur) && !lambdaNames[cur->getDefinition()->getBindingOf(cur.getReference())].compare("main")) {
 							newLine();
 							visit(NodeAddress(cur->getFunctionType()->getReturnType()));
 							auto parameters = cur->getParameterList();
@@ -1010,9 +1012,12 @@ namespace printer {
 					out << lang::getConstructName(node);
 					return;
 				}
-				out << lambdaNames[node->getDefinition()->getBindingOf(node->getVariable())];
+				out << lambdaNames[node->getDefinition()->getBindingOf(node->getReference())];
 			}
 
+			PRINT(LambdaReference) {
+				out << node->getNameAsString();
+			}
 
 			PRINT(LambdaDefinition) {
 				auto defs = node->getDefinitions();
@@ -1023,7 +1028,7 @@ namespace printer {
 				newLine();
 				std::size_t count = 0;
 				for_each(defs.begin(), defs.end(), [&](const LambdaBindingAddress& cur) {
-					VISIT(cur->getVariable());
+					VISIT(cur->getReference());
 					out << " = ";
 					VISIT(cur->getLambda());
 					out << ";";
@@ -1124,9 +1129,9 @@ namespace printer {
 						if (lang::isDerived(lambdaExpr)) {
 							out << lang::getConstructName(lambdaExpr);
 						} else {
-							out << lambdaNames[lambdaExpr->getDefinition()->getBindingOf(lambdaExpr->getVariable())];
+							out << lambdaNames[lambdaExpr->getDefinition()->getBindingOf(lambdaExpr->getReference())];
 						}
-					} else if (auto var = functionPtr.isa<VariablePtr>()) {
+					} else if (auto var = functionPtr.isa<LambdaReferencePtr>()) {
 						NodeAddress parent = node.getFirstParentOfType(NT_LambdaDefinition);
 						if (parent) {
 							auto bindingPtr = parent.getAddressedNode().as<LambdaDefinitionPtr>()->getBindingOf(var);

@@ -45,6 +45,8 @@
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/printer/pretty_printer.h"
 
+#include "insieme/core/checks/full_check.h"
+
 namespace insieme {
 namespace core {
 namespace analysis {
@@ -66,7 +68,7 @@ namespace analysis {
 		ASSERT_TRUE(call);
 
 		// check free variables
-		EXPECT_EQ("rec v0.{v0=fun(ref<((int<4>)=>int<4>),f,f,plain> v1) {return ref_deref(v1)(2);}}(bind(v0){int_add(int_add(2, v77), v0)})", toString(*call));
+		EXPECT_EQ("rec _.{_=fun(ref<((int<4>)=>int<4>),f,f,plain> v0) {return ref_deref(v0)(2);}}(bind(v0){int_add(int_add(2, v77), v0)})", toString(*call));
 		EXPECT_EQ("[AP(v77)]", toString(getFreeVariables(call)));
 	}
 
@@ -87,7 +89,7 @@ namespace analysis {
 		ASSERT_TRUE(call);
 
 		// check free variables
-		EXPECT_EQ("rec v0.{v0=fun(ref<((int<4>)=>int<4>),f,f,plain> v1) {return ref_deref(v1)(2);}}(bind(v0){int_add(int_add(2, v77), v0)})", toString(*call));
+		EXPECT_EQ("rec _.{_=fun(ref<((int<4>)=>int<4>),f,f,plain> v0) {return ref_deref(v0)(2);}}(bind(v0){int_add(int_add(2, v77), v0)})", toString(*call));
 		EXPECT_EQ("[0-2-2-2-3]", toString(getFreeVariableAddresses(call)));
 	}
 
@@ -131,7 +133,7 @@ namespace analysis {
 
 		fun = transform::correctRecursiveLambdaVariableUsage(manager, fun);
 
-		EXPECT_EQ(toVector(fun->getVariable()), getFreeVariables(fun->getLambda()))
+		EXPECT_EQ(VariableList(), getFreeVariables(fun->getLambda()))
 		    << "Lambda:   " << core::printer::PrettyPrinter(fun->getLambda(),
 		                                                    core::printer::PrettyPrinter::NO_LET_BOUND_FUNCTIONS | core::printer::PrettyPrinter::NO_EVAL_LAZY);
 	}
@@ -261,10 +263,10 @@ namespace analysis {
 		ASSERT_TRUE(call);
 
 		// check free variables
-		EXPECT_EQ("rec v0.{v0=fun(ref<((int<4>)=>int<4>),f,f,plain> v1) {return ref_deref(v1)(2);}}(bind(v0){int_add(int_add(2, v77), v0)})", toString(*call));
-		EXPECT_EQ(utils::set::toSet<VariableSet>(builder.variable(int4, 0), builder.variable(builder.refType(builder.functionType(int4, int4, FK_CLOSURE)), 1),
+		EXPECT_EQ("rec _.{_=fun(ref<((int<4>)=>int<4>),f,f,plain> v0) {return ref_deref(v0)(2);}}(bind(v0){int_add(int_add(2, v77), v0)})", toString(*call));
+		EXPECT_EQ(utils::set::toSet<VariableSet>(builder.variable(int4, 0),
 		                                         builder.variable(int4, 77),
-		                                         builder.variable(builder.functionType(builder.functionType(int4, int4, FK_CLOSURE), int4), 0)),
+		                                         builder.variable(builder.refType(builder.functionType(int4, int4, FK_CLOSURE)), 0)),
 		          getAllVariables(call));
 	}
 
@@ -287,7 +289,7 @@ namespace analysis {
 		{
 			TagTypeReferencePtr tag = builder.tagTypeReference("list");
 			auto listElem = builder.structRecord(toVector(builder.field("load", manager.getLangBasic().getInt4()), builder.field("next", builder.refType(tag))));
-			TypePtr constRecType = builder.tagType(tag, builder.tagTypeDefinition(toVector(builder.tagTypeBinding(tag, listElem))));
+			TypePtr constRecType = builder.tagType(tag, builder.tagTypeDefinition({ { tag, listElem } }));
 
 			EXPECT_EQ("rec ^list.{^list=struct {load:int<4>,next:ref<^list,f,f,plain>,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}}",
 			          toString(*constRecType));
@@ -298,7 +300,7 @@ namespace analysis {
 		{
 			TagTypeReferencePtr tag = builder.tagTypeReference("list");
 			auto listElem = builder.structRecord(toVector(builder.field("load", builder.typeVariable("b")), builder.field("next", builder.refType(tag))));
-			TypePtr constRecType = builder.tagType(tag, builder.tagTypeDefinition(toVector(builder.tagTypeBinding(tag, listElem))));
+			TypePtr constRecType = builder.tagType(tag, builder.tagTypeDefinition( { { tag, listElem } }));
 
 			EXPECT_EQ("rec ^list.{^list=struct {load:'b,next:ref<^list,f,f,plain>,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}}",
 			          toString(*constRecType));
@@ -738,6 +740,119 @@ namespace analysis {
 		EXPECT_EQ(ref, getCanonicalType(builder.parseType("ref<A1>", symbols)));
 		EXPECT_EQ(ref, getCanonicalType(builder.parseType("ref<A2>", symbols)));
 		EXPECT_EQ(ref, getCanonicalType(builder.parseType("ref<A3>", symbols)));
+	}
+
+
+	TEST(Utils, MinimizeRecursiveTypes) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+		auto& basic = mgr.getLangBasic();
+
+		auto a = builder.tagTypeReference("A");
+		auto b = builder.tagTypeReference("B");
+		auto c = builder.tagTypeReference("C");
+		auto d = builder.tagTypeReference("D");
+
+		auto sA = builder.structRecord("A", { builder.field("i", basic.getInt4()) });
+		auto sB = builder.structRecord("B", { builder.field("a", a), builder.field("c", c) });
+		auto sC = builder.structRecord("C", { builder.field("a", a), builder.field("b", b) });
+		auto sD = builder.structRecord("D", { builder.field("b", b), builder.field("c", c) });
+
+		auto def = builder.tagTypeDefinition({
+			{ a,sA },
+			{ b,sB },
+			{ c,sC },
+			{ d,sD }
+		});
+
+		auto D = builder.tagType(d, def);
+
+		// check that it has been properly assembled
+		EXPECT_TRUE(checks::check(D).empty()) << checks::check(D);
+		EXPECT_FALSE(D->isRecursive());
+		EXPECT_EQ(4, D->getDefinition().size());
+
+		// normalize the type
+		auto list = minimizeRecursiveGroup(D->getDefinition());
+
+		EXPECT_EQ(4, list.size());
+
+		EXPECT_TRUE(list[a]);
+		EXPECT_TRUE(list[b]);
+		EXPECT_TRUE(list[c]);
+		EXPECT_TRUE(list[d]);
+
+		EXPECT_FALSE(list[a]->isRecursive());
+		EXPECT_TRUE(list[b]->isRecursive());
+		EXPECT_TRUE(list[c]->isRecursive());
+		EXPECT_FALSE(list[d]->isRecursive());
+
+		EXPECT_EQ(1, list[a]->getDefinition().size());
+		EXPECT_EQ(2, list[b]->getDefinition().size());
+		EXPECT_EQ(2, list[c]->getDefinition().size());
+		EXPECT_EQ(1, list[d]->getDefinition().size());
+
+		EXPECT_TRUE(checks::check(list[a]).empty()) << checks::check(list[a]);
+		EXPECT_TRUE(checks::check(list[b]).empty()) << checks::check(list[b]);
+		EXPECT_TRUE(checks::check(list[c]).empty()) << checks::check(list[c]);
+		EXPECT_TRUE(checks::check(list[d]).empty()) << checks::check(list[d]);
+
+	}
+
+	TEST(Utils, MinimizeRecursiveFunctions) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto funType = builder.parseType("() -> int<4>").as<FunctionTypePtr>();
+
+		auto a = builder.lambdaReference(funType, "A");
+		auto b = builder.lambdaReference(funType, "B");
+		auto c = builder.lambdaReference(funType, "C");
+		auto d = builder.lambdaReference(funType, "D");
+
+		auto lA = builder.lambda(funType, VariableList(), builder.returnStmt(builder.intLit(1)));
+		auto lB = builder.lambda(funType, VariableList(), builder.returnStmt(builder.add(builder.callExpr(a),builder.callExpr(c))));
+		auto lC = builder.lambda(funType, VariableList(), builder.returnStmt(builder.add(builder.callExpr(a), builder.callExpr(b))));
+		auto lD = builder.lambda(funType, VariableList(), builder.returnStmt(builder.add(builder.callExpr(b), builder.callExpr(c))));
+
+		auto def = builder.lambdaDefinition({
+			{ a,lA },
+			{ b,lB },
+			{ c,lC },
+			{ d,lD }
+		});
+
+		auto D = builder.lambdaExpr(d, def);
+
+		// check that it has been properly assembled
+		EXPECT_TRUE(checks::check(D).empty()) << checks::check(D);
+		//EXPECT_FALSE(D->isRecursive());
+		EXPECT_EQ(4, D->getDefinition().size());
+
+		// normalize the type
+		auto list = minimizeRecursiveGroup(D->getDefinition());
+
+		EXPECT_EQ(4, list.size());
+
+		EXPECT_TRUE(list[a]);
+		EXPECT_TRUE(list[b]);
+		EXPECT_TRUE(list[c]);
+		EXPECT_TRUE(list[d]);
+
+		EXPECT_FALSE(list[a]->isRecursive());
+		EXPECT_TRUE(list[b]->isRecursive());
+		EXPECT_TRUE(list[c]->isRecursive());
+		EXPECT_FALSE(list[d]->isRecursive());
+
+		EXPECT_EQ(1, list[a]->getDefinition().size());
+		EXPECT_EQ(2, list[b]->getDefinition().size());
+		EXPECT_EQ(2, list[c]->getDefinition().size());
+		EXPECT_EQ(1, list[d]->getDefinition().size());
+
+		EXPECT_TRUE(checks::check(list[a]).empty()) << checks::check(list[a]);
+		EXPECT_TRUE(checks::check(list[b]).empty()) << checks::check(list[b]);
+		EXPECT_TRUE(checks::check(list[c]).empty()) << checks::check(list[c]);
+		EXPECT_TRUE(checks::check(list[d]).empty()) << checks::check(list[d]);
 	}
 
 } // end namespace analysis

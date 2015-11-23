@@ -1,2 +1,2 @@
 files="../../transpose/transpose.c"
-outputAwk="/^CHECK[[:space:]]\w+$/{ print $2 }"
+outputAwk="/^CHECK/{ print $2 }"

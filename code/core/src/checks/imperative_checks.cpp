@@ -81,12 +81,8 @@ namespace checks {
 			void visitVariable(const VariableAddress& cur) {
 				// check whether variable has been declared
 				if(declaredVariables.find(cur.getAddressedNode()) == declaredVariables.end()) {
-					// check whether it is a recursive function variable
-					auto visitor = makeLambdaVisitor([&](const LambdaDefinitionPtr& def) -> bool { return def->getDefinitionOf(cur); });
-					bool isRecVariable = visitPathBottomUpInterruptible(cur, visitor);
-
-					// => not declared => add to list of undeclared variables
-					if(!isRecVariable) { undeclaredVariableUsage.push_back(cur); }
+					// => add to list of undeclared variables
+					undeclaredVariableUsage.push_back(cur);
 				}
 			}
 
@@ -240,16 +236,15 @@ namespace checks {
 	OptionalMessageList UndeclaredVariableCheck::visitLambdaDefinition(const LambdaDefinitionAddress& lambdaDef) {
 		OptionalMessageList res;
 
-		VariableSet recFunctions;
-		for_each(lambdaDef.getAddressedNode()->getDefinitions(), [&recFunctions](const LambdaBindingPtr& cur) { recFunctions.insert(cur->getVariable()); });
+		LambdaReferenceSet recFunctions;
+		for (const auto& cur : lambdaDef.getAddressedNode()) {
+			recFunctions.insert(cur->getReference());
+		}
 
 		for_each(lambdaDef->getDefinitions(), [&](const LambdaBindingAddress& cur) {
 
 			// assemble set of defined variables
 			VariableSet declared;
-
-			// add recursive function variables
-			declared.insert(recFunctions.begin(), recFunctions.end());
 
 			// add parameters
 			auto paramList = cur.getAddressedNode()->getLambda()->getParameterList();

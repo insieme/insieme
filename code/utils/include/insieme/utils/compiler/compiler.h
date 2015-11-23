@@ -41,9 +41,9 @@
 #include <set>
 #include <fstream>
 
+#include "insieme/utils/abstraction.h"
 #include "insieme/utils/logging.h"
 #include "insieme/utils/printable.h"
-
 
 namespace insieme {
 namespace utils {

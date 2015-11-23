@@ -90,7 +90,7 @@ namespace checks {
 
 			EXPECT_EQ(toString(check(stmt_err, scalarArrayIndexRangeCheck)[0]),
 			          toString(Message(errorAdr, EC_SEMANTIC_ARRAY_INDEX_OUT_OF_RANGE,
-			                           "Potentially unsafe indexing of single-element array v1 using formula v2", Message::WARNING)));
+			                           "Potentially unsafe indexing of single-element array v0 using formula v1", Message::WARNING)));
 		}
 
 		{

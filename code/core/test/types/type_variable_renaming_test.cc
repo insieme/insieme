@@ -124,10 +124,7 @@ namespace types {
 		TagTypeReferencePtr tag = builder.tagTypeReference("X");
 		RecordPtr type = builder.structRecord(toVector(builder.field("f", builder.refType(tag))));
 
-		vector<TagTypeBindingPtr> defs;
-		defs.push_back(builder.tagTypeBinding(tag, type));
-
-		TagTypeDefinitionPtr def = builder.tagTypeDefinition(defs);
+		TagTypeDefinitionPtr def = builder.tagTypeDefinition({ { tag, type } });
 		TagTypePtr tagType = builder.tagType(tag, def);
 
 		EXPECT_EQ("rec ^X.{^X=struct {f:ref<^X,f,f,plain>,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}}",

@@ -70,13 +70,7 @@ namespace conversion {
 	}
 
 	namespace {
-		core::FunctionTypePtr getFunMethodTypeInternal(Converter& converter, const clang::FunctionDecl* funDecl) {
-			// first get function type
-			auto funType = converter.convertType(funDecl->getType()).as<core::FunctionTypePtr>();
-			// is this a method? if not, we are done
-			const clang::CXXMethodDecl* methDecl = llvm::dyn_cast<clang::CXXMethodDecl>(funDecl);
-			if(methDecl == nullptr) return funType;
-			// now build "this" type
+		core::TypePtr getThisType(Converter& converter, const clang::CXXMethodDecl* methDecl) {
 			auto parentType = converter.convertType(converter.getCompiler().getASTContext().getRecordType(methDecl->getParent()));
 			auto refKind = core::lang::ReferenceType::Kind::Plain;
 			switch(methDecl->getRefQualifier()) {
@@ -84,7 +78,17 @@ namespace conversion {
 			case clang::RefQualifierKind::RQ_RValue: refKind = core::lang::ReferenceType::Kind::CppRValueReference; break;
 			case clang::RefQualifierKind::RQ_None: break; // stop warnings
 			}
-			auto thisType = core::lang::buildRefType(parentType, methDecl->isConst(), methDecl->isVolatile(), refKind);
+			return core::lang::buildRefType(parentType, methDecl->isConst(), methDecl->isVolatile(), refKind);
+		}
+
+		core::FunctionTypePtr getFunMethodTypeInternal(Converter& converter, const clang::FunctionDecl* funDecl) {
+			// first get function type
+			auto funType = converter.convertType(funDecl->getType()).as<core::FunctionTypePtr>();
+			// is this a method? if not, we are done
+			const clang::CXXMethodDecl* methDecl = llvm::dyn_cast<clang::CXXMethodDecl>(funDecl);
+			if(methDecl == nullptr) return funType;
+			// now build "this" type
+			auto thisType = getThisType(converter, methDecl);
 			// add "this" parameter to param list
 			auto paramList = funType->getParameterTypeList();
 			paramList.insert(paramList.begin(), thisType);
@@ -110,9 +114,9 @@ namespace conversion {
 				core::VariableList params;
 				// handle implicit "this" for methods
 				if(methDecl) {
-					auto thisType = converter.convertVarType(methDecl->getThisType(converter.getCompiler().getASTContext()));
-					params.push_back(converter.getIRBuilder().variable(thisType));					
-				}				
+					auto thisType = getThisType(converter, methDecl);
+					params.push_back(converter.getIRBuilder().variable(converter.getIRBuilder().refType(thisType)));					
+				}
 				// handle other parameters
 				for(auto param : funcDecl->parameters()) {
 					auto irParam = converter.getDeclConverter()->convertVarDecl(param);
@@ -138,15 +142,14 @@ namespace conversion {
 		return convertFunMethodInternal(converter, funType, funcDecl);
 	}
 	
-	core::MemberFunctionPtr DeclConverter::convertMethodDecl(const clang::CXXMethodDecl* methDecl, bool lit) const {
+	DeclConverter::ConvertedMethodDecl DeclConverter::convertMethodDecl(const clang::CXXMethodDecl* methDecl) const {
+		ConvertedMethodDecl ret;
 		string name = insieme::utils::mangle(methDecl->getNameAsString());
 		auto funType = getFunMethodTypeInternal(converter, methDecl);
-		core::ExpressionPtr func = builder.literal(name, funType);
-		if(!lit) {
-			auto lambda = convertFunMethodInternal(converter, funType, methDecl);
-			if(lambda) func = lambda;
-		}
-		return builder.memberFunction(methDecl->isVirtual(), name, func);
+		ret.lit = builder.literal(name, funType);
+		ret.lambda = convertFunMethodInternal(converter, funType, methDecl);
+		ret.memFun = builder.memberFunction(methDecl->isVirtual(), name, ret.lit);
+		return ret;
 	}
 
 	// Visitors -------------------------------------------------------------------------------------------------------
@@ -236,7 +239,7 @@ namespace conversion {
 
 		// convert prototype
 		auto funType = getFunMethodTypeInternal(converter, funcDecl);
-		core::LiteralPtr irLit = builder.literal(insieme::utils::mangle(funcDecl->getNameAsString()), funType);
+		core::LiteralPtr irLit = builder.literal(insieme::utils::mangle(utils::buildNameForFunction(funcDecl)), funType);
 		// add required annotations
 		if(inExternC) { annotations::c::markAsExternC(irLit); }
 		converter.applyHeaderTagging(irLit, funcDecl->getCanonicalDecl());
@@ -260,7 +263,9 @@ namespace conversion {
 	//					 Function template declarations
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	void DeclConverter::VisitFunctionTemplateDecl(const clang::FunctionTemplateDecl* funcTempDecl) {
+		VLOG(2) << "~~~~~~~~~~~~~~~~ VisitFunctionTemplateDecl: " << dumpClang(funcTempDecl);
 		for(auto spec : funcTempDecl->specializations()) {
+			VLOG(2) << "~~~~~~~ -> visit Specialization: " << dumpClang(spec);
 			Visit(spec);
 		}
 	}

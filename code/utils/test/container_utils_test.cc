@@ -39,6 +39,7 @@
 #include <algorithm>
 #include <list>
 #include <vector>
+#include <map>
 
 #include <iostream>
 
@@ -143,6 +144,16 @@ TEST(ContainerUtils, Duplicates) {
 
 	list.push_back(N / 2);
 	EXPECT_TRUE(hasDuplicates(list));
+
+	std::vector<std::pair<int,int>> testPairs { {1, 1}, {2, 2}, {3, 3}, {3, 4} };
+	EXPECT_FALSE(hasDuplicates(testPairs));
+	EXPECT_TRUE(hasDuplicates(testPairs, [](const std::pair<int,int>& p) { return p.first; }));
+	EXPECT_FALSE(hasDuplicates(testPairs, [](const std::pair<int,int>& p) { return p.second; }));
+
+	std::map<int,string> testMap { {1, "bla"}, {2, "bla"} };
+	EXPECT_FALSE(hasDuplicates(testMap));
+	EXPECT_FALSE(hasDuplicates(testMap, [](const std::pair<int,string>& p) { return p.first; }));
+	EXPECT_TRUE(hasDuplicates(testMap, [](const std::pair<int,string>& p) { return p.second; }));
 }
 
 TEST(ContainerUtils, Projection) {

@@ -47,6 +47,7 @@
 #include "insieme/core/annotations/source_location.h"
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/printer/error_printer.h"
+#include "insieme/core/ir_address.h"
 #include "insieme/frontend/extensions/test_pragma_extension.h"
 #include "insieme/frontend/frontend.h"
 #include "insieme/frontend/state/variable_manager.h"
@@ -60,6 +61,48 @@ namespace frontend {
 	using insieme::annotations::ExpectedIRAnnotation;
 
 	namespace {
+
+		void irDiff(NodePtr a, NodePtr b) {
+			if(a->getNodeType() != b->getNodeType()) {
+				std::cout << "IRDIFF-----\nNode types differ:\n" 
+					<< "NT a: " << a->getNodeType() << "\n" << "NT b: " << b->getNodeType() << "\n"
+					<< "a: " << *a << "\nb: " << *b << "\n";
+			}
+			
+			auto aExp = a.isa<ExpressionPtr>();
+			auto bExp = b.isa<ExpressionPtr>();
+			if(aExp) {
+				if(aExp->getType() != bExp->getType()) {
+					std::cout << "IRDIFF-----\nExpressions differ in type:\n" 
+						<< "type a: " << *aExp->getType() << "\n" << "type b: " << *bExp->getType() << "\n"
+						<< "a: " << *a << "\nb: " << *b << "\n";
+				}
+			}
+
+			auto aVar = a.isa<VariablePtr>();
+			auto bVar = b.isa<VariablePtr>();
+			if(aVar) {
+				if(aVar->getId() != bVar->getId()) {
+					std::cout << "IRDIFF-----\nVariables differ in id:\n" 
+						<< "id a: " << aVar->getId() << "\n" << "id b: " << bVar->getId() << "\n"
+						<< "a: " << *a << "\nb: " << *b << "\n";
+				}
+			}
+			
+			auto aChildren = a->getChildList();
+			auto bChildren = b->getChildList();
+			if(aChildren.size() != bChildren.size()) {				
+					std::cout << "IRDIFF-----\nNodes differ in number of children (ABORTING):\n" 
+						<< "child count a: " << aChildren.size() << "\n" << "child count b: " << bChildren.size() << "\n"
+						<< "a: " << *a << "\nb: " << *b << "\n";
+					return;
+			}
+
+			for(size_t i=0; i<aChildren.size(); ++i) {
+				irDiff(aChildren[i], bChildren[i]);
+			}
+		}
+
 		
 		static inline std::string locationOf(const NodeAddress& addr) {
 			auto loc = core::annotations::getLocation(addr);
@@ -72,19 +115,25 @@ namespace frontend {
 			IRBuilder builder(expected->getNodeManager());
 			bool eIsExp = expected.isa<ExpressionPtr>();
 			bool aIsExp = actual.isa<ExpressionPtr>();
+			auto expNN = expected;
+			auto actNN = actual;
 			expected = builder.normalize(expected);
 			actual = builder.normalize(actual);
 			EXPECT_EQ(expected, actual) << "Location     : " << locationOf(addr) << "\n"
 			                            << "Actual Pretty: " << dumpColor(actual, std::cout, true) << "\n"
-			                            << "Expected type: " << (eIsExp ? toString(dumpColor(expected.as<ExpressionPtr>()->getType())) : toString("-")) << "\n"
+			                            << "Expect Pretty: " << dumpColor(expected, std::cout, true) << "\n"
+			                            //<< "Actual NN: " << dumpColor(actNN, std::cout, true) << "\n"
+			                            //<< "Expect NN: " << dumpColor(expNN, std::cout, true) << "\n"
 			                            << "Actual type  : " << (aIsExp ? toString(dumpColor(actual.as<ExpressionPtr>()->getType())) : toString("-")) << "\n"
-			    //<< "Text expected:\n" << dumpText(expected) << "\n"
-			    //<< "Text actual  :\n" << dumpText(actual) << "\n"
-			    ;
+			                            << "Expected type: " << (eIsExp ? toString(dumpColor(expected.as<ExpressionPtr>()->getType())) : toString("-")) << "\n"
+			                            //<< "Text actual  :\n" << dumpText(actual) << "\n"
+			                            //<< "Text expected:\n" << dumpText(expected) << "\n"
+										;
+			if(expected != actual) irDiff(actual, expected);
 		}
 	}
 
-	static inline void runIndependentTestOn(const string& fn, std::function<void(ConversionJob&)> jobModifier = [](ConversionJob& job){ }) {
+	static inline void runIndependentTestOn(const string& fn, std::function<void(ConversionJob&)> jobModifier = [](ConversionJob& job) {}) {
 		core::NodeManager mgr;
 		core::IRBuilder builder(mgr);
 		ConversionJob job(fn);

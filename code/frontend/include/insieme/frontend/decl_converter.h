@@ -79,11 +79,20 @@ namespace conversion {
 		/// @return Converted lambda
 		core::LambdaExprPtr convertFunctionDecl(const clang::FunctionDecl* funcDecl) const;
 		
+
+		// return value type for convertMethodDecl
+		// impl can be null
+		struct ConvertedMethodDecl {
+			core::MemberFunctionPtr memFun = nullptr;
+			core::LambdaExprPtr lambda = nullptr;
+			core::LiteralPtr lit = nullptr;
+		};
+
 		/// Converts a method declaration into an IR MemberFunction.
 		/// @param methDecl is a clang CXXMethodDecl which represent a definition for the method
 		/// @param lit whether to create a literal or the full implementation
 		/// @return Converted member function
-		core::MemberFunctionPtr convertMethodDecl(const clang::CXXMethodDecl* methDecl, bool lit = true) const;
+		ConvertedMethodDecl convertMethodDecl(const clang::CXXMethodDecl* methDecl) const;
 
 		// Visitors -------------------------------------------------------------------------------------------------------
 

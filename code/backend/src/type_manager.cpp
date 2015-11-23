@@ -65,6 +65,7 @@
 #include "insieme/core/lang/const_extension.h"
 
 #include "insieme/utils/logging.h"
+#include "insieme/utils/name_mangling.h"
 
 namespace insieme {
 namespace backend {
@@ -532,7 +533,7 @@ namespace backend {
 			// add elements
 			for(const core::FieldPtr& entry : ptr->getFields()) {
 				// get the name of the member
-				c_ast::IdentifierPtr name = manager->create(entry->getName()->getValue());
+				c_ast::IdentifierPtr name = manager->create(insieme::utils::demangle(entry->getName()->getValue()));
 				core::TypePtr curType = entry->getType();
 
 				// special handling of variable sized arrays within structs / unions

@@ -61,6 +61,7 @@
 #include "insieme/core/encoder/lists.h"
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/ir++_extension.h"
+#include "insieme/core/lang/pointer.h"
 #include "insieme/core/transform/node_replacer.h"
 
 using namespace clang;
@@ -231,7 +232,7 @@ namespace conversion {
 			frontend_assert(false) << "Member function pointer call not implemented";
 		} else {			
 			// get method lambda
-			auto methodLambda = converter.getDeclConverter()->convertMethodDecl(methodDecl)->getImplementation();
+			auto methodLambda = converter.getDeclConverter()->convertMethodDecl(methodDecl).lit;
 
 			// get the "this" object and add to arguments
 			core::ExpressionPtr thisObj = Visit(callExpr->getImplicitObjectArgument());
@@ -333,7 +334,7 @@ namespace conversion {
 			}
 
 			// get constructor lambda
-			auto constructorLambda = converter.getDeclConverter()->convertMethodDecl(constructExpr->getConstructor())->getImplementation();
+			auto constructorLambda = converter.getDeclConverter()->convertMethodDecl(constructExpr->getConstructor()).lit;
 
 			// return call
 			auto retType = constructorLambda->getType().as<core::FunctionTypePtr>()->getReturnType();
@@ -358,33 +359,24 @@ namespace conversion {
 	//						CXX NEW CALL EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr Converter::CXXExprConverter::VisitCXXNewExpr(const clang::CXXNewExpr* callExpr) {
-		// TODO:  - inplace allocation - non default ctor array?
 		core::ExpressionPtr retExpr;
 		LOG_EXPR_CONVERSION(callExpr, retExpr);
 
-		//// if no constructor is found, it is a new over an non-class type, can be any kind of pointer of array
-		//// spetialy double pointer
-		//if(!callExpr->getConstructExpr()) {
-		//	core::TypePtr type = converter.convertType(callExpr->getAllocatedType());
-		//	core::ExpressionPtr placeHolder;
-		//	if(callExpr->hasInitializer()) {
-		//		const clang::Expr* initializer = callExpr->getInitializer();
-		//		core::ExpressionPtr initializerExpr = converter.convertExpr(initializer);
-		//		frontend_assert(initializerExpr);
-		//		placeHolder = initializerExpr;
-		//	} else {
-		//		placeHolder = builder.undefinedNew(type);
-		//	}
+		// if no constructor is found, it is a new over a non-class type, can be any kind of pointer of array
+		if(!callExpr->getConstructExpr()) {
+			core::TypePtr type = converter.convertType(callExpr->getAllocatedType());
+			core::ExpressionPtr placeHolder;
+			if(callExpr->hasInitializer()) {
+				const clang::Expr* initializer = callExpr->getInitializer();
+				core::ExpressionPtr initializerExpr = converter.convertInitExpr(initializer);
+				frontend_assert(initializerExpr);
+				placeHolder = builder.refNew(initializerExpr);
+			} else {
+				placeHolder = builder.undefinedNew(type);
+			}
 
-		//	if(callExpr->isArray()) {
-		//		core::ExpressionPtr&& arrSizeExpr = converter.convertExpr(callExpr->getArraySize());
-		//		placeHolder = builder.callExpr(builder.arrayType(type), builder.getLangBasic().getArrayCreate1D(), builder.getTypeLiteral(type),
-		//		                               core::types::smartCast(arrSizeExpr, gen.getUInt4()));
-		//		retExpr = builder.refNew(placeHolder);
-		//	} else {
-		//		retExpr = builder.callExpr(builder.getLangBasic().getScalarToArray(), builder.refNew(placeHolder));
-		//	}
-		//} else {
+			retExpr = core::lang::buildPtrFromRef(placeHolder);
+		}// else {
 		//	core::ExpressionPtr ctorCall = Visit(callExpr->getConstructExpr());
 		//	frontend_assert(ctorCall.isa<core::CallExprPtr>()) << "aint constructor call in here, no way to translate NEW\n";
 
@@ -437,7 +429,7 @@ namespace conversion {
 		//	}
 		//}
 
-		assert_not_implemented();
+		if(!retExpr) assert_not_implemented();
 
 		return retExpr;
 	}
@@ -449,56 +441,12 @@ namespace conversion {
 		core::ExpressionPtr retExpr;
 		LOG_EXPR_CONVERSION(deleteExpr, retExpr);
 
-		//// convert the target of our delete expr
-		//core::ExpressionPtr exprToDelete = Visit(deleteExpr->getArgument());
+		// convert the target of our delete expr
+		core::ExpressionPtr exprToDelete = Visit(deleteExpr->getArgument());
+		frontend_assert(core::lang::isPointer(exprToDelete)) << "\"delete\" called on non-pointer, not supported.";
 
-		//core::ExpressionPtr dtor;
-		//clang::CXXDestructorDecl* dtorDecl = nullptr;
-		//// since destructor might be defined in a different translation unit or even in this one but after the usage
-		//// we should retrieve a callable symbol and delay the conversion
-		//auto ty = deleteExpr->getDestroyedType().getTypePtr();
-		//const clang::CXXRecordDecl* classDecl = nullptr;
-		//// if it is a tag type everything is straight forward, but
-		//// if we have a template specialization here we need to call something different to get the record decl
-		//if(const clang::TagType* record = llvm::dyn_cast<clang::TagType>(ty)) {
-		//	classDecl = llvm::dyn_cast<clang::CXXRecordDecl>(record->getDecl());
-		//} else if(const clang::TemplateSpecializationType* templType = llvm::dyn_cast<clang::TemplateSpecializationType>(ty)) {
-		//	classDecl = llvm::dyn_cast<clang::CXXRecordDecl>(templType->getAsCXXRecordDecl());
-		//}
-
-		//if(classDecl) {
-		//	dtorDecl = classDecl->getDestructor();
-		//	if(dtorDecl) { dtor = converter.getCallableExpression(dtorDecl); }
-		//}
-
-		//if(deleteExpr->isArrayForm()) {
-		//	// we need to call arratDtor, with the object, refdelete and the dtorFunc
-		//	if(dtor) {
-		//		// FIXME: why mem_alloc dtor has being marked as virtual????
-		//		frontend_assert(dtorDecl && !dtorDecl->isVirtual()) << "no virtual dtor allowed for array dtor\n";
-
-		//		std::vector<core::ExpressionPtr> args;
-		//		args.push_back(exprToDelete);
-		//		args.push_back(builder.getLangBasic().getRefDelete());
-		//		args.push_back(dtor);
-		//		retExpr = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getArrayDtor(), args);
-		//	} else {
-		//		exprToDelete = getCArrayElemRef(builder, exprToDelete);
-
-		//		// this is a built in type, we need to build a empty dtor with the right type
-		//		retExpr = builder.callExpr(builder.getLangBasic().getRefDelete(), exprToDelete);
-		//	}
-		//} else {
-		//	exprToDelete = getCArrayElemRef(builder, exprToDelete);
-
-		//	if(dtor) {
-		//		retExpr = builder.callExpr(builder.getLangBasic().getRefDelete(), builder.callExpr(dtor, toVector(exprToDelete)));
-		//	} else {
-		//		retExpr = builder.callExpr(builder.getLangBasic().getRefDelete(), exprToDelete);
-		//	}
-		//}
-
-		assert_not_implemented();
+		// destructor calls are implicit in inspire 2.0, just like C++
+		retExpr = converter.getIRBuilder().refDelete(core::lang::buildPtrToRef(exprToDelete));
 
 		return retExpr;
 	}
