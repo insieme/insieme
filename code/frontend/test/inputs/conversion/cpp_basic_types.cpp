@@ -7,6 +7,15 @@ using driver = philipp;
 
 int main() {
 	
+	#define C_STYLE_ASSIGN "def c_ass = (v1: ref<'a,f,'b>, v2: 'a) -> 'a { v1 = v2; return *v1; };"
+
+	#pragma test expect_ir(C_STYLE_ASSIGN,"{ var ref<bool> v0; c_ass(v0, true); c_ass(v0, false); }")
+	{
+		bool a;
+		a = true;
+		a = false;
+	}
+	
 	#pragma test expect_ir("{ var ref<int<4>> v0; var ref<int<4>,f,f,cpp_ref> v1 = ref_cast(v0, type_lit(f), type_lit(f), type_lit(cpp_ref)); }")
 	{
 		int i;
