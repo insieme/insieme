@@ -50,6 +50,8 @@
 #include "insieme/core/lang/reference.h"
 #include "insieme/core/lang/pointer.h"
 
+#include "insieme/core/transform/materialize.h"
+
 #include "insieme/utils/numeric_cast.h"
 
 namespace insieme {
@@ -591,15 +593,43 @@ namespace checks {
 		// check type of lambda
 		IRBuilder builder(lambda->getNodeManager());
 		FunctionTypePtr funTypeIs = lambda->getLambda()->getType();
-		FunctionTypePtr funTypeShould =
-		    builder.functionType(::transform(lambda->getLambda()->getParameterList(), [](const VariablePtr& cur) { return analysis::getReferencedType(cur->getType()); }),
-		                         funTypeIs->getReturnType(), funTypeIs->getKind());
-		if(*funTypeIs != *funTypeShould) {
-			add(res, Message(address, EC_TYPE_INVALID_LAMBDA_TYPE, format("Invalid type of lambda definition for variable %s - is: %s, should %s",
-			                                                              toString(*lambda->getReference()), toString(*funTypeIs), toString(*funTypeShould)),
-			                 Message::ERROR));
+
+		TypesPtr types = funTypeIs->getParameterTypes();
+		vector<TypePtr> paramTypes;
+		for (std::size_t i = 0; i < types.size(); ++i) {
+			
+			auto parameter = address->getParameterList()[i];
+			auto should = transform::materialize(types[i]);
+			auto is = parameter->getType();
+
+			if (*is != *should) {
+				add(res, Message(
+						parameter, EC_TYPE_INVALID_LAMBDA_TYPE, 
+						format("Invalid parameters type of %s - is: %s, should %s", *parameter, *is, *should),
+						Message::ERROR
+					)
+				);
+			}
 		}
 
+		/*
+		FunctionTypePtr funTypeShould =
+		    builder.functionType(::transform(lambda->getLambda()->getParameterList(), [](const VariablePtr& cur)->TypePtr { 
+			auto argument = 
+			return (lang::isReference(cur->getType()) ? cur->getType() : 
+			return analysis::getReferencedType(cur->getType()); 
+		}), funTypeIs->getReturnType(), funTypeIs->getKind());
+		
+		if(*funTypeIs != *funTypeShould) {
+			add(res, Message(address, EC_TYPE_INVALID_LAMBDA_TYPE, format("Invalid type of lambda definition for lambda reference %s - is: %s, should %s",
+			    toString(*lambda->getReference()), 
+				toString(*funTypeIs), 
+				toString(*funTypeShould)),
+			    Message::ERROR)
+			);
+		}
+
+		*/
 		return res;
 	}
 

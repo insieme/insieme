@@ -9,6 +9,23 @@ namespace core {
 namespace transform {
 
 
+	TypePtr materialize(const TypePtr& type) {
+
+		// check for null pointer
+		if (!type) return type;
+
+		// do not materialize references
+		//if (lang::isReference(type)) {
+		if (lang::isCppReference(type)||lang::isCppRValueReference(type)) {
+			return type;
+		}
+
+		// wrap type into parameter
+		IRBuilder builder(type->getNodeManager());
+		return builder.refType(type);
+	}
+
+
 	LambdaIngredients materialize(const LambdaIngredients& in) {
 
 		LambdaIngredients out;
@@ -27,8 +44,11 @@ namespace transform {
 		insieme::utils::map::PointerMap<VariablePtr,ExpressionPtr> substitute;
 		for(const auto& cur : in.params) {
 
+			// get materialized type
+			auto paramType = materialize(cur->getType());
+
 			// create the new parameters with an extra ref
-			auto newParam = builder.variable(builder.refType(cur->getType()), cur->getID());
+			auto newParam = builder.variable(paramType, cur->getID());
 
 			// migrate annotations
 			utils::migrateAnnotations(cur, newParam);

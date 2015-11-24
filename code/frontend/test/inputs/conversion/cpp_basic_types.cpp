@@ -28,8 +28,9 @@ int main() {
 	#pragma test expect_ir("var ref<int<4>,f,f> v0 = ref_var_init(3);")
 	driver var3 = 3;
 	
-	//pragma test expect_ir(R"(function (v1 : ref<int<4>,f,f,cpp_rref>) -> unit { }(() -> int<4> { return 5; }()))")
-	//consumer(producer());
+	#pragma test expect_ir(R"(function (v1 : ref<int<4>,f,f,cpp_rref>) -> unit { }(() -> int<4> { return 5; }()))")
+	consumer(producer());
+
 
 	return 0;
 }

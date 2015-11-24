@@ -26,3 +26,7 @@ variadic_functions
 # Disabling tests because VLAs are not implemented in the BE
 variable_arrays
 pointer_arith_vla
+
+
+# Disabled due to incompatible deduction of type of functions and their parameters
+particlesim

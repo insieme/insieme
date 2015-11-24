@@ -1205,7 +1205,7 @@ namespace checks {
 		err = transform::replaceAll(manager, lambda, param, invalidParam, transform::globalReplacement).as<LambdaExprPtr>();
 		errors = check(err, typeCheck);
 		EXPECT_EQ(1u, errors.size()) << errors;
-		EXPECT_PRED2(containsMSG, errors, Message(NodeAddress(err), EC_TYPE_INVALID_LAMBDA_TYPE, "", Message::ERROR));
+		EXPECT_PRED2(containsMSG, errors, Message(LambdaExprAddress(err)->getParameterList()[0], EC_TYPE_INVALID_LAMBDA_TYPE, "", Message::ERROR));
 
 		// case 5 - non-ref parameter type
 		param = lambda->getLambda()->getParameterList()[0];
