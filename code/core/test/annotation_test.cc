@@ -198,7 +198,7 @@ namespace core {
 		ptr->attachValue(s);
 
 		EXPECT_EQ("12", toString(ptr->getAttachedValue<decltype(12)>()));
-		EXPECT_EQ("$[Value(ZN7insieme4core36Annotation_ValueAnnotationPrint_Test8TestBodyEvE11unprintable), 12: A]$",
+		EXPECT_EQ("$[Value(ZN7insieme4core36Annotation_ValueAnnotationPrint_Test8TestBodyEvE11unprintable),12: A]$",
 		          toString(core::printer::PrettyPrinter(ptr, core::printer::PrettyPrinter::PRINT_ANNOTATIONS)));
 	}
 

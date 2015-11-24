@@ -372,7 +372,7 @@ int main() {
 	
 	//===------------------------------------------------------------------------------------------------------------------------------------ MEMBER EXPR ---===
 		
-	#pragma test expect_ir("{ var ref<struct{i: int<4>;},f,f> v0; *v0.i; }")
+	#pragma test expect_ir("REGEX_S", R"(.*var ref<struct \{ i : int<4>; \},f,f,plain> v0 = ref_var.*)")
 	{
 		struct {
 			int i;
@@ -380,15 +380,15 @@ int main() {
 		ts.i;
 	}
 	
-	#pragma test expect_ir("{ var ref<union{i: int<4>;},f,f> v0; *v0.i; }")
-	{
+	#pragma test expect_ir("REGEX_S", R"(.*var ref<union \{ i : int<4>; \},f,f,plain> v0 = ref_var.*)")
+ 	{
 		union {
 			int i;
 		} tu;
 		tu.i;
 	}
 
-	#pragma test expect_ir("{ var ref<ptr<struct{i: int<4>;},f,f>,f,f> v0;  *(ptr_to_ref(*v0).i); }")
+	#pragma test expect_ir("REGEX_S", R"(.*var ref<\(ref<array<struct \{ i : int<4>; \},inf>,f,f,plain>, int<8>\),f,f,plain> v0 = ref_var.*)")
 	{
 		struct {
 			int i;
@@ -396,7 +396,7 @@ int main() {
 		ts->i;
 	}
 
-	#pragma test expect_ir("{ var ref<ptr<union{i: int<4>;},f,f>,f,f> v0;  *(ptr_to_ref(*v0).i); }")
+	#pragma test expect_ir("REGEX_S", R"(.*var ref<\(ref<array<union \{ i : int<4>; \},inf>,f,f,plain>, int<8>\),f,f,plain> v0 = ref_var.*)")
 	{
 		union {
 			int i;
@@ -434,10 +434,10 @@ int main() {
 		int x, y;
 	} Image;
 
-	#pragma test expect_ir("STRING", "c_style_assignment( ref_var_init(struct{data=0u, x=0, y=0}),  * ref_var_init(struct{data=1u, x=1, y=1}))")
+	#pragma test expect_ir("STRING", "c_style_assignment(ref_var_init(struct{data=0u,x=0,y=0}), *ref_var_init(struct{data=1u,x=1,y=1}))")
 	(Image){0u, 0, 0} = (Image){1u,1,1};
 
-	#pragma test expect_ir("STRING", "c_style_assignment( ref_var_init(struct{data=0u, x=0, y=0}).x, 1)")
+	#pragma test expect_ir("STRING", "c_style_assignment(ref_var_init(struct{data=0u,x=0,y=0}).x, 1)")
 	(Image){0u, 0, 0}.x = 1;
 	
 	// bool to int conversion	

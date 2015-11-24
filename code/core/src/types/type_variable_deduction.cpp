@@ -443,6 +443,7 @@ namespace types {
 			if (!isRefArg && isRefParam) {
 				lang::ReferenceType refParam(parameter[i]);
 				switch(refParam.getKind()) {
+				case lang::ReferenceType::Kind::Undefined: return fail;
 				case lang::ReferenceType::Kind::Plain: return fail;
 				case lang::ReferenceType::Kind::CppReference: {
 					/* the cpp reference must be const */

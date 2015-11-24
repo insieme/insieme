@@ -396,6 +396,101 @@ namespace analysis {
 			"} in struct class : [public base] { }")));
 	}
 
+	TEST(IsaDefaultConstructor, Basic) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		auto thisType = builder.refType(builder.tagTypeReference("A"));
+		auto parents = builder.parents();
+		auto fields = builder.fields();
+		auto defaultCtor = builder.getDefaultConstructor(thisType, parents, fields).as<ExpressionPtr>();
+		auto defaultDtor = builder.getDefaultDestructor(thisType);
+		auto record = builder.structType("A", parents, fields, builder.expressions(toVector(defaultCtor)), defaultDtor, false, builder.memberFunctions(), builder.pureVirtualMemberFunctions());
+
+		{
+			auto ctor = builder.getDefaultConstructor(thisType, parents, fields).as<ExpressionPtr>();
+			EXPECT_TRUE(isaDefaultConstructor(record, ctor));
+		}
+
+		{
+			auto ctor = builder.getDefaultCopyConstructor(thisType, parents, fields).as<ExpressionPtr>();
+			EXPECT_TRUE(isaDefaultConstructor(record, ctor));
+		}
+
+		{
+			auto ctor = builder.getDefaultMoveConstructor(thisType, parents, fields).as<ExpressionPtr>();
+			EXPECT_TRUE(isaDefaultConstructor(record, ctor));
+		}
+
+		{
+			auto funType = builder.functionType(toVector(thisType.as<TypePtr>()), FK_CONSTRUCTOR);
+			auto ctor = builder.lambdaExpr(funType, builder.parameters(toVector(builder.variable(thisType))), builder.getNoOp());
+			EXPECT_FALSE(isaDefaultConstructor(record, ctor));
+		}
+	}
+
+	TEST(HasDefaultDestructor, Basic) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		auto thisType = builder.refType(builder.tagTypeReference("A"));
+		auto parents = builder.parents();
+		auto fields = builder.fields();
+		auto defaultCtor = builder.getDefaultConstructor(thisType, parents, fields).as<ExpressionPtr>();
+		auto defaultDtor = builder.getDefaultDestructor(thisType);
+
+		{
+			auto record = builder.structType("A", parents, fields, builder.expressions(toVector(defaultCtor)), defaultDtor, false, builder.memberFunctions(), builder.pureVirtualMemberFunctions());
+			EXPECT_TRUE(hasDefaultDestructor(record));
+		}
+
+		{
+			auto record = builder.structType("A", parents, fields, builder.expressions(toVector(defaultCtor)), defaultDtor, true, builder.memberFunctions(), builder.pureVirtualMemberFunctions());
+			EXPECT_FALSE(hasDefaultDestructor(record));
+		}
+
+		{
+			auto funType = builder.functionType(toVector(thisType.as<TypePtr>()), FK_DESTRUCTOR);
+			auto dtor = builder.lambdaExpr(funType, builder.parameters(toVector(builder.variable(thisType))), builder.getNoOp());
+			auto record = builder.structType("A", parents, fields, builder.expressions(toVector(defaultCtor)), dtor, false, builder.memberFunctions(), builder.pureVirtualMemberFunctions());
+			EXPECT_FALSE(hasDefaultDestructor(record));
+		}
+	}
+
+	TEST(IsaDefaultMember, Basic) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		auto thisType = builder.refType(builder.tagTypeReference("A"));
+		auto parents = builder.parents();
+		auto fields = builder.fields();
+		auto defaultCtor = builder.getDefaultConstructor(thisType, parents, fields).as<ExpressionPtr>();
+		auto defaultDtor = builder.getDefaultDestructor(thisType);
+		auto record = builder.structType("A", parents, fields, builder.expressions(toVector(defaultCtor)), defaultDtor, false, builder.memberFunctions(), builder.pureVirtualMemberFunctions());
+
+		{
+			auto member = builder.getDefaultCopyAssignOperator(thisType, parents, fields);
+			EXPECT_TRUE(isaDefaultMember(record, member));
+		}
+
+		{
+			auto member = builder.getDefaultMoveAssignOperator(thisType, parents, fields);
+			EXPECT_TRUE(isaDefaultMember(record, member));
+		}
+
+		{
+			auto funType = builder.functionType(toVector(thisType.as<TypePtr>()), FK_MEMBER_FUNCTION);
+			auto member = builder.memberFunction(false, "foo", builder.lambdaExpr(funType, builder.parameters(toVector(builder.variable(thisType))), builder.getNoOp()));
+			EXPECT_FALSE(isaDefaultMember(record, member));
+		}
+
+		{
+			auto funType = builder.functionType(toVector(thisType.as<TypePtr>()), FK_MEMBER_FUNCTION);
+			auto member = builder.memberFunction(false, "operator_assign", builder.lambdaExpr(funType, builder.parameters(toVector(builder.variable(thisType))), builder.getNoOp()));
+			EXPECT_FALSE(isaDefaultMember(record, member));
+		}
+	}
+
 	/*
 	TEST(GlobalRec, InitBug) {
 	    NodeManager manager;

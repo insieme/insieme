@@ -171,8 +171,7 @@ namespace frontend {
 						re = boost::regex(ex.substr(regexKey.size()));
 					}
 					auto irString = ::toString(printer::PrettyPrinter(
-					    builder.normalize(node), printer::PrettyPrinter::OPTIONS_DEFAULT | printer::PrettyPrinter::NO_LET_BINDINGS
-					                                 | printer::PrettyPrinter::NO_LET_BOUND_FUNCTIONS | printer::PrettyPrinter::PRINT_DEREFS));
+					    builder.normalize(node), printer::PrettyPrinter::OPTIONS_DEFAULT | printer::PrettyPrinter::PRINT_DERIVED_IMPL | printer::PrettyPrinter::PRINT_DEREFS));
 					EXPECT_TRUE(boost::regex_match(irString.begin(), irString.end(), re)) << "Location : " << locationOf(addr) << "\n"
 					                                                                      << "IR String: " << irString << "\n"
 					                                                                      << "Regex    : " << re << "\n";

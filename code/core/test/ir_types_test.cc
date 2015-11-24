@@ -377,13 +377,13 @@ namespace core {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
-		EXPECT_EQ("struct "
-		          "{x:bla<int<4>>,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,"
-		          "operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}",
+		EXPECT_EQ("struct {x:bla<int<4>>,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor(),"
+				  "operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,"
+				  "operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}",
 		          toString(*builder.parseType("let A = struct { x : bla<int<4>>; } in A")));
-		EXPECT_EQ("struct "
-		          "{x:bla<int<4>>,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,"
-		          "operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}",
+		EXPECT_EQ("struct {x:bla<int<4>>,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor(),"
+				  "operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,"
+				  "operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}",
 		          toString(*builder.parseType("let A = struct { x : bla<int<4>>; } in A").as<TagTypePtr>()->peel()));
 
 		EXPECT_EQ("rec ^A.{^A=struct A "
