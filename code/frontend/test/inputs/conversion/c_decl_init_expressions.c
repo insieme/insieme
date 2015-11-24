@@ -112,40 +112,35 @@ int main() {
 	// STRUCT TYPES //////////////////////////////////////////////////////////////
 
 	// basic
-	#pragma test expect_ir("alias s = struct { a: int<4>; b: real<4>; }; { var ref<s,f,f> v0 = ref_var_init(<s> {1, lit(\"1.0E+0\":real<4>)}); }")
+	#pragma test expect_ir("REGEX_S", R"(.*var ref<struct \{ a : int<4>; b : real<4>; \},f,f,plain> v0 = ref_var_init.*)")
 	{ struct { int a; float b; } sif = { 1, 1.0f }; }
 
 	// implicit
-	#pragma test expect_ir("alias s = struct {a: int<4>; b: real<4>; c: uint<4>;}; { var ref<s,f,f> v0 = ref_var_init(<s> {1, 0.0f, 2u}); }")
+	#pragma test expect_ir("REGEX_S", R"(.*var ref<struct \{ a : int<4>; b : real<4>; c : uint<4>; \},f,f,plain> v0 =.*)")
 	{ struct { int a; float b; unsigned c; } sifc = { .a = 1, .c = 2u }; }
 	
 	// explicit
-	#pragma test expect_ir("alias s = struct {a: int<4>; b: real<4>; c: uint<4>;}; { var ref<s,f,f> v0 = ref_var_init(<s> {1, lit(\"0.0E+0\":real<4>), 2u}); }")
+	#pragma test expect_ir("REGEX_S", R"(.*var ref<struct \{ a : int<4>; b : real<4>; c : uint<4>; \},f,f,plain> v0 =.*)")
 	{ struct { int a; float b; unsigned c; } sifc2 = { 1, 0.0f, 2u }; }
 	
 	// UNION TYPES //////////////////////////////////////////////////////////////
 	
-	#pragma test expect_ir("alias s = union {a: int<4>; b: real<4>;}; { var ref<s,f,f> v0 = ref_var_init(<s> {1}); }")
+	#pragma test expect_ir("REGEX_S", R"(.*var ref<union \{ a : int<4>; b : real<4>; \},f,f,plain> v0 = .*)")
 	{ union { int a; float b; } uif = { 1 }; }
-	
-	#pragma test expect_ir("alias s = union {a: int<4>; b: real<4>;}; { var ref<s,f,f> v0 = ref_var_init(<s> {1}); }")
+
+
+	#pragma test expect_ir("REGEX_S", R"(.*var ref<union \{ a : int<4>; b : real<4>; \},f,f,plain> v0 = .*)")
 	{ union { int a; float b; } uif = { .a = 1 }; }
 	
-	#pragma test expect_ir("alias s = union {a: int<4>; b: real<4>;}; { var ref<s,f,f> v0 = ref_var_init(<s> {lit(\"1.0E+0\":real<4>)}); }")
+	#pragma test expect_ir("REGEX_S", R"(.*var ref<union \{ a : int<4>; b : real<4>; \},f,f,plain> v0 = .*)")
 	{ union { int a; float b; } uif = { .b = 1.0f }; }
 	
 	// NESTED INITIALIZERS //////////////////////////////////////////////////////
 
-	#pragma test expect_ir(R"( 
-		alias ist = struct { inner1: int<4>; inner2: real<4>; }; 
-		alias iut = union { u1: int<4>; u2: real<4>; }; 
-		alias sut = struct { is: ist; iu: iut; }; 
-		{ var ref<sut,f,f> v0 = ref_var_init(<sut> { <ist> { 1, lit("2.0E+0":real<4>) }, <iut> { 3 } } ); })")
+	#pragma test expect_ir("REGEX_S", R"(.*ref<struct \{ is : struct \{ inner1 : int<4>; inner2 : real<4>; \}; iu : union \{ u1 : int<4>; u2 : real<4>; \}; \},f,f,plain> v0 = .*)")
 	{ struct { struct { int inner1; float inner2; } is; union { int u1; float u2; } iu; } su = { { 1, 2.0f }, { 3 } }; }
 	
-	#pragma test expect_ir(R"(
-		alias s = struct { a: int<4>; b: uint<4>; }; 
-		{ var ref<array<s,2>,f,f> v0 = ref_var_init(array_create(type_lit(2), [<s> {1, 2u}, <s> {3, 4u}])); })")
+	#pragma test expect_ir("REGEX_S", R"(.*ref<array<struct \{ a : int<4>; b : uint<4>;  \},2>,f,f,plain> v0 = .*)")
 	{ struct { int a; unsigned b; } su[2] = { { 1, 2u }, { 3, 4u } }; }
 
 	// BOOL CONVERSION //////////////////////////////////////////////////////

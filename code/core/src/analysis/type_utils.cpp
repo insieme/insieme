@@ -195,6 +195,8 @@ namespace analysis {
 		bool trivialMoveConstructor = containsCtor(builder.getDefaultMoveConstructor(thisType, parents, record->getFields()));
 		if (!trivialMoveConstructor) return false;
 
+		// check for trivial, non-virtual destructor
+		if(record->getDestructorVirtual().getValue() || *builder.normalize(record->getDestructor()) != *builder.normalize(builder.getDefaultDestructor(thisType))) return false;
 
 		// check for trivial copy and move assignments
 		bool trivialCopyAssignment = containsMemberFunction(builder.getDefaultCopyAssignOperator(thisType, parents, record->getFields()));
@@ -202,9 +204,6 @@ namespace analysis {
 
 		bool trivialMoveAssignment = containsMemberFunction(builder.getDefaultMoveAssignOperator(thisType, parents, record->getFields()));
 		if (!trivialMoveAssignment) return false;
-
-		// check for trivial, non-virtual destructor
-		if(record->getDestructor().as<LambdaExprPtr>()->getBody().size() != 0 || record->getDestructorVirtual().getValue()) return false;
 
 		// check for virtual member functions
 		for(auto memFun : record->getMemberFunctions()) {
@@ -235,6 +234,63 @@ namespace analysis {
 		}
 
 		return true;
+	}
+
+	bool isaDefaultConstructor(const TagTypePtr& type, const ExpressionPtr& ctor) {
+		auto record = type->getRecord();
+		IRBuilder builder(type->getNodeManager());
+		auto thisType = builder.refType(builder.tagTypeReference(record->getName()));
+
+		auto checkCtor = [&](const ExpressionPtr& ctor, const ExpressionPtr& candidate)->bool {
+			return *builder.normalize(ctor) == *builder.normalize(candidate);
+		};
+
+		ParentsPtr parents =
+				(record.isa<StructPtr>()) ?
+				record.as<StructPtr>()->getParents() :
+				builder.parents();
+
+		//compare with all three default generated constructors
+		if (checkCtor(ctor, builder.getDefaultConstructor(thisType, parents, record->getFields()))) return true;
+		if (checkCtor(ctor, builder.getDefaultCopyConstructor(thisType, parents, record->getFields()))) return true;
+		if (checkCtor(ctor, builder.getDefaultMoveConstructor(thisType, parents, record->getFields()))) return true;
+
+		return false;
+	}
+
+	bool hasDefaultDestructor(const TagTypePtr& type) {
+		auto record = type->getRecord();
+		IRBuilder builder(type->getNodeManager());
+		auto thisType = builder.refType(builder.tagTypeReference(record->getName()));
+
+		//check the virtual flag and compare with the default generated destructor
+		if(!record->getDestructorVirtual().getValue() && *builder.normalize(record->getDestructor()) == *builder.normalize(builder.getDefaultDestructor(thisType))) return true;
+
+		return false;
+	}
+
+	bool isaDefaultMember(const TagTypePtr& type, const MemberFunctionPtr& memberFunction) {
+		//only assignment operators can be default member functions
+		if (memberFunction->getNameAsString() != "operator_assign") return false;
+
+		auto record = type->getRecord();
+		IRBuilder builder(type->getNodeManager());
+		auto thisType = builder.refType(builder.tagTypeReference(record->getName()));
+
+		auto checkMemberFunction = [&](const MemberFunctionPtr& member, const MemberFunctionPtr& candidate)->bool {
+			return *builder.normalize(member) == *builder.normalize(candidate);
+		};
+
+		ParentsPtr parents =
+				(record.isa<StructPtr>()) ?
+				record.as<StructPtr>()->getParents() :
+				builder.parents();
+
+		//compare with both default generated assignment operators
+		if (checkMemberFunction(memberFunction, builder.getDefaultCopyAssignOperator(thisType, parents, record->getFields()))) return true;
+		if (checkMemberFunction(memberFunction, builder.getDefaultMoveAssignOperator(thisType, parents, record->getFields()))) return true;
+
+		return false;
 	}
 
 } // end namespace analysis

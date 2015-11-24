@@ -472,7 +472,7 @@ namespace parser {
 			// if it is a function that is defined
 			if (!inLambda) {
 				// => skip materialization of parameters
-				return builder.lambdaExpr(funcType, params, body);
+				return builder.lambdaExpr(funcType.as<FunctionTypePtr>(), params, body);
 			}
 
 			// replace all variables in the body by their implicitly materialized version
@@ -752,6 +752,7 @@ namespace parser {
 			}
 
 			auto ftype = func->getType();
+
 			if(!ftype.isa<FunctionTypePtr>()) {
 				error(l, format("attempt to call non function expression of type %s", *ftype));
 				return nullptr;

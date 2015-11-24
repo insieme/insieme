@@ -82,7 +82,7 @@ TEST(RuntimeExtension, WorkItemVariant) {
 	// test encoding
 	WorkItemVariant variant(getDummyImpl(manager));
 	core::ExpressionPtr encoded = enc::toIR(manager, variant);
-	EXPECT_EQ("WorkItemVariant(function(ref<ref<irt_wi,f,f,plain>,f,f,plain> v1) -> unit { })",
+	EXPECT_EQ("decl fun000 : (ref<irt_wi,f,f,plain>) -> unit;def fun000 = function (v1 : ref<ref<irt_wi,f,f,plain>,f,f,plain>) -> unit { };WorkItemVariant(fun000)",
 	          toString(core::printer::PrettyPrinter(encoded, core::printer::PrettyPrinter::OPTIONS_SINGLE_LINE)));
 
 	// test decoding
@@ -110,7 +110,7 @@ TEST(RuntimeExtension, WorkItemImpl) {
 	WorkItemImpl impl(toVector(WorkItemVariant(getDummyImpl(manager))));
 	core::ExpressionPtr encoded = enc::toIR(manager, impl);
 	EXPECT_TRUE(encoded);
-	EXPECT_EQ("WorkItemImpl([WorkItemVariant(function(ref<ref<irt_wi,f,f,plain>,f,f,plain> v1) -> unit { })])",
+	EXPECT_EQ("WorkItemImpl([WorkItemVariant(fun000)])",
 	          toString(core::printer::PrettyPrinter(encoded, core::printer::PrettyPrinter::NO_LET_BINDINGS)));
 
 	// test decoding
