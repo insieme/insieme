@@ -97,10 +97,10 @@ namespace printer {
 
 			PRINT_DEREFS = 1 << 0,
 			PRINT_CASTS = 1 << 1,
+			PRINT_DEFAULT_MEMBERS = 1 << 2,
 			PRINT_SINGLE_LINE = 1 << 3,
 			PRINT_MARKERS = 1 << 4,
 			PRINT_ANNOTATIONS = 1 << 5,
-			NO_EXPAND_LAMBDAS = 1 << 6,
 			NO_LIST_SUGAR = 1 << 7,
 			PRINT_ATTRIBUTES = 1 << 8,
 			NAME_CONTRACTION = 1 << 9,
@@ -110,7 +110,7 @@ namespace printer {
 			PRINT_LITERAL_TYPES = 1 << 13,
 			USE_COLOR = 1 << 14,
 			PRINT_DERIVED_IMPL = 1 << 15,
-			JUST_OUTERMOST_SCOPE = 1 << 16
+			JUST_LOCAL_CONTEXT = 1 << 16
 		};
 
 		/**

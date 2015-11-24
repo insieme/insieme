@@ -58,6 +58,9 @@ namespace analysis {
 
 		m[refs.getGenPostInc()] = {2,0};
 		m[refs.getGenPostDec()] = {2,0};
+		m[lang.getCompositeMemberAccess()] = {2,0};
+		m[refs.getRefMemberAccess()] = {2,0};
+		m[refs.getRefDeref()] = {3,0};
 		m[lang.getBoolLNot()] = {3,1};
 		m[lang.getSignedIntNot()] = {3,1};
 		m[lang.getUnsignedIntNot()] = {3,1};

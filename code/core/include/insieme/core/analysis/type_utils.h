@@ -81,6 +81,27 @@ namespace analysis {
 	 */
 	bool isTrivial(const TypePtr& type);
 
+	/**
+	 * Determines whether the given constructor is one of the default generated ones for the given type.
+	 *
+	 * @param type the TagType to check
+	 * @param ctor the ctor to check
+	 */
+	bool isaDefaultConstructor(const TagTypePtr& type, const ExpressionPtr& ctor);
+
+	/**
+	 * Determines whether the given TagType has the default generated destructor.
+	 */
+	bool hasDefaultDestructor(const TagTypePtr& type);
+
+	/**
+	 * Determines whether the given member function is one of the default generated assignment operators for the given type.
+	 *
+	 * @param type the TagType to check
+	 * @param memberFunction the memberFunction to check
+	 */
+	bool isaDefaultMember(const TagTypePtr& type, const MemberFunctionPtr& memberFunction);
+
 } // end namespace analysis
 } // end namespace core
 } // end namespace insieme

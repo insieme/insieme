@@ -305,7 +305,7 @@ namespace lang {
 		 * An enumeration of the supported reference types.
 		 */
 		enum class Kind {
-			Plain, CppReference, CppRValueReference
+			Plain, CppReference, CppRValueReference, Undefined
 		};
 
 	private:
