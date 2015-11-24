@@ -283,17 +283,17 @@ namespace lang {
 
 	TEST(Reference, SubReferencing) {
 
-		NodeManager nm;
-		IRBuilder builder(nm);
-        auto& ext = nm.getLangExtension<ReferenceExtension>();
-
-		auto A = builder.parseType("A");
-		auto B = builder.parseType("B");
-
-        auto refExpr = builder.literal(ReferenceType::create(A), "Refdummy");
-        auto constRefExpr = builder.literal(ReferenceType::create(A, true), "ConstRefdummy");
-        auto volatileRefExpr = builder.literal(ReferenceType::create(A, false, true), "VolRefdummy");
-        auto valueExpr = builder.literal(A, "dummy");
+//		NodeManager nm;
+//		IRBuilder builder(nm);
+//        auto& ext = nm.getLangExtension<ReferenceExtension>();
+//
+//		auto A = builder.parseType("A");
+//		auto B = builder.parseType("B");
+//
+//        auto refExpr = builder.literal(ReferenceType::create(A), "Refdummy");
+//        auto constRefExpr = builder.literal(ReferenceType::create(A, true), "ConstRefdummy");
+//        auto volatileRefExpr = builder.literal(ReferenceType::create(A, false, true), "VolRefdummy");
+//        auto valueExpr = builder.literal(A, "dummy");
 
         std::cout << " This module requires a better testing, which may make use of more types. is better to do it appart" << std::endl;
 //
@@ -400,7 +400,7 @@ namespace lang {
 
             NodeManager nm;
 		IRBuilder builder(nm);
-        auto& ext = nm.getLangExtension<ReferenceExtension>();
+ //       auto& ext = nm.getLangExtension<ReferenceExtension>();
 
 		auto A = builder.parseType("A");
 
