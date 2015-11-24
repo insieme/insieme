@@ -311,8 +311,9 @@ namespace lang {
 		auto type = node.as<GenericTypePtr>();
 		return type->getTypeParameter(1).as<NumericTypePtr>();
 	}
-
+	
 	ExpressionPtr buildArrayCreate(const TypePtr& size, const ExpressionList& list);
+	ExpressionPtr buildArrayCreate(const ExpressionPtr& size, const ExpressionList& list);
 	ExpressionPtr buildArrayCreate(NodeManager& mgr, size_t size, const ExpressionList& list);
 
 } // end namespace lang

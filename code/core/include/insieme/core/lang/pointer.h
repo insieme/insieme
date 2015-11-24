@@ -106,12 +106,21 @@ namespace lang {
 		)
 
 		/**
-		 * A built-in derived operator allocating memory on the heap.
+		 * A built-in derived operator for extracting references from pointers
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(PtrToRef, "ptr_to_ref",
-				"  (p : ptr<'a,'c,'v>) -> ref<'a,'c,'v> {   "
-				"		return p.0[p.1];                 "
-				"  }                                             "
+				"  (p : ptr<'a,'c,'v>) -> ref<'a,'c,'v> {          "
+				"		return p.0[p.1];                           "
+				"  }                                               "
+		)
+
+		/**
+		 * A built-in derived operator for extracting array references from pointers
+		 */
+		LANG_EXT_DERIVED_WITH_NAME(PtrToArray, "ptr_to_array",
+				"  (p : ptr<'a,'c,'v>) -> ref<array<'a>,'c,'v> {   "
+				"		return ref_scalar_to_ref_array(p.0[p.1]);  "
+				"  }                                               "
 		)
 
 		/**
@@ -420,6 +429,7 @@ namespace lang {
 	ExpressionPtr buildPtrFromRef(const ExpressionPtr& refExpr);
 	ExpressionPtr buildPtrToRef(const ExpressionPtr& ptrExpr);
 	ExpressionPtr buildPtrFromArray(const ExpressionPtr& arrExpr);
+	ExpressionPtr buildPtrToArray(const ExpressionPtr& ptrExpr);
 	ExpressionPtr buildPtrFromIntegral(const ExpressionPtr& intExpr, const TypePtr& ptrType);
 	ExpressionPtr buildPtrToIntegral(const ExpressionPtr& ptrExpr, const TypePtr& intType);
 	ExpressionPtr buildPtrOfFunction(const ExpressionPtr& funExpr);
