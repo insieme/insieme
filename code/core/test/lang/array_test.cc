@@ -120,6 +120,136 @@ namespace lang {
 
 	}
 
+	TEST(Array, Reduce) {
+
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto& ext = mgr.getLangExtension<ArrayExtension>();
+
+		auto l = builder.literal(builder.parseType("uint<inf>"), "4");
+		auto v = builder.variable(builder.parseType("uint<inf>"), 0);
+
+        auto A     = builder.parseType("A");
+        auto B     = builder.parseType("B");
+        auto array1 = builder.literal(ReferenceType::create(ArrayType::create(A)), "dummy");
+        auto array2 = builder.literal(ReferenceType::create(ArrayType::create(A, 10)), "dummy");
+        auto array3 = builder.literal(ReferenceType::create(ArrayType::create(A, l)), "dummy");
+        auto array4 = builder.literal(ReferenceType::create(ArrayType::create(A, v)), "dummy");
+
+        auto size = builder.literal(builder.getLangBasic().getInt8(), "10");
+        auto init = builder.literal(A, "initVal");
+        auto init2= builder.literal(B, "initVal");
+
+        IRBuilder::EagerDefinitionMap symbols;
+        symbols["A"] = A;
+        symbols["B"] = B;
+        auto f = builder.parseExpr("(a : A, b : A) -> A { }", symbols);
+        auto f2 = builder.parseExpr("(a : B, b : A) -> B { }", symbols);
+
+        // with generic binary operator
+        EXPECT_TRUE (builder.callExpr(A, ext.getArrayReduce(), array1, size, builder.getLangBasic().getGenAdd(), init));
+        EXPECT_EQ   (builder.callExpr(ext.getArrayReduce(), array1, size, builder.getLangBasic().getGenAdd(), init)->getType(), A);
+
+        EXPECT_TRUE (builder.callExpr(A, ext.getArrayReduce(), array2, size, builder.getLangBasic().getGenAdd(), init));
+        EXPECT_EQ   (builder.callExpr(ext.getArrayReduce(), array2, size, builder.getLangBasic().getGenAdd(), init)->getType(), A);
+
+        EXPECT_TRUE (builder.callExpr(A, ext.getArrayReduce(), array3, size, builder.getLangBasic().getGenAdd(), init));
+        EXPECT_EQ   (builder.callExpr(ext.getArrayReduce(), array3, size, builder.getLangBasic().getGenAdd(), init)->getType(), A);
+
+        EXPECT_TRUE (builder.callExpr(A, ext.getArrayReduce(), array4, size, builder.getLangBasic().getGenAdd(), init));
+        EXPECT_EQ   (builder.callExpr(ext.getArrayReduce(), array4, size, builder.getLangBasic().getGenAdd(), init)->getType(), A);
+
+        // in/out same type
+        EXPECT_TRUE (builder.callExpr(A, ext.getArrayReduce(), array1, size, f, init));
+        EXPECT_EQ   (builder.callExpr(ext.getArrayReduce(), array1, size, f, init)->getType(), A);
+
+        EXPECT_TRUE (builder.callExpr(A, ext.getArrayReduce(), array2, size, f, init));
+        EXPECT_EQ   (builder.callExpr(ext.getArrayReduce(), array2, size, f, init)->getType(), A);
+
+        EXPECT_TRUE (builder.callExpr(A, ext.getArrayReduce(), array3, size, f, init));
+        EXPECT_EQ   (builder.callExpr(ext.getArrayReduce(), array3, size, f, init)->getType(), A);
+
+        EXPECT_TRUE (builder.callExpr(A, ext.getArrayReduce(), array4, size, f, init));
+        EXPECT_EQ   (builder.callExpr(ext.getArrayReduce(), array4, size, f, init)->getType(), A);
+
+        // in/out different types
+        EXPECT_TRUE (builder.callExpr(A, ext.getArrayReduce(), array1, size, f2, init2));
+        EXPECT_EQ   (builder.callExpr(ext.getArrayReduce(), array1, size, f2, init2)->getType(), B);
+
+        EXPECT_TRUE (builder.callExpr(A, ext.getArrayReduce(), array2, size, f2, init2));
+        EXPECT_EQ   (builder.callExpr(ext.getArrayReduce(), array2, size, f2, init2)->getType(), B);
+
+        EXPECT_TRUE (builder.callExpr(A, ext.getArrayReduce(), array3, size, f2, init2));
+        EXPECT_EQ   (builder.callExpr(ext.getArrayReduce(), array3, size, f2, init2)->getType(), B);
+
+        EXPECT_TRUE (builder.callExpr(A, ext.getArrayReduce(), array4, size, f2, init2));
+        EXPECT_EQ   (builder.callExpr(ext.getArrayReduce(), array4, size, f2, init2)->getType(), B);
+
+    }
+
+	TEST(Array, Fold) {
+
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto& ext = mgr.getLangExtension<ArrayExtension>();
+
+		auto l = builder.literal(builder.parseType("uint<inf>"), "4");
+		auto v = builder.variable(builder.parseType("uint<inf>"), 0);
+
+        auto A     = builder.parseType("A");
+        auto B     = builder.parseType("B");
+        auto array1 = builder.literal(ArrayType::create(A), "dummy");
+        auto array2 = builder.literal(ArrayType::create(A, 10), "dummy");
+        auto array3 = builder.literal(ArrayType::create(A, l), "dummy");
+        auto array4 = builder.literal(ArrayType::create(A, v), "dummy");
+
+        auto size = builder.literal(builder.getLangBasic().getInt8(), "10");
+        auto init = builder.literal(A, "initVal");
+        auto init2= builder.literal(B, "initVal");
+
+        IRBuilder::EagerDefinitionMap symbols;
+        symbols["A"] = A;
+        symbols["B"] = B;
+        auto f = builder.parseExpr("(a : A, b : A) -> A { }", symbols);
+        auto f2 = builder.parseExpr("(a : B, b : A) -> B { }", symbols);
+
+        // with generic binary operator
+        EXPECT_TRUE (builder.callExpr(A, ext.getArrayFold(), array1, init, builder.getLangBasic().getGenAdd()));
+        EXPECT_TRUE (builder.callExpr(A, ext.getArrayFold(), array2, init, builder.getLangBasic().getGenAdd()));
+        EXPECT_TRUE (builder.callExpr(A, ext.getArrayFold(), array3, init, builder.getLangBasic().getGenAdd()));
+        EXPECT_TRUE (builder.callExpr(A, ext.getArrayFold(), array4, init, builder.getLangBasic().getGenAdd()));
+
+        EXPECT_EQ (builder.callExpr(ext.getArrayFold(), array1, init, builder.getLangBasic().getGenAdd())->getType(), A);
+        EXPECT_EQ (builder.callExpr(ext.getArrayFold(), array2, init, builder.getLangBasic().getGenAdd())->getType(), A);
+        EXPECT_EQ (builder.callExpr(ext.getArrayFold(), array3, init, builder.getLangBasic().getGenAdd())->getType(), A);
+        EXPECT_EQ (builder.callExpr(ext.getArrayFold(), array4, init, builder.getLangBasic().getGenAdd())->getType(), A);
+
+        // in/out same type
+        EXPECT_TRUE (builder.callExpr(A, ext.getArrayFold(), array1, init, f));
+        EXPECT_TRUE (builder.callExpr(A, ext.getArrayFold(), array2, init, f));
+        EXPECT_TRUE (builder.callExpr(A, ext.getArrayFold(), array3, init, f));
+        EXPECT_TRUE (builder.callExpr(A, ext.getArrayFold(), array4, init, f));
+
+        EXPECT_EQ (builder.callExpr(ext.getArrayFold(), array1, init, f)->getType(), A);
+        EXPECT_EQ (builder.callExpr(ext.getArrayFold(), array2, init, f)->getType(), A);
+        EXPECT_EQ (builder.callExpr(ext.getArrayFold(), array3, init, f)->getType(), A);
+        EXPECT_EQ (builder.callExpr(ext.getArrayFold(), array4, init, f)->getType(), A);
+        
+        // in/out different types
+        EXPECT_TRUE (builder.callExpr(A, ext.getArrayFold(), array1, init2, f2));
+        EXPECT_TRUE (builder.callExpr(A, ext.getArrayFold(), array2, init2, f2));
+        EXPECT_TRUE (builder.callExpr(A, ext.getArrayFold(), array3, init2, f2));
+        EXPECT_TRUE (builder.callExpr(A, ext.getArrayFold(), array4, init2, f2));
+
+        EXPECT_EQ (builder.callExpr(ext.getArrayFold(), array1, init2, f2)->getType(), B);
+        EXPECT_EQ (builder.callExpr(ext.getArrayFold(), array2, init2, f2)->getType(), B);
+        EXPECT_EQ (builder.callExpr(ext.getArrayFold(), array3, init2, f2)->getType(), B);
+        EXPECT_EQ (builder.callExpr(ext.getArrayFold(), array4, init2, f2)->getType(), B);
+      
+    }
+
 	TEST(Array, Pointwise) {
 
 		// test the type of a pointwise operator
