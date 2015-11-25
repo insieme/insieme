@@ -593,16 +593,18 @@ namespace checks {
 		// check type of lambda
 		IRBuilder builder(lambda->getNodeManager());
 		FunctionTypePtr funTypeIs = lambda->getLambda()->getType();
+		std::cout << "\nFunctionTypePtr: " << dumpColor(funTypeIs) << "\n";
 
 		TypesPtr types = funTypeIs->getParameterTypes();
+		std::cout << " - types: " << types << "\n";
 		vector<TypePtr> paramTypes;
-		for (std::size_t i = 0; i < types.size(); ++i) {
+		for(std::size_t i = 0; i < types.size(); ++i) {
 			
 			auto parameter = address->getParameterList()[i];
 			auto should = transform::materialize(types[i]);
 			auto is = parameter->getType();
 
-			if (*is != *should) {
+			if(*should != *is && !lang::doReferencesDifferOnlyInQualifiers(is, should)) {
 				add(res, Message(
 						parameter, EC_TYPE_INVALID_LAMBDA_TYPE, 
 						format("Invalid parameters type of %s - is: %s, should %s", *parameter, *is, *should),

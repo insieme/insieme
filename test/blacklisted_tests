@@ -27,6 +27,3 @@ variadic_functions
 variable_arrays
 pointer_arith_vla
 
-
-# Disabled due to incompatible deduction of type of functions and their parameters
-particlesim

@@ -13,11 +13,12 @@ int ii_to_i(int a, int b) {
 	return b;
 }
 
-int main() {
+void qualified_params(const int a, volatile int b) {
+}
 
-	// TODO FE NG enable checks when call semantic is fixed
-	
-	#pragma test expect_ir("(v1: int<4>) -> int<4> { return v1; }(1)")
+int main() {
+		
+	#pragma test expect_ir("def IMP_i_to_i = (v1: int<4>) -> int<4> { return v1; }; IMP_i_to_i(1)")
 	i_to_i(1);
 	#pragma test expect_ir("EXPR_TYPE","int<4>")
 	i_to_i(2); // use different number, otherwise same node as above -> pragma doesn't work
@@ -47,6 +48,9 @@ int main() {
 	{ rec(3); }
 	#pragma test expect_ir("EXPR_TYPE","int<4>")
 	rec(4);
+	
+	#pragma test expect_ir("function (v0 : ref<int<4>,t,f,plain>, v1 : ref<int<4>,f,t,plain>) -> int<4> { }(1,2)")
+	qualified_params(1,2);
 
 	return 0;
 }
