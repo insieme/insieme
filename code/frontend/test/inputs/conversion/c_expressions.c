@@ -186,6 +186,24 @@ int main() {
 	#pragma test expect_ir("int_ge(1, 2)")
 	1 >= 2;
 
+    
+	// WITH DIFFERENT TYPES ///////////////////////////////////////////////////
+
+//	#p ragma test expect_ir("num_cast(1, type_lit(real<8>))+2.0")
+//	1 + 2.0;
+//
+//	#p ragma test expect_ir("int_sub(3, 4)")
+//	3.0 - 4;
+//
+//	#p ragma test expect_ir("int_mul(5, 6)")
+//	5.0f * 6;
+//
+//	#p ragma test expect_ir("int_div(7, 8)")
+//	7u / 8;
+//	
+//  #p ragma test expect_ir("")
+//	9u + 10;
+//
 	// POINTER & ARRAYS ///////////////////////////////////////////////////////
 
 	// one dimension
