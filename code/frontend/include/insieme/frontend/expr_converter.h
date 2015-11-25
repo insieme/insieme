@@ -67,8 +67,54 @@ namespace conversion {
 
 		core::TypePtr convertExprType(const clang::Expr* expr);
 
+    /**
+     * stores conversion map between clang operators and Inspire
+     */
+		const std::map<clang::BinaryOperator::Opcode, core::lang::BasicGenerator::Operator> opMap;
+
+    /**
+     * Handles most of binary conversion, details handled in pointer visitor itself
+     */
+        core::ExpressionPtr createBinaryExpression (const core::TypePtr& exprTy, const core::ExpressionPtr& left, 
+                                                    const core::ExpressionPtr& right, clang::BinaryOperator::Opcode op);
+
 	  public:
-		ExprConverter(Converter& converter) : converter(converter), mgr(converter.mgr), builder(converter.builder), basic(converter.builder.getLangBasic()) {}
+		ExprConverter(Converter& converter) : converter(converter), mgr(converter.mgr), builder(converter.builder), basic(converter.builder.getLangBasic()) ,
+		opMap ({
+			{clang::BO_MulAssign, core::lang::BasicGenerator::Mul},    // a *= b
+			{clang::BO_DivAssign, core::lang::BasicGenerator::Div},    // a /= b
+			{clang::BO_RemAssign, core::lang::BasicGenerator::Mod},    // a %= b
+			{clang::BO_AddAssign, core::lang::BasicGenerator::Add},    // a += b
+			{clang::BO_SubAssign, core::lang::BasicGenerator::Sub},    // a -= b
+			{clang::BO_ShlAssign, core::lang::BasicGenerator::LShift}, // a <<= b
+			{clang::BO_ShrAssign, core::lang::BasicGenerator::RShift}, // a >>= b
+			{clang::BO_AndAssign, core::lang::BasicGenerator::And},    // a &= b
+			{clang::BO_OrAssign, core::lang::BasicGenerator::Or},      // a |= b
+			{clang::BO_XorAssign, core::lang::BasicGenerator::Xor},    // a ^= b
+
+			{clang::BO_Add, core::lang::BasicGenerator::Add},    // a + b
+			{clang::BO_Sub, core::lang::BasicGenerator::Sub},    // a - b
+			{clang::BO_Mul, core::lang::BasicGenerator::Mul},    // a * b
+			{clang::BO_Div, core::lang::BasicGenerator::Div},    // a / b
+			{clang::BO_Rem, core::lang::BasicGenerator::Mod},    // a % b
+			{clang::BO_Shl, core::lang::BasicGenerator::LShift}, // a << b
+			{clang::BO_Shr, core::lang::BasicGenerator::RShift}, // a >> b
+			{clang::BO_And, core::lang::BasicGenerator::And},    // a & b
+			{clang::BO_Xor, core::lang::BasicGenerator::Xor},    // a ^ b
+			{clang::BO_Or, core::lang::BasicGenerator::Or},      // a | b
+
+			{clang::BO_LAnd, core::lang::BasicGenerator::LAnd}, // a && b
+			{clang::BO_LOr, core::lang::BasicGenerator::LOr},   // a || b
+
+			{clang::BO_LT, core::lang::BasicGenerator::Lt}, // a < b
+			{clang::BO_GT, core::lang::BasicGenerator::Gt}, // a > b
+			{clang::BO_LE, core::lang::BasicGenerator::Le}, // a <= b
+			{clang::BO_GE, core::lang::BasicGenerator::Ge}, // a >= b
+			{clang::BO_EQ, core::lang::BasicGenerator::Eq}, // a == b
+			{clang::BO_NE, core::lang::BasicGenerator::Ne}, // a != b
+		})
+        { }
+
 		virtual ~ExprConverter() {}
 
 		core::ExpressionPtr convertInitExpr(const clang::Expr* original);
@@ -83,6 +129,7 @@ namespace conversion {
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		//  Operators
 		core::ExpressionPtr VisitBinaryOperator(const clang::BinaryOperator* binOp);
+		core::ExpressionPtr VisitCompoundAssignOperator(const clang::CompoundAssignOperator* binOp);
 		core::ExpressionPtr VisitUnaryOperator(const clang::UnaryOperator* unOp);
 		core::ExpressionPtr VisitConditionalOperator(const clang::ConditionalOperator* condOp);
 		
@@ -139,6 +186,7 @@ namespace conversion {
 		CALL_BASE_EXPR_VISIT(ExprConverter, UnaryExprOrTypeTraitExpr)
 		CALL_BASE_EXPR_VISIT(ExprConverter, MemberExpr)
 		CALL_BASE_EXPR_VISIT(ExprConverter, BinaryOperator)
+		CALL_BASE_EXPR_VISIT(ExprConverter, CompoundAssignOperator)
 		CALL_BASE_EXPR_VISIT(ExprConverter, UnaryOperator)
 		CALL_BASE_EXPR_VISIT(ExprConverter, ConditionalOperator)
 		CALL_BASE_EXPR_VISIT(ExprConverter, ArraySubscriptExpr)
@@ -176,6 +224,7 @@ namespace conversion {
 		CALL_BASE_EXPR_VISIT(ExprConverter, StmtExpr)
 		CALL_BASE_EXPR_VISIT(ExprConverter, ImplicitValueInitExpr)
 		CALL_BASE_EXPR_VISIT(ExprConverter, BinaryOperator)
+		CALL_BASE_EXPR_VISIT(ExprConverter, CompoundAssignOperator)
 		CALL_BASE_EXPR_VISIT(ExprConverter, AtomicExpr)
 
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
