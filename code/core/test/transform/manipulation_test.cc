@@ -807,8 +807,8 @@ namespace core {
 		in = analysis::normalize(in);
 
 		EXPECT_EQ("rec g.{"
-		          "f=fun(ref<int<4>,f,f,plain> v0) {1; rec _.{_=fun() {return f(5);}}(); f(4); g(f(4)); rec _.{_=fun() {return g(5);}}();}, "
-		          "g=fun(ref<int<4>,f,f,plain> v1) {2; rec _.{_=fun() {return f(5);}}(); f(g(4)); g(4); rec _.{_=fun() {return g(5);}}();}"
+		          "f=fun(ref<int<4>,f,f,plain> v0) {1; rec h.{h=fun() {return f(5);}}(); f(4); g(f(4)); rec h.{h=fun() {return g(5);}}();}, "
+		          "g=fun(ref<int<4>,f,f,plain> v1) {2; rec h.{h=fun() {return f(5);}}(); f(g(4)); g(4); rec h.{h=fun() {return g(5);}}();}"
 		          "}",
 		          toString(*analysis::normalize(transform::correctRecursiveLambdaVariableUsage(manager, in))));
 	}
@@ -875,7 +875,7 @@ namespace core {
 
 		EXPECT_TRUE(core::checks::check(code).empty()) << core::checks::check(code);
 
-		EXPECT_EQ("{rec _.{_=fun(ref<int<4>,f,f,plain> v0) {return int_sub(ref_deref(v0), rec _.{_=fun(ref<int<4>,f,f,plain> v0) {return int_add(int_add(ref_deref(v0), 1), 2);}}(ref_deref(v0)));}}(10);}",
+		EXPECT_EQ("{rec g.{g=fun(ref<int<4>,f,f,plain> v0) {return int_sub(ref_deref(v0), rec f.{f=fun(ref<int<4>,f,f,plain> v0) {return int_add(int_add(ref_deref(v0), 1), 2);}}(ref_deref(v0)));}}(10);}",
 		          toString(*code));
 
 		// implant var
@@ -911,7 +911,7 @@ namespace core {
 
 		EXPECT_TRUE(core::checks::check(code).empty()) << core::checks::check(code);
 
-		EXPECT_EQ("{rec _.{_=fun(ref<int<4>,f,f,plain> v0) {return int_add(int_sub(ref_deref(v0), rec _.{_=fun(ref<int<4>,f,f,plain> v0) {return int_add(ref_deref(v0), 1);}}(ref_deref(v0))), 2);}}(10);}",
+		EXPECT_EQ("{rec g.{g=fun(ref<int<4>,f,f,plain> v0) {return int_add(int_sub(ref_deref(v0), rec f.{f=fun(ref<int<4>,f,f,plain> v0) {return int_add(ref_deref(v0), 1);}}(ref_deref(v0))), 2);}}(10);}",
 		          toString(*code));
 
 		// variables to be implanted

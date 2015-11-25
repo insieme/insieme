@@ -7,9 +7,7 @@ using driver = philipp;
 
 int main() {
 	
-	#define C_STYLE_ASSIGN "def c_ass = (v1: ref<'a,f,'b>, v2: 'a) -> 'a { v1 = v2; return *v1; };"
-
-	#pragma test expect_ir(C_STYLE_ASSIGN,"{ var ref<bool> v0; c_ass(v0, true); c_ass(v0, false); }")
+	#pragma test expect_ir("{ var ref<bool> v0; c_style_assignment(v0, true); c_style_assignment(v0, false); }")
 	{
 		bool a;
 		a = true;
@@ -40,7 +38,11 @@ int main() {
 	#pragma test expect_ir("var ref<int<4>,f,f> v0 = ref_var_init(3);")
 	driver var3 = 3;
 	
-	#pragma test expect_ir(R"(function (v1 : ref<int<4>,f,f,cpp_rref>) -> unit { }(() -> int<4> { return 5; }()))")
+	#pragma test expect_ir(R"(
+		def IMP_consumer = function (v1 : ref<int<4>,f,f,cpp_rref>) -> unit { };
+		def IMP_producer = () -> int<4> { return 5; };
+		IMP_consumer(IMP_producer())
+	)")
 	consumer(producer());
 
 

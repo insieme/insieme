@@ -139,8 +139,8 @@ namespace conversion {
 		}
 	}
 
-	core::LambdaExprPtr DeclConverter::convertFunctionDecl(const clang::FunctionDecl* funcDecl) const {
-		string name = insieme::utils::mangle(funcDecl->getNameAsString());
+	core::LambdaExprPtr DeclConverter::convertFunctionDecl(const clang::FunctionDecl* funcDecl, string name) const {
+		if(name.empty()) name = insieme::utils::mangle(funcDecl->getNameAsString());
 		auto funType = getFunMethodTypeInternal(converter, funcDecl);
 		return convertFunMethodInternal(converter, funType, funcDecl, name);
 	}
@@ -242,7 +242,8 @@ namespace conversion {
 
 		// convert prototype
 		auto funType = getFunMethodTypeInternal(converter, funcDecl);
-		core::LiteralPtr irLit = builder.literal(insieme::utils::mangle(utils::buildNameForFunction(funcDecl)), funType);
+		auto name = utils::buildNameForFunction(funcDecl);
+		core::LiteralPtr irLit = builder.literal(name, funType);
 		// add required annotations
 		if(inExternC) { annotations::c::markAsExternC(irLit); }
 		converter.applyHeaderTagging(irLit, funcDecl->getCanonicalDecl());
@@ -252,7 +253,7 @@ namespace conversion {
 		// if definition, convert body
 		if(isDefinition) {
 			VLOG(2) << "~~~~~~~~~~~~~~~~ VisitFunctionDecl - isDefinition: " << dumpClang(funcDecl);
-			core::LambdaExprPtr irFunc = convertFunctionDecl(funcDecl);
+			core::LambdaExprPtr irFunc = convertFunctionDecl(funcDecl, name);
 			if(irFunc) { 
 				irFunc = pragma::handlePragmas({irFunc}, funcDecl, converter).front().as<core::LambdaExprPtr>();
 				converter.getIRTranslationUnit().addFunction(irLit, irFunc);

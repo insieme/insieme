@@ -76,8 +76,9 @@ namespace conversion {
 
 		/// Converts a function declaration into an IR lambda.
 		/// @param funcDecl is a clang FunctionDecl which represent a definition for the function
+		/// @param name the name to use for the lambda. If empty, one will be generated
 		/// @return Converted lambda
-		core::LambdaExprPtr convertFunctionDecl(const clang::FunctionDecl* funcDecl) const;
+		core::LambdaExprPtr convertFunctionDecl(const clang::FunctionDecl* funcDecl, string name = "") const;
 		
 
 		// return value type for convertMethodDecl

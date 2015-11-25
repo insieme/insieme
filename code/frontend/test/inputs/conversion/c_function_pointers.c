@@ -48,17 +48,16 @@ int main() {
 
 	// EXPRESSIONS //////////////////////////////////////////////////////////////
 	
-	#define FOO_FUN "alias foo_type = (int<4>) -> int<4>; def foo = (a: int<4>)->int<4> { return a; }; alias foo_ptr_type = ptr<foo_type,t,f>; "
-	#define C_STYLE_ASSIGN "def c_ass = (v1: ref<'a,f,'b>, v2: 'a) -> 'a { v1 = v2; return *v1; };"
+	#define FOO_FUN "alias foo_type = (int<4>) -> int<4>; def IMP_foo = (a: int<4>)->int<4> { return a; }; alias foo_ptr_type = ptr<foo_type,t,f>; "
 	{ }
 
-	#pragma test expect_ir(FOO_FUN "{ ptr_of_function(foo); 1; }")
+	#pragma test expect_ir(FOO_FUN "{ ptr_of_function(IMP_foo); 1; }")
 	{
 		&foo;
 		1; // to make INSPIRE different from next case
 	}
 	
-	#pragma test expect_ir(FOO_FUN "{ ptr_of_function(foo); 2; }")
+	#pragma test expect_ir(FOO_FUN "{ ptr_of_function(IMP_foo); 2; }")
 	{
 		foo;
 		2; // to make INSPIRE different from previous case
@@ -76,31 +75,31 @@ int main() {
 		ptr(5);
 	}
 	
-	#pragma test expect_ir(FOO_FUN C_STYLE_ASSIGN "{ var ref<foo_ptr_type,f,f> v0; c_ass(v0, ptr_of_function(foo)); }")
+	#pragma test expect_ir(FOO_FUN "{ var ref<foo_ptr_type,f,f> v0; c_style_assignment(v0, ptr_of_function(IMP_foo)); }")
 	{
 		int (*ptr)(int);
 		ptr = foo;
 	}
 	
-	#pragma test expect_ir(FOO_FUN C_STYLE_ASSIGN "{ var ref<foo_ptr_type,f,f> v0; c_ass(v0, ptr_of_function(foo)); }")
+	#pragma test expect_ir(FOO_FUN "{ var ref<foo_ptr_type,f,f> v0; c_style_assignment(v0, ptr_of_function(IMP_foo)); }")
 	{
 		int (*ptr)(int);
 		ptr = &foo;
 	}
 
-	#pragma test expect_ir(FOO_FUN "{ ptr_deref(ptr_of_function(foo))(5); }")
+	#pragma test expect_ir(FOO_FUN "{ ptr_deref(ptr_of_function(IMP_foo))(5); }")
 	{
 		(*(&foo))(5);
 	}
 
 	// INIT EXPRESSIONS ///////////////////////////////////////////////////////////
 	
-	#pragma test expect_ir(FOO_FUN C_STYLE_ASSIGN "{ var ref<foo_ptr_type,f,f> v0 = ref_var_init(ptr_of_function(foo)); }")
+	#pragma test expect_ir(FOO_FUN "{ var ref<foo_ptr_type,f,f> v0 = ref_var_init(ptr_of_function(IMP_foo)); }")
 	{
 		int (*ptr)(int) = foo;
 	}
 
-	#pragma test expect_ir(FOO_FUN C_STYLE_ASSIGN "{ var ref<foo_ptr_type,f,f> v0 = ref_var_init(ptr_of_function(foo)); }")
+	#pragma test expect_ir(FOO_FUN "{ var ref<foo_ptr_type,f,f> v0 = ref_var_init(ptr_of_function(IMP_foo)); }")
 	{
 		int (*ptr)(int) = &foo;
 	}
