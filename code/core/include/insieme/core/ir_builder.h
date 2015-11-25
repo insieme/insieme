@@ -335,14 +335,14 @@ namespace core {
 		MemberFunctionPtr getDefaultMoveAssignOperator(const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields) const;
 
 	  private:
-		LiteralPtr getLiteralForMember(const FunctionTypePtr& functionType, const std::string& memberName);
+		LiteralPtr getLiteralForMember(const FunctionTypePtr& functionType, const std::string& memberName) const;
 	  public:
 
-		LiteralPtr getLiteralForConstructor(const FunctionTypePtr& functionType);
+		LiteralPtr getLiteralForConstructor(const FunctionTypePtr& functionType) const;
 
-		LiteralPtr getLiteralForDestructor(const FunctionTypePtr& functionType);
+		LiteralPtr getLiteralForDestructor(const FunctionTypePtr& functionType) const;
 
-		LiteralPtr getLiteralForMemberFunction(const FunctionTypePtr& functionType, const std::string& memberName);
+		LiteralPtr getLiteralForMemberFunction(const FunctionTypePtr& functionType, const std::string& memberName) const;
 
 		// -----------------------------------
 
@@ -472,8 +472,8 @@ namespace core {
 		LambdaPtr lambda(const FunctionTypePtr& type, const VariableList& params, const StatementPtr& body) const;
 
 		// Lambda Expressions
-		LambdaExprPtr lambdaExpr(const TypePtr& returnType, const VariableList& params, const StatementPtr& body) const;
-		LambdaExprPtr lambdaExpr(const FunctionTypePtr& type, const VariableList& params, const StatementPtr& body) const;
+		LambdaExprPtr lambdaExpr(const TypePtr& returnType, const VariableList& params, const StatementPtr& body, const std::string& name="_") const;
+		LambdaExprPtr lambdaExpr(const FunctionTypePtr& type, const VariableList& params, const StatementPtr& body, const std::string& name = "_") const;
 
 		BindExprPtr bindExpr(const VariableList& params, const CallExprPtr& call) const;
 

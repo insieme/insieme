@@ -458,8 +458,8 @@ namespace checks {
 		}
 
 		// 3) check return type - which has to be matched with modified function return value.
-		TypePtr retType = substitution->applyTo(returnType);
-		TypePtr resType = address->getType();
+		TypePtr retType = analysis::normalize(substitution->applyTo(returnType));
+		TypePtr resType = analysis::normalize(address->getType());
 
 		if(!core::types::isSubTypeOf(retType, resType)) {
 			add(res, Message(address, EC_TYPE_INVALID_RETURN_TYPE,
@@ -733,8 +733,8 @@ namespace checks {
 		DeclarationStmtPtr declaration = address.getAddressedNode();
 
 		// just test whether same type is on both sides
-		TypePtr variableType = declaration->getVariable()->getType();
-		TypePtr initType = declaration->getInitialization()->getType();
+		TypePtr variableType = analysis::normalize(declaration->getVariable()->getType());
+		TypePtr initType = analysis::normalize(declaration->getInitialization()->getType());
 
 		if(!types::isSubTypeOf(initType, variableType)) {
 			add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR, format("Invalid type of initial value - expected: \n%s, actual: \n%s",

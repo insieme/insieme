@@ -167,19 +167,24 @@ namespace analysis {
 		IRBuilder builder(type->getNodeManager());
 
 		auto containsCtor = [&](const LambdaExprPtr& ctor)->bool {
-			return any(record->getConstructors(), [&](const ExpressionPtr& cur) {
-				return *builder.normalize(cur) == *builder.normalize(ctor);
+			return any(record->getConstructors(), [&](const ExpressionPtr& cu) {
+				const LambdaExprPtr& cur = cu.as<LambdaExprPtr>();
+				return *builder.normalize(cur->getType()) == *builder.normalize(ctor->getType()) &&
+					*builder.normalize(cur)->getBody() == *builder.normalize(ctor)->getBody();
 			});
 		};
 
 		auto containsMemberFunction = [&](const MemberFunctionPtr& member)->bool {
 			return any(record->getMemberFunctions(), [&](const MemberFunctionPtr& cur) {
-				return *builder.normalize(cur) == *builder.normalize(member);
+				return	cur->getName() == member->getName() &&
+						cur->getVirtualFlag() == member->getVirtualFlag() &&
+						builder.normalize(cur->getImplementation()->getType()) == builder.normalize(member->getImplementation()->getType()) &&
+						builder.normalize(cur)->getImplementation().as<LambdaExprPtr>()->getBody() == 
+						builder.normalize(member)->getImplementation().as<LambdaExprPtr>()->getBody();
 			});
 		};
 
 		auto thisType = builder.refType(builder.tagTypeReference(record->getName()));
-
 		ParentsPtr parents =
 				(record.isa<StructPtr>()) ?
 				record.as<StructPtr>()->getParents() :
@@ -205,6 +210,13 @@ namespace analysis {
 		bool trivialMoveAssignment = containsMemberFunction(builder.getDefaultMoveAssignOperator(thisType, parents, record->getFields()));
 		if (!trivialMoveAssignment) return false;
 
+		// check for trivial, non-virtual destructor
+		const auto defDtor = builder.getDefaultDestructor(thisType);
+		const auto dtor = record->getDestructor().as<LambdaExprPtr>(); 
+		if (record->getDestructorVirtual().getValue() || 
+			builder.normalize(dtor->getBody()) != builder.normalize(defDtor->getBody()) || 
+			builder.normalize(dtor->getType()) != builder.normalize(defDtor->getType())) return false;
+		
 		// check for virtual member functions
 		for(auto memFun : record->getMemberFunctions()) {
 			if(memFun->getVirtualFlag().getValue()) return false;

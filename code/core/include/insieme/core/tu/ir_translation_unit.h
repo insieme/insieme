@@ -279,7 +279,9 @@ namespace tu {
 		}
 
 		std::ostream& printTo(std::ostream& out) const;
-		
+
+		core::TagTypePtr insertRecordTypeWithDefaults(const core::GenericTypePtr& key, const core::TagTypePtr& tagType);
+
 	};
 
 

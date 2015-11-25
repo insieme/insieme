@@ -639,15 +639,15 @@ namespace printer {
 				auto printer = [&](std::ostream&, const TypeAddress& cur) { VISIT(cur); };
 
 				if(node->isConstructor()) {
-					VISIT(node->getObjectType());
+					VISIT(analysis::getObjectType(node));
 					out << "::ctor";
 					auto parameterTypes = node->getParameterTypes();
 					out << "(" << join(", ", parameterTypes.begin() + 1, parameterTypes.end(), printer) << ")";
 				} else if(node->isDestructor()) {
-					VISIT(node->getObjectType());
+					VISIT(analysis::getObjectType(node));
 					out << "::dtor()";
 				} else if(node->isMemberFunction() || node->isVirtualMemberFunction()) {
-					VISIT(node->getObjectType());
+					VISIT(analysis::getObjectType(node));
 					auto parameterTypes = node->getParameterTypes();
 					out << "::(" << join(", ", parameterTypes.begin() + 1, parameterTypes.end(), printer) << ")"
 							<< (node->isMemberFunction() ? " -> " : " ~> ");
@@ -1053,7 +1053,7 @@ namespace printer {
 				if(funType->isConstructor()) {
 					// print constructor header
 					out << "ctor ";
-					VISIT(funType->getObjectType());
+					VISIT(analysis::getObjectType(funType));
 					out << " ";
 					VISIT(node->getParameters()->getElement(0));
 					auto parameters = node->getParameters();
@@ -1067,7 +1067,7 @@ namespace printer {
 
 				} else if(funType->isDestructor()) {
 					// print destructor header
-					VISIT(funType->getObjectType());
+					VISIT(analysis::getObjectType(funType));
 					auto parameters = node->getParameters();
 					out << " :: (" << join(", ", parameters.begin() + 1, parameters.end(), paramPrinter) << ") ";
 					if (!node->getParameterList().empty())
@@ -1080,7 +1080,7 @@ namespace printer {
 				} else if(funType->isMemberFunction() || funType->isVirtualMemberFunction()) {
 					// print member function header
 					out << "function ";
-					VISIT(funType->getObjectType());
+					VISIT(analysis::getObjectType(funType));
 					auto parameters = node->getParameters();
 					out << "::(" << join(", ", parameters.begin() + 1, parameters.end(), paramPrinter) << ")"
 							<< (funType->isMemberFunction() ? " -> " : " ~> ");

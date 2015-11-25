@@ -38,6 +38,8 @@
 
 #include <set>
 
+#include "insieme/core/analysis/type_utils.h"
+
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/transform/manipulation_utils.h"
@@ -78,7 +80,8 @@ namespace core {
 			if(getParameterTypes().empty() || !lang::isReference(getParameterTypes()[0])) {
 				objType = GenericType::get(getNodeManager(), "%error%");
 			} else {
-				objType = getObjectType();
+				FunctionTypePtr ft = this;
+				objType = analysis::getObjectType(ft);
 			}
 		}
 
