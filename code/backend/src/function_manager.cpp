@@ -53,6 +53,7 @@
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/attributes.h"
 #include "insieme/core/analysis/normalize.h"
+#include "insieme/core/analysis/type_utils.h"
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/varargs_extension.h"
 #include "insieme/core/transform/manipulation.h"
@@ -214,7 +215,7 @@ namespace backend {
 		}
 
 		core::TagTypePtr getClassType(const core::FunctionTypePtr& funType) {
-			core::TypePtr type = funType->getObjectType();
+			core::TypePtr type = core::analysis::getObjectType(funType);
 			if (auto tagType = type.isa<core::TagTypePtr>()) {
 				if (tagType->isRecursive()) {
 					type = tagType->peel();
@@ -242,7 +243,7 @@ namespace backend {
 				args.erase(args.begin());
 
 				// extract class type
-				auto classType = context.getConverter().getTypeManager().getTypeInfo(funType->getObjectType()).lValueType;
+				auto classType = context.getConverter().getTypeManager().getTypeInfo(core::analysis::getObjectType(funType)).lValueType;
 
 				// distinguish memory location to be utilized
 				// case a) create object on stack => default
@@ -279,7 +280,7 @@ namespace backend {
 				auto obj = c_ast::deref(args[0].as<c_ast::ExpressionPtr>());
 
 				// extract class type
-				auto classType = context.getConverter().getTypeManager().getTypeInfo(funType->getObjectType()).lValueType;
+				auto classType = context.getConverter().getTypeManager().getTypeInfo(core::analysis::getObjectType(funType)).lValueType;
 
 				// create resulting call
 				res = c_ast::dtorCall(classType, obj, false); // it is not a virtual destructor if it is explicitly mentioned
@@ -603,7 +604,7 @@ namespace backend {
 
 				// make sure the object definition, ctors, dtors and member functions have already been resolved
 				// if this would not be the case, we could end up resolving e.g. a ctor while resolving the ctor itself
-				converter.getTypeManager().getTypeInfo(funType->getObjectType()); // ignore result
+				converter.getTypeManager().getTypeInfo(core::analysis::getObjectType(funType)); // ignore result
 			}
 
 			// lookup information within store
@@ -656,7 +657,7 @@ namespace backend {
 
 			} else if(funType->isMemberFunction()) {
 				// add pure-virtual member function to class declaration
-				const auto& typeInfo = typeManager.getTypeInfo(funType->getObjectType());
+				const auto& typeInfo = typeManager.getTypeInfo(core::analysis::getObjectType(funType));
 				res->prototype = typeInfo.definition;
 				res->prototype->addDependencies(fun.prototypeDependencies);
 
@@ -913,7 +914,7 @@ namespace backend {
 				// member functions are declared within object definition
 				c_ast::NamedCompositeTypePtr classDecl;
 				if(isMember) {
-					const auto& typeInfo = typeManager.getTypeInfo(funType->getObjectType());
+					const auto& typeInfo = typeManager.getTypeInfo(core::analysis::getObjectType(funType));
 					info->prototype = typeInfo.definition;
 					classDecl = typeInfo.lValueType.as<c_ast::NamedCompositeTypePtr>();
 					// add requirement of implementation
@@ -1060,7 +1061,7 @@ namespace backend {
 
 					// test whether argument is this (super-constructor call)
 					if(auto deref = refs.isCallOfRefDeref(target)) {
-						if(deref[0] == thisVar) { return funType->getObjectType(); }
+						if(deref[0] == thisVar) { return core::analysis::getObjectType(funType); }
 					}
 
 					// test whether argument is a member (member initializer)
@@ -1454,7 +1455,7 @@ namespace backend {
 			// a lazy-evaluated utility to obtain the name of a class a member function is associated to
 			auto getClassName = [&]() -> c_ast::IdentifierPtr {
 
-				const auto& type = typeManager.getTypeInfo(funType->getObjectType()).lValueType;
+				const auto& type = typeManager.getTypeInfo(core::analysis::getObjectType(funType)).lValueType;
 
 				if(const auto& tagType = type.isa<c_ast::NamedCompositeTypePtr>()) { return tagType->name; }
 

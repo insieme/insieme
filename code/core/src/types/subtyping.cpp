@@ -38,6 +38,7 @@
 
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/lang/basic.h"
+#include "insieme/core/analysis/normalize.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"
 
@@ -148,16 +149,19 @@ namespace types {
 		}
 	}
 
-	bool isSubTypeOf(const TypePtr& subType, const TypePtr& superType) {
+	bool isSubTypeOf(const TypePtr& subTy, const TypePtr& superTy) {
+		auto subType = analysis::normalize(subTy);
+		auto superType = analysis::normalize(superTy);
+
 		// quick check - reflexivity
 		if (*subType == *superType) return true;
 
 		// check for recursive types
 		if (auto tagType = subType.isa<TagTypePtr>()) {
-			if(tagType->isRecursive()) return isSubTypeOf(tagType->peel(), superType);
+			if(tagType->isRecursive()) return isSubTypeOf(tagType->peel(), superTy);
 		}
 		if (auto tagType = superType.isa<TagTypePtr>()) {
-			if(tagType->isRecursive()) return isSubTypeOf(subType, tagType->peel());
+			if(tagType->isRecursive()) return isSubTypeOf(subTy, tagType->peel());
 		}
 
 		// check reference types

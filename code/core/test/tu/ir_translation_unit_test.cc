@@ -189,11 +189,12 @@ namespace tu {
 		IRTranslationUnit tu(mgr);
 
 		auto genericType = builder.genericType("A");
-		auto thisVariable = builder.variable(builder.refType(builder.refType(genericType)));
+		auto thisType = builder.refType(genericType);
+		auto thisVariable = builder.variable(builder.refType(thisType));
 
 		auto paramsF = toVector(thisVariable);
 		auto bodyF = builder.compoundStmt(builder.returnStmt(builder.intLit(1)));
-		auto lambdaF = builder.lambdaExpr(builder.functionType(toVector(builder.refType(genericType).as<TypePtr>()), builder.getLangBasic().getInt4(), FK_MEMBER_FUNCTION), paramsF, bodyF);
+		auto lambdaF = builder.lambdaExpr(builder.functionType(toVector<TypePtr>(thisType), builder.getLangBasic().getInt4(), FK_MEMBER_FUNCTION), paramsF, bodyF);
 		auto memberFunctionF = builder.memberFunction(false, "f", lambdaF);
 		auto literalMemberFunctionF = builder.literal("A::f", lambdaF->getFunctionType());
 		tu.addFunction(literalMemberFunctionF, lambdaF);
@@ -201,13 +202,13 @@ namespace tu {
 
 		auto paramsG = toVector(thisVariable);
 		auto bodyG = builder.compoundStmt(builder.returnStmt(builder.callExpr(literalMemberFunctionF, builder.deref(thisVariable))));
-		auto lambdaG = builder.lambdaExpr(builder.functionType(toVector(builder.refType(genericType).as<TypePtr>()), builder.getLangBasic().getInt4(), FK_MEMBER_FUNCTION), paramsG, bodyG);
+		auto lambdaG = builder.lambdaExpr(builder.functionType(toVector<TypePtr>(thisType), builder.getLangBasic().getInt4(), FK_MEMBER_FUNCTION), paramsG, bodyG);
 		auto memberFunctionG = builder.memberFunction(false, "g", lambdaG);
 		auto literalMemberFunctionG = builder.literal("A::g", lambdaG->getFunctionType());
 		tu.addFunction(literalMemberFunctionG, lambdaG);
 		std::cout << "Registered member function " << literalMemberFunctionG << " of type " << literalMemberFunctionG->getType() << "\n";
 
-		auto recordType = builder.structType("A", ParentList(), FieldList(), ExpressionList(), builder.getDefaultDestructor(builder.tagTypeReference("A")), false, toVector(memberFunctionF, memberFunctionG), PureVirtualMemberFunctionList());
+		auto recordType = builder.structType("A", ParentList(), FieldList(), ExpressionList(), builder.getDefaultDestructor(thisType), false, toVector(memberFunctionF, memberFunctionG), PureVirtualMemberFunctionList());
 		tu.addType(genericType, recordType);
 
 		std::cout << "\nContents of TU:\n";

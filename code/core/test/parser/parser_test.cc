@@ -749,7 +749,12 @@ namespace parser {
 		                              "    this.a;"
 		                              "  }"
 		                              "}");
-		auto memberFunction = type.as<TagTypePtr>()->getRecord()->getMemberFunctions()[0];
+		core::MemberFunctionPtr memberFunction;
+		for (auto mfun : type.as<TagTypePtr>()->getRecord()->getMemberFunctions()) {
+			if (mfun->getNameAsString() == "f")
+				memberFunction = mfun;
+		}
+		assert_true(memberFunction) << "could not find member function in struct: \n" << dumpColor(type);
 		auto body = memberFunction->getImplementation().as<LambdaExprPtr>()->getBody();
 
 		auto stmt1 = body[0];

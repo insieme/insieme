@@ -363,7 +363,7 @@ namespace checks {
 			TypePtr thisType = builder.refType(builder.tagTypeReference("A"));
 			auto functionType = builder.functionType(toVector(thisType), thisType, FK_PLAIN);
 			auto ctor = builder.lambdaExpr(functionType, toVector(builder.variable(builder.refType(thisType))), builder.getNoOp());
-			auto err = builder.structType("A", ParentList(), FieldList(), toVector(ctor.as<ExpressionPtr>()), builder.getDefaultDestructor(builder.tagTypeReference("A")), false, MemberFunctionList(), PureVirtualMemberFunctionList());
+			auto err = builder.structType("A", ParentList(), FieldList(), toVector(ctor.as<ExpressionPtr>()), builder.getDefaultDestructor(thisType), false, MemberFunctionList(), PureVirtualMemberFunctionList());
 
 			EXPECT_PRED2(containsMSG, check(err), Message(NodeAddress(err).getAddressOfChild(1,0), EC_TYPE_INVALID_CONSTRUCTOR_TYPE, "", Message::ERROR));
 		}
@@ -373,7 +373,7 @@ namespace checks {
 			TypePtr thisType = builder.refType(builder.tagTypeReference("A"));
 			auto functionType = builder.functionType(toVector(builder.refType(thisType).as<TypePtr>()), thisType, FK_CONSTRUCTOR);
 			auto ctor = builder.lambdaExpr(functionType, toVector(builder.variable(builder.refType(thisType))), builder.getNoOp());
-			auto err = builder.structType("A", ParentList(), FieldList(), toVector(ctor.as<ExpressionPtr>()), builder.getDefaultDestructor(builder.tagTypeReference("A")), false, MemberFunctionList(), PureVirtualMemberFunctionList());
+			auto err = builder.structType("A", ParentList(), FieldList(), toVector(ctor.as<ExpressionPtr>()), builder.getDefaultDestructor(thisType), false, MemberFunctionList(), PureVirtualMemberFunctionList());
 
 			EXPECT_PRED2(containsMSG, check(err), Message(NodeAddress(err).getAddressOfChild(1,0), EC_TYPE_INVALID_CONSTRUCTOR_TYPE, "", Message::ERROR));
 		}
@@ -383,7 +383,7 @@ namespace checks {
 			TypePtr thisType = builder.refType(builder.tagTypeReference("A"));
 			auto functionType = builder.functionType(toVector(thisType), builder.genericType("A"), FK_CONSTRUCTOR);
 			auto ctor = builder.lambdaExpr(functionType, toVector(builder.variable(builder.refType(thisType))), builder.getNoOp());
-			auto err = builder.structType("A", ParentList(), FieldList(), toVector(ctor.as<ExpressionPtr>()), builder.getDefaultDestructor(builder.tagTypeReference("A")), false, MemberFunctionList(), PureVirtualMemberFunctionList());
+			auto err = builder.structType("A", ParentList(), FieldList(), toVector(ctor.as<ExpressionPtr>()), builder.getDefaultDestructor(thisType), false, MemberFunctionList(), PureVirtualMemberFunctionList());
 
 			EXPECT_PRED2(containsMSG, check(err), Message(NodeAddress(err).getAddressOfChild(1,0), EC_TYPE_INVALID_CONSTRUCTOR_TYPE, "", Message::ERROR));
 		}
@@ -477,7 +477,7 @@ namespace checks {
 			TypePtr thisType = builder.refType(builder.tagTypeReference("A"));
 			auto functionType = builder.functionType(toVector(thisType), builder.getLangBasic().getUnit(), FK_PLAIN);
 			auto memberFunction = builder.memberFunction(false, "f", builder.lambdaExpr(functionType, toVector(builder.variable(builder.refType(thisType))), builder.getNoOp()));
-			auto err = builder.structType("A", ParentList(), FieldList(), ExpressionList(), builder.getDefaultDestructor(builder.tagTypeReference("A")), false, toVector(memberFunction), PureVirtualMemberFunctionList());
+			auto err = builder.structType("A", ParentList(), FieldList(), ExpressionList(), builder.getDefaultDestructor(thisType), false, toVector(memberFunction), PureVirtualMemberFunctionList());
 
 			EXPECT_PRED2(containsMSG, check(err), Message(NodeAddress(err).getAddressOfChild(1,0), EC_TYPE_INVALID_MEMBER_FUNCTION_TYPE, "", Message::ERROR));
 		}
@@ -487,7 +487,7 @@ namespace checks {
 			TypePtr thisType = builder.refType(builder.tagTypeReference("A"));
 			auto functionType = builder.functionType(toVector(builder.refType(thisType).as<TypePtr>()), builder.getLangBasic().getUnit(), FK_MEMBER_FUNCTION);
 			auto memberFunction = builder.memberFunction(false, "f", builder.lambdaExpr(functionType, toVector(builder.variable(builder.refType(thisType))), builder.getNoOp()));
-			auto err = builder.structType("A", ParentList(), FieldList(), ExpressionList(), builder.getDefaultDestructor(builder.tagTypeReference("A")), false, toVector(memberFunction), PureVirtualMemberFunctionList());
+			auto err = builder.structType("A", ParentList(), FieldList(), ExpressionList(), builder.getDefaultDestructor(thisType), false, toVector(memberFunction), PureVirtualMemberFunctionList());
 
 			EXPECT_PRED2(containsMSG, check(err), Message(NodeAddress(err).getAddressOfChild(1,0), EC_TYPE_INVALID_MEMBER_FUNCTION_TYPE, "", Message::ERROR));
 		}
@@ -497,7 +497,7 @@ namespace checks {
 			TypePtr thisType = builder.refType(builder.tagTypeReference("A"));
 			auto functionType = builder.functionType(toVector(thisType), builder.getLangBasic().getUnit(), FK_PLAIN);
 			auto memberFunction = builder.pureVirtualMemberFunction("f", functionType);
-			auto err = builder.structType("A", ParentList(), FieldList(), ExpressionList(), builder.getDefaultDestructor(builder.tagTypeReference("A")), false, MemberFunctionList(), toVector(memberFunction));
+			auto err = builder.structType("A", ParentList(), FieldList(), ExpressionList(), builder.getDefaultDestructor(thisType), false, MemberFunctionList(), toVector(memberFunction));
 
 			EXPECT_PRED2(containsMSG, check(err), Message(NodeAddress(err).getAddressOfChild(1,0), EC_TYPE_INVALID_MEMBER_FUNCTION_TYPE, "", Message::ERROR));
 		}
@@ -507,7 +507,7 @@ namespace checks {
 			TypePtr thisType = builder.refType(builder.tagTypeReference("A"));
 			auto functionType = builder.functionType(toVector(builder.refType(thisType).as<TypePtr>()), builder.getLangBasic().getUnit(), FK_MEMBER_FUNCTION);
 			auto memberFunction = builder.pureVirtualMemberFunction("f", functionType);
-			auto err = builder.structType("A", ParentList(), FieldList(), ExpressionList(), builder.getDefaultDestructor(builder.tagTypeReference("A")), false, MemberFunctionList(), toVector(memberFunction));
+			auto err = builder.structType("A", ParentList(), FieldList(), ExpressionList(), builder.getDefaultDestructor(thisType), false, MemberFunctionList(), toVector(memberFunction));
 
 			EXPECT_PRED2(containsMSG, check(err), Message(NodeAddress(err).getAddressOfChild(1,0), EC_TYPE_INVALID_MEMBER_FUNCTION_TYPE, "", Message::ERROR));
 		}
@@ -529,7 +529,7 @@ namespace checks {
 			TypePtr thisType = builder.refType(builder.tagTypeReference("A"));
 			auto functionType = builder.functionType(toVector(thisType), builder.getLangBasic().getUnit(), FK_MEMBER_FUNCTION);
 			auto memberFunction = builder.memberFunction(false, "f", builder.lambdaExpr(functionType, toVector(builder.variable(builder.refType(thisType))), builder.getNoOp()));
-			auto err = builder.structType("A", ParentList(), FieldList(), ExpressionList(), builder.getDefaultDestructor(builder.tagTypeReference("A")), false, toVector(memberFunction, memberFunction), PureVirtualMemberFunctionList());
+			auto err = builder.structType("A", ParentList(), FieldList(), ExpressionList(), builder.getDefaultDestructor(thisType), false, toVector(memberFunction, memberFunction), PureVirtualMemberFunctionList());
 
 			EXPECT_PRED2(containsMSG, check(err), Message(NodeAddress(err).getAddressOfChild(1,0), EC_TYPE_DUPLICATE_MEMBER_FUNCTION, "", Message::ERROR));
 		}
@@ -539,7 +539,7 @@ namespace checks {
 			TypePtr thisType = builder.refType(builder.tagTypeReference("A"));
 			auto functionType = builder.functionType(toVector(thisType), builder.getLangBasic().getUnit(), FK_MEMBER_FUNCTION);
 			auto memberFunction = builder.pureVirtualMemberFunction("f", functionType);
-			auto err = builder.structType("A", ParentList(), FieldList(), ExpressionList(), builder.getDefaultDestructor(builder.tagTypeReference("A")), false, MemberFunctionList(), toVector(memberFunction, memberFunction));
+			auto err = builder.structType("A", ParentList(), FieldList(), ExpressionList(), builder.getDefaultDestructor(thisType), false, MemberFunctionList(), toVector(memberFunction, memberFunction));
 
 			EXPECT_PRED2(containsMSG, check(err), Message(NodeAddress(err).getAddressOfChild(1,0), EC_TYPE_DUPLICATE_MEMBER_FUNCTION, "", Message::ERROR));
 		}
@@ -550,7 +550,7 @@ namespace checks {
 			auto functionType = builder.functionType(toVector(thisType), builder.getLangBasic().getUnit(), FK_MEMBER_FUNCTION);
 			auto memberFunction = builder.memberFunction(false, "f", builder.lambdaExpr(functionType, toVector(builder.variable(builder.refType(thisType))), builder.getNoOp()));
 			auto pureVirtualMemberFunction = builder.pureVirtualMemberFunction("f", functionType);
-			auto err = builder.structType("A", ParentList(), FieldList(), ExpressionList(), builder.getDefaultDestructor(builder.tagTypeReference("A")), false, toVector(memberFunction), toVector(pureVirtualMemberFunction));
+			auto err = builder.structType("A", ParentList(), FieldList(), ExpressionList(), builder.getDefaultDestructor(thisType), false, toVector(memberFunction), toVector(pureVirtualMemberFunction));
 
 			EXPECT_PRED2(containsMSG, check(err), Message(NodeAddress(err).getAddressOfChild(1,0), EC_TYPE_DUPLICATE_MEMBER_FUNCTION, "", Message::ERROR));
 		}

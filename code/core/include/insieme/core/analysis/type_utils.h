@@ -37,6 +37,8 @@
 #pragma once
 
 #include "insieme/core/forward_decls.h"
+#include "insieme/core/lang/reference.h"
+#include "insieme/core/analysis/ir_utils.h"
 
 namespace insieme {
 namespace core {
@@ -101,6 +103,20 @@ namespace analysis {
 	 * @param memberFunction the memberFunction to check
 	 */
 	bool isaDefaultMember(const TagTypePtr& type, const MemberFunctionPtr& memberFunction);
+
+	/**
+	* Obtains the object type this function is attached to in case it is a constructor, destructor
+	* or member function. In case it is a plain or closure function type a call to this function is
+	* invalid.
+	*/
+	template<template <typename> class Ptr>
+	Ptr<const Type> getObjectType(const Ptr<const FunctionType>& type) {
+		assert_true(type->isConstructor() || type->isDestructor() || type->isMemberFunction() || type->isVirtualMemberFunction());
+		assert_false(type->getParameterTypes().empty());
+		assert_true(analysis::isRefType(type->getParameterType(0)));
+		return type->getParameterType(0).template as<Ptr<const GenericType>>()->getTypeParameter(0);
+	}
+
 
 } // end namespace analysis
 } // end namespace core
