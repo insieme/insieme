@@ -189,21 +189,22 @@ int main() {
     
 	// WITH DIFFERENT TYPES ///////////////////////////////////////////////////
 
-//	#p ragma test expect_ir("num_cast(1, type_lit(real<8>))+2.0")
-//	1 + 2.0;
-//
-//	#p ragma test expect_ir("int_sub(3, 4)")
-//	3.0 - 4;
-//
-//	#p ragma test expect_ir("int_mul(5, 6)")
-//	5.0f * 6;
-//
-//	#p ragma test expect_ir("int_div(7, 8)")
-//	7u / 8;
-//	
-//  #p ragma test expect_ir("")
-//	9u + 10;
-//
+	// this should work: num_cast(1, type_lit(real<8>))+2.0E+0
+	#pragma test expect_ir("num_cast(1, type_lit(real<8>))+lit(\"2.0E+0\":real<8>)")
+	1 + 2.0;
+
+	#pragma test expect_ir("lit(\"3.0E+0\":real<8>)-num_cast(4, type_lit(real<8>))")
+	3.0 - 4;
+
+	#pragma test expect_ir("lit(\"5.0E+0\":real<4>)*num_cast(6, type_lit(real<4>))")
+	5.0f * 6;
+
+	#pragma test expect_ir("7u/num_cast(8, type_lit(uint<4>))")
+	7u / 8;
+	
+	#pragma test expect_ir("9u+num_cast(10, type_lit(uint<4>))")
+	9u + 10;
+
 	// POINTER & ARRAYS ///////////////////////////////////////////////////////
 
 	// one dimension
