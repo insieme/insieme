@@ -650,20 +650,6 @@ namespace core {
 			return (FunctionKind)getFunctionKind()->getValue();
 		}
 
-		/**
-		 * Obtains the object type this function is attached to in case it is a constructor, destructor
-		 * or member function. In case it is a plain or closure function type a call to this function is
-		 * invalid.
-		 */
-		Ptr<const Type> getObjectType() const {
-			assert_true(isConstructor() || isDestructor() || isMemberFunction() || isVirtualMemberFunction());
-			assert_false(getParameterTypes().empty());
-			assert_eq(getParameterType(0)->getNodeType(), NT_GenericType);
-			static const auto caster = typename Ptr<const GenericType>::StaticCast();
-			Ptr<const GenericType> type = caster.template operator()<const GenericType>(getParameterType(0));
-			assert_true(!type->getTypeParameter().empty());
-			return type->getTypeParameter(0);
-		}
 	IR_NODE_END()
 
 	/**
@@ -1196,8 +1182,7 @@ namespace core {
 		 * @return the requested field list instance managed by the given manager
 		 */
 		static FieldsPtr get(NodeManager& manager, const FieldList& fields = FieldList()) {
-			auto result = hasDuplicates(fields, [](const FieldPtr& field) { return field->getName()->getValue(); });
-			assert_false(result)  << "field names must be unique";
+			assert_false(hasDuplicates(fields, [](const FieldPtr& field) { return field->getName()->getValue(); }))  << "field names must be unique";
 			return manager.get(Fields(convertList(fields)));
 		}
 

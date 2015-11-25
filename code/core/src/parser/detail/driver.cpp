@@ -400,7 +400,7 @@ namespace parser {
 			}
 
 			// register type in translation unit
-			tu.addType(key, res);
+			tu.insertRecordTypeWithDefaults(key, res);
 
 			// done
 			return key;
@@ -427,7 +427,7 @@ namespace parser {
 				res =  builder.unionTypeWithDefaults(builder.refType(key), fields,
 				                                     ExpressionList(), ExpressionPtr(), false, MemberFunctionList(), PureVirtualMemberFunctionList());
 			}
-			tu.addType(key, res);
+			tu.insertRecordTypeWithDefaults(key, res);
 
 			//end the record here
 			endRecord();
@@ -452,7 +452,11 @@ namespace parser {
 						error(l, format("Parameter %s is not of ref type", var));
 						return TypeList();
 					}
-					paramTypes.push_back(analysis::getReferencedType(var.getType()));
+					if (lang::isCppReference(var->getType()) || lang::isCppRValueReference(var->getType())) {
+						paramTypes.push_back(var->getType());
+					} else {
+						paramTypes.push_back(analysis::getReferencedType(var.getType()));
+					}
 				}
 			}
 			return paramTypes;
@@ -469,10 +473,10 @@ namespace parser {
 			// build resulting function type
 			auto funcType = builder.functionType(paramTypes, retType, functionKind);
 
-			// if it is a function that is defined
+			// if it is a function with explicitly auto-created parameters no materialization of the parameters is required
 			if (!inLambda) {
 				// => skip materialization of parameters
-				return builder.lambdaExpr(funcType.as<FunctionTypePtr>(), params, body);
+				return builder.lambdaExpr(funcType, params, body);
 			}
 
 			// replace all variables in the body by their implicitly materialized version
@@ -1024,6 +1028,9 @@ namespace parser {
 			auto emptyName = builder.stringValue("");
 			for (auto temporaryName : temporaryAnonymousNames) {
 				replacements[temporaryName] = emptyName;
+				replacements[builder.stringValue(temporaryName->getValue() + "::ctor")] = builder.stringValue("::ctor");
+				replacements[builder.stringValue(temporaryName->getValue() + "::dtor")] = builder.stringValue("::dtor");
+				replacements[builder.stringValue(temporaryName->getValue() + "::operator_assign")] = builder.stringValue("::operator_assign");
 			}
 			result = transform::replaceAll(mgr, result, replacements, transform::globalReplacement);
 		}

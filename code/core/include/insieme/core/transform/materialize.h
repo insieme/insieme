@@ -6,6 +6,8 @@ namespace insieme {
 namespace core {
 namespace transform {
 
+	TypePtr materialize(const TypePtr&);
+
 	struct LambdaIngredients {
 		VariableList params;
 		StatementPtr body;

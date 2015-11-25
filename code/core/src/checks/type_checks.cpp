@@ -50,6 +50,8 @@
 #include "insieme/core/lang/reference.h"
 #include "insieme/core/lang/pointer.h"
 
+#include "insieme/core/transform/materialize.h"
+
 #include "insieme/utils/numeric_cast.h"
 
 namespace insieme {
@@ -456,8 +458,8 @@ namespace checks {
 		}
 
 		// 3) check return type - which has to be matched with modified function return value.
-		TypePtr retType = substitution->applyTo(returnType);
-		TypePtr resType = address->getType();
+		TypePtr retType = analysis::normalize(substitution->applyTo(returnType));
+		TypePtr resType = analysis::normalize(address->getType());
 
 		if(!core::types::isSubTypeOf(retType, resType)) {
 			add(res, Message(address, EC_TYPE_INVALID_RETURN_TYPE,
@@ -591,15 +593,43 @@ namespace checks {
 		// check type of lambda
 		IRBuilder builder(lambda->getNodeManager());
 		FunctionTypePtr funTypeIs = lambda->getLambda()->getType();
-		FunctionTypePtr funTypeShould =
-		    builder.functionType(::transform(lambda->getLambda()->getParameterList(), [](const VariablePtr& cur) { return analysis::getReferencedType(cur->getType()); }),
-		                         funTypeIs->getReturnType(), funTypeIs->getKind());
-		if(*funTypeIs != *funTypeShould) {
-			add(res, Message(address, EC_TYPE_INVALID_LAMBDA_TYPE, format("Invalid type of lambda definition for variable %s - is: %s, should %s",
-			                                                              toString(*lambda->getReference()), toString(*funTypeIs), toString(*funTypeShould)),
-			                 Message::ERROR));
+
+		TypesPtr types = funTypeIs->getParameterTypes();
+		vector<TypePtr> paramTypes;
+		for (std::size_t i = 0; i < types.size(); ++i) {
+			
+			auto parameter = address->getParameterList()[i];
+			auto should = transform::materialize(types[i]);
+			auto is = parameter->getType();
+
+			if (*is != *should) {
+				add(res, Message(
+						parameter, EC_TYPE_INVALID_LAMBDA_TYPE, 
+						format("Invalid parameters type of %s - is: %s, should %s", *parameter, *is, *should),
+						Message::ERROR
+					)
+				);
+			}
 		}
 
+		/*
+		FunctionTypePtr funTypeShould =
+		    builder.functionType(::transform(lambda->getLambda()->getParameterList(), [](const VariablePtr& cur)->TypePtr { 
+			auto argument = 
+			return (lang::isReference(cur->getType()) ? cur->getType() : 
+			return analysis::getReferencedType(cur->getType()); 
+		}), funTypeIs->getReturnType(), funTypeIs->getKind());
+		
+		if(*funTypeIs != *funTypeShould) {
+			add(res, Message(address, EC_TYPE_INVALID_LAMBDA_TYPE, format("Invalid type of lambda definition for lambda reference %s - is: %s, should %s",
+			    toString(*lambda->getReference()), 
+				toString(*funTypeIs), 
+				toString(*funTypeShould)),
+			    Message::ERROR)
+			);
+		}
+
+		*/
 		return res;
 	}
 
@@ -701,8 +731,8 @@ namespace checks {
 		DeclarationStmtPtr declaration = address.getAddressedNode();
 
 		// just test whether same type is on both sides
-		TypePtr variableType = declaration->getVariable()->getType();
-		TypePtr initType = declaration->getInitialization()->getType();
+		TypePtr variableType = analysis::normalize(declaration->getVariable()->getType());
+		TypePtr initType = analysis::normalize(declaration->getInitialization()->getType());
 
 		if(!types::isSubTypeOf(initType, variableType)) {
 			add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR, format("Invalid type of initial value - expected: \n%s, actual: \n%s",
