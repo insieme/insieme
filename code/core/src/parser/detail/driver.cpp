@@ -400,7 +400,7 @@ namespace parser {
 			}
 
 			// register type in translation unit
-			tu.addType(key, res);
+			tu.insertRecordTypeWithDefaults(key, res);
 
 			// done
 			return key;
@@ -427,7 +427,7 @@ namespace parser {
 				res =  builder.unionTypeWithDefaults(builder.refType(key), fields,
 				                                     ExpressionList(), ExpressionPtr(), false, MemberFunctionList(), PureVirtualMemberFunctionList());
 			}
-			tu.addType(key, res);
+			tu.insertRecordTypeWithDefaults(key, res);
 
 			//end the record here
 			endRecord();
@@ -1028,6 +1028,9 @@ namespace parser {
 			auto emptyName = builder.stringValue("");
 			for (auto temporaryName : temporaryAnonymousNames) {
 				replacements[temporaryName] = emptyName;
+				replacements[builder.stringValue(temporaryName->getValue() + "::ctor")] = builder.stringValue("::ctor");
+				replacements[builder.stringValue(temporaryName->getValue() + "::dtor")] = builder.stringValue("::dtor");
+				replacements[builder.stringValue(temporaryName->getValue() + "::operator_assign")] = builder.stringValue("::operator_assign");
 			}
 			result = transform::replaceAll(mgr, result, replacements, transform::globalReplacement);
 		}

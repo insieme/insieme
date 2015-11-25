@@ -222,7 +222,7 @@ namespace analysis {
 			"}")));
 	}
 
-	TEST(CopyConstructor, DISABLED_UserDefaulted) {
+	TEST(CopyConstructor, UserDefaulted) {
 		NodeManager manager;
 		IRBuilder builder(manager);
 		EXPECT_TRUE(isTrivial(builder.parseType(
@@ -242,7 +242,7 @@ namespace analysis {
 			"}")));
 	}
 
-	TEST(MoveConstructor, DISABLED_UserDefaulted) {
+	TEST(MoveConstructor, UserDefaulted) {
 		NodeManager manager;
 		IRBuilder builder(manager);
 		EXPECT_TRUE(isTrivial(builder.parseType(
@@ -263,7 +263,7 @@ namespace analysis {
 			"}")));
 	}
 
-	TEST(Constructors, DISABLED_UserDefaulted) {
+	TEST(Constructors, UserDefaulted) {
 		NodeManager manager;
 		IRBuilder builder(manager);
 		EXPECT_TRUE(isTrivial(builder.parseType(
@@ -335,7 +335,7 @@ namespace analysis {
 			"}")));
 	}
 
-	TEST(ConstructorsAndAssignments, DISABLED_UserDefaulted) {
+	TEST(ConstructorsAndAssignments, UserDefaulted) {
 		NodeManager manager;
 		IRBuilder builder(manager);
 		EXPECT_TRUE(isTrivial(builder.parseType(

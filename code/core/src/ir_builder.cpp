@@ -60,6 +60,7 @@
 
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"
+#include "insieme/core/analysis/type_utils.h"
 
 #include "insieme/core/encoder/lists.h"
 
@@ -511,27 +512,32 @@ namespace core {
 	LambdaExprPtr IRBuilderBaseModule::getDefaultConstructor(const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields) const {
 		assert_true(analysis::isRefType(thisType)) << "thisType has to be a ref type";
 		auto ctorType = functionType(toVector(thisType), thisType, FK_CONSTRUCTOR);
-		return normalize(lambdaExpr(ctorType, toVector(variable(refType(thisType))), getNoOp())).as<LambdaExprPtr>();
+		auto name = getLiteralForConstructor(ctorType);
+		return normalize(lambdaExpr(ctorType, toVector(variable(refType(thisType))), getNoOp(), name->getValue()->getValue())).as<LambdaExprPtr>();
 	}
 
 	LambdaExprPtr IRBuilderBaseModule::getDefaultCopyConstructor(const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields) const {
 		assert_true(analysis::isRefType(thisType)) << "thisType has to be a ref type";
 		TypePtr otherType = refType(analysis::getReferencedType(thisType), true, false, lang::ReferenceType::Kind::CppReference);
 		auto ctorType = functionType(toVector(thisType, otherType), thisType, FK_CONSTRUCTOR);
-		return normalize(lambdaExpr(ctorType, toVector(variable(refType(thisType)), variable(otherType)), getNoOp())).as<LambdaExprPtr>();
+		auto name = getLiteralForConstructor(ctorType);
+		return normalize(lambdaExpr(ctorType, toVector(variable(refType(thisType)), variable(otherType)), getNoOp(), name->getValue()->getValue())).as<LambdaExprPtr>();
 	}
 
 	LambdaExprPtr IRBuilderBaseModule::getDefaultMoveConstructor(const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields) const {
 		assert_true(analysis::isRefType(thisType)) << "thisType has to be a ref type";
 		TypePtr otherType = refType(analysis::getReferencedType(thisType), false, false, lang::ReferenceType::Kind::CppRValueReference);
 		auto ctorType = functionType(toVector(thisType, otherType), thisType, FK_CONSTRUCTOR);
-		return normalize(lambdaExpr(ctorType, toVector(variable(refType(thisType)), variable(otherType)), getNoOp())).as<LambdaExprPtr>();
+		auto name = getLiteralForConstructor(ctorType);
+		return normalize(lambdaExpr(ctorType, toVector(variable(refType(thisType)), variable(otherType)), getNoOp(), name->getValue()->getValue())).as<LambdaExprPtr>();
 	}
 
 	LambdaExprPtr IRBuilderBaseModule::getDefaultDestructor(const TypePtr& thisType) const {
+		assert_true(analysis::isRefType(thisType)) << "thisType has to be a ref type";
 		// create default destructor
 		auto dtorType = functionType(toVector(thisType), thisType, FK_DESTRUCTOR);
-		return normalize(lambdaExpr(dtorType, toVector(variable(refType(thisType))), getNoOp())).as<LambdaExprPtr>();
+		auto name = getLiteralForDestructor(dtorType);
+		return normalize(lambdaExpr(dtorType, toVector(variable(refType(thisType))), getNoOp(), name->getValue()->getValue())).as<LambdaExprPtr>();
 	}
 
 	MemberFunctionPtr IRBuilderBaseModule::getDefaultCopyAssignOperator(const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields) const {
@@ -541,7 +547,8 @@ namespace core {
 		auto funType = functionType(toVector(thisType, otherType), resType, FK_MEMBER_FUNCTION);
 		auto thisParam = variable(refType(thisType));
 		auto res = returnStmt(lang::buildRefCast(deref(thisParam),resType));
-		auto fun = normalize(lambdaExpr(funType, toVector(thisParam, variable(otherType)), res)).as<LambdaExprPtr>();
+		auto name = getLiteralForMemberFunction(funType, "operator_assign");
+		auto fun = normalize(lambdaExpr(funType, toVector(thisParam, variable(otherType)), res, name->getValue()->getValue())).as<LambdaExprPtr>();
 		return memberFunction(false, "operator_assign", fun);
 	}
 
@@ -549,31 +556,34 @@ namespace core {
 		assert_true(analysis::isRefType(thisType)) << "thisType has to be a ref type";
 		TypePtr otherType = refType(analysis::getReferencedType(thisType), false, false, lang::ReferenceType::Kind::CppRValueReference);
 		TypePtr resType = refType(analysis::getReferencedType(thisType), false, false, lang::ReferenceType::Kind::CppReference);
-		auto ctorType = functionType(toVector(thisType, otherType), resType, FK_MEMBER_FUNCTION);
+		auto funType = functionType(toVector(thisType, otherType), resType, FK_MEMBER_FUNCTION);
 		auto thisParam = variable(refType(thisType));
 		auto res = returnStmt(lang::buildRefCast(deref(thisParam),resType));
-		auto fun = normalize(lambdaExpr(ctorType, toVector(thisParam, variable(otherType)), res)).as<LambdaExprPtr>();
+		auto name = getLiteralForMemberFunction(funType, "operator_assign");
+		auto fun = normalize(lambdaExpr(funType, toVector(thisParam, variable(otherType)), res, name->getValue()->getValue())).as<LambdaExprPtr>();
 		return memberFunction(false, "operator_assign", fun);
 	}
 
-	LiteralPtr IRBuilderBaseModule::getLiteralForMember(const FunctionTypePtr& functionType, const std::string& memberName) {
+	LiteralPtr IRBuilderBaseModule::getLiteralForMember(const FunctionTypePtr& functionType, const std::string& memberName) const {
 		if (!functionType->isMember()) {
 			return LiteralPtr();
 		}
-
-		auto recordName = functionType->getObjectType().as<GenericTypePtr>()->getName()->getValue();
+		std::string recordName;
+		const auto ft = analysis::getObjectType(functionType);
+		if (TagTypeReferencePtr ttref = ft.isa<TagTypeReferencePtr>()) recordName = ttref->getName()->getValue();
+		if (GenericTypePtr gt = ft.isa<GenericTypePtr>()) recordName = gt->getName()->getValue();
 		return literal(recordName + "::" + memberName, functionType);
 	}
 
-	LiteralPtr IRBuilderBaseModule::getLiteralForConstructor(const FunctionTypePtr& functionType) {
+	LiteralPtr IRBuilderBaseModule::getLiteralForConstructor(const FunctionTypePtr& functionType) const {
 		return getLiteralForMember(functionType, "ctor");
 	}
 
-	LiteralPtr IRBuilderBaseModule::getLiteralForDestructor(const FunctionTypePtr& functionType) {
+	LiteralPtr IRBuilderBaseModule::getLiteralForDestructor(const FunctionTypePtr& functionType) const {
 		return getLiteralForMember(functionType, "dtor");
 	}
 
-	LiteralPtr IRBuilderBaseModule::getLiteralForMemberFunction(const FunctionTypePtr& functionType, const std::string& memberName) {
+	LiteralPtr IRBuilderBaseModule::getLiteralForMemberFunction(const FunctionTypePtr& functionType, const std::string& memberName) const {
 		return getLiteralForMember(functionType, memberName);
 	}
 
@@ -1027,16 +1037,16 @@ namespace core {
 		return lambda(type, params, wrapBody(body));
 	}
 
-	LambdaExprPtr IRBuilderBaseModule::lambdaExpr(const TypePtr& returnType, const VariableList& params, const StatementPtr& body) const {
+	LambdaExprPtr IRBuilderBaseModule::lambdaExpr(const TypePtr& returnType, const VariableList& params, const StatementPtr& body, const std::string& name) const {
 		auto paramVarTypes = extractTypes(params);
 		assert_true(::all(paramVarTypes, lang::isReference)) << "All parameters need to be reference types, given: " << paramVarTypes;
 		auto paramTypes = ::transform(paramVarTypes, analysis::getReferencedType);
-		return lambdaExpr(functionType(paramTypes, returnType, FK_PLAIN), params, wrapBody(body));
+		return lambdaExpr(functionType(paramTypes, returnType, FK_PLAIN), params, wrapBody(body), name);
 	}
 
-	LambdaExprPtr IRBuilderBaseModule::lambdaExpr(const FunctionTypePtr& type, const VariableList& params, const StatementPtr& body) const {
+	LambdaExprPtr IRBuilderBaseModule::lambdaExpr(const FunctionTypePtr& type, const VariableList& params, const StatementPtr& body, const std::string& name) const {
 		assert_true(::all(extractTypes(params), lang::isReference)) << "All parameters need to be reference types, given: " << extractTypes(params);
-		return lambdaExpr(lambda(type, params, body));
+		return lambdaExpr(lambda(type, params, body), name);
 	}
 
 	BindExprPtr IRBuilderBaseModule::bindExpr(const VariableList& params, const CallExprPtr& call) const {
