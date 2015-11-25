@@ -158,10 +158,10 @@ namespace types {
 
 		// check for recursive types
 		if (auto tagType = subType.isa<TagTypePtr>()) {
-			if(tagType->isRecursive()) return isSubTypeOf(tagType->peel(), superTy);
+			if(tagType->isRecursive()) return isSubTypeOf(tagType->peel(), superType);
 		}
 		if (auto tagType = superType.isa<TagTypePtr>()) {
-			if(tagType->isRecursive()) return isSubTypeOf(subTy, tagType->peel());
+			if(tagType->isRecursive()) return isSubTypeOf(subType, tagType->peel());
 		}
 
 		// check reference types
