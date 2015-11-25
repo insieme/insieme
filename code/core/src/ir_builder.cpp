@@ -518,14 +518,14 @@ namespace core {
 		assert_true(analysis::isRefType(thisType)) << "thisType has to be a ref type";
 		TypePtr otherType = refType(analysis::getReferencedType(thisType), true, false, lang::ReferenceType::Kind::CppReference);
 		auto ctorType = functionType(toVector(thisType, otherType), thisType, FK_CONSTRUCTOR);
-		return normalize(lambdaExpr(ctorType, toVector(variable(refType(thisType)), variable(refType(otherType))), getNoOp())).as<LambdaExprPtr>();
+		return normalize(lambdaExpr(ctorType, toVector(variable(refType(thisType)), variable(otherType)), getNoOp())).as<LambdaExprPtr>();
 	}
 
 	LambdaExprPtr IRBuilderBaseModule::getDefaultMoveConstructor(const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields) const {
 		assert_true(analysis::isRefType(thisType)) << "thisType has to be a ref type";
 		TypePtr otherType = refType(analysis::getReferencedType(thisType), false, false, lang::ReferenceType::Kind::CppRValueReference);
 		auto ctorType = functionType(toVector(thisType, otherType), thisType, FK_CONSTRUCTOR);
-		return normalize(lambdaExpr(ctorType, toVector(variable(refType(thisType)), variable(refType(otherType))), getNoOp())).as<LambdaExprPtr>();
+		return normalize(lambdaExpr(ctorType, toVector(variable(refType(thisType)), variable(otherType)), getNoOp())).as<LambdaExprPtr>();
 	}
 
 	LambdaExprPtr IRBuilderBaseModule::getDefaultDestructor(const TypePtr& thisType) const {
@@ -541,7 +541,7 @@ namespace core {
 		auto funType = functionType(toVector(thisType, otherType), resType, FK_MEMBER_FUNCTION);
 		auto thisParam = variable(refType(thisType));
 		auto res = returnStmt(lang::buildRefCast(deref(thisParam),resType));
-		auto fun = normalize(lambdaExpr(funType, toVector(thisParam, variable(refType(otherType))), res)).as<LambdaExprPtr>();
+		auto fun = normalize(lambdaExpr(funType, toVector(thisParam, variable(otherType)), res)).as<LambdaExprPtr>();
 		return memberFunction(false, "operator_assign", fun);
 	}
 
@@ -552,7 +552,7 @@ namespace core {
 		auto ctorType = functionType(toVector(thisType, otherType), resType, FK_MEMBER_FUNCTION);
 		auto thisParam = variable(refType(thisType));
 		auto res = returnStmt(lang::buildRefCast(deref(thisParam),resType));
-		auto fun = normalize(lambdaExpr(ctorType, toVector(thisParam, variable(refType(otherType))), res)).as<LambdaExprPtr>();
+		auto fun = normalize(lambdaExpr(ctorType, toVector(thisParam, variable(otherType)), res)).as<LambdaExprPtr>();
 		return memberFunction(false, "operator_assign", fun);
 	}
 

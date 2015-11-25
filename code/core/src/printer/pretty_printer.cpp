@@ -803,7 +803,7 @@ namespace printer {
 				}
 			}
 
-			PRINT(TupleType) { out << join(", ", node->getElementTypes(), [&](std::ostream&, const TypeAddress& cur) { VISIT(cur); }); }
+			PRINT(TupleType) { out << "(" << join(", ", node->getElementTypes(), [&](std::ostream&, const TypeAddress& cur) { VISIT(cur); }) << ")"; }
 
 			PRINT(Type) {
 				if(auto tagtype = node.isa<TagTypeAddress>())

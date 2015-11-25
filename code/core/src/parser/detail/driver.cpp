@@ -452,7 +452,11 @@ namespace parser {
 						error(l, format("Parameter %s is not of ref type", var));
 						return TypeList();
 					}
-					paramTypes.push_back(analysis::getReferencedType(var.getType()));
+					if (lang::isCppReference(var->getType()) || lang::isCppRValueReference(var->getType())) {
+						paramTypes.push_back(var->getType());
+					} else {
+						paramTypes.push_back(analysis::getReferencedType(var.getType()));
+					}
 				}
 			}
 			return paramTypes;
@@ -469,10 +473,10 @@ namespace parser {
 			// build resulting function type
 			auto funcType = builder.functionType(paramTypes, retType, functionKind);
 
-			// if it is a function that is defined
+			// if it is a function with explicitly auto-created parameters no materialization of the parameters is required
 			if (!inLambda) {
 				// => skip materialization of parameters
-				return builder.lambdaExpr(funcType.as<FunctionTypePtr>(), params, body);
+				return builder.lambdaExpr(funcType, params, body);
 			}
 
 			// replace all variables in the body by their implicitly materialized version

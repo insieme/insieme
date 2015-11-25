@@ -120,6 +120,12 @@ namespace parser {
 		EXPECT_TRUE(test_type(nm, "alias papa = t<11>; alias mama = t<4>; struct name : [ papa, mama ] { a: int<4>; b : int<5>;}"));
 		EXPECT_TRUE(test_type(nm, "alias papa = t<11>; struct name :[ papa ]{ a : int<4>; b : int<5>;}"));
 
+		// tuple types
+		EXPECT_TRUE(test_type(nm, "(int<4>, int<8>)"));
+		EXPECT_TRUE(test_type(nm, "(int<4>, struct {a:int<4>;})"));
+		EXPECT_TRUE(test_type(nm, "(int<4>, struct {a:int<4>; b:int<8>;})"));
+		EXPECT_TRUE(test_type(nm, "alias int = int<4>; (int, struct {a:int; b:int<8>;}, int<7>)"));
+
 		// Extended test for structs with parents
 		EXPECT_TRUE(test_type(nm, "alias A = struct name { a : int<4>;}; struct B : [ private A ]         { b : int<8>;}"));
 		EXPECT_TRUE(test_type(nm, "alias A = struct name { a : int<4>;}; struct B : [ virtual private A ] { b : int<8>;}"));
@@ -394,7 +400,7 @@ namespace parser {
 		}
 	}
 
-	TEST(After_Before_Test, Let) {
+TEST(After_Before_Test, Let) {
 		NodeManager mgr;
     	EXPECT_TRUE(test_program(mgr, "alias int = int<4>; int main () { return 1; }"));
 		EXPECT_TRUE(test_program(mgr, "alias int = int<4>; alias long = int<8>; long main ( a : int) { return 1; }"));

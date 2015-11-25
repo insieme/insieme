@@ -1196,8 +1196,7 @@ namespace core {
 		 * @return the requested field list instance managed by the given manager
 		 */
 		static FieldsPtr get(NodeManager& manager, const FieldList& fields = FieldList()) {
-			auto result = hasDuplicates(fields, [](const FieldPtr& field) { return field->getName()->getValue(); });
-			assert_false(result)  << "field names must be unique";
+			assert_false(hasDuplicates(fields, [](const FieldPtr& field) { return field->getName()->getValue(); }))  << "field names must be unique";
 			return manager.get(Fields(convertList(fields)));
 		}
 
