@@ -317,7 +317,11 @@ namespace conversion {
 		return retIr;
 	}
 
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//						CXX CONSTRUCTOR CALL EXPRESSION
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	namespace {
+		/// Convert a ConstructExpr to an IR constructor call, allocating the required memory either on the stack (default) or on the heap 
 		core::ExpressionPtr convertConstructExprInternal(Converter& converter, const clang::CXXConstructExpr* constructExpr, bool onStack) {
 			auto& builder = converter.getIRBuilder();
 			core::TypePtr resType = converter.convertType(constructExpr->getType());
@@ -336,6 +340,7 @@ namespace conversion {
 
 			// get constructor lambda
 			auto constructorLambda = converter.getDeclConverter()->convertMethodDecl(constructExpr->getConstructor()).lit;
+			VLOG(2) << "constructor lambda literal " << *constructorLambda << " of type " << dumpColor(constructorLambda->getType());
 
 			// return call
 			auto retType = constructorLambda->getType().as<core::FunctionTypePtr>()->getReturnType();
@@ -343,9 +348,6 @@ namespace conversion {
 		}
 	}
 
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	//						CXX CONSTRUCTOR CALL EXPRESSION
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr Converter::CXXExprConverter::VisitCXXConstructExpr(const clang::CXXConstructExpr* callExpr) {
 		core::ExpressionPtr retIr;
 		LOG_EXPR_CONVERSION(callExpr, retIr);
@@ -360,6 +362,7 @@ namespace conversion {
 	//						CXX NEW CALL EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	namespace {
+		/// Resize the array created by an array create call (required due to mismatched size reported for initializer expressions in new[])
 		core::ExpressionPtr resizeArrayCreate(const Converter& converter, const core::ExpressionPtr& createExpr, const core::ExpressionPtr& newSize) {
 			auto& nodeMan = createExpr->getNodeManager();
 			auto& arrExp = nodeMan.getLangExtension<core::lang::ArrayExtension>();
@@ -397,7 +400,11 @@ namespace conversion {
 
 			// initialize pointer either from ref for scalars or from array
 			retExpr = newExpr->isArray() ? core::lang::buildPtrFromArray(newExp) : core::lang::buildPtrFromRef(newExp);
-		}// else {
+		}
+		// we have a constructor, so we are building a class
+		else {
+			retExpr = core::lang::buildPtrFromRef(convertConstructExprInternal(converter, newExpr->getConstructExpr(), false));
+
 		//	core::ExpressionPtr ctorCall = Visit(callExpr->getConstructExpr());
 		//	frontend_assert(ctorCall.isa<core::CallExprPtr>()) << "aint constructor call in here, no way to translate NEW\n";
 
@@ -448,7 +455,7 @@ namespace conversion {
 		//			}
 		//		}
 		//	}
-		//}
+		}
 
 		if(!retExpr) assert_not_implemented();
 

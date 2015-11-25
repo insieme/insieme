@@ -119,6 +119,7 @@ namespace conversion {
 		for(auto mem : classDecl->methods()) {
 			auto convDecl = converter.getDeclConverter()->convertMethodDecl(mem);
 			if(convDecl.lambda) {
+				VLOG(2) << "adding method lambda literal " << *convDecl.lit << " of type " << dumpColor(convDecl.lit->getType()) << "to IRTU";
 				converter.getIRTranslationUnit().addFunction(convDecl.lit, convDecl.lambda);
 			}
 			if(mem->isVirtual() && mem->isPure()) {
