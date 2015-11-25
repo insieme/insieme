@@ -79,7 +79,7 @@ namespace tu {
 	}
 
 	std::ostream& IRTranslationUnit::printTo(std::ostream& out) const {
-		static auto print = [](const core::NodePtr& node) { return core::printer::printInOneLine(node); };
+		static auto print = [](const core::NodePtr& node) { return toString(node); };
 		return out << "TU(\n\tTypes:\n\t\t"
 		           << join("\n\t\t", types,
 		                   [&](std::ostream& out, const std::pair<core::GenericTypePtr, core::TypePtr>& cur) { out << *cur.first << " => " << *cur.second; })
@@ -198,6 +198,9 @@ namespace tu {
 
 		  public:
 			Resolver(NodeManager& mgr, const IRTranslationUnit& unit) : mgr(mgr), builder(mgr), symbolMap() {
+
+				VLOG(3) << "#####################################################\n" << unit << "########################################\n";
+
 				// copy type symbols into symbol table
 				for(auto cur : unit.getTypes()) {
 					symbolMap[mgr.get(cur.first)] = mgr.get(cur.second);

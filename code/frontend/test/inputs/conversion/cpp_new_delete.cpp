@@ -1,4 +1,10 @@
 
+struct SimplestConstructor {
+	SimplestConstructor() {}
+	~SimplestConstructor() {}
+};
+
+
 int main() {
 	;
 	
@@ -41,6 +47,14 @@ int main() {
 		int *arri = new int[50] {1,2,3};
 		delete [] arri;
 	}
+
+	// Class types ---------------------------------------------------------------------------------------------------------------------------------------------
+
+	//{
+	//	SimplestConstructor *simple = new SimplestConstructor;
+	//	delete simple;
+	//}
+	
 
 	return 0;
 }

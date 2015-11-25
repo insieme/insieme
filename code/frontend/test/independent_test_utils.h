@@ -209,7 +209,13 @@ namespace frontend {
 		}
 		EXPECT_EQ(visited, occurrences);
 
-		//dumpColor(res);
+		dumpColor(res);
+
+		//std::cout << res;
+
+		//visitDepthFirstOnce(res, [](const LiteralPtr& lit) { 
+		//	std::cout << "Literal: " << *lit << "\n of type " << *lit->getType() << "\n\n";
+		//});
 
 		auto checkResult = core::checks::check(res);
 		EXPECT_EQ(checkResult.size(), 0) << checkResult;
