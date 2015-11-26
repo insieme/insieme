@@ -439,7 +439,7 @@ namespace core {
 		EXPECT_TRUE(recAddr);
 	}
 
-	TEST(TypeTest, DISABLED_StructType) {
+	TEST(TypeTest, StructType) {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
@@ -448,17 +448,23 @@ namespace core {
 		entriesA.push_back(builder.field("b", GenericType::get(manager, "B")));
 
 		auto genStructA = builder.structType(entriesA);
-		EXPECT_EQ("struct {a:A,b:B,dtor()}", toString(*genStructA));
+		EXPECT_EQ("struct {a:A,b:B,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>)," \
+				  "dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,"\
+				  "operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}", toString(*genStructA));
 
 		vector<FieldPtr> entriesB;
 		auto genStructB = builder.structType(entriesB);
-		EXPECT_EQ("struct {dtor()}", toString(*genStructB));
+		EXPECT_EQ("struct {ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>)," \
+				  "dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>," \
+				  "operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}", toString(*genStructB));
 
 		vector<FieldPtr> entriesC;
 		entriesC.push_back(builder.field("a", TypeVariable::get(manager, "alpha")));
 		entriesC.push_back(builder.field("b", GenericType::get(manager, "B")));
 		auto genStructC = builder.structType(entriesC);
-		EXPECT_EQ("struct {a:'alpha,b:B,dtor()}", toString(*genStructC));
+		EXPECT_EQ("struct {a:'alpha,b:B,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>)," \
+				  "dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>," \
+				  "operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}", toString(*genStructC));
 
 		// test for elements with same name
 		vector<FieldPtr> entriesD;
@@ -489,7 +495,7 @@ namespace core {
 		basicTypeTests(genStructC, false, toList(toVector<NodePtr>(tagType, tagDefinitionC)));
 	}
 
-	TEST(TypeTest, DISABLED_StructTypeParents) {
+	TEST(TypeTest, StructTypeParents) {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
@@ -497,21 +503,39 @@ namespace core {
 		vector<FieldPtr> entriesA;
 		entriesA.push_back(builder.field("a", GenericType::get(manager, "A")));
 		auto genStructA = builder.structType(entriesA);
-		EXPECT_EQ("struct {a:A,dtor()}", toString(*genStructA));
+		EXPECT_EQ("struct {a:A,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>)," \
+				  "dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>," \
+				  "operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}", toString(*genStructA));
 
 		// create derived type B : A
 		vector<FieldPtr> entriesB;
 		entriesB.push_back(builder.field("b", GenericType::get(manager, "B")));
 		ParentsPtr parentsB = Parents::get(manager, toVector(Parent::get(manager, genStructA)));
 		auto genStructB = builder.structType(parentsB, entriesB);
-		EXPECT_EQ("struct : [struct {a:A,dtor()}] {b:B,dtor()}", toString(*genStructB));
+		EXPECT_EQ("struct : [struct {a:A,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>)," \
+				  "dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>," \
+				  "operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}] " \
+				  "{b:B,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor()," \
+				  "operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>," \
+				  "operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}", toString(*genStructB));
 
 		// create derived type C : A, B
 		vector<FieldPtr> entriesC;
 		entriesC.push_back(builder.field("c", GenericType::get(manager, "C")));
 		ParentsPtr parentsC = Parents::get(manager, toVector(Parent::get(manager, genStructA), Parent::get(manager, true, genStructB)));
 		auto genStructC = builder.structType(parentsC, entriesC);
-		EXPECT_EQ("struct : [struct {a:A,dtor()}, virtual struct : [struct {a:A,dtor()}] {b:B,dtor()}] {c:C,dtor()}", toString(*genStructC));
+		EXPECT_EQ("struct : [struct {a:A,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>)," \
+				  "dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>," \
+				  "operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}, " \
+				  "virtual struct : [struct {a:A,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>)," \
+				  "dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,"\
+				  "operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}] " \
+				  "{b:B,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>)," \
+				  "dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>," \
+				  "operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}] " \
+				  "{c:C,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>)," \
+				  "dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>," \
+				  "operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}", toString(*genStructC));
 
 		// this is an anonymous tagType reference
 		auto tagType = builder.tagTypeReference("");
@@ -526,7 +550,7 @@ namespace core {
 		basicTypeTests(genStructC, true, toList(toVector<NodePtr>(tagType, tagDefinitionC)));
 	}
 
-	TEST(TypeTest, DISABLED_StructTypeNames) {
+	TEST(TypeTest, StructTypeNames) {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
@@ -534,21 +558,39 @@ namespace core {
 		vector<FieldPtr> entriesA;
 		entriesA.push_back(builder.field("a", GenericType::get(manager, "A")));
 		auto genStructA = builder.structType("xy", entriesA);
-		EXPECT_EQ("struct xy {a:A,dtor()}", toString(*genStructA));
+		EXPECT_EQ("struct xy {a:A,ctor(),ctor(ref<^xy,t,f,cpp_ref>),ctor(ref<^xy,f,f,cpp_rref>)," \
+				  "dtor(),operator_assign(ref<^xy,t,f,cpp_ref>)->ref<^xy,f,f,cpp_ref>," \
+				  "operator_assign(ref<^xy,f,f,cpp_rref>)->ref<^xy,f,f,cpp_ref>}", toString(*genStructA));
 
 		// create derived type B : A
 		vector<FieldPtr> entriesB;
 		entriesB.push_back(builder.field("b", GenericType::get(manager, "B")));
 		ParentsPtr parentsB = Parents::get(manager, toVector(Parent::get(manager, genStructA)));
 		auto genStructB = builder.structType(builder.stringValue("xy"), parentsB, entriesB);
-		EXPECT_EQ("struct xy : [struct xy {a:A,dtor()}] {b:B,dtor()}", toString(*genStructB));
+		EXPECT_EQ("struct xy : [struct xy {a:A,ctor(),ctor(ref<^xy,t,f,cpp_ref>),ctor(ref<^xy,f,f,cpp_rref>)," \
+				  "dtor(),operator_assign(ref<^xy,t,f,cpp_ref>)->ref<^xy,f,f,cpp_ref>," \
+				  "operator_assign(ref<^xy,f,f,cpp_rref>)->ref<^xy,f,f,cpp_ref>}] " \
+				  "{b:B,ctor(),ctor(ref<^xy,t,f,cpp_ref>),ctor(ref<^xy,f,f,cpp_rref>)," \
+				  "dtor(),operator_assign(ref<^xy,t,f,cpp_ref>)->ref<^xy,f,f,cpp_ref>," \
+				  "operator_assign(ref<^xy,f,f,cpp_rref>)->ref<^xy,f,f,cpp_ref>}", toString(*genStructB));
 
 		// create derived type C : A, B
 		vector<FieldPtr> entriesC;
 		entriesC.push_back(builder.field("c", GenericType::get(manager, "C")));
 		ParentsPtr parentsC = Parents::get(manager, toVector(Parent::get(manager, genStructA), Parent::get(manager, true, genStructB)));
 		auto genStructC = builder.structType(builder.stringValue("xy"), parentsC, entriesC);
-		EXPECT_EQ("struct xy : [struct xy {a:A,dtor()}, virtual struct xy : [struct xy {a:A,dtor()}] {b:B,dtor()}] {c:C,dtor()}", toString(*genStructC));
+		EXPECT_EQ("struct xy : [struct xy {a:A,ctor(),ctor(ref<^xy,t,f,cpp_ref>),ctor(ref<^xy,f,f,cpp_rref>)," \
+				  "dtor(),operator_assign(ref<^xy,t,f,cpp_ref>)->ref<^xy,f,f,cpp_ref>," \
+				  "operator_assign(ref<^xy,f,f,cpp_rref>)->ref<^xy,f,f,cpp_ref>}, " \
+				  "virtual struct xy : [struct xy {a:A,ctor(),ctor(ref<^xy,t,f,cpp_ref>)," \
+				  "ctor(ref<^xy,f,f,cpp_rref>),dtor(),operator_assign(ref<^xy,t,f,cpp_ref>)->ref<^xy,f,f,cpp_ref>,"\
+				  "operator_assign(ref<^xy,f,f,cpp_rref>)->ref<^xy,f,f,cpp_ref>}] " \
+				  "{b:B,ctor(),ctor(ref<^xy,t,f,cpp_ref>),ctor(ref<^xy,f,f,cpp_rref>),dtor()," \
+				  "operator_assign(ref<^xy,t,f,cpp_ref>)->ref<^xy,f,f,cpp_ref>," \
+				  "operator_assign(ref<^xy,f,f,cpp_rref>)->ref<^xy,f,f,cpp_ref>}] " \
+				  "{c:C,ctor(),ctor(ref<^xy,t,f,cpp_ref>),ctor(ref<^xy,f,f,cpp_rref>),dtor()," \
+				  "operator_assign(ref<^xy,t,f,cpp_ref>)->ref<^xy,f,f,cpp_ref>," \
+				  "operator_assign(ref<^xy,f,f,cpp_rref>)->ref<^xy,f,f,cpp_ref>}", toString(*genStructC));
 
 		// this is a named tagType reference
 		auto tagType = builder.tagTypeReference("xy");
@@ -563,7 +605,7 @@ namespace core {
 		basicTypeTests(genStructC, true, toList(toVector<NodePtr>(tagType, tagDefinitionC)));
 	}
 
-	TEST(TypeTest, DISABLED_RecStructType) {
+	TEST(TypeTest, RecStructType) {
 		// create a manager for this test
 		NodeManager manager;
 		IRBuilder builder(manager);
@@ -578,20 +620,28 @@ namespace core {
 		entriesA.push_back(builder.field("b", builder.refType(varX)));
 
 		auto genStructA = builder.structType(entriesA);
-		EXPECT_EQ("struct {a:A,b:ref<^X,f,f,plain>,dtor()}", toString(*genStructA));
+		EXPECT_EQ("struct {a:A,b:ref<^X,f,f,plain>,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>)," \
+				  "dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>," \
+				  "operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}", toString(*genStructA));
 
 		auto definition = builder.tagTypeDefinition({{varX, genStructA.as<TagTypePtr>()->getRecord()}});
-		EXPECT_EQ("{^X=struct {a:A,b:ref<^X,f,f,plain>,dtor()}}", toString(*definition));
+		EXPECT_EQ("{^X=struct {a:A,b:ref<^X,f,f,plain>,ctor(),ctor(ref<^,t,f,cpp_ref>)," \
+				  "ctor(ref<^,f,f,cpp_rref>),dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>," \
+				  "operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}}", toString(*definition));
 
 		auto tagType = builder.tagType(varX, definition);
-		EXPECT_EQ("rec ^X.{^X=struct {a:A,b:ref<^X,f,f,plain>,dtor()}}", toString(*tagType));
-		EXPECT_EQ("struct {a:A,b:ref<^X,f,f,plain>,dtor()}", toString(*tagType->getDefinition()->getDefinitionOf(varX)));
+		EXPECT_EQ("rec ^X.{^X=struct {a:A,b:ref<^X,f,f,plain>,ctor(),ctor(ref<^,t,f,cpp_ref>)," \
+				  "ctor(ref<^,f,f,cpp_rref>),dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>," \
+				  "operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}}", toString(*tagType));
+		EXPECT_EQ("struct {a:A,b:ref<^X,f,f,plain>,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>)," \
+				  "dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>," \
+				  "operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}", toString(*tagType->getDefinition()->getDefinitionOf(varX)));
 
 		// perform basic type tests
 		basicTypeTests(tagType, true, toList(toVector<NodePtr>(varX, definition)));
 	}
 
-	TEST(TypeTest, DISABLED_UnionType) {
+	TEST(TypeTest, UnionType) {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
@@ -600,17 +650,23 @@ namespace core {
 		entriesA.push_back(builder.field("b", GenericType::get(manager, "B")));
 
 		auto genUnionA = builder.unionType(entriesA);
-		EXPECT_EQ("union {a:A,b:B,dtor()}", toString(*genUnionA));
+		EXPECT_EQ("union {a:A,b:B,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor()," \
+				  "operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>," \
+				  "operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}", toString(*genUnionA));
 
 		vector<FieldPtr> entriesB;
 		auto genUnionB = builder.unionType(entriesB);
-		EXPECT_EQ("union {dtor()}", toString(*genUnionB));
+		EXPECT_EQ("union {ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor()," \
+				  "operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>," \
+				  "operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}", toString(*genUnionB));
 
 		vector<FieldPtr> entriesC;
 		entriesC.push_back(builder.field("a", TypeVariable::get(manager, "alpha")));
 		entriesC.push_back(builder.field("b", GenericType::get(manager, "B")));
 		auto genUnionC = builder.unionType(entriesC);
-		EXPECT_EQ("union {a:'alpha,b:B,dtor()}", toString(*genUnionC));
+		EXPECT_EQ("union {a:'alpha,b:B,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor()," \
+				  "operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>," \
+				  "operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}", toString(*genUnionC));
 
 		// this is an anonymous tagType reference
 		auto tagType = builder.tagTypeReference("");
