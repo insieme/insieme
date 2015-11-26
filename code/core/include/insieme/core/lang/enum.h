@@ -39,6 +39,7 @@
 #include <boost/algorithm/string/predicate.hpp>
 
 #include "insieme/core/lang/extension.h"
+#include "insieme/core/lang/reference.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 
 namespace insieme {
@@ -54,29 +55,32 @@ namespace lang {
 		 */
 		friend class core::NodeManager;
 
+		// import data-path extension for defined literals
+		IMPORT_MODULE(ReferenceExtension);
+
 		/**
 		 * Creates a new instance based on the given node manager.
 		 */
 		EnumExtension(core::NodeManager& manager) : core::lang::Extension(manager) {}
 
 		LANG_EXT_DERIVED_WITH_NAME(EnumEquals, "enum_eq",
-			"def struct enum { enum_type : 'a ; value : 'b; };	"
-			"(a : enum, b : enum) -> bool {				"
-			"    return a.value == b.value;					"
-			"}												"
+			"(x : ('a, 'b), y : ('a, 'b)) -> bool {		"
+			"    return x.1 == y.1;				"
+			"}									"
 		);
 
 		LANG_EXT_DERIVED_WITH_NAME(IntToEnum, "int_to_enum",
-			"def struct enum { enum_type : 'a; value : 'b; }; "
-			"(t : type<enum>, v : 'b) -> enum {				"
-			"	return <enum>{ lit(\"enum_type\" : 'a), v };	"
-			"}														"
+			"(t : type<('a, 'b)>, v : 'b) -> ('a, 'b) {	"
+			"	auto r = ref_var(type_lit(('a, 'b)));			"
+			"	r->1 = v;						"
+			"	return *r;						"
+			"}									"
 		);
 
 		LANG_EXT_DERIVED_WITH_NAME(EnumToInt, "enum_to_int",
-			"( e : struct enum { enum_type : 'a; value : 'b; }) -> 'b {	"
-			"	return e.value;										"
-			"}														"
+			"( e : ('a, 'b)) -> 'b {				"
+			"	return e.1;						"
+			"}									"
 		);
 
 	};
@@ -167,9 +171,9 @@ namespace lang {
 
 	bool isEnumType(const core::NodePtr& node);
 
-	ExpressionPtr getEnumInit(const ExpressionPtr& initVal, const TagTypePtr& enumType);
+	ExpressionPtr getEnumInit(const ExpressionPtr& initVal, const TupleTypePtr& enumType);
 
-	TagTypePtr getEnumType(const TypePtr& valueType, const GenericTypePtr& enumDef);
+	TupleTypePtr getEnumType(const TypePtr& valueType, const GenericTypePtr& enumDef);
 
 	GenericTypePtr getEnumElement(const GenericTypePtr& name, const ExpressionPtr& val);
 

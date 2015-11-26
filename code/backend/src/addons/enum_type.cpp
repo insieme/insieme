@@ -63,16 +63,14 @@ namespace addons {
 			t = type_info_utils::headerAnnotatedTypeHandler(converter, type, ff);
 			if(t) { return t; }
 
-			const core::TagTypePtr tt = type.as<core::TagTypePtr>();
-			const core::FieldPtr t1 = tt->getFields()[0];
-			const core::FieldPtr t2 = tt->getFields()[1];
+			const core::TupleTypePtr tt = type.as<core::TupleTypePtr>();
 
 			//get the enum definition
-			core::lang::EnumDefinition enumTy(t1->getType());
+			core::lang::EnumDefinition enumTy(tt->getElement(0));
 			
 			//get the enum class type and convert it
 			TypeManager& typeManager = converter.getTypeManager();
-			const TypeInfo& enumClassTypeInfo = typeManager.getTypeInfo(t2->getType());
+			const TypeInfo& enumClassTypeInfo = typeManager.getTypeInfo(tt->getElement(1));
 			//get the enum name and convert it
 			const c_ast::SharedCNodeManager& cnodemgr = converter.getCNodeManager();
 			c_ast::IdentifierPtr enumName = cnodemgr->create<c_ast::Identifier>(enumTy.getEnumName().as<core::GenericTypePtr>()->getName()->getValue());

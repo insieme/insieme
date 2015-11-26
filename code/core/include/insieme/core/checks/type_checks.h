@@ -51,6 +51,7 @@ namespace checks {
 	SIMPLE_CHECK(Parent, Parent, true);
 	SIMPLE_CHECK(FreeTagTypeReferences, Node, true);
 	SIMPLE_CHECK(TagTypeFields, TagType, true);
+	SIMPLE_CHECK(EnumType, GenericType, true);
 
 	SIMPLE_CHECK(ConstructorType, TagTypeBinding, true);
 	SIMPLE_CHECK(DuplicateConstructorType, TagTypeBinding, true);

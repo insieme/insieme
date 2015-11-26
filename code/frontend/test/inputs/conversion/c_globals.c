@@ -41,7 +41,7 @@ int x;
 const float y;
 
 typedef enum { Bla, Alb } enum_t;
-#pragma test expect_ir("lit(\"globalEnum\": ref<struct enum { enum_type : enum_def<IMP_enum_t,enum_entry<Bla,0>,enum_entry<Alb,1>>; value : uint<4>; },f,f>)")
+#pragma test expect_ir("lit(\"globalEnum\": ref<(enum_def<IMP_enum_t,enum_entry<Bla,0>,enum_entry<Alb,1>>, uint<4>)>)")
 enum_t globalEnum;
 
 typedef struct { int x; } IAmTheTagType;

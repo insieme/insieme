@@ -663,12 +663,12 @@ namespace core {
 
 			//special case for enum to numeric
 			if(lang::isEnumType(expr)) {
-				auto realTargetType = expr->getType().as<core::TagTypePtr>()->getFields()[1]->getType();
+				auto realTargetType = expr->getType().as<core::TupleTypePtr>()->getElement(1);
 				return numericCast(callExpr(realTargetType, getExtension<lang::EnumExtension>().getEnumToInt(), expr), targetType);
 			}
 			//special case for numeric to enum
 			if(lang::isEnumType(targetType)) {
-				auto innerTargetType = targetType.as<core::TagTypePtr>()->getFields()[1]->getType();
+				auto innerTargetType = targetType.as<core::TupleTypePtr>()->getElement(1);
 				auto preCast = numericCast(expr, innerTargetType);
 				return callExpr(targetType, getExtension<lang::EnumExtension>().getIntToEnum(), getTypeLiteral(targetType), preCast);
 			}
