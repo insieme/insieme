@@ -82,6 +82,9 @@ const NodePtr PForConstantPropagator::resolveElement(const NodePtr& ptr) {
 
 			if (body->getNodeType() == NT_LambdaExpr) {
 				ParametersAddress params = body.as<LambdaExprAddress>()->getParameterList();
+
+				if(params.size() < 3) return ptr;
+
 				assert(params.size() > 2 && "Expecting at least 3 parameters (start, end, stride)!");
 //				dumpColor(params);
 				const NodeAddress startVar = params[params.size()-3];
