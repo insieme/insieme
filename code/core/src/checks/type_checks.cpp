@@ -596,13 +596,14 @@ namespace checks {
 
 		TypesPtr types = funTypeIs->getParameterTypes();
 		vector<TypePtr> paramTypes;
-		for (std::size_t i = 0; i < types.size(); ++i) {
+		for(std::size_t i = 0; i < types.size(); ++i) {
 			
 			auto parameter = address->getParameterList()[i];
 			auto should = transform::materialize(types[i]);
 			auto is = parameter->getType();
 
-			if (*is != *should) {
+			// materialized parameters of non-ref type are alowed to have arbitrary qualifiers
+			if(*should != *is && (!analysis::isRefType(types[i]) && !lang::doReferencesDifferOnlyInQualifiers(is, should))) {
 				add(res, Message(
 						parameter, EC_TYPE_INVALID_LAMBDA_TYPE, 
 						format("Invalid parameters type of %s - is: %s, should %s", *parameter, *is, *should),

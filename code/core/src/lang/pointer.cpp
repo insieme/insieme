@@ -190,6 +190,13 @@ namespace lang {
 		return builder.callExpr(pExt.getPtrToRef(), ptrExpr);
 	}
 	
+	ExpressionPtr buildPtrToArray(const ExpressionPtr& ptrExpr) {
+		assert_pred1(isPointer, ptrExpr) << "Trying to build an array from non-ptr.";
+		IRBuilder builder(ptrExpr->getNodeManager());
+		auto& pExt = ptrExpr->getNodeManager().getLangExtension<PointerExtension>();
+		return builder.callExpr(pExt.getPtrToArray(), ptrExpr);
+	}
+	
 	ExpressionPtr buildPtrCast(const ExpressionPtr& ptrExpr, bool newConst, bool newVolatile) {
 		assert_pred1(core::lang::isPointer, ptrExpr) << "Trying to build a ptr cast from non-ptr.";
 		PointerType srcTy(ptrExpr->getType());

@@ -62,6 +62,7 @@
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/ir++_extension.h"
 #include "insieme/core/lang/pointer.h"
+#include "insieme/core/lang/array.h"
 #include "insieme/core/transform/node_replacer.h"
 
 using namespace clang;
@@ -316,7 +317,11 @@ namespace conversion {
 		return retIr;
 	}
 
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//						CXX CONSTRUCTOR CALL EXPRESSION
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	namespace {
+		/// Convert a ConstructExpr to an IR constructor call, allocating the required memory either on the stack (default) or on the heap 
 		core::ExpressionPtr convertConstructExprInternal(Converter& converter, const clang::CXXConstructExpr* constructExpr, bool onStack) {
 			auto& builder = converter.getIRBuilder();
 			core::TypePtr resType = converter.convertType(constructExpr->getType());
@@ -335,6 +340,7 @@ namespace conversion {
 
 			// get constructor lambda
 			auto constructorLambda = converter.getDeclConverter()->convertMethodDecl(constructExpr->getConstructor()).lit;
+			VLOG(2) << "constructor lambda literal " << *constructorLambda << " of type " << dumpColor(constructorLambda->getType());
 
 			// return call
 			auto retType = constructorLambda->getType().as<core::FunctionTypePtr>()->getReturnType();
@@ -342,9 +348,6 @@ namespace conversion {
 		}
 	}
 
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	//						CXX CONSTRUCTOR CALL EXPRESSION
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr Converter::CXXExprConverter::VisitCXXConstructExpr(const clang::CXXConstructExpr* callExpr) {
 		core::ExpressionPtr retIr;
 		LOG_EXPR_CONVERSION(callExpr, retIr);
@@ -358,25 +361,50 @@ namespace conversion {
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//						CXX NEW CALL EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::ExpressionPtr Converter::CXXExprConverter::VisitCXXNewExpr(const clang::CXXNewExpr* callExpr) {
+	namespace {
+		/// Resize the array created by an array create call (required due to mismatched size reported for initializer expressions in new[])
+		core::ExpressionPtr resizeArrayCreate(const Converter& converter, const core::ExpressionPtr& createExpr, const core::ExpressionPtr& newSize) {
+			auto& nodeMan = createExpr->getNodeManager();
+			auto& arrExp = nodeMan.getLangExtension<core::lang::ArrayExtension>();
+			frontend_assert(core::analysis::isCallOf(createExpr, arrExp.getArrayCreate()))
+				<< "Trying to resize array creation, but expression is not array creation";
+
+			return core::lang::buildArrayCreate(newSize, core::lang::parseListOfExpressions(createExpr.as<core::CallExprPtr>()->getArgument(1)));
+		}
+	}
+
+	core::ExpressionPtr Converter::CXXExprConverter::VisitCXXNewExpr(const clang::CXXNewExpr* newExpr) {
 		core::ExpressionPtr retExpr;
-		LOG_EXPR_CONVERSION(callExpr, retExpr);
+		LOG_EXPR_CONVERSION(newExpr, retExpr);
+
+		frontend_assert(newExpr->getNumPlacementArgs() == 0) << "Placement new not yet supported";
 
 		// if no constructor is found, it is a new over a non-class type, can be any kind of pointer of array
-		if(!callExpr->getConstructExpr()) {
-			core::TypePtr type = converter.convertType(callExpr->getAllocatedType());
-			core::ExpressionPtr placeHolder;
-			if(callExpr->hasInitializer()) {
-				const clang::Expr* initializer = callExpr->getInitializer();
+		if(!newExpr->getConstructExpr()) {
+			core::TypePtr type = converter.convertType(newExpr->getAllocatedType());
+			// for arrays, we need to allocate the right size
+			if(newExpr->isArray()) type = core::lang::ArrayType::create(type, converter.convertExpr(newExpr->getArraySize()));
+
+			// build new expression depending on whether or not we have an initializer expression
+			core::ExpressionPtr newExp;
+			if(newExpr->hasInitializer()) {
+				const clang::Expr* initializer = newExpr->getInitializer();
 				core::ExpressionPtr initializerExpr = converter.convertInitExpr(initializer);
 				frontend_assert(initializerExpr);
-				placeHolder = builder.refNew(initializerExpr);
+				// make sure we allocate the correct amount of array elements with partial initialization
+				if(newExpr->isArray()) initializerExpr = resizeArrayCreate(converter, initializerExpr, converter.convertExpr(newExpr->getArraySize()));
+				newExp = builder.refNew(initializerExpr);
 			} else {
-				placeHolder = builder.undefinedNew(type);
+				newExp = builder.undefinedNew(type);
 			}
 
-			retExpr = core::lang::buildPtrFromRef(placeHolder);
-		}// else {
+			// initialize pointer either from ref for scalars or from array
+			retExpr = newExpr->isArray() ? core::lang::buildPtrFromArray(newExp) : core::lang::buildPtrFromRef(newExp);
+		}
+		// we have a constructor, so we are building a class
+		else {
+			retExpr = core::lang::buildPtrFromRef(convertConstructExprInternal(converter, newExpr->getConstructExpr(), false));
+
 		//	core::ExpressionPtr ctorCall = Visit(callExpr->getConstructExpr());
 		//	frontend_assert(ctorCall.isa<core::CallExprPtr>()) << "aint constructor call in here, no way to translate NEW\n";
 
@@ -427,7 +455,7 @@ namespace conversion {
 		//			}
 		//		}
 		//	}
-		//}
+		}
 
 		if(!retExpr) assert_not_implemented();
 
@@ -445,14 +473,18 @@ namespace conversion {
 		core::ExpressionPtr exprToDelete = Visit(deleteExpr->getArgument());
 		frontend_assert(core::lang::isPointer(exprToDelete)) << "\"delete\" called on non-pointer, not supported.";
 
+		// make sure we delete a ref array if we have an array delete
+		auto toDelete = core::lang::buildPtrToRef(exprToDelete);
+		if(deleteExpr->isArrayForm()) toDelete = core::lang::buildPtrToArray(exprToDelete);
+
 		// destructor calls are implicit in inspire 2.0, just like C++
-		retExpr = converter.getIRBuilder().refDelete(core::lang::buildPtrToRef(exprToDelete));
+		retExpr = converter.getIRBuilder().refDelete(toDelete);
 
 		return retExpr;
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	//						CXX THIS CALL EXPRESSION
+	//						CXX THIS EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr Converter::CXXExprConverter::VisitCXXThisExpr(const clang::CXXThisExpr* thisExpr) {
 		core::ExpressionPtr retIr;

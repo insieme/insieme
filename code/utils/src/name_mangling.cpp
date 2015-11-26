@@ -61,6 +61,8 @@ namespace utils {
 		                                                       {" ", "_space_"},
 		                                                       {"(", "_lparen_"},
 		                                                       {")", "_rparen_"},
+		                                                       {"[", "_lbracket_"},
+		                                                       {"]", "_rbracket_"},
 		                                                       {",", "_comma_"},
 		                                                       {"*", "_star_"},
 		                                                       {"&", "_ampersand_"},

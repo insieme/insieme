@@ -47,9 +47,7 @@ simple_struct generate_struct() { return (simple_struct){0}; };
 
 int main() {
 	nameCheck();
-	
-	#define BOOL_TO_INT "def bool_to_int = (b: bool) -> int<4> { if(b) {return 1;} else {return 0;} };"
-	
+		
 	//===-------------------------------------------------------------------------------------------------------------------------------- UNARY OPERATORS ---===
 	
 	#pragma test expect_ir("int_not(3)")
@@ -110,17 +108,15 @@ int main() {
 	
 	// COMMA OPERATOR //////////////////////////////////////////////////////////////
 	
-	#define C_STYLE_COMMA "def c_comma = (lhs: () => 'a, rhs: () => 'b) -> 'b { lhs(); return rhs(); };"
-
-	#pragma test expect_ir(C_STYLE_COMMA,"{ c_comma(() -> int<4> { return 2; }, () -> int<4> { return 3; }); }")
+	#pragma test expect_ir("{ comma_operator(() -> int<4> { return 2; }, () -> int<4> { return 3; }); }")
 	{ 2, 3; }
 	#pragma test expect_ir("EXPR_TYPE", "int<4>")
 	2, 3;
 	
-	#pragma test expect_ir(C_STYLE_COMMA,"{ c_comma(() -> int<4> { return c_comma(() -> int<4> { return 2; }, () -> int<4> { return 3; }); }, () -> int<4> { return 4; }); }")
+	#pragma test expect_ir("{ comma_operator(() -> int<4> { return comma_operator(() -> int<4> { return 2; }, () -> int<4> { return 3; }); }, () -> int<4> { return 4; }); }")
 	{ 2, 3, 4; }
 	
-	#pragma test expect_ir(C_STYLE_COMMA,"{ c_comma( () -> int<4> { return 2; }, () -> real<8> { return lit(\"3.0E+0\":real<8>); }); }")
+	#pragma test expect_ir("{ comma_operator(() -> int<4> { return 2; }, () -> real<8> { return lit(\"3.0E+0\":real<8>); }); }")
 	{ 2, 3.0; }
 	#pragma test expect_ir("EXPR_TYPE", "real<8>")
 	2, 3.0;
@@ -189,6 +185,25 @@ int main() {
 
 	#pragma test expect_ir("int_ge(1, 2)")
 	1 >= 2;
+
+    
+	// WITH DIFFERENT TYPES ///////////////////////////////////////////////////
+
+	// this should work: num_cast(1, type_lit(real<8>))+2.0E+0
+	#pragma test expect_ir("num_cast(1, type_lit(real<8>))+lit(\"2.0E+0\":real<8>)")
+	1 + 2.0;
+
+	#pragma test expect_ir("lit(\"3.0E+0\":real<8>)-num_cast(4, type_lit(real<8>))")
+	3.0 - 4;
+
+	#pragma test expect_ir("lit(\"5.0E+0\":real<4>)*num_cast(6, type_lit(real<4>))")
+	5.0f * 6;
+
+	#pragma test expect_ir("7u/num_cast(8, type_lit(uint<4>))")
+	7u / 8;
+	
+	#pragma test expect_ir("9u+num_cast(10, type_lit(uint<4>))")
+	9u + 10;
 
 	// POINTER & ARRAYS ///////////////////////////////////////////////////////
 
@@ -289,63 +304,61 @@ int main() {
 
 	// COMPOUND //////////////////////////////////////////////////////////////
 
-	#define C_STYLE_ASSIGN "def c_ass = (v1: ref<'a,f,'b>, v2: 'a) -> 'a { v1 = v2; return *v1; };"
-
-	#pragma test expect_ir(C_STYLE_ASSIGN, "{ var ref<int<4>,f,f> v1 = ref_var_init(1); c_ass(v1, *v1+1); }")
+	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = ref_var_init(1); c_style_assignment(v1, *v1+1); }")
 	{
 		int a = 1;
 		a += 1;
 	}
 	
-	#pragma test expect_ir(C_STYLE_ASSIGN, "{ var ref<int<4>,f,f> v1 = ref_var_init(1); c_ass(v1, *v1-2); }")
+	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = ref_var_init(1); c_style_assignment(v1, *v1-2); }")
 	{
 		int a = 1;
 		a -= 2;
 	}
 	
-	#pragma test expect_ir(C_STYLE_ASSIGN, "{ var ref<int<4>,f,f> v1 = ref_var_init(1); c_ass(v1, *v1/1); }")
+	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = ref_var_init(1); c_style_assignment(v1, *v1/1); }")
 	{
 		int a = 1;
 		a /= 1;
 	}
 	
-	#pragma test expect_ir(C_STYLE_ASSIGN, "{ var ref<int<4>,f,f> v1 = ref_var_init(1); c_ass(v1, *v1*5); }")
+	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = ref_var_init(1); c_style_assignment(v1, *v1*5); }")
 	{
 		int a = 1;
 		a *= 5;
 	}
 
-	#pragma test expect_ir(C_STYLE_ASSIGN, "{ var ref<int<4>,f,f> v1 = ref_var_init(1); c_ass(v1, *v1%5); }")
+	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = ref_var_init(1); c_style_assignment(v1, *v1%5); }")
 	{
 		int a = 1;
 		a %= 5;
 	}
 
-	#pragma test expect_ir(C_STYLE_ASSIGN, "{ var ref<int<4>,f,f> v1 = ref_var_init(1); c_ass(v1, *v1&5); }")
+	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = ref_var_init(1); c_style_assignment(v1, *v1&5); }")
 	{
 		int a = 1;
 		a &= 5;
 	}
 
-	#pragma test expect_ir(C_STYLE_ASSIGN, "{ var ref<int<4>,f,f> v1 = ref_var_init(1); c_ass(v1, *v1|5); }")
+	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = ref_var_init(1); c_style_assignment(v1, *v1|5); }")
 	{
 		int a = 1;
 		a |= 5;
 	}
 
-	#pragma test expect_ir(C_STYLE_ASSIGN, "{ var ref<int<4>,f,f> v1 = ref_var_init(1); c_ass(v1, *v1 ^ 5); }")
+	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = ref_var_init(1); c_style_assignment(v1, *v1 ^ 5); }")
 	{
 		int a = 1;
 		a ^= 5;
 	}
 
-	#pragma test expect_ir(C_STYLE_ASSIGN, "{ var ref<int<4>,f,f> v1 = ref_var_init(1); c_ass(v1, int_lshift(*v1, 5)); }")
+	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = ref_var_init(1); c_style_assignment(v1, int_lshift(*v1, 5)); }")
 	{
 		int a = 1;
 		a <<= 5;
 	}
 
-	#pragma test expect_ir(C_STYLE_ASSIGN, "{ var ref<int<4>,f,f> v1 = ref_var_init(1); c_ass(v1, int_rshift(*v1, 5)); }")
+	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = ref_var_init(1); c_style_assignment(v1, int_rshift(*v1, 5)); }")
 	{
 		int a = 1;
 		a >>= 5;
@@ -353,13 +366,13 @@ int main() {
 
 	// ASSIGNMENT //////////////////////////////////////////////////////////////
 
-	#pragma test expect_ir(C_STYLE_ASSIGN, "{ var ref<int<4>,f,f> v1; c_ass(v1, 5); }")
+	#pragma test expect_ir("{ var ref<int<4>,f,f> v1; c_style_assignment(v1, 5); }")
 	{
 		int a;
 		a = 5;
 	}
 	
-	#pragma test expect_ir(C_STYLE_ASSIGN, "{ var ref<int<4>,f,f> v0; var ref<int<4>,f,f> v1; c_ass(v0, c_ass(v1, 1)); }")
+	#pragma test expect_ir("{ var ref<int<4>,f,f> v0; var ref<int<4>,f,f> v1; c_style_assignment(v0, c_style_assignment(v1, 1)); }")
 	{
 		int a, b;
 		a = b = 1;
@@ -405,7 +418,7 @@ int main() {
 	}
 
 	// check direct R-value access
-	#pragma test expect_ir("() -> struct IMP_simple_struct {i: int<4>;} { return *ref_var_init(<IMP_simple_struct>{0}); }().i+5")
+	#pragma test expect_ir("def IMP_generate_struct = () -> struct IMP_simple_struct {i: int<4>;} { return *ref_var_init(<IMP_simple_struct>{0}); }; IMP_generate_struct().i+5")
 	generate_struct().i + 5;
 	
 	//===---------------------------------------------------------------------------------------------------------------------------------- MISCELLANEOUS ---===
@@ -440,7 +453,7 @@ int main() {
 	#pragma test expect_ir("STRING", "c_style_assignment(ref_var_init(struct{data=0u,x=0,y=0}).x, 1)")
 	(Image){0u, 0, 0}.x = 1;
 	
-	// bool to int conversion	
-	#pragma test expect_ir(BOOL_TO_INT,"{ bool_to_int(1<5)+17; }")
+	// bool to int conversion
+	#pragma test expect_ir("{ bool_to_int(1<5)+17; }")
 	{ (1 < 5) + 17; }
 }

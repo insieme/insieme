@@ -51,6 +51,7 @@
 #include "insieme/frontend/extensions/test_pragma_extension.h"
 #include "insieme/frontend/frontend.h"
 #include "insieme/frontend/state/variable_manager.h"
+#include "insieme/frontend/utils/frontend_inspire_module.h"
 #include "insieme/utils/config.h"
 
 namespace insieme {
@@ -145,6 +146,8 @@ namespace frontend {
 		jobModifier(job);
 		auto res = builder.normalize(job.execute(mgr));
 
+		auto symbols = mgr.getLangExtension<frontend::utils::FrontendInspireModule>().getSymbols();
+
 		// iterate over res and check pragma expectations
 		size_t visited = 0;
 		visitDepthFirstOnce(NodeAddress(res), [&](const NodeAddress& addr) {
@@ -183,14 +186,14 @@ namespace frontend {
 					EXPECT_EQ(exs, irString) << "Location       : " << locationOf(addr) << "\n";
 				} else if(boost::starts_with(ex, exprTypeKey)) {
 					string irs(ex.substr(exprTypeKey.size()));
-					NodePtr expected = builder.parseType(irs);
+					NodePtr expected = builder.parseType(irs, symbols);
 					checkExpected(expected, node.as<ExpressionPtr>()->getType(), addr);
 				} else {
 					NodePtr expected;
 					if(node.isa<ExpressionPtr>()) {
-						expected = builder.parseExpr(ex);
+						expected = builder.parseExpr(ex, symbols);
 					} else {
-						expected = builder.parseStmt(ex);
+						expected = builder.parseStmt(ex, symbols);
 					}
 					checkExpected(expected, node, addr);
 				}
@@ -210,6 +213,11 @@ namespace frontend {
 		EXPECT_EQ(visited, occurrences);
 
 		//dumpColor(res);
+		//std::cout << res;
+
+		//visitDepthFirstOnce(res, [](const LiteralPtr& lit) { 
+		//	std::cout << "Literal: " << *lit << "\n of type " << *lit->getType() << "\n\n";
+		//});
 
 		auto checkResult = core::checks::check(res);
 		EXPECT_EQ(checkResult.size(), 0) << checkResult;

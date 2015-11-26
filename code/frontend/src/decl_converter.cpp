@@ -107,7 +107,8 @@ namespace conversion {
 			return newFunType;
 		}
 
-		core::LambdaExprPtr convertFunMethodInternal(Converter& converter, const core::FunctionTypePtr& funType, const clang::FunctionDecl* funcDecl) {
+		core::LambdaExprPtr convertFunMethodInternal(Converter& converter, const core::FunctionTypePtr& funType,
+			                                         const clang::FunctionDecl* funcDecl, const string& name) {
 			const clang::CXXMethodDecl* methDecl = llvm::dyn_cast<clang::CXXMethodDecl>(funcDecl);
 			if(funcDecl->hasBody()) {
 				converter.getVarMan()->pushScope(false);
@@ -126,7 +127,8 @@ namespace conversion {
 				// convert body and build full expression
 				auto body = converter.convertStmt(funcDecl->getBody());
 				converter.getVarMan()->popScope();
-				auto funExp = converter.getIRBuilder().lambdaExpr(funType, params, body);
+				auto lambda = converter.getIRBuilder().lambda(funType, params, body);
+				auto funExp = converter.getIRBuilder().lambdaExpr(lambda, name);
 				return funExp;
 			} else {
 				return core::LambdaExprPtr();
@@ -137,9 +139,10 @@ namespace conversion {
 		}
 	}
 
-	core::LambdaExprPtr DeclConverter::convertFunctionDecl(const clang::FunctionDecl* funcDecl) const {
+	core::LambdaExprPtr DeclConverter::convertFunctionDecl(const clang::FunctionDecl* funcDecl, string name) const {
+		if(name.empty()) name = insieme::utils::mangle(funcDecl->getNameAsString());
 		auto funType = getFunMethodTypeInternal(converter, funcDecl);
-		return convertFunMethodInternal(converter, funType, funcDecl);
+		return convertFunMethodInternal(converter, funType, funcDecl, name);
 	}
 	
 	DeclConverter::ConvertedMethodDecl DeclConverter::convertMethodDecl(const clang::CXXMethodDecl* methDecl) const {
@@ -147,7 +150,7 @@ namespace conversion {
 		string name = insieme::utils::mangle(methDecl->getNameAsString());
 		auto funType = getFunMethodTypeInternal(converter, methDecl);
 		ret.lit = builder.literal(name, funType);
-		ret.lambda = convertFunMethodInternal(converter, funType, methDecl);
+		ret.lambda = convertFunMethodInternal(converter, funType, methDecl, name);
 		ret.memFun = builder.memberFunction(methDecl->isVirtual(), name, ret.lit);
 		return ret;
 	}
@@ -239,7 +242,8 @@ namespace conversion {
 
 		// convert prototype
 		auto funType = getFunMethodTypeInternal(converter, funcDecl);
-		core::LiteralPtr irLit = builder.literal(insieme::utils::mangle(utils::buildNameForFunction(funcDecl)), funType);
+		auto name = utils::buildNameForFunction(funcDecl);
+		core::LiteralPtr irLit = builder.literal(name, funType);
 		// add required annotations
 		if(inExternC) { annotations::c::markAsExternC(irLit); }
 		converter.applyHeaderTagging(irLit, funcDecl->getCanonicalDecl());
@@ -249,7 +253,7 @@ namespace conversion {
 		// if definition, convert body
 		if(isDefinition) {
 			VLOG(2) << "~~~~~~~~~~~~~~~~ VisitFunctionDecl - isDefinition: " << dumpClang(funcDecl);
-			core::LambdaExprPtr irFunc = convertFunctionDecl(funcDecl);
+			core::LambdaExprPtr irFunc = convertFunctionDecl(funcDecl, name);
 			if(irFunc) { 
 				irFunc = pragma::handlePragmas({irFunc}, funcDecl, converter).front().as<core::LambdaExprPtr>();
 				converter.getIRTranslationUnit().addFunction(irLit, irFunc);

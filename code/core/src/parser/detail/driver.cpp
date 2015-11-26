@@ -687,20 +687,22 @@ namespace parser {
 		}
 
 		ExpressionPtr InspireDriver::genFunctionDefinition(const location& l, const std::string name, const LambdaExprPtr& lambda)  {
-			//check if this type has already been defined before
+			// check if this type has already been defined before
 			const LiteralPtr key = builder.literal(name, lambda->getType());
 			if (tu[key]) {
 				error(l, format("Re-definition of function %s", name));
 				return nullptr;
 			}
 
-			//only declare the symbol implicitly if it hasn't already been declared
-			if (!isSymbolDeclaredInCurrentScope(name)) {
+			// only declare the symbol implicitly if it hasn't already been declared
+			if(!isSymbolDeclaredInCurrentScope(name)) {
 				declareSymbol(l, name, key);
 			}
 
-			tu.addFunction(key, lambda);
-			annotations::attachName(lambda, name);
+			// rename lambda ref to given name
+			auto renamedLambda = builder.lambdaExpr(lambda->getLambda(), name);
+			tu.addFunction(key, renamedLambda);
+			annotations::attachName(renamedLambda, name);
 
 			return key;
 		}

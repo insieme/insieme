@@ -119,6 +119,7 @@ namespace conversion {
 		for(auto mem : classDecl->methods()) {
 			auto convDecl = converter.getDeclConverter()->convertMethodDecl(mem);
 			if(convDecl.lambda) {
+				VLOG(2) << "adding method lambda literal " << *convDecl.lit << " of type " << dumpColor(convDecl.lit->getType()) << "to IRTU";
 				converter.getIRTranslationUnit().addFunction(convDecl.lit, convDecl.lambda);
 			}
 			if(mem->isVirtual() && mem->isPure()) {
@@ -253,7 +254,7 @@ namespace conversion {
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	//					DEPENDENT TEMPLATE SPECIALIZATION TYPE (TODO)
+	//					INJECTED CLASS NAME TYPE
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::TypePtr Converter::CXXTypeConverter::VisitInjectedClassNameType(const InjectedClassNameType* tempTy) {
 		core::TypePtr retTy;
@@ -328,6 +329,15 @@ namespace conversion {
 		return retTy;
 	}
 	
+	
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//                 DECLTYPE AND AUTO TYPE
+	// For both of these, we depend on clang to correctly resolve them.
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	core::TypePtr Converter::CXXTypeConverter::VisitDecltypeType(const clang::DecltypeType* declTy) {
+		frontend_assert(!declTy->isUndeducedType()) << "Non-deduced decltype type unsupported.";
+		return convertInternal(declTy->getUnderlyingType());	
+	}	
 	core::TypePtr Converter::CXXTypeConverter::VisitAutoType(const clang::AutoType* autoTy) {
 		frontend_assert(autoTy->isDeduced()) << "Non-deduced auto type unsupported.";
 		return convertInternal(autoTy->getDeducedType());	

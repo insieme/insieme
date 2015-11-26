@@ -192,6 +192,20 @@ namespace lang {
 		return builder.callExpr(arrExt.getArrayCreate(), builder.getTypeLiteral(size), core::lang::buildListOfExpressions(list));
 	}
 	
+	ExpressionPtr buildArrayCreate(const ExpressionPtr& size, const ExpressionList& list) {
+		NodeManager& mgr = size.getNodeManager();
+		auto& basic = mgr.getLangBasic();
+		IRBuilder builder(mgr);
+		TypePtr sizeType;
+		if(auto lit = size.as<LiteralPtr>()) {
+			sizeType = builder.numericType(Literal::get(mgr, basic.getUIntInf(), lit->getStringValue()));
+		} else {
+			assert_pred1(dynamic_pointer_cast<VariablePtr>, size) << "trying to build an array creation expression with non-var/lit size expression";
+			sizeType = builder.numericType(size.as<VariablePtr>());
+		}
+		return buildArrayCreate(sizeType, list);
+	}
+	
 	ExpressionPtr buildArrayCreate(NodeManager& mgr, size_t size, const ExpressionList& list) {
 		auto& basic = mgr.getLangBasic();
 		IRBuilder builder(mgr);

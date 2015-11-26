@@ -118,165 +118,85 @@ namespace utils {
 				name = funcDecl->getNameAsString();
 			} else if(method->getParent()) {
 				if(method->getParent()->isLambda()) { name = createNameForAnon("lambda", method->getParent(), funcDecl->getASTContext().getSourceManager()); }
-			} else if(method->isOverloadedOperator()) {
-				//	name = funcDecl->getNameAsString();
 			}
 		}
 
-		// Normally we use the function name of the member function.
-		// This can be dangerous when using templated member functions.
-		// In this case we have to add the return type information to
-		// the name, because it is not allowed to have overloaded functions
-		// that only differ by the return type.
-		// FIXME: Call to external functions might not work. What should we do with templated operators?!
-		// TODO cleanup early exit
-		/*
-		if(funcDecl->isTemplateInstantiation() && !funcDecl->isOverloadedOperator()) {
-		    std::string functionname = funcDecl->getNameAsString();
-		    std::string returnType = funcDecl->getReturnType().getAsString();
-		    functionname.append(returnType);
+		// mangle name
+		name = insieme::utils::mangle(name);
 
-		    if (llvm::isa<clang::CXXMethodDecl>(funcDecl) && llvm::cast<clang::CXXMethodDecl>(funcDecl)->isConst())
-		        functionname.append("_c");
+		// build a suffix for template instantiations
+		std::stringstream suffix;
 
-		    utils::removeSymbols(functionname);
-
-		    return functionname;
-		}
-		*/
-
-		// if we have non type template specialization args,
-		// we have to modify the name (e.g. template <bool VAR>)
-		if(funcDecl->getTemplateSpecializationArgs()) {
-			for(unsigned int i = 0; i < funcDecl->getTemplateSpecializationArgs()->size(); i++) {
-				if(funcDecl->getTemplateSpecializationArgs()->get(i).getKind() == clang::TemplateArgument::ArgKind::Integral) {
-					name.append(funcDecl->getTemplateSpecializationArgs()->get(i).getAsIntegral().toString(10));
+		if(funcDecl->isFunctionTemplateSpecialization() && funcDecl->getTemplateSpecializationArgs()) {
+			for(unsigned i = 0; i < funcDecl->getTemplateSpecializationArgs()->size(); ++i) {
+				std::cout << "### i: "<< i <<" \n";
+				auto arg = funcDecl->getTemplateSpecializationArgs()->get(i);
+				switch(arg.getKind()) {
+				case clang::TemplateArgument::Expression: {
+					suffix << "_" << arg.getAsExpr()->getType().getAsString();
+					break;
+				}
+				case clang::TemplateArgument::Type: {
+					// check if the type is a lambda, this one needs special handling
+					std::string typeName;
+					if(arg.getAsType().getTypePtr()->getAsCXXRecordDecl() && arg.getAsType().getTypePtr()->getAsCXXRecordDecl()->isLambda()) {
+						typeName =
+							createNameForAnon("lambda", arg.getAsType().getTypePtr()->getAsCXXRecordDecl(), funcDecl->getASTContext().getSourceManager());
+					} else {
+						typeName = arg.getAsType().getAsString();
+					}
+					suffix << "_" << typeName;
+					break;
+				}
+				case clang::TemplateArgument::Null: {
+					suffix << "_null";
+					break;
+				}
+				case clang::TemplateArgument::Declaration: {
+					suffix << "_" << arg.getAsDecl()->getType().getAsString();
+					break;
+				}
+				case clang::TemplateArgument::NullPtr: {
+					suffix << "_nullptr";
+					break;
+				}
+				case clang::TemplateArgument::Integral: {
+					suffix << "_" << arg.getAsIntegral().toString(10);
+					break;
+				}
+				case clang::TemplateArgument::Template: {
+					suffix << "_" << arg.getAsTemplate().getAsTemplateDecl()->getTemplatedDecl()->getNameAsString();
+					break;
+				}
+				case clang::TemplateArgument::TemplateExpansion: {
+					// I don't know what to do here
+					break;
+				}
+				case clang::TemplateArgument::Pack: {
+					suffix << "_pack_begin";
+					for(clang::TemplateArgument::pack_iterator it = arg.pack_begin(), end = arg.pack_end(); it != end; it++) {
+						const clang::QualType& argType = (*it).getAsType();
+						suffix << "_" << argType.getAsString();
+					}
+					suffix << "_pack_end";
+					break;
+				}
 				}
 			}
 		}
 
-		// we need to replace right and left shift operators with a dummy
-		// to avoid wrong renaming and double occurrence when both operators
-		// have been overloaded
-		boost::algorithm::replace_last(name, "operator<<", "LESSLESSdummy");
-		boost::algorithm::replace_last(name, "operator>>", "GREATERGREATERdummy");
-		// if no shift operators found lets check for less, greater
-		// and less equals, greater equals (handled in one case)
-		boost::algorithm::replace_last(name, "operator<", "LESSdummy");
-		boost::algorithm::replace_last(name, "operator>", "GREATERdummy");
-		// also other*symbols
-		boost::algorithm::replace_last(name, "operator()", "PARENdummy");
-		boost::algorithm::replace_last(name, "operator/=", "DIVEQdummy");
-		boost::algorithm::replace_last(name, "operator-=", "MINEQdummy");
-		boost::algorithm::replace_last(name, "operator+=", "PLUEQdummy");
-		boost::algorithm::replace_last(name, "operator*=", "TIMEQdummy");
-		boost::algorithm::replace_last(name, "operator==", "EQEQdummy");
-
-		boost::algorithm::replace_last(name, "operator*", "ASTdummy");
-		boost::algorithm::replace_last(name, "operator,", "COMdummy");
-		boost::algorithm::replace_last(name, "operator+", "PLUSdummy");
-		boost::algorithm::replace_last(name, "operator-", "MINUSdummy");
-		boost::algorithm::replace_last(name, "operator/", "DIVIDEdummy");
-		boost::algorithm::replace_last(name, "operator=", "EQUALSdummy");
-
-		boost::algorithm::replace_last(name, "operator new", "NEWdummy");
-
-		// if(!funcDecl->isOverloadedOperator())
-		{
-			// beware of specialized functions, the type does not show off
-			// check if we have template spec args otherwise seg faults may occur
-			if(funcDecl->isFunctionTemplateSpecialization() && funcDecl->getTemplateSpecializationArgs()) {
-				for(unsigned i = 0; i < funcDecl->getTemplateSpecializationArgs()->size(); ++i) {
-					// only add something if we have a type
-					auto arg = funcDecl->getTemplateSpecializationArgs()->get(i);
-					switch(arg.getKind()) {
-					case clang::TemplateArgument::Expression: {
-						name.append("_" + arg.getAsExpr()->getType().getAsString());
-						break;
-					}
-					case clang::TemplateArgument::Type: {
-						// check if the type is a lambda, this one needs special handling
-						std::string typeName;
-						if(arg.getAsType().getTypePtr()->getAsCXXRecordDecl() && arg.getAsType().getTypePtr()->getAsCXXRecordDecl()->isLambda()) {
-							typeName =
-							    createNameForAnon("lambda", arg.getAsType().getTypePtr()->getAsCXXRecordDecl(), funcDecl->getASTContext().getSourceManager());
-						} else {
-							typeName = arg.getAsType().getAsString();
-						}
-						name.append("_" + typeName);
-						break;
-					}
-					case clang::TemplateArgument::Null: {
-						name.append("_null");
-						break;
-					}
-					case clang::TemplateArgument::Declaration: {
-						name.append("_" + arg.getAsDecl()->getType().getAsString());
-						break;
-					}
-					case clang::TemplateArgument::NullPtr: {
-						name.append("_nullptr");
-						break;
-					}
-					case clang::TemplateArgument::Integral: {
-						name.append("_" + arg.getAsIntegral().toString(10));
-						break;
-					}
-					case clang::TemplateArgument::Template: {
-						name.append("_" + arg.getAsTemplate().getAsTemplateDecl()->getTemplatedDecl()->getNameAsString());
-						break;
-					}
-					case clang::TemplateArgument::TemplateExpansion: {
-						// I don't know what to do here
-						break;
-					}
-					case clang::TemplateArgument::Pack: {
-						for(clang::TemplateArgument::pack_iterator it = arg.pack_begin(), end = arg.pack_end(); it != end; it++) {
-							const clang::QualType& argType = (*it).getAsType();
-							name.append("_" + argType.getAsString());
-						}
-						break;
-					}
-					}
-				}
-			}
-
-			if(funcDecl->isTemplateInstantiation()) {
-				std::string returnType = funcDecl->getReturnType().getAsString();
-				name.append(returnType);
-			}
+		if(funcDecl->isTemplateInstantiation()) {
+			std::string returnType = funcDecl->getReturnType().getAsString();
+			suffix << "_returns_" << returnType;
 		}
 
-		if(llvm::isa<clang::CXXMethodDecl>(funcDecl) && llvm::cast<clang::CXXMethodDecl>(funcDecl)->isConst()) { name.append("_c"); }
+		if(llvm::isa<clang::CXXMethodDecl>(funcDecl) && llvm::cast<clang::CXXMethodDecl>(funcDecl)->isConst()) { suffix << "_c"; }
 
-		name = removeSymbols(name);
-
-		// check for dummyss or dummygg and replace it with the original name
-		boost::algorithm::replace_last(name, "LESSLESSdummy", "operator<<");
-		boost::algorithm::replace_last(name, "GREATERGREATERdummy", "operator>>");
-		// if nothing was found check for the other ones
-		boost::algorithm::replace_last(name, "LESSdummy", "operator<");
-		boost::algorithm::replace_last(name, "GREATERdummy", "operator>");
-		// and the asterisk symbol
-		boost::algorithm::replace_last(name, "ASTdummy", "operator*");
-		boost::algorithm::replace_last(name, "COMdummy", "operator,");
-		boost::algorithm::replace_last(name, "MINUSdummy", "operator-");
-		boost::algorithm::replace_last(name, "PARENdummy", "operator()");
-
-		boost::algorithm::replace_last(name, "PLUSdummy", "operator+");
-		boost::algorithm::replace_last(name, "DIVIDEdummy", "operator/");
-		boost::algorithm::replace_last(name, "EQUALSdummy", "operator=");
-
-		boost::algorithm::replace_last(name, "DIVEQdummy", "operator/=");
-		boost::algorithm::replace_last(name, "MINEQdummy", "operator-=");
-		boost::algorithm::replace_last(name, "PLUEQdummy", "operator+=");
-		boost::algorithm::replace_last(name, "TIMEQdummy", "operator*=");
-		boost::algorithm::replace_last(name, "EQEQdummy", "operator==");
-
-		boost::algorithm::replace_last(name, "NEWdummy", "operator new");
-
+		string suffixStr = suffix.str();
+		boost::algorithm::replace_all(suffixStr, " ", "_");
+		
 		// all done
-		return name;
+		return name + suffixStr;
 	}
 
 	std::string getNameForGlobal(const clang::VarDecl* varDecl, const clang::SourceManager& sm) {

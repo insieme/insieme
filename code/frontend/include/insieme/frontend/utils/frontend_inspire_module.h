@@ -72,7 +72,6 @@ namespace utils {
 		/**
 		 * Implements a C style assignment (returning the assigned value)
 		 */
-		// TODO FE NG call semantic
 		LANG_EXT_DERIVED(CStyleAssignment, "(lhs : ref<'a,f,'b>, rhs : 'a) -> 'a { lhs = rhs; return *lhs; }")
 
 		/**

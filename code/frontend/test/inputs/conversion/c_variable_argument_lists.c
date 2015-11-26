@@ -6,7 +6,7 @@ void foo(int a, ...);
 
 int main() {
 
-	#define PREAMBLE "using \"ext.varargs\";"
+	#define PREAMBLE "using \"ext.varargs\"; def IMP_bar = () -> int<4> { return 0;};"
 	#define BLA "lit(\"IMP_bla\":(int<4>,int<4>,var_list)->unit)"
 	#define FOO "lit(\"IMP_foo\":(int<4>,var_list)->unit)"
 
@@ -22,7 +22,7 @@ int main() {
 	#pragma test expect_ir(PREAMBLE "{",FOO,"(1, varlist_pack(())); }")
 	{ foo(1); }
 	
-	#pragma test expect_ir(PREAMBLE "{",FOO,"(1, varlist_pack((() -> int<4> { return 0;}()))); }")
+	#pragma test expect_ir(PREAMBLE "{",FOO,"(1, varlist_pack((IMP_bar()))); }")
 	{ foo(1, bar()); }
 
 	return 0;

@@ -425,20 +425,6 @@ namespace conversion {
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	namespace {
-		core::ExpressionPtr buildBinaryOpExpression(Converter& converter, const core::TypePtr& exprTy, const core::ExpressionPtr& lhs,
-			                                        const core::ExpressionPtr& rhs, core::lang::BasicGenerator::Operator op,
-			                                        const clang::BinaryOperator* binOp) {
-			auto& basic = converter.getNodeManager().getLangBasic();
-			auto& builder = converter.getIRBuilder();
-
-			if(core::lang::isPointer(lhs->getType()) || core::lang::isPointer(rhs->getType())) { return core::lang::buildPtrOperation(op, lhs, rhs); }
-
-			auto irOp = basic.getOperator(exprTy, op);
-			// for comparisons, use type of operand
-			if(binOp->isComparisonOp()) irOp = basic.getOperator(lhs->getType(), op);
-
-			return builder.binaryOp(irOp, lhs, rhs);
-		}
 
 		core::ExpressionPtr buildUnaryOpExpression(Converter& converter, const core::TypePtr& exprTy, const core::ExpressionPtr& expr,
 			                                       core::lang::BasicGenerator::Operator op) {
@@ -461,6 +447,59 @@ namespace conversion {
 		}
 	}
 
+
+    core::ExpressionPtr Converter::ExprConverter::createBinaryExpression (const core::TypePtr& exprTy, const core::ExpressionPtr& left, const core::ExpressionPtr& right,  clang::BinaryOperator::Opcode op){
+
+		auto opIt = opMap.find(op);
+		frontend_assert(opIt != opMap.end()) << "Binary Operator not implemented.";
+        auto binOp = opIt->second;
+
+		if( (core::lang::isReference(left) && core::lang::isPointer(core::analysis::getReferencedType(left->getType()))) || 
+            (core::lang::isReference(right)&& core::lang::isPointer(core::analysis::getReferencedType(right->getType())))||
+		    (core::lang::isPointer(left->getType())) || 
+            (core::lang::isPointer(right->getType())) ) { 
+
+            return core::lang::buildPtrOperation(binOp, left, right); 
+        }
+
+		auto irOp = basic.getOperator(exprTy, binOp);
+
+        // Comparisons will return a boolean (integer) 
+        //  but the operator requires different parameter types
+        if( binOp == core::lang::BasicGenerator::Lt ||
+            binOp == core::lang::BasicGenerator::Gt ||
+            binOp == core::lang::BasicGenerator::Le ||
+            binOp == core::lang::BasicGenerator::Ge ||
+            binOp == core::lang::BasicGenerator::Eq ||
+            binOp == core::lang::BasicGenerator::Ne ){
+
+            // find first super type commom to both types,
+            //      int4   uint4
+            //       |   /   |
+            //      int8 <- unit8    => (int4, uint8) should be int8
+            irOp = basic.getOperator(core::types::getBiggestCommonSubType( left->getType(), right->getType()), binOp);
+        }
+
+		return builder.binaryOp(irOp, left, right);
+    }
+
+	core::ExpressionPtr Converter::ExprConverter::VisitCompoundAssignOperator(const clang::CompoundAssignOperator* compOp) {
+
+		core::ExpressionPtr retIr;
+		LOG_EXPR_CONVERSION(compOp, retIr);
+
+		core::ExpressionPtr lhs = Visit(compOp->getLHS());
+		core::ExpressionPtr rhs = Visit(compOp->getRHS());
+		core::TypePtr exprTy = converter.convertType(compOp->getType());
+
+        assert_true( core::lang::isReference( lhs->getType()) ) << "left side must be assignable";
+
+        retIr = createBinaryExpression(exprTy, builder.deref(lhs), rhs, compOp->getOpcode());
+        retIr = utils::buildCStyleAssignment(lhs, retIr);
+
+        return retIr;
+    }
+
 	core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::BinaryOperator* binOp) {
 		core::ExpressionPtr retIr;
 		LOG_EXPR_CONVERSION(binOp, retIr);
@@ -481,50 +520,8 @@ namespace conversion {
 			return retIr;
 		}
 
-		std::map<clang::BinaryOperator::Opcode, core::lang::BasicGenerator::Operator> opMap = {
-			{clang::BO_MulAssign, core::lang::BasicGenerator::Mul},    // a *= b
-			{clang::BO_DivAssign, core::lang::BasicGenerator::Div},    // a /= b
-			{clang::BO_RemAssign, core::lang::BasicGenerator::Mod},    // a %= b
-			{clang::BO_AddAssign, core::lang::BasicGenerator::Add},    // a += b
-			{clang::BO_SubAssign, core::lang::BasicGenerator::Sub},    // a -= b
-			{clang::BO_ShlAssign, core::lang::BasicGenerator::LShift}, // a <<= b
-			{clang::BO_ShrAssign, core::lang::BasicGenerator::RShift}, // a >>= b
-			{clang::BO_AndAssign, core::lang::BasicGenerator::And},    // a &= b
-			{clang::BO_OrAssign, core::lang::BasicGenerator::Or},      // a |= b
-			{clang::BO_XorAssign, core::lang::BasicGenerator::Xor},    // a ^= b
-
-			{clang::BO_Add, core::lang::BasicGenerator::Add},    // a + b
-			{clang::BO_Sub, core::lang::BasicGenerator::Sub},    // a - b
-			{clang::BO_Mul, core::lang::BasicGenerator::Mul},    // a * b
-			{clang::BO_Div, core::lang::BasicGenerator::Div},    // a / b
-			{clang::BO_Rem, core::lang::BasicGenerator::Mod},    // a % b
-			{clang::BO_Shl, core::lang::BasicGenerator::LShift}, // a << b
-			{clang::BO_Shr, core::lang::BasicGenerator::RShift}, // a >> b
-			{clang::BO_And, core::lang::BasicGenerator::And},    // a & b
-			{clang::BO_Xor, core::lang::BasicGenerator::Xor},    // a ^ b
-			{clang::BO_Or, core::lang::BasicGenerator::Or},      // a | b
-
-			{clang::BO_LAnd, core::lang::BasicGenerator::LAnd}, // a && b
-			{clang::BO_LOr, core::lang::BasicGenerator::LOr},   // a || b
-
-			{clang::BO_LT, core::lang::BasicGenerator::Lt}, // a < b
-			{clang::BO_GT, core::lang::BasicGenerator::Gt}, // a > b
-			{clang::BO_LE, core::lang::BasicGenerator::Le}, // a <= b
-			{clang::BO_GE, core::lang::BasicGenerator::Ge}, // a >= b
-			{clang::BO_EQ, core::lang::BasicGenerator::Eq}, // a == b
-			{clang::BO_NE, core::lang::BasicGenerator::Ne}, // a != b
-		};
-
 		auto opIt = opMap.find(binOp->getOpcode());
 		frontend_assert(opIt != opMap.end()) << "Binary Operator " << binOp->getOpcodeStr().str() << " not implemented.";
-
-		if(binOp->isCompoundAssignmentOp()) { // ---------------------------------------------------------------------------------------------------- COMPOUND -
-			// we need to deref the LHS, as it is assigned to the clang AST does not contain an LtoR cast
-			auto op = buildBinaryOpExpression(converter, exprTy, builder.deref(lhs), rhs, opIt->second, binOp);
-			// for compound operators, we need to build a CallExpr returning the LHS after the operation
-			retIr = utils::buildCStyleAssignment(lhs, op);
-			return retIr;
-		}
 
 		// the logical operators && and || need to eval their arguments lazily ------------------------------------------------------------------ LAZY LOGICAL -
 		if(binOp->getOpcode() == clang::BO_LAnd || binOp->getOpcode() == clang::BO_LOr) {
@@ -533,7 +530,7 @@ namespace conversion {
 			rhs = builder.wrapLazy(utils::exprToBool(rhs));
 		}
 
-		retIr = buildBinaryOpExpression(converter, exprTy, lhs, rhs, opIt->second, binOp);
+		retIr = createBinaryExpression(exprTy, lhs, rhs, binOp->getOpcode());
 
 		// in C, bool operations return an int
 		if(retIr->getType() == basic.getBool()) {
