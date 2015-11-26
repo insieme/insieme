@@ -106,7 +106,8 @@ TEST(LangBasic, Derived) {
 	NodeManager nm;
 
 	// get a derived literal
-	EXPECT_EQ("rec _.{_=fun(ref<bool,f,f,plain> v0, ref<(()=>bool),f,f,plain> v1) {if(ref_deref(v0)) {return ref_deref(v1)();} else {}; return false;}}",
+	EXPECT_EQ("rec bool_and.{bool_and=fun(ref<bool,f,f,plain> v0, ref<(()=>bool),f,f,plain> v1) {if(ref_deref(v0)) {return ref_deref(v1)();} else {}; return "
+	          "false;}}",
 	          toString(*nm.getLangBasic().getBoolLAnd()));
 }
 

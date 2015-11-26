@@ -209,7 +209,7 @@ namespace lang {
 	#define TYPE(_id, _spec)                                                                                                                                   \
 		TypePtr BasicGenerator::get##_id() const {                                                                                                             \
 			if(!pimpl->ptr##_id) {                                                                                                                             \
-				pimpl->ptr##_id = parser::parseType(nm, _spec, false);																					   \
+				pimpl->ptr##_id = parser::parseType(nm, _spec, false);                                                                                         \
 				markAsBuiltIn(pimpl->ptr##_id);                                                                                                                \
 			}                                                                                                                                                  \
 			return pimpl->ptr##_id;                                                                                                                            \
@@ -221,7 +221,7 @@ namespace lang {
 	#define LITERAL(_id, _name, _spec)                                                                                                                         \
 		LiteralPtr BasicGenerator::get##_id() const {                                                                                                          \
 			if(!pimpl->ptr##_id) {                                                                                                                             \
-				pimpl->ptr##_id = pimpl->build.literal(parser::parseType(nm, _spec, false), _name);                                                          \
+				pimpl->ptr##_id = pimpl->build.literal(parser::parseType(nm, _spec, false), _name);                                                            \
 				markAsBuiltIn(pimpl->ptr##_id);                                                                                                                \
 			}                                                                                                                                                  \
 			return pimpl->ptr##_id;                                                                                                                            \
@@ -233,7 +233,10 @@ namespace lang {
 	#define DERIVED(_id, _name, _spec)                                                                                                                         \
 		ExpressionPtr BasicGenerator::get##_id() const {                                                                                                       \
 			if(!pimpl->ptr##_id) {                                                                                                                             \
-				pimpl->ptr##_id = analysis::normalize(parser::parseExpr(nm, _spec, false));                                                                  \
+				pimpl->ptr##_id = analysis::normalize(parser::parseExpr(nm, _spec, false));                                                                    \
+				if(pimpl->ptr##_id.isa<insieme::core::LambdaExprPtr>()) {                                                                                      \
+					pimpl->ptr##_id = insieme::core::LambdaExpr::get(nm, pimpl->ptr##_id.as<insieme::core::LambdaExprPtr>()->getLambda(), _name);              \
+				}                                                                                                                                              \
 				markAsBuiltIn(pimpl->ptr##_id);                                                                                                                \
 				markAsDerived(pimpl->ptr##_id, _name);                                                                                                         \
 			}                                                                                                                                                  \
@@ -247,7 +250,7 @@ namespace lang {
 	#define OPERATION(_type, _op, _name, _spec)                                                                                                                \
 		LiteralPtr BasicGenerator::get##_type##_op() const {                                                                                                   \
 			if(!pimpl->ptr##_type##_op) {                                                                                                                      \
-				pimpl->ptr##_type##_op = pimpl->build.literal(parser::parseType(nm, _spec, false), _name);                                                   \
+				pimpl->ptr##_type##_op = pimpl->build.literal(parser::parseType(nm, _spec, false), _name);                                                     \
 				markAsBuiltIn(pimpl->ptr##_type##_op);                                                                                                         \
 			}                                                                                                                                                  \
 			return pimpl->ptr##_type##_op;                                                                                                                     \
@@ -259,7 +262,10 @@ namespace lang {
 	#define DERIVED_OP(_type, _op, _name, _spec)                                                                                                               \
 		ExpressionPtr BasicGenerator::get##_type##_op() const {                                                                                                \
 			if(!pimpl->ptr##_type##_op) {                                                                                                                      \
-				pimpl->ptr##_type##_op = analysis::normalize(parser::parseExpr(nm, _spec, false));                                                           \
+				pimpl->ptr##_type##_op = analysis::normalize(parser::parseExpr(nm, _spec, false));                                                             \
+				if(pimpl->ptr##_type##_op.isa<insieme::core::LambdaExprPtr>()) {                                                                               \
+					pimpl->ptr##_type##_op = insieme::core::LambdaExpr::get(nm, pimpl->ptr##_type##_op.as<insieme::core::LambdaExprPtr>()->getLambda(), _name);\
+				}                                                                                                                                              \
 				markAsBuiltIn(pimpl->ptr##_type##_op);                                                                                                         \
 				markAsDerived(pimpl->ptr##_type##_op, _name);                                                                                                  \
 			}                                                                                                                                                  \
