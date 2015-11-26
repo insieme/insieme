@@ -146,23 +146,22 @@ namespace lang {
 
 		// Test for the re-use of an unknown named extension
 		auto& namedDerivedUnknown = extension.getNamedDerivedUnknown();
-		EXPECT_EQ("rec _.{_=fun(ref<FooType,f,f,plain> v0) {return ref_deref(v0);}}",
+		EXPECT_EQ("rec NamedDerivedUnknown.{NamedDerivedUnknown=fun(ref<FooType,f,f,plain> v0) {return ref_deref(v0);}}",
 		          toString(*namedDerivedUnknown));
 		EXPECT_EQ("((FooType)->FooType)", toString(*namedDerivedUnknown.getType()));
 
 		// Test for correct handling of a known named extension
 		auto& namedDerived = extension.getNamedDerived();
-		EXPECT_EQ("rec _.{_=fun(ref<struct {foo:'a,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor(),"
-				  "operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,"
-				  "operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>},f,f,plain> v0) "
-				  "{return ref_deref(v0);}}",
-		          toString(*namedDerived));
+		EXPECT_EQ("rec named_derived.{named_derived=fun(ref<struct "
+			      "{foo:'a,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,operator_"
+			      "assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>},f,f,plain> v0) {return ref_deref(v0);}}",
+			      toString(*namedDerived));
 		EXPECT_EQ("((struct {foo:'a,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor(),"
-				  "operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,"
-				  "operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>})->struct {foo:'a,ctor(),ctor(ref<^,t,f,cpp_ref>),"
-				  "ctor(ref<^,f,f,cpp_rref>),dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,"
-				  "operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>})",
-		          toString(*namedDerived.getType()));
+			      "operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,"
+			      "operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>})->struct {foo:'a,ctor(),ctor(ref<^,t,f,cpp_ref>),"
+			      "ctor(ref<^,f,f,cpp_rref>),dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,"
+			      "operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>})",
+			      toString(*namedDerived.getType()));
 	}
 
 

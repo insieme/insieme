@@ -321,13 +321,13 @@ namespace lang {
 		const insieme::core::TypePtr& get##NAME() const {                                                                                                      \
 		    if(!type_##NAME) {                                                                                                                                 \
 				type_##NAME = getType(getNodeManager(), TYPE, getSymbols(), getTypeAliases());                                                                 \
-				assert_true(type_##NAME) << "Unable to parse IR for type " #NAME;                                                                            \
+				assert_true(type_##NAME) << "Unable to parse IR for type " #NAME;                                                                              \
 				insieme::core::lang::markAsBuiltIn(type_##NAME);                                                                                               \
 			}                                                                                                                                                  \
 			return type_##NAME;                                                                                                                                \
 		}                                                                                                                                                      \
 		const bool is##NAME(const insieme::core::NodePtr& node) const {                                                                                        \
-			if(auto expr = node.isa<insieme::core::ExpressionPtr>()) return is##NAME(expr->getType());																		   \
+			if(auto expr = node.isa<insieme::core::ExpressionPtr>()) return is##NAME(expr->getType());													       \
 			return node && (*node == *get##NAME());                                                                                                            \
 		}
 
@@ -355,15 +355,15 @@ namespace lang {
                                                                                                                                                                \
 		insieme::core::LiteralPtr reg##NAME() const {                                                                                                          \
 			checkIrNameNotAlreadyInUse(IR_NAME);                                                                                                               \
-			addNamedIrExtension(IR_NAME, [&]()->insieme::core::NodePtr { return get##NAME(); });                                                                              \
+			addNamedIrExtension(IR_NAME, [&]()->insieme::core::NodePtr { return get##NAME(); });                                                               \
 			return insieme::core::LiteralPtr();                                                                                                                \
 		}                                                                                                                                                      \
                                                                                                                                                                \
 	  public:                                                                                                                                                  \
 		const insieme::core::LiteralPtr& get##NAME() const {                                                                                                   \
-		    if (!lit_##NAME) {                                                                                                                                 \
+		    if(!lit_##NAME) {                                                                                                                                  \
 				lit_##NAME = getLiteral(getNodeManager(), TYPE, VALUE, getSymbols(), getTypeAliases());                                                        \
-				assert_true(lit_##NAME) << "Unable to parse IR for literal " #NAME;                                                                          \
+				assert_true(lit_##NAME) << "Unable to parse IR for literal " #NAME;                                                                            \
 				insieme::core::lang::markAsDerived(lit_##NAME, VALUE);                                                                                         \
 				insieme::core::lang::markAsBuiltIn(lit_##NAME);                                                                                                \
 			}                                                                                                                                                  \
@@ -372,7 +372,7 @@ namespace lang {
 		const bool is##NAME(const insieme::core::NodePtr& node) const {                                                                                        \
 			return node && (*node == *get##NAME());                                                                                                            \
 		} 																																					   \
-	    const insieme::core::CallExprPtr isCallOf##NAME(const insieme::core::NodePtr& node) const {                                                                           \
+	    const insieme::core::CallExprPtr isCallOf##NAME(const insieme::core::NodePtr& node) const {                                                            \
 			return isCallOf(node,[&]()->insieme::core::NodePtr { return get##NAME(); });                                                             		   \
 		}
 
@@ -399,16 +399,19 @@ namespace lang {
                                                                                                                                                                \
 		const insieme::core::ExpressionPtr reg##NAME() const {                                                                                                 \
 			checkIrNameNotAlreadyInUse(IR_NAME);                                                                                                               \
-			addNamedIrExtension(IR_NAME, [&]()->insieme::core::NodePtr { return get##NAME(); });                                                                              \
+			addNamedIrExtension(IR_NAME, [&]()->insieme::core::NodePtr { return get##NAME(); });                                                               \
 			return insieme::core::ExpressionPtr();                                                                                                             \
 		}                                                                                                                                                      \
                                                                                                                                                                \
 	  public:                                                                                                                                                  \
 		const insieme::core::ExpressionPtr& get##NAME() const {                                                                                                \
-		    if (!expr_##NAME) {                                                                                                                                \
-				expr_##NAME = getExpression(getNodeManager(), SPEC, getSymbols(), getTypeAliases());                                                             \
+		    if(!expr_##NAME) {                                                                                                                                 \
+				expr_##NAME = getExpression(getNodeManager(), SPEC, getSymbols(), getTypeAliases());                                                           \
 				assert_true(expr_##NAME) << "Unable to parse IR for derived " #NAME;                                                                           \
-				insieme::core::lang::markAsDerived(expr_##NAME, IR_NAME);                                                                                        \
+				if(expr_##NAME.isa<insieme::core::LambdaExprPtr>()) {                                                                                          \
+					expr_##NAME = insieme::core::LambdaExpr::get(manager, expr_##NAME.as<insieme::core::LambdaExprPtr>()->getLambda(), IR_NAME);               \
+				}                                                                                                                                              \
+				insieme::core::lang::markAsDerived(expr_##NAME, IR_NAME);                                                                                      \
 				insieme::core::lang::markAsBuiltIn(expr_##NAME);                                                                                               \
 	        }                                                                                                                                                  \
 			return expr_##NAME;                                                                                                                                \
@@ -416,7 +419,7 @@ namespace lang {
 		const bool is##NAME(const insieme::core::NodePtr& node) const {                                                                                        \
 			return node && (*node == *get##NAME());                                                                                                            \
 		} 																																					   \
-		const insieme::core::CallExprPtr isCallOf##NAME(const insieme::core::NodePtr& node) const {                                                                           \
+		const insieme::core::CallExprPtr isCallOf##NAME(const insieme::core::NodePtr& node) const {                                                            \
 			return isCallOf(node,[&]()->insieme::core::NodePtr { return get##NAME(); });                                                            		   \
 		}
 
