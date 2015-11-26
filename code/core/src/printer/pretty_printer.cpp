@@ -42,6 +42,8 @@
 #include <stack>
 
 #include <boost/unordered_map.hpp>
+#include <boost/iostreams/stream.hpp>
+#include <boost/iostreams/concepts.hpp>
 
 #include "insieme/utils/string_utils.h"
 #include "insieme/utils/map_utils.h"
@@ -52,23 +54,19 @@
 
 #include "insieme/core/lang/parallel.h"
 #include "insieme/core/lang/reference.h"
+#include "insieme/core/lang/pointer.h"
 
-#include "insieme/core/analysis/ir_utils.h"
-#include "insieme/core/encoder/lists.h"
-
-#include "insieme/core/transform/manipulation.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/type_utils.h"
 #include "insieme/core/analysis/attributes.h"
-#include "insieme/core/annotations/naming.h"
-
-
-#include <boost/iostreams/stream.hpp>
-#include <boost/iostreams/concepts.hpp>
-
 #include "insieme/core/analysis/parentheses.h"
-#include "insieme/core/printer/lexer.h"
 
+#include "insieme/core/annotations/naming.h"
+#include "insieme/core/encoder/lists.h"
+#include "insieme/core/printer/lexer.h"
+#include "insieme/core/types/match.h"
+#include "insieme/core/transform/manipulation.h"
+#include "insieme/core/transform/node_mapper_utils.h"
 
 namespace insieme {
 namespace core {
@@ -146,6 +144,42 @@ namespace printer {
 		// a forward declaration for a method assembling formatter tables
 		FormatTable initFormatTable(const PrettyPrinter&);
 
+		TypePtr resolveTypeAliases(const TypePtr& type, const TypeMap& aliases) {
+			// run through alias lists
+			for(const auto& cur : aliases) {
+				// check whether pattern matches
+				if(auto sub = types::match(nm, type, cur.first)) {
+					// compute substitution
+					auto next = (*sub).applyTo(cur.second);
+					// apply pattern and start over again
+					return resolveTypeAliases(next);
+				}
+			}
+			// no matching alias found => done
+			return type;
+		}
+
+		// applies the given alias map in revese to the given type
+		class ReverseAliasMapper : public transform::CachedNodeMapping {
+			TypeMap aliases;
+			NodeManager& nm;
+
+		  public:
+			ReverseAliasMapper(NodeManager& nm, const lang::type_alias_map& revAliases) : nm(nm) {
+				for(auto& entry: revAliases) {
+					aliases.insert({entry.second, entry.first});
+				}
+			}
+
+			const NodePtr resolveElement(const NodePtr& ptr) {
+				auto typePtr = ptr.isa<TypePtr>();
+				if(!typePtr) {
+					return ptr->substitute(nm, *this);
+				}
+				return resolveTypeAliases(typePtr, aliases)->substitute(nm, *this);
+			}
+
+		};
 
 		/**
 		 * The main visitor used by the pretty printer process.
@@ -216,9 +250,17 @@ namespace printer {
 			/**
 			 * The main entry point computing common sub-expressions before printing the actual code.
 			 */
-			void print(const NodePtr& node) {
+			void print(const NodePtr& inputNode) {
 				// reset setup
 				letBindings.clear();
+
+				// perform reverse alias mapping
+				// only pointers for now, TODO: extend
+				NodePtr node = inputNode;
+				auto& nm = node->getNodeManager();
+				auto aliases = nm.getLangExtension<lang::PointerExtension>().getDefinedTypeAliases();
+				auto rAliasMapper = ReverseAliasMapper(node->getNodeManager(), aliases);
+				node = rAliasMapper.map(node);
 
 				int funCounter = 0;
 				auto extractName = [&](const NodePtr& cur) {

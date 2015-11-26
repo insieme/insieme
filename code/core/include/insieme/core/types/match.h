@@ -47,11 +47,11 @@ namespace types {
 	// -------------------------------------------------------------------------------------------------------------------------
 
 	/**
-	 * Tries to match a type to a given generic type
+	 * Tries to match a type to another given type by mapping the type variables contained in it
 	 *
 	 * @param manager the node manager to be used for creating temporal results and the mappings within the resulting substitution
 	 * @param type     the type to be matched against the given pattern
-	 * @param pattern  the generic type describing the pattern
+	 * @param pattern  the type describing the pattern
 	 * @return an optional substitution mapping type variables in the pattern to types such that the given type and the pattern are equivalent
 	 */
 	SubstitutionOpt match(NodeManager& manager, const TypePtr& type, const TypePtr& pattern);
