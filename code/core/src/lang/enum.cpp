@@ -51,9 +51,9 @@ namespace lang {
 		auto type = node.isa<GenericTypePtr>();
 		if (auto expr = node.isa<ExpressionPtr>()) type = expr->getType().isa<GenericTypePtr>();
 
-		// if we have a struct expression that is of type (e.g. struct { enum_def, value_type })
+		// if we have an expression that is of type (e.g. (enum_def, value_type))
 		if(isEnumType(node)) {
-			type = node.as<core::TagTypePtr>()->getFields()[0]->getType().as<core::GenericTypePtr>();
+			type = node.as<TupleTypePtr>()->getElement(0).as<GenericTypePtr>();
 		}
 
 		// check given node type (performs all needed checks)
@@ -62,7 +62,7 @@ namespace lang {
 		// process node type
 		std::vector<GenericTypePtr> entries;
 		for(unsigned i=1; i<type->getTypeParameter()->size(); ++i) {
-			entries.push_back(type->getTypeParameter(i).as<core::GenericTypePtr>());
+			entries.push_back(type->getTypeParameter(i).as<GenericTypePtr>());
 		}
 		*this = EnumDefinition(type->getTypeParameter(0).as<GenericTypePtr>(), entries);
 	}
@@ -71,7 +71,7 @@ namespace lang {
 		//generic type ptr?!
 		if(!node.isa<GenericTypePtr>())
 			return false;
-		GenericTypePtr gt = node.as<core::GenericTypePtr>();
+		GenericTypePtr gt = node.as<GenericTypePtr>();
 		//name has to be enum_entry
 		if(gt->getName()->getValue().find("enum_def") == std::string::npos)
 			return false;
@@ -113,14 +113,14 @@ namespace lang {
 
 		// process node type
 		*this = EnumEntry(type->getTypeParameter(0).as<GenericTypePtr>(), 
-			type->getTypeParameter(1).as<NumericTypePtr>()->getValue().as<core::LiteralPtr>()->getValueAs<int64_t>());
+			type->getTypeParameter(1).as<NumericTypePtr>()->getValue().as<LiteralPtr>()->getValueAs<int64_t>());
 	}
 
 	bool EnumEntry::isEnumEntry(const NodePtr& node) {
 		//generic type ptr?!
 		if(!node.isa<GenericTypePtr>())
 			return false;
-		GenericTypePtr gt = node.as<core::GenericTypePtr>();
+		GenericTypePtr gt = node.as<GenericTypePtr>();
 		//type param size == 2
 		if(gt->getTypeParameter()->size() != 2)
 			return false;
@@ -144,48 +144,40 @@ namespace lang {
 		NodeManager& nm = entryName.getNodeManager();
 		IRBuilder builder(nm);
 		auto val = builder.numericType(builder.literal(builder.getLangBasic().getUIntInf(), toString(value)));
-		return GenericType::get(nm, "enum_entry", toVector(entryName.as<core::TypePtr>(), val));
+		return GenericType::get(nm, "enum_entry", toVector(entryName.as<TypePtr>(), val));
 	}
 
-	bool isEnumType(const core::NodePtr& node) {
-		core::TypePtr type;
-		if(node.isa<core::TypePtr>())
-			type = node.as<core::TypePtr>();
-		if(node.isa<core::ExpressionPtr>())
-			type = node.as<core::ExpressionPtr>()->getType();
-		//type must be a tag type (struct type)
-		if(!type.isa<core::TagTypePtr>())
+	bool isEnumType(const NodePtr& node) {
+		TypePtr type;
+		if(node.isa<TypePtr>())
+			type = node.as<TypePtr>();
+		if(node.isa<ExpressionPtr>())
+			type = node.as<ExpressionPtr>()->getType();
+		//type must be a tuple type
+		if(!type.isa<TupleTypePtr>())
 			return false;
-		const core::TagTypePtr tt = type.as<core::TagTypePtr>();
-		//name of struct has to be enum
-		if(tt->getName()->getValue() != "enum")
+		const TupleTypePtr tt = type.as<TupleTypePtr>();
+		//with exactly 2 elements (value and enum_type)
+		if(tt->getElementTypes().size() != 2)
 			return false;
-		//with exactly 2 fields (value and enum_type)
-		if(tt->getFields().size() != 2)
+		if(!tt->getElement(0).isa<GenericTypePtr>())
 			return false;
-		const core::FieldPtr t1 = tt->getFields()[0];
-		const core::FieldPtr t2 = tt->getFields()[1];
-		if(t1->getName()->getValue().find("enum_type") == std::string::npos)
-			return false;
-		if(t2->getName()->getValue().find("value") == std::string::npos)
+		const GenericTypePtr t1 = tt->getElement(0).as<GenericTypePtr>();
+		if(!EnumDefinition::isEnumDefinition(t1))
 			return false;
 		return true;
 	}
 
 
-	ExpressionPtr getEnumInit(const ExpressionPtr& initVal, const TagTypePtr& enumType) {
+	ExpressionPtr getEnumInit(const ExpressionPtr& initVal, const TupleTypePtr& enumType) {
 		IRBuilder builder(enumType->getNodeManager());
-		return builder.structExpr(enumType, { builder.namedValue("value", initVal) });
+		return builder.tupleExpr(toVector<ExpressionPtr>(builder.undefinedVar(enumType->getElement(0)), initVal));
 	}
 
-	TagTypePtr getEnumType(const TypePtr& valueType, const GenericTypePtr& enumDef) {
+	TupleTypePtr getEnumType(const TypePtr& valueType, const GenericTypePtr& enumDef) {
 		IRBuilder builder(enumDef->getNodeManager());
-		// build struct {enumty t; val v;}
-		std::vector<core::FieldPtr> elements {
-			builder.field(builder.stringValue("enum_type"), enumDef),
-			builder.field(builder.stringValue("value"), valueType)
-		};
-		return builder.structType("enum", elements);
+		// build (enumty t, val v) tuple
+		return builder.tupleType(toVector<TypePtr>(enumDef, valueType));
 	}
 
 	GenericTypePtr getEnumElement(const GenericTypePtr& name, const ExpressionPtr& val) {
@@ -194,10 +186,10 @@ namespace lang {
 
 	TypePtr getEnumElementType(const TypePtr& type) {
 		assert_true(isEnumType(type)) << "Passed type is not an enum type.";
-		const core::TagTypePtr tt = type.as<core::TagTypePtr>();
-		const core::FieldPtr t2 = tt->getFields()[1];		
-		return t2->getType();
+		const TupleTypePtr tt = type.as<TupleTypePtr>();
+		return tt->getElement(1);
 	}
+
 	GenericTypePtr getEnumDef(const GenericTypePtr& name, const std::vector<GenericTypePtr>& entries) {
 		return EnumDefinition::create(name, entries);
 	}

@@ -66,24 +66,19 @@ namespace lang {
 		auto enumTy = core::lang::getEnumType(builder.getLangBasic().getInt4(), finalEnum);
 		EXPECT_TRUE(core::lang::isEnumType(enumTy));
 		/****ENUM TAG TYPE SEMA CHECKS*****/
-		auto correct = builder.parseType("struct enum { enum_type : enum_def<Color,enum_entry<Blue,3>>; value : int<8>; }");
+		auto correct = builder.parseType("(enum_def<Color,enum_entry<Blue,3>>, int<8>)");
 		auto c = core::checks::check(correct);
 		EXPECT_FALSE(c.getErrors().size());
 		//missing name sema fail
-		auto incorrectName = builder.parseType("struct enum { enum_type : enum_def<enum_entry<Blue,3>>; value : int<8>; }");
+		auto incorrectName = builder.parseType("(enum_def<enum_entry<Blue,3>>, int<8>)");
 		c = core::checks::check(incorrectName);
 		EXPECT_TRUE(c.getErrors().size() == 1);
 		EXPECT_TRUE(c.getErrors()[0].getMessage().find("Enum definition contains invalid name") != std::string::npos);
-		//malformed enum type
-		auto incorrectET = builder.parseType("struct enum { enum_type : int<8>; value : int<8>; }");
-		c = core::checks::check(incorrectET);
-		EXPECT_TRUE(c.getErrors().size() == 1);
-		EXPECT_TRUE(c.getErrors()[0].getMessage().find("Invalid enum type") != std::string::npos);
 		//enum entry sema fail
-		auto incorrectEntry = builder.parseType("struct enum { enum_type : enum_def<Name, enum_entry<Blue>>; value : int<8>; }");
+		auto incorrectEntry = builder.parseType("(enum_def<Name, enum_entry<Blue>>, int<8>)");
 		c = core::checks::check(incorrectEntry);
 		EXPECT_TRUE(c.getErrors().size() == 1);
-		EXPECT_TRUE(c.getErrors()[0].getMessage().find("Enum definition contains invalid enum entry") != std::string::npos);
+		EXPECT_TRUE(c.getErrors()[0].getMessage().find("Invalid enum entry discovered") != std::string::npos) << c;
 	}
 
 	TEST(Enum, EnumInit) {
@@ -99,15 +94,15 @@ namespace lang {
 		GenericTypePtr eeGreen = lang::getEnumElement(enumGreen, builder.add(builder.intLit(4), builder.intLit(3)));
 		/****ENUM DEFINITION + TYPE*****/
 		GenericTypePtr finalEnum = core::lang::getEnumDef(enumName, { eeBlue, eeGreen, eeRed });
-		TagTypePtr enumTy = core::lang::getEnumType(builder.getLangBasic().getInt4(), finalEnum);
+		auto enumTy = core::lang::getEnumType(builder.getLangBasic().getInt4(), finalEnum);
 		/****ENUM DEFINITION*****/
 		auto x = lang::getEnumInit(builder.intLit(5), enumTy);
 		auto y = lang::getEnumInit(builder.intLit(3), enumTy);
-		EXPECT_EQ("struct{value=5}", toString(*x));
-		EXPECT_EQ("struct{value=3}", toString(*y));
-		EXPECT_EQ("struct enum {enum_type:enum_def<Color,enum_entry<Blue,3>,enum_entry<Green,7>,enum_entry<Red,5>>,value:int<4>,ctor(),ctor(ref<^enum,t,f,cpp_ref>),ctor(ref<^enum,f,f,cpp_rref>),dtor(),operator_assign(ref<^enum,t,f,cpp_ref>)->ref<^enum,f,f,cpp_ref>,operator_assign(ref<^enum,f,f,cpp_rref>)->ref<^enum,f,f,cpp_ref>}",
+		EXPECT_EQ("tuple(rec ref_var.{ref_var=fun(ref<type<'a>,f,f,plain> v0) {return ref_alloc(ref_deref(v0), mem_loc_stack);}}(type<enum_def<Color,enum_entry<Blue,3>,enum_entry<Green,7>,enum_entry<Red,5>>>),5)", toString(*x));
+		EXPECT_EQ("tuple(rec ref_var.{ref_var=fun(ref<type<'a>,f,f,plain> v0) {return ref_alloc(ref_deref(v0), mem_loc_stack);}}(type<enum_def<Color,enum_entry<Blue,3>,enum_entry<Green,7>,enum_entry<Red,5>>>),3)", toString(*y));
+		EXPECT_EQ("(ref<enum_def<Color,enum_entry<Blue,3>,enum_entry<Green,7>,enum_entry<Red,5>>,f,f,plain>,int<4>)",
 		          toString(*(x->getType())));
-		EXPECT_EQ("struct enum {enum_type:enum_def<Color,enum_entry<Blue,3>,enum_entry<Green,7>,enum_entry<Red,5>>,value:int<4>,ctor(),ctor(ref<^enum,t,f,cpp_ref>),ctor(ref<^enum,f,f,cpp_rref>),dtor(),operator_assign(ref<^enum,t,f,cpp_ref>)->ref<^enum,f,f,cpp_ref>,operator_assign(ref<^enum,f,f,cpp_rref>)->ref<^enum,f,f,cpp_ref>}",
+		EXPECT_EQ("(ref<enum_def<Color,enum_entry<Blue,3>,enum_entry<Green,7>,enum_entry<Red,5>>,f,f,plain>,int<4>)",
 		          toString(*(y->getType())));
 		auto c1 = core::checks::check(x);
 		EXPECT_TRUE(c1.getErrors().empty());
@@ -128,7 +123,7 @@ namespace lang {
 		GenericTypePtr eeGreen = lang::getEnumElement(enumGreen, builder.add(builder.intLit(4), builder.intLit(3)));
 
 		GenericTypePtr finalEnum = core::lang::getEnumDef(enumName, { eeBlue, eeGreen, eeRed });
-		TagTypePtr enumTy = core::lang::getEnumType(builder.getLangBasic().getInt4(), finalEnum);
+		auto enumTy = core::lang::getEnumType(builder.getLangBasic().getInt4(), finalEnum);
 
 		auto x = lang::getEnumInit(builder.intLit(5), enumTy);
 		auto y = lang::getEnumInit(builder.intLit(3), enumTy);

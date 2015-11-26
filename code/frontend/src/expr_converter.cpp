@@ -689,8 +689,9 @@ namespace conversion {
 
 			//convert and return the struct init expr
 			auto enumDef = converter.convertType(enumType->getCanonicalTypeInternal());
-			assert_true(enumDef.isa<core::TagTypePtr>()) << "enum type conversion failed.";
-			return builder.numericCast(core::lang::getEnumInit(val, enumDef.as<core::TagTypePtr>()), builder.getLangBasic().getInt4());
+			assert_true(enumDef.isa<core::TupleTypePtr>()) << "enum type conversion failed.";
+			auto exp = core::lang::getEnumInit(val, enumDef.as<core::TupleTypePtr>());
+			return builder.numericCast(exp.as<core::TupleExprPtr>()->getExpressions()[1], builder.getLangBasic().getInt4());
 		}
 
 		frontend_assert(false) << "DeclRefExpr not handled: " << dumpClang(declRef, converter.getSourceManager());
