@@ -148,6 +148,7 @@ namespace conversion {
 				                              presEnd.getColumn());
 		}
 
+        assert_true(retIr) << " no null return allowed";
 		return retIr;
 	}
 
@@ -377,7 +378,14 @@ namespace conversion {
 		case clang::UETT_SizeOf: 
 			irNode = builder.callExpr(basic.getSizeof(), builder.getTypeLiteral(type)); 
 			break;
-		default: frontend_assert(false) << "UnaryExprOrTypeTraitExpr not handled.";
+
+        case clang::UETT_AlignOf:
+		    frontend_assert(false) << "allign of is not supported";
+
+        case clang::UETT_VecStep:
+		    frontend_assert(false) << "vect step no suported in C (this is ocl feature).";
+
+		default: frontend_assert(false) << "UnaryExprOrTypeTraitExpr not handled in C.";
 		}
 		
 		return irNode;
@@ -400,7 +408,7 @@ namespace conversion {
 		}
 
 		auto memberDecl = membExpr->getMemberDecl();
-		frontend_assert(llvm::isa<clang::FieldDecl>(memberDecl)) << "non-field member in c";
+		frontend_assert(llvm::isa<clang::FieldDecl>(memberDecl)) << "non-field member in C";
 		string memName = frontend::utils::getNameForField(llvm::dyn_cast<clang::FieldDecl>(memberDecl), converter.getSourceManager());
 		auto retType = converter.convertType(membExpr->getType());
 		auto retTypeLit = builder.getTypeLiteral(retType);
@@ -424,34 +432,59 @@ namespace conversion {
 	//							BINARY OPERATOR
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-	namespace {
+    core::ExpressionPtr Converter::ExprConverter::createUnaryExpression (const core::TypePtr& exprTy, const core::ExpressionPtr& subExpr, 
+                                                                         clang::UnaryOperator::Opcode cop){
 
-		core::ExpressionPtr buildUnaryOpExpression(Converter& converter, const core::TypePtr& exprTy, const core::ExpressionPtr& expr,
-			                                       core::lang::BasicGenerator::Operator op) {
-			auto& basic = converter.getNodeManager().getLangBasic();
-			auto& builder = converter.getIRBuilder();
+            // A unary AddressOf operator translates to a ptr-from-ref in IR --------------------------------------------------------------------------- ADDRESSOF -
+            if(cop == clang::UO_AddrOf) {
+                // if function type, handle with special operator
+                if(subExpr->getType().isa<core::FunctionTypePtr>()) {
+                    return core::lang::buildPtrOfFunction(subExpr);
+                } else {
+                    return core::lang::buildPtrFromRef(subExpr);
+                }
+            }
 
-			if(core::lang::isReference(expr) && core::lang::isPointer(core::analysis::getReferencedType(expr->getType()))) {
-				return core::lang::buildPtrOperation(op, expr);
+		    // A unary Deref operator translates to a ptr-to-ref operation in IR --------------------------------------------------------------------------- DEREF -
+            if(cop == clang::UO_Deref) {
+                frontend_assert(core::lang::isPointer(subExpr)) << "Deref operation only possible on pointers, got:\n" << dumpColor(subExpr->getType());
+                // if function pointer type, access function directly
+                if(core::lang::PointerType(subExpr->getType()).getElementType().isa<core::FunctionTypePtr>()) {
+                    return core::lang::buildPtrDeref(subExpr);
+                } else {
+                    return core::lang::buildPtrToRef(subExpr);
+                }
+            }
+
+            auto opIt = unOpMap.find(cop);
+		    frontend_assert(opIt != unOpMap.end()) << "Unary Operator not implemented (" << clang::UnaryOperator::getOpcodeStr(cop).str() << ")";
+            auto op = opIt->second;
+
+			if(core::lang::isReference(subExpr) && core::lang::isPointer(core::analysis::getReferencedType(subExpr->getType()))) {
+				return core::lang::buildPtrOperation(op, subExpr);
 			}
 
 			switch(op) {
-			case core::lang::BasicGenerator::Operator::PostInc: return builder.postInc(expr);
-			case core::lang::BasicGenerator::Operator::PostDec: return builder.postDec(expr);
-			case core::lang::BasicGenerator::Operator::PreInc: return builder.preInc(expr);
-			case core::lang::BasicGenerator::Operator::PreDec: return builder.preDec(expr);
+			case core::lang::BasicGenerator::Operator::PostInc: return builder.postInc(subExpr);
+			case core::lang::BasicGenerator::Operator::PostDec: return builder.postDec(subExpr);
+			case core::lang::BasicGenerator::Operator::PreInc: return builder.preInc(subExpr);
+			case core::lang::BasicGenerator::Operator::PreDec: return builder.preDec(subExpr);
+
+			case core::lang::BasicGenerator::Operator::Plus: return builder.plus(subExpr);
+            case core::lang::BasicGenerator::Operator::Minus: return builder.minus(subExpr);
+            case core::lang::BasicGenerator::Operator::LNot:  return builder.logicNeg(utils::exprToBool(subExpr));
+
 			default: break;
 			}
 
-			return builder.unaryOp(basic.getOperator(exprTy, op), expr);
-		}
-	}
+			return builder.unaryOp(basic.getOperator(exprTy, op), subExpr);
+    }
 
+    core::ExpressionPtr Converter::ExprConverter::createBinaryExpression (const core::TypePtr& exprTy, const core::ExpressionPtr& left, 
+                                                                          const core::ExpressionPtr& right,  clang::BinaryOperator::Opcode cop){
 
-    core::ExpressionPtr Converter::ExprConverter::createBinaryExpression (const core::TypePtr& exprTy, const core::ExpressionPtr& left, const core::ExpressionPtr& right,  clang::BinaryOperator::Opcode op){
-
-		auto opIt = opMap.find(op);
-		frontend_assert(opIt != opMap.end()) << "Binary Operator not implemented.";
+		auto opIt = binOpMap.find(cop);
+		frontend_assert(opIt != binOpMap.end()) << "Binary Operator not implemented (" << clang::BinaryOperator::getOpcodeStr(cop).str() << ")";
         auto binOp = opIt->second;
 
 		if( (core::lang::isReference(left) && core::lang::isPointer(core::analysis::getReferencedType(left->getType()))) || 
@@ -462,7 +495,8 @@ namespace conversion {
             return core::lang::buildPtrOperation(binOp, left, right); 
         }
 
-		auto irOp = basic.getOperator(exprTy, binOp);
+        // the operator type needs to be deduced from operands (sometimes)
+        core::ExpressionPtr irOp;
 
         // Comparisons will return a boolean (integer) 
         //  but the operator requires different parameter types
@@ -479,10 +513,16 @@ namespace conversion {
             //      int8 <- unit8    => (int4, uint8) should be int8
             irOp = basic.getOperator(core::types::getBiggestCommonSubType( left->getType(), right->getType()), binOp);
         }
+        else{
+	    	irOp = basic.getOperator(exprTy, binOp);
+        }
 
 		return builder.binaryOp(irOp, left, right);
     }
 
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//							COMPOUND ASSINGMENT OPERATOR
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr Converter::ExprConverter::VisitCompoundAssignOperator(const clang::CompoundAssignOperator* compOp) {
 
 		core::ExpressionPtr retIr;
@@ -500,6 +540,9 @@ namespace conversion {
         return retIr;
     }
 
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//							BINARY OPERATOR
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::BinaryOperator* binOp) {
 		core::ExpressionPtr retIr;
 		LOG_EXPR_CONVERSION(binOp, retIr);
@@ -519,9 +562,6 @@ namespace conversion {
 			retIr = utils::buildCStyleAssignment(lhs, rhs);
 			return retIr;
 		}
-
-		auto opIt = opMap.find(binOp->getOpcode());
-		frontend_assert(opIt != opMap.end()) << "Binary Operator " << binOp->getOpcodeStr().str() << " not implemented.";
 
 		// the logical operators && and || need to eval their arguments lazily ------------------------------------------------------------------ LAZY LOGICAL -
 		if(binOp->getOpcode() == clang::BO_LAnd || binOp->getOpcode() == clang::BO_LOr) {
@@ -550,60 +590,14 @@ namespace conversion {
 		core::ExpressionPtr subExpr = Visit(unOp->getSubExpr());
 		core::TypePtr exprTy = converter.convertType(unOp->getType());
 
-		// A unary + is an integral upcast in some situations, but then clang generates the implicit cast in the subexpr -------------------------------- PLUS -
-		if(unOp->getOpcode() == clang::UO_Plus) {
-			retIr = subExpr;
-			return retIr;
-		}
-		
-		// A unary - is equivalent to 0-x -------------------------------------------------------------------------------------------------------------- MINUS -
-		if(unOp->getOpcode() == clang::UO_Minus) {
-			retIr = builder.minus(subExpr);
-			return retIr;
-		}
-				
-		// A unary ! implies a conversion to bool in IR ------------------------------------------------------------------------------------------ LOGICAL NOT -
-		if(unOp->getOpcode() == clang::UO_LNot) {
-			retIr = builder.logicNeg(utils::exprToBool(subExpr));
-			return utils::buildBoolToInt(retIr);
+		retIr = createUnaryExpression(exprTy, subExpr, unOp->getOpcode());
+
+		// in C, bool operations return an int
+		if(retIr->getType() == basic.getBool()) {
+			retIr = utils::buildBoolToInt(retIr);
 		}
 
-		// A unary AddressOf operator translates to a ptr-from-ref in IR --------------------------------------------------------------------------- ADDRESSOF -
-		if(unOp->getOpcode() == clang::UO_AddrOf) {
-			// if function type, handle with special operator
-			if(subExpr->getType().isa<core::FunctionTypePtr>()) {
-				retIr = core::lang::buildPtrOfFunction(subExpr);
-			} else {
-				retIr = core::lang::buildPtrFromRef(subExpr);
-			}
-			return retIr;
-		}
-
-		// A unary Deref operator translates to a ptr-to-ref operation in IR --------------------------------------------------------------------------- DEREF -
-		if(unOp->getOpcode() == clang::UO_Deref) {
-			frontend_assert(core::lang::isPointer(subExpr)) << "Deref operation only possible on pointers, got:\n" << dumpColor(subExpr->getType());
-			// if function pointer type, access function directly
-			if(core::lang::PointerType(subExpr->getType()).getElementType().isa<core::FunctionTypePtr>()) {
-				retIr = core::lang::buildPtrDeref(subExpr);
-			} else {
-				retIr = core::lang::buildPtrToRef(subExpr);
-			}
-			return retIr;
-		}
-		
-		std::map<clang::UnaryOperator::Opcode, core::lang::BasicGenerator::Operator> opMap = {
-			{clang::UO_Not, core::lang::BasicGenerator::Not},         // ~a
-			{clang::UO_PreDec, core::lang::BasicGenerator::PreDec},   // --a
-			{clang::UO_PreInc, core::lang::BasicGenerator::PreInc},   // ++a
-			{clang::UO_PostDec, core::lang::BasicGenerator::PostDec}, // a--
-			{clang::UO_PostInc, core::lang::BasicGenerator::PostInc}, // a++
-		};
-
-		auto opIt = opMap.find(unOp->getOpcode());
-		frontend_assert(opIt != opMap.end()) << "Unary Operator " << clang::UnaryOperator::getOpcodeStr(unOp->getOpcode()).str() << " not implemented.";
-
-		retIr = buildUnaryOpExpression(converter, exprTy, subExpr, opIt->second);
-		return retIr;
+        return retIr;
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

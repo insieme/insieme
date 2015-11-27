@@ -67,20 +67,30 @@ namespace conversion {
 
 		core::TypePtr convertExprType(const clang::Expr* expr);
 
-    /**
-     * stores conversion map between clang operators and Inspire
-     */
-		const std::map<clang::BinaryOperator::Opcode, core::lang::BasicGenerator::Operator> opMap;
+        /**
+         * stores conversion map between clang operators and Inspire (BINARY)
+         */
+		const std::map<clang::BinaryOperator::Opcode, core::lang::BasicGenerator::Operator> binOpMap;
+		
+        /**
+         * stores conversion map between clang operators and Inspire (UNARY)
+         */
+		const std::map<clang::UnaryOperator::Opcode, core::lang::BasicGenerator::Operator> unOpMap;
 
-    /**
-     * Handles most of binary conversion, details handled in pointer visitor itself
-     */
+        /**
+         * Handles most of binary conversion, details handled in pointer visitor itself
+         */
         core::ExpressionPtr createBinaryExpression (const core::TypePtr& exprTy, const core::ExpressionPtr& left, 
                                                     const core::ExpressionPtr& right, clang::BinaryOperator::Opcode op);
 
+        /**
+         * Handles most if unary conversion, common to C & C++
+         */
+        core::ExpressionPtr createUnaryExpression (const core::TypePtr& exprTy, const core::ExpressionPtr& subexp, clang::UnaryOperator::Opcode op);
+
 	  public:
 		ExprConverter(Converter& converter) : converter(converter), mgr(converter.mgr), builder(converter.builder), basic(converter.builder.getLangBasic()) ,
-		opMap ({
+		binOpMap ({
 			{clang::BO_MulAssign, core::lang::BasicGenerator::Mul},    // a *= b
 			{clang::BO_DivAssign, core::lang::BasicGenerator::Div},    // a /= b
 			{clang::BO_RemAssign, core::lang::BasicGenerator::Mod},    // a %= b
@@ -112,6 +122,27 @@ namespace conversion {
 			{clang::BO_GE, core::lang::BasicGenerator::Ge}, // a >= b
 			{clang::BO_EQ, core::lang::BasicGenerator::Eq}, // a == b
 			{clang::BO_NE, core::lang::BasicGenerator::Ne}, // a != b
+		}),
+		 unOpMap ({
+
+			{clang::UO_Not, core::lang::BasicGenerator::Not},         // ~a
+            {clang::UO_LNot, core::lang::BasicGenerator::LNot},       // !a
+
+            {clang::UO_Plus, core::lang::BasicGenerator::Plus},
+            {clang::UO_Minus, core::lang::BasicGenerator::Minus},
+
+			{clang::UO_PreDec, core::lang::BasicGenerator::PreDec},   // --a
+			{clang::UO_PreInc, core::lang::BasicGenerator::PreInc},   // ++a
+			{clang::UO_PostDec, core::lang::BasicGenerator::PostDec}, // a--
+			{clang::UO_PostInc, core::lang::BasicGenerator::PostInc}, // a++
+
+            //{clang::UO_AddrOf, NONE},
+            //{clang::UO_Deref, NONE},
+            //
+            //{clang::UO_Imag, NONE},
+            //{clang::UO_Real, NONE},
+            //
+            //{clang::UO_Extension, NONE}
 		})
         { }
 
@@ -223,19 +254,14 @@ namespace conversion {
 		CALL_BASE_EXPR_VISIT(ExprConverter, CompoundLiteralExpr)
 		CALL_BASE_EXPR_VISIT(ExprConverter, StmtExpr)
 		CALL_BASE_EXPR_VISIT(ExprConverter, ImplicitValueInitExpr)
-		CALL_BASE_EXPR_VISIT(ExprConverter, BinaryOperator)
-		CALL_BASE_EXPR_VISIT(ExprConverter, CompoundAssignOperator)
 		CALL_BASE_EXPR_VISIT(ExprConverter, AtomicExpr)
 
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		//  next methods require a specific implementation on C++
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-		core::ExpressionPtr VisitImplicitCastExpr(const clang::ImplicitCastExpr* castExpr);
-		core::ExpressionPtr VisitExplicitCastExpr(const clang::ExplicitCastExpr* castExpr);
-		core::ExpressionPtr VisitCallExpr(const clang::CallExpr* callExpr);
-		core::ExpressionPtr VisitMemberExpr(const clang::MemberExpr* memExpr);
-		core::ExpressionPtr VisitDeclRefExpr(const clang::DeclRefExpr* declRef);
+		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		//  C++ only Expressions
 		core::ExpressionPtr VisitCXXBoolLiteralExpr(const clang::CXXBoolLiteralExpr* boolLit);
 		core::ExpressionPtr VisitCXXMemberCallExpr(const clang::CXXMemberCallExpr* callExpr);
 		core::ExpressionPtr VisitCXXOperatorCallExpr(const clang::CXXOperatorCallExpr* callExpr);
@@ -245,19 +271,39 @@ namespace conversion {
 		core::ExpressionPtr VisitCXXThisExpr(const clang::CXXThisExpr* callExpr);
 		core::ExpressionPtr VisitCXXThrowExpr(const clang::CXXThrowExpr* throwExpr);
 		core::ExpressionPtr VisitCXXDefaultArgExpr(const clang::CXXDefaultArgExpr* defaultArgExpr);
-		core::ExpressionPtr VisitCXXBindTemporaryExpr(const clang::CXXBindTemporaryExpr* bindTempExpr);
 		core::ExpressionPtr VisitCXXScalarValueInitExpr(const clang::CXXScalarValueInitExpr* scalarValueInit);
+		core::ExpressionPtr VisitCXXDefaultInitExpr(const clang::CXXDefaultInitExpr* initExpr);
+
+		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		//  Temporaries management
 		core::ExpressionPtr VisitExprWithCleanups(const clang::ExprWithCleanups* cleanupExpr);
 		core::ExpressionPtr VisitMaterializeTemporaryExpr(const clang::MaterializeTemporaryExpr* materTempExpr);
-		core::ExpressionPtr VisitCXXTypeidExpr(const clang::CXXTypeidExpr* typeidExpr);
-		core::ExpressionPtr VisitCXXDefaultInitExpr(const clang::CXXDefaultInitExpr* initExpr);
-		core::ExpressionPtr VisitSubstNonTypeTemplateParmExpr(const clang::SubstNonTypeTemplateParmExpr* substExpr);
+		core::ExpressionPtr VisitCXXBindTemporaryExpr(const clang::CXXBindTemporaryExpr* bindTempExpr);
+
+
+		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		//  Operators
 		core::ExpressionPtr VisitUnaryOperator(const clang::UnaryOperator* unaryOp);
+		core::ExpressionPtr VisitBinaryOperator (const clang::BinaryOperator* binOp);
+		core::ExpressionPtr VisitCompoundAssignOperator(const clang::CompoundAssignOperator* binOp);
 		core::ExpressionPtr VisitBinPtrMemD(const clang::BinaryOperator* binPtrMemDexpr);
 		core::ExpressionPtr VisitBinPtrMemI(const clang::BinaryOperator* binPtrMemIexpr);
+
+        //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        // Traits expressions & templates
 		core::ExpressionPtr VisitTypeTraitExpr(const clang::TypeTraitExpr* typeTraitExpr);
 		core::ExpressionPtr VisitSizeOfPackExpr(const clang::SizeOfPackExpr* expr);
+		core::ExpressionPtr VisitCXXTypeidExpr(const clang::CXXTypeidExpr* typeidExpr);
+		core::ExpressionPtr VisitSubstNonTypeTemplateParmExpr(const clang::SubstNonTypeTemplateParmExpr* substExpr);
 		
+		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		//  Expressions
+		core::ExpressionPtr VisitImplicitCastExpr(const clang::ImplicitCastExpr* castExpr);
+		core::ExpressionPtr VisitExplicitCastExpr(const clang::ExplicitCastExpr* castExpr);
+		core::ExpressionPtr VisitCallExpr(const clang::CallExpr* callExpr);
+		core::ExpressionPtr VisitMemberExpr(const clang::MemberExpr* memExpr);
+		core::ExpressionPtr VisitDeclRefExpr(const clang::DeclRefExpr* declRef);
+
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		//  default visitor call
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

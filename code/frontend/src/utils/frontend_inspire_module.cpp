@@ -51,6 +51,13 @@ namespace utils {
 		auto& inspMod = mgr.getLangExtension<FrontendInspireModule>();
 		return builder.callExpr(core::analysis::getReferencedType(lhs->getType()), inspMod.getCStyleAssignment(), lhs, rhs);
 	}
+    
+    ExpressionPtr buildCxxStyleAssignment(const ExpressionPtr& lhs, const ExpressionPtr& rhs) {
+		NodeManager& mgr = lhs->getNodeManager();
+		IRBuilder builder(mgr);
+		auto& inspMod = mgr.getLangExtension<FrontendInspireModule>();
+		return builder.callExpr(lhs->getType(), inspMod.getCxxStyleAssignment(), lhs, rhs);
+	}
 
 	ExpressionPtr buildCommaOperator(const core::ExpressionPtr& lhs, const core::ExpressionPtr& rhs) {
 		NodeManager& mgr = lhs->getNodeManager();

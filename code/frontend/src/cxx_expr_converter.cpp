@@ -47,6 +47,8 @@
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/stmt_wrapper.h"
 #include "insieme/frontend/utils/temporaries_lookup.h"
+#include "insieme/frontend/utils/frontend_inspire_module.h"
+#include "insieme/frontend/utils/expr_to_bool.h"
 
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/functional_utils.h"
@@ -145,26 +147,18 @@ namespace conversion {
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	//						  UNARY OPERATOR EXPRESSION
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::ExpressionPtr Converter::CXXExprConverter::VisitUnaryOperator(const clang::UnaryOperator* unOp) {
-		core::ExpressionPtr retIr;
-		LOG_EXPR_CONVERSION(unOp, retIr);
-
-		assert_not_implemented();
-
-		return retIr = Converter::ExprConverter::VisitUnaryOperator(unOp);
-	}
-
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//						  MEMBER EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr Converter::CXXExprConverter::VisitMemberExpr(const clang::MemberExpr* membExpr) {
 		core::ExpressionPtr retIr;
 		LOG_EXPR_CONVERSION(membExpr, retIr);
 
+		core::ExpressionPtr&& base = Visit(membExpr->getBase());
+
+        membExpr->dumpColor();
+        std::cout << " base: " << base << " : " << base->getType() << std::endl;
+
 		//// get the base we want to access to
-		//core::ExpressionPtr&& base = Visit(membExpr->getBase());
 
 		//// it might be that is a function, therefore we retrieve a callable expression
 		//const clang::ValueDecl* valDecl = membExpr->getMemberDecl();
@@ -797,6 +791,72 @@ namespace conversion {
 		LOG_EXPR_CONVERSION(exprI, retIr);
 		assert_not_implemented();
 		return retIr;
+	}
+
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//							COMPOUND ASSINGMENT OPERATOR
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	core::ExpressionPtr Converter::CXXExprConverter::VisitCompoundAssignOperator(const clang::CompoundAssignOperator* compOp) {
+
+		core::ExpressionPtr retIr;
+		LOG_EXPR_CONVERSION(compOp, retIr);
+
+		core::ExpressionPtr lhs = Visit(compOp->getLHS());
+		core::ExpressionPtr rhs = Visit(compOp->getRHS());
+		core::TypePtr exprTy = converter.convertType(compOp->getType());
+
+        assert_true( core::lang::isReference( lhs->getType()) ) << "left side must be assignable";
+
+        retIr = createBinaryExpression(exprTy, builder.deref(lhs), rhs, compOp->getOpcode());
+        retIr = frontend::utils::buildCStyleAssignment(lhs, retIr);
+
+        return retIr;
+    }
+    
+    //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//						  UNARY OPERATOR EXPRESSION
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	core::ExpressionPtr Converter::CXXExprConverter::VisitUnaryOperator(const clang::UnaryOperator* unOp) {
+		core::ExpressionPtr retIr;
+		LOG_EXPR_CONVERSION(unOp, retIr);
+
+        auto subExpr = Visit(unOp->getSubExpr());
+        auto exprType = convertExprType(unOp);
+
+		return retIr = createUnaryExpression(exprType, subExpr, unOp->getOpcode());
+	}
+
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//							BINARY OPERATOR
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	core::ExpressionPtr Converter::CXXExprConverter::VisitBinaryOperator(const clang::BinaryOperator* binOp) {
+		core::ExpressionPtr retIr;
+		LOG_EXPR_CONVERSION(binOp, retIr);
+
+		core::ExpressionPtr lhs = Visit(binOp->getLHS());
+		core::ExpressionPtr rhs = Visit(binOp->getRHS());
+		core::TypePtr exprTy = converter.convertType(binOp->getType());
+
+		// if the binary operator is a comma separated expression, we convert it into a function call which returns the value of the last expression --- COMMA -
+		if(binOp->getOpcode() == clang::BO_Comma) {
+			retIr = frontend::utils::buildCommaOperator(builder.wrapLazy(lhs), builder.wrapLazy(rhs));
+			return retIr;
+		}
+
+		// we need to translate the semantics of C-style assignments to a function call ----------------------------------------------------------- ASSIGNMENT -
+		if(binOp->getOpcode() == clang::BO_Assign) {
+			retIr = frontend::utils::buildCxxStyleAssignment(lhs, rhs);
+			return retIr;
+		}
+
+		// the logical operators && and || need to eval their arguments lazily ------------------------------------------------------------------ LAZY LOGICAL -
+		if(binOp->getOpcode() == clang::BO_LAnd || binOp->getOpcode() == clang::BO_LOr) {
+			exprTy = basic.getBool();
+			lhs = utils::exprToBool(lhs);
+			rhs = builder.wrapLazy(utils::exprToBool(rhs));
+		}
+
+        return	retIr = createBinaryExpression(exprTy, lhs, rhs, binOp->getOpcode());
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

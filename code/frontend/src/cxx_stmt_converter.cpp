@@ -146,7 +146,14 @@ namespace conversion {
 	//							COMPOUND STATEMENT
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitCompoundStmt(clang::CompoundStmt* compStmt) {
-		return StmtConverter::VisitCompoundStmt(compStmt);
+		auto resStmt = StmtConverter::VisitCompoundStmt(compStmt);
+
+        std::cout << " ============================ \n";
+        compStmt->dumpColor();
+        std::cout << std::endl;
+        for (const auto& s : resStmt) dumpColor(s);
+
+        return resStmt;
 	}
 
 

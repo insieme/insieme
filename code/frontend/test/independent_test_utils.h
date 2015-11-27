@@ -270,7 +270,7 @@ namespace frontend {
 		}
 		EXPECT_EQ(visited, occurrences);
 
-		//dumpColor(res);
+		dumpColor(res);
 		//std::cout << res;
 
 		//visitDepthFirstOnce(res, [](const LiteralPtr& lit) { 
@@ -278,7 +278,9 @@ namespace frontend {
 		//});
 
 		auto checkResult = core::checks::check(res);
-		EXPECT_EQ(checkResult.size(), 0) << checkResult;
+		EXPECT_EQ(checkResult.size(), 0) << checkResult << "\n" << 
+            dumpColor(checkResult.getErrors()[0].getOrigin().getAddressedNode()) <<  "\n@(" <<
+            locationOf(checkResult.getErrors()[0].getOrigin()) << ")";
 		//std::cout << "Semantic Error dump:\n";
 		//dumpText(checkResult.getErrors()[0].getOrigin().getParentNode(2));
 	}

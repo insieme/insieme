@@ -75,6 +75,11 @@ namespace utils {
 		LANG_EXT_DERIVED(CStyleAssignment, "(lhs : ref<'a,f,'b>, rhs : 'a) -> 'a { lhs = rhs; return *lhs; }")
 
 		/**
+		 * Implements a C++ style assignment (returning the assigned value)
+		 */
+		LANG_EXT_DERIVED(CxxStyleAssignment, "(lhs : ref<'a,f,'b>, rhs : 'a) -> ref<'a,f,'b> { lhs = rhs; return lhs; }")
+
+		/**
 		 * Implements the C comma operator semantics
 		 */
 		LANG_EXT_DERIVED(CommaOperator, "(lhs : () => 'a, rhs : () => 'b) -> 'b { lhs(); return rhs(); }")
@@ -98,6 +103,11 @@ namespace utils {
 	 */
 	core::ExpressionPtr buildCStyleAssignment(const core::ExpressionPtr& lhs, const core::ExpressionPtr& rhs);
 	
+	/**
+	 * Creates a C++-style assignment operation
+	 */
+	core::ExpressionPtr buildCxxStyleAssignment(const core::ExpressionPtr& lhs, const core::ExpressionPtr& rhs);
+
 	/**
 	 * Creates a C-style comma operation
 	 */
