@@ -129,7 +129,6 @@ namespace utils {
 
 		if(funcDecl->isFunctionTemplateSpecialization() && funcDecl->getTemplateSpecializationArgs()) {
 			for(unsigned i = 0; i < funcDecl->getTemplateSpecializationArgs()->size(); ++i) {
-				std::cout << "### i: "<< i <<" \n";
 				auto arg = funcDecl->getTemplateSpecializationArgs()->get(i);
 				switch(arg.getKind()) {
 				case clang::TemplateArgument::Expression: {

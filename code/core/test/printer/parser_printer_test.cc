@@ -42,15 +42,12 @@
 
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_builder.h"
-#include "insieme/core/checks/full_check.h"
 
-#include "insieme/core/ir_node.h"
-#include "insieme/core/ir_expressions.h"
-#include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/annotations/naming.h"
-
+#include "insieme/core/checks/full_check.h"
 #include "insieme/core/parser/ir_parser.h"
-#include "insieme/core/ir_node.h"
+#include "insieme/core/printer/pretty_printer.h"
+#include "insieme/core/analysis/compare.h"
 
 namespace insieme {
 namespace core {
@@ -161,7 +158,7 @@ namespace parser {
 				auto type3 = builder.normalize(builder.parseExpr(ss1.str()));
 
 
-				if(builder.normalize(type1) == builder.normalize(type2)) {
+				if(analysis::equalNameless(builder.normalize(type1), builder.normalize(type2))) {
 					dumpColor(type2);
 					return true;
 				} else {
@@ -214,17 +211,17 @@ namespace parser {
 		EXPECT_TRUE(test_expression(nm, "1 + 0 * 5"));
 		EXPECT_TRUE(test_expression(nm, "1 * 0 + 5"));
 
-		//EXPECT_TRUE(test_expression(nm, "() -> unit { }"));
-		//EXPECT_TRUE(test_expression(nm, "( a : int<4>) -> unit { }"));
-		//EXPECT_TRUE(test_expression(nm, "() -> unit { var int<4> a = 1+1; }"));
-		//EXPECT_TRUE(test_expression(nm, "( a : bool) -> bool { return a; }"));
+		EXPECT_TRUE(test_expression(nm, "() -> unit { }"));
+		EXPECT_TRUE(test_expression(nm, "( a : int<4>) -> unit { }"));
+		EXPECT_TRUE(test_expression(nm, "() -> unit { var int<4> a = 1+1; }"));
+		EXPECT_TRUE(test_expression(nm, "( a : bool) -> bool { return a; }"));
 
-		//EXPECT_TRUE(test_expression(nm, "( _ : 'a ) -> bool { return true; }"));
-		//EXPECT_TRUE(test_expression(nm, "( x : 'a ) -> bool { return true; }"));
-		//EXPECT_TRUE(test_expression(nm, "( x : 'a ) -> 'a { return x+CAST('a) 3; }"));
-		//EXPECT_TRUE(test_expression(nm, "( x : 'a ) -> 'a { return(x+CAST('a) 3); }"));
-		//EXPECT_TRUE(test_expression(nm, "( x : 'a ) -> 'a { return x+CAST('a) 3; }"));
-		//EXPECT_TRUE(test_expression(nm, "( x : 'a ) => x+CAST('a) 3"));
+		EXPECT_TRUE(test_expression(nm, "( _ : 'a ) -> bool { return true; }"));
+		EXPECT_TRUE(test_expression(nm, "( x : 'a ) -> bool { return true; }"));
+		EXPECT_TRUE(test_expression(nm, "( x : 'a ) -> 'a { return x+CAST('a) 3; }"));
+		EXPECT_TRUE(test_expression(nm, "( x : 'a ) -> 'a { return(x+CAST('a) 3); }"));
+		EXPECT_TRUE(test_expression(nm, "( x : 'a ) -> 'a { return x+CAST('a) 3; }"));
+		EXPECT_TRUE(test_expression(nm, "( x : 'a ) => x+CAST('a) 3"));
 
 		EXPECT_TRUE(test_expression(nm, "type_lit(int<4>)"));
 

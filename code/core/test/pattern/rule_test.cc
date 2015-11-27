@@ -251,10 +251,12 @@ TEST(Rule, VarDeref) {
 	auto b = builder.deref(builder.refVar(a));
 	auto c = builder.deref(builder.refNew(a));
 
-	EXPECT_EQ("ref_deref(rec _.{_=fun(ref<'a,f,f,plain> v0) {ref<'a,f,f,plain> v1 = rec _.{_=fun(ref<type<'a>,f,f,plain> v0) {return ref_alloc(ref_deref(v0), mem_loc_stack);}}(type<'a>); ref_assign(v1, ref_deref(v0)); return v1;}}(1))",
-	          toString(*b));
-	EXPECT_EQ("ref_deref(rec _.{_=fun(ref<'a,f,f,plain> v0) {ref<'a,f,f,plain> v1 = rec _.{_=fun(ref<type<'a>,f,f,plain> v0) {return ref_alloc(ref_deref(v0), mem_loc_heap);}}(type<'a>); ref_assign(v1, ref_deref(v0)); return v1;}}(1))",
-	          toString(*c));
+	EXPECT_EQ("ref_deref(rec ref_var_init.{ref_var_init=fun(ref<'a,f,f,plain> v0) {ref<'a,f,f,plain> v1 = rec ref_var.{ref_var=fun(ref<type<'a>,f,f,plain> v0) "
+			  "{return ref_alloc(ref_deref(v0), mem_loc_stack);}}(type<'a>); ref_assign(v1, ref_deref(v0)); return v1;}}(1))",
+			  toString(*b));
+	EXPECT_EQ("ref_deref(rec ref_new_init.{ref_new_init=fun(ref<'a,f,f,plain> v0) {ref<'a,f,f,plain> v1 = rec ref_new.{ref_new=fun(ref<type<'a>,f,f,plain> v0) "
+			  "{return ref_alloc(ref_deref(v0), mem_loc_heap);}}(type<'a>); ref_assign(v1, ref_deref(v0)); return v1;}}(1))",
+			  toString(*c));
 	EXPECT_EQ("1", toString(*r.fixpoint(b)));
 	EXPECT_EQ("1", toString(*r.fixpoint(c)));
 	EXPECT_EQ("1", toString(*r.fixpointNested(b)));

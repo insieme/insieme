@@ -87,10 +87,11 @@ namespace analysis {
 		// test a function
 		manager.setNextFreshID(5);
 		NodePtr node = builder.parseStmt("{var int<4> a = 0; let f = (a : int<4>, b : int<4>)->int<4> { return a; } in f(a,a); }");
-		EXPECT_EQ("AP({int<4> v0 = 0; rec _.{_=fun(ref<int<4>,f,f,plain> v0, ref<int<4>,f,f,plain> v1) {return ref_deref(v0);}}(v0, v0);})", toString(normalize(node)));
-		EXPECT_EQ("AP({int<4> v0 = 0; rec _.{_=fun(ref<int<4>,f,f,plain> v0, ref<int<4>,f,f,plain> v1) {return ref_deref(v0);}}(v0, v0);})", toString(normalize(node)));
-
-
+		EXPECT_EQ("AP({int<4> v0 = 0; rec _.{_=fun(ref<int<4>,f,f,plain> v0, ref<int<4>,f,f,plain> v1) {return ref_deref(v0);}}(v0, v0);})",
+			      toString(normalize(node)));
+		EXPECT_EQ("AP({int<4> v0 = 0; rec _.{_=fun(ref<int<4>,f,f,plain> v0, ref<int<4>,f,f,plain> v1) {return ref_deref(v0);}}(v0, v0);})",
+			      toString(normalize(node)));
+		
 		// test normalization with existing free variables
 		VariablePtr z = builder.variable(basic.getInt4(), 0); // create a v0!
 		std::map<string, NodePtr> map;
@@ -101,8 +102,7 @@ namespace analysis {
 		ASSERT_TRUE(expr);
 
 		EXPECT_EQ("AP(rec _.{_=fun() {v0;}})", toString(normalize(expr)));
-
-
+		
 		// test a sibling-compound
 		EXPECT_EQ("{int<4> v0 = 1; {int<4> v1 = 2;}; {int<4> v2 = 3;};}",
 		          toString(*normalize(builder.parseStmt("{var int<4> a = 1; { var int<4> b = 2; } { var int<4> c = 3; } }"))));
@@ -124,7 +124,8 @@ namespace analysis {
 			                          "	}(x);"
 			                          "}; f(3)");
 
-		EXPECT_EQ("rec f.{f=fun(ref<int<4>,f,f,plain> v0) {return rec _.{_=fun(ref<int<4>,f,f,plain> v0) {return f(ref_deref(v0));}}(ref_deref(v0));}}(3)", toString(*normalize(code)));
+		EXPECT_EQ("rec f.{f=fun(ref<int<4>,f,f,plain> v0) {return rec _.{_=fun(ref<int<4>,f,f,plain> v0) {return f(ref_deref(v0));}}(ref_deref(v0));}}(3)",
+			      toString(*normalize(code)));
 	}
 
 	TEST(Normalizing, VariablesInTypes) {
@@ -135,7 +136,9 @@ namespace analysis {
 		                              "	var int<inf> v40 = 3;"
 		                              "	var ref<array<int<4>,#v40>,f,f,plain> v50;"
 		                              "}; x()");
-		EXPECT_EQ("rec x.{x=fun() {int<inf> v0 = 3; ref<array<int<4>,v0>,f,f,plain> v1 = rec _.{_=fun(ref<type<'a>,f,f,plain> v0) {return ref_alloc(ref_deref(v0), mem_loc_stack);}}(type<array<int<4>,v0>>);}}()", toString(*normalize(code)));
+		EXPECT_EQ("rec x.{x=fun() {int<inf> v0 = 3; ref<array<int<4>,v0>,f,f,plain> v1 = rec ref_var.{ref_var=fun(ref<type<'a>,f,f,plain> v0) {return "
+			      "ref_alloc(ref_deref(v0), mem_loc_stack);}}(type<array<int<4>,v0>>);}}()",
+			      toString(*normalize(code)));
 	}
 
 

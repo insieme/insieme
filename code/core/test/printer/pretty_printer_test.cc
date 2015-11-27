@@ -40,6 +40,7 @@
 #include "insieme/core/ir_expressions.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/lang/pointer.h"
 
 #include "insieme/core/analysis/attributes.h"
 
@@ -683,4 +684,17 @@ TEST(PrettyPrinter, JustOutermostScope) {
 			"}";
 
 	EXPECT_EQ(res2, toString(PrettyPrinter(stmt, PrettyPrinter::JUST_LOCAL_CONTEXT))) << toString(PrettyPrinter(stmt, PrettyPrinter::JUST_LOCAL_CONTEXT));
+}
+
+TEST(PrettyPrinter, ReverseAliases) {
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+	auto& basic = mgr.getLangBasic();
+
+	EXPECT_EQ(toString(PrettyPrinter(insieme::core::lang::PointerType::create(basic.getInt4()))), "ptr<int<4>>");
+
+	EXPECT_EQ(toString(PrettyPrinter(insieme::core::lang::PointerType::create(basic.getInt8(), true, false))), "ptr<int<8>,t,f>");
+
+	EXPECT_EQ(toString(PrettyPrinter(insieme::core::lang::PointerType::create(insieme::core::lang::PointerType::create(basic.getInt4(), false, true)))),
+	          "ptr<ptr<int<4>,f,t>>");
 }

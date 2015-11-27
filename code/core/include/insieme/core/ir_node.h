@@ -755,7 +755,7 @@ namespace core {
 	 * of child nodes. This utility is extended by the actual node (via multiple
 	 * inheritance) to inherit type save operations on the child nodes.
 	 *
-	 * @tparam Derived the derived class, for static polymorthism
+	 * @tparam Derived the derived class, for static polymorphism
 	 * @tparam Children the list of child node types
 	 */
 	template <typename Derived, typename... Children>
@@ -768,7 +768,8 @@ namespace core {
 		 */
 		FixedSizeNodeHelper(const NodeList& children) {
 			// verify the proper composition of the child node list
-			assert_true(checkChildList(children) || printChildListTypes(children)) << "Invalid composition of Child-Nodes discovered!";
+			assert_true(checkChildList(children) || printChildListTypes(children)) 
+				<< "Invalid composition of Child-Nodes discovered!\n" << "list: " << children << "\n";
 		}
 
 		/**
@@ -784,8 +785,8 @@ namespace core {
 		/**
 		 * Checks whether the given range is composed of node pointers of the given types.
 		 *
-		 * @tparam First the first type to be occuring within the list
-		 * @tparam Rest the remaining types to be occuring wihtin the list
+		 * @tparam First the first type to be occurring within the list
+		 * @tparam Rest the remaining types to be occurring within the list
 		 * @param begin the begin of the range
 		 * @param end the end of the range to be checked
 		 */
@@ -812,7 +813,7 @@ namespace core {
 	 * of child nodes. This utility is extended by the actual node (via multiple
 	 * inheritance) to inherit type save operations on the child nodes.
 	 *
-	 * @tparam Derived the derived class, for static polymorthism
+	 * @tparam Derived the derived class, for static polymorphism
 	 * @tparam Children the list of child node types
 	 */
 	template <typename Derived, typename... Children>
@@ -841,8 +842,8 @@ namespace core {
 		/**
 		 * Checks whether the given range is composed of node pointers of the given types.
 		 *
-		 * @tparam First the first type to be occuring within the list
-		 * @tparam Rest the remaining types to be occuring wihtin the list
+		 * @tparam First the first type to be occurring within the list
+		 * @tparam Rest the remaining types to be occurring within the list
 		 * @param begin the begin of the range
 		 * @param end the end of the range to be checked
 		 */
@@ -869,7 +870,7 @@ namespace core {
 	 * node types - consisting of a list of a fixed list of heterogeneous nodes
 	 * followed by a variable length list of equal types.
 	 *
-	 * @tparam Derived the derived class, for static polymorthism
+	 * @tparam Derived the derived class, for static polymorphism
 	 * @tparam First the first list of the child list types
 	 * @tparam Rest the remaining types of the child list types
 	 *

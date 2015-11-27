@@ -34,32 +34,23 @@
  * regarding third party software licenses.
  */
 
-#pragma test expect_ir("lit(\"x\": ref<int<4>,f,f>)")
-int x;
+#pragma once
 
-#pragma test expect_ir("lit(\"y\": ref<real<4>,t,f>)")
-const float y;
+#include "insieme/core/ir.h"
 
-typedef enum { Bla, Alb } enum_t;
-#pragma test expect_ir("lit(\"globalEnum\": ref<(enum_def<IMP_enum_t,enum_entry<Bla,0>,enum_entry<Alb,1>>, uint<4>)>)")
-enum_t globalEnum;
+namespace insieme {
+namespace core {
+namespace analysis {
 
-typedef struct { int x; } IAmTheTagType;
-#pragma test expect_ir("lit(\"tt\": ref<struct IMP_IAmTheTagType { x: int<4>; },f,f>)")
-IAmTheTagType tt;
+	/**
+	 * Check for equality of two ir fragments while disregarding TagType/Lambda reference names.
+	 *
+	 * @param nodeA the first node to be compared
+	 * @param nodeB the second node to be compared
+	 * @return whether nodeA equals nodeB, disregarding tag names
+	 */
+	bool equalNameless(const NodePtr& nodeA, const NodePtr& nodeB);
 
-typedef struct _omp_lock_t { int x; } omp_lock_t;
-void omp_set_lock(omp_lock_t* lock);
-#pragma test expect_ir("lit(\"lck\": ref<struct IMP__omp_lock_t { x : int<4>; },f,f>)")
-omp_lock_t lck;
-
-int main() {
-	globalEnum;
-	y;
-	tt;
-	#pragma test expect_ir("STRING","ptr_from_ref(lck)")
-	&lck;
-	#pragma test expect_ir("STRING","IMP_omp_set_lock(ptr_from_ref(lck))")
-	omp_set_lock(&lck);
-	return x;
-}
+} // namespace analysis
+} // namespace core
+} // namespace insieme

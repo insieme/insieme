@@ -153,58 +153,58 @@ namespace checks {
 
 			FreeTagTypeCollector() : IRVisitor<TagTypeRefs>(true) {}
 
-			TagTypeRefs visit(const NodePtr& cur) override {
-				// check cache
-				auto pos = cache.find(cur);
-				if (pos != cache.end()) {
-					return pos->second;
-				}
+TagTypeRefs visit(const NodePtr& cur) override {
+	// check cache
+	auto pos = cache.find(cur);
+	if (pos != cache.end()) {
+		return pos->second;
+	}
 
-				// dispatch & cache
-				return cache[cur] = IRVisitor<TagTypeRefs>::visit(cur);
-			}
+	// dispatch & cache
+	return cache[cur] = IRVisitor<TagTypeRefs>::visit(cur);
+}
 
-			TagTypeRefs visitTagTypeReference(const TagTypeReferencePtr& ref) override {
-				TagTypeRefs res;
-				res.push_back(TagTypeReferenceAddress(ref));
-				return res;
-			}
+TagTypeRefs visitTagTypeReference(const TagTypeReferencePtr& ref) override {
+	TagTypeRefs res;
+	res.push_back(TagTypeReferenceAddress(ref));
+	return res;
+}
 
-			TagTypeRefs visitTagTypeDefinition(const TagTypeDefinitionPtr& def) override {
-				// aggregate references of child nodes - filtered by definitions
-				TagTypeRefs res;
-				for(const auto& cur : TagTypeDefinitionAddress(def)) {
-					RecordAddress recordAdr = cur->getRecord();
-					for(const auto& ref : visit(recordAdr)) {
-						if (!def->getDefinitionOf(ref)) {
-							res.push_back(concat(recordAdr, ref));
-						}
-					}
-				}
-				return res;
+TagTypeRefs visitTagTypeDefinition(const TagTypeDefinitionPtr& def) override {
+	// aggregate references of child nodes - filtered by definitions
+	TagTypeRefs res;
+	for (const auto& cur : TagTypeDefinitionAddress(def)) {
+		RecordAddress recordAdr = cur->getRecord();
+		for (const auto& ref : visit(recordAdr)) {
+			if (!def->getDefinitionOf(ref)) {
+				res.push_back(concat(recordAdr, ref));
 			}
+		}
+	}
+	return res;
+}
 
-			TagTypeRefs visitTagType(const TagTypePtr& type) override {
-				// skipping the tag-type reference in the tag type
-				TagTypeRefs res;
-				TagTypeDefinitionAddress defAddr = TagTypeAddress(type)->getDefinition();
-				for(const auto& cur : visit(defAddr)) {
-					res.push_back(concat(defAddr, cur));
-				}
-				return res;
-			}
+TagTypeRefs visitTagType(const TagTypePtr& type) override {
+	// skipping the tag-type reference in the tag type
+	TagTypeRefs res;
+	TagTypeDefinitionAddress defAddr = TagTypeAddress(type)->getDefinition();
+	for (const auto& cur : visit(defAddr)) {
+		res.push_back(concat(defAddr, cur));
+	}
+	return res;
+}
 
-			TagTypeRefs visitNode(const NodePtr& cur) override {
-				// default: aggregate free references of children
-				TagTypeRefs res;
-				NodeAddress addr(cur);
-				for(const auto& child : addr.getChildList()) {
-					for(const auto& ref : visit(child)) {
-						res.push_back(concat(child,ref));
-					}
-				}
-				return res;
-			}
+TagTypeRefs visitNode(const NodePtr& cur) override {
+	// default: aggregate free references of children
+	TagTypeRefs res;
+	NodeAddress addr(cur);
+	for (const auto& child : addr.getChildList()) {
+		for (const auto& ref : visit(child)) {
+			res.push_back(concat(child, ref));
+		}
+	}
+	return res;
+}
 
 		};
 
@@ -216,13 +216,13 @@ namespace checks {
 
 		// correct address
 		if (!address.isRoot()) {
-			for(auto& cur : free) {
+			for (auto& cur : free) {
 				cur = concat(address, cur);
 			}
 		}
 
 		// add errors
-		for(const auto& cur : free) {
+		for (const auto& cur : free) {
 			// in all other cases there is a free definition
 			add(res, Message(cur, EC_TYPE_FREE_TAG_TYPE_REFERENCE, format("Free tag type reference %s found", *cur), Message::ERROR));
 		}
@@ -234,52 +234,51 @@ namespace checks {
 	OptionalMessageList TagTypeFieldsCheck::visitTagType(const TagTypeAddress& address) {
 		OptionalMessageList res;
 
-		// check if enum type
-		if(lang::isEnumType(address.getAddressedNode())) {
-			auto fields = address.getAddressedNode()->getFields();
-			//only check if non generic enum type?!
-			if(!fields[0]->getType().isa<TypeVariablePtr>()) {
-				// enum definition has to be a generic type ptr
-				// that has >= 1 type param and the name "enum_def<...>"
-				auto enumDefType = fields[0]->getType().isa<GenericTypePtr>();
-				if(enumDefType && enumDefType->getTypeParameter().size() &&
-					(enumDefType->getName()->getValue().find("enum_def") != std::string::npos)) {
-					//first field of enum_def has to be a string lit
-					if(GenericTypePtr enumName = enumDefType->getTypeParameter(0).isa<GenericTypePtr>()) {
-						if(enumName->getTypeParameter()->size()) {
-							add(res, Message(address, EC_TYPE_MALFORMED_ENUM_TYPE_DEFINITION_NAME,
-								format("Enum definition contains invalid name: ", *(enumDefType->getTypeParameter(0)), Message::ERROR)));
-						}
-					} else {
-							add(res, Message(address, EC_TYPE_MALFORMED_ENUM_TYPE_DEFINITION_NAME,
-								format("Enum definition contains invalid name: ", *(enumDefType->getTypeParameter(0)), Message::ERROR)));
-					}
-					//all following fields must be enum entries
-					for(unsigned i=1; i<enumDefType->getTypeParameter()->size(); ++i) {
-						if(!lang::EnumEntry::isEnumEntry(enumDefType->getTypeParameter(i))) {
-							add(res, Message(address, EC_TYPE_MALFORMED_ENUM_ENTRY,
-								format("Enum definition contains invalid enum entry: ", *(enumDefType->getTypeParameter(i)), Message::ERROR)));
-						}
-					}
-				} else {
-					add(res, Message(address, EC_TYPE_MALFORMED_ENUM_TYPE, format("Invalid enum type: ",
-						*(address.getAddressedNode()), Message::ERROR)));
-				}
-			}
-		}
-
 		// check for duplicate field names
 		utils::set::PointerSet<StringValuePtr> identifiers;
 		auto fields = address.getAddressedNode()->getFields();
-		for(auto field : fields) {
+		for (auto field : fields) {
 			auto id = field->getName();
-			if(id->getValue().empty()) continue;
-			if(identifiers.contains(id)) {
+			if (id->getValue().empty()) continue;
+			if (identifiers.contains(id)) {
 				add(res, Message(address, EC_TYPE_MALFORMED_TAG_TYPE, format("Tag type contains duplicate field name: ", *id), Message::ERROR));
 			}
 			identifiers.insert(id);
 		}
 
+		return res;
+	}
+
+	OptionalMessageList EnumTypeCheck::visitGenericType(const GenericTypeAddress& address) {
+		OptionalMessageList res;
+		GenericTypePtr gt = address.getAddressedNode();
+		//check if the name is enum_entry
+		if((gt->getName()->getValue() == "enum_entry") && !lang::EnumEntry::isEnumEntry(gt)) {
+			add(res, Message(address, EC_TYPE_MALFORMED_ENUM_ENTRY,
+				format("Invalid enum entry discovered: ", *gt, Message::ERROR)));
+
+		}
+		//check if the name is enum_def
+		if ((gt->getName()->getValue() == "enum_def") && !lang::EnumDefinition::isEnumDefinition(gt)) {
+			// minimum 1 field (name, entries)
+			if(gt->getTypeParameter()->size() >= 1) {
+				//first value has to be a name
+				if (auto enumName = gt->getTypeParameter(0).isa<GenericTypePtr>()) {
+					if (enumName->getTypeParameter()->size()) {
+						add(res, Message(address, EC_TYPE_MALFORMED_ENUM_TYPE_DEFINITION_NAME,
+							format("Enum definition contains invalid name: ", *(gt->getTypeParameter(0)), Message::ERROR)));
+					}
+				}
+				else {
+					add(res, Message(address, EC_TYPE_MALFORMED_ENUM_TYPE_DEFINITION_NAME,
+						format("Enum definition contains invalid name: ", *(gt->getTypeParameter(0)), Message::ERROR)));
+				}
+				//all following values have to be enum entries -> checked above
+			} else {
+				add(res, Message(address, EC_TYPE_MALFORMED_ENUM_TYPE, format("Invalid enum definition: ",
+					*(address.getAddressedNode()), Message::ERROR)));
+			}
+		}
 		return res;
 	}
 
