@@ -62,40 +62,89 @@ namespace frontend {
 	using insieme::annotations::ExpectedIRAnnotation;
 
 	namespace {
+		
+        template <typename T>
+		static inline std::string locationOf(const T& n) {
+			auto loc = core::annotations::getLocation(n);
+			return loc ? toString(*loc) : std::string("Location could not be found!");
+		}
 
-		void irDiff(NodePtr a, NodePtr b) {
-			if(a->getNodeType() != b->getNodeType()) {
+        static inline std::string typeParsingError(core::IRBuilder& builder, const std::string& str, const core::lang::symbol_map& symbols){
+
+            try {
+                builder.parseType (str, symbols);
+            } catch (const core::parser::IRParserException& ex){
+                return ex.getMessage();
+            }
+            return "";
+        }
+        static inline std::string exprParsingError(core::IRBuilder& builder, const std::string& str, const core::lang::symbol_map& symbols){
+
+            try {
+                builder.parseExpr(str, symbols);
+            } catch (const core::parser::IRParserException& ex){
+                return ex.getMessage();
+            }
+            return "";
+        }
+        static inline std::string stmtParsingError(core::IRBuilder& builder, const std::string& str, const core::lang::symbol_map& symbols){
+
+            try {
+                builder.parseStmt(str, symbols);
+            } catch (const core::parser::IRParserException& ex){
+                return ex.getMessage();
+            }
+            return "";
+        }
+
+		void irDiff(NodePtr codeIr, NodePtr pragmaIr) {
+
+			const auto& locString = locationOf(codeIr);
+
+			if(codeIr->getNodeType() != pragmaIr->getNodeType()) {
 				std::cout << "IRDIFF-----\nNode types differ:\n" 
-					<< "NT a: " << a->getNodeType() << "\n" << "NT b: " << b->getNodeType() << "\n"
-					<< "a: " << *a << "\nb: " << *b << "\n";
+					<< "\tNT codeIr:   " << codeIr->getNodeType() << "\n" 
+                    << "\tNT pragmaIr: " << pragmaIr->getNodeType() << "\n"
+					<< "\tcodeIr:   " << dumpColor(codeIr) 
+                    << "\tpragmaIr: " << dumpColor(pragmaIr) 
+                    << "\tLOC(" << locString << ")\n";
 			}
 			
-			auto aExp = a.isa<ExpressionPtr>();
-			auto bExp = b.isa<ExpressionPtr>();
+			auto aExp = codeIr.isa<ExpressionPtr>();
+			auto bExpr = pragmaIr.isa<ExpressionPtr>();
 			if(aExp) {
-				if(aExp->getType() != bExp->getType()) {
+				if(aExp->getType() != bExpr->getType()) {
 					std::cout << "IRDIFF-----\nExpressions differ in type:\n" 
-						<< "type a: " << *aExp->getType() << "\n" << "type b: " << *bExp->getType() << "\n"
-						<< "a: " << *a << "\nb: " << *b << "\n";
+						<< "\ttype codeIr:   " << *aExp->getType() << "\n"
+                        << "\ttype pragmaIr: " << *bExpr->getType() << "\n"
+                        << "\tcodeIr:   " << dumpColor(codeIr) 
+                        << "\tpragmaIr: " << dumpColor(pragmaIr) 
+                        << "\tLOC(" << locString << ")\n";
 				}
 			}
 
-			auto aVar = a.isa<VariablePtr>();
-			auto bVar = b.isa<VariablePtr>();
+			auto aVar = codeIr.isa<VariablePtr>();
+			auto bVar = pragmaIr.isa<VariablePtr>();
 			if(aVar) {
 				if(aVar->getId() != bVar->getId()) {
 					std::cout << "IRDIFF-----\nVariables differ in id:\n" 
-						<< "id a: " << aVar->getId() << "\n" << "id b: " << bVar->getId() << "\n"
-						<< "a: " << *a << "\nb: " << *b << "\n";
+						<< "\tid codeIr:   " << aVar->getId() << "\n" 
+                        << "\tid pragmaIr: " << bVar->getId() << "\n"
+                        << "\tcodeIr:   " << dumpColor(codeIr) 
+                        << "\tpragmaIr: " << dumpColor(pragmaIr) 
+                        << "\tLOC(" << locString << ")\n";
 				}
 			}
 			
-			auto aChildren = a->getChildList();
-			auto bChildren = b->getChildList();
+			auto aChildren = codeIr->getChildList();
+			auto bChildren = pragmaIr->getChildList();
 			if(aChildren.size() != bChildren.size()) {				
 					std::cout << "IRDIFF-----\nNodes differ in number of children (ABORTING):\n" 
-						<< "child count a: " << aChildren.size() << "\n" << "child count b: " << bChildren.size() << "\n"
-						<< "a: " << *a << "\nb: " << *b << "\n";
+						<< "\tchild count codeIr:   " << aChildren.size() << "\n" 
+                        << "\tchild count pragmaIr: " << bChildren.size() << "\n"
+                        << "\tcodeIr:   " << dumpColor(codeIr) 
+                        << "\tpragmaIr: " << dumpColor(pragmaIr) 
+                        << "\tLOC(" << locString << ")\n";
 					return;
 			}
 
@@ -103,13 +152,6 @@ namespace frontend {
 				irDiff(aChildren[i], bChildren[i]);
 			}
 		}
-
-		
-		static inline std::string locationOf(const NodeAddress& addr) {
-			auto loc = core::annotations::getLocation(addr);
-			return loc ? toString(*loc) : std::string("-");
-		}
-
 		static inline void checkExpected(NodePtr expected, NodePtr actual, const NodeAddress& addr) {
 			ASSERT_TRUE(actual) << "Actual IR pointer null!";
 			ASSERT_TRUE(expected) << "Expected IR pointer null (likely parser error)!\n" << "  Location: " << *core::annotations::getLocation(addr) << "\n";
@@ -120,16 +162,11 @@ namespace frontend {
 			auto actNN = actual;
 			expected = builder.normalize(expected);
 			actual = builder.normalize(actual);
-			EXPECT_EQ(expected, actual) << "Location     : " << locationOf(addr) << "\n"
-			                            << "Actual Pretty: " << dumpColor(actual, std::cout, true) << "\n"
-			                            << "Expect Pretty: " << dumpColor(expected, std::cout, true) << "\n"
-			                            //<< "Actual NN: " << dumpColor(actNN, std::cout, true) << "\n"
-			                            //<< "Expect NN: " << dumpColor(expNN, std::cout, true) << "\n"
-			                            << "Actual type  : " << (aIsExp ? toString(dumpColor(actual.as<ExpressionPtr>()->getType())) : toString("-")) << "\n"
-			                            << "Expected type: " << (eIsExp ? toString(dumpColor(expected.as<ExpressionPtr>()->getType())) : toString("-")) << "\n"
-			                            //<< "Text actual  :\n" << dumpText(actual) << "\n"
-			                            //<< "Text expected:\n" << dumpText(expected) << "\n"
-										;
+			EXPECT_EQ(expected, actual) << "\tLocation     : " << locationOf(addr) << "\n"
+			                            << "\tActual Pretty: " << dumpColor(actual, std::cout, true) << "\n"
+			                            << "\tExpect Pretty: " << dumpColor(expected, std::cout, true) << "\n"
+			                            << "\tActual type  : " << (aIsExp ? toString(dumpColor(actual.as<ExpressionPtr>()->getType())) : toString("-")) << "\n"
+			                            << "\tExpected type: " << (eIsExp ? toString(dumpColor(expected.as<ExpressionPtr>()->getType())) : toString("-")) << "\n";
 			if(expected != actual) irDiff(actual, expected);
 		}
 	}
@@ -151,10 +188,14 @@ namespace frontend {
 		// iterate over res and check pragma expectations
 		size_t visited = 0;
 		visitDepthFirstOnce(NodeAddress(res), [&](const NodeAddress& addr) {
+
 			auto node = addr.getAddressedNode();
+            ASSERT_TRUE(node) << " no node in adress";
+
 			if(node->hasAnnotation(ExpectedIRAnnotation::KEY)) {
-				auto ann = node->getAnnotation(ExpectedIRAnnotation::KEY);
-				auto ex = ann->getExpected();
+				const auto& ann = node->getAnnotation(ExpectedIRAnnotation::KEY);
+				const auto& ex = ann->getExpected();
+                ASSERT_FALSE(ex.empty()) << " Empty string in pragma @ " << locationOf(node);
 				
 				const string regexKey = "REGEX";
 				const string regexKeyS = "REGEX_S";
@@ -163,8 +204,9 @@ namespace frontend {
 
 				VLOG(2) << "Expected annotation string: " << ex << "\n";
 
-				// Regex expect
+				// -----------------------------------------------------------------------------------------------                     ====== Regex ===========|
 				if(boost::starts_with(ex, regexKey)) {
+
 					boost::regex re;
 					if(boost::starts_with(ex, regexKeyS)) {
 						auto res = ex.substr(regexKeyS.size());
@@ -175,26 +217,42 @@ namespace frontend {
 					}
 					auto irString = ::toString(printer::PrettyPrinter(
 					    builder.normalize(node), printer::PrettyPrinter::OPTIONS_DEFAULT | printer::PrettyPrinter::PRINT_DERIVED_IMPL | printer::PrettyPrinter::PRINT_DEREFS));
-					EXPECT_TRUE(boost::regex_match(irString.begin(), irString.end(), re)) << "Location : " << locationOf(addr) << "\n"
+					EXPECT_TRUE(boost::regex_match(irString.begin(), irString.end(), re)) << "Location : " << locationOf(node) << "\n"
 					                                                                      << "IR String: " << irString << "\n"
 					                                                                      << "Regex    : " << re << "\n";
+				// -----------------------------------------------------------------------------------------------            ====== String Compare ===========|
 				} else if(boost::starts_with(ex, stringKey)) {
+
 					string exs(ex.substr(stringKey.size()));
 					auto irString = ::toString(printer::PrettyPrinter(
 					    builder.normalize(node), printer::PrettyPrinter::OPTIONS_DEFAULT | printer::PrettyPrinter::NO_LET_BINDINGS
 					                                 | printer::PrettyPrinter::NO_LET_BOUND_FUNCTIONS | printer::PrettyPrinter::PRINT_DEREFS));
-					EXPECT_EQ(exs, irString) << "Location       : " << locationOf(addr) << "\n";
+					EXPECT_EQ(exs, irString) << "Location       : " << locationOf(node) << "\n";
+
+				// -----------------------------------------------------------------------------------------------        ====== type of expression ===========|
 				} else if(boost::starts_with(ex, exprTypeKey)) {
+
 					string irs(ex.substr(exprTypeKey.size()));
-					NodePtr expected = builder.parseType(irs, symbols);
+					NodePtr expected; 
+					ASSERT_NO_THROW(expected = builder.parseType(irs, symbols)) << "Type in pragma could not be parsed:\n\t" << ex 
+                                                                                << "error: " << typeParsingError(builder, irs, symbols)
+                                                                                << "\n@" << locationOf(node);
 					checkExpected(expected, node.as<ExpressionPtr>()->getType(), addr);
+
+				// -----------------------------------------------------------------------------------------------            ====== any other case ===========|
 				} else {
+
 					NodePtr expected;
 					if(node.isa<ExpressionPtr>()) {
-						expected = builder.parseExpr(ex, symbols);
+						ASSERT_NO_THROW(expected = builder.parseExpr(ex, symbols)) << "Expression in pragma could not be parsed:\n\t" << ex 
+                                                                                   << "error: " << exprParsingError(builder, ex, symbols)
+                                                                                   << "\n@" << locationOf(node);
 					} else {
-						expected = builder.parseStmt(ex, symbols);
+						ASSERT_NO_THROW(expected = builder.parseStmt(ex, symbols)) << "Statement in pragma could not be parsed:\n\t" << ex 
+                                                                                   << "error: " << stmtParsingError(builder, ex, symbols)
+                                                                                   << "\n@" << locationOf(node);
 					}
+                    ASSERT_TRUE(expected) << "nothin to compare wiht";
 					checkExpected(expected, node, addr);
 				}
 				visited++;

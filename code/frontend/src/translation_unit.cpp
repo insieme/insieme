@@ -85,6 +85,7 @@ namespace frontend {
 
 	TranslationUnit::TranslationUnit(NodeManager& mgr, const path& file, const ConversionSetup& setup)
 	    : mMgr(mgr), mFileName(file), setup(setup), mClang(setup, file), mSema(mPragmaList, mClang.getPreprocessor(), mClang.getASTContext(), emptyCons, true) {
+
 		// check for frontend extensions pragma handlers
 		// and add user provided pragmas to be handled
 		// by insieme
@@ -116,6 +117,7 @@ namespace frontend {
 
 		if(mClang.getDiagnostics().hasErrorOccurred()) {
 			// errors are always fatal
+            assert_fail() << " clang could not parse input file, please check error report";
 			throw ClangParsingError(mFileName);
 		}
 
