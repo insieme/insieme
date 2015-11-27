@@ -808,7 +808,7 @@ namespace conversion {
         assert_true( core::lang::isReference( lhs->getType()) ) << "left side must be assignable";
 
         retIr = createBinaryExpression(exprTy, builder.deref(lhs), rhs, compOp->getOpcode());
-        retIr = frontend::utils::buildCStyleAssignment(lhs, retIr);
+        retIr = frontend::utils::buildCxxStyleAssignment(lhs, retIr);
 
         return retIr;
     }
@@ -822,6 +822,12 @@ namespace conversion {
 
         auto subExpr = Visit(unOp->getSubExpr());
         auto exprType = convertExprType(unOp);
+
+        if (core::lang::isCppReference(subExpr->getType())){
+            core::lang::ReferenceType plainRef(subExpr->getType());
+            plainRef.setKind(core::lang::ReferenceType::Kind::Plain);
+            subExpr =  core::lang::buildRefCast(subExpr, plainRef.toType());
+        }
 
 		return retIr = createUnaryExpression(exprType, subExpr, unOp->getOpcode());
 	}

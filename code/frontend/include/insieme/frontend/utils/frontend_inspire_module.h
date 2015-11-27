@@ -76,8 +76,10 @@ namespace utils {
 
 		/**
 		 * Implements a C++ style assignment (returning the assigned value)
+         *
+         * FIXME: assignment returns cpp_ref or plain? what happens with rs_ref?
 		 */
-		LANG_EXT_DERIVED(CxxStyleAssignment, "(lhs : ref<'a,f,'b>, rhs : 'a) -> ref<'a,f,'b> { lhs = rhs; return lhs; }")
+		LANG_EXT_DERIVED(CxxStyleAssignment, "(lhs : ref<'a,f,'b,'c>, rhs : 'a) -> ref<'a,f,'b,'c> { lhs = rhs; return lhs; }")
 
 		/**
 		 * Implements the C comma operator semantics

@@ -291,61 +291,61 @@ int main() {
 
 	// COMPOUND //////////////////////////////////////////////////////////////
 
-	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = ref_var_init(1); c_style_assignment(v1, *v1+1); }")
+	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = ref_var_init(1); cxx_style_assignment(v1, *v1+1); }")
 	{
 		int a = 1;
 		a += 1;
 	}
 	
-	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = ref_var_init(1); c_style_assignment(v1, *v1-2); }")
+	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = ref_var_init(1); cxx_style_assignment(v1, *v1-2); }")
 	{
 		int a = 1;
 		a -= 2;
 	}
 	
-	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = ref_var_init(1); c_style_assignment(v1, *v1/1); }")
+	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = ref_var_init(1); cxx_style_assignment(v1, *v1/1); }")
 	{
 		int a = 1;
 		a /= 1;
 	}
 	
-	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = ref_var_init(1); c_style_assignment(v1, *v1*5); }")
+	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = ref_var_init(1); cxx_style_assignment(v1, *v1*5); }")
 	{
 		int a = 1;
 		a *= 5;
 	}
 
-	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = ref_var_init(1); c_style_assignment(v1, *v1%5); }")
+	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = ref_var_init(1); cxx_style_assignment(v1, *v1%5); }")
 	{
 		int a = 1;
 		a %= 5;
 	}
 
-	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = ref_var_init(1); c_style_assignment(v1, *v1&5); }")
+	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = ref_var_init(1); cxx_style_assignment(v1, *v1&5); }")
 	{
 		int a = 1;
 		a &= 5;
 	}
 
-	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = ref_var_init(1); c_style_assignment(v1, *v1|5); }")
+	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = ref_var_init(1); cxx_style_assignment(v1, *v1|5); }")
 	{
 		int a = 1;
 		a |= 5;
 	}
 
-	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = ref_var_init(1); c_style_assignment(v1, *v1 ^ 5); }")
+	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = ref_var_init(1); cxx_style_assignment(v1, *v1 ^ 5); }")
 	{
 		int a = 1;
 		a ^= 5;
 	}
 
-	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = ref_var_init(1); c_style_assignment(v1, int_lshift(*v1, 5)); }")
+	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = ref_var_init(1); cxx_style_assignment(v1, int_lshift(*v1, 5)); }")
 	{
 		int a = 1;
 		a <<= 5;
 	}
 
-	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = ref_var_init(1); c_style_assignment(v1, int_rshift(*v1, 5)); }")
+	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = ref_var_init(1); cxx_style_assignment(v1, int_rshift(*v1, 5)); }")
 	{
 		int a = 1;
 		a >>= 5;
