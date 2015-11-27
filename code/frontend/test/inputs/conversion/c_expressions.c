@@ -401,7 +401,7 @@ int main() {
 		tu.i;
 	}
 
-	#pragma test expect_ir("REGEX_S", R"(.*var ref<\(ref<array<struct \{ i : int<4>; \},inf>,f,f,plain>, int<8>\),f,f,plain> v0 = ref_var.*)")
+	#pragma test expect_ir("REGEX_S", R"(.*var ref<ptr<struct \{ i : int<4>; \}>,f,f,plain> v0 = ref_var.*)")
 	{
 		struct {
 			int i;
@@ -409,7 +409,7 @@ int main() {
 		ts->i;
 	}
 
-	#pragma test expect_ir("REGEX_S", R"(.*var ref<\(ref<array<union \{ i : int<4>; \},inf>,f,f,plain>, int<8>\),f,f,plain> v0 = ref_var.*)")
+	#pragma test expect_ir("REGEX_S", R"(.*var ref<ptr<union \{ i : int<4>; \}>,f,f,plain> v0 = ref_var.*)")
 	{
 		union {
 			int i;

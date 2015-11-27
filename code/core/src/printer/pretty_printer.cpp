@@ -51,6 +51,7 @@
 
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_visitor.h"
+#include "insieme/core/ir_statistic.h"
 
 #include "insieme/core/lang/parallel.h"
 #include "insieme/core/lang/reference.h"
@@ -144,43 +145,22 @@ namespace printer {
 		// a forward declaration for a method assembling formatter tables
 		FormatTable initFormatTable(const PrettyPrinter&);
 
-		TypePtr resolveTypeAliases(const TypePtr& type, const TypeMap& aliases) {
+		// applies the given alias map to the given type
+		TypePtr resolveTypeAliases(const TypePtr& type, const std::vector<std::pair<TypePtr,TypePtr>>& aliases) {
 			// run through alias lists
 			for(const auto& cur : aliases) {
 				// check whether pattern matches
-				if(auto sub = types::match(nm, type, cur.first)) {
+				if(auto sub = types::match(type->getNodeManager(), type, cur.first)) {
 					// compute substitution
 					auto next = (*sub).applyTo(cur.second);
 					// apply pattern and start over again
-					return resolveTypeAliases(next);
+					return resolveTypeAliases(next, aliases);
 				}
 			}
 			// no matching alias found => done
 			return type;
 		}
-
-		// applies the given alias map in revese to the given type
-		class ReverseAliasMapper : public transform::CachedNodeMapping {
-			TypeMap aliases;
-			NodeManager& nm;
-
-		  public:
-			ReverseAliasMapper(NodeManager& nm, const lang::type_alias_map& revAliases) : nm(nm) {
-				for(auto& entry: revAliases) {
-					aliases.insert({entry.second, entry.first});
-				}
-			}
-
-			const NodePtr resolveElement(const NodePtr& ptr) {
-				auto typePtr = ptr.isa<TypePtr>();
-				if(!typePtr) {
-					return ptr->substitute(nm, *this);
-				}
-				return resolveTypeAliases(typePtr, aliases)->substitute(nm, *this);
-			}
-
-		};
-
+		
 		/**
 		 * The main visitor used by the pretty printer process.
 		 */
@@ -227,6 +207,8 @@ namespace printer {
 			 */
 			utils::map::PointerMap<LambdaBindingPtr, std::string> lambdaNames;
 
+			std::vector<std::pair<TypePtr,TypePtr>> aliases;
+
 		  public:
 			/**
 			 * The output stream this printer is printing to.
@@ -250,17 +232,21 @@ namespace printer {
 			/**
 			 * The main entry point computing common sub-expressions before printing the actual code.
 			 */
-			void print(const NodePtr& inputNode) {
+			void print(const NodePtr& node) {
 				// reset setup
 				letBindings.clear();
 
 				// perform reverse alias mapping
 				// only pointers for now, TODO: extend
-				NodePtr node = inputNode;
 				auto& nm = node->getNodeManager();
-				auto aliases = nm.getLangExtension<lang::PointerExtension>().getDefinedTypeAliases();
-				auto rAliasMapper = ReverseAliasMapper(node->getNodeManager(), aliases);
-				node = rAliasMapper.map(node);
+				auto revAliases = nm.getLangExtension<lang::PointerExtension>().getDefinedTypeAliases();
+				for(auto& entry: revAliases) {
+					aliases.push_back({entry.second, entry.first});
+				}
+				// this sorting step is important to produce consistent results
+				std::sort(aliases.begin(), aliases.end(), [](const std::pair<TypePtr, TypePtr>& a, const std::pair<TypePtr, TypePtr>& b) {
+					return IRStatistic::evaluate(a.second).getNumSharedNodes() < IRStatistic::evaluate(b.second).getNumSharedNodes();
+				});
 
 				int funCounter = 0;
 				auto extractName = [&](const NodePtr& cur) {
@@ -615,7 +601,9 @@ namespace printer {
 			/**
 			 * Wrapper for general tasks
 			 */
-			virtual void visit(const NodeAddress& element) {
+			virtual void visit(const NodeAddress& inElement) {
+				NodeAddress element = inElement;
+
 				// check whether this one is covered by the plug-in
 				if(printer.plugin.covers(element)) {
 					printer.plugin.print(out, element, *this);
@@ -627,6 +615,12 @@ namespace printer {
 				if(pos != letBindings.end()) {
 					out << pos->second;
 					return;
+				}
+
+				// for types, apply reverse aliases
+				auto typePtr = element.getAddressedNode().isa<TypePtr>();
+				if(typePtr) {
+					element = NodeAddress(resolveTypeAliases(typePtr, aliases));
 				}
 
 				if(depth > printer.maxDepth) {
