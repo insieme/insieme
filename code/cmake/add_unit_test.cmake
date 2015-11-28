@@ -22,16 +22,21 @@ macro ( add_unit_test case_name ut_prefix )
 		#set(GTEST_PREFIX ${THIRD_PARTY_LIBS_HOME}/ep-gtest-${GTEST_VERSION}/)
 		#ugly but necessary, in future versions one can use ${BINARY_DIR} in BUILD_BYPRODUCTS
 		set(gtest_lib
-			${GTEST_PREFIX}/src/googletest-build/libgtest.a)
+			${GTEST_PREFIX}/src/googletest-build/${CMAKE_CFG_INTDIR}/${CMAKE_STATIC_LIBRARY_PREFIX}gtest${CMAKE_STATIC_LIBRARY_SUFFIX})
 		set(gtest_main_lib
-			${GTEST_PREFIX}/src/googletest-build/libgtest_main.a)
+			${GTEST_PREFIX}/src/googletest-build/${CMAKE_CFG_INTDIR}/${CMAKE_STATIC_LIBRARY_PREFIX}gtest_main${CMAKE_STATIC_LIBRARY_SUFFIX})
+
+		# for now, always dynamically link in Windows
+		if(MSVC)
+			set(googletest_BUILD_SHARED_LIBS ON)
+		endif()
 
 		ExternalProject_Add(googletest
 			URL http://googletest.googlecode.com/files/gtest-${GTEST_VERSION}.zip
 			URL_HASH SHA256=247ca18dd83f53deb1328be17e4b1be31514cedfc1e3424f672bf11fd7e0d60d
 			PREFIX ${GTEST_PREFIX} 
 			INSTALL_COMMAND "" #make gtest gtest_main
-			CMAKE_ARGS -DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}
+			CMAKE_ARGS -DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM} -Dgtest_force_shared_crt=${MSVC_SHARED_RUNTIME} -DBUILD_SHARED_LIBS=${googletest_BUILD_SHARED_LIBS}
 			BUILD_BYPRODUCTS
 				${gtest_lib}
 				${gtest_main_lib}
@@ -39,8 +44,8 @@ macro ( add_unit_test case_name ut_prefix )
 		)
 	
 		ExternalProject_Get_Property(googletest source_dir binary_dir)
-		set(GTEST_LIBRARY_PATH ${binary_dir}/${CMAKE_FIND_LIBRARY_PREFIXES}gtest.a)
-		set(GTEST_MAIN_LIBRARY_PATH ${binary_dir}/${CMAKE_FIND_LIBRARY_PREFIXES}gtest_main.a)
+		set(GTEST_LIBRARY_PATH ${gtest_lib})
+		set(GTEST_MAIN_LIBRARY_PATH ${gtest_main_lib})
 
 		set(GTEST_LIBRARY gtest)
 		set(GTEST_MAIN_LIBRARY gtest_main)
@@ -52,8 +57,8 @@ macro ( add_unit_test case_name ut_prefix )
 		add_dependencies(${GTEST_MAIN_LIBRARY} googletest) 
 	else()
 		ExternalProject_Get_Property(googletest source_dir binary_dir)
-		set(GTEST_LIBRARY_PATH ${binary_dir}/${CMAKE_FIND_LIBRARY_PREFIXES}gtest.a)
-		set(GTEST_MAIN_LIBRARY_PATH ${binary_dir}/${CMAKE_FIND_LIBRARY_PREFIXES}gtest_main.a)
+		set(GTEST_LIBRARY_PATH ${binary_dir}/${CMAKE_CFG_INTDIR}/${CMAKE_STATIC_LIBRARY_PREFIX}gtest${CMAKE_STATIC_LIBRARY_SUFFIX})
+		set(GTEST_MAIN_LIBRARY_PATH ${binary_dir}/${CMAKE_CFG_INTDIR}/${CMAKE_STATIC_LIBRARY_PREFIX}gtest_main${CMAKE_STATIC_LIBRARY_SUFFIX})
 		#set(GTEST_LIBRARY gtest)
 		#set(GTEST_MAIN_LIBRARY gtest_main)
 	endif()

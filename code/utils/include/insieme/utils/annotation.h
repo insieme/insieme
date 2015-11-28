@@ -250,7 +250,7 @@ namespace utils {
 			 */
 			template <typename Value>
 			struct equal_value_impl<Value, true> {
-				bool operator()(const Value& a, const Value& b) const {
+				bool operator()(const Value& /*a*/, const Value& /*b*/) const {
 					return true;
 				}
 			};

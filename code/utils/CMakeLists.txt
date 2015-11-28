@@ -18,6 +18,16 @@ insieme_glob_headers(insieme_utils_incs include)
 # build the utils library
 add_library(insieme_utils ${LINKING_TYPE} ${insieme_utils_srcs} ${insieme_utils_incs} )
 target_include_directories(insieme_utils PUBLIC include)
+# required for generating import libraries (".lib") in Windows for DLL linking
+if(MSVC)
+	include (GenerateExportHeader)
+	GENERATE_EXPORT_HEADER( insieme_utils
+				BASE_NAME insieme_utils
+				EXPORT_MACRO_NAME insieme_utils_EXPORT
+				EXPORT_FILE_NAME insieme_utils_Export.h
+				STATIC_DEFINE insieme_utils_BUILT_AS_STATIC
+	)
+endif()
 
 # lookup Boost library
 insieme_find_package(NAME Boost COMPONENTS filesystem system regex) 
@@ -32,8 +42,6 @@ target_link_libraries(insieme_utils ${Boost_REGEX_LIBRARY})
 insieme_find_package(NAME LUAJIT)
 target_include_directories(insieme_utils PUBLIC ${LUAJIT_INCLUDE_DIRS})
 target_link_libraries(insieme_utils ${LUAJIT_LIBRARIES})
-
-target_link_libraries(insieme_utils dl)
 
 cotire(insieme_utils)
 

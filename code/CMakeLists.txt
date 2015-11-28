@@ -26,6 +26,9 @@ option(BUILD_RUNTIME_ONLY "Build only the Runtime of Insieme" OFF)
 # -- option to build Insieme (C/C++) FE + core + transform/analysis + BE ... 
 option(BUILD_CLANG "Builds the Insieme Frontend + Insieme CORE + Insieme Backend" OFF)
 
+# load environment settings common to both compiler and runtime
+include(environment_common.cmake)
+
 if(BUILD_RUNTIME_ONLY)
 	# Build only the RUNTIME part
 	# to avoid dependency on other libraries NOT used by runtime (boost for example)

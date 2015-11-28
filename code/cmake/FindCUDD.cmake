@@ -29,9 +29,8 @@ if(CUDD_ROOT)
   set(CUDD_LIBRARY_PATH PATHS "${CUDD_ROOT}/lib" NO_DEFAULT_PATH)
 endif()
 
-
 find_path(CUDD_INCLUDE_DIRS NAMES cudd.h HINTS ${CUDD_INCLUDE_PATH})
-find_library(CUDD_LIBRARIES NAMES cudd HINTS ${CUDD_LIBRARY_PATH})
+find_library(CUDD_LIBRARIES NAMES cudd CUDDVC-2.5.0 HINTS ${CUDD_LIBRARY_PATH})
 
 include(FindPackageHandleStandardArgs)
 

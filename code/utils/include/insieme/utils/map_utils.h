@@ -40,6 +40,7 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <map>
 #include <unordered_map>
 #include <vector>
 #include <initializer_list>
