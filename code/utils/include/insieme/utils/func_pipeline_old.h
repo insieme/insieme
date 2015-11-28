@@ -86,7 +86,7 @@ namespace utils {
 	};
 
 	template <class InTuple, class OutTuple>
-	class Pipeline;
+	struct Pipeline;
 
 	/**
 	 * A Stage is 1 step in the pipeline. It contains a number of functions which are all insisting on

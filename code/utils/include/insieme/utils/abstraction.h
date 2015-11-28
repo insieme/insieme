@@ -46,6 +46,15 @@
 	#endif
 #endif
 
+#ifndef SETENV_WRAPPER
+	#ifdef _MSC_VER
+		// _putenv_s always overwrites the value of existing environment variables
+		#define SETENV_WRAPPER(__env_name_, __value_name_, __overwrite_) _putenv_s(__env_name_, __value_name_)
+	#else
+		#define SETENV_WRAPPER(__env_name_, __value_name_, __overwrite_) setenv(__env_name_, __value_name_, __overwrite_)
+	#endif
+#endif
+
 #ifndef FUNCTION_SIGNATURE
 	#ifdef _MSC_VER
 		#define FUNCTION_SIGNATURE __FUNCSIG__

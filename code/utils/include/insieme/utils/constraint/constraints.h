@@ -351,7 +351,7 @@ namespace constraint {
 			Variables getInputs() const {
 				return toVector<Variable>(a);
 			}
-			void addUsedInputs(const Assignment& ass, vector<Variable>& used) const {
+			void addUsedInputs(const Assignment& /*ass*/, vector<Variable>& used) const {
 				used.push_back(a);
 			}
 		};
@@ -370,7 +370,7 @@ namespace constraint {
 			Variables getInputs() const {
 				return toVector<Variable>(a);
 			}
-			void addUsedInputs(const Assignment& ass, vector<Variable>& used) const {
+			void addUsedInputs(const Assignment& /*ass*/, vector<Variable>& used) const {
 				used.push_back(a);
 			}
 		};
@@ -391,7 +391,7 @@ namespace constraint {
 			Variables getInputs() const {
 				return toVector<Variable>(a);
 			}
-			void addUsedInputs(const Assignment& ass, vector<Variable>& used) const {
+			void addUsedInputs(const Assignment& /*ass*/, vector<Variable>& used) const {
 				used.push_back(a);
 			}
 		};
@@ -463,7 +463,7 @@ namespace constraint {
 				out << "e" << (int*)&e << " [label=\"" << e << "\"]\n";
 				out << "e" << (int*)&e << " -> " << a << " " << label;
 			}
-			void addUsedInputs(const Assignment& ass, vector<Variable>& used) const {
+			void addUsedInputs(const Assignment& /*ass*/, vector<Variable>& /*used*/) const {
 				// nothing
 			}
 		};
@@ -495,7 +495,7 @@ namespace constraint {
 			void writeDotEdge(std::ostream& out, const string& label) const {
 				out << a << " -> " << b << label;
 			}
-			void addUsedInputs(const Assignment& ass, vector<Variable>& used) const {
+			void addUsedInputs(const Assignment& /*ass*/, vector<Variable>& used) const {
 				used.push_back(a);
 			}
 		};
@@ -531,7 +531,7 @@ namespace constraint {
 			void writeDotEdge(std::ostream& out, const string& label) const {
 				out << a << " -> " << r << label;
 			}
-			void addUsedInputs(const Assignment& ass, vector<Variable>& used) const {
+			void addUsedInputs(const Assignment& /*ass*/, vector<Variable>& used) const {
 				used.push_back(a);
 			}
 		};
@@ -571,7 +571,7 @@ namespace constraint {
 				out << a << " -> " << r << label << "\n";
 				out << b << " -> " << r << label;
 			}
-			void addUsedInputs(const Assignment& ass, vector<Variable>& used) const {
+			void addUsedInputs(const Assignment& /*ass*/, vector<Variable>& used) const {
 				used.push_back(a);
 				used.push_back(b);
 			}
