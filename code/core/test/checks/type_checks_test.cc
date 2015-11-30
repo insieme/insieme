@@ -42,6 +42,7 @@
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/analysis/normalize.h"
+#include "insieme/core/analysis/type_utils.h"
 
 #include "insieme/core/lang/reference.h"
 #include "insieme/core/lang/array.h"
@@ -830,6 +831,115 @@ namespace checks {
 
 		EXPECT_PRED2(containsMSG, check(err1, returnTypeCheck),
 		             Message(NodeAddress(err1).getAddressOfChild(2, 0), EC_TYPE_INVALID_RETURN_VALUE_TYPE, "", Message::ERROR));
+	}
+
+	TEST(ReturnTypeCheck, ObjectTypes) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		// return type rules for value types:
+		//  - trivial types can be returned by value or reference
+		//  - non-trivial types must be returned by reference
+
+		TypePtr trivialClass = builder.parseType("struct A { x : int<4>; }");
+		TypePtr nonTrivialClass = builder.parseType("struct B { x : int<4>; ctor () { x = 5; } }");
+
+		EXPECT_TRUE(trivialClass);
+		EXPECT_TRUE(nonTrivialClass);
+
+		EXPECT_TRUE(analysis::isTrivial(trivialClass));
+		EXPECT_FALSE(analysis::isTrivial(nonTrivialClass));
+
+
+		{
+			// -- trivial case --
+			FunctionTypePtr trivialFunType = builder.functionType(TypeList(), trivialClass);
+
+			// -- return by value --
+			LambdaPtr a = builder.lambda(trivialFunType, VariableList(), builder.returnStmt(
+				builder.literal(trivialClass, "X")
+			));
+
+			// -- return a reference
+			LambdaPtr b = builder.lambda(trivialFunType, VariableList(), builder.returnStmt(
+				builder.literal(builder.refType(trivialClass), "X")
+			));
+
+			// -- return as C++ reference
+			LambdaPtr c = builder.lambda(trivialFunType, VariableList(), builder.returnStmt(
+				builder.literal(builder.refType(trivialClass, true, false, lang::ReferenceType::Kind::CppReference), "X")
+			));
+
+			// -- not something different, e.g. a pointer
+			LambdaPtr d = builder.lambda(trivialFunType, VariableList(), builder.returnStmt(
+				builder.literal(builder.ptrType(trivialClass), "X")
+			));
+
+			CheckPtr returnTypeCheck = make_check<ReturnTypeCheck>();
+			EXPECT_TRUE(check(a, returnTypeCheck).empty()) << check(a, returnTypeCheck);
+			EXPECT_TRUE(check(b, returnTypeCheck).empty()) << check(b, returnTypeCheck);
+			EXPECT_TRUE(check(c, returnTypeCheck).empty()) << check(c, returnTypeCheck);
+			EXPECT_EQ(1, check(d, returnTypeCheck).size()) << check(d, returnTypeCheck);
+		}
+
+		{
+			// -- non-trivial case --
+			FunctionTypePtr nonTrivialFunType = builder.functionType(TypeList(), nonTrivialClass);
+
+			// -- return by value --
+			LambdaPtr a = builder.lambda(nonTrivialFunType, VariableList(), builder.returnStmt(
+				builder.literal(nonTrivialClass, "X")
+			));
+
+			// -- return a reference
+			LambdaPtr b = builder.lambda(nonTrivialFunType, VariableList(), builder.returnStmt(
+				builder.literal(builder.refType(nonTrivialClass), "X")
+			));
+
+			// -- return as C++ reference
+			LambdaPtr c = builder.lambda(nonTrivialFunType, VariableList(), builder.returnStmt(
+				builder.literal(builder.refType(nonTrivialClass, true, false, lang::ReferenceType::Kind::CppReference), "X")
+			));
+
+			// -- not something different, e.g. a pointer
+			LambdaPtr d = builder.lambda(nonTrivialFunType, VariableList(), builder.returnStmt(
+				builder.literal(builder.ptrType(nonTrivialClass), "X")
+			));
+
+			CheckPtr returnTypeCheck = make_check<ReturnTypeCheck>();
+			EXPECT_EQ(1, check(a, returnTypeCheck).size()) << check(a, returnTypeCheck);
+			EXPECT_TRUE(check(b, returnTypeCheck).empty()) << check(b, returnTypeCheck);
+			EXPECT_TRUE(check(c, returnTypeCheck).empty()) << check(c, returnTypeCheck);
+			EXPECT_EQ(1, check(d, returnTypeCheck).size()) << check(d, returnTypeCheck);
+		}
+
+		/*
+		// create a function type (for all those functions)
+		TypePtr resultType = basic.getInt4();
+		FunctionTypePtr funType = builder.functionType(TypeList(), resultType);
+
+		// create a function where everything is correct
+		StatementPtr body = builder.returnStmt(builder.literal(resultType, "1"));
+		LambdaPtr ok1 = builder.lambda(funType, VariableList(), body);
+
+		// create a function where return type is wrong - and nested
+		body = builder.returnStmt(builder.literal(basic.getInt2(), "1"));
+		body = builder.compoundStmt(body);
+		LambdaPtr ok2 = builder.lambda(funType, VariableList(), body);
+
+		body = builder.returnStmt(builder.literal(basic.getInt8(), "1"));
+		body = builder.compoundStmt(body);
+		LambdaPtr err1 = builder.lambda(funType, VariableList(), body);
+
+		CheckPtr returnTypeCheck = make_check<ReturnTypeCheck>();
+		EXPECT_TRUE(check(ok1, returnTypeCheck).empty());
+		EXPECT_TRUE(check(ok2, returnTypeCheck).empty());
+
+		EXPECT_FALSE(check(err1, returnTypeCheck).empty());
+
+		EXPECT_PRED2(containsMSG, check(err1, returnTypeCheck),
+			Message(NodeAddress(err1).getAddressOfChild(2, 0), EC_TYPE_INVALID_RETURN_VALUE_TYPE, "", Message::ERROR));
+		*/
 	}
 
 	TEST(DeclarationStmtTypeCheck, Basic) {

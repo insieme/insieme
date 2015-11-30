@@ -39,6 +39,7 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"
+#include "insieme/core/analysis/type_utils.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/types/subtyping.h"
 #include "insieme/core/types/type_variable_deduction.h"
@@ -512,6 +513,7 @@ TagTypeRefs visitNode(const NodePtr& cur) override {
 
 		// obtain return type of lambda
 		const TypePtr& returnType = address->getType()->getReturnType();
+		bool isTrivialReturn = analysis::isTrivial(returnType);
 
 		// search for all return statements and check type
 		visitDepthFirstPrunable(address, [&](const NodeAddress& cur) -> bool {
@@ -523,8 +525,21 @@ TagTypeRefs visitNode(const NodePtr& cur) override {
 				return (category == NC_Type || category == NC_Expression);
 			}
 
-			const ReturnStmtAddress& returnStmt = static_address_cast<const ReturnStmt>(cur);
-			const TypePtr& actualType = returnStmt->getReturnExpr()->getType();
+			ReturnStmtAddress returnStmt = cur.as<ReturnStmtAddress>();
+			TypePtr actualType = returnStmt->getReturnExpr()->getType();
+
+			// check that it is a reference when needed
+			if (!isTrivialReturn && !lang::isReference(actualType)) {
+				add(res, Message(cur, EC_TYPE_INVALID_RETURN_TYPE,
+					format("Object of non-trivial type %s must be returned by reference.", *returnType),
+					Message::ERROR));
+				return true;
+			}
+
+			if (lang::isReference(actualType) && !lang::isReference(returnType)) {
+				actualType = analysis::getReferencedType(actualType);
+			}
+
 			if(!core::types::isSubTypeOf(actualType, returnType)) {
 				add(res, Message(cur, EC_TYPE_INVALID_RETURN_VALUE_TYPE,
 				                 format("Invalid type of return value \nexpected: \n\t%s\n actual: \n\t%s", toString(*returnType), toString(*actualType)),
