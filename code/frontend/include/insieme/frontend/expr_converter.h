@@ -77,16 +77,16 @@ namespace conversion {
          */
 		const std::map<clang::UnaryOperator::Opcode, core::lang::BasicGenerator::Operator> unOpMap;
 
-        /**
-         * Handles most of binary conversion, details handled in pointer visitor itself
-         */
-        core::ExpressionPtr createBinaryExpression (const core::TypePtr& exprTy, const core::ExpressionPtr& left, 
-                                                    const core::ExpressionPtr& right, clang::BinaryOperator::Opcode op);
+		/**
+		 * Handles most of binary conversion, details handled in pointer visitor itself
+		 */
+		core::ExpressionPtr createBinaryExpression(core::TypePtr exprTy, core::ExpressionPtr left, core::ExpressionPtr right,
+			                                       const clang::BinaryOperator* clangBinOp);
 
-        /**
-         * Handles most if unary conversion, common to C & C++
-         */
-        core::ExpressionPtr createUnaryExpression (const core::TypePtr& exprTy, const core::ExpressionPtr& subexp, clang::UnaryOperator::Opcode op);
+		/**
+		 * Handles most if unary conversion, common to C & C++
+		 */
+		core::ExpressionPtr createUnaryExpression(const core::TypePtr& exprTy, const core::ExpressionPtr& subexp, clang::UnaryOperator::Opcode op);
 
 	  public:
 		ExprConverter(Converter& converter) : converter(converter), mgr(converter.mgr), builder(converter.builder), basic(converter.builder.getLangBasic()) ,
