@@ -1,0 +1,10 @@
+
+
+*.c filter=tabspace4
+*.cpp filter=tabspace4
+*.cxx filter=tabspace4
+*.cc filter=tabspace4
+
+*.h filter=tabspace4
+*.hpp filter=tabspace4
+
