@@ -535,9 +535,8 @@ namespace conversion {
 	core::ExpressionPtr Converter::CXXExprConverter::VisitCXXDefaultArgExpr(const clang::CXXDefaultArgExpr* defaultArgExpr) {
 		auto retIr = Visit(defaultArgExpr->getExpr());
 		LOG_EXPR_CONVERSION(defaultArgExpr, retIr);
-
-		assert_not_implemented();
-
+		
+		// default arguments are handled just like any other argument
 		return retIr;
 	}
 
