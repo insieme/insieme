@@ -535,9 +535,8 @@ namespace conversion {
 	core::ExpressionPtr Converter::CXXExprConverter::VisitCXXDefaultArgExpr(const clang::CXXDefaultArgExpr* defaultArgExpr) {
 		auto retIr = Visit(defaultArgExpr->getExpr());
 		LOG_EXPR_CONVERSION(defaultArgExpr, retIr);
-
-		assert_not_implemented();
-
+		
+		// default arguments are handled just like any other argument
 		return retIr;
 	}
 
@@ -797,7 +796,6 @@ namespace conversion {
 	//							COMPOUND ASSINGMENT OPERATOR
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr Converter::CXXExprConverter::VisitCompoundAssignOperator(const clang::CompoundAssignOperator* compOp) {
-
 		core::ExpressionPtr retIr;
 		LOG_EXPR_CONVERSION(compOp, retIr);
 
@@ -805,29 +803,29 @@ namespace conversion {
 		core::ExpressionPtr rhs = Visit(compOp->getRHS());
 		core::TypePtr exprTy = converter.convertType(compOp->getType());
 
-        assert_true( core::lang::isReference( lhs->getType()) ) << "left side must be assignable";
+		assert_true(core::lang::isReference(lhs->getType())) << "left side must be assignable";
 
-        retIr = createBinaryExpression(exprTy, builder.deref(lhs), rhs, compOp->getOpcode());
-        retIr = frontend::utils::buildCxxStyleAssignment(lhs, retIr);
+		retIr = createBinaryExpression(exprTy, builder.deref(lhs), rhs, compOp);
+		retIr = frontend::utils::buildCxxStyleAssignment(lhs, retIr);
 
-        return retIr;
-    }
-    
-    //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		return retIr;
+	}
+
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//						  UNARY OPERATOR EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr Converter::CXXExprConverter::VisitUnaryOperator(const clang::UnaryOperator* unOp) {
 		core::ExpressionPtr retIr;
 		LOG_EXPR_CONVERSION(unOp, retIr);
 
-        auto subExpr = Visit(unOp->getSubExpr());
-        auto exprType = convertExprType(unOp);
+		auto subExpr = Visit(unOp->getSubExpr());
+		auto exprType = convertExprType(unOp);
 
-        if (core::lang::isCppReference(subExpr->getType())){
-            core::lang::ReferenceType plainRef(subExpr->getType());
-            plainRef.setKind(core::lang::ReferenceType::Kind::Plain);
-            subExpr =  core::lang::buildRefCast(subExpr, plainRef.toType());
-        }
+		if(core::lang::isCppReference(subExpr->getType())) {
+			core::lang::ReferenceType plainRef(subExpr->getType());
+			plainRef.setKind(core::lang::ReferenceType::Kind::Plain);
+			subExpr = core::lang::buildRefCast(subExpr, plainRef.toType());
+		}
 
 		return retIr = createUnaryExpression(exprType, subExpr, unOp->getOpcode());
 	}
@@ -843,26 +841,15 @@ namespace conversion {
 		core::ExpressionPtr rhs = Visit(binOp->getRHS());
 		core::TypePtr exprTy = converter.convertType(binOp->getType());
 
-		// if the binary operator is a comma separated expression, we convert it into a function call which returns the value of the last expression --- COMMA -
-		if(binOp->getOpcode() == clang::BO_Comma) {
-			retIr = frontend::utils::buildCommaOperator(builder.wrapLazy(lhs), builder.wrapLazy(rhs));
-			return retIr;
-		}
-
-		// we need to translate the semantics of C-style assignments to a function call ----------------------------------------------------------- ASSIGNMENT -
+		// we need to translate the semantics of Cxx-style assignments to a function call --------------------------------------------------------- ASSIGNMENT -
 		if(binOp->getOpcode() == clang::BO_Assign) {
-			retIr = frontend::utils::buildCxxStyleAssignment(lhs, rhs);
-			return retIr;
+			retIr = utils::buildCxxStyleAssignment(lhs, rhs);
 		}
-
-		// the logical operators && and || need to eval their arguments lazily ------------------------------------------------------------------ LAZY LOGICAL -
-		if(binOp->getOpcode() == clang::BO_LAnd || binOp->getOpcode() == clang::BO_LOr) {
-			exprTy = basic.getBool();
-			lhs = utils::exprToBool(lhs);
-			rhs = builder.wrapLazy(utils::exprToBool(rhs));
+		else {
+			retIr = createBinaryExpression(exprTy, lhs, rhs, binOp);
 		}
-
-        return	retIr = createBinaryExpression(exprTy, lhs, rhs, binOp->getOpcode());
+		
+        return retIr;
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

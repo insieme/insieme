@@ -432,10 +432,10 @@ namespace conversion {
 	//							BINARY OPERATOR
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    core::ExpressionPtr Converter::ExprConverter::createUnaryExpression (const core::TypePtr& exprTy, const core::ExpressionPtr& subExpr, 
-                                                                         clang::UnaryOperator::Opcode cop){
+    core::ExpressionPtr Converter::ExprConverter::createUnaryExpression(const core::TypePtr& exprTy, const core::ExpressionPtr& subExpr, 
+                                                                         clang::UnaryOperator::Opcode cop) {
 
-            // A unary AddressOf operator translates to a ptr-from-ref in IR --------------------------------------------------------------------------- ADDRESSOF -
+            // A unary AddressOf operator translates to a ptr-from-ref in IR ----------------------------------------------------------------------- ADDRESSOF -
             if(cop == clang::UO_AddrOf) {
                 // if function type, handle with special operator
                 if(subExpr->getType().isa<core::FunctionTypePtr>()) {
@@ -445,7 +445,7 @@ namespace conversion {
                 }
             }
 
-		    // A unary Deref operator translates to a ptr-to-ref operation in IR --------------------------------------------------------------------------- DEREF -
+		    // A unary Deref operator translates to a ptr-to-ref operation in IR ----------------------------------------------------------------------- DEREF -
             if(cop == clang::UO_Deref) {
                 frontend_assert(core::lang::isPointer(subExpr)) << "Deref operation only possible on pointers, got:\n" << dumpColor(subExpr->getType());
                 // if function pointer type, access function directly
@@ -480,40 +480,49 @@ namespace conversion {
 			return builder.unaryOp(basic.getOperator(exprTy, op), subExpr);
     }
 
-    core::ExpressionPtr Converter::ExprConverter::createBinaryExpression (const core::TypePtr& exprTy, const core::ExpressionPtr& left, 
-                                                                          const core::ExpressionPtr& right,  clang::BinaryOperator::Opcode cop){
+	core::ExpressionPtr Converter::ExprConverter::createBinaryExpression(core::TypePtr exprTy, core::ExpressionPtr left, core::ExpressionPtr right,
+		                                                                 const clang::BinaryOperator* clangBinOp) {
+		auto cop = clangBinOp->getOpcode();
 
+		// if the binary operator is a comma separated expression, we convert it into a function call which returns the value of the last expression --- COMMA -
+		if(cop == clang::BO_Comma) { 
+			return utils::buildCommaOperator(builder.wrapLazy(left), builder.wrapLazy(right)); 
+		}
+
+		// we need to translate the semantics of C-style assignments to a function call ----------------------------------------------------------- ASSIGNMENT -
+		if(cop == clang::BO_Assign) {
+			return utils::buildCStyleAssignment(left, right);
+		}
+
+		// the logical operators && and || need to eval their arguments lazily ------------------------------------------------------------------ LAZY LOGICAL -
+		if(cop == clang::BO_LAnd || cop == clang::BO_LOr) {
+			exprTy = basic.getBool();
+			left = utils::exprToBool(left);
+			right = builder.wrapLazy(utils::exprToBool(right));
+		}
+		
 		auto opIt = binOpMap.find(cop);
 		frontend_assert(opIt != binOpMap.end()) << "Binary Operator not implemented (" << clang::BinaryOperator::getOpcodeStr(cop).str() << ")";
         auto binOp = opIt->second;
 
-		if( (core::lang::isReference(left) && core::lang::isPointer(core::analysis::getReferencedType(left->getType()))) || 
-            (core::lang::isReference(right)&& core::lang::isPointer(core::analysis::getReferencedType(right->getType())))||
-		    (core::lang::isPointer(left->getType())) || 
-            (core::lang::isPointer(right->getType())) ) { 
-
-            return core::lang::buildPtrOperation(binOp, left, right); 
+		if((core::lang::isReference(left) && core::lang::isPointer(core::analysis::getReferencedType(left->getType())))
+		   || (core::lang::isReference(right) && core::lang::isPointer(core::analysis::getReferencedType(right->getType())))
+		   || (core::lang::isPointer(left->getType())) || (core::lang::isPointer(right->getType()))) {
+			return core::lang::buildPtrOperation(binOp, left, right); 
         }
 
         // the operator type needs to be deduced from operands (sometimes)
         core::ExpressionPtr irOp;
 
-        // Comparisons will return a boolean (integer) 
-        //  but the operator requires different parameter types
-        if( binOp == core::lang::BasicGenerator::Lt ||
-            binOp == core::lang::BasicGenerator::Gt ||
-            binOp == core::lang::BasicGenerator::Le ||
-            binOp == core::lang::BasicGenerator::Ge ||
-            binOp == core::lang::BasicGenerator::Eq ||
-            binOp == core::lang::BasicGenerator::Ne ){
-
+        // Comparisons will return a boolean (integer) but the operator requires different parameter types
+        if(clangBinOp->isComparisonOp()) {
             // find first super type commom to both types,
             //      int4   uint4
             //       |   /   |
             //      int8 <- unit8    => (int4, uint8) should be int8
             irOp = basic.getOperator(core::types::getBiggestCommonSubType( left->getType(), right->getType()), binOp);
         }
-        else{
+        else {
 	    	irOp = basic.getOperator(exprTy, binOp);
         }
 
@@ -524,7 +533,6 @@ namespace conversion {
 	//							COMPOUND ASSINGMENT OPERATOR
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr Converter::ExprConverter::VisitCompoundAssignOperator(const clang::CompoundAssignOperator* compOp) {
-
 		core::ExpressionPtr retIr;
 		LOG_EXPR_CONVERSION(compOp, retIr);
 
@@ -532,13 +540,13 @@ namespace conversion {
 		core::ExpressionPtr rhs = Visit(compOp->getRHS());
 		core::TypePtr exprTy = converter.convertType(compOp->getType());
 
-        assert_true( core::lang::isReference( lhs->getType()) ) << "left side must be assignable";
+		assert_true(core::lang::isReference(lhs->getType())) << "left side must be assignable";
 
-        retIr = createBinaryExpression(exprTy, builder.deref(lhs), rhs, compOp->getOpcode());
-        retIr = utils::buildCStyleAssignment(lhs, retIr);
+		retIr = createBinaryExpression(exprTy, builder.deref(lhs), rhs, compOp);
+		retIr = utils::buildCStyleAssignment(lhs, retIr);
 
-        return retIr;
-    }
+		return retIr;
+	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//							BINARY OPERATOR
@@ -551,26 +559,7 @@ namespace conversion {
 		core::ExpressionPtr rhs = Visit(binOp->getRHS());
 		core::TypePtr exprTy = converter.convertType(binOp->getType());
 
-		// if the binary operator is a comma separated expression, we convert it into a function call which returns the value of the last expression --- COMMA -
-		if(binOp->getOpcode() == clang::BO_Comma) {
-			retIr = utils::buildCommaOperator(builder.wrapLazy(lhs), builder.wrapLazy(rhs));
-			return retIr;
-		}
-
-		// we need to translate the semantics of C-style assignments to a function call ----------------------------------------------------------- ASSIGNMENT -
-		if(binOp->getOpcode() == clang::BO_Assign) {
-			retIr = utils::buildCStyleAssignment(lhs, rhs);
-			return retIr;
-		}
-
-		// the logical operators && and || need to eval their arguments lazily ------------------------------------------------------------------ LAZY LOGICAL -
-		if(binOp->getOpcode() == clang::BO_LAnd || binOp->getOpcode() == clang::BO_LOr) {
-			exprTy = basic.getBool();
-			lhs = utils::exprToBool(lhs);
-			rhs = builder.wrapLazy(utils::exprToBool(rhs));
-		}
-
-		retIr = createBinaryExpression(exprTy, lhs, rhs, binOp->getOpcode());
+		retIr = createBinaryExpression(exprTy, lhs, rhs, binOp);
 
 		// in C, bool operations return an int
 		if(retIr->getType() == basic.getBool()) {

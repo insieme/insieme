@@ -58,9 +58,13 @@ namespace frontend {
 	TEST(CppIndependentTest, BasicTemplates) {
 		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/cpp_basic_templates.cpp");
 	}
-
+	
 	TEST(CppIndependentTest, NewDelete) {
 		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/cpp_new_delete.cpp");
+	}
+
+	TEST(CppIndependentTest, DefaultArgs) {
+		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/cpp_default_args.cpp");
 	}
 
 } // fe namespace

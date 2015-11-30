@@ -45,11 +45,23 @@ int main() {
 		int& b = a;
 		&b;
 	}
+	#pragma test expect_ir("{var ref<int<4>,f,f,plain> v0; var ref<int<4>,t,f,cpp_ref> v1 = ref_cast(v0, type_lit(t), type_lit(f), type_lit(cpp_ref)); ptr_from_ref(ref_cast(v1, type_lit(t), type_lit(f), type_lit(plain)));}")
+	{
+        int a;
+		const int& b = a;
+		&b;
+	}
 	
 	#pragma test expect_ir("{var ref<int<4>,f,f,plain> v0; var ref<int<4>,f,f,cpp_ref> v1 = ref_cast(v0, type_lit(f), type_lit(f), type_lit(cpp_ref)); 0-*v1; } ")
 	{
 		int a;
 		int& b = a;
+		-b;
+	}
+	#pragma test expect_ir("{var ref<int<4>,f,f,plain> v0; var ref<int<4>,t,f,cpp_ref> v1 = ref_cast(v0, type_lit(t), type_lit(f), type_lit(cpp_ref)); 0-*v1; } ")
+	{
+		int a;
+		const int& b = a;
 		-b;
 	}
 
@@ -89,6 +101,12 @@ int main() {
 	{
         int a;
         int& b = a;
+		a+b;
+	}
+	#pragma test expect_ir("{var ref<int<4>,t,f,plain> v0  = ref_cast(ref_var_init(1), type_lit(t), type_lit(f), type_lit(plain)); var ref<int<4>,t,f,cpp_ref> v1 = ref_cast(v0, type_lit(t), type_lit(f), type_lit(cpp_ref)); *v0+*v1; } ")
+	{
+        const int a = 1;
+        const int& b = a;
 		a+b;
 	}
 
@@ -162,6 +180,21 @@ int main() {
 	{
         intPtr a;
 		intPtr& b = a;
+		*b;
+	}
+    
+    #pragma test expect_ir("{var ref<ptr<int<4>>,f,f,plain> v0; var ref<ptr<int<4>>,t,f,cpp_ref> v1 = ref_cast(v0, type_lit(t), type_lit(f), type_lit(cpp_ref)); ptr_to_ref(*v1); } ")
+	{
+        intPtr a;
+		const intPtr& b = a;
+		*b;
+	}
+
+	typedef const int* constIntPtr;
+    #pragma test expect_ir("{var ref<ptr<int<4>,t,f>,f,f,plain> v0; var ref<ptr<int<4>,t,f>,t,f,cpp_ref> v1 = ref_cast(v0, type_lit(t), type_lit(f), type_lit(cpp_ref)); ptr_to_ref(*v1); } ")
+	{
+        constIntPtr a;
+		const constIntPtr & b = a;
 		*b;
 	}
 
