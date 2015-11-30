@@ -34,6 +34,8 @@ endif (NOT MSVC)
 # toggle shared vs. static MSVC runtime library linking
 option(MSVC_SHARED_RUNTIME "Use shared MSVC runtime linking" ON)
 
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBOOST_NO_CXX11_EXPLICIT_CONVERSION_OPERATORS")
+
 # Visual Studio customization
 if(MSVC)
 	# enable minimal rebuild

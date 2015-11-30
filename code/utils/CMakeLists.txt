@@ -21,12 +21,7 @@ target_include_directories(insieme_utils PUBLIC include)
 # required for generating import libraries (".lib") in Windows for DLL linking
 if(MSVC)
 	include (GenerateExportHeader)
-	GENERATE_EXPORT_HEADER( insieme_utils
-				BASE_NAME insieme_utils
-				EXPORT_MACRO_NAME insieme_utils_EXPORT
-				EXPORT_FILE_NAME insieme_utils_Export.h
-				STATIC_DEFINE insieme_utils_BUILT_AS_STATIC
-	)
+	GENERATE_EXPORT_HEADER(insieme_utils)
 endif()
 
 # lookup Boost library
