@@ -41,6 +41,11 @@
 #include <cassert>
 #include <stdexcept>
 #include <iostream>
+ 
+#ifdef _MSC_VER
+ // enables text syntax for operators
+#include <iso646.h>
+#endif
 
 #include <boost/operators.hpp>
 #include <boost/mpl/or.hpp>
@@ -72,7 +77,7 @@ namespace utils {
 	 */
 	enum ConstraintType { GT, LT, EQ, NE, GE, LE };
 
-	// Returns the constrait type which correspond to the logic negation of a given constraint type
+	// Returns the constraint type which correspond to the logic negation of a given constraint type
 	inline ConstraintType getLogicNegation(const ConstraintType& c) {
 		switch(c) {
 		case ConstraintType::EQ: return ConstraintType::NE;
@@ -113,7 +118,7 @@ namespace utils {
 		Constraint(FuncTy&& func, ConstraintType type = ConstraintType::GE) : func(std::move(func)), type(type) {}
 
 		/**
-		 * Standard costructor
+		 * Standard constructor
 		 */
 		Constraint(const FuncTy& func, const ConstraintType& type = ConstraintType::GE) : func(func), type(type) {}
 
@@ -183,7 +188,7 @@ namespace utils {
 
 	// Forward declaration for the Constraint combiner and its subclasses
 	template <typename FuncTy>
-	class Combiner;
+	struct Combiner;
 
 	enum CombinerType { CT_RAW, CT_NEG, CT_BIN };
 
@@ -433,7 +438,7 @@ namespace utils {
 		RecConstraintVisitor(bool postOrder = false) : postOrder(postOrder) {}
 
 		// Visits a raw node (which contains a raw constraint)
-		virtual RetTy visitRawConstraint(const RawConstraint<FuncTy>& rcc) {
+		virtual RetTy visitRawConstraint(const RawConstraint<FuncTy>& /*rcc*/) {
 			return RetTy();
 		}
 
@@ -517,7 +522,7 @@ namespace utils {
 		 */
 		template <class FuncTy>
 		struct __combiner<CombinerPtr<FuncTy>> {
-			static CombinerPtr<FuncTy> make(const typename BinConstraint<FuncTy>::Type& type, const CombinerPtr<FuncTy>& head) {
+			static CombinerPtr<FuncTy> make(const typename BinConstraint<FuncTy>::Type& /*type*/, const CombinerPtr<FuncTy>& head) {
 				return head;
 			}
 		};
@@ -574,7 +579,7 @@ namespace utils {
 		return CombinerPtr<FuncTy>(std::make_shared<NegConstraint<FuncTy>>(makeCombiner(c)));
 	}
 
-	// Redefinition of && operarator with the semantics of AND
+	// Redefinition of && operator with the semantics of AND
 	template <class FuncTy, template <typename> class C1, template <typename> class C2>
 	typename boost::
 	    enable_if<boost::mpl::and_<boost::mpl::or_<boost::is_same<C1<FuncTy>, Constraint<FuncTy>>, boost::is_same<C1<FuncTy>, CombinerPtr<FuncTy>>>,
@@ -678,11 +683,11 @@ namespace utils {
 	}
 
 	/**
-	 * Picewise represent a generic class used to represent piesewise polynomials or functions.
+	 * Piecewise represent a generic class used to represent piecewise polynomials or functions.
 	 * It is represented by a set of pieces each of them containing a constraint which defines
 	 * the range for which a piece is defined and its value for that range.
 	 *
-	 * Carefull that no checks are conducted to make sure that the pieces are disjoints so make
+	 * Careful that no checks are conducted to make sure that the pieces are disjoints so make
 	 * sure that this is the case when the piecewise is constructed otherwise you may end up with
 	 * overlapping pieces and obtain undesired results
 	 */

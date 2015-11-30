@@ -323,21 +323,21 @@ namespace constraint {
 				// otherwise do nothing
 				return Constraint::Unchanged;
 			};
-			virtual bool check(const Assignment& ass) const {
+			virtual bool check(const Assignment& /*ass*/) const {
 				return true;
 			}
 
 			virtual std::ostream& writeDotEdge(std::ostream& o) const {
 				return o << in << "->" << out << "\n";
 			}
-			virtual std::ostream& writeDotEdge(std::ostream& o, const Assignment& ass) const {
+			virtual std::ostream& writeDotEdge(std::ostream& o, const Assignment& /*ass*/) const {
 				return writeDotEdge(o);
 			}
 
 			virtual bool hasAssignmentDependentDependencies() const {
 				return false;
 			}
-			virtual const std::vector<Variable>& getUsedInputs(const Assignment& ass) const {
+			virtual const std::vector<Variable>& getUsedInputs(const Assignment& /*ass*/) const {
 				return getInputs();
 			}
 
@@ -432,7 +432,7 @@ namespace constraint {
 				assert_not_implemented();
 				return out;
 			}
-			virtual std::ostream& writeDotEdge(std::ostream& out, const Assignment& ass) const {
+			virtual std::ostream& writeDotEdge(std::ostream& out, const Assignment& /*ass*/) const {
 				return writeDotEdge(out);
 			}
 

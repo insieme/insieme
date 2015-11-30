@@ -170,7 +170,7 @@ namespace utils {
 				std::vector<Digit> pos;
 				for(const auto& cur : data) {
 					if(cur.begin() == cur.end()) { return end(data); }
-					pos.push_back((Digit){cur.begin(), cur.end(), cur.begin()});
+					pos.push_back(Digit{cur.begin(), cur.end(), cur.begin()});
 				}
 				return CartesianProductIterator(pos);
 			}
@@ -180,7 +180,7 @@ namespace utils {
 			 * the last element of the Cartesian product.
 			 */
 			template <typename NestedDataContainer>
-			static CartesianProductIterator end(const NestedDataContainer& data) {
+			static CartesianProductIterator end(const NestedDataContainer& /*data*/) {
 				return CartesianProductIterator();
 			}
 		};

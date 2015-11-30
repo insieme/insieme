@@ -41,6 +41,7 @@
 #include <functional>
 #include <string>
 #include <cstring>
+#include <cctype>
 #include <sstream>
 #include <iterator>
 

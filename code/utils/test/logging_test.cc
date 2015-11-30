@@ -55,7 +55,7 @@ class StdoutRedirect {
 TEST(Logging, EnvVariableLevel) {
 	ASSERT_EXIT({
 		StdoutRedirect redirect;
-		setenv(LOG_LEVEL_ENV, "DEBUG", 1);
+		SETENV_WRAPPER(LOG_LEVEL_ENV, "DEBUG", 1);
 		insieme::utils::logger_details::reloadConfiguration();
 		LOG(DEBUG) << "DEBUG log test";
 		LOG(INFO) << "INFO log test";
@@ -66,7 +66,7 @@ TEST(Logging, EnvVariableLevel) {
 
 	ASSERT_EXIT({
 		StdoutRedirect redirect;
-		setenv(LOG_LEVEL_ENV, "INFO", 1);
+		SETENV_WRAPPER(LOG_LEVEL_ENV, "INFO", 1);
 		insieme::utils::logger_details::reloadConfiguration();
 		LOG(DEBUG) << "DEBUG log test";
 		LOG(INFO) << "INFO log test";
@@ -78,7 +78,7 @@ TEST(Logging, EnvVariableLevel) {
 
 	ASSERT_EXIT({
 		StdoutRedirect redirect;
-		setenv(LOG_LEVEL_ENV, "WARNING", 1);
+		SETENV_WRAPPER(LOG_LEVEL_ENV, "WARNING", 1);
 		insieme::utils::logger_details::reloadConfiguration();
 		LOG(DEBUG) << "DEBUG log test";
 		LOG(INFO) << "INFO log test";
@@ -90,7 +90,7 @@ TEST(Logging, EnvVariableLevel) {
 
 	ASSERT_EXIT({
 		StdoutRedirect redirect;
-		setenv(LOG_LEVEL_ENV, "ERROR", 1);
+		SETENV_WRAPPER(LOG_LEVEL_ENV, "ERROR", 1);
 		insieme::utils::logger_details::reloadConfiguration();
 		LOG(DEBUG) << "DEBUG log test";
 		LOG(INFO) << "INFO log test";
@@ -102,7 +102,7 @@ TEST(Logging, EnvVariableLevel) {
 
 	ASSERT_EXIT({
 		StdoutRedirect redirect;
-		setenv(LOG_LEVEL_ENV, "FATAL", 1);
+		SETENV_WRAPPER(LOG_LEVEL_ENV, "FATAL", 1);
 		insieme::utils::logger_details::reloadConfiguration();
 		LOG(DEBUG) << "DEBUG log test";
 		LOG(INFO) << "INFO log test";
@@ -123,16 +123,16 @@ void Beta() {
 TEST(Logging, EnvVariableFilter) {
 	ASSERT_EXIT({
 		StdoutRedirect redirect;
-		setenv(LOG_LEVEL_ENV, "DEBUG", 1);
-		setenv(LOG_FILTER_ENV, ".*Alpha.*", 1);
+		SETENV_WRAPPER(LOG_LEVEL_ENV, "DEBUG", 1);
+		SETENV_WRAPPER(LOG_FILTER_ENV, ".*Alpha.*", 1);
 		Alpha();
 		Beta();
 	} exit(0);, ::testing::ExitedWithCode(0), "^[^%]*$[^%]*$");
 
 	ASSERT_EXIT({
 		StdoutRedirect redirect;
-		setenv(LOG_LEVEL_ENV, "DEBUG", 1);
-		setenv(LOG_FILTER_ENV, ".*Beta.*", 1);
+		SETENV_WRAPPER(LOG_LEVEL_ENV, "DEBUG", 1);
+		SETENV_WRAPPER(LOG_FILTER_ENV, ".*Beta.*", 1);
 		Alpha();
 		Beta();
 	} exit(0);, ::testing::ExitedWithCode(0), "^[^$]*%[^$]*$");

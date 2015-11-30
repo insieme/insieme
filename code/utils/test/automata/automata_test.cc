@@ -280,13 +280,13 @@ namespace automata {
 	}
 
 	TEST(Automata, IntegerTest) {
-		typedef eNFA<int>::state_type State;
+		typedef eNFA<int>::state_type EState;
 
 		eNFA<int> a;
 
-		State s1 = a.getNewState();
-		State s2 = a.getNewState();
-		State s3 = a.getNewState();
+		EState s1 = a.getNewState();
+		EState s2 = a.getNewState();
+		EState s3 = a.getNewState();
 
 		a.addTransition(s1, 1, s2);
 		a.addTransition(s2, 2, s2);
