@@ -112,12 +112,13 @@ namespace logger_details {
 
 			std::ostream* out;
 			std::mutex lock;
+			Level level;
 			unsigned short verbosity;
 			boost::regex filter;
 
 			Setup()
 				: out(&std::cout), lock(),
-				  verbosity(getVerbosityFromEnv()), filter(getFilterFromEnv()) {}
+				  level(getLevelFromEnv()), verbosity(getVerbosityFromEnv()), filter(getFilterFromEnv()) {}
 
 			static Setup& get() {
 				static Setup setup;
@@ -125,6 +126,7 @@ namespace logger_details {
 			}
 
 			static void reload() {
+				get().level = getLevelFromEnv();
 				get().verbosity = getVerbosityFromEnv();
 				get().filter = getFilterFromEnv();
 			}
@@ -132,15 +134,14 @@ namespace logger_details {
 
 	} // end namespace
 
-
-	// -- the log level instance --
-
-	Level g_level = getLevelFromEnv();
-
 	// -- log filter handling --
 
 	bool isIncludedInFilter(const char* fullFunctionName) {
 		return boost::regex_search(fullFunctionName, Setup::get().filter);
+	}
+
+	Level getLogLevel() {
+		return Setup::get().level;
 	}
 
 	unsigned short getVerbosityLevel() {
@@ -158,7 +159,6 @@ namespace logger_details {
 	}
 
 	void reloadConfiguration() {
-		g_level = getLevelFromEnv();
 		Setup::reload();
 	}
 

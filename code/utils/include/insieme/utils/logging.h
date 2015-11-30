@@ -75,12 +75,7 @@ namespace log {
  * into other namespaces.
  */
 namespace logger_details {
-
-	/**
-	 * A globally visible variable determining the logging level.
-	 */
-	extern log::Level g_level;
-
+	
 	/**
 	 * Temporary object used to wrap the log stream. This object is responsible to
 	 * collect logs and flush the stream once the object is deallocated.
@@ -102,11 +97,11 @@ namespace logger_details {
 	public:
 
 		SynchronizedStream(std::ostream& out, std::mutex& mutex) : out(out), mutex(mutex), owner(true) {
-			mutex.lock();		// acquire exclusive access to the output stream
+			mutex.lock(); // acquire exclusive access to the output stream
 		}
 
 		SynchronizedStream(SynchronizedStream&& other) : out(other.out), mutex(other.mutex), owner(true) {
-			other.owner = false;  // pass on access to output stream
+			other.owner = false; // pass on access to output stream
 		}
 
 		~SynchronizedStream() {
@@ -135,6 +130,11 @@ namespace logger_details {
 	bool isIncludedInFilter(const char* fullFunctionName);
 
 	/**
+	 * Determines the current log level.
+	 */
+	log::Level getLogLevel();
+
+	/**
 	 * Determines the current verbosity level.
 	 */
 	unsigned short getVerbosityLevel();
@@ -156,7 +156,7 @@ namespace logger_details {
 using namespace insieme::utils::log;
 
 #define LOG(LEVEL)                                                                                                                                             \
-	if(insieme::utils::logger_details::g_level > LEVEL || !insieme::utils::logger_details::isIncludedInFilter(FUNCTION_SIGNATURE)) {/* nothing */               \
+	if(insieme::utils::logger_details::getLogLevel() > LEVEL || !insieme::utils::logger_details::isIncludedInFilter(FUNCTION_SIGNATURE)) {/* nothing */               \
 	} else                                                                                                                                                     \
 	insieme::utils::logger_details::getLogStreamFor(LEVEL, __FILE__, __LINE__).getStream()
 
