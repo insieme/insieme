@@ -144,11 +144,22 @@ namespace lang {
 			                    bmExt.getMarkerTypeLiteral(pt.isVolatile()));
 	}
 
-	ExpressionPtr buildPtrFromRef(const ExpressionPtr& refExpr) {
+	ExpressionPtr buildPtrFromRef(const ExpressionPtr& refExpr, bool simplify) {
 		assert_pred1(isReference, refExpr) << "Trying to build ptr from non-ref.";
 		IRBuilder builder(refExpr->getNodeManager());
 		auto& pExt = refExpr->getNodeManager().getLangExtension<PointerExtension>();
+		// if we are operating on a ptr_to_ref, strip it rather than adding a ptr_from_ref
+		if(simplify && analysis::isCallOf(refExpr, pExt.getPtrToRef())) return refExpr.as<CallExprPtr>()->getArgument(0);
 		return builder.callExpr(pExt.getPtrFromRef(), refExpr);
+	}
+
+	ExpressionPtr buildPtrToRef(const ExpressionPtr& ptrExpr, bool simplify) {
+		assert_pred1(isPointer, ptrExpr) << "Trying to build a ref from non-ptr.";
+		IRBuilder builder(ptrExpr->getNodeManager());
+		auto& pExt = ptrExpr->getNodeManager().getLangExtension<PointerExtension>();
+		// if we are operating on a ptr_from_ref, strip it rather than adding a ptr_to_ref
+		if(simplify && analysis::isCallOf(ptrExpr, pExt.getPtrFromRef())) return ptrExpr.as<CallExprPtr>()->getArgument(0);
+		return builder.callExpr(pExt.getPtrToRef(), ptrExpr);
 	}
 
 	ExpressionPtr buildPtrFromArray(const ExpressionPtr& arrExpr) {
@@ -181,13 +192,6 @@ namespace lang {
 		IRBuilder builder(funExpr->getNodeManager());
 		auto& pExt = funExpr->getNodeManager().getLangExtension<PointerExtension>();
 		return builder.callExpr(pExt.getPtrOfFunction(), funExpr);
-	}
-
-	ExpressionPtr buildPtrToRef(const ExpressionPtr& ptrExpr) {
-		assert_pred1(isPointer, ptrExpr) << "Trying to build a ref from non-ptr.";
-		IRBuilder builder(ptrExpr->getNodeManager());
-		auto& pExt = ptrExpr->getNodeManager().getLangExtension<PointerExtension>();
-		return builder.callExpr(pExt.getPtrToRef(), ptrExpr);
 	}
 	
 	ExpressionPtr buildPtrToArray(const ExpressionPtr& ptrExpr) {

@@ -426,8 +426,8 @@ namespace lang {
 
 	// constructors and conversions
 	ExpressionPtr buildPtrNull(const TypePtr& type);
-	ExpressionPtr buildPtrFromRef(const ExpressionPtr& refExpr);
-	ExpressionPtr buildPtrToRef(const ExpressionPtr& ptrExpr);
+	ExpressionPtr buildPtrFromRef(const ExpressionPtr& refExpr, bool simplify = true);
+	ExpressionPtr buildPtrToRef(const ExpressionPtr& ptrExpr, bool simplify = true);
 	ExpressionPtr buildPtrFromArray(const ExpressionPtr& arrExpr);
 	ExpressionPtr buildPtrToArray(const ExpressionPtr& ptrExpr);
 	ExpressionPtr buildPtrFromIntegral(const ExpressionPtr& intExpr, const TypePtr& ptrType);
