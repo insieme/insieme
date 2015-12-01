@@ -257,6 +257,7 @@ namespace frontend {
 			}
 		});
 
+        // count number of ocurrences of the pragma string
 		std::ifstream tf(fn);
 		std::string fileText((std::istreambuf_iterator<char>(tf)), std::istreambuf_iterator<char>());
 		std::string searchString{"#pragma test expect_ir"};
