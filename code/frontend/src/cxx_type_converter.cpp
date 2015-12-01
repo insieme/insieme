@@ -41,6 +41,7 @@
 #include "insieme/frontend/utils/name_manager.h"
 #include "insieme/frontend/utils/macros.h"
 #include "insieme/frontend/state/record_manager.h"
+#include "insieme/frontend/state/function_manager.h"
 
 #include "insieme/utils/numeric_cast.h"
 #include "insieme/utils/container_utils.h"
@@ -109,6 +110,7 @@ namespace conversion {
 			auto parentIrType = convert(base.getType());
 			parents.push_back(builder.parent(base.isVirtual(), parentIrType));
 		}
+		auto irParents = builder.parents(parents);
 
 		// get methods, constructors and destructor
 		std::vector<core::MemberFunctionPtr> members;
@@ -117,7 +119,8 @@ namespace conversion {
 		auto destructor = structTy->getDestructor();
 		bool destructorVirtual = false;
 		for(auto mem : classDecl->methods()) {
-			auto convDecl = converter.getDeclConverter()->convertMethodDecl(mem);
+			mem = mem->getCanonicalDecl();
+			auto convDecl = converter.getDeclConverter()->convertMethodDecl(mem, irParents, structTy->getFields());
 			if(convDecl.lambda) {
 				VLOG(2) << "adding method lambda literal " << *convDecl.lit << " of type " << dumpColor(convDecl.lit->getType()) << "to IRTU";
 				converter.getIRTranslationUnit().addFunction(convDecl.lit, convDecl.lambda);
@@ -128,19 +131,18 @@ namespace conversion {
 				if(!mem->isDefaulted()) constructors.push_back(convDecl.lit.as<core::ExpressionPtr>());
 			} else if(llvm::dyn_cast<clang::CXXDestructorDecl>(mem)) {
 				destructor = convDecl.lit;
-				if(mem->isVirtual()) { destructorVirtual = true; }
+				destructorVirtual = mem->isVirtual();
 			} else {
 				members.push_back(convDecl.memFun);
 			}
 		}
 
 		// create new structTy
-		retTy = builder.structTypeWithDefaults(builder.refType(genTy), builder.parents(parents), structTy->getFields(), builder.expressions(constructors),
-			                                   destructor, builder.boolValue(destructorVirtual), builder.memberFunctions(members),
-			                                   builder.pureVirtualMemberFunctions(pvMembers));
+		retTy = builder.structTypeWithDefaults(builder.refType(genTy), irParents, structTy->getFields(), builder.expressions(constructors), destructor,
+			                                   destructorVirtual, builder.memberFunctions(members), builder.pureVirtualMemberFunctions(pvMembers));
 
 		// update associated type in irTu
-		converter.getIRTranslationUnit().replaceType(genTy, retTy.as<core::TagTypePtr>());
+		converter.getIRTranslationUnit().insertRecordTypeWithDefaults(genTy, retTy.as<core::TagTypePtr>());
 
 		return genTy;
 	}

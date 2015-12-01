@@ -51,7 +51,7 @@ namespace frontend {
 		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/cpp_expressions_ref.cpp");
 	}
 
-	TEST(CppIndependentTest, DISABLED_BasicClasses) {
+	TEST(CppIndependentTest, BasicClasses) {
 		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/cpp_basic_classes.cpp");
 	}
 	

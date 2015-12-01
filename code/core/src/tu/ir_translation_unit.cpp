@@ -756,7 +756,7 @@ namespace tu {
 				uni->getDestructorVirtual(), builder.memberFunctions(memFuns),
 				uni->getPureVirtualMemberFunctions());
 		}
-		addType(key, newTagType);
+		types[key] = newTagType;
 		// return tag type
 		return newTagType;
 	}

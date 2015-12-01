@@ -144,14 +144,43 @@ namespace conversion {
 		auto funType = getFunMethodTypeInternal(converter, funcDecl);
 		return convertFunMethodInternal(converter, funType, funcDecl, name);
 	}
-	
-	DeclConverter::ConvertedMethodDecl DeclConverter::convertMethodDecl(const clang::CXXMethodDecl* methDecl) const {
+
+	DeclConverter::ConvertedMethodDecl DeclConverter::convertMethodDecl(const clang::CXXMethodDecl* methDecl, const core::ParentsPtr& parents,
+		                                                                const core::FieldsPtr& fields) const {
 		ConvertedMethodDecl ret;
-		string name = insieme::utils::mangle(methDecl->getNameAsString());
-		auto funType = getFunMethodTypeInternal(converter, methDecl);
-		ret.lit = builder.literal(name, funType);
-		ret.lambda = convertFunMethodInternal(converter, funType, methDecl, name);
-		ret.memFun = builder.memberFunction(methDecl->isVirtual(), name, ret.lit);
+
+		// handle default constructor / destructor / operators in accordance with core
+		if(methDecl->isDefaulted()) {
+			auto thisType = getThisType(converter, methDecl);
+			if(llvm::dyn_cast<clang::CXXDestructorDecl>(methDecl)) {
+				ret.lambda = converter.getIRBuilder().getDefaultDestructor(thisType);
+				ret.lit = converter.getIRBuilder().getLiteralForDestructor(ret.lambda->getType());
+			}
+			if(auto constDecl = llvm::dyn_cast<clang::CXXConstructorDecl>(methDecl)) {
+				if(constDecl->isDefaultConstructor()) {
+					ret.lambda = converter.getIRBuilder().getDefaultConstructor(thisType, parents, fields);
+				}				
+				else if(constDecl->isCopyConstructor()) {
+					ret.lambda = converter.getIRBuilder().getDefaultCopyConstructor(thisType, parents, fields);
+				}
+				else if(constDecl->isMoveConstructor()) {
+					ret.lambda = converter.getIRBuilder().getDefaultMoveConstructor(thisType, parents, fields);
+				} else {				
+					assert_not_implemented() << "Can't translate defaulted method: " << dumpClang(methDecl);
+				}
+				ret.lit = converter.getIRBuilder().getLiteralForConstructor(ret.lambda->getType()); 
+			}
+			converter.getFunMan()->insert(methDecl, ret.lit);
+		}
+		// non-default cases
+		else {
+			string name = insieme::utils::mangle(methDecl->getNameAsString());
+			auto funType = getFunMethodTypeInternal(converter, methDecl);
+			ret.lit = builder.getLiteralForMemberFunction(funType, name);
+			converter.getFunMan()->insert(methDecl, ret.lit);
+			ret.lambda = convertFunMethodInternal(converter, funType, methDecl, ret.lit->getStringValue());
+			ret.memFun = builder.memberFunction(methDecl->isVirtual(), name, ret.lit);
+		}
 		return ret;
 	}
 
@@ -177,7 +206,7 @@ namespace conversion {
 		if(typeDecl->isDependentType()) { return; }
 
 		converter.trackSourceLocation(typeDecl);
-		//convertTypeDecl(typeDecl);
+		converter.convertType(converter.getCompiler().getASTContext().getTypeDeclType(typeDecl));
 		converter.untrackSourceLocation();
 	}
 
