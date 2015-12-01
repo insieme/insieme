@@ -11,7 +11,6 @@ float A::f() {
 #define A_IR R"(
 def struct IMP_A {
 	i : int<4>;
-	ctor () {}
 	lambda IMP_f : () -> real<4> { return lit("1.0E+0":real<4>); }
 };)"
 

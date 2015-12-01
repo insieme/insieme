@@ -28,8 +28,6 @@ include(default_library_configuration)
 include(insieme_find_package)
 include(add_unit_test)
 
-include(../environment_common.cmake)
-
 # for win64 we need to add a assembly object file to each target, see below.
 # For all other platforms this var is empty. This safes a lot of if clauses througout this file
 set (WIN64ASM_OBJ "") 
@@ -248,7 +246,7 @@ if(CXX11_Support)
 	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 elseif(CXX0X_Support)
 	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
-else()
+elseif(MSVC_VERSION LESS 1900) # 1900 = Visual Studio 2015
 	message(WARNING "WARNING: -std=c++0x or -std=c++11 not supported by your compiler!" )
 endif()
 

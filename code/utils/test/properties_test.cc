@@ -46,9 +46,9 @@ namespace utils {
 
 	// establish a value implementation for this test ...
 
-	typedef typename properties::make_value_type<bool, int, string>::type Value;
-	typedef typename properties::Property<Value>::ptr PropertyPtr;
-	typedef typename properties::ListProperty<Value>::ptr ListPropertyPtr;
+	typedef properties::make_value_type<bool, int, string>::type Value;
+	typedef properties::Property<Value>::ptr PropertyPtr;
+	typedef properties::ListProperty<Value>::ptr ListPropertyPtr;
 
 	template <typename T>
 	PropertyPtr atom(const string& desc = "") {

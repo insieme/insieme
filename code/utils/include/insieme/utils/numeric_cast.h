@@ -123,7 +123,7 @@ namespace {
 			std::string cleared(str, str + size);
 
 			// convert to long-long and then to target type
-			return (isUnsigned) ? boost::lexical_cast<unsigned long long>(cleared) : boost::lexical_cast<long long>(cleared);
+			return (RetTy)((isUnsigned) ? boost::lexical_cast<unsigned long long>(cleared) : boost::lexical_cast<long long>(cleared));
 		}
 	};
 

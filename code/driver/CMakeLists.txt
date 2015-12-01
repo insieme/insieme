@@ -4,7 +4,6 @@
 project(insieme_driver CXX)
 message(STATUS "========== configure driver =============")
 cmake_minimum_required(VERSION 3.2)
-include(../environment_common.cmake)
 
 # Create a variable called insieme_compiler_core_SOURCES containing all .cpp files:
 file(GLOB_RECURSE insieme_driver_srcs 	src/*.cpp )
@@ -54,7 +53,6 @@ foreach ( exec_file ${executables})
 	target_link_libraries(${exec_name} insieme_annotations) 
 	target_link_libraries(${exec_name} ${Boost_PROGRAM_OPTIONS_LIBRARY})
 	target_link_libraries(${exec_name} gomp)
-	target_link_libraries(${exec_name} dl)
 
 	cotire(${exec_name})
 endforeach(exec_file)

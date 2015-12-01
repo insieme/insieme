@@ -38,17 +38,17 @@
 
 #include "insieme/frontend/clang.h"
 #include "insieme/frontend/decl_converter.h"
-#include "insieme/frontend/omp/omp_annotation.h"
+#include "insieme/frontend/state/function_manager.h"
 #include "insieme/frontend/state/record_manager.h"
 #include "insieme/frontend/utils/clang_cast.h"
 #include "insieme/frontend/utils/debug.h"
+#include "insieme/frontend/utils/expr_to_bool.h"
+#include "insieme/frontend/utils/frontend_inspire_module.h"
 #include "insieme/frontend/utils/macros.h"
 #include "insieme/frontend/utils/name_manager.h"
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/stmt_wrapper.h"
 #include "insieme/frontend/utils/temporaries_lookup.h"
-#include "insieme/frontend/utils/frontend_inspire_module.h"
-#include "insieme/frontend/utils/expr_to_bool.h"
 
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/functional_utils.h"
@@ -227,7 +227,7 @@ namespace conversion {
 			frontend_assert(false) << "Member function pointer call not implemented";
 		} else {			
 			// get method lambda
-			auto methodLambda = converter.getDeclConverter()->convertMethodDecl(methodDecl).lit;
+			auto methodLambda = converter.getFunMan()->lookup(methodDecl);
 
 			// get the "this" object and add to arguments
 			core::ExpressionPtr thisObj = Visit(callExpr->getImplicitObjectArgument());
@@ -333,7 +333,7 @@ namespace conversion {
 			}
 
 			// get constructor lambda
-			auto constructorLambda = converter.getDeclConverter()->convertMethodDecl(constructExpr->getConstructor()).lit;
+			auto constructorLambda = converter.getFunMan()->lookup(constructExpr->getConstructor());
 			VLOG(2) << "constructor lambda literal " << *constructorLambda << " of type " << dumpColor(constructorLambda->getType());
 
 			// return call

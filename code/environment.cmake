@@ -82,32 +82,9 @@ if(${TIME_EXECUTABLE} STREQUAL "TIME_EXECUTABLE-NOTFOUND" AND NOT MSVC)
 	message(FATAL_ERROR "Unable to locate time utility!")
 endif()
 
-# ------------------------------------------------------------- configuration for platforms
-if(MSVC)
-  # Windows Visual Studio
-  # MSVC can compile insieme statical only
-  if(NOT LINKING_TYPE)
-	set(LINKING_TYPE STATIC)
-  endif(NOT LINKING_TYPE)
-
-  # Therefore Boost needs to be linked statically
-  set(Boost_USE_STATIC_LIBS ON)
-  # Use MT Boost
-  set(Boost_USE_MULTITHREADED ON)
-  set(DO_INSTALL FALSE)
-
-else(MSVC) 
-	# Linux or Cygwin/MinGW
-
-    # Default is here: shared linking
-    if(NOT LINKING_TYPE)
-  	    set(LINKING_TYPE SHARED)
-    endif(NOT LINKING_TYPE)
-
-  set(DO_INSTALL TRUE)
-  
-endif(MSVC)
-
+if(NOT LINKING_TYPE)
+    set(LINKING_TYPE SHARED)
+endif(NOT LINKING_TYPE)
 
 # --------------------------------------------------------------------- including libraries
 # set up insieme lib home either from THIRD_PARTY_LIBS_HOME or INSIEME_LIBS_HOME env var 
@@ -127,40 +104,14 @@ IF (DO_GOOGLE_PROFILING)
 ENDIF ()
 
 # ------------------------------------------------------------- configuration for platforms
-# Visual Studio customization
-if(MSVC)
-	# enable minimal rebuild
-	add_definitions( /Gm )
-	# disable optimizations (compilation speed)
-	add_definitions( /Od )
-	# disable some warnings
-	add_definitions( /D_CRT_SECURE_NO_WARNINGS )
-	# Boost: No auto-lib
-	add_definitions( /DBOOST_ALL_NO_LIB )
-	# disable warning "assignment operator could not be generated"
-	add_definitions( /wd"4512" )
-	# disable warning "nonstandard extension: enum '[EnumName::ENUM]' used in qualified name"	
-	add_definitions( /wd"4482" )
-	# disable warning "unkown pragma"
-	add_definitions( /wd"4068" )
-	# disable warning "declaration hides class member"
-	add_definitions( /wd"4458" )
-	# disable warning "forcing value to bool 'true' or 'false' (performance warning)"
-	add_definitions( /wd"4800" )
-	# statically link with runtime library (required for gtest)
-	foreach(flag_var
-		CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE
-		CMAKE_CXX_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_RELWITHDEBINFO)
-		if(${flag_var} MATCHES "/MD")
-			string(REGEX REPLACE "/MD" "/MT" ${flag_var} "${${flag_var}}")
-		endif(${flag_var} MATCHES "/MD")
-	endforeach(flag_var)
 
-	# enable warnings
-	add_definitions( /W4 )
+# --------------------------- MSVC -------------------------
+if(MSVC)
+	# set warning level to maximum (all warnings + informational stuff)
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4")
 endif()
 
-#--------------------------- GCC -------------------------
+# --------------------------- GCC -------------------------
 if (CMAKE_COMPILER_IS_GNUCXX)
 	# add general flags
 	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fshow-column")
@@ -214,7 +165,7 @@ if (CMAKE_COMPILER_IS_GNUC)
 	endif()
 endif()
 
-#--------------------------- Clang Compiler -------------------------
+# --------------------------- Clang Compiler -------------------------
 if (${CMAKE_CXX_COMPILER} MATCHES "clang")
 	# C flags
 	set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -rdynamic -fPIC")
@@ -226,7 +177,7 @@ if (${CMAKE_CXX_COMPILER} MATCHES "clang")
 	set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g3 -O0")	
 endif ()
 
-#--------------------------- Intel Compiler -------------------------
+# --------------------------- Intel Compiler -------------------------
 if (${CMAKE_CXX_COMPILER} MATCHES "icpc")
 	# add general flags
 	add_definitions( -Wall )

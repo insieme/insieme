@@ -256,7 +256,7 @@ namespace {
 	 * @param vector the vector to which nothing is written to
 	 */
 	template <typename T>
-	inline void appendToVector(vector<T>& vector) {}
+	inline void appendToVector(vector<T>& /*vector*/) {}
 
 	/**
 	 * A variable-argument function writing elements into a vector in the given order.
@@ -707,7 +707,7 @@ namespace std {
 		}
 
 		template <class Tuple>
-		std::ostream& print_tuple(std::ostream& out, const Tuple& t, int_<0>) {
+		std::ostream& print_tuple(std::ostream& out, const Tuple& /*t*/, int_<0>) {
 			return out;
 		}
 
