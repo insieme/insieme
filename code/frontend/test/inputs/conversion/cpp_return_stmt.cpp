@@ -34,18 +34,18 @@
  * regarding third party software licenses.
  */
 
+// -- Scalar tests
+// ================================================================================================|
 
-// -- Scalar tests ================================================================================================|
-
-int scalar_int(){
-	 #pragma test expect_ir("{var ref<int<4>,f,f,plain> a; return *a; }")
+int scalar_int() {
+#pragma test expect_ir("{var ref<int<4>,f,f,plain> a; return *a; }")
 	{
-	int a;
-	return a;
+		int a;
+		return a;
 	}
 }
-const int& scalar_ref_int(){
-  #pragma test expect_ir("{var ref<int<4>,f,f,plain> v0;  return v0; } ")
+const int& scalar_ref_int() {
+#pragma test expect_ir("{var ref<int<4>,f,f,plain> v0;  return v0; } ")
 	{
 		int a;
 		return a;
@@ -53,52 +53,52 @@ const int& scalar_ref_int(){
 }
 
 // upgrade cast on return
-float scalar_float(){
-	 #pragma test expect_ir("{var ref<int<4>,f,f,plain> a; return num_cast(*a, type_lit(real<4>)); }")
+float scalar_float() {
+#pragma test expect_ir("{var ref<int<4>,f,f,plain> a; return num_cast(*a, type_lit(real<4>)); }")
 	{
-	int a;
-	return a;
+		int a;
+		return a;
 	}
 }
 
 typedef int* intPtr;
-intPtr pointer_int(){
-	#pragma test expect_ir("return ptr_null(type_lit(int<4>), type_lit(f), type_lit(f));")
+intPtr pointer_int() {
+#pragma test expect_ir("return ptr_null(type_lit(int<4>), type_lit(f), type_lit(f));")
 	return 0;
 }
 
 typedef const int* constIntPtr;
-constIntPtr const_pointer_int(){
-	#pragma test expect_ir("return ptr_null(type_lit(int<4>), type_lit(t), type_lit(f));")
+constIntPtr const_pointer_int() {
+#pragma test expect_ir("return ptr_null(type_lit(int<4>), type_lit(t), type_lit(f));")
 	return 0;
 }
 
-intPtr& reference_pointer_int(){
-	#pragma test expect_ir("{var ref<ptr<int<4>>,f,f,plain> v0 = ref_var(type_lit(ptr<int<4>>)); return v0; } ")
+intPtr& reference_pointer_int() {
+#pragma test expect_ir("{var ref<ptr<int<4>>,f,f,plain> v0 = ref_var(type_lit(ptr<int<4>>)); return v0; } ")
 	{
 		intPtr a;
 		return a;
 	}
 }
 
-const intPtr& const_reference_pointer_int(){
-	#pragma test expect_ir("{var ref<ptr<int<4>>,f,f,plain> v0 = ref_var(type_lit(ptr<int<4>>)); return v0; } ")
+const intPtr& const_reference_pointer_int() {
+#pragma test expect_ir("{var ref<ptr<int<4>>,f,f,plain> v0 = ref_var(type_lit(ptr<int<4>>)); return v0; } ")
 	{
 		intPtr a;
 		return a;
 	}
 }
 
-constIntPtr& reference_const_pointer_int(){
-	#pragma test expect_ir("{var ref<ptr<int<4>,t,f>,f,f,plain> v0; return v0; } ")
+constIntPtr& reference_const_pointer_int() {
+#pragma test expect_ir("{var ref<ptr<int<4>,t,f>,f,f,plain> v0; return v0; } ")
 	{
 		constIntPtr a;
 		return a;
 	}
 }
 
-const constIntPtr& const_reference_const_pointer_int(){
-	#pragma test expect_ir("{var ref<ptr<int<4>>,f,f,plain> v0; return v0; } ")
+const constIntPtr& const_reference_const_pointer_int() {
+#pragma test expect_ir("{var ref<ptr<int<4>>,f,f,plain> v0; return v0; } ")
 	{
 		intPtr a;
 		return a;
@@ -106,36 +106,36 @@ const constIntPtr& const_reference_const_pointer_int(){
 }
 
 int main() {
-	{ } // help pragmas to find their way
+	{} // help pragmas to find their way
 
 	{
-		#pragma test expect_ir("EXPR_TYPE","int<4>")
+	#pragma test expect_ir("EXPR_TYPE", "int<4>")
 		scalar_int();
-		#pragma test expect_ir("EXPR_TYPE","real<4>")
+		#pragma test expect_ir("EXPR_TYPE", "real<4>")
 		scalar_float();
-		#pragma test expect_ir("EXPR_TYPE","ref<int<4>,t,f,cpp_ref>")
+		#pragma test expect_ir("EXPR_TYPE", "ref<int<4>,t,f,cpp_ref>")
 		scalar_ref_int();
 	}
-	
-	{
-		#pragma test expect_ir("EXPR_TYPE","ptr<int<4>>")
-		pointer_int(); 
 
-		#pragma test expect_ir("EXPR_TYPE","ptr<int<4>, t,f>")
-		const_pointer_int(); 
+	{
+	#pragma test expect_ir("EXPR_TYPE", "ptr<int<4>>")
+		pointer_int();
+
+		#pragma test expect_ir("EXPR_TYPE", "ptr<int<4>, t,f>")
+		const_pointer_int();
 	}
 
 	{
-		#pragma test expect_ir("EXPR_TYPE","ref<ptr<int<4>>,f,f,cpp_ref>")
+	#pragma test expect_ir("EXPR_TYPE", "ref<ptr<int<4>>,f,f,cpp_ref>")
 		reference_pointer_int();
 
-		#pragma test expect_ir("EXPR_TYPE","ref<ptr<int<4>>,t,f,cpp_ref>")
+		#pragma test expect_ir("EXPR_TYPE", "ref<ptr<int<4>>,t,f,cpp_ref>")
 		const_reference_pointer_int();
 
-		#pragma test expect_ir("EXPR_TYPE","ref<ptr<int<4>,t,f>,f,f,cpp_ref>")
+		#pragma test expect_ir("EXPR_TYPE", "ref<ptr<int<4>,t,f>,f,f,cpp_ref>")
 		reference_const_pointer_int();
 
-		#pragma test expect_ir("EXPR_TYPE","ref<ptr<int<4>,t,f>,t,f,cpp_ref>")
+		#pragma test expect_ir("EXPR_TYPE", "ref<ptr<int<4>,t,f>,t,f,cpp_ref>")
 		const_reference_const_pointer_int();
 	}
 }

@@ -7,7 +7,7 @@ struct SimplestConstructor {
 
 int main() {
 	;
-	
+
 	// Base types ----------------------------------------------------------------------------------------------------------------------------------------------
 
 	#pragma test expect_ir(R"({
@@ -15,19 +15,19 @@ int main() {
 		ref_delete(ptr_to_ref(*i));
 	})")
 	{
-		int *i = new int;
+		int* i = new int;
 		delete i;
 	}
-	
+
 	#pragma test expect_ir(R"({
 		var ref<ptr<int<4>,f,f>,f,f,plain> i = ref_var_init(ptr_from_ref(ref_new_init(42)));
 		ref_delete(ptr_to_ref(*i));
 	})")
 	{
-		int *i = new int { 42 };
+		int* i = new int{42};
 		delete i;
 	}
-	
+
 	// Base type arrays ----------------------------------------------------------------------------------------------------------------------------------------
 
 	#pragma test expect_ir(R"({
@@ -35,8 +35,8 @@ int main() {
 		ref_delete(ptr_to_array(*i));
 	})")
 	{
-		int *arri = new int[50];
-		delete [] arri;
+		int* arri = new int[50];
+		delete[] arri;
 	}
 
 	#pragma test expect_ir(R"({
@@ -44,8 +44,8 @@ int main() {
 		ref_delete(ptr_to_array(*i));
 	})")
 	{
-		int *arri = new int[50] {1,2,3};
-		delete [] arri;
+		int* arri = new int[50]{1, 2, 3};
+		delete[] arri;
 	}
 
 	// Class types ---------------------------------------------------------------------------------------------------------------------------------------------
@@ -54,7 +54,7 @@ int main() {
 	//	SimplestConstructor *simple = new SimplestConstructor;
 	//	delete simple;
 	//}
-	
+
 
 	return 0;
 }

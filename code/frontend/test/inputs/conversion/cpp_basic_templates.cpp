@@ -1,20 +1,30 @@
 
-template<typename T>
+template <typename T>
 T plusOne(T v) {
-	return v+1;
+	return v + 1;
 }
 
-template<int val>
-int fib() { return fib<val-1>() + fib<val-2>(); }
-template<>
-int fib<0>() { return 1; }
-template<>
-int fib<1>() { return 1; }
+template <int val>
+int fib() {
+	return fib<val - 1>() + fib<val - 2>();
+}
+template <>
+int fib<0>() {
+	return 1;
+}
+template <>
+int fib<1>() {
+	return 1;
+}
 
-template<int m, int n>
-int bla() { return bla<m-1,n-1>()+1; }
-template<>
-int bla<0,1>() { return 2; }
+template <int m, int n>
+int bla() {
+	return bla<m - 1, n - 1>() + 1;
+}
+template <>
+int bla<0, 1>() {
+	return 2;
+}
 
 int main() {
 	;
@@ -46,7 +56,7 @@ int main() {
 	def IMP_bla_1_2_returns_int = () -> int<4> { return IMP_bla_0_1()+1; };
 	def IMP_bla_2_3_returns_int = () -> int<4> { return IMP_bla_1_2_returns_int()+1; };
 	IMP_bla_2_3_returns_int())")
-	bla<2,3>();
-	
+	bla<2, 3>();
+
 	return 0;
 }

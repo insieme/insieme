@@ -45,10 +45,10 @@ def struct IMP_C {
 int main() {
 	; // this is required because of the clang compound source location bug
 
-	#pragma test expect_ir(A_IR,R"( { var ref<IMP_A> a = IMP_A::(ref_var(type_lit(IMP_A))); } )")
+	#pragma test expect_ir(A_IR, R"( { var ref<IMP_A> a = IMP_A::(ref_var(type_lit(IMP_A))); } )")
 	{ A a; }
-	
-	#pragma test expect_ir(A_IR,R"( { var ref<IMP_A> a = IMP_A::(ref_var(type_lit(IMP_A))); a.IMP_f(); } )")
+
+	#pragma test expect_ir(A_IR, R"( { var ref<IMP_A> a = IMP_A::(ref_var(type_lit(IMP_A))); a.IMP_f(); } )")
 	{
 		A a;
 		a.f();
