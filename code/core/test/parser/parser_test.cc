@@ -228,6 +228,11 @@ namespace parser {
 		                          "  lambda f : () -> int<4> { return *a; }"
 		                          "}; A"));
 
+		EXPECT_TRUE(test_type(nm, "def struct A {" //write our own field
+		                          "  a : int<4>;"
+		                          "  lambda f : () -> unit { a = 5; }"
+		                          "}; A"));
+
 		EXPECT_TRUE(test_type(nm, "def struct A {" //reference our own field using the this pointer
 		                          "  a : int<4>;"
 		                          "  lambda f : () -> int<4> { return *this.a; }"
@@ -818,6 +823,7 @@ namespace parser {
 			                                                 "  $ca.a$;"
 			                                                 "  $va.a$;"
 			                                                 "  $cva.a$;"
+				                                             "  ra.a = 7;"
 			                                                 "}");
 			ASSERT_EQ(4, addresses.size());
 			auto reference0 = lang::ReferenceType(addresses[0].getAddressedNode().as<ExpressionPtr>()->getType());
@@ -839,6 +845,8 @@ namespace parser {
 			EXPECT_TRUE (reference3.isConst());
 			EXPECT_TRUE (reference3.isVolatile());
 			EXPECT_TRUE (reference3.isPlain());
+
+			EXPECT_EQ(checks::check(addresses[0].getRootNode()).size(), 0);
 		}
 	}
 
@@ -903,6 +911,46 @@ namespace parser {
 			EXPECT_EQ(nm.getLangBasic().getBool(), addresses[0].getAddressedNode().as<CallExprPtr>()->getType());
 			EXPECT_EQ(nm.getLangBasic().getInt4(), addresses[1].getAddressedNode().as<CallExprPtr>()->getType());
 		}
+	}
+
+	TEST(IR_Parser, ManuallyBuilt) {
+	
+		NodeManager nm;
+		IRBuilder builder(nm);
+		auto& basic = nm.getLangBasic();
+		auto& refExt = nm.getLangExtension<core::lang::ReferenceExtension>();
+
+		auto parsed = parseType(nm, R"(
+			def struct A {
+				i : int<4>;
+				ctor() { i = 0; }
+			};
+			A
+		)");
+
+		parsed = builder.normalize(parsed);
+
+		auto parsedChecked = checks::check(parsed);
+		ASSERT_TRUE(parsedChecked.empty()) << parsedChecked;
+
+		auto field = builder.field("i", basic.getInt4());
+		auto thisType = builder.refType(builder.tagTypeReference("A"));
+		auto thisVariable = builder.variable(builder.refType(thisType));
+		auto ctorType = builder.functionType(builder.types(toVector<TypePtr>(thisType)), thisType, FK_CONSTRUCTOR);
+		auto fieldAccess = builder.callExpr(refExt.getRefMemberAccess(), builder.deref(thisVariable), builder.getIdentifierLiteral("i"),
+			                                builder.getTypeLiteral(basic.getInt4()));
+		auto ctorBody = builder.compoundStmt(builder.assign(fieldAccess, builder.intLit(0)));
+		auto ctor = builder.lambdaExpr(ctorType, builder.parameters(thisVariable), ctorBody, "A::ctor");
+
+		auto constructed = builder.structTypeWithDefaults(thisType, ParentList(), toVector(field), toVector<ExpressionPtr>(ctor), 
+			builder.getDefaultDestructor(thisType), false, MemberFunctionList(), PureVirtualMemberFunctionList());
+
+		constructed = builder.normalize(constructed);
+
+		auto constructedChecked = checks::check(constructed);
+		ASSERT_TRUE(constructedChecked.empty()) << constructedChecked;
+
+		EXPECT_EQ(parsed, constructed);
 	}
 
 } // parser

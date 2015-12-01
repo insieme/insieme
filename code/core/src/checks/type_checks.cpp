@@ -963,7 +963,7 @@ TagTypeRefs visitNode(const NodePtr& cur) override {
 		TypePtr resultType;
 		if(GenericTypePtr genType = dynamic_pointer_cast<const GenericType>(elementType)) {
 			if(genType->getName()->getValue() != "type" || genType->getTypeParameter()->size() != 1) {
-				// invalid argument => leaf issues to argument type checker
+				// invalid argument => leave issues to argument type checker
 				return res;
 			}
 

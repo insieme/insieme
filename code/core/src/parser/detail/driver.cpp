@@ -513,8 +513,8 @@ namespace parser {
 				if(!isSymbolDeclaredInGlobalScope(memberName)) { declareSymbolInGlobalScope(l, memberName, key); }
 
 				// create the member access call to store in the symbol table for accessing this symbol within this current record _without_ the this pointer
-				ExpressionPtr access = builder.getLangBasic().getCompositeMemberAccess();
-				auto accessExpr = builder.callExpr(type, access, genThis(l), builder.getIdentifierLiteral(name), builder.getTypeLiteral(type));
+				ExpressionPtr access = mgr.getLangExtension<core::lang::ReferenceExtension>().getRefMemberAccess();
+				auto accessExpr = builder.callExpr(access, genThis(l), builder.getIdentifierLiteral(name), builder.getTypeLiteral(field->getType()));
 				annotations::attachName(field, name);
 				declareSymbol(l, name, accessExpr);
 			}
