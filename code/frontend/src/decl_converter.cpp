@@ -116,7 +116,9 @@ namespace conversion {
 				// handle implicit "this" for methods
 				if(methDecl) {
 					auto thisType = getThisType(converter, methDecl);
-					params.push_back(converter.getIRBuilder().variable(converter.getIRBuilder().refType(thisType)));					
+					auto thisVar = converter.getIRBuilder().variable(converter.getIRBuilder().refType(thisType));
+					params.push_back(thisVar);
+					converter.getVarMan()->setThis(thisVar);
 				}
 				// handle other parameters
 				for(auto param : funcDecl->parameters()) {
@@ -176,7 +178,9 @@ namespace conversion {
 		else {
 			string name = insieme::utils::mangle(methDecl->getNameAsString());
 			auto funType = getFunMethodTypeInternal(converter, methDecl);
-			ret.lit = builder.getLiteralForMemberFunction(funType, name);
+			if(funType->getKind() == core::FK_CONSTRUCTOR) { ret.lit = builder.getLiteralForConstructor(funType); }
+			else if(funType->getKind() == core::FK_DESTRUCTOR) { ret.lit = builder.getLiteralForDestructor(funType); }
+			else { ret.lit = builder.getLiteralForMemberFunction(funType, name); }
 			converter.getFunMan()->insert(methDecl, ret.lit);
 			ret.lambda = convertFunMethodInternal(converter, funType, methDecl, ret.lit->getStringValue());
 			ret.memFun = builder.memberFunction(methDecl->isVirtual(), name, ret.lit);

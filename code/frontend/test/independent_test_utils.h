@@ -53,6 +53,7 @@
 #include "insieme/frontend/state/variable_manager.h"
 #include "insieme/frontend/utils/frontend_inspire_module.h"
 #include "insieme/utils/config.h"
+#include "insieme/utils/set_utils.h"
 
 namespace insieme {
 namespace frontend {
@@ -88,8 +89,14 @@ namespace frontend {
 			return "";
 		}
 
-		void irDiff(NodePtr codeIr, NodePtr pragmaIr) {
+		void irDiff(NodePtr codeIr, NodePtr pragmaIr, insieme::utils::set::PointerSet<NodePtr> visited = insieme::utils::set::PointerSet<NodePtr>()) {
 			const auto& locString = locationOf(codeIr);
+
+			if(visited.find(codeIr) != visited.end()) {
+				return;
+			} else {
+				visited.insert(codeIr);
+			}
 
 			if(codeIr->getNodeType() != pragmaIr->getNodeType()) {
 				std::cout << "IRDIFF-----\nNode types differ:\n"

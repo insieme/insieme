@@ -87,6 +87,22 @@ namespace state {
 		return sum;
 	}
 
+	void VariableManager::setThis(const core::ExpressionPtr& thisVar) {
+		frontend_assert(!storage.back().thisExpr) << "Trying to set \"this\" variable for current scope, but already set.";
+		storage.back().thisExpr = thisVar;
+	}
+
+	core::ExpressionPtr VariableManager::getThis() {
+		// lookup this in all applicable scopes starting from innermost
+		for(auto it = storage.crbegin(); it != storage.crend(); ++it) {
+			if(it->thisExpr) return it->thisExpr;
+			if(!it->nested) break;
+		}
+
+		frontend_assert(false) << "Trying to look up \"this\" variable, but not defined in any applicable scope";
+		return core::ExpressionPtr();
+	}
+
 } // end namespace state
 } // end namespace frontend
 } // end namespace insieme
