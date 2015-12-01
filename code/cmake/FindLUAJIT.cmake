@@ -26,11 +26,12 @@ endif()
 # Search path for nonstandard locations
 if(LUAJIT_ROOT)
   set(LUAJIT_INCLUDE_PATH PATHS "${LUAJIT_ROOT}/include" NO_DEFAULT_PATH)
-  set(LUAJIT_LIBRARY_PATH PATHS "${LUAJIT_ROOT}/lib" NO_DEFAULT_PATH)
+  # for MSVC, the luajit library is located in the root directory, not root/lib
+  set(LUAJIT_LIBRARY_PATH PATHS "${LUAJIT_ROOT}/lib" "${LUAJIT_ROOT}" NO_DEFAULT_PATH)
 endif()
 
 find_path(LUAJIT_INCLUDE_DIRS NAMES luajit-2.0/ HINTS ${LUAJIT_INCLUDE_PATH})
-find_library(LUAJIT_LIBRARIES NAMES luajit-5.1 HINTS ${LUAJIT_LIBRARY_PATH})
+find_library(LUAJIT_LIBRARIES NAMES luajit-5.1 lua51 HINTS ${LUAJIT_LIBRARY_PATH})
 
 include(FindPackageHandleStandardArgs)
 

@@ -178,13 +178,13 @@ namespace properties {
 		template <typename T>
 		struct is_type_of : public boost::static_visitor<bool> {
 			// the case in which the property is true => the type is correct.
-			bool operator()(const T& cur) const {
+			bool operator()(const T& /*cur*/) const {
 				return true;
 			}
 
 			// all other cases are handled generically
 			template <typename S>
-			bool operator()(const S& cur) const {
+			bool operator()(const S& /*cur*/) const {
 				return false;
 			}
 		};
@@ -356,7 +356,7 @@ namespace properties {
 		/**
 		 * The various sub-properties of this property (only present if it is a composed property).
 		 */
-		vector<Property<Value>::ptr> components;
+		vector<typename Property<Value>::ptr> components;
 
 	  public:
 		/**
@@ -365,7 +365,7 @@ namespace properties {
 		 * @param description the description to be attached to the resulting property
 		 * @param components the components this property is consisting of
 		 */
-		Property(bool atomic, const string& description, const vector<Property<Value>::ptr>& components = vector<Property<Value>::ptr>())
+		Property(bool atomic, const string& description, const vector<typename Property<Value>::ptr>& components = vector<typename Property<Value>::ptr>())
 		    : atomic(atomic), description(description), components(components) {}
 
 		/**
@@ -394,7 +394,7 @@ namespace properties {
 		 *
 		 * @return the list of properties this property is combining
 		 */
-		const vector<Property<Value>::ptr>& getComponents() const {
+		const vector<typename Property<Value>::ptr>& getComponents() const {
 			return components;
 		}
 

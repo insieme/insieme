@@ -502,10 +502,10 @@ namespace detail {
 
 
 template <typename Lambda>
-struct lambda_traits : public detail::lambda_traits_helper<decltype(&Lambda::operator())> {};
+struct lambda_traits : public ::detail::lambda_traits_helper<decltype(&Lambda::operator())> {};
 
 template <typename R, typename... P>
-struct lambda_traits<R(P...)> : public detail::lambda_traits_helper<R(P...)> {};
+struct lambda_traits<R(P...)> : public ::detail::lambda_traits_helper<R(P...)> {};
 
 template <typename R, typename... P>
 struct lambda_traits<R (*)(P...)> : public lambda_traits<R(P...)> {};
@@ -514,7 +514,7 @@ template <typename R, typename... P>
 struct lambda_traits<R (*const)(P...)> : public lambda_traits<R(P...)> {};
 
 template <typename R, typename C, typename... P>
-struct lambda_traits<R (C::*)(P...)> : public detail::lambda_traits_helper<R (C::*)(P...)> {};
+struct lambda_traits<R (C::*)(P...)> : public ::detail::lambda_traits_helper<R (C::*)(P...)> {};
 
 template <typename R, typename C, typename... P>
 struct lambda_traits<R (C::*const)(P...)> : public lambda_traits<R (C::*)(P...)> {};

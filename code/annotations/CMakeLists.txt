@@ -37,8 +37,3 @@ foreach ( case_file ${test_cases})
 	
 	add_unit_test(${case_name} ${ut_prefix})
 endforeach(case_file)
-
-# --- INSTALL --------------------------------------------------------------------
-if(DO_INSTALL)
-	INSTALL(TARGETS insieme_annotations LIBRARY DESTINATION lib)
-endif(DO_INSTALL)

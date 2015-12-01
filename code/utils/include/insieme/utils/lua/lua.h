@@ -246,7 +246,7 @@ namespace lua {
 
 		template <typename F, typename R>
 		struct call<F, R> {
-			R operator()(lua_State* state, F& obj) const {
+			R operator()(lua_State* /*state*/, F& obj) const {
 				return obj();
 			}
 		};
