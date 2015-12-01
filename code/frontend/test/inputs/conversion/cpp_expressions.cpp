@@ -36,34 +36,33 @@
 
 
 int main() {
-		
-	//===-------------------------------------------------------------------------------------------------------------------------------- UNARY OPERATORS ---===
-	
-	#pragma test expect_ir("int_not(3)")
+//===-------------------------------------------------------------------------------------------------------------------------------- UNARY OPERATORS ---===
+
+#pragma test expect_ir("int_not(3)")
 	~3;
-	
+
 	#pragma test expect_ir("!(3!=0)")
 	!3;
-	
+
 	#pragma test expect_ir("3")
 	+3;
-	
+
 	#pragma test expect_ir("-3")
 	-3;
-	
+
 	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = ref_var_init(0); ptr_from_ref(v1); }")
 	{
 		int x = 0;
 		&x;
 	}
-	
-    // In c++, default is to return lvalues, once used, they might get derefed (LtoRcast)
+
+	// In c++, default is to return lvalues, once used, they might get derefed (LtoRcast)
 	#pragma test expect_ir("{ var ref<ptr<int<4>,f,f>,f,f> v0; ptr_to_ref(*v0); }")
 	{
 		int* x;
 		*x;
 	}
-	
+
 	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = ref_var_init(0); 0-v1; }")
 	{
 		int x = 0;
@@ -93,24 +92,25 @@ int main() {
 		signed char v = 0;
 		v--;
 	}
-	
+
 	//===------------------------------------------------------------------------------------------------------------------------------- BINARY OPERATORS ---===
-	
+
 	// COMMA OPERATOR //////////////////////////////////////////////////////////////
-	
+
 	#pragma test expect_ir("{ comma_operator(() -> int<4> { return 2; }, () -> int<4> { return 3; }); }")
 	{ 2, 3; }
 	#pragma test expect_ir("EXPR_TYPE", "int<4>")
 	2, 3;
-	
-	#pragma test expect_ir("{ comma_operator(() -> int<4> { return comma_operator(() -> int<4> { return 2; }, () -> int<4> { return 3; }); }, () -> int<4> { return 4; }); }")
+
+	#pragma test expect_ir(                                                                                                                                    \
+	    "{ comma_operator(() -> int<4> { return comma_operator(() -> int<4> { return 2; }, () -> int<4> { return 3; }); }, () -> int<4> { return 4; }); }")
 	{ 2, 3, 4; }
-	
+
 	#pragma test expect_ir("{ comma_operator(() -> int<4> { return 2; }, () -> real<8> { return lit(\"3.0E+0\":real<8>); }); }")
 	{ 2, 3.0; }
 	#pragma test expect_ir("EXPR_TYPE", "real<8>")
 	2, 3.0;
-	
+
 	// MATH //////////////////////////////////////////////////////////////
 
 	#pragma test expect_ir("int_add(1, 2)")
@@ -124,10 +124,10 @@ int main() {
 
 	#pragma test expect_ir("int_div(7, 8)")
 	7 / 8;
-	
+
 	#pragma test expect_ir("int_mod(9, 10)")
 	9 % 10;
-	
+
 	// BITS //////////////////////////////////////////////////////////////
 
 	#pragma test expect_ir("int_lshift(11, 12)")
@@ -146,13 +146,13 @@ int main() {
 	19 | 20;
 
 	// LOGICAL ////////////////////////////////////////////////////////////
-	
+
 	#pragma test expect_ir("(0!=0) || (1!=0)")
 	0 || 1;
 
 	#pragma test expect_ir("(1!=0) && (0!=0)")
 	1 && 0;
-	
+
 	// COMPARISON /////////////////////////////////////////////////////////
 
 	#pragma test expect_ir("int_eq(1, 2)")
@@ -160,7 +160,7 @@ int main() {
 
 	#pragma test expect_ir("int_ne(1, 2)")
 	1 != 2;
-	
+
 	#pragma test expect_ir("real_ne(lit(\"1.0E+0\":real<8>), lit(\"2.0E+0\":real<8>))")
 	1.0 != 2.0;
 
@@ -176,7 +176,7 @@ int main() {
 	#pragma test expect_ir("int_ge(1, 2)")
 	1 >= 2;
 
-    
+
 	// WITH DIFFERENT TYPES ///////////////////////////////////////////////////
 
 	// this should work: num_cast(1, type_lit(real<8>))+2.0E+0
@@ -191,7 +191,7 @@ int main() {
 
 	#pragma test expect_ir("7u/num_cast(8, type_lit(uint<4>))")
 	7u / 8;
-	
+
 	#pragma test expect_ir("9u+num_cast(10, type_lit(uint<4>))")
 	9u + 10;
 
@@ -214,9 +214,9 @@ int main() {
 	#pragma test expect_ir("{ var ref<array<int<4>,5>,f,f> v0; ptr_subscript(ptr_from_array(v0), 1); }")
 	{
 		int a[5];
-		1[a];
+		1 [a];
 	}
-	
+
 	#pragma test expect_ir("{ var ref<array<int<4>,1>,f,f> v0; ptr_to_ref(ptr_from_array(v0)); }")
 	{
 		int a[1];
@@ -228,60 +228,60 @@ int main() {
 		int* a;
 		&a;
 	}
-	
+
 	#pragma test expect_ir("{ var ref<array<int<4>,5>,f,f> v0; ptr_from_ref(v0); }")
 	{
 		int a[5];
 		&a;
 	}
-	
-    // No ptr arithmetics with void* in C++ 
-//	{
-//		void* a;
-//		a+5;
-//	}
-//
-//	{
-//		void* a;
-//		5+a;
-//	}
-//
-//	{
-//		void* a;
-//		a++;
-//		a--;
-//		++a;
-//		--a;
-//	}
-//	
-//	{
-//		void* a;
-//		a-5;
-//	}
 
-    // No ptr difference with void* in C++ 
-//	{
-//		void *a, *b;
-//		a-b;
-//	}
-	
+	// No ptr arithmetics with void* in C++
+	//	{
+	//		void* a;
+	//		a+5;
+	//	}
+	//
+	//	{
+	//		void* a;
+	//		5+a;
+	//	}
+	//
+	//	{
+	//		void* a;
+	//		a++;
+	//		a--;
+	//		++a;
+	//		--a;
+	//	}
+	//
+	//	{
+	//		void* a;
+	//		a-5;
+	//	}
+
+	// No ptr difference with void* in C++
+	//	{
+	//		void *a, *b;
+	//		a-b;
+	//	}
+
 	#pragma test expect_ir("{ var ref<ptr<unit,f,f>,f,f> v0; ptr_gt(*v0,*v0); ptr_lt(*v0,*v0); ptr_le(*v0,*v0); ptr_ge(*v0,*v0); }")
 	{
 		void* a;
-		a>a;
-		a<a;
-		a<=a;
-		a>=a;
+		a > a;
+		a < a;
+		a <= a;
+		a >= a;
 	}
 
 	// multidimensional
-	
+
 	#pragma test expect_ir("{ var ref<array<array<int<4>,3>,2>,f,f> v0; ptr_subscript(ptr_from_array(ptr_subscript(ptr_from_array(v0), 1)), 2); }")
 	{
 		int a[2][3];
 		a[1][2];
 	}
-	
+
 	// note: there are no rvalue arrays in C!
 	#pragma test expect_ir("{ var ref<array<array<int<4>,3>,2>,f,f> v0; ptr_subscript(ptr_from_array(v0), 1); }")
 	{
@@ -296,19 +296,19 @@ int main() {
 		int a = 1;
 		a += 1;
 	}
-	
+
 	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = ref_var_init(1); cxx_style_assignment(v1, *v1-2); }")
 	{
 		int a = 1;
 		a -= 2;
 	}
-	
+
 	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = ref_var_init(1); cxx_style_assignment(v1, *v1/1); }")
 	{
 		int a = 1;
 		a /= 1;
 	}
-	
+
 	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = ref_var_init(1); cxx_style_assignment(v1, *v1*5); }")
 	{
 		int a = 1;
@@ -358,37 +358,37 @@ int main() {
 		int a;
 		a = 5;
 	}
-	
+
 	#pragma test expect_ir("{ var ref<int<4>,f,f,plain> v0; var ref<int<4>,f,f,plain> v1; cxx_style_assignment(v0, *cxx_style_assignment(v1, 1)); }")
 	{
 		int a, b;
 		a = b = 1;
 	}
-	
+
 	//===------------------------------------------------------------------------------------------------------------------------------- TERNARY OPERATOR ---===
 
- 	#pragma test expect_ir("(1!=0)?2:3")
-    1?2:3; 
-	
+	#pragma test expect_ir("(1!=0)?2:3")
+	1 ? 2 : 3;
+
 	//===---------------------------------------------------------------------------------------------------------------------------------- MISCELLANEOUS ---===
-	
-    #pragma test expect_ir("{ var ref<uint<8>,f,f,plain> v0 = ref_var_init(sizeof(type_lit(real<8>))); cxx_style_assignment(v0, sizeof(type_lit(uint<8>))); }")
-    {
-        unsigned long i = sizeof(double);
-        i = sizeof(i);
-    }
-	
-// FIXME: unsuported
-   // #pr agma test expect_ir("{ var ref<uint<8>,f,f,plain> v0 = ref_var_init(sizeof(type_lit(real<8>))); cxx_style_assignment(v0, sizeof(type_lit(uint<8>))); }")
-   // {
-   //     unsigned long i = alignof(double);
-   //     i = alignof(i);
-   // }
+
+	#pragma test expect_ir("{ var ref<uint<8>,f,f,plain> v0 = ref_var_init(sizeof(type_lit(real<8>))); cxx_style_assignment(v0, sizeof(type_lit(uint<8>))); }")
+	{
+		unsigned long i = sizeof(double);
+		i = sizeof(i);
+	}
+
+	// FIXME: unsuported
+	// #pr agma test expect_ir("{ var ref<uint<8>,f,f,plain> v0 = ref_var_init(sizeof(type_lit(real<8>))); cxx_style_assignment(v0, sizeof(type_lit(uint<8>)));
+	// }")
+	// {
+	//     unsigned long i = alignof(double);
+	//     i = alignof(i);
+	// }
 
 	#pragma test expect_ir("{ var ref<array<char,8>,f,f> v0; var ref<uint<8>,f,f,plain> v1 = ref_var_init(sizeof(type_lit(array<char,8>))); }")
 	{
 		char char_arr[8];
 		unsigned long i = sizeof(char_arr);
 	}
-
 }
