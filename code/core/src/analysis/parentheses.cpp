@@ -53,8 +53,8 @@ namespace analysis {
 		auto& lang = nm.getLangBasic();
 		auto& refs = nm.getLangExtension<lang::ReferenceExtension>();
 
-		//check if the precedence_map is already attached to the node manager
-		if (nm.hasAttachedValue<precedence_map>()) return nm.getAttachedValue<precedence_map>();
+		//TODO: check why using the attached value is slower than recreating the map everytime?!?!
+		//if (nm.hasAttachedValue<precedence_map>()) return nm.getAttachedValue<precedence_map>();
 
 		precedence_map m;
 
@@ -147,7 +147,8 @@ namespace analysis {
 		m[lang.getBoolLOr()] = {14,0};
 
 		//attach the map to the node manager
-		nm.attachValue<precedence_map>(m);
+		//nm.attachValue<precedence_map>(m);
+		//assert_true(nm.hasAttachedValue<precedence_map>()) << "cannot attach precedence map to node manager.";
 
 		return m;
 	}
@@ -186,7 +187,7 @@ namespace analysis {
 	 */
 	bool needsParentheses(const CallExprAddress& cur) {
 
-		const precedence_map pm = create_precedence_map(cur->getNodeManager());
+		const precedence_map& pm = create_precedence_map(cur->getNodeManager());
 
 		// in the case, where the operation is already the root
 		// there is no need for parentheses
