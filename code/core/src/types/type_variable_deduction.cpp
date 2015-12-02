@@ -694,7 +694,7 @@ namespace types {
 
 	SubstitutionOpt getTypeVariableInstantiation(NodeManager& manager, const CallExprPtr& call) {
 		// check for null
-		if(!call) { return 0; }
+		if(!call) { return boost::none; }
 
 
 		// derive substitution
@@ -705,7 +705,7 @@ namespace types {
 
 		// get function parameter types
 		const TypePtr& funType = call->getFunctionExpr()->getType();
-		if(funType->getNodeType() != NT_FunctionType) { return 0; }
+		if(funType->getNodeType() != NT_FunctionType) { return boost::none; }
 
 		// compute type variable instantiation
 		SubstitutionOpt res = getTypeVariableInstantiation(manager, static_pointer_cast<const FunctionType>(funType), argTypes);

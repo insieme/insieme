@@ -37,6 +37,7 @@
 #pragma once
 
 #include <algorithm>
+#include <functional>
 
 #include <boost/functional/hash.hpp>
 
@@ -67,6 +68,18 @@ namespace utils {
 	template <typename T>
 	typename std::enable_if<std::is_base_of<Hashable, T>::value, std::size_t>::type hash_value(const T& instance) {
 		return instance.hash();
+	}
+
+	/**
+	* Integrates the hash code computation for nodes (that are not base of Hashable).
+	* Just forward to std::hash<T>
+	*
+	* @param instance the instance for which a hash code should be obtained.
+	* @return the hash code of the given instance
+	*/
+	template <typename T>
+	typename std::enable_if<!std::is_base_of<Hashable, T>::value, std::size_t>::type hash_value(const T& instance) {
+		return std::hash<T>()(instance);
 	}
 
 	/**

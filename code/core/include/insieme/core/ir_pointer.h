@@ -221,6 +221,14 @@ namespace core {
 namespace std {
 
 	template <typename T>
+	struct hash<insieme::core::Pointer<T>> {
+		size_t operator()(const insieme::core::Pointer<T>& instance) const {
+			return boost::hash_value(instance.ptr);
+		}
+	};
+
+
+	template <typename T>
 	std::ostream& operator<<(std::ostream& out, const insieme::core::Pointer<T>& ptr) {
 		out << "AP(";
 		if(!!ptr) {
