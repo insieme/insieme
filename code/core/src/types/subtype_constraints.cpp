@@ -197,7 +197,7 @@ namespace types {
 	}
 
 	SubstitutionOpt SubTypeConstraints::solve() const {
-		if(!isSatisfiable()) { return 0; }
+		if(!isSatisfiable()) { return boost::none; }
 
 		if(!constraints.empty()) { return solve(constraints.begin()->first->getNodeManager()); }
 
@@ -213,7 +213,7 @@ namespace types {
 		if(debug) { std::cout << "Constraints: " << *this << std::endl; }
 
 		// quick check to exclude unsatisfiability
-		if(!isSatisfiable()) { return 0; }
+		if(!isSatisfiable()) { return boost::none; }
 
 		// create result
 		Substitution res;
@@ -311,7 +311,7 @@ namespace types {
 					if(!isSubTypeOf(cur[i], cur[j]) || !isSubTypeOf(cur[j], cur[i])) {
 						// equality constraint violated => no solution
 						if(debug) { std::cout << "WARNING: equality constraint violated within " << cur << std::endl; }
-						return 0;
+						return boost::none;
 					}
 				}
 			}
@@ -367,7 +367,7 @@ namespace types {
 
 				if(!limit) {
 					if(debug) { std::cout << "No common super type for " << subTypes << std::endl; }
-					return 0;
+					return boost::none;
 				}
 
 				// super types could be unified => try the same with current
@@ -383,7 +383,7 @@ namespace types {
 					if(!isSubTypeOf(limit, cur)) {
 						// => no solution
 						if(debug) { std::cout << "The type " << cur << " is definetly not a sub-type of " << limit << std::endl; }
-						return 0;
+						return boost::none;
 					}
 				}
 
@@ -414,7 +414,7 @@ namespace types {
 
 					if(!limit) {
 						if(debug) { std::cout << "No common sub type for " << superTypes << std::endl; }
-						return 0;
+						return boost::none;
 					}
 
 					// super types could be unified => try the same with current
@@ -430,7 +430,7 @@ namespace types {
 						if(!isSubTypeOf(cur, limit)) {
 							// => no solution
 							if(debug) { std::cout << "The type " << limit << " is not a sub-type of " << cur << std::endl; }
-							return 0;
+							return boost::none;
 						}
 					}
 				}

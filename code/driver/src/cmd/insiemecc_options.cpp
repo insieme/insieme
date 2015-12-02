@@ -75,7 +75,7 @@ namespace cmd {
 			#define PARAMETER(_name__, _id__, _type__, _default_value__, _description__)                                                                       \
 				(_name__, bpo::value<_type__>()->default_value(_default_value__), _description__)
 			#define OPTION(_name__, _id__, _type__, _default_value__, _description__)                                                                          \
-				(_name__, bpo::value<_type__>()->implicit_value(_default_value__), _description__)
+				(_name__, bpo::value<_type__>(), _description__)
 			#include "insieme/driver/cmd/insiemecc_options.def"
 			    ;
 
@@ -118,9 +118,9 @@ namespace cmd {
 			    bpo::basic_command_line_parser<char>(argv)
 			        .options(desc)
 			        .style((bpo::command_line_style::default_style | bpo::command_line_style::allow_long_disguise) ^ bpo::command_line_style::allow_guessing)
-			        .positional(pos)
 			        .allow_unregistered()
-			        .run();
+					.positional(pos)
+					.run();
 
 			bpo::store(parsed, map);
 			bpo::notify(map);

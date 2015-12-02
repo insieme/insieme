@@ -104,7 +104,7 @@ namespace types {
 			auto cur = unify(manager, unified, res.applyTo(*begin));
 			if(!cur) {
 				// => not unify-able
-				return 0;
+				return boost::none;
 			}
 			unified = cur->applyTo(unified);
 			res = Substitution::compose(manager, res, *cur);

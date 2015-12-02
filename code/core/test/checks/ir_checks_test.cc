@@ -55,7 +55,7 @@ namespace checks {
 	  public:
 		IDontLikeAnythingCheck() : IRCheck(true) {}
 		OptionalMessageList visitNode(const NodeAddress& node) {
-			if(node->getNodeType() != NT_GenericType) { return 0; }
+			if(node->getNodeType() != NT_GenericType) { return boost::none; }
 			return MessageList(Message(node, (ErrorCode)1, "I hate it!"));
 		}
 	};
