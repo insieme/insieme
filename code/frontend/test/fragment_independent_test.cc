@@ -40,55 +40,55 @@ namespace insieme {
 namespace frontend {
 
 	TEST(IndependentTest, Literals) {
-		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_literals.c");
+		runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_literals.c");
 	}
 	
 	TEST(IndependentTest, BasicTypes) {
-		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_basic_types.c");
+		runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_basic_types.c");
 	}
 
 	TEST(IndependentTest, Globals) {
-		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_globals.c");
+		runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_globals.c");
 	}
 
 	TEST(IndependentTest, GlobalsInit) {
-		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_globals_init.c");
+		runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_globals_init.c");
 	}
 
 	TEST(IndependentTest, Statements) {
-		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_statements.c");
+		runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_statements.c");
 	}
 
 	TEST(IndependentTest, VariableScopes) {
-		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_variable_scopes.c");
+		runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_variable_scopes.c");
 	}
 	
 	TEST(IndependentTest, FunCalls) {
-		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_fun_calls.c");
+		runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_fun_calls.c");
 	}
 
 	TEST(IndependentTest, Expressions) {
-		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_expressions.c");
+		runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_expressions.c");
 	}
 
 	TEST(IndependentTest, Casts) {
-		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_casts.c");
+		runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_casts.c");
 	}
 
 	TEST(IndependentTest, DeclInitExpressions) {
-		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_decl_init_expressions.c");
+		runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_decl_init_expressions.c");
 	}
 
 	TEST(IndependentTest, Prototypes) {
-		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_prototypes.c");
+		runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_prototypes.c");
 	}
 
 	TEST(IndependentTest, FunctionPointers) {
-		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_function_pointers.c");
+		runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_function_pointers.c");
 	}
 	
 	TEST(IndependentTest, Static) {
-		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_static.c");
+		runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_static.c");
 	}
 
 } // fe namespace

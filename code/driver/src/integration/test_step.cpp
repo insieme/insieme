@@ -357,8 +357,8 @@ namespace integration {
 
 				// add runtime include directories
 				if(backend != Sequential) { // TODO: make this non-hardcoded -- it is ugly, but I don't have the time ...
-					cmd << " -I " << SRC_ROOT_DIR << "runtime/include";
-					cmd << " -I " << SRC_ROOT_DIR << "common/include";
+					cmd << " -I " << utils::getInsiemeSourceRootDir() << "runtime/include";
+					cmd << " -I " << utils::getInsiemeSourceRootDir() << "common/include";
 				}
 
 				// add include directories

@@ -60,9 +60,9 @@ namespace measure {
 			string temp = "-D" + string(e.first) + "=" + string(e.second);
 			tempCompiler.addFlag(temp);
 		}
-		tempCompiler.addFlag("-I " PAPI_HOME "/include");
-		tempCompiler.addFlag("-L " PAPI_HOME "/lib/");
-		tempCompiler.addFlag("-Wl,-rpath," PAPI_HOME "/lib -lpapi");
+		tempCompiler.addFlag(string("-I ") + utils::getInsiemeLibsRootDir() + "/papi-latest/include");
+		tempCompiler.addFlag(string("-L ") + utils::getInsiemeLibsRootDir() + "/papi-latest/lib/");
+		tempCompiler.addFlag(string("-Wl,-rpath,") + utils::getInsiemeLibsRootDir() + "/papi-latest/lib -lpapi");
 
 		auto binary = utils::compiler::compileToBinary(*target, tempCompiler);
 

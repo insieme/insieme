@@ -1129,17 +1129,17 @@ namespace measure {
 		utils::compiler::Compiler compiler = compilerSetup;
 
 		// add flags required by the runtime
-		compiler.addFlag("-I " DRIVER_TEST_DIR "../../runtime/include");
-		compiler.addFlag("-I " DRIVER_TEST_DIR "../../common/include");
-		compiler.addFlag("-I " PAPI_HOME "/include");
-		compiler.addFlag("-L " PAPI_HOME "/lib/");
+		compiler.addFlag(string("-I ") + utils::getInsiemeSourceRootDir() + "runtime/include");
+		compiler.addFlag(string("-I ") + utils::getInsiemeSourceRootDir() + "common/include");
+		compiler.addFlag(string("-I ") + utils::getInsiemeLibsRootDir() + "papi-latest/include");
+		compiler.addFlag(string("-L ") + utils::getInsiemeLibsRootDir() + "papi-latest/lib/");
 		compiler.addFlag("-D_XOPEN_SOURCE=700 -D_GNU_SOURCE");
 		compiler.addFlag("-DIRT_ENABLE_REGION_INSTRUMENTATION");
 		compiler.addFlag("-DIRT_WORKER_SLEEPING");
 		compiler.addFlag("-DIRT_SCHED_POLICY=IRT_SCHED_POLICY_STATIC");
 		compiler.addFlag("-DIRT_USE_PAPI");
 		compiler.addFlag("-ldl -lrt -lpthread -lm");
-		compiler.addFlag("-Wl,-rpath," PAPI_HOME "/lib -lpapi");
+		compiler.addFlag(string("-Wl,-rpath,") + utils::getInsiemeLibsRootDir() + "papi-latest/lib -lpapi");
 		compiler.addFlag("-Wno-unused-but-set-variable");
 		compiler.addFlag("-Wno-unused-variable");
 

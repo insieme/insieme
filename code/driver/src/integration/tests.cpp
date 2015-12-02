@@ -158,7 +158,7 @@ namespace integration {
 			bool enableCXX11 = false;
 
 			// get the test directory -- if the testName is a existingPath skip appending rootDir
-			auto testDir = (fs::exists(fs::path(testName))) ? fs::path(testName) : fs::path(TEST_ROOT_DIR) / testName;
+			auto testDir = (fs::exists(fs::path(testName))) ? fs::path(testName) : fs::path(utils::getInsiemeSourceRootDir() + "../test") / testName;
 
 			// check test case directory
 			const fs::path testCaseDir = fs::canonical(fs::absolute(testDir));
@@ -257,7 +257,7 @@ namespace integration {
 			}
 
 			// find "canonical" test name regardless of setup
-			string canonRoot = fs::canonical(fs::path(TEST_ROOT_DIR)).string();
+			string canonRoot = fs::canonical(fs::path(utils::getInsiemeSourceRootDir() + "../test")).string();
 			string prefix = commonPrefix(testCaseDir.string(), canonRoot);
 			string name = testCaseDir.string().substr(prefix.size());
 			// don't just replace "test/" here, as unintended replacements might occur deeper in the directory structure
@@ -372,7 +372,7 @@ namespace integration {
 	const vector<IntegrationTestCase>& getAllCases(const bool blacklistedOnly) {
 		// check whether cases have been loaded before
 		if(!TEST_CASES) {
-			TEST_CASES = boost::optional<vector<IntegrationTestCase>>(loadAllCases(TEST_ROOT_DIR, blacklistedOnly ? BLACKLISTED_TESTS : ENABLED_TESTS));
+			TEST_CASES = boost::optional<vector<IntegrationTestCase>>(loadAllCases(utils::getInsiemeSourceRootDir() + "../test", blacklistedOnly ? BLACKLISTED_TESTS : ENABLED_TESTS));
 			std::sort(TEST_CASES->begin(), TEST_CASES->end());
 		}
 		return *TEST_CASES;

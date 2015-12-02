@@ -34,6 +34,15 @@ endif (NOT MSVC)
 # toggle shared vs. static MSVC runtime library linking
 option(MSVC_SHARED_RUNTIME "Use shared MSVC runtime linking" ON)
 
+# --------------------------------------------------------------------- including libraries
+# set up insieme lib home either from THIRD_PARTY_LIBS_HOME or INSIEME_LIBS_HOME env var 
+if ( DEFINED ENV{THIRD_PARTY_LIBS_HOME} ) 
+	set(THIRD_PARTY_LIBS_HOME $ENV{THIRD_PARTY_LIBS_HOME} CACHE PATH "Third party library home" )
+elseif ( DEFINED ENV{INSIEME_LIBS_HOME} ) 
+	set(THIRD_PARTY_LIBS_HOME $ENV{INSIEME_LIBS_HOME} CACHE PATH "Third party library home" )
+endif()
+
+add_definitions("-DINSIEME_LIBS_HOME=\"${THIRD_PARTY_LIBS_HOME}/\"")
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBOOST_NO_CXX11_EXPLICIT_CONVERSION_OPERATORS")
 
 # Visual Studio customization

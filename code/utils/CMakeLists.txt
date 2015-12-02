@@ -5,9 +5,6 @@ project(insieme_utils CXX)
 message(STATUS "========== configure utils =============")
 cmake_minimum_required(VERSION 3.2)
 
-# configure config files
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/include/insieme/utils/config.h)
-
 # collect source files 
 file(GLOB_RECURSE insieme_utils_srcs 	src/*.cpp )
 insieme_glob_headers(insieme_utils_incs include)

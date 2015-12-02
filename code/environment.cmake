@@ -86,14 +86,6 @@ if(NOT LINKING_TYPE)
     set(LINKING_TYPE SHARED)
 endif(NOT LINKING_TYPE)
 
-# --------------------------------------------------------------------- including libraries
-# set up insieme lib home either from THIRD_PARTY_LIBS_HOME or INSIEME_LIBS_HOME env var 
-if ( DEFINED ENV{THIRD_PARTY_LIBS_HOME} ) 
-	set(THIRD_PARTY_LIBS_HOME $ENV{THIRD_PARTY_LIBS_HOME} CACHE PATH "Third party library home" )
-elseif ( DEFINED ENV{INSIEME_LIBS_HOME} ) 
-	set(THIRD_PARTY_LIBS_HOME $ENV{INSIEME_LIBS_HOME} CACHE PATH "Third party library home" )
-endif()
-
 #------------------------------------------------------------- profiling
 IF (DO_GOOGLE_PROFILING)
 	if(NOT DEFINED GPERFTOOLS_HOME)

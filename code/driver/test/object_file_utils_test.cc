@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -52,7 +52,7 @@ namespace driver {
 	TEST(ObjectFile, HelloWorldTest) {
 		core::NodeManager mgr;
 
-		fe::ConversionJob job(DRIVER_TEST_DIR "/inputs/hello_world.c");
+		fe::ConversionJob job(utils::getInsiemeSourceRootDir() + "driver/test/inputs/hello_world.c");
 		auto unit = job.toIRTranslationUnit(mgr);
 
 		// save tu to temporary file
@@ -66,7 +66,7 @@ namespace driver {
 		EXPECT_TRUE(isInsiemeLib(file));
 
 		// this one should fail ..
-		EXPECT_FALSE(isInsiemeLib(DRIVER_TEST_DIR "/inputs/hello_world.c"));
+		EXPECT_FALSE(isInsiemeLib(utils::getInsiemeSourceRootDir() + "driver/test/inputs/hello_world.c"));
 
 		// reload translation unit
 		core::NodeManager mgr2;

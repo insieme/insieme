@@ -54,6 +54,8 @@
 #include "insieme/frontend/utils/frontend_inspire_module.h"
 #include "insieme/utils/config.h"
 
+#define FRONTEND_TEST_DIR insieme::utils::getInsiemeSourceRootDir() + "frontend/test/"
+
 namespace insieme {
 namespace frontend {
 

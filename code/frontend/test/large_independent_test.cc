@@ -53,23 +53,23 @@ namespace frontend {
 	}
 
 	TEST(LargeIndependentTest, HelloWorld) {
-		runLargeIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_hello_world.c");
+		runLargeIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_hello_world.c");
 	}
 
 	TEST(IndependentTest, MatrixMul) {
-		runLargeIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_matrix_mul.c");
+		runLargeIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_matrix_mul.c");
 	}
 
 	TEST(IndependentTest, Pendulum) {
-		runLargeIndependentTestOn(FRONTEND_TEST_DIR "../../../test/pendulum/pendulum.c");
+		runLargeIndependentTestOn(FRONTEND_TEST_DIR + "../../../test/pendulum/pendulum.c");
 	}
 
 	TEST(IndependentTest, Pyramids) {
-		runLargeIndependentTestOn(FRONTEND_TEST_DIR "../../../test/pyramids/pyramids.c");
+		runLargeIndependentTestOn(FRONTEND_TEST_DIR + "../../../test/pyramids/pyramids.c");
 	}
 	
 	TEST(IndependentTest, Stencil3D) {
-		runLargeIndependentTestOn(FRONTEND_TEST_DIR "../../../test/stencil3d/stencil3d.c");
+		runLargeIndependentTestOn(FRONTEND_TEST_DIR + "../../../test/stencil3d/stencil3d.c");
 	}
 
 	// enable after checking recursive struct resolve
