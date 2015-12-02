@@ -157,8 +157,7 @@ namespace conversion {
 			if(llvm::dyn_cast<clang::CXXDestructorDecl>(methDecl)) {
 				ret.lambda = converter.getIRBuilder().getDefaultDestructor(thisType);
 				ret.lit = converter.getIRBuilder().getLiteralForDestructor(ret.lambda->getType());
-			}
-			if(auto constDecl = llvm::dyn_cast<clang::CXXConstructorDecl>(methDecl)) {
+			} else if(auto constDecl = llvm::dyn_cast<clang::CXXConstructorDecl>(methDecl)) {
 				if(constDecl->isDefaultConstructor()) {
 					ret.lambda = converter.getIRBuilder().getDefaultConstructor(thisType, parents, fields);
 				}				
@@ -168,9 +167,19 @@ namespace conversion {
 				else if(constDecl->isMoveConstructor()) {
 					ret.lambda = converter.getIRBuilder().getDefaultMoveConstructor(thisType, parents, fields);
 				} else {				
-					assert_not_implemented() << "Can't translate defaulted method: " << dumpClang(methDecl);
+					assert_not_implemented() << "Can't translate defaulted constructor: " << dumpClang(methDecl);
 				}
 				ret.lit = converter.getIRBuilder().getLiteralForConstructor(ret.lambda->getType()); 
+			} else {				
+				if(methDecl->isCopyAssignmentOperator()) {
+					ret.memFun = converter.getIRBuilder().getDefaultCopyAssignOperator(thisType, parents, fields);
+				} else if(methDecl->isMoveAssignmentOperator()) {
+					ret.memFun = converter.getIRBuilder().getDefaultMoveAssignOperator(thisType, parents, fields);
+				} else {
+					assert_not_implemented() << "Can't translate defaulted method: " << dumpClang(methDecl);
+				}
+				ret.lambda = ret.memFun->getImplementation().as<core::LambdaExprPtr>();
+				ret.lit = converter.getIRBuilder().literal(ret.lambda->getReference()->getNameAsString(), ret.lambda->getType());
 			}
 			converter.getFunMan()->insert(methDecl, ret.lit);
 		}

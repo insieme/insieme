@@ -226,6 +226,9 @@ namespace conversion {
 	core::ExpressionPtr Converter::CXXExprConverter::VisitCXXOperatorCallExpr(const clang::CXXOperatorCallExpr* callExpr) {
 		core::ExpressionPtr retIr;
 		LOG_EXPR_CONVERSION(callExpr, retIr);
+
+		retIr = ExprConverter::VisitCallExpr(callExpr);
+
 		//core::ExpressionPtr func;
 		//core::ExpressionPtr convertedOp;
 		//ExpressionList args;
