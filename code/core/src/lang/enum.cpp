@@ -34,7 +34,6 @@
  * regarding third party software licenses.
  */
 
-
 #include "insieme/core/lang/enum.h"
 #include "insieme/core/ir_builder.h"
 
