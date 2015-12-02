@@ -106,7 +106,12 @@ namespace frontend {
 		/**
 		 * A list of include directories containing system headers.
 		 */
-		vector<path> systemHeaderSearchPath;
+		insieme::utils::Lazy<vector<path>> systemHeaderSearchPath;
+		
+		/**
+		 * Retrieve list (lazy evaluation)
+		 */
+		vector<path>& getSystemHeaderSearchPathInternal();
 
 		/**
 		 * The C standard to be followed.
@@ -268,21 +273,21 @@ namespace frontend {
 		 * Obtains a reference to the covered set of std-library include directories.
 		 */
 		const vector<path>& getSystemHeadersDirectories() const {
-			return systemHeaderSearchPath;
+			return const_cast<ConversionSetup*>(this)->getSystemHeaderSearchPathInternal();
 		}
 
 		/**
 		 * Updates the set of considered std-library include directories.
 		 */
 		void setSystemHeadersDirectories(const vector<path>& includeDirectories) {
-			this->systemHeaderSearchPath = includeDirectories;
+			getSystemHeaderSearchPathInternal() = includeDirectories;
 		}
 
 		/**
-		 * Adds an additional user defined header serach path
+		 * Adds an additional user defined header search path
 		 */
 		void addSystemHeadersDirectory(const path& directory) {
-			this->systemHeaderSearchPath.push_back(directory);
+			getSystemHeaderSearchPathInternal().push_back(directory);
 		}
 
 		/**

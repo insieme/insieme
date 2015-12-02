@@ -71,7 +71,6 @@ namespace frontend {
 
 	ConversionSetup::ConversionSetup(const vector<path>& includeDirs)
 	    : includeDirs(includeDirs),
-	      systemHeaderSearchPath(::transform(insieme::utils::compiler::getDefaultCppIncludePaths(), [](const string& cur) { return path(cur); })),
 	      standard(Auto), definitions(), interceptedNameSpacePatterns({"std::.*", "__gnu_cxx::.*", "_m_.*", "_mm_.*", "__mm_.*", "__builtin_.*"}),
 	      interceptedHeaderDirs(), flags(DEFAULT_FLAGS){};
 
@@ -79,6 +78,13 @@ namespace frontend {
 	bool ConversionSetup::isCxx(const path& file) const {
 		static std::set<string> CxxExtensions({".cpp", ".cxx", ".cc", ".C"});
 		return standard == Cxx03 || standard == Cxx98 || (standard == Auto && ::contains(CxxExtensions, boost::filesystem::extension(file)));
+	}
+
+	vector<path>& ConversionSetup::getSystemHeaderSearchPathInternal() {
+		if(!systemHeaderSearchPath.isEvaluated()) {
+			systemHeaderSearchPath.setValue(::transform(insieme::utils::compiler::getDefaultCppIncludePaths(), [](const string& cur) { return path(cur); }));
+		}
+		return systemHeaderSearchPath;
 	}
 
 	// This method calls the lambdas that were collected
