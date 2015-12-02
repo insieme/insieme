@@ -923,7 +923,7 @@ namespace insieme {
 					// it worked => return match result
 					return context.getMatch();
 				}
-				return 0;
+				return boost::none;
 			}
 
 			template <typename T, typename target>
@@ -934,7 +934,7 @@ namespace insieme {
 					// => it is a match (but leaf root empty)
 					return context.getMatch();
 				}
-				return 0;
+				return boost::none;
 			}
 
 			template <typename T, typename target>

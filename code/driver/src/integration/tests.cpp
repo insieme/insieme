@@ -367,7 +367,7 @@ namespace integration {
 	}
 
 	// a global variable containing the list of test cases after they have been loaded the first time
-	boost::optional<vector<IntegrationTestCase>> TEST_CASES = 0;
+	boost::optional<vector<IntegrationTestCase>> TEST_CASES = boost::none;
 
 	const vector<IntegrationTestCase>& getAllCases(const bool blacklistedOnly) {
 		// check whether cases have been loaded before

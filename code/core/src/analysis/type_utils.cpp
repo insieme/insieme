@@ -42,6 +42,7 @@
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/pointer.h"
 #include "insieme/core/lang/array.h"
+#include "insieme/core/analysis/compare.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/types/subtype_constraints.h"
 
@@ -167,20 +168,14 @@ namespace analysis {
 		IRBuilder builder(type->getNodeManager());
 
 		auto containsCtor = [&](const LambdaExprPtr& ctor)->bool {
-			return any(record->getConstructors(), [&](const ExpressionPtr& cu) {
-				const LambdaExprPtr& cur = cu.as<LambdaExprPtr>();
-				return *builder.normalize(cur->getType()) == *builder.normalize(ctor->getType()) &&
-					*builder.normalize(cur)->getBody() == *builder.normalize(ctor)->getBody();
+			return any(record->getConstructors(), [&](const ExpressionPtr& cur) {
+				return analysis::equalNameless(builder.normalize(ctor), builder.normalize(cur));
 			});
 		};
 
 		auto containsMemberFunction = [&](const MemberFunctionPtr& member)->bool {
 			return any(record->getMemberFunctions(), [&](const MemberFunctionPtr& cur) {
-				return	cur->getName() == member->getName() &&
-						cur->getVirtualFlag() == member->getVirtualFlag() &&
-						builder.normalize(cur->getImplementation()->getType()) == builder.normalize(member->getImplementation()->getType()) &&
-						builder.normalize(cur)->getImplementation().as<LambdaExprPtr>()->getBody() == 
-						builder.normalize(member)->getImplementation().as<LambdaExprPtr>()->getBody();
+				return analysis::equalNameless(builder.normalize(member), builder.normalize(cur));
 			});
 		};
 
@@ -201,7 +196,7 @@ namespace analysis {
 		if (!trivialMoveConstructor) return false;
 
 		// check for trivial, non-virtual destructor
-		if(record->getDestructorVirtual().getValue() || *builder.normalize(record->getDestructor()) != *builder.normalize(builder.getDefaultDestructor(thisType))) return false;
+		if (!hasDefaultDestructor(ttype)) return false;
 
 		// check for trivial copy and move assignments
 		bool trivialCopyAssignment = containsMemberFunction(builder.getDefaultCopyAssignOperator(thisType, parents, record->getFields()));
@@ -209,13 +204,6 @@ namespace analysis {
 
 		bool trivialMoveAssignment = containsMemberFunction(builder.getDefaultMoveAssignOperator(thisType, parents, record->getFields()));
 		if (!trivialMoveAssignment) return false;
-
-		// check for trivial, non-virtual destructor
-		const auto defDtor = builder.getDefaultDestructor(thisType);
-		const auto dtor = record->getDestructor().as<LambdaExprPtr>(); 
-		if (record->getDestructorVirtual().getValue() || 
-			builder.normalize(dtor->getBody()) != builder.normalize(defDtor->getBody()) || 
-			builder.normalize(dtor->getType()) != builder.normalize(defDtor->getType())) return false;
 		
 		// check for virtual member functions
 		for(auto memFun : record->getMemberFunctions()) {
@@ -254,7 +242,7 @@ namespace analysis {
 		auto thisType = builder.refType(builder.tagTypeReference(record->getName()));
 
 		auto checkCtor = [&](const ExpressionPtr& ctor, const ExpressionPtr& candidate)->bool {
-			return *builder.normalize(ctor) == *builder.normalize(candidate);
+			return analysis::equalNameless(builder.normalize(ctor), builder.normalize(candidate));
 		};
 
 		ParentsPtr parents =
@@ -276,7 +264,8 @@ namespace analysis {
 		auto thisType = builder.refType(builder.tagTypeReference(record->getName()));
 
 		//check the virtual flag and compare with the default generated destructor
-		if(!record->getDestructorVirtual().getValue() && *builder.normalize(record->getDestructor()) == *builder.normalize(builder.getDefaultDestructor(thisType))) return true;
+		if(!record->getDestructorVirtual().getValue()
+				&& analysis::equalNameless(builder.normalize(record->getDestructor()), builder.normalize(builder.getDefaultDestructor(thisType)))) return true;
 
 		return false;
 	}
@@ -290,7 +279,7 @@ namespace analysis {
 		auto thisType = builder.refType(builder.tagTypeReference(record->getName()));
 
 		auto checkMemberFunction = [&](const MemberFunctionPtr& member, const MemberFunctionPtr& candidate)->bool {
-			return *builder.normalize(member) == *builder.normalize(candidate);
+			return analysis::equalNameless(builder.normalize(member), builder.normalize(candidate));
 		};
 
 		ParentsPtr parents =

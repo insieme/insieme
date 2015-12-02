@@ -91,9 +91,10 @@ namespace conversion {
 
 		/// Converts a method declaration into an IR MemberFunction.
 		/// @param methDecl is a clang CXXMethodDecl which represent a definition for the method
-		/// @param lit whether to create a literal or the full implementation
+		/// @param parents parents of the class this is a method of
+		/// @param fields fields of the class this is a method of
 		/// @return Converted member function
-		ConvertedMethodDecl convertMethodDecl(const clang::CXXMethodDecl* methDecl) const;
+		ConvertedMethodDecl convertMethodDecl(const clang::CXXMethodDecl* methDecl, const core::ParentsPtr& parents, const core::FieldsPtr& fields) const;
 
 		// Visitors -------------------------------------------------------------------------------------------------------
 

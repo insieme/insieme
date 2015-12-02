@@ -34,26 +34,26 @@
  * regarding third party software licenses.
  */
 
-#include "independent_test_utils.h"
+struct Simplest {
+};
 
-namespace insieme {
-namespace frontend {
+#define SIMPLEST_IR R"(
+def struct IMP_Simplest {
+};)"
 
-	TEST(CppIndependentTest, BasicTypes) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_basic_types.cpp"); }
 
-	TEST(CppIndependentTest, Expressions) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_expressions.cpp"); }
+int main() {
+	; // this is required because of the clang compound source location bug
 
-	TEST(CppIndependentTest, DISABLED_Expressions_Ref) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_expressions_ref.cpp"); }
+	#pragma test expect_ir(SIMPLEST_IR,R"( { 
+		var ref<IMP_Simplest,f,f,plain> v0 = IMP_Simplest::(ref_var(type_lit(IMP_Simplest))); 
+		var ref<IMP_Simplest,f,f,plain> v1 = IMP_Simplest::(ref_var(type_lit(IMP_Simplest)));
+		IMP_Simplest::operator_assign(v0,v1);
+	} )")
+	{ 
+		Simplest a, b;
+		a = b;
+	}
 
-	TEST(CppIndependentTest, BasicClasses) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_basic_classes.cpp"); }
-	
-	TEST(CppIndependentTest, DISABLED_ClassOperators) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_class_operators.cpp"); }
-
-	TEST(CppIndependentTest, BasicTemplates) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_basic_templates.cpp"); }
-
-	TEST(CppIndependentTest, NewDelete) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_new_delete.cpp"); }
-
-	TEST(CppIndependentTest, DefaultArgs) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_default_args.cpp"); }
-
-} // fe namespace
-} // insieme namespace
+	return 0;
+}

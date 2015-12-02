@@ -116,7 +116,9 @@ namespace conversion {
 				// handle implicit "this" for methods
 				if(methDecl) {
 					auto thisType = getThisType(converter, methDecl);
-					params.push_back(converter.getIRBuilder().variable(converter.getIRBuilder().refType(thisType)));					
+					auto thisVar = converter.getIRBuilder().variable(converter.getIRBuilder().refType(thisType));
+					params.push_back(thisVar);
+					converter.getVarMan()->setThis(thisVar);
 				}
 				// handle other parameters
 				for(auto param : funcDecl->parameters()) {
@@ -144,14 +146,54 @@ namespace conversion {
 		auto funType = getFunMethodTypeInternal(converter, funcDecl);
 		return convertFunMethodInternal(converter, funType, funcDecl, name);
 	}
-	
-	DeclConverter::ConvertedMethodDecl DeclConverter::convertMethodDecl(const clang::CXXMethodDecl* methDecl) const {
+
+	DeclConverter::ConvertedMethodDecl DeclConverter::convertMethodDecl(const clang::CXXMethodDecl* methDecl, const core::ParentsPtr& parents,
+		                                                                const core::FieldsPtr& fields) const {
 		ConvertedMethodDecl ret;
-		string name = insieme::utils::mangle(methDecl->getNameAsString());
-		auto funType = getFunMethodTypeInternal(converter, methDecl);
-		ret.lit = builder.literal(name, funType);
-		ret.lambda = convertFunMethodInternal(converter, funType, methDecl, name);
-		ret.memFun = builder.memberFunction(methDecl->isVirtual(), name, ret.lit);
+
+		// handle default constructor / destructor / operators in accordance with core
+		if(methDecl->isDefaulted()) {
+			auto thisType = getThisType(converter, methDecl);
+			if(llvm::dyn_cast<clang::CXXDestructorDecl>(methDecl)) {
+				ret.lambda = converter.getIRBuilder().getDefaultDestructor(thisType);
+				ret.lit = converter.getIRBuilder().getLiteralForDestructor(ret.lambda->getType());
+			} else if(auto constDecl = llvm::dyn_cast<clang::CXXConstructorDecl>(methDecl)) {
+				if(constDecl->isDefaultConstructor()) {
+					ret.lambda = converter.getIRBuilder().getDefaultConstructor(thisType, parents, fields);
+				}				
+				else if(constDecl->isCopyConstructor()) {
+					ret.lambda = converter.getIRBuilder().getDefaultCopyConstructor(thisType, parents, fields);
+				}
+				else if(constDecl->isMoveConstructor()) {
+					ret.lambda = converter.getIRBuilder().getDefaultMoveConstructor(thisType, parents, fields);
+				} else {				
+					assert_not_implemented() << "Can't translate defaulted constructor: " << dumpClang(methDecl);
+				}
+				ret.lit = converter.getIRBuilder().getLiteralForConstructor(ret.lambda->getType()); 
+			} else {				
+				if(methDecl->isCopyAssignmentOperator()) {
+					ret.memFun = converter.getIRBuilder().getDefaultCopyAssignOperator(thisType, parents, fields);
+				} else if(methDecl->isMoveAssignmentOperator()) {
+					ret.memFun = converter.getIRBuilder().getDefaultMoveAssignOperator(thisType, parents, fields);
+				} else {
+					assert_not_implemented() << "Can't translate defaulted method: " << dumpClang(methDecl);
+				}
+				ret.lambda = ret.memFun->getImplementation().as<core::LambdaExprPtr>();
+				ret.lit = converter.getIRBuilder().literal(ret.lambda->getReference()->getNameAsString(), ret.lambda->getType());
+			}
+			converter.getFunMan()->insert(methDecl, ret.lit);
+		}
+		// non-default cases
+		else {
+			string name = insieme::utils::mangle(methDecl->getNameAsString());
+			auto funType = getFunMethodTypeInternal(converter, methDecl);
+			if(funType->getKind() == core::FK_CONSTRUCTOR) { ret.lit = builder.getLiteralForConstructor(funType); }
+			else if(funType->getKind() == core::FK_DESTRUCTOR) { ret.lit = builder.getLiteralForDestructor(funType); }
+			else { ret.lit = builder.getLiteralForMemberFunction(funType, name); }
+			converter.getFunMan()->insert(methDecl, ret.lit);
+			ret.lambda = convertFunMethodInternal(converter, funType, methDecl, ret.lit->getStringValue());
+			ret.memFun = builder.memberFunction(methDecl->isVirtual(), name, ret.lit);
+		}
 		return ret;
 	}
 
@@ -177,7 +219,7 @@ namespace conversion {
 		if(typeDecl->isDependentType()) { return; }
 
 		converter.trackSourceLocation(typeDecl);
-		//convertTypeDecl(typeDecl);
+		converter.convertType(converter.getCompiler().getASTContext().getTypeDeclType(typeDecl));
 		converter.untrackSourceLocation();
 	}
 

@@ -527,9 +527,14 @@ namespace graph {
 	Graph<std::set<VertexType>> computeSCCGraph(const GraphType& graph) {
 		auto numVertices = boost::num_vertices(graph);
 
+		// no vertices?! just return empty graph
+		if (!numVertices) {
+			return Graph<std::set<VertexType>>();
+		}
+
 		// start by computing identifying the components using boost ...
-		typename GraphType::vertices_size_type componentMap[numVertices];
-		auto numComponents = boost::strong_components(graph, componentMap);
+		std::vector<typename GraphType::vertices_size_type> componentMap(numVertices);
+		auto numComponents = boost::strong_components(graph, make_iterator_property_map(componentMap.begin(), get(boost::vertex_index, graph), componentMap[0]));
 
 		// create sets forming equivalence classes (nodes of the resulting graph)
 		std::vector<std::set<VertexType>> sets(numComponents);
@@ -538,7 +543,7 @@ namespace graph {
 			// add type to corresponding set
 			sets[componentMap[i]].insert(graph[i]);
 		}
-
+		
 		// create resulting graph
 		Graph<std::set<VertexType>> res;
 		for(std::size_t i = 0; i < numComponents; i++) {

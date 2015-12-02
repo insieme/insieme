@@ -58,6 +58,8 @@ namespace state {
 			std::map<const clang::VarDecl*, core::ExpressionPtr> variables;
 			/// determines whether variables from upper scopes are visible
 			bool nested;
+			/// stores the "this" parameter for methods
+			core::ExpressionPtr thisExpr = nullptr;
 		};
 
 		/// Internal storage for mappings from clang variable declarations to 
@@ -75,6 +77,11 @@ namespace state {
 		core::ExpressionPtr lookup(const clang::VarDecl* varDecl) const;
 		void undefine(const clang::VarDecl* varDecl);
 		void insert(const clang::VarDecl* varDecl, const core::ExpressionPtr& var);
+
+		/// Set the "this" expression for the current scope
+		void setThis(const core::ExpressionPtr& thisVar);
+		/// Get the "this" expression for the current scope
+		core::ExpressionPtr getThis();
 
 		/// get the number of visible declarations in current scope (for testing)
 		size_t numVisibleDeclarations() const;

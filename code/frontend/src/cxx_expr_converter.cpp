@@ -38,17 +38,18 @@
 
 #include "insieme/frontend/clang.h"
 #include "insieme/frontend/decl_converter.h"
-#include "insieme/frontend/omp/omp_annotation.h"
+#include "insieme/frontend/state/function_manager.h"
 #include "insieme/frontend/state/record_manager.h"
+#include "insieme/frontend/state/variable_manager.h"
 #include "insieme/frontend/utils/clang_cast.h"
 #include "insieme/frontend/utils/debug.h"
+#include "insieme/frontend/utils/expr_to_bool.h"
+#include "insieme/frontend/utils/frontend_inspire_module.h"
 #include "insieme/frontend/utils/macros.h"
 #include "insieme/frontend/utils/name_manager.h"
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/stmt_wrapper.h"
 #include "insieme/frontend/utils/temporaries_lookup.h"
-#include "insieme/frontend/utils/frontend_inspire_module.h"
-#include "insieme/frontend/utils/expr_to_bool.h"
 
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/functional_utils.h"
@@ -153,37 +154,10 @@ namespace conversion {
 		core::ExpressionPtr retIr;
 		LOG_EXPR_CONVERSION(membExpr, retIr);
 
-		core::ExpressionPtr&& base = Visit(membExpr->getBase());
+		retIr = ExprConverter::VisitMemberExpr(membExpr);
 
-        membExpr->dumpColor();
-        std::cout << " base: " << base << " : " << base->getType() << std::endl;
-
-		//// get the base we want to access to
-
-		//// it might be that is a function, therefore we retrieve a callable expression
-		//const clang::ValueDecl* valDecl = membExpr->getMemberDecl();
-		//if(valDecl && llvm::isa<clang::FunctionDecl>(valDecl)) {
-		//	retIr = converter.getCallableExpression(llvm::cast<clang::FunctionDecl>(valDecl));
-		//	// exceptional handling if the val decl is a static function -> outline code (see CallExprVisitor)
-		//	const clang::CXXMethodDecl* mdecl = llvm::dyn_cast<clang::CXXMethodDecl>(valDecl);
-		//	if(mdecl && mdecl->isStatic() && base.isa<core::CallExprPtr>()) {
-		//		// create a function that calls a function like fun() { base(); return call; }
-		//		core::CompoundStmtPtr comp = builder.compoundStmt({base, builder.returnStmt(retIr)});
-		//		retIr = builder.createCallExprFromBody(comp, retIr->getType());
-		//	}
-		//	return retIr;
-		//}
-
-		//if(core::analysis::isAnyCppRef(converter.lookupTypeDetails(base->getType()))) { base = builder.toIRRef(base); }
-
-		//retIr = getMemberAccessExpr(converter, builder, base, membExpr);
-
-		//// if the  resulting expression is a ref to cpp ref, we remove one ref, no need to provide one extra ref
-		//if(retIr->getType().isa<core::RefTypePtr>() && core::analysis::isAnyCppRef(retIr->getType().as<core::RefTypePtr>()->getElementType())) {
-		//	retIr = builder.deref(retIr);
-		//}
-
-		assert_not_implemented();
+		// TODO: does this need to do anything special? If not, remove and add to header
+		
 		return retIr;
 	}
 
@@ -227,7 +201,7 @@ namespace conversion {
 			frontend_assert(false) << "Member function pointer call not implemented";
 		} else {			
 			// get method lambda
-			auto methodLambda = converter.getDeclConverter()->convertMethodDecl(methodDecl).lit;
+			auto methodLambda = converter.getFunMan()->lookup(methodDecl);
 
 			// get the "this" object and add to arguments
 			core::ExpressionPtr thisObj = Visit(callExpr->getImplicitObjectArgument());
@@ -252,6 +226,9 @@ namespace conversion {
 	core::ExpressionPtr Converter::CXXExprConverter::VisitCXXOperatorCallExpr(const clang::CXXOperatorCallExpr* callExpr) {
 		core::ExpressionPtr retIr;
 		LOG_EXPR_CONVERSION(callExpr, retIr);
+
+		retIr = ExprConverter::VisitCallExpr(callExpr);
+
 		//core::ExpressionPtr func;
 		//core::ExpressionPtr convertedOp;
 		//ExpressionList args;
@@ -333,7 +310,7 @@ namespace conversion {
 			}
 
 			// get constructor lambda
-			auto constructorLambda = converter.getDeclConverter()->convertMethodDecl(constructExpr->getConstructor()).lit;
+			auto constructorLambda = converter.getFunMan()->lookup(constructExpr->getConstructor());
 			VLOG(2) << "constructor lambda literal " << *constructorLambda << " of type " << dumpColor(constructorLambda->getType());
 
 			// return call
@@ -482,22 +459,12 @@ namespace conversion {
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr Converter::CXXExprConverter::VisitCXXThisExpr(const clang::CXXThisExpr* thisExpr) {
 		core::ExpressionPtr retIr;
-		//// figure out the type of the expression
-		//core::TypePtr&& irType =
-		//    converter.convertType(llvm::cast<clang::TypeDecl>(thisExpr->getBestDynamicClassType())->getTypeForDecl()->getCanonicalTypeInternal());
-		//frontend_assert(irType.isa<core::GenericTypePtr>()) << "for convention, all this operators deal with generic types\n";
-		//irType = builder.refType(irType);
+		LOG_EXPR_CONVERSION(thisExpr, retIr);
 
-		//// build a variable as a placeholder (has to be substituted later by function call expression)
-		//// converter.thisVariable returns alwasy a variable with id 0 as placeholder!
-		//core::ExpressionPtr ret = converter.thisVariable(irType);
-
-		//// this is a pointer, make it pointer
-		//ret = builder.callExpr(builder.getLangBasic().getScalarToArray(), ret);
-
-		//LOG_EXPR_CONVERSION(thisExpr, ret);
-
-		assert_not_implemented();
+		// obtain current "this" from variable manager
+		auto thisRef = converter.getVarMan()->getThis();
+		// this is a pointer, not a reference
+		retIr = core::lang::buildPtrFromRef(converter.getIRBuilder().deref(thisRef));
 
 		return retIr;
 	}

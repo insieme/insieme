@@ -65,8 +65,8 @@ namespace checks {
 
 		if((address->getName()->getValue() == "array" && !lang::isArray(address)) || (address->getName()->getValue() == "ref" && !lang::isReference(address))
 		   || (address->getName()->getValue() == "channel" && !lang::isChannel(address))) {
-			add(res, Message(address, EC_TYPE_ILLEGAL_USE_OF_TYPE_KEYWORD, format("Name of generic type %s is a reserved keyword.", *address),
-			                 Message::WARNING));
+			add(res,
+				Message(address, EC_TYPE_ILLEGAL_USE_OF_TYPE_KEYWORD, format("Name of generic type %s is a reserved keyword.", *address), Message::WARNING));
 		}
 		return res;
 	}
@@ -94,7 +94,7 @@ namespace checks {
 				add(res, Message(address, EC_TYPE_ILLEGAL_OBJECT_TYPE, format("Missing object type within ctor / dtor / member function."), Message::ERROR));
 			} else if(!analysis::isObjectReferenceType(address->getParameterType(0))) {
 				add(res, Message(address, EC_TYPE_ILLEGAL_OBJECT_TYPE, format("Invalid type for target object: %s", toString(address->getParameterType(0))),
-				                 Message::ERROR));
+					             Message::ERROR));
 			}
 		}
 
@@ -963,7 +963,7 @@ TagTypeRefs visitNode(const NodePtr& cur) override {
 		TypePtr resultType;
 		if(GenericTypePtr genType = dynamic_pointer_cast<const GenericType>(elementType)) {
 			if(genType->getName()->getValue() != "type" || genType->getTypeParameter()->size() != 1) {
-				// invalid argument => leaf issues to argument type checker
+				// invalid argument => leave issues to argument type checker
 				return res;
 			}
 

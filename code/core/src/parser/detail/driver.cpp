@@ -76,9 +76,9 @@ namespace parser {
 		/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ InspireDriver ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 		InspireDriver::InspireDriver(const std::string& str, NodeManager& mgr)
-		    : scopes(), mgr(mgr), builder(mgr), file("global scope"), str(str), tu(mgr), result(nullptr), globLoc(&file), ss(str), scanner(&ss),
-		      parser(*this, scanner), printedErrors(false), parserIRExtension(mgr.getLangExtension<ParserIRExtension>()) {
-			//begin the global scope
+			: scopes(), mgr(mgr), builder(mgr), file("global scope"), str(str), tu(mgr), result(nullptr), globLoc(&file), ss(str), scanner(&ss),
+			  parser(*this, scanner), printedErrors(false), parserIRExtension(mgr.getLangExtension<ParserIRExtension>()) {
+			// begin the global scope
 			openScope();
 		}
 
@@ -133,17 +133,13 @@ namespace parser {
 			// auto-unwrap tuple
 			if(auto tuple = expr.isa<TupleExprPtr>()) {
 				const auto& elements = tuple->getExpressions();
-				if (elements.size() == 1) {
-					return getScalar(elements[0]);
-				}
+				if(elements.size() == 1) { return getScalar(elements[0]); }
 			}
 			// otherwise stay as it is
 			return expr;
 		}
 
-		ExpressionPtr InspireDriver::getOperand(ExpressionPtr expr) {
-			return builder.tryDeref(getScalar(expr));
-		}
+		ExpressionPtr InspireDriver::getOperand(ExpressionPtr expr) { return builder.tryDeref(getScalar(expr)); }
 
 		ExpressionPtr InspireDriver::genBinaryExpression(const location& l, const std::string& op, ExpressionPtr left, ExpressionPtr right) {
 			// Interpret operator
@@ -221,21 +217,19 @@ namespace parser {
 		namespace {
 
 			TypePtr getFieldType(const TypePtr& type, const std::string& name) {
-
 				// remove references
-				if (analysis::isRefType(type)) return getFieldType(analysis::getReferencedType(type), name);
+				if(analysis::isRefType(type)) return getFieldType(analysis::getReferencedType(type), name);
 
 				// check for a tag type
 				auto tagType = type.isa<TagTypePtr>();
-				if (!tagType) return TypePtr();
+				if(!tagType) return TypePtr();
 
 				// unroll recursive types
-				if (tagType->isRecursive()) return getFieldType(tagType->peel(), name);
+				if(tagType->isRecursive()) return getFieldType(tagType->peel(), name);
 
 				// get field type
 				return tagType->getFieldType(name);
 			}
-
 		}
 
 
@@ -249,53 +243,49 @@ namespace parser {
 			const auto& refAccess = mgr.getLangExtension<core::lang::ReferenceExtension>().getRefMemberAccess();
 			const auto& memberFunctionAccess = parserIRExtension.getMemberFunctionAccess();
 
-			//the type of the expression
+			// the type of the expression
 			TypePtr exprType = expr->getType();
-			//the actual type - maybe stripped of one ref
+			// the actual type - maybe stripped of one ref
 			TypePtr objectType = exprType;
-			if (analysis::isRefType(exprType)) {
-				objectType = analysis::getReferencedType(exprType);
-			}
+			if(analysis::isRefType(exprType)) { objectType = analysis::getReferencedType(exprType); }
 
-			//if the type is a generic type, we can proceed with the literal lookup here
-			if (auto genericObjectType = objectType.isa<GenericTypePtr>()) {
-				//create a key to look up the symbol in the global scope
+			// if the type is a generic type, we can proceed with the literal lookup here
+			if(auto genericObjectType = objectType.isa<GenericTypePtr>()) {
+				// create a key to look up the symbol in the global scope
 				std::string keyName = genericObjectType->getName()->getValue() + "::" + memberName;
 
-				//look for the key in the global scope
+				// look for the key in the global scope
 				auto lookupResult = lookupDeclaredInGlobalScope(keyName);
-				if (!lookupResult) {
+				if(!lookupResult) {
 					error(l, format("Unable to locate member %s in type %s", memberName, *genericObjectType));
 					return nullptr;
 
-				} else if (!lookupResult.isa<LiteralPtr>()) {
+				} else if(!lookupResult.isa<LiteralPtr>()) {
 					error(l, format("Member %s in type %s is not a literal", memberName, *genericObjectType));
 					return nullptr;
 				}
 
-				//now that we found the given member, create a member access expression to return
+				// now that we found the given member, create a member access expression to return
 				TypePtr memberType = lookupResult.as<LiteralPtr>()->getType();
-				if (analysis::isRefType(memberType)) {
-					memberType = analysis::getReferencedType(memberType);
-				}
+				if(analysis::isRefType(memberType)) { memberType = analysis::getReferencedType(memberType); }
 
-				//if the member is a member function
-				if (auto functionType = memberType.isa<FunctionTypePtr>()) {
-					if (functionType->getKind() == FK_MEMBER_FUNCTION) {
+				// if the member is a member function
+				if(auto functionType = memberType.isa<FunctionTypePtr>()) {
+					if(functionType->getKind() == FK_MEMBER_FUNCTION) {
 						return builder.callExpr(memberFunctionAccess, expr, builder.getIdentifierLiteral(memberName));
 					}
 				}
 
-				//otherwise it is a field
+				// otherwise it is a field
 				if(analysis::isRefType(exprType)) {
 					return builder.callExpr(refAccess, expr, builder.getIdentifierLiteral(memberName), builder.getTypeLiteral(memberType));
 				}
 				return builder.callExpr(fieldAccess, expr, builder.getIdentifierLiteral(memberName), builder.getTypeLiteral(memberType));
 
-				//otherwise we have to create the member lookup differently
+				// otherwise we have to create the member lookup differently
 			} else {
 				// check whether there is such a field
-				if (auto fieldType = getFieldType(exprType, memberName)) {
+				if(auto fieldType = getFieldType(exprType, memberName)) {
 					// create access
 					if(analysis::isRefType(exprType)) {
 						return builder.callExpr(refAccess, expr, builder.getIdentifierLiteral(memberName), builder.getTypeLiteral(fieldType));
@@ -363,9 +353,7 @@ namespace parser {
 		}
 
 		NumericTypePtr InspireDriver::genNumericType(const location& l, const ExpressionPtr& variable) const {
-			if(!variable.isa<VariablePtr>()) {
-				error(l, "not a variable");
-			}
+			if(!variable.isa<VariablePtr>()) { error(l, "not a variable"); }
 			return builder.numericType(variable.as<core::VariablePtr>());
 		}
 
@@ -377,22 +365,22 @@ namespace parser {
 			return builder.functionType(params, retType, fk);
 		}
 
-		TypePtr InspireDriver::genRecordType(const location& l, const NodeType& type, const string& name, const ParentList& parents, const FieldList& fields, const ExpressionList& ctors,
-				const ExpressionPtr& dtor, const bool dtorIsVirtual, const MemberFunctionList& mfuns, const PureVirtualMemberFunctionList& pvmfuns) {
-
-			//check if this type has already been defined before
+		TypePtr InspireDriver::genRecordType(const location& l, const NodeType& type, const string& name, const ParentList& parents, const FieldList& fields,
+			                                 const ExpressionList& ctors, const ExpressionPtr& dtor, const bool dtorIsVirtual, const MemberFunctionList& mfuns,
+			                                 const PureVirtualMemberFunctionList& pvmfuns) {
+			// check if this type has already been defined before
 			const GenericTypePtr key = builder.genericType(name);
-			if (tu[key]) {
+			if(tu[key]) {
 				error(l, format("Type %s has already been defined", name));
 				return nullptr;
 			}
 
 			TagTypePtr res;
 
-			if (type == NT_Struct) {
+			if(type == NT_Struct) {
 				res = builder.structTypeWithDefaults(builder.refType(getThisType()), parents, fields, ctors, dtor, dtorIsVirtual, mfuns, pvmfuns);
 			} else {
-				if (!parents.empty()) {
+				if(!parents.empty()) {
 					error(l, "Inheritance not supported for unions!");
 					return nullptr;
 				}
@@ -407,29 +395,29 @@ namespace parser {
 		}
 
 		TypePtr InspireDriver::genSimpleStructOrUnionType(const location& l, const NodeType& type, const FieldList& fields) {
-			//create a unique dummy name for this anonymous record.
-			//this is needed in order to put this record into the TU also.
-			//the name will be set to "" before returning the final parsed IR.
+			// create a unique dummy name for this anonymous record.
+			// this is needed in order to put this record into the TU also.
+			// the name will be set to "" before returning the final parsed IR.
 			auto name = builder.stringValue(format("__insieme_anonymous_record_%d_%d", l.begin.line, l.begin.column));
 			temporaryAnonymousNames.push_back(name);
 
-			//now we begin a new record with that name
+			// now we begin a new record with that name
 			beginRecord(l, name->getValue());
-			//and register the fields here
+			// and register the fields here
 			registerFields(l, fields);
 
 			const GenericTypePtr key = builder.genericType(name->getValue());
 			TagTypePtr res;
-			if (type == NT_Struct) {
-				res = builder.structTypeWithDefaults(builder.refType(key), ParentList(), fields,
-				                                     ExpressionList(), ExpressionPtr(), false, MemberFunctionList(), PureVirtualMemberFunctionList());
+			if(type == NT_Struct) {
+				res = builder.structTypeWithDefaults(builder.refType(key), ParentList(), fields, ExpressionList(), ExpressionPtr(), false, MemberFunctionList(),
+					                                 PureVirtualMemberFunctionList());
 			} else {
-				res =  builder.unionTypeWithDefaults(builder.refType(key), fields,
-				                                     ExpressionList(), ExpressionPtr(), false, MemberFunctionList(), PureVirtualMemberFunctionList());
+				res = builder.unionTypeWithDefaults(builder.refType(key), fields, ExpressionList(), ExpressionPtr(), false, MemberFunctionList(),
+					                                PureVirtualMemberFunctionList());
 			}
 			tu.insertRecordTypeWithDefaults(key, res);
 
-			//end the record here
+			// end the record here
 			endRecord();
 
 			return key;
@@ -442,17 +430,17 @@ namespace parser {
 		TypeList InspireDriver::getParamTypesForLambdaAndFunction(const location& l, const VariableList& params) {
 			TypeList paramTypes;
 			for(const auto& var : params) {
-				//if we are building a lambda, the function type is already the correct one and the body will be materialized
-				if (inLambda) {
+				// if we are building a lambda, the function type is already the correct one and the body will be materialized
+				if(inLambda) {
 					paramTypes.push_back(var.getType());
 
-					//if we are building a function, we have to calculate the function type differently and leave the body untouched
+					// if we are building a function, we have to calculate the function type differently and leave the body untouched
 				} else {
-					if (!analysis::isRefType(var.getType())) {
+					if(!analysis::isRefType(var.getType())) {
 						error(l, format("Parameter %s is not of ref type", var));
 						return TypeList();
 					}
-					if (lang::isCppReference(var->getType()) || lang::isCppRValueReference(var->getType())) {
+					if(lang::isCppReference(var->getType()) || lang::isCppRValueReference(var->getType())) {
 						paramTypes.push_back(var->getType());
 					} else {
 						paramTypes.push_back(analysis::getReferencedType(var.getType()));
@@ -462,19 +450,18 @@ namespace parser {
 			return paramTypes;
 		}
 
-		LambdaExprPtr InspireDriver::genLambda(const location& l, const VariableList& params, const TypePtr& retType, const StatementPtr& body, const FunctionKind functionKind) {
+		LambdaExprPtr InspireDriver::genLambda(const location& l, const VariableList& params, const TypePtr& retType, const StatementPtr& body,
+			                                   const FunctionKind functionKind) {
 			// TODO: cast returns to appropriate type
 
 			auto paramTypes = getParamTypesForLambdaAndFunction(l, params);
-			if (paramTypes.size() != params.size()) {
-				return nullptr;
-			}
+			if(paramTypes.size() != params.size()) { return nullptr; }
 
 			// build resulting function type
 			auto funcType = builder.functionType(paramTypes, retType, functionKind);
 
 			// if it is a function with explicitly auto-created parameters no materialization of the parameters is required
-			if (!inLambda) {
+			if(!inLambda) {
 				// => skip materialization of parameters
 				return builder.lambdaExpr(funcType, params, body);
 			}
@@ -512,24 +499,22 @@ namespace parser {
 		void InspireDriver::registerFields(const location& l, const FieldList& fields) {
 			assert_false(currentRecordStack.empty()) << "Not within record definition!";
 
-			//iterate over all the fields
-			for (const auto& field : fields) {
+			// iterate over all the fields
+			for(const auto& field : fields) {
 				const auto& name = field->getName()->getValue();
 				const auto& type = builder.refType(field->getType());
 
 				const std::string memberName = getThisType()->getName()->getValue() + "::" + name;
 
-				//create literal to store in the lookup table
+				// create literal to store in the lookup table
 				const auto key = builder.literal(memberName, type);
 
-				//only declare the symbol implicitly if it hasn't already been declared
-				if (!isSymbolDeclaredInGlobalScope(memberName)) {
-					declareSymbolInGlobalScope(l, memberName, key);
-				}
+				// only declare the symbol implicitly if it hasn't already been declared
+				if(!isSymbolDeclaredInGlobalScope(memberName)) { declareSymbolInGlobalScope(l, memberName, key); }
 
-				//create the member access call to store in the symbol table for accessing this symbol within this current record _without_ the this pointer
-				ExpressionPtr access = builder.getLangBasic().getCompositeMemberAccess();
-				auto accessExpr = builder.callExpr(type, access, genThis(l), builder.getIdentifierLiteral(name), builder.getTypeLiteral(type));
+				// create the member access call to store in the symbol table for accessing this symbol within this current record _without_ the this pointer
+				ExpressionPtr access = mgr.getLangExtension<core::lang::ReferenceExtension>().getRefMemberAccess();
+				auto accessExpr = builder.callExpr(access, genThis(l), builder.getIdentifierLiteral(name), builder.getTypeLiteral(field->getType()));
 				annotations::attachName(field, name);
 				declareSymbol(l, name, accessExpr);
 			}
@@ -548,12 +533,11 @@ namespace parser {
 			// create full parameter list
 			VariableList ctorParams;
 			ctorParams.push_back(thisParam);
-			for(const auto& cur : params) ctorParams.push_back(cur);
+			for(const auto& cur : params)
+				ctorParams.push_back(cur);
 
 			auto paramTypes = getParamTypesForLambdaAndFunction(l, ctorParams);
-			if (paramTypes.size() != params.size() + 1) {
-				return nullptr;
-			}
+			if(paramTypes.size() != params.size() + 1) { return nullptr; }
 
 			// update body
 			auto newBody = transform::replaceAll(mgr, body, genThis(l), thisParam).as<StatementPtr>();
@@ -563,7 +547,7 @@ namespace parser {
 
 			// create the constructor
 			transform::LambdaIngredients ingredients{ctorParams, newBody};
-			if (inLambda) {
+			if(inLambda) {
 				// replace all variables in the body by their implicitly materialized version
 				ingredients = transform::materialize(ingredients);
 			}
@@ -573,10 +557,8 @@ namespace parser {
 			auto memberName = key->getValue()->getValue();
 			tu.addFunction(key, fun);
 
-			//only declare the symbol implicitly if it hasn't already been declared
-			if (!isSymbolDeclaredInGlobalScope(memberName)) {
-				declareSymbolInGlobalScope(l, memberName, key);
-			}
+			// only declare the symbol implicitly if it hasn't already been declared
+			if(!isSymbolDeclaredInGlobalScope(memberName)) { declareSymbolInGlobalScope(l, memberName, key); }
 
 			return key;
 		}
@@ -592,12 +574,10 @@ namespace parser {
 			auto thisParam = builder.variable(thisType);
 
 			// create full parameter list
-			VariableList params = { thisParam };
+			VariableList params = {thisParam};
 
 			auto paramTypes = getParamTypesForLambdaAndFunction(l, params);
-			if (paramTypes.size() != 1) {
-				return nullptr;
-			}
+			if(paramTypes.size() != 1) { return nullptr; }
 
 			// update body
 			auto newBody = transform::replaceAll(mgr, body, genThis(l), thisParam).as<StatementPtr>();
@@ -607,7 +587,7 @@ namespace parser {
 
 			// create the destructor
 			transform::LambdaIngredients ingredients{params, newBody};
-			if (inLambda) {
+			if(inLambda) {
 				// replace all variables in the body by their implicitly materialized version
 				ingredients = transform::materialize(ingredients);
 			}
@@ -617,10 +597,8 @@ namespace parser {
 			auto memberName = key->getValue()->getValue();
 			tu.addFunction(key, fun);
 
-			//only declare the symbol implicitly if it hasn't already been declared
-			if (!isSymbolDeclaredInGlobalScope(memberName)) {
-				declareSymbolInGlobalScope(l, memberName, key);
-			}
+			// only declare the symbol implicitly if it hasn't already been declared
+			if(!isSymbolDeclaredInGlobalScope(memberName)) { declareSymbolInGlobalScope(l, memberName, key); }
 
 			return key;
 		}
@@ -628,7 +606,8 @@ namespace parser {
 		/**
 		 * generates a member function for the currently defined record type
 		 */
-		MemberFunctionPtr InspireDriver::genMemberFunction(const location& l, bool virtl, bool cnst, bool voltile, const std::string& name, const VariableList& params, const TypePtr& retType, const StatementPtr& body) {
+		MemberFunctionPtr InspireDriver::genMemberFunction(const location& l, bool virtl, bool cnst, bool voltile, const std::string& name,
+			                                               const VariableList& params, const TypePtr& retType, const StatementPtr& body) {
 			assert_false(currentRecordStack.empty()) << "Not within record definition!";
 
 			// get this-type (which is ref<ref in case of a function
@@ -638,7 +617,9 @@ namespace parser {
 			// create full parameter list
 			VariableList fullParams;
 			fullParams.push_back(thisParam);
-			for(const auto& cur : params) fullParams.push_back(cur);
+			for(const auto& cur : params) {
+				fullParams.push_back(cur);
+			}
 
 			// update body
 			auto newBody = transform::replaceAll(mgr, body, genThis(l), thisParam).as<StatementPtr>();
@@ -659,15 +640,14 @@ namespace parser {
 			auto memberName = key->getValue()->getValue();
 			tu.addFunction(key, fun);
 
-			//only declare the symbol implicitly if it hasn't already been declared
-			if (!isSymbolDeclaredInGlobalScope(memberName)) {
-				declareSymbolInGlobalScope(l, memberName, key);
-			}
+			// only declare the symbol implicitly if it hasn't already been declared
+			if(!isSymbolDeclaredInGlobalScope(memberName)) { declareSymbolInGlobalScope(l, memberName, key); }
 
 			return builder.memberFunction(virtl, name, key);
 		}
 
-		PureVirtualMemberFunctionPtr InspireDriver::genPureVirtualMemberFunction(const location& l,  bool cnst, bool voltile, const std::string& name, const FunctionTypePtr& type) {
+		PureVirtualMemberFunctionPtr InspireDriver::genPureVirtualMemberFunction(const location& l, bool cnst, bool voltile, const std::string& name,
+			                                                                     const FunctionTypePtr& type) {
 			assert_true(type->isPlain()) << "Only plain function types should be covered here!";
 			assert_false(currentRecordStack.empty()) << "Not within record definition!";
 
@@ -677,7 +657,9 @@ namespace parser {
 			// create full parameter type list
 			TypeList fullParams;
 			fullParams.push_back(thisType);
-			for(const auto& cur : type->getParameterTypes()) fullParams.push_back(cur);
+			for(const auto& cur : type->getParameterTypes()) {
+				fullParams.push_back(cur);
+			}
 
 			// create member function type type
 			auto memberFunType = builder.functionType(fullParams, type->getReturnType(), FK_MEMBER_FUNCTION);
@@ -686,18 +668,16 @@ namespace parser {
 			return builder.pureVirtualMemberFunction(name, memberFunType);
 		}
 
-		ExpressionPtr InspireDriver::genFunctionDefinition(const location& l, const std::string name, const LambdaExprPtr& lambda)  {
+		ExpressionPtr InspireDriver::genFunctionDefinition(const location& l, const std::string name, const LambdaExprPtr& lambda) {
 			// check if this type has already been defined before
 			const LiteralPtr key = builder.literal(name, lambda->getType());
-			if (tu[key]) {
+			if(tu[key]) {
 				error(l, format("Re-definition of function %s", name));
 				return nullptr;
 			}
 
 			// only declare the symbol implicitly if it hasn't already been declared
-			if(!isSymbolDeclaredInCurrentScope(name)) {
-				declareSymbol(l, name, key);
-			}
+			if(!isSymbolDeclaredInCurrentScope(name)) { declareSymbol(l, name, key); }
 
 			// rename lambda ref to given name
 			auto renamedLambda = builder.lambdaExpr(lambda->getLambda(), name);
@@ -709,9 +689,7 @@ namespace parser {
 
 		TypePtr InspireDriver::findOrGenAbstractType(const location& l, const std::string& name, const ParentList& parents, const TypeList& typeList) {
 			auto foundType = findType(l, name);
-			if(!foundType) {
-				foundType = lookupDeclared(name).isa<TypePtr>();
-			}
+			if(!foundType) { foundType = lookupDeclared(name).isa<TypePtr>(); }
 			if(foundType) { return foundType; }
 
 			return builder.genericType(name, parents, typeList);
@@ -721,28 +699,27 @@ namespace parser {
 			ExpressionPtr func = getScalar(callable);
 
 			// if this is a member function call we prepend the implicit this parameter
-			if(analysis::isCallOf(callable, parserIRExtension.getMemberFunctionAccess())) {
+			if(analysis::isCallOf(func, parserIRExtension.getMemberFunctionAccess())) {
 				// we add the callable itself as the first argument of the call
-				auto thisParam = callable.as<CallExprPtr>()->getArgument(0);
+				auto thisParam = func.as<CallExprPtr>()->getArgument(0);
 				auto thisParamType = thisParam->getType();
-				if (analysis::isRefType(thisParamType)) {
-					thisParamType = analysis::getReferencedType(thisParamType);
-				}
+				if(analysis::isRefType(thisParamType)) { thisParamType = analysis::getReferencedType(thisParamType); }
 
 				args.insert(args.begin(), thisParam);
 
-				//replace func with the lookup of the literal. first create the name of the literal
+				// replace func with the lookup of the literal. first create the name of the literal
 				std::string typeName = thisParamType.as<GenericTypePtr>()->getName()->getValue();
-				std::string functionName = callable.as<CallExprPtr>()->getArgument(1).as<LiteralPtr>()->getValue()->getValue();
+				std::string functionName = func.as<CallExprPtr>()->getArgument(1).as<LiteralPtr>()->getValue()->getValue();
 				std::string memberName = typeName + "::" + functionName;
 
-				//now we have to find a function registered in the TU which has the same literal name and the same parameter types. we have to ignore the result type
+				// now we have to find a function registered in the TU which has the same literal name and the same parameter types. we have to ignore the
+				// result type
 				const auto argumentTypes = extractTypes(args);
-				for (const auto& mapEntry : tu.getFunctions()) {
+				for(const auto& mapEntry : tu.getFunctions()) {
 					const auto& key = mapEntry.first;
-					if (key.getValue()->getValue() == memberName) {
-						if (const auto& keyType = key->getType().isa<FunctionTypePtr>()) {
-							if (keyType->isMember() && keyType->getParameterTypeList() == argumentTypes) {
+					if(key.getValue()->getValue() == memberName) {
+						if(const auto& keyType = key->getType().isa<FunctionTypePtr>()) {
+							if(keyType->isMember() && keyType->getParameterTypeList() == argumentTypes) {
 								func = key;
 								break;
 							}
@@ -750,8 +727,8 @@ namespace parser {
 					}
 				}
 
-				//if we didn'T change the function, we didn't find a suitable one
-				if (func == callable) {
+				//if we didn't change the function, we didn't find a suitable one
+				if (func == getScalar(callable)) {
 					error(l, format("Couldn't find member %s in type %s for argument types %s", memberName, typeName, argumentTypes));
 					return nullptr;
 				}
@@ -809,19 +786,19 @@ namespace parser {
 		ExpressionPtr InspireDriver::genConstructorCall(const location& l, const std::string name, ExpressionList params) {
 			assert_true(params.size() >= 1) << "Constructor calls must have at least the this parameter argument";
 
-			//extract the this parameter from the params
+			// extract the this parameter from the params
 			auto thisParam = params[0];
 
-			//and remove it from the parameter list
+			// and remove it from the parameter list
 			params.erase(params.begin());
 
-			//genCall will do everything else
+			// genCall will do everything else
 			const auto callable = builder.callExpr(parserIRExtension.getMemberFunctionAccess(), thisParam, builder.getIdentifierLiteral("ctor"));
 			return genCall(l, callable, params);
 		}
 
 		ExpressionPtr InspireDriver::genDestructorCall(const location& l, const std::string name, const ExpressionPtr& param) {
-			//genCall will do everything else
+			// genCall will do everything else
 			const auto callable = builder.callExpr(parserIRExtension.getMemberFunctionAccess(), param, builder.getIdentifierLiteral("dtor"));
 			return genCall(l, callable, ExpressionList());
 		}
@@ -881,30 +858,28 @@ namespace parser {
 			if(tagType && tagType->isStruct()) {
 				return genStructExpression(l, type, list);
 
-				//check for union type, which has to be initialized differently
+				// check for union type, which has to be initialized differently
 			} else if(tagType && tagType->isUnion()) {
-				//there must only be one expression in the initializer
-				if (list.size() != 1) {
+				// there must only be one expression in the initializer
+				if(list.size() != 1) {
 					error(l, "A union initialization expression must only contain one expression");
 					return nullptr;
 				}
 
-				//we have to find the member of the union which has the same type as the given expression
+				// we have to find the member of the union which has the same type as the given expression
 				ExpressionPtr init = list[0];
 				auto unionType = tagType->getUnion();
-				for (auto cur : unionType->getFields()) {
-					if (cur->getType() == init.getType()) {
-						return genUnionExpression(l, type, cur->getName()->getValue(), init);
-					}
+				for(auto cur : unionType->getFields()) {
+					if(cur->getType() == init.getType()) { return genUnionExpression(l, type, cur->getName()->getValue(), init); }
 				}
 
-				//if we end up here we didn't find a matching field
+				// if we end up here we didn't find a matching field
 				error(l, "The given expression does not match any of the union's field types");
 				return nullptr;
 
 			} else if(auto genericType = type.isa<GenericTypePtr>()) {
 				auto tuType = tu[genericType];
-				if (!tuType) {
+				if(!tuType) {
 					error(l, format("Can not initialize generic type %s, since it isn't registered in the translation unit", type));
 					return nullptr;
 				}
@@ -993,7 +968,7 @@ namespace parser {
 		}
 
 		ExpressionPtr InspireDriver::genThis(const location& l) {
-			if (inLambda) {
+			if(inLambda) {
 				return genThisInLambda(l);
 			} else {
 				return genThisInFunction(l);
@@ -1025,10 +1000,10 @@ namespace parser {
 		void InspireDriver::computeResult(const NodePtr& fragment) {
 			result = tu.resolve(fragment);
 
-			//replace all temporaries generated for anonymous records
+			// replace all temporaries generated for anonymous records
 			NodeMap replacements;
 			auto emptyName = builder.stringValue("");
-			for (auto temporaryName : temporaryAnonymousNames) {
+			for(auto temporaryName : temporaryAnonymousNames) {
 				replacements[temporaryName] = emptyName;
 				replacements[builder.stringValue(temporaryName->getValue() + "::ctor")] = builder.stringValue("::ctor");
 				replacements[builder.stringValue(temporaryName->getValue() + "::dtor")] = builder.stringValue("::dtor");
@@ -1059,9 +1034,7 @@ namespace parser {
 			for(auto it = scopes.rbegin(); it != scopes.rend(); ++it) {
 				const DefinitionMap& cur = (*it)->declaredSymbols;
 				auto pos = cur.find(name);
-				if(pos != cur.end()) {
-					return pos->second();
-				}
+				if(pos != cur.end()) { return pos->second(); }
 			}
 			return nullptr;
 		}
@@ -1069,9 +1042,7 @@ namespace parser {
 		NodePtr InspireDriver::lookupDeclaredInGlobalScope(const std::string& name) {
 			const DefinitionMap& cur = scopes[0]->declaredSymbols;
 			auto pos = cur.find(name);
-			if(pos != cur.end()) {
-				return pos->second();
-			}
+			if(pos != cur.end()) { return pos->second(); }
 			return nullptr;
 		}
 
@@ -1106,9 +1077,7 @@ namespace parser {
 			assert_false(currentRecordStack.empty());
 			const auto& symbols = currentRecordStack.back().scope->declaredSymbols;
 			auto pos = symbols.find(name);
-			if(pos != symbols.end()) {
-				return pos->second().as<ExpressionPtr>();
-			}
+			if(pos != symbols.end()) { return pos->second().as<ExpressionPtr>(); }
 			return nullptr;
 		}
 
@@ -1137,9 +1106,7 @@ namespace parser {
 			return result.as<TypePtr>();
 		}
 
-		void InspireDriver::openScope() {
-			scopes.push_back(std::make_shared<Scope>());
-		}
+		void InspireDriver::openScope() { scopes.push_back(std::make_shared<Scope>()); }
 
 		void InspireDriver::closeScope() {
 			assert_gt(scopes.size(), 1) << "Attempted to pop global scope!";
@@ -1224,7 +1191,7 @@ namespace parser {
 		}
 
 		void InspireDriver::addTypeAlias(const TypePtr& pattern, const TypePtr& substitute) {
-			if (*pattern == *substitute) return;
+			if(*pattern == *substitute) return;
 			auto& aliases = getCurrentScope()->aliases;
 			assert_true(aliases.find(pattern) == aliases.end());
 			aliases[pattern] = substitute;
@@ -1276,7 +1243,7 @@ namespace parser {
 			if(!isTypeDeclaredInCurrentScope(name)) { declareType(l, name, key); }
 
 			openScope();
-			currentRecordStack.push_back({ key, getCurrentScope() });
+			currentRecordStack.push_back({key, getCurrentScope()});
 		}
 
 		void InspireDriver::endRecord() {
@@ -1285,9 +1252,7 @@ namespace parser {
 			currentRecordStack.pop_back();
 		}
 
-		bool InspireDriver::isInRecordType() {
-			return !currentRecordStack.empty();
-		}
+		bool InspireDriver::isInRecordType() { return !currentRecordStack.empty(); }
 
 		GenericTypePtr InspireDriver::getThisType() {
 			assert_false(currentRecordStack.empty());
@@ -1313,17 +1278,15 @@ namespace parser {
 
 			// import symbols
 			for(const auto& cur : extension.getSymbols()) {
-				if (!isSymbolDeclaredInCurrentScope(cur.first)) {
-					declareSymbol(location(), cur.first, cur.second);
-				}
+				if(!isSymbolDeclaredInCurrentScope(cur.first)) { declareSymbol(location(), cur.first, cur.second); }
 			}
 
 			// import type aliases
 			auto& aliases = getCurrentScope()->aliases;
 			for(const auto& cur : extension.getTypeAliases()) {
 				if(aliases.find(cur.first) != aliases.end()) {
-					assert_true(aliases[cur.first] == cur.second) << "Confliction type alias for " << *(cur.first)
-							<< ". " << *(aliases[cur.first]) << " vs. " << *(cur.second);
+					assert_true(aliases[cur.first] == cur.second) << "Confliction type alias for " << *(cur.first) << ". " << *(aliases[cur.first]) << " vs. "
+						                                          << *(cur.second);
 					continue;
 				}
 				addTypeAlias(cur.first, cur.second);
@@ -1411,9 +1374,7 @@ namespace parser {
 
 		void InspireDriver::error(const std::string& m) const { errors.push_back(ParserError(globLoc, m)); }
 
-		bool InspireDriver::whereErrors() const {
-			return !errors.empty();
-		}
+		bool InspireDriver::whereErrors() const { return !errors.empty(); }
 
 
 		void InspireDriver::printErrors(std::ostream& out, bool color) const {
@@ -1465,7 +1426,6 @@ namespace parser {
 				out << std::endl;
 			}
 		}
-
 
 	} // namespace detail
 } // namespace parser
