@@ -356,6 +356,11 @@ namespace parser {
 			                      const ExpressionPtr& lowerBound, const ExpressionPtr& upperBound, const ExpressionPtr& stepExpr, const StatementPtr& body);
 
 			/**
+			 * generates a new forward declaration for everything except member fields
+			 */
+			void genDeclaration(const location& l, const std::string name, const TypePtr& type);
+
+			/**
 			 * constructs a literal referencing the current object
 			 */
 			ExpressionPtr genThis(const location& l);

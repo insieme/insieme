@@ -969,6 +969,10 @@ namespace parser {
 			return builder.forStmt(iteratorVariable, getScalar(lowerBound), getScalar(upperBound), getScalar(stepExpr), body);
 		}
 
+		void InspireDriver::genDeclaration(const location& l, const std::string name, const TypePtr& type) {
+			declareSymbol(l, name, builder.literal(name, type));
+		}
+
 		ExpressionPtr InspireDriver::genThis(const location& l) {
 			if(inLambda) {
 				return genThisInLambda(l);

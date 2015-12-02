@@ -297,7 +297,7 @@ alias : "alias" abstract_type "=" type                                      { dr
       ;
 
 declaration : "decl" struct_or_union "identifier"                           { driver.declareType(@3, $3, driver.builder.genericType($3)); }
-            | "decl" "identifier" ":" type                                  { driver.declareSymbol(@2, $2, driver.builder.literal($2, $4)); }
+            | "decl" "identifier" ":" type                                  { driver.genDeclaration(@2, $2, $4); }
             | "decl" "identifier" "::" "identifier" ":" type                { assert_not_implemented(); }
             ;
 
