@@ -547,9 +547,9 @@ namespace core {
 		auto funType = functionType(toVector(thisType, otherType), resType, FK_MEMBER_FUNCTION);
 		auto thisParam = variable(refType(thisType));
 		auto res = returnStmt(lang::buildRefCast(deref(thisParam),resType));
-		auto name = getLiteralForMemberFunction(funType, "operator_assign");
+		auto name = getLiteralForMemberFunction(funType, utils::getMangledOperatorAssignName());
 		auto fun = normalize(lambdaExpr(funType, toVector(thisParam, variable(otherType)), res, name->getValue()->getValue())).as<LambdaExprPtr>();
-		return memberFunction(false, "operator_assign", fun);
+		return memberFunction(false, utils::getMangledOperatorAssignName(), fun);
 	}
 
 	MemberFunctionPtr IRBuilderBaseModule::getDefaultMoveAssignOperator(const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields) const {
@@ -559,9 +559,9 @@ namespace core {
 		auto funType = functionType(toVector(thisType, otherType), resType, FK_MEMBER_FUNCTION);
 		auto thisParam = variable(refType(thisType));
 		auto res = returnStmt(lang::buildRefCast(deref(thisParam),resType));
-		auto name = getLiteralForMemberFunction(funType, "operator_assign");
+		auto name = getLiteralForMemberFunction(funType, utils::getMangledOperatorAssignName());
 		auto fun = normalize(lambdaExpr(funType, toVector(thisParam, variable(otherType)), res, name->getValue()->getValue())).as<LambdaExprPtr>();
-		return memberFunction(false, "operator_assign", fun);
+		return memberFunction(false, utils::getMangledOperatorAssignName(), fun);
 	}
 
 	LiteralPtr IRBuilderBaseModule::getLiteralForMember(const FunctionTypePtr& functionType, const std::string& memberName) const {

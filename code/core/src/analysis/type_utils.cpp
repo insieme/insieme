@@ -47,6 +47,7 @@
 #include "insieme/core/types/subtype_constraints.h"
 
 #include "insieme/utils/assert.h"
+#include "insieme/utils/name_mangling.h"
 
 namespace insieme {
 namespace core {
@@ -272,7 +273,7 @@ namespace analysis {
 
 	bool isaDefaultMember(const TagTypePtr& type, const MemberFunctionPtr& memberFunction) {
 		//only assignment operators can be default member functions
-		if (memberFunction->getNameAsString() != "operator_assign") return false;
+		if (memberFunction->getNameAsString() != utils::getMangledOperatorAssignName()) return false;
 
 		auto record = type->getRecord();
 		IRBuilder builder(type->getNodeManager());

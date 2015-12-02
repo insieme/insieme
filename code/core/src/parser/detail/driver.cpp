@@ -61,6 +61,8 @@
 #include "insieme/core/lang/extension.h"
 #include "insieme/core/lang/extension_registry.h"
 
+#include "insieme/utils/name_mangling.h"
+
 // this last one is generated and the path will be provided to the command
 #include "inspire_parser.hpp"
 
@@ -613,7 +615,7 @@ namespace parser {
 			// get this-type (which is ref<ref in case of a function
 			auto thisType = getThisTypeForLambdaAndFunction(cnst, voltile);
 			auto thisParam = builder.variable(thisType);
-
+std::cout << name << "\n";
 			// create full parameter list
 			VariableList fullParams;
 			fullParams.push_back(thisParam);
@@ -967,6 +969,10 @@ namespace parser {
 			return builder.forStmt(iteratorVariable, getScalar(lowerBound), getScalar(upperBound), getScalar(stepExpr), body);
 		}
 
+		void InspireDriver::genDeclaration(const location& l, const std::string name, const TypePtr& type) {
+			declareSymbol(l, name, builder.literal(name, type));
+		}
+
 		ExpressionPtr InspireDriver::genThis(const location& l) {
 			if(inLambda) {
 				return genThisInLambda(l);
@@ -1007,7 +1013,7 @@ namespace parser {
 				replacements[temporaryName] = emptyName;
 				replacements[builder.stringValue(temporaryName->getValue() + "::ctor")] = builder.stringValue("::ctor");
 				replacements[builder.stringValue(temporaryName->getValue() + "::dtor")] = builder.stringValue("::dtor");
-				replacements[builder.stringValue(temporaryName->getValue() + "::operator_assign")] = builder.stringValue("::operator_assign");
+				replacements[builder.stringValue(temporaryName->getValue() + "::" + utils::getMangledOperatorAssignName())] = builder.stringValue("::" + utils::getMangledOperatorAssignName());
 			}
 			result = transform::replaceAll(mgr, result, replacements, transform::globalReplacement);
 		}

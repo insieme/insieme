@@ -44,6 +44,9 @@
 
 #include "insieme/core/analysis/attributes.h"
 
+#include "insieme/utils/name_mangling.h"
+
+using namespace insieme;
 using namespace insieme::core;
 using namespace insieme::core::printer;
 
@@ -555,16 +558,16 @@ std::string res = "decl struct A;\n"
 			 	  "decl A::ctor();\n"
 			 	  "decl A::ctor(ref<^A,t,f,cpp_ref>);\n"
 			 	  "decl A::ctor(ref<^A,f,f,cpp_rref>);\n"
-			 	  "decl A::operator_assign(ref<^A,t,f,cpp_ref>) -> ref<^A,f,f,cpp_ref>;\n"
-			 	  "decl A::operator_assign(ref<^A,f,f,cpp_rref>) -> ref<^A,f,f,cpp_ref>;\n"
+			 	  "decl A::" + utils::getMangledOperatorAssignName() + "(ref<^A,t,f,cpp_ref>) -> ref<^A,f,f,cpp_ref>;\n"
+			 	  "decl A::" + utils::getMangledOperatorAssignName() + "(ref<^A,f,f,cpp_rref>) -> ref<^A,f,f,cpp_ref>;\n"
 			 	  "def struct A {\n"
 			 	  "    ctor () { }\n"
 			 	  "    ctor (v1 : ref<^A,t,f,cpp_ref>) { }\n"
 			 	  "    ctor (v1 : ref<^A,f,f,cpp_rref>) { }\n"
-			 	  "    function operator_assign : (v1 : ref<^A,t,f,cpp_ref>) -> ref<^A,f,f,cpp_ref> {\n"
+			 	  "    function " + utils::getMangledOperatorAssignName() + " : (v1 : ref<^A,t,f,cpp_ref>) -> ref<^A,f,f,cpp_ref> {\n"
 			 	  "        return ref_cast(*this, type_lit(f), type_lit(f), type_lit(cpp_ref));\n"
 			 	  "    }\n"
-			 	  "    function operator_assign : (v1 : ref<^A,f,f,cpp_rref>) -> ref<^A,f,f,cpp_ref> {\n"
+			 	  "    function " + utils::getMangledOperatorAssignName() + " : (v1 : ref<^A,f,f,cpp_rref>) -> ref<^A,f,f,cpp_ref> {\n"
 			 	  "        return ref_cast(*this, type_lit(f), type_lit(f), type_lit(cpp_ref));\n"
 			 	  "    }\n"
 			 	  "};\n"

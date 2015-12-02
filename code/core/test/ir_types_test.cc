@@ -50,6 +50,8 @@
 
 #include "insieme/core/checks/full_check.h"
 
+#include "insieme/utils/name_mangling.h"
+
 #include "ir_node_test.inc"
 
 using std::vector;
@@ -378,23 +380,23 @@ namespace core {
 		IRBuilder builder(manager);
 
 		EXPECT_EQ("struct {x:bla<int<4>>,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor(),"
-				  "operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,"
-				  "operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}",
+				  + utils::getMangledOperatorAssignName() + "(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,"
+				  + utils::getMangledOperatorAssignName() + "(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}",
 		          toString(*builder.parseType("let A = struct { x : bla<int<4>>; } in A")));
 		EXPECT_EQ("struct {x:bla<int<4>>,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor(),"
-				  "operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,"
-				  "operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}",
+				  + utils::getMangledOperatorAssignName() + "(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,"
+				  + utils::getMangledOperatorAssignName() + "(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}",
 		          toString(*builder.parseType("let A = struct { x : bla<int<4>>; } in A").as<TagTypePtr>()->peel()));
 
 		EXPECT_EQ("rec ^A.{^A=struct A "
-		          "{x:bla<^A>,ctor(),ctor(ref<^A,t,f,cpp_ref>),ctor(ref<^A,f,f,cpp_rref>),dtor(),operator_assign(ref<^A,t,f,cpp_ref>)->ref<^A,f,f,cpp_ref>,"
-		          "operator_assign(ref<^A,f,f,cpp_rref>)->ref<^A,f,f,cpp_ref>}}",
+		          "{x:bla<^A>,ctor(),ctor(ref<^A,t,f,cpp_ref>),ctor(ref<^A,f,f,cpp_rref>),dtor()," + utils::getMangledOperatorAssignName() + "(ref<^A,t,f,cpp_ref>)->ref<^A,f,f,cpp_ref>,"
+		          + utils::getMangledOperatorAssignName() + "(ref<^A,f,f,cpp_rref>)->ref<^A,f,f,cpp_ref>}}",
 		          toString(*builder.parseType("decl struct A; def struct A { x : bla<A>; }; A")));
 		EXPECT_EQ("struct A {x:bla<rec ^A.{^A=struct A "
-		          "{x:bla<^A>,ctor(),ctor(ref<^A,t,f,cpp_ref>),ctor(ref<^A,f,f,cpp_rref>),dtor(),operator_assign(ref<^A,t,f,cpp_ref>)->ref<^A,f,f,cpp_ref>,"
-		          "operator_assign(ref<^A,f,f,cpp_rref>)->ref<^A,f,f,cpp_ref>}}>,"
-		          "ctor(),ctor(ref<^A,t,f,cpp_ref>),ctor(ref<^A,f,f,cpp_rref>),dtor(),operator_assign(ref<^A,t,f,cpp_ref>)->ref<^A,f,f,cpp_ref>,operator_"
-		          "assign(ref<^A,f,f,cpp_rref>)->ref<^A,f,f,cpp_ref>}",
+		          "{x:bla<^A>,ctor(),ctor(ref<^A,t,f,cpp_ref>),ctor(ref<^A,f,f,cpp_rref>),dtor()," + utils::getMangledOperatorAssignName() + "(ref<^A,t,f,cpp_ref>)->ref<^A,f,f,cpp_ref>,"
+		          + utils::getMangledOperatorAssignName() + "(ref<^A,f,f,cpp_rref>)->ref<^A,f,f,cpp_ref>}}>,"
+		          "ctor(),ctor(ref<^A,t,f,cpp_ref>),ctor(ref<^A,f,f,cpp_rref>),dtor()," + utils::getMangledOperatorAssignName() + "(ref<^A,t,f,cpp_ref>)->ref<^A,f,f,cpp_ref>,"
+		          + utils::getMangledOperatorAssignName() + "(ref<^A,f,f,cpp_rref>)->ref<^A,f,f,cpp_ref>}",
 		          toString(*builder.parseType("decl struct A; def struct A { x : bla<A>; }; A").as<TagTypePtr>()->peel()));
 
 		TagTypePtr tagType = builder.parseType("decl struct A; def struct A { x : bla<A>; }; A").as<TagTypePtr>();
@@ -449,22 +451,22 @@ namespace core {
 
 		auto genStructA = builder.structType(entriesA);
 		EXPECT_EQ("struct {a:A,b:B,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>)," \
-				  "dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,"\
-				  "operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}", toString(*genStructA));
+				  "dtor()," + utils::getMangledOperatorAssignName() + "(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,"\
+				  + utils::getMangledOperatorAssignName() + "(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}", toString(*genStructA));
 
 		vector<FieldPtr> entriesB;
 		auto genStructB = builder.structType(entriesB);
 		EXPECT_EQ("struct {ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>)," \
-				  "dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>," \
-				  "operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}", toString(*genStructB));
+				  "dtor()," + utils::getMangledOperatorAssignName() + "(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>," \
+				  + utils::getMangledOperatorAssignName() + "(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}", toString(*genStructB));
 
 		vector<FieldPtr> entriesC;
 		entriesC.push_back(builder.field("a", TypeVariable::get(manager, "alpha")));
 		entriesC.push_back(builder.field("b", GenericType::get(manager, "B")));
 		auto genStructC = builder.structType(entriesC);
 		EXPECT_EQ("struct {a:'alpha,b:B,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>)," \
-				  "dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>," \
-				  "operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}", toString(*genStructC));
+				  "dtor()," + utils::getMangledOperatorAssignName() + "(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>," \
+				  + utils::getMangledOperatorAssignName() + "(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}", toString(*genStructC));
 
 		// test for elements with same name
 		vector<FieldPtr> entriesD;
@@ -504,8 +506,8 @@ namespace core {
 		entriesA.push_back(builder.field("a", GenericType::get(manager, "A")));
 		auto genStructA = builder.structType(entriesA);
 		EXPECT_EQ("struct {a:A,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>)," \
-				  "dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>," \
-				  "operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}", toString(*genStructA));
+				  "dtor()," + utils::getMangledOperatorAssignName() + "(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>," \
+				  + utils::getMangledOperatorAssignName() + "(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}", toString(*genStructA));
 
 		// create derived type B : A
 		vector<FieldPtr> entriesB;
@@ -513,11 +515,11 @@ namespace core {
 		ParentsPtr parentsB = Parents::get(manager, toVector(Parent::get(manager, genStructA)));
 		auto genStructB = builder.structType(parentsB, entriesB);
 		EXPECT_EQ("struct : [struct {a:A,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>)," \
-				  "dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>," \
-				  "operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}] " \
+				  "dtor()," + utils::getMangledOperatorAssignName() + "(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>," \
+				  + utils::getMangledOperatorAssignName() + "(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}] " \
 				  "{b:B,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor()," \
-				  "operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>," \
-				  "operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}", toString(*genStructB));
+				  + utils::getMangledOperatorAssignName() + "(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>," \
+				  + utils::getMangledOperatorAssignName() + "(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}", toString(*genStructB));
 
 		// create derived type C : A, B
 		vector<FieldPtr> entriesC;
@@ -525,17 +527,17 @@ namespace core {
 		ParentsPtr parentsC = Parents::get(manager, toVector(Parent::get(manager, genStructA), Parent::get(manager, true, genStructB)));
 		auto genStructC = builder.structType(parentsC, entriesC);
 		EXPECT_EQ("struct : [struct {a:A,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>)," \
-				  "dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>," \
-				  "operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}, " \
+				  "dtor()," + utils::getMangledOperatorAssignName() + "(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>," \
+				  + utils::getMangledOperatorAssignName() + "(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}, " \
 				  "virtual struct : [struct {a:A,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>)," \
-				  "dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,"\
-				  "operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}] " \
+				  "dtor()," + utils::getMangledOperatorAssignName() + "(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,"\
+				  + utils::getMangledOperatorAssignName() + "(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}] " \
 				  "{b:B,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>)," \
-				  "dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>," \
-				  "operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}] " \
+				  "dtor()," + utils::getMangledOperatorAssignName() + "(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>," \
+				  + utils::getMangledOperatorAssignName() + "(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}] " \
 				  "{c:C,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>)," \
-				  "dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>," \
-				  "operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}", toString(*genStructC));
+				  "dtor()," + utils::getMangledOperatorAssignName() + "(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>," \
+				  + utils::getMangledOperatorAssignName() + "(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}", toString(*genStructC));
 
 		// this is an anonymous tagType reference
 		auto tagType = builder.tagTypeReference("");
@@ -559,8 +561,8 @@ namespace core {
 		entriesA.push_back(builder.field("a", GenericType::get(manager, "A")));
 		auto genStructA = builder.structType("xy", entriesA);
 		EXPECT_EQ("struct xy {a:A,ctor(),ctor(ref<^xy,t,f,cpp_ref>),ctor(ref<^xy,f,f,cpp_rref>)," \
-				  "dtor(),operator_assign(ref<^xy,t,f,cpp_ref>)->ref<^xy,f,f,cpp_ref>," \
-				  "operator_assign(ref<^xy,f,f,cpp_rref>)->ref<^xy,f,f,cpp_ref>}", toString(*genStructA));
+				  "dtor()," + utils::getMangledOperatorAssignName() + "(ref<^xy,t,f,cpp_ref>)->ref<^xy,f,f,cpp_ref>," \
+				  + utils::getMangledOperatorAssignName() + "(ref<^xy,f,f,cpp_rref>)->ref<^xy,f,f,cpp_ref>}", toString(*genStructA));
 
 		// create derived type B : A
 		vector<FieldPtr> entriesB;
@@ -568,11 +570,11 @@ namespace core {
 		ParentsPtr parentsB = Parents::get(manager, toVector(Parent::get(manager, genStructA)));
 		auto genStructB = builder.structType(builder.stringValue("xy"), parentsB, entriesB);
 		EXPECT_EQ("struct xy : [struct xy {a:A,ctor(),ctor(ref<^xy,t,f,cpp_ref>),ctor(ref<^xy,f,f,cpp_rref>)," \
-				  "dtor(),operator_assign(ref<^xy,t,f,cpp_ref>)->ref<^xy,f,f,cpp_ref>," \
-				  "operator_assign(ref<^xy,f,f,cpp_rref>)->ref<^xy,f,f,cpp_ref>}] " \
+				  "dtor()," + utils::getMangledOperatorAssignName() + "(ref<^xy,t,f,cpp_ref>)->ref<^xy,f,f,cpp_ref>," \
+				  + utils::getMangledOperatorAssignName() + "(ref<^xy,f,f,cpp_rref>)->ref<^xy,f,f,cpp_ref>}] " \
 				  "{b:B,ctor(),ctor(ref<^xy,t,f,cpp_ref>),ctor(ref<^xy,f,f,cpp_rref>)," \
-				  "dtor(),operator_assign(ref<^xy,t,f,cpp_ref>)->ref<^xy,f,f,cpp_ref>," \
-				  "operator_assign(ref<^xy,f,f,cpp_rref>)->ref<^xy,f,f,cpp_ref>}", toString(*genStructB));
+				  "dtor()," + utils::getMangledOperatorAssignName() + "(ref<^xy,t,f,cpp_ref>)->ref<^xy,f,f,cpp_ref>," \
+				  + utils::getMangledOperatorAssignName() + "(ref<^xy,f,f,cpp_rref>)->ref<^xy,f,f,cpp_ref>}", toString(*genStructB));
 
 		// create derived type C : A, B
 		vector<FieldPtr> entriesC;
@@ -580,17 +582,17 @@ namespace core {
 		ParentsPtr parentsC = Parents::get(manager, toVector(Parent::get(manager, genStructA), Parent::get(manager, true, genStructB)));
 		auto genStructC = builder.structType(builder.stringValue("xy"), parentsC, entriesC);
 		EXPECT_EQ("struct xy : [struct xy {a:A,ctor(),ctor(ref<^xy,t,f,cpp_ref>),ctor(ref<^xy,f,f,cpp_rref>)," \
-				  "dtor(),operator_assign(ref<^xy,t,f,cpp_ref>)->ref<^xy,f,f,cpp_ref>," \
-				  "operator_assign(ref<^xy,f,f,cpp_rref>)->ref<^xy,f,f,cpp_ref>}, " \
+				  "dtor()," + utils::getMangledOperatorAssignName() + "(ref<^xy,t,f,cpp_ref>)->ref<^xy,f,f,cpp_ref>," \
+				  + utils::getMangledOperatorAssignName() + "(ref<^xy,f,f,cpp_rref>)->ref<^xy,f,f,cpp_ref>}, " \
 				  "virtual struct xy : [struct xy {a:A,ctor(),ctor(ref<^xy,t,f,cpp_ref>)," \
-				  "ctor(ref<^xy,f,f,cpp_rref>),dtor(),operator_assign(ref<^xy,t,f,cpp_ref>)->ref<^xy,f,f,cpp_ref>,"\
-				  "operator_assign(ref<^xy,f,f,cpp_rref>)->ref<^xy,f,f,cpp_ref>}] " \
+				  "ctor(ref<^xy,f,f,cpp_rref>),dtor()," + utils::getMangledOperatorAssignName() + "(ref<^xy,t,f,cpp_ref>)->ref<^xy,f,f,cpp_ref>,"\
+				  + utils::getMangledOperatorAssignName() + "(ref<^xy,f,f,cpp_rref>)->ref<^xy,f,f,cpp_ref>}] " \
 				  "{b:B,ctor(),ctor(ref<^xy,t,f,cpp_ref>),ctor(ref<^xy,f,f,cpp_rref>),dtor()," \
-				  "operator_assign(ref<^xy,t,f,cpp_ref>)->ref<^xy,f,f,cpp_ref>," \
-				  "operator_assign(ref<^xy,f,f,cpp_rref>)->ref<^xy,f,f,cpp_ref>}] " \
+				  + utils::getMangledOperatorAssignName() + "(ref<^xy,t,f,cpp_ref>)->ref<^xy,f,f,cpp_ref>," \
+				  + utils::getMangledOperatorAssignName() + "(ref<^xy,f,f,cpp_rref>)->ref<^xy,f,f,cpp_ref>}] " \
 				  "{c:C,ctor(),ctor(ref<^xy,t,f,cpp_ref>),ctor(ref<^xy,f,f,cpp_rref>),dtor()," \
-				  "operator_assign(ref<^xy,t,f,cpp_ref>)->ref<^xy,f,f,cpp_ref>," \
-				  "operator_assign(ref<^xy,f,f,cpp_rref>)->ref<^xy,f,f,cpp_ref>}", toString(*genStructC));
+				  + utils::getMangledOperatorAssignName() + "(ref<^xy,t,f,cpp_ref>)->ref<^xy,f,f,cpp_ref>," \
+				  + utils::getMangledOperatorAssignName() + "(ref<^xy,f,f,cpp_rref>)->ref<^xy,f,f,cpp_ref>}", toString(*genStructC));
 
 		// this is a named tagType reference
 		auto tagType = builder.tagTypeReference("xy");
@@ -621,21 +623,21 @@ namespace core {
 
 		auto genStructA = builder.structType(entriesA);
 		EXPECT_EQ("struct {a:A,b:ref<^X,f,f,plain>,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>)," \
-				  "dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>," \
-				  "operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}", toString(*genStructA));
+				  "dtor()," + utils::getMangledOperatorAssignName() + "(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>," \
+				  + utils::getMangledOperatorAssignName() + "(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}", toString(*genStructA));
 
 		auto definition = builder.tagTypeDefinition({{varX, genStructA.as<TagTypePtr>()->getRecord()}});
 		EXPECT_EQ("{^X=struct {a:A,b:ref<^X,f,f,plain>,ctor(),ctor(ref<^,t,f,cpp_ref>)," \
-				  "ctor(ref<^,f,f,cpp_rref>),dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>," \
-				  "operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}}", toString(*definition));
+				  "ctor(ref<^,f,f,cpp_rref>),dtor()," + utils::getMangledOperatorAssignName() + "(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>," \
+				  + utils::getMangledOperatorAssignName() + "(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}}", toString(*definition));
 
 		auto tagType = builder.tagType(varX, definition);
 		EXPECT_EQ("rec ^X.{^X=struct {a:A,b:ref<^X,f,f,plain>,ctor(),ctor(ref<^,t,f,cpp_ref>)," \
-				  "ctor(ref<^,f,f,cpp_rref>),dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>," \
-				  "operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}}", toString(*tagType));
+				  "ctor(ref<^,f,f,cpp_rref>),dtor()," + utils::getMangledOperatorAssignName() + "(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>," \
+				  + utils::getMangledOperatorAssignName() + "(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}}", toString(*tagType));
 		EXPECT_EQ("struct {a:A,b:ref<^X,f,f,plain>,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>)," \
-				  "dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>," \
-				  "operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}", toString(*tagType->getDefinition()->getDefinitionOf(varX)));
+				  "dtor()," + utils::getMangledOperatorAssignName() + "(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>," \
+				  + utils::getMangledOperatorAssignName() + "(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}", toString(*tagType->getDefinition()->getDefinitionOf(varX)));
 
 		// perform basic type tests
 		basicTypeTests(tagType, true, toList(toVector<NodePtr>(varX, definition)));
@@ -651,22 +653,22 @@ namespace core {
 
 		auto genUnionA = builder.unionType(entriesA);
 		EXPECT_EQ("union {a:A,b:B,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor()," \
-				  "operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>," \
-				  "operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}", toString(*genUnionA));
+				  + utils::getMangledOperatorAssignName() + "(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>," \
+				  + utils::getMangledOperatorAssignName() + "(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}", toString(*genUnionA));
 
 		vector<FieldPtr> entriesB;
 		auto genUnionB = builder.unionType(entriesB);
 		EXPECT_EQ("union {ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor()," \
-				  "operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>," \
-				  "operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}", toString(*genUnionB));
+				  + utils::getMangledOperatorAssignName() + "(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>," \
+				  + utils::getMangledOperatorAssignName() + "(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}", toString(*genUnionB));
 
 		vector<FieldPtr> entriesC;
 		entriesC.push_back(builder.field("a", TypeVariable::get(manager, "alpha")));
 		entriesC.push_back(builder.field("b", GenericType::get(manager, "B")));
 		auto genUnionC = builder.unionType(entriesC);
 		EXPECT_EQ("union {a:'alpha,b:B,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor()," \
-				  "operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>," \
-				  "operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}", toString(*genUnionC));
+				  + utils::getMangledOperatorAssignName() + "(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>," \
+				  + utils::getMangledOperatorAssignName() + "(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}", toString(*genUnionC));
 
 		// this is an anonymous tagType reference
 		auto tagType = builder.tagTypeReference("");
