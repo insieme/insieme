@@ -615,7 +615,7 @@ namespace parser {
 			// get this-type (which is ref<ref in case of a function
 			auto thisType = getThisTypeForLambdaAndFunction(cnst, voltile);
 			auto thisParam = builder.variable(thisType);
-std::cout << name << "\n";
+
 			// create full parameter list
 			VariableList fullParams;
 			fullParams.push_back(thisParam);
@@ -967,10 +967,6 @@ std::cout << name << "\n";
 			VariablePtr iteratorVariable = findSymbol(l, iteratorName).isa<VariablePtr>();
 			assert_true(iteratorVariable) << "Variable doesn't exist or isn't a VariablePtr";
 			return builder.forStmt(iteratorVariable, getScalar(lowerBound), getScalar(upperBound), getScalar(stepExpr), body);
-		}
-
-		void InspireDriver::genDeclaration(const location& l, const std::string name, const TypePtr& type) {
-			declareSymbol(l, name, builder.literal(name, type));
 		}
 
 		ExpressionPtr InspireDriver::genThis(const location& l) {
