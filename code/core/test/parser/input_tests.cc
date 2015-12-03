@@ -60,7 +60,7 @@ namespace core {
 namespace parser {
 
 	// the directory to load input files from
-	const auto ROOT_DIR = SRC_ROOT_DIR "core/test/parser/inputs/";
+	const auto ROOT_DIR = utils::getInsiemeSourceRootDir() + "core/test/parser/inputs/";
 
 
 	using std::string;

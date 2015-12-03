@@ -61,6 +61,8 @@
 #include "insieme/core/lang/extension.h"
 #include "insieme/core/lang/extension_registry.h"
 
+#include "insieme/utils/name_mangling.h"
+
 // this last one is generated and the path will be provided to the command
 #include "inspire_parser.hpp"
 
@@ -1007,7 +1009,7 @@ namespace parser {
 				replacements[temporaryName] = emptyName;
 				replacements[builder.stringValue(temporaryName->getValue() + "::ctor")] = builder.stringValue("::ctor");
 				replacements[builder.stringValue(temporaryName->getValue() + "::dtor")] = builder.stringValue("::dtor");
-				replacements[builder.stringValue(temporaryName->getValue() + "::operator_assign")] = builder.stringValue("::operator_assign");
+				replacements[builder.stringValue(temporaryName->getValue() + "::" + utils::getMangledOperatorAssignName())] = builder.stringValue("::" + utils::getMangledOperatorAssignName());
 			}
 			result = transform::replaceAll(mgr, result, replacements, transform::globalReplacement);
 		}

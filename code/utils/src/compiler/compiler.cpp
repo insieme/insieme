@@ -79,7 +79,7 @@ Compiler Compiler::getDefaultCppCompiler() {
 
 Compiler Compiler::getRuntimeCompiler(const Compiler& base) {
 	Compiler res = base;
-	res.addFlag("-I " SRC_ROOT_DIR "runtime/include -I " SRC_ROOT_DIR "common/include -D_XOPEN_SOURCE=700 -D_GNU_SOURCE -ldl -lrt -lpthread -lm");
+	res.addFlag(string("-I ") + utils::getInsiemeSourceRootDir() + "runtime/include -I " + utils::getInsiemeSourceRootDir() + "common/include -D_XOPEN_SOURCE=700 -D_GNU_SOURCE -ldl -lrt -lpthread -lm");
 	return res;
 }
 

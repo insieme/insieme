@@ -11,12 +11,6 @@ if (WIN32)
 endif()
 option (USE_OPENCL "Build Insieme Runtime with Opencl" OFF)
 
-if (DEFINED ENV{THIRD_PARTY_LIBS_HOME} )
-	set ( THIRD_PARTY_LIBS_HOME $ENV{THIRD_PARTY_LIBS_HOME} CACHE PATH "Third party library home")
-elseif (DEFINED ENV{INSIEME_LIBS_HOME} )
-	set ( THIRD_PARTY_LIBS_HOME $ENV{INSIEME_LIBS_HOME} CACHE PATH "Third party library home")
-endif()
-
 #to find the custom modules (for find_package)
 #TODO better path
 get_filename_component( insieme_code_dir ${CMAKE_CURRENT_LIST_FILE} PATH )
@@ -344,9 +338,3 @@ foreach (case_file ${test_cases})
     	target_link_libraries(${case_name} ${OPENCL_LIBS})
 	endif ( USE_OPENCL )
 endforeach(case_file)
-
-if ( USE_MPI_OPENCL )
-	add_subdirectory( src/mpi_ocl/ )
-endif ( USE_MPI_OPENCL )
-
-

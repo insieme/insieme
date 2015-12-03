@@ -194,7 +194,7 @@ namespace backend {
 		// try compiling the code fragment
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
 		compiler.addFlag("-lm");
-		compiler.addFlag("-I " SRC_ROOT_DIR "simple_backend/include/insieme/simple_backend/runtime/");
+		compiler.addFlag(string("-I ") + utils::getInsiemeSourceRootDir() + "simple_backend/include/insieme/simple_backend/runtime/");
 		compiler.addFlag("-c"); // do not run the linker
 		EXPECT_TRUE(utils::compiler::compile(*converted, compiler)) << "Code: \n" << *converted;
 	}

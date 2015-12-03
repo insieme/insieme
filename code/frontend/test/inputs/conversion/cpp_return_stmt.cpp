@@ -1,13 +1,13 @@
 /**
  * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
- *				  Institute of Computer Science,
- *				 University of Innsbruck, Austria
+ *                Institute of Computer Science,
+ *               University of Innsbruck, Austria
  *
  * This file is part of the INSIEME Compiler and Runtime System.
  *
  * We provide the software of this file (below described as "INSIEME")
  * under GPL Version 3.0 on an AS IS basis, and do not warrant its
- * validity or performance.	 We reserve the right to update, modify,
+ * validity or performance.  We reserve the right to update, modify,
  * or discontinue this software at any time.  We shall have no
  * obligation to supply such updates or modifications or any other
  * form of support to you.
@@ -15,7 +15,7 @@
  * If you require different license terms for your intended use of the
  * software, e.g. for proprietary commercial or industrial use, please
  * contact us at:
- *					 insieme@dps.uibk.ac.at
+ *                   insieme@dps.uibk.ac.at
  *
  * We kindly ask you to acknowledge the use of this software in any
  * publication or other disclosure of results by referring to the

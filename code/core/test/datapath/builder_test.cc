@@ -42,6 +42,8 @@
 #include "insieme/core/ir_address.h"
 #include "insieme/core/datapath/datapath.h"
 
+#include "insieme/utils/name_mangling.h"
+
 namespace insieme {
 namespace core {
 namespace datapath {
@@ -58,14 +60,14 @@ namespace datapath {
 
 		EXPECT_EQ("dp_root(type<R>)", toString(*build("R").getPath()));
 		EXPECT_EQ("dp_member(dp_root(type<struct {hello:bool,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor(),"
-				  "operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}>), hello, type<bool>)",
+				  "" + utils::getMangledOperatorAssignName() + "(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>," + utils::getMangledOperatorAssignName() + "(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}>), hello, type<bool>)",
 		          toString(*build("struct { hello: bool; }").member("hello").getPath()));
 		EXPECT_EQ("dp_element(dp_root(type<array<int<4>,20>>), 12)", toString(*build("array<int<4>,20>").element(12).getPath()));
 		EXPECT_EQ("dp_component(dp_root(type<(bool,int<4>,real<4>,R)>), 3, type<R>)", toString(*build("(bool,int<4>,real<4>,R)").component(3).getPath()));
 		EXPECT_EQ("dp_parent(dp_root(type<struct B : [struct A {ctor(),ctor(ref<^A,t,f,cpp_ref>),ctor(ref<^A,f,f,cpp_rref>),"
-		          "dtor(),operator_assign(ref<^A,t,f,cpp_ref>)->ref<^A,f,f,cpp_ref>,operator_assign(ref<^A,f,f,cpp_rref>)->ref<^A,f,f,cpp_ref>}] {"
-		          "ctor(),ctor(ref<^B,t,f,cpp_ref>),ctor(ref<^B,f,f,cpp_rref>),dtor(),operator_assign(ref<^B,t,f,cpp_ref>)->ref<^B,f,f,cpp_ref>,"
-		          "operator_assign(ref<^B,f,f,cpp_rref>)->ref<^B,f,f,cpp_ref>}>), type<A>)",
+		          "dtor()," + utils::getMangledOperatorAssignName() + "(ref<^A,t,f,cpp_ref>)->ref<^A,f,f,cpp_ref>," + utils::getMangledOperatorAssignName() + "(ref<^A,f,f,cpp_rref>)->ref<^A,f,f,cpp_ref>}] {"
+		          "ctor(),ctor(ref<^B,t,f,cpp_ref>),ctor(ref<^B,f,f,cpp_rref>),dtor()," + utils::getMangledOperatorAssignName() + "(ref<^B,t,f,cpp_ref>)->ref<^B,f,f,cpp_ref>,"
+		          "" + utils::getMangledOperatorAssignName() + "(ref<^B,f,f,cpp_rref>)->ref<^B,f,f,cpp_ref>}>), type<A>)",
 		          toString(*build("alias A = struct A {}; struct B : [ A ] {}").parent(typeA).getPath()));
 
 	}
@@ -86,46 +88,46 @@ namespace datapath {
 		DataPath path(root);
 
 		EXPECT_EQ("<array<struct {test:(int<4>,bool,int<4>,struct E : [struct A {ctor(),ctor(ref<^A,t,f,cpp_ref>),"
-				  "ctor(ref<^A,f,f,cpp_rref>),dtor(),operator_assign(ref<^A,t,f,cpp_ref>)->ref<^A,f,f,cpp_ref>,"
-				  "operator_assign(ref<^A,f,f,cpp_rref>)->ref<^A,f,f,cpp_ref>}] {ctor(),ctor(ref<^E,t,f,cpp_ref>),"
-				  "ctor(ref<^E,f,f,cpp_rref>),dtor(),operator_assign(ref<^E,t,f,cpp_ref>)->ref<^E,f,f,cpp_ref>,"
-				  "operator_assign(ref<^E,f,f,cpp_rref>)->ref<^E,f,f,cpp_ref>}),ctor(),ctor(ref<^,t,f,cpp_ref>),"
-				  "ctor(ref<^,f,f,cpp_rref>),dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,"
-				  "operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>},50>>",
+				  "ctor(ref<^A,f,f,cpp_rref>),dtor()," + utils::getMangledOperatorAssignName() + "(ref<^A,t,f,cpp_ref>)->ref<^A,f,f,cpp_ref>,"
+				  "" + utils::getMangledOperatorAssignName() + "(ref<^A,f,f,cpp_rref>)->ref<^A,f,f,cpp_ref>}] {ctor(),ctor(ref<^E,t,f,cpp_ref>),"
+				  "ctor(ref<^E,f,f,cpp_rref>),dtor()," + utils::getMangledOperatorAssignName() + "(ref<^E,t,f,cpp_ref>)->ref<^E,f,f,cpp_ref>,"
+				  "" + utils::getMangledOperatorAssignName() + "(ref<^E,f,f,cpp_rref>)->ref<^E,f,f,cpp_ref>}),ctor(),ctor(ref<^,t,f,cpp_ref>),"
+				  "ctor(ref<^,f,f,cpp_rref>),dtor()," + utils::getMangledOperatorAssignName() + "(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,"
+				  "" + utils::getMangledOperatorAssignName() + "(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>},50>>",
 		          toString(path));
 		EXPECT_EQ("<array<struct {test:(int<4>,bool,int<4>,struct E : [struct A {ctor(),ctor(ref<^A,t,f,cpp_ref>),"
-				  "ctor(ref<^A,f,f,cpp_rref>),dtor(),operator_assign(ref<^A,t,f,cpp_ref>)->ref<^A,f,f,cpp_ref>,"
-				  "operator_assign(ref<^A,f,f,cpp_rref>)->ref<^A,f,f,cpp_ref>}] {ctor(),ctor(ref<^E,t,f,cpp_ref>),"
-				  "ctor(ref<^E,f,f,cpp_rref>),dtor(),operator_assign(ref<^E,t,f,cpp_ref>)->ref<^E,f,f,cpp_ref>,"
-				  "operator_assign(ref<^E,f,f,cpp_rref>)->ref<^E,f,f,cpp_ref>}),ctor(),ctor(ref<^,t,f,cpp_ref>),"
-				  "ctor(ref<^,f,f,cpp_rref>),dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,"
-				  "operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>},50>>[4]",
+				  "ctor(ref<^A,f,f,cpp_rref>),dtor()," + utils::getMangledOperatorAssignName() + "(ref<^A,t,f,cpp_ref>)->ref<^A,f,f,cpp_ref>,"
+				  "" + utils::getMangledOperatorAssignName() + "(ref<^A,f,f,cpp_rref>)->ref<^A,f,f,cpp_ref>}] {ctor(),ctor(ref<^E,t,f,cpp_ref>),"
+				  "ctor(ref<^E,f,f,cpp_rref>),dtor()," + utils::getMangledOperatorAssignName() + "(ref<^E,t,f,cpp_ref>)->ref<^E,f,f,cpp_ref>,"
+				  "" + utils::getMangledOperatorAssignName() + "(ref<^E,f,f,cpp_rref>)->ref<^E,f,f,cpp_ref>}),ctor(),ctor(ref<^,t,f,cpp_ref>),"
+				  "ctor(ref<^,f,f,cpp_rref>),dtor()," + utils::getMangledOperatorAssignName() + "(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,"
+				  "" + utils::getMangledOperatorAssignName() + "(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>},50>>[4]",
 		          toString(path.element(4)));
 		EXPECT_EQ("<array<struct {test:(int<4>,bool,int<4>,struct E : [struct A {ctor(),ctor(ref<^A,t,f,cpp_ref>),"
-				  "ctor(ref<^A,f,f,cpp_rref>),dtor(),operator_assign(ref<^A,t,f,cpp_ref>)->ref<^A,f,f,cpp_ref>,"
-				  "operator_assign(ref<^A,f,f,cpp_rref>)->ref<^A,f,f,cpp_ref>}] {ctor(),ctor(ref<^E,t,f,cpp_ref>),"
-				  "ctor(ref<^E,f,f,cpp_rref>),dtor(),operator_assign(ref<^E,t,f,cpp_ref>)->ref<^E,f,f,cpp_ref>,"
-				  "operator_assign(ref<^E,f,f,cpp_rref>)->ref<^E,f,f,cpp_ref>}),ctor(),ctor(ref<^,t,f,cpp_ref>),"
-				  "ctor(ref<^,f,f,cpp_rref>),dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,"
-				  "operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>},50>>[4].test",
+				  "ctor(ref<^A,f,f,cpp_rref>),dtor()," + utils::getMangledOperatorAssignName() + "(ref<^A,t,f,cpp_ref>)->ref<^A,f,f,cpp_ref>,"
+				  "" + utils::getMangledOperatorAssignName() + "(ref<^A,f,f,cpp_rref>)->ref<^A,f,f,cpp_ref>}] {ctor(),ctor(ref<^E,t,f,cpp_ref>),"
+				  "ctor(ref<^E,f,f,cpp_rref>),dtor()," + utils::getMangledOperatorAssignName() + "(ref<^E,t,f,cpp_ref>)->ref<^E,f,f,cpp_ref>,"
+				  "" + utils::getMangledOperatorAssignName() + "(ref<^E,f,f,cpp_rref>)->ref<^E,f,f,cpp_ref>}),ctor(),ctor(ref<^,t,f,cpp_ref>),"
+				  "ctor(ref<^,f,f,cpp_rref>),dtor()," + utils::getMangledOperatorAssignName() + "(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,"
+				  "" + utils::getMangledOperatorAssignName() + "(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>},50>>[4].test",
 		          toString(path.element(4).member("test")));
 
 		// "u" after "c3" added to match the printer
 		EXPECT_EQ("<array<struct {test:(int<4>,bool,int<4>,struct E : [struct A {ctor(),ctor(ref<^A,t,f,cpp_ref>),"
-				  "ctor(ref<^A,f,f,cpp_rref>),dtor(),operator_assign(ref<^A,t,f,cpp_ref>)->ref<^A,f,f,cpp_ref>,"
-				  "operator_assign(ref<^A,f,f,cpp_rref>)->ref<^A,f,f,cpp_ref>}] {ctor(),ctor(ref<^E,t,f,cpp_ref>),"
-				  "ctor(ref<^E,f,f,cpp_rref>),dtor(),operator_assign(ref<^E,t,f,cpp_ref>)->ref<^E,f,f,cpp_ref>,"
-				  "operator_assign(ref<^E,f,f,cpp_rref>)->ref<^E,f,f,cpp_ref>}),ctor(),ctor(ref<^,t,f,cpp_ref>),"
-				  "ctor(ref<^,f,f,cpp_rref>),dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,"
-				  "operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>},50>>[4].test.c3u",
+				  "ctor(ref<^A,f,f,cpp_rref>),dtor()," + utils::getMangledOperatorAssignName() + "(ref<^A,t,f,cpp_ref>)->ref<^A,f,f,cpp_ref>,"
+				  "" + utils::getMangledOperatorAssignName() + "(ref<^A,f,f,cpp_rref>)->ref<^A,f,f,cpp_ref>}] {ctor(),ctor(ref<^E,t,f,cpp_ref>),"
+				  "ctor(ref<^E,f,f,cpp_rref>),dtor()," + utils::getMangledOperatorAssignName() + "(ref<^E,t,f,cpp_ref>)->ref<^E,f,f,cpp_ref>,"
+				  "" + utils::getMangledOperatorAssignName() + "(ref<^E,f,f,cpp_rref>)->ref<^E,f,f,cpp_ref>}),ctor(),ctor(ref<^,t,f,cpp_ref>),"
+				  "ctor(ref<^,f,f,cpp_rref>),dtor()," + utils::getMangledOperatorAssignName() + "(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,"
+				  "" + utils::getMangledOperatorAssignName() + "(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>},50>>[4].test.c3u",
 		          toString(path.element(4).member("test").component(3)));
 		EXPECT_EQ("<array<struct {test:(int<4>,bool,int<4>,struct E : [struct A {ctor(),ctor(ref<^A,t,f,cpp_ref>),"
-				  "ctor(ref<^A,f,f,cpp_rref>),dtor(),operator_assign(ref<^A,t,f,cpp_ref>)->ref<^A,f,f,cpp_ref>,"
-				  "operator_assign(ref<^A,f,f,cpp_rref>)->ref<^A,f,f,cpp_ref>}] {ctor(),ctor(ref<^E,t,f,cpp_ref>),"
-				  "ctor(ref<^E,f,f,cpp_rref>),dtor(),operator_assign(ref<^E,t,f,cpp_ref>)->ref<^E,f,f,cpp_ref>,"
-				  "operator_assign(ref<^E,f,f,cpp_rref>)->ref<^E,f,f,cpp_ref>}),ctor(),ctor(ref<^,t,f,cpp_ref>),"
-				  "ctor(ref<^,f,f,cpp_rref>),dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,"
-				  "operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>},50>>[4].test.c3u.as<A>",
+				  "ctor(ref<^A,f,f,cpp_rref>),dtor()," + utils::getMangledOperatorAssignName() + "(ref<^A,t,f,cpp_ref>)->ref<^A,f,f,cpp_ref>,"
+				  "" + utils::getMangledOperatorAssignName() + "(ref<^A,f,f,cpp_rref>)->ref<^A,f,f,cpp_ref>}] {ctor(),ctor(ref<^E,t,f,cpp_ref>),"
+				  "ctor(ref<^E,f,f,cpp_rref>),dtor()," + utils::getMangledOperatorAssignName() + "(ref<^E,t,f,cpp_ref>)->ref<^E,f,f,cpp_ref>,"
+				  "" + utils::getMangledOperatorAssignName() + "(ref<^E,f,f,cpp_rref>)->ref<^E,f,f,cpp_ref>}),ctor(),ctor(ref<^,t,f,cpp_ref>),"
+				  "ctor(ref<^,f,f,cpp_rref>),dtor()," + utils::getMangledOperatorAssignName() + "(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,"
+				  "" + utils::getMangledOperatorAssignName() + "(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>},50>>[4].test.c3u.as<A>",
 		          toString(path.element(4).member("test").component(3).parent(typeA)));
 	}
 

@@ -171,7 +171,7 @@ namespace testFramework {
 
 
 	std::string getGitVersion() {
-		string getGitVersionCmd = string("cd ") + SRC_ROOT_DIR + "; git describe --dirty";
+		string getGitVersionCmd = string("cd ") + utils::getInsiemeSourceRootDir() + "; git describe --dirty";
 		FILE* pipe = popen(getGitVersionCmd.c_str(), "r");
 		char buff[50];
 		auto success = fgets(buff, 50, pipe);

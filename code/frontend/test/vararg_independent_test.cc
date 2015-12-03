@@ -47,11 +47,11 @@ namespace frontend {
 	}
 	
 	TEST(VarargIndependentTest, Basic) {
-		runVarargIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_variable_argument_lists.c");
+		runVarargIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_variable_argument_lists.c");
 	}
 
 	TEST(VarargIndependentTest, HelloWorld) {
-		runVarargIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_hello_world.c");
+		runVarargIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_hello_world.c");
 	}
 
 } // fe namespace

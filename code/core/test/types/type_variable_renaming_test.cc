@@ -41,6 +41,8 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/types/type_variable_renamer.h"
 
+#include "insieme/utils/name_mangling.h"
+
 namespace insieme {
 namespace core {
 namespace types {
@@ -127,11 +129,11 @@ namespace types {
 		TagTypeDefinitionPtr def = builder.tagTypeDefinition({ { tag, type } });
 		TagTypePtr tagType = builder.tagType(tag, def);
 
-		EXPECT_EQ("rec ^X.{^X=struct {f:ref<^X,f,f,plain>,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}}",
+		EXPECT_EQ("rec ^X.{^X=struct {f:ref<^X,f,f,plain>,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor()," + utils::getMangledOperatorAssignName() + "(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>," + utils::getMangledOperatorAssignName() + "(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}}",
 		          toString(*tagType));
 
 		VariableRenamer renamer;
-		EXPECT_EQ("rec ^X.{^X=struct {f:ref<^X,f,f,plain>,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}}",
+		EXPECT_EQ("rec ^X.{^X=struct {f:ref<^X,f,f,plain>,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor()," + utils::getMangledOperatorAssignName() + "(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>," + utils::getMangledOperatorAssignName() + "(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}}",
 		          toString(*renamer.rename(tagType)));
 	}
 

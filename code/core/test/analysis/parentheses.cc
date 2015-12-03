@@ -25,7 +25,7 @@
  * T. Fahringer, H. Moritsch. A Multi-Objective Auto-Tuning Framework
  * for Parallel Codes, in Proc. of the Intl. Conference for High
  * Performance Computing, Networking, Storage and Analysis (SC 2012),
- * IEEE Computer Society Preoutput, Nov. 2012, Salt Lake City, USA.
+ * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  *
  * All copyright notices must be kept intact.
  *

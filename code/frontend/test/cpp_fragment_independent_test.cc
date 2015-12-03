@@ -39,21 +39,21 @@
 namespace insieme {
 namespace frontend {
 
-	TEST(CppIndependentTest, BasicTypes) { runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/cpp_basic_types.cpp"); }
+	TEST(CppIndependentTest, BasicTypes) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_basic_types.cpp"); }
 
-	TEST(CppIndependentTest, Expressions) { runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/cpp_expressions.cpp"); }
+	TEST(CppIndependentTest, Expressions) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_expressions.cpp"); }
 
-	TEST(CppIndependentTest, DISABLED_Expressions_Ref) { runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/cpp_expressions_ref.cpp"); }
+	TEST(CppIndependentTest, DISABLED_Expressions_Ref) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_expressions_ref.cpp"); }
 
-	TEST(CppIndependentTest, BasicClasses) { runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/cpp_basic_classes.cpp"); }
+	TEST(CppIndependentTest, BasicClasses) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_basic_classes.cpp"); }
 	
-	TEST(CppIndependentTest, DISABLED_ClassOperators) { runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/cpp_class_operators.cpp"); }
+	TEST(CppIndependentTest, DISABLED_ClassOperators) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_class_operators.cpp"); }
 
-	TEST(CppIndependentTest, BasicTemplates) { runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/cpp_basic_templates.cpp"); }
+	TEST(CppIndependentTest, BasicTemplates) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_basic_templates.cpp"); }
 
-	TEST(CppIndependentTest, NewDelete) { runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/cpp_new_delete.cpp"); }
+	TEST(CppIndependentTest, NewDelete) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_new_delete.cpp"); }
 
-	TEST(CppIndependentTest, DefaultArgs) { runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/cpp_default_args.cpp"); }
+	TEST(CppIndependentTest, DefaultArgs) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_default_args.cpp"); }
 
 } // fe namespace
 } // insieme namespace

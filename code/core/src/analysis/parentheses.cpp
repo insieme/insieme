@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -43,18 +43,20 @@ namespace insieme {
 namespace core {
 namespace analysis {
 
-	typedef struct {
-		int precedence;
-		int associativity;
-	} precedence_container;
+	//precedence_container.first => precedence; 
+	//precedence_container.second => associativity;
+	using precedence_container = std::pair<int,int>;
+	using precedence_map = std::map<NodePtr, precedence_container>;
 
-	std::map<NodePtr,precedence_container> create_precedence_map(NodeManager& nm)
-	{
+	precedence_map create_precedence_map(NodeManager& nm) {
 
 		auto& lang = nm.getLangBasic();
 		auto& refs = nm.getLangExtension<lang::ReferenceExtension>();
 
-		std::map<NodePtr, precedence_container> m;
+		//TODO: check why using the attached value is slower than recreating the map everytime?!?!
+		//if (nm.hasAttachedValue<precedence_map>()) return nm.getAttachedValue<precedence_map>();
+
+		precedence_map m;
 
 		m[refs.getGenPostInc()] = {2,0};
 		m[refs.getGenPostDec()] = {2,0};
@@ -144,6 +146,10 @@ namespace analysis {
 		m[lang.getBoolLAnd()] = {13,0};
 		m[lang.getBoolLOr()] = {14,0};
 
+		//attach the map to the node manager
+		//nm.attachValue<precedence_map>(m);
+		//assert_true(nm.hasAttachedValue<precedence_map>()) << "cannot attach precedence map to node manager.";
+
 		return m;
 	}
 
@@ -181,7 +187,7 @@ namespace analysis {
 	 */
 	bool needsParentheses(const CallExprAddress& cur) {
 
-		const std::map<NodePtr,precedence_container> precedence_map = create_precedence_map(cur->getNodeManager());
+		const precedence_map& pm = create_precedence_map(cur->getNodeManager());
 
 		// in the case, where the operation is already the root
 		// there is no need for parentheses
@@ -194,22 +200,22 @@ namespace analysis {
 		if(auto enclosingOp = getEnclosingOperatorCall(cur.getParentAddress())) {
 
 			// look up precedences
-			auto curOp = precedence_map.find(cur->getFunctionExpr());
-			auto parentOp = precedence_map.find(enclosingOp->getFunctionExpr());
+			auto curOp = pm.find(cur->getFunctionExpr());
+			auto parentOp = pm.find(enclosingOp->getFunctionExpr());
 
 			// check whether precedences could be obtained
-			if (curOp == precedence_map.end() || parentOp == precedence_map.end()) {
+			if (curOp == pm.end() || parentOp == pm.end()) {
 				return false;
 			}
 
 			// If the precedence of the parent element is higher,
 			// we need braces for the current
-			if (parentOp->second.precedence < curOp->second.precedence)
+			if (parentOp->second.first < curOp->second.first)
 				return true;
 
 			// If the precedence of the two elements is the same,
 			// we need to determine other things
-			if (parentOp->second.precedence == curOp->second.precedence) {
+			if (parentOp->second.first == curOp->second.first) {
 
 				// The first thing we check is, if cur is the same as
 				// the second ([1]) child-Node of the parent AND if

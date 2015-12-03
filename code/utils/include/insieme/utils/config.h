@@ -36,22 +36,22 @@
 
 #pragma once
 
-//code/driver/include/insieme/driver/driver_config.h:
-#define DRIVER_TEST_DIR "${insieme_code_dir}/driver/test/"
-//code/driver/include/insieme/driver/driver_config.h:
-#define PAPI_HOME "${THIRD_PARTY_LIBS_HOME}/papi-latest"
-//code/utils/include/insieme/utils/test/test_config.h:
-#define SRC_ROOT_DIR "${insieme_code_dir}/utils/../"
-//code/utils/include/insieme/utils/test/test_config.h:
-#define TEST_ROOT_DIR "${insieme_code_dir}/../test"
-//code/frontend/include/insieme/frontend/clang_config.h:
-#define FRONTEND_TEST_DIR "${insieme_code_dir}/frontend/test/"
+#include <boost/filesystem/path.hpp>
 
-/**
- *                          !!!!!!  ------ W A R N I N G -------- !!!!!
- *
- *  NEVER EVER ADD A MACRO DEFINTION FOR SOMETHING DEPENDING ON THE LOCATION OF THE BUILD DIRECTORY!
- *
- *                          !!!!!!  ------ W A R N I N G -------- !!!!!
- */
+namespace insieme {
+namespace utils {
 
+	using std::string;
+
+	const boost::filesystem::path up("../");
+
+	inline string getInsiemeSourceRootDir() {
+		return (boost::filesystem::path(__FILE__).parent_path() / up / up / up / up).string();
+	}
+
+	inline string getInsiemeLibsRootDir() {
+		return string(INSIEME_LIBS_HOME); // INSIEME_LIBS_HOME is supplied by cmake
+	}
+
+} // end namespace utils
+} // end namespace insieme

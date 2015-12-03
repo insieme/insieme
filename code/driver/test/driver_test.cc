@@ -36,12 +36,11 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/core/ir_program.h"
-
-#include "insieme/frontend/frontend.h"
 #include "insieme/backend/sequential/sequential_backend.h"
-#include "insieme/utils/config.h"
+#include "insieme/core/ir_program.h"
 #include "insieme/core/printer/pretty_printer.h"
+#include "insieme/frontend/frontend.h"
+#include "insieme/utils/config.h"
 
 //#include <glog/logging.h>
 #include "insieme/utils/logging.h"
@@ -52,16 +51,17 @@
 
 namespace fe = insieme::frontend;
 namespace core = insieme::core;
-using namespace insieme::utils::set;
+namespace iu = insieme::utils;
+using namespace iu::set;
+using namespace iu::log;
 using namespace insieme::backend::sequential;
-using namespace insieme::utils::log;
 
 TEST(DriverTest, HelloWorldTest) {
 	core::NodeManager manager;
 
-	LOG(INFO) << "Converting input program '" << std::string(DRIVER_TEST_DIR) << "/inputs/hello_world.c"
+	LOG(INFO) << "Converting input program '" << iu::getInsiemeSourceRootDir() << "driver/test/inputs/hello_world.c"
 	          << "' to IR...";
-	fe::ConversionJob job(DRIVER_TEST_DIR "/inputs/hello_world.c");
+	fe::ConversionJob job(iu::getInsiemeSourceRootDir() + "driver/test/inputs/hello_world.c");
 	job.registerDefaultExtensions();
 	core::ProgramPtr program = job.execute(manager);
 	LOG(INFO) << "Done.";
@@ -72,9 +72,9 @@ TEST(DriverTest, HelloWorldTest) {
 	auto converted = SequentialBackend::getDefault()->convert(program);
 	LOG(INFO) << "Printing converted code: " << *converted;
 
-	std::ofstream out(std::string(DRIVER_TEST_DIR) + "/inputs/hello_world.insieme.c");
+	std::ofstream out(iu::getInsiemeSourceRootDir() + "driver/test/inputs/hello_world.insieme.c");
 	out << *converted;
 	out.close();
 
-	LOG(INFO) << "Wrote source to " << DRIVER_TEST_DIR << "/inputs/hello_world.insieme.c" << std::endl;
+	LOG(INFO) << "Wrote source to " << iu::getInsiemeSourceRootDir() << "driver/test/inputs/hello_world.insieme.c" << std::endl;
 }
