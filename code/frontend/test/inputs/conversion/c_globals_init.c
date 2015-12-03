@@ -36,8 +36,32 @@
 
 int initedGlobal = 5;
 
-#pragma test expect_ir(R"(def IMP_main = ()->int<4> { lit("initedGlobal":ref<int<4>>) = 5; *lit("initedGlobal":ref<int<4>>); return 0; }; IMP_main)")
+typedef struct S {
+	int x;
+	unsigned y;
+} S;
+
+S y = { 1, 5u };
+
+const S klaus_test[] = {{1,2u},{3,4u},{5,6u}};
+
+#pragma test expect_ir(R"INSPIRE(
+def struct IMP_S { x: int<4>; y: uint<4>; };
+def IMP_main = ()->int<4> {
+	lit("initedGlobal":ref<int<4>>) = 5;
+	lit("y":ref<IMP_S>) = <IMP_S>{1, 5u};
+	ref_cast(lit("klaus_test":ref<array<IMP_S,3>,t,f>), type_lit(f), type_lit(f), type_lit(plain)) =
+		array_create(type_lit(3), [<IMP_S>{1,2u},<IMP_S>{3,4u},<IMP_S>{5,6u}]);
+	*lit("initedGlobal":ref<int<4>>);
+	*lit("y":ref<IMP_S>);
+	ptr_from_array(lit("klaus_test":ref<array<IMP_S,3>,t,f>));
+	return 0;
+};
+IMP_main
+)INSPIRE")
 int main() {
 	initedGlobal;
+	y;
+	klaus_test;
 	return 0;
 }
