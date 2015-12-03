@@ -44,10 +44,8 @@ threadprivate_static
 # Disabling tests because they fail with assertion:
 # Trying to look up function not previously declared
 datasharing
-parallel_merge_stress
 privatized_global
 rec_global
-stream
 
 # Disabling tests because they fail with assertion:
 # Record types not correctly resolved
@@ -61,9 +59,6 @@ global_firstprivate
 n_body
 ordered
 simple
-
-# Disables tests for missing external function / header support (interceptor)
-pendulum
 
 # Disabling tests because OMP doesn't seem to work at the moment
 gemm
