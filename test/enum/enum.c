@@ -63,5 +63,22 @@ int main() {
 	enum ThingWithE e = E;
 	printf("%i\n", e);
 	f();
+
+    //enum casts
+    Kind k2;
+    k2 = Linear;
+    if(k2) {
+        printf("k2 is true\n");
+    } else {
+        printf("k2 is false\n");
+    }
+    
+    k2 = Magnet;
+    if(k2) {
+        printf("k2 is true\n");
+    } else {
+        printf("k2 is false\n");
+    }
+    
 	return 0;
 }
