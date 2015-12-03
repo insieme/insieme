@@ -42,6 +42,7 @@
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/pointer.h"
+#include "insieme/core/lang/enum.h"
 
 namespace insieme {
 namespace frontend {
@@ -68,6 +69,10 @@ namespace utils {
 		// if pointer, check against equality with PtrNull
 		auto& pExt = builder.getExtension<core::lang::PointerExtension>();
 		if(lang::isPointer(t)) return builder.callExpr(basic.getBool(), pExt.getPtrNotEqual(), expr, lang::buildPtrNull(t));
+
+		//if enum type, cast to boolean
+		auto& enumExt = builder.getExtension<core::lang::EnumExtension>();
+		if (lang::isEnumType(t)) return exprToBool(builder.callExpr(lang::getEnumElementType(t), enumExt.getEnumToInt(), expr));
 
 		assert_not_implemented() << "Trying to build bool expression from unsupported type " << *t;
 		return ExpressionPtr();
