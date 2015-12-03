@@ -49,6 +49,7 @@
 
 #include "insieme/core/types/match.h"
 #include "insieme/core/types/return_type_deduction.h"
+#include "insieme/core/types/type_variable_deduction.h"
 
 #include "insieme/core/parser/detail/scanner.h"
 
@@ -723,9 +724,12 @@ namespace parser {
 					const auto& key = mapEntry.first;
 					if(key.getValue()->getValue() == memberName) {
 						if(const auto& keyType = key->getType().isa<FunctionTypePtr>()) {
-							if(keyType->isMember() && keyType->getParameterTypeList() == argumentTypes) {
-								func = key;
-								break;
+							if(keyType->isMember()) {
+								//we found a method with the correct name. now we try to find a parameter substitution
+								if (types::getTypeVariableInstantiation(mgr, keyType->getParameterTypeList(), argumentTypes)) {
+									func = key;
+									break;
+								}
 							}
 						}
 					}

@@ -959,14 +959,12 @@ namespace parser {
 		NodeManager nm;
 		IRBuilder builder(nm);
 
-		const std::string testString = "var ref<A,t,f,cpp_ref> const_a_ref;"
-		                               "var ref<A,f,f,cpp_rref> a_rref;"
-		                               "var ref<A,f,f,plain> a_default = A::(ref_var(type_lit(A)));"           //call the default constructor
-		                               "var ref<A,f,f,plain> a_copy = A::(ref_var(type_lit(A)), const_a_ref);" //call the copy constructor
-		                               "var ref<A,f,f,plain> a_move = A::(ref_var(type_lit(A)), a_rref);"      //call the move constructor
-		                               "A::~(a_default);"                                                      //call the default destructor
-		                               "a_default." + utils::getMangledOperatorAssignName() + "(const_a_ref);" //call the default copy assignment operator
-		                               "a_default." + utils::getMangledOperatorAssignName() + "(a_rref);";     //call the default move assignment operator
+		const std::string testString = "var ref<A,f,f,plain> a = A::(ref_var(type_lit(A)));"         //call the default constructor
+		                               "var ref<A,f,f,plain> a_copy = A::(ref_var(type_lit(A)), a);" //call the copy constructor
+		                               "var ref<A,f,f,plain> a_move = A::(ref_var(type_lit(A)), a);" //call the move constructor
+		                               "A::~(a);"                                                    //call the default destructor
+		                               "a." + utils::getMangledOperatorAssignName() + "(a);"         //call the default copy assignment operator
+		                               "a." + utils::getMangledOperatorAssignName() + "(a);";        //call the default move assignment operator
 
 		{
 			auto res = builder.parseStmt("def struct A { };" //call the default generated members outside the struct
