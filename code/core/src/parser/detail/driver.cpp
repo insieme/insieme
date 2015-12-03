@@ -717,28 +717,40 @@ namespace parser {
 				std::string functionName = func.as<CallExprPtr>()->getArgument(1).as<LiteralPtr>()->getValue()->getValue();
 				std::string memberName = typeName + "::" + functionName;
 
-				// now we have to find a function registered in the TU which has the same literal name and the same parameter types. we have to ignore the
+				// now we have to find a function registered in the TU which has the same literal name and the correct parameter types. we have to ignore the
 				// result type
 				const auto argumentTypes = extractTypes(args);
+				LiteralPtr candidate;
 				for(const auto& mapEntry : tu.getFunctions()) {
 					const auto& key = mapEntry.first;
 					if(key.getValue()->getValue() == memberName) {
 						if(const auto& keyType = key->getType().isa<FunctionTypePtr>()) {
 							if(keyType->isMember()) {
-								//we found a method with the correct name. now we try to find a parameter substitution
-								if (types::getTypeVariableInstantiation(mgr, keyType->getParameterTypeList(), argumentTypes)) {
+								//if the found function is an exact match, we can stop the search right away
+								if (keyType->getParameterTypeList() == argumentTypes) {
 									func = key;
 									break;
+
+								//otherwise, if we don't already have a matching candidate and can find a valid parameter substitution, we remember it
+								} else if (!candidate && types::getTypeVariableInstantiation(mgr, keyType->getParameterTypeList(), argumentTypes)) {
+									candidate = key;
 								}
 							}
 						}
 					}
 				}
 
-				//if we didn't change the function, we didn't find a suitable one
+				//if we didn't change the function, we didn't find an exact match
 				if (func == getScalar(callable)) {
-					error(l, format("Couldn't find member %s in type %s for argument types %s", memberName, typeName, argumentTypes));
-					return nullptr;
+					//if we found a candidate then we take that one
+					if (candidate) {
+						func = candidate;
+
+						//otherwise we fail
+					} else {
+						error(l, format("Couldn't find member %s in type %s for argument types %s", memberName, typeName, argumentTypes));
+						return nullptr;
+					}
 				}
 			}
 
