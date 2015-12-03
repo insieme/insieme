@@ -356,6 +356,11 @@ namespace parser {
 			                      const ExpressionPtr& lowerBound, const ExpressionPtr& upperBound, const ExpressionPtr& stepExpr, const StatementPtr& body);
 
 			/**
+			 * declares a new record type and all it's default members
+			 */
+			void declareRecordType(const location& l, const std::string name);
+
+			/**
 			 * generates a new forward declaration for everything except member fields
 			 */
 			void genDeclaration(const location& l, const std::string name, const TypePtr& type);
