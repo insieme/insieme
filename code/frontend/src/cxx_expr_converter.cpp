@@ -283,7 +283,7 @@ namespace conversion {
 
 		//retIr = builder.callExpr(funcTy->getReturnType(), convertedOp, args);
 
-		assert_not_implemented();
+		//assert_not_implemented();
 
 		return retIr;
 	}
