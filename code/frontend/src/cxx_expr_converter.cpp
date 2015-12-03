@@ -283,7 +283,7 @@ namespace conversion {
 
 		//retIr = builder.callExpr(funcTy->getReturnType(), convertedOp, args);
 
-		assert_not_implemented();
+		//assert_not_implemented();
 
 		return retIr;
 	}
@@ -374,61 +374,12 @@ namespace conversion {
 		}
 		// we have a constructor, so we are building a class
 		else {
-			retExpr = core::lang::buildPtrFromRef(convertConstructExprInternal(converter, newExpr->getConstructExpr(), false));
-
-		//	core::ExpressionPtr ctorCall = Visit(callExpr->getConstructExpr());
-		//	frontend_assert(ctorCall.isa<core::CallExprPtr>()) << "aint constructor call in here, no way to translate NEW\n";
-
-		//	core::TypePtr type = converter.convertType(callExpr->getAllocatedType());
-		//	core::ExpressionPtr newCall = builder.undefinedNew(ctorCall->getType());
-
-		//	if(callExpr->isArray()) {
-		//		core::ExpressionPtr arrSizeExpr = converter.convertExpr(callExpr->getArraySize());
-		//		arrSizeExpr = core::types::castScalar(mgr.getLangBasic().getUInt8(), arrSizeExpr);
-
-		//		// if the object is a POD the construct expression visitor will return a variable
-		//		// which is of course no ctor. if this is the case we create a default constructor
-		//		// and use this one to initalize the new elements
-		//		if(!core::analysis::isConstructorCall(ctorCall)) {
-		//			auto ctor = core::analysis::createDefaultConstructor(type);
-		//			auto ret =
-		//			    builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getArrayCtor(), mgr.getLangBasic().getRefNew(), ctor, arrSizeExpr);
-		//			return ret;
-		//		}
-
-		//		// extract only the ctor function from the converted ctor call
-		//		core::ExpressionPtr ctorFunc = ctorCall.as<core::CallExprPtr>().getFunctionExpr();
-
-		//		frontend_assert(ctorFunc->getType().as<core::FunctionTypePtr>()->getParameterTypes().size()) << "not default ctor used in array construction\n";
-
-		//		retExpr =
-		//		    builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getArrayCtor(), mgr.getLangBasic().getRefNew(), ctorFunc, arrSizeExpr);
-		//	} else {
-		//		// the basic constructor translation defines a stack variable as argument for the call
-		//		// in order to turn this into a diynamic memory allocation, we only need to substitute
-		//		// the first argument for a heap location
-		//		core::CallExprAddress addr(ctorCall.as<core::CallExprPtr>());
-		//		if(insieme::core::analysis::isConstructorCall(ctorCall)) {
-		//			VLOG(2) << addr->getArgument(0).as<core::CallExprPtr>();
-		//			retExpr = core::transform::replaceNode(converter.mgr, addr->getArgument(0), newCall).as<core::CallExprPtr>();
-
-		//			retExpr = builder.callExpr(builder.getLangBasic().getScalarToArray(), retExpr);
-		//		} else {
-		//			// if constructor of is NOT userprovided we get back the "plain" object, no wrapping
-		//			// ctor to take care of for the exchange of "refVar" with "newCall"
-		//			if(!callExpr->getConstructExpr()->getConstructor()->isUserProvided()) {
-		//				VLOG(2) << addr.as<core::CallExprPtr>();
-		//				retExpr = core::transform::replaceNode(converter.mgr, addr, newCall).as<core::CallExprPtr>();
-
-		//				retExpr = builder.callExpr(builder.getLangBasic().getScalarToArray(), retExpr);
-		//			} else {
-		//				retExpr = builder.callExpr(builder.getLangBasic().getScalarToArray(), builder.refNew(addr->getArgument(0)));
-		//			}
-		//		}
-		//	}
+			if(newExpr->isArray()) {
+				frontend_assert(false) << "New array expressions on class types not yet supported!";
+			} else {
+				retExpr = core::lang::buildPtrFromRef(convertConstructExprInternal(converter, newExpr->getConstructExpr(), false));
+			}
 		}
-
-		if(!retExpr) assert_not_implemented();
 
 		return retExpr;
 	}

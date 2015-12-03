@@ -7,8 +7,4 @@ asm
 
 # Disabling tests because they fail in the backend
 # -> rec types are sometimes peeled, sometimes not
-rec_func_param_type
 global_rec_struct2
-
-# Disabled for lack of support of multiple translation units
-extern_array

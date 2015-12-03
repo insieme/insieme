@@ -43,6 +43,8 @@
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/encoder/lists.h"
 
+#include "insieme/utils/name_mangling.h"
+
 namespace insieme {
 namespace core {
 namespace analysis {
@@ -189,8 +191,8 @@ namespace analysis {
 			"  ctor(other: ref<class,t,f,cpp_ref>) {}"
 			"  ctor(other: ref<class,t,f,cpp_rref>) {}"
 			"  dtor virtual() {}"
-			"  lambda operator_assign : (rhs: ref<class,f,f,cpp_ref>) -> ref<class,f,f,cpp_ref> {}"
-			"  lambda operator_assign : (rhs: ref<class,f,f,cpp_rref>) -> ref<class,f,f,cpp_ref> {}"
+			"  lambda " + utils::getMangledOperatorAssignName() + " : (rhs: ref<class,f,f,cpp_ref>) -> ref<class,f,f,cpp_ref> {}"
+			"  lambda " + utils::getMangledOperatorAssignName() + " : (rhs: ref<class,f,f,cpp_rref>) -> ref<class,f,f,cpp_ref> {}"
 			"}")));
 	}
 
@@ -304,7 +306,7 @@ namespace analysis {
 		IRBuilder builder(manager);
 		EXPECT_FALSE(isTrivial(builder.parseType(
 			"struct class {"
-			"  lambda operator_assign : (rhs: ref<class,t,f,cpp_ref>) -> ref<class,f,f,cpp_ref> { return; }"
+			"  lambda " + utils::getMangledOperatorAssignName() + " : (rhs: ref<class,t,f,cpp_ref>) -> ref<class,f,f,cpp_ref> { return; }"
 			"}")));
 	}
 
@@ -313,7 +315,7 @@ namespace analysis {
 		IRBuilder builder(manager);
 		EXPECT_TRUE(isTrivial(builder.parseType(
 			"struct class {"
-			"  lambda operator_assign : (rhs: ref<class,t,f,cpp_ref>) -> ref<class,f,f,cpp_ref> { return ref_cast(this, type_lit(f), type_lit(f), type_lit(cpp_ref)); }"
+			"  lambda " + utils::getMangledOperatorAssignName() + " : (rhs: ref<class,t,f,cpp_ref>) -> ref<class,f,f,cpp_ref> { return ref_cast(this, type_lit(f), type_lit(f), type_lit(cpp_ref)); }"
 			"}")));
 	}
 
@@ -322,7 +324,7 @@ namespace analysis {
 		IRBuilder builder(manager);
 		EXPECT_FALSE(isTrivial(builder.parseType(
 			"struct class {"
-			"  lambda operator_assign : (rhs: ref<class,f,f,cpp_rref>) -> ref<class,f,f,cpp_ref> { return; }"
+			"  lambda " + utils::getMangledOperatorAssignName() + " : (rhs: ref<class,f,f,cpp_rref>) -> ref<class,f,f,cpp_ref> { return; }"
 			"}")));
 	}
 
@@ -331,7 +333,7 @@ namespace analysis {
 		IRBuilder builder(manager);
 		EXPECT_TRUE(isTrivial(builder.parseType(
 			"struct class {"
-			"  lambda operator_assign : (rhs: ref<class,f,f,cpp_rref>) -> ref<class,f,f,cpp_ref> { return ref_cast(this, type_lit(f), type_lit(f), type_lit(cpp_ref)); }"
+			"  lambda " + utils::getMangledOperatorAssignName() + " : (rhs: ref<class,f,f,cpp_rref>) -> ref<class,f,f,cpp_ref> { return ref_cast(this, type_lit(f), type_lit(f), type_lit(cpp_ref)); }"
 			"}")));
 	}
 
@@ -343,8 +345,8 @@ namespace analysis {
 			"  ctor() {}"
 			"  ctor(other: ref<class,t,f,cpp_ref>) {}"
 			"  ctor(other: ref<class,f,f,cpp_rref>) {}"
-			"  lambda operator_assign : (rhs: ref<class,t,f,cpp_ref>) -> ref<class,f,f,cpp_ref> { return ref_cast(this, type_lit(f), type_lit(f), type_lit(cpp_ref)); }"
-			"  lambda operator_assign : (rhs: ref<class,f,f,cpp_rref>) -> ref<class,f,f,cpp_ref> { return ref_cast(this, type_lit(f), type_lit(f), type_lit(cpp_ref)); }"
+			"  lambda " + utils::getMangledOperatorAssignName() + " : (rhs: ref<class,t,f,cpp_ref>) -> ref<class,f,f,cpp_ref> { return ref_cast(this, type_lit(f), type_lit(f), type_lit(cpp_ref)); }"
+			"  lambda " + utils::getMangledOperatorAssignName() + " : (rhs: ref<class,f,f,cpp_rref>) -> ref<class,f,f,cpp_ref> { return ref_cast(this, type_lit(f), type_lit(f), type_lit(cpp_ref)); }"
 			"}")));
 	}
 
@@ -358,8 +360,8 @@ namespace analysis {
 			"  ctor() {}"
 			"  ctor(other: ref<class,t,f,cpp_ref>) {}"
 			"  ctor(other: ref<class,f,f,cpp_rref>) {}"
-			"  lambda operator_assign : (rhs: ref<class,t,f,cpp_ref>) -> ref<class,f,f,cpp_ref> {}"
-			"  lambda operator_assign : (rhs: ref<class,f,f,cpp_rref>) -> ref<class,f,f,cpp_ref> {}"
+			"  lambda " + utils::getMangledOperatorAssignName() + " : (rhs: ref<class,t,f,cpp_ref>) -> ref<class,f,f,cpp_ref> {}"
+			"  lambda " + utils::getMangledOperatorAssignName() + " : (rhs: ref<class,f,f,cpp_rref>) -> ref<class,f,f,cpp_ref> {}"
 			"}")));
 	}
 
@@ -368,13 +370,13 @@ namespace analysis {
 		IRBuilder builder(manager);
 		EXPECT_FALSE(isTrivial(builder.parseType(
 			"let base = struct base_class {"
-			"  lambda operator_assign : (rhs: ref<base_class,f,f,cpp_ref>) -> ref<nase_class,f,f,cpp_ref> { return; }"
+			"  lambda " + utils::getMangledOperatorAssignName() + " : (rhs: ref<base_class,f,f,cpp_ref>) -> ref<nase_class,f,f,cpp_ref> { return; }"
 			"} in struct class : [public base] {"
 			"  ctor() {}"
 			"  ctor(other: ref<class,t,f,cpp_ref>) {}"
 			"  ctor(other: ref<class,t,f,cpp_rref>) {}"
-			"  lambda operator_assign : (rhs: ref<class,f,f,cpp_ref>) -> ref<class,f,f,cpp_ref> {}"
-			"  lambda operator_assign : (rhs: ref<class,f,f,cpp_rref>) -> ref<class,f,f,cpp_ref> {}"
+			"  lambda " + utils::getMangledOperatorAssignName() + " : (rhs: ref<class,f,f,cpp_ref>) -> ref<class,f,f,cpp_ref> {}"
+			"  lambda " + utils::getMangledOperatorAssignName() + " : (rhs: ref<class,f,f,cpp_rref>) -> ref<class,f,f,cpp_ref> {}"
 			"}")));
 	}
 
@@ -392,7 +394,7 @@ namespace analysis {
 		IRBuilder builder(manager);
 		EXPECT_FALSE(isTrivial(builder.parseType(
 			"let base = struct base_class {"
-			"  lambda operator_assign : (rhs: ref<base_class,t,f,cpp_ref>) -> ref<base_class,f,f,cpp_ref> { 5; return ref_cast(this, type_lit(f), type_lit(f), type_lit(cpp_ref)); }"
+			"  lambda " + utils::getMangledOperatorAssignName() + " : (rhs: ref<base_class,t,f,cpp_ref>) -> ref<base_class,f,f,cpp_ref> { 5; return ref_cast(this, type_lit(f), type_lit(f), type_lit(cpp_ref)); }"
 			"} in struct class : [public base] { }")));
 	}
 
@@ -486,7 +488,7 @@ namespace analysis {
 
 		{
 			auto funType = builder.functionType(toVector(thisType.as<TypePtr>()), FK_MEMBER_FUNCTION);
-			auto member = builder.memberFunction(false, "operator_assign", builder.lambdaExpr(funType, builder.parameters(toVector(builder.variable(thisType))), builder.getNoOp()));
+			auto member = builder.memberFunction(false, utils::getMangledOperatorAssignName(), builder.lambdaExpr(funType, builder.parameters(toVector(builder.variable(thisType))), builder.getNoOp()));
 			EXPECT_FALSE(isaDefaultMember(record, member));
 		}
 	}

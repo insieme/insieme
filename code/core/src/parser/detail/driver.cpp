@@ -49,6 +49,7 @@
 
 #include "insieme/core/types/match.h"
 #include "insieme/core/types/return_type_deduction.h"
+#include "insieme/core/types/type_variable_deduction.h"
 
 #include "insieme/core/parser/detail/scanner.h"
 
@@ -60,6 +61,8 @@
 
 #include "insieme/core/lang/extension.h"
 #include "insieme/core/lang/extension_registry.h"
+
+#include "insieme/utils/name_mangling.h"
 
 // this last one is generated and the path will be provided to the command
 #include "inspire_parser.hpp"
@@ -257,10 +260,21 @@ namespace parser {
 				// look for the key in the global scope
 				auto lookupResult = lookupDeclaredInGlobalScope(keyName);
 				if(!lookupResult) {
-					error(l, format("Unable to locate member %s in type %s", memberName, *genericObjectType));
-					return nullptr;
+					//if we didn't find the symbol in the global scope, we search the TU for it
+					for(const auto& mapEntry : tu.getFunctions()) {
+						const auto& key = mapEntry.first;
+						if(key.getValue()->getValue() == keyName) {
+							lookupResult = key;
+						}
+					}
 
-				} else if(!lookupResult.isa<LiteralPtr>()) {
+					if (!lookupResult) {
+						error(l, format("Unable to locate member %s in type %s", memberName, *genericObjectType));
+						return nullptr;
+					}
+				}
+
+				if(!lookupResult.isa<LiteralPtr>()) {
 					error(l, format("Member %s in type %s is not a literal", memberName, *genericObjectType));
 					return nullptr;
 				}
@@ -557,9 +571,6 @@ namespace parser {
 			auto memberName = key->getValue()->getValue();
 			tu.addFunction(key, fun);
 
-			// only declare the symbol implicitly if it hasn't already been declared
-			if(!isSymbolDeclaredInGlobalScope(memberName)) { declareSymbolInGlobalScope(l, memberName, key); }
-
 			return key;
 		}
 
@@ -596,9 +607,6 @@ namespace parser {
 			auto key = builder.getLiteralForDestructor(dtorType);
 			auto memberName = key->getValue()->getValue();
 			tu.addFunction(key, fun);
-
-			// only declare the symbol implicitly if it hasn't already been declared
-			if(!isSymbolDeclaredInGlobalScope(memberName)) { declareSymbolInGlobalScope(l, memberName, key); }
 
 			return key;
 		}
@@ -639,9 +647,6 @@ namespace parser {
 			auto key = builder.getLiteralForMemberFunction(fun->getFunctionType(), name);
 			auto memberName = key->getValue()->getValue();
 			tu.addFunction(key, fun);
-
-			// only declare the symbol implicitly if it hasn't already been declared
-			if(!isSymbolDeclaredInGlobalScope(memberName)) { declareSymbolInGlobalScope(l, memberName, key); }
 
 			return builder.memberFunction(virtl, name, key);
 		}
@@ -712,25 +717,40 @@ namespace parser {
 				std::string functionName = func.as<CallExprPtr>()->getArgument(1).as<LiteralPtr>()->getValue()->getValue();
 				std::string memberName = typeName + "::" + functionName;
 
-				// now we have to find a function registered in the TU which has the same literal name and the same parameter types. we have to ignore the
+				// now we have to find a function registered in the TU which has the same literal name and the correct parameter types. we have to ignore the
 				// result type
 				const auto argumentTypes = extractTypes(args);
+				LiteralPtr candidate;
 				for(const auto& mapEntry : tu.getFunctions()) {
 					const auto& key = mapEntry.first;
 					if(key.getValue()->getValue() == memberName) {
 						if(const auto& keyType = key->getType().isa<FunctionTypePtr>()) {
-							if(keyType->isMember() && keyType->getParameterTypeList() == argumentTypes) {
-								func = key;
-								break;
+							if(keyType->isMember()) {
+								//if the found function is an exact match, we can stop the search right away
+								if (keyType->getParameterTypeList() == argumentTypes) {
+									func = key;
+									break;
+
+								//otherwise, if we don't already have a matching candidate and can find a valid parameter substitution, we remember it
+								} else if (!candidate && types::getTypeVariableInstantiation(mgr, keyType->getParameterTypeList(), argumentTypes)) {
+									candidate = key;
+								}
 							}
 						}
 					}
 				}
 
-				//if we didn't change the function, we didn't find a suitable one
+				//if we didn't change the function, we didn't find an exact match
 				if (func == getScalar(callable)) {
-					error(l, format("Couldn't find member %s in type %s for argument types %s", memberName, typeName, argumentTypes));
-					return nullptr;
+					//if we found a candidate then we take that one
+					if (candidate) {
+						func = candidate;
+
+						//otherwise we fail
+					} else {
+						error(l, format("Couldn't find member %s in type %s for argument types %s", memberName, typeName, argumentTypes));
+						return nullptr;
+					}
 				}
 			}
 
@@ -967,6 +987,68 @@ namespace parser {
 			return builder.forStmt(iteratorVariable, getScalar(lowerBound), getScalar(upperBound), getScalar(stepExpr), body);
 		}
 
+		void InspireDriver::declareRecordType(const location& l, const std::string name) {
+			const GenericTypePtr key = builder.genericType(name);
+
+			//declare the type
+			declareType(l, name, key);
+
+			//now register all the default members
+			TypePtr thisType = builder.refType(key);
+
+			{
+				//default constructor
+				auto ctorType = builder.functionType(toVector(thisType), thisType, FK_CONSTRUCTOR);
+				auto lit = builder.getLiteralForConstructor(ctorType);
+				tu.addFunction(lit, builder.lambdaExpr(ctorType, builder.parameters(), builder.getNoOp()));
+			}
+
+			{
+				//default copy constructor
+				TypePtr otherType = builder.refType(analysis::getReferencedType(thisType), true, false, lang::ReferenceType::Kind::CppReference);
+				auto ctorType = builder.functionType(toVector(thisType, otherType), thisType, FK_CONSTRUCTOR);
+				auto lit = builder.getLiteralForConstructor(ctorType);
+				tu.addFunction(lit, builder.lambdaExpr(ctorType, builder.parameters(), builder.getNoOp()));
+			}
+
+			{
+				//default move constructor
+				TypePtr otherType = builder.refType(analysis::getReferencedType(thisType), false, false, lang::ReferenceType::Kind::CppRValueReference);
+				auto ctorType = builder.functionType(toVector(thisType, otherType), thisType, FK_CONSTRUCTOR);
+				auto lit = builder.getLiteralForConstructor(ctorType);
+				tu.addFunction(lit, builder.lambdaExpr(ctorType, builder.parameters(), builder.getNoOp()));
+			}
+
+			{
+				//default destructor
+				auto dtorType = builder.functionType(toVector(thisType), thisType, FK_DESTRUCTOR);
+				auto lit = builder.getLiteralForDestructor(dtorType);
+				tu.addFunction(lit, builder.lambdaExpr(dtorType, builder.parameters(), builder.getNoOp()));
+			}
+
+			{
+				//default copy assignment operator
+				TypePtr otherType = builder.refType(analysis::getReferencedType(thisType), true, false, lang::ReferenceType::Kind::CppReference);
+				TypePtr resType = builder.refType(analysis::getReferencedType(thisType), false, false, lang::ReferenceType::Kind::CppReference);
+				auto funType = builder.functionType(toVector(thisType, otherType), resType, FK_MEMBER_FUNCTION);
+				auto lit = builder.getLiteralForMemberFunction(funType, utils::getMangledOperatorAssignName());
+				tu.addFunction(lit, builder.lambdaExpr(funType, builder.parameters(), builder.getNoOp()));
+			}
+
+			{
+				//default move assignment operator
+				TypePtr otherType = builder.refType(analysis::getReferencedType(thisType), false, false, lang::ReferenceType::Kind::CppRValueReference);
+				TypePtr resType = builder.refType(analysis::getReferencedType(thisType), false, false, lang::ReferenceType::Kind::CppReference);
+				auto funType = builder.functionType(toVector(thisType, otherType), resType, FK_MEMBER_FUNCTION);
+				auto lit = builder.getLiteralForMemberFunction(funType, utils::getMangledOperatorAssignName());
+				tu.addFunction(lit, builder.lambdaExpr(funType, builder.parameters(), builder.getNoOp()));
+			}
+		}
+
+		void InspireDriver::genDeclaration(const location& l, const std::string name, const TypePtr& type) {
+			declareSymbol(l, name, builder.literal(name, type));
+		}
+
 		ExpressionPtr InspireDriver::genThis(const location& l) {
 			if(inLambda) {
 				return genThisInLambda(l);
@@ -1007,7 +1089,7 @@ namespace parser {
 				replacements[temporaryName] = emptyName;
 				replacements[builder.stringValue(temporaryName->getValue() + "::ctor")] = builder.stringValue("::ctor");
 				replacements[builder.stringValue(temporaryName->getValue() + "::dtor")] = builder.stringValue("::dtor");
-				replacements[builder.stringValue(temporaryName->getValue() + "::operator_assign")] = builder.stringValue("::operator_assign");
+				replacements[builder.stringValue(temporaryName->getValue() + "::" + utils::getMangledOperatorAssignName())] = builder.stringValue("::" + utils::getMangledOperatorAssignName());
 			}
 			result = transform::replaceAll(mgr, result, replacements, transform::globalReplacement);
 		}
@@ -1240,7 +1322,7 @@ namespace parser {
 			auto key = builder.genericType(name);
 
 			// only declare the type implicitly if it hasn't already been declared
-			if(!isTypeDeclaredInCurrentScope(name)) { declareType(l, name, key); }
+			if(!isTypeDeclaredInCurrentScope(name)) { declareRecordType(l, name); }
 
 			openScope();
 			currentRecordStack.push_back({key, getCurrentScope()});

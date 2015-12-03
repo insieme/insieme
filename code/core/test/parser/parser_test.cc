@@ -46,6 +46,8 @@
 
 #include "insieme/core/checks/full_check.h"
 
+#include "insieme/utils/name_mangling.h"
+
 
 namespace insieme {
 namespace core {
@@ -951,6 +953,52 @@ namespace parser {
 		ASSERT_TRUE(constructedChecked.empty()) << constructedChecked;
 
 		EXPECT_EQ(parsed, constructed);
+	}
+
+	TEST(IR_Parser, DefaultConstructedCalls) {
+		NodeManager nm;
+		IRBuilder builder(nm);
+
+		const std::string testString = "var ref<A,f,f,plain> a = A::(ref_var(type_lit(A)));"         //call the default constructor
+		                               "var ref<A,f,f,plain> a_copy = A::(ref_var(type_lit(A)), a);" //call the copy constructor
+		                               "var ref<A,f,f,plain> a_move = A::(ref_var(type_lit(A)), a);" //call the move constructor
+		                               "A::~(a);"                                                    //call the default destructor
+		                               "a." + utils::getMangledOperatorAssignName() + "(a);"         //call the default copy assignment operator
+		                               "a." + utils::getMangledOperatorAssignName() + "(a);";        //call the default move assignment operator
+
+		{
+			auto res = builder.parseStmt("def struct A { };" //call the default generated members outside the struct
+			                              "{"
+			                              + testString +
+			                              "}");
+
+			EXPECT_TRUE(res);
+			EXPECT_TRUE(checks::check(res).empty()) << checks::check(res);
+		}
+
+		{
+			auto res = builder.parseType("def struct A {" //call the default generated members within the struct itself
+			                             "  lambda f : () -> unit {"
+			                             + testString +
+			                             "  }"
+			                             "}; A");
+
+			EXPECT_TRUE(res);
+			EXPECT_TRUE(checks::check(res).empty()) << checks::check(res);
+		}
+
+		{
+			auto res = builder.parseType("decl struct A;" //call the default generated members in another struct after only a forward declaration has been encountered
+			                             "def struct B {"
+			                             "  lambda f : () -> unit {"
+			                             + testString +
+			                             "  }"
+			                             "};"
+			                             "def struct A { }; B");
+
+			EXPECT_TRUE(res);
+			EXPECT_TRUE(checks::check(res).empty()) << checks::check(res);
+		}
 	}
 
 } // parser

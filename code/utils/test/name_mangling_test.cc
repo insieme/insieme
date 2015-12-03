@@ -61,3 +61,43 @@ TEST(NameMangling, Empty) {
 	EXPECT_EQ("IMP__not_really_mangle_empty__IMLOC_foo_dot_cpp_42_7", mangle("EMPTY", "foo.cpp", 42, 7));
 	EXPECT_EQ("EMPTY", demangle("IMP__not_really_mangle_empty__IMLOC_foo_dot_cpp_42_7"));
 }
+
+TEST(NameMangling, OperatorManglingPrecedence) {
+	EXPECT_EQ("IMP__operator_plus_",          mangle("operator+"));
+	EXPECT_EQ("IMP__operator_minus_",         mangle("operator-"));
+	EXPECT_EQ("IMP__operator_mult_",          mangle("operator*"));
+	EXPECT_EQ("IMP__operator_div_",           mangle("operator/"));
+	EXPECT_EQ("IMP__operator_mod_",           mangle("operator%"));
+	EXPECT_EQ("IMP__operator_xor_",           mangle("operator^"));
+	EXPECT_EQ("IMP__operator_and_",           mangle("operator&"));
+	EXPECT_EQ("IMP__operator_or_",            mangle("operator|"));
+	EXPECT_EQ("IMP__operator_complement_",    mangle("operator~"));
+	EXPECT_EQ("IMP__operator_assign_",        mangle("operator="));
+	EXPECT_EQ("IMP__operator_lt_",            mangle("operator<"));
+	EXPECT_EQ("IMP__operator_gt_",            mangle("operator>"));
+	EXPECT_EQ("IMP__operator_plus_assign_",   mangle("operator+="));
+	EXPECT_EQ("IMP__operator_minus_assign_",  mangle("operator-="));
+	EXPECT_EQ("IMP__operator_mult_assign_",   mangle("operator*="));
+	EXPECT_EQ("IMP__operator_div_assign_",    mangle("operator/="));
+	EXPECT_EQ("IMP__operator_mod_assign_",    mangle("operator%="));
+	EXPECT_EQ("IMP__operator_xor_assign_",    mangle("operator^="));
+	EXPECT_EQ("IMP__operator_and_assign_",    mangle("operator&="));
+	EXPECT_EQ("IMP__operator_or_assign_",     mangle("operator|="));
+	EXPECT_EQ("IMP__operator_lshift_",        mangle("operator<<"));
+	EXPECT_EQ("IMP__operator_rshift_",        mangle("operator>>"));
+	EXPECT_EQ("IMP__operator_rshift_assign_", mangle("operator>>="));
+	EXPECT_EQ("IMP__operator_lshift_assign_", mangle("operator<<="));
+	EXPECT_EQ("IMP__operator_eq_",            mangle("operator=="));
+	EXPECT_EQ("IMP__operator_neq_",           mangle("operator!="));
+	EXPECT_EQ("IMP__operator_le_",            mangle("operator<="));
+	EXPECT_EQ("IMP__operator_ge_",            mangle("operator>="));
+	EXPECT_EQ("IMP__operator_land_",          mangle("operator&&"));
+	EXPECT_EQ("IMP__operator_lor_",           mangle("operator||"));
+	EXPECT_EQ("IMP__operator_inc_",           mangle("operator++"));
+	EXPECT_EQ("IMP__operator_dec_",           mangle("operator--"));
+	EXPECT_EQ("IMP__operator_comma_",         mangle("operator,"));
+	EXPECT_EQ("IMP__operator_memberpointer_", mangle("operator->*"));
+	EXPECT_EQ("IMP__operator_member_",        mangle("operator->"));
+	EXPECT_EQ("IMP__operator_call_",          mangle("operator()"));
+	EXPECT_EQ("IMP__operator_subscript_",     mangle("operator[]"));
+}

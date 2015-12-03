@@ -35,10 +35,11 @@
  */
 
 struct SimplestConstructor {
-	SimplestConstructor() {}
-	~SimplestConstructor() {}
+	SimplestConstructor() = default;
+	~SimplestConstructor() = default;
 };
 
+#define SimplestConstructor_IR R"( def struct IMP_SimplestConstructor { }; )"
 
 int main() {
 	;
@@ -84,10 +85,23 @@ int main() {
 	}
 
 	// Class types ---------------------------------------------------------------------------------------------------------------------------------------------
+	
+	#pragma test expect_ir(SimplestConstructor_IR, R"({
+		var ref<ptr<IMP_SimplestConstructor>,f,f,plain> v0 = ref_var_init(ptr_from_ref(IMP_SimplestConstructor::(ref_new(type_lit(IMP_SimplestConstructor)))));
+		ref_delete(ptr_to_ref(*v0));
+	})")
+	{
+		SimplestConstructor *simple = new SimplestConstructor;
+		delete simple;
+	}
 
+	//# pragma test expect_ir(SimplestConstructor_IR, R"({
+	//	var ref<ptr<IMP_SimplestConstructor>,f,f,plain> v0 = ref_var_init(ptr_from_ref(IMP_SimplestConstructor::(ref_new(type_lit(IMP_SimplestConstructor)))));
+	//	ref_delete(ptr_to_ref(*v0));
+	//})")
 	//{
-	//	SimplestConstructor *simple = new SimplestConstructor;
-	//	delete simple;
+	//	SimplestConstructor* arrsimple = new SimplestConstructor[3];
+	//	delete [] arrsimple;
 	//}
 
 

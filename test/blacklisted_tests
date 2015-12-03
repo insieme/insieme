@@ -8,7 +8,6 @@ vectors
 vivid
 
 # Disabling cpp test cases for the time being
-cpp
 interceptor
 
 # Disabling tests because they fail with assertion:

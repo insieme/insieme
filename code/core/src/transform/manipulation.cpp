@@ -922,21 +922,6 @@ namespace transform {
 		return build.bindExpr(params, outlined);
 	}
 
-	LambdaExprPtr privatizeVariables(NodeManager& manager, const LambdaExprPtr& root, const std::vector<VariablePtr>& varsToPrivatize) {
-		auto body = root->getBody();
-
-		IRBuilder build(manager);
-		um::PointerMap<NodePtr, NodePtr> replacements;
-
-		for_each(varsToPrivatize, [&](VariablePtr p) {
-			auto var = build.variable(p->getType());
-			replacements[p] = var;
-		});
-		auto newBody = replaceAll(manager, body, replacements);
-
-		return dynamic_pointer_cast<const LambdaExpr>(newBody);
-	}
-
 	LambdaExprPtr instantiate(NodeManager& manager, const LambdaExprPtr& lambda, const types::SubstitutionOpt& substitution) {
 		// check for early exit
 		if(!substitution || substitution->empty()) { return lambda; }

@@ -160,7 +160,7 @@ namespace tu {
 
 		void addFunction(const core::LiteralPtr& symbol, const core::LambdaExprPtr& definition) {
 			assert_eq(*symbol->getType(), *definition->getType());
-			functions.insert({mgr->get(symbol), mgr->get(definition)});
+			functions[symbol] = definition;
 		}
 
 		/**

@@ -46,6 +46,7 @@
 #include "insieme/core/test/test_utils.h"
 
 #include "insieme/utils/assert.h"
+#include "insieme/utils/name_mangling.h"
 
 #include <string>
 #include <map>
@@ -116,11 +117,11 @@ namespace lang {
 
 		// As I passed the extension with the name "complex" already defined this should be expanded
 		EXPECT_EQ("AP(struct "
-			      "{foo:NamedType,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,"
-			      "operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>} v0 = rec ref_var.{ref_var=fun(ref<type<'a>,f,f,plain> v0) {return "
+			      "{foo:NamedType,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor()," + utils::getMangledOperatorAssignName() + "(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,"
+			      + utils::getMangledOperatorAssignName() + "(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>} v0 = rec ref_var.{ref_var=fun(ref<type<'a>,f,f,plain> v0) {return "
 			      "ref_alloc(ref_deref(v0), mem_loc_stack);}}(type<struct "
-			      "{foo:NamedType,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor(),operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,"
-			      "operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}>))",
+			      "{foo:NamedType,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor()," + utils::getMangledOperatorAssignName() + "(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,"
+			      + utils::getMangledOperatorAssignName() + "(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}>))",
 			      toString(builder.normalize(parser::parseStmt(manager, "var complex a;", false, existingNames, typeAlises))));
 
 		// inside of a compound stmt we shadow previous vararations

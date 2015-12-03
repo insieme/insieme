@@ -46,6 +46,7 @@
 
 #include "insieme/backend/c_ast/c_ast_printer.h"
 
+#include "insieme/utils/name_mangling.h"
 #include "insieme/utils/test/test_utils.h"
 
 
@@ -1047,7 +1048,7 @@ namespace backend {
 
 
 		EXPECT_EQ("(struct {a:int<4>,b:int<4>,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor(),"
-		          "operator_assign(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,operator_assign(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}::(int<4>)->real<4>)", toString(*type));
+		          + utils::getMangledOperatorAssignName() + "(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>," + utils::getMangledOperatorAssignName() + "(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}::(int<4>)->real<4>)", toString(*type));
 		EXPECT_TRUE(info.plain);
 		EXPECT_EQ("name", toC(info.lValueType)); // there is an implicit typedef, therefore the type is used with a symbol name
 		EXPECT_EQ("name", toC(info.rValueType));

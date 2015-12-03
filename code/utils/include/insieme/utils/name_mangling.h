@@ -54,5 +54,9 @@ namespace utils {
 	/// Retrieve the original name from the mangled representation.
 	///
 	std::string demangle(std::string name);
+
+	/// Returns the mangled name for the assignment operator.
+	///
+	const std::string& getMangledOperatorAssignName();
 }
 }

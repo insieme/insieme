@@ -320,9 +320,6 @@ namespace transform {
 	 ** */
 	BindExprPtr extractLambda(NodeManager& manager, const StatementPtr& root, const std::vector<VariablePtr>& passAsArguments);
 
-
-	LambdaExprPtr privatizeVariables(NodeManager& manager, const LambdaExprPtr& root, const std::vector<VariablePtr>& varsToPrivatize);
-
 	/**
 	 * Instantiates the type variables within the given lambda based on the given variable instantiation and
 	 * returns the same lambda, having its generic parameters fixed.
