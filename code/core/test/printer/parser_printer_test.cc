@@ -56,6 +56,8 @@ namespace parser {
 	using namespace detail;
 	using namespace insieme::core::printer;
 
+	bool test_statement(NodeManager& nm, const std::string& x);
+
 	bool test_type(NodeManager &nm, const std::string &x) {
 		IRBuilder builder(nm);
 
@@ -210,6 +212,24 @@ namespace parser {
 		// precedence
 		EXPECT_TRUE(test_expression(nm, "1 + 0 * 5"));
 		EXPECT_TRUE(test_expression(nm, "1 * 0 + 5"));
+
+		EXPECT_TRUE(test_statement(nm, "def union uni { a : int<4>; }; { var ref<uni,f,f,plain> a; }"));
+		EXPECT_TRUE(test_statement(nm, "def union uni { a : int<4>; }; { <uni> { 4 }; }"));
+		EXPECT_TRUE(test_statement(nm, ""
+				"def struct BU { b : int<8>; };"
+				"def union uni { a : int<4>; b : BU; };"
+				"{"
+				"  auto b = <BU> {6};"
+				"  auto u1 = <uni> { b };"
+				"  auto u2 = <uni> { 3 };"
+				"  auto u3 = <uni> { <BU> { 5 } };"
+				"}"));
+
+		EXPECT_TRUE(test_expression(nm, "def struct x { a : int<4>; b : int<4>; }; <x> { 4, 5 }"));
+		EXPECT_TRUE(test_expression(nm, "def struct x { a : uint<4>; b : int<4>; }; <x> { 4, -5 }"));
+		EXPECT_TRUE(test_expression(nm, "def struct x { a : int<4>; b : uint<4>; }; <x> { -4, 5 }"));
+		EXPECT_TRUE(test_expression(nm, "def struct x { a : int<4>; }; <x> { 4 }"));
+		EXPECT_TRUE(test_expression(nm, "def struct x { }; <x> { }"));
 
 		EXPECT_TRUE(test_expression(nm, "() -> unit { }"));
 		EXPECT_TRUE(test_expression(nm, "( a : int<4>) -> unit { }"));

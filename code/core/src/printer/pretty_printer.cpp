@@ -1248,16 +1248,18 @@ namespace printer {
 			}
 
 			PRINT(StructExpr) {
-				out << "struct{" << ::join(",", node->getMembers()->getElements(), [&](std::ostream& out, const NamedValueAddress& cur) {
-					VISIT(cur->getName());
-					out << "=";
+				out << "<";
+				VISIT(node->getType());
+				out << "> {" <<	join(",", node->getMembers()->getElements(), [&](std::ostream& out, const NamedValueAddress& cur) {
 					VISIT(cur->getValue());
 				}) << "}";
 			}
 
 			PRINT(UnionExpr) {
-				out << "union{" << node->getMemberName()->getValue() << "=";
-				visit(node->getMember());
+				out << "<";
+				VISIT(node->getType());
+				out << "> {";
+				VISIT(node->getMember());
 				out << "}";
 			}
 

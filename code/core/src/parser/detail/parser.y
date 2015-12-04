@@ -298,7 +298,7 @@ alias : "alias" abstract_type "=" type                                      { dr
 
 declaration : "decl" struct_or_union "identifier"                           { driver.declareRecordType(@3, $3); }
             | "decl" "identifier" ":" type                                  { driver.genDeclaration(@2, $2, $4); }
-            | "decl" "identifier" "::" "identifier" ":" type                { assert_not_implemented(); }
+            | "decl" "identifier" "::" "identifier" ":" type                { driver.registerField(@4, $2, $4, $6); }
             ;
 
 definition : "def" record_definition                                        { $$ = $2; }
@@ -650,10 +650,10 @@ initializer : "<" type ">" "{" expressions "}"                            { $$ =
 unary_op : "-" expression                                                 { $$ = driver.builder.minus(driver.getScalar(driver.getOperand($2))); }       %prec UMINUS
          | "*" expression                                                 { $$ = driver.genDerefExpr(@1, $2); }                                         %prec UDEREF
          | "!" expression                                                 { $$ = driver.builder.logicNeg(driver.getScalar(driver.getOperand($2))); }    %prec UNOT
-         | expression "." "identifier"                                    { $$ = driver.genMemberAccess(@1, $1, $3); }
-         | expression "." "int"                                           { $$ = driver.genTupleAccess(@1, $1, $3); }
-         | expression "->" "identifier"                                   { $$ = driver.genMemberAccess(@1, $1, $3); }
-         | expression "->" "int"                                          { $$ = driver.genTupleAccess(@1, $1, $3); }
+         | expression "." "identifier"                                    { $$ = driver.genMemberAccess(@3, $1, $3); }
+         | expression "." "int"                                           { $$ = driver.genTupleAccess(@3, $1, $3); }
+         | expression "->" "identifier"                                   { $$ = driver.genMemberAccess(@3, $1, $3); }
+         | expression "->" "int"                                          { $$ = driver.genTupleAccess(@3, $1, $3); }
          | "CAST" "(" type ")" expression                                 { $$ = driver.builder.castExpr($3, $5); }
          | expression "." "as" "(" type ")"                               { $$ = driver.genAsExpr(@1, $1, $5); }
          ;
