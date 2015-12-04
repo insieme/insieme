@@ -67,6 +67,8 @@ if(MSVC)
 	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd\"4458\"" )
 	# disable warning "forcing value to bool 'true' or 'false' (performance warning)"
 	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd\"4800\"" )
+	# disable warning "symbol will be dynamically initialized (implementation limitation)" because MSVC 2015.1 is still buggy on that
+	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd\"4592\"" )
 	
 	# properly configure how to link the MSVC runtime library, static <-> shared and debug <-> release
 	if(MSVC_SHARED_RUNTIME)
