@@ -228,6 +228,14 @@ namespace core {
 		return parseProgram(code, toLazy(symbols));
 	}
 
+	vector<NodeAddress> IRBuilderBaseModule::parseAddressesType(const string& code, const LazyDefinitionMap& symbols) const {
+		return parser::parseAddressesType(manager, code, true, addStandardSymbols(manager, symbols), getStandardAliasMap(manager));
+	}
+
+	vector<NodeAddress> IRBuilderBaseModule::parseAddressesType(const string& code, const EagerDefinitionMap& symbols) const {
+		return parseAddressesType(code, toLazy(symbols));
+	}
+
 	vector<NodeAddress> IRBuilderBaseModule::parseAddressesExpression(const string& code, const LazyDefinitionMap& symbols) const {
 		return parser::parseAddressesExpression(manager, code, true, addStandardSymbols(manager, symbols), getStandardAliasMap(manager));
 	}

@@ -227,7 +227,7 @@ namespace parser {
 						assert(false && "Only marker expressions and statements should be marked.");
 					}
 				}
-			});
+			}, true, true);
 
 			// remove marks from code
 			root = removeMarks(root);
@@ -242,6 +242,24 @@ namespace parser {
 		}
 
 	} // annon namespace
+
+	std::vector<NodeAddress> parseAddressesType(NodeManager& manager, const string& code, bool onFailThrow,
+		const DefinitionMap& definitions, const TypeAliasMap& aliases) {
+
+		InspireDriver driver(code, manager);
+		saveSymbolTable(driver, definitions);
+		appendTypeAliases(driver, aliases);
+		auto root = driver.parseType();
+
+		// check the result
+		if (!root) {
+			checkErrors(driver, onFailThrow);
+			return std::vector<NodeAddress>();
+		}
+
+		return extractAddresses(root);
+	}
+
 
 	std::vector<NodeAddress> parseAddressesExpression(NodeManager& manager, const string& code, bool onFailThrow,
 	                                                   const DefinitionMap& definitions, const TypeAliasMap& aliases) {

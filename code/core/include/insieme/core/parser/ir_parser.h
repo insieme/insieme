@@ -157,6 +157,23 @@ namespace parser {
 	                        const DefinitionMap& definitions = DefinitionMap(), const TypeAliasMap& aliases = TypeAliasMap());
 
 	/**
+	* A specialized version of the general parse function which is considering labels within the IR marking constructs
+	* which's addresses should be returned by the parsing process. Expressions within the given type can be marked using $ .. $ symbols. For Instance,
+	* parsing 1 + $2 * $3$$ will return a list of addresses referencing the 2*3 part and the 3. The addresses in the
+	* resulting vector will be order according to their natural order (lexicographically).
+	*
+	* @param manager the manager to be used for creating the resulting IR DAG
+	* @param code the code fragment to be parsed, including marked locations.
+	* @param onFailThrow a flag determining whether a parsing error should result in an empty list or a Parsing Exception
+	* @param definitions a map of pre-defined symbols
+	* @param aliases a map of pre-defined type aliases
+	* @return a list of all addresses referencing marked sub-constructs within the parsed IR or an empty list of the parsing failed and onFailThrow was not set
+	* @throw an IRParserException if the parsing failed and the onFailThrow flag was set; the Exception tries to explain the reason for the parsing error.
+	*/
+	std::vector<NodeAddress> parseAddressesType(NodeManager& manager, const string& code, bool onFailThrow = false,
+		const DefinitionMap& definitions = DefinitionMap(), const TypeAliasMap& aliases = TypeAliasMap());
+
+	/**
 	 * A specialized version of the general parse function which is considering labels within the IR marking constructs
 	 * which's addresses should be returned by the parsing process. Expressions can be marked using $ .. $ symbols. For Instance,
 	 * parsing 1 + $2 * $3$$ will return a list of addresses referencing the 2*3 part and the 3. The addresses in the
