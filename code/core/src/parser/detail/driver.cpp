@@ -265,6 +265,7 @@ namespace parser {
 						const auto& key = mapEntry.first;
 						if(key.getValue()->getValue() == keyName) {
 							lookupResult = key;
+							break;
 						}
 					}
 
