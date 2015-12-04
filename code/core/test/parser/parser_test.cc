@@ -222,7 +222,7 @@ namespace parser {
 
 		EXPECT_TRUE(test_type(nm, "def struct A {" //reference our own field
 		                          "  a : int<4>;"
-		                          "  lambda f : () -> int<4> { return *a; }"
+		                          "  lambda f : () -> int<4> { return a; }"
 		                          "}; A"));
 
 		EXPECT_TRUE(test_type(nm, "def struct A {" //write our own field
@@ -232,7 +232,7 @@ namespace parser {
 
 		EXPECT_TRUE(test_type(nm, "def struct A {" //reference our own field using the this pointer
 		                          "  a : int<4>;"
-		                          "  lambda f : () -> int<4> { return *this.a; }"
+		                          "  lambda f : () -> int<4> { return this.a; }"
 		                          "}; A"));
 
 		EXPECT_TRUE(test_type(nm, "def struct A {" //reference the field of another struct - that struct is created locally. this also tests the init expression
@@ -241,7 +241,7 @@ namespace parser {
 		                          "def struct B {"
 		                          "  lambda f : () -> int<4> {"
 		                          "    var ref<A,f,f,plain> a;"
-		                          "    return *(a.a);"
+		                          "    return a.a;"
 		                          "  }"
 		                          "}; B"));
 
@@ -251,7 +251,7 @@ namespace parser {
 		                          "def struct B {"
 		                          "  a : A;"
 		                          "  lambda f : () -> int<4> {"
-		                          "    return *(a.a);"
+		                          "    return a.a;"
 		                          "  }"
 		                          "}; B"));
 
@@ -271,7 +271,7 @@ namespace parser {
 		                          "def struct B {"
 		                          "  a : A;"
 		                          "  lambda f : () -> int<4> {"
-		                          "    return *(this.a.a);"
+		                          "    return this.a.a;"
 		                          "  }"
 		                          "}; B"));
 

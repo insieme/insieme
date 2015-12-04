@@ -281,7 +281,6 @@ namespace parser {
 
 				// now that we found the given member, create a member access expression to return
 				TypePtr memberType = lookupResult.as<LiteralPtr>()->getType();
-				if(analysis::isRefType(memberType)) { memberType = analysis::getReferencedType(memberType); }
 
 				// if the member is a member function
 				if(auto functionType = memberType.isa<FunctionTypePtr>()) {
