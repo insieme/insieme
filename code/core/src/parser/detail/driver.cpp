@@ -568,7 +568,6 @@ namespace parser {
 			auto fun = builder.lambdaExpr(ctorType, ingredients.params, ingredients.body);
 
 			auto key = builder.getLiteralForConstructor(ctorType);
-			auto memberName = key->getValue()->getValue();
 			tu.addFunction(key, fun);
 
 			return key;
@@ -605,7 +604,6 @@ namespace parser {
 			auto fun = builder.lambdaExpr(dtorType, ingredients.params, ingredients.body);
 
 			auto key = builder.getLiteralForDestructor(dtorType);
-			auto memberName = key->getValue()->getValue();
 			tu.addFunction(key, fun);
 
 			return key;
@@ -645,7 +643,6 @@ namespace parser {
 			declareSymbol(l, name, accessExpr);
 
 			auto key = builder.getLiteralForMemberFunction(fun->getFunctionType(), name);
-			auto memberName = key->getValue()->getValue();
 			tu.addFunction(key, fun);
 
 			return builder.memberFunction(virtl, name, key);
