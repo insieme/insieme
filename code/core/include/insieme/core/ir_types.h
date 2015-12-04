@@ -854,6 +854,28 @@ namespace core {
 		}
 
 		/**
+		* Obtains a list of addresses pointing to recursive references to any of the tag types defined 
+		* by this definition.
+		*
+		* @param reference the tag type reference to be searched for
+		* @return the list of recursive references within this definition, rooted by this definition.
+		*/
+	    const vector<TagTypeReferenceAddress>& getRecursiveReferences() const {
+			return this->getNode().getRecursiveReferences();
+		}
+
+		/**
+		* Obtains a list of addresses pointing to recursive references to the given tag type reference.
+		* The targeted reference has to be defined by this definition.
+		*
+		* @param reference the tag type reference to be searched for
+		* @return the list of recursive references within this definition, rooted by this definition.
+		*/
+		const vector<TagTypeReferenceAddress>& getRecursiveReferencesOf(const TagTypeReferencePtr& reference) const {
+			return this->getNode().getRecursiveReferencesOf(reference);
+		}
+
+		/**
 		 * Peels this definition once for the given variable.
 		 *
 		 * @param manager the manager to be used for maintaining the resulting type pointer
@@ -896,7 +918,25 @@ namespace core {
 		 * @param bindings the bindings to be included within this definition
 		 * @return the requested type instance managed by the given manager
 		 */
-		  static TagTypeDefinitionPtr get(NodeManager& manager, const TagTypeBindingMap& bindings);
+		static TagTypeDefinitionPtr get(NodeManager& manager, const TagTypeBindingMap& bindings);
+		
+	    /**
+		 * Obtains a list of addresses pointing to recursive references to any of the tag types defined
+		 * by this definition.
+		 *
+		 * @param reference the tag type reference to be searched for
+		 * @return the list of recursive references within this definition, rooted by this definition.
+		 */
+		const vector<TagTypeReferenceAddress>& getRecursiveReferences() const;
+
+		/**
+		 * Obtains a list of addresses pointing to recursive references to the given tag type reference.
+		 * The targeted reference has to be defined by this definition.
+		 *
+		 * @param reference the tag type reference to be searched for
+		 * @return the list of recursive references within this definition, rooted by this definition.
+		 */
+		const vector<TagTypeReferenceAddress>& getRecursiveReferencesOf(const TagTypeReferencePtr& reference) const;
 
 		/**
 		 * Peels this definition for the given tag for the given number of times.

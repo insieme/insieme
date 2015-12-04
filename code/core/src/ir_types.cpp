@@ -283,6 +283,68 @@ namespace core {
 		return manager.get(TagTypeDefinition(convertList(tagTypeBindings)));
 	}
 
+	const vector<TagTypeReferenceAddress>& TagTypeDefinition::getRecursiveReferences() const {
+
+		// the annotation to store the reference list
+		struct reference_list {
+			vector<TagTypeReferenceAddress> list;
+			bool operator==(const reference_list& other) const {
+				return list == other.list;
+			}
+		};
+
+		// check the attached list
+		if (hasAttachedValue<reference_list>()) {
+			return getAttachedValue<reference_list>().list;
+		}
+
+		// compute references
+		vector<TagTypeReferenceAddress> res;
+		for (const auto& binding : TagTypeDefinitionAddress(TagTypeDefinitionPtr(this))) {
+			for (const auto& cur : getFreeTagTypeReferences(NodeAddress(binding->getRecord()), TagTypeReferencePtr())) {
+				res.push_back(cur);
+			}
+		}
+
+		// attach the result
+		attachValue(reference_list{ res });
+		return getRecursiveReferences();
+	}
+
+	const vector<TagTypeReferenceAddress>& TagTypeDefinition::getRecursiveReferencesOf(const TagTypeReferencePtr& reference) const {
+		static const vector<TagTypeReferenceAddress> empty;
+
+		auto def = getDefinitionOf(reference);
+		if (!def) return empty;
+
+		// the annotation to store the reference list
+		struct reference_list {
+			vector<TagTypeReferenceAddress> list;
+			bool operator==(const reference_list& other) const {
+				return list == other.list;
+			}
+		};
+
+		// check for annotation
+		if (def->hasAttachedValue<reference_list>()) {
+			return def->getAttachedValue<reference_list>().list;
+		}
+		
+		// compute list
+		vector<TagTypeReferenceAddress> res;
+		for (const auto& cur : getRecursiveReferences()) {
+			if (*cur == *reference) res.push_back(cur);
+		}
+
+		// attach new value
+		def->attachValue(reference_list{res});
+
+		// done
+		return def->getAttachedValue<reference_list>().list;
+	}
+
+
+
 	TagTypePtr TagTypeDefinition::peelDefinition(NodeManager& manager, const TagTypeReferencePtr& tag, unsigned times) const {
 
 
