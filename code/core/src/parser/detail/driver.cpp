@@ -1169,14 +1169,6 @@ namespace parser {
 			return result.as<ExpressionPtr>();
 		}
 
-		ExpressionPtr InspireDriver::findSymbolInRecordDefiniton(const location& l, const std::string& name) {
-			assert_false(currentRecordStack.empty());
-			const auto& symbols = currentRecordStack.back().scope->declaredSymbols;
-			auto pos = symbols.find(name);
-			if(pos != symbols.end()) { return pos->second().as<ExpressionPtr>(); }
-			return nullptr;
-		}
-
 		TypePtr InspireDriver::findType(const location& l, const std::string& name) {
 			assert_false(scopes.empty()) << "Missing global scope!";
 

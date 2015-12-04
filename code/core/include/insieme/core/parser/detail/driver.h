@@ -417,11 +417,6 @@ namespace parser {
 			ExpressionPtr findSymbol(const location& l, const std::string& name);
 
 			/**
-			 * finds a symbol declaration for a member in the current record definition scope
-			 */
-			ExpressionPtr findSymbolInRecordDefiniton(const location& l, const std::string& name);
-
-			/**
 			 * finds a previously defined type symbol
 			 */
 			TypePtr findType(const location& l, const std::string& name);
