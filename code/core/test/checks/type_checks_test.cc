@@ -722,6 +722,69 @@ namespace checks {
 		EXPECT_PRED2(containsMSG, check(err4, typeCheck), Message(NodeAddress(err4), EC_TYPE_INVALID_IDENTIFIER, "", Message::ERROR));
 	}
 
+	TEST(MemberAccessElementTypeInTagTypeCheck, RecursiveNested) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		auto pos = builder.parseAddressesType(
+			R"(
+				struct A {
+					x : int<4>;
+					lambda f : () -> unit { $x$; }
+				}
+			)"
+			);
+
+		ASSERT_EQ(1, pos.size());
+		auto x = pos[0].as<CallExprAddress>();
+
+		auto ok = x.getRootNode();
+		auto err1 = transform::replaceNode(manager, x[2], builder.getTypeLiteral(builder.parseType("ref<int<4>>")));
+		auto err2 = transform::replaceNode(manager, x[2], builder.getTypeLiteral(builder.parseType("float")));
+
+		CheckPtr typeCheck = makeVisitOnce(make_check<MemberAccessElementTypeInTagTypeCheck>());
+		EXPECT_TRUE(check(ok, typeCheck).empty()) << check(ok, typeCheck);
+		EXPECT_FALSE(check(err1, typeCheck).empty());
+		EXPECT_FALSE(check(err2, typeCheck).empty());
+
+		EXPECT_PRED2(containsMSG, check(err1, typeCheck), Message(NodeAddress(x.switchRoot(err1)), EC_TYPE_INVALID_TYPE_OF_MEMBER, "", Message::ERROR));
+		EXPECT_PRED2(containsMSG, check(err2, typeCheck), Message(NodeAddress(x.switchRoot(err2)), EC_TYPE_INVALID_TYPE_OF_MEMBER, "", Message::ERROR));
+
+
+		// in the full-check context
+		EXPECT_TRUE(check(ok).empty()) << check(ok, typeCheck);
+		EXPECT_FALSE(check(err1).empty());
+		EXPECT_FALSE(check(err2).empty());
+
+		EXPECT_PRED2(containsMSG, check(err1), Message(NodeAddress(x.switchRoot(err1)), EC_TYPE_INVALID_TYPE_OF_MEMBER, "", Message::ERROR));
+		EXPECT_PRED2(containsMSG, check(err2), Message(NodeAddress(x.switchRoot(err2)), EC_TYPE_INVALID_TYPE_OF_MEMBER, "", Message::ERROR));
+	}
+
+	TEST(MemberAccessElementTypeInTagTypeCheck, RecursiveNestedSelfReference) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		auto pos = builder.parseAddressesType(
+			R"(
+				struct A {
+					x : ptr<A>;
+					lambda f : () -> unit { $x$; }
+				}
+			)"
+			);
+
+		ASSERT_EQ(1, pos.size());
+		auto x = pos[0].as<CallExprAddress>();
+
+		auto ok = x.getRootNode();
+		
+		CheckPtr typeCheck = makeVisitOnce(make_check<MemberAccessElementTypeInTagTypeCheck>());
+		EXPECT_TRUE(check(ok, typeCheck).empty()) << check(ok, typeCheck);
+		
+		// in the full-check context
+		EXPECT_TRUE(check(ok).empty()) << check(ok, typeCheck);
+	}
+
 	TEST(ComponentAccessTypeCheck, Basic) {
 		NodeManager manager;
 		IRBuilder builder(manager);

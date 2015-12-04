@@ -161,6 +161,14 @@ namespace checks {
 		}
 
 		/**
+		 * Updates the origin of this code location.
+		 */
+		void setOrigin(const NodeAddress& addr) {
+			if (annotationPath.empty()) { address = addr; }
+			else annotationPath.back().second = addr;
+		}
+
+		/**
 		 * Shifts the address of this location such that it becomes a location addressing a
 		 * problem within a node of an annotation of an outer node.
 		 *

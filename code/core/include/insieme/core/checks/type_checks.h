@@ -59,6 +59,7 @@ namespace checks {
 	SIMPLE_CHECK(MemberFunctionType, TagTypeBinding, true);
 	SIMPLE_CHECK(DuplicateMemberFunction, TagTypeBinding, true);
 	SIMPLE_CHECK(DuplicateMemberField, Fields, true);
+	SIMPLE_CHECK(MemberAccessElementTypeInTagType, TagTypeDefinition, true);
 
 	SIMPLE_CHECK(CallExprType, CallExpr, false);
 	SIMPLE_CHECK(BindExprType, BindExpr, false);

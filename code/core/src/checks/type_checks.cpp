@@ -154,58 +154,58 @@ namespace checks {
 
 			FreeTagTypeCollector() : IRVisitor<TagTypeRefs>(true) {}
 
-TagTypeRefs visit(const NodePtr& cur) override {
-	// check cache
-	auto pos = cache.find(cur);
-	if (pos != cache.end()) {
-		return pos->second;
-	}
+			TagTypeRefs visit(const NodePtr& cur) override {
+				// check cache
+				auto pos = cache.find(cur);
+				if (pos != cache.end()) {
+					return pos->second;
+				}
 
-	// dispatch & cache
-	return cache[cur] = IRVisitor<TagTypeRefs>::visit(cur);
-}
-
-TagTypeRefs visitTagTypeReference(const TagTypeReferencePtr& ref) override {
-	TagTypeRefs res;
-	res.push_back(TagTypeReferenceAddress(ref));
-	return res;
-}
-
-TagTypeRefs visitTagTypeDefinition(const TagTypeDefinitionPtr& def) override {
-	// aggregate references of child nodes - filtered by definitions
-	TagTypeRefs res;
-	for (const auto& cur : TagTypeDefinitionAddress(def)) {
-		RecordAddress recordAdr = cur->getRecord();
-		for (const auto& ref : visit(recordAdr)) {
-			if (!def->getDefinitionOf(ref)) {
-				res.push_back(concat(recordAdr, ref));
+				// dispatch & cache
+				return cache[cur] = IRVisitor<TagTypeRefs>::visit(cur);
 			}
-		}
-	}
-	return res;
-}
 
-TagTypeRefs visitTagType(const TagTypePtr& type) override {
-	// skipping the tag-type reference in the tag type
-	TagTypeRefs res;
-	TagTypeDefinitionAddress defAddr = TagTypeAddress(type)->getDefinition();
-	for (const auto& cur : visit(defAddr)) {
-		res.push_back(concat(defAddr, cur));
-	}
-	return res;
-}
+			TagTypeRefs visitTagTypeReference(const TagTypeReferencePtr& ref) override {
+				TagTypeRefs res;
+				res.push_back(TagTypeReferenceAddress(ref));
+				return res;
+			}
 
-TagTypeRefs visitNode(const NodePtr& cur) override {
-	// default: aggregate free references of children
-	TagTypeRefs res;
-	NodeAddress addr(cur);
-	for (const auto& child : addr.getChildList()) {
-		for (const auto& ref : visit(child)) {
-			res.push_back(concat(child, ref));
-		}
-	}
-	return res;
-}
+			TagTypeRefs visitTagTypeDefinition(const TagTypeDefinitionPtr& def) override {
+				// aggregate references of child nodes - filtered by definitions
+				TagTypeRefs res;
+				for (const auto& cur : TagTypeDefinitionAddress(def)) {
+					RecordAddress recordAdr = cur->getRecord();
+					for (const auto& ref : visit(recordAdr)) {
+						if (!def->getDefinitionOf(ref)) {
+							res.push_back(concat(recordAdr, ref));
+						}
+					}
+				}
+				return res;
+			}
+
+			TagTypeRefs visitTagType(const TagTypePtr& type) override {
+				// skipping the tag-type reference in the tag type
+				TagTypeRefs res;
+				TagTypeDefinitionAddress defAddr = TagTypeAddress(type)->getDefinition();
+				for (const auto& cur : visit(defAddr)) {
+					res.push_back(concat(defAddr, cur));
+				}
+				return res;
+			}
+
+			TagTypeRefs visitNode(const NodePtr& cur) override {
+				// default: aggregate free references of children
+				TagTypeRefs res;
+				NodeAddress addr(cur);
+				for (const auto& child : addr.getChildList()) {
+					for (const auto& ref : visit(child)) {
+						res.push_back(concat(child, ref));
+					}
+				}
+				return res;
+			}
 
 		};
 
@@ -869,18 +869,42 @@ TagTypeRefs visitNode(const NodePtr& cur) override {
 
 	namespace {
 
+		OptionalMessageList checkMemberAccess(const NodeAddress& address, const RecordPtr& record, const StringValuePtr& identifier,
+			const TypePtr& elementType, bool isRefVersion) {
+			OptionalMessageList res;
+
+			// get member type
+			const TypePtr& resultType = record->getFieldType(identifier);
+			if (!resultType) {
+				add(res, Message(address, EC_TYPE_NO_SUCH_MEMBER,
+					format("No member '%s' within record type '%s'", *identifier, *record),
+					Message::ERROR));
+				return res;
+			}
+
+			// check for correct member type
+			if (!core::analysis::equalTypes(elementType, resultType)) {
+				add(res, Message(address, EC_TYPE_INVALID_TYPE_OF_MEMBER,
+					format("Invalid type of extracted member '%s' - specified: '%s' - actual type: '%s'", *identifier, *elementType, *resultType), Message::ERROR));
+				return res;
+			}
+
+			// no problems found
+			return res;
+		}
 
 		OptionalMessageList checkMemberAccess(const NodeAddress& address, const ExpressionPtr& structExpr, const StringValuePtr& identifier,
-		                                      const TypePtr& elementType, bool isRefVersion) {
+			const TypePtr& elementType, bool isRefVersion) {
 			OptionalMessageList res;
 
 			// check whether it is a struct at all
 			TypePtr exprType = structExpr->getType();
-			if(isRefVersion) {
-				if(analysis::isRefType(exprType)) {
+			if (isRefVersion) {
+				if (analysis::isRefType(exprType)) {
 					// extract element type
 					exprType = analysis::getReferencedType(exprType);
-				} else {
+				}
+				else {
 					// invalid argument => handled by argument check
 					return res;
 				}
@@ -891,43 +915,18 @@ TagTypeRefs visitNode(const NodePtr& cur) override {
 			// we allow; since we have no way to check the consistency of
 			// the requested element, everything is fine
 			auto tagType = exprType.isa<TagTypePtr>();
-			if(!tagType) return res;		// all fine
+			if (!tagType) return res;		// all fine
 
-			// resolve recursive types
+			// peel recursive type (this fixes the field types to be accessed)
 			if (tagType->isRecursive()) {
 				tagType = tagType->peel();
 			}
 
-			// get member type
-			const TypePtr& resultType = tagType->getFieldType(identifier);
-			if(!resultType) {
-				add(res, Message(address, EC_TYPE_NO_SUCH_MEMBER,
-				                 format("No member '%s' within record type '%s'", *identifier, *tagType),
-				                 Message::ERROR));
-				return res;
-			}
-
-			// handle anonymous fields
-			if(identifier->getValue().empty()) {
-				// iterate through fields to find correct
-				for(auto field : tagType->getFields()) {
-					if(!field->getName()->getValue().empty()) continue;
-					if(field->getType() == elementType) return res;
-				}
-				add(res, Message(address, EC_TYPE_INVALID_TYPE_OF_MEMBER, format("No anonymous member of type '%s' in record", *elementType), Message::ERROR));
-				return res;
-			}
-
-			// check for correct member type
-			if(!core::analysis::equalTypes(elementType, resultType)) {
-				add(res, Message(address, EC_TYPE_INVALID_TYPE_OF_MEMBER,
-					             format("Invalid type of extracted member '%s' - expected '%s'", *resultType, *elementType), Message::ERROR));
-				return res;
-			}
-
-			// no problems found
-			return res;
+			// check member access
+			return checkMemberAccess(address, tagType->getRecord(), identifier, elementType, isRefVersion);
 		}
+
+		
 	}
 
 	OptionalMessageList MemberAccessElementTypeCheck::visitCallExpr(const CallExprAddress& address) {
@@ -983,6 +982,76 @@ TagTypeRefs visitNode(const NodePtr& cur) override {
 		return checkMemberAccess(address, structExpr, memberName, resultType, isMemberReferencing);
 	}
 
+	OptionalMessageList MemberAccessElementTypeInTagTypeCheck::visitTagTypeDefinition(const TagTypeDefinitionAddress& address) {
+		NodeManager& manager = address->getNodeManager();
+		OptionalMessageList res;
+
+		// a small record summarizing call site information
+		struct CallInfo {
+			TagTypeReferencePtr tag;
+			StringValuePtr identifier;
+			TypePtr type;
+		};
+
+		// extract list of nested member accesses calls
+		std::map<CallExprAddress,CallInfo> accesses;
+
+		// check all nested recursive references to typed defined here
+		auto refMember = manager.getLangExtension<lang::ReferenceExtension>().getRefMemberAccess();
+		for (const auto& cur : address->getRecursiveReferences()) {
+
+			// check whether this reference is accessed in the context of a member-access operation
+			visitPathBottomUp(cur, [&](const CallExprAddress& call) {
+
+				// check number of arguments
+				if (call.size() != 3) return;
+
+				// only interested in ref-member calls
+				if (!analysis::isCallOf(call.as<CallExprPtr>(), refMember)) return;
+
+				// check target type
+				if (!lang::isReference(call[0])) return;
+
+				// unpack tag type ptr
+				auto tagType = analysis::getReferencedType(call[0]->getType()).isa<TagTypeReferencePtr>();
+				if (!tagType) return;
+
+				// check that it is a locally defined tag type
+				if (!address->getDefinitionOf(tagType)) return;
+
+				// unpack identifier
+				auto identifierLit = call[1].as<LiteralPtr>();
+				if (!identifierLit) return;
+
+				// unpack target type
+				if (!analysis::isTypeLiteral(call[2])) return;
+				auto targetType = analysis::getRepresentedType(call[2]);
+
+				// collect the access
+				accesses[call] = CallInfo{
+					tagType, identifierLit->getValue(), targetType
+				};
+
+			});
+
+		}
+
+		// check all accesses
+		for (const auto& cur : accesses) {
+
+			const auto& call = cur.first;
+			const auto& info = cur.second;
+
+			// compare should and is
+			auto record = address->getDefinitionOf(info.tag);
+			
+			// check access
+			addAll(res, checkMemberAccess(concat(address, call), record, info.identifier, info.type, true));
+		}
+
+		// done
+		return res;
+	}
 
 	namespace {
 

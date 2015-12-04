@@ -274,7 +274,11 @@ namespace checks {
 					// correct locations
 					if(issues) {
 						for(const Message& cur : issues->getAll()) {
-							res.add(Message(loc, cur.getErrorCode(), cur.getMessage(), cur.getType()));
+							auto newLoc = loc;
+							if (isChildOf(loc.getOrigin(), cur.getLocation().getOrigin())) {
+								newLoc.setOrigin(cur.getLocation().getOrigin());
+							}
+							res.add(Message(newLoc, cur.getErrorCode(), cur.getMessage(), cur.getType()));
 						}
 					}
 				}

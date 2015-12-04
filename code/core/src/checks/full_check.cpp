@@ -67,6 +67,7 @@ namespace checks {
 			context_free_checks.push_back(make_check<TagTypeFieldsCheck>());
 			context_free_checks.push_back(make_check<EnumTypeCheck>());
 			context_free_checks.push_back(make_check<MemberAccessElementTypeCheck>());
+			context_free_checks.push_back(make_check<MemberAccessElementTypeInTagTypeCheck>());
 			context_free_checks.push_back(make_check<ComponentAccessTypeCheck>());
 			context_free_checks.push_back(make_check<BuiltInLiteralCheck>());
 			context_free_checks.push_back(make_check<RefCastCheck>());
