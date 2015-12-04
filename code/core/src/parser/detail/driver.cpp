@@ -512,19 +512,22 @@ namespace parser {
 		void InspireDriver::registerFields(const location& l, const FieldList& fields) {
 			assert_false(currentRecordStack.empty()) << "Not within record definition!";
 
+			const std::string& recordName = getThisType()->getName()->getValue();
+
 			// iterate over all the fields
 			for(const auto& field : fields) {
-				const auto& name = field->getName()->getValue();
-				const auto& type = builder.refType(field->getType());
-
-				const std::string memberName = getThisType()->getName()->getValue() + "::" + name;
-
-				// create literal to store in the lookup table
-				const auto key = builder.literal(memberName, type);
-
-				// only declare the symbol implicitly if it hasn't already been declared
-				if(!isSymbolDeclaredInGlobalScope(memberName)) { declareSymbolInGlobalScope(l, memberName, key); }
+				registerField(l, recordName, field->getName()->getValue(), field->getType());
 			}
+		}
+
+		void InspireDriver::registerField(const location l, const std::string& recordName, const std::string& fieldName, const TypePtr& fieldType) {
+			const std::string memberName = recordName + "::" + fieldName;
+
+			// create literal to store in the lookup table
+			const auto key = builder.literal(memberName, /*builder.refType(*/fieldType/*)*/);
+
+			// only declare the symbol implicitly if it hasn't already been declared
+			if(!isSymbolDeclaredInGlobalScope(memberName)) { declareSymbolInGlobalScope(l, memberName, key); }
 		}
 
 		/**

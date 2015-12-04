@@ -255,6 +255,11 @@ namespace parser {
 			void registerFields(const location& l, const FieldList& fields);
 
 			/**
+			 * registers the given field for the given record in the global scope
+			 */
+			void registerField(const location l, const std::string& recordName, const std::string& fieldName, const TypePtr& fieldType);
+
+			/**
 			 * generates a constructor for the currently defined record type
 			 */
 			ExpressionPtr genConstructor(const location& l, const VariableList& params, const StatementPtr& body);

@@ -275,6 +275,18 @@ namespace parser {
 		                          "  }"
 		                          "}; B"));
 
+		EXPECT_TRUE(test_type(nm, "decl struct B;" //reference the field of another struct which has been declared previously
+		                          "decl B::b : int<4>;"
+		                          "def struct A {"
+		                          "  lambda f : () -> int<4> {"
+		                          "    var ref<B,f,f,plain> b;"
+		                          "    return b.b;"
+		                          "  }"
+		                          "};"
+		                          "def struct B {"
+		                          "  b : int<4>;"
+		                          "}; A"));
+
 		EXPECT_TRUE(test_type(nm, "def struct A {" //reference our own member function
 		                          "  lambda f : () -> int<4> { return 1; }"
 		                          "  lambda g : () -> int<4> { return f(); }"
