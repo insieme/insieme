@@ -281,7 +281,6 @@ namespace parser {
 
 				// now that we found the given member, create a member access expression to return
 				TypePtr memberType = lookupResult.as<LiteralPtr>()->getType();
-				if(analysis::isRefType(memberType)) { memberType = analysis::getReferencedType(memberType); }
 
 				// if the member is a member function
 				if(auto functionType = memberType.isa<FunctionTypePtr>()) {
@@ -513,25 +512,22 @@ namespace parser {
 		void InspireDriver::registerFields(const location& l, const FieldList& fields) {
 			assert_false(currentRecordStack.empty()) << "Not within record definition!";
 
+			const std::string& recordName = getThisType()->getName()->getValue();
+
 			// iterate over all the fields
 			for(const auto& field : fields) {
-				const auto& name = field->getName()->getValue();
-				const auto& type = builder.refType(field->getType());
-
-				const std::string memberName = getThisType()->getName()->getValue() + "::" + name;
-
-				// create literal to store in the lookup table
-				const auto key = builder.literal(memberName, type);
-
-				// only declare the symbol implicitly if it hasn't already been declared
-				if(!isSymbolDeclaredInGlobalScope(memberName)) { declareSymbolInGlobalScope(l, memberName, key); }
-
-				// create the member access call to store in the symbol table for accessing this symbol within this current record _without_ the this pointer
-				ExpressionPtr access = mgr.getLangExtension<core::lang::ReferenceExtension>().getRefMemberAccess();
-				auto accessExpr = builder.callExpr(access, genThis(l), builder.getIdentifierLiteral(name), builder.getTypeLiteral(field->getType()));
-				annotations::attachName(field, name);
-				declareSymbol(l, name, accessExpr);
+				registerField(l, recordName, field->getName()->getValue(), field->getType());
 			}
+		}
+
+		void InspireDriver::registerField(const location l, const std::string& recordName, const std::string& fieldName, const TypePtr& fieldType) {
+			const std::string memberName = recordName + "::" + fieldName;
+
+			// create literal to store in the lookup table
+			const auto key = builder.literal(memberName, /*builder.refType(*/fieldType/*)*/);
+
+			// only declare the symbol implicitly if it hasn't already been declared
+			if(!isSymbolDeclaredInGlobalScope(memberName)) { declareSymbolInGlobalScope(l, memberName, key); }
 		}
 
 		/**
@@ -568,7 +564,6 @@ namespace parser {
 			auto fun = builder.lambdaExpr(ctorType, ingredients.params, ingredients.body);
 
 			auto key = builder.getLiteralForConstructor(ctorType);
-			auto memberName = key->getValue()->getValue();
 			tu.addFunction(key, fun);
 
 			return key;
@@ -605,7 +600,6 @@ namespace parser {
 			auto fun = builder.lambdaExpr(dtorType, ingredients.params, ingredients.body);
 
 			auto key = builder.getLiteralForDestructor(dtorType);
-			auto memberName = key->getValue()->getValue();
 			tu.addFunction(key, fun);
 
 			return key;
@@ -638,14 +632,7 @@ namespace parser {
 			auto memberFunType = fun->getFunctionType();
 			assert_false(fun->isRecursive()) << "The parser should not produce recursive functions!";
 
-			// generate call expression which is used to call this function in the current tag type context _without_ the this pointer
-			ExpressionPtr access = parserIRExtension.getMemberFunctionAccess();
-			auto accessExpr = builder.callExpr(memberFunType, access, genThisInLambda(l), builder.getIdentifierLiteral(name));
-			annotations::attachName(fun, name);
-			declareSymbol(l, name, accessExpr);
-
 			auto key = builder.getLiteralForMemberFunction(fun->getFunctionType(), name);
-			auto memberName = key->getValue()->getValue();
 			tu.addFunction(key, fun);
 
 			return builder.memberFunction(virtl, name, key);
@@ -1046,7 +1033,30 @@ namespace parser {
 		}
 
 		void InspireDriver::genDeclaration(const location& l, const std::string name, const TypePtr& type) {
-			declareSymbol(l, name, builder.literal(name, type));
+			//first build the literal we want to register
+			auto literal = builder.literal(name, type);
+
+			//now we handle members of classes differently
+			if (auto functionType = type.isa<FunctionTypePtr>()) {
+				if (functionType->isMember()) {
+					if (functionType->isConstructor()) {
+						literal = builder.getLiteralForConstructor(functionType);
+
+					} else if (functionType->isDestructor()) {
+						literal = builder.getLiteralForDestructor(functionType);
+
+					} else {
+						literal = builder.getLiteralForMemberFunction(functionType, name);
+					}
+
+					//register the member in the TU
+					tu.addFunction(literal, builder.lambdaExpr(functionType, builder.parameters(), builder.getNoOp()));
+					//and return here. there is no need to register this symbol in the global scope, as member calls are handled differently
+					return;
+				}
+			}
+
+			declareSymbol(l, literal->getValue()->getValue(), literal);
 		}
 
 		ExpressionPtr InspireDriver::genThis(const location& l) {
@@ -1142,6 +1152,12 @@ namespace parser {
 				}
 			}
 
+			//if we didn't find anything and we are in a record type currently
+			if (!result && isInRecordType()) {
+				//we try to locate a record member using the implicit this pointer here
+				result = genMemberAccess(l, genThis(l), name);
+			}
+
 			// fail if not found
 			if(!result) {
 				error(l, format("the symbol %s was not declared in this context", name));
@@ -1153,14 +1169,6 @@ namespace parser {
 			}
 
 			return result.as<ExpressionPtr>();
-		}
-
-		ExpressionPtr InspireDriver::findSymbolInRecordDefiniton(const location& l, const std::string& name) {
-			assert_false(currentRecordStack.empty());
-			const auto& symbols = currentRecordStack.back().scope->declaredSymbols;
-			auto pos = symbols.find(name);
-			if(pos != symbols.end()) { return pos->second().as<ExpressionPtr>(); }
-			return nullptr;
 		}
 
 		TypePtr InspireDriver::findType(const location& l, const std::string& name) {

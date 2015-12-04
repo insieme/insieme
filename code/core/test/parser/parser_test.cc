@@ -118,7 +118,7 @@ namespace parser {
 		                          "  a : int<4>;"
 		                          "  b : int<4>;"
 		                          "}"));
-		
+
 		EXPECT_TRUE(test_type(nm, "struct class {"
 		                          "  a : int<4>;"
 		                          "  ctor () { }"
@@ -199,11 +199,6 @@ namespace parser {
 		                          "  virtual const volatile lambda g : () -> int<4> { return 1; }"
 		                          "  pure virtual h : () -> int<4>"
 		                          "}"));
-
-//		EXPECT_TRUE(test_type(nm, "struct class {"
-//		                          "  lambda f : () -> int<4> { return f(); }"
-//		                          "  lambda g : (a : int<4>) -> int<4> { return f(); }"
-//		                          "}"));
 	}
 
 	bool test_expression(NodeManager& nm, const std::string& x) {
@@ -227,7 +222,7 @@ namespace parser {
 
 		EXPECT_TRUE(test_type(nm, "def struct A {" //reference our own field
 		                          "  a : int<4>;"
-		                          "  lambda f : () -> int<4> { return *a; }"
+		                          "  lambda f : () -> int<4> { return a; }"
 		                          "}; A"));
 
 		EXPECT_TRUE(test_type(nm, "def struct A {" //write our own field
@@ -237,7 +232,7 @@ namespace parser {
 
 		EXPECT_TRUE(test_type(nm, "def struct A {" //reference our own field using the this pointer
 		                          "  a : int<4>;"
-		                          "  lambda f : () -> int<4> { return *this.a; }"
+		                          "  lambda f : () -> int<4> { return this.a; }"
 		                          "}; A"));
 
 		EXPECT_TRUE(test_type(nm, "def struct A {" //reference the field of another struct - that struct is created locally. this also tests the init expression
@@ -246,7 +241,7 @@ namespace parser {
 		                          "def struct B {"
 		                          "  lambda f : () -> int<4> {"
 		                          "    var ref<A,f,f,plain> a;"
-		                          "    return *(a.a);"
+		                          "    return a.a;"
 		                          "  }"
 		                          "}; B"));
 
@@ -256,7 +251,7 @@ namespace parser {
 		                          "def struct B {"
 		                          "  a : A;"
 		                          "  lambda f : () -> int<4> {"
-		                          "    return *(a.a);"
+		                          "    return a.a;"
 		                          "  }"
 		                          "}; B"));
 
@@ -276,14 +271,45 @@ namespace parser {
 		                          "def struct B {"
 		                          "  a : A;"
 		                          "  lambda f : () -> int<4> {"
-		                          "    return *(this.a.a);"
+		                          "    return this.a.a;"
 		                          "  }"
 		                          "}; B"));
+
+		EXPECT_TRUE(test_type(nm, "decl struct B;" //reference the field of another struct which has been declared previously
+		                          "decl B::b : int<4>;"
+		                          "def struct A {"
+		                          "  lambda f : () -> int<4> {"
+		                          "    var ref<B,f,f,plain> b;"
+		                          "    return b.b;"
+		                          "  }"
+		                          "};"
+		                          "def struct B {"
+		                          "  b : int<4>;"
+		                          "}; A"));
 
 		EXPECT_TRUE(test_type(nm, "def struct A {" //reference our own member function
 		                          "  lambda f : () -> int<4> { return 1; }"
 		                          "  lambda g : () -> int<4> { return f(); }"
 		                          "}; A"));
+
+		EXPECT_TRUE(test_type(nm, "struct class {" //reference out own member function (with parameters)
+		                          "  lambda f : (a : int<4>) -> int<4> { return 42; }"
+		                          "  lambda g : (a : int<4>) -> int<4> { return f(5); }"
+		                          "}"));
+
+		EXPECT_TRUE(test_type(nm, "decl struct class;" //reference out own member function which has been declared previously
+		                          "decl g : class::() -> int<4>;"
+		                          "struct class {"
+		                          "  lambda f : () -> int<4> { return 42; }"
+		                          "  lambda g : () -> int<4> { return f(); }"
+		                          "}"));
+
+		EXPECT_TRUE(test_type(nm, "decl struct class;" //reference out own member function which has been declared previously (with parameters)
+		                          "decl g : class::(int<4>) -> int<4>;"
+		                          "struct class {"
+		                          "  lambda f : (a : int<4>) -> int<4> { return 42; }"
+		                          "  lambda g : (a : int<4>) -> int<4> { return f(5); }"
+		                          "}"));
 
 		EXPECT_TRUE(test_type(nm, "def struct A {" //reference our own member function using the this pointer
 		                          "  lambda f : () -> int<4> { return 1; }"
@@ -330,18 +356,18 @@ namespace parser {
 		                          "def struct B {"
 		                          "}; A"));
 
-//		EXPECT_TRUE(test_type(nm, "decl struct B;" //reference another struct's member function which has been declared using a forward declaration
-//		                          "decl B :: g : () -> int<4>;"
-//		                          "def struct A {"
-//		                          "  lambda f : (b : B) -> int<4> {"
-//		                          "    return b.g();"
-//		                          "  }"
-//		                          "};"
-//		                          "def struct B {"
-//		                          "  lambda h : () -> int<4> {"
-//		                          "    return 1;"
-//		                          "  }"
-//		                          "}; A"));
+		EXPECT_TRUE(test_type(nm, "decl struct B;" //reference another struct's member function which has been declared using a forward declaration
+		                          "decl g : B::() -> int<4>;"
+		                          "def struct A {"
+		                          "  lambda f : (b : ref<B,f,f,plain>) -> int<4> {"
+		                          "    return b.g();"
+		                          "  }"
+		                          "};"
+		                          "def struct B {"
+		                          "  lambda g : () -> int<4> {"
+		                          "    return 1;"
+		                          "  }"
+		                          "}; A"));
 
 		{
 			auto addresses = builder.parseAddressesStatement("def struct A {" //check that member calls get translated to calls of the actual lambda
