@@ -40,6 +40,7 @@
 #include <vector>
 
 #include "insieme/core/printer/pretty_printer.h"
+#include "insieme/core/tu/ir_translation_unit.h"
 #include "insieme/frontend/extensions/frontend_extension.h"
 
 namespace printer = insieme::core::printer;
@@ -53,7 +54,8 @@ namespace extensions {
 	 */
 	class WhileToForExtension : public insieme::frontend::extensions::FrontendExtension {
 	  public:
-		virtual insieme::core::ProgramPtr IRVisit(insieme::core::ProgramPtr& prog);
+		virtual core::tu::IRTranslationUnit IRVisit(core::tu::IRTranslationUnit& tu) override;
+
 	};
 
 } // namespace extensions

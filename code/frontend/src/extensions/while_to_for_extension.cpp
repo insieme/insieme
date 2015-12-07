@@ -51,8 +51,12 @@
 #include "insieme/core/pattern/ir_pattern.h"
 #include "insieme/core/pattern/pattern_utils.h"
 #include "insieme/core/transform/manipulation.h"
+#include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/transform/node_replacer.h"
+
+/// DELETEME
+#include "insieme/frontend/omp/omp_annotation.h"
 
 #include "insieme/utils/assert.h"
 #include "insieme/utils/set_utils.h"
@@ -180,144 +184,153 @@ namespace extensions {
 		}
 	}
 
-	bool isUsedAfterLoop(const core::StatementList& stmts,
-			const core::WhileStmtPtr& whileStmt, const core::NodePtr& predecessor) {
-		if(((stmts.size()>=1) && (stmts[stmts.size()-1] != whileStmt))
-			|| !predecessor.isa<core::DeclarationStmtPtr>()) {
-			return true;
+	bool isUsedAfterLoop(const core::StatementList& stmts, const core::WhileStmtPtr& whileStmt, const core::NodePtr& predecessor,
+		                 const core::VariablePtr& cvar) {
+
+		if(!predecessor.isa<core::DeclarationStmtPtr>()) return true;
+
+		bool afterWhile = false;
+		for(auto stmt : stmts) {
+			if(stmt == whileStmt) {
+				afterWhile = true;
+			} else {
+				if(afterWhile && ::contains(core::analysis::getFreeVariables(stmt), cvar)) return true;
+			}
 		}
 		return false;
 	}
 
 	/// while statements can be for statements iff only one variable used in the condition is
 	/// altered within the statement, and this alteration satisfies certain conditions
-	core::ProgramPtr WhileToForExtension::IRVisit(insieme::core::ProgramPtr& prog) {
+	core::tu::IRTranslationUnit WhileToForExtension::IRVisit(core::tu::IRTranslationUnit& tu) {
 
-		auto& mgr = prog->getNodeManager();		
-		core::IRBuilder builder(mgr);
-		auto& basic = mgr.getLangBasic();
+		for(auto fun : tu.getFunctions()) {
 
-		auto whilePat = irp::compoundStmt(pattern::anyList << pattern::var("predecessor", (irp::declarationStmt() | irp::callExpr(pattern::any)))
-			                                               << pattern::var("while", irp::whileStmt()) 
-														   << pattern::anyList);
+			auto lambdaExpr = fun.second;
 
-		// match (and potentially replace) all generated while statements
-		prog = irp::replaceAll(whilePat, core::NodeAddress(prog), [&](pattern::AddressMatch match) -> core::StatementPtr {
-			auto original = match.getRoot().getAddressedNode().as<core::CompoundStmtPtr>();
-			auto whileAddr = match["while"].getFlattened().front().as<core::WhileStmtAddress>();
-			auto condition = whileAddr.getAddressedNode()->getCondition();
-			auto body = whileAddr.getAddressedNode()->getBody();
-			auto pred = match["predecessor"].getFlattened().front();
+			auto& mgr = lambdaExpr->getNodeManager();
+			core::IRBuilder builder(mgr);
+			auto& basic = mgr.getLangBasic();
 
-			// check if loop variable is used after the loop
-			// at the moment this check is very simple. 
-			// TODO: replace stupid "use after loop" check by more sophisticated def use analysis.
-			if(isUsedAfterLoop(original->getStatements(), whileAddr.getAddressedNode(), 
-				pred.getAddressedNode())) {
-				return original;
-			}
+			auto innerWhilePat = pattern::var("while", irp::whileStmt());
+			auto markerNestedWhile = pattern::rT(innerWhilePat | irp::markerStmt(pattern::recurse, pattern::any));
+			auto whilePat = irp::compoundStmt(pattern::anyList << pattern::var("predecessor", (irp::declarationStmt() | irp::callExpr(pattern::any)))
+				                                               << pattern::aT(innerWhilePat) << pattern::anyList);
 
-			VLOG(1) << "======= START WHILE TO FOR ===========\n" << dumpColor(match.getRoot().getAddressedNode());
+			VLOG(2) << "While to for on function:\n" << core::printer::PrettyPrinter(lambdaExpr, core::printer::PrettyPrinter::PRINT_MARKERS);
+
+			// match (and potentially replace) all generated while statements
+			lambdaExpr = irp::replaceAll(whilePat, core::NodeAddress(lambdaExpr), [&](pattern::AddressMatch match) -> core::StatementPtr {
+				auto original = match.getRoot().getAddressedNode().as<core::CompoundStmtPtr>();
+
+				auto whileAddr = match["while"].getFlattened().front().as<core::WhileStmtAddress>();
+				auto condition = whileAddr.getAddressedNode()->getCondition();
+				auto body = whileAddr.getAddressedNode()->getBody();
+				auto pred = match["predecessor"].getFlattened().front();
+
+				VLOG(1) << "======= START WHILE TO FOR ===========\n" << dumpColor(match.getRoot().getAddressedNode());
+											
+				// check if body contains flow alterating stmts (break or return. continue is allowed.)
+				bool flowAlteration = core::analysis::hasFreeBreakStatement(body) || core::analysis::hasFreeReturnStatement(body);
+				VLOG(1) << "--- flow alteration: " << flowAlteration << "\n";
+				if(flowAlteration) return original;
+
+				// if more than one free variable in the condition -> we certainly can't create a for for this
+				auto cvars = core::analysis::getFreeVariables(condition);
+				VLOG(1) << "--- cvars:\n " << cvars << "\n";
+				if(cvars.size() > 1 || cvars.size() == 0) return original;
+
+				auto cvar = cvars.front();
+				core::TypePtr cvarType = core::analysis::getReferencedType(cvar->getType());
+				VLOG(1) << "cvar: " << dumpColor(cvar) << "\n -- type: " << cvarType << "\n";
 			
-			// check if body contains flow alterating stmts (break or return. continue is allowed.)
-			bool flowAlteration = core::analysis::hasFreeBreakStatement(body) || core::analysis::hasFreeReturnStatement(body);
-			VLOG(1) << "--- flow alteration: " << flowAlteration << "\n";
-			if(flowAlteration) return original;
+				// if it's not an integer, we bail out for now
+				if(!basic.isInt(cvarType)) return original;
 
-			// if more than one free variable in the condition -> we certainly can't create a for for this
-			auto cvars = core::analysis::getFreeVariables(condition);
-			VLOG(1) << "--- cvars:\n " << cvars << "\n";
-			if(cvars.size() > 1 || cvars.size() == 0) return original;
+				// check if loop variable is used after the loop
+				// at the moment this check is very simple
+				// TODO: replace stupid "use after loop" check by more sophisticated def use analysis.
+				if(isUsedAfterLoop(original->getStatements(), whileAddr.getAddressedNode(), pred, cvar)) {
+					VLOG(1) << "--- isUsedAfterLoop, bailing\n";
+					return original;
+				}
 
-			auto cvar = cvars.front();
-			core::TypePtr cvarType = core::analysis::getReferencedType(cvar->getType());
-			VLOG(1) << "cvar: " << dumpColor(cvar) << "\n -- type: " << cvarType << "\n";
-			
-			// if it's not an integer, we bail out for now
-			if(!basic.isInt(cvarType)) return original;
+				/////////////////////////////////////////////////////////////////////////////////////// figuring out the step
 
-			/////////////////////////////////////////////////////////////////////////////////////// figuring out the step
-
-			// find all uses of the variable in the while body
-			core::ExpressionList writeStepExprs;
-			core::NodeList toRemoveFromBody;
-			core::visitDepthFirstPrunable(core::NodeAddress(body), [&](const core::NodeAddress& varA) {
-				auto var = varA.getAddressedNode().isa<core::VariablePtr>();
-				if(var == cvar) {
-					// check if it's a write
-					auto convertedPair = mapToStep(varA.getParentNode());
-					if(!convertedPair.first) {
-						writeStepExprs.push_back(convertedPair.second);
-						toRemoveFromBody.push_back(varA.getParentNode());
+				// find all uses of the variable in the while body
+				core::ExpressionList writeStepExprs;
+				core::NodeList toRemoveFromBody;
+				core::visitDepthFirstPrunable(core::NodeAddress(body), [&](const core::NodeAddress& varA) {
+					auto var = varA.getAddressedNode().isa<core::VariablePtr>();
+					if(var == cvar) {
+						// check if it's a write
+						auto convertedPair = mapToStep(varA.getParentNode());
+						if(!convertedPair.first) {
+							writeStepExprs.push_back(convertedPair.second);
+							toRemoveFromBody.push_back(varA.getParentNode());
+						}
 					}
+					if(varA.isa<core::LambdaExprAddress>()) return true;
+					return false;
+				});
+				VLOG(1) << "WriteStepExprs: " << writeStepExprs << "\n";
+			
+				// if there is not exactly one write, or there are free variables in the step, bail out
+				// (could be much smarter about the step)
+				if(writeStepExprs.size()!=1) return original;
+				if(!core::analysis::getFreeVariables(writeStepExprs.back()).empty()) return original;
+				auto convertedStepExpr = writeStepExprs.front();
+			
+				/////////////////////////////////////////////////////////////////////////////////////// figuring out start
+			
+				auto convertedStartPair = mapToStart(cvar, pred);
+				VLOG(1) << "StartPair: " << convertedStartPair.first << " // " << convertedStartPair.second << "\n";
+
+				// bail if no valid start found
+				if(!convertedStartPair.first) return original;
+			
+				/////////////////////////////////////////////////////////////////////////////////////// figuring out end
+
+				auto convertedEndPair = mapToEnd(cvar, condition);
+				VLOG(1) << "EndPair: " << convertedEndPair.first << " // " << convertedEndPair.second << "\n";
+			
+				// bail if no valid end found
+				if(!convertedEndPair.first) return original;
+							
+				/////////////////////////////////////////////////////////////////////////////////////// build the for
+
+				auto forVar = builder.variable(cvarType);
+
+				// prepare new body
+				core::StatementList newBodyStmts;
+				core::NodeMap loopVarReplacement;
+				loopVarReplacement[builder.deref(cvar)] = forVar;
+				for(auto stmt : body->getStatements()) {
+					if(!::contains(toRemoveFromBody, stmt)) newBodyStmts.push_back(core::transform::replaceAllGen(mgr, stmt, loopVarReplacement));
 				}
-				if(varA.isa<core::LambdaExprAddress>()) return true;
-				return false;
-			});
-			VLOG(1) << "WriteStepExprs: " << writeStepExprs << "\n";
+				//synchronize cvar and new forVar
+				//newBodyStmts.push_back(builder.callExpr(cvar->getType(), fMod.getCStyleAssignment(), forVar, cvar));
+				auto newBody = builder.compoundStmt(newBodyStmts);
+
+				// if the old loop variable is free in the new body, we messed up and should bail
+				if(::contains(core::analysis::getFreeVariables(newBody), cvar)) return original;
+
+				auto forStmt = builder.forStmt(forVar, convertedStartPair.second, convertedEndPair.second, convertedStepExpr, newBody);
+				core::transform::utils::migrateAnnotations(whileAddr.getAddressedNode(), forStmt);
+				VLOG(1) << "======> FOR:\n" << dumpColor(forStmt);
+
+				/////////////////////////////////////////////////////////////////////////////////////// replace the while in the original compound
 			
-			// if there is not exactly one write, or there are free variables in the step, bail out
-			// (could be much smarter about the step)
-			if(writeStepExprs.size()!=1) return original;
-			if(!core::analysis::getFreeVariables(writeStepExprs.back()).empty()) return original;
-			auto convertedStepExpr = writeStepExprs.front();
+				auto replacementCompoundStmt = core::transform::replaceAddress(mgr, whileAddr, forStmt).getRootNode().as<core::CompoundStmtPtr>();
+
+				return replacementCompoundStmt;
+			}).as<core::LambdaExprPtr>();
 			
-			/////////////////////////////////////////////////////////////////////////////////////// figuring out start
-			
-			auto convertedStartPair = mapToStart(cvar, pred);
-			VLOG(1) << "StartPair: " << convertedStartPair.first << " // " << convertedStartPair.second << "\n";
+			VLOG(1) << "While to for replacement - from function:\n" << dumpColor(fun.second) << " - to function:\n" << dumpColor(lambdaExpr);
 
-			// bail if no valid start found
-			if(!convertedStartPair.first) return original;
-			
-			/////////////////////////////////////////////////////////////////////////////////////// figuring out end
-
-			auto convertedEndPair = mapToEnd(cvar, condition);
-			VLOG(1) << "EndPair: " << convertedEndPair.first << " // " << convertedEndPair.second << "\n";
-			
-			// bail if no valid end found
-			if(!convertedEndPair.first) return original;
-			
-			/////////////////////////////////////////////////////////////////////////////////////// build the for
-
-			auto forVar = builder.variable(cvarType);
-
-			// prepare new body
-			core::StatementList newBodyStmts;
-			core::NodeMap loopVarReplacement;
-			loopVarReplacement[builder.deref(cvar)] = forVar;
-			for(auto stmt : body->getStatements()) {
-				if(!::contains(toRemoveFromBody, stmt)) newBodyStmts.push_back(core::transform::replaceAllGen(mgr, stmt, loopVarReplacement));
-			}
-			//synchronize cvar and new forVar
-			//newBodyStmts.push_back(builder.callExpr(cvar->getType(), fMod.getCStyleAssignment(), forVar, cvar));
-			auto newBody = builder.compoundStmt(newBodyStmts);
-
-			// if the old loop variable is free in the new body, we messed up and should bail
-			if(::contains(core::analysis::getFreeVariables(newBody), cvar)) return original;
-
-			auto forStmt = builder.forStmt(forVar, convertedStartPair.second, convertedEndPair.second, convertedStepExpr, newBody);
-			VLOG(1) << "======> FOR:\n" << dumpColor(forStmt);
-
-			/////////////////////////////////////////////////////////////////////////////////////// replace the while in the original compound
-			
-			core::StatementList replacementCompoundStmts;
-			bool afterWhile = false;
-			for(auto stmt : original->getStatements()) {
-				if(stmt == whileAddr.getAddressedNode()) {
-					afterWhile = true;
-					replacementCompoundStmts.push_back(forStmt);
-				} else {
-					replacementCompoundStmts.push_back(stmt);
-					// if cvar is used after while, bail (for now)
-					if(afterWhile && ::contains(core::analysis::getFreeVariables(stmt), cvar)) return original;
-				}
-			}
-
-			return builder.compoundStmt(replacementCompoundStmts);
-		}).as<core::ProgramPtr>();
-
-		return prog;
+			tu.replaceFunction(fun.first, lambdaExpr);
+		}
+		return tu;
 	}
 
 } // extensions
