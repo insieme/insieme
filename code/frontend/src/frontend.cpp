@@ -223,10 +223,10 @@ namespace frontend {
 		registerFrontendExtension<extensions::InstrumentationRegionExtension>(options);
 		registerFrontendExtension<extensions::TestPragmaExtension>(options);
 		registerFrontendExtension<extensions::InsiemePragmaExtension>(options);
+		registerFrontendExtension<extensions::WhileToForExtension>(options);
 		registerFrontendExtension<extensions::OmpFrontendExtension>(options);
 		registerFrontendExtension<extensions::SignificanceFrontendExtension>(options);
 		registerFrontendExtension<extensions::CilkFrontendExtension>(options);
-		registerFrontendExtension<extensions::WhileToForExtension>(options);
 
 		registerFrontendExtension<extensions::VariableArgumentListExtension>(options);
 		registerFrontendExtension<extensions::VariableLengthArrayExtension>(options);
