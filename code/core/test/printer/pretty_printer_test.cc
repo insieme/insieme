@@ -192,6 +192,7 @@ IRBuilder builder(nm);
 
 	std::string res = ""
 			"decl struct A;\n"
+			"decl A::a:int<4>;\n"
 			"decl A::f() -> int<4>;\n"
 			"def struct A {\n"
 			"    a : int<4>;\n"
@@ -234,8 +235,27 @@ IRBuilder builder(nm);
 	EXPECT_EQ(res, toString(printer1)) <<printer1;
 }
 // TODO: member function access test!
-/*
+
 {
+
+std::string res2 = ""
+		"decl struct A;\n"
+		"decl A::a:int<4>;\n"
+		"decl A::f() -> int<4>;\n"
+		"decl A::g(ref<() -> int<4>,f,f,plain>) -> unit;\n"
+		"def struct A {\n"
+		"    a : int<4>;\n"
+		"    function f : () -> int<4> {\n"
+		"        return *(*this).a;\n"
+		"    }\n"
+		"    function g : (v120 : ref<() -> int<4>,f,f,plain>) -> unit {\n"
+		"        var () -> int<4> v121 = parser_member_function_access(*this, f);\n"
+		"        (*v120)();\n"
+		"        v121();\n"
+		"    }\n"
+		"};\n"
+		"A";
+
 auto type1 = builder.parseType(""
 									   "def struct A { "
 									   "    a : int<4>;"
@@ -254,9 +274,9 @@ PrettyPrinter printer1(type1, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::PR
 							  | PrettyPrinter::PRINT_ATTRIBUTES | PrettyPrinter::NO_EVAL_LAZY
 							  | PrettyPrinter::PRINT_DERIVED_IMPL);
 
-EXPECT_EQ(res, toString(printer1)) <<printer1;
+EXPECT_EQ(res2, toString(printer1)) <<printer1;
 }
-*/
+
 }
 
 TEST(PrettyPrinter, Declarations) {
@@ -370,6 +390,47 @@ TEST(PrettyPrinter, Declarations) {
 								  | PrettyPrinter::PRINT_DERIVED_IMPL);
 
 	EXPECT_EQ("decl f : () -> int<4>;\ndef f = function () -> int<4> {\n    return 1;\n};\n{\n    f();\n}",toString(printer5)) << printer5;
+
+	{
+		auto type = builder.normalize(builder.parseType("def struct A { a : int<4>; }; A"));
+		PrettyPrinter printer(type, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::PRINT_CASTS
+									  | PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_MARKERS
+									  | PrettyPrinter::NO_LIST_SUGAR
+									  | PrettyPrinter::PRINT_ATTRIBUTES | PrettyPrinter::NO_EVAL_LAZY
+									  | PrettyPrinter::PRINT_DERIVED_IMPL);
+
+		EXPECT_EQ(toString(printer), ""
+		"decl struct A;\n"
+		"decl A::a:int<4>;\n"
+		"def struct A {\n"
+		"    a : int<4>;\n"
+		"};\n"
+		"A") << printer;
+	}
+
+	{
+		auto type = builder.normalize(builder.parseType("decl struct B;"
+														"def struct A {"
+														"    a : int<4>;"
+														"    b : B;"
+														"};"
+														"A"));
+		PrettyPrinter printer(type, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::PRINT_CASTS
+									| PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_MARKERS
+									| PrettyPrinter::NO_LIST_SUGAR
+									| PrettyPrinter::PRINT_ATTRIBUTES | PrettyPrinter::NO_EVAL_LAZY
+									| PrettyPrinter::PRINT_DERIVED_IMPL);
+
+		EXPECT_EQ(toString(printer), ""
+		"decl struct A;\n"
+		"decl A::a:int<4>;\n"
+		"decl A::b:B;\n"
+		"def struct A {\n"
+		"    a : int<4>;\n"
+		"    b : B;\n"
+		"};\n"
+		"A") << printer;
+	}
 
 }
 

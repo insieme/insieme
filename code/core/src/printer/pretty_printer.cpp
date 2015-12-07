@@ -349,9 +349,17 @@ namespace printer {
 					visitDepthFirstOnce(node, [&](const TagTypePtr &tagType) {
 
 						auto cur = tagType.getRecord();
-						// TODO: print all memberFields declarations
 
 						if (cur->getName()->getValue().compare("")) {
+							// print all memberFields declarations
+							for(auto field : cur->getFields()) {
+								newLine();
+								out << "decl " << cur->getName()->getValue() << "::";
+								visit(NodeAddress(field->getName()));
+								out << ":";
+								visit(NodeAddress(field->getType()));
+								out << ";";
+							}
 
 							// print all constructors declarations
 							auto constructors = cur->getConstructors();
