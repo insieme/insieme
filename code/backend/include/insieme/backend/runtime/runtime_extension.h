@@ -100,7 +100,7 @@ namespace runtime {
 		LANG_EXT_LITERAL(Task, "irt_task", "(irt_parallel_job)->ref<irt_wi>")
 		LANG_EXT_LITERAL(Region, "irt_region", "(irt_parallel_job)->ref<irt_wi>")
 
-		LANG_EXT_LITERAL(Pfor, "irt_pfor", "(threadgroup,int<4>,int<4>,int<4>,irt_wi_implementation_id,irt_lwdi<'a>)->ref<irt_wi>")
+		LANG_EXT_LITERAL(Pfor, "irt_pfor", "(threadgroup,int<8>,int<8>,int<8>,irt_wi_implementation_id,irt_lwdi<'a>)->ref<irt_wi>")
 		LANG_EXT_LITERAL(Merge, "irt_merge", "(ref<irt_wi>)->unit")
 
 

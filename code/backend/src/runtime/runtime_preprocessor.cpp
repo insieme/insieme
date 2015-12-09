@@ -556,7 +556,9 @@ namespace runtime {
 				}
 
 				// handle pfor calls
-				if(parExt.isPFor(fun)) { return convertPfor(call).as<core::CallExprPtr>(); }
+				if(parExt.isPFor(fun)) {
+					return convertPfor(call).as<core::CallExprPtr>(); 
+				}
 			}
 
 			// handle calls to pick-variant calls
