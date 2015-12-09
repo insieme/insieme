@@ -274,7 +274,7 @@ namespace parser {
 					}
 
 					if (!lookupResult) {
-						error(l, format("Unable to locate member %s in type %s", memberName, *genericObjectType));
+						error(l, format("Unable to lookup member %s in type %s", memberName, *genericObjectType));
 						return nullptr;
 					}
 				}
