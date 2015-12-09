@@ -831,7 +831,10 @@ namespace omp {
 		}
 
 		NodePtr handleFor(const StatementPtr& stmtNode, const ForPtr& forP, bool isParallel = false) {
-			assert_eq(stmtNode.getNodeType(), NT_ForStmt) << "OpenMP for attached to non-for statement";
+			if(stmtNode.getNodeType() != NT_ForStmt) {
+				LOG(WARNING) << "OpenMP for attached to non-for statement, ignoring";
+				return stmtNode;
+			}
 			ForStmtPtr outer = dynamic_pointer_cast<const ForStmt>(stmtNode);
 			// outer = collapseForNest(outer);
 			StatementList resultStmts;

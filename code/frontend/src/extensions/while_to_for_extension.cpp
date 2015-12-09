@@ -215,7 +215,7 @@ namespace extensions {
 			auto innerWhilePat = pattern::var("while", irp::whileStmt());
 			auto markerNestedWhile = pattern::rT(innerWhilePat | irp::markerStmt(pattern::recurse, pattern::any));
 			auto whilePat = irp::compoundStmt(pattern::anyList << pattern::var("predecessor", (irp::declarationStmt() | irp::callExpr(pattern::any)))
-				                                               << pattern::aT(innerWhilePat) << pattern::anyList);
+				                                               << markerNestedWhile << pattern::anyList);
 
 			VLOG(2) << "While to for on function:\n" << core::printer::PrettyPrinter(lambdaExpr, core::printer::PrettyPrinter::PRINT_MARKERS);
 
@@ -265,7 +265,7 @@ namespace extensions {
 					if(var == cvar) {
 						// check if it's a write
 						auto convertedPair = mapToStep(varA.getParentNode());
-						if(!convertedPair.first) {
+						if(convertedPair.second && !convertedPair.first) {
 							writeStepExprs.push_back(convertedPair.second);
 							toRemoveFromBody.push_back(varA.getParentNode());
 						}
