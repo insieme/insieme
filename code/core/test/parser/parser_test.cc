@@ -480,16 +480,6 @@ namespace parser {
 		NodeManager nm;
 		IRBuilder builder(nm);
 
-//		auto funA = builder.normalize(parseExpr(nm, "(x : int<4>) -> int<4> { return x; }"));
-//		auto funB = builder.normalize(parseExpr(nm, "(x : ref<int<4>,f,f,plain>) -> int<4> { return *x; }"));
-//
-//		auto funC = builder.normalize(parseExpr(nm, "let f = (x : int<4>) -> int<4> { return x; } in f"));
-//		auto funD = builder.normalize(parseExpr(nm, "let f = (y : ref<int<4>,f,f,plain>) -> int<4> { return *y; } in f"));
-//
-//		EXPECT_EQ(funA, funB);
-//		EXPECT_EQ(funB, funC);
-//		EXPECT_EQ(funC, funD);
-
 		EXPECT_TRUE(test_expression(nm, "decl foo : (int<4>) -> int<4>;" //self-recursion
 		                                "def foo : (a : int<4>) -> int<4> { return foo(a); }; foo"));
 
@@ -581,6 +571,36 @@ namespace parser {
 		}
 
 		{ //ensure that functions and lambdas end up the same when written correctly
+			auto type1 = builder.parseType("def struct s { a : int<4>; ctor () { a = 5; } }; s");
+			auto type2 = builder.parseType("def struct s { a : int<4>; ctor function () { (*this).a = 5; } }; s");
+
+			ASSERT_TRUE(checks::check(type1).empty()) << checks::check(type1);
+			ASSERT_TRUE(checks::check(type2).empty()) << checks::check(type2);
+
+			EXPECT_EQ(builder.normalize(type1), builder.normalize(type2));
+		}
+
+		{ //ensure that functions and lambdas end up the same when written correctly
+			auto type1 = builder.parseType("def struct s { a : int<4>; ctor () { this.a = 5; } }; s");
+			auto type2 = builder.parseType("def struct s { a : int<4>; ctor function () { (*this).a = 5; } }; s");
+
+			ASSERT_TRUE(checks::check(type1).empty()) << checks::check(type1);
+			ASSERT_TRUE(checks::check(type2).empty()) << checks::check(type2);
+
+			EXPECT_EQ(builder.normalize(type1), builder.normalize(type2));
+		}
+
+		{ //ensure that functions and lambdas end up the same when written correctly
+			auto type1 = builder.parseType("def struct s { a : int<4>; ctor (b : int<4>) { a = b; } }; s");
+			auto type2 = builder.parseType("def struct s { a : int<4>; ctor function (b : ref<int<4>,f,f,plain>) { (*this).a = *b; } }; s");
+
+			ASSERT_TRUE(checks::check(type1).empty()) << checks::check(type1);
+			ASSERT_TRUE(checks::check(type2).empty()) << checks::check(type2);
+
+			EXPECT_EQ(builder.normalize(type1), builder.normalize(type2));
+		}
+
+		{ //ensure that functions and lambdas end up the same when written correctly
 			auto type1 = builder.parseType("def struct s { dtor () { } }; s");
 			auto type2 = builder.parseType("def struct s { dtor function () { } }; s");
 
@@ -590,6 +610,15 @@ namespace parser {
 			EXPECT_EQ(builder.normalize(type1), builder.normalize(type2));
 		}
 
+		{ //ensure that functions and lambdas end up the same when written correctly
+			auto type1 = builder.parseType("def struct s { a : int<4>; dtor () { a = 5; } }; s");
+			auto type2 = builder.parseType("def struct s { a : int<4>; dtor function () { (*this).a = 5; } }; s");
+
+			ASSERT_TRUE(checks::check(type1).empty()) << checks::check(type1);
+			ASSERT_TRUE(checks::check(type2).empty()) << checks::check(type2);
+
+			EXPECT_EQ(builder.normalize(type1), builder.normalize(type2));
+		}
 	}
 
 	bool test_statement(NodeManager& nm, const std::string& x) {
