@@ -655,7 +655,7 @@ unary_op : "-" expression                                                 { $$ =
          | expression "." "int"                                           { $$ = driver.genTupleAccess(@3, $1, $3); }
          | expression "->" "identifier"                                   { $$ = driver.genMemberAccess(@3, $1, $3); }
          | expression "->" "int"                                          { $$ = driver.genTupleAccess(@3, $1, $3); }
-         | "CAST" "(" type ")" expression                                 { $$ = driver.builder.castExpr($3, $5); }
+         | "CAST" "(" type ")" expression                                 { $$ = driver.builder.castExpr($3, $5); }                                     %prec CAST
          | expression "." "as" "(" type ")"                               { $$ = driver.genAsExpr(@1, $1, $5); }
          ;
 
@@ -811,22 +811,17 @@ let_statement : "let" "identifier" "=" expression ";"                     {  dri
               ;
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Precedence list ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// the lowest in list, the highest precedence
+// the lower in this list, the higher the precedence
 
 
 %right    "in";
-%nonassoc "::" ;
 %left     ":";
 %nonassoc ")";
 
-
-%nonassoc "else";
 %right    "=>";
 %left     "spawn" "sync" "sync_all";
-%right    "catch";
-%left     LAMBDA;
 
-%left     "=";
+%right    "=";
 %right    "?";
 %left     "||";
 %left     "&&";
@@ -837,15 +832,8 @@ let_statement : "let" "identifier" "=" expression ";"                     {  dri
 %left     "<" "<=" ">" ">=";
 %left     "+" "-";
 %left     "*" "/" "%";
-
-%nonassoc UDEREF;
-%nonassoc UNOT;
-%nonassoc UMINUS;
-
-%nonassoc "->";
-%nonassoc ".";
-%right    "[";
-%right    "(";
+%right    UDEREF UNOT UMINUS CAST;
+%left     "->" "." "[" "(";
 
 %%
 // code after the second %% is copyed verbatim at the end of the parser .cpp file
