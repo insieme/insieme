@@ -3,8 +3,8 @@ alias int = int<4>;
 
 decl even : (int)->bool;
 decl odd : (int)->bool;
-def even =  (n : int)->bool { if (n == 0) { return true; } return odd(n-1); };
-def odd = (n : int)->bool { if (n == 0) { return false; } return even(n-1); };
+def even :  (n : int)->bool { if (n == 0) { return true; } return odd(n-1); };
+def odd : (n : int)->bool { if (n == 0) { return false; } return even(n-1); };
 
 unit main() {
 

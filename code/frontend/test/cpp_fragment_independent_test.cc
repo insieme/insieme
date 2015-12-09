@@ -55,5 +55,7 @@ namespace frontend {
 
 	TEST(CppIndependentTest, DefaultArgs) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_default_args.cpp"); }
 
+	TEST(CppIndependentTest, DISABLED_ObjectPassing) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_object_passing.cpp"); }
+
 } // fe namespace
 } // insieme namespace

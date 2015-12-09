@@ -478,7 +478,7 @@ namespace core {
 		manager.setNextFreshID(0);
 		lambda = builder.normalize(
 			builder.parseExpr("decl f: ()->unit;"
-							  "def f = ()->unit { 5; f(); }; f").as<LambdaExprPtr>());
+							  "def f : ()->unit { 5; f(); }; f").as<LambdaExprPtr>());
 		ASSERT_TRUE(lambda);
 
 		EXPECT_TRUE(lambda->isRecursive());
@@ -489,8 +489,8 @@ namespace core {
 		// check mutual recursive lambdas
 		manager.setNextFreshID(0);
 		lambda = builder.parseExpr("decl g: ()->unit;"
-								   "def f = ()->unit { 1; g(); }; "
-		                           "def g = ()->unit { 2; f(); }; "
+								   "def f : ()->unit { 1; g(); }; "
+		                           "def g : ()->unit { 2; f(); }; "
 		                           " f")
 		             .as<LambdaExprPtr>();
 		ASSERT_TRUE(lambda);
@@ -503,7 +503,7 @@ namespace core {
 		// check nested recursive lambda
 		manager.setNextFreshID(0);
 		lambda = builder.parseExpr("decl f: ()->unit;"
-								   "def f = ()->unit { "
+								   "def f : ()->unit { "
 		                           "	5; "
 		                           "	()->unit { f(); } (); "
 		                           "}; f")
@@ -518,12 +518,12 @@ namespace core {
 		// check nested mutual recursive lambdas
 		manager.setNextFreshID(0);
 		lambda = builder.parseExpr("decl g: ()->unit;"
-								   "def f = "
+								   "def f : "
 		                           "	()->unit { "
 		                           "		1; "
 		                           "		()->unit { g(); } (); "
 		                           "	}; "
-		                           "def g = "
+		                           "def g : "
 								   "	()->unit { "
 		                           "		2; "
 		                           "		()->unit { f(); } (); "
@@ -550,8 +550,8 @@ namespace core {
 
 		LambdaExprPtr even = builder.normalize(builder.parseExpr("alias int = int<4>; "
 		                                       "decl odd: (int)->bool;"
-											   "def even = (x: int)->bool { return (x==0)?true:odd(x-1); };"
-		                                       "def odd = (x: int)->bool { return (x==0)?false:even(x-1); };"
+											   "def even : (x: int)->bool { return (x==0)?true:odd(x-1); };"
+		                                       "def odd : (x: int)->bool { return (x==0)?false:even(x-1); };"
 		                                       "even"))
 		                         .as<LambdaExprPtr>();
 
@@ -608,8 +608,8 @@ namespace core {
 
 		LambdaExprPtr even = builder.normalize(builder.parseExpr("alias int = int<4>; "
 		                                       "decl odd: (int)->bool;"
-											   "def even = (x: int)->bool { return (x==0)?true:(odd(x-1)); };"
-		                                       "def odd = (x: int)->bool { return (x==0)?false:(even(x-1)); };"
+											   "def even : (x: int)->bool { return (x==0)?true:(odd(x-1)); };"
+		                                       "def odd : (x: int)->bool { return (x==0)?false:(even(x-1)); };"
 		                                       "even"))
 		                         .as<LambdaExprPtr>();
 
@@ -687,7 +687,7 @@ namespace core {
 
 		LambdaExprPtr fun = builder.parseExpr("alias int = int<4> ; "
 		                                      "decl fun: (int)->int; "
-											  "def fun = (x: int)->int { fun(x-2) + fun(x-1); };"
+											  "def fun : (x: int)->int { fun(x-2) + fun(x-1); };"
 		                                      "fun")
 		                        .as<LambdaExprPtr>();
 
@@ -715,7 +715,7 @@ namespace core {
 		IRBuilder builder(manager);
 
 		LambdaExprPtr fun = builder.parseExpr("decl f: (int<4>)->int<4>;	"
-											  "def f = (x: int<4>)->int<4> {"
+											  "def f : (x: int<4>)->int<4> {"
 		                                      "	return (x==0)?0:((x==1)?1:f(x-1)+f(x-2));"
 		                                      "};  f")
 		                        .as<LambdaExprPtr>();
@@ -736,7 +736,7 @@ namespace core {
 		NodeManager manager;
 		IRBuilder builder(manager);
 		LambdaExprPtr fun = builder.parseExpr("decl f: (int<4>)->int<4>;"
-											  "def f = (x: int<4>)->int<4> {"
+											  "def f : (x: int<4>)->int<4> {"
 		                                      "	return (x==0)?0:((x==1)?1:f(x-1)+f(x-2));"
 		                                      "}; f")
 		                        .as<LambdaExprPtr>();

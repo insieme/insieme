@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -175,8 +175,8 @@ namespace backend {
 		core::LambdaExprPtr lambda = builder.parseExpr(
 				"decl even : (int<4>)->bool;"
 				"decl odd  : (int<4>)->bool;"
-				"def even = (a : int<4>)->bool { return odd(a); }; "
-				"def odd  = (a : int<4>)->bool { return even(a); }; "
+				"def even : (a : int<4>)->bool { return odd(a); }; "
+				"def odd  : (a : int<4>)->bool { return even(a); }; "
 				"even"
 		).as<core::LambdaExprPtr>();
 

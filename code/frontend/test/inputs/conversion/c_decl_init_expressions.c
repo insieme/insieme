@@ -145,7 +145,7 @@ int main() {
 
 	// BOOL CONVERSION //////////////////////////////////////////////////////
 	
-	#define BOOL_TO_INT "def bool_to_int = (b: bool) -> int<4> { if(b) {return 1;} else {return 0;} };"
+	#define BOOL_TO_INT "def bool_to_int : (b: bool) -> int<4> { if(b) {return 1;} else {return 0;} };"
 
 	#pragma test expect_ir(BOOL_TO_INT,"{","var ref<int<4>,f,f> v0 = ref_var_init(bool_to_int(1<2)); }")
 	{ int boolconv = 1 < 2; }

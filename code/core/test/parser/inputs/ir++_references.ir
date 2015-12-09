@@ -4,9 +4,9 @@ alias int = int<4>;
 alias intRef = ref<int>;
 alias refType<'a> = ref<'a>;
 
-def cpp2ir = (x : refType<'a>)->ref<'a> { return x; };
+def cpp2ir : (x : refType<'a>)->ref<'a> { return x; };
 
-def ir2cpp = (x : ref<'a>)->refType<'a> { return x; };
+def ir2cpp : (x : ref<'a>)->refType<'a> { return x; };
 
 unit main() {
 	

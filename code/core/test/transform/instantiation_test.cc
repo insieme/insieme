@@ -56,11 +56,11 @@ namespace transform {
 		IRBuilder builder(mgr);
 
 		auto addresses = builder.parseAddressesStatement(R"raw(
-		def x = (a : 'a)->unit {
+		def x : (a : 'a)->unit {
 			auto z = a; 
 			$z$; 
 		};
-		def test = (f : 'a) -> unit {
+		def test : (f : 'a) -> unit {
 			auto y = f;
 			x(f);
 		};
@@ -83,11 +83,11 @@ namespace transform {
 		IRBuilder builder(mgr);
 
 		auto addresses = builder.parseAddressesStatement(R"raw(
-		def x = (a : 'a)->unit {
+		def x : (a : 'a)->unit {
 			auto z = a; 
 			$z$; 
 		};
-		def test = (f : 'a) -> unit {
+		def test : (f : 'a) -> unit {
 			auto y = f;
 			x(f);
 		};
@@ -110,7 +110,7 @@ namespace transform {
 		IRBuilder builder(mgr);
 
 		auto addresses = builder.parseAddressesStatement(R"raw(
-		def test = (a : vector<'res,'l>) -> unit {
+		def test : (a : vector<'res,'l>) -> unit {
 			$var vector<'res, 'l> res;$
 		};
 		{
@@ -134,7 +134,7 @@ namespace transform {
 		IRBuilder builder(mgr);
 
 		auto addresses = builder.parseAddressesStatement(R"raw(
-		def test = (a : vector<'res,'l>) -> unit {
+		def test : (a : vector<'res,'l>) -> unit {
 			$var vector<'res, 'l> res;$
 			var int<4> x = 0;
 			$x$;
@@ -166,7 +166,7 @@ namespace transform {
 		IRBuilder builder(mgr);
 
 		auto addresses = builder.parseAddressesStatement(R"raw(
-		def test = (a : vector<'res,'l>) -> unit {
+		def test : (a : vector<'res,'l>) -> unit {
 			$var vector<'res, 'l> res;$
 		};
 		{
@@ -194,7 +194,7 @@ namespace transform {
 		IRBuilder builder(mgr);
 
 		auto addresses = builder.parseAddressesStatement(R"raw(
-		def test = (a : vector<'res,'l>) -> unit {
+		def test : (a : vector<'res,'l>) -> unit {
 			var vector<'res, 'l> res;
 		};
 
@@ -222,11 +222,11 @@ namespace transform {
 		IRBuilder builder(mgr);
 
 		auto addresses = builder.parseAddressesStatement(R"raw(
-		def foo = (v : 'a) -> 'a {
+		def foo : (v : 'a) -> 'a {
 			return $v$;
 		};
 		
-		def test = (v : array<'res,'l>, f : ('res) -> 'res) -> unit {
+		def test : (v : array<'res,'l>, f : ('res) -> 'res) -> unit {
 			f(v[0]);
 		};
 		
@@ -348,16 +348,16 @@ namespace transform {
             alias int = int<4>;
             alias uint = uint<4>;
 
-            def differentbla = (x : '_type_b) -> unit {
+            def differentbla : (x : '_type_b) -> unit {
                 auto m = x;
                 auto l = m;
             };
 
-            def anotherbla = (x : '_type_a) -> unit {
+            def anotherbla : (x : '_type_a) -> unit {
                 auto m = x;
             };
 
-            def bla = (f : '_type_a) -> unit {
+            def bla : (f : '_type_a) -> unit {
                 anotherbla(f);
                 differentbla(f);
                 parallel(job { auto l = f; });
@@ -391,7 +391,7 @@ namespace transform {
 
 		auto addresses = build.parseAddressesStatement(R"raw(
 		decl x : ('_type_)->unit;
-		def x = (a : '_type_)->unit {
+		def x : (a : '_type_)->unit {
 			$x$(a); // address 1
 		};
 		{
@@ -418,11 +418,11 @@ namespace transform {
 		IRBuilder builder(mgr);
 
 		auto addresses = builder.parseAddressesStatement(R"raw(
-		def x = (a : 'a)->unit {
+		def x : (a : 'a)->unit {
 			auto z = a; 
 			$z$; 
 		};
-		def test = (f : 'a) -> unit {
+		def test : (f : 'a) -> unit {
 			auto y = f;
 			x(f);
 		};

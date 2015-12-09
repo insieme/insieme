@@ -62,8 +62,8 @@ TEST(ErrorPrinter, address) {
 
 	auto addrs = builder.parseAddressesStatement(R"1N5P1RE(
 			decl lfun : (ref<int<4>>)->int<4>;
-			def fun = (arg : int<4>)->int<4> { return arg + 1; };
-			def rfun = (arg : ref<int<4>>)->int<4> { return *arg;};
+			def fun : (arg : int<4>)->int<4> { return arg + 1; };
+			def rfun : (arg : ref<int<4>>)->int<4> { return *arg;};
             {
 			$var ref<int<4>,f,f,plain> a;$
 			var ref<int<4>,f,f,plain> b;

@@ -128,7 +128,7 @@ namespace analysis {
 
 		// create example
 		auto fun = builder.parseExpr("decl f : (int<4>)->int<4>;"
-			                         "def f = (x : int<4>)->int<4> {"
+			                         "def f : (x : int<4>)->int<4> {"
 			                         "	return (x==0)?1:f(x-1)*x;"
 			                         "}; f")
 			           .as<LambdaExprPtr>();
@@ -151,7 +151,7 @@ namespace analysis {
 
 		// create example
 		auto code = builder.parseExpr("decl f : (int<4>)->int<4>;"
-			                          " def f = (x : int<4>)->int<4> {"
+			                          " def f : (x : int<4>)->int<4> {"
 			                          "		return (y : int<4>)->int<4> {"
 			                          "			return f(y);"
 			                          "		}(x);"
@@ -488,8 +488,8 @@ namespace analysis {
 		ExpressionPtr recFun =
 			builder.parseExpr("alias ftype = (ref<int<4>>, ref<int<4>>, ref<int<4>>, ref<int<4>>)->unit;"
 			                  "decl f : ftype; decl g : ftype;"
-			                  "def f = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { b = *a; d = *b; g(a,b,c,d); };"
-			                  "def g = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { c = *a; d = *c; f(a,b,c,d); };"
+			                  "def f : (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { b = *a; d = *b; g(a,b,c,d); };"
+			                  "def g : (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { c = *a; d = *c; f(a,b,c,d); };"
 			                  "f");
 
 		VariablePtr varC = builder.variable(builder.refType(mgr.getLangBasic().getInt4()), 8);
@@ -543,8 +543,8 @@ namespace analysis {
 		ExpressionPtr recFun =
 			builder.parseExpr("alias ftype = (ref<int<4>>, ref<int<4>>, ref<int<4>>, ref<int<4>>)->unit;"
 			                  "decl f : ftype; decl g : ftype;"
-			                  "def f = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { b = *a; d = *b; g(a,b,c,d); };"
-			                  "def g = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { c = *a; d = *c; f(a,b,c,d); };"
+			                  "def f : (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { b = *a; d = *b; g(a,b,c,d); };"
+			                  "def g : (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { c = *a; d = *c; f(a,b,c,d); };"
 			                  "f");
 
 		VariablePtr varC = builder.variable(builder.refType(mgr.getLangBasic().getInt4()), 8);
@@ -564,13 +564,13 @@ namespace analysis {
 		ExpressionPtr funA = builder.parseExpr(
 			"alias ftype = (ref<int<4>>, ref<int<4>>, ref<int<4>>, ref<int<4>>)->unit;"
 			"decl f : ftype;"
-			"def f = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { var ref<int<4>> x = ref_var_init(*d); f(x,a,b,c); };"
+			"def f : (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { var ref<int<4>> x = ref_var_init(*d); f(x,a,b,c); };"
 			"f");
 
 		ExpressionPtr funB = builder.parseExpr(
 			"alias ftype = (ref<int<4>>, ref<int<4>>, ref<int<4>>, ref<int<4>>)->unit;"
 			"decl f : ftype;"
-			"def f = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { var ref<int<4>> x = ref_var_init(*d); d = 2; f(x,a,b,c); };"
+			"def f : (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { var ref<int<4>> x = ref_var_init(*d); d = 2; f(x,a,b,c); };"
 			"f");
 
 		VariablePtr varA = builder.variable(builder.refType(mgr.getLangBasic().getInt4()), 6);
@@ -592,16 +592,16 @@ namespace analysis {
 		ExpressionPtr funA = builder.parseExpr(
 			"alias ftype = (ref<int<4>>, ref<int<4>>, ref<int<4>>, ref<int<4>>)->unit;"
 			"decl f : ftype; decl g : ftype;"
-			"def f = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { var ref<int<4>> x = ref_var_init(*d); g(x,a,b,c); };"
-			"def g = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { var ref<int<4>> x = ref_var_init(*d); f(x,a,b,c); };"
+			"def f : (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { var ref<int<4>> x = ref_var_init(*d); g(x,a,b,c); };"
+			"def g : (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { var ref<int<4>> x = ref_var_init(*d); f(x,a,b,c); };"
 			"f");
 
 		ExpressionPtr funB =
 		    builder.parseExpr(
 			"alias ftype = (ref<int<4>>, ref<int<4>>, ref<int<4>>, ref<int<4>>)->unit;"
 			"decl f : ftype; decl g : ftype;"
-			"def f = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { var ref<int<4>> x = ref_var_init(*d); d = 2; g(x,a,b,c); };"
-			"def g = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { var ref<int<4>> x = ref_var_init(*d); d = 2; f(x,a,b,c); };"
+			"def f : (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { var ref<int<4>> x = ref_var_init(*d); d = 2; g(x,a,b,c); };"
+			"def g : (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { var ref<int<4>> x = ref_var_init(*d); d = 2; f(x,a,b,c); };"
 			"f");
 
 		VariablePtr varA = builder.variable(builder.refType(mgr.getLangBasic().getInt4()), 6);
@@ -629,7 +629,7 @@ namespace analysis {
 		auto prog = builder.parseProgram(R"1N5P1RE(
 			alias int = int<4>;
 			decl taskfun : (int) -> unit;
-			def taskfun = (v : int) -> unit {
+			def taskfun : (v : int) -> unit {
 				if(v == 0) { return; }
 				taskfun(v-1);
 				mergeAll();
@@ -648,7 +648,7 @@ namespace analysis {
 		auto prog = builder.parseProgram(R"1N5P1RE(
 			alias int = int<4>;
 			decl taskfun : (int) -> unit;
-			def taskfun = (v : int) -> unit {
+			def taskfun : (v : int) -> unit {
 				if(v == 0) { return; }
 				parallel(job [1..1] => taskfun(v-1));
 				mergeAll();
@@ -667,7 +667,7 @@ namespace analysis {
 
 		auto prog = builder.parseProgram(R"1N5P1RE(
 			alias int = int<4>;
-			def fun = () -> unit {
+			def fun : () -> unit {
 				var int x = 1;
 				var int y;
 			};
