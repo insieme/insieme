@@ -254,25 +254,25 @@ namespace parser {
 /*
 		EXPECT_TRUE(test_expression(nm, ""
 				"decl foo : () -> unit; "
-				"def bar = () -> unit { foo(); }; "
-				"def foo = () -> unit { bar(); }; "
+				"def bar : () -> unit { foo(); }; "
+				"def foo : () -> unit { bar(); }; "
 				"foo"));
 
 		EXPECT_TRUE(test_expression(nm, ""
 				"decl foo : () -> unit; "
-				"def bar = () -> unit { foo(); }; "
-				"def foo = () -> unit { bar(); }; "
+				"def bar : () -> unit { foo(); }; "
+				"def foo : () -> unit { bar(); }; "
 				"bar"));
 
 		EXPECT_TRUE(test_expression(nm, ""
 				"decl foo : (int<4>) -> int<4>; "
-				"def bar = (a : int<4>) -> int<4> { return foo(a); }; "
-				"def foo = (b : int<4>) -> int<4> { return bar(b); }; "
+				"def bar : (a : int<4>) -> int<4> { return foo(a); }; "
+				"def foo : (b : int<4>) -> int<4> { return bar(b); }; "
 				"foo"));
 
-		EXPECT_TRUE(test_expression(nm,"def f = (a : struct {}) -> unit {}; f"));
-		EXPECT_TRUE(test_expression(nm,"def f = (a : struct {a : int<4>;}) -> unit {}; f"));
-		EXPECT_TRUE(test_expression(nm,"def f = (a : struct {a : int<4>; b : union {a : int<4>; b : int<8>};) -> unit {}; f"));
+		EXPECT_TRUE(test_expression(nm,"def f : (a : struct {}) -> unit {}; f"));
+		EXPECT_TRUE(test_expression(nm,"def f : (a : struct {a : int<4>;}) -> unit {}; f"));
+		EXPECT_TRUE(test_expression(nm,"def f : (a : struct {a : int<4>; b : union {a : int<4>; b : int<8>};) -> unit {}; f"));
 */
 
 	}
@@ -421,18 +421,18 @@ TEST(After_Before_Test, Let) {
     	EXPECT_TRUE(test_program(mgr, "alias int = int<4>; int main () { return 1; }"));
 		EXPECT_TRUE(test_program(mgr, "alias int = int<4>; alias long = int<8>; long main ( a : int) { return 1; }"));
 		EXPECT_TRUE(test_program(mgr, "alias int = int<4>; alias long = int<8>; int<4> main () { return 1; }"));
-		EXPECT_TRUE(test_program(mgr, "def f = () -> unit { }; int<4> main () { f(); return 1; }"));
+		EXPECT_TRUE(test_program(mgr, "def f : () -> unit { }; int<4> main () { f(); return 1; }"));
 
-		EXPECT_TRUE(test_program(mgr, "alias int = int<4>; def f = (a : int) -> int { return a; }; int main () { f(1); return 1; }"));
-		EXPECT_TRUE(test_program(mgr, "decl f : ()->unit; decl g : ()->unit; def f = ()->unit{g();}; def g = ()->unit{f();}; unit main() { f(); }"));
-		EXPECT_TRUE(test_program(mgr, "decl f : ()->unit; decl g : ()->unit; def f = ()->unit{g();}; def g = ()->unit{f();}; unit main() { f(); 5;}"));
-		EXPECT_TRUE(test_program(mgr, "decl f : ()->unit; decl g : ()->unit; def f = ()->unit{g();}; def g = ()->unit{f();}; unit main() { f(); g(); }"));
+		EXPECT_TRUE(test_program(mgr, "alias int = int<4>; def f : (a : int) -> int { return a; }; int main () { f(1); return 1; }"));
+		EXPECT_TRUE(test_program(mgr, "decl f : ()->unit; decl g : ()->unit; def f : ()->unit{g();}; def g : ()->unit{f();}; unit main() { f(); }"));
+		EXPECT_TRUE(test_program(mgr, "decl f : ()->unit; decl g : ()->unit; def f : ()->unit{g();}; def g : ()->unit{f();}; unit main() { f(); 5;}"));
+		EXPECT_TRUE(test_program(mgr, "decl f : ()->unit; decl g : ()->unit; def f : ()->unit{g();}; def g : ()->unit{f();}; unit main() { f(); g(); }"));
     	EXPECT_TRUE(test_program(mgr, ""
 			                          "alias int = int<4>;"
-			                          "def f = (a : int) -> int {"
+			                          "def f : (a : int) -> int {"
 			                          "   return 0;"
 			                          "};"
-			                          "def g = (a : int, b : int) -> unit {};"
+			                          "def g : (a : int, b : int) -> unit {};"
 			                          "unit main() {"
 			                          "   f(3);"
 			                          "   var int x = 4;"
@@ -460,10 +460,10 @@ TEST(After_Before_Test, Let) {
 		"def struct name { "
 		"    a : int;"
 		"    b : int;"
-		"    lambda f = () -> int {"
+		"    lambda f : () -> int {"
 		"        return 0;"
 		"    }"
-		"    lambda f = (a : int) -> int {"
+		"    lambda f : (a : int) -> int {"
 		"        return 1;"
 		"    }"
 		"};"
@@ -553,14 +553,14 @@ TEST(After_Before_Test, Let) {
 			                         "}"));
 		EXPECT_TRUE(test_program(nm, ""
 			                         "alias int = int<4>;"
-			                         "def f = ()->unit{};"
+			                         "def f : ()->unit{};"
 			                         "int main() {"
 			                         "   f();"
 			                         "   return 4;"
 			                         "}"));
 		EXPECT_TRUE(test_program(nm, ""
 			                         "alias int = int<4>;"
-			                         "def f = (a : int)->int{"
+			                         "def f : (a : int)->int{"
 			                         "   return a;"
 			                         "};"
 			                         "unit main(a : ref<int<4>,f,f,plain>) {"
@@ -569,7 +569,7 @@ TEST(After_Before_Test, Let) {
 
 		EXPECT_TRUE(test_program(nm, ""
 			                         "alias int = int<4>;"
-			                         "def f = function (a : ref<int,f,f,plain>)->unit{"
+			                         "def f : function (a : ref<int,f,f,plain>)->unit{"
 			                         "   a = 5;"
 			                         "};"
 			                         "unit main(a : ref<int<4>,f,f,plain>) {"
@@ -578,7 +578,7 @@ TEST(After_Before_Test, Let) {
 			                         "}"));
 		EXPECT_TRUE(test_program(nm, ""
 			                         "alias int = int<4>;"
-			                         "def f = function (a : ref<int<4>,f,f,plain>)->int{"
+			                         "def f : function (a : ref<int<4>,f,f,plain>)->int{"
 			                         "   return *a;"
 			                         "};"
 			                         "unit main() {"
@@ -586,7 +586,7 @@ TEST(After_Before_Test, Let) {
 			                         "}"));
 
 		EXPECT_TRUE(test_program(nm, ""
-			                         "def f = function (a : ref<int<4>,f,f,plain>) -> int<4> { "
+			                         "def f : function (a : ref<int<4>,f,f,plain>) -> int<4> { "
 			                         "   return *a; "
 			                         "}; "
 			                         "unit main (argc : int<8>, argc2 : int<4>) {1;2;3;f(2);}"));
@@ -599,7 +599,7 @@ TEST(After_Before_Test, Let) {
 			                         "alias int = int<4>; "
 			                         "unit main (a : int, b : int) { 1+1; }"));
 		EXPECT_TRUE(test_program(nm, "alias int = int<4>; "
-			                         "def f = function (a : ref<int,f,f,plain>) ->int { "
+			                         "def f : function (a : ref<int,f,f,plain>) ->int { "
 			                         "  return *a; "
 			                         "}; "
 			                         "unit main (a : int, b : int) { "
@@ -608,10 +608,10 @@ TEST(After_Before_Test, Let) {
 
 		EXPECT_TRUE(test_program(nm, "alias int = int<4>;"
 			                         "decl g : () ->unit;"
-				                     "def f = () -> unit{"
+				                     "def f : () -> unit{"
 			                         "    g();"
 			                         "};"
-			                         "def g = () -> unit {"
+			                         "def g : () -> unit {"
 			                         "    f();"
 			                         "};"
 			                         "int main() { "
@@ -621,11 +621,11 @@ TEST(After_Before_Test, Let) {
 			                         "}"));
 
 		EXPECT_TRUE(test_program(nm, "decl ffunc : (int<4>)->int<4>;"
-				                     "def ffunc = function (a : ref<int<4>,f,f,plain>)->int<4> {"
+				                     "def ffunc : function (a : ref<int<4>,f,f,plain>)->int<4> {"
 			                         "         ffunc(*a);"
 			                         "         return 5;"
 			                         "};"
-			                         "def gfunc = (a : int<4>)->int<4> {"
+			                         "def gfunc : (a : int<4>)->int<4> {"
 			                         "  return a;"
 			                         "};"
 			                         "unit main() { "
@@ -635,7 +635,7 @@ TEST(After_Before_Test, Let) {
 			                         " }"));
 
 		EXPECT_TRUE(test_program(nm, "alias int = int<4>;"
-			                         "def f = (a : int) -> int {"
+			                         "def f : (a : int) -> int {"
 			                         "   return a;"
 			                         "};"
 			                         "int main() {"
@@ -646,7 +646,7 @@ TEST(After_Before_Test, Let) {
 			                         "}"));
 
 		EXPECT_TRUE(test_program(nm, "decl ffunc : (int<4>)->unit;"
-				                     "def ffunc = function (a : ref<int<4>,f,f,plain>)->unit {"
+				                     "def ffunc : function (a : ref<int<4>,f,f,plain>)->unit {"
 			                         "         ffunc(*a);"
 			                         "};"
 			                         "unit main() { "
@@ -654,14 +654,14 @@ TEST(After_Before_Test, Let) {
 			                         "  ffunc(*s); "
 			                         "}"));
 
-		EXPECT_TRUE(test_program(nm, "def ffunc = (a : int<4>)->int<4> {"
+		EXPECT_TRUE(test_program(nm, "def ffunc : (a : int<4>)->int<4> {"
 			                         "      return a;"
 			                         "    };"
 			                         "unit main() { ffunc(12); }"));
 
 		EXPECT_TRUE(test_program(nm, "alias int = int<4>;"
-			                         "def f = (a : int) -> unit {};"
-			                         "def g = (b : int) -> unit {"
+			                         "def f : (a : int) -> unit {};"
+			                         "def g : (b : int) -> unit {"
 			                         "   f(5);"
 			                         "   f(b);"
 			                         "};"
@@ -671,12 +671,12 @@ TEST(After_Before_Test, Let) {
 
 		EXPECT_TRUE(test_program(nm, "decl ffunc : (int<4>)->int<4>;"
 				                     "decl gfunc : (int<4>)->int<4>;"
-			                         "def ffunc = function (a : ref<int<4>,f,f,plain>)->int<4> {"
+			                         "def ffunc : function (a : ref<int<4>,f,f,plain>)->int<4> {"
 			                         "         ffunc(*a);"
 			                         "         gfunc(6);"
 			                         "         return 5;"
 			                         "};"
-			                         "def gfunc = function (b : ref<int<4>,f,f,plain>)->int<4> {"
+			                         "def gfunc : function (b : ref<int<4>,f,f,plain>)->int<4> {"
 			                         "         ffunc(7);"
 			                         "         gfunc(*b);"
 			                         "         return 3;"
@@ -685,11 +685,11 @@ TEST(After_Before_Test, Let) {
 
 		EXPECT_TRUE(test_program(nm, "decl ffunc : (int<4>)->int<4>;"
 									 "decl gfunc : (int<4>)->int<4>;"
-			                         "def ffunc = (a : int<4>)->unit {"
+			                         "def ffunc : (a : int<4>)->unit {"
 			                         "         ffunc(a);"
 			                         "         gfunc(6);"
 			                         "};"
-			                         "def gfunc = (b : int<4>)->unit {"
+			                         "def gfunc : (b : int<4>)->unit {"
 			                         "         ffunc(7);"
 			                         "         gfunc(b);"
 			                         "};"

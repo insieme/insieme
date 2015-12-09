@@ -75,8 +75,8 @@ int main() {
 	driver var3 = 3;
 
 	#pragma test expect_ir(R"(
-		def IMP_consumer = function (v1 : ref<int<4>,f,f,cpp_rref>) -> unit { };
-		def IMP_producer = () -> int<4> { return 5; };
+		def IMP_consumer : function (v1 : ref<int<4>,f,f,cpp_rref>) -> unit { };
+		def IMP_producer : () -> int<4> { return 5; };
 		IMP_consumer(IMP_producer())
 	)")
 	consumer(producer());

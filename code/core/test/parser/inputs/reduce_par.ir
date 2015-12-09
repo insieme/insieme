@@ -1,6 +1,6 @@
 
 
-def red_par = (g : threadgroup, v : 'a, op : ('b,'a)->'b, init : 'b)->'b {
+def red_par : (g : threadgroup, v : 'a, op : ('b,'a)->'b, init : 'b)->'b {
 	return redistribute(g, v, (data : ref<array<'a,inf>>, size : uint<8>, _ : uint<8>)=> array_reduce(data, num_cast(size,type_lit(int<8>)), op, init) );
 };
 

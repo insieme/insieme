@@ -48,7 +48,7 @@ int main() {
 
 	// EXPRESSIONS //////////////////////////////////////////////////////////////
 	
-	#define FOO_FUN "alias foo_type = (int<4>) -> int<4>; def IMP_foo = (a: int<4>)->int<4> { return a; }; alias foo_ptr_type = ptr<foo_type,t,f>; "
+	#define FOO_FUN "alias foo_type = (int<4>) -> int<4>; def IMP_foo : (a: int<4>)->int<4> { return a; }; alias foo_ptr_type = ptr<foo_type,t,f>; "
 	{ }
 
 	#pragma test expect_ir(FOO_FUN "{ ptr_of_function(IMP_foo); 1; }")
