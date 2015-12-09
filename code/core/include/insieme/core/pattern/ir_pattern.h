@@ -220,8 +220,8 @@ namespace pattern {
 			return node(core::NT_UnionExpr, single(memberName) << single(member));
 		}
 
-		inline TreePattern markerExpr(const TreePattern& subExpression, const TreePattern& id) {
-			return node(core::NT_MarkerExpr, single(subExpression) << single(id));
+		inline TreePattern markerExpr(const TreePattern& subExpression, const TreePattern& id, const TreePattern& type = any) {
+			return node(core::NT_MarkerExpr, single(type) << single(id) << single(subExpression));
 		}
 
 		inline TreePattern lambda(const TreePattern& type, const ListPattern& parameters, const TreePattern& body) {
@@ -287,7 +287,7 @@ namespace pattern {
 		}
 
 		inline TreePattern markerStmt(const TreePattern& subExpr, const TreePattern& id) {
-			return node(core::NT_MarkerStmt, single(subExpr) << single(id));
+			return node(core::NT_MarkerStmt, single(id) << single(subExpr));
 		}
 
 		inline const TreePattern& continueStmt() {
