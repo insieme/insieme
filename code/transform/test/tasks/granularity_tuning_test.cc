@@ -55,8 +55,8 @@ namespace tasks {
 
 		auto addresses = builder.parseAddressesProgram(R"1N5P1RE(
             alias int = int<4>;
-			decl taskfun: (int)->unit;
-            def taskfun = (v: int) -> unit {
+			decl taskfun : (int)->unit;
+            def taskfun : (v: int) -> unit {
                 if(v == 0) {return;}
                 parallel(job [1..1] => taskfun(v-1));
 				mergeAll();
@@ -92,13 +92,13 @@ namespace tasks {
 
 		auto addresses = builder.parseAddressesProgram(R"1N5P1RE(
 			alias int = int<4>;
-			decl tf2: (int)->unit;
-			def tf1 = (v: int) -> unit {
+			decl tf2 : (int)->unit;
+			def tf1 : (v: int) -> unit {
 				if(v == 0) {return;}
 				parallel(job [1..1] => tf2(v-1));
 				mergeAll();
 			};
-			def tf2 = (v: int) -> unit {
+			def tf2 : (v: int) -> unit {
 				if(v == 0) {return;}
 				parallel(job [1..1] => tf1(v-1));
 				mergeAll();

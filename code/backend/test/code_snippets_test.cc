@@ -67,7 +67,7 @@ namespace backend {
 				R"(
 				alias int = int<4>;
 				
-				def f = (a : int, b : int)->int {
+				def f : (a : int, b : int)->int {
 					return a + b * a;
 				};
 				
@@ -341,12 +341,12 @@ namespace backend {
 			alias int = int<4>;
 			alias uint = uint<4>;
 
-			def differentbla = (x : 'b) -> unit {
+			def differentbla : (x : 'b) -> unit {
 				auto m = x;
 				auto l = m;
 			};
 
-			def bla = (f : 'a) -> unit {
+			def bla : (f : 'a) -> unit {
 				let anotherbla = (x : 'a) -> unit {
 					auto m = x;
 				};
@@ -470,7 +470,7 @@ namespace backend {
 		core::IRBuilder builder(manager);
 
 		core::ProgramPtr program = builder.parseProgram(R"(
-				def f = (a : ref<'a>, c : ('a)=>bool, v : ()=>'a)->ref<'a> {
+				def f : (a : ref<'a>, c : ('a)=>bool, v : ()=>'a)->ref<'a> {
 					if(c(*a)) {
 						a = v();
 					}
@@ -514,8 +514,8 @@ namespace backend {
 		core::NodeManager manager;
 		core::IRBuilder builder(manager);
 
-		core::ProgramPtr program = builder.parseProgram("def f = ()->int<4> { return 4; };"
-		                                                "def g = (a : ()=>'a)->'a { return a(); };"
+		core::ProgramPtr program = builder.parseProgram("def f : ()->int<4> { return 4; };"
+		                                                "def g : (a : ()=>'a)->'a { return a(); };"
 		                                                "int<4> main() {"
 		                                                "	g(f);"
 		                                                "	return 0;"
@@ -549,9 +549,9 @@ namespace backend {
 
 		core::ProgramPtr program = builder.parseProgram("alias int = int<4>;"
 		                                                ""
-		                                                "def f = ()->int { return 4; };"
+		                                                "def f : ()->int { return 4; };"
 		                                                ""
-		                                                "def g = (x : int)->int { return x + 2; };"
+		                                                "def g : (x : int)->int { return x + 2; };"
 		                                                ""
 		                                                "int main() {"
 		                                                "	return g(f());"
@@ -579,7 +579,7 @@ namespace backend {
 			EXPECT_PRED2(notContainsSubString, code, "<?>");
 			EXPECT_PRED2(notContainsSubString, code, "<a>");
 			EXPECT_PRED2(notContainsSubString, code, "UNSUPPORTED");
-			EXPECT_PRED2(notContainsSubString, code, "{\n    _ = function() -> int<4> {\n        return g(f());\n    };\n}");
+			EXPECT_PRED2(notContainsSubString, code, "{\n    _ : function() -> int<4> {\n        return g(f());\n    };\n}");
 
 			// try compiling the code fragment
 			utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
@@ -608,7 +608,7 @@ namespace backend {
 			EXPECT_PRED2(notContainsSubString, code, "<?>");
 			EXPECT_PRED2(notContainsSubString, code, "<a>");
 			EXPECT_PRED2(notContainsSubString, code, "UNSUPPORTED");
-			EXPECT_PRED2(containsSubString, code, "{main = () -> int<4> {\n        return g(f());\n    };\n}");
+			EXPECT_PRED2(containsSubString, code, "{main : () -> int<4> {\n        return g(f());\n    };\n}");
 
 			// try compiling the code fragment
 			utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();

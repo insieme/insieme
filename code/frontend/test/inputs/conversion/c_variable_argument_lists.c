@@ -41,7 +41,7 @@ void foo(int a, ...);
 
 int main() {
 
-	#define PREAMBLE "using \"ext.varargs\"; def IMP_bar = () -> int<4> { return 0;};"
+	#define PREAMBLE "using \"ext.varargs\"; def IMP_bar : () -> int<4> { return 0;};"
 	#define BLA "lit(\"IMP_bla\":(int<4>,int<4>,var_list)->unit)"
 	#define FOO "lit(\"IMP_foo\":(int<4>,var_list)->unit)"
 
