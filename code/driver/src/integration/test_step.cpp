@@ -104,6 +104,11 @@ namespace integration {
 				// start with executable
 				cmd << props["compiler"];
 
+				// add input files
+				for(const auto& cur : test.getFiles()) {
+					cmd << " " << cur.string();
+				}
+
 				// add include directories
 				for(const auto& cur : test.getIncludeDirs()) {
 					cmd << " -I" << cur.string();
@@ -121,11 +126,6 @@ namespace integration {
 
 				// disable multithreading
 				set.numThreads = 0;
-
-				// add input files
-				for(const auto& cur : test.getFiles()) {
-					cmd << " " << cur.string();
-				}
 
 				std::vector<string> flags = test.getCompilerArguments(name);
 				// get all flags defined by properties
@@ -350,6 +350,9 @@ namespace integration {
 				// determine backend
 				string be = getBackendKey(backend);
 
+				// add input file
+				cmd << " " << executionDirectory << "/" << test.getBaseName() << ".insieme." << be << "." << getExtension(l);
+
 				// add intercepted include directories
 				for(const auto& cur : test.getInterceptedHeaderFileDirectories()) {
 					cmd << " -I" << cur.string();
@@ -378,9 +381,6 @@ namespace integration {
 
 				// disable multithreading
 				set.numThreads = 0;
-
-				// add input file
-				cmd << " " << executionDirectory << "/" << test.getBaseName() << ".insieme." << be << "." << getExtension(l);
 
 				std::vector<string> flags = test.getCompilerArguments(name);
 				// get all flags defined by properties

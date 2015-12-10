@@ -44,6 +44,7 @@
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/lang/pointer.h"
+#include "insieme/core/lang/array.h"
 #include "insieme/core/annotations/naming.h"
 
 #include "insieme/annotations/c/extern.h"
@@ -239,24 +240,49 @@ namespace conversion {
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//							Variable declarations
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	namespace {
+		struct DeclaredTag {};
+	}
+
 	void DeclConverter::VisitVarDecl(const clang::VarDecl* var) {
 		VLOG(2) << "~~~~~~~~~~~~~~~~ VisitVarDecl: " << dumpClang(var);
-		// variables to be skipped
+		// non-global variables are to be skipped
 		if(!var->hasGlobalStorage()) { return; }
-		if(var->hasExternalStorage()) { return; }
 
 		converter.trackSourceLocation(var);
 		auto convertedVar = convertVarDecl(var);
 		auto name = utils::getNameForGlobal(var, converter.getSourceManager());
 		auto globalLit = builder.literal(convertedVar.first->getType(), name);
+
+		// for global arrays, purge size information (this is required for sized and unsized arrays in different translation units to be correctly unified)
+		auto refT = core::lang::ReferenceType(globalLit->getType());
+		auto elemType = refT.getElementType();
+		if(core::lang::isArray(elemType)) {
+			auto newArrType = core::lang::ArrayType::create(core::lang::ArrayType(elemType).getElementType());
+			auto newRefType = core::lang::ReferenceType::create(newArrType, refT.isConst(), refT.isVolatile(), refT.getKind());
+			globalLit = builder.literal(newRefType, name);
+		}
+
+		// mark as extern and tag with source header if required
+		if(var->hasExternalStorage() && !globalLit->hasAttachedValue<DeclaredTag>()) annotations::c::markExtern(globalLit);
 		converter.applyHeaderTagging(globalLit, var);
+
 		// handle pragmas attached to decls
 		globalLit = pragma::handlePragmas({globalLit}, var, converter).front().as<core::LiteralPtr>();
+
+		// store variable in variable manager
 		converter.getVarMan()->insert(var, globalLit);
-		auto init =
-			(var->getInit()) ? converter.convertInitExpr(var->getInit()) : builder.getZero(core::lang::ReferenceType(globalLit->getType()).getElementType());
-		core::annotations::attachName(globalLit, name);
-		converter.getIRTranslationUnit().addGlobal(globalLit, init);
+
+		// handle initialization if not extern
+		if(!var->hasExternalStorage()) {
+			auto init = (var->getInit()) ? converter.convertInitExpr(var->getInit()) : builder.getZero(elemType);
+			core::annotations::attachName(globalLit, name);
+			// remove extern tag, add declared tag
+			annotations::c::markExtern(globalLit, false);
+			globalLit->attachValue<DeclaredTag>();
+			converter.getIRTranslationUnit().addGlobal(globalLit, init);
+		}
+
 		converter.untrackSourceLocation();
 	}
 
