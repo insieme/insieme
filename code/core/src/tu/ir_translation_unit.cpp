@@ -577,34 +577,29 @@ namespace tu {
 			core::FrontendIRBuilder builder(internalMainFunc->getNodeManager());
 			core::StatementList inits;
 
-			// check all used literals if they are used as global and the global type is vector
-			// and the usedLiteral type is array, if so replace the used literal type to vector and
-			// us ref.vector.to.ref.array
+			// check if the initialization of any literal specifies the array type more accurately than the literal (e.g. inf -> fixed size)
+			// if so, replace the literal type
 			core::NodeMap replacements;
 			for(auto cur : unit.getGlobals()) {
 				const LiteralPtr& global = resolver.apply(cur.first).as<LiteralPtr>();
-				const TypePtr& globalTy = global->getType();
+				auto globalRefT = core::analysis::getReferencedType(global);
+				
+				if(core::lang::isArray(globalRefT) && core::lang::isArray(cur.second)) {
+					auto litArrT = core::lang::ArrayType(globalRefT);
+					auto initArrT = core::lang::ArrayType(cur.second);
+					if(litArrT.isUnknownSize() && ! initArrT.isUnknownSize()) {
+						// get the literal
+						auto rT = core::lang::ReferenceType(global);
+						auto replacement =
+							resolver.apply(builder.literal(global->getStringValue(), core::lang::ReferenceType::create((GenericTypePtr)initArrT, rT.isConst(),
+							                                                                                           rT.isVolatile(), rT.getKind())));
 
-				if(!core::analysis::isRefType(globalTy)) { continue; }
-
-				auto findLit = [&](const NodePtr& node) {
-					const LiteralPtr& usedLit = resolver.apply(node).as<LiteralPtr>();
-					const TypePtr& usedLitTy = usedLit->getType();
-
-					if(!core::analysis::isRefType(usedLitTy)) { return false; }
-
-					return usedLit->getStringValue() == global->getStringValue() && core::lang::isArray(core::analysis::getReferencedType(usedLitTy))
-					       && types::isSubTypeOf(globalTy, usedLitTy);
-				};
-
-				if(any(usedLiterals, findLit)) {
-					// get the literal
-					LiteralPtr toReplace = resolver.apply((*std::find_if(usedLiterals.begin(), usedLiterals.end(), findLit)).as<LiteralPtr>());
-					LiteralPtr global = resolver.apply(cur.first);
-
-					// update usedLiterals to the "new" literal
-					usedLiterals.erase(toReplace);
-					usedLiterals.insert(global);
+						// update usedLiterals to the "new" literal
+						usedLiterals.erase(global);
+						usedLiterals.insert(replacement);
+						// add to replacement list
+						replacements.insert({global, replacement});
+					}
 				}
 			}
 			internalMainFunc = transform::replaceAll(internalMainFunc->getNodeManager(), internalMainFunc, replacements, core::transform::globalReplacement)
