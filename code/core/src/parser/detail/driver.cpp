@@ -448,20 +448,24 @@ namespace parser {
 		TypeList InspireDriver::getParamTypesForLambdaAndFunction(const location& l, const VariableList& params) {
 			TypeList paramTypes;
 			for(const auto& var : params) {
+				const auto& varType = var->getType();
 				// if we are building a lambda, the function type is already the correct one and the body will be materialized
 				if(inLambda) {
-					paramTypes.push_back(var.getType());
+					paramTypes.push_back(varType);
 
 					// if we are building a function, we have to calculate the function type differently and leave the body untouched
 				} else {
-					if(!analysis::isRefType(var.getType())) {
+					if(!analysis::isRefType(varType)) {
 						error(l, format("Parameter %s is not of ref type", var));
 						return TypeList();
 					}
-					if(lang::isCppReference(var->getType()) || lang::isCppRValueReference(var->getType())) {
-						paramTypes.push_back(var->getType());
+					//CPP refs and rrefs get used as is (see transform::materialize)
+					if(lang::isCppReference(varType) || lang::isCppRValueReference(varType)) {
+						paramTypes.push_back(varType);
+
+						//plain refs get unwrapped
 					} else {
-						paramTypes.push_back(analysis::getReferencedType(var.getType()));
+						paramTypes.push_back(analysis::getReferencedType(varType));
 					}
 				}
 			}
