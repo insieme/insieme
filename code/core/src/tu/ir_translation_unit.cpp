@@ -577,44 +577,35 @@ namespace tu {
 			core::FrontendIRBuilder builder(internalMainFunc->getNodeManager());
 			core::StatementList inits;
 
-			// check if the initialization of any literal specifies the array type more accurately than the literal (e.g. inf -> fixed size)
-			// if so, replace the literal type
-			core::NodeMap replacements;
-			for(auto cur : unit.getGlobals()) {
-				const LiteralPtr& global = resolver.apply(cur.first).as<LiteralPtr>();
-				auto globalRefT = core::analysis::getReferencedType(global);
-				
-				if(core::lang::isArray(globalRefT) && core::lang::isArray(cur.second)) {
-					auto litArrT = core::lang::ArrayType(globalRefT);
-					auto initArrT = core::lang::ArrayType(cur.second);
-					if(litArrT.isUnknownSize() && ! initArrT.isUnknownSize()) {
-						// get the literal
-						auto rT = core::lang::ReferenceType(global);
-						auto replacement =
-							resolver.apply(builder.literal(global->getStringValue(), core::lang::ReferenceType::create((GenericTypePtr)initArrT, rT.isConst(),
-							                                                                                           rT.isVolatile(), rT.getKind())));
-
-						// update usedLiterals to the "new" literal
-						usedLiterals.erase(global);
-						usedLiterals.insert(replacement);
-						// add to replacement list
-						replacements.insert({global, replacement});
-					}
-				}
-			}
-			internalMainFunc = transform::replaceAll(internalMainFunc->getNodeManager(), internalMainFunc, replacements, core::transform::globalReplacement)
-				.as<LambdaExprPtr>();
-
 			// ~~~~~~~~~~~~~~~~~~ INITIALIZE GLOBALS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+			core::NodeMap replacements;
 			for(auto cur : unit.getGlobals()) {
 				// only consider having an initialization value
 				if(!cur.second) { continue; }
 
 				core::LiteralPtr newLit = resolver.apply(cur.first);
-
 				if(!contains(usedLiterals, newLit)) { continue; }
 
-				auto lit = resolver.apply(newLit);
+				// check if the initialization of any literal specifies the array type more accurately than the literal (e.g. inf -> fixed size)
+				// if so, replace the literal type
+				auto globalRefT = core::analysis::getReferencedType(newLit);
+				
+				auto lit = newLit;
+				if(core::lang::isArray(globalRefT) && core::lang::isArray(cur.second)) {
+					auto litArrT = core::lang::ArrayType(globalRefT);
+					auto initArrT = core::lang::ArrayType(cur.second);
+					if(litArrT.isUnknownSize() && ! initArrT.isUnknownSize()) {
+						// get the literal
+						auto rT = core::lang::ReferenceType(newLit);
+						auto replacement =
+							resolver.apply(builder.literal(newLit->getStringValue(), core::lang::ReferenceType::create((GenericTypePtr)initArrT, rT.isConst(),
+							                                                                                           rT.isVolatile(), rT.getKind())));
+						// add to replacement list
+						replacements.insert({newLit, replacement});
+						lit = replacement;
+					}
+				}
+
 				core::lang::ReferenceType refType(lit->getType());
 				refType.setConst(false);
 				core::GenericTypePtr mutableType = refType;
@@ -634,12 +625,13 @@ namespace tu {
 				// add creation statement
 				inits.push_back(builder.createStaticVariable(lit));
 			}
-
+			
 			// build resulting lambda
-			if(inits.empty()) { return internalMainFunc; }
-
-			return core::transform::insert(internalMainFunc->getNodeManager(), core::LambdaExprAddress(internalMainFunc)->getBody(), inits, 0)
+			internalMainFunc = core::transform::insert(internalMainFunc->getNodeManager(), core::LambdaExprAddress(internalMainFunc)->getBody(), inits, 0)
 			    .as<core::LambdaExprPtr>();
+			internalMainFunc = transform::replaceAllGen(internalMainFunc->getNodeManager(), internalMainFunc, replacements, core::transform::globalReplacement);
+
+			return internalMainFunc;
 		}
 
 		core::LambdaExprPtr addInitializer(const IRTranslationUnit& unit, const core::LambdaExprPtr& mainFunc) {
