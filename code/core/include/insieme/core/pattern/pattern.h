@@ -328,9 +328,9 @@ inline TreePattern step(const TreePattern& a) {
 	return node(anyList << a << anyList);
 }
 
-inline TreePattern all(const TreePattern& a) {
+inline TreePattern all(const TreePattern& a, const TreePattern& limit = !any) {
 	// collect all occurs of pattern a
-	return rT((a & node(*recurse)) | ((!a) & node(*recurse)));
+	return rT((a & !limit & node(*recurse)) | ((!a) & !limit & node(*recurse)));
 }
 
 inline TreePattern outermost(const TreePattern& a) {

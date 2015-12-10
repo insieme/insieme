@@ -228,6 +228,10 @@ namespace pattern {
 			return node(core::NT_Lambda, single(type) << single(node(core::NT_Parameters, parameters)) << wrapBody(body));
 		}
 
+		inline TreePattern lambdaExpr() {
+			return node(core::NT_LambdaExpr, single(any) << single(any) << single(any));
+		}
+
 		inline TreePattern lambdaExpr(const TreePattern& variable, const TreePattern& lambdaDef) {
 			return node(core::NT_LambdaExpr, single(any) << single(variable) << single(lambdaDef));
 		}
