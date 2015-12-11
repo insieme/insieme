@@ -1014,19 +1014,20 @@ namespace parser {
 		NodeManager nm;
 		IRBuilder builder(nm);
 
-		const std::string testString = "var ref<A,f,f,plain> a = A::(ref_var(type_lit(A)));"         //call the default constructor
-		                               "var ref<A,f,f,plain> a_copy = A::(ref_var(type_lit(A)), a);" //call the copy constructor
-		                               "var ref<A,f,f,plain> a_move = A::(ref_var(type_lit(A)), a);" //call the move constructor
-		                               "A::~(a);"                                                    //call the default destructor
-		                               "a." + utils::getMangledOperatorAssignName() + "(a);"         //call the default copy assignment operator
-		                               "a." + utils::getMangledOperatorAssignName() + "(a);";        //call the default move assignment operator
+		const std::string testString = "var ref<A,t,f,cpp_ref> a_ref;"
+		                               "var ref<A,f,f,cpp_rref> a_rref;"
+		                               "var ref<A,f,f,plain> a = A::(ref_var(type_lit(A)));"              //call the default constructor
+		                               "var ref<A,f,f,plain> a_copy = A::(ref_var(type_lit(A)), a_ref);"  //call the copy constructor
+		                               "var ref<A,f,f,plain> a_move = A::(ref_var(type_lit(A)), a_rref);" //call the move constructor
+		                               "A::~(a);"                                                         //call the default destructor
+		                               "a." + utils::getMangledOperatorAssignName() + "(a_ref);"          //call the default copy assignment operator
+		                               "a." + utils::getMangledOperatorAssignName() + "(a_rref);";        //call the default move assignment operator
 
 		{
 			auto res = builder.parseStmt("def struct A { };" //call the default generated members outside the struct
 			                              "{"
 			                              + testString +
 			                              "}");
-
 			EXPECT_TRUE(res);
 			EXPECT_TRUE(checks::check(res).empty()) << checks::check(res);
 		}
@@ -1037,7 +1038,6 @@ namespace parser {
 			                             + testString +
 			                             "  }"
 			                             "}; A");
-
 			EXPECT_TRUE(res);
 			EXPECT_TRUE(checks::check(res).empty()) << checks::check(res);
 		}
@@ -1050,7 +1050,6 @@ namespace parser {
 			                             "  }"
 			                             "};"
 			                             "def struct A { }; B");
-
 			EXPECT_TRUE(res);
 			EXPECT_TRUE(checks::check(res).empty()) << checks::check(res);
 		}
@@ -1094,6 +1093,9 @@ namespace parser {
 
 		//wrong overload type for function with multiple params
 		EXPECT_ANY_THROW(builder.parseStmt(commonClass + "{ var ref<A> a; a.f(5, 42 : int<4>, real<4>); }"));
+
+
+
 	}
 
 } // parser
