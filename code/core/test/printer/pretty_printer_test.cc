@@ -248,15 +248,15 @@ std::string res2 = ""
 		"    function f : () -> int<4> {\n"
 		"        return *(*this).a;\n"
 		"    }\n"
-		"    function g : (v120 : ref<() -> int<4>,f,f,plain>) -> unit {\n"
-		"        var () -> int<4> v121 = parser_member_function_access(*this, f);\n"
-		"        (*v120)();\n"
-		"        v121();\n"
+		"    function g : (v1 : ref<() -> int<4>,f,f,plain>) -> unit {\n"
+		"        var () -> int<4> v2 = parser_member_function_access(*this, f);\n"
+		"        (*v1)();\n"
+		"        v2();\n"
 		"    }\n"
 		"};\n"
 		"A";
 
-auto type1 = builder.parseType(""
+auto type1 = builder.normalize(builder.parseType(""
 									   "def struct A { "
 									   "    a : int<4>;"
 									   "    lambda f : () -> int<4> {"
@@ -267,7 +267,7 @@ auto type1 = builder.parseType(""
 									   "        b();"
 									   "        c();"
 									   "    }"
-									   "}; A");
+									   "}; A"));
 PrettyPrinter printer1(type1, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::PRINT_CASTS
 							  | PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_MARKERS
 							  | PrettyPrinter::NO_LIST_SUGAR
