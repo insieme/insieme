@@ -236,7 +236,11 @@ namespace parser {
 		}
 
 
-		ExpressionPtr InspireDriver::genMemberAccess(const location& l, const ExpressionPtr& expr, const std::string& memberName) {
+		ExpressionPtr InspireDriver::genMemberAccess(const location& l, const ExpressionPtr& exprIn, const std::string& memberName) {
+
+			//get rid of single element tuples
+			const ExpressionPtr& expr = getScalar(exprIn);
+
 			if(!expr) {
 				error(l, "no expression");
 				return nullptr;
