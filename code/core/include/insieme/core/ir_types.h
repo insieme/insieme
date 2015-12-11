@@ -626,7 +626,7 @@ namespace core {
 		 */
 		bool isMember() const {
 			return isConstructor() || isDestructor()
-			       || isMemberFunction();
+			       || isMemberFunction() || isVirtualMemberFunction();
 		}
 
 		/**
