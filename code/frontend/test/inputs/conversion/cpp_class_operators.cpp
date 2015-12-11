@@ -48,7 +48,7 @@ int main() {
 	#pragma test expect_ir(SIMPLEST_IR,R"( { 
 		var ref<IMP_Simplest,f,f,plain> v0 = IMP_Simplest::(ref_var(type_lit(IMP_Simplest))); 
 		var ref<IMP_Simplest,f,f,plain> v1 = IMP_Simplest::(ref_var(type_lit(IMP_Simplest)));
-		v0.IMP__operator_assign_(v1);
+		v0.IMP__operator_assign_(v1 : ref<IMP_Simplest,t,f,cpp_ref>);
 	} )")
 	{ 
 		Simplest a, b;

@@ -729,8 +729,15 @@ namespace parser {
 
 				// now we have to find a function registered in the TU which has the same literal name and the correct parameter types. we have to ignore the
 				// result type
-				const auto argumentTypes = extractTypes(args);
+				auto argumentTypes(overloadType);
+				argumentTypes.insert(argumentTypes.begin(), thisParam->getType());
+
+				//the first candidate we found
 				LiteralPtr candidate;
+				//the number of candidates we found. finding no exact match but multiple candidates is an error
+				unsigned int candidateCount = 0;
+
+				//now iterate over all functions registered in the TU and filter for the ones with the correct name
 				for(const auto& mapEntry : tu.getFunctions()) {
 					const auto& key = mapEntry.first;
 					if(key.getValue()->getValue() == memberName) {
@@ -741,8 +748,9 @@ namespace parser {
 									func = key;
 									break;
 
-								//otherwise, if we don't already have a matching candidate and can find a valid parameter substitution, we remember it
-								} else if (!candidate && types::getTypeVariableInstantiation(mgr, keyType->getParameterTypeList(), argumentTypes)) {
+									//otherwise, if we can find a valid parameter substitution, we increment the candidateCount and store the function
+								} else if (types::getTypeVariableInstantiation(mgr, keyType->getParameterTypeList(), argumentTypes)) {
+									candidateCount++;
 									candidate = key;
 								}
 							}
@@ -752,8 +760,14 @@ namespace parser {
 
 				//if we didn't change the function, we didn't find an exact match
 				if (func == getScalar(callable)) {
-					//if we found a candidate then we take that one
-					if (candidate) {
+					//if we found multiple candidates, this is an error, and the user has to specify which overload to use
+					if (candidateCount >= 2) {
+						error(l, format("Found %d possible candidates matching the given argument types. Specify which one to call by using the advanced overload selection syntax.",
+						                candidateCount));
+						return nullptr;
+
+						//if we found a single candidate then we take that one
+					} else if (candidateCount == 1) {
 						func = candidate;
 
 						//otherwise we fail

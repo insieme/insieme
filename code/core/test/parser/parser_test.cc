@@ -1060,15 +1060,37 @@ namespace parser {
 		IRBuilder builder(nm);
 
 		const std::string commonClass = "def struct A {"
+		                                "  ctor(a : int<2>) {}"
 		                                "  ctor(a : int<4>) {}"
 		                                "  ctor(a : int<8>) {}"
+		                                "  ctor(a : int<16>) {}"
 		                                "  ctor(a : int<4>, b : int<4>) {}"
 		                                "  ctor(a : int<8>, b : int<4>) {}"
+		                                "  lambda f : (a : int<2>) -> unit {}"
 		                                "  lambda f : (a : int<4>) -> unit {}"
 		                                "  lambda f : (a : int<8>) -> unit {}"
+		                                "  lambda f : (a : int<16>) -> unit {}"
 		                                "  lambda f : (a : int<4>, b : int<4>) -> unit {}"
 		                                "  lambda f : (a : int<8>, b : int<4>) -> unit {}"
 		                                "};";
+
+		//giving the default number of type arguments for overload selection
+		EXPECT_ANY_THROW(builder.parseStmt(commonClass + "{ var ref<A> a = A::(ref_var(type_lit(A)), 5 : ); }"));
+		EXPECT_ANY_THROW(builder.parseStmt(commonClass + "{ var ref<A> a = A::(ref_var(type_lit(A)), 5 : int<4>, int<4>); }"));
+		EXPECT_ANY_THROW(builder.parseStmt(commonClass + "{ var ref<A> a; a.f(5 : ); }"));
+		EXPECT_ANY_THROW(builder.parseStmt(commonClass + "{ var ref<A> a; a.f(5 : int<4>, int<4>); }"));
+
+		//multiple possible overloads. Simple call fails for constructor with a single param
+		EXPECT_ANY_THROW(builder.parseStmt(commonClass + "{ var int<1> param = 5; var ref<A> a = A::(ref_var(type_lit(A)), param); }"));
+
+		//multiple possible overloads. Simple call fails for constructor with multiple params
+		EXPECT_ANY_THROW(builder.parseStmt(commonClass + "{ var int<1> param = 5; var ref<A> a = A::(ref_var(type_lit(A)), param, param); }"));
+
+		//multiple possible overloads. Simple call fails for function with a single param
+		EXPECT_ANY_THROW(builder.parseStmt(commonClass + "{ var int<1> param = 5; var ref<A> a; a.f(param); }"));
+
+		//multiple possible overloads. Simple call fails for function with multiple params
+		EXPECT_ANY_THROW(builder.parseStmt(commonClass + "{ var int<1> param = 5; var ref<A> a; a.f(param, param); }"));
 
 		//wrong overload type for constructor with a single param
 		EXPECT_ANY_THROW(builder.parseStmt(commonClass + "{ var ref<A> a = A::(ref_var(type_lit(A)), 5 : int<1>); }"));
@@ -1095,7 +1117,45 @@ namespace parser {
 		EXPECT_ANY_THROW(builder.parseStmt(commonClass + "{ var ref<A> a; a.f(5, 42 : int<4>, real<4>); }"));
 
 
+		//multiple possible overloads. Specifying the desired overload will work for constructor with a single param
+		EXPECT_TRUE(builder.parseStmt(commonClass + "{ var int<1> param = 5; var ref<A> a = A::(ref_var(type_lit(A)), param : int<4>); }"));
 
+		//multiple possible overloads. Specifying the desired overload will work for constructor with multiple params
+		EXPECT_TRUE(builder.parseStmt(commonClass + "{ var int<1> param = 5; var ref<A> a = A::(ref_var(type_lit(A)), param, param : int<4>, int<4>); }"));
+
+		//multiple possible overloads. Specifying the desired overload will work for function with a single param
+		EXPECT_TRUE(builder.parseStmt(commonClass + "{ var int<1> param = 5; var ref<A> a; a.f(param : int<4>); }"));
+
+		//multiple possible overloads. Specifying the desired overload will work for function with a single param
+		EXPECT_TRUE(builder.parseStmt(commonClass + "{ var int<1> param = 5; var ref<A> a; a.f(param, param : int<4>, int<4>); }"));
+
+
+		//calling the default generated constructs without specifying the desired overload should fail as we have two candidates
+		EXPECT_ANY_THROW(builder.parseStmt("def struct A { };"
+		                     "{"
+		                     "  var ref<A> a;"
+		                     "  var ref<A> a_copy = A::(ref_var(type_lit(A)), a);"
+		                     "}"));
+
+		//calling the default generated assignment operator without specifying the desired overload should fail as we have two candidates
+		EXPECT_ANY_THROW(builder.parseStmt("def struct A { };"
+		                     "{"
+		                     "  var ref<A> a;"
+		                     "  a." + utils::getMangledOperatorAssignName() + "(a);"
+		                     "}"));
+
+		{ //call the default generated constructs and manually specify which overload to take
+			const auto res = builder.parseStmt("def struct A { };"
+			                     "{"
+			                     "  var ref<A> a;"
+			                     "  var ref<A> a_copy = A::(ref_var(type_lit(A)), a : ref<A,t,f,cpp_ref>);"    //copy constructor
+			                     "  var ref<A> a_move = A::(ref_var(type_lit(A)), a : ref<A,f,f,cpp_rref>);"   //move constructor
+			                     "  a." + utils::getMangledOperatorAssignName() + "(a : ref<A,t,f,cpp_ref>);"  //default copy assignment operator
+			                     "  a." + utils::getMangledOperatorAssignName() + "(a : ref<A,f,f,cpp_rref>);" //default move assignment operator
+			                     "}");
+			EXPECT_TRUE(res);
+			EXPECT_TRUE(checks::check(res).empty()) << checks::check(res);
+		}
 	}
 
 } // parser
