@@ -127,6 +127,16 @@ namespace lang {
 		 */
 		TYPE_ALIAS("ref<'a,'const,'volatile>", "ref<'a,'const,'volatile,plain>");
 
+		/**
+		* Add a type alias that maps all cpp_ref to the encoding of C++ references.
+		*/
+		TYPE_ALIAS("cpp_ref<'a,'const,'volatile>", "ref<'a,'const,'volatile,cpp_ref>");
+
+		/**
+		* Add a type alias that maps all cpp_rref to the encoding of C++ r-value references.
+		*/
+		TYPE_ALIAS("cpp_rref<'a,'const,'volatile>", "ref<'a,'const,'volatile,cpp_rref>");
+
 
 		// -- memory management --
 
