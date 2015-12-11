@@ -76,7 +76,7 @@ namespace conversion {
 	// and transparently attach annotations to node which are annotated
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	stmtutils::StmtWrapper Converter::CStmtConverter::Visit(clang::Stmt* stmt) {
-		VLOG(2) << "C";
+		VLOG(2) << "CStmtConverter";
 
 		// iterate frontend extension list and check if a extension wants to convert the stmt
 		stmtutils::StmtWrapper retStmt;

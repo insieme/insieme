@@ -153,7 +153,18 @@ namespace runtime {
 
 			// define parameter of resulting lambda
 			core::VariablePtr workItem = builder.variable(builder.refType(builder.refType(extensions.getWorkItemType())));
-			core::TypePtr tupleType = DataItem::toLWDataItemType(builder.tupleType(entryType->getParameterTypes()->getElements()));
+
+			// build up all the data that has to be passed to the resulting work item
+			core::TypeList dataItemEntries = entryType->getParameterTypeList();
+
+			// add value for storing return value of function if necessary
+			TypePtr resultType = entryType->getReturnType();
+			if (!basic.isUnit(resultType)) {
+				dataItemEntries.push_back(builder.refType(resultType));	
+			}
+
+			// build light-weight data item for main work-item call
+			core::TypePtr tupleType = DataItem::toLWDataItemType(builder.tupleType(dataItemEntries));
 			core::ExpressionPtr paramTypes = builder.getTypeLiteral(tupleType);
 
 			vector<core::ExpressionPtr> argList;
@@ -166,6 +177,15 @@ namespace runtime {
 			// produce replacement
 			core::TypePtr unit = basic.getUnit();
 			core::ExpressionPtr call = builder.callExpr(entryType->getReturnType(), entry, argList);
+
+			// save result if necessary
+			if (!basic.isUnit(resultType)) {
+				auto target = builder.callExpr(extensions.getGetWorkItemArgument(), toVector<core::ExpressionPtr>(
+						builder.deref(workItem), core::encoder::toIR(manager, counter++), paramTypes, builder.getTypeLiteral(builder.refType(resultType))
+					));
+				call = builder.assign(target, call);
+			}
+
 			const auto& instExt = manager.getLangExtension<core::lang::InstrumentationExtension>();
 
 			if(instrumentBody) {
@@ -210,19 +230,41 @@ namespace runtime {
 				stmts.push_back(registerEntryPoint(manager, impl));
 			});
 
+			// ----------------- Create Variable for Return Value  -------------------
+
+			core::VariablePtr var;
+			
 			// ------------------- Start standalone runtime  -------------------------
 
-			// construct light-weight data item tuple
-			core::ExpressionPtr expr = builder.tupleExpr(toVector<core::ExpressionPtr>(builder.deref(argc), builder.deref(argv)));
-			core::TupleTypePtr tupleType = static_pointer_cast<const core::TupleType>(expr->getType());
-			expr = builder.callExpr(DataItem::toLWDataItemType(tupleType), extensions.getWrapLWData(), toVector(expr));
-
 			// create call to standalone runtime
-			if(!workItemImpls.empty()) { stmts.push_back(builder.callExpr(unit, extensions.getRunStandalone(), workItemImpls[0], expr)); }
+			if(!workItemImpls.empty()) { 
+
+				// get result type
+				auto resultType = program->getEntryPoints()[0]->getType().as<FunctionTypePtr>()->getReturnType();
+
+				// construct parameter expression
+				core::ExpressionPtr expr;
+				if (!basic.isUnit(resultType)) {
+					var = builder.variable(builder.refType(resultType));
+					stmts.push_back(builder.declarationStmt(var, builder.refVar(builder.getZero(resultType))));
+					expr = builder.tupleExpr(toVector<core::ExpressionPtr>(builder.deref(argc), builder.deref(argv), var));
+				} else {
+					expr = builder.tupleExpr(toVector<core::ExpressionPtr>(builder.deref(argc), builder.deref(argv)));
+				}
+
+				// construct light-weight data item tuple
+				core::TupleTypePtr tupleType = static_pointer_cast<const core::TupleType>(expr->getType());
+				expr = builder.callExpr(DataItem::toLWDataItemType(tupleType), extensions.getWrapLWData(), toVector(expr));
+
+				stmts.push_back(builder.callExpr(unit, extensions.getRunStandalone(), workItemImpls[0], expr)); 
+			}
 
 			// ------------------- Add return   -------------------------
 
-			stmts.push_back(builder.returnStmt(builder.intLit(0)));
+			stmts.push_back(builder.returnStmt((var) 
+					? builder.deref(var).as<ExpressionPtr>() 
+					: builder.intLit(0).as<ExpressionPtr>()
+				));
 
 			// ------------------- Creation of new main function -------------------------
 
@@ -556,7 +598,9 @@ namespace runtime {
 				}
 
 				// handle pfor calls
-				if(parExt.isPFor(fun)) { return convertPfor(call).as<core::CallExprPtr>(); }
+				if(parExt.isPFor(fun)) {
+					return convertPfor(call).as<core::CallExprPtr>(); 
+				}
 			}
 
 			// handle calls to pick-variant calls

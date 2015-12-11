@@ -36,52 +36,76 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/driver/integration/tests.h"
-
-#include <iostream>
+#include <cstdlib>
 #include <boost/filesystem.hpp>
-#include <boost/filesystem/fstream.hpp>
 
+#include "insieme/frontend/frontend.h"
+#include "insieme/backend/sequential/sequential_backend.h"
+#include "insieme/backend/runtime/runtime_backend.h"
 
-#include "insieme/utils/container_utils.h"
-#include "insieme/utils/logging.h"
-
-using namespace insieme::utils;
+#include "insieme/utils/config.h"
+#include "insieme/utils/compiler/compiler.h"
 
 namespace insieme {
 namespace driver {
 namespace integration {
 
+	namespace fe = insieme::frontend;
+	namespace be = insieme::backend;
 
-	TEST(TestUtilsTest, getList) {
-		namespace fs = boost::filesystem;
+	namespace {
 
-		auto res = getAllCases();
+		void testReturnValueOf(
+				const be::BackendPtr& backend,
+				const utils::compiler::Compiler& compiler = utils::compiler::Compiler::getDefaultC99Compiler()
+		) {
 
-		LOG(log::INFO) << join("\n", res);
+			core::NodeManager manager;
 
-		//	// check the existens of the referenced files
-		//	for_each(res, [](const IntegrationTestCase& cur) {
-		//		SCOPED_TRACE(cur.getName());
-		//
-		//		EXPECT_GE(cur.getFiles().size(), static_cast<std::size_t>(1));
-		//		for_each(cur.getFiles(), [](const string& cur){
-		//			EXPECT_TRUE(fs::exists( cur )) << "Testing existens of file " << cur;
-		//			EXPECT_FALSE(fs::is_directory( cur )) << "Checking whether " << cur << " is a directory.";
-		//		});
-		//
-		//		for_each(cur.getIncludeDirs(), [](const string& cur){
-		//			EXPECT_TRUE(fs::exists( cur )) << "Testing existens of directory " << cur;
-		//			EXPECT_TRUE(fs::is_directory( cur )) << "Checking whether " << cur << " is a directory.";
-		//		});
-		//	});
-		//
-		//	// should also work a second time
-		//	auto numTests = res.size();
-		//	res = getAllCases();
-		//	EXPECT_EQ(numTests, res.size());
+			// pick a random return value
+			int returnValue = (rand() % 50) + 1;
+
+			// load input file
+			fe::ConversionJob job(utils::getInsiemeSourceRootDir() + "driver/test/inputs/return_value.c");
+			job.registerDefaultExtensions();
+			job.setDefinition("N", toString(returnValue));
+
+			// convert to IR program
+			auto program = job.execute(manager);
+
+			// convert to C target code
+			auto code = backend->convert(program);
+
+			// build binary
+			auto binary = utils::compiler::compileToBinary(*code, compiler);
+			ASSERT_FALSE(binary.empty());
+
+			// run binary
+			int a = system(binary.c_str());
+			auto res = WEXITSTATUS(a);
+
+			// check exit code
+			EXPECT_EQ(returnValue, res);
+
+			// delete target file
+			if(boost::filesystem::exists(binary)) { boost::filesystem::remove(binary); }
+		}
+
 	}
 
+
+	TEST(MainReturnValue, SequentialBackend) {
+		testReturnValueOf(
+				backend::sequential::SequentialBackend::getDefault()
+		);
+	}
+
+	TEST(MainReturnValue, RuntimeBackend) {
+		testReturnValueOf(
+				backend::runtime::RuntimeBackend::getDefault(),
+				utils::compiler::Compiler::getRuntimeCompiler()
+		);
+	}
 
 } // end namespace integration
 } // end namespace driver

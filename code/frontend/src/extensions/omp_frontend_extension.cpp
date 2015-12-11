@@ -38,6 +38,7 @@
 
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/ir_visitor.h"
+#include "insieme/core/ir_address.h"
 #include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/tu/ir_translation_unit.h"
@@ -498,22 +499,22 @@ namespace extensions {
 			    anns.push_back(std::make_shared<omp::For>(privateClause, firstPrivateClause, lastPrivateClause, reductionClause, scheduleClause, 
 				                                          collapseClause, noWait, ordered));
 
-			    // apply omp for annotation only to the for stmt
-			    // get next for stmt from node list and annotate it
+			    // apply omp for annotation to outermost loop
 			    for(auto& node : nodes) {
-				    core::StatementPtr&& stmt = node.as<core::StatementPtr>();
-				    // if it is already a marker stmt check the sub stmt
-				    // else check if it is a for and annotate it.
-				    if(stmt.isa<core::MarkerStmtPtr>()) {
-					    if(stmt.as<core::MarkerStmtPtr>()->getSubStatement().isa<core::ForStmtPtr>()) {
-						    node = getMarkedNode(stmt, anns);
-						    return nodes;
-					    }
-				    } else if(stmt.isa<core::ForStmtPtr>()) {
-					    node = getMarkedNode(stmt, anns);
-					    return nodes;
-				    }
-			    }
+				    core::StatementPtr stmt = node.as<core::StatementPtr>();
+
+					core::StatementAddress foundWhile;
+					visitDepthFirstOnceInterruptible(core::NodeAddress(stmt), [&](const core::WhileStmtAddress& whileAddr) {
+						foundWhile = whileAddr;
+						return true;
+					});
+					if(foundWhile != core::NodeAddress()) {
+						auto whileNode = foundWhile.getAddressedNode();
+						node = core::transform::replaceAddress(node->getNodeManager(), foundWhile, getMarkedNode(whileNode, anns)).getRootNode();
+						return nodes;
+					}
+				}
+				assert_fail() << "Could not attach OMP for annotation";
 			    return nodes;
 			})));
 

@@ -478,7 +478,9 @@ namespace core {
 		//  For this test, Google Test couldn't detect the number of threads.'
 		//
 		// in agreement with 'the others' this warning can be ignored 'safely'
-		EXPECT_DEATH_IF_SUPPORTED(builder.structType(entriesD), "field names must be unique");
+		#ifndef NDEBUG
+			EXPECT_DEATH_IF_SUPPORTED(builder.structType(entriesD), "field names must be unique");
+		#endif
 
 		// .. same type should not be a problem
 		entriesD.pop_back();

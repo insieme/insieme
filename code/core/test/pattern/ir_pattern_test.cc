@@ -281,6 +281,45 @@ namespace pattern {
 		EXPECT_PRED2(isMatch, pattern4, stmt4);
 	}
 
+	TEST(IRPattern, Markers) {
+		NodeManager manager;
+		IRBuilder build(manager);
+
+		{
+			StatementPtr compound = build.compoundStmt();
+			StatementPtr markerStmt = build.markerStmt(compound, 31337);
+		
+			TreePattern patternMarkerStmt1 = irp::markerStmt(pattern::any, pattern::any);
+			TreePattern patternMarkerStmt2 = irp::markerStmt(pattern::any, irp::atom(build.uintValue(31337)));
+			TreePattern patternMarkerStmt3 = irp::markerStmt(pattern::any, irp::atom(build.uintValue(42)));
+			TreePattern patternMarkerStmt4 = irp::markerStmt(irp::compoundStmt(), pattern::any);
+			TreePattern patternMarkerStmt5 = irp::markerStmt(irp::whileStmt(), pattern::any);
+
+			EXPECT_PRED2(isMatch, patternMarkerStmt1, markerStmt);
+			EXPECT_PRED2(isMatch, patternMarkerStmt2, markerStmt);
+			EXPECT_PRED2(noMatch, patternMarkerStmt3, markerStmt);
+			EXPECT_PRED2(isMatch, patternMarkerStmt4, markerStmt);
+			EXPECT_PRED2(noMatch, patternMarkerStmt5, markerStmt);
+		}
+
+		{
+			ExpressionPtr lit = build.intLit(4);
+			ExpressionPtr markerExpr = build.markerExpr(lit, 31337);
+
+			TreePattern patternMarkerExpr1 = irp::markerExpr(pattern::any, pattern::any);
+			TreePattern patternMarkerExpr2 = irp::markerExpr(pattern::any, irp::atom(build.uintValue(31337)));
+			TreePattern patternMarkerExpr3 = irp::markerExpr(pattern::any, irp::atom(build.uintValue(42)));
+			TreePattern patternMarkerExpr4 = irp::markerExpr(irp::atom(lit), pattern::any);
+			TreePattern patternMarkerExpr5 = irp::markerExpr(irp::atom(build.intLit(18)), pattern::any);
+
+			EXPECT_PRED2(isMatch, patternMarkerExpr1, markerExpr);
+			EXPECT_PRED2(isMatch, patternMarkerExpr2, markerExpr);
+			EXPECT_PRED2(noMatch, patternMarkerExpr3, markerExpr);
+			EXPECT_PRED2(isMatch, patternMarkerExpr4, markerExpr);
+			EXPECT_PRED2(noMatch, patternMarkerExpr5, markerExpr);
+		}
+	}
+
 	TEST(IRPattern, Addresses) {
 		NodeManager manager;
 		auto at = [&manager](const string& str) { return irp::atom(manager, str); };
