@@ -1056,6 +1056,46 @@ namespace parser {
 		}
 	}
 
+	TEST(IRParser, ManualOverloadSelection) {
+		NodeManager nm;
+		IRBuilder builder(nm);
+
+		const std::string commonClass = "def struct A {"
+		                                "  ctor(a : int<4>) {}"
+		                                "  ctor(a : int<8>) {}"
+		                                "  ctor(a : int<4>, b : int<4>) {}"
+		                                "  ctor(a : int<8>, b : int<4>) {}"
+		                                "  lambda f : (a : int<4>) -> unit {}"
+		                                "  lambda f : (a : int<8>) -> unit {}"
+		                                "  lambda f : (a : int<4>, b : int<4>) -> unit {}"
+		                                "  lambda f : (a : int<8>, b : int<4>) -> unit {}"
+		                                "};";
+
+		//wrong overload type for constructor with a single param
+		EXPECT_ANY_THROW(builder.parseStmt(commonClass + "{ var ref<A> a = A::(ref_var(type_lit(A)), 5 : int<1>); }"));
+
+		//wrong overload type for constructor with a single param
+		EXPECT_ANY_THROW(builder.parseStmt(commonClass + "{ var ref<A> a = A::(ref_var(type_lit(A)), 5 : real<4>); }"));
+
+		//wrong overload type for constructor with multiple params
+		EXPECT_ANY_THROW(builder.parseStmt(commonClass + "{ var ref<A> a = A::(ref_var(type_lit(A)), 5, 42 : int<1>, int<4>); }"));
+
+		//wrong overload type for constructor with multiple params
+		EXPECT_ANY_THROW(builder.parseStmt(commonClass + "{ var ref<A> a = A::(ref_var(type_lit(A)), 5, 42 : int<4>, real<4>); }"));
+
+		//wrong overload type for function with a single param
+		EXPECT_ANY_THROW(builder.parseStmt(commonClass + "{ var ref<A> a; a.f(5 : int<1>); }"));
+
+		//wrong overload type for function with a single param
+		EXPECT_ANY_THROW(builder.parseStmt(commonClass + "{ var ref<A> a; a.f(5 : real<4>); }"));
+
+		//wrong overload type for function with multiple params
+		EXPECT_ANY_THROW(builder.parseStmt(commonClass + "{ var ref<A> a; a.f(5, 42 : int<1>, int<4>); }"));
+
+		//wrong overload type for function with multiple params
+		EXPECT_ANY_THROW(builder.parseStmt(commonClass + "{ var ref<A> a; a.f(5, 42 : int<4>, real<4>); }"));
+	}
+
 } // parser
 } // core
 } // insieme

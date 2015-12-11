@@ -697,6 +697,20 @@ namespace parser {
 		}
 
 		ExpressionPtr InspireDriver::genCall(const location& l, const ExpressionPtr& callable, ExpressionList args) {
+			return genCall(l, callable, args, extractTypes(args));
+		}
+
+		ExpressionPtr InspireDriver::genCall(const location& l, const ExpressionPtr& callable, ExpressionList args, TypeList overloadType) {
+			if (args.size() != overloadType.size()) {
+				error(l, format("The given overloadType doesn't specify the correct number of argument types. Should be %d, is %d",
+				                args.size(), overloadType.size()));
+				return nullptr;
+			}
+			if (!types::getTypeVariableInstantiation(mgr, overloadType, extractTypes(args))) {
+				error(l, format("The given overloadType %s does not match the passed argument types %s", overloadType, extractTypes(args)));
+				return nullptr;
+			}
+
 			ExpressionPtr func = getScalar(callable);
 
 			// if this is a member function call we prepend the implicit this parameter
@@ -799,23 +813,44 @@ namespace parser {
 			return res;
 		}
 
-		ExpressionPtr InspireDriver::genConstructorCall(const location& l, const std::string name, ExpressionList params) {
-			assert_true(params.size() >= 1) << "Constructor calls must have at least the this parameter argument";
+		ExpressionPtr InspireDriver::genConstructorCall(const location& l, const std::string name, ExpressionList args) {
+			if (args.size() == 0) {
+				error(l, "Constructor calls must have at least the this parameter argument");
+				return nullptr;
+			}
+
+			//remove the implicit this parameter from the overloadType list
+			TypeList overloadType = extractTypes(args);
+			overloadType.erase(overloadType.begin());
+
+			return genConstructorCall(l, name, args, overloadType);
+		}
+
+		ExpressionPtr InspireDriver::genConstructorCall(const location& l, const std::string name, ExpressionList args, TypeList overloadType) {
+			if (args.size() == 0) {
+				error(l, "Constructor calls must have at least the this parameter argument");
+				return nullptr;
+
+			} else if (args.size() - 1 != overloadType.size()) {
+				error(l, format("The given overloadType doesn't specify the correct number of argument types. Should be %d, is %d",
+				                args.size() - 1, overloadType.size()));
+				return nullptr;
+			}
 
 			// extract the this parameter from the params
-			auto thisParam = params[0];
+			auto thisParam = args[0];
 
 			// and remove it from the parameter list
-			params.erase(params.begin());
+			args.erase(args.begin());
 
 			// genCall will do everything else
 			const auto callable = builder.callExpr(parserIRExtension.getMemberFunctionAccess(), thisParam, builder.getIdentifierLiteral("ctor"));
-			return genCall(l, callable, params);
+			return genCall(l, callable, args, overloadType);
 		}
 
-		ExpressionPtr InspireDriver::genDestructorCall(const location& l, const std::string name, const ExpressionPtr& param) {
+		ExpressionPtr InspireDriver::genDestructorCall(const location& l, const std::string name, const ExpressionPtr& thisArgument) {
 			// genCall will do everything else
-			const auto callable = builder.callExpr(parserIRExtension.getMemberFunctionAccess(), param, builder.getIdentifierLiteral("dtor"));
+			const auto callable = builder.callExpr(parserIRExtension.getMemberFunctionAccess(), thisArgument, builder.getIdentifierLiteral("dtor"));
 			return genCall(l, callable, ExpressionList());
 		}
 
