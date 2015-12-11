@@ -291,14 +291,13 @@ namespace printer {
 							newLine();
 							out << "decl ";
 							out << ((cur->isStruct()) ? "struct " : "union ");
-							//this->visit(NodeAddress(tagType->getName()));
 							out << cur->getName()->getValue();
 							out << ";";
 						}
 					});
 
 					utils::set::PointerSet<LiteralPtr> visitedLiterals;
-					// print all declarations for NOT-defined functions
+					// print all declarations for NOT-defined (but declared) functions
 					visitDepthFirstOnce(node, [&](const CallExprPtr& cur) {
 						auto literalExpr = cur->getFunctionExpr().isa<LiteralPtr>();
 						if (literalExpr && !lang::isBuiltIn(literalExpr)) {
@@ -334,11 +333,7 @@ namespace printer {
 							if (!funType->isMember()) {
 								newLine();
 								out << "decl " << lambdaNames[binding] << " : ";
-								out << "(" <<
-								join(", ", funType->getParameterTypes(), [&](std::ostream& out, const TypePtr& curVar) {
-									visit(NodeAddress(curVar));
-								}) << ")" << (funType->isVirtualMemberFunction() ? " ~> " : " -> ");
-								visit(NodeAddress(funType->getReturnType()));
+								visit(NodeAddress(funType));
 								out << ";";
 							}
 						}
@@ -368,22 +363,10 @@ namespace printer {
 									if (!printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) && analysis::isaDefaultConstructor(tagType, constr)) continue;
 									if (auto ctor = constr.isa<LambdaExprPtr>()) {
 										newLine();
-										out << "decl " << cur->getName()->getValue() << "::ctor";
-										auto params = ctor->getParameterList();
-										out << "(" << join(", ", params.begin() + 1, params.end(),
-														   [&](std::ostream& out, const VariablePtr& curVar) {
-															   visit(NodeAddress(curVar->getType()));
-														   }) << ");";
+										out << "decl ctor:" << cur->getName()->getValue() << "::";
+										visit(NodeAddress(ctor->getType()));
+										out << ";";
 									}
-								}
-							}
-
-							// print the destructor declaration
-							if (!printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) && !analysis::hasDefaultDestructor(tagType)) {
-								auto destructor = cur->getDestructor();
-								if (auto dtor = destructor.isa<LambdaExprPtr>()) {
-									newLine();
-									out << "decl " << cur->getName()->getValue() << "::dtor();";
 								}
 							}
 
@@ -394,15 +377,9 @@ namespace printer {
 									if (!printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) && analysis::isaDefaultMember(tagType, memberFun)) continue;
 									if (auto member = memberFun->getImplementation().isa<LambdaExprPtr>()) {
 										newLine();
-										out << "decl " << cur->getName()->getValue() << "::" <<
-										memberFun->getName()->getValue();
-										auto params = member->getParameterList();
-
-										out << "(" << join(", ", params.begin() + 1, params.end(),
-														   [&](std::ostream& out, const VariablePtr& curVar) {
-															   visit(NodeAddress(curVar->getType()));
-														   }) << ") -> ";
-										visit(NodeAddress(member->getFunctionType()->getReturnType()));
+										out << "decl " << memberFun->getName()->getValue() << ":"
+													   << cur->getName()->getValue() << "::";
+										visit(NodeAddress(member->getType()));
 										out << ";";
 									}
 								}
@@ -462,9 +439,11 @@ namespace printer {
 								if (auto ctor = constr.isa<LambdaExprPtr>()) {
 									newLine();
 									auto params = ctor->getParameterList();
-									out << "ctor (" << join(", ", params.begin() + 1, params.end(), paramPrinter);
+									out << "ctor function (" << join(", ", params.begin() + 1, params.end(), paramPrinter);
 									out << ") ";
+									thisStack.push(params.front());
 									visit(NodeAddress(ctor->getBody()));
+									thisStack.pop();
 								}
 							}
 
@@ -473,8 +452,10 @@ namespace printer {
 								auto destructor = cur->getDestructor();
 								if (auto dtor = destructor.isa<LambdaExprPtr>()) {
 									newLine();
-									out << "dtor () ";
+									out << "dtor function () ";
+									thisStack.push(dtor->getParameterList().front());
 									visit(NodeAddress(dtor->getBody()));
+									thisStack.pop();
 								}
 							}
 
@@ -683,23 +664,18 @@ namespace printer {
 				auto printer = [&](std::ostream&, const TypeAddress& cur) { VISIT(cur); };
 
 				if(node->isConstructor()) {
-					VISIT(analysis::getObjectType(node));
-					out << "::ctor";
-					auto parameterTypes = node->getParameterTypes();
-					out << "(" << join(", ", parameterTypes.begin() + 1, parameterTypes.end(), printer) << ")";
+					auto params = node->getParameterTypes();
+					out << "(" << join(", ", params.begin() + 1, params.end(), printer) << ")";
 				} else if(node->isDestructor()) {
-					VISIT(analysis::getObjectType(node));
-					out << "::dtor()";
+					out << "()";
 				} else if(node->isMemberFunction() || node->isVirtualMemberFunction()) {
-					VISIT(analysis::getObjectType(node));
 					auto parameterTypes = node->getParameterTypes();
-					out << "::(" << join(", ", parameterTypes.begin() + 1, parameterTypes.end(), printer) << ")"
+					out << "(" << join(", ", parameterTypes.begin() + 1, parameterTypes.end(), printer) << ")"
 							<< (node->isMemberFunction() ? " -> " : " ~> ");
 					VISIT(node->getReturnType());
 				} else {
-					out << "(" << join(", ", node->getParameterTypes(), printer) << ") ";
-					out << ((node->isPlain()) ? "->" : "=>");
-					out << " ";
+					out << "(" << join(", ", node->getParameterTypes(), printer) << ")";
+					out << ((node->isPlain()) ? " -> " : " => ");
 					VISIT(node->getReturnType());
 				}
 			}
@@ -1269,6 +1245,10 @@ namespace printer {
 				out << "> {";
 				VISIT(node->getMember());
 				out << "}";
+			}
+
+			PRINT(TagTypeReference) {
+				out << node->getName()->getValue();
 			}
 
 			PRINT(TagTypeDefinition) {
