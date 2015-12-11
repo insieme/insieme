@@ -182,6 +182,12 @@ namespace c_ast {
 		return CVQualifiedType::equals(other) && *elementType == *other.elementType;
 	}
 
+	bool RValueReferenceType::equals(const Node& node) const {
+		assert(dynamic_cast<const RValueReferenceType*>(&node));
+		auto other = static_cast<const RValueReferenceType&>(node);
+		return CVQualifiedType::equals(other) && *elementType == *other.elementType;
+	}
+
 	bool VectorType::equals(const Node& node) const {
 		assert(dynamic_cast<const VectorType*>(&node));
 		auto other = static_cast<const VectorType&>(node);

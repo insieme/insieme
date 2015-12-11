@@ -611,8 +611,24 @@ namespace backend {
 		};
 		
 		res[refExt.getRefCast()] = OP_CONVERTER {
+
 			// in C, this should always be implicit
-			return CONVERT_ARG(0);
+			auto in = CONVERT_ARG(0);
+			if (*call->getType() == *ARG(0)->getType()) {
+				return in;
+			}
+
+			// parse source and target types
+			auto src = core::lang::ReferenceType(ARG(0)->getType());
+			auto trg = core::lang::ReferenceType(call->getType());
+
+			// if it is a plain to cpp reference cast => deref source
+			if (src.isPlain() && !trg.isPlain()) {
+				in = c_ast::deref(in);
+			}
+
+			auto res_type = GET_TYPE_INFO(call->getType()).rValueType;
+			return c_ast::cast(res_type, in);
 		};
 
 		// -- support narrow and expand --

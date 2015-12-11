@@ -163,6 +163,7 @@ AST_TERMINAL(PrimitiveType, CVQualifiedType)
 AST_TERMINAL(NamedType, CVQualifiedType)
 AST_TERMINAL(PointerType, CVQualifiedType)
 AST_TERMINAL(ReferenceType, CVQualifiedType)
+AST_TERMINAL(RValueReferenceType, CVQualifiedType)
 
 AST_TERMINAL(VectorType, Type)
 AST_TERMINAL(FunctionType, Type)
