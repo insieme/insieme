@@ -124,7 +124,7 @@ namespace backend {
 		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
 	}
 
-	TEST(CppSnippet, DISABLED_HelloWorld) {
+	TEST(CppSnippet, HelloWorld) {
 		core::NodeManager manager;
 		core::IRBuilder builder(manager);
 

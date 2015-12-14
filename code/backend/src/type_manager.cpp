@@ -299,7 +299,10 @@ namespace backend {
 
 		// --------------------- Implementations of resolution utilities --------------------
 
-		const TypeInfo* TypeInfoStore::resolveInternal(const core::TypePtr& type) {
+		const TypeInfo* TypeInfoStore::resolveInternal(const core::TypePtr& in) {
+
+			// normalize all types
+			auto type = core::analysis::normalize(in);
 
 			// lookup information within cache
 			auto pos = typeInfos.find(type);
