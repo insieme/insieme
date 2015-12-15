@@ -56,19 +56,23 @@ namespace parser {
 	using namespace detail;
 
 	bool test_type(NodeManager& nm, const std::string& x) {
-		InspireDriver driver(x, nm);
-		driver.parseType();
-		if(driver.result) {
+		IRBuilder builder(nm);
+		try {
+			auto result = builder.parseType(x);
 //			std::cout << "Result of parsing " << x << "\n";
-//			dumpColor(driver.result);
+//			dumpColor(result);
 //			std::cout << "    ------------\n\n";
 //			std::cout << " ============== TEST ============ " << std::endl;
-			auto msg = checks::check(driver.result);
-			EXPECT_TRUE(msg.empty()) << msg;
-		} else {
-			driver.printErrors();
+			auto msg = checks::check(result);
+			if (!msg.empty()) {
+				std::cout << msg;
+			}
+			return msg.empty();
+
+		} catch (const IRParserException& ex) {
+			std::cout << ex.what() << std::endl;
 		}
-		return driver.result;
+		return false;
 	}
 
 	bool test_statement(NodeManager& nm, const std::string& x);
@@ -202,18 +206,23 @@ namespace parser {
 	}
 
 	bool test_expression(NodeManager& nm, const std::string& x) {
-		InspireDriver driver(x, nm);
-		driver.parseExpression();
-		if(driver.result) {
-//			std::cout << driver.result << std::endl;
-//			dumpColor(driver.result);
-			auto msg = checks::check(driver.result);
-			EXPECT_TRUE(msg.empty()) << msg;
-		} else {
-			driver.printErrors();
+		IRBuilder builder(nm);
+		try {
+			auto result = builder.parseExpr(x);
+//			std::cout << "Result of parsing " << x << "\n";
+//			dumpColor(result);
+//			std::cout << "    ------------\n\n";
+//			std::cout << " ============== TEST ============ " << std::endl;
+			auto msg = checks::check(result);
+			if (!msg.empty()) {
+				std::cout << msg;
+			}
+			return msg.empty();
+
+		} catch (const IRParserException& ex) {
+			std::cout << ex.what() << std::endl;
 		}
-		//   std::cout << " ============== TEST ============ " << std::endl;
-		return driver.result;
+		return false;
 	}
 
 	TEST(IR_Parser, RecordTypes) {
@@ -622,17 +631,23 @@ namespace parser {
 	}
 
 	bool test_statement(NodeManager& nm, const std::string& x) {
-		InspireDriver driver(x, nm);
-		driver.parseStmt();
-		if(driver.result) {
-//			dumpColor(driver.result);
-			auto msg = checks::check(driver.result);
-			EXPECT_TRUE(msg.empty()) << msg;
-		} else {
-			driver.printErrors();
+		IRBuilder builder(nm);
+		try {
+			auto result = builder.parseStmt(x);
+//			std::cout << "Result of parsing " << x << "\n";
+//			dumpColor(result);
+//			std::cout << "    ------------\n\n";
+//			std::cout << " ============== TEST ============ " << std::endl;
+			auto msg = checks::check(result);
+			if (!msg.empty()) {
+				std::cout << msg;
+			}
+			return msg.empty();
+
+		} catch (const IRParserException& ex) {
+			std::cout << ex.what() << std::endl;
 		}
-//		std::cout << " ============== TEST ============ " << std::endl;
-		return driver.result;
+		return false;
 	}
 
 	TEST(IR_Parser, Statements) {
@@ -716,20 +731,23 @@ namespace parser {
 	}
 
 	bool test_program(NodeManager& nm, const std::string& x) {
+		IRBuilder builder(nm);
+		try {
+			auto result = builder.parseProgram(x);
+//			std::cout << "Result of parsing " << x << "\n";
+//			dumpColor(result);
+//			std::cout << "    ------------\n\n";
+//			std::cout << " ============== TEST ============ " << std::endl;
+			auto msg = checks::check(result);
+			if (!msg.empty()) {
+				std::cout << msg;
+			}
+			return msg.empty();
 
-		InspireDriver driver(x, nm);
-
-		driver.parseProgram();
-
-		if(driver.result) {
-//			dumpColor(driver.result);
-			auto msg = checks::check(driver.result);
-			EXPECT_TRUE(msg.empty()) << msg;
-		} else {
-			driver.printErrors();
+		} catch (const IRParserException& ex) {
+			std::cout << ex.what() << std::endl;
 		}
-//		   std::cout << " ============== TEST ============ " << std::endl;
-		return driver.result;
+		return false;
 	}
 
 	TEST(IR_Parser, Program) {
