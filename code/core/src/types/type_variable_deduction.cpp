@@ -455,8 +455,8 @@ namespace types {
 				}
 				}
 
-				// check whether the argument is trivial
-				if (!analysis::isTrivial(arguments[i])) {
+				// check whether the argument is trivial or not convertible to parameter type
+				if (!analysis::isTrivial(arguments[i]) && !analysis::hasConstructorAccepting(parameter[i], arguments[i])) {
 					return fail;
 				}
 
@@ -471,6 +471,8 @@ namespace types {
 				if (lang::isCppReference(arguments[i]) || lang::isCppRValueReference(arguments[i])) {
 					lang::ReferenceType refArg(arguments[i]);
 					materializedArguments[i] = refArg.getElementType();
+				} else if (analysis::hasConstructorAccepting(parameter[i], arguments[i])) {
+					materializedArguments[i] = parameter[i];
 				}
 			}
 		}
