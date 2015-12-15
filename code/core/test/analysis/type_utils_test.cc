@@ -493,6 +493,22 @@ namespace analysis {
 		}
 	}
 
+	TEST(EssentialsChecks, Basic) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		auto A = builder.parseType("struct A { }").isa<TagTypePtr>();
+		EXPECT_TRUE(A);
+
+		EXPECT_PRED1(hasDefaultConstructor, A);
+		EXPECT_PRED1(hasCopyConstructor, A);
+		EXPECT_PRED1(hasMoveConstructor, A);
+		EXPECT_PRED1(hasDefaultDestructor, A);
+
+		EXPECT_PRED1(hasCopyAssignment, A);
+		EXPECT_PRED1(hasMoveAssignment, A);
+	}
+
 	/*
 	TEST(GlobalRec, InitBug) {
 	    NodeManager manager;

@@ -387,7 +387,7 @@ namespace core {
 		return TagType::get(manager, tag, definition);
 	}
 
-	ExpressionPtr TagTypeDefinition::peelMember(NodeManager& manager, const ExpressionPtr& member) const {
+	NodePtr TagTypeDefinition::peelMember(NodeManager& manager, const NodePtr& member) const {
 
 		// create a replacement map from of the tag-type bindings
 		NodeMap replacements;

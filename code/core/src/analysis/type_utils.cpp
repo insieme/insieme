@@ -237,13 +237,89 @@ namespace analysis {
 		return true;
 	}
 
+	bool hasConstructorOfType(const TagTypePtr& type, const FunctionTypePtr& funType) {
+		auto record = type->getRecord();
+		for (const auto& cur : record->getConstructors()) {
+			if (*cur->getType() == *funType) return true;
+		}
+		return false;
+	}
+
+	bool hasConstructorAccepting(const TypePtr& type, const TypePtr& paramType) {
+
+		// check that the given type is a tag type
+		auto tagType = type.isa<TagTypePtr>();
+		if (!tagType) return false;
+
+		// search for constructor
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+		auto thisType = builder.refType(tagType->getTag());
+		auto ctorType = builder.functionType(TypeList{ thisType, paramType }, thisType, FK_CONSTRUCTOR);
+		return hasConstructorOfType(tagType, ctorType);
+	}
+
+	bool hasMemberOfType(const TagTypePtr& type, const std::string& name, const FunctionTypePtr& funType) {
+		auto record = type->getRecord();
+		for (const auto& cur : record->getMemberFunctions()) {
+			if (*funType == *cur->getImplementation()->getType() && cur->getNameAsString() == name) return true;
+		}
+		for (const auto& cur : record->getPureVirtualMemberFunctions()) {
+			if (*funType == *cur->getType() && cur->getNameAsString() == name) return true;
+		}
+		return false;
+	}
+
+	bool hasDefaultConstructor(const TagTypePtr& type) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+		auto thisType = builder.refType(type->getTag());
+		auto ctorType = builder.functionType(TypeList{ thisType }, thisType, FK_CONSTRUCTOR);
+		return hasConstructorOfType(type, ctorType);
+	}
+
+	bool hasCopyConstructor(const TagTypePtr& type) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+		auto otherType = builder.refType(type->getTag(), true, false, lang::ReferenceType::Kind::CppReference);
+		return hasConstructorAccepting(type, otherType);
+	}
+
+	bool hasMoveConstructor(const TagTypePtr& type) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+		auto otherType = builder.refType(type->getTag(), false, false, lang::ReferenceType::Kind::CppRValueReference);
+		return hasConstructorAccepting(type, otherType);
+	}
+
+	bool hasCopyAssignment(const TagTypePtr& type) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+		auto thisType = builder.refType(type->getTag());
+		auto otherType = builder.refType(type->getTag(), true, false, lang::ReferenceType::Kind::CppReference);
+		auto resType = builder.refType(type->getTag(), false, false, lang::ReferenceType::Kind::CppReference);
+		auto funType = builder.functionType(TypeList{ thisType, otherType }, resType, FK_MEMBER_FUNCTION);
+		return hasMemberOfType(type, "IMP__operator_assign_", funType);
+	}
+
+	bool hasMoveAssignment(const TagTypePtr& type) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+		auto thisType = builder.refType(type->getTag());
+		auto otherType = builder.refType(type->getTag(), false, false, lang::ReferenceType::Kind::CppRValueReference);
+		auto resType = builder.refType(type->getTag(), false, false, lang::ReferenceType::Kind::CppReference);
+		auto funType = builder.functionType(TypeList{ thisType, otherType }, resType, FK_MEMBER_FUNCTION);
+		return hasMemberOfType(type, "IMP__operator_assign_", funType);
+	}
+
 	bool isaDefaultConstructor(const TagTypePtr& type, const ExpressionPtr& ctor) {
 		auto record = type->getRecord();
 		IRBuilder builder(type->getNodeManager());
 		auto thisType = builder.refType(builder.tagTypeReference(record->getName()));
 
 		auto checkCtor = [&](const ExpressionPtr& ctor, const ExpressionPtr& candidate)->bool {
-			return analysis::equalNameless(builder.normalize(ctor), builder.normalize(candidate));
+			return analysis::equalNameless(ctor, builder.normalize(candidate)) ||
+				analysis::equalNameless(ctor, builder.normalize(type->peel(candidate)));
 		};
 
 		ParentsPtr parents =
@@ -252,11 +328,32 @@ namespace analysis {
 				builder.parents();
 
 		//compare with all three default generated constructors
-		if (checkCtor(ctor, builder.getDefaultConstructor(thisType, parents, record->getFields()))) return true;
-		if (checkCtor(ctor, builder.getDefaultCopyConstructor(thisType, parents, record->getFields()))) return true;
-		if (checkCtor(ctor, builder.getDefaultMoveConstructor(thisType, parents, record->getFields()))) return true;
+		auto norm_ctor = builder.normalize(ctor);
+		if (checkCtor(norm_ctor, builder.getDefaultConstructor(thisType, parents, record->getFields()))) return true;
+		if (checkCtor(norm_ctor, builder.getDefaultCopyConstructor(thisType, parents, record->getFields()))) return true;
+		if (checkCtor(norm_ctor, builder.getDefaultMoveConstructor(thisType, parents, record->getFields()))) return true;
 
 		return false;
+	}
+
+	bool isDefaultDestructor(const TagTypePtr& type, const ExpressionPtr& dtor) {
+		auto record = type->getRecord();
+		IRBuilder builder(type->getNodeManager());
+		auto thisType = builder.refType(builder.tagTypeReference(record->getName()));
+
+		auto checkDtor = [&](const ExpressionPtr& dtor, const ExpressionPtr& candidate)->bool {
+			return analysis::equalNameless(dtor, builder.normalize(candidate)) ||
+				analysis::equalNameless(dtor, builder.normalize(type->peel(candidate)));
+		};
+
+		ParentsPtr parents =
+			(record.isa<StructPtr>()) ?
+			record.as<StructPtr>()->getParents() :
+			builder.parents();
+
+		//compare with all three default generated constructors
+		auto norm_dtor = builder.normalize(dtor);
+		return checkDtor(norm_dtor, builder.getDefaultDestructor(thisType));
 	}
 
 	bool hasDefaultDestructor(const TagTypePtr& type) {
