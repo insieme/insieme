@@ -1093,46 +1093,46 @@ namespace parser {
 		                                "};";
 
 		//giving the default number of type arguments for overload selection
-		EXPECT_ANY_THROW(builder.parseStmt(commonClass + "{ var ref<A> a = A::(ref_var(type_lit(A)), 5 : ); }"));
-		EXPECT_ANY_THROW(builder.parseStmt(commonClass + "{ var ref<A> a = A::(ref_var(type_lit(A)), 5 : int<4>, int<4>); }"));
-		EXPECT_ANY_THROW(builder.parseStmt(commonClass + "{ var ref<A> a; a.f(5 : ); }"));
-		EXPECT_ANY_THROW(builder.parseStmt(commonClass + "{ var ref<A> a; a.f(5 : int<4>, int<4>); }"));
+		EXPECT_FALSE(test_statement(nm, commonClass + "{ var ref<A> a = A::(ref_var(type_lit(A)), 5 : ); }"));
+		EXPECT_FALSE(test_statement(nm, commonClass + "{ var ref<A> a = A::(ref_var(type_lit(A)), 5 : int<4>, int<4>); }"));
+		EXPECT_FALSE(test_statement(nm, commonClass + "{ var ref<A> a; a.f(5 : ); }"));
+		EXPECT_FALSE(test_statement(nm, commonClass + "{ var ref<A> a; a.f(5 : int<4>, int<4>); }"));
 
 		//multiple possible overloads. Simple call fails for constructor with a single param
-		EXPECT_ANY_THROW(builder.parseStmt(commonClass + "{ var int<1> param = 5; var ref<A> a = A::(ref_var(type_lit(A)), param); }"));
+		EXPECT_FALSE(test_statement(nm, commonClass + "{ var int<1> param = 5; var ref<A> a = A::(ref_var(type_lit(A)), param); }"));
 
 		//multiple possible overloads. Simple call fails for constructor with multiple params
-		EXPECT_ANY_THROW(builder.parseStmt(commonClass + "{ var int<1> param = 5; var ref<A> a = A::(ref_var(type_lit(A)), param, param); }"));
+		EXPECT_FALSE(test_statement(nm, commonClass + "{ var int<1> param = 5; var ref<A> a = A::(ref_var(type_lit(A)), param, param); }"));
 
 		//multiple possible overloads. Simple call fails for function with a single param
-		EXPECT_ANY_THROW(builder.parseStmt(commonClass + "{ var int<1> param = 5; var ref<A> a; a.f(param); }"));
+		EXPECT_FALSE(test_statement(nm, commonClass + "{ var int<1> param = 5; var ref<A> a; a.f(param); }"));
 
 		//multiple possible overloads. Simple call fails for function with multiple params
-		EXPECT_ANY_THROW(builder.parseStmt(commonClass + "{ var int<1> param = 5; var ref<A> a; a.f(param, param); }"));
+		EXPECT_FALSE(test_statement(nm, commonClass + "{ var int<1> param = 5; var ref<A> a; a.f(param, param); }"));
 
 		//wrong overload type for constructor with a single param
-		EXPECT_ANY_THROW(builder.parseStmt(commonClass + "{ var ref<A> a = A::(ref_var(type_lit(A)), 5 : int<1>); }"));
+		EXPECT_FALSE(test_statement(nm, commonClass + "{ var ref<A> a = A::(ref_var(type_lit(A)), 5 : int<1>); }"));
 
 		//wrong overload type for constructor with a single param
-		EXPECT_ANY_THROW(builder.parseStmt(commonClass + "{ var ref<A> a = A::(ref_var(type_lit(A)), 5 : real<4>); }"));
+		EXPECT_FALSE(test_statement(nm, commonClass + "{ var ref<A> a = A::(ref_var(type_lit(A)), 5 : real<4>); }"));
 
 		//wrong overload type for constructor with multiple params
-		EXPECT_ANY_THROW(builder.parseStmt(commonClass + "{ var ref<A> a = A::(ref_var(type_lit(A)), 5, 42 : int<1>, int<4>); }"));
+		EXPECT_FALSE(test_statement(nm, commonClass + "{ var ref<A> a = A::(ref_var(type_lit(A)), 5, 42 : int<1>, int<4>); }"));
 
 		//wrong overload type for constructor with multiple params
-		EXPECT_ANY_THROW(builder.parseStmt(commonClass + "{ var ref<A> a = A::(ref_var(type_lit(A)), 5, 42 : int<4>, real<4>); }"));
+		EXPECT_FALSE(test_statement(nm, commonClass + "{ var ref<A> a = A::(ref_var(type_lit(A)), 5, 42 : int<4>, real<4>); }"));
 
 		//wrong overload type for function with a single param
-		EXPECT_ANY_THROW(builder.parseStmt(commonClass + "{ var ref<A> a; a.f(5 : int<1>); }"));
+		EXPECT_FALSE(test_statement(nm, commonClass + "{ var ref<A> a; a.f(5 : int<1>); }"));
 
 		//wrong overload type for function with a single param
-		EXPECT_ANY_THROW(builder.parseStmt(commonClass + "{ var ref<A> a; a.f(5 : real<4>); }"));
+		EXPECT_FALSE(test_statement(nm, commonClass + "{ var ref<A> a; a.f(5 : real<4>); }"));
 
 		//wrong overload type for function with multiple params
-		EXPECT_ANY_THROW(builder.parseStmt(commonClass + "{ var ref<A> a; a.f(5, 42 : int<1>, int<4>); }"));
+		EXPECT_FALSE(test_statement(nm, commonClass + "{ var ref<A> a; a.f(5, 42 : int<1>, int<4>); }"));
 
 		//wrong overload type for function with multiple params
-		EXPECT_ANY_THROW(builder.parseStmt(commonClass + "{ var ref<A> a; a.f(5, 42 : int<4>, real<4>); }"));
+		EXPECT_FALSE(test_statement(nm, commonClass + "{ var ref<A> a; a.f(5, 42 : int<4>, real<4>); }"));
 
 
 		//multiple possible overloads. Specifying the desired overload will work for constructor with a single param
@@ -1149,31 +1149,28 @@ namespace parser {
 
 
 		//calling the default generated constructs without specifying the desired overload should fail as we have two candidates
-		EXPECT_ANY_THROW(builder.parseStmt("def struct A { };"
+		EXPECT_FALSE(test_statement(nm, "def struct A { };"
 		                     "{"
 		                     "  var ref<A> a;"
 		                     "  var ref<A> a_copy = A::(ref_var(type_lit(A)), a);"
 		                     "}"));
 
 		//calling the default generated assignment operator without specifying the desired overload should fail as we have two candidates
-		EXPECT_ANY_THROW(builder.parseStmt("def struct A { };"
+		EXPECT_FALSE(test_statement(nm, "def struct A { };"
 		                     "{"
 		                     "  var ref<A> a;"
 		                     "  a." + utils::getMangledOperatorAssignName() + "(a);"
 		                     "}"));
 
-		{ //call the default generated constructs and manually specify which overload to take
-			const auto res = builder.parseStmt("def struct A { };"
-			                     "{"
-			                     "  var ref<A> a;"
-			                     "  var ref<A> a_copy = A::(ref_var(type_lit(A)), a : ref<A,t,f,cpp_ref>);"    //copy constructor
-			                     "  var ref<A> a_move = A::(ref_var(type_lit(A)), a : ref<A,f,f,cpp_rref>);"   //move constructor
-			                     "  a." + utils::getMangledOperatorAssignName() + "(a : ref<A,t,f,cpp_ref>);"  //default copy assignment operator
-			                     "  a." + utils::getMangledOperatorAssignName() + "(a : ref<A,f,f,cpp_rref>);" //default move assignment operator
-			                     "}");
-			EXPECT_TRUE(res);
-			EXPECT_TRUE(checks::check(res).empty()) << checks::check(res);
-		}
+		//call the default generated constructs and manually specify which overload to take
+		EXPECT_TRUE(test_statement(nm, "def struct A { };"
+		                     "{"
+		                     "  var ref<A> a;"
+		                     "  var ref<A> a_copy = A::(ref_var(type_lit(A)), a : ref<A,t,f,cpp_ref>);"    //copy constructor
+		                     "  var ref<A> a_move = A::(ref_var(type_lit(A)), a : ref<A,f,f,cpp_rref>);"   //move constructor
+		                     "  a." + utils::getMangledOperatorAssignName() + "(a : ref<A,t,f,cpp_ref>);"  //default copy assignment operator
+		                     "  a." + utils::getMangledOperatorAssignName() + "(a : ref<A,f,f,cpp_rref>);" //default move assignment operator
+		                     "}"));
 	}
 
 } // parser
