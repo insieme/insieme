@@ -452,7 +452,11 @@ namespace printer {
 								auto destructor = cur->getDestructor();
 								if (auto dtor = destructor.isa<LambdaExprPtr>()) {
 									newLine();
-									out << "dtor function () ";
+									out << "dtor ";
+									if(cur->getDestructorVirtual() && cur->getDestructorVirtual()->getValue()) {
+										out << "virtual ";
+									}
+									out << "function () ";
 									thisStack.push(dtor->getParameterList().front());
 									visit(NodeAddress(dtor->getBody()));
 									thisStack.pop();

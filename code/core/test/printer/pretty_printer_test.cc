@@ -575,6 +575,53 @@ TEST(PrettyPrinter, Structs) {
 
 	}
 
+	{ // destructor
+		auto type = builder.parseType("struct s {"
+									  "    dtor () {}"
+									  "}");
+
+		auto type1 = builder.parseType("struct s {"
+									  "    dtor () {return;}"
+									  "}");
+
+		EXPECT_EQ("decl struct s;\n"
+		          "def struct s {\n"
+		          "};\n"
+		          "s", toString(PrettyPrinter(type))) << toString(PrettyPrinter(type));
+
+		EXPECT_EQ("decl struct s;\n"
+		          "def struct s {\n"
+		          "    dtor function () {\n"
+		          "        return unit;\n"
+		          "    }\n"
+		          "};\n"
+		          "s", toString(PrettyPrinter(type1))) << toString(PrettyPrinter(type1));
+	}
+
+	{ // destructor virtual
+		auto type = builder.parseType("struct s {"
+											  "    dtor virtual () {}"
+											  "}");
+
+		auto type1 = builder.parseType("struct s {"
+											   "    dtor virtual () {return;}"
+											   "}");
+
+		EXPECT_EQ("decl struct s;\n"
+		          "def struct s {\n"
+		          "    dtor virtual function () { }\n"
+		          "};\n"
+		          "s", toString(PrettyPrinter(type))) << toString(PrettyPrinter(type));
+
+		EXPECT_EQ("decl struct s;\n"
+		          "def struct s {\n"
+		          "    dtor virtual function () {\n"
+		          "        return unit;\n"
+		          "    }\n"
+		          "};\n"
+		          "s", toString(PrettyPrinter(type1))) << toString(PrettyPrinter(type1));
+		}
+
 
 }
 
