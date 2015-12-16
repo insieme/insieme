@@ -76,6 +76,12 @@ namespace frontend {
 namespace extensions {
 
 	namespace {
+		auto isCStyleAssignment = [](const core::NodePtr& node) {
+			auto& mgr = node->getNodeManager();
+			auto& fMod = mgr.getLangExtension<utils::FrontendInspireModule>();
+			return core::analysis::isCallOf(node, fMod.getCStyleAssignment());
+		};
+
 		// tries to map a given operation (assignment or increment/decrement) to a step for an IR for loop
 		// returns (read/write, step expression)
 		std::pair<bool, core::ExpressionPtr> mapToStep(core::NodePtr operation) {
@@ -84,14 +90,13 @@ namespace extensions {
 			auto& mgr = operation->getNodeManager();
 			core::IRBuilder builder(mgr);
 			auto& basic = mgr.getLangBasic();
-			auto& fMod = mgr.getLangExtension<utils::FrontendInspireModule>();
 			auto& rMod = mgr.getLangExtension<core::lang::ReferenceExtension>();
 
-			auto call = operation.as<core::CallExprPtr>();
+			auto call = operation.isa<core::CallExprPtr>();
 			if(!call) return invalid;
 			auto callee = call->getFunctionExpr();
 
-			if(callee == fMod.getCStyleAssignment()) {
+			if(isCStyleAssignment(operation)) {
 				// we could be smarter here, for now only handle the simplest case
 				auto lhs = call->getArgument(0);
 				auto rhsCall = call->getArgument(1).isa<core::CallExprPtr>();
@@ -185,19 +190,23 @@ namespace extensions {
 	}
 
 	bool isUsedAfterLoop(const core::StatementList& stmts, const core::WhileStmtPtr& whileStmt, const core::NodePtr& predecessor,
-		                 const core::VariablePtr& cvar) {
-
-		if(!predecessor.isa<core::DeclarationStmtPtr>()) return true;
-
+		const core::VariablePtr& cvar) {
+		if (!predecessor.isa<core::DeclarationStmtPtr>()) return true;
 		bool afterWhile = false;
-		for(auto stmt : stmts) {
-			if(stmt == whileStmt) {
+		for (auto stmt : stmts) {
+			if (stmt == whileStmt) {
 				afterWhile = true;
 			} else {
-				if(afterWhile && ::contains(core::analysis::getFreeVariables(stmt), cvar)) return true;
+				if (afterWhile && ::contains(core::analysis::getFreeVariables(stmt), cvar)) return true;
 			}
 		}
 		return false;
+	}
+	
+	core::StatementPtr getPostCondition(const core::VariablePtr& forVar, const core::ExpressionPtr& start, const core::ExpressionPtr& stop, const core::ExpressionPtr& step) {
+		core::IRBuilder builder(forVar->getNodeManager());
+		// create following statement: tmpEndValue = end + ((beg-end) % step + step) % step
+		return builder.assign(forVar, builder.add(stop, builder.mod(builder.add(builder.mod(builder.sub(start, stop), step), step),step)));
 	}
 
 	/// while statements can be for statements iff only one variable used in the condition is
@@ -237,7 +246,28 @@ namespace extensions {
 
 				// if more than one free variable in the condition -> we certainly can't create a for for this
 				auto cvars = core::analysis::getFreeVariables(condition);
+
 				VLOG(1) << "--- cvars:\n " << cvars << "\n";
+				// remove all read only free vars from list
+				for (auto it = cvars.rbegin(); it != cvars.rend(); ++it) {
+					VLOG(1) << "---- check read only " << *it << "\n";
+					if (core::analysis::isReadOnlyWithinScope(body, *it)) {
+						cvars.erase(std::next(it).base());
+						VLOG(1) << "---- erased, because var is read only " << *it << "\n";
+					}
+				}
+
+				// check if we use literals (e.g., globals). If yes, return original
+				bool litAccess = false;
+				core::visitDepthFirstOnce(condition, 
+					[&](const core::LiteralPtr& lit) {
+						if (core::analysis::isRefType(lit->getType())) {
+							litAccess = true;;
+						}
+				});
+				VLOG(1) << "--- used literals:\n " << litAccess << "\n";
+				if (litAccess) return original;
+
 				if(cvars.size() > 1 || cvars.size() == 0) return original;
 
 				auto cvar = cvars.front();
@@ -246,15 +276,7 @@ namespace extensions {
 			
 				// if it's not an integer, we bail out for now
 				if(!basic.isInt(cvarType)) return original;
-
-				// check if loop variable is used after the loop
-				// at the moment this check is very simple
-				// TODO: replace stupid "use after loop" check by more sophisticated def use analysis.
-				if(isUsedAfterLoop(original->getStatements(), whileAddr.getAddressedNode(), pred, cvar)) {
-					VLOG(1) << "--- isUsedAfterLoop, bailing\n";
-					return original;
-				}
-
+				
 				/////////////////////////////////////////////////////////////////////////////////////// figuring out the step
 
 				// find all uses of the variable in the while body
@@ -296,7 +318,7 @@ namespace extensions {
 			
 				// bail if no valid end found
 				if(!convertedEndPair.first) return original;
-							
+
 				/////////////////////////////////////////////////////////////////////////////////////// build the for
 
 				auto forVar = builder.variable(cvarType);
@@ -319,11 +341,17 @@ namespace extensions {
 				core::transform::utils::migrateAnnotations(whileAddr.getAddressedNode(), forStmt);
 				VLOG(1) << "======> FOR:\n" << dumpColor(forStmt);
 
-				/////////////////////////////////////////////////////////////////////////////////////// replace the while in the original compound
-			
-				auto replacementCompoundStmt = core::transform::replaceAddress(mgr, whileAddr, forStmt).getRootNode().as<core::CompoundStmtPtr>();
+				/////////////////////////////////////////////////////////////////////////////////////// check if post assignment is mandatory
+				core::StatementPtr postCond = nullptr;
+				if (isUsedAfterLoop(original->getStatements(), whileAddr.getAddressedNode(), pred, cvar)) {
+					postCond = getPostCondition(cvar, convertedStartPair.second, convertedEndPair.second, convertedStepExpr);
+				}
 
-				return replacementCompoundStmt;
+				/////////////////////////////////////////////////////////////////////////////////////// replace the while in the original compound
+				auto replacementCompoundStmt = core::transform::replaceAddress(mgr, whileAddr, forStmt).getRootNode().as<core::CompoundStmtPtr>();
+				core::StatementList stmtlist = replacementCompoundStmt->getStatements();
+				if(postCond) stmtlist.push_back(postCond);
+				return builder.compoundStmt(stmtlist);
 			}).as<core::LambdaExprPtr>();
 			
 			VLOG(1) << "While to for replacement - from function:\n" << dumpColor(fun.second) << " - to function:\n" << dumpColor(lambdaExpr);

@@ -264,6 +264,14 @@ namespace backend {
 			virtual void addRequirement(const CodeFragmentPtr& fragment);
 
 			/**
+			 * Removes a requirement from this fragment.
+			 *
+			 * @param fragment the code fragment requirement to be eliminated
+			 * @return true if a requirement was removed, false otherwise
+			 */
+			virtual bool remRequirement(const CodeFragmentPtr& fragment);
+
+			/**
 			 * Adds the fragment pointers present within the given container to the
 			 * set of requirements defined for this code fragment.
 			 *

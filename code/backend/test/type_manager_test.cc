@@ -40,6 +40,7 @@
 
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/lang/reference.h"
+#include "insieme/core/checks/full_check.h"
 
 #include "insieme/backend/type_manager.h"
 #include "insieme/backend/name_manager.h"
@@ -1237,12 +1238,13 @@ namespace backend {
 		vector<core::FieldPtr> entriesA;
 		entriesA.push_back(builder.field(builder.stringValue("value"), basic.getInt4()));
 		entriesA.push_back(builder.field(builder.stringValue("next"), builder.refType(A)));
-		core::StructPtr structA = builder.structRecord(entriesA);
+		core::StructPtr structA = builder.structRecord("A",entriesA);
 
 		core::TagTypeDefinitionPtr def = builder.tagTypeDefinition({ { A, structA } });
 
 		core::TagTypePtr recTypeA = builder.tagType(A, def);
 		EXPECT_TRUE(recTypeA->isRecursive());
+		EXPECT_TRUE(core::checks::check(recTypeA).empty()) << core::checks::check(recTypeA);
 
 		// do the checks
 
@@ -1281,12 +1283,12 @@ namespace backend {
 		vector<core::FieldPtr> entriesA;
 		entriesA.push_back(builder.field(builder.stringValue("value"), basic.getInt4()));
 		entriesA.push_back(builder.field(builder.stringValue("other"), builder.refType(B)));
-		auto structA = builder.structRecord(entriesA);
+		auto structA = builder.structRecord("A",entriesA);
 
 		vector<core::FieldPtr> entriesB;
 		entriesB.push_back(builder.field(builder.stringValue("value"), basic.getBool()));
 		entriesB.push_back(builder.field(builder.stringValue("other"), builder.refType(A)));
-		auto structB = builder.structRecord(entriesB);
+		auto structB = builder.structRecord("B",entriesB);
 
 		core::TagTypeDefinitionPtr def = builder.tagTypeDefinition({ { A, structA }, { B, structB } });
 
@@ -1295,6 +1297,10 @@ namespace backend {
 
 		EXPECT_TRUE(recTypeA->isRecursive());
 		EXPECT_TRUE(recTypeB->isRecursive());
+
+		EXPECT_TRUE(core::checks::check(recTypeA).empty()) << core::checks::check(recTypeA);
+		EXPECT_TRUE(core::checks::check(recTypeB).empty()) << core::checks::check(recTypeB);
+
 
 		// do the checks
 

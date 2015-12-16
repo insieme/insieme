@@ -158,12 +158,13 @@ namespace analysis {
 	* or member function. In case it is a plain or closure function type a call to this function is
 	* invalid.
 	*/
-	template<template <typename> class Ptr>
-	Ptr<const Type> getObjectType(const Ptr<const FunctionType>& type) {
-		assert_true(type->isConstructor() || type->isDestructor() || type->isMemberFunction() || type->isVirtualMemberFunction());
-		assert_false(type->getParameterTypes().empty());
-		assert_true(analysis::isRefType(type->getParameterType(0)));
-		return type->getParameterType(0).template as<Ptr<const GenericType>>()->getTypeParameter(0);
+	template<template <typename> class Ptr, typename T>
+	Ptr<const Type> getObjectType(const Ptr<const T>& type) {
+		auto funType = type.template as<Ptr<const FunctionType>>();
+		assert_true(funType->isConstructor() || funType->isDestructor() || funType->isMemberFunction() || funType->isVirtualMemberFunction());
+		assert_false(funType->getParameterTypes().empty());
+		assert_true(analysis::isRefType(funType->getParameterType(0)));
+		return funType->getParameterType(0).template as<Ptr<const GenericType>>()->getTypeParameter(0);
 	}
 
 

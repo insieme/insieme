@@ -35,6 +35,7 @@
  */
 
 #include <gtest/gtest.h>
+#include <string>
 
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_expressions.h"
@@ -460,6 +461,167 @@ EXPECT_EQ(toString(printer), "decl struct A;\n"
 							 "};\n"
 							 "A") << printer;
 }
+
+}
+
+
+TEST(PrettyPrinter, Structs) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	{ // default struct
+		auto type = builder.parseType("struct s {}");
+
+		EXPECT_EQ("decl struct s;\ndef struct s {\n};\ns", toString(PrettyPrinter(type))) << toString(PrettyPrinter(type));
+	}
+
+	{ // struct with member fields
+		auto type = builder.parseType("struct s { a : int<4>; b : real<8>;}");
+
+		EXPECT_EQ("decl struct s;\n"
+	              "decl s::a:int<4>;\n"
+	              "decl s::b:real<8>;\n"
+	              "def struct s {\n"
+	              "    a : int<4>;\n"
+	              "    b : real<8>;\n"
+	              "};\n"
+	              "s", toString(PrettyPrinter(type))) << toString(PrettyPrinter(type));
+	}
+
+	{ // default constructor
+		auto type = builder.parseType("struct s { ctor () { return; }}");
+		auto type1 = builder.parseType("struct s { ctor () {}}");
+
+		EXPECT_EQ("decl struct s;\n"
+                  "decl ctor:s::();\n"
+                  "def struct s {\n"
+                  "    ctor function () {\n"
+                  "        return unit;\n"
+                  "    }\n"
+                  "};\n"
+                  "s", toString(PrettyPrinter(type))) << toString(PrettyPrinter(type));
+
+		EXPECT_EQ("decl struct s;\n"
+		          "def struct s {\n"
+		          "};\n"
+		          "s", toString(PrettyPrinter(type1))) << toString(PrettyPrinter(type1));
+
+	}
+
+	{ // copy and move constructor
+		auto type = builder.normalize(builder.parseType("struct s { "
+									  "    ctor function (v1 : ref<s,t,f,cpp_ref>) { return; }"
+									  "    ctor function (v1 : ref<s,f,f,cpp_rref>) { return;}"
+									  "}"));
+		auto type1 = builder.normalize(builder.parseType("struct s { "
+									   "    ctor (other : ref<s,t,f,cpp_ref>) { }"
+									   "    ctor (other : ref<s,f,f,cpp_rref>) { }"
+									   "}"));
+
+		EXPECT_EQ("decl struct s;\n"
+		          "decl ctor:s::(ref<s,t,f,cpp_ref>);\n"
+		          "decl ctor:s::(ref<s,f,f,cpp_rref>);\n"
+		          "def struct s {\n"
+		          "    ctor function (v1 : ref<s,t,f,cpp_ref>) {\n"
+		          "        return unit;\n"
+		          "    }\n"
+		          "    ctor function (v1 : ref<s,f,f,cpp_rref>) {\n"
+		          "        return unit;\n"
+		          "    }\n"
+		          "};\n"
+		          "s", toString(PrettyPrinter(type))) << toString(PrettyPrinter(type));
+
+		EXPECT_EQ("decl struct s;\n"
+		          "def struct s {\n"
+		          "};\n"
+		          "s", toString(PrettyPrinter(type1))) << toString(PrettyPrinter(type1));
+
+	}
+
+	{ // assignment operator
+		auto type = builder.normalize(builder.parseType(
+				"struct s {"
+				"    function " + utils::getMangledOperatorAssignName() + " : (v1 : ref<s,t,f,cpp_ref>) -> ref<s,f,f,cpp_ref> {\n"
+				"    }\n"
+				"    function " + utils::getMangledOperatorAssignName() + " : (v1 : ref<s,f,f,cpp_rref>) -> ref<s,f,f,cpp_ref> {\n"
+				"    }\n"
+				"}"));
+
+		auto type1 = builder.normalize(builder.parseType(
+				"struct s {"
+				"    function " + utils::getMangledOperatorAssignName() + " : (v1 : ref<s,t,f,cpp_ref>) -> ref<s,f,f,cpp_ref> {\n"
+				"        return ref_cast(*this, type_lit(f), type_lit(f), type_lit(cpp_ref));\n"
+				"    }\n"
+				"    function " + utils::getMangledOperatorAssignName() + " : (v1 : ref<s,f,f,cpp_rref>) -> ref<s,f,f,cpp_ref> {\n"
+				"        return ref_cast(*this, type_lit(f), type_lit(f), type_lit(cpp_ref));\n"
+				"    }\n"
+				"}"));
+
+		std::string res = "decl struct s;\n"
+						  "decl IMP__operator_assign_:s::(ref<s,t,f,cpp_ref>) -> ref<s,f,f,cpp_ref>;\n"
+						  "decl IMP__operator_assign_:s::(ref<s,f,f,cpp_rref>) -> ref<s,f,f,cpp_ref>;\n"
+						  "def struct s {\n"
+						  "    function " + utils::getMangledOperatorAssignName() + " : (v1 : ref<s,t,f,cpp_ref>) -> ref<s,f,f,cpp_ref> { }\n"
+						  "    function " + utils::getMangledOperatorAssignName() + " : (v1 : ref<s,f,f,cpp_rref>) -> ref<s,f,f,cpp_ref> { }\n"
+						  "};\n"
+						  "s";
+
+		EXPECT_EQ(res, toString(PrettyPrinter(type))) << toString(PrettyPrinter(type));
+
+		EXPECT_EQ("decl struct s;\n"
+		          "def struct s {\n"
+		          "};\n"
+		          "s", toString(PrettyPrinter(type1))) << toString(PrettyPrinter(type1));
+
+	}
+
+	{ // destructor
+		auto type = builder.parseType("struct s {"
+									  "    dtor () {}"
+									  "}");
+
+		auto type1 = builder.parseType("struct s {"
+									  "    dtor () {return;}"
+									  "}");
+
+		EXPECT_EQ("decl struct s;\n"
+		          "def struct s {\n"
+		          "};\n"
+		          "s", toString(PrettyPrinter(type))) << toString(PrettyPrinter(type));
+
+		EXPECT_EQ("decl struct s;\n"
+		          "def struct s {\n"
+		          "    dtor function () {\n"
+		          "        return unit;\n"
+		          "    }\n"
+		          "};\n"
+		          "s", toString(PrettyPrinter(type1))) << toString(PrettyPrinter(type1));
+	}
+
+	{ // destructor virtual
+		auto type = builder.parseType("struct s {"
+											  "    dtor virtual () {}"
+											  "}");
+
+		auto type1 = builder.parseType("struct s {"
+											   "    dtor virtual () {return;}"
+											   "}");
+
+		EXPECT_EQ("decl struct s;\n"
+		          "def struct s {\n"
+		          "    dtor virtual function () { }\n"
+		          "};\n"
+		          "s", toString(PrettyPrinter(type))) << toString(PrettyPrinter(type));
+
+		EXPECT_EQ("decl struct s;\n"
+		          "def struct s {\n"
+		          "    dtor virtual function () {\n"
+		          "        return unit;\n"
+		          "    }\n"
+		          "};\n"
+		          "s", toString(PrettyPrinter(type1))) << toString(PrettyPrinter(type1));
+		}
+
 
 }
 

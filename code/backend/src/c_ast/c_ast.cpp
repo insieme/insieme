@@ -451,19 +451,19 @@ namespace c_ast {
 	bool ConstructorPrototype::equals(const Node& node) const {
 		assert(dynamic_cast<const ConstructorPrototype*>(&node));
 		auto other = static_cast<const ConstructorPrototype&>(node);
-		return *ctor == *other.ctor;
+		return *ctor == *other.ctor && flag == other.flag;
 	}
 
 	bool DestructorPrototype::equals(const Node& node) const {
 		assert(dynamic_cast<const DestructorPrototype*>(&node));
 		auto other = static_cast<const DestructorPrototype&>(node);
-		return isVirtual == other.isVirtual && *dtor == *other.dtor;
+		return isVirtual == other.isVirtual && flag == other.flag && *dtor == *other.dtor;
 	}
 
 	bool MemberFunctionPrototype::equals(const Node& node) const {
 		assert(dynamic_cast<const MemberFunctionPrototype*>(&node));
 		auto other = static_cast<const MemberFunctionPrototype&>(node);
-		return isVirtual == other.isVirtual && pureVirtual == other.pureVirtual && ((!fun && !other.fun) || *fun == *other.fun);
+		return isVirtual == other.isVirtual && pureVirtual == other.pureVirtual && flag == other.flag && ((!fun && !other.fun) || *fun == *other.fun);
 	}
 
 	bool TypeDefinition::equals(const Node& node) const {
@@ -497,7 +497,7 @@ namespace c_ast {
 	bool MemberFunction::equals(const Node& node) const {
 		assert(dynamic_cast<const MemberFunction*>(&node));
 		auto other = static_cast<const MemberFunction&>(node);
-		return isConstant == other.isConstant && *className == *other.className && *function == *other.function;
+		return isConstant == other.isConstant && isVolatile == other.isVolatile && *className == *other.className && *function == *other.function;
 	}
 
 	bool Namespace::equals(const Node& node) const {
