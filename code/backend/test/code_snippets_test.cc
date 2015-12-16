@@ -299,7 +299,7 @@ namespace backend {
 		auto converted = sequential::SequentialBackend::getDefault()->convert(call);
 		string code = toString(*converted);
 
-		EXPECT_PRED2(containsSubString, code, "call_vector((uint64_t(*)[3])(&(__insieme_type_0){{(uint64_t)0, (uint64_t)0, (uint64_t)0}}))");
+		EXPECT_PRED2(containsSubString, code, "call_vector((uint64_t(*)[3])(&(__insieme_type_1){{(uint64_t)0, (uint64_t)0, (uint64_t)0}}))");
 	}
 
 

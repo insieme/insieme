@@ -83,11 +83,11 @@ namespace backend {
 
 		const FunctionInfo& getInfo(const core::LiteralPtr& literal);
 
-		const FunctionInfo& getInfo(const core::LiteralPtr& pureVirtualMemberFun, bool isConst);
+		const FunctionInfo& getInfo(const core::PureVirtualMemberFunctionPtr& fun);
 
 		const LambdaInfo& getInfo(const core::LambdaExprPtr& lambda);
 
-		const LambdaInfo& getInfo(const core::LambdaExprPtr& memberFun, bool isConst, bool isVirtual);
+		const LambdaInfo& getInfo(const core::MemberFunctionPtr& memberFun);
 
 		const BindInfo& getInfo(const core::BindExprPtr& bind);
 
@@ -125,6 +125,8 @@ namespace backend {
 		//		- prototype
 		//		- definition
 		//		- lambdaWrapper
+
+		c_ast::NodePtr declaration;
 
 		c_ast::FunctionPtr function;
 

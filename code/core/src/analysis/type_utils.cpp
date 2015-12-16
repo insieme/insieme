@@ -186,6 +186,12 @@ namespace analysis {
 				record.as<StructPtr>()->getParents() :
 				builder.parents();
 
+		// check that there are the right number of constructors
+		if (record->getConstructors().size() != 3) return false;
+
+		// and there is a non-virtual destructor
+		if (record->hasVirtualDestructor()) return false;
+
 		// check for trivial constructors
 		bool trivialDefaultConstructor = containsCtor(builder.getDefaultConstructor(thisType, parents, record->getFields()));
 		if (!trivialDefaultConstructor) return false;
@@ -377,7 +383,8 @@ namespace analysis {
 		auto thisType = builder.refType(builder.tagTypeReference(record->getName()));
 
 		auto checkMemberFunction = [&](const MemberFunctionPtr& member, const MemberFunctionPtr& candidate)->bool {
-			return analysis::equalNameless(builder.normalize(member), builder.normalize(candidate));
+			return analysis::equalNameless(member, builder.normalize(candidate)) ||
+					analysis::equalNameless(member, builder.normalize(type->peel(candidate)));
 		};
 
 		ParentsPtr parents =
@@ -386,8 +393,9 @@ namespace analysis {
 				builder.parents();
 
 		//compare with both default generated assignment operators
-		if (checkMemberFunction(memberFunction, builder.getDefaultCopyAssignOperator(thisType, parents, record->getFields()))) return true;
-		if (checkMemberFunction(memberFunction, builder.getDefaultMoveAssignOperator(thisType, parents, record->getFields()))) return true;
+		auto norm_member = builder.normalize(memberFunction);
+		if (checkMemberFunction(norm_member, builder.getDefaultCopyAssignOperator(thisType, parents, record->getFields()))) return true;
+		if (checkMemberFunction(norm_member, builder.getDefaultMoveAssignOperator(thisType, parents, record->getFields()))) return true;
 
 		return false;
 	}
