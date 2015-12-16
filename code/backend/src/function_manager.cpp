@@ -81,10 +81,19 @@ namespace backend {
 		struct info_trait<core::Literal> {
 			typedef FunctionInfo type;
 		};
+		template<>
+		struct info_trait<core::PureVirtualMemberFunction> 
+			: public info_trait<core::Literal> {};
+
 		template <>
 		struct info_trait<core::LambdaExpr> {
 			typedef LambdaInfo type;
 		};
+		
+		template<>
+		struct info_trait<core::MemberFunction>
+			: public info_trait<core::LambdaExpr> {};
+
 		template <>
 		struct info_trait<core::BindExpr> {
 			typedef BindInfo type;
@@ -101,39 +110,48 @@ namespace backend {
 		class FunctionInfoStore {
 			const Converter& converter;
 
-			utils::map::PointerMap<core::ExpressionPtr, ElementInfo*> funInfos;
+			utils::map::PointerMap<core::NodePtr, ElementInfo*> funInfos;
 
 		  public:
+
 			FunctionInfoStore(const Converter& converter) : converter(converter), funInfos() {}
 
 			~FunctionInfoStore() {
-				// free all stored type information instances
-				for_each(funInfos, [](const std::pair<core::ExpressionPtr, ElementInfo*>& cur) { delete cur.second; });
+				// free all stored type information instances (may contain duplicates)
+				std::set<ElementInfo*> deleted;
+				for (const auto& cur : funInfos) 
+					if (deleted.insert(cur.second).second) 
+						delete cur.second;
 			}
 
-			template <typename T, typename result_type = typename info_trait<typename std::remove_const<typename T::element_type>::type>::type*>
-			result_type resolve(const T& expression, bool isConst = false, bool isVirtual = false) {
+			template <
+				typename T, 
+				typename result_type = typename info_trait<typename std::remove_const<typename T::element_type>::type>::type*
+			>
+			result_type resolve(const T& node) {
 				// lookup information using internal mechanism and cast statically
-				ElementInfo* info = resolveInternal(expression, isConst, isVirtual);
+				ElementInfo* info = resolveInternal(node);
 				assert(dynamic_cast<result_type>(info));
 				return static_cast<result_type>(info);
 			}
 
 		  protected:
-			ElementInfo* resolveInternal(const core::ExpressionPtr& expression, bool isConst = false, bool isVirtual = false);
+			
+			ElementInfo* resolveInternal(const core::NodePtr& expression);
 
-			ElementInfo* resolveLiteral(const core::LiteralPtr& literal, bool isConst);
-			ElementInfo* resolveBind(const core::BindExprPtr& bind);
-			ElementInfo* resolveLambda(const core::LambdaExprPtr& lambda, bool isConst, bool isVirtual);
-			void resolveLambdaDefinition(const core::LambdaDefinitionPtr& lambdaDefinition, bool isConst, bool isVirtual);
+			FunctionInfo* resolveLiteral(const core::LiteralPtr& literal);
+			FunctionInfo* resolvePureVirtualMember(const core::PureVirtualMemberFunctionPtr&);
+			LambdaInfo* resolveLambda(const core::LambdaExprPtr& lambda);
+			LambdaInfo* resolveMemberFunction(const core::MemberFunctionPtr&);
+			BindInfo* resolveBind(const core::BindExprPtr& bind);
+
+			void resolveLambdaDefinition(const core::LambdaDefinitionPtr& lambdaDefinition);
 
 			// -------- utilities -----------
 
-			FunctionCodeInfo resolveFunction(const c_ast::IdentifierPtr name, const core::FunctionTypePtr& funType, const core::LambdaPtr& lambda,
-			                                 bool external, bool isConst = false);
+			FunctionCodeInfo resolveFunction(const c_ast::IdentifierPtr name, const core::FunctionTypePtr& funType, const core::LambdaPtr& lambda, bool external);
 
-			std::pair<c_ast::IdentifierPtr, c_ast::CodeFragmentPtr> resolveLambdaWrapper(const c_ast::FunctionPtr& function,
-			                                                                             const core::FunctionTypePtr& funType, bool external);
+			std::pair<c_ast::IdentifierPtr, c_ast::CodeFragmentPtr> resolveLambdaWrapper(const c_ast::FunctionPtr& function, const core::FunctionTypePtr& funType, bool external);
 		};
 	}
 
@@ -152,16 +170,16 @@ namespace backend {
 		return *(store->resolve(literal));
 	}
 
-	const FunctionInfo& FunctionManager::getInfo(const core::LiteralPtr& pureVirtualMemberFun, bool isConst) {
-		return *(store->resolve(pureVirtualMemberFun, isConst, true));
+	const FunctionInfo& FunctionManager::getInfo(const core::PureVirtualMemberFunctionPtr& fun) {
+		return *(store->resolve(fun));
 	}
 
 	const LambdaInfo& FunctionManager::getInfo(const core::LambdaExprPtr& lambda) {
 		return *(store->resolve(lambda));
 	}
 
-	const LambdaInfo& FunctionManager::getInfo(const core::LambdaExprPtr& memberFun, bool isConst, bool isVirtual) {
-		return *(store->resolve(memberFun, isConst, isVirtual));
+	const LambdaInfo& FunctionManager::getInfo(const core::MemberFunctionPtr& memberFun) {
+		return *(store->resolve(memberFun));
 	}
 
 	const BindInfo& FunctionManager::getInfo(const core::BindExprPtr& bind) {
@@ -593,32 +611,59 @@ namespace backend {
 
 	namespace detail {
 
+		core::FunctionTypePtr getFunctionType(const core::NodePtr& node) {
+			
+			// for expressions get the the type and interpret as a function type
+			if (auto expr = node.isa<core::ExpressionPtr>()) {
+				return expr->getType().as<core::FunctionTypePtr>();
+			}
 
-		ElementInfo* FunctionInfoStore::resolveInternal(const core::ExpressionPtr& expr, bool isConst, bool isVirtual) {
-			// normalize member functions to avoid unintended duplication and resulting name collisions
-			core::ExpressionPtr expression = expr;
-			core::FunctionTypePtr funType = expr->getType().as<core::FunctionTypePtr>();
-			if(funType->isMember()) {
-				// normalize member
-				expression = core::analysis::normalize(expression);
+			// extract type of a member function node
+			if (auto memFun = node.isa<core::MemberFunctionPtr>()) {
+				return memFun->getImplementation()->getType().as<core::FunctionTypePtr>();
+			}
 
+			// extract type from a pure virtual function
+			if (auto pureVirtual = node.isa<core::PureVirtualMemberFunctionPtr>()) {
+				return pureVirtual->getType();
+			}
+
+			// unsupported case
+			assert_fail() << "Unsupported function type: " << node->getNodeType() << "\n";
+			return core::FunctionTypePtr();
+		}
+
+
+		ElementInfo* FunctionInfoStore::resolveInternal(const core::NodePtr& fun) {
+			// normalize all functions to avoid duplicates
+			core::NodePtr function = core::analysis::normalize(fun);
+
+			// lookup information within store
+			auto pos = funInfos.find(function);
+			if (pos != funInfos.end()) { return pos->second; }
+
+			// copy name for normalized version
+			auto& nameManager = converter.getNameManager();
+			nameManager.setName(function, nameManager.getName(fun));
+
+			// extract function type
+			auto funType = getFunctionType(function);
+			if (funType->isMember()) {
 				// make sure the object definition, ctors, dtors and member functions have already been resolved
 				// if this would not be the case, we could end up resolving e.g. a ctor while resolving the ctor itself
 				converter.getTypeManager().getTypeInfo(core::analysis::getObjectType(funType)); // ignore result
 			}
 
-			// lookup information within store
-			auto pos = funInfos.find(expression);
-			if(pos != funInfos.end()) { return pos->second; }
-
 			// obtain function information
 			ElementInfo* info;
 
 			// not known yet => requires some resolution
-			switch(expression->getNodeType()) {
-			case core::NT_Literal: info = resolveLiteral(static_pointer_cast<const core::Literal>(expression), isConst); break;
-			case core::NT_LambdaExpr: info = resolveLambda(static_pointer_cast<const core::LambdaExpr>(expression), isConst, isVirtual); break;
-			case core::NT_BindExpr: info = resolveBind(static_pointer_cast<const core::BindExpr>(expression)); break;
+			switch(function->getNodeType()) {
+			case core::NT_Literal: info = resolveLiteral(function.as<core::LiteralPtr>()); break;
+			case core::NT_LambdaExpr: info = resolveLambda(function.as<core::LambdaExprPtr>()); break;
+			case core::NT_BindExpr: info = resolveBind(function.as<core::BindExprPtr>()); break;
+			case core::NT_MemberFunction: info = resolveMemberFunction(function.as<core::MemberFunctionPtr>()); break;
+			case core::NT_PureVirtualMemberFunction: info = resolvePureVirtualMember(function.as<core::PureVirtualMemberFunctionPtr>()); break;
 			default:
 				// this should not happen ...
 				assert_fail() << "Unsupported node type encountered!";
@@ -626,13 +671,13 @@ namespace backend {
 			}
 
 			// store information
-			funInfos.insert(std::make_pair(expression, info));
+			funInfos.insert(std::make_pair(function, info));
 
 			// return pointer to obtained information
 			return info;
 		}
 
-		ElementInfo* FunctionInfoStore::resolveLiteral(const core::LiteralPtr& literal, bool isConst) {
+		FunctionInfo* FunctionInfoStore::resolveLiteral(const core::LiteralPtr& literal) {
 			assert_eq(literal->getType()->getNodeType(), core::NT_FunctionType) << "Only supporting literals with a function type!";
 
 			// some preparation
@@ -654,6 +699,7 @@ namespace backend {
 			if(header) {
 				// => use prototype of include file
 				res->prototype = c_ast::IncludeFragment::createNew(converter.getFragmentManager(), *header);
+				res->declaration = nullptr;
 
 			} else if(funType->isMemberFunction()) {
 				// add pure-virtual member function to class declaration
@@ -663,8 +709,10 @@ namespace backend {
 
 				// add declaration of pure-virtual function
 				c_ast::StructTypePtr classDecl = typeInfo.lValueType.as<c_ast::StructTypePtr>();
-				auto mFun = manager->create<c_ast::MemberFunction>(classDecl->name, fun.function, isConst);
-				classDecl->members.push_back(manager->create<c_ast::MemberFunctionPrototype>(mFun, true, true));
+				auto mFun = manager->create<c_ast::MemberFunction>(classDecl->name, fun.function);
+				auto decl = manager->create<c_ast::MemberFunctionPrototype>(mFun, true, true);
+				res->declaration = decl;
+				classDecl->members.push_back(decl);
 
 				//TODO
 			} else if(funType->isVirtualMemberFunction()) {
@@ -679,6 +727,7 @@ namespace backend {
 				if(annotations::c::isExternC(literal)) { code = manager->create<c_ast::ExternC>(code); }
 				res->prototype = c_ast::CCodeFragment::createNew(converter.getFragmentManager(), code);
 				res->prototype->addDependencies(fun.prototypeDependencies);
+				res->declaration = code;
 			}
 
 			// -------------------------- add lambda wrapper ---------------------------
@@ -693,7 +742,49 @@ namespace backend {
 			return res;
 		}
 
-		ElementInfo* FunctionInfoStore::resolveBind(const core::BindExprPtr& bind) {
+		FunctionInfo* FunctionInfoStore::resolvePureVirtualMember(const core::PureVirtualMemberFunctionPtr&  pureVirtualMemberFun) {
+			assert_not_implemented();
+			return nullptr;
+		}
+		
+		LambdaInfo* FunctionInfoStore::resolveLambda(const core::LambdaExprPtr& lambda) {
+			// resolve lambda definitions
+			resolveLambdaDefinition(lambda->getDefinition());
+
+			// look up lambda again
+			return resolve(lambda);
+		}
+
+		LambdaInfo* FunctionInfoStore::resolveMemberFunction(const core::MemberFunctionPtr& memberFun) {
+
+			// fix name
+			auto impl = memberFun->getImplementation();
+			auto name = utils::demangle(memberFun->getNameAsString());
+			converter.getNameManager().setName(impl, name);
+
+			// convert implementation
+			auto res = resolveLambda(impl.as<core::LambdaExprPtr>());
+
+			// correct virtual flag
+			c_ast::MemberFunctionPrototypePtr decl = res->declaration.as<c_ast::MemberFunctionPrototypePtr>();
+			decl->isVirtual = memberFun->isVirtual();
+
+			// check for default members
+			auto classType = core::analysis::getObjectType(memberFun->getType()).as<core::TagTypePtr>();
+			if (core::analysis::isaDefaultMember(classType, memberFun)) {
+
+				// set declaration to default
+				decl->flag = c_ast::BodyFlag::Default;
+
+				// delete definition by removing the prototypes requirement towards the definition
+				res->prototype->remRequirement(res->definition);
+			}
+			
+			// done
+			return res;
+		}
+
+		BindInfo* FunctionInfoStore::resolveBind(const core::BindExprPtr& bind) {
 			// prepare some manager
 			NameManager& nameManager = converter.getNameManager();
 			TypeManager& typeManager = converter.getTypeManager();
@@ -861,15 +952,7 @@ namespace backend {
 			return res;
 		}
 
-		ElementInfo* FunctionInfoStore::resolveLambda(const core::LambdaExprPtr& lambda, bool isConst, bool isVirtual) {
-			// resolve lambda definitions
-			resolveLambdaDefinition(lambda->getDefinition(), isConst, isVirtual);
-
-			// look up lambda again
-			return resolveInternal(lambda);
-		}
-
-		void FunctionInfoStore::resolveLambdaDefinition(const core::LambdaDefinitionPtr& lambdaDefinition, bool isConst, bool isVirtual) {
+		void FunctionInfoStore::resolveLambdaDefinition(const core::LambdaDefinitionPtr& lambdaDefinition) {
 			// prepare some manager
 			NameManager& nameManager = converter.getNameManager();
 			core::NodeManager& manager = converter.getNodeManager();
@@ -912,9 +995,11 @@ namespace backend {
 				info->definition = definitions;
 
 				// member functions are declared within object definition
+				core::TagTypePtr classType;
 				c_ast::NamedCompositeTypePtr classDecl;
 				if(isMember) {
-					const auto& typeInfo = typeManager.getTypeInfo(core::analysis::getObjectType(funType));
+					classType = core::analysis::getObjectType(funType).as<core::TagTypePtr>();
+					const auto& typeInfo = typeManager.getTypeInfo(classType);
 					info->prototype = typeInfo.definition;
 					classDecl = typeInfo.lValueType.as<c_ast::NamedCompositeTypePtr>();
 					// add requirement of implementation
@@ -955,14 +1040,19 @@ namespace backend {
 					if(funType.isConstructor()) {
 						// add constructor
 						auto ctor = cManager->create<c_ast::Constructor>(classDecl->name, info->function);
-						classDecl->ctors.push_back(cManager->create<c_ast::ConstructorPrototype>(ctor));
+						c_ast::BodyFlag flag = (core::analysis::isaDefaultConstructor(classType, lambda) ? c_ast::BodyFlag::Default : c_ast::BodyFlag::None);
+						auto decl = cManager->create<c_ast::ConstructorPrototype>(ctor,flag);
+						classDecl->ctors.push_back(decl);
+						info->declaration = decl;
 					} else if(funType.isDestructor()) {
 						// add destructor
 						assert_false(classDecl->dtor) << "Destructor already defined!";
+						bool defaultDtor = core::analysis::isDefaultDestructor(classType, lambda);
+						c_ast::BodyFlag flag = defaultDtor ? c_ast::BodyFlag::Default : c_ast::BodyFlag::None;
 						auto dtor = cManager->create<c_ast::Destructor>(classDecl->name, info->function);
-						auto decl = cManager->create<c_ast::DestructorPrototype>(dtor);
-						decl->isVirtual = isVirtual;
+						auto decl = cManager->create<c_ast::DestructorPrototype>(dtor, flag);
 						classDecl->dtor = decl;
+						info->declaration = decl;
 					} else if(funType.isVirtualMemberFunction()) {
 						//TODO
 						assert_not_implemented();
@@ -972,10 +1062,13 @@ namespace backend {
 						auto mfun = cManager->create<c_ast::MemberFunction>(classDecl->name, info->function);
 						auto decl = cManager->create<c_ast::MemberFunctionPrototype>(mfun);
 
-						mfun->isConstant = isConst;
-						decl->isVirtual = isVirtual;
+						// add cv modifier
+						auto thisRef = core::lang::ReferenceType(funType->getParameterType(0));
+						mfun->isConstant = thisRef.isConst();
+						mfun->isVolatile = thisRef.isVolatile();
 
 						classDecl->members.push_back(decl);
+						info->declaration = decl;
 					}
 
 					// remove dependencies from others to this class (causes cyclic dependencies)
@@ -1007,13 +1100,23 @@ namespace backend {
 				const c_ast::IdentifierPtr& name = pair.first;
 				const core::LambdaExprPtr& lambda = pair.second;
 
+				// skip default implementations
+				auto funType = lambda->getFunctionType();
+				if (funType->isConstructor()) {
+					auto classType = core::analysis::getObjectType(funType).as<core::TagTypePtr>();
+					if (core::analysis::isaDefaultConstructor(classType, lambda)) return;
+				}
+				if (funType->isDestructor()) {
+					auto classType = core::analysis::getObjectType(funType).as<core::TagTypePtr>();
+					if (core::analysis::isDefaultDestructor(classType, lambda)) return;
+				}
+
 				// peel function and create function definition
 				core::LambdaExprPtr unrolled = lambdaDefinition->peel(manager, lambda->getReference());
 				assert_false(unrolled->isRecursive()) << "Peeled function must not be recursive!";
 
 				// resolve function ... now with body
-				const core::FunctionTypePtr& funType = static_pointer_cast<const core::FunctionType>(lambda->getType());
-				FunctionCodeInfo codeInfo = resolveFunction(name, funType, unrolled->getLambda(), false, isConst);
+				FunctionCodeInfo codeInfo = resolveFunction(name, funType, unrolled->getLambda(), false);
 
 				// add function
 				LambdaInfo* info = static_cast<LambdaInfo*>(funInfos[lambda]);
@@ -1358,7 +1461,7 @@ namespace backend {
 
 
 		FunctionCodeInfo FunctionInfoStore::resolveFunction(const c_ast::IdentifierPtr name, const core::FunctionTypePtr& funType,
-		                                                    const core::LambdaPtr& lambda, bool external, bool isConst) {
+		                                                    const core::LambdaPtr& lambda, bool external) {
 			FunctionCodeInfo res;
 
 			// get C node manager
@@ -1468,7 +1571,10 @@ namespace backend {
 			// modify function if required
 			if(funType->isMemberFunction()) {
 				// update definition to define a member function
-				res.definition = manager->create<c_ast::MemberFunction>(getClassName(), res.function, isConst);
+				auto thisType = core::lang::ReferenceType(funType->getParameterType(0));
+				bool isConst = thisType.isConst();
+				bool isVolatile = thisType.isVolatile();
+				res.definition = manager->create<c_ast::MemberFunction>(getClassName(), res.function, isConst, isVolatile);
 
 			} else if(funType->isConstructor()) {
 				// update definition to define a member function

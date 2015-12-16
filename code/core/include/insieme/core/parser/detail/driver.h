@@ -290,19 +290,24 @@ namespace parser {
 			TypePtr findOrGenAbstractType(const location& l, const std::string& name, const ParentList& parents, const TypeList& typeList);
 
 			/**
+			 * Creates a new typed expression from the given arguments
+			 */
+			ParserTypedExpression genTypedExpression(const location& l, const ExpressionPtr& expression, const TypePtr& type);
+
+			/**
 			 * generates a call expression
 			 */
-			ExpressionPtr genCall(const location& l, const ExpressionPtr& func, ExpressionList params);
+			ExpressionPtr genCall(const location& l, const ExpressionPtr& func, ParserTypedExpressionList args);
 
 			/**
 			 * generates a constructor call expression
 			 */
-			ExpressionPtr genConstructorCall(const location& l, const std::string name, ExpressionList params);
+			ExpressionPtr genConstructorCall(const location& l, const std::string name, ParserTypedExpressionList args);
 
 			/**
 			 * generates a destructor call expression
 			 */
-			ExpressionPtr genDestructorCall(const location& l, const std::string name, const ExpressionPtr& param);
+			ExpressionPtr genDestructorCall(const location& l, const std::string name, const ExpressionPtr& thisArgument);
 
 			/**
 			 * constructs an initializer expression according to the given type and expression list

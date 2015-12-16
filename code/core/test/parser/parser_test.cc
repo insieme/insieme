@@ -56,19 +56,23 @@ namespace parser {
 	using namespace detail;
 
 	bool test_type(NodeManager& nm, const std::string& x) {
-		InspireDriver driver(x, nm);
-		driver.parseType();
-		if(driver.result) {
+		IRBuilder builder(nm);
+		try {
+			auto result = builder.parseType(x);
 //			std::cout << "Result of parsing " << x << "\n";
-//			dumpColor(driver.result);
+//			dumpColor(result);
 //			std::cout << "    ------------\n\n";
 //			std::cout << " ============== TEST ============ " << std::endl;
-			auto msg = checks::check(driver.result);
-			EXPECT_TRUE(msg.empty()) << msg;
-		} else {
-			driver.printErrors();
+			auto msg = checks::check(result);
+			if (!msg.empty()) {
+				std::cout << msg;
+			}
+			return msg.empty();
+
+		} catch (const IRParserException& ex) {
+			std::cout << ex.what() << std::endl;
 		}
-		return driver.result;
+		return false;
 	}
 
 	bool test_statement(NodeManager& nm, const std::string& x);
@@ -202,18 +206,23 @@ namespace parser {
 	}
 
 	bool test_expression(NodeManager& nm, const std::string& x) {
-		InspireDriver driver(x, nm);
-		driver.parseExpression();
-		if(driver.result) {
-//			std::cout << driver.result << std::endl;
-//			dumpColor(driver.result);
-			auto msg = checks::check(driver.result);
-			EXPECT_TRUE(msg.empty()) << msg;
-		} else {
-			driver.printErrors();
+		IRBuilder builder(nm);
+		try {
+			auto result = builder.parseExpr(x);
+//			std::cout << "Result of parsing " << x << "\n";
+//			dumpColor(result);
+//			std::cout << "    ------------\n\n";
+//			std::cout << " ============== TEST ============ " << std::endl;
+			auto msg = checks::check(result);
+			if (!msg.empty()) {
+				std::cout << msg;
+			}
+			return msg.empty();
+
+		} catch (const IRParserException& ex) {
+			std::cout << ex.what() << std::endl;
 		}
-		//   std::cout << " ============== TEST ============ " << std::endl;
-		return driver.result;
+		return false;
 	}
 
 	TEST(IR_Parser, RecordTypes) {
@@ -480,16 +489,6 @@ namespace parser {
 		NodeManager nm;
 		IRBuilder builder(nm);
 
-//		auto funA = builder.normalize(parseExpr(nm, "(x : int<4>) -> int<4> { return x; }"));
-//		auto funB = builder.normalize(parseExpr(nm, "(x : ref<int<4>,f,f,plain>) -> int<4> { return *x; }"));
-//
-//		auto funC = builder.normalize(parseExpr(nm, "let f = (x : int<4>) -> int<4> { return x; } in f"));
-//		auto funD = builder.normalize(parseExpr(nm, "let f = (y : ref<int<4>,f,f,plain>) -> int<4> { return *y; } in f"));
-//
-//		EXPECT_EQ(funA, funB);
-//		EXPECT_EQ(funB, funC);
-//		EXPECT_EQ(funC, funD);
-
 		EXPECT_TRUE(test_expression(nm, "decl foo : (int<4>) -> int<4>;" //self-recursion
 		                                "def foo : (a : int<4>) -> int<4> { return foo(a); }; foo"));
 
@@ -581,6 +580,36 @@ namespace parser {
 		}
 
 		{ //ensure that functions and lambdas end up the same when written correctly
+			auto type1 = builder.parseType("def struct s { a : int<4>; ctor () { a = 5; } }; s");
+			auto type2 = builder.parseType("def struct s { a : int<4>; ctor function () { (*this).a = 5; } }; s");
+
+			ASSERT_TRUE(checks::check(type1).empty()) << checks::check(type1);
+			ASSERT_TRUE(checks::check(type2).empty()) << checks::check(type2);
+
+			EXPECT_EQ(builder.normalize(type1), builder.normalize(type2));
+		}
+
+		{ //ensure that functions and lambdas end up the same when written correctly
+			auto type1 = builder.parseType("def struct s { a : int<4>; ctor () { this.a = 5; } }; s");
+			auto type2 = builder.parseType("def struct s { a : int<4>; ctor function () { (*this).a = 5; } }; s");
+
+			ASSERT_TRUE(checks::check(type1).empty()) << checks::check(type1);
+			ASSERT_TRUE(checks::check(type2).empty()) << checks::check(type2);
+
+			EXPECT_EQ(builder.normalize(type1), builder.normalize(type2));
+		}
+
+		{ //ensure that functions and lambdas end up the same when written correctly
+			auto type1 = builder.parseType("def struct s { a : int<4>; ctor (b : int<4>) { a = b; } }; s");
+			auto type2 = builder.parseType("def struct s { a : int<4>; ctor function (b : ref<int<4>,f,f,plain>) { (*this).a = *b; } }; s");
+
+			ASSERT_TRUE(checks::check(type1).empty()) << checks::check(type1);
+			ASSERT_TRUE(checks::check(type2).empty()) << checks::check(type2);
+
+			EXPECT_EQ(builder.normalize(type1), builder.normalize(type2));
+		}
+
+		{ //ensure that functions and lambdas end up the same when written correctly
 			auto type1 = builder.parseType("def struct s { dtor () { } }; s");
 			auto type2 = builder.parseType("def struct s { dtor function () { } }; s");
 
@@ -590,20 +619,35 @@ namespace parser {
 			EXPECT_EQ(builder.normalize(type1), builder.normalize(type2));
 		}
 
+		{ //ensure that functions and lambdas end up the same when written correctly
+			auto type1 = builder.parseType("def struct s { a : int<4>; dtor () { a = 5; } }; s");
+			auto type2 = builder.parseType("def struct s { a : int<4>; dtor function () { (*this).a = 5; } }; s");
+
+			ASSERT_TRUE(checks::check(type1).empty()) << checks::check(type1);
+			ASSERT_TRUE(checks::check(type2).empty()) << checks::check(type2);
+
+			EXPECT_EQ(builder.normalize(type1), builder.normalize(type2));
+		}
 	}
 
 	bool test_statement(NodeManager& nm, const std::string& x) {
-		InspireDriver driver(x, nm);
-		driver.parseStmt();
-		if(driver.result) {
-//			dumpColor(driver.result);
-			auto msg = checks::check(driver.result);
-			EXPECT_TRUE(msg.empty()) << msg;
-		} else {
-			driver.printErrors();
+		IRBuilder builder(nm);
+		try {
+			auto result = builder.parseStmt(x);
+//			std::cout << "Result of parsing " << x << "\n";
+//			dumpColor(result);
+//			std::cout << "    ------------\n\n";
+//			std::cout << " ============== TEST ============ " << std::endl;
+			auto msg = checks::check(result);
+			if (!msg.empty()) {
+				std::cout << msg;
+			}
+			return msg.empty();
+
+		} catch (const IRParserException& ex) {
+			std::cout << ex.what() << std::endl;
 		}
-//		std::cout << " ============== TEST ============ " << std::endl;
-		return driver.result;
+		return false;
 	}
 
 	TEST(IR_Parser, Statements) {
@@ -687,20 +731,23 @@ namespace parser {
 	}
 
 	bool test_program(NodeManager& nm, const std::string& x) {
+		IRBuilder builder(nm);
+		try {
+			auto result = builder.parseProgram(x);
+//			std::cout << "Result of parsing " << x << "\n";
+//			dumpColor(result);
+//			std::cout << "    ------------\n\n";
+//			std::cout << " ============== TEST ============ " << std::endl;
+			auto msg = checks::check(result);
+			if (!msg.empty()) {
+				std::cout << msg;
+			}
+			return msg.empty();
 
-		InspireDriver driver(x, nm);
-
-		driver.parseProgram();
-
-		if(driver.result) {
-//			dumpColor(driver.result);
-			auto msg = checks::check(driver.result);
-			EXPECT_TRUE(msg.empty()) << msg;
-		} else {
-			driver.printErrors();
+		} catch (const IRParserException& ex) {
+			std::cout << ex.what() << std::endl;
 		}
-//		   std::cout << " ============== TEST ============ " << std::endl;
-		return driver.result;
+		return false;
 	}
 
 	TEST(IR_Parser, Program) {
@@ -985,19 +1032,20 @@ namespace parser {
 		NodeManager nm;
 		IRBuilder builder(nm);
 
-		const std::string testString = "var ref<A,f,f,plain> a = A::(ref_var(type_lit(A)));"         //call the default constructor
-		                               "var ref<A,f,f,plain> a_copy = A::(ref_var(type_lit(A)), a);" //call the copy constructor
-		                               "var ref<A,f,f,plain> a_move = A::(ref_var(type_lit(A)), a);" //call the move constructor
-		                               "A::~(a);"                                                    //call the default destructor
-		                               "a." + utils::getMangledOperatorAssignName() + "(a);"         //call the default copy assignment operator
-		                               "a." + utils::getMangledOperatorAssignName() + "(a);";        //call the default move assignment operator
+		const std::string testString = "var ref<A,t,f,cpp_ref> a_ref;"
+		                               "var ref<A,f,f,cpp_rref> a_rref;"
+		                               "var ref<A,f,f,plain> a = A::(ref_var(type_lit(A)));"              //call the default constructor
+		                               "var ref<A,f,f,plain> a_copy = A::(ref_var(type_lit(A)), a_ref);"  //call the copy constructor
+		                               "var ref<A,f,f,plain> a_move = A::(ref_var(type_lit(A)), a_rref);" //call the move constructor
+		                               "A::~(a);"                                                         //call the default destructor
+		                               "a." + utils::getMangledOperatorAssignName() + "(a_ref);"          //call the default copy assignment operator
+		                               "a." + utils::getMangledOperatorAssignName() + "(a_rref);";        //call the default move assignment operator
 
 		{
 			auto res = builder.parseStmt("def struct A { };" //call the default generated members outside the struct
 			                              "{"
 			                              + testString +
 			                              "}");
-
 			EXPECT_TRUE(res);
 			EXPECT_TRUE(checks::check(res).empty()) << checks::check(res);
 		}
@@ -1008,7 +1056,6 @@ namespace parser {
 			                             + testString +
 			                             "  }"
 			                             "}; A");
-
 			EXPECT_TRUE(res);
 			EXPECT_TRUE(checks::check(res).empty()) << checks::check(res);
 		}
@@ -1021,10 +1068,96 @@ namespace parser {
 			                             "  }"
 			                             "};"
 			                             "def struct A { }; B");
-
 			EXPECT_TRUE(res);
 			EXPECT_TRUE(checks::check(res).empty()) << checks::check(res);
 		}
+	}
+
+	TEST(IRParser, TypedExpression) {
+		NodeManager nm;
+
+		const std::string commonCode = "def g : (a : int<4>) -> unit {};";
+
+		//calling with the correct type
+		EXPECT_TRUE(test_statement(nm, commonCode + "{ g(42); }"));
+
+		//manually specifying a type which is not correct
+		EXPECT_FALSE(test_statement(nm, commonCode + "{ var int<8> param = 42; g(param : int<4>); }"));
+
+		//manually specifying a type which is not correct
+		EXPECT_FALSE(test_statement(nm, commonCode + "{ g(42 : int<1>); }"));
+
+		//as with wrong size conversions, mixing types also doesn't work
+		EXPECT_FALSE(test_statement(nm, commonCode + "{ var real<4> realParam = 5.0; g(realParam : int<4>); }"));
+	}
+
+	TEST(IRParser, ManualOverloadSelection) {
+		NodeManager nm;
+
+		const std::string commonClass = "def struct A {"
+		                                "  ctor(a : int<2>) {}"
+		                                "  ctor(a : int<4>) {}"
+		                                "  ctor(a : int<8>) {}"
+		                                "  ctor(a : int<16>) {}"
+		                                "  ctor(a : int<4>, b : int<4>) {}"
+		                                "  ctor(a : int<8>, b : int<4>) {}"
+		                                "  lambda f : (a : int<2>) -> unit {}"
+		                                "  lambda f : (a : int<4>) -> unit {}"
+		                                "  lambda f : (a : int<8>) -> unit {}"
+		                                "  lambda f : (a : int<16>) -> unit {}"
+		                                "  lambda f : (a : int<4>, b : int<4>) -> unit {}"
+		                                "  lambda f : (a : int<8>, b : int<4>) -> unit {}"
+		                                "};";
+
+		//multiple possible overloads. Simple call fails for constructor with a single param
+		EXPECT_FALSE(test_statement(nm, commonClass + "{ var int<1> param = 5; var ref<A> a = A::(ref_var(type_lit(A)), param); }"));
+
+		//multiple possible overloads. Simple call fails for constructor with multiple params
+		EXPECT_FALSE(test_statement(nm, commonClass + "{ var int<1> param = 5; var ref<A> a = A::(ref_var(type_lit(A)), param, param); }"));
+
+		//multiple possible overloads. Simple call fails for function with a single param
+		EXPECT_FALSE(test_statement(nm, commonClass + "{ var int<1> param = 5; var ref<A> a; a.f(param); }"));
+
+		//multiple possible overloads. Simple call fails for function with multiple params
+		EXPECT_FALSE(test_statement(nm, commonClass + "{ var int<1> param = 5; var ref<A> a; a.f(param, param); }"));
+
+
+		//multiple possible overloads. Specifying the desired overload will work for constructor with a single param
+		EXPECT_TRUE(test_statement(nm, commonClass + "{ var int<1> param = lit(\"5\" : int<1>); var ref<A> a = A::(ref_var(type_lit(A)), param : int<4>); }"));
+
+		//multiple possible overloads. Specifying the desired overload will work for constructor with multiple params
+		EXPECT_TRUE(test_statement(nm, commonClass + "{ var int<1> param = lit(\"5\" : int<1>); var ref<A> a = A::(ref_var(type_lit(A)), param : int<4>, param : int<4>); }"));
+
+		//multiple possible overloads. Specifying the desired overload will work for function with a single param
+		EXPECT_TRUE(test_statement(nm, commonClass + "{ var int<1> param = lit(\"5\" : int<1>); var ref<A> a; a.f(param : int<4>); }"));
+
+		//multiple possible overloads. Specifying the desired overload will work for function with a single param
+		EXPECT_TRUE(test_statement(nm, commonClass + "{ var int<1> param = lit(\"5\" : int<1>); var ref<A> a; a.f(param : int<4>, param : int<4>); }"));
+
+
+		//calling the default generated constructs without specifying the desired overload should fail as we have two candidates
+		EXPECT_FALSE(test_statement(nm, "def struct A { };"
+		                     "{"
+		                     "  var ref<A> a;"
+		                     "  var ref<A> a_copy = A::(ref_var(type_lit(A)), a);"
+		                     "}"));
+
+		//calling the default generated assignment operator without specifying the desired overload should fail as we have two candidates
+		EXPECT_FALSE(test_statement(nm, "def struct A { };"
+		                     "{"
+		                     "  var ref<A> a;"
+		                     "  a." + utils::getMangledOperatorAssignName() + "(a);"
+		                     "}"));
+
+		//call the default generated constructs and manually specify which overload to take
+		EXPECT_TRUE(test_statement(nm, "def struct A { };"
+		                     "{"
+		                     "  var ref<A> a;"
+		                     "  var ref<A> a_copy = A::(ref_var(type_lit(A)), a : ref<A,t,f,cpp_ref>);"    //copy constructor
+		                     "  var ref<A> a_move = A::(ref_var(type_lit(A)), a : ref<A,f,f,cpp_rref>);"   //move constructor
+		                     "  a." + utils::getMangledOperatorAssignName() + "(a : ref<A,t,f,cpp_ref>);"  //default copy assignment operator
+		                     "  a." + utils::getMangledOperatorAssignName() + "(a : ref<A,f,f,cpp_rref>);" //default move assignment operator
+		                     "}"));
 	}
 
 } // parser

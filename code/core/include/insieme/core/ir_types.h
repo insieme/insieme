@@ -1268,6 +1268,13 @@ namespace core {
 		}
 
 		/**
+		 * Obtains the type of this member function.
+		 */
+		FunctionTypePtr getType() const {
+			return getImplementation()->getType().template as<FunctionTypePtr>();
+		}
+
+		/**
 		 * Determines whether this member function is marked virtual or not.
 		 */
 		bool isVirtual() const {
@@ -1547,6 +1554,13 @@ namespace core {
 		 */
 		Ptr<const Type> getFieldType(const StringValuePtr& name) const {
 			return getFieldType(name->getValue());
+		}
+
+		/**
+		 * Determines whether the destrutor of this record is virtual or not.
+		 */
+		bool hasVirtualDestructor() const {
+			return getDestructorVirtual().getValue();
 		}
 	};
 

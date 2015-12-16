@@ -54,6 +54,7 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"
+#include "insieme/core/analysis/type_utils.h"
 #include "insieme/core/annotations/naming.h"
 #include "insieme/annotations/c/include.h"
 #include "insieme/annotations/c/decl_only.h"
@@ -185,8 +186,7 @@ namespace backend {
 			const TagTypeInfo* resolveRecType(const core::TagTypePtr& ptr);
 			void resolveRecTypeDefinition(const core::TagTypeDefinitionPtr& ptr);
 
-			template <typename ResInfo>
-			ResInfo* resolveRecordType(const core::RecordPtr&);
+			TagTypeInfo* resolveRecordType(const core::TagTypePtr&, const core::RecordPtr&);
 		};
 	}
 
@@ -502,8 +502,9 @@ namespace backend {
 			return type_info_utils::createUnsupportedInfo(manager, ptr);
 		}
 
-		template <typename ResInfo>
-		ResInfo* TypeInfoStore::resolveRecordType(const core::RecordPtr& ptr) {
+		TagTypeInfo* TypeInfoStore::resolveRecordType(const core::TagTypePtr& tagType, const core::RecordPtr& ptr) {
+			assert_eq(tagType->getRecord(), ptr);
+
 			// The resolution of a named composite type is based on 3 steps
 			//		- first, get a name for the resulting C struct / union
 			//		- create a code fragment including a declaration of the struct / union (no definition)
@@ -576,7 +577,48 @@ namespace backend {
 			definition->addDependencies(definitions);
 
 			// create resulting type info
-			return type_info_utils::createInfo<ResInfo>(type, declaration, definition);
+			auto res = type_info_utils::createInfo<TagTypeInfo>(type, declaration, definition);
+
+			// ----- members -------
+
+			// save current info (otherwise the following code will result in an infinite recursion)
+			addInfo(tagType, res);						// for the full tag type
+
+			// the function manager is required to convert member functions
+			auto& funMgr = converter.getFunctionManager();
+
+			// add constructors, destructors and assignments to non-trivial classes
+			if (!core::analysis::isTrivial(tagType)) {
+
+				// add constructors
+				for (const auto& ctor : ptr->getConstructors()) {
+					auto impl = (core::analysis::getObjectType(ctor->getType()).isa<core::TagTypeReferencePtr>()) ? tagType->peel(ctor) : ctor;
+					funMgr.getInfo(impl.as<core::LambdaExprPtr>());	// this will declare and define the constructor
+				}
+//				// TODO: explicitly delete missing constructors
+//				//if (!core::analysis::hasDefaultConstructor(tagType)) {
+//					//type->ctors.push_back(manager->create<c_ast::ConstructorPrototype>());
+//				//}
+//
+				// add destructors (only for structs)
+				auto dtor = ptr->getDestructor();
+				funMgr.getInfo(tagType->peel(dtor).as<core::LambdaExprPtr>());
+
+				// add member functions
+				for (const auto& member : ptr->getMemberFunctions()) {
+					// TODO: fix name and flags + default marks
+					funMgr.getInfo(tagType->peel(member));
+				}
+
+				// add pure virtual function declarations
+				for (const auto& pureVirtual : ptr->getPureVirtualMemberFunctions()) {
+					// TODO: add declaration
+					funMgr.getInfo(tagType->peel(pureVirtual));
+				}
+			}
+
+			// done
+			return res;
 		}
 
 		const TagTypeInfo* TypeInfoStore::resolveTagType(const core::TagTypePtr& ptr) {
@@ -592,7 +634,7 @@ namespace backend {
 		const TagTypeInfo* TypeInfoStore::resolveStructType(const core::TagTypePtr& ptr) {
 			assert_true(ptr->isStruct()) << "Type: " << *ptr;
 
-			TagTypeInfo* res = resolveRecordType<TagTypeInfo>(ptr->getRecord());
+			TagTypeInfo* res = resolveRecordType(ptr, ptr->getRecord());
 
 			// get C node manager
 			auto manager = converter.getCNodeManager();
@@ -707,7 +749,7 @@ namespace backend {
 		const TagTypeInfo* TypeInfoStore::resolveUnionType(const core::TagTypePtr& ptr) {
 			assert_true(ptr->isUnion()) << "Type: " << *ptr;
 
-			TagTypeInfo* res = resolveRecordType<TagTypeInfo>(ptr->getRecord());
+			TagTypeInfo* res = resolveRecordType(ptr, ptr->getRecord());
 
 			// get C node manager
 			auto manager = converter.getCNodeManager();
@@ -1365,7 +1407,7 @@ namespace backend {
 			c_ast::CCodeFragmentPtr declaration = c_ast::CCodeFragment::createNew(converter.getFragmentManager());
 
 			// A) create a type info instance for each defined type and add definition
-			for_each(ptr->getDefinitions(), [&](const core::TagTypeBindingPtr& cur) {
+			for(const core::TagTypeBindingPtr& cur : ptr->getDefinitions()) {
 
 				// create recursive type represented by current type variable
 				core::TagTypePtr type = core::TagType::get(nodeManager, cur->getTag(), ptr);
@@ -1399,10 +1441,11 @@ namespace backend {
 				// register new type information
 				typeInfos.insert(std::make_pair(type, info));
 				allInfos.insert(info);
-			});
+			}
 
 			// B) unroll types and add definitions
-			for_each(ptr->getDefinitions(), [&](const core::TagTypeBindingPtr& cur) {
+			for(const core::TagTypeBindingPtr& cur : ptr->getDefinitions()) {
+
 				// obtain peeled type
 				core::TagTypePtr recType = core::TagType::get(nodeManager, cur->getTag(), ptr);
 				core::TagTypePtr peeled = ptr->peel(nodeManager, cur->getTag());
@@ -1431,7 +1474,7 @@ namespace backend {
 				// also re-direct the new setup (of the peeled which might be used in the future)
 				newInfo->declaration = curInfo->declaration;
 				newInfo->definition = curInfo->definition;
-			});
+			}
 		}
 
 		const TypeInfo* TypeInfoStore::resolveCVectorType(const core::TypePtr& elementType, const c_ast::ExpressionPtr& size) {

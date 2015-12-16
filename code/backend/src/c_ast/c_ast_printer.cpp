@@ -620,20 +620,23 @@ namespace c_ast {
 			PRINT(ConstructorPrototype) {
 				// <class name> ( <parameter list > );
 				auto ctor = node->ctor;
-				return out << print(ctor->className) << "(" << printMemberParam(ctor->function->parameter) << ")";
+				return out << print(ctor->className) << "(" << printMemberParam(ctor->function->parameter) << ")" << node->flag;
 			}
 
 			PRINT(DestructorPrototype) {
 				// <virtual> ~ <class name> ( <parameter list > );
 				auto dtor = node->dtor;
-				return out << (node->isVirtual ? "virtual " : "") << "~" << print(dtor->className) << "()";
+				return out << (node->isVirtual ? "virtual " : "") << "~" << print(dtor->className) << "()" << node->flag;
 			}
 
 			PRINT(MemberFunctionPrototype) {
 				// <virtual> <return type> <name> ( <parameter list > ) <const>;
 				auto fun = node->fun->function;
 				return out << (node->isVirtual ? "virtual " : "") << (boost::starts_with(fun->name->name, "operator ") ? "" : toC(fun->returnType) + " ")
-				           << print(fun->name) << "(" << printMemberParam(fun->parameter) << ")" << (node->fun->isConstant ? " const" : "")
+				           << print(fun->name) << "(" << printMemberParam(fun->parameter) << ")" 
+						   << (node->fun->isConstant ? " const" : "")
+						   << (node->fun->isVolatile ? " volatile" : "")
+						   << node->flag
 				           << (node->pureVirtual ? " =0" : "");
 			}
 
