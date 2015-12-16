@@ -20,6 +20,7 @@
 	#include <string>
 	#include <iostream>
 	#include "insieme/core/ir.h"
+	#include "insieme/core/parser/detail/typed_expression.h"
 
 	namespace insieme {
 	namespace core {
@@ -202,6 +203,8 @@
 %type <TypeList>                       types non_empty_types type_param_list
 %type <ExpressionPtr>                  expression plain_expression let_expression
 %type <ExpressionList>                 expressions non_empty_expressions
+%type <ParserTypedExpression>          typed_expression
+%type <ParserTypedExpressionList>      typed_expressions non_empty_typed_expressions
 %type <StatementPtr>                   statement plain_statement let_statement
 %type <ProgramPtr>                     main
 %type <NodePtr>                        definition
@@ -551,6 +554,18 @@ plain_expression : variable                                               { $$ =
                  | this_expression                                        { $$ = $1; }
                  ;
 
+typed_expressions : non_empty_typed_expressions                           { $$ = $1; }
+                  |                                                       { $$ = ParserTypedExpressionList(); }
+                  ;
+
+non_empty_typed_expressions : non_empty_typed_expressions "," typed_expression    { $1.push_back($3); $$ = $1; }
+                            | typed_expression                                    { $$ = toVector($1); }
+                            ;
+
+typed_expression : expression ":" type                                    { $$ = driver.genTypedExpression(@$, $1, $3); INSPIRE_GUARD(@$, $$.expression); }
+                 | expression                                             { $$ = {$1, $1->getType()}; INSPIRE_GUARD(@$, $$.expression); }
+                 ;
+
 
 // -- variable --
 
@@ -579,10 +594,8 @@ literal : "true"                                                          { $$ =
 
 // -- call --
 
-call : expression "(" expressions ")"                                     { $$ = driver.genCall(@$, $1, $3); }
-     | expression "(" expressions ":" types ")"                           { $$ = driver.genCall(@$, $1, $3, $5); }
-     | "identifier" "::" "(" non_empty_expressions ")"                    { $$ = driver.genConstructorCall(@$, $1, $4); }
-     | "identifier" "::" "(" non_empty_expressions":" types ")"           { $$ = driver.genConstructorCall(@$, $1, $4, $6); }
+call : expression "(" typed_expressions ")"                               { $$ = driver.genCall(@$, $1, $3); }
+     | "identifier" "::" "(" non_empty_typed_expressions ")"              { $$ = driver.genConstructorCall(@$, $1, $4); }
      | "identifier" "::" "~" "(" expression ")"                           { $$ = driver.genDestructorCall(@$, $1, $5); }
      ;
 

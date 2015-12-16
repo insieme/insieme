@@ -696,19 +696,21 @@ namespace parser {
 			return builder.genericType(name, parents, typeList);
 		}
 
-		ExpressionPtr InspireDriver::genCall(const location& l, const ExpressionPtr& callable, ExpressionList args) {
-			return genCall(l, callable, args, extractTypes(args));
+		ParserTypedExpression InspireDriver::genTypedExpression(const location& l, const ExpressionPtr& expression, const TypePtr& type) {
+			if (!types::getTypeVariableInstantiation(mgr, type, expression->getType())) {
+				error(l, format("The given explicit expression type %s does not match the expression of type %s", *type, *expression->getType()));
+				return {};
+			}
+			return {expression, type};
 		}
 
-		ExpressionPtr InspireDriver::genCall(const location& l, const ExpressionPtr& callable, ExpressionList args, TypeList overloadType) {
-			if (args.size() != overloadType.size()) {
-				error(l, format("The given overloadType doesn't specify the correct number of argument types. Should be %d, is %d",
-				                args.size(), overloadType.size()));
-				return nullptr;
-			}
-			if (!types::getTypeVariableInstantiation(mgr, overloadType, extractTypes(args))) {
-				error(l, format("The given overloadType %s does not match the passed argument types %s", overloadType, extractTypes(args)));
-				return nullptr;
+		ExpressionPtr InspireDriver::genCall(const location& l, const ExpressionPtr& callable, ParserTypedExpressionList typedArgs) {
+			ExpressionList args;
+			TypeList argumentTypes;
+
+			for (const auto& cur : typedArgs) {
+				args.push_back(cur.expression);
+				argumentTypes.push_back(cur.type);
 			}
 
 			ExpressionPtr func = getScalar(callable);
@@ -721,6 +723,7 @@ namespace parser {
 				if(analysis::isRefType(thisParamType)) { thisParamType = analysis::getReferencedType(thisParamType); }
 
 				args.insert(args.begin(), thisParam);
+				argumentTypes.insert(argumentTypes.begin(), thisParam->getType());
 
 				// replace func with the lookup of the literal. first create the name of the literal
 				std::string typeName = thisParamType.as<GenericTypePtr>()->getName()->getValue();
@@ -729,8 +732,6 @@ namespace parser {
 
 				// now we have to find a function registered in the TU which has the same literal name and the correct parameter types. we have to ignore the
 				// result type
-				auto argumentTypes(overloadType);
-				argumentTypes.insert(argumentTypes.begin(), thisParam->getType());
 
 				//the first candidate we found
 				LiteralPtr candidate;
@@ -797,6 +798,12 @@ namespace parser {
 						newParams.push_back(builder.pack(packParams));
 						std::swap(args, newParams);
 					}
+
+					//Fix the argument type list accordingly
+					while (argumentTypes.size() > args.size() - 1) {
+						argumentTypes.pop_back();
+					}
+					argumentTypes.push_back(args.crbegin()->getType());
 				}
 			}
 
@@ -804,9 +811,6 @@ namespace parser {
 				error(l, "invalid number of arguments in function call");
 				return nullptr;
 			}
-
-			TypeList argumentTypes;
-			::transform(args, back_inserter(argumentTypes), [](const ExpressionPtr& cur) { return cur->getType(); });
 
 			TypePtr retType;
 			try {
@@ -827,45 +831,27 @@ namespace parser {
 			return res;
 		}
 
-		ExpressionPtr InspireDriver::genConstructorCall(const location& l, const std::string name, ExpressionList args) {
+		ExpressionPtr InspireDriver::genConstructorCall(const location& l, const std::string name, ParserTypedExpressionList args) {
 			if (args.size() == 0) {
 				error(l, "Constructor calls must have at least the this parameter argument");
-				return nullptr;
-			}
-
-			//remove the implicit this parameter from the overloadType list
-			TypeList overloadType = extractTypes(args);
-			overloadType.erase(overloadType.begin());
-
-			return genConstructorCall(l, name, args, overloadType);
-		}
-
-		ExpressionPtr InspireDriver::genConstructorCall(const location& l, const std::string name, ExpressionList args, TypeList overloadType) {
-			if (args.size() == 0) {
-				error(l, "Constructor calls must have at least the this parameter argument");
-				return nullptr;
-
-			} else if (args.size() - 1 != overloadType.size()) {
-				error(l, format("The given overloadType doesn't specify the correct number of argument types. Should be %d, is %d",
-				                args.size() - 1, overloadType.size()));
 				return nullptr;
 			}
 
 			// extract the this parameter from the params
-			auto thisParam = args[0];
+			auto thisParam = args[0].expression;
 
 			// and remove it from the parameter list
 			args.erase(args.begin());
 
 			// genCall will do everything else
 			const auto callable = builder.callExpr(parserIRExtension.getMemberFunctionAccess(), thisParam, builder.getIdentifierLiteral("ctor"));
-			return genCall(l, callable, args, overloadType);
+			return genCall(l, callable, args);
 		}
 
 		ExpressionPtr InspireDriver::genDestructorCall(const location& l, const std::string name, const ExpressionPtr& thisArgument) {
 			// genCall will do everything else
 			const auto callable = builder.callExpr(parserIRExtension.getMemberFunctionAccess(), thisArgument, builder.getIdentifierLiteral("dtor"));
-			return genCall(l, callable, ExpressionList());
+			return genCall(l, callable, ParserTypedExpressionList());
 		}
 
 		ExpressionPtr InspireDriver::genStructExpression(const location& l, const TypePtr& type, const ExpressionList& list) {

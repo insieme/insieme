@@ -1073,9 +1073,26 @@ namespace parser {
 		}
 	}
 
+	TEST(IRParser, TypedExpression) {
+		NodeManager nm;
+
+		const std::string commonCode = "def g : (a : int<4>) -> unit {};";
+
+		//calling with the correct type
+		EXPECT_TRUE(test_statement(nm, commonCode + "{ g(42); }"));
+
+		//manually specifying a type which is not correct
+		EXPECT_FALSE(test_statement(nm, commonCode + "{ var int<8> param = 42; g(param : int<4>); }"));
+
+		//manually specifying a type which is not correct
+		EXPECT_FALSE(test_statement(nm, commonCode + "{ g(42 : int<1>); }"));
+
+		//as with wrong size conversions, mixing types also doesn't work
+		EXPECT_FALSE(test_statement(nm, commonCode + "{ var real<4> realParam = 5.0; g(realParam : int<4>); }"));
+	}
+
 	TEST(IRParser, ManualOverloadSelection) {
 		NodeManager nm;
-		IRBuilder builder(nm);
 
 		const std::string commonClass = "def struct A {"
 		                                "  ctor(a : int<2>) {}"
@@ -1092,12 +1109,6 @@ namespace parser {
 		                                "  lambda f : (a : int<8>, b : int<4>) -> unit {}"
 		                                "};";
 
-		//giving the default number of type arguments for overload selection
-		EXPECT_FALSE(test_statement(nm, commonClass + "{ var ref<A> a = A::(ref_var(type_lit(A)), 5 : ); }"));
-		EXPECT_FALSE(test_statement(nm, commonClass + "{ var ref<A> a = A::(ref_var(type_lit(A)), 5 : int<4>, int<4>); }"));
-		EXPECT_FALSE(test_statement(nm, commonClass + "{ var ref<A> a; a.f(5 : ); }"));
-		EXPECT_FALSE(test_statement(nm, commonClass + "{ var ref<A> a; a.f(5 : int<4>, int<4>); }"));
-
 		//multiple possible overloads. Simple call fails for constructor with a single param
 		EXPECT_FALSE(test_statement(nm, commonClass + "{ var int<1> param = 5; var ref<A> a = A::(ref_var(type_lit(A)), param); }"));
 
@@ -1110,42 +1121,18 @@ namespace parser {
 		//multiple possible overloads. Simple call fails for function with multiple params
 		EXPECT_FALSE(test_statement(nm, commonClass + "{ var int<1> param = 5; var ref<A> a; a.f(param, param); }"));
 
-		//wrong overload type for constructor with a single param
-		EXPECT_FALSE(test_statement(nm, commonClass + "{ var ref<A> a = A::(ref_var(type_lit(A)), 5 : int<1>); }"));
-
-		//wrong overload type for constructor with a single param
-		EXPECT_FALSE(test_statement(nm, commonClass + "{ var ref<A> a = A::(ref_var(type_lit(A)), 5 : real<4>); }"));
-
-		//wrong overload type for constructor with multiple params
-		EXPECT_FALSE(test_statement(nm, commonClass + "{ var ref<A> a = A::(ref_var(type_lit(A)), 5, 42 : int<1>, int<4>); }"));
-
-		//wrong overload type for constructor with multiple params
-		EXPECT_FALSE(test_statement(nm, commonClass + "{ var ref<A> a = A::(ref_var(type_lit(A)), 5, 42 : int<4>, real<4>); }"));
-
-		//wrong overload type for function with a single param
-		EXPECT_FALSE(test_statement(nm, commonClass + "{ var ref<A> a; a.f(5 : int<1>); }"));
-
-		//wrong overload type for function with a single param
-		EXPECT_FALSE(test_statement(nm, commonClass + "{ var ref<A> a; a.f(5 : real<4>); }"));
-
-		//wrong overload type for function with multiple params
-		EXPECT_FALSE(test_statement(nm, commonClass + "{ var ref<A> a; a.f(5, 42 : int<1>, int<4>); }"));
-
-		//wrong overload type for function with multiple params
-		EXPECT_FALSE(test_statement(nm, commonClass + "{ var ref<A> a; a.f(5, 42 : int<4>, real<4>); }"));
-
 
 		//multiple possible overloads. Specifying the desired overload will work for constructor with a single param
-		EXPECT_TRUE(builder.parseStmt(commonClass + "{ var int<1> param = 5; var ref<A> a = A::(ref_var(type_lit(A)), param : int<4>); }"));
+		EXPECT_TRUE(test_statement(nm, commonClass + "{ var int<1> param = lit(\"5\" : int<1>); var ref<A> a = A::(ref_var(type_lit(A)), param : int<4>); }"));
 
 		//multiple possible overloads. Specifying the desired overload will work for constructor with multiple params
-		EXPECT_TRUE(builder.parseStmt(commonClass + "{ var int<1> param = 5; var ref<A> a = A::(ref_var(type_lit(A)), param, param : int<4>, int<4>); }"));
+		EXPECT_TRUE(test_statement(nm, commonClass + "{ var int<1> param = lit(\"5\" : int<1>); var ref<A> a = A::(ref_var(type_lit(A)), param : int<4>, param : int<4>); }"));
 
 		//multiple possible overloads. Specifying the desired overload will work for function with a single param
-		EXPECT_TRUE(builder.parseStmt(commonClass + "{ var int<1> param = 5; var ref<A> a; a.f(param : int<4>); }"));
+		EXPECT_TRUE(test_statement(nm, commonClass + "{ var int<1> param = lit(\"5\" : int<1>); var ref<A> a; a.f(param : int<4>); }"));
 
 		//multiple possible overloads. Specifying the desired overload will work for function with a single param
-		EXPECT_TRUE(builder.parseStmt(commonClass + "{ var int<1> param = 5; var ref<A> a; a.f(param, param : int<4>, int<4>); }"));
+		EXPECT_TRUE(test_statement(nm, commonClass + "{ var int<1> param = lit(\"5\" : int<1>); var ref<A> a; a.f(param : int<4>, param : int<4>); }"));
 
 
 		//calling the default generated constructs without specifying the desired overload should fail as we have two candidates
