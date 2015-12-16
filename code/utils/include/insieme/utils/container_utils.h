@@ -63,7 +63,7 @@ using boost::enable_if;
 // Type trait to check for STL-like container types
 
 template <typename T, typename _ = void>
-struct is_container : std::false_type {};
+struct is_container : public std::false_type {};
 
 namespace detail {
 	template <typename... Ts>
@@ -71,11 +71,11 @@ namespace detail {
 }
 
 template <typename T>
-struct is_container<T, std::conditional<false, detail::is_container_helper<typename T::value_type, typename T::size_type, typename T::allocator_type,
+struct is_container<T, typename std::conditional<false, detail::is_container_helper<typename T::value_type, typename T::size_type, typename T::allocator_type,
                                                                            typename T::iterator, typename T::const_iterator, decltype(std::declval<T>().size()),
                                                                            decltype(std::declval<T>().begin()), decltype(std::declval<T>().end()),
                                                                            decltype(std::declval<T>().cbegin()), decltype(std::declval<T>().cend())>,
-                                        void>> : public std::true_type {};
+                                        void>::type> : public std::true_type {};
 
 /** Checks whether a condition is true for any element of the supplied iteration range.
  *
