@@ -893,7 +893,7 @@ namespace core {
 		 * @param member the member to be peeled out
 		 * @return the peeled out member
 		 */
-		ExpressionPtr peel(NodeManager& manager, const ExpressionPtr& member) const;
+		NodePtr peel(NodeManager& manager, const NodePtr& member) const;
 
 	IR_NODE_END()
 
@@ -956,7 +956,7 @@ namespace core {
 		 * @param member the member to be peeled out
 		 * @return the peeled out member
 		 */
-		ExpressionPtr peelMember(NodeManager& manager, const ExpressionPtr& member) const;
+		NodePtr peelMember(NodeManager& manager, const NodePtr& member) const;
 
 	IR_NODE_END()
 
@@ -1089,15 +1089,23 @@ namespace core {
 		/**
 		 * Peels out the given member.
 		 */
-		ExpressionPtr peel(NodeManager& manager, const ExpressionPtr& member) const {
+		NodePtr peel(NodeManager& manager, const NodePtr& member) const {
 			return (*getDefinition()).peel(manager, member);
 		}
 
 		/**
 		 * Peels out the given member.
 		 */
-		ExpressionPtr peel(const ExpressionPtr& member) const {
+		NodePtr peel(const NodePtr& member) const {
 			return peel(this->getNode().getNodeManager(), member);
+		}
+
+		/**
+		* Peels out the given member.
+		*/
+		template<typename T>
+		Pointer<const T> peel(const Pointer<const T>& member) const {
+			return peel(this->getNode().getNodeManager(), member.template as<NodePtr>()).template as<Pointer<const T>>();
 		}
 
 		/**
@@ -1257,6 +1265,13 @@ namespace core {
 		 */
 		const std::string& getNameAsString() const {
 			return getName().getValue();
+		}
+
+		/**
+		 * Obtains the type of this member function.
+		 */
+		FunctionTypePtr getType() const {
+			return getImplementation()->getType().template as<FunctionTypePtr>();
 		}
 
 		/**
@@ -1539,6 +1554,13 @@ namespace core {
 		 */
 		Ptr<const Type> getFieldType(const StringValuePtr& name) const {
 			return getFieldType(name->getValue());
+		}
+
+		/**
+		 * Determines whether the destrutor of this record is virtual or not.
+		 */
+		bool hasVirtualDestructor() const {
+			return getDestructorVirtual().getValue();
 		}
 	};
 
@@ -1870,7 +1892,7 @@ namespace core {
 	}
 
 	template<typename LeafType, template<typename T> class Ptr>
-	ExpressionPtr Accessor<TagTypeDefinition, LeafType, Ptr>::peel(NodeManager& manager, const ExpressionPtr& member) const {
+	NodePtr Accessor<TagTypeDefinition, LeafType, Ptr>::peel(NodeManager& manager, const NodePtr& member) const {
 		return Accessor<TagTypeDefinition, LeafType, Ptr>::getNode().peelMember(manager, member);
 	}
 

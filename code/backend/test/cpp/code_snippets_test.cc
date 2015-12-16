@@ -124,7 +124,7 @@ namespace backend {
 		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
 	}
 
-	TEST(CppSnippet, DISABLED_HelloWorld) {
+	TEST(CppSnippet, MemberFunctions) {
 		core::NodeManager manager;
 		core::IRBuilder builder(manager);
 
@@ -167,8 +167,118 @@ namespace backend {
 		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
 	}
 
+	TEST(CppSnippet, TheEssentialSix) {
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
 
-	TEST(CppSnippet, DISABLED_Counter) {
+		// create a code fragment including some member functions
+		core::ProgramPtr program = builder.parseProgram(R"(
+				alias int = int<4>;
+				
+				def struct A {
+				    ctor( ) {} 
+				    ctor( x : int ) {}
+				};
+				
+				int main() {
+					var ref<A> a;
+					return 0;
+				}
+		)");
+
+		ASSERT_TRUE(program);
+		// std::cout << "Program: " << dumpColor(program) << std::endl;
+		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
+
+		// use sequential backend to convert into C++ code
+		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
+		ASSERT_TRUE((bool)converted);
+		// std::cout << "Converted: \n" << *converted << std::endl;
+
+		// check presence of relevant code
+		auto code = toString(*converted);
+		EXPECT_PRED2(containsSubString, code, "struct A");		// struct definition
+		EXPECT_PRED2(containsSubString, code, "A a;");			// variable definition
+
+		// check definition of six essential functions
+		EXPECT_PRED2(containsSubString, code, "A() = default;");						// default constructor
+		EXPECT_PRED2(containsSubString, code, "A(const A& p2) = default;");				// default copy constructor
+		EXPECT_PRED2(containsSubString, code, "A(A&& p2) = default;");					// default move constructor
+		EXPECT_PRED2(containsSubString, code, "~A() = default;");						// default destructor
+		EXPECT_PRED2(containsSubString, code, "A& operator=(const A& p2) = default;");		// default assignment
+		EXPECT_PRED2(containsSubString, code, "A& operator=(A&& p2) = default;");			// default move assignment
+
+		EXPECT_PRED2(containsSubString, code, "A(int32_t p2);");						// user defined constructor declaration
+		EXPECT_PRED2(containsSubString, code, "A::A(int32_t x) { }");					// user defined constructor definition
+
+		// try compiling the code fragment
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+	}
+
+	TEST(CppSnippet, DISABLED_TheEssentialSixMutualRecursion) {
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+
+		// create a code fragment including some member functions
+		core::ProgramPtr program = builder.parseProgram(R"(
+				alias int = int<4>;
+				
+				decl struct A;
+				decl struct B;
+
+				def struct A {
+ 					data : ref<B>;
+ 					ctor( ) {} 
+					ctor( x : int ) {}
+				};
+
+				def struct B {
+ 					data : ref<A>;
+ 					ctor( ) {}
+					ctor( x : int ) {}
+				};
+				
+				int main() {
+					var ref<A> a;
+					return 0;
+				}
+		)");
+
+		ASSERT_TRUE(program);
+		std::cout << "Program: " << dumpColor(program) << std::endl;
+		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
+
+		// use sequential backend to convert into C++ code
+		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
+		ASSERT_TRUE((bool)converted);
+		std::cout << "Converted: \n" << *converted << std::endl;
+
+		// check presence of relevant code
+		auto code = toString(*converted);
+		EXPECT_PRED2(containsSubString, code, "struct A");		// struct definition
+		EXPECT_PRED2(containsSubString, code, "A a;");			// variable definition
+
+		// check definition of six essential functions
+		EXPECT_PRED2(containsSubString, code, "A() = default;");						// default constructor
+		EXPECT_PRED2(containsSubString, code, "A(const A& p2) = default;");				// default copy constructor
+		EXPECT_PRED2(containsSubString, code, "A(A&& p2) = default;");					// default move constructor
+		EXPECT_PRED2(containsSubString, code, "~A() = default;");						// default destructor
+		EXPECT_PRED2(containsSubString, code, "A& operator=(const A& p2) = default;");		// default assignment
+		EXPECT_PRED2(containsSubString, code, "A& operator=(A&& p2) = default;");			// default move assignment
+
+		EXPECT_PRED2(containsSubString, code, "A(int32_t p2);");						// user defined constructor declaration
+		EXPECT_PRED2(containsSubString, code, "A::A(int32_t x) { }");					// user defined constructor definition
+
+
+		// try compiling the code fragment
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+	}
+
+	TEST(CppSnippet, Counter) {
 		core::NodeManager manager;
 		core::IRBuilder builder(manager);
 

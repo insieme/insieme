@@ -137,6 +137,10 @@ namespace c_ast {
 		if(fragment && this != &*fragment) { requirements.insert(fragment); }
 	}
 
+	bool CodeFragment::remRequirement(const CodeFragmentPtr& fragment) {
+		return requirements.erase(fragment) == 1;
+	}
+
 	namespace {
 
 		bool isDependingOnInternal(const CodeFragment& cur, const CodeFragment& trg, std::set<const CodeFragment*>& visited) {

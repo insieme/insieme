@@ -120,7 +120,15 @@ namespace backend {
 		if(it != globalScope.names.end()) { return it->second; }
 
 		{
+			// get attached name
 			string name = getAttachedName(ptr);
+
+			// for record types -- check record name
+			if (name.empty() || isUsed(name)) {
+				if (auto record = ptr.isa<RecordPtr>()) {
+					name = record->getName()->getValue();
+				}
+			}
 
 			// use attached name if present
 			if(!name.empty() && !isUsed(name)) {
@@ -162,7 +170,7 @@ namespace backend {
 		// register string
 		globalScope.names.insert(make_pair(ptr, resName));
 		globalScope.usedNames.insert(resName);
-
+		
 		// return result
 		return resName;
 	}

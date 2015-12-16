@@ -34,35 +34,26 @@
  * regarding third party software licenses.
  */
 
-struct Simplest {
-};
+#pragma once
 
-#define SIMPLEST_IR R"(
-def struct IMP_Simplest {
-};)"
+#include <vector>
+
+#include "insieme/core/ir_node.h"
 
 
-int main() {
-	; // this is required because of the clang compound source location bug
+namespace insieme {
+namespace core {
+namespace parser {
+	namespace detail {
 
-	#pragma test expect_ir(SIMPLEST_IR,R"( { 
-		var ref<IMP_Simplest,f,f,plain> v0 = IMP_Simplest::(ref_var(type_lit(IMP_Simplest))); 
-		var ref<IMP_Simplest,f,f,plain> v1 = IMP_Simplest::(ref_var(type_lit(IMP_Simplest)));
-		v0.IMP__operator_assign_(v1 : ref<IMP_Simplest,t,f,cpp_ref>);
-	} )")
-	{ 
-		Simplest a, b;
-		a = b;
-	}
-	
-	//#p ragma test expect_ir(SIMPLEST_IR,R"( {
-	//	var ref<IMP_Simplest,f,f,plain> v0 = IMP_Simplest::(ref_var(type_lit(IMP_Simplest)));
-	//	v0.IMP__operator_assign_(IMP_Simplest::(ref_var(type_lit(IMP_Simplest))));
-	//} )")
-	//{
-	//	Simplest a;
-	//	a = Simplest();
-	//}
+		struct ParserTypedExpression {
+			ExpressionPtr expression;
+			TypePtr type;
+		};
 
-	return 0;
-}
+		typedef std::vector<ParserTypedExpression> ParserTypedExpressionList;
+
+	} // namespace detail
+} // namespace parser
+} // namespace core
+} // namespace insieme

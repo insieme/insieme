@@ -274,7 +274,7 @@ namespace parser {
 					}
 
 					if (!lookupResult) {
-						error(l, format("Unable to locate member %s in type %s", memberName, *genericObjectType));
+						error(l, format("Unable to lookup member %s in type %s", memberName, *genericObjectType));
 						return nullptr;
 					}
 				}
@@ -448,20 +448,24 @@ namespace parser {
 		TypeList InspireDriver::getParamTypesForLambdaAndFunction(const location& l, const VariableList& params) {
 			TypeList paramTypes;
 			for(const auto& var : params) {
+				const auto& varType = var->getType();
 				// if we are building a lambda, the function type is already the correct one and the body will be materialized
 				if(inLambda) {
-					paramTypes.push_back(var.getType());
+					paramTypes.push_back(varType);
 
 					// if we are building a function, we have to calculate the function type differently and leave the body untouched
 				} else {
-					if(!analysis::isRefType(var.getType())) {
+					if(!analysis::isRefType(varType)) {
 						error(l, format("Parameter %s is not of ref type", var));
 						return TypeList();
 					}
-					if(lang::isCppReference(var->getType()) || lang::isCppRValueReference(var->getType())) {
-						paramTypes.push_back(var->getType());
+					//CPP refs and rrefs get used as is (see transform::materialize)
+					if(lang::isCppReference(varType) || lang::isCppRValueReference(varType)) {
+						paramTypes.push_back(varType);
+
+						//plain refs get unwrapped
 					} else {
-						paramTypes.push_back(analysis::getReferencedType(var.getType()));
+						paramTypes.push_back(analysis::getReferencedType(varType));
 					}
 				}
 			}
@@ -692,7 +696,23 @@ namespace parser {
 			return builder.genericType(name, parents, typeList);
 		}
 
-		ExpressionPtr InspireDriver::genCall(const location& l, const ExpressionPtr& callable, ExpressionList args) {
+		ParserTypedExpression InspireDriver::genTypedExpression(const location& l, const ExpressionPtr& expression, const TypePtr& type) {
+			if (!types::getTypeVariableInstantiation(mgr, type, expression->getType())) {
+				error(l, format("The given explicit expression type %s does not match the expression of type %s", *type, *expression->getType()));
+				return {};
+			}
+			return {expression, type};
+		}
+
+		ExpressionPtr InspireDriver::genCall(const location& l, const ExpressionPtr& callable, ParserTypedExpressionList typedArgs) {
+			ExpressionList args;
+			TypeList argumentTypes;
+
+			for (const auto& cur : typedArgs) {
+				args.push_back(cur.expression);
+				argumentTypes.push_back(cur.type);
+			}
+
 			ExpressionPtr func = getScalar(callable);
 
 			// if this is a member function call we prepend the implicit this parameter
@@ -703,6 +723,7 @@ namespace parser {
 				if(analysis::isRefType(thisParamType)) { thisParamType = analysis::getReferencedType(thisParamType); }
 
 				args.insert(args.begin(), thisParam);
+				argumentTypes.insert(argumentTypes.begin(), thisParam->getType());
 
 				// replace func with the lookup of the literal. first create the name of the literal
 				std::string typeName = thisParamType.as<GenericTypePtr>()->getName()->getValue();
@@ -711,8 +732,13 @@ namespace parser {
 
 				// now we have to find a function registered in the TU which has the same literal name and the correct parameter types. we have to ignore the
 				// result type
-				const auto argumentTypes = extractTypes(args);
+
+				//the first candidate we found
 				LiteralPtr candidate;
+				//the number of candidates we found. finding no exact match but multiple candidates is an error
+				unsigned int candidateCount = 0;
+
+				//now iterate over all functions registered in the TU and filter for the ones with the correct name
 				for(const auto& mapEntry : tu.getFunctions()) {
 					const auto& key = mapEntry.first;
 					if(key.getValue()->getValue() == memberName) {
@@ -723,8 +749,9 @@ namespace parser {
 									func = key;
 									break;
 
-								//otherwise, if we don't already have a matching candidate and can find a valid parameter substitution, we remember it
-								} else if (!candidate && types::getTypeVariableInstantiation(mgr, keyType->getParameterTypeList(), argumentTypes)) {
+									//otherwise, if we can find a valid parameter substitution, we increment the candidateCount and store the function
+								} else if (types::getTypeVariableInstantiation(mgr, keyType->getParameterTypeList(), argumentTypes)) {
+									candidateCount++;
 									candidate = key;
 								}
 							}
@@ -734,8 +761,14 @@ namespace parser {
 
 				//if we didn't change the function, we didn't find an exact match
 				if (func == getScalar(callable)) {
-					//if we found a candidate then we take that one
-					if (candidate) {
+					//if we found multiple candidates, this is an error, and the user has to specify which overload to use
+					if (candidateCount >= 2) {
+						error(l, format("Found %d possible candidates matching the given argument types. Specify which one to call by using the advanced overload selection syntax.",
+						                candidateCount));
+						return nullptr;
+
+						//if we found a single candidate then we take that one
+					} else if (candidateCount == 1) {
 						func = candidate;
 
 						//otherwise we fail
@@ -765,6 +798,12 @@ namespace parser {
 						newParams.push_back(builder.pack(packParams));
 						std::swap(args, newParams);
 					}
+
+					//Fix the argument type list accordingly
+					while (argumentTypes.size() > args.size() - 1) {
+						argumentTypes.pop_back();
+					}
+					argumentTypes.push_back(args.crbegin()->getType());
 				}
 			}
 
@@ -772,9 +811,6 @@ namespace parser {
 				error(l, "invalid number of arguments in function call");
 				return nullptr;
 			}
-
-			TypeList argumentTypes;
-			::transform(args, back_inserter(argumentTypes), [](const ExpressionPtr& cur) { return cur->getType(); });
 
 			TypePtr retType;
 			try {
@@ -795,24 +831,27 @@ namespace parser {
 			return res;
 		}
 
-		ExpressionPtr InspireDriver::genConstructorCall(const location& l, const std::string name, ExpressionList params) {
-			assert_true(params.size() >= 1) << "Constructor calls must have at least the this parameter argument";
+		ExpressionPtr InspireDriver::genConstructorCall(const location& l, const std::string name, ParserTypedExpressionList args) {
+			if (args.size() == 0) {
+				error(l, "Constructor calls must have at least the this parameter argument");
+				return nullptr;
+			}
 
 			// extract the this parameter from the params
-			auto thisParam = params[0];
+			auto thisParam = args[0].expression;
 
 			// and remove it from the parameter list
-			params.erase(params.begin());
+			args.erase(args.begin());
 
 			// genCall will do everything else
 			const auto callable = builder.callExpr(parserIRExtension.getMemberFunctionAccess(), thisParam, builder.getIdentifierLiteral("ctor"));
-			return genCall(l, callable, params);
+			return genCall(l, callable, args);
 		}
 
-		ExpressionPtr InspireDriver::genDestructorCall(const location& l, const std::string name, const ExpressionPtr& param) {
+		ExpressionPtr InspireDriver::genDestructorCall(const location& l, const std::string name, const ExpressionPtr& thisArgument) {
 			// genCall will do everything else
-			const auto callable = builder.callExpr(parserIRExtension.getMemberFunctionAccess(), param, builder.getIdentifierLiteral("dtor"));
-			return genCall(l, callable, ExpressionList());
+			const auto callable = builder.callExpr(parserIRExtension.getMemberFunctionAccess(), thisArgument, builder.getIdentifierLiteral("dtor"));
+			return genCall(l, callable, ParserTypedExpressionList());
 		}
 
 		ExpressionPtr InspireDriver::genStructExpression(const location& l, const TypePtr& type, const ExpressionList& list) {
