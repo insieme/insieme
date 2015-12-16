@@ -82,6 +82,12 @@ namespace parser {
 		EXPECT_TRUE(test_type(nm, "someweirdname<>"));
 		EXPECT_TRUE(test_type(nm, "vector<int<4>, 4>"));
 		EXPECT_TRUE(test_type(nm, "vector<'a, 4>"));
+		EXPECT_TRUE(test_type(nm, "ref<'a,f,f,plain>"));
+		EXPECT_TRUE(test_type(nm, "ref<'a,f,t,plain>"));
+		EXPECT_TRUE(test_type(nm, "ref<'a,t,f,plain>"));
+		EXPECT_TRUE(test_type(nm, "ref<'a,t,t,plain>"));
+		EXPECT_TRUE(test_type(nm, "ref<'a,f,f,cpp_ref>"));
+		EXPECT_TRUE(test_type(nm, "ref<'a,f,f,cpp_rref>"));
 		EXPECT_TRUE(test_type(nm, "struct { a : int<4>; b : int<5>; }"));
 		EXPECT_TRUE(test_type(nm, "struct name { a : int<4>; b : int<5>; }"));
 		EXPECT_TRUE(test_type(nm, "let papa = t<11> in struct name : [papa] { a : int<4>; b : int<5>; }"));
