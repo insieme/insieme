@@ -19,7 +19,6 @@ target_include_directories(insieme_transform SYSTEM PRIVATE ${Boost_INCLUDE_DIRS
 
 target_link_libraries(insieme_transform insieme_core)
 target_link_libraries(insieme_transform insieme_utils)
-target_link_libraries(insieme_transform insieme_annotations)
 
 cotire(insieme_transform)
 
@@ -35,7 +34,6 @@ foreach ( case_file ${test_cases})
 	add_executable(${case_name} ${case_file})
 	target_link_libraries(${case_name} insieme_core)
 	target_link_libraries(${case_name} insieme_utils)
-	target_link_libraries(${case_name} insieme_annotations)
 	target_link_libraries(${case_name} insieme_transform)
 	
 	add_unit_test(${case_name} ${ut_prefix})

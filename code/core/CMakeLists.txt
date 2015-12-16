@@ -124,7 +124,7 @@ foreach ( case_file ${test_cases})
 	target_link_libraries(${case_name} insieme_core)
 	target_link_libraries(${case_name} insieme_utils)
 	target_link_libraries(${case_name} ${CUDD_LIBRARIES})
-    target_link_libraries(${case_name} ${Boost_REGEX_LIBRARY})
+	target_link_libraries(${case_name} ${Boost_REGEX_LIBRARY})
 	target_include_directories(${case_name} PUBLIC test/include/)
 	
 	#the parser unit-tests need the bison/flex include directories
