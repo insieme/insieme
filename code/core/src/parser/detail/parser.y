@@ -20,6 +20,7 @@
 	#include <string>
 	#include <iostream>
 	#include "insieme/core/ir.h"
+	#include "insieme/core/parser/detail/typed_expression.h"
 
 	namespace insieme {
 	namespace core {
@@ -202,6 +203,8 @@
 %type <TypeList>                       types non_empty_types type_param_list
 %type <ExpressionPtr>                  expression plain_expression let_expression
 %type <ExpressionList>                 expressions non_empty_expressions
+%type <ParserTypedExpression>          typed_expression
+%type <ParserTypedExpressionList>      typed_expressions non_empty_typed_expressions
 %type <StatementPtr>                   statement plain_statement let_statement
 %type <ProgramPtr>                     main
 %type <NodePtr>                        definition
@@ -551,6 +554,18 @@ plain_expression : variable                                               { $$ =
                  | this_expression                                        { $$ = $1; }
                  ;
 
+typed_expressions : non_empty_typed_expressions                           { $$ = $1; }
+                  |                                                       { $$ = ParserTypedExpressionList(); }
+                  ;
+
+non_empty_typed_expressions : non_empty_typed_expressions "," typed_expression    { $1.push_back($3); $$ = $1; }
+                            | typed_expression                                    { $$ = toVector($1); }
+                            ;
+
+typed_expression : expression ":" type                                    { $$ = driver.genTypedExpression(@$, $1, $3); INSPIRE_GUARD(@$, $$.expression); }
+                 | expression                                             { $$ = {$1, $1->getType()}; INSPIRE_GUARD(@$, $$.expression); }
+                 ;
+
 
 // -- variable --
 
@@ -579,8 +594,8 @@ literal : "true"                                                          { $$ =
 
 // -- call --
 
-call : expression "(" expressions ")"                                     { $$ = driver.genCall(@$, $1, $3); }
-     | "identifier" "::" "(" non_empty_expressions ")"                    { $$ = driver.genConstructorCall(@$, $1, $4); }
+call : expression "(" typed_expressions ")"                               { $$ = driver.genCall(@$, $1, $3); }
+     | "identifier" "::" "(" non_empty_typed_expressions ")"              { $$ = driver.genConstructorCall(@$, $1, $4); }
      | "identifier" "::" "~" "(" expression ")"                           { $$ = driver.genDestructorCall(@$, $1, $5); }
      ;
 
@@ -655,7 +670,7 @@ unary_op : "-" expression                                                 { $$ =
          | expression "." "int"                                           { $$ = driver.genTupleAccess(@3, $1, $3); }
          | expression "->" "identifier"                                   { $$ = driver.genMemberAccess(@3, $1, $3); }
          | expression "->" "int"                                          { $$ = driver.genTupleAccess(@3, $1, $3); }
-         | "CAST" "(" type ")" expression                                 { $$ = driver.builder.castExpr($3, $5); }
+         | "CAST" "(" type ")" expression                                 { $$ = driver.builder.castExpr($3, $5); }                                     %prec CAST
          | expression "." "as" "(" type ")"                               { $$ = driver.genAsExpr(@1, $1, $5); }
          ;
 
@@ -811,22 +826,17 @@ let_statement : "let" "identifier" "=" expression ";"                     {  dri
               ;
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Precedence list ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// the lowest in list, the highest precedence
+// the lower in this list, the higher the precedence
 
 
 %right    "in";
-%nonassoc "::" ;
 %left     ":";
 %nonassoc ")";
 
-
-%nonassoc "else";
 %right    "=>";
 %left     "spawn" "sync" "sync_all";
-%right    "catch";
-%left     LAMBDA;
 
-%left     "=";
+%right    "=";
 %right    "?";
 %left     "||";
 %left     "&&";
@@ -837,15 +847,8 @@ let_statement : "let" "identifier" "=" expression ";"                     {  dri
 %left     "<" "<=" ">" ">=";
 %left     "+" "-";
 %left     "*" "/" "%";
-
-%nonassoc UDEREF;
-%nonassoc UNOT;
-%nonassoc UMINUS;
-
-%nonassoc "->";
-%nonassoc ".";
-%right    "[";
-%right    "(";
+%right    UDEREF UNOT UMINUS CAST;
+%left     "->" "." "[" "(";
 
 %%
 // code after the second %% is copyed verbatim at the end of the parser .cpp file
