@@ -143,8 +143,30 @@ namespace conversion {
 	core::ExpressionPtr Converter::CXXExprConverter::VisitCallExpr(const clang::CallExpr* callExpr) {
 		core::CallExprPtr irCall = ExprConverter::VisitCallExpr(callExpr).as<core::CallExprPtr>();
 		LOG_EXPR_CONVERSION(callExpr, irCall);
+
+		// in Inspire 2.0, copy and move constructor calls are implicit on function calls
+		auto newArgs = irCall->getArgumentList();
+		auto funExp = irCall->getFunctionExpr();
+		size_t i = 0;
+		for(auto clangArgExpr : callExpr->arguments()) {
+			// detect copy/move constructor calls
+			auto constructExpr = llvm::dyn_cast<clang::CXXConstructExpr>(clangArgExpr);
+			if(constructExpr) {
+				auto constructor = constructExpr->getConstructor();
+				if(constructor->isCopyOrMoveConstructor()) {
+					auto prevArg = newArgs[i];
+					newArgs[i] = Visit(constructExpr->getArg(0));
+					// cast ref as required by copy constructor
+					if(core::lang::isReference(newArgs[i])) {
+						newArgs[i] = core::lang::buildRefCast(
+							newArgs[i], prevArg.as<core::CallExprPtr>()->getFunctionExpr()->getType().as<core::FunctionTypePtr>()->getParameterType(1));
+					}
+				}
+			}
+			++i;
+		}
 		
-		return irCall;
+		return builder.callExpr(irCall->getType(), funExp, newArgs);
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -336,7 +358,7 @@ namespace conversion {
 		/// Resize the array created by an array create call (required due to mismatched size reported for initializer expressions in new[])
 		core::ExpressionPtr resizeArrayCreate(const Converter& converter, const core::ExpressionPtr& createExpr, const core::ExpressionPtr& newSize) {
 			auto& nodeMan = createExpr->getNodeManager();
-			__unused auto& arrExp = nodeMan.getLangExtension<core::lang::ArrayExtension>();
+			assert_decl(auto& arrExp = nodeMan.getLangExtension<core::lang::ArrayExtension>());
 			frontend_assert(core::analysis::isCallOf(createExpr, arrExp.getArrayCreate()))
 				<< "Trying to resize array creation, but expression is not array creation";
 
