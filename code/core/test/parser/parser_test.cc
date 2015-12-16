@@ -370,6 +370,26 @@ namespace parser {
 		                          "  }"
 		                          "}; A"));
 
+		EXPECT_TRUE(test_type(nm, "def struct a { };"
+				                  "def struct b : [ public a ] { };"
+				                  "def struct c : [ public b ] { };"
+				                  "c"));
+
+		EXPECT_TRUE(test_type(nm, "def struct a { };"
+				                  "def struct b { };"
+				                  "def struct c : [ public a, public b ] { };"
+				                  "c"));
+
+		EXPECT_TRUE(test_type(nm, "def struct a { };"
+				                  "def struct b { };"
+				                  "def struct c : [ virtual public a, public b ] { };"
+				                  "c"));
+
+		EXPECT_TRUE(test_type(nm, "def struct a { };"
+					              "def struct b { };"
+					              "def struct c : [ virtual public a, virtual public b ] { };"
+					              "c"));
+
 		{
 			auto addresses = builder.parseAddressesStatement("def struct A {" //check that member calls get translated to calls of the actual lambda
 			                                                 "  ctor() {}"
