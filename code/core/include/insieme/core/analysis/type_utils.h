@@ -84,12 +84,61 @@ namespace analysis {
 	bool isTrivial(const TypePtr& type);
 
 	/**
+	 * Determines whether the given tag type has a constructor of the given type.
+	 */
+	bool hasConstructorOfType(const TagTypePtr& type, const FunctionTypePtr& funType);
+
+	/**
+	 * Determines whether the given tag type has a constructor accepting a single parameter
+	 * of the given type (in addition to the this reference).
+	 */
+	bool hasConstructorAccepting(const TypePtr& type, const TypePtr& paramType);
+
+	/**
+	* Determines whether the given tag type has a member function of the given name and type.
+	*/
+	bool hasMemberOfType(const TagTypePtr& type, const std::string& name, const FunctionTypePtr& funType);
+
+	/**
+	 * Determines whether the given tag type has a default constructor.
+	 */
+	bool hasDefaultConstructor(const TagTypePtr&);
+
+	/**
+	 * Determines whether the given tag type has a copy constructor.
+	 */
+	bool hasCopyConstructor(const TagTypePtr&);
+
+	/**
+	 * Determines whether the given tag type has a move constructor.
+	 */
+	bool hasMoveConstructor(const TagTypePtr&);
+
+	/**
+	 * Determines whether the given tag type has a copy assignment operator.
+	 */
+	bool hasCopyAssignment(const TagTypePtr&);
+
+	/**
+	 * Determines whether the given tag type has a move assignment operator.
+	 */
+	bool hasMoveAssignment(const TagTypePtr&);
+
+	/**
 	 * Determines whether the given constructor is one of the default generated ones for the given type.
 	 *
 	 * @param type the TagType to check
 	 * @param ctor the ctor to check
 	 */
 	bool isaDefaultConstructor(const TagTypePtr& type, const ExpressionPtr& ctor);
+
+	/**
+	* Determines whether the given destructor is a default destructor for the given type.
+	*
+	* @param type the TagType to check
+	* @param dtor the destructor to check
+	*/
+	bool isDefaultDestructor(const TagTypePtr& type, const ExpressionPtr& dtor);
 
 	/**
 	 * Determines whether the given TagType has the default generated destructor.

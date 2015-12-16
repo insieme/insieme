@@ -186,6 +186,16 @@ namespace c_ast {
 				return out << print(node->elementType) << "&";
 			}
 
+			PRINT(RValueReferenceType) {
+
+				// print qualifiers
+				if (node->isConst()) { out << "const "; }
+				if (node->isVolatile()) { out << "volatile "; }
+
+				// print rest
+				return out << print(node->elementType) << "&&";
+			}
+
 			PRINT(VectorType) {
 				return out << print(node->elementType) << "[" << print(node->size) << "]";
 			}

@@ -39,6 +39,7 @@
 #include "insieme/utils/container_utils.h"
 
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/lang/reference.h"
 
 #include "insieme/backend/type_manager.h"
 #include "insieme/backend/name_manager.h"
@@ -941,6 +942,148 @@ namespace backend {
 			EXPECT_TRUE((bool)info.newOperatorName);
 			EXPECT_EQ("_ref_new_name", toC(info.newOperatorName));
 
+	}
+
+	TEST(TypeManager, RefTypesCppRef) {
+		core::NodeManager nodeManager;
+		core::IRBuilder builder(nodeManager);
+
+		Converter converter(nodeManager);
+		converter.setNameManager(std::make_shared<TestNameManager>());
+		TypeManager& typeManager = converter.getTypeManager();
+
+		c_ast::SharedCodeFragmentManager fragmentManager = converter.getFragmentManager();
+		c_ast::SharedCNodeManager cManager = fragmentManager->getNodeManager();
+
+		RefTypeInfo info;
+		auto lit = cManager->create<c_ast::Literal>("X");
+
+		core::GenericTypePtr type;
+
+		// ----- C++ references -----
+
+		type = builder.parseType("ref<int<4>,f,f,cpp_ref>").as<core::GenericTypePtr>();
+		EXPECT_PRED1(core::lang::isCppReference, type);
+		info = typeManager.getRefTypeInfo(type);
+		EXPECT_EQ("int32_t&", toC(info.lValueType));
+		EXPECT_EQ("int32_t&", toC(info.rValueType));
+		EXPECT_EQ("int32_t&", toC(info.externalType));
+		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
+		EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
+		EXPECT_TRUE((bool)info.declaration);
+		EXPECT_TRUE((bool)info.definition);
+		EXPECT_FALSE((bool)info.newOperator);
+		EXPECT_FALSE((bool)info.newOperatorName);
+
+		type = builder.parseType("ref<int<4>,t,f,cpp_ref>").as<core::GenericTypePtr>();
+		EXPECT_PRED1(core::lang::isCppReference, type);
+		info = typeManager.getRefTypeInfo(type);
+		EXPECT_EQ("const int32_t&", toC(info.lValueType));
+		EXPECT_EQ("const int32_t&", toC(info.rValueType));
+		EXPECT_EQ("const int32_t&", toC(info.externalType));
+		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
+		EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
+		EXPECT_TRUE((bool)info.declaration);
+		EXPECT_TRUE((bool)info.definition);
+		EXPECT_FALSE((bool)info.newOperator);
+		EXPECT_FALSE((bool)info.newOperatorName);
+
+		type = builder.parseType("ref<int<4>,f,t,cpp_ref>").as<core::GenericTypePtr>();
+		EXPECT_PRED1(core::lang::isCppReference, type);
+		info = typeManager.getRefTypeInfo(type);
+		EXPECT_EQ("volatile int32_t&", toC(info.lValueType));
+		EXPECT_EQ("volatile int32_t&", toC(info.rValueType));
+		EXPECT_EQ("volatile int32_t&", toC(info.externalType));
+		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
+		EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
+		EXPECT_TRUE((bool)info.declaration);
+		EXPECT_TRUE((bool)info.definition);
+		EXPECT_FALSE((bool)info.newOperator);
+		EXPECT_FALSE((bool)info.newOperatorName);
+
+		type = builder.parseType("ref<int<4>,t,t,cpp_ref>").as<core::GenericTypePtr>();
+		EXPECT_PRED1(core::lang::isCppReference, type);
+		info = typeManager.getRefTypeInfo(type);
+		EXPECT_EQ("const volatile int32_t&", toC(info.lValueType));
+		EXPECT_EQ("const volatile int32_t&", toC(info.rValueType));
+		EXPECT_EQ("const volatile int32_t&", toC(info.externalType));
+		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
+		EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
+		EXPECT_TRUE((bool)info.declaration);
+		EXPECT_TRUE((bool)info.definition);
+		EXPECT_FALSE((bool)info.newOperator);
+		EXPECT_FALSE((bool)info.newOperatorName);
+	}
+
+	TEST(TypeManager, RefTypesCppRValueRef) {
+		core::NodeManager nodeManager;
+		core::IRBuilder builder(nodeManager);
+		
+		Converter converter(nodeManager);
+		converter.setNameManager(std::make_shared<TestNameManager>());
+		TypeManager& typeManager = converter.getTypeManager();
+
+		c_ast::SharedCodeFragmentManager fragmentManager = converter.getFragmentManager();
+		c_ast::SharedCNodeManager cManager = fragmentManager->getNodeManager();
+
+		RefTypeInfo info;
+		auto lit = cManager->create<c_ast::Literal>("X");
+
+		core::GenericTypePtr type;
+
+		// ----- C++ r-value references -----
+
+		type = builder.parseType("ref<int<4>,f,f,cpp_rref>").as<core::GenericTypePtr>();
+		EXPECT_PRED1(core::lang::isCppRValueReference, type);
+		info = typeManager.getRefTypeInfo(type);
+		EXPECT_EQ("int32_t&&", toC(info.lValueType));
+		EXPECT_EQ("int32_t&&", toC(info.rValueType));
+		EXPECT_EQ("int32_t&&", toC(info.externalType));
+		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
+		EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
+		EXPECT_TRUE((bool)info.declaration);
+		EXPECT_TRUE((bool)info.definition);
+		EXPECT_FALSE((bool)info.newOperator);
+		EXPECT_FALSE((bool)info.newOperatorName);
+
+		type = builder.parseType("ref<int<4>,t,f,cpp_rref>").as<core::GenericTypePtr>();
+		EXPECT_PRED1(core::lang::isCppRValueReference, type);
+		info = typeManager.getRefTypeInfo(type);
+		EXPECT_EQ("const int32_t&&", toC(info.lValueType));
+		EXPECT_EQ("const int32_t&&", toC(info.rValueType));
+		EXPECT_EQ("const int32_t&&", toC(info.externalType));
+		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
+		EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
+		EXPECT_TRUE((bool)info.declaration);
+		EXPECT_TRUE((bool)info.definition);
+		EXPECT_FALSE((bool)info.newOperator);
+		EXPECT_FALSE((bool)info.newOperatorName);
+
+		type = builder.parseType("ref<int<4>,f,t,cpp_rref>").as<core::GenericTypePtr>();
+		EXPECT_PRED1(core::lang::isCppRValueReference, type);
+		info = typeManager.getRefTypeInfo(type);
+		EXPECT_EQ("volatile int32_t&&", toC(info.lValueType));
+		EXPECT_EQ("volatile int32_t&&", toC(info.rValueType));
+		EXPECT_EQ("volatile int32_t&&", toC(info.externalType));
+		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
+		EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
+		EXPECT_TRUE((bool)info.declaration);
+		EXPECT_TRUE((bool)info.definition);
+		EXPECT_FALSE((bool)info.newOperator);
+		EXPECT_FALSE((bool)info.newOperatorName);
+
+		type = builder.parseType("ref<int<4>,t,t,cpp_rref>").as<core::GenericTypePtr>();
+		EXPECT_PRED1(core::lang::isCppRValueReference, type);
+		info = typeManager.getRefTypeInfo(type);
+		EXPECT_EQ("const volatile int32_t&&", toC(info.lValueType));
+		EXPECT_EQ("const volatile int32_t&&", toC(info.rValueType));
+		EXPECT_EQ("const volatile int32_t&&", toC(info.externalType));
+		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
+		EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
+		EXPECT_TRUE((bool)info.declaration);
+		EXPECT_TRUE((bool)info.definition);
+		EXPECT_FALSE((bool)info.newOperator);
+		EXPECT_FALSE((bool)info.newOperatorName);
 	}
 
 	TEST(TypeManager, FunctionTypes) {

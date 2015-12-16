@@ -181,7 +181,7 @@ namespace backend {
 			const FunctionTypeInfo* resolveThickFunctionType(const core::FunctionTypePtr& ptr);
 
 			const RefTypeInfo* resolveRefType(const core::GenericTypePtr& ptr);
-
+			
 			const TagTypeInfo* resolveRecType(const core::TagTypePtr& ptr);
 			void resolveRecTypeDefinition(const core::TagTypeDefinitionPtr& ptr);
 
@@ -299,7 +299,10 @@ namespace backend {
 
 		// --------------------- Implementations of resolution utilities --------------------
 
-		const TypeInfo* TypeInfoStore::resolveInternal(const core::TypePtr& type) {
+		const TypeInfo* TypeInfoStore::resolveInternal(const core::TypePtr& in) {
+
+			// normalize all types
+			auto type = core::analysis::normalize(in);
 
 			// lookup information within cache
 			auto pos = typeInfos.find(type);
@@ -934,8 +937,12 @@ namespace backend {
 
 		const RefTypeInfo* TypeInfoStore::resolveRefType(const core::GenericTypePtr& ptr) {
 			assert_pred1(core::lang::isReference, ptr) << "Can only convert reference types.";
-			assert_pred1(core::lang::isPlainReference, ptr) << "Yet unsupported non-plain reference type: " << *ptr;
 
+			// check that it is a plain, C++ or C++ R-Value reference
+			assert_true(core::lang::isPlainReference(ptr) || core::lang::isCppReference(ptr) || core::lang::isCppRValueReference(ptr))
+				<< "Unsupported reference type: " << *ptr;
+
+			
 			auto manager = converter.getCNodeManager();
 
 			// parse reference type
@@ -958,10 +965,48 @@ namespace backend {
 			// produce R and L value type
 
 			// generally, a level of indirection needs to be added
-			res->lValueType = c_ast::qualify(subType->lValueType, ref.isConst(), ref.isVolatile());
-			res->rValueType = c_ast::ptr(c_ast::qualify(subType->rValueType, ref.isConst(), ref.isVolatile()));
-			res->externalType = c_ast::ptr(c_ast::qualify(subType->externalType, ref.isConst(), ref.isVolatile()));
+			switch (ref.getKind()) {
+				case core::lang::ReferenceType::Kind::Plain: {
 
+					// local (l-value) values are simply qualified types, the rest is a pointer
+					res->lValueType = c_ast::qualify(subType->lValueType, ref.isConst(), ref.isVolatile());
+					res->rValueType = c_ast::ptr(c_ast::qualify(subType->rValueType, ref.isConst(), ref.isVolatile()));
+					res->externalType = c_ast::ptr(c_ast::qualify(subType->externalType, ref.isConst(), ref.isVolatile()));
+
+					break;
+				}
+
+				case core::lang::ReferenceType::Kind::CppReference: {
+
+					assert_false(core::lang::isReference(elementType)) << "Unsupported references to references!";
+					assert_false(core::lang::isArray(elementType)) << "Unsupported references to arrays!";
+
+					// here we just add a reference to the nested type
+					res->lValueType = c_ast::ref(subType->lValueType, ref.isConst(), ref.isVolatile());
+					res->rValueType = c_ast::ref(subType->rValueType, ref.isConst(), ref.isVolatile());
+					res->externalType = c_ast::ref(subType->externalType, ref.isConst(), ref.isVolatile());
+
+					break;
+				}
+
+				case core::lang::ReferenceType::Kind::CppRValueReference: {
+
+					assert_false(core::lang::isReference(elementType)) << "Unsupported references to references!";
+					assert_false(core::lang::isArray(elementType)) << "Unsupported references to arrays!";
+
+					// here we just add a reference to the nested type
+					res->lValueType = c_ast::rvalue_ref(subType->lValueType, ref.isConst(), ref.isVolatile());
+					res->rValueType = c_ast::rvalue_ref(subType->rValueType, ref.isConst(), ref.isVolatile());
+					res->externalType = c_ast::rvalue_ref(subType->externalType, ref.isConst(), ref.isVolatile());
+
+					break;
+				}
+
+				case core::lang::ReferenceType::Kind::Undefined: {
+					assert_fail() << "Should not be reachable!"; break;
+				}
+			}
+			
 			// support nested references
 			if (core::lang::isReference(elementType)) {
 				// for nested references, the lValue type is composed differently
@@ -1003,35 +1048,38 @@ namespace backend {
 
 			// ---------------- add a new operator ------------------------
 
-			string newOpName = "_ref_new_" + converter.getNameManager().getName(ptr);
-			res->newOperatorName = manager->create(newOpName);
+			if (ref.isPlain()) {
 
-			// the argument variable
-			string resultTypeName = toString(c_ast::CPrint(res->rValueType));
-			string valueTypeName = toString(c_ast::CPrint(subType->lValueType));
+				string newOpName = "_ref_new_" + converter.getNameManager().getName(ptr);
+				res->newOperatorName = manager->create(newOpName);
 
-			std::stringstream code;
-			code << "/* New Operator for type " << toString(*ptr) << "*/ \n"
-				 "static inline " << resultTypeName << " " << newOpName << "(" << valueTypeName << " value) {\n"
-			           << resultTypeName << " res = malloc(sizeof(" << valueTypeName << "));\n"
-			     "    *res = value;\n"
-			     "    return res;\n"
-			     "}\n";
+				// the argument variable
+				string resultTypeName = toString(c_ast::CPrint(res->rValueType));
+				string valueTypeName = toString(c_ast::CPrint(subType->lValueType));
 
-			// attach the new operator
-			c_ast::OpaqueCodePtr cCode = manager->create<c_ast::OpaqueCode>(code.str());
-			res->newOperator = c_ast::CCodeFragment::createNew(converter.getFragmentManager(), cCode);
+				std::stringstream code;
+				code << "/* New Operator for type " << toString(*ptr) << "*/ \n"
+					"static inline " << resultTypeName << " " << newOpName << "(" << valueTypeName << " value) {\n"
+					<< resultTypeName << " res = malloc(sizeof(" << valueTypeName << "));\n"
+					"    *res = value;\n"
+					"    return res;\n"
+					"}\n";
 
-			// add dependencies
-			res->newOperator->addDependency(subType->definition);
+				// attach the new operator
+				c_ast::OpaqueCodePtr cCode = manager->create<c_ast::OpaqueCode>(code.str());
+				res->newOperator = c_ast::CCodeFragment::createNew(converter.getFragmentManager(), cCode);
 
-			// add include for malloc
-			res->newOperator->addInclude(string("stdlib.h"));
+				// add dependencies
+				res->newOperator->addDependency(subType->definition);
+
+				// add include for malloc
+				res->newOperator->addInclude(string("stdlib.h"));
+
+			}
 
 			// done
 			return res;
 		}
-
 
 		const FunctionTypeInfo* TypeInfoStore::resolveFunctionType(const core::FunctionTypePtr& ptr) {
 			// dispatch to pointer-specific type!

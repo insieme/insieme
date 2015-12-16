@@ -181,6 +181,13 @@ namespace c_ast {
 		virtual bool equals(const Node& other) const;
 	};
 
+	struct RValueReferenceType : public CVQualifiedType {
+		TypePtr elementType;
+		RValueReferenceType(TypePtr elementType, bool isConst = false, bool isVolatile = false)
+			: CVQualifiedType(NT_RValueReferenceType, isConst, isVolatile), elementType(elementType) {}
+		virtual bool equals(const Node& other) const;
+	};
+
 	struct VectorType : public Type {
 		TypePtr elementType;
 		ExpressionPtr size; // could be null to represent T[]; - no size given
