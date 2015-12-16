@@ -43,6 +43,7 @@
 #include "insieme/core/ir_builder.h"
 
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/analysis/compare.h"
 
 #include "insieme/core/checks/full_check.h"
 
@@ -480,15 +481,14 @@ namespace parser {
 		NodeManager nm;
 		IRBuilder builder(nm);
 
-//		auto funA = builder.normalize(parseExpr(nm, "(x : int<4>) -> int<4> { return x; }"));
-//		auto funB = builder.normalize(parseExpr(nm, "(x : ref<int<4>,f,f,plain>) -> int<4> { return *x; }"));
-//
-//		auto funC = builder.normalize(parseExpr(nm, "let f = (x : int<4>) -> int<4> { return x; } in f"));
-//		auto funD = builder.normalize(parseExpr(nm, "let f = (y : ref<int<4>,f,f,plain>) -> int<4> { return *y; } in f"));
-//
-//		EXPECT_EQ(funA, funB);
-//		EXPECT_EQ(funB, funC);
-//		EXPECT_EQ(funC, funD);
+		auto funA = builder.normalize(parseExpr(nm, "(x : int<4>) -> int<4> { return x; }"));
+		auto funB = builder.normalize(parseExpr(nm, "(x : ref<int<4>,f,f,plain>) -> int<4> { return *x; }"));
+
+		auto funC = builder.normalize(parseExpr(nm, "function (x : ref<int<4>,f,f,plain>) -> int<4> { return *x; }"));
+		auto funD = builder.normalize(parseExpr(nm, "function (x : ref<ref<int<4>,f,f,plain>,f,f,plain>) -> int<4> { return **x; }"));
+
+		EXPECT_TRUE(analysis::equalNameless(funA, funC)) << "funA: " << funA << "\nfunC: " << funC << "\n";
+		EXPECT_TRUE(analysis::equalNameless(funB, funD)) << "funB: " << funB << "\nfunD: " << funD << "\n";;
 
 		EXPECT_TRUE(test_expression(nm, "decl foo : (int<4>) -> int<4>;" //self-recursion
 		                                "def foo : (a : int<4>) -> int<4> { return foo(a); }; foo"));
