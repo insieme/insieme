@@ -57,11 +57,11 @@ R to(A x) {
 	return x;
 }
 
-#define STRUCT_TRIVIAL "def struct IMP_Trivial { i : int<4>; };"
-#define CONSUME_TRIVIAL "def IMP_consume_struct_Trivial_returns_void = function (v0 : ref<IMP_Trivial,f,f,plain>) -> unit { };"
+#define STRUCT_TRIVIAL "def struct IMP_Trivial { i : int<4>; }; "
+#define CONSUME_TRIVIAL "def IMP_consume_struct_Trivial_returns_void : function (v0 : ref<IMP_Trivial,f,f,plain>) -> unit { }; "
 
-#define STRUCT_NON_TRIVIAL "def struct IMP_NonTrivial { i : int<4>; };"
-#define CONSUME_NON_TRIVIAL "def IMP_consume_struct_NonTrivial_returns_void = function (v0 : ref<IMP_NonTrivial,f,f,plain>) -> unit { };"
+#define STRUCT_NON_TRIVIAL "def struct IMP_NonTrivial { i : int<4>; }; "
+#define CONSUME_NON_TRIVIAL "def IMP_consume_struct_NonTrivial_returns_void : function (v0 : ref<IMP_NonTrivial,f,f,plain>) -> unit { }; "
 
 
 void space() {};
@@ -75,16 +75,20 @@ void validateTrivial() {
 
 	// by value:
 
-	#pragma test expect_ir(STRUCT_TRIVIAL,CONSUME_TRIVIAL, R"(
-		{ var ref<IMP_Trivial> v0 = IMP_Trivial::(ref_var(type_lit(IMP_Trivial))); IMP_consume_struct_Trivial_returns_void(*v0); }
-	)")
-	{ T t; consume<T>(t); }		// pass l-value
+	#pragma test expect_ir(STRUCT_TRIVIAL,CONSUME_TRIVIAL, R"({ 
+		var ref<IMP_Trivial> v0 = IMP_Trivial::(ref_var(type_lit(IMP_Trivial)));
+		IMP_consume_struct_Trivial_returns_void(ref_cast(v0, type_lit(t), type_lit(f), type_lit(cpp_ref))); 
+	})")
+	{ // pass l-value
+		T t; 
+		consume<T>(t); 
+	}
 
-	#pragma test expect_ir(STRUCT_TRIVIAL,CONSUME_TRIVIAL, R"(
+/*	#pra gma test expect_ir(STRUCT_TRIVIAL,CONSUME_TRIVIAL, R"(
 		{ IMP_consume_struct_Trivial_returns_void(*IMP_Trivial::(ref_var(type_lit(IMP_Trivial)))); }
 	)")
 	{ consume<T>(T()); }	// pass temporary
-/*
+
 	{ consume<T>({12}); }	// pass temporary
 
 	{ consume<T>(produce<T>()); }	// pass x-value
