@@ -41,7 +41,7 @@ add_definitions(-D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS)
 # prevent clang Preprocessor.h from being included in cotire header to enable privacy violation workaround
 set_target_properties(insieme_frontend PROPERTIES
 	COTIRE_PREFIX_HEADER_IGNORE_PATH "${CMAKE_SOURCE_DIR};${CMAKE_BINARY_DIR};${CLANG_INCLUDE_DIRS}/clang/Lex/Preprocessor.h;${CLANG_INCLUDE_DIRS}/clang/Parse/Parser.h"
-	COTIRE_PREFIX_HEADER_INCLUDE_PATH "/")
+	COTIRE_PREFIX_HEADER_INCLUDE_PATH "/;${CLANG_INCLUDE_DIRS}/clang")
 cotire(insieme_frontend)
 
 # =============================================  TESTING  =====================================
@@ -71,9 +71,5 @@ foreach ( case_file ${test_cases})
 	target_link_libraries(${case_name} ${CLANG_LIBRARIES})
 	target_link_libraries(${case_name} ${LLVM_LIBRARIES})
 	
-	if(${case_name} STREQUAL ut_fe_ocl_host_compiler_test)
-		add_unit_test(${case_name} ${ut_prefix} off)
-	else()
-		add_unit_test(${case_name} ${ut_prefix}) 
-	endif()
+	add_unit_test(${case_name} ${ut_prefix}) 
 endforeach(case_file)
