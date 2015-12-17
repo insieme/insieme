@@ -1196,6 +1196,22 @@ namespace parser {
 		                     "}"));
 	}
 
+
+	TEST(IRParser, Comments) {
+		NodeManager mgr;
+
+
+		EXPECT_TRUE(parseExpr(mgr, "12"));
+		EXPECT_TRUE(parseExpr(mgr, "12 // this is the number 12"));
+
+		EXPECT_FALSE(parseStmt(mgr, "{ 12; // this is the number 12 }"));
+		EXPECT_TRUE(parseStmt(mgr, "{ 12; // this is the number \n 12; }"));
+
+		EXPECT_TRUE(parseExpr(mgr, "/* before */ 12 /* after */"));
+		EXPECT_TRUE(parseStmt(mgr, " { /* before */ 12 /* mid */ ; /* after */ }"));
+
+	}
+
 } // parser
 } // core
 } // insieme

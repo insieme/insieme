@@ -77,7 +77,8 @@ blank         [ \t]
 	loc.step ();
 %}
 
-"//"+.*       loc.step ();
+"//"+.*       loc.step ();							// skip single-line comments
+"/*"([^*]|(\*+[^*/]))*\*+\/      loc.step ();		// skip multi-line comments
 {blank}+      loc.step ();
 [\n]+         loc.lines (yyleng); loc.step ();
 "-"           return InspireParser::make_MINUS(loc);
