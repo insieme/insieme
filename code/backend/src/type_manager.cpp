@@ -579,19 +579,23 @@ namespace backend {
 			// create resulting type info
 			auto res = type_info_utils::createInfo<TagTypeInfo>(type, declaration, definition);
 
+
+			// the function manager is required to convert member functions
+			auto& funMgr = converter.getFunctionManager();
+
 			// ----- members -------
 
 			// save current info (otherwise the following code will result in an infinite recursion)
 			addInfo(tagType, res);						// for the full tag type
 
-			// the function manager is required to convert member functions
-			auto& funMgr = converter.getFunctionManager();
-
 			// add constructors, destructors and assignments to non-trivial classes
 			if (!core::analysis::isTrivial(tagType)) {
 
+				// extract the record type info
+				auto record = tagType->getRecord();
+
 				// add constructors
-				for (const auto& ctor : ptr->getConstructors()) {
+				for (const auto& ctor : record->getConstructors()) {
 					auto impl = (core::analysis::getObjectType(ctor->getType()).isa<core::TagTypeReferencePtr>()) ? tagType->peel(ctor) : ctor;
 					funMgr.getInfo(impl.as<core::LambdaExprPtr>());	// this will declare and define the constructor
 				}
@@ -601,17 +605,17 @@ namespace backend {
 //				//}
 //
 				// add destructors (only for structs)
-				auto dtor = ptr->getDestructor();
+				auto dtor = record->getDestructor();
 				funMgr.getInfo(tagType->peel(dtor).as<core::LambdaExprPtr>());
 
 				// add member functions
-				for (const auto& member : ptr->getMemberFunctions()) {
+				for (const auto& member : record->getMemberFunctions()) {
 					// TODO: fix name and flags + default marks
 					funMgr.getInfo(tagType->peel(member));
 				}
 
 				// add pure virtual function declarations
-				for (const auto& pureVirtual : ptr->getPureVirtualMemberFunctions()) {
+				for (const auto& pureVirtual : record->getPureVirtualMemberFunctions()) {
 					// TODO: add declaration
 					funMgr.getInfo(tagType->peel(pureVirtual));
 				}
@@ -621,14 +625,15 @@ namespace backend {
 			return res;
 		}
 
-		const TagTypeInfo* TypeInfoStore::resolveTagType(const core::TagTypePtr& ptr) {
-			// handle recursive types
-			if (ptr->isRecursive()) return resolveRecType(ptr);
+		const TagTypeInfo* TypeInfoStore::resolveTagType(const core::TagTypePtr& tagType) {
 
-			// handle struct and unions
-			if (ptr.isStruct()) return resolveStructType(ptr);
-			assert(ptr.isUnion());
-			return resolveUnionType(ptr);
+			// handle recursive types
+			if (tagType->isRecursive()) {
+				return resolveRecType(tagType);
+			}
+
+			// convert type -- struct and union specific
+			return (tagType.isStruct()) ? resolveStructType(tagType) : resolveUnionType(tagType);
 		}
 
 		const TagTypeInfo* TypeInfoStore::resolveStructType(const core::TagTypePtr& ptr) {
@@ -684,63 +689,6 @@ namespace backend {
 				// add parent to struct definition
 				type->parents.push_back(manager->create<c_ast::Parent>(parent->isVirtual(), parentInfo->lValueType));
 			}
-
-			// TODO: port this to new infrastructure
-
-//			// -- Process Meta-Infos --
-//
-//			// skip rest if there is no meta-info present
-//			if(!core::hasMetaInfo(ptr)) { return res; }
-//
-//			// save current info (otherwise the following code will result in an infinite recursion)
-//			addInfo(ptr, res);
-//
-//			auto& nameMgr = converter.getNameManager();
-//			core::ClassMetaInfo info = core::getMetaInfo(ptr);
-//			auto& funMgr = converter.getFunctionManager();
-//
-//			// add constructors
-//			for(const core::ExpressionPtr& cur : info.getConstructors()) {
-//				assert(cur.isa<core::LambdaExprPtr>() && "metaInfo should only contain ctors which are lambdaExprs at this point");
-//				// let function manager handle it
-//				funMgr.getInfo(cur.as<core::LambdaExprPtr>());
-//			}
-//
-//			// add destructor
-//			if(auto dtor = info.getDestructor()) {
-//				assert(dtor.isa<core::LambdaExprPtr>() && "metaInfo should only contain dtor which is a lambdaExprs at this point");
-//				// let function manager handle it
-//				funMgr.getInfo(dtor.as<core::LambdaExprPtr>(), false, info.isDestructorVirtual());
-//			}
-//
-//			// add member functions
-//			for(const core::MemberFunction& cur : info.getMemberFunctions()) {
-//				// fix name of all member functions before converting them
-//				auto impl = cur.getImplementation();
-//				if(!core::analysis::isPureVirtual(impl)) { nameMgr.setName(core::analysis::normalize(impl), cur.getName()); }
-//			}
-//			for(const core::MemberFunction& cur : info.getMemberFunctions()) {
-//				// process function using function manager
-//				auto impl = cur.getImplementation();
-//				if(!core::analysis::isPureVirtual(impl)) {
-//					// might be than there is no implementation for the function?
-//					// what about ignoring it and allow backend compiler to synthetize it?
-//					if(impl.isa<core::LiteralPtr>()) { continue; }
-//
-//					// generate code for member function
-//					funMgr.getInfo(impl.as<core::LambdaExprPtr>(), cur.isConst(), cur.isVirtual());
-//
-//				} else {
-//					// resolve the type of this function and all its dependencies using the function manager
-//					// by asking for an temporary "external function"
-//
-//					// create temporary literal ...
-//					core::NodeManager& nodeMgr = ptr->getNodeManager();
-//
-//					// ... and resolve dependencies (that's all, function manager will do the rest)
-//					funMgr.getInfo(core::Literal::get(nodeMgr, impl.getType(), cur.getName()), cur.isConst());
-//				}
-//			}
 
 			// done
 			return res;
@@ -1464,7 +1412,8 @@ namespace backend {
 				newInfo->definition->remDependency(newInfo->declaration);
 
 				// we move the definition part of the newInfo to the curInfo
-				*static_pointer_cast<c_ast::CCodeFragment>(curInfo->definition) = *static_pointer_cast<c_ast::CCodeFragment>(newInfo->definition);
+				curInfo->definition->addDependency(curInfo->declaration);
+				curInfo->definition->addDependency(newInfo->definition);
 
 				// also update lValue, rValue and external type
 				curInfo->lValueType = newInfo->lValueType;

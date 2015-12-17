@@ -43,6 +43,7 @@
 #include "insieme/core/ir_builder.h"
 
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/analysis/compare.h"
 
 #include "insieme/core/checks/full_check.h"
 
@@ -85,6 +86,12 @@ namespace parser {
 		EXPECT_TRUE(test_type(nm, "someweirdname<>"));
 		EXPECT_TRUE(test_type(nm, "vector<int<4>, 4>"));
 		EXPECT_TRUE(test_type(nm, "vector<'a, 4>"));
+		EXPECT_TRUE(test_type(nm, "ref<'a,f,f,plain>"));
+		EXPECT_TRUE(test_type(nm, "ref<'a,f,t,plain>"));
+		EXPECT_TRUE(test_type(nm, "ref<'a,t,f,plain>"));
+		EXPECT_TRUE(test_type(nm, "ref<'a,t,t,plain>"));
+		EXPECT_TRUE(test_type(nm, "ref<'a,f,f,cpp_ref>"));
+		EXPECT_TRUE(test_type(nm, "ref<'a,f,f,cpp_rref>"));
 		EXPECT_TRUE(test_type(nm, "struct { a : int<4>; b : int<5>; }"));
 		EXPECT_TRUE(test_type(nm, "struct name { a : int<4>; b : int<5>; }"));
 		EXPECT_TRUE(test_type(nm, "let papa = t<11> in struct name : [papa] { a : int<4>; b : int<5>; }"));
@@ -378,6 +385,26 @@ namespace parser {
 		                          "  }"
 		                          "}; A"));
 
+		EXPECT_TRUE(test_type(nm, "def struct a { };"
+				                  "def struct b : [ public a ] { };"
+				                  "def struct c : [ public b ] { };"
+				                  "c"));
+
+		EXPECT_TRUE(test_type(nm, "def struct a { };"
+				                  "def struct b { };"
+				                  "def struct c : [ public a, public b ] { };"
+				                  "c"));
+
+		EXPECT_TRUE(test_type(nm, "def struct a { };"
+				                  "def struct b { };"
+				                  "def struct c : [ virtual public a, public b ] { };"
+				                  "c"));
+
+		EXPECT_TRUE(test_type(nm, "def struct a { };"
+					              "def struct b { };"
+					              "def struct c : [ virtual public a, virtual public b ] { };"
+					              "c"));
+
 		{
 			auto addresses = builder.parseAddressesStatement("def struct A {" //check that member calls get translated to calls of the actual lambda
 			                                                 "  ctor() {}"
@@ -488,6 +515,15 @@ namespace parser {
 	TEST(IR_Parser, LambdasAndFunctions) {
 		NodeManager nm;
 		IRBuilder builder(nm);
+
+		auto funA = builder.normalize(parseExpr(nm, "(x : int<4>) -> int<4> { return x; }"));
+		auto funB = builder.normalize(parseExpr(nm, "(x : ref<int<4>,f,f,plain>) -> int<4> { return *x; }"));
+
+		auto funC = builder.normalize(parseExpr(nm, "function (x : ref<int<4>,f,f,plain>) -> int<4> { return *x; }"));
+		auto funD = builder.normalize(parseExpr(nm, "function (x : ref<ref<int<4>,f,f,plain>,f,f,plain>) -> int<4> { return **x; }"));
+
+		EXPECT_TRUE(analysis::equalNameless(funA, funC)) << "funA: " << funA << "\nfunC: " << funC << "\n";
+		EXPECT_TRUE(analysis::equalNameless(funB, funD)) << "funB: " << funB << "\nfunD: " << funD << "\n";;
 
 		EXPECT_TRUE(test_expression(nm, "decl foo : (int<4>) -> int<4>;" //self-recursion
 		                                "def foo : (a : int<4>) -> int<4> { return foo(a); }; foo"));

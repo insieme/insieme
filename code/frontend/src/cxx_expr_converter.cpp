@@ -357,8 +357,10 @@ namespace conversion {
 	namespace {
 		/// Resize the array created by an array create call (required due to mismatched size reported for initializer expressions in new[])
 		core::ExpressionPtr resizeArrayCreate(const Converter& converter, const core::ExpressionPtr& createExpr, const core::ExpressionPtr& newSize) {
-			auto& nodeMan = createExpr->getNodeManager();
-			assert_decl(auto& arrExp = nodeMan.getLangExtension<core::lang::ArrayExtension>());
+			assert_decl(
+					auto& nodeMan = createExpr->getNodeManager();
+					auto& arrExp = nodeMan.getLangExtension<core::lang::ArrayExtension>()
+			);
 			frontend_assert(core::analysis::isCallOf(createExpr, arrExp.getArrayCreate()))
 				<< "Trying to resize array creation, but expression is not array creation";
 
