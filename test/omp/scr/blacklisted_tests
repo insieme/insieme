@@ -5,11 +5,9 @@ fft
 fft6
 jacobi01
 jacobi02
-loopsA
 loopsB
 loopsC
 loopsD
-lu_reduction
 mandelbrot
 molecular
 qsort
