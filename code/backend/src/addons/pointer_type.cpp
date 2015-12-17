@@ -111,7 +111,9 @@ namespace addons {
 							return CONVERT_ARG(0);   // the literal is already a pointer
 						}
 					}
-					return c_ast::access(c_ast::deref(CONVERT_ARG(0)), "data");
+					//TODO Think about a nicer solution here. This line replaces the following one to also support arrays in system defined structs
+					return c_ast::cast(CONVERT_TYPE(call->getType()), CONVERT_ARG(0));
+					//return c_ast::access(c_ast::deref(CONVERT_ARG(0)), "data");
 				}
 
 				// otherwise references and pointers are the same
