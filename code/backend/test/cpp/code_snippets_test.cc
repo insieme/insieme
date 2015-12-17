@@ -407,67 +407,131 @@ namespace backend {
 
 
 	TEST(CppSnippet, Constructors) {
-			core::NodeManager manager;
-			core::IRBuilder builder(manager);
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
 
-			// create a code fragment including some member functions
-			core::ProgramPtr program = builder.parseProgram(R"(
-					alias int = int<4>;
+		// create a code fragment including some member functions
+		core::ProgramPtr program = builder.parseProgram(R"(
+				alias int = int<4>;
 
-					def struct A {
-						x : int;
-	 					ctor( ) {
-	 						this->x = 12;
-	 					} 
-						ctor( x : int ) {
-	 						this->x = x;
-	 					} 
-						ctor( x : int , y : int ) {
-							this->x = x + y;
-						}
-					};
-/*
-					def f : A::( x : int, y : int, z : int ) {
-						this->x = x + y + z;
-					};
-*/				
-					int main() {
-						var ref<A> a;
-						// var ref<A> b = f(ref_var(type_lit(A)));
-						return 0;
+				def struct A {
+					x : int;
+					ctor( ) {
+						this->x = 12;
+					} 
+					ctor( x : int ) {
+						this->x = x;
+					} 
+					ctor( x : int , y : int ) {
+						this->x = x + y;
 					}
-			)");
+				};
+/*
+				def f : A::( x : int, y : int, z : int ) {
+					this->x = x + y + z;
+				};
+*/				
+				int main() {
+					var ref<A> a;
+					// var ref<A> b = f(ref_var(type_lit(A)));
+					return 0;
+				}
+		)");
 
-			ASSERT_TRUE(program);
-			std::cout << "Program: " << dumpColor(program) << std::endl;
-			EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
+		ASSERT_TRUE(program);
+		std::cout << "Program: " << dumpColor(program) << std::endl;
+		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
 
-			// use sequential backend to convert into C++ code
-			auto converted = sequential::SequentialBackend::getDefault()->convert(program);
-			ASSERT_TRUE((bool)converted);
-			std::cout << "Converted: \n" << *converted << std::endl;
+		// use sequential backend to convert into C++ code
+		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
+		ASSERT_TRUE((bool)converted);
+		std::cout << "Converted: \n" << *converted << std::endl;
 
-			// check presence of relevant code
-			auto code = toString(*converted);
-			EXPECT_PRED2(containsSubString, code, "struct A");		// struct definition
-			EXPECT_PRED2(containsSubString, code, "A a;");			// variable definition
+		// check presence of relevant code
+		auto code = toString(*converted);
+		EXPECT_PRED2(containsSubString, code, "struct A");		// struct definition
+		EXPECT_PRED2(containsSubString, code, "A a;");			// variable definition
 
-			// check definition of six essential functions
-			EXPECT_PRED2(containsSubString, code, "A();");
-			EXPECT_PRED2(containsSubString, code, "A::A() : x(12) { }");
+		// check definition of six essential functions
+		EXPECT_PRED2(containsSubString, code, "A();");
+		EXPECT_PRED2(containsSubString, code, "A::A() : x(12) { }");
 
-			EXPECT_PRED2(containsSubString, code, "A(int32_t p2);");
-			EXPECT_PRED2(containsSubString, code, "A::A(int32_t x) : x(x) { }");
+		EXPECT_PRED2(containsSubString, code, "A(int32_t p2);");
+		EXPECT_PRED2(containsSubString, code, "A::A(int32_t x) : x(x) { }");
 
-			EXPECT_PRED2(containsSubString, code, "A(int32_t p2, int32_t p3);");
-			EXPECT_PRED2(containsSubString, code, "A::A(int32_t x, int32_t y) : x(x + y) { }");
+		EXPECT_PRED2(containsSubString, code, "A(int32_t p2, int32_t p3);");
+		EXPECT_PRED2(containsSubString, code, "A::A(int32_t x, int32_t y) : x(x + y) { }");
 
 
-			// try compiling the code fragment
-			utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
-			compiler.addFlag("-c"); // do not run the linker
-			EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
-		}
+		// try compiling the code fragment
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+	}
+
+
+	TEST(CppSnippet, Destructor) {
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+
+		// create a code fragment including some member functions
+		core::ProgramPtr program = builder.parseProgram(R"(
+				alias int = int<4>;
+
+				def struct A {
+					x : int;
+					dtor() { }
+				};
+
+				def struct B {
+					x : int;
+					dtor() { x = 12; }
+				};
+
+				def struct C {
+					x : int;
+					dtor virtual () { x = 12; }
+				};
+
+				int main() {
+					var ref<A> a;
+					var ref<B> b;
+					var ref<C> c;
+					return 0;
+				}
+		)");
+
+		ASSERT_TRUE(program);
+		std::cout << "Program: " << dumpColor(program) << std::endl;
+		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
+
+		// use sequential backend to convert into C++ code
+		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
+		ASSERT_TRUE((bool)converted);
+		std::cout << "Converted: \n" << *converted << std::endl;
+
+		// check presence of relevant code
+		auto code = toString(*converted);
+
+		EXPECT_PRED2(containsSubString, code, "struct A");		// struct definition
+		EXPECT_PRED2(containsSubString, code, "A a;");			// variable definition
+		EXPECT_FALSE(containsSubString(code, "~A"));			// no destructor for A
+
+		EXPECT_PRED2(containsSubString, code, "struct B");			// struct definition
+		EXPECT_PRED2(containsSubString, code, "B b;");				// variable definition
+		EXPECT_PRED2(containsSubString, code, "~B();");				// destructor for B
+		EXPECT_FALSE(containsSubString(code, "virtual ~B();"));		// not virtual
+
+		EXPECT_PRED2(containsSubString, code, "struct C");			// struct definition
+		EXPECT_PRED2(containsSubString, code, "C c;");				// variable definition
+		EXPECT_PRED2(containsSubString, code, "virtual ~C();");		// destructor for B
+
+
+		// try compiling the code fragment
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+	}
 
 
 	TEST(CppSnippet, Counter) {

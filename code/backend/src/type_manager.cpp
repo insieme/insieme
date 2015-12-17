@@ -605,8 +605,11 @@ namespace backend {
 //				//}
 //
 				// add destructors (only for structs)
-				auto dtor = record->getDestructor();
-				funMgr.getInfo(tagType->peel(dtor).as<core::LambdaExprPtr>());
+				{
+					auto dtor = record->getDestructor();
+					auto info = funMgr.getInfo(tagType->peel(dtor).as<core::LambdaExprPtr>());
+					info.declaration.as<c_ast::DestructorPrototypePtr>()->isVirtual = record->hasVirtualDestructor();
+				}
 
 				// add member functions
 				for (const auto& member : record->getMemberFunctions()) {
