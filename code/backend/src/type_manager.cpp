@@ -588,11 +588,12 @@ namespace backend {
 			// save current info (otherwise the following code will result in an infinite recursion)
 			addInfo(tagType, res);						// for the full tag type
 
-			// add constructors, destructors and assignments to non-trivial classes
-			if (!core::analysis::isTrivial(tagType)) {
+			// extract the record type info
+			auto record = tagType->getRecord();
 
-				// extract the record type info
-				auto record = tagType->getRecord();
+			// add constructors, destructors and assignments to non-trivial classes
+			bool trivial = core::analysis::isTrivial(tagType);
+			if (!trivial) {
 
 				// add constructors
 				for (const auto& ctor : record->getConstructors()) {
@@ -611,16 +612,17 @@ namespace backend {
 					info.declaration.as<c_ast::DestructorPrototypePtr>()->isVirtual = record->hasVirtualDestructor();
 				}
 
-				// add member functions
-				for (const auto& member : record->getMemberFunctions()) {
-					// TODO: fix name and flags + default marks
-					funMgr.getInfo(tagType->peel(member));
-				}
-
 				// add pure virtual function declarations
 				for (const auto& pureVirtual : record->getPureVirtualMemberFunctions()) {
 					// TODO: add declaration
 					funMgr.getInfo(tagType->peel(pureVirtual));
+				}
+			}
+
+			// add member functions (for trivial and non trivial classes)
+			for (const auto& member : record->getMemberFunctions()) {
+				if (!trivial || !core::analysis::isaDefaultMember(tagType, member)) {
+					funMgr.getInfo(tagType->peel(member));
 				}
 			}
 

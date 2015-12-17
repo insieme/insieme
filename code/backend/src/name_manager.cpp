@@ -130,8 +130,21 @@ namespace backend {
 				}
 			}
 
+			// for lambdas -- check reference name
+			if (name.empty() || isUsed(name)) {
+				if (auto lambda = ptr.isa<LambdaExprPtr>()) {
+					name = lambda->getReference()->getNameAsString();
+				}
+			}
+
+			// cut off everything before the last ::
+			auto columnPos = name.rfind("::");
+			if (columnPos != std::string::npos) {
+				name = name.substr(columnPos+2);
+			}
+
 			// use attached name if present
-			if(!name.empty() && !isUsed(name)) {
+			if(!name.empty() && name != "_" && !isUsed(name)) {
 				globalScope.names.insert(make_pair(ptr, name));
 				globalScope.usedNames.insert(name);
 				return name;

@@ -374,13 +374,13 @@ namespace backend {
 		)");
 
 		ASSERT_TRUE(program);
-		std::cout << "Program: " << dumpColor(program) << std::endl;
+		// std::cout << "Program: " << dumpColor(program) << std::endl;
 		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
 
 		// use sequential backend to convert into C++ code
 		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
 		ASSERT_TRUE((bool)converted);
-		std::cout << "Converted: \n" << *converted << std::endl;
+		// std::cout << "Converted: \n" << *converted << std::endl;
 
 		// check presence of relevant code
 		auto code = toString(*converted);
@@ -439,13 +439,13 @@ namespace backend {
 		)");
 
 		ASSERT_TRUE(program);
-		std::cout << "Program: " << dumpColor(program) << std::endl;
+		// std::cout << "Program: " << dumpColor(program) << std::endl;
 		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
 
 		// use sequential backend to convert into C++ code
 		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
 		ASSERT_TRUE((bool)converted);
-		std::cout << "Converted: \n" << *converted << std::endl;
+		// std::cout << "Converted: \n" << *converted << std::endl;
 
 		// check presence of relevant code
 		auto code = toString(*converted);
@@ -502,13 +502,13 @@ namespace backend {
 		)");
 
 		ASSERT_TRUE(program);
-		std::cout << "Program: " << dumpColor(program) << std::endl;
+		// std::cout << "Program: " << dumpColor(program) << std::endl;
 		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
 
 		// use sequential backend to convert into C++ code
 		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
 		ASSERT_TRUE((bool)converted);
-		std::cout << "Converted: \n" << *converted << std::endl;
+		// std::cout << "Converted: \n" << *converted << std::endl;
 
 		// check presence of relevant code
 		auto code = toString(*converted);
@@ -568,13 +568,13 @@ namespace backend {
 		)");
 
 		ASSERT_TRUE(program);
-		std::cout << "Program: " << dumpColor(program) << std::endl;
+		// std::cout << "Program: " << dumpColor(program) << std::endl;
 		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
 
 		// use sequential backend to convert into C++ code
 		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
 		ASSERT_TRUE((bool)converted);
-		std::cout << "Converted: \n" << *converted << std::endl;
+		// std::cout << "Converted: \n" << *converted << std::endl;
 
 		// check presence of relevant code
 		auto code = toString(*converted);
@@ -606,6 +606,64 @@ namespace backend {
 
 		EXPECT_PRED2(containsSubString, code, "virtual void f8() volatile;");
 		EXPECT_PRED2(containsSubString, code, "void A::f8() volatile {");
+
+		// try compiling the code fragment
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+	}
+
+	TEST(CppSnippet, MemberFunctionsRecursive) {
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+
+		// create a code fragment including some member functions
+		core::ProgramPtr program = builder.parseProgram(R"(
+				alias int = int<4>;
+
+				decl struct A;
+				decl r : A::()->unit;
+				decl f : A::()->unit;
+				decl g : A::()->unit; 
+
+				def struct A {
+					x : int;
+
+					lambda r : () -> unit { r(); }
+					lambda f : () -> unit { g(); }
+					lambda g : () -> unit { f(); }
+					
+				};
+
+				int main() {
+					var ref<A> a;
+					return 0;
+				}
+		)");
+
+		ASSERT_TRUE(program);
+		// std::cout << "Program: " << dumpColor(program) << std::endl;
+		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
+
+		// use sequential backend to convert into C++ code
+		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
+		ASSERT_TRUE((bool)converted);
+		// std::cout << "Converted: \n" << *converted << std::endl;
+
+		// check presence of relevant code
+		auto code = toString(*converted);
+		EXPECT_PRED2(containsSubString, code, "struct A");		// struct definition
+		EXPECT_PRED2(containsSubString, code, "A a;");			// variable definition
+
+		// check definition of the recursive functions
+		EXPECT_PRED2(containsSubString, code, "void r();");
+		EXPECT_PRED2(containsSubString, code, "void A::r() {");
+
+		EXPECT_PRED2(containsSubString, code, "void f();");
+		EXPECT_PRED2(containsSubString, code, "void A::f() {");
+
+		EXPECT_PRED2(containsSubString, code, "void g();");
+		EXPECT_PRED2(containsSubString, code, "void A::g() {");
 
 		// try compiling the code fragment
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();

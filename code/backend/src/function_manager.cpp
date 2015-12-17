@@ -763,7 +763,7 @@ namespace backend {
 			converter.getNameManager().setName(impl, name);
 
 			// convert implementation
-			auto res = resolveLambda(impl.as<core::LambdaExprPtr>());
+			auto res = resolve(impl.as<core::LambdaExprPtr>());
 
 			// correct virtual flag
 			c_ast::MemberFunctionPrototypePtr decl = res->declaration.as<c_ast::MemberFunctionPrototypePtr>();
