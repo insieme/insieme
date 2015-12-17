@@ -534,6 +534,86 @@ namespace backend {
 	}
 
 
+	TEST(CppSnippet, MemberFunctionsExausted) {
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+
+		// create a code fragment including some member functions
+		core::ProgramPtr program = builder.parseProgram(R"(
+				alias int = int<4>;
+
+				def struct A {
+					x : int;
+
+					lambda f1 : () -> unit { 10; }
+					const lambda f2 : () -> unit { 11; }
+					const volatile lambda f3 : () -> unit { 12; }
+					volatile lambda f4 : () -> unit { 13; }
+
+					virtual lambda f5 : () -> unit { 14; }
+					virtual const lambda f6 : () -> unit { 15; }
+					virtual const volatile lambda f7 : () -> unit { 16; }
+					virtual volatile lambda f8 : () -> unit { 17; }
+
+				};
+/*
+				def f : A::( x : int, y : int, z : int ) {
+					this->x = x + y + z;
+				};
+*/				
+				int main() {
+					var ref<A> a;
+					return 0;
+				}
+		)");
+
+		ASSERT_TRUE(program);
+		std::cout << "Program: " << dumpColor(program) << std::endl;
+		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
+
+		// use sequential backend to convert into C++ code
+		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
+		ASSERT_TRUE((bool)converted);
+		std::cout << "Converted: \n" << *converted << std::endl;
+
+		// check presence of relevant code
+		auto code = toString(*converted);
+		EXPECT_PRED2(containsSubString, code, "struct A");		// struct definition
+		EXPECT_PRED2(containsSubString, code, "A a;");			// variable definition
+
+		// check definition of six essential functions
+		EXPECT_PRED2(containsSubString, code, "void f1();");
+		EXPECT_PRED2(containsSubString, code, "void A::f1() {");
+
+		EXPECT_PRED2(containsSubString, code, "void f2() const;");
+		EXPECT_PRED2(containsSubString, code, "void A::f2() const {");
+
+		EXPECT_PRED2(containsSubString, code, "void f3() const volatile;");
+		EXPECT_PRED2(containsSubString, code, "void A::f3() const volatile {");
+
+		EXPECT_PRED2(containsSubString, code, "void f4() volatile;");
+		EXPECT_PRED2(containsSubString, code, "void A::f4() volatile {");
+
+
+		EXPECT_PRED2(containsSubString, code, "virtual void f5();");
+		EXPECT_PRED2(containsSubString, code, "void A::f5() {");
+
+		EXPECT_PRED2(containsSubString, code, "virtual void f6() const;");
+		EXPECT_PRED2(containsSubString, code, "void A::f6() const {");
+
+		EXPECT_PRED2(containsSubString, code, "virtual void f7() const volatile;");
+		EXPECT_PRED2(containsSubString, code, "void A::f7() const volatile {");
+
+		EXPECT_PRED2(containsSubString, code, "virtual void f8() volatile;");
+		EXPECT_PRED2(containsSubString, code, "void A::f8() volatile {");
+
+		// try compiling the code fragment
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+	}
+
+
 	TEST(CppSnippet, Counter) {
 		core::NodeManager manager;
 		core::IRBuilder builder(manager);
