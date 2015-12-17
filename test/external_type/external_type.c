@@ -13,6 +13,7 @@ int main() {
 
 	#ifndef _WIN32
 		struct utsname architecture;
+		uname(&architecture);
 		printf("%s\n", architecture.machine);
 	#endif
 }
