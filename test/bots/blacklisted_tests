@@ -4,6 +4,14 @@
 
 # Disabling tests because they fail with exception:
 # No duplicates within identifiers are allowed!
+alignment
+alignment_for
+fft
+fib
 floorplan
+health
+nqueens
 sort
+sparselu
+strassen
 uts

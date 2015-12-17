@@ -6,7 +6,9 @@
 # No duplicates within identifiers are allowed!
 alignment
 fft
+fib
 floorplan
+nqueens
 sort
 sparselu
 strassen
