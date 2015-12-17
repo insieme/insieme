@@ -45,6 +45,8 @@ S y = { 1, 5u };
 
 const S klaus_test[] = {{1,2u},{3,4u},{5,6u}};
 
+char char_arr[255] = "";
+
 #pragma test expect_ir(R"INSPIRE(
 def struct IMP_S { x: int<4>; y: uint<4>; };
 def IMP_main : ()->int<4> {
@@ -52,9 +54,11 @@ def IMP_main : ()->int<4> {
 	lit("y":ref<IMP_S>) = <IMP_S>{1, 5u};
 	ref_cast(lit("klaus_test":ref<array<IMP_S,3>,t,f>), type_lit(f), type_lit(f), type_lit(plain)) =
 		array_create(type_lit(3), [<IMP_S>{1,2u},<IMP_S>{3,4u},<IMP_S>{5,6u}]);
+	lit("char_arr":ref<array<char,255>,f,f>) = array_create(type_lit(255), [lit("'\0'":char)]);
 	*lit("initedGlobal":ref<int<4>>);
 	*lit("y":ref<IMP_S>);
 	ptr_from_array(lit("klaus_test":ref<array<IMP_S,3>,t,f>));
+	ptr_from_array(lit("char_arr":ref<array<char,255>,f,f>));
 	return 0;
 };
 IMP_main
@@ -63,5 +67,6 @@ int main() {
 	initedGlobal;
 	y;
 	klaus_test;
+	char_arr;
 	return 0;
 }
