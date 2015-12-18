@@ -702,14 +702,18 @@ namespace backend {
 				res->declaration = nullptr;
 
 			} else if(funType->isMemberFunction()) {
+
 				// add pure-virtual member function to class declaration
 				const auto& typeInfo = typeManager.getTypeInfo(core::analysis::getObjectType(funType));
 				res->prototype = typeInfo.definition;
 				res->prototype->addDependencies(fun.prototypeDependencies);
 
+				// parse reference type
+				core::lang::ReferenceType refType(funType->getParameterType(0));
+
 				// add declaration of pure-virtual function
 				c_ast::StructTypePtr classDecl = typeInfo.lValueType.as<c_ast::StructTypePtr>();
-				auto mFun = manager->create<c_ast::MemberFunction>(classDecl->name, fun.function);
+				auto mFun = manager->create<c_ast::MemberFunction>(classDecl->name, fun.function, refType.isConst(), refType.isVolatile());
 				auto decl = manager->create<c_ast::MemberFunctionPrototype>(mFun, true, true);
 				res->declaration = decl;
 				classDecl->members.push_back(decl);
@@ -743,8 +747,11 @@ namespace backend {
 		}
 
 		FunctionInfo* FunctionInfoStore::resolvePureVirtualMember(const core::PureVirtualMemberFunctionPtr&  pureVirtualMemberFun) {
-			assert_not_implemented();
-			return nullptr;
+
+			// create a literal of the propert type and resolve the literal
+			core::IRBuilder builder(pureVirtualMemberFun->getNodeManager());
+			return resolve(builder.literal(pureVirtualMemberFun->getName(), pureVirtualMemberFun->getType()));
+
 		}
 		
 		LambdaInfo* FunctionInfoStore::resolveLambda(const core::LambdaExprPtr& lambda) {
@@ -981,7 +988,7 @@ namespace backend {
 				        });
 
 			// B) create an entries within info table containing code fragments, wrappers and prototypes
-			for_each(lambdas, [&](const std::pair<c_ast::IdentifierPtr, core::LambdaExprPtr>& pair) {
+			for(const std::pair<c_ast::IdentifierPtr, core::LambdaExprPtr>& pair: lambdas) {
 
 				const c_ast::IdentifierPtr& name = pair.first;
 				const core::LambdaExprPtr& lambda = pair.second;
@@ -1092,10 +1099,10 @@ namespace backend {
 
 				// add includes
 				declarations->addIncludes(codeInfo.includes);
-			});
+			}
 
 			// C) create function definitions
-			for_each(lambdas, [&](const std::pair<c_ast::IdentifierPtr, core::LambdaExprPtr>& pair) {
+			for(const std::pair<c_ast::IdentifierPtr, core::LambdaExprPtr>& pair : lambdas) {
 
 				const c_ast::IdentifierPtr& name = pair.first;
 				const core::LambdaExprPtr& lambda = pair.second;
@@ -1130,7 +1137,7 @@ namespace backend {
 
 				// add includes
 				definitions->addIncludes(codeInfo.includes);
-			});
+			}
 		}
 
 		namespace {

@@ -671,6 +671,64 @@ namespace backend {
 		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
 	}
 
+	TEST(CppSnippet, PureVirtualMemberFunctions) {
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+
+		// create a code fragment including some member functions
+		core::ProgramPtr program = builder.parseProgram(R"(
+				alias int = int<4>;
+
+				def struct A {
+					x : int;
+
+					pure virtual f1 : () -> unit
+					pure virtual const f2 : () -> unit
+					pure virtual const volatile f3 : () -> unit
+					pure virtual volatile f4 : () -> unit
+					
+				};
+
+				def struct B : [public A] {
+
+					virtual lambda f1 : () -> unit { }
+					virtual const lambda f2 : () -> unit { }
+					virtual const volatile lambda f3 : () -> unit { }
+					virtual volatile lambda f4 : () -> unit { }
+					
+				};
+
+				int main() {
+					var ref<B> a;
+					return 0;
+				}
+		)");
+
+		ASSERT_TRUE(program);
+		// std::cout << "Program: " << dumpColor(program) << std::endl;
+		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
+
+		// use sequential backend to convert into C++ code
+		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
+		ASSERT_TRUE((bool)converted);
+		// std::cout << "Converted: \n" << *converted << std::endl;
+
+		// check presence of relevant code
+		auto code = toString(*converted);
+		EXPECT_PRED2(containsSubString, code, "struct A");		// struct definition
+		EXPECT_PRED2(containsSubString, code, "B a;");			// variable definition
+
+		EXPECT_PRED2(containsSubString, code, "virtual void f1() =0;");
+		EXPECT_PRED2(containsSubString, code, "virtual void f2() const =0;");
+		EXPECT_PRED2(containsSubString, code, "virtual void f3() const volatile =0;");
+		EXPECT_PRED2(containsSubString, code, "virtual void f4() volatile =0;");
+
+		// try compiling the code fragment
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+	}
+
 
 	TEST(CppSnippet, Counter) {
 		core::NodeManager manager;
