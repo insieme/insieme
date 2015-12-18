@@ -556,13 +556,16 @@ namespace backend {
 					virtual volatile lambda f8 : () -> unit { 17; }
 
 				};
+
 /*
-				def f : A::( x : int, y : int, z : int ) {
+				def f9 : A::( x : int, y : int, z : int )->unit {
 					this->x = x + y + z;
 				};
-*/				
+*/
+				
 				int main() {
 					var ref<A> a;
+					// a.f9();
 					return 0;
 				}
 		)");
