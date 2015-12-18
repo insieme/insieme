@@ -307,7 +307,7 @@ namespace backend {
 		const TypeInfo* TypeInfoStore::resolveInternal(const core::TypePtr& in) {
 
 			// normalize all types
-			auto type = core::analysis::normalize(in);
+			auto type = core::analysis::normalize(core::analysis::getCanonicalType(in));
 
 			// lookup information within cache
 			auto pos = typeInfos.find(type);
@@ -1405,11 +1405,11 @@ namespace backend {
 			// B) unroll types and add definitions
 			for(const core::TagTypeBindingPtr& cur : ptr->getDefinitions()) {
 
-				// obtain peeled type
+				// obtain current tag type
 				core::TagTypePtr recType = core::TagType::get(nodeManager, cur->getTag(), ptr);
 
-				// fix name of peeled struct
-				nameManager.setName(recType, nameManager.getName(recType));
+				// fix name of tag type
+				nameManager.setName(recType->getRecord(), nameManager.getName(recType));
 
 				// get reference to pointer within map (needs to be updated)
 				TypeInfo*& curInfo = const_cast<TypeInfo*&>(typeInfos.at(recType->getTag()));
