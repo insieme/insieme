@@ -155,8 +155,10 @@ namespace parser {
 			if(op == "=") {
 				if(!analysis::isRefType(left.getType())) {
 					error(l, format("left side on assignment must be a reference and is %s", toString(left.getType())));
+					return nullptr;
 				} else if(analysis::getReferencedType(left.getType()) != right->getType()) {
 					error(l, format("right side expression of type %s can not be assingend to type %s", toString(right.getType()), toString(left.getType())));
+					return nullptr;
 				}
 
 				return builder.assign(left, right);
@@ -355,15 +357,21 @@ namespace parser {
 
 		TypePtr InspireDriver::genGenericType(const location& l, const std::string& name, const ParentList& parents, const TypeList& params) {
 			if(name == "int") {
-				if(params.size() != 1) { error(l, "wrong int size"); }
+				if(params.size() != 1) {
+					error(l, "wrong int size");
+					return nullptr;
+				}
 			}
 			if(name == "real") {
-				if(params.size() != 1) { error(l, "wrong real size"); }
+				if(params.size() != 1) {
+					error(l, "wrong real size");
+					return nullptr;
+				}
 			}
 			for(const auto& p : params) {
 				if(!p) {
-					std::cerr << "wrong parameter in paramenter list" << std::endl;
-					abort();
+					error(l, "wrong parameter in paramenter list");
+					return nullptr;
 				}
 			}
 
@@ -371,7 +379,10 @@ namespace parser {
 		}
 
 		NumericTypePtr InspireDriver::genNumericType(const location& l, const ExpressionPtr& variable) const {
-			if(!variable.isa<VariablePtr>()) { error(l, "not a variable"); }
+			if(!variable.isa<VariablePtr>()) {
+				error(l, "not a variable");
+				return nullptr;
+			}
 			return builder.numericType(variable.as<core::VariablePtr>());
 		}
 
