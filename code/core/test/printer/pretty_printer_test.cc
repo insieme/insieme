@@ -305,13 +305,13 @@ TEST(PrettyPrinter, Declarations) {
 								  | PrettyPrinter::PRINT_DERIVED_IMPL);
 
 	EXPECT_EQ(toString(printer2), ""
-		"decl struct B;\n"
 		"decl struct A;\n"
-		"def struct B: [ public A ] {\n"
-		"};\n"
-		"def struct A {\n"
-		"};\n"
-		"B") << printer2;
+	    "decl struct B;\n"
+	    "def struct A {\n"
+	    "};\n"
+	    "def struct B: [ public A ] {\n"
+	    "};\n"
+	    "B") << printer2;
 
 
 	auto type1 = builder.normalize(builder.parseType("def struct A { "
