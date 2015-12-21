@@ -320,7 +320,7 @@ namespace analysis {
 
 	bool isaDefaultConstructor(const TagTypePtr& type, const ExpressionPtr& ctor) {
 		auto record = type->getRecord();
-		IRBuilder builder(type->getNodeManager());
+		IRBuilder builder(record->getNodeManager());
 		auto thisType = builder.refType(builder.tagTypeReference(record->getName()));
 
 		auto checkCtor = [&](const ExpressionPtr& ctor, const ExpressionPtr& candidate)->bool {
