@@ -311,6 +311,8 @@ definition : "def" record_definition                                        { $$
 
 main : type "identifier" "(" parameters                                     { driver.openScope(); driver.registerParameters(@4, $4); }
                                         ")" compound_statement              { $$ = driver.builder.createProgram({driver.genFunctionDefinition(@$, $2, driver.genLambda(@$, $4, $1, $7))}); driver.closeScope(); }
+     | type "function" "identifier" "(" parameters                          { driver.inLambda = false; driver.openScope(); driver.registerParameters(@5, $5); }
+                                        ")" compound_statement              { $$ = driver.builder.createProgram({driver.genFunctionDefinition(@$, $3, driver.genLambda(@$, $5, $1, $8))}); driver.closeScope(); driver.inLambda = true; }
      ;
 
 //    -- record_declarations -------------------------------------
