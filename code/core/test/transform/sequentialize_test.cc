@@ -88,21 +88,21 @@ namespace transform {
 
 
 		auto res = analysis::normalize(transform::trySequentialize(mgr, code));
-		EXPECT_EQ("decl fun000 : (ref<'a,f,'v,plain>, 'a) -> 'a;\n"
-				  "decl fun001 : (ref<'a,f,'v,plain>, 'a) -> 'a;\n"
-				  "def fun000 : function (v0 : ref<ref<'a,f,'v,plain>,f,f,plain>, v1 : ref<'a,f,f,plain>) -> 'a {\n"
+		EXPECT_EQ("decl atomic_fetch_and_add : (ref<'a,f,'v,plain>, 'a) -> 'a;\n"
+				  "decl fun000 : (ref<'a,f,'v,plain>, 'a) -> 'a;\n"
+				  "def atomic_fetch_and_add : function (v0 : ref<ref<'a,f,'v,plain>,f,f,plain>, v1 : ref<'a,f,f,plain>) -> 'a {\n"
 				  "    (v2 : 'a)=> id(true);\n"
 				  "    (v3 : 'a)=> gen_add(v3, *v1);\n"
-				  "    return fun001(*v0, *v1);\n"
+				  "    return fun000(*v0, *v1);\n"
 				  "};\n"
-				  "def fun001 : function (v0 : ref<ref<'a,f,'v,plain>,f,f,plain>, v1 : ref<'a,f,f,plain>) -> 'a {\n"
+				  "def fun000 : function (v0 : ref<ref<'a,f,'v,plain>,f,f,plain>, v1 : ref<'a,f,f,plain>) -> 'a {\n"
 				  "    var 'a v2 = **v0;\n"
 				  "    *v0 = gen_add(**v0, *v1);\n"
 				  "    return v2;\n"
 				  "};\n"
 				  "{\n"
 				  "    var ref<int<4>,f,f,plain> v0 = ref_var_init(2);\n"
-				  "    fun000(v0, 10);\n"
+				  "    atomic_fetch_and_add(v0, 10);\n"
 				  "}", toString(printer::PrettyPrinter(res))) << printer::PrettyPrinter(res);
 
 		EXPECT_TRUE(check(res, checks::getFullCheck()).empty()) << check(res, checks::getFullCheck());

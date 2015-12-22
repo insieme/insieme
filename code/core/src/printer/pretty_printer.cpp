@@ -41,6 +41,8 @@
 #include <iomanip>
 #include <stack>
 
+#include <ctime>
+
 #include <boost/unordered_map.hpp>
 #include <boost/iostreams/stream.hpp>
 #include <boost/iostreams/concepts.hpp>
@@ -246,6 +248,7 @@ namespace printer {
 				// reset setup
 				letBindings.clear();
 
+				// get all entry-points
 				if (const auto& program = node.isa<ProgramPtr>()) {
 					for (auto& entry : program->getEntryPoints()) {
 						const auto& lambdaExpr = entry.as<LambdaExprPtr>();
@@ -267,18 +270,25 @@ namespace printer {
 
 				int funCounter = 0;
 				auto extractName = [&](const NodePtr& cur) {
+					std::string result = "_";
 					if (annotations::hasAttachedName(cur)) {
-						return annotations::getAttachedName(cur);
+						result = annotations::getAttachedName(cur);
 					} else if (lang::isDerived(cur)) {
-						return lang::getConstructName(cur);
+						result = lang::getConstructName(cur);
 					} else if (auto binding = cur.isa<LambdaBindingPtr>()) {
-						return binding->getReference()->getNameAsString();
-					} else {
-						return format("fun%03d", funCounter++);
+						result = binding->getReference()->getNameAsString();
+					} else if (auto expr = cur.isa<LambdaExprPtr>()) {
+						result = expr->getReference()->getNameAsString();
 					}
+
+					if (result == "_") {
+						result = format("fun%03d", funCounter++);
+					}
+
+					return result;
 				};
 
-				//
+				// get all lambda names out of member functions
 				visitDepthFirstOnce(node, [&](const TagTypePtr& cur) {
 					const auto& definition = cur->getDefinition();
 
@@ -294,7 +304,7 @@ namespace printer {
 					}
 				});
 
-					// get all lambda/function names
+				// get all lambda/function names
 				// visit all lambdas to get names of all non-recursive functions
 				visitDepthFirstOnce(node, [&](const LambdaExprPtr& cur) {
 					const auto& defaultRef = cur->getReference();
@@ -406,8 +416,10 @@ namespace printer {
 							if (!constructors.empty()) {
 								for (auto constr : constructors) {
 									if (!printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) &&
-										analysis::isaDefaultConstructor(tag, constr))
+										analysis::isaDefaultConstructor(tag, constr)) {
 										continue;
+									}
+
 									if (auto ctor = constr.isa<LambdaExprPtr>()) {
 										newLine();
 										out << "decl ctor:" << tagName << "::";
@@ -433,6 +445,7 @@ namespace printer {
 									}
 								}
 							}
+
 							// TODO: wait unit pure virtual member funcs are implemented in the nodemanager
 						}
 					}
