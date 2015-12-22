@@ -610,28 +610,28 @@ namespace parser {
 		EXPECT_TRUE(analysis::equalNameless(funB, funD)) << "funB: " << funB << "\nfunD: " << funD << "\n";;
 
 		EXPECT_TRUE(test_expression(nm, "decl foo : (int<4>) -> int<4>;" //self-recursion
-		                                "def foo : (a : int<4>) -> int<4> { return foo(a); }; foo"));
+		                                "def foo = (a : int<4>) -> int<4> { return foo(a); }; foo"));
 
 		EXPECT_TRUE(test_expression(nm, "decl foo : (int<4>) -> int<4>;" //mutual recursion
 		                                "decl bar : (int<4>) -> int<4>;"
-		                                "def bar : (a : int<4>) -> int<4> { return foo(a); };"
-		                                "def foo : (a : int<4>) -> int<4> { return bar(a); };"
+		                                "def bar = (a : int<4>) -> int<4> { return foo(a); };"
+		                                "def foo = (a : int<4>) -> int<4> { return bar(a); };"
 		                                "foo"));
 
 		EXPECT_TRUE(test_expression(nm, "decl foo : (int<4>) -> int<4>;" //mutual recursion without declarations for both functions
-		                                "def bar : (a : int<4>) -> int<4> { return foo(a); };"
-		                                "def foo : (a : int<4>) -> int<4> { return bar(a); };"
+		                                "def bar = (a : int<4>) -> int<4> { return foo(a); };"
+		                                "def foo = (a : int<4>) -> int<4> { return bar(a); };"
 		                                "foo"));
 
 		EXPECT_TRUE(test_expression(nm, "decl foo : (int<4>) -> int<4>;" //mutual recursion without declarations for each function
-		                                "def bar : (a : int<4>) -> int<4> { return foo(a); };"
-		                                "def baz : (a : int<4>) -> int<4> { return bar(a); };"
-		                                "def foo : (a : int<4>) -> int<4> { return baz(a); };"
+		                                "def bar = (a : int<4>) -> int<4> { return foo(a); };"
+		                                "def baz = (a : int<4>) -> int<4> { return bar(a); };"
+		                                "def foo = (a : int<4>) -> int<4> { return baz(a); };"
 		                                "foo"));
 
 		{ //ensure that functions and lambdas end up the same when written correctly
-			auto type1 = builder.parseType("def a : ()->unit { }; a");
-			auto type2 = builder.parseType("def a : function ()->unit { }; a");
+			auto type1 = builder.parseType("def a = ()->unit { }; a");
+			auto type2 = builder.parseType("def a = function ()->unit { }; a");
 
 			ASSERT_TRUE(checks::check(type1).empty()) << checks::check(type1);
 			ASSERT_TRUE(checks::check(type2).empty()) << checks::check(type2);
@@ -640,8 +640,8 @@ namespace parser {
 		}
 
 		{ //ensure that functions and lambdas end up the same when written correctly
-			auto type1 = builder.parseType("def a : (b : int<4>)->int<4> { return b; }; a");
-			auto type2 = builder.parseType("def a : function (b : ref<int<4>,f,f,plain>)->int<4> { return *b; }; a");
+			auto type1 = builder.parseType("def a = (b : int<4>)->int<4> { return b; }; a");
+			auto type2 = builder.parseType("def a = function (b : ref<int<4>,f,f,plain>)->int<4> { return *b; }; a");
 
 			ASSERT_TRUE(checks::check(type1).empty()) << checks::check(type1);
 			ASSERT_TRUE(checks::check(type2).empty()) << checks::check(type2);
@@ -872,20 +872,20 @@ namespace parser {
 
 	TEST(IR_Parser, Program) {
 		NodeManager nm;
-		EXPECT_TRUE(test_program(nm, "int<4> main (a : ref<int<4>,f,f,plain>, b : ref<int<4>,f,f,plain>) { return 1+1; }"));
+		EXPECT_TRUE(test_program(nm, "int<4> main (a : ref<int<4>,f,f,plain>, b : ref<int<4>,f,f,plain>)  { return 1+1; }"));
 		EXPECT_TRUE(test_program(nm, "alias int = int<4>; int main (a : ref<int,f,f,plain>, b : ref<int,f,f,plain>) { return 1+1; }"));
-		EXPECT_TRUE(test_program(nm, "alias int = int<4>; def f : (a : int) -> int { return a; }; int main (a : ref<int,f,f,plain>, b : ref<int,f,f,plain>) { return f(1); }"));
+		EXPECT_TRUE(test_program(nm, "alias int = int<4>; def f = (a : int) -> int { return a; }; int main (a : ref<int,f,f,plain>, b : ref<int,f,f,plain>) { return f(1); }"));
 		EXPECT_TRUE(test_program(nm, "alias int = int<4>;"
-		                             "def h : (f : (int)->int) -> int { return f(5); };"
+		                             "def h = (f : (int)->int) -> int { return f(5); };"
 		                             "decl f : (int) -> int;"
 		                             "decl g : (int) -> int;"
-		                             "def f : (a : int) -> int {"
+		                             "def f = (a : int) -> int {"
 		                             "    h(f);"
 		                             "    f(4);"
 		                             "    g(f(4));"
 		                             "    return h(g);"
 		                             "};"
-		                             "def g : (a : int) -> int {"
+		                             "def g = (a : int) -> int {"
 		                             "    h(f);"
 		                             "    f(g(4));"
 		                             "    g(4);"
@@ -1196,7 +1196,7 @@ namespace parser {
 	TEST(IRParser, TypedExpression) {
 		NodeManager nm;
 
-		const std::string commonCode = "def g : (a : int<4>) -> unit {};";
+		const std::string commonCode = "def g = (a : int<4>) -> unit {};";
 
 		//calling with the correct type
 		EXPECT_TRUE(test_statement(nm, commonCode + "{ g(42); }"));

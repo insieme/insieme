@@ -6,7 +6,7 @@ alias double = real<8>;
 
 alias matrix = array<array<double,100>,100>;
 
-def initUniform : (elem : 'elem, size : type<'a>) -> array<'elem,'a>{
+def initUniform = (elem : 'elem, size : type<'a>) -> array<'elem,'a>{
 					var ref<array<'elem,'a>> res;
 					for(int i=0 .. 100) {
 						res[i] = elem;

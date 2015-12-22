@@ -171,7 +171,7 @@ namespace measure {
 		IRBuilder builder(manager);
 
 		vector<NodeAddress> stmts = builder.parseAddressesStatement(""
-																	"def load : (n : int<4>)->int<4> {"
+																	"def load = (n : int<4>)->int<4> {"
 																	"	var ref<int<4>> sum = ref_var_init(0);"
 																	"	for(int<4> i = 0 .. n) {"
 																	"			sum = sum / i;"

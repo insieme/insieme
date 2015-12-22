@@ -60,7 +60,7 @@ namespace backend {
 		core::ProgramPtr program = builder.parseProgram(R"(
 				alias int = int<4>;
 				
-				def f : ( x : ref<int,f,f>, y : cpp_ref<int,f,f>, z : cpp_ref<int,t,f>, w : cpp_ref<int,t,t> ) -> int {
+				def f = ( x : ref<int,f,f>, y : cpp_ref<int,f,f>, z : cpp_ref<int,t,f>, w : cpp_ref<int,t,t> ) -> int {
 					return *x + *y + *z + *w;
 				};
 				
@@ -97,9 +97,9 @@ namespace backend {
 		core::ProgramPtr program = builder.parseProgram(R"(
 				alias int = int<4>;
 				
-				def g : () -> int { return 12; };
+				def g = () -> int { return 12; };
 
-				def f : ( y : cpp_rref<int,f,f>, z : cpp_rref<int,t,f>, w : cpp_rref<int,t,t> ) -> int {
+				def f = ( y : cpp_rref<int,f,f>, z : cpp_rref<int,t,f>, w : cpp_rref<int,t,t> ) -> int {
 					return *y + *z + *w;
 				};
 				
@@ -558,7 +558,7 @@ namespace backend {
 				};
 
 /*
-				def f9 : A::( x : int, y : int, z : int )->unit {
+				def f = A::( x : int, y : int, z : int )->unit {
 					this->x = x + y + z;
 				};
 */

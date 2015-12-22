@@ -118,7 +118,7 @@ namespace analysis {
 		IRBuilder builder(manager);
 
 		auto code = builder.parseExpr("decl f : (int<4>)->int<4>;"
-			                          "def f : (x : int<4>)->int<4> {"
+			                          "def f = (x : int<4>)->int<4> {"
 			                          "	return (y : int<4>)->int<4> {"
 			                          "		return f(y);"
 			                          "	}(x);"
@@ -132,7 +132,7 @@ namespace analysis {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
-		auto code = builder.parseExpr("def x : () -> unit {"
+		auto code = builder.parseExpr("def x = () -> unit {"
 		                              "	var int<inf> v40 = 3;"
 		                              "	var ref<array<int<4>,#v40>,f,f,plain> v50;"
 		                              "}; x()");
