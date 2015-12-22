@@ -543,7 +543,7 @@ namespace backend {
 		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
 	}
 
-	TEST(FunctionCall, DebugCodePrinting) {
+	TEST(Debugging, DebugCodePrinting) {
 		core::NodeManager manager;
 		core::IRBuilder builder(manager);
 
@@ -618,7 +618,7 @@ namespace backend {
 		}
 	}
 
-	TEST(FunctionCall, RecursiveTypesSimple) {
+	TEST(Types, RecursiveTypesSimple) {
 		core::NodeManager manager;
 		core::IRBuilder builder(manager);
 
@@ -661,7 +661,7 @@ namespace backend {
 
 	}
 
-	TEST(FunctionCall, RecursiveTypesMutual) {
+	TEST(Types, RecursiveTypesMutual) {
 		core::NodeManager manager;
 		core::IRBuilder builder(manager);
 
@@ -706,6 +706,145 @@ namespace backend {
 
 	}
 
+	TEST(Functions, RecursiveFunctionSimple) {
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+
+		core::ProgramPtr program = builder.parseProgram(
+			R"(
+				alias int = int<4>;
+		
+				decl f : ()->unit;		
+				def f : ()->unit { f(); };
+			
+				int main() {
+					f();
+					return 0;
+				}
+			)"
+		);
+
+		ASSERT_TRUE(program);
+
+		// check for semantic errors
+		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
+
+		// create backend instance
+		auto be = sequential::SequentialBackend::getDefault();
+
+		LOG(INFO) << "Converting IR to C...";
+		auto converted = be->convert(program);
+		LOG(INFO) << "Printing converted code: " << *converted;
+
+		string code = toString(*converted);
+
+		EXPECT_PRED2(notContainsSubString, code, "<?>");
+		EXPECT_PRED2(notContainsSubString, code, "<a>");
+		EXPECT_PRED2(notContainsSubString, code, "UNSUPPORTED");
+
+		// try compiling the code fragment
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-lm");
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+
+	}
+
+	TEST(Functions, RecursiveFunctionMutual) {
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+
+		core::ProgramPtr program = builder.parseProgram(
+			R"(
+				alias int = int<4>;
+
+				decl f : ()->unit;
+				decl g : ()->unit;
+		
+				def f : ()->unit { g(); };
+				def g : ()->unit { f(); };
+			
+				int main() {
+					f();
+					g();
+					return 0;
+				}
+			)"
+		);
+
+		ASSERT_TRUE(program);
+
+		// check for semantic errors
+		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
+
+		// create backend instance
+		auto be = sequential::SequentialBackend::getDefault();
+
+		LOG(INFO) << "Converting IR to C...";
+		auto converted = be->convert(program);
+		LOG(INFO) << "Printing converted code: " << *converted;
+
+		string code = toString(*converted);
+
+		EXPECT_PRED2(notContainsSubString, code, "<?>");
+		EXPECT_PRED2(notContainsSubString, code, "<a>");
+		EXPECT_PRED2(notContainsSubString, code, "UNSUPPORTED");
+
+		// try compiling the code fragment
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-lm");
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+
+	}
+
+	TEST(Functions, RecursiveFunctionEvenOdd) {
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+
+		core::ProgramPtr program = builder.parseProgram(
+			R"(
+				alias int = int<4>;
+
+				decl even : ( int )->bool;
+				decl odd  : ( int )->bool;
+		
+				def even : ( x : int )->bool { return ( x == 0 ) ? true : odd(x-1); };
+				def odd  : ( x : int )->bool { return ( x == 0 ) ? false : even(x-1); };
+			
+				int main() {
+					even(10);
+					odd(12);
+					return 0;
+				}
+			)"
+		);
+
+		ASSERT_TRUE(program);
+
+		// check for semantic errors
+		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
+
+		// create backend instance
+		auto be = sequential::SequentialBackend::getDefault();
+
+		LOG(INFO) << "Converting IR to C...";
+		auto converted = be->convert(program);
+		LOG(INFO) << "Printing converted code: " << *converted;
+
+		string code = toString(*converted);
+
+		EXPECT_PRED2(notContainsSubString, code, "<?>");
+		EXPECT_PRED2(notContainsSubString, code, "<a>");
+		EXPECT_PRED2(notContainsSubString, code, "UNSUPPORTED");
+
+		// try compiling the code fragment
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-lm");
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+
+	}
 
 } // namespace backend
 } // namespace insieme

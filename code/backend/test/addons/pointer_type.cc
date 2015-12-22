@@ -149,7 +149,7 @@ namespace runtime {
 		EXPECT_EQ(      "(volatile char*)x", convert("ptr_cast(x,type_lit(f),type_lit(t))"));
 		EXPECT_EQ("(const volatile char*)x", convert("ptr_cast(x,type_lit(t),type_lit(t))"));
 
-		EXPECT_EQ("m.data", convert("ptr_from_array(m)"));
+		EXPECT_EQ("(char*)(&m)", convert("ptr_from_array(m)"));
 		EXPECT_EQ("n", convert("ptr_from_array(n)"));
 
 		// check pointer subscript

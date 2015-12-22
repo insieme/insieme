@@ -155,8 +155,10 @@ namespace parser {
 			if(op == "=") {
 				if(!analysis::isRefType(left.getType())) {
 					error(l, format("left side on assignment must be a reference and is %s", toString(left.getType())));
+					return nullptr;
 				} else if(analysis::getReferencedType(left.getType()) != right->getType()) {
 					error(l, format("right side expression of type %s can not be assingend to type %s", toString(right.getType()), toString(left.getType())));
+					return nullptr;
 				}
 
 				return builder.assign(left, right);
@@ -355,15 +357,21 @@ namespace parser {
 
 		TypePtr InspireDriver::genGenericType(const location& l, const std::string& name, const ParentList& parents, const TypeList& params) {
 			if(name == "int") {
-				if(params.size() != 1) { error(l, "wrong int size"); }
+				if(params.size() != 1) {
+					error(l, "wrong int size");
+					return nullptr;
+				}
 			}
 			if(name == "real") {
-				if(params.size() != 1) { error(l, "wrong real size"); }
+				if(params.size() != 1) {
+					error(l, "wrong real size");
+					return nullptr;
+				}
 			}
 			for(const auto& p : params) {
 				if(!p) {
-					std::cerr << "wrong parameter in paramenter list" << std::endl;
-					abort();
+					error(l, "wrong parameter in paramenter list");
+					return nullptr;
 				}
 			}
 
@@ -371,7 +379,10 @@ namespace parser {
 		}
 
 		NumericTypePtr InspireDriver::genNumericType(const location& l, const ExpressionPtr& variable) const {
-			if(!variable.isa<VariablePtr>()) { error(l, "not a variable"); }
+			if(!variable.isa<VariablePtr>()) {
+				error(l, "not a variable");
+				return nullptr;
+			}
 			return builder.numericType(variable.as<core::VariablePtr>());
 		}
 
@@ -539,6 +550,14 @@ namespace parser {
 			if(!isSymbolDeclaredInGlobalScope(memberName)) { declareSymbolInGlobalScope(l, memberName, key); }
 		}
 
+		StatementPtr InspireDriver::replaceThisInBody(const location& l, const StatementPtr& body, const VariablePtr& thisParam) {
+			if (inLambda) {
+				return transform::replaceAll(mgr, body, genThis(l), thisParam).as<StatementPtr>();
+			} else {
+				return transform::replaceAll(mgr, body, genThis(l), builder.deref(thisParam)).as<StatementPtr>();
+			}
+		}
+
 		/**
 		 * generates a constructor for the currently defined record type
 		 */
@@ -552,14 +571,15 @@ namespace parser {
 			// create full parameter list
 			VariableList ctorParams;
 			ctorParams.push_back(thisParam);
-			for(const auto& cur : params)
+			for(const auto& cur : params) {
 				ctorParams.push_back(cur);
+			}
 
 			auto paramTypes = getParamTypesForLambdaAndFunction(l, ctorParams);
 			if(paramTypes.size() != params.size() + 1) { return nullptr; }
 
 			// update body
-			auto newBody = transform::replaceAll(mgr, body, genThis(l), thisParam).as<StatementPtr>();
+			auto newBody = replaceThisInBody(l, body, thisParam);
 
 			// create constructor type
 			auto ctorType = builder.functionType(paramTypes, builder.refType(getThisType()), FK_CONSTRUCTOR);
@@ -595,7 +615,7 @@ namespace parser {
 			if(paramTypes.size() != 1) { return nullptr; }
 
 			// update body
-			auto newBody = transform::replaceAll(mgr, body, genThis(l), thisParam).as<StatementPtr>();
+			auto newBody = replaceThisInBody(l, body, thisParam);
 
 			// create destructor type
 			auto dtorType = builder.functionType(paramTypes, builder.refType(getThisType()), FK_DESTRUCTOR);
@@ -633,10 +653,14 @@ namespace parser {
 			}
 
 			// update body
-			auto newBody = transform::replaceAll(mgr, body, genThis(l), thisParam).as<StatementPtr>();
+			auto newBody = replaceThisInBody(l, body, thisParam);
 
 			// create the member function
 			auto fun = genLambda(l, fullParams, retType, newBody, FK_MEMBER_FUNCTION);
+			//ensure that the lambda got created without errors
+			if (!fun) {
+				return nullptr;
+			}
 
 			auto memberFunType = fun->getFunctionType();
 			assert_false(fun->isRecursive()) << "The parser should not produce recursive functions!";
@@ -1104,33 +1128,7 @@ namespace parser {
 		}
 
 		ExpressionPtr InspireDriver::genThis(const location& l) {
-			if(inLambda) {
-				return genThisInLambda(l);
-			} else {
-				return genThisInFunction(l);
-			}
-		}
-
-		ExpressionPtr InspireDriver::genThisInLambda(const location& l) {
-			// check valid scope
-			if(currentRecordStack.empty()) {
-				error(l, "This-pointer in non-record context!");
-				return nullptr;
-			}
-
-			// build a literal
 			return builder.literal("this", builder.refType(getThisType()));
-		}
-
-		ExpressionPtr InspireDriver::genThisInFunction(const location& l) {
-			// check valid scope
-			if(currentRecordStack.empty()) {
-				error(l, "This-pointer in non-record context!");
-				return nullptr;
-			}
-
-			// build a literal
-			return builder.literal("this", builder.refType(builder.refType(getThisType())));
 		}
 
 		void InspireDriver::computeResult(const NodePtr& fragment) {

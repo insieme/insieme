@@ -279,6 +279,16 @@ TEST(ContainerUtils, transform) {
 	EXPECT_TRUE(equals(mapB, mapResult));
 }
 
+TEST(ContainerUtils, IsContainer) {
+	using AContainer = std::vector<int>;
+	using AlsoAContainer = std::map<char, string>;
+	using NotAContainer = struct bla { };
+
+	EXPECT_TRUE(is_container<AContainer>::value);
+	EXPECT_TRUE(is_container<AlsoAContainer>::value);
+	EXPECT_FALSE(is_container<NotAContainer>::value);
+}
+
 TEST(Tuple, RemoveHead) {
 	std::tuple<int, int, bool> t{2, 2, false};
 	EXPECT_EQ(3u, std::tuple_size<decltype(t)>::value);

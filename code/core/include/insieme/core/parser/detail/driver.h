@@ -259,6 +259,13 @@ namespace parser {
 			 */
 			void registerField(const location l, const std::string& recordName, const std::string& fieldName, const TypePtr& fieldType);
 
+		  private:
+			/**
+			 * Replaces every occurence of the this literal in the body with the correct usage of the given thisParam
+			 */
+			StatementPtr replaceThisInBody(const location& l, const StatementPtr& body, const VariablePtr& thisParam);
+		  public:
+
 			/**
 			 * generates a constructor for the currently defined record type
 			 */
@@ -379,16 +386,6 @@ namespace parser {
 			 * constructs a literal referencing the current object
 			 */
 			ExpressionPtr genThis(const location& l);
-
-			/**
-			 * constructs a literal referencing the current object in a lambda
-			 */
-			ExpressionPtr genThisInLambda(const location& l);
-
-			/**
-			 * constructs a literal referencing the current object in a function
-			 */
-			ExpressionPtr genThisInFunction(const location& l);
 
 		  private:
 			GenericTypePtr getThisTypeForLambdaAndFunction(const bool cnst, const bool voltile);

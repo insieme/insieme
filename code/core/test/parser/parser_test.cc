@@ -313,23 +313,76 @@ namespace parser {
 		                          "  lambda g : (a : int<4>) -> int<4> { return f(5); }"
 		                          "}"));
 
-		EXPECT_TRUE(test_type(nm, "decl struct class;" //reference out own member function which has been declared previously
+		EXPECT_TRUE(test_type(nm, "def struct A {" //reference our own member function (function variant)
+		                          "  function f : () -> int<4> { return 1; }"
+		                          "  function g : () -> int<4> { return f(); }"
+		                          "}; A"));
+
+		EXPECT_TRUE(test_type(nm, "struct class {" //reference out own member function (with parameters) (function variant)
+		                          "  function f : (a : ref<int<4>,f,f,plain>) -> int<4> { return 42; }"
+		                          "  function g : (a : ref<int<4>,f,f,plain>) -> int<4> { return f(*a); }"
+		                          "}"));
+
+		EXPECT_TRUE(test_type(nm, "decl struct class;" //reference our own member function which has been declared previously
 		                          "decl g : class::() -> int<4>;"
 		                          "struct class {"
 		                          "  lambda f : () -> int<4> { return 42; }"
 		                          "  lambda g : () -> int<4> { return f(); }"
 		                          "}"));
 
-		EXPECT_TRUE(test_type(nm, "decl struct class;" //reference out own member function which has been declared previously (with parameters)
+		EXPECT_TRUE(test_type(nm, "decl struct class;" //reference our own member function which has been declared previously (with parameters)
 		                          "decl g : class::(int<4>) -> int<4>;"
 		                          "struct class {"
 		                          "  lambda f : (a : int<4>) -> int<4> { return 42; }"
 		                          "  lambda g : (a : int<4>) -> int<4> { return f(5); }"
 		                          "}"));
 
+		EXPECT_TRUE(test_type(nm, "decl struct class;" //reference our own member function which has been declared previously (function variant)
+		                          "decl g : class::() -> int<4>;"
+		                          "struct class {"
+		                          "  function f : () -> int<4> { return 42; }"
+		                          "  function g : () -> int<4> { return f(); }"
+		                          "}"));
+
+		EXPECT_TRUE(test_type(nm, "decl struct class;" //reference our own member function which has been declared previously (with parameters) (function variant)
+		                          "decl g : class::(int<4>) -> int<4>;"
+		                          "struct class {"
+		                          "  function f : (a : ref<int<4>,f,f,plain>) -> int<4> { return 42; }"
+		                          "  function g : (a : ref<int<4>,f,f,plain>) -> int<4> { return f(*a); }"
+		                          "}"));
+
+		EXPECT_TRUE(test_type(nm, "decl struct class;" //reference the current member function which has been declared previously
+		                          "decl f : class::() -> int<4>;"
+		                          "struct class {"
+		                          "  lambda f : () -> int<4> { return f(); }"
+		                          "}"));
+
+		EXPECT_TRUE(test_type(nm, "decl struct class;" //reference the current member function which has been declared previously (function variant)
+		                          "decl f : class::() -> int<4>;"
+		                          "struct class {"
+		                          "  function f : () -> int<4> { return f(); }"
+		                          "}"));
+
+		EXPECT_TRUE(test_type(nm, "decl struct class;" //reference the current member function which has been declared previously
+		                          "decl f : class::(int<4>) -> int<4>;"
+		                          "struct class {"
+		                          "  lambda f : (a : int<4>) -> int<4> { return f(a); }"
+		                          "}"));
+
+		EXPECT_TRUE(test_type(nm, "decl struct class;" //reference the current member function which has been declared previously (function variant)
+		                          "decl f : class::(int<4>) -> int<4>;"
+		                          "struct class {"
+		                          "  function f : (a : ref<int<4>,f,f,plain>) -> int<4> { return f(*a); }"
+		                          "}"));
+
 		EXPECT_TRUE(test_type(nm, "def struct A {" //reference our own member function using the this pointer
 		                          "  lambda f : () -> int<4> { return 1; }"
 		                          "  lambda g : () -> int<4> { return this.f(); }"
+		                          "}; A"));
+
+		EXPECT_TRUE(test_type(nm, "def struct A {" //reference our own member function using the this pointer (function variant)
+		                          "  function f : () -> int<4> { return 1; }"
+		                          "  function g : () -> int<4> { return this.f(); }"
 		                          "}; A"));
 
 		EXPECT_TRUE(test_type(nm, "def struct A {" //reference a member function of another struct
@@ -343,6 +396,17 @@ namespace parser {
 		                          "  }"
 		                          "}; B"));
 
+		EXPECT_TRUE(test_type(nm, "def struct A {" //reference a member function of another struct (function variant)
+		                          "  function f : () -> int<4> {"
+		                          "    return 1;"
+		                          "  }"
+		                          "};"
+		                          "def struct B {"
+		                          "  function g : (a : ref<ref<A,f,f,plain>,f,f,plain>) -> int<4> {"
+		                          "    return (*a).f();"
+		                          "  }"
+		                          "}; B"));
+
 		EXPECT_TRUE(test_type(nm, "def struct A {" //reference a member function of another struct - that struct is held as a field
 		                          "  lambda f : () -> int<4> { return 1; }"
 		                          "};"
@@ -353,12 +417,32 @@ namespace parser {
 		                          "  }"
 		                          "}; B"));
 
+		EXPECT_TRUE(test_type(nm, "def struct A {" //reference a member function of another struct - that struct is held as a field (function variant)
+		                          "  function f : () -> int<4> { return 1; }"
+		                          "};"
+		                          "def struct B {"
+		                          "  a : A;"
+		                          "  function g : () -> int<4> {"
+		                          "    return a.f();"
+		                          "  }"
+		                          "}; B"));
+
 		EXPECT_TRUE(test_type(nm, "def struct A {" //reference a member function of another struct - that struct is held as a field and it is accessed using the this pointer
 		                          "  lambda f : () -> int<4> { return 1; }"
 		                          "};"
 		                          "def struct B {"
 		                          "  a : A;"
 		                          "  lambda g : () -> int<4> {"
+		                          "    return this.a.f();"
+		                          "  }"
+		                          "}; B"));
+
+		EXPECT_TRUE(test_type(nm, "def struct A {" //reference a member function of another struct - that struct is held as a field and it is accessed using the this pointer (function variant)
+		                          "  function f : () -> int<4> { return 1; }"
+		                          "};"
+		                          "def struct B {"
+		                          "  a : A;"
+		                          "  function g : () -> int<4> {"
 		                          "    return this.a.f();"
 		                          "  }"
 		                          "}; B"));
@@ -587,7 +671,7 @@ namespace parser {
 
 		{ //ensure that functions and lambdas end up the same when written correctly
 			auto type1 = builder.parseType("decl struct s; def struct s { lambda a : ()->ref<s,f,f,plain> { return this; } }; s");
-			auto type2 = builder.parseType("decl struct s; def struct s { function a : ()->ref<s,f,f,plain> { return *this; } }; s");
+			auto type2 = builder.parseType("decl struct s; def struct s { function a : ()->ref<s,f,f,plain> { return this; } }; s");
 
 			ASSERT_TRUE(checks::check(type1).empty()) << checks::check(type1);
 			ASSERT_TRUE(checks::check(type2).empty()) << checks::check(type2);
@@ -617,7 +701,7 @@ namespace parser {
 
 		{ //ensure that functions and lambdas end up the same when written correctly
 			auto type1 = builder.parseType("def struct s { a : int<4>; ctor () { a = 5; } }; s");
-			auto type2 = builder.parseType("def struct s { a : int<4>; ctor function () { (*this).a = 5; } }; s");
+			auto type2 = builder.parseType("def struct s { a : int<4>; ctor function () { a = 5; } }; s");
 
 			ASSERT_TRUE(checks::check(type1).empty()) << checks::check(type1);
 			ASSERT_TRUE(checks::check(type2).empty()) << checks::check(type2);
@@ -626,8 +710,8 @@ namespace parser {
 		}
 
 		{ //ensure that functions and lambdas end up the same when written correctly
-			auto type1 = builder.parseType("def struct s { a : int<4>; ctor () { this.a = 5; } }; s");
-			auto type2 = builder.parseType("def struct s { a : int<4>; ctor function () { (*this).a = 5; } }; s");
+			auto type1 = builder.parseType("def struct s { a : int<4>; ctor () { a = 5; } }; s");
+			auto type2 = builder.parseType("def struct s { a : int<4>; ctor function () { a = 5; } }; s");
 
 			ASSERT_TRUE(checks::check(type1).empty()) << checks::check(type1);
 			ASSERT_TRUE(checks::check(type2).empty()) << checks::check(type2);
@@ -637,7 +721,7 @@ namespace parser {
 
 		{ //ensure that functions and lambdas end up the same when written correctly
 			auto type1 = builder.parseType("def struct s { a : int<4>; ctor (b : int<4>) { a = b; } }; s");
-			auto type2 = builder.parseType("def struct s { a : int<4>; ctor function (b : ref<int<4>,f,f,plain>) { (*this).a = *b; } }; s");
+			auto type2 = builder.parseType("def struct s { a : int<4>; ctor function (b : ref<int<4>,f,f,plain>) { a = *b; } }; s");
 
 			ASSERT_TRUE(checks::check(type1).empty()) << checks::check(type1);
 			ASSERT_TRUE(checks::check(type2).empty()) << checks::check(type2);
@@ -657,7 +741,7 @@ namespace parser {
 
 		{ //ensure that functions and lambdas end up the same when written correctly
 			auto type1 = builder.parseType("def struct s { a : int<4>; dtor () { a = 5; } }; s");
-			auto type2 = builder.parseType("def struct s { a : int<4>; dtor function () { (*this).a = 5; } }; s");
+			auto type2 = builder.parseType("def struct s { a : int<4>; dtor function () { a = 5; } }; s");
 
 			ASSERT_TRUE(checks::check(type1).empty()) << checks::check(type1);
 			ASSERT_TRUE(checks::check(type2).empty()) << checks::check(type2);
@@ -1194,6 +1278,22 @@ namespace parser {
 		                     "  a." + utils::getMangledOperatorAssignName() + "(a : ref<A,t,f,cpp_ref>);"  //default copy assignment operator
 		                     "  a." + utils::getMangledOperatorAssignName() + "(a : ref<A,f,f,cpp_rref>);" //default move assignment operator
 		                     "}"));
+	}
+
+
+	TEST(IRParser, Comments) {
+		NodeManager mgr;
+
+
+		EXPECT_TRUE(parseExpr(mgr, "12"));
+		EXPECT_TRUE(parseExpr(mgr, "12 // this is the number 12"));
+
+		EXPECT_FALSE(parseStmt(mgr, "{ 12; // this is the number 12 }"));
+		EXPECT_TRUE(parseStmt(mgr, "{ 12; // this is the number \n 12; }"));
+
+		EXPECT_TRUE(parseExpr(mgr, "/* before */ 12 /* after */"));
+		EXPECT_TRUE(parseStmt(mgr, " { /* before */ 12 /* mid */ ; /* after */ }"));
+
 	}
 
 } // parser

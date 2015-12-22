@@ -34,8 +34,10 @@
  * regarding third party software licenses.
  */
 
-int main() {		
+int g_bla = 10;
 
+int main() {		
+	
 	#pragma test expect_ir("{{ var ref<int<4>,f,f> v0 = ref_var_init(0); for(int<4> v1 = 0 .. 10 : 1) { v1; }; }}")
 	{
 		for(int i = 0; i < 10; i++) {
@@ -98,13 +100,35 @@ int main() {
 	{
 		for(int k = 2; k > 5; k+=1) { }
 	}
-
-	#pragma test expect_ir("{ var ref<int<4>,f,f,plain> v0; { c_style_assignment(v0, 0); while( *v0<5) { gen_post_inc(v0); } } { var ref<int<4>,f,f,plain> v1 = ref_var_init(0); for( int<4> v2 = 0 .. 5 : 1) { } } var ref<int<4>,f,f,plain> v3 = ref_var_init(*v0); }")
+	
+	#pragma test expect_ir("{ var ref<int<4>,f,f,plain> v0; { c_style_assignment(v0, 0); for( int<4> v1 = 0 .. 5 : 1) { }; v0 = 5+((0-5)%1+1)%1; } { var ref<int<4>,f,f,plain> v1 = ref_var_init(0); for( int<4> v2 = 0 .. 5 : 1) { } } var ref<int<4>,f,f,plain> v3 = ref_var_init(*v0); }")
 	{
 		int i;
 		for(i=0; i<5; i++) { }
+
 		for(int k = 0; k<5; k++) { }
 		int z=i;
+	}
+	
+	// should not be converted into for loop, because we do 
+	// not inspect the modification of the global literal yet. 
+	#pragma test expect_ir("{{ var ref<int<4>, f, f, plain> v0 =  ref_var_init(0); while(*v0<*lit(\"g_bla\": ref<int<4>,f,f>)) { gen_post_dec(lit(\"g_bla\": ref<int<4>,f,f>)); gen_pre_inc(v0); }; }}")
+	{
+		for (int i = 0; i < g_bla; ++i) {
+			g_bla--;
+		}
+	}
+
+	// should not be converted into for loop, because we do 
+	// not inspect the modification of the global literal yet. 
+	#pragma test expect_ir("{ var ref<int<4>,f,f,plain> v1 = ref_var_init(10); var ref<int<4>,f,f,plain> v2 = ref_var_init(0); { var ref<int<4>,f,f,plain> v3 = ref_var_init(0); while(*v3<*lit(\"g_bla\": ref<int<4>,f,f>)) { gen_post_inc(v2); gen_pre_inc(v3); } } }")
+	{
+		int l_bla1 = 10;
+		int l_bla2 = 0;
+		for (int i = 0; i < g_bla; ++i) {
+			l_bla2++;
+		}
+
 	}
 
 	return 0;

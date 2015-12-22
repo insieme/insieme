@@ -192,10 +192,10 @@ namespace printer {
 			 */
 			utils::map::PointerMap<NodePtr, std::string> letBindings;
 
-            /**
-             * A stack used to keep track of the "this"-operator
-             */
-            std::stack<VariablePtr> thisStack;
+			/**
+			 * A stack used to keep track of the "this"-operator
+			 */
+			std::stack<VariablePtr> thisStack;
 
 			/**
 			 * Used to format the printout
@@ -230,6 +230,13 @@ namespace printer {
 
 			const PrettyPrinter& getPrettyPrint() const {
 				return printer;
+			}
+
+			const VariablePtr getTopOfThisStack() const {
+				if (thisStack.empty()) {
+					return VariablePtr();
+				}
+				return thisStack.top();
 			}
 
 			/**
@@ -1498,8 +1505,12 @@ namespace printer {
 
 //			if(config.hasOption(PrettyPrinter::PRINT_DEREFS)) {
 				ADD_FORMATTER(refExt.getRefDeref()) {
-					OUT("*");
-					PRINT_ARG(0);
+					if (ARG(0).isa<VariableAddress>() && ARG(0).getAddressedNode() == printer.getTopOfThisStack()) {
+						PRINT_ARG(0);
+					} else {
+						OUT("*");
+						PRINT_ARG(0);
+					}
 				};
 //			} else {
 //				ADD_FORMATTER(refExt.getRefDeref()) { PRINT_ARG(0); };

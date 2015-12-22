@@ -167,6 +167,132 @@ namespace backend {
 		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
 	}
 
+	TEST(CppSnippet, TrivialClass) {
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+
+		// create a code fragment including some member functions
+		core::ProgramPtr program = builder.parseProgram(R"(
+				alias int = int<4>;
+				
+				def struct A { };
+				
+				int main() {
+					var ref<A> a;
+					return 0;
+				}
+		)");
+
+		ASSERT_TRUE(program);
+		// std::cout << "Program: " << dumpColor(program) << std::endl;
+		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
+
+		// use sequential backend to convert into C++ code
+		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
+		ASSERT_TRUE((bool)converted);
+		// std::cout << "Converted: \n" << *converted << std::endl;
+
+		// check presence of relevant code
+		auto code = toString(*converted);
+		EXPECT_PRED2(containsSubString, code, "struct A");		// struct definition
+		EXPECT_PRED2(containsSubString, code, "A a;");			// variable definition
+
+		// check definition of six essential functions
+		EXPECT_FALSE(containsSubString(code, "A()"));
+
+		// try compiling the code fragment
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+	}
+
+	TEST(CppSnippet, RecursiveClass) {
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+
+		// create a code fragment including some member functions
+		core::ProgramPtr program = builder.parseProgram(R"(
+				alias int = int<4>;
+				
+				def struct A { x : ref<A>; };
+				
+				int main() {
+					var ref<A> a;
+					return 0;
+				}
+		)");
+
+		ASSERT_TRUE(program);
+		// std::cout << "Program: " << dumpColor(program) << std::endl;
+		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
+
+		// use sequential backend to convert into C++ code
+		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
+		ASSERT_TRUE((bool)converted);
+		// std::cout << "Converted: \n" << *converted << std::endl;
+
+		// check presence of relevant code
+		auto code = toString(*converted);
+		EXPECT_PRED2(containsSubString, code, "struct A");		// struct definition
+		EXPECT_PRED2(containsSubString, code, "A a;");			// variable definition
+
+		// check definition of six essential functions
+		EXPECT_FALSE(containsSubString(code, "A()"));
+
+		// try compiling the code fragment
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+	}
+
+	TEST(CppSnippet, MutualRecursiveClass) {
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+
+		// create a code fragment including some member functions
+		core::ProgramPtr program = builder.parseProgram(R"(
+				alias int = int<4>;
+				
+				decl struct A;
+				decl struct B;
+
+				def struct A { x : ref<B>; };
+				def struct B { x : ref<A>; };
+				
+				int main() {
+					var ref<A> a;
+					return 0;
+				}
+		)");
+
+		ASSERT_TRUE(program);
+		// std::cout << "Program: " << dumpColor(program) << std::endl;
+		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
+
+		// use sequential backend to convert into C++ code
+		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
+		ASSERT_TRUE((bool)converted);
+		// std::cout << "Converted: \n" << *converted << std::endl;
+
+		// check presence of relevant code
+		auto code = toString(*converted);
+		EXPECT_PRED2(containsSubString, code, "struct A");		// struct definition
+		EXPECT_PRED2(containsSubString, code, "A a;");			// variable definition
+
+		// make sure no constructors are defined
+		EXPECT_FALSE(containsSubString(code, "A()"));
+		EXPECT_FALSE(containsSubString(code, "B()"));
+
+		// also, the definition of B is missing
+		EXPECT_FALSE(containsSubString(code, "struct B {"));
+
+
+		// try compiling the code fragment
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+	}
+
 	TEST(CppSnippet, TheEssentialSix) {
 		core::NodeManager manager;
 		core::IRBuilder builder(manager);
@@ -217,7 +343,7 @@ namespace backend {
 		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
 	}
 
-	TEST(CppSnippet, DISABLED_TheEssentialSixMutualRecursion) {
+	TEST(CppSnippet, TheEssentialSixMutualRecursion) {
 		core::NodeManager manager;
 		core::IRBuilder builder(manager);
 
@@ -242,18 +368,19 @@ namespace backend {
 				
 				int main() {
 					var ref<A> a;
+					var ref<B> b;
 					return 0;
 				}
 		)");
 
 		ASSERT_TRUE(program);
-		std::cout << "Program: " << dumpColor(program) << std::endl;
+		// std::cout << "Program: " << dumpColor(program) << std::endl;
 		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
 
 		// use sequential backend to convert into C++ code
 		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
 		ASSERT_TRUE((bool)converted);
-		std::cout << "Converted: \n" << *converted << std::endl;
+		// std::cout << "Converted: \n" << *converted << std::endl;
 
 		// check presence of relevant code
 		auto code = toString(*converted);
@@ -277,6 +404,331 @@ namespace backend {
 		compiler.addFlag("-c"); // do not run the linker
 		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
 	}
+
+
+	TEST(CppSnippet, Constructors) {
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+
+		// create a code fragment including some member functions
+		core::ProgramPtr program = builder.parseProgram(R"(
+				alias int = int<4>;
+
+				def struct A {
+					x : int;
+					ctor( ) {
+						this->x = 12;
+					} 
+					ctor( x : int ) {
+						this->x = x;
+					} 
+					ctor( x : int , y : int ) {
+						this->x = x + y;
+					}
+				};
+/*
+				def f : A::( x : int, y : int, z : int ) {
+					this->x = x + y + z;
+				};
+*/				
+				int main() {
+					var ref<A> a;
+					// var ref<A> b = f(ref_var(type_lit(A)));
+					return 0;
+				}
+		)");
+
+		ASSERT_TRUE(program);
+		// std::cout << "Program: " << dumpColor(program) << std::endl;
+		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
+
+		// use sequential backend to convert into C++ code
+		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
+		ASSERT_TRUE((bool)converted);
+		// std::cout << "Converted: \n" << *converted << std::endl;
+
+		// check presence of relevant code
+		auto code = toString(*converted);
+		EXPECT_PRED2(containsSubString, code, "struct A");		// struct definition
+		EXPECT_PRED2(containsSubString, code, "A a;");			// variable definition
+
+		// check definition of six essential functions
+		EXPECT_PRED2(containsSubString, code, "A();");
+		EXPECT_PRED2(containsSubString, code, "A::A() : x(12) { }");
+
+		EXPECT_PRED2(containsSubString, code, "A(int32_t p2);");
+		EXPECT_PRED2(containsSubString, code, "A::A(int32_t x) : x(x) { }");
+
+		EXPECT_PRED2(containsSubString, code, "A(int32_t p2, int32_t p3);");
+		EXPECT_PRED2(containsSubString, code, "A::A(int32_t x, int32_t y) : x(x + y) { }");
+
+
+		// try compiling the code fragment
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+	}
+
+
+	TEST(CppSnippet, Destructor) {
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+
+		// create a code fragment including some member functions
+		core::ProgramPtr program = builder.parseProgram(R"(
+				alias int = int<4>;
+
+				def struct A {
+					x : int;
+					dtor() { }
+				};
+
+				def struct B {
+					x : int;
+					dtor() { x = 12; }
+				};
+
+				def struct C {
+					x : int;
+					dtor virtual () { x = 12; }
+				};
+
+				int main() {
+					var ref<A> a;
+					var ref<B> b;
+					var ref<C> c;
+					return 0;
+				}
+		)");
+
+		ASSERT_TRUE(program);
+		// std::cout << "Program: " << dumpColor(program) << std::endl;
+		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
+
+		// use sequential backend to convert into C++ code
+		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
+		ASSERT_TRUE((bool)converted);
+		// std::cout << "Converted: \n" << *converted << std::endl;
+
+		// check presence of relevant code
+		auto code = toString(*converted);
+
+		EXPECT_PRED2(containsSubString, code, "struct A");		// struct definition
+		EXPECT_PRED2(containsSubString, code, "A a;");			// variable definition
+		EXPECT_FALSE(containsSubString(code, "~A"));			// no destructor for A
+
+		EXPECT_PRED2(containsSubString, code, "struct B");			// struct definition
+		EXPECT_PRED2(containsSubString, code, "B b;");				// variable definition
+		EXPECT_PRED2(containsSubString, code, "~B();");				// destructor for B
+		EXPECT_FALSE(containsSubString(code, "virtual ~B();"));		// not virtual
+
+		EXPECT_PRED2(containsSubString, code, "struct C");			// struct definition
+		EXPECT_PRED2(containsSubString, code, "C c;");				// variable definition
+		EXPECT_PRED2(containsSubString, code, "virtual ~C();");		// destructor for B
+
+
+		// try compiling the code fragment
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+	}
+
+
+	TEST(CppSnippet, MemberFunctionsExausted) {
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+
+		// create a code fragment including some member functions
+		core::ProgramPtr program = builder.parseProgram(R"(
+				alias int = int<4>;
+
+				def struct A {
+					x : int;
+
+					lambda f1 : () -> unit { 10; }
+					const lambda f2 : () -> unit { 11; }
+					const volatile lambda f3 : () -> unit { 12; }
+					volatile lambda f4 : () -> unit { 13; }
+
+					virtual lambda f5 : () -> unit { 14; }
+					virtual const lambda f6 : () -> unit { 15; }
+					virtual const volatile lambda f7 : () -> unit { 16; }
+					virtual volatile lambda f8 : () -> unit { 17; }
+
+				};
+/*
+				def f : A::( x : int, y : int, z : int ) {
+					this->x = x + y + z;
+				};
+*/				
+				int main() {
+					var ref<A> a;
+					return 0;
+				}
+		)");
+
+		ASSERT_TRUE(program);
+		// std::cout << "Program: " << dumpColor(program) << std::endl;
+		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
+
+		// use sequential backend to convert into C++ code
+		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
+		ASSERT_TRUE((bool)converted);
+		// std::cout << "Converted: \n" << *converted << std::endl;
+
+		// check presence of relevant code
+		auto code = toString(*converted);
+		EXPECT_PRED2(containsSubString, code, "struct A");		// struct definition
+		EXPECT_PRED2(containsSubString, code, "A a;");			// variable definition
+
+		// check definition of six essential functions
+		EXPECT_PRED2(containsSubString, code, "void f1();");
+		EXPECT_PRED2(containsSubString, code, "void A::f1() {");
+
+		EXPECT_PRED2(containsSubString, code, "void f2() const;");
+		EXPECT_PRED2(containsSubString, code, "void A::f2() const {");
+
+		EXPECT_PRED2(containsSubString, code, "void f3() const volatile;");
+		EXPECT_PRED2(containsSubString, code, "void A::f3() const volatile {");
+
+		EXPECT_PRED2(containsSubString, code, "void f4() volatile;");
+		EXPECT_PRED2(containsSubString, code, "void A::f4() volatile {");
+
+
+		EXPECT_PRED2(containsSubString, code, "virtual void f5();");
+		EXPECT_PRED2(containsSubString, code, "void A::f5() {");
+
+		EXPECT_PRED2(containsSubString, code, "virtual void f6() const;");
+		EXPECT_PRED2(containsSubString, code, "void A::f6() const {");
+
+		EXPECT_PRED2(containsSubString, code, "virtual void f7() const volatile;");
+		EXPECT_PRED2(containsSubString, code, "void A::f7() const volatile {");
+
+		EXPECT_PRED2(containsSubString, code, "virtual void f8() volatile;");
+		EXPECT_PRED2(containsSubString, code, "void A::f8() volatile {");
+
+		// try compiling the code fragment
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+	}
+
+	TEST(CppSnippet, MemberFunctionsRecursive) {
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+
+		// create a code fragment including some member functions
+		core::ProgramPtr program = builder.parseProgram(R"(
+				alias int = int<4>;
+
+				decl struct A;
+				decl r : A::()->unit;
+				decl f : A::()->unit;
+				decl g : A::()->unit; 
+
+				def struct A {
+					x : int;
+
+					lambda r : () -> unit { r(); }
+					lambda f : () -> unit { g(); }
+					lambda g : () -> unit { f(); }
+					
+				};
+
+				int main() {
+					var ref<A> a;
+					return 0;
+				}
+		)");
+
+		ASSERT_TRUE(program);
+		// std::cout << "Program: " << dumpColor(program) << std::endl;
+		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
+
+		// use sequential backend to convert into C++ code
+		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
+		ASSERT_TRUE((bool)converted);
+		// std::cout << "Converted: \n" << *converted << std::endl;
+
+		// check presence of relevant code
+		auto code = toString(*converted);
+		EXPECT_PRED2(containsSubString, code, "struct A");		// struct definition
+		EXPECT_PRED2(containsSubString, code, "A a;");			// variable definition
+
+		// check definition of the recursive functions
+		EXPECT_PRED2(containsSubString, code, "void r();");
+		EXPECT_PRED2(containsSubString, code, "void A::r() {");
+
+		EXPECT_PRED2(containsSubString, code, "void f();");
+		EXPECT_PRED2(containsSubString, code, "void A::f() {");
+
+		EXPECT_PRED2(containsSubString, code, "void g();");
+		EXPECT_PRED2(containsSubString, code, "void A::g() {");
+
+		// try compiling the code fragment
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+	}
+
+	TEST(CppSnippet, PureVirtualMemberFunctions) {
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+
+		// create a code fragment including some member functions
+		core::ProgramPtr program = builder.parseProgram(R"(
+				alias int = int<4>;
+
+				def struct A {
+					x : int;
+
+					pure virtual f1 : () -> unit
+					pure virtual const f2 : () -> unit
+					pure virtual const volatile f3 : () -> unit
+					pure virtual volatile f4 : () -> unit
+					
+				};
+
+				def struct B : [public A] {
+
+					virtual lambda f1 : () -> unit { }
+					virtual const lambda f2 : () -> unit { }
+					virtual const volatile lambda f3 : () -> unit { }
+					virtual volatile lambda f4 : () -> unit { }
+					
+				};
+
+				int main() {
+					var ref<B> a;
+					return 0;
+				}
+		)");
+
+		ASSERT_TRUE(program);
+		// std::cout << "Program: " << dumpColor(program) << std::endl;
+		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
+
+		// use sequential backend to convert into C++ code
+		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
+		ASSERT_TRUE((bool)converted);
+		// std::cout << "Converted: \n" << *converted << std::endl;
+
+		// check presence of relevant code
+		auto code = toString(*converted);
+		EXPECT_PRED2(containsSubString, code, "struct A");		// struct definition
+		EXPECT_PRED2(containsSubString, code, "B a;");			// variable definition
+
+		EXPECT_PRED2(containsSubString, code, "virtual void f1() =0;");
+		EXPECT_PRED2(containsSubString, code, "virtual void f2() const =0;");
+		EXPECT_PRED2(containsSubString, code, "virtual void f3() const volatile =0;");
+		EXPECT_PRED2(containsSubString, code, "virtual void f4() volatile =0;");
+
+		// try compiling the code fragment
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+	}
+
 
 	TEST(CppSnippet, Counter) {
 		core::NodeManager manager;

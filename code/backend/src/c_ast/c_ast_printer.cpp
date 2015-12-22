@@ -788,8 +788,8 @@ namespace c_ast {
 				auto fun = node->function;
 
 				// print header
-				out << (boost::starts_with(fun->name->name, "operator ") ? "" : toC(fun->returnType) + " ") << " " << print(node->className)
-				    << "::" << print(fun->name) << "(" << printMemberParam(fun->parameter) << ")" << (node->isConstant ? " const " : " ");
+				out << (boost::starts_with(fun->name->name, "operator ") ? "" : toC(fun->returnType) + " ") << print(node->className)
+				    << "::" << print(fun->name) << "(" << printMemberParam(fun->parameter) << ")" << (node->isConstant ? " const" : "") << (node->isVolatile ? " volatile" : "") << " ";
 
 				// print body
 				return out << print(wrapBody(fun->body));
