@@ -46,7 +46,7 @@ float A::f() {
 #define A_IR R"(
 def struct IMP_A {
 	i : int<4>;
-	lambda IMP_f : () -> real<4> { return lit("1.0E+0":real<4>); }
+	lambda IMP_f = () -> real<4> { return lit("1.0E+0":real<4>); }
 };)"
 
 struct B {
@@ -57,7 +57,7 @@ struct B {
 #define B_IR R"(
 def struct IMP_B {
 	i : int<4>;
-	lambda IMP_f : () -> real<4> { return lit("1.0E+0":real<4>); }
+	lambda IMP_f = () -> real<4> { return lit("1.0E+0":real<4>); }
 };)"
 
 struct C {

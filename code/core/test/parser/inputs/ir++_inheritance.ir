@@ -3,17 +3,17 @@ alias int = int<4>;
 
 def struct A {
 	x : int;
-	lambda a : ()->unit { }
+	lambda a = ()->unit { }
 };
 
 def struct B : [A] {
 	y : int;
-	lambda b : ()->unit { }
+	lambda b = ()->unit { }
 };
 
 def struct C : [B] {
 	z : int;
-	lambda c : ()->unit { }
+	lambda c = ()->unit { }
 };
 
 int main() {

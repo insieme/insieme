@@ -5,29 +5,29 @@ def struct Counter {
 
 	value : int;
 	
-	lambda reset : ()->unit {
+	lambda reset = ()->unit {
 		value = 0;
 	}
 	
-	lambda inc : ()->int {
+	lambda inc = ()->int {
 		value = value + 1;
 		return *value;
 	}
 	
-	lambda dec : ()->int {
+	lambda dec = ()->int {
 		value = value - 1;
 		return *value;
 	}
 	
-	lambda get : ()->int {
+	lambda get = ()->int {
 		return *value;
 	}
 	
-	lambda set : (x : int)->unit {
+	lambda set = (x : int)->unit {
 		value = x;
 	}
 	
-	lambda p : ()-> unit {
+	lambda p = ()-> unit {
 		print("%d\n", get());
 	}
 };
