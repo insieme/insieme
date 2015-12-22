@@ -80,6 +80,9 @@ namespace integration {
 			// add pre-processor definitions
 			for_each(testCase.getDefinitions(step), [&](const std::pair<string, string>& def) { options.job.setDefinition(def.first, def.second); });
 
+			// add include directories
+			for_each(testCase.getIncludeDirs(), [&](const frontend::path& dir) { options.job.addIncludeDirectory(dir); });
+
 			// add interceptor configuration
 			options.job.addInterceptedNameSpacePatterns(testCase.getInterceptedNameSpaces());
 			options.job.setInterceptedHeaderDirs(testCase.getInterceptedHeaderFileDirectories());
