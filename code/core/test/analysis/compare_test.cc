@@ -63,9 +63,9 @@ namespace analysis {
 		NodeManager nm;
 		IRBuilder builder(nm);
 		
-		auto expA = builder.parseExpr("def a : ()->() { 5; }; a()");
-		auto expB = builder.parseExpr("def b : ()->() { 5; }; b()");
-		auto expC = builder.parseExpr("def b : ()->() { 7; }; b()");
+		auto expA = builder.parseExpr("def a = ()->() { 5; }; a()");
+		auto expB = builder.parseExpr("def b = ()->() { 5; }; b()");
+		auto expC = builder.parseExpr("def b = ()->() { 7; }; b()");
 		
 		EXPECT_NE(expA, expB);
 		EXPECT_PRED2(equalNameless, expA, expB);
@@ -100,10 +100,10 @@ namespace analysis {
 		NodeManager nm;
 		IRBuilder builder(nm);
 		
-		auto stmtA = builder.parseStmt("def a : ()->() { 5; }; def b : ()->() { 6; }; { a(); b(); }");
-		auto stmtB = builder.parseStmt("def b : ()->() { 6; }; def a : ()->() { 5; }; { a(); b(); }");
-		auto stmtC = builder.parseStmt("def a : ()->() { 6; }; def b : ()->() { 5; }; { a(); b(); }");
-		auto stmtD = builder.parseStmt("def b : ()->() { 5; }; def a : ()->() { 6; }; { b(); a(); }");
+		auto stmtA = builder.parseStmt("def a = ()->() { 5; }; def b = ()->() { 6; }; { a(); b(); }");
+		auto stmtB = builder.parseStmt("def b = ()->() { 6; }; def a = ()->() { 5; }; { a(); b(); }");
+		auto stmtC = builder.parseStmt("def a = ()->() { 6; }; def b = ()->() { 5; }; { a(); b(); }");
+		auto stmtD = builder.parseStmt("def b = ()->() { 5; }; def a = ()->() { 6; }; { b(); a(); }");
 		
 		EXPECT_NE(stmtA, stmtD);
 		EXPECT_PRED2(equalNameless, stmtA, stmtB);

@@ -546,7 +546,7 @@ namespace printer {
 									out << "def " << lambdaNames[binding];
 
 									auto parameters = lambda.getParameterList();
-									out << " : function (" <<
+									out << " = function (" <<
 									join(", ", parameters, [&](std::ostream& out, const VariablePtr& curVar) {
 										visit(NodeAddress(curVar));
 										out << " : ";
@@ -1060,7 +1060,7 @@ namespace printer {
 				std::size_t count = 0;
 				for_each(defs.begin(), defs.end(), [&](const LambdaBindingAddress& cur) {
 					VISIT(cur->getReference());
-					out << " : ";
+					out << " = ";
 					VISIT(cur->getLambda());
 					out << ";";
 					if(count++ < defs.size() - 1) { this->newLine(); }
