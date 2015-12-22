@@ -105,6 +105,26 @@ namespace lang {
 		return builder.tupleType(toVector(ReferenceType::create(ArrayType::create(elementType), mConst, mVolatile).as<TypePtr>(), ext.getInt8().as<TypePtr>()));
 	}
 
+	namespace {
+
+		bool isPointerInternal(const TupleTypePtr& type) {
+
+			// simple approach: use matching
+			NodeManager& mgr = type.getNodeManager();
+			const PointerExtension& ext = mgr.getLangExtension<PointerExtension>();
+
+			// unify given type with template type
+			auto ref = ext.getGenPtr();
+			auto sub = types::match(mgr, type, ref);
+			if (!sub) return false;
+
+			// check instantiation
+			return isValidBooleanMarker(extractConstMarker(type)) && isValidBooleanMarker(extractVolatileMarker(type));
+		}
+
+	}
+
+
 	bool isPointer(const NodePtr& node) {
 
 		// check for null
@@ -117,17 +137,23 @@ namespace lang {
 		auto type = node.isa<TupleTypePtr>();
 		if(!type) return false;
 
-		// simple approach: use unification
-		NodeManager& mgr = node.getNodeManager();
-		const PointerExtension& ext = mgr.getLangExtension<PointerExtension>();
+		// check annotation
+		struct PointerMarker {
+			bool res;
+			bool operator==(const PointerMarker& other) const {
+				return res == other.res;
+			}
+		};
+		
+		// check for annotations
+		if (type->hasAttachedValue<PointerMarker>()) {
+			return type->getAttachedValue<PointerMarker>().res;
+		}
 
-		// unify given type with template type
-		auto ref = ext.getGenPtr();
-		auto sub = types::match(mgr, type, ref);
-		if(!sub) return false;
-
-		// check instantiation
-		return isValidBooleanMarker(extractConstMarker(type)) && isValidBooleanMarker(extractVolatileMarker(type));
+		// compute, attach, and return result
+		bool res = isPointerInternal(type);
+		type->attachValue(PointerMarker{ res });
+		return res;
 	}
 
 	TypePtr buildPtrType(const TypePtr& elementType, bool _const, bool _volatile) {

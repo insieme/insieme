@@ -399,190 +399,227 @@ namespace types {
 		}
 	}
 
+	namespace {
+
+		SubstitutionOpt getTypeVariableInstantiationInternal(NodeManager& manager, const TypeList& parameter, const TypeList& arguments) {
+			const bool debug = false;
+
+			// the result to be returned upon failure
+			const static SubstitutionOpt fail;
+
+			// check length of parameter and arguments
+			if (parameter.size() != arguments.size()) { return fail; }
+
+			// use private node manager for computing results
+			NodeManager internalManager(manager);
+
+
+			// -------------------------------- Invalid Call By Value ---------------------------------------
+			//
+			// Non-Trivial types must not be passed by value.
+			//
+			// ----------------------------------------------------------------------------------------------
+
+			// check all arguments
+			for (const auto& cur : arguments) {
+				if (!analysis::isTrivial(cur)) return fail;
+			}
+
+
+			// ------------------------------ Implicit Materialization --------------------------------------
+			//
+			// In C++ it is allowed to pass values to function parameters accepting references. In this case,
+			// an implicit temporary object initialized by a copy-constructor is created at the call-site.
+			// This is supported for all 'trivial' types.
+			//
+			// ----------------------------------------------------------------------------------------------
+
+			TypeList materializedArguments = arguments;
+			for (size_t i = 0; i < parameter.size(); i++) {
+
+				bool isRefArg = lang::isReference(arguments[i]);
+				bool isRefParam = lang::isReference(parameter[i]);
+
+				// implicit materialization
+				if (!isRefArg && isRefParam) {
+					lang::ReferenceType refParam(parameter[i]);
+					switch (refParam.getKind()) {
+					case lang::ReferenceType::Kind::Undefined: return fail;
+					case lang::ReferenceType::Kind::Plain: return fail;
+					case lang::ReferenceType::Kind::CppReference: {
+						/* the cpp reference must be const */
+						if (!refParam.isConst()) return fail;
+						break;
+					}
+					case lang::ReferenceType::Kind::CppRValueReference: {
+						/* all fine */
+					}
+					}
+
+					// check whether the argument is trivial or not convertible to parameter type
+					if (!analysis::isTrivial(arguments[i]) && !analysis::hasConstructorAccepting(parameter[i], arguments[i])) {
+						return fail;
+					}
+
+					// all checks out => materialize
+					materializedArguments[i] = lang::ReferenceType::create(
+						arguments[i], refParam.isConst(), refParam.isVolatile(), refParam.getKind()
+						);
+				}
+
+				// implicit copy construction
+				if (isRefArg && !isRefParam) {
+					if (lang::isCppReference(arguments[i]) || lang::isCppRValueReference(arguments[i])) {
+						lang::ReferenceType refArg(arguments[i]);
+						materializedArguments[i] = refArg.getElementType();
+					}
+					else if (analysis::hasConstructorAccepting(parameter[i], arguments[i])) {
+						materializedArguments[i] = parameter[i];
+					}
+				}
+			}
+
+			if (debug) { std::cout << "    Arguments: " << arguments << std::endl; }
+			if (debug) { std::cout << " Materialized: " << materializedArguments << std::endl; }
+
+
+			// ---------------------------------- Variable Renaming -----------------------------------------
+			//
+			// The variables have to be renamed to avoid collisions within type variables used within the
+			// function type and variables used within the arguments. Further, variables within function
+			// types of the arguments need to be renamed independently (to avoid illegal capturing)
+			//
+			// ----------------------------------------------------------------------------------------------
+
+
+			// for the renaming a variable re-namer is used
+			VariableRenamer renamer;
+
+			// 1) convert parameters (consistently, all at once)
+			TypeMapping parameterMapping = renamer.mapVariables(TupleType::get(internalManager, parameter));
+			TypeList renamedParameter = parameterMapping.applyForward(internalManager, parameter);
+
+			if (debug) { std::cout << " Parameter: " << parameter << std::endl; }
+			if (debug) { std::cout << "   Renamed: " << renamedParameter << std::endl; }
+
+			// 2) convert arguments (individually)
+			//		- fix free variables consistently => replace with constants
+			//		- rename unbounded variables - individually per parameter
+
+			// collects the mapping of free variables to constant replacements (to protect them
+			// from being substituted during some unification process)
+			TypeMapping&& argumentMapping = substituteFreeVariablesWithConstants(internalManager, materializedArguments);
+
+			if (debug) { std::cout << " Arguments: " << materializedArguments << std::endl; }
+			if (debug) { std::cout << "   Mapping: " << argumentMapping << std::endl; }
+
+			// apply renaming to arguments
+			TypeList renamedArguments = materializedArguments;
+			vector<TypeMapping> argumentRenaming;
+			for (std::size_t i = 0; i < renamedArguments.size(); ++i) {
+				TypePtr& cur = renamedArguments[i];
+
+				// first: apply bound variable substitution
+				cur = argumentMapping.applyForward(internalManager, cur);
+
+				// second: apply variable renaming
+				TypeMapping mapping = renamer.mapVariables(internalManager, cur);
+				if (!mapping.empty()) { argumentRenaming.push_back(mapping); }
+				cur = mapping.applyForward(internalManager, cur);
+			}
+
+			if (debug) { std::cout << " Renamed Arguments: " << renamedArguments << std::endl; }
+			if (debug) { std::cout << " Renamings: " << argumentRenaming << std::endl; }
+
+
+			// ---------------------------------- Assembling Constraints -----------------------------------------
+
+			// collect constraints on the type variables used within the parameter types
+			SubTypeConstraints constraints;
+
+			// collect constraints
+			auto begin = make_paired_iterator(renamedParameter.begin(), renamedArguments.begin());
+			auto end = make_paired_iterator(renamedParameter.end(), renamedArguments.end());
+			for (auto it = begin; constraints.isSatisfiable() && it != end; ++it) {
+				// add constraints to ensure current parameter is a super-type of the arguments
+				addTypeConstraints(constraints, it->first, it->second, Direction::SUPER_TYPE);
+			}
+
+
+			if (debug) { std::cout << " Constraints: " << constraints << std::endl; }
+
+			// ---------------------------------- Solve Constraints -----------------------------------------
+
+			// solve constraints to obtain results
+			SubstitutionOpt&& res = constraints.solve(internalManager);
+			if (!res) {
+				// if unsolvable => return this information
+				if (debug) { std::cout << " Terminated with no solution!" << std::endl << std::endl; }
+				return res;
+			}
+
+			if (debug) { std::cout << " Solution: " << *res << std::endl; }
+
+			// ----------------------------------- Revert Renaming ------------------------------------------
+			// (and produce a result within the correct node manager - internal manager will be thrown away)
+
+			// check for empty solution (to avoid unnecessary operations
+			if (res->empty()) {
+				if (debug) { std::cout << " Terminated with: " << *res << std::endl << std::endl; }
+				return res;
+			}
+
+			// reverse variables from previously selected constant replacements (and bring back to correct node manager)
+			Substitution restored;
+			for (auto it = res->getMapping().begin(); it != res->getMapping().end(); ++it) {
+				TypeVariablePtr var = static_pointer_cast<const TypeVariable>(parameterMapping.applyBackward(manager, it->first));
+				TypePtr substitute = argumentMapping.applyBackward(manager, it->second);
+
+				// also apply argument renaming backwards ..
+				for (auto it2 = argumentRenaming.begin(); it2 != argumentRenaming.end(); ++it2) {
+					var = it2->applyBackward(manager, var).as<TypeVariablePtr>();
+					substitute = it2->applyBackward(manager, substitute);
+				}
+
+				restored.addMapping(manager.get(var), manager.get(substitute));
+			}
+			if (debug) { std::cout << " Terminated with: " << restored << std::endl << std::endl; }
+			return restored;
+		}
+
+	}
 
 	SubstitutionOpt getTypeVariableInstantiation(NodeManager& manager, const TypeList& parameter, const TypeList& arguments) {
-		const bool debug = false;
 
-		// the result to be returned upon failure
-		const static SubstitutionOpt fail;
+		struct ResultCache {
+			mutable std::map<std::pair<TypeList, TypeList>, SubstitutionOpt> results;
+			bool operator==(const ResultCache& other) const { 
+				assert_fail() << "Should never be reached!";
+				return false; 
+			};
+		};
 
-		// check length of parameter and arguments
-		if(parameter.size() != arguments.size()) { return fail; }
-
-		// use private node manager for computing results
-		NodeManager internalManager(manager);
-
-
-		// -------------------------------- Invalid Call By Value ---------------------------------------
-		//
-		// Non-Trivial types must not be passed by value.
-		//
-		// ----------------------------------------------------------------------------------------------
-
-		// check all arguments
-		for(const auto& cur : arguments) {
-			if (!analysis::isTrivial(cur)) return fail;
+		// initialize result cache if necessary
+		if (!manager.hasAttachedValue<ResultCache>()) {
+			manager.attachValue(ResultCache());
 		}
 
+		// obtain result cache
+		auto& cache = manager.getAttachedValue<ResultCache>().results;
 
-		// ------------------------------ Implicit Materialization --------------------------------------
-		//
-		// In C++ it is allowed to pass values to function parameters accepting references. In this case,
-		// an implicit temporary object initialized by a copy-constructor is created at the call-site.
-		// This is supported for all 'trivial' types.
-		//
-		// ----------------------------------------------------------------------------------------------
+		// bring parameter and arguments into this node manager
+		TypeList params;
+		for (const auto& cur : parameter) params.push_back(manager.get(cur));
 
-		TypeList materializedArguments = arguments;
-		for(size_t i=0; i<parameter.size(); i++) {
+		TypeList args;
+		for (const auto& cur : arguments) args.push_back(manager.get(cur));
 
-			bool isRefArg   = lang::isReference(arguments[i]);
-			bool isRefParam = lang::isReference(parameter[i]);
+		// look up cache
+		auto pos = cache.find({ params,args });
+		if (pos != cache.end()) return pos->second;
 
-			// implicit materialization
-			if (!isRefArg && isRefParam) {
-				lang::ReferenceType refParam(parameter[i]);
-				switch(refParam.getKind()) {
-				case lang::ReferenceType::Kind::Undefined: return fail;
-				case lang::ReferenceType::Kind::Plain: return fail;
-				case lang::ReferenceType::Kind::CppReference: {
-					/* the cpp reference must be const */
-					if (!refParam.isConst()) return fail;
-					break;
-				}
-				case lang::ReferenceType::Kind::CppRValueReference: {
-					/* all fine */
-				}
-				}
-
-				// check whether the argument is trivial or not convertible to parameter type
-				if (!analysis::isTrivial(arguments[i]) && !analysis::hasConstructorAccepting(parameter[i], arguments[i])) {
-					return fail;
-				}
-
-				// all checks out => materialize
-				materializedArguments[i] = lang::ReferenceType::create(
-						arguments[i], refParam.isConst(), refParam.isVolatile(), refParam.getKind()
-				);
-			}
-
-			// implicit copy construction
-			if (isRefArg && !isRefParam) {
-				if (lang::isCppReference(arguments[i]) || lang::isCppRValueReference(arguments[i])) {
-					lang::ReferenceType refArg(arguments[i]);
-					materializedArguments[i] = refArg.getElementType();
-				} else if (analysis::hasConstructorAccepting(parameter[i], arguments[i])) {
-					materializedArguments[i] = parameter[i];
-				}
-			}
-		}
-
-		if(debug) { std::cout << "    Arguments: " << arguments << std::endl; }
-		if(debug) { std::cout << " Materialized: " << materializedArguments << std::endl; }
-
-
-		// ---------------------------------- Variable Renaming -----------------------------------------
-		//
-		// The variables have to be renamed to avoid collisions within type variables used within the
-		// function type and variables used within the arguments. Further, variables within function
-		// types of the arguments need to be renamed independently (to avoid illegal capturing)
-		//
-		// ----------------------------------------------------------------------------------------------
-
-
-		// for the renaming a variable re-namer is used
-		VariableRenamer renamer;
-
-		// 1) convert parameters (consistently, all at once)
-		TypeMapping parameterMapping = renamer.mapVariables(TupleType::get(internalManager, parameter));
-		TypeList renamedParameter = parameterMapping.applyForward(internalManager, parameter);
-
-		if(debug) { std::cout << " Parameter: " << parameter << std::endl; }
-		if(debug) { std::cout << "   Renamed: " << renamedParameter << std::endl; }
-
-		// 2) convert arguments (individually)
-		//		- fix free variables consistently => replace with constants
-		//		- rename unbounded variables - individually per parameter
-
-		// collects the mapping of free variables to constant replacements (to protect them
-		// from being substituted during some unification process)
-		TypeMapping&& argumentMapping = substituteFreeVariablesWithConstants(internalManager, materializedArguments);
-
-		if(debug) { std::cout << " Arguments: " << materializedArguments << std::endl; }
-		if(debug) { std::cout << "   Mapping: " << argumentMapping << std::endl; }
-
-		// apply renaming to arguments
-		TypeList renamedArguments = materializedArguments;
-		vector<TypeMapping> argumentRenaming;
-		for(std::size_t i = 0; i < renamedArguments.size(); ++i) {
-			TypePtr& cur = renamedArguments[i];
-
-			// first: apply bound variable substitution
-			cur = argumentMapping.applyForward(internalManager, cur);
-
-			// second: apply variable renaming
-			TypeMapping mapping = renamer.mapVariables(internalManager, cur);
-			if(!mapping.empty()) { argumentRenaming.push_back(mapping); }
-			cur = mapping.applyForward(internalManager, cur);
-		}
-
-		if(debug) { std::cout << " Renamed Arguments: " << renamedArguments << std::endl; }
-		if(debug) { std::cout << " Renamings: " << argumentRenaming << std::endl; }
-
-
-		// ---------------------------------- Assembling Constraints -----------------------------------------
-
-		// collect constraints on the type variables used within the parameter types
-		SubTypeConstraints constraints;
-
-		// collect constraints
-		auto begin = make_paired_iterator(renamedParameter.begin(), renamedArguments.begin());
-		auto end = make_paired_iterator(renamedParameter.end(), renamedArguments.end());
-		for(auto it = begin; constraints.isSatisfiable() && it != end; ++it) {
-			// add constraints to ensure current parameter is a super-type of the arguments
-			addTypeConstraints(constraints, it->first, it->second, Direction::SUPER_TYPE);
-		}
-
-
-		if(debug) { std::cout << " Constraints: " << constraints << std::endl; }
-
-		// ---------------------------------- Solve Constraints -----------------------------------------
-
-		// solve constraints to obtain results
-		SubstitutionOpt&& res = constraints.solve(internalManager);
-		if(!res) {
-			// if unsolvable => return this information
-			if(debug) { std::cout << " Terminated with no solution!" << std::endl << std::endl; }
-			return res;
-		}
-
-		if(debug) { std::cout << " Solution: " << *res << std::endl; }
-
-		// ----------------------------------- Revert Renaming ------------------------------------------
-		// (and produce a result within the correct node manager - internal manager will be thrown away)
-
-		// check for empty solution (to avoid unnecessary operations
-		if(res->empty()) {
-			if(debug) { std::cout << " Terminated with: " << *res << std::endl << std::endl; }
-			return res;
-		}
-
-		// reverse variables from previously selected constant replacements (and bring back to correct node manager)
-		Substitution restored;
-		for(auto it = res->getMapping().begin(); it != res->getMapping().end(); ++it) {
-			TypeVariablePtr var = static_pointer_cast<const TypeVariable>(parameterMapping.applyBackward(manager, it->first));
-			TypePtr substitute = argumentMapping.applyBackward(manager, it->second);
-
-			// also apply argument renaming backwards ..
-			for(auto it2 = argumentRenaming.begin(); it2 != argumentRenaming.end(); ++it2) {
-				var = it2->applyBackward(manager, var).as<TypeVariablePtr>();
-				substitute = it2->applyBackward(manager, substitute);
-			}
-
-			restored.addMapping(manager.get(var), manager.get(substitute));
-		}
-		if(debug) { std::cout << " Terminated with: " << restored << std::endl << std::endl; }
-		return restored;
+		// resolve internal, cache, and return result
+		return cache[{params, args}] = getTypeVariableInstantiationInternal(manager, params, args);
 	}
 
 	SubstitutionOpt getTypeVariableInstantiation(NodeManager& manager, const TypePtr& parameter, const TypePtr& argument) {

@@ -97,23 +97,55 @@ namespace lang {
 		}
 	}
 
+	namespace {
+
+		bool isArrayTypeInternal(const TypePtr& type) {
+
+			// simple approach: use unification
+			NodeManager& mgr = type.getNodeManager();
+			const ArrayExtension& ext = mgr.getLangExtension<ArrayExtension>();
+
+			// unify given type with template type
+			auto ref = ext.getGenArray().as<GenericTypePtr>();
+			auto sub = types::match(mgr, type, ref);
+			if (!sub) return false;
+
+			// check instantiation
+			const types::Substitution& map = *sub;
+			auto size = map.applyTo(ref->getTypeParameter(1));
+			return size.isa<TypeVariablePtr>() || size.isa<NumericTypePtr>() || isInf(size);
+
+		}
+
+	}
+
+
 	bool ArrayType::isArrayType(const NodePtr& node) {
+
+		// a quick check
 		auto type = node.isa<GenericTypePtr>();
 		if(!type) return false;
 
-		// simple approach: use unification
-		NodeManager& mgr = node.getNodeManager();
-		const ArrayExtension& ext = mgr.getLangExtension<ArrayExtension>();
+		// the annotation to cache check results
+		struct ArrayTypeMark {
+			bool res;
+			bool operator==(const ArrayTypeMark& other) const { return res == other.res; }
+		};
 
-		// unify given type with template type
-		auto ref = ext.getGenArray().as<GenericTypePtr>();
-		auto sub = types::match(mgr, type, ref);
-		if(!sub) return false;
+		// check annotation
+		if (type->hasAttachedValue<ArrayTypeMark>()) {
+			return type->getAttachedValue<ArrayTypeMark>().res;
+		}
 
-		// check instantiation
-		const types::Substitution& map = *sub;
-		auto size = map.applyTo(ref->getTypeParameter(1));
-		return size.isa<TypeVariablePtr>() || size.isa<NumericTypePtr>() || isInf(size);
+		// compute result
+		bool res = isArrayTypeInternal(type);
+
+		// attach result
+		type->attachValue(ArrayTypeMark{ res });
+
+		// done
+		return res;
+
 	}
 
 	bool ArrayType::isFixedSizedArrayType(const NodePtr& node) {
