@@ -159,7 +159,7 @@ namespace analysis {
 		IRBuilder builder(manager);
 		EXPECT_TRUE(isTrivial(builder.parseType(
 			"struct class {"
-			"  lambda fn : () -> unit { }"
+			"  lambda fn = () -> unit { }"
 			"}")));
 	}
 
@@ -168,7 +168,7 @@ namespace analysis {
 		IRBuilder builder(manager);
 		EXPECT_FALSE(isTrivial(builder.parseType(
 			"struct class {"
-			"  virtual lambda fn : () -> unit { }"
+			"  virtual lambda fn = () -> unit { }"
 			"}")));
 	}
 
@@ -191,8 +191,8 @@ namespace analysis {
 			"  ctor(other: ref<class,t,f,cpp_ref>) {}"
 			"  ctor(other: ref<class,t,f,cpp_rref>) {}"
 			"  dtor virtual() {}"
-			"  lambda " + utils::getMangledOperatorAssignName() + " : (rhs: ref<class,f,f,cpp_ref>) -> ref<class,f,f,cpp_ref> {}"
-			"  lambda " + utils::getMangledOperatorAssignName() + " : (rhs: ref<class,f,f,cpp_rref>) -> ref<class,f,f,cpp_ref> {}"
+			"  lambda " + utils::getMangledOperatorAssignName() + " = (rhs: ref<class,f,f,cpp_ref>) -> ref<class,f,f,cpp_ref> {}"
+			"  lambda " + utils::getMangledOperatorAssignName() + " = (rhs: ref<class,f,f,cpp_rref>) -> ref<class,f,f,cpp_ref> {}"
 			"}")));
 	}
 
@@ -306,7 +306,7 @@ namespace analysis {
 		IRBuilder builder(manager);
 		EXPECT_FALSE(isTrivial(builder.parseType(
 			"struct class {"
-			"  lambda " + utils::getMangledOperatorAssignName() + " : (rhs: ref<class,t,f,cpp_ref>) -> ref<class,f,f,cpp_ref> { return; }"
+			"  lambda " + utils::getMangledOperatorAssignName() + " = (rhs: ref<class,t,f,cpp_ref>) -> ref<class,f,f,cpp_ref> { return; }"
 			"}")));
 	}
 
@@ -315,7 +315,7 @@ namespace analysis {
 		IRBuilder builder(manager);
 		EXPECT_TRUE(isTrivial(builder.parseType(
 			"struct class {"
-			"  lambda " + utils::getMangledOperatorAssignName() + " : (rhs: ref<class,t,f,cpp_ref>) -> ref<class,f,f,cpp_ref> { return ref_cast(this, type_lit(f), type_lit(f), type_lit(cpp_ref)); }"
+			"  lambda " + utils::getMangledOperatorAssignName() + " = (rhs: ref<class,t,f,cpp_ref>) -> ref<class,f,f,cpp_ref> { return ref_cast(this, type_lit(f), type_lit(f), type_lit(cpp_ref)); }"
 			"}")));
 	}
 
@@ -324,7 +324,7 @@ namespace analysis {
 		IRBuilder builder(manager);
 		EXPECT_FALSE(isTrivial(builder.parseType(
 			"struct class {"
-			"  lambda " + utils::getMangledOperatorAssignName() + " : (rhs: ref<class,f,f,cpp_rref>) -> ref<class,f,f,cpp_ref> { return; }"
+			"  lambda " + utils::getMangledOperatorAssignName() + " = (rhs: ref<class,f,f,cpp_rref>) -> ref<class,f,f,cpp_ref> { return; }"
 			"}")));
 	}
 
@@ -333,7 +333,7 @@ namespace analysis {
 		IRBuilder builder(manager);
 		EXPECT_TRUE(isTrivial(builder.parseType(
 			"struct class {"
-			"  lambda " + utils::getMangledOperatorAssignName() + " : (rhs: ref<class,f,f,cpp_rref>) -> ref<class,f,f,cpp_ref> { return ref_cast(this, type_lit(f), type_lit(f), type_lit(cpp_ref)); }"
+			"  lambda " + utils::getMangledOperatorAssignName() + " = (rhs: ref<class,f,f,cpp_rref>) -> ref<class,f,f,cpp_ref> { return ref_cast(this, type_lit(f), type_lit(f), type_lit(cpp_ref)); }"
 			"}")));
 	}
 
@@ -345,8 +345,8 @@ namespace analysis {
 			"  ctor() {}"
 			"  ctor(other: ref<class,t,f,cpp_ref>) {}"
 			"  ctor(other: ref<class,f,f,cpp_rref>) {}"
-			"  lambda " + utils::getMangledOperatorAssignName() + " : (rhs: ref<class,t,f,cpp_ref>) -> ref<class,f,f,cpp_ref> { return ref_cast(this, type_lit(f), type_lit(f), type_lit(cpp_ref)); }"
-			"  lambda " + utils::getMangledOperatorAssignName() + " : (rhs: ref<class,f,f,cpp_rref>) -> ref<class,f,f,cpp_ref> { return ref_cast(this, type_lit(f), type_lit(f), type_lit(cpp_ref)); }"
+			"  lambda " + utils::getMangledOperatorAssignName() + " = (rhs: ref<class,t,f,cpp_ref>) -> ref<class,f,f,cpp_ref> { return ref_cast(this, type_lit(f), type_lit(f), type_lit(cpp_ref)); }"
+			"  lambda " + utils::getMangledOperatorAssignName() + " = (rhs: ref<class,f,f,cpp_rref>) -> ref<class,f,f,cpp_ref> { return ref_cast(this, type_lit(f), type_lit(f), type_lit(cpp_ref)); }"
 			"}")));
 	}
 
@@ -360,8 +360,8 @@ namespace analysis {
 			"  ctor() {}"
 			"  ctor(other: ref<class,t,f,cpp_ref>) {}"
 			"  ctor(other: ref<class,f,f,cpp_rref>) {}"
-			"  lambda " + utils::getMangledOperatorAssignName() + " : (rhs: ref<class,t,f,cpp_ref>) -> ref<class,f,f,cpp_ref> {}"
-			"  lambda " + utils::getMangledOperatorAssignName() + " : (rhs: ref<class,f,f,cpp_rref>) -> ref<class,f,f,cpp_ref> {}"
+			"  lambda " + utils::getMangledOperatorAssignName() + " = (rhs: ref<class,t,f,cpp_ref>) -> ref<class,f,f,cpp_ref> {}"
+			"  lambda " + utils::getMangledOperatorAssignName() + " = (rhs: ref<class,f,f,cpp_rref>) -> ref<class,f,f,cpp_ref> {}"
 			"}")));
 	}
 
@@ -370,13 +370,13 @@ namespace analysis {
 		IRBuilder builder(manager);
 		EXPECT_FALSE(isTrivial(builder.parseType(
 			"let base = struct base_class {"
-			"  lambda " + utils::getMangledOperatorAssignName() + " : (rhs: ref<base_class,f,f,cpp_ref>) -> ref<nase_class,f,f,cpp_ref> { return; }"
+			"  lambda " + utils::getMangledOperatorAssignName() + " = (rhs: ref<base_class,f,f,cpp_ref>) -> ref<nase_class,f,f,cpp_ref> { return; }"
 			"} in struct class : [public base] {"
 			"  ctor() {}"
 			"  ctor(other: ref<class,t,f,cpp_ref>) {}"
 			"  ctor(other: ref<class,t,f,cpp_rref>) {}"
-			"  lambda " + utils::getMangledOperatorAssignName() + " : (rhs: ref<class,f,f,cpp_ref>) -> ref<class,f,f,cpp_ref> {}"
-			"  lambda " + utils::getMangledOperatorAssignName() + " : (rhs: ref<class,f,f,cpp_rref>) -> ref<class,f,f,cpp_ref> {}"
+			"  lambda " + utils::getMangledOperatorAssignName() + " = (rhs: ref<class,f,f,cpp_ref>) -> ref<class,f,f,cpp_ref> {}"
+			"  lambda " + utils::getMangledOperatorAssignName() + " = (rhs: ref<class,f,f,cpp_rref>) -> ref<class,f,f,cpp_ref> {}"
 			"}")));
 	}
 
@@ -394,7 +394,7 @@ namespace analysis {
 		IRBuilder builder(manager);
 		EXPECT_FALSE(isTrivial(builder.parseType(
 			"let base = struct base_class {"
-			"  lambda " + utils::getMangledOperatorAssignName() + " : (rhs: ref<base_class,t,f,cpp_ref>) -> ref<base_class,f,f,cpp_ref> { 5; return ref_cast(this, type_lit(f), type_lit(f), type_lit(cpp_ref)); }"
+			"  lambda " + utils::getMangledOperatorAssignName() + " = (rhs: ref<base_class,t,f,cpp_ref>) -> ref<base_class,f,f,cpp_ref> { 5; return ref_cast(this, type_lit(f), type_lit(f), type_lit(cpp_ref)); }"
 			"} in struct class : [public base] { }")));
 	}
 

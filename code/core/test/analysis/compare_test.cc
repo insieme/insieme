@@ -80,7 +80,7 @@ namespace analysis {
 		string structStringA = R"(
 		def struct StructName {
 			a : int<4>;
-			lambda f : () -> int<4> { return *a; }
+			lambda f = () -> int<4> { return *a; }
 		}; StructName )";
 		auto structStringC = structStringA;
 		boost::algorithm::replace_all(structStringC, "int<4>", "int<8>");

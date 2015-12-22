@@ -353,9 +353,9 @@ member_functions : member_functions member_function                         { IN
                  |                                                          { $$ = MemberFunctionList(); }
                  ;
 
-member_function : virtual_flag cv_flags lambda_or_function "identifier" ":" "(" ")"    { driver.inLambda = $3; }
+member_function : virtual_flag cv_flags lambda_or_function "identifier" "=" "(" ")"    { driver.inLambda = $3; }
                           "->" type compound_statement                      { $$ = driver.genMemberFunction(@$, $1, $2.first, $2.second, $4, VariableList(), $10, $11); driver.inLambda = true; }
-                | virtual_flag cv_flags lambda_or_function "identifier" ":" "(" non_empty_parameters
+                | virtual_flag cv_flags lambda_or_function "identifier" "=" "(" non_empty_parameters
                                                                             { driver.openScope(); driver.registerParameters(@7, $7); driver.inLambda = $3; }
                       ")" "->" type compound_statement_no_scope             { $$ = driver.genMemberFunction(@$, $1, $2.first, $2.second, $4, $7, $11, $12); driver.closeScope(); driver.inLambda = true; }
                 ;

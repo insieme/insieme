@@ -494,7 +494,7 @@ namespace printer {
 									auto parameters = impl->getParameterList();
 									thisStack.push(parameters.front());
 
-									out << " : (" << join(", ", parameters.begin() + 1, parameters.end(),
+									out << " = (" << join(", ", parameters.begin() + 1, parameters.end(),
 														  [&](std::ostream &out, const VariablePtr &curVar) {
 															  visit(NodeAddress(curVar));
 															  out << " : ";
@@ -810,7 +810,7 @@ namespace printer {
 							auto parameters = impl->getParameterList();
 							thisStack.push(parameters.front().getAddressedNode());
 
-							out << " : (" << join(", ", parameters.begin() + 1, parameters.end(),
+							out << " = (" << join(", ", parameters.begin() + 1, parameters.end(),
 												  [&](std::ostream &out, const VariableAddress &curVar) {
 													  VISIT(curVar);
 													  out << " : ";
