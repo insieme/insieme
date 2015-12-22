@@ -269,7 +269,7 @@ namespace core {
 
 		StatementPtr stmt = builder.compoundStmt(toVector<StatementPtr>(builder.declarationStmt(varA, builder.refVar(zero)),
 		                                                                builder.assign(varA, builder.callExpr(uint4, lambda, builder.deref(varA)))));
-		EXPECT_EQ("decl fun000 : (uint<4>) -> uint<4>;\ndef fun000 : function (v3 : ref<uint<4>,f,f,plain>) -> uint<4> {\n    return *v3;\n};\n{\n    var ref<uint<4>,f,f,plain> v1 = ref_var_init(2u);\n    v1 = fun000(*v1);\n}", toString(printer::PrettyPrinter(stmt)));
+		EXPECT_EQ("decl fun000 : (uint<4>) -> uint<4>;\ndef fun000 = function (v3 : ref<uint<4>,f,f,plain>) -> uint<4> {\n    return *v3;\n};\n{\n    var ref<uint<4>,f,f,plain> v1 = ref_var_init(2u);\n    v1 = fun000(*v1);\n}", toString(printer::PrettyPrinter(stmt)));
 
 
 		CheckPtr all = core::checks::getFullCheck();
@@ -284,7 +284,7 @@ namespace core {
 		// fix initalization
 		stmt2 = transform::replaceAll(manager, stmt2, builder.refVar(zero), builder.refVar(builder.literal(boolType, "false")));
 
-		EXPECT_EQ(  "decl fun000 : (bool) -> bool;\ndef fun000 : function (v39 : ref<bool,f,f,plain>) -> bool {\n    return *v39;\n};\n{\n    var ref<bool,f,f,plain> v2 = ref_var_init(false);\n    v2 = fun000(*v2);\n}", toString(printer::PrettyPrinter(stmt2)));
+		EXPECT_EQ(  "decl fun000 : (bool) -> bool;\ndef fun000 = function (v39 : ref<bool,f,f,plain>) -> bool {\n    return *v39;\n};\n{\n    var ref<bool,f,f,plain> v2 = ref_var_init(false);\n    v2 = fun000(*v2);\n}", toString(printer::PrettyPrinter(stmt2)));
 
 		EXPECT_EQ("[]", toString(check(stmt2, all)));
 		EXPECT_PRED2(containsSubString, toString(printer::PrettyPrinter(stmt2)), "var ref<bool,f,f,plain> v2 = ref_var_init(false)");
