@@ -550,6 +550,14 @@ namespace parser {
 			if(!isSymbolDeclaredInGlobalScope(memberName)) { declareSymbolInGlobalScope(l, memberName, key); }
 		}
 
+		StatementPtr InspireDriver::replaceThisInBody(const location& l, const StatementPtr& body, const VariablePtr& thisParam) {
+			if (inLambda) {
+				return transform::replaceAll(mgr, body, genThis(l), thisParam).as<StatementPtr>();
+			} else {
+				return transform::replaceAll(mgr, body, genThis(l), builder.deref(thisParam)).as<StatementPtr>();
+			}
+		}
+
 		/**
 		 * generates a constructor for the currently defined record type
 		 */
@@ -571,7 +579,7 @@ namespace parser {
 			if(paramTypes.size() != params.size() + 1) { return nullptr; }
 
 			// update body
-			auto newBody = transform::replaceAll(mgr, body, genThis(l), thisParam).as<StatementPtr>();
+			auto newBody = replaceThisInBody(l, body, thisParam);
 
 			// create constructor type
 			auto ctorType = builder.functionType(paramTypes, builder.refType(getThisType()), FK_CONSTRUCTOR);
@@ -607,7 +615,7 @@ namespace parser {
 			if(paramTypes.size() != 1) { return nullptr; }
 
 			// update body
-			auto newBody = transform::replaceAll(mgr, body, genThis(l), thisParam).as<StatementPtr>();
+			auto newBody = replaceThisInBody(l, body, thisParam);
 
 			// create destructor type
 			auto dtorType = builder.functionType(paramTypes, builder.refType(getThisType()), FK_DESTRUCTOR);
@@ -645,7 +653,7 @@ namespace parser {
 			}
 
 			// update body
-			auto newBody = transform::replaceAll(mgr, body, genThis(l), thisParam).as<StatementPtr>();
+			auto newBody = replaceThisInBody(l, body, thisParam);
 
 			// create the member function
 			auto fun = genLambda(l, fullParams, retType, newBody, FK_MEMBER_FUNCTION);
@@ -1120,33 +1128,7 @@ namespace parser {
 		}
 
 		ExpressionPtr InspireDriver::genThis(const location& l) {
-			if(inLambda) {
-				return genThisInLambda(l);
-			} else {
-				return genThisInFunction(l);
-			}
-		}
-
-		ExpressionPtr InspireDriver::genThisInLambda(const location& l) {
-			// check valid scope
-			if(currentRecordStack.empty()) {
-				error(l, "This-pointer in non-record context!");
-				return nullptr;
-			}
-
-			// build a literal
 			return builder.literal("this", builder.refType(getThisType()));
-		}
-
-		ExpressionPtr InspireDriver::genThisInFunction(const location& l) {
-			// check valid scope
-			if(currentRecordStack.empty()) {
-				error(l, "This-pointer in non-record context!");
-				return nullptr;
-			}
-
-			// build a literal
-			return builder.literal("this", builder.refType(builder.refType(getThisType())));
 		}
 
 		void InspireDriver::computeResult(const NodePtr& fragment) {
