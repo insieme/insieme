@@ -2,7 +2,7 @@
 alias int = int<4>;
 
 // an atomic increment
-def atomicInc : (v : ref<'a>)->unit {
+def atomicInc = (v : ref<'a>)->unit {
 	atomic(v, (_ : 'a)=>true, (x : 'a)=>x+CAST('a)1);
 };
 

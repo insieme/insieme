@@ -418,7 +418,7 @@ int main() {
 	}
 
 	// check direct R-value access
-	#pragma test expect_ir("def IMP_generate_struct : () -> struct IMP_simple_struct {i: int<4>;} { return *ref_var_init(<IMP_simple_struct>{0}); }; IMP_generate_struct().i+5")
+	#pragma test expect_ir("def IMP_generate_struct = () -> struct IMP_simple_struct {i: int<4>;} { return *ref_var_init(<IMP_simple_struct>{0}); }; IMP_generate_struct().i+5")
 	generate_struct().i + 5;
 	
 	//===---------------------------------------------------------------------------------------------------------------------------------- MISCELLANEOUS ---===

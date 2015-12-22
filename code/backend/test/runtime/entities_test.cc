@@ -82,7 +82,7 @@ TEST(RuntimeExtension, WorkItemVariant) {
 	// test encoding
 	WorkItemVariant variant(getDummyImpl(manager));
 	core::ExpressionPtr encoded = enc::toIR(manager, variant);
-	EXPECT_EQ("decl fun000 : (ref<irt_wi,f,f,plain>) -> unit;def fun000 : function (v1 : ref<ref<irt_wi,f,f,plain>,f,f,plain>) -> unit { };WorkItemVariant(fun000)",
+	EXPECT_EQ("decl fun000 : (ref<irt_wi,f,f,plain>) -> unit;def fun000 = function (v1 : ref<ref<irt_wi,f,f,plain>,f,f,plain>) -> unit { };WorkItemVariant(fun000)",
 	          toString(core::printer::PrettyPrinter(encoded, core::printer::PrettyPrinter::OPTIONS_SINGLE_LINE)));
 
 	// test decoding

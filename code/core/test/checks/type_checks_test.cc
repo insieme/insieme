@@ -461,11 +461,11 @@ namespace checks {
 		IRBuilder builder(manager);
 
 		//create structs with correct member functions
-		auto ok1 = builder.parseType("struct A { lambda f : () -> unit {} }");
-		auto ok2 = builder.parseType("struct A { lambda f : () -> unit {} lambda g : () -> unit {} }");
-		auto ok3 = builder.parseType("struct A { lambda f : (a : int<4>) -> unit {} lambda g : (a : int<4>) -> unit {} }");
-		auto ok4 = builder.parseType("struct A { lambda f : () -> unit {} pure virtual g : () -> unit }");
-		auto ok5 = builder.parseType("struct A { lambda f : (a : int<4>) -> unit {} pure virtual g : (int<4>) -> unit }");
+		auto ok1 = builder.parseType("struct A { lambda f = () -> unit {} }");
+		auto ok2 = builder.parseType("struct A { lambda f = () -> unit {} lambda g = () -> unit {} }");
+		auto ok3 = builder.parseType("struct A { lambda f = (a : int<4>) -> unit {} lambda g = (a : int<4>) -> unit {} }");
+		auto ok4 = builder.parseType("struct A { lambda f = () -> unit {} pure virtual g : () -> unit }");
+		auto ok5 = builder.parseType("struct A { lambda f = (a : int<4>) -> unit {} pure virtual g : (int<4>) -> unit }");
 
 		EXPECT_TRUE(check(ok1).empty()) << check(ok1);
 		EXPECT_TRUE(check(ok2).empty()) << check(ok2);
@@ -519,11 +519,11 @@ namespace checks {
 		IRBuilder builder(manager);
 
 		//create structs with correct member functions
-		auto ok1 = builder.parseType("struct A { lambda f : () -> unit {} }");
-		auto ok2 = builder.parseType("struct A { lambda f : () -> unit {} lambda g : () -> unit {} }");
-		auto ok3 = builder.parseType("struct A { lambda f : (a : int<4>) -> unit {} lambda g : (a : int<4>) -> unit {} }");
-		auto ok4 = builder.parseType("struct A { lambda f : () -> unit {} pure virtual g : () -> unit }");
-		auto ok5 = builder.parseType("struct A { lambda f : (a : int<4>) -> unit {} pure virtual g : (int<4>) -> unit }");
+		auto ok1 = builder.parseType("struct A { lambda f = () -> unit {} }");
+		auto ok2 = builder.parseType("struct A { lambda f = () -> unit {} lambda g = () -> unit {} }");
+		auto ok3 = builder.parseType("struct A { lambda f = (a : int<4>) -> unit {} lambda g = (a : int<4>) -> unit {} }");
+		auto ok4 = builder.parseType("struct A { lambda f = () -> unit {} pure virtual g : () -> unit }");
+		auto ok5 = builder.parseType("struct A { lambda f = (a : int<4>) -> unit {} pure virtual g : (int<4>) -> unit }");
 
 		{
 			//create a struct with two identical member functions
@@ -730,7 +730,7 @@ namespace checks {
 			R"(
 				struct A {
 					x : int<4>;
-					lambda f : () -> unit { $x$; }
+					lambda f = () -> unit { $x$; }
 				}
 			)"
 			);
@@ -768,7 +768,7 @@ namespace checks {
 			R"(
 				struct A {
 					x : ptr<A>;
-					lambda f : () -> unit { $x$; }
+					lambda f = () -> unit { $x$; }
 				}
 			)"
 			);

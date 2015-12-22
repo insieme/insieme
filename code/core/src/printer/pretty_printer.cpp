@@ -557,8 +557,8 @@ namespace printer {
 									auto parameters = impl->getParameterList();
 									thisStack.push(parameters.front());
 
-									out << " : (" << join(", ", parameters.begin() + 1, parameters.end(),
-														  [&](std::ostream& out, const VariablePtr& curVar) {
+									out << " = (" << join(", ", parameters.begin() + 1, parameters.end(),
+														  [&](std::ostream &out, const VariablePtr &curVar) {
 															  visit(NodeAddress(curVar));
 															  out << " : ";
 															  visit(NodeAddress(curVar->getType()));
@@ -609,7 +609,7 @@ namespace printer {
 									out << "def " << lambdaNames[binding->getReference()];
 
 									auto parameters = lambda.getParameterList();
-									out << " : function (" <<
+									out << " = function (" <<
 									join(", ", parameters, [&](std::ostream& out, const VariablePtr& curVar) {
 										visit(NodeAddress(curVar));
 										out << " : ";
@@ -828,7 +828,7 @@ namespace printer {
 							auto parameters = impl->getParameterList();
 							thisStack.push(parameters.front().getAddressedNode());
 
-							out << " : (" << join(", ", parameters.begin() + 1, parameters.end(),
+							out << " = (" << join(", ", parameters.begin() + 1, parameters.end(),
 												  [&](std::ostream &out, const VariableAddress &curVar) {
 													  VISIT(curVar);
 													  out << " : ";
@@ -1078,7 +1078,7 @@ namespace printer {
 				std::size_t count = 0;
 				for_each(defs.begin(), defs.end(), [&](const LambdaBindingAddress& cur) {
 					VISIT(cur->getReference());
-					out << " : ";
+					out << " = ";
 					VISIT(cur->getLambda());
 					out << ";";
 					if(count++ < defs.size() - 1) { this->newLine(); }
