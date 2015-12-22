@@ -305,7 +305,7 @@ namespace analysis {
 		auto otherType = builder.refType(type->getTag(), true, false, lang::ReferenceType::Kind::CppReference);
 		auto resType = builder.refType(type->getTag(), false, false, lang::ReferenceType::Kind::CppReference);
 		auto funType = builder.functionType(TypeList{ thisType, otherType }, resType, FK_MEMBER_FUNCTION);
-		return hasMemberOfType(type, "IMP__operator_assign_", funType);
+		return hasMemberOfType(type, utils::getMangledOperatorAssignName(), funType);
 	}
 
 	bool hasMoveAssignment(const TagTypePtr& type) {
@@ -315,7 +315,7 @@ namespace analysis {
 		auto otherType = builder.refType(type->getTag(), false, false, lang::ReferenceType::Kind::CppRValueReference);
 		auto resType = builder.refType(type->getTag(), false, false, lang::ReferenceType::Kind::CppReference);
 		auto funType = builder.functionType(TypeList{ thisType, otherType }, resType, FK_MEMBER_FUNCTION);
-		return hasMemberOfType(type, "IMP__operator_assign_", funType);
+		return hasMemberOfType(type, utils::getMangledOperatorAssignName(), funType);
 	}
 
 	bool isaDefaultConstructor(const TagTypePtr& type, const ExpressionPtr& ctor) {
