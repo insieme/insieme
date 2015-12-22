@@ -1196,7 +1196,7 @@ namespace parser {
 	TEST(IRParser, TypedExpression) {
 		NodeManager nm;
 
-		const std::string commonCode = "def g : (a : int<4>) -> unit {};";
+		const std::string commonCode = "def g = (a : int<4>) -> unit {};";
 
 		//calling with the correct type
 		EXPECT_TRUE(test_statement(nm, commonCode + "{ g(42); }"));

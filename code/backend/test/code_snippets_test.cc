@@ -715,7 +715,7 @@ namespace backend {
 				alias int = int<4>;
 		
 				decl f : ()->unit;		
-				def f : ()->unit { f(); };
+				def f = ()->unit { f(); };
 			
 				int main() {
 					f();
@@ -761,8 +761,8 @@ namespace backend {
 				decl f : ()->unit;
 				decl g : ()->unit;
 		
-				def f : ()->unit { g(); };
-				def g : ()->unit { f(); };
+				def f = ()->unit { g(); };
+				def g = ()->unit { f(); };
 			
 				int main() {
 					f();
@@ -809,8 +809,8 @@ namespace backend {
 				decl even : ( int )->bool;
 				decl odd  : ( int )->bool;
 		
-				def even : ( x : int )->bool { return ( x == 0 ) ? true : odd(x-1); };
-				def odd  : ( x : int )->bool { return ( x == 0 ) ? false : even(x-1); };
+				def even = ( x : int )->bool { return ( x == 0 ) ? true : odd(x-1); };
+				def odd  = ( x : int )->bool { return ( x == 0 ) ? false : even(x-1); };
 			
 				int main() {
 					even(10);
