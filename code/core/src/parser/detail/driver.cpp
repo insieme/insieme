@@ -563,8 +563,9 @@ namespace parser {
 			// create full parameter list
 			VariableList ctorParams;
 			ctorParams.push_back(thisParam);
-			for(const auto& cur : params)
+			for(const auto& cur : params) {
 				ctorParams.push_back(cur);
+			}
 
 			auto paramTypes = getParamTypesForLambdaAndFunction(l, ctorParams);
 			if(paramTypes.size() != params.size() + 1) { return nullptr; }
