@@ -648,6 +648,10 @@ namespace parser {
 
 			// create the member function
 			auto fun = genLambda(l, fullParams, retType, newBody, FK_MEMBER_FUNCTION);
+			//ensure that the lambda got created without errors
+			if (!fun) {
+				return nullptr;
+			}
 
 			auto memberFunType = fun->getFunctionType();
 			assert_false(fun->isRecursive()) << "The parser should not produce recursive functions!";
