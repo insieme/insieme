@@ -1055,7 +1055,7 @@ namespace parser {
 				//default constructor
 				auto ctorType = builder.functionType(toVector(thisType), thisType, FK_CONSTRUCTOR);
 				auto lit = builder.getLiteralForConstructor(ctorType);
-				tu.addFunction(lit, builder.lambdaExpr(ctorType, builder.parameters(), builder.getNoOp()));
+				tu.addFunction(lit, builder.lambdaExpr(ctorType, builder.parameters(), parserIRExtension.getMemberDummyLambda()));
 			}
 
 			{
@@ -1063,7 +1063,7 @@ namespace parser {
 				TypePtr otherType = builder.refType(analysis::getReferencedType(thisType), true, false, lang::ReferenceType::Kind::CppReference);
 				auto ctorType = builder.functionType(toVector(thisType, otherType), thisType, FK_CONSTRUCTOR);
 				auto lit = builder.getLiteralForConstructor(ctorType);
-				tu.addFunction(lit, builder.lambdaExpr(ctorType, builder.parameters(), builder.getNoOp()));
+				tu.addFunction(lit, builder.lambdaExpr(ctorType, builder.parameters(), parserIRExtension.getMemberDummyLambda()));
 			}
 
 			{
@@ -1071,14 +1071,14 @@ namespace parser {
 				TypePtr otherType = builder.refType(analysis::getReferencedType(thisType), false, false, lang::ReferenceType::Kind::CppRValueReference);
 				auto ctorType = builder.functionType(toVector(thisType, otherType), thisType, FK_CONSTRUCTOR);
 				auto lit = builder.getLiteralForConstructor(ctorType);
-				tu.addFunction(lit, builder.lambdaExpr(ctorType, builder.parameters(), builder.getNoOp()));
+				tu.addFunction(lit, builder.lambdaExpr(ctorType, builder.parameters(), parserIRExtension.getMemberDummyLambda()));
 			}
 
 			{
 				//default destructor
 				auto dtorType = builder.functionType(toVector(thisType), thisType, FK_DESTRUCTOR);
 				auto lit = builder.getLiteralForDestructor(dtorType);
-				tu.addFunction(lit, builder.lambdaExpr(dtorType, builder.parameters(), builder.getNoOp()));
+				tu.addFunction(lit, builder.lambdaExpr(dtorType, builder.parameters(), parserIRExtension.getMemberDummyLambda()));
 			}
 
 			{
@@ -1087,7 +1087,7 @@ namespace parser {
 				TypePtr resType = builder.refType(analysis::getReferencedType(thisType), false, false, lang::ReferenceType::Kind::CppReference);
 				auto funType = builder.functionType(toVector(thisType, otherType), resType, FK_MEMBER_FUNCTION);
 				auto lit = builder.getLiteralForMemberFunction(funType, utils::getMangledOperatorAssignName());
-				tu.addFunction(lit, builder.lambdaExpr(funType, builder.parameters(), builder.getNoOp()));
+				tu.addFunction(lit, builder.lambdaExpr(funType, builder.parameters(), parserIRExtension.getMemberDummyLambda()));
 			}
 
 			{
@@ -1096,7 +1096,7 @@ namespace parser {
 				TypePtr resType = builder.refType(analysis::getReferencedType(thisType), false, false, lang::ReferenceType::Kind::CppReference);
 				auto funType = builder.functionType(toVector(thisType, otherType), resType, FK_MEMBER_FUNCTION);
 				auto lit = builder.getLiteralForMemberFunction(funType, utils::getMangledOperatorAssignName());
-				tu.addFunction(lit, builder.lambdaExpr(funType, builder.parameters(), builder.getNoOp()));
+				tu.addFunction(lit, builder.lambdaExpr(funType, builder.parameters(), parserIRExtension.getMemberDummyLambda()));
 			}
 		}
 
@@ -1118,7 +1118,7 @@ namespace parser {
 					}
 
 					//register the member in the TU
-					tu.addFunction(literal, builder.lambdaExpr(functionType, builder.parameters(), builder.getNoOp()));
+					tu.addFunction(literal, builder.lambdaExpr(functionType, builder.parameters(), parserIRExtension.getMemberDummyLambda()));
 					//and return here. there is no need to register this symbol in the global scope, as member calls are handled differently
 					return;
 				}
@@ -1144,6 +1144,20 @@ namespace parser {
 				replacements[builder.stringValue(temporaryName->getValue() + "::" + utils::getMangledOperatorAssignName())] = builder.stringValue("::" + utils::getMangledOperatorAssignName());
 			}
 			result = transform::replaceAll(mgr, result, replacements, transform::globalReplacement);
+
+			bool foundDummyLambda = false;
+			const auto& dummyLambda = parserIRExtension.getMemberDummyLambda();
+			visitDepthFirstOnceInterruptible(result, [&](const LiteralPtr& lit) {
+				if (lit == dummyLambda) {
+					foundDummyLambda = true;
+					return true;
+				}
+				return false;
+			});
+
+			if (foundDummyLambda) {
+				assert_fail() << "Found dummy lambda in final parser result.";
+			}
 		}
 
 

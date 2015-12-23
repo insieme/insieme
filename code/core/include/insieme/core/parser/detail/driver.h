@@ -68,12 +68,19 @@ namespace parser {
 			 */
 			friend class core::NodeManager;
 
+			const LiteralPtr memberDummyLambda;
+
 			/**
 			 * Creates a new instance based on the given node manager.
 			 */
-			ParserIRExtension(core::NodeManager& manager) : core::lang::Extension(manager) {}
+			ParserIRExtension(core::NodeManager& manager) : core::lang::Extension(manager),
+					memberDummyLambda(IRBuilder(manager).literal(IRBuilder(manager).genericType("parser_member_dummy_lambda"), "parser_member_dummy_lambda")) {}
 
-			LANG_EXT_LITERAL_WITH_NAME(MemberFunctionAccess, "parser_member_function_access", "parser_member_function_access", "('a, identifier) -> unit")
+			LANG_EXT_LITERAL(MemberFunctionAccess, "parser_member_function_access", "('a, identifier) -> unit")
+
+			const LiteralPtr& getMemberDummyLambda() const {
+				return memberDummyLambda;
+			}
 		};
 
 		/**
