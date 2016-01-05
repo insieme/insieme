@@ -81,7 +81,12 @@ make
 
 ### Running Unit Tests
 
-Unit tests can be executed with:
+For certain unit- and integration tests tests to run, the environment has to be prepared (e.g. precompiling libraries to link against). This can be achieved by executing the following command:
+```
+./code/driver/integration_tests --preprocessing
+```
+
+Unit tests can then be executed with:
 ```
 make test ARGS=-j2 # Runs all unit tests using two parallel jobs
 ```
@@ -91,16 +96,6 @@ or directly via CTest:
 ctest -j2 # Runs all unit tests using two parallel jobs
 ```
 
-
-If everything was successful... 
-**congratulations!**
-**You can start enjoying Insieme now!**
-
-
-Please, understand that the install command is not implemented since this is an on-going development framework. 
-Instead of polluting your local setup, we prefer to use Insieme from the build directory. 
-Install scripts will be provided in future releases.
-
 ### Running Integration Tests
 
 Integration tests can be executed using the custom runner compiled in the build directory:
@@ -109,9 +104,25 @@ Integration tests can be executed using the custom runner compiled in the build 
 ```
 Integration tests can be executed in parallel (``-w SLOTS``), and multiple times (``-r N``). For a full list of options use the ``-h`` argument or refer to the Insieme developer documentation. The mock run (``-m``) will give you an idea of the actual commands being invoked.
 
+To clean up files generated in the preprocessing step, simply run:
+```
+./code/driver/integration_tests --postprocessing
+```
+
+
+If everything was successful...
+**congratulations!**
+**You can start enjoying Insieme now!**
+
 ### Compiling Application Codes
 
 The main executable provided by the Insieme framework is called ``insiemecc``. It can be used to replace e.g. occurrences of another compiler such as ``gcc`` in makefiles. It supports both source-to-source-only compilation, as well as full compilation by calling a backend compiler. For further information on its features and options, please refer to:
 ```
 ./code/driver/insiemecc --help
 ```
+
+### Installation
+
+Please, understand that the install command is not implemented since this is an on-going development framework.
+Instead of polluting your local setup, we prefer to use Insieme from the build directory.
+Install scripts may be provided in future releases.
