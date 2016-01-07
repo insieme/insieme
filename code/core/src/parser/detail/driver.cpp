@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -402,6 +402,17 @@ namespace parser {
 			if(tu[key]) {
 				error(l, format("Type %s has already been defined", name));
 				return nullptr;
+			}
+
+			//if this record type has user specified constructors and the default constructor is still our dummy lambda, we have to delete that one here
+			if (!ctors.empty()) {
+				const TypePtr thisType = builder.refType(key);
+				const auto ctorType = builder.functionType(toVector(thisType), thisType, FK_CONSTRUCTOR);
+				const auto lit = builder.getLiteralForConstructor(ctorType);
+				const auto dummyLambda = builder.lambdaExpr(ctorType, builder.parameters(), parserIRExtension.getMemberDummyLambda());
+				if (tu.getFunctions()[lit] == dummyLambda) {
+					tu.getFunctions().erase(lit);
+				}
 			}
 
 			TagTypePtr res;
