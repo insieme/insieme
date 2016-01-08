@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -404,6 +404,17 @@ namespace parser {
 				return nullptr;
 			}
 
+			//if this record type has user specified constructors and the default constructor is still our dummy lambda, we have to delete that one here
+			if (!ctors.empty()) {
+				const TypePtr thisType = builder.refType(key);
+				const auto ctorType = builder.functionType(toVector(thisType), thisType, FK_CONSTRUCTOR);
+				const auto lit = builder.getLiteralForConstructor(ctorType);
+				const auto dummyLambda = builder.lambdaExpr(ctorType, builder.parameters(), parserIRExtension.getMemberDummyLambda());
+				if (tu.getFunctions()[lit] == dummyLambda) {
+					tu.getFunctions().erase(lit);
+				}
+			}
+
 			TagTypePtr res;
 
 			if(type == NT_Struct) {
@@ -561,7 +572,19 @@ namespace parser {
 		/**
 		 * generates a constructor for the currently defined record type
 		 */
-		ExpressionPtr InspireDriver::genConstructor(const location& l, const VariableList& params, const StatementPtr& body) {
+		ExpressionPtr InspireDriver::genConstructor(const location& l, const LambdaExprPtr& ctor) {
+			assert_false(currentRecordStack.empty()) << "Not within record definition!";
+
+			auto key = builder.getLiteralForConstructor(ctor->getType());
+			tu.addFunction(key, ctor);
+
+			return key;
+		}
+
+		/**
+		 * generates a constructor for the currently defined record type
+		 */
+		LambdaExprPtr InspireDriver::genConstructorLambda(const location& l, const VariableList& params, const StatementPtr& body) {
 			assert_false(currentRecordStack.empty()) << "Not within record definition!";
 
 			// get this-type (which is ref<ref in case of a function
@@ -590,12 +613,7 @@ namespace parser {
 				// replace all variables in the body by their implicitly materialized version
 				ingredients = transform::materialize(ingredients);
 			}
-			auto fun = builder.lambdaExpr(ctorType, ingredients.params, ingredients.body);
-
-			auto key = builder.getLiteralForConstructor(ctorType);
-			tu.addFunction(key, fun);
-
-			return key;
+			return builder.lambdaExpr(ctorType, ingredients.params, ingredients.body);
 		}
 
 		/**
@@ -691,6 +709,22 @@ namespace parser {
 
 			// create the member function entry
 			return builder.pureVirtualMemberFunction(name, memberFunType);
+		}
+
+		ExpressionPtr InspireDriver::genFreeConstructor(const location& l, const std::string& name, const LambdaExprPtr& ctor) {
+			assert_false(currentRecordStack.empty()) << "Not within record definition!";
+
+			//the given ctor is already complete. all we have to do is register it in the TU and the global scope with the desired name
+			const auto key = builder.literal(name, ctor->getType());
+			if(tu[key] || isSymbolDeclaredInGlobalScope(name)) {
+				error(l, format("Re-definition of function %s", name));
+				return nullptr;
+			}
+
+			declareSymbolInGlobalScope(l, name, key);
+			tu.addFunction(key, ctor);
+
+			return key;
 		}
 
 		ExpressionPtr InspireDriver::genFunctionDefinition(const location& l, const std::string name, const LambdaExprPtr& lambda) {
