@@ -207,7 +207,7 @@
 %type <ParserTypedExpressionList>      typed_expressions non_empty_typed_expressions
 %type <StatementPtr>                   statement plain_statement let_statement
 %type <ProgramPtr>                     main
-%type <NodePtr>                        definition
+%type <NodePtr>                        definition free_member_definition
 
 %type <TypePtr>                        record_definition
 %type <NodePtr>                        function_definition
@@ -241,7 +241,7 @@
 %type <ExpressionPtr>                  variable
 %type <LiteralPtr>                     literal
 %type <ExpressionPtr>                  call
-%type <LambdaExprPtr>                  lambda
+%type <LambdaExprPtr>                  lambda constructor_lambda
 %type <BindExprPtr>                    bind
 %type <ExpressionPtr>                  parallel_expression list_expression initializer unary_op binary_op ternary_op this_expression
 
@@ -307,6 +307,7 @@ declaration : "decl" struct_or_union "identifier"                           { dr
 
 definition : "def" record_definition                                        { $$ = $2; }
            | "def" function_definition                                      { $$ = $2; }
+           | "def" free_member_definition                                   { $$ = $2; }
            ;
 
 main : type "identifier" "(" parameters                                     { driver.openScope(); driver.registerParameters(@4, $4); }
@@ -339,11 +340,14 @@ constructors : constructors constructor                                     { IN
              |                                                              { $$ = ExpressionList(); }
              ;
 
-constructor : "ctor" "(" parameters                                         { driver.openScope(); driver.registerParameters(@3, $3); }
-                                    ")" compound_statement_no_scope         { $$ = driver.genConstructor(@$, $3, $6); driver.closeScope(); }
-            | "ctor" "function" "(" parameters                              { driver.openScope(); driver.registerParameters(@3, $4); driver.inLambda = false; }
-                                    ")" compound_statement_no_scope         { $$ = driver.genConstructor(@$, $4, $7); driver.closeScope(); driver.inLambda = true; }
+constructor : "ctor" constructor_lambda                                     { $$ = driver.genConstructor(@$, $2); }
             ;
+
+constructor_lambda : "(" parameters                                         { driver.openScope(); driver.registerParameters(@2, $2); }
+                                    ")" compound_statement_no_scope         { $$ = driver.genConstructorLambda(@$, $2, $5); driver.closeScope(); }
+                   | "function" "(" parameters                              { driver.openScope(); driver.registerParameters(@2, $3); driver.inLambda = false; }
+                                    ")" compound_statement_no_scope         { $$ = driver.genConstructorLambda(@$, $3, $6); driver.closeScope(); driver.inLambda = true; }
+                   ;
 
 destructor : "dtor" virtual_flag "(" ")" compound_statement                 { $$ = std::make_pair(driver.genDestructor(@$, $5), $2); }
            | "dtor" virtual_flag "function"                                 { driver.inLambda = false; }
@@ -379,6 +383,15 @@ pure_virtual_member_functions : pure_virtual_member_functions pure_virtual_membe
 
 pure_virtual_member_function : "pure" "virtual" cv_flags "identifier" ":" pure_function_type    { $$ = driver.genPureVirtualMemberFunction(@$, $3.first, $3.second, $4, $6); }
                              ;
+
+
+//    -- free members -------------------------------------
+
+free_member_definition : "identifier" "::" "ctor" "identifier" "="          { driver.beginRecord(@$, $1); }
+                                           constructor_lambda               { $$ = driver.genFreeConstructor(@$, $4, $7); driver.endRecord(); }
+                       | "identifier" "::"                                  { driver.beginRecord(@$, $1); }
+                                           member_function                  { $$ = $4; driver.endRecord(); }
+                       ;
 
 
 //    -- function_declarations -------------------------------------

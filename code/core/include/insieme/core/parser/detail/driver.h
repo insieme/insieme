@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -274,9 +274,14 @@ namespace parser {
 		  public:
 
 			/**
+			 * generates a constructor from the given lambda expression (mostly used in conjunction with genConstructorDetail)
+			 */
+			ExpressionPtr genConstructor(const location& l, const LambdaExprPtr& ctor);
+
+			/**
 			 * generates a constructor for the currently defined record type
 			 */
-			ExpressionPtr genConstructor(const location& l, const VariableList& params, const StatementPtr& body);
+			LambdaExprPtr genConstructorLambda(const location& l, const VariableList& params, const StatementPtr& body);
 
 			/**
 			 * generates a destructor for the currently defined record type
@@ -292,6 +297,11 @@ namespace parser {
 			 * generates a member function for the currently defined record type
 			 */
 			PureVirtualMemberFunctionPtr genPureVirtualMemberFunction(const location& l, bool cnst, bool voltile, const std::string& name, const FunctionTypePtr& type);
+
+			/**
+			 * generates a free constructor for the given lambda
+			 */
+			ExpressionPtr genFreeConstructor(const location& l, const std::string& name, const LambdaExprPtr& ctor);
 
 			/**
 			 * generates a function definition

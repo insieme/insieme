@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -1285,6 +1285,27 @@ namespace parser {
 		                     "}"));
 	}
 
+	TEST(IRParser, FreeMembers) {
+		NodeManager nm;
+
+		//free ctors are used differently than the ones defined within record types
+		//member functions can be used just like the ones defined within the record type itself
+		EXPECT_TRUE(test_statement(nm, "def struct A {"
+		                               "  a : int<4>;"
+		                               "  ctor(x : int<4>) { a = x; }"
+		                               "  lambda mfun = (x : int<4>) -> int<4> { return a; }"
+		                               "};"
+		                               "def A::ctor free_ctor = (x : int<4>) { a = x; };"
+		                               "def A::lambda free_mfun = (x : int<4>) -> int<4> { return a; };"
+		                               "{"
+		                               "  var ref<A> a1 = A::(ref_var(type_lit(A)), 10);"
+		                               "  a1.mfun(12);"
+		                               "  a1.free_mfun(12);"
+		                               "  var ref<A> a2 = free_ctor(ref_var(type_lit(A)), 10);"
+		                               "  a2.mfun(12);"
+		                               "  a2.free_mfun(12);"
+		                               "}"));
+	}
 
 	TEST(IRParser, Comments) {
 		NodeManager mgr;
