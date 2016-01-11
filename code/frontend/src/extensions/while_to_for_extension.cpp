@@ -118,7 +118,7 @@ namespace extensions {
 			}
 			return invalid;
 		}
-		
+
 		// tries to map a given operation (declaration or assignment) to a start expr for an IR for loop
 		// returns (valid, start expression)
 		std::pair<bool, core::ExpressionPtr> mapToStart(core::VariablePtr var, core::NodePtr operation) {
@@ -147,7 +147,7 @@ namespace extensions {
 			}
 			return invalid;
 		}
-		
+
 		// tries to map a given operation (conditional) to an end expr for an IR for loop
 		// returns (valid, end expression)
 		std::pair<bool, core::ExpressionPtr> mapToEnd(core::VariablePtr var, core::ExpressionPtr operation) {
@@ -202,7 +202,7 @@ namespace extensions {
 		}
 		return false;
 	}
-	
+
 	core::StatementPtr getPostCondition(const core::VariablePtr& forVar, const core::ExpressionPtr& start, const core::ExpressionPtr& stop, const core::ExpressionPtr& step) {
 		core::IRBuilder builder(forVar->getNodeManager());
 		// create following statement: tmpEndValue = end + ((beg-end) % step + step) % step
@@ -238,7 +238,7 @@ namespace extensions {
 				auto pred = match["predecessor"].getFlattened().front();
 
 				VLOG(1) << "======= START WHILE TO FOR ===========\n" << dumpColor(match.getRoot().getAddressedNode());
-											
+
 				// check if body contains flow alterating stmts (break or return. continue is allowed.)
 				bool flowAlteration = core::analysis::hasFreeBreakStatement(body) || core::analysis::hasFreeReturnStatement(body);
 				VLOG(1) << "--- flow alteration: " << flowAlteration << "\n";
@@ -259,7 +259,7 @@ namespace extensions {
 
 				// check if we use literals (e.g., globals). If yes, return original
 				bool litAccess = false;
-				core::visitDepthFirstOnce(condition, 
+				core::visitDepthFirstOnce(condition,
 					[&](const core::LiteralPtr& lit) {
 						if (core::analysis::isRefType(lit->getType())) {
 							litAccess = true;;
@@ -271,17 +271,19 @@ namespace extensions {
 				if(cvars.size() > 1 || cvars.size() == 0) return original;
 
 				auto cvar = cvars.front();
+
 				core::TypePtr cvarType = core::analysis::getReferencedType(cvar->getType());
 				VLOG(1) << "cvar: " << dumpColor(cvar) << "\n -- type: " << cvarType << "\n";
-			
+
 				// if it's not an integer, we bail out for now
 				if(!basic.isInt(cvarType)) return original;
-				
+
 				/////////////////////////////////////////////////////////////////////////////////////// figuring out the step
 
 				// find all uses of the variable in the while body
 				core::ExpressionList writeStepExprs;
 				core::NodeList toRemoveFromBody;
+				bool cvar_is_last_statement = true;
 				core::visitDepthFirstPrunable(core::NodeAddress(body), [&](const core::NodeAddress& varA) {
 					auto var = varA.getAddressedNode().isa<core::VariablePtr>();
 					if(var == cvar) {
@@ -290,32 +292,39 @@ namespace extensions {
 						if(convertedPair.second && !convertedPair.first) {
 							writeStepExprs.push_back(convertedPair.second);
 							toRemoveFromBody.push_back(varA.getParentNode());
+				// additionally check if the condition var write
+				// occurs at the end of the while body, otherwise
+				// return original code.
+				if(body->getStatements().back() != varA.getParentNode()) cvar_is_last_statement = false;
 						}
 					}
 					if(varA.isa<core::LambdaExprAddress>()) return true;
 					return false;
 				});
 				VLOG(1) << "WriteStepExprs: " << writeStepExprs << "\n";
-			
+
+				VLOG(1) << "Step expression is last statement: " << cvar_is_last_statement << "\n";
+				if(!cvar_is_last_statement) return original;
+
 				// if there is not exactly one write, or there are free variables in the step, bail out
 				// (could be much smarter about the step)
 				if(writeStepExprs.size()!=1) return original;
 				if(!core::analysis::getFreeVariables(writeStepExprs.back()).empty()) return original;
 				auto convertedStepExpr = writeStepExprs.front();
-			
+
 				/////////////////////////////////////////////////////////////////////////////////////// figuring out start
-			
+
 				auto convertedStartPair = mapToStart(cvar, pred);
 				VLOG(1) << "StartPair: " << convertedStartPair.first << " // " << convertedStartPair.second << "\n";
 
 				// bail if no valid start found
 				if(!convertedStartPair.first) return original;
-			
+
 				/////////////////////////////////////////////////////////////////////////////////////// figuring out end
 
 				auto convertedEndPair = mapToEnd(cvar, condition);
 				VLOG(1) << "EndPair: " << convertedEndPair.first << " // " << convertedEndPair.second << "\n";
-			
+
 				// bail if no valid end found
 				if(!convertedEndPair.first) return original;
 
@@ -353,7 +362,7 @@ namespace extensions {
 				if(postCond) stmtlist.push_back(postCond);
 				return builder.compoundStmt(stmtlist);
 			}).as<core::LambdaExprPtr>();
-			
+
 			VLOG(1) << "While to for replacement - from function:\n" << dumpColor(fun.second) << " - to function:\n" << dumpColor(lambdaExpr);
 
 			tu.replaceFunction(fun.first, lambdaExpr);

@@ -257,7 +257,7 @@ namespace core {
 		 * Collects all free tag-type references in the given code fragment by excluding the given origin-reference.
 		 */
 		template<template<typename T> class Ptr>
-		std::set<Ptr<const TagTypeReference>> getFreeTagTypeReferences(const Ptr<const Node>& root, const TagTypeReferencePtr& origin) {
+		std::set<Ptr<const TagTypeReference>> getFreeTagTypeReferences(const Ptr<const Node>& root, const TagTypeReferencePtr& origin = TagTypeReferencePtr()) {
 			std::set<Ptr<const TagTypeReference>> res;
 			appendFreeTagTypeReferences(root, res, false, origin);
 			return res;
@@ -389,14 +389,20 @@ namespace core {
 
 	NodePtr TagTypeDefinition::peelMember(NodeManager& manager, const NodePtr& member) const {
 
-		// create a replacement map from of the tag-type bindings
-		NodeMap replacements;
-		for(const auto& cur : *this) {
-			replacements[cur->getTag()] = TagType::get(manager, cur->getTag(),this);
+		// collect free tag type references in the given member
+		auto positions = getFreeTagTypeReferences(NodeAddress(member));
+
+		// skip if there is nothing to do
+		if (positions.empty()) return member;
+
+		// create replacement map
+		std::map<NodeAddress, NodePtr> replacements;
+		for(const auto& cur : positions) {
+			replacements[cur] = TagType::get(manager, cur, this);
 		}
 
-		// apply replacement
-		return transform::replaceAllGen(manager, member, replacements, transform::globalReplacement);
+		// conduct replacement
+		return transform::replaceAll(manager, replacements);
 	}
 
 	bool TagType::isRecursive() const {

@@ -159,33 +159,68 @@ namespace lang {
 		return isRefMarker(kind) && getKind() == Kind::CppRValueReference;
 	}
 
+	namespace {
+
+		bool isReferenceInternal(const TypePtr& node) {
+
+			// make sure the node is an actual type
+			assert_true(node);
+
+			// check type
+			auto type = node.isa<GenericTypePtr>();
+			if (!type) return false;
+
+			// simple approach: use unification
+			NodeManager& mgr = node.getNodeManager();
+			const ReferenceExtension& ext = mgr.getLangExtension<ReferenceExtension>();
+
+			// unify given type with template type
+			auto ref = ext.getGenRef().as<GenericTypePtr>();
+			auto sub = types::match(mgr, type, ref);
+			if (!sub) return false;
+
+			// check instantiation
+			const types::Substitution& map = *sub;
+			return isValidBooleanMarker(map.applyTo(ref->getTypeParameter(1))) &&
+				isValidBooleanMarker(map.applyTo(ref->getTypeParameter(2))) &&
+				isRefMarker(map.applyTo(ref->getTypeParameter(3)));
+		}
+
+	}
+
+
 
 	bool isReference(const NodePtr& node) {
+
+		// the mark annotated to cache results
+		struct ReferenceMark {
+			bool valid;
+			bool operator==(const ReferenceMark& other) const { return valid == other.valid;  }
+		};
 
 		// check for null
 		if(!node) return false;
 
 		// check for expressions
-		if(auto expr = node.isa<ExpressionPtr>()) return isReference(expr->getType());
+		if (auto expr = node.isa<ExpressionPtr>()) return isReference(expr->getType());
 
-		// check type
-		auto type = node.isa<GenericTypePtr>();
-		if(!type) return false;
+		// now it needs to be a type
+		auto type = node.isa<TypePtr>();
+		if (!type) return false;
 
-		// simple approach: use unification
-		NodeManager& mgr = node.getNodeManager();
-		const ReferenceExtension& ext = mgr.getLangExtension<ReferenceExtension>();
+		// check for a cached annotation
+		if (type->hasAttachedValue<ReferenceMark>()) {
+			return type->getAttachedValue<ReferenceMark>().valid;
+		}
 
-		// unify given type with template type
-		auto ref = ext.getGenRef().as<GenericTypePtr>();
-		auto sub = types::match(mgr, type, ref);
-		if(!sub) return false;
+		// compute the result
+		bool res = isReferenceInternal(type);
 
-		// check instantiation
-		const types::Substitution& map = *sub;
-		return isValidBooleanMarker(map.applyTo(ref->getTypeParameter(1))) &&
-				isValidBooleanMarker(map.applyTo(ref->getTypeParameter(2))) &&
-				isRefMarker(map.applyTo(ref->getTypeParameter(3)));
+		// attach the result
+		type->attachValue(ReferenceMark{ res });
+
+		// done
+		return res;
 	}
 
 	bool isReferenceTo(const NodePtr& node, const TypePtr& type) {

@@ -207,7 +207,7 @@
 %type <ParserTypedExpressionList>      typed_expressions non_empty_typed_expressions
 %type <StatementPtr>                   statement plain_statement let_statement
 %type <ProgramPtr>                     main
-%type <NodePtr>                        definition
+%type <NodePtr>                        definition free_member_definition
 
 %type <TypePtr>                        record_definition
 %type <NodePtr>                        function_definition
@@ -241,7 +241,7 @@
 %type <ExpressionPtr>                  variable
 %type <LiteralPtr>                     literal
 %type <ExpressionPtr>                  call
-%type <LambdaExprPtr>                  lambda
+%type <LambdaExprPtr>                  lambda constructor_lambda
 %type <BindExprPtr>                    bind
 %type <ExpressionPtr>                  parallel_expression list_expression initializer unary_op binary_op ternary_op this_expression
 
@@ -307,10 +307,13 @@ declaration : "decl" struct_or_union "identifier"                           { dr
 
 definition : "def" record_definition                                        { $$ = $2; }
            | "def" function_definition                                      { $$ = $2; }
+           | "def" free_member_definition                                   { $$ = $2; }
            ;
 
 main : type "identifier" "(" parameters                                     { driver.openScope(); driver.registerParameters(@4, $4); }
                                         ")" compound_statement              { $$ = driver.builder.createProgram({driver.genFunctionDefinition(@$, $2, driver.genLambda(@$, $4, $1, $7))}); driver.closeScope(); }
+     | type "function" "identifier" "(" parameters                          { driver.inLambda = false; driver.openScope(); driver.registerParameters(@5, $5); }
+                                        ")" compound_statement              { $$ = driver.builder.createProgram({driver.genFunctionDefinition(@$, $3, driver.genLambda(@$, $5, $1, $8))}); driver.closeScope(); driver.inLambda = true; }
      ;
 
 //    -- record_declarations -------------------------------------
@@ -337,11 +340,14 @@ constructors : constructors constructor                                     { IN
              |                                                              { $$ = ExpressionList(); }
              ;
 
-constructor : "ctor" "(" parameters                                         { driver.openScope(); driver.registerParameters(@3, $3); }
-                                    ")" compound_statement_no_scope         { $$ = driver.genConstructor(@$, $3, $6); driver.closeScope(); }
-            | "ctor" "function" "(" parameters                              { driver.openScope(); driver.registerParameters(@3, $4); driver.inLambda = false; }
-                                    ")" compound_statement_no_scope         { $$ = driver.genConstructor(@$, $4, $7); driver.closeScope(); driver.inLambda = true; }
+constructor : "ctor" constructor_lambda                                     { $$ = driver.genConstructor(@$, $2); }
             ;
+
+constructor_lambda : "(" parameters                                         { driver.openScope(); driver.registerParameters(@2, $2); }
+                                    ")" compound_statement_no_scope         { $$ = driver.genConstructorLambda(@$, $2, $5); driver.closeScope(); }
+                   | "function" "(" parameters                              { driver.openScope(); driver.registerParameters(@2, $3); driver.inLambda = false; }
+                                    ")" compound_statement_no_scope         { $$ = driver.genConstructorLambda(@$, $3, $6); driver.closeScope(); driver.inLambda = true; }
+                   ;
 
 destructor : "dtor" virtual_flag "(" ")" compound_statement                 { $$ = std::make_pair(driver.genDestructor(@$, $5), $2); }
            | "dtor" virtual_flag "function"                                 { driver.inLambda = false; }
@@ -353,9 +359,9 @@ member_functions : member_functions member_function                         { IN
                  |                                                          { $$ = MemberFunctionList(); }
                  ;
 
-member_function : virtual_flag cv_flags lambda_or_function "identifier" ":" "(" ")"    { driver.inLambda = $3; }
+member_function : virtual_flag cv_flags lambda_or_function "identifier" "=" "(" ")"    { driver.inLambda = $3; }
                           "->" type compound_statement                      { $$ = driver.genMemberFunction(@$, $1, $2.first, $2.second, $4, VariableList(), $10, $11); driver.inLambda = true; }
-                | virtual_flag cv_flags lambda_or_function "identifier" ":" "(" non_empty_parameters
+                | virtual_flag cv_flags lambda_or_function "identifier" "=" "(" non_empty_parameters
                                                                             { driver.openScope(); driver.registerParameters(@7, $7); driver.inLambda = $3; }
                       ")" "->" type compound_statement_no_scope             { $$ = driver.genMemberFunction(@$, $1, $2.first, $2.second, $4, $7, $11, $12); driver.closeScope(); driver.inLambda = true; }
                 ;
@@ -379,9 +385,18 @@ pure_virtual_member_function : "pure" "virtual" cv_flags "identifier" ":" pure_f
                              ;
 
 
+//    -- free members -------------------------------------
+
+free_member_definition : "identifier" "::" "ctor" "identifier" "="          { driver.beginRecord(@$, $1); }
+                                           constructor_lambda               { $$ = driver.genFreeConstructor(@$, $4, $7); driver.endRecord(); }
+                       | "identifier" "::"                                  { driver.beginRecord(@$, $1); }
+                                           member_function                  { $$ = $4; driver.endRecord(); }
+                       ;
+
+
 //    -- function_declarations -------------------------------------
 
-function_definition : "identifier" ":" lambda                             { $$ = driver.genFunctionDefinition(@$, $1, $3); }
+function_definition : "identifier" "=" lambda                             { $$ = driver.genFunctionDefinition(@$, $1, $3); }
                     ;
 
 lambda_or_function : "lambda"                                             { $$ = true; }

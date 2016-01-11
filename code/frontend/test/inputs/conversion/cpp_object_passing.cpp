@@ -58,10 +58,10 @@ R to(A x) {
 }
 
 #define STRUCT_TRIVIAL "def struct IMP_Trivial { i : int<4>; }; "
-#define CONSUME_TRIVIAL "def IMP_consume_struct_Trivial_returns_void : function (v0 : ref<IMP_Trivial,f,f,plain>) -> unit { }; "
+#define CONSUME_TRIVIAL "def IMP_consume_struct_Trivial_returns_void = function (v0 : ref<IMP_Trivial,f,f,plain>) -> unit { }; "
 
 #define STRUCT_NON_TRIVIAL "def struct IMP_NonTrivial { i : int<4>; }; "
-#define CONSUME_NON_TRIVIAL "def IMP_consume_struct_NonTrivial_returns_void : function (v0 : ref<IMP_NonTrivial,f,f,plain>) -> unit { }; "
+#define CONSUME_NON_TRIVIAL "def IMP_consume_struct_NonTrivial_returns_void = function (v0 : ref<IMP_NonTrivial,f,f,plain>) -> unit { }; "
 
 
 void space() {};

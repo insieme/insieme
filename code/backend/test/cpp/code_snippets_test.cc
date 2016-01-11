@@ -60,7 +60,7 @@ namespace backend {
 		core::ProgramPtr program = builder.parseProgram(R"(
 				alias int = int<4>;
 				
-				def f : ( x : ref<int,f,f>, y : cpp_ref<int,f,f>, z : cpp_ref<int,t,f>, w : cpp_ref<int,t,t> ) -> int {
+				def f = ( x : ref<int,f,f>, y : cpp_ref<int,f,f>, z : cpp_ref<int,t,f>, w : cpp_ref<int,t,t> ) -> int {
 					return *x + *y + *z + *w;
 				};
 				
@@ -97,9 +97,9 @@ namespace backend {
 		core::ProgramPtr program = builder.parseProgram(R"(
 				alias int = int<4>;
 				
-				def g : () -> int { return 12; };
+				def g = () -> int { return 12; };
 
-				def f : ( y : cpp_rref<int,f,f>, z : cpp_rref<int,t,f>, w : cpp_rref<int,t,t> ) -> int {
+				def f = ( y : cpp_rref<int,f,f>, z : cpp_rref<int,t,f>, w : cpp_rref<int,t,t> ) -> int {
 					return *y + *z + *w;
 				};
 				
@@ -134,11 +134,11 @@ namespace backend {
 				
 				def struct Math {
 				
-					lambda id : (a : int)->int {
+					lambda id = (a : int)->int {
 						return a;
 					}
 				
-					lambda sum : (a : int, b : int)->int {
+					lambda sum = (a : int, b : int)->int {
 						return a + b;
 					}
 				};
@@ -427,7 +427,7 @@ namespace backend {
 					}
 				};
 /*
-				def f : A::( x : int, y : int, z : int ) {
+				def f = A::( x : int, y : int, z : int ) {
 					this->x = x + y + z;
 				};
 */				
@@ -545,24 +545,27 @@ namespace backend {
 				def struct A {
 					x : int;
 
-					lambda f1 : () -> unit { 10; }
-					const lambda f2 : () -> unit { 11; }
-					const volatile lambda f3 : () -> unit { 12; }
-					volatile lambda f4 : () -> unit { 13; }
+					lambda f1 = () -> unit { 10; }
+					const lambda f2 = () -> unit { 11; }
+					const volatile lambda f3 = () -> unit { 12; }
+					volatile lambda f4 = () -> unit { 13; }
 
-					virtual lambda f5 : () -> unit { 14; }
-					virtual const lambda f6 : () -> unit { 15; }
-					virtual const volatile lambda f7 : () -> unit { 16; }
-					virtual volatile lambda f8 : () -> unit { 17; }
+					virtual lambda f5 = () -> unit { 14; }
+					virtual const lambda f6 = () -> unit { 15; }
+					virtual const volatile lambda f7 = () -> unit { 16; }
+					virtual volatile lambda f8 = () -> unit { 17; }
 
 				};
+
 /*
-				def f : A::( x : int, y : int, z : int ) {
+				def f = A::( x : int, y : int, z : int )->unit {
 					this->x = x + y + z;
 				};
-*/				
+*/
+				
 				int main() {
 					var ref<A> a;
+					// a.f9();
 					return 0;
 				}
 		)");
@@ -629,9 +632,9 @@ namespace backend {
 				def struct A {
 					x : int;
 
-					lambda r : () -> unit { r(); }
-					lambda f : () -> unit { g(); }
-					lambda g : () -> unit { f(); }
+					lambda r = () -> unit { r(); }
+					lambda f = () -> unit { g(); }
+					lambda g = () -> unit { f(); }
 					
 				};
 
@@ -671,6 +674,64 @@ namespace backend {
 		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
 	}
 
+	TEST(CppSnippet, PureVirtualMemberFunctions) {
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+
+		// create a code fragment including some member functions
+		core::ProgramPtr program = builder.parseProgram(R"(
+				alias int = int<4>;
+
+				def struct A {
+					x : int;
+
+					pure virtual f1 : () -> unit
+					pure virtual const f2 : () -> unit
+					pure virtual const volatile f3 : () -> unit
+					pure virtual volatile f4 : () -> unit
+					
+				};
+
+				def struct B : [public A] {
+
+					virtual lambda f1 = () -> unit { }
+					virtual const lambda f2 = () -> unit { }
+					virtual const volatile lambda f3 = () -> unit { }
+					virtual volatile lambda f4 = () -> unit { }
+					
+				};
+
+				int main() {
+					var ref<B> a;
+					return 0;
+				}
+		)");
+
+		ASSERT_TRUE(program);
+		// std::cout << "Program: " << dumpColor(program) << std::endl;
+		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
+
+		// use sequential backend to convert into C++ code
+		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
+		ASSERT_TRUE((bool)converted);
+		// std::cout << "Converted: \n" << *converted << std::endl;
+
+		// check presence of relevant code
+		auto code = toString(*converted);
+		EXPECT_PRED2(containsSubString, code, "struct A");		// struct definition
+		EXPECT_PRED2(containsSubString, code, "B a;");			// variable definition
+
+		EXPECT_PRED2(containsSubString, code, "virtual void f1() =0;");
+		EXPECT_PRED2(containsSubString, code, "virtual void f2() const =0;");
+		EXPECT_PRED2(containsSubString, code, "virtual void f3() const volatile =0;");
+		EXPECT_PRED2(containsSubString, code, "virtual void f4() volatile =0;");
+
+		// try compiling the code fragment
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+	}
+
 
 	TEST(CppSnippet, Counter) {
 		core::NodeManager manager;
@@ -685,29 +746,29 @@ namespace backend {
 				
 					value : int;
 					
-					lambda reset : ()->unit {
+					lambda reset = ()->unit {
 						value = 0;
 					}
 					
-					lambda inc : ()->int {
+					lambda inc = ()->int {
 						value = value + 1;
 						return *value;
 					}
 					
-					lambda dec : ()->int {
+					lambda dec = ()->int {
 						value = value - 1;
 						return *value;
 					}
 					
-					lambda get : ()->int {
+					lambda get = ()->int {
 						return *value;
 					}
 					
-					lambda set : (x : int)->unit {
+					lambda set = (x : int)->unit {
 						value = x;
 					}
 					
-					lambda p : ()-> unit {
+					lambda p = ()-> unit {
 						print("%d\n", get());
 					}
 				};

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -68,12 +68,19 @@ namespace parser {
 			 */
 			friend class core::NodeManager;
 
+			const LiteralPtr memberDummyLambda;
+
 			/**
 			 * Creates a new instance based on the given node manager.
 			 */
-			ParserIRExtension(core::NodeManager& manager) : core::lang::Extension(manager) {}
+			ParserIRExtension(core::NodeManager& manager) : core::lang::Extension(manager),
+					memberDummyLambda(IRBuilder(manager).literal(IRBuilder(manager).genericType("parser_member_dummy_lambda"), "parser_member_dummy_lambda")) {}
 
-			LANG_EXT_LITERAL_WITH_NAME(MemberFunctionAccess, "parser_member_function_access", "parser_member_function_access", "('a, identifier) -> unit")
+			LANG_EXT_LITERAL(MemberFunctionAccess, "parser_member_function_access", "('a, identifier) -> unit")
+
+			const LiteralPtr& getMemberDummyLambda() const {
+				return memberDummyLambda;
+			}
 		};
 
 		/**
@@ -259,10 +266,22 @@ namespace parser {
 			 */
 			void registerField(const location l, const std::string& recordName, const std::string& fieldName, const TypePtr& fieldType);
 
+		  private:
+			/**
+			 * Replaces every occurence of the this literal in the body with the correct usage of the given thisParam
+			 */
+			StatementPtr replaceThisInBody(const location& l, const StatementPtr& body, const VariablePtr& thisParam);
+		  public:
+
+			/**
+			 * generates a constructor from the given lambda expression (mostly used in conjunction with genConstructorDetail)
+			 */
+			ExpressionPtr genConstructor(const location& l, const LambdaExprPtr& ctor);
+
 			/**
 			 * generates a constructor for the currently defined record type
 			 */
-			ExpressionPtr genConstructor(const location& l, const VariableList& params, const StatementPtr& body);
+			LambdaExprPtr genConstructorLambda(const location& l, const VariableList& params, const StatementPtr& body);
 
 			/**
 			 * generates a destructor for the currently defined record type
@@ -278,6 +297,11 @@ namespace parser {
 			 * generates a member function for the currently defined record type
 			 */
 			PureVirtualMemberFunctionPtr genPureVirtualMemberFunction(const location& l, bool cnst, bool voltile, const std::string& name, const FunctionTypePtr& type);
+
+			/**
+			 * generates a free constructor for the given lambda
+			 */
+			ExpressionPtr genFreeConstructor(const location& l, const std::string& name, const LambdaExprPtr& ctor);
 
 			/**
 			 * generates a function definition
@@ -379,16 +403,6 @@ namespace parser {
 			 * constructs a literal referencing the current object
 			 */
 			ExpressionPtr genThis(const location& l);
-
-			/**
-			 * constructs a literal referencing the current object in a lambda
-			 */
-			ExpressionPtr genThisInLambda(const location& l);
-
-			/**
-			 * constructs a literal referencing the current object in a function
-			 */
-			ExpressionPtr genThisInFunction(const location& l);
 
 		  private:
 			GenericTypePtr getThisTypeForLambdaAndFunction(const bool cnst, const bool voltile);

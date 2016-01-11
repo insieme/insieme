@@ -291,7 +291,12 @@ namespace backend {
 		// --------------------- Type Specific Wrapper --------------------
 
 		const TypeInfo* TypeInfoStore::addInfo(const core::TypePtr& type, const TypeInfo* info) {
+
+
 			// register type information
+			assert_true(typeInfos.find(type) == typeInfos.end() || typeInfos.find(type)->second == info)
+				<< "Previous definition of type " << type->getNodeHashValue() << " = " << *type << " already present!";
+
 			typeInfos.insert(std::make_pair(type, info));
 			allInfos.insert(info);
 			return info;
@@ -302,7 +307,7 @@ namespace backend {
 		const TypeInfo* TypeInfoStore::resolveInternal(const core::TypePtr& in) {
 
 			// normalize all types
-			auto type = core::analysis::normalize(in);
+			auto type = core::analysis::normalize(core::analysis::getCanonicalType(in));
 
 			// lookup information within cache
 			auto pos = typeInfos.find(type);
@@ -531,10 +536,23 @@ namespace backend {
 				type = manager->create<c_ast::UnionType>(typeName);
 			}
 
-			// collect dependencies
-			std::set<c_ast::CodeFragmentPtr> definitions;
+			// create declaration of named composite type
+			auto declCode = manager->create<c_ast::TypeDeclaration>(type);
+			c_ast::CodeFragmentPtr declaration = c_ast::CCodeFragment::createNew(fragmentManager, declCode);
 
-			// add elements
+			// create definition of named composite type
+			auto defCode = manager->create<c_ast::TypeDefinition>(type);
+			c_ast::CodeFragmentPtr definition = c_ast::CCodeFragment::createNew(fragmentManager, defCode);
+			definition->addDependency(declaration);
+
+			// create resulting type info
+			auto res = type_info_utils::createInfo<TagTypeInfo>(type, declaration, definition);
+
+
+			// save current info (otherwise the following code will result in an infinite recursion)
+			addInfo(tagType, res);										// for the full tag type
+
+			// ----- fields -----
 			for(const core::FieldPtr& entry : ptr->getFields()) {
 				// get the name of the member
 				c_ast::IdentifierPtr name = manager->create(insieme::utils::demangle(entry->getName()->getValue()));
@@ -552,7 +570,9 @@ namespace backend {
 					type->elements.push_back(var(memberType, name));
 
 					// remember definition
-					if(info->definition) { definitions.insert(info->definition); }
+					if(info->definition) {
+						definition->addDependency(info->definition);
+					}
 
 					continue;
 				}
@@ -563,30 +583,15 @@ namespace backend {
 				type->elements.push_back(var(elementType, name));
 
 				// remember definitions
-				if(info->definition) { definitions.insert(info->definition); }
+				if(info->definition) {
+					definition->addDependency(info->definition);
+				}
 			}
-
-			// create declaration of named composite type
-			auto declCode = manager->create<c_ast::TypeDeclaration>(type);
-			c_ast::CodeFragmentPtr declaration = c_ast::CCodeFragment::createNew(fragmentManager, declCode);
-
-			// create definition of named composite type
-			auto defCode = manager->create<c_ast::TypeDefinition>(type);
-			c_ast::CodeFragmentPtr definition = c_ast::CCodeFragment::createNew(fragmentManager, defCode);
-			definition->addDependency(declaration);
-			definition->addDependencies(definitions);
-
-			// create resulting type info
-			auto res = type_info_utils::createInfo<TagTypeInfo>(type, declaration, definition);
-
 
 			// the function manager is required to convert member functions
 			auto& funMgr = converter.getFunctionManager();
 
 			// ----- members -------
-
-			// save current info (otherwise the following code will result in an infinite recursion)
-			addInfo(tagType, res);						// for the full tag type
 
 			// extract the record type info
 			auto record = tagType->getRecord();
@@ -613,9 +618,11 @@ namespace backend {
 				}
 
 				// add pure virtual function declarations
+				core::IRBuilder builder(ptr.getNodeManager());
 				for (const auto& pureVirtual : record->getPureVirtualMemberFunctions()) {
-					// TODO: add declaration
-					funMgr.getInfo(tagType->peel(pureVirtual));
+					auto type = pureVirtual->getType();
+					type = (core::analysis::getObjectType(type).isa<core::TagTypeReferencePtr>()) ? tagType->peel(type) : type;
+					funMgr.getInfo(builder.pureVirtualMemberFunction(pureVirtual->getName(), type));
 				}
 			}
 
@@ -1392,23 +1399,21 @@ namespace backend {
 				info->definition = c_ast::CCodeFragment::createNew(converter.getFragmentManager());
 
 				// register new type information
-				typeInfos.insert(std::make_pair(type, info));
-				allInfos.insert(info);
+				addInfo(cur->getTag(), info);
 			}
 
 			// B) unroll types and add definitions
 			for(const core::TagTypeBindingPtr& cur : ptr->getDefinitions()) {
 
-				// obtain peeled type
+				// obtain current tag type
 				core::TagTypePtr recType = core::TagType::get(nodeManager, cur->getTag(), ptr);
-				core::TagTypePtr peeled = ptr->peel(nodeManager, cur->getTag());
 
-				// fix name of peeled struct
-				nameManager.setName(peeled->getRecord(), nameManager.getName(recType));
+				// fix name of tag type
+				nameManager.setName(recType->getRecord(), nameManager.getName(recType));
 
 				// get reference to pointer within map (needs to be updated)
-				TypeInfo*& curInfo = const_cast<TypeInfo*&>(typeInfos.at(recType));
-				TagTypeInfo* newInfo = const_cast<TagTypeInfo*>(resolveType(peeled));
+				TypeInfo*& curInfo = const_cast<TypeInfo*&>(typeInfos.at(recType->getTag()));
+				TagTypeInfo* newInfo = const_cast<TagTypeInfo*>(resolveRecordType(recType, recType->getRecord()));
 
 				assert_true(curInfo && newInfo) << "Both should be available now!";
 				assert(curInfo != newInfo);
