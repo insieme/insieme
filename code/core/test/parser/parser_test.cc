@@ -475,9 +475,9 @@ namespace parser {
 		                          "}; A"));
 
 		EXPECT_TRUE(test_type(nm, "def struct a { };"
-				                  "def struct b : [ public a ] { };"
-				                  "def struct c : [ public b ] { };"
-				                  "c"));
+		                          "def struct b : [ public a ] { };"
+		                          "def struct c : [ public b ] { };"
+		                          "c"));
 
 		EXPECT_TRUE(test_type(nm, "def struct a { };"
 				                  "def struct b { };"
@@ -1310,7 +1310,6 @@ namespace parser {
 	TEST(IRParser, Comments) {
 		NodeManager mgr;
 
-
 		EXPECT_TRUE(parseExpr(mgr, "12"));
 		EXPECT_TRUE(parseExpr(mgr, "12 // this is the number 12"));
 
@@ -1319,7 +1318,6 @@ namespace parser {
 
 		EXPECT_TRUE(parseExpr(mgr, "/* before */ 12 /* after */"));
 		EXPECT_TRUE(parseStmt(mgr, " { /* before */ 12 /* mid */ ; /* after */ }"));
-
 	}
 
 } // parser
