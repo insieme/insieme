@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -84,14 +84,14 @@ void validateTrivial() {
 		consume<T>(t); 
 	}
 
-/*	#pra gma test expect_ir(STRUCT_TRIVIAL,CONSUME_TRIVIAL, R"(
-		{ IMP_consume_struct_Trivial_returns_void(*IMP_Trivial::(ref_var(type_lit(IMP_Trivial)))); }
+	#pragma test expect_ir(STRUCT_TRIVIAL,CONSUME_TRIVIAL, R"(
+		{ IMP_consume_struct_Trivial_returns_void(ref_cast(IMP_Trivial::(ref_var(type_lit(IMP_Trivial))), type_lit(f), type_lit(f), type_lit(cpp_rref))); }
 	)")
 	{ consume<T>(T()); }	// pass temporary
 
 	{ consume<T>({12}); }	// pass temporary
 
-	{ consume<T>(produce<T>()); }	// pass x-value
+/*	{ consume<T>(produce<T>()); }	// pass x-value
 
 
 	// by reference:
