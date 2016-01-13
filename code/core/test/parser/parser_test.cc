@@ -1307,6 +1307,48 @@ namespace parser {
 		                               "}"));
 	}
 
+	TEST(IRParser, ParentCalls) {
+		NodeManager nm;
+
+		const std::string classA = "def struct A {"
+		                           "  x : int<4>;"
+		                           "  lambda a = ()->unit { }"
+		                           "};";
+		const std::string classB = "def struct B : [A] {"
+		                           "  y : int<4>;"
+		                           "  ctor() {"
+		                           "    A::(this);"
+		                           "  }"
+		                           "  lambda b = ()->unit {"
+		                           "    this.as(A).a();"
+		                           "    y = *this.as(A).x;"
+		                           "  }"
+		                           "};";
+		const std::string body = "{"
+		                         "  var ref<A> a = A::(ref_var(type_lit(A)));"
+		                         "  var ref<B> b = B::(ref_var(type_lit(B)));"
+		                         "  a.a();"
+		                         "  a.x;"
+		                         "  b.b();"
+		                         "  b.y;"
+		                         "  b.as(A).a();"
+		                         "  b.as(A).x;"
+		                         "}";
+
+		//calling of superclass ctor and of member functions of super classes
+		EXPECT_TRUE(test_statement(nm, classA
+		                               + classB
+		                               + body));
+
+		//the same as above but with the two structs switched and using a forward decl
+		EXPECT_TRUE(test_statement(nm, "decl struct A;"
+		                               "decl A::x : int<4>;"
+		                               "decl a : A::()->unit;"
+		                               + classB
+		                               + classA
+		                               + body));
+	}
+
 	TEST(IRParser, Comments) {
 		NodeManager mgr;
 
