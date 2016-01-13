@@ -755,6 +755,45 @@ namespace parser {
 		}
 	}
 
+	TEST(IRParser, LambdaNames) {
+		NodeManager nm;
+		IRBuilder builder(nm);
+
+		//normal functions
+		{
+			auto lambda = builder.parseExpr("def foo = () -> unit { }; foo").as<LambdaExprPtr>();
+			EXPECT_EQ("foo", lambda->getReference()->getNameAsString());
+		}
+
+		//member functions
+		{
+			auto addresses = builder.parseAddressesType("def struct A { lambda foo = () -> unit { $1$; } }; A");
+			ASSERT_EQ(1, addresses.size());
+			EXPECT_EQ("A::foo", addresses[0].getParentAddress(3).getAddressedNode().as<LambdaBindingPtr>()->getReference()->getNameAsString());
+		}
+
+		//constructors
+		{
+			auto addresses = builder.parseAddressesType("def struct A { ctor() { $1$; } }; A");
+			ASSERT_EQ(1, addresses.size());
+			EXPECT_EQ("A::ctor", addresses[0].getParentAddress(3).getAddressedNode().as<LambdaBindingPtr>()->getReference()->getNameAsString());
+		}
+
+		//free member functions
+		{
+			auto addresses = builder.parseAddressesStatement("def struct A { }; def A::lambda foo = () -> unit { 1; }; { var ref<A> a; $a.foo()$;}");
+			ASSERT_EQ(1, addresses.size());
+			EXPECT_EQ("A::foo", addresses[0].getAddressedNode().as<CallExprPtr>()->getFunctionExpr().as<LambdaExprPtr>()->getReference()->getNameAsString());
+		}
+
+		//free constructor
+		{
+			auto addresses = builder.parseAddressesStatement("def struct A { }; def A::ctor foo = () { 1; }; { var ref<A> a = $foo(ref_var(type_lit(A)))$;}");
+			ASSERT_EQ(1, addresses.size());
+			EXPECT_EQ("foo", addresses[0].getAddressedNode().as<CallExprPtr>()->getFunctionExpr().as<LambdaExprPtr>()->getReference()->getNameAsString());
+		}
+	}
+
 	bool test_statement(NodeManager& nm, const std::string& x) {
 		IRBuilder builder(nm);
 		try {

@@ -683,7 +683,15 @@ namespace parser {
 			auto memberFunType = fun->getFunctionType();
 			assert_false(fun->isRecursive()) << "The parser should not produce recursive functions!";
 
+			//the key used to register this member function in the TU
 			auto key = builder.getLiteralForMemberFunction(fun->getFunctionType(), name);
+
+			// rename lambda ref to the correct name for a member function
+			std::string lambdaName = key->getStringValue();
+			fun = builder.lambdaExpr(fun->getLambda(), lambdaName);
+			annotations::attachName(fun, lambdaName);
+
+			//register the lambda itself in the TU
 			tu.addFunction(key, fun);
 
 			return builder.memberFunction(virtl, name, key);
@@ -721,8 +729,12 @@ namespace parser {
 				return nullptr;
 			}
 
+			// rename lambda ref to given name
+			auto renamedCtor = builder.lambdaExpr(ctor->getLambda(), name);
+			annotations::attachName(renamedCtor, name);
+
 			declareSymbolInGlobalScope(l, name, key);
-			tu.addFunction(key, ctor);
+			tu.addFunction(key, renamedCtor);
 
 			return key;
 		}
