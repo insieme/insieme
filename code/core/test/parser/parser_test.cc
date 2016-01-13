@@ -475,9 +475,9 @@ namespace parser {
 		                          "}; A"));
 
 		EXPECT_TRUE(test_type(nm, "def struct a { };"
-				                  "def struct b : [ public a ] { };"
-				                  "def struct c : [ public b ] { };"
-				                  "c"));
+		                          "def struct b : [ public a ] { };"
+		                          "def struct c : [ public b ] { };"
+		                          "c"));
 
 		EXPECT_TRUE(test_type(nm, "def struct a { };"
 				                  "def struct b { };"
@@ -752,6 +752,45 @@ namespace parser {
 			ASSERT_TRUE(checks::check(type2).empty()) << checks::check(type2);
 
 			EXPECT_EQ(builder.normalize(type1), builder.normalize(type2));
+		}
+	}
+
+	TEST(IRParser, LambdaNames) {
+		NodeManager nm;
+		IRBuilder builder(nm);
+
+		//normal functions
+		{
+			auto lambda = builder.parseExpr("def foo = () -> unit { }; foo").as<LambdaExprPtr>();
+			EXPECT_EQ("foo", lambda->getReference()->getNameAsString());
+		}
+
+		//member functions
+		{
+			auto addresses = builder.parseAddressesType("def struct A { lambda foo = () -> unit { $1$; } }; A");
+			ASSERT_EQ(1, addresses.size());
+			EXPECT_EQ("A::foo", addresses[0].getParentAddress(3).getAddressedNode().as<LambdaBindingPtr>()->getReference()->getNameAsString());
+		}
+
+		//constructors
+		{
+			auto addresses = builder.parseAddressesType("def struct A { ctor() { $1$; } }; A");
+			ASSERT_EQ(1, addresses.size());
+			EXPECT_EQ("A::ctor", addresses[0].getParentAddress(3).getAddressedNode().as<LambdaBindingPtr>()->getReference()->getNameAsString());
+		}
+
+		//free member functions
+		{
+			auto addresses = builder.parseAddressesStatement("def struct A { }; def A::lambda foo = () -> unit { 1; }; { var ref<A> a; $a.foo()$;}");
+			ASSERT_EQ(1, addresses.size());
+			EXPECT_EQ("A::foo", addresses[0].getAddressedNode().as<CallExprPtr>()->getFunctionExpr().as<LambdaExprPtr>()->getReference()->getNameAsString());
+		}
+
+		//free constructor
+		{
+			auto addresses = builder.parseAddressesStatement("def struct A { }; def A::ctor foo = () { 1; }; { var ref<A> a = $foo(ref_var(type_lit(A)))$;}");
+			ASSERT_EQ(1, addresses.size());
+			EXPECT_EQ("foo", addresses[0].getAddressedNode().as<CallExprPtr>()->getFunctionExpr().as<LambdaExprPtr>()->getReference()->getNameAsString());
 		}
 	}
 
@@ -1307,9 +1346,50 @@ namespace parser {
 		                               "}"));
 	}
 
+	TEST(IRParser, ParentCalls) {
+		NodeManager nm;
+
+		const std::string classA = "def struct A {"
+		                           "  x : int<4>;"
+		                           "  lambda a = ()->unit { }"
+		                           "};";
+		const std::string classB = "def struct B : [A] {"
+		                           "  y : int<4>;"
+		                           "  ctor() {"
+		                           "    A::(this);"
+		                           "  }"
+		                           "  lambda b = ()->unit {"
+		                           "    this.as(A).a();"
+		                           "    y = *this.as(A).x;"
+		                           "  }"
+		                           "};";
+		const std::string body = "{"
+		                         "  var ref<A> a = A::(ref_var(type_lit(A)));"
+		                         "  var ref<B> b = B::(ref_var(type_lit(B)));"
+		                         "  a.a();"
+		                         "  a.x;"
+		                         "  b.b();"
+		                         "  b.y;"
+		                         "  b.as(A).a();"
+		                         "  b.as(A).x;"
+		                         "}";
+
+		//calling of superclass ctor and of member functions of super classes
+		EXPECT_TRUE(test_statement(nm, classA
+		                               + classB
+		                               + body));
+
+		//the same as above but with the two structs switched and using a forward decl
+		EXPECT_TRUE(test_statement(nm, "decl struct A;"
+		                               "decl A::x : int<4>;"
+		                               "decl a : A::()->unit;"
+		                               + classB
+		                               + classA
+		                               + body));
+	}
+
 	TEST(IRParser, Comments) {
 		NodeManager mgr;
-
 
 		EXPECT_TRUE(parseExpr(mgr, "12"));
 		EXPECT_TRUE(parseExpr(mgr, "12 // this is the number 12"));
@@ -1319,7 +1399,6 @@ namespace parser {
 
 		EXPECT_TRUE(parseExpr(mgr, "/* before */ 12 /* after */"));
 		EXPECT_TRUE(parseStmt(mgr, " { /* before */ 12 /* mid */ ; /* after */ }"));
-
 	}
 
 } // parser
