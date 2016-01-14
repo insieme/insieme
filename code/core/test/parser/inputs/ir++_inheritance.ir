@@ -45,6 +45,8 @@ int main() {
 	// access B's A's x
 	c.as(B).as(A).x = 1;
 	c.as(B).as(A).a();
+	c.as(A).x = 1;
+	c.as(A).a();
 
 	// access B's y
 	c.as(B).y = 2;
@@ -54,9 +56,9 @@ int main() {
 	c.z = 3;
 	c.c();
 	
-	print("x = %d\n", *(c.as(B).as(A).x));
-	print("y = %d\n", *(c.as(B).y));
-	print("z = %d\n", *c.z);
+	print("x = %d\n", c.as(A).x);
+	print("y = %d\n", c.as(B).y);
+	print("z = %d\n", c.z);
 	
 	return 0;
 }
