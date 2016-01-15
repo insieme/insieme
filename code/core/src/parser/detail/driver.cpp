@@ -576,6 +576,15 @@ namespace parser {
 			assert_false(currentRecordStack.empty()) << "Not within record definition!";
 
 			auto key = builder.getLiteralForConstructor(ctor->getType());
+
+			//register the lambda itself in the TU - but only overwrite dummy declarations
+			if (const auto& otherMember = tu.getFunctions()[key]) {
+				const auto& otherBody = otherMember->getBody();
+				if (otherBody->size() != 1 || otherBody[0] != parserIRExtension.getMemberDummyLambda()) {
+					error(l, format("Re-definition of constructor of type %s", *key->getType()));
+					return nullptr;
+				}
+			}
 			tu.addFunction(key, ctor);
 
 			return key;
@@ -691,7 +700,13 @@ namespace parser {
 			fun = builder.lambdaExpr(fun->getLambda(), lambdaName);
 			annotations::attachName(fun, lambdaName);
 
-			//register the lambda itself in the TU
+			//register the lambda itself in the TU - but only overwrite dummy declarations
+			if (const auto& otherMember = tu.getFunctions()[key]) {
+				const auto& otherBody = otherMember->getBody();
+				if (otherBody->size() != 1 || otherBody[0] != parserIRExtension.getMemberDummyLambda()) {
+					return nullptr;
+				}
+			}
 			tu.addFunction(key, fun);
 
 			return builder.memberFunction(virtl, name, key);
