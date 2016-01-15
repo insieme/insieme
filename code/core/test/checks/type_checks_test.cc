@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -403,12 +403,25 @@ namespace checks {
 		EXPECT_TRUE(check(ok2).empty()) << check(ok2);
 		EXPECT_TRUE(check(ok3).empty()) << check(ok3);
 
-		//duplicate constructor types
-		auto err1 = builder.parseType("struct A { ctor () {} ctor () {} }");
-		auto err2 = builder.parseType("struct A { ctor (a : int<4>) {} ctor (b : int<4>) {} }");
+		//duplicate constructor type
+		{
+			TypePtr thisType = builder.refType(builder.tagTypeReference("A"));
+			auto functionType = builder.functionType(toVector(thisType), thisType, FK_CONSTRUCTOR);
+			auto ctor = builder.lambdaExpr(functionType, toVector(builder.variable(builder.refType(thisType))), builder.getNoOp());
+			auto err = builder.structType("A", ParentList(), FieldList(), toVector<ExpressionPtr>(ctor, ctor), builder.getDefaultDestructor(thisType), false, MemberFunctionList(), PureVirtualMemberFunctionList());
 
-		EXPECT_PRED2(containsMSG, check(err1), Message(NodeAddress(err1).getAddressOfChild(1,0), EC_TYPE_DUPLICATE_CONSTRUCTOR_TYPE, "", Message::ERROR));
-		EXPECT_PRED2(containsMSG, check(err2), Message(NodeAddress(err2).getAddressOfChild(1,0), EC_TYPE_DUPLICATE_CONSTRUCTOR_TYPE, "", Message::ERROR));
+			EXPECT_PRED2(containsMSG, check(err), Message(NodeAddress(err).getAddressOfChild(1,0), EC_TYPE_DUPLICATE_CONSTRUCTOR_TYPE, "", Message::ERROR));
+		}
+
+		//duplicate constructor type
+		{
+			TypePtr thisType = builder.refType(builder.tagTypeReference("A"));
+			auto functionType = builder.functionType(toVector(thisType), thisType, FK_CONSTRUCTOR);
+			auto ctor = builder.lambdaExpr(functionType, toVector(builder.variable(builder.refType(thisType)), builder.variable(builder.refType(builder.getLangBasic().getInt4()))), builder.getNoOp());
+			auto err = builder.structType("A", ParentList(), FieldList(), toVector<ExpressionPtr>(ctor, ctor), builder.getDefaultDestructor(thisType), false, MemberFunctionList(), PureVirtualMemberFunctionList());
+
+			EXPECT_PRED2(containsMSG, check(err), Message(NodeAddress(err).getAddressOfChild(1,0), EC_TYPE_DUPLICATE_CONSTRUCTOR_TYPE, "", Message::ERROR));
+		}
 	}
 
 	TEST(DestructorTypeCheck, Basic) {

@@ -1346,6 +1346,68 @@ namespace parser {
 		                               "}"));
 	}
 
+	TEST(IRParser, DuplicateMemberFunctions) {
+		NodeManager nm;
+		IRBuilder builder(nm);
+
+		//Note: We do not use the helper function test_statement here, as that one will also run the semantic checks.
+		//Those will fail for certain duplicate members and thus mask shortcomings of the parser error detections we actually want to test here
+
+		//re-declaration of member functions with the same type but a different name is ok
+		EXPECT_TRUE(builder.parseStmt("def struct A {"
+		                              "  lambda foo = () -> unit { }"
+		                              "  lambda bar = () -> unit { }"
+		                              "};"
+		                              "{"
+		                              "  var ref<A> a;"
+		                              "}"));
+
+		//re-declaration of member functions with the same type and the same name is not allowed
+		EXPECT_ANY_THROW(builder.parseStmt("def struct A {"
+		                                   "  lambda foo = () -> unit { }"
+		                                   "  lambda foo = () -> unit { }"
+		                                   "};"
+		                                   "{"
+		                                   "  var ref<A> a;"
+		                                   "}"));
+
+		//re-declaration of a constructor with the same type isn't allowed
+		EXPECT_ANY_THROW(builder.parseStmt("def struct A {"
+		                                   "  ctor() { }"
+		                                   "  ctor() { }"
+		                                   "};"
+		                                   "{"
+		                                   "  var ref<A> a;"
+		                                   "}"));
+
+		//re-declaration of (free) member functions with the same type but a different name is ok
+		EXPECT_TRUE(builder.parseStmt("def struct A {"
+		                              "  lambda foo = () -> unit { }"
+		                              "};"
+		                              "def A::lambda bar = () -> unit { };"
+		                              "{"
+		                              "  var ref<A> a;"
+		                              "}"));
+
+		//re-declaration of (free) member functions with the same type and the same name is not allowed
+		EXPECT_ANY_THROW(builder.parseStmt("def struct A {"
+		                                   "  lambda foo = () -> unit { }"
+		                                   "};"
+		                                   "def A::lambda foo = () -> unit { };"
+		                                   "{"
+		                                   "  var ref<A> a;"
+		                                   "}"));
+
+		//re-declaration of a (free) constructor with the same type is allowed, as it has a different name
+		EXPECT_TRUE(builder.parseStmt("def struct A {"
+		                              "  ctor() { }"
+		                              "};"
+		                              "def A::ctor foo = () { };"
+		                              "{"
+		                              "  var ref<A> a;"
+		                              "}"));
+	}
+
 	TEST(IRParser, ParentCalls) {
 		NodeManager nm;
 
