@@ -47,6 +47,7 @@
 #include "insieme/core/tu/ir_translation_unit.h"
 
 #include "insieme/core/parser/detail/scanner.h"
+#include "insieme/core/parser/detail/typed_expression.h"
 #include "insieme/core/parser/ir_parser.h"
 
 #include "insieme/core/ir_node_annotation.h"
