@@ -451,7 +451,7 @@ namespace c_ast {
 	bool ConstructorPrototype::equals(const Node& node) const {
 		assert(dynamic_cast<const ConstructorPrototype*>(&node));
 		auto other = static_cast<const ConstructorPrototype&>(node);
-		return *ctor == *other.ctor && flag == other.flag;
+		return flag == other.flag && *ctor == *other.ctor;
 	}
 
 	bool DestructorPrototype::equals(const Node& node) const {

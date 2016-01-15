@@ -449,8 +449,12 @@ namespace backend {
 		};
 
 		res[refExt.getRefVar()] = OP_CONVERTER { 
-			assert_not_implemented() << "This point should not be reached."; 
-			return c_ast::ExpressionPtr();
+			ADD_HEADER("alloca.h"); // for 'alloca'
+			core::GenericTypePtr resType = call->getType().as<core::GenericTypePtr>();
+			c_ast::ExpressionPtr size = c_ast::sizeOf(CONVERT_TYPE(core::analysis::getReferencedType(resType)));
+			auto cType = CONVERT_TYPE(resType);
+			auto allocaNode = c_ast::call(C_NODE_MANAGER->create("alloca"), size);
+			return c_ast::cast(cType, allocaNode);
 		};
 		
 		res[refExt.getRefVarInit()] = OP_CONVERTER {
