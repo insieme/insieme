@@ -59,6 +59,8 @@ R to(A x) {
 
 #define STRUCT_TRIVIAL "def struct IMP_Trivial { i : int<4>; }; "
 #define CONSUME_TRIVIAL "def IMP_consume_struct_Trivial_returns_void = function (v0 : ref<IMP_Trivial,f,f,plain>) -> unit { }; "
+#define PRODUCE_TRIVIAL "def IMP_produce_struct_Trivial_returns_struct_Trivial = function () -> IMP_Trivial { return ref_cast(IMP_Trivial::(ref_var(type_lit(IMP_Trivial))), type_lit(f), type_lit(f), type_lit(cpp_rref)); }; "
+
 
 #define STRUCT_NON_TRIVIAL "def struct IMP_NonTrivial { i : int<4>; }; "
 #define CONSUME_NON_TRIVIAL "def IMP_consume_struct_NonTrivial_returns_void = function (v0 : ref<IMP_NonTrivial,f,f,plain>) -> unit { }; "
@@ -73,7 +75,11 @@ void validateTrivial() {
 
 	// -------- arguments --------
 
-	// by value:
+	// produce only
+	#pragma test expect_ir(STRUCT_TRIVIAL,PRODUCE_TRIVIAL R"(IMP_produce_struct_Trivial_returns_struct_Trivial())")
+	produce<T>();
+
+	//// by value:
 
 	#pragma test expect_ir(STRUCT_TRIVIAL,CONSUME_TRIVIAL, R"({ 
 		var ref<IMP_Trivial> v0 = IMP_Trivial::(ref_var(type_lit(IMP_Trivial)));
@@ -88,15 +94,22 @@ void validateTrivial() {
 		{ IMP_consume_struct_Trivial_returns_void(ref_cast(IMP_Trivial::(ref_var(type_lit(IMP_Trivial))), type_lit(f), type_lit(f), type_lit(cpp_rref))); }
 	)")
 	{ consume<T>(T()); }	// pass temporary
-
+	
+	#pragma test expect_ir(STRUCT_TRIVIAL,CONSUME_TRIVIAL, R"(
+		{ IMP_consume_struct_Trivial_returns_void(<IMP_Trivial> {12}); }
+	)")
 	{ consume<T>({12}); }	// pass temporary
+	
+	#pragma test expect_ir(STRUCT_TRIVIAL,CONSUME_TRIVIAL,PRODUCE_TRIVIAL R"(
+		{ IMP_consume_struct_Trivial_returns_void(IMP_produce_struct_Trivial_returns_struct_Trivial()); }
+	)")
+	{ consume<T>(produce<T>()); }	// pass x-value
 
-/*	{ consume<T>(produce<T>()); }	// pass x-value
-
-
+	
 	// by reference:
 
-	{ T t; consume<T&>(t); }		// pass l-value
+	//#pragma test expect_ir(R"({5;})")
+	//{ T t; consume<T&>(t); }		// pass l-value
 
 //	{ consume<T&>(T()); }			// pass temporary
 
@@ -104,7 +117,7 @@ void validateTrivial() {
 
 //	{ consume<T&>(produce<T>()); }	// pass x-value
 
-
+	/*
 	// by r-value reference:
 
 //	{ T t; consume<T&&>(t); }		// pass l-value
@@ -137,7 +150,7 @@ void validateTrivial() {
 
 	{ consume<const T&&>(produce<T>()); }	// pass x-value
 
-
+/*
 
 	// --------- return values ----------
 

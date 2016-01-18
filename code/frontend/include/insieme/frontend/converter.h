@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -221,6 +221,14 @@ namespace conversion {
 		 * @return the corresponding IR initialization expression
 		 */
 		core::ExpressionPtr convertInitExpr(const clang::Expr* expr) const;
+		
+		/**
+		 * Entry point for converting clang expressions used in C++ arguments or return values to IR expressions
+		 * - in these cases, we need to skip implicitly generated move and copy constructor calls
+		 * @param expr is a clang expression of the AST
+		 * @return the corresponding IR expression
+		 */
+		core::ExpressionPtr convertCxxArgExpr(const clang::Expr* expr) const;
 
 		/**
 		 * Entry point for converting clang types into an IR types

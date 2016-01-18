@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -111,6 +111,29 @@ namespace conversion {
 			VLOG(2) << "convertInitExpr: translated string literal\n" << dumpClang(original, converter.getSourceManager()) << " - to - \n" << dumpColor(expr);
 		}
 		return expr;
+	}
+
+	// translate expression, but skip outer construct expr
+	core::ExpressionPtr Converter::ExprConverter::convertCxxArgExpr(const clang::Expr* clangArgExpr) {
+		core::ExpressionPtr ret = converter.convertExpr(clangArgExpr);
+		// detect copy/move constructor calls
+		VLOG(2) << "---\nCXX call checking arg: " << dumpClang(clangArgExpr, converter.getCompiler().getSourceManager());
+		auto constructExpr = llvm::dyn_cast<clang::CXXConstructExpr>(clangArgExpr);
+		if(constructExpr) {
+			auto constructor = constructExpr->getConstructor();
+			if(constructor->isCopyOrMoveConstructor()) {
+				VLOG(2) << "CopyOrMove in param list at " << utils::location(clangArgExpr->getLocStart(), converter.getSourceManager()) << "\n";
+				auto prevArg = ret;
+				ret = Visit(constructExpr->getArg(0));
+				// cast ref as required by copy constructor
+				if(core::lang::isReference(ret)) {
+					ret = core::lang::buildRefCast(
+						ret, prevArg.as<core::CallExprPtr>()->getFunctionExpr()->getType().as<core::FunctionTypePtr>()->getParameterType(1));
+				}
+				VLOG(2) << "CXX call converted newArg: " << dumpPretty(ret);
+			}
+		}
+		return ret;
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

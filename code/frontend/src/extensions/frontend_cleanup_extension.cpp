@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -130,7 +130,9 @@ namespace extensions {
 				auto call = matchingAddress.getAddressedNode().as<CallExprPtr>();
 				auto arg0 = call->getArgument(0);
 				// ensure correct typing
-				assert_pred2(core::analysis::equalTypes, call->getType(), arg0->getType()) << "Record types not correctly resolved";
+				// TODO Re-enable assertion, remove replacement
+				//assert_pred2(core::analysis::equalTypes, call->getType(), arg0->getType()) << "Record types not correctly resolved"; 
+				arg0 = core::transform::replaceAddress(mgr, core::ExpressionAddress(arg0)->getType(), call->getType()).getRootNode().as<ExpressionPtr>();
 				// remove call
 				return arg0;
 			}).as<ProgramPtr>();

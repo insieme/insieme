@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -145,28 +145,12 @@ namespace conversion {
 		LOG_EXPR_CONVERSION(callExpr, irCall);
 
 		// in Inspire 2.0, copy and move constructor calls are implicit on function calls
-		auto newArgs = irCall->getArgumentList();
-		auto funExp = irCall->getFunctionExpr();
-		size_t i = 0;
-		for(auto clangArgExpr : callExpr->arguments()) {
-			// detect copy/move constructor calls
-			auto constructExpr = llvm::dyn_cast<clang::CXXConstructExpr>(clangArgExpr);
-			if(constructExpr) {
-				auto constructor = constructExpr->getConstructor();
-				if(constructor->isCopyOrMoveConstructor()) {
-					auto prevArg = newArgs[i];
-					newArgs[i] = Visit(constructExpr->getArg(0));
-					// cast ref as required by copy constructor
-					if(core::lang::isReference(newArgs[i])) {
-						newArgs[i] = core::lang::buildRefCast(
-							newArgs[i], prevArg.as<core::CallExprPtr>()->getFunctionExpr()->getType().as<core::FunctionTypePtr>()->getParameterType(1));
-					}
-				}
-			}
-			++i;
-		}
+		ExpressionList newArgs; 
+		std::transform(callExpr->arg_begin(), callExpr->arg_end(), std::back_inserter(newArgs), [&](const clang::Expr* clangArgExpr) { 
+			return convertCxxArgExpr(clangArgExpr);
+		});
 		
-		return builder.callExpr(irCall->getType(), funExp, newArgs);
+		return builder.callExpr(irCall->getType(), irCall->getFunctionExpr(), newArgs);
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

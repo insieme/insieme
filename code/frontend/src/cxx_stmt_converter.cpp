@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -110,36 +110,18 @@ namespace conversion {
 	//							RETURN STATEMENT
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitReturnStmt(clang::ReturnStmt* retStmt) {
-		stmtutils::StmtWrapper stmt = StmtConverter::VisitReturnStmt(retStmt);
-		LOG_STMT_CONVERSION(retStmt, stmt);
+		stmtutils::StmtWrapper retIr;
+		LOG_STMT_CONVERSION(retStmt, retIr);
 
-		if(!retStmt->getRetValue()) {
-			// if there is no return value its an empty return "return;"
-			return stmt;
+		auto irRetStmt = builder.returnStmt();
+
+		// check if we have a return value
+		if(clang::Expr* expr = retStmt->getRetValue()) {
+			irRetStmt = builder.returnStmt(converter.convertCxxArgExpr(expr));
 		}
 
-		core::ExpressionPtr retExpr = stmt.getSingleStmt().as<core::ReturnStmtPtr>().getReturnExpr();
-
-		// check if the return must be converted or not to a reference,
-		// is easy to check if the value has being derefed or not
-		if(gen.isPrimitive(retExpr->getType())) { return stmt; }
-
-		// return by value ALWAYS, will fix this in a second pass (check cpp_ref extension)
-		//   - var(undefined (Obj))
-		//   - ctor(undefined(Obj))
-		//   - vx (where type is ref<Obj<..>>)
-		//   		all this casses, by value!
-		//   all of those cases result in an expression typed ref<obj>
-		if(core::analysis::isRefType(retExpr->getType())) {
-			if(core::analysis::isObjectType(core::analysis::getReferencedType(retExpr->getType()))) {
-				vector<core::StatementPtr> stmtList;
-				stmtList.push_back(builder.returnStmt(builder.deref(retExpr)));
-				core::StatementPtr retStatement = builder.compoundStmt(stmtList);
-				stmt = stmtutils::aggregateStmts(builder, stmtList);
-			}
-		}
-
-		return stmt;
+		retIr.push_back(irRetStmt);
+		return retIr;
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
