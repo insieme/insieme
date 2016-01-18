@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -395,6 +395,58 @@ namespace types {
 		argType = builder.parseType("ref<A,t,f,cpp_rref>", symbols);
 		funType = builder.parseType("(A)->bool", symbols).as<FunctionTypePtr>();
 		EXPECT_EQ("bool",toString(*deduceReturnType(funType, {argType})));
+
+		
+		// different ref kinds are incompatible
+		argType = builder.parseType("ref<A>", symbols);
+		funType = builder.parseType("(ref<A,f,f,cpp_ref>)->bool", symbols).as<FunctionTypePtr>();
+		EXPECT_EQ("unit",toString(*deduceReturnType(funType, {argType})));
+		
+		argType = builder.parseType("ref<A>", symbols);
+		funType = builder.parseType("(ref<A,f,f,cpp_rref>)->bool", symbols).as<FunctionTypePtr>();
+		EXPECT_EQ("unit",toString(*deduceReturnType(funType, {argType})));
+
+		argType = builder.parseType("ref<A,f,f,cpp_ref>", symbols);
+		funType = builder.parseType("(ref<A>)->bool", symbols).as<FunctionTypePtr>();
+		EXPECT_EQ("unit",toString(*deduceReturnType(funType, {argType})));
+		
+		argType = builder.parseType("ref<A,f,f,cpp_rref>", symbols);
+		funType = builder.parseType("(ref<A>)->bool", symbols).as<FunctionTypePtr>();
+		EXPECT_EQ("unit",toString(*deduceReturnType(funType, {argType})));
+		
+		argType = builder.parseType("ref<A,f,f,cpp_ref>", symbols);
+		funType = builder.parseType("(ref<A,f,f,cpp_rref>)->bool", symbols).as<FunctionTypePtr>();
+		EXPECT_EQ("unit",toString(*deduceReturnType(funType, {argType})));
+		
+		argType = builder.parseType("ref<A,f,f,cpp_rref>", symbols);
+		funType = builder.parseType("(ref<A,f,f,cpp_ref>)->bool", symbols).as<FunctionTypePtr>();
+		EXPECT_EQ("unit",toString(*deduceReturnType(funType, {argType})));
+
+
+		// addition of flags is ok, subtraction not
+		argType = builder.parseType("ref<A,f,f>", symbols);
+		funType = builder.parseType("(ref<A,f,t>)->bool", symbols).as<FunctionTypePtr>();
+		EXPECT_EQ("bool",toString(*deduceReturnType(funType, {argType})));
+
+		argType = builder.parseType("ref<A,f,f>", symbols);
+		funType = builder.parseType("(ref<A,t,f>)->bool", symbols).as<FunctionTypePtr>();
+		EXPECT_EQ("bool",toString(*deduceReturnType(funType, {argType})));
+
+		argType = builder.parseType("ref<A,f,f>", symbols);
+		funType = builder.parseType("(ref<A,t,t>)->bool", symbols).as<FunctionTypePtr>();
+		EXPECT_EQ("bool",toString(*deduceReturnType(funType, {argType})));
+
+		argType = builder.parseType("ref<A,t,f>", symbols);
+		funType = builder.parseType("(ref<A,f,t>)->bool", symbols).as<FunctionTypePtr>();
+		EXPECT_EQ("unit",toString(*deduceReturnType(funType, {argType})));
+
+		argType = builder.parseType("ref<A,f,t>", symbols);
+		funType = builder.parseType("(ref<A,f,f>)->bool", symbols).as<FunctionTypePtr>();
+		EXPECT_EQ("unit",toString(*deduceReturnType(funType, {argType})));
+
+		argType = builder.parseType("ref<A,t,t>", symbols);
+		funType = builder.parseType("(ref<A,t,f>)->bool", symbols).as<FunctionTypePtr>();
+		EXPECT_EQ("unit",toString(*deduceReturnType(funType, {argType})));
 
 	}
 

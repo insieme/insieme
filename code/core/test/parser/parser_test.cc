@@ -1271,6 +1271,10 @@ namespace parser {
 		                                "  lambda f = (a : int<16>) -> unit {}"
 		                                "  lambda f = (a : int<4>, b : int<4>) -> unit {}"
 		                                "  lambda f = (a : int<8>, b : int<4>) -> unit {}"
+		                                "  lambda g = (a : ref<int<4>>) -> unit {}"
+		                                "  lambda g = (a : ref<int<4>,t,f>) -> unit {}"
+		                                "  lambda g = (a : ref<int<4>,f,t>) -> unit {}"
+		                                "  lambda g = (a : ref<int<4>,t,t>) -> unit {}"
 		                                "};";
 
 		//multiple possible overloads. Simple call fails for constructor with a single param
@@ -1313,15 +1317,16 @@ namespace parser {
 		                     "  a." + utils::getMangledOperatorAssignName() + "(a);"
 		                     "}"));
 
-		//call the default generated constructs and manually specify which overload to take
-		EXPECT_TRUE(test_statement(nm, "def struct A { };"
-		                     "{"
-		                     "  var ref<A> a;"
-		                     "  var ref<A> a_copy = A::(ref_var(type_lit(A)), a : ref<A,t,f,cpp_ref>);"    //copy constructor
-		                     "  var ref<A> a_move = A::(ref_var(type_lit(A)), a : ref<A,f,f,cpp_rref>);"   //move constructor
-		                     "  a." + utils::getMangledOperatorAssignName() + "(a : ref<A,t,f,cpp_ref>);"  //default copy assignment operator
-		                     "  a." + utils::getMangledOperatorAssignName() + "(a : ref<A,f,f,cpp_rref>);" //default move assignment operator
-		                     "}"));
+		// call g and manually specify which const/volatile overload to take
+		EXPECT_TRUE(test_statement(nm, commonClass + 
+			                           "{"
+			                           "  var ref<A> a;"
+			                           "  var ref<int<4>> b;"
+			                           "  a.g(b : ref<int<4>,f,f>);"
+			                           "  a.g(b : ref<int<4>,t,f>);"
+			                           "  a.g(b : ref<int<4>,f,t>);"
+			                           "  a.g(b : ref<int<4>,t,t>);"
+			                           "}"));
 	}
 
 	TEST(IRParser, FreeMembers) {

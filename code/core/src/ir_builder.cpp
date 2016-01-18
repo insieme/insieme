@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -763,20 +763,20 @@ namespace core {
 
 	ExpressionPtr IRBuilderBaseModule::undefinedVar(const TypePtr& type) const {
 		auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
-		core::TypePtr elementType = type;
 		if(analysis::isRefType(type)) {
-			elementType = core::analysis::getReferencedType(type);
+			auto elementType = analysis::getReferencedType(type);
+			return lang::buildRefCast(callExpr(refType(elementType), refExt.getRefVar(), getTypeLiteral(elementType)), type);
 		}
-		return callExpr(refType(elementType), refExt.getRefVar(), getTypeLiteral(elementType));
+		return callExpr(refType(type), refExt.getRefVar(), getTypeLiteral(type));
 	}
 
 	ExpressionPtr IRBuilderBaseModule::undefinedNew(const TypePtr& type) const {
 		auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
-		core::TypePtr elementType = type;
 		if(analysis::isRefType(type)) {
-			elementType = core::analysis::getReferencedType(type);
+			auto elementType = analysis::getReferencedType(type);
+			return lang::buildRefCast(callExpr(refType(elementType), refExt.getRefNew(), getTypeLiteral(elementType)), type);
 		}
-		return callExpr(refType(elementType), refExt.getRefNew(), getTypeLiteral(elementType));
+		return callExpr(refType(type), refExt.getRefNew(), getTypeLiteral(type));
 	}
 
 	CallExprPtr IRBuilderBaseModule::deref(const ExpressionPtr& subExpr) const {

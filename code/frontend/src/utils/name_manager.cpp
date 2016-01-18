@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -110,6 +110,13 @@ namespace utils {
 		return removeSymbols(fullName);
 	}
 
+	namespace {
+		string getTypeString(clang::QualType t) {
+			string s = t.getAsString();
+			boost::replace_all(s, " ", "_");
+			return removeSymbols(s);
+		}
+	}
 
 	std::string buildNameForFunction(const clang::FunctionDecl* funcDecl) {
 		std::string name = funcDecl->getQualifiedNameAsString();
@@ -142,7 +149,7 @@ namespace utils {
 						typeName =
 							createNameForAnon("lambda", arg.getAsType().getTypePtr()->getAsCXXRecordDecl(), funcDecl->getASTContext().getSourceManager());
 					} else {
-						typeName = arg.getAsType().getAsString();
+						typeName = getTypeString(arg.getAsType());
 					}
 					suffix << "_" << typeName;
 					break;
@@ -152,7 +159,7 @@ namespace utils {
 					break;
 				}
 				case clang::TemplateArgument::Declaration: {
-					suffix << "_" << arg.getAsDecl()->getType().getAsString();
+					suffix << "_" << getTypeString(arg.getAsDecl()->getType());
 					break;
 				}
 				case clang::TemplateArgument::NullPtr: {
@@ -164,7 +171,7 @@ namespace utils {
 					break;
 				}
 				case clang::TemplateArgument::Template: {
-					suffix << "_" << arg.getAsTemplate().getAsTemplateDecl()->getTemplatedDecl()->getNameAsString();
+					suffix << "_" << removeSymbols(arg.getAsTemplate().getAsTemplateDecl()->getTemplatedDecl()->getNameAsString());
 					break;
 				}
 				case clang::TemplateArgument::TemplateExpansion: {
@@ -175,7 +182,7 @@ namespace utils {
 					suffix << "_pack_begin";
 					for(clang::TemplateArgument::pack_iterator it = arg.pack_begin(), end = arg.pack_end(); it != end; it++) {
 						const clang::QualType& argType = (*it).getAsType();
-						suffix << "_" << argType.getAsString();
+						suffix << "_" << getTypeString(argType);
 					}
 					suffix << "_pack_end";
 					break;
@@ -185,7 +192,7 @@ namespace utils {
 		}
 
 		if(funcDecl->isTemplateInstantiation()) {
-			std::string returnType = funcDecl->getReturnType().getAsString();
+			std::string returnType = getTypeString(funcDecl->getReturnType());
 			suffix << "_returns_" << returnType;
 		}
 
