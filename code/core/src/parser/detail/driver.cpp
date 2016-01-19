@@ -1450,7 +1450,7 @@ namespace parser {
 			if(!isTypeDeclaredInCurrentScope(name)) { declareRecordType(l, name); }
 
 			openScope();
-			currentRecordStack.push_back({key, getCurrentScope()});
+			currentRecordStack.push_back({key});
 		}
 
 		void InspireDriver::endRecord() {

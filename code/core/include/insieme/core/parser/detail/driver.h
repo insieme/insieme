@@ -138,7 +138,6 @@ namespace parser {
 
 			struct RecordStackEntry {
 				GenericTypePtr record;
-				std::shared_ptr<Scope> scope;
 			};
 
 			std::vector<RecordStackEntry> currentRecordStack;
