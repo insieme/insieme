@@ -411,11 +411,6 @@ namespace parser {
 
 		  public:
 
-			/**
-			 * stores in the current scope the "this" variable with the given type
-			 */
-			void addThis(const location& l, const TypePtr& classType);
-
 			/*
 			 * Computes the final result of parsing by using the TU to resolve all symbols and applying some post-processing actions.
 			 *

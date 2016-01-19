@@ -1433,16 +1433,6 @@ namespace parser {
 			return type;
 		}
 
-
-		void InspireDriver::addThis(const location& l, const TypePtr& classType) {
-			// gen ref type
-			auto refThis = builder.refType(classType);
-			// gen var
-			auto thisVar = builder.variable(refThis);
-			// save in scope
-			declareSymbol(l, "this", thisVar);
-		}
-
 		void InspireDriver::beginRecord(const location& l, const std::string& name) {
 			auto key = builder.genericType(name);
 
