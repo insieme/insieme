@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -149,7 +149,7 @@ namespace conversion {
 	}
 
 	DeclConverter::ConvertedMethodDecl DeclConverter::convertMethodDecl(const clang::CXXMethodDecl* methDecl, const core::ParentsPtr& parents,
-		                                                                const core::FieldsPtr& fields) const {
+		                                                                const core::FieldsPtr& fields, bool declOnly) const {
 		ConvertedMethodDecl ret;
 
 		// handle default constructor / destructor / operators in accordance with core
@@ -182,7 +182,7 @@ namespace conversion {
 				ret.lambda = ret.memFun->getImplementation().as<core::LambdaExprPtr>();
 				ret.lit = converter.getIRBuilder().literal(ret.lambda->getReference()->getNameAsString(), ret.lambda->getType());
 			}
-			converter.getFunMan()->insert(methDecl, ret.lit);
+			if(!converter.getFunMan()->contains(methDecl)) converter.getFunMan()->insert(methDecl, ret.lit);
 		}
 		// non-default cases
 		else {
@@ -191,9 +191,11 @@ namespace conversion {
 			if(funType->getKind() == core::FK_CONSTRUCTOR) { ret.lit = builder.getLiteralForConstructor(funType); }
 			else if(funType->getKind() == core::FK_DESTRUCTOR) { ret.lit = builder.getLiteralForDestructor(funType); }
 			else { ret.lit = builder.getLiteralForMemberFunction(funType, name); }
-			converter.getFunMan()->insert(methDecl, ret.lit);
-			ret.lambda = convertFunMethodInternal(converter, funType, methDecl, ret.lit->getStringValue());
-			ret.memFun = builder.memberFunction(methDecl->isVirtual(), name, ret.lit);
+			if(!converter.getFunMan()->contains(methDecl)) converter.getFunMan()->insert(methDecl, ret.lit);
+			if(!declOnly) {
+				ret.lambda = convertFunMethodInternal(converter, funType, methDecl, ret.lit->getStringValue());
+				ret.memFun = builder.memberFunction(methDecl->isVirtual(), name, ret.lit);
+			}
 		}
 		return ret;
 	}

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -284,7 +284,8 @@ namespace frontend {
 		auto checkResult = core::checks::check(res);
 		EXPECT_EQ(checkResult.size(), 0) << printer::dumpErrors(checkResult)
 		                                 //<< "\n" << dumpColor(checkResult.getErrors()[0].getOrigin().getAddressedNode())
-		                                 << "\n@(" << locationOf(checkResult.getErrors()[0].getOrigin()) << ")";
+		                                 << "\n@(" << locationOf(checkResult.getErrors()[0].getOrigin()) << ")"
+			<< "\n" << checkResult;
 		// std::cout << "Semantic Error dump:\n";
 		// dumpText(checkResult.getErrors()[0].getOrigin().getParentNode(2));
 	}

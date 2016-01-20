@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -77,16 +77,44 @@ def struct IMP_C {
 	ctor(y : uint<4>) { cxx_style_assignment(x, y); }
 };)"
 
+// check member use within struct member function
+struct D1 {	
+	void bla() {}
+	void test() {
+		bla();
+	}
+};
+
+// check member use within struct member function, inverse order
+struct D2 {	
+	void test() {
+		bla();
+	}
+	void bla() {}
+};
+
 int main() {
 	; // this is required because of the clang compound source location bug
 
 	#pragma test expect_ir(A_IR, R"( { var ref<IMP_A> a = IMP_A::(ref_var(type_lit(IMP_A))); } )")
 	{ A a; }
-
+	
+	// method call
 	#pragma test expect_ir(A_IR, R"( { var ref<IMP_A> a = IMP_A::(ref_var(type_lit(IMP_A))); a.IMP_f(); } )")
 	{
 		A a;
 		a.f();
+	}
+
+	// method call using pointer
+	#pragma test expect_ir(A_IR, R"({
+		var ref<IMP_A,f,f,plain> v0 = IMP_A::(ref_var(type_lit(IMP_A)));
+		var ref<ptr<IMP_A>,f,f,plain> v1 = ref_var_init(ptr_from_ref(v0));
+		ptr_to_ref(*v1).IMP_f();
+	})")
+	{
+		A a, *b = &a;
+		b->f();
 	}
 	
 	#pragma test expect_ir(B_IR,R"( { var ref<IMP_B> b = IMP_B::(ref_var(type_lit(IMP_B))); b.IMP_f(); } )")
@@ -103,6 +131,14 @@ int main() {
 	#pragma test expect_ir(C_IR,R"( { var ref<IMP_C> c = IMP_C::(ref_var(type_lit(IMP_C)), 6u); } )")
 	{
 		C c2(6u);
+	}
+	
+	{
+		D1 d1;
+	}
+
+	{
+		D2 d2;
 	}
 
 	return 0;

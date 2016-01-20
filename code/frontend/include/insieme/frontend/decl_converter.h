@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -93,8 +93,10 @@ namespace conversion {
 		/// @param methDecl is a clang CXXMethodDecl which represent a definition for the method
 		/// @param parents parents of the class this is a method of
 		/// @param fields fields of the class this is a method of
+		/// @param declOnly only add method to function table, don't convert body
 		/// @return Converted member function
-		ConvertedMethodDecl convertMethodDecl(const clang::CXXMethodDecl* methDecl, const core::ParentsPtr& parents, const core::FieldsPtr& fields) const;
+		ConvertedMethodDecl convertMethodDecl(const clang::CXXMethodDecl* methDecl, const core::ParentsPtr& parents, const core::FieldsPtr& fields,
+			                                  bool declOnly = false) const;
 
 		// Visitors -------------------------------------------------------------------------------------------------------
 
