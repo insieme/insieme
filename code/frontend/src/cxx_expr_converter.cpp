@@ -215,6 +215,9 @@ namespace conversion {
 
 			// get the "this" object and add to arguments
 			core::ExpressionPtr thisObj = Visit(callExpr->getImplicitObjectArgument());
+			if(core::lang::isPointer(thisObj)) {
+				thisObj = core::lang::buildPtrToRef(thisObj);
+			}
 			core::ExpressionList arguments { thisObj };
 
 			// in Inspire 2.0, copy and move constructor calls are implicit on function calls, and ref kind needs to be adapted
