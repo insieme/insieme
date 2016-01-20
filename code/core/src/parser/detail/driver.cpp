@@ -576,6 +576,15 @@ namespace parser {
 			assert_false(currentRecordStack.empty()) << "Not within record definition!";
 
 			auto key = builder.getLiteralForConstructor(ctor->getType());
+
+			//register the lambda itself in the TU - but only overwrite dummy declarations
+			if (const auto& otherMember = tu.getFunctions()[key]) {
+				const auto& otherBody = otherMember->getBody();
+				if (otherBody->size() != 1 || otherBody[0] != parserIRExtension.getMemberDummyLambda()) {
+					error(l, format("Re-definition of constructor of type %s", *key->getType()));
+					return nullptr;
+				}
+			}
 			tu.addFunction(key, ctor);
 
 			return key;
@@ -691,7 +700,13 @@ namespace parser {
 			fun = builder.lambdaExpr(fun->getLambda(), lambdaName);
 			annotations::attachName(fun, lambdaName);
 
-			//register the lambda itself in the TU
+			//register the lambda itself in the TU - but only overwrite dummy declarations
+			if (const auto& otherMember = tu.getFunctions()[key]) {
+				const auto& otherBody = otherMember->getBody();
+				if (otherBody->size() != 1 || otherBody[0] != parserIRExtension.getMemberDummyLambda()) {
+					return nullptr;
+				}
+			}
 			tu.addFunction(key, fun);
 
 			return builder.memberFunction(virtl, name, key);
@@ -1418,16 +1433,6 @@ namespace parser {
 			return type;
 		}
 
-
-		void InspireDriver::addThis(const location& l, const TypePtr& classType) {
-			// gen ref type
-			auto refThis = builder.refType(classType);
-			// gen var
-			auto thisVar = builder.variable(refThis);
-			// save in scope
-			declareSymbol(l, "this", thisVar);
-		}
-
 		void InspireDriver::beginRecord(const location& l, const std::string& name) {
 			auto key = builder.genericType(name);
 
@@ -1435,7 +1440,7 @@ namespace parser {
 			if(!isTypeDeclaredInCurrentScope(name)) { declareRecordType(l, name); }
 
 			openScope();
-			currentRecordStack.push_back({key, getCurrentScope()});
+			currentRecordStack.push_back({key});
 		}
 
 		void InspireDriver::endRecord() {

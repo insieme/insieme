@@ -138,7 +138,6 @@ namespace parser {
 
 			struct RecordStackEntry {
 				GenericTypePtr record;
-				std::shared_ptr<Scope> scope;
 			};
 
 			std::vector<RecordStackEntry> currentRecordStack;
@@ -411,11 +410,6 @@ namespace parser {
 			TypeList getParamTypesForLambdaAndFunction(const location& l, const VariableList& params);
 
 		  public:
-
-			/**
-			 * stores in the current scope the "this" variable with the given type
-			 */
-			void addThis(const location& l, const TypePtr& classType);
 
 			/*
 			 * Computes the final result of parsing by using the TU to resolve all symbols and applying some post-processing actions.

@@ -46,6 +46,7 @@
 #include <boost/unordered_map.hpp>
 #include <boost/iostreams/stream.hpp>
 #include <boost/iostreams/concepts.hpp>
+#include <boost/algorithm/string.hpp>
 
 #include "insieme/utils/string_utils.h"
 #include "insieme/utils/map_utils.h"
@@ -211,6 +212,9 @@ namespace printer {
 			utils::set::PointerSet<LambdaReferencePtr> entryPoints;
 			utils::set::PointerSet<TagTypePtr> visitedTagTypes;
 			utils::set::PointerSet<LiteralPtr> visitedLiterals;
+			utils::map::PointerMap<LambdaReferencePtr, std::tuple<std::string, std::string>> visitedFreeFunctions;
+			utils::set::PointerSet<LambdaReferencePtr> visitedMemberFunctions;
+			utils::set::PointerSet<LambdaReferencePtr> visitedConstructors;
 
 			std::vector<std::pair<TypePtr,TypePtr>> aliases;
 
@@ -300,6 +304,20 @@ namespace printer {
 							const auto& lambdaBinding = lambdaExpr->getDefinition()->getBindingOf(lambdaExpr->getReference());
 							lambdaNames[cur->peel(lambdaBinding)->getReference()] = memberFun->getName()->getValue();
 							lambdaNames[lambdaBinding->getReference()] = memberFun->getName()->getValue();
+
+							// later used to find out which member functions are not visited -> free defined memFuns
+							visitedMemberFunctions.insert(lambdaBinding->getReference());
+							visitedMemberFunctions.insert(cur->peel(lambdaBinding)->getReference());
+						}
+
+						// later used to find out which member functions are not visited -> free defined ctors
+						auto constructors = cur->getRecord()->getConstructors();
+						if (!constructors.empty()) {
+							for (auto constr : constructors) {
+								if (auto ctor = constr.isa<LambdaExprPtr>()) {
+									visitedMemberFunctions.insert(ctor->getReference());
+								}
+							}
 						}
 					}
 				});
@@ -390,6 +408,29 @@ namespace printer {
 								out << "decl " << lambdaNames[binding->getReference()] << " : ";
 								visit(NodeAddress(funType));
 								out << ";";
+							} else if (visitedMemberFunctions.insert(binding->getReference()).second) {
+								// branch for free defined function
+								if (binding->getReference()->getType().isMemberFunction()) { // free member functions
+									auto tagname = analysis::getObjectType(
+											cur->getType()).as<TagTypePtr>()->getName()->getValue();
+									vector<std::string> splitstring;
+									boost::split(splitstring, lambdaNames[binding->getReference()],
+												 boost::is_any_of("::"));
+									visitedFreeFunctions[binding->getReference()] = std::make_tuple(tagname,
+																									splitstring[2]);
+
+									lambdaNames[binding->getReference()] = splitstring[2];
+									newLine();
+									out << "decl " << splitstring[2] << ":" << tagname << "::";
+									visit(NodeAddress(funType));
+									out << ";";
+								} else if (binding->getReference()->getType().isConstructor()) { // free constructors
+									auto tagtype = analysis::getObjectType(cur->getType());
+									if(tagtype.isa<TagTypePtr>()) {
+										auto tagname = tagtype.as<TagTypePtr>()->getName()->getValue();
+										visitedFreeFunctions[binding->getReference()] = std::make_tuple(tagname, lambdaNames[binding->getReference()]);
+									}
+								}
 							}
 						}
 
@@ -615,6 +656,41 @@ namespace printer {
 										out << " : ";
 										visit(NodeAddress(curVar->getType()));
 									}) << ")" << (funType->isVirtualMemberFunction() ? " ~> " : " -> ");
+									visit(NodeAddress(funType->getReturnType()));
+									out << " ";
+									visit(bindingAddress->getLambda()->getBody());
+									out << ";";
+								}
+							} else if (visitedFreeFunctions.find(binding->getReference()) != visitedFreeFunctions.end()) {
+								// branch for the free member functions
+								if (funType->isConstructor()) {
+									auto tagname = std::get<0>(visitedFreeFunctions[binding->getReference()]);
+									auto funname = std::get<1>(visitedFreeFunctions[binding->getReference()]);
+									auto parameters = lambda.getParameterList();
+
+									newLine();
+									out << "decl ctor : " << tagname << " :: " << funname << " = (" <<
+											join(", ", lambda->getParameters().begin() + 1, lambda->getParameters().end(),
+												 [&](std::ostream& out, const VariablePtr& curVar) {
+													 visit(NodeAddress(curVar));
+													 out << " : ";
+													 visit(NodeAddress(curVar->getType()));
+												 }) << ") ";
+									visit(bindingAddress->getLambda()->getBody());
+									out << ";";
+								} else if (funType->isMemberFunction()) {
+									auto tagname = std::get<0>(visitedFreeFunctions[binding->getReference()]);
+									auto funname = std::get<1>(visitedFreeFunctions[binding->getReference()]);
+									auto parameters = lambda.getParameterList();
+
+									newLine();
+									out << "def " << tagname << " :: function " << funname << " = (" <<
+									join(", ", lambda->getParameters().begin() + 1, lambda->getParameters().end(),
+										 [&](std::ostream& out, const VariablePtr& curVar) {
+											 visit(NodeAddress(curVar));
+											 out << " : ";
+											 visit(NodeAddress(curVar->getType()));
+										 }) << ")" << (funType->isVirtualMemberFunction() ? " ~> " : " -> ");
 									visit(NodeAddress(funType->getReturnType()));
 									out << " ";
 									visit(bindingAddress->getLambda()->getBody());

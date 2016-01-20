@@ -953,3 +953,97 @@ TEST(PrettyPrinter, ReverseAliases) {
 	EXPECT_EQ(toString(PrettyPrinter(insieme::core::lang::PointerType::create(insieme::core::lang::PointerType::create(basic.getInt4(), false, true)))),
 	          "ptr<ptr<int<4>,f,t>>");
 }
+
+TEST(PrettyPrinter, FreeFunctions) {
+	NodeManager nm;
+	IRBuilder builder(nm);
+
+	// standard definition of a memberfunction for counter checking
+	{
+		std::string input = ""
+				"def struct A{"
+				"  lambda func = () -> unit{"
+				"    1+1;"
+				"  }"
+				"};"
+				"{"
+				"  var ref<A> a;"
+				"  a.func();"
+				"}";
+
+		auto ir = builder.parseStmt(input);
+
+		PrettyPrinter printer(ir, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::PRINT_CASTS
+									| PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_ATTRIBUTES
+									| PrettyPrinter::PRINT_DERIVED_IMPL);
+
+		EXPECT_EQ("decl struct A;\n"
+				  "decl func:A::() -> unit;\n"
+				  "def struct A {\n"
+				  "    function func = () -> unit {\n"
+				  "        1+1;\n"
+				  "    }\n"
+				  "};\n"
+				  "{\n"
+				  "    var ref<A,f,f,plain> v13 = ref_var(type_lit(A));\n"
+				  "    v13.func();\n"
+				  "}", toString(printer));
+	}
+
+	// free memberfunction definition
+	{
+		std::string input = ""
+				"def struct A {};"
+				"def A :: lambda func = () -> unit {"
+				"  1+1;"
+				"};"
+				"{"
+				"  var ref<A> a;"
+				"  a.func();"
+				"}";
+
+		auto ir = builder.parseStmt(input);
+
+		PrettyPrinter printer(ir, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::PRINT_CASTS
+									| PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_ATTRIBUTES
+									| PrettyPrinter::PRINT_DERIVED_IMPL);
+
+		EXPECT_EQ("decl struct A;\n"
+				  "decl func:A::() -> unit;\n"
+				  "def struct A {\n"
+				  "};\n"
+				  "def A :: function func = () -> unit {\n"
+				  "    1+1;\n"
+				  "};\n"
+				  "{\n"
+				  "    var ref<A,f,f,plain> v87 = ref_var(type_lit(A));\n"
+				  "    v87.func();\n"
+				  "}", toString(printer));
+	}
+
+	// free definition of a costructor
+	{
+		std::string input = ""
+				"def struct A {"
+				"};"
+				"def A :: ctor foo = () {};"
+				"{"
+				"  var ref<A> a = foo(ref_var(type_lit(A)));"
+				"}";
+
+		auto ir = builder.parseStmt(input);
+
+		PrettyPrinter printer(ir, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::PRINT_CASTS
+									| PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_ATTRIBUTES
+									| PrettyPrinter::PRINT_DERIVED_IMPL);
+
+		EXPECT_EQ("decl struct A;\n"
+				  "def struct A {\n"
+				  "};\n"
+				  "decl ctor : A :: foo = () { };\n"
+				  "{\n"
+				  "    var ref<A,f,f,plain> v130 = foo(ref_var(type_lit(A)));\n"
+				  "}", toString(printer));
+	}
+
+}
