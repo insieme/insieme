@@ -223,11 +223,9 @@ namespace conversion {
 			std::transform(callExpr->arg_begin(), callExpr->arg_end(), std::back_inserter(arguments), [&](const clang::Expr* clangArgExpr) {
 				auto targetType = funType->getParameterType(i++);
 				auto ret = convertCxxArgExpr(clangArgExpr, targetType);
-				VLOG(2) << "====================\n\nconvert method argument:\n" 
-					<< "\n - from: " << dumpClang(clangArgExpr, converter.getCompiler().getSourceManager())
-					<< "\n - to: " << dumpPretty(ret)
-					<< "\n - of type: " << dumpPretty(ret->getType())
-					<< "\n - target T: " << dumpPretty(targetType);
+				VLOG(2) << "====================\n\nconvert method argument:\n"
+					    << "\n - from: " << dumpClang(clangArgExpr, converter.getCompiler().getSourceManager()) << "\n - to: " << dumpPretty(ret)
+					    << "\n - of type: " << dumpPretty(ret->getType()) << "\n - target T: " << dumpPretty(targetType);
 				return ret;
 			});
 

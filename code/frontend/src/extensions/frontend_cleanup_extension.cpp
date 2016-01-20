@@ -130,11 +130,11 @@ namespace extensions {
 				auto call = matchingAddress.getAddressedNode().as<CallExprPtr>();
 				auto arg0 = call->getArgument(0);
 				// ensure correct typing
-				// TODO Re-enable assertion, remove replacement
-				assert_pred2(core::analysis::equalTypes, call->getType(), arg0->getType()) << "Record types not correctly resolved"; 
-				//arg0 = core::transform::replaceAddress(mgr, 
-				//	core::ExpressionAddress(arg0)->getType(), core::analysis::getCanonicalType(call->getType())).getRootNode().as<ExpressionPtr>();
-				// remove call
+				//assert_pred2(core::analysis::equalTypes, call->getType(), arg0->getType()) << "Record types not correctly resolved"; 
+				// TODO FIXME re-enable assertion and remove this when uniform representation of recursive types is available
+				if(!core::analysis::equalTypes(call->getType(), arg0->getType())) {
+					arg0 = core::transform::replaceAddress(mgr, ExpressionAddress(arg0)->getType(), call->getType()).getRootNode().as<ExpressionPtr>();
+				} 
 				return arg0;
 			}).as<ProgramPtr>();
 

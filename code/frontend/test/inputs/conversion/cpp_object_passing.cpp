@@ -98,7 +98,7 @@ void validateTrivial() {
 		{ IMP_consume_struct_Trivial_returns_void(ref_cast(IMP_Trivial::(ref_var(type_lit(IMP_Trivial))), type_lit(f), type_lit(f), type_lit(cpp_rref))); }
 	)")
 	{ consume<T>(T()); }
-	
+
 	// pass temporary
 	#pragma test expect_ir(STRUCT_TRIVIAL,CONSUME_TRIVIAL, R"(
 		{ IMP_consume_struct_Trivial_returns_void(<IMP_Trivial> {12}); }
@@ -124,7 +124,7 @@ void validateTrivial() {
 	// pass l-value
 	#pragma test expect_ir(STRUCT_TRIVIAL,CONSUME_TRIVIAL_REF,R"({ 
 		var ref<IMP_Trivial,f,f,plain> v0 = IMP_Trivial::(ref_var(type_lit(IMP_Trivial)));
-		IMP_consume_struct_Trivial__ampersand__returns_void(v0);
+		IMP_consume_struct_Trivial__ampersand__returns_void(ref_kind_cast(v0,type_lit(cpp_ref)));
 	})")
 	{ T t; consume<T&>(t); }
 	
@@ -146,7 +146,7 @@ void validateTrivial() {
 	
 	// pass temporary
 	#pragma test expect_ir(STRUCT_TRIVIAL,CONSUME_TRIVIAL_RREF,R"(
-		{ IMP_consume_struct_Trivial__ampersand__ampersand__returns_void(IMP_Trivial::(ref_var(type_lit(IMP_Trivial)))); }
+		{ IMP_consume_struct_Trivial__ampersand__ampersand__returns_void(ref_kind_cast(IMP_Trivial::(ref_var(type_lit(IMP_Trivial))),type_lit(cpp_rref))); }
 	)")
 	{ consume<T&&>(T()); }
 	
@@ -169,13 +169,13 @@ void validateTrivial() {
 	// pass l-value
 	#pragma test expect_ir(STRUCT_TRIVIAL,CONSUME_TRIVIAL_CONST_REF,R"({ 
 		var ref<IMP_Trivial,f,f,plain> v0 = IMP_Trivial::(ref_var(type_lit(IMP_Trivial)));
-		IMP_consume_const_struct_Trivial__ampersand__returns_void(v0);
+		IMP_consume_const_struct_Trivial__ampersand__returns_void(ref_kind_cast(v0,type_lit(cpp_ref)));
 	})")
 	{ T t; consume<const T&>(t); }
 	
 	// pass temporary
 	#pragma test expect_ir(STRUCT_TRIVIAL,CONSUME_TRIVIAL_CONST_REF,R"(
-		{ IMP_consume_const_struct_Trivial__ampersand__returns_void(IMP_Trivial::(ref_var(type_lit(IMP_Trivial)))); }
+		{ IMP_consume_const_struct_Trivial__ampersand__returns_void(ref_kind_cast(IMP_Trivial::(ref_var(type_lit(IMP_Trivial))),type_lit(cpp_ref))); }
 	)")
 	{ consume<const T&>(T()); }
 	
@@ -205,7 +205,7 @@ void validateTrivial() {
 
 	// pass temporary
 	#pragma test expect_ir(STRUCT_TRIVIAL,CONSUME_TRIVIAL_CONST_RREF,R"(
-		{ IMP_consume_const_struct_Trivial__ampersand__ampersand__returns_void(IMP_Trivial::(ref_var(type_lit(IMP_Trivial)))); }
+		{ IMP_consume_const_struct_Trivial__ampersand__ampersand__returns_void(ref_kind_cast(IMP_Trivial::(ref_var(type_lit(IMP_Trivial))),type_lit(cpp_rref))); }
 	)")
 	{ consume<const T&&>(T()); }		// pass temporary
 
