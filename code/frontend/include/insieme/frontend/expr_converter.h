@@ -149,7 +149,7 @@ namespace conversion {
 		virtual ~ExprConverter() {}
 
 		core::ExpressionPtr convertInitExpr(const clang::Expr* original);
-		core::ExpressionPtr convertCxxArgExpr(const clang::Expr* original);
+		core::ExpressionPtr convertCxxArgExpr(const clang::Expr* original, const core::TypePtr& targetType = nullptr);
 		
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		//  Literals

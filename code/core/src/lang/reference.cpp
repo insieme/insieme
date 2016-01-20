@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -277,6 +277,15 @@ namespace lang {
 						bmExt.getMarkerTypeLiteral(referenceTy.isConst()),
 			            bmExt.getMarkerTypeLiteral(referenceTy.isVolatile()),
 						builder.getTypeLiteral(lang::toType(refExpr->getNodeManager(), referenceTy.getKind())));
+	}
+	
+	ExpressionPtr buildRefKindCast(const ExpressionPtr& refExpr, ReferenceType::Kind newKind) {
+		assert_pred1(isReference, refExpr) << "Trying to build a ref kind cast from non-ref.";
+		auto rT = ReferenceType(refExpr);
+		if(rT.getKind() == newKind) return refExpr;
+		IRBuilder builder(refExpr->getNodeManager());
+		auto& rExt = refExpr->getNodeManager().getLangExtension<ReferenceExtension>();
+		return builder.callExpr(rExt.getRefKindCast(), refExpr, builder.getTypeLiteral(lang::toType(refExpr->getNodeManager(), newKind)));
 	}
 
 	ExpressionPtr buildRefNull(const TypePtr& type) {

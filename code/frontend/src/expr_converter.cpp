@@ -113,8 +113,8 @@ namespace conversion {
 		return expr;
 	}
 
-	// translate expression, but skip outer construct expr
-	core::ExpressionPtr Converter::ExprConverter::convertCxxArgExpr(const clang::Expr* clangArgExpr) {
+	// translate expression, but skip outer construct expr and cast references to correct kind
+	core::ExpressionPtr Converter::ExprConverter::convertCxxArgExpr(const clang::Expr* clangArgExpr, const core::TypePtr& targetType) {
 		core::ExpressionPtr ret = converter.convertExpr(clangArgExpr);
 		// detect copy/move constructor calls
 		VLOG(2) << "---\nCXX call checking arg: " << dumpClang(clangArgExpr, converter.getCompiler().getSourceManager());
@@ -132,6 +132,12 @@ namespace conversion {
 				}
 				VLOG(2) << "CXX call converted newArg: " << dumpPretty(ret);
 			}
+		}
+		// if a targetType was provided, and we are working on a ref, cast the ref as required
+		if(targetType && core::analysis::isRefType(targetType) && core::analysis::isRefType(ret->getType())) {
+			auto targetRef = core::lang::ReferenceType(targetType);
+			auto retRef = core::lang::ReferenceType(ret->getType());
+			ret = core::lang::buildRefKindCast(ret, targetRef.getKind());
 		}
 		return ret;
 	}

@@ -144,13 +144,17 @@ namespace conversion {
 		core::CallExprPtr irCall = ExprConverter::VisitCallExpr(callExpr).as<core::CallExprPtr>();
 		LOG_EXPR_CONVERSION(callExpr, irCall);
 
+		auto funExp = irCall->getFunctionExpr();
+		auto funType = funExp->getType().as<core::FunctionTypePtr>();
+
 		// in Inspire 2.0, copy and move constructor calls are implicit on function calls
-		ExpressionList newArgs; 
-		std::transform(callExpr->arg_begin(), callExpr->arg_end(), std::back_inserter(newArgs), [&](const clang::Expr* clangArgExpr) { 
-			return convertCxxArgExpr(clangArgExpr);
+		ExpressionList newArgs;
+		size_t i = 0;
+		std::transform(callExpr->arg_begin(), callExpr->arg_end(), std::back_inserter(newArgs), [&](const clang::Expr* clangArgExpr) {
+			return convertCxxArgExpr(clangArgExpr, funType->getParameterType(i++));
 		});
 		
-		return builder.callExpr(irCall->getType(), irCall->getFunctionExpr(), newArgs);
+		return builder.callExpr(irCall->getType(), funExp, newArgs);
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -212,9 +216,20 @@ namespace conversion {
 			// get the "this" object and add to arguments
 			core::ExpressionPtr thisObj = Visit(callExpr->getImplicitObjectArgument());
 			core::ExpressionList arguments { thisObj };
-			for(auto arg : callExpr->arguments()) {
-				arguments.push_back(converter.convertExpr(arg));
-			}
+
+			// in Inspire 2.0, copy and move constructor calls are implicit on function calls, and ref kind needs to be adapted
+			auto funType = methodLambda->getType().as<core::FunctionTypePtr>();
+			size_t i = 1;
+			std::transform(callExpr->arg_begin(), callExpr->arg_end(), std::back_inserter(arguments), [&](const clang::Expr* clangArgExpr) {
+				auto targetType = funType->getParameterType(i++);
+				auto ret = convertCxxArgExpr(clangArgExpr, targetType);
+				VLOG(2) << "====================\n\nconvert method argument:\n" 
+					<< "\n - from: " << dumpClang(clangArgExpr, converter.getCompiler().getSourceManager())
+					<< "\n - to: " << dumpPretty(ret)
+					<< "\n - of type: " << dumpPretty(ret->getType())
+					<< "\n - target T: " << dumpPretty(targetType);
+				return ret;
+			});
 
 			// build call and we are done
 			auto retType = methodLambda->getType().as<core::FunctionTypePtr>()->getReturnType();
@@ -233,7 +248,7 @@ namespace conversion {
 		core::ExpressionPtr retIr;
 		LOG_EXPR_CONVERSION(callExpr, retIr);
 
-		retIr = ExprConverter::VisitCallExpr(callExpr);
+		retIr = VisitCallExpr(callExpr);
 
 		//core::ExpressionPtr func;
 		//core::ExpressionPtr convertedOp;

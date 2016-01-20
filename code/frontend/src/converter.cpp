@@ -280,9 +280,9 @@ namespace conversion {
 		return exprConvPtr->convertInitExpr(expr);
 	}
 
-	core::ExpressionPtr Converter::convertCxxArgExpr(const clang::Expr* expr) const {
+	core::ExpressionPtr Converter::convertCxxArgExpr(const clang::Expr* expr, const core::TypePtr& targetType) const {
 		assert_true(expr) << "Calling convertCxxArgExpr with a NULL pointer";
-		return exprConvPtr->convertCxxArgExpr(expr);
+		return exprConvPtr->convertCxxArgExpr(expr, targetType);
 	}
 
 	core::StatementPtr Converter::convertStmt(const clang::Stmt* stmt) const {

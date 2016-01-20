@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -43,7 +43,7 @@ using philipp = int;
 using driver = philipp;
 
 int main() {
-#pragma test expect_ir("{ var ref<bool> v0; cxx_style_assignment(v0, true); cxx_style_assignment(v0, false); }")
+	#pragma test expect_ir("{ var ref<bool> v0; cxx_style_assignment(v0, true); cxx_style_assignment(v0, false); }")
 	{
 		bool a;
 		a = true;
