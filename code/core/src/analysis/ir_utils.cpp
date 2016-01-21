@@ -961,6 +961,93 @@ namespace analysis {
 		}
 	}
 
+	
+	const std::set<TagTypeReferencePtr>& getFreeTagTypeReferences(const TagTypePtr& tagType) {
+
+		// TODO: cache
+		struct FreeTagTypeReferences {
+			std::set<TagTypeReferencePtr> references;
+			bool operator==(const FreeTagTypeReferences& other) const {
+				return references == other.references;
+			}
+		};
+
+		// check for annotated result
+		auto def = tagType->getDefinition();
+		if (def.hasAttachedValue<FreeTagTypeReferences>()) {
+			return def.getAttachedValue<FreeTagTypeReferences>().references;
+		}
+
+		// create a tag-type reference collector
+		std::set<TagTypeReferencePtr> allReferences;
+		auto visitor = makeLambdaVisitor([&](const TypePtr& type)->bool {
+
+			if (auto ref = type.isa<TagTypeReferencePtr>()) {
+				allReferences.insert(ref);
+			}
+
+			if (auto tagType = type.isa<TagTypePtr>()) {
+				for (const auto& cur : getFreeTagTypeReferences(tagType)) {
+					allReferences.insert(cur);
+				}
+				return true;	// stop descent here
+			}
+
+			// keep descending
+			return false;
+
+		}, true);
+		auto collector = makeDepthFirstOncePrunableVisitor(visitor);
+
+		// collect all present tag-type references
+		for (const auto& binding : tagType->getDefinition()) {
+			collector(binding->getRecord());
+		}
+
+		// filter out locally defined tags
+		std::set<TagTypeReferencePtr> res;
+		for (const auto& cur : allReferences) {
+			if (!tagType->getDefinition()->getDefinitionOf(cur)) {
+				res.insert(cur);
+			}
+		}
+
+		// attach result
+		def.attachValue(FreeTagTypeReferences{ res });
+
+		// done
+		return def.getAttachedValue<FreeTagTypeReferences>().references;
+	}
+
+
+	bool hasFreeTagTypeReferences(const TypePtr& type) {
+
+		// if it is a tag type reference => it is free
+		if (type.isa<TagTypeReferencePtr>()) return true;
+
+		// for tag types => check whether there are free tag types
+		if (auto tagType = type.isa<TagTypePtr>()) {
+			return !getFreeTagTypeReferences(tagType).empty();
+		}
+
+		// for all others: check child types
+		bool foundFree = false;
+		visitDepthFirstOncePrunable(type, [&](const NodePtr& node)->bool {
+
+			// update found flag
+			foundFree = foundFree ||
+				node.isa<TagTypeReferencePtr>() ||
+				(node.isa<TagTypePtr>() && !getFreeTagTypeReferences(node.as<TagTypePtr>()).empty());
+
+			// prune nested expressions and tag types
+			return foundFree || node.isa<TagTypePtr>() || node.isa<ExpressionPtr>();
+
+		}, true);
+		
+		// return result
+		return foundFree;
+	}
+
 
 	namespace {
 
@@ -1079,6 +1166,11 @@ namespace analysis {
 				
 				// if it is the same address, it is always the same
 				if (a == b) return true;
+
+				// if the two nodes are completely identical and have no free tag type references
+				if (*a == *b && (!a.isa<TypePtr>() || !hasFreeTagTypeReferences(a.as<TypePtr>()))) {
+					return true;
+				}
 
 				// check whether they are equivalent according to the equivalence classes
 				if (!topLevel) {

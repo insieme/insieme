@@ -682,6 +682,31 @@ namespace analysis {
 		EXPECT_EQ(countInstances(prog, builder.intLit(1)), 2);
 	}
 
+	TEST(Types, FreeTagTypeReferences) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto hasNoFreeTagTypeReferences = [](const TypePtr& type) {
+			return !hasFreeTagTypeReferences(type);
+		};
+
+		// some basic types do not have free references
+		EXPECT_PRED1(hasNoFreeTagTypeReferences, builder.getLangBasic().getInt16());
+
+		// closed recursive types are also free of free tag type references
+		EXPECT_PRED1(hasNoFreeTagTypeReferences, builder.parseType("decl struct S; def struct S { x : ref<S>; }; S"));
+
+		// a tag type reference has a free tag type reference
+		EXPECT_PRED1(hasFreeTagTypeReferences, builder.parseType("^T"));
+		EXPECT_PRED1(hasFreeTagTypeReferences, builder.parseType("ref<^T>"));
+
+		// but also within structs tag types may be free
+		EXPECT_PRED1(hasFreeTagTypeReferences, builder.parseType("def struct S { x : ref<^T>; }; S"));
+
+		// but if the free reference is closed again, it should not be identified as free
+		EXPECT_PRED1(hasNoFreeTagTypeReferences, builder.parseType("def struct S { x : ref<^T>; }; struct T { y : S; }"));
+	}
+
 	TEST(Types, CanonicalType) {
 		NodeManager mgr;
 		IRBuilder builder(mgr);

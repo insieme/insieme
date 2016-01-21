@@ -421,6 +421,14 @@ namespace analysis {
 	bool isStaticVar(const ExpressionPtr& var);
 
 	/**
+	 * Tests whether the given type has free tag type references or not.
+	 *
+	 * @param type the type to be tested
+	 * @return true if it has free tag type references, false otherwise
+	 */
+	bool hasFreeTagTypeReferences(const TypePtr& type);
+
+	/**
 	 * Obtains the canonical representation of the given type. For instance,
 	 * generic parameters will be normalized and recursive types presented
 	 * in their most compact form.
