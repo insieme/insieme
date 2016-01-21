@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -839,8 +839,13 @@ namespace checks {
 		// extract type
 		core::TypePtr type = address.getAddressedNode()->getType();
 
-		// get struct type
-		core::StructPtr structType = analysis::isStruct(type);
+		auto tagT = type.isa<TagTypePtr>();
+		if(!tagT) {
+			return res;
+		}
+		
+		// get peeled struct type
+		core::StructPtr structType = analysis::isStruct(tagT->peel());
 
 		// check whether it is a struct type
 		if(!structType) {

@@ -130,11 +130,7 @@ namespace extensions {
 				auto call = matchingAddress.getAddressedNode().as<CallExprPtr>();
 				auto arg0 = call->getArgument(0);
 				// ensure correct typing
-				//assert_pred2(core::analysis::equalTypes, call->getType(), arg0->getType()) << "Record types not correctly resolved"; 
-				// TODO FIXME re-enable assertion and remove this when uniform representation of recursive types is available
-				if(!core::analysis::equalTypes(call->getType(), arg0->getType())) {
-					arg0 = core::transform::replaceAddress(mgr, ExpressionAddress(arg0)->getType(), call->getType()).getRootNode().as<ExpressionPtr>();
-				} 
+				assert_pred2(core::analysis::equalTypes, call->getType(), arg0->getType()) << "Record types not correctly resolved"; 
 				return arg0;
 			}).as<ProgramPtr>();
 
@@ -187,6 +183,16 @@ namespace extensions {
 
 			return prog;
 		}
+
+		class TypeCanonicalizer : public core::transform::CachedNodeMapping {			
+			virtual const NodePtr resolveElement(const NodePtr& ptr) override {
+				auto tt = ptr.isa<core::TagTypePtr>();
+				if(tt) {
+					return core::analysis::getCanonicalType(tt);
+				}
+				return ptr->substitute(ptr->getNodeManager(), *this);
+			}
+		};
 		
 	}
 
@@ -203,6 +209,8 @@ namespace extensions {
 	}
 
 	insieme::core::ProgramPtr FrontendCleanupExtension::IRVisit(insieme::core::ProgramPtr& prog) {
+
+		prog = TypeCanonicalizer().map(prog);
 		prog = mainReturnCorrection(prog);
 		prog = removeRecordTypeFixup(prog);
 		prog = removeSuperfluousBoolToInt(prog);
