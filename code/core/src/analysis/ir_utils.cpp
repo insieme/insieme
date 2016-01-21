@@ -46,6 +46,7 @@
 #include "insieme/core/ir_cached_visitor.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/analysis/attributes.h"
+#include "insieme/core/checks/full_check.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/manipulation_utils.h"
 
@@ -991,88 +992,480 @@ namespace analysis {
 			return transform::replaceAll(mgr, type, mapping, transform::localReplacement).as<TypePtr>();
 		}
 
-		TagTypeSet getNestedTagTypes(const TypePtr& type) {
-			TagTypeSet res;
-			visitDepthFirstOnce(type, [&](const TagTypePtr& tagType) {
-				// record types
-				res.insert(tagType);
-			}, true);
-			return res;
-		}
+		namespace {
 
-		TagTypePtr tryUnpeelingType(const TagTypePtr& type) {
+			// a type to manage equality classes
+			class EqualityClasses {
 
-			// for recursive types this is done
-			if (type->isRecursive()) return type;
+				// the number of elements managed, to be fixed on construction
+				unsigned numEntries;
 
-			// get set of nested tag types
-			TagTypeSet tagTypes = getNestedTagTypes(type);
+				// a buffer to store whether two elements are equal
+				std::vector<bool> different;
 
-			// if there are non, done
-			if (tagTypes.empty()) return type;
+			public:
 
-			// walk through candidate list
-			auto& mgr = type.getNodeManager();
-			for(TagTypePtr cur : tagTypes) {
+				EqualityClasses(unsigned numEntries)
+					: numEntries(numEntries), different(numEntries*numEntries) {}
 
-				// check whether current candidate is recursive
-				if (!cur->isRecursive()) continue;
-
-				// if not contained => skip
-				if (!tagTypes.contains(cur)) continue;
-
-				// get list of all recursive types based on this definition
-				TagTypeList recTypes;
-				for(const auto& def : cur->getDefinition()) {
-					recTypes.push_back(TagType::get(mgr, def->getTag(), cur->getDefinition()));
+				bool areEqual(unsigned a, unsigned b) const {
+					assert_lt(a, numEntries);
+					assert_lt(b, numEntries);
+					if (a > b) return areEqual(b, a);
+					return !different[a*numEntries + b];
 				}
 
-				// start with unpeeled types
-				int peelFactor = 0;
-				TagTypeList peeled = recTypes;
+				void markDifferent(unsigned a, unsigned b) {
+					assert_lt(a, numEntries);
+					assert_lt(b, numEntries);
+					if (a > b) return markDifferent(b, a);
+					different[a*numEntries + b] = true;
+				}
 
-				// while any of the types is still present
-				while(any(peeled, [&](const TagTypePtr& cur) { return tagTypes.contains(cur); })) {
-					// check whether we have a match
-					for(const auto& cur : make_paired_range(peeled, recTypes)) {
-						if (*cur.first == *type) return cur.second;
+				std::vector<std::vector<unsigned>> getClasses() const {
+					std::vector<std::vector<unsigned>> res;
+
+					std::vector<bool> covered(numEntries);
+
+					for (unsigned i = 0; i < numEntries; i++) {
+						if (!covered[i]) {
+							// create a new class
+							res.emplace_back();
+							auto& clss = res.back();
+							for (unsigned j = i; j < numEntries; j++) {
+								if (areEqual(i, j)) {
+									clss.push_back(j);
+									covered[j] = true;
+								}
+							}
+						}
+
 					}
 
-					// peel one more level
-					peelFactor++;
-					peeled.clear();
-					for(const auto& cur : recTypes) {
-						peeled.push_back(cur->peel(mgr,peelFactor));
+					return res;
+				}
+
+			};
+
+
+			RecordAddress getDefinition(const TagTypeReferenceAddress& tag) {
+				RecordAddress none;
+				NodeAddress cur = tag;
+
+				// skip free tag types
+				if (cur.isRoot()) return none;
+
+				// skip binding and selection location
+				if (cur.getParentNode().isa<TagTypePtr>()) return none;
+				if (cur.getParentNode().isa<TagTypeBindingPtr>()) return none;
+
+				// walk up until definition is found
+				while (!cur.isRoot()) {
+					cur = cur.getParentAddress();
+					if (auto bind = cur.isa<TagTypeBindingAddress>()) {
+						if (*tag == *bind->getTag()) {
+							return bind->getRecord();
+						}
+					}
+					if (auto def = cur.isa<TagTypeDefinitionAddress>()) {
+						auto res = def->getDefinitionOf(tag);
+						if (res) return res;
 					}
 				}
+				return RecordAddress();
 			}
 
-			// no corresponding recursive type found
-			return type;
+			bool equalUnder(const NodeAddress& a, const NodeAddress& b, const EqualityClasses& classes, const std::map<NodeAddress, unsigned>& index, bool topLevel = true) {
+				
+				// if it is the same address, it is always the same
+				if (a == b) return true;
+
+				// check whether they are equivalent according to the equivalence classes
+				if (!topLevel) {
+					auto posA = index.find(a);
+					if (posA != index.end()) {
+						auto posB = index.find(b);
+						if (posB != index.end()) {
+							// std::cout << "    Classes are equivalent: " << classes.areEqual(posA->second, posB->second) << "\n";
+							return classes.areEqual(posA->second, posB->second);
+						}
+					}
+				}
+
+				// resolve tag type references
+				if (auto t = a.isa<TagTypeReferenceAddress>()) {
+					auto def = getDefinition(t);
+					// If needed: check whether other side is the same free reference
+					assert_true(def) << "Free tag type references not yet supported!";
+					return equalUnder(def, b, classes, index, topLevel);
+				}
+
+				if (auto t = b.isa<TagTypeReferenceAddress>()) {
+					auto def = getDefinition(t);
+					// If needed: check whether other side is the same free reference
+					assert_true(def) << "Free tag type references not yet supported: " << t << " = " << *t << " - " << t.getParentNode()->getNodeType();
+					return equalUnder(a, def, classes, index, topLevel);
+				}
+
+				// skip the tag type wrapper for a
+				if (auto t = a.isa<TagTypeAddress>()) {
+					return equalUnder(t->getRecord(), b, classes, index, topLevel);
+				}
+
+				// and for b
+				if (auto t = b.isa<TagTypeAddress>()) {
+					return equalUnder(a, t->getRecord(), classes, index, topLevel);
+				}
+
+				// check whether they are of the same type
+				if (a->getNodeType() != b->getNodeType()) return false;
+
+				// check value nodes
+				if (a->getNodeCategory() == NC_Value) {
+					return *a == *b;
+				}
+
+				// check child-list
+				bool res = equals(a->getChildList(), b->getChildList(), [&](const NodeAddress& x, const NodeAddress& y) {
+					return equalUnder(x, y, classes, index, false);
+				});
+
+				return res;
+
+			}
+
+			bool isReachable(const NodeAddress& from, const RecordAddress& trg, std::set<NodeAddress>& visited) {
+
+				// if we reached the target, we are done
+				if (from == trg) return true;
+
+				// stop here when already visited
+				if (!visited.insert(from).second) return false;
+
+				// skip the tag type constructs
+				if (auto type = from.isa<TagTypeAddress>()) {
+					return isReachable(type->getRecord(), trg, visited);
+				}
+
+				// if it is a tag type reference, continue with definition
+				if (auto tag = from.isa<TagTypeReferenceAddress>()) {
+					auto def = getDefinition(tag);
+					return def && isReachable(def, trg, visited);
+				}
+
+				// check all child nodes
+				return any(from->getChildList(), [&](const NodeAddress& cur) {
+					return isReachable(cur, trg, visited);
+				});
+			}
+
+			bool isReachable(const NodeAddress& from, const RecordAddress& trg) {
+				std::set<NodeAddress> visited;
+				return isReachable(from, trg, visited);
+			}
+
+			bool dependsOn(const std::vector<RecordAddress>& a, const std::vector<RecordAddress>& b) {
+
+				// quick check: if any of the addresses in a is a prefix of any of the addresses in b
+				for (const auto& x : a) {
+					for (const auto& y : b) {
+						if (x != y && isChildOf(y, x)) return true;
+					}
+				}
+
+				// more expensive: if you can reach through one of the types one of the other types => dependency
+				for (const auto& x : a) {
+					for (const auto& y : b) {
+						if (x != y && isReachable(y, x)) return true;
+					}
+				}
+
+				// otherwise there is no dependency
+				return false;
+			}
+
+			RecordAddress getRepresentForClass(const std::vector<RecordAddress>& clss) {
+				assert_false(clss.empty());
+
+				// pick the first named reference
+				for (const auto& record : clss) {
+					if (auto binding = record.getParentNode().isa<TagTypeBindingPtr>()) {
+						auto tag = binding->getTag();
+						if (tag->getName()->getValue() != "_") return record;
+					}
+				}
+
+				// so there is no named one, take the first
+				return clss.front();
+			}
+
+			TagTypeReferencePtr getTagForClass(const std::vector<RecordAddress>& clss) {
+				return getRepresentForClass(clss).getParentNode().as<TagTypeBindingPtr>()->getTag();
+			}
+
+			TagTypeAddress getEnclosingTagType(const RecordAddress& record) {
+				const static TagTypeAddress none;
+
+				// move up to the tag type enclosing this record
+				if (record.isRoot()) return none;
+
+				auto binding = record.getParentAddress().isa<TagTypeBindingAddress>();
+				if (!binding || binding.isRoot()) return none;
+
+				auto def = binding.getParentAddress().isa<TagTypeDefinitionAddress>();
+				if (!def || def.isRoot()) return none;
+
+				auto tagType = def.getParentAddress().isa<TagTypeAddress>();
+				if (!tagType || *tagType->getTag() != *binding->getTag()) return none;
+
+				return tagType;
+			}
 		}
 
 		TypePtr normalizeRecursiveTypes(const TypePtr& type) {
 
-			// get a set of all nested types
-			TagTypeSet types = getNestedTagTypes(type);
+			// This function is converting recursive types into their most compact form.
+			// Thus, (partially) unrolled or peeled fragments will be identified as such
+			// and pruned to obtain a representation which can not be further reduced.
 
-			// check for all tag types whether they are peeled recursive types
-			NodeMap map;
-			for(const auto& cur : types) {
-				auto unpeeled = tryUnpeelingType(cur);
-				if (*cur != *unpeeled) {
-					map[cur] = unpeeled;
+			// function specific debugging flag
+			static const bool debug = false;
+			
+			// 1) get a list of all record types and tag type references in the given type
+			vector<RecordAddress> records;
+			visitDepthFirst(TypeAddress(type), [&](const RecordAddress& record) {
+				records.push_back(record);
+			}, true, true);
+
+			// print some debugging
+			if (debug) {
+				std::cout << "Num Records: " << records.size() << "\n";
+				int i = 0;
+				for (const auto& cur : records) {
+					std::cout << "\t" << i << ": " << cur << " = " << *cur << "\n";
+					i++;
 				}
 			}
 
-			// apply replacement
-			return transform::replaceAll(type.getNodeManager(), type, map).as<TypePtr>();
-		}
+			// if there are no records or a single record => we are done
+			if (records.size() <= 1) return type;
 
+			// 2) compute equivalence classes of those records
+			EqualityClasses classes(records.size());
+			std::map<NodeAddress, unsigned> recordToId;
+			for (unsigned i = 0; i < records.size(); ++i) {
+				recordToId[records[i]] = i;
+			}
+
+			bool changed = true;
+			while (changed) {
+				changed = false;
+
+				// compare each pair of records
+				for (unsigned i = 0; i < records.size(); ++i) {
+					for (unsigned j = i + 1; j < records.size(); ++j) {
+						// if they are still considered equal ..
+						if (classes.areEqual(i, j)) {
+							// .. verify this
+							if (!equalUnder(records[i], records[j], classes, recordToId)) {
+								classes.markDifferent(i, j);
+								changed = true;
+							}
+						}
+					}
+				}
+
+			}
+
+			// extract equivalence classes
+			auto listOfClasses = classes.getClasses();
+
+			// print equivalence classes as a debug message
+			if (debug) {
+				std::cout << "Equivalence classes:\n";
+				for (const auto& cur : listOfClasses) {
+					std::cout << "\t" << cur << "\n";
+				}
+			}
+
+
+			// 3) compute dependencies between equivalence classes
+			using EquivalenceClass = std::vector<RecordAddress>;
+			utils::graph::Graph<EquivalenceClass> depGraph;
+
+			// add classes as vertices
+			std::vector<EquivalenceClass> vertices;
+			for (const auto& cls : listOfClasses) {
+				EquivalenceClass cur;
+				for (unsigned i : cls) cur.push_back(records[i]);
+				depGraph.addVertex(cur);
+				vertices.push_back(cur);
+			}
+
+			// add dependencies
+			for (const auto& a : vertices) {
+				for (const auto& b : vertices) {
+					if (&a != & b && dependsOn(a, b)) {
+						depGraph.addEdge(a, b);
+					}
+				}
+			}
+
+			// debug-print the dependency graph
+			if (debug) {
+				std::cout << "Dependency Graph:\n";
+				depGraph.printGraphViz(std::cout);
+			}
+
+
+			// 4) compute strongly connected components
+			auto componentGraph = utils::graph::computeSCCGraph(depGraph.asBoostGraph());
+
+			// debug-print the component graph
+			if (debug) {
+				std::cout << "Component Graph:\n";
+				componentGraph.printGraphViz(std::cout);
+			}
+
+			// 5) compute topological order on component graph
+			auto order = utils::graph::getTopologicalOrder(componentGraph);
+
+			// print the topological order
+			if (debug) {
+				std::cout << "Topological order:\n";
+				for (const auto& cur : order) {
+					std::cout << "\t" << cur << "\n";
+				}
+			}
+
+			// process each component bottom up to build minimal type
+			IRBuilder builder(type.getNodeManager());
+			std::map<NodeAddress, NodePtr> replacements;
+			for (const auto& group : order) {
+
+				// build up definitions for current tag type definition block
+				TagTypeBindingMap bindings;
+
+				// register tag type replacements for recursive dependencies
+				for (const auto& cls : group) {
+
+					// the first is the represent to be transformed
+					auto represent = getRepresentForClass(cls);
+
+					// get the tag type reference to be used for this class
+					auto tag = getTagForClass(cls);
+
+					// for all others add a temporary replacement
+					for (const auto& record : cls) {
+
+						// get enclosing tag type
+						auto tagType = getEnclosingTagType(record);
+						if (!tagType) continue;
+
+						// substitute this tag type with the common tag type reference of this group
+						assert_true(tagType.isValid());
+						replacements[tagType] = tag;
+					}
+
+				}
+
+				// print current replacements
+				if (debug) std::cout << "Replacements: " << replacements << "\n";
+
+				// compute canonical form for each class
+				for (const auto& cls : group) {
+
+					// obtain tag
+					auto tag = getTagForClass(cls);
+
+					// compute unified replacement
+					auto represent = getRepresentForClass(cls);
+
+					// filter replacement map to nested addresses
+					std::map<NodeAddress, NodePtr> local_replacements;
+					for (const auto& cur : replacements) {
+						if (isChildOf(represent, cur.first)) {
+							local_replacements[cur.first] = cur.second;
+						}
+					}
+
+					// print filtered replacement
+					if (debug) {
+						std::cout << "Local Replacements:\n";
+						std::cout << local_replacements << "\n";
+					}
+
+					// unify current record
+					auto unified_record = represent.as<RecordPtr>();
+					if (!local_replacements.empty()) {
+						unified_record = represent.switchRoot(
+							transform::replaceAll(type.getNodeManager(), local_replacements)
+						).as<RecordPtr>();
+					}
+
+					// print the current unification step
+					if (debug) {
+						std::cout << "Represent:\n";
+						std::cout << represent << "\n";
+						std::cout << *represent << "\n";
+						std::cout << "Unified struct:\n";
+						std::cout << *unified_record << "\n";
+						std::cout << "\n";
+					}
+
+					// register the unified record
+					bindings[tag] = unified_record;
+				}
+
+
+				// create definition
+				auto def = builder.tagTypeDefinition(bindings);
+
+				// create the complete tag type representation for each of the classes in the current group
+				for (const auto& cls : group) {
+
+					auto tag = getTagForClass(cls);
+					auto tagType = builder.tagType(tag, def);
+
+					// register resulting tag types
+					for (const auto& cur : cls) {
+						auto type = getEnclosingTagType(cur);
+						if (type) replacements[type] = tagType;
+					}
+				}
+			}
+
+			// shortcut if there have not been any replacements
+			if (replacements.empty()) return type;
+
+			// convert the input type
+			auto result = transform::replaceAll(type.getNodeManager(), replacements).as<TypePtr>();
+
+			// make sure the resulting type is OK
+			assert_true(checks::check(result).empty()) << checks::check(result);
+
+			// done
+			return result;
+		}
 	}
 
 
 	TypePtr getCanonicalType(const TypePtr& a) {
+
+		// An annotation associating the canonical type to types.
+		struct CanonicalAnnotation {
+			TypePtr canonical;
+			bool operator==(const CanonicalAnnotation& other) const {
+				return *canonical == *other.canonical;
+			}
+		};
+
+		// check the annotation
+		if (a.hasAttachedValue<CanonicalAnnotation>()) {
+			return a.getAttachedValue<CanonicalAnnotation>().canonical;
+		}
+
+
 		TypePtr res = a;
 
 		// step 1 - normalize type variables
@@ -1080,6 +1473,9 @@ namespace analysis {
 
 		// step 2 - normalize recursions
 		res = normalizeRecursiveTypes(res);
+
+		// attach result
+		a.attachValue(CanonicalAnnotation{ res });
 
 		// done
 		return res;

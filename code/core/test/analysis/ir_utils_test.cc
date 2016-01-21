@@ -42,6 +42,7 @@
 #include "insieme/core/ir_address.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/normalize.h"
+#include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/printer/pretty_printer.h"
 
@@ -701,7 +702,9 @@ namespace analysis {
 
 
 		// recursive types
-		TagTypePtr recType = builder.parseType("let f = struct { x : int<4>; next : link<f>; } in f").as<TagTypePtr>();
+		TagTypePtr recType = builder.parseType("decl struct g; def struct g { x : int<4>; next : link<g>; }; g").as<TagTypePtr>();
+		EXPECT_TRUE(recType->isRecursive());
+
 		EXPECT_EQ(recType, getCanonicalType(recType));
 		EXPECT_EQ(recType, getCanonicalType(recType->peel(0)));
 		EXPECT_EQ(recType, getCanonicalType(recType->peel(1)));
@@ -710,8 +713,8 @@ namespace analysis {
 
 
 		// mutual recursive types
-		TagTypePtr typeA = builder.parseType("decl struct g; def struct f { x : int<4>; next : link<g>; }; def struct g { y : double; next : link<f>; }; f").as<TagTypePtr>();
-		TagTypePtr typeB = builder.parseType("decl struct g; def struct f { x : int<4>; next : link<g>; }; def struct g { y : double; next : link<f>; }; g").as<TagTypePtr>();
+		TagTypePtr typeA = builder.parseType("decl struct g; def struct h { x : int<4>; next : link<g>; }; def struct g { y : double; next : link<h>; }; h").as<TagTypePtr>();
+		TagTypePtr typeB = builder.parseType("decl struct g; def struct h { x : int<4>; next : link<g>; }; def struct g { y : double; next : link<h>; }; g").as<TagTypePtr>();
 
 //		std::cout << *typeA << "\n";
 //		std::cout << *typeA->peel(0) << " = \n\t\t" << *getCanonicalType(typeA->peel(0)) << "\n";
@@ -744,6 +747,51 @@ namespace analysis {
 		EXPECT_EQ(ref, getCanonicalType(builder.parseType("ref<A1>", symbols)));
 		EXPECT_EQ(ref, getCanonicalType(builder.parseType("ref<A2>", symbols)));
 		EXPECT_EQ(ref, getCanonicalType(builder.parseType("ref<A3>", symbols)));
+	}
+
+	TEST(Types, CanonicalType_PartiallyUnrolled) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		// build up a mutual recursive type
+		auto recType = builder.parseType(
+				"decl struct X; decl struct Y; def struct X { a : T; y : Y; }; def struct Y { a : S; x : X; }; X"
+			).as<TagTypePtr>();
+
+		// check that the composed type is properly composed
+		EXPECT_TRUE(core::checks::check(recType).empty()) << core::checks::check(recType);
+
+		// make sure that standard properties hold
+		EXPECT_TRUE(recType->isRecursive());
+
+
+		// unroll first type manually
+		TypeAddress fieldType = TagTypeAddress(recType)->getRecord()->getFieldType("y");
+		auto nestedTag = builder.tagTypeReference("Y");
+		TagTypeBindingMap definition;
+		definition[nestedTag] = recType->getDefinition()[1]->getRecord();
+		TagTypePtr nestedY = builder.tagType(nestedTag, builder.tagTypeDefinition(definition));
+		auto partiallyUnrolled = core::transform::replaceNode(mgr, fieldType, nestedY).as<TagTypePtr>();
+
+		// check that the composed type is properly composed
+		EXPECT_TRUE(core::checks::check(partiallyUnrolled).empty()) << core::checks::check(partiallyUnrolled);
+		
+		// make sure that standard properties hold
+		EXPECT_TRUE(partiallyUnrolled->isRecursive());
+
+		// check whether canonicalization is capable of reverting the partial unroll
+		EXPECT_EQ(recType, getCanonicalType(partiallyUnrolled));
+		EXPECT_EQ(recType, getCanonicalType(partiallyUnrolled->peel()));
+
+		std::map<string, NodePtr> symbols;
+		symbols["R"] = recType;
+		symbols["T"] = partiallyUnrolled->peel();
+
+		EXPECT_EQ(
+			builder.parseType("def struct Z { x : R; }; Z", symbols),
+			getCanonicalType(builder.parseType("def struct Z { x : T; }; Z", symbols))
+		);
+		
 	}
 
 

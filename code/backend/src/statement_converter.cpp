@@ -448,7 +448,9 @@ namespace backend {
 			if (refExt.isCallOfRefVar(initValue) || refExt.isCallOfRefVarInit(initValue)) return true;
 
 			// if it is a constructor call ..
-			if(core::CallExprPtr call = initValue.isa<core::CallExprPtr>()) { return core::analysis::isCallOf(call[0], refExt.getRefVarInit()); }
+			if(core::CallExprPtr call = initValue.isa<core::CallExprPtr>()) { 
+				return toBeAllocatedOnStack(call[0]); 
+			}
 
 			// everything else is heap based
 			return false;
@@ -491,9 +493,6 @@ namespace backend {
 
 		// create declaration statement
 		c_ast::ExpressionPtr initValue = convertInitExpression(context, init);
-
-		// get rid of & operator in front of stack-based constructor calls
-		if(core::analysis::isConstructorCall(init) && location == VariableInfo::DIRECT) { initValue = c_ast::deref(initValue); }
 
 		// check if we have an intercepted default ctor call (e.g., std::stringstream s;)
 		// the interceptor adds a zero initalization that would be converted into something like
