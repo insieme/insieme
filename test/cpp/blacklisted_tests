@@ -46,7 +46,6 @@ inherit_single
 inherit_single_dynmem
 inherit_virtual
 initialization
-isomorphic
 long_long
 materialize_with_bind_expr
 mem_alloc
