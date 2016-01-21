@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -111,6 +111,11 @@ namespace conversion {
 			parents.push_back(builder.parent(base.isVirtual(), parentIrType));
 		}
 		auto irParents = builder.parents(parents);
+
+		// add symbols for all methods to function manager before conversion
+		for(auto mem : classDecl->methods()) {
+			auto convDecl = converter.getDeclConverter()->convertMethodDecl(mem, irParents, structTy->getFields(), true);
+		}
 
 		// get methods, constructors and destructor
 		std::vector<core::MemberFunctionPtr> members;

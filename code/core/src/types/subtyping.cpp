@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -167,13 +167,22 @@ namespace types {
 		// check reference types
 		if(analysis::isRefType(subType) && analysis::isRefType(superType)) {
 
+			auto subRefType = lang::ReferenceType(subType);
+			auto superRefType = lang::ReferenceType(superType);
+
+			// different kinds of references are not subtypes of each other
+			if(subRefType.getKind() != superRefType.getKind()) return false;
+
+			// implicit addition of flags is allowed
+			if(subRefType.isConst() && !superRefType.isConst()) return false;
+			if(subRefType.isVolatile() && !superRefType.isVolatile()) return false;
+
 			// check element type
 			auto srcElement = analysis::getReferencedType(subType);
 			auto trgElement = analysis::getReferencedType(superType);
 
-			// if element types are identical => it is fine
-			// if (srcElement == trgElement) return true;
-			if(core::analysis::equalTypes(srcElement, trgElement)) { return true; }
+			// if element and kind are the same, and flags are compatible, return true
+			if(analysis::equalTypes(srcElement, trgElement)) return true;
 
 			// support nested references
 			if(analysis::isRefType(srcElement) && analysis::isRefType(trgElement)) { return isSubTypeOf(srcElement, trgElement); }

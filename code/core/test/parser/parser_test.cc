@@ -1271,6 +1271,10 @@ namespace parser {
 		                                "  lambda f = (a : int<16>) -> unit {}"
 		                                "  lambda f = (a : int<4>, b : int<4>) -> unit {}"
 		                                "  lambda f = (a : int<8>, b : int<4>) -> unit {}"
+		                                "  lambda g = (a : ref<int<4>>) -> unit {}"
+		                                "  lambda g = (a : ref<int<4>,t,f>) -> unit {}"
+		                                "  lambda g = (a : ref<int<4>,f,t>) -> unit {}"
+		                                "  lambda g = (a : ref<int<4>,t,t>) -> unit {}"
 		                                "};";
 
 		//multiple possible overloads. Simple call fails for constructor with a single param
@@ -1313,15 +1317,16 @@ namespace parser {
 		                     "  a." + utils::getMangledOperatorAssignName() + "(a);"
 		                     "}"));
 
-		//call the default generated constructs and manually specify which overload to take
-		EXPECT_TRUE(test_statement(nm, "def struct A { };"
-		                     "{"
-		                     "  var ref<A> a;"
-		                     "  var ref<A> a_copy = A::(ref_var(type_lit(A)), a : ref<A,t,f,cpp_ref>);"    //copy constructor
-		                     "  var ref<A> a_move = A::(ref_var(type_lit(A)), a : ref<A,f,f,cpp_rref>);"   //move constructor
-		                     "  a." + utils::getMangledOperatorAssignName() + "(a : ref<A,t,f,cpp_ref>);"  //default copy assignment operator
-		                     "  a." + utils::getMangledOperatorAssignName() + "(a : ref<A,f,f,cpp_rref>);" //default move assignment operator
-		                     "}"));
+		// call g and manually specify which const/volatile overload to take
+		EXPECT_TRUE(test_statement(nm, commonClass + 
+			                           "{"
+			                           "  var ref<A> a;"
+			                           "  var ref<int<4>> b;"
+			                           "  a.g(b : ref<int<4>,f,f>);"
+			                           "  a.g(b : ref<int<4>,t,f>);"
+			                           "  a.g(b : ref<int<4>,f,t>);"
+			                           "  a.g(b : ref<int<4>,t,t>);"
+			                           "}"));
 	}
 
 	TEST(IRParser, FreeMembers) {
@@ -1344,6 +1349,68 @@ namespace parser {
 		                               "  a2.mfun(12);"
 		                               "  a2.free_mfun(12);"
 		                               "}"));
+	}
+
+	TEST(IRParser, DuplicateMemberFunctions) {
+		NodeManager nm;
+		IRBuilder builder(nm);
+
+		//Note: We do not use the helper function test_statement here, as that one will also run the semantic checks.
+		//Those will fail for certain duplicate members and thus mask shortcomings of the parser error detections we actually want to test here
+
+		//re-declaration of member functions with the same type but a different name is ok
+		EXPECT_TRUE(builder.parseStmt("def struct A {"
+		                              "  lambda foo = () -> unit { }"
+		                              "  lambda bar = () -> unit { }"
+		                              "};"
+		                              "{"
+		                              "  var ref<A> a;"
+		                              "}"));
+
+		//re-declaration of member functions with the same type and the same name is not allowed
+		EXPECT_ANY_THROW(builder.parseStmt("def struct A {"
+		                                   "  lambda foo = () -> unit { }"
+		                                   "  lambda foo = () -> unit { }"
+		                                   "};"
+		                                   "{"
+		                                   "  var ref<A> a;"
+		                                   "}"));
+
+		//re-declaration of a constructor with the same type isn't allowed
+		EXPECT_ANY_THROW(builder.parseStmt("def struct A {"
+		                                   "  ctor() { }"
+		                                   "  ctor() { }"
+		                                   "};"
+		                                   "{"
+		                                   "  var ref<A> a;"
+		                                   "}"));
+
+		//re-declaration of (free) member functions with the same type but a different name is ok
+		EXPECT_TRUE(builder.parseStmt("def struct A {"
+		                              "  lambda foo = () -> unit { }"
+		                              "};"
+		                              "def A::lambda bar = () -> unit { };"
+		                              "{"
+		                              "  var ref<A> a;"
+		                              "}"));
+
+		//re-declaration of (free) member functions with the same type and the same name is not allowed
+		EXPECT_ANY_THROW(builder.parseStmt("def struct A {"
+		                                   "  lambda foo = () -> unit { }"
+		                                   "};"
+		                                   "def A::lambda foo = () -> unit { };"
+		                                   "{"
+		                                   "  var ref<A> a;"
+		                                   "}"));
+
+		//re-declaration of a (free) constructor with the same type is allowed, as it has a different name
+		EXPECT_TRUE(builder.parseStmt("def struct A {"
+		                              "  ctor() { }"
+		                              "};"
+		                              "def A::ctor foo = () { };"
+		                              "{"
+		                              "  var ref<A> a;"
+		                              "}"));
 	}
 
 	TEST(IRParser, ParentCalls) {

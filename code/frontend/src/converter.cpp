@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -276,8 +276,13 @@ namespace conversion {
 	}
 
 	core::ExpressionPtr Converter::convertInitExpr(const clang::Expr* expr) const {
-		assert_true(expr) << "Calling convertExpr with a NULL pointer";
-		return exprConvPtr->convertInitExpr(const_cast<Expr*>(expr));
+		assert_true(expr) << "Calling convertInitExpr with a NULL pointer";
+		return exprConvPtr->convertInitExpr(expr);
+	}
+
+	core::ExpressionPtr Converter::convertCxxArgExpr(const clang::Expr* expr, const core::TypePtr& targetType) const {
+		assert_true(expr) << "Calling convertCxxArgExpr with a NULL pointer";
+		return exprConvPtr->convertCxxArgExpr(expr, targetType);
 	}
 
 	core::StatementPtr Converter::convertStmt(const clang::Stmt* stmt) const {

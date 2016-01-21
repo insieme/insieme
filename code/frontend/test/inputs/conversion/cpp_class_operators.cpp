@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -41,28 +41,45 @@ struct Simplest {
 def struct IMP_Simplest {
 };)"
 
+struct AddOpTest {
+	AddOpTest operator+(const AddOpTest& rhs) {
+		return AddOpTest();
+	}
+};
+
+#define ADDITIVE_IR R"(
+def struct AddOpTest {
+};)"
 
 int main() {
 	; // this is required because of the clang compound source location bug
-
+	
+	// call copy assignment
 	#pragma test expect_ir(SIMPLEST_IR,R"( { 
 		var ref<IMP_Simplest,f,f,plain> v0 = IMP_Simplest::(ref_var(type_lit(IMP_Simplest))); 
 		var ref<IMP_Simplest,f,f,plain> v1 = IMP_Simplest::(ref_var(type_lit(IMP_Simplest)));
-		v0.IMP__operator_assign_(v1 : ref<IMP_Simplest,t,f,cpp_ref>);
+		v0.IMP__operator_assign_(ref_kind_cast(v1, type_lit(cpp_ref)));
 	} )")
 	{ 
 		Simplest a, b;
 		a = b;
 	}
 	
-	//#p ragma test expect_ir(SIMPLEST_IR,R"( {
-	//	var ref<IMP_Simplest,f,f,plain> v0 = IMP_Simplest::(ref_var(type_lit(IMP_Simplest)));
-	//	v0.IMP__operator_assign_(IMP_Simplest::(ref_var(type_lit(IMP_Simplest))));
-	//} )")
-	//{
-	//	Simplest a;
-	//	a = Simplest();
-	//}
+	// call move assignment
+	#pragma test expect_ir(SIMPLEST_IR,R"( {
+		var ref<IMP_Simplest,f,f,plain> v0 = IMP_Simplest::(ref_var(type_lit(IMP_Simplest)));
+		v0.IMP__operator_assign_(ref_kind_cast(IMP_Simplest::(ref_var(type_lit(IMP_Simplest))), type_lit(cpp_rref)));
+	} )")
+	{
+		Simplest a;
+		a = Simplest();
+	}
+
+	// addition
+	{
+		AddOpTest a, b;
+		a = a+b;
+	}
 
 	return 0;
 }
