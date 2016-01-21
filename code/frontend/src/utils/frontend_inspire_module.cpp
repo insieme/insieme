@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -78,6 +78,14 @@ namespace utils {
 		IRBuilder builder(mgr);
 		auto& inspMod = mgr.getLangExtension<FrontendInspireModule>();
 		return builder.callExpr(targetType, inspMod.getRecordTypeFixup(), expr, builder.getTypeLiteral(targetType));
+	}
+	
+	core::ExpressionPtr buildObjectArrayNew(const core::TypePtr& objType, const core::ExpressionPtr& num, const core::ExpressionPtr& ctor) {
+		NodeManager& mgr = num->getNodeManager();
+		IRBuilder builder(mgr);
+		assert_pred1(mgr.getLangBasic().isInt, num->getType()) << "ObjectArrayNew must be called with size of integral type";
+		auto& inspMod = mgr.getLangExtension<FrontendInspireModule>();
+		return builder.callExpr(lang::buildPtrType(objType), inspMod.getObjectArrayNew(), builder.getTypeLiteral(objType), num, ctor);
 	}
 
 } // end namespace utils
