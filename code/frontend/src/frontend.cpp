@@ -62,6 +62,7 @@
 #include "insieme/frontend/extensions/variable_argument_list_extension.h"
 #include "insieme/frontend/extensions/variable_length_array_extension.h"
 #include "insieme/frontend/extensions/while_to_for_extension.h"
+#include "insieme/frontend/extensions/opencl_frontend_extension.h"
 
 namespace insieme {
 namespace frontend {
@@ -231,6 +232,8 @@ namespace frontend {
 		registerFrontendExtension<extensions::VariableArgumentListExtension>(options);
 		registerFrontendExtension<extensions::VariableLengthArrayExtension>(options);
 		
+		registerFrontendExtension<extensions::OpenCLFrontendExtension>(options);
+
 		registerFrontendExtension<extensions::FrontendCleanupExtension>(options);
 	}
 	
