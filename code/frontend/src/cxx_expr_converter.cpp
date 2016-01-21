@@ -375,8 +375,8 @@ namespace conversion {
 		frontend_assert(newExpr->getNumPlacementArgs() == 0) << "Placement new not yet supported";
 
 		// if no constructor is found, it is a new over a non-class type, can be any kind of pointer of array
+		core::TypePtr type = converter.convertType(newExpr->getAllocatedType());
 		if(!newExpr->getConstructExpr()) {
-			core::TypePtr type = converter.convertType(newExpr->getAllocatedType());
 			// for arrays, we need to allocate the right size
 			if(newExpr->isArray()) type = core::lang::ArrayType::create(type, converter.convertExpr(newExpr->getArraySize()));
 
@@ -399,7 +399,8 @@ namespace conversion {
 		// we have a constructor, so we are building a class
 		else {
 			if(newExpr->isArray()) {
-				frontend_assert(false) << "New array expressions on class types not yet supported!";
+				retExpr = utils::buildObjectArrayNew(type, converter.convertExpr(newExpr->getArraySize()),
+					                                 converter.getFunMan()->lookup(newExpr->getConstructExpr()->getConstructor()));
 			} else {
 				retExpr = core::lang::buildPtrFromRef(convertConstructExprInternal(converter, newExpr->getConstructExpr(), false));
 			}
