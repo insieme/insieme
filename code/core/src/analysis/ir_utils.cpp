@@ -1222,7 +1222,6 @@ namespace analysis {
 			}
 		}
 
-
 		TypePtr normalizeRecursiveTypes(const TypePtr& type) {
 
 			// This function is converting recursive types into their most compact form.
@@ -1452,6 +1451,21 @@ namespace analysis {
 
 
 	TypePtr getCanonicalType(const TypePtr& a) {
+
+		// An annotation associating the canonical type to types.
+		struct CanonicalAnnotation {
+			TypePtr canonical;
+			bool operator==(const CanonicalAnnotation& other) const {
+				return *canonical == *other.canonical;
+			}
+		};
+
+		// check the annotation
+		if (a.hasAttachedValue<CanonicalAnnotation>()) {
+			return a.getAttachedValue<CanonicalAnnotation>().canonical;
+		}
+
+
 		TypePtr res = a;
 
 		// step 1 - normalize type variables
@@ -1459,6 +1473,9 @@ namespace analysis {
 
 		// step 2 - normalize recursions
 		res = normalizeRecursiveTypes(res);
+
+		// attach result
+		a.attachValue(CanonicalAnnotation{ res });
 
 		// done
 		return res;
