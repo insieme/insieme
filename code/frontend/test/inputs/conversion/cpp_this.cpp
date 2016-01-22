@@ -34,30 +34,43 @@
  * regarding third party software licenses.
  */
 
-#include "independent_test_utils.h"
+// a trivial struct
+struct ThisTest {
+	ThisTest* getThis() { return this; } 
+};
 
-namespace insieme {
-namespace frontend {
+#define STRUCT_THISTEST R"(def struct IMP_ThisTest {
+	lambda IMP_getThis = () -> ptr<IMP_ThisTest> { return ptr_from_ref(this); }
+};)"
 
-	TEST(CppIndependentTest, BasicTypes) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_basic_types.cpp"); }
+struct ThisTest2 {
+	float v;
+	float fA() { return this->v; } 
+	float fB() { return v; } 
+};
+#define STRUCT_THISTEST2 R"(def struct IMP_ThisTest2 {
+	v : real<4>;
+	lambda IMP_fA = () -> real<4> { return *v; }
+	lambda IMP_fB = () -> real<4> { return *v; }
+};)"
 
-	TEST(CppIndependentTest, Expressions) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_expressions.cpp"); }
+int main() {
 
-	TEST(CppIndependentTest, DISABLED_Expressions_Ref) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_expressions_ref.cpp"); }
+	#pragma test expect_ir(STRUCT_THISTEST,R"({
+		var ref<IMP_ThisTest,f,f,plain> v0 = IMP_ThisTest::(ref_var(type_lit(IMP_ThisTest)));
+		v0.IMP_getThis();
+	})")
+	{
+		ThisTest tt;
+		tt.getThis();
+	}
 
-	TEST(CppIndependentTest, BasicClasses) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_basic_classes.cpp"); }
-	
-	TEST(CppIndependentTest, ClassOperators) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_class_operators.cpp"); }
+	#pragma test expect_ir(STRUCT_THISTEST2,R"({
+		var ref<IMP_ThisTest2,f,f,plain> v0 = IMP_ThisTest2::(ref_var(type_lit(IMP_ThisTest2)));
+	})")
+	{
+		ThisTest2 tt2;
+	}
 
-	TEST(CppIndependentTest, BasicTemplates) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_basic_templates.cpp"); }
-
-	TEST(CppIndependentTest, NewDelete) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_new_delete.cpp"); }
-
-	TEST(CppIndependentTest, DefaultArgs) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_default_args.cpp"); }
-
-	TEST(CppIndependentTest, ObjectPassing) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_object_passing.cpp"); }
-
-	TEST(CppIndependentTest, This) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_this.cpp"); }
-
-} // fe namespace
-} // insieme namespace
+	return 0;
+}

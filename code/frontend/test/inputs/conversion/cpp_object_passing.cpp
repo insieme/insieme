@@ -223,21 +223,25 @@ void validateTrivial() {
 	
 	//{ T t, &r = t; consume<const T&&>(r); } // pass reference  - NOT ALLOWED
 
-/*
 
 	// --------- return values |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
 
-	// by value:
+	// by value: ===============================================================================================================================================
 
+	#pragma test expect_ir(STRUCT_TRIVIAL,PRODUCE_TRIVIAL,R"({
+		var ref<IMP_Trivial,f,f,plain> v0 = IMP_Trivial::(ref_var(type_lit(IMP_Trivial)), IMP_produce_struct_Trivial_returns_struct_Trivial() : ref<IMP_Trivial,f,f,cpp_rref>);
+	})")
 	{ T x = produce<T>(); }				// return r-value, capture value
 
-//	{ T& x = produce<T>(); }			// return r-value, capture by reference
-
+	//{ T& x = produce<T>(); }			// return r-value, capture by reference           - NOT ALLOWED
+/*
 	{ const T& x = produce<T>(); }		// return r-value, capture by constant reference
 
 	{ T&& x = produce<T>(); }			// return r-value, capture by r-value reference
 
 	{ const T&& x = produce<T>(); }		// return r-value, capture by r-value reference
+
+/*
 
 	// -- life time extension --
 
