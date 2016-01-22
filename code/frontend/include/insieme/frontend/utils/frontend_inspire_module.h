@@ -105,15 +105,14 @@ namespace utils {
 		 * Allocates an array of "n" objects of type "typ" and calls the constructor for each of them
 		 * (Intended to implement "new Bla[5]" semantics)
 		 */
-		LANG_EXT_DERIVED(ObjectArrayNew, R"(
-		(typ : type<'a>, n : 'b, constructor : 'c::()) -> ptr<'a> {
-			auto ret = ref_new(type_lit(array<'a,#n>));
-			for(int<8> it = 0 ..  num_cast(n, type_lit(int<8>))) {
-				constructor(ref_array_elem(ret, it));
-			}
-			return ptr_from_array(ret);
-		}
-		)")
+		LANG_EXT_DERIVED(ObjectArrayNew, 
+		"(typ : type<'a>, n : 'b, constructor : 'c::()) -> ptr<'a> {"
+		"	auto ret = ref_new(type_lit(array<'a,#n>));"
+		"	for(int<8> it = 0 ..  num_cast(n, type_lit(int<8>))) {"
+		"		constructor(ref_array_elem(ret, it));"
+		"	}"
+		"	return ptr_from_array(ret);"
+		"}")
 	};
 
 	// --------------------- Utilities ----------------------------
