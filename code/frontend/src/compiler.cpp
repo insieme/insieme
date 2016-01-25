@@ -281,7 +281,9 @@ namespace frontend {
 		pimpl->clang.createPreprocessor(clang::TranslationUnitKind::TU_Complete);
 		pimpl->clang.createASTContext();
 
-		// FIXME why is this needed?
+        // since we perform a custom initialization of the compiler entity,
+        // we should not forget to initialize the set of invariant and target dependent builtints.
+        // (which we need to compile code with standard c++ headers)
 		getPreprocessor().getBuiltinInfo().InitializeBuiltins(getPreprocessor().getIdentifierTable(), getPreprocessor().getLangOpts());
 
 		// pimpl->clang.getDiagnostics().getClient()->BeginSourceFile( LO, &pimpl->clang.getPreprocessor() );
