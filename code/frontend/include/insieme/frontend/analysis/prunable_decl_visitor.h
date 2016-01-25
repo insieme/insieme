@@ -167,9 +167,8 @@ namespace analysis {
 			case clang::Decl::ClassTemplate: {
 				const clang::ClassTemplateDecl* classTmplDecl = llvm::cast<clang::ClassTemplateDecl>(decl);
 				if(visitTemplates) { static_cast<BASE*>(this)->VisitClassTemplate(classTmplDecl); }
-				// FIXME: it seems that clang 3.2 does not like const iterators, change whenever clang upgrade
-				clang::ClassTemplateDecl::spec_iterator spec_it = const_cast<clang::ClassTemplateDecl*>(classTmplDecl)->spec_begin();
-				clang::ClassTemplateDecl::spec_iterator spec_end = const_cast<clang::ClassTemplateDecl*>(classTmplDecl)->spec_end();
+				auto spec_it = classTmplDecl->spec_begin();
+				auto spec_end = classTmplDecl->spec_end();
 				for(; spec_it != spec_end; ++spec_it) {
 					if(!spec_it->isDependentType()) { dispatchDecl(*spec_it); }
 				}
@@ -185,9 +184,8 @@ namespace analysis {
 			case clang::Decl::FunctionTemplate: {
 				const clang::FunctionTemplateDecl* funcTmplDecl = llvm::cast<clang::FunctionTemplateDecl>(decl);
 				if(visitTemplates) { static_cast<BASE*>(this)->VisitFunctionTemplate(funcTmplDecl); }
-				// FIXME: it seems that clang 3.2 does not like const iterators, change whenever clang upgrade
-				clang::FunctionTemplateDecl::spec_iterator spec_it = const_cast<clang::FunctionTemplateDecl*>(funcTmplDecl)->spec_begin();
-				clang::FunctionTemplateDecl::spec_iterator spec_end = const_cast<clang::FunctionTemplateDecl*>(funcTmplDecl)->spec_end();
+				auto spec_it =  funcTmplDecl->spec_begin();
+				auto spec_end = funcTmplDecl->spec_end();
 				for(; spec_it != spec_end; ++spec_it) {
 					dispatchDecl(*spec_it);
 				}
