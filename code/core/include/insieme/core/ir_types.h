@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -920,7 +920,7 @@ namespace core {
 		 */
 		static TagTypeDefinitionPtr get(NodeManager& manager, const TagTypeBindingMap& bindings);
 		
-	    /**
+		/**
 		 * Obtains a list of addresses pointing to recursive references to any of the tag types defined
 		 * by this definition.
 		 *
@@ -957,6 +957,16 @@ namespace core {
 		 * @return the peeled out member
 		 */
 		NodePtr peelMember(NodeManager& manager, const NodePtr& member) const;
+
+		/**
+	     * Unpeels the given input type.
+	     * E.g. When called on BlaType: "(a : struct BlaType {...}) -> bool" turns into "(a : ^BlaType) -> bool"
+		 *
+		 * @param mgr the manager to be used for maintaining the resulting type pointer
+		 * @param input the type to be unpeeled
+		 * @return the unpeeled type
+	     */
+	    TypePtr unpeel(NodeManager& mgr, const TypePtr& input) const;
 
 	IR_NODE_END()
 
@@ -1100,13 +1110,29 @@ namespace core {
 			return peel(this->getNode().getNodeManager(), member);
 		}
 
-		/**
+	    /**
 		* Peels out the given member.
 		*/
 		template<typename T>
 		Pointer<const T> peel(const Pointer<const T>& member) const {
 			return peel(this->getNode().getNodeManager(), member.template as<NodePtr>()).template as<Pointer<const T>>();
 		}
+
+	    /*
+	     * Unpeels the given input type.
+	     * E.g. When called on BlaType: "(a : struct BlaType {...}) -> bool" turns into "(a : ^BlaType) -> bool"
+	     */
+	    TypePtr unpeel(NodeManager& mgr, const TypePtr& input) const {
+			return (*getDefinition()).unpeel(mgr, input);
+	    }
+		
+	    /*
+	     * Unpeels the given input type.
+	     * E.g. When called on BlaType: "(a : struct BlaType {...}) -> bool" turns into "(a : ^BlaType) -> bool"
+	     */
+	    TypePtr unpeel(const TypePtr& input) const {
+			return unpeel(input->getNodeManager(), input);
+	    }
 
 		/**
 		 * Determines whether the represented tag type is a recursive type.
