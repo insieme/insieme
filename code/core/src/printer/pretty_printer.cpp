@@ -316,6 +316,7 @@ namespace printer {
 							for (auto constr : constructors) {
 								if (auto ctor = constr.isa<LambdaExprPtr>()) {
 									visitedMemberFunctions.insert(ctor->getReference());
+									visitedMemberFunctions.insert(cur->peel(ctor)->getReference());
 								}
 							}
 						}
@@ -669,14 +670,16 @@ namespace printer {
 									auto parameters = lambda.getParameterList();
 
 									newLine();
-									out << "decl ctor : " << tagname << " :: " << funname << " = (" <<
+									out << "def " << tagname << " :: ctor " << funname << " = function (" <<
 											join(", ", lambda->getParameters().begin() + 1, lambda->getParameters().end(),
 												 [&](std::ostream& out, const VariablePtr& curVar) {
 													 visit(NodeAddress(curVar));
 													 out << " : ";
 													 visit(NodeAddress(curVar->getType()));
 												 }) << ") ";
+									thisStack.push(lambda->getParameters().front());
 									visit(bindingAddress->getLambda()->getBody());
+									thisStack.pop();
 									out << ";";
 								} else if (funType->isMemberFunction()) {
 									auto tagname = std::get<0>(visitedFreeFunctions[binding->getReference()]);
