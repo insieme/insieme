@@ -153,7 +153,7 @@ namespace conversion {
 		std::transform(callExpr->arg_begin(), callExpr->arg_end(), std::back_inserter(newArgs), [&](const clang::Expr* clangArgExpr) {
 			return convertCxxArgExpr(clangArgExpr, funType->getParameterType(i++));
 		});
-		
+
 		return builder.callExpr(irCall->getType(), funExp, newArgs);
 	}
 
@@ -167,7 +167,7 @@ namespace conversion {
 		retIr = ExprConverter::VisitMemberExpr(membExpr);
 
 		// TODO: does this need to do anything special? If not, remove and add to header
-		
+
 		return retIr;
 	}
 
@@ -177,7 +177,7 @@ namespace conversion {
 	core::ExpressionPtr Converter::CXXExprConverter::VisitDeclRefExpr(const clang::DeclRefExpr* declRef) {
 		core::ExpressionPtr retIr;
 		LOG_EXPR_CONVERSION(declRef, retIr);
-		
+
 		if(const clang::FieldDecl* field = llvm::dyn_cast<clang::FieldDecl>(declRef->getDecl())) {
 			field->dump(); // prevent unused warning
 			assert_not_implemented();
@@ -209,7 +209,7 @@ namespace conversion {
 		if(!methodDecl) {
 			// member function pointer call
 			frontend_assert(false) << "Member function pointer call not implemented";
-		} else {			
+		} else {
 			// get method lambda
 			auto methodLambda = converter.getFunMan()->lookup(methodDecl);
 
@@ -236,7 +236,7 @@ namespace conversion {
 			auto retType = methodLambda->getType().as<core::FunctionTypePtr>()->getReturnType();
 			ret = builder.callExpr(retType, methodLambda, arguments);
 		}
-		
+
 		return ret;
 	}
 
@@ -314,7 +314,7 @@ namespace conversion {
 	//						CXX CONSTRUCTOR CALL EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	namespace {
-		/// Convert a ConstructExpr to an IR constructor call, allocating the required memory either on the stack (default) or on the heap 
+		/// Convert a ConstructExpr to an IR constructor call, allocating the required memory either on the stack (default) or on the heap
 		core::ExpressionPtr convertConstructExprInternal(Converter& converter, const clang::CXXConstructExpr* constructExpr, bool onStack) {
 			auto& builder = converter.getIRBuilder();
 			core::TypePtr resType = converter.convertType(constructExpr->getType());
@@ -346,7 +346,7 @@ namespace conversion {
 		LOG_EXPR_CONVERSION(callExpr, retIr);
 
 		retIr = convertConstructExprInternal(converter, callExpr, true);
-		
+
 		frontend_assert(retIr) << "ConstructExpr could not be translated\n";
 		return retIr;
 	}
@@ -478,7 +478,7 @@ namespace conversion {
 	core::ExpressionPtr Converter::CXXExprConverter::VisitCXXDefaultArgExpr(const clang::CXXDefaultArgExpr* defaultArgExpr) {
 		auto retIr = Visit(defaultArgExpr->getExpr());
 		LOG_EXPR_CONVERSION(defaultArgExpr, retIr);
-		
+
 		// default arguments are handled just like any other argument
 		return retIr;
 	}
@@ -791,7 +791,7 @@ namespace conversion {
 		else {
 			retIr = createBinaryExpression(exprTy, lhs, rhs, binOp);
 		}
-		
+
         return retIr;
 	}
 
@@ -816,6 +816,37 @@ namespace conversion {
 		LOG_EXPR_CONVERSION(sizeOfPackExpr, retIr);
 		retIr = builder.uintLit(sizeOfPackExpr->getPackLength());
 		return retIr;
+	}
+
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//		CXXStdInitializerListExpr expr
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	core::ExpressionPtr Converter::CXXExprConverter::VisitCXXStdInitializerListExpr(const clang::CXXStdInitializerListExpr* stdInitListExpr) {
+		core::ExpressionPtr retIr;
+		LOG_EXPR_CONVERSION(stdInitListExpr, retIr);
+		auto subEx = converter.convertExpr(stdInitListExpr->getSubExpr());
+		auto subExType = stdInitListExpr->getSubExpr()->getType().getTypePtr();
+		auto initListIRType = converter.convertType(stdInitListExpr->getType());
+		//get std::initializer_list<T> ctor lambda expr
+		auto recordType = llvm::dyn_cast<clang::RecordType>(stdInitListExpr->getType().getTypePtr()->getUnqualifiedDesugaredType());
+		auto recordDecl = recordType->getAsCXXRecordDecl();
+		frontend_assert(recordType && recordDecl) << "failed to get the std::initializer_list type declaration.";
+		core::LiteralPtr ctorLambda = nullptr;
+		for(auto e : recordDecl->ctors()) {
+			if(ctorLambda) continue;
+			if(e->getNumParams() == 2) {
+				ctorLambda = converter.getFunMan()->lookup(e);
+			}
+		}
+		//extract size of sub expr
+		frontend_assert(llvm::isa<clang::ConstantArrayType>(subExType)) << "std::initializer_list sub expression has no constant size array type.";
+		auto numElements = llvm::cast<clang::ConstantArrayType>(subExType)->getSize().getSExtValue();
+		//get this type, return type, and create list of arguments
+		auto thisTy = builder.undefinedVar(initListIRType);
+		core::ExpressionList args { thisTy, subEx, converter.builder.uintLit(numElements) };
+		auto retType = ctorLambda->getType().as<core::FunctionTypePtr>()->getReturnType();
+		//build call to constructor
+		return (retIr = builder.callExpr(retType, ctorLambda, args));
 	}
 
 } // End conversion namespace
