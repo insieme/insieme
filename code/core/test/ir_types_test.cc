@@ -446,6 +446,29 @@ namespace core {
 		EXPECT_EQ(unpeeledT, originalT);
 	}
 
+	
+	TEST(TypeTest, TagTypeUnpeelingNotPeeled) {
+		// create a manager for this test
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		auto aType = builder.parseType(R"(
+			def struct A {
+				lambda retA = () -> A { return *this; }
+			}; 
+			A
+		)").as<TagTypePtr>();
+		
+		// peel once, then unpeel -> should be the same
+		auto member = aType->getStruct()->getMemberFunctions().front();
+		auto originalT = member.getType();
+		// peel manually
+		auto peeledT = transform::replaceAllGen(manager, originalT, aType->getTag(), aType, transform::globalReplacement);
+		EXPECT_NE(peeledT, originalT);
+		auto unpeeledT = aType.unpeel(peeledT);
+		EXPECT_EQ(unpeeledT, originalT);
+	}
+
 	TEST(TypeTest, RecTypeTest) {
 		// test accessing the definition of a recursive type using addresses
 
