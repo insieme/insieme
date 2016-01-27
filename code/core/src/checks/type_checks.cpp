@@ -778,6 +778,23 @@ namespace checks {
 		return res;
 	}
 
+	OptionalMessageList DeclarationStmtSemanticCheck::visitDeclarationStmt(const DeclarationStmtAddress& address) {
+		OptionalMessageList res;
+
+		auto variable = address.getAddressedNode()->getVariable();
+		auto expression = address.getAddressedNode()->getInitialization();
+
+		unsigned count = analysis::countInstances(expression, variable);
+
+		if (count > 1) {
+			add(res,
+			    Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR, "Invalid declaration statement with multiple occurrences of the declared variable",
+			            Message::ERROR));
+		}
+
+		return res;
+	}
+
 	OptionalMessageList IfConditionTypeCheck::visitIfStmt(const IfStmtAddress& address) {
 		const NodeManager& manager = address->getNodeManager();
 		OptionalMessageList res;

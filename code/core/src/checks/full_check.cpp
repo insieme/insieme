@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -59,6 +59,7 @@ namespace checks {
 			context_free_checks.push_back(make_check<ReturnTypeCheck>());
 			context_free_checks.push_back(make_check<LambdaTypeCheck>());
 			context_free_checks.push_back(make_check<DeclarationStmtTypeCheck>());
+			context_free_checks.push_back(make_check<DeclarationStmtSemanticCheck>());
 			context_free_checks.push_back(make_check<IfConditionTypeCheck>());
 			context_free_checks.push_back(make_check<ForStmtTypeCheck>());
 			context_free_checks.push_back(make_check<WhileConditionTypeCheck>());
