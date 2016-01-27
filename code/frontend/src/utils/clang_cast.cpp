@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -178,13 +178,10 @@ namespace utils {
 			return builder.unitConsume(expr);
 
 		////////////////////////////////////////////////////////////////////////////////////////////////////////////
-		//case clang::CK_ConstructorConversion:
-		//	// Conversion by constructor. struct A { A(int); }; A a = A(10);
-		//	{
-		//		// this should be handled by backend compiler
-		//		// http://stackoverflow.com/questions/1384007/conversion-constructor-vs-conversion-operator-precedence
-		//		return expr;
-		//	}
+		// Conversion by constructor. struct A { A(int); }; A a = A(10);
+		// * subexpr is constructor call which can be translated to IR normally
+		case clang::CK_ConstructorConversion:
+			return expr;
 
 		////////////////////////////////////////////////////////////////////////////////////////////////////////////
 		//case clang::CK_FloatingRealToComplex:

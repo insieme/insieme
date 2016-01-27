@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -137,7 +137,7 @@ namespace conversion {
 				if(varDecl->getInit()->isLValue() || llvm::isa<clang::CXXConstructExpr>(varDecl->getInit())) {
 					refVar = *convertedDecl.second;
 				}
-				initExp = core::lang::buildRefCast(refVar, convertedDecl.first->getType());
+				initExp = refVar;
 				if(initExp != refVar) {
 					VLOG(2) << "Initialization: casting ref from\n" << dumpPretty(refVar->getType()) << " to \n" << convertedDecl.first->getType();
 				}

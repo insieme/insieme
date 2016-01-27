@@ -36,24 +36,26 @@
 
 #include "insieme/core/checks/type_checks.h"
 
-#include "insieme/core/ir_builder.h"
-#include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"
+#include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/type_utils.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
+#include "insieme/core/checks/full_check.h"
+#include "insieme/core/ir_builder.h"
+#include "insieme/core/lang/enum.h"
+#include "insieme/core/printer/pretty_printer.h"
+#include "insieme/core/transform/materialize.h"
 #include "insieme/core/types/subtyping.h"
 #include "insieme/core/types/type_variable_deduction.h"
-#include "insieme/core/printer/pretty_printer.h"
-#include "insieme/core/lang/enum.h"
 
 #include "insieme/core/lang/array.h"
 #include "insieme/core/lang/channel.h"
 #include "insieme/core/lang/reference.h"
 #include "insieme/core/lang/pointer.h"
 
-#include "insieme/core/transform/materialize.h"
-
 #include "insieme/utils/numeric_cast.h"
+#include "insieme/utils/logging.h"
+
 
 namespace insieme {
 namespace core {
@@ -744,16 +746,35 @@ namespace checks {
 		OptionalMessageList res;
 
 		DeclarationStmtPtr declaration = address.getAddressedNode();
+		TypePtr variableType = declaration->getVariable()->getType();
+		ExpressionPtr init = declaration->getInitialization();
+		TypePtr initType = init->getType();
 
-		// just test whether same type is on both sides
-		TypePtr variableType = analysis::normalize(declaration->getVariable()->getType());
-		TypePtr initType = analysis::normalize(declaration->getInitialization()->getType());
+		// if the types are equivalent, everything is fine
+		if(analysis::equalTypes(variableType, initType) || types::isSubTypeOf(initType, variableType)) return res;
 
-		if(!types::isSubTypeOf(initType, variableType)) {
-			add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR, format("Invalid type of initial value - expected: \n%s, actual: \n%s",
-			                                                                      *variableType, *initType),
-			                 Message::ERROR));
+		// qualifiers can be added freely
+		if(lang::isReference(variableType) && lang::isReference(initType)) {
+			auto varRefType = lang::ReferenceType(variableType);
+			auto initRefType = lang::ReferenceType(initType);
+			if(varRefType.getElementType() == initRefType.getElementType()) {
+				if((!initRefType.isVolatile() || varRefType.isVolatile()) && (!initRefType.isConst() || varRefType.isConst())) {
+					return res;
+				}
+			}
 		}
+
+		// otherwise, we check whether there is a constructor for the lhs type accepting the rhs type
+		if(lang::isPlainReference(variableType)) {
+			VLOG(2) << "\n==================\n reffed type: " << *analysis::getReferencedType(variableType) << "\n param type: " << *initType
+				    << "\n has: " << analysis::hasConstructorAccepting(analysis::getReferencedType(variableType), initType)
+				    << "\n================= >>>>>>>>>>>>>>>>>>>>>>>>>>>>\n";
+
+			if(analysis::hasConstructorAccepting(analysis::getReferencedType(variableType), initType)) return res;
+		}
+
+		add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
+			             format("Invalid type of initial value - expected: \n%s, actual: \n%s", *variableType, *initType), Message::ERROR));
 		return res;
 	}
 

@@ -324,16 +324,18 @@ namespace conversion {
 
 			// first constructor argument is the object memory location -- we need to build this either on the stack or heap
 			auto irMemLoc = onStack ? builder.undefinedVar(resType) : builder.undefinedNew(resType);
+			
+			// get constructor lambda
+			auto constructorLambda = converter.getFunMan()->lookup(constructExpr->getConstructor());
+			auto lambdaParamTypes = constructorLambda.getType().as<core::FunctionTypePtr>().getParameterTypeList();
+			VLOG(2) << "constructor lambda literal " << *constructorLambda << " of type " << dumpColor(constructorLambda->getType());
 
 			// the constructor is then simply a call with the mem location and all its arguments
 			core::ExpressionList arguments { irMemLoc };
+			size_t i = 1;
 			for(auto arg : constructExpr->arguments()) {
-				arguments.push_back(converter.convertExpr(arg));
+				arguments.push_back(converter.convertCxxArgExpr(arg, lambdaParamTypes[i++]));
 			}
-
-			// get constructor lambda
-			auto constructorLambda = converter.getFunMan()->lookup(constructExpr->getConstructor());
-			VLOG(2) << "constructor lambda literal " << *constructorLambda << " of type " << dumpColor(constructorLambda->getType());
 
 			// return call
 			auto retType = constructorLambda->getType().as<core::FunctionTypePtr>()->getReturnType();
@@ -665,7 +667,7 @@ namespace conversion {
 		//	return (retIr = builder.refVar(retIr));
 		//}
 
-		assert_not_implemented();
+		//assert_not_implemented();
 
 		return retIr;
 	}
