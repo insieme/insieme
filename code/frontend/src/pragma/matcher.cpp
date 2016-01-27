@@ -60,7 +60,6 @@ friend class insieme::frontend::pragma::cpp_string_lit_p
 #include "insieme/utils/logging.h"
 #include "insieme/utils/string_utils.h"
 
-using namespace clang;
 using namespace insieme::frontend;
 using namespace insieme::frontend::pragma;
 
@@ -86,7 +85,7 @@ namespace pragma {
 	ValueUnion::~ValueUnion() {
 		if(ptrOwner && is<clang::Stmt*>()) {
 			assert_true(clangCtx) << "Invalid ASTContext associated with this element.";
-			clangCtx->Deallocate(get<Stmt*>());
+			clangCtx->Deallocate(get<clang::Stmt*>());
 		}
 		if(ptrOwner && is<std::string*>()) { delete get<std::string*>(); }
 	}
@@ -94,9 +93,9 @@ namespace pragma {
 	std::string ValueUnion::toStr() const {
 		std::string ret;
 		llvm::raw_string_ostream rs(ret);
-		if(is<Stmt*>()) {
+		if(is<clang::Stmt*>()) {
 			// [3.0] get<Stmt*>()->printPretty(rs, *clangCtx, 0, clang::PrintingPolicy(clangCtx->getLangOptions()));
-			get<Stmt*>()->printPretty(rs, 0, clangCtx->getPrintingPolicy());
+			get<clang::Stmt*>()->printPretty(rs, 0, clangCtx->getPrintingPolicy());
 		} else {
 			rs << *get<std::string*>();
 		}
@@ -271,7 +270,7 @@ namespace pragma {
 			err++;
 		} while(err < errStack.stackSize());
 
-		frontend::utils::clangPreprocessorDiag(pp, errLoc, DiagnosticsEngine::Error, ss.str());
+		frontend::utils::clangPreprocessorDiag(pp, errLoc, clang::DiagnosticsEngine::Error, ss.str());
 	}
 
 	// ------------------------------------ node ---------------------------
@@ -382,7 +381,7 @@ namespace pragma {
 
 	bool expr_p::match(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const {
 		PP.EnableBacktrackAtThisPos();
-		Expr* result = ParserProxy::get().ParseExpression(PP);
+        clang::Expr* result = ParserProxy::get().ParseExpression(PP);
 		
 		if(result) {
 			PP.CommitBacktrackedTokens();
@@ -406,10 +405,10 @@ namespace pragma {
 		PP.recomputeCurLexerKind();
 		auto lex = dynamic_cast<clang::Lexer*>(PP.getCurrentLexer());
 		bool prev = lex->getLangOpts().CPlusPlus11;
-		const_cast<LangOptions&>(lex->getLangOpts()).CPlusPlus11 = true;
+		const_cast<clang::LangOptions&>(lex->getLangOpts()).CPlusPlus11 = true;
 		PP.EnterCachingLexMode();
 		FinalActions restore([&]{ 
-			const_cast<LangOptions&>(lex->getLangOpts()).CPlusPlus11 = prev;
+			const_cast<clang::LangOptions&>(lex->getLangOpts()).CPlusPlus11 = prev;
 		});
 		
 		clang::Token token;
@@ -458,17 +457,17 @@ namespace pragma {
 		}
 	}
 
-	void AddToMap(clang::tok::TokenKind tok, Token const& token, bool resolve, std::string const& map_str, MatchMap& mmap) {
+	void AddToMap(clang::tok::TokenKind tok, clang::Token const& token, bool resolve, std::string const& map_str, MatchMap& mmap) {
 		if(!map_str.size()) { return; }
 
-		Sema& A = ParserProxy::get().getParser()->getActions();
+	 clang::Sema& A = ParserProxy::get().getParser()->getActions();
 
 		// HACK: FIXME
 		// this hacks make it possible that if we have a token and we just want its string value
 		// we do not invoke clang semantics action on it.
 		if(!resolve) {
 			if(tok == clang::tok::identifier) {
-				UnqualifiedId Name;
+                clang::UnqualifiedId Name;
 				Name.setIdentifier(token.getIdentifierInfo(), token.getLocation());
 				mmap[map_str].push_back(ValueUnionPtr(new ValueUnion(std::string(Name.Identifier->getNameStart(), Name.Identifier->getLength()))));
 				return;
@@ -482,15 +481,15 @@ namespace pragma {
 		switch(tok) {
 		case clang::tok::numeric_constant:
 			mmap[map_str].push_back(
-			    ValueUnionPtr(new ValueUnion(A.ActOnNumericConstant(token).getAs<IntegerLiteral>(), &static_cast<clang::Sema&>(A).Context)));
+			    ValueUnionPtr(new ValueUnion(A.ActOnNumericConstant(token).getAs<clang::IntegerLiteral>(), &static_cast<clang::Sema&>(A).Context)));
 			break;
 		case clang::tok::identifier: {
-			UnqualifiedId Name;
-			CXXScopeSpec ScopeSpec;
+            clang::UnqualifiedId Name;
+            clang::CXXScopeSpec ScopeSpec;
 			Name.setIdentifier(token.getIdentifierInfo(), token.getLocation());
 
 			// look up the identifier name
-			LookupResult res(A, clang::DeclarationName(token.getIdentifierInfo()), token.getLocation(), clang::Sema::LookupOrdinaryName);
+            clang::LookupResult res(A, clang::DeclarationName(token.getIdentifierInfo()), token.getLocation(), clang::Sema::LookupOrdinaryName);
 			if(!A.LookupName(res, ParserProxy::get().CurrentScope(), false)) {
 				// TODO: Identifier could not be resolved => report error!
 				assert_fail() << "Unable to obtain declaration of identifier!";
@@ -499,7 +498,7 @@ namespace pragma {
 
 			mmap[map_str].push_back(ValueUnionPtr(new ValueUnion(
 			    // [3.0] A.ActOnIdExpression(ParserProxy::get().CurrentScope(), ScopeSpec, Name, false, false).takeAs<Stmt>(),
-			    new(A.Context) clang::DeclRefExpr(varDecl, false, varDecl->getType(), VK_LValue, varDecl->getLocation()), &A.Context)));
+			    new(A.Context) clang::DeclRefExpr(varDecl, false, varDecl->getType(), clang::VK_LValue, varDecl->getLocation()), &A.Context)));
 			break;
 		}
 		default: {

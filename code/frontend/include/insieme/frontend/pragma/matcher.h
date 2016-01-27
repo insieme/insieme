@@ -474,8 +474,8 @@ namespace pragma {
 		bool resolve;
 		std::string tok;
 
-		Tok() {}
-		Tok(std::string const& str, bool addToMap = true, bool resolve = false) : MappableNode<Tok<T>>(str, addToMap), resolve(resolve), tok(str) {}
+		Tok() :resolve(false), tok("undefined") {}
+		Tok(std::string const& str, bool addToMap = true, bool resolve = false) : MappableNode<Tok<T>>(str, addToMap), resolve(resolve), tok(str) { }
 
 		node* copy() const {
 			return new Tok<T>(MappableNode<Tok<T>>::getMapName(), MappableNode<Tok<T>>::isAddToMap(), resolve);
