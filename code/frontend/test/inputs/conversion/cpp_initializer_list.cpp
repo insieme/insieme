@@ -33,54 +33,40 @@
  * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
+#include <initializer_list>
 
-int producer() {
-	return 5;
-}
-void consumer(int&& i) {}
+struct SimplestConstructor {
+	SimplestConstructor() = default;
+	~SimplestConstructor() = default;
+};
 
-using philipp = int;
-using driver = philipp;
+struct S {
+    SimplestConstructor v[3];
+    S(std::initializer_list<SimplestConstructor> l) { // list-initialization in ctor
+         //std::cout << "constructed with a " << l.size() << "-element list\n";
+         append(l);
+    }
+    void append(std::initializer_list<SimplestConstructor> l) { // list-initialization as argument
+        for(int i=0; i<l.size(); ++i) {
+			v[i] = *(l.begin()+i);
+        }
+    }
+    int c_arr() const {
+        return {3};  // list-initialization in return statement
+    }
+};
+
+#define SimplestConstructor_IR R"( def struct IMP_SimplestConstructor { }; )"
 
 int main() {
-	#pragma test expect_ir("{ var ref<bool> v0; cxx_style_assignment(v0, true); cxx_style_assignment(v0, false); }")
+	//this IR test pragma is not correct yet. just committed for testing purposes.
+	#pragma test expect_ir(SimplestConstructor_IR, R"({
+		var ref<ptr<IMP_SimplestConstructor>,f,f,plain> v0 = ref_var_init(ptr_from_ref(IMP_SimplestConstructor::(ref_new(type_lit(IMP_SimplestConstructor)))));
+		ref_delete(ptr_to_ref(*v0));
+	})")
 	{
-		bool a;
-		a = true;
-		a = false;
+		S obj_s({SimplestConstructor(), SimplestConstructor()});
 	}
-
-	#pragma test expect_ir("{ var ref<int<4>> v0; var ref<int<4>,f,f,cpp_ref> v1 = v0; }")
-	{
-		int i;
-		int& ref_i = i;
-	}
-
-	#pragma test expect_ir("{ var ref<int<4>> v0; var ref<int<4>,t,f,cpp_ref> v1 = v0; }")
-	{
-		int i;
-		const int& ref_i = i;
-	}
-
-	#pragma test expect_ir("var ref<int<4>,f,f> v0 = ref_var_init(0);")
-	auto var0 = 0;
-
-	#pragma test expect_ir("var ref<int<4>,f,f> v0 = ref_var_init(1);")
-	decltype(var0) var1 = 1;
-
-	#pragma test expect_ir("var ref<int<4>,f,f> v0 = ref_var_init(2);")
-	philipp var2 = 2;
-
-	#pragma test expect_ir("var ref<int<4>,f,f> v0 = ref_var_init(3);")
-	driver var3 = 3;
-
-	#pragma test expect_ir(R"(
-		def IMP_consumer = function (v1 : ref<int<4>,f,f,cpp_rref>) -> unit { };
-		def IMP_producer = () -> int<4> { return 5; };
-		IMP_consumer(IMP_producer())
-	)")
-	consumer(producer());
-
 
 	return 0;
 }

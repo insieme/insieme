@@ -64,7 +64,7 @@ namespace conversion {
 		auto irType = converter.convertVarType(varDecl->getType());
 		auto var = builder.variable(irType);
 		if(varDecl->getInit()) {
-			return {var, converter.convertExpr(varDecl->getInit())};
+			return {var, converter.convertCxxArgExpr(varDecl->getInit())};
 		} else {
 			return {var, {}};
 		}

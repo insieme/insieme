@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -60,13 +60,13 @@ int main() {
 	
 	// QUALIFIERS ////////////////////////////////////////////////////////////// 
 	
-	#pragma test expect_ir("var ref<int<4>,t,f> v0 = ref_cast(ref_var_init(5), type_lit(t), type_lit(f), type_lit(plain));")
+	#pragma test expect_ir("var ref<int<4>,t,f> v0 = ref_var_init(5);")
 	const int ci = 5;
 	
-	#pragma test expect_ir("var ref<int<4>,f,t> v0 = ref_cast(ref_var_init(5), type_lit(f), type_lit(t), type_lit(plain));")
+	#pragma test expect_ir("var ref<int<4>,f,t> v0 = ref_var_init(5);")
 	volatile int vi = 5;
 	
-	#pragma test expect_ir("var ref<int<4>,t,t> v0 = ref_cast(ref_var_init(5), type_lit(t), type_lit(t), type_lit(plain));")
+	#pragma test expect_ir("var ref<int<4>,t,t> v0 = ref_var_init(5);")
 	const volatile int cvi = 5;
 		
 	// POINTER TYPES //////////////////////////////////////////////////////////////

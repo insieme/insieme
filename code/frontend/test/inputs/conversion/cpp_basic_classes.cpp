@@ -93,12 +93,51 @@ struct D2 {
 	void bla() {}
 };
 
+
+struct VolatileConstructor {
+	VolatileConstructor() = default;
+	VolatileConstructor(const VolatileConstructor&) {}
+	VolatileConstructor(volatile const VolatileConstructor&) {}
+};
+
+#define VOL_CONSTR_IR R"(
+def struct IMP_VolatileConstructor {
+	ctor() { }
+	ctor(v : ref<IMP_VolatileConstructor,t,f,cpp_ref>) { }
+	ctor(v : ref<IMP_VolatileConstructor,t,t,cpp_ref>) { }
+};)"
+
+
 int main() {
 	; // this is required because of the clang compound source location bug
 
 	#pragma test expect_ir(A_IR, R"( { var ref<IMP_A> a = IMP_A::(ref_var(type_lit(IMP_A))); } )")
 	{ A a; }
+
+	// init options
+	#pragma test expect_ir(A_IR, R"( {
+		var ref<IMP_A,f,f,plain> v0 = IMP_A::(ref_var(type_lit(IMP_A)));
+		var ref<IMP_A,f,f,plain> v1 = ref_cast(v0, type_lit(t), type_lit(f), type_lit(cpp_ref));
+		var ref<IMP_A,f,f,plain> v2 = ref_cast(IMP_A::(ref_var(type_lit(IMP_A)), ref_kind_cast(v0, type_lit(cpp_ref))), type_lit(f), type_lit(f), type_lit(cpp_rref));
+	} )")
+	{
+		A a;
+		A b = a;
+		A c = A(a);
+	}
 	
+	// non-default implicit init
+	#pragma test expect_ir(VOL_CONSTR_IR, R"( {
+		var ref<IMP_VolatileConstructor,f,t,plain> v0 = IMP_VolatileConstructor::(ref_var(type_lit(IMP_VolatileConstructor)));
+		var ref<IMP_VolatileConstructor,f,f,plain> v1 = ref_cast(v0, type_lit(t), type_lit(t), type_lit(cpp_ref));
+		var ref<IMP_VolatileConstructor,f,f,plain> v2 = ref_cast(IMP_VolatileConstructor::(ref_var(type_lit(IMP_VolatileConstructor)), ref_kind_cast(v0, type_lit(cpp_ref))), type_lit(t), type_lit(f), type_lit(cpp_ref));
+	} )")
+	{
+		volatile VolatileConstructor a;
+		VolatileConstructor b = a;
+		VolatileConstructor c = VolatileConstructor(a);
+	}
+
 	// method call
 	#pragma test expect_ir(A_IR, R"( { var ref<IMP_A> a = IMP_A::(ref_var(type_lit(IMP_A))); a.IMP_f(); } )")
 	{

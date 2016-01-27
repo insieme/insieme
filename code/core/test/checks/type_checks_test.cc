@@ -1060,7 +1060,7 @@ namespace checks {
 		IRBuilder builder(manager);
 
 		// OK ... create a function literal
-		TagTypePtr typeA = builder.parseType("decl struct t; def struct t { a : A; next : ref<t>; }; t").as<TagTypePtr>();
+		TagTypePtr typeA = builder.parseType("decl struct StructX; def struct StructX { a : A; next : ref<StructX>; }; StructX").as<TagTypePtr>();
 		TypePtr typeB = typeA->peel();
 
 		// all of the following should be supported

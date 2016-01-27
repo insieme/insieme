@@ -71,7 +71,7 @@ namespace conversion {
          * stores conversion map between clang operators and Inspire (BINARY)
          */
 		const std::map<clang::BinaryOperator::Opcode, core::lang::BasicGenerator::Operator> binOpMap;
-		
+
         /**
          * stores conversion map between clang operators and Inspire (UNARY)
          */
@@ -150,7 +150,7 @@ namespace conversion {
 
 		core::ExpressionPtr convertInitExpr(const clang::Expr* original);
 		core::ExpressionPtr convertCxxArgExpr(const clang::Expr* original, const core::TypePtr& targetType = nullptr);
-		
+
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		//  Literals
 		core::ExpressionPtr VisitIntegerLiteral(const clang::IntegerLiteral* intLit);
@@ -164,7 +164,7 @@ namespace conversion {
 		core::ExpressionPtr VisitCompoundAssignOperator(const clang::CompoundAssignOperator* binOp);
 		core::ExpressionPtr VisitUnaryOperator(const clang::UnaryOperator* unOp);
 		core::ExpressionPtr VisitConditionalOperator(const clang::ConditionalOperator* condOp);
-		
+
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		//  Expressions
 		core::ExpressionPtr VisitParenExpr(const clang::ParenExpr* parExpr);
@@ -274,6 +274,7 @@ namespace conversion {
 		core::ExpressionPtr VisitCXXDefaultArgExpr(const clang::CXXDefaultArgExpr* defaultArgExpr);
 		core::ExpressionPtr VisitCXXScalarValueInitExpr(const clang::CXXScalarValueInitExpr* scalarValueInit);
 		core::ExpressionPtr VisitCXXDefaultInitExpr(const clang::CXXDefaultInitExpr* initExpr);
+		core::ExpressionPtr VisitCXXStdInitializerListExpr(const clang::CXXStdInitializerListExpr* stdinitlistexpr);
 
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		//  Temporaries management
@@ -296,7 +297,7 @@ namespace conversion {
 		core::ExpressionPtr VisitSizeOfPackExpr(const clang::SizeOfPackExpr* expr);
 		core::ExpressionPtr VisitCXXTypeidExpr(const clang::CXXTypeidExpr* typeidExpr);
 		core::ExpressionPtr VisitSubstNonTypeTemplateParmExpr(const clang::SubstNonTypeTemplateParmExpr* substExpr);
-		
+
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		//  Expressions
 		core::ExpressionPtr VisitImplicitCastExpr(const clang::ImplicitCastExpr* castExpr);
