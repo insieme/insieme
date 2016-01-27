@@ -185,6 +185,7 @@ namespace encoder {
 			}
 			// use the default IRBuilder to generate the callExpr
 			return builder.callExpr(oclExt.getDataRequirement(), oclExt.getMakeDataRequirement(),
+									builder.getTypeLiteral(value.getType()),
 									toIR<ExpressionList, DirectExprListConverter>(manager, dims),
 									toIR<ExpressionList, DirectExprListConverter>(manager, ranges),
 									accessMode);
@@ -199,17 +200,20 @@ namespace encoder {
 			// prepare an empty requirement such that we can fill it up
 			opencl::DataRequirement requirement;
 
-			ExpressionList dims = toValue<ExpressionList, DirectExprListConverter>(analysis::getArgument(expr, 0));
+			// extract the enclosed type
+			requirement.setType(analysis::getArgument(expr, 0)->getType().as<GenericTypePtr>()->getTypeParameter(0));
+
+			ExpressionList dims = toValue<ExpressionList, DirectExprListConverter>(analysis::getArgument(expr, 1));
 			for (const auto& dim: dims) requirement.addDim(toValue<unsigned int>(dim));
 			
-			ExpressionList ranges = toValue<ExpressionList, DirectExprListConverter>(analysis::getArgument(expr, 1));
+			ExpressionList ranges = toValue<ExpressionList, DirectExprListConverter>(analysis::getArgument(expr, 2));
 			for (const auto& range: ranges) requirement.addRange(opencl::DataRange::decode(range));
 			
-			unsigned int accessMode = toValue<unsigned int>(analysis::getArgument(expr, 2));
+			unsigned int accessMode = toValue<unsigned int>(analysis::getArgument(expr, 3));
 			if 		(accessMode == 0) requirement.setAccessMode(opencl::DataRequirement::AccessMode::RO);
 			else if (accessMode == 1) requirement.setAccessMode(opencl::DataRequirement::AccessMode::WO);
 			else					  requirement.setAccessMode(opencl::DataRequirement::AccessMode::RW);
-			// DataRequirement is done now (however 'Type' is omitted for now)
+			// DataRequirement is done now and can be returend to user-code
 			return requirement;
 		}
 	};
