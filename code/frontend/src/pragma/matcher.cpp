@@ -303,15 +303,6 @@ namespace pragma {
 		return out << "option(" << *getNode() << ")";
 	}
 
-	template <clang::tok::TokenKind T>
-	std::ostream& Tok<T>::printTo(std::ostream& out) const {
-		if(tok.empty()) {
-			return out << clang::tok::getTokenName(T);
-		} else {
-			return out << "Tok(" << clang::tok::getTokenName(T) << ": " << tok << ")";
-		}
-	}
-
 	std::ostream& kwd::printTo(std::ostream& out) const {
 		return out << "kwd(" << kw << ")";
 	}
@@ -430,9 +421,9 @@ namespace pragma {
 	bool kwd::match(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const {
 		clang::Token& token = ParserProxy::get().ConsumeToken();
 		if(token.getIdentifierInfo() && token.getIdentifierInfo()->getName() == kw) {
-			if(isAddToMap() && getMapName().empty()) {
+			if(isToBeAddedToMap() && getMapName().empty()) {
 				mmap[kw];
-			} else if(isAddToMap()) {
+			} else if(isToBeAddedToMap()) {
 				mmap[getMapName()].push_back(ValueUnionPtr(new ValueUnion(kw)));
 			}
 			return true;
@@ -457,56 +448,63 @@ namespace pragma {
 		}
 	}
 
-	void AddToMap(clang::tok::TokenKind tok, clang::Token const& token, bool resolve, std::string const& map_str, MatchMap& mmap) {
+	void resolveAndAddToMap(clang::tok::TokenKind tok, clang::Token const& token, std::string const& map_str, MatchMap& mmap){
 		if(!map_str.size()) { return; }
 
-	 clang::Sema& A = ParserProxy::get().getParser()->getActions();
-
-		// HACK: FIXME
-		// this hacks make it possible that if we have a token and we just want its string value
-		// we do not invoke clang semantics action on it.
-		if(!resolve) {
-			if(tok == clang::tok::identifier) {
-                clang::UnqualifiedId Name;
-				Name.setIdentifier(token.getIdentifierInfo(), token.getLocation());
-				mmap[map_str].push_back(ValueUnionPtr(new ValueUnion(std::string(Name.Identifier->getNameStart(), Name.Identifier->getLength()))));
-				return;
-			}
-			mmap[map_str].push_back(ValueUnionPtr(new ValueUnion(TokenToStr(token))));
-			return;
-		}
+        clang::Sema& A = ParserProxy::get().getParser()->getActions();
 
 		// We want to use clang sema to actually get the Clang node which is found out of this
 		// identifier
 		switch(tok) {
-		case clang::tok::numeric_constant:
-			mmap[map_str].push_back(
-			    ValueUnionPtr(new ValueUnion(A.ActOnNumericConstant(token).getAs<clang::IntegerLiteral>(), &static_cast<clang::Sema&>(A).Context)));
-			break;
-		case clang::tok::identifier: {
-            clang::UnqualifiedId Name;
-            clang::CXXScopeSpec ScopeSpec;
-			Name.setIdentifier(token.getIdentifierInfo(), token.getLocation());
+            case clang::tok::numeric_constant:
+                mmap[map_str].push_back(
+                    ValueUnionPtr(new ValueUnion(A.ActOnNumericConstant(token).getAs<clang::IntegerLiteral>(), &static_cast<clang::Sema&>(A).Context)));
+                break;
+            case clang::tok::identifier: {
+                clang::UnqualifiedId Name;
+                clang::CXXScopeSpec ScopeSpec;
+                Name.setIdentifier(token.getIdentifierInfo(), token.getLocation());
 
-			// look up the identifier name
-            clang::LookupResult res(A, clang::DeclarationName(token.getIdentifierInfo()), token.getLocation(), clang::Sema::LookupOrdinaryName);
-			if(!A.LookupName(res, ParserProxy::get().CurrentScope(), false)) {
-				// TODO: Identifier could not be resolved => report error!
-				assert_fail() << "Unable to obtain declaration of identifier!";
-			}
-			auto varDecl = res.getAsSingle<clang::VarDecl>();
+                // look up the identifier name
+                clang::LookupResult res(A, clang::DeclarationName(token.getIdentifierInfo()), token.getLocation(), clang::Sema::LookupOrdinaryName);
+                if(!A.LookupName(res, ParserProxy::get().CurrentScope(), false)) {
+                    // TODO: Identifier could not be resolved => report error!
+                    assert_fail() << "Unable to obtain declaration of identifier!";
+                }
+                auto varDecl = res.getAsSingle<clang::VarDecl>();
 
-			mmap[map_str].push_back(ValueUnionPtr(new ValueUnion(
-			    // [3.0] A.ActOnIdExpression(ParserProxy::get().CurrentScope(), ScopeSpec, Name, false, false).takeAs<Stmt>(),
-			    new(A.Context) clang::DeclRefExpr(varDecl, false, varDecl->getType(), clang::VK_LValue, varDecl->getLocation()), &A.Context)));
-			break;
-		}
-		default: {
-			mmap[map_str].push_back(ValueUnionPtr(new ValueUnion(TokenToStr(token))));
-			break;
-		}
+                mmap[map_str].push_back(ValueUnionPtr(new ValueUnion(
+                    // [3.0] A.ActOnIdExpression(ParserProxy::get().CurrentScope(), ScopeSpec, Name, false, false).takeAs<Stmt>(),
+                    new(A.Context) clang::DeclRefExpr(varDecl, false, varDecl->getType(), clang::VK_LValue, varDecl->getLocation()), &A.Context)));
+                break;
+            }
+            default: {
+                mmap[map_str].push_back(ValueUnionPtr(new ValueUnion(TokenToStr(token))));
+                break;
+            }
 		}
 	}
+
+    void avoidAndAddToMap(clang::tok::TokenKind tok, clang::Token const& token, std::string const& map_str, MatchMap& mmap){
+		if(!map_str.size()) { return; }
+
+		// this hacks make it possible that if we have a token and we just want its string value
+		// we do not invoke clang semantics action on it.
+        std::string tokString;
+        if(tok == clang::tok::identifier) {
+            clang::UnqualifiedId Name;
+            Name.setIdentifier(token.getIdentifierInfo(), token.getLocation());
+            tokString = std::string(Name.Identifier->getNameStart(), Name.Identifier->getLength());
+            return;
+        }
+        else{
+            tokString = TokenToStr(token);
+        }
+        mmap[map_str].push_back(ValueUnionPtr(new ValueUnion(tokString)));
+        return;
+    }
+
+
 
 } // end pragma namespace
 } // End frontend namespace
