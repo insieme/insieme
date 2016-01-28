@@ -337,8 +337,8 @@ int main(int argc, char** argv) {
 
 	switch(options.backendHint.backend) {
 	case cmd::BackendEnum::Sequential: break;
+	case cmd::BackendEnum::OpenCL: compiler = cp::Compiler::getOpenCLCompiler(compiler); break;
 	case cmd::BackendEnum::Runtime:
-	case cmd::BackendEnum::OpenCL:
 	case cmd::BackendEnum::Pthreads:
 	default: compiler = cp::Compiler::getRuntimeCompiler(compiler);
 	}

@@ -83,6 +83,12 @@ Compiler Compiler::getRuntimeCompiler(const Compiler& base) {
 	return res;
 }
 
+Compiler Compiler::getOpenCLCompiler(const Compiler& base) {
+	Compiler res = getRuntimeCompiler(base);
+	res.addFlag("-lOpenCL");
+	return res;
+}
+
 Compiler Compiler::getOptimizedCompiler(const Compiler& base, const string& level) {
 	Compiler res = base;
 	res.addFlag("-O" + level);

@@ -97,6 +97,8 @@ namespace compiler {
 		static Compiler getDefaultCppCompiler();
 
 		static Compiler getRuntimeCompiler(const Compiler& baseCompiler = getDefaultC99Compiler());
+		
+		static Compiler getOpenCLCompiler(const Compiler& baseCompiler = getDefaultC99Compiler());
 
 		static Compiler getOptimizedCompiler(const Compiler& base, const string& level = "3");
 
