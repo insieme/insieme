@@ -60,7 +60,6 @@ friend class insieme::frontend::pragma::cpp_string_lit_p
 #include "insieme/utils/logging.h"
 #include "insieme/utils/string_utils.h"
 
-using namespace clang;
 using namespace insieme::frontend;
 using namespace insieme::frontend::pragma;
 
@@ -86,7 +85,7 @@ namespace pragma {
 	ValueUnion::~ValueUnion() {
 		if(ptrOwner && is<clang::Stmt*>()) {
 			assert_true(clangCtx) << "Invalid ASTContext associated with this element.";
-			clangCtx->Deallocate(get<Stmt*>());
+			clangCtx->Deallocate(get<clang::Stmt*>());
 		}
 		if(ptrOwner && is<std::string*>()) { delete get<std::string*>(); }
 	}
@@ -94,9 +93,9 @@ namespace pragma {
 	std::string ValueUnion::toStr() const {
 		std::string ret;
 		llvm::raw_string_ostream rs(ret);
-		if(is<Stmt*>()) {
+		if(is<clang::Stmt*>()) {
 			// [3.0] get<Stmt*>()->printPretty(rs, *clangCtx, 0, clang::PrintingPolicy(clangCtx->getLangOptions()));
-			get<Stmt*>()->printPretty(rs, 0, clangCtx->getPrintingPolicy());
+			get<clang::Stmt*>()->printPretty(rs, 0, clangCtx->getPrintingPolicy());
 		} else {
 			rs << *get<std::string*>();
 		}
@@ -271,7 +270,7 @@ namespace pragma {
 			err++;
 		} while(err < errStack.stackSize());
 
-		frontend::utils::clangPreprocessorDiag(pp, errLoc, DiagnosticsEngine::Error, ss.str());
+		frontend::utils::clangPreprocessorDiag(pp, errLoc, clang::DiagnosticsEngine::Error, ss.str());
 	}
 
 	// ------------------------------------ node ---------------------------
@@ -302,15 +301,6 @@ namespace pragma {
 
 	std::ostream& option::printTo(std::ostream& out) const {
 		return out << "option(" << *getNode() << ")";
-	}
-
-	template <clang::tok::TokenKind T>
-	std::ostream& Tok<T>::printTo(std::ostream& out) const {
-		if(tok.empty()) {
-			return out << clang::tok::getTokenName(T);
-		} else {
-			return out << "Tok(" << clang::tok::getTokenName(T) << ": " << tok << ")";
-		}
 	}
 
 	std::ostream& kwd::printTo(std::ostream& out) const {
@@ -382,7 +372,7 @@ namespace pragma {
 
 	bool expr_p::match(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const {
 		PP.EnableBacktrackAtThisPos();
-		Expr* result = ParserProxy::get().ParseExpression(PP);
+        clang::Expr* result = ParserProxy::get().ParseExpression(PP);
 		
 		if(result) {
 			PP.CommitBacktrackedTokens();
@@ -406,10 +396,10 @@ namespace pragma {
 		PP.recomputeCurLexerKind();
 		auto lex = dynamic_cast<clang::Lexer*>(PP.getCurrentLexer());
 		bool prev = lex->getLangOpts().CPlusPlus11;
-		const_cast<LangOptions&>(lex->getLangOpts()).CPlusPlus11 = true;
+		const_cast<clang::LangOptions&>(lex->getLangOpts()).CPlusPlus11 = true;
 		PP.EnterCachingLexMode();
 		FinalActions restore([&]{ 
-			const_cast<LangOptions&>(lex->getLangOpts()).CPlusPlus11 = prev;
+			const_cast<clang::LangOptions&>(lex->getLangOpts()).CPlusPlus11 = prev;
 		});
 		
 		clang::Token token;
@@ -431,9 +421,9 @@ namespace pragma {
 	bool kwd::match(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const {
 		clang::Token& token = ParserProxy::get().ConsumeToken();
 		if(token.getIdentifierInfo() && token.getIdentifierInfo()->getName() == kw) {
-			if(isAddToMap() && getMapName().empty()) {
+			if(isToBeAddedToMap() && getMapName().empty()) {
 				mmap[kw];
-			} else if(isAddToMap()) {
+			} else if(isToBeAddedToMap()) {
 				mmap[getMapName()].push_back(ValueUnionPtr(new ValueUnion(kw)));
 			}
 			return true;
@@ -458,56 +448,63 @@ namespace pragma {
 		}
 	}
 
-	void AddToMap(clang::tok::TokenKind tok, Token const& token, bool resolve, std::string const& map_str, MatchMap& mmap) {
+	void resolveAndAddToMap(clang::tok::TokenKind tok, clang::Token const& token, std::string const& map_str, MatchMap& mmap){
 		if(!map_str.size()) { return; }
 
-		Sema& A = ParserProxy::get().getParser()->getActions();
-
-		// HACK: FIXME
-		// this hacks make it possible that if we have a token and we just want its string value
-		// we do not invoke clang semantics action on it.
-		if(!resolve) {
-			if(tok == clang::tok::identifier) {
-				UnqualifiedId Name;
-				Name.setIdentifier(token.getIdentifierInfo(), token.getLocation());
-				mmap[map_str].push_back(ValueUnionPtr(new ValueUnion(std::string(Name.Identifier->getNameStart(), Name.Identifier->getLength()))));
-				return;
-			}
-			mmap[map_str].push_back(ValueUnionPtr(new ValueUnion(TokenToStr(token))));
-			return;
-		}
+        clang::Sema& A = ParserProxy::get().getParser()->getActions();
 
 		// We want to use clang sema to actually get the Clang node which is found out of this
 		// identifier
 		switch(tok) {
-		case clang::tok::numeric_constant:
-			mmap[map_str].push_back(
-			    ValueUnionPtr(new ValueUnion(A.ActOnNumericConstant(token).getAs<IntegerLiteral>(), &static_cast<clang::Sema&>(A).Context)));
-			break;
-		case clang::tok::identifier: {
-			UnqualifiedId Name;
-			CXXScopeSpec ScopeSpec;
-			Name.setIdentifier(token.getIdentifierInfo(), token.getLocation());
+            case clang::tok::numeric_constant:
+                mmap[map_str].push_back(
+                    ValueUnionPtr(new ValueUnion(A.ActOnNumericConstant(token).getAs<clang::IntegerLiteral>(), &static_cast<clang::Sema&>(A).Context)));
+                break;
+            case clang::tok::identifier: {
+                clang::UnqualifiedId Name;
+                clang::CXXScopeSpec ScopeSpec;
+                Name.setIdentifier(token.getIdentifierInfo(), token.getLocation());
 
-			// look up the identifier name
-			LookupResult res(A, clang::DeclarationName(token.getIdentifierInfo()), token.getLocation(), clang::Sema::LookupOrdinaryName);
-			if(!A.LookupName(res, ParserProxy::get().CurrentScope(), false)) {
-				// TODO: Identifier could not be resolved => report error!
-				assert_fail() << "Unable to obtain declaration of identifier!";
-			}
-			auto varDecl = res.getAsSingle<clang::VarDecl>();
+                // look up the identifier name
+                clang::LookupResult res(A, clang::DeclarationName(token.getIdentifierInfo()), token.getLocation(), clang::Sema::LookupOrdinaryName);
+                if(!A.LookupName(res, ParserProxy::get().CurrentScope(), false)) {
+                    // TODO: Identifier could not be resolved => report error!
+                    assert_fail() << "Unable to obtain declaration of identifier!";
+                }
+                auto varDecl = res.getAsSingle<clang::VarDecl>();
 
-			mmap[map_str].push_back(ValueUnionPtr(new ValueUnion(
-			    // [3.0] A.ActOnIdExpression(ParserProxy::get().CurrentScope(), ScopeSpec, Name, false, false).takeAs<Stmt>(),
-			    new(A.Context) clang::DeclRefExpr(varDecl, false, varDecl->getType(), VK_LValue, varDecl->getLocation()), &A.Context)));
-			break;
-		}
-		default: {
-			mmap[map_str].push_back(ValueUnionPtr(new ValueUnion(TokenToStr(token))));
-			break;
-		}
+                mmap[map_str].push_back(ValueUnionPtr(new ValueUnion(
+                    // [3.0] A.ActOnIdExpression(ParserProxy::get().CurrentScope(), ScopeSpec, Name, false, false).takeAs<Stmt>(),
+                    new(A.Context) clang::DeclRefExpr(varDecl, false, varDecl->getType(), clang::VK_LValue, varDecl->getLocation()), &A.Context)));
+                break;
+            }
+            default: {
+                mmap[map_str].push_back(ValueUnionPtr(new ValueUnion(TokenToStr(token))));
+                break;
+            }
 		}
 	}
+
+    void avoidAndAddToMap(clang::tok::TokenKind tok, clang::Token const& token, std::string const& map_str, MatchMap& mmap){
+		if(!map_str.size()) { return; }
+
+		// this hacks make it possible that if we have a token and we just want its string value
+		// we do not invoke clang semantics action on it.
+        std::string tokString;
+        if(tok == clang::tok::identifier) {
+            clang::UnqualifiedId Name;
+            Name.setIdentifier(token.getIdentifierInfo(), token.getLocation());
+            tokString = std::string(Name.Identifier->getNameStart(), Name.Identifier->getLength());
+            return;
+        }
+        else{
+            tokString = TokenToStr(token);
+        }
+        mmap[map_str].push_back(ValueUnionPtr(new ValueUnion(tokString)));
+        return;
+    }
+
+
 
 } // end pragma namespace
 } // End frontend namespace
