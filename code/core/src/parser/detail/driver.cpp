@@ -1089,11 +1089,37 @@ namespace parser {
 		}
 
 		DeclarationStmtPtr InspireDriver::genVariableDefinition(const location& l, const TypePtr& type, const std::string name, const ExpressionPtr& init) {
+			auto var = genVariableDeclaration(l, type, name);
+			if (!var) {
+				return nullptr;
+			}
+			return builder.declarationStmt(var, getScalar(init));
+		}
+
+		/**
+		 * constructs a new variable declaraion with a given type
+		 */
+		VariablePtr InspireDriver::genVariableDeclaration(const location& l, const TypePtr& type, const std::string name) {
 			auto resolvedType = resolveTypeAliases(l, type);
 			auto variable = builder.variable(resolvedType);
 			annotations::attachName(variable, name);
 			declareSymbol(l, name, variable);
-			return builder.declarationStmt(variable, getScalar(init));
+			if (whereErrors()) {
+				return nullptr;
+			}
+			return variable;
+		}
+
+		/**
+		 * constructs a new declaration statement for the variable with name name and the given init expression
+		 */
+		DeclarationStmtPtr InspireDriver::genDeclarationStmt(const location& l, const std::string name, const ExpressionPtr& init) {
+			auto var = lookupDeclared(name).isa<VariablePtr>();
+			if (!var) {
+				error(l, format("Symbol %s is not a variable", name));
+				return nullptr;
+			}
+			return builder.declarationStmt(var, getScalar(init));
 		}
 
 		ForStmtPtr InspireDriver::genForStmt(const location& l, const TypePtr& iteratorType, const std::string iteratorName, const ExpressionPtr& lowerBound,
