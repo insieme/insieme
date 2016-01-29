@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -678,8 +678,8 @@ namespace analysis {
 			}
 		)1N5P1RE");
 
-		EXPECT_EQ(countInstances(prog, builder.parseType("int<4>")), 10);
-		EXPECT_EQ(countInstances(prog, builder.intLit(1)), 2);
+		EXPECT_EQ(8, countInstances(prog, builder.parseType("int<4>")));
+		EXPECT_EQ(2, countInstances(prog, builder.intLit(1)));
 	}
 
 	TEST(Types, FreeTagTypeReferences) {

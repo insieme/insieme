@@ -1097,7 +1097,7 @@ namespace parser {
 		}
 
 		/**
-		 * constructs a new variable declaraion with a given type
+		 * constructs a new variable declaration with a given type
 		 */
 		VariablePtr InspireDriver::genVariableDeclaration(const location& l, const TypePtr& type, const std::string name) {
 			auto resolvedType = resolveTypeAliases(l, type);
@@ -1120,6 +1120,17 @@ namespace parser {
 				return nullptr;
 			}
 			return builder.declarationStmt(var, getScalar(init));
+		}
+
+		/**
+		 * constructs a new declaration statement for the variable with an undefined init expression
+		 */
+		DeclarationStmtPtr InspireDriver::genUndefinedDeclarationStmt(const location& l, const TypePtr& type, const std::string name) {
+			auto var = genVariableDeclaration(l, type, name);
+			if (!var) {
+				return nullptr;
+			}
+			return builder.declarationStmt(var, var);
 		}
 
 		ForStmtPtr InspireDriver::genForStmt(const location& l, const TypePtr& iteratorType, const std::string iteratorName, const ExpressionPtr& lowerBound,
