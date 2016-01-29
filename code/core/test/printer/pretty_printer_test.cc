@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -971,7 +971,7 @@ TEST(PrettyPrinter, FreeFunctions) {
 				"  a.func();"
 				"}";
 
-		auto ir = builder.parseStmt(input);
+		auto ir = builder.normalize(builder.parseStmt(input));
 
 		PrettyPrinter printer(ir, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::PRINT_CASTS
 									| PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_ATTRIBUTES
@@ -985,8 +985,8 @@ TEST(PrettyPrinter, FreeFunctions) {
 				  "    }\n"
 				  "};\n"
 				  "{\n"
-				  "    var ref<A,f,f,plain> v13 = ref_var(type_lit(A));\n"
-				  "    v13.func();\n"
+				  "    var ref<A,f,f,plain> v0 = ref_var(type_lit(A));\n"
+				  "    v0.func();\n"
 				  "}", toString(printer));
 	}
 
@@ -1002,7 +1002,7 @@ TEST(PrettyPrinter, FreeFunctions) {
 				"  a.func();"
 				"}";
 
-		auto ir = builder.parseStmt(input);
+		auto ir = builder.normalize(builder.parseStmt(input));
 
 		PrettyPrinter printer(ir, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::PRINT_CASTS
 									| PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_ATTRIBUTES
@@ -1016,8 +1016,8 @@ TEST(PrettyPrinter, FreeFunctions) {
 				  "    1+1;\n"
 				  "};\n"
 				  "{\n"
-				  "    var ref<A,f,f,plain> v87 = ref_var(type_lit(A));\n"
-				  "    v87.func();\n"
+				  "    var ref<A,f,f,plain> v0 = ref_var(type_lit(A));\n"
+				  "    v0.func();\n"
 				  "}", toString(printer));
 	}
 
@@ -1031,7 +1031,7 @@ TEST(PrettyPrinter, FreeFunctions) {
 				"  var ref<A> a = foo(ref_var(type_lit(A)));"
 				"}";
 
-		auto ir = builder.parseStmt(input);
+		auto ir = builder.normalize(builder.parseStmt(input));
 
 		PrettyPrinter printer(ir, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::PRINT_CASTS
 									| PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_ATTRIBUTES
@@ -1042,7 +1042,7 @@ TEST(PrettyPrinter, FreeFunctions) {
 				  "};\n"
 				  "decl ctor : A :: foo = () { };\n"
 				  "{\n"
-				  "    var ref<A,f,f,plain> v130 = foo(ref_var(type_lit(A)));\n"
+				  "    var ref<A,f,f,plain> v0 = foo(ref_var(type_lit(A)));\n"
 				  "}", toString(printer));
 	}
 
