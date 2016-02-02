@@ -103,8 +103,8 @@ int main ( int argc, char *argv[] )
     Local, double W[M][N], the solution computed at the latest iteration.
 */
 {
-# define M 20
-# define N 20
+# define M 384
+# define N 384
 
   double diff;
   double epsilon = 0.001;
@@ -250,10 +250,12 @@ int main ( int argc, char *argv[] )
       {
         for ( j = 1; j < N - 1; j++ )
         {
-          if ( my_diff < fabs ( w[i][j] - u[i][j] ) )
-          {
-            my_diff = fabs ( w[i][j] - u[i][j] );
-          }
+  //        if ( my_diff < fabs ( w[i][j] - u[i][j] ) )
+  //        {
+  //          my_diff = fabs ( w[i][j] - u[i][j] );
+  //        }
+double their_diff = fabs ( w[i][j] - u[i][j] );
+my_diff = (my_diff < their_diff) ? their_diff : my_diff;
         }
       }
 # pragma omp critical
