@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -81,41 +81,41 @@ namespace backend {
 				print("o.a = %d\n", *o.a);
 			
 				// updated member a directly
-				var ref<int> x = ref_narrow(o, dp_member(dp_root(type_lit(obj)), lit("a"), type_lit(int)));
-				x = 12;
-				print("Equal: %d\n", ref_eq(o.a, x));
-				print("x = %d \t o.a = %d\n", *x, *o.a);
+				var ref<ref<int>> x = ref_narrow(o, dp_member(dp_root(type_lit(obj)), lit("a"), type_lit(int)));
+				*x = 12;
+				print("Equal: %d\n", ref_eq(o.a, *x));
+				print("x = %d \t o.a = %d\n", **x, *o.a);
 			
 		
 				// udpate element of b directly
 				o.b[2u] = 0;
 				print("o.b[2] = %d\n", *o.b[2u]);
 			
-				var ref<int> y = ref_narrow(o, dp_element(dp_member(dp_root(type_lit(obj)), lit("b"), type_lit(array<int,4>)), 2u));
-				y = 12;
-				print("Equal: %d\n", ref_eq(o.b[2u], y));
-				print("y = %d \t o.b[2] = %d\n", *y, *o.b[2u]);
+				var ref<ref<int>> y = ref_narrow(o, dp_element(dp_member(dp_root(type_lit(obj)), lit("b"), type_lit(array<int,4>)), 2u));
+				*y = 12;
+				print("Equal: %d\n", ref_eq(o.b[2u], *y));
+				print("y = %d \t o.b[2] = %d\n", **y, *o.b[2u]);
 		
 			
 				// expand a definition
-				var ref<array<int,4>> v = ref_expand(y, dp_element(dp_root(type_lit(array<int,4>)), 2u));
-				v[1u] = 10;
-				v[2u] = 14;
+				var ref<ref<array<int,4>>> v = ref_expand(*y, dp_element(dp_root(type_lit(array<int,4>)), 2u));
+				(*v)[1u] = 10;
+				(*v)[2u] = 14;
 			
-				print("Equal: %d\n", ref_eq(o.b, v));
+				print("Equal: %d\n", ref_eq(o.b, *v));
 				print("v[1] = %d \t v[2] = %d \t o.v[1] = %d \t o.v[2] = %d \t y = %d\n",
-						*v[1u], *v[2u], *o.b[1u], *o.b[2u], *y);
+						(**v)[1u], (**v)[2u], *o.b[1u], *o.b[2u], **y);
 			
 			
 				// handle nested element
-				var ref<int> first = ref_narrow(o, dp_member(dp_member(dp_root(type_lit(obj)), lit("c"), type_lit(pair)), lit("first"), type_lit(int)));
+				var ref<ref<int>> first = ref_narrow(o, dp_member(dp_member(dp_root(type_lit(obj)), lit("c"), type_lit(pair)), lit("first"), type_lit(int)));
 			
 				// check reference equality
-				print("Equal: %d\n", ref_eq(o.c.first, first));
+				print("Equal: %d\n", ref_eq(o.c.first, *first));
 			
 				// and the reverse
-				var ref<obj> full = ref_expand(first, dp_member(dp_member(dp_root(type_lit(obj)), lit("c"), type_lit(pair)), lit("first"), type_lit(int)));
-				print("Equal: %d\n", ref_eq(o,full));
+				var ref<ref<obj>> full = ref_expand(*first, dp_member(dp_member(dp_root(type_lit(obj)), lit("c"), type_lit(pair)), lit("first"), type_lit(int)));
+				print("Equal: %d\n", ref_eq(o,*full));
 			}
 		)").as<core::ProgramPtr>();
 

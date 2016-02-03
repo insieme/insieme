@@ -795,7 +795,7 @@ namespace conversion {
 
 		if(const clang::InitListExpr* initList = llvm::dyn_cast<clang::InitListExpr>(compLitExpr->getInitializer())) {
 			// for some reason, this is an lvalue
-			retIr = builder.refVar(Visit(initList));
+			retIr = builder.refTemp(Visit(initList));
 		}
 		
 		if(!retIr) frontend_assert(false) << "Unimplemented type of CompoundLiteralExpr encountered";

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -1600,12 +1600,6 @@ namespace analysis {
 
 		// ... or the ref_null literal
 		if(refExt.isRefNull(value)) { return true; }
-
-		// TODO: remove this when frontend is fixed!!
-		// => compensate for silly stuff like var(*getNull()) or NULL aka ref_deref(ref_null)
-		if(core::analysis::isCallOf(value, refExt.getRefVarInit()) || core::analysis::isCallOf(value, refExt.getRefDeref())) {
-			return isZero(core::analysis::getArgument(value, 0));
-		}
 
 		// otherwise, it is not zero
 		return false;

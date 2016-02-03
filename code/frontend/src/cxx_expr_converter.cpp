@@ -323,7 +323,7 @@ namespace conversion {
 				    << (*converter.getIRTranslationUnit().getTypes().find(resType.as<core::GenericTypePtr>())).second << "\n";
 
 			// first constructor argument is the object memory location -- we need to build this either on the stack or heap
-			auto irMemLoc = onStack ? builder.undefinedVar(resType) : builder.undefinedNew(resType);
+			auto irMemLoc = onStack ? core::lang::buildRefTemp(resType) : builder.undefinedNew(resType);
 			
 			// get constructor lambda
 			auto constructorLambda = converter.getFunMan()->lookup(constructExpr->getConstructor());
@@ -844,7 +844,7 @@ namespace conversion {
 		frontend_assert(llvm::isa<clang::ConstantArrayType>(subExType)) << "std::initializer_list sub expression has no constant size array type.";
 		auto numElements = llvm::cast<clang::ConstantArrayType>(subExType)->getSize().getSExtValue();
 		//get this type, return type, and create list of arguments
-		auto thisTy = builder.undefinedVar(initListIRType);
+		auto thisTy = core::lang::buildRefTemp(initListIRType);
 		core::ExpressionList args { thisTy, subEx, converter.builder.uintLit(numElements) };
 		auto retType = ctorLambda->getType().as<core::FunctionTypePtr>()->getReturnType();
 		//build call to constructor

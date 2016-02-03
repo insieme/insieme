@@ -1076,6 +1076,50 @@ namespace checks {
 		EXPECT_TRUE(check(ok3, typeCheck).empty()) << check(ok3, typeCheck);
 	}
 
+	TEST(DeclarationStmtTypeCheck, ReferenceSemantics) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		auto& basic = manager.getLangBasic();
+		const auto& int4 = basic.getInt4();
+		const auto& int8 = basic.getInt8();
+
+		CheckPtr typeCheck = make_check<DeclarationStmtTypeCheck>();
+
+		{ //plain integer
+			DeclarationStmtPtr ok = builder.declarationStmt(builder.variable(builder.refType(int4)), builder.literal(int4, "42"));
+			EXPECT_TRUE(check(ok, typeCheck).empty()) << check(ok, typeCheck);
+		}
+
+		{ //const integer
+			DeclarationStmtPtr ok = builder.declarationStmt(builder.variable(builder.refType(int4, true)), builder.literal(int4, "42"));
+			EXPECT_TRUE(check(ok, typeCheck).empty()) << check(ok, typeCheck);
+		}
+
+		{ //volatile integer
+			DeclarationStmtPtr ok = builder.declarationStmt(builder.variable(builder.refType(int4, false, true)), builder.literal(int4, "42"));
+			EXPECT_TRUE(check(ok, typeCheck).empty()) << check(ok, typeCheck);
+		}
+
+		{ //cpp ref
+			auto var = builder.variable(builder.refType(int4, false, false, lang::ReferenceType::Kind::CppReference));
+			DeclarationStmtPtr ok = builder.declarationStmt(var, var);
+			EXPECT_TRUE(check(ok, typeCheck).empty()) << check(ok, typeCheck);
+		}
+
+		{ //cpp rref
+			auto var = builder.variable(builder.refType(int4, false, false, lang::ReferenceType::Kind::CppRValueReference));
+			DeclarationStmtPtr ok = builder.declarationStmt(var, var);
+			EXPECT_TRUE(check(ok, typeCheck).empty()) << check(ok, typeCheck);
+		}
+
+		{ //different types do not work
+			DeclarationStmtPtr err = builder.declarationStmt(builder.variable(builder.refType(int4)), builder.literal(int8, "42"));
+			ASSERT_FALSE(check(err, typeCheck).empty());
+			EXPECT_PRED2(containsMSG, check(err, typeCheck), Message(NodeAddress(err), EC_TYPE_INVALID_INITIALIZATION_EXPR, "", Message::ERROR));
+		}
+	}
+
 	TEST(DeclarationStmtSemanticCheck, Basic) {
 		NodeManager manager;
 		IRBuilder builder(manager);
@@ -1589,10 +1633,10 @@ namespace checks {
 
 		ExpressionPtr arrayPtr = builder.parseExpr("array_create(type_lit(12),[0])");
 
-		// also, allow array values to be used within ref.new, ref.var, struct, tuple and union expressions
+		// also, allow array values to be used within ref.new, ref.temp, struct, tuple and union expressions
 
-		// ref.var
-		cur = builder.refVar(arrayPtr);
+		// ref.temp
+		cur = builder.refTemp(arrayPtr);
 		errors = check(cur, typeCheck);
 		EXPECT_TRUE(errors.empty()) << cur << "\n" << errors;
 

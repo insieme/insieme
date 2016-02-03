@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -366,8 +366,8 @@ namespace pattern {
 			                type);
 		}
 
-		inline TreePattern refVar(const TreePattern& expr = any) {
-			return callExpr(lazyAtom([](core::NodeManager& mgr) { return mgr.getLangExtension<lang::ReferenceExtension>().getRefVar(); }), expr);
+		inline TreePattern refTemp(const TreePattern& expr = any) {
+			return callExpr(lazyAtom([](core::NodeManager& mgr) { return mgr.getLangExtension<lang::ReferenceExtension>().getRefTemp(); }), expr);
 		}
 
 		inline TreePattern refNew(const TreePattern& expr = any) {

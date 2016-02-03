@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -33,7 +33,6 @@
  * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
-
 
 int main() {
 //===-------------------------------------------------------------------------------------------------------------------------------- UNARY OPERATORS ---===
@@ -112,7 +111,7 @@ int main() {
 		a + b;
 	}
 	#pragma test expect_ir(                                                                                                                                    \
-	    "{var ref<int<4>,t,f,plain> v0  = ref_cast(ref_var_init(1), type_lit(t), type_lit(f), type_lit(plain)); var ref<int<4>,t,f,cpp_ref> v1 = ref_cast(v0, type_lit(t), type_lit(f), type_lit(cpp_ref)); *v0+*v1; } ")
+	    "{var ref<int<4>,t,f,plain> v0  = ref_cast(ref_temp_init(1), type_lit(t), type_lit(f), type_lit(plain)); var ref<int<4>,t,f,cpp_ref> v1 = ref_cast(v0, type_lit(t), type_lit(f), type_lit(cpp_ref)); *v0+*v1; } ")
 	{
 		const int a = 1;
 		const int& b = a;
@@ -177,7 +176,7 @@ int main() {
 	// WITH DIFFERENT TYPES ///////////////////////////////////////////////////
 
 	#pragma test expect_ir(                                                                                                                                    \
-	    "{var ref<int<4>,f,f,plain> v0; var ref<real<4>,f,f,plain> v1 = ref_var(type_lit(real<4>)); var ref<int<4>,f,f,cpp_ref> v2 = ref_cast(v0, type_lit(f), type_lit(f), type_lit(cpp_ref)); var ref<real<4>,f,f,cpp_ref> v3 = ref_cast(v1, type_lit(f), type_lit(f), type_lit(cpp_ref)); num_cast(*v2, type_lit(real<4>))+*v3; }")
+	    "{var ref<int<4>,f,f,plain> v0; var ref<real<4>,f,f,plain> v1 = v1; var ref<int<4>,f,f,cpp_ref> v2 = ref_cast(v0, type_lit(f), type_lit(f), type_lit(cpp_ref)); var ref<real<4>,f,f,cpp_ref> v3 = ref_cast(v1, type_lit(f), type_lit(f), type_lit(cpp_ref)); num_cast(*v2, type_lit(real<4>))+*v3; }")
 
 	{
 		int a;
@@ -218,7 +217,7 @@ int main() {
 	}
 
 	#pragma test expect_ir(                                                                                                                                    \
-	    "{var ref<int<4>,f,f,plain> v0; var ref<ptr<int<4>>,f,f,plain> v1 = ref_var(type_lit(ptr<int<4>>)); var ref<ptr<int<4>>,f,f,cpp_ref> v2 = ref_cast(v1, type_lit(f), type_lit(f), type_lit(cpp_ref)); cxx_style_assignment(v2, ptr_from_ref(v0)); }")
+	    "{var ref<int<4>,f,f,plain> v0; var ref<ptr<int<4>>,f,f,plain> v1 = v1; var ref<ptr<int<4>>,f,f,cpp_ref> v2 = ref_cast(v1, type_lit(f), type_lit(f), type_lit(cpp_ref)); cxx_style_assignment(v2, ptr_from_ref(v0)); }")
 	{
 		int v;
 		intPtr a;

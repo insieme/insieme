@@ -161,6 +161,16 @@ namespace lang {
 		LANG_EXT_DERIVED_WITH_NAME(RefVarInit, "ref_var_init", "(v : 'a) -> ref<'a,f,f> { auto r = ref_var(type_lit('a)); r = v; return r; }")
 
 		/**
+		 * A built-in derived operator allocating memory on the stack.
+		 */
+		LANG_EXT_DERIVED_WITH_NAME(RefTemp, "ref_temp", "(t : type<'a>) -> ref<'a,f,f> { return ref_alloc(t, mem_loc_stack); }")
+
+		/**
+		 * A built-in derived operator allocating memory on the stack and initializing it.
+		 */
+		LANG_EXT_DERIVED_WITH_NAME(RefTempInit, "ref_temp_init", "(v : 'a) -> ref<'a,f,f> { auto r = ref_temp(type_lit('a)); r = v; return r; }")
+
+		/**
 		 * A built-in derived operator allocating memory on the heap.
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(RefNew, "ref_new", "(t : type<'a>) -> ref<'a,f,f> { return ref_alloc(t, mem_loc_heap ); }")
@@ -451,6 +461,8 @@ namespace lang {
 	
 	ExpressionPtr buildRefCast(const ExpressionPtr& refExpr, const TypePtr& targetTy);
 	ExpressionPtr buildRefKindCast(const ExpressionPtr& refExpr, ReferenceType::Kind newKind);
+
+	ExpressionPtr buildRefTemp(const TypePtr& type);
 
 	ExpressionPtr buildRefNull(const TypePtr& type);
 

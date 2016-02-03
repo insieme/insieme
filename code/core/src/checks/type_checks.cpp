@@ -751,26 +751,30 @@ namespace checks {
 		TypePtr initType = init->getType();
 
 		// if the types are equivalent, everything is fine
-		if(analysis::equalTypes(variableType, initType) || types::isSubTypeOf(initType, variableType)) return res;
+		if(types::isSubTypeOf(initType, variableType)) return res;
 
-		// qualifiers can be added freely
-		if(lang::isReference(variableType) && lang::isReference(initType)) {
-			auto varRefType = lang::ReferenceType(variableType);
-			auto initRefType = lang::ReferenceType(initType);
-			if(varRefType.getElementType() == initRefType.getElementType()) {
-				if((!initRefType.isVolatile() || varRefType.isVolatile()) && (!initRefType.isConst() || varRefType.isConst())) {
+		// try to find a valid type variable instantiation
+		TypePtr paramType = variableType;
+		if(analysis::isRefType(paramType)) {
+			// plain refs get unwrapped, CPP refs and rrefs get used as is (see transform::materialize)
+			if(lang::isPlainReference(paramType)) {
+				paramType = analysis::getReferencedType(paramType);
+			}
+
+			// if we can find a valid instantiation, then this declaration is valid
+			if (types::getTypeVariableInstantiation(declaration->getNodeManager(), paramType, initType)) {
+				return res;
+
+				// if the substitution failed and we are assigning to a cpp ref or rref
+			} else if (lang::isCppReference(paramType) || lang::isCppRValueReference(paramType)) {
+				// we try to find a substitution for the case where the parameter would be a plain ref
+				auto paramRef = lang::ReferenceType(paramType);
+				auto plainRefType = lang::buildRefType(paramRef.getElementType(), paramRef.isConst(), paramRef.isVolatile(), lang::ReferenceType::Kind::Plain);
+				//try to find a substitution again with the changed reference kind
+				if (types::getTypeVariableInstantiation(declaration->getNodeManager(), plainRefType, initType)) {
 					return res;
 				}
 			}
-		}
-
-		// otherwise, we check whether there is a constructor for the lhs type accepting the rhs type
-		if(lang::isPlainReference(variableType)) {
-			VLOG(2) << "\n==================\n reffed type: " << *analysis::getReferencedType(variableType) << "\n param type: " << *initType
-				    << "\n has: " << analysis::hasConstructorAccepting(analysis::getReferencedType(variableType), initType)
-				    << "\n================= >>>>>>>>>>>>>>>>>>>>>>>>>>>>\n";
-
-			if(analysis::hasConstructorAccepting(analysis::getReferencedType(variableType), initType)) return res;
 		}
 
 		add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,

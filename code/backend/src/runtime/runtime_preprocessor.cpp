@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -246,7 +246,7 @@ namespace runtime {
 				core::ExpressionPtr expr;
 				if (!basic.isUnit(resultType)) {
 					var = builder.variable(builder.refType(resultType));
-					stmts.push_back(builder.declarationStmt(var, builder.refVar(builder.getZero(resultType))));
+					stmts.push_back(builder.declarationStmt(var, builder.getZero(resultType)));
 					expr = builder.tupleExpr(toVector<core::ExpressionPtr>(builder.deref(argc), builder.deref(argv), var));
 				} else {
 					expr = builder.tupleExpr(toVector<core::ExpressionPtr>(builder.deref(argc), builder.deref(argv)));

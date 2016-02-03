@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -89,13 +89,10 @@ namespace cilk {
 							core::IRBuilder builder(manager);
 
 							// initialize the variable using an undefined
-							newStmts.push_back(
-							    builder.declarationStmt(decl.getVariable(), builder.undefinedVar(core::analysis::getReferencedType(type))));
+							newStmts.push_back(builder.declarationStmt(decl.getVariable(), decl.getVariable()));
 
 							// assign the value
 							core::ExpressionPtr init = decl->getInitialization();
-							assert_true(core::analysis::isCallOf(init, manager.getLangExtension<core::lang::ReferenceExtension>().getRefVarInit()));
-							init = init.as<core::CallExprPtr>()->getArgument(0);
 							newStmts.push_back(builder.parallel(builder.assign(decl.getVariable(), init), 1));
 
 							// done

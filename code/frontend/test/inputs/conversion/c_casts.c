@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -53,38 +53,38 @@ int main() {
 	//===---------------------------------------------------------------------------------------------------------------------------------- NUMERIC CASTS ---===
 
 	// IntegralToFloating
-	#pragma test expect_ir("{ var ref<int<4>,f,f> v0; var ref<real<4>,f,f> v1 = ref_var_init(num_cast(*v0,type_lit(real<4>))); }")
+	#pragma test expect_ir("{ var ref<int<4>,f,f> v0; var ref<real<4>,f,f> v1 = num_cast(*v0,type_lit(real<4>)); }")
 	{
 		int x;
 		float y = x;
 	}
 	
 	// FloatingToIntegral
-	#pragma test expect_ir("{ var ref<real<4>,f,f> v0; var ref<int<4>,f,f> v1 = ref_var_init(num_cast(*v0,type_lit(int<4>))); }")
+	#pragma test expect_ir("{ var ref<real<4>,f,f> v0; var ref<int<4>,f,f> v1 = num_cast(*v0,type_lit(int<4>)); }")
 	{
 		float x;
 		int y = x;
 	}
 	
 	// FloatingCast
-	#pragma test expect_ir("{ var ref<real<4>,f,f> v0; var ref<real<8>,f,f> v1 = ref_var_init(num_cast(*v0,type_lit(real<8>))); }")
+	#pragma test expect_ir("{ var ref<real<4>,f,f> v0; var ref<real<8>,f,f> v1 = num_cast(*v0,type_lit(real<8>)); }")
 	{
 		float x;
 		double y = x;
 	}
 
 	// IntegralCast
-	#pragma test expect_ir("{ var ref<int<4>,f,f> v0; var ref<uint<4>,f,f> v1 = ref_var_init(num_cast(*v0,type_lit(uint<4>))); }")
+	#pragma test expect_ir("{ var ref<int<4>,f,f> v0; var ref<uint<4>,f,f> v1 = num_cast(*v0,type_lit(uint<4>)); }")
 	{
 		int x;
 		unsigned y = x;
 	}
-	#pragma test expect_ir("{ var ref<uint<8>,f,f> v0; var ref<int<4>,f,f> v1 = ref_var_init(num_cast(*v0,type_lit(int<4>))); }")
+	#pragma test expect_ir("{ var ref<uint<8>,f,f> v0; var ref<int<4>,f,f> v1 = num_cast(*v0,type_lit(int<4>)); }")
 	{
 		unsigned long x;
 		int y = x;
 	}
-	#pragma test expect_ir("{ var ref<char,f,f> v0; var ref<int<1>,f,f> v1 = ref_var_init(num_cast(*v0,type_lit(int<1>))); }")
+	#pragma test expect_ir("{ var ref<char,f,f> v0; var ref<int<1>,f,f> v1 = num_cast(*v0,type_lit(int<1>)); }")
 	{
 		char x;
 		signed char y = x;
@@ -93,73 +93,73 @@ int main() {
 	//===---------------------------------------------------------------------------------------------------------------------------------- POINTER CASTS ---===
 	
 	// implicit type change
-	#pragma test expect_ir("{ var ref<ptr<unit,f,f>,f,f> v0; var ref<ptr<int<4>,f,f>,f,f> v1 = ref_var_init(ptr_reinterpret(*v0, type_lit(int<4>))); }")
+	#pragma test expect_ir("{ var ref<ptr<unit,f,f>,f,f> v0; var ref<ptr<int<4>,f,f>,f,f> v1 = ptr_reinterpret(*v0, type_lit(int<4>)); }")
 	{
 		void* x;
 		int* y = x;
 	}
 	
 	// explicit type change
-	#pragma test expect_ir("{ var ref<ptr<unit,f,f>,f,f> v0; var ref<ptr<int<4>,f,f>,f,f> v1 = ref_var_init(ptr_reinterpret(*v0, type_lit(int<4>))); }")
+	#pragma test expect_ir("{ var ref<ptr<unit,f,f>,f,f> v0; var ref<ptr<int<4>,f,f>,f,f> v1 = ptr_reinterpret(*v0, type_lit(int<4>)); }")
 	{
 		void* x;
 		int* y = (int*)x;
 	}
 
 	// implicit qualifier change
-	#pragma test expect_ir("{ var ref<ptr<unit,t,f>,f,f> v0; var ref<ptr<unit,f,f>,f,f> v1 = ref_var_init(ptr_cast(*v0, type_lit(f), type_lit(f))); }")
+	#pragma test expect_ir("{ var ref<ptr<unit,t,f>,f,f> v0; var ref<ptr<unit,f,f>,f,f> v1 = ptr_cast(*v0, type_lit(f), type_lit(f)); }")
 	{
 		const void* x;
 		void* y = x;
 	}
 	
 	// explicit qualifier change
-	#pragma test expect_ir("{ var ref<ptr<unit,t,f>,f,f> v0; var ref<ptr<unit,f,f>,f,f> v1 = ref_var_init(ptr_cast(*v0, type_lit(f), type_lit(f))); }")
+	#pragma test expect_ir("{ var ref<ptr<unit,t,f>,f,f> v0; var ref<ptr<unit,f,f>,f,f> v1 = ptr_cast(*v0, type_lit(f), type_lit(f)); }")
 	{
 		const void* x;
 		void* y = (void*)x;
 	}
 	
 	// implicit type + qualifier change
-	#pragma test expect_ir("{ var ref<ptr<unit,t,f>,f,f> v0; var ref<ptr<int<4>,f,f>,f,f> v1 = ref_var_init(ptr_cast(ptr_reinterpret(*v0, type_lit(int<4>)), type_lit(f), type_lit(f))); }")
+	#pragma test expect_ir("{ var ref<ptr<unit,t,f>,f,f> v0; var ref<ptr<int<4>,f,f>,f,f> v1 = ptr_cast(ptr_reinterpret(*v0, type_lit(int<4>)), type_lit(f), type_lit(f)); }")
 	{
 		const void* x;
 		int* y = x;
 	}
 	
 	// explicit type + qualifier change
-	#pragma test expect_ir("{ var ref<ptr<unit,t,f>,f,f> v0; var ref<ptr<int<4>,f,f>,f,f> v1 = ref_var_init(ptr_cast(ptr_reinterpret(*v0, type_lit(int<4>)), type_lit(f), type_lit(f))); }")
+	#pragma test expect_ir("{ var ref<ptr<unit,t,f>,f,f> v0; var ref<ptr<int<4>,f,f>,f,f> v1 = ptr_cast(ptr_reinterpret(*v0, type_lit(int<4>)), type_lit(f), type_lit(f)); }")
 	{
 		const void* x;
 		int* y = (int*)x;
 	}
 	
 	// implicit int to pointer
-	#pragma test expect_ir("var ref<ptr<unit,f,f>,f,f> v0 = ref_var_init(ptr_from_integral(5, type_lit(ptr<unit,f,f>)));")
+	#pragma test expect_ir("var ref<ptr<unit,f,f>,f,f> v0 = ptr_from_integral(5, type_lit(ptr<unit,f,f>));")
 	void* a = 5;
 
 	// explicit int to pointer
-	#pragma test expect_ir("var ref<ptr<unit,f,f>,f,f> v0 = ref_var_init(ptr_from_integral(5, type_lit(ptr<unit,f,f>)));")
+	#pragma test expect_ir("var ref<ptr<unit,f,f>,f,f> v0 = ptr_from_integral(5, type_lit(ptr<unit,f,f>));")
 	void* a2 = (void*)5;
 	
 	// implicit pointer to int
-	#pragma test expect_ir("var ref<int<4>,f,f> v0 = ref_var_init(ptr_to_integral(ptr_from_integral(5, type_lit(ptr<unit,f,f>)), type_lit(int<4>)));")
+	#pragma test expect_ir("var ref<int<4>,f,f> v0 = ptr_to_integral(ptr_from_integral(5, type_lit(ptr<unit,f,f>)), type_lit(int<4>));")
 	int ifromp = (void*)5;
 
 	// explicit pointer to int
-	#pragma test expect_ir("var ref<int<4>,f,f> v0 = ref_var_init(ptr_to_integral(ptr_from_integral(5, type_lit(ptr<unit,f,f>)), type_lit(int<4>)));")
+	#pragma test expect_ir("var ref<int<4>,f,f> v0 = ptr_to_integral(ptr_from_integral(5, type_lit(ptr<unit,f,f>)), type_lit(int<4>));")
 	int ifromp2 = (int)(void*)5;
 	
 	// implicit int to volatile pointer
-	#pragma test expect_ir("var ref<ptr<unit,f,t>,f,f> v0 = ref_var_init(ptr_from_integral(5, type_lit(ptr<unit,f,t>)));")
+	#pragma test expect_ir("var ref<ptr<unit,f,t>,f,f> v0 = ptr_from_integral(5, type_lit(ptr<unit,f,t>));")
 	volatile void* vpointerfromint = 5;
 	
 	// implicit uint to pointer
-	#pragma test expect_ir("var ref<ptr<unit,f,f>,f,f> v0 = ref_var_init(ptr_from_integral(5u, type_lit(ptr<unit,f,f>)));")
+	#pragma test expect_ir("var ref<ptr<unit,f,f>,f,f> v0 = ptr_from_integral(5u, type_lit(ptr<unit,f,f>));")
 	void* pointerfromuint = 5u;
 	
 	// implicit pointer to uint
-	#pragma test expect_ir("var ref<uint<4>,f,f> v0 = ref_var_init(ptr_to_integral(ptr_from_integral(5, type_lit(ptr<unit,f,f>)), type_lit(uint<4>)));")
+	#pragma test expect_ir("var ref<uint<4>,f,f> v0 = ptr_to_integral(ptr_from_integral(5, type_lit(ptr<unit,f,f>)), type_lit(uint<4>));")
 	unsigned uintfrompointer = (void*)5;
 
 	//===------------------------------------------------------------------------------------------------------------------------------------- MISC CASTS ---===

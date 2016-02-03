@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -94,12 +94,12 @@ int main() {
 
 	// INIT EXPRESSIONS ///////////////////////////////////////////////////////////
 	
-	#pragma test expect_ir(FOO_FUN "{ var ref<foo_ptr_type,f,f> v0 = ref_var_init(ptr_of_function(IMP_foo)); }")
+	#pragma test expect_ir(FOO_FUN "{ var ref<foo_ptr_type,f,f> v0 = ptr_of_function(IMP_foo); }")
 	{
 		int (*ptr)(int) = foo;
 	}
 
-	#pragma test expect_ir(FOO_FUN "{ var ref<foo_ptr_type,f,f> v0 = ref_var_init(ptr_of_function(IMP_foo)); }")
+	#pragma test expect_ir(FOO_FUN "{ var ref<foo_ptr_type,f,f> v0 = ptr_of_function(IMP_foo); }")
 	{
 		int (*ptr)(int) = &foo;
 	}
