@@ -883,7 +883,7 @@ TEST(PrettyPrinter, JustOutermostScope) {
 				fun(fun(*d));
 				fun(rfun(e));
 				lfun(f);
-				rfun(ref_var_init(lfun(g)));
+				rfun(ref_temp_init(lfun(g)));
 			}
 		}
 	)1N5P1RE"));
@@ -914,7 +914,7 @@ TEST(PrettyPrinter, JustOutermostScope) {
 			"        fun(fun(*v3));\n"
 			"        fun(rfun(v4));\n"
 			"        lfun(v5);\n"
-			"        rfun(ref_var_init(lfun(v6)));\n"
+			"        rfun(ref_temp_init(lfun(v6)));\n"
 			"    };\n"
 			"}";
 
@@ -934,7 +934,7 @@ TEST(PrettyPrinter, JustOutermostScope) {
 			"        fun(fun(*v3));\n"
 			"        fun(rfun(v4));\n"
 			"        lfun(v5);\n"
-			"        rfun(ref_var_init(lfun(v6)));\n"
+			"        rfun(ref_temp_init(lfun(v6)));\n"
 			"    };\n"
 			"}";
 
@@ -1028,7 +1028,7 @@ TEST(PrettyPrinter, FreeFunctions) {
 				"};"
 				"def A :: ctor foo = () {};"
 				"{"
-				"  var ref<A> a = foo(ref_var(type_lit(A)));"
+				"  var ref<A> a = foo(a);"
 				"}";
 
 		auto ir = builder.normalize(builder.parseStmt(input));
@@ -1042,7 +1042,7 @@ TEST(PrettyPrinter, FreeFunctions) {
 				  "};\n"
 				  "decl ctor : A :: foo = () { };\n"
 				  "{\n"
-				  "    var ref<A,f,f,plain> v0 = foo(ref_var(type_lit(A)));\n"
+				  "    var ref<A,f,f,plain> v0 = foo(v0);\n"
 				  "}", toString(printer));
 	}
 

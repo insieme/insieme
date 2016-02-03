@@ -153,16 +153,6 @@ namespace lang {
 		/**
 		 * A built-in derived operator allocating memory on the stack.
 		 */
-		LANG_EXT_DERIVED_WITH_NAME(RefVar, "ref_var", "(t : type<'a>) -> ref<'a,f,f> { return ref_alloc(t, mem_loc_stack); }")
-
-		/**
-		 * A built-in derived operator allocating memory on the stack and initializing it.
-		 */
-		LANG_EXT_DERIVED_WITH_NAME(RefVarInit, "ref_var_init", "(v : 'a) -> ref<'a,f,f> { auto r = ref_var(type_lit('a)); r = v; return r; }")
-
-		/**
-		 * A built-in derived operator allocating memory on the stack.
-		 */
 		LANG_EXT_DERIVED_WITH_NAME(RefTemp, "ref_temp", "(t : type<'a>) -> ref<'a,f,f> { return ref_alloc(t, mem_loc_stack); }")
 
 		/**

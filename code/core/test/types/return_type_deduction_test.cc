@@ -260,7 +260,7 @@ namespace types {
 
 		auto op1 = builder.parseExpr(R"(
 			(v1 : array<'elem1,'l>, v2 : array<'elem2,'l>) => (v1 : array<'elem1,'l>, v2 : array<'elem2,'l>, op : ('elem1, 'elem2) -> 'res) -> array<'res,'l> {
-				var ref<array<'res,'l>> res = ref_var(type_lit(array<'res,'l>));
+				var ref<array<'res,'l>> res;
 				return *res;
 			}(v1, v2, lit("x":('elem1,'elem2)->'elem2))
 		)");
@@ -269,7 +269,7 @@ namespace types {
 
 		auto op2 = builder.parseExpr(R"(
 			(v1 : array<int<'a>,'l>, v2 : array<int<'a>,'l>) => (v1 : array<'elem1,'l>, v2 : array<'elem2,'l>, op : ('elem1, 'elem2) -> 'res) -> array<'res,'l> {
-				var ref<array<'res,'l>> res = ref_var(type_lit(array<'res,'l>));
+				var ref<array<'res,'l>> res;
 				return *res;
 			}(v1, v2, int_add)
 		)");

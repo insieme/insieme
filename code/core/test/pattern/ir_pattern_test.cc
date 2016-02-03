@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -441,7 +441,7 @@ namespace pattern {
 		                                       "			for(uint<4> k = 2u .. 100u ) { "
 		                                       "				v[i+j]; "
 		                                       "			} "
-		                                       "           var ref<uint<4>> a = ref_var_init(3u); "
+		                                       "           var ref<uint<4>> a = 3u; "
 		                                       "			a = i; "
 		                                       "		} "
 		                                       "	} "
@@ -511,7 +511,7 @@ namespace pattern {
 		                                       "			for(uint<4> k = 2u .. 100u) { "
 		                                       "				v[i+j]; "
 		                                       "			}; "
-		                                       "           var ref<uint<4>> a = ref_var_init(3u); "
+		                                       "           var ref<uint<4>> a = 3u; "
 		                                       "			a = i; "
 		                                       "		}"
 		                                       "	}"
@@ -586,7 +586,7 @@ namespace pattern {
 		                                       "			for(uint<4> k = 2u .. 100u) { "
 		                                       "				v[i+j]; "
 		                                       "			}; "
-		                                       "           var ref<uint<4>> a = ref_var_init(3u); "
+		                                       "           var ref<uint<4>> a = 3u; "
 		                                       "			a = i; "
 		                                       "		}"
 		                                       "	}"
