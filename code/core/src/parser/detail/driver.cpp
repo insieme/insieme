@@ -167,6 +167,7 @@ namespace parser {
 			auto b = getOperand(right);
 			// left side is untouched because of reference subscript operators
 			if(op == "[") {
+				left = getScalar(left);
 				if(builder.getLangBasic().isUnsignedInt(b->getType())) { b = builder.castExpr(builder.getLangBasic().getInt8(), b); }
 				if(analysis::isRefType(left->getType())) {
 					auto inType = analysis::getReferencedType(left->getType());
