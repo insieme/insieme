@@ -755,8 +755,9 @@ statement_list :                                                          { $$ =
 
 // -- variable declaration --
 
-variable_definition : "var" type "identifier" "=" expression ";"          { $$ = driver.genVariableDefinition(@$, $2, $3, $5); }
-                    | "var" type "identifier" ";"                         { $$ = driver.genVariableDefinition(@$, $2, $3, driver.builder.undefinedVar($2)); }
+variable_definition : "var" type "identifier" "="                         { INSPIRE_GUARD(@3, driver.genVariableDeclaration(@$, $2, $3)); }
+                                                  expression ";"          { $$ = driver.genDeclarationStmt(@$, $3, $6); }
+                    | "var" type "identifier" ";"                         { $$ = driver.genUndefinedDeclarationStmt(@$, $2, $3); }
                     | "auto" "identifier" "=" expression ";"              { $$ = driver.genVariableDefinition(@$, driver.getScalar($4)->getType(), $2, $4); }
                     ;
 

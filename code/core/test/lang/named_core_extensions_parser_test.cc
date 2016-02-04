@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -65,7 +65,7 @@ namespace lang {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
-		EXPECT_EQ("AP(('a,'a) v0 = rec ref_var.{ref_var=fun(ref<type<'a>,f,f,plain> v0) {return ref_alloc(ref_deref(v0), mem_loc_stack);}}(type<('a,'a)>))",
+		EXPECT_EQ("AP(('a,'a) v0 = v0)",
 		          toString(builder.normalize(parser::parseStmt(manager, "using \"ext.complex\"; var complex a;"))));
 	}
 
@@ -74,8 +74,7 @@ namespace lang {
 		IRBuilder builder(manager);
 
 		// both instances of type complex should be expanded
-		EXPECT_EQ("AP({('a,'a) v0 = rec ref_var.{ref_var=fun(ref<type<'a>,f,f,plain> v0) {return ref_alloc(ref_deref(v0), mem_loc_stack);}}(type<('a,'a)>); "
-			      "('a,'a) v1 = rec ref_var.{ref_var=fun(ref<type<'a>,f,f,plain> v0) {return ref_alloc(ref_deref(v0), mem_loc_stack);}}(type<('a,'a)>);})",
+		EXPECT_EQ("AP({('a,'a) v0 = v0; ('a,'a) v1 = v1;})",
 			      toString(builder.normalize(parser::parseStmt(manager, "using \"ext.complex\"; { var complex a; var complex b; }"))));
 	}
 
@@ -84,8 +83,7 @@ namespace lang {
 		IRBuilder builder(manager);
 
 		// the nested instance of complex should also be expanded
-		EXPECT_EQ("AP({('a,'a) v0 = rec ref_var.{ref_var=fun(ref<type<'a>,f,f,plain> v0) {return ref_alloc(ref_deref(v0), mem_loc_stack);}}(type<('a,'a)>); "
-			      "{('a,'a) v1 = rec ref_var.{ref_var=fun(ref<type<'a>,f,f,plain> v0) {return ref_alloc(ref_deref(v0), mem_loc_stack);}}(type<('a,'a)>);};})",
+		EXPECT_EQ("AP({('a,'a) v0 = v0; {('a,'a) v1 = v1;};})",
 			      toString(builder.normalize(parser::parseStmt(manager, "using \"ext.complex\"; { var complex a; { var complex b; }}"))));
 	}
 
@@ -118,10 +116,7 @@ namespace lang {
 		// As I passed the extension with the name "complex" already defined this should be expanded
 		EXPECT_EQ("AP(struct "
 			      "{foo:NamedType,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor()," + utils::getMangledOperatorAssignName() + "(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,"
-			      + utils::getMangledOperatorAssignName() + "(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>} v0 = rec ref_var.{ref_var=fun(ref<type<'a>,f,f,plain> v0) {return "
-			      "ref_alloc(ref_deref(v0), mem_loc_stack);}}(type<struct "
-			      "{foo:NamedType,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor()," + utils::getMangledOperatorAssignName() + "(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,"
-			      + utils::getMangledOperatorAssignName() + "(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}>))",
+			      + utils::getMangledOperatorAssignName() + "(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>} v0 = v0)",
 			      toString(builder.normalize(parser::parseStmt(manager, "var complex a;", false, existingNames, typeAlises))));
 
 		// inside of a compound stmt we shadow previous vararations

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -245,13 +245,13 @@ TEST(Rule, VarDeref) {
 
 	Variable x;
 
-	auto r = Rule(irp::callExpr(ext.getRefDeref(), irp::callExpr((irp::atom(ext.getRefVarInit()) | irp::atom(ext.getRefNewInit())), x)), x);
+	auto r = Rule(irp::callExpr(ext.getRefDeref(), irp::callExpr((irp::atom(ext.getRefTempInit()) | irp::atom(ext.getRefNewInit())), x)), x);
 
 	auto a = builder.intLit(1);
-	auto b = builder.deref(builder.refVar(a));
+	auto b = builder.deref(builder.refTemp(a));
 	auto c = builder.deref(builder.refNew(a));
 
-	EXPECT_EQ("ref_deref(rec ref_var_init.{ref_var_init=fun(ref<'a,f,f,plain> v0) {ref<'a,f,f,plain> v1 = rec ref_var.{ref_var=fun(ref<type<'a>,f,f,plain> v0) "
+	EXPECT_EQ("ref_deref(rec ref_temp_init.{ref_temp_init=fun(ref<'a,f,f,plain> v0) {ref<'a,f,f,plain> v1 = rec ref_temp.{ref_temp=fun(ref<type<'a>,f,f,plain> v0) "
 			  "{return ref_alloc(ref_deref(v0), mem_loc_stack);}}(type<'a>); ref_assign(v1, ref_deref(v0)); return v1;}}(1))",
 			  toString(*b));
 	EXPECT_EQ("ref_deref(rec ref_new_init.{ref_new_init=fun(ref<'a,f,f,plain> v0) {ref<'a,f,f,plain> v1 = rec ref_new.{ref_new=fun(ref<type<'a>,f,f,plain> v0) "

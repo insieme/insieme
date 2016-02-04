@@ -6,7 +6,7 @@ def sum = (h : int, j : int)->int { return h + j; };
 unit main() {
 
 	// define a variable
-	var ref<int> a  = ref_var_init(0);
+	var ref<int> a  = 0;
 	
 	auto acc = (v : int) => { a = a + v; };
 	

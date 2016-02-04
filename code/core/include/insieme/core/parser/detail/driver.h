@@ -384,6 +384,21 @@ namespace parser {
 			DeclarationStmtPtr genVariableDefinition(const location& l, const TypePtr& type, const std::string name, const ExpressionPtr& init);
 
 			/**
+			 * constructs a new variable declaration with a given type
+			 */
+			VariablePtr genVariableDeclaration(const location& l, const TypePtr& type, const std::string name);
+
+			/**
+			 * constructs a new declaration statement for the variable with name name and the given init expression
+			 */
+			DeclarationStmtPtr genDeclarationStmt(const location& l, const std::string name, const ExpressionPtr& init);
+
+			/**
+			 * constructs a new declaration statement for the variable with an undefined init expression
+			 */
+			DeclarationStmtPtr genUndefinedDeclarationStmt(const location& l, const TypePtr& type, const std::string name);
+
+			/**
 			 * constructs a new for loop
 			 */
 			ForStmtPtr genForStmt(const location& l, const TypePtr& iteratorType, const std::string iteratorName,

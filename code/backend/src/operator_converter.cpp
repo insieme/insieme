@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -405,7 +405,7 @@ namespace backend {
 
 			// special handling of derefing result of ref.new or ref.var => bogus
 			core::ExpressionPtr arg = ARG(0);
-			if(core::analysis::isCallOf(arg, LANG_EXT_REF.getRefVarInit()) || core::analysis::isCallOf(arg, LANG_EXT_REF.getRefNewInit())) {
+			if(core::analysis::isCallOf(arg, LANG_EXT_REF.getRefTempInit()) || core::analysis::isCallOf(arg, LANG_EXT_REF.getRefNewInit())) {
 				// skip ref.var / ref.new => stupid
 				core::CallExprPtr call = static_pointer_cast<const core::CallExpr>(arg);
 				return CONVERT_EXPR(call->getArgument(0));
@@ -448,7 +448,7 @@ namespace backend {
 			return c_ast::assign(getAssignmentTarget(context, ARG(0)), CONVERT_ARG(1));
 		};
 
-		res[refExt.getRefVar()] = OP_CONVERTER { 
+		res[refExt.getRefTemp()] = OP_CONVERTER {
 			ADD_HEADER("alloca.h"); // for 'alloca'
 			core::GenericTypePtr resType = call->getType().as<core::GenericTypePtr>();
 			c_ast::ExpressionPtr size = c_ast::sizeOf(CONVERT_TYPE(core::analysis::getReferencedType(resType)));
@@ -457,7 +457,7 @@ namespace backend {
 			return c_ast::cast(cType, allocaNode);
 		};
 		
-		res[refExt.getRefVarInit()] = OP_CONVERTER {
+		res[refExt.getRefTempInit()] = OP_CONVERTER {
 
 			// extract type
 			core::ExpressionPtr initValue = call->getArgument(0);

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -98,12 +98,10 @@ namespace lang {
 		/****ENUM DEFINITION*****/
 		auto x = lang::getEnumInit(builder.intLit(5), enumTy);
 		auto y = lang::getEnumInit(builder.intLit(3), enumTy);
-		EXPECT_EQ("tuple(rec ref_var.{ref_var=fun(ref<type<'a>,f,f,plain> v0) {return ref_alloc(ref_deref(v0), mem_loc_stack);}}(type<enum_def<Color,enum_entry<Blue,3>,enum_entry<Green,7>,enum_entry<Red,5>>>),5)", toString(*x));
-		EXPECT_EQ("tuple(rec ref_var.{ref_var=fun(ref<type<'a>,f,f,plain> v0) {return ref_alloc(ref_deref(v0), mem_loc_stack);}}(type<enum_def<Color,enum_entry<Blue,3>,enum_entry<Green,7>,enum_entry<Red,5>>>),3)", toString(*y));
-		EXPECT_EQ("(ref<enum_def<Color,enum_entry<Blue,3>,enum_entry<Green,7>,enum_entry<Red,5>>,f,f,plain>,int<4>)",
-		          toString(*(x->getType())));
-		EXPECT_EQ("(ref<enum_def<Color,enum_entry<Blue,3>,enum_entry<Green,7>,enum_entry<Red,5>>,f,f,plain>,int<4>)",
-		          toString(*(y->getType())));
+		EXPECT_EQ("tuple(type<enum_def<Color,enum_entry<Blue,3>,enum_entry<Green,7>,enum_entry<Red,5>>>,5)", toString(*x));
+		EXPECT_EQ("tuple(type<enum_def<Color,enum_entry<Blue,3>,enum_entry<Green,7>,enum_entry<Red,5>>>,3)", toString(*y));
+		EXPECT_EQ("(type<enum_def<Color,enum_entry<Blue,3>,enum_entry<Green,7>,enum_entry<Red,5>>>,int<4>)", toString(*(x->getType())));
+		EXPECT_EQ("(type<enum_def<Color,enum_entry<Blue,3>,enum_entry<Green,7>,enum_entry<Red,5>>>,int<4>)", toString(*(y->getType())));
 		auto c1 = core::checks::check(x);
 		EXPECT_TRUE(c1.getErrors().empty());
 		auto c2 = core::checks::check(y);

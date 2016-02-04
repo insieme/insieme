@@ -61,7 +61,7 @@ struct S {
 int main() {
 	//this IR test pragma is not correct yet. just committed for testing purposes.
 	#pragma test expect_ir(SimplestConstructor_IR, R"({
-		var ref<ptr<IMP_SimplestConstructor>,f,f,plain> v0 = ref_var_init(ptr_from_ref(IMP_SimplestConstructor::(ref_new(type_lit(IMP_SimplestConstructor)))));
+		var ref<ptr<IMP_SimplestConstructor>,f,f,plain> v0 = ptr_from_ref(IMP_SimplestConstructor::(ref_new(type_lit(IMP_SimplestConstructor))));
 		ref_delete(ptr_to_ref(*v0));
 	})")
 	{

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -74,7 +74,7 @@ constIntPtr const_pointer_int() {
 }
 
 intPtr& reference_pointer_int() {
-#pragma test expect_ir("{var ref<ptr<int<4>>,f,f,plain> v0 = ref_var(type_lit(ptr<int<4>>)); return v0; } ")
+#pragma test expect_ir("{var ref<ptr<int<4>>,f,f,plain> v0 = v0; return v0; } ")
 	{
 		intPtr a;
 		return a;
@@ -82,7 +82,7 @@ intPtr& reference_pointer_int() {
 }
 
 const intPtr& const_reference_pointer_int() {
-#pragma test expect_ir("{var ref<ptr<int<4>>,f,f,plain> v0 = ref_var(type_lit(ptr<int<4>>)); return v0; } ")
+#pragma test expect_ir("{var ref<ptr<int<4>>,f,f,plain> v0 = v0; return v0; } ")
 	{
 		intPtr a;
 		return a;

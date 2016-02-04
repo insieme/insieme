@@ -701,10 +701,7 @@ namespace conversion {
 			}
 
 			//convert and return the struct init expr
-			auto enumDef = converter.convertType(enumType->getCanonicalTypeInternal());
-			assert_true(enumDef.isa<core::TupleTypePtr>()) << "enum type conversion failed.";
-			auto exp = core::lang::getEnumInit(val, enumDef.as<core::TupleTypePtr>());
-			return builder.numericCast(exp.as<core::TupleExprPtr>()->getExpressions()[1], builder.getLangBasic().getInt4());
+			return builder.numericCast(val, builder.getLangBasic().getInt4());
 		}
 
 		frontend_assert(false) << "DeclRefExpr not handled: " << dumpClang(declRef, converter.getSourceManager());
@@ -798,7 +795,7 @@ namespace conversion {
 
 		if(const clang::InitListExpr* initList = llvm::dyn_cast<clang::InitListExpr>(compLitExpr->getInitializer())) {
 			// for some reason, this is an lvalue
-			retIr = builder.refVar(Visit(initList));
+			retIr = builder.refTemp(Visit(initList));
 		}
 		
 		if(!retIr) frontend_assert(false) << "Unimplemented type of CompoundLiteralExpr encountered";

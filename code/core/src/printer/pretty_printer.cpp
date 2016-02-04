@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -1610,8 +1610,8 @@ namespace printer {
 				OUT(" = ");
 				PRINT_ARG(1);
 			};
-			ADD_FORMATTER(refExt.getRefVar()) {
-				OUT("ref_var(");
+			ADD_FORMATTER(refExt.getRefTemp()) {
+				OUT("ref_temp(");
 				PRINT_ARG(0);
 				OUT(")");
 			};
@@ -1620,8 +1620,8 @@ namespace printer {
 				PRINT_ARG(0);
 				OUT(")");
 			};
-			ADD_FORMATTER(refExt.getRefVarInit()) {
-				OUT("ref_var_init(");
+			ADD_FORMATTER(refExt.getRefTempInit()) {
+				OUT("ref_temp_init(");
 				PRINT_ARG(0);
 				OUT(")");
 			};

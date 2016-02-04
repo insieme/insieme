@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -88,7 +88,7 @@ namespace pattern {
 					for(uint<4> k = 2u .. 100u) { 
 						v[i+j]; 
 					}; 
-		            var ref<uint<4>> a = ref_var_init(3u);
+		            var ref<uint<4>> a = 3u;
 					a = i; 
 				}
 			}
@@ -151,7 +151,7 @@ namespace pattern {
 		IRBuilder builder(manager);
 
 		core::StatementPtr node = builder.parseStmt("for(uint<4> k = 2u .. 100u) { "
-		                                            "	var ref<uint<4>> a = ref_var_init(3u);"
+		                                            "	var ref<uint<4>> a = 3u;"
 		                                            "} ");
 
 		EXPECT_TRUE(node);
@@ -166,7 +166,7 @@ namespace pattern {
 			matches++;
 			return m.getRoot();
 		}, true);
-		EXPECT_EQ(1101, matches);
+		EXPECT_EQ(401, matches);
 	}
 }
 }

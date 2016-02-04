@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -127,13 +127,10 @@ namespace extensions {
 			auto& mgr = operation->getNodeManager();
 			core::IRBuilder builder(mgr);
 			auto& fMod = mgr.getLangExtension<utils::FrontendInspireModule>();
-			auto& rMod = mgr.getLangExtension<core::lang::ReferenceExtension>();
 
 			// first check if declaration
 			if(auto decl = operation.isa<core::DeclarationStmtPtr>()) {
-				auto initCall = decl->getInitialization().isa<core::CallExprPtr>();
-				if(!initCall || !core::analysis::isCallOf(initCall, rMod.getRefVarInit())) return invalid;
-				return std::make_pair(decl->getVariable() == var, initCall->getArgument(0));
+				return std::make_pair(decl->getVariable() == var, decl->getInitialization());
 			}
 
 			// otherwise assignment call

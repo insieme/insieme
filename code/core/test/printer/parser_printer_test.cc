@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -659,7 +659,7 @@ TEST(After_Before_Test, Let) {
 			                         "    f();"
 			                         "};"
 			                         "int main() { "
-			                         "      var ref<int> x = ref_var_init(10);"
+			                         "      var ref<int> x = 10;"
 			                         "      f();"
 			                         "      return 0; "
 			                         "}"));
@@ -673,7 +673,7 @@ TEST(After_Before_Test, Let) {
 			                         "  return a;"
 			                         "};"
 			                         "unit main() { "
-			                         "  var ref<int<4>,f,f,plain> s = ref_var_init(5);"
+			                         "  var ref<int<4>,f,f,plain> s = 5;"
 			                         "  ffunc(*s);"
 			                         "  gfunc(4);"
 			                         " }"));
@@ -683,7 +683,7 @@ TEST(After_Before_Test, Let) {
 			                         "   return a;"
 			                         "};"
 			                         "int main() {"
-			                         "   var ref<int> a = ref_var_init(5);"
+			                         "   var ref<int> a = 5;"
 			                         "   f(4);"
 			                         "   f(*a);"
 			                         "   return 0;"
@@ -694,7 +694,7 @@ TEST(After_Before_Test, Let) {
 			                         "         ffunc(*a);"
 			                         "};"
 			                         "unit main() { "
-			                         "  var ref<int<4>,f,f,plain> s = ref_var_init(5);"
+			                         "  var ref<int<4>,f,f,plain> s = 5;"
 			                         "  ffunc(*s); "
 			                         "}"));
 
