@@ -100,6 +100,16 @@ namespace utils {
 		//const core::lang::BasicGenerator& basic = builder.getLangBasic();
 		//core::NodeManager& mgr = converter.getNodeManager();
 		
+		// explicit C++ static casts
+		auto staticCast = llvm::dyn_cast<clang::CXXStaticCastExpr>(castExpr);
+		if(staticCast) {
+			auto staticTarget = converter.convertType(staticCast->getTypeAsWritten());
+			VLOG(2) << "STATIC CAST: " << dumpColor(exprTy) << " -> : " << dumpColor(staticTarget);
+			if(core::analysis::isRefType(staticTarget) && core::analysis::isRefType(exprTy)) {
+				return core::lang::buildRefCast(expr, staticTarget);
+			}
+		}
+
 		switch(castExpr->getCastKind()) {
 		////////////////////////////////////////////////////////////////////////////////////////////////////////////	
 		// A conversion which causes the extraction of an r-value from the operand gl-value.
