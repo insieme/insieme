@@ -752,9 +752,10 @@ namespace analysis {
 			   }, true)(code);
 	}
 
-	unsigned countInstances(const NodePtr& code, const NodePtr& element) {
+	unsigned countInstances(const NodePtr& code, const NodePtr& element, bool limitScope) {
 		assert_true(element) << "Element to be searched must not be empty!";
 		return code ? makeCachedLambdaVisitor([&](const NodePtr& cur, rec_call<unsigned>::type& rec) -> unsigned {
+			if(limitScope && cur.isa<LambdaExprPtr>()) return 0;
 			if(*cur == *element) return 1;
 			auto children = cur->getChildList();
 			unsigned ret = 0;

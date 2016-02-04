@@ -389,7 +389,7 @@ namespace analysis {
 	 * @param element the element to be searched
 	 * @return number of instances of element
 	 */
-	unsigned countInstances(const NodePtr& code, const NodePtr& element);
+	unsigned countInstances(const NodePtr& code, const NodePtr& element, bool limitScope = false);
 
 	/**
 	 * Tests if the variable is ever assigned or used by reference, if so, is not considered a read only

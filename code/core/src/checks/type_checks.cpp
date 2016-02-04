@@ -788,12 +788,11 @@ namespace checks {
 		auto variable = address.getAddressedNode()->getVariable();
 		auto expression = address.getAddressedNode()->getInitialization();
 
-		unsigned count = analysis::countInstances(expression, variable);
+		unsigned count = analysis::countInstances(expression, variable, true);
 
-		if (count > 1) {
-			add(res,
-			    Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR, "Invalid declaration statement with multiple occurrences of the declared variable",
-			            Message::ERROR));
+		if(count > 1) {
+			add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR, "Invalid declaration statement with multiple occurrences of the declared variable",
+				             Message::ERROR));
 		}
 
 		return res;
@@ -806,10 +805,9 @@ namespace checks {
 		TypePtr conditionType = address->getCondition()->getType();
 
 		if(!manager.getLangBasic().isBool(conditionType)) {
-			add(res,
-			    Message(address, EC_TYPE_INVALID_CONDITION_EXPR, format("Invalid type of condition expression - expected: \n%s, actual: \n%s",
-			                                                            *manager.getLangBasic().getBool(), *conditionType),
-			            Message::ERROR));
+			add(res, Message(address, EC_TYPE_INVALID_CONDITION_EXPR,
+				             format("Invalid type of condition expression - expected: \n%s, actual: \n%s", *manager.getLangBasic().getBool(), *conditionType),
+				             Message::ERROR));
 		}
 		return res;
 	}
