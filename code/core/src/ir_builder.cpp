@@ -761,15 +761,6 @@ namespace core {
 		return doubleLit(out.str());
 	}
 
-	ExpressionPtr IRBuilderBaseModule::undefinedVar(const TypePtr& type) const {
-		auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
-		if(analysis::isRefType(type)) {
-			auto elementType = analysis::getReferencedType(type);
-			return lang::buildRefCast(callExpr(refType(elementType), refExt.getRefVar(), getTypeLiteral(elementType)), type);
-		}
-		return callExpr(refType(type), refExt.getRefVar(), getTypeLiteral(type));
-	}
-
 	ExpressionPtr IRBuilderBaseModule::undefinedNew(const TypePtr& type) const {
 		auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
 		if(analysis::isRefType(type)) {
@@ -790,9 +781,9 @@ namespace core {
 		return deref(subExpr);
 	}
 
-	CallExprPtr IRBuilderBaseModule::refVar(const ExpressionPtr& subExpr) const {
+	CallExprPtr IRBuilderBaseModule::refTemp(const ExpressionPtr& subExpr) const {
 		auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
-		return callExpr(refType(subExpr->getType()), refExt.getRefVarInit(), subExpr);
+		return callExpr(refType(subExpr->getType()), refExt.getRefTempInit(), subExpr);
 	}
 
 	CallExprPtr IRBuilderBaseModule::refNew(const ExpressionPtr& subExpr) const {
@@ -809,7 +800,7 @@ namespace core {
 	CallExprPtr IRBuilderBaseModule::assign(const ExpressionPtr& target, const ExpressionPtr& value) const {
 		assert_pred1(analysis::isRefType, target->getType());
 		auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
-		return callExpr(manager.getLangBasic().getUnit(), refExt.getRefAssign(), target, value);
+		return callExpr(refExt.getRefAssign(), target, value);
 	}
 
 	ExpressionPtr IRBuilderBaseModule::refReinterpret(const ExpressionPtr& subExpr, const TypePtr& newElementType) const {

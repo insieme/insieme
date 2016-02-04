@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -71,7 +71,7 @@ namespace lang {
 
 		LANG_EXT_DERIVED_WITH_NAME(IntToEnum, "int_to_enum",
 			"(t : type<('a, 'b)>, v : 'b) -> ('a, 'b) {	"
-			"	auto r = ref_var(type_lit(('a, 'b)));			"
+			"	var ref<('a, 'b)> r;			"
 			"	r->1 = v;						"
 			"	return *r;						"
 			"}									"

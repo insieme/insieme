@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -136,8 +136,7 @@ namespace analysis {
 		                              "	var int<inf> v40 = 3;"
 		                              "	var ref<array<int<4>,#v40>,f,f,plain> v50;"
 		                              "}; x()");
-		EXPECT_EQ("rec x.{x=fun() {int<inf> v0 = 3; ref<array<int<4>,v0>,f,f,plain> v1 = rec ref_var.{ref_var=fun(ref<type<'a>,f,f,plain> v0) {return "
-			      "ref_alloc(ref_deref(v0), mem_loc_stack);}}(type<array<int<4>,v0>>);}}()",
+		EXPECT_EQ("rec x.{x=fun() {int<inf> v0 = 3; ref<array<int<4>,v0>,f,f,plain> v1 = v1;}}()",
 			      toString(*normalize(code)));
 	}
 

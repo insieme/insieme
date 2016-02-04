@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -204,6 +204,15 @@ namespace analysis {
 		assert_true(node) << "Cannot get the referenced type of null pointer";
 		assert_true(isRefType(node)) << "Cannot get the referenced type of a non ref type: " << *node;
 		return lang::ReferenceType(node).getElementType();
+	}
+
+	/**
+	 * Tests whether the given declaration statement is an undefined variable declaration or not.
+	 *
+	 * @return true if the passed declaration is an undefined declaration
+	 */
+	static inline bool isUndefinedInitalization(const DeclarationStmtPtr& decl) {
+		return decl->getVariable() == decl->getInitialization();
 	}
 
 

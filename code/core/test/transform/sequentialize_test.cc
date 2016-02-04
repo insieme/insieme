@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -75,14 +75,14 @@ namespace transform {
 
 		StatementPtr code = analysis::normalize(builder.parseStmt("alias int = int<4>;"
 		                                                          "{"
-		                                                          "	var ref<int> a = ref_var_init(2);"
+		                                                          "	var ref<int> a = 2;"
 		                                                          "	atomic_fetch_and_add(a, 10);"
 		                                                          "}")
 		                                            .as<StatementPtr>());
 
 		ASSERT_TRUE(code);
 
-		EXPECT_EQ("{var ref<int<4>,f,f,plain> v0 = ref_var_init(2);atomic_fetch_and_add(v0, 10);}",
+		EXPECT_EQ("{var ref<int<4>,f,f,plain> v0 = 2;atomic_fetch_and_add(v0, 10);}",
 		          toString(printer::PrettyPrinter(code, printer::PrettyPrinter::PRINT_SINGLE_LINE)));
 		EXPECT_TRUE(check(code, checks::getFullCheck()).empty()) << check(code, checks::getFullCheck());
 
@@ -101,7 +101,7 @@ namespace transform {
 				  "    return v2;\n"
 				  "};\n"
 				  "{\n"
-				  "    var ref<int<4>,f,f,plain> v0 = ref_var_init(2);\n"
+				  "    var ref<int<4>,f,f,plain> v0 = 2;\n"
 				  "    atomic_fetch_and_add(v0, 10);\n"
 				  "}", toString(printer::PrettyPrinter(res))) << printer::PrettyPrinter(res);
 

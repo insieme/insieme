@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -270,7 +270,7 @@ namespace backend {
 				bool isOnHeap = core::analysis::isCallOf(call[0], refs.getRefNewInit());
 
 				// case c) create object in-place (placement new)
-				c_ast::ExpressionPtr loc = (!core::analysis::isCallOf(call[0], refs.getRefVarInit()) && !core::analysis::isCallOf(call[0], refs.getRefNewInit()))
+				c_ast::ExpressionPtr loc = (!core::analysis::isCallOf(call[0], refs.getRefTempInit()) && !core::analysis::isCallOf(call[0], refs.getRefNewInit()))
 				                               ? location.as<c_ast::ExpressionPtr>()
 				                               : c_ast::ExpressionPtr();
 

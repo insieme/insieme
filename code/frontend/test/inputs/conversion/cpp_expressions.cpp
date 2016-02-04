@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -34,7 +34,6 @@
  * regarding third party software licenses.
  */
 
-
 int main() {
 //===-------------------------------------------------------------------------------------------------------------------------------- UNARY OPERATORS ---===
 
@@ -50,7 +49,7 @@ int main() {
 	#pragma test expect_ir("-3")
 	-3;
 
-	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = ref_var_init(0); ptr_from_ref(v1); }")
+	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = 0; ptr_from_ref(v1); }")
 	{
 		int x = 0;
 		&x;
@@ -63,31 +62,31 @@ int main() {
 		*x;
 	}
 
-	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = ref_var_init(0); 0-v1; }")
+	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = 0; 0-v1; }")
 	{
 		int x = 0;
 		-x;
 	}
 
-	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = ref_var_init(0); gen_pre_inc(v1); }")
+	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = 0; gen_pre_inc(v1); }")
 	{
 		int v = 0;
 		++v;
 	}
 
-	#pragma test expect_ir("{ var ref<uint<2>,f,f> v1 = ref_var_init(num_cast(0, type_lit(uint<2>))); gen_post_inc(v1); }")
+	#pragma test expect_ir("{ var ref<uint<2>,f,f> v1 = num_cast(0, type_lit(uint<2>)); gen_post_inc(v1); }")
 	{
 		unsigned short v = 0;
 		v++;
 	}
 
-	#pragma test expect_ir("{ var ref<char,f,f> v1 = ref_var_init(num_cast(0, type_lit(char))); gen_pre_dec(v1); }")
+	#pragma test expect_ir("{ var ref<char,f,f> v1 = num_cast(0, type_lit(char)); gen_pre_dec(v1); }")
 	{
 		char v = 0;
 		--v;
 	}
 
-	#pragma test expect_ir("{ var ref<int<1>,f,f> v1 = ref_var_init(num_cast(0, type_lit(int<1>))); gen_post_dec(v1); }")
+	#pragma test expect_ir("{ var ref<int<1>,f,f> v1 = num_cast(0, type_lit(int<1>)); gen_post_dec(v1); }")
 	{
 		signed char v = 0;
 		v--;
@@ -291,61 +290,61 @@ int main() {
 
 	// COMPOUND //////////////////////////////////////////////////////////////
 
-	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = ref_var_init(1); cxx_style_assignment(v1, *v1+1); }")
+	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = 1; cxx_style_assignment(v1, *v1+1); }")
 	{
 		int a = 1;
 		a += 1;
 	}
 
-	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = ref_var_init(1); cxx_style_assignment(v1, *v1-2); }")
+	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = 1; cxx_style_assignment(v1, *v1-2); }")
 	{
 		int a = 1;
 		a -= 2;
 	}
 
-	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = ref_var_init(1); cxx_style_assignment(v1, *v1/1); }")
+	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = 1; cxx_style_assignment(v1, *v1/1); }")
 	{
 		int a = 1;
 		a /= 1;
 	}
 
-	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = ref_var_init(1); cxx_style_assignment(v1, *v1*5); }")
+	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = 1; cxx_style_assignment(v1, *v1*5); }")
 	{
 		int a = 1;
 		a *= 5;
 	}
 
-	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = ref_var_init(1); cxx_style_assignment(v1, *v1%5); }")
+	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = 1; cxx_style_assignment(v1, *v1%5); }")
 	{
 		int a = 1;
 		a %= 5;
 	}
 
-	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = ref_var_init(1); cxx_style_assignment(v1, *v1&5); }")
+	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = 1; cxx_style_assignment(v1, *v1&5); }")
 	{
 		int a = 1;
 		a &= 5;
 	}
 
-	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = ref_var_init(1); cxx_style_assignment(v1, *v1|5); }")
+	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = 1; cxx_style_assignment(v1, *v1|5); }")
 	{
 		int a = 1;
 		a |= 5;
 	}
 
-	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = ref_var_init(1); cxx_style_assignment(v1, *v1 ^ 5); }")
+	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = 1; cxx_style_assignment(v1, *v1 ^ 5); }")
 	{
 		int a = 1;
 		a ^= 5;
 	}
 
-	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = ref_var_init(1); cxx_style_assignment(v1, int_lshift(*v1, 5)); }")
+	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = 1; cxx_style_assignment(v1, int_lshift(*v1, 5)); }")
 	{
 		int a = 1;
 		a <<= 5;
 	}
 
-	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = ref_var_init(1); cxx_style_assignment(v1, int_rshift(*v1, 5)); }")
+	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = 1; cxx_style_assignment(v1, int_rshift(*v1, 5)); }")
 	{
 		int a = 1;
 		a >>= 5;
@@ -372,21 +371,21 @@ int main() {
 
 	//===---------------------------------------------------------------------------------------------------------------------------------- MISCELLANEOUS ---===
 
-	#pragma test expect_ir("{ var ref<uint<8>,f,f,plain> v0 = ref_var_init(sizeof(type_lit(real<8>))); cxx_style_assignment(v0, sizeof(type_lit(uint<8>))); }")
+	#pragma test expect_ir("{ var ref<uint<8>,f,f,plain> v0 = sizeof(type_lit(real<8>)); cxx_style_assignment(v0, sizeof(type_lit(uint<8>))); }")
 	{
 		unsigned long i = sizeof(double);
 		i = sizeof(i);
 	}
 
 	// FIXME: unsuported
-	// #pr agma test expect_ir("{ var ref<uint<8>,f,f,plain> v0 = ref_var_init(sizeof(type_lit(real<8>))); cxx_style_assignment(v0, sizeof(type_lit(uint<8>)));
+	// #pr agma test expect_ir("{ var ref<uint<8>,f,f,plain> v0 = sizeof(type_lit(real<8>)); cxx_style_assignment(v0, sizeof(type_lit(uint<8>)));
 	// }")
 	// {
 	//     unsigned long i = alignof(double);
 	//     i = alignof(i);
 	// }
 
-	#pragma test expect_ir("{ var ref<array<char,8>,f,f> v0; var ref<uint<8>,f,f,plain> v1 = ref_var_init(sizeof(type_lit(array<char,8>))); }")
+	#pragma test expect_ir("{ var ref<array<char,8>,f,f> v0; var ref<uint<8>,f,f,plain> v1 = sizeof(type_lit(array<char,8>)); }")
 	{
 		char char_arr[8];
 		unsigned long i = sizeof(char_arr);

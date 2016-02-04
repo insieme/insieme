@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -138,13 +138,13 @@ int main() {
 	// ENUM TYPES //////////////////////////////////////////////////////////////
 		
 	typedef enum { Bla, Alb } enum_t;
-	#pragma test expect_ir("REGEX", R"(.*var ref<\(enum_def<IMP_enum_t_IMLOC.*,enum_entry<Bla.*,enum_entry<Alb.*uint<4>\),f,f,plain> v0 = ref_var.*enum_def<IMP_enum_t_IMLOC__.*,enum_entry<Bla.*,enum_entry<Alb.*\).*)")
+	#pragma test expect_ir("REGEX", R"(.*var ref<\(enum_def<IMP_enum_t_IMLOC.*,enum_entry<Bla.*,enum_entry<Alb.*uint<4>\),f,f,plain> v0 = v0.*)")
 	enum_t enu;
 	enum { XY, ZR } bla;
 
 	// STRUCT TYPES //////////////////////////////////////////////////////////////
 
-	#pragma test expect_ir("STRING", "var ref<struct {i : int<4>;\n},f,f,plain> v0 = ref_var(type_lit(struct {\n    i : int<4>;\n}))")
+	#pragma test expect_ir("STRING", "var ref<struct {i : int<4>;\n},f,f,plain> v0 = v0")
 	struct { int i; } swi_anon;
 	
 	typedef struct swi_s { int i; } swi_t;

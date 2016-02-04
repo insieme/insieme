@@ -57,7 +57,7 @@ struct ThisTest2 {
 int main() {
 
 	#pragma test expect_ir(STRUCT_THISTEST,R"({
-		var ref<IMP_ThisTest,f,f,plain> v0 = IMP_ThisTest::(ref_var(type_lit(IMP_ThisTest)));
+		var ref<IMP_ThisTest,f,f,plain> v0 = IMP_ThisTest::(v0);
 		v0.IMP_getThis();
 	})")
 	{
@@ -66,7 +66,7 @@ int main() {
 	}
 
 	#pragma test expect_ir(STRUCT_THISTEST2,R"({
-		var ref<IMP_ThisTest2,f,f,plain> v0 = IMP_ThisTest2::(ref_var(type_lit(IMP_ThisTest2)));
+		var ref<IMP_ThisTest2,f,f,plain> v0 = IMP_ThisTest2::(v0);
 	})")
 	{
 		ThisTest2 tt2;

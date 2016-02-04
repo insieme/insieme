@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -883,7 +883,7 @@ TEST(PrettyPrinter, JustOutermostScope) {
 				fun(fun(*d));
 				fun(rfun(e));
 				lfun(f);
-				rfun(ref_var_init(lfun(g)));
+				rfun(ref_temp_init(lfun(g)));
 			}
 		}
 	)1N5P1RE"));
@@ -900,13 +900,13 @@ TEST(PrettyPrinter, JustOutermostScope) {
 			"    return **v0;\n"
 			"};\n"
 			"{\n"
-			"    var ref<int<4>,f,f,plain> v0 = ref_var(type_lit(int<4>));\n"
-			"    var ref<int<4>,f,f,plain> v1 = ref_var(type_lit(int<4>));\n"
-			"    var ref<int<4>,f,f,plain> v2 = ref_var(type_lit(int<4>));\n"
-			"    var ref<int<4>,f,f,plain> v3 = ref_var(type_lit(int<4>));\n"
-			"    var ref<int<4>,f,f,plain> v4 = ref_var(type_lit(int<4>));\n"
-			"    var ref<int<4>,f,f,plain> v5 = ref_var(type_lit(int<4>));\n"
-			"    var ref<int<4>,f,f,plain> v6 = ref_var(type_lit(int<4>));\n"
+			"    var ref<int<4>,f,f,plain> v0 = v0;\n"
+			"    var ref<int<4>,f,f,plain> v1 = v1;\n"
+			"    var ref<int<4>,f,f,plain> v2 = v2;\n"
+			"    var ref<int<4>,f,f,plain> v3 = v3;\n"
+			"    var ref<int<4>,f,f,plain> v4 = v4;\n"
+			"    var ref<int<4>,f,f,plain> v5 = v5;\n"
+			"    var ref<int<4>,f,f,plain> v6 = v6;\n"
 			"    {\n"
 			"        v0 = 7;\n"
 			"        fun(*v1);\n"
@@ -914,19 +914,19 @@ TEST(PrettyPrinter, JustOutermostScope) {
 			"        fun(fun(*v3));\n"
 			"        fun(rfun(v4));\n"
 			"        lfun(v5);\n"
-			"        rfun(ref_var_init(lfun(v6)));\n"
+			"        rfun(ref_temp_init(lfun(v6)));\n"
 			"    };\n"
 			"}";
 
 	EXPECT_EQ(res, toString(PrettyPrinter(stmt, PrettyPrinter::PRINT_DEREFS))) << toString(PrettyPrinter(stmt, PrettyPrinter::PRINT_DEREFS));
 	std::string res2 = ""
-			"{var ref<int<4>,f,f,plain> v0 = ref_var(type_lit(int<4>));\n"
-			"    var ref<int<4>,f,f,plain> v1 = ref_var(type_lit(int<4>));\n"
-			"    var ref<int<4>,f,f,plain> v2 = ref_var(type_lit(int<4>));\n"
-			"    var ref<int<4>,f,f,plain> v3 = ref_var(type_lit(int<4>));\n"
-			"    var ref<int<4>,f,f,plain> v4 = ref_var(type_lit(int<4>));\n"
-			"    var ref<int<4>,f,f,plain> v5 = ref_var(type_lit(int<4>));\n"
-			"    var ref<int<4>,f,f,plain> v6 = ref_var(type_lit(int<4>));\n"
+			"{var ref<int<4>,f,f,plain> v0 = v0;\n"
+			"    var ref<int<4>,f,f,plain> v1 = v1;\n"
+			"    var ref<int<4>,f,f,plain> v2 = v2;\n"
+			"    var ref<int<4>,f,f,plain> v3 = v3;\n"
+			"    var ref<int<4>,f,f,plain> v4 = v4;\n"
+			"    var ref<int<4>,f,f,plain> v5 = v5;\n"
+			"    var ref<int<4>,f,f,plain> v6 = v6;\n"
 			"    {\n"
 			"        v0 = 7;\n"
 			"        fun(*v1);\n"
@@ -934,7 +934,7 @@ TEST(PrettyPrinter, JustOutermostScope) {
 			"        fun(fun(*v3));\n"
 			"        fun(rfun(v4));\n"
 			"        lfun(v5);\n"
-			"        rfun(ref_var_init(lfun(v6)));\n"
+			"        rfun(ref_temp_init(lfun(v6)));\n"
 			"    };\n"
 			"}";
 
@@ -971,7 +971,7 @@ TEST(PrettyPrinter, FreeFunctions) {
 				"  a.func();"
 				"}";
 
-		auto ir = builder.parseStmt(input);
+		auto ir = builder.normalize(builder.parseStmt(input));
 
 		PrettyPrinter printer(ir, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::PRINT_CASTS
 									| PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_ATTRIBUTES
@@ -985,8 +985,8 @@ TEST(PrettyPrinter, FreeFunctions) {
 				  "    }\n"
 				  "};\n"
 				  "{\n"
-				  "    var ref<A,f,f,plain> v13 = ref_var(type_lit(A));\n"
-				  "    v13.func();\n"
+				  "    var ref<A,f,f,plain> v0 = v0;\n"
+				  "    v0.func();\n"
 				  "}", toString(printer));
 	}
 
@@ -1002,7 +1002,7 @@ TEST(PrettyPrinter, FreeFunctions) {
 				"  a.func();"
 				"}";
 
-		auto ir = builder.parseStmt(input);
+		auto ir = builder.normalize(builder.parseStmt(input));
 
 		PrettyPrinter printer(ir, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::PRINT_CASTS
 									| PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_ATTRIBUTES
@@ -1016,8 +1016,8 @@ TEST(PrettyPrinter, FreeFunctions) {
 				  "    1+1;\n"
 				  "};\n"
 				  "{\n"
-				  "    var ref<A,f,f,plain> v87 = ref_var(type_lit(A));\n"
-				  "    v87.func();\n"
+				  "    var ref<A,f,f,plain> v0 = v0;\n"
+				  "    v0.func();\n"
 				  "}", toString(printer));
 	}
 
@@ -1028,10 +1028,10 @@ TEST(PrettyPrinter, FreeFunctions) {
 				"};"
 				"def A :: ctor foo = () {};"
 				"{"
-				"  var ref<A> a = foo(ref_var(type_lit(A)));"
+				"  var ref<A> a = foo(a);"
 				"}";
 
-		auto ir = builder.parseStmt(input);
+		auto ir = builder.normalize(builder.parseStmt(input));
 
 		PrettyPrinter printer(ir, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::PRINT_CASTS
 									| PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_ATTRIBUTES
@@ -1042,7 +1042,7 @@ TEST(PrettyPrinter, FreeFunctions) {
 				  "};\n"
 				  "decl ctor : A :: foo = () { };\n"
 				  "{\n"
-				  "    var ref<A,f,f,plain> v130 = foo(ref_var(type_lit(A)));\n"
+				  "    var ref<A,f,f,plain> v0 = foo(v0);\n"
 				  "}", toString(printer));
 	}
 

@@ -755,7 +755,7 @@ namespace parser {
 		}
 	}
 
-	TEST(IRParser, LambdaNames) {
+	TEST(IR_Parser, LambdaNames) {
 		NodeManager nm;
 		IRBuilder builder(nm);
 
@@ -788,7 +788,7 @@ namespace parser {
 
 		//free constructor
 		{
-			auto addresses = builder.parseAddressesStatement("def struct A { }; def A::ctor foo = () { 1; }; { var ref<A> a = $foo(ref_var(type_lit(A)))$;}");
+			auto addresses = builder.parseAddressesStatement("def struct A { }; def A::ctor foo = () { 1; }; { var ref<A> a = $foo(a)$;}");
 			ASSERT_EQ(1, addresses.size());
 			EXPECT_EQ("foo", addresses[0].getAddressedNode().as<CallExprPtr>()->getFunctionExpr().as<LambdaExprPtr>()->getReference()->getNameAsString());
 		}
@@ -1198,12 +1198,12 @@ namespace parser {
 
 		const std::string testString = "var ref<A,t,f,cpp_ref> a_ref;"
 		                               "var ref<A,f,f,cpp_rref> a_rref;"
-		                               "var ref<A,f,f,plain> a = A::(ref_var(type_lit(A)));"              //call the default constructor
-		                               "var ref<A,f,f,plain> a_copy = A::(ref_var(type_lit(A)), a_ref);"  //call the copy constructor
-		                               "var ref<A,f,f,plain> a_move = A::(ref_var(type_lit(A)), a_rref);" //call the move constructor
-		                               "A::~(a);"                                                         //call the default destructor
-		                               "a." + utils::getMangledOperatorAssignName() + "(a_ref);"          //call the default copy assignment operator
-		                               "a." + utils::getMangledOperatorAssignName() + "(a_rref);";        //call the default move assignment operator
+		                               "var ref<A,f,f,plain> a = A::(a);"                          //call the default constructor
+		                               "var ref<A,f,f,plain> a_copy = A::(a_copy, a_ref);"         //call the copy constructor
+		                               "var ref<A,f,f,plain> a_move = A::(a_move, a_rref);"        //call the move constructor
+		                               "A::~(a);"                                                  //call the default destructor
+		                               "a." + utils::getMangledOperatorAssignName() + "(a_ref);"   //call the default copy assignment operator
+		                               "a." + utils::getMangledOperatorAssignName() + "(a_rref);"; //call the default move assignment operator
 
 		{
 			auto res = builder.parseStmt("def struct A { };" //call the default generated members outside the struct
@@ -1237,7 +1237,7 @@ namespace parser {
 		}
 	}
 
-	TEST(IRParser, TypedExpression) {
+	TEST(IR_Parser, TypedExpression) {
 		NodeManager nm;
 
 		const std::string commonCode = "def g = (a : int<4>) -> unit {};";
@@ -1255,7 +1255,7 @@ namespace parser {
 		EXPECT_FALSE(test_statement(nm, commonCode + "{ var real<4> realParam = 5.0; g(realParam : int<4>); }"));
 	}
 
-	TEST(IRParser, ManualOverloadSelection) {
+	TEST(IR_Parser, ManualOverloadSelection) {
 		NodeManager nm;
 
 		const std::string commonClass = "def struct A {"
@@ -1278,10 +1278,10 @@ namespace parser {
 		                                "};";
 
 		//multiple possible overloads. Simple call fails for constructor with a single param
-		EXPECT_FALSE(test_statement(nm, commonClass + "{ var int<1> param = 5; var ref<A> a = A::(ref_var(type_lit(A)), param); }"));
+		EXPECT_FALSE(test_statement(nm, commonClass + "{ var int<1> param = 5; var ref<A> a = A::(a), param); }"));
 
 		//multiple possible overloads. Simple call fails for constructor with multiple params
-		EXPECT_FALSE(test_statement(nm, commonClass + "{ var int<1> param = 5; var ref<A> a = A::(ref_var(type_lit(A)), param, param); }"));
+		EXPECT_FALSE(test_statement(nm, commonClass + "{ var int<1> param = 5; var ref<A> a = A::(a), param, param); }"));
 
 		//multiple possible overloads. Simple call fails for function with a single param
 		EXPECT_FALSE(test_statement(nm, commonClass + "{ var int<1> param = 5; var ref<A> a; a.f(param); }"));
@@ -1291,10 +1291,10 @@ namespace parser {
 
 
 		//multiple possible overloads. Specifying the desired overload will work for constructor with a single param
-		EXPECT_TRUE(test_statement(nm, commonClass + "{ var int<1> param = lit(\"5\" : int<1>); var ref<A> a = A::(ref_var(type_lit(A)), param : int<4>); }"));
+		EXPECT_TRUE(test_statement(nm, commonClass + "{ var int<1> param = lit(\"5\" : int<1>); var ref<A> a = A::(a, param : int<4>); }"));
 
 		//multiple possible overloads. Specifying the desired overload will work for constructor with multiple params
-		EXPECT_TRUE(test_statement(nm, commonClass + "{ var int<1> param = lit(\"5\" : int<1>); var ref<A> a = A::(ref_var(type_lit(A)), param : int<4>, param : int<4>); }"));
+		EXPECT_TRUE(test_statement(nm, commonClass + "{ var int<1> param = lit(\"5\" : int<1>); var ref<A> a = A::(a, param : int<4>, param : int<4>); }"));
 
 		//multiple possible overloads. Specifying the desired overload will work for function with a single param
 		EXPECT_TRUE(test_statement(nm, commonClass + "{ var int<1> param = lit(\"5\" : int<1>); var ref<A> a; a.f(param : int<4>); }"));
@@ -1307,7 +1307,7 @@ namespace parser {
 		EXPECT_FALSE(test_statement(nm, "def struct A { };"
 		                     "{"
 		                     "  var ref<A> a;"
-		                     "  var ref<A> a_copy = A::(ref_var(type_lit(A)), a);"
+		                     "  var ref<A> a_copy = A::(a_copy, a);"
 		                     "}"));
 
 		//calling the default generated assignment operator without specifying the desired overload should fail as we have two candidates
@@ -1329,7 +1329,7 @@ namespace parser {
 			                           "}"));
 	}
 
-	TEST(IRParser, FreeMembers) {
+	TEST(IR_Parser, FreeMembers) {
 		NodeManager nm;
 
 		//free ctors are used differently than the ones defined within record types
@@ -1342,16 +1342,16 @@ namespace parser {
 		                               "def A::ctor free_ctor = (x : int<4>) { a = x; };"
 		                               "def A::lambda free_mfun = (x : int<4>) -> int<4> { return a; };"
 		                               "{"
-		                               "  var ref<A> a1 = A::(ref_var(type_lit(A)), 10);"
+		                               "  var ref<A> a1 = A::(a1, 10);"
 		                               "  a1.mfun(12);"
 		                               "  a1.free_mfun(12);"
-		                               "  var ref<A> a2 = free_ctor(ref_var(type_lit(A)), 10);"
+		                               "  var ref<A> a2 = free_ctor(a2, 10);"
 		                               "  a2.mfun(12);"
 		                               "  a2.free_mfun(12);"
 		                               "}"));
 	}
 
-	TEST(IRParser, DuplicateMemberFunctions) {
+	TEST(IR_Parser, DuplicateMemberFunctions) {
 		NodeManager nm;
 		IRBuilder builder(nm);
 
@@ -1413,7 +1413,7 @@ namespace parser {
 		                              "}"));
 	}
 
-	TEST(IRParser, ParentCalls) {
+	TEST(IR_Parser, ParentCalls) {
 		NodeManager nm;
 
 		const std::string classA = "def struct A {"
@@ -1431,8 +1431,8 @@ namespace parser {
 		                           "  }"
 		                           "};";
 		const std::string body = "{"
-		                         "  var ref<A> a = A::(ref_var(type_lit(A)));"
-		                         "  var ref<B> b = B::(ref_var(type_lit(B)));"
+		                         "  var ref<A> a = A::(a);"
+		                         "  var ref<B> b = B::(b);"
 		                         "  a.a();"
 		                         "  a.x;"
 		                         "  b.b();"
@@ -1455,7 +1455,7 @@ namespace parser {
 		                               + body));
 	}
 
-	TEST(IRParser, Comments) {
+	TEST(IR_Parser, Comments) {
 		NodeManager mgr;
 
 		EXPECT_TRUE(parseExpr(mgr, "12"));

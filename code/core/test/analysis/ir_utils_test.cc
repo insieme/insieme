@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -565,13 +565,13 @@ namespace analysis {
 		ExpressionPtr funA = builder.parseExpr(
 			"alias ftype = (ref<int<4>>, ref<int<4>>, ref<int<4>>, ref<int<4>>)->unit;"
 			"decl f : ftype;"
-			"def f = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { var ref<int<4>> x = ref_var_init(*d); f(x,a,b,c); };"
+			"def f = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { var ref<int<4>> x = *d; f(x,a,b,c); };"
 			"f");
 
 		ExpressionPtr funB = builder.parseExpr(
 			"alias ftype = (ref<int<4>>, ref<int<4>>, ref<int<4>>, ref<int<4>>)->unit;"
 			"decl f : ftype;"
-			"def f = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { var ref<int<4>> x = ref_var_init(*d); d = 2; f(x,a,b,c); };"
+			"def f = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { var ref<int<4>> x = *d; d = 2; f(x,a,b,c); };"
 			"f");
 
 		VariablePtr varA = builder.variable(builder.refType(mgr.getLangBasic().getInt4()), 6);
@@ -593,16 +593,16 @@ namespace analysis {
 		ExpressionPtr funA = builder.parseExpr(
 			"alias ftype = (ref<int<4>>, ref<int<4>>, ref<int<4>>, ref<int<4>>)->unit;"
 			"decl f : ftype; decl g : ftype;"
-			"def f = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { var ref<int<4>> x = ref_var_init(*d); g(x,a,b,c); };"
-			"def g = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { var ref<int<4>> x = ref_var_init(*d); f(x,a,b,c); };"
+			"def f = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { var ref<int<4>> x = *d; g(x,a,b,c); };"
+			"def g = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { var ref<int<4>> x = *d; f(x,a,b,c); };"
 			"f");
 
 		ExpressionPtr funB =
 		    builder.parseExpr(
 			"alias ftype = (ref<int<4>>, ref<int<4>>, ref<int<4>>, ref<int<4>>)->unit;"
 			"decl f : ftype; decl g : ftype;"
-			"def f = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { var ref<int<4>> x = ref_var_init(*d); d = 2; g(x,a,b,c); };"
-			"def g = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { var ref<int<4>> x = ref_var_init(*d); d = 2; f(x,a,b,c); };"
+			"def f = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { var ref<int<4>> x = *d; d = 2; g(x,a,b,c); };"
+			"def g = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { var ref<int<4>> x = *d; d = 2; f(x,a,b,c); };"
 			"f");
 
 		VariablePtr varA = builder.variable(builder.refType(mgr.getLangBasic().getInt4()), 6);
@@ -678,8 +678,8 @@ namespace analysis {
 			}
 		)1N5P1RE");
 
-		EXPECT_EQ(countInstances(prog, builder.parseType("int<4>")), 10);
-		EXPECT_EQ(countInstances(prog, builder.intLit(1)), 2);
+		EXPECT_EQ(8, countInstances(prog, builder.parseType("int<4>")));
+		EXPECT_EQ(2, countInstances(prog, builder.intLit(1)));
 	}
 
 	TEST(Types, FreeTagTypeReferences) {

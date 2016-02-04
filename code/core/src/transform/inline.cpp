@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -133,7 +133,7 @@ namespace transform {
 
 				// build returned boolean
 				returned = build.variable(build.refType(build.getLangBasic().getBool()));
-				retStmts.push_back(build.declarationStmt(returned, build.refVar(build.boolLit(false))));
+				retStmts.push_back(build.declarationStmt(returned, build.boolLit(false)));
 
 				// adjust body
 				retStmts.push_back(map(body));
@@ -176,7 +176,7 @@ namespace transform {
 				} else {
 					// a more complex expression - we need to build a variable and map it to that
 					VariablePtr newVar = build.variable(cur.first->getType());
-					retStmts.push_back(build.declarationStmt(newVar, build.refVar(cur.second)));
+					retStmts.push_back(build.declarationStmt(newVar, cur.second));
 					parReplacements.insert(make_pair(cur.first, newVar));
 				}
 			});
