@@ -887,6 +887,11 @@ namespace core {
 		return declarationStmt(variable(type), value);
 	}
 
+	ReturnStmtPtr IRBuilderBaseModule::returnStmt(const ExpressionPtr& retVal) const {
+		auto declStmt = declarationStmt(retVal);
+		return returnStmt(declStmt);
+	}
+
 	ReturnStmtPtr IRBuilderBaseModule::returnStmt() const {
 		return returnStmt(manager.getLangBasic().getUnitConstant());
 	}

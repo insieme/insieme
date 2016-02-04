@@ -834,7 +834,7 @@ namespace core {
 		// push bind inside
 		CallExprPtr res = analysis::normalize(transform::pushBindIntoLambda(manager, call, 0));
 
-		EXPECT_EQ("rec _.{_=fun(ref<int<4>,f,f,plain> v0) {return bind(v1){int_add(ref_deref(v0), v1)}(2);}}(int_add(2, v77))", toString(*res));
+		EXPECT_EQ("rec _.{_=fun(ref<int<4>,f,f,plain> v0) {return bind(v2){int_add(ref_deref(v0), v2)}(2);}}(int_add(2, v77))", toString(*res));
 		EXPECT_EQ("int_add(v77, 4)", toString(*transform::simplify(manager, res)));
 
 		EXPECT_TRUE(check(res, checks::getFullCheck()).empty()) << check(res, checks::getFullCheck());
@@ -852,7 +852,7 @@ namespace core {
 		// push bind inside
 		res = analysis::normalize(transform::pushBindIntoLambda(manager, call, 0));
 
-		EXPECT_EQ("rec _.{_=fun() {return bind(v0){int_add(int_add(2, 3), v0)}(2);}}()", toString(*res));
+		EXPECT_EQ("rec _.{_=fun() {return bind(v1){int_add(int_add(2, 3), v1)}(2);}}()", toString(*res));
 		EXPECT_EQ("7", toString(*transform::simplify(manager, res.as<NodePtr>())));
 
 		EXPECT_TRUE(check(res, checks::getFullCheck()).empty()) << check(res, checks::getFullCheck());

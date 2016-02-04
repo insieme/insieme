@@ -286,8 +286,8 @@ namespace pattern {
 			return node(core::NT_SwitchStmt, single(expression) << cases << single(defaultCase));
 		}
 
-		inline TreePattern returnStmt(const TreePattern& returnExpression) {
-			return node(core::NT_ReturnStmt, single(returnExpression));
+		inline TreePattern returnStmt(const TreePattern& returnDecl) {
+			return node(core::NT_ReturnStmt, single(returnDecl));
 		}
 
 		inline TreePattern markerStmt(const TreePattern& subExpr, const TreePattern& id) {

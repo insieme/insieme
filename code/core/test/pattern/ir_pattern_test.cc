@@ -226,16 +226,16 @@ namespace pattern {
 		auto at = [&manager](const string& str) { return irp::atom(manager, str); };
 		auto ps = [&manager](const string& str) { return IRBuilder(manager).parseStmt(str); };
 
-		StatementPtr stmt1 = ps("if( false ) { return 0; } else { return 1+2; }");
-		StatementPtr stmt2 = ps("if( false ) { return 0; }");
-		StatementPtr stmt3 = ps("if(1 != 0) { return 0; }");
+		StatementPtr stmt1 = ps("if( false ) { 0; } else { 1+2; }");
+		StatementPtr stmt2 = ps("if( false ) { 0; }");
+		StatementPtr stmt3 = ps("if(1 != 0) { 0; }");
 
-		TreePattern pattern1 = irp::ifStmt(any, at("{ return 0; }"), irp::returnStmt(any));
-		TreePattern pattern2 = irp::ifStmt(any, irp::returnStmt(any), irp::returnStmt(any));
-		TreePattern pattern3 = irp::ifStmt(any, irp::returnStmt(at("1") | at("0")), irp::returnStmt(any));
-		TreePattern pattern4 = irp::ifStmt(any, at("{ return 0; }"), any);
-		TreePattern pattern5 = irp::ifStmt(any, at("{ return 0; }"), at("{ }"));
-		TreePattern pattern6 = irp::ifStmt(at("1 != 0"), at("{ return 0; }"), at("{ }"));
+		TreePattern pattern1 = irp::ifStmt(any, at("{ 0; }"), at("{ 1+2; }"));
+		TreePattern pattern2 = irp::ifStmt(any, any, at("{ 1+2; }"));
+		TreePattern pattern3 = irp::ifStmt(any, at("1") | at("0"), at("{ 1+2; }"));
+		TreePattern pattern4 = irp::ifStmt(any, at("{ 0; }"), any);
+		TreePattern pattern5 = irp::ifStmt(any, at("{ 0; }"), at("{ }"));
+		TreePattern pattern6 = irp::ifStmt(at("1 != 0"), at("{ 0; }"), at("{ }"));
 
 		EXPECT_PRED2(isMatch, pattern1, stmt1);
 		EXPECT_PRED2(isMatch, pattern2, stmt1);
@@ -265,12 +265,12 @@ namespace pattern {
 		auto ps = [&manager](const string& str) { return IRBuilder(manager).parseStmt(str); };
 
 		StatementPtr stmt1 = ps("for(int<4> i = 30 .. 5 : -5) { var int<4> i = 3;}");
-		StatementPtr stmt2 = ps("for(int<4> i = 0 .. 10 : 2) { return 0; }");
+		StatementPtr stmt2 = ps("for(int<4> i = 0 .. 10 : 2) { 0; }");
 		StatementPtr stmt3 = ps("for(int<4> i = 0 .. 5) { 7; 6; continue; 8; }");
-		StatementPtr stmt4 = ps("for(int<4> i = 0 .. 2) { for(int<4> j = 0 .. 2){ return 0; } }");
+		StatementPtr stmt4 = ps("for(int<4> i = 0 .. 2) { for(int<4> j = 0 .. 2){ 0; } }");
 
 		TreePattern pattern1 = irp::forStmt(var("x"), any, at("5"), at("-5"), irp::declarationStmt(var("y"), at("3")));
-		TreePattern pattern2 = irp::forStmt(any, any, at("10"), at("2"), irp::returnStmt(at("0")));
+		TreePattern pattern2 = irp::forStmt(any, any, at("10"), at("2"), at("0"));
 		TreePattern pattern3 = irp::forStmt(any, any, at("5"), at("1"), irp::compoundStmt(*any << irp::continueStmt() << any));
 		TreePattern pattern4 = irp::forStmt(var("i"), var("x"), var("y"), var("z"),
 		                                    irp::compoundStmt(irp::forStmt(var("j"), var("x"), var("y"), var("z"), irp::compoundStmt(*any)) << *any));
