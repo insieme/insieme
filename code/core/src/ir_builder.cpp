@@ -888,8 +888,8 @@ namespace core {
 	}
 
 	ReturnStmtPtr IRBuilderBaseModule::returnStmt(const ExpressionPtr& retVal) const {
-		auto declStmt = declarationStmt(retVal);
-		return returnStmt(declStmt);
+		auto implicitVariable = variable(retVal->getType());
+		return returnStmt(retVal, implicitVariable);
 	}
 
 	ReturnStmtPtr IRBuilderBaseModule::returnStmt() const {

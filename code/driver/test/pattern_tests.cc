@@ -186,8 +186,7 @@ namespace insieme {
 
 		// create pattern
 		auto x = var("x");
-		auto pattern = aT(irp::declarationStmt(x)) & !aT(irp::returnStmt(irp::declarationStmt(x))) & !aT((!irp::declarationStmt(x)) & step(x));
-
+		auto pattern = aT(irp::declarationStmt(x)) & !aT((!irp::declarationStmt(x)) & step(x));
 
 		// load input code
 		NodeManager mgr;

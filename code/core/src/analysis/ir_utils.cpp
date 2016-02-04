@@ -399,6 +399,14 @@ namespace analysis {
 				this->visit(decl->getInitialization(), bound, free);
 			}
 
+			void visitReturnStmt(const Ptr<const ReturnStmt>& decl, VariableSet& bound, ResultSet& free) {
+				// first add variable to set of bound variables
+				bound.insert(decl->getReturnVar());
+
+				// then visit the defining expression
+				this->visit(decl->getReturnExpr(), bound, free);
+			}
+
 			void visitCompoundStmt(const Ptr<const CompoundStmt>& compound, VariableSet& bound, ResultSet& free) {
 				// a compound statement creates a new scope
 				VariableSet innerBound = bound;

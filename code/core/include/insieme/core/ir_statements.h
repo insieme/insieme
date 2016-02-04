@@ -311,7 +311,7 @@ namespace core {
 	IR_NODE_END()
 
 	/**
-	 * The entity used to represent a if statements within the IR.
+	 * The entity used to represent an if statement within the IR.
 	 */
 	IR_NODE(IfStmt, Statement)
 	  protected:
@@ -359,7 +359,7 @@ namespace core {
 	IR_NODE_END()
 
 	/**
-	 * The entity used to represent a while statements within the IR.
+	 * The entity used to represent a while statement within the IR.
 	 */
 	IR_NODE(WhileStmt, Statement)
 	  protected:
@@ -431,7 +431,7 @@ namespace core {
 	IR_NODE_END()
 
 	/**
-	 * The entity used to represent a for statements within the IR.
+	 * The entity used to represent a for statement within the IR.
 	 */
 	IR_NODE(ForStmt, Statement)
 	  protected:
@@ -792,22 +792,21 @@ namespace core {
 	IR_NODE_END()
 
 
-
-
 	// ---------------------------------------- Return Statement ------------------------------
 
 	/**
 	 * The accessor associated to the return statement.
 	 */
-	IR_NODE_ACCESSOR(ReturnStmt, Statement, DeclarationStmt)
+	IR_NODE_ACCESSOR(ReturnStmt, Statement, Expression, Variable)
 		/**
-		 * Obtains a reference to the declaration associated to this return statement.
+		 * Obtains a reference to the expression associated to this return statement.
 		 */
-		IR_NODE_PROPERTY(DeclarationStmt, ReturnDeclStmt, 0);
+		IR_NODE_PROPERTY(Expression, ReturnExpr, 0);
 
-		Ptr<const Expression> getReturnExpr() const { 
-			return getReturnDeclStmt()->getInitialization();
-		}
+		/**
+		 * Obtains a reference to the implicit variable associated to this return statement.
+		 */
+		IR_NODE_PROPERTY(Variable, ReturnVar, 1);
 		
 	IR_NODE_END()
 
@@ -820,7 +819,7 @@ namespace core {
 		 * Prints a string representation of this node to the given output stream.
 		 */
 		virtual std::ostream& printTo(std::ostream & out) const {
-			// varaible number gives no additional information
+			// variable number gives no additional information
 			return out << "return " << *getReturnExpr();
 		}
 
@@ -830,11 +829,12 @@ namespace core {
 		 * within the given node manager based on the given parameters.
 		 *
 		 * @param manager the manager used for maintaining instances of this class
-		 * @param declStmt the declaration statement declaring the variable to be returned by the resulting statement
+		 * @param returnExpr the expression forming the return value
+		 * @param returnVar the implicit variable associated with this return
 		 * @return the requested type instance managed by the given manager
 		 */
-		static ReturnStmtPtr get(NodeManager & manager, const DeclarationStmtPtr& declStmt) {
-			return manager.get(ReturnStmt(declStmt));
+		static ReturnStmtPtr get(NodeManager & manager, const ExpressionPtr& returnExpr, const VariablePtr& returnVar) {
+			return manager.get(ReturnStmt(returnExpr, returnVar));
 		}
 	IR_NODE_END()
 

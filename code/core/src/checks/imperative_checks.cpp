@@ -96,6 +96,17 @@ namespace checks {
 				// second => recursive check of initialization expression.
 				visit(cur->getInitialization());
 			}
+			
+			/**
+			 * A special handling of return statements, which are introducing new variables.
+			 */
+			void visitReturnStmt(const ReturnStmtAddress& cur) {
+				// first: add newly declared variable to set of declared variables (in order to be able to use them in the return already)
+				declaredVariables.insert(cur->getReturnVar());
+
+				// second => recursive check of return expression.
+				visit(cur->getReturnExpr());
+			}
 
 			/**
 			 * A special handling of for loops, which are introducing a iterator variable.

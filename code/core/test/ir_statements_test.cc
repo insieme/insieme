@@ -196,13 +196,12 @@ namespace core {
 		LiteralPtr literal = Literal::get(manager, manager.getLangBasic().getInt4(), "12");
 		IRBuilder builder(manager);
 		auto var = builder.variable(literal->getType(), 1337);
-		auto declStmt = builder.declarationStmt(var, literal);
-		ReturnStmtPtr stmt = ReturnStmt::get(manager, declStmt);
+		ReturnStmtPtr stmt = ReturnStmt::get(manager, literal, var);
 
 		EXPECT_EQ("return 12", toString(*stmt));
 
 		// check hash codes, children and cloning
-		basicNodeTests(stmt, toVector<NodePtr>(declStmt));
+		basicNodeTests(stmt, toVector<NodePtr>(literal, var));
 	}
 
 	TEST(StatementsTest, Goto) {
