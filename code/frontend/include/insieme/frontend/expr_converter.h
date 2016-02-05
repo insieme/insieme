@@ -62,7 +62,7 @@ namespace conversion {
 		Converter& converter;
 
 		core::NodeManager& mgr;
-		const core::FrontendIRBuilder& builder;
+		const core::IRBuilder& builder;
 		const core::lang::BasicGenerator& basic;
 
 		core::TypePtr convertExprType(const clang::Expr* expr);

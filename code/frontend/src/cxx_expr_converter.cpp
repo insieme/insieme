@@ -203,7 +203,7 @@ namespace conversion {
 		core::ExpressionPtr ret;
 		LOG_EXPR_CONVERSION(callExpr, ret);
 
-		const core::FrontendIRBuilder& builder = converter.builder;
+		const core::IRBuilder& builder = converter.builder;
 		const CXXMethodDecl* methodDecl = callExpr->getMethodDecl();
 
 		if(!methodDecl) {

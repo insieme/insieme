@@ -54,7 +54,7 @@ namespace conversion {
 	class DeclConverter : public clang::DeclVisitor<DeclConverter> {
 	private:
 		Converter& converter;
-		const core::FrontendIRBuilder& builder;
+		const core::IRBuilder& builder;
 
 		/// Whether we are currently in an 'extern "C"' block
 		///

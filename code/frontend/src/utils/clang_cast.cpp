@@ -47,7 +47,6 @@
 #include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/encoder/lists.h"
-#include "insieme/core/frontend_ir_builder.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_expressions.h"
 #include "insieme/core/ir_types.h"
@@ -96,7 +95,7 @@ namespace utils {
 			VLOG(2) << "\n";
 		}
 
-		const core::FrontendIRBuilder& builder = converter.getIRBuilder();
+		const core::IRBuilder& builder = converter.getIRBuilder();
 		//const core::lang::BasicGenerator& basic = builder.getLangBasic();
 		//core::NodeManager& mgr = converter.getNodeManager();
 		

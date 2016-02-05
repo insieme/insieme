@@ -37,7 +37,6 @@
 #include <gtest/gtest.h>
 
 #include "insieme/core/ir_builder.h"
-#include "insieme/core/frontend_ir_builder.h"
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/lang/ir++_extension.h"
 #include "insieme/core/lang/static_vars.h"

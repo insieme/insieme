@@ -34,34 +34,22 @@
  * regarding third party software licenses.
  */
 
-#include <vector>
+// a trivial struct
+struct Trivial {
+};
 
-#include <gtest/gtest.h>
+Trivial x;
 
-#include "insieme/core/analysis/ir++_utils.h"
-
-#include "insieme/core/ir_builder.h"
-#include "insieme/core/checks/full_check.h"
-
-namespace insieme {
-namespace core {
-namespace analysis {
-
-	TEST(IRppUtils, DefaultCtorTest) {
-		NodeManager manager;
-		IRBuilder builder(manager);
-
-		// create a struct type
-		TypePtr type = builder.parseType("struct { x : int<4>; y : int<4>; }");
-		ASSERT_TRUE(type);
-
-		// create a default constructor for this type
-		auto ctor = createDefaultConstructor(type);
-		EXPECT_TRUE(checks::check(ctor).empty()) << ctor << checks::check(ctor);
-
-		EXPECT_PRED1(isDefaultConstructor, ctor);
-	}
-
-} // end namespace analysis
-} // end namespace core
-} // end namespace insieme
+#pragma test expect_ir(R"INSPIRE(
+def struct IMP_Trivial { };
+def IMP_main = ()->int<4> {
+	lit("x":ref<IMP_Trivial>) = *IMP_Trivial::(lit("x":ref<IMP_Trivial>));
+	lit("x":ref<IMP_Trivial>);
+	return 0;
+};
+IMP_main
+)INSPIRE")
+int main() {
+	x;
+	return 0;
+}

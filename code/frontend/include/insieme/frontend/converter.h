@@ -49,7 +49,6 @@
 #include "insieme/frontend/utils/source_locations.h"
 
 #include "insieme/core/ir_program.h"
-#include "insieme/core/frontend_ir_builder.h"
 
 #include "insieme/utils/map_utils.h"
 
@@ -152,7 +151,7 @@ namespace conversion {
 		 * IR building and managing tools
 		 */
 		core::NodeManager& mgr;
-		const core::FrontendIRBuilder builder;
+		const core::IRBuilder builder;
 		const frontend::ir::FrontendIr feIR;
 		core::tu::IRTranslationUnit irTranslationUnit;
 
@@ -175,7 +174,7 @@ namespace conversion {
 		core::tu::IRTranslationUnit convert();
 
 		// Getters & Setters
-		const core::FrontendIRBuilder& getIRBuilder() const { return builder; }
+		const core::IRBuilder& getIRBuilder() const { return builder; }
 		core::NodeManager& getNodeManager() const { return mgr; }
 
 		const TranslationUnit& getTranslationUnit() const { return translationUnit; }
