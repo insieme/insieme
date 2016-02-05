@@ -34,22 +34,37 @@
  * regarding third party software licenses.
  */
 
-// a trivial struct
-struct Trivial {
-};
+#include "insieme/frontend/utils/conversion_utils.h"
 
-Trivial x;
+#include "insieme/core/analysis/ir++_utils.h"
+#include "insieme/core/ir.h"
+#include "insieme/core/ir_address.h"
+#include "insieme/core/lang/reference.h"
+#include "insieme/core/transform/node_replacer.h"
 
-#pragma test expect_ir(R"INSPIRE(
-def struct IMP_Trivial { };
-def IMP_main = ()->int<4> {
-	IMP_Trivial::(lit("x":ref<IMP_Trivial>));
-	lit("x":ref<IMP_Trivial>);
-	return 0;
-};
-IMP_main
-)INSPIRE")
-int main() {
-	x;
-	return 0;
-}
+namespace insieme {
+namespace frontend {
+namespace utils {
+
+	core::ExpressionPtr fixTempMemoryInInitExpression(const core::ExpressionPtr& variable, const core::ExpressionPtr& initExp) {
+		auto& mgr = initExp->getNodeManager();
+		auto& refExt = mgr.getLangExtension<core::lang::ReferenceExtension>();
+		// if the init expr is a constructor call
+		if(core::analysis::isConstructorCall(initExp)) {
+			core::CallExprAddress call(initExp.as<core::CallExprPtr>());
+			assert_ge(call->getArguments().size(), 1) << "Ill-formed constructor call. Missing this argument";
+			if(refExt.isCallOfRefTemp(call->getArgument(0))) {
+				// we replace the first parameter (which has been created as ref_temp) by the variable to initialize
+				return core::transform::replaceNode(
+					       initExp->getNodeManager(), call->getArgument(0),
+					       core::lang::buildRefCast(variable, call->getFunctionExpr()->getType().as<core::FunctionTypePtr>()->getParameterType(0)))
+					.as<core::ExpressionPtr>();
+			}
+		}
+		return initExp;
+	}
+
+} // end namespace utils
+} // end namespace frontend
+} // end namespace insieme
+

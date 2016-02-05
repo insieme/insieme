@@ -63,7 +63,7 @@ namespace frontend {
 	
 	TEST(CppIndependentTest, DISABLED_Return) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_return.cpp"); }
 
-	TEST(CppIndependentTest, DISABLED_Globals) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_globals.cpp"); }
+	TEST(CppIndependentTest, Globals) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_globals.cpp"); }
 
 } // fe namespace
 } // insieme namespace

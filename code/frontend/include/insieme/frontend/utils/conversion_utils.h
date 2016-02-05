@@ -34,22 +34,19 @@
  * regarding third party software licenses.
  */
 
-// a trivial struct
-struct Trivial {
-};
+#pragma once
 
-Trivial x;
+#include "insieme/core/forward_decls.h"
 
-#pragma test expect_ir(R"INSPIRE(
-def struct IMP_Trivial { };
-def IMP_main = ()->int<4> {
-	IMP_Trivial::(lit("x":ref<IMP_Trivial>));
-	lit("x":ref<IMP_Trivial>);
-	return 0;
-};
-IMP_main
-)INSPIRE")
-int main() {
-	x;
-	return 0;
-}
+namespace insieme {
+namespace frontend {
+namespace utils {
+
+	/// Replace RefTemps in outer constructor calls with variable itself
+	///
+	core::ExpressionPtr fixTempMemoryInInitExpression(const core::ExpressionPtr& variable, const core::ExpressionPtr& initExp);
+
+} // end namespace utils
+} // end namespace frontend
+} // end namespace insieme
+

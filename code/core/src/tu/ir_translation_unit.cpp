@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -42,11 +42,12 @@
 #include "insieme/utils/name_mangling.h"
 
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/analysis/type_utils.h"
 #include "insieme/core/annotations/naming.h"
-#include "insieme/core/frontend_ir_builder.h"
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/frontend_ir_builder.h"
 #include "insieme/core/ir_statistic.h"
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/lang/array.h"
@@ -192,7 +193,7 @@ namespace tu {
 
 			NodeManager& mgr;
 
-			FrontendIRBuilder builder;
+			IRBuilder builder;
 
 			NodeMap symbolMap;
 
@@ -610,9 +611,14 @@ namespace tu {
 				refType.setConst(false);
 				core::GenericTypePtr mutableType = refType;
 				auto initExp = resolver.apply(cur.second);
-				auto castedLit = core::lang::buildRefCast(lit, mutableType);
-				if(castedLit != lit) { VLOG(2) << "Global Literal: casting ref from\n" << dumpPretty(lit->getType()) << " to \n" << castedLit->getType(); }
-				inits.push_back(builder.assign(castedLit, initExp));
+				// constructor calls are standalone, no need for assignment
+				if(core::analysis::isConstructorCall(initExp)) {
+					inits.push_back(initExp);
+				} else { // else build assignment (ignoring const)
+					auto castedLit = core::lang::buildRefCast(lit, mutableType);
+					if(castedLit != lit) { VLOG(2) << "Global Literal: casting ref from\n" << dumpPretty(lit->getType()) << " to \n" << castedLit->getType(); }
+					inits.push_back(builder.assign(castedLit, initExp));
+				}
 			}
 
 			// ~~~~~~~~~~~~~~~~~~ PREPARE STATICS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

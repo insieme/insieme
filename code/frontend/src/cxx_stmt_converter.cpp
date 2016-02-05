@@ -36,9 +36,10 @@
 
 #include "insieme/frontend/stmt_converter.h"
 
-#include "insieme/frontend/utils/source_locations.h"
+#include "insieme/frontend/utils/conversion_utils.h"
 #include "insieme/frontend/utils/debug.h"
 #include "insieme/frontend/utils/macros.h"
+#include "insieme/frontend/utils/source_locations.h"
 
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/logging.h"
@@ -113,26 +114,11 @@ namespace conversion {
 			// DeclarationStmts might have to be post-processed
 			if(const auto& declStmt = decl.isa<core::DeclarationStmtPtr>()) {
 				const auto& variable = declStmt->getVariable();
-				auto initExp = declStmt->getInitialization();
-				// if the init expr is a constructor call
-				if(const auto& call = core::NodeAddress(initExp).isa<core::CallExprAddress>()) {
-					if(const auto& function = call->getFunctionExpr()->getType().isa<core::FunctionTypeAddress>()) {
-						if(function.isConstructor()) {
-							assert_ge(call->getArguments().size(), 1) << "Ill-formed constructor call. Missing this argument";
-							if(refExt.isCallOfRefTemp(call->getArgument(0))) {
-
-								// we replace the first parameter (which has been created as ref_temp) by the variable to initialize
-								initExp = core::transform::replaceNode(initExp->getNodeManager(), call->getArgument(0),
-																											 core::lang::buildRefCast(variable, function->getParameterType(0))).as<core::ExpressionPtr>();
-							}
-						}
-					}
-				}
-
+				auto initExp = declStmt->getInitialization();				
+				initExp = utils::fixTempMemoryInInitExpression(variable, initExp);
 				retIr.push_back(builder.declarationStmt(variable, initExp));
-
-				// everything else is used as is
 			} else {
+				// everything else is used as is
 				retIr.push_back(decl);
 			}
 		}
