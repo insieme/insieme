@@ -173,6 +173,8 @@ blank         [ \t]
 "public"      return InspireParser::make_PUBLIC(loc);
 "protected"   return InspireParser::make_PROTECTED(loc);
 
+"materialize" return InspireParser::make_MATERIALIZE(loc);
+
 "spawn"       return InspireParser::make_SPAWN(loc);
 "sync"        return InspireParser::make_SYNC(loc);
 "sync_all"    return InspireParser::make_SYNCALL(loc);

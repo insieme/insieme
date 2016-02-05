@@ -300,14 +300,15 @@ namespace printer {
 					for(auto& binding : definition) {
 						// iterate over all member function of each binding
 						for(auto& memberFun : binding->getRecord()->getMemberFunctions()) {
-							const auto& lambdaExpr = memberFun->getImplementation().as<LambdaExprPtr>();
-							const auto& lambdaBinding = lambdaExpr->getDefinition()->getBindingOf(lambdaExpr->getReference());
-							lambdaNames[cur->peel(lambdaBinding)->getReference()] = memberFun->getName()->getValue();
-							lambdaNames[lambdaBinding->getReference()] = memberFun->getName()->getValue();
+							if (const auto& lambdaExpr = memberFun->getImplementation().isa<LambdaExprPtr>()) {
+								const auto& lambdaBinding = lambdaExpr->getDefinition()->getBindingOf(lambdaExpr->getReference());
+								lambdaNames[cur->peel(lambdaBinding)->getReference()] = memberFun->getName()->getValue();
+								lambdaNames[lambdaBinding->getReference()] = memberFun->getName()->getValue();
 
-							// later used to find out which member functions are not visited -> free defined memFuns
-							visitedMemberFunctions.insert(lambdaBinding->getReference());
-							visitedMemberFunctions.insert(cur->peel(lambdaBinding)->getReference());
+								// later used to find out which member functions are not visited -> free defined memFuns
+								visitedMemberFunctions.insert(lambdaBinding->getReference());
+								visitedMemberFunctions.insert(cur->peel(lambdaBinding)->getReference());
+							}
 						}
 
 						// later used to find out which member functions are not visited -> free defined ctors

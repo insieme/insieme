@@ -169,6 +169,7 @@
 	CATCH        "catch"
 	THROW        "throw"
 
+	MATERIALIZE  "materialize"
 
 	SPAWN        "spawn"
 	SYNC         "sync"
@@ -240,7 +241,7 @@
 
 %type <ExpressionPtr>                  variable
 %type <LiteralPtr>                     literal
-%type <ExpressionPtr>                  call
+%type <ExpressionPtr>                  call actual_call
 %type <LambdaExprPtr>                  lambda constructor_lambda
 %type <BindExprPtr>                    bind
 %type <ExpressionPtr>                  parallel_expression list_expression initializer unary_op binary_op ternary_op this_expression
@@ -609,10 +610,14 @@ literal : "true"                                                          { $$ =
 
 // -- call --
 
-call : expression "(" typed_expressions ")"                               { $$ = driver.genCall(@$, $1, $3); }
-     | "identifier" "::" "(" non_empty_typed_expressions ")"              { $$ = driver.genConstructorCall(@$, $1, $4); }
-     | "identifier" "::" "~" "(" expression ")"                           { $$ = driver.genDestructorCall(@$, $1, $5); }
+call : actual_call                                                        { $$ = $1; }
+     | actual_call "materialize"                                          { $$ = driver.materializeCall(@$, $1); }
      ;
+
+actual_call : expression "(" typed_expressions ")"                        { $$ = driver.genCall(@$, $1, $3); }
+            | "identifier" "::" "(" non_empty_typed_expressions ")"       { $$ = driver.genConstructorCall(@$, $1, $4); }
+            | "identifier" "::" "~" "(" expression ")"                    { $$ = driver.genDestructorCall(@$, $1, $5); }
+            ;
 
 
 // -- lambda --

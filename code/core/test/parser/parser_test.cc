@@ -1455,6 +1455,52 @@ namespace parser {
 		                               + body));
 	}
 
+	TEST(IR_Parser, ExplicitDeclarations) {
+		NodeManager nm;
+		IRBuilder builder(nm);
+
+		const std::string classA = "decl a : A::()->unit;"
+		                           "def struct A {"
+		                           "  lambda b = ()->unit { }"
+		                           "};"
+		                           "A";
+
+		auto type = builder.parseType(classA);
+		EXPECT_TRUE(checks::check(type).empty()) << checks::check(type);
+		EXPECT_TRUE(toString(type).find(",a()->unit,") != std::string::npos);
+	}
+
+	TEST(IR_Parser, MaterializeCall) {
+		NodeManager nm;
+		IRBuilder builder(nm);
+
+		auto int4 = builder.getLangBasic().getInt4();
+		auto plainRef = builder.refType(builder.getLangBasic().getInt4());
+		auto cppRef = builder.refType(builder.getLangBasic().getInt4(), false, false, lang::ReferenceType::Kind::CppReference);
+
+		const std::string code = "def f1 = ()->int<4> { return 42; };"
+		                         "def f2 = ()->ref<int<4>,f,f,plain> { return 42; };"
+		                         "def f3 = ()->ref<int<4>,f,f,cpp_ref> { return 42; };"
+		                         "{"
+		                         "  $f1()$;"
+		                         "  $f2()$;"
+		                         "  $f3()$;"
+		                         "  $f1() materialize$;"
+		                         "  $f2() materialize$;"
+		                         "  $f3() materialize$;"
+		                         "}";
+
+		auto addresses = builder.parseAddressesStatement(code);
+
+		ASSERT_EQ(6, addresses.size());
+		EXPECT_EQ(addresses[0].getAddressedNode().as<CallExprPtr>()->getType(), int4);
+		EXPECT_EQ(addresses[1].getAddressedNode().as<CallExprPtr>()->getType(), plainRef);
+		EXPECT_EQ(addresses[2].getAddressedNode().as<CallExprPtr>()->getType(), cppRef);
+		EXPECT_EQ(addresses[3].getAddressedNode().as<CallExprPtr>()->getType(), plainRef);
+		EXPECT_EQ(addresses[4].getAddressedNode().as<CallExprPtr>()->getType(), plainRef);
+		EXPECT_EQ(addresses[5].getAddressedNode().as<CallExprPtr>()->getType(), plainRef);
+	}
+
 	TEST(IR_Parser, Comments) {
 		NodeManager mgr;
 
