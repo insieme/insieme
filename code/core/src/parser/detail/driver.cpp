@@ -979,7 +979,12 @@ namespace parser {
 		ExpressionPtr InspireDriver::materializeCall(const location& l, const ExpressionPtr& exp) {
 			if (const auto& call = exp.isa<CallExprPtr>()) {
 				const auto& callType = call->getType();
-				TypePtr newType = lang::buildRefType(analysis::isRefType(callType) ? analysis::getReferencedType(callType) : callType);
+				TypePtr newType = lang::buildRefType(callType);
+				if(analysis::isRefType(callType)) {
+					auto callRefType = lang::ReferenceType(callType);
+					callRefType.setKind(lang::ReferenceType::Kind::Plain);
+					newType = callRefType.toType();
+				}
 				return builder.callExpr(newType, call->getFunctionExpr(), call->getArguments());
 			}
 			return exp;
