@@ -341,6 +341,11 @@ namespace parser {
 			ExpressionPtr genDestructorCall(const location& l, const std::string name, const ExpressionPtr& thisArgument);
 
 			/**
+			 * Generates a new call expression from the given one with the type of the call expression materialized
+			 */
+			ExpressionPtr materializeCall(const location& l, const ExpressionPtr& exp);
+
+			/**
 			 * constructs an initializer expression according to the given type and expression list
 			 */
 			ExpressionPtr genInitializerExpr(const location& l, const TypePtr& type, const ExpressionList& list);

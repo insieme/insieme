@@ -973,6 +973,18 @@ namespace parser {
 			return genCall(l, callable, ParserTypedExpressionList());
 		}
 
+		/**
+		 * Generates a new call expression from the given one with the type of the call expression materialized
+		 */
+		ExpressionPtr InspireDriver::materializeCall(const location& l, const ExpressionPtr& exp) {
+			if (const auto& call = exp.isa<CallExprPtr>()) {
+				const auto& callType = call->getType();
+				TypePtr newType = lang::buildRefType(analysis::isRefType(callType) ? analysis::getReferencedType(callType) : callType);
+				return builder.callExpr(newType, call->getFunctionExpr(), call->getArguments());
+			}
+			return exp;
+		}
+
 		ExpressionPtr InspireDriver::genStructExpression(const location& l, const TypePtr& type, const ExpressionList& list) {
 			// check for null
 			if(!type) {
