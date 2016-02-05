@@ -282,7 +282,6 @@ namespace conversion {
 		core::ExpressionPtr VisitMaterializeTemporaryExpr(const clang::MaterializeTemporaryExpr* materTempExpr);
 		core::ExpressionPtr VisitCXXBindTemporaryExpr(const clang::CXXBindTemporaryExpr* bindTempExpr);
 
-
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		//  Operators
 		core::ExpressionPtr VisitUnaryOperator(const clang::UnaryOperator* unaryOp);
@@ -305,7 +304,7 @@ namespace conversion {
 		core::ExpressionPtr VisitCallExpr(const clang::CallExpr* callExpr);
 		core::ExpressionPtr VisitMemberExpr(const clang::MemberExpr* memExpr);
 		core::ExpressionPtr VisitDeclRefExpr(const clang::DeclRefExpr* declRef);
-
+		
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		//  default visitor call
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -154,7 +154,7 @@ namespace conversion {
 			return convertCxxArgExpr(clangArgExpr, funType->getParameterType(i++));
 		});
 
-		return builder.callExpr(irCall->getType(), funExp, newArgs);
+		return builder.callExpr(convertExprType(callExpr), funExp, newArgs);
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

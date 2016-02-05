@@ -47,7 +47,7 @@ int&& x3() {
 const int&& x4() {
 	return static_cast<int&&>(x);
 };
-
+/*
 struct Trivial {};
 Trivial y;
 Trivial y1() {
@@ -79,19 +79,20 @@ NonTrivial&& z3() {
 const NonTrivial&& z4() {
 	return static_cast<NonTrivial&&>(z);
 };
-
+*/
 void intTest() {
+/*
 	{
 		int a = x1();
 		int b = x2();
 		int c = x3();
 		int d = x4();
 	}
-	{
+	{*/
 		const int& a = x1();
 		const int& b = x2();
 		const int& c = x3();
-		const int& d = x4();
+		const int& d = x4();/*
 	}
 	{
 		int&& a = x1();
@@ -104,9 +105,9 @@ void intTest() {
 		// const int&& b = x2(); // NOT ALLOWED
 		const int&& c = x3();
 		const int&& d = x4();
-	}
+	}*/
 }
-
+/*
 void trivialTest() {
     {
         Trivial a = y1();
@@ -132,7 +133,7 @@ void trivialTest() {
         const Trivial&& c = y3();
         const Trivial&& d = y4();
     }
-}
+}*/
 /*
 void nonTrivialTest() {
     {
@@ -163,6 +164,6 @@ void nonTrivialTest() {
 
 int main() {
 	intTest();
-	trivialTest();
+	//trivialTest();
 	//nonTrivialTest();
 }

@@ -61,6 +61,37 @@ namespace insieme {
 namespace core {
 namespace checks {
 
+	namespace {
+		bool typeMatchesWithOptionalMaterialization(NodeManager& nm, const TypePtr& targetT, const TypePtr& valueT) {
+			// if the types are equivalent, everything is fine
+			if(types::isSubTypeOf(valueT, targetT)) { return true; }
+
+			// try to find a valid type variable instantiation
+			TypePtr paramType = targetT;
+			if(analysis::isRefType(paramType)) {
+				// plain refs get unwrapped, CPP refs and rrefs get used as is (see transform::materialize)
+				if(lang::isPlainReference(paramType)) {
+					paramType = analysis::getReferencedType(paramType);
+				}
+
+				// if we can find a valid instantiation, then this declaration is valid
+				if (types::getTypeVariableInstantiation(nm, paramType, valueT)) {
+					return true;
+					// if the substitution failed and we are assigning to a cpp ref or rref
+				} else if (lang::isCppReference(paramType) || lang::isCppRValueReference(paramType)) {
+					// we try to find a substitution for the case where the parameter would be a plain ref
+					auto paramRef = lang::ReferenceType(paramType);
+					auto plainRefType = lang::buildRefType(paramRef.getElementType(), paramRef.isConst(), paramRef.isVolatile(), lang::ReferenceType::Kind::Plain);
+					//try to find a substitution again with the changed reference kind
+					if (types::getTypeVariableInstantiation(nm, plainRefType, valueT)) {
+						return true;
+					}
+				}
+			}
+
+			return false;
+		}
+	}
 
 	OptionalMessageList KeywordCheck::visitGenericType(const GenericTypeAddress& address) {
 		OptionalMessageList res;
@@ -463,7 +494,7 @@ namespace checks {
 		TypePtr retType = analysis::normalize(substitution->applyTo(returnType));
 		TypePtr resType = analysis::normalize(address->getType());
 
-		if(!core::types::isSubTypeOf(retType, resType)) {
+		if(!typeMatchesWithOptionalMaterialization(manager, resType, retType)) {
 			add(res, Message(address, EC_TYPE_INVALID_RETURN_TYPE,
 			                 format("Invalid result type of call expression \nexpected: \n\t%s \nactual: \n\t%s \nfunction type: \n\t%s",
 			                        *retType, *resType, *functionType),
@@ -542,7 +573,7 @@ namespace checks {
 				actualType = analysis::getReferencedType(actualType);
 			}
 
-			if(!core::types::isSubTypeOf(actualType, returnType)) {
+			if(!typeMatchesWithOptionalMaterialization(address->getNodeManager(), returnType, actualType)) {
 				add(res, Message(cur, EC_TYPE_INVALID_RETURN_VALUE_TYPE,
 				                 format("Invalid type of return value \nexpected: \n\t%s\n actual: \n\t%s", toString(*returnType), toString(*actualType)),
 				                 Message::ERROR));
@@ -740,8 +771,7 @@ namespace checks {
 		// done
 		return res;
 	}
-
-
+	
 	OptionalMessageList DeclarationStmtTypeCheck::visitDeclarationStmt(const DeclarationStmtAddress& address) {
 		OptionalMessageList res;
 
@@ -750,32 +780,7 @@ namespace checks {
 		ExpressionPtr init = declaration->getInitialization();
 		TypePtr initType = init->getType();
 
-		// if the types are equivalent, everything is fine
-		if(types::isSubTypeOf(initType, variableType)) return res;
-
-		// try to find a valid type variable instantiation
-		TypePtr paramType = variableType;
-		if(analysis::isRefType(paramType)) {
-			// plain refs get unwrapped, CPP refs and rrefs get used as is (see transform::materialize)
-			if(lang::isPlainReference(paramType)) {
-				paramType = analysis::getReferencedType(paramType);
-			}
-
-			// if we can find a valid instantiation, then this declaration is valid
-			if (types::getTypeVariableInstantiation(declaration->getNodeManager(), paramType, initType)) {
-				return res;
-
-				// if the substitution failed and we are assigning to a cpp ref or rref
-			} else if (lang::isCppReference(paramType) || lang::isCppRValueReference(paramType)) {
-				// we try to find a substitution for the case where the parameter would be a plain ref
-				auto paramRef = lang::ReferenceType(paramType);
-				auto plainRefType = lang::buildRefType(paramRef.getElementType(), paramRef.isConst(), paramRef.isVolatile(), lang::ReferenceType::Kind::Plain);
-				//try to find a substitution again with the changed reference kind
-				if (types::getTypeVariableInstantiation(declaration->getNodeManager(), plainRefType, initType)) {
-					return res;
-				}
-			}
-		}
+		if(typeMatchesWithOptionalMaterialization(address->getNodeManager(), variableType, initType)) { return res; }
 
 		add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
 			             format("Invalid type of initial value - expected: \n%s, actual: \n%s", *variableType, *initType), Message::ERROR));

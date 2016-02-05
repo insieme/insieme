@@ -174,7 +174,10 @@ namespace frontend {
 			                            << "\tActual type  : " << (aIsExp ? toString(dumpColor(actual.as<ExpressionPtr>()->getType())) : toString("-")) << "\n"
 			                            << "\tExpected type: " << (eIsExp ? toString(dumpColor(expected.as<ExpressionPtr>()->getType())) : toString("-"))
 			                            << "\n";
-			//if(expected != actual) irDiff(actual, expected);
+			if(expected != actual) {
+				irDiff(actual, expected);
+				exit(0);
+			}
 		}
 	}
 

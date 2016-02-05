@@ -88,10 +88,12 @@ namespace conversion {
 	core::TypePtr Converter::ExprConverter::convertExprType(const clang::Expr* expr) {
 		auto qType = expr->getType();
 		auto irType = converter.convertType(qType);
-		if(expr->getValueKind() == clang::VK_LValue) irType = builder.refType(irType, qType.isConstQualified(), qType.isVolatileQualified());
+		if(expr->getValueKind() == clang::VK_LValue || expr->getValueKind() == clang::VK_XValue) {
+			irType = builder.refType(irType, qType.isConstQualified(), qType.isVolatileQualified());
+		}
 		return irType;
 	}
-	
+
 	// translate expression as usual, but convert translated string literals to r-values rather than l-values
 	core::ExpressionPtr Converter::ExprConverter::convertInitExpr(const clang::Expr* original) {
 		auto expr = converter.convertExpr(original);
