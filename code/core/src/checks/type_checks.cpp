@@ -359,7 +359,19 @@ namespace checks {
 
 		// iterate over all the member functions and check their type
 		for (auto& memberFunction : address->getRecord()->getMemberFunctions()) {
-			checkMemberType(address, memberFunction.getAddressedNode()->getImplementation().as<LambdaExprPtr>()->getFunctionType(), FK_MEMBER_FUNCTION, true, res, EC_TYPE_INVALID_MEMBER_FUNCTION_TYPE, "Invalid member function type");
+			const auto& implementation = memberFunction.getAddressedNode()->getImplementation();
+			FunctionTypePtr type;
+			if (const auto& lambda = implementation.isa<LambdaExprPtr>()) {
+				type = lambda->getFunctionType();
+
+			} else if (const auto& functionType = implementation->getType().as<FunctionTypePtr>()) {
+				type = functionType;
+
+			} else {
+				add(res, Message(address, EC_TYPE_INVALID_MEMBER_FUNCTION_TYPE, format("Invalid member function type: %s", *implementation->getType()), Message::ERROR));
+				continue;
+			}
+			checkMemberType(address, type, FK_MEMBER_FUNCTION, true, res, EC_TYPE_INVALID_MEMBER_FUNCTION_TYPE, "Invalid member function type");
 		}
 
 		// iterate over all the pure virtual member functions and check their type
@@ -378,7 +390,19 @@ namespace checks {
 
 		std::map<std::string, std::set<FunctionTypePtr>> memberFunctionTypes;
 		for (const auto& memberFunction : address->getRecord()->getMemberFunctions()) {
-			const auto& type = memberFunction.getAddressedNode()->getImplementation().as<LambdaExprPtr>()->getFunctionType();
+			const auto& implementation = memberFunction.getAddressedNode()->getImplementation();
+			FunctionTypePtr type;
+			if (const auto& lambda = implementation.isa<LambdaExprPtr>()) {
+				type = lambda->getFunctionType();
+
+			} else if (const auto& functionType = implementation->getType().as<FunctionTypePtr>()) {
+				type = functionType;
+
+			} else {
+				//MemberFunctionTypeCheck will take care of reporting this error
+				continue;
+			}
+
 			const auto& name = memberFunction->getName()->getValue();
 			auto inserted = memberFunctionTypes[name].insert(type);
 

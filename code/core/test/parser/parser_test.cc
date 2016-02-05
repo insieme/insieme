@@ -1455,6 +1455,22 @@ namespace parser {
 		                               + body));
 	}
 
+	TEST(IR_Parser, ExplicitDeclarations) {
+		NodeManager nm;
+		IRBuilder builder(nm);
+
+		const std::string classA = "decl a : A::()->unit;"
+		                           "def struct A {"
+		                           "  lambda b = ()->unit { }"
+		                           "};"
+		                           "A";
+
+
+		auto type = builder.parseType(classA);
+		EXPECT_TRUE(checks::check(type).empty()) << checks::check(type);
+		EXPECT_TRUE(toString(type).find(",a()->unit,") != std::string::npos);
+	}
+
 	TEST(IR_Parser, Comments) {
 		NodeManager mgr;
 
