@@ -176,7 +176,7 @@ namespace frontend {
 			                            << "\n";
 			if(expected != actual) {
 				irDiff(actual, expected);
-				exit(0);
+				exit(-1);
 			}
 		}
 	}
