@@ -799,8 +799,9 @@ namespace core {
 
 	CallExprPtr IRBuilderBaseModule::assign(const ExpressionPtr& target, const ExpressionPtr& value) const {
 		assert_pred1(analysis::isRefType, target->getType());
+		auto& basic = manager.getLangBasic();
 		auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
-		return callExpr(refExt.getRefAssign(), target, value);
+		return callExpr(basic.getUnit(), refExt.getRefAssign(), target, value);
 	}
 
 	ExpressionPtr IRBuilderBaseModule::refReinterpret(const ExpressionPtr& subExpr, const TypePtr& newElementType) const {
