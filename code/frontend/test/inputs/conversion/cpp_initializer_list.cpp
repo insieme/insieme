@@ -35,37 +35,27 @@
  */
 #include <initializer_list>
 
-struct SimplestConstructor {
-	SimplestConstructor() = default;
-	~SimplestConstructor() = default;
+#define S_IR R"(
+decl struct IMP_std_colon__colon_initializer_list;
+decl IMP_std_colon__colon_initializer_list::_M_array:ptr<int<4>,t,f>;
+decl IMP_std_colon__colon_initializer_list::_M_len:uint<8>;
+decl ctor:IMP_std_colon__colon_initializer_list::(ptr<int<4>,t,f>, uint<8>);
+decl IMP_end : const IMP_std_colon__colon_initializer_list::() -> (ref<array<int<4>,inf>,t,f,plain>,int<8>);
+decl IMP_begin : const IMP_std_colon__colon_initializer_list::() -> (ref<array<int<4>,inf>,t,f,plain>,int<8>);
+decl IMP_size : const IMP_std_colon__colon_initializer_list::() -> uint<8>;
+def struct IMP_std_colon__colon_initializer_list {
+    _M_array : ptr<int<4>,t,f>;
+    _M_len : uint<8>;
+    ctor function (v1 : ref<ptr<int<4>,t,f>,f,f,plain>, v2 : ref<uint<8>,f,f,plain>) { }
+    ctor() { }
 };
-
-struct S {
-    SimplestConstructor v[3];
-    S(std::initializer_list<SimplestConstructor> l) { // list-initialization in ctor
-         //std::cout << "constructed with a " << l.size() << "-element list\n";
-         append(l);
-    }
-    void append(std::initializer_list<SimplestConstructor> l) { // list-initialization as argument
-        for(int i=0; i<l.size(); ++i) {
-			v[i] = *(l.begin()+i);
-        }
-    }
-    int c_arr() const {
-        return {3};  // list-initialization in return statement
-    }
-};
-
-#define SimplestConstructor_IR R"( def struct IMP_SimplestConstructor { }; )"
+)"
 
 int main() {
 	//this IR test pragma is not correct yet. just committed for testing purposes.
-	#pragma test expect_ir(SimplestConstructor_IR, R"({
-		var ref<ptr<IMP_SimplestConstructor>,f,f,plain> v0 = ptr_from_ref(IMP_SimplestConstructor::(ref_new(type_lit(IMP_SimplestConstructor))));
-		ref_delete(ptr_to_ref(*v0));
-	})")
+	#pragma test expect_ir(S_IR, R"({ var ref<IMP_std_colon__colon_initializer_list,f,f,plain> v0 = IMP_std_colon__colon_initializer_list::(v0, ptr_from_array(ref_temp_init(array_create(type_lit(3), [1,2,3]))), num_cast(3u, type_lit(uint<8>))); })")
 	{
-		S obj_s({SimplestConstructor(), SimplestConstructor()});
+		std::initializer_list<int> a = {1,2,3};
 	}
 
 	return 0;

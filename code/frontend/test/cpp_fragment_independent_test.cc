@@ -46,7 +46,7 @@ namespace frontend {
 	TEST(CppIndependentTest, DISABLED_Expressions_Ref) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_expressions_ref.cpp"); }
 
 	TEST(CppIndependentTest, BasicClasses) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_basic_classes.cpp"); }
-	
+
 	TEST(CppIndependentTest, ClassOperators) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_class_operators.cpp"); }
 
 	TEST(CppIndependentTest, BasicTemplates) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_basic_templates.cpp"); }
@@ -56,11 +56,11 @@ namespace frontend {
 	TEST(CppIndependentTest, DefaultArgs) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_default_args.cpp"); }
 
 	TEST(CppIndependentTest, ObjectPassing) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_object_passing.cpp"); }
-	
+
 	TEST(CppIndependentTest, This) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_this.cpp"); }
 
-	TEST(CppIndependentTest, DISABLED_InitializerList) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_initializer_list.cpp"); }
-	
+	TEST(CppIndependentTest, InitializerList) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_initializer_list.cpp"); }
+
 	TEST(CppIndependentTest, DISABLED_Return) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_return.cpp"); }
 
 	TEST(CppIndependentTest, Globals) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_globals.cpp"); }
