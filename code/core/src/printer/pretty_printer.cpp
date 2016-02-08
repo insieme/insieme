@@ -164,7 +164,15 @@ namespace printer {
 			// no matching alias found => done
 			return type;
 		}
-		
+
+		const std::string& getObjectName(const core::TypePtr& ty) {
+			auto objTy = analysis::getObjectType(ty);
+			if(auto gt = objTy.isa<GenericTypePtr>()) return gt->getName()->getValue();
+			if(auto tt = objTy.isa<TagTypePtr>()) return tt->getName()->getValue();
+			assert_fail() << "could not retrieve object type name";
+			throw;
+		}
+
 		/**
 		 * The main visitor used by the pretty printer process.
 		 */
@@ -313,12 +321,11 @@ namespace printer {
 						}
 
 						// later used to find out which member functions are not visited -> free defined ctors
-						auto constructors = cur->getRecord()->getConstructors();
-						if (!constructors.empty()) {
-							for (auto constr : constructors) {
-								if (auto ctor = constr.isa<LambdaExprPtr>()) {
-									visitedMemberFunctions.insert(ctor->getReference());
-								}
+						auto constructors = binding->getRecord()->getConstructors();
+						for (auto constr : constructors) {
+							if (auto ctor = constr.isa<LambdaExprPtr>()) {
+								visitedMemberFunctions.insert(ctor->getReference());
+								visitedMemberFunctions.insert(cur->peel(ctor)->getReference());
 							}
 						}
 					}
@@ -413,8 +420,7 @@ namespace printer {
 							} else if (visitedMemberFunctions.insert(binding->getReference()).second) {
 								// branch for free defined function
 								if (binding->getReference()->getType().isMemberFunction()) { // free member functions
-									auto tagname = analysis::getObjectType(
-											cur->getType()).as<TagTypePtr>()->getName()->getValue();
+									auto tagname = getObjectName(cur->getType());
 									vector<std::string> splitstring;
 									boost::split(splitstring, lambdaNames[binding->getReference()],
 												 boost::is_any_of("::"));
@@ -427,11 +433,8 @@ namespace printer {
 									visit(NodeAddress(funType));
 									out << ";";
 								} else if (binding->getReference()->getType().isConstructor()) { // free constructors
-									auto tagtype = analysis::getObjectType(cur->getType());
-									if(tagtype.isa<TagTypePtr>()) {
-										auto tagname = tagtype.as<TagTypePtr>()->getName()->getValue();
-										visitedFreeFunctions[binding->getReference()] = std::make_tuple(tagname, lambdaNames[binding->getReference()]);
-									}
+									auto tagname = getObjectName(cur->getType());
+									visitedFreeFunctions[binding->getReference()] = std::make_tuple(tagname, lambdaNames[binding->getReference()]);
 								}
 							}
 						}
@@ -671,14 +674,16 @@ namespace printer {
 									auto parameters = lambda.getParameterList();
 
 									newLine();
-									out << "decl ctor : " << tagname << " :: " << funname << " = (" <<
+									out << "def " << tagname << " :: ctor " << funname << " = function (" <<
 											join(", ", lambda->getParameters().begin() + 1, lambda->getParameters().end(),
 												 [&](std::ostream& out, const VariablePtr& curVar) {
 													 visit(NodeAddress(curVar));
 													 out << " : ";
 													 visit(NodeAddress(curVar->getType()));
 												 }) << ") ";
+									thisStack.push(lambda->getParameters().front());
 									visit(bindingAddress->getLambda()->getBody());
+									thisStack.pop();
 									out << ";";
 								} else if (funType->isMemberFunction()) {
 									auto tagname = std::get<0>(visitedFreeFunctions[binding->getReference()]);

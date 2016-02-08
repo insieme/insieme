@@ -164,6 +164,13 @@ namespace tu {
 		}
 
 		/**
+		 * removes a function from the function map
+		 */
+		void removeFunction(const core::LiteralPtr& symbol) {
+			if(functions.find(symbol) != functions.end()) functions.erase(symbol);
+		}
+
+		/**
 		 * replaces a previous definition by a new one
 		 */
 		void replaceFunction(const core::LiteralPtr& symbol, const core::LambdaExprPtr& definition) {
