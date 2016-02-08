@@ -75,15 +75,15 @@ namespace checks {
 				}
 
 				// if we can find a valid instantiation, then this declaration is valid
-				if (types::getTypeVariableInstantiation(nm, paramType, valueT)) {
+				if(types::getTypeVariableInstantiation(nm, paramType, valueT)) {
 					return true;
 					// if the substitution failed and we are assigning to a cpp ref or rref
-				} else if (lang::isCppReference(paramType) || lang::isCppRValueReference(paramType)) {
+				} else if(lang::isCppReference(paramType) || lang::isCppRValueReference(paramType)) {
 					// we try to find a substitution for the case where the parameter would be a plain ref
 					auto paramRef = lang::ReferenceType(paramType);
 					auto plainRefType = lang::buildRefType(paramRef.getElementType(), paramRef.isConst(), paramRef.isVolatile(), lang::ReferenceType::Kind::Plain);
-					//try to find a substitution again with the changed reference kind
-					if (types::getTypeVariableInstantiation(nm, plainRefType, valueT)) {
+					// try to find a substitution again with the changed reference kind
+					if(types::getTypeVariableInstantiation(nm, plainRefType, valueT)) {
 						return true;
 					}
 				}
@@ -518,13 +518,17 @@ namespace checks {
 		TypePtr retType = analysis::normalize(substitution->applyTo(returnType));
 		TypePtr resType = analysis::normalize(address->getType());
 
-		if(!typeMatchesWithOptionalMaterialization(manager, resType, retType)) {
-			add(res, Message(address, EC_TYPE_INVALID_RETURN_TYPE,
-			                 format("Invalid result type of call expression \nexpected: \n\t%s \nactual: \n\t%s \nfunction type: \n\t%s",
-			                        *retType, *resType, *functionType),
-			                 Message::ERROR));
-			return res;
+		if(typeMatchesWithOptionalMaterialization(manager, resType, retType)) return res;
+		
+		// FIXME: this should only be allowed if the actual return within the lambda generates a ref
+		if(lang::isPlainReference(resType)) {
+			if(analysis::equalTypes(analysis::getReferencedType(resType), retType)) return res;
 		}
+
+		add(res, Message(address, EC_TYPE_INVALID_RETURN_TYPE,
+			                format("Invalid result type of call expression \nexpected: \n\t%s \nactual: \n\t%s \nfunction type: \n\t%s",
+			                    *retType, *resType, *functionType),
+			                Message::ERROR));
 		return res;
 	}
 

@@ -167,14 +167,15 @@ namespace frontend {
 			expected = builder.normalize(expected);
 			actual = builder.normalize(actual);
 			EXPECT_EQ(expected, actual) << "\tLocation     : " << locationOf(addr) << "\n"
-			                            << "\tActual Pretty: " << dumpColor(actual, std::cout, true) << "\n"
-			                            << "\tExpect Pretty: " << dumpColor(expected, std::cout, true) << "\n"
+			                            << "\tActual Pretty: " << dumpColor(actual, std::cout) << "\n"
+			                            << "\tExpect Pretty: " << dumpColor(expected, std::cout) << "\n"
 			                            //<< "\tActual Text: " << dumpText(actual) << "\n"
 			                            //<< "\tExpect Text: " << dumpText(expected) << "\n"
 			                            << "\tActual type  : " << (aIsExp ? toString(dumpColor(actual.as<ExpressionPtr>()->getType())) : toString("-")) << "\n"
 			                            << "\tExpected type: " << (eIsExp ? toString(dumpColor(expected.as<ExpressionPtr>()->getType())) : toString("-"))
 			                            << "\n";
-			if(expected != actual) {
+
+			if(getenv("INSIEME_IRDIFF") != nullptr && expected != actual) {
 				irDiff(actual, expected);
 				exit(-1);
 			}

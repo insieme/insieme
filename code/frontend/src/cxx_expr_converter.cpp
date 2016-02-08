@@ -492,38 +492,8 @@ namespace conversion {
 		core::ExpressionPtr retIr;
 		LOG_EXPR_CONVERSION(bindTempExpr, retIr);
 
-		//const clang::CXXTemporary* temp = bindTempExpr->getTemporary();
-
-		//// we may visit the BindTemporaryExpr twice. Once in the temporary lookup and
-		//// then when we visit the subexpr of the expression with cleanups. If this is the second time that we
-		//// visit the expr do not create a new declaration statement and just return the previous one.
-		//Converter::TemporaryInitMap::const_iterator fit = converter.tempInitMap.find(temp);
-		//if(fit != converter.tempInitMap.end()) {
-		//	// variable found in the map
-		//	return (fit->second.getVariable());
-		//}
-
-		//const clang::CXXDestructorDecl* dtorDecl = temp->getDestructor();
-		//const clang::CXXRecordDecl* classDecl = dtorDecl->getParent();
-
-		//core::TypePtr&& irType = converter.convertType(classDecl->getTypeForDecl()->getCanonicalTypeInternal());
-
-		//// create a new var for the temporary and initialize it with the inner expr IR
-		//const clang::Expr* inner = bindTempExpr->getSubExpr();
-		//core::ExpressionPtr body = converter.convertExpr(inner);
-		//if(!gen.isRef(body->getType())) {
-		//	// body = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), body);
-		//	body = builder.refVar(body);
-		//}
-
-		//core::DeclarationStmtPtr declStmt;
-		//declStmt = converter.builder.declarationStmt(converter.builder.refType(irType), (body));
-
-		//// store temporary and declaration stmt in Map
-		//converter.tempInitMap.insert(std::make_pair(temp, declStmt));
-		//return retIr = declStmt.getVariable();
-
-		assert_not_implemented();
+		// temporary creation/destruction is implicit
+		retIr = converter.convertExpr(bindTempExpr->getSubExpr());
 
 		return retIr;
 
@@ -535,72 +505,9 @@ namespace conversion {
 	core::ExpressionPtr Converter::CXXExprConverter::VisitExprWithCleanups(const clang::ExprWithCleanups* cleanupExpr) {
 		core::ExpressionPtr retIr;
 		LOG_EXPR_CONVERSION(cleanupExpr, retIr);
-
-		//// perform subtree traversal and get the temporaries that the cleanup expression creates
-		//std::vector<const clang::CXXTemporary*>&& tmps = utils::lookupTemporaries(cleanupExpr->getSubExpr());
-
-		//// convert the subexpr to IR
-		//const clang::Expr* inner = cleanupExpr->getSubExpr();
-		//core::ExpressionPtr innerIr = converter.convertExpr(inner);
-
-		//// for each of the temporaries create an IR var decl and push it at the beginning of the
-		//// lambda body
-		//vector<core::StatementPtr> stmtList;
-		//for(std::vector<const clang::CXXTemporary*>::iterator it = tmps.begin(); it != tmps.end(); ++it) {
-		//	Converter::TemporaryInitMap::const_iterator fit = converter.tempInitMap.find(*it);
-		//	if(fit != converter.tempInitMap.end()) {
-		//		// if the cleanup obj is a const_ref, we dont need the cleanup expr
-		//		core::DeclarationStmtPtr decl = fit->second.as<core::DeclarationStmtPtr>();
-		//		core::VariablePtr var = decl->getVariable();
-		//		core::ExpressionPtr init = decl->getInitialization();
-
-		//		VLOG(2) << " expr: " << innerIr;
-		//		VLOG(2) << " cleanup: " << var << " (type: " << var->getType() << ")  init: " << init << std::endl;
-		//		stmtList.insert(stmtList.begin(), decl); // insert with reverse order
-		//	}
-		//}
-
-		//core::TypePtr lambdaRetType = converter.convertType(cleanupExpr->getType());
-
-		//if(innerIr->getType() != lambdaRetType && !gen.isRef(lambdaRetType)) {
-		//	// if (core::analysis::isCallOf(innerIr, mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize()))
-		//	if(core::analysis::isCallOf(innerIr, mgr.getLangBasic().getRefVar())) {
-		//		innerIr = innerIr.as<core::CallExprPtr>().getArgument(0);
-		//	} else {
-		//		if(core::analysis::isAnyCppRef(innerIr->getType())) { innerIr = core::analysis::unwrapCppRef(innerIr); }
-
-		//		innerIr = converter.tryDeref(innerIr);
-		//	}
-		//}
-
-		//if(stmtList.empty()) {
-		//	// we avoided all expressions to be cleanup, no extra lambda needed
-		//	VLOG(2) << "	cleanup expression is simplyfied and avoided";
-		//	return retIr = innerIr;
-		//}
-
-		//// if the expression does not return anything, do not add return stmt
-		//if(gen.isUnit(innerIr->getType())) {
-		//	stmtList.push_back(innerIr);
-		//} else {
-		//	if(core::encoder::isListType(innerIr->getType())) {
-		//		vector<core::ExpressionPtr> retList = core::encoder::toValue<vector<core::ExpressionPtr>, core::encoder::DirectExprListConverter>(innerIr);
-		//		if(core::encoder::isListType(retList[0]->getType())) {
-		//			retList = core::encoder::toValue<vector<core::ExpressionPtr>, core::encoder::DirectExprListConverter>(retList[0]);
-		//		}
-		//		for(core::ExpressionPtr& expr : retList) {
-		//			expr = builder.deref(expr);
-		//		}
-
-		//		innerIr = builder.callExpr(lambdaRetType, mgr.getLangBasic().getGenInit(), builder.getTypeLiteral(lambdaRetType), builder.tupleExpr(retList));
-		//	}
-		//	stmtList.push_back(converter.builder.returnStmt(innerIr));
-		//}
-
-		//// inline the list,
-		//return retIr = detail::inlineExpressionWithCleanups(stmtList);
-
-		assert_not_implemented();
+		
+		// temporary creation/destruction is implicit
+		retIr = converter.convertExpr(cleanupExpr->getSubExpr());
 
 		return retIr;
 	}
@@ -629,45 +536,25 @@ namespace conversion {
 		LOG_EXPR_CONVERSION(materTempExpr, retIr);
 		retIr = Visit(materTempExpr->GetTemporaryExpr());
 
+		// if we are materializing the rvalue result of a function call, do it
+		auto subCall = retIr.isa<core::CallExprPtr>();
+		if(subCall) {
+			auto materializedType = convertExprType(materTempExpr);
+			if(core::analysis::isRefType(materializedType)) {
+				core::lang::ReferenceType matRefType(materializedType);
+				// if we are already materialized everything is fine
+				if(core::lang::isPlainReference(retIr->getType())) return retIr;
+				// otherwise, materialize
+				frontend_assert(matRefType.getElementType() == retIr->getType()) << "Materializing to unexpected type " << dumpColor(matRefType.toType())
+					                                                            << " from " << dumpColor(retIr->getType());
+				retIr = builder.callExpr(builder.refType(retIr->getType()), subCall->getFunctionExpr(), subCall->getArguments());
+			}
+		}
+
 		// we don't need to materialize POD types, Inspire semantics allow implicit materialization
 		if(materTempExpr->getType().isPODType(converter.getCompiler().getASTContext())) {
 			return retIr;
 		}
-
-		//if(VLOG_IS_ON(2)) {
-		//	VLOG(2) << " =============== Materialize! =================" << std::endl;
-		//	materTempExpr->dump();
-		//	VLOG(2) << "inner: ";
-		//	dumpPretty(retIr);
-		//	VLOG(2) << "type: ";
-		//	dumpPretty(retIr->getType());
-		//	VLOG(2) << "expected: ";
-		//	core::TypePtr t = converter.convertType(materTempExpr->getType());
-		//	VLOG(2) << dumpPretty(t);
-		//}
-
-		//// if (! t.isa<core::RefTypePtr>())
-		////	return retIr;
-
-		//// if inner expression is a bind temporary, we do not need to materialize, is IR-correct
-		//if(llvm::isa<clang::CXXBindTemporaryExpr>(materTempExpr->GetTemporaryExpr())) { return retIr; }
-		//if(llvm::isa<clang::CXXNewExpr>(materTempExpr->GetTemporaryExpr())) { return (retIr = builder.refVar(retIr)); }
-		//// return (retIr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), retIr));
-
-		//// inner type is a pointer? materialize
-		//if((retIr->getType().isa<core::RefTypePtr>()) && (retIr->getType().as<core::RefTypePtr>()->getElementType()->getNodeType() == core::NT_ArrayType)) {
-		//	return (retIr = builder.refVar(retIr));
-		//}
-		//// return (retIr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), retIr));
-
-
-		//if(core::analysis::isAnyCppRef(retIr->getType()) || gen.isRef(retIr->getType())) {
-		//	return retIr;
-		//} else {
-		//	return (retIr = builder.refVar(retIr));
-		//}
-
-		//assert_not_implemented();
 
 		return retIr;
 	}

@@ -97,7 +97,7 @@ int main() {
 	#pragma test expect_ir(ADDOPTEST_IR,R"( {
 		var ref<IMP_AddOpTest,f,f,plain> v0 = IMP_AddOpTest::(v0);
 		var ref<IMP_AddOpTest,f,f,plain> v1 = IMP_AddOpTest::(v1);
-		v0.IMP__operator_assign_(v0.IMP__operator_plus_(ref_kind_cast(v1, type_lit(cpp_ref))) : ref<IMP_AddOpTest,f,f,cpp_rref>) materialize;
+		v0.IMP__operator_assign_(ref_kind_cast(v0.IMP__operator_plus_(ref_kind_cast(v1, type_lit(cpp_ref))) materialize, type_lit(cpp_rref))) materialize;
 	} )")
 	{
 		AddOpTest a, b;
@@ -108,7 +108,7 @@ int main() {
 	#pragma test expect_ir(ADDOPEXTERNTEST_IR,R"( {
 		var ref<IMP_AddOpExternTest,f,f,plain> v0 = IMP_AddOpExternTest::(v0);
 		var ref<IMP_AddOpExternTest,f,f,plain> v1 = IMP_AddOpExternTest::(v1);
-		v0.IMP__operator_assign_(IMP__operator_plus_(ref_kind_cast(v0, type_lit(cpp_ref)), ref_kind_cast(v1, type_lit(cpp_ref))) : ref<IMP_AddOpExternTest,f,f,cpp_rref>) materialize;
+		v0.IMP__operator_assign_(ref_kind_cast(IMP__operator_plus_(ref_kind_cast(v0, type_lit(cpp_ref)), ref_kind_cast(v1, type_lit(cpp_ref))) materialize, type_lit(cpp_rref))) materialize;
 	} )")
 	{
 		AddOpExternTest a, b;

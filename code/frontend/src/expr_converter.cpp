@@ -116,8 +116,12 @@ namespace conversion {
 	}
 
 	// translate expression, but skip outer construct expr and cast references to correct kind
-	core::ExpressionPtr Converter::ExprConverter::convertCxxArgExpr(const clang::Expr* clangArgExpr, const core::TypePtr& targetType) {
-		core::ExpressionPtr ret = converter.convertExpr(clangArgExpr);
+	core::ExpressionPtr Converter::ExprConverter::convertCxxArgExpr(const clang::Expr* clangArgExprInput, const core::TypePtr& targetType) {
+		core::ExpressionPtr ret = converter.convertExpr(clangArgExprInput);
+		const clang::Expr* clangArgExpr = clangArgExprInput;
+		// skip over potential ExprWithCleanups
+		auto conWithCleanups = llvm::dyn_cast<clang::ExprWithCleanups>(clangArgExpr);
+		if(conWithCleanups) clangArgExpr = conWithCleanups->getSubExpr();
 		// detect copy/move constructor calls
 		VLOG(2) << "---\nCXX call checking arg: " << dumpClang(clangArgExpr, converter.getCompiler().getSourceManager());
 		auto constructExpr = llvm::dyn_cast<clang::CXXConstructExpr>(clangArgExpr);
@@ -734,8 +738,6 @@ namespace conversion {
 			for(auto entry : fields) {
 				core::ExpressionPtr initExp = converter.getIRBuilder().getZero(entry->getType());
 				if(i < initList->getNumInits()) initExp = converter.convertInitExpr(initList->getInit(i));
-				frontend_assert(initExp->getType() == entry->getType()) << "Type mismatch in record initialization expression:\n"
-					<< "expected: " << dumpColor(entry->getType()) << "got: " << dumpColor(initExp->getType());
 				values.push_back(converter.getIRBuilder().namedValue(entry->getName(), initExp));
 				++i;
 			}
@@ -755,13 +757,13 @@ namespace conversion {
 		if(clangType->isStructureType()) {
 			auto types = lookupRecordTypes(converter, initList);
 			auto values = buildNamedValuesForStructInit(converter, initList);
-			retIr = utils::buildRecordTypeFixup(builder.structExpr(types.first, values), types.second);
+			retIr = builder.structExpr(types.first, values);
 		}
 		else if(clangType->isUnionType()) {
 			auto types = lookupRecordTypes(converter, initList);
 			auto member = builder.stringValue(initList->getInitializedFieldInUnion()->getNameAsString());
 			auto initExp = Visit(initList->getInit(0));
-			retIr = utils::buildRecordTypeFixup(builder.unionExpr(types.first, member, initExp), types.second);
+			retIr = builder.unionExpr(types.first, member, initExp);
 		}
 		else if(clangType->isArrayType()) {
 			auto gT = converter.convertType(clangType).as<core::GenericTypePtr>();

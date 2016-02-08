@@ -115,28 +115,6 @@ namespace extensions {
 			return prog;
 		}
 
-		//////////////////////////////////////////////////////////////////////
-		// Remove calls to RecordTypeFixup (from the frontend inspire module)
-		// ==================================================================
-		//
-		// These are generated to ensure valid semantics pre-resolver, and should be eliminated now.
-		// All of these should have the same argument type as their return type (and type literal) at this point.
-		//
-		ProgramPtr removeRecordTypeFixup(ProgramPtr prog) {
-			auto& mgr = prog->getNodeManager();
-			auto& inspModule = mgr.getLangExtension<frontend::utils::FrontendInspireModule>();
-
-			prog = irp::replaceAllAddr(irp::callExpr(inspModule.getRecordTypeFixup(), icp::anyList), prog, [&](const NodeAddress& matchingAddress) {
-				auto call = matchingAddress.getAddressedNode().as<CallExprPtr>();
-				auto arg0 = call->getArgument(0);
-				// ensure correct typing
-				assert_pred2(core::analysis::equalTypes, call->getType(), arg0->getType()) << "Record types not correctly resolved"; 
-				return arg0;
-			}).as<ProgramPtr>();
-
-			return prog;
-		}
-		
 		//////////////////////////////////////////////////////////////////////////
 		// Remove superfluous bool_to_int calls (from the frontend inspire module)
 		// =======================================================================
@@ -212,7 +190,6 @@ namespace extensions {
 
 		prog = TypeCanonicalizer().map(prog);
 		prog = mainReturnCorrection(prog);
-		prog = removeRecordTypeFixup(prog);
 		prog = removeSuperfluousBoolToInt(prog);
 		prog = replaceZeroStructInits(prog);
 

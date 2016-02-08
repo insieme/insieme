@@ -72,13 +72,6 @@ namespace utils {
 		auto& inspMod = mgr.getLangExtension<FrontendInspireModule>();
 		return builder.callExpr(mgr.getLangBasic().getInt4(), inspMod.getBoolToInt(), b);
 	}
-
-	ExpressionPtr buildRecordTypeFixup(const ExpressionPtr& expr, const GenericTypePtr& targetType) {
-		NodeManager& mgr = expr->getNodeManager();
-		IRBuilder builder(mgr);
-		auto& inspMod = mgr.getLangExtension<FrontendInspireModule>();
-		return builder.callExpr(targetType, inspMod.getRecordTypeFixup(), expr, builder.getTypeLiteral(targetType));
-	}
 	
 	core::ExpressionPtr buildObjectArrayNew(const core::TypePtr& objType, const core::ExpressionPtr& num, const core::ExpressionPtr& ctor) {
 		NodeManager& mgr = num->getNodeManager();

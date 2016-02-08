@@ -69,6 +69,7 @@
 #include "insieme/core/encoder/lists.h"
 #include "insieme/core/printer/lexer.h"
 #include "insieme/core/types/match.h"
+#include "insieme/core/types/type_variable_deduction.h"
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/node_mapper_utils.h"
 
@@ -1297,6 +1298,13 @@ namespace printer {
 					out << "(" << join(", ", begin, args.end(), [&](std::ostream& out, const NodeAddress& curParam) {
 						VISIT(curParam);
 					}) << ")";
+				}
+
+				// print materialize if required
+				auto callType = node->getType().getAddressedNode();
+				auto funType = function->getType().as<FunctionTypePtr>()->getReturnType();
+				if(!analysis::equalTypes(callType, funType) && !types::getTypeVariableInstantiation(node->getNodeManager(), funType, callType)) {
+					out << " materialize ";
 				}
 			}
 

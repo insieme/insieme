@@ -94,14 +94,18 @@ namespace conversion {
 			// add "this" parameter to param list
 			auto paramList = funType->getParameterTypeList();
 			paramList.insert(paramList.begin(), thisType);
-			// handle return type for constructors
+			// handle return type for constructors and destructors
 			auto retType = funType->getReturnType();
 			const clang::CXXConstructorDecl* constrDecl = llvm::dyn_cast<clang::CXXConstructorDecl>(methDecl);
-			if(constrDecl) { retType = thisType; }
+			const clang::CXXDestructorDecl* destrDecl = llvm::dyn_cast<clang::CXXDestructorDecl>(methDecl);
+			if(constrDecl || destrDecl) { retType = thisType; }
 			// determine kind
 			auto kind = core::FunctionKind::FK_MEMBER_FUNCTION;
-			if(constrDecl) { kind = core::FunctionKind::FK_CONSTRUCTOR; }
-			else if(llvm::dyn_cast<clang::CXXDestructorDecl>(methDecl)) { kind = core::FunctionKind::FK_DESTRUCTOR; }
+			if(constrDecl) {
+				kind = core::FunctionKind::FK_CONSTRUCTOR;
+			} else if(destrDecl) {
+				kind = core::FunctionKind::FK_DESTRUCTOR;
+			}
 			// build type
 			auto newFunType = converter.getIRBuilder().functionType(paramList, retType, kind);
 			VLOG(2) << "Converted method type from: " << dumpClang(methDecl) << "\n to: " << dumpColor(newFunType)

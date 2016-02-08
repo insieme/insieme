@@ -107,7 +107,7 @@ void validateTrivial() {
 	
 	// pass x-value
 	#pragma test expect_ir(STRUCT_TRIVIAL,CONSUME_TRIVIAL,PRODUCE_TRIVIAL R"(
-		{ IMP_consume_struct_Trivial_returns_void(IMP_produce_struct_Trivial_returns_struct_Trivial()); }
+		{ IMP_consume_struct_Trivial_returns_void(ref_cast(IMP_produce_struct_Trivial_returns_struct_Trivial() materialize, type_lit(f), type_lit(f), type_lit(cpp_rref))); }
 	)")
 	{ consume<T>(produce<T>()); }
 	
@@ -158,7 +158,7 @@ void validateTrivial() {
 	
 	// pass x-value
 	#pragma test expect_ir(STRUCT_TRIVIAL,CONSUME_TRIVIAL_RREF,PRODUCE_TRIVIAL R"(
-		{ IMP_consume_struct_Trivial__ampersand__ampersand__returns_void(IMP_produce_struct_Trivial_returns_struct_Trivial()); }
+		{ IMP_consume_struct_Trivial__ampersand__ampersand__returns_void(ref_kind_cast(IMP_produce_struct_Trivial_returns_struct_Trivial() materialize, type_lit(cpp_rref))); }
 	)")
 	{ consume<T&&>(produce<T>()); }
 	
@@ -187,7 +187,7 @@ void validateTrivial() {
 	
 	// pass x-value
 	#pragma test expect_ir(STRUCT_TRIVIAL,CONSUME_TRIVIAL_CONST_REF,PRODUCE_TRIVIAL R"(
-		{ IMP_consume_const_struct_Trivial__ampersand__returns_void(IMP_produce_struct_Trivial_returns_struct_Trivial()); }
+		{ IMP_consume_const_struct_Trivial__ampersand__returns_void(ref_kind_cast(IMP_produce_struct_Trivial_returns_struct_Trivial() materialize, type_lit(cpp_ref))); }
 	)")
 	{ consume<const T&>(produce<T>()); }
 	
@@ -217,7 +217,7 @@ void validateTrivial() {
 
 	// pass x-value
 	#pragma test expect_ir(STRUCT_TRIVIAL,CONSUME_TRIVIAL_CONST_RREF,PRODUCE_TRIVIAL R"(
-		{ IMP_consume_const_struct_Trivial__ampersand__ampersand__returns_void(IMP_produce_struct_Trivial_returns_struct_Trivial()); }
+		{ IMP_consume_const_struct_Trivial__ampersand__ampersand__returns_void(ref_kind_cast(IMP_produce_struct_Trivial_returns_struct_Trivial() materialize, type_lit(cpp_rref))); }
 	)")
 	{ consume<const T&&>(produce<T>()); }	// pass x-value
 	

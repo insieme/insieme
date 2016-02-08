@@ -77,7 +77,7 @@ int main() {
 	#pragma test expect_ir(R"(
 		def IMP_consumer = function (v1 : ref<int<4>,f,f,cpp_rref>) -> unit { };
 		def IMP_producer = () -> int<4> { return 5; };
-		IMP_consumer(IMP_producer())
+		IMP_consumer(ref_kind_cast(IMP_producer() materialize, type_lit(cpp_rref)))
 	)")
 	consumer(producer());
 
