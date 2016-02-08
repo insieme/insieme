@@ -1384,8 +1384,11 @@ namespace core {
 		 * @return the requested member function list instance managed by the given manager
 		 */
 		static MemberFunctionsPtr get(NodeManager& manager, const MemberFunctionList& fields = MemberFunctionList()) {
-			return manager.get(MemberFunctions(convertList(fields)));
-		}
+			MemberFunctionList sorted = fields;
+		    std::stable_sort(sorted.begin(), sorted.end(),
+		              [](const MemberFunctionPtr& a, const MemberFunctionPtr& b) { return a.getNameAsString() < b.getNameAsString(); });
+		    return manager.get(MemberFunctions(convertList(sorted)));
+	    }
 
 	IR_NODE_END()
 
