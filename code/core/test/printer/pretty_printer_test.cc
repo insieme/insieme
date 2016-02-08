@@ -1040,7 +1040,7 @@ TEST(PrettyPrinter, FreeFunctions) {
 		EXPECT_EQ("decl struct A;\n"
 				  "def struct A {\n"
 				  "};\n"
-				  "def ctor : A :: foo = () { };\n"
+				  "def A :: ctor foo = function () { };\n"
 				  "{\n"
 				  "    var ref<A,f,f,plain> v130 = foo(ref_var(type_lit(A)));\n"
 				  "}", toString(printer));
