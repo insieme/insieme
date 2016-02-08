@@ -169,6 +169,7 @@
 	CATCH        "catch"
 	THROW        "throw"
 
+	MATERIALIZE  "materialize"
 
 	SPAWN        "spawn"
 	SYNC         "sync"
@@ -240,7 +241,7 @@
 
 %type <ExpressionPtr>                  variable
 %type <LiteralPtr>                     literal
-%type <ExpressionPtr>                  call
+%type <ExpressionPtr>                  call actual_call
 %type <LambdaExprPtr>                  lambda constructor_lambda
 %type <BindExprPtr>                    bind
 %type <ExpressionPtr>                  parallel_expression list_expression initializer unary_op binary_op ternary_op this_expression
@@ -609,10 +610,14 @@ literal : "true"                                                          { $$ =
 
 // -- call --
 
-call : expression "(" typed_expressions ")"                               { $$ = driver.genCall(@$, $1, $3); }
-     | "identifier" "::" "(" non_empty_typed_expressions ")"              { $$ = driver.genConstructorCall(@$, $1, $4); }
-     | "identifier" "::" "~" "(" expression ")"                           { $$ = driver.genDestructorCall(@$, $1, $5); }
+call : actual_call                                                        { $$ = $1; }
+     | actual_call "materialize"                                          { $$ = driver.materializeCall(@$, $1); }
      ;
+
+actual_call : expression "(" typed_expressions ")"                        { $$ = driver.genCall(@$, $1, $3); }
+            | "identifier" "::" "(" non_empty_typed_expressions ")"       { $$ = driver.genConstructorCall(@$, $1, $4); }
+            | "identifier" "::" "~" "(" expression ")"                    { $$ = driver.genDestructorCall(@$, $1, $5); }
+            ;
 
 
 // -- lambda --
@@ -755,8 +760,9 @@ statement_list :                                                          { $$ =
 
 // -- variable declaration --
 
-variable_definition : "var" type "identifier" "=" expression ";"          { $$ = driver.genVariableDefinition(@$, $2, $3, $5); }
-                    | "var" type "identifier" ";"                         { $$ = driver.genVariableDefinition(@$, $2, $3, driver.builder.undefinedVar($2)); }
+variable_definition : "var" type "identifier" "="                         { INSPIRE_GUARD(@3, driver.genVariableDeclaration(@$, $2, $3)); }
+                                                  expression ";"          { $$ = driver.genDeclarationStmt(@$, $3, $6); }
+                    | "var" type "identifier" ";"                         { $$ = driver.genUndefinedDeclarationStmt(@$, $2, $3); }
                     | "auto" "identifier" "=" expression ";"              { $$ = driver.genVariableDefinition(@$, driver.getScalar($4)->getType(), $2, $4); }
                     ;
 

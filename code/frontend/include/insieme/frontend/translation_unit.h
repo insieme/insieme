@@ -74,7 +74,8 @@ class TranslationUnit : public boost::noncopyable {
 	clang::ASTConsumer emptyCons;
 	insieme::frontend::InsiemeSema mSema;
 
-	// FIXME: needed for what? maybe for ParserProxy
+    // this two friend declarations are needed for testing.
+    // type_conversion_test.cc
 	friend class ::TypeConversion_FileTest_Test;
 	friend class ::StmtConversion_FileTest_Test;
 

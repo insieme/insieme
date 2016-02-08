@@ -362,11 +362,9 @@ namespace conversion {
 			core::GenericTypePtr et = core::lang::getEnumDef(builder.genericType(enumName), enumElements);
 			// build struct {enumty t; val v;}
 			auto enumResTy = core::lang::getEnumType(enumClassType, et);
-
 			// attach necessary information for types defined in library headers
 			converter.applyHeaderTagging(enumResTy, enumDecl);
-			core::annotations::attachName(enumResTy, enumDecl->getNameAsString());
-
+            if (!enumDecl->getNameAsString().empty()) core::annotations::attachName(enumResTy, enumDecl->getNameAsString());
 			return enumResTy;
 		}
 
@@ -379,28 +377,28 @@ namespace conversion {
 				return rMan.lookup(clangDecl);
 			}
 			// first time we encounter this type
-			string name;
+			string mangledName;
 			bool useName;
-			std::tie(name, useName) = getNameFor(converter, clangDecl);
-			auto genTy = builder.genericType(name);
+			std::tie(mangledName, useName) = getNameFor(converter, clangDecl);
+			auto genTy = builder.genericType(mangledName);
 			rMan.insert(clangDecl, genTy);
 			// build actual struct type (after insert!)
 			core::FieldList recordMembers;
 			for(auto mem : clangDecl->fields()) {
 				recordMembers.push_back(builder.field(insieme::frontend::utils::getNameForField(mem, converter.getSourceManager()), converter.convertType(mem->getType())));
 			}
-			auto compoundName = useName ? builder.stringValue(name) : builder.stringValue("");
+			auto compoundName = useName ? builder.stringValue(mangledName) : builder.stringValue("");
 			core::TagTypePtr recordType = clangRecordTy->isUnionType() ? builder.unionType(compoundName, recordMembers)
 				                                                       : builder.structType(compoundName, recordMembers);
 			// attach necessary information for types defined in library headers
 			converter.applyHeaderTagging(recordType, clangRecordTy->getDecl());
-			core::annotations::attachName(recordType, clangRecordTy->getDecl()->getNameAsString());
-
+            // we'll attach name only if available, this could be a problem if anonymous names are used
+            if (!clangRecordTy->getDecl()->getNameAsString().empty()) core::annotations::attachName(recordType, clangRecordTy->getDecl()->getNameAsString());
 			// add type to ir translation unit
 			converter.getIRTranslationUnit().addType(genTy, recordType);
 			return genTy;
 		}
-	}
+	} // annon namespace
 
 	core::TypePtr Converter::TypeConverter::VisitTagType(const TagType* tagType) {
 		VLOG(2) << "Converter::TypeConverter::VisitTagType " << tagType << std::endl;

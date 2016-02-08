@@ -28,7 +28,6 @@ curiously_recurring_template_pattern_2
 curiously_recurring_template_pattern_member_function
 dtor
 dtor_return
-empty_struct_bug
 enum
 expr_with_cleanups
 friend
@@ -52,8 +51,6 @@ mem_alloc
 mem_alloc_ctor
 mem_alloc_ctor_inherit
 member_data_pointer
-memberFunc
-memberFuncOverload
 member_function_vector
 memb_func_ptr
 metaFib
@@ -70,7 +67,6 @@ performance
 pod_struct
 pod_struct_assignment
 pod_struct_bug
-pod_struct_return
 rec_class
 rec_memberfunc
 rec_memberfunc_pointer

@@ -18,7 +18,7 @@ def struct A {
 int main() {
 
 	// create an un-initialized memory location
-	var ref<A> a = A::(ref_var(type_lit(A)), 1);
+	var ref<A> a = A::(a, 1);
 	
 	// init using in-place constructor
 	A::(a, 2);

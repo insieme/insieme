@@ -151,7 +151,7 @@ namespace frontend {
 		StmtResult&& ret = Sema::ActOnCompoundStmt(L, R, std::move(Elts), isStmtExpr);
 		clang::CompoundStmt* CS = cast<clang::CompoundStmt>(ret.get());
 		
-		// This is still buggy as of Clang 3.6.2:
+		// This is still buggy with Clang 3.6.2:
 		// when pragmas are just after the beginning of a compound stmt, example:
 		// {
 		// 		#pragma xxx
@@ -159,8 +159,15 @@ namespace frontend {
 		// }
 		// the location of the opening bracket is wrong because of a bug in the clang parser.
 		//
-		// We solve the problem by searching for the bracket in the input stream and overwrite
-		// the value of L (which contains the wrong location) with the correct value.
+        // FIXME: THIS IS A DIRTY HACK AND SHOLD BE ADDRESSED
+        // the problem is not clang as was always blamed, our plagma matcher leaves the 
+        // lexer in an unstable state. Lexer Tokens are used by reference and each lookahead alter
+        // the Lexer state. Once pragma has been consumed, the lexer is not returned to the rightfull
+        // position. 
+        // Looking for the the brackets here is error prone. There is a need to deal with macro expansions and
+        // wold require of a more sofisticated infrastructure. Like the one already provided by clang preprocessor.
+        // Therefore here we sould assert that the source locations(L and R) point EXACTLY to { and } respectively,
+        // and solve this issue in the pragma lexer. (I have seen it working, but without the Raw string in C mode).
 
 		enum { MacroIDBit = 1U << 31 }; // from clang/Basic/SourceLocation.h for use with cpp classes
 		{

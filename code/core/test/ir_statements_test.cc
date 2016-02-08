@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -194,12 +194,14 @@ namespace core {
 		NodeManager manager;
 
 		LiteralPtr literal = Literal::get(manager, manager.getLangBasic().getInt4(), "12");
-		ReturnStmtPtr stmt = ReturnStmt::get(manager, literal);
+		IRBuilder builder(manager);
+		auto var = builder.variable(literal->getType(), 1337);
+		ReturnStmtPtr stmt = ReturnStmt::get(manager, literal, var);
 
 		EXPECT_EQ("return 12", toString(*stmt));
 
 		// check hash codes, children and cloning
-		basicNodeTests(stmt, toVector<NodePtr>(literal));
+		basicNodeTests(stmt, toVector<NodePtr>(literal, var));
 	}
 
 	TEST(StatementsTest, Goto) {

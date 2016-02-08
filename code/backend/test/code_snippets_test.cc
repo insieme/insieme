@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -107,7 +107,7 @@ namespace backend {
 				R"(
 				int<4> main() {
 					var ref<int<4>,f,f,plain> c;
-					var ref<int<4>,f,f,plain> v = ref_var_init(3);
+					var ref<int<4>,f,f,plain> v = 3;
 					return c+v;
 				}
 				)"
@@ -292,7 +292,7 @@ namespace backend {
 		core::IRBuilder builder(manager);
 
 		core::ExpressionPtr zero = builder.literal(manager.getLangBasic().getUInt8(), "0");
-		core::ExpressionPtr offset = builder.parseExpr("ref_var_init(array_create(type_lit(3),[0ul,0ul,0ul]))");
+		core::ExpressionPtr offset = builder.parseExpr("ref_temp_init(array_create(type_lit(3),[0ul,0ul,0ul]))");
 		core::ExpressionPtr extFun = builder.parseExpr("lit(\"call_vector\" : (ref<array<uint<8>,3>>)->unit )");
 		core::ExpressionPtr call = builder.callExpr(manager.getLangBasic().getUnit(), extFun, toVector(offset));
 
@@ -387,11 +387,11 @@ namespace backend {
 				var uint<inf> size = num_cast(12,type_lit(uint<inf>));
 
 				// create two fixed-sized arrays on the stack and the heap
-				var ref<array<int,10>> a = ref_var_init(array_create(type_lit(10), list_empty(type_lit(int))));
+				var ref<array<int,10>> a = array_create(type_lit(10), list_empty(type_lit(int)));
 				var ref<array<int,10>> b = ref_new_init(array_create(type_lit(10), list_empty(type_lit(int))));
 
 //				// create two variable-sized arrays on the stack and the heap
-//				var ref<array<int,size>> c = ref_var(type_lit(array<int,size>));
+//				var ref<array<int,size>> c = ref_temp(type_lit(array<int,size>));
 //				var ref<array<int,size>> d = ref_new(type_lit(array<int,size>));
 
 				// create two unknown-sized arrays on the stack and the heap
@@ -478,8 +478,8 @@ namespace backend {
 				};
 				int<4> main() {
 				
-				var ref<int<4>> a = ref_var_init(1);
-				var ref<real<4>> b = ref_var_init(2.0f);
+				var ref<int<4>> a = 1;
+				var ref<real<4>> b = 2.0f;
 				
 				f(a, (a : int<4>)=> true, ()=>3);
 				f(b, (b : real<4>)=> true, ()=>4.0f);

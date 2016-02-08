@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -206,6 +206,15 @@ namespace analysis {
 		return lang::ReferenceType(node).getElementType();
 	}
 
+	/**
+	 * Tests whether the given declaration statement is an undefined variable declaration or not.
+	 *
+	 * @return true if the passed declaration is an undefined declaration
+	 */
+	static inline bool isUndefinedInitalization(const DeclarationStmtPtr& decl) {
+		return decl->getVariable() == decl->getInitialization();
+	}
+
 
 	// ----------------------------------- Type-Literals ----------------------------
 
@@ -380,7 +389,7 @@ namespace analysis {
 	 * @param element the element to be searched
 	 * @return number of instances of element
 	 */
-	unsigned countInstances(const NodePtr& code, const NodePtr& element);
+	unsigned countInstances(const NodePtr& code, const NodePtr& element, bool limitScope = false);
 
 	/**
 	 * Tests if the variable is ever assigned or used by reference, if so, is not considered a read only

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -45,6 +45,8 @@
 #include "insieme/core/analysis/compare.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/types/subtype_constraints.h"
+
+#include "insieme/core/transform/node_replacer.h"
 
 #include "insieme/utils/assert.h"
 #include "insieme/utils/name_mangling.h"
@@ -246,6 +248,7 @@ namespace analysis {
 	bool hasConstructorOfType(const TagTypePtr& type, const FunctionTypePtr& funType) {
 		auto record = type->getRecord();
 		for (const auto& cur : record->getConstructors()) {
+
 			if (*cur->getType() == *funType) return true;
 		}
 		return false;
@@ -257,12 +260,15 @@ namespace analysis {
 		auto tagType = type.isa<TagTypePtr>();
 		if (!tagType) return false;
 
+		// unpeel
+		auto canonicalTagType = analysis::getCanonicalType(type).as<TagTypePtr>();
+		auto adjustedParam = tagType->unpeel(paramType);
+
 		// search for constructor
-		NodeManager mgr;
-		IRBuilder builder(mgr);
+		IRBuilder builder(type->getNodeManager());
 		auto thisType = builder.refType(tagType->getTag());
-		auto ctorType = builder.functionType(TypeList{ thisType, paramType }, thisType, FK_CONSTRUCTOR);
-		return hasConstructorOfType(tagType, ctorType);
+		auto ctorType = builder.functionType(TypeList{ thisType, adjustedParam }, thisType, FK_CONSTRUCTOR);
+		return hasConstructorOfType(canonicalTagType, ctorType);
 	}
 
 	bool hasMemberOfType(const TagTypePtr& type, const std::string& name, const FunctionTypePtr& funType) {

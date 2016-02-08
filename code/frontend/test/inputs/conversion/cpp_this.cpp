@@ -34,34 +34,43 @@
  * regarding third party software licenses.
  */
 
-#include <vector>
+// a trivial struct
+struct ThisTest {
+	ThisTest* getThis() { return this; } 
+};
 
-#include <gtest/gtest.h>
+#define STRUCT_THISTEST R"(def struct IMP_ThisTest {
+	lambda IMP_getThis = () -> ptr<IMP_ThisTest> { return ptr_from_ref(this); }
+};)"
 
-#include "insieme/core/analysis/ir++_utils.h"
+struct ThisTest2 {
+	float v;
+	float fA() { return this->v; } 
+	float fB() { return v; } 
+};
+#define STRUCT_THISTEST2 R"(def struct IMP_ThisTest2 {
+	v : real<4>;
+	lambda IMP_fA = () -> real<4> { return *v; }
+	lambda IMP_fB = () -> real<4> { return *v; }
+};)"
 
-#include "insieme/core/ir_builder.h"
-#include "insieme/core/checks/full_check.h"
+int main() {
 
-namespace insieme {
-namespace core {
-namespace analysis {
-
-	TEST(IRppUtils, DefaultCtorTest) {
-		NodeManager manager;
-		IRBuilder builder(manager);
-
-		// create a struct type
-		TypePtr type = builder.parseType("struct { x : int<4>; y : int<4>; }");
-		ASSERT_TRUE(type);
-
-		// create a default constructor for this type
-		auto ctor = createDefaultConstructor(type);
-		EXPECT_TRUE(checks::check(ctor).empty()) << ctor << checks::check(ctor);
-
-		EXPECT_PRED1(isDefaultConstructor, ctor);
+	#pragma test expect_ir(STRUCT_THISTEST,R"({
+		var ref<IMP_ThisTest,f,f,plain> v0 = IMP_ThisTest::(v0);
+		v0.IMP_getThis();
+	})")
+	{
+		ThisTest tt;
+		tt.getThis();
 	}
 
-} // end namespace analysis
-} // end namespace core
-} // end namespace insieme
+	#pragma test expect_ir(STRUCT_THISTEST2,R"({
+		var ref<IMP_ThisTest2,f,f,plain> v0 = IMP_ThisTest2::(v0);
+	})")
+	{
+		ThisTest2 tt2;
+	}
+
+	return 0;
+}

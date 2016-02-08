@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -404,7 +404,6 @@ namespace core {
 		}
 
 		// Build undefined initializers
-		ExpressionPtr undefinedVar(const TypePtr& type) const;
 		ExpressionPtr undefinedNew(const TypePtr& type) const;
 
 		/**
@@ -434,7 +433,7 @@ namespace core {
 
 		// Referencing
 		CallExprPtr deref(const ExpressionPtr& subExpr) const;
-		CallExprPtr refVar(const ExpressionPtr& subExpr) const;
+		CallExprPtr refTemp(const ExpressionPtr& subExpr) const;
 		CallExprPtr refNew(const ExpressionPtr& subExpr) const;
 		CallExprPtr refDelete(const ExpressionPtr& subExpr) const;
 		CallExprPtr assign(const ExpressionPtr& target, const ExpressionPtr& value) const;
@@ -458,6 +457,7 @@ namespace core {
 		DeclarationStmtPtr declarationStmt(const TypePtr& type, const ExpressionPtr& value) const;
 
 		// Return Statement
+		ReturnStmtPtr returnStmt(const ExpressionPtr& retVal) const;
 		ReturnStmtPtr returnStmt() const;
 
 		// Call Expressions

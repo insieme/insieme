@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -79,7 +79,7 @@ TEST(ErrorPrinter, address) {
 				fun(fun(*d));
 				fun(rfun(e));
 				$lfun$(f);
-				rfun(ref_var_init(lfun(g)));
+				rfun(ref_temp_init(lfun(g)));
 			}
 		}
 	)1N5P1RE");

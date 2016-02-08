@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -47,7 +47,6 @@
 #include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/encoder/lists.h"
-#include "insieme/core/frontend_ir_builder.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_expressions.h"
 #include "insieme/core/ir_types.h"
@@ -96,10 +95,20 @@ namespace utils {
 			VLOG(2) << "\n";
 		}
 
-		const core::FrontendIRBuilder& builder = converter.getIRBuilder();
+		const core::IRBuilder& builder = converter.getIRBuilder();
 		//const core::lang::BasicGenerator& basic = builder.getLangBasic();
 		//core::NodeManager& mgr = converter.getNodeManager();
 		
+		// explicit C++ static casts
+		auto staticCast = llvm::dyn_cast<clang::CXXStaticCastExpr>(castExpr);
+		if(staticCast) {
+			auto staticTarget = converter.convertType(staticCast->getTypeAsWritten());
+			VLOG(2) << "STATIC CAST: " << dumpColor(exprTy) << " -> : " << dumpColor(staticTarget);
+			if(core::analysis::isRefType(staticTarget) && core::analysis::isRefType(exprTy)) {
+				return core::lang::buildRefCast(expr, staticTarget);
+			}
+		}
+
 		switch(castExpr->getCastKind()) {
 		////////////////////////////////////////////////////////////////////////////////////////////////////////////	
 		// A conversion which causes the extraction of an r-value from the operand gl-value.
@@ -178,13 +187,10 @@ namespace utils {
 			return builder.unitConsume(expr);
 
 		////////////////////////////////////////////////////////////////////////////////////////////////////////////
-		//case clang::CK_ConstructorConversion:
-		//	// Conversion by constructor. struct A { A(int); }; A a = A(10);
-		//	{
-		//		// this should be handled by backend compiler
-		//		// http://stackoverflow.com/questions/1384007/conversion-constructor-vs-conversion-operator-precedence
-		//		return expr;
-		//	}
+		// Conversion by constructor. struct A { A(int); }; A a = A(10);
+		// * subexpr is constructor call which can be translated to IR normally
+		case clang::CK_ConstructorConversion:
+			return expr;
 
 		////////////////////////////////////////////////////////////////////////////////////////////////////////////
 		//case clang::CK_FloatingRealToComplex:

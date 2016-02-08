@@ -34,34 +34,37 @@
  * regarding third party software licenses.
  */
 
-#include <vector>
-
-#include <gtest/gtest.h>
+#include "insieme/frontend/utils/conversion_utils.h"
 
 #include "insieme/core/analysis/ir++_utils.h"
-
-#include "insieme/core/ir_builder.h"
-#include "insieme/core/checks/full_check.h"
+#include "insieme/core/ir.h"
+#include "insieme/core/ir_address.h"
+#include "insieme/core/lang/reference.h"
+#include "insieme/core/transform/node_replacer.h"
 
 namespace insieme {
-namespace core {
-namespace analysis {
+namespace frontend {
+namespace utils {
 
-	TEST(IRppUtils, DefaultCtorTest) {
-		NodeManager manager;
-		IRBuilder builder(manager);
-
-		// create a struct type
-		TypePtr type = builder.parseType("struct { x : int<4>; y : int<4>; }");
-		ASSERT_TRUE(type);
-
-		// create a default constructor for this type
-		auto ctor = createDefaultConstructor(type);
-		EXPECT_TRUE(checks::check(ctor).empty()) << ctor << checks::check(ctor);
-
-		EXPECT_PRED1(isDefaultConstructor, ctor);
+	core::ExpressionPtr fixTempMemoryInInitExpression(const core::ExpressionPtr& variable, const core::ExpressionPtr& initExp) {
+		auto& mgr = initExp->getNodeManager();
+		auto& refExt = mgr.getLangExtension<core::lang::ReferenceExtension>();
+		// if the init expr is a constructor call
+		if(core::analysis::isConstructorCall(initExp)) {
+			core::CallExprAddress call(initExp.as<core::CallExprPtr>());
+			assert_ge(call->getArguments().size(), 1) << "Ill-formed constructor call. Missing this argument";
+			if(refExt.isCallOfRefTemp(call->getArgument(0))) {
+				// we replace the first parameter (which has been created as ref_temp) by the variable to initialize
+				return core::transform::replaceNode(
+					       initExp->getNodeManager(), call->getArgument(0),
+					       core::lang::buildRefCast(variable, call->getFunctionExpr()->getType().as<core::FunctionTypePtr>()->getParameterType(0)))
+					.as<core::ExpressionPtr>();
+			}
+		}
+		return initExp;
 	}
 
-} // end namespace analysis
-} // end namespace core
+} // end namespace utils
+} // end namespace frontend
 } // end namespace insieme
+

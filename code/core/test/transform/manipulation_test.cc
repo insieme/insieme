@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -962,50 +962,6 @@ namespace core {
 
 		// check that all variables are properly forwarded
 		EXPECT_TRUE(checks::check(modified).empty()) << checks::check(modified);
-	}
-
-	TEST(Manipulation, ReplaceVarsRecursive) {
-		NodeManager mgr;
-		IRBuilder builder(mgr);
-
-		auto addr = builder.parseAddressesStatement("{"
-		                                            "	var ref<int<4>,f,f,plain> A = ref_var_init(0);"
-		                                            "	var ref<int<4>,f,f,plain> B = ref_var_init(0);"
-		                                            "	(arg : int<4>)->int<4> { return arg; }(* $ A $);"
-													"	(arg : int<4>)->int<4> { return arg; }(* $ B $);"
-		                                            "}");
-
-		CompoundStmtPtr code = addr[0].getRootNode().as<CompoundStmtPtr>();
-
-		VariablePtr varA = addr[0].as<VariablePtr>();
-		VariablePtr varB = addr[1].as<VariablePtr>();
-
-		VariablePtr uintB = builder.variable(builder.refType(mgr.getLangBasic().getUInt4()));
-
-		ExpressionMap replacements;
-		replacements[varB] = uintB;
-
-		transform::TypeHandler th = [&](const StatementPtr& stmt) -> StatementPtr {
-			if(DeclarationStmtPtr decl = stmt.isa<DeclarationStmtPtr>()) {
-				VariablePtr var = decl->getVariable();
-				ExpressionPtr init = decl->getInitialization();
-				return builder.declarationStmt(var, builder.castExpr(var->getType(), init));
-			}
-
-			return stmt;
-		};
-
-		utils::map::PointerMap<VariablePtr, ExpressionPtr> declInitReplacements;
-		declInitReplacements[uintB] = builder.parseExpr("ref_var_init(0u)");
-
-		auto code1 = transform::replaceVarsRecursiveGen(mgr, code, replacements, true, transform::defaultTypeRecovery, th, declInitReplacements);
-
-		EXPECT_NE(code, code1);
-
-		auto semantic = core::checks::check(code1);
-
-		auto errors = semantic.getErrors();
-		EXPECT_EQ(0u, errors.size()) << errors;
 	}
 
 

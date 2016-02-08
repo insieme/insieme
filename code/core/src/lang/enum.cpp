@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -170,7 +170,7 @@ namespace lang {
 
 	ExpressionPtr getEnumInit(const ExpressionPtr& initVal, const TupleTypePtr& enumType) {
 		IRBuilder builder(enumType->getNodeManager());
-		return builder.tupleExpr(toVector<ExpressionPtr>(builder.undefinedVar(enumType->getElement(0)), initVal));
+		return builder.tupleExpr(toVector<ExpressionPtr>(builder.getTypeLiteral(enumType->getElement(0)), initVal));
 	}
 
 	TupleTypePtr getEnumType(const TypePtr& valueType, const GenericTypePtr& enumDef) {

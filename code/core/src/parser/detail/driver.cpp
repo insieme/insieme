@@ -167,6 +167,7 @@ namespace parser {
 			auto b = getOperand(right);
 			// left side is untouched because of reference subscript operators
 			if(op == "[") {
+				left = getScalar(left);
 				if(builder.getLangBasic().isUnsignedInt(b->getType())) { b = builder.castExpr(builder.getLangBasic().getInt8(), b); }
 				if(analysis::isRefType(left->getType())) {
 					auto inType = analysis::getReferencedType(left->getType());
@@ -417,14 +418,42 @@ namespace parser {
 
 			TagTypePtr res;
 
+			// now we insert new member functions with just literals as implementation for all functions which have only been declared by the user
+			MemberFunctionList mfunsNew = mfuns;
+			std::vector<LiteralPtr> literalsToRemove;
+			const std::string classPrefix = name + "::";
+			// iterate over all functions registered in the TU
+			for (auto& function : tu.getFunctions()) {
+				auto& literal = function.first;
+				auto& literalName = literal->getStringValue();
+				auto& lambda = function.second;
+				// only consider member functions
+				if (lambda->getFunctionType().isMemberFunction()) {
+					auto body = lambda->getBody();
+					// only functions which have been explicitely defined by the user will be inserted as literals
+					if (body.size() > 0 && body[0] == parserIRExtension.getExplicitMemberDummyLambda()
+							&& boost::starts_with(literalName, classPrefix)) {
+						//register this literal for removal from the TU
+						literalsToRemove.push_back(literal);
+						//and add a new member function with the literal implementation
+						auto newLiteral = builder.literal(literalName.substr(classPrefix.length()), literal->getType());
+						mfunsNew.push_back(builder.memberFunction(false, newLiteral->getStringValue(), newLiteral));
+					}
+				}
+			}
+			//remove the literals we are supposed to remove
+			for (auto& lit : literalsToRemove) {
+				tu.getFunctions().erase(lit);
+			}
+
 			if(type == NT_Struct) {
-				res = builder.structTypeWithDefaults(builder.refType(getThisType()), parents, fields, ctors, dtor, dtorIsVirtual, mfuns, pvmfuns);
+				res = builder.structTypeWithDefaults(builder.refType(getThisType()), parents, fields, ctors, dtor, dtorIsVirtual, mfunsNew, pvmfuns);
 			} else {
 				if(!parents.empty()) {
 					error(l, "Inheritance not supported for unions!");
 					return nullptr;
 				}
-				res = builder.unionTypeWithDefaults(builder.refType(getThisType()), fields, ctors, dtor, dtorIsVirtual, mfuns, pvmfuns);
+				res = builder.unionTypeWithDefaults(builder.refType(getThisType()), fields, ctors, dtor, dtorIsVirtual, mfunsNew, pvmfuns);
 			}
 
 			// register type in translation unit
@@ -580,7 +609,9 @@ namespace parser {
 			//register the lambda itself in the TU - but only overwrite dummy declarations
 			if (const auto& otherMember = tu.getFunctions()[key]) {
 				const auto& otherBody = otherMember->getBody();
-				if (otherBody->size() != 1 || otherBody[0] != parserIRExtension.getMemberDummyLambda()) {
+				if (otherBody->size() != 1
+						|| (otherBody[0] != parserIRExtension.getMemberDummyLambda()
+								&& otherBody[0] != parserIRExtension.getExplicitMemberDummyLambda())) {
 					error(l, format("Re-definition of constructor of type %s", *key->getType()));
 					return nullptr;
 				}
@@ -703,7 +734,10 @@ namespace parser {
 			//register the lambda itself in the TU - but only overwrite dummy declarations
 			if (const auto& otherMember = tu.getFunctions()[key]) {
 				const auto& otherBody = otherMember->getBody();
-				if (otherBody->size() != 1 || otherBody[0] != parserIRExtension.getMemberDummyLambda()) {
+				if (otherBody->size() != 1
+						|| (otherBody[0] != parserIRExtension.getMemberDummyLambda()
+								&& otherBody[0] != parserIRExtension.getExplicitMemberDummyLambda())) {
+					error(l, format("Re-definition of member function %s of type %s", name, *key->getType()));
 					return nullptr;
 				}
 			}
@@ -939,6 +973,23 @@ namespace parser {
 			return genCall(l, callable, ParserTypedExpressionList());
 		}
 
+		/**
+		 * Generates a new call expression from the given one with the type of the call expression materialized
+		 */
+		ExpressionPtr InspireDriver::materializeCall(const location& l, const ExpressionPtr& exp) {
+			if (const auto& call = exp.isa<CallExprPtr>()) {
+				const auto& callType = call->getType();
+				TypePtr newType = lang::buildRefType(callType);
+				if(analysis::isRefType(callType)) {
+					auto callRefType = lang::ReferenceType(callType);
+					callRefType.setKind(lang::ReferenceType::Kind::Plain);
+					newType = callRefType.toType();
+				}
+				return builder.callExpr(newType, call->getFunctionExpr(), call->getArguments());
+			}
+			return exp;
+		}
+
 		ExpressionPtr InspireDriver::genStructExpression(const location& l, const TypePtr& type, const ExpressionList& list) {
 			// check for null
 			if(!type) {
@@ -1089,11 +1140,48 @@ namespace parser {
 		}
 
 		DeclarationStmtPtr InspireDriver::genVariableDefinition(const location& l, const TypePtr& type, const std::string name, const ExpressionPtr& init) {
+			auto var = genVariableDeclaration(l, type, name);
+			if (!var) {
+				return nullptr;
+			}
+			return builder.declarationStmt(var, getScalar(init));
+		}
+
+		/**
+		 * constructs a new variable declaration with a given type
+		 */
+		VariablePtr InspireDriver::genVariableDeclaration(const location& l, const TypePtr& type, const std::string name) {
 			auto resolvedType = resolveTypeAliases(l, type);
 			auto variable = builder.variable(resolvedType);
 			annotations::attachName(variable, name);
 			declareSymbol(l, name, variable);
-			return builder.declarationStmt(variable, getScalar(init));
+			if (whereErrors()) {
+				return nullptr;
+			}
+			return variable;
+		}
+
+		/**
+		 * constructs a new declaration statement for the variable with name name and the given init expression
+		 */
+		DeclarationStmtPtr InspireDriver::genDeclarationStmt(const location& l, const std::string name, const ExpressionPtr& init) {
+			auto var = lookupDeclared(name).isa<VariablePtr>();
+			if (!var) {
+				error(l, format("Symbol %s is not a variable", name));
+				return nullptr;
+			}
+			return builder.declarationStmt(var, getScalar(init));
+		}
+
+		/**
+		 * constructs a new declaration statement for the variable with an undefined init expression
+		 */
+		DeclarationStmtPtr InspireDriver::genUndefinedDeclarationStmt(const location& l, const TypePtr& type, const std::string name) {
+			auto var = genVariableDeclaration(l, type, name);
+			if (!var) {
+				return nullptr;
+			}
+			return builder.declarationStmt(var, var);
 		}
 
 		ForStmtPtr InspireDriver::genForStmt(const location& l, const TypePtr& iteratorType, const std::string iteratorName, const ExpressionPtr& lowerBound,
@@ -1179,7 +1267,7 @@ namespace parser {
 					}
 
 					//register the member in the TU
-					tu.addFunction(literal, builder.lambdaExpr(functionType, builder.parameters(), parserIRExtension.getMemberDummyLambda()));
+					tu.addFunction(literal, builder.lambdaExpr(functionType, builder.parameters(), parserIRExtension.getExplicitMemberDummyLambda()));
 					//and return here. there is no need to register this symbol in the global scope, as member calls are handled differently
 					return;
 				}
@@ -1208,8 +1296,9 @@ namespace parser {
 
 			bool foundDummyLambda = false;
 			const auto& dummyLambda = parserIRExtension.getMemberDummyLambda();
+			const auto& explicitDummyLambda = parserIRExtension.getExplicitMemberDummyLambda();
 			visitDepthFirstOnceInterruptible(result, [&](const LiteralPtr& lit) {
-				if (lit == dummyLambda) {
+				if (lit == dummyLambda || lit == explicitDummyLambda) {
 					foundDummyLambda = true;
 					return true;
 				}

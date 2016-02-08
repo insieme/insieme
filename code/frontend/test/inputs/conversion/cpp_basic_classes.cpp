@@ -93,14 +93,53 @@ struct D2 {
 	void bla() {}
 };
 
+
+struct VolatileConstructor {
+	VolatileConstructor() = default;
+	VolatileConstructor(const VolatileConstructor&) {}
+	VolatileConstructor(volatile const VolatileConstructor&) {}
+};
+
+#define VOL_CONSTR_IR R"(
+def struct IMP_VolatileConstructor {
+	ctor() { }
+	ctor(v : ref<IMP_VolatileConstructor,t,f,cpp_ref>) { }
+	ctor(v : ref<IMP_VolatileConstructor,t,t,cpp_ref>) { }
+};)"
+
+
 int main() {
 	; // this is required because of the clang compound source location bug
 
-	#pragma test expect_ir(A_IR, R"( { var ref<IMP_A> a = IMP_A::(ref_var(type_lit(IMP_A))); } )")
+	#pragma test expect_ir(A_IR, R"( { var ref<IMP_A> a = IMP_A::(a); } )")
 	{ A a; }
+
+	// init options
+	#pragma test expect_ir(A_IR, R"( {
+		var ref<IMP_A,f,f,plain> v0 = IMP_A::(v0);
+		var ref<IMP_A,f,f,plain> v1 = ref_cast(v0, type_lit(t), type_lit(f), type_lit(cpp_ref));
+		var ref<IMP_A,f,f,plain> v2 = ref_cast(IMP_A::(ref_temp(type_lit(IMP_A)), ref_kind_cast(v0, type_lit(cpp_ref))), type_lit(f), type_lit(f), type_lit(cpp_rref));
+	} )")
+	{
+		A a;
+		A b = a;
+		A c = A(a);
+	}
 	
+	// non-default implicit init
+	#pragma test expect_ir(VOL_CONSTR_IR, R"( {
+		var ref<IMP_VolatileConstructor,f,t,plain> v0 = IMP_VolatileConstructor::(ref_cast(v0, type_lit(f), type_lit(f), type_lit(plain)));
+		var ref<IMP_VolatileConstructor,f,f,plain> v1 = ref_cast(v0, type_lit(t), type_lit(t), type_lit(cpp_ref));
+		var ref<IMP_VolatileConstructor,f,f,plain> v2 = ref_cast(IMP_VolatileConstructor::(ref_temp(type_lit(IMP_VolatileConstructor)), ref_kind_cast(v0, type_lit(cpp_ref))), type_lit(t), type_lit(f), type_lit(cpp_ref));
+	} )")
+	{
+		volatile VolatileConstructor a;
+		VolatileConstructor b = a;
+		VolatileConstructor c = VolatileConstructor(a);
+	}
+
 	// method call
-	#pragma test expect_ir(A_IR, R"( { var ref<IMP_A> a = IMP_A::(ref_var(type_lit(IMP_A))); a.IMP_f(); } )")
+	#pragma test expect_ir(A_IR, R"( { var ref<IMP_A> a = IMP_A::(a); a.IMP_f(); } )")
 	{
 		A a;
 		a.f();
@@ -108,8 +147,8 @@ int main() {
 
 	// method call using pointer
 	#pragma test expect_ir(A_IR, R"({
-		var ref<IMP_A,f,f,plain> v0 = IMP_A::(ref_var(type_lit(IMP_A)));
-		var ref<ptr<IMP_A>,f,f,plain> v1 = ref_var_init(ptr_from_ref(v0));
+		var ref<IMP_A,f,f,plain> v0 = IMP_A::(v0);
+		var ref<ptr<IMP_A>,f,f,plain> v1 = ptr_from_ref(v0);
 		ptr_to_ref(*v1).IMP_f();
 	})")
 	{
@@ -117,18 +156,18 @@ int main() {
 		b->f();
 	}
 	
-	#pragma test expect_ir(B_IR,R"( { var ref<IMP_B> b = IMP_B::(ref_var(type_lit(IMP_B))); b.IMP_f(); } )")
+	#pragma test expect_ir(B_IR,R"( { var ref<IMP_B> b = IMP_B::(b); b.IMP_f(); } )")
 	{ 
 		B b;
 		b.f();
 	}
 	
-	#pragma test expect_ir(C_IR,R"( { var ref<IMP_C> c1 = IMP_C::(ref_var(type_lit(IMP_C))); } )")
+	#pragma test expect_ir(C_IR,R"( { var ref<IMP_C> c1 = IMP_C::(c1); } )")
 	{
 		C c1;
 	}
 	
-	#pragma test expect_ir(C_IR,R"( { var ref<IMP_C> c = IMP_C::(ref_var(type_lit(IMP_C)), 6u); } )")
+	#pragma test expect_ir(C_IR,R"( { var ref<IMP_C> c = IMP_C::(c, 6u); } )")
 	{
 		C c2(6u);
 	}

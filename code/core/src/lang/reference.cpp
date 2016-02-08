@@ -288,6 +288,16 @@ namespace lang {
 		return builder.callExpr(rExt.getRefKindCast(), refExpr, builder.getTypeLiteral(lang::toType(refExpr->getNodeManager(), newKind)));
 	}
 
+	ExpressionPtr buildRefTemp(const TypePtr& type) {
+		IRBuilder builder(type->getNodeManager());
+		auto& refExt = type->getNodeManager().getLangExtension<lang::ReferenceExtension>();
+		if(isReference(type)) {
+			auto elementType = ReferenceType(type).getElementType();
+			return buildRefCast(builder.callExpr(builder.refType(elementType), refExt.getRefTemp(), builder.getTypeLiteral(elementType)), type);
+		}
+		return builder.callExpr(builder.refType(type), refExt.getRefTemp(), builder.getTypeLiteral(type));
+	}
+
 	ExpressionPtr buildRefNull(const TypePtr& type) {
 		assert_pred1(isReference, type) << "Trying to build a null ref which isn't a reference.";
 		IRBuilder builder(type->getNodeManager());

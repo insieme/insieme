@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -132,19 +132,12 @@ namespace conversion {
 			// check if we have an init expression
 			core::ExpressionPtr initExp;
 			if(convertedDecl.second) {
-				core::ExpressionPtr refVar = builder.refVar(*convertedDecl.second);
-				// exception for string literals (appear here as plain lvalues) and CXX constructor calls
-				if(varDecl->getInit()->isLValue() || llvm::isa<clang::CXXConstructExpr>(varDecl->getInit())) {
-					refVar = *convertedDecl.second;
-				}
-				initExp = core::lang::buildRefCast(refVar, convertedDecl.first->getType());
-				if(initExp != refVar) {
-					VLOG(2) << "Initialization: casting ref from\n" << dumpPretty(refVar->getType()) << " to \n" << convertedDecl.first->getType();
-				}
+				initExp = *convertedDecl.second;
 			} else {
 				// generate undefined initializer
-				initExp = builder.undefinedVar(convertedDecl.first.getType());
+				initExp = convertedDecl.first;
 			}
+
 			// build ir declaration
 			return builder.declarationStmt(convertedDecl.first, initExp);
 		}
@@ -346,7 +339,7 @@ namespace conversion {
 		core::VariablePtr exitTest = builder.variable(builder.refType(gen.getBool()));
 		condExpr = builder.logicOr(builder.logicNeg(builder.deref(exitTest)), condExpr);
 		body = builder.compoundStmt({builder.assign(exitTest, gen.getTrue()), body});
-		retStmt.push_back(builder.compoundStmt({builder.declarationStmt(exitTest, builder.refVar(gen.getFalse())), builder.whileStmt(condExpr, body)}));
+		retStmt.push_back(builder.compoundStmt({builder.declarationStmt(exitTest, gen.getFalse()), builder.whileStmt(condExpr, body)}));
 
 		return retStmt;
 	}
@@ -431,14 +424,14 @@ namespace conversion {
 					decl = st.as<core::DeclarationStmtPtr>();
 					// remove the init, use undefinedvar
 					// this is what GCC does, VC simply errors out
-					decl = builder.declarationStmt(decl->getVariable(), builder.undefinedVar(decl->getInitialization()->getType()));
+					decl = builder.declarationStmt(decl->getVariable(), decl->getVariable());
 					decls.push_back(decl);
 				}
 			} else {
 				decl = result.as<core::DeclarationStmtPtr>();
 				// remove the init, use undefinedvar
 				// this is what GCC does, VC simply errors out
-				decl = builder.declarationStmt(decl->getVariable(), builder.undefinedVar(decl->getInitialization()->getType()));
+				decl = builder.declarationStmt(decl->getVariable(), decl->getVariable());
 				decls.push_back(decl);
 			}
 		};

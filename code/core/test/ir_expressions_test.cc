@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -732,7 +732,7 @@ namespace core {
 		EXPECT_TRUE(fun->isRecursive());
 	}
 
-	TEST(ExpressionTest, UnrollCompactFib) {
+	TEST(ExpressionsTest, UnrollCompactFib) {
 		NodeManager manager;
 		IRBuilder builder(manager);
 		LambdaExprPtr fun = builder.parseExpr("decl f: (int<4>)->int<4>;"

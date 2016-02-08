@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -338,17 +338,9 @@ namespace backend {
 		// create init expression
 		c_ast::InitializerPtr init = c_ast::init(type);
 
-		// obtain some helper
-		auto& refExt = converter.getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
-
 		// append initialization values
 		::transform(ptr->getMembers()->getElements(), std::back_inserter(init->values), [&](const core::NamedValuePtr& cur) {
 			core::ExpressionPtr arg = cur->getValue();
-			// skip ref.var if present
-			if(core::analysis::isCallOf(cur->getValue(), refExt.getRefVarInit())) {
-				arg = static_pointer_cast<const core::CallExpr>(cur->getValue())->getArgument(0);
-				if(core::analysis::isCallOf(arg, refExt.getRefDeref())) { arg = static_pointer_cast<const core::CallExpr>(arg)->getArgument(0); }
-			}
 			return convert(context, arg);
 		});
 
@@ -444,18 +436,12 @@ namespace backend {
 		bool toBeAllocatedOnStack(const core::ExpressionPtr& initValue) {
 			auto& refExt = initValue->getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
 
-			// if it is a call to a ref.var => put it on the stack
-			if (refExt.isCallOfRefVar(initValue) || refExt.isCallOfRefVarInit(initValue)) return true;
+			// if it is a call to a ref.new => put it on the heap
+			if (refExt.isCallOfRefNew(initValue) || refExt.isCallOfRefNewInit(initValue)) return false;
 
-			// if it is a constructor call ..
-			if(core::CallExprPtr call = initValue.isa<core::CallExprPtr>()) { 
-				return toBeAllocatedOnStack(call[0]); 
-			}
-
-			// everything else is heap based
-			return false;
+			// everything else is stack based
+			return true;
 		}
-
 	}
 
 	c_ast::NodePtr StmtConverter::visitDeclarationStmt(const core::DeclarationStmtPtr& ptr, ConversionContext& context) {
@@ -471,7 +457,10 @@ namespace backend {
 
 		// decide storage location of variable
 		VariableInfo::MemoryLocation location = VariableInfo::NONE;
-		if(core::lang::isReference(plainType)) {
+		//assigning from the same type (not uninitialized) doesn't regard the location
+		if (plainType == init->getType() && !core::analysis::isUndefinedInitalization(ptr)) {
+			location = VariableInfo::INDIRECT;
+		} else if(core::lang::isReference(plainType)) {
 			if(toBeAllocatedOnStack(init)) {
 				location = VariableInfo::DIRECT;
 			} else {
@@ -494,6 +483,11 @@ namespace backend {
 		// create declaration statement
 		c_ast::ExpressionPtr initValue = convertInitExpression(context, init);
 
+		//if the declared variable is undefined, we don't create an initialization value
+		if (core::analysis::isUndefinedInitalization(ptr)) {
+			initValue = c_ast::ExpressionPtr();
+		}
+
 		// check if we have an intercepted default ctor call (e.g., std::stringstream s;)
 		// the interceptor adds a zero initalization that would be converted into something like
 		// std::stringstream s = std::stringstream(). This is maybe wrong (e.g., private copy ctor)
@@ -513,19 +507,13 @@ namespace backend {
 
 	c_ast::ExpressionPtr StmtConverter::convertInitExpression(ConversionContext& context, const core::ExpressionPtr& init) {
 		auto& refExt = converter.getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
-		auto manager = converter.getCNodeManager();
-
-		// test whether initialization is required ...
-		if(core::analysis::isCallOf(init, refExt.getRefVar())) {
-			return c_ast::ExpressionPtr();
-		}
 
 		// TODO: handle initUndefine and init struct cases
 
 		core::ExpressionPtr initValue = init;
-		
-		// drop ref.var ...
-		if(core::analysis::isCallOf(initValue, refExt.getRefVarInit())) { initValue = core::analysis::getArgument(initValue, 0); }
+
+		// drop ref_temp ...
+		if(core::analysis::isCallOf(initValue, refExt.getRefTempInit())) { initValue = core::analysis::getArgument(initValue, 0); }
 
 		return convertExpression(context, initValue);
 	}

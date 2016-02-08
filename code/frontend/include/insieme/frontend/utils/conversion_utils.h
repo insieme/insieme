@@ -34,34 +34,19 @@
  * regarding third party software licenses.
  */
 
-#include <vector>
+#pragma once
 
-#include <gtest/gtest.h>
-
-#include "insieme/core/analysis/ir++_utils.h"
-
-#include "insieme/core/ir_builder.h"
-#include "insieme/core/checks/full_check.h"
+#include "insieme/core/forward_decls.h"
 
 namespace insieme {
-namespace core {
-namespace analysis {
+namespace frontend {
+namespace utils {
 
-	TEST(IRppUtils, DefaultCtorTest) {
-		NodeManager manager;
-		IRBuilder builder(manager);
+	/// Replace RefTemps in outer constructor calls with variable itself
+	///
+	core::ExpressionPtr fixTempMemoryInInitExpression(const core::ExpressionPtr& variable, const core::ExpressionPtr& initExp);
 
-		// create a struct type
-		TypePtr type = builder.parseType("struct { x : int<4>; y : int<4>; }");
-		ASSERT_TRUE(type);
-
-		// create a default constructor for this type
-		auto ctor = createDefaultConstructor(type);
-		EXPECT_TRUE(checks::check(ctor).empty()) << ctor << checks::check(ctor);
-
-		EXPECT_PRED1(isDefaultConstructor, ctor);
-	}
-
-} // end namespace analysis
-} // end namespace core
+} // end namespace utils
+} // end namespace frontend
 } // end namespace insieme
+

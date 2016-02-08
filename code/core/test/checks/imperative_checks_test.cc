@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -70,6 +70,10 @@ namespace checks {
 
 		NodeAddress errorAdr = NodeAddress(err).getAddressOfChild(2, 0, 1, 2, 0, 1);
 		EXPECT_PRED2(containsMSG, check(err, typeCheck), Message(errorAdr, EC_IMPERATIVE_UNDECLARED_VARIABLE_USAGE, "", Message::ERROR));
+
+		//using the declared variable within it's initialization is ok too
+		NodePtr ok2 = builder.lambdaExpr(funType, toVector<VariablePtr>(), builder.declarationStmt(varA, varA));
+		EXPECT_TRUE(check(ok2, typeCheck).empty());
 	}
 
 

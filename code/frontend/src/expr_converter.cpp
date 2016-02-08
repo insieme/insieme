@@ -88,10 +88,12 @@ namespace conversion {
 	core::TypePtr Converter::ExprConverter::convertExprType(const clang::Expr* expr) {
 		auto qType = expr->getType();
 		auto irType = converter.convertType(qType);
-		if(expr->getValueKind() == clang::VK_LValue) irType = builder.refType(irType, qType.isConstQualified(), qType.isVolatileQualified());
+		if(expr->getValueKind() == clang::VK_LValue || expr->getValueKind() == clang::VK_XValue) {
+			irType = builder.refType(irType, qType.isConstQualified(), qType.isVolatileQualified());
+		}
 		return irType;
 	}
-	
+
 	// translate expression as usual, but convert translated string literals to r-values rather than l-values
 	core::ExpressionPtr Converter::ExprConverter::convertInitExpr(const clang::Expr* original) {
 		auto expr = converter.convertExpr(original);
@@ -701,10 +703,7 @@ namespace conversion {
 			}
 
 			//convert and return the struct init expr
-			auto enumDef = converter.convertType(enumType->getCanonicalTypeInternal());
-			assert_true(enumDef.isa<core::TupleTypePtr>()) << "enum type conversion failed.";
-			auto exp = core::lang::getEnumInit(val, enumDef.as<core::TupleTypePtr>());
-			return builder.numericCast(exp.as<core::TupleExprPtr>()->getExpressions()[1], builder.getLangBasic().getInt4());
+			return builder.numericCast(val, builder.getLangBasic().getInt4());
 		}
 
 		frontend_assert(false) << "DeclRefExpr not handled: " << dumpClang(declRef, converter.getSourceManager());
@@ -798,7 +797,7 @@ namespace conversion {
 
 		if(const clang::InitListExpr* initList = llvm::dyn_cast<clang::InitListExpr>(compLitExpr->getInitializer())) {
 			// for some reason, this is an lvalue
-			retIr = builder.refVar(Visit(initList));
+			retIr = builder.refTemp(Visit(initList));
 		}
 		
 		if(!retIr) frontend_assert(false) << "Unimplemented type of CompoundLiteralExpr encountered";

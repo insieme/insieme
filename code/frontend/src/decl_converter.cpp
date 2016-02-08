@@ -39,6 +39,7 @@
 #include "insieme/frontend/converter.h"
 #include "insieme/frontend/state/function_manager.h"
 #include "insieme/frontend/state/variable_manager.h"
+#include "insieme/frontend/utils/conversion_utils.h"
 #include "insieme/frontend/utils/name_manager.h"
 
 #include "insieme/core/ir.h"
@@ -64,7 +65,7 @@ namespace conversion {
 		auto irType = converter.convertVarType(varDecl->getType());
 		auto var = builder.variable(irType);
 		if(varDecl->getInit()) {
-			return {var, converter.convertExpr(varDecl->getInit())};
+			return {var, converter.convertCxxArgExpr(varDecl->getInit())};
 		} else {
 			return {var, {}};
 		}
@@ -278,6 +279,7 @@ namespace conversion {
 		// handle initialization if not extern
 		if(!var->hasExternalStorage()) {
 			auto init = (var->getInit()) ? converter.convertInitExpr(var->getInit()) : builder.getZero(elemType);
+			init = utils::fixTempMemoryInInitExpression(globalLit, init);
 			core::annotations::attachName(globalLit, name);
 			// remove extern tag, add declared tag
 			annotations::c::markExtern(globalLit, false);

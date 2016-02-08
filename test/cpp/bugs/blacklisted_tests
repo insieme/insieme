@@ -56,7 +56,6 @@ reference_in_condition_expression
 ref_to_pointer
 return_overload
 return_string
-scope_isomorph
 set_spetialization
 static_cast_in_return
 staticDataMemberInOneTU

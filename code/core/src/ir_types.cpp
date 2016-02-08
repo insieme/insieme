@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -405,8 +405,22 @@ namespace core {
 		return transform::replaceAll(manager, replacements);
 	}
 
-	bool TagType::isRecursive() const {
+	TypePtr TagTypeDefinition::unpeel(NodeManager& mgr, const TypePtr& input) const {
+		IRBuilder builder(mgr);
+		// get canonical Tag Type (tag is irrelevant) and input
+		TagTypePtr canonicalTT = builder.tagType(getDefinitions().front().getTag(), TagTypeDefinitionPtr(this));
+		TagTypeDefinitionPtr ttDef = canonicalTT->getDefinition();
+		TypePtr adjustedParam = analysis::getCanonicalType(input);
 
+		// create replacement map and apply
+		NodeMap replacements;
+		for(const auto& binding : ttDef) {
+			replacements[builder.tagType(binding->getTag(), ttDef)] = binding->getTag();
+		}
+		return transform::replaceAllGen(mgr, adjustedParam, replacements, transform::globalReplacement);
+	}
+
+	bool TagType::isRecursive() const {
 		// the marker type to annotate the result of the is-recursive check
 		struct RecursiveTypeMarker {
 			bool value;

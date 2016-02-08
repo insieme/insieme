@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -37,7 +37,6 @@
 #include <gtest/gtest.h>
 
 #include "insieme/core/ir_builder.h"
-#include "insieme/core/frontend_ir_builder.h"
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/lang/ir++_extension.h"
 #include "insieme/core/lang/static_vars.h"
@@ -65,7 +64,7 @@ namespace backend {
 				};
 				
 				int main() {
-					var ref<int> i = ref_var_init(12);
+					var ref<int> i = 12;
 					var cpp_ref<int,f,f> j = ref_cast(i, type_lit(f), type_lit(f), type_lit(cpp_ref));
 					var cpp_ref<int,t,f> k = ref_cast(i, type_lit(t), type_lit(f), type_lit(cpp_ref));
 					var cpp_ref<int,t,t> l = ref_cast(i, type_lit(t), type_lit(t), type_lit(cpp_ref));
@@ -433,7 +432,7 @@ namespace backend {
 */				
 				int main() {
 					var ref<A> a;
-					// var ref<A> b = f(ref_var(type_lit(A)));
+					// var ref<A> b = f(b);
 					return 0;
 				}
 		)");
@@ -1087,8 +1086,8 @@ namespace backend {
 					
 					int main() {
 						// on stack
-						var ref<A> a1 = A::(ref_var(undefined(A)));
-						var ref<A> a2 = A::(ref_var(undefined(A)), 1);
+						var ref<A> a1 = A::(a1);
+						var ref<A> a2 = A::(a2, 1);
 
 						// on heap
 						var ref<A> a3 = A::(ref_new(undefined(A)));
@@ -1150,7 +1149,7 @@ namespace backend {
 					int main() {
 					
 						// create an un-initialized memory location
-						var ref<A> a = A::(ref_var(undefined(A)), 1);
+						var ref<A> a = A::(a, 1);
 						
 						// init using in-place constructor
 						A::(a, 2);
@@ -1405,7 +1404,7 @@ namespace backend {
 					int main() {
 
 						// call constructor
-						var ref<B> b = B::(ref_var(undefined(B)), 1, 2);
+						var ref<B> b = B::(b, 1, 2);
 
 						return 0;
 					}
@@ -1465,7 +1464,7 @@ namespace backend {
 					int main() {
 
 						// call constructor
-						var ref<B> b = B::(ref_var(undefined(B)), 1, 2, 3);
+						var ref<B> b = B::(b, 1, 2, 3);
 
 						return 0;
 					}
@@ -1516,7 +1515,7 @@ namespace backend {
 					int main() {
 
 						// call constructor
-						var ref<A> b = A::(ref_var(undefined(A)), 1, 2);
+						var ref<A> b = A::(b, 1, 2);
 
 						return 0;
 					}

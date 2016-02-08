@@ -103,7 +103,10 @@ namespace utils {
 			}
 
 			if(l.isMacroID()) {
-				// FIXME: what do we do here? somehow clang fails
+				// FIXME: what do we do here? Somehow clang fails
+                std::cerr << "WARNING: we are not quite confident with source locations in expanded macros.\n" <<
+                             " please take note of the current source file to improve expanded macros source location retrieval" << 
+                             std::endl;
 				/*
 				std::cout << "SLoc isMacroID\n";
 

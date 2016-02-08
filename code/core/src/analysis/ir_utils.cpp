@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -399,6 +399,14 @@ namespace analysis {
 				this->visit(decl->getInitialization(), bound, free);
 			}
 
+			void visitReturnStmt(const Ptr<const ReturnStmt>& decl, VariableSet& bound, ResultSet& free) {
+				// first add variable to set of bound variables
+				bound.insert(decl->getReturnVar());
+
+				// then visit the defining expression
+				this->visit(decl->getReturnExpr(), bound, free);
+			}
+
 			void visitCompoundStmt(const Ptr<const CompoundStmt>& compound, VariableSet& bound, ResultSet& free) {
 				// a compound statement creates a new scope
 				VariableSet innerBound = bound;
@@ -752,9 +760,10 @@ namespace analysis {
 			   }, true)(code);
 	}
 
-	unsigned countInstances(const NodePtr& code, const NodePtr& element) {
+	unsigned countInstances(const NodePtr& code, const NodePtr& element, bool limitScope) {
 		assert_true(element) << "Element to be searched must not be empty!";
 		return code ? makeCachedLambdaVisitor([&](const NodePtr& cur, rec_call<unsigned>::type& rec) -> unsigned {
+			if(limitScope && cur.isa<LambdaExprPtr>()) return 0;
 			if(*cur == *element) return 1;
 			auto children = cur->getChildList();
 			unsigned ret = 0;
@@ -1600,12 +1609,6 @@ namespace analysis {
 
 		// ... or the ref_null literal
 		if(refExt.isRefNull(value)) { return true; }
-
-		// TODO: remove this when frontend is fixed!!
-		// => compensate for silly stuff like var(*getNull()) or NULL aka ref_deref(ref_null)
-		if(core::analysis::isCallOf(value, refExt.getRefVarInit()) || core::analysis::isCallOf(value, refExt.getRefDeref())) {
-			return isZero(core::analysis::getArgument(value, 0));
-		}
 
 		// otherwise, it is not zero
 		return false;

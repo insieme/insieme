@@ -33,35 +33,40 @@
  * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
+#include <initializer_list>
 
-#include <vector>
+struct SimplestConstructor {
+	SimplestConstructor() = default;
+	~SimplestConstructor() = default;
+};
 
-#include <gtest/gtest.h>
+struct S {
+    SimplestConstructor v[3];
+    S(std::initializer_list<SimplestConstructor> l) { // list-initialization in ctor
+         //std::cout << "constructed with a " << l.size() << "-element list\n";
+         append(l);
+    }
+    void append(std::initializer_list<SimplestConstructor> l) { // list-initialization as argument
+        for(int i=0; i<l.size(); ++i) {
+			v[i] = *(l.begin()+i);
+        }
+    }
+    int c_arr() const {
+        return {3};  // list-initialization in return statement
+    }
+};
 
-#include "insieme/core/analysis/ir++_utils.h"
+#define SimplestConstructor_IR R"( def struct IMP_SimplestConstructor { }; )"
 
-#include "insieme/core/ir_builder.h"
-#include "insieme/core/checks/full_check.h"
-
-namespace insieme {
-namespace core {
-namespace analysis {
-
-	TEST(IRppUtils, DefaultCtorTest) {
-		NodeManager manager;
-		IRBuilder builder(manager);
-
-		// create a struct type
-		TypePtr type = builder.parseType("struct { x : int<4>; y : int<4>; }");
-		ASSERT_TRUE(type);
-
-		// create a default constructor for this type
-		auto ctor = createDefaultConstructor(type);
-		EXPECT_TRUE(checks::check(ctor).empty()) << ctor << checks::check(ctor);
-
-		EXPECT_PRED1(isDefaultConstructor, ctor);
+int main() {
+	//this IR test pragma is not correct yet. just committed for testing purposes.
+	#pragma test expect_ir(SimplestConstructor_IR, R"({
+		var ref<ptr<IMP_SimplestConstructor>,f,f,plain> v0 = ptr_from_ref(IMP_SimplestConstructor::(ref_new(type_lit(IMP_SimplestConstructor))));
+		ref_delete(ptr_to_ref(*v0));
+	})")
+	{
+		S obj_s({SimplestConstructor(), SimplestConstructor()});
 	}
 
-} // end namespace analysis
-} // end namespace core
-} // end namespace insieme
+	return 0;
+}
