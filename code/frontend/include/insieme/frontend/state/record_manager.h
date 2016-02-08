@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -60,6 +60,7 @@ namespace state {
 		core::GenericTypePtr lookup(const clang::RecordDecl* recordDecl) const;
 		bool contains(const clang::RecordDecl* recordDecl) const;
 		void insert(const clang::RecordDecl* recordDecl, const core::GenericTypePtr& genType);
+		void replace(const clang::RecordDecl* recordDecl, const core::GenericTypePtr& genType);
 	};
 
 } // end namespace state

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -63,10 +63,18 @@ namespace utils {
 	std::string getNameForRecord(const clang::NamedDecl* decl, const clang::Type* type, const clang::SourceManager& sm);
 
 	/**
+	 * build a string suffix encoding the template parameters provided
+	 * @param tempArgs template argument list
+	 * @param astContext AstContext used for type name lookup
+	 * @return encoded string value
+	 */
+	std::string buildNameSuffixForTemplate(const clang::TemplateArgumentList& tempArgs, clang::ASTContext& astContext);
+
+	/**
 	 * build a string to identify a function
 	 * the produced string will be output-compatible, this means that we can use this name
 	 * to name functions and they will not have qualification issues.
-	 * @param funcDecl: the function decl to name
+	 * @param funcDecl the function decl to name
 	 * @return unique string value
 	 */
 	std::string buildNameForFunction(const clang::FunctionDecl* funcDecl);

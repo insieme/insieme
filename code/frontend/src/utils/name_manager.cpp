@@ -34,7 +34,10 @@
  * regarding third party software licenses.
  */
 
+#include "insieme/frontend/utils/name_manager.h"
+
 #include "insieme/frontend/clang.h"
+#include "insieme/utils/assert.h"
 #include "insieme/utils/name_mangling.h"
 
 #include <boost/algorithm/string.hpp>
@@ -118,6 +121,65 @@ namespace utils {
 		}
 	}
 
+	std::string buildNameSuffixForTemplate(const clang::TemplateArgumentList& tempArgs, clang::ASTContext& astContext) {
+		std::stringstream suffix;
+		for(unsigned i = 0; i < tempArgs.size(); ++i) {
+			auto arg = tempArgs.get(i);
+			switch(arg.getKind()) {
+			case clang::TemplateArgument::Expression: {
+				suffix << "_" << arg.getAsExpr()->getType().getAsString();
+				break;
+			}
+			case clang::TemplateArgument::Type: {
+				// check if the type is a lambda, this one needs special handling
+				std::string typeName;
+				if(arg.getAsType().getTypePtr()->getAsCXXRecordDecl() && arg.getAsType().getTypePtr()->getAsCXXRecordDecl()->isLambda()) {
+					typeName = createNameForAnon("lambda", arg.getAsType().getTypePtr()->getAsCXXRecordDecl(), astContext.getSourceManager());
+				} else {
+					typeName = getTypeString(arg.getAsType());
+				}
+				suffix << "_" << typeName;
+				break;
+			}
+			case clang::TemplateArgument::Null: {
+				suffix << "_null";
+				break;
+			}
+			case clang::TemplateArgument::Declaration: {
+				suffix << "_" << getTypeString(arg.getAsDecl()->getType());
+				break;
+			}
+			case clang::TemplateArgument::NullPtr: {
+				suffix << "_nullptr";
+				break;
+			}
+			case clang::TemplateArgument::Integral: {
+				suffix << "_" << arg.getAsIntegral().toString(10);
+				break;
+			}
+			case clang::TemplateArgument::Template: {
+				suffix << "_" << removeSymbols(arg.getAsTemplate().getAsTemplateDecl()->getTemplatedDecl()->getNameAsString());
+				break;
+			}
+			case clang::TemplateArgument::TemplateExpansion: {
+				// I don't know what to do here
+				assert_not_implemented();
+				break;
+			}
+			case clang::TemplateArgument::Pack: {
+				suffix << "_pack_begin";
+				for(clang::TemplateArgument::pack_iterator it = arg.pack_begin(), end = arg.pack_end(); it != end; it++) {
+					const clang::QualType& argType = (*it).getAsType();
+					suffix << "_" << getTypeString(argType);
+				}
+				suffix << "_pack_end";
+				break;
+			}
+			}
+		}
+		return suffix.str();
+	}
+
 	std::string buildNameForFunction(const clang::FunctionDecl* funcDecl) {
 		std::string name = funcDecl->getQualifiedNameAsString();
 		if(const clang::CXXMethodDecl* method = llvm::dyn_cast<clang::CXXMethodDecl>(funcDecl)) {
@@ -135,60 +197,7 @@ namespace utils {
 		std::stringstream suffix;
 
 		if(funcDecl->isFunctionTemplateSpecialization() && funcDecl->getTemplateSpecializationArgs()) {
-			for(unsigned i = 0; i < funcDecl->getTemplateSpecializationArgs()->size(); ++i) {
-				auto arg = funcDecl->getTemplateSpecializationArgs()->get(i);
-				switch(arg.getKind()) {
-				case clang::TemplateArgument::Expression: {
-					suffix << "_" << arg.getAsExpr()->getType().getAsString();
-					break;
-				}
-				case clang::TemplateArgument::Type: {
-					// check if the type is a lambda, this one needs special handling
-					std::string typeName;
-					if(arg.getAsType().getTypePtr()->getAsCXXRecordDecl() && arg.getAsType().getTypePtr()->getAsCXXRecordDecl()->isLambda()) {
-						typeName =
-							createNameForAnon("lambda", arg.getAsType().getTypePtr()->getAsCXXRecordDecl(), funcDecl->getASTContext().getSourceManager());
-					} else {
-						typeName = getTypeString(arg.getAsType());
-					}
-					suffix << "_" << typeName;
-					break;
-				}
-				case clang::TemplateArgument::Null: {
-					suffix << "_null";
-					break;
-				}
-				case clang::TemplateArgument::Declaration: {
-					suffix << "_" << getTypeString(arg.getAsDecl()->getType());
-					break;
-				}
-				case clang::TemplateArgument::NullPtr: {
-					suffix << "_nullptr";
-					break;
-				}
-				case clang::TemplateArgument::Integral: {
-					suffix << "_" << arg.getAsIntegral().toString(10);
-					break;
-				}
-				case clang::TemplateArgument::Template: {
-					suffix << "_" << removeSymbols(arg.getAsTemplate().getAsTemplateDecl()->getTemplatedDecl()->getNameAsString());
-					break;
-				}
-				case clang::TemplateArgument::TemplateExpansion: {
-					// I don't know what to do here
-					break;
-				}
-				case clang::TemplateArgument::Pack: {
-					suffix << "_pack_begin";
-					for(clang::TemplateArgument::pack_iterator it = arg.pack_begin(), end = arg.pack_end(); it != end; it++) {
-						const clang::QualType& argType = (*it).getAsType();
-						suffix << "_" << getTypeString(argType);
-					}
-					suffix << "_pack_end";
-					break;
-				}
-				}
-			}
+			suffix << buildNameSuffixForTemplate(*funcDecl->getTemplateSpecializationArgs(), funcDecl->getASTContext());
 		}
 
 		if(funcDecl->isTemplateInstantiation()) {
