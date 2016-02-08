@@ -104,8 +104,6 @@ namespace conversion {
 	// 			In clang a declstmt is represented as a list of VarDecl
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitDeclStmt(clang::DeclStmt* declStmt) {
-		auto& refExt = converter.getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
-
 		auto decls = StmtConverter::VisitDeclStmt(declStmt);
 		stmtutils::StmtWrapper retIr;
 
