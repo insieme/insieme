@@ -169,10 +169,9 @@ namespace printer {
 			if(auto gt = objTy.isa<GenericTypePtr>()) return gt->getName()->getValue();
 			if(auto tt = objTy.isa<TagTypePtr>()) return tt->getName()->getValue();
 			assert_fail() << "could not retrieve object type name";
-			const std::string& na="";
-			return na;
+			throw;
 		}
-		
+
 		/**
 		 * The main visitor used by the pretty printer process.
 		 */
