@@ -16,7 +16,6 @@ class
 class_as_return_type_of_member_function_closing_rec_cycle
 class_def_and_decl_splitup
 const_pointer
-const_ptr_param
 const_ref_arguments
 counter
 cpp11
