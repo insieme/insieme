@@ -436,8 +436,7 @@ namespace parser {
 						//register this literal for removal from the TU
 						literalsToRemove.push_back(literal);
 						//and add a new member function with the literal implementation
-						auto newLiteral = builder.literal(literalName.substr(classPrefix.length()), literal->getType());
-						mfunsNew.push_back(builder.memberFunction(false, newLiteral->getStringValue(), newLiteral));
+						mfunsNew.push_back(builder.memberFunction(false, literalName.substr(classPrefix.length()), literal));
 					}
 				}
 			}
