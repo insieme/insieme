@@ -988,92 +988,17 @@ namespace parser {
 			}
 			return exp;
 		}
-
-		ExpressionPtr InspireDriver::genStructExpression(const location& l, const TypePtr& type, const ExpressionList& list) {
-			// check for null
-			if(!type) {
-				error(l, "Accessing null-type!");
+		
+		ExpressionPtr InspireDriver::genInitializerExprTemp(const location& l, const TypePtr& type, const ExpressionList& list) {
+			if(!lang::isReference(type)) {
+				error(l, format("type for initialization must be a reference type (is %s)", *type));
 				return nullptr;
 			}
-
-			// check for a struct type
-			TagTypePtr structType = type.isa<TagTypePtr>();
-			if(!structType || !structType->isStruct()) {
-				error(l, format("Not a struct type: %s", toString(type)));
-				return nullptr;
-			}
-
-			// check fields
-			auto fields = structType->getFields();
-			if(fields->size() != list.size()) {
-				error(l, "init list does not match number of fields");
-				return nullptr;
-			}
-
-			// extract name / value pairs
-			NamedValueList values;
-			for(const auto& cur : make_paired_range(fields, list)) {
-				values.push_back(builder.namedValue(cur.first->getName(), cur.second.as<ExpressionPtr>()));
-			}
-
-			// build struct expression with generic type
-			return builder.structExpr(builder.genericType(structType->getName()->getValue()), values);
+			return builder.initExprTemp(type.as<GenericTypePtr>(), list);
 		}
-
-		ExpressionPtr InspireDriver::genUnionExpression(const location& l, const TypePtr& type, const std::string field, const ExpressionPtr& expr) {
-			// check for null
-			if(!type) {
-				error(l, "Accessing null-type!");
-				return nullptr;
-			}
-
-			// check for a union type
-			TagTypePtr unionType = type.isa<TagTypePtr>();
-			if(!unionType || !unionType->isUnion()) {
-				error(l, format("Not a union type: %s", toString(type)));
-				return nullptr;
-			}
-
-			// build union expression with generic type
-			return builder.unionExpr(builder.genericType(unionType->getName()->getValue()), builder.stringValue(field), expr);
-		}
-
-		ExpressionPtr InspireDriver::genInitializerExpr(const location& l, const TypePtr& type, const ExpressionList& list) {
-			// check for a struct type
-			TagTypePtr tagType = type.isa<TagTypePtr>();
-			if(tagType && tagType->isStruct()) {
-				return genStructExpression(l, type, list);
-
-				// check for union type, which has to be initialized differently
-			} else if(tagType && tagType->isUnion()) {
-				// there must only be one expression in the initializer
-				if(list.size() != 1) {
-					error(l, "A union initialization expression must only contain one expression");
-					return nullptr;
-				}
-
-				// we have to find the member of the union which has the same type as the given expression
-				ExpressionPtr init = list[0];
-				auto unionType = tagType->getUnion();
-				for(auto cur : unionType->getFields()) {
-					if(cur->getType() == init.getType()) { return genUnionExpression(l, type, cur->getName()->getValue(), init); }
-				}
-
-				// if we end up here we didn't find a matching field
-				error(l, "The given expression does not match any of the union's field types");
-				return nullptr;
-
-			} else if(auto genericType = type.isa<GenericTypePtr>()) {
-				auto tuType = tu[genericType];
-				if(!tuType) {
-					error(l, format("Can not initialize generic type %s, since it isn't registered in the translation unit", type));
-					return nullptr;
-				}
-				return genInitializerExpr(l, tuType, list);
-			}
-
-			assert_not_implemented() << "Unimplemented functionality. Can't initialize type " << type;
-			return nullptr;
+		
+		ExpressionPtr InspireDriver::genInitializerExpr(const location& l, const TypePtr& type, const ExpressionPtr& memExpr, const ExpressionList& list) {
+			return builder.initExpr(memExpr, list);
 		}
 
 		VariablePtr InspireDriver::genParameter(const location& l, const std::string& name, const TypePtr& type) {

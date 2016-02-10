@@ -95,11 +95,7 @@ namespace omp {
 		const lang::BasicGenerator& basic;
 		const lang::ParallelExtension& parExt;
 		us::PointerSet<CompoundStmtPtr> toFlatten; // set of compound statements to flatten one step further up
-
-		// the following vars handle global struct type adjustment due to threadprivate
-		bool fixStructType;              // when set, implies that the struct was just modified and needs to be adjusted
-		ExprVarMap thisLambdaTPAccesses; // threadprivate optimization map
-
+		
 		// this stack is used to keep track of which variables are shared in enclosing constructs, to correctly parallelize
 		std::stack<VariableList> sharedVarStack;
 
@@ -112,7 +108,6 @@ namespace omp {
 	  public:
 		OMPSemaMapper(NodeManager& nodeMan)
 			: nodeMan(nodeMan), build(nodeMan), basic(nodeMan.getLangBasic()), parExt(nodeMan.getLangExtension<lang::ParallelExtension>()), toFlatten(),
-			  fixStructType(false), thisLambdaTPAccesses(),
 			  orderedCountLit(build.literal("ordered_counter", build.refType(basic.getInt8(), false, true))),
 			  orderedItLit(build.literal("ordered_loop_it", basic.getInt8())), orderedIncLit(build.literal("ordered_loop_inc", basic.getInt8())),
 			  paramCounter(0) {}
@@ -188,7 +183,6 @@ namespace omp {
 				}
 			}
 			newNode = handleTPVars(newNode);
-			newNode = fixStruct(newNode);
 			newNode = flattenCompounds(newNode);
 			newNode = handleFunctions(newNode);
 			if(LambdaExprPtr lambda = dynamic_pointer_cast<const LambdaExpr>(newNode)) {
@@ -252,26 +246,7 @@ namespace omp {
 			// check stack integrity when leaving program
 			if(node.isa<ProgramPtr>()) { assert_eq(sharedVarStack.size(), 0) << "ending omp translation: shared var stack corrupted"; }
 		}
-
-		// fixes a struct type to correctly resemble its members
-		// used to make the global struct in line with its new shape after modification by one/multiple threadprivate(s)
-		NodePtr fixStruct(const NodePtr& newNode) {
-			if(fixStructType) {
-				if(StructExprPtr structExpr = dynamic_pointer_cast<const StructExpr>(newNode)) {
-					// WHY doesn't StructExpr::getType() return a StructType?
-					fixStructType = false;
-					NamedValuesPtr members = structExpr->getMembers();
-					// build new type from member initialization expressions' types
-					vector<FieldPtr> memberTypes;
-					::transform(members, std::back_inserter(memberTypes),
-					            [&](const NamedValuePtr& cur) { return build.field(cur->getName(), cur->getValue()->getType()); });
-					auto adjustedStruct = build.structType(memberTypes);
-					return build.structExpr(adjustedStruct, members);
-				}
-			}
-			return newNode;
-		}
-
+		
 		// flattens generated compound statements if requested
 		// used to preserve the correct scope for variable declarations
 		NodePtr flattenCompounds(const NodePtr& newNode) {

@@ -34,6 +34,8 @@
  * regarding third party software licenses.
  */
 
+class Trivial {};
+
 int main() {
 //===-------------------------------------------------------------------------------------------------------------------------------- UNARY OPERATORS ---===
 
@@ -234,36 +236,6 @@ int main() {
 		&a;
 	}
 
-	// No ptr arithmetics with void* in C++
-	//	{
-	//		void* a;
-	//		a+5;
-	//	}
-	//
-	//	{
-	//		void* a;
-	//		5+a;
-	//	}
-	//
-	//	{
-	//		void* a;
-	//		a++;
-	//		a--;
-	//		++a;
-	//		--a;
-	//	}
-	//
-	//	{
-	//		void* a;
-	//		a-5;
-	//	}
-
-	// No ptr difference with void* in C++
-	//	{
-	//		void *a, *b;
-	//		a-b;
-	//	}
-
 	#pragma test expect_ir("{ var ref<ptr<unit,f,f>,f,f> v0; ptr_gt(*v0,*v0); ptr_lt(*v0,*v0); ptr_le(*v0,*v0); ptr_ge(*v0,*v0); }")
 	{
 		void* a;
@@ -390,4 +362,8 @@ int main() {
 		char char_arr[8];
 		unsigned long i = sizeof(char_arr);
 	}
+
+	// check vector init with constructor calls
+	Trivial trivials[2] = {Trivial(), Trivial()};
+
 }

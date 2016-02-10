@@ -906,40 +906,100 @@ namespace checks {
 	}
 
 
-	OptionalMessageList StructExprTypeCheck::visitStructExpr(const StructExprAddress& address) {
+	OptionalMessageList InitExprTypeCheck::visitInitExpr(const InitExprAddress& address) {
 		OptionalMessageList res;
+		auto& mgr = address->getNodeManager();
 
-		// extract type
-		core::TypePtr type = address.getAddressedNode()->getType();
+		// extract type and check for ref
+		core::TypePtr refType = address.getAddressedNode()->getType();
+		if(!analysis::isRefType(refType)) {
+			add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
+				             format("InitExpr only initializes memory and therefore requires a reference type (got %s)", *refType), Message::ERROR));
+			return res;
+		}
+
+		core::TypePtr type = analysis::getReferencedType(refType);
+
+		// get initializers
+		auto initExprs = address.getAddressedNode()->getInitExprList();
 
 		auto tagT = type.isa<TagTypePtr>();
-		if(!tagT) {
-			return res;
-		}
-		
-		// get peeled struct type
-		core::StructPtr structType = analysis::isStruct(tagT->peel());
-
-		// check whether it is a struct type
-		if(!structType) {
-			add(res, Message(address, EC_TYPE_INVALID_TYPE_OF_STRUCT_EXPR, format("Invalid type of struct-expression - type: \n%s", *type),
-			                 Message::ERROR));
-			return res;
-		}
-
-		// check type of values within struct expression
-		for_each(address.getAddressedNode()->getMembers()->getNamedValues(), [&](const NamedValuePtr& cur) {
-			core::TypePtr requiredType = structType->getFieldType(cur->getName());
-			core::TypePtr isType = cur->getValue()->getType();
-			if(!requiredType) {
-				add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR, format("No member %s in struct type %s", cur->getName(), *structType),
-					             Message::ERROR));
-			} else if(!types::isSubTypeOf(isType, requiredType)) {
-				add(res,
-					Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
-					        format("Invalid type of struct-member initalization - expected type: \n%s, actual: \n%s", *requiredType, *isType), Message::ERROR));
+		if(tagT) {
+			// test struct types
+			core::StructPtr structType = analysis::isStruct(tagT->peel());
+			if(structType) {
+				std::vector<FieldPtr> fields = structType->getFields()->getFields();
+				// check number of initializers
+				if(initExprs.size() != fields.size()) {
+					add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
+						             format("Wrong number of initialization expressions (%d expressions for %d fields)", initExprs.size(), fields.size()),
+						             Message::ERROR));
+					return res;
+				}
+				// check type of values within init expression
+				unsigned i = 0;
+				for(const auto& cur : initExprs) {
+					core::TypePtr requiredType = fields[i++]->getType();
+					core::TypePtr isType = cur->getType();
+					if(!typeMatchesWithOptionalMaterialization(mgr, requiredType, isType)) {
+						add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
+										 format("Invalid type of struct-member initialization - expected type: \n%s, actual: \n%s", *requiredType, *isType),
+										 Message::ERROR));
+					}
+				}
+				return res;
 			}
-		});
+			
+			// test unions
+			core::UnionPtr unionType = analysis::isUnion(tagT->peel());
+			if(unionType) {
+				// check for single initializer
+				if(initExprs.size() != 1) {
+					add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR, "More than one initialization expression for union", Message::ERROR));
+					return res;
+				}
+				// check that its type matches any of the union types
+				core::TypePtr isType = initExprs.front()->getType();
+				bool matchesAny = false;
+				for(const auto& field : unionType->getFields()) {
+					if(typeMatchesWithOptionalMaterialization(mgr, field->getType(), isType)) matchesAny = true;
+				}
+				if(!matchesAny) {
+					add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
+						             format("Union initialization expression (of type %s) does not match any union types", isType), Message::ERROR));
+				}
+				return res;
+			}
+		}
+
+		if(lang::isArray(type)) {
+			lang::ArrayType arrType = lang::ArrayType(type);
+			// check number of initializers
+			if(arrType.isConstSize()) {
+				if(initExprs.size() > arrType.getNumElements()) {
+					add(res,
+						Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
+						        format("Too many initialization expressions (%d expressions for array size %d)", initExprs.size(), arrType.getNumElements()),
+						        Message::ERROR));
+					return res;
+				}
+			}
+			// check type of values within init expression
+			core::TypePtr requiredType = arrType.getElementType();
+			for(const auto& cur : initExprs) {
+				core::TypePtr isType = cur->getType();
+				if(!typeMatchesWithOptionalMaterialization(mgr, requiredType, isType)) {
+					add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
+										format("Invalid type of struct-member initialization - expected type: \n%s, actual: \n%s", *requiredType, *isType),
+										Message::ERROR));
+				}
+			}
+			return res;
+		}
+
+		// this means it's not a struct, union or array
+		add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
+			             format("Initialization may only initialize structs, unions and array (trying to initialize %s)", *type), Message::ERROR));
 
 		return res;
 	}

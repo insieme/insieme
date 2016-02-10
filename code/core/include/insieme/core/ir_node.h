@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -1135,7 +1135,7 @@ namespace core {
 	 */
 	#define IR_NODE_PROPERTY(TYPE, NAME, INDEX)                                                                                                                \
 		Ptr<const TYPE> get##NAME() const {                                                                                                                    \
-			return this->getChildList()[INDEX].template as<Ptr<const TYPE>>();                                               \
+			return this->getChildList()[INDEX].template as<Ptr<const TYPE>>();                                                                                 \
 		}
 
 

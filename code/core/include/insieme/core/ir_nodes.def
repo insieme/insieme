@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -214,8 +214,7 @@ AST_TERMINAL(CallExpr, Expression)
 AST_TERMINAL(CastExpr, Expression)
 
 AST_TERMINAL(TupleExpr, Expression)
-AST_TERMINAL(StructExpr, Expression)
-AST_TERMINAL(UnionExpr, Expression)
+AST_TERMINAL(InitExpr, Expression)
 AST_TERMINAL(JobExpr, Expression)
 
 
@@ -258,7 +257,6 @@ AST_TERMINAL(LambdaBinding, Support)
 AST_TERMINAL(LambdaDefinition, Support)
 
 AST_TERMINAL(NamedValue, Support)
-AST_TERMINAL(NamedValues, Support)
 
 AST_TERMINAL(SwitchCase, Support)
 AST_TERMINAL(SwitchCases, Support)

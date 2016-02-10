@@ -64,11 +64,9 @@ namespace transform {
 			fields.push_back(builder.field("second", basic.getReal8()));
 			const VariablePtr& structVar = builder.variable(builder.refType(builder.structType(fields)));
 
-			vector<NamedValuePtr> init;
-			init.push_back(builder.namedValue("first", builder.intLit(1)));
-			init.push_back(builder.namedValue("second", builder.literal(basic.getReal8(), "0.0")));
+			ExpressionList init { builder.intLit(1), builder.literal(basic.getReal8(), "0.0") };
 
-			saStmts.push_back(builder.declarationStmt(structVar, builder.structExpr(init)));
+			saStmts.push_back(builder.declarationStmt(structVar, builder.initExpr(structVar, init)));
 
 			// CompositeMemberAccess
 			saStmts.push_back(builder.callExpr(basic.getInt8(), basic.getCompositeMemberAccess(),

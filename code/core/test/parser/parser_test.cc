@@ -556,15 +556,15 @@ namespace parser {
 		EXPECT_TRUE(test_expression(nm, "1 + 2 * 3"));
 		EXPECT_TRUE(test_expression(nm, "(1 + 2) * 3"));
 
-		EXPECT_FALSE(test_expression(nm, "def union uni { a : int<4>; }; <uni> { \"4\" }"));
-		EXPECT_FALSE(test_expression(nm, "def union uni { a : int<4>; }; <uni> { 4, 5 }"));
-		EXPECT_TRUE(test_expression(nm, "def struct x { a : int<4>; b : int<4>; }; <x> { 4, 5 }"));
-		EXPECT_TRUE(test_expression(nm, "def struct x { a : int<4>; }; <x> { 4 }"));
-		EXPECT_TRUE(test_expression(nm, "def struct x { }; <x> { }"));
+		EXPECT_FALSE(test_expression(nm, "def union uni { a : int<4>; }; <ref<uni>> { \"4\" }"));
+		EXPECT_FALSE(test_expression(nm, "def union uni { a : int<4>; }; <ref<uni>> { 4, 5 }"));
+		EXPECT_TRUE(test_expression(nm, "def struct x { a : int<4>; b : int<4>; }; <ref<x>> { 4, 5 }"));
+		EXPECT_TRUE(test_expression(nm, "def struct x { a : int<4>; }; <ref<x>> { 4 }"));
+		EXPECT_TRUE(test_expression(nm, "def struct x { }; <ref<x>> { }"));
 
 		EXPECT_TRUE(test_type(nm, "def union uni { a : int<4>; lambda f = ()->unit {} }; uni"));
 		EXPECT_TRUE(test_statement(nm, "def union uni { a : int<4>; lambda f = ()->unit {} }; { var ref<uni,f,f,plain> a; }"));
-		EXPECT_TRUE(test_statement(nm, "def union uni { a : int<4>; lambda f = ()->unit {} }; { <uni> { 4 }; }"));
+		EXPECT_TRUE(test_statement(nm, "def union uni { a : int<4>; lambda f = ()->unit {} }; { <ref<uni>> { 4 }; }"));
 
 		EXPECT_FALSE(test_expression(nm, "x"));
 

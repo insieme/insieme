@@ -153,16 +153,6 @@ namespace parser {
 
 			const ParserIRExtension& parserIRExtension;
 
-			/**
-			 * constructs a struct expression
-			 */
-			ExpressionPtr genStructExpression(const location& l, const TypePtr& structType, const ExpressionList& list);
-
-			/**
-			 * constructs a union expression
-			 */
-			ExpressionPtr genUnionExpression(const location& l, const TypePtr& type, const std::string field, const ExpressionPtr& expr);
-
 		  public:
 
 			ProgramPtr parseProgram();
@@ -348,7 +338,12 @@ namespace parser {
 			/**
 			 * constructs an initializer expression according to the given type and expression list
 			 */
-			ExpressionPtr genInitializerExpr(const location& l, const TypePtr& type, const ExpressionList& list);
+			ExpressionPtr genInitializerExprTemp(const location& l, const TypePtr& type, const ExpressionList& list);
+
+			/**
+			 * constructs an initializer expression according to the given type and expression list
+			 */
+			ExpressionPtr genInitializerExpr(const location& l, const TypePtr& type, const ExpressionPtr& memExpr, const ExpressionList& list);
 
 			/**
 			 * constructs a parameter
