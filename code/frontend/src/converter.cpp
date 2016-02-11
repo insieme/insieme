@@ -78,7 +78,6 @@
 #include "insieme/core/ir_program.h"
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/enum.h"
-#include "insieme/core/lang/ir++_extension.h"
 #include "insieme/core/lang/static_vars.h"
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/manipulation_utils.h"

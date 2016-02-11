@@ -68,7 +68,6 @@
 #include "insieme/core/lang/array.h"
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/enum.h"
-#include "insieme/core/lang/ir++_extension.h"
 #include "insieme/core/lang/pointer.h"
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/node_replacer.h"
@@ -96,7 +95,7 @@ namespace conversion {
 
 	// translate expression as usual, but convert translated string literals to r-values rather than l-values
 	core::ExpressionPtr Converter::ExprConverter::convertInitExpr(const clang::Expr* original) {
-		auto expr = converter.convertExpr(original);
+		auto expr = converter.convertCxxArgExpr(original);
 		if(original->isLValue()) {
 			auto origType = llvm::dyn_cast_or_null<clang::ConstantArrayType>(original->getType()->getAsArrayTypeUnsafe());
 			auto lit = expr.isa<core::LiteralPtr>();
@@ -730,15 +729,15 @@ namespace conversion {
 			return std::make_pair(irRecordType, irGenericType);
 		}
 
-		core::NamedValueList buildNamedValuesForStructInit(Converter& converter, const clang::InitListExpr* initList) {
+		core::ExpressionList buildExprListForStructInit(Converter& converter, const clang::InitListExpr* initList) {
 			core::TagTypePtr irRecordType = lookupRecordTypes(converter, initList).first;
-			core::NamedValueList values;
+			core::ExpressionList values;
 			core::FieldList fields = irRecordType->getFields();
 			unsigned i = 0;
 			for(auto entry : fields) {
 				core::ExpressionPtr initExp = converter.getIRBuilder().getZero(entry->getType());
 				if(i < initList->getNumInits()) initExp = converter.convertInitExpr(initList->getInit(i));
-				values.push_back(converter.getIRBuilder().namedValue(entry->getName(), initExp));
+				values.push_back(initExp);
 				++i;
 			}
 			return values;
@@ -753,17 +752,19 @@ namespace conversion {
 		auto clangType = initList->getType();
 		// convert the type if this is the first time we encounter it
 		converter.convertType(clangType);
+		auto convertedExprType = convertExprType(initList);
+		if(!core::lang::isReference(convertedExprType)) convertedExprType = builder.refType(convertedExprType);
+		auto genType = convertedExprType.as<core::GenericTypePtr>();
 
 		if(clangType->isStructureType()) {
 			auto types = lookupRecordTypes(converter, initList);
-			auto values = buildNamedValuesForStructInit(converter, initList);
-			retIr = builder.structExpr(types.first, values);
+			auto values = buildExprListForStructInit(converter, initList);
+			retIr = builder.initExprTemp(genType, values);
 		}
 		else if(clangType->isUnionType()) {
 			auto types = lookupRecordTypes(converter, initList);
-			auto member = builder.stringValue(initList->getInitializedFieldInUnion()->getNameAsString());
 			auto initExp = Visit(initList->getInit(0));
-			retIr = builder.unionExpr(types.first, member, initExp);
+			retIr = builder.initExprTemp(genType, initExp);
 		}
 		else if(clangType->isArrayType()) {
 			auto gT = converter.convertType(clangType).as<core::GenericTypePtr>();
@@ -772,12 +773,18 @@ namespace conversion {
 			for(unsigned i = 0; i < initList->getNumInits(); ++i) { // yes, that is really the best way to do this in clang 3.6
 				initExps.push_back(convertInitExpr(initList->getInit(i)));
 			}
-			retIr = core::lang::buildArrayCreate(core::lang::getArraySize(gT), initExps);
+			retIr = builder.initExprTemp(genType, initExps);
 		}
 		else if(clangType->isScalarType()) {
 			retIr = convertInitExpr(initList->getInit(0));
+			return retIr;
 		} else {
 			frontend_assert(false) << "Clang InitListExpr of unexpected type";
+		}
+
+		// if used as r-value, deref
+		if(initList->isRValue()) {
+			retIr = builder.deref(retIr);
 		}
 
 		return retIr;
@@ -797,9 +804,12 @@ namespace conversion {
 		core::ExpressionPtr retIr;
 		LOG_EXPR_CONVERSION(compLitExpr, retIr);
 
+
 		if(const clang::InitListExpr* initList = llvm::dyn_cast<clang::InitListExpr>(compLitExpr->getInitializer())) {
-			// for some reason, this is an lvalue
-			retIr = builder.refTemp(Visit(initList));
+			retIr = VisitInitListExpr(initList);
+			auto& refExt = converter.getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
+			if(refExt.isCallOfRefDeref(retIr)) retIr = core::analysis::getArgument(retIr, 0);
+			else retIr = builder.refTemp(retIr);
 		}
 
 		if(!retIr) frontend_assert(false) << "Unimplemented type of CompoundLiteralExpr encountered";

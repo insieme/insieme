@@ -174,7 +174,7 @@ namespace omp {
 				// LOG(DEBUG) << "replaced with: \n" << printer::PrettyPrinter(newNode);
 			} else {
 				// check whether it is a struct-init expression of a lock
-				if(node->getNodeType() == NT_StructExpr && isLockStructType(node.as<ExpressionPtr>()->getType())) {
+				if(node->getNodeType() == NT_InitExpr && isLockStructType(node.as<ExpressionPtr>()->getType())) {
 					// replace with uninitialized lock
 					newNode = build.getZero(parExt.getLock());					
 				} else {
@@ -182,7 +182,6 @@ namespace omp {
 					newNode = node->substitute(nodeMan, *this);
 				}
 			}
-			newNode = handleTPVars(newNode);
 			newNode = flattenCompounds(newNode);
 			newNode = handleFunctions(newNode);
 			if(LambdaExprPtr lambda = dynamic_pointer_cast<const LambdaExpr>(newNode)) {
@@ -370,49 +369,7 @@ namespace omp {
 			});
 			return inside;
 		}
-
-		// internal implementation of TP variable generation used by both
-		// handleTPVars and implementDataClauses
-		CompoundStmtPtr handleTPVarsInternal(const CompoundStmtPtr& body, bool generatedByOMP = false) {
-			StatementList statements;
-			StatementList oldStatements = body->getStatements();
-			StatementList::const_iterator oi = oldStatements.cbegin();
-			// insert existing decl statements before
-			if(!generatedByOMP)
-				while((*oi)->getNodeType() == NT_DeclarationStmt) {
-					statements.push_back(*oi);
-					oi++;
-				}
-			// insert new decls
-			ExprVarMap newLambdaAcc;
-			for_each(thisLambdaTPAccesses, [&](const ExprVarMap::value_type& entry) {
-				VariablePtr var = entry.second;
-				if(isInTree(var, body)) {
-					ExpressionPtr expr = entry.first;
-					statements.push_back(build.declarationStmt(var, expr));
-					if(generatedByOMP) { newLambdaAcc.insert(entry); }
-				} else {
-					newLambdaAcc.insert(entry);
-				}
-			});
-			thisLambdaTPAccesses = newLambdaAcc;
-			// insert rest of existing body
-			while(oi != oldStatements.cend()) {
-				statements.push_back(*oi);
-				oi++;
-			}
-			return build.compoundStmt(statements);
-		}
-
-		// generates threadprivate access variables for the current lambda
-		NodePtr handleTPVars(const NodePtr& node) {
-			LambdaPtr lambda = dynamic_pointer_cast<const Lambda>(node);
-			if(lambda && !thisLambdaTPAccesses.empty()) {
-				return build.lambda(lambda->getType(), lambda->getParameters(), handleTPVarsInternal(lambda->getBody()));
-			}
-			return node;
-		}
-
+		
 		// beware! the darkness hath returned to prey upon innocent globals yet again
 		// will the frontend prevail?
 		// new and improved crazyness! does not directly implement accesses, replaces with variable
@@ -681,10 +638,8 @@ namespace omp {
 			if(forP && !forP->hasNoWait()) { replacements.push_back(build.barrier()); }
 			// append postfix
 			copy(postFix.cbegin(), postFix.cend(), back_inserter(replacements));
-			// handle threadprivates before it is too late!
-			auto res = handleTPVarsInternal(build.compoundStmt(replacements), true);
 
-			return res;
+			return build.compoundStmt(replacements);
 		}
 
 		NodePtr markUnordered(const NodePtr& node) {

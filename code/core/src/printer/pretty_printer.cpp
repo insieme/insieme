@@ -1357,7 +1357,7 @@ namespace printer {
 				VISIT(node->getType());
 				out << ">(";
 				VISIT(node->getMemoryExpr());
-				out << ") {" <<	join(",", node->getInitExprList(), [&](std::ostream& out, const ExpressionAddress& cur) {
+				out << ") {" <<	join(", ", node->getInitExprList(), [&](std::ostream& out, const ExpressionAddress& cur) {
 					VISIT(cur);
 				}) << "}";
 			}

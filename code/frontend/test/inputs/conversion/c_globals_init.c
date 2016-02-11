@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -51,9 +51,9 @@ char char_arr[255] = "";
 def struct IMP_S { x: int<4>; y: uint<4>; };
 def IMP_main = ()->int<4> {
 	lit("initedGlobal":ref<int<4>>) = 5;
-	lit("y":ref<IMP_S>) = <IMP_S>{1, 5u};
+	lit("y":ref<IMP_S>) = *<ref<IMP_S>>(lit("y":ref<IMP_S>)){1, 5u};
 	ref_cast(lit("klaus_test":ref<array<IMP_S,3>,t,f>), type_lit(f), type_lit(f), type_lit(plain)) =
-		array_create(type_lit(3), [<IMP_S>{1,2u},<IMP_S>{3,4u},<IMP_S>{5,6u}]);
+		*<ref<array<IMP_S,3>,f,f,plain>>(lit("klaus_test":ref<array<IMP_S,3>,t,f>)){ *<ref<IMP_S>>{1,2u}, *<ref<IMP_S>>{3,4u}, *<ref<IMP_S>>{5,6u} };
 	lit("char_arr":ref<array<char,255>,f,f>) = array_create(type_lit(255), [lit("'\0'":char)]);
 	*lit("initedGlobal":ref<int<4>>);
 	*lit("y":ref<IMP_S>);

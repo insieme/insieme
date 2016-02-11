@@ -45,7 +45,7 @@ namespace utils {
 	/// Replace RefTemps in outer constructor calls with variable itself
 	///
 	core::ExpressionPtr fixTempMemoryInInitExpression(const core::ExpressionPtr& variable, const core::ExpressionPtr& initExp);
-
+	
 } // end namespace utils
 } // end namespace frontend
 } // end namespace insieme

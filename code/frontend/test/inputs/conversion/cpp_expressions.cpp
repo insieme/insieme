@@ -364,6 +364,12 @@ int main() {
 	}
 
 	// check vector init with constructor calls
+	#pragma test expect_ir(R"(
+		def struct IMP_Trivial {};
+		var ref<array<IMP_Trivial,2>,f,f,plain> v0 = *<ref<array<IMP_Trivial,2>,f,f,plain>>(v0) {
+			ref_cast(IMP_Trivial::(ref_temp(type_lit(IMP_Trivial))), type_lit(f), type_lit(f), type_lit(cpp_rref)), 
+			ref_cast(IMP_Trivial::(ref_temp(type_lit(IMP_Trivial))), type_lit(f), type_lit(f), type_lit(cpp_rref))
+		};)")
 	Trivial trivials[2] = {Trivial(), Trivial()};
 
 }

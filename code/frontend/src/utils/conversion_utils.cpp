@@ -36,6 +36,7 @@
 
 #include "insieme/frontend/utils/conversion_utils.h"
 
+#include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_address.h"
@@ -46,22 +47,32 @@ namespace insieme {
 namespace frontend {
 namespace utils {
 
-	core::ExpressionPtr fixTempMemoryInInitExpression(const core::ExpressionPtr& variable, const core::ExpressionPtr& initExp) {
-		auto& mgr = initExp->getNodeManager();
+	core::ExpressionPtr fixTempMemoryInInitExpression(const core::ExpressionPtr& variable, const core::ExpressionPtr& initExpIn) {
+		auto& mgr = initExpIn->getNodeManager();
 		auto& refExt = mgr.getLangExtension<core::lang::ReferenceExtension>();
 		// if the init expr is a constructor call
-		if(core::analysis::isConstructorCall(initExp)) {
-			core::CallExprAddress call(initExp.as<core::CallExprPtr>());
+		if(core::analysis::isConstructorCall(initExpIn)) {
+			core::CallExprAddress call(initExpIn.as<core::CallExprPtr>());
 			assert_ge(call->getArguments().size(), 1) << "Ill-formed constructor call. Missing this argument";
 			if(refExt.isCallOfRefTemp(call->getArgument(0))) {
 				// we replace the first parameter (which has been created as ref_temp) by the variable to initialize
 				return core::transform::replaceNode(
-					       initExp->getNodeManager(), call->getArgument(0),
+					       initExpIn->getNodeManager(), call->getArgument(0),
 					       core::lang::buildRefCast(variable, call->getFunctionExpr()->getType().as<core::FunctionTypePtr>()->getParameterType(0)))
 					.as<core::ExpressionPtr>();
 			}
 		}
-		return initExp;
+		// if the init expr is an init expr
+		core::ExpressionAddress initExp(initExpIn);
+		if(refExt.isCallOfRefDeref(initExp)) initExp = initExp.as<core::CallExprAddress>().getArgument(0);
+		if(auto initInitExpr = initExp.isa<core::InitExprAddress>()) {
+			auto memExprAddr = initInitExpr->getMemoryExpr();
+			if(refExt.isCallOfRefTemp(memExprAddr)) {
+				// we replace the memory address to be initialized with the variable being declared
+				return core::transform::replaceNode(initExp->getNodeManager(), memExprAddr, variable).as<core::ExpressionPtr>();
+			}
+		}
+		return initExpIn;
 	}
 
 } // end namespace utils

@@ -41,12 +41,13 @@
 #include "insieme/frontend/converter.h"
 #include "insieme/frontend/decl_converter.h"
 #include "insieme/frontend/state/variable_manager.h"
-#include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/clang_cast.h"
-#include "insieme/frontend/utils/macros.h"
-#include "insieme/frontend/utils/stmt_wrapper.h"
+#include "insieme/frontend/utils/conversion_utils.h"
 #include "insieme/frontend/utils/error_report.h"
 #include "insieme/frontend/utils/expr_to_bool.h"
+#include "insieme/frontend/utils/macros.h"
+#include "insieme/frontend/utils/source_locations.h"
+#include "insieme/frontend/utils/stmt_wrapper.h"
 
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/logging.h"
@@ -133,6 +134,7 @@ namespace conversion {
 			core::ExpressionPtr initExp;
 			if(convertedDecl.second) {
 				initExp = *convertedDecl.second;
+				initExp = utils::fixTempMemoryInInitExpression(convertedDecl.first, initExp);
 			} else {
 				// generate undefined initializer
 				initExp = convertedDecl.first;

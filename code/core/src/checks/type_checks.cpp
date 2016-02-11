@@ -64,7 +64,9 @@ namespace checks {
 	namespace {
 		bool typeMatchesWithOptionalMaterialization(NodeManager& nm, const TypePtr& targetT, const TypePtr& valueT) {
 			// if the types are equivalent, everything is fine
-			if(types::isSubTypeOf(valueT, targetT)) { return true; }
+			if(types::isSubTypeOf(valueT, targetT)) { 
+				return true; 
+			}
 
 			// try to find a valid type variable instantiation
 			TypePtr paramType = targetT;
@@ -923,6 +925,11 @@ namespace checks {
 		// get initializers
 		auto initExprs = address.getAddressedNode()->getInitExprList();
 
+		auto materialize = [&](const TypePtr& tt) -> TypePtr {
+			if(!core::lang::isReference(tt)) return IRBuilder(mgr).refType(tt);
+			return tt;
+		};
+
 		auto tagT = type.isa<TagTypePtr>();
 		if(tagT) {
 			// test struct types
@@ -941,7 +948,7 @@ namespace checks {
 				for(const auto& cur : initExprs) {
 					core::TypePtr requiredType = fields[i++]->getType();
 					core::TypePtr isType = cur->getType();
-					if(!typeMatchesWithOptionalMaterialization(mgr, requiredType, isType)) {
+					if(!typeMatchesWithOptionalMaterialization(mgr, materialize(requiredType), isType)) {
 						add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
 										 format("Invalid type of struct-member initialization - expected type: \n%s, actual: \n%s", *requiredType, *isType),
 										 Message::ERROR));
@@ -962,7 +969,7 @@ namespace checks {
 				core::TypePtr isType = initExprs.front()->getType();
 				bool matchesAny = false;
 				for(const auto& field : unionType->getFields()) {
-					if(typeMatchesWithOptionalMaterialization(mgr, field->getType(), isType)) matchesAny = true;
+					if(typeMatchesWithOptionalMaterialization(mgr, materialize(field->getType()), isType)) matchesAny = true;
 				}
 				if(!matchesAny) {
 					add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
@@ -988,9 +995,9 @@ namespace checks {
 			core::TypePtr requiredType = arrType.getElementType();
 			for(const auto& cur : initExprs) {
 				core::TypePtr isType = cur->getType();
-				if(!typeMatchesWithOptionalMaterialization(mgr, requiredType, isType)) {
+				if(!typeMatchesWithOptionalMaterialization(mgr, materialize(requiredType), isType)) {
 					add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
-										format("Invalid type of struct-member initialization - expected type: \n%s, actual: \n%s", *requiredType, *isType),
+										format("Invalid type of array-member initialization - expected type: \n%s, actual: \n%s", *requiredType, *isType),
 										Message::ERROR));
 				}
 			}

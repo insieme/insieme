@@ -65,7 +65,6 @@
 #include "insieme/core/datapath/datapath.h"
 #include "insieme/core/encoder/lists.h"
 #include "insieme/core/lang/basic.h"
-#include "insieme/core/lang/ir++_extension.h"
 #include "insieme/core/lang/pointer.h"
 #include "insieme/core/lang/array.h"
 #include "insieme/core/transform/node_replacer.h"
@@ -362,15 +361,30 @@ namespace conversion {
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	namespace {
 		/// Resize the array created by an array create call (required due to mismatched size reported for initializer expressions in new[])
-		core::ExpressionPtr resizeArrayCreate(const Converter& converter, const core::ExpressionPtr& createExpr, const core::ExpressionPtr& newSize) {
-			assert_decl(
-					auto& nodeMan = createExpr->getNodeManager();
-					auto& arrExp = nodeMan.getLangExtension<core::lang::ArrayExtension>()
-			);
-			frontend_assert(core::analysis::isCallOf(createExpr, arrExp.getArrayCreate()))
-				<< "Trying to resize array creation, but expression is not array creation";
+		core::ExpressionPtr resizeArrayCreate(const Converter& converter, core::ExpressionPtr createExpr, const core::ExpressionPtr& newSize) {
+			auto& nodeMan = createExpr->getNodeManager();
+			auto& arrExt = nodeMan.getLangExtension<core::lang::ArrayExtension>();
+			auto& refExt = nodeMan.getLangExtension<core::lang::ReferenceExtension>();
+			bool hasDeref = refExt.isCallOfRefDeref(createExpr);
+			if(hasDeref) createExpr = core::analysis::getArgument(createExpr, 0);
+			
+			auto initExpr = createExpr.isa<core::InitExprPtr>();
+			frontend_assert(initExpr) << "Trying to resize array creation, but expression is not init";
 
-			return core::lang::buildArrayCreate(newSize, core::lang::parseListOfExpressions(createExpr.as<core::CallExprPtr>()->getArgument(1)));
+			auto arrGt = initExpr.getType();
+			frontend_assert(core::lang::isReference(arrGt)) << "Inited type must be reference";
+			auto subTy = core::analysis::getReferencedType(arrGt);
+			frontend_assert(core::lang::isArray(subTy)) << "Expected array type, got " << *subTy;
+			auto arrTy = core::lang::ArrayType(subTy);
+			
+			// need to implement this for non-const size (approach same as with C VLAs)
+			auto form = core::arithmetic::toFormula(newSize);
+			frontend_assert(form.isConstant()) << "Non const-sized new[] not yet implemented";
+			arrTy.setSize(form.getIntegerValue());
+
+			core::ExpressionPtr retIr = converter.getIRBuilder().initExprTemp(arrTy, initExpr.getInitExprList());
+			if(hasDeref) retIr = converter.getIRBuilder().deref(retIr);
+			return retIr;
 		}
 	}
 
@@ -551,15 +565,17 @@ namespace conversion {
 				// otherwise, materialize
 				frontend_assert(matRefType.getElementType() == retIr->getType()) << "Materializing to unexpected type " << dumpColor(matRefType.toType())
 					                                                            << " from " << dumpColor(retIr->getType());
+				// if call to deref, simply remove it
+				auto& refExt = converter.getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
+				if(refExt.isCallOfRefDeref(retIr)) {
+					retIr = subCall->getArgument(0);
+					return retIr;
+				}
+				// otherwise, materialize call
 				retIr = builder.callExpr(builder.refType(retIr->getType()), subCall->getFunctionExpr(), subCall->getArguments());
 			}
 		}
-
-		// we don't need to materialize POD types, Inspire semantics allow implicit materialization
-		if(materTempExpr->getType().isPODType(converter.getCompiler().getASTContext())) {
-			return retIr;
-		}
-
+		
 		return retIr;
 	}
 

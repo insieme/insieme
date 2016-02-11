@@ -990,15 +990,15 @@ namespace parser {
 		}
 		
 		ExpressionPtr InspireDriver::genInitializerExprTemp(const location& l, const TypePtr& type, const ExpressionList& list) {
+			return genInitializerExpr(l, type, lang::buildRefTemp(type), list);
+		}
+		
+		ExpressionPtr InspireDriver::genInitializerExpr(const location& l, const TypePtr& type, const ExpressionPtr& memExpr, const ExpressionList& list) {
 			if(!lang::isReference(type)) {
 				error(l, format("type for initialization must be a reference type (is %s)", *type));
 				return nullptr;
 			}
-			return builder.initExprTemp(type.as<GenericTypePtr>(), list);
-		}
-		
-		ExpressionPtr InspireDriver::genInitializerExpr(const location& l, const TypePtr& type, const ExpressionPtr& memExpr, const ExpressionList& list) {
-			return builder.initExpr(memExpr, list);
+			return builder.initExpr(type.as<GenericTypePtr>(), memExpr, builder.expressions(list));
 		}
 
 		VariablePtr InspireDriver::genParameter(const location& l, const std::string& name, const TypePtr& type) {

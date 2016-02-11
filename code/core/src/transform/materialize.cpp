@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -51,7 +51,6 @@ namespace transform {
 		if (!type) return type;
 
 		// do not materialize references
-		//if (lang::isReference(type)) {
 		if (lang::isCppReference(type)||lang::isCppRValueReference(type)) {
 			return type;
 		}
