@@ -37,6 +37,7 @@
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/types/match.h"
 #include "insieme/core/tu/ir_translation_unit.h"
 #include "insieme/core/lang/reference.h"
 #include "insieme/core/lang/parallel.h"
@@ -70,12 +71,20 @@ namespace extensions {
 		static const std::string independent = "independent";
 		static const std::string yes = "yes";
 		static const std::string no = "no";
+		static const std::string requirement = "requirement";
+		static const std::string range = "range";
+		static const std::string access = "access";
+		static const std::string ro = "RO";
+		static const std::string wo = "WO";
+		static const std::string rw = "RW";
 	}
 
 	// contains all clauses which are used to register the pragma handlers
 	namespace clauses {
 		auto device = kwd(keywords::type) >> l_paren >> (kwd(keywords::cpu) | kwd(keywords::gpu) | kwd(keywords::accelerator) | kwd(keywords::defaulted))[keywords::type] >> r_paren;
 		auto loop = !(kwd(keywords::independent) >> l_paren >> (kwd(keywords::yes) | kwd(keywords::no))[keywords::independent] >> r_paren);
+		auto range = kwd(keywords::range) >> l_paren >> tok::expr[keywords::range] >> colon >> tok::expr[keywords::range] >> colon >> tok::expr[keywords::range] >> r_paren;
+		auto requirement = l_paren >> var[keywords::requirement] >> comma >> range >> comma >> (kwd(keywords::ro) | kwd(keywords::wo) | kwd(keywords::rw))[keywords::access] >> r_paren;
 	}
 
 	DevicePtr handleDeviceClause(const MatchObject& object) {
@@ -100,6 +109,33 @@ namespace extensions {
 		const std::string& value = object.getString(keywords::independent);
 		return value == keywords::yes;
 	}
+	
+	VariableRequirementPtr handleRequirementClause(const MatchObject& object) {
+		auto var = object.getVars(keywords::requirement);
+		assert_eq(var.size(), 1) << "OpenCL: requirement clause must contain a variable";
+		// extract the supplied ranges
+		auto ranges = object.getExprs(keywords::range);
+		assert_eq(ranges.size(), 3) << "OpenCL: requirement clause must contain a range with three exprs";
+		// check if the ranges are integer based expressions!
+		#if 0
+		assert_true(::all(ranges, [&](const core::ExpressionPtr& expr) { 
+				return core::types::isMatchable(expr->getType(), var[0]->getNodeManager().getLangBasic().getUIntGen());
+			})) << "OpenCL: ranges clause must contain uints";
+		#endif
+		// last but not least, grab the access mode
+		const std::string& value = object.getString(keywords::access);
+		VariableRequirement::AccessMode accessMode;
+		if(value == keywords::ro) {
+			accessMode = VariableRequirement::AccessMode::RO;
+		} else if(value == keywords::wo) {
+			accessMode = VariableRequirement::AccessMode::WO;
+		} else if(value == keywords::rw) {
+			accessMode = VariableRequirement::AccessMode::RW;
+		} else {
+			assert_fail() << "OpenCL: unsupported access type: " << value;
+		}
+		return std::make_shared<VariableRequirement>(var[0], ranges[0], ranges[1], ranges[2], accessMode);
+    }
 
 	void addAnnotations(core::NodePtr& node, BaseAnnotation::AnnotationList& annos) {
 		if(annos.empty()) return;
@@ -128,13 +164,7 @@ namespace extensions {
 			    deviceAnnos.push_back(std::make_shared<DeviceAnnotation>(deviceClause));
 
 			    for (auto& node : nodes) {
-					/*if(auto lambdaExpr = node.isa<core::LambdaExprPtr>()) {
-						auto funType = lambdaExpr->getFunctionType();
-						LOG(DEBUG) << "OpenCL: annotating function of type: " << dumpColor(funType);
-						// now mark the lambdaExpr with the annotation such that the OpenCLTransformer
-						// will process it later on (e.g. checks and so forth)
-						addAnnotations(node, deviceAnnos);
-					} else*/ if (node->getNodeType() == core::NT_CompoundStmt) {
+					if (node->getNodeType() == core::NT_CompoundStmt) {
 						LOG(DEBUG) << "OpenCL: annotationg compound with device";
 						// now mark the compoundStmt with the annotation such that the OpenCLTransformer
 						// will process i tlater on (e.g. checks and so forth)
@@ -168,6 +198,25 @@ namespace extensions {
 					}
 				}
 			    return nodes;
+			})));
+		// Add a handler for pragma opencl requirement
+		pragmaHandlers.push_back(std::make_shared<PragmaHandler>(
+			PragmaHandler(pragmaNamespace, keywords::requirement, clauses::requirement >> tok::eod, [](const MatchObject& object, core::NodeList nodes) {
+				LOG(DEBUG) << "OpenCL: found requirement clause";
+				// create the annotation and put it into the BaseAnnotation list
+				BaseAnnotation::AnnotationList reqAnnos;
+				reqAnnos.push_back(handleRequirementClause(object));
+				for (auto& node : nodes) {
+					if (node->getNodeType() == core::NT_CompoundStmt) {
+						LOG(DEBUG) << "OpenCL: annotation compound with requirement";
+						// now mark the compountStmt
+						addAnnotations(node, reqAnnos);
+					} else {
+						// in any other case, the #pragma will simply be ignored
+						LOG(WARNING) << "OpenCL: attached pragma will be ignored";
+					}
+				}
+				return nodes;
 			})));
 	}
 

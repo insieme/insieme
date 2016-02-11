@@ -48,26 +48,27 @@ namespace opencl {
 
 	class KernelTable;
 	typedef Ptr<KernelTable> KernelTablePtr;
+	
+	class DataRequirementTable;
+	typedef Ptr<DataRequirementTable> DataRequirementTablePtr;
 
 	class KernelTable : public c_ast::CodeFragment {
 		const Converter& converter;
-		utils::map::PointerMap<LiteralPtr, LiteralPtr> impls;
+		std::map<unsigned, std::string> impls;
 		c_ast::CodeFragmentPtr declaration;
-	  public:
+		static unsigned unique;
+	public:
 		KernelTable(const Converter& converter);
-
 		static KernelTablePtr get(const Converter& converter);
+		static unsigned getNextUnique();
 
-		c_ast::CodeFragmentPtr getDeclaration();
-		const c_ast::ExpressionPtr getTable();
+		c_ast::CodeFragmentPtr getDeclaration() const;
+		const c_ast::ExpressionPtr getTable() const;
 		unsigned size() const;
 		
-		void registerKernel(const ExpressionPtr& id, const ExpressionPtr& source);
-		void registerDataRequirement(const ExpressionPtr& id, const DataRequirementPtr& requirement);
-		void registerNDRange(const ExpressionPtr& id);
-		
-		virtual std::ostream& printTo(std::ostream& out) const;
-	};
+		unsigned registerKernel(const ExpressionPtr& id, const ExpressionPtr& source);		
+		std::ostream& printTo(std::ostream& out) const override;
+	};	
 } // end namespace opencl
 } // end namespace backend
 } // end namespace insieme

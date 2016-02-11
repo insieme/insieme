@@ -290,6 +290,20 @@ namespace runtime {
 			if(!cur.components.empty()) { out << "irt_type_id g_type_" << cur.index << "_components[] = {" << join(",", cur.components) << "};\n"; }
 		});
 		out << "\n";
+		out << "// --- components_offset for type table entries ---\n";
+		for_each(store->getEntries(), [&](const TypeTableStore::Entry& cur) {
+			// only structs can have an offsets table
+			if(cur.type->getNodeType() != c_ast::NT_StructType) return;
+			// the type does not consit of components, omit the table as well
+			if(cur.components.empty()) return;
+			
+			out << "size_t g_type_" << cur.index << "_components_offset[] = {";
+			for_each(cur.type.as<c_ast::NamedCompositeTypePtr>()->elements, [&](const c_ast::VariablePtr& var) { 
+				out << "offsetof(" << toC(cur.type) << ", " << var->name->name << "), ";
+			});
+			out << "};\n";
+		});
+		out << "\n";
 
 		out << "// --- the type table ---\n"
 		       "irt_type " TYPE_TABLE_NAME "[] = {\n";
@@ -307,9 +321,14 @@ namespace runtime {
 			}
 			out << ", " << cur.components.size() << ", ";
 			if(cur.components.empty()) {
+				out << "0, ";
+			} else {
+				out << "g_type_" << cur.index << "_components, ";
+			}
+			if(cur.type->getNodeType() != c_ast::NT_StructType || cur.components.empty()) {
 				out << "0";
 			} else {
-				out << "g_type_" << cur.index << "_components";
+				out << "g_type_" << cur.index << "_components_offset";
 			}
 			out << "}";
 		});

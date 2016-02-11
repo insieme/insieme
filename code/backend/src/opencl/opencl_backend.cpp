@@ -57,6 +57,7 @@
 #include "insieme/backend/opencl/opencl_preprocessor.h"
 #include "insieme/backend/opencl/opencl_code_fragments.h"
 #include "insieme/backend/opencl/opencl_operator.h"
+#include "insieme/backend/opencl/opencl_type_handler.h"
 
 #include "insieme/backend/runtime/runtime_operator.h"
 #include "insieme/backend/runtime/runtime_type_handler.h"
@@ -123,8 +124,12 @@ namespace opencl {
 		    makePreProcessor<runtime::WorkItemizer>(includeEffortEstimation), makePreProcessor<runtime::StandaloneWrapper>());
 		converter.setPreProcessor(preprocessor);
 
+		TypeManager& typeManager = converter.getTypeManager();
+		typeManager.addTypeHandler(OpenCLTypeHandler);
+
 		FunctionManager& functionManager = converter.getFunctionManager();
 		addOpenCLSpecificOps(manager, functionManager.getOperatorConverterTable(), getConfiguration());
+		addOpenCLSpecificHeaders(functionManager.getFunctionIncludeTable());
 		return converter;
 	}
 	

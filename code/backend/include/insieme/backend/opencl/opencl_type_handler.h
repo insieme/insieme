@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -36,25 +36,15 @@
 
 #pragma once
 
-#include "insieme/backend/operator_converter.h"
-#include "insieme/backend/function_manager.h"
-#include "insieme/backend/backend_config.h"
+#include "insieme/backend/type_manager.h"
 
 namespace insieme {
 namespace backend {
 namespace opencl {
 
-	/**
-	 * Adds support for opencl-specific operators to the given operator converter
-	 * table.
-	 *
-	 * @param manager the node manager to be used to obtain instances of operators used as key within the given table
-	 * @param table the table to be extended
-	 * @return a reference to the handed in table
-	 */
-	OperatorConverterTable& addOpenCLSpecificOps(core::NodeManager& manager, OperatorConverterTable& table, const BackendConfig& config);
+	extern TypeHandler OpenCLTypeHandler;
 
-	void addOpenCLSpecificHeaders(FunctionIncludeTable& table);
 } // end namespace opencl
 } // end namespace backend
 } // end namespace insieme
+

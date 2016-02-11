@@ -38,6 +38,7 @@
 
 #include "insieme/core/lang/extension.h"
 #include "insieme/core/lang/reference.h"
+#include "insieme/core/lang/varargs_extension.h"
 
 namespace insieme {
 namespace backend {
@@ -50,29 +51,24 @@ namespace opencl {
 		// import reference extension to utilize aliases
 		IMPORT_MODULE(core::lang::ReferenceExtension);
 		// used to register a kernel source under the given id (which is an index within the global kernel table)
-		// 1st arg: kernel id
-		// 2nd arg: kernel source
 		LANG_EXT_LITERAL(RegisterKernel, "opencl_register_kernel", "(uint<4>, (ref<array<char,inf>,t,f,plain>,int<8>))->unit");
-		// used to register a kernels nd-range
-		// 1st arg: kernel id
-		// 2nd arg: work_dim
-		// 3rd arg: global_work_size
-		// 4th arg: local_work_size
-		LANG_EXT_LITERAL(RegisterNDRange, "opencl_register_ndrange", "(uint<4>, uint<4>, array<uint<4>, 3>, array<uint<4>, 3>)->unit");
-
+		// used to run a given kernel
+		LANG_EXT_LITERAL(ExecuteKernel, "opencl_execute_kernel", "(uint<4>, (ref<irt_wi>)->opencl_ndrange, list<(ref<irt_wi>, ref<opencl_ndrange>, uint<4>)->opencl_data_requirement>, var_list)->unit");
+		// represents an nd-range
+		LANG_EXT_TYPE(NDRange, "opencl_ndrange"/*, "struct { work_dim : uint<4>; global_work_size : array<uint<4>, 3>; local_work_size : array<uint<4>, 3>; }"*/);
+		// used to make an ndrange for a given kernel
+		// 1st arg: work_dim
+		// 2nd arg: global_work_size
+		// 3rd arg: local_work_size
+		LANG_EXT_LITERAL(MakeNDRange, "opencl_make_ndrange", "(uint<4>, list<uint<4>>, list<uint<4>>)->opencl_ndrange");
 		// represents a data range within a DataRequirement
-		LANG_EXT_TYPE(DataRange, "opencl_data_range");
+		LANG_EXT_TYPE(DataRange, "opencl_data_range"/*, "struct { size : uint<4>; start : uint<4>; end : uint<4>; }"*/);
 		// constructor for the latter
-		LANG_EXT_LITERAL(MakeDataRange, "opencl_make_data_range", "(uint<4>, uint<4>)->opencl_data_range");
+		LANG_EXT_LITERAL(MakeDataRange, "opencl_make_data_range", "(uint<4>, uint<4>, uint<4>)->opencl_data_range");
 		// represents a DataRequirement entity
-		LANG_EXT_TYPE(DataRequirement, "opencl_data_requirement");
+		LANG_EXT_TYPE(DataRequirement, "opencl_data_requirement"/*, "struct { mode : uint<4>; num_ranges : uint<4>; ranges : array<opencl_data_range, 's>; }"*/);
 		// constructor for the latter
-		LANG_EXT_LITERAL(MakeDataRequirement, "opencl_make_data_requirement", "(list<uint<4>>, list<opencl_data_range>, uint<4>)->opencl_data_requirement");
-		// used to register a kernel requirement (which is in fact the requirement for the ith argument)
-		// 1st arg: must be the same as used @opencl_register_kernel!
-		// 2nd arg: is a list (must be same size as 2nd arg) which defines the ranges within the dimension to consider
-		// 3rd arg: must be 0=RO, 1=WO or 2=RW
-		LANG_EXT_LITERAL(RegisterDataRequirement, "opencl_register_data_requirement", "(uint<4>, opencl_data_requirement)->unit");
+		LANG_EXT_LITERAL(MakeDataRequirement, "opencl_make_data_requirement", "(type<'a>, uint<4>, (ref<irt_wi>, ref<opencl_ndrange>, uint<4>, uint<4>)->opencl_data_range, uint<4>)->opencl_data_requirement");
 	};
 } // end namespace opencl
 } // end namespace backend

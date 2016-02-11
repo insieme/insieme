@@ -85,7 +85,7 @@ Compiler Compiler::getRuntimeCompiler(const Compiler& base) {
 
 Compiler Compiler::getOpenCLCompiler(const Compiler& base) {
 	Compiler res = getRuntimeCompiler(base);
-	res.addFlag("-lOpenCL");
+	res.addFlag("-lOpenCL -DIRT_ENABLE_OPENCL");
 	return res;
 }
 

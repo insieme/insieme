@@ -34,32 +34,40 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/backend/opencl/opencl_code_fragments.h"
-
 #include <algorithm>
 
-#include "insieme/utils/logging.h"
+#include "insieme/annotations/meta_info/meta_infos.h"
 
 #include "insieme/backend/type_manager.h"
 #include "insieme/backend/function_manager.h"
 #include "insieme/backend/statement_converter.h"
 #include "insieme/backend/c_ast/c_ast_utils.h"
 #include "insieme/backend/c_ast/c_ast_printer.h"
+#include "insieme/backend/opencl/opencl_entities.h"
+#include "insieme/backend/opencl/opencl_code_fragments.h"
+#include "insieme/backend/runtime/runtime_code_fragments.h"
 
-#include "insieme/annotations/meta_info/meta_infos.h"
+#include "insieme/utils/logging.h"
 
 namespace insieme {
 namespace backend {
 namespace opencl {
 
-	#define KERNEL_TABLE_NAME "g_insieme_kernel_table"
+	#define KERNEL_TABLE_NAME "g_insieme_opencl_kernel_table"
+	#define DATA_REQUIREMENT_TABLE_NAME "g_insieme_opencl_data_requirement_table"
+
+	unsigned KernelTable::unique = 0;
 
 	KernelTable::KernelTable(const Converter& converter) :
 		converter(converter),
 	    declaration(c_ast::CCodeFragment::createNew(
 			converter.getFragmentManager(),
-			converter.getCNodeManager()->create<c_ast::OpaqueCode>("extern irt_ocl_kernel_code " KERNEL_TABLE_NAME "[];"))) {
-		addDependency(declaration);
+			converter.getCNodeManager()->create<c_ast::OpaqueCode>("extern irt_opencl_kernel_implementation *" KERNEL_TABLE_NAME "[];"))) {
+		addDependency(declaration);		
+		runtime::ContextHandlingFragmentPtr ctx = runtime::ContextHandlingFragment::get(converter);
+		// add the dataReq. table as well
+		ctx->addInitExpression("\tirt_opencl_init_context(%s, " KERNEL_TABLE_NAME ");\n");
+		ctx->addCleanupExpression("\tirt_opencl_cleanup_context(%s);\n");
 	}
 
 	KernelTablePtr KernelTable::get(const Converter& converter) {
@@ -76,12 +84,16 @@ namespace opencl {
 		}
 		return static_pointer_cast<KernelTable>(res);
 	}
+	
+	unsigned KernelTable::getNextUnique() {
+		return unique++;
+	}
 
-	c_ast::CodeFragmentPtr KernelTable::getDeclaration() {
+	c_ast::CodeFragmentPtr KernelTable::getDeclaration() const {
 		return declaration;
 	}
 
-	const c_ast::ExpressionPtr KernelTable::getTable() {
+	const c_ast::ExpressionPtr KernelTable::getTable() const {
 		return c_ast::ref(converter.getCNodeManager()->create<c_ast::Literal>(KERNEL_TABLE_NAME));
 	}
 
@@ -89,37 +101,39 @@ namespace opencl {
 		return impls.size();
 	}
 
-	void KernelTable::registerKernel(const core::ExpressionPtr& id, const core::ExpressionPtr& impl) {
-		#if 0
-		// check whether implementation has already been resolved
-		auto pos = impls.find(id);
-		if(pos != impls.end()) return;
+	unsigned KernelTable::registerKernel(const core::ExpressionPtr& id, const core::ExpressionPtr& source) {
+		// grab the kernelId for this source
+		unsigned int kernelId = core::encoder::toValue<unsigned int>(id);
+		// check if it is already present, if it is .. oops the codegeneration has a bug!
+		assert_true(impls.find(kernelId) == impls.end()) << "kernel with id " << kernelId << " has already been registered!";
 		// now it is safe to insert it into our registration map
-		impls.insert(std::make_pair(id, impl));
-		#endif
+		impls.insert(std::make_pair(kernelId, analysis::getArgument(source, 0).as<core::LiteralPtr>()->getStringValue()));
+		return kernelId;
 	}
 
 	std::ostream& KernelTable::printTo(std::ostream& out) const {
-		out << "// --- the kernel table --- \n"
-		       "irt_ocl_kernel_code " KERNEL_TABLE_NAME "[] = {\n";
-		for_each(impls, [&](const std::pair<core::LiteralPtr, core::LiteralPtr>& arg) {
-			out << "    { " << arg.first->getStringValue() << ", ";
-			
-			std::string source = arg.second->getStringValue();
-			std::string target;
-			// inform the stl allocator that we need at least as much space as the inital one
-			target.reserve(source.size());
-			for (std::string::iterator it = source.begin(); it != source.end(); ++it) {
-				if (*it == '\n') target.append("\"\n\"");
-				else			 target.push_back(*it);
+		out << "// --- opencl kernel implementations ---\n";
+		// first of all, we generate a struct for each single kernel
+		for (const auto& arg : impls) {
+			// first member must be '0' as it points to irt_private
+			out << "irt_opencl_kernel_implementation g_insieme_opencl_kernel_" << arg.first << "_implementation = {0,\n";
+			// second arg is the printed kernel in an appropriate format
+			for (auto it = arg.second.begin(); it != arg.second.end(); ++it) {
+				if (*it == '\n') out << "\"\n\"";
+				else			 out << *it;
 			}
-			out << target << " },\n";
-		});
-		// the empty element to know the bounds of the table
-		out << "{0, 0}\n";
-		return out << "};\n\n";
-	}
+			out << "};\n\n";
+		};
 
+		out << "// --- opencl kernel table ---\n";
+		// now generate the actual kernel table which stores a pointer to the impls
+		out << "irt_opencl_kernel_implementation *" KERNEL_TABLE_NAME "[] = {\n";
+		for (const auto& arg : impls) {
+			out << "&g_insieme_opencl_kernel_" << arg.first << "_implementation,\n";
+		}
+		// end of table marker
+		return out << "0};\n\n";
+	}
 } // end namespace opencl
 } // end namespace backend
 } // end namespace insieme

@@ -35,6 +35,7 @@
  */
 
 #include "insieme/annotations/opencl/opencl_annotations.h"
+#include "insieme/core/ir_builder.h"
 #include <memory>
 
 namespace insieme {
@@ -43,6 +44,25 @@ namespace opencl {
 
 	const string BaseAnnotation::NAME = "OpenCLAnnotation";
 	const utils::StringKey<BaseAnnotation> BaseAnnotation::KEY("OpenCL");
+
+	// little helper function to build the correct uint<4> exprs which are required by the backend
+	core::ExpressionPtr toUInt4(const core::ExpressionPtr& expr) {
+		// check for literals
+		core::LiteralPtr size = expr.isa<core::LiteralPtr>();
+		if (!size) {
+			return expr;
+		}
+
+		// fix literal type
+		auto& mgr = size->getNodeManager();
+		auto& basic = mgr.getLangBasic();
+		if (basic.isUInt4(size->getType())) {
+			return size;	// take size at it is
+		}
+
+		// fix the size
+		return core::Literal::get(mgr, basic.getUInt4(), size->getValue());
+	}
 
 	BaseAnnotation::BaseAnnotation(const insieme::utils::CompoundAnnotation<opencl::Annotation>::AnnotationList& annotationList) :
 		insieme::utils::CompoundAnnotation<opencl::Annotation, core::NodeAnnotation>(annotationList)
@@ -148,6 +168,37 @@ namespace opencl {
 	
 	void LoopAnnotation::replaceUsage(const core::NodeMap& map) {
 		return;
+	}
+	
+	VariableRequirement::VariableRequirement(const core::VariablePtr& var, const core::ExpressionPtr& size,
+											 const core::ExpressionPtr& start, const core::ExpressionPtr& end,
+											 AccessMode accessMode) :
+		var(var), size(toUInt4(size)), start(toUInt4(start)), end(toUInt4(end)), accessMode(accessMode)
+	{ }
+		
+	const core::VariablePtr& VariableRequirement::getVar() const {
+		return var;
+	}
+	
+	const core::ExpressionPtr& VariableRequirement::getSize() const {
+		return size;
+	}
+	
+	const core::ExpressionPtr& VariableRequirement::getStart() const {
+		return start;
+	}
+	
+	const core::ExpressionPtr& VariableRequirement::getEnd() const {
+		return end;
+	}
+	
+	VariableRequirement::AccessMode VariableRequirement::getAccessMode() const {
+		return accessMode;
+	}
+	
+	std::ostream& VariableRequirement::printTo(std::ostream& out) const {
+		out << "requirement";
+		return out;
 	}
 } // End opencl namespace
 } // End annotations namespace

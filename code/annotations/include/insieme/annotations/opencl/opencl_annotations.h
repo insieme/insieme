@@ -68,6 +68,7 @@ namespace opencl {
 	DEFINE_TYPE(Device);
 	DEFINE_TYPE(DeviceAnnotation);
 	DEFINE_TYPE(LoopAnnotation);
+	DEFINE_TYPE(VariableRequirement);
 
 	/**
 	 * It implements the annotation node which is attached to the insieme IR for OpenCL directives
@@ -122,6 +123,28 @@ namespace opencl {
 		
 		virtual std::ostream& printTo(std::ostream& out) const;
 		virtual void replaceUsage(const core::NodeMap& map);
+	};
+	
+	class VariableRequirement : public Annotation {
+	public:
+		enum AccessMode { RO = 0, WO = 1, RW = 2 };
+	
+		VariableRequirement(const core::VariablePtr& var, const core::ExpressionPtr& size,
+							const core::ExpressionPtr& start, const core::ExpressionPtr& end,
+							AccessMode accessMode);
+		const core::VariablePtr& getVar() const;
+		const core::ExpressionPtr& getSize() const;
+		const core::ExpressionPtr& getStart() const;
+		const core::ExpressionPtr& getEnd() const;
+		AccessMode getAccessMode() const;
+		
+		std::ostream& printTo(std::ostream& out) const override;
+	private:
+		core::VariablePtr var;
+		core::ExpressionPtr size;
+		core::ExpressionPtr start;
+		core::ExpressionPtr end;
+		AccessMode accessMode;
 	};
 } // End opencl namespace
 } // End annotations namespace

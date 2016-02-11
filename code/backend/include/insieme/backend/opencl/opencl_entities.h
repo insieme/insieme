@@ -51,26 +51,26 @@ namespace opencl {
 	typedef std::vector<DataRangePtr> DataRangeList;
 	
 	class DataRange {
+		ExpressionPtr size;
 		ExpressionPtr start;
 		ExpressionPtr end;
 	public:
-		DataRange(const ExpressionPtr& start, const ExpressionPtr& end) :
-			start(start), end(end)
+		DataRange(const ExpressionPtr& size, const ExpressionPtr& start, const ExpressionPtr& end) :
+			size(size), start(start), end(end)
 		{ }
+		const ExpressionPtr& getSize() const { return size; }
 		const ExpressionPtr& getStart() const { return start; }
 		const ExpressionPtr& getEnd() const { return end; }
 		
 		bool operator==(const DataRange& other) const {
-			return start == other.start && end == other.end;
+			return size == other.size && start == other.start && end == other.end;
 		}
 		
-		static DataRangePtr get(NodeManager& manager, unsigned int start, unsigned int end) { 
-			IRBuilder builder(manager);
-			return std::make_shared<DataRange>(builder.uintLit(start), builder.uintLit(end));
+		static DataRangePtr get(NodeManager& manager, const ExpressionPtr& size, const ExpressionPtr& start, const ExpressionPtr& end) {
+			return std::make_shared<DataRange>(size, start, end);
 		}
 		
 		static DataRangePtr decode(const ExpressionPtr& expr) {
-			assert_false(encoder::isEncodingOf<DataRange>(expr)) << "Not an encoding of a matching value!";
 			return std::make_shared<DataRange>(encoder::toValue<DataRange>(expr));
 		}
 
@@ -91,18 +91,17 @@ namespace opencl {
 		void setAccessMode(AccessMode mode) { accessMode = mode; }
 		const TypePtr& getType() const { return typePtr; }
 		void setType(const TypePtr& type) { typePtr = type; }
-		const std::vector<unsigned int>& getDims() const { return dim; }
-		void addDim(unsigned int range) { dim.push_back(range); }
-		const DataRangeList& getRanges() const { return ranges; }
-		void addRange(const DataRangePtr& range) { ranges.push_back(range); }
+		const ExpressionPtr& getNumRanges() const { return numRanges; }
+		void setNumRanges(const ExpressionPtr& expr) { numRanges = expr; }
+		const LambdaExprPtr& getRangeExpr() const { return rangeExpr; }
+		void setRangeExpr(const LambdaExprPtr& expr) { rangeExpr = expr; }
 		
 		bool operator==(const DataRequirement& other) const {
 			return accessMode == other.accessMode && typePtr == other.typePtr &&
-				   dim == other.dim && ranges == other.ranges;
+				   numRanges == other.numRanges && rangeExpr == other.rangeExpr;
 		}
 		
 		static DataRequirementPtr decode(const ExpressionPtr& expr) {
-			assert_false(encoder::isEncodingOf<DataRequirement>(expr)) << "Not an encoding of a matching value!";
 			return std::make_shared<DataRequirement>(encoder::toValue<DataRequirement>(expr));
 		}
 		
@@ -112,10 +111,39 @@ namespace opencl {
 	private:
 		AccessMode accessMode;
 		TypePtr typePtr;
-		std::vector<unsigned int> dim;
-		DataRangeList ranges;
+		ExpressionPtr numRanges;
+		LambdaExprPtr rangeExpr;
 	};
 	
+	class NDRange;
+	typedef std::shared_ptr<NDRange> NDRangePtr;
+	
+	class NDRange {
+	public:
+		const ExpressionPtr& getWorkDim() const { return workDim; }
+		void setWorkDim(const ExpressionPtr& workDim) { this->workDim = workDim; }
+		const ExpressionList& getGlobalWorkSizes() const { return globalWorkSize; }
+		void addGlobalWorkSize(const ExpressionPtr& sz) { globalWorkSize.push_back(sz); }
+		const ExpressionList& getLocalWorkSizes() const { return localWorkSize; }
+		void addLocalWorkSize(const ExpressionPtr& sz) { localWorkSize.push_back(sz); }
+		
+		bool operator==(const NDRange& other) const {
+			return workDim == other.workDim && globalWorkSize == other.globalWorkSize &&
+				   localWorkSize == other.localWorkSize;
+		}
+		
+		static NDRangePtr decode(const ExpressionPtr& expr) {
+			return std::make_shared<NDRange>(encoder::toValue<NDRange>(expr));
+		}
+		
+		static ExpressionPtr encode(NodeManager& manager, const NDRangePtr& value) {
+			return encoder::toIR<NDRange>(manager, *value);
+		}
+	private:
+		ExpressionPtr workDim;
+		ExpressionList globalWorkSize;
+		ExpressionList localWorkSize;
+	};
 } // end namespace opencl
 } // end namespace backend
 
@@ -136,7 +164,7 @@ namespace encoder {
 			IRBuilder builder(manager);
 			auto& oclExt = manager.getLangExtension<opencl::OpenCLExtension>();
 			return builder.callExpr(oclExt.getDataRange(), oclExt.getMakeDataRange(),
-									toVector(value.getStart(), value.getEnd()));
+									toVector(value.getSize(), value.getStart(), value.getEnd()));
 		}
 	};
 
@@ -146,7 +174,8 @@ namespace encoder {
 			// paranoia check
 			if (!isEncodingOf<opencl::DataRange>(expr)) throw InvalidExpression(expr);
 			// construct the new object from the expr's arguments			
-			return opencl::DataRange(analysis::getArgument(expr, 0), analysis::getArgument(expr, 1));
+			return opencl::DataRange(analysis::getArgument(expr, 0), analysis::getArgument(expr, 1),
+									 analysis::getArgument(expr, 2));
 		}
 	};
 
@@ -171,12 +200,6 @@ namespace encoder {
 			IRBuilder builder(manager);
 			auto& oclExt = manager.getLangExtension<opencl::OpenCLExtension>();
 			
-			ExpressionList dims;
-			for (unsigned int dim: value.getDims()) dims.push_back(builder.uintLit(dim));
-			
-			ExpressionList ranges;
-			for (const auto& range: value.getRanges()) ranges.push_back(opencl::DataRange::encode(manager, range));
-			
 			LiteralPtr accessMode;
 			switch(value.getAccessMode()) {
 			case opencl::DataRequirement::AccessMode::RO:	accessMode = builder.uintLit(0); break;
@@ -185,10 +208,8 @@ namespace encoder {
 			}
 			// use the default IRBuilder to generate the callExpr
 			return builder.callExpr(oclExt.getDataRequirement(), oclExt.getMakeDataRequirement(),
-									builder.getTypeLiteral(value.getType()),
-									toIR<ExpressionList, DirectExprListConverter>(manager, dims),
-									toIR<ExpressionList, DirectExprListConverter>(manager, ranges),
-									accessMode);
+									builder.getTypeLiteral(value.getType()), value.getNumRanges(),
+									value.getRangeExpr(), accessMode);
 		}
 	};
 
@@ -202,12 +223,10 @@ namespace encoder {
 
 			// extract the enclosed type
 			requirement.setType(analysis::getArgument(expr, 0)->getType().as<GenericTypePtr>()->getTypeParameter(0));
-
-			ExpressionList dims = toValue<ExpressionList, DirectExprListConverter>(analysis::getArgument(expr, 1));
-			for (const auto& dim: dims) requirement.addDim(toValue<unsigned int>(dim));
-			
-			ExpressionList ranges = toValue<ExpressionList, DirectExprListConverter>(analysis::getArgument(expr, 2));
-			for (const auto& range: ranges) requirement.addRange(opencl::DataRange::decode(range));
+			// extract the number of ranges
+			requirement.setNumRanges(analysis::getArgument(expr, 1));
+			// as well as the range expression itself
+			requirement.setRangeExpr(analysis::getArgument(expr, 2).as<LambdaExprPtr>());
 			
 			unsigned int accessMode = toValue<unsigned int>(analysis::getArgument(expr, 3));
 			if 		(accessMode == 0) requirement.setAccessMode(opencl::DataRequirement::AccessMode::RO);
@@ -223,6 +242,55 @@ namespace encoder {
 		bool operator()(const core::ExpressionPtr& expr) const {
 			auto& oclExt = expr->getNodeManager().getLangExtension<opencl::OpenCLExtension>();
 			return analysis::isCallOf(expr, oclExt.getMakeDataRequirement());
+		}
+	};
+	
+	template <>
+	struct type_factory<opencl::NDRange> {
+		TypePtr operator()(NodeManager& manager) const {
+			return manager.getLangExtension<opencl::OpenCLExtension>().getNDRange();
+		}
+	};
+	
+	template <>
+	struct value_to_ir_converter<opencl::NDRange> {
+		ExpressionPtr operator()(NodeManager& manager, const opencl::NDRange& value) const {
+			IRBuilder builder(manager);
+			auto& oclExt = manager.getLangExtension<opencl::OpenCLExtension>();
+			// use the default IRBuilder to generate the callExpr
+			return builder.callExpr(oclExt.getNDRange(), oclExt.getMakeNDRange(),
+									value.getWorkDim(),
+									toIR<ExpressionList, DirectExprListConverter>(manager, value.getGlobalWorkSizes()),
+									toIR<ExpressionList, DirectExprListConverter>(manager, value.getLocalWorkSizes()));
+		}
+	};
+
+	template <>
+	struct ir_to_value_converter<opencl::NDRange> {
+		opencl::NDRange operator()(const core::ExpressionPtr& expr) const {
+			// paranoia check
+			if (!isEncodingOf<opencl::NDRange>(expr)) throw InvalidExpression(expr);
+			// prepare an empty requirement such that we can fill it up
+			opencl::NDRange ndrange;
+
+			// extract the enclosed workDim
+			ndrange.setWorkDim(analysis::getArgument(expr, 0));
+
+			ExpressionList globalWorkSizes = toValue<ExpressionList, DirectExprListConverter>(analysis::getArgument(expr, 1));
+			for (const auto& sz: globalWorkSizes) ndrange.addGlobalWorkSize(sz);
+			
+			ExpressionList localWorkSizes = toValue<ExpressionList, DirectExprListConverter>(analysis::getArgument(expr, 2));
+			for (const auto& sz: localWorkSizes) ndrange.addLocalWorkSize(sz);
+			// ndrange is ready to return it to the user who requested the conversion
+			return ndrange;
+		}
+	};
+	
+	template <>
+	struct is_encoding_of<opencl::NDRange> {
+		bool operator()(const core::ExpressionPtr& expr) const {
+			auto& oclExt = expr->getNodeManager().getLangExtension<opencl::OpenCLExtension>();
+			return analysis::isCallOf(expr, oclExt.getMakeNDRange());
 		}
 	};
 } // end namespace core

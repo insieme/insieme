@@ -64,6 +64,8 @@
 #include "insieme/backend/opencl/opencl_extension.h"
 #include "insieme/backend/opencl/opencl_entities.h"
 
+#include "insieme/backend/runtime/runtime_extension.h"
+
 #include "insieme/utils/logging.h"
 #include "insieme/utils/name_mangling.h"
 #include "insieme/utils/map_utils.h"
@@ -76,7 +78,6 @@ namespace opencl {
 	using namespace insieme::annotations::opencl_ns;
 	using namespace insieme::utils::map;
 
-	// @TODO: compound only does not work  --> does a for not have an own one?
 	class Filter {
 		NodeManager& nodeMan;
 		const lang::BasicGenerator& basic;
@@ -95,25 +96,7 @@ namespace opencl {
 					  "pow", "remainder", "remquo", "rint", "round", "sin",
 					  "sqrt", "tan", "tanh", "tgamma", "trunc"})
 		{ }
-		/*
-		ProgramPtr run(void) {
-			insieme::utils::map::PointerMap<core::NodePtr, core::NodePtr> replacements;
-			auto&& transformer = [&](const NodePtr& node) {
-				if(auto anno = node->getAnnotation(BaseAnnotation::KEY)) {
-					// a lambdaExpr does not modify the "IR-Tree" yet
-					if(auto lambdaExpr = node.isa<LambdaExprPtr>()) handleLambdaExpr(anno, lambdaExpr);
-					// if it is a compound, grab the replacements
-					else if(auto compoundStmt = node.isa<CompoundStmtPtr>()) {
-						auto outline = handleCompoundStmt(anno, compoundStmt);
-						replacements.insert(std::make_pair(compoundStmt, outline));
-					}
-				}
-			};
-			visitDepthFirstOnce(prog, makeLambdaVisitor(transformer));
-			return static_pointer_cast<const ProgramPtr>(transform::replaceAll(nodeMan, prog, replacements, transform::globalReplacement));
-		}
-		*/
-		
+
 		// return true if the given node satisfies the constraints of opencl offloading
 		bool operator()(const NodePtr& node) const {
 			if(auto anno = node->getAnnotation(BaseAnnotation::KEY)) {
@@ -344,79 +327,144 @@ namespace opencl {
 			return true;
 		}
 	};
-
-	// @TODO: put this into opencl_transform.cpp/h ?	
+	
 	class Transformer {
 		IRBuilder& builder;
 		NodeManager& manager;
-		unsigned int uniqueId;
 		OpenCLKernelBackendPtr backend;
 		const OpenCLExtension& oclExt;
 	public:
 		Transformer(IRBuilder& builder, NodeManager& manager) : 
-			builder(builder), manager(manager), uniqueId(0), 
+			builder(builder), manager(manager),
 			backend(OpenCLKernelBackend::getDefault()), oclExt(manager.getLangExtension<OpenCLExtension>())
 		{ }
 		
-		LambdaExprPtr operator()(const LambdaExprPtr& lambdaExpr, const DataRequirementList& requirements) { 
+		LambdaExprPtr operator()(const LambdaExprPtr& lambdaExpr, const std::vector<VariableRequirementPtr>& requirements) { 
 			unsigned int id;
+			// transform the requirements into functions
+			ExpressionList rq;
+			for (const auto& requirement : requirements)
+				rq.push_back(toLambdaExpr(requirement));
+			// transform the NDRange(s) into function(s)
+			ExpressionPtr nd = toLambdaExpr(makeDefaultNDRange());
+			// empty list for the additional arguments
+			ExpressionList va;
+			
 			StatementList body;
 			// first of all, we need to register the kernel itself
-			body.push_back(buildRegisterKernel(id, buildSource(lambdaExpr)));
-			body.push_back(buildRegisterNDRange(id));
-			for (const auto& requirement : requirements)
-				body.push_back(buildRegisterDataRequirement(id, requirement));
+			body.push_back(buildRegisterKernel(id, toKernelLiteral(lambdaExpr)));
+			body.push_back(buildExecuteKernel(id, nd, rq, va));
 			// now the body is populated with all required IR constructs, build the wrapper
-			LambdaExprPtr wrapperExpr = buildWrapper(lambdaExpr->getParameterList(), body);
+			LambdaExprPtr wrapperExpr = toLambdaExpr(manager.getLangBasic().getUnit(), lambdaExpr->getParameterList(), body);
 			// tag this lambda as OpenCL capable
 			info_type meta_data;
 			meta_data.opencl = true;
-			meta_data.kernel_id = id;			
+			meta_data.kernel_id = id;
 			wrapperExpr->attachValue(meta_data);
 			return wrapperExpr;
 		}
 	private:
+		NDRangePtr makeDefaultNDRange() {
+			NDRangePtr ndrange = std::make_shared<NDRange>();
+			ndrange->setWorkDim(builder.uintLit(1));
+			ndrange->addGlobalWorkSize(builder.uintLit(1));
+			ndrange->addLocalWorkSize(builder.uintLit(1));
+			return ndrange;
+		}
+	
 		CallExprPtr buildRegisterKernel(unsigned int& id, const LiteralPtr& literal) {
 			// generate a new unique id for this kernel
-			id = uniqueId++;
+			id = KernelTable::getNextUnique();
 			// use the default IRBuilder to generate the callExpr
 			return builder.callExpr(manager.getLangBasic().getUnit(), oclExt.getRegisterKernel(),
 									builder.uintLit(id), lang::buildPtrFromArray(literal));
 		}
-		
-		CallExprPtr buildRegisterNDRange(unsigned int id) {
-			// @TODO: this must match the actual ND-Range of the kernel!
-			// work_dim = 1, global_work_offset = NULL, global_work_size[0] set to 1, and local_work_size[0] set to 1.
-			ExpressionList workSize;
-			workSize.push_back(builder.uintLit(1));
-			workSize.push_back(builder.uintLit(0));
-			workSize.push_back(builder.uintLit(0));
-			
-			LiteralPtr workDim = builder.uintLit(1);
-			// now build the actual register call
-			return builder.callExpr(manager.getLangBasic().getUnit(), oclExt.getRegisterNDRange(),
-									builder.uintLit(id), workDim,
-									lang::buildArrayCreate(manager, workSize.size(), workSize),
-									lang::buildArrayCreate(manager, workSize.size(), workSize));
+
+		CallExprPtr buildExecuteKernel(unsigned int id, const ExpressionPtr& ndrange, const ExpressionList& requirements, const ExpressionList& optionals) {
+			// this call instructs the irt to execute the kernel @id
+			return builder.callExpr(manager.getLangBasic().getUnit(), oclExt.getExecuteKernel(), builder.uintLit(id), ndrange,
+									encoder::toIR<ExpressionList, encoder::DirectExprListConverter>(manager, requirements), builder.pack(optionals));
 		}
-		
-		CallExprPtr buildRegisterDataRequirement(unsigned int id, const DataRequirementPtr& requirement) {
-			// use the default IRBuilder to generate the callExpr
-			return builder.callExpr(manager.getLangBasic().getUnit(), oclExt.getRegisterDataRequirement(),
-									builder.uintLit(id), DataRequirement::encode(manager, requirement));
-		}
-	
-		LiteralPtr buildSource(const LambdaExprPtr& lambdaExpr) {
+
+		LiteralPtr toKernelLiteral(const LambdaExprPtr& lambdaExpr) {
 			TargetCodePtr target = backend->convert(lambdaExpr);
 			return builder.stringLit(toString(*target));
 		}
 		
-		LambdaExprPtr buildWrapper(const VariableList& params, const StatementList& body) {
-			return builder.lambdaExpr(manager.getLangBasic().getUnit(), params, builder.compoundStmt(body));
+		TypePtr toRefType(const TypePtr& type) {
+			return lang::buildRefType(lang::buildRefType(type));
+		}
+		
+		LambdaExprPtr toLambdaExpr(const TypePtr& returnType, const VariableList& params, const StatementList& body) {
+			return builder.lambdaExpr(returnType, params, builder.compoundStmt(body));
+		}
+		
+		LambdaExprPtr toLambdaExpr(const NDRangePtr& ndrange) {
+			// grab a reference to the runtime extension
+			auto& runExt = manager.getLangExtension<runtime::RuntimeExtension>();
+			
+			VariableList params;
+			params.push_back(Variable::get(manager, toRefType(runExt.getWorkItemType())));
+			// body is simply a ref_new_init
+			StatementList body;
+			body.push_back(builder.returnStmt(NDRange::encode(manager, ndrange)));
+			// and finally ... THE lambda ladies and gentleman
+			return toLambdaExpr(oclExt.getNDRange(), params, body);
+		}
+		
+		LambdaExprPtr toLambdaExpr(const VariableRequirementPtr& var) {
+			/*
+			the requirement is transformed into the following 'lambda'
+			fun001 = function (wi: ref<irt_wi>, nd: ref<opencl_ndrange>, arg: uint<4>) -> opencl_data_requirement {
+				return opencl_make_data_requirement(1u, 2u, fun002);
+			}
+			fun002 = function (wi: ref<irt_wi>, nd: ref<opencl_ndrange>, arg: uint<4>, dim: uint<4>) -> opencl_data_range {
+				switch (dim) {
+				case 0: return opencl_make_data_range(1000u, 0u, 1000u);
+				case 1: return opencl_make_data_range(1000u, 0u, 1000u);
+				case 2: return opencl_make_data_range(1000u, 0u, 1000u);
+				}
+			}
+			*/
+
+			// grab a reference to the runtime extension
+			auto& runExt = manager.getLangExtension<runtime::RuntimeExtension>();
+			// copy over the access mode
+			DataRequirementPtr requirement = std::make_shared<DataRequirement>();
+			switch (var->getAccessMode()) {
+			case VariableRequirement::AccessMode::RO: requirement->setAccessMode(DataRequirement::AccessMode::RO); break;
+			case VariableRequirement::AccessMode::WO: requirement->setAccessMode(DataRequirement::AccessMode::WO); break;
+			case VariableRequirement::AccessMode::RW: requirement->setAccessMode(DataRequirement::AccessMode::RW); break;
+			}
+			requirement->setType(var->getVar()->getType());
+
+			VariableList params;
+			params.push_back(Variable::get(manager, toRefType(runExt.getWorkItemType())));
+			params.push_back(Variable::get(manager, toRefType(oclExt.getNDRange())));
+			params.push_back(Variable::get(manager, lang::buildRefType(manager.getLangBasic().getUInt4())));
+			params.push_back(Variable::get(manager, lang::buildRefType(manager.getLangBasic().getUInt4())));
+
+			StatementList body;
+			// encode the range (in this case 1D)
+			DataRangePtr range = DataRange::get(manager, var->getSize(), var->getStart(), var->getEnd());
+			body.push_back(builder.returnStmt(DataRange::encode(manager, range)));
+			// ok, now we can generate the "inner" lambda
+			LambdaExprPtr rangeExpr = toLambdaExpr(oclExt.getDataRange(), params, body);
+
+			// prepare for the outer lamdba
+			body.pop_back();
+			params.pop_back();
+			// as a VariableRequirement is used for 1D, we set the numRanges hard-coded
+			requirement->setNumRanges(builder.uintLit(1));
+			// encode the requirement and build the "outer" lambda
+			requirement->setRangeExpr(rangeExpr);
+			body.push_back(builder.returnStmt(DataRequirement::encode(manager, requirement)));
+			// and finally ... THE lambda ladies and gentleman
+			return toLambdaExpr(oclExt.getDataRequirement(), params, body);
 		}
 	};
-	
-	// @TODO: replace reserved names within the context of OpenCL .. SpirKeywordReplacer .. or something like that
+		
+	// @TODO: replace reserved names within the context of OpenCL
 	OffloadSupport::OffloadSupport() :
 		PreProcessor()
 	{ }
@@ -440,16 +488,40 @@ namespace opencl {
 				CallExprPtr callExpr = transform::outline(manager, node.as<CompoundStmtPtr>());
 				// grab the lambdaExpr as the pick stores "function-pointer"-like objects
 				LambdaExprPtr lambdaExpr = callExpr->getFunctionExpr().as<LambdaExprPtr>();
-				// put together the offloadExpr
-				DataRequirementList requirements;
+				// put together the requirements for the new callExpr
+				std::vector<VariableRequirementPtr> annos;
+				for_each(node->getAnnotation(BaseAnnotation::KEY)->getAnnotationList(), [&] (const AnnotationPtr& anno) { 
+						if (auto fe = std::dynamic_pointer_cast<VariableRequirement>(anno)) annos.push_back(fe);
+					});
+				
+				// this are the actual requirements in-order with the function arguments
+				std::vector<VariableRequirementPtr> requirements;
 				for (const auto& arg : callExpr->getArguments()) {
-					DataRequirementPtr requirement = std::make_shared<DataRequirement>();
-					requirement->setAccessMode(DataRequirement::AccessMode::RW);
-					requirement->setType(arg->getType());
-					// @TODO: this is hardcoded!
-					requirement->addDim(1000);
-					requirement->addRange(DataRange::get(manager, 0, 1000));
-					requirements.push_back(requirement);
+					// check if argument is a variable in the first place
+					if (arg->getNodeType() != NT_Variable) {
+						LOG(WARNING) << "OpenCL: arguments must be variables";
+						return;
+					}
+					// find the corresponding requirement for this argument
+					auto it = std::find_if(annos.begin(), annos.end(),[&](const VariableRequirementPtr& var) { return *var->getVar() == *arg; });
+					if (it == annos.end()) {
+						TypePtr type = arg->getType();
+						if(lang::isReference(type)) type = lang::ReferenceType(type).getElementType();
+						// at this point we try to deduce the correct VariableRequirement
+						if (manager.getLangBasic().isPrimitive(type)) {
+							ExpressionPtr size = builder.uintLit(1);
+							ExpressionPtr start = builder.uintLit(0);
+							ExpressionPtr end = builder.uintLit(1);
+							// we have to assume such mode at this time
+							VariableRequirement::AccessMode accessMode = VariableRequirement::AccessMode::RW;
+							requirements.push_back(std::make_shared<VariableRequirement>(arg.as<VariablePtr>(), size, start, end, accessMode));
+							continue;
+						}
+					
+						LOG(WARNING) << "OpenCL: argument has no associated requirement";
+						return;
+					}
+					requirements.push_back(*it);
 				}
 				// put together the variants used by the pick
 				ExpressionList variants;

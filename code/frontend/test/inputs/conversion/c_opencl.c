@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -34,27 +34,16 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#pragma opencl device type(DEFAULT) 
+void rec(int a)
+{
+	if(a > 1) rec(a-1);
+}
 
-#include "insieme/backend/operator_converter.h"
-#include "insieme/backend/function_manager.h"
-#include "insieme/backend/backend_config.h"
+int main(int argc, char** argv) 
+{
+	#pragma test expect_ir("decl IMP_rec: (int<4>)->unit; def IMP_rec = (v1: int<4>) -> unit { if(v1>1) { IMP_rec(v1-1); } }; { IMP_rec(3); }")
+	{ rec(3); }
 
-namespace insieme {
-namespace backend {
-namespace opencl {
-
-	/**
-	 * Adds support for opencl-specific operators to the given operator converter
-	 * table.
-	 *
-	 * @param manager the node manager to be used to obtain instances of operators used as key within the given table
-	 * @param table the table to be extended
-	 * @return a reference to the handed in table
-	 */
-	OperatorConverterTable& addOpenCLSpecificOps(core::NodeManager& manager, OperatorConverterTable& table, const BackendConfig& config);
-
-	void addOpenCLSpecificHeaders(FunctionIncludeTable& table);
-} // end namespace opencl
-} // end namespace backend
-} // end namespace insieme
+	return 0;
+}

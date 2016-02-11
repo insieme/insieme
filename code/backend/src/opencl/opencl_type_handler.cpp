@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -34,27 +34,42 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include "insieme/backend/converter.h"
 
-#include "insieme/backend/operator_converter.h"
-#include "insieme/backend/function_manager.h"
-#include "insieme/backend/backend_config.h"
+#include "insieme/backend/opencl/opencl_extension.h"
+#include "insieme/backend/opencl/opencl_type_handler.h"
+
+#include "insieme/backend/c_ast/c_code.h"
+#include "insieme/backend/c_ast/c_ast_utils.h"
 
 namespace insieme {
 namespace backend {
 namespace opencl {
 
-	/**
-	 * Adds support for opencl-specific operators to the given operator converter
-	 * table.
-	 *
-	 * @param manager the node manager to be used to obtain instances of operators used as key within the given table
-	 * @param table the table to be extended
-	 * @return a reference to the handed in table
-	 */
-	OperatorConverterTable& addOpenCLSpecificOps(core::NodeManager& manager, OperatorConverterTable& table, const BackendConfig& config);
+	using namespace insieme::core;
 
-	void addOpenCLSpecificHeaders(FunctionIncludeTable& table);
+	namespace {
+
+		const TypeInfo* handleType(const Converter& converter, const TypePtr& type) {
+			auto& oclExt = converter.getNodeManager().getLangExtension<OpenCLExtension>();
+			
+			if(oclExt.isDataRequirement(type)) {
+				// use opencl definition of the context
+				return type_info_utils::createInfo(converter.getFragmentManager(), "irt_opencl_data_requirement", "irt_opencl.h");
+			} else if(oclExt.isDataRange(type)) {
+				// use opencl definition of the work item type
+				return type_info_utils::createInfo(converter.getFragmentManager(), "irt_opencl_data_range", "irt_opencl.h");
+			} else if(oclExt.isNDRange(type)) {
+				// use opencl definition of the work item type
+				return type_info_utils::createInfo(converter.getFragmentManager(), "irt_opencl_ndrange", "irt_opencl.h");
+			}
+			// it is not a special opencl type => let somebody else try
+			return 0;
+		}
+	}
+
+	TypeHandler OpenCLTypeHandler = &handleType;
+
 } // end namespace opencl
 } // end namespace backend
 } // end namespace insieme
