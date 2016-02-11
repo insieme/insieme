@@ -845,6 +845,151 @@ namespace backend {
 		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
 
 	}
+	
+	TEST(Initialization, Array) {
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+
+		core::ProgramPtr program = builder.parseProgram(
+			R"(
+			int<4> main() {
+				var ref<array<int<4>,5>,f,f> v0 = *<ref<array<int<4>,5>,f,f,plain>>(v0) {1,2,3,4,5};
+				//int arr_all[5] = {1,2,3,4,5};
+
+				var ref<array<int<4>,5>,f,f> v1 = *<ref<array<int<4>,5>,f,f,plain>>(v1) {1,2};
+				//int arr_partial[5] = {1,2};
+
+				var ref<array<int<4>,5>,f,f> v2 = *<ref<array<int<4>,5>,f,f,plain>>(v2) {0};
+				//int arr_zero[5] = {0};
+
+				var ref<array<int<4>,3>,f,f> v3 = *<ref<array<int<4>,3>,f,f,plain>>(v3) {0,1,2};
+				//int arr_implied[] = {0,1,2};
+
+				var ref<array<array<int<4>,3>,2>,f,f> v4 = *<ref<array<array<int<4>,3>,2>,f,f,plain>>(v4) {*<ref<array<int<4>,3>,f,f,plain>>(ref_temp(type_lit(array<int<4>,3>))) {1,2,3},*<ref<array<int<4>,3>,f,f,plain>>(ref_temp(type_lit(array<int<4>,3>))) {4,5,6}};
+				//int arr_multi[2][3] = {{1,2,3}, {4,5,6}};
+
+				var ref<array<array<int<4>,3>,2>,f,f,plain> v5 = *<ref<array<array<int<4>,3>,2>,f,f,plain>>(v5) {*<ref<array<int<4>,3>,f,f,plain>>(ref_temp(type_lit(array<int<4>,3>))) {1},*<ref<array<int<4>,3>,f,f,plain>>(ref_temp(type_lit(array<int<4>,3>))) {4,5}};
+				//int arr_multi[2][3] = {{1}, {4,5}};
+
+				return 0;
+			}
+			)"
+		);
+
+		ASSERT_TRUE(program);
+
+		// check for semantic errors
+		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
+
+		// create backend instance
+		auto be = sequential::SequentialBackend::getDefault();
+
+		LOG(INFO) << "Converting IR to C...";
+		auto converted = be->convert(program);
+		LOG(INFO) << "Printing converted code: " << *converted;
+
+		string code = toString(*converted);
+
+		EXPECT_PRED2(containsSubString, code, "v0 = {{1, 2, 3, 4, 5}}");
+		EXPECT_PRED2(containsSubString, code, "v1 = {{1, 2}}");
+		EXPECT_PRED2(containsSubString, code, "v2 = {{0}}");
+		EXPECT_PRED2(containsSubString, code, "v3 = {{0, 1, 2}}");
+		EXPECT_PRED2(containsSubString, code, "v4 = {{{{1, 2, 3}}, {{4, 5, 6}}}}");
+		EXPECT_PRED2(containsSubString, code, "v5 = {{{{1}}, {{4, 5}}}}");
+
+		// try compiling the code fragment
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-lm");
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+
+	}
+
+	TEST(Initialization, Struct) {
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+
+		core::ProgramPtr program = builder.parseProgram(
+			R"(
+			def struct A { a : int<4>; b : real<4>; };
+			def struct B { a : int<4>; b : real<4>; c : uint<4>; };
+			int<4> main() {
+				var ref<A> v0 = *<ref<A>>(v0){ 1, 1.0f };
+				//{ struct { int a; float b; } sif = { 1, 1.0f }; }
+
+				var ref<B> v1 = *<ref<B>>(v1){ 1, 1.0f, 2u };
+				//{ struct { int a; float b; unsigned c; } sifc = { .a = 1, .c = 2u }; }
+
+				return 0;
+			}
+			)"
+		);
+
+		ASSERT_TRUE(program);
+
+		// check for semantic errors
+		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
+
+		// create backend instance
+		auto be = sequential::SequentialBackend::getDefault();
+
+		LOG(INFO) << "Converting IR to C...";
+		auto converted = be->convert(program);
+		LOG(INFO) << "Printing converted code: " << *converted;
+
+		string code = toString(*converted);
+
+		EXPECT_PRED2(containsSubString, code, "A v0 = {1, 1.0f}");
+		EXPECT_PRED2(containsSubString, code, "B v1 = {1, 1.0f, 2u}");
+
+		// try compiling the code fragment
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-lm");
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+	}
+
+	
+	TEST(Initialization, StructTemp) {
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+
+		core::ProgramPtr program = builder.parseProgram(
+			R"(
+			def struct A { a : int<4>; b : real<4>; };
+
+			def f = (a : A) ->unit { };
+
+			int<4> main() {
+				f(*<ref<A>>(ref_temp(type_lit(A))){ 1, 1.0f });
+
+				var ref<A> v0;
+				v0 = *<ref<A>>(ref_temp(type_lit(A))){ 1, 1.0f };
+				return 0;
+			}
+			)"
+		);
+
+		ASSERT_TRUE(program);
+
+		// check for semantic errors
+		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
+
+		// create backend instance
+		auto be = sequential::SequentialBackend::getDefault();
+
+		LOG(INFO) << "Converting IR to C...";
+		auto converted = be->convert(program);
+		LOG(INFO) << "Printing converted code: " << *converted;
+
+		string code = toString(*converted);
+
+		// try compiling the code fragment
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-lm");
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+	}
 
 } // namespace backend
 } // namespace insieme

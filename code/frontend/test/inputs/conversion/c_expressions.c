@@ -452,6 +452,8 @@ int main() {
 
 	#pragma test expect_ir("REGEX_S", R"(.*c_style_assignment\(<ref<IMP_Image_IMLOC_.*> .* \{0u, 0, 0\}.x, 1\).*)")
 	(Image){0u, 0, 0}.x = 1;
+
+	int y = (Image){0u, 0, 0}.y;
 	
 	// bool to int conversion
 	#pragma test expect_ir("{ bool_to_int(1<5)+17; }")

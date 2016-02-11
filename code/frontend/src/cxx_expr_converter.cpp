@@ -363,7 +363,6 @@ namespace conversion {
 		/// Resize the array created by an array create call (required due to mismatched size reported for initializer expressions in new[])
 		core::ExpressionPtr resizeArrayCreate(const Converter& converter, core::ExpressionPtr createExpr, const core::ExpressionPtr& newSize) {
 			auto& nodeMan = createExpr->getNodeManager();
-			auto& arrExt = nodeMan.getLangExtension<core::lang::ArrayExtension>();
 			auto& refExt = nodeMan.getLangExtension<core::lang::ReferenceExtension>();
 			bool hasDeref = refExt.isCallOfRefDeref(createExpr);
 			if(hasDeref) createExpr = core::analysis::getArgument(createExpr, 0);

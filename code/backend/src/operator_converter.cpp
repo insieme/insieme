@@ -429,6 +429,13 @@ namespace backend {
 
 			// deref of an assigment, do not
 			if(core::analysis::isCallOf(ARG(0), LANG_EXT_REF.getRefAssign())) { return CONVERT_ARG(0); }
+			
+			// deref of init expression is implicit in C/++
+			if(ARG(0).isa<core::InitExprPtr>()) {
+				return CONVERT_ARG(0); 
+			} else {
+				std::cout << "DIDIN'T SKIP:\n" << dumpColor(ARG(0)) << "\n";
+			}
 
 			return c_ast::deref(CONVERT_ARG(0));
 		};
@@ -762,13 +769,18 @@ namespace backend {
 
 			assert_eq(ARG(1)->getNodeType(), core::NT_Literal);
 			c_ast::IdentifierPtr field = C_NODE_MANAGER->create(static_pointer_cast<const core::Literal>(ARG(1))->getStringValue());
-
-			// special handling for accessing variable array within struct
-			auto access = c_ast::access(c_ast::deref(CONVERT_ARG(0)), field);
+			
+			auto converted = CONVERT_ARG(0);
+			auto access = c_ast::access(c_ast::deref(converted), field);
+			
+			// handle inner initExpr
+			if(ARG(0).isa<core::InitExprPtr>()) {
+				access = c_ast::access(converted, field);
+			}
 
 			// handle implicit C array / pointer duality
 			if(core::lang::isVariableSizedArray(core::analysis::getReferencedType(call->getType()))) { return access; }
-
+			
 			// access the type
 			return c_ast::ref(access);
 		};
