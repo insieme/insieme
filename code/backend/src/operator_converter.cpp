@@ -56,7 +56,6 @@
 #include "insieme/core/lang/reference.h"
 #include "insieme/core/lang/complex.h"
 #include "insieme/core/lang/io.h"
-#include "insieme/core/lang/ir++_extension.h"
 
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"
@@ -535,14 +534,16 @@ namespace backend {
 
 					__unused auto& arrayExt = LANG_EXT(core::lang::ArrayExtension);
 
-					assert_eq(ARG(0)->getNodeType(), core::NT_StructExpr) << "Only supporting struct expressions as initializer value so far!";
-					core::StructExprPtr initValue = ARG(0).as<core::StructExprPtr>();
+					assert_eq(ARG(0)->getNodeType(), core::NT_InitExpr) << "Only supporting struct expressions as initializer value so far!";
+					core::InitExprPtr initValue = ARG(0).as<core::InitExprPtr>();
 
 					// get types of struct and element
-					auto structType = initValue->getType();
+					auto structType = core::analysis::getReferencedType(initValue->getType());
 
 					// get size of variable part
-					auto arrayInitValue = initValue->getMembers().back()->getValue();
+					auto arrayInitValue = initValue->getInitExprList().back();
+					// FIXME
+					assert_not_implemented() << "Variable sized struct unimplemented";
 					assert_true(core::analysis::isCallOf(arrayInitValue, arrayExt.getArrayCreate())) << "Array not properly initialized!";
 					auto size = arrayInitValue.as<core::CallExprPtr>()->getArgument(1);
 

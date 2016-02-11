@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -226,8 +226,8 @@ inline Result transform(const MapLikeContainer<K, V, C, A<T>>& c, const Functor&
  * Convenience function for std::transform.
  */
 template <typename Container, typename OutputIterator, typename Functor>
-inline void transform(Container& c, OutputIterator out, const Functor& f) {
-	std::transform(c.begin(), c.end(), out, f);
+inline void transform(const Container& c, OutputIterator out, const Functor& f) {
+	std::transform(c.cbegin(), c.cend(), out, f);
 }
 
 /**

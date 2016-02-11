@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -39,7 +39,6 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/checks/full_check.h"
-#include "insieme/core/lang/ir++_extension.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/backend/sequential/sequential_backend.h"
 #include "insieme/utils/compiler/compiler.h"

@@ -58,21 +58,12 @@ namespace backend {
 	TEST(Preprocessor, GlobalElimination) {
 		core::NodeManager manager;
 		core::IRBuilder builder(manager);
-
-		std::map<string, core::NodePtr> symbols;
-		std::vector<core::FieldPtr> types;
-
-		types.push_back(builder.field("a", builder.parseType("vector<int<4>,20>")));
-		types.push_back(builder.field("f", builder.parseType("real<8>")));
-
-		symbols["A"] = builder.structExpr(builder.structType("__insieme_anonymous_record_2_20", types), toVector<core::NamedValuePtr>(builder.namedValue("a", builder.getZero(builder.parseType("vector<int<4>,20>"))),
-		                                                                builder.namedValue("f", builder.getZero(builder.parseType("real<8>")))));
-
+						
 		core::ProgramPtr program = builder.parseProgram(R"(
 			alias gstruct = struct __insieme_anonymous_record_2_20 { a: vector<int<4>,20>; f : real<8>; };
 			
 			int<4> main() {
-				var ref<gstruct> v1 = ref_new_init(A);
+				var ref<gstruct> v1 = <ref<gstruct>> (v1) { zero(type_lit(vector<int<4>,20>)), 0.0 };
 				v1.a;
 				composite_member_access(*v1, lit("a"), type_lit(vector<int<4>,20>));
 				(v2: ref<gstruct>) -> unit {
@@ -84,8 +75,7 @@ namespace backend {
 				}
 				return 0;
 			}
-            )",
-		                                                symbols);
+            )");
 
 		EXPECT_TRUE(program);
 

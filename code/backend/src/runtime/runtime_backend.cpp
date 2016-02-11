@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -62,7 +62,6 @@
 
 #include "insieme/backend/addons/pointer_type.h"
 #include "insieme/backend/addons/cpp_casts.h"
-#include "insieme/backend/addons/cpp_memb_ptr.h"
 #include "insieme/backend/addons/complex_type.h"
 #include "insieme/backend/addons/enum_type.h"
 #include "insieme/backend/addons/io.h"
@@ -99,7 +98,6 @@ namespace runtime {
 		auto res = std::make_shared<RuntimeBackend>(includeEffortEstimation, config);
 		res->addAddOn<addons::PointerType>();
 		res->addAddOn<addons::CppCastsAddon>();
-		res->addAddOn<addons::CppMembAddon>();
 		res->addAddOn<addons::ComplexType>();
 		res->addAddOn<addons::EnumType>();
 		res->addAddOn<addons::InputOutput>();

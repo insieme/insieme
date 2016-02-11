@@ -56,7 +56,6 @@
 #include "insieme/core/types/subtyping.h"
 #include "insieme/core/lang/array.h"
 #include "insieme/core/lang/pointer.h"
-#include "insieme/core/lang/ir++_extension.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/annotations/naming.h"
 
@@ -316,11 +315,11 @@ namespace backend {
 		return res;
 	}
 
-	c_ast::NodePtr StmtConverter::visitStructExpr(const core::StructExprPtr& ptr, ConversionContext& context) {
+	c_ast::NodePtr StmtConverter::visitInitExpr(const core::InitExprPtr& ptr, ConversionContext& context) {
 		// to be created: an initialization of the corresponding struct
 		//     (<type>){<list of members>}
 
-		auto typeInfo = converter.getTypeManager().getTypeInfo(ptr->getType());
+		auto typeInfo = converter.getTypeManager().getTypeInfo(core::analysis::getReferencedType(ptr->getType()));
 		context.addDependency(typeInfo.definition);
 
 		// get type
@@ -339,13 +338,12 @@ namespace backend {
 		c_ast::InitializerPtr init = c_ast::init(type);
 
 		// append initialization values
-		::transform(ptr->getMembers()->getElements(), std::back_inserter(init->values), [&](const core::NamedValuePtr& cur) {
-			core::ExpressionPtr arg = cur->getValue();
-			return convert(context, arg);
+		::transform(ptr->getInitExprList(), std::back_inserter(init->values), [&](const core::ExpressionPtr& cur) {
+			return convert(context, cur);
 		});
 
 		// remove last element if it is a variable sized struct
-		if(core::lang::isUnknownSizedArray(ptr->getMembers()->getElements().back())) {
+		if(core::lang::isUnknownSizedArray(ptr->getInitExprList().back())) {
 			assert_false(init->values.empty());
 			init->values.pop_back();
 		}
@@ -354,32 +352,32 @@ namespace backend {
 		return init;
 	}
 
-	c_ast::NodePtr StmtConverter::visitUnionExpr(const core::UnionExprPtr& ptr, ConversionContext& context) {
-		// to be created: an initialization of the corresponding union
-		//     (<type>){<single member>}
+	//c_ast::NodePtr StmtConverter::visitUnionExpr(const core::UnionExprPtr& ptr, ConversionContext& context) {
+	//	// to be created: an initialization of the corresponding union
+	//	//     (<type>){<single member>}
 
-		core::TypePtr unionType = ptr->getType();
-		auto typeInfo = converter.getTypeManager().getTypeInfo(unionType);
-		context.addDependency(typeInfo.definition);
+	//	core::TypePtr unionType = ptr->getType();
+	//	auto typeInfo = converter.getTypeManager().getTypeInfo(unionType);
+	//	context.addDependency(typeInfo.definition);
 
-		// get type and create init expression
-		c_ast::TypePtr type = typeInfo.rValueType;
+	//	// get type and create init expression
+	//	c_ast::TypePtr type = typeInfo.rValueType;
 
-		auto cmgr = context.getConverter().getCNodeManager();
+	//	auto cmgr = context.getConverter().getCNodeManager();
 
-		// special handling for vector initialization (should not be turned into a struct)
-		auto value = convertExpression(context, ptr->getMember());
-		if(core::lang::isFixedSizedArray(ptr->getMember())) {
-			auto initValue = value.isa<c_ast::InitializerPtr>();
-			assert_true(initValue);
-			auto init0 = initValue->values[0].isa<c_ast::InitializerPtr>();
-			assert_true(init0);
-			value = cmgr->create<c_ast::VectorInit>(init0->values);
-		}
+	//	// special handling for vector initialization (should not be turned into a struct)
+	//	auto value = convertExpression(context, ptr->getMember());
+	//	if(core::lang::isFixedSizedArray(ptr->getMember())) {
+	//		auto initValue = value.isa<c_ast::InitializerPtr>();
+	//		assert_true(initValue);
+	//		auto init0 = initValue->values[0].isa<c_ast::InitializerPtr>();
+	//		assert_true(init0);
+	//		value = cmgr->create<c_ast::VectorInit>(init0->values);
+	//	}
 
-		return c_ast::init(type, cmgr->create(ptr->getMemberName()->getValue()), value);
-		//		return c_ast::init(type, convert(context, ptr->getMember()));
-	}
+	//	return c_ast::init(type, cmgr->create(ptr->getMemberName()->getValue()), value);
+	//	//		return c_ast::init(type, convert(context, ptr->getMember()));
+	//}
 
 	c_ast::NodePtr StmtConverter::visitTupleExpr(const core::TupleExprPtr& ptr, ConversionContext& context) {
 		// to be created: an initialization of the corresponding struct
