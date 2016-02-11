@@ -119,7 +119,7 @@ namespace opencl {
 			out << "irt_opencl_kernel_implementation g_insieme_opencl_kernel_" << arg.first << "_implementation = {0,\n";
 			// second arg is the printed kernel in an appropriate format
 			for (auto it = arg.second.begin(); it != arg.second.end(); ++it) {
-				if (*it == '\n') out << "\"\n\"";
+				if (*it == '\n') out << "\\n\"\n\"";
 				else			 out << *it;
 			}
 			out << "};\n\n";
