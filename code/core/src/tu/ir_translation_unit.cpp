@@ -563,6 +563,9 @@ namespace tu {
 					if(contains(prevAddedLiterals, cur.first)) {
 						core::visitDepthFirstOnce(cur.second, [&](const core::LiteralPtr& literal) {
 							if(core::analysis::isRefType(literal->getType())) {
+								if(contains(usedLiterals, literal)) {
+									return;
+								}
 								currAddedLiterals.insert(literal);
 								usedLiterals.insert(literal);
 							}
