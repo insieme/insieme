@@ -433,8 +433,6 @@ namespace backend {
 			// deref of init expression is implicit in C/++
 			if(ARG(0).isa<core::InitExprPtr>()) {
 				return CONVERT_ARG(0); 
-			} else {
-				std::cout << "DIDIN'T SKIP:\n" << dumpColor(ARG(0)) << "\n";
 			}
 
 			return c_ast::deref(CONVERT_ARG(0));
