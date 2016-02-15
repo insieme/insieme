@@ -595,10 +595,6 @@ namespace core {
 		return field(stringValue(name), type);
 	}
 
-	NamedValuePtr IRBuilderBaseModule::namedValue(const string& name, const ExpressionPtr& value) const {
-		return namedValue(stringValue(name), value);
-	}
-
 	TupleExprPtr IRBuilderBaseModule::tupleExpr(const vector<ExpressionPtr>& values) const {
 		TupleTypePtr type = tupleType(extractTypes(values));
 		return tupleExpr(type, Expressions::get(manager, values));

@@ -1074,52 +1074,6 @@ namespace core {
 	IR_NODE_END()
 
 
-	// ------------------------------------- Named Values -----------------------------------
-
-	/**
-	 * The accessor associated to a named value.
-	 */
-	IR_NODE_ACCESSOR(NamedValue, Support, StringValue, Expression)
-		/**
-		 * Obtains a reference to the bound name.
-		 */
-		IR_NODE_PROPERTY(StringValue, Name, 0);
-
-		/**
-		 * Obtains a reference to the bound value.
-		 */
-		IR_NODE_PROPERTY(Expression, Value, 1);
-	IR_NODE_END()
-
-	/**
-	 * This type of node is used within the struct expression to represent the
-	 * connection between a name (the name of a member) and a value.
-	 */
-	IR_NODE(NamedValue, Support)
-	  protected:
-		/**
-		 * Prints a string representation of this node to the given output stream.
-		 */
-		virtual std::ostream& printTo(std::ostream & out) const {
-			return out << *getName() << "=" << *getValue();
-		}
-
-	  public:
-		/**
-		 * This static factory method constructing a new named value instance based
-		 * on the given parameters.
-		 *
-		 * @param manager the manager used for maintaining instances of this class
-		 * @param name the name to be bound
-		 * @param value the value to be bound
-		 * @return the requested type instance managed by the given manager
-		 */
-		static NamedValuePtr get(NodeManager & manager, const StringValuePtr& name, const ExpressionPtr& value) {
-			return manager.get(NamedValue(name, value));
-		}
-
-	IR_NODE_END()
-
 	// ------------------------------------- Init Expression -----------------------------------
 
 	/**
