@@ -118,9 +118,14 @@ namespace conversion {
 	core::ExpressionPtr Converter::ExprConverter::convertCxxArgExpr(const clang::Expr* clangArgExprInput, const core::TypePtr& targetType) {
 		core::ExpressionPtr ret = converter.convertExpr(clangArgExprInput);
 		const clang::Expr* clangArgExpr = clangArgExprInput;
+
 		// skip over potential ExprWithCleanups
 		auto conWithCleanups = llvm::dyn_cast<clang::ExprWithCleanups>(clangArgExpr);
 		if(conWithCleanups) clangArgExpr = conWithCleanups->getSubExpr();
+		// skip over potential CXXBindTemporaryExpr
+		auto conBindTemporary = llvm::dyn_cast<clang::CXXBindTemporaryExpr>(clangArgExpr);
+		if(conBindTemporary) clangArgExpr = conBindTemporary->getSubExpr();
+
 		// detect copy/move constructor calls
 		VLOG(2) << "---\nCXX call checking arg: " << dumpClang(clangArgExpr, converter.getCompiler().getSourceManager());
 		auto constructExpr = llvm::dyn_cast<clang::CXXConstructExpr>(clangArgExpr);

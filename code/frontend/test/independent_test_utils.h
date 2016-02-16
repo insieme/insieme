@@ -37,6 +37,7 @@
 #include <string>
 #include <fstream>
 #include <functional>
+#include <regex>
 
 #include <gtest/gtest.h>
 #include <boost/filesystem.hpp>
@@ -128,7 +129,7 @@ namespace frontend {
 					          << "\tcodeIr:   " << dumpColor(codeIr) << "\tpragmaIr: " << dumpColor(pragmaIr) << "\tLOC(" << locString << ")\n";
 				}
 			}
-			
+
 			auto aString = codeIr.isa<StringValuePtr>();
 			auto bString = pragmaIr.isa<StringValuePtr>();
 			if(aString) {
@@ -251,7 +252,7 @@ namespace frontend {
 					    << "Type in pragma could not be parsed:\n\t" << ex << "error: " << typeParsingError(builder, irs, symbols) << "\n@" << locationOf(node);
 					checkExpected(expected, node.as<ExpressionPtr>()->getType(), addr);
 				}
-				// --------------------------------------------------------------------------------------------------------------------- any other case =======|				
+				// --------------------------------------------------------------------------------------------------------------------- any other case =======|
 				else {
 					NodePtr expected;
 					if(node.isa<ExpressionPtr>()) {
@@ -270,9 +271,13 @@ namespace frontend {
 			}
 		});
 
-        // count number of ocurrences of the pragma string
+        // count number of occurrences of the pragma string
 		std::ifstream tf(fn);
 		std::string fileText((std::istreambuf_iterator<char>(tf)), std::istreambuf_iterator<char>());
+		// delete comments
+		boost::regex comments(R"((//.*?$)|(/\*.*?\*/))");
+		fileText = boost::regex_replace(fileText, comments, "");
+		// search pragmas
 		std::string searchString{"#pragma test expect_ir"};
 		string::size_type start = 0;
 		unsigned occurrences = 0;
