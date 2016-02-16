@@ -359,45 +359,6 @@ namespace checks {
 		EXPECT_EQ(toString(checkResult), "[]");
 	}
 
-	TEST(ArrayCreateArgumentCheck, Basic) {
-		NodeManager manager;
-		IRBuilder builder(manager);
-
-		{
-			StatementPtr stmt_ok = builder.normalize(builder.parseStmt(R"1N5P1RE(
-            alias uint = uint<8>;
-            {
-                () -> unit {
-					var ref<array<int<4>,3>,f,f,plain> v0 = array_create(type_lit(3), [0,1,2]);
-				};
-			}
-            )1N5P1RE"));
-			EXPECT_TRUE(stmt_ok) << "parsing error";
-			CheckPtr arrayCreateArgumentCheck = makeRecursive(make_check<ArrayCreateArgumentCheck>());
-			auto checkResult = check(stmt_ok, arrayCreateArgumentCheck);
-			EXPECT_TRUE(checkResult.empty());
-			EXPECT_EQ(toString(checkResult), "[]");
-		}
-
-		{
-			StatementPtr stmt_err = builder.normalize(builder.parseStmt(R"1N5P1RE(
-            alias uint = uint<8>;
-            {
-                () -> unit {
-					var ref<list<int<4>>> list = [0,1,2];
-					var ref<array<int<4>,3>,f,f,plain> v0 = array_create(type_lit(3), *list);
-				};
-			}
-            )1N5P1RE"));
-			EXPECT_TRUE(stmt_err) << "parsing error";
-			CheckPtr arrayCreateArgumentCheck = makeRecursive(make_check<ArrayCreateArgumentCheck>());
-			auto checkResult = check(stmt_err, arrayCreateArgumentCheck);
-			EXPECT_EQ(checkResult.size(), 1);
-			EXPECT_EQ(toString(checkResult[0]),
-					"ERROR:   [04003] - SEMANTIC / ARRAY_CREATE_INVALID_ARGUMENT @ (0-0-2-0-1-2-1-1) - MSG: Invalid initializer argument in array_create call.");
-		}
-	}
-
 } // end namespace checks
 } // end namespace core
 } // end namespace insieme

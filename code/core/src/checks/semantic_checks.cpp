@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -256,23 +256,6 @@ namespace checks {
 			}
 		}
 
-		return res;
-	}
-
-	OptionalMessageList ArrayCreateArgumentCheck::visitCallExpr(const CallExprAddress& callExpr) {
-		OptionalMessageList res;
-
-		auto& manager = callExpr->getNodeManager();
-		const core::lang::ArrayExtension& arrayExt = manager.getLangExtension<core::lang::ArrayExtension>();
-
-		// check if we have a call to array_create
-		CallExprPtr curPtr = callExpr.getAddressedNode();
-		if(arrayExt.isCallOfArrayCreate(curPtr)) {
-			if(!encoder::isEncodingOf<ExpressionList, encoder::DirectExprListConverter>(curPtr[1])) {
-				add(res, Message(callExpr, EC_SEMANTIC_ARRAY_CREATE_INVALID_ARGUMENT,
-				    format("Invalid initializer argument in array_create call."), Message::ERROR));
-			}
-		}
 		return res;
 	}
 

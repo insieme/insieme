@@ -1481,7 +1481,7 @@ namespace core {
 
 			// for array types
 			if(lang::isArray(type)) {
-				return lang::buildArrayCreate(lang::getArraySize(type), { getZero(lang::getArrayElementType(type)) });
+				return deref(initExpr(lang::buildRefTemp(type), getZero(lang::getArrayElementType(type))));
 			}
 
 			// for all other generic types we return a generic zero value

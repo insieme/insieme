@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -263,6 +263,22 @@ namespace lang {
 		EXPECT_EQ("((array<int<'a>,'l>,array<int<'a>,'l>)->array<int<'a>,'l>)", toString(*builder.callExpr(ext.getArrayPointwise(), basic.getSignedIntAdd())->getType()));
 		EXPECT_EQ("((array<bool,'l>,array<bool,'l>)->array<bool,'l>)", toString(*builder.callExpr(ext.getArrayPointwise(), basic.getBoolEq())->getType()));
 		EXPECT_EQ("((array<uint<'a>,'l>,array<uint<'a>,'l>)->array<bool,'l>)", toString(*builder.callExpr(ext.getArrayPointwise(), basic.getUnsignedIntGt())->getType()));
+	}
+
+	TEST(Array, IsArrayInit) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto notArrayInit = [](const NodePtr& node){ return !isArrayInit(node); };
+
+		EXPECT_PRED1(notArrayInit, builder.parseExpr("5"));
+		EXPECT_PRED1(notArrayInit, NodePtr());
+		EXPECT_PRED1(notArrayInit, builder.parseType("struct A {}"));
+		EXPECT_PRED1(notArrayInit, builder.parseExpr("<ref<struct A {}>>{}"));
+
+		EXPECT_PRED1(isArrayInit, builder.parseExpr("<ref<array<int<4>,5>>>{}"));
+		EXPECT_PRED1(isArrayInit, builder.parseExpr("<ref<array<int<4>,5>>>{1,2,3,4,5}"));
+		EXPECT_EQ(*isArrayInit(builder.parseExpr("<ref<array<int<4>,5>>>{1,2,3,4,5}")), ArrayType(builder.parseType("array<int<4>,5>")));
 	}
 
 } // end namespace lang

@@ -515,22 +515,6 @@ namespace backend {
 			// fix dependency
 			context.getDependencies().insert(valueTypeInfo.definition);
 
-			// special handling for arrays
-			if (LANG_EXT(core::lang::ArrayExtension).isCallOfArrayCreate(ARG(0))) {
-				assert_not_pred1(core::lang::isGenericSizedArray, call[0]->getType());
-				assert_true(core::lang::parseListOfExpressions(call[0].as<core::CallExprPtr>()[1]).empty()) << "(Partial) Initialization of heap-allocated arrays not supported!";
-
-				// parse resulting array type
-				core::lang::ArrayType array(call[0]);
-
-				// array-init is allocating data on stack using alloca => switch to malloc
-				ADD_HEADER("stdlib.h"); // for 'malloc'
-
-				// build malloc call
-				auto arrayType = CONVERT_TYPE(call[0]->getType());
-				return c_ast::cast(c_ast::ptr(arrayType), c_ast::call(C_NODE_MANAGER->create("malloc"), c_ast::sizeOf(arrayType)));
-			}
-
 			// special handling for variable sized structs
 			if(auto structType = core::analysis::isStruct(initValue->getType())) {
 				if(core::lang::isUnknownSizedArray(structType->getFields().back()->getType())) {
@@ -549,21 +533,21 @@ namespace backend {
 					auto arrayInitValue = initValue->getInitExprList().back();
 					// FIXME
 					assert_not_implemented() << "Variable sized struct unimplemented";
-					assert_true(core::analysis::isCallOf(arrayInitValue, arrayExt.getArrayCreate())) << "Array not properly initialized!";
-					auto size = arrayInitValue.as<core::CallExprPtr>()->getArgument(1);
-
-					// add header dependencies
-					ADD_HEADER("stdlib.h"); // for 'malloc'
-					ADD_HEADER("string.h"); // for 'memcpy'
-
-					auto c_struct_type = CONVERT_TYPE(structType);
-					auto c_element_type = CONVERT_TYPE(core::lang::ArrayType(arrayInitValue).getElementType());
-
-					// build call
-					auto malloc = c_ast::call(C_NODE_MANAGER->create("malloc"),
-											  c_ast::add(c_ast::sizeOf(c_struct_type), c_ast::mul(c_ast::sizeOf(c_element_type), CONVERT_EXPR(size))));
-					return c_ast::cast(CONVERT_TYPE(resType),
-									   c_ast::call(C_NODE_MANAGER->create("memcpy"), malloc, c_ast::ref(CONVERT_EXPR(initValue)), c_ast::sizeOf(c_struct_type)));
+//					assert_true(core::analysis::isCallOf(arrayInitValue, arrayExt.getArrayCreate())) << "Array not properly initialized!";
+//					auto size = arrayInitValue.as<core::CallExprPtr>()->getArgument(1);
+//
+//					// add header dependencies
+//					ADD_HEADER("stdlib.h"); // for 'malloc'
+//					ADD_HEADER("string.h"); // for 'memcpy'
+//
+//					auto c_struct_type = CONVERT_TYPE(structType);
+//					auto c_element_type = CONVERT_TYPE(core::lang::ArrayType(arrayInitValue).getElementType());
+//
+//					// build call
+//					auto malloc = c_ast::call(C_NODE_MANAGER->create("malloc"),
+//											  c_ast::add(c_ast::sizeOf(c_struct_type), c_ast::mul(c_ast::sizeOf(c_element_type), CONVERT_EXPR(size))));
+//					return c_ast::cast(CONVERT_TYPE(resType),
+//									   c_ast::call(C_NODE_MANAGER->create("memcpy"), malloc, c_ast::ref(CONVERT_EXPR(initValue)), c_ast::sizeOf(c_struct_type)));
 				}
 			}
 
@@ -709,33 +693,6 @@ namespace backend {
 			//   Operator Type: (ref<'a>) -> ref<array<'a,1>>
 			// => requires no special treatment
 			return CONVERT_ARG(0);
-		};
-
-		res[arrayExt.getArrayCreate()] = OP_CONVERTER {
-			// type of Operator: "(type<'size>, list<'elem>) -> array<'elem,'size>"
-			assert_not_pred1(core::lang::isGenericSizedArray, call->getType());
-
-			// convert initialization values
-			vector<c_ast::NodePtr> values;
-			for(const auto& cur : core::lang::parseListOfExpressions(call[1])) {
-				values.push_back(CONVERT_EXPR(cur));
-			}
-
-			// get the array type
-			auto arrayType = CONVERT_TYPE(call->getType());
-
-			// support empty initialization
-			if (values.empty()) {
-				return c_ast::init(arrayType);
-			}
-
-			// initialize fixed-sized arrays
-			if (core::lang::isFixedSizedArray(call)) {
-				return c_ast::init(arrayType, c_ast::init(values));
-			}
-
-			// and variable sized arrays
-			return c_ast::init(arrayType, values);
 		};
 
 

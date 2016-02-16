@@ -360,6 +360,11 @@ namespace backend {
 			return convertExpression(context, cur);
 		});
 
+		// support empty initialization
+		if(init->values.empty()) {
+			return init;
+		}
+
 		// remove last element if it is a variable sized struct
 		if(core::lang::isUnknownSizedArray(ptr->getInitExprList().back())) {
 			assert_false(init->values.empty());
