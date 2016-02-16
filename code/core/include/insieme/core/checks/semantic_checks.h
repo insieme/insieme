@@ -65,6 +65,11 @@ namespace checks {
 	 * This check verifies that functions with non-unit return type return something on every code path.
 	 */
 	SIMPLE_CHECK(MissingReturnStmt, LambdaExpr, false);
+	
+	/**
+	 * This check verifies that init expressions are executed on synthesizable locations.
+	 */
+	SIMPLE_CHECK(ValidInitExprMemLocation, InitExpr, false);
 
 	#undef SIMPLE_CHECK
 

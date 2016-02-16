@@ -57,12 +57,12 @@ namespace checks {
 			auto addrlist = builder.parseAddressesStatement(R"1N5P1RE(
             alias uint = uint<8>;
             {
-                () -> unit { 
-                    var ref<uint<8>,f,f,plain> i = 0u; 
-                    (arr : ref<array<uint<8>,inf>,f,f,plain>) -> unit { 
-                        var uint<8> b = 1u; 
-                        $ arr[b] $; 
-                    } (ref_scalar_to_ref_array(i)); 
+                () -> unit {
+                    var ref<uint<8>,f,f,plain> i = 0u;
+                    (arr : ref<array<uint<8>,inf>,f,f,plain>) -> unit {
+                        var uint<8> b = 1u;
+                        $ arr[b] $;
+                    } (ref_scalar_to_ref_array(i));
                  };
 			}
             )1N5P1RE");
@@ -99,13 +99,13 @@ namespace checks {
 		IRBuilder builder(manager);
 
 		auto stmt = builder.parseStmt(R"1N5P1RE(
-	alias uint = uint<8>;
-	{
-		() -> unit { 
-			var ref<uint<8>,f,f,plain> i = 0u;
-		};
-	}
-	)1N5P1RE");
+			alias uint = uint<8>;
+			{
+				() -> unit {
+					var ref<uint<8>,f,f,plain> i = 0u;
+				};
+			}
+			)1N5P1RE");
 		EXPECT_TRUE(stmt) << "parsing error";
 
 
@@ -119,13 +119,13 @@ namespace checks {
 		IRBuilder builder(manager);
 
 		auto stmt = builder.parseStmt(R"1N5P1RE(
-	alias uint = uint<8>;
-	{
-		() -> uint { 
-			var ref<int<8>,f,f,plain> i = 0u;
-		};
-	}
-	)1N5P1RE");
+			alias uint = uint<8>;
+			{
+				() -> uint {
+					var ref<int<8>,f,f,plain> i = 0u;
+				};
+			}
+			)1N5P1RE");
 		EXPECT_TRUE(stmt) << "parsing error";
 
 		CheckPtr missingReturnStmtCheck = makeRecursive(make_check<MissingReturnStmtCheck>());
@@ -140,18 +140,18 @@ namespace checks {
 		IRBuilder builder(manager);
 
 		auto stmt = builder.parseStmt(R"1N5P1RE(
-	alias uint = uint<8>;
-	{
-		() -> uint { 
-			var bool a = true;
-			if(a) {
-				return 1u;
-			} else {
-				return 2u;
+			alias uint = uint<8>;
+			{
+				() -> uint {
+					var bool a = true;
+					if(a) {
+						return 1u;
+					} else {
+						return 2u;
+					}
+				};
 			}
-		};
-	}
-	)1N5P1RE");
+			)1N5P1RE");
 		EXPECT_TRUE(stmt) << "parsing error";
 
 		CheckPtr missingReturnStmtCheck = makeRecursive(make_check<MissingReturnStmtCheck>());
@@ -166,16 +166,16 @@ namespace checks {
 		IRBuilder builder(manager);
 
 		auto stmt = builder.parseStmt(R"1N5P1RE(
-	alias uint = uint<8>;
-	{
-		() -> uint { 
-			var bool a = true;
-			if(a) {
-				return 1u;
+			alias uint = uint<8>;
+			{
+				() -> uint {
+					var bool a = true;
+					if(a) {
+						return 1u;
+					}
+				};
 			}
-		};
-	}
-	)1N5P1RE");
+			)1N5P1RE");
 		EXPECT_TRUE(stmt) << "parsing error";
 
 		CheckPtr missingReturnStmtCheck = makeRecursive(make_check<MissingReturnStmtCheck>());
@@ -190,16 +190,16 @@ namespace checks {
 		IRBuilder builder(manager);
 
 		auto stmt = builder.parseStmt(R"1N5P1RE(
-	alias uint = uint<8>;
-	{
-		() -> uint {
-			var bool a = true;			
-			while(true) {
-				if(a) { return 1u; }
+			alias uint = uint<8>;
+			{
+				() -> uint {
+					var bool a = true;
+					while(true) {
+						if(a) { return 1u; }
+					}
+				};
 			}
-		};
-	}
-	)1N5P1RE");
+			)1N5P1RE");
 		EXPECT_TRUE(stmt) << "parsing error";
 
 		CheckPtr missingReturnStmtCheck = makeRecursive(make_check<MissingReturnStmtCheck>());
@@ -214,16 +214,16 @@ namespace checks {
 		IRBuilder builder(manager);
 
 		auto stmt = builder.parseStmt(R"1N5P1RE(
-	alias uint = uint<8>;
-	{
-		(b : bool) -> uint {
-			var bool a = true;			
-			while(b) {
-				if(a) { return 1u; }
+			alias uint = uint<8>;
+			{
+				(b : bool) -> uint {
+					var bool a = true;
+					while(b) {
+						if(a) { return 1u; }
+					}
+				};
 			}
-		};
-	}
-	)1N5P1RE");
+			)1N5P1RE");
 		EXPECT_TRUE(stmt) << "parsing error";
 
 		CheckPtr missingReturnStmtCheck = makeRecursive(make_check<MissingReturnStmtCheck>());
@@ -238,13 +238,13 @@ namespace checks {
 		IRBuilder builder(manager);
 
 		auto stmt = builder.parseStmt(R"1N5P1RE(
-	alias uint = uint<8>;
-	{
-		() -> uint {
-			throw 5;
-		};
-	}
-	)1N5P1RE");
+			alias uint = uint<8>;
+			{
+				() -> uint {
+					throw 5;
+				};
+			}
+			)1N5P1RE");
 		EXPECT_TRUE(stmt) << "parsing error";
 
 		CheckPtr missingReturnStmtCheck = makeRecursive(make_check<MissingReturnStmtCheck>());
@@ -259,18 +259,18 @@ namespace checks {
 		IRBuilder builder(manager);
 
 		auto stmt = builder.parseStmt(R"1N5P1RE(
-	alias uint = uint<8>;
-	{
-		() -> uint {
-			var int<4> a;
-			switch(a) {
-			case 0: { return 5; }
-			case 1: { return 10; }
-			default: { throw "Ugh"; }
+			alias uint = uint<8>;
+			{
+				() -> uint {
+					var int<4> a;
+					switch(a) {
+					case 0: { return 5; }
+					case 1: { return 10; }
+					default: { throw "Ugh"; }
+					}
+				};
 			}
-		};
-	}
-	)1N5P1RE");
+			)1N5P1RE");
 		EXPECT_TRUE(stmt) << "parsing error";
 
 		CheckPtr missingReturnStmtCheck = makeRecursive(make_check<MissingReturnStmtCheck>());
@@ -285,18 +285,18 @@ namespace checks {
 		IRBuilder builder(manager);
 
 		auto stmt = builder.parseStmt(R"1N5P1RE(
-	alias uint = uint<8>;
-	{
-		() -> uint {
-			var int<4> a;
-			switch(a) {
-			case 0: { return 5; }
-			case 1: { 10; }
-			default: { throw "Ugh"; }
+			alias uint = uint<8>;
+			{
+				() -> uint {
+					var int<4> a;
+					switch(a) {
+					case 0: { return 5; }
+					case 1: { 10; }
+					default: { throw "Ugh"; }
+					}
+				};
 			}
-		};
-	}
-	)1N5P1RE");
+			)1N5P1RE");
 		EXPECT_TRUE(stmt) << "parsing error";
 
 		CheckPtr missingReturnStmtCheck = makeRecursive(make_check<MissingReturnStmtCheck>());
@@ -311,17 +311,17 @@ namespace checks {
 		IRBuilder builder(manager);
 
 		auto stmt = builder.parseStmt(R"1N5P1RE(
-	alias uint = uint<8>;
-	{
-		() -> uint {
-			var int<4> a;
-			switch(a) {
-			case 0: { return 5; }
-			case 1: { return 10; }
+			alias uint = uint<8>;
+			{
+				() -> uint {
+					var int<4> a;
+					switch(a) {
+					case 0: { return 5; }
+					case 1: { return 10; }
+					}
+				};
 			}
-		};
-	}
-	)1N5P1RE");
+			)1N5P1RE");
 		EXPECT_TRUE(stmt) << "parsing error";
 
 		CheckPtr missingReturnStmtCheck = makeRecursive(make_check<MissingReturnStmtCheck>());
@@ -336,20 +336,20 @@ namespace checks {
 		IRBuilder builder(manager);
 
 		auto stmt = builder.parseStmt(R"1N5P1RE(
-	alias uint = uint<8>;
-	{
-		() -> uint {
-			var int<4> a;
-			while(true) {
-				switch(a) {
-				case 0: { return 5; }
-				case 1: { 10; }
-				default: { "Ugh"; }
-				}
+			alias uint = uint<8>;
+			{
+				() -> uint {
+					var int<4> a;
+					while(true) {
+						switch(a) {
+						case 0: { return 5; }
+						case 1: { 10; }
+						default: { "Ugh"; }
+						}
+					}
+				};
 			}
-		};
-	}
-	)1N5P1RE");
+			)1N5P1RE");
 		EXPECT_TRUE(stmt) << "parsing error";
 
 		CheckPtr missingReturnStmtCheck = makeRecursive(make_check<MissingReturnStmtCheck>());
@@ -357,6 +357,48 @@ namespace checks {
 		auto checkResult = check(stmt, missingReturnStmtCheck);
 		EXPECT_TRUE(checkResult.empty());
 		EXPECT_EQ(toString(checkResult), "[]");
+	}
+
+	TEST(ValidInitExprMemLocationCheck, Valid) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		auto stmt = builder.parseStmt(R"1N5P1RE(
+			def struct X { a: int<4>; };
+			{
+				<ref<X>>{ 5 };
+				<ref<X>>(ref_temp(type_lit(X))){ 5 };
+				var ref<X> v0 = <ref<X>>(v0){ 5 };
+				<ref<X>>(v0){ 5 };
+				<ref<X>>(lit("bla":ref<X>)){ 5 };
+			})1N5P1RE");
+		EXPECT_TRUE(stmt) << "parsing error";
+
+		CheckPtr validInitExprMemLocationCheck = makeRecursive(make_check<ValidInitExprMemLocationCheck>());
+
+		auto checkResult = check(stmt, validInitExprMemLocationCheck);
+		EXPECT_TRUE(checkResult.empty());
+		EXPECT_EQ(toString(checkResult), "[]");
+	}
+
+	TEST(ValidInitExprMemLocationCheck, Invalid) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		auto stmt = builder.parseStmt(R"1N5P1RE(
+			def struct X { a: int<4>; };
+			{
+				<ref<X>>(ref_new(type_lit(X))){ 5 };
+				<ref<X>>(5+5){ 5 };
+			})1N5P1RE");
+		EXPECT_TRUE(stmt) << "parsing error";
+
+		CheckPtr validInitExprMemLocationCheck = makeRecursive(make_check<ValidInitExprMemLocationCheck>());
+
+		auto checkResult = check(stmt, validInitExprMemLocationCheck);
+		EXPECT_FALSE(checkResult.empty());
+		EXPECT_PRED2(containsMSG, checkResult, Message(NodeAddress(stmt).getAddressOfChild(0), EC_SEMANTIC_INVALID_INIT_MEMLOC, "", Message::ERROR));
+		EXPECT_PRED2(containsMSG, checkResult, Message(NodeAddress(stmt).getAddressOfChild(1), EC_SEMANTIC_INVALID_INIT_MEMLOC, "", Message::ERROR));
 	}
 
 } // end namespace checks

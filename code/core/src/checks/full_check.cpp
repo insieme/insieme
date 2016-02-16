@@ -92,6 +92,7 @@ namespace checks {
 			// context_free_checks.push_back(make_check<UndefinedCheck>());
 			context_free_checks.push_back(make_check<FreeBreakInsideForLoopCheck>());
 			context_free_checks.push_back(make_check<MissingReturnStmtCheck>());
+			context_free_checks.push_back(make_check<ValidInitExprMemLocationCheck>());
 
 			context_free_checks.push_back(make_check<LiteralFormatCheck>());
 
