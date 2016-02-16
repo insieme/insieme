@@ -45,23 +45,15 @@ namespace insieme {
 namespace core {
 namespace checks {
 
+	bool containsMSG(const MessageList& list, const Message& msg) {
+		return contains(list.getAll(), msg);
+	}
+
 	TEST(ScalarArrayIndexRangeCheck, Basic) {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
 		{
-			StatementPtr stmt_err = builder.normalize(builder.parseStmt(R"1N5P1RE(
-            alias uint = uint<8>;
-            {
-                () -> unit { 
-                    var ref<uint<8>,f,f,plain> i = 0u; 
-                    (arr : ref<array<uint<8>,inf>,f,f,plain>) -> unit { 
-                        var uint<8> b = 1u; 
-                        arr[b]; 
-                    } (ref_scalar_to_ref_array(i)); 
-                 };
-			}
-            )1N5P1RE"));
 			auto addrlist = builder.parseAddressesStatement(R"1N5P1RE(
             alias uint = uint<8>;
             {
@@ -75,22 +67,15 @@ namespace checks {
 			}
             )1N5P1RE");
 
-			EXPECT_TRUE(stmt_err) << "parsing error";
 			EXPECT_EQ(addrlist.size(), 1) << "parsing error";
 
 			CheckPtr scalarArrayIndexRangeCheck = makeRecursive(make_check<ScalarArrayIndexRangeCheck>());
 
-			// NodeAddress errorAdr = NodeAddress(stmt_err).getAddressOfChild(2,0,1,2,1,1,2,0,1,2,1);
 			NodeAddress errorAdr = addrlist[0];
 
-			EXPECT_EQ("0-0-2-0-1-2-1-1-2-0-1-2-1", toString(errorAdr));
-			EXPECT_TRUE(dynamic_pointer_cast<CallExprPtr>(errorAdr.getAddressedNode())) << errorAdr.getAddressedNode();
-
-			ASSERT_FALSE(check(stmt_err, scalarArrayIndexRangeCheck).empty());
-
-			EXPECT_EQ(toString(check(stmt_err, scalarArrayIndexRangeCheck)[0]),
-			          toString(Message(errorAdr, EC_SEMANTIC_ARRAY_INDEX_OUT_OF_RANGE,
-			                           "Potentially unsafe indexing of single-element array v0 using formula v1", Message::WARNING)));
+			auto errors = check(errorAdr.getRootNode(), scalarArrayIndexRangeCheck);
+			ASSERT_FALSE(errors.empty());
+			EXPECT_PRED2(containsMSG, errors, Message(errorAdr, EC_SEMANTIC_ARRAY_INDEX_OUT_OF_RANGE, "", Message::WARNING));
 		}
 
 		{
@@ -147,8 +132,7 @@ namespace checks {
 
 		auto checkResult = check(stmt, missingReturnStmtCheck);
 		EXPECT_EQ(checkResult.size(), 1);
-		EXPECT_EQ(toString(checkResult[0]),
-		          "ERROR:   [04006] - SEMANTIC / MISSING_RETURN_STMT @ (0-0) - MSG: Not all control paths of non-unit lambdaExpr return a value.");
+		EXPECT_PRED2(containsMSG, checkResult, Message(NodeAddress(stmt).getAddressOfChild(0), EC_SEMANTIC_MISSING_RETURN_STMT, "", Message::ERROR));
 	}
 
 	TEST(MissingReturnStmtCheck, IfCorrect) {
@@ -198,8 +182,7 @@ namespace checks {
 
 		auto checkResult = check(stmt, missingReturnStmtCheck);
 		EXPECT_EQ(checkResult.size(), 1);
-		EXPECT_EQ(toString(checkResult[0]),
-		          "ERROR:   [04006] - SEMANTIC / MISSING_RETURN_STMT @ (0-0) - MSG: Not all control paths of non-unit lambdaExpr return a value.");
+		EXPECT_PRED2(containsMSG, checkResult, Message(NodeAddress(stmt).getAddressOfChild(0), EC_SEMANTIC_MISSING_RETURN_STMT, "", Message::ERROR));
 	}
 
 	TEST(MissingReturnStmtCheck, WhileCorrect) {
@@ -247,8 +230,7 @@ namespace checks {
 
 		auto checkResult = check(stmt, missingReturnStmtCheck);
 		EXPECT_EQ(checkResult.size(), 1);
-		EXPECT_EQ(toString(checkResult[0]),
-		          "ERROR:   [04006] - SEMANTIC / MISSING_RETURN_STMT @ (0-0) - MSG: Not all control paths of non-unit lambdaExpr return a value.");
+		EXPECT_PRED2(containsMSG, checkResult, Message(NodeAddress(stmt).getAddressOfChild(0), EC_SEMANTIC_MISSING_RETURN_STMT, "", Message::ERROR));
 	}
 
 	TEST(MissingReturnStmtCheck, Throw) {
@@ -321,8 +303,7 @@ namespace checks {
 
 		auto checkResult = check(stmt, missingReturnStmtCheck);
 		EXPECT_EQ(checkResult.size(), 1);
-		EXPECT_EQ(toString(checkResult[0]),
-		          "ERROR:   [04006] - SEMANTIC / MISSING_RETURN_STMT @ (0-0) - MSG: Not all control paths of non-unit lambdaExpr return a value.");
+		EXPECT_PRED2(containsMSG, checkResult, Message(NodeAddress(stmt).getAddressOfChild(0), EC_SEMANTIC_MISSING_RETURN_STMT, "", Message::ERROR));
 	}
 
 	TEST(MissingReturnStmtCheck, SwitchErrorDefaultMissing) {
@@ -347,8 +328,7 @@ namespace checks {
 
 		auto checkResult = check(stmt, missingReturnStmtCheck);
 		EXPECT_EQ(checkResult.size(), 1);
-		EXPECT_EQ(toString(checkResult[0]),
-		          "ERROR:   [04006] - SEMANTIC / MISSING_RETURN_STMT @ (0-0) - MSG: Not all control paths of non-unit lambdaExpr return a value.");
+		EXPECT_PRED2(containsMSG, checkResult, Message(NodeAddress(stmt).getAddressOfChild(0), EC_SEMANTIC_MISSING_RETURN_STMT, "", Message::ERROR));
 	}
 
 	TEST(MissingReturnStmtCheck, SwitchCorrectInLoop) {
