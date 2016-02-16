@@ -256,8 +256,6 @@ AST_TERMINAL(Lambda, Support)
 AST_TERMINAL(LambdaBinding, Support)
 AST_TERMINAL(LambdaDefinition, Support)
 
-AST_TERMINAL(NamedValue, Support)
-
 AST_TERMINAL(SwitchCase, Support)
 AST_TERMINAL(SwitchCases, Support)
 

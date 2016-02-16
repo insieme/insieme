@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -1035,7 +1035,17 @@ namespace backend {
 			} else {
 				// requires a cast
 				res->externalize = [res](const c_ast::SharedCNodeManager& manager, const c_ast::ExpressionPtr& node) {
-					if (auto lit = node.isa<c_ast::LiteralPtr>()) if (lit->value[0] == '"') return node;  // for string literals
+					if (auto lit = node.isa<c_ast::LiteralPtr>()) {
+						if (lit->value[0] == '"') {
+							return node;  // for string literals
+						}
+					}
+					// resolve l/r-value duality of array init expressions
+					if (auto initExp = node.isa<c_ast::InitializerPtr>()) {
+						if (initExp->type && !initExp->type.isa<c_ast::UnionTypePtr>() && !initExp->type.isa<c_ast::StructTypePtr>()) {
+							return c_ast::cast(res->externalType, c_ast::ref(node));
+						}
+					}
 					return c_ast::cast(res->externalType, node);
 				};
 				res->internalize = [res](const c_ast::SharedCNodeManager& manager, const c_ast::ExpressionPtr& node) {

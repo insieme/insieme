@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -65,11 +65,11 @@ namespace checks {
 	 * This check verifies that functions with non-unit return type return something on every code path.
 	 */
 	SIMPLE_CHECK(MissingReturnStmt, LambdaExpr, false);
-
+	
 	/**
-	 * This check verifies that the initializer argument of an array_create call is a list.
+	 * This check verifies that init expressions are executed on synthesizable locations.
 	 */
-	SIMPLE_CHECK(ArrayCreateArgument, CallExpr, false);
+	SIMPLE_CHECK(ValidInitExprMemLocation, InitExpr, false);
 
 	#undef SIMPLE_CHECK
 

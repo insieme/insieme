@@ -108,7 +108,7 @@ namespace conversion {
 				initExps.push_back(builder.literal(format("'%s'",toString(insieme::utils::escapeChar(c))), mgr.getLangBasic().getChar()));
 			}
 			initExps.push_back(builder.literal("'\\0'", mgr.getLangBasic().getChar()));
-			expr = core::lang::buildArrayCreate(lit->getNodeManager(), origType->getSize().getLimitedValue(), initExps);
+			expr = builder.deref(builder.initExprTemp(converter.convertType(original->getType()).as<core::GenericTypePtr>(), initExps));
 			VLOG(2) << "convertInitExpr: translated string literal\n" << dumpClang(original, converter.getSourceManager()) << " - to - \n" << dumpColor(expr);
 		}
 		return expr;

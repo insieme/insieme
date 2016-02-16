@@ -595,10 +595,6 @@ namespace core {
 		return field(stringValue(name), type);
 	}
 
-	NamedValuePtr IRBuilderBaseModule::namedValue(const string& name, const ExpressionPtr& value) const {
-		return namedValue(stringValue(name), value);
-	}
-
 	TupleExprPtr IRBuilderBaseModule::tupleExpr(const vector<ExpressionPtr>& values) const {
 		TupleTypePtr type = tupleType(extractTypes(values));
 		return tupleExpr(type, Expressions::get(manager, values));
@@ -1485,7 +1481,7 @@ namespace core {
 
 			// for array types
 			if(lang::isArray(type)) {
-				return lang::buildArrayCreate(lang::getArraySize(type), { getZero(lang::getArrayElementType(type)) });
+				return deref(initExpr(lang::buildRefTemp(type), getZero(lang::getArrayElementType(type))));
 			}
 
 			// for all other generic types we return a generic zero value

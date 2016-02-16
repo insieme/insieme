@@ -45,52 +45,37 @@ namespace insieme {
 namespace core {
 namespace checks {
 
+	bool containsMSG(const MessageList& list, const Message& msg) {
+		return contains(list.getAll(), msg);
+	}
+
 	TEST(ScalarArrayIndexRangeCheck, Basic) {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
 		{
-			StatementPtr stmt_err = builder.normalize(builder.parseStmt(R"1N5P1RE(
-            alias uint = uint<8>;
-            {
-                () -> unit { 
-                    var ref<uint<8>,f,f,plain> i = 0u; 
-                    (arr : ref<array<uint<8>,inf>,f,f,plain>) -> unit { 
-                        var uint<8> b = 1u; 
-                        arr[b]; 
-                    } (ref_scalar_to_ref_array(i)); 
-                 };
-			}
-            )1N5P1RE"));
 			auto addrlist = builder.parseAddressesStatement(R"1N5P1RE(
             alias uint = uint<8>;
             {
-                () -> unit { 
-                    var ref<uint<8>,f,f,plain> i = 0u; 
-                    (arr : ref<array<uint<8>,inf>,f,f,plain>) -> unit { 
-                        var uint<8> b = 1u; 
-                        $ arr[b] $; 
-                    } (ref_scalar_to_ref_array(i)); 
+                () -> unit {
+                    var ref<uint<8>,f,f,plain> i = 0u;
+                    (arr : ref<array<uint<8>,inf>,f,f,plain>) -> unit {
+                        var uint<8> b = 1u;
+                        $ arr[b] $;
+                    } (ref_scalar_to_ref_array(i));
                  };
 			}
             )1N5P1RE");
 
-			EXPECT_TRUE(stmt_err) << "parsing error";
 			EXPECT_EQ(addrlist.size(), 1) << "parsing error";
 
 			CheckPtr scalarArrayIndexRangeCheck = makeRecursive(make_check<ScalarArrayIndexRangeCheck>());
 
-			// NodeAddress errorAdr = NodeAddress(stmt_err).getAddressOfChild(2,0,1,2,1,1,2,0,1,2,1);
 			NodeAddress errorAdr = addrlist[0];
 
-			EXPECT_EQ("0-0-2-0-1-2-1-1-2-0-1-2-1", toString(errorAdr));
-			EXPECT_TRUE(dynamic_pointer_cast<CallExprPtr>(errorAdr.getAddressedNode())) << errorAdr.getAddressedNode();
-
-			ASSERT_FALSE(check(stmt_err, scalarArrayIndexRangeCheck).empty());
-
-			EXPECT_EQ(toString(check(stmt_err, scalarArrayIndexRangeCheck)[0]),
-			          toString(Message(errorAdr, EC_SEMANTIC_ARRAY_INDEX_OUT_OF_RANGE,
-			                           "Potentially unsafe indexing of single-element array v0 using formula v1", Message::WARNING)));
+			auto errors = check(errorAdr.getRootNode(), scalarArrayIndexRangeCheck);
+			ASSERT_FALSE(errors.empty());
+			EXPECT_PRED2(containsMSG, errors, Message(errorAdr, EC_SEMANTIC_ARRAY_INDEX_OUT_OF_RANGE, "", Message::WARNING));
 		}
 
 		{
@@ -114,13 +99,13 @@ namespace checks {
 		IRBuilder builder(manager);
 
 		auto stmt = builder.parseStmt(R"1N5P1RE(
-	alias uint = uint<8>;
-	{
-		() -> unit { 
-			var ref<uint<8>,f,f,plain> i = 0u;
-		};
-	}
-	)1N5P1RE");
+			alias uint = uint<8>;
+			{
+				() -> unit {
+					var ref<uint<8>,f,f,plain> i = 0u;
+				};
+			}
+			)1N5P1RE");
 		EXPECT_TRUE(stmt) << "parsing error";
 
 
@@ -134,21 +119,20 @@ namespace checks {
 		IRBuilder builder(manager);
 
 		auto stmt = builder.parseStmt(R"1N5P1RE(
-	alias uint = uint<8>;
-	{
-		() -> uint { 
-			var ref<int<8>,f,f,plain> i = 0u;
-		};
-	}
-	)1N5P1RE");
+			alias uint = uint<8>;
+			{
+				() -> uint {
+					var ref<int<8>,f,f,plain> i = 0u;
+				};
+			}
+			)1N5P1RE");
 		EXPECT_TRUE(stmt) << "parsing error";
 
 		CheckPtr missingReturnStmtCheck = makeRecursive(make_check<MissingReturnStmtCheck>());
 
 		auto checkResult = check(stmt, missingReturnStmtCheck);
 		EXPECT_EQ(checkResult.size(), 1);
-		EXPECT_EQ(toString(checkResult[0]),
-		          "ERROR:   [04006] - SEMANTIC / MISSING_RETURN_STMT @ (0-0) - MSG: Not all control paths of non-unit lambdaExpr return a value.");
+		EXPECT_PRED2(containsMSG, checkResult, Message(NodeAddress(stmt).getAddressOfChild(0), EC_SEMANTIC_MISSING_RETURN_STMT, "", Message::ERROR));
 	}
 
 	TEST(MissingReturnStmtCheck, IfCorrect) {
@@ -156,18 +140,18 @@ namespace checks {
 		IRBuilder builder(manager);
 
 		auto stmt = builder.parseStmt(R"1N5P1RE(
-	alias uint = uint<8>;
-	{
-		() -> uint { 
-			var bool a = true;
-			if(a) {
-				return 1u;
-			} else {
-				return 2u;
+			alias uint = uint<8>;
+			{
+				() -> uint {
+					var bool a = true;
+					if(a) {
+						return 1u;
+					} else {
+						return 2u;
+					}
+				};
 			}
-		};
-	}
-	)1N5P1RE");
+			)1N5P1RE");
 		EXPECT_TRUE(stmt) << "parsing error";
 
 		CheckPtr missingReturnStmtCheck = makeRecursive(make_check<MissingReturnStmtCheck>());
@@ -182,24 +166,23 @@ namespace checks {
 		IRBuilder builder(manager);
 
 		auto stmt = builder.parseStmt(R"1N5P1RE(
-	alias uint = uint<8>;
-	{
-		() -> uint { 
-			var bool a = true;
-			if(a) {
-				return 1u;
+			alias uint = uint<8>;
+			{
+				() -> uint {
+					var bool a = true;
+					if(a) {
+						return 1u;
+					}
+				};
 			}
-		};
-	}
-	)1N5P1RE");
+			)1N5P1RE");
 		EXPECT_TRUE(stmt) << "parsing error";
 
 		CheckPtr missingReturnStmtCheck = makeRecursive(make_check<MissingReturnStmtCheck>());
 
 		auto checkResult = check(stmt, missingReturnStmtCheck);
 		EXPECT_EQ(checkResult.size(), 1);
-		EXPECT_EQ(toString(checkResult[0]),
-		          "ERROR:   [04006] - SEMANTIC / MISSING_RETURN_STMT @ (0-0) - MSG: Not all control paths of non-unit lambdaExpr return a value.");
+		EXPECT_PRED2(containsMSG, checkResult, Message(NodeAddress(stmt).getAddressOfChild(0), EC_SEMANTIC_MISSING_RETURN_STMT, "", Message::ERROR));
 	}
 
 	TEST(MissingReturnStmtCheck, WhileCorrect) {
@@ -207,16 +190,16 @@ namespace checks {
 		IRBuilder builder(manager);
 
 		auto stmt = builder.parseStmt(R"1N5P1RE(
-	alias uint = uint<8>;
-	{
-		() -> uint {
-			var bool a = true;			
-			while(true) {
-				if(a) { return 1u; }
+			alias uint = uint<8>;
+			{
+				() -> uint {
+					var bool a = true;
+					while(true) {
+						if(a) { return 1u; }
+					}
+				};
 			}
-		};
-	}
-	)1N5P1RE");
+			)1N5P1RE");
 		EXPECT_TRUE(stmt) << "parsing error";
 
 		CheckPtr missingReturnStmtCheck = makeRecursive(make_check<MissingReturnStmtCheck>());
@@ -231,24 +214,23 @@ namespace checks {
 		IRBuilder builder(manager);
 
 		auto stmt = builder.parseStmt(R"1N5P1RE(
-	alias uint = uint<8>;
-	{
-		(b : bool) -> uint {
-			var bool a = true;			
-			while(b) {
-				if(a) { return 1u; }
+			alias uint = uint<8>;
+			{
+				(b : bool) -> uint {
+					var bool a = true;
+					while(b) {
+						if(a) { return 1u; }
+					}
+				};
 			}
-		};
-	}
-	)1N5P1RE");
+			)1N5P1RE");
 		EXPECT_TRUE(stmt) << "parsing error";
 
 		CheckPtr missingReturnStmtCheck = makeRecursive(make_check<MissingReturnStmtCheck>());
 
 		auto checkResult = check(stmt, missingReturnStmtCheck);
 		EXPECT_EQ(checkResult.size(), 1);
-		EXPECT_EQ(toString(checkResult[0]),
-		          "ERROR:   [04006] - SEMANTIC / MISSING_RETURN_STMT @ (0-0) - MSG: Not all control paths of non-unit lambdaExpr return a value.");
+		EXPECT_PRED2(containsMSG, checkResult, Message(NodeAddress(stmt).getAddressOfChild(0), EC_SEMANTIC_MISSING_RETURN_STMT, "", Message::ERROR));
 	}
 
 	TEST(MissingReturnStmtCheck, Throw) {
@@ -256,13 +238,13 @@ namespace checks {
 		IRBuilder builder(manager);
 
 		auto stmt = builder.parseStmt(R"1N5P1RE(
-	alias uint = uint<8>;
-	{
-		() -> uint {
-			throw 5;
-		};
-	}
-	)1N5P1RE");
+			alias uint = uint<8>;
+			{
+				() -> uint {
+					throw 5;
+				};
+			}
+			)1N5P1RE");
 		EXPECT_TRUE(stmt) << "parsing error";
 
 		CheckPtr missingReturnStmtCheck = makeRecursive(make_check<MissingReturnStmtCheck>());
@@ -277,18 +259,18 @@ namespace checks {
 		IRBuilder builder(manager);
 
 		auto stmt = builder.parseStmt(R"1N5P1RE(
-	alias uint = uint<8>;
-	{
-		() -> uint {
-			var int<4> a;
-			switch(a) {
-			case 0: { return 5; }
-			case 1: { return 10; }
-			default: { throw "Ugh"; }
+			alias uint = uint<8>;
+			{
+				() -> uint {
+					var int<4> a;
+					switch(a) {
+					case 0: { return 5; }
+					case 1: { return 10; }
+					default: { throw "Ugh"; }
+					}
+				};
 			}
-		};
-	}
-	)1N5P1RE");
+			)1N5P1RE");
 		EXPECT_TRUE(stmt) << "parsing error";
 
 		CheckPtr missingReturnStmtCheck = makeRecursive(make_check<MissingReturnStmtCheck>());
@@ -303,26 +285,25 @@ namespace checks {
 		IRBuilder builder(manager);
 
 		auto stmt = builder.parseStmt(R"1N5P1RE(
-	alias uint = uint<8>;
-	{
-		() -> uint {
-			var int<4> a;
-			switch(a) {
-			case 0: { return 5; }
-			case 1: { 10; }
-			default: { throw "Ugh"; }
+			alias uint = uint<8>;
+			{
+				() -> uint {
+					var int<4> a;
+					switch(a) {
+					case 0: { return 5; }
+					case 1: { 10; }
+					default: { throw "Ugh"; }
+					}
+				};
 			}
-		};
-	}
-	)1N5P1RE");
+			)1N5P1RE");
 		EXPECT_TRUE(stmt) << "parsing error";
 
 		CheckPtr missingReturnStmtCheck = makeRecursive(make_check<MissingReturnStmtCheck>());
 
 		auto checkResult = check(stmt, missingReturnStmtCheck);
 		EXPECT_EQ(checkResult.size(), 1);
-		EXPECT_EQ(toString(checkResult[0]),
-		          "ERROR:   [04006] - SEMANTIC / MISSING_RETURN_STMT @ (0-0) - MSG: Not all control paths of non-unit lambdaExpr return a value.");
+		EXPECT_PRED2(containsMSG, checkResult, Message(NodeAddress(stmt).getAddressOfChild(0), EC_SEMANTIC_MISSING_RETURN_STMT, "", Message::ERROR));
 	}
 
 	TEST(MissingReturnStmtCheck, SwitchErrorDefaultMissing) {
@@ -330,25 +311,24 @@ namespace checks {
 		IRBuilder builder(manager);
 
 		auto stmt = builder.parseStmt(R"1N5P1RE(
-	alias uint = uint<8>;
-	{
-		() -> uint {
-			var int<4> a;
-			switch(a) {
-			case 0: { return 5; }
-			case 1: { return 10; }
+			alias uint = uint<8>;
+			{
+				() -> uint {
+					var int<4> a;
+					switch(a) {
+					case 0: { return 5; }
+					case 1: { return 10; }
+					}
+				};
 			}
-		};
-	}
-	)1N5P1RE");
+			)1N5P1RE");
 		EXPECT_TRUE(stmt) << "parsing error";
 
 		CheckPtr missingReturnStmtCheck = makeRecursive(make_check<MissingReturnStmtCheck>());
 
 		auto checkResult = check(stmt, missingReturnStmtCheck);
 		EXPECT_EQ(checkResult.size(), 1);
-		EXPECT_EQ(toString(checkResult[0]),
-		          "ERROR:   [04006] - SEMANTIC / MISSING_RETURN_STMT @ (0-0) - MSG: Not all control paths of non-unit lambdaExpr return a value.");
+		EXPECT_PRED2(containsMSG, checkResult, Message(NodeAddress(stmt).getAddressOfChild(0), EC_SEMANTIC_MISSING_RETURN_STMT, "", Message::ERROR));
 	}
 
 	TEST(MissingReturnStmtCheck, SwitchCorrectInLoop) {
@@ -356,20 +336,20 @@ namespace checks {
 		IRBuilder builder(manager);
 
 		auto stmt = builder.parseStmt(R"1N5P1RE(
-	alias uint = uint<8>;
-	{
-		() -> uint {
-			var int<4> a;
-			while(true) {
-				switch(a) {
-				case 0: { return 5; }
-				case 1: { 10; }
-				default: { "Ugh"; }
-				}
+			alias uint = uint<8>;
+			{
+				() -> uint {
+					var int<4> a;
+					while(true) {
+						switch(a) {
+						case 0: { return 5; }
+						case 1: { 10; }
+						default: { "Ugh"; }
+						}
+					}
+				};
 			}
-		};
-	}
-	)1N5P1RE");
+			)1N5P1RE");
 		EXPECT_TRUE(stmt) << "parsing error";
 
 		CheckPtr missingReturnStmtCheck = makeRecursive(make_check<MissingReturnStmtCheck>());
@@ -379,43 +359,46 @@ namespace checks {
 		EXPECT_EQ(toString(checkResult), "[]");
 	}
 
-	TEST(ArrayCreateArgumentCheck, Basic) {
+	TEST(ValidInitExprMemLocationCheck, Valid) {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
-		{
-			StatementPtr stmt_ok = builder.normalize(builder.parseStmt(R"1N5P1RE(
-            alias uint = uint<8>;
-            {
-                () -> unit {
-					var ref<array<int<4>,3>,f,f,plain> v0 = array_create(type_lit(3), [0,1,2]);
-				};
-			}
-            )1N5P1RE"));
-			EXPECT_TRUE(stmt_ok) << "parsing error";
-			CheckPtr arrayCreateArgumentCheck = makeRecursive(make_check<ArrayCreateArgumentCheck>());
-			auto checkResult = check(stmt_ok, arrayCreateArgumentCheck);
-			EXPECT_TRUE(checkResult.empty());
-			EXPECT_EQ(toString(checkResult), "[]");
-		}
+		auto stmt = builder.parseStmt(R"1N5P1RE(
+			def struct X { a: int<4>; };
+			{
+				<ref<X>>{ 5 };
+				<ref<X>>(ref_temp(type_lit(X))){ 5 };
+				var ref<X> v0 = <ref<X>>(v0){ 5 };
+				<ref<X>>(v0){ 5 };
+				<ref<X>>(lit("bla":ref<X>)){ 5 };
+			})1N5P1RE");
+		EXPECT_TRUE(stmt) << "parsing error";
 
-		{
-			StatementPtr stmt_err = builder.normalize(builder.parseStmt(R"1N5P1RE(
-            alias uint = uint<8>;
-            {
-                () -> unit {
-					var ref<list<int<4>>> list = [0,1,2];
-					var ref<array<int<4>,3>,f,f,plain> v0 = array_create(type_lit(3), *list);
-				};
-			}
-            )1N5P1RE"));
-			EXPECT_TRUE(stmt_err) << "parsing error";
-			CheckPtr arrayCreateArgumentCheck = makeRecursive(make_check<ArrayCreateArgumentCheck>());
-			auto checkResult = check(stmt_err, arrayCreateArgumentCheck);
-			EXPECT_EQ(checkResult.size(), 1);
-			EXPECT_EQ(toString(checkResult[0]),
-					"ERROR:   [04003] - SEMANTIC / ARRAY_CREATE_INVALID_ARGUMENT @ (0-0-2-0-1-2-1-1) - MSG: Invalid initializer argument in array_create call.");
-		}
+		CheckPtr validInitExprMemLocationCheck = makeRecursive(make_check<ValidInitExprMemLocationCheck>());
+
+		auto checkResult = check(stmt, validInitExprMemLocationCheck);
+		EXPECT_TRUE(checkResult.empty());
+		EXPECT_EQ(toString(checkResult), "[]");
+	}
+
+	TEST(ValidInitExprMemLocationCheck, Invalid) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		auto stmt = builder.parseStmt(R"1N5P1RE(
+			def struct X { a: int<4>; };
+			{
+				<ref<X>>(ref_new(type_lit(X))){ 5 };
+				<ref<X>>(5+5){ 5 };
+			})1N5P1RE");
+		EXPECT_TRUE(stmt) << "parsing error";
+
+		CheckPtr validInitExprMemLocationCheck = makeRecursive(make_check<ValidInitExprMemLocationCheck>());
+
+		auto checkResult = check(stmt, validInitExprMemLocationCheck);
+		EXPECT_FALSE(checkResult.empty());
+		EXPECT_PRED2(containsMSG, checkResult, Message(NodeAddress(stmt).getAddressOfChild(0), EC_SEMANTIC_INVALID_INIT_MEMLOC, "", Message::ERROR));
+		EXPECT_PRED2(containsMSG, checkResult, Message(NodeAddress(stmt).getAddressOfChild(1), EC_SEMANTIC_INVALID_INIT_MEMLOC, "", Message::ERROR));
 	}
 
 } // end namespace checks

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -474,8 +474,6 @@ namespace printer {
 
 			// array operators
 
-			auto& arrayExt = manager.getLangExtension<lang::ArrayExtension>();
-			res[arrayExt.getArrayCreate()] = OP_CONVERTER({ OUT("{}"); });
 			res[refExt.getRefArrayElement()] = OP_CONVERTER({
 				PRINT_ARG(0);
 				OUT("[");

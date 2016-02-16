@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -131,7 +131,7 @@ namespace backend {
 
 			// check argument and result types!
 			assert_pred1(core::lang::isFixedSizedArray, arg0Type) << "First argument should be a fixed-sized array!";
-			assert_pred1(core::lang::isFixedSizedArray, arg1Type) << "First argument should be a fixed-sized array!";
+			assert_pred1(core::lang::isFixedSizedArray, arg1Type) << "Second argument should be a fixed-sized array!";
 			assert_pred1(core::lang::isFixedSizedArray, resType) << "Result should be a fixed-sized array!";
 
 			// obtain the vector size
@@ -167,8 +167,7 @@ namespace backend {
 			}
 
 			// return result
-			auto sizeType = builder.numericType(core::lang::ArrayType(arg0Type).getSize().as<core::LiteralPtr>());
-			core::StatementPtr body = builder.returnStmt(core::lang::buildArrayCreate(sizeType, elements));
+			core::StatementPtr body = builder.returnStmt(builder.initExprTemp(builder.refType(arg0Type), elements));
 
 			// construct substitute ...
 			core::LambdaExprPtr substitute = builder.lambdaExpr(funType, toVector(v1, v2), body);

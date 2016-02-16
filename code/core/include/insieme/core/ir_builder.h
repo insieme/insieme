@@ -358,8 +358,6 @@ namespace core {
 
 		// -----------------------------------
 
-		NamedValuePtr namedValue(const string& name, const ExpressionPtr& value) const;
-
 		TupleExprPtr tupleExpr(const ExpressionList& values = ExpressionList()) const;
 
 		template <typename... T>

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -449,11 +449,12 @@ namespace transform {
 		IRBuilder builder(mgr);
 
 		core::ProgramPtr code = builder.parseProgram("int<4> main() {"
-														"	(dtype : type<'a>, size : type<'s>)->ref<array<'a,'s>> {"
-														"		return ref_new_init(array_create(size, list_empty(dtype)));"
-														"	} (type_lit(real<4>), type_lit(7));"
-														"	return 0;"
-														"}");
+		                                             "  (dtype : type<'a>, size : type<'s>)->unit {"
+		                                             "    var ref<'a> v0;"
+		                                             "    var int<'s> v1;"
+		                                             "  } (type_lit(real<4>), type_lit(8));"
+		                                             "  return 0;"
+		                                             "}");
 
 		ASSERT_TRUE(code);
 

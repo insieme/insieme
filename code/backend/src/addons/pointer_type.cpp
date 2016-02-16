@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -45,6 +45,7 @@
 #include "insieme/backend/statement_converter.h"
 
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/lang/array.h"
 #include "insieme/core/lang/pointer.h"
 #include "insieme/core/lang/reference.h"
@@ -104,15 +105,18 @@ namespace addons {
 				context.getDependencies().insert(info.definition);
 
 				// access source
-				if (core::lang::isFixedSizedArray(elementType)) {
+				if(core::lang::isFixedSizedArray(elementType)) {
 					// special handling for string-literals ..
 					if (auto lit = ARG(0).isa<core::LiteralPtr>()) {
 						if (lit->getStringValue()[0] == '"') {
 							return CONVERT_ARG(0);   // the literal is already a pointer
 						}
 					}
+					auto converted = CONVERT_ARG(0);
+					// if directly nested init expression, we need to get its address
+					if(ARG(0).isa<core::InitExprPtr>()) converted = c_ast::ref(converted);
 					//TODO Think about a nicer solution here. This line replaces the following one to also support arrays in system defined structs
-					return c_ast::cast(CONVERT_TYPE(call->getType()), CONVERT_ARG(0));
+					return c_ast::cast(CONVERT_TYPE(call->getType()), converted);
 					//return c_ast::access(c_ast::deref(CONVERT_ARG(0)), "data");
 				}
 
