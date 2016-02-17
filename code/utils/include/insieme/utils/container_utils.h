@@ -211,6 +211,18 @@ inline Result transform(const Container<T, A<T>>& c, const Functor& f) {
 }
 
 /**
+ * Convenience function for std::transform for changing vector-like types to set-like types.
+ */
+template <template <typename, typename, typename> class TargetSetLikeContainer, template <typename, typename> class Container, typename Functor,
+          typename T, template <typename> class A, typename ResultMember = typename lambda_traits<Functor>::result_type,
+          typename Result = TargetSetLikeContainer<ResultMember, std::less<ResultMember>, A<ResultMember>>>
+inline Result transform(const Container<T, A<T>>& c, const Functor& f) {
+	Result res;
+	std::transform(c.begin(), c.end(), inserter(res, res.end()), f);
+	return res;
+}
+
+/**
  * Convenience function for std::transform for changing map-like types to vector-like types.
  */
 template <template <typename, typename> class TargetContainer, template <typename, typename, typename, typename> class MapLikeContainer, typename Functor,
