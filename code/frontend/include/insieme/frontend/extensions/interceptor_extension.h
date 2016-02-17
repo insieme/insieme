@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -47,36 +47,20 @@ namespace extensions {
 
 	class InterceptorExtension : public insieme::frontend::extensions::FrontendExtension {
 	  public:
-		virtual FrontendExtension::flagHandler registerFlag(boost::program_options::options_description& options);
+		InterceptorExtension();
 
-		InterceptorExtension() : interceptor(std::set<std::string>()) {}
+		virtual FrontendExtension::flagHandler registerFlag(boost::program_options::options_description& options) override;
 
-		virtual boost::optional<std::string> isPrerequisiteMissing(ConversionSetup& setup) const;
+		virtual boost::optional<std::string> isPrerequisiteMissing(ConversionSetup& setup) const override;
 
 		// Extension Hooks
-		virtual insieme::core::ExpressionPtr Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& converter);
 
-		virtual core::ExpressionPtr FuncDeclVisit(const clang::FunctionDecl* funcDecl, insieme::frontend::conversion::Converter& converter, bool symbolic);
+		virtual core::ExpressionPtr FuncDeclVisit(const clang::FunctionDecl* funcDecl, insieme::frontend::conversion::Converter& converter, bool symbolic) override;
+		virtual core::TypePtr TypeDeclVisit(const clang::TypeDecl* decl, insieme::frontend::conversion::Converter& converter) override;
 
-		virtual core::TypePtr Visit(const clang::QualType& type, insieme::frontend::conversion::Converter& converter);
+		virtual insieme::core::ExpressionPtr Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& converter) override;
+		virtual core::TypePtr Visit(const clang::QualType& type, insieme::frontend::conversion::Converter& converter) override;
 
-		virtual core::ExpressionPtr ValueDeclPostVisit(const clang::ValueDecl* decl, core::ExpressionPtr expr,
-		                                               insieme::frontend::conversion::Converter& converter);
-
-		virtual core::TypePtr TypeDeclVisit(const clang::TypeDecl* decl, insieme::frontend::conversion::Converter& converter);
-
-		virtual core::ExpressionPtr PostVisit(const clang::Expr* expr, const core::ExpressionPtr& irExpr, conversion::Converter& converter);
-
-	  private:
-		insieme::frontend::utils::Interceptor interceptor;
-
-		const insieme::frontend::utils::Interceptor& getInterceptor() const {
-			return interceptor;
-		}
-
-		void setInterceptor(const std::set<std::string>& patterns) {
-			interceptor = insieme::frontend::utils::Interceptor(patterns);
-		}
 	};
 
 } // extensions

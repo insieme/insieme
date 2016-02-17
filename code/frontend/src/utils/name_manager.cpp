@@ -37,6 +37,7 @@
 #include "insieme/frontend/utils/name_manager.h"
 
 #include "insieme/frontend/clang.h"
+#include "insieme/frontend/converter.h"
 #include "insieme/utils/assert.h"
 #include "insieme/utils/name_mangling.h"
 
@@ -209,7 +210,7 @@ namespace utils {
 
 		string suffixStr = suffix.str();
 		boost::algorithm::replace_all(suffixStr, " ", "_");
-		
+
 		// all done
 		return name + suffixStr;
 	}
@@ -244,6 +245,25 @@ namespace utils {
 
 		// in this case we return the original name itself
 		return fieldName;
+	}
+
+	std::pair<std::string,bool> getNameForTagDecl(const conversion::Converter& converter, const clang::TagDecl* tagDecl) {
+		auto canon = tagDecl->getCanonicalDecl();
+		// try to use name, if not available try to use typedef name, otherwise no name
+		string name = utils::createNameForAnon("__anon_tagtype_", tagDecl, converter.getSourceManager());
+		if(canon->getDeclName() && !canon->getDeclName().isEmpty()) name = canon->getQualifiedNameAsString();
+		else if(canon->hasNameForLinkage()) name = canon->getTypedefNameForAnonDecl()->getQualifiedNameAsString();
+		// if externally visible, build mangled name based on canonical decl without location
+		if(tagDecl->isExternallyVisible()) return std::make_pair(insieme::utils::mangle(name), true);
+		// not externally visible: build mangled name with location
+		// canonicalize filename in case we refer to it from different relative locations
+		auto& sm = converter.getSourceManager();
+		std::string filename = sm.getFilename(canon->getLocStart()).str();
+		boost::filesystem::path path(filename);
+		path = boost::filesystem::canonical(path);
+		auto line = sm.getExpansionLineNumber(canon->getLocStart());
+		auto column = sm.getExpansionColumnNumber(canon->getLocStart());
+		return std::make_pair(insieme::utils::mangle(name, path.string(), line, column), canon->hasNameForLinkage());
 	}
 
 } // End utils namespace

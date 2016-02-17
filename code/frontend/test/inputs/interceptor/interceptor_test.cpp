@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -60,6 +60,6 @@ void intercept_memFunc2() {
 // only for manual compilation
 int main() {
 	intercept_simpleFunc();
-	intercept_memFunc1();
+	intercept_memFunc();
 	intercept_memFunc2();
 };

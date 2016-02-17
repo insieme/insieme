@@ -40,6 +40,12 @@
 
 namespace insieme {
 namespace frontend {
+
+// forward decl
+namespace conversion {
+	class Converter;
+}
+
 namespace utils {
 
 	using namespace llvm;
@@ -94,6 +100,13 @@ namespace utils {
 	 * @return name for the field
 	 */
 	std::string getNameForField(const clang::FieldDecl* fieldDecl, const clang::SourceManager& sm);
+
+	/**
+	 * Get name for tag decl (named or anonymous)
+	 * @param tagDecl the Tag declaration given by clang
+	 * @return pair(name,bool) with bool indicating whether it is externally visible
+	 */
+	std::pair<std::string,bool> getNameForTagDecl(const conversion::Converter& converter, const clang::TagDecl* tagDecl);
 
 } // End utils namespace
 } // End frontend namespace

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -212,12 +212,12 @@ namespace extensions {
 		 *  User provided clang decl visitor. Will be called before clang decl
 		 *  is visited by the insieme decl visitors. If the extension returns an IR expression
 		 *  or an IR type the standard visitors are not called. This method mustn't be
-		 *  overriden, because this method delegates the declaration to the right extension decl visitor.
+		 *  overridden, because this method delegates the declaration to the right extension decl visitor.
 		 *  @param decl clang decl
 		 *  @param converter insieme conversion factory
 		 *  @return NodePtr that can either be an expression or a type
 		 */
-		virtual insieme::core::NodePtr Visit(const clang::Decl* decl, insieme::frontend::conversion::Converter& converter, bool symbolic = false);
+		virtual insieme::core::NodePtr Visit(const clang::Decl* decl, insieme::frontend::conversion::Converter& converter, bool symbolic = false) final;
 
 		/**
 		 *  User provided clang type decl visitor. Will be called before clang type decl
@@ -288,7 +288,7 @@ namespace extensions {
 		/**
 		 *  User provided post clang decl visitor. Will be called after clang decl
 		 *  was visited by the insieme visitor and returns a modified IR type or
-		 *  expression. This method mustn't be overriden because it is used to
+		 *  expression. This method mustn't be overridden because it is used to
 		 *  delegate the declaration to the right visitor.
 		 *  @param decl clang decl
 		 *  @param ir IR NodePtr
@@ -296,7 +296,7 @@ namespace extensions {
 		 *  @return modified version of IR input
 		 */
 		virtual insieme::core::NodePtr PostVisit(const clang::Decl* decl, insieme::core::NodePtr ir, insieme::frontend::conversion::Converter& converter,
-		                                         bool symbolic = false);
+		                                         bool symbolic = false) final;
 
 		/**
 		 *  User provided post clang type decl visitor. Will be called after clang decl

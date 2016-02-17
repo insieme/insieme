@@ -331,11 +331,7 @@ namespace conversion {
 	core::ExpressionPtr Converter::ExprConverter::VisitGNUNullExpr(const clang::GNUNullExpr* nullExpr) {
 		core::ExpressionPtr retIr;
 		LOG_EXPR_CONVERSION(nullExpr, retIr);
-		//core::TypePtr type = converter.convertType(nullExpr->getType());
-
-		//frontend_assert(core::analysis::isArrayType(type->getNodeType())) << "C pointer type must of type array<'a,1>\n";
-		//return (retIr = builder.refReinterpret(mgr.getLangBasic().getRefNull(), type));
-		frontend_assert(false) << "GNU NUllExpr not implemented.";
+		retIr = builder.getZero(converter.convertType(nullExpr->getType()));
 		return retIr;
 	}
 
@@ -495,6 +491,11 @@ namespace conversion {
                     return core::lang::buildPtrToRef(subExpr);
                 }
             }
+
+		    // "__extension__" operator ignored in IR ---------------------------------------------------------------------------------------------- EXTENSION -
+			if(cop == clang::UO_Extension) {
+				return subExpr;
+			}
 
             auto opIt = unOpMap.find(cop);
 		    frontend_assert(opIt != unOpMap.end()) << "Unary Operator not implemented (" << clang::UnaryOperator::getOpcodeStr(cop).str() << ")";
