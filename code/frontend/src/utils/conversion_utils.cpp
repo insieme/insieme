@@ -36,6 +36,7 @@
 
 #include "insieme/frontend/utils/conversion_utils.h"
 
+#include "insieme/frontend/converter.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/ir.h"
@@ -73,6 +74,22 @@ namespace utils {
 			}
 		}
 		return initExpIn;
+	}
+
+
+	core::CallExprPtr buildCxxMethodCall(conversion::Converter& converter, const core::TypePtr& retType, const core::ExpressionPtr& callee,
+		                                 const core::ExpressionPtr& thisArgument, clang::CallExpr::arg_const_range argumentRange) {
+		auto lambdaParamTypes = callee.getType().as<core::FunctionTypePtr>().getParameterTypeList();
+
+		// the constructor is then simply a call with the mem location and all its arguments
+		core::ExpressionList arguments{thisArgument};
+		size_t i = 1;
+		for(auto arg : argumentRange) {
+			arguments.push_back(converter.convertCxxArgExpr(arg, lambdaParamTypes[i++]));
+		}
+
+		// return call
+		return converter.getIRBuilder().callExpr(retType, callee, arguments);
 	}
 
 } // end namespace utils

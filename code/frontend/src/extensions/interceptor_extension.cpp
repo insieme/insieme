@@ -36,7 +36,9 @@
 
 #include "insieme/frontend/extensions/interceptor_extension.h"
 #include "insieme/core/transform/manipulation_utils.h"
+#include "insieme/core/lang/pointer.h"
 #include "insieme/frontend/utils/name_manager.h"
+#include "insieme/frontend/utils/conversion_utils.h"
 #include "insieme/frontend/decl_converter.h"
 
 #include <boost/program_options.hpp>
@@ -70,6 +72,7 @@ namespace extensions {
 	}
 
 	insieme::core::ExpressionPtr InterceptorExtension::Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& converter) {
+		const core::IRBuilder& builder = converter.getIRBuilder();
 		std::cout << "INTERCEPTOR E\n";
 		auto dr = llvm::dyn_cast<clang::DeclRefExpr>(expr);
 		if(dr) {
@@ -93,10 +96,33 @@ namespace extensions {
 			std::cout << " -> construct\n";
 			if(converter.getHeaderTagger()->isIntercepted(decl)) {
 				std::cout << " -> inter\n";
-				auto funDecl = llvm::dyn_cast<clang::FunctionDecl>(decl);
-				if(funDecl) {
-					std::cout << " -> fun\n";
-					return converter.getDeclConverter()->convertFunctionDecl(decl, utils::buildNameForFunction(decl), true);
+				auto methDecl = llvm::dyn_cast<clang::CXXMethodDecl>(decl);
+				if(methDecl) {
+					std::cout << " -> con\n";
+					auto convMethodLit = converter.getDeclConverter()->convertMethodDecl(methDecl, builder.parents(), builder.fields(), true).lit;
+					auto retType = convMethodLit.getType().as<core::FunctionTypePtr>()->getReturnType();
+					auto thisArg = core::lang::buildRefTemp(retType);
+					return utils::buildCxxMethodCall(converter, retType, convMethodLit, thisArg, construct->arguments());
+				}
+			}
+		}
+		auto newExp = llvm::dyn_cast<clang::CXXNewExpr>(expr);
+		if(newExp) {
+			std::cout << " -> new\n";
+			construct = newExp->getConstructExpr();
+			if(construct) {
+				std::cout << " -> construct\n";
+				auto decl = construct->getConstructor();
+				if(converter.getHeaderTagger()->isIntercepted(decl)) {
+					std::cout << " -> inter\n";
+					auto methDecl = llvm::dyn_cast<clang::CXXMethodDecl>(decl);
+					if(methDecl) {
+						std::cout << " -> con\n";
+						auto convMethodLit = converter.getDeclConverter()->convertMethodDecl(methDecl, builder.parents(), builder.fields(), true).lit;
+						auto retType = convMethodLit.getType().as<core::FunctionTypePtr>()->getReturnType();
+						auto thisArg = builder.undefinedNew(retType);
+						return core::lang::buildPtrFromRef(utils::buildCxxMethodCall(converter, retType, convMethodLit, thisArg, construct->arguments()));
+					}
 				}
 			}
 		}
@@ -106,10 +132,13 @@ namespace extensions {
 			std::cout << " -> memberCall\n";
 			if(converter.getHeaderTagger()->isIntercepted(decl)) {
 				std::cout << " -> inter\n";
-				auto funDecl = llvm::dyn_cast<clang::FunctionDecl>(decl);
-				if(funDecl) {
-					std::cout << " -> fun\n";
-					return converter.getDeclConverter()->convertFunctionDecl(funDecl, utils::buildNameForFunction(funDecl), true);
+				auto methDecl = llvm::dyn_cast<clang::CXXMethodDecl>(decl);
+				if(methDecl) {
+					std::cout << " -> meth\n";
+					auto convMethodLit = converter.getDeclConverter()->convertMethodDecl(methDecl, builder.parents(), builder.fields(), true).lit;
+					auto retType = convMethodLit.getType().as<core::FunctionTypePtr>()->getReturnType();
+					auto thisArg = converter.convertExpr(memberCall->getImplicitObjectArgument());
+					return utils::buildCxxMethodCall(converter, retType, convMethodLit, thisArg, memberCall->arguments());
 				}
 			}
 		}

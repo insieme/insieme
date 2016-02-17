@@ -34,29 +34,25 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include "../independent_test_utils.h"
 
-#include "insieme/core/forward_decls.h"
-#include "insieme/frontend/clang.h"
+#include "insieme/frontend/extensions/interceptor_extension.h"
 
 namespace insieme {
 namespace frontend {
 
-namespace conversion {
-	class Converter;
-}
+	TEST(InterceptorTest, CustomPath) {
+		runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/interceptor/interceptor_test.cpp", [](ConversionJob& job) {
+			job.addInterceptedHeaderDir(FRONTEND_TEST_DIR + "/inputs/interceptor");
+			job.registerFrontendExtension<extensions::InterceptorExtension, extensions::TestPragmaExtension>();
+		});
+	}
 
-namespace utils {
+	//TEST(InterceptorTest, NoInterception) {
+	//	runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/interceptor/not_interceptor_test.cpp", [](ConversionJob& job) {
+	//		job.registerFrontendExtension<extensions::InterceptorExtension, extensions::TestPragmaExtension>();
+	//	});
+	//}
 
-	/// Replace RefTemps in outer constructor calls with variable itself
-	///
-	core::ExpressionPtr fixTempMemoryInInitExpression(const core::ExpressionPtr& variable, const core::ExpressionPtr& initExp);
-
-	/// Build a Cxx method call from its components
-	///
-	core::CallExprPtr buildCxxMethodCall(conversion::Converter& converter, const core::TypePtr& retType, const core::ExpressionPtr& callee,
-		                                 const core::ExpressionPtr& thisArgument, clang::CallExpr::arg_const_range argumentRange);
-
-} // end namespace utils
-} // end namespace frontend
-} // end namespace insieme
+} // fe namespace
+} // insieme namespace

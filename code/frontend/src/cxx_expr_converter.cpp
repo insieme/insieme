@@ -42,6 +42,7 @@
 #include "insieme/frontend/state/record_manager.h"
 #include "insieme/frontend/state/variable_manager.h"
 #include "insieme/frontend/utils/clang_cast.h"
+#include "insieme/frontend/utils/conversion_utils.h"
 #include "insieme/frontend/utils/debug.h"
 #include "insieme/frontend/utils/expr_to_bool.h"
 #include "insieme/frontend/utils/frontend_inspire_module.h"
@@ -221,23 +222,10 @@ namespace conversion {
 			if(core::lang::isPointer(thisObj)) {
 				thisObj = core::lang::buildPtrToRef(thisObj);
 			}
-			core::ExpressionList arguments { thisObj };
-
-			// in Inspire 2.0, copy and move constructor calls are implicit on function calls, and ref kind needs to be adapted
-			auto funType = methodLambda->getType().as<core::FunctionTypePtr>();
-			size_t i = 1;
-			std::transform(callExpr->arg_begin(), callExpr->arg_end(), std::back_inserter(arguments), [&](const clang::Expr* clangArgExpr) {
-				auto targetType = funType->getParameterType(i++);
-				auto ret = convertCxxArgExpr(clangArgExpr, targetType);
-				VLOG(2) << "====================\n\nconvert method argument:\n"
-					    << "\n - from: " << dumpClang(clangArgExpr, converter.getCompiler().getSourceManager()) << "\n - to: " << dumpPretty(ret)
-					    << "\n - of type: " << dumpPretty(ret->getType()) << "\n - target T: " << dumpPretty(targetType);
-				return ret;
-			});
 
 			// build call and we are done
 			auto retType = methodLambda->getType().as<core::FunctionTypePtr>()->getReturnType();
-			ret = builder.callExpr(retType, methodLambda, arguments);
+			ret = utils::buildCxxMethodCall(converter, retType, methodLambda, thisObj, callExpr->arguments());
 		}
 
 		return ret;
@@ -273,19 +261,10 @@ namespace conversion {
 
 			// get constructor lambda
 			auto constructorLambda = converter.getFunMan()->lookup(constructExpr->getConstructor());
-			auto lambdaParamTypes = constructorLambda.getType().as<core::FunctionTypePtr>().getParameterTypeList();
-			VLOG(2) << "constructor lambda literal " << *constructorLambda << " of type " << dumpColor(constructorLambda->getType());
-
-			// the constructor is then simply a call with the mem location and all its arguments
-			core::ExpressionList arguments { irMemLoc };
-			size_t i = 1;
-			for(auto arg : constructExpr->arguments()) {
-				arguments.push_back(converter.convertCxxArgExpr(arg, lambdaParamTypes[i++]));
-			}
 
 			// return call
 			auto retType = constructorLambda->getType().as<core::FunctionTypePtr>()->getReturnType();
-			return builder.callExpr(retType, constructorLambda, arguments);
+			return utils::buildCxxMethodCall(converter, retType, constructorLambda, irMemLoc, constructExpr->arguments());
 		}
 	}
 
