@@ -253,8 +253,16 @@ namespace utils {
 		string name = utils::createNameForAnon("__anon_tagtype_", tagDecl, converter.getSourceManager());
 		if(canon->getDeclName() && !canon->getDeclName().isEmpty()) name = canon->getQualifiedNameAsString();
 		else if(canon->hasNameForLinkage()) name = canon->getTypedefNameForAnonDecl()->getQualifiedNameAsString();
+
+		// encode template parameters in name
+		auto tempSpec = llvm::dyn_cast<clang::ClassTemplateSpecializationDecl>(tagDecl);
+		if(tempSpec) {
+			name = name + utils::buildNameSuffixForTemplate(tempSpec->getTemplateInstantiationArgs(), tempSpec->getASTContext());
+		}
+
 		// if externally visible, build mangled name based on canonical decl without location
 		if(tagDecl->isExternallyVisible()) return std::make_pair(insieme::utils::mangle(name), true);
+
 		// not externally visible: build mangled name with location
 		// canonicalize filename in case we refer to it from different relative locations
 		auto& sm = converter.getSourceManager();
@@ -263,6 +271,7 @@ namespace utils {
 		path = boost::filesystem::canonical(path);
 		auto line = sm.getExpansionLineNumber(canon->getLocStart());
 		auto column = sm.getExpansionColumnNumber(canon->getLocStart());
+
 		return std::make_pair(insieme::utils::mangle(name, path.string(), line, column), canon->hasNameForLinkage());
 	}
 

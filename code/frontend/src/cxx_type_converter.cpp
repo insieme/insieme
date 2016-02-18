@@ -99,20 +99,6 @@ namespace conversion {
 		const clang::CXXRecordDecl* classDecl = llvm::dyn_cast_or_null<clang::CXXRecordDecl>(tagType->getDecl());
 		if(!classDecl || !classDecl->getDefinition()) { return genTy; }
 
-		// for C++ template specializations, we need to encode the template parameters into the name
-		// and replace it in the TU, the record manager, and the existing struct type
-		auto tempSpec = llvm::dyn_cast<clang::ClassTemplateSpecializationDecl>(classDecl);
-		if(tempSpec) {
-			auto suffix = utils::buildNameSuffixForTemplate(tempSpec->getTemplateInstantiationArgs(), tempSpec->getASTContext());
-			auto newGenTy = builder.genericType(genTy.getName().getValue() + suffix);
-			converter.getIRTranslationUnit().removeType(genTy);
-			converter.getRecordMan()->replace(classDecl, newGenTy);
-			retTy = core::transform::replaceAllGen(converter.getNodeManager(), retTy, genTy, newGenTy, core::transform::globalReplacement);
-			retTy = core::transform::replaceAllGen(converter.getNodeManager(), retTy, builder.tagTypeReference(genTy->getName()),
-				                                   builder.tagTypeReference(newGenTy.getName()), core::transform::globalReplacement);
-			genTy = newGenTy;
-		}
-
 		// get struct type for easier manipulation
 		auto tagTy = retTy.as<core::TagTypePtr>();
 		auto recordTy = tagTy->getRecord();
