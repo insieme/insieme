@@ -60,29 +60,18 @@ namespace extensions {
 		return boost::optional<std::string>();
 	}
 
-	core::ExpressionPtr InterceptorExtension::FuncDeclVisit(const clang::FunctionDecl* funcDecl, insieme::frontend::conversion::Converter& converter,
-	                                                        bool symbolic) {
-		std::cout << "INTERCEPTOR F: " << funcDecl->getNameAsString() << " : " << converter.getHeaderTagger()->isIntercepted(funcDecl) << "\n";
-		return nullptr;
-	}
-
-	core::TypePtr InterceptorExtension::TypeDeclVisit(const clang::TypeDecl* decl, insieme::frontend::conversion::Converter& converter) {
-		std::cout << "INTERCEPTOR T: " << decl->getNameAsString() << " : " << converter.getHeaderTagger()->isIntercepted(decl) << "\n";
-		return nullptr;
-	}
-
 	insieme::core::ExpressionPtr InterceptorExtension::Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& converter) {
 		const core::IRBuilder& builder = converter.getIRBuilder();
-		std::cout << "INTERCEPTOR E\n";
+		VLOG(3) << "INTERCEPTOR E\n";
 		auto dr = llvm::dyn_cast<clang::DeclRefExpr>(expr);
 		if(dr) {
 			auto decl = dr->getDecl();
-			std::cout << " -> dr\n";
+			VLOG(3) << " -> dr\n";
 			if(converter.getHeaderTagger()->isIntercepted(decl)) {
-				std::cout << " -> inter\n";
+				VLOG(3) << " -> inter\n";
 				auto funDecl = llvm::dyn_cast<clang::FunctionDecl>(decl);
 				if(funDecl) {
-					std::cout << " -> fun\n";
+					VLOG(3) << " -> fun\n";
 					auto lit = converter.getIRBuilder().literal(utils::buildNameForFunction(funDecl), converter.convertType(expr->getType()));
 					converter.applyHeaderTagging(lit, decl);
 					VLOG(2) << "Interceptor: intercepted clang fun\n" << dumpClang(decl) << " -> converted to literal: " << *lit << "\n";
@@ -93,12 +82,12 @@ namespace extensions {
 		auto construct = llvm::dyn_cast<clang::CXXConstructExpr>(expr);
 		if(construct) {
 			auto decl = construct->getConstructor();
-			std::cout << " -> construct\n";
+			VLOG(3) << " -> construct\n";
 			if(converter.getHeaderTagger()->isIntercepted(decl)) {
-				std::cout << " -> inter\n";
+				VLOG(3) << " -> inter\n";
 				auto methDecl = llvm::dyn_cast<clang::CXXMethodDecl>(decl);
 				if(methDecl) {
-					std::cout << " -> con\n";
+					VLOG(3) << " -> con\n";
 					auto convMethodLit = converter.getDeclConverter()->convertMethodDecl(methDecl, builder.parents(), builder.fields(), true).lit;
 					auto retType = convMethodLit.getType().as<core::FunctionTypePtr>()->getReturnType();
 					auto thisArg = core::lang::buildRefTemp(retType);
@@ -108,16 +97,16 @@ namespace extensions {
 		}
 		auto newExp = llvm::dyn_cast<clang::CXXNewExpr>(expr);
 		if(newExp) {
-			std::cout << " -> new\n";
+			VLOG(3) << " -> new\n";
 			construct = newExp->getConstructExpr();
 			if(construct) {
-				std::cout << " -> construct\n";
+				VLOG(3) << " -> construct\n";
 				auto decl = construct->getConstructor();
 				if(converter.getHeaderTagger()->isIntercepted(decl)) {
-					std::cout << " -> inter\n";
+					VLOG(3) << " -> inter\n";
 					auto methDecl = llvm::dyn_cast<clang::CXXMethodDecl>(decl);
 					if(methDecl) {
-						std::cout << " -> con\n";
+						VLOG(3) << " -> con\n";
 						auto convMethodLit = converter.getDeclConverter()->convertMethodDecl(methDecl, builder.parents(), builder.fields(), true).lit;
 						auto retType = convMethodLit.getType().as<core::FunctionTypePtr>()->getReturnType();
 						auto thisArg = builder.undefinedNew(retType);
@@ -129,12 +118,12 @@ namespace extensions {
 		auto memberCall = llvm::dyn_cast<clang::CXXMemberCallExpr>(expr);
 		if(memberCall) {
 			auto decl = memberCall->getCalleeDecl();
-			std::cout << " -> memberCall\n";
+			VLOG(3) << " -> memberCall\n";
 			if(converter.getHeaderTagger()->isIntercepted(decl)) {
-				std::cout << " -> inter\n";
+				VLOG(3) << " -> inter\n";
 				auto methDecl = llvm::dyn_cast<clang::CXXMethodDecl>(decl);
 				if(methDecl) {
-					std::cout << " -> meth\n";
+					VLOG(3) << " -> meth\n";
 					auto convMethodLit = converter.getDeclConverter()->convertMethodDecl(methDecl, builder.parents(), builder.fields(), true).lit;
 					auto retType = convMethodLit.getType().as<core::FunctionTypePtr>()->getReturnType();
 					auto thisArg = converter.convertExpr(memberCall->getImplicitObjectArgument());
@@ -148,14 +137,15 @@ namespace extensions {
 
 
 	core::TypePtr InterceptorExtension::Visit(const clang::QualType& type, insieme::frontend::conversion::Converter& converter) {
-		std::cout << "INTERCEPTOR QT\n";
+		VLOG(3) << "INTERCEPTOR QT\n";
 		auto tt = llvm::dyn_cast<clang::TagType>(type->getCanonicalTypeUnqualified());
 		if(tt) {
 			auto decl = tt->getDecl();
-			std::cout << " -> " << decl->getNameAsString() << " : " << converter.getHeaderTagger()->isIntercepted(decl) << "\n";
+			VLOG(3) << " -> " << decl->getNameAsString() << " : " << converter.getHeaderTagger()->isIntercepted(decl) << "\n";
 			if(converter.getHeaderTagger()->isIntercepted(decl)) {
 				auto genType = converter.getIRBuilder().genericType(utils::getNameForTagDecl(converter, decl).first);
 				converter.applyHeaderTagging(genType, decl);
+				dumpDetailColored(genType);
 				VLOG(2) << "Interceptor: intercepted clang type\n" << dumpClang(decl) << " -> converted to generic type: " << *genType << "\n";
 				return genType;
 			}

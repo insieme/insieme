@@ -55,9 +55,6 @@ namespace extensions {
 
 		// Extension Hooks
 
-		virtual core::ExpressionPtr FuncDeclVisit(const clang::FunctionDecl* funcDecl, insieme::frontend::conversion::Converter& converter, bool symbolic) override;
-		virtual core::TypePtr TypeDeclVisit(const clang::TypeDecl* decl, insieme::frontend::conversion::Converter& converter) override;
-
 		virtual insieme::core::ExpressionPtr Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& converter) override;
 		virtual core::TypePtr Visit(const clang::QualType& type, insieme::frontend::conversion::Converter& converter) override;
 

@@ -171,15 +171,15 @@ namespace conversion {
 
 	core::tu::IRTranslationUnit Converter::convert() {
 		assert_true(getCompiler().getASTContext().getTranslationUnitDecl());
-	
+
 		// collect all type definitions
 		auto declContext = clang::TranslationUnitDecl::castToDeclContext(getCompiler().getASTContext().getTranslationUnitDecl());
 		declConvPtr->VisitDeclContext(declContext);
-		
+
 		//std::cout << " ==================================== " << std::endl;
 		//std::cout << getIRTranslationUnit() << std::endl;
 		//std::cout << " ==================================== " << std::endl;
-	
+
 		// that's all
 		return irTranslationUnit;
 	}
@@ -218,7 +218,7 @@ namespace conversion {
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	core::ExpressionPtr Converter::attachFuncAnnotations(const core::ExpressionPtr& node, const clang::FunctionDecl* funcDecl) {
-		
+
 		// ----------------------------------- Add annotations to this function -------------------------------------------
 		pragma::handlePragmas(core::NodeList({node.as<core::NodePtr>()}), funcDecl, *this);
 
@@ -251,11 +251,11 @@ namespace conversion {
 
 		return node;
 	}
-	
+
 	void Converter::applyHeaderTagging(const core::NodePtr& node, const clang::Decl* decl) const {
 		VLOG(2) << "Apply header tagging on " << dumpDetailColored(node) << " with decl\n" << dumpClang(decl);
-		if(headerTaggerPtr->isDefinedInSystemHeader(decl)) {
-			VLOG(2) << "-> Is defined in system header!";
+		if(headerTaggerPtr->isIntercepted(decl)) {
+			VLOG(2) << "-> Is intercepted!";
  			headerTaggerPtr->addHeaderForDecl(node, decl);
 			if(annotations::c::hasIncludeAttached(node)) {
 				VLOG(2) << "-> annotated with: " << annotations::c::getAttachedInclude(node);
@@ -292,11 +292,11 @@ namespace conversion {
 	core::TypePtr Converter::convertType(const clang::QualType& type) const {
 		return typeConvPtr->convert(type);
 	}
-	
+
 	core::TypePtr Converter::convertVarType(const clang::QualType& type) const {
 		return typeConvPtr->convertVarType(type);
 	}
-		
+
 } // End conversion namespace
 } // End frontend namespace
 } // End insieme namespace
