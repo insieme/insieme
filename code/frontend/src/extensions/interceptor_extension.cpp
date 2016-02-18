@@ -55,23 +55,37 @@ namespace extensions {
 		if(setup.getExtensions().begin()->get() != this) {
 			return boost::optional<std::string>("InterceptorExtension should be the first Extension");
 		}
-
 		// prerequisites are met - no prerequisite is missing
 		return boost::optional<std::string>();
 	}
 
-	insieme::core::ExpressionPtr InterceptorExtension::Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& converter) {
-		const core::IRBuilder& builder = converter.getIRBuilder();
-		VLOG(3) << "INTERCEPTOR E\n";
-		auto dr = llvm::dyn_cast<clang::DeclRefExpr>(expr);
-		if(dr) {
-			auto decl = dr->getDecl();
-			VLOG(3) << " -> dr\n";
+	namespace {
+		core::CallExprPtr interceptMethodCall(conversion::Converter& converter, const clang::Decl* decl,
+			                                  std::function<core::ExpressionPtr(const core::TypePtr&)> thisArgFactory, clang::CallExpr::arg_const_range args) {
+			const core::IRBuilder& builder(converter.getIRBuilder());
 			if(converter.getHeaderTagger()->isIntercepted(decl)) {
-				VLOG(3) << " -> inter\n";
+				auto methDecl = llvm::dyn_cast<clang::CXXMethodDecl>(decl);
+				if(methDecl) {
+					auto convMethodLit = converter.getDeclConverter()->convertMethodDecl(methDecl, builder.parents(), builder.fields(), true).lit;
+					auto retType = convMethodLit.getType().as<core::FunctionTypePtr>()->getReturnType();
+					auto thisArg = thisArgFactory(retType);
+					VLOG(2) << "Interceptor: intercepted clang method/constructor call\n" << dumpClang(decl) << "\n";
+					return utils::buildCxxMethodCall(converter, retType, convMethodLit, thisArg, args);
+				}
+			}
+			return nullptr;
+		}
+	}
+
+	core::ExpressionPtr InterceptorExtension::Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& converter) {
+		const core::IRBuilder& builder = converter.getIRBuilder();
+		VLOG(3) << "Intercepting Expression\n";
+		// decl refs to intercepted functions
+		if(auto dr = llvm::dyn_cast<clang::DeclRefExpr>(expr)) {
+			auto decl = dr->getDecl();
+			if(converter.getHeaderTagger()->isIntercepted(decl)) {
 				auto funDecl = llvm::dyn_cast<clang::FunctionDecl>(decl);
 				if(funDecl) {
-					VLOG(3) << " -> fun\n";
 					auto lit = converter.getIRBuilder().literal(utils::buildNameForFunction(funDecl), converter.convertType(expr->getType()));
 					converter.applyHeaderTagging(lit, decl);
 					VLOG(2) << "Interceptor: intercepted clang fun\n" << dumpClang(decl) << " -> converted to literal: " << *lit << "\n";
@@ -79,57 +93,21 @@ namespace extensions {
 				}
 			}
 		}
-		auto construct = llvm::dyn_cast<clang::CXXConstructExpr>(expr);
-		if(construct) {
-			auto decl = construct->getConstructor();
-			VLOG(3) << " -> construct\n";
-			if(converter.getHeaderTagger()->isIntercepted(decl)) {
-				VLOG(3) << " -> inter\n";
-				auto methDecl = llvm::dyn_cast<clang::CXXMethodDecl>(decl);
-				if(methDecl) {
-					VLOG(3) << " -> con\n";
-					auto convMethodLit = converter.getDeclConverter()->convertMethodDecl(methDecl, builder.parents(), builder.fields(), true).lit;
-					auto retType = convMethodLit.getType().as<core::FunctionTypePtr>()->getReturnType();
-					auto thisArg = core::lang::buildRefTemp(retType);
-					return utils::buildCxxMethodCall(converter, retType, convMethodLit, thisArg, construct->arguments());
-				}
+		// member calls and their variants
+		if(auto construct = llvm::dyn_cast<clang::CXXConstructExpr>(expr)) {
+			auto thisFactory = [&](const core::TypePtr& retType){ return core::lang::buildRefTemp(retType); };
+			return interceptMethodCall(converter, construct->getConstructor(), thisFactory, construct->arguments());
+		}
+		if(auto newExp = llvm::dyn_cast<clang::CXXNewExpr>(expr)) {
+			if(auto construct = newExp->getConstructExpr()) {
+				auto thisFactory = [&](const core::TypePtr& retType){ return builder.undefinedNew(retType); };
+				auto ret = interceptMethodCall(converter, construct->getConstructor(), thisFactory, construct->arguments());
+				if(ret) return core::lang::buildPtrFromRef(ret);
 			}
 		}
-		auto newExp = llvm::dyn_cast<clang::CXXNewExpr>(expr);
-		if(newExp) {
-			VLOG(3) << " -> new\n";
-			construct = newExp->getConstructExpr();
-			if(construct) {
-				VLOG(3) << " -> construct\n";
-				auto decl = construct->getConstructor();
-				if(converter.getHeaderTagger()->isIntercepted(decl)) {
-					VLOG(3) << " -> inter\n";
-					auto methDecl = llvm::dyn_cast<clang::CXXMethodDecl>(decl);
-					if(methDecl) {
-						VLOG(3) << " -> con\n";
-						auto convMethodLit = converter.getDeclConverter()->convertMethodDecl(methDecl, builder.parents(), builder.fields(), true).lit;
-						auto retType = convMethodLit.getType().as<core::FunctionTypePtr>()->getReturnType();
-						auto thisArg = builder.undefinedNew(retType);
-						return core::lang::buildPtrFromRef(utils::buildCxxMethodCall(converter, retType, convMethodLit, thisArg, construct->arguments()));
-					}
-				}
-			}
-		}
-		auto memberCall = llvm::dyn_cast<clang::CXXMemberCallExpr>(expr);
-		if(memberCall) {
-			auto decl = memberCall->getCalleeDecl();
-			VLOG(3) << " -> memberCall\n";
-			if(converter.getHeaderTagger()->isIntercepted(decl)) {
-				VLOG(3) << " -> inter\n";
-				auto methDecl = llvm::dyn_cast<clang::CXXMethodDecl>(decl);
-				if(methDecl) {
-					VLOG(3) << " -> meth\n";
-					auto convMethodLit = converter.getDeclConverter()->convertMethodDecl(methDecl, builder.parents(), builder.fields(), true).lit;
-					auto retType = convMethodLit.getType().as<core::FunctionTypePtr>()->getReturnType();
-					auto thisArg = converter.convertExpr(memberCall->getImplicitObjectArgument());
-					return utils::buildCxxMethodCall(converter, retType, convMethodLit, thisArg, memberCall->arguments());
-				}
-			}
+		if(auto memberCall = llvm::dyn_cast<clang::CXXMemberCallExpr>(expr)) {
+			auto thisFactory = [&](const core::TypePtr& retType){ return converter.convertExpr(memberCall->getImplicitObjectArgument()); };
+			return interceptMethodCall(converter, memberCall->getCalleeDecl(), thisFactory, memberCall->arguments());
 		}
 
 		return nullptr;
@@ -137,15 +115,12 @@ namespace extensions {
 
 
 	core::TypePtr InterceptorExtension::Visit(const clang::QualType& type, insieme::frontend::conversion::Converter& converter) {
-		VLOG(3) << "INTERCEPTOR QT\n";
-		auto tt = llvm::dyn_cast<clang::TagType>(type->getCanonicalTypeUnqualified());
-		if(tt) {
+		VLOG(3) << "Intercepting Type\n";
+		if(auto tt = llvm::dyn_cast<clang::TagType>(type->getCanonicalTypeUnqualified())) {
 			auto decl = tt->getDecl();
-			VLOG(3) << " -> " << decl->getNameAsString() << " : " << converter.getHeaderTagger()->isIntercepted(decl) << "\n";
 			if(converter.getHeaderTagger()->isIntercepted(decl)) {
 				auto genType = converter.getIRBuilder().genericType(utils::getNameForTagDecl(converter, decl).first);
 				converter.applyHeaderTagging(genType, decl);
-				dumpDetailColored(genType);
 				VLOG(2) << "Interceptor: intercepted clang type\n" << dumpClang(decl) << " -> converted to generic type: " << *genType << "\n";
 				return genType;
 			}

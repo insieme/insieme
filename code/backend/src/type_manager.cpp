@@ -42,7 +42,6 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/type_traits/remove_const.hpp>
 
-
 #include "insieme/backend/converter.h"
 #include "insieme/backend/name_manager.h"
 #include "insieme/backend/function_manager.h"
@@ -50,20 +49,20 @@
 #include "insieme/backend/c_ast/c_ast_utils.h"
 #include "insieme/backend/c_ast/c_ast_printer.h"
 
-#include "insieme/core/ir_types.h"
-#include "insieme/core/ir_builder.h"
-#include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"
+#include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/type_utils.h"
 #include "insieme/core/annotations/naming.h"
+#include "insieme/core/ir_builder.h"
+#include "insieme/core/ir_types.h"
+#include "insieme/core/lang/array.h"
+#include "insieme/core/lang/channel.h"
+#include "insieme/core/lang/const_extension.h"
+#include "insieme/core/lang/enum.h"
+#include "insieme/core/lang/reference.h"
+
 #include "insieme/annotations/c/include.h"
 #include "insieme/annotations/c/decl_only.h"
-
-#include "insieme/core/lang/array.h"
-#include "insieme/core/lang/reference.h"
-#include "insieme/core/lang/channel.h"
-#include "insieme/core/lang/enum.h"
-#include "insieme/core/lang/const_extension.h"
 
 #include "insieme/utils/logging.h"
 #include "insieme/utils/name_mangling.h"
@@ -182,7 +181,7 @@ namespace backend {
 			const FunctionTypeInfo* resolveThickFunctionType(const core::FunctionTypePtr& ptr);
 
 			const RefTypeInfo* resolveRefType(const core::GenericTypePtr& ptr);
-			
+
 			const TagTypeInfo* resolveRecType(const core::TagTypePtr& ptr);
 			void resolveRecTypeDefinition(const core::TagTypeDefinitionPtr& ptr);
 
@@ -260,7 +259,7 @@ namespace backend {
 	namespace type_info_utils {
 
 		const TypeInfo* headerAnnotatedTypeHandler(const Converter& converter, const core::TypePtr& type,
-			std::function<void(std::string&, const core::TypePtr&)> nameModifier) {
+		                                           std::function<void(std::string&, const core::TypePtr&)> nameModifier) {
 			if(annotations::c::hasIncludeAttached(type) && core::annotations::hasAttachedName(type)) {
 				const string& header = annotations::c::getAttachedInclude(type);
 				string name = core::annotations::getAttachedName(type);
@@ -268,7 +267,7 @@ namespace backend {
 				nameModifier(name, type);
 				return type_info_utils::createInfo(converter.getFragmentManager(), name, header);
 			}
-			return NULL;
+			return nullptr;
 		}
 
 		c_ast::ExpressionPtr NoOp(const c_ast::SharedCNodeManager&, const c_ast::ExpressionPtr& node) {
@@ -944,7 +943,6 @@ namespace backend {
 			assert_true(core::lang::isPlainReference(ptr) || core::lang::isCppReference(ptr) || core::lang::isCppRValueReference(ptr))
 				<< "Unsupported reference type: " << *ptr;
 
-			
 			auto manager = converter.getCNodeManager();
 
 			// parse reference type
@@ -1008,7 +1006,7 @@ namespace backend {
 					assert_fail() << "Should not be reachable!"; break;
 				}
 			}
-			
+
 			// support nested references
 			if (core::lang::isReference(elementType)) {
 				// for nested references, the lValue type is composed differently

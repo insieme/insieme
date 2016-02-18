@@ -37,7 +37,6 @@
 #include <string>
 #include <fstream>
 #include <functional>
-#include <regex>
 
 #include <gtest/gtest.h>
 #include <boost/filesystem.hpp>

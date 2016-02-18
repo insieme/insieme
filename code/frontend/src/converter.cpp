@@ -67,6 +67,7 @@
 #include "insieme/utils/assert.h"
 #include "insieme/utils/functional_utils.h"
 #include "insieme/utils/progress_bar.h"
+#include "insieme/utils/name_mangling.h"
 
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/annotations/naming.h"
@@ -258,6 +259,14 @@ namespace conversion {
 			VLOG(2) << "-> Is intercepted!";
  			headerTaggerPtr->addHeaderForDecl(node, decl);
 			if(annotations::c::hasIncludeAttached(node)) {
+				if(auto tagDecl = llvm::dyn_cast<clang::TagDecl>(decl)) {
+					// attach name for backend
+					string name = insieme::utils::demangle(utils::getNameForTagDecl(*this, tagDecl).first);
+					if(tagDecl->isStruct()) name = "struct " + name;
+					else if(tagDecl->isUnion()) name = "union " + name;
+					else if(tagDecl->isEnum()) name = "enum " + name;
+					core::annotations::attachName(node, name);
+				}
 				VLOG(2) << "-> annotated with: " << annotations::c::getAttachedInclude(node);
 			} else {
 				VLOG(2) << "-> NOT annotated!";
