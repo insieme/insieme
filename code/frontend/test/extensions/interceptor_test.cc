@@ -41,8 +41,27 @@
 namespace insieme {
 namespace frontend {
 
+	TEST(InterceptorTest, TrueInterception) {
+		core::NodeManager manager;
+		ConversionJob job(FRONTEND_TEST_DIR + "/inputs/interceptor/interceptor_test.cpp");
+		job.addInterceptedHeaderDir(FRONTEND_TEST_DIR + "/inputs/interceptor");
+		job.registerFrontendExtension<extensions::InterceptorExtension>();
+		job.registerFrontendExtension<extensions::TestPragmaExtension>(); // necessary to parse pragmas
+		auto irTu = job.toIRTranslationUnit(manager);
+		auto funs = irTu.getFunctions();
+		EXPECT_FALSE(any(funs, [](decltype(funs)::value_type val) { return val.first->getStringValue() == "IMP_simpleFunc"; })) << "Function not intercepted!";
+		EXPECT_TRUE(irTu.getTypes().empty());
+	}
+
 	TEST(InterceptorTest, CustomPath) {
 		runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/interceptor/interceptor_test.cpp", [](ConversionJob& job) {
+			job.addInterceptedHeaderDir(FRONTEND_TEST_DIR + "/inputs/interceptor");
+			job.registerFrontendExtension<extensions::InterceptorExtension, extensions::TestPragmaExtension>();
+		});
+	}
+
+	TEST(InterceptorTest, Templates) {
+		runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/interceptor/template_interception.cpp", [](ConversionJob& job) {
 			job.addInterceptedHeaderDir(FRONTEND_TEST_DIR + "/inputs/interceptor");
 			job.registerFrontendExtension<extensions::InterceptorExtension, extensions::TestPragmaExtension>();
 		});

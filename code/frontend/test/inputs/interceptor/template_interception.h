@@ -34,17 +34,14 @@
  * regarding third party software licenses.
  */
 
-// intercepted
-namespace ns {
-	static int simpleFunc(int x) {
-		return x;
-	}
+#pragma once
 
-	struct S {
-		int a, b, c;
-		S() {}
-		int memberFunc(int x) {
-			return x;
-		}
-	};
+template<class C>
+C templateFun(C c) {
+	return c+c;
 }
+
+template<class D>
+class TemplateClass {
+	D field;
+};

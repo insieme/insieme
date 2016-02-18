@@ -93,44 +93,38 @@ namespace frontend {
 	}
 
 	TEST(HeaderTagging, Intercepted) {
-		NodeManager man;
+		core::NodeManager manager;
+		ConversionJob job(FRONTEND_TEST_DIR + "/inputs/interceptor/interceptor_test.cpp");
+		job.addInterceptedHeaderDir(FRONTEND_TEST_DIR + "/inputs/interceptor");
+		job.registerFrontendExtension<extensions::InterceptorExtension>();
+		job.registerFrontendExtension<extensions::TestPragmaExtension>(); // necessary to parse pragmas
+		auto code = job.execute(manager);
+		EXPECT_TRUE(code);
 
-		fs::path tmpFile;
+		// check that the intercepted "S" type exists and has the correct attachment
 		{
-			// parse temporary file
-			core::NodeManager manager;
-			ConversionJob job(FRONTEND_TEST_DIR + "/inputs/interceptor/interceptor_test.cpp");
-			job.addInterceptedHeaderDir(FRONTEND_TEST_DIR + "/inputs/interceptor");
-			job.registerFrontendExtension<extensions::InterceptorExtension>();
-			job.registerFrontendExtension<extensions::TestPragmaExtension>(); // necessary to parse pragmas
-			auto code = job.execute(manager);
-			EXPECT_TRUE(code);
+			bool checked = false;
+			visitDepthFirstOnce(code, [&checked](const core::GenericTypePtr& genType) {
+				if(genType->getName()->getValue() == "IMP_ns_colon__colon_S") {
+					ASSERT_TRUE(insieme::annotations::c::hasIncludeAttached(genType));
+					EXPECT_EQ(insieme::annotations::c::getAttachedInclude(genType), "interceptor_header.h");
+					checked = true;
+				}
+			}, true);
+			EXPECT_TRUE(checked);
+		}
 
-			// check that the intercepted "S" type exists and has the correct attachment
-			{
-				bool checked = false;
-				visitDepthFirstOnce(code, [&checked](const core::GenericTypePtr& genType) {
-					if(genType->getName()->getValue() == "IMP_ns_colon__colon_S") {
-						ASSERT_TRUE(insieme::annotations::c::hasIncludeAttached(genType));
-						EXPECT_EQ(insieme::annotations::c::getAttachedInclude(genType), "interceptor_header.h");
-						checked = true;
-					}
-				}, true);
-				EXPECT_TRUE(checked);
-			}
-
-			// check that the intercepted "IMP_ns_colon__colon_simpleFunc" literal exists and has the correct attachment
-			{
-				bool checked = false;
-				visitDepthFirstOnce(code, [&checked](const core::LiteralPtr& lit) {
-					if(lit->getStringValue() == "IMP_ns_colon__colon_simpleFunc") {
-						ASSERT_TRUE(insieme::annotations::c::hasIncludeAttached(lit));
-						EXPECT_EQ(insieme::annotations::c::getAttachedInclude(lit), "interceptor_header.h");
-						checked = true;
-					}
-				}, true);
-				EXPECT_TRUE(checked);
-			}
+		// check that the intercepted "IMP_ns_colon__colon_simpleFunc" literal exists and has the correct attachment
+		{
+			bool checked = false;
+			visitDepthFirstOnce(code, [&checked](const core::LiteralPtr& lit) {
+				if(lit->getStringValue() == "IMP_ns_colon__colon_simpleFunc") {
+					ASSERT_TRUE(insieme::annotations::c::hasIncludeAttached(lit));
+					EXPECT_EQ(insieme::annotations::c::getAttachedInclude(lit), "interceptor_header.h");
+					checked = true;
+				}
+			}, true);
+			EXPECT_TRUE(checked);
 		}
 	}
 

@@ -99,6 +99,7 @@ namespace utils {
 		if(fit != isStdCache.end()) { return fit->second.second; }
 
 		std::string filename = sm.getPresumedLoc(loc).getFilename();
+		if(!isHeaderFile(filename)) return false;
 		bool isSys = isStdLibHeader(filename);
 		isStdCache[sm.getFileID(loc)] = {filename, isSys};
 		return isSys;
@@ -114,6 +115,7 @@ namespace utils {
 		if(fit != isInterceptedCache.end()) { return !fit->second.second; }
 
 		std::string filename = sm.getPresumedLoc(loc).getFilename();
+		if(!isHeaderFile(filename)) return false;
 		bool isIntercepted = isInterceptedLibHeader(filename);
 		isInterceptedCache[sm.getFileID(loc)] = {filename, !isIntercepted};
 		return isIntercepted;
@@ -143,6 +145,7 @@ namespace utils {
 		if(fit != isUserCache.end()) { return !fit->second.second; }
 
 		std::string filename = sm.getPresumedLoc(loc).getFilename();
+		if(!isHeaderFile(filename)) return false;
 		bool isUser = isUserLibHeader(filename);
 		isUserCache[sm.getFileID(loc)] = {filename, !isUser};
 		return isUser;

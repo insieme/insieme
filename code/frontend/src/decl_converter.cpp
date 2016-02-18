@@ -312,7 +312,14 @@ namespace conversion {
 	//					 Function declarations
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	void DeclConverter::VisitFunctionDecl(const clang::FunctionDecl* funcDecl) {
+
+		// if handled by a plugin, don't do anything else
+		for(auto extension : converter.getConversionSetup().getExtensions()) {
+			if(extension->FuncDeclVisit(funcDecl, converter)) return;
+		}
+		// we only want to visit actual specialized templates
 		if(funcDecl->isTemplateDecl() && !funcDecl->isFunctionTemplateSpecialization()) { return; }
+
 		converter.trackSourceLocation(funcDecl);
 		VLOG(2) << "~~~~~~~~~~~~~~~~ VisitFunctionDecl: " << dumpClang(funcDecl);
 		bool isDefinition = funcDecl->isThisDeclarationADefinition();

@@ -128,6 +128,14 @@ namespace extensions {
 		return nullptr;
 	}
 
+	core::ExpressionPtr InterceptorExtension::FuncDeclVisit(const clang::FunctionDecl* decl, insieme::frontend::conversion::Converter& converter,
+		                                                    bool symbolic /*= false*/) {
+		if(converter.getHeaderTagger()->isIntercepted(decl)) {
+			return converter.getIRBuilder().literal("INTERCEPTED_FUNCTION_YOU_SHOULD_NEVER_SEE_THIS", converter.getIRBuilder().genericType("T"));
+		}
+		return nullptr;
+	}
+
 	FrontendExtension::flagHandler InterceptorExtension::registerFlag(boost::program_options::options_description& options) {
 		// create lambda
 		auto lambda = [&](const ConversionJob& job) {
@@ -137,6 +145,7 @@ namespace extensions {
 		};
 		return lambda;
 	}
+
 
 } // extensions
 } // frontend

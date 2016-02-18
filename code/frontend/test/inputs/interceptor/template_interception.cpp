@@ -34,17 +34,20 @@
  * regarding third party software licenses.
  */
 
-// intercepted
-namespace ns {
-	static int simpleFunc(int x) {
-		return x;
-	}
+#include "template_interception.h"
 
-	struct S {
-		int a, b, c;
-		S() {}
-		int memberFunc(int x) {
-			return x;
-		}
-	};
+int main() {
+	#pragma test expect_ir(R"(lit("IMP_templateFun_int_returns_int" : (int<4>) -> int<4>)(1))")
+	templateFun(1);
+	#pragma test expect_ir(R"(lit("IMP_templateFun_double_returns_double" : (real<8>) -> real<8>)(lit("2.0E+0":real<8>)))")
+	templateFun(2.0);
+	#pragma test expect_ir(R"(lit("IMP_templateFun_unsigned_long_long_returns_unsigned_long_long" : (uint<16>) -> uint<16>)(lit("3":uint<16>)))")
+	templateFun(3ull);
+
+	#pragma test expect_ir(R"(var ref<IMP_TemplateClass_int,f,f,plain> v0 = lit("IMP_TemplateClass_int::ctor" : IMP_TemplateClass_int::())(v0);)")
+	TemplateClass<int> intInstance;
+	#pragma test expect_ir(R"(var ref<IMP_TemplateClass_double,f,f,plain> v0 = lit("IMP_TemplateClass_double::ctor" : IMP_TemplateClass_double::())(v0);)")
+	TemplateClass<double> doubleInstance;
+	#pragma test expect_ir(R"(var ref<IMP_TemplateClass__Bool,f,f,plain> v0 = lit("IMP_TemplateClass__Bool::ctor" : IMP_TemplateClass__Bool::())(v0);)")
+	TemplateClass<bool> boolInstance;
 }
