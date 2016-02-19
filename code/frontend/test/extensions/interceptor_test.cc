@@ -43,6 +43,33 @@
 namespace insieme {
 namespace frontend {
 
+	TEST(InterceptorTest, CustomPath) {
+		runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/interceptor/interceptor_test.cpp", [](ConversionJob& job) {
+			job.addInterceptedHeaderDir(FRONTEND_TEST_DIR + "/inputs/interceptor");
+			job.registerFrontendExtension<extensions::InterceptorExtension, extensions::TestPragmaExtension>();
+		});
+	}
+
+	TEST(InterceptorTest, Templates) {
+		runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/interceptor/template_interception.cpp", [](ConversionJob& job) {
+			job.addInterceptedHeaderDir(FRONTEND_TEST_DIR + "/inputs/interceptor");
+			job.registerFrontendExtension<extensions::InterceptorExtension, extensions::TestPragmaExtension>();
+		});
+	}
+
+	TEST(InterceptorTest, SystemInterception) {
+		runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/interceptor/system_interception.cpp", [](ConversionJob& job) {
+			job.registerFrontendExtension<extensions::InterceptorExtension, extensions::TestPragmaExtension>();
+		});
+	}
+
+	//TEST(InterceptorTest, NoInterception) {
+	//	runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/interceptor/not_interceptor_test.cpp", [](ConversionJob& job) {
+	//		job.registerFrontendExtension<extensions::InterceptorExtension, extensions::TestPragmaExtension>();
+	//	});
+	//}
+
+
 	TEST(InterceptorTest, TrueInterception) {
 		core::NodeManager manager;
 		ConversionJob job(FRONTEND_TEST_DIR + "/inputs/interceptor/interceptor_test.cpp");
@@ -121,31 +148,46 @@ namespace frontend {
 		}
 	}
 
-	TEST(InterceptorTest, CustomPath) {
-		runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/interceptor/interceptor_test.cpp", [](ConversionJob& job) {
-			job.addInterceptedHeaderDir(FRONTEND_TEST_DIR + "/inputs/interceptor");
-			job.registerFrontendExtension<extensions::InterceptorExtension, extensions::TestPragmaExtension>();
-		});
-	}
+	TEST(InterceptorTest, TrueSystemInterception) {
+		core::NodeManager manager;
+		ConversionJob job(FRONTEND_TEST_DIR + "/inputs/interceptor/system_interception.cpp");
+		job.registerFrontendExtension<extensions::InterceptorExtension>();
+		job.registerFrontendExtension<extensions::TestPragmaExtension>(); // necessary to parse pragmas
+		job.setStandard(ConversionSetup::Standard::Cxx11);
+		auto irTu = job.toIRTranslationUnit(manager);
+		auto funs = irTu.getFunctions();
+		EXPECT_FALSE(any(funs, [](decltype(funs)::value_type val) { return val.first->getStringValue() == "IMP_gettimeofday"; })) << "Function not intercepted!";
+		EXPECT_FALSE(any(funs, [](decltype(funs)::value_type val) { return val.first->getStringValue() == "IMP_std_colon__colon_vector_int_std_colon__colon_allocator_lt_int_gt_::IMP_push_back"; })) << "Function not intercepted!";
+		EXPECT_TRUE(irTu.getTypes().empty());
 
-	TEST(InterceptorTest, Templates) {
-		runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/interceptor/template_interception.cpp", [](ConversionJob& job) {
-			job.addInterceptedHeaderDir(FRONTEND_TEST_DIR + "/inputs/interceptor");
-			job.registerFrontendExtension<extensions::InterceptorExtension, extensions::TestPragmaExtension>();
-		});
-	}
+		// check the attached name of the intercepted structs for correctness
+		auto code = job.execute(manager);
+		ASSERT_TRUE(code);
+		{
+			bool checked = false;
+			visitDepthFirstOnce(code, [&checked](const core::GenericTypePtr& genType) {
+				if(genType->getName()->getValue() == "IMP_timeval") {
+					ASSERT_TRUE(core::annotations::hasAttachedName(genType));
+					EXPECT_EQ("struct timeval", core::annotations::getAttachedName(genType));
+					checked = true;
+				}
+			}, true);
+			EXPECT_TRUE(checked);
+		}
+		{
+			bool checked = false;
+			visitDepthFirstOnce(code, [&checked](const core::GenericTypePtr& genType) {
+				if(genType->getName()->getValue() == "IMP_std_colon__colon_vector_int_std_colon__colon_allocator_lt_int_gt_") {
+					ASSERT_TRUE(core::annotations::hasAttachedName(genType));
+					EXPECT_EQ("std::vector<int,std::allocator<int>>", core::annotations::getAttachedName(genType));
+					checked = true;
+				}
+			}, true);
+			EXPECT_TRUE(checked);
+		}
 
-	TEST(InterceptorTest, SystemInterception) {
-		runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/interceptor/system_interception.cpp", [](ConversionJob& job) {
-			job.registerFrontendExtension<extensions::InterceptorExtension, extensions::TestPragmaExtension>();
-		});
+		// TODO check name of push back method literal
 	}
-
-	//TEST(InterceptorTest, NoInterception) {
-	//	runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/interceptor/not_interceptor_test.cpp", [](ConversionJob& job) {
-	//		job.registerFrontendExtension<extensions::InterceptorExtension, extensions::TestPragmaExtension>();
-	//	});
-	//}
 
 } // fe namespace
 } // insieme namespace

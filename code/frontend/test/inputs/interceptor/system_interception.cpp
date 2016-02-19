@@ -49,11 +49,11 @@ int main() {
 	}
 
 	#pragma test expect_ir(R"({
-		var ref<IMP_std_colon__colon_vector_int_class_std_colon__colon_allocator_lt_int_gt_> v0 =
-			lit("IMP_std_colon__colon_vector_int_class_std_colon__colon_allocator_lt_int_gt_::ctor"
-				: IMP_std_colon__colon_vector_int_class_std_colon__colon_allocator_lt_int_gt_::())(v0);
-		lit("IMP_std_colon__colon_vector_int_class_std_colon__colon_allocator_lt_int_gt_::IMP_push_back" :
-			IMP_std_colon__colon_vector_int_class_std_colon__colon_allocator_lt_int_gt_::(ref<int<4>,f,f,cpp_rref>) -> unit) (v0, 0);
+		var ref<IMP_std_colon__colon_vector_int_std_colon__colon_allocator_lt_int_gt_> v0 =
+			lit("IMP_std_colon__colon_vector_int_std_colon__colon_allocator_lt_int_gt_::ctor"
+				: IMP_std_colon__colon_vector_int_std_colon__colon_allocator_lt_int_gt_::())(v0);
+		lit("IMP_std_colon__colon_vector_int_std_colon__colon_allocator_lt_int_gt_::IMP_push_back" :
+			IMP_std_colon__colon_vector_int_std_colon__colon_allocator_lt_int_gt_::(ref<int<4>,f,f,cpp_rref>) -> unit) (v0, 0);
 	})")
 	{
 		std::vector<int> v;

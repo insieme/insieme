@@ -117,7 +117,8 @@ namespace utils {
 	namespace {
 		string getTypeString(clang::QualType t) {
 			string s = t.getAsString();
-			boost::replace_all(s, "_Bool", "bool"); //special handling for clangs translation of bool types
+			boost::replace_all(s, "class ", "");    // special handling for clang's translation of template class arguments
+			boost::replace_all(s, "_Bool", "bool"); // special handling for clang's translation of bool types
 			boost::replace_all(s, " ", "_");
 			return removeSymbols(s);
 		}
