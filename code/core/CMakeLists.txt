@@ -89,7 +89,6 @@ target_include_directories(insieme_core PUBLIC ${insieme_core_include_dir} )
 target_include_directories(insieme_core PRIVATE ${FLEX_OUTPUT_PATH})
 target_include_directories(insieme_core PRIVATE ${BISON_OUTPUT_PATH})
 target_include_directories(insieme_core PRIVATE ${FLEX_INCLUDE_DIRS})
-target_link_libraries(insieme_core gomp)
 
 # add dependencies
 target_link_libraries(insieme_core insieme_utils)
