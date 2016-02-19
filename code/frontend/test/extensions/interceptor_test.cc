@@ -135,6 +135,12 @@ namespace frontend {
 		});
 	}
 
+	TEST(InterceptorTest, SystemInterception) {
+		runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/interceptor/system_interception.cpp", [](ConversionJob& job) {
+			job.registerFrontendExtension<extensions::InterceptorExtension, extensions::TestPragmaExtension>();
+		});
+	}
+
 	//TEST(InterceptorTest, NoInterception) {
 	//	runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/interceptor/not_interceptor_test.cpp", [](ConversionJob& job) {
 	//		job.registerFrontendExtension<extensions::InterceptorExtension, extensions::TestPragmaExtension>();
