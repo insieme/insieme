@@ -303,7 +303,8 @@ namespace conversion {
 		core::ExpressionPtr VisitCallExpr(const clang::CallExpr* callExpr);
 		core::ExpressionPtr VisitMemberExpr(const clang::MemberExpr* memExpr);
 		core::ExpressionPtr VisitDeclRefExpr(const clang::DeclRefExpr* declRef);
-		
+		core::ExpressionPtr VisitCXXNullPtrLiteralExpr(const clang::CXXNullPtrLiteralExpr* nptrExpr);
+
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		//  default visitor call
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -81,6 +81,11 @@ int main() {
 	)")
 	consumer(producer());
 
+	#pragma test expect_ir("ptr_null(type_lit(unit), type_lit(f), type_lit(f))")
+	nullptr;
+
+	#pragma test expect_ir("ptr_null(type_lit(int<4>), type_lit(f), type_lit(f))")
+	(int*)(nullptr);
 
 	return 0;
 }

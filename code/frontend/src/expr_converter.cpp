@@ -134,7 +134,7 @@ namespace conversion {
 			if(constructor->isCopyOrMoveConstructor()) {
 				VLOG(2) << "CopyOrMove in param list at " << utils::location(clangArgExpr->getLocStart(), converter.getSourceManager()) << "\n";
 				auto prevArg = ret;
-				ret = Visit(constructExpr->getArg(0));
+				ret = converter.convertExpr(constructExpr->getArg(0));
 				// cast ref as required by copy constructor
 				if(core::lang::isReference(ret)) {
 					ret = core::lang::buildRefCast(
@@ -313,7 +313,7 @@ namespace conversion {
 	//							PARENTHESIS EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr Converter::ExprConverter::VisitParenExpr(const clang::ParenExpr* parExpr) {
-		core::ExpressionPtr retExpr = Visit(parExpr->getSubExpr());
+		core::ExpressionPtr retExpr = converter.convertExpr(parExpr->getSubExpr());
 		LOG_EXPR_CONVERSION(parExpr, retExpr);
 		return retExpr;
 	}
@@ -364,7 +364,7 @@ namespace conversion {
 
 		core::ExpressionList irArguments;
 		for(auto arg : callExpr->arguments()) {
-			irArguments.push_back(Visit(arg));
+			irArguments.push_back(converter.convertExpr(arg));
 		}
 
 		// simplify generated call if direct call of function
@@ -392,7 +392,7 @@ namespace conversion {
 		core::ExpressionPtr retIr;
 		LOG_EXPR_CONVERSION(preExpr, retIr);
 
-		retIr = Visit(preExpr->getFunctionName());
+		retIr = converter.convertExpr(preExpr->getFunctionName());
 
 		return retIr;
 	}
@@ -435,7 +435,7 @@ namespace conversion {
 	core::ExpressionPtr Converter::ExprConverter::VisitMemberExpr(const clang::MemberExpr* membExpr) {
 		core::ExpressionPtr retIr;
 		LOG_EXPR_CONVERSION(membExpr, retIr);
-		core::ExpressionPtr base = Visit(membExpr->getBase());
+		core::ExpressionPtr base = converter.convertExpr(membExpr->getBase());
 
 		// deal with pointer accesses by conversion to ref
 		if(membExpr->isArrow()) {
@@ -577,8 +577,8 @@ namespace conversion {
 		core::ExpressionPtr retIr;
 		LOG_EXPR_CONVERSION(compOp, retIr);
 
-		core::ExpressionPtr lhs = Visit(compOp->getLHS());
-		core::ExpressionPtr rhs = Visit(compOp->getRHS());
+		core::ExpressionPtr lhs = converter.convertExpr(compOp->getLHS());
+		core::ExpressionPtr rhs = converter.convertExpr(compOp->getRHS());
 		core::TypePtr exprTy = converter.convertType(compOp->getType());
 
 		assert_true(core::lang::isReference(lhs->getType())) << "left side must be assignable";
@@ -596,8 +596,8 @@ namespace conversion {
 		core::ExpressionPtr retIr;
 		LOG_EXPR_CONVERSION(binOp, retIr);
 
-		core::ExpressionPtr lhs = Visit(binOp->getLHS());
-		core::ExpressionPtr rhs = Visit(binOp->getRHS());
+		core::ExpressionPtr lhs = converter.convertExpr(binOp->getLHS());
+		core::ExpressionPtr rhs = converter.convertExpr(binOp->getRHS());
 		core::TypePtr exprTy = converter.convertType(binOp->getType());
 
 		retIr = createBinaryExpression(exprTy, lhs, rhs, binOp);
@@ -617,7 +617,7 @@ namespace conversion {
 		core::ExpressionPtr retIr;
 		LOG_EXPR_CONVERSION(unOp, retIr);
 
-		core::ExpressionPtr subExpr = Visit(unOp->getSubExpr());
+		core::ExpressionPtr subExpr = converter.convertExpr(unOp->getSubExpr());
 		core::TypePtr exprTy = converter.convertType(unOp->getType());
 
 		retIr = createUnaryExpression(exprTy, subExpr, unOp->getOpcode());
@@ -638,9 +638,9 @@ namespace conversion {
 		LOG_EXPR_CONVERSION(condOp, retIr);
 
 		core::TypePtr retTy = converter.convertType(condOp->getType());
-		core::ExpressionPtr trueExpr = Visit(condOp->getTrueExpr());
-		core::ExpressionPtr falseExpr = Visit(condOp->getFalseExpr());
-		core::ExpressionPtr condExpr = Visit(condOp->getCond());
+		core::ExpressionPtr trueExpr = converter.convertExpr(condOp->getTrueExpr());
+		core::ExpressionPtr falseExpr = converter.convertExpr(condOp->getFalseExpr());
+		core::ExpressionPtr condExpr = converter.convertExpr(condOp->getCond());
 
 		trueExpr = builder.wrapLazy(trueExpr);
 		falseExpr = builder.wrapLazy(falseExpr);
@@ -658,8 +658,8 @@ namespace conversion {
 		core::ExpressionPtr retIr;
 		LOG_EXPR_CONVERSION(arraySubExpr, retIr);
 
-		core::ExpressionPtr ptrExpr = Visit(arraySubExpr->getBase());
-		core::ExpressionPtr idxExpr = Visit(arraySubExpr->getIdx());
+		core::ExpressionPtr ptrExpr = converter.convertExpr(arraySubExpr->getBase());
+		core::ExpressionPtr idxExpr = converter.convertExpr(arraySubExpr->getIdx());
 
 		retIr = core::lang::buildPtrSubscript(ptrExpr, idxExpr);
 
@@ -769,7 +769,7 @@ namespace conversion {
 		}
 		else if(clangType->isUnionType()) {
 			auto types = lookupRecordTypes(converter, initList);
-			auto initExp = Visit(initList->getInit(0));
+			auto initExp = converter.convertExpr(initList->getInit(0));
 			retIr = builder.initExprTemp(genType, initExp);
 		}
 		else if(clangType->isArrayType()) {
@@ -899,7 +899,7 @@ namespace conversion {
 
 		//// only c11 atomic operations are handled here (not std::atomic stuff)
 
-		//core::ExpressionPtr ptr = Visit(atom->getPtr());
+		//core::ExpressionPtr ptr = converter.convertExpr(atom->getPtr());
 		//// if ptr is ref array -> array ref elem auf richtiges elem
 		//// accept pure array type
 		//if(ptr->getType()->getNodeType() == insieme::core::NT_ArrayType) { ptr = builder.arrayRefElem(ptr, builder.uintLit(0)); }
@@ -909,7 +909,7 @@ namespace conversion {
 		//	ptr = builder.arrayRefElem(ptr, builder.uintLit(0));
 		//}
 
-		//core::ExpressionPtr val = Visit(atom->getVal1());
+		//core::ExpressionPtr val = converter.convertExpr(atom->getVal1());
 		//// dumpDetail(val);
 
 		//switch(operation) {

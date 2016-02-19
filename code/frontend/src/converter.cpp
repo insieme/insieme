@@ -302,6 +302,11 @@ namespace conversion {
 		return stmtutils::aggregateStmts(builder, stmtConvPtr->Visit(const_cast<Stmt*>(stmt)));
 	}
 
+	stmtutils::StmtWrapper Converter::convertStmtToWrapper(const clang::Stmt* stmt) const {
+		assert_true(stmt) << "Calling convertStmtToWrapper with a NULL pointer";
+		return stmtConvPtr->Visit(const_cast<Stmt*>(stmt));
+	}
+
 	core::TypePtr Converter::convertType(const clang::QualType& type) const {
 		return typeConvPtr->convert(type);
 	}

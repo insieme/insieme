@@ -208,6 +208,13 @@ namespace conversion {
 		core::StatementPtr convertStmt(const clang::Stmt* stmt) const;
 
 		/**
+		 * Entry point for converting clang statements into an IR statement wrapper
+		 * @param stmt is a clang statement of the AST
+		 * @return the corresponding IR statement(s) in a wrapper
+		 */
+		stmtutils::StmtWrapper convertStmtToWrapper(const clang::Stmt* stmt) const;
+
+		/**
 		 * Entry point for converting clang expressions to IR expressions
 		 * @param expr is a clang expression of the AST
 		 * @return the corresponding IR expression
