@@ -48,6 +48,6 @@ int main() {
 	TemplateClass<int> intInstance;
 	#pragma test expect_ir(R"(var ref<IMP_TemplateClass_double,f,f,plain> v0 = lit("IMP_TemplateClass_double::ctor" : IMP_TemplateClass_double::())(v0);)")
 	TemplateClass<double> doubleInstance;
-	#pragma test expect_ir(R"(var ref<IMP_TemplateClass__Bool,f,f,plain> v0 = lit("IMP_TemplateClass__Bool::ctor" : IMP_TemplateClass__Bool::())(v0);)")
+	#pragma test expect_ir(R"(var ref<IMP_TemplateClass_bool,f,f,plain> v0 = lit("IMP_TemplateClass_bool::ctor" : IMP_TemplateClass_bool::())(v0);)")
 	TemplateClass<bool> boolInstance;
 }

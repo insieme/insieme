@@ -73,7 +73,7 @@ namespace frontend {
 			core::NodeManager manager;
 			ConversionJob job(file);
 			auto code = job.execute(manager);
-			EXPECT_TRUE(code);
+			ASSERT_TRUE(code);
 
 			// check that the target type of the stdout pointer has the correct attachment
 			bool checked = false;
@@ -84,7 +84,7 @@ namespace frontend {
 					EXPECT_TRUE(core::lang::isPointer(ptrT));
 					auto elemT = core::lang::PointerType(ptrT).getElementType();
 					ASSERT_TRUE(insieme::annotations::c::hasIncludeAttached(elemT));
-					EXPECT_EQ(insieme::annotations::c::getAttachedInclude(elemT), "stdio.h");
+					EXPECT_EQ("stdio.h", insieme::annotations::c::getAttachedInclude(elemT));
 					checked = true;
 				}
 			});
@@ -99,7 +99,7 @@ namespace frontend {
 		job.registerFrontendExtension<extensions::InterceptorExtension>();
 		job.registerFrontendExtension<extensions::TestPragmaExtension>(); // necessary to parse pragmas
 		auto code = job.execute(manager);
-		EXPECT_TRUE(code);
+		ASSERT_TRUE(code);
 
 		// check that the intercepted "S" type exists and has the correct attachment
 		{
@@ -107,7 +107,7 @@ namespace frontend {
 			visitDepthFirstOnce(code, [&checked](const core::GenericTypePtr& genType) {
 				if(genType->getName()->getValue() == "IMP_ns_colon__colon_S") {
 					ASSERT_TRUE(insieme::annotations::c::hasIncludeAttached(genType));
-					EXPECT_EQ(insieme::annotations::c::getAttachedInclude(genType), "interceptor_header.h");
+					EXPECT_EQ("interceptor_header.h", insieme::annotations::c::getAttachedInclude(genType));
 					checked = true;
 				}
 			}, true);
@@ -120,7 +120,7 @@ namespace frontend {
 			visitDepthFirstOnce(code, [&checked](const core::LiteralPtr& lit) {
 				if(lit->getStringValue() == "IMP_ns_colon__colon_simpleFunc") {
 					ASSERT_TRUE(insieme::annotations::c::hasIncludeAttached(lit));
-					EXPECT_EQ(insieme::annotations::c::getAttachedInclude(lit), "interceptor_header.h");
+					EXPECT_EQ("interceptor_header.h", insieme::annotations::c::getAttachedInclude(lit));
 					checked = true;
 				}
 			}, true);

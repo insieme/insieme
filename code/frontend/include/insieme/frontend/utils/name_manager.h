@@ -72,9 +72,10 @@ namespace utils {
 	 * build a string suffix encoding the template parameters provided
 	 * @param tempArgs template argument list
 	 * @param astContext AstContext used for type name lookup
+	 * @param cStyleName whether to build a name suitable for usage in a C program or for the IR
 	 * @return encoded string value
 	 */
-	std::string buildNameSuffixForTemplate(const clang::TemplateArgumentList& tempArgs, clang::ASTContext& astContext);
+	std::string buildNameSuffixForTemplate(const clang::TemplateArgumentList& tempArgs, clang::ASTContext& astContext, bool cStyleName = false);
 
 	/**
 	 * build a string to identify a function
@@ -104,9 +105,10 @@ namespace utils {
 	/**
 	 * Get name for tag decl (named or anonymous)
 	 * @param tagDecl the Tag declaration given by clang
+	 * @param cStyleName whether to build a name suitable for usage in a C program or for the IR
 	 * @return pair(name,bool) with bool indicating whether it is externally visible
 	 */
-	std::pair<std::string,bool> getNameForTagDecl(const conversion::Converter& converter, const clang::TagDecl* tagDecl);
+	std::pair<std::string,bool> getNameForTagDecl(const conversion::Converter& converter, const clang::TagDecl* tagDecl, bool cStyleName = false);
 
 } // End utils namespace
 } // End frontend namespace

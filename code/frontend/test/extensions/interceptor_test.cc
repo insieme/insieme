@@ -38,6 +38,8 @@
 
 #include "insieme/frontend/extensions/interceptor_extension.h"
 
+#include "insieme/core/annotations/naming.h"
+
 namespace insieme {
 namespace frontend {
 
@@ -51,6 +53,72 @@ namespace frontend {
 		auto funs = irTu.getFunctions();
 		EXPECT_FALSE(any(funs, [](decltype(funs)::value_type val) { return val.first->getStringValue() == "IMP_simpleFunc"; })) << "Function not intercepted!";
 		EXPECT_TRUE(irTu.getTypes().empty());
+
+		// check the attached name of the intercepted struct for correctness
+		auto code = job.execute(manager);
+		ASSERT_TRUE(code);
+		{
+			bool checked = false;
+			visitDepthFirstOnce(code, [&checked](const core::GenericTypePtr& genType) {
+				if(genType->getName()->getValue() == "IMP_ns_colon__colon_S") {
+					ASSERT_TRUE(core::annotations::hasAttachedName(genType));
+					EXPECT_EQ(core::annotations::getAttachedName(genType), "struct ns::S");
+					checked = true;
+				}
+			}, true);
+			EXPECT_TRUE(checked);
+		}
+	}
+
+	TEST(InterceptorTest, TrueTemplateInterception) {
+		core::NodeManager manager;
+		ConversionJob job(FRONTEND_TEST_DIR + "/inputs/interceptor/template_interception.cpp");
+		job.addInterceptedHeaderDir(FRONTEND_TEST_DIR + "/inputs/interceptor");
+		job.registerFrontendExtension<extensions::InterceptorExtension>();
+		job.registerFrontendExtension<extensions::TestPragmaExtension>(); // necessary to parse pragmas
+		auto irTu = job.toIRTranslationUnit(manager);
+		auto funs = irTu.getFunctions();
+		EXPECT_FALSE(any(funs, [](decltype(funs)::value_type val) { return val.first->getStringValue() == "IMP_templateFun_int_returns_int"; })) << "Function not intercepted!";
+		EXPECT_FALSE(any(funs, [](decltype(funs)::value_type val) { return val.first->getStringValue() == "IMP_templateFun_double_returns_double"; })) << "Function not intercepted!";
+		EXPECT_FALSE(any(funs, [](decltype(funs)::value_type val) { return val.first->getStringValue() == "IMP_templateFun_unsigned_long_long_returns_unsigned_long_long"; })) << "Function not intercepted!";
+		EXPECT_TRUE(irTu.getTypes().empty());
+
+		// check the attached name of the intercepted structs for correctness
+		auto code = job.execute(manager);
+		ASSERT_TRUE(code);
+		{
+			bool checked = false;
+			visitDepthFirstOnce(code, [&checked](const core::GenericTypePtr& genType) {
+				if(genType->getName()->getValue() == "IMP_TemplateClass_int") {
+					ASSERT_TRUE(core::annotations::hasAttachedName(genType));
+					EXPECT_EQ("TemplateClass<int>", core::annotations::getAttachedName(genType));
+					checked = true;
+				}
+			}, true);
+			EXPECT_TRUE(checked);
+		}
+		{
+			bool checked = false;
+			visitDepthFirstOnce(code, [&checked](const core::GenericTypePtr& genType) {
+				if(genType->getName()->getValue() == "IMP_TemplateClass_double") {
+					ASSERT_TRUE(core::annotations::hasAttachedName(genType));
+					EXPECT_EQ("TemplateClass<double>", core::annotations::getAttachedName(genType));
+					checked = true;
+				}
+			}, true);
+			EXPECT_TRUE(checked);
+		}
+		{
+			bool checked = false;
+			visitDepthFirstOnce(code, [&checked](const core::GenericTypePtr& genType) {
+				if(genType->getName()->getValue() == "IMP_TemplateClass_bool") {
+					ASSERT_TRUE(core::annotations::hasAttachedName(genType));
+					EXPECT_EQ("TemplateClass<bool>", core::annotations::getAttachedName(genType));
+					checked = true;
+				}
+			}, true);
+			EXPECT_TRUE(checked);
+		}
 	}
 
 	TEST(InterceptorTest, CustomPath) {

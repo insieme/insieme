@@ -255,13 +255,17 @@ namespace conversion {
 
 	void Converter::applyHeaderTagging(const core::NodePtr& node, const clang::Decl* decl) const {
 		VLOG(2) << "Apply header tagging on " << dumpDetailColored(node) << " with decl\n" << dumpClang(decl);
+		if(annotations::c::hasIncludeAttached(node)) {
+			VLOG(2) << " -> Annotation already attached";
+			return;
+		}
 		if(headerTaggerPtr->isIntercepted(decl)) {
 			VLOG(2) << "-> Is intercepted!";
  			headerTaggerPtr->addHeaderForDecl(node, decl);
 			if(annotations::c::hasIncludeAttached(node)) {
 				if(auto tagDecl = llvm::dyn_cast<clang::TagDecl>(decl)) {
 					// attach name for backend
-					string name = insieme::utils::demangle(utils::getNameForTagDecl(*this, tagDecl).first);
+					string name = insieme::utils::demangle(utils::getNameForTagDecl(*this, tagDecl, true).first);
 					if(tagDecl->isStruct()) name = "struct " + name;
 					else if(tagDecl->isUnion()) name = "union " + name;
 					else if(tagDecl->isEnum()) name = "enum " + name;
