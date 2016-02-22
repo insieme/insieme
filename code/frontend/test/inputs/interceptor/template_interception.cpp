@@ -113,4 +113,13 @@ int main() {
 		TemplateClass<int> c1;
 		templateTemplateFun<TemplateClass, TemplateClass<int> >(c, c1);
 	}
+
+
+	// Variadic templates //////////////////////////////////////////////////////////////
+
+	#pragma test expect_ir(R"(lit("IMP_variadicTemplateFun_int_returns_int" : (int<4>) -> int<4>)(0))")
+	variadicTemplateFun(0);
+
+	#pragma test expect_ir(R"(lit("IMP_variadicTemplateFun_int_pack_begin_int_pack_end_returns_int" : (int<4>, int<4>) -> int<4>)(0, 1))")
+	variadicTemplateFun(0, 1);
 }

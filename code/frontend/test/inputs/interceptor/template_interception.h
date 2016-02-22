@@ -51,3 +51,13 @@ template <template <typename> class Container, typename T>
 void templateTemplateFun(Container<T>& container, const T value) {
 	container.field = value;
 }
+
+template<typename T>
+T variadicTemplateFun(T v) {
+  return v;
+}
+
+template<typename T, typename... Args>
+T variadicTemplateFun(T first, Args... args) {
+  return first + variadicTemplateFun(args...);
+}

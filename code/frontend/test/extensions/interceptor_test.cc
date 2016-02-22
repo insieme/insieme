@@ -110,6 +110,8 @@ namespace frontend {
 		EXPECT_FALSE(any(funs, [](decltype(funs)::value_type val) { return val.first->getStringValue() == "IMP_templateFun_unsigned_long_long_returns_unsigned_long_long"; })) << "Function not intercepted!";
 		EXPECT_FALSE(any(funs, [](decltype(funs)::value_type val) { return val.first->getStringValue() == "IMP_templateTemplateFun_TemplateClass_int_returns_void"; })) << "Function not intercepted!";
 		EXPECT_FALSE(any(funs, [](decltype(funs)::value_type val) { return val.first->getStringValue() == "IMP_templateTemplateFun_TemplateClass_TemplateClass_lt_int_gt__returns_void"; })) << "Function not intercepted!";
+		EXPECT_FALSE(any(funs, [](decltype(funs)::value_type val) { return val.first->getStringValue() == "IMP_variadicTemplateFun_int_returns_int"; })) << "Function not intercepted!";
+		EXPECT_FALSE(any(funs, [](decltype(funs)::value_type val) { return val.first->getStringValue() == "IMP_variadicTemplateFun_int_pack_begin_int_pack_end_returns_int"; })) << "Function not intercepted!";
 		EXPECT_TRUE(irTu.getTypes().empty());
 
 		// check the attached name of the intercepted structs for correctness
