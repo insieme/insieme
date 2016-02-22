@@ -582,7 +582,7 @@ namespace checks {
 		}
 	}
 
-	TEST(StructExprTypeCheck, Basic) {
+	TEST(InitExprTypeCheck, Basic) {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
@@ -598,18 +598,17 @@ namespace checks {
 		fields.push_back(builder.field(name, typeA));
 		TagTypePtr structType = builder.structType(fields);
 
-
 		// create struct expression
-		NamedValueList members;
-		members.push_back(builder.namedValue(name, valueA));
-		core::StructExprPtr ok = builder.structExpr(structType, members);
+		ExpressionList members;
+		members.push_back(valueA);
+		core::InitExprPtr ok = builder.initExprTemp(builder.refType(structType), members);
 
 		members.clear();
-		members.push_back(builder.namedValue(name, valueB));
-		core::StructExprPtr err = builder.structExpr(structType, members);
+		members.push_back(valueB);
+		core::InitExprPtr err = builder.initExprTemp(builder.refType(structType), members);
 
 		// conduct checks
-		CheckPtr typeCheck = make_check<StructExprTypeCheck>();
+		CheckPtr typeCheck = make_check<InitExprTypeCheck>();
 
 		EXPECT_TRUE(check(ok, typeCheck).empty());
 		ASSERT_FALSE(check(err, typeCheck).empty());
@@ -622,18 +621,16 @@ namespace checks {
 		IRBuilder builder(manager);
 
 		// conduct checks
-		CheckPtr typeCheck = make_check<StructExprTypeCheck>();
+		CheckPtr typeCheck = make_check<InitExprTypeCheck>();
 		core::TypePtr structType = builder.parseType("struct { a : A; b : B; }");
 
 		// Create a example expressions
-		core::StringValuePtr name = builder.stringValue("x");
 		core::TypePtr typeA = builder.genericType("A");
 		core::ExpressionPtr valueA = builder.literal(typeA, "a");
-		NamedValueList members;
-		members.push_back(builder.namedValue(name, valueA));
-		core::StructExprPtr err = builder.structExpr(structType.as<TagTypePtr>(), members);
-		EXPECT_FALSE(check(err, typeCheck).empty());
-		EXPECT_TRUE(check(err, typeCheck).size() == 1);
+		ExpressionList members;
+		members.push_back(valueA);
+		core::InitExprPtr err = builder.initExprTemp(builder.refType(structType.as<TagTypePtr>()), members);
+		EXPECT_EQ(check(err, typeCheck).size(), 1);
 	}
 
 	TEST(MemberAccessElementTypeCheck, Basic) {
@@ -1621,7 +1618,7 @@ namespace checks {
 
 		// create simple, context less array type
 		TypePtr element = manager.getLangBasic().getInt4();
-		TypePtr arrayType = builder.arrayType(element);
+		TypePtr arrayType = builder.arrayType(element, 12);
 
 		NodePtr cur;
 		auto errors = check(arrayType, typeCheck);
@@ -1631,7 +1628,7 @@ namespace checks {
 		errors = check(cur, typeCheck);
 		EXPECT_TRUE(errors.empty()) << cur << "\n" << errors;
 
-		ExpressionPtr arrayPtr = builder.parseExpr("array_create(type_lit(12),[0])");
+		ExpressionPtr arrayPtr = builder.parseExpr("*<ref<array<int<4>,12>,f,f,plain>> {0}");
 
 		// also, allow array values to be used within ref.new, ref.temp, struct, tuple and union expressions
 
@@ -1646,13 +1643,14 @@ namespace checks {
 		EXPECT_TRUE(errors.empty()) << cur << "\n" << errors;
 
 		// struct expression
-		cur = builder.structExpr(toVector(builder.namedValue("a", arrayPtr)));
+		TagTypePtr structType = builder.structType(toVector(builder.field("a", arrayType)));
+		cur = builder.initExprTemp(builder.refType(structType), arrayPtr);
 		errors = check(cur, typeCheck);
 		EXPECT_TRUE(errors.empty()) << cur << "\n" << errors;
 
 		// union expression
 		TagTypePtr unionType = builder.unionType(toVector(builder.field("a", arrayType)));
-		cur = builder.unionExpr(unionType, builder.stringValue("a"), arrayPtr);
+		cur = builder.initExprTemp(builder.refType(unionType), arrayPtr);
 		errors = check(cur, typeCheck);
 		EXPECT_TRUE(errors.empty()) << cur << "\n" << errors;
 

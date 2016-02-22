@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -37,8 +37,9 @@
 #include "insieme/core/lang/array.h"
 
 #include "insieme/core/ir_builder.h"
-#include "insieme/core/types/match.h"
+#include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/lang/list.h"
+#include "insieme/core/types/match.h"
 
 namespace insieme {
 namespace core {
@@ -95,6 +96,10 @@ namespace lang {
 			// generic array type
 			*this = ArrayType(type->getTypeParameter(0), size);
 		}
+	}
+
+	bool ArrayType::operator==(const ArrayType& other) const {
+		return elementType == other.elementType && size == other.size;
 	}
 
 	namespace {
@@ -216,33 +221,19 @@ namespace lang {
 		this->size = size;
 	}
 
-	ExpressionPtr buildArrayCreate(const TypePtr& size, const ExpressionList& list) {
-		NodeManager& nm = size.getNodeManager();
-		IRBuilder builder(nm);
-		auto& arrExt = nm.getLangExtension<ArrayExtension>();
-
-		return builder.callExpr(arrExt.getArrayCreate(), builder.getTypeLiteral(size), core::lang::buildListOfExpressions(list));
-	}
-	
-	ExpressionPtr buildArrayCreate(const ExpressionPtr& size, const ExpressionList& list) {
-		NodeManager& mgr = size.getNodeManager();
-		auto& basic = mgr.getLangBasic();
-		IRBuilder builder(mgr);
-		TypePtr sizeType;
-		if(auto lit = size.as<LiteralPtr>()) {
-			sizeType = builder.numericType(Literal::get(mgr, basic.getUIntInf(), lit->getStringValue()));
-		} else {
-			assert_pred1(dynamic_pointer_cast<VariablePtr>, size) << "trying to build an array creation expression with non-var/lit size expression";
-			sizeType = builder.numericType(size.as<VariablePtr>());
+	boost::optional<ArrayType> isArrayInit(const NodePtr& node) {
+		if (!node || !node.isa<InitExprPtr>()) {
+			return boost::optional<ArrayType>();
 		}
-		return buildArrayCreate(sizeType, list);
-	}
-	
-	ExpressionPtr buildArrayCreate(NodeManager& mgr, size_t size, const ExpressionList& list) {
-		auto& basic = mgr.getLangBasic();
-		IRBuilder builder(mgr);
-		auto sizeType = builder.numericType(Literal::get(mgr, basic.getUIntInf(), toString(size)));
-		return buildArrayCreate(sizeType, list);
+
+		auto initExpr = node.as<InitExprPtr>();
+		auto initType = analysis::getReferencedType(initExpr->getType());
+
+		if (isArray(initType)) {
+			return boost::optional<ArrayType>(initType);
+		}
+
+		return boost::optional<ArrayType>();
 	}
 
 } // end namespace lang

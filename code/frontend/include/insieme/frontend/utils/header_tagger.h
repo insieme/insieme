@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -57,12 +57,12 @@ namespace ba = boost::algorithm;
 /**
  * class which helps finding the more suitable header for a declaration, not allways top
  * level since we might have a system header included deep in a includes chain.
- * the most apropiate header has to be computed
+ * the most appropriate header has to be computed
  */
 class HeaderTagger {
-	vector<fs::path> stdLibDirs;
-	vector<fs::path> interceptedHeaderDirs;
-	vector<fs::path> userIncludeDirs;
+	std::set<fs::path> stdLibDirs;
+	std::set<fs::path> interceptedHeaderDirs;
+	std::set<fs::path> userIncludeDirs;
 	const clang::SourceManager& sm;
 
 	mutable std::map<clang::FileID, std::pair<std::string, bool>> isStdCache;
@@ -120,6 +120,14 @@ class HeaderTagger {
 	 * @param decl the declaration this node has been derived from
 	 */
 	void addHeaderForDecl(const core::NodePtr& node, const clang::Decl* decl, bool attachUserDefined = false) const;
+
+	/**
+	 * Check whether this declaration is to be intercepted
+	 *
+	 * @param decl the declaration we are asking for
+	 * @return is to be intercepted
+	 */
+	bool isIntercepted(const clang::Decl* decl) const;
 };
 
 } // end namespace utils

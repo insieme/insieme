@@ -64,7 +64,7 @@ namespace checks {
 			context_free_checks.push_back(make_check<ForStmtTypeCheck>());
 			context_free_checks.push_back(make_check<WhileConditionTypeCheck>());
 			context_free_checks.push_back(make_check<SwitchExpressionTypeCheck>());
-			context_free_checks.push_back(make_check<StructExprTypeCheck>());
+			context_free_checks.push_back(make_check<InitExprTypeCheck>());
 			context_free_checks.push_back(make_check<TagTypeFieldsCheck>());
 			context_free_checks.push_back(make_check<EnumTypeCheck>());
 			context_free_checks.push_back(make_check<MemberAccessElementTypeCheck>());
@@ -89,10 +89,10 @@ namespace checks {
 			context_free_checks.push_back(make_check<UndeclaredVariableCheck>());
 
 			context_free_checks.push_back(make_check<ScalarArrayIndexRangeCheck>());
-			context_free_checks.push_back(make_check<ArrayCreateArgumentCheck>());
 			// context_free_checks.push_back(make_check<UndefinedCheck>());
 			context_free_checks.push_back(make_check<FreeBreakInsideForLoopCheck>());
 			context_free_checks.push_back(make_check<MissingReturnStmtCheck>());
+			context_free_checks.push_back(make_check<ValidInitExprMemLocationCheck>());
 
 			context_free_checks.push_back(make_check<LiteralFormatCheck>());
 

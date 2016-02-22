@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -40,6 +40,7 @@
 #include <list>
 #include <vector>
 #include <map>
+#include <set>
 
 #include <iostream>
 
@@ -271,6 +272,11 @@ TEST(ContainerUtils, transform) {
 	auto result7 = transform<std::vector>(refMapA, [](const pair<int, int> val) { return val.first; });
 	static_assert(std::is_same<decltype(result7), vector<int>>::value, "Unexpected type from transform map -> vector");
 	EXPECT_TRUE(equals(listA, result7));
+
+	// changed container type (vector -> set)
+	auto result8 = transform<std::set>(result7, [](const int val) { return val; });
+	static_assert(std::is_same<decltype(result8), std::set<int>>::value, "Unexpected type from transform vector -> set");
+	EXPECT_TRUE(equals(listA, result8));
 
 	// maps
 	std::map<string, int> mapA{{"one", 1}, {"two", 2}, {"Jorg", 42}};

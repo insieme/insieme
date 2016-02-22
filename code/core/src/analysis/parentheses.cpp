@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -222,10 +222,12 @@ namespace analysis {
 				// the parent function expressions are NOT "sub", "div" or "mod"
 
 				auto parentAddress = cur.getParentAddress();
-				auto parentArgs = parentAddress.as<CallExprPtr>().getArguments();
-
-				if (cur.as<CallExprPtr>() == parentArgs[1]) {
-					return true;
+				auto parentCall = parentAddress.isa<CallExprPtr>();
+				if(parentCall) {
+					auto parentArgs = parentCall.getArguments();
+					if (cur.as<CallExprPtr>() == parentArgs[1]) {
+						return true;
+					}
 				}
 			}
 		}

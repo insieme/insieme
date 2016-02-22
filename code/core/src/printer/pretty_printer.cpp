@@ -1373,20 +1373,14 @@ namespace printer {
 				out << "}";
 			}
 
-			PRINT(StructExpr) {
+			PRINT(InitExpr) {
 				out << "<";
 				VISIT(node->getType());
-				out << "> {" <<	join(",", node->getMembers()->getElements(), [&](std::ostream& out, const NamedValueAddress& cur) {
-					VISIT(cur->getValue());
+				out << ">(";
+				VISIT(node->getMemoryExpr());
+				out << ") {" <<	join(", ", node->getInitExprList(), [&](std::ostream& out, const ExpressionAddress& cur) {
+					VISIT(cur);
 				}) << "}";
-			}
-
-			PRINT(UnionExpr) {
-				out << "<";
-				VISIT(node->getType());
-				out << "> {";
-				VISIT(node->getMember());
-				out << "}";
 			}
 
 			PRINT(TagTypeReference) {

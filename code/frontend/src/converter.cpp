@@ -67,6 +67,7 @@
 #include "insieme/utils/assert.h"
 #include "insieme/utils/functional_utils.h"
 #include "insieme/utils/progress_bar.h"
+#include "insieme/utils/name_mangling.h"
 
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/annotations/naming.h"
@@ -78,7 +79,6 @@
 #include "insieme/core/ir_program.h"
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/enum.h"
-#include "insieme/core/lang/ir++_extension.h"
 #include "insieme/core/lang/static_vars.h"
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/manipulation_utils.h"
@@ -172,15 +172,15 @@ namespace conversion {
 
 	core::tu::IRTranslationUnit Converter::convert() {
 		assert_true(getCompiler().getASTContext().getTranslationUnitDecl());
-	
+
 		// collect all type definitions
 		auto declContext = clang::TranslationUnitDecl::castToDeclContext(getCompiler().getASTContext().getTranslationUnitDecl());
 		declConvPtr->VisitDeclContext(declContext);
-		
+
 		//std::cout << " ==================================== " << std::endl;
 		//std::cout << getIRTranslationUnit() << std::endl;
 		//std::cout << " ==================================== " << std::endl;
-	
+
 		// that's all
 		return irTranslationUnit;
 	}
@@ -219,7 +219,7 @@ namespace conversion {
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	core::ExpressionPtr Converter::attachFuncAnnotations(const core::ExpressionPtr& node, const clang::FunctionDecl* funcDecl) {
-		
+
 		// ----------------------------------- Add annotations to this function -------------------------------------------
 		pragma::handlePragmas(core::NodeList({node.as<core::NodePtr>()}), funcDecl, *this);
 
@@ -252,13 +252,25 @@ namespace conversion {
 
 		return node;
 	}
-	
+
 	void Converter::applyHeaderTagging(const core::NodePtr& node, const clang::Decl* decl) const {
 		VLOG(2) << "Apply header tagging on " << dumpDetailColored(node) << " with decl\n" << dumpClang(decl);
-		if(headerTaggerPtr->isDefinedInSystemHeader(decl)) {
-			VLOG(2) << "-> Is defined in system header!";
+		if(annotations::c::hasIncludeAttached(node)) {
+			VLOG(2) << " -> Annotation already attached";
+			return;
+		}
+		if(headerTaggerPtr->isIntercepted(decl)) {
+			VLOG(2) << "-> Is intercepted!";
  			headerTaggerPtr->addHeaderForDecl(node, decl);
 			if(annotations::c::hasIncludeAttached(node)) {
+				if(auto tagDecl = llvm::dyn_cast<clang::TagDecl>(decl)) {
+					// attach name for backend
+					string name = insieme::utils::demangle(utils::getNameForTagDecl(*this, tagDecl, true).first);
+					if(tagDecl->isStruct()) name = "struct " + name;
+					else if(tagDecl->isUnion()) name = "union " + name;
+					else if(tagDecl->isEnum()) name = "enum " + name;
+					core::annotations::attachName(node, name);
+				}
 				VLOG(2) << "-> annotated with: " << annotations::c::getAttachedInclude(node);
 			} else {
 				VLOG(2) << "-> NOT annotated!";
@@ -290,14 +302,19 @@ namespace conversion {
 		return stmtutils::aggregateStmts(builder, stmtConvPtr->Visit(const_cast<Stmt*>(stmt)));
 	}
 
+	stmtutils::StmtWrapper Converter::convertStmtToWrapper(const clang::Stmt* stmt) const {
+		assert_true(stmt) << "Calling convertStmtToWrapper with a NULL pointer";
+		return stmtConvPtr->Visit(const_cast<Stmt*>(stmt));
+	}
+
 	core::TypePtr Converter::convertType(const clang::QualType& type) const {
 		return typeConvPtr->convert(type);
 	}
-	
+
 	core::TypePtr Converter::convertVarType(const clang::QualType& type) const {
 		return typeConvPtr->convertVarType(type);
 	}
-		
+
 } // End conversion namespace
 } // End frontend namespace
 } // End insieme namespace

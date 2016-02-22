@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -211,6 +211,18 @@ inline Result transform(const Container<T, A<T>>& c, const Functor& f) {
 }
 
 /**
+ * Convenience function for std::transform for changing vector-like types to set-like types.
+ */
+template <template <typename, typename, typename> class TargetSetLikeContainer, template <typename, typename> class Container, typename Functor,
+          typename T, template <typename> class A, typename ResultMember = typename lambda_traits<Functor>::result_type,
+          typename Result = TargetSetLikeContainer<ResultMember, std::less<ResultMember>, A<ResultMember>>>
+inline Result transform(const Container<T, A<T>>& c, const Functor& f) {
+	Result res;
+	std::transform(c.begin(), c.end(), inserter(res, res.end()), f);
+	return res;
+}
+
+/**
  * Convenience function for std::transform for changing map-like types to vector-like types.
  */
 template <template <typename, typename> class TargetContainer, template <typename, typename, typename, typename> class MapLikeContainer, typename Functor,
@@ -226,8 +238,8 @@ inline Result transform(const MapLikeContainer<K, V, C, A<T>>& c, const Functor&
  * Convenience function for std::transform.
  */
 template <typename Container, typename OutputIterator, typename Functor>
-inline void transform(Container& c, OutputIterator out, const Functor& f) {
-	std::transform(c.begin(), c.end(), out, f);
+inline void transform(const Container& c, OutputIterator out, const Functor& f) {
+	std::transform(c.cbegin(), c.cend(), out, f);
 }
 
 /**

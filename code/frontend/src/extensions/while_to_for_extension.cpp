@@ -47,7 +47,6 @@
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_address.h"
 #include "insieme/core/ir_visitor.h"
-#include "insieme/core/lang/ir++_extension.h"
 #include "insieme/core/pattern/ir_pattern.h"
 #include "insieme/core/pattern/pattern_utils.h"
 #include "insieme/core/transform/manipulation.h"

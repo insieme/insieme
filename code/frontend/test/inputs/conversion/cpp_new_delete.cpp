@@ -76,7 +76,7 @@ int main() {
 	}
 
 	#pragma test expect_ir(R"({
-		var ref<ptr<int<4>,f,f>,f,f,plain> i =  ptr_from_array(ref_new_init(array_create(type_lit(50), [1,2,3])));
+		var ref<ptr<int<4>,f,f>,f,f,plain> i = ptr_from_array(ref_new_init(*<ref<array<int<4>,50>,f,f,plain>>(ref_temp(type_lit(array<int<4>,50>))) {1,2,3}));
 		ref_delete(ptr_to_array(*i));
 	})")
 	{

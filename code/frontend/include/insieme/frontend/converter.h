@@ -98,7 +98,7 @@ namespace conversion {
 		/// List of warnings up to this point
 		///
 		std::set<std::string> warnings;
-		
+
 		/// Converts Clang declarations to corresponding IR, also storing the necessary state
 		///
 		std::shared_ptr<DeclConverter> declConvPtr;
@@ -142,7 +142,7 @@ namespace conversion {
 		/// A state object which manages mappings from clang record types to IR GenericTypes
 		///
 		std::shared_ptr<state::RecordManager> recordManPtr;
-		
+
 		/// An object which handles attaching tags to literals generated from symbols defined in the standard library
 		///
 		std::shared_ptr<utils::HeaderTagger> headerTaggerPtr;
@@ -196,9 +196,10 @@ namespace conversion {
 		std::shared_ptr<state::VariableManager> getVarMan() const { return varManPtr; }
 		std::shared_ptr<state::FunctionManager> getFunMan() const { return funManPtr; }
 		std::shared_ptr<state::RecordManager> getRecordMan() const { return recordManPtr; }
+		std::shared_ptr<utils::HeaderTagger> getHeaderTagger() const { return headerTaggerPtr; }
 
 		const pragma::PragmaStmtMap& getPragmaMap() const {	return pragmaMap; }
-		
+
 		/**
 		 * Entry point for converting clang statements into IR statements
 		 * @param stmt is a clang statement of the AST
@@ -207,12 +208,19 @@ namespace conversion {
 		core::StatementPtr convertStmt(const clang::Stmt* stmt) const;
 
 		/**
+		 * Entry point for converting clang statements into an IR statement wrapper
+		 * @param stmt is a clang statement of the AST
+		 * @return the corresponding IR statement(s) in a wrapper
+		 */
+		stmtutils::StmtWrapper convertStmtToWrapper(const clang::Stmt* stmt) const;
+
+		/**
 		 * Entry point for converting clang expressions to IR expressions
 		 * @param expr is a clang expression of the AST
 		 * @return the corresponding IR expression
 		 */
 		core::ExpressionPtr convertExpr(const clang::Expr* expr) const;
-		
+
 		/**
 		 * Entry point for converting clang initialization expressions to IR expressions
 		 * - the difference is relevant in the case of string literals
@@ -220,7 +228,7 @@ namespace conversion {
 		 * @return the corresponding IR initialization expression
 		 */
 		core::ExpressionPtr convertInitExpr(const clang::Expr* expr) const;
-		
+
 		/**
 		 * Entry point for converting clang expressions used in C++ arguments or return values to IR expressions
 		 * - in these cases, we need to skip implicitly generated move and copy constructor calls
@@ -244,8 +252,8 @@ namespace conversion {
 		 * @return the corresponding IR type
 		 */
 		core::TypePtr convertVarType(const clang::QualType& type) const;
-		
-		
+
+
 		/**
 		 * Tag symbols from std libs with the appropriate header information
 		 * @param node the node to (potentially) tag

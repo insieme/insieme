@@ -50,7 +50,6 @@
 #include "insieme/core/ir_types.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/annotations/naming.h"
-#include "insieme/core/lang/ir++_extension.h"
 
 #include <boost/algorithm/string/predicate.hpp>
 
@@ -76,7 +75,7 @@ namespace conversion {
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::TypePtr Converter::CXXTypeConverter::VisitTagType(const TagType* tagType) {
 		VLOG(2) << "CXXTypeConverter::VisitTagType " << tagType << std::endl;
-		
+
 		// first, try lookup
 		if(auto clangRecTy = llvm::dyn_cast<RecordType>(tagType)) {
 			if(converter.getRecordMan()->contains(clangRecTy->getDecl())) {
@@ -95,27 +94,14 @@ namespace conversion {
 		auto irTuIt = tuTypes.find(genTy);
 		if(irTuIt == tuTypes.end()) return retTy;
 		retTy = irTuIt->second;
-		
+
 		// for C++ classes/structs, we need to add members and parents
 		const clang::CXXRecordDecl* classDecl = llvm::dyn_cast_or_null<clang::CXXRecordDecl>(tagType->getDecl());
 		if(!classDecl || !classDecl->getDefinition()) { return genTy; }
-		
-		// for C++ template specializations, we need to encode the template parameters into the name 
-		// and replace it in the TU, the record manager, and the existing struct type
-		auto tempSpec = llvm::dyn_cast<clang::ClassTemplateSpecializationDecl>(classDecl);
-		if(tempSpec) {
-			auto suffix = utils::buildNameSuffixForTemplate(tempSpec->getTemplateInstantiationArgs(), tempSpec->getASTContext());
-			auto newGenTy = builder.genericType(genTy.getName().getValue() + suffix);
-			converter.getIRTranslationUnit().removeType(genTy);
-			converter.getRecordMan()->replace(classDecl, newGenTy);
-			retTy = core::transform::replaceAllGen(converter.getNodeManager(), retTy, genTy, newGenTy, core::transform::globalReplacement);
-			retTy = core::transform::replaceAllGen(converter.getNodeManager(), retTy, builder.tagTypeReference(genTy->getName()),
-				                                   builder.tagTypeReference(newGenTy.getName()), core::transform::globalReplacement);
-			genTy = newGenTy;
-		}
-		
+
 		// get struct type for easier manipulation
-		auto structTy = retTy.as<core::TagTypePtr>()->getStruct();
+		auto tagTy = retTy.as<core::TagTypePtr>();
+		auto recordTy = tagTy->getRecord();
 
 		// get parents if any
 		std::vector<core::ParentPtr> parents;
@@ -128,7 +114,7 @@ namespace conversion {
 
 		// add symbols for all methods to function manager before conversion
 		for(auto mem : classDecl->methods()) {
-			auto convDecl = converter.getDeclConverter()->convertMethodDecl(mem, irParents, structTy->getFields(), true);
+			auto convDecl = converter.getDeclConverter()->convertMethodDecl(mem, irParents, recordTy->getFields(), true);
 		}
 
 		// get methods, constructors and destructor
@@ -139,7 +125,7 @@ namespace conversion {
 		bool destructorVirtual = false;
 		for(auto mem : classDecl->methods()) {
 			mem = mem->getCanonicalDecl();
-			auto convDecl = converter.getDeclConverter()->convertMethodDecl(mem, irParents, structTy->getFields());
+			auto convDecl = converter.getDeclConverter()->convertMethodDecl(mem, irParents, recordTy->getFields());
 			if(convDecl.lambda) {
 				VLOG(2) << "adding method lambda literal " << *convDecl.lit << " of type " << dumpColor(convDecl.lit->getType()) << "to IRTU";
 				converter.getIRTranslationUnit().addFunction(convDecl.lit, convDecl.lambda);
@@ -156,16 +142,21 @@ namespace conversion {
 			}
 		}
 
-		// create new structTy
-		retTy = builder.structTypeWithDefaults(builder.refType(genTy), irParents, structTy->getFields(), builder.expressions(constructors), destructor,
-			                                   destructorVirtual, builder.memberFunctions(members), builder.pureVirtualMemberFunctions(pvMembers));
+		// create new structTy/unionTy
+		if(tagTy->isStruct()) {
+			retTy = builder.structTypeWithDefaults(builder.refType(genTy), irParents, recordTy->getFields(), builder.expressions(constructors), destructor,
+				                                   destructorVirtual, builder.memberFunctions(members), builder.pureVirtualMemberFunctions(pvMembers));
+		} else {
+			retTy = builder.unionTypeWithDefaults(builder.refType(genTy), recordTy->getFields(), builder.expressions(constructors), destructor,
+				                                  destructorVirtual, builder.memberFunctions(members), builder.pureVirtualMemberFunctions(pvMembers));
+		}
 
 		// update associated type in irTu
 		converter.getIRTranslationUnit().insertRecordTypeWithDefaults(genTy, retTy.as<core::TagTypePtr>());
 
 		return genTy;
 	}
-	
+
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// 						DEPENDENT SIZED ARRAY TYPE
 	// This type represents an array type in C++ whose size is a value-dependent
@@ -189,7 +180,7 @@ namespace conversion {
 	//						REFERENCE TYPE
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::TypePtr Converter::CXXTypeConverter::VisitReferenceType(const ReferenceType* refTy) {
-		assert_fail() << "CPP Reference type should have been handled upstream already!";		
+		assert_fail() << "CPP Reference type should have been handled upstream already!";
 		return core::TypePtr();
 	}
 
@@ -349,19 +340,19 @@ namespace conversion {
 		assert_not_implemented();
 		return retTy;
 	}
-	
-	
+
+
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//                 DECLTYPE AND AUTO TYPE
 	// For both of these, we depend on clang to correctly resolve them.
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::TypePtr Converter::CXXTypeConverter::VisitDecltypeType(const clang::DecltypeType* declTy) {
 		frontend_assert(!declTy->isUndeducedType()) << "Non-deduced decltype type unsupported.";
-		return convertInternal(declTy->getUnderlyingType());	
-	}	
+		return convertInternal(declTy->getUnderlyingType());
+	}
 	core::TypePtr Converter::CXXTypeConverter::VisitAutoType(const clang::AutoType* autoTy) {
 		frontend_assert(autoTy->isDeduced()) << "Non-deduced auto type unsupported.";
-		return convertInternal(autoTy->getDeducedType());	
+		return convertInternal(autoTy->getDeducedType());
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

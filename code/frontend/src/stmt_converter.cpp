@@ -41,12 +41,13 @@
 #include "insieme/frontend/converter.h"
 #include "insieme/frontend/decl_converter.h"
 #include "insieme/frontend/state/variable_manager.h"
-#include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/clang_cast.h"
-#include "insieme/frontend/utils/macros.h"
-#include "insieme/frontend/utils/stmt_wrapper.h"
+#include "insieme/frontend/utils/conversion_utils.h"
 #include "insieme/frontend/utils/error_report.h"
 #include "insieme/frontend/utils/expr_to_bool.h"
+#include "insieme/frontend/utils/macros.h"
+#include "insieme/frontend/utils/source_locations.h"
+#include "insieme/frontend/utils/stmt_wrapper.h"
 
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/logging.h"
@@ -70,7 +71,7 @@ namespace {
 namespace insieme {
 namespace frontend {
 namespace conversion {
-	
+
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// Overwrite the basic visit method for expression in order to automatically
 	// and transparently attach annotations to node which are annotated
@@ -133,6 +134,7 @@ namespace conversion {
 			core::ExpressionPtr initExp;
 			if(convertedDecl.second) {
 				initExp = *convertedDecl.second;
+				initExp = utils::fixTempMemoryInInitExpression(convertedDecl.first, initExp);
 			} else {
 				// generate undefined initializer
 				initExp = convertedDecl.first;
@@ -174,7 +176,7 @@ namespace conversion {
 		retIr.push_back(irRetStmt);
 		return retIr;
 	}
-	
+
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//								FOR STATEMENT
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -196,7 +198,7 @@ namespace conversion {
 		// only generate non-empty body in IR if not a clang::NullStmt (for() ;) and not an empty compound (for() { })
 		clang::Stmt* clangBody = forStmt->getBody();
 		if(clangBody && !dyn_cast<clang::NullStmt>(clangBody)) {
-			stmtutils::StmtWrapper irOldBody = Visit(clangBody);
+			stmtutils::StmtWrapper irOldBody = converter.convertStmtToWrapper(clangBody);
 			if(auto compound = irOldBody.getSingleStmt().isa<core::CompoundStmtPtr>()) {
 				if(!compound->empty()) { newBody.push_back(aggregateStmts(builder, irOldBody)); }
 			} else {
@@ -250,7 +252,7 @@ namespace conversion {
 		stmtutils::StmtWrapper retStmt;
 		LOG_STMT_CONVERSION(ifStmt, retStmt);
 
-		core::StatementPtr thenBody = stmtutils::aggregateStmts(builder, Visit(ifStmt->getThen()));
+		core::StatementPtr thenBody = stmtutils::aggregateStmts(builder, converter.convertStmtToWrapper(ifStmt->getThen()));
 		frontend_assert(thenBody) << "Couldn't convert 'then' body of the IfStmt";
 
 		core::ExpressionPtr condExpr;
@@ -277,15 +279,15 @@ namespace conversion {
 		frontend_assert(cond) << "If statement with no condition";
 		condExpr = converter.convertExpr(cond);
 		frontend_assert(condExpr) << "Couldn't convert 'condition' expression of the IfStmt";
-		
+
 		core::StatementPtr elseBody = builder.compoundStmt();
 		// check for else statement
-		if(Stmt* elseStmt = ifStmt->getElse()) { elseBody = stmtutils::aggregateStmts(builder, Visit(elseStmt)); }
+		if(Stmt* elseStmt = ifStmt->getElse()) { elseBody = stmtutils::aggregateStmts(builder, converter.convertStmtToWrapper(elseStmt)); }
 		frontend_assert(elseBody) << "Couldn't convert 'else' body of the IfStmt";
 
 		// adding the ifstmt to the list of returned stmts
 		retStmt.push_back(builder.ifStmt(utils::exprToBool(condExpr), thenBody, elseBody));
-		
+
 		return retStmt;
 	}
 
@@ -296,7 +298,7 @@ namespace conversion {
 		stmtutils::StmtWrapper retStmt;
 		LOG_STMT_CONVERSION(whileStmt, retStmt);
 
-		core::StatementPtr body = aggregateStmts(builder, Visit(whileStmt->getBody()));
+		core::StatementPtr body = aggregateStmts(builder, converter.convertStmtToWrapper(whileStmt->getBody()));
 		frontend_assert(body) << "Couldn't convert body of the WhileStmt";
 
 		frontend_assert(!whileStmt->getConditionVariable()) << "WhileStmt with a declaration of a condition variable not supported";
@@ -313,7 +315,7 @@ namespace conversion {
 
 		retStmt.push_back(builder.whileStmt(utils::exprToBool(condExpr), body));
 		retStmt = aggregateStmts(builder, retStmt);
-		
+
 		return retStmt;
 	}
 
@@ -324,7 +326,7 @@ namespace conversion {
 		stmtutils::StmtWrapper retStmt;
 		LOG_STMT_CONVERSION(doStmt, retStmt);
 
-		core::CompoundStmtPtr body = builder.wrapBody(stmtutils::aggregateStmts(builder, Visit(doStmt->getBody())));
+		core::CompoundStmtPtr body = builder.wrapBody(stmtutils::aggregateStmts(builder, converter.convertStmtToWrapper(doStmt->getBody())));
 		frontend_assert(body) << "Couldn't convert body of the DoStmt";
 
 		const clang::Expr* cond = doStmt->getCond();
@@ -332,10 +334,10 @@ namespace conversion {
 
 		core::ExpressionPtr condExpr = utils::exprToBool(converter.convertExpr(cond));
 		frontend_assert(condExpr) << "Couldn't convert 'condition' expression of the DoStmt";
-		
+
 		frontend_assert(!core::analysis::isCallOf(condExpr, mgr.getLangExtension<core::lang::ReferenceExtension>().getRefAssign()))
 			<< "Assignments in do while condition not supported";
-		
+
 		core::VariablePtr exitTest = builder.variable(builder.refType(gen.getBool()));
 		condExpr = builder.logicOr(builder.logicNeg(builder.deref(exitTest)), condExpr);
 		body = builder.compoundStmt({builder.assign(exitTest, gen.getTrue()), body});
@@ -356,7 +358,7 @@ namespace conversion {
 		const clang::Expr* cond = switchStmt->getCond();
 		frontend_assert(cond) << "SwitchStmt with no condition";
 		core::ExpressionPtr condExpr = converter.convertExpr(cond);
-		
+
 		std::map<core::LiteralPtr, std::vector<core::StatementPtr>> caseMap;
 		vector<core::StatementPtr> decls;
 		std::vector<core::LiteralPtr> openCases;
@@ -537,11 +539,11 @@ namespace conversion {
 	stmtutils::StmtWrapper Converter::StmtConverter::VisitCompoundStmt(clang::CompoundStmt* compStmt) {
 		core::StatementPtr retStmt;
 		LOG_STMT_CONVERSION(compStmt, retStmt);
-		
+
 		converter.getVarMan()->pushScope(true);
 		core::StatementList stmtList;
 		for(auto stmt : compStmt->body()) {
-			stmtutils::StmtWrapper convertedStmt = Visit(stmt);
+			stmtutils::StmtWrapper convertedStmt = converter.convertStmtToWrapper(stmt);
 			for(auto stmt : convertedStmt) {
 				if(stmt != builder.getNoOp()) stmtList.push_back(stmt);
 			}
@@ -581,7 +583,7 @@ namespace conversion {
 		stmtutils::StmtWrapper retIr = stmtutils::StmtWrapper(builder.labelStmt(str));
 
 		clang::Stmt* stmt = labelStmt->getSubStmt();
-		stmtutils::StmtWrapper retIr2 = Visit(stmt);
+		stmtutils::StmtWrapper retIr2 = converter.convertStmtToWrapper(stmt);
 		std::copy(retIr2.begin(), retIr2.end(), std::back_inserter(retIr));
 		return retIr;
 	}
@@ -595,13 +597,12 @@ namespace conversion {
 		return stmtutils::StmtWrapper();
 	}
 
-
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//							  STATEMENT
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	stmtutils::StmtWrapper Converter::StmtConverter::VisitStmt(clang::Stmt* stmt) {
-		// frontend_assert(false && "this code looks malform and no used") << stmt->getStmtClassName(); -- guess what, it is used!
-		std::for_each(stmt->child_begin(), stmt->child_end(), [this](clang::Stmt* stmt) { this->Visit(stmt); });
+		// side effects?
+		std::for_each(stmt->child_begin(), stmt->child_end(), [&](clang::Stmt* stmt) { converter.convertStmtToWrapper(stmt); });
 		return stmtutils::StmtWrapper();
 	}
 }

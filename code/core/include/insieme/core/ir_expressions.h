@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -1074,186 +1074,57 @@ namespace core {
 	IR_NODE_END()
 
 
-	// ------------------------------------- Named Values -----------------------------------
+	// ------------------------------------- Init Expression -----------------------------------
 
 	/**
-	 * The accessor associated to a named value.
+	 * The accessor associated to an init expression.
 	 */
-	IR_NODE_ACCESSOR(NamedValue, Support, StringValue, Expression)
-		/**
-		 * Obtains a reference to the bound name.
-		 */
-		IR_NODE_PROPERTY(StringValue, Name, 0);
+	IR_NODE_ACCESSOR(InitExpr, Expression, GenericType, Expression, Expressions)
 
 		/**
-		 * Obtains a reference to the bound value.
+		 * Obtains the expression providing the reference to the memory location being initialized.
+		 * (Either a variable or ref_temp)
 		 */
-		IR_NODE_PROPERTY(Expression, Value, 1);
+		IR_NODE_PROPERTY(Expression, MemoryExpr, 1);
+	
+		/**
+		 * Obtains the initialization expressions.
+		 */
+		IR_NODE_PROPERTY(Expressions, InitExprs, 2);
+
+		vector<Ptr<const Expression>> getInitExprList() const {
+			return getInitExprs()->getExpressions();
+		}
+
 	IR_NODE_END()
 
 	/**
-	 * This type of node is used within the struct expression to represent the
-	 * connection between a name (the name of a member) and a value.
+	 * The entity used to represent init expressions. An init expression initializes a set of values in-place in a compound value.
+	 * (a struct, union or array)
 	 */
-	IR_NODE(NamedValue, Support)
+	IR_NODE(InitExpr, Expression)
 	  protected:
 		/**
 		 * Prints a string representation of this node to the given output stream.
 		 */
 		virtual std::ostream& printTo(std::ostream & out) const {
-			return out << *getName() << "=" << *getValue();
+			return out << "(" << getMemoryExpr() << " : " << getType() << "){" << join(", ", getInitExprList())<< "}";
 		}
 
 	  public:
+
 		/**
-		 * This static factory method constructing a new named value instance based
-		 * on the given parameters.
+		 * The static factory method constructing a new init expression based
+		 * on the memory expression and list of init expressions.
 		 *
 		 * @param manager the manager used for maintaining instances of this class
-		 * @param name the name to be bound
-		 * @param value the value to be bound
-		 * @return the requested type instance managed by the given manager
+		 * @param type the type of the value constructed
+		 * @param memoryExpr the expression describing the memory location to be populated
+		 * @param initExprs initialization expressions
+		 * @return the requested init expression
 		 */
-		static NamedValuePtr get(NodeManager & manager, const StringValuePtr& name, const ExpressionPtr& value) {
-			return manager.get(NamedValue(name, value));
-		}
-
-	IR_NODE_END()
-
-
-	// ------------------------------------ A class representing a list of named values------------------------------
-
-	/**
-	 * The accessor associated to a list of named values.
-	 */
-	IR_LIST_NODE_ACCESSOR(NamedValues, Support, NamedValues, NamedValue)
-	IR_NODE_END()
-
-	/**
-	 * A node type representing a list of named values.
-	 */
-	IR_NODE(NamedValues, Support)
-	  protected:
-		/**
-		 * Prints a string representation of this node to the given output stream.
-		 */
-		virtual std::ostream& printTo(std::ostream & out) const {
-			return out << "[" << join(",", getChildList(), print<deref<NodePtr>>()) << "]";
-		}
-
-	  public:
-		/**
-		 * This static factory method allows to construct a named value list based
-		 * on the given list.
-		 *
-		 * @param manager the manager used for maintaining instances of this class
-		 * @param values the values to be included within the requested list
-		 * @return the requested type instance managed by the given manager
-		 */
-		static NamedValuesPtr get(NodeManager & manager, const NamedValueList& values) {
-			return manager.get(NamedValues(convertList(values)));
-		}
-	IR_NODE_END()
-
-
-	// ------------------------------------- Struct Expression -----------------------------------
-
-	/**
-	 * The accessor associated to a struct expression.
-	 */
-	IR_NODE_ACCESSOR(StructExpr, Expression, Type, NamedValues)
-
-		/**
-		 * Obtains a reference to the list of named values aggregated to a struct by
-		 * the represented node.
-		 */
-		IR_NODE_PROPERTY(NamedValues, Members, 1);
-
-	IR_NODE_END()
-
-	/**
-	 * The entity used to represent struct expressions. A struct expression is composing
-	 * a given list of values into a struct containing those values.
-	 */
-	IR_NODE(StructExpr, Expression)
-	  public:
-		/**
-		 * A type definition defining the type of entries this composed type is consisting of.
-		 */
-		typedef NamedValueList Members;
-
-	  protected:
-
-		/**
-		 * Prints a string representation of this node to the given output stream.
-		 */
-		virtual std::ostream& printTo(std::ostream & out) const {
-			static auto entryPrinter = [](std::ostream& out, const NamedValuePtr& cur) { out << *cur->getName() << "=" << *cur->getValue(); };
-			return out << "struct{" << join(", ", getMembers()->getElements(), entryPrinter) << "}";
-		}
-
-	  public:
-		/**
-		 * This static factory method constructing a new struct expression based
-		 * on the resulting type and a given list of expressions.
-		 *
-		 * @param manager the manager used for maintaining instances of this class
-		 * @param type the type of the struct constructed by the resulting expression
-		 * @param values the values to be packed into a vector
-		 * @return the requested type instance managed by the given manager
-		 */
-		static StructExprPtr get(NodeManager & manager, const TypePtr& type, const NamedValuesPtr& values) {
-			return manager.get(StructExpr(type, values));
-		}
-
-	IR_NODE_END()
-
-
-	// ------------------------------------- Union Expression -----------------------------------
-
-	/**
-	 * The accessor associated to a union expression.
-	 */
-	IR_NODE_ACCESSOR(UnionExpr, Expression, Type, StringValue, Expression)
-
-		/**
-		 * Obtains a reference to the name of the field initialized by this union
-		 */
-		IR_NODE_PROPERTY(StringValue, MemberName, 1);
-
-		/**
-		 * Obtains a reference to the value associated to the addressed member of the resulting union.
-		 */
-		IR_NODE_PROPERTY(Expression, Member, 2);
-
-	IR_NODE_END()
-
-	/**
-	 * The entity used to represent union expressions. A union expression is composing
-	 * a given list of values into a union containing those values.
-	 */
-	IR_NODE(UnionExpr, Expression)
-	  protected:
-		/**
-		 * Prints a string representation of this node to the given output stream.
-		 */
-		virtual std::ostream& printTo(std::ostream & out) const {
-			return out << "union{" << *getMemberName() << "=" << *getMember() << "}";
-		}
-
-	  public:
-		/**
-		 * This static factory method constructing a new union expression based
-		 * on the resulting type, a member name and a value.
-		 *
-		 * @param manager the manager used for maintaining instances of this class
-		 * @param type the type of the union constructed by the resulting expression
-		 * @param member the name of the member to be initialized
-		 * @param value the value to be used for the initialization
-		 * @return the requested type instance managed by the given manager
-		 */
-		static UnionExprPtr get(NodeManager & manager, const TypePtr& type, const StringValuePtr& member, const ExpressionPtr& value) {
-			return manager.get(UnionExpr(type, member, value));
+		static InitExprPtr get(NodeManager& manager, const GenericTypePtr& type, const ExpressionPtr& memoryExpr, const ExpressionsPtr& initExprs) {
+			return manager.get(InitExpr(type, memoryExpr, initExprs));
 		}
 
 	IR_NODE_END()

@@ -41,17 +41,16 @@
 #include "insieme/utils/logging.h"
 #include "insieme/utils/name_mangling.h"
 
-#include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"
+#include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/type_utils.h"
 #include "insieme/core/annotations/naming.h"
+#include "insieme/core/frontend_ir_builder.h"
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_builder.h"
-#include "insieme/core/frontend_ir_builder.h"
 #include "insieme/core/ir_statistic.h"
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/lang/array.h"
-#include "insieme/core/lang/ir++_extension.h"
 #include "insieme/core/lang/static_vars.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/transform/manipulation.h"
@@ -60,7 +59,6 @@
 #include "insieme/core/types/subtyping.h"
 
 #include "insieme/utils/graph_utils.h"
-
 
 namespace insieme {
 namespace core {
@@ -565,6 +563,9 @@ namespace tu {
 					if(contains(prevAddedLiterals, cur.first)) {
 						core::visitDepthFirstOnce(cur.second, [&](const core::LiteralPtr& literal) {
 							if(core::analysis::isRefType(literal->getType())) {
+								if(contains(usedLiterals, literal)) {
+									return;
+								}
 								currAddedLiterals.insert(literal);
 								usedLiterals.insert(literal);
 							}

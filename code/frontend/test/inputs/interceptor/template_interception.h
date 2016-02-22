@@ -36,27 +36,12 @@
 
 #pragma once
 
-#include "insieme/core/forward_decls.h"
-#include "insieme/frontend/clang.h"
-
-namespace insieme {
-namespace frontend {
-
-namespace conversion {
-	class Converter;
+template<class C>
+C templateFun(C c) {
+	return c+c;
 }
 
-namespace utils {
-
-	/// Replace RefTemps in outer constructor calls with variable itself
-	///
-	core::ExpressionPtr fixTempMemoryInInitExpression(const core::ExpressionPtr& variable, const core::ExpressionPtr& initExp);
-
-	/// Build a Cxx method call from its components
-	///
-	core::CallExprPtr buildCxxMethodCall(conversion::Converter& converter, const core::TypePtr& retType, const core::ExpressionPtr& callee,
-		                                 const core::ExpressionPtr& thisArgument, clang::CallExpr::arg_const_range argumentRange);
-
-} // end namespace utils
-} // end namespace frontend
-} // end namespace insieme
+template<class D>
+class TemplateClass {
+	D field;
+};

@@ -358,20 +358,29 @@ namespace core {
 
 		// -----------------------------------
 
-		NamedValuePtr namedValue(const string& name, const ExpressionPtr& value) const;
-
 		TupleExprPtr tupleExpr(const ExpressionList& values = ExpressionList()) const;
 
 		template <typename... T>
 		TupleExprPtr tupleExpr(const ExpressionPtr& expr, const T&... rest) const {
 			return tupleExpr(toVector<ExpressionPtr>(expr, rest...));
 		}
+		
+		InitExprPtr initExpr(const ExpressionPtr& memExpr, const ExpressionList& initExprs = ExpressionList()) const {
+			assert_true(lang::isReference(memExpr)) << "initExpr needs to be built on Reference type, got " << dumpColor(memExpr->getType());
+			return initExpr(memExpr->getType().as<GenericTypePtr>(), memExpr, expressions(initExprs));
+		}
+		template <typename... T>
+		InitExprPtr initExpr(const ExpressionPtr& memExpr, const T&... initExprs) const {
+			return initExpr(memExpr, toVector<ExpressionPtr>(initExprs...));
+		}
 
-
-		StructExprPtr structExpr(const TypePtr& structType, const vector<NamedValuePtr>& values) const;
-		StructExprPtr structExpr(const vector<std::pair<StringValuePtr, ExpressionPtr>>& values) const;
-		StructExprPtr structExpr(const vector<NamedValuePtr>& values) const;
-
+		InitExprPtr initExprTemp(const GenericTypePtr& type, const ExpressionList& initExprs = ExpressionList()) const {
+			return initExpr(lang::buildRefTemp(type), initExprs);
+		}
+		template <typename... T>
+		InitExprPtr initExprTemp(const GenericTypePtr& type, const T&... initExprs) const {
+			return initExprTemp(type, toVector<ExpressionPtr>(initExprs...));
+		}
 
 		// creates a program - empty or based on the given entry points
 		ProgramPtr createProgram(const ExpressionList& entryPoints = ExpressionList()) const;

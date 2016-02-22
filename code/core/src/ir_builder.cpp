@@ -62,22 +62,18 @@
 #include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/analysis/type_utils.h"
 
-#include "insieme/core/encoder/lists.h"
-
 #include "insieme/core/lang/array.h"
 #include "insieme/core/lang/io.h"
-#include "insieme/core/lang/ir++_extension.h"
 #include "insieme/core/lang/parallel.h"
 #include "insieme/core/lang/pointer.h"
 #include "insieme/core/lang/reference.h"
 #include "insieme/core/lang/static_vars.h"
 #include "insieme/core/lang/varargs_extension.h"
 
-#include "insieme/core/parser/ir_parser.h"
-
-#include "insieme/core/printer/pretty_printer.h"
-
 #include "insieme/core/datapath/datapath.h"
+#include "insieme/core/encoder/lists.h"
+#include "insieme/core/parser/ir_parser.h"
+#include "insieme/core/printer/pretty_printer.h"
 
 #include "insieme/utils/map_utils.h"
 #include "insieme/utils/logging.h"
@@ -599,36 +595,11 @@ namespace core {
 		return field(stringValue(name), type);
 	}
 
-	NamedValuePtr IRBuilderBaseModule::namedValue(const string& name, const ExpressionPtr& value) const {
-		return namedValue(stringValue(name), value);
-	}
-
 	TupleExprPtr IRBuilderBaseModule::tupleExpr(const vector<ExpressionPtr>& values) const {
 		TupleTypePtr type = tupleType(extractTypes(values));
 		return tupleExpr(type, Expressions::get(manager, values));
 	}
-
-	StructExprPtr IRBuilderBaseModule::structExpr(const TypePtr& structType, const vector<NamedValuePtr>& values) const {
-		return structExpr(structType, namedValues(values));
-	}
-
-	StructExprPtr IRBuilderBaseModule::structExpr(const vector<std::pair<StringValuePtr, ExpressionPtr>>& members) const {
-		vector<FieldPtr> types;
-		vector<NamedValuePtr> values;
-		for_each(members, [&](const pair<StringValuePtr, ExpressionPtr>& cur) {
-			types.push_back(field(cur.first, cur.second->getType()));
-			values.push_back(namedValue(cur.first, cur.second));
-		});
-		return structExpr(structType(types), namedValues(values));
-	}
-
-	StructExprPtr IRBuilderBaseModule::structExpr(const vector<NamedValuePtr>& values) const {
-		vector<FieldPtr> types;
-		for_each(values, [&](const NamedValuePtr& cur) { types.push_back(field(cur->getName(), cur->getValue()->getType())); });
-		return structExpr(structType(types), namedValues(values));
-	}
-
-
+	
 	IfStmtPtr IRBuilderBaseModule::ifStmt(const ExpressionPtr& condition, const StatementPtr& thenBody, const StatementPtr& elseBody) const {
 		if(!elseBody) { return ifStmt(condition, wrapBody(thenBody), getNoOp()); }
 		return ifStmt(condition, wrapBody(thenBody), wrapBody(elseBody));
@@ -1483,9 +1454,9 @@ namespace core {
 
 			// if it is a struct ...
 			if(auto structType = analysis::isStruct(type)) {
-				vector<NamedValuePtr> members;
-				for_each(structType->getFields(), [&](const FieldPtr& cur) { members.push_back(namedValue(cur->getName(), getZero(cur->getType()))); });
-				return core::StructExpr::get(manager, type, namedValues(members));
+				ExpressionList initers;
+				for_each(structType->getFields(), [&](const FieldPtr& cur) { initers.push_back(getZero(cur->getType())); });
+				return deref(initExpr(lang::buildRefTemp(type), initers));
 			}
 
 			// if it is a union type ...
@@ -1495,7 +1466,7 @@ namespace core {
 
 				// init the first member
 				auto first = unionType->getFields()[0];
-				return unionExpr(type, first->getName(), getZero(first->getType()));
+				return deref(initExpr(lang::buildRefTemp(type), getZero(first->getType())));
 			}
 
 			// if it is a function type -- used for function pointers
@@ -1510,7 +1481,7 @@ namespace core {
 
 			// for array types
 			if(lang::isArray(type)) {
-				return lang::buildArrayCreate(lang::getArraySize(type), { getZero(lang::getArrayElementType(type)) });
+				return deref(initExpr(lang::buildRefTemp(type), getZero(lang::getArrayElementType(type))));
 			}
 
 			// for all other generic types we return a generic zero value

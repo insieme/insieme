@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -34,27 +34,20 @@
  * regarding third party software licenses.
  */
 
-#include <gtest/gtest.h>
+#include "template_interception.h"
 
-#include "insieme/core/test/test_utils.h"
-#include "insieme/core/lang/basic.h"
+int main() {
+	#pragma test expect_ir(R"(lit("IMP_templateFun_int_returns_int" : (int<4>) -> int<4>)(1))")
+	templateFun(1);
+	#pragma test expect_ir(R"(lit("IMP_templateFun_double_returns_double" : (real<8>) -> real<8>)(lit("2.0E+0":real<8>)))")
+	templateFun(2.0);
+	#pragma test expect_ir(R"(lit("IMP_templateFun_unsigned_long_long_returns_unsigned_long_long" : (uint<16>) -> uint<16>)(lit("3":uint<16>)))")
+	templateFun(3ull);
 
-#include "insieme/core/ir_node.h"
-#include "insieme/core/lang/ir++_extension.h"
-#include "insieme/core/checks/full_check.h"
-
-namespace insieme {
-namespace core {
-namespace lang {
-
-	TEST(IRppExtensions, AllSemantics) {
-		NodeManager nm;
-		const IRppExtensions& ext = nm.getLangExtension<IRppExtensions>();
-
-		semanticCheckSecond(ext.getDefinedSymbols());
-	}
-
-
-} // end namespace lang
-} // end namespace core
-} // end namespace insieme
+	#pragma test expect_ir(R"(var ref<IMP_TemplateClass_int,f,f,plain> v0 = lit("IMP_TemplateClass_int::ctor" : IMP_TemplateClass_int::())(v0);)")
+	TemplateClass<int> intInstance;
+	#pragma test expect_ir(R"(var ref<IMP_TemplateClass_double,f,f,plain> v0 = lit("IMP_TemplateClass_double::ctor" : IMP_TemplateClass_double::())(v0);)")
+	TemplateClass<double> doubleInstance;
+	#pragma test expect_ir(R"(var ref<IMP_TemplateClass_bool,f,f,plain> v0 = lit("IMP_TemplateClass_bool::ctor" : IMP_TemplateClass_bool::())(v0);)")
+	TemplateClass<bool> boolInstance;
+}

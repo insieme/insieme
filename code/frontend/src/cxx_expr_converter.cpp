@@ -42,6 +42,7 @@
 #include "insieme/frontend/state/record_manager.h"
 #include "insieme/frontend/state/variable_manager.h"
 #include "insieme/frontend/utils/clang_cast.h"
+#include "insieme/frontend/utils/conversion_utils.h"
 #include "insieme/frontend/utils/debug.h"
 #include "insieme/frontend/utils/expr_to_bool.h"
 #include "insieme/frontend/utils/frontend_inspire_module.h"
@@ -65,7 +66,6 @@
 #include "insieme/core/datapath/datapath.h"
 #include "insieme/core/encoder/lists.h"
 #include "insieme/core/lang/basic.h"
-#include "insieme/core/lang/ir++_extension.h"
 #include "insieme/core/lang/pointer.h"
 #include "insieme/core/lang/array.h"
 #include "insieme/core/transform/node_replacer.h"
@@ -192,6 +192,16 @@ namespace conversion {
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//							NULLPTR
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	core::ExpressionPtr Converter::CXXExprConverter::VisitCXXNullPtrLiteralExpr(const clang::CXXNullPtrLiteralExpr* nptrExpr) {
+		core::ExpressionPtr retIr;
+		LOG_EXPR_CONVERSION(nptrExpr, retIr);
+		retIr = core::lang::buildPtrNull(core::lang::buildPtrType(converter.getIRBuilder().getLangBasic().getUnit()));
+		return retIr;
+	}
+
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//								CXX BOOLEAN LITERAL
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr Converter::CXXExprConverter::VisitCXXBoolLiteralExpr(const clang::CXXBoolLiteralExpr* boolLit) {
@@ -207,7 +217,6 @@ namespace conversion {
 		core::ExpressionPtr ret;
 		LOG_EXPR_CONVERSION(callExpr, ret);
 
-		const core::IRBuilder& builder = converter.builder;
 		const CXXMethodDecl* methodDecl = callExpr->getMethodDecl();
 
 		if(!methodDecl) {
@@ -222,23 +231,10 @@ namespace conversion {
 			if(core::lang::isPointer(thisObj)) {
 				thisObj = core::lang::buildPtrToRef(thisObj);
 			}
-			core::ExpressionList arguments { thisObj };
-
-			// in Inspire 2.0, copy and move constructor calls are implicit on function calls, and ref kind needs to be adapted
-			auto funType = methodLambda->getType().as<core::FunctionTypePtr>();
-			size_t i = 1;
-			std::transform(callExpr->arg_begin(), callExpr->arg_end(), std::back_inserter(arguments), [&](const clang::Expr* clangArgExpr) {
-				auto targetType = funType->getParameterType(i++);
-				auto ret = convertCxxArgExpr(clangArgExpr, targetType);
-				VLOG(2) << "====================\n\nconvert method argument:\n"
-					    << "\n - from: " << dumpClang(clangArgExpr, converter.getCompiler().getSourceManager()) << "\n - to: " << dumpPretty(ret)
-					    << "\n - of type: " << dumpPretty(ret->getType()) << "\n - target T: " << dumpPretty(targetType);
-				return ret;
-			});
 
 			// build call and we are done
 			auto retType = methodLambda->getType().as<core::FunctionTypePtr>()->getReturnType();
-			ret = builder.callExpr(retType, methodLambda, arguments);
+			ret = utils::buildCxxMethodCall(converter, retType, methodLambda, thisObj, callExpr->arguments());
 		}
 
 		return ret;
@@ -254,63 +250,6 @@ namespace conversion {
 		LOG_EXPR_CONVERSION(callExpr, retIr);
 
 		retIr = VisitCallExpr(callExpr);
-
-		//core::ExpressionPtr func;
-		//core::ExpressionPtr convertedOp;
-		//ExpressionList args;
-		//core::FunctionTypePtr funcTy;
-
-		//if(const clang::CXXMethodDecl* methodDecl = llvm::dyn_cast<clang::CXXMethodDecl>(callExpr->getCalleeDecl())) {
-		//	// operator defined as member function
-		//	VLOG(2) << "Operator defined as member function " << methodDecl->getParent()->getNameAsString() << "::" << methodDecl->getNameAsString();
-
-
-		//	convertedOp = converter.getCallableExpression(methodDecl);
-
-		//	// possible member operators: +,-,*,/,%,^,&,|,~,!,<,>,+=,-=,*=,/=,%=,^=,&=,|=,<<,>>,>>=,<<=,==,!=,<=,>=,&&,||,++,--,','
-		//	// overloaded only as member function: '=', '->', '()', '[]', '->*', 'new', 'new[]', 'delete', 'delete[]'
-		//	// unary:	X::operator@();	left == CallExpr->arg(0) == "this"
-		//	// binary:	X::operator@( right==arg(1) ); left == CallExpr->arg(0) == "this"
-		//	// else functioncall: ():		X::operator@( right==arg(1), args ); left == CallExpr->arg(0) == "this"
-
-		//	// get "this-object"
-		//	core::ExpressionPtr ownerObj = converter.convertExpr(callExpr->getArg(0));
-
-		//	if(core::analysis::isAnyCppRef(ownerObj->getType())) { ownerObj = builder.toIRRef(ownerObj); }
-
-		//	// get arguments
-		//	funcTy = convertedOp.getType().as<core::FunctionTypePtr>();
-		//	args = getFunctionArguments(callExpr, funcTy);
-
-		//	//  the problem is, we call a memeber function over a value, the owner MUST be always a ref,
-		//	//  is not a expression with cleanups because this object has not need to to be destucted,
-		//	//  no used defined dtor.
-		//	// some constructions might return an instance, incorporate a materialize
-		//	if(!ownerObj->getType().isa<core::RefTypePtr>()) {
-		//		// ownerObj =  builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), ownerObj);
-		//		ownerObj = builder.refVar(ownerObj);
-		//	}
-
-		//	// incorporate this to the beginning of the args list
-		//	args.insert(args.begin(), ownerObj);
-		//} else if(const clang::FunctionDecl* funcDecl = llvm::dyn_cast<clang::FunctionDecl>(callExpr->getCalleeDecl())) {
-		//	// operator defined as non-member function
-		//	VLOG(2) << "Operator defined as non-member function " << funcDecl->getNameAsString();
-
-		//	// possible non-member operators:
-		//	// unary:	operator@( left==arg(0) )
-		//	// binary:	operator@( left==arg(0), right==arg(1) )
-
-		//	convertedOp = converter.convertExpr(callExpr->getCallee());
-
-		//	funcTy = convertedOp.getType().as<core::FunctionTypePtr>();
-		//	args = getFunctionArguments(callExpr, funcDecl);
-		//}
-
-		//retIr = builder.callExpr(funcTy->getReturnType(), convertedOp, args);
-
-		//assert_not_implemented();
-
 		return retIr;
 	}
 
@@ -331,19 +270,10 @@ namespace conversion {
 
 			// get constructor lambda
 			auto constructorLambda = converter.getFunMan()->lookup(constructExpr->getConstructor());
-			auto lambdaParamTypes = constructorLambda.getType().as<core::FunctionTypePtr>().getParameterTypeList();
-			VLOG(2) << "constructor lambda literal " << *constructorLambda << " of type " << dumpColor(constructorLambda->getType());
-
-			// the constructor is then simply a call with the mem location and all its arguments
-			core::ExpressionList arguments { irMemLoc };
-			size_t i = 1;
-			for(auto arg : constructExpr->arguments()) {
-				arguments.push_back(converter.convertCxxArgExpr(arg, lambdaParamTypes[i++]));
-			}
 
 			// return call
 			auto retType = constructorLambda->getType().as<core::FunctionTypePtr>()->getReturnType();
-			return builder.callExpr(retType, constructorLambda, arguments);
+			return utils::buildCxxMethodCall(converter, retType, constructorLambda, irMemLoc, constructExpr->arguments());
 		}
 	}
 
@@ -362,15 +292,29 @@ namespace conversion {
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	namespace {
 		/// Resize the array created by an array create call (required due to mismatched size reported for initializer expressions in new[])
-		core::ExpressionPtr resizeArrayCreate(const Converter& converter, const core::ExpressionPtr& createExpr, const core::ExpressionPtr& newSize) {
-			assert_decl(
-					auto& nodeMan = createExpr->getNodeManager();
-					auto& arrExp = nodeMan.getLangExtension<core::lang::ArrayExtension>()
-			);
-			frontend_assert(core::analysis::isCallOf(createExpr, arrExp.getArrayCreate()))
-				<< "Trying to resize array creation, but expression is not array creation";
+		core::ExpressionPtr resizeArrayCreate(const Converter& converter, core::ExpressionPtr createExpr, const core::ExpressionPtr& newSize) {
+			auto& nodeMan = createExpr->getNodeManager();
+			auto& refExt = nodeMan.getLangExtension<core::lang::ReferenceExtension>();
+			bool hasDeref = refExt.isCallOfRefDeref(createExpr);
+			if(hasDeref) createExpr = core::analysis::getArgument(createExpr, 0);
 
-			return core::lang::buildArrayCreate(newSize, core::lang::parseListOfExpressions(createExpr.as<core::CallExprPtr>()->getArgument(1)));
+			auto initExpr = createExpr.isa<core::InitExprPtr>();
+			frontend_assert(initExpr) << "Trying to resize array creation, but expression is not init";
+
+			auto arrGt = initExpr.getType();
+			frontend_assert(core::lang::isReference(arrGt)) << "Inited type must be reference";
+			auto subTy = core::analysis::getReferencedType(arrGt);
+			frontend_assert(core::lang::isArray(subTy)) << "Expected array type, got " << *subTy;
+			auto arrTy = core::lang::ArrayType(subTy);
+
+			// need to implement this for non-const size (approach same as with C VLAs)
+			auto form = core::arithmetic::toFormula(newSize);
+			frontend_assert(form.isConstant()) << "Non const-sized new[] not yet implemented";
+			arrTy.setSize(form.getIntegerValue());
+
+			core::ExpressionPtr retIr = converter.getIRBuilder().initExprTemp(arrTy, initExpr.getInitExprList());
+			if(hasDeref) retIr = converter.getIRBuilder().deref(retIr);
+			return retIr;
 		}
 	}
 
@@ -509,7 +453,7 @@ namespace conversion {
 	core::ExpressionPtr Converter::CXXExprConverter::VisitExprWithCleanups(const clang::ExprWithCleanups* cleanupExpr) {
 		core::ExpressionPtr retIr;
 		LOG_EXPR_CONVERSION(cleanupExpr, retIr);
-		
+
 		// temporary creation/destruction is implicit
 		retIr = converter.convertExpr(cleanupExpr->getSubExpr());
 
@@ -551,13 +495,15 @@ namespace conversion {
 				// otherwise, materialize
 				frontend_assert(matRefType.getElementType() == retIr->getType()) << "Materializing to unexpected type " << dumpColor(matRefType.toType())
 					                                                            << " from " << dumpColor(retIr->getType());
+				// if call to deref, simply remove it
+				auto& refExt = converter.getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
+				if(refExt.isCallOfRefDeref(retIr)) {
+					retIr = subCall->getArgument(0);
+					return retIr;
+				}
+				// otherwise, materialize call
 				retIr = builder.callExpr(builder.refType(retIr->getType()), subCall->getFunctionExpr(), subCall->getArguments());
 			}
-		}
-
-		// we don't need to materialize POD types, Inspire semantics allow implicit materialization
-		if(materTempExpr->getType().isPODType(converter.getCompiler().getASTContext())) {
-			return retIr;
 		}
 
 		return retIr;

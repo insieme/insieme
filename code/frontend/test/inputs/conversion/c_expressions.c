@@ -418,7 +418,7 @@ int main() {
 	}
 
 	// check direct R-value access
-	#pragma test expect_ir("def IMP_generate_struct = () -> struct IMP_simple_struct {i: int<4>;} { return *ref_temp_init(<IMP_simple_struct>{0}); }; IMP_generate_struct().i+5")
+	#pragma test expect_ir("def IMP_generate_struct = () -> struct IMP_simple_struct {i: int<4>;} { return *<ref<IMP_simple_struct,f,f,plain>>(ref_temp(type_lit(IMP_simple_struct))) {0}; }; IMP_generate_struct().i+5")
 	generate_struct().i + 5;
 	
 	//===---------------------------------------------------------------------------------------------------------------------------------- MISCELLANEOUS ---===
@@ -447,11 +447,13 @@ int main() {
 		int x, y;
 	} Image;
 
-	#pragma test expect_ir("REGEX_S", R"(.*c_style_assignment\(ref_temp_init\(<IMP_Image_IMLOC_.*> \{0u,0,0\}\), \*ref_temp_init\(<IMP_Image_IMLOC_.*> \{1u,1,1\}\)\).*)")
-	(Image){0u, 0, 0} = (Image){1u,1,1};
+	#pragma test expect_ir("REGEX_S", R"(.*c_style_assignment\(<ref<IMP_Image_IMLOC_.*> .* \{0u, 0, 0\}, \*<ref<IMP_Image_IMLOC_.*> .* \{1u, 1, 1\}\).*)")
+	(Image){0u, 0, 0} = (Image){1u, 1, 1};
 
-	#pragma test expect_ir("REGEX_S", R"(.*c_style_assignment\(ref_temp_init\(<IMP_Image_IMLOC_.*> \{0u,0,0\}\).x, 1\).*)")
+	#pragma test expect_ir("REGEX_S", R"(.*c_style_assignment\(<ref<IMP_Image_IMLOC_.*> .* \{0u, 0, 0\}.x, 1\).*)")
 	(Image){0u, 0, 0}.x = 1;
+
+	int y = (Image){0u, 0, 0}.y;
 	
 	// bool to int conversion
 	#pragma test expect_ir("{ bool_to_int(1<5)+17; }")

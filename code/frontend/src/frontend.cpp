@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -112,11 +112,20 @@ namespace frontend {
 				}
 			}
 		}
+
 		// check pre-requisites
 		for(auto ext : getExtensions()) {
 			auto isMissing = ext->isPrerequisiteMissing(*this);
 			if(isMissing) {
 				std::cerr << "Prerequisite for an extension is missing:\n" << *isMissing << std::endl;
+
+				std::stringstream ss;
+				for(const auto& extPtr : getExtensions()) {
+					const auto& feExt = *extPtr;
+					ss << typeid(feExt).name() << "\n";
+				}
+				std::cerr << "Loaded extensions:\n" << ss.str() << std::endl;
+
 				assert_fail() << "Aborting due to frontend extension prerequisite error.";
 			}
 		}
@@ -230,10 +239,10 @@ namespace frontend {
 
 		registerFrontendExtension<extensions::VariableArgumentListExtension>(options);
 		registerFrontendExtension<extensions::VariableLengthArrayExtension>(options);
-		
+
 		registerFrontendExtension<extensions::FrontendCleanupExtension>(options);
 	}
-	
+
 	void ConversionJob::registerDefaultExtensions()	{
 		boost::program_options::options_description opt;
 		registerExtensionFlags(opt);

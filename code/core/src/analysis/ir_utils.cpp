@@ -320,7 +320,7 @@ namespace analysis {
 
 	bool isConstructorExpr(const NodePtr& node) {
 		NodeType pnt = node->getNodeType();
-		return pnt == NT_StructExpr || pnt == NT_UnionExpr || pnt == NT_TupleExpr || pnt == NT_JobExpr;
+		return pnt == NT_InitExpr || pnt == NT_TupleExpr || pnt == NT_JobExpr;
 	}
 
 

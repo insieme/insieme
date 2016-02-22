@@ -53,7 +53,7 @@ def struct IMP_std_colon__colon_initializer_list_int {
 
 int main() {
 	//this IR test pragma is not correct yet. just committed for testing purposes.
-	#pragma test expect_ir(S_IR, R"({ var ref<IMP_std_colon__colon_initializer_list_int,f,f,plain> v0 = IMP_std_colon__colon_initializer_list_int::(v0, ptr_from_array(array_create(type_lit(3), [1,2,3]) materialize), num_cast(3u, type_lit(uint<8>))); })")
+	#pragma test expect_ir(S_IR, R"({ var ref<IMP_std_colon__colon_initializer_list_int,f,f,plain> v0 =  IMP_std_colon__colon_initializer_list_int::(v0, ptr_from_array(<ref<array<int<4>,3>,f,f,plain>>(ref_temp(type_lit(array<int<4>,3>))) {1,2,3}), num_cast(3u, type_lit(uint<8>))); })")
 	{
 		std::initializer_list<int> a = {1,2,3};
 	}

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -153,12 +153,8 @@ namespace irg {
 		return node(core::NT_TupleExpr, expressions);
 	}
 
-	inline TreeGenerator structExpr(const ListGenerator& members) {
-		return node(core::NT_StructExpr, members);
-	}
-
-	inline TreeGenerator unionExpr(const TreeGenerator& memberName, const TreeGenerator& member) {
-		return node(core::NT_UnionExpr, single(memberName) << single(member));
+	inline TreeGenerator initExpr(const TreeGenerator& type, const TreeGenerator& memExpr, const ListGenerator& expressions) {
+		return node(core::NT_InitExpr, single(type) << single(memExpr) << expressions);
 	}
 
 	inline TreeGenerator markerExpr(const TreeGenerator& subExpression, const TreeGenerator& id) {

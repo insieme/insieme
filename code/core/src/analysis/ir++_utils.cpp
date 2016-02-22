@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -40,7 +40,6 @@
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/analysis/ir_utils.h"
-#include "insieme/core/lang/ir++_extension.h"
 
 #include "insieme/core/datapath/datapath.h"
 
@@ -107,74 +106,7 @@ namespace analysis {
 	bool isObjectReferenceType(const GenericTypePtr& type) {
 		return isRefType(type) && isObjectType(getReferencedType(type));
 	}
-
-
-	// --------------------------- data member pointer -----------------------------------
-
-	bool isMemberPointer(const TypePtr& type) {
-		// filter out null-pointer
-		if(!type) { return false; }
-
-		// must be a struct type
-		TagTypePtr tagType = type.isa<TagTypePtr>();
-		if(!tagType || !tagType.isStruct()) { return false; }
-
-		// has 3 elements
-		auto fields = tagType->getFields();
-		if(fields.size() != 3u) { return false; }
-
-		FieldPtr element = fields[0];
-		if(!isTypeLiteralType(element->getType())) { return false; }
-		if(element->getName().getValue() != "objType") { return false; }
-
-		element = fields[1];
-		// if ( !isId(element->getType()))	return false; // TODO: ask if is an identifier
-		if(element->getName().getValue() != "id") { return false; }
-
-		element = fields[2];
-		if(!isTypeLiteralType(element->getType())) { return false; }
-		if(element->getName().getValue() != "membType") { return false; }
-
-		return true;
-	}
-
-	TypePtr getMemberPointer(const TypePtr& classType, const TypePtr& membTy) {
-		NodeManager& manager = classType.getNodeManager();
-		IRBuilder builder(manager);
-		return builder.structType(toVector(builder.field(builder.stringValue("objType"), builder.getTypeLiteralType(classType)),
-		                                   builder.field(builder.stringValue("id"), builder.getLangBasic().getIdentifier()),
-		                                   builder.field(builder.stringValue("membType"), builder.getTypeLiteralType(membTy))));
-	}
-
-	ExpressionPtr getMemberPointerValue(const TypePtr& classType, const std::string& fieldName, const TypePtr& membType) {
-		NodeManager& manager = classType.getNodeManager();
-		IRBuilder builder(manager);
-
-		// retrieve the name and the field type to build the desired member pointer struct
-		core::ExpressionPtr access = manager.getLangExtension<lang::IRppExtensions>().getMemberPointerCtor();
-		return builder.callExpr(access, toVector<core::ExpressionPtr>(builder.getTypeLiteral(classType), builder.getIdentifierLiteral(fieldName),
-		                                                              builder.getTypeLiteral(membType)));
-	}
-
-	ExpressionPtr getMemberPointerAccess(const ExpressionPtr& base, const ExpressionPtr& expr) {
-		NodeManager& manager = base.getNodeManager();
-		IRBuilder builder(manager);
-
-		// retrieve the name and the field type to build the desired access
-		core::ExpressionPtr access = manager.getLangExtension<lang::IRppExtensions>().getMemberPointerAccess();
-		return builder.callExpr(access, toVector(base, expr));
-	}
-
-	ExpressionPtr getMemberPointerCheck(const ExpressionPtr& expr) {
-		NodeManager& manager = expr.getNodeManager();
-		IRBuilder builder(manager);
-
-		// retrieve the name and the field type to build the desired access
-		core::ExpressionPtr access = manager.getLangExtension<lang::IRppExtensions>().getMemberPointerCheck();
-		return builder.callExpr(access, expr);
-	}
-
-
+	
 	// --------------------------- C++ calls ---------------------------------------------
 
 	bool isConstructorCall(const core::ExpressionPtr& expr) {

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -152,9 +152,7 @@ namespace backend {
 
 		c_ast::NodePtr visitMarkerExpr(const core::MarkerExprPtr& ptr, ConversionContext& context);
 
-		c_ast::NodePtr visitStructExpr(const core::StructExprPtr& ptr, ConversionContext& context);
-
-		c_ast::NodePtr visitUnionExpr(const core::UnionExprPtr& ptr, ConversionContext& context);
+		c_ast::NodePtr visitInitExpr(const core::InitExprPtr& ptr, ConversionContext& context);
 
 		c_ast::NodePtr visitTupleExpr(const core::TupleExprPtr& ptr, ConversionContext& context);
 

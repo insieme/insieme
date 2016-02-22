@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -34,32 +34,29 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <sys/time.h>
 
-#include "insieme/core/forward_decls.h"
+#include <vector>
 
-#include "insieme/backend/addon.h"
+int main() {
+	#pragma test expect_ir(R"({
+		var ref<IMP_timeval> v0 = lit("IMP_timeval::ctor" : IMP_timeval::())(v0);
+		lit("IMP_gettimeofday": (ptr<IMP_timeval>, ptr<IMP_timezone>) -> int<4>)(ptr_from_ref(v0), ptr_null(type_lit(IMP_timezone), type_lit(f), type_lit(f)));
+	})")
+	{
+		struct timeval t;
+		gettimeofday(&t, nullptr);
+	}
 
-/**
- * This header file defines the components required to be registered within
- * a backend instance to handle C++ member pointer
- */
-namespace insieme {
-namespace backend {
-namespace addons {
-
-
-	/**
-	 * An Add-On realizing support for C++ member pointer
-	 */
-	struct CppMembAddon : public AddOn {
-		/**
-		 * Installs the this Add-On within the given converter.
-		 */
-		virtual void installOn(Converter& converter) const;
-	};
-
-
-} // end namespace addons
-} // end namespace backend
-} // end namespace insieme
+	#pragma test expect_ir(R"({
+		var ref<IMP_std_colon__colon_vector_int_std_colon__colon_allocator_lt_int_gt_> v0 =
+			lit("IMP_std_colon__colon_vector_int_std_colon__colon_allocator_lt_int_gt_::ctor"
+				: IMP_std_colon__colon_vector_int_std_colon__colon_allocator_lt_int_gt_::())(v0);
+		lit("IMP_std_colon__colon_vector_int_std_colon__colon_allocator_lt_int_gt_::IMP_push_back" :
+			IMP_std_colon__colon_vector_int_std_colon__colon_allocator_lt_int_gt_::(ref<int<4>,f,f,cpp_rref>) -> unit) (v0, 0);
+	})")
+	{
+		std::vector<int> v;
+		v.push_back(0);
+	}
+}

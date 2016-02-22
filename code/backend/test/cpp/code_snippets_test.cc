@@ -38,7 +38,6 @@
 
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/checks/full_check.h"
-#include "insieme/core/lang/ir++_extension.h"
 #include "insieme/core/lang/static_vars.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/backend/sequential/sequential_backend.h"

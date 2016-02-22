@@ -52,7 +52,6 @@
 #include "insieme/core/ir_types.h"
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/enum.h"
-#include "insieme/core/lang/ir++_extension.h"
 #include "insieme/core/lang/pointer.h"
 
 using namespace insieme;
@@ -70,8 +69,8 @@ namespace utils {
 
 			core::lang::PointerType srcPtrType(expr->getType());
 			core::lang::PointerType trgPtrType(targetTy);
-			
-			core::ExpressionPtr retExpr = expr;			
+
+			core::ExpressionPtr retExpr = expr;
 			// if types pointed to differ, reinterpret
 			retExpr = core::lang::buildPtrReinterpret(retExpr, trgPtrType.getElementType());
 			// if qualifiers differ, cast
@@ -96,9 +95,7 @@ namespace utils {
 		}
 
 		const core::IRBuilder& builder = converter.getIRBuilder();
-		//const core::lang::BasicGenerator& basic = builder.getLangBasic();
-		//core::NodeManager& mgr = converter.getNodeManager();
-		
+
 		// explicit C++ static casts
 		auto staticCast = llvm::dyn_cast<clang::CXXStaticCastExpr>(castExpr);
 		if(staticCast) {
@@ -110,7 +107,7 @@ namespace utils {
 		}
 
 		switch(castExpr->getCastKind()) {
-		////////////////////////////////////////////////////////////////////////////////////////////////////////////	
+		////////////////////////////////////////////////////////////////////////////////////////////////////////////
 		// A conversion which causes the extraction of an r-value from the operand gl-value.
 		// The result of an r-value conversion is always unqualified.
 		// IR: this is the same as ref_deref: ref<a'> -> a'
@@ -127,7 +124,7 @@ namespace utils {
 		case clang::CK_IntegralToFloating:
 		case clang::CK_FloatingToIntegral:
 		case clang::CK_FloatingCast:
-			return builder.numericCast(expr, targetTy); 
+			return builder.numericCast(expr, targetTy);
 
 		////////////////////////////////////////////////////////////////////////////////////////////////////////////
 		// Numeric and pointer to boolean
@@ -180,7 +177,7 @@ namespace utils {
 		// * same type casts, CK_NoOp, e.g. int -> int
 		case clang::CK_NoOp:
 			return expr;
-			
+
 		////////////////////////////////////////////////////////////////////////////////////////////////////////////
 		// Unused return value: (void)fun()
 		case clang::CK_ToVoid:

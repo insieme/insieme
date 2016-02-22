@@ -212,14 +212,10 @@ namespace pattern {
 			return node(core::NT_Expressions, expressions);
 		}
 
-		inline TreePattern structExpr(const ListPattern& members) {
-			return node(core::NT_StructExpr, members);
+		inline TreePattern initExpr(const TreePattern& memExpr, const ListPattern& inits, const TreePattern& type = any) {
+			return node(core::NT_InitExpr, single(type) << single(memExpr) << inits);
 		}
-
-		inline TreePattern unionExpr(const TreePattern& memberName, const TreePattern& member) {
-			return node(core::NT_UnionExpr, single(memberName) << single(member));
-		}
-
+		
 		inline TreePattern markerExpr(const TreePattern& subExpression, const TreePattern& id, const TreePattern& type = any) {
 			return node(core::NT_MarkerExpr, single(type) << single(id) << single(subExpression));
 		}
