@@ -108,6 +108,8 @@ namespace frontend {
 		EXPECT_FALSE(any(funs, [](decltype(funs)::value_type val) { return val.first->getStringValue() == "IMP_templateFun_int_returns_int"; })) << "Function not intercepted!";
 		EXPECT_FALSE(any(funs, [](decltype(funs)::value_type val) { return val.first->getStringValue() == "IMP_templateFun_double_returns_double"; })) << "Function not intercepted!";
 		EXPECT_FALSE(any(funs, [](decltype(funs)::value_type val) { return val.first->getStringValue() == "IMP_templateFun_unsigned_long_long_returns_unsigned_long_long"; })) << "Function not intercepted!";
+		EXPECT_FALSE(any(funs, [](decltype(funs)::value_type val) { return val.first->getStringValue() == "IMP_templateTemplateFun_TemplateClass_int_returns_void"; })) << "Function not intercepted!";
+		EXPECT_FALSE(any(funs, [](decltype(funs)::value_type val) { return val.first->getStringValue() == "IMP_templateTemplateFun_TemplateClass_TemplateClass_lt_int_gt__returns_void"; })) << "Function not intercepted!";
 		EXPECT_TRUE(irTu.getTypes().empty());
 
 		// check the attached name of the intercepted structs for correctness
@@ -146,6 +148,19 @@ namespace frontend {
 			}, true);
 			EXPECT_TRUE(checked);
 		}
+		{
+			bool checked = false;
+			visitDepthFirstOnce(code, [&checked](const core::GenericTypePtr& genType) {
+				if(genType->getName()->getValue() == "IMP_TemplateClass_TemplateClass_lt_int_gt_") {
+					ASSERT_TRUE(core::annotations::hasAttachedName(genType));
+					EXPECT_EQ("TemplateClass<TemplateClass<int>>", core::annotations::getAttachedName(genType));
+					checked = true;
+				}
+			}, true);
+			EXPECT_TRUE(checked);
+		}
+
+		// TODO check name of push back method literal
 	}
 
 	TEST(InterceptorTest, TrueSystemInterception) {

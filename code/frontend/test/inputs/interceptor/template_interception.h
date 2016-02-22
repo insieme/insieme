@@ -43,5 +43,11 @@ C templateFun(C c) {
 
 template<class D>
 class TemplateClass {
+public:
 	D field;
 };
+
+template <template <typename> class Container, typename T>
+void templateTemplateFun(Container<T>& container, const T value) {
+	container.field = value;
+}
