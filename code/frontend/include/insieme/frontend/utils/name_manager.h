@@ -82,9 +82,10 @@ namespace utils {
 	 * the produced string will be output-compatible, this means that we can use this name
 	 * to name functions and they will not have qualification issues.
 	 * @param funcDecl the function decl to name
+	 * @param cStyleName whether to build a name suitable for usage in a C program or for the IR
 	 * @return unique string value
 	 */
-	std::string buildNameForFunction(const clang::FunctionDecl* funcDecl);
+	std::string buildNameForFunction(const clang::FunctionDecl* funcDecl, bool cStyleName = false);
 
 	std::string getNameForGlobal(const clang::VarDecl* varDecl, const clang::SourceManager& sm);
 

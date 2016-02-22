@@ -54,6 +54,7 @@ namespace utils {
 	using std::string;
 
 	std::string removeSymbols(std::string str) {
+		boost::replace_all(str, " ", "_");
 		boost::replace_all(str, "<", "_lt_");
 		boost::replace_all(str, ">", "_gt_");
 		boost::replace_all(str, ":", "_colon_");
@@ -115,18 +116,19 @@ namespace utils {
 	}
 
 	namespace {
-		string getTypeString(clang::QualType t) {
+		string getTypeString(clang::QualType t, bool cStyleName = false) {
 			string s = t.getAsString();
 			boost::replace_all(s, "class ", "");    // special handling for clang's translation of template class arguments
 			boost::replace_all(s, "_Bool", "bool"); // special handling for clang's translation of bool types
-			boost::replace_all(s, " ", "_");
+			if (cStyleName) {
+				return s;
+			}
 			return removeSymbols(s);
 		}
 	}
 
 	std::string buildNameSuffixForTemplate(const clang::TemplateArgumentList& tempArgs, clang::ASTContext& astContext, bool cStyleName) {
 		std::string separator = cStyleName ? "," : "_";
-
 		std::stringstream suffix;
 		for(unsigned i = 0; i < tempArgs.size(); ++i) {
 			auto arg = tempArgs.get(i);
@@ -141,7 +143,7 @@ namespace utils {
 				if(arg.getAsType().getTypePtr()->getAsCXXRecordDecl() && arg.getAsType().getTypePtr()->getAsCXXRecordDecl()->isLambda()) {
 					typeName = createNameForAnon("lambda", arg.getAsType().getTypePtr()->getAsCXXRecordDecl(), astContext.getSourceManager());
 				} else {
-					typeName = getTypeString(arg.getAsType());
+					typeName = getTypeString(arg.getAsType(), cStyleName);
 				}
 				suffix << separator << typeName;
 				break;
@@ -151,7 +153,7 @@ namespace utils {
 				break;
 			}
 			case clang::TemplateArgument::Declaration: {
-				suffix << separator << getTypeString(arg.getAsDecl()->getType());
+				suffix << separator << getTypeString(arg.getAsDecl()->getType(), cStyleName);
 				break;
 			}
 			case clang::TemplateArgument::NullPtr: {
@@ -163,7 +165,8 @@ namespace utils {
 				break;
 			}
 			case clang::TemplateArgument::Template: {
-				suffix << separator << removeSymbols(arg.getAsTemplate().getAsTemplateDecl()->getTemplatedDecl()->getNameAsString());
+				std::string templateName = arg.getAsTemplate().getAsTemplateDecl()->getTemplatedDecl()->getQualifiedNameAsString();
+				suffix << separator << (cStyleName ? templateName : removeSymbols(templateName));
 				break;
 			}
 			case clang::TemplateArgument::TemplateExpansion: {
@@ -175,7 +178,7 @@ namespace utils {
 				suffix << separator << "pack_begin";
 				for(clang::TemplateArgument::pack_iterator it = arg.pack_begin(), end = arg.pack_end(); it != end; it++) {
 					const clang::QualType& argType = (*it).getAsType();
-					suffix << separator << getTypeString(argType);
+					suffix << separator << getTypeString(argType, cStyleName);
 				}
 				suffix << separator << "pack_end";
 				break;
@@ -197,7 +200,7 @@ namespace utils {
 		return suffix.str();
 	}
 
-	std::string buildNameForFunction(const clang::FunctionDecl* funcDecl) {
+	std::string buildNameForFunction(const clang::FunctionDecl* funcDecl, bool cStyleName) {
 		std::string name = funcDecl->getQualifiedNameAsString();
 		if(const clang::CXXMethodDecl* method = llvm::dyn_cast<clang::CXXMethodDecl>(funcDecl)) {
 			if(method->isVirtual()) {
@@ -214,18 +217,22 @@ namespace utils {
 		std::stringstream suffix;
 
 		if(funcDecl->isFunctionTemplateSpecialization() && funcDecl->getTemplateSpecializationArgs()) {
-			suffix << buildNameSuffixForTemplate(*funcDecl->getTemplateSpecializationArgs(), funcDecl->getASTContext());
+			suffix << buildNameSuffixForTemplate(*funcDecl->getTemplateSpecializationArgs(), funcDecl->getASTContext(), cStyleName);
 		}
 
 		if(funcDecl->isTemplateInstantiation()) {
 			std::string returnType = getTypeString(funcDecl->getReturnType());
-			suffix << "_returns_" << returnType;
+			if (!cStyleName) {
+				suffix << "_returns_" << returnType;
+			}
 		}
 
 		if(llvm::isa<clang::CXXMethodDecl>(funcDecl) && llvm::cast<clang::CXXMethodDecl>(funcDecl)->isConst()) { suffix << "_c"; }
 
 		string suffixStr = suffix.str();
-		boost::algorithm::replace_all(suffixStr, " ", "_");
+		if (!cStyleName) {
+			boost::algorithm::replace_all(suffixStr, " ", "_");
+		}
 
 		// all done
 		return name + suffixStr;
