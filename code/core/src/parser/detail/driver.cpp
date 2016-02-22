@@ -926,7 +926,7 @@ namespace parser {
 			}
 
 			if(args.size() != funcParamTypes.size()) {
-				error(l, "invalid number of arguments in function call");
+				error(l, format("invalid number of arguments in function call. got %d, expected %d", args.size(), funcParamTypes.size()));
 				return nullptr;
 			}
 
