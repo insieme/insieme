@@ -546,8 +546,19 @@ namespace printer {
 							auto constructors = record->getConstructors();
 							for (auto constr : constructors) {
 								if (!printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) &&
-									analysis::isaDefaultConstructor(tag, constr))
-									continue;
+									analysis::isaDefaultConstructor(tag, constr)) {
+									// we encounter any default constructors
+									// we just skip them
+									if (auto ctortype = constr->getType().isa<FunctionTypePtr>()) {
+										if (ctortype->getParameterTypeList().size() != 1 ||
+											constructors.size() == 3) {
+											continue;
+										}
+										// this constructor is a non-default one, so we don't need to skip it
+									} else {
+										continue;
+									}
+								}
 								if (auto ctor = constr.isa<LambdaExprPtr>()) {
 									newLine();
 									auto params = ctor->getParameterList();
@@ -1268,7 +1279,17 @@ namespace printer {
 							out << lambdaNames[lambdaExpr->getReference()];
 						} else if (lang::isDerived(lambdaExpr)) {
 							out << lang::getConstructName(lambdaExpr);
+						} else if (lambdaExpr->getType().as<FunctionTypePtr>().isConstructor()) {
+							auto funType = lambdaExpr->getType().as<FunctionTypePtr>();
+							// check if the constructor is a freely defined
+							if (visitedFreeFunctions.find(lambdaExpr->getReference()) != visitedFreeFunctions.end()) {
+								// indeed, we have a free constructor here
+								out << std::get<1>(visitedFreeFunctions[lambdaExpr->getReference()]);
+							} else {
+								out << getObjectName(lambdaExpr->getType()) << "::";
+							}
 						} else {
+							// standard function call name
 							out << lambdaNames[lambdaExpr->getReference()];
 						}
 					} else if (auto var = functionPtr.isa<LambdaReferencePtr>()) {

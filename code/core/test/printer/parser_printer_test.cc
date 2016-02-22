@@ -581,6 +581,41 @@ TEST(After_Before_Test, Let) {
 		));
 	}
 
+	TEST(After_Before_Test, Struct) {
+		NodeManager nm;
+
+		// reference check
+		EXPECT_TRUE(test_statement(nm, "def struct A {"
+				                       "  x : int<4>;"
+				                       "};"
+				                       "{"
+				                       "  var ref<A> b = A::(b);"
+				                       "}"));
+
+		EXPECT_TRUE(test_statement(nm, "def struct A {"
+				                       "  x : int<4>;"
+				                       "  ctor () {}"
+				                       "  ctor (a : int<4>) {"
+				                       "    x = a;"
+				                       "  }"
+				                       "};"
+				                       "{"
+				                       "  var ref<A> a = A::(a, 10);"
+				                       "  var ref<A> b = A::(b);"
+				                       "}"));
+
+		EXPECT_TRUE(test_statement(nm, "def struct A {"
+				                       "  x : int<4>;"
+				                       "};"
+				                       "def A :: ctor foo1 = () {};"
+				                       "def A :: ctor foo2 = function (a : ref<int<4>>) {x = *a;};"
+				                       "{"
+				                       "  var ref<A> a = foo1(a);"
+				                       "  var ref<A> b = foo2(b, 10);"
+				                       "}"));
+
+	}
+
     TEST(After_Before_Test, Program) {
 		NodeManager nm;
 
