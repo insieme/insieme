@@ -263,12 +263,16 @@ namespace conversion {
 			VLOG(2) << "-> Is intercepted!";
  			headerTaggerPtr->addHeaderForDecl(node, decl);
 			if(annotations::c::hasIncludeAttached(node)) {
+				// attach name for backend
 				if(auto tagDecl = llvm::dyn_cast<clang::TagDecl>(decl)) {
-					// attach name for backend
 					string name = insieme::utils::demangle(utils::getNameForTagDecl(*this, tagDecl, true).first);
 					if(tagDecl->isStruct()) name = "struct " + name;
 					else if(tagDecl->isUnion()) name = "union " + name;
 					else if(tagDecl->isEnum()) name = "enum " + name;
+					core::annotations::attachName(node, name);
+
+				} else if (auto funDecl = llvm::dyn_cast<clang::FunctionDecl>(decl)) {
+					string name = insieme::utils::demangle(utils::buildNameForFunction(funDecl, true));
 					core::annotations::attachName(node, name);
 				}
 				VLOG(2) << "-> annotated with: " << annotations::c::getAttachedInclude(node);

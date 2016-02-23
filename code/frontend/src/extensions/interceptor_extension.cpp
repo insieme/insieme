@@ -69,6 +69,7 @@ namespace extensions {
 					auto convMethodLit = converter.getDeclConverter()->convertMethodDecl(methDecl, builder.parents(), builder.fields(), true).lit;
 					auto retType = convMethodLit.getType().as<core::FunctionTypePtr>()->getReturnType();
 					auto thisArg = thisArgFactory(retType);
+					converter.applyHeaderTagging(convMethodLit, decl);
 					VLOG(2) << "Interceptor: intercepted clang method/constructor call\n" << dumpClang(decl) << "\n";
 					return utils::buildCxxMethodCall(converter, retType, convMethodLit, thisArg, args);
 				}

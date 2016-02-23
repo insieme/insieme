@@ -203,6 +203,9 @@ namespace utils {
 	std::string buildNameForFunction(const clang::FunctionDecl* funcDecl, bool cStyleName) {
 		std::string name = funcDecl->getQualifiedNameAsString();
 		if(const clang::CXXMethodDecl* method = llvm::dyn_cast<clang::CXXMethodDecl>(funcDecl)) {
+			if (cStyleName) {
+				name = method->getNameAsString();
+			}
 			if(method->isVirtual()) {
 				name = funcDecl->getNameAsString();
 			} else if(method->getParent()) {
