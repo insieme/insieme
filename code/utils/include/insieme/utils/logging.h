@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -89,14 +89,14 @@ namespace logger_details {
 		std::ostream& out;
 
 		// a reference to a synchronizing mutex
-		std::mutex& mutex;
+		std::recursive_mutex& mutex;
 
 		// a flag indicating that this instance is the current owner of the stream
 		bool owner;
 
 	public:
 
-		SynchronizedStream(std::ostream& out, std::mutex& mutex) : out(out), mutex(mutex), owner(true) {
+		SynchronizedStream(std::ostream& out, std::recursive_mutex& mutex) : out(out), mutex(mutex), owner(true) {
 			mutex.lock(); // acquire exclusive access to the output stream
 		}
 
