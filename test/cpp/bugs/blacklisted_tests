@@ -9,7 +9,6 @@ boost_intercepted_naming
 boost_mutex
 boost_noncopyable
 boost_regex_search
-boost_shared_ptr_cycle_dep
 case_default
 const_obj_init
 const_obj_param
@@ -24,7 +23,6 @@ dowhile_this
 duplicatedCtor
 empty_pod
 error_handler
-ewc_capturing
 expression_with_cleanups
 expr_with_cleanups
 gettimeoftheday
@@ -76,7 +74,6 @@ throw
 tr1_array
 try_catch
 typedefs
-union
 union_member_func
 unspecified_bool_type
 vector_pointers
