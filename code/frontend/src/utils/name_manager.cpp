@@ -192,8 +192,13 @@ namespace utils {
 
 		//if we should build a c-style name then the first separator isn't correct. also the whole suffix should be packed inside '<' and '>'
 		if (cStyleName) {
-			suffix << ">";
 			std::string res = suffix.str();
+			//append another space in case it is needed to avoid the substring ">>"
+			if (res.size() > 0 && res[res.size() - 1] == '>') {
+				res += " >";
+			} else {
+				res += ">";
+			}
 			if (res.length() == 1) {
 				return "";
 			}
