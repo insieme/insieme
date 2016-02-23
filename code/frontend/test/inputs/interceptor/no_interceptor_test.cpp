@@ -36,14 +36,17 @@
 
 #include "interceptor_header.h"
 
+#define SIMPLE_FUNC "def IMP_ns_colon__colon_simpleFunc = (v0 : int<4>) -> int<4> { return v0; };"
+#define STRUCT_S "def struct IMP_ns_colon__colon_S { a : int<4>; b : int<4>; c : int<4>; lambda IMP_memberFunc = (v1 : int<4>) -> int<4> { return v1; } };"
+
 void intercept_simpleFunc() {
 
-	#pragma test expect_ir(R"( lit("IMP_ns_colon__colon_simpleFunc" : (int<4>) -> int<4>)(1) )")
+	#pragma test expect_ir(SIMPLE_FUNC, R"( IMP_ns_colon__colon_simpleFunc(1) )")
 	ns::simpleFunc(1);
 
-	#pragma test expect_ir(R"({
+	#pragma test expect_ir(SIMPLE_FUNC, R"({
 		var ref<int<4>,f,f,plain> v0 = 0;
-		lit("IMP_ns_colon__colon_simpleFunc" : (int<4>) -> int<4>)(*v0);
+		IMP_ns_colon__colon_simpleFunc(*v0);
 	})")
 	{
 		int a = 0;
@@ -52,14 +55,12 @@ void intercept_simpleFunc() {
 }
 
 void intercept_memFunc() {
-	#pragma test expect_ir(R"(
-		var ref<IMP_ns_colon__colon_S> v0 = lit("IMP_ns_colon__colon_S::ctor" : IMP_ns_colon__colon_S::())(v0);
-	)")
+	#pragma test expect_ir(STRUCT_S, R"( var ref<IMP_ns_colon__colon_S> v0 = IMP_ns_colon__colon_S::(v0); )")
 	ns::S s1;
 
-	#pragma test expect_ir(R"({
-		var ref<IMP_ns_colon__colon_S,f,f,plain> v0 = lit("IMP_ns_colon__colon_S::ctor" : IMP_ns_colon__colon_S::())(v0);
-		lit("IMP_ns_colon__colon_S::IMP_memberFunc" : IMP_ns_colon__colon_S::(int<4>) -> int<4>)(v0, 1);
+	#pragma test expect_ir(STRUCT_S, R"({
+		var ref<IMP_ns_colon__colon_S> v0 = IMP_ns_colon__colon_S::(v0);
+		v0.IMP_memberFunc(1);
 	})")
 	{
 		ns::S s2;
@@ -71,14 +72,12 @@ void intercept_memFunc2() {
 	using namespace ns;
 	int magic; // do not remove
 
-	#pragma test expect_ir(R"(
-		var ref<IMP_ns_colon__colon_S> v0 = lit("IMP_ns_colon__colon_S::ctor" : IMP_ns_colon__colon_S::())(v0);
-	)")
+	#pragma test expect_ir(STRUCT_S, R"( var ref<IMP_ns_colon__colon_S> v0 = IMP_ns_colon__colon_S::(v0); )")
 	S s1;
 
-	#pragma test expect_ir(R"({
-		var ref<IMP_ns_colon__colon_S,f,f,plain> v0 = lit("IMP_ns_colon__colon_S::ctor" : IMP_ns_colon__colon_S::())(v0);
-		lit("IMP_ns_colon__colon_S::IMP_memberFunc" : IMP_ns_colon__colon_S::(int<4>) -> int<4>)(v0, 1);
+	#pragma test expect_ir(STRUCT_S, R"({
+		var ref<IMP_ns_colon__colon_S> v0 = IMP_ns_colon__colon_S::(v0);
+		v0.IMP_memberFunc(1);
 	})")
 	{
 		S s2;
@@ -87,9 +86,9 @@ void intercept_memFunc2() {
 }
 
 void intercept_fieldAccess() {
-	#pragma test expect_ir(R"({
-		var ref<IMP_ns_colon__colon_S,f,f,plain> v0 = lit("IMP_ns_colon__colon_S::ctor" : IMP_ns_colon__colon_S::())(v0);
-		cxx_style_assignment(ref_member_access(v0,lit("a"),type_lit(int<4>)), *ref_member_access(v0,lit("b"),type_lit(int<4>)));
+	#pragma test expect_ir(STRUCT_S, R"({
+		var ref<IMP_ns_colon__colon_S> v0 = IMP_ns_colon__colon_S::(v0);
+		cxx_style_assignment(v0.a, *v0.b);
 	})")
 	{
 		ns::S s2;
@@ -98,9 +97,7 @@ void intercept_fieldAccess() {
 }
 
 void intercept_new() {
-	#pragma test expect_ir(R"({
-		ptr_from_ref(lit("IMP_ns_colon__colon_S::ctor" : IMP_ns_colon__colon_S::())(ref_new(type_lit(IMP_ns_colon__colon_S))));
-	})")
+	#pragma test expect_ir(STRUCT_S, R"({ ptr_from_ref(IMP_ns_colon__colon_S::(ref_new(type_lit(IMP_ns_colon__colon_S)))); })")
 	{
 		new ns::S();
 	}

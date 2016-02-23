@@ -63,11 +63,11 @@ namespace frontend {
 		});
 	}
 
-	//TEST(InterceptorTest, NoInterception) {
-	//	runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/interceptor/not_interceptor_test.cpp", [](ConversionJob& job) {
-	//		job.registerFrontendExtension<extensions::InterceptorExtension, extensions::TestPragmaExtension>();
-	//	});
-	//}
+	TEST(InterceptorTest, NoInterception) {
+		runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/interceptor/no_interceptor_test.cpp", [](ConversionJob& job) {
+			job.registerFrontendExtension<extensions::InterceptorExtension, extensions::TestPragmaExtension>();
+		});
+	}
 
 	void checkForFunction(const core::tu::IRTranslationUnit& irTu, const std::string& name) {
 		auto funs = irTu.getFunctions();
