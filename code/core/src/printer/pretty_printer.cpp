@@ -397,13 +397,13 @@ namespace printer {
 
 					//second: print all function declarations
 					utils::set::PointerSet<LambdaBindingPtr> visitedBindings;
-					visitDepthFirstOnce(node, [&](const LambdaExprPtr& cur) {
+					visitDepthFirstOncePrunable(node, [&](const LambdaExprPtr& cur) {
 						// jump over this part, if lambda is derived, but printer don't have the option to print them
 						if(lang::isDerived(cur) && !printer.hasOption(PrettyPrinter::PRINT_DERIVED_IMPL)) {
-							return;
+							return true;
 						}
-						if (lang::isBuiltIn(cur)) {
-							return;
+						if(lang::isBuiltIn(cur)) {
+							return true;
 						}
 
 						for(auto& binding : cur->getDefinition()->getDefinitions()) {
@@ -438,6 +438,7 @@ namespace printer {
 								}
 							}
 						}
+						return false;
 
 					});
 
@@ -632,15 +633,15 @@ namespace printer {
 
 					//fourth: print all definitions for functions
 					visitedBindings.clear();
-					visitDepthFirstOnce(node, [&](const LambdaExprPtr& cur) {
+					visitDepthFirstOncePrunable(node, [&](const LambdaExprPtr& cur) {
 						// jump over this part, if lambda is derived, but printer don't have the option to print them
 						LambdaExprAddress curAddress{cur};
 
 						if(lang::isDerived(cur) && !printer.hasOption(PrettyPrinter::PRINT_DERIVED_IMPL)) {
-								return;
+							return true;
 						}
 						if (lang::isBuiltIn(cur)) {
-							return;
+							return true;
 						}
 
 						auto definition = curAddress->getDefinition();
@@ -656,7 +657,7 @@ namespace printer {
 
 							if (!funType->isMember()) {
 								if(entryPoints.find(binding->getReference()) != entryPoints.end()) {
-									return;
+									return false;
 								} else {
 									newLine();
 									out << "def " << lambdaNames[binding->getReference()];
@@ -712,6 +713,7 @@ namespace printer {
 								}
 							}
 						}
+						return false;
 					});
 					newLine();
 				}
