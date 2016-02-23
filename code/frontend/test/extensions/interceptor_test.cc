@@ -86,6 +86,18 @@ namespace frontend {
 		EXPECT_TRUE(checked);
 	}
 
+	void checkForFunctionName(const NodePtr& code, const std::string& functionLiteralName, const std::string& expectedAttachedName) {
+		bool checked = false;
+		visitDepthFirstOnce(code, [&](const core::LiteralPtr& lit) {
+			if(lit->getValue()->getValue() == functionLiteralName) {
+				ASSERT_TRUE(core::annotations::hasAttachedName(lit));
+				EXPECT_EQ(expectedAttachedName, core::annotations::getAttachedName(lit));
+				checked = true;
+			}
+		}, true);
+		EXPECT_TRUE(checked);
+	}
+
 	TEST(InterceptorTest, TrueInterception) {
 		core::NodeManager manager;
 		ConversionJob job(FRONTEND_TEST_DIR + "/inputs/interceptor/interceptor_test.cpp");
@@ -105,7 +117,9 @@ namespace frontend {
 		auto code = job.execute(manager);
 		checkForTypeName(code, "IMP_ns_colon__colon_S", "struct ns::S");
 
-		// TODO check name of function/method literals
+		// check name of function/method literals
+		checkForFunctionName(code, "IMP_ns_colon__colon_simpleFunc", "ns::simpleFunc");
+		checkForFunctionName(code, "IMP_ns_colon__colon_S::IMP_memberFunc", "memberFunc");
 	}
 
 	TEST(InterceptorTest, TrueTemplateInterception) {
@@ -135,9 +149,17 @@ namespace frontend {
 		checkForTypeName(code, "IMP_TemplateClass_int", "TemplateClass<int>");
 		checkForTypeName(code, "IMP_TemplateClass_double", "TemplateClass<double>");
 		checkForTypeName(code, "IMP_TemplateClass_bool", "TemplateClass<bool>");
-		checkForTypeName(code, "IMP_TemplateClass_TemplateClass_lt_int_gt_", "TemplateClass<TemplateClass<int>>");
+		checkForTypeName(code, "IMP_TemplateClass_TemplateClass_lt_int_gt_", "TemplateClass<TemplateClass<int> >");
 
-		// TODO check name of function/method literals
+		// check name of function/method literals
+		checkForFunctionName(code, "IMP_templateFun_int_returns_int", "templateFun<int>");
+		checkForFunctionName(code, "IMP_templateFun_double_returns_double", "templateFun<double>");
+		checkForFunctionName(code, "IMP_templateFun_unsigned_long_long_returns_unsigned_long_long", "templateFun<unsigned long long>");
+		checkForFunctionName(code, "IMP_templateFun_unsigned_long_returns_unsigned_long", "templateFun<unsigned long>");
+		checkForFunctionName(code, "IMP_templateTemplateFun_TemplateClass_int_returns_void", "templateTemplateFun<TemplateClass,int>");
+		checkForFunctionName(code, "IMP_templateTemplateFun_TemplateClass_TemplateClass_lt_int_gt__returns_void", "templateTemplateFun<TemplateClass,TemplateClass<int> >");
+		checkForFunctionName(code, "IMP_variadicTemplateFun_int_returns_int", "variadicTemplateFun<int>");
+		checkForFunctionName(code, "IMP_variadicTemplateFun_int_pack_begin_int_pack_end_returns_int", "variadicTemplateFun<int,int>");
 	}
 
 	TEST(InterceptorTest, TrueSystemInterception) {
@@ -160,9 +182,11 @@ namespace frontend {
 		auto code = job.execute(manager);
 		ASSERT_TRUE(code);
 		checkForTypeName(code, "IMP_timeval", "struct timeval");
-		checkForTypeName(code, "IMP_std_colon__colon_vector_int_std_colon__colon_allocator_lt_int_gt_", "std::vector<int,std::allocator<int>>");
+		checkForTypeName(code, "IMP_std_colon__colon_vector_int_std_colon__colon_allocator_lt_int_gt_", "std::vector<int,std::allocator<int> >");
 
-		// TODO check name of push back method literal
+		// check name of function/method literals
+		checkForFunctionName(code, "IMP_gettimeofday", "gettimeofday");
+		checkForFunctionName(code, "IMP_std_colon__colon_vector_int_std_colon__colon_allocator_lt_int_gt_::IMP_push_back", "push_back");
 	}
 
 } // fe namespace
