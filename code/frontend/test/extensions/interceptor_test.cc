@@ -69,6 +69,22 @@ namespace frontend {
 	//	});
 	//}
 
+	void checkForFunction(const core::tu::IRTranslationUnit& irTu, const std::string& name) {
+		auto funs = irTu.getFunctions();
+		EXPECT_FALSE(any(funs, [&](decltype(funs)::value_type val) { return val.first->getStringValue() == name; })) << "Function " << name << " has not intercepted!";
+	}
+
+	void checkForTypeName(const NodePtr& code, const std::string& typeNodeName, const std::string& expectedAttachedName) {
+		bool checked = false;
+		visitDepthFirstOnce(code, [&](const core::GenericTypePtr& genType) {
+			if(genType->getName()->getValue() == typeNodeName) {
+				ASSERT_TRUE(core::annotations::hasAttachedName(genType));
+				EXPECT_EQ(expectedAttachedName, core::annotations::getAttachedName(genType));
+				checked = true;
+			}
+		}, true);
+		EXPECT_TRUE(checked);
+	}
 
 	TEST(InterceptorTest, TrueInterception) {
 		core::NodeManager manager;
@@ -78,23 +94,18 @@ namespace frontend {
 		job.registerFrontendExtension<extensions::TestPragmaExtension>(); // necessary to parse pragmas
 		auto irTu = job.toIRTranslationUnit(manager);
 		auto funs = irTu.getFunctions();
-		EXPECT_FALSE(any(funs, [](decltype(funs)::value_type val) { return val.first->getStringValue() == "IMP_simpleFunc"; })) << "Function not intercepted!";
+
+		//check that functions/methods have been intercepted
+		checkForFunction(irTu, "IMP_simpleFunc");
+
+		//no types should have been translated
 		EXPECT_TRUE(irTu.getTypes().empty());
 
 		// check the attached name of the intercepted struct for correctness
 		auto code = job.execute(manager);
-		ASSERT_TRUE(code);
-		{
-			bool checked = false;
-			visitDepthFirstOnce(code, [&checked](const core::GenericTypePtr& genType) {
-				if(genType->getName()->getValue() == "IMP_ns_colon__colon_S") {
-					ASSERT_TRUE(core::annotations::hasAttachedName(genType));
-					EXPECT_EQ(core::annotations::getAttachedName(genType), "struct ns::S");
-					checked = true;
-				}
-			}, true);
-			EXPECT_TRUE(checked);
-		}
+		checkForTypeName(code, "IMP_ns_colon__colon_S", "struct ns::S");
+
+		// TODO check name of function/method literals
 	}
 
 	TEST(InterceptorTest, TrueTemplateInterception) {
@@ -103,49 +114,30 @@ namespace frontend {
 		job.addInterceptedHeaderDir(FRONTEND_TEST_DIR + "/inputs/interceptor");
 		job.registerFrontendExtension<extensions::InterceptorExtension>();
 		job.registerFrontendExtension<extensions::TestPragmaExtension>(); // necessary to parse pragmas
+		job.setStandard(ConversionSetup::Standard::Cxx11);
 		auto irTu = job.toIRTranslationUnit(manager);
-		auto funs = irTu.getFunctions();
-		EXPECT_FALSE(any(funs, [](decltype(funs)::value_type val) { return val.first->getStringValue() == "IMP_templateFun_int_returns_int"; })) << "Function not intercepted!";
-		EXPECT_FALSE(any(funs, [](decltype(funs)::value_type val) { return val.first->getStringValue() == "IMP_templateFun_double_returns_double"; })) << "Function not intercepted!";
-		EXPECT_FALSE(any(funs, [](decltype(funs)::value_type val) { return val.first->getStringValue() == "IMP_templateFun_unsigned_long_long_returns_unsigned_long_long"; })) << "Function not intercepted!";
+
+		//check that functions/methods have been intercepted
+		checkForFunction(irTu, "IMP_templateFun_int_returns_int");
+		checkForFunction(irTu, "IMP_templateFun_double_returns_double");
+		checkForFunction(irTu, "IMP_templateFun_unsigned_long_long_returns_unsigned_long_long");
+		checkForFunction(irTu, "IMP_templateTemplateFun_TemplateClass_int_returns_void");
+		checkForFunction(irTu, "IMP_templateTemplateFun_TemplateClass_TemplateClass_lt_int_gt__returns_void");
+		checkForFunction(irTu, "IMP_variadicTemplateFun_int_returns_int");
+		checkForFunction(irTu, "IMP_variadicTemplateFun_int_pack_begin_int_pack_end_returns_int");
+
+		//no types should have been translated
 		EXPECT_TRUE(irTu.getTypes().empty());
 
 		// check the attached name of the intercepted structs for correctness
 		auto code = job.execute(manager);
 		ASSERT_TRUE(code);
-		{
-			bool checked = false;
-			visitDepthFirstOnce(code, [&checked](const core::GenericTypePtr& genType) {
-				if(genType->getName()->getValue() == "IMP_TemplateClass_int") {
-					ASSERT_TRUE(core::annotations::hasAttachedName(genType));
-					EXPECT_EQ("TemplateClass<int>", core::annotations::getAttachedName(genType));
-					checked = true;
-				}
-			}, true);
-			EXPECT_TRUE(checked);
-		}
-		{
-			bool checked = false;
-			visitDepthFirstOnce(code, [&checked](const core::GenericTypePtr& genType) {
-				if(genType->getName()->getValue() == "IMP_TemplateClass_double") {
-					ASSERT_TRUE(core::annotations::hasAttachedName(genType));
-					EXPECT_EQ("TemplateClass<double>", core::annotations::getAttachedName(genType));
-					checked = true;
-				}
-			}, true);
-			EXPECT_TRUE(checked);
-		}
-		{
-			bool checked = false;
-			visitDepthFirstOnce(code, [&checked](const core::GenericTypePtr& genType) {
-				if(genType->getName()->getValue() == "IMP_TemplateClass_bool") {
-					ASSERT_TRUE(core::annotations::hasAttachedName(genType));
-					EXPECT_EQ("TemplateClass<bool>", core::annotations::getAttachedName(genType));
-					checked = true;
-				}
-			}, true);
-			EXPECT_TRUE(checked);
-		}
+		checkForTypeName(code, "IMP_TemplateClass_int", "TemplateClass<int>");
+		checkForTypeName(code, "IMP_TemplateClass_double", "TemplateClass<double>");
+		checkForTypeName(code, "IMP_TemplateClass_bool", "TemplateClass<bool>");
+		checkForTypeName(code, "IMP_TemplateClass_TemplateClass_lt_int_gt_", "TemplateClass<TemplateClass<int>>");
+
+		// TODO check name of function/method literals
 	}
 
 	TEST(InterceptorTest, TrueSystemInterception) {
@@ -156,35 +148,19 @@ namespace frontend {
 		job.setStandard(ConversionSetup::Standard::Cxx11);
 		auto irTu = job.toIRTranslationUnit(manager);
 		auto funs = irTu.getFunctions();
-		EXPECT_FALSE(any(funs, [](decltype(funs)::value_type val) { return val.first->getStringValue() == "IMP_gettimeofday"; })) << "Function not intercepted!";
-		EXPECT_FALSE(any(funs, [](decltype(funs)::value_type val) { return val.first->getStringValue() == "IMP_std_colon__colon_vector_int_std_colon__colon_allocator_lt_int_gt_::IMP_push_back"; })) << "Function not intercepted!";
+
+		//check that functions/methods have been intercepted
+		checkForFunction(irTu, "IMP_gettimeofday");
+		checkForFunction(irTu, "IMP_std_colon__colon_vector_int_std_colon__colon_allocator_lt_int_gt_::IMP_push_back");
+
+		//no types should have been translated
 		EXPECT_TRUE(irTu.getTypes().empty());
 
 		// check the attached name of the intercepted structs for correctness
 		auto code = job.execute(manager);
 		ASSERT_TRUE(code);
-		{
-			bool checked = false;
-			visitDepthFirstOnce(code, [&checked](const core::GenericTypePtr& genType) {
-				if(genType->getName()->getValue() == "IMP_timeval") {
-					ASSERT_TRUE(core::annotations::hasAttachedName(genType));
-					EXPECT_EQ("struct timeval", core::annotations::getAttachedName(genType));
-					checked = true;
-				}
-			}, true);
-			EXPECT_TRUE(checked);
-		}
-		{
-			bool checked = false;
-			visitDepthFirstOnce(code, [&checked](const core::GenericTypePtr& genType) {
-				if(genType->getName()->getValue() == "IMP_std_colon__colon_vector_int_std_colon__colon_allocator_lt_int_gt_") {
-					ASSERT_TRUE(core::annotations::hasAttachedName(genType));
-					EXPECT_EQ("std::vector<int,std::allocator<int>>", core::annotations::getAttachedName(genType));
-					checked = true;
-				}
-			}, true);
-			EXPECT_TRUE(checked);
-		}
+		checkForTypeName(code, "IMP_timeval", "struct timeval");
+		checkForTypeName(code, "IMP_std_colon__colon_vector_int_std_colon__colon_allocator_lt_int_gt_", "std::vector<int,std::allocator<int>>");
 
 		// TODO check name of push back method literal
 	}
