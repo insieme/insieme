@@ -175,12 +175,16 @@ namespace utils {
 				break;
 			}
 			case clang::TemplateArgument::Pack: {
-				suffix << separator << "pack_begin";
+				if (!cStyleName) {
+					suffix << separator << "pack_begin";
+				}
 				for(clang::TemplateArgument::pack_iterator it = arg.pack_begin(), end = arg.pack_end(); it != end; it++) {
 					const clang::QualType& argType = (*it).getAsType();
 					suffix << separator << getTypeString(argType, cStyleName);
 				}
-				suffix << separator << "pack_end";
+				if (!cStyleName) {
+					suffix << separator << "pack_end";
+				}
 				break;
 			}
 			}
