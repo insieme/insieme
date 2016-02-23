@@ -459,36 +459,32 @@ namespace printer {
 
 							// print all constructors declarations
 							auto constructors = record->getConstructors();
-							if (!constructors.empty()) {
-								for (auto constr : constructors) {
-									if (!printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) &&
-										analysis::isaDefaultConstructor(tag, constr)) {
-										continue;
-									}
+							for (auto constr : constructors) {
+								if (!printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) &&
+									analysis::isaDefaultConstructor(tag, constr)) {
+									continue;
+								}
 
-									if (auto ctor = constr.isa<LambdaExprPtr>()) {
-										newLine();
-										out << "decl ctor:" << tagName << "::";
-										visit(NodeAddress(ctor->getType()));
-										out << ";";
-									}
+								if (auto ctor = constr.isa<LambdaExprPtr>()) {
+									newLine();
+									out << "decl ctor:" << tagName << "::";
+									visit(NodeAddress(ctor->getType()));
+									out << ";";
 								}
 							}
 
 							// print all memberFunctions declarations
 							auto memberFunctions = record->getMemberFunctions();
-							if (!memberFunctions.empty()) {
-								for (auto memberFun : memberFunctions) {
-									if (!printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) &&
-										analysis::isaDefaultMember(tag, memberFun))
-										continue;
-									if (auto member = memberFun->getImplementation().isa<LambdaExprPtr>()) {
-										newLine();
-										out << "decl " << memberFun->getName()->getValue() << ":"
-										<< tagName << "::";
-										visit(NodeAddress(member->getType()));
-										out << ";";
-									}
+							for (auto memberFun : memberFunctions) {
+								if (!printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) &&
+									analysis::isaDefaultMember(tag, memberFun))
+									continue;
+								if (auto member = memberFun->getImplementation().isa<LambdaExprPtr>()) {
+									newLine();
+									out << "decl " << memberFun->getName()->getValue() << ":"
+									<< tagName << "::";
+									visit(NodeAddress(member->getType()));
+									out << ";";
 								}
 							}
 
@@ -1311,6 +1307,7 @@ namespace printer {
 						VISIT(function);
 						out << ")";
 					} else {
+						//Literal Expression
 						VISIT(function);
 					}
 				}
@@ -1385,30 +1382,6 @@ namespace printer {
 
 			PRINT(TagTypeReference) {
 				out << node->getName()->getValue();
-			}
-
-			PRINT(TagTypeDefinition) {
-				auto defs = node->getDefinitions();
-				if(defs.empty()) {
-					out << "{ }";
-					return;
-				}
-
-				out << "{";
-				increaseIndent();
-				newLine();
-				std::size_t count = 0;
-				for_each(defs.begin(), defs.end(), [&](const TagTypeBindingAddress& cur) {
-					VISIT(cur->getTag());
-					out << " = ";
-					VISIT(cur->getRecord());
-					out << ";";
-					if(count++ < defs.size() - 1) { this->newLine(); }
-				});
-
-				decreaseIndent();
-				newLine();
-				out << "}";
 			}
 
 			PRINT(Program) {
