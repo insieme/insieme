@@ -625,6 +625,10 @@ namespace backend {
 			return c_ast::cast(res_type, in);
 		};
 
+		res[refExt.getRefKindCast()] = OP_CONVERTER {
+			return CONVERT_ARG(0);
+		};
+
 		// -- support narrow and expand --
 
 		res[refExt.getRefNarrow()] = OP_CONVERTER {
