@@ -93,12 +93,20 @@ namespace extensions {
 					VLOG(2) << "Interceptor: intercepted clang fun\n" << dumpClang(decl) << " -> converted to literal: " << *lit << "\n";
 					return lit;
 
-					//as well as globals
+					//as well as global variables
 				} else if (auto varDecl = llvm::dyn_cast<clang::VarDecl>(decl)) {
 					auto lit = converter.getIRBuilder().literal(
 							insieme::utils::mangle(varDecl->getQualifiedNameAsString()), converter.convertVarType(expr->getType()));
 					converter.applyHeaderTagging(lit, decl);
 					VLOG(2) << "Interceptor: intercepted clang lit\n" << dumpClang(decl) << " -> converted to literal: " << *lit << "\n";
+					return lit;
+
+					//as well as global enums
+				} else if (auto enumConstantDecl = llvm::dyn_cast<clang::EnumConstantDecl>(decl)) {
+					auto lit = converter.getIRBuilder().literal(
+							insieme::utils::mangle(enumConstantDecl->getQualifiedNameAsString()), converter.convertVarType(expr->getType()));
+					converter.applyHeaderTagging(lit, decl);
+					VLOG(2) << "Interceptor: intercepted clang enum constant\n" << dumpClang(decl) << " -> converted to literal: " << *lit << "\n";
 					return lit;
 				}
 			}

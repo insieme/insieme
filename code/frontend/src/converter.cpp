@@ -277,6 +277,10 @@ namespace conversion {
 
 				} else if (auto varDecl = llvm::dyn_cast<clang::VarDecl>(decl)) {
 					core::annotations::attachName(node, varDecl->getQualifiedNameAsString());
+
+				} else if (auto enumConstantDecl = llvm::dyn_cast<clang::EnumConstantDecl>(decl)) {
+					string name = insieme::utils::demangle(enumConstantDecl->getQualifiedNameAsString());
+					core::annotations::attachName(node, name);
 				}
 				VLOG(2) << "-> annotated with: " << annotations::c::getAttachedInclude(node);
 			} else {
