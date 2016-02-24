@@ -36,6 +36,7 @@
 
 #include <sys/time.h>
 
+#include <iostream>
 #include <vector>
 
 int main() {
@@ -58,5 +59,15 @@ int main() {
 	{
 		std::vector<int> v;
 		v.push_back(0);
+	}
+
+	#pragma test expect_ir(R"({
+		lit("IMP_std_colon__colon__operator_lshift__struct_std_colon__colon_char_traits_lt_char_gt__returns_basic_ostream_lt_char_comma__struct_std_colon__colon_char_traits_lt_char_gt___gt___ampersand_" :
+			(ref<IMP_std_colon__colon_basic_ostream_char_struct_std_colon__colon_char_traits_lt_char_gt_,f,f,cpp_ref>, ptr<char,t,f>) -> ref<IMP_std_colon__colon_basic_ostream_char_struct_std_colon__colon_char_traits_lt_char_gt_,f,f,cpp_ref>) (
+				ref_kind_cast(lit("IMP_std_colon__colon_cout":ref<IMP_std_colon__colon_basic_ostream_char_struct_std_colon__colon_char_traits_lt_char_gt_>), type_lit(cpp_ref)), ptr_from_array("Test")) materialize;
+	})")
+	{
+		std::cout << "Test";
+		//std::operator<<<std::char_traits<char>>(std::cout, "Test");
 	}
 }

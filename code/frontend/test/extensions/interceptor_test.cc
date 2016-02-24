@@ -174,6 +174,7 @@ namespace frontend {
 		//check that functions/methods have been intercepted
 		checkForFunction(irTu, "IMP_gettimeofday");
 		checkForFunction(irTu, "IMP_std_colon__colon_vector_int_std_colon__colon_allocator_lt_int_gt_::IMP_push_back");
+		checkForFunction(irTu, "IMP_std_colon__colon__operator_lshift__struct_std_colon__colon_char_traits_lt_char_gt__returns_basic_ostream_lt_char_comma__struct_std_colon__colon_char_traits_lt_char_gt___gt___ampersand_");
 
 		//no types should have been translated
 		EXPECT_TRUE(irTu.getTypes().empty());
@@ -184,9 +185,11 @@ namespace frontend {
 		checkForTypeName(code, "IMP_timeval", "struct timeval");
 		checkForTypeName(code, "IMP_std_colon__colon_vector_int_std_colon__colon_allocator_lt_int_gt_", "std::vector<int,std::allocator<int> >");
 
-		// check name of function/method literals
+		// check name of function/method literals as well as globals
 		checkForFunctionName(code, "IMP_gettimeofday", "gettimeofday");
 		checkForFunctionName(code, "IMP_std_colon__colon_vector_int_std_colon__colon_allocator_lt_int_gt_::IMP_push_back", "push_back");
+		checkForFunctionName(code, "IMP_std_colon__colon__operator_lshift__struct_std_colon__colon_char_traits_lt_char_gt__returns_basic_ostream_lt_char_comma__struct_std_colon__colon_char_traits_lt_char_gt___gt___ampersand_", "std::operator<<<struct std::char_traits<char> >");
+		checkForFunctionName(code, "IMP_std_colon__colon_cout", "std::cout");
 	}
 
 } // fe namespace

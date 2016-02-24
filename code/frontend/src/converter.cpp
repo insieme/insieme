@@ -274,6 +274,9 @@ namespace conversion {
 				} else if (auto funDecl = llvm::dyn_cast<clang::FunctionDecl>(decl)) {
 					string name = insieme::utils::demangle(utils::buildNameForFunction(funDecl, true));
 					core::annotations::attachName(node, name);
+
+				} else if (auto varDecl = llvm::dyn_cast<clang::VarDecl>(decl)) {
+					core::annotations::attachName(node, varDecl->getQualifiedNameAsString());
 				}
 				VLOG(2) << "-> annotated with: " << annotations::c::getAttachedInclude(node);
 			} else {

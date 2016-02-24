@@ -35,11 +35,12 @@
  */
 
 #include "insieme/frontend/extensions/interceptor_extension.h"
-#include "insieme/core/transform/manipulation_utils.h"
-#include "insieme/core/lang/pointer.h"
 #include "insieme/frontend/utils/name_manager.h"
 #include "insieme/frontend/utils/conversion_utils.h"
 #include "insieme/frontend/decl_converter.h"
+#include "insieme/core/transform/manipulation_utils.h"
+#include "insieme/core/lang/pointer.h"
+#include "insieme/utils/name_mangling.h"
 
 #include <boost/program_options.hpp>
 
@@ -85,11 +86,19 @@ namespace extensions {
 		if(auto dr = llvm::dyn_cast<clang::DeclRefExpr>(expr)) {
 			auto decl = dr->getDecl();
 			if(converter.getHeaderTagger()->isIntercepted(decl)) {
-				auto funDecl = llvm::dyn_cast<clang::FunctionDecl>(decl);
-				if(funDecl) {
+				//translate functions
+				if(auto funDecl = llvm::dyn_cast<clang::FunctionDecl>(decl)) {
 					auto lit = converter.getIRBuilder().literal(utils::buildNameForFunction(funDecl), converter.convertType(expr->getType()));
 					converter.applyHeaderTagging(lit, decl);
 					VLOG(2) << "Interceptor: intercepted clang fun\n" << dumpClang(decl) << " -> converted to literal: " << *lit << "\n";
+					return lit;
+
+					//as well as globals
+				} else if (auto varDecl = llvm::dyn_cast<clang::VarDecl>(decl)) {
+					auto lit = converter.getIRBuilder().literal(
+							insieme::utils::mangle(varDecl->getQualifiedNameAsString()), converter.convertVarType(expr->getType()));
+					converter.applyHeaderTagging(lit, decl);
+					VLOG(2) << "Interceptor: intercepted clang lit\n" << dumpClang(decl) << " -> converted to literal: " << *lit << "\n";
 					return lit;
 				}
 			}
