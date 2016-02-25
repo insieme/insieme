@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -292,6 +292,13 @@ int main(int argc, char** argv) {
 	// convert src file to target code
 	auto program = options.job.execute(mgr);
 
+	// dump IR code
+	if(!options.settings.dumpIR.empty()) {
+		std::cout << "Dumping intermediate representation ...\n";
+		std::ofstream out(options.settings.dumpIR.string());
+		out << co::printer::PrettyPrinter(program, co::printer::PrettyPrinter::PRINT_DEREFS);
+	}
+
 	core::checks::MessageList errors;
 	if(options.settings.checkSema || options.settings.checkSemaOnly) {
 		int retval = checkSema(program, errors);
@@ -303,13 +310,6 @@ int main(int argc, char** argv) {
 	if(options.settings.benchmarkCore) { benchmarkCore(program); }
 
 	if(options.settings.taskGranularityTuning) { program = insieme::transform::tasks::applyTaskOptimization(program); }
-
-	// dump IR code
-	if(!options.settings.dumpIR.empty()) {
-		std::cout << "Dumping intermediate representation ...\n";
-		std::ofstream out(options.settings.dumpIR.string());
-		out << co::printer::PrettyPrinter(program, co::printer::PrettyPrinter::PRINT_DEREFS);
-	}
 
 	// Step 3: produce output code
 	std::cout << "Creating target code ...\n";
