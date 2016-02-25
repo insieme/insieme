@@ -75,6 +75,7 @@ struct _irt_type {
 	uint32 bytes;
 	uint32 num_components;   // 0 for basic types
 	irt_type_id* components; // num_components entries
+	size_t* components_offset;
 };
 
 /* ------------------------------ operations ----- */

@@ -44,6 +44,9 @@
 #ifdef USE_OPENCL
 #include "irt_ocl.h"
 #endif
+#ifdef IRT_ENABLE_OPENCL
+#include "irt_opencl.h"
+#endif
 
 /* ------------------------------ data structures ----- */
 
@@ -76,6 +79,9 @@ struct _irt_context {
 	irt_ocl_kernel** kernel_binary_table;
 	#endif
 
+	#ifdef IRT_ENABLE_OPENCL
+	irt_opencl_context opencl_context;
+	#endif
 	// private implementation detail
 	struct _irt_context* lookup_table_next;
 };
