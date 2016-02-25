@@ -397,13 +397,13 @@ namespace printer {
 
 					//second: print all function declarations
 					utils::set::PointerSet<LambdaBindingPtr> visitedBindings;
-					visitDepthFirstOnce(node, [&](const LambdaExprPtr& cur) {
+					visitDepthFirstOncePrunable(node, [&](const LambdaExprPtr& cur) {
 						// jump over this part, if lambda is derived, but printer don't have the option to print them
 						if(lang::isDerived(cur) && !printer.hasOption(PrettyPrinter::PRINT_DERIVED_IMPL)) {
-							return;
+							return true;
 						}
-						if (lang::isBuiltIn(cur)) {
-							return;
+						if(lang::isBuiltIn(cur)) {
+							return true;
 						}
 
 						for(auto& binding : cur->getDefinition()->getDefinitions()) {
@@ -438,6 +438,7 @@ namespace printer {
 								}
 							}
 						}
+						return false;
 
 					});
 
@@ -459,36 +460,32 @@ namespace printer {
 
 							// print all constructors declarations
 							auto constructors = record->getConstructors();
-							if (!constructors.empty()) {
-								for (auto constr : constructors) {
-									if (!printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) &&
-										analysis::isaDefaultConstructor(tag, constr)) {
-										continue;
-									}
+							for (auto constr : constructors) {
+								if (!printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) &&
+									analysis::isaDefaultConstructor(tag, constr)) {
+									continue;
+								}
 
-									if (auto ctor = constr.isa<LambdaExprPtr>()) {
-										newLine();
-										out << "decl ctor:" << tagName << "::";
-										visit(NodeAddress(ctor->getType()));
-										out << ";";
-									}
+								if (auto ctor = constr.isa<LambdaExprPtr>()) {
+									newLine();
+									out << "decl ctor:" << tagName << "::";
+									visit(NodeAddress(ctor->getType()));
+									out << ";";
 								}
 							}
 
 							// print all memberFunctions declarations
 							auto memberFunctions = record->getMemberFunctions();
-							if (!memberFunctions.empty()) {
-								for (auto memberFun : memberFunctions) {
-									if (!printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) &&
-										analysis::isaDefaultMember(tag, memberFun))
-										continue;
-									if (auto member = memberFun->getImplementation().isa<LambdaExprPtr>()) {
-										newLine();
-										out << "decl " << memberFun->getName()->getValue() << ":"
-										<< tagName << "::";
-										visit(NodeAddress(member->getType()));
-										out << ";";
-									}
+							for (auto memberFun : memberFunctions) {
+								if (!printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) &&
+									analysis::isaDefaultMember(tag, memberFun))
+									continue;
+								if (auto member = memberFun->getImplementation().isa<LambdaExprPtr>()) {
+									newLine();
+									out << "decl " << memberFun->getName()->getValue() << ":"
+									<< tagName << "::";
+									visit(NodeAddress(member->getType()));
+									out << ";";
 								}
 							}
 
@@ -636,15 +633,15 @@ namespace printer {
 
 					//fourth: print all definitions for functions
 					visitedBindings.clear();
-					visitDepthFirstOnce(node, [&](const LambdaExprPtr& cur) {
+					visitDepthFirstOncePrunable(node, [&](const LambdaExprPtr& cur) {
 						// jump over this part, if lambda is derived, but printer don't have the option to print them
 						LambdaExprAddress curAddress{cur};
 
 						if(lang::isDerived(cur) && !printer.hasOption(PrettyPrinter::PRINT_DERIVED_IMPL)) {
-								return;
+							return true;
 						}
 						if (lang::isBuiltIn(cur)) {
-							return;
+							return true;
 						}
 
 						auto definition = curAddress->getDefinition();
@@ -660,7 +657,7 @@ namespace printer {
 
 							if (!funType->isMember()) {
 								if(entryPoints.find(binding->getReference()) != entryPoints.end()) {
-									return;
+									return false;
 								} else {
 									newLine();
 									out << "def " << lambdaNames[binding->getReference()];
@@ -716,6 +713,7 @@ namespace printer {
 								}
 							}
 						}
+						return false;
 					});
 					newLine();
 				}
@@ -1311,6 +1309,7 @@ namespace printer {
 						VISIT(function);
 						out << ")";
 					} else {
+						//Literal Expression
 						VISIT(function);
 					}
 				}
@@ -1385,30 +1384,6 @@ namespace printer {
 
 			PRINT(TagTypeReference) {
 				out << node->getName()->getValue();
-			}
-
-			PRINT(TagTypeDefinition) {
-				auto defs = node->getDefinitions();
-				if(defs.empty()) {
-					out << "{ }";
-					return;
-				}
-
-				out << "{";
-				increaseIndent();
-				newLine();
-				std::size_t count = 0;
-				for_each(defs.begin(), defs.end(), [&](const TagTypeBindingAddress& cur) {
-					VISIT(cur->getTag());
-					out << " = ";
-					VISIT(cur->getRecord());
-					out << ";";
-					if(count++ < defs.size() - 1) { this->newLine(); }
-				});
-
-				decreaseIndent();
-				newLine();
-				out << "}";
 			}
 
 			PRINT(Program) {

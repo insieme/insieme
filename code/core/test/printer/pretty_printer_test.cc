@@ -1047,3 +1047,25 @@ TEST(PrettyPrinter, FreeFunctions) {
 	}
 
 }
+
+TEST(PrettyPrinter, AutoEvaluatedFunctions) {
+	NodeManager nm;
+	IRBuilder builder(nm);
+
+	{
+		std::string input = "{\n"
+				            "    var ref<ptr<unit>,f,f,plain> v0 = v0;\n"
+				            "    ptr_gt(*v0, *v0);\n"
+				            "    ptr_lt(*v0, *v0);\n"
+				            "    ptr_le(*v0, *v0);\n"
+				            "    ptr_ge(*v0, *v0);\n"
+				            "}";
+
+		auto ir = builder.normalize(builder.parseStmt(input));
+		PrettyPrinter printer(ir, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::PRINT_CASTS
+								  | PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_ATTRIBUTES);
+
+		EXPECT_EQ(input, toString(printer)) << printer;
+	}
+
+}
