@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -84,7 +84,6 @@ namespace integration {
 			for_each(testCase.getIncludeDirs(), [&](const frontend::path& dir) { options.job.addIncludeDirectory(dir); });
 
 			// add interceptor configuration
-			options.job.addInterceptedNameSpacePatterns(testCase.getInterceptedNameSpaces());
 			options.job.setInterceptedHeaderDirs(testCase.getInterceptedHeaderFileDirectories());
 
 			// done
@@ -248,7 +247,6 @@ namespace integration {
 			enableOpenCL = prop.get<bool>("use_opencl");
 
 			// extract interception configuration
-			auto interceptionNameSpacePatterns = prop.get<vector<string>>("intercepted_name_spaces");
 			vector<frontend::path> interceptedHeaderFileDirectories;
 
 			for(const auto& path : prop.get<vector<string>>("intercepted_header_file_dirs")) {
@@ -269,7 +267,7 @@ namespace integration {
 			if(boost::algorithm::starts_with(name, "/")) { name = name.substr(1); }
 
 			// add test case
-			return IntegrationTestCase(name, testCaseDir, files, includeDirs, libPaths, libNames, interceptionNameSpacePatterns,
+			return IntegrationTestCase(name, testCaseDir, files, includeDirs, libPaths, libNames,
 			                           interceptedHeaderFileDirectories, enableOpenMP, enableOpenCL, enableCXX11, prop);
 		}
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -102,11 +102,6 @@ namespace integration {
 		vector<string> libNames;
 
 		/**
-		 * A list of name spaces to be intercepted by the frontend.
-		 */
-		vector<string> interceptedNameSpaces;
-
-		/**
 		 * A list of directories containing header filed to be intercepted.
 		 */
 		vector<frontend::path> interceptedHeaderFileDirectories;
@@ -145,10 +140,10 @@ namespace integration {
 		 * Creates a new test case based on the given arguments.
 		 */
 		IntegrationTestCase(const string& name, const frontend::path& dir, const vector<frontend::path>& files, const vector<frontend::path>& includeDirs,
-		                    const vector<frontend::path>& libDirs, const vector<string>& libNames, const vector<string>& interceptedNameSpaces,
+		                    const vector<frontend::path>& libDirs, const vector<string>& libNames,
 		                    const vector<frontend::path>& interceptedHeaderFileDirectories, bool enableOpenMP, bool enableOpenCL, bool enableCXX11,
 		                    const Properties& properties)
-		    : name(name), dir(dir), files(files), includeDirs(includeDirs), libDirs(libDirs), libNames(libNames), interceptedNameSpaces(interceptedNameSpaces),
+		    : name(name), dir(dir), files(files), includeDirs(includeDirs), libDirs(libDirs), libNames(libNames),
 		      interceptedHeaderFileDirectories(interceptedHeaderFileDirectories), enableOpenMP(enableOpenMP), enableOpenCL(enableOpenCL),
 		      enableCXX11(enableCXX11), properties(properties) {}
 
@@ -199,13 +194,6 @@ namespace integration {
 		 */
 		const vector<string>& getLibNames() const {
 			return libNames;
-		}
-
-		/**
-		 * Contains the list of namespaces patterns to be intercepted.
-		 */
-		const vector<string>& getInterceptedNameSpaces() const {
-			return interceptedNameSpaces;
 		}
 
 		/**

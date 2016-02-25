@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -128,12 +128,6 @@ namespace frontend {
 		 * A regex to filter the clang AST dump.
 		 */
 		std::string clangASTDumpFilter;
-
-		/**
-		 * A list of string representing the regular expression to be intercepted
-		 * by default "std::.*" and "__gnu_cxx::.*" are intercepted
-		 */
-		set<string> interceptedNameSpacePatterns;
 
 		/**
 		 * A list of include directories containing intercepted headers.
@@ -288,30 +282,6 @@ namespace frontend {
 		 */
 		void addSystemHeadersDirectory(const path& directory) {
 			getSystemHeaderSearchPathInternal().push_back(directory);
-		}
-
-		/**
-		 * Adds a single regular expression string to the interception set
-		 */
-		void addInterceptedNameSpacePattern(const string& pattern) {
-			this->interceptedNameSpacePatterns.insert(pattern);
-		}
-
-		/**
-		 * Adds a single regular expression string to the interception set
-		 */
-		template <typename List>
-		void addInterceptedNameSpacePatterns(const List& patterns) {
-			for(const auto& cur : patterns) {
-				addInterceptedNameSpacePattern(cur);
-			}
-		}
-
-		/**
-		 * Obtains a reference to the currently defined interceptions.
-		 */
-		const set<string>& getInterceptedNameSpacePatterns() const {
-			return interceptedNameSpacePatterns;
 		}
 
 		/**
