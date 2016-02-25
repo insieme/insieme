@@ -25,6 +25,7 @@ empty_pod
 error_handler
 expression_with_cleanups
 expr_with_cleanups
+ewc_capturing
 gettimeoftheday
 global_init
 global_intercepted

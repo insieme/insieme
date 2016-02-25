@@ -33,6 +33,7 @@ friend
 global_const
 globals_in_classes
 header
+helloStream
 identical_class_structure
 includes
 inherit
