@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -105,24 +105,8 @@ namespace extensions {
 		return stmtutils::StmtWrapper();
 	}
 
-	insieme::core::NodePtr FrontendExtension::Visit(const clang::Decl* decl, insieme::frontend::conversion::Converter& converter, bool symbolic) {
-		if(llvm::isa<clang::FunctionDecl>(decl)) { return this->FuncDeclVisit(llvm::cast<clang::FunctionDecl>(decl), converter, symbolic); }
-		if(llvm::isa<clang::ValueDecl>(decl)) { return this->ValueDeclVisit(llvm::cast<clang::ValueDecl>(decl), converter); }
-		if(llvm::isa<clang::TypeDecl>(decl)) { return this->TypeDeclVisit(llvm::cast<clang::TypeDecl>(decl), converter); }
-		return nullptr;
-	}
-
-	insieme::core::TypePtr FrontendExtension::TypeDeclVisit(const clang::TypeDecl* decl, insieme::frontend::conversion::Converter& converter) {
-		return nullptr;
-	}
-
-	insieme::core::ExpressionPtr FrontendExtension::FuncDeclVisit(const clang::FunctionDecl* decl, insieme::frontend::conversion::Converter& converter,
-	                                                              bool symbolic) {
-		return nullptr;
-	}
-
-	insieme::core::ExpressionPtr FrontendExtension::ValueDeclVisit(const clang::ValueDecl* decl, insieme::frontend::conversion::Converter& converter) {
-		return nullptr;
+	bool FrontendExtension::FuncDeclVisit(const clang::FunctionDecl* decl, insieme::frontend::conversion::Converter& converter) {
+		return true;
 	}
 
 
@@ -139,35 +123,6 @@ namespace extensions {
 	stmtutils::StmtWrapper FrontendExtension::PostVisit(const clang::Stmt* stmt, const stmtutils::StmtWrapper& irStmt,
 	                                                    insieme::frontend::conversion::Converter& converter) {
 		return irStmt;
-	}
-
-	insieme::core::TypePtr FrontendExtension::TypeDeclPostVisit(const clang::TypeDecl* decl, core::TypePtr type,
-	                                                            insieme::frontend::conversion::Converter& converter) {
-		return nullptr;
-	}
-
-	insieme::core::ExpressionPtr FrontendExtension::FuncDeclPostVisit(const clang::FunctionDecl* decl, core::ExpressionPtr expr,
-	                                                                  insieme::frontend::conversion::Converter& converter, bool symbolic) {
-		return nullptr;
-	}
-
-	insieme::core::ExpressionPtr FrontendExtension::ValueDeclPostVisit(const clang::ValueDecl* decl, core::ExpressionPtr expr,
-	                                                                   insieme::frontend::conversion::Converter& converter) {
-		return nullptr;
-	}
-
-	insieme::core::NodePtr FrontendExtension::PostVisit(const clang::Decl* decl, core::NodePtr ir, insieme::frontend::conversion::Converter& converter,
-	                                                    bool symbolic) {
-		if(llvm::isa<clang::FunctionDecl>(decl) && ir.isa<core::ExpressionPtr>()) {
-			return this->FuncDeclPostVisit(llvm::cast<clang::FunctionDecl>(decl), ir.as<core::ExpressionPtr>(), converter, symbolic);
-		}
-		if(llvm::isa<clang::ValueDecl>(decl) && ir.isa<core::ExpressionPtr>()) {
-			return this->ValueDeclPostVisit(llvm::cast<clang::ValueDecl>(decl), ir.as<core::ExpressionPtr>(), converter);
-		}
-		if(llvm::isa<clang::TypeDecl>(decl) && ir.isa<core::TypePtr>()) {
-			return this->TypeDeclPostVisit(llvm::cast<clang::TypeDecl>(decl), ir.as<core::TypePtr>(), converter);
-		}
-		return nullptr;
 	}
 
 	// ############ POST CLANG STAGE ############ //

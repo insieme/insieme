@@ -58,7 +58,7 @@ namespace extensions {
 		virtual insieme::core::ExpressionPtr Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& converter) override;
 		virtual core::TypePtr Visit(const clang::QualType& type, insieme::frontend::conversion::Converter& converter) override;
 
-		virtual core::ExpressionPtr FuncDeclVisit(const clang::FunctionDecl* decl, insieme::frontend::conversion::Converter& converter, bool symbolic = false) override;
+		virtual bool FuncDeclVisit(const clang::FunctionDecl* decl, insieme::frontend::conversion::Converter& converter) override;
 
 	};
 

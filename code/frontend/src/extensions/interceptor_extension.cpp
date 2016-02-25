@@ -145,12 +145,11 @@ namespace extensions {
 		return nullptr;
 	}
 
-	core::ExpressionPtr InterceptorExtension::FuncDeclVisit(const clang::FunctionDecl* decl, insieme::frontend::conversion::Converter& converter,
-		                                                    bool symbolic /*= false*/) {
+	bool InterceptorExtension::FuncDeclVisit(const clang::FunctionDecl* decl, insieme::frontend::conversion::Converter& converter) {
 		if(converter.getHeaderTagger()->isIntercepted(decl)) {
-			return converter.getIRBuilder().literal("INTERCEPTED_FUNCTION_YOU_SHOULD_NEVER_SEE_THIS", converter.getIRBuilder().genericType("T"));
+			return false;
 		}
-		return nullptr;
+		return true;
 	}
 
 	FrontendExtension::flagHandler InterceptorExtension::registerFlag(boost::program_options::options_description& options) {
