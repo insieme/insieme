@@ -76,10 +76,10 @@ int main() {
 	}
 
 	//cpp global enum
-	#pragma test expect_ir(R"({
-		var ref<IMP_std_colon__colon_launch,f,f,plain> v0 = lit("IMP_std_colon__colon_launch_colon__colon_async":ref<IMP_std_colon__colon_launch,f,f,plain>);
-	})")
-	{
-		auto a = std::launch::async;
-	}
+//	#pragma test expect_ir(R"({
+//		var ref<IMP_std_colon__colon_launch,f,f,plain> v0 = lit("IMP_std_colon__colon_launch_colon__colon_async":ref<IMP_std_colon__colon_launch,f,f,plain>);
+//	})")
+//	{
+//		std::launch::async == std::launch::deferred;
+//	}
 }

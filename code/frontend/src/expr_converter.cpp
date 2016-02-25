@@ -39,18 +39,19 @@
 #include "insieme/frontend/expr_converter.h"
 
 #include "insieme/frontend/decl_converter.h"
-#include "insieme/frontend/state/function_manager.h"
-#include "insieme/frontend/state/record_manager.h"
-#include "insieme/frontend/state/variable_manager.h"
 #include "insieme/frontend/utils/clang_cast.h"
+#include "insieme/frontend/utils/conversion_utils.h"
 #include "insieme/frontend/utils/expr_to_bool.h"
 #include "insieme/frontend/utils/frontend_inspire_module.h"
+#include "insieme/frontend/state/function_manager.h"
 #include "insieme/frontend/utils/macros.h"
 #include "insieme/frontend/utils/memalloc.h"
 #include "insieme/frontend/utils/name_manager.h"
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/stmt_wrapper.h"
+#include "insieme/frontend/state/record_manager.h"
+#include "insieme/frontend/state/variable_manager.h"
 
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/logging.h"
@@ -700,19 +701,7 @@ namespace conversion {
 		}
 
 		if(const clang::EnumConstantDecl* decl = llvm::dyn_cast<clang::EnumConstantDecl>(declRef->getDecl())) {
-			const clang::EnumType* enumType = llvm::dyn_cast<clang::EnumType>(llvm::cast<clang::TypeDecl>(decl->getDeclContext())->getTypeForDecl());
-			auto enumDecl = enumType->getDecl();
-			auto enumClassType = converter.convertType(enumDecl->getIntegerType());
-			//get the init val of the enum constant decl
-			core::ExpressionPtr val;
-			std::string value = decl->getInitVal().toString(10);
-			val = builder.literal(enumClassType, value);
-			if(val->getType() != enumClassType) {
-				val = builder.numericCast(val, enumClassType);
-			}
-
-			//convert and return the struct init expr
-			return builder.numericCast(val, builder.getLangBasic().getInt4());
+			return utils::buildEnumConstantExpression(converter, decl);
 		}
 
 		frontend_assert(false) << "DeclRefExpr not handled: " << dumpClang(declRef, converter.getSourceManager());

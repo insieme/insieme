@@ -34,12 +34,12 @@
  * regarding third party software licenses.
  */
 
+#include "insieme/frontend/decl_converter.h"
 #include "insieme/frontend/extensions/interceptor_extension.h"
 #include "insieme/frontend/utils/name_manager.h"
 #include "insieme/frontend/utils/conversion_utils.h"
-#include "insieme/frontend/decl_converter.h"
-#include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/lang/pointer.h"
+#include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/utils/name_mangling.h"
 
 #include <boost/program_options.hpp>
@@ -90,7 +90,7 @@ namespace extensions {
 				if(auto funDecl = llvm::dyn_cast<clang::FunctionDecl>(decl)) {
 					auto lit = converter.getIRBuilder().literal(utils::buildNameForFunction(funDecl), converter.convertType(expr->getType()));
 					converter.applyHeaderTagging(lit, decl);
-					VLOG(2) << "Interceptor: intercepted clang fun\n" << dumpClang(decl) << " -> converted to literal: " << *lit << "\n";
+					VLOG(2) << "Interceptor: intercepted clang fun\n" << dumpClang(decl) << " -> converted to literal: " << *lit << " of type " << *lit->getType() << "\n";
 					return lit;
 
 					//as well as global variables
@@ -98,16 +98,15 @@ namespace extensions {
 					auto lit = converter.getIRBuilder().literal(
 							insieme::utils::mangle(varDecl->getQualifiedNameAsString()), converter.convertVarType(expr->getType()));
 					converter.applyHeaderTagging(lit, decl);
-					VLOG(2) << "Interceptor: intercepted clang lit\n" << dumpClang(decl) << " -> converted to literal: " << *lit << "\n";
+					VLOG(2) << "Interceptor: intercepted clang lit\n" << dumpClang(decl) << " -> converted to literal: " << *lit << " of type " << *lit->getType() << "\n";
 					return lit;
 
 					//as well as global enums
 				} else if (auto enumConstantDecl = llvm::dyn_cast<clang::EnumConstantDecl>(decl)) {
-					auto lit = converter.getIRBuilder().literal(
-							insieme::utils::mangle(enumConstantDecl->getQualifiedNameAsString()), converter.convertVarType(expr->getType()));
-					converter.applyHeaderTagging(lit, decl);
-					VLOG(2) << "Interceptor: intercepted clang enum constant\n" << dumpClang(decl) << " -> converted to literal: " << *lit << "\n";
-					return lit;
+					auto exp = utils::buildEnumConstantExpression(converter, enumConstantDecl);
+					converter.applyHeaderTagging(exp, decl);
+					VLOG(2) << "Interceptor: intercepted clang enum constant\n" << dumpClang(decl) << " -> converted to literal: " << *exp << " of type " << *exp->getType() << "\n";
+					return exp;
 				}
 			}
 		}

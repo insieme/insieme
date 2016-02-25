@@ -92,6 +92,23 @@ namespace utils {
 		return converter.getIRBuilder().callExpr(retType, callee, arguments);
 	}
 
+	core::ExpressionPtr buildEnumConstantExpression(conversion::Converter& converter, const clang::EnumConstantDecl* decl) {
+		auto& builder = converter.getIRBuilder();
+		const clang::EnumType* enumType = llvm::dyn_cast<clang::EnumType>(llvm::cast<clang::TypeDecl>(decl->getDeclContext())->getTypeForDecl());
+		auto enumDecl = enumType->getDecl();
+		auto enumClassType = converter.convertType(enumDecl->getIntegerType());
+		//get the init val of the enum constant decl
+		core::ExpressionPtr val;
+		std::string value = decl->getInitVal().toString(10);
+		val = builder.literal(enumClassType, value);
+		if(val->getType() != enumClassType) {
+			val = builder.numericCast(val, enumClassType);
+		}
+
+		//convert and return the struct init expr
+		return builder.numericCast(val, builder.getLangBasic().getInt4());
+	}
+
 } // end namespace utils
 } // end namespace frontend
 } // end namespace insieme
