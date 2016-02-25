@@ -315,7 +315,7 @@ namespace conversion {
 
 		// if handled by a plugin, don't do anything else
 		for(auto extension : converter.getConversionSetup().getExtensions()) {
-			if(extension->FuncDeclVisit(funcDecl, converter)) return;
+			if(!extension->FuncDeclVisit(funcDecl, converter)) return;
 		}
 		// we only want to visit actual specialized templates
 		if(funcDecl->isTemplateDecl() && !funcDecl->isFunctionTemplateSpecialization()) { return; }
