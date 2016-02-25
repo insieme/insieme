@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -250,10 +250,6 @@ namespace integration {
 				// get definitions
 				for_each(test.getDefinitions(name), [&](const std::pair<string, string>& def) { cmd << " -D" << def.first << "=" << def.second; });
 
-				// append intercept patterns
-				for(const auto& cur : test.getInterceptedNameSpaces()) {
-					cmd << " --intercept " << cur;
-				}
 				// append intercepted header file dirs
 				for(const auto& cur : test.getInterceptedHeaderFileDirectories()) {
 					cmd << " --intercept-include " << cur.string();
@@ -313,10 +309,6 @@ namespace integration {
 				// get definitions
 				for_each(test.getDefinitions(name), [&](const std::pair<string, string>& def) { cmd << " -D" << def.first << "=" << def.second; });
 
-				// append intercept patterns
-				for(const auto& cur : test.getInterceptedNameSpaces()) {
-					cmd << " --intercept " << cur;
-				}
 				// append intercepted header file dirs
 				for(const auto& cur : test.getInterceptedHeaderFileDirectories()) {
 					cmd << " --intercept-include " << cur.string();

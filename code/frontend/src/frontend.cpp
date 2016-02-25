@@ -70,9 +70,7 @@ namespace frontend {
 	const unsigned ConversionSetup::DEFAULT_FLAGS = PrintDiag;
 
 	ConversionSetup::ConversionSetup(const vector<path>& includeDirs)
-	    : includeDirs(includeDirs),
-	      standard(Auto), definitions(), interceptedNameSpacePatterns({"std::.*", "__gnu_cxx::.*", "_m_.*", "_mm_.*", "__mm_.*", "__builtin_.*"}),
-	      interceptedHeaderDirs(), flags(DEFAULT_FLAGS){};
+	    : includeDirs(includeDirs), standard(Auto), definitions(), interceptedHeaderDirs(), flags(DEFAULT_FLAGS){};
 
 
 	bool ConversionSetup::isCxx(const path& file) const {
@@ -258,7 +256,7 @@ namespace frontend {
 		    << "ProgressBar " << hasOption(ConversionSetup::ProgressBar) << "\n"
 		    << "NoWarnings " << hasOption(ConversionSetup::NoWarnings) << "\n"
 		    << "NoDefaultExtensions " << hasOption(ConversionSetup::NoDefaultExtensions) << "\n" << std::endl;
-		out << "interceptions: \n" << getInterceptedNameSpacePatterns() << std::endl;
+		out << "interceptions: \n" << getInterceptedHeaderDirs() << std::endl;
 		out << "crosscompilation dir: \n" << getCrossCompilationSystemHeadersDir() << std::endl;
 		out << "include dirs: \n" << getIncludeDirectories() << std::endl;
 		out << "definitions: \n" << getDefinitions() << std::endl;

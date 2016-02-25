@@ -54,6 +54,7 @@
 #include "insieme/core/analysis/attributes.h"
 #include "insieme/core/analysis/normalize.h"
 #include "insieme/core/analysis/type_utils.h"
+#include "insieme/core/annotations/naming.h"
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/varargs_extension.h"
 #include "insieme/core/transform/manipulation.h"
@@ -689,7 +690,9 @@ namespace backend {
 
 			// ------------------------ resolve function ---------------------
 
-			FunctionCodeInfo fun = resolveFunction(manager->create(insieme::utils::demangle(literal->getStringValue())), funType, core::LambdaPtr(), true);
+			std::string name = insieme::utils::demangle(literal->getStringValue());
+			if (core::annotations::hasAttachedName(literal)) name = core::annotations::getAttachedName(literal);
+			FunctionCodeInfo fun = resolveFunction(manager->create(name), funType, core::LambdaPtr(), true);
 
 			res->function = fun.function;
 

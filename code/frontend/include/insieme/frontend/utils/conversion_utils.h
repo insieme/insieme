@@ -57,6 +57,10 @@ namespace utils {
 	core::CallExprPtr buildCxxMethodCall(conversion::Converter& converter, const core::TypePtr& retType, const core::ExpressionPtr& callee,
 		                                 const core::ExpressionPtr& thisArgument, clang::CallExpr::arg_const_range argumentRange);
 
+	/// Creates an expression corresponding to a clang EnumConstantDecl
+	///
+	core::ExpressionPtr buildEnumConstantExpression(conversion::Converter& converter, const clang::EnumConstantDecl* decl);
+
 } // end namespace utils
 } // end namespace frontend
 } // end namespace insieme

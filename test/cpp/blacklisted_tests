@@ -58,7 +58,6 @@ naive
 nameless_struct
 nested_class
 new_string
-object_bug
 omp
 op_overl
 pairs
@@ -92,7 +91,6 @@ struct
 template1
 template2
 template3
-template_dependencies
 template_statics
 this
 try_catch
