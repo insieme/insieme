@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -180,8 +180,8 @@ void printSummary(const int totalTests,
 	std::cout << "# PASSED: " << col.green() << boost::format(footerSummaryFormat) % okSteps.size() << col.reset() << " #\n";
 	if (blacklistedOnly) {
 		for(const auto& testCase : okSteps) {
-			string footerSuccessListFormat("%" + to_string(screenWidth - 10 - testCase.getName().length()) + "s");
-			std::cout << "#" << col.green() << "   - " << testCase.getName() << ": " << col.reset() << boost::format(footerSuccessListFormat) % "" << " #\n";
+			string footerSuccessListFormat("%" + to_string(screenWidth - 9 - testCase.getName().length()) + "s");
+			std::cout << "#" << col.green() << "   - " << testCase.getName() << " " << col.reset() << boost::format(footerSuccessListFormat) % "" << " #\n";
 		}
 	}
 	std::cout << "# OMITTED:" << (omittedCount != 0 ? col.yellow() : "") << boost::format(footerSummaryFormat) % omittedCount
@@ -193,8 +193,8 @@ void printSummary(const int totalTests,
 			TestCase testCase = cur.first;
 			TestResult testResult = cur.second;
 			string failedStepInfo(testResult.getStepName() + ": exit code " + to_string(testResult.getRetVal()));
-			string footerFailedListFormat("%" + to_string(screenWidth - 10 - testCase.getName().length()) + "s");
-			std::cout << "#" << col.red() << "   - " << testCase.getName() << ": " << col.reset() << boost::format(footerFailedListFormat) % failedStepInfo
+			string footerFailedListFormat("%" + to_string(screenWidth - 9 - testCase.getName().length()) + "s");
+			std::cout << "#" << col.red() << "   - " << testCase.getName() << " " << col.reset() << boost::format(footerFailedListFormat) % failedStepInfo
 								<< " #\n";
 		}
 	}
