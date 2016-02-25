@@ -56,7 +56,6 @@
 #include "insieme/frontend/extensions/instrumentation_region_extension.h"
 #include "insieme/frontend/extensions/interceptor_extension.h"
 #include "insieme/frontend/extensions/omp_frontend_extension.h"
-#include "insieme/frontend/extensions/semantic_check_extension.h"
 #include "insieme/frontend/extensions/significance_frontend_extension.h"
 #include "insieme/frontend/extensions/test_pragma_extension.h"
 #include "insieme/frontend/extensions/variable_argument_list_extension.h"
