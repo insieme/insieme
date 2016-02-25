@@ -408,6 +408,12 @@ namespace integration {
 				string executionDirectory = test.getDirectory().string();
 				if(!set.executionDir.empty()) executionDirectory = set.executionDir;
 
+				// the log file to delete afterwards
+				std::string logFile = "";
+				if (backend == Runtime) {
+					logFile = executionDirectory + "/insieme_runtime.log";
+				}
+
 				// start with executable
 				cmd << executionDirectory << "/" << test.getBaseName() << ".insieme." << be;
 
@@ -424,7 +430,7 @@ namespace integration {
 				set.stdErrFile = executionDirectory + "/" + test.getBaseName() + "." + name + ".err.out";
 
 				// run it
-				return runner.runCommand(name, set, props, cmd.str(), "", executionDirectory);
+				return runner.runCommand(name, set, props, cmd.str(), logFile, executionDirectory);
 			}, deps, RUN);
 		}
 
