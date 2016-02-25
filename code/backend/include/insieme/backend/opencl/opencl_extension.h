@@ -39,6 +39,7 @@
 #include "insieme/core/lang/extension.h"
 #include "insieme/core/lang/reference.h"
 #include "insieme/core/lang/varargs_extension.h"
+#include "insieme/core/forward_decls.h"
 
 namespace insieme {
 namespace backend {
@@ -69,7 +70,45 @@ namespace opencl {
 		LANG_EXT_TYPE(DataRequirement, "opencl_data_requirement"/*, "struct { mode : uint<4>; num_ranges : uint<4>; ranges : array<opencl_data_range, 's>; }"*/);
 		// constructor for the latter
 		LANG_EXT_LITERAL(MakeDataRequirement, "opencl_make_data_requirement", "(type<'a>, uint<4>, (ref<irt_wi>, ref<opencl_ndrange>, uint<4>, uint<4>)->opencl_data_range, uint<4>)->opencl_data_requirement");
+
+		// extensions for the opencl kernel code
+		LANG_EXT_LITERAL(WorkDim, "opencl_get_work_dim", "()->uint<4>");
+		LANG_EXT_LITERAL(GlobalSize, "opencl_get_global_size", "(uint<4>)->uint<4>");
+		LANG_EXT_LITERAL(GlobalId, "opencl_get_global_id", "(uint<4>)->uint<4>");
+		LANG_EXT_LITERAL(LocalSize, "opencl_get_local_size", "(uint<4>)->uint<4>");
+		LANG_EXT_LITERAL(LocalId, "opencl_get_local_id", "(uint<4>)->uint<4>");
+		LANG_EXT_LITERAL(NumGroups, "opencl_get_num_groups", "(uint<4>)->uint<4>");
+		LANG_EXT_LITERAL(GroupId, "opencl_get_group_id", "(uint<4>)->uint<4>");
+
+		LANG_EXT_TYPE_WITH_NAME(MarkerGlobal, "opencl_global_marker", "opencl_global");
+		LANG_EXT_TYPE_WITH_NAME(MarkerConstant, "opencl_constant_marker", "opencl_constant");
+		LANG_EXT_TYPE_WITH_NAME(MarkerLocal, "opencl_local_marker", "opencl_local");
+		LANG_EXT_TYPE_WITH_NAME(MarkerPrivate, "opencl_private_marker", "opencl_private");
+
+		LANG_EXT_TYPE_WITH_NAME(GenType, "opencl_type_template", "opencl_type<'a, 'loc>");
+		TYPE_ALIAS("opencl_type<'a>", "opencl_type<'a, opencl_private>");
+
+		LANG_EXT_LITERAL(Peel, "opencl_peel", "(opencl_type<'a, 'loc>)->'a");
 	};
+
+	class KernelType {
+	public:
+		enum class AddressSpace { Global, Constant, Local, Private, Undefined };
+	private:
+		core::TypePtr elementType;
+		core::TypePtr locType;
+
+		KernelType(const core::TypePtr& elementType, const core::TypePtr& locType);
+	public:
+		static core::GenericTypePtr create(const core::TypePtr& elementType, AddressSpace loc);
+		const core::TypePtr& getElementType() const;
+		void setElementType(const core::TypePtr& type);
+		AddressSpace getAddressSpace() const;
+		operator core::GenericTypePtr() const;
+		core::GenericTypePtr toType() const;
+	};
+
+	bool isKernelType(const core::NodePtr& node);
 } // end namespace opencl
 } // end namespace backend
 } // end namespace insieme
