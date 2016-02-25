@@ -423,8 +423,15 @@ namespace integration {
 	}
 
 	vector<IntegrationTestCase> getTestSuite(const string& path) {
+		// create a dummy error code object to ignore if the path can't be resolved
+		boost::system::error_code errorCode;
 		// convert the path into an absolute path
-		frontend::path absolute_path = fs::canonical(fs::absolute(path));
+		frontend::path absolute_path = fs::canonical(fs::absolute(path), errorCode);
+
+		// if the given path doesn't exist, we try to interpret the argument as relative to the base test directory
+		if (!fs::exists(absolute_path)) {
+			absolute_path = fs::canonical(fs::absolute(utils::getInsiemeSourceRootDir() + "../test/" + path));
+		}
 
 		// first check if it's an individual test case
 		const fs::path blacklistFile = absolute_path / "blacklisted_tests";
