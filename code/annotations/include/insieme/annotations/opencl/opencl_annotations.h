@@ -146,6 +146,7 @@ namespace opencl {
 		core::ExpressionPtr end;
 		AccessMode accessMode;
 	};
+	typedef std::vector<VariableRequirementPtr> VariableRequirementList;
 } // End opencl namespace
 } // End annotations namespace
 } // End insieme namespace
