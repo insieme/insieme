@@ -208,7 +208,7 @@ namespace lang {
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(RefConstCast, "ref_const_cast",
 			                       "(r : ref<'a,'c,'v,'k>, c : type<'nc>) -> ref<'a,'nc,'v,'k> { return ref_cast(r, c, type_lit('v), type_lit('k)); }")
-			
+
 		/**
 		 * A specialization of the ref_cast operator for modeling volatile casts.
 		 */
@@ -441,6 +441,11 @@ namespace lang {
 	 */
 	bool isCppRValueReference(const NodePtr& node);
 
+	/**
+	 * Determines the reference kind represented by the given input type literal
+	 */
+	ReferenceType::Kind getReferenceKind(const TypePtr& typeLitType);
+	ReferenceType::Kind getReferenceKind(const ExpressionPtr& expression);
 
 	/**
 	 * A factory function creating a reference type utilizing the given element type and flag combination.
@@ -448,12 +453,11 @@ namespace lang {
 	TypePtr buildRefType(const TypePtr& elementType, bool _const = false, bool _volatile = false, const ReferenceType::Kind& kind = ReferenceType::Kind::Plain);
 
 	bool doReferencesDifferOnlyInQualifiers(const TypePtr& typeA, const TypePtr& typeB);
-	
+
 	ExpressionPtr buildRefCast(const ExpressionPtr& refExpr, const TypePtr& targetTy);
 	ExpressionPtr buildRefKindCast(const ExpressionPtr& refExpr, ReferenceType::Kind newKind);
 
 	ExpressionPtr buildRefTemp(const TypePtr& type);
-
 	ExpressionPtr buildRefNull(const TypePtr& type);
 
 } // end namespace lang
