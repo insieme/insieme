@@ -180,6 +180,7 @@ namespace frontend {
 		checkForFunction(irTu, "IMP_gettimeofday");
 		checkForFunction(irTu, "IMP_std_colon__colon_vector_int_std_colon__colon_allocator_lt_int_gt_::IMP_push_back");
 		checkForFunction(irTu, "IMP_std_colon__colon__operator_lshift__struct_std_colon__colon_char_traits_lt_char_gt__returns_basic_ostream_lt_char_comma__struct_std_colon__colon_char_traits_lt_char_gt___gt___ampersand_");
+		checkForFunction(irTu, "IMP_std_colon__colon_basic_ostream_char_struct_std_colon__colon_char_traits_lt_char_gt_::IMP__operator_lshift_");
 
 		//no types should have been translated
 		EXPECT_TRUE(irTu.getTypes().empty());
@@ -196,6 +197,7 @@ namespace frontend {
 		checkForFunctionName(code, "IMP_std_colon__colon_vector_int_std_colon__colon_allocator_lt_int_gt_::IMP_push_back", "push_back", "vector");
 		checkForFunctionName(code, "IMP_std_colon__colon__operator_lshift__struct_std_colon__colon_char_traits_lt_char_gt__returns_basic_ostream_lt_char_comma__struct_std_colon__colon_char_traits_lt_char_gt___gt___ampersand_", "std::operator<<<struct std::char_traits<char> >", "iostream");
 		checkForFunctionName(code, "IMP_std_colon__colon_cout", "std::cout", "iostream");
+		checkForFunctionName(code, "IMP_std_colon__colon_basic_ostream_char_struct_std_colon__colon_char_traits_lt_char_gt_::IMP__operator_lshift_", "operator<<", "iostream");
 //		checkForFunctionName(code, "IMP_std_colon__colon_launch_colon__colon_async", "std::launch::async", "future");
 //		checkForFunctionName(code, "IMP_std_colon__colon_launch_colon__colon_async", "std::launch::deferred", "future");
 	}

@@ -126,6 +126,17 @@ namespace extensions {
 			auto thisFactory = [&](const core::TypePtr& retType){ return converter.convertExpr(memberCall->getImplicitObjectArgument()); };
 			return interceptMethodCall(converter, memberCall->getCalleeDecl(), thisFactory, memberCall->arguments());
 		}
+		if(auto operatorCall = llvm::dyn_cast<clang::CXXOperatorCallExpr>(expr)) {
+			auto decl = operatorCall->getCalleeDecl();
+			if(decl) {
+				if(llvm::dyn_cast<clang::CXXMethodDecl>(decl)) {
+					auto argList = operatorCall->arguments();
+					auto thisFactory = [&](const core::TypePtr& retType){ return converter.convertExpr(*argList.begin()); };
+					decltype(argList) remainder(argList.begin()+1, argList.end());
+					return interceptMethodCall(converter, decl, thisFactory, remainder);
+				}
+			}
+		}
 
 		return nullptr;
 	}
