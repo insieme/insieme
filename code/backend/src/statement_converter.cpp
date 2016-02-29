@@ -320,7 +320,7 @@ namespace backend {
 	c_ast::NodePtr StmtConverter::visitInitExpr(const core::InitExprPtr& ptr, ConversionContext& context) {
 		// to be created: an initialization of the corresponding struct
 		//     (<type>){<list of members>}
-		
+
 		auto innerType = core::analysis::getReferencedType(ptr->getType());
 		auto typeInfo = converter.getTypeManager().getTypeInfo(innerType);
 		context.addDependency(typeInfo.definition);
@@ -449,7 +449,7 @@ namespace backend {
 		core::IRBuilder builder(ptr->getNodeManager());
 
 		core::VariablePtr var = ptr->getVariable();
-		
+
 		core::ExpressionPtr init = ptr->getInitialization();
 
 		core::TypePtr plainType = var->getType();
@@ -479,11 +479,16 @@ namespace backend {
 			context.getDependencies().insert(context.getConverter().getTypeManager().getTypeInfo(elementType).definition);
 		}
 
-		// create declaration statement
 		c_ast::ExpressionPtr initValue = convertInitExpression(context, init);
 
-		//if the declared variable is undefined, we don't create an initialization value
-		if (core::analysis::isUndefinedInitalization(ptr)) {
+		// if LHS is cpp ref/rref, remove ref on RHS
+		if(core::lang::isCppReference(var) || core::lang::isCppRValueReference(var)) {
+			auto unOp = initValue.isa<c_ast::UnaryOperationPtr>();
+			if(unOp && unOp->operation == c_ast::UnaryOperation::Reference) initValue = unOp->operand.as<c_ast::ExpressionPtr>();
+		}
+
+		// if the declared variable is undefined, we don't create an initialization value
+		if(core::analysis::isUndefinedInitalization(ptr)) {
 			initValue = c_ast::ExpressionPtr();
 		}
 

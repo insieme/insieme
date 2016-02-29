@@ -435,6 +435,11 @@ namespace backend {
 				return CONVERT_ARG(0);
 			}
 
+			// deref of a cpp ref is implicit
+			if(core::lang::isCppReference(ARG(0)) || core::lang::isCppRValueReference(ARG(0))) {
+				return CONVERT_ARG(0);
+			}
+
 			return c_ast::deref(CONVERT_ARG(0));
 		};
 

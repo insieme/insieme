@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -37,6 +37,7 @@
 #include "insieme/backend/variable_manager.h"
 
 #include "insieme/core/ir_expressions.h"
+#include "insieme/core/lang/reference.h"
 
 #include "insieme/backend/c_ast/c_ast_utils.h"
 #include "insieme/backend/converter.h"
@@ -77,6 +78,11 @@ namespace backend {
 		c_ast::IdentifierPtr name = converter.getCNodeManager()->create(converter.getNameManager().getName(var));
 
 		info.var = c_ast::var(type, name);
+
+		// if var is cpp ref/rref, it's always indirect
+		if(core::lang::isCppReference(var) || core::lang::isCppRValueReference(var)) {
+			location = VariableInfo::NONE;
+		}
 		info.location = location;
 
 		return info;

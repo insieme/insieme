@@ -58,8 +58,8 @@ namespace backend {
 		core::ProgramPtr program = builder.parseProgram(R"(
 				alias int = int<4>;
 
-				def f = ( x : ref<int,f,f>, y : cpp_ref<int,f,f>, z : cpp_ref<int,t,f>, w : cpp_ref<int,t,t> ) -> int {
-					return *x + *y + *z + *w;
+				def f = ( x : int, y : cpp_ref<int,f,f>, z : cpp_ref<int,t,f>, w : cpp_ref<int,t,t> ) -> int {
+					return x + y + z + w;
 				};
 
 				int main() {
@@ -67,7 +67,7 @@ namespace backend {
 					var cpp_ref<int,f,f> j = ref_cast(i, type_lit(f), type_lit(f), type_lit(cpp_ref));
 					var cpp_ref<int,t,f> k = ref_cast(i, type_lit(t), type_lit(f), type_lit(cpp_ref));
 					var cpp_ref<int,t,t> l = ref_cast(i, type_lit(t), type_lit(t), type_lit(cpp_ref));
-					f(i,j,k,l);
+					f(*i,j,k,l);
 					return 0;
 				}
 		)");
@@ -98,7 +98,7 @@ namespace backend {
 				def g = () -> int { return 12; };
 
 				def f = ( y : cpp_rref<int,f,f>, z : cpp_rref<int,t,f>, w : cpp_rref<int,t,t> ) -> int {
-					return *y + *z + *w;
+					return y + z + w;
 				};
 
 				int main() {
@@ -122,12 +122,10 @@ namespace backend {
 		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
 	}
 
-
 	TEST(CppSnippet, ReferenceParameter) {
 		core::NodeManager manager;
 		core::IRBuilder builder(manager);
 
-		// create a code fragment including some member functions
 		core::ProgramPtr program = builder.parseProgram(R"(
 				def IMP_test = function (v1 : ref<int<4>,f,f,cpp_ref>) -> unit { };
 				int<4> function IMP_main (){
@@ -146,10 +144,74 @@ namespace backend {
 		ASSERT_TRUE((bool)converted);
 		// std::cout << "Converted: \n" << *converted << std::endl;
 
+		// check absence of relevant code
+		auto code = toString(*converted);
+		EXPECT_PRED2(notContainsSubString, code, "&bla");
+
+		// try compiling the code fragment
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+	}
+
+	TEST(CppSnippet, ReferenceVariableDeclaration) {
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+
+		core::ProgramPtr program = builder.parseProgram(R"(
+				int<4> function IMP_main () {
+					var ref<int<4>,f,f,plain> bla = 2;
+					var ref<int<4>,f,f,cpp_ref> alb = bla;
+					return 0;
+				}
+		)");
+
+		ASSERT_TRUE(program);
+		// std::cout << "Program: " << dumpColor(program) << std::endl;
+		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
+
+		// use sequential backend to convert into C++ code
+		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
+		ASSERT_TRUE((bool)converted);
+		// std::cout << "Converted: \n" << *converted << std::endl;
+
 		// check presence of relevant code
 		auto code = toString(*converted);
+		EXPECT_PRED2(containsSubString, code, "int32_t& alb = bla;");
 
-		EXPECT_PRED2(notContainsSubString, code, "&bla");
+		// try compiling the code fragment
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+	}
+
+	TEST(CppSnippet, ReferenceVariableUse) {
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+
+		core::ProgramPtr program = builder.parseProgram(R"(
+				def IMP_test = function (v1 : ref<int<4>,f,f,cpp_ref>) -> unit { };
+				int<4> function IMP_main () {
+					var ref<int<4>,f,f,plain> bla = 2;
+					var ref<int<4>,f,f,cpp_ref> alb = bla;
+					IMP_test(alb);
+					bla + alb;
+					return 0;
+				}
+		)");
+
+		ASSERT_TRUE(program);
+		// std::cout << "Program: " << dumpColor(program) << std::endl;
+		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
+
+		// use sequential backend to convert into C++ code
+		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
+		ASSERT_TRUE((bool)converted);
+		// std::cout << "Converted: \n" << *converted << std::endl;
+
+		// check presence of relevant code
+		auto code = toString(*converted);
+		EXPECT_PRED2(containsSubString, code, "IMP_test(alb)");
 
 		// try compiling the code fragment
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
