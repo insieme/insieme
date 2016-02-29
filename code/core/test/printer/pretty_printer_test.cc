@@ -1069,3 +1069,44 @@ TEST(PrettyPrinter, AutoEvaluatedFunctions) {
 	}
 
 }
+
+TEST(PrettyPrinter, MarkerTest) {
+	NodeManager nm;
+	IRBuilder builder(nm);
+
+	{
+		std::string input = "{"
+				            "  $1;$"
+				            "}";
+
+		std::string res = "{\n"
+				          "    <m id=1>1</m>;\n"
+				          "}";
+
+		auto ir = builder.normalize(builder.parseStmt(input));
+		PrettyPrinter printer(ir, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::PRINT_CASTS
+								  | PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_ATTRIBUTES
+		                          | PrettyPrinter::PRINT_MARKERS);
+
+		EXPECT_EQ(res, toString(printer)) << printer;
+	}
+
+	{
+		std::string input = "{"
+				            "  $1;$"
+				            "  $var int<4> a = $5$;$"
+				            "}";
+
+		std::string res = "{\n"
+				          "    <m id=41>1</m>;\n"
+				          "    <m id=44>var int<4> v0 = <m id=43>5</m></m>;\n"
+				          "}";
+
+		auto ir = builder.normalize(builder.parseStmt(input));
+		PrettyPrinter printer(ir, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::PRINT_CASTS
+								  | PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_ATTRIBUTES
+								  | PrettyPrinter::PRINT_MARKERS);
+
+		EXPECT_EQ(res, toString(printer)) << printer;
+	}
+}
