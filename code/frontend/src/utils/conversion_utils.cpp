@@ -95,7 +95,6 @@ namespace utils {
 	core::ExpressionPtr buildEnumConstantExpression(conversion::Converter& converter, const clang::EnumConstantDecl* decl) {
 		auto& builder = converter.getIRBuilder();
 		const clang::EnumType* enumType = llvm::dyn_cast<clang::EnumType>(llvm::cast<clang::TypeDecl>(decl->getDeclContext())->getTypeForDecl());
-		auto enumDecl = enumType->getDecl();
 
 		// determine target integral type
 		auto irEnumDef = core::lang::getEnumTypeDefinition(converter.convertType(clang::QualType(enumType, 0)));
