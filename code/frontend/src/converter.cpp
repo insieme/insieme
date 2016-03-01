@@ -270,17 +270,16 @@ namespace conversion {
 					else if(tagDecl->isUnion()) name = "union " + name;
 					else if(tagDecl->isEnum()) name = "enum " + name;
 					core::annotations::attachName(node, name);
-
-				} else if (auto funDecl = llvm::dyn_cast<clang::FunctionDecl>(decl)) {
+				}
+				else if(auto funDecl = llvm::dyn_cast<clang::FunctionDecl>(decl)) {
 					string name = insieme::utils::demangle(utils::buildNameForFunction(funDecl, true));
 					core::annotations::attachName(node, name);
-
-				} else if (auto varDecl = llvm::dyn_cast<clang::VarDecl>(decl)) {
-					core::annotations::attachName(node, varDecl->getQualifiedNameAsString());
-
-				} else if (auto enumConstantDecl = llvm::dyn_cast<clang::EnumConstantDecl>(decl)) {
-					string name = insieme::utils::demangle(enumConstantDecl->getQualifiedNameAsString());
-					core::annotations::attachName(node, name);
+				}
+				else if(auto varDecl = llvm::dyn_cast<clang::VarDecl>(decl)) {
+					core::annotations::attachName(node, utils::stripLeadingGlobalNamespace(varDecl->getQualifiedNameAsString()));
+				}
+				else if(auto enumConstantDecl = llvm::dyn_cast<clang::EnumConstantDecl>(decl)) {
+					core::annotations::attachName(node, utils::stripLeadingGlobalNamespace(enumConstantDecl->getQualifiedNameAsString()));
 				}
 				VLOG(2) << "-> annotated with: " << annotations::c::getAttachedInclude(node);
 			} else {

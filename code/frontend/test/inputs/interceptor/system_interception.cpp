@@ -85,12 +85,8 @@ int main() {
 	}
 
 	// cpp global enum
-	#pragma test expect_ir(R"({
-		gen_eq((type_lit(enum_def<IMP_std_colon__colon_launch,int<4>, enum_entry<IMP_std_colon__colon_launch_colon__colon_async,1>,
-                                  enum_entry<IMP_std_colon__colon_launch_colon__colon_deferred,2>>), 1),
-		       (type_lit(enum_def<IMP_std_colon__colon_launch,int<4>,enum_entry<IMP_std_colon__colon_launch_colon__colon_async,1>,
-                                  enum_entry<IMP_std_colon__colon_launch_colon__colon_deferred,2>>), 2));
-	})")
+	#pragma test expect_ir("STRING", R"({gen_eq(IMP_std_colon__colon_launch_colon__colon_async, IMP_std_colon__colon_launch_colon__colon_deferred);
+})")
 	{
 		std::launch::async == std::launch::deferred;
 	}

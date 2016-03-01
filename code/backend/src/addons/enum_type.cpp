@@ -128,8 +128,8 @@ namespace addons {
 			if(!node.isa<core::TupleExprPtr>()) return nullptr;
 			auto expr = node.as<core::ExpressionPtr>();
 			auto entry = core::lang::EnumEntry(core::lang::getEnumEntry(expr));
-			return c_ast::lit(context.getConverter().getStmtConverter().convertType(context, expr->getType()),
-				              utils::demangleToIdentifier(entry.getName(), true));
+			auto name = utils::demangleToIdentifier(entry.getName(), true);
+			return c_ast::lit(context.getConverter().getStmtConverter().convertType(context, expr->getType()), name);
 		}
 	}
 

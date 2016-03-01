@@ -1,2 +1,20 @@
 # Do not remove this file even if it does not blacklist any test.
 # It is needed for the integration test driver to recognize this folder as the parent for multiple other tests.
+
+alignof
+async
+auto
+constexpr
+decltype
+declval
+function_type_template_arg
+init_list
+lambda
+lambda_to_funptr
+range_for
+rvalue
+sizeofpack
+std_array
+stdinitlistexpr
+variadic_templates
+

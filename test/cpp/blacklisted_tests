@@ -18,7 +18,6 @@ class_def_and_decl_splitup
 const_pointer
 const_ref_arguments
 counter
-cpp11
 ctor
 ctor_inherit
 ctor_return

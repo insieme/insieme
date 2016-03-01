@@ -88,7 +88,7 @@ namespace extensions {
 			if(converter.getHeaderTagger()->isIntercepted(decl)) {
 				// translate functions
 				if(auto funDecl = llvm::dyn_cast<clang::FunctionDecl>(decl)) {
-					auto lit = converter.getIRBuilder().literal(utils::buildNameForFunction(funDecl), converter.convertType(expr->getType()));
+					auto lit = builder.literal(utils::buildNameForFunction(funDecl), converter.convertType(expr->getType()));
 					converter.applyHeaderTagging(lit, decl);
 					VLOG(2) << "Interceptor: intercepted clang fun\n" << dumpClang(decl) << " -> converted to literal: " << *lit << " of type "
 						    << *lit->getType() << "\n";
@@ -96,12 +96,22 @@ namespace extensions {
 				}
 				// as well as global variables
 				if(auto varDecl = llvm::dyn_cast<clang::VarDecl>(decl)) {
-					auto lit = converter.getIRBuilder().literal(insieme::utils::mangle(varDecl->getQualifiedNameAsString()),
-						                                        converter.convertVarType(expr->getType()));
+					auto lit = builder.literal(insieme::utils::mangle(varDecl->getQualifiedNameAsString()), converter.convertVarType(expr->getType()));
 					converter.applyHeaderTagging(lit, decl);
 					VLOG(2) << "Interceptor: intercepted clang lit\n" << dumpClang(decl) << " -> converted to literal: " << *lit << " of type "
 						    << *lit->getType() << "\n";
 					return lit;
+				}
+				// and enum constants
+				if(auto enumDecl = llvm::dyn_cast<clang::EnumConstantDecl>(decl)) {
+					const clang::EnumType* enumType = llvm::dyn_cast<clang::EnumType>(llvm::cast<clang::TypeDecl>(decl->getDeclContext())->getTypeForDecl());
+					core::ExpressionPtr exp =
+						builder.literal(insieme::utils::mangle(enumDecl->getQualifiedNameAsString()), converter.convertType(clang::QualType(enumType, 0)));
+					converter.applyHeaderTagging(exp, decl);
+					exp = builder.numericCast(exp, converter.convertType(expr->getType()));
+					VLOG(2) << "Interceptor: intercepted clang enum\n" << dumpClang(decl) << " -> converted to expression: " << *exp << " of type "
+						    << *exp->getType() << "\n";
+					return exp;
 				}
 			}
 		}
