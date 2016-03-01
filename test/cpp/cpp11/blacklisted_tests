@@ -14,7 +14,6 @@ lambda_to_funptr
 range_for
 rvalue
 sizeofpack
-std_array
 stdinitlistexpr
 variadic_templates
 
