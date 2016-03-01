@@ -339,11 +339,7 @@ namespace conversion {
 			for(auto m : enumDecl->enumerators()) {
 				// get value of enum element
 				core::ExpressionPtr val = builder.literal(builder.getLangBasic().getInt8(), m->getInitVal().toString(10));
-				std::string enumConstantDeclName = m->getNameAsString();
-				// hashing needed?
-				if(!llvm::dyn_cast<clang::TranslationUnitDecl>(enumDecl->getDeclContext())) {
-					enumConstantDeclName += std::to_string(std::hash<std::string>()(enumName));
-				}
+				std::string enumConstantDeclName = insieme::utils::mangle(m->getQualifiedNameAsString());
 				// create enum element
 				enumElements.push_back(core::lang::EnumEntry::create(builder.genericType(enumConstantDeclName), val));
 			}

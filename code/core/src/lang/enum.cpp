@@ -202,15 +202,38 @@ namespace lang {
 		return builder.tupleType(elements);
 	}
 
-	TypePtr getEnumTypeDefinition(const core::TypePtr& enumType) {
+	TupleExprPtr buildEnumValue(const GenericTypePtr& enumDefinition, const ExpressionPtr& value) {
+		assert_true(EnumDefinition::isEnumDefinition(enumDefinition)) << "Passed type is not an enum definition.";
+		NodeManager& mgr = enumDefinition.getNodeManager();
+		IRBuilder builder(mgr);
+		return builder.tupleExpr(builder.getTypeLiteral(enumDefinition), value);
+	}
+
+	GenericTypePtr getEnumTypeDefinition(const core::TypePtr& enumType) {
 		assert_true(isEnum(enumType)) << "Passed type is not an enum type.";
-		return core::analysis::getRepresentedType(enumType.as<TupleTypePtr>().getElement(0));
+		return core::analysis::getRepresentedType(enumType.as<TupleTypePtr>().getElement(0)).as<GenericTypePtr>();
 	}
 
 	TypePtr getEnumIntType(const TypePtr& type) {
 		assert_true(isEnum(type)) << "Passed type is not an enum type.";
 		const TupleTypePtr tt = type.as<TupleTypePtr>();
 		return tt->getElement(1);
+	}
+
+	GenericTypePtr getEnumEntry(const ExpressionPtr& enumValue) {
+		assert_true(isEnum(enumValue)) << "Passed value is not of enum type.";
+		auto enumDef = EnumDefinition(getEnumTypeDefinition(enumValue->getType()));
+		auto valFormula = core::arithmetic::toFormula(enumValue.as<TupleExprPtr>()->getExpressions()->getElement(1));
+		assert_true(valFormula.isInteger()) << "Enum value not constant integer.";
+		auto val = valFormula.getIntegerValue();
+		for(auto entryGt : enumDef.getElements()) {
+			auto entry = EnumEntry(entryGt);
+			if(entry.getEnumEntryValue() == val) {
+				return entry;
+			}
+		}
+		assert_fail() << "Invalid enum value:\n" << dumpColor(enumValue);
+		return nullptr;
 	}
 
 	ExpressionPtr buildEnumToInt(const ExpressionPtr& enumExpr) {

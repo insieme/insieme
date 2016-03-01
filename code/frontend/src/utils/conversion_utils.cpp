@@ -109,7 +109,7 @@ namespace utils {
 			val = builder.numericCast(val, enumIntType);
 		}
 
-		return builder.tupleExpr(builder.getTypeLiteral(irEnumDef), val);
+		return core::lang::buildEnumValue(irEnumDef, val);
 	}
 
 } // end namespace utils

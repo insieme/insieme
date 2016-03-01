@@ -86,27 +86,22 @@ namespace extensions {
 		if(auto dr = llvm::dyn_cast<clang::DeclRefExpr>(expr)) {
 			auto decl = dr->getDecl();
 			if(converter.getHeaderTagger()->isIntercepted(decl)) {
-				//translate functions
+				// translate functions
 				if(auto funDecl = llvm::dyn_cast<clang::FunctionDecl>(decl)) {
 					auto lit = converter.getIRBuilder().literal(utils::buildNameForFunction(funDecl), converter.convertType(expr->getType()));
 					converter.applyHeaderTagging(lit, decl);
-					VLOG(2) << "Interceptor: intercepted clang fun\n" << dumpClang(decl) << " -> converted to literal: " << *lit << " of type " << *lit->getType() << "\n";
+					VLOG(2) << "Interceptor: intercepted clang fun\n" << dumpClang(decl) << " -> converted to literal: " << *lit << " of type "
+						    << *lit->getType() << "\n";
 					return lit;
-
-					//as well as global variables
-				} else if (auto varDecl = llvm::dyn_cast<clang::VarDecl>(decl)) {
-					auto lit = converter.getIRBuilder().literal(
-							insieme::utils::mangle(varDecl->getQualifiedNameAsString()), converter.convertVarType(expr->getType()));
+				}
+				// as well as global variables
+				if(auto varDecl = llvm::dyn_cast<clang::VarDecl>(decl)) {
+					auto lit = converter.getIRBuilder().literal(insieme::utils::mangle(varDecl->getQualifiedNameAsString()),
+						                                        converter.convertVarType(expr->getType()));
 					converter.applyHeaderTagging(lit, decl);
-					VLOG(2) << "Interceptor: intercepted clang lit\n" << dumpClang(decl) << " -> converted to literal: " << *lit << " of type " << *lit->getType() << "\n";
+					VLOG(2) << "Interceptor: intercepted clang lit\n" << dumpClang(decl) << " -> converted to literal: " << *lit << " of type "
+						    << *lit->getType() << "\n";
 					return lit;
-
-					//as well as global enums
-				} else if (auto enumConstantDecl = llvm::dyn_cast<clang::EnumConstantDecl>(decl)) {
-					auto exp = utils::buildEnumConstantExpression(converter, enumConstantDecl);
-					converter.applyHeaderTagging(exp, decl);
-					VLOG(2) << "Interceptor: intercepted clang enum constant\n" << dumpClang(decl) << " -> converted to literal: " << *exp << " of type " << *exp->getType() << "\n";
-					return exp;
 				}
 			}
 		}
@@ -145,6 +140,8 @@ namespace extensions {
 	core::TypePtr InterceptorExtension::Visit(const clang::QualType& type, insieme::frontend::conversion::Converter& converter) {
 		VLOG(3) << "Intercepting Type\n";
 		if(auto tt = llvm::dyn_cast<clang::TagType>(type->getCanonicalTypeUnqualified())) {
+			// do not intercept enums, they are simple
+			if(tt->isEnumeralType()) return nullptr;
 			auto decl = tt->getDecl();
 			if(converter.getHeaderTagger()->isIntercepted(decl)) {
 				auto genType = converter.getIRBuilder().genericType(utils::getNameForTagDecl(converter, decl).first);

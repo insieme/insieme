@@ -39,7 +39,7 @@ enum Bla : unsigned long { A };
 
 int main() {
 	#pragma test expect_ir(R"(using "ext.enum"; {
-		var ref<(type<enum_def<IMP_Bla,uint<8>,enum_entry<A,0>>>, uint<8>),f,f,plain> v0 = (type_lit(enum_def<IMP_Bla,uint<8>,enum_entry<A,0>>), 0ul);
+		var ref<(type<enum_def<IMP_Bla,uint<8>,enum_entry<IMP_Bla_colon__colon_A,0>>>, uint<8>),f,f,plain> v0 = (type_lit(enum_def<IMP_Bla,uint<8>,enum_entry<IMP_Bla_colon__colon_A,0>>), 0ul);
 		enum_to_int(*v0)==num_cast(5, type_lit(uint<8>));
 	})")
 	{

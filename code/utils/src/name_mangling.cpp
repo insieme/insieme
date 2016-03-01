@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -128,11 +128,18 @@ namespace utils {
 			return in;
 		}
 
+		string replaceToNil(string in) {
+			for(auto& mapping : replacements) {
+				boost::replace_all(in, mapping.first, "");
+			}
+			return in;
+		}
+
 	}
 
 	string mangle(string name, string file, unsigned line, unsigned column) {
 		// in order to correctly handle empty names
-		if (name.empty()) return mangle(file, line, column);
+		if(name.empty()) return mangle(file, line, column);
 		return format("%s_%s_%s_%s_%u_%u", manglePrefix, applyReplacements(name), mangleLocation, applyReplacements(file), line, column);
 	}
 
@@ -141,23 +148,30 @@ namespace utils {
 		return format("%s_%s_%s_%s_%u_%u", manglePrefix, mangleEmpty, mangleLocation, applyReplacements(file), line, column);
 	}
 
-	std::string mangle(std::string name) {
+	string mangle(string name) {
 		return format("%s_%s", manglePrefix, applyReplacements(name));
 	}
 
-	string demangle(string name) {
+	string demangle(string name, bool keepLocation) {
 		if(!boost::starts_with(name, manglePrefix)) return name;
 		auto ret = name.substr(manglePrefix.size()+1);
 		if(boost::starts_with(ret, mangleEmpty)) return "";
-		auto loc = ret.find(mangleLocation);
-		if(loc != string::npos) {
-			ret = ret.substr(0,	loc-1);
+		if(!keepLocation) {
+			auto loc = ret.find(mangleLocation);
+			if(loc != string::npos) {
+				ret = ret.substr(0,	loc-1);
+			}
 		}
 		return reverseReplacements(ret);
 	}
 
-	const std::string& getMangledOperatorAssignName() {
-		static std::string result = mangle("operator=");
+	string demangleToIdentifier(string name, bool keepLocation) {
+		auto demangled = demangle(name, keepLocation);
+		return replaceToNil(demangled);
+	}
+
+	const string& getMangledOperatorAssignName() {
+		static string result = mangle("operator=");
 		return result;
 	}
 }

@@ -118,6 +118,10 @@ namespace lang {
 			return value;
 		}
 
+		string getName() const {
+			return getEnumEntryName().as<core::GenericTypePtr>()->getName()->getValue();
+		}
+
 	};
 
 	class EnumDefinition {
@@ -169,12 +173,21 @@ namespace lang {
 
 	};
 
-	bool isEnum(const core::NodePtr& node);
+	/// Checks whether the given node is an enum type (a tuple with 2 elements the first of which is a enum definition type literal)
+	/// or an expression of enum type
+	bool isEnum(const NodePtr& node);
 
-	TupleTypePtr buildEnumType(const core::GenericTypePtr& enumDefinition);
-	TypePtr getEnumTypeDefinition(const core::TypePtr& enumType);
+	/// Builds an enum tuple type for the given enum definition
+	TupleTypePtr buildEnumType(const GenericTypePtr& enumDefinition);
+	/// Builds an instance of a value of the given enum definition
+	TupleExprPtr buildEnumValue(const GenericTypePtr& enumDefinition, const ExpressionPtr& value);
 
+	/// Extracts the enum definition from a given enum (tuple) type
+	GenericTypePtr getEnumTypeDefinition(const TypePtr& enumType);
+	/// Extracts the integral type from a given enum (tuple) type
 	TypePtr getEnumIntType(const TypePtr& type);
+	/// Extracts the enum entry corresponding to a given value instance (tuple)
+	GenericTypePtr getEnumEntry(const ExpressionPtr& enumValue);
 
 	ExpressionPtr buildEnumToInt(const ExpressionPtr& enumExpr);
 	ExpressionPtr buildEnumFromInt(const TypePtr& enumT, const ExpressionPtr& value);

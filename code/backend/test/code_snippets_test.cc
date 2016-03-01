@@ -66,11 +66,11 @@ namespace backend {
 		core::ProgramPtr program = builder.parseProgram(
 				R"(
 				alias int = int<4>;
-				
+
 				def f = (a : int, b : int)->int {
 					return a + b * a;
 				};
-				
+
 				int<4> main() {
 					f(12,15);
 					return 0;
@@ -490,13 +490,13 @@ namespace backend {
 					return a;
 				};
 				int<4> main() {
-				
+
 				var ref<int<4>> a = 1;
 				var ref<real<4>> b = 2.0f;
-				
+
 				f(a, (a : int<4>)=> true, ()=>3);
 				f(b, (b : real<4>)=> true, ()=>4.0f);
-				
+
 				return 0;
 			}
 		)");
@@ -638,9 +638,9 @@ namespace backend {
 		core::ProgramPtr program = builder.parseProgram(
 				R"(
 					alias int = int<4>;
-		
+
 					def struct List { value : int<4>; next : ref<List>; };
-				
+
 					int main() {
 						var ref<List> x;
 						return 0;
@@ -681,11 +681,11 @@ namespace backend {
 		core::ProgramPtr program = builder.parseProgram(
 				R"(
 					alias int = int<4>;
-		
+
 					decl struct B;
 					def struct A { value : int<4>; next : ref<B>; };
 					def struct B { value : int<4>; next : ref<A>; };
-				
+
 					int main() {
 						var ref<A> x;
 						return 0;
@@ -726,10 +726,10 @@ namespace backend {
 		core::ProgramPtr program = builder.parseProgram(
 			R"(
 				alias int = int<4>;
-		
-				decl f : ()->unit;		
+
+				decl f : ()->unit;
 				def f = ()->unit { f(); };
-			
+
 				int main() {
 					f();
 					return 0;
@@ -773,10 +773,10 @@ namespace backend {
 
 				decl f : ()->unit;
 				decl g : ()->unit;
-		
+
 				def f = ()->unit { g(); };
 				def g = ()->unit { f(); };
-			
+
 				int main() {
 					f();
 					g();
@@ -821,10 +821,10 @@ namespace backend {
 
 				decl even : ( int )->bool;
 				decl odd  : ( int )->bool;
-		
+
 				def even = ( x : int )->bool { return ( x == 0 ) ? true : odd(x-1); };
 				def odd  = ( x : int )->bool { return ( x == 0 ) ? false : even(x-1); };
-			
+
 				int main() {
 					even(10);
 					odd(12);
@@ -858,7 +858,7 @@ namespace backend {
 		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
 
 	}
-	
+
 	TEST(Initialization, Array) {
 		core::NodeManager manager;
 		core::IRBuilder builder(manager);
@@ -962,7 +962,6 @@ namespace backend {
 		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
 	}
 
-	
 	TEST(Initialization, StructTemp) {
 		core::NodeManager manager;
 		core::IRBuilder builder(manager);
@@ -996,6 +995,42 @@ namespace backend {
 		LOG(INFO) << "Printing converted code: " << *converted;
 
 		string code = toString(*converted);
+
+		// try compiling the code fragment
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-lm");
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+	}
+
+	TEST(Enum, Simple) {
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+
+		core::ProgramPtr program = builder.parseProgram(
+			R"(using "ext.enum";
+			int<4> main() {
+				var ref<(type<enum_def<IMP_e,int<4>,enum_entry<IMP_e_colon__colon_A,0>,enum_entry<IMP_e_colon__colon_B,1>,enum_entry<IMP_e_colon__colon_C,2>>>, int<4>),f,f,plain> v0 = (type_lit(enum_def<IMP_e,int<4>,enum_entry<IMP_e_colon__colon_A,0>,enum_entry<IMP_e_colon__colon_B,1>,enum_entry<IMP_e_colon__colon_C,2>>), 0);
+				return 0;
+			}
+			)"
+		);
+
+		ASSERT_TRUE(program);
+
+		// check for semantic errors
+		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
+
+		// create backend instance
+		auto be = sequential::SequentialBackend::getDefault();
+
+		LOG(INFO) << "Converting IR to C...";
+		auto converted = be->convert(program);
+		LOG(INFO) << "Printing converted code: " << *converted;
+
+		string code = toString(*converted);
+
+		EXPECT_PRED2(containsSubString, code, "e v0 = eA;");
 
 		// try compiling the code fragment
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();

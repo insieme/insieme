@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -34,6 +34,8 @@
  * regarding third party software licenses.
  */
 
+#pragma once
+
 #include <string>
 
 namespace insieme {
@@ -53,7 +55,11 @@ namespace utils {
 
 	/// Retrieve the original name from the mangled representation.
 	///
-	std::string demangle(std::string name);
+	std::string demangle(std::string name, bool keepLocation = false);
+
+	/// Retrieve a valid C/CPP name from the mangled representation.
+	///
+	std::string demangleToIdentifier(std::string name, bool keepLocation = false);
 
 	/// Returns the mangled name for the assignment operator.
 	///

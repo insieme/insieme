@@ -138,7 +138,7 @@ int main() {
 	// ENUM TYPES //////////////////////////////////////////////////////////////
 
 	typedef enum { Bla, Alb } enum_t;
-	#pragma test expect_ir("REGEX", R"(.*var ref<\(type<enum_def<IMP_enum_t_IMLOC.*,enum_entry<Bla.*,enum_entry<Alb.*int<4>\),f,f,plain> v0 = v0.*)")
+	#pragma test expect_ir("REGEX", R"(.*var ref<\(type<enum_def<IMP_enum_t_IMLOC.*,int<4>,enum_entry<IMP_main_lparen__rparen__colon__colon__colon__colon_Bla,0>,enum_entry<IMP_main_lparen__rparen__colon__colon__colon__colon_Alb,1>>>, int<4>\),f,f,plain> v0 = v0.*)")
 	enum_t enu;
 	enum { XY, ZR } bla;
 

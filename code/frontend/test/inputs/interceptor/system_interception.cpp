@@ -85,10 +85,13 @@ int main() {
 	}
 
 	// cpp global enum
-//	#pragma test expect_ir(R"({
-//		var ref<IMP_std_colon__colon_launch,f,f,plain> v0 = lit("IMP_std_colon__colon_launch_colon__colon_async":ref<IMP_std_colon__colon_launch,f,f,plain>);
-//	})")
-//	{
-//		std::launch::async == std::launch::deferred;
-//	}
+	#pragma test expect_ir(R"({
+		gen_eq((type_lit(enum_def<IMP_std_colon__colon_launch,int<4>, enum_entry<IMP_std_colon__colon_launch_colon__colon_async,1>,
+                                  enum_entry<IMP_std_colon__colon_launch_colon__colon_deferred,2>>), 1),
+		       (type_lit(enum_def<IMP_std_colon__colon_launch,int<4>,enum_entry<IMP_std_colon__colon_launch_colon__colon_async,1>,
+                                  enum_entry<IMP_std_colon__colon_launch_colon__colon_deferred,2>>), 2));
+	})")
+	{
+		std::launch::async == std::launch::deferred;
+	}
 }
