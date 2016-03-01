@@ -34,32 +34,17 @@
  * regarding third party software licenses.
  */
 
-#pragma test expect_ir("lit(\"x\": ref<int<4>,f,f>)")
-int x;
 
-#pragma test expect_ir("lit(\"y\": ref<real<4>,t,f>)")
-const float y;
-
-typedef enum { Bla, Alb } enum_t;
-#pragma test expect_ir("lit(\"globalEnum\": ref<(type<enum_def<IMP_enum_t,int<4>,enum_entry<Bla,0>,enum_entry<Alb,1>>>, int<4>)>)")
-enum_t globalEnum;
-
-typedef struct { int x; } IAmTheTagType;
-#pragma test expect_ir("lit(\"tt\": ref<struct IMP_IAmTheTagType { x: int<4>; },f,f>)")
-IAmTheTagType tt;
-
-typedef struct _omp_lock_t { int x; } omp_lock_t;
-void omp_set_lock(omp_lock_t* lock);
-#pragma test expect_ir("lit(\"lck\": ref<struct IMP__omp_lock_t { x : int<4>; },f,f>)")
-omp_lock_t lck;
+enum Bla : unsigned long { A };
 
 int main() {
-	globalEnum;
-	y;
-	tt;
-	#pragma test expect_ir("STRING","ptr_from_ref(lck)")
-	&lck;
-	#pragma test expect_ir("STRING","IMP_omp_set_lock(ptr_from_ref(lck))")
-	omp_set_lock(&lck);
-	return x;
+	#pragma test expect_ir(R"(using "ext.enum"; {
+		var ref<(type<enum_def<IMP_Bla,uint<8>,enum_entry<A,0>>>, uint<8>),f,f,plain> v0 = (type_lit(enum_def<IMP_Bla,uint<8>,enum_entry<A,0>>), 0ul);
+		enum_to_int(*v0)==num_cast(5, type_lit(uint<8>));
+	})")
+	{
+		Bla b = A;
+		b == 5;
+	}
+	return 0;
 }

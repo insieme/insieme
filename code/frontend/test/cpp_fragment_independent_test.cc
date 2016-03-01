@@ -41,6 +41,8 @@ namespace frontend {
 
 	TEST(CppIndependentTest, BasicTypes) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_basic_types.cpp"); }
 
+	TEST(CppIndependentTest, Enum) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_enum.cpp"); }
+
 	TEST(CppIndependentTest, Expressions) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_expressions.cpp"); }
 
 	TEST(CppIndependentTest, ExpressionsRef) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_expressions_ref.cpp"); }

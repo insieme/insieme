@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -71,8 +71,7 @@ namespace utils {
 		if(lang::isPointer(t)) return builder.callExpr(basic.getBool(), pExt.getPtrNotEqual(), expr, lang::buildPtrNull(t));
 
 		//if enum type, cast to boolean
-		auto& enumExt = builder.getExtension<core::lang::EnumExtension>();
-		if (lang::isEnumType(t)) return exprToBool(builder.callExpr(lang::getEnumElementType(t), enumExt.getEnumToInt(), expr));
+		if(lang::isEnum(t)) return exprToBool(core::lang::buildEnumToInt(expr));
 
 		assert_not_implemented() << "Trying to build bool expression from unsupported type " << *t;
 		return ExpressionPtr();

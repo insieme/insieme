@@ -364,7 +364,7 @@ namespace core {
 		TupleExprPtr tupleExpr(const ExpressionPtr& expr, const T&... rest) const {
 			return tupleExpr(toVector<ExpressionPtr>(expr, rest...));
 		}
-		
+
 		InitExprPtr initExpr(const ExpressionPtr& memExpr, const ExpressionList& initExprs = ExpressionList()) const {
 			assert_true(lang::isReference(memExpr)) << "initExpr needs to be built on Reference type, got " << dumpColor(memExpr->getType());
 			return initExpr(memExpr->getType().as<GenericTypePtr>(), memExpr, expressions(initExprs));
@@ -679,23 +679,7 @@ namespace core {
 		LiteralPtr minus(const LiteralPtr& lit) const;
 		ExpressionPtr minus(const ExpressionPtr& a) const;
 
-		ExpressionPtr numericCast(const core::ExpressionPtr& expr, const core::TypePtr& targetType) const  {
-			if(expr->getType() == targetType) return expr;
-
-			//special case for enum to numeric
-			if(lang::isEnumType(expr)) {
-				auto realTargetType = expr->getType().as<core::TupleTypePtr>()->getElement(1);
-				return numericCast(callExpr(realTargetType, getExtension<lang::EnumExtension>().getEnumToInt(), expr), targetType);
-			}
-			//special case for numeric to enum
-			if(lang::isEnumType(targetType)) {
-				auto innerTargetType = targetType.as<core::TupleTypePtr>()->getElement(1);
-				auto preCast = numericCast(expr, innerTargetType);
-				return callExpr(targetType, getExtension<lang::EnumExtension>().getIntToEnum(), getTypeLiteral(targetType), preCast);
-			}
-
-			return callExpr(targetType, getLangBasic().getNumericCast(), expr, getTypeLiteral(targetType));
-		}
+		ExpressionPtr numericCast(const core::ExpressionPtr& expr, const core::TypePtr& targetType) const;
 
 		inline CallExprPtr preInc(const ExpressionPtr& a) const {
 			return unaryOp(getExtension<lang::ReferenceExtension>().getGenPreInc(), a);

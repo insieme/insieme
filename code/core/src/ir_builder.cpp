@@ -599,7 +599,7 @@ namespace core {
 		TupleTypePtr type = tupleType(extractTypes(values));
 		return tupleExpr(type, Expressions::get(manager, values));
 	}
-	
+
 	IfStmtPtr IRBuilderBaseModule::ifStmt(const ExpressionPtr& condition, const StatementPtr& thenBody, const StatementPtr& elseBody) const {
 		if(!elseBody) { return ifStmt(condition, wrapBody(thenBody), getNoOp()); }
 		return ifStmt(condition, wrapBody(thenBody), wrapBody(elseBody));
@@ -1421,6 +1421,21 @@ namespace core {
 		return sub(getZero(type), a);
 	}
 
+	ExpressionPtr IRBuilderBaseModule::numericCast(const core::ExpressionPtr& expr, const core::TypePtr& targetType) const {
+		if(expr->getType() == targetType) return expr;
+
+		// special case for enum to numeric
+		if(lang::isEnum(expr)) {
+			return numericCast(core::lang::buildEnumToInt(expr), targetType);
+		}
+		// special case for numeric to enum
+		if(lang::isEnum(targetType)) {
+			return core::lang::buildEnumFromInt(targetType, expr);
+		}
+
+		return callExpr(targetType, getLangBasic().getNumericCast(), expr, getTypeLiteral(targetType));
+	}
+
 	core::ExpressionPtr IRBuilderBaseModule::getZero(const core::TypePtr& type) const {
 			// if it is an integer ...
 			if(manager.getLangBasic().isInt(type)) { return literal(type, "0"); }
@@ -1446,10 +1461,10 @@ namespace core {
 			}
 
 			// if it is an enum ...
-			if(lang::isEnumType(type)) {
+			if(lang::isEnum(type)) {
 				auto& enumExt = manager.getLangExtension<lang::EnumExtension>();
 				// this is what gcc does: { enum { A=1 } var1; cout << var1; }. Prints 0.
-				return callExpr(type, enumExt.getIntToEnum(), getTypeLiteral(type), getZero(lang::getEnumElementType(type)));
+				return callExpr(type, enumExt.getEnumFromInt(), getTypeLiteral(type), getZero(lang::getEnumIntType(type)));
 			}
 
 			// if it is a struct ...

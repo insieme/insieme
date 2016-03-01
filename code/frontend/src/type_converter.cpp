@@ -325,27 +325,36 @@ namespace conversion {
 			core::NodeManager& mgr = converter.getNodeManager();
 			core::IRBuilder builder(mgr);
 			auto enumDecl = clangEnumTy->getDecl();
-			auto enumClassType = converter.convertType(enumDecl->getIntegerType());
+
+			// determine correct integral type
+			auto enumIntType = builder.getLangBasic().getInt4();
+			if(enumDecl->isFixed()) {
+				enumIntType = converter.convertType(enumDecl->getIntegerType());
+			}
+
 			std::string enumName = utils::getNameForTagDecl(converter, enumDecl).first;
+
 			// collect enum constant decls
 			std::vector<core::GenericTypePtr> enumElements;
 			for(auto m : enumDecl->enumerators()) {
-				//get value of enum element
+				// get value of enum element
 				core::ExpressionPtr val = builder.literal(builder.getLangBasic().getInt8(), m->getInitVal().toString(10));
 				std::string enumConstantDeclName = m->getNameAsString();
-				//hashing needed?
-				if(!llvm::dyn_cast<clang::TranslationUnitDecl>(enumDecl->getDeclContext()))
+				// hashing needed?
+				if(!llvm::dyn_cast<clang::TranslationUnitDecl>(enumDecl->getDeclContext())) {
 					enumConstantDeclName += std::to_string(std::hash<std::string>()(enumName));
-				//create enum element
-				enumElements.push_back(core::lang::getEnumElement(builder.genericType(enumConstantDeclName), val));
+				}
+				// create enum element
+				enumElements.push_back(core::lang::EnumEntry::create(builder.genericType(enumConstantDeclName), val));
 			}
-			//generate enum type
-			core::GenericTypePtr et = core::lang::getEnumDef(builder.genericType(enumName), enumElements);
-			// build struct {enumty t; val v;}
-			auto enumResTy = core::lang::getEnumType(enumClassType, et);
+
+			// generate enum type
+			core::GenericTypePtr definition = core::lang::EnumDefinition::create(builder.genericType(enumName), enumIntType, enumElements);
+			auto enumResTy = core::lang::buildEnumType(definition);
+
 			// attach necessary information for types defined in library headers
 			converter.applyHeaderTagging(enumResTy, enumDecl);
-            if (!enumDecl->getNameAsString().empty()) core::annotations::attachName(enumResTy, enumDecl->getNameAsString());
+            if(!enumDecl->getNameAsString().empty()) core::annotations::attachName(enumResTy, enumDecl->getNameAsString());
 			return enumResTy;
 		}
 

@@ -47,21 +47,21 @@ enum e eProducer() { return A; }
 int main() {
 
 	// undefined initialization
-	#pragma test expect_ir("var ref<(enum_def<IMP_e,enum_entry<A,0>,enum_entry<B,1>,enum_entry<C,2>>, uint<4>),f,f,plain> v0 = v0;")
+	#pragma test expect_ir("var ref<(type<enum_def<IMP_e,int<4>,enum_entry<A,0>,enum_entry<B,1>,enum_entry<C,2>>>, int<4>),f,f,plain> v0 = v0;")
 	enum e e1;
 
 	// initialized with an enum constant
-	#pragma test expect_ir("using \"ext.enum\"; var ref<(enum_def<IMP_e,enum_entry<A,0>,enum_entry<B,1>,enum_entry<C,2>>, uint<4>),f,f,plain> v0 = int_to_enum(type_lit((enum_def<IMP_e,enum_entry<A,0>,enum_entry<B,1>,enum_entry<C,2>>, uint<4>)), num_cast(num_cast(0u, type_lit(int<4>)), type_lit(uint<4>)));")
+	#pragma test expect_ir("using \"ext.enum\"; var ref<(type<enum_def<IMP_e,int<4>,enum_entry<A,0>,enum_entry<B,1>,enum_entry<C,2>>>, int<4>),f,f,plain> v0 = (type_lit(enum_def<IMP_e,int<4>,enum_entry<A,0>,enum_entry<B,1>,enum_entry<C,2>>), 0);")
 	enum e e2 = A;
 
 	// initialized with an integer
-	#pragma test expect_ir("using \"ext.enum\"; var ref<(enum_def<IMP_e,enum_entry<A,0>,enum_entry<B,1>,enum_entry<C,2>>, uint<4>),f,f,plain> v0 = int_to_enum(type_lit((enum_def<IMP_e,enum_entry<A,0>,enum_entry<B,1>,enum_entry<C,2>>, uint<4>)), num_cast(7, type_lit(uint<4>)));")
+	#pragma test expect_ir("using \"ext.enum\"; var ref<(type<enum_def<IMP_e,int<4>,enum_entry<A,0>,enum_entry<B,1>,enum_entry<C,2>>>, int<4>),f,f,plain> v0 = enum_from_int(type_lit((type<enum_def<IMP_e,int<4>,enum_entry<A,0>,enum_entry<B,1>,enum_entry<C,2>>>, int<4>)), 7);")
 	enum e e3 = 7;
 
 	// initialized with another enum variable
 	#pragma test expect_ir(R"(using "ext.enum"; {
-	    var ref<(enum_def<IMP_e,enum_entry<A,0>,enum_entry<B,1>,enum_entry<C,2>>, uint<4>),f,f,plain> v0 = v0;
-	    var ref<(enum_def<IMP_e,enum_entry<A,0>,enum_entry<B,1>,enum_entry<C,2>>, uint<4>),f,f,plain> v1 = *v0;
+	    var ref<(type<enum_def<IMP_e,int<4>,enum_entry<A,0>,enum_entry<B,1>,enum_entry<C,2>>>, int<4>),f,f,plain> v0 = v0;
+	    var ref<(type<enum_def<IMP_e,int<4>,enum_entry<A,0>,enum_entry<B,1>,enum_entry<C,2>>>, int<4>),f,f,plain> v1 = *v0;
 	    })")
 	{
 		enum e e4a;
@@ -70,9 +70,9 @@ int main() {
 
 	// passing an enum to a function
 	#pragma test expect_ir(R"(using "ext.enum";
-	    def IMP_eConsumer = function (v0 : ref<(enum_def<IMP_e,enum_entry<A,0>,enum_entry<B,1>,enum_entry<C,2>>, uint<4>),f,f,plain>) -> unit { };
+	    def IMP_eConsumer = function (v0 : ref<(type<enum_def<IMP_e,int<4>,enum_entry<A,0>,enum_entry<B,1>,enum_entry<C,2>>>, int<4>),f,f,plain>) -> unit { };
 	    {
-	        var ref<(enum_def<IMP_e,enum_entry<A,0>,enum_entry<B,1>,enum_entry<C,2>>, uint<4>),f,f,plain> v0 = v0;
+	        var ref<(type<enum_def<IMP_e,int<4>,enum_entry<A,0>,enum_entry<B,1>,enum_entry<C,2>>>, int<4>),f,f,plain> v0 = v0;
 	        IMP_eConsumer(*v0);
 	    })")
 	{
@@ -82,9 +82,11 @@ int main() {
 
 	// getting an enum from a function
 	#pragma test expect_ir(R"(using "ext.enum";
-	    def IMP_eProducer = function () -> (enum_def<IMP_e,enum_entry<A,0>,enum_entry<B,1>,enum_entry<C,2>>, uint<4>) { return int_to_enum(type_lit((enum_def<IMP_e,enum_entry<A,0>,enum_entry<B,1>,enum_entry<C,2>>, uint<4>)), num_cast(num_cast(0u, type_lit(int<4>)), type_lit(uint<4>))); };
+	    def IMP_eProducer = function () -> (type<enum_def<IMP_e,int<4>,enum_entry<A,0>,enum_entry<B,1>,enum_entry<C,2>>>, int<4>) {
+			return (type_lit(enum_def<IMP_e,int<4>,enum_entry<A,0>,enum_entry<B,1>,enum_entry<C,2>>), 0);
+		};
 	    {
-	        var ref<(enum_def<IMP_e,enum_entry<A,0>,enum_entry<B,1>,enum_entry<C,2>>, uint<4>),f,f,plain> v0 = IMP_eProducer();
+	        var ref<(type<enum_def<IMP_e,int<4>,enum_entry<A,0>,enum_entry<B,1>,enum_entry<C,2>>>, int<4>),f,f,plain> v0 = IMP_eProducer();
 	    })")
 	{
 		enum e e6 = eProducer();
@@ -92,11 +94,49 @@ int main() {
 
 
 	// typedef-ed enum
-	#pragma test expect_ir("var ref<(enum_def<IMP_f,enum_entry<D,0>,enum_entry<E,1>,enum_entry<F,2>>, uint<4>),f,f,plain> v0 = v0;")
+	#pragma test expect_ir("var ref<(type<enum_def<IMP_f,int<4>,enum_entry<D,0>,enum_entry<E,1>,enum_entry<F,2>>>, int<4>),f,f,plain> v0 = v0;")
 	f f1;
 
 
 	// enum with custom values
-	#pragma test expect_ir("var ref<(enum_def<IMP_g,enum_entry<G,0>,enum_entry<H,4>,enum_entry<I,5>>, uint<4>),f,f,plain> v0 = v0;")
+	#pragma test expect_ir("var ref<(type<enum_def<IMP_g,int<4>,enum_entry<G,0>,enum_entry<H,4>,enum_entry<I,5>>>, int<4>),f,f,plain> v0 = v0;")
 	g g1;
+
+	// comparison operators
+	#pragma test expect_ir(R"(using "ext.enum"; {
+		var ref<(type<enum_def<IMP_e,int<4>,enum_entry<A,0>,enum_entry<B,1>,enum_entry<C,2>>>, int<4>),f,f,plain> v0 = (type_lit(enum_def<IMP_e,int<4>,enum_entry<A,0>,enum_entry<B,1>,enum_entry<C,2>>), 0);
+		enum_to_int((type_lit(enum_def<IMP_e,int<4>,enum_entry<A,0>,enum_entry<B,1>,enum_entry<C,2>>), 0))==5;
+		enum_to_int((type_lit(enum_def<IMP_e,int<4>,enum_entry<A,0>,enum_entry<B,1>,enum_entry<C,2>>), 0))<enum_to_int((type_lit(enum_def<IMP_e,int<4>,enum_entry<A,0>,enum_entry<B,1>,enum_entry<C,2>>), 1));
+	    num_cast(enum_to_int(*v0), type_lit(uint<4>))<num_cast(enum_to_int((type_lit(enum_def<IMP_e,int<4>,enum_entry<A,0>,enum_entry<B,1>,enum_entry<C,2>>), 2)), type_lit(uint<4>));
+	})")
+	{
+		enum e e1 = A;
+		A == 5;
+		A < B;
+		e1 < C;
+	}
+
+	// other operators
+	#pragma test expect_ir(R"(using "ext.enum"; {
+		var ref<(type<enum_def<IMP_e,int<4>,enum_entry<A,0>,enum_entry<B,1>,enum_entry<C,2>>>, int<4>),f,f,plain> v0 = (type_lit(enum_def<IMP_e,int<4>,enum_entry<A,0>,enum_entry<B,1>,enum_entry<C,2>>), 0);
+		enum_to_int((type_lit(enum_def<IMP_e,int<4>,enum_entry<A,0>,enum_entry<B,1>,enum_entry<C,2>>), 0))+5;
+		enum_to_int((type_lit(enum_def<IMP_e,int<4>,enum_entry<A,0>,enum_entry<B,1>,enum_entry<C,2>>), 0))&enum_to_int((type_lit(enum_def<IMP_e,int<4>,enum_entry<A,0>,enum_entry<B,1>,enum_entry<C,2>>), 1));
+		num_cast(enum_to_int(*v0), type_lit(uint<4>))|num_cast(enum_to_int((type_lit(enum_def<IMP_e,int<4>,enum_entry<A,0>,enum_entry<B,1>,enum_entry<C,2>>), 2)), type_lit(uint<4>));
+	})")
+	{
+		enum e e1 = A;
+		A + 5;
+		A & B;
+		e1 | C;
+	}
+
+	// enum ptr
+	#pragma test expect_ir(R"(using "ext.enum"; {
+		var ref<(type<enum_def<IMP_e,int<4>,enum_entry<A,0>,enum_entry<B,1>,enum_entry<C,2>>>, int<4>),f,f,plain> v0 = (type_lit(enum_def<IMP_e,int<4>,enum_entry<A,0>,enum_entry<B,1>,enum_entry<C,2>>), 0);
+		var ref<ptr<(type<enum_def<IMP_e,int<4>,enum_entry<A,0>,enum_entry<B,1>,enum_entry<C,2>>>, int<4>)>,f,f,plain> v1 = ptr_from_ref(v0);
+	})")
+	{
+		enum e e1 = A;
+		enum e *e2 = &e1;
+	}
 }
