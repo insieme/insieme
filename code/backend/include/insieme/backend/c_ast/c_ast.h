@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -253,9 +253,9 @@ namespace c_ast {
 		using EnumElements = std::vector<std::pair<IdentifierPtr, LiteralPtr>>;
 		IdentifierPtr name;
 		EnumElements values;
-		TypePtr	classTy;
-		EnumType(const IdentifierPtr& identifier, const EnumElements& elements, const TypePtr& enumClassType)
-			: Type(NT_EnumType), name(identifier), values(elements), classTy(enumClassType) {}
+		TypePtr intType;
+		EnumType(const IdentifierPtr& identifier, const EnumElements& elements, const TypePtr& intType)
+			: Type(NT_EnumType), name(identifier), values(elements), intType(intType) {}
 		virtual bool equals(const Node& node) const;
 	};
 
@@ -638,7 +638,7 @@ namespace c_ast {
 	struct ConstructorPrototype : public Node {
 		ConstructorPtr ctor;
 		BodyFlag flag;
-		ConstructorPrototype(const ConstructorPtr& ctor, BodyFlag flag = BodyFlag::None) 
+		ConstructorPrototype(const ConstructorPtr& ctor, BodyFlag flag = BodyFlag::None)
 			: Node(NT_ConstructorPrototype), ctor(ctor), flag(flag) {}
 		virtual bool equals(const Node& node) const;
 	};
@@ -647,7 +647,7 @@ namespace c_ast {
 		DestructorPtr dtor;
 		bool isVirtual;
 		BodyFlag flag;
-		DestructorPrototype(const DestructorPtr& dtor, bool isVirtual = false) 
+		DestructorPrototype(const DestructorPtr& dtor, bool isVirtual = false)
 			: Node(NT_DestructorPrototype), dtor(dtor), isVirtual(isVirtual), flag(BodyFlag::None) {}
 		DestructorPrototype(const DestructorPtr& dtor, BodyFlag flag)
 			: Node(NT_DestructorPrototype), dtor(dtor), isVirtual(false), flag(flag) {}

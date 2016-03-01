@@ -899,6 +899,37 @@ namespace backend {
 		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
 	}
 
+	TEST(CppSnippet, Enum) {
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+
+		core::ProgramPtr program = builder.parseProgram(R"( using "ext.enum";
+				int<4> function IMP_main () {
+					var ref<(type<enum_def<IMP_Bla,uint<8>,enum_entry<IMP_Bla_colon__colon_A,0>>>, uint<8>),f,f,plain> v0 = (type_lit(enum_def<IMP_Bla,uint<8>,enum_entry<IMP_Bla_colon__colon_A,0>>), 0ul);
+					enum_to_int(*v0)==num_cast(5, type_lit(uint<8>));
+					return 0;
+				}
+		)");
+
+		ASSERT_TRUE(program);
+		// std::cout << "Program: " << dumpColor(program) << std::endl;
+		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
+
+		// use sequential backend to convert into C++ code
+		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
+		ASSERT_TRUE((bool)converted);
+		//std::cout << "Converted: \n" << *converted << std::endl;
+
+		// check presence of relevant code
+		auto code = toString(*converted);
+		EXPECT_PRED2(containsSubString, code, "enum Bla : uint64_t { BlaA=0 }");
+
+		// try compiling the code fragment
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+	}
+
 	TEST(CppSnippet, DISABLED_Inheritance) {
 		core::NodeManager manager;
 		core::IRBuilder builder(manager);

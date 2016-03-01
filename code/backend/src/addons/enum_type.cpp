@@ -45,8 +45,9 @@
 #include "insieme/annotations/c/include.h"
 #include "insieme/annotations/c/decl_only.h"
 
-#include "insieme/core/lang/enum.h"
 #include "insieme/core/annotations/naming.h"
+#include "insieme/core/lang/basic.h"
+#include "insieme/core/lang/enum.h"
 
 namespace insieme {
 namespace backend {
@@ -68,24 +69,26 @@ namespace addons {
 			// get the enum definition
 			core::lang::EnumDefinition enumTy(core::lang::getEnumTypeDefinition(tt));
 
-			// get the enum class type and convert it
-			TypeManager& typeManager = converter.getTypeManager();
-			const TypeInfo& enumClassTypeInfo = typeManager.getTypeInfo(tt->getElement(1));
 			// get the enum name and convert it
 			const c_ast::SharedCNodeManager& cnodemgr = converter.getCNodeManager();
 			c_ast::IdentifierPtr enumName =
 				cnodemgr->create<c_ast::Identifier>(utils::demangleToIdentifier(enumTy.getEnumName().as<core::GenericTypePtr>()->getName()->getValue(), true));
+			// get the enum int type and convert it if applicable
+			c_ast::TypePtr enumIntType = nullptr;
+			if(!type->getNodeManager().getLangBasic().isInt4(enumTy.getIntType())) {
+				auto intTypeInfo = converter.getTypeManager().getTypeInfo(enumTy.getIntType());
+				enumIntType = intTypeInfo.lValueType;
+			}
 			// get the enum values and convert them
 			std::vector<std::pair<c_ast::IdentifierPtr, c_ast::LiteralPtr>> values;
 			for(auto e : enumTy.getElements()) {
 				core::lang::EnumEntry ee(e);
-				c_ast::IdentifierPtr eeName =
-					cnodemgr->create<c_ast::Identifier>(utils::demangleToIdentifier(ee.getName(), true));
+				c_ast::IdentifierPtr eeName = cnodemgr->create<c_ast::Identifier>(utils::demangleToIdentifier(ee.getName(), true));
 				c_ast::LiteralPtr eeVal = cnodemgr->create<c_ast::Literal>(std::to_string(ee.getEnumEntryValue()));
 				values.push_back({eeName, eeVal});
 			}
 			// build up the enum code fragments
-			auto cEnumType = cnodemgr->create<c_ast::EnumType>(enumName, values, enumClassTypeInfo.lValueType);
+			auto cEnumType = cnodemgr->create<c_ast::EnumType>(enumName, values, enumIntType);
 			auto cEnumVarTy = cnodemgr->create<c_ast::NamedType>(enumName);
 
 			TypeInfo* retTypeInfo = new TypeInfo();
