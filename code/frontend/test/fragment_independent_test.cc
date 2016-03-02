@@ -95,7 +95,7 @@ namespace frontend {
 		runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_enum.c");
 	}
 
-	TEST(IndependentTest, Static) {
+	TEST(IndependentTest, OpenCL) {
 		runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_opencl.c");
 	}
 

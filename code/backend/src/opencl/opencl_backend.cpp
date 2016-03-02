@@ -67,7 +67,6 @@
 
 #include "insieme/backend/addons/pointer_type.h"
 #include "insieme/backend/addons/cpp_casts.h"
-#include "insieme/backend/addons/cpp_memb_ptr.h"
 #include "insieme/backend/addons/complex_type.h"
 #include "insieme/backend/addons/enum_type.h"
 #include "insieme/backend/addons/io.h"
