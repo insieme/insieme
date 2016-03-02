@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -63,7 +63,7 @@ using boost::enable_if;
 // Type trait to check for STL-like container types
 
 template <typename T, typename _ = void>
-struct is_container : std::false_type {};
+struct is_container : public std::false_type {};
 
 namespace detail {
 	template <typename... Ts>
@@ -71,11 +71,11 @@ namespace detail {
 }
 
 template <typename T>
-struct is_container<T, std::conditional<false, detail::is_container_helper<typename T::value_type, typename T::size_type, typename T::allocator_type,
+struct is_container<T, typename std::conditional<false, detail::is_container_helper<typename T::value_type, typename T::size_type, typename T::allocator_type,
                                                                            typename T::iterator, typename T::const_iterator, decltype(std::declval<T>().size()),
                                                                            decltype(std::declval<T>().begin()), decltype(std::declval<T>().end()),
                                                                            decltype(std::declval<T>().cbegin()), decltype(std::declval<T>().cend())>,
-                                        void>> : public std::true_type {};
+                                        void>::type> : public std::true_type {};
 
 /** Checks whether a condition is true for any element of the supplied iteration range.
  *
@@ -211,6 +211,18 @@ inline Result transform(const Container<T, A<T>>& c, const Functor& f) {
 }
 
 /**
+ * Convenience function for std::transform for changing vector-like types to set-like types.
+ */
+template <template <typename, typename, typename> class TargetSetLikeContainer, template <typename, typename> class Container, typename Functor,
+          typename T, template <typename> class A, typename ResultMember = typename lambda_traits<Functor>::result_type,
+          typename Result = TargetSetLikeContainer<ResultMember, std::less<ResultMember>, A<ResultMember>>>
+inline Result transform(const Container<T, A<T>>& c, const Functor& f) {
+	Result res;
+	std::transform(c.begin(), c.end(), inserter(res, res.end()), f);
+	return res;
+}
+
+/**
  * Convenience function for std::transform for changing map-like types to vector-like types.
  */
 template <template <typename, typename> class TargetContainer, template <typename, typename, typename, typename> class MapLikeContainer, typename Functor,
@@ -226,8 +238,8 @@ inline Result transform(const MapLikeContainer<K, V, C, A<T>>& c, const Functor&
  * Convenience function for std::transform.
  */
 template <typename Container, typename OutputIterator, typename Functor>
-inline void transform(Container& c, OutputIterator out, const Functor& f) {
-	std::transform(c.begin(), c.end(), out, f);
+inline void transform(const Container& c, OutputIterator out, const Functor& f) {
+	std::transform(c.cbegin(), c.cend(), out, f);
 }
 
 /**

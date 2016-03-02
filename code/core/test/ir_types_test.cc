@@ -1,5 +1,5 @@
-	/**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+/**
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -424,6 +424,50 @@ namespace core {
 		auto fixedDtor = tagType->peel(dtor);
 		EXPECT_TRUE(checks::check(fixedDtor).empty()) << checks::check(fixedDtor);
 	}
+	
+	TEST(TypeTest, TagTypeUnpeeling) {
+		// create a manager for this test
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		auto aType = builder.parseType(R"(
+			def struct A {
+				lambda retA = () -> A { return *this; }
+			}; 
+			A
+		)").as<TagTypePtr>();
+
+		// peel once, then unpeel -> should be the same
+		auto member = aType->getStruct()->getMemberFunctions().front();
+		auto originalT = member.getType();
+		auto peeledT = aType.peel(member).getType();
+		EXPECT_NE(peeledT, originalT);
+		auto unpeeledT = aType.unpeel(peeledT);
+		EXPECT_EQ(unpeeledT, originalT);
+	}
+
+	
+	TEST(TypeTest, TagTypeUnpeelingNotPeeled) {
+		// create a manager for this test
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		auto aType = builder.parseType(R"(
+			def struct A {
+				lambda retA = () -> A { return *this; }
+			}; 
+			A
+		)").as<TagTypePtr>();
+		
+		// peel once, then unpeel -> should be the same
+		auto member = aType->getStruct()->getMemberFunctions().front();
+		auto originalT = member.getType();
+		// peel manually
+		auto peeledT = transform::replaceAllGen(manager, originalT, aType->getTag(), aType, transform::globalReplacement);
+		EXPECT_NE(peeledT, originalT);
+		auto unpeeledT = aType.unpeel(peeledT);
+		EXPECT_EQ(unpeeledT, originalT);
+	}
 
 	TEST(TypeTest, RecTypeTest) {
 		// test accessing the definition of a recursive type using addresses
@@ -478,7 +522,9 @@ namespace core {
 		//  For this test, Google Test couldn't detect the number of threads.'
 		//
 		// in agreement with 'the others' this warning can be ignored 'safely'
-		EXPECT_DEATH_IF_SUPPORTED(builder.structType(entriesD), "field names must be unique");
+		#ifndef NDEBUG
+			EXPECT_DEATH_IF_SUPPORTED(builder.structType(entriesD), "field names must be unique");
+		#endif
 
 		// .. same type should not be a problem
 		entriesD.pop_back();

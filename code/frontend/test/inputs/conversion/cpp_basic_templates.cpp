@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -61,6 +61,11 @@ int bla<0, 1>() {
 	return 2;
 }
 
+template <typename T>
+class tempClass {
+	T val;
+};
+
 int main() {
 	;
 
@@ -92,6 +97,22 @@ int main() {
 	def IMP_bla_2_3_returns_int = () -> int<4> { return IMP_bla_1_2_returns_int()+1; };
 	IMP_bla_2_3_returns_int())")
 	bla<2, 3>();
+
+	#pragma test expect_ir(R"(
+		def struct IMP_tempClass_int {
+			val : int<4>;
+		};
+		var ref<IMP_tempClass_int,f,f,plain> v0 = IMP_tempClass_int::(v0);
+	)")
+	tempClass<int> aInt;
+
+	#pragma test expect_ir(R"(
+		def struct IMP_tempClass_float {
+			val : real<4>;
+		};
+		var ref<IMP_tempClass_float,f,f,plain> v0 = IMP_tempClass_float::(v0);
+	)")
+	tempClass<float> aFloat;
 
 	return 0;
 }

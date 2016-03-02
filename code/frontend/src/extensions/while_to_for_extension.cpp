@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -47,12 +47,15 @@
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_address.h"
 #include "insieme/core/ir_visitor.h"
-#include "insieme/core/lang/ir++_extension.h"
 #include "insieme/core/pattern/ir_pattern.h"
 #include "insieme/core/pattern/pattern_utils.h"
 #include "insieme/core/transform/manipulation.h"
+#include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/transform/node_replacer.h"
+
+/// DELETEME
+#include "insieme/frontend/omp/omp_annotation.h"
 
 #include "insieme/utils/assert.h"
 #include "insieme/utils/set_utils.h"
@@ -72,6 +75,12 @@ namespace frontend {
 namespace extensions {
 
 	namespace {
+		auto isCStyleAssignment = [](const core::NodePtr& node) {
+			auto& mgr = node->getNodeManager();
+			auto& fMod = mgr.getLangExtension<utils::FrontendInspireModule>();
+			return core::analysis::isCallOf(node, fMod.getCStyleAssignment());
+		};
+
 		// tries to map a given operation (assignment or increment/decrement) to a step for an IR for loop
 		// returns (read/write, step expression)
 		std::pair<bool, core::ExpressionPtr> mapToStep(core::NodePtr operation) {
@@ -80,14 +89,13 @@ namespace extensions {
 			auto& mgr = operation->getNodeManager();
 			core::IRBuilder builder(mgr);
 			auto& basic = mgr.getLangBasic();
-			auto& fMod = mgr.getLangExtension<utils::FrontendInspireModule>();
 			auto& rMod = mgr.getLangExtension<core::lang::ReferenceExtension>();
 
-			auto call = operation.as<core::CallExprPtr>();
+			auto call = operation.isa<core::CallExprPtr>();
 			if(!call) return invalid;
 			auto callee = call->getFunctionExpr();
 
-			if(callee == fMod.getCStyleAssignment()) {
+			if(isCStyleAssignment(operation)) {
 				// we could be smarter here, for now only handle the simplest case
 				auto lhs = call->getArgument(0);
 				auto rhsCall = call->getArgument(1).isa<core::CallExprPtr>();
@@ -109,7 +117,7 @@ namespace extensions {
 			}
 			return invalid;
 		}
-		
+
 		// tries to map a given operation (declaration or assignment) to a start expr for an IR for loop
 		// returns (valid, start expression)
 		std::pair<bool, core::ExpressionPtr> mapToStart(core::VariablePtr var, core::NodePtr operation) {
@@ -118,13 +126,10 @@ namespace extensions {
 			auto& mgr = operation->getNodeManager();
 			core::IRBuilder builder(mgr);
 			auto& fMod = mgr.getLangExtension<utils::FrontendInspireModule>();
-			auto& rMod = mgr.getLangExtension<core::lang::ReferenceExtension>();
 
 			// first check if declaration
 			if(auto decl = operation.isa<core::DeclarationStmtPtr>()) {
-				auto initCall = decl->getInitialization().isa<core::CallExprPtr>();
-				if(!initCall || !core::analysis::isCallOf(initCall, rMod.getRefVarInit())) return invalid;
-				return std::make_pair(decl->getVariable() == var, initCall->getArgument(0));
+				return std::make_pair(decl->getVariable() == var, decl->getInitialization());
 			}
 
 			// otherwise assignment call
@@ -138,7 +143,7 @@ namespace extensions {
 			}
 			return invalid;
 		}
-		
+
 		// tries to map a given operation (conditional) to an end expr for an IR for loop
 		// returns (valid, end expression)
 		std::pair<bool, core::ExpressionPtr> mapToEnd(core::VariablePtr var, core::ExpressionPtr operation) {
@@ -180,144 +185,185 @@ namespace extensions {
 		}
 	}
 
-	bool isUsedAfterLoop(const core::StatementList& stmts,
-			const core::WhileStmtPtr& whileStmt, const core::NodePtr& predecessor) {
-		if(((stmts.size()>=1) && (stmts[stmts.size()-1] != whileStmt))
-			|| !predecessor.isa<core::DeclarationStmtPtr>()) {
-			return true;
+	bool isUsedAfterLoop(const core::StatementList& stmts, const core::WhileStmtPtr& whileStmt, const core::NodePtr& predecessor,
+		const core::VariablePtr& cvar) {
+		if (!predecessor.isa<core::DeclarationStmtPtr>()) return true;
+		bool afterWhile = false;
+		for (auto stmt : stmts) {
+			if (stmt == whileStmt) {
+				afterWhile = true;
+			} else {
+				if (afterWhile && ::contains(core::analysis::getFreeVariables(stmt), cvar)) return true;
+			}
 		}
 		return false;
 	}
 
+	core::StatementPtr getPostCondition(const core::VariablePtr& forVar, const core::ExpressionPtr& start, const core::ExpressionPtr& stop, const core::ExpressionPtr& step) {
+		core::IRBuilder builder(forVar->getNodeManager());
+		// create following statement: tmpEndValue = end + ((beg-end) % step + step) % step
+		return builder.assign(forVar, builder.add(stop, builder.mod(builder.add(builder.mod(builder.sub(start, stop), step), step),step)));
+	}
+
 	/// while statements can be for statements iff only one variable used in the condition is
 	/// altered within the statement, and this alteration satisfies certain conditions
-	core::ProgramPtr WhileToForExtension::IRVisit(insieme::core::ProgramPtr& prog) {
+	core::tu::IRTranslationUnit WhileToForExtension::IRVisit(core::tu::IRTranslationUnit& tu) {
 
-		auto& mgr = prog->getNodeManager();		
-		core::IRBuilder builder(mgr);
-		auto& basic = mgr.getLangBasic();
+		for(auto fun : tu.getFunctions()) {
 
-		auto whilePat = irp::compoundStmt(pattern::anyList << pattern::var("predecessor", (irp::declarationStmt() | irp::callExpr(pattern::any)))
-			                                               << pattern::var("while", irp::whileStmt()) 
-														   << pattern::anyList);
+			auto lambdaExpr = fun.second;
 
-		// match (and potentially replace) all generated while statements
-		prog = irp::replaceAll(whilePat, core::NodeAddress(prog), [&](pattern::AddressMatch match) -> core::StatementPtr {
-			auto original = match.getRoot().getAddressedNode().as<core::CompoundStmtPtr>();
-			auto whileAddr = match["while"].getFlattened().front().as<core::WhileStmtAddress>();
-			auto condition = whileAddr.getAddressedNode()->getCondition();
-			auto body = whileAddr.getAddressedNode()->getBody();
-			auto pred = match["predecessor"].getFlattened().front();
+			auto& mgr = lambdaExpr->getNodeManager();
+			core::IRBuilder builder(mgr);
+			auto& basic = mgr.getLangBasic();
 
-			// check if loop variable is used after the loop
-			// at the moment this check is very simple. 
-			// TODO: replace stupid "use after loop" check by more sophisticated def use analysis.
-			if(isUsedAfterLoop(original->getStatements(), whileAddr.getAddressedNode(), 
-				pred.getAddressedNode())) {
-				return original;
-			}
+			auto innerWhilePat = pattern::var("while", irp::whileStmt());
+			auto markerNestedWhile = pattern::rT(innerWhilePat | irp::markerStmt(pattern::recurse, pattern::any));
+			auto whilePat = irp::compoundStmt(pattern::anyList << pattern::var("predecessor", (irp::declarationStmt() | irp::callExpr(pattern::any)))
+				                                               << markerNestedWhile << pattern::anyList);
 
-			VLOG(1) << "======= START WHILE TO FOR ===========\n" << dumpColor(match.getRoot().getAddressedNode());
-			
-			// check if body contains flow alterating stmts (break or return. continue is allowed.)
-			bool flowAlteration = core::analysis::hasFreeBreakStatement(body) || core::analysis::hasFreeReturnStatement(body);
-			VLOG(1) << "--- flow alteration: " << flowAlteration << "\n";
-			if(flowAlteration) return original;
+			VLOG(2) << "While to for on function:\n" << core::printer::PrettyPrinter(lambdaExpr, core::printer::PrettyPrinter::PRINT_MARKERS);
 
-			// if more than one free variable in the condition -> we certainly can't create a for for this
-			auto cvars = core::analysis::getFreeVariables(condition);
-			VLOG(1) << "--- cvars:\n " << cvars << "\n";
-			if(cvars.size() > 1 || cvars.size() == 0) return original;
+			// match (and potentially replace) all generated while statements
+			lambdaExpr = irp::replaceAll(whilePat, core::NodeAddress(lambdaExpr), [&](pattern::AddressMatch match) -> core::StatementPtr {
+				auto original = match.getRoot().getAddressedNode().as<core::CompoundStmtPtr>();
 
-			auto cvar = cvars.front();
-			core::TypePtr cvarType = core::analysis::getReferencedType(cvar->getType());
-			VLOG(1) << "cvar: " << dumpColor(cvar) << "\n -- type: " << cvarType << "\n";
-			
-			// if it's not an integer, we bail out for now
-			if(!basic.isInt(cvarType)) return original;
+				auto whileAddr = match["while"].getFlattened().front().as<core::WhileStmtAddress>();
+				auto condition = whileAddr.getAddressedNode()->getCondition();
+				auto body = whileAddr.getAddressedNode()->getBody();
+				auto pred = match["predecessor"].getFlattened().front();
 
-			/////////////////////////////////////////////////////////////////////////////////////// figuring out the step
+				VLOG(1) << "======= START WHILE TO FOR ===========\n" << dumpColor(match.getRoot().getAddressedNode());
 
-			// find all uses of the variable in the while body
-			core::ExpressionList writeStepExprs;
-			core::NodeList toRemoveFromBody;
-			core::visitDepthFirstPrunable(core::NodeAddress(body), [&](const core::NodeAddress& varA) {
-				auto var = varA.getAddressedNode().isa<core::VariablePtr>();
-				if(var == cvar) {
-					// check if it's a write
-					auto convertedPair = mapToStep(varA.getParentNode());
-					if(!convertedPair.first) {
-						writeStepExprs.push_back(convertedPair.second);
-						toRemoveFromBody.push_back(varA.getParentNode());
+				// check if body contains flow alterating stmts (break or return. continue is allowed.)
+				bool flowAlteration = core::analysis::hasFreeBreakStatement(body) || core::analysis::hasFreeReturnStatement(body);
+				VLOG(1) << "--- flow alteration: " << flowAlteration << "\n";
+				if(flowAlteration) return original;
+
+				// if more than one free variable in the condition -> we certainly can't create a for for this
+				auto cvars = core::analysis::getFreeVariables(condition);
+
+				VLOG(1) << "--- cvars:\n " << cvars << "\n";
+				// remove all read only free vars from list
+				for (auto it = cvars.rbegin(); it != cvars.rend(); ++it) {
+					VLOG(1) << "---- check read only " << *it << "\n";
+					if (core::analysis::isReadOnlyWithinScope(body, *it)) {
+						cvars.erase(std::next(it).base());
+						VLOG(1) << "---- erased, because var is read only " << *it << "\n";
 					}
 				}
-				if(varA.isa<core::LambdaExprAddress>()) return true;
-				return false;
-			});
-			VLOG(1) << "WriteStepExprs: " << writeStepExprs << "\n";
-			
-			// if there is not exactly one write, or there are free variables in the step, bail out
-			// (could be much smarter about the step)
-			if(writeStepExprs.size()!=1) return original;
-			if(!core::analysis::getFreeVariables(writeStepExprs.back()).empty()) return original;
-			auto convertedStepExpr = writeStepExprs.front();
-			
-			/////////////////////////////////////////////////////////////////////////////////////// figuring out start
-			
-			auto convertedStartPair = mapToStart(cvar, pred);
-			VLOG(1) << "StartPair: " << convertedStartPair.first << " // " << convertedStartPair.second << "\n";
 
-			// bail if no valid start found
-			if(!convertedStartPair.first) return original;
-			
-			/////////////////////////////////////////////////////////////////////////////////////// figuring out end
+				// check if we use literals (e.g., globals). If yes, return original
+				bool litAccess = false;
+				core::visitDepthFirstOnce(condition,
+					[&](const core::LiteralPtr& lit) {
+						if (core::analysis::isRefType(lit->getType())) {
+							litAccess = true;;
+						}
+				});
+				VLOG(1) << "--- used literals:\n " << litAccess << "\n";
+				if (litAccess) return original;
 
-			auto convertedEndPair = mapToEnd(cvar, condition);
-			VLOG(1) << "EndPair: " << convertedEndPair.first << " // " << convertedEndPair.second << "\n";
-			
-			// bail if no valid end found
-			if(!convertedEndPair.first) return original;
-			
-			/////////////////////////////////////////////////////////////////////////////////////// build the for
+				if(cvars.size() > 1 || cvars.size() == 0) return original;
 
-			auto forVar = builder.variable(cvarType);
+				auto cvar = cvars.front();
 
-			// prepare new body
-			core::StatementList newBodyStmts;
-			core::NodeMap loopVarReplacement;
-			loopVarReplacement[builder.deref(cvar)] = forVar;
-			for(auto stmt : body->getStatements()) {
-				if(!::contains(toRemoveFromBody, stmt)) newBodyStmts.push_back(core::transform::replaceAllGen(mgr, stmt, loopVarReplacement));
-			}
-			//synchronize cvar and new forVar
-			//newBodyStmts.push_back(builder.callExpr(cvar->getType(), fMod.getCStyleAssignment(), forVar, cvar));
-			auto newBody = builder.compoundStmt(newBodyStmts);
+				core::TypePtr cvarType = core::analysis::getReferencedType(cvar->getType());
+				VLOG(1) << "cvar: " << dumpColor(cvar) << "\n -- type: " << cvarType << "\n";
 
-			// if the old loop variable is free in the new body, we messed up and should bail
-			if(::contains(core::analysis::getFreeVariables(newBody), cvar)) return original;
+				// if it's not an integer, we bail out for now
+				if(!basic.isInt(cvarType)) return original;
 
-			auto forStmt = builder.forStmt(forVar, convertedStartPair.second, convertedEndPair.second, convertedStepExpr, newBody);
-			VLOG(1) << "======> FOR:\n" << dumpColor(forStmt);
+				/////////////////////////////////////////////////////////////////////////////////////// figuring out the step
 
-			/////////////////////////////////////////////////////////////////////////////////////// replace the while in the original compound
-			
-			core::StatementList replacementCompoundStmts;
-			bool afterWhile = false;
-			for(auto stmt : original->getStatements()) {
-				if(stmt == whileAddr.getAddressedNode()) {
-					afterWhile = true;
-					replacementCompoundStmts.push_back(forStmt);
-				} else {
-					replacementCompoundStmts.push_back(stmt);
-					// if cvar is used after while, bail (for now)
-					if(afterWhile && ::contains(core::analysis::getFreeVariables(stmt), cvar)) return original;
+				// find all uses of the variable in the while body
+				core::ExpressionList writeStepExprs;
+				core::NodeList toRemoveFromBody;
+				bool cvar_is_last_statement = true;
+				core::visitDepthFirstPrunable(core::NodeAddress(body), [&](const core::NodeAddress& varA) {
+					auto var = varA.getAddressedNode().isa<core::VariablePtr>();
+					if(var == cvar) {
+						// check if it's a write
+						auto convertedPair = mapToStep(varA.getParentNode());
+						if(convertedPair.second && !convertedPair.first) {
+							writeStepExprs.push_back(convertedPair.second);
+							toRemoveFromBody.push_back(varA.getParentNode());
+				// additionally check if the condition var write
+				// occurs at the end of the while body, otherwise
+				// return original code.
+				if(body->getStatements().back() != varA.getParentNode()) cvar_is_last_statement = false;
+						}
+					}
+					if(varA.isa<core::LambdaExprAddress>()) return true;
+					return false;
+				});
+				VLOG(1) << "WriteStepExprs: " << writeStepExprs << "\n";
+
+				VLOG(1) << "Step expression is last statement: " << cvar_is_last_statement << "\n";
+				if(!cvar_is_last_statement) return original;
+
+				// if there is not exactly one write, or there are free variables in the step, bail out
+				// (could be much smarter about the step)
+				if(writeStepExprs.size()!=1) return original;
+				if(!core::analysis::getFreeVariables(writeStepExprs.back()).empty()) return original;
+				auto convertedStepExpr = writeStepExprs.front();
+
+				/////////////////////////////////////////////////////////////////////////////////////// figuring out start
+
+				auto convertedStartPair = mapToStart(cvar, pred);
+				VLOG(1) << "StartPair: " << convertedStartPair.first << " // " << convertedStartPair.second << "\n";
+
+				// bail if no valid start found
+				if(!convertedStartPair.first) return original;
+
+				/////////////////////////////////////////////////////////////////////////////////////// figuring out end
+
+				auto convertedEndPair = mapToEnd(cvar, condition);
+				VLOG(1) << "EndPair: " << convertedEndPair.first << " // " << convertedEndPair.second << "\n";
+
+				// bail if no valid end found
+				if(!convertedEndPair.first) return original;
+
+				/////////////////////////////////////////////////////////////////////////////////////// build the for
+
+				auto forVar = builder.variable(cvarType);
+
+				// prepare new body
+				core::StatementList newBodyStmts;
+				core::NodeMap loopVarReplacement;
+				loopVarReplacement[builder.deref(cvar)] = forVar;
+				for(auto stmt : body->getStatements()) {
+					if(!::contains(toRemoveFromBody, stmt)) newBodyStmts.push_back(core::transform::replaceAllGen(mgr, stmt, loopVarReplacement));
 				}
-			}
+				//synchronize cvar and new forVar
+				//newBodyStmts.push_back(builder.callExpr(cvar->getType(), fMod.getCStyleAssignment(), forVar, cvar));
+				auto newBody = builder.compoundStmt(newBodyStmts);
 
-			return builder.compoundStmt(replacementCompoundStmts);
-		}).as<core::ProgramPtr>();
+				// if the old loop variable is free in the new body, we messed up and should bail
+				if(::contains(core::analysis::getFreeVariables(newBody), cvar)) return original;
 
-		return prog;
+				auto forStmt = builder.forStmt(forVar, convertedStartPair.second, convertedEndPair.second, convertedStepExpr, newBody);
+				core::transform::utils::migrateAnnotations(whileAddr.getAddressedNode(), forStmt);
+				VLOG(1) << "======> FOR:\n" << dumpColor(forStmt);
+
+				/////////////////////////////////////////////////////////////////////////////////////// check if post assignment is mandatory
+				core::StatementPtr postCond = nullptr;
+				if (isUsedAfterLoop(original->getStatements(), whileAddr.getAddressedNode(), pred, cvar)) {
+					postCond = getPostCondition(cvar, convertedStartPair.second, convertedEndPair.second, convertedStepExpr);
+				}
+
+				/////////////////////////////////////////////////////////////////////////////////////// replace the while in the original compound
+				auto replacementCompoundStmt = core::transform::replaceAddress(mgr, whileAddr, forStmt).getRootNode().as<core::CompoundStmtPtr>();
+				core::StatementList stmtlist = replacementCompoundStmt->getStatements();
+				if(postCond) stmtlist.push_back(postCond);
+				return builder.compoundStmt(stmtlist);
+			}).as<core::LambdaExprPtr>();
+
+			VLOG(1) << "While to for replacement - from function:\n" << dumpColor(fun.second) << " - to function:\n" << dumpColor(lambdaExpr);
+
+			tu.replaceFunction(fun.first, lambdaExpr);
+		}
+		return tu;
 	}
 
 } // extensions

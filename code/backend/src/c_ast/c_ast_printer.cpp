@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -186,6 +186,16 @@ namespace c_ast {
 				return out << print(node->elementType) << "&";
 			}
 
+			PRINT(RValueReferenceType) {
+
+				// print qualifiers
+				if (node->isConst()) { out << "const "; }
+				if (node->isVolatile()) { out << "volatile "; }
+
+				// print rest
+				return out << print(node->elementType) << "&&";
+			}
+
 			PRINT(VectorType) {
 				return out << print(node->elementType) << "[" << print(node->size) << "]";
 			}
@@ -217,15 +227,15 @@ namespace c_ast {
 
 			PRINT(EnumType) {
 				out << "typedef enum " << print(node->name);
-				//class type should only be printed when using c++11 enum classes
-				//if(node->classTy) { out << " : " << print(node->classTy); }
-				out << " { " << 
-					join(", ", node->values, [&](std::ostream& out, const std::pair<IdentifierPtr,LiteralPtr>& cur) { 
+				// int type should only be printed when using c++11 enum int types
+				if(node->intType) { out << " : " << print(node->intType); }
+				out << " { " <<
+					join(", ", node->values, [&](std::ostream& out, const std::pair<IdentifierPtr,LiteralPtr>& cur) {
 						out << print(cur.first);
 						if(!cur.second->value.empty()) {
 							out << "=" << print(cur.second);
 						}
-				}); 
+				});
 				return out << " } " << print(node->name) << ";";
 			}
 
@@ -610,20 +620,23 @@ namespace c_ast {
 			PRINT(ConstructorPrototype) {
 				// <class name> ( <parameter list > );
 				auto ctor = node->ctor;
-				return out << print(ctor->className) << "(" << printMemberParam(ctor->function->parameter) << ")";
+				return out << print(ctor->className) << "(" << printMemberParam(ctor->function->parameter) << ")" << node->flag;
 			}
 
 			PRINT(DestructorPrototype) {
 				// <virtual> ~ <class name> ( <parameter list > );
 				auto dtor = node->dtor;
-				return out << (node->isVirtual ? "virtual " : "") << "~" << print(dtor->className) << "()";
+				return out << (node->isVirtual ? "virtual " : "") << "~" << print(dtor->className) << "()" << node->flag;
 			}
 
 			PRINT(MemberFunctionPrototype) {
 				// <virtual> <return type> <name> ( <parameter list > ) <const>;
 				auto fun = node->fun->function;
 				return out << (node->isVirtual ? "virtual " : "") << (boost::starts_with(fun->name->name, "operator ") ? "" : toC(fun->returnType) + " ")
-				           << print(fun->name) << "(" << printMemberParam(fun->parameter) << ")" << (node->fun->isConstant ? " const" : "")
+				           << print(fun->name) << "(" << printMemberParam(fun->parameter) << ")"
+						   << (node->fun->isConstant ? " const" : "")
+						   << (node->fun->isVolatile ? " volatile" : "")
+						   << node->flag
 				           << (node->pureVirtual ? " =0" : "");
 			}
 
@@ -775,8 +788,8 @@ namespace c_ast {
 				auto fun = node->function;
 
 				// print header
-				out << (boost::starts_with(fun->name->name, "operator ") ? "" : toC(fun->returnType) + " ") << " " << print(node->className)
-				    << "::" << print(fun->name) << "(" << printMemberParam(fun->parameter) << ")" << (node->isConstant ? " const " : " ");
+				out << (boost::starts_with(fun->name->name, "operator ") ? "" : toC(fun->returnType) + " ") << print(node->className)
+				    << "::" << print(fun->name) << "(" << printMemberParam(fun->parameter) << ")" << (node->isConstant ? " const" : "") << (node->isVolatile ? " volatile" : "") << " ";
 
 				// print body
 				return out << print(wrapBody(fun->body));

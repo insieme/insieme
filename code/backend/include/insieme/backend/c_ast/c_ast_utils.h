@@ -159,6 +159,10 @@ namespace c_ast {
 		return type->getManager()->create<c_ast::ReferenceType>(type, isConst, isVolatile);
 	}
 
+	inline RValueReferenceTypePtr rvalue_ref(const TypePtr& type, bool isConst = false, bool isVolatile = false) {
+		return type->getManager()->create<c_ast::RValueReferenceType>(type, isConst, isVolatile);
+	}
+
 	inline VectorTypePtr vec(const TypePtr& element) {
 		return element->getManager()->create<c_ast::VectorType>(element);
 	}
@@ -180,6 +184,9 @@ namespace c_ast {
 		}
 		if (auto reft = type.isa<c_ast::ReferenceTypePtr>()) {
 			return ref(reft->elementType, isConst, isVolatile);
+		}
+		if (auto reft = type.isa<c_ast::RValueReferenceTypePtr>()) {
+			return rvalue_ref(reft->elementType, isConst, isVolatile);
 		}
 		if (auto namedType = type.isa<c_ast::NamedTypePtr>()) {
 			auto res = type->getManager()->create<c_ast::NamedType>(namedType->name, isConst, isVolatile);

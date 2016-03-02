@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -90,11 +90,22 @@ namespace checks {
 			 * A special handling of declaration statements, which are introducing new variables.
 			 */
 			void visitDeclarationStmt(const DeclarationStmtAddress& cur) {
-				// first => recursive check of initialization expression.
-				visit(cur->getInitialization());
-
-				// second: add newly declared variable to set of declared variables
+				// first: add newly declared variable to set of declared variables (in order to be able to use them in the initialization already)
 				declaredVariables.insert(cur->getVariable());
+
+				// second => recursive check of initialization expression.
+				visit(cur->getInitialization());
+			}
+			
+			/**
+			 * A special handling of return statements, which are introducing new variables.
+			 */
+			void visitReturnStmt(const ReturnStmtAddress& cur) {
+				// first: add newly declared variable to set of declared variables (in order to be able to use them in the return already)
+				declaredVariables.insert(cur->getReturnVar());
+
+				// second => recursive check of return expression.
+				visit(cur->getReturnExpr());
 			}
 
 			/**

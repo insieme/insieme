@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -47,6 +47,7 @@
 #include "insieme/core/tu/ir_translation_unit.h"
 
 #include "insieme/core/parser/detail/scanner.h"
+#include "insieme/core/parser/detail/typed_expression.h"
 #include "insieme/core/parser/ir_parser.h"
 
 #include "insieme/core/ir_node_annotation.h"
@@ -68,12 +69,26 @@ namespace parser {
 			 */
 			friend class core::NodeManager;
 
+			const LiteralPtr memberDummyLambda;
+
+			const LiteralPtr explicitMemberDummyLambda;
+
 			/**
 			 * Creates a new instance based on the given node manager.
 			 */
-			ParserIRExtension(core::NodeManager& manager) : core::lang::Extension(manager) {}
+			ParserIRExtension(core::NodeManager& manager) : core::lang::Extension(manager),
+					memberDummyLambda(IRBuilder(manager).literal(IRBuilder(manager).genericType("parser_member_dummy_lambda"), "parser_member_dummy_lambda")),
+					explicitMemberDummyLambda(IRBuilder(manager).literal(IRBuilder(manager).genericType("parser_explicit_member_dummy_lambda"), "parser_explicit_member_dummy_lambda")) {}
 
-			LANG_EXT_LITERAL_WITH_NAME(MemberFunctionAccess, "parser_member_function_access", "parser_member_function_access", "('a, identifier) -> unit")
+			LANG_EXT_LITERAL(MemberFunctionAccess, "parser_member_function_access", "('a, identifier) -> unit")
+
+			const LiteralPtr& getMemberDummyLambda() const {
+				return memberDummyLambda;
+			}
+
+			const LiteralPtr& getExplicitMemberDummyLambda() const {
+				return explicitMemberDummyLambda;
+			}
 		};
 
 		/**
@@ -130,7 +145,6 @@ namespace parser {
 
 			struct RecordStackEntry {
 				GenericTypePtr record;
-				std::shared_ptr<Scope> scope;
 			};
 
 			std::vector<RecordStackEntry> currentRecordStack;
@@ -138,16 +152,6 @@ namespace parser {
 			std::vector<StringValuePtr> temporaryAnonymousNames;
 
 			const ParserIRExtension& parserIRExtension;
-
-			/**
-			 * constructs a struct expression
-			 */
-			ExpressionPtr genStructExpression(const location& l, const TypePtr& structType, const ExpressionList& list);
-
-			/**
-			 * constructs a union expression
-			 */
-			ExpressionPtr genUnionExpression(const location& l, const TypePtr& type, const std::string field, const ExpressionPtr& expr);
 
 		  public:
 
@@ -259,10 +263,22 @@ namespace parser {
 			 */
 			void registerField(const location l, const std::string& recordName, const std::string& fieldName, const TypePtr& fieldType);
 
+		  private:
+			/**
+			 * Replaces every occurence of the this literal in the body with the correct usage of the given thisParam
+			 */
+			StatementPtr replaceThisInBody(const location& l, const StatementPtr& body, const VariablePtr& thisParam);
+		  public:
+
+			/**
+			 * generates a constructor from the given lambda expression (mostly used in conjunction with genConstructorDetail)
+			 */
+			ExpressionPtr genConstructor(const location& l, const LambdaExprPtr& ctor);
+
 			/**
 			 * generates a constructor for the currently defined record type
 			 */
-			ExpressionPtr genConstructor(const location& l, const VariableList& params, const StatementPtr& body);
+			LambdaExprPtr genConstructorLambda(const location& l, const VariableList& params, const StatementPtr& body);
 
 			/**
 			 * generates a destructor for the currently defined record type
@@ -280,6 +296,11 @@ namespace parser {
 			PureVirtualMemberFunctionPtr genPureVirtualMemberFunction(const location& l, bool cnst, bool voltile, const std::string& name, const FunctionTypePtr& type);
 
 			/**
+			 * generates a free constructor for the given lambda
+			 */
+			ExpressionPtr genFreeConstructor(const location& l, const std::string& name, const LambdaExprPtr& ctor);
+
+			/**
 			 * generates a function definition
 			 */
 			ExpressionPtr genFunctionDefinition(const location& l, const std::string name, const LambdaExprPtr& lambda);
@@ -290,24 +311,39 @@ namespace parser {
 			TypePtr findOrGenAbstractType(const location& l, const std::string& name, const ParentList& parents, const TypeList& typeList);
 
 			/**
+			 * Creates a new typed expression from the given arguments
+			 */
+			ParserTypedExpression genTypedExpression(const location& l, const ExpressionPtr& expression, const TypePtr& type);
+
+			/**
 			 * generates a call expression
 			 */
-			ExpressionPtr genCall(const location& l, const ExpressionPtr& func, ExpressionList params);
+			ExpressionPtr genCall(const location& l, const ExpressionPtr& func, ParserTypedExpressionList args);
 
 			/**
 			 * generates a constructor call expression
 			 */
-			ExpressionPtr genConstructorCall(const location& l, const std::string name, ExpressionList params);
+			ExpressionPtr genConstructorCall(const location& l, const std::string name, ParserTypedExpressionList args);
 
 			/**
 			 * generates a destructor call expression
 			 */
-			ExpressionPtr genDestructorCall(const location& l, const std::string name, const ExpressionPtr& param);
+			ExpressionPtr genDestructorCall(const location& l, const std::string name, const ExpressionPtr& thisArgument);
+
+			/**
+			 * Generates a new call expression from the given one with the type of the call expression materialized
+			 */
+			ExpressionPtr materializeCall(const location& l, const ExpressionPtr& exp);
 
 			/**
 			 * constructs an initializer expression according to the given type and expression list
 			 */
-			ExpressionPtr genInitializerExpr(const location& l, const TypePtr& type, const ExpressionList& list);
+			ExpressionPtr genInitializerExprTemp(const location& l, const TypePtr& type, const ExpressionList& list);
+
+			/**
+			 * constructs an initializer expression according to the given type and expression list
+			 */
+			ExpressionPtr genInitializerExpr(const location& l, const TypePtr& type, const ExpressionPtr& memExpr, const ExpressionList& list);
 
 			/**
 			 * constructs a parameter
@@ -355,6 +391,21 @@ namespace parser {
 			DeclarationStmtPtr genVariableDefinition(const location& l, const TypePtr& type, const std::string name, const ExpressionPtr& init);
 
 			/**
+			 * constructs a new variable declaration with a given type
+			 */
+			VariablePtr genVariableDeclaration(const location& l, const TypePtr& type, const std::string name);
+
+			/**
+			 * constructs a new declaration statement for the variable with name name and the given init expression
+			 */
+			DeclarationStmtPtr genDeclarationStmt(const location& l, const std::string name, const ExpressionPtr& init);
+
+			/**
+			 * constructs a new declaration statement for the variable with an undefined init expression
+			 */
+			DeclarationStmtPtr genUndefinedDeclarationStmt(const location& l, const TypePtr& type, const std::string name);
+
+			/**
 			 * constructs a new for loop
 			 */
 			ForStmtPtr genForStmt(const location& l, const TypePtr& iteratorType, const std::string iteratorName,
@@ -375,27 +426,12 @@ namespace parser {
 			 */
 			ExpressionPtr genThis(const location& l);
 
-			/**
-			 * constructs a literal referencing the current object in a lambda
-			 */
-			ExpressionPtr genThisInLambda(const location& l);
-
-			/**
-			 * constructs a literal referencing the current object in a function
-			 */
-			ExpressionPtr genThisInFunction(const location& l);
-
 		  private:
 			GenericTypePtr getThisTypeForLambdaAndFunction(const bool cnst, const bool voltile);
 
 			TypeList getParamTypesForLambdaAndFunction(const location& l, const VariableList& params);
 
 		  public:
-
-			/**
-			 * stores in the current scope the "this" variable with the given type
-			 */
-			void addThis(const location& l, const TypePtr& classType);
 
 			/*
 			 * Computes the final result of parsing by using the TU to resolve all symbols and applying some post-processing actions.

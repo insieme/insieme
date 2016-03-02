@@ -16,10 +16,8 @@ class
 class_as_return_type_of_member_function_closing_rec_cycle
 class_def_and_decl_splitup
 const_pointer
-const_ptr_param
 const_ref_arguments
 counter
-cpp11
 ctor
 ctor_inherit
 ctor_return
@@ -28,14 +26,11 @@ curiously_recurring_template_pattern_2
 curiously_recurring_template_pattern_member_function
 dtor
 dtor_return
-empty_struct_bug
 enum
 expr_with_cleanups
 friend
-global_const
 globals_in_classes
 header
-helloStream
 identical_class_structure
 includes
 inherit
@@ -46,15 +41,12 @@ inherit_single
 inherit_single_dynmem
 inherit_virtual
 initialization
-isomorphic
 long_long
 materialize_with_bind_expr
 mem_alloc
 mem_alloc_ctor
 mem_alloc_ctor_inherit
 member_data_pointer
-memberFunc
-memberFuncOverload
 member_function_vector
 memb_func_ptr
 metaFib
@@ -63,7 +55,6 @@ naive
 nameless_struct
 nested_class
 new_string
-object_bug
 omp
 op_overl
 pairs
@@ -71,7 +62,6 @@ performance
 pod_struct
 pod_struct_assignment
 pod_struct_bug
-pod_struct_return
 rec_class
 rec_memberfunc
 rec_memberfunc_pointer
@@ -98,7 +88,6 @@ struct
 template1
 template2
 template3
-template_dependencies
 template_statics
 this
 try_catch

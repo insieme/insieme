@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -95,11 +95,7 @@ namespace omp {
 		const lang::BasicGenerator& basic;
 		const lang::ParallelExtension& parExt;
 		us::PointerSet<CompoundStmtPtr> toFlatten; // set of compound statements to flatten one step further up
-
-		// the following vars handle global struct type adjustment due to threadprivate
-		bool fixStructType;              // when set, implies that the struct was just modified and needs to be adjusted
-		ExprVarMap thisLambdaTPAccesses; // threadprivate optimization map
-
+		
 		// this stack is used to keep track of which variables are shared in enclosing constructs, to correctly parallelize
 		std::stack<VariableList> sharedVarStack;
 
@@ -112,7 +108,6 @@ namespace omp {
 	  public:
 		OMPSemaMapper(NodeManager& nodeMan)
 			: nodeMan(nodeMan), build(nodeMan), basic(nodeMan.getLangBasic()), parExt(nodeMan.getLangExtension<lang::ParallelExtension>()), toFlatten(),
-			  fixStructType(false), thisLambdaTPAccesses(),
 			  orderedCountLit(build.literal("ordered_counter", build.refType(basic.getInt8(), false, true))),
 			  orderedItLit(build.literal("ordered_loop_it", basic.getInt8())), orderedIncLit(build.literal("ordered_loop_inc", basic.getInt8())),
 			  paramCounter(0) {}
@@ -179,7 +174,7 @@ namespace omp {
 				// LOG(DEBUG) << "replaced with: \n" << printer::PrettyPrinter(newNode);
 			} else {
 				// check whether it is a struct-init expression of a lock
-				if(node->getNodeType() == NT_StructExpr && isLockStructType(node.as<ExpressionPtr>()->getType())) {
+				if(node->getNodeType() == NT_InitExpr && isLockStructType(node.as<ExpressionPtr>()->getType())) {
 					// replace with uninitialized lock
 					newNode = build.getZero(parExt.getLock());					
 				} else {
@@ -187,8 +182,6 @@ namespace omp {
 					newNode = node->substitute(nodeMan, *this);
 				}
 			}
-			newNode = handleTPVars(newNode);
-			newNode = fixStruct(newNode);
 			newNode = flattenCompounds(newNode);
 			newNode = handleFunctions(newNode);
 			if(LambdaExprPtr lambda = dynamic_pointer_cast<const LambdaExpr>(newNode)) {
@@ -252,26 +245,7 @@ namespace omp {
 			// check stack integrity when leaving program
 			if(node.isa<ProgramPtr>()) { assert_eq(sharedVarStack.size(), 0) << "ending omp translation: shared var stack corrupted"; }
 		}
-
-		// fixes a struct type to correctly resemble its members
-		// used to make the global struct in line with its new shape after modification by one/multiple threadprivate(s)
-		NodePtr fixStruct(const NodePtr& newNode) {
-			if(fixStructType) {
-				if(StructExprPtr structExpr = dynamic_pointer_cast<const StructExpr>(newNode)) {
-					// WHY doesn't StructExpr::getType() return a StructType?
-					fixStructType = false;
-					NamedValuesPtr members = structExpr->getMembers();
-					// build new type from member initialization expressions' types
-					vector<FieldPtr> memberTypes;
-					::transform(members, std::back_inserter(memberTypes),
-					            [&](const NamedValuePtr& cur) { return build.field(cur->getName(), cur->getValue()->getType()); });
-					auto adjustedStruct = build.structType(memberTypes);
-					return build.structExpr(adjustedStruct, members);
-				}
-			}
-			return newNode;
-		}
-
+		
 		// flattens generated compound statements if requested
 		// used to preserve the correct scope for variable declarations
 		NodePtr flattenCompounds(const NodePtr& newNode) {
@@ -395,49 +369,7 @@ namespace omp {
 			});
 			return inside;
 		}
-
-		// internal implementation of TP variable generation used by both
-		// handleTPVars and implementDataClauses
-		CompoundStmtPtr handleTPVarsInternal(const CompoundStmtPtr& body, bool generatedByOMP = false) {
-			StatementList statements;
-			StatementList oldStatements = body->getStatements();
-			StatementList::const_iterator oi = oldStatements.cbegin();
-			// insert existing decl statements before
-			if(!generatedByOMP)
-				while((*oi)->getNodeType() == NT_DeclarationStmt) {
-					statements.push_back(*oi);
-					oi++;
-				}
-			// insert new decls
-			ExprVarMap newLambdaAcc;
-			for_each(thisLambdaTPAccesses, [&](const ExprVarMap::value_type& entry) {
-				VariablePtr var = entry.second;
-				if(isInTree(var, body)) {
-					ExpressionPtr expr = entry.first;
-					statements.push_back(build.declarationStmt(var, expr));
-					if(generatedByOMP) { newLambdaAcc.insert(entry); }
-				} else {
-					newLambdaAcc.insert(entry);
-				}
-			});
-			thisLambdaTPAccesses = newLambdaAcc;
-			// insert rest of existing body
-			while(oi != oldStatements.cend()) {
-				statements.push_back(*oi);
-				oi++;
-			}
-			return build.compoundStmt(statements);
-		}
-
-		// generates threadprivate access variables for the current lambda
-		NodePtr handleTPVars(const NodePtr& node) {
-			LambdaPtr lambda = dynamic_pointer_cast<const Lambda>(node);
-			if(lambda && !thisLambdaTPAccesses.empty()) {
-				return build.lambda(lambda->getType(), lambda->getParameters(), handleTPVarsInternal(lambda->getBody()));
-			}
-			return node;
-		}
-
+		
 		// beware! the darkness hath returned to prey upon innocent globals yet again
 		// will the frontend prevail?
 		// new and improved crazyness! does not directly implement accesses, replaces with variable
@@ -569,11 +501,11 @@ namespace omp {
 			case Reduction::PLUS:
 			case Reduction::MINUS:
 			case Reduction::OR:
-			case Reduction::XOR: ret = build.refVar(build.literal("0", elemType)); break;
+			case Reduction::XOR: ret = build.literal("0", elemType); break;
 			case Reduction::MUL:
-			case Reduction::AND: ret = build.refVar(build.literal("1", elemType)); break;
-			case Reduction::LAND: ret = build.refVar(build.boolLit(true)); break;
-			case Reduction::LOR: ret = build.refVar(build.boolLit(false)); break;
+			case Reduction::AND: ret = build.literal("1", elemType); break;
+			case Reduction::LAND: ret = build.boolLit(true); break;
+			case Reduction::LOR: ret = build.boolLit(false); break;
 			default: LOG(ERROR) << "OMP reduction operator: " << Reduction::opToStr(op); assert_fail() << "Unsupported reduction operator";
 			}
 			return ret;
@@ -632,14 +564,14 @@ namespace omp {
 				VariablePtr pVar = build.variable(expType);
 				publicToPrivateMap[varExp] = pVar;
 				privateToPublicMap[pVar] = varExp;
-				DeclarationStmtPtr decl = build.declarationStmt(pVar, build.undefinedVar(expType));
+				DeclarationStmtPtr decl = build.declarationStmt(pVar, pVar);
 				if(contains(firstPrivates, varExp)) {
 					// make sure to actually get *copies* for firstprivate initialization, not copies of references
 					if(core::analysis::isRefType(expType)) {
 						VariablePtr fpPassVar = build.variable(core::analysis::getReferencedType(expType));
 						DeclarationStmtPtr fpPassDecl = build.declarationStmt(fpPassVar, build.deref(varExp));
 						outsideDecls.push_back(fpPassDecl);
-						decl = build.declarationStmt(pVar, build.refVar(fpPassVar));
+						decl = build.declarationStmt(pVar, fpPassVar);
 					} else {
 						decl = build.declarationStmt(pVar, varExp);
 					}
@@ -706,10 +638,8 @@ namespace omp {
 			if(forP && !forP->hasNoWait()) { replacements.push_back(build.barrier()); }
 			// append postfix
 			copy(postFix.cbegin(), postFix.cend(), back_inserter(replacements));
-			// handle threadprivates before it is too late!
-			auto res = handleTPVarsInternal(build.compoundStmt(replacements), true);
 
-			return res;
+			return build.compoundStmt(replacements);
 		}
 
 		NodePtr markUnordered(const NodePtr& node) {
@@ -777,8 +707,7 @@ namespace omp {
 			// if we don't find any orderedCountLit literals, we don't have to do anything
 			if(pushMap.empty()) { return origStmt; }
 			// create variable outside the parallel
-			auto countVarDecl = build.declarationStmt(
-			    orderedCountVar, build.undefinedVar(orderedCountVar->getType().as<GenericTypePtr>()->getTypeParameter(0)));
+			auto countVarDecl = build.declarationStmt(orderedCountVar, orderedCountVar);
 			// push ordered variable to where it is needed
 			auto newStmt = transform::pushInto(nodeMan, pushMap).as<CompoundStmtPtr>();
 			// build new compound and return it
@@ -831,7 +760,7 @@ namespace omp {
 		}
 
 		NodePtr handleFor(const StatementPtr& stmtNode, const ForPtr& forP, bool isParallel = false) {
-			assert_eq(stmtNode.getNodeType(), NT_ForStmt) << "OpenMP for attached to non-for statement";
+			assert_true(stmtNode.getNodeType() == NT_ForStmt) << "Trying to attach OpenMP for to non-for statement.\n" << dumpColor(stmtNode);
 			ForStmtPtr outer = dynamic_pointer_cast<const ForStmt>(stmtNode);
 			// outer = collapseForNest(outer);
 			StatementList resultStmts;
@@ -899,60 +828,7 @@ namespace omp {
 		}
 	};
 
-	// TODO refactor: move this to somewhere where it can be used by front- and backend
 	namespace {
-		struct GlobalDeclarationCollector : public core::IRVisitor<bool, core::Address> {
-			vector<core::DeclarationStmtAddress> decls;
-
-			// do not visit types
-			GlobalDeclarationCollector() : IRVisitor<bool, core::Address>(false) {}
-
-			bool visitNode(const core::NodeAddress& node) {
-				return true; // does not need to descent deeper
-			}
-
-			bool visitDeclarationStmt(const core::DeclarationStmtAddress& cur) {
-				core::DeclarationStmtPtr decl = cur.getAddressedNode();
-
-				// check the type
-				core::TypePtr type = decl->getVariable()->getType();
-
-				// check for references
-				if(!core::analysis::isRefType(type)) {
-					return true; // not a global struct
-				}
-
-				type = core::analysis::getReferencedType(type);
-
-				// the element type has to be a struct or union type
-				if(type.isa<core::TagTypePtr>()) {
-					return true; // also, not a global
-				}
-
-				// check initialization
-				auto& refExt = decl->getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
-				core::ExpressionPtr init = decl->getInitialization();
-				if(!(core::analysis::isCallOf(init, refExt.getRefNewInit()) || core::analysis::isCallOf(init, refExt.getRefVarInit()))) {
-					return true; // again, not a global
-				}
-
-				init = core::analysis::getArgument(init, 0);
-
-				// check whether the initialization is based on a struct expression
-				if(init->getNodeType() != core::NT_StructExpr) {
-					return true; // guess what, not a global!
-				}
-
-				// well, this is a global
-				decls.push_back(cur);
-				return true;
-			}
-
-			bool visitCompoundStmt(const core::CompoundStmtAddress& cmp) {
-				return false; // keep descending into those!
-			}
-		};
-
 		void collectAndRegisterLocks(core::NodeManager& mgr, core::tu::IRTranslationUnit& unit, const core::ExpressionPtr& fragment) {
 			// search locks
 			visitDepthFirstOnce(fragment, [&](const LiteralPtr& lit) {

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -90,10 +90,7 @@ namespace lang {
 
 		// -------------------- operators ---------------------------
 
-		/**
-		 * A literal to create a (partially) initialized array instance.
-		 */
-		LANG_EXT_LITERAL(ArrayCreate, "array_create", "(type<'size>, list<'elem>) -> array<'elem,'size>")
+		// NOTE: Arrays are created using init expressions.
 
 		/**
 		 * A literal to project arrays to single elements.
@@ -106,7 +103,7 @@ namespace lang {
 		LANG_EXT_DERIVED_WITH_NAME(ArrayReduce, "array_reduce",
 				    "                                                                                             "
 					"   (data : ref<array<'a,'s>,'v,'c,plain>, size : int<8>, op : ('b,'a)->'b, init : 'b)->'b {   "
-					"   	var ref<'b,f,f,plain> res = ref_var_init(init);                                               "
+					"   	var ref<'b,f,f,plain> res = init;                                               "
 					"   	for(int<8> i = 0 .. size) {                                                           "
 					"   		res = op(*res, *(data[i]));                                                       "
 					"   	}                                                                                     "
@@ -121,7 +118,7 @@ namespace lang {
 		LANG_EXT_DERIVED_WITH_NAME(ArrayFold, "array_fold",
 					"                                                                                       "
 					"   (data : array<'a,'s>, init : 'b, op : ('b,'a)->'b)->'b {                           "
-					"   	var ref<'b,f,f,plain> res = ref_var_init(init);                                         "
+					"   	var ref<'b,f,f,plain> res = init;                                         "
 					"   	for(int<8> i = 0 .. type_to_int(type_lit('s))) {                                     "
 					"   		res = op(*res, data[i]);                                                    "
 					"   	}                                                                               "
@@ -135,43 +132,6 @@ namespace lang {
 		 */
 		LANG_EXT_LITERAL(ArrayPointwise, "array_pointwise", "(('a,'b)->'c) -> (array<'a,'l>,array<'b,'l>)->array<'c,'l>")
 
-
-		//		// Arrays -------------------------------------------------------------------------------------------------------------
-		//
-		//		GROUP(ArrayOp, ArrayCreate1D, ArrayCreateND, ArraySubscript1D, ArraySubscriptND, ArrayRefElem1D, ArrayRefElemND, ArrayRefProjection1D,
-		// ArrayRefProjectionND)
-		//
-		//		LITERAL(ArrayCreate1D, 		"array_create_1D", 		"(type<'elem>, uint<8>) -> array<'elem,1>")
-		//		LITERAL(ArrayCreateND, 		"array_create_ND", 		"(type<'elem>, vector<uint<8>,'n>) -> array<'elem,'n>")
-		//
-		//		LITERAL(ArraySubscript1D,      "array_subscript_1D",   "(array<'elem,1>, uint<8>) -> 'elem")
-		//		LITERAL(ArraySubscriptND,      "array_subscript_ND",   "(array<'elem,'n>, vector<uint<8>,'n>) -> 'elem")
-		//
-		//		DERIVED(ArrayRefElem1D,     "array_ref_elem_1D",    "(ref<array<'elem,1>> a, uint<8> i) -> ref<'elem> { return ref_narrow(a,
-		// dp_element(dp_root, i), lit('elem)); }")
-		//		LITERAL(ArrayRefElemND, 	"array_ref_elem_ND", 	"(ref<array<'elem,'n>>, vector<uint<8>,'n>) -> ref<'elem>")
-		//
-		//		LITERAL(ArrayRefProjection1D, "array_ref_projection_1D",
-		//									  "(ref<array<'elem,1>>,uint<8>,uint<8>) -> ref<array<'elem,1>>")
-		//		LITERAL(ArrayRefProjectionND, "array_ref_projection_ND",
-		//									  "(ref<array<'elem,'n>>,vector<uint<8>,'n>,vector<uint<8>,'n>) -> ref<array<'elem,'n>>")
-		//
-		//		LITERAL(ArrayRefDistance, 		"array_ref_distance", 	"(ref<array<'elem,1>>, ref<array<'elem,1>>) -> int<8>")
-		//		DERIVED(ScalarToArray, 			"scalar_to_array", 		"(ref<'a> a) -> ref<array<'a,1>> { return ref_expand(a, dp_element(dp_root,0u),
-		// lit(array<'a,1>)); }")
-		//
-		//		DERIVED(ArrayReduce, "array_reduce",
-		//			"	(ref<array<'a,1>> data, uint<8> size, ('b,'a)->'b op, 'b init)->'b {"
-		//			"		decl ref<'b> res = var(init);"
-		//			"		for(uint<8> i = 0ul .. size) {"
-		//			"			res = op(*res, *(data[i]));"
-		//			"		}"
-		//			"		return *res;"
-		//			"	}")
-		//
-		//		// Arrays and Vectors -------------------------------------------------------------------------------------------------
-		//
-		//		GROUP(SubscriptOperator, ArraySubscript1D, ArraySubscriptND, VectorSubscript, ArrayRefElem1D, ArrayRefElemND, VectorRefElem)
 	};
 
 
@@ -197,6 +157,8 @@ namespace lang {
 
 		ArrayType& operator=(const ArrayType&) = default;
 		ArrayType& operator=(ArrayType&&) = default;
+
+		bool operator==(const ArrayType& other) const;
 
 
 		// --- utilities ---
@@ -311,10 +273,8 @@ namespace lang {
 		auto type = node.as<GenericTypePtr>();
 		return type->getTypeParameter(1).as<NumericTypePtr>();
 	}
-	
-	ExpressionPtr buildArrayCreate(const TypePtr& size, const ExpressionList& list);
-	ExpressionPtr buildArrayCreate(const ExpressionPtr& size, const ExpressionList& list);
-	ExpressionPtr buildArrayCreate(NodeManager& mgr, size_t size, const ExpressionList& list);
+
+	boost::optional<ArrayType> isArrayInit(const NodePtr& node);
 
 } // end namespace lang
 } // end namespace core

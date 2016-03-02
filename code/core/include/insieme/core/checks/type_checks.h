@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -70,12 +70,13 @@ namespace checks {
 	SIMPLE_CHECK(GenericOps, CallExpr, false);
 
 	SIMPLE_CHECK(DeclarationStmtType, DeclarationStmt, false);
+	SIMPLE_CHECK(DeclarationStmtSemantic, DeclarationStmt, false);
 	SIMPLE_CHECK(IfConditionType, IfStmt, false);
 	SIMPLE_CHECK(ForStmtType, ForStmt, false);
 	SIMPLE_CHECK(WhileConditionType, WhileStmt, false);
 	SIMPLE_CHECK(SwitchExpressionType, SwitchStmt, false);
 
-	SIMPLE_CHECK(StructExprType, StructExpr, false);
+	SIMPLE_CHECK(InitExprType, InitExpr, false);
 	SIMPLE_CHECK(MemberAccessElementType, CallExpr, false);
 	SIMPLE_CHECK(ComponentAccessType, CallExpr, false);
 

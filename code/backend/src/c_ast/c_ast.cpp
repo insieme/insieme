@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -182,6 +182,12 @@ namespace c_ast {
 		return CVQualifiedType::equals(other) && *elementType == *other.elementType;
 	}
 
+	bool RValueReferenceType::equals(const Node& node) const {
+		assert(dynamic_cast<const RValueReferenceType*>(&node));
+		auto other = static_cast<const RValueReferenceType&>(node);
+		return CVQualifiedType::equals(other) && *elementType == *other.elementType;
+	}
+
 	bool VectorType::equals(const Node& node) const {
 		assert(dynamic_cast<const VectorType*>(&node));
 		auto other = static_cast<const VectorType&>(node);
@@ -243,7 +249,7 @@ namespace c_ast {
 			if(values[i].second != other.values[i].second)
 				return false;
 		}
-		return ((name == other.name) && (classTy == other.classTy));
+		return (name == other.name) && (intType == other.intType);
 	}
 
 	bool MemberFieldPointer::equals(const Node& node) const {
@@ -445,19 +451,19 @@ namespace c_ast {
 	bool ConstructorPrototype::equals(const Node& node) const {
 		assert(dynamic_cast<const ConstructorPrototype*>(&node));
 		auto other = static_cast<const ConstructorPrototype&>(node);
-		return *ctor == *other.ctor;
+		return flag == other.flag && *ctor == *other.ctor;
 	}
 
 	bool DestructorPrototype::equals(const Node& node) const {
 		assert(dynamic_cast<const DestructorPrototype*>(&node));
 		auto other = static_cast<const DestructorPrototype&>(node);
-		return isVirtual == other.isVirtual && *dtor == *other.dtor;
+		return isVirtual == other.isVirtual && flag == other.flag && *dtor == *other.dtor;
 	}
 
 	bool MemberFunctionPrototype::equals(const Node& node) const {
 		assert(dynamic_cast<const MemberFunctionPrototype*>(&node));
 		auto other = static_cast<const MemberFunctionPrototype&>(node);
-		return isVirtual == other.isVirtual && pureVirtual == other.pureVirtual && ((!fun && !other.fun) || *fun == *other.fun);
+		return isVirtual == other.isVirtual && pureVirtual == other.pureVirtual && flag == other.flag && ((!fun && !other.fun) || *fun == *other.fun);
 	}
 
 	bool TypeDefinition::equals(const Node& node) const {
@@ -491,7 +497,7 @@ namespace c_ast {
 	bool MemberFunction::equals(const Node& node) const {
 		assert(dynamic_cast<const MemberFunction*>(&node));
 		auto other = static_cast<const MemberFunction&>(node);
-		return isConstant == other.isConstant && *className == *other.className && *function == *other.function;
+		return isConstant == other.isConstant && isVolatile == other.isVolatile && *className == *other.className && *function == *other.function;
 	}
 
 	bool Namespace::equals(const Node& node) const {

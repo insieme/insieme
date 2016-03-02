@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -226,16 +226,16 @@ namespace pattern {
 		auto at = [&manager](const string& str) { return irp::atom(manager, str); };
 		auto ps = [&manager](const string& str) { return IRBuilder(manager).parseStmt(str); };
 
-		StatementPtr stmt1 = ps("if( false ) { return 0; } else { return 1+2; }");
-		StatementPtr stmt2 = ps("if( false ) { return 0; }");
-		StatementPtr stmt3 = ps("if(1 != 0) { return 0; }");
+		StatementPtr stmt1 = ps("if( false ) { 0; } else { 1+2; }");
+		StatementPtr stmt2 = ps("if( false ) { 0; }");
+		StatementPtr stmt3 = ps("if(1 != 0) { 0; }");
 
-		TreePattern pattern1 = irp::ifStmt(any, at("{ return 0; }"), irp::returnStmt(any));
-		TreePattern pattern2 = irp::ifStmt(any, irp::returnStmt(any), irp::returnStmt(any));
-		TreePattern pattern3 = irp::ifStmt(any, irp::returnStmt(at("1") | at("0")), irp::returnStmt(any));
-		TreePattern pattern4 = irp::ifStmt(any, at("{ return 0; }"), any);
-		TreePattern pattern5 = irp::ifStmt(any, at("{ return 0; }"), at("{ }"));
-		TreePattern pattern6 = irp::ifStmt(at("1 != 0"), at("{ return 0; }"), at("{ }"));
+		TreePattern pattern1 = irp::ifStmt(any, at("{ 0; }"), at("{ 1+2; }"));
+		TreePattern pattern2 = irp::ifStmt(any, any, at("{ 1+2; }"));
+		TreePattern pattern3 = irp::ifStmt(any, at("1") | at("0"), at("{ 1+2; }"));
+		TreePattern pattern4 = irp::ifStmt(any, at("{ 0; }"), any);
+		TreePattern pattern5 = irp::ifStmt(any, at("{ 0; }"), at("{ }"));
+		TreePattern pattern6 = irp::ifStmt(at("1 != 0"), at("{ 0; }"), at("{ }"));
 
 		EXPECT_PRED2(isMatch, pattern1, stmt1);
 		EXPECT_PRED2(isMatch, pattern2, stmt1);
@@ -265,12 +265,12 @@ namespace pattern {
 		auto ps = [&manager](const string& str) { return IRBuilder(manager).parseStmt(str); };
 
 		StatementPtr stmt1 = ps("for(int<4> i = 30 .. 5 : -5) { var int<4> i = 3;}");
-		StatementPtr stmt2 = ps("for(int<4> i = 0 .. 10 : 2) { return 0; }");
+		StatementPtr stmt2 = ps("for(int<4> i = 0 .. 10 : 2) { 0; }");
 		StatementPtr stmt3 = ps("for(int<4> i = 0 .. 5) { 7; 6; continue; 8; }");
-		StatementPtr stmt4 = ps("for(int<4> i = 0 .. 2) { for(int<4> j = 0 .. 2){ return 0; } }");
+		StatementPtr stmt4 = ps("for(int<4> i = 0 .. 2) { for(int<4> j = 0 .. 2){ 0; } }");
 
 		TreePattern pattern1 = irp::forStmt(var("x"), any, at("5"), at("-5"), irp::declarationStmt(var("y"), at("3")));
-		TreePattern pattern2 = irp::forStmt(any, any, at("10"), at("2"), irp::returnStmt(at("0")));
+		TreePattern pattern2 = irp::forStmt(any, any, at("10"), at("2"), at("0"));
 		TreePattern pattern3 = irp::forStmt(any, any, at("5"), at("1"), irp::compoundStmt(*any << irp::continueStmt() << any));
 		TreePattern pattern4 = irp::forStmt(var("i"), var("x"), var("y"), var("z"),
 		                                    irp::compoundStmt(irp::forStmt(var("j"), var("x"), var("y"), var("z"), irp::compoundStmt(*any)) << *any));
@@ -279,6 +279,45 @@ namespace pattern {
 		EXPECT_PRED2(isMatch, pattern2, stmt2);
 		EXPECT_PRED2(isMatch, pattern3, stmt3);
 		EXPECT_PRED2(isMatch, pattern4, stmt4);
+	}
+
+	TEST(IRPattern, Markers) {
+		NodeManager manager;
+		IRBuilder build(manager);
+
+		{
+			StatementPtr compound = build.compoundStmt();
+			StatementPtr markerStmt = build.markerStmt(compound, 31337);
+		
+			TreePattern patternMarkerStmt1 = irp::markerStmt(pattern::any, pattern::any);
+			TreePattern patternMarkerStmt2 = irp::markerStmt(pattern::any, irp::atom(build.uintValue(31337)));
+			TreePattern patternMarkerStmt3 = irp::markerStmt(pattern::any, irp::atom(build.uintValue(42)));
+			TreePattern patternMarkerStmt4 = irp::markerStmt(irp::compoundStmt(), pattern::any);
+			TreePattern patternMarkerStmt5 = irp::markerStmt(irp::whileStmt(), pattern::any);
+
+			EXPECT_PRED2(isMatch, patternMarkerStmt1, markerStmt);
+			EXPECT_PRED2(isMatch, patternMarkerStmt2, markerStmt);
+			EXPECT_PRED2(noMatch, patternMarkerStmt3, markerStmt);
+			EXPECT_PRED2(isMatch, patternMarkerStmt4, markerStmt);
+			EXPECT_PRED2(noMatch, patternMarkerStmt5, markerStmt);
+		}
+
+		{
+			ExpressionPtr lit = build.intLit(4);
+			ExpressionPtr markerExpr = build.markerExpr(lit, 31337);
+
+			TreePattern patternMarkerExpr1 = irp::markerExpr(pattern::any, pattern::any);
+			TreePattern patternMarkerExpr2 = irp::markerExpr(pattern::any, irp::atom(build.uintValue(31337)));
+			TreePattern patternMarkerExpr3 = irp::markerExpr(pattern::any, irp::atom(build.uintValue(42)));
+			TreePattern patternMarkerExpr4 = irp::markerExpr(irp::atom(lit), pattern::any);
+			TreePattern patternMarkerExpr5 = irp::markerExpr(irp::atom(build.intLit(18)), pattern::any);
+
+			EXPECT_PRED2(isMatch, patternMarkerExpr1, markerExpr);
+			EXPECT_PRED2(isMatch, patternMarkerExpr2, markerExpr);
+			EXPECT_PRED2(noMatch, patternMarkerExpr3, markerExpr);
+			EXPECT_PRED2(isMatch, patternMarkerExpr4, markerExpr);
+			EXPECT_PRED2(noMatch, patternMarkerExpr5, markerExpr);
+		}
 	}
 
 	TEST(IRPattern, Addresses) {
@@ -402,7 +441,7 @@ namespace pattern {
 		                                       "			for(uint<4> k = 2u .. 100u ) { "
 		                                       "				v[i+j]; "
 		                                       "			} "
-		                                       "           var ref<uint<4>> a = ref_var_init(3u); "
+		                                       "           var ref<uint<4>> a = 3u; "
 		                                       "			a = i; "
 		                                       "		} "
 		                                       "	} "
@@ -472,7 +511,7 @@ namespace pattern {
 		                                       "			for(uint<4> k = 2u .. 100u) { "
 		                                       "				v[i+j]; "
 		                                       "			}; "
-		                                       "           var ref<uint<4>> a = ref_var_init(3u); "
+		                                       "           var ref<uint<4>> a = 3u; "
 		                                       "			a = i; "
 		                                       "		}"
 		                                       "	}"
@@ -547,7 +586,7 @@ namespace pattern {
 		                                       "			for(uint<4> k = 2u .. 100u) { "
 		                                       "				v[i+j]; "
 		                                       "			}; "
-		                                       "           var ref<uint<4>> a = ref_var_init(3u); "
+		                                       "           var ref<uint<4>> a = 3u; "
 		                                       "			a = i; "
 		                                       "		}"
 		                                       "	}"

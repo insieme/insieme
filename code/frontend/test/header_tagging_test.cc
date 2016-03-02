@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -38,10 +38,11 @@
 
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/lang/pointer.h"
-
 #include "insieme/annotations/c/include.h"
-
 #include "insieme/frontend/frontend.h"
+#include "insieme/frontend/extensions/interceptor_extension.h"
+
+#include "independent_test_utils.h"
 #include "test_utils.inc"
 
 namespace insieme {
@@ -49,7 +50,7 @@ namespace frontend {
 
 	using namespace core;
 
-	TEST(C89Declarations, Basic) {
+	TEST(HeaderTagging, C89Declarations) {
 		NodeManager man;
 
 		fs::path tmpFile;
@@ -72,7 +73,7 @@ namespace frontend {
 			core::NodeManager manager;
 			ConversionJob job(file);
 			auto code = job.execute(manager);
-			EXPECT_TRUE(code);
+			ASSERT_TRUE(code);
 
 			// check that the target type of the stdout pointer has the correct attachment
 			bool checked = false;
@@ -82,11 +83,47 @@ namespace frontend {
 					auto ptrT = core::lang::ReferenceType(lit->getType()).getElementType();
 					EXPECT_TRUE(core::lang::isPointer(ptrT));
 					auto elemT = core::lang::PointerType(ptrT).getElementType();
-					EXPECT_TRUE(insieme::annotations::c::hasIncludeAttached(elemT));
-					EXPECT_EQ(insieme::annotations::c::getAttachedInclude(elemT), "stdio.h");
+					ASSERT_TRUE(insieme::annotations::c::hasIncludeAttached(elemT));
+					EXPECT_EQ("stdio.h", insieme::annotations::c::getAttachedInclude(elemT));
 					checked = true;
 				}
 			});
+			EXPECT_TRUE(checked);
+		}
+	}
+
+	TEST(HeaderTagging, Intercepted) {
+		core::NodeManager manager;
+		ConversionJob job(FRONTEND_TEST_DIR + "/inputs/interceptor/interceptor_test.cpp");
+		job.addInterceptedHeaderDir(FRONTEND_TEST_DIR + "/inputs/interceptor");
+		job.registerFrontendExtension<extensions::InterceptorExtension>();
+		job.registerFrontendExtension<extensions::TestPragmaExtension>(); // necessary to parse pragmas
+		auto code = job.execute(manager);
+		ASSERT_TRUE(code);
+
+		// check that the intercepted "S" type exists and has the correct attachment
+		{
+			bool checked = false;
+			visitDepthFirstOnce(code, [&checked](const core::GenericTypePtr& genType) {
+				if(genType->getName()->getValue() == "IMP_ns_colon__colon_S") {
+					ASSERT_TRUE(insieme::annotations::c::hasIncludeAttached(genType));
+					EXPECT_EQ("interceptor_header.h", insieme::annotations::c::getAttachedInclude(genType));
+					checked = true;
+				}
+			}, true);
+			EXPECT_TRUE(checked);
+		}
+
+		// check that the intercepted "IMP_ns_colon__colon_simpleFunc" literal exists and has the correct attachment
+		{
+			bool checked = false;
+			visitDepthFirstOnce(code, [&checked](const core::LiteralPtr& lit) {
+				if(lit->getStringValue() == "IMP_ns_colon__colon_simpleFunc") {
+					ASSERT_TRUE(insieme::annotations::c::hasIncludeAttached(lit));
+					EXPECT_EQ("interceptor_header.h", insieme::annotations::c::getAttachedInclude(lit));
+					checked = true;
+				}
+			}, true);
 			EXPECT_TRUE(checked);
 		}
 	}

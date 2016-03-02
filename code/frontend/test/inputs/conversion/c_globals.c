@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -41,7 +41,7 @@ int x;
 const float y;
 
 typedef enum { Bla, Alb } enum_t;
-#pragma test expect_ir("lit(\"globalEnum\": ref<(enum_def<IMP_enum_t,enum_entry<Bla,0>,enum_entry<Alb,1>>, uint<4>)>)")
+#pragma test expect_ir("lit(\"globalEnum\": ref<(type<enum_def<IMP_enum_t,int<4>,enum_entry<IMP__colon__colon_Bla,0>,enum_entry<IMP__colon__colon_Alb,1>>>, int<4>)>)")
 enum_t globalEnum;
 
 typedef struct { int x; } IAmTheTagType;

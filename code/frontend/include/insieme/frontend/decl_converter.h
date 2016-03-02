@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -54,7 +54,7 @@ namespace conversion {
 	class DeclConverter : public clang::DeclVisitor<DeclConverter> {
 	private:
 		Converter& converter;
-		const core::FrontendIRBuilder& builder;
+		const core::IRBuilder& builder;
 
 		/// Whether we are currently in an 'extern "C"' block
 		///
@@ -66,7 +66,7 @@ namespace conversion {
 		/// Type expressing the conversion result of a clang Variable decl
 		///
 		using ConvertedVarDecl = std::pair<core::VariablePtr, boost::optional<core::ExpressionPtr>>;
-		
+
 		// Converters -----------------------------------------------------------------------------------------------------
 
 		/// Converts a variable declaration into an IR variable.
@@ -74,12 +74,13 @@ namespace conversion {
 		/// @return Converted variable
 		ConvertedVarDecl convertVarDecl(const clang::VarDecl* varDecl) const;
 
-		/// Converts a function declaration into an IR lambda.
+		/// Converts a function declaration into IR.
 		/// @param funcDecl is a clang FunctionDecl which represent a definition for the function
 		/// @param name the name to use for the lambda. If empty, one will be generated
+		/// @param genLiteral whether to generate a full lambda expr or just a literal
 		/// @return Converted lambda
-		core::LambdaExprPtr convertFunctionDecl(const clang::FunctionDecl* funcDecl, string name = "") const;
-		
+		core::ExpressionPtr convertFunctionDecl(const clang::FunctionDecl* funcDecl, string name = "", bool genLiteral = false) const;
+
 
 		// return value type for convertMethodDecl
 		// impl can be null
@@ -93,8 +94,10 @@ namespace conversion {
 		/// @param methDecl is a clang CXXMethodDecl which represent a definition for the method
 		/// @param parents parents of the class this is a method of
 		/// @param fields fields of the class this is a method of
+		/// @param declOnly only add method to function table, don't convert body
 		/// @return Converted member function
-		ConvertedMethodDecl convertMethodDecl(const clang::CXXMethodDecl* methDecl, const core::ParentsPtr& parents, const core::FieldsPtr& fields) const;
+		ConvertedMethodDecl convertMethodDecl(const clang::CXXMethodDecl* methDecl, const core::ParentsPtr& parents, const core::FieldsPtr& fields,
+			                                  bool declOnly = false) const;
 
 		// Visitors -------------------------------------------------------------------------------------------------------
 

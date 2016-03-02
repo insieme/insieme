@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -127,6 +127,16 @@ namespace lang {
 		 */
 		TYPE_ALIAS("ref<'a,'const,'volatile>", "ref<'a,'const,'volatile,plain>");
 
+		/**
+		* Add a type alias that maps all cpp_ref to the encoding of C++ references.
+		*/
+		TYPE_ALIAS("cpp_ref<'a,'const,'volatile>", "ref<'a,'const,'volatile,cpp_ref>");
+
+		/**
+		* Add a type alias that maps all cpp_rref to the encoding of C++ r-value references.
+		*/
+		TYPE_ALIAS("cpp_rref<'a,'const,'volatile>", "ref<'a,'const,'volatile,cpp_rref>");
+
 
 		// -- memory management --
 
@@ -143,12 +153,12 @@ namespace lang {
 		/**
 		 * A built-in derived operator allocating memory on the stack.
 		 */
-		LANG_EXT_DERIVED_WITH_NAME(RefVar, "ref_var", "(t : type<'a>) -> ref<'a,f,f> { return ref_alloc(t, mem_loc_stack); }")
+		LANG_EXT_DERIVED_WITH_NAME(RefTemp, "ref_temp", "(t : type<'a>) -> ref<'a,f,f> { return ref_alloc(t, mem_loc_stack); }")
 
 		/**
 		 * A built-in derived operator allocating memory on the stack and initializing it.
 		 */
-		LANG_EXT_DERIVED_WITH_NAME(RefVarInit, "ref_var_init", "(v : 'a) -> ref<'a,f,f> { auto r = ref_var(type_lit('a)); r = v; return r; }")
+		LANG_EXT_DERIVED_WITH_NAME(RefTempInit, "ref_temp_init", "(v : 'a) -> ref<'a,f,f> { auto r = ref_temp(type_lit('a)); r = v; return r; }")
 
 		/**
 		 * A built-in derived operator allocating memory on the heap.
@@ -196,13 +206,20 @@ namespace lang {
 		/**
 		 * A specialization of the ref_cast operator for modeling const casts.
 		 */
-		LANG_EXT_DERIVED_WITH_NAME(RefConstCast, "ref_const_cast", "(r : ref<'a,'c,'v,'k>, c : type<'nc>) -> ref<'a,'nc,'v,'k> { return ref_cast(r, c, type_lit('v), type_lit('k)); }")
+		LANG_EXT_DERIVED_WITH_NAME(RefConstCast, "ref_const_cast",
+			                       "(r : ref<'a,'c,'v,'k>, c : type<'nc>) -> ref<'a,'nc,'v,'k> { return ref_cast(r, c, type_lit('v), type_lit('k)); }")
 
 		/**
 		 * A specialization of the ref_cast operator for modeling volatile casts.
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(RefVolatileCast, "ref_volatile_cast",
-		                           "(r : ref<'a,'c,'v,'k>, v : type<'nv>) -> ref<'a,'c,'nv,'k> { return ref_cast(r, type_lit('c), v, type_lit('k)); }")
+			                       "(r : ref<'a,'c,'v,'k>, v : type<'nv>) -> ref<'a,'c,'nv,'k> { return ref_cast(r, type_lit('c), v, type_lit('k)); }")
+
+		/**
+		 * A specialization of the ref_cast operator for modeling kind casts.
+		 */
+		LANG_EXT_DERIVED_WITH_NAME(RefKindCast, "ref_kind_cast",
+			                       "(r : ref<'a,'c,'v,'k>, k : type<'nk>) -> ref<'a,'c,'v,'nk> { return ref_cast(r, type_lit('c), type_lit('v), k); }")
 
 
 		// -- sub-referencing --
@@ -424,6 +441,11 @@ namespace lang {
 	 */
 	bool isCppRValueReference(const NodePtr& node);
 
+	/**
+	 * Determines the reference kind represented by the given input type literal
+	 */
+	ReferenceType::Kind getReferenceKind(const TypePtr& typeLitType);
+	ReferenceType::Kind getReferenceKind(const ExpressionPtr& expression);
 
 	/**
 	 * A factory function creating a reference type utilizing the given element type and flag combination.
@@ -433,7 +455,9 @@ namespace lang {
 	bool doReferencesDifferOnlyInQualifiers(const TypePtr& typeA, const TypePtr& typeB);
 
 	ExpressionPtr buildRefCast(const ExpressionPtr& refExpr, const TypePtr& targetTy);
+	ExpressionPtr buildRefKindCast(const ExpressionPtr& refExpr, ReferenceType::Kind newKind);
 
+	ExpressionPtr buildRefTemp(const TypePtr& type);
 	ExpressionPtr buildRefNull(const TypePtr& type);
 
 } // end namespace lang

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -114,16 +114,16 @@ namespace lang {
         EXPECT_TRUE(builder.parseExpr("ref_delete(dummy)", symbols));
 
             // stack alloc
-        EXPECT_TRUE(builder.callExpr(ext.getRefVar(), Tlit));
-        EXPECT_EQ(builder.callExpr(ext.getRefVar(), Tlit)->getType(),  builder.parseType("ref<A,f,f>"));
-        EXPECT_TRUE(builder.parseExpr("ref_var(T)", symbols));
-        EXPECT_EQ(builder.parseExpr("ref_var(T)", symbols)->getType(), builder.parseType("ref<A,f,f>"));
+        EXPECT_TRUE(builder.callExpr(ext.getRefTemp(), Tlit));
+        EXPECT_EQ(builder.callExpr(ext.getRefTemp(), Tlit)->getType(),  builder.parseType("ref<A,f,f>"));
+        EXPECT_TRUE(builder.parseExpr("ref_temp(T)", symbols));
+        EXPECT_EQ(builder.parseExpr("ref_temp(T)", symbols)->getType(), builder.parseType("ref<A,f,f>"));
 
             // stack + init
-        EXPECT_TRUE(builder.callExpr(ext.getRefVarInit(), value));
-        EXPECT_EQ(builder.callExpr(ext.getRefVarInit(), value)->getType(),  builder.parseType("ref<A,f,f>"));
-        EXPECT_TRUE(builder.parseExpr("ref_var_init(v)", symbols));
-        EXPECT_EQ(builder.parseExpr("ref_var_init(v)", symbols)->getType(),  builder.parseType("ref<A,f,f>"));
+        EXPECT_TRUE(builder.callExpr(ext.getRefTempInit(), value));
+        EXPECT_EQ(builder.callExpr(ext.getRefTempInit(), value)->getType(),  builder.parseType("ref<A,f,f>"));
+        EXPECT_TRUE(builder.parseExpr("ref_temp_init(v)", symbols));
+        EXPECT_EQ(builder.parseExpr("ref_temp_init(v)", symbols)->getType(),  builder.parseType("ref<A,f,f>"));
 
             // heap
         EXPECT_TRUE(builder.callExpr(ext.getRefNew(), Tlit));

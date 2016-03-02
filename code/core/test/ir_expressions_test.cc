@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -355,16 +355,16 @@ namespace core {
 	TEST(ExpressionsTest, MemberAccessExpr) {
 		NodeManager manager;
 		IRBuilder builder(manager);
-
-		vector<NamedValuePtr> members;
-
+		
 		StringValuePtr idA = StringValue::get(manager, "a");
 		StringValuePtr idB = StringValue::get(manager, "b");
 		TypePtr typeA = GenericType::get(manager, "typeA");
 		TypePtr typeB = GenericType::get(manager, "typeB");
-		members.push_back(NamedValue::get(manager, idA, Literal::get(manager, typeA, "1")));
-		members.push_back(NamedValue::get(manager, idB, Literal::get(manager, typeB, "2")));
-		StructExprPtr data = builder.structExpr(members);
+		ExpressionList members { Literal::get(manager, typeA, "1"), Literal::get(manager, typeB, "2") };
+		FieldList fields { builder.field(idA, typeA), builder.field(idB, typeB) };
+		auto structT = builder.structType(fields);
+
+		ExpressionPtr data = builder.deref(builder.initExprTemp(builder.refType(structT), members));
 
 		ExpressionPtr access = builder.accessMember(data, idA);
 		EXPECT_EQ(*typeA, *access->getType());
@@ -379,8 +379,20 @@ namespace core {
 		EXPECT_NE(access2, access3);
 		EXPECT_EQ(access, access3);
 
-		EXPECT_EQ("composite_member_access(struct{a=1, b=2}, a, type<typeA>)", toString(*access));
-		EXPECT_EQ("composite_member_access(struct{a=1, b=2}, b, type<typeB>)", toString(*access2));
+		EXPECT_EQ("composite_member_access(ref_deref((AP(rec ref_temp.{ref_temp=fun(ref<type<'a>,f,f,plain> v0) {return ref_alloc(ref_deref(v0), "
+		          "mem_loc_stack);}}(type<struct "
+		          "{a:typeA,b:typeB,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor(),IMP__operator_assign_(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_"
+		          "ref>,IMP__operator_assign_(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}>)) : AP(ref<struct "
+		          "{a:typeA,b:typeB,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor(),IMP__operator_assign_(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_"
+		          "ref>,IMP__operator_assign_(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>},f,f,plain>)){AP(1), AP(2)}), a, type<typeA>)",
+		          toString(*access));
+		EXPECT_EQ("composite_member_access(ref_deref((AP(rec ref_temp.{ref_temp=fun(ref<type<'a>,f,f,plain> v0) {return ref_alloc(ref_deref(v0), "
+		          "mem_loc_stack);}}(type<struct "
+		          "{a:typeA,b:typeB,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor(),IMP__operator_assign_(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_"
+		          "ref>,IMP__operator_assign_(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}>)) : AP(ref<struct "
+		          "{a:typeA,b:typeB,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor(),IMP__operator_assign_(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_"
+		          "ref>,IMP__operator_assign_(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>},f,f,plain>)){AP(1), AP(2)}), b, type<typeB>)",
+		          toString(*access2));
 	}
 
 	TEST(ExpressionsTest, TupleProjectionExpr) {
@@ -732,7 +744,7 @@ namespace core {
 		EXPECT_TRUE(fun->isRecursive());
 	}
 
-	TEST(ExpressionTest, UnrollCompactFib) {
+	TEST(ExpressionsTest, UnrollCompactFib) {
 		NodeManager manager;
 		IRBuilder builder(manager);
 		LambdaExprPtr fun = builder.parseExpr("decl f: (int<4>)->int<4>;"

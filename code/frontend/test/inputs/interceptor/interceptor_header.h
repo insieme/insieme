@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -36,11 +36,15 @@
 
 // intercepted
 namespace ns {
-	int simpleFunc(int x);
+	static int simpleFunc(int x) {
+		return x;
+	}
 
 	struct S {
 		int a, b, c;
 		S() {}
-		int memberFunc(int x);
+		int memberFunc(int x) {
+			return x;
+		}
 	};
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -43,6 +43,7 @@
 #include "insieme/core/ir_builder.h"
 
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/analysis/compare.h"
 
 #include "insieme/core/checks/full_check.h"
 
@@ -56,19 +57,23 @@ namespace parser {
 	using namespace detail;
 
 	bool test_type(NodeManager& nm, const std::string& x) {
-		InspireDriver driver(x, nm);
-		driver.parseType();
-		if(driver.result) {
+		IRBuilder builder(nm);
+		try {
+			auto result = builder.parseType(x);
 //			std::cout << "Result of parsing " << x << "\n";
-//			dumpColor(driver.result);
+//			dumpColor(result);
 //			std::cout << "    ------------\n\n";
 //			std::cout << " ============== TEST ============ " << std::endl;
-			auto msg = checks::check(driver.result);
-			EXPECT_TRUE(msg.empty()) << msg;
-		} else {
-			driver.printErrors();
+			auto msg = checks::check(result);
+			if (!msg.empty()) {
+				std::cout << msg;
+			}
+			return msg.empty();
+
+		} catch (const IRParserException& ex) {
+			std::cout << ex.what() << std::endl;
 		}
-		return driver.result;
+		return false;
 	}
 
 	bool test_statement(NodeManager& nm, const std::string& x);
@@ -81,6 +86,17 @@ namespace parser {
 		EXPECT_TRUE(test_type(nm, "someweirdname<>"));
 		EXPECT_TRUE(test_type(nm, "vector<int<4>, 4>"));
 		EXPECT_TRUE(test_type(nm, "vector<'a, 4>"));
+		EXPECT_TRUE(test_type(nm, "ref<'a,f,f,plain>"));
+		EXPECT_TRUE(test_type(nm, "ref<'a,f,t,plain>"));
+		EXPECT_TRUE(test_type(nm, "ref<'a,t,f,plain>"));
+		EXPECT_TRUE(test_type(nm, "ref<'a,t,t,plain>"));
+		EXPECT_TRUE(test_type(nm, "ref<'a,f,f,cpp_ref>"));
+		EXPECT_TRUE(test_type(nm, "ref<'a,f,f,cpp_rref>"));
+		EXPECT_TRUE(test_type(nm, "ptr<'a>"));
+		EXPECT_TRUE(test_type(nm, "ptr<'a,f,f>"));
+		EXPECT_TRUE(test_type(nm, "ptr<'a,t,f>"));
+		EXPECT_TRUE(test_type(nm, "ptr<'a,f,t>"));
+		EXPECT_TRUE(test_type(nm, "ptr<'a,t,t>"));
 		EXPECT_TRUE(test_type(nm, "struct { a : int<4>; b : int<5>; }"));
 		EXPECT_TRUE(test_type(nm, "struct name { a : int<4>; b : int<5>; }"));
 		EXPECT_TRUE(test_type(nm, "let papa = t<11> in struct name : [papa] { a : int<4>; b : int<5>; }"));
@@ -147,31 +163,31 @@ namespace parser {
 
 		EXPECT_TRUE(test_type(nm, "struct class {"
 		                          "  a : int<4>;"
-		                          "  lambda f : () -> int<4> { return 1; }"
+		                          "  lambda f = () -> int<4> { return 1; }"
 		                          "}"));
 
 		EXPECT_TRUE(test_type(nm, "struct class {" //multiple functions with the same name
 		                          "  a : int<4>;"
-		                          "  lambda f : () -> int<4> { return 1; }"
-		                          "  lambda f : (a : int<4>) -> int<4> { return 1; }"
+		                          "  lambda f = () -> int<4> { return 1; }"
+		                          "  lambda f = (a : int<4>) -> int<4> { return 1; }"
 		                          "}"));
 
 		EXPECT_TRUE(test_type(nm, "struct class {"
 		                          "  a : int<4>;"
-		                          "  lambda f : () -> int<4> { return 1; }"
-		                          "  lambda g : (b : int<4>) -> int<4> { return b; }"
+		                          "  lambda f = () -> int<4> { return 1; }"
+		                          "  lambda g = (b : int<4>) -> int<4> { return b; }"
 		                          "}"));
 
 		EXPECT_TRUE(test_type(nm, "struct class {"
 		                          "  a : int<4>;"
-		                          "  const lambda b : () -> int<4> { return 1; }"
-		                          "  volatile lambda c : () -> int<4> { return 1; }"
-		                          "  volatile const lambda d : (a : int<4>) -> int<4> { return 1; }"
-		                          "  const volatile lambda e : (a : int<4>) -> int<4> { return 1; }"
-		                          "  virtual const lambda f : () -> int<4> { return 1; }"
-		                          "  virtual volatile lambda g : () -> int<4> { return 1; }"
-		                          "  virtual volatile const lambda h : (a : int<4>) -> int<4> { return 1; }"
-		                          "  virtual const volatile lambda i : (a : int<4>) -> int<4> { return 1; }"
+		                          "  const lambda b = () -> int<4> { return 1; }"
+		                          "  volatile lambda c = () -> int<4> { return 1; }"
+		                          "  volatile const lambda d = (a : int<4>) -> int<4> { return 1; }"
+		                          "  const volatile lambda e = (a : int<4>) -> int<4> { return 1; }"
+		                          "  virtual const lambda f = () -> int<4> { return 1; }"
+		                          "  virtual volatile lambda g = () -> int<4> { return 1; }"
+		                          "  virtual volatile const lambda h = (a : int<4>) -> int<4> { return 1; }"
+		                          "  virtual const volatile lambda i = (a : int<4>) -> int<4> { return 1; }"
 		                          "}"));
 
 		EXPECT_TRUE(test_type(nm, "struct class {"
@@ -185,8 +201,8 @@ namespace parser {
 
 		EXPECT_FALSE(test_type(nm, "struct class {" //wrong member order
 		                           "  a : int<4>;"
-		                           "  lambda f : () -> int<4> { return 1; }"
-		                           "  lambda g : (a : int<4>) -> int<4> { return a; }"
+		                           "  lambda f = () -> int<4> { return 1; }"
+		                           "  lambda g = (a : int<4>) -> int<4> { return a; }"
 		                           "  dtor () { }"
 		                           "}"));
 
@@ -195,25 +211,30 @@ namespace parser {
 		                          "  ctor () { }"
 		                          "  ctor (a : int<4>) { }"
 		                          "  dtor () { }"
-		                          "  lambda f : () -> int<4> { return 1; }"
-		                          "  virtual const volatile lambda g : () -> int<4> { return 1; }"
+		                          "  lambda f = () -> int<4> { return 1; }"
+		                          "  virtual const volatile lambda g = () -> int<4> { return 1; }"
 		                          "  pure virtual h : () -> int<4>"
 		                          "}"));
 	}
 
 	bool test_expression(NodeManager& nm, const std::string& x) {
-		InspireDriver driver(x, nm);
-		driver.parseExpression();
-		if(driver.result) {
-//			std::cout << driver.result << std::endl;
-//			dumpColor(driver.result);
-			auto msg = checks::check(driver.result);
-			EXPECT_TRUE(msg.empty()) << msg;
-		} else {
-			driver.printErrors();
+		IRBuilder builder(nm);
+		try {
+			auto result = builder.parseExpr(x);
+//			std::cout << "Result of parsing " << x << "\n";
+//			dumpColor(result);
+//			std::cout << "    ------------\n\n";
+//			std::cout << " ============== TEST ============ " << std::endl;
+			auto msg = checks::check(result);
+			if (!msg.empty()) {
+				std::cout << msg;
+			}
+			return msg.empty();
+
+		} catch (const IRParserException& ex) {
+			std::cout << ex.what() << std::endl;
 		}
-		//   std::cout << " ============== TEST ============ " << std::endl;
-		return driver.result;
+		return false;
 	}
 
 	TEST(IR_Parser, RecordTypes) {
@@ -222,24 +243,24 @@ namespace parser {
 
 		EXPECT_TRUE(test_type(nm, "def struct A {" //reference our own field
 		                          "  a : int<4>;"
-		                          "  lambda f : () -> int<4> { return a; }"
+		                          "  lambda f = () -> int<4> { return a; }"
 		                          "}; A"));
 
 		EXPECT_TRUE(test_type(nm, "def struct A {" //write our own field
 		                          "  a : int<4>;"
-		                          "  lambda f : () -> unit { a = 5; }"
+		                          "  lambda f = () -> unit { a = 5; }"
 		                          "}; A"));
 
 		EXPECT_TRUE(test_type(nm, "def struct A {" //reference our own field using the this pointer
 		                          "  a : int<4>;"
-		                          "  lambda f : () -> int<4> { return this.a; }"
+		                          "  lambda f = () -> int<4> { return this.a; }"
 		                          "}; A"));
 
 		EXPECT_TRUE(test_type(nm, "def struct A {" //reference the field of another struct - that struct is created locally. this also tests the init expression
 		                          "  a : int<4>;"
 		                          "};"
 		                          "def struct B {"
-		                          "  lambda f : () -> int<4> {"
+		                          "  lambda f = () -> int<4> {"
 		                          "    var ref<A,f,f,plain> a;"
 		                          "    return a.a;"
 		                          "  }"
@@ -250,7 +271,7 @@ namespace parser {
 		                          "};"
 		                          "def struct B {"
 		                          "  a : A;"
-		                          "  lambda f : () -> int<4> {"
+		                          "  lambda f = () -> int<4> {"
 		                          "    return a.a;"
 		                          "  }"
 		                          "}; B"));
@@ -260,7 +281,7 @@ namespace parser {
 		                          "};"
 		                          "def struct B {"
 		                          "  a : A;"
-		                          "  lambda f : () -> int<4> {"
+		                          "  lambda f = () -> int<4> {"
 		                          "    return a.a + 5;"
 		                          "  }"
 		                          "}; B"));
@@ -270,7 +291,7 @@ namespace parser {
 		                          "};"
 		                          "def struct B {"
 		                          "  a : A;"
-		                          "  lambda f : () -> int<4> {"
+		                          "  lambda f = () -> int<4> {"
 		                          "    return this.a.a;"
 		                          "  }"
 		                          "}; B"));
@@ -278,7 +299,7 @@ namespace parser {
 		EXPECT_TRUE(test_type(nm, "decl struct B;" //reference the field of another struct which has been declared previously
 		                          "decl B::b : int<4>;"
 		                          "def struct A {"
-		                          "  lambda f : () -> int<4> {"
+		                          "  lambda f = () -> int<4> {"
 		                          "    var ref<B,f,f,plain> b;"
 		                          "    return b.b;"
 		                          "  }"
@@ -288,68 +309,152 @@ namespace parser {
 		                          "}; A"));
 
 		EXPECT_TRUE(test_type(nm, "def struct A {" //reference our own member function
-		                          "  lambda f : () -> int<4> { return 1; }"
-		                          "  lambda g : () -> int<4> { return f(); }"
+		                          "  lambda f = () -> int<4> { return 1; }"
+		                          "  lambda g = () -> int<4> { return f(); }"
 		                          "}; A"));
 
 		EXPECT_TRUE(test_type(nm, "struct class {" //reference out own member function (with parameters)
-		                          "  lambda f : (a : int<4>) -> int<4> { return 42; }"
-		                          "  lambda g : (a : int<4>) -> int<4> { return f(5); }"
+		                          "  lambda f = (a : int<4>) -> int<4> { return 42; }"
+		                          "  lambda g = (a : int<4>) -> int<4> { return f(5); }"
 		                          "}"));
 
-		EXPECT_TRUE(test_type(nm, "decl struct class;" //reference out own member function which has been declared previously
+		EXPECT_TRUE(test_type(nm, "def struct A {" //reference our own member function (function variant)
+		                          "  function f = () -> int<4> { return 1; }"
+		                          "  function g = () -> int<4> { return f(); }"
+		                          "}; A"));
+
+		EXPECT_TRUE(test_type(nm, "struct class {" //reference out own member function (with parameters) (function variant)
+		                          "  function f = (a : ref<int<4>,f,f,plain>) -> int<4> { return 42; }"
+		                          "  function g = (a : ref<int<4>,f,f,plain>) -> int<4> { return f(*a); }"
+		                          "}"));
+
+		EXPECT_TRUE(test_type(nm, "decl struct class;" //reference our own member function which has been declared previously
 		                          "decl g : class::() -> int<4>;"
 		                          "struct class {"
-		                          "  lambda f : () -> int<4> { return 42; }"
-		                          "  lambda g : () -> int<4> { return f(); }"
+		                          "  lambda f = () -> int<4> { return 42; }"
+		                          "  lambda g = () -> int<4> { return f(); }"
 		                          "}"));
 
-		EXPECT_TRUE(test_type(nm, "decl struct class;" //reference out own member function which has been declared previously (with parameters)
+		EXPECT_TRUE(test_type(nm, "decl struct class;" //reference our own member function which has been declared previously (with parameters)
 		                          "decl g : class::(int<4>) -> int<4>;"
 		                          "struct class {"
-		                          "  lambda f : (a : int<4>) -> int<4> { return 42; }"
-		                          "  lambda g : (a : int<4>) -> int<4> { return f(5); }"
+		                          "  lambda f = (a : int<4>) -> int<4> { return 42; }"
+		                          "  lambda g = (a : int<4>) -> int<4> { return f(5); }"
+		                          "}"));
+
+		EXPECT_TRUE(test_type(nm, "decl struct class;" //reference our own member function which has been declared previously (function variant)
+		                          "decl g : class::() -> int<4>;"
+		                          "struct class {"
+		                          "  function f = () -> int<4> { return 42; }"
+		                          "  function g = () -> int<4> { return f(); }"
+		                          "}"));
+
+		EXPECT_TRUE(test_type(nm, "decl struct class;" //reference our own member function which has been declared previously (with parameters) (function variant)
+		                          "decl g : class::(int<4>) -> int<4>;"
+		                          "struct class {"
+		                          "  function f = (a : ref<int<4>,f,f,plain>) -> int<4> { return 42; }"
+		                          "  function g = (a : ref<int<4>,f,f,plain>) -> int<4> { return f(*a); }"
+		                          "}"));
+
+		EXPECT_TRUE(test_type(nm, "decl struct class;" //reference the current member function which has been declared previously
+		                          "decl f : class::() -> int<4>;"
+		                          "struct class {"
+		                          "  lambda f = () -> int<4> { return f(); }"
+		                          "}"));
+
+		EXPECT_TRUE(test_type(nm, "decl struct class;" //reference the current member function which has been declared previously (function variant)
+		                          "decl f : class::() -> int<4>;"
+		                          "struct class {"
+		                          "  function f = () -> int<4> { return f(); }"
+		                          "}"));
+
+		EXPECT_TRUE(test_type(nm, "decl struct class;" //reference the current member function which has been declared previously
+		                          "decl f : class::(int<4>) -> int<4>;"
+		                          "struct class {"
+		                          "  lambda f = (a : int<4>) -> int<4> { return f(a); }"
+		                          "}"));
+
+		EXPECT_TRUE(test_type(nm, "decl struct class;" //reference the current member function which has been declared previously (function variant)
+		                          "decl f : class::(int<4>) -> int<4>;"
+		                          "struct class {"
+		                          "  function f = (a : ref<int<4>,f,f,plain>) -> int<4> { return f(*a); }"
 		                          "}"));
 
 		EXPECT_TRUE(test_type(nm, "def struct A {" //reference our own member function using the this pointer
-		                          "  lambda f : () -> int<4> { return 1; }"
-		                          "  lambda g : () -> int<4> { return this.f(); }"
+		                          "  lambda f = () -> int<4> { return 1; }"
+		                          "  lambda g = () -> int<4> { return this.f(); }"
+		                          "}; A"));
+
+		EXPECT_TRUE(test_type(nm, "def struct A {" //reference our own member function using the this pointer (function variant)
+		                          "  function f = () -> int<4> { return 1; }"
+		                          "  function g = () -> int<4> { return this.f(); }"
 		                          "}; A"));
 
 		EXPECT_TRUE(test_type(nm, "def struct A {" //reference a member function of another struct
-		                          "  lambda f : () -> int<4> {"
+		                          "  lambda f = () -> int<4> {"
 		                          "    return 1;"
 		                          "  }"
 		                          "};"
 		                          "def struct B {"
-		                          "  lambda g : (a : ref<A,f,f,plain>) -> int<4> {"
+		                          "  lambda g = (a : ref<A,f,f,plain>) -> int<4> {"
 		                          "    return a.f();"
 		                          "  }"
 		                          "}; B"));
 
+		EXPECT_TRUE(test_type(nm, "def struct A {" //reference a member function of another struct (function variant)
+		                          "  function f = () -> int<4> {"
+		                          "    return 1;"
+		                          "  }"
+		                          "};"
+		                          "def struct B {"
+		                          "  function g = (a : ref<ref<A,f,f,plain>,f,f,plain>) -> int<4> {"
+		                          "    return (*a).f();"
+		                          "  }"
+		                          "}; B"));
+
 		EXPECT_TRUE(test_type(nm, "def struct A {" //reference a member function of another struct - that struct is held as a field
-		                          "  lambda f : () -> int<4> { return 1; }"
+		                          "  lambda f = () -> int<4> { return 1; }"
 		                          "};"
 		                          "def struct B {"
 		                          "  a : A;"
-		                          "  lambda g : () -> int<4> {"
+		                          "  lambda g = () -> int<4> {"
+		                          "    return a.f();"
+		                          "  }"
+		                          "}; B"));
+
+		EXPECT_TRUE(test_type(nm, "def struct A {" //reference a member function of another struct - that struct is held as a field (function variant)
+		                          "  function f = () -> int<4> { return 1; }"
+		                          "};"
+		                          "def struct B {"
+		                          "  a : A;"
+		                          "  function g = () -> int<4> {"
 		                          "    return a.f();"
 		                          "  }"
 		                          "}; B"));
 
 		EXPECT_TRUE(test_type(nm, "def struct A {" //reference a member function of another struct - that struct is held as a field and it is accessed using the this pointer
-		                          "  lambda f : () -> int<4> { return 1; }"
+		                          "  lambda f = () -> int<4> { return 1; }"
 		                          "};"
 		                          "def struct B {"
 		                          "  a : A;"
-		                          "  lambda g : () -> int<4> {"
+		                          "  lambda g = () -> int<4> {"
+		                          "    return this.a.f();"
+		                          "  }"
+		                          "}; B"));
+
+		EXPECT_TRUE(test_type(nm, "def struct A {" //reference a member function of another struct - that struct is held as a field and it is accessed using the this pointer (function variant)
+		                          "  function f = () -> int<4> { return 1; }"
+		                          "};"
+		                          "def struct B {"
+		                          "  a : A;"
+		                          "  function g = () -> int<4> {"
 		                          "    return this.a.f();"
 		                          "  }"
 		                          "}; B"));
 
 		EXPECT_TRUE(test_type(nm, "decl struct B;" //reference another struct which has been declared using a forward declaration
 		                          "def struct A {"
-		                          "  lambda f : (b : ref<B,f,f,plain>) -> int<4> {"
+		                          "  lambda f = (b : ref<B,f,f,plain>) -> int<4> {"
 		                          "    return 1;"
 		                          "  }"
 		                          "};"
@@ -359,21 +464,41 @@ namespace parser {
 		EXPECT_TRUE(test_type(nm, "decl struct B;" //reference another struct's member function which has been declared using a forward declaration
 		                          "decl g : B::() -> int<4>;"
 		                          "def struct A {"
-		                          "  lambda f : (b : ref<B,f,f,plain>) -> int<4> {"
+		                          "  lambda f = (b : ref<B,f,f,plain>) -> int<4> {"
 		                          "    return b.g();"
 		                          "  }"
 		                          "};"
 		                          "def struct B {"
-		                          "  lambda g : () -> int<4> {"
+		                          "  lambda g = () -> int<4> {"
 		                          "    return 1;"
 		                          "  }"
 		                          "}; A"));
+
+		EXPECT_TRUE(test_type(nm, "def struct a { };"
+		                          "def struct b : [ public a ] { };"
+		                          "def struct c : [ public b ] { };"
+		                          "c"));
+
+		EXPECT_TRUE(test_type(nm, "def struct a { };"
+				                  "def struct b { };"
+				                  "def struct c : [ public a, public b ] { };"
+				                  "c"));
+
+		EXPECT_TRUE(test_type(nm, "def struct a { };"
+				                  "def struct b { };"
+				                  "def struct c : [ virtual public a, public b ] { };"
+				                  "c"));
+
+		EXPECT_TRUE(test_type(nm, "def struct a { };"
+					              "def struct b { };"
+					              "def struct c : [ virtual public a, virtual public b ] { };"
+					              "c"));
 
 		{
 			auto addresses = builder.parseAddressesStatement("def struct A {" //check that member calls get translated to calls of the actual lambda
 			                                                 "  ctor() {}"
 			                                                 "  dtor() {}"
-			                                                 "  lambda f : ()->unit {}"
+			                                                 "  lambda f = ()->unit {}"
 			                                                 "};"
 			                                                 "{"
 			                                                 "  var ref<A,f,f,plain> ra;"
@@ -431,15 +556,15 @@ namespace parser {
 		EXPECT_TRUE(test_expression(nm, "1 + 2 * 3"));
 		EXPECT_TRUE(test_expression(nm, "(1 + 2) * 3"));
 
-		EXPECT_FALSE(test_expression(nm, "def union uni { a : int<4>; }; <uni> { \"4\" }"));
-		EXPECT_FALSE(test_expression(nm, "def union uni { a : int<4>; }; <uni> { 4, 5 }"));
-		EXPECT_TRUE(test_expression(nm, "def struct x { a : int<4>; b : int<4>; }; <x> { 4, 5 }"));
-		EXPECT_TRUE(test_expression(nm, "def struct x { a : int<4>; }; <x> { 4 }"));
-		EXPECT_TRUE(test_expression(nm, "def struct x { }; <x> { }"));
+		EXPECT_FALSE(test_expression(nm, "def union uni { a : int<4>; }; <ref<uni>> { \"4\" }"));
+		EXPECT_FALSE(test_expression(nm, "def union uni { a : int<4>; }; <ref<uni>> { 4, 5 }"));
+		EXPECT_TRUE(test_expression(nm, "def struct x { a : int<4>; b : int<4>; }; <ref<x>> { 4, 5 }"));
+		EXPECT_TRUE(test_expression(nm, "def struct x { a : int<4>; }; <ref<x>> { 4 }"));
+		EXPECT_TRUE(test_expression(nm, "def struct x { }; <ref<x>> { }"));
 
-		EXPECT_TRUE(test_type(nm, "def union uni { a : int<4>; lambda f : ()->unit {} }; uni"));
-		EXPECT_TRUE(test_statement(nm, "def union uni { a : int<4>; lambda f : ()->unit {} }; { var ref<uni,f,f,plain> a; }"));
-		EXPECT_TRUE(test_statement(nm, "def union uni { a : int<4>; lambda f : ()->unit {} }; { <uni> { 4 }; }"));
+		EXPECT_TRUE(test_type(nm, "def union uni { a : int<4>; lambda f = ()->unit {} }; uni"));
+		EXPECT_TRUE(test_statement(nm, "def union uni { a : int<4>; lambda f = ()->unit {} }; { var ref<uni,f,f,plain> a; }"));
+		EXPECT_TRUE(test_statement(nm, "def union uni { a : int<4>; lambda f = ()->unit {} }; { <ref<uni>> { 4 }; }"));
 
 		EXPECT_FALSE(test_expression(nm, "x"));
 
@@ -480,15 +605,14 @@ namespace parser {
 		NodeManager nm;
 		IRBuilder builder(nm);
 
-//		auto funA = builder.normalize(parseExpr(nm, "(x : int<4>) -> int<4> { return x; }"));
-//		auto funB = builder.normalize(parseExpr(nm, "(x : ref<int<4>,f,f,plain>) -> int<4> { return *x; }"));
-//
-//		auto funC = builder.normalize(parseExpr(nm, "let f = (x : int<4>) -> int<4> { return x; } in f"));
-//		auto funD = builder.normalize(parseExpr(nm, "let f = (y : ref<int<4>,f,f,plain>) -> int<4> { return *y; } in f"));
-//
-//		EXPECT_EQ(funA, funB);
-//		EXPECT_EQ(funB, funC);
-//		EXPECT_EQ(funC, funD);
+		auto funA = builder.normalize(parseExpr(nm, "(x : int<4>) -> int<4> { return x; }"));
+		auto funB = builder.normalize(parseExpr(nm, "(x : ref<int<4>,f,f,plain>) -> int<4> { return *x; }"));
+
+		auto funC = builder.normalize(parseExpr(nm, "function (x : ref<int<4>,f,f,plain>) -> int<4> { return *x; }"));
+		auto funD = builder.normalize(parseExpr(nm, "function (x : ref<ref<int<4>,f,f,plain>,f,f,plain>) -> int<4> { return **x; }"));
+
+		EXPECT_TRUE(analysis::equalNameless(funA, funC)) << "funA: " << funA << "\nfunC: " << funC << "\n";
+		EXPECT_TRUE(analysis::equalNameless(funB, funD)) << "funB: " << funB << "\nfunD: " << funD << "\n";;
 
 		EXPECT_TRUE(test_expression(nm, "decl foo : (int<4>) -> int<4>;" //self-recursion
 		                                "def foo = (a : int<4>) -> int<4> { return foo(a); }; foo"));
@@ -531,8 +655,8 @@ namespace parser {
 		}
 
 		{ //ensure that functions and lambdas end up the same when written correctly
-			auto type1 = builder.parseType("def struct s { lambda a : ()->unit { } }; s");
-			auto type2 = builder.parseType("def struct s { function a : ()->unit { } }; s");
+			auto type1 = builder.parseType("def struct s { lambda a = ()->unit { } }; s");
+			auto type2 = builder.parseType("def struct s { function a = ()->unit { } }; s");
 
 			ASSERT_TRUE(checks::check(type1).empty()) << checks::check(type1);
 			ASSERT_TRUE(checks::check(type2).empty()) << checks::check(type2);
@@ -541,8 +665,8 @@ namespace parser {
 		}
 
 		{ //ensure that functions and lambdas end up the same when written correctly
-			auto type1 = builder.parseType("def struct s { lambda a : (b : int<4>)->int<4> { return b; } }; s");
-			auto type2 = builder.parseType("def struct s { function a : (b : ref<int<4>,f,f,plain>)->int<4> { return *b; } }; s");
+			auto type1 = builder.parseType("def struct s { lambda a = (b : int<4>)->int<4> { return b; } }; s");
+			auto type2 = builder.parseType("def struct s { function a = (b : ref<int<4>,f,f,plain>)->int<4> { return *b; } }; s");
 
 			ASSERT_TRUE(checks::check(type1).empty()) << checks::check(type1);
 			ASSERT_TRUE(checks::check(type2).empty()) << checks::check(type2);
@@ -551,8 +675,8 @@ namespace parser {
 		}
 
 		{ //ensure that functions and lambdas end up the same when written correctly
-			auto type1 = builder.parseType("decl struct s; def struct s { lambda a : ()->ref<s,f,f,plain> { return this; } }; s");
-			auto type2 = builder.parseType("decl struct s; def struct s { function a : ()->ref<s,f,f,plain> { return *this; } }; s");
+			auto type1 = builder.parseType("decl struct s; def struct s { lambda a = ()->ref<s,f,f,plain> { return this; } }; s");
+			auto type2 = builder.parseType("decl struct s; def struct s { function a = ()->ref<s,f,f,plain> { return this; } }; s");
 
 			ASSERT_TRUE(checks::check(type1).empty()) << checks::check(type1);
 			ASSERT_TRUE(checks::check(type2).empty()) << checks::check(type2);
@@ -581,6 +705,36 @@ namespace parser {
 		}
 
 		{ //ensure that functions and lambdas end up the same when written correctly
+			auto type1 = builder.parseType("def struct s { a : int<4>; ctor () { a = 5; } }; s");
+			auto type2 = builder.parseType("def struct s { a : int<4>; ctor function () { a = 5; } }; s");
+
+			ASSERT_TRUE(checks::check(type1).empty()) << checks::check(type1);
+			ASSERT_TRUE(checks::check(type2).empty()) << checks::check(type2);
+
+			EXPECT_EQ(builder.normalize(type1), builder.normalize(type2));
+		}
+
+		{ //ensure that functions and lambdas end up the same when written correctly
+			auto type1 = builder.parseType("def struct s { a : int<4>; ctor () { a = 5; } }; s");
+			auto type2 = builder.parseType("def struct s { a : int<4>; ctor function () { a = 5; } }; s");
+
+			ASSERT_TRUE(checks::check(type1).empty()) << checks::check(type1);
+			ASSERT_TRUE(checks::check(type2).empty()) << checks::check(type2);
+
+			EXPECT_EQ(builder.normalize(type1), builder.normalize(type2));
+		}
+
+		{ //ensure that functions and lambdas end up the same when written correctly
+			auto type1 = builder.parseType("def struct s { a : int<4>; ctor (b : int<4>) { a = b; } }; s");
+			auto type2 = builder.parseType("def struct s { a : int<4>; ctor function (b : ref<int<4>,f,f,plain>) { a = *b; } }; s");
+
+			ASSERT_TRUE(checks::check(type1).empty()) << checks::check(type1);
+			ASSERT_TRUE(checks::check(type2).empty()) << checks::check(type2);
+
+			EXPECT_EQ(builder.normalize(type1), builder.normalize(type2));
+		}
+
+		{ //ensure that functions and lambdas end up the same when written correctly
 			auto type1 = builder.parseType("def struct s { dtor () { } }; s");
 			auto type2 = builder.parseType("def struct s { dtor function () { } }; s");
 
@@ -590,20 +744,74 @@ namespace parser {
 			EXPECT_EQ(builder.normalize(type1), builder.normalize(type2));
 		}
 
+		{ //ensure that functions and lambdas end up the same when written correctly
+			auto type1 = builder.parseType("def struct s { a : int<4>; dtor () { a = 5; } }; s");
+			auto type2 = builder.parseType("def struct s { a : int<4>; dtor function () { a = 5; } }; s");
+
+			ASSERT_TRUE(checks::check(type1).empty()) << checks::check(type1);
+			ASSERT_TRUE(checks::check(type2).empty()) << checks::check(type2);
+
+			EXPECT_EQ(builder.normalize(type1), builder.normalize(type2));
+		}
+	}
+
+	TEST(IR_Parser, LambdaNames) {
+		NodeManager nm;
+		IRBuilder builder(nm);
+
+		//normal functions
+		{
+			auto lambda = builder.parseExpr("def foo = () -> unit { }; foo").as<LambdaExprPtr>();
+			EXPECT_EQ("foo", lambda->getReference()->getNameAsString());
+		}
+
+		//member functions
+		{
+			auto addresses = builder.parseAddressesType("def struct A { lambda foo = () -> unit { $1$; } }; A");
+			ASSERT_EQ(1, addresses.size());
+			EXPECT_EQ("A::foo", addresses[0].getParentAddress(3).getAddressedNode().as<LambdaBindingPtr>()->getReference()->getNameAsString());
+		}
+
+		//constructors
+		{
+			auto addresses = builder.parseAddressesType("def struct A { ctor() { $1$; } }; A");
+			ASSERT_EQ(1, addresses.size());
+			EXPECT_EQ("A::ctor", addresses[0].getParentAddress(3).getAddressedNode().as<LambdaBindingPtr>()->getReference()->getNameAsString());
+		}
+
+		//free member functions
+		{
+			auto addresses = builder.parseAddressesStatement("def struct A { }; def A::lambda foo = () -> unit { 1; }; { var ref<A> a; $a.foo()$;}");
+			ASSERT_EQ(1, addresses.size());
+			EXPECT_EQ("A::foo", addresses[0].getAddressedNode().as<CallExprPtr>()->getFunctionExpr().as<LambdaExprPtr>()->getReference()->getNameAsString());
+		}
+
+		//free constructor
+		{
+			auto addresses = builder.parseAddressesStatement("def struct A { }; def A::ctor foo = () { 1; }; { var ref<A> a = $foo(a)$;}");
+			ASSERT_EQ(1, addresses.size());
+			EXPECT_EQ("foo", addresses[0].getAddressedNode().as<CallExprPtr>()->getFunctionExpr().as<LambdaExprPtr>()->getReference()->getNameAsString());
+		}
 	}
 
 	bool test_statement(NodeManager& nm, const std::string& x) {
-		InspireDriver driver(x, nm);
-		driver.parseStmt();
-		if(driver.result) {
-//			dumpColor(driver.result);
-			auto msg = checks::check(driver.result);
-			EXPECT_TRUE(msg.empty()) << msg;
-		} else {
-			driver.printErrors();
+		IRBuilder builder(nm);
+		try {
+			auto result = builder.parseStmt(x);
+//			std::cout << "Result of parsing " << x << "\n";
+//			dumpColor(result);
+//			std::cout << "    ------------\n\n";
+//			std::cout << " ============== TEST ============ " << std::endl;
+			auto msg = checks::check(result);
+			if (!msg.empty()) {
+				std::cout << msg;
+			}
+			return msg.empty();
+
+		} catch (const IRParserException& ex) {
+			std::cout << ex.what() << std::endl;
 		}
-//		std::cout << " ============== TEST ============ " << std::endl;
-		return driver.result;
+		return false;
 	}
 
 	TEST(IR_Parser, Statements) {
@@ -687,20 +895,23 @@ namespace parser {
 	}
 
 	bool test_program(NodeManager& nm, const std::string& x) {
+		IRBuilder builder(nm);
+		try {
+			auto result = builder.parseProgram(x);
+//			std::cout << "Result of parsing " << x << "\n";
+//			dumpColor(result);
+//			std::cout << "    ------------\n\n";
+//			std::cout << " ============== TEST ============ " << std::endl;
+			auto msg = checks::check(result);
+			if (!msg.empty()) {
+				std::cout << msg;
+			}
+			return msg.empty();
 
-		InspireDriver driver(x, nm);
-
-		driver.parseProgram();
-
-		if(driver.result) {
-//			dumpColor(driver.result);
-			auto msg = checks::check(driver.result);
-			EXPECT_TRUE(msg.empty()) << msg;
-		} else {
-			driver.printErrors();
+		} catch (const IRParserException& ex) {
+			std::cout << ex.what() << std::endl;
 		}
-//		   std::cout << " ============== TEST ============ " << std::endl;
-		return driver.result;
+		return false;
 	}
 
 	TEST(IR_Parser, Program) {
@@ -777,7 +988,7 @@ namespace parser {
 		{
 		auto type = builder.parseType("struct A {" //correct access to field and param with the same name
 		                              "  a : int<4>;"
-		                              "  lambda f : (a : int<8>) -> unit {"
+		                              "  lambda f = (a : int<8>) -> unit {"
 		                              "    a;"
 		                              "    this.a;"
 		                              "  }"
@@ -883,25 +1094,25 @@ namespace parser {
 		IRBuilder builder(nm);
 
 		EXPECT_TRUE(test_type(nm, "def struct A {" //referencing a member function which has been declared
-		                          "  lambda f : () -> unit { }"
-		                          "  lambda g : () -> unit { f(); }"
+		                          "  lambda f = () -> unit { }"
+		                          "  lambda g = () -> unit { f(); }"
 		                          "}; A"));
 
 		EXPECT_TRUE(test_type(nm, "def struct A {" //referencing a member function which has been declared using the this pointer
-		                          "  lambda f : () -> unit { }"
-		                          "  lambda g : () -> unit { this.f(); }"
+		                          "  lambda f = () -> unit { }"
+		                          "  lambda g = () -> unit { this.f(); }"
 		                          "}; A"));
 
 		EXPECT_FALSE(test_type(nm, "def struct A {" //referencing a member function which has not been declared
-		                           "  lambda f : () -> unit { f(); }"
+		                           "  lambda f = () -> unit { f(); }"
 		                           "}; A"));
 
 		EXPECT_FALSE(test_type(nm, "def struct A {" //referencing a member function which has not been declared using the this pointer
-		                           "  lambda f : () -> unit { this.f(); }"
+		                           "  lambda f = () -> unit { this.f(); }"
 		                           "}; A"));
 
 		EXPECT_TRUE(test_statement(nm, "def struct A {" //externally referencing a member function which has been declared
-		                               "  lambda f : () -> unit { }"
+		                               "  lambda f = () -> unit { }"
 		                               "};"
 		                               "{"
 		                               "  var ref<A,f,f,plain> a;"
@@ -910,8 +1121,8 @@ namespace parser {
 
 		{
 			auto addresses = builder.parseAddressesStatement("def struct A {" //externally referencing a member function which has been declared multiple times
-			                                                 "  lambda f : () -> bool { return false; }"
-			                                                 "  lambda f : (a : int<4>) -> int<4> { return a; }"
+			                                                 "  lambda f = () -> bool { return false; }"
+			                                                 "  lambda f = (a : int<4>) -> int<4> { return a; }"
 			                                                 "};"
 			                                                 "{"
 			                                                 "  var ref<A,f,f,plain> a;"
@@ -926,8 +1137,8 @@ namespace parser {
 
 		{
 			auto addresses = builder.parseAddressesStatement("def struct A {" //externally referencing a member function which has been declared multiple times
-			                                                 "  lambda f : (a : bool) -> bool { return a; }"
-			                                                 "  lambda f : (a : int<4>) -> int<4> { return a; }"
+			                                                 "  lambda f = (a : bool) -> bool { return a; }"
+			                                                 "  lambda f = (a : int<4>) -> int<4> { return a; }"
 			                                                 "};"
 			                                                 "{"
 			                                                 "  var ref<A,f,f,plain> a;"
@@ -985,30 +1196,30 @@ namespace parser {
 		NodeManager nm;
 		IRBuilder builder(nm);
 
-		const std::string testString = "var ref<A,f,f,plain> a = A::(ref_var(type_lit(A)));"         //call the default constructor
-		                               "var ref<A,f,f,plain> a_copy = A::(ref_var(type_lit(A)), a);" //call the copy constructor
-		                               "var ref<A,f,f,plain> a_move = A::(ref_var(type_lit(A)), a);" //call the move constructor
-		                               "A::~(a);"                                                    //call the default destructor
-		                               "a." + utils::getMangledOperatorAssignName() + "(a);"         //call the default copy assignment operator
-		                               "a." + utils::getMangledOperatorAssignName() + "(a);";        //call the default move assignment operator
+		const std::string testString = "var ref<A,t,f,cpp_ref> a_ref;"
+		                               "var ref<A,f,f,cpp_rref> a_rref;"
+		                               "var ref<A,f,f,plain> a = A::(a);"                          //call the default constructor
+		                               "var ref<A,f,f,plain> a_copy = A::(a_copy, a_ref);"         //call the copy constructor
+		                               "var ref<A,f,f,plain> a_move = A::(a_move, a_rref);"        //call the move constructor
+		                               "A::~(a);"                                                  //call the default destructor
+		                               "a." + utils::getMangledOperatorAssignName() + "(a_ref);"   //call the default copy assignment operator
+		                               "a." + utils::getMangledOperatorAssignName() + "(a_rref);"; //call the default move assignment operator
 
 		{
 			auto res = builder.parseStmt("def struct A { };" //call the default generated members outside the struct
 			                              "{"
 			                              + testString +
 			                              "}");
-
 			EXPECT_TRUE(res);
 			EXPECT_TRUE(checks::check(res).empty()) << checks::check(res);
 		}
 
 		{
 			auto res = builder.parseType("def struct A {" //call the default generated members within the struct itself
-			                             "  lambda f : () -> unit {"
+			                             "  lambda f = () -> unit {"
 			                             + testString +
 			                             "  }"
 			                             "}; A");
-
 			EXPECT_TRUE(res);
 			EXPECT_TRUE(checks::check(res).empty()) << checks::check(res);
 		}
@@ -1016,15 +1227,291 @@ namespace parser {
 		{
 			auto res = builder.parseType("decl struct A;" //call the default generated members in another struct after only a forward declaration has been encountered
 			                             "def struct B {"
-			                             "  lambda f : () -> unit {"
+			                             "  lambda f = () -> unit {"
 			                             + testString +
 			                             "  }"
 			                             "};"
 			                             "def struct A { }; B");
-
 			EXPECT_TRUE(res);
 			EXPECT_TRUE(checks::check(res).empty()) << checks::check(res);
 		}
+	}
+
+	TEST(IR_Parser, TypedExpression) {
+		NodeManager nm;
+
+		const std::string commonCode = "def g = (a : int<4>) -> unit {};";
+
+		//calling with the correct type
+		EXPECT_TRUE(test_statement(nm, commonCode + "{ g(42); }"));
+
+		//manually specifying a type which is not correct
+		EXPECT_FALSE(test_statement(nm, commonCode + "{ var int<8> param = 42; g(param : int<4>); }"));
+
+		//manually specifying a type which is not correct
+		EXPECT_FALSE(test_statement(nm, commonCode + "{ g(42 : int<1>); }"));
+
+		//as with wrong size conversions, mixing types also doesn't work
+		EXPECT_FALSE(test_statement(nm, commonCode + "{ var real<4> realParam = 5.0; g(realParam : int<4>); }"));
+	}
+
+	TEST(IR_Parser, ManualOverloadSelection) {
+		NodeManager nm;
+
+		const std::string commonClass = "def struct A {"
+		                                "  ctor(a : int<2>) {}"
+		                                "  ctor(a : int<4>) {}"
+		                                "  ctor(a : int<8>) {}"
+		                                "  ctor(a : int<16>) {}"
+		                                "  ctor(a : int<4>, b : int<4>) {}"
+		                                "  ctor(a : int<8>, b : int<4>) {}"
+		                                "  lambda f = (a : int<2>) -> unit {}"
+		                                "  lambda f = (a : int<4>) -> unit {}"
+		                                "  lambda f = (a : int<8>) -> unit {}"
+		                                "  lambda f = (a : int<16>) -> unit {}"
+		                                "  lambda f = (a : int<4>, b : int<4>) -> unit {}"
+		                                "  lambda f = (a : int<8>, b : int<4>) -> unit {}"
+		                                "  lambda g = (a : ref<int<4>>) -> unit {}"
+		                                "  lambda g = (a : ref<int<4>,t,f>) -> unit {}"
+		                                "  lambda g = (a : ref<int<4>,f,t>) -> unit {}"
+		                                "  lambda g = (a : ref<int<4>,t,t>) -> unit {}"
+		                                "};";
+
+		//multiple possible overloads. Simple call fails for constructor with a single param
+		EXPECT_FALSE(test_statement(nm, commonClass + "{ var int<1> param = 5; var ref<A> a = A::(a), param); }"));
+
+		//multiple possible overloads. Simple call fails for constructor with multiple params
+		EXPECT_FALSE(test_statement(nm, commonClass + "{ var int<1> param = 5; var ref<A> a = A::(a), param, param); }"));
+
+		//multiple possible overloads. Simple call fails for function with a single param
+		EXPECT_FALSE(test_statement(nm, commonClass + "{ var int<1> param = 5; var ref<A> a; a.f(param); }"));
+
+		//multiple possible overloads. Simple call fails for function with multiple params
+		EXPECT_FALSE(test_statement(nm, commonClass + "{ var int<1> param = 5; var ref<A> a; a.f(param, param); }"));
+
+
+		//multiple possible overloads. Specifying the desired overload will work for constructor with a single param
+		EXPECT_TRUE(test_statement(nm, commonClass + "{ var int<1> param = lit(\"5\" : int<1>); var ref<A> a = A::(a, param : int<4>); }"));
+
+		//multiple possible overloads. Specifying the desired overload will work for constructor with multiple params
+		EXPECT_TRUE(test_statement(nm, commonClass + "{ var int<1> param = lit(\"5\" : int<1>); var ref<A> a = A::(a, param : int<4>, param : int<4>); }"));
+
+		//multiple possible overloads. Specifying the desired overload will work for function with a single param
+		EXPECT_TRUE(test_statement(nm, commonClass + "{ var int<1> param = lit(\"5\" : int<1>); var ref<A> a; a.f(param : int<4>); }"));
+
+		//multiple possible overloads. Specifying the desired overload will work for function with a single param
+		EXPECT_TRUE(test_statement(nm, commonClass + "{ var int<1> param = lit(\"5\" : int<1>); var ref<A> a; a.f(param : int<4>, param : int<4>); }"));
+
+
+		//calling the default generated constructs without specifying the desired overload should fail as we have two candidates
+		EXPECT_FALSE(test_statement(nm, "def struct A { };"
+		                     "{"
+		                     "  var ref<A> a;"
+		                     "  var ref<A> a_copy = A::(a_copy, a);"
+		                     "}"));
+
+		//calling the default generated assignment operator without specifying the desired overload should fail as we have two candidates
+		EXPECT_FALSE(test_statement(nm, "def struct A { };"
+		                     "{"
+		                     "  var ref<A> a;"
+		                     "  a." + utils::getMangledOperatorAssignName() + "(a);"
+		                     "}"));
+
+		// call g and manually specify which const/volatile overload to take
+		EXPECT_TRUE(test_statement(nm, commonClass + 
+			                           "{"
+			                           "  var ref<A> a;"
+			                           "  var ref<int<4>> b;"
+			                           "  a.g(b : ref<int<4>,f,f>);"
+			                           "  a.g(b : ref<int<4>,t,f>);"
+			                           "  a.g(b : ref<int<4>,f,t>);"
+			                           "  a.g(b : ref<int<4>,t,t>);"
+			                           "}"));
+	}
+
+	TEST(IR_Parser, FreeMembers) {
+		NodeManager nm;
+
+		//free ctors are used differently than the ones defined within record types
+		//member functions can be used just like the ones defined within the record type itself
+		EXPECT_TRUE(test_statement(nm, "def struct A {"
+		                               "  a : int<4>;"
+		                               "  ctor(x : int<4>) { a = x; }"
+		                               "  lambda mfun = (x : int<4>) -> int<4> { return a; }"
+		                               "};"
+		                               "def A::ctor free_ctor = (x : int<4>) { a = x; };"
+		                               "def A::lambda free_mfun = (x : int<4>) -> int<4> { return a; };"
+		                               "{"
+		                               "  var ref<A> a1 = A::(a1, 10);"
+		                               "  a1.mfun(12);"
+		                               "  a1.free_mfun(12);"
+		                               "  var ref<A> a2 = free_ctor(a2, 10);"
+		                               "  a2.mfun(12);"
+		                               "  a2.free_mfun(12);"
+		                               "}"));
+	}
+
+	TEST(IR_Parser, DuplicateMemberFunctions) {
+		NodeManager nm;
+		IRBuilder builder(nm);
+
+		//Note: We do not use the helper function test_statement here, as that one will also run the semantic checks.
+		//Those will fail for certain duplicate members and thus mask shortcomings of the parser error detections we actually want to test here
+
+		//re-declaration of member functions with the same type but a different name is ok
+		EXPECT_TRUE(builder.parseStmt("def struct A {"
+		                              "  lambda foo = () -> unit { }"
+		                              "  lambda bar = () -> unit { }"
+		                              "};"
+		                              "{"
+		                              "  var ref<A> a;"
+		                              "}"));
+
+		//re-declaration of member functions with the same type and the same name is not allowed
+		EXPECT_ANY_THROW(builder.parseStmt("def struct A {"
+		                                   "  lambda foo = () -> unit { }"
+		                                   "  lambda foo = () -> unit { }"
+		                                   "};"
+		                                   "{"
+		                                   "  var ref<A> a;"
+		                                   "}"));
+
+		//re-declaration of a constructor with the same type isn't allowed
+		EXPECT_ANY_THROW(builder.parseStmt("def struct A {"
+		                                   "  ctor() { }"
+		                                   "  ctor() { }"
+		                                   "};"
+		                                   "{"
+		                                   "  var ref<A> a;"
+		                                   "}"));
+
+		//re-declaration of (free) member functions with the same type but a different name is ok
+		EXPECT_TRUE(builder.parseStmt("def struct A {"
+		                              "  lambda foo = () -> unit { }"
+		                              "};"
+		                              "def A::lambda bar = () -> unit { };"
+		                              "{"
+		                              "  var ref<A> a;"
+		                              "}"));
+
+		//re-declaration of (free) member functions with the same type and the same name is not allowed
+		EXPECT_ANY_THROW(builder.parseStmt("def struct A {"
+		                                   "  lambda foo = () -> unit { }"
+		                                   "};"
+		                                   "def A::lambda foo = () -> unit { };"
+		                                   "{"
+		                                   "  var ref<A> a;"
+		                                   "}"));
+
+		//re-declaration of a (free) constructor with the same type is allowed, as it has a different name
+		EXPECT_TRUE(builder.parseStmt("def struct A {"
+		                              "  ctor() { }"
+		                              "};"
+		                              "def A::ctor foo = () { };"
+		                              "{"
+		                              "  var ref<A> a;"
+		                              "}"));
+	}
+
+	TEST(IR_Parser, ParentCalls) {
+		NodeManager nm;
+
+		const std::string classA = "def struct A {"
+		                           "  x : int<4>;"
+		                           "  lambda a = ()->unit { }"
+		                           "};";
+		const std::string classB = "def struct B : [A] {"
+		                           "  y : int<4>;"
+		                           "  ctor() {"
+		                           "    A::(this);"
+		                           "  }"
+		                           "  lambda b = ()->unit {"
+		                           "    this.as(A).a();"
+		                           "    y = *this.as(A).x;"
+		                           "  }"
+		                           "};";
+		const std::string body = "{"
+		                         "  var ref<A> a = A::(a);"
+		                         "  var ref<B> b = B::(b);"
+		                         "  a.a();"
+		                         "  a.x;"
+		                         "  b.b();"
+		                         "  b.y;"
+		                         "  b.as(A).a();"
+		                         "  b.as(A).x;"
+		                         "}";
+
+		//calling of superclass ctor and of member functions of super classes
+		EXPECT_TRUE(test_statement(nm, classA
+		                               + classB
+		                               + body));
+
+		//the same as above but with the two structs switched and using a forward decl
+		EXPECT_TRUE(test_statement(nm, "decl struct A;"
+		                               "decl A::x : int<4>;"
+		                               "decl a : A::()->unit;"
+		                               + classB
+		                               + classA
+		                               + body));
+	}
+
+	TEST(IR_Parser, ExplicitDeclarations) {
+		NodeManager nm;
+		IRBuilder builder(nm);
+
+		const std::string classA = "decl a : A::()->unit;"
+		                           "def struct A {"
+		                           "  lambda b = ()->unit { }"
+		                           "};"
+		                           "A";
+
+		auto type = builder.parseType(classA);
+		EXPECT_TRUE(checks::check(type).empty()) << checks::check(type);
+		EXPECT_TRUE(toString(type).find(",a()->unit,") != std::string::npos);
+	}
+
+	TEST(IR_Parser, MaterializeCall) {
+		NodeManager nm;
+		IRBuilder builder(nm);
+
+		auto int4 = builder.getLangBasic().getInt4();
+		auto plainRef = builder.refType(builder.getLangBasic().getInt4());
+		auto cppRef = builder.refType(builder.getLangBasic().getInt4(), false, false, lang::ReferenceType::Kind::CppReference);
+
+		const std::string code = "def f1 = ()->int<4> { return 42; };"
+		                         "def f2 = ()->ref<int<4>,f,f,plain> { return 42; };"
+		                         "def f3 = ()->ref<int<4>,f,f,cpp_ref> { return 42; };"
+		                         "{"
+		                         "  $f1()$;"
+		                         "  $f2()$;"
+		                         "  $f3()$;"
+		                         "  $f1() materialize$;"
+		                         "  $f2() materialize$;"
+		                         "  $f3() materialize$;"
+		                         "}";
+
+		auto addresses = builder.parseAddressesStatement(code);
+
+		ASSERT_EQ(6, addresses.size());
+		EXPECT_EQ(addresses[0].getAddressedNode().as<CallExprPtr>()->getType(), int4);
+		EXPECT_EQ(addresses[1].getAddressedNode().as<CallExprPtr>()->getType(), plainRef);
+		EXPECT_EQ(addresses[2].getAddressedNode().as<CallExprPtr>()->getType(), cppRef);
+		EXPECT_EQ(addresses[3].getAddressedNode().as<CallExprPtr>()->getType(), plainRef);
+		EXPECT_EQ(addresses[4].getAddressedNode().as<CallExprPtr>()->getType(), plainRef);
+		EXPECT_EQ(addresses[5].getAddressedNode().as<CallExprPtr>()->getType(), plainRef);
+	}
+
+	TEST(IR_Parser, Comments) {
+		NodeManager mgr;
+
+		EXPECT_TRUE(parseExpr(mgr, "12"));
+		EXPECT_TRUE(parseExpr(mgr, "12 // this is the number 12"));
+
+		EXPECT_FALSE(parseStmt(mgr, "{ 12; // this is the number 12 }"));
+		EXPECT_TRUE(parseStmt(mgr, "{ 12; // this is the number \n 12; }"));
+
+		EXPECT_TRUE(parseExpr(mgr, "/* before */ 12 /* after */"));
+		EXPECT_TRUE(parseStmt(mgr, " { /* before */ 12 /* mid */ ; /* after */ }"));
 	}
 
 } // parser

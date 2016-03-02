@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -39,11 +39,13 @@
 #include "insieme/frontend/converter.h"
 #include "insieme/frontend/state/function_manager.h"
 #include "insieme/frontend/state/variable_manager.h"
+#include "insieme/frontend/utils/conversion_utils.h"
 #include "insieme/frontend/utils/name_manager.h"
 
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/lang/pointer.h"
+#include "insieme/core/lang/array.h"
 #include "insieme/core/annotations/naming.h"
 
 #include "insieme/annotations/c/extern.h"
@@ -56,14 +58,14 @@ namespace frontend {
 namespace conversion {
 
 	DeclConverter::DeclConverter(Converter& converter) : converter(converter), builder(converter.getIRBuilder()) {}
-	
+
 	// Converters -----------------------------------------------------------------------------------------------------
 
 	DeclConverter::ConvertedVarDecl DeclConverter::convertVarDecl(const clang::VarDecl* varDecl) const {
 		auto irType = converter.convertVarType(varDecl->getType());
 		auto var = builder.variable(irType);
 		if(varDecl->getInit()) {
-			return {var, converter.convertExpr(varDecl->getInit())};
+			return {var, converter.convertCxxArgExpr(varDecl->getInit())};
 		} else {
 			return {var, {}};
 		}
@@ -92,14 +94,18 @@ namespace conversion {
 			// add "this" parameter to param list
 			auto paramList = funType->getParameterTypeList();
 			paramList.insert(paramList.begin(), thisType);
-			// handle return type for constructors
+			// handle return type for constructors and destructors
 			auto retType = funType->getReturnType();
 			const clang::CXXConstructorDecl* constrDecl = llvm::dyn_cast<clang::CXXConstructorDecl>(methDecl);
-			if(constrDecl) { retType = thisType; }
+			const clang::CXXDestructorDecl* destrDecl = llvm::dyn_cast<clang::CXXDestructorDecl>(methDecl);
+			if(constrDecl || destrDecl) { retType = thisType; }
 			// determine kind
 			auto kind = core::FunctionKind::FK_MEMBER_FUNCTION;
-			if(constrDecl) { kind = core::FunctionKind::FK_CONSTRUCTOR; }
-			else if(llvm::dyn_cast<clang::CXXDestructorDecl>(methDecl)) { kind = core::FunctionKind::FK_DESTRUCTOR; }
+			if(constrDecl) {
+				kind = core::FunctionKind::FK_CONSTRUCTOR;
+			} else if(destrDecl) {
+				kind = core::FunctionKind::FK_DESTRUCTOR;
+			}
 			// build type
 			auto newFunType = converter.getIRBuilder().functionType(paramList, retType, kind);
 			VLOG(2) << "Converted method type from: " << dumpClang(methDecl) << "\n to: " << dumpColor(newFunType)
@@ -141,14 +147,17 @@ namespace conversion {
 		}
 	}
 
-	core::LambdaExprPtr DeclConverter::convertFunctionDecl(const clang::FunctionDecl* funcDecl, string name) const {
+	core::ExpressionPtr DeclConverter::convertFunctionDecl(const clang::FunctionDecl* funcDecl, string name, bool genLiteral) const {
 		if(name.empty()) name = insieme::utils::mangle(funcDecl->getNameAsString());
 		auto funType = getFunMethodTypeInternal(converter, funcDecl);
+		if(genLiteral) {
+			return converter.getIRBuilder().literal(name, funType);
+		}
 		return convertFunMethodInternal(converter, funType, funcDecl, name);
 	}
 
 	DeclConverter::ConvertedMethodDecl DeclConverter::convertMethodDecl(const clang::CXXMethodDecl* methDecl, const core::ParentsPtr& parents,
-		                                                                const core::FieldsPtr& fields) const {
+		                                                                const core::FieldsPtr& fields, bool declOnly) const {
 		ConvertedMethodDecl ret;
 
 		// handle default constructor / destructor / operators in accordance with core
@@ -160,17 +169,17 @@ namespace conversion {
 			} else if(auto constDecl = llvm::dyn_cast<clang::CXXConstructorDecl>(methDecl)) {
 				if(constDecl->isDefaultConstructor()) {
 					ret.lambda = converter.getIRBuilder().getDefaultConstructor(thisType, parents, fields);
-				}				
+				}
 				else if(constDecl->isCopyConstructor()) {
 					ret.lambda = converter.getIRBuilder().getDefaultCopyConstructor(thisType, parents, fields);
 				}
 				else if(constDecl->isMoveConstructor()) {
 					ret.lambda = converter.getIRBuilder().getDefaultMoveConstructor(thisType, parents, fields);
-				} else {				
+				} else {
 					assert_not_implemented() << "Can't translate defaulted constructor: " << dumpClang(methDecl);
 				}
-				ret.lit = converter.getIRBuilder().getLiteralForConstructor(ret.lambda->getType()); 
-			} else {				
+				ret.lit = converter.getIRBuilder().getLiteralForConstructor(ret.lambda->getType());
+			} else {
 				if(methDecl->isCopyAssignmentOperator()) {
 					ret.memFun = converter.getIRBuilder().getDefaultCopyAssignOperator(thisType, parents, fields);
 				} else if(methDecl->isMoveAssignmentOperator()) {
@@ -181,7 +190,7 @@ namespace conversion {
 				ret.lambda = ret.memFun->getImplementation().as<core::LambdaExprPtr>();
 				ret.lit = converter.getIRBuilder().literal(ret.lambda->getReference()->getNameAsString(), ret.lambda->getType());
 			}
-			converter.getFunMan()->insert(methDecl, ret.lit);
+			if(!converter.getFunMan()->contains(methDecl)) converter.getFunMan()->insert(methDecl, ret.lit);
 		}
 		// non-default cases
 		else {
@@ -190,15 +199,17 @@ namespace conversion {
 			if(funType->getKind() == core::FK_CONSTRUCTOR) { ret.lit = builder.getLiteralForConstructor(funType); }
 			else if(funType->getKind() == core::FK_DESTRUCTOR) { ret.lit = builder.getLiteralForDestructor(funType); }
 			else { ret.lit = builder.getLiteralForMemberFunction(funType, name); }
-			converter.getFunMan()->insert(methDecl, ret.lit);
-			ret.lambda = convertFunMethodInternal(converter, funType, methDecl, ret.lit->getStringValue());
-			ret.memFun = builder.memberFunction(methDecl->isVirtual(), name, ret.lit);
+			if(!converter.getFunMan()->contains(methDecl)) converter.getFunMan()->insert(methDecl, ret.lit);
+			if(!declOnly) {
+				ret.lambda = convertFunMethodInternal(converter, funType, methDecl, ret.lit->getStringValue());
+				ret.memFun = builder.memberFunction(methDecl->isVirtual(), name, ret.lit);
+			}
 		}
 		return ret;
 	}
 
 	// Visitors -------------------------------------------------------------------------------------------------------
-	
+
 	void DeclConverter::VisitDeclContext(const clang::DeclContext* context) {
 		VLOG(2) << "~~~~~~~~~~~~~~~~ VisitDeclContext: !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n ";
 		if(VLOG_IS_ON(2)) context->dumpDeclContext();
@@ -209,7 +220,7 @@ namespace conversion {
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	//							Structs, Unions and Classes 
+	//							Structs, Unions and Classes
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	void DeclConverter::VisitRecordDecl(const clang::RecordDecl* typeDecl) {
 		VLOG(2) << "~~~~~~~~~~~~~~~~ VisitRecordDecl: " << dumpClang(typeDecl);
@@ -235,28 +246,54 @@ namespace conversion {
 		//convertTypeDecl(typedefDecl);
 		converter.untrackSourceLocation();
 	}
-	
+
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//							Variable declarations
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	namespace {
+		struct DeclaredTag {};
+	}
+
 	void DeclConverter::VisitVarDecl(const clang::VarDecl* var) {
 		VLOG(2) << "~~~~~~~~~~~~~~~~ VisitVarDecl: " << dumpClang(var);
-		// variables to be skipped
+		// non-global variables are to be skipped
 		if(!var->hasGlobalStorage()) { return; }
-		if(var->hasExternalStorage()) { return; }
 
 		converter.trackSourceLocation(var);
 		auto convertedVar = convertVarDecl(var);
 		auto name = utils::getNameForGlobal(var, converter.getSourceManager());
 		auto globalLit = builder.literal(convertedVar.first->getType(), name);
+
+		// for global arrays, purge size information (this is required for sized and unsized arrays in different translation units to be correctly unified)
+		auto refT = core::lang::ReferenceType(globalLit->getType());
+		auto elemType = refT.getElementType();
+		if(core::lang::isArray(elemType)) {
+			auto newArrType = core::lang::ArrayType::create(core::lang::ArrayType(elemType).getElementType());
+			auto newRefType = core::lang::ReferenceType::create(newArrType, refT.isConst(), refT.isVolatile(), refT.getKind());
+			globalLit = builder.literal(newRefType, name);
+		}
+
+		// mark as extern and tag with source header if required
+		if(var->hasExternalStorage() && !globalLit->hasAttachedValue<DeclaredTag>()) annotations::c::markExtern(globalLit);
 		converter.applyHeaderTagging(globalLit, var);
+
 		// handle pragmas attached to decls
 		globalLit = pragma::handlePragmas({globalLit}, var, converter).front().as<core::LiteralPtr>();
+
+		// store variable in variable manager
 		converter.getVarMan()->insert(var, globalLit);
-		auto init =
-			(var->getInit()) ? converter.convertInitExpr(var->getInit()) : builder.getZero(core::lang::ReferenceType(globalLit->getType()).getElementType());
-		core::annotations::attachName(globalLit, name);
-		converter.getIRTranslationUnit().addGlobal(globalLit, init);
+
+		// handle initialization if not extern
+		if(!var->hasExternalStorage()) {
+			auto init = (var->getInit()) ? converter.convertInitExpr(var->getInit()) : builder.getZero(elemType);
+			init = utils::fixTempMemoryInInitExpression(globalLit, init);
+			core::annotations::attachName(globalLit, name);
+			// remove extern tag, add declared tag
+			annotations::c::markExtern(globalLit, false);
+			globalLit->attachValue<DeclaredTag>();
+			converter.getIRTranslationUnit().addGlobal(globalLit, init);
+		}
+
 		converter.untrackSourceLocation();
 	}
 
@@ -270,12 +307,19 @@ namespace conversion {
 		VisitDeclContext(llvm::cast<clang::DeclContext>(link));
 		inExternC = prevExternC;
 	}
-	
+
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//					 Function declarations
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	void DeclConverter::VisitFunctionDecl(const clang::FunctionDecl* funcDecl) {
+
+		// if handled by a plugin, don't do anything else
+		for(auto extension : converter.getConversionSetup().getExtensions()) {
+			if(!extension->FuncDeclVisit(funcDecl, converter)) return;
+		}
+		// we only want to visit actual specialized templates
 		if(funcDecl->isTemplateDecl() && !funcDecl->isFunctionTemplateSpecialization()) { return; }
+
 		converter.trackSourceLocation(funcDecl);
 		VLOG(2) << "~~~~~~~~~~~~~~~~ VisitFunctionDecl: " << dumpClang(funcDecl);
 		bool isDefinition = funcDecl->isThisDeclarationADefinition();
@@ -295,8 +339,8 @@ namespace conversion {
 		// if definition, convert body
 		if(isDefinition) {
 			VLOG(2) << "~~~~~~~~~~~~~~~~ VisitFunctionDecl - isDefinition: " << dumpClang(funcDecl);
-			core::LambdaExprPtr irFunc = convertFunctionDecl(funcDecl, name);
-			if(irFunc) { 
+			core::LambdaExprPtr irFunc = convertFunctionDecl(funcDecl, name).as<core::LambdaExprPtr>();
+			if(irFunc) {
 				irFunc = pragma::handlePragmas({irFunc}, funcDecl, converter).front().as<core::LambdaExprPtr>();
 				converter.getIRTranslationUnit().addFunction(irLit, irFunc);
 			}
@@ -304,7 +348,7 @@ namespace conversion {
 
 		converter.untrackSourceLocation();
 	}
-	
+
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//					 Function template declarations
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -315,7 +359,7 @@ namespace conversion {
 			Visit(spec);
 		}
 	}
-	
+
 } // End conversion namespace
 } // End frontend namespace
 } // End insieme namespace

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -95,7 +95,7 @@ namespace analysis {
 				auto childrenB = nodeB->getChildList();
 				if(childrenA.size() != childrenB.size()) return false;
 				for(size_t i = 0; i < childrenA.size(); ++i) {
-						if(!equalNamelessImpl(childrenA[i], childrenB[i], mapA, mapB)) return false;
+					if(!equalNamelessImpl(childrenA[i], childrenB[i], mapA, mapB)) return false;
 				}
 			}
 			return true;

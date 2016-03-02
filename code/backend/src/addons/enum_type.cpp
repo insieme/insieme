@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -45,8 +45,9 @@
 #include "insieme/annotations/c/include.h"
 #include "insieme/annotations/c/decl_only.h"
 
-#include "insieme/core/lang/enum.h"
 #include "insieme/core/annotations/naming.h"
+#include "insieme/core/lang/basic.h"
+#include "insieme/core/lang/enum.h"
 
 namespace insieme {
 namespace backend {
@@ -54,10 +55,10 @@ namespace addons {
 
 	namespace {
 
-		const TypeInfo* EnumTypeHandler(const Converter& converter, const core::TypePtr& type) {			
-			if(!core::lang::isEnumType(type)) { return NULL; }
+		const TypeInfo* EnumTypeHandler(const Converter& converter, const core::TypePtr& type) {
+			if(!core::lang::isEnum(type)) { return NULL; }
 
-			//check if the enum is defined in a system header
+			// check if the enum is defined in a system header
 			const TypeInfo* t = NULL;
 			std::function<void(std::string&, const core::TypePtr&)> ff = [](std::string& s, const core::TypePtr& type){ s = "enum" + s; };
 			t = type_info_utils::headerAnnotatedTypeHandler(converter, type, ff);
@@ -65,25 +66,29 @@ namespace addons {
 
 			const core::TupleTypePtr tt = type.as<core::TupleTypePtr>();
 
-			//get the enum definition
-			core::lang::EnumDefinition enumTy(tt->getElement(0));
-			
-			//get the enum class type and convert it
-			TypeManager& typeManager = converter.getTypeManager();
-			const TypeInfo& enumClassTypeInfo = typeManager.getTypeInfo(tt->getElement(1));
-			//get the enum name and convert it
+			// get the enum definition
+			core::lang::EnumDefinition enumTy(core::lang::getEnumTypeDefinition(tt));
+
+			// get the enum name and convert it
 			const c_ast::SharedCNodeManager& cnodemgr = converter.getCNodeManager();
-			c_ast::IdentifierPtr enumName = cnodemgr->create<c_ast::Identifier>(enumTy.getEnumName().as<core::GenericTypePtr>()->getName()->getValue());
-			//get the enum values and convert them
+			c_ast::IdentifierPtr enumName =
+				cnodemgr->create<c_ast::Identifier>(utils::demangleToIdentifier(enumTy.getEnumName().as<core::GenericTypePtr>()->getName()->getValue(), true));
+			// get the enum int type and convert it if applicable
+			c_ast::TypePtr enumIntType = nullptr;
+			if(!type->getNodeManager().getLangBasic().isInt4(enumTy.getIntType())) {
+				auto intTypeInfo = converter.getTypeManager().getTypeInfo(enumTy.getIntType());
+				enumIntType = intTypeInfo.lValueType;
+			}
+			// get the enum values and convert them
 			std::vector<std::pair<c_ast::IdentifierPtr, c_ast::LiteralPtr>> values;
 			for(auto e : enumTy.getElements()) {
 				core::lang::EnumEntry ee(e);
-				c_ast::IdentifierPtr eeName = cnodemgr->create<c_ast::Identifier>(ee.getEnumEntryName().as<core::GenericTypePtr>()->getName()->getValue());
+				c_ast::IdentifierPtr eeName = cnodemgr->create<c_ast::Identifier>(utils::demangleToIdentifier(ee.getName(), true));
 				c_ast::LiteralPtr eeVal = cnodemgr->create<c_ast::Literal>(std::to_string(ee.getEnumEntryValue()));
 				values.push_back({eeName, eeVal});
 			}
-			//build up the enum code fragments
-			auto cEnumType = cnodemgr->create<c_ast::EnumType>(enumName, values, enumClassTypeInfo.lValueType);
+			// build up the enum code fragments
+			auto cEnumType = cnodemgr->create<c_ast::EnumType>(enumName, values, enumIntType);
 			auto cEnumVarTy = cnodemgr->create<c_ast::NamedType>(enumName);
 
 			TypeInfo* retTypeInfo = new TypeInfo();
@@ -107,10 +112,10 @@ namespace addons {
 
 			#include "insieme/backend/operator_converter_begin.inc"
 
-			// ------------------ complex specific operators ---------------
+			// ------------------ enum specific operators ---------------
 			res[ext.getEnumToInt()] = OP_CONVERTER { return CONVERT_ARG(0); };
 
-			res[ext.getIntToEnum()] = OP_CONVERTER { return CONVERT_ARG(1); };
+			res[ext.getEnumFromInt()] = OP_CONVERTER { return CONVERT_ARG(1); };
 
 			#include "insieme/backend/operator_converter_end.inc"
 
@@ -119,12 +124,27 @@ namespace addons {
 
 	}
 
+	namespace {
+		c_ast::NodePtr enumExprConverter(ConversionContext& context, const core::NodePtr& node) {
+			if(node.getNodeCategory() != core::NC_Expression) return nullptr;
+			if(!core::lang::isEnum(node)) return nullptr;
+			if(!node.isa<core::TupleExprPtr>()) return nullptr;
+			auto expr = node.as<core::ExpressionPtr>();
+			auto entry = core::lang::EnumEntry(core::lang::getEnumEntry(expr));
+			auto name = utils::demangleToIdentifier(entry.getName(), true);
+			return c_ast::lit(context.getConverter().getStmtConverter().convertType(context, expr->getType()), name);
+		}
+	}
+
 	void EnumType::installOn(Converter& converter) const {
 		// registers type handler
 		converter.getTypeManager().addTypeHandler(EnumTypeHandler);
 
 		// register additional operators
 		converter.getFunctionManager().getOperatorConverterTable().insertAll(getEnumTypeOperatorTable(converter.getNodeManager()));
+
+		// register expression handler (to handle enum tuples)
+		converter.getStmtConverter().addStmtHandler(enumExprConverter);
 	}
 
 } // end namespace addons

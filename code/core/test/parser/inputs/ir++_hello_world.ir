@@ -9,11 +9,11 @@ def struct C {
 		sum = 0;
 	}
 
-	lambda add : (x : int)->unit {
+	lambda add = (x : int)->unit {
 		this.sum = this.sum + x;
 	}
 	
-	lambda getSum : ()->int {
+	lambda getSum = ()->int {
 		return *sum;
 	}
 };

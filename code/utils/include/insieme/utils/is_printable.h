@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -36,34 +36,21 @@
 
 #pragma once
 
+#include <iostream>
+#include <utility>
+
 namespace insieme {
 namespace utils {
 
 	/**
 	 * A type trait to determine whether a given type T can be printed to some output stream.
 	 */
+	template <typename T, typename _ = void>
+	struct is_printable : public std::false_type {};
+	
 	template <typename T>
-	class is_printable {
-		typedef char yes;
-		typedef long no;
-
-		template <class E>
-		static E& lvalue_of_type();
-		template <class E>
-		static E rvalue_of_type();
-
-		// two implementations of the test - as templates to utilize the SFINA mechanism
-		//   - the first one will only be supported in cases where T is printable
-		//   - the latter is always supported, yet of lower priority in the overloading
-		template <typename C>
-		static yes test(char (*)[sizeof(lvalue_of_type<std::ostream>() << rvalue_of_type<C>())]);
-		template <typename C>
-		static no test(...);
-
-	  public:
-		// define the resulting constant by testing which test method is called
-		enum { value = sizeof(test<T>(0)) == sizeof(yes) };
-	};
+	struct is_printable<T, typename std::conditional<false, decltype(std::declval<std::ostream&>() << std::declval<T>()), void>::type> : public std::true_type {};
 
 } // end namespace utils
 } // end namespace insieme
+

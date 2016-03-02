@@ -247,7 +247,7 @@ namespace pragma {
 	};
 
 	typedef std::pair<bool, MatchMap> MatcherResult;
-	template <clang::tok::TokenKind T>
+	template <clang::tok::TokenKind T, bool Resolve>
 	struct Tok;
 
 	// ------------------------------------ pragma matcher ---------------------------
@@ -403,10 +403,10 @@ namespace pragma {
 	template <class T>
 	class MappableNode : public node {
 		std::string mapName;
-		bool addToMap;
+		bool toAddToMap;
 
 	  public:
-		MappableNode(std::string const& str = std::string(), bool addToMap = true) : mapName(str), addToMap(addToMap) {}
+		MappableNode(std::string const& str = std::string(), bool toAddToMap = true) : mapName(str), toAddToMap(toAddToMap) {}
 
 		node& operator[](const std::string& str) {
 			mapName = str;
@@ -414,7 +414,7 @@ namespace pragma {
 		}
 
 		node* copy() const {
-			return new T(getMapName(), addToMap);
+			return new T(getMapName(), toAddToMap);
 		}
 		/**
 		 * The operator '~' is used to say the current node (even if a map key has been assigned) will
@@ -427,8 +427,8 @@ namespace pragma {
 		const std::string& getMapName() const {
 			return mapName;
 		}
-		bool isAddToMap() const {
-			return addToMap;
+		bool isToBeAddedToMap() const {
+			return toAddToMap;
 		}
 	};
 
@@ -439,7 +439,7 @@ namespace pragma {
 	 */
 	struct expr_p : public MappableNode<expr_p> {
 		expr_p() {}
-		expr_p(std::string const& map_str, bool addToMap = true) : MappableNode<expr_p>(map_str, addToMap) {}
+		expr_p(std::string const& map_str, bool toAddToMap = true) : MappableNode<expr_p>(map_str, toAddToMap) {}
 
 		bool match(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const;
 
@@ -451,7 +451,7 @@ namespace pragma {
 	 */
 	struct cpp_string_lit_p : public MappableNode<cpp_string_lit_p> {
 		cpp_string_lit_p() {}
-		cpp_string_lit_p(std::string const& map_str, bool addToMap = true) : MappableNode<cpp_string_lit_p>(map_str, addToMap) {}
+		cpp_string_lit_p(std::string const& map_str, bool toAddToMap = true) : MappableNode<cpp_string_lit_p>(map_str, toAddToMap) {}
 
 		bool match(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const;
 
@@ -459,9 +459,13 @@ namespace pragma {
 	};
 
 	/**
-	 * Utility function for adding a token with a specific key to the matcher map.
+	 * Utility function for adding a token with a specific key to the matcher map. Triggering sematic actions while doing so.
 	 */
-	void AddToMap(clang::tok::TokenKind tok, clang::Token const& token, bool resolve, std::string const& map_str, MatchMap& mmap);
+	void resolveAndAddToMap(clang::tok::TokenKind tok, clang::Token const& token, std::string const& map_str, MatchMap& mmap);
+	/**
+	 * Utility function for adding a token with a specific key to the matcher map. Avoiding semantic actions while doing so.
+	 */
+	void avoidAndAddToMap(clang::tok::TokenKind tok, clang::Token const& token, std::string const& map_str, MatchMap& mmap);
 
 	std::string TokenToStr(clang::tok::TokenKind tok);
 	std::string TokenToStr(const clang::Token& token);
@@ -469,42 +473,51 @@ namespace pragma {
 	/**
 	 * This class represents a wrapper for clang basic tokens.
 	 */
-	template <clang::tok::TokenKind T>
-	struct Tok : public MappableNode<Tok<T>> {
-		bool resolve;
+	template <clang::tok::TokenKind T, bool Resolve = false>
+	struct Tok : public MappableNode<Tok<T,Resolve>> {
 		std::string tok;
 
-		Tok() {}
-		Tok(std::string const& str, bool addToMap = true, bool resolve = false) : MappableNode<Tok<T>>(str, addToMap), resolve(resolve), tok(str) {}
+		Tok() : tok("undefined") {}
+		Tok(std::string const& str, bool toAddToMap = true) : MappableNode<Tok<T,Resolve>>(str, toAddToMap), tok(str) { }
 
 		node* copy() const {
-			return new Tok<T>(MappableNode<Tok<T>>::getMapName(), MappableNode<Tok<T>>::isAddToMap(), resolve);
+			return new Tok<T,Resolve>(MappableNode<Tok<T,Resolve>>::getMapName(), MappableNode<Tok<T,Resolve>>::isToBeAddedToMap());
 		}
 
 		virtual bool match(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const {
 			clang::Token& token = ParserProxy::get().ConsumeToken();
 			if(token.is(T)) {
-				if(MappableNode<Tok<T>>::isAddToMap()) { AddToMap(T, token, resolve, MappableNode<Tok<T>>::getMapName(), mmap); }
+				if(MappableNode<Tok<T,Resolve>>::isToBeAddedToMap()) { 
+                    if (Resolve) resolveAndAddToMap(T, token, MappableNode<Tok<T,Resolve>>::getMapName(), mmap); 
+                    else         avoidAndAddToMap(T, token, MappableNode<Tok<T,Resolve>>::getMapName(), mmap); 
+                }
 				return true;
 			}
 			errStack.addExpected(recID, ParserStack::Error("\'" + TokenToStr(T) + "\'", token.getLocation()));
 			return false;
 		}
 
-		virtual std::ostream& printTo(std::ostream& out) const;
+	    std::ostream& printTo(std::ostream& out) const {
+            if(tok.empty()) {
+                return out << clang::tok::getTokenName(T);
+            } else {
+                return out << "Tok(" << clang::tok::getTokenName(T) << ": " << tok << ")";
+            }
+        }
 	};
 
 	/**
 	 * A keyword is a string which is expected to appear in the input stream.
 	 */
-	struct kwd : public Tok<clang::tok::identifier> {
+	struct kwd : public Tok<clang::tok::identifier,false> {
 		std::string kw;
 
-		kwd(std::string const& kw) : Tok<clang::tok::identifier>(), kw(kw) {}
-		kwd(std::string const& kw, std::string const& map_str, bool addToMap = true) : Tok<clang::tok::identifier>(map_str, addToMap), kw(kw) {}
+		kwd(std::string const& kw) : Tok<clang::tok::identifier,false>(), kw(kw) {}
+		kwd(std::string const& kw, std::string const& map_str, bool toAddToMap = true) 
+        : Tok<clang::tok::identifier,false>(map_str, toAddToMap), kw(kw) {}
 
 		node* copy() const {
-			return new kwd(kw, getMapName(), isAddToMap());
+			return new kwd(kw, getMapName(), isToBeAddedToMap());
 		}
 		kwd operator~() const {
 			return kwd(kw, getMapName(), false);
@@ -518,17 +531,18 @@ namespace pragma {
 	 * This is a hack which has been done to solve the problem with OpenMP regions which receive an
 	 * identifier as name and this could be arbitrary
 	 */
-	struct var_p : public Tok<clang::tok::identifier> {
-		var_p() : Tok<clang::tok::identifier>("", true, true) {}
-		var_p(std::string const& str) : Tok<clang::tok::identifier>(str, true, true) {}
+	struct var_p : public Tok<clang::tok::identifier,true> {
+		var_p() : Tok<clang::tok::identifier,true>("", true) {}
+        //FIXME: here, true resolve node
+		var_p(std::string const& str) : Tok<clang::tok::identifier,true>(str, true) {}
 
 		virtual std::ostream& printTo(std::ostream& out) const;
 	};
 
 	// import token definitions from clang
 	namespace tok {
-	#define PUNCTUATOR(name, _) static Tok<clang::tok::name> name = Tok<clang::tok::name>();
-	#define TOK(name) static Tok<clang::tok::name> name = Tok<clang::tok::name>();
+	#define PUNCTUATOR(name, _) static Tok<clang::tok::name, false> name = Tok<clang::tok::name, false>();
+	#define TOK(name) static Tok<clang::tok::name, false> name = Tok<clang::tok::name, false>();
 	#include <clang/Basic/TokenKinds.def>
 	#undef PUNCTUATOR
 	#undef TOK

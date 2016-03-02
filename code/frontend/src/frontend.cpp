@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -56,7 +56,6 @@
 #include "insieme/frontend/extensions/instrumentation_region_extension.h"
 #include "insieme/frontend/extensions/interceptor_extension.h"
 #include "insieme/frontend/extensions/omp_frontend_extension.h"
-#include "insieme/frontend/extensions/semantic_check_extension.h"
 #include "insieme/frontend/extensions/significance_frontend_extension.h"
 #include "insieme/frontend/extensions/test_pragma_extension.h"
 #include "insieme/frontend/extensions/variable_argument_list_extension.h"
@@ -71,9 +70,7 @@ namespace frontend {
 	const unsigned ConversionSetup::DEFAULT_FLAGS = PrintDiag;
 
 	ConversionSetup::ConversionSetup(const vector<path>& includeDirs)
-	    : includeDirs(includeDirs),
-	      standard(Auto), definitions(), interceptedNameSpacePatterns({"std::.*", "__gnu_cxx::.*", "_m_.*", "_mm_.*", "__mm_.*", "__builtin_.*"}),
-	      interceptedHeaderDirs(), flags(DEFAULT_FLAGS){};
+	    : includeDirs(includeDirs), standard(Auto), definitions(), interceptedHeaderDirs(), flags(DEFAULT_FLAGS){};
 
 
 	bool ConversionSetup::isCxx(const path& file) const {
@@ -113,11 +110,20 @@ namespace frontend {
 				}
 			}
 		}
+
 		// check pre-requisites
 		for(auto ext : getExtensions()) {
 			auto isMissing = ext->isPrerequisiteMissing(*this);
 			if(isMissing) {
 				std::cerr << "Prerequisite for an extension is missing:\n" << *isMissing << std::endl;
+
+				std::stringstream ss;
+				for(const auto& extPtr : getExtensions()) {
+					const auto& feExt = *extPtr;
+					ss << typeid(feExt).name() << "\n";
+				}
+				std::cerr << "Loaded extensions:\n" << ss.str() << std::endl;
+
 				assert_fail() << "Aborting due to frontend extension prerequisite error.";
 			}
 		}
@@ -224,19 +230,18 @@ namespace frontend {
 		registerFrontendExtension<extensions::InstrumentationRegionExtension>(options);
 		registerFrontendExtension<extensions::TestPragmaExtension>(options);
 		registerFrontendExtension<extensions::InsiemePragmaExtension>(options);
+		registerFrontendExtension<extensions::WhileToForExtension>(options);
 		registerFrontendExtension<extensions::OmpFrontendExtension>(options);
 		registerFrontendExtension<extensions::SignificanceFrontendExtension>(options);
 		registerFrontendExtension<extensions::CilkFrontendExtension>(options);
-		registerFrontendExtension<extensions::WhileToForExtension>(options);
 
 		registerFrontendExtension<extensions::VariableArgumentListExtension>(options);
 		registerFrontendExtension<extensions::VariableLengthArrayExtension>(options);
-		
 		registerFrontendExtension<extensions::OpenCLFrontendExtension>(options);
 
 		registerFrontendExtension<extensions::FrontendCleanupExtension>(options);
 	}
-	
+
 	void ConversionJob::registerDefaultExtensions()	{
 		boost::program_options::options_description opt;
 		registerExtensionFlags(opt);
@@ -252,7 +257,7 @@ namespace frontend {
 		    << "ProgressBar " << hasOption(ConversionSetup::ProgressBar) << "\n"
 		    << "NoWarnings " << hasOption(ConversionSetup::NoWarnings) << "\n"
 		    << "NoDefaultExtensions " << hasOption(ConversionSetup::NoDefaultExtensions) << "\n" << std::endl;
-		out << "interceptions: \n" << getInterceptedNameSpacePatterns() << std::endl;
+		out << "interceptions: \n" << getInterceptedHeaderDirs() << std::endl;
 		out << "crosscompilation dir: \n" << getCrossCompilationSystemHeadersDir() << std::endl;
 		out << "include dirs: \n" << getIncludeDirectories() << std::endl;
 		out << "definitions: \n" << getDefinitions() << std::endl;

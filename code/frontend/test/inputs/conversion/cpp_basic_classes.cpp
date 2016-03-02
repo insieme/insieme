@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -46,7 +46,7 @@ float A::f() {
 #define A_IR R"(
 def struct IMP_A {
 	i : int<4>;
-	lambda IMP_f : () -> real<4> { return lit("1.0E+0":real<4>); }
+	lambda IMP_f = () -> real<4> { return lit("1.0E+0":real<4>); }
 };)"
 
 struct B {
@@ -57,7 +57,7 @@ struct B {
 #define B_IR R"(
 def struct IMP_B {
 	i : int<4>;
-	lambda IMP_f : () -> real<4> { return lit("1.0E+0":real<4>); }
+	lambda IMP_f = () -> real<4> { return lit("1.0E+0":real<4>); }
 };)"
 
 struct C {
@@ -77,32 +77,107 @@ def struct IMP_C {
 	ctor(y : uint<4>) { cxx_style_assignment(x, y); }
 };)"
 
+// check member use within struct member function
+struct D1 {	
+	void bla() {}
+	void test() {
+		bla();
+	}
+};
+
+// check member use within struct member function, inverse order
+struct D2 {	
+	void test() {
+		bla();
+	}
+	void bla() {}
+};
+
+
+struct VolatileConstructor {
+	VolatileConstructor() = default;
+	VolatileConstructor(const VolatileConstructor&) {}
+	VolatileConstructor(volatile const VolatileConstructor&) {}
+};
+
+#define VOL_CONSTR_IR R"(
+def struct IMP_VolatileConstructor {
+	ctor() { }
+	ctor(v : ref<IMP_VolatileConstructor,t,f,cpp_ref>) { }
+	ctor(v : ref<IMP_VolatileConstructor,t,t,cpp_ref>) { }
+};)"
+
+
 int main() {
 	; // this is required because of the clang compound source location bug
 
-	#pragma test expect_ir(A_IR, R"( { var ref<IMP_A> a = IMP_A::(ref_var(type_lit(IMP_A))); } )")
+	#pragma test expect_ir(A_IR, R"( { var ref<IMP_A> a = IMP_A::(a); } )")
 	{ A a; }
 
-	#pragma test expect_ir(A_IR, R"( { var ref<IMP_A> a = IMP_A::(ref_var(type_lit(IMP_A))); a.IMP_f(); } )")
+	// init options
+	#pragma test expect_ir(A_IR, R"( {
+		var ref<IMP_A,f,f,plain> v0 = IMP_A::(v0);
+		var ref<IMP_A,f,f,plain> v1 = ref_cast(v0, type_lit(t), type_lit(f), type_lit(cpp_ref));
+		var ref<IMP_A,f,f,plain> v2 = ref_cast(IMP_A::(ref_temp(type_lit(IMP_A)), ref_kind_cast(v0, type_lit(cpp_ref))), type_lit(f), type_lit(f), type_lit(cpp_rref));
+	} )")
+	{
+		A a;
+		A b = a;
+		A c = A(a);
+	}
+	
+	// non-default implicit init
+	#pragma test expect_ir(VOL_CONSTR_IR, R"( {
+		var ref<IMP_VolatileConstructor,f,t,plain> v0 = IMP_VolatileConstructor::(ref_cast(v0, type_lit(f), type_lit(f), type_lit(plain)));
+		var ref<IMP_VolatileConstructor,f,f,plain> v1 = ref_cast(v0, type_lit(t), type_lit(t), type_lit(cpp_ref));
+		var ref<IMP_VolatileConstructor,f,f,plain> v2 = ref_cast(IMP_VolatileConstructor::(ref_temp(type_lit(IMP_VolatileConstructor)), ref_kind_cast(v0, type_lit(cpp_ref))), type_lit(t), type_lit(f), type_lit(cpp_ref));
+	} )")
+	{
+		volatile VolatileConstructor a;
+		VolatileConstructor b = a;
+		VolatileConstructor c = VolatileConstructor(a);
+	}
+
+	// method call
+	#pragma test expect_ir(A_IR, R"( { var ref<IMP_A> a = IMP_A::(a); a.IMP_f(); } )")
 	{
 		A a;
 		a.f();
 	}
+
+	// method call using pointer
+	#pragma test expect_ir(A_IR, R"({
+		var ref<IMP_A,f,f,plain> v0 = IMP_A::(v0);
+		var ref<ptr<IMP_A>,f,f,plain> v1 = ptr_from_ref(v0);
+		ptr_to_ref(*v1).IMP_f();
+	})")
+	{
+		A a, *b = &a;
+		b->f();
+	}
 	
-	#pragma test expect_ir(B_IR,R"( { var ref<IMP_B> b = IMP_B::(ref_var(type_lit(IMP_B))); b.IMP_f(); } )")
+	#pragma test expect_ir(B_IR,R"( { var ref<IMP_B> b = IMP_B::(b); b.IMP_f(); } )")
 	{ 
 		B b;
 		b.f();
 	}
 	
-	#pragma test expect_ir(C_IR,R"( { var ref<IMP_C> c1 = IMP_C::(ref_var(type_lit(IMP_C))); } )")
+	#pragma test expect_ir(C_IR,R"( { var ref<IMP_C> c1 = IMP_C::(c1); } )")
 	{
 		C c1;
 	}
 	
-	#pragma test expect_ir(C_IR,R"( { var ref<IMP_C> c = IMP_C::(ref_var(type_lit(IMP_C)), 6u); } )")
+	#pragma test expect_ir(C_IR,R"( { var ref<IMP_C> c = IMP_C::(c, 6u); } )")
 	{
 		C c2(6u);
+	}
+	
+	{
+		D1 d1;
+	}
+
+	{
+		D2 d2;
 	}
 
 	return 0;

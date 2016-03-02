@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -280,6 +280,7 @@ namespace conversion {
 		FORWARD_STMT_TO_EXPR_VISITOR_CALL(CXXThisExpr)
 		FORWARD_STMT_TO_EXPR_VISITOR_CALL(CXXThrowExpr)
 		FORWARD_STMT_TO_EXPR_VISITOR_CALL(CXXDefaultArgExpr)
+		FORWARD_STMT_TO_EXPR_VISITOR_CALL(CXXNullPtrLiteralExpr)
 		FORWARD_STMT_TO_EXPR_VISITOR_CALL(ExprWithCleanups)
 		FORWARD_STMT_TO_EXPR_VISITOR_CALL(MaterializeTemporaryExpr)
 		FORWARD_STMT_TO_EXPR_VISITOR_CALL(CXXTypeidExpr)

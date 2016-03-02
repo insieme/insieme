@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -43,44 +43,49 @@ using philipp = int;
 using driver = philipp;
 
 int main() {
-#pragma test expect_ir("{ var ref<bool> v0; cxx_style_assignment(v0, true); cxx_style_assignment(v0, false); }")
+	#pragma test expect_ir("{ var ref<bool> v0; cxx_style_assignment(v0, true); cxx_style_assignment(v0, false); }")
 	{
 		bool a;
 		a = true;
 		a = false;
 	}
 
-	#pragma test expect_ir("{ var ref<int<4>> v0; var ref<int<4>,f,f,cpp_ref> v1 = ref_cast(v0, type_lit(f), type_lit(f), type_lit(cpp_ref)); }")
+	#pragma test expect_ir("{ var ref<int<4>> v0; var ref<int<4>,f,f,cpp_ref> v1 = v0; }")
 	{
 		int i;
 		int& ref_i = i;
 	}
 
-	#pragma test expect_ir("{ var ref<int<4>> v0; var ref<int<4>,t,f,cpp_ref> v1 = ref_cast(v0, type_lit(t), type_lit(f), type_lit(cpp_ref)); }")
+	#pragma test expect_ir("{ var ref<int<4>> v0; var ref<int<4>,t,f,cpp_ref> v1 = v0; }")
 	{
 		int i;
 		const int& ref_i = i;
 	}
 
-	#pragma test expect_ir("var ref<int<4>,f,f> v0 = ref_var_init(0);")
+	#pragma test expect_ir("var ref<int<4>,f,f> v0 = 0;")
 	auto var0 = 0;
 
-	#pragma test expect_ir("var ref<int<4>,f,f> v0 = ref_var_init(1);")
+	#pragma test expect_ir("var ref<int<4>,f,f> v0 = 1;")
 	decltype(var0) var1 = 1;
 
-	#pragma test expect_ir("var ref<int<4>,f,f> v0 = ref_var_init(2);")
+	#pragma test expect_ir("var ref<int<4>,f,f> v0 = 2;")
 	philipp var2 = 2;
 
-	#pragma test expect_ir("var ref<int<4>,f,f> v0 = ref_var_init(3);")
+	#pragma test expect_ir("var ref<int<4>,f,f> v0 = 3;")
 	driver var3 = 3;
 
 	#pragma test expect_ir(R"(
 		def IMP_consumer = function (v1 : ref<int<4>,f,f,cpp_rref>) -> unit { };
 		def IMP_producer = () -> int<4> { return 5; };
-		IMP_consumer(IMP_producer())
+		IMP_consumer(ref_kind_cast(IMP_producer() materialize, type_lit(cpp_rref)))
 	)")
 	consumer(producer());
 
+	#pragma test expect_ir("ptr_null(type_lit(unit), type_lit(f), type_lit(f))")
+	nullptr;
+
+	#pragma test expect_ir("ptr_null(type_lit(int<4>), type_lit(f), type_lit(f))")
+	(int*)(nullptr);
 
 	return 0;
 }

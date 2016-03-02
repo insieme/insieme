@@ -52,7 +52,6 @@ foreach ( exec_file ${executables})
 	target_link_libraries(${exec_name} insieme_transform) 
 	target_link_libraries(${exec_name} insieme_annotations) 
 	target_link_libraries(${exec_name} ${Boost_PROGRAM_OPTIONS_LIBRARY})
-	target_link_libraries(${exec_name} gomp)
 
 	cotire(${exec_name})
 endforeach(exec_file)

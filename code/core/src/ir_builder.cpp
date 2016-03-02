@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -62,22 +62,18 @@
 #include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/analysis/type_utils.h"
 
-#include "insieme/core/encoder/lists.h"
-
 #include "insieme/core/lang/array.h"
 #include "insieme/core/lang/io.h"
-#include "insieme/core/lang/ir++_extension.h"
 #include "insieme/core/lang/parallel.h"
 #include "insieme/core/lang/pointer.h"
 #include "insieme/core/lang/reference.h"
 #include "insieme/core/lang/static_vars.h"
 #include "insieme/core/lang/varargs_extension.h"
 
-#include "insieme/core/parser/ir_parser.h"
-
-#include "insieme/core/printer/pretty_printer.h"
-
 #include "insieme/core/datapath/datapath.h"
+#include "insieme/core/encoder/lists.h"
+#include "insieme/core/parser/ir_parser.h"
+#include "insieme/core/printer/pretty_printer.h"
 
 #include "insieme/utils/map_utils.h"
 #include "insieme/utils/logging.h"
@@ -599,35 +595,10 @@ namespace core {
 		return field(stringValue(name), type);
 	}
 
-	NamedValuePtr IRBuilderBaseModule::namedValue(const string& name, const ExpressionPtr& value) const {
-		return namedValue(stringValue(name), value);
-	}
-
 	TupleExprPtr IRBuilderBaseModule::tupleExpr(const vector<ExpressionPtr>& values) const {
 		TupleTypePtr type = tupleType(extractTypes(values));
 		return tupleExpr(type, Expressions::get(manager, values));
 	}
-
-	StructExprPtr IRBuilderBaseModule::structExpr(const TypePtr& structType, const vector<NamedValuePtr>& values) const {
-		return structExpr(structType, namedValues(values));
-	}
-
-	StructExprPtr IRBuilderBaseModule::structExpr(const vector<std::pair<StringValuePtr, ExpressionPtr>>& members) const {
-		vector<FieldPtr> types;
-		vector<NamedValuePtr> values;
-		for_each(members, [&](const pair<StringValuePtr, ExpressionPtr>& cur) {
-			types.push_back(field(cur.first, cur.second->getType()));
-			values.push_back(namedValue(cur.first, cur.second));
-		});
-		return structExpr(structType(types), namedValues(values));
-	}
-
-	StructExprPtr IRBuilderBaseModule::structExpr(const vector<NamedValuePtr>& values) const {
-		vector<FieldPtr> types;
-		for_each(values, [&](const NamedValuePtr& cur) { types.push_back(field(cur->getName(), cur->getValue()->getType())); });
-		return structExpr(structType(types), namedValues(values));
-	}
-
 
 	IfStmtPtr IRBuilderBaseModule::ifStmt(const ExpressionPtr& condition, const StatementPtr& thenBody, const StatementPtr& elseBody) const {
 		if(!elseBody) { return ifStmt(condition, wrapBody(thenBody), getNoOp()); }
@@ -761,22 +732,13 @@ namespace core {
 		return doubleLit(out.str());
 	}
 
-	ExpressionPtr IRBuilderBaseModule::undefinedVar(const TypePtr& type) const {
-		auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
-		core::TypePtr elementType = type;
-		if(analysis::isRefType(type)) {
-			elementType = core::analysis::getReferencedType(type);
-		}
-		return callExpr(refType(elementType), refExt.getRefVar(), getTypeLiteral(elementType));
-	}
-
 	ExpressionPtr IRBuilderBaseModule::undefinedNew(const TypePtr& type) const {
 		auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
-		core::TypePtr elementType = type;
 		if(analysis::isRefType(type)) {
-			elementType = core::analysis::getReferencedType(type);
+			auto elementType = analysis::getReferencedType(type);
+			return lang::buildRefCast(callExpr(refType(elementType), refExt.getRefNew(), getTypeLiteral(elementType)), type);
 		}
-		return callExpr(refType(elementType), refExt.getRefNew(), getTypeLiteral(elementType));
+		return callExpr(refType(type), refExt.getRefNew(), getTypeLiteral(type));
 	}
 
 	CallExprPtr IRBuilderBaseModule::deref(const ExpressionPtr& subExpr) const {
@@ -790,9 +752,9 @@ namespace core {
 		return deref(subExpr);
 	}
 
-	CallExprPtr IRBuilderBaseModule::refVar(const ExpressionPtr& subExpr) const {
+	CallExprPtr IRBuilderBaseModule::refTemp(const ExpressionPtr& subExpr) const {
 		auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
-		return callExpr(refType(subExpr->getType()), refExt.getRefVarInit(), subExpr);
+		return callExpr(refType(subExpr->getType()), refExt.getRefTempInit(), subExpr);
 	}
 
 	CallExprPtr IRBuilderBaseModule::refNew(const ExpressionPtr& subExpr) const {
@@ -808,8 +770,9 @@ namespace core {
 
 	CallExprPtr IRBuilderBaseModule::assign(const ExpressionPtr& target, const ExpressionPtr& value) const {
 		assert_pred1(analysis::isRefType, target->getType());
+		auto& basic = manager.getLangBasic();
 		auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
-		return callExpr(manager.getLangBasic().getUnit(), refExt.getRefAssign(), target, value);
+		return callExpr(basic.getUnit(), refExt.getRefAssign(), target, value);
 	}
 
 	ExpressionPtr IRBuilderBaseModule::refReinterpret(const ExpressionPtr& subExpr, const TypePtr& newElementType) const {
@@ -894,6 +857,11 @@ namespace core {
 
 	DeclarationStmtPtr IRBuilderBaseModule::declarationStmt(const TypePtr& type, const ExpressionPtr& value) const {
 		return declarationStmt(variable(type), value);
+	}
+
+	ReturnStmtPtr IRBuilderBaseModule::returnStmt(const ExpressionPtr& retVal) const {
+		auto implicitVariable = variable(retVal->getType());
+		return returnStmt(retVal, implicitVariable);
 	}
 
 	ReturnStmtPtr IRBuilderBaseModule::returnStmt() const {
@@ -1453,6 +1421,21 @@ namespace core {
 		return sub(getZero(type), a);
 	}
 
+	ExpressionPtr IRBuilderBaseModule::numericCast(const core::ExpressionPtr& expr, const core::TypePtr& targetType) const {
+		if(expr->getType() == targetType) return expr;
+
+		// special case for enum to numeric
+		if(lang::isEnum(expr)) {
+			return numericCast(core::lang::buildEnumToInt(expr), targetType);
+		}
+		// special case for numeric to enum
+		if(lang::isEnum(targetType)) {
+			return core::lang::buildEnumFromInt(targetType, expr);
+		}
+
+		return callExpr(targetType, getLangBasic().getNumericCast(), expr, getTypeLiteral(targetType));
+	}
+
 	core::ExpressionPtr IRBuilderBaseModule::getZero(const core::TypePtr& type) const {
 			// if it is an integer ...
 			if(manager.getLangBasic().isInt(type)) { return literal(type, "0"); }
@@ -1478,17 +1461,17 @@ namespace core {
 			}
 
 			// if it is an enum ...
-			if(lang::isEnumType(type)) {
+			if(lang::isEnum(type)) {
 				auto& enumExt = manager.getLangExtension<lang::EnumExtension>();
 				// this is what gcc does: { enum { A=1 } var1; cout << var1; }. Prints 0.
-				return callExpr(type, enumExt.getIntToEnum(), getTypeLiteral(type), getZero(lang::getEnumElementType(type)));
+				return callExpr(type, enumExt.getEnumFromInt(), getTypeLiteral(type), getZero(lang::getEnumIntType(type)));
 			}
 
 			// if it is a struct ...
 			if(auto structType = analysis::isStruct(type)) {
-				vector<NamedValuePtr> members;
-				for_each(structType->getFields(), [&](const FieldPtr& cur) { members.push_back(namedValue(cur->getName(), getZero(cur->getType()))); });
-				return core::StructExpr::get(manager, type, namedValues(members));
+				ExpressionList initers;
+				for_each(structType->getFields(), [&](const FieldPtr& cur) { initers.push_back(getZero(cur->getType())); });
+				return deref(initExpr(lang::buildRefTemp(type), initers));
 			}
 
 			// if it is a union type ...
@@ -1498,7 +1481,7 @@ namespace core {
 
 				// init the first member
 				auto first = unionType->getFields()[0];
-				return unionExpr(type, first->getName(), getZero(first->getType()));
+				return deref(initExpr(lang::buildRefTemp(type), getZero(first->getType())));
 			}
 
 			// if it is a function type -- used for function pointers
@@ -1513,7 +1496,7 @@ namespace core {
 
 			// for array types
 			if(lang::isArray(type)) {
-				return lang::buildArrayCreate(lang::getArraySize(type), { getZero(lang::getArrayElementType(type)) });
+				return deref(initExpr(lang::buildRefTemp(type), getZero(lang::getArrayElementType(type))));
 			}
 
 			// for all other generic types we return a generic zero value

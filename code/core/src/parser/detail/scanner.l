@@ -77,7 +77,8 @@ blank         [ \t]
 	loc.step ();
 %}
 
-"//"+.*       loc.step ();
+"//"+.*       loc.step ();							// skip single-line comments
+"/*"([^*]|(\*+[^*/]))*\*+\/      loc.step ();		// skip multi-line comments
 {blank}+      loc.step ();
 [\n]+         loc.lines (yyleng); loc.step ();
 "-"           return InspireParser::make_MINUS(loc);
@@ -171,6 +172,8 @@ blank         [ \t]
 "private"     return InspireParser::make_PRIVATE(loc);
 "public"      return InspireParser::make_PUBLIC(loc);
 "protected"   return InspireParser::make_PROTECTED(loc);
+
+"materialize" return InspireParser::make_MATERIALIZE(loc);
 
 "spawn"       return InspireParser::make_SPAWN(loc);
 "sync"        return InspireParser::make_SYNC(loc);

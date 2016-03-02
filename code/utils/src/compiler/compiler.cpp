@@ -71,7 +71,7 @@ Compiler Compiler::getDefaultCppCompiler() {
 	res.addFlag("-x c++");
 	res.addFlag("-lstdc++");
 	res.addFlag("-Wall");
-	res.addFlag("--std=c++98");
+	res.addFlag("--std=c++11");
 	res.addFlag("-fpermissive");
 	res.addFlag("-Wno-write-strings");
 	return res;

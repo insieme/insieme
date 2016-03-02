@@ -89,7 +89,6 @@ target_include_directories(insieme_core PUBLIC ${insieme_core_include_dir} )
 target_include_directories(insieme_core PRIVATE ${FLEX_OUTPUT_PATH})
 target_include_directories(insieme_core PRIVATE ${BISON_OUTPUT_PATH})
 target_include_directories(insieme_core PRIVATE ${FLEX_INCLUDE_DIRS})
-target_link_libraries(insieme_core gomp)
 
 # add dependencies
 target_link_libraries(insieme_core insieme_utils)
@@ -106,10 +105,10 @@ target_link_libraries(insieme_core ${Boost_REGEX_LIBRARY})
 
 # include workaround header for cudd (which prevents cudd leaking macros) in prefix
 # prevent flex from being added to prefix
-#set_target_properties(insieme_core PROPERTIES
-#	COTIRE_PREFIX_HEADER_IGNORE_PATH "${CMAKE_SOURCE_DIR};${CMAKE_BINARY_DIR};${FLEX_INCLUDE_DIRS}"
-#	COTIRE_PREFIX_HEADER_INCLUDE_PATH "${CMAKE_SOURCE_DIR}/code/core/include/insieme/core/arithmetic/cudd")
-#cotire(insieme_core)
+set_target_properties(insieme_core PROPERTIES
+	COTIRE_PREFIX_HEADER_IGNORE_PATH "${CMAKE_SOURCE_DIR};${CMAKE_BINARY_DIR};${FLEX_INCLUDE_DIRS}"
+	COTIRE_PREFIX_HEADER_INCLUDE_PATH "${CMAKE_SOURCE_DIR}/code/core/include/insieme/core/arithmetic/cudd")
+cotire(insieme_core)
 
 # =============================================  TESTING  =====================================
 set( ut_prefix  ut_core)
@@ -124,7 +123,7 @@ foreach ( case_file ${test_cases})
 	target_link_libraries(${case_name} insieme_core)
 	target_link_libraries(${case_name} insieme_utils)
 	target_link_libraries(${case_name} ${CUDD_LIBRARIES})
-    target_link_libraries(${case_name} ${Boost_REGEX_LIBRARY})
+	target_link_libraries(${case_name} ${Boost_REGEX_LIBRARY})
 	target_include_directories(${case_name} PUBLIC test/include/)
 	
 	#the parser unit-tests need the bison/flex include directories

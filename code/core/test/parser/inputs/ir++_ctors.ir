@@ -17,13 +17,13 @@ def struct A {
 unit main() {
 
 	// create a stack based A
-	var ref<A> a1 = A::(ref_var(type_lit(A)));
+	var ref<A> a1 = A::(a1);
 	
 	// create a heap based A
 	var ref<A> a2 = A::(ref_new(type_lit(A)));
 	
 	// create a stack based A with initial value
-	var ref<A> a3 = A::(ref_var(type_lit(A)), 2);
+	var ref<A> a3 = A::(a3, 2);
 	
 	// create a stack based A with initial value
 	var ref<A> a4 = A::(ref_new(type_lit(A)), 3);

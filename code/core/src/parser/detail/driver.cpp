@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -155,8 +155,10 @@ namespace parser {
 			if(op == "=") {
 				if(!analysis::isRefType(left.getType())) {
 					error(l, format("left side on assignment must be a reference and is %s", toString(left.getType())));
+					return nullptr;
 				} else if(analysis::getReferencedType(left.getType()) != right->getType()) {
 					error(l, format("right side expression of type %s can not be assingend to type %s", toString(right.getType()), toString(left.getType())));
+					return nullptr;
 				}
 
 				return builder.assign(left, right);
@@ -165,6 +167,7 @@ namespace parser {
 			auto b = getOperand(right);
 			// left side is untouched because of reference subscript operators
 			if(op == "[") {
+				left = getScalar(left);
 				if(builder.getLangBasic().isUnsignedInt(b->getType())) { b = builder.castExpr(builder.getLangBasic().getInt8(), b); }
 				if(analysis::isRefType(left->getType())) {
 					auto inType = analysis::getReferencedType(left->getType());
@@ -236,7 +239,11 @@ namespace parser {
 		}
 
 
-		ExpressionPtr InspireDriver::genMemberAccess(const location& l, const ExpressionPtr& expr, const std::string& memberName) {
+		ExpressionPtr InspireDriver::genMemberAccess(const location& l, const ExpressionPtr& exprIn, const std::string& memberName) {
+
+			//get rid of single element tuples
+			const ExpressionPtr& expr = getScalar(exprIn);
+
 			if(!expr) {
 				error(l, "no expression");
 				return nullptr;
@@ -265,11 +272,12 @@ namespace parser {
 						const auto& key = mapEntry.first;
 						if(key.getValue()->getValue() == keyName) {
 							lookupResult = key;
+							break;
 						}
 					}
 
 					if (!lookupResult) {
-						error(l, format("Unable to locate member %s in type %s", memberName, *genericObjectType));
+						error(l, format("Unable to lookup member %s in type %s", memberName, *genericObjectType));
 						return nullptr;
 					}
 				}
@@ -350,15 +358,21 @@ namespace parser {
 
 		TypePtr InspireDriver::genGenericType(const location& l, const std::string& name, const ParentList& parents, const TypeList& params) {
 			if(name == "int") {
-				if(params.size() != 1) { error(l, "wrong int size"); }
+				if(params.size() != 1) {
+					error(l, "wrong int size");
+					return nullptr;
+				}
 			}
 			if(name == "real") {
-				if(params.size() != 1) { error(l, "wrong real size"); }
+				if(params.size() != 1) {
+					error(l, "wrong real size");
+					return nullptr;
+				}
 			}
 			for(const auto& p : params) {
 				if(!p) {
-					std::cerr << "wrong parameter in paramenter list" << std::endl;
-					abort();
+					error(l, "wrong parameter in paramenter list");
+					return nullptr;
 				}
 			}
 
@@ -366,7 +380,10 @@ namespace parser {
 		}
 
 		NumericTypePtr InspireDriver::genNumericType(const location& l, const ExpressionPtr& variable) const {
-			if(!variable.isa<VariablePtr>()) { error(l, "not a variable"); }
+			if(!variable.isa<VariablePtr>()) {
+				error(l, "not a variable");
+				return nullptr;
+			}
 			return builder.numericType(variable.as<core::VariablePtr>());
 		}
 
@@ -388,16 +405,54 @@ namespace parser {
 				return nullptr;
 			}
 
+			//if this record type has user specified constructors and the default constructor is still our dummy lambda, we have to delete that one here
+			if (!ctors.empty()) {
+				const TypePtr thisType = builder.refType(key);
+				const auto ctorType = builder.functionType(toVector(thisType), thisType, FK_CONSTRUCTOR);
+				const auto lit = builder.getLiteralForConstructor(ctorType);
+				const auto dummyLambda = builder.lambdaExpr(ctorType, builder.parameters(), parserIRExtension.getMemberDummyLambda());
+				if (tu.getFunctions()[lit] == dummyLambda) {
+					tu.getFunctions().erase(lit);
+				}
+			}
+
 			TagTypePtr res;
 
+			// now we insert new member functions with just literals as implementation for all functions which have only been declared by the user
+			MemberFunctionList mfunsNew = mfuns;
+			std::vector<LiteralPtr> literalsToRemove;
+			const std::string classPrefix = name + "::";
+			// iterate over all functions registered in the TU
+			for (auto& function : tu.getFunctions()) {
+				auto& literal = function.first;
+				auto& literalName = literal->getStringValue();
+				auto& lambda = function.second;
+				// only consider member functions
+				if (lambda->getFunctionType().isMemberFunction()) {
+					auto body = lambda->getBody();
+					// only functions which have been explicitely defined by the user will be inserted as literals
+					if (body.size() > 0 && body[0] == parserIRExtension.getExplicitMemberDummyLambda()
+							&& boost::starts_with(literalName, classPrefix)) {
+						//register this literal for removal from the TU
+						literalsToRemove.push_back(literal);
+						//and add a new member function with the literal implementation
+						mfunsNew.push_back(builder.memberFunction(false, literalName.substr(classPrefix.length()), literal));
+					}
+				}
+			}
+			//remove the literals we are supposed to remove
+			for (auto& lit : literalsToRemove) {
+				tu.getFunctions().erase(lit);
+			}
+
 			if(type == NT_Struct) {
-				res = builder.structTypeWithDefaults(builder.refType(getThisType()), parents, fields, ctors, dtor, dtorIsVirtual, mfuns, pvmfuns);
+				res = builder.structTypeWithDefaults(builder.refType(getThisType()), parents, fields, ctors, dtor, dtorIsVirtual, mfunsNew, pvmfuns);
 			} else {
 				if(!parents.empty()) {
 					error(l, "Inheritance not supported for unions!");
 					return nullptr;
 				}
-				res = builder.unionTypeWithDefaults(builder.refType(getThisType()), fields, ctors, dtor, dtorIsVirtual, mfuns, pvmfuns);
+				res = builder.unionTypeWithDefaults(builder.refType(getThisType()), fields, ctors, dtor, dtorIsVirtual, mfunsNew, pvmfuns);
 			}
 
 			// register type in translation unit
@@ -443,20 +498,24 @@ namespace parser {
 		TypeList InspireDriver::getParamTypesForLambdaAndFunction(const location& l, const VariableList& params) {
 			TypeList paramTypes;
 			for(const auto& var : params) {
+				const auto& varType = var->getType();
 				// if we are building a lambda, the function type is already the correct one and the body will be materialized
 				if(inLambda) {
-					paramTypes.push_back(var.getType());
+					paramTypes.push_back(varType);
 
 					// if we are building a function, we have to calculate the function type differently and leave the body untouched
 				} else {
-					if(!analysis::isRefType(var.getType())) {
+					if(!analysis::isRefType(varType)) {
 						error(l, format("Parameter %s is not of ref type", var));
 						return TypeList();
 					}
-					if(lang::isCppReference(var->getType()) || lang::isCppRValueReference(var->getType())) {
-						paramTypes.push_back(var->getType());
+					//CPP refs and rrefs get used as is (see transform::materialize)
+					if(lang::isCppReference(varType) || lang::isCppRValueReference(varType)) {
+						paramTypes.push_back(varType);
+
+						//plain refs get unwrapped
 					} else {
-						paramTypes.push_back(analysis::getReferencedType(var.getType()));
+						paramTypes.push_back(analysis::getReferencedType(varType));
 					}
 				}
 			}
@@ -530,10 +589,41 @@ namespace parser {
 			if(!isSymbolDeclaredInGlobalScope(memberName)) { declareSymbolInGlobalScope(l, memberName, key); }
 		}
 
+		StatementPtr InspireDriver::replaceThisInBody(const location& l, const StatementPtr& body, const VariablePtr& thisParam) {
+			if (inLambda) {
+				return transform::replaceAll(mgr, body, genThis(l), thisParam).as<StatementPtr>();
+			} else {
+				return transform::replaceAll(mgr, body, genThis(l), builder.deref(thisParam)).as<StatementPtr>();
+			}
+		}
+
 		/**
 		 * generates a constructor for the currently defined record type
 		 */
-		ExpressionPtr InspireDriver::genConstructor(const location& l, const VariableList& params, const StatementPtr& body) {
+		ExpressionPtr InspireDriver::genConstructor(const location& l, const LambdaExprPtr& ctor) {
+			assert_false(currentRecordStack.empty()) << "Not within record definition!";
+
+			auto key = builder.getLiteralForConstructor(ctor->getType());
+
+			//register the lambda itself in the TU - but only overwrite dummy declarations
+			if (const auto& otherMember = tu.getFunctions()[key]) {
+				const auto& otherBody = otherMember->getBody();
+				if (otherBody->size() != 1
+						|| (otherBody[0] != parserIRExtension.getMemberDummyLambda()
+								&& otherBody[0] != parserIRExtension.getExplicitMemberDummyLambda())) {
+					error(l, format("Re-definition of constructor of type %s", *key->getType()));
+					return nullptr;
+				}
+			}
+			tu.addFunction(key, ctor);
+
+			return key;
+		}
+
+		/**
+		 * generates a constructor for the currently defined record type
+		 */
+		LambdaExprPtr InspireDriver::genConstructorLambda(const location& l, const VariableList& params, const StatementPtr& body) {
 			assert_false(currentRecordStack.empty()) << "Not within record definition!";
 
 			// get this-type (which is ref<ref in case of a function
@@ -543,14 +633,15 @@ namespace parser {
 			// create full parameter list
 			VariableList ctorParams;
 			ctorParams.push_back(thisParam);
-			for(const auto& cur : params)
+			for(const auto& cur : params) {
 				ctorParams.push_back(cur);
+			}
 
 			auto paramTypes = getParamTypesForLambdaAndFunction(l, ctorParams);
 			if(paramTypes.size() != params.size() + 1) { return nullptr; }
 
 			// update body
-			auto newBody = transform::replaceAll(mgr, body, genThis(l), thisParam).as<StatementPtr>();
+			auto newBody = replaceThisInBody(l, body, thisParam);
 
 			// create constructor type
 			auto ctorType = builder.functionType(paramTypes, builder.refType(getThisType()), FK_CONSTRUCTOR);
@@ -561,12 +652,7 @@ namespace parser {
 				// replace all variables in the body by their implicitly materialized version
 				ingredients = transform::materialize(ingredients);
 			}
-			auto fun = builder.lambdaExpr(ctorType, ingredients.params, ingredients.body);
-
-			auto key = builder.getLiteralForConstructor(ctorType);
-			tu.addFunction(key, fun);
-
-			return key;
+			return builder.lambdaExpr(ctorType, ingredients.params, ingredients.body);
 		}
 
 		/**
@@ -586,7 +672,7 @@ namespace parser {
 			if(paramTypes.size() != 1) { return nullptr; }
 
 			// update body
-			auto newBody = transform::replaceAll(mgr, body, genThis(l), thisParam).as<StatementPtr>();
+			auto newBody = replaceThisInBody(l, body, thisParam);
 
 			// create destructor type
 			auto dtorType = builder.functionType(paramTypes, builder.refType(getThisType()), FK_DESTRUCTOR);
@@ -624,15 +710,36 @@ namespace parser {
 			}
 
 			// update body
-			auto newBody = transform::replaceAll(mgr, body, genThis(l), thisParam).as<StatementPtr>();
+			auto newBody = replaceThisInBody(l, body, thisParam);
 
 			// create the member function
 			auto fun = genLambda(l, fullParams, retType, newBody, FK_MEMBER_FUNCTION);
+			//ensure that the lambda got created without errors
+			if (!fun) {
+				return nullptr;
+			}
 
 			auto memberFunType = fun->getFunctionType();
 			assert_false(fun->isRecursive()) << "The parser should not produce recursive functions!";
 
+			//the key used to register this member function in the TU
 			auto key = builder.getLiteralForMemberFunction(fun->getFunctionType(), name);
+
+			// rename lambda ref to the correct name for a member function
+			std::string lambdaName = key->getStringValue();
+			fun = builder.lambdaExpr(fun->getLambda(), lambdaName);
+			annotations::attachName(fun, lambdaName);
+
+			//register the lambda itself in the TU - but only overwrite dummy declarations
+			if (const auto& otherMember = tu.getFunctions()[key]) {
+				const auto& otherBody = otherMember->getBody();
+				if (otherBody->size() != 1
+						|| (otherBody[0] != parserIRExtension.getMemberDummyLambda()
+								&& otherBody[0] != parserIRExtension.getExplicitMemberDummyLambda())) {
+					error(l, format("Re-definition of member function %s of type %s", name, *key->getType()));
+					return nullptr;
+				}
+			}
 			tu.addFunction(key, fun);
 
 			return builder.memberFunction(virtl, name, key);
@@ -658,6 +765,26 @@ namespace parser {
 
 			// create the member function entry
 			return builder.pureVirtualMemberFunction(name, memberFunType);
+		}
+
+		ExpressionPtr InspireDriver::genFreeConstructor(const location& l, const std::string& name, const LambdaExprPtr& ctor) {
+			assert_false(currentRecordStack.empty()) << "Not within record definition!";
+
+			//the given ctor is already complete. all we have to do is register it in the TU and the global scope with the desired name
+			const auto key = builder.literal(name, ctor->getType());
+			if(tu[key] || isSymbolDeclaredInGlobalScope(name)) {
+				error(l, format("Re-definition of function %s", name));
+				return nullptr;
+			}
+
+			// rename lambda ref to given name
+			auto renamedCtor = builder.lambdaExpr(ctor->getLambda(), name);
+			annotations::attachName(renamedCtor, name);
+
+			declareSymbolInGlobalScope(l, name, key);
+			tu.addFunction(key, renamedCtor);
+
+			return key;
 		}
 
 		ExpressionPtr InspireDriver::genFunctionDefinition(const location& l, const std::string name, const LambdaExprPtr& lambda) {
@@ -687,7 +814,23 @@ namespace parser {
 			return builder.genericType(name, parents, typeList);
 		}
 
-		ExpressionPtr InspireDriver::genCall(const location& l, const ExpressionPtr& callable, ExpressionList args) {
+		ParserTypedExpression InspireDriver::genTypedExpression(const location& l, const ExpressionPtr& expression, const TypePtr& type) {
+			if (!types::getTypeVariableInstantiation(mgr, type, expression->getType())) {
+				error(l, format("The given explicit expression type %s does not match the expression of type %s", *type, *expression->getType()));
+				return {};
+			}
+			return {expression, type};
+		}
+
+		ExpressionPtr InspireDriver::genCall(const location& l, const ExpressionPtr& callable, ParserTypedExpressionList typedArgs) {
+			ExpressionList args;
+			TypeList argumentTypes;
+
+			for (const auto& cur : typedArgs) {
+				args.push_back(cur.expression);
+				argumentTypes.push_back(cur.type);
+			}
+
 			ExpressionPtr func = getScalar(callable);
 
 			// if this is a member function call we prepend the implicit this parameter
@@ -698,6 +841,7 @@ namespace parser {
 				if(analysis::isRefType(thisParamType)) { thisParamType = analysis::getReferencedType(thisParamType); }
 
 				args.insert(args.begin(), thisParam);
+				argumentTypes.insert(argumentTypes.begin(), thisParam->getType());
 
 				// replace func with the lookup of the literal. first create the name of the literal
 				std::string typeName = thisParamType.as<GenericTypePtr>()->getName()->getValue();
@@ -706,8 +850,13 @@ namespace parser {
 
 				// now we have to find a function registered in the TU which has the same literal name and the correct parameter types. we have to ignore the
 				// result type
-				const auto argumentTypes = extractTypes(args);
+
+				//the first candidate we found
 				LiteralPtr candidate;
+				//the number of candidates we found. finding no exact match but multiple candidates is an error
+				unsigned int candidateCount = 0;
+
+				//now iterate over all functions registered in the TU and filter for the ones with the correct name
 				for(const auto& mapEntry : tu.getFunctions()) {
 					const auto& key = mapEntry.first;
 					if(key.getValue()->getValue() == memberName) {
@@ -718,8 +867,9 @@ namespace parser {
 									func = key;
 									break;
 
-								//otherwise, if we don't already have a matching candidate and can find a valid parameter substitution, we remember it
-								} else if (!candidate && types::getTypeVariableInstantiation(mgr, keyType->getParameterTypeList(), argumentTypes)) {
+									//otherwise, if we can find a valid parameter substitution, we increment the candidateCount and store the function
+								} else if (types::getTypeVariableInstantiation(mgr, keyType->getParameterTypeList(), argumentTypes)) {
+									candidateCount++;
 									candidate = key;
 								}
 							}
@@ -729,8 +879,14 @@ namespace parser {
 
 				//if we didn't change the function, we didn't find an exact match
 				if (func == getScalar(callable)) {
-					//if we found a candidate then we take that one
-					if (candidate) {
+					//if we found multiple candidates, this is an error, and the user has to specify which overload to use
+					if (candidateCount >= 2) {
+						error(l, format("Found %d possible candidates matching the given argument types. Specify which one to call by using the advanced overload selection syntax.",
+						                candidateCount));
+						return nullptr;
+
+						//if we found a single candidate then we take that one
+					} else if (candidateCount == 1) {
 						func = candidate;
 
 						//otherwise we fail
@@ -760,16 +916,19 @@ namespace parser {
 						newParams.push_back(builder.pack(packParams));
 						std::swap(args, newParams);
 					}
+
+					//Fix the argument type list accordingly
+					while (argumentTypes.size() > args.size() - 1) {
+						argumentTypes.pop_back();
+					}
+					argumentTypes.push_back(args.crbegin()->getType());
 				}
 			}
 
 			if(args.size() != funcParamTypes.size()) {
-				error(l, "invalid number of arguments in function call");
+				error(l, format("invalid number of arguments in function call. got %d, expected %d", args.size(), funcParamTypes.size()));
 				return nullptr;
 			}
-
-			TypeList argumentTypes;
-			::transform(args, back_inserter(argumentTypes), [](const ExpressionPtr& cur) { return cur->getType(); });
 
 			TypePtr retType;
 			try {
@@ -790,111 +949,56 @@ namespace parser {
 			return res;
 		}
 
-		ExpressionPtr InspireDriver::genConstructorCall(const location& l, const std::string name, ExpressionList params) {
-			assert_true(params.size() >= 1) << "Constructor calls must have at least the this parameter argument";
+		ExpressionPtr InspireDriver::genConstructorCall(const location& l, const std::string name, ParserTypedExpressionList args) {
+			if (args.size() == 0) {
+				error(l, "Constructor calls must have at least the this parameter argument");
+				return nullptr;
+			}
 
 			// extract the this parameter from the params
-			auto thisParam = params[0];
+			auto thisParam = args[0].expression;
 
 			// and remove it from the parameter list
-			params.erase(params.begin());
+			args.erase(args.begin());
 
 			// genCall will do everything else
 			const auto callable = builder.callExpr(parserIRExtension.getMemberFunctionAccess(), thisParam, builder.getIdentifierLiteral("ctor"));
-			return genCall(l, callable, params);
+			return genCall(l, callable, args);
 		}
 
-		ExpressionPtr InspireDriver::genDestructorCall(const location& l, const std::string name, const ExpressionPtr& param) {
+		ExpressionPtr InspireDriver::genDestructorCall(const location& l, const std::string name, const ExpressionPtr& thisArgument) {
 			// genCall will do everything else
-			const auto callable = builder.callExpr(parserIRExtension.getMemberFunctionAccess(), param, builder.getIdentifierLiteral("dtor"));
-			return genCall(l, callable, ExpressionList());
+			const auto callable = builder.callExpr(parserIRExtension.getMemberFunctionAccess(), thisArgument, builder.getIdentifierLiteral("dtor"));
+			return genCall(l, callable, ParserTypedExpressionList());
 		}
 
-		ExpressionPtr InspireDriver::genStructExpression(const location& l, const TypePtr& type, const ExpressionList& list) {
-			// check for null
-			if(!type) {
-				error(l, "Accessing null-type!");
-				return nullptr;
+		/**
+		 * Generates a new call expression from the given one with the type of the call expression materialized
+		 */
+		ExpressionPtr InspireDriver::materializeCall(const location& l, const ExpressionPtr& exp) {
+			if (const auto& call = exp.isa<CallExprPtr>()) {
+				const auto& callType = call->getType();
+				TypePtr newType = lang::buildRefType(callType);
+				if(analysis::isRefType(callType)) {
+					auto callRefType = lang::ReferenceType(callType);
+					callRefType.setKind(lang::ReferenceType::Kind::Plain);
+					newType = callRefType.toType();
+				}
+				return builder.callExpr(newType, call->getFunctionExpr(), call->getArguments());
 			}
-
-			// check for a struct type
-			TagTypePtr structType = type.isa<TagTypePtr>();
-			if(!structType || !structType->isStruct()) {
-				error(l, format("Not a struct type: %s", toString(type)));
-				return nullptr;
-			}
-
-			// check fields
-			auto fields = structType->getFields();
-			if(fields->size() != list.size()) {
-				error(l, "init list does not match number of fields");
-				return nullptr;
-			}
-
-			// extract name / value pairs
-			NamedValueList values;
-			for(const auto& cur : make_paired_range(fields, list)) {
-				values.push_back(builder.namedValue(cur.first->getName(), cur.second.as<ExpressionPtr>()));
-			}
-
-			// build struct expression with generic type
-			return builder.structExpr(builder.genericType(structType->getName()->getValue()), values);
+			return exp;
 		}
-
-		ExpressionPtr InspireDriver::genUnionExpression(const location& l, const TypePtr& type, const std::string field, const ExpressionPtr& expr) {
-			// check for null
-			if(!type) {
-				error(l, "Accessing null-type!");
-				return nullptr;
-			}
-
-			// check for a union type
-			TagTypePtr unionType = type.isa<TagTypePtr>();
-			if(!unionType || !unionType->isUnion()) {
-				error(l, format("Not a union type: %s", toString(type)));
-				return nullptr;
-			}
-
-			// build union expression with generic type
-			return builder.unionExpr(builder.genericType(unionType->getName()->getValue()), builder.stringValue(field), expr);
+		
+		ExpressionPtr InspireDriver::genInitializerExprTemp(const location& l, const TypePtr& type, const ExpressionList& list) {
+			return genInitializerExpr(l, type, lang::buildRefTemp(type), list);
 		}
-
-		ExpressionPtr InspireDriver::genInitializerExpr(const location& l, const TypePtr& type, const ExpressionList& list) {
-			// check for a struct type
-			TagTypePtr tagType = type.isa<TagTypePtr>();
-			if(tagType && tagType->isStruct()) {
-				return genStructExpression(l, type, list);
-
-				// check for union type, which has to be initialized differently
-			} else if(tagType && tagType->isUnion()) {
-				// there must only be one expression in the initializer
-				if(list.size() != 1) {
-					error(l, "A union initialization expression must only contain one expression");
-					return nullptr;
-				}
-
-				// we have to find the member of the union which has the same type as the given expression
-				ExpressionPtr init = list[0];
-				auto unionType = tagType->getUnion();
-				for(auto cur : unionType->getFields()) {
-					if(cur->getType() == init.getType()) { return genUnionExpression(l, type, cur->getName()->getValue(), init); }
-				}
-
-				// if we end up here we didn't find a matching field
-				error(l, "The given expression does not match any of the union's field types");
+		
+		ExpressionPtr InspireDriver::genInitializerExpr(const location& l, const TypePtr& type, const ExpressionPtr& memExpr, const ExpressionList& list) {
+			if(!lang::isReference(type)) {
+				error(l, format("type for initialization must be a reference type (is %s)", *type));
 				return nullptr;
-
-			} else if(auto genericType = type.isa<GenericTypePtr>()) {
-				auto tuType = tu[genericType];
-				if(!tuType) {
-					error(l, format("Can not initialize generic type %s, since it isn't registered in the translation unit", type));
-					return nullptr;
-				}
-				return genInitializerExpr(l, tuType, list);
 			}
-
-			assert_not_implemented() << "Unimplemented functionality. Can't initialize type " << type;
-			return nullptr;
+			return builder.initExpr(type.as<GenericTypePtr>(), memExpr, builder.expressions(list));
 		}
 
 		VariablePtr InspireDriver::genParameter(const location& l, const std::string& name, const TypePtr& type) {
@@ -960,11 +1064,48 @@ namespace parser {
 		}
 
 		DeclarationStmtPtr InspireDriver::genVariableDefinition(const location& l, const TypePtr& type, const std::string name, const ExpressionPtr& init) {
+			auto var = genVariableDeclaration(l, type, name);
+			if (!var) {
+				return nullptr;
+			}
+			return builder.declarationStmt(var, getScalar(init));
+		}
+
+		/**
+		 * constructs a new variable declaration with a given type
+		 */
+		VariablePtr InspireDriver::genVariableDeclaration(const location& l, const TypePtr& type, const std::string name) {
 			auto resolvedType = resolveTypeAliases(l, type);
 			auto variable = builder.variable(resolvedType);
 			annotations::attachName(variable, name);
 			declareSymbol(l, name, variable);
-			return builder.declarationStmt(variable, getScalar(init));
+			if (whereErrors()) {
+				return nullptr;
+			}
+			return variable;
+		}
+
+		/**
+		 * constructs a new declaration statement for the variable with name name and the given init expression
+		 */
+		DeclarationStmtPtr InspireDriver::genDeclarationStmt(const location& l, const std::string name, const ExpressionPtr& init) {
+			auto var = lookupDeclared(name).isa<VariablePtr>();
+			if (!var) {
+				error(l, format("Symbol %s is not a variable", name));
+				return nullptr;
+			}
+			return builder.declarationStmt(var, getScalar(init));
+		}
+
+		/**
+		 * constructs a new declaration statement for the variable with an undefined init expression
+		 */
+		DeclarationStmtPtr InspireDriver::genUndefinedDeclarationStmt(const location& l, const TypePtr& type, const std::string name) {
+			auto var = genVariableDeclaration(l, type, name);
+			if (!var) {
+				return nullptr;
+			}
+			return builder.declarationStmt(var, var);
 		}
 
 		ForStmtPtr InspireDriver::genForStmt(const location& l, const TypePtr& iteratorType, const std::string iteratorName, const ExpressionPtr& lowerBound,
@@ -987,7 +1128,7 @@ namespace parser {
 				//default constructor
 				auto ctorType = builder.functionType(toVector(thisType), thisType, FK_CONSTRUCTOR);
 				auto lit = builder.getLiteralForConstructor(ctorType);
-				tu.addFunction(lit, builder.lambdaExpr(ctorType, builder.parameters(), builder.getNoOp()));
+				tu.addFunction(lit, builder.lambdaExpr(ctorType, builder.parameters(), parserIRExtension.getMemberDummyLambda()));
 			}
 
 			{
@@ -995,7 +1136,7 @@ namespace parser {
 				TypePtr otherType = builder.refType(analysis::getReferencedType(thisType), true, false, lang::ReferenceType::Kind::CppReference);
 				auto ctorType = builder.functionType(toVector(thisType, otherType), thisType, FK_CONSTRUCTOR);
 				auto lit = builder.getLiteralForConstructor(ctorType);
-				tu.addFunction(lit, builder.lambdaExpr(ctorType, builder.parameters(), builder.getNoOp()));
+				tu.addFunction(lit, builder.lambdaExpr(ctorType, builder.parameters(), parserIRExtension.getMemberDummyLambda()));
 			}
 
 			{
@@ -1003,14 +1144,14 @@ namespace parser {
 				TypePtr otherType = builder.refType(analysis::getReferencedType(thisType), false, false, lang::ReferenceType::Kind::CppRValueReference);
 				auto ctorType = builder.functionType(toVector(thisType, otherType), thisType, FK_CONSTRUCTOR);
 				auto lit = builder.getLiteralForConstructor(ctorType);
-				tu.addFunction(lit, builder.lambdaExpr(ctorType, builder.parameters(), builder.getNoOp()));
+				tu.addFunction(lit, builder.lambdaExpr(ctorType, builder.parameters(), parserIRExtension.getMemberDummyLambda()));
 			}
 
 			{
 				//default destructor
 				auto dtorType = builder.functionType(toVector(thisType), thisType, FK_DESTRUCTOR);
 				auto lit = builder.getLiteralForDestructor(dtorType);
-				tu.addFunction(lit, builder.lambdaExpr(dtorType, builder.parameters(), builder.getNoOp()));
+				tu.addFunction(lit, builder.lambdaExpr(dtorType, builder.parameters(), parserIRExtension.getMemberDummyLambda()));
 			}
 
 			{
@@ -1019,7 +1160,7 @@ namespace parser {
 				TypePtr resType = builder.refType(analysis::getReferencedType(thisType), false, false, lang::ReferenceType::Kind::CppReference);
 				auto funType = builder.functionType(toVector(thisType, otherType), resType, FK_MEMBER_FUNCTION);
 				auto lit = builder.getLiteralForMemberFunction(funType, utils::getMangledOperatorAssignName());
-				tu.addFunction(lit, builder.lambdaExpr(funType, builder.parameters(), builder.getNoOp()));
+				tu.addFunction(lit, builder.lambdaExpr(funType, builder.parameters(), parserIRExtension.getMemberDummyLambda()));
 			}
 
 			{
@@ -1028,7 +1169,7 @@ namespace parser {
 				TypePtr resType = builder.refType(analysis::getReferencedType(thisType), false, false, lang::ReferenceType::Kind::CppReference);
 				auto funType = builder.functionType(toVector(thisType, otherType), resType, FK_MEMBER_FUNCTION);
 				auto lit = builder.getLiteralForMemberFunction(funType, utils::getMangledOperatorAssignName());
-				tu.addFunction(lit, builder.lambdaExpr(funType, builder.parameters(), builder.getNoOp()));
+				tu.addFunction(lit, builder.lambdaExpr(funType, builder.parameters(), parserIRExtension.getMemberDummyLambda()));
 			}
 		}
 
@@ -1050,7 +1191,7 @@ namespace parser {
 					}
 
 					//register the member in the TU
-					tu.addFunction(literal, builder.lambdaExpr(functionType, builder.parameters(), builder.getNoOp()));
+					tu.addFunction(literal, builder.lambdaExpr(functionType, builder.parameters(), parserIRExtension.getExplicitMemberDummyLambda()));
 					//and return here. there is no need to register this symbol in the global scope, as member calls are handled differently
 					return;
 				}
@@ -1060,33 +1201,7 @@ namespace parser {
 		}
 
 		ExpressionPtr InspireDriver::genThis(const location& l) {
-			if(inLambda) {
-				return genThisInLambda(l);
-			} else {
-				return genThisInFunction(l);
-			}
-		}
-
-		ExpressionPtr InspireDriver::genThisInLambda(const location& l) {
-			// check valid scope
-			if(currentRecordStack.empty()) {
-				error(l, "This-pointer in non-record context!");
-				return nullptr;
-			}
-
-			// build a literal
 			return builder.literal("this", builder.refType(getThisType()));
-		}
-
-		ExpressionPtr InspireDriver::genThisInFunction(const location& l) {
-			// check valid scope
-			if(currentRecordStack.empty()) {
-				error(l, "This-pointer in non-record context!");
-				return nullptr;
-			}
-
-			// build a literal
-			return builder.literal("this", builder.refType(builder.refType(getThisType())));
 		}
 
 		void InspireDriver::computeResult(const NodePtr& fragment) {
@@ -1102,6 +1217,21 @@ namespace parser {
 				replacements[builder.stringValue(temporaryName->getValue() + "::" + utils::getMangledOperatorAssignName())] = builder.stringValue("::" + utils::getMangledOperatorAssignName());
 			}
 			result = transform::replaceAll(mgr, result, replacements, transform::globalReplacement);
+
+			bool foundDummyLambda = false;
+			const auto& dummyLambda = parserIRExtension.getMemberDummyLambda();
+			const auto& explicitDummyLambda = parserIRExtension.getExplicitMemberDummyLambda();
+			visitDepthFirstOnceInterruptible(result, [&](const LiteralPtr& lit) {
+				if (lit == dummyLambda || lit == explicitDummyLambda) {
+					foundDummyLambda = true;
+					return true;
+				}
+				return false;
+			});
+
+			if (foundDummyLambda) {
+				assert_fail() << "Found dummy lambda in final parser result.";
+			}
 		}
 
 
@@ -1316,16 +1446,6 @@ namespace parser {
 			return type;
 		}
 
-
-		void InspireDriver::addThis(const location& l, const TypePtr& classType) {
-			// gen ref type
-			auto refThis = builder.refType(classType);
-			// gen var
-			auto thisVar = builder.variable(refThis);
-			// save in scope
-			declareSymbol(l, "this", thisVar);
-		}
-
 		void InspireDriver::beginRecord(const location& l, const std::string& name) {
 			auto key = builder.genericType(name);
 
@@ -1333,7 +1453,7 @@ namespace parser {
 			if(!isTypeDeclaredInCurrentScope(name)) { declareRecordType(l, name); }
 
 			openScope();
-			currentRecordStack.push_back({key, getCurrentScope()});
+			currentRecordStack.push_back({key});
 		}
 
 		void InspireDriver::endRecord() {

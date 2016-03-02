@@ -120,10 +120,31 @@ namespace backend {
 		if(it != globalScope.names.end()) { return it->second; }
 
 		{
+			// get attached name
 			string name = getAttachedName(ptr);
 
+			// for record types -- check record name
+			if (name.empty() || isUsed(name)) {
+				if (auto record = ptr.isa<RecordPtr>()) {
+					name = record->getName()->getValue();
+				}
+			}
+
+			// for lambdas -- check reference name
+			if (name.empty() || isUsed(name)) {
+				if (auto lambda = ptr.isa<LambdaExprPtr>()) {
+					name = lambda->getReference()->getNameAsString();
+				}
+			}
+
+			// cut off everything before the last ::
+			auto columnPos = name.rfind("::");
+			if (columnPos != std::string::npos) {
+				name = name.substr(columnPos+2);
+			}
+
 			// use attached name if present
-			if(!name.empty() && !isUsed(name)) {
+			if(!name.empty() && name != "_" && !isUsed(name)) {
 				globalScope.names.insert(make_pair(ptr, name));
 				globalScope.usedNames.insert(name);
 				return name;
@@ -162,7 +183,7 @@ namespace backend {
 		// register string
 		globalScope.names.insert(make_pair(ptr, resName));
 		globalScope.usedNames.insert(resName);
-
+		
 		// return result
 		return resName;
 	}

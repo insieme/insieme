@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -42,7 +42,6 @@
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/lang/enum.h"
-#include "insieme/core/lang/ir++_extension.h"
 #include "insieme/core/pattern/ir_generator.h"
 #include "insieme/core/pattern/ir_pattern.h"
 #include "insieme/core/pattern/pattern_utils.h"
@@ -115,29 +114,6 @@ namespace extensions {
 			return prog;
 		}
 
-		//////////////////////////////////////////////////////////////////////
-		// Remove calls to RecordTypeFixup (from the frontend inspire module)
-		// ==================================================================
-		//
-		// These are generated to ensure valid semantics pre-resolver, and should be eliminated now.
-		// All of these should have the same argument type as their return type (and type literal) at this point.
-		//
-		ProgramPtr removeRecordTypeFixup(ProgramPtr prog) {
-			auto& mgr = prog->getNodeManager();
-			auto& inspModule = mgr.getLangExtension<frontend::utils::FrontendInspireModule>();
-
-			prog = irp::replaceAllAddr(irp::callExpr(inspModule.getRecordTypeFixup(), icp::anyList), prog, [&](const NodeAddress& matchingAddress) {
-				auto call = matchingAddress.getAddressedNode().as<CallExprPtr>();
-				auto arg0 = call->getArgument(0);
-				// ensure correct typing
-				assert_pred2(core::analysis::equalTypes, call->getType(), arg0->getType()) << "Record types not correctly resolved";
-				// remove call
-				return arg0;
-			}).as<ProgramPtr>();
-
-			return prog;
-		}
-		
 		//////////////////////////////////////////////////////////////////////////
 		// Remove superfluous bool_to_int calls (from the frontend inspire module)
 		// =======================================================================
@@ -184,6 +160,16 @@ namespace extensions {
 
 			return prog;
 		}
+
+		class TypeCanonicalizer : public core::transform::CachedNodeMapping {			
+			virtual const NodePtr resolveElement(const NodePtr& ptr) override {
+				auto tt = ptr.isa<core::TagTypePtr>();
+				if(tt) {
+					return core::analysis::getCanonicalType(tt);
+				}
+				return ptr->substitute(ptr->getNodeManager(), *this);
+			}
+		};
 		
 	}
 
@@ -200,8 +186,9 @@ namespace extensions {
 	}
 
 	insieme::core::ProgramPtr FrontendCleanupExtension::IRVisit(insieme::core::ProgramPtr& prog) {
+
+		prog = TypeCanonicalizer().map(prog);
 		prog = mainReturnCorrection(prog);
-		prog = removeRecordTypeFixup(prog);
 		prog = removeSuperfluousBoolToInt(prog);
 		prog = replaceZeroStructInits(prog);
 

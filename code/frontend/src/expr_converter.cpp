@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -39,18 +39,19 @@
 #include "insieme/frontend/expr_converter.h"
 
 #include "insieme/frontend/decl_converter.h"
-#include "insieme/frontend/state/function_manager.h"
-#include "insieme/frontend/state/record_manager.h"
-#include "insieme/frontend/state/variable_manager.h"
 #include "insieme/frontend/utils/clang_cast.h"
+#include "insieme/frontend/utils/conversion_utils.h"
 #include "insieme/frontend/utils/expr_to_bool.h"
 #include "insieme/frontend/utils/frontend_inspire_module.h"
+#include "insieme/frontend/state/function_manager.h"
 #include "insieme/frontend/utils/macros.h"
 #include "insieme/frontend/utils/memalloc.h"
 #include "insieme/frontend/utils/name_manager.h"
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/stmt_wrapper.h"
+#include "insieme/frontend/state/record_manager.h"
+#include "insieme/frontend/state/variable_manager.h"
 
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/logging.h"
@@ -68,7 +69,6 @@
 #include "insieme/core/lang/array.h"
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/enum.h"
-#include "insieme/core/lang/ir++_extension.h"
 #include "insieme/core/lang/pointer.h"
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/node_replacer.h"
@@ -80,21 +80,23 @@ using namespace insieme;
 namespace insieme {
 namespace frontend {
 namespace conversion {
-		
+
 	//---------------------------------------------------------------------------------------------------------------------
 	//										BASE EXPRESSION CONVERTER
 	//---------------------------------------------------------------------------------------------------------------------
-	
+
 	core::TypePtr Converter::ExprConverter::convertExprType(const clang::Expr* expr) {
 		auto qType = expr->getType();
 		auto irType = converter.convertType(qType);
-		if(expr->getValueKind() == clang::VK_LValue) irType = builder.refType(irType, qType.isConstQualified(), qType.isVolatileQualified());
+		if(expr->getValueKind() == clang::VK_LValue || expr->getValueKind() == clang::VK_XValue) {
+			irType = builder.refType(irType, qType.isConstQualified(), qType.isVolatileQualified());
+		}
 		return irType;
 	}
-	
+
 	// translate expression as usual, but convert translated string literals to r-values rather than l-values
 	core::ExpressionPtr Converter::ExprConverter::convertInitExpr(const clang::Expr* original) {
-		auto expr = converter.convertExpr(original);
+		auto expr = converter.convertCxxArgExpr(original);
 		if(original->isLValue()) {
 			auto origType = llvm::dyn_cast_or_null<clang::ConstantArrayType>(original->getType()->getAsArrayTypeUnsafe());
 			auto lit = expr.isa<core::LiteralPtr>();
@@ -106,10 +108,49 @@ namespace conversion {
 			for(char c : s) {
 				initExps.push_back(builder.literal(format("'%s'",toString(insieme::utils::escapeChar(c))), mgr.getLangBasic().getChar()));
 			}
-			expr = core::lang::buildArrayCreate(lit->getNodeManager(), origType->getSize().getLimitedValue(), initExps);
+			initExps.push_back(builder.literal("'\\0'", mgr.getLangBasic().getChar()));
+			expr = builder.deref(builder.initExprTemp(converter.convertType(original->getType()).as<core::GenericTypePtr>(), initExps));
 			VLOG(2) << "convertInitExpr: translated string literal\n" << dumpClang(original, converter.getSourceManager()) << " - to - \n" << dumpColor(expr);
 		}
 		return expr;
+	}
+
+	// translate expression, but skip outer construct expr and cast references to correct kind
+	core::ExpressionPtr Converter::ExprConverter::convertCxxArgExpr(const clang::Expr* clangArgExprInput, const core::TypePtr& targetType) {
+		core::ExpressionPtr ret = converter.convertExpr(clangArgExprInput);
+		const clang::Expr* clangArgExpr = clangArgExprInput;
+
+		// skip over potential ExprWithCleanups
+		auto conWithCleanups = llvm::dyn_cast<clang::ExprWithCleanups>(clangArgExpr);
+		if(conWithCleanups) clangArgExpr = conWithCleanups->getSubExpr();
+		// skip over potential CXXBindTemporaryExpr
+		auto conBindTemporary = llvm::dyn_cast<clang::CXXBindTemporaryExpr>(clangArgExpr);
+		if(conBindTemporary) clangArgExpr = conBindTemporary->getSubExpr();
+
+		// detect copy/move constructor calls
+		VLOG(2) << "---\nCXX call checking arg: " << dumpClang(clangArgExpr, converter.getCompiler().getSourceManager());
+		auto constructExpr = llvm::dyn_cast<clang::CXXConstructExpr>(clangArgExpr);
+		if(constructExpr) {
+			auto constructor = constructExpr->getConstructor();
+			if(constructor->isCopyOrMoveConstructor()) {
+				VLOG(2) << "CopyOrMove in param list at " << utils::location(clangArgExpr->getLocStart(), converter.getSourceManager()) << "\n";
+				auto prevArg = ret;
+				ret = converter.convertExpr(constructExpr->getArg(0));
+				// cast ref as required by copy constructor
+				if(core::lang::isReference(ret)) {
+					ret = core::lang::buildRefCast(
+						ret, prevArg.as<core::CallExprPtr>()->getFunctionExpr()->getType().as<core::FunctionTypePtr>()->getParameterType(1));
+				}
+				VLOG(2) << "CXX call converted newArg: " << dumpPretty(ret);
+			}
+		}
+		// if a targetType was provided, and we are working on a ref, cast the ref as required
+		if(targetType && core::analysis::isRefType(targetType) && core::analysis::isRefType(ret->getType())) {
+			auto targetRef = core::lang::ReferenceType(targetType);
+			auto retRef = core::lang::ReferenceType(ret->getType());
+			ret = core::lang::buildRefKindCast(ret, targetRef.getKind());
+		}
+		return ret;
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -207,7 +248,7 @@ namespace conversion {
 		core::ExpressionPtr retExpr;
 		LOG_EXPR_CONVERSION(charLit, retExpr);
 
-		std::string value;		
+		std::string value;
 		if(charLit->getKind() == clang::CharacterLiteral::Ascii) {
 			value = "\'" + insieme::utils::escapeChar(charLit->getValue()) + "\'";
 		} else {
@@ -260,7 +301,7 @@ namespace conversion {
 		}
 		frontend_assert(elemType);
 		vectorLength += 1; // add the null char
-		
+
 		if(stringLit->getKind() == clang::StringLiteral::Ascii) {
 			strValue = insieme::utils::escapeString(strValue);
 		}
@@ -273,7 +314,7 @@ namespace conversion {
 	//							PARENTHESIS EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr Converter::ExprConverter::VisitParenExpr(const clang::ParenExpr* parExpr) {
-		core::ExpressionPtr retExpr = Visit(parExpr->getSubExpr());
+		core::ExpressionPtr retExpr = converter.convertExpr(parExpr->getSubExpr());
 		LOG_EXPR_CONVERSION(parExpr, retExpr);
 		return retExpr;
 	}
@@ -291,11 +332,7 @@ namespace conversion {
 	core::ExpressionPtr Converter::ExprConverter::VisitGNUNullExpr(const clang::GNUNullExpr* nullExpr) {
 		core::ExpressionPtr retIr;
 		LOG_EXPR_CONVERSION(nullExpr, retIr);
-		//core::TypePtr type = converter.convertType(nullExpr->getType());
-
-		//frontend_assert(core::analysis::isArrayType(type->getNodeType())) << "C pointer type must of type array<'a,1>\n";
-		//return (retIr = builder.refReinterpret(mgr.getLangBasic().getRefNull(), type));
-		frontend_assert(false) << "GNU NUllExpr not implemented.";
+		retIr = builder.getZero(converter.convertType(nullExpr->getType()));
 		return retIr;
 	}
 
@@ -328,7 +365,7 @@ namespace conversion {
 
 		core::ExpressionList irArguments;
 		for(auto arg : callExpr->arguments()) {
-			irArguments.push_back(Visit(arg));
+			irArguments.push_back(converter.convertExpr(arg));
 		}
 
 		// simplify generated call if direct call of function
@@ -348,7 +385,7 @@ namespace conversion {
 	//
 	// [C99 6.4.2.2] - A predefined identifier such as __func__.
 	// The identifier __func__ shall be implicitly declared by the translator as if, immediately following
-	// the opening brace of each function definition, the declaration 
+	// the opening brace of each function definition, the declaration
 	// static const char __func__[] = "function-name";
 	// appeared, where function-name is the name of the lexically-enclosing function.
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -356,7 +393,7 @@ namespace conversion {
 		core::ExpressionPtr retIr;
 		LOG_EXPR_CONVERSION(preExpr, retIr);
 
-		retIr = Visit(preExpr->getFunctionName());
+		retIr = converter.convertExpr(preExpr->getFunctionName());
 
 		return retIr;
 	}
@@ -375,8 +412,8 @@ namespace conversion {
 		    expr->isArgumentType() ? converter.convertType(expr->getArgumentType()) : converter.convertType(expr->getArgumentExpr()->getType());
 
 		switch(expr->getKind()) {
-		case clang::UETT_SizeOf: 
-			irNode = builder.callExpr(basic.getSizeof(), builder.getTypeLiteral(type)); 
+		case clang::UETT_SizeOf:
+			irNode = builder.callExpr(basic.getSizeof(), builder.getTypeLiteral(type));
 			break;
 
         case clang::UETT_AlignOf:
@@ -387,7 +424,7 @@ namespace conversion {
 
 		default: frontend_assert(false) << "UnaryExprOrTypeTraitExpr not handled in C.";
 		}
-		
+
 		return irNode;
 	}
 
@@ -399,8 +436,8 @@ namespace conversion {
 	core::ExpressionPtr Converter::ExprConverter::VisitMemberExpr(const clang::MemberExpr* membExpr) {
 		core::ExpressionPtr retIr;
 		LOG_EXPR_CONVERSION(membExpr, retIr);
-		core::ExpressionPtr base = Visit(membExpr->getBase());
-		
+		core::ExpressionPtr base = converter.convertExpr(membExpr->getBase());
+
 		// deal with pointer accesses by conversion to ref
 		if(membExpr->isArrow()) {
 			frontend_assert(core::lang::isPointer(base)) << "Arrow member access on non-pointer " << dumpColor(base);
@@ -411,7 +448,7 @@ namespace conversion {
 		frontend_assert(llvm::isa<clang::FieldDecl>(memberDecl)) << "non-field member in C";
 		string memName = frontend::utils::getNameForField(llvm::dyn_cast<clang::FieldDecl>(memberDecl), converter.getSourceManager());
 		auto retType = converter.convertType(membExpr->getType());
-		auto retTypeLit = builder.getTypeLiteral(retType);
+ 		auto retTypeLit = builder.getTypeLiteral(retType);
 		frontend_assert(retType);
 
 		core::ExpressionPtr access = mgr.getLangBasic().getCompositeMemberAccess();
@@ -420,7 +457,7 @@ namespace conversion {
 		// if a ref struct is accessed, we get a ref to its member
 		if(core::lang::isReference(base)) {
 			access = mgr.getLangExtension<core::lang::ReferenceExtension>().getRefMemberAccess();
-			retType = builder.refType(retType);
+			retType = builder.refType(retType, membExpr->getType().isConstQualified(), membExpr->getType().isVolatileQualified());
 		}
 
 		retIr = builder.callExpr(retType, access, base, builder.getIdentifierLiteral(memName), retTypeLit);
@@ -432,7 +469,7 @@ namespace conversion {
 	//							BINARY OPERATOR
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    core::ExpressionPtr Converter::ExprConverter::createUnaryExpression(const core::TypePtr& exprTy, const core::ExpressionPtr& subExpr, 
+    core::ExpressionPtr Converter::ExprConverter::createUnaryExpression(const core::TypePtr& exprTy, const core::ExpressionPtr& subExpr,
                                                                          clang::UnaryOperator::Opcode cop) {
 
             // A unary AddressOf operator translates to a ptr-from-ref in IR ----------------------------------------------------------------------- ADDRESSOF -
@@ -455,6 +492,11 @@ namespace conversion {
                     return core::lang::buildPtrToRef(subExpr);
                 }
             }
+
+		    // "__extension__" operator ignored in IR ---------------------------------------------------------------------------------------------- EXTENSION -
+			if(cop == clang::UO_Extension) {
+				return subExpr;
+			}
 
             auto opIt = unOpMap.find(cop);
 		    frontend_assert(opIt != unOpMap.end()) << "Unary Operator not implemented (" << clang::UnaryOperator::getOpcodeStr(cop).str() << ")";
@@ -485,8 +527,8 @@ namespace conversion {
 		auto cop = clangBinOp->getOpcode();
 
 		// if the binary operator is a comma separated expression, we convert it into a function call which returns the value of the last expression --- COMMA -
-		if(cop == clang::BO_Comma) { 
-			return utils::buildCommaOperator(builder.wrapLazy(left), builder.wrapLazy(right)); 
+		if(cop == clang::BO_Comma) {
+			return utils::buildCommaOperator(builder.wrapLazy(left), builder.wrapLazy(right));
 		}
 
 		// we need to translate the semantics of C-style assignments to a function call ----------------------------------------------------------- ASSIGNMENT -
@@ -500,7 +542,7 @@ namespace conversion {
 			left = utils::exprToBool(left);
 			right = builder.wrapLazy(utils::exprToBool(right));
 		}
-		
+
 		auto opIt = binOpMap.find(cop);
 		frontend_assert(opIt != binOpMap.end()) << "Binary Operator not implemented (" << clang::BinaryOperator::getOpcodeStr(cop).str() << ")";
         auto binOp = opIt->second;
@@ -508,7 +550,7 @@ namespace conversion {
 		if((core::lang::isReference(left) && core::lang::isPointer(core::analysis::getReferencedType(left->getType())))
 		   || (core::lang::isReference(right) && core::lang::isPointer(core::analysis::getReferencedType(right->getType())))
 		   || (core::lang::isPointer(left->getType())) || (core::lang::isPointer(right->getType()))) {
-			return core::lang::buildPtrOperation(binOp, left, right); 
+			return core::lang::buildPtrOperation(binOp, left, right);
         }
 
         // the operator type needs to be deduced from operands (sometimes)
@@ -520,7 +562,7 @@ namespace conversion {
             //      int4   uint4
             //       |   /   |
             //      int8 <- unit8    => (int4, uint8) should be int8
-            irOp = basic.getOperator(core::types::getBiggestCommonSubType( left->getType(), right->getType()), binOp);
+            irOp = basic.getOperator(core::types::getBiggestCommonSubType(left->getType(), right->getType()), binOp);
         }
         else {
 	    	irOp = basic.getOperator(exprTy, binOp);
@@ -536,8 +578,8 @@ namespace conversion {
 		core::ExpressionPtr retIr;
 		LOG_EXPR_CONVERSION(compOp, retIr);
 
-		core::ExpressionPtr lhs = Visit(compOp->getLHS());
-		core::ExpressionPtr rhs = Visit(compOp->getRHS());
+		core::ExpressionPtr lhs = converter.convertExpr(compOp->getLHS());
+		core::ExpressionPtr rhs = converter.convertExpr(compOp->getRHS());
 		core::TypePtr exprTy = converter.convertType(compOp->getType());
 
 		assert_true(core::lang::isReference(lhs->getType())) << "left side must be assignable";
@@ -555,8 +597,8 @@ namespace conversion {
 		core::ExpressionPtr retIr;
 		LOG_EXPR_CONVERSION(binOp, retIr);
 
-		core::ExpressionPtr lhs = Visit(binOp->getLHS());
-		core::ExpressionPtr rhs = Visit(binOp->getRHS());
+		core::ExpressionPtr lhs = converter.convertExpr(binOp->getLHS());
+		core::ExpressionPtr rhs = converter.convertExpr(binOp->getRHS());
 		core::TypePtr exprTy = converter.convertType(binOp->getType());
 
 		retIr = createBinaryExpression(exprTy, lhs, rhs, binOp);
@@ -576,7 +618,7 @@ namespace conversion {
 		core::ExpressionPtr retIr;
 		LOG_EXPR_CONVERSION(unOp, retIr);
 
-		core::ExpressionPtr subExpr = Visit(unOp->getSubExpr());
+		core::ExpressionPtr subExpr = converter.convertExpr(unOp->getSubExpr());
 		core::TypePtr exprTy = converter.convertType(unOp->getType());
 
 		retIr = createUnaryExpression(exprTy, subExpr, unOp->getOpcode());
@@ -597,10 +639,10 @@ namespace conversion {
 		LOG_EXPR_CONVERSION(condOp, retIr);
 
 		core::TypePtr retTy = converter.convertType(condOp->getType());
-		core::ExpressionPtr trueExpr = Visit(condOp->getTrueExpr());
-		core::ExpressionPtr falseExpr = Visit(condOp->getFalseExpr());
-		core::ExpressionPtr condExpr = Visit(condOp->getCond());
-		
+		core::ExpressionPtr trueExpr = converter.convertExpr(condOp->getTrueExpr());
+		core::ExpressionPtr falseExpr = converter.convertExpr(condOp->getFalseExpr());
+		core::ExpressionPtr condExpr = converter.convertExpr(condOp->getCond());
+
 		trueExpr = builder.wrapLazy(trueExpr);
 		falseExpr = builder.wrapLazy(falseExpr);
 		condExpr = utils::exprToBool(condExpr);
@@ -616,9 +658,9 @@ namespace conversion {
 	core::ExpressionPtr Converter::ExprConverter::VisitArraySubscriptExpr(const clang::ArraySubscriptExpr* arraySubExpr) {
 		core::ExpressionPtr retIr;
 		LOG_EXPR_CONVERSION(arraySubExpr, retIr);
-		
-		core::ExpressionPtr ptrExpr = Visit(arraySubExpr->getBase());
-		core::ExpressionPtr idxExpr = Visit(arraySubExpr->getIdx());
+
+		core::ExpressionPtr ptrExpr = converter.convertExpr(arraySubExpr->getBase());
+		core::ExpressionPtr idxExpr = converter.convertExpr(arraySubExpr->getIdx());
 
 		retIr = core::lang::buildPtrSubscript(ptrExpr, idxExpr);
 
@@ -632,7 +674,7 @@ namespace conversion {
 	core::ExpressionPtr Converter::ExprConverter::VisitDeclRefExpr(const clang::DeclRefExpr* declRef) {
 		core::ExpressionPtr retIr;
 		LOG_EXPR_CONVERSION(declRef, retIr);
-		
+
 		if(const clang::VarDecl* varDecl = llvm::dyn_cast<clang::VarDecl>(declRef->getDecl())) {
 			// fall back to literals for extern variables
 			if(varDecl->hasExternalStorage()) {
@@ -642,7 +684,7 @@ namespace conversion {
 			}
 			return retIr;
 		}
-		
+
 		if(const clang::FunctionDecl* funcDecl = llvm::dyn_cast<clang::FunctionDecl>(declRef->getDecl())) {
 			// fall back to literals for builtin functions
 			if(declRef->getType()->isBuiltinType()) {
@@ -659,22 +701,11 @@ namespace conversion {
 		}
 
 		if(const clang::EnumConstantDecl* decl = llvm::dyn_cast<clang::EnumConstantDecl>(declRef->getDecl())) {
-			const clang::EnumType* enumType = llvm::dyn_cast<clang::EnumType>(llvm::cast<clang::TypeDecl>(decl->getDeclContext())->getTypeForDecl());
-			auto enumDecl = enumType->getDecl();
-			auto enumClassType = converter.convertType(enumDecl->getIntegerType());
-			//get the init val of the enum constant decl
-			core::ExpressionPtr val;
-			std::string value = decl->getInitVal().toString(10);
-			val = builder.literal(enumClassType, value);
-			if(val->getType() != enumClassType) {
-				val = builder.numericCast(val, enumClassType);
-			}
-
-			//convert and return the struct init expr
-			auto enumDef = converter.convertType(enumType->getCanonicalTypeInternal());
-			assert_true(enumDef.isa<core::TupleTypePtr>()) << "enum type conversion failed.";
-			auto exp = core::lang::getEnumInit(val, enumDef.as<core::TupleTypePtr>());
-			return builder.numericCast(exp.as<core::TupleExprPtr>()->getExpressions()[1], builder.getLangBasic().getInt4());
+			retIr = utils::buildEnumConstantExpression(converter, decl);
+			auto irT = converter.convertType(declRef->getType());
+			// in C, the target type of the decl ref expression is an int, so we cast here
+			// in C++, the target type is an enum type, so nothing will happen
+			return builder.numericCast(retIr, irT);
 		}
 
 		frontend_assert(false) << "DeclRefExpr not handled: " << dumpClang(declRef, converter.getSourceManager());
@@ -692,22 +723,20 @@ namespace conversion {
 			frontend_assert(clangRecordType);
 			auto irGenericType = converter.getRecordMan()->lookup(clangRecordType->getDecl());
 			auto irRecordTypeIt = converter.getIRTranslationUnit().getTypes().find(irGenericType);
-			frontend_assert(irRecordTypeIt != converter.getIRTranslationUnit().getTypes().end()) << "Initializing unregistered record type"; 
+			frontend_assert(irRecordTypeIt != converter.getIRTranslationUnit().getTypes().end()) << "Initializing unregistered record type";
 			auto irRecordType = irRecordTypeIt->second.as<core::TagTypePtr>();
 			return std::make_pair(irRecordType, irGenericType);
 		}
 
-		core::NamedValueList buildNamedValuesForStructInit(Converter& converter, const clang::InitListExpr* initList) {
+		core::ExpressionList buildExprListForStructInit(Converter& converter, const clang::InitListExpr* initList) {
 			core::TagTypePtr irRecordType = lookupRecordTypes(converter, initList).first;
-			core::NamedValueList values;
+			core::ExpressionList values;
 			core::FieldList fields = irRecordType->getFields();
 			unsigned i = 0;
 			for(auto entry : fields) {
 				core::ExpressionPtr initExp = converter.getIRBuilder().getZero(entry->getType());
 				if(i < initList->getNumInits()) initExp = converter.convertInitExpr(initList->getInit(i));
-				frontend_assert(initExp->getType() == entry->getType()) << "Type mismatch in record initialization expression:\n"
-					<< "expected: " << dumpColor(entry->getType()) << "got: " << dumpColor(initExp->getType());
-				values.push_back(converter.getIRBuilder().namedValue(entry->getName(), initExp));
+				values.push_back(initExp);
 				++i;
 			}
 			return values;
@@ -722,17 +751,19 @@ namespace conversion {
 		auto clangType = initList->getType();
 		// convert the type if this is the first time we encounter it
 		converter.convertType(clangType);
-		
+		auto convertedExprType = convertExprType(initList);
+		if(!core::lang::isReference(convertedExprType)) convertedExprType = builder.refType(convertedExprType);
+		auto genType = convertedExprType.as<core::GenericTypePtr>();
+
 		if(clangType->isStructureType()) {
 			auto types = lookupRecordTypes(converter, initList);
-			auto values = buildNamedValuesForStructInit(converter, initList);
-			retIr = utils::buildRecordTypeFixup(builder.structExpr(types.first, values), types.second);
+			auto values = buildExprListForStructInit(converter, initList);
+			retIr = builder.initExprTemp(genType, values);
 		}
 		else if(clangType->isUnionType()) {
 			auto types = lookupRecordTypes(converter, initList);
-			auto member = builder.stringValue(initList->getInitializedFieldInUnion()->getNameAsString());
-			auto initExp = Visit(initList->getInit(0));
-			retIr = utils::buildRecordTypeFixup(builder.unionExpr(types.first, member, initExp), types.second);
+			auto initExp = converter.convertExpr(initList->getInit(0));
+			retIr = builder.initExprTemp(genType, initExp);
 		}
 		else if(clangType->isArrayType()) {
 			auto gT = converter.convertType(clangType).as<core::GenericTypePtr>();
@@ -741,12 +772,18 @@ namespace conversion {
 			for(unsigned i = 0; i < initList->getNumInits(); ++i) { // yes, that is really the best way to do this in clang 3.6
 				initExps.push_back(convertInitExpr(initList->getInit(i)));
 			}
-			retIr = core::lang::buildArrayCreate(core::lang::getArraySize(gT), initExps);
-		} 
+			retIr = builder.initExprTemp(genType, initExps);
+		}
 		else if(clangType->isScalarType()) {
 			retIr = convertInitExpr(initList->getInit(0));
+			return retIr;
 		} else {
 			frontend_assert(false) << "Clang InitListExpr of unexpected type";
+		}
+
+		// if used as r-value, deref
+		if(initList->isRValue()) {
+			retIr = builder.deref(retIr);
 		}
 
 		return retIr;
@@ -766,11 +803,14 @@ namespace conversion {
 		core::ExpressionPtr retIr;
 		LOG_EXPR_CONVERSION(compLitExpr, retIr);
 
+
 		if(const clang::InitListExpr* initList = llvm::dyn_cast<clang::InitListExpr>(compLitExpr->getInitializer())) {
-			// for some reason, this is an lvalue
-			retIr = builder.refVar(Visit(initList));
+			retIr = VisitInitListExpr(initList);
+			auto& refExt = converter.getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
+			if(refExt.isCallOfRefDeref(retIr)) retIr = core::analysis::getArgument(retIr, 0);
+			else retIr = builder.refTemp(retIr);
 		}
-		
+
 		if(!retIr) frontend_assert(false) << "Unimplemented type of CompoundLiteralExpr encountered";
 		return retIr;
 	}
@@ -852,7 +892,7 @@ namespace conversion {
 
 		//// only c11 atomic operations are handled here (not std::atomic stuff)
 
-		//core::ExpressionPtr ptr = Visit(atom->getPtr());
+		//core::ExpressionPtr ptr = converter.convertExpr(atom->getPtr());
 		//// if ptr is ref array -> array ref elem auf richtiges elem
 		//// accept pure array type
 		//if(ptr->getType()->getNodeType() == insieme::core::NT_ArrayType) { ptr = builder.arrayRefElem(ptr, builder.uintLit(0)); }
@@ -862,7 +902,7 @@ namespace conversion {
 		//	ptr = builder.arrayRefElem(ptr, builder.uintLit(0));
 		//}
 
-		//core::ExpressionPtr val = Visit(atom->getVal1());
+		//core::ExpressionPtr val = converter.convertExpr(atom->getVal1());
 		//// dumpDetail(val);
 
 		//switch(operation) {

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -104,6 +104,11 @@ namespace integration {
 				// start with executable
 				cmd << props["compiler"];
 
+				// add input files
+				for(const auto& cur : test.getFiles()) {
+					cmd << " " << cur.string();
+				}
+
 				// add include directories
 				for(const auto& cur : test.getIncludeDirs()) {
 					cmd << " -I" << cur.string();
@@ -121,11 +126,6 @@ namespace integration {
 
 				// disable multithreading
 				set.numThreads = 0;
-
-				// add input files
-				for(const auto& cur : test.getFiles()) {
-					cmd << " " << cur.string();
-				}
 
 				std::vector<string> flags = test.getCompilerArguments(name);
 				// get all flags defined by properties
@@ -250,10 +250,6 @@ namespace integration {
 				// get definitions
 				for_each(test.getDefinitions(name), [&](const std::pair<string, string>& def) { cmd << " -D" << def.first << "=" << def.second; });
 
-				// append intercept patterns
-				for(const auto& cur : test.getInterceptedNameSpaces()) {
-					cmd << " --intercept " << cur;
-				}
 				// append intercepted header file dirs
 				for(const auto& cur : test.getInterceptedHeaderFileDirectories()) {
 					cmd << " --intercept-include " << cur.string();
@@ -313,10 +309,6 @@ namespace integration {
 				// get definitions
 				for_each(test.getDefinitions(name), [&](const std::pair<string, string>& def) { cmd << " -D" << def.first << "=" << def.second; });
 
-				// append intercept patterns
-				for(const auto& cur : test.getInterceptedNameSpaces()) {
-					cmd << " --intercept " << cur;
-				}
 				// append intercepted header file dirs
 				for(const auto& cur : test.getInterceptedHeaderFileDirectories()) {
 					cmd << " --intercept-include " << cur.string();
@@ -350,6 +342,9 @@ namespace integration {
 				// determine backend
 				string be = getBackendKey(backend);
 
+				// add input file
+				cmd << " " << executionDirectory << "/" << test.getBaseName() << ".insieme." << be << "." << getExtension(l);
+
 				// add intercepted include directories
 				for(const auto& cur : test.getInterceptedHeaderFileDirectories()) {
 					cmd << " -I" << cur.string();
@@ -378,9 +373,6 @@ namespace integration {
 
 				// disable multithreading
 				set.numThreads = 0;
-
-				// add input file
-				cmd << " " << executionDirectory << "/" << test.getBaseName() << ".insieme." << be << "." << getExtension(l);
 
 				std::vector<string> flags = test.getCompilerArguments(name);
 				// get all flags defined by properties
@@ -416,6 +408,12 @@ namespace integration {
 				string executionDirectory = test.getDirectory().string();
 				if(!set.executionDir.empty()) executionDirectory = set.executionDir;
 
+				// the log file to delete afterwards
+				std::string logFile = "";
+				if (backend == Runtime) {
+					logFile = executionDirectory + "/insieme_runtime.log";
+				}
+
 				// start with executable
 				cmd << executionDirectory << "/" << test.getBaseName() << ".insieme." << be;
 
@@ -432,7 +430,7 @@ namespace integration {
 				set.stdErrFile = executionDirectory + "/" + test.getBaseName() + "." + name + ".err.out";
 
 				// run it
-				return runner.runCommand(name, set, props, cmd.str(), "", executionDirectory);
+				return runner.runCommand(name, set, props, cmd.str(), logFile, executionDirectory);
 			}, deps, RUN);
 		}
 

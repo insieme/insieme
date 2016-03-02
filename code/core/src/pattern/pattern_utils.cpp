@@ -35,12 +35,14 @@
  */
 
 #include "insieme/core/pattern/pattern_utils.h"
-#include "insieme/core/transform/node_replacer.h"
+
+#include "insieme/core/ir_cached_visitor.h"
+#include "insieme/core/ir_visitor.h"
 #include "insieme/core/printer/pretty_printer.h"
+#include "insieme/core/transform/node_replacer.h"
 
 #include "insieme/utils/container_utils.h"
-#include "insieme/core/ir_visitor.h"
-#include "insieme/core/ir_cached_visitor.h"
+#include "insieme/utils/logging.h"
 
 namespace insieme {
 namespace core {
@@ -154,7 +156,9 @@ namespace irp {
 		                           bool matchTypes, bool passAddresses) {
 			// visit in preorder and collect matches, then go through them in reverse (postorder)
 			// postorder implies that we can easily handle non-overlapping results
-			auto&& res = collectAllPairs<core::NodeAddress, AddressMatch>(pattern, NodeAddress(root), matchTypes);
+			auto res = collectAllPairs<core::NodeAddress, AddressMatch>(pattern, NodeAddress(root), matchTypes);
+
+			VLOG(2) << "all replacement pairs: " << res;
 
 			auto ret = root;
 			while(!res.empty()) {

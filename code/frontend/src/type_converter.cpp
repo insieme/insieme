@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -321,52 +321,36 @@ namespace conversion {
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	namespace {
-		std::pair<string,bool> getNameFor(const Converter& converter, const clang::TagDecl* tagDecl) {
-			auto canon = tagDecl->getCanonicalDecl();
-			// try to use name, if not available try to use typedef name, otherwise no name
-			string name = utils::createNameForAnon("__anon_tagtype_", tagDecl, converter.getSourceManager());
-			if(canon->getDeclName() && !canon->getDeclName().isEmpty()) name = canon->getQualifiedNameAsString();
-			else if(canon->hasNameForLinkage()) name = canon->getTypedefNameForAnonDecl()->getQualifiedNameAsString();
-			// if externally visible, build mangled name based on canonical decl without location
-			if(tagDecl->isExternallyVisible()) return std::make_pair(insieme::utils::mangle(name), true);
-			// not externally visible: build mangled name with location
-			// canonicalize filename in case we refer to it from different relative locations
-			auto& sm = converter.getSourceManager();
-			std::string filename = sm.getFilename(canon->getLocStart()).str();
-			boost::filesystem::path path(filename);
-			path = boost::filesystem::canonical(path);
-			auto line = sm.getExpansionLineNumber(canon->getLocStart());
-			auto column = sm.getExpansionColumnNumber(canon->getLocStart());
-			return std::make_pair(insieme::utils::mangle(name, path.string(), line, column), canon->hasNameForLinkage());
-		}
-
 		core::TypePtr handleEnumType(const Converter& converter, const EnumType* clangEnumTy) {
 			core::NodeManager& mgr = converter.getNodeManager();
 			core::IRBuilder builder(mgr);
 			auto enumDecl = clangEnumTy->getDecl();
-			auto enumClassType = converter.convertType(enumDecl->getIntegerType());
-			std::string enumName = getNameFor(converter, enumDecl).first;
+
+			// determine correct integral type
+			auto enumIntType = builder.getLangBasic().getInt4();
+			if(enumDecl->isFixed()) {
+				enumIntType = converter.convertType(enumDecl->getIntegerType());
+			}
+
+			std::string enumName = utils::getNameForTagDecl(converter, enumDecl).first;
+
 			// collect enum constant decls
 			std::vector<core::GenericTypePtr> enumElements;
 			for(auto m : enumDecl->enumerators()) {
-				//get value of enum element
+				// get value of enum element
 				core::ExpressionPtr val = builder.literal(builder.getLangBasic().getInt8(), m->getInitVal().toString(10));
-				std::string enumConstantDeclName = m->getNameAsString();
-				//hashing needed?
-				if(!llvm::dyn_cast<clang::TranslationUnitDecl>(enumDecl->getDeclContext()))
-					enumConstantDeclName += std::to_string(std::hash<std::string>()(enumName));
-				//create enum element
-				enumElements.push_back(core::lang::getEnumElement(builder.genericType(enumConstantDeclName), val));
+				std::string enumConstantDeclName = insieme::utils::mangle(m->getQualifiedNameAsString());
+				// create enum element
+				enumElements.push_back(core::lang::EnumEntry::create(builder.genericType(enumConstantDeclName), val));
 			}
-			//generate enum type
-			core::GenericTypePtr et = core::lang::getEnumDef(builder.genericType(enumName), enumElements);
-			// build struct {enumty t; val v;}
-			auto enumResTy = core::lang::getEnumType(enumClassType, et);
+
+			// generate enum type
+			core::GenericTypePtr definition = core::lang::EnumDefinition::create(builder.genericType(enumName), enumIntType, enumElements);
+			auto enumResTy = core::lang::buildEnumType(definition);
 
 			// attach necessary information for types defined in library headers
 			converter.applyHeaderTagging(enumResTy, enumDecl);
-			core::annotations::attachName(enumResTy, enumDecl->getNameAsString());
-
+            if(!enumDecl->getNameAsString().empty()) core::annotations::attachName(enumResTy, enumDecl->getNameAsString());
 			return enumResTy;
 		}
 
@@ -379,28 +363,28 @@ namespace conversion {
 				return rMan.lookup(clangDecl);
 			}
 			// first time we encounter this type
-			string name;
+			string mangledName;
 			bool useName;
-			std::tie(name, useName) = getNameFor(converter, clangDecl);
-			auto genTy = builder.genericType(name);
+			std::tie(mangledName, useName) = utils::getNameForTagDecl(converter, clangDecl);
+			auto genTy = builder.genericType(mangledName);
 			rMan.insert(clangDecl, genTy);
 			// build actual struct type (after insert!)
 			core::FieldList recordMembers;
 			for(auto mem : clangDecl->fields()) {
 				recordMembers.push_back(builder.field(insieme::frontend::utils::getNameForField(mem, converter.getSourceManager()), converter.convertType(mem->getType())));
 			}
-			auto compoundName = useName ? builder.stringValue(name) : builder.stringValue("");
+			auto compoundName = useName ? builder.stringValue(mangledName) : builder.stringValue("");
 			core::TagTypePtr recordType = clangRecordTy->isUnionType() ? builder.unionType(compoundName, recordMembers)
 				                                                       : builder.structType(compoundName, recordMembers);
 			// attach necessary information for types defined in library headers
 			converter.applyHeaderTagging(recordType, clangRecordTy->getDecl());
-			core::annotations::attachName(recordType, clangRecordTy->getDecl()->getNameAsString());
-
+            // we'll attach name only if available, this could be a problem if anonymous names are used
+            if (!clangRecordTy->getDecl()->getNameAsString().empty()) core::annotations::attachName(recordType, clangRecordTy->getDecl()->getNameAsString());
 			// add type to ir translation unit
 			converter.getIRTranslationUnit().addType(genTy, recordType);
 			return genTy;
 		}
-	}
+	} // annon namespace
 
 	core::TypePtr Converter::TypeConverter::VisitTagType(const TagType* tagType) {
 		VLOG(2) << "Converter::TypeConverter::VisitTagType " << tagType << std::endl;

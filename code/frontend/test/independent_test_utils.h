@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -128,7 +128,7 @@ namespace frontend {
 					          << "\tcodeIr:   " << dumpColor(codeIr) << "\tpragmaIr: " << dumpColor(pragmaIr) << "\tLOC(" << locString << ")\n";
 				}
 			}
-			
+
 			auto aString = codeIr.isa<StringValuePtr>();
 			auto bString = pragmaIr.isa<StringValuePtr>();
 			if(aString) {
@@ -167,14 +167,18 @@ namespace frontend {
 			expected = builder.normalize(expected);
 			actual = builder.normalize(actual);
 			EXPECT_EQ(expected, actual) << "\tLocation     : " << locationOf(addr) << "\n"
-			                            << "\tActual Pretty: " << dumpColor(actual, std::cout, true) << "\n"
-			                            << "\tExpect Pretty: " << dumpColor(expected, std::cout, true) << "\n"
+			                            << "\tActual Pretty: " << dumpColor(actual, std::cout) << "\n"
+			                            << "\tExpect Pretty: " << dumpColor(expected, std::cout) << "\n"
 			                            //<< "\tActual Text: " << dumpText(actual) << "\n"
 			                            //<< "\tExpect Text: " << dumpText(expected) << "\n"
 			                            << "\tActual type  : " << (aIsExp ? toString(dumpColor(actual.as<ExpressionPtr>()->getType())) : toString("-")) << "\n"
 			                            << "\tExpected type: " << (eIsExp ? toString(dumpColor(expected.as<ExpressionPtr>()->getType())) : toString("-"))
 			                            << "\n";
-			if(expected != actual) irDiff(actual, expected);
+
+			if(getenv("INSIEME_IRDIFF") != nullptr && expected != actual) {
+				irDiff(actual, expected);
+				exit(-1);
+			}
 		}
 	}
 
@@ -247,7 +251,7 @@ namespace frontend {
 					    << "Type in pragma could not be parsed:\n\t" << ex << "error: " << typeParsingError(builder, irs, symbols) << "\n@" << locationOf(node);
 					checkExpected(expected, node.as<ExpressionPtr>()->getType(), addr);
 				}
-				// --------------------------------------------------------------------------------------------------------------------- any other case =======|				
+				// --------------------------------------------------------------------------------------------------------------------- any other case =======|
 				else {
 					NodePtr expected;
 					if(node.isa<ExpressionPtr>()) {
@@ -266,9 +270,13 @@ namespace frontend {
 			}
 		});
 
-        // count number of ocurrences of the pragma string
+        // count number of occurrences of the pragma string
 		std::ifstream tf(fn);
 		std::string fileText((std::istreambuf_iterator<char>(tf)), std::istreambuf_iterator<char>());
+		// delete comments
+		boost::regex comments(R"((//.*?$)|(/\*.*?\*/))");
+		fileText = boost::regex_replace(fileText, comments, "");
+		// search pragmas
 		std::string searchString{"#pragma test expect_ir"};
 		string::size_type start = 0;
 		unsigned occurrences = 0;
@@ -284,7 +292,8 @@ namespace frontend {
 		auto checkResult = core::checks::check(res);
 		EXPECT_EQ(checkResult.size(), 0) << printer::dumpErrors(checkResult)
 		                                 //<< "\n" << dumpColor(checkResult.getErrors()[0].getOrigin().getAddressedNode())
-		                                 << "\n@(" << locationOf(checkResult.getErrors()[0].getOrigin()) << ")";
+		                                 //<< "\n@(" << locationOf(checkResult.getErrors()[0].getOrigin()) << ")"
+		                                 << "\n" << checkResult;
 		// std::cout << "Semantic Error dump:\n";
 		// dumpText(checkResult.getErrors()[0].getOrigin().getParentNode(2));
 	}

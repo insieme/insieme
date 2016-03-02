@@ -195,14 +195,7 @@ namespace lang {
     }
 
 	TEST(Pointer, Ptr_function_convert) {
-//		/**
-//		 * A built-in derived operator for obtaining pointers to functions.
-//		 */
-//		LANG_EXT_DERIVED_WITH_NAME(PtrOfFunction, "ptr_of_function",
-//				"(fun : 'a) -> ptr<'a,t,f> {"
-//				"	return ptr_from_ref(ref_of_function(fun));"
-//				"}"
-//		)
+
 		NodeManager nm;
 		IRBuilder builder(nm);
         auto& ext = nm.getLangExtension<PointerExtension>();
@@ -282,76 +275,7 @@ namespace lang {
         EXPECT_EQ ( builder.callExpr(ext.getPtrToIntegral(), volatilePtrExpr, builder.getTypeLiteral(builder.getLangBasic().getUInt8()))->getType(), builder.getLangBasic().getUInt8());
     
     }
-    
-	TEST(Pointer, SubReferencing) {
-//		/**
-//		 * The narrow operation is obtaining a reference to a sub-object within a referenced object.
-//		 */
-//		LANG_EXT_DERIVED_WITH_NAME(PtrNarrow, "ptr_narrow",
-//				"  (p : ptr<'a,'c,'v>, dp : datapath<'a,'b>) -> ptr<'b,'c,'v> {                 "
-//				"		return ptr_from_ref(ref_narrow(ptr_to_ref(p), dp));                        "
-//				"  }                                                                               "
-//		)
-//
-//		/**
-//		 * The expand operation is the inverse operation of the narrow operation.
-//		 */
-//		LANG_EXT_DERIVED_WITH_NAME(PtrExpand, "ptr_expand",
-//				"  (p : ptr<'b,'c,'v>, dp : datapath<'a,'b>) -> ptr<'a,'c,'v> {                 "
-//				"		return ptr_from_ref(ref_expand(ptr_to_ref(p), dp));                        "
-//				"  }                                                                               "
-//		)
-//
-//		/**
-//		 * A derived operator providing access to an element in an array.
-//		 */
-//		LANG_EXT_DERIVED_WITH_NAME(
-//		    PtrArrayElement, "ptr_array_elem",
-//		    "(r : ptr<array<'a,'s>,'c,'v>, i : int<8>) -> ptr<'a,'c,'v> { return ptr_narrow(r, dp_element(dp_root(type_lit(array<'a,'s>)),i)); }"
-//		)
-//
-//		/**
-//		 * A derived reference navigation operator providing access to a member of a struct / union.
-//		 */
-//		LANG_EXT_DERIVED_WITH_NAME(
-//		    PtrMemberAccess, "ptr_member_access",
-//		    "(r : ptr<'a,'c,'v>, name : identifier, type : type<'b>) -> ptr<'b,'c,'v> { return ptr_narrow(r, dp_member(dp_root(type_lit('a)),name,type)); }"
-//		)
-//
-//		/**
-//		 * A derived reference navigation operator providing access to a components of a tuple.
-//		 */
-//		LANG_EXT_DERIVED_WITH_NAME(
-//		    PtrComponentAccess, "ptr_component_access",
-//		    "(r : ptr<'a,'c,'v>, pos : uint<8>, type : type<'b>) -> ptr<'b,'c,'v> { return ptr_narrow(r, dp_component(dp_root(type_lit('a)),pos,type)); }"
-//		)
-//
-//		/**
-//		 * A derived reference-navigation operation providing an array view on a scalar.
-//		 */
-//		LANG_EXT_DERIVED_WITH_NAME(
-//			PtrScalarToPtrArray, "ptr_scalar_to_ptr_array",
-//		    "(a : ptr<'a,'c,'v>) -> ptr<array<'a>,'c,'v> { return ptr_expand(a, dp_element(dp_root(type_lit(array<'a>)),0u)); }"
-//		)
-//
-//		/**
-//		 * A derived operator accessing a element addressed by a pointer + some offset.
-//		 */
-//		LANG_EXT_DERIVED_WITH_NAME(
-//			PtrSubscript, "ptr_subscript",
-//			"(p : ptr<'a,'c,'v>, i : int<8>) -> ref<'a,'c,'v> { return p.0[p.1 + i]; }"
-//		)
-//
-//		/**
-//		 * A derived operator accessing a element addressed by a pointer.
-//		 */
-//		LANG_EXT_DERIVED_WITH_NAME(
-//			PtrDeref, "ptr_deref",
-//			"(p : ptr<'a,'c,'v>) -> 'a { return ref_deref(ptr_to_ref(p)); }"
-//		)
-//
-    }
-    
+
 	TEST(Pointer, NullPtr) {
 		NodeManager nm;
 		IRBuilder builder(nm);
@@ -368,111 +292,6 @@ namespace lang {
         EXPECT_TRUE(isPointer(builder.callExpr(ext.getPtrNull(), A, f, f)->getType()));
 
     }
-    
-	TEST(Pointer, Comparison) {
-//
-//		// -- comparison operators --
-//
-//		/**
-//		 * An operator to compare two references on equality.
-//		 */
-//		LANG_EXT_DERIVED_WITH_NAME(
-//			PtrEqual, "ptr_eq",
-//			"(p1 : ptr<'a,'c1,'v1>, p2 : ptr<'a,'c2,'v2>) -> bool { return ref_eq(p1.0,p2.0) && p1.1 == p2.1; }"
-//		)
-//
-//		/**
-//		 * An operator to compare two references for inequality.
-//		 */
-//		LANG_EXT_DERIVED_WITH_NAME(PtrNotEqual, "ptr_ne", "(a : ptr<'a,'c1,'v1>, b : ptr<'a,'c2,'v2>) -> bool { return !ptr_eq(a,b); }")
-//
-//
-//		LANG_EXT_DERIVED_WITH_NAME(
-//			PtrLessThan, "ptr_lt",
-//			"(p1 : ptr<'a,'c1,'v1>, p2 : ptr<'a,'c2,'v2>) -> bool { return ref_eq(p1.0,p2.0) && p1.1 < p2.1; }"
-//		)
-//
-//		LANG_EXT_DERIVED_WITH_NAME(
-//			PtrLessEqual, "ptr_le",
-//			"(p1 : ptr<'a,'c1,'v1>, p2 : ptr<'a,'c2,'v2>) -> bool { return ref_eq(p1.0,p2.0) && p1.1 <= p2.1; }"
-//		)
-//
-//		LANG_EXT_DERIVED_WITH_NAME(
-//			PtrGreaterEqual, "ptr_ge",
-//			"(p1 : ptr<'a,'c1,'v1>, p2 : ptr<'a,'c2,'v2>) -> bool { return ref_eq(p1.0,p2.0) && p1.1 >= p2.1; }"
-//		)
-//
-//		LANG_EXT_DERIVED_WITH_NAME(
-//			PtrGreaterThan, "ptr_gt",
-//			"(p1 : ptr<'a,'c1,'v1>, p2 : ptr<'a,'c2,'v2>) -> bool { return ref_eq(p1.0,p2.0) && p1.1 > p2.1; }"
-//		)
-//
-//
-    }
-    
-	TEST(Pointer, Arithmetic) {
-//		// -- pointer arithmetic --
-//
-//		LANG_EXT_DERIVED_WITH_NAME(
-//			PtrAdd, "ptr_add",
-//			"(p : ptr<'a,'c,'v>, i : int<8>) -> ptr<'a,'c,'v> { return ( p.0, p.1 + i ); }"
-//		)
-//
-//		LANG_EXT_DERIVED_WITH_NAME(
-//			PtrSub, "ptr_sub",
-//			"(p : ptr<'a,'c,'v>, i : int<8>) -> ptr<'a,'c,'v> { return ( p.0, p.1 - i ); }"
-//		)
-//
-//		// pointer difference is not defined for unrelated pointers
-//		LANG_EXT_DERIVED_WITH_NAME(
-//			PtrDiff, "ptr_diff",
-//			"(l : ptr<'a,'c,'v>, r : ptr<'a,'c,'v>) -> int<8> { return l.1 - r.1; }"
-//		)
-//
-//		LANG_EXT_DERIVED_WITH_NAME(PtrPostInc, "ptr_post_inc", "(p : ref<ptr<'a,'c,'v>>) -> ptr<'a,'c,'v> { var ptr<'a,'c,'v> temp = *p; p = ptr_add(*p, 1l); return temp; }")
-//
-//		LANG_EXT_DERIVED_WITH_NAME(PtrPostDec, "ptr_post_dec", "(p : ref<ptr<'a,'c,'v>>) -> ptr<'a,'c,'v> { var ptr<'a,'c,'v> temp = *p; p = ptr_sub(*p, 1l); return temp; }")
-//
-//		LANG_EXT_DERIVED_WITH_NAME(PtrPreInc, "ptr_pre_inc", "(p : ref<ptr<'a,'c,'v>>) -> ptr<'a,'c,'v> { p = ptr_add(*p, 1l); return *p; }")
-//
-//		LANG_EXT_DERIVED_WITH_NAME(PtrPreDec, "ptr_pre_dec", "(p : ref<ptr<'a,'c,'v>>) -> ptr<'a,'c,'v> { p = ptr_sub(*p, 1l); return *p; }")
-//
-//	};
-//
-    }
-    
-	TEST(Pointer, Utilities) {
-//	/**
-//	 * Tests whether the given node is a pointer type or an expression of a pointer type.
-//	 */
-//	bool isPointer(const NodePtr& node);
-//	
-//	/**
-//	 * Creates a new pointer type based on the given specification.
-//	 */
-//	TypePtr buildPtrType(const TypePtr& elementType, bool _const = false, bool _volatile = false);
-//
-//	// constructors and conversions
-//	ExpressionPtr buildPtrNull(const TypePtr& type);
-//	ExpressionPtr buildPtrFromRef(const ExpressionPtr& refExpr);
-//	ExpressionPtr buildPtrToRef(const ExpressionPtr& ptrExpr);
-//	ExpressionPtr buildPtrFromArray(const ExpressionPtr& arrExpr);
-//	ExpressionPtr buildPtrFromIntegral(const ExpressionPtr& intExpr, const TypePtr& ptrType);
-//	ExpressionPtr buildPtrToIntegral(const ExpressionPtr& ptrExpr, const TypePtr& intType);
-//	ExpressionPtr buildPtrOfFunction(const ExpressionPtr& funExpr);
-//
-//	// casts
-//	ExpressionPtr buildPtrCast(const ExpressionPtr& ptrExpr, bool newConst, bool newVolatile);
-//	ExpressionPtr buildPtrReinterpret(const ExpressionPtr& ptrExpr, const TypePtr& newElementType);
-//
-//	// operations
-//	ExpressionPtr buildPtrDeref(const ExpressionPtr& ptrExpr);
-//	ExpressionPtr buildPtrSubscript(const ExpressionPtr& ptrExpr, const ExpressionPtr& subscriptExpr);
-//	ExpressionPtr buildPtrOperation(BasicGenerator::Operator op, const ExpressionPtr& lhs, const ExpressionPtr& rhs);
-//	ExpressionPtr buildPtrOperation(BasicGenerator::Operator op, const ExpressionPtr& ptrExpr);
-
-    } 
-
 } // end namespace lang
 } // end namespace core
 } // end namespace insieme

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -403,12 +403,25 @@ namespace checks {
 		EXPECT_TRUE(check(ok2).empty()) << check(ok2);
 		EXPECT_TRUE(check(ok3).empty()) << check(ok3);
 
-		//duplicate constructor types
-		auto err1 = builder.parseType("struct A { ctor () {} ctor () {} }");
-		auto err2 = builder.parseType("struct A { ctor (a : int<4>) {} ctor (b : int<4>) {} }");
+		//duplicate constructor type
+		{
+			TypePtr thisType = builder.refType(builder.tagTypeReference("A"));
+			auto functionType = builder.functionType(toVector(thisType), thisType, FK_CONSTRUCTOR);
+			auto ctor = builder.lambdaExpr(functionType, toVector(builder.variable(builder.refType(thisType))), builder.getNoOp());
+			auto err = builder.structType("A", ParentList(), FieldList(), toVector<ExpressionPtr>(ctor, ctor), builder.getDefaultDestructor(thisType), false, MemberFunctionList(), PureVirtualMemberFunctionList());
 
-		EXPECT_PRED2(containsMSG, check(err1), Message(NodeAddress(err1).getAddressOfChild(1,0), EC_TYPE_DUPLICATE_CONSTRUCTOR_TYPE, "", Message::ERROR));
-		EXPECT_PRED2(containsMSG, check(err2), Message(NodeAddress(err2).getAddressOfChild(1,0), EC_TYPE_DUPLICATE_CONSTRUCTOR_TYPE, "", Message::ERROR));
+			EXPECT_PRED2(containsMSG, check(err), Message(NodeAddress(err).getAddressOfChild(1,0), EC_TYPE_DUPLICATE_CONSTRUCTOR_TYPE, "", Message::ERROR));
+		}
+
+		//duplicate constructor type
+		{
+			TypePtr thisType = builder.refType(builder.tagTypeReference("A"));
+			auto functionType = builder.functionType(toVector(thisType), thisType, FK_CONSTRUCTOR);
+			auto ctor = builder.lambdaExpr(functionType, toVector(builder.variable(builder.refType(thisType)), builder.variable(builder.refType(builder.getLangBasic().getInt4()))), builder.getNoOp());
+			auto err = builder.structType("A", ParentList(), FieldList(), toVector<ExpressionPtr>(ctor, ctor), builder.getDefaultDestructor(thisType), false, MemberFunctionList(), PureVirtualMemberFunctionList());
+
+			EXPECT_PRED2(containsMSG, check(err), Message(NodeAddress(err).getAddressOfChild(1,0), EC_TYPE_DUPLICATE_CONSTRUCTOR_TYPE, "", Message::ERROR));
+		}
 	}
 
 	TEST(DestructorTypeCheck, Basic) {
@@ -461,11 +474,11 @@ namespace checks {
 		IRBuilder builder(manager);
 
 		//create structs with correct member functions
-		auto ok1 = builder.parseType("struct A { lambda f : () -> unit {} }");
-		auto ok2 = builder.parseType("struct A { lambda f : () -> unit {} lambda g : () -> unit {} }");
-		auto ok3 = builder.parseType("struct A { lambda f : (a : int<4>) -> unit {} lambda g : (a : int<4>) -> unit {} }");
-		auto ok4 = builder.parseType("struct A { lambda f : () -> unit {} pure virtual g : () -> unit }");
-		auto ok5 = builder.parseType("struct A { lambda f : (a : int<4>) -> unit {} pure virtual g : (int<4>) -> unit }");
+		auto ok1 = builder.parseType("struct A { lambda f = () -> unit {} }");
+		auto ok2 = builder.parseType("struct A { lambda f = () -> unit {} lambda g = () -> unit {} }");
+		auto ok3 = builder.parseType("struct A { lambda f = (a : int<4>) -> unit {} lambda g = (a : int<4>) -> unit {} }");
+		auto ok4 = builder.parseType("struct A { lambda f = () -> unit {} pure virtual g : () -> unit }");
+		auto ok5 = builder.parseType("struct A { lambda f = (a : int<4>) -> unit {} pure virtual g : (int<4>) -> unit }");
 
 		EXPECT_TRUE(check(ok1).empty()) << check(ok1);
 		EXPECT_TRUE(check(ok2).empty()) << check(ok2);
@@ -519,11 +532,11 @@ namespace checks {
 		IRBuilder builder(manager);
 
 		//create structs with correct member functions
-		auto ok1 = builder.parseType("struct A { lambda f : () -> unit {} }");
-		auto ok2 = builder.parseType("struct A { lambda f : () -> unit {} lambda g : () -> unit {} }");
-		auto ok3 = builder.parseType("struct A { lambda f : (a : int<4>) -> unit {} lambda g : (a : int<4>) -> unit {} }");
-		auto ok4 = builder.parseType("struct A { lambda f : () -> unit {} pure virtual g : () -> unit }");
-		auto ok5 = builder.parseType("struct A { lambda f : (a : int<4>) -> unit {} pure virtual g : (int<4>) -> unit }");
+		auto ok1 = builder.parseType("struct A { lambda f = () -> unit {} }");
+		auto ok2 = builder.parseType("struct A { lambda f = () -> unit {} lambda g = () -> unit {} }");
+		auto ok3 = builder.parseType("struct A { lambda f = (a : int<4>) -> unit {} lambda g = (a : int<4>) -> unit {} }");
+		auto ok4 = builder.parseType("struct A { lambda f = () -> unit {} pure virtual g : () -> unit }");
+		auto ok5 = builder.parseType("struct A { lambda f = (a : int<4>) -> unit {} pure virtual g : (int<4>) -> unit }");
 
 		{
 			//create a struct with two identical member functions
@@ -569,7 +582,7 @@ namespace checks {
 		}
 	}
 
-	TEST(StructExprTypeCheck, Basic) {
+	TEST(InitExprTypeCheck, Basic) {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
@@ -585,18 +598,17 @@ namespace checks {
 		fields.push_back(builder.field(name, typeA));
 		TagTypePtr structType = builder.structType(fields);
 
-
 		// create struct expression
-		NamedValueList members;
-		members.push_back(builder.namedValue(name, valueA));
-		core::StructExprPtr ok = builder.structExpr(structType, members);
+		ExpressionList members;
+		members.push_back(valueA);
+		core::InitExprPtr ok = builder.initExprTemp(builder.refType(structType), members);
 
 		members.clear();
-		members.push_back(builder.namedValue(name, valueB));
-		core::StructExprPtr err = builder.structExpr(structType, members);
+		members.push_back(valueB);
+		core::InitExprPtr err = builder.initExprTemp(builder.refType(structType), members);
 
 		// conduct checks
-		CheckPtr typeCheck = make_check<StructExprTypeCheck>();
+		CheckPtr typeCheck = make_check<InitExprTypeCheck>();
 
 		EXPECT_TRUE(check(ok, typeCheck).empty());
 		ASSERT_FALSE(check(err, typeCheck).empty());
@@ -609,18 +621,16 @@ namespace checks {
 		IRBuilder builder(manager);
 
 		// conduct checks
-		CheckPtr typeCheck = make_check<StructExprTypeCheck>();
+		CheckPtr typeCheck = make_check<InitExprTypeCheck>();
 		core::TypePtr structType = builder.parseType("struct { a : A; b : B; }");
 
 		// Create a example expressions
-		core::StringValuePtr name = builder.stringValue("x");
 		core::TypePtr typeA = builder.genericType("A");
 		core::ExpressionPtr valueA = builder.literal(typeA, "a");
-		NamedValueList members;
-		members.push_back(builder.namedValue(name, valueA));
-		core::StructExprPtr err = builder.structExpr(structType.as<TagTypePtr>(), members);
-		EXPECT_FALSE(check(err, typeCheck).empty());
-		EXPECT_TRUE(check(err, typeCheck).size() == 1);
+		ExpressionList members;
+		members.push_back(valueA);
+		core::InitExprPtr err = builder.initExprTemp(builder.refType(structType.as<TagTypePtr>()), members);
+		EXPECT_EQ(check(err, typeCheck).size(), 1);
 	}
 
 	TEST(MemberAccessElementTypeCheck, Basic) {
@@ -730,7 +740,7 @@ namespace checks {
 			R"(
 				struct A {
 					x : int<4>;
-					lambda f : () -> unit { $x$; }
+					lambda f = () -> unit { $x$; }
 				}
 			)"
 			);
@@ -768,7 +778,7 @@ namespace checks {
 			R"(
 				struct A {
 					x : ptr<A>;
-					lambda f : () -> unit { $x$; }
+					lambda f = () -> unit { $x$; }
 				}
 			)"
 			);
@@ -1047,7 +1057,7 @@ namespace checks {
 		IRBuilder builder(manager);
 
 		// OK ... create a function literal
-		TagTypePtr typeA = builder.parseType("decl struct t; def struct t { a : A; next : ref<t>; }; t").as<TagTypePtr>();
+		TagTypePtr typeA = builder.parseType("decl struct StructX; def struct StructX { a : A; next : ref<StructX>; }; StructX").as<TagTypePtr>();
 		TypePtr typeB = typeA->peel();
 
 		// all of the following should be supported
@@ -1061,6 +1071,72 @@ namespace checks {
 		EXPECT_TRUE(check(ok1, typeCheck).empty()) << check(ok1, typeCheck);
 		EXPECT_TRUE(check(ok2, typeCheck).empty()) << check(ok2, typeCheck);
 		EXPECT_TRUE(check(ok3, typeCheck).empty()) << check(ok3, typeCheck);
+	}
+
+	TEST(DeclarationStmtTypeCheck, ReferenceSemantics) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		auto& basic = manager.getLangBasic();
+		const auto& int4 = basic.getInt4();
+		const auto& int8 = basic.getInt8();
+
+		CheckPtr typeCheck = make_check<DeclarationStmtTypeCheck>();
+
+		{ //plain integer
+			DeclarationStmtPtr ok = builder.declarationStmt(builder.variable(builder.refType(int4)), builder.literal(int4, "42"));
+			EXPECT_TRUE(check(ok, typeCheck).empty()) << check(ok, typeCheck);
+		}
+
+		{ //const integer
+			DeclarationStmtPtr ok = builder.declarationStmt(builder.variable(builder.refType(int4, true)), builder.literal(int4, "42"));
+			EXPECT_TRUE(check(ok, typeCheck).empty()) << check(ok, typeCheck);
+		}
+
+		{ //volatile integer
+			DeclarationStmtPtr ok = builder.declarationStmt(builder.variable(builder.refType(int4, false, true)), builder.literal(int4, "42"));
+			EXPECT_TRUE(check(ok, typeCheck).empty()) << check(ok, typeCheck);
+		}
+
+		{ //cpp ref
+			auto var = builder.variable(builder.refType(int4, false, false, lang::ReferenceType::Kind::CppReference));
+			DeclarationStmtPtr ok = builder.declarationStmt(var, var);
+			EXPECT_TRUE(check(ok, typeCheck).empty()) << check(ok, typeCheck);
+		}
+
+		{ //cpp rref
+			auto var = builder.variable(builder.refType(int4, false, false, lang::ReferenceType::Kind::CppRValueReference));
+			DeclarationStmtPtr ok = builder.declarationStmt(var, var);
+			EXPECT_TRUE(check(ok, typeCheck).empty()) << check(ok, typeCheck);
+		}
+
+		{ //different types do not work
+			DeclarationStmtPtr err = builder.declarationStmt(builder.variable(builder.refType(int4)), builder.literal(int8, "42"));
+			ASSERT_FALSE(check(err, typeCheck).empty());
+			EXPECT_PRED2(containsMSG, check(err, typeCheck), Message(NodeAddress(err), EC_TYPE_INVALID_INITIALIZATION_EXPR, "", Message::ERROR));
+		}
+	}
+
+	TEST(DeclarationStmtSemanticCheck, Basic) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		CheckPtr semanticCheck = make_check<DeclarationStmtSemanticCheck>();
+
+		TypePtr typeA = builder.getLangBasic().getInt4();
+
+		// not using the variable is ok
+		DeclarationStmtPtr ok0 = builder.declarationStmt(builder.variable(typeA), builder.intLit(5));
+		EXPECT_TRUE(check(ok0, semanticCheck).empty()) << check(ok0, semanticCheck);
+
+		// using the variable once is ok (for all semantic checks)
+		auto variable1 = builder.variable(typeA);
+		DeclarationStmtPtr ok1 = builder.declarationStmt(variable1, variable1);
+		EXPECT_TRUE(check(ok1).empty()) << check(ok0);
+
+		// using the variable more than once results in the check to fail
+		DeclarationStmtPtr err0 = builder.declarationStmt(variable1, builder.add(variable1, variable1));
+		EXPECT_PRED2(containsMSG, check(err0, semanticCheck), Message(NodeAddress(err0), EC_TYPE_INVALID_INITIALIZATION_EXPR, "", Message::ERROR));
 	}
 
 	TEST(IfCondition, Basic) {
@@ -1542,7 +1618,7 @@ namespace checks {
 
 		// create simple, context less array type
 		TypePtr element = manager.getLangBasic().getInt4();
-		TypePtr arrayType = builder.arrayType(element);
+		TypePtr arrayType = builder.arrayType(element, 12);
 
 		NodePtr cur;
 		auto errors = check(arrayType, typeCheck);
@@ -1552,12 +1628,12 @@ namespace checks {
 		errors = check(cur, typeCheck);
 		EXPECT_TRUE(errors.empty()) << cur << "\n" << errors;
 
-		ExpressionPtr arrayPtr = builder.parseExpr("array_create(type_lit(12),[0])");
+		ExpressionPtr arrayPtr = builder.parseExpr("*<ref<array<int<4>,12>,f,f,plain>> {0}");
 
-		// also, allow array values to be used within ref.new, ref.var, struct, tuple and union expressions
+		// also, allow array values to be used within ref.new, ref.temp, struct, tuple and union expressions
 
-		// ref.var
-		cur = builder.refVar(arrayPtr);
+		// ref.temp
+		cur = builder.refTemp(arrayPtr);
 		errors = check(cur, typeCheck);
 		EXPECT_TRUE(errors.empty()) << cur << "\n" << errors;
 
@@ -1567,13 +1643,14 @@ namespace checks {
 		EXPECT_TRUE(errors.empty()) << cur << "\n" << errors;
 
 		// struct expression
-		cur = builder.structExpr(toVector(builder.namedValue("a", arrayPtr)));
+		TagTypePtr structType = builder.structType(toVector(builder.field("a", arrayType)));
+		cur = builder.initExprTemp(builder.refType(structType), arrayPtr);
 		errors = check(cur, typeCheck);
 		EXPECT_TRUE(errors.empty()) << cur << "\n" << errors;
 
 		// union expression
 		TagTypePtr unionType = builder.unionType(toVector(builder.field("a", arrayType)));
-		cur = builder.unionExpr(unionType, builder.stringValue("a"), arrayPtr);
+		cur = builder.initExprTemp(builder.refType(unionType), arrayPtr);
 		errors = check(cur, typeCheck);
 		EXPECT_TRUE(errors.empty()) << cur << "\n" << errors;
 

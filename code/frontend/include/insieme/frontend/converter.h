@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -49,7 +49,6 @@
 #include "insieme/frontend/utils/source_locations.h"
 
 #include "insieme/core/ir_program.h"
-#include "insieme/core/frontend_ir_builder.h"
 
 #include "insieme/utils/map_utils.h"
 
@@ -99,7 +98,7 @@ namespace conversion {
 		/// List of warnings up to this point
 		///
 		std::set<std::string> warnings;
-		
+
 		/// Converts Clang declarations to corresponding IR, also storing the necessary state
 		///
 		std::shared_ptr<DeclConverter> declConvPtr;
@@ -143,7 +142,7 @@ namespace conversion {
 		/// A state object which manages mappings from clang record types to IR GenericTypes
 		///
 		std::shared_ptr<state::RecordManager> recordManPtr;
-		
+
 		/// An object which handles attaching tags to literals generated from symbols defined in the standard library
 		///
 		std::shared_ptr<utils::HeaderTagger> headerTaggerPtr;
@@ -152,7 +151,7 @@ namespace conversion {
 		 * IR building and managing tools
 		 */
 		core::NodeManager& mgr;
-		const core::FrontendIRBuilder builder;
+		const core::IRBuilder builder;
 		const frontend::ir::FrontendIr feIR;
 		core::tu::IRTranslationUnit irTranslationUnit;
 
@@ -175,7 +174,7 @@ namespace conversion {
 		core::tu::IRTranslationUnit convert();
 
 		// Getters & Setters
-		const core::FrontendIRBuilder& getIRBuilder() const { return builder; }
+		const core::IRBuilder& getIRBuilder() const { return builder; }
 		core::NodeManager& getNodeManager() const { return mgr; }
 
 		const TranslationUnit& getTranslationUnit() const { return translationUnit; }
@@ -197,9 +196,10 @@ namespace conversion {
 		std::shared_ptr<state::VariableManager> getVarMan() const { return varManPtr; }
 		std::shared_ptr<state::FunctionManager> getFunMan() const { return funManPtr; }
 		std::shared_ptr<state::RecordManager> getRecordMan() const { return recordManPtr; }
+		std::shared_ptr<utils::HeaderTagger> getHeaderTagger() const { return headerTaggerPtr; }
 
 		const pragma::PragmaStmtMap& getPragmaMap() const {	return pragmaMap; }
-		
+
 		/**
 		 * Entry point for converting clang statements into IR statements
 		 * @param stmt is a clang statement of the AST
@@ -208,12 +208,19 @@ namespace conversion {
 		core::StatementPtr convertStmt(const clang::Stmt* stmt) const;
 
 		/**
+		 * Entry point for converting clang statements into an IR statement wrapper
+		 * @param stmt is a clang statement of the AST
+		 * @return the corresponding IR statement(s) in a wrapper
+		 */
+		stmtutils::StmtWrapper convertStmtToWrapper(const clang::Stmt* stmt) const;
+
+		/**
 		 * Entry point for converting clang expressions to IR expressions
 		 * @param expr is a clang expression of the AST
 		 * @return the corresponding IR expression
 		 */
 		core::ExpressionPtr convertExpr(const clang::Expr* expr) const;
-		
+
 		/**
 		 * Entry point for converting clang initialization expressions to IR expressions
 		 * - the difference is relevant in the case of string literals
@@ -221,6 +228,16 @@ namespace conversion {
 		 * @return the corresponding IR initialization expression
 		 */
 		core::ExpressionPtr convertInitExpr(const clang::Expr* expr) const;
+
+		/**
+		 * Entry point for converting clang expressions used in C++ arguments or return values to IR expressions
+		 * - in these cases, we need to skip implicitly generated move and copy constructor calls
+		 * - we also need to cast reference types to the correct reference kind if required
+		 * @param expr is a clang expression of the AST
+		 * @param targetType is the IR type we require (optional, no casting if not provided)
+		 * @return the corresponding IR expression
+		 */
+		core::ExpressionPtr convertCxxArgExpr(const clang::Expr* expr, const core::TypePtr& targetType = nullptr) const;
 
 		/**
 		 * Entry point for converting clang types into an IR types
@@ -235,8 +252,8 @@ namespace conversion {
 		 * @return the corresponding IR type
 		 */
 		core::TypePtr convertVarType(const clang::QualType& type) const;
-		
-		
+
+
 		/**
 		 * Tag symbols from std libs with the appropriate header information
 		 * @param node the node to (potentially) tag

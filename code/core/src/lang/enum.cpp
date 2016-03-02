@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -36,7 +36,7 @@
 
 #include "insieme/core/lang/enum.h"
 #include "insieme/core/ir_builder.h"
-
+#include "insieme/core/analysis/ir_utils.h"
 
 namespace insieme {
 namespace core {
@@ -48,10 +48,10 @@ namespace lang {
 
 		// support expressions as input
 		auto type = node.isa<GenericTypePtr>();
-		if (auto expr = node.isa<ExpressionPtr>()) type = expr->getType().isa<GenericTypePtr>();
+		if(auto expr = node.isa<ExpressionPtr>()) type = expr->getType().isa<GenericTypePtr>();
 
 		// if we have an expression that is of type (e.g. (enum_def, value_type))
-		if(isEnumType(node)) {
+		if(isEnum(node)) {
 			type = node.as<TupleTypePtr>()->getElement(0).as<GenericTypePtr>();
 		}
 
@@ -60,31 +60,47 @@ namespace lang {
 
 		// process node type
 		std::vector<GenericTypePtr> entries;
-		for(unsigned i=1; i<type->getTypeParameter()->size(); ++i) {
+		for(unsigned i=2; i<type->getTypeParameter()->size(); ++i) {
 			entries.push_back(type->getTypeParameter(i).as<GenericTypePtr>());
 		}
-		*this = EnumDefinition(type->getTypeParameter(0).as<GenericTypePtr>(), entries);
+		*this = EnumDefinition(type->getTypeParameter(0).as<GenericTypePtr>(), type->getTypeParameter(1), entries);
 	}
 
 	bool EnumDefinition::isEnumDefinition(const NodePtr& node) {
-		//generic type ptr?!
-		if(!node.isa<GenericTypePtr>())
+		// generic type ptr?!
+		if(!node.isa<GenericTypePtr>()) {
 			return false;
+		}
 		GenericTypePtr gt = node.as<GenericTypePtr>();
-		//name has to be enum_entry
-		if(gt->getName()->getValue().find("enum_def") == std::string::npos)
+		// name has to be enum_def
+		if(gt->getName()->getValue().find("enum_def") == std::string::npos) {
 			return false;
-		//first field has to be a string lit or empty string
-		if(GenericTypePtr gt2 = gt->getTypeParameter(0).isa<GenericTypePtr>()) {
-			if(gt2->getTypeParameter()->size())
+		}
+		// has to have at least 2 type params
+		if(gt->getTypeParameterList().size() < 2) {
+			return false;
+		}
+		// first field has to be a string lit or empty string
+		if(GenericTypePtr nameType = gt->getTypeParameter(0).isa<GenericTypePtr>()) {
+			if(nameType->getTypeParameter()->size()) {
 				return false;
+			}
 		} else {
 			return false;
 		}
-		//all following fields must be enum entries
-		for(unsigned i=1; i<gt->getTypeParameter()->size(); ++i) {
-			if(!EnumEntry::isEnumEntry(gt->getTypeParameter(i)))
+		// second field has to be integer type
+		if(GenericTypePtr intType = gt->getTypeParameter(1).isa<GenericTypePtr>()) {
+			if(!node.getNodeManager().getLangBasic().isInt(intType)) {
 				return false;
+			}
+		} else {
+			return false;
+		}
+		// all following fields must be enum entries
+		for(unsigned i=2; i<gt->getTypeParameter()->size(); ++i) {
+			if(!EnumEntry::isEnumEntry(gt->getTypeParameter(i))) {
+				return false;
+			}
 		}
 		return true;
 	}
@@ -94,8 +110,10 @@ namespace lang {
 		IRBuilder builder(nm);
 		TypeList tl;
 		tl.push_back(enumName);
-		for(auto& ty : domain)
+		tl.push_back(intType);
+		for(auto& ty : domain) {
 			tl.push_back(static_cast<GenericTypePtr>(ty));
+		}
 		return GenericType::get(nm, "enum_def", ParentList(), tl);
 	}
 
@@ -111,7 +129,7 @@ namespace lang {
 		assert_true(isEnumEntry(type)) << "Given node " << *node << " is not an enum entry type!";
 
 		// process node type
-		*this = EnumEntry(type->getTypeParameter(0).as<GenericTypePtr>(), 
+		*this = EnumEntry(type->getTypeParameter(0).as<GenericTypePtr>(),
 			type->getTypeParameter(1).as<NumericTypePtr>()->getValue().as<LiteralPtr>()->getValueAs<int64_t>());
 	}
 
@@ -146,53 +164,105 @@ namespace lang {
 		return GenericType::get(nm, "enum_entry", toVector(entryName.as<TypePtr>(), val));
 	}
 
-	bool isEnumType(const NodePtr& node) {
+	bool isEnum(const NodePtr& node) {
 		TypePtr type;
-		if(node.isa<TypePtr>())
+		if(node.isa<TypePtr>()) {
 			type = node.as<TypePtr>();
-		if(node.isa<ExpressionPtr>())
+		}
+		if(node.isa<ExpressionPtr>()) {
 			type = node.as<ExpressionPtr>()->getType();
-		//type must be a tuple type
-		if(!type.isa<TupleTypePtr>())
+		}
+		// type must be a tuple type
+		if(!type.isa<TupleTypePtr>()) {
 			return false;
+		}
 		const TupleTypePtr tt = type.as<TupleTypePtr>();
-		//with exactly 2 elements (value and enum_type)
-		if(tt->getElementTypes().size() != 2)
+		// with exactly 2 elements (value and enum_type)
+		if(tt->getElementTypes().size() != 2) {
 			return false;
-		if(!tt->getElement(0).isa<GenericTypePtr>())
+		}
+		if(!tt->getElement(0).isa<GenericTypePtr>()) {
 			return false;
+		}
 		const GenericTypePtr t1 = tt->getElement(0).as<GenericTypePtr>();
-		if(!EnumDefinition::isEnumDefinition(t1))
+		if(!core::analysis::isTypeLiteralType(t1)) {
 			return false;
+		}
+		if(!EnumDefinition::isEnumDefinition(core::analysis::getRepresentedType(t1))) {
+			return false;
+		}
 		return true;
 	}
 
-
-	ExpressionPtr getEnumInit(const ExpressionPtr& initVal, const TupleTypePtr& enumType) {
-		IRBuilder builder(enumType->getNodeManager());
-		return builder.tupleExpr(toVector<ExpressionPtr>(builder.undefinedVar(enumType->getElement(0)), initVal));
+	TupleTypePtr buildEnumType(const core::GenericTypePtr& enumDefinition) {
+		assert_true(EnumDefinition::isEnumDefinition(enumDefinition)) << "Passed type is not an enum definition.";
+		NodeManager& mgr = enumDefinition.getNodeManager();
+		IRBuilder builder(mgr);
+		TypeList elements { builder.getTypeLiteralType(enumDefinition), EnumDefinition(enumDefinition).getIntType() };
+		return builder.tupleType(elements);
 	}
 
-	TupleTypePtr getEnumType(const TypePtr& valueType, const GenericTypePtr& enumDef) {
-		IRBuilder builder(enumDef->getNodeManager());
-		// build (enumty t, val v) tuple
-		return builder.tupleType(toVector<TypePtr>(enumDef, valueType));
+	TupleExprPtr buildEnumValue(const GenericTypePtr& enumDefinition, const ExpressionPtr& value) {
+		assert_true(EnumDefinition::isEnumDefinition(enumDefinition)) << "Passed type is not an enum definition.";
+		NodeManager& mgr = enumDefinition.getNodeManager();
+		IRBuilder builder(mgr);
+		return builder.tupleExpr(builder.getTypeLiteral(enumDefinition), value);
 	}
 
-	GenericTypePtr getEnumElement(const GenericTypePtr& name, const ExpressionPtr& val) {
-		return EnumEntry::create(name, val);
+	GenericTypePtr getEnumTypeDefinition(const core::TypePtr& enumType) {
+		assert_true(isEnum(enumType)) << "Passed type is not an enum type.";
+		return core::analysis::getRepresentedType(enumType.as<TupleTypePtr>().getElement(0)).as<GenericTypePtr>();
 	}
 
-	TypePtr getEnumElementType(const TypePtr& type) {
-		assert_true(isEnumType(type)) << "Passed type is not an enum type.";
+	TypePtr getEnumIntType(const TypePtr& type) {
+		assert_true(isEnum(type)) << "Passed type is not an enum type.";
 		const TupleTypePtr tt = type.as<TupleTypePtr>();
 		return tt->getElement(1);
 	}
 
-	GenericTypePtr getEnumDef(const GenericTypePtr& name, const std::vector<GenericTypePtr>& entries) {
-		return EnumDefinition::create(name, entries);
+	GenericTypePtr getEnumEntry(const ExpressionPtr& enumValue) {
+		assert_true(isEnum(enumValue)) << "Passed value is not of enum type.";
+		auto enumDef = EnumDefinition(getEnumTypeDefinition(enumValue->getType()));
+		auto valFormula = core::arithmetic::toFormula(enumValue.as<TupleExprPtr>()->getExpressions()->getElement(1));
+		assert_true(valFormula.isInteger()) << "Enum value not constant integer.";
+		auto val = valFormula.getIntegerValue();
+		for(auto entryGt : enumDef.getElements()) {
+			auto entry = EnumEntry(entryGt);
+			if(entry.getEnumEntryValue() == val) {
+				return entry;
+			}
+		}
+		assert_fail() << "Invalid enum value:\n" << dumpColor(enumValue);
+		return nullptr;
 	}
 
-}
-}
-}
+	ExpressionPtr buildEnumToInt(const ExpressionPtr& enumExpr) {
+		assert_true(isEnum(enumExpr)) << "Passed type is not an enum type.";
+		auto t = enumExpr->getType();
+		NodeManager& mgr = enumExpr.getNodeManager();
+		IRBuilder builder(mgr);
+		auto& enumExt = mgr.getLangExtension<EnumExtension>();
+		return builder.callExpr(lang::getEnumIntType(t), enumExt.getEnumToInt(), enumExpr);
+	}
+
+	ExpressionPtr buildEnumFromInt(const TypePtr& enumT, const ExpressionPtr& value) {
+		assert_true(isEnum(enumT)) << "Passed type is not an enum type.";
+		NodeManager& mgr = value.getNodeManager();
+		IRBuilder builder(mgr);
+		assert_true(builder.getLangBasic().isInt(value->getType())) << "Passed value does not have integral type - is\n" << dumpColor(value)
+			                                                        << " of type:\n" << dumpColor(value->getType());
+		auto& enumExt = mgr.getLangExtension<EnumExtension>();
+
+		// simplify nested to_int / from_int chains
+		if(enumExt.isCallOfEnumToInt(value) && getEnumTypeDefinition(analysis::getArgument(value, 0)->getType()) == getEnumTypeDefinition(enumT)) {
+			return analysis::getArgument(value, 0);
+		}
+
+		auto innerTargetType = enumT.as<core::TupleTypePtr>()->getElement(1);
+		auto preCast = builder.numericCast(value, innerTargetType);
+		return builder.callExpr(enumT, enumExt.getEnumFromInt(), builder.getTypeLiteral(enumT), preCast);
+	}
+
+} // end namespace lang
+} // end namespace core
+} // end namespace insieme

@@ -43,6 +43,7 @@
 #include "insieme/core/forward_decls.h"
 #include "insieme/core/ir_types.h"
 #include "insieme/core/ir_expressions.h"
+#include "insieme/core/types/match.h"
 
 #include "insieme/core/lang/lang.h"
 
@@ -417,7 +418,9 @@ namespace lang {
 			return expr_##NAME;                                                                                                                                \
 		}                                                                                                                                                      \
 		const bool is##NAME(const insieme::core::NodePtr& node) const {                                                                                        \
-			return node && (*node == *get##NAME());                                                                                                            \
+			if(!node) return false;                                                                                                                            \
+			if(auto expr = node.isa<core::LambdaExprPtr>()) return core::types::isMatchable(expr->getType(), get##NAME()->getType());                          \
+			return *node == *get##NAME();                                                                                                                      \
 		} 																																					   \
 		const insieme::core::CallExprPtr isCallOf##NAME(const insieme::core::NodePtr& node) const {                                                            \
 			return isCallOf(node,[&]()->insieme::core::NodePtr { return get##NAME(); });                                                            		   \

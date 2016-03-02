@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -47,7 +47,7 @@ int main() {
 	// Base types ----------------------------------------------------------------------------------------------------------------------------------------------
 
 	#pragma test expect_ir(R"({
-		var ref<ptr<int<4>,f,f>,f,f,plain> i = ref_var_init(ptr_from_ref(ref_new(type_lit(int<4>))));
+		var ref<ptr<int<4>,f,f>,f,f,plain> i = ptr_from_ref(ref_new(type_lit(int<4>)));
 		ref_delete(ptr_to_ref(*i));
 	})")
 	{
@@ -56,7 +56,7 @@ int main() {
 	}
 
 	#pragma test expect_ir(R"({
-		var ref<ptr<int<4>,f,f>,f,f,plain> i = ref_var_init(ptr_from_ref(ref_new_init(42)));
+		var ref<ptr<int<4>,f,f>,f,f,plain> i = ptr_from_ref(ref_new_init(42));
 		ref_delete(ptr_to_ref(*i));
 	})")
 	{
@@ -67,27 +67,27 @@ int main() {
 	// Base type arrays ----------------------------------------------------------------------------------------------------------------------------------------
 
 	#pragma test expect_ir(R"({
-		var ref<ptr<int<4>,f,f>,f,f,plain> i = ref_var_init(ptr_from_array(ref_new(type_lit(array<int<4>,50>))));
+		var ref<ptr<int<4>,f,f>,f,f,plain> i = ptr_from_array(ref_new(type_lit(array<int<4>,50>)));
 		ref_delete(ptr_to_array(*i));
 	})")
 	{
 		int* arri = new int[50];
-		delete[] arri;
+		delete [] arri;
 	}
 
 	#pragma test expect_ir(R"({
-		var ref<ptr<int<4>,f,f>,f,f,plain> i =  ref_var_init(ptr_from_array(ref_new_init(array_create(type_lit(50), [1,2,3]))));
+		var ref<ptr<int<4>,f,f>,f,f,plain> i = ptr_from_array(ref_new_init(*<ref<array<int<4>,50>,f,f,plain>>(ref_temp(type_lit(array<int<4>,50>))) {1,2,3}));
 		ref_delete(ptr_to_array(*i));
 	})")
 	{
 		int* arri = new int[50]{1, 2, 3};
-		delete[] arri;
+		delete [] arri;
 	}
 
 	// Class types ---------------------------------------------------------------------------------------------------------------------------------------------
 	
 	#pragma test expect_ir(SimplestConstructor_IR, R"({
-		var ref<ptr<IMP_SimplestConstructor>,f,f,plain> v0 = ref_var_init(ptr_from_ref(IMP_SimplestConstructor::(ref_new(type_lit(IMP_SimplestConstructor)))));
+		var ref<ptr<IMP_SimplestConstructor>,f,f,plain> v0 = ptr_from_ref(IMP_SimplestConstructor::(ref_new(type_lit(IMP_SimplestConstructor))));
 		ref_delete(ptr_to_ref(*v0));
 	})")
 	{
@@ -95,14 +95,14 @@ int main() {
 		delete simple;
 	}
 
-	//# pragma test expect_ir(SimplestConstructor_IR, R"({
-	//	var ref<ptr<IMP_SimplestConstructor>,f,f,plain> v0 = ref_var_init(ptr_from_ref(IMP_SimplestConstructor::(ref_new(type_lit(IMP_SimplestConstructor)))));
-	//	ref_delete(ptr_to_ref(*v0));
+	//#pra gma test expect_ir(SimplestConstructor_IR, R"({
+	//	var ref<ptr<IMP_SimplestConstructor>,f,f,plain> v0 = object_array_new(type_lit(IMP_SimplestConstructor), 3, IMP_SimplestConstructor::);
+	//	delete(ptr_to_array(*v0));
 	//})")
-	//{
-	//	SimplestConstructor* arrsimple = new SimplestConstructor[3];
-	//	delete [] arrsimple;
-	//}
+	{
+		SimplestConstructor* arrsimple = new SimplestConstructor[3];
+		delete [] arrsimple;
+	}
 
 
 	return 0;

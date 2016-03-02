@@ -54,14 +54,32 @@ using namespace clang;
 
 namespace {
 
+    /** 
+     * this class guarantees release of resources when using the parserproxy.
+     * TODO: Idealy ParserProxy should dissapear or turn into something which is
+     * more standard.
+     */
+    struct ParserProxyRAII {
+            ParserProxyRAII(clang::Parser* p){ 
+                ParserProxy::init(p);
+                p->Initialize(); 
+            }
+            ParserProxyRAII(const ParserProxyRAII&) = delete;
+            ParserProxyRAII& operator=(const ParserProxyRAII&) = delete;
+            ~ParserProxyRAII(){ 
+		        ParserProxy::discard(); 
+            }
+    };
+
 	// Instantiate the clang parser and sema to build the clang AST. Pragmas are stored during the parsing
 	///
 	void parseClangAST(ClangCompiler& comp, clang::ASTConsumer* Consumer, InsiemeSema& sema) {
 		Parser P(comp.getPreprocessor(), sema, false); // do not skip function bodies
 		comp.getPreprocessor().EnterMainSourceFile();
 
-		ParserProxy::init(&P);
-		P.Initialize(); // FIXME
+        // guarantee that resources are relased after use
+        ParserProxyRAII guard(&P);
+
 		Consumer->Initialize(comp.getASTContext());
 		if(SemaConsumer* SC = dyn_cast<SemaConsumer>(Consumer)) { SC->InitializeSema(sema); }
 
@@ -75,7 +93,6 @@ namespace {
 			if(ADecl) { Consumer->HandleTopLevelDecl(ADecl.getPtrAs<DeclGroupRef>()); }
 		}
 		Consumer->HandleTranslationUnit(comp.getASTContext());
-		ParserProxy::discard(); // FIXME
 	}
 
 } // end anonymous namespace

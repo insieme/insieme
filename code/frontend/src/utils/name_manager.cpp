@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -34,7 +34,11 @@
  * regarding third party software licenses.
  */
 
+#include "insieme/frontend/utils/name_manager.h"
+
 #include "insieme/frontend/clang.h"
+#include "insieme/frontend/converter.h"
+#include "insieme/utils/assert.h"
 #include "insieme/utils/name_mangling.h"
 
 #include <boost/algorithm/string.hpp>
@@ -50,6 +54,7 @@ namespace utils {
 	using std::string;
 
 	std::string removeSymbols(std::string str) {
+		boost::replace_all(str, " ", "_");
 		boost::replace_all(str, "<", "_lt_");
 		boost::replace_all(str, ">", "_gt_");
 		boost::replace_all(str, ":", "_colon_");
@@ -110,10 +115,106 @@ namespace utils {
 		return removeSymbols(fullName);
 	}
 
+	namespace {
+		string getTypeString(clang::QualType t, bool cStyleName = false) {
+			string s = t.getAsString();
+			boost::replace_all(s, "class ", "");    // special handling for clang's translation of template class arguments
+			boost::replace_all(s, "_Bool", "bool"); // special handling for clang's translation of bool types
+			if (cStyleName) {
+				return s;
+			}
+			return removeSymbols(s);
+		}
+	}
 
-	std::string buildNameForFunction(const clang::FunctionDecl* funcDecl) {
+	std::string buildNameSuffixForTemplate(const clang::TemplateArgumentList& tempArgs, clang::ASTContext& astContext, bool cStyleName) {
+		std::string separator = cStyleName ? "," : "_";
+		std::stringstream suffix;
+		for(unsigned i = 0; i < tempArgs.size(); ++i) {
+			auto arg = tempArgs.get(i);
+			switch(arg.getKind()) {
+			case clang::TemplateArgument::Expression: {
+				suffix << separator << arg.getAsExpr()->getType().getAsString();
+				break;
+			}
+			case clang::TemplateArgument::Type: {
+				// check if the type is a lambda, this one needs special handling
+				std::string typeName;
+				if(arg.getAsType().getTypePtr()->getAsCXXRecordDecl() && arg.getAsType().getTypePtr()->getAsCXXRecordDecl()->isLambda()) {
+					typeName = createNameForAnon("lambda", arg.getAsType().getTypePtr()->getAsCXXRecordDecl(), astContext.getSourceManager());
+				} else {
+					typeName = getTypeString(arg.getAsType(), cStyleName);
+				}
+				suffix << separator << typeName;
+				break;
+			}
+			case clang::TemplateArgument::Null: {
+				suffix << separator << "null";
+				break;
+			}
+			case clang::TemplateArgument::Declaration: {
+				suffix << separator << getTypeString(arg.getAsDecl()->getType(), cStyleName);
+				break;
+			}
+			case clang::TemplateArgument::NullPtr: {
+				suffix << separator << "nullptr";
+				break;
+			}
+			case clang::TemplateArgument::Integral: {
+				suffix << separator << arg.getAsIntegral().toString(10);
+				break;
+			}
+			case clang::TemplateArgument::Template: {
+				std::string templateName = arg.getAsTemplate().getAsTemplateDecl()->getTemplatedDecl()->getQualifiedNameAsString();
+				suffix << separator << (cStyleName ? templateName : removeSymbols(templateName));
+				break;
+			}
+			case clang::TemplateArgument::TemplateExpansion: {
+				// I don't know what to do here
+				assert_not_implemented();
+				break;
+			}
+			case clang::TemplateArgument::Pack: {
+				if (!cStyleName) {
+					suffix << separator << "pack_begin";
+				}
+				for(clang::TemplateArgument::pack_iterator it = arg.pack_begin(), end = arg.pack_end(); it != end; it++) {
+					const clang::QualType& argType = (*it).getAsType();
+					suffix << separator << getTypeString(argType, cStyleName);
+				}
+				if (!cStyleName) {
+					suffix << separator << "pack_end";
+				}
+				break;
+			}
+			}
+		}
+
+		//if we should build a c-style name then the first separator isn't correct. also the whole suffix should be packed inside '<' and '>'
+		if (cStyleName) {
+			std::string res = suffix.str();
+			//append another space in case it is needed to avoid the substring ">>"
+			if (res.size() > 0 && res[res.size() - 1] == '>') {
+				res += " >";
+			} else {
+				res += ">";
+			}
+			if (res.length() == 1) {
+				return "";
+			}
+			res[0] = '<';
+			return res;
+		}
+
+		return suffix.str();
+	}
+
+	std::string buildNameForFunction(const clang::FunctionDecl* funcDecl, bool cStyleName) {
 		std::string name = funcDecl->getQualifiedNameAsString();
 		if(const clang::CXXMethodDecl* method = llvm::dyn_cast<clang::CXXMethodDecl>(funcDecl)) {
+			if (cStyleName) {
+				name = method->getNameAsString();
+			}
 			if(method->isVirtual()) {
 				name = funcDecl->getNameAsString();
 			} else if(method->getParent()) {
@@ -128,72 +229,23 @@ namespace utils {
 		std::stringstream suffix;
 
 		if(funcDecl->isFunctionTemplateSpecialization() && funcDecl->getTemplateSpecializationArgs()) {
-			for(unsigned i = 0; i < funcDecl->getTemplateSpecializationArgs()->size(); ++i) {
-				auto arg = funcDecl->getTemplateSpecializationArgs()->get(i);
-				switch(arg.getKind()) {
-				case clang::TemplateArgument::Expression: {
-					suffix << "_" << arg.getAsExpr()->getType().getAsString();
-					break;
-				}
-				case clang::TemplateArgument::Type: {
-					// check if the type is a lambda, this one needs special handling
-					std::string typeName;
-					if(arg.getAsType().getTypePtr()->getAsCXXRecordDecl() && arg.getAsType().getTypePtr()->getAsCXXRecordDecl()->isLambda()) {
-						typeName =
-							createNameForAnon("lambda", arg.getAsType().getTypePtr()->getAsCXXRecordDecl(), funcDecl->getASTContext().getSourceManager());
-					} else {
-						typeName = arg.getAsType().getAsString();
-					}
-					suffix << "_" << typeName;
-					break;
-				}
-				case clang::TemplateArgument::Null: {
-					suffix << "_null";
-					break;
-				}
-				case clang::TemplateArgument::Declaration: {
-					suffix << "_" << arg.getAsDecl()->getType().getAsString();
-					break;
-				}
-				case clang::TemplateArgument::NullPtr: {
-					suffix << "_nullptr";
-					break;
-				}
-				case clang::TemplateArgument::Integral: {
-					suffix << "_" << arg.getAsIntegral().toString(10);
-					break;
-				}
-				case clang::TemplateArgument::Template: {
-					suffix << "_" << arg.getAsTemplate().getAsTemplateDecl()->getTemplatedDecl()->getNameAsString();
-					break;
-				}
-				case clang::TemplateArgument::TemplateExpansion: {
-					// I don't know what to do here
-					break;
-				}
-				case clang::TemplateArgument::Pack: {
-					suffix << "_pack_begin";
-					for(clang::TemplateArgument::pack_iterator it = arg.pack_begin(), end = arg.pack_end(); it != end; it++) {
-						const clang::QualType& argType = (*it).getAsType();
-						suffix << "_" << argType.getAsString();
-					}
-					suffix << "_pack_end";
-					break;
-				}
-				}
-			}
+			suffix << buildNameSuffixForTemplate(*funcDecl->getTemplateSpecializationArgs(), funcDecl->getASTContext(), cStyleName);
 		}
 
 		if(funcDecl->isTemplateInstantiation()) {
-			std::string returnType = funcDecl->getReturnType().getAsString();
-			suffix << "_returns_" << returnType;
+			std::string returnType = getTypeString(funcDecl->getReturnType());
+			if (!cStyleName) {
+				suffix << "_returns_" << returnType;
+			}
 		}
 
 		if(llvm::isa<clang::CXXMethodDecl>(funcDecl) && llvm::cast<clang::CXXMethodDecl>(funcDecl)->isConst()) { suffix << "_c"; }
 
 		string suffixStr = suffix.str();
-		boost::algorithm::replace_all(suffixStr, " ", "_");
-		
+		if (!cStyleName) {
+			boost::algorithm::replace_all(suffixStr, " ", "_");
+		}
+
 		// all done
 		return name + suffixStr;
 	}
@@ -228,6 +280,41 @@ namespace utils {
 
 		// in this case we return the original name itself
 		return fieldName;
+	}
+
+	std::pair<std::string,bool> getNameForTagDecl(const conversion::Converter& converter, const clang::TagDecl* tagDecl, bool cStyleName) {
+		auto canon = tagDecl->getCanonicalDecl();
+		// try to use name, if not available try to use typedef name, otherwise no name
+		string name = utils::createNameForAnon("__anon_tagtype_", tagDecl, converter.getSourceManager());
+		if(canon->getDeclName() && !canon->getDeclName().isEmpty()) name = canon->getQualifiedNameAsString();
+		else if(canon->hasNameForLinkage()) name = canon->getTypedefNameForAnonDecl()->getQualifiedNameAsString();
+
+		// encode template parameters in name
+		auto tempSpec = llvm::dyn_cast<clang::ClassTemplateSpecializationDecl>(tagDecl);
+		if(tempSpec) {
+			name = name + utils::buildNameSuffixForTemplate(tempSpec->getTemplateInstantiationArgs(), tempSpec->getASTContext(), cStyleName);
+		}
+
+		// if externally visible, build mangled name based on canonical decl without location
+		if(tagDecl->isExternallyVisible()) return std::make_pair(insieme::utils::mangle(name), true);
+
+		// not externally visible: build mangled name with location
+		// canonicalize filename in case we refer to it from different relative locations
+		auto& sm = converter.getSourceManager();
+		std::string filename = sm.getFilename(canon->getLocStart()).str();
+		boost::filesystem::path path(filename);
+		path = boost::filesystem::canonical(path);
+		auto line = sm.getExpansionLineNumber(canon->getLocStart());
+		auto column = sm.getExpansionColumnNumber(canon->getLocStart());
+
+		return std::make_pair(insieme::utils::mangle(name, path.string(), line, column), canon->hasNameForLinkage());
+	}
+
+	std::string stripLeadingGlobalNamespace(const std::string& name) {
+		if(boost::starts_with(name, "::")) {
+			return name.substr(2);
+		}
+		return name;
 	}
 
 } // End utils namespace

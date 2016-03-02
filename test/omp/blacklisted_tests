@@ -33,7 +33,6 @@ private_iterator
 # Global variable not inserted at global scope
 comd-omp
 dijkstra
-integralEstimation
 
 # Disabling tests because they fail with assertion:
 # OMP threadprivate not yet supported
@@ -53,7 +52,6 @@ qap2
 
 # Disabling tests because they fail to satisfy some semantic checks or errors
 critical
-even_odd_task
 functions
 global_firstprivate
 n_body
@@ -63,12 +61,8 @@ simple
 # Disabling tests because OMP doesn't seem to work at the moment
 gemm
 heatedPlate
-matrix_mul_static
 nested_pfor_irregular
-oddEvenSort
-reduction
 reduction_all
-single
 
 # Disabling tests because the volatile information seems to get lost, which results in the test having a race condition
 volatile

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -55,6 +55,11 @@ namespace state {
 
 	void RecordManager::insert(const clang::RecordDecl* recordDecl, const core::GenericTypePtr& genType) {
 		frontend_assert(!::containsKey(records, recordDecl)) << "Trying to insert previously declared record: " << dumpClang(recordDecl);
+		records[recordDecl] = genType;
+	}
+
+	void RecordManager::replace(const clang::RecordDecl* recordDecl, const core::GenericTypePtr& genType) {
+		frontend_assert(::containsKey(records, recordDecl)) << "Trying to replace undeclared record: " << dumpClang(recordDecl);
 		records[recordDecl] = genType;
 	}
 

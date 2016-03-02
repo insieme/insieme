@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -38,6 +38,8 @@
 
 #include "insieme/core/lang/extension.h"
 #include "insieme/core/lang/reference.h"
+#include "insieme/core/lang/array.h"
+#include "insieme/core/lang/pointer.h"
 
 namespace insieme {
 namespace frontend {
@@ -65,7 +67,9 @@ namespace utils {
 	  public:		
 
 		// Import constructs from core's reference extension
-		IMPORT_MODULE(core::lang::ReferenceExtension);
+		IMPORT_MODULE(core::lang::ReferenceExtension)
+		IMPORT_MODULE(core::lang::ArrayExtension)
+		IMPORT_MODULE(core::lang::PointerExtension)
 
 		// -------------------- operators ---------------------------
 
@@ -90,12 +94,19 @@ namespace utils {
 		 * Implements the C bool semantics
 		 */
 		LANG_EXT_DERIVED(BoolToInt, "(b : bool) -> int<4> { if(b) { return 1; } else { return 0; } }")
-
+		
 		/**
-		 * Temporary operator to fix record types before resolver pass
-		 * NOTE: should be completely eliminated before IR passes out of the FE
+		 * Allocates an array of "n" objects of type "typ" and calls the constructor for each of them
+		 * (Intended to implement "new Bla[5]" semantics)
 		 */
-		LANG_EXT_LITERAL(RecordTypeFixup, "record_type_fixup", "('a, type<'b>) -> 'b")
+		LANG_EXT_DERIVED(ObjectArrayNew, 
+		"(typ : type<'a>, n : 'b, constructor : 'c::()) -> ptr<'a> {"
+		"	auto ret = ref_new(type_lit(array<'a,#n>));"
+		"	for(int<8> it = 0 ..  num_cast(n, type_lit(int<8>))) {"
+		"		constructor(ref_array_elem(ret, it));"
+		"	}"
+		"	return ptr_from_array(ret);"
+		"}")
 	};
 
 	// --------------------- Utilities ----------------------------
@@ -121,9 +132,9 @@ namespace utils {
 	core::ExpressionPtr buildBoolToInt(const core::ExpressionPtr& b);
 	
 	/**
-	 * Creates a temporary fix call for record init expression types
+	 * Allocates an array of "num" objects of type "objType" and calls the constructor "ctor" for each of them
 	 */
-	core::ExpressionPtr buildRecordTypeFixup(const core::ExpressionPtr& expr, const core::GenericTypePtr& targetType);
+	core::ExpressionPtr buildObjectArrayNew(const core::TypePtr& objType, const core::ExpressionPtr& num, const core::ExpressionPtr& ctor);
 
 } // end namespace utils
 } // end namespace frontend

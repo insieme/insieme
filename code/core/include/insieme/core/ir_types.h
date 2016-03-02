@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -376,6 +376,14 @@ namespace core {
 		Ptr<const Type> getTypeParameter(std::size_t index) const {
 			return getTypeParameter()->getElement(index);
 		}
+
+		/**
+		 * Obtains a list of types forming the parameter types of this function type.
+		 */
+		vector<Ptr<const Type>> getTypeParameterList() const {
+			return getTypeParameter()->getElements();
+		}
+
 	IR_NODE_END()
 
 	/**
@@ -626,7 +634,7 @@ namespace core {
 		 */
 		bool isMember() const {
 			return isConstructor() || isDestructor()
-			       || isMemberFunction();
+			       || isMemberFunction() || isVirtualMemberFunction();
 		}
 
 		/**
@@ -854,7 +862,7 @@ namespace core {
 		}
 
 		/**
-		* Obtains a list of addresses pointing to recursive references to any of the tag types defined 
+		* Obtains a list of addresses pointing to recursive references to any of the tag types defined
 		* by this definition.
 		*
 		* @param reference the tag type reference to be searched for
@@ -893,7 +901,7 @@ namespace core {
 		 * @param member the member to be peeled out
 		 * @return the peeled out member
 		 */
-		ExpressionPtr peel(NodeManager& manager, const ExpressionPtr& member) const;
+		NodePtr peel(NodeManager& manager, const NodePtr& member) const;
 
 	IR_NODE_END()
 
@@ -919,8 +927,8 @@ namespace core {
 		 * @return the requested type instance managed by the given manager
 		 */
 		static TagTypeDefinitionPtr get(NodeManager& manager, const TagTypeBindingMap& bindings);
-		
-	    /**
+
+		/**
 		 * Obtains a list of addresses pointing to recursive references to any of the tag types defined
 		 * by this definition.
 		 *
@@ -956,7 +964,17 @@ namespace core {
 		 * @param member the member to be peeled out
 		 * @return the peeled out member
 		 */
-		ExpressionPtr peelMember(NodeManager& manager, const ExpressionPtr& member) const;
+		NodePtr peelMember(NodeManager& manager, const NodePtr& member) const;
+
+		/**
+	     * Unpeels the given input type.
+	     * E.g. When called on BlaType: "(a : struct BlaType {...}) -> bool" turns into "(a : ^BlaType) -> bool"
+		 *
+		 * @param mgr the manager to be used for maintaining the resulting type pointer
+		 * @param input the type to be unpeeled
+		 * @return the unpeeled type
+	     */
+	    TypePtr unpeel(NodeManager& mgr, const TypePtr& input) const;
 
 	IR_NODE_END()
 
@@ -1089,16 +1107,40 @@ namespace core {
 		/**
 		 * Peels out the given member.
 		 */
-		ExpressionPtr peel(NodeManager& manager, const ExpressionPtr& member) const {
+		NodePtr peel(NodeManager& manager, const NodePtr& member) const {
 			return (*getDefinition()).peel(manager, member);
 		}
 
 		/**
 		 * Peels out the given member.
 		 */
-		ExpressionPtr peel(const ExpressionPtr& member) const {
+		NodePtr peel(const NodePtr& member) const {
 			return peel(this->getNode().getNodeManager(), member);
 		}
+
+	    /**
+		* Peels out the given member.
+		*/
+		template<typename T>
+		Pointer<const T> peel(const Pointer<const T>& member) const {
+			return peel(this->getNode().getNodeManager(), member.template as<NodePtr>()).template as<Pointer<const T>>();
+		}
+
+	    /*
+	     * Unpeels the given input type.
+	     * E.g. When called on BlaType: "(a : struct BlaType {...}) -> bool" turns into "(a : ^BlaType) -> bool"
+	     */
+	    TypePtr unpeel(NodeManager& mgr, const TypePtr& input) const {
+			return (*getDefinition()).unpeel(mgr, input);
+	    }
+
+	    /*
+	     * Unpeels the given input type.
+	     * E.g. When called on BlaType: "(a : struct BlaType {...}) -> bool" turns into "(a : ^BlaType) -> bool"
+	     */
+	    TypePtr unpeel(const TypePtr& input) const {
+			return unpeel(input->getNodeManager(), input);
+	    }
 
 		/**
 		 * Determines whether the represented tag type is a recursive type.
@@ -1260,6 +1302,13 @@ namespace core {
 		}
 
 		/**
+		 * Obtains the type of this member function.
+		 */
+		FunctionTypePtr getType() const {
+			return getImplementation()->getType().template as<FunctionTypePtr>();
+		}
+
+		/**
 		 * Determines whether this member function is marked virtual or not.
 		 */
 		bool isVirtual() const {
@@ -1343,8 +1392,11 @@ namespace core {
 		 * @return the requested member function list instance managed by the given manager
 		 */
 		static MemberFunctionsPtr get(NodeManager& manager, const MemberFunctionList& fields = MemberFunctionList()) {
-			return manager.get(MemberFunctions(convertList(fields)));
-		}
+			MemberFunctionList sorted = fields;
+		    std::stable_sort(sorted.begin(), sorted.end(),
+		              [](const MemberFunctionPtr& a, const MemberFunctionPtr& b) { return a.getNameAsString() < b.getNameAsString(); });
+		    return manager.get(MemberFunctions(convertList(sorted)));
+	    }
 
 	IR_NODE_END()
 
@@ -1539,6 +1591,13 @@ namespace core {
 		 */
 		Ptr<const Type> getFieldType(const StringValuePtr& name) const {
 			return getFieldType(name->getValue());
+		}
+
+		/**
+		 * Determines whether the destrutor of this record is virtual or not.
+		 */
+		bool hasVirtualDestructor() const {
+			return getDestructorVirtual().getValue();
 		}
 	};
 
@@ -1870,7 +1929,7 @@ namespace core {
 	}
 
 	template<typename LeafType, template<typename T> class Ptr>
-	ExpressionPtr Accessor<TagTypeDefinition, LeafType, Ptr>::peel(NodeManager& manager, const ExpressionPtr& member) const {
+	NodePtr Accessor<TagTypeDefinition, LeafType, Ptr>::peel(NodeManager& manager, const NodePtr& member) const {
 		return Accessor<TagTypeDefinition, LeafType, Ptr>::getNode().peelMember(manager, member);
 	}
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -51,7 +51,6 @@
 #include "insieme/core/lang/datapath.h"
 #include "insieme/core/lang/instrumentation_extension.h"
 #include "insieme/core/lang/io.h"
-#include "insieme/core/lang/ir++_extension.h"
 #include "insieme/core/lang/parallel.h"
 #include "insieme/core/lang/pointer.h"
 #include "insieme/core/lang/reference.h"
@@ -85,7 +84,6 @@ namespace lang {
 			extensionFactories.insert(getExtensionFactory<EnumExtension>("ext.enum"));
 			extensionFactories.insert(getExtensionFactory<InputOutputExtension>("ext.io"));
 			extensionFactories.insert(getExtensionFactory<InstrumentationExtension>("ext.instrumentation"));
-			extensionFactories.insert(getExtensionFactory<IRppExtensions>("ext.ir++"));
 			extensionFactories.insert(getExtensionFactory<ParallelExtension>("ext.parallel"));
 			extensionFactories.insert(getExtensionFactory<PointerExtension>("ext.pointer"));
 			extensionFactories.insert(getExtensionFactory<ReferenceExtension>("ext.reference"));

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -36,29 +36,64 @@
 
 #include "insieme/core/checks/type_checks.h"
 
-#include "insieme/core/ir_builder.h"
-#include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"
+#include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/type_utils.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
+#include "insieme/core/checks/full_check.h"
+#include "insieme/core/ir_builder.h"
+#include "insieme/core/lang/enum.h"
+#include "insieme/core/printer/pretty_printer.h"
+#include "insieme/core/transform/materialize.h"
 #include "insieme/core/types/subtyping.h"
 #include "insieme/core/types/type_variable_deduction.h"
-#include "insieme/core/printer/pretty_printer.h"
-#include "insieme/core/lang/enum.h"
 
 #include "insieme/core/lang/array.h"
 #include "insieme/core/lang/channel.h"
 #include "insieme/core/lang/reference.h"
 #include "insieme/core/lang/pointer.h"
 
-#include "insieme/core/transform/materialize.h"
-
 #include "insieme/utils/numeric_cast.h"
+#include "insieme/utils/logging.h"
+
 
 namespace insieme {
 namespace core {
 namespace checks {
 
+	namespace {
+		bool typeMatchesWithOptionalMaterialization(NodeManager& nm, const TypePtr& targetT, const TypePtr& valueT) {
+			// if the types are equivalent, everything is fine
+			if(types::isSubTypeOf(valueT, targetT)) {
+				return true;
+			}
+
+			// try to find a valid type variable instantiation
+			TypePtr paramType = targetT;
+			if(analysis::isRefType(paramType)) {
+				// plain refs get unwrapped, CPP refs and rrefs get used as is (see transform::materialize)
+				if(lang::isPlainReference(paramType)) {
+					paramType = analysis::getReferencedType(paramType);
+				}
+
+				// if we can find a valid instantiation, then this declaration is valid
+				if(types::getTypeVariableInstantiation(nm, paramType, valueT)) {
+					return true;
+					// if the substitution failed and we are assigning to a cpp ref or rref
+				} else if(lang::isCppReference(paramType) || lang::isCppRValueReference(paramType)) {
+					// we try to find a substitution for the case where the parameter would be a plain ref
+					auto paramRef = lang::ReferenceType(paramType);
+					auto plainRefType = lang::buildRefType(paramRef.getElementType(), paramRef.isConst(), paramRef.isVolatile(), lang::ReferenceType::Kind::Plain);
+					// try to find a substitution again with the changed reference kind
+					if(types::getTypeVariableInstantiation(nm, plainRefType, valueT)) {
+						return true;
+					}
+				}
+			}
+
+			return false;
+		}
+	}
 
 	OptionalMessageList KeywordCheck::visitGenericType(const GenericTypeAddress& address) {
 		OptionalMessageList res;
@@ -357,7 +392,19 @@ namespace checks {
 
 		// iterate over all the member functions and check their type
 		for (auto& memberFunction : address->getRecord()->getMemberFunctions()) {
-			checkMemberType(address, memberFunction.getAddressedNode()->getImplementation().as<LambdaExprPtr>()->getFunctionType(), FK_MEMBER_FUNCTION, true, res, EC_TYPE_INVALID_MEMBER_FUNCTION_TYPE, "Invalid member function type");
+			const auto& implementation = memberFunction.getAddressedNode()->getImplementation();
+			FunctionTypePtr type;
+			if (const auto& lambda = implementation.isa<LambdaExprPtr>()) {
+				type = lambda->getFunctionType();
+
+			} else if (const auto& functionType = implementation->getType().as<FunctionTypePtr>()) {
+				type = functionType;
+
+			} else {
+				add(res, Message(address, EC_TYPE_INVALID_MEMBER_FUNCTION_TYPE, format("Invalid member function type: %s", *implementation->getType()), Message::ERROR));
+				continue;
+			}
+			checkMemberType(address, type, FK_MEMBER_FUNCTION, true, res, EC_TYPE_INVALID_MEMBER_FUNCTION_TYPE, "Invalid member function type");
 		}
 
 		// iterate over all the pure virtual member functions and check their type
@@ -376,7 +423,19 @@ namespace checks {
 
 		std::map<std::string, std::set<FunctionTypePtr>> memberFunctionTypes;
 		for (const auto& memberFunction : address->getRecord()->getMemberFunctions()) {
-			const auto& type = memberFunction.getAddressedNode()->getImplementation().as<LambdaExprPtr>()->getFunctionType();
+			const auto& implementation = memberFunction.getAddressedNode()->getImplementation();
+			FunctionTypePtr type;
+			if (const auto& lambda = implementation.isa<LambdaExprPtr>()) {
+				type = lambda->getFunctionType();
+
+			} else if (const auto& functionType = implementation->getType().as<FunctionTypePtr>()) {
+				type = functionType;
+
+			} else {
+				//MemberFunctionTypeCheck will take care of reporting this error
+				continue;
+			}
+
 			const auto& name = memberFunction->getName()->getValue();
 			auto inserted = memberFunctionTypes[name].insert(type);
 
@@ -396,7 +455,7 @@ namespace checks {
 
 		return res;
 	}
-	
+
 	OptionalMessageList DuplicateMemberFieldCheck::visitFields(const FieldsAddress& address) {
 		OptionalMessageList res;
 
@@ -461,13 +520,17 @@ namespace checks {
 		TypePtr retType = analysis::normalize(substitution->applyTo(returnType));
 		TypePtr resType = analysis::normalize(address->getType());
 
-		if(!core::types::isSubTypeOf(retType, resType)) {
-			add(res, Message(address, EC_TYPE_INVALID_RETURN_TYPE,
-			                 format("Invalid result type of call expression \nexpected: \n\t%s \nactual: \n\t%s \nfunction type: \n\t%s",
-			                        *retType, *resType, *functionType),
-			                 Message::ERROR));
-			return res;
+		if(typeMatchesWithOptionalMaterialization(manager, resType, retType)) return res;
+
+		// FIXME: this should only be allowed if the actual return within the lambda generates a ref
+		if(lang::isPlainReference(resType)) {
+			if(analysis::equalTypes(analysis::getReferencedType(resType), retType)) return res;
 		}
+
+		add(res, Message(address, EC_TYPE_INVALID_RETURN_TYPE,
+			                format("Invalid result type of call expression \nexpected: \n\t%s \nactual: \n\t%s \nfunction type: \n\t%s",
+			                    *retType, *resType, *functionType),
+			                Message::ERROR));
 		return res;
 	}
 
@@ -540,7 +603,7 @@ namespace checks {
 				actualType = analysis::getReferencedType(actualType);
 			}
 
-			if(!core::types::isSubTypeOf(actualType, returnType)) {
+			if(!typeMatchesWithOptionalMaterialization(address->getNodeManager(), returnType, actualType)) {
 				add(res, Message(cur, EC_TYPE_INVALID_RETURN_VALUE_TYPE,
 				                 format("Invalid type of return value \nexpected: \n\t%s\n actual: \n\t%s", toString(*returnType), toString(*actualType)),
 				                 Message::ERROR));
@@ -611,7 +674,7 @@ namespace checks {
 		TypesPtr types = funTypeIs->getParameterTypes();
 		vector<TypePtr> paramTypes;
 		for(std::size_t i = 0; i < types.size(); ++i) {
-			
+
 			auto parameter = address->getParameterList()[i];
 			auto should = transform::materialize(types[i]);
 			auto is = parameter->getType();
@@ -619,7 +682,7 @@ namespace checks {
 			// materialized parameters of non-ref type are alowed to have arbitrary qualifiers
 			if(*should != *is && (!analysis::isRefType(types[i]) && !lang::doReferencesDifferOnlyInQualifiers(is, should))) {
 				add(res, Message(
-						parameter, EC_TYPE_INVALID_LAMBDA_TYPE, 
+						parameter, EC_TYPE_INVALID_LAMBDA_TYPE,
 						format("Invalid parameters type of %s - is: %s, should %s", *parameter, *is, *should),
 						Message::ERROR
 					)
@@ -629,16 +692,16 @@ namespace checks {
 
 		/*
 		FunctionTypePtr funTypeShould =
-		    builder.functionType(::transform(lambda->getLambda()->getParameterList(), [](const VariablePtr& cur)->TypePtr { 
-			auto argument = 
-			return (lang::isReference(cur->getType()) ? cur->getType() : 
-			return analysis::getReferencedType(cur->getType()); 
+		    builder.functionType(::transform(lambda->getLambda()->getParameterList(), [](const VariablePtr& cur)->TypePtr {
+			auto argument =
+			return (lang::isReference(cur->getType()) ? cur->getType() :
+			return analysis::getReferencedType(cur->getType());
 		}), funTypeIs->getReturnType(), funTypeIs->getKind());
-		
+
 		if(*funTypeIs != *funTypeShould) {
 			add(res, Message(address, EC_TYPE_INVALID_LAMBDA_TYPE, format("Invalid type of lambda definition for lambda reference %s - is: %s, should %s",
-			    toString(*lambda->getReference()), 
-				toString(*funTypeIs), 
+			    toString(*lambda->getReference()),
+				toString(*funTypeIs),
 				toString(*funTypeShould)),
 			    Message::ERROR)
 			);
@@ -729,7 +792,7 @@ namespace checks {
 		// arguments need to be arithmetic types or function types
 		for(auto arg : call) {
 			auto type = arg->getType();
-			if(!type.isa<TypeVariablePtr>() && !base.isScalarType(type) && !type.isa<FunctionTypePtr>() && !core::lang::isEnumType(type)) {
+			if(!type.isa<TypeVariablePtr>() && !base.isScalarType(type) && !type.isa<FunctionTypePtr>() && !core::lang::isEnum(type)) {
 				add(res, Message(address, EC_TYPE_INVALID_GENERIC_OPERATOR_APPLICATION,
 				                 format("Generic operators must only be applied on arithmetic types - found: %s", toString(*type)), Message::ERROR));
 			}
@@ -739,21 +802,34 @@ namespace checks {
 		return res;
 	}
 
-
 	OptionalMessageList DeclarationStmtTypeCheck::visitDeclarationStmt(const DeclarationStmtAddress& address) {
 		OptionalMessageList res;
 
 		DeclarationStmtPtr declaration = address.getAddressedNode();
+		TypePtr variableType = declaration->getVariable()->getType();
+		ExpressionPtr init = declaration->getInitialization();
+		TypePtr initType = init->getType();
 
-		// just test whether same type is on both sides
-		TypePtr variableType = analysis::normalize(declaration->getVariable()->getType());
-		TypePtr initType = analysis::normalize(declaration->getInitialization()->getType());
+		if(typeMatchesWithOptionalMaterialization(address->getNodeManager(), variableType, initType)) { return res; }
 
-		if(!types::isSubTypeOf(initType, variableType)) {
-			add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR, format("Invalid type of initial value - expected: \n%s, actual: \n%s",
-			                                                                      *variableType, *initType),
-			                 Message::ERROR));
+		add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
+			             format("Invalid type of initial value - expected: \n%s, actual: \n%s", *variableType, *initType), Message::ERROR));
+		return res;
+	}
+
+	OptionalMessageList DeclarationStmtSemanticCheck::visitDeclarationStmt(const DeclarationStmtAddress& address) {
+		OptionalMessageList res;
+
+		auto variable = address.getAddressedNode()->getVariable();
+		auto expression = address.getAddressedNode()->getInitialization();
+
+		unsigned count = analysis::countInstances(expression, variable, true);
+
+		if(count > 1) {
+			add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR, "Invalid declaration statement with multiple occurrences of the declared variable",
+				             Message::ERROR));
 		}
+
 		return res;
 	}
 
@@ -764,10 +840,9 @@ namespace checks {
 		TypePtr conditionType = address->getCondition()->getType();
 
 		if(!manager.getLangBasic().isBool(conditionType)) {
-			add(res,
-			    Message(address, EC_TYPE_INVALID_CONDITION_EXPR, format("Invalid type of condition expression - expected: \n%s, actual: \n%s",
-			                                                            *manager.getLangBasic().getBool(), *conditionType),
-			            Message::ERROR));
+			add(res, Message(address, EC_TYPE_INVALID_CONDITION_EXPR,
+				             format("Invalid type of condition expression - expected: \n%s, actual: \n%s", *manager.getLangBasic().getBool(), *conditionType),
+				             Message::ERROR));
 		}
 		return res;
 	}
@@ -833,35 +908,105 @@ namespace checks {
 	}
 
 
-	OptionalMessageList StructExprTypeCheck::visitStructExpr(const StructExprAddress& address) {
+	OptionalMessageList InitExprTypeCheck::visitInitExpr(const InitExprAddress& address) {
 		OptionalMessageList res;
+		auto& mgr = address->getNodeManager();
 
-		// extract type
-		core::TypePtr type = address.getAddressedNode()->getType();
-
-		// get struct type
-		core::StructPtr structType = analysis::isStruct(type);
-
-		// check whether it is a struct type
-		if(!structType) {
-			add(res, Message(address, EC_TYPE_INVALID_TYPE_OF_STRUCT_EXPR, format("Invalid type of struct-expression - type: \n%s", *type),
-			                 Message::ERROR));
+		// extract type and check for ref
+		core::TypePtr refType = address.getAddressedNode()->getType();
+		if(!analysis::isRefType(refType)) {
+			add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
+				             format("InitExpr only initializes memory and therefore requires a reference type (got %s)", *refType), Message::ERROR));
 			return res;
 		}
 
-		// check type of values within struct expression
-		for_each(address.getAddressedNode()->getMembers()->getNamedValues(), [&](const NamedValuePtr& cur) {
-			core::TypePtr requiredType = structType->getFieldType(cur->getName());
-			core::TypePtr isType = cur->getValue()->getType();
-			if(!requiredType) {
-				add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR, format("No member %s in struct type %s", cur->getName(), *structType),
-					             Message::ERROR));
-			} else if(!types::isSubTypeOf(isType, requiredType)) {
-				add(res,
-					Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
-					        format("Invalid type of struct-member initalization - expected type: \n%s, actual: \n%s", *requiredType, *isType), Message::ERROR));
+		core::TypePtr type = analysis::getReferencedType(refType);
+
+		// get initializers
+		auto initExprs = address.getAddressedNode()->getInitExprList();
+
+		auto materialize = [&](const TypePtr& tt) -> TypePtr {
+			if(!core::lang::isReference(tt)) return IRBuilder(mgr).refType(tt);
+			return tt;
+		};
+
+		auto tagT = type.isa<TagTypePtr>();
+		if(tagT) {
+			// test struct types
+			core::StructPtr structType = analysis::isStruct(tagT->peel());
+			if(structType) {
+				std::vector<FieldPtr> fields = structType->getFields()->getFields();
+				// check number of initializers
+				if(initExprs.size() != fields.size()) {
+					add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
+						             format("Wrong number of initialization expressions (%d expressions for %d fields)", initExprs.size(), fields.size()),
+						             Message::ERROR));
+					return res;
+				}
+				// check type of values within init expression
+				unsigned i = 0;
+				for(const auto& cur : initExprs) {
+					core::TypePtr requiredType = fields[i++]->getType();
+					core::TypePtr isType = cur->getType();
+					if(!typeMatchesWithOptionalMaterialization(mgr, materialize(requiredType), isType)) {
+						add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
+										 format("Invalid type of struct-member initialization - expected type: \n%s, actual: \n%s", *requiredType, *isType),
+										 Message::ERROR));
+					}
+				}
+				return res;
 			}
-		});
+
+			// test unions
+			core::UnionPtr unionType = analysis::isUnion(tagT->peel());
+			if(unionType) {
+				// check for single initializer
+				if(initExprs.size() != 1) {
+					add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR, "More than one initialization expression for union", Message::ERROR));
+					return res;
+				}
+				// check that its type matches any of the union types
+				core::TypePtr isType = initExprs.front()->getType();
+				bool matchesAny = false;
+				for(const auto& field : unionType->getFields()) {
+					if(typeMatchesWithOptionalMaterialization(mgr, materialize(field->getType()), isType)) matchesAny = true;
+				}
+				if(!matchesAny) {
+					add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
+						             format("Union initialization expression (of type %s) does not match any union types", isType), Message::ERROR));
+				}
+				return res;
+			}
+		}
+
+		if(lang::isArray(type)) {
+			lang::ArrayType arrType = lang::ArrayType(type);
+			// check number of initializers
+			if(arrType.isConstSize()) {
+				if(initExprs.size() > arrType.getNumElements()) {
+					add(res,
+						Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
+						        format("Too many initialization expressions (%d expressions for array size %d)", initExprs.size(), arrType.getNumElements()),
+						        Message::ERROR));
+					return res;
+				}
+			}
+			// check type of values within init expression
+			core::TypePtr requiredType = arrType.getElementType();
+			for(const auto& cur : initExprs) {
+				core::TypePtr isType = cur->getType();
+				if(!typeMatchesWithOptionalMaterialization(mgr, materialize(requiredType), isType)) {
+					add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
+										format("Invalid type of array-member initialization - expected type: \n%s, actual: \n%s", *requiredType, *isType),
+										Message::ERROR));
+				}
+			}
+			return res;
+		}
+
+		// this means it's not a struct, union or array
+		add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
+			             format("Initialization may only initialize structs, unions and array (trying to initialize %s)", *type), Message::ERROR));
 
 		return res;
 	}
@@ -926,7 +1071,7 @@ namespace checks {
 			return checkMemberAccess(address, tagType->getRecord(), identifier, elementType, isRefVersion);
 		}
 
-		
+
 	}
 
 	OptionalMessageList MemberAccessElementTypeCheck::visitCallExpr(const CallExprAddress& address) {
@@ -1044,7 +1189,7 @@ namespace checks {
 
 			// compare should and is
 			auto record = address->getDefinitionOf(info.tag);
-			
+
 			// check access
 			addAll(res, checkMemberAccess(concat(address, call), record, info.identifier, info.type, true));
 		}
@@ -1302,7 +1447,7 @@ namespace checks {
 
 		// create a validity check for the argument types
 		auto isValidNumericType = [&](const TypePtr& type) {
-			return type.isa<TypeVariablePtr>() || basic.isNumeric(type) || core::lang::isEnumType(type);
+			return type.isa<TypeVariablePtr>() || basic.isNumeric(type) || core::lang::isEnum(type);
 		};
 
 		//check expression type

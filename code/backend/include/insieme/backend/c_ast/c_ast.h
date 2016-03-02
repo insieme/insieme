@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -181,6 +181,13 @@ namespace c_ast {
 		virtual bool equals(const Node& other) const;
 	};
 
+	struct RValueReferenceType : public CVQualifiedType {
+		TypePtr elementType;
+		RValueReferenceType(TypePtr elementType, bool isConst = false, bool isVolatile = false)
+			: CVQualifiedType(NT_RValueReferenceType, isConst, isVolatile), elementType(elementType) {}
+		virtual bool equals(const Node& other) const;
+	};
+
 	struct VectorType : public Type {
 		TypePtr elementType;
 		ExpressionPtr size; // could be null to represent T[]; - no size given
@@ -246,9 +253,9 @@ namespace c_ast {
 		using EnumElements = std::vector<std::pair<IdentifierPtr, LiteralPtr>>;
 		IdentifierPtr name;
 		EnumElements values;
-		TypePtr	classTy;
-		EnumType(const IdentifierPtr& identifier, const EnumElements& elements, const TypePtr& enumClassType)
-			: Type(NT_EnumType), name(identifier), values(elements), classTy(enumClassType) {}
+		TypePtr intType;
+		EnumType(const IdentifierPtr& identifier, const EnumElements& elements, const TypePtr& intType)
+			: Type(NT_EnumType), name(identifier), values(elements), intType(intType) {}
 		virtual bool equals(const Node& node) const;
 	};
 
@@ -618,16 +625,32 @@ namespace c_ast {
 		virtual bool equals(const Node& node) const;
 	};
 
+	enum class BodyFlag {
+		None, Default, Delete
+	};
+
+	inline std::ostream& operator<<(std::ostream& out, const BodyFlag& flag) {
+		if (flag == BodyFlag::Default) return out << " = default";
+		if (flag == BodyFlag::Delete) return out << " = delete";
+		return out;
+	}
+
 	struct ConstructorPrototype : public Node {
 		ConstructorPtr ctor;
-		ConstructorPrototype(const ConstructorPtr& ctor) : Node(NT_ConstructorPrototype), ctor(ctor) {}
+		BodyFlag flag;
+		ConstructorPrototype(const ConstructorPtr& ctor, BodyFlag flag = BodyFlag::None)
+			: Node(NT_ConstructorPrototype), ctor(ctor), flag(flag) {}
 		virtual bool equals(const Node& node) const;
 	};
 
 	struct DestructorPrototype : public Node {
 		DestructorPtr dtor;
 		bool isVirtual;
-		DestructorPrototype(const DestructorPtr& dtor, bool isVirtual = false) : Node(NT_DestructorPrototype), dtor(dtor), isVirtual(isVirtual) {}
+		BodyFlag flag;
+		DestructorPrototype(const DestructorPtr& dtor, bool isVirtual = false)
+			: Node(NT_DestructorPrototype), dtor(dtor), isVirtual(isVirtual), flag(BodyFlag::None) {}
+		DestructorPrototype(const DestructorPtr& dtor, BodyFlag flag)
+			: Node(NT_DestructorPrototype), dtor(dtor), isVirtual(false), flag(flag) {}
 		virtual bool equals(const Node& node) const;
 	};
 
@@ -635,8 +658,11 @@ namespace c_ast {
 		bool isVirtual;
 		MemberFunctionPtr fun;
 		bool pureVirtual;
-		MemberFunctionPrototype(const MemberFunctionPtr& fun, bool isVirtual = false, bool isPureVirtual = false)
-		    : Node(NT_MemberFunctionPrototype), isVirtual(isVirtual), fun(fun), pureVirtual(isPureVirtual) {}
+		BodyFlag flag;
+		MemberFunctionPrototype(const MemberFunctionPtr& fun, BodyFlag flag = BodyFlag::None)
+		    : Node(NT_MemberFunctionPrototype), isVirtual(false), fun(fun), pureVirtual(false), flag(flag) {}
+		MemberFunctionPrototype(const MemberFunctionPtr& fun, bool isVirtual, bool isPureVirtual = false)
+			: Node(NT_MemberFunctionPrototype), isVirtual(isVirtual), fun(fun), pureVirtual(isPureVirtual), flag(BodyFlag::None) {}
 		virtual bool equals(const Node& node) const;
 	};
 
@@ -695,8 +721,9 @@ namespace c_ast {
 		IdentifierPtr className;
 		FunctionPtr function;
 		bool isConstant;
-		MemberFunction(const IdentifierPtr& className, const FunctionPtr& function, bool isConstant = false)
-		    : Definition(NT_MemberFunction), className(className), function(function), isConstant(isConstant) {}
+		bool isVolatile;
+		MemberFunction(const IdentifierPtr& className, const FunctionPtr& function, bool isConstant = false, bool isVolatile = false)
+		    : Definition(NT_MemberFunction), className(className), function(function), isConstant(isConstant), isVolatile(isVolatile) {}
 		virtual bool equals(const Node& node) const;
 	};
 

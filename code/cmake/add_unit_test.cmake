@@ -114,7 +114,7 @@ macro ( add_unit_test case_name ut_prefix )
 			# default = 8 if system query failed
 			set(NB_PROCESSORS 8)
 		endif(NOT NB_PROCESSORS)
-		math(EXPR NB_PROCESSOR_PART "${NB_PROCESSORS} / 4")
+		math(EXPR NB_PROCESSOR_PART "${NB_PROCESSORS} / 2")
 		
 		# add normal test
 		# parallelize integration tests

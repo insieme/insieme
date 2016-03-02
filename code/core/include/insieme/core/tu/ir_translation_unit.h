@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -164,6 +164,13 @@ namespace tu {
 		}
 
 		/**
+		 * removes a function from the function map
+		 */
+		void removeFunction(const core::LiteralPtr& symbol) {
+			if(functions.find(symbol) != functions.end()) functions.erase(symbol);
+		}
+
+		/**
 		 * replaces a previous definition by a new one
 		 */
 		void replaceFunction(const core::LiteralPtr& symbol, const core::LambdaExprPtr& definition) {
@@ -198,6 +205,10 @@ namespace tu {
 		void addEntryPoints(const core::LiteralPtr& literal) {
 			assert(functions.find(literal) != functions.end());
 			entryPoints.push_back(mgr->get(literal));
+		}
+
+		void removeType(const core::GenericTypePtr& type) {
+			types.erase(type);
 		}
 
 		// operators:

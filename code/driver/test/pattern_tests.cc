@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -156,9 +156,14 @@ namespace insieme {
 
 		// create pattern
 		auto x = var("x");
-		auto use = (!irp::declarationStmt()) & step(x);
-		auto pattern = aT(irp::declarationStmt(x)) & aT(use) & all(var("y", use));
+		auto use = (!irp::declarationStmt(any,step(x))) & step(x);
 
+		// to full-scale version:
+		//auto pattern = aT(irp::declarationStmt(x)) & aT(use) & all(var("y", use));
+
+		// a version focusing on a compound-stmt first
+		auto pattern = aT(irp::compoundStmt(anyList << irp::declarationStmt(x) << anyList) & aT(use) & all(var("y", use), irp::lambdaExpr()));
+		
 
 		// load input code
 		NodeManager mgr;
@@ -181,9 +186,7 @@ namespace insieme {
 
 		// create pattern
 		auto x = var("x");
-		auto use = (!irp::declarationStmt()) & step(x);
 		auto pattern = aT(irp::declarationStmt(x)) & !aT((!irp::declarationStmt(x)) & step(x));
-
 
 		// load input code
 		NodeManager mgr;

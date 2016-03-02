@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -110,42 +110,7 @@ namespace analysis {
 	 */
 	bool isObjectReferenceType(const GenericTypePtr& type);
 
-
-	// --------------------------- data member pointer -----------------------------------
-
-	/**
-	 * queries whenever this is or not a member pointer type
-	 */
-	bool isMemberPointer(const TypePtr& type);
-
-	/**
-	 * constructs a member pointer type
-	 * @param the class of the owner object
-	 * @param the identifier for the
-	 */
-	TypePtr getMemberPointer(const TypePtr& classType, const TypePtr& membTy);
-
-	/**
-	 * initializes a value of type member pointer
-	 * @param
-	 * @param
-	 * @param
-	 */
-	ExpressionPtr getMemberPointerValue(const TypePtr& classType, const std::string& fieldName, const TypePtr& membTy);
-
-	/**
-	 * access of a member pointer
-	 * @param
-	 * @param
-	 */
-	ExpressionPtr getMemberPointerAccess(const ExpressionPtr& parent, const ExpressionPtr& expr);
-
-	/**
-	 * check if member pointer is not null
-	 * @param pointer var
-	 */
-	ExpressionPtr getMemberPointerCheck(const ExpressionPtr& expr);
-
+	
 	// ---------------------------- Constructors --------------------------------------
 
 	/**

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -257,7 +257,7 @@ namespace core {
 		 * Collects all free tag-type references in the given code fragment by excluding the given origin-reference.
 		 */
 		template<template<typename T> class Ptr>
-		std::set<Ptr<const TagTypeReference>> getFreeTagTypeReferences(const Ptr<const Node>& root, const TagTypeReferencePtr& origin) {
+		std::set<Ptr<const TagTypeReference>> getFreeTagTypeReferences(const Ptr<const Node>& root, const TagTypeReferencePtr& origin = TagTypeReferencePtr()) {
 			std::set<Ptr<const TagTypeReference>> res;
 			appendFreeTagTypeReferences(root, res, false, origin);
 			return res;
@@ -387,20 +387,40 @@ namespace core {
 		return TagType::get(manager, tag, definition);
 	}
 
-	ExpressionPtr TagTypeDefinition::peelMember(NodeManager& manager, const ExpressionPtr& member) const {
+	NodePtr TagTypeDefinition::peelMember(NodeManager& manager, const NodePtr& member) const {
 
-		// create a replacement map from of the tag-type bindings
-		NodeMap replacements;
-		for(const auto& cur : *this) {
-			replacements[cur->getTag()] = TagType::get(manager, cur->getTag(),this);
+		// collect free tag type references in the given member
+		auto positions = getFreeTagTypeReferences(NodeAddress(member));
+
+		// skip if there is nothing to do
+		if (positions.empty()) return member;
+
+		// create replacement map
+		std::map<NodeAddress, NodePtr> replacements;
+		for(const auto& cur : positions) {
+			replacements[cur] = TagType::get(manager, cur, this);
 		}
 
-		// apply replacement
-		return transform::replaceAllGen(manager, member, replacements, transform::globalReplacement);
+		// conduct replacement
+		return transform::replaceAll(manager, replacements);
+	}
+
+	TypePtr TagTypeDefinition::unpeel(NodeManager& mgr, const TypePtr& input) const {
+		IRBuilder builder(mgr);
+		// get canonical Tag Type (tag is irrelevant) and input
+		TagTypePtr canonicalTT = builder.tagType(getDefinitions().front().getTag(), TagTypeDefinitionPtr(this));
+		TagTypeDefinitionPtr ttDef = canonicalTT->getDefinition();
+		TypePtr adjustedParam = analysis::getCanonicalType(input);
+
+		// create replacement map and apply
+		NodeMap replacements;
+		for(const auto& binding : ttDef) {
+			replacements[builder.tagType(binding->getTag(), ttDef)] = binding->getTag();
+		}
+		return transform::replaceAllGen(mgr, adjustedParam, replacements, transform::globalReplacement);
 	}
 
 	bool TagType::isRecursive() const {
-
 		// the marker type to annotate the result of the is-recursive check
 		struct RecursiveTypeMarker {
 			bool value;

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -358,8 +358,6 @@ namespace core {
 
 		// -----------------------------------
 
-		NamedValuePtr namedValue(const string& name, const ExpressionPtr& value) const;
-
 		TupleExprPtr tupleExpr(const ExpressionList& values = ExpressionList()) const;
 
 		template <typename... T>
@@ -367,11 +365,22 @@ namespace core {
 			return tupleExpr(toVector<ExpressionPtr>(expr, rest...));
 		}
 
+		InitExprPtr initExpr(const ExpressionPtr& memExpr, const ExpressionList& initExprs = ExpressionList()) const {
+			assert_true(lang::isReference(memExpr)) << "initExpr needs to be built on Reference type, got " << dumpColor(memExpr->getType());
+			return initExpr(memExpr->getType().as<GenericTypePtr>(), memExpr, expressions(initExprs));
+		}
+		template <typename... T>
+		InitExprPtr initExpr(const ExpressionPtr& memExpr, const T&... initExprs) const {
+			return initExpr(memExpr, toVector<ExpressionPtr>(initExprs...));
+		}
 
-		StructExprPtr structExpr(const TypePtr& structType, const vector<NamedValuePtr>& values) const;
-		StructExprPtr structExpr(const vector<std::pair<StringValuePtr, ExpressionPtr>>& values) const;
-		StructExprPtr structExpr(const vector<NamedValuePtr>& values) const;
-
+		InitExprPtr initExprTemp(const GenericTypePtr& type, const ExpressionList& initExprs = ExpressionList()) const {
+			return initExpr(lang::buildRefTemp(type), initExprs);
+		}
+		template <typename... T>
+		InitExprPtr initExprTemp(const GenericTypePtr& type, const T&... initExprs) const {
+			return initExprTemp(type, toVector<ExpressionPtr>(initExprs...));
+		}
 
 		// creates a program - empty or based on the given entry points
 		ProgramPtr createProgram(const ExpressionList& entryPoints = ExpressionList()) const;
@@ -404,7 +413,6 @@ namespace core {
 		}
 
 		// Build undefined initializers
-		ExpressionPtr undefinedVar(const TypePtr& type) const;
 		ExpressionPtr undefinedNew(const TypePtr& type) const;
 
 		/**
@@ -434,7 +442,7 @@ namespace core {
 
 		// Referencing
 		CallExprPtr deref(const ExpressionPtr& subExpr) const;
-		CallExprPtr refVar(const ExpressionPtr& subExpr) const;
+		CallExprPtr refTemp(const ExpressionPtr& subExpr) const;
 		CallExprPtr refNew(const ExpressionPtr& subExpr) const;
 		CallExprPtr refDelete(const ExpressionPtr& subExpr) const;
 		CallExprPtr assign(const ExpressionPtr& target, const ExpressionPtr& value) const;
@@ -458,6 +466,7 @@ namespace core {
 		DeclarationStmtPtr declarationStmt(const TypePtr& type, const ExpressionPtr& value) const;
 
 		// Return Statement
+		ReturnStmtPtr returnStmt(const ExpressionPtr& retVal) const;
 		ReturnStmtPtr returnStmt() const;
 
 		// Call Expressions
@@ -670,23 +679,7 @@ namespace core {
 		LiteralPtr minus(const LiteralPtr& lit) const;
 		ExpressionPtr minus(const ExpressionPtr& a) const;
 
-		ExpressionPtr numericCast(const core::ExpressionPtr& expr, const core::TypePtr& targetType) const  {
-			if(expr->getType() == targetType) return expr;
-
-			//special case for enum to numeric
-			if(lang::isEnumType(expr)) {
-				auto realTargetType = expr->getType().as<core::TupleTypePtr>()->getElement(1);
-				return numericCast(callExpr(realTargetType, getExtension<lang::EnumExtension>().getEnumToInt(), expr), targetType);
-			}
-			//special case for numeric to enum
-			if(lang::isEnumType(targetType)) {
-				auto innerTargetType = targetType.as<core::TupleTypePtr>()->getElement(1);
-				auto preCast = numericCast(expr, innerTargetType);
-				return callExpr(targetType, getExtension<lang::EnumExtension>().getIntToEnum(), getTypeLiteral(targetType), preCast);
-			}
-
-			return callExpr(targetType, getLangBasic().getNumericCast(), expr, getTypeLiteral(targetType));
-		}
+		ExpressionPtr numericCast(const core::ExpressionPtr& expr, const core::TypePtr& targetType) const;
 
 		inline CallExprPtr preInc(const ExpressionPtr& a) const {
 			return unaryOp(getExtension<lang::ReferenceExtension>().getGenPreInc(), a);

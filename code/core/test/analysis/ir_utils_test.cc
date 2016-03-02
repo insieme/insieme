@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -42,6 +42,7 @@
 #include "insieme/core/ir_address.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/normalize.h"
+#include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/printer/pretty_printer.h"
 
@@ -264,12 +265,11 @@ namespace analysis {
 		        .as<CallExprPtr>();
 		ASSERT_TRUE(call);
 
-		// check free variables
+		// check variables
 		EXPECT_EQ("rec _.{_=fun(ref<((int<4>)=>int<4>),f,f,plain> v0) {return ref_deref(v0)(2);}}(bind(v0){int_add(int_add(2, v77), v0)})", toString(*call));
-		EXPECT_EQ(utils::set::toSet<VariableSet>(builder.variable(int4, 0),
-		                                         builder.variable(int4, 77),
-		                                         builder.variable(builder.refType(builder.functionType(int4, int4, FK_CLOSURE)), 0)),
-		          getAllVariables(call));
+		EXPECT_EQ(utils::set::toSet<VariableSet>(builder.variable(int4, 0), builder.variable(int4, 1), builder.variable(int4, 77),
+			                                     builder.variable(builder.refType(builder.functionType(int4, int4, FK_CLOSURE)), 0)),
+			      getAllVariables(call));
 	}
 
 
@@ -564,13 +564,13 @@ namespace analysis {
 		ExpressionPtr funA = builder.parseExpr(
 			"alias ftype = (ref<int<4>>, ref<int<4>>, ref<int<4>>, ref<int<4>>)->unit;"
 			"decl f : ftype;"
-			"def f = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { var ref<int<4>> x = ref_var_init(*d); f(x,a,b,c); };"
+			"def f = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { var ref<int<4>> x = *d; f(x,a,b,c); };"
 			"f");
 
 		ExpressionPtr funB = builder.parseExpr(
 			"alias ftype = (ref<int<4>>, ref<int<4>>, ref<int<4>>, ref<int<4>>)->unit;"
 			"decl f : ftype;"
-			"def f = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { var ref<int<4>> x = ref_var_init(*d); d = 2; f(x,a,b,c); };"
+			"def f = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { var ref<int<4>> x = *d; d = 2; f(x,a,b,c); };"
 			"f");
 
 		VariablePtr varA = builder.variable(builder.refType(mgr.getLangBasic().getInt4()), 6);
@@ -592,16 +592,16 @@ namespace analysis {
 		ExpressionPtr funA = builder.parseExpr(
 			"alias ftype = (ref<int<4>>, ref<int<4>>, ref<int<4>>, ref<int<4>>)->unit;"
 			"decl f : ftype; decl g : ftype;"
-			"def f = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { var ref<int<4>> x = ref_var_init(*d); g(x,a,b,c); };"
-			"def g = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { var ref<int<4>> x = ref_var_init(*d); f(x,a,b,c); };"
+			"def f = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { var ref<int<4>> x = *d; g(x,a,b,c); };"
+			"def g = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { var ref<int<4>> x = *d; f(x,a,b,c); };"
 			"f");
 
 		ExpressionPtr funB =
 		    builder.parseExpr(
 			"alias ftype = (ref<int<4>>, ref<int<4>>, ref<int<4>>, ref<int<4>>)->unit;"
 			"decl f : ftype; decl g : ftype;"
-			"def f = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { var ref<int<4>> x = ref_var_init(*d); d = 2; g(x,a,b,c); };"
-			"def g = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { var ref<int<4>> x = ref_var_init(*d); d = 2; f(x,a,b,c); };"
+			"def f = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { var ref<int<4>> x = *d; d = 2; g(x,a,b,c); };"
+			"def g = (a : ref<int<4>>, b : ref<int<4>>, c : ref<int<4>>, d : ref<int<4>>)->unit { var ref<int<4>> x = *d; d = 2; f(x,a,b,c); };"
 			"f");
 
 		VariablePtr varA = builder.variable(builder.refType(mgr.getLangBasic().getInt4()), 6);
@@ -677,8 +677,33 @@ namespace analysis {
 			}
 		)1N5P1RE");
 
-		EXPECT_EQ(countInstances(prog, builder.parseType("int<4>")), 10);
-		EXPECT_EQ(countInstances(prog, builder.intLit(1)), 2);
+		EXPECT_EQ(8, countInstances(prog, builder.parseType("int<4>")));
+		EXPECT_EQ(2, countInstances(prog, builder.intLit(1)));
+	}
+
+	TEST(Types, FreeTagTypeReferences) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto hasNoFreeTagTypeReferences = [](const TypePtr& type) {
+			return !hasFreeTagTypeReferences(type);
+		};
+
+		// some basic types do not have free references
+		EXPECT_PRED1(hasNoFreeTagTypeReferences, builder.getLangBasic().getInt16());
+
+		// closed recursive types are also free of free tag type references
+		EXPECT_PRED1(hasNoFreeTagTypeReferences, builder.parseType("decl struct S; def struct S { x : ref<S>; }; S"));
+
+		// a tag type reference has a free tag type reference
+		EXPECT_PRED1(hasFreeTagTypeReferences, builder.parseType("^T"));
+		EXPECT_PRED1(hasFreeTagTypeReferences, builder.parseType("ref<^T>"));
+
+		// but also within structs tag types may be free
+		EXPECT_PRED1(hasFreeTagTypeReferences, builder.parseType("def struct S { x : ref<^T>; }; S"));
+
+		// but if the free reference is closed again, it should not be identified as free
+		EXPECT_PRED1(hasNoFreeTagTypeReferences, builder.parseType("def struct S { x : ref<^T>; }; struct T { y : S; }"));
 	}
 
 	TEST(Types, CanonicalType) {
@@ -701,7 +726,9 @@ namespace analysis {
 
 
 		// recursive types
-		TagTypePtr recType = builder.parseType("let f = struct { x : int<4>; next : link<f>; } in f").as<TagTypePtr>();
+		TagTypePtr recType = builder.parseType("decl struct g; def struct g { x : int<4>; next : link<g>; }; g").as<TagTypePtr>();
+		EXPECT_TRUE(recType->isRecursive());
+
 		EXPECT_EQ(recType, getCanonicalType(recType));
 		EXPECT_EQ(recType, getCanonicalType(recType->peel(0)));
 		EXPECT_EQ(recType, getCanonicalType(recType->peel(1)));
@@ -710,8 +737,8 @@ namespace analysis {
 
 
 		// mutual recursive types
-		TagTypePtr typeA = builder.parseType("decl struct g; def struct f { x : int<4>; next : link<g>; }; def struct g { y : double; next : link<f>; }; f").as<TagTypePtr>();
-		TagTypePtr typeB = builder.parseType("decl struct g; def struct f { x : int<4>; next : link<g>; }; def struct g { y : double; next : link<f>; }; g").as<TagTypePtr>();
+		TagTypePtr typeA = builder.parseType("decl struct g; def struct h { x : int<4>; next : link<g>; }; def struct g { y : double; next : link<h>; }; h").as<TagTypePtr>();
+		TagTypePtr typeB = builder.parseType("decl struct g; def struct h { x : int<4>; next : link<g>; }; def struct g { y : double; next : link<h>; }; g").as<TagTypePtr>();
 
 //		std::cout << *typeA << "\n";
 //		std::cout << *typeA->peel(0) << " = \n\t\t" << *getCanonicalType(typeA->peel(0)) << "\n";
@@ -744,6 +771,51 @@ namespace analysis {
 		EXPECT_EQ(ref, getCanonicalType(builder.parseType("ref<A1>", symbols)));
 		EXPECT_EQ(ref, getCanonicalType(builder.parseType("ref<A2>", symbols)));
 		EXPECT_EQ(ref, getCanonicalType(builder.parseType("ref<A3>", symbols)));
+	}
+
+	TEST(Types, CanonicalType_PartiallyUnrolled) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		// build up a mutual recursive type
+		auto recType = builder.parseType(
+				"decl struct X; decl struct Y; def struct X { a : T; y : Y; }; def struct Y { a : S; x : X; }; X"
+			).as<TagTypePtr>();
+
+		// check that the composed type is properly composed
+		EXPECT_TRUE(core::checks::check(recType).empty()) << core::checks::check(recType);
+
+		// make sure that standard properties hold
+		EXPECT_TRUE(recType->isRecursive());
+
+
+		// unroll first type manually
+		TypeAddress fieldType = TagTypeAddress(recType)->getRecord()->getFieldType("y");
+		auto nestedTag = builder.tagTypeReference("Y");
+		TagTypeBindingMap definition;
+		definition[nestedTag] = recType->getDefinition()[1]->getRecord();
+		TagTypePtr nestedY = builder.tagType(nestedTag, builder.tagTypeDefinition(definition));
+		auto partiallyUnrolled = core::transform::replaceNode(mgr, fieldType, nestedY).as<TagTypePtr>();
+
+		// check that the composed type is properly composed
+		EXPECT_TRUE(core::checks::check(partiallyUnrolled).empty()) << core::checks::check(partiallyUnrolled);
+		
+		// make sure that standard properties hold
+		EXPECT_TRUE(partiallyUnrolled->isRecursive());
+
+		// check whether canonicalization is capable of reverting the partial unroll
+		EXPECT_EQ(recType, getCanonicalType(partiallyUnrolled));
+		EXPECT_EQ(recType, getCanonicalType(partiallyUnrolled->peel()));
+
+		std::map<string, NodePtr> symbols;
+		symbols["R"] = recType;
+		symbols["T"] = partiallyUnrolled->peel();
+
+		EXPECT_EQ(
+			builder.parseType("def struct Z { x : R; }; Z", symbols),
+			getCanonicalType(builder.parseType("def struct Z { x : T; }; Z", symbols))
+		);
+		
 	}
 
 

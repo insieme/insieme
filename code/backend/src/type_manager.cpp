@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -42,7 +42,6 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/type_traits/remove_const.hpp>
 
-
 #include "insieme/backend/converter.h"
 #include "insieme/backend/name_manager.h"
 #include "insieme/backend/function_manager.h"
@@ -50,19 +49,20 @@
 #include "insieme/backend/c_ast/c_ast_utils.h"
 #include "insieme/backend/c_ast/c_ast_printer.h"
 
-#include "insieme/core/ir_types.h"
-#include "insieme/core/ir_builder.h"
-#include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"
+#include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/analysis/type_utils.h"
 #include "insieme/core/annotations/naming.h"
+#include "insieme/core/ir_builder.h"
+#include "insieme/core/ir_types.h"
+#include "insieme/core/lang/array.h"
+#include "insieme/core/lang/channel.h"
+#include "insieme/core/lang/const_extension.h"
+#include "insieme/core/lang/enum.h"
+#include "insieme/core/lang/reference.h"
+
 #include "insieme/annotations/c/include.h"
 #include "insieme/annotations/c/decl_only.h"
-
-#include "insieme/core/lang/array.h"
-#include "insieme/core/lang/reference.h"
-#include "insieme/core/lang/channel.h"
-#include "insieme/core/lang/enum.h"
-#include "insieme/core/lang/const_extension.h"
 
 #include "insieme/utils/logging.h"
 #include "insieme/utils/name_mangling.h"
@@ -185,8 +185,7 @@ namespace backend {
 			const TagTypeInfo* resolveRecType(const core::TagTypePtr& ptr);
 			void resolveRecTypeDefinition(const core::TagTypeDefinitionPtr& ptr);
 
-			template <typename ResInfo>
-			ResInfo* resolveRecordType(const core::RecordPtr&);
+			TagTypeInfo* resolveRecordType(const core::TagTypePtr&, const core::RecordPtr&);
 		};
 	}
 
@@ -260,7 +259,7 @@ namespace backend {
 	namespace type_info_utils {
 
 		const TypeInfo* headerAnnotatedTypeHandler(const Converter& converter, const core::TypePtr& type,
-			std::function<void(std::string&, const core::TypePtr&)> nameModifier) {
+		                                           std::function<void(std::string&, const core::TypePtr&)> nameModifier) {
 			if(annotations::c::hasIncludeAttached(type) && core::annotations::hasAttachedName(type)) {
 				const string& header = annotations::c::getAttachedInclude(type);
 				string name = core::annotations::getAttachedName(type);
@@ -268,7 +267,7 @@ namespace backend {
 				nameModifier(name, type);
 				return type_info_utils::createInfo(converter.getFragmentManager(), name, header);
 			}
-			return NULL;
+			return nullptr;
 		}
 
 		c_ast::ExpressionPtr NoOp(const c_ast::SharedCNodeManager&, const c_ast::ExpressionPtr& node) {
@@ -291,7 +290,12 @@ namespace backend {
 		// --------------------- Type Specific Wrapper --------------------
 
 		const TypeInfo* TypeInfoStore::addInfo(const core::TypePtr& type, const TypeInfo* info) {
+
+
 			// register type information
+			assert_true(typeInfos.find(type) == typeInfos.end() || typeInfos.find(type)->second == info)
+				<< "Previous definition of type " << type->getNodeHashValue() << " = " << *type << " already present!";
+
 			typeInfos.insert(std::make_pair(type, info));
 			allInfos.insert(info);
 			return info;
@@ -299,7 +303,10 @@ namespace backend {
 
 		// --------------------- Implementations of resolution utilities --------------------
 
-		const TypeInfo* TypeInfoStore::resolveInternal(const core::TypePtr& type) {
+		const TypeInfo* TypeInfoStore::resolveInternal(const core::TypePtr& in) {
+
+			// normalize all types
+			auto type = core::analysis::normalize(core::analysis::getCanonicalType(in));
 
 			// lookup information within cache
 			auto pos = typeInfos.find(type);
@@ -499,8 +506,9 @@ namespace backend {
 			return type_info_utils::createUnsupportedInfo(manager, ptr);
 		}
 
-		template <typename ResInfo>
-		ResInfo* TypeInfoStore::resolveRecordType(const core::RecordPtr& ptr) {
+		TagTypeInfo* TypeInfoStore::resolveRecordType(const core::TagTypePtr& tagType, const core::RecordPtr& ptr) {
+			assert_eq(tagType->getRecord(), ptr);
+
 			// The resolution of a named composite type is based on 3 steps
 			//		- first, get a name for the resulting C struct / union
 			//		- create a code fragment including a declaration of the struct / union (no definition)
@@ -527,10 +535,23 @@ namespace backend {
 				type = manager->create<c_ast::UnionType>(typeName);
 			}
 
-			// collect dependencies
-			std::set<c_ast::CodeFragmentPtr> definitions;
+			// create declaration of named composite type
+			auto declCode = manager->create<c_ast::TypeDeclaration>(type);
+			c_ast::CodeFragmentPtr declaration = c_ast::CCodeFragment::createNew(fragmentManager, declCode);
 
-			// add elements
+			// create definition of named composite type
+			auto defCode = manager->create<c_ast::TypeDefinition>(type);
+			c_ast::CodeFragmentPtr definition = c_ast::CCodeFragment::createNew(fragmentManager, defCode);
+			definition->addDependency(declaration);
+
+			// create resulting type info
+			auto res = type_info_utils::createInfo<TagTypeInfo>(type, declaration, definition);
+
+
+			// save current info (otherwise the following code will result in an infinite recursion)
+			addInfo(tagType, res);										// for the full tag type
+
+			// ----- fields -----
 			for(const core::FieldPtr& entry : ptr->getFields()) {
 				// get the name of the member
 				c_ast::IdentifierPtr name = manager->create(insieme::utils::demangle(entry->getName()->getValue()));
@@ -548,7 +569,9 @@ namespace backend {
 					type->elements.push_back(var(memberType, name));
 
 					// remember definition
-					if(info->definition) { definitions.insert(info->definition); }
+					if(info->definition) {
+						definition->addDependency(info->definition);
+					}
 
 					continue;
 				}
@@ -559,37 +582,75 @@ namespace backend {
 				type->elements.push_back(var(elementType, name));
 
 				// remember definitions
-				if(info->definition) { definitions.insert(info->definition); }
+				if(info->definition) {
+					definition->addDependency(info->definition);
+				}
 			}
 
-			// create declaration of named composite type
-			auto declCode = manager->create<c_ast::TypeDeclaration>(type);
-			c_ast::CodeFragmentPtr declaration = c_ast::CCodeFragment::createNew(fragmentManager, declCode);
+			// the function manager is required to convert member functions
+			auto& funMgr = converter.getFunctionManager();
 
-			// create definition of named composite type
-			auto defCode = manager->create<c_ast::TypeDefinition>(type);
-			c_ast::CodeFragmentPtr definition = c_ast::CCodeFragment::createNew(fragmentManager, defCode);
-			definition->addDependency(declaration);
-			definition->addDependencies(definitions);
+			// ----- members -------
 
-			// create resulting type info
-			return type_info_utils::createInfo<ResInfo>(type, declaration, definition);
+			// extract the record type info
+			auto record = tagType->getRecord();
+
+			// add constructors, destructors and assignments to non-trivial classes
+			bool trivial = core::analysis::isTrivial(tagType);
+			if (!trivial) {
+
+				// add constructors
+				for (const auto& ctor : record->getConstructors()) {
+					auto impl = (core::analysis::getObjectType(ctor->getType()).isa<core::TagTypeReferencePtr>()) ? tagType->peel(ctor) : ctor;
+					funMgr.getInfo(impl.as<core::LambdaExprPtr>());	// this will declare and define the constructor
+				}
+//				// TODO: explicitly delete missing constructors
+//				//if (!core::analysis::hasDefaultConstructor(tagType)) {
+//					//type->ctors.push_back(manager->create<c_ast::ConstructorPrototype>());
+//				//}
+//
+				// add destructors (only for structs)
+				{
+					auto dtor = record->getDestructor();
+					auto info = funMgr.getInfo(tagType->peel(dtor).as<core::LambdaExprPtr>());
+					info.declaration.as<c_ast::DestructorPrototypePtr>()->isVirtual = record->hasVirtualDestructor();
+				}
+
+				// add pure virtual function declarations
+				core::IRBuilder builder(ptr.getNodeManager());
+				for (const auto& pureVirtual : record->getPureVirtualMemberFunctions()) {
+					auto type = pureVirtual->getType();
+					type = (core::analysis::getObjectType(type).isa<core::TagTypeReferencePtr>()) ? tagType->peel(type) : type;
+					funMgr.getInfo(builder.pureVirtualMemberFunction(pureVirtual->getName(), type));
+				}
+			}
+
+			// add member functions (for trivial and non trivial classes)
+			for (const auto& member : record->getMemberFunctions()) {
+				if (!trivial || !core::analysis::isaDefaultMember(tagType, member)) {
+					funMgr.getInfo(tagType->peel(member));
+				}
+			}
+
+			// done
+			return res;
 		}
 
-		const TagTypeInfo* TypeInfoStore::resolveTagType(const core::TagTypePtr& ptr) {
-			// handle recursive types
-			if (ptr->isRecursive()) return resolveRecType(ptr);
+		const TagTypeInfo* TypeInfoStore::resolveTagType(const core::TagTypePtr& tagType) {
 
-			// handle struct and unions
-			if (ptr.isStruct()) return resolveStructType(ptr);
-			assert(ptr.isUnion());
-			return resolveUnionType(ptr);
+			// handle recursive types
+			if (tagType->isRecursive()) {
+				return resolveRecType(tagType);
+			}
+
+			// convert type -- struct and union specific
+			return (tagType.isStruct()) ? resolveStructType(tagType) : resolveUnionType(tagType);
 		}
 
 		const TagTypeInfo* TypeInfoStore::resolveStructType(const core::TagTypePtr& ptr) {
 			assert_true(ptr->isStruct()) << "Type: " << *ptr;
 
-			TagTypeInfo* res = resolveRecordType<TagTypeInfo>(ptr->getRecord());
+			TagTypeInfo* res = resolveRecordType(ptr, ptr->getRecord());
 
 			// get C node manager
 			auto manager = converter.getCNodeManager();
@@ -640,63 +701,6 @@ namespace backend {
 				type->parents.push_back(manager->create<c_ast::Parent>(parent->isVirtual(), parentInfo->lValueType));
 			}
 
-			// TODO: port this to new infrastructure
-
-//			// -- Process Meta-Infos --
-//
-//			// skip rest if there is no meta-info present
-//			if(!core::hasMetaInfo(ptr)) { return res; }
-//
-//			// save current info (otherwise the following code will result in an infinite recursion)
-//			addInfo(ptr, res);
-//
-//			auto& nameMgr = converter.getNameManager();
-//			core::ClassMetaInfo info = core::getMetaInfo(ptr);
-//			auto& funMgr = converter.getFunctionManager();
-//
-//			// add constructors
-//			for(const core::ExpressionPtr& cur : info.getConstructors()) {
-//				assert(cur.isa<core::LambdaExprPtr>() && "metaInfo should only contain ctors which are lambdaExprs at this point");
-//				// let function manager handle it
-//				funMgr.getInfo(cur.as<core::LambdaExprPtr>());
-//			}
-//
-//			// add destructor
-//			if(auto dtor = info.getDestructor()) {
-//				assert(dtor.isa<core::LambdaExprPtr>() && "metaInfo should only contain dtor which is a lambdaExprs at this point");
-//				// let function manager handle it
-//				funMgr.getInfo(dtor.as<core::LambdaExprPtr>(), false, info.isDestructorVirtual());
-//			}
-//
-//			// add member functions
-//			for(const core::MemberFunction& cur : info.getMemberFunctions()) {
-//				// fix name of all member functions before converting them
-//				auto impl = cur.getImplementation();
-//				if(!core::analysis::isPureVirtual(impl)) { nameMgr.setName(core::analysis::normalize(impl), cur.getName()); }
-//			}
-//			for(const core::MemberFunction& cur : info.getMemberFunctions()) {
-//				// process function using function manager
-//				auto impl = cur.getImplementation();
-//				if(!core::analysis::isPureVirtual(impl)) {
-//					// might be than there is no implementation for the function?
-//					// what about ignoring it and allow backend compiler to synthetize it?
-//					if(impl.isa<core::LiteralPtr>()) { continue; }
-//
-//					// generate code for member function
-//					funMgr.getInfo(impl.as<core::LambdaExprPtr>(), cur.isConst(), cur.isVirtual());
-//
-//				} else {
-//					// resolve the type of this function and all its dependencies using the function manager
-//					// by asking for an temporary "external function"
-//
-//					// create temporary literal ...
-//					core::NodeManager& nodeMgr = ptr->getNodeManager();
-//
-//					// ... and resolve dependencies (that's all, function manager will do the rest)
-//					funMgr.getInfo(core::Literal::get(nodeMgr, impl.getType(), cur.getName()), cur.isConst());
-//				}
-//			}
-
 			// done
 			return res;
 		}
@@ -704,7 +708,7 @@ namespace backend {
 		const TagTypeInfo* TypeInfoStore::resolveUnionType(const core::TagTypePtr& ptr) {
 			assert_true(ptr->isUnion()) << "Type: " << *ptr;
 
-			TagTypeInfo* res = resolveRecordType<TagTypeInfo>(ptr->getRecord());
+			TagTypeInfo* res = resolveRecordType(ptr, ptr->getRecord());
 
 			// get C node manager
 			auto manager = converter.getCNodeManager();
@@ -934,7 +938,10 @@ namespace backend {
 
 		const RefTypeInfo* TypeInfoStore::resolveRefType(const core::GenericTypePtr& ptr) {
 			assert_pred1(core::lang::isReference, ptr) << "Can only convert reference types.";
-			assert_pred1(core::lang::isPlainReference, ptr) << "Yet unsupported non-plain reference type: " << *ptr;
+
+			// check that it is a plain, C++ or C++ R-Value reference
+			assert_true(core::lang::isPlainReference(ptr) || core::lang::isCppReference(ptr) || core::lang::isCppRValueReference(ptr))
+				<< "Unsupported reference type: " << *ptr;
 
 			auto manager = converter.getCNodeManager();
 
@@ -958,9 +965,47 @@ namespace backend {
 			// produce R and L value type
 
 			// generally, a level of indirection needs to be added
-			res->lValueType = c_ast::qualify(subType->lValueType, ref.isConst(), ref.isVolatile());
-			res->rValueType = c_ast::ptr(c_ast::qualify(subType->rValueType, ref.isConst(), ref.isVolatile()));
-			res->externalType = c_ast::ptr(c_ast::qualify(subType->externalType, ref.isConst(), ref.isVolatile()));
+			switch (ref.getKind()) {
+				case core::lang::ReferenceType::Kind::Plain: {
+
+					// local (l-value) values are simply qualified types, the rest is a pointer
+					res->lValueType = c_ast::qualify(subType->lValueType, ref.isConst(), ref.isVolatile());
+					res->rValueType = c_ast::ptr(c_ast::qualify(subType->rValueType, ref.isConst(), ref.isVolatile()));
+					res->externalType = c_ast::ptr(c_ast::qualify(subType->externalType, ref.isConst(), ref.isVolatile()));
+
+					break;
+				}
+
+				case core::lang::ReferenceType::Kind::CppReference: {
+
+					assert_false(core::lang::isReference(elementType)) << "Unsupported references to references!";
+					assert_false(core::lang::isArray(elementType)) << "Unsupported references to arrays!";
+
+					// here we just add a reference to the nested type
+					res->lValueType = c_ast::ref(subType->lValueType, ref.isConst(), ref.isVolatile());
+					res->rValueType = c_ast::ref(subType->rValueType, ref.isConst(), ref.isVolatile());
+					res->externalType = c_ast::ref(subType->externalType, ref.isConst(), ref.isVolatile());
+
+					break;
+				}
+
+				case core::lang::ReferenceType::Kind::CppRValueReference: {
+
+					assert_false(core::lang::isReference(elementType)) << "Unsupported references to references!";
+					assert_false(core::lang::isArray(elementType)) << "Unsupported references to arrays!";
+
+					// here we just add a reference to the nested type
+					res->lValueType = c_ast::rvalue_ref(subType->lValueType, ref.isConst(), ref.isVolatile());
+					res->rValueType = c_ast::rvalue_ref(subType->rValueType, ref.isConst(), ref.isVolatile());
+					res->externalType = c_ast::rvalue_ref(subType->externalType, ref.isConst(), ref.isVolatile());
+
+					break;
+				}
+
+				case core::lang::ReferenceType::Kind::Undefined: {
+					assert_fail() << "Should not be reachable!"; break;
+				}
+			}
 
 			// support nested references
 			if (core::lang::isReference(elementType)) {
@@ -988,7 +1033,17 @@ namespace backend {
 			} else {
 				// requires a cast
 				res->externalize = [res](const c_ast::SharedCNodeManager& manager, const c_ast::ExpressionPtr& node) {
-					if (auto lit = node.isa<c_ast::LiteralPtr>()) if (lit->value[0] == '"') return node;  // for string literals
+					if (auto lit = node.isa<c_ast::LiteralPtr>()) {
+						if (lit->value[0] == '"') {
+							return node;  // for string literals
+						}
+					}
+					// resolve l/r-value duality of array init expressions
+					if (auto initExp = node.isa<c_ast::InitializerPtr>()) {
+						if (initExp->type && !initExp->type.isa<c_ast::UnionTypePtr>() && !initExp->type.isa<c_ast::StructTypePtr>()) {
+							return c_ast::cast(res->externalType, c_ast::ref(node));
+						}
+					}
 					return c_ast::cast(res->externalType, node);
 				};
 				res->internalize = [res](const c_ast::SharedCNodeManager& manager, const c_ast::ExpressionPtr& node) {
@@ -1003,35 +1058,38 @@ namespace backend {
 
 			// ---------------- add a new operator ------------------------
 
-			string newOpName = "_ref_new_" + converter.getNameManager().getName(ptr);
-			res->newOperatorName = manager->create(newOpName);
+			if (ref.isPlain()) {
 
-			// the argument variable
-			string resultTypeName = toString(c_ast::CPrint(res->rValueType));
-			string valueTypeName = toString(c_ast::CPrint(subType->lValueType));
+				string newOpName = "_ref_new_" + converter.getNameManager().getName(ptr);
+				res->newOperatorName = manager->create(newOpName);
 
-			std::stringstream code;
-			code << "/* New Operator for type " << toString(*ptr) << "*/ \n"
-				 "static inline " << resultTypeName << " " << newOpName << "(" << valueTypeName << " value) {\n"
-			           << resultTypeName << " res = malloc(sizeof(" << valueTypeName << "));\n"
-			     "    *res = value;\n"
-			     "    return res;\n"
-			     "}\n";
+				// the argument variable
+				string resultTypeName = toString(c_ast::CPrint(res->rValueType));
+				string valueTypeName = toString(c_ast::CPrint(subType->lValueType));
 
-			// attach the new operator
-			c_ast::OpaqueCodePtr cCode = manager->create<c_ast::OpaqueCode>(code.str());
-			res->newOperator = c_ast::CCodeFragment::createNew(converter.getFragmentManager(), cCode);
+				std::stringstream code;
+				code << "/* New Operator for type " << toString(*ptr) << "*/ \n"
+					"static inline " << resultTypeName << " " << newOpName << "(" << valueTypeName << " value) {\n"
+					<< resultTypeName << " res = malloc(sizeof(" << valueTypeName << "));\n"
+					"    *res = value;\n"
+					"    return res;\n"
+					"}\n";
 
-			// add dependencies
-			res->newOperator->addDependency(subType->definition);
+				// attach the new operator
+				c_ast::OpaqueCodePtr cCode = manager->create<c_ast::OpaqueCode>(code.str());
+				res->newOperator = c_ast::CCodeFragment::createNew(converter.getFragmentManager(), cCode);
 
-			// add include for malloc
-			res->newOperator->addInclude(string("stdlib.h"));
+				// add dependencies
+				res->newOperator->addDependency(subType->definition);
+
+				// add include for malloc
+				res->newOperator->addInclude(string("stdlib.h"));
+
+			}
 
 			// done
 			return res;
 		}
-
 
 		const FunctionTypeInfo* TypeInfoStore::resolveFunctionType(const core::FunctionTypePtr& ptr) {
 			// dispatch to pointer-specific type!
@@ -1317,7 +1375,7 @@ namespace backend {
 			c_ast::CCodeFragmentPtr declaration = c_ast::CCodeFragment::createNew(converter.getFragmentManager());
 
 			// A) create a type info instance for each defined type and add definition
-			for_each(ptr->getDefinitions(), [&](const core::TagTypeBindingPtr& cur) {
+			for(const core::TagTypeBindingPtr& cur : ptr->getDefinitions()) {
 
 				// create recursive type represented by current type variable
 				core::TagTypePtr type = core::TagType::get(nodeManager, cur->getTag(), ptr);
@@ -1349,22 +1407,21 @@ namespace backend {
 				info->definition = c_ast::CCodeFragment::createNew(converter.getFragmentManager());
 
 				// register new type information
-				typeInfos.insert(std::make_pair(type, info));
-				allInfos.insert(info);
-			});
+				addInfo(cur->getTag(), info);
+			}
 
 			// B) unroll types and add definitions
-			for_each(ptr->getDefinitions(), [&](const core::TagTypeBindingPtr& cur) {
-				// obtain peeled type
-				core::TagTypePtr recType = core::TagType::get(nodeManager, cur->getTag(), ptr);
-				core::TagTypePtr peeled = ptr->peel(nodeManager, cur->getTag());
+			for(const core::TagTypeBindingPtr& cur : ptr->getDefinitions()) {
 
-				// fix name of peeled struct
-				nameManager.setName(peeled->getRecord(), nameManager.getName(recType));
+				// obtain current tag type
+				core::TagTypePtr recType = core::TagType::get(nodeManager, cur->getTag(), ptr);
+
+				// fix name of tag type
+				nameManager.setName(recType->getRecord(), nameManager.getName(recType));
 
 				// get reference to pointer within map (needs to be updated)
-				TypeInfo*& curInfo = const_cast<TypeInfo*&>(typeInfos.at(recType));
-				TagTypeInfo* newInfo = const_cast<TagTypeInfo*>(resolveType(peeled));
+				TypeInfo*& curInfo = const_cast<TypeInfo*&>(typeInfos.at(recType->getTag()));
+				TagTypeInfo* newInfo = const_cast<TagTypeInfo*>(resolveRecordType(recType, recType->getRecord()));
 
 				assert_true(curInfo && newInfo) << "Both should be available now!";
 				assert(curInfo != newInfo);
@@ -1373,7 +1430,8 @@ namespace backend {
 				newInfo->definition->remDependency(newInfo->declaration);
 
 				// we move the definition part of the newInfo to the curInfo
-				*static_pointer_cast<c_ast::CCodeFragment>(curInfo->definition) = *static_pointer_cast<c_ast::CCodeFragment>(newInfo->definition);
+				curInfo->definition->addDependency(curInfo->declaration);
+				curInfo->definition->addDependency(newInfo->definition);
 
 				// also update lValue, rValue and external type
 				curInfo->lValueType = newInfo->lValueType;
@@ -1383,7 +1441,7 @@ namespace backend {
 				// also re-direct the new setup (of the peeled which might be used in the future)
 				newInfo->declaration = curInfo->declaration;
 				newInfo->definition = curInfo->definition;
-			});
+			}
 		}
 
 		const TypeInfo* TypeInfoStore::resolveCVectorType(const core::TypePtr& elementType, const c_ast::ExpressionPtr& size) {

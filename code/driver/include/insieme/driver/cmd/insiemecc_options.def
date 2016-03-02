@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -82,7 +82,6 @@ OPTION("dump-tu", dumpTU, frontend::path, "a.tu", "dump translation unit")
 OPTION("fopt", optimizationFlags, std::vector<std::string>, std::vector<std::string>(), "optimization flags")
 OPTION("include-path,I", includePaths, std::vector<frontend::path>, std::vector<frontend::path>(), "additional user include search path(s)")
 OPTION("intercept-include", interceptIncludes, std::vector<frontend::path>, std::vector<frontend::path>(), "intercepted include file(s)")
-OPTION("intercept", intercept, std::vector<std::string>, std::vector<std::string>(), "regular expression(s) to be intercepted")
 OPTION("isystem", systemIncludePaths, std::vector<frontend::path>, std::vector<frontend::path>(), "additional system include search path(s)")
 OPTION("library-file,l", libraryFiles, std::vector<frontend::path>, std::vector<frontend::path>(), "linker flag(s)/file(s)")
 OPTION("library-path,L", libraryPaths, std::vector<frontend::path>, std::vector<frontend::path>(), "library search path(s)")

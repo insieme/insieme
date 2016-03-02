@@ -84,12 +84,61 @@ namespace analysis {
 	bool isTrivial(const TypePtr& type);
 
 	/**
+	 * Determines whether the given tag type has a constructor of the given type.
+	 */
+	bool hasConstructorOfType(const TagTypePtr& type, const FunctionTypePtr& funType);
+
+	/**
+	 * Determines whether the given tag type has a constructor accepting a single parameter
+	 * of the given type (in addition to the this reference).
+	 */
+	bool hasConstructorAccepting(const TypePtr& type, const TypePtr& paramType);
+
+	/**
+	* Determines whether the given tag type has a member function of the given name and type.
+	*/
+	bool hasMemberOfType(const TagTypePtr& type, const std::string& name, const FunctionTypePtr& funType);
+
+	/**
+	 * Determines whether the given tag type has a default constructor.
+	 */
+	bool hasDefaultConstructor(const TagTypePtr&);
+
+	/**
+	 * Determines whether the given tag type has a copy constructor.
+	 */
+	bool hasCopyConstructor(const TagTypePtr&);
+
+	/**
+	 * Determines whether the given tag type has a move constructor.
+	 */
+	bool hasMoveConstructor(const TagTypePtr&);
+
+	/**
+	 * Determines whether the given tag type has a copy assignment operator.
+	 */
+	bool hasCopyAssignment(const TagTypePtr&);
+
+	/**
+	 * Determines whether the given tag type has a move assignment operator.
+	 */
+	bool hasMoveAssignment(const TagTypePtr&);
+
+	/**
 	 * Determines whether the given constructor is one of the default generated ones for the given type.
 	 *
 	 * @param type the TagType to check
 	 * @param ctor the ctor to check
 	 */
 	bool isaDefaultConstructor(const TagTypePtr& type, const ExpressionPtr& ctor);
+
+	/**
+	* Determines whether the given destructor is a default destructor for the given type.
+	*
+	* @param type the TagType to check
+	* @param dtor the destructor to check
+	*/
+	bool isDefaultDestructor(const TagTypePtr& type, const ExpressionPtr& dtor);
 
 	/**
 	 * Determines whether the given TagType has the default generated destructor.
@@ -109,12 +158,13 @@ namespace analysis {
 	* or member function. In case it is a plain or closure function type a call to this function is
 	* invalid.
 	*/
-	template<template <typename> class Ptr>
-	Ptr<const Type> getObjectType(const Ptr<const FunctionType>& type) {
-		assert_true(type->isConstructor() || type->isDestructor() || type->isMemberFunction() || type->isVirtualMemberFunction());
-		assert_false(type->getParameterTypes().empty());
-		assert_true(analysis::isRefType(type->getParameterType(0)));
-		return type->getParameterType(0).template as<Ptr<const GenericType>>()->getTypeParameter(0);
+	template<template <typename> class Ptr, typename T>
+	Ptr<const Type> getObjectType(const Ptr<const T>& type) {
+		auto funType = type.template as<Ptr<const FunctionType>>();
+		assert_true(funType->isConstructor() || funType->isDestructor() || funType->isMemberFunction() || funType->isVirtualMemberFunction());
+		assert_false(funType->getParameterTypes().empty());
+		assert_true(analysis::isRefType(funType->getParameterType(0)));
+		return funType->getParameterType(0).template as<Ptr<const GenericType>>()->getTypeParameter(0);
 	}
 
 

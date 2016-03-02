@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -42,6 +42,7 @@
 #include "insieme/core/lang/boolean_marker.h"
 #include "insieme/core/lang/pointer.h"
 #include "insieme/core/types/match.h"
+#include "insieme/core/analysis/ir_utils.h"
 
 namespace insieme {
 namespace core {
@@ -159,33 +160,68 @@ namespace lang {
 		return isRefMarker(kind) && getKind() == Kind::CppRValueReference;
 	}
 
+	namespace {
+
+		bool isReferenceInternal(const TypePtr& node) {
+
+			// make sure the node is an actual type
+			assert_true(node);
+
+			// check type
+			auto type = node.isa<GenericTypePtr>();
+			if (!type) return false;
+
+			// simple approach: use unification
+			NodeManager& mgr = node.getNodeManager();
+			const ReferenceExtension& ext = mgr.getLangExtension<ReferenceExtension>();
+
+			// unify given type with template type
+			auto ref = ext.getGenRef().as<GenericTypePtr>();
+			auto sub = types::match(mgr, type, ref);
+			if (!sub) return false;
+
+			// check instantiation
+			const types::Substitution& map = *sub;
+			return isValidBooleanMarker(map.applyTo(ref->getTypeParameter(1))) &&
+				isValidBooleanMarker(map.applyTo(ref->getTypeParameter(2))) &&
+				isRefMarker(map.applyTo(ref->getTypeParameter(3)));
+		}
+
+	}
+
+
 
 	bool isReference(const NodePtr& node) {
+
+		// the mark annotated to cache results
+		struct ReferenceMark {
+			bool valid;
+			bool operator==(const ReferenceMark& other) const { return valid == other.valid;  }
+		};
 
 		// check for null
 		if(!node) return false;
 
 		// check for expressions
-		if(auto expr = node.isa<ExpressionPtr>()) return isReference(expr->getType());
+		if (auto expr = node.isa<ExpressionPtr>()) return isReference(expr->getType());
 
-		// check type
-		auto type = node.isa<GenericTypePtr>();
-		if(!type) return false;
+		// now it needs to be a type
+		auto type = node.isa<TypePtr>();
+		if (!type) return false;
 
-		// simple approach: use unification
-		NodeManager& mgr = node.getNodeManager();
-		const ReferenceExtension& ext = mgr.getLangExtension<ReferenceExtension>();
+		// check for a cached annotation
+		if (type->hasAttachedValue<ReferenceMark>()) {
+			return type->getAttachedValue<ReferenceMark>().valid;
+		}
 
-		// unify given type with template type
-		auto ref = ext.getGenRef().as<GenericTypePtr>();
-		auto sub = types::match(mgr, type, ref);
-		if(!sub) return false;
+		// compute the result
+		bool res = isReferenceInternal(type);
 
-		// check instantiation
-		const types::Substitution& map = *sub;
-		return isValidBooleanMarker(map.applyTo(ref->getTypeParameter(1))) &&
-				isValidBooleanMarker(map.applyTo(ref->getTypeParameter(2))) &&
-				isRefMarker(map.applyTo(ref->getTypeParameter(3)));
+		// attach the result
+		type->attachValue(ReferenceMark{ res });
+
+		// done
+		return res;
 	}
 
 	bool isReferenceTo(const NodePtr& node, const TypePtr& type) {
@@ -208,6 +244,15 @@ namespace lang {
 
 	bool isCppRValueReference(const NodePtr& node) {
 		return isReference(node) && ReferenceType(node).isCppRValueReference();
+	}
+
+	ReferenceType::Kind getReferenceKind(const TypePtr& typeLitType) {
+		if(core::analysis::isTypeLiteralType(typeLitType)) return parseKind(core::analysis::getRepresentedType(typeLitType));
+		return parseKind(typeLitType);
+	}
+	ReferenceType::Kind getReferenceKind(const ExpressionPtr& expression) {
+		if(isReference(expression)) return ReferenceType(expression).getKind();
+		return getReferenceKind(core::analysis::getRepresentedType(expression));
 	}
 
 	TypePtr buildRefType(const TypePtr& elementType, bool _const, bool _volatile, const ReferenceType::Kind& kind) {
@@ -242,6 +287,25 @@ namespace lang {
 						bmExt.getMarkerTypeLiteral(referenceTy.isConst()),
 			            bmExt.getMarkerTypeLiteral(referenceTy.isVolatile()),
 						builder.getTypeLiteral(lang::toType(refExpr->getNodeManager(), referenceTy.getKind())));
+	}
+
+	ExpressionPtr buildRefKindCast(const ExpressionPtr& refExpr, ReferenceType::Kind newKind) {
+		assert_pred1(isReference, refExpr) << "Trying to build a ref kind cast from non-ref.";
+		auto rT = ReferenceType(refExpr);
+		if(rT.getKind() == newKind) return refExpr;
+		IRBuilder builder(refExpr->getNodeManager());
+		auto& rExt = refExpr->getNodeManager().getLangExtension<ReferenceExtension>();
+		return builder.callExpr(rExt.getRefKindCast(), refExpr, builder.getTypeLiteral(lang::toType(refExpr->getNodeManager(), newKind)));
+	}
+
+	ExpressionPtr buildRefTemp(const TypePtr& type) {
+		IRBuilder builder(type->getNodeManager());
+		auto& refExt = type->getNodeManager().getLangExtension<lang::ReferenceExtension>();
+		if(isReference(type)) {
+			auto elementType = ReferenceType(type).getElementType();
+			return buildRefCast(builder.callExpr(builder.refType(elementType), refExt.getRefTemp(), builder.getTypeLiteral(elementType)), type);
+		}
+		return builder.callExpr(builder.refType(type), refExt.getRefTemp(), builder.getTypeLiteral(type));
 	}
 
 	ExpressionPtr buildRefNull(const TypePtr& type) {

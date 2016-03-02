@@ -20,6 +20,7 @@
 	#include <string>
 	#include <iostream>
 	#include "insieme/core/ir.h"
+	#include "insieme/core/parser/detail/typed_expression.h"
 
 	namespace insieme {
 	namespace core {
@@ -168,6 +169,7 @@
 	CATCH        "catch"
 	THROW        "throw"
 
+	MATERIALIZE  "materialize"
 
 	SPAWN        "spawn"
 	SYNC         "sync"
@@ -202,9 +204,11 @@
 %type <TypeList>                       types non_empty_types type_param_list
 %type <ExpressionPtr>                  expression plain_expression let_expression
 %type <ExpressionList>                 expressions non_empty_expressions
+%type <ParserTypedExpression>          typed_expression
+%type <ParserTypedExpressionList>      typed_expressions non_empty_typed_expressions
 %type <StatementPtr>                   statement plain_statement let_statement
 %type <ProgramPtr>                     main
-%type <NodePtr>                        definition
+%type <NodePtr>                        definition free_member_definition
 
 %type <TypePtr>                        record_definition
 %type <NodePtr>                        function_definition
@@ -237,8 +241,8 @@
 
 %type <ExpressionPtr>                  variable
 %type <LiteralPtr>                     literal
-%type <ExpressionPtr>                  call
-%type <LambdaExprPtr>                  lambda
+%type <ExpressionPtr>                  call actual_call
+%type <LambdaExprPtr>                  lambda constructor_lambda
 %type <BindExprPtr>                    bind
 %type <ExpressionPtr>                  parallel_expression list_expression initializer unary_op binary_op ternary_op this_expression
 
@@ -297,16 +301,20 @@ alias : "alias" abstract_type "=" type                                      { dr
       ;
 
 declaration : "decl" struct_or_union "identifier"                           { driver.declareRecordType(@3, $3); }
+            | "decl" "ctor" ":" constructor_type                            { driver.genDeclaration(@2, "ctor", $4); }
             | "decl" "identifier" ":" type                                  { driver.genDeclaration(@2, $2, $4); }
             | "decl" "identifier" "::" "identifier" ":" type                { driver.registerField(@4, $2, $4, $6); }
             ;
 
 definition : "def" record_definition                                        { $$ = $2; }
            | "def" function_definition                                      { $$ = $2; }
+           | "def" free_member_definition                                   { $$ = $2; }
            ;
 
 main : type "identifier" "(" parameters                                     { driver.openScope(); driver.registerParameters(@4, $4); }
                                         ")" compound_statement              { $$ = driver.builder.createProgram({driver.genFunctionDefinition(@$, $2, driver.genLambda(@$, $4, $1, $7))}); driver.closeScope(); }
+     | type "function" "identifier" "(" parameters                          { driver.inLambda = false; driver.openScope(); driver.registerParameters(@5, $5); }
+                                        ")" compound_statement              { $$ = driver.builder.createProgram({driver.genFunctionDefinition(@$, $3, driver.genLambda(@$, $5, $1, $8))}); driver.closeScope(); driver.inLambda = true; }
      ;
 
 //    -- record_declarations -------------------------------------
@@ -333,11 +341,14 @@ constructors : constructors constructor                                     { IN
              |                                                              { $$ = ExpressionList(); }
              ;
 
-constructor : "ctor" "(" parameters                                         { driver.openScope(); driver.registerParameters(@3, $3); }
-                                    ")" compound_statement_no_scope         { $$ = driver.genConstructor(@$, $3, $6); driver.closeScope(); }
-            | "ctor" "function" "(" parameters                              { driver.openScope(); driver.registerParameters(@3, $4); driver.inLambda = false; }
-                                    ")" compound_statement_no_scope         { $$ = driver.genConstructor(@$, $4, $7); driver.closeScope(); driver.inLambda = true; }
+constructor : "ctor" constructor_lambda                                     { $$ = driver.genConstructor(@$, $2); }
             ;
+
+constructor_lambda : "(" parameters                                         { driver.openScope(); driver.registerParameters(@2, $2); }
+                                    ")" compound_statement_no_scope         { $$ = driver.genConstructorLambda(@$, $2, $5); driver.closeScope(); }
+                   | "function" "(" parameters                              { driver.openScope(); driver.registerParameters(@2, $3); driver.inLambda = false; }
+                                    ")" compound_statement_no_scope         { $$ = driver.genConstructorLambda(@$, $3, $6); driver.closeScope(); driver.inLambda = true; }
+                   ;
 
 destructor : "dtor" virtual_flag "(" ")" compound_statement                 { $$ = std::make_pair(driver.genDestructor(@$, $5), $2); }
            | "dtor" virtual_flag "function"                                 { driver.inLambda = false; }
@@ -349,9 +360,9 @@ member_functions : member_functions member_function                         { IN
                  |                                                          { $$ = MemberFunctionList(); }
                  ;
 
-member_function : virtual_flag cv_flags lambda_or_function "identifier" ":" "(" ")"    { driver.inLambda = $3; }
+member_function : virtual_flag cv_flags lambda_or_function "identifier" "=" "(" ")"    { driver.inLambda = $3; }
                           "->" type compound_statement                      { $$ = driver.genMemberFunction(@$, $1, $2.first, $2.second, $4, VariableList(), $10, $11); driver.inLambda = true; }
-                | virtual_flag cv_flags lambda_or_function "identifier" ":" "(" non_empty_parameters
+                | virtual_flag cv_flags lambda_or_function "identifier" "=" "(" non_empty_parameters
                                                                             { driver.openScope(); driver.registerParameters(@7, $7); driver.inLambda = $3; }
                       ")" "->" type compound_statement_no_scope             { $$ = driver.genMemberFunction(@$, $1, $2.first, $2.second, $4, $7, $11, $12); driver.closeScope(); driver.inLambda = true; }
                 ;
@@ -373,6 +384,15 @@ pure_virtual_member_functions : pure_virtual_member_functions pure_virtual_membe
 
 pure_virtual_member_function : "pure" "virtual" cv_flags "identifier" ":" pure_function_type    { $$ = driver.genPureVirtualMemberFunction(@$, $3.first, $3.second, $4, $6); }
                              ;
+
+
+//    -- free members -------------------------------------
+
+free_member_definition : "identifier" "::" "ctor" "identifier" "="          { driver.beginRecord(@$, $1); }
+                                           constructor_lambda               { $$ = driver.genFreeConstructor(@$, $4, $7); INSPIRE_GUARD(@$, $$) driver.endRecord(); }
+                       | "identifier" "::"                                  { driver.beginRecord(@$, $1); }
+                                           member_function                  { INSPIRE_GUARD(@4, $4) $$ = $4; driver.endRecord(); }
+                       ;
 
 
 //    -- function_declarations -------------------------------------
@@ -550,6 +570,18 @@ plain_expression : variable                                               { $$ =
                  | this_expression                                        { $$ = $1; }
                  ;
 
+typed_expressions : non_empty_typed_expressions                           { $$ = $1; }
+                  |                                                       { $$ = ParserTypedExpressionList(); }
+                  ;
+
+non_empty_typed_expressions : non_empty_typed_expressions "," typed_expression    { $1.push_back($3); $$ = $1; }
+                            | typed_expression                                    { $$ = toVector($1); }
+                            ;
+
+typed_expression : expression ":" type                                    { $$ = driver.genTypedExpression(@$, $1, $3); INSPIRE_GUARD(@$, $$.expression); }
+                 | expression                                             { $$ = {$1, $1->getType()}; INSPIRE_GUARD(@$, $$.expression); }
+                 ;
+
 
 // -- variable --
 
@@ -578,10 +610,14 @@ literal : "true"                                                          { $$ =
 
 // -- call --
 
-call : expression "(" expressions ")"                                     { $$ = driver.genCall(@$, $1, $3); }
-     | "identifier" "::" "(" non_empty_expressions ")"                    { $$ = driver.genConstructorCall(@$, $1, $4); }
-     | "identifier" "::" "~" "(" expression ")"                           { $$ = driver.genDestructorCall(@$, $1, $5); }
+call : actual_call                                                        { $$ = $1; }
+     | actual_call "materialize"                                          { $$ = driver.materializeCall(@$, $1); }
      ;
+
+actual_call : expression "(" typed_expressions ")"                        { $$ = driver.genCall(@$, $1, $3); }
+            | "identifier" "::" "(" non_empty_typed_expressions ")"       { $$ = driver.genConstructorCall(@$, $1, $4); }
+            | "identifier" "::" "~" "(" expression ")"                    { $$ = driver.genDestructorCall(@$, $1, $5); }
+            ;
 
 
 // -- lambda --
@@ -642,7 +678,8 @@ list_expression : "[" non_empty_expressions "]"                           { $$ =
 
 // -- initializer --
 
-initializer : "<" type ">" "{" expressions "}"                            { $$ = driver.genInitializerExpr(@$, $2, $5); }
+initializer : "<" type ">" "{" expressions "}"                            { $$ = driver.genInitializerExprTemp(@$, $2, $5); }
+            | "<" type ">" "(" expression ")" "{" expressions "}"         { $$ = driver.genInitializerExpr(@$, $2, $5, $8); }
             | "(" ")"                                                     { $$ = driver.builder.tupleExpr(); }
             | "(" non_empty_expressions ")"                               { $$ = driver.builder.tupleExpr($2); }
             ;
@@ -654,7 +691,7 @@ unary_op : "-" expression                                                 { $$ =
          | expression "." "int"                                           { $$ = driver.genTupleAccess(@3, $1, $3); }
          | expression "->" "identifier"                                   { $$ = driver.genMemberAccess(@3, $1, $3); }
          | expression "->" "int"                                          { $$ = driver.genTupleAccess(@3, $1, $3); }
-         | "CAST" "(" type ")" expression                                 { $$ = driver.builder.castExpr($3, $5); }
+         | "CAST" "(" type ")" expression                                 { $$ = driver.builder.castExpr($3, $5); }                                     %prec CAST
          | expression "." "as" "(" type ")"                               { $$ = driver.genAsExpr(@1, $1, $5); }
          ;
 
@@ -724,8 +761,9 @@ statement_list :                                                          { $$ =
 
 // -- variable declaration --
 
-variable_definition : "var" type "identifier" "=" expression ";"          { $$ = driver.genVariableDefinition(@$, $2, $3, $5); }
-                    | "var" type "identifier" ";"                         { $$ = driver.genVariableDefinition(@$, $2, $3, driver.builder.undefinedVar($2)); }
+variable_definition : "var" type "identifier" "="                         { INSPIRE_GUARD(@3, driver.genVariableDeclaration(@$, $2, $3)); }
+                                                  expression ";"          { $$ = driver.genDeclarationStmt(@$, $3, $6); }
+                    | "var" type "identifier" ";"                         { $$ = driver.genUndefinedDeclarationStmt(@$, $2, $3); }
                     | "auto" "identifier" "=" expression ";"              { $$ = driver.genVariableDefinition(@$, driver.getScalar($4)->getType(), $2, $4); }
                     ;
 
@@ -810,22 +848,17 @@ let_statement : "let" "identifier" "=" expression ";"                     {  dri
               ;
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Precedence list ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// the lowest in list, the highest precedence
+// the lower in this list, the higher the precedence
 
 
 %right    "in";
-%nonassoc "::" ;
 %left     ":";
 %nonassoc ")";
 
-
-%nonassoc "else";
 %right    "=>";
 %left     "spawn" "sync" "sync_all";
-%right    "catch";
-%left     LAMBDA;
 
-%left     "=";
+%right    "=";
 %right    "?";
 %left     "||";
 %left     "&&";
@@ -836,15 +869,8 @@ let_statement : "let" "identifier" "=" expression ";"                     {  dri
 %left     "<" "<=" ">" ">=";
 %left     "+" "-";
 %left     "*" "/" "%";
-
-%nonassoc UDEREF;
-%nonassoc UNOT;
-%nonassoc UMINUS;
-
-%nonassoc "->";
-%nonassoc ".";
-%right    "[";
-%right    "(";
+%right    UDEREF UNOT UMINUS CAST;
+%left     "->" "." "[" "(";
 
 %%
 // code after the second %% is copyed verbatim at the end of the parser .cpp file

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -40,6 +40,12 @@
 
 namespace insieme {
 namespace frontend {
+
+// forward decl
+namespace conversion {
+	class Converter;
+}
+
 namespace utils {
 
 	using namespace llvm;
@@ -63,13 +69,23 @@ namespace utils {
 	std::string getNameForRecord(const clang::NamedDecl* decl, const clang::Type* type, const clang::SourceManager& sm);
 
 	/**
+	 * build a string suffix encoding the template parameters provided
+	 * @param tempArgs template argument list
+	 * @param astContext AstContext used for type name lookup
+	 * @param cStyleName whether to build a name suitable for usage in a C program or for the IR
+	 * @return encoded string value
+	 */
+	std::string buildNameSuffixForTemplate(const clang::TemplateArgumentList& tempArgs, clang::ASTContext& astContext, bool cStyleName = false);
+
+	/**
 	 * build a string to identify a function
 	 * the produced string will be output-compatible, this means that we can use this name
 	 * to name functions and they will not have qualification issues.
-	 * @param funcDecl: the function decl to name
+	 * @param funcDecl the function decl to name
+	 * @param cStyleName whether to build a name suitable for usage in a C program or for the IR
 	 * @return unique string value
 	 */
-	std::string buildNameForFunction(const clang::FunctionDecl* funcDecl);
+	std::string buildNameForFunction(const clang::FunctionDecl* funcDecl, bool cStyleName = false);
 
 	std::string getNameForGlobal(const clang::VarDecl* varDecl, const clang::SourceManager& sm);
 
@@ -86,6 +102,19 @@ namespace utils {
 	 * @return name for the field
 	 */
 	std::string getNameForField(const clang::FieldDecl* fieldDecl, const clang::SourceManager& sm);
+
+	/**
+	 * Get name for tag decl (named or anonymous)
+	 * @param tagDecl the Tag declaration given by clang
+	 * @param cStyleName whether to build a name suitable for usage in a C program or for the IR
+	 * @return pair(name,bool) with bool indicating whether it is externally visible
+	 */
+	std::pair<std::string,bool> getNameForTagDecl(const conversion::Converter& converter, const clang::TagDecl* tagDecl, bool cStyleName = false);
+
+	/**
+	 * Remove leading :: qualifier from name
+	 */
+	std::string stripLeadingGlobalNamespace(const std::string& name);
 
 } // End utils namespace
 } // End frontend namespace

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -56,7 +56,6 @@
 #include "insieme/core/types/subtyping.h"
 #include "insieme/core/lang/array.h"
 #include "insieme/core/lang/pointer.h"
-#include "insieme/core/lang/ir++_extension.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/annotations/naming.h"
 
@@ -191,7 +190,9 @@ namespace backend {
 
 		// convert literal
 		auto toLiteral = [&](const string& value) { return converter.getCNodeManager()->create<c_ast::Literal>(value); };
-		c_ast::ExpressionPtr res = toLiteral(ptr->getStringValue());
+		std::string name = ptr->getStringValue();
+		if (core::annotations::hasAttachedName(ptr)) name = core::annotations::getAttachedName(ptr);
+		c_ast::ExpressionPtr res = toLiteral(name);
 
 		// handle primitive types
 		auto type = ptr->getType();
@@ -316,18 +317,19 @@ namespace backend {
 		return res;
 	}
 
-	c_ast::NodePtr StmtConverter::visitStructExpr(const core::StructExprPtr& ptr, ConversionContext& context) {
+	c_ast::NodePtr StmtConverter::visitInitExpr(const core::InitExprPtr& ptr, ConversionContext& context) {
 		// to be created: an initialization of the corresponding struct
 		//     (<type>){<list of members>}
 
-		auto typeInfo = converter.getTypeManager().getTypeInfo(ptr->getType());
+		auto innerType = core::analysis::getReferencedType(ptr->getType());
+		auto typeInfo = converter.getTypeManager().getTypeInfo(innerType);
 		context.addDependency(typeInfo.definition);
 
 		// get type
 		c_ast::TypePtr type = typeInfo.rValueType;
 
 		// special case.. empty struct: instead (<type>)(<members>) we use *((<type>*)(0))
-		if(auto stp = core::analysis::isStruct(ptr->getType())) {
+		if(auto stp = core::analysis::isStruct(innerType)) {
 			if(!stp->getFields().size()) {
 				auto cmgr = context.getConverter().getCNodeManager();
 				auto zero = cmgr->create("0");
@@ -335,58 +337,47 @@ namespace backend {
 			}
 		}
 
+		// handle unions
+		if(core::analysis::isUnion(innerType)) {
+			auto cmgr = context.getConverter().getCNodeManager();
+			auto initExp = ptr->getInitExprList().back();
+			// special handling for vector initialization (should not be turned into a struct)
+			auto value = convertExpression(context, initExp);
+			auto& refExt = innerType->getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
+			if(refExt.isCallOfRefDeref(initExp)) initExp = core::analysis::getArgument(initExp, 0);
+			if(initExp.isa<core::InitExprPtr>()) {
+				auto initValue = value.isa<c_ast::InitializerPtr>();
+				assert_true(initValue);
+				initValue->type = nullptr;
+			}
+
+			return c_ast::init(type, value);
+		}
+
 		// create init expression
 		c_ast::InitializerPtr init = c_ast::init(type);
 
-		// obtain some helper
-		auto& refExt = converter.getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
-
 		// append initialization values
-		::transform(ptr->getMembers()->getElements(), std::back_inserter(init->values), [&](const core::NamedValuePtr& cur) {
-			core::ExpressionPtr arg = cur->getValue();
-			// skip ref.var if present
-			if(core::analysis::isCallOf(cur->getValue(), refExt.getRefVarInit())) {
-				arg = static_pointer_cast<const core::CallExpr>(cur->getValue())->getArgument(0);
-				if(core::analysis::isCallOf(arg, refExt.getRefDeref())) { arg = static_pointer_cast<const core::CallExpr>(arg)->getArgument(0); }
-			}
-			return convert(context, arg);
+		::transform(ptr->getInitExprList(), std::back_inserter(init->values), [&](const core::ExpressionPtr& cur) {
+			return convertExpression(context, cur);
 		});
 
+		// support empty initialization
+		if(init->values.empty()) {
+			return init;
+		}
+
 		// remove last element if it is a variable sized struct
-		if(core::lang::isUnknownSizedArray(ptr->getMembers()->getElements().back())) {
+		if(core::lang::isUnknownSizedArray(ptr->getInitExprList().back())) {
 			assert_false(init->values.empty());
 			init->values.pop_back();
 		}
 
+		// if array, initialize inner data member
+		if(core::lang::isFixedSizedArray(innerType)) init = c_ast::init(type, c_ast::init(init->values));
+
 		// return completed
 		return init;
-	}
-
-	c_ast::NodePtr StmtConverter::visitUnionExpr(const core::UnionExprPtr& ptr, ConversionContext& context) {
-		// to be created: an initialization of the corresponding union
-		//     (<type>){<single member>}
-
-		core::TypePtr unionType = ptr->getType();
-		auto typeInfo = converter.getTypeManager().getTypeInfo(unionType);
-		context.addDependency(typeInfo.definition);
-
-		// get type and create init expression
-		c_ast::TypePtr type = typeInfo.rValueType;
-
-		auto cmgr = context.getConverter().getCNodeManager();
-
-		// special handling for vector initialization (should not be turned into a struct)
-		auto value = convertExpression(context, ptr->getMember());
-		if(core::lang::isFixedSizedArray(ptr->getMember())) {
-			auto initValue = value.isa<c_ast::InitializerPtr>();
-			assert_true(initValue);
-			auto init0 = initValue->values[0].isa<c_ast::InitializerPtr>();
-			assert_true(init0);
-			value = cmgr->create<c_ast::VectorInit>(init0->values);
-		}
-
-		return c_ast::init(type, cmgr->create(ptr->getMemberName()->getValue()), value);
-		//		return c_ast::init(type, convert(context, ptr->getMember()));
 	}
 
 	c_ast::NodePtr StmtConverter::visitTupleExpr(const core::TupleExprPtr& ptr, ConversionContext& context) {
@@ -444,16 +435,12 @@ namespace backend {
 		bool toBeAllocatedOnStack(const core::ExpressionPtr& initValue) {
 			auto& refExt = initValue->getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
 
-			// if it is a call to a ref.var => put it on the stack
-			if (refExt.isCallOfRefVar(initValue) || refExt.isCallOfRefVarInit(initValue)) return true;
+			// if it is a call to a ref.new => put it on the heap
+			if (refExt.isCallOfRefNew(initValue) || refExt.isCallOfRefNewInit(initValue)) return false;
 
-			// if it is a constructor call ..
-			if(core::CallExprPtr call = initValue.isa<core::CallExprPtr>()) { return core::analysis::isCallOf(call[0], refExt.getRefVarInit()); }
-
-			// everything else is heap based
-			return false;
+			// everything else is stack based
+			return true;
 		}
-
 	}
 
 	c_ast::NodePtr StmtConverter::visitDeclarationStmt(const core::DeclarationStmtPtr& ptr, ConversionContext& context) {
@@ -462,14 +449,17 @@ namespace backend {
 		core::IRBuilder builder(ptr->getNodeManager());
 
 		core::VariablePtr var = ptr->getVariable();
-		
+
 		core::ExpressionPtr init = ptr->getInitialization();
 
 		core::TypePtr plainType = var->getType();
 
 		// decide storage location of variable
 		VariableInfo::MemoryLocation location = VariableInfo::NONE;
-		if(core::lang::isReference(plainType)) {
+		//assigning from the same type (not uninitialized) doesn't regard the location
+		if (plainType == init->getType() && !core::analysis::isUndefinedInitalization(ptr)) {
+			location = VariableInfo::INDIRECT;
+		} else if(core::lang::isReference(plainType)) {
 			if(toBeAllocatedOnStack(init)) {
 				location = VariableInfo::DIRECT;
 			} else {
@@ -489,11 +479,18 @@ namespace backend {
 			context.getDependencies().insert(context.getConverter().getTypeManager().getTypeInfo(elementType).definition);
 		}
 
-		// create declaration statement
 		c_ast::ExpressionPtr initValue = convertInitExpression(context, init);
 
-		// get rid of & operator in front of stack-based constructor calls
-		if(core::analysis::isConstructorCall(init) && location == VariableInfo::DIRECT) { initValue = c_ast::deref(initValue); }
+		// if LHS is cpp ref/rref, remove ref on RHS
+		if(core::lang::isCppReference(var) || core::lang::isCppRValueReference(var)) {
+			auto unOp = initValue.isa<c_ast::UnaryOperationPtr>();
+			if(unOp && unOp->operation == c_ast::UnaryOperation::Reference) initValue = unOp->operand.as<c_ast::ExpressionPtr>();
+		}
+
+		// if the declared variable is undefined, we don't create an initialization value
+		if(core::analysis::isUndefinedInitalization(ptr)) {
+			initValue = c_ast::ExpressionPtr();
+		}
 
 		// check if we have an intercepted default ctor call (e.g., std::stringstream s;)
 		// the interceptor adds a zero initalization that would be converted into something like
@@ -514,20 +511,13 @@ namespace backend {
 
 	c_ast::ExpressionPtr StmtConverter::convertInitExpression(ConversionContext& context, const core::ExpressionPtr& init) {
 		auto& refExt = converter.getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
-		auto manager = converter.getCNodeManager();
-
-		// test whether initialization is required ...
-		if(core::analysis::isCallOf(init, refExt.getRefVar())) {
-			return c_ast::ExpressionPtr();
-		}
 
 		// TODO: handle initUndefine and init struct cases
 
 		core::ExpressionPtr initValue = init;
-		// drop ref_cast
-		if(core::analysis::isCallOf(initValue, refExt.getRefCast())) { initValue = core::analysis::getArgument(initValue, 0); }
-		// drop ref.var ...
-		if(core::analysis::isCallOf(initValue, refExt.getRefVarInit())) { initValue = core::analysis::getArgument(initValue, 0); }
+
+		// drop ref_temp ...
+		if(core::analysis::isCallOf(initValue, refExt.getRefTempInit())) { initValue = core::analysis::getArgument(initValue, 0); }
 
 		return convertExpression(context, initValue);
 	}

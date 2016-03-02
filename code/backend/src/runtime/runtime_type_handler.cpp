@@ -88,6 +88,11 @@ namespace runtime {
 				// use runtime definition of the id
 				return type_info_utils::createInfo(converter.getFragmentManager(), "irt_type_id", "irt_all_impls.h");
 			}
+			
+			if(extension.isWorkItemRange(type)) {
+				// use runtime definition of the work item range type
+				return type_info_utils::createInfo(converter.getFragmentManager(), "irt_work_item_range", "irt_all_impls.h");
+			}
 
 			if(DataItem::isLWDataItemType(type)) {
 				// create a substitution struct - the same struct + the type id

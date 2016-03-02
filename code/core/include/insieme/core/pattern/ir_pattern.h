@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -212,20 +212,20 @@ namespace pattern {
 			return node(core::NT_Expressions, expressions);
 		}
 
-		inline TreePattern structExpr(const ListPattern& members) {
-			return node(core::NT_StructExpr, members);
+		inline TreePattern initExpr(const TreePattern& memExpr, const ListPattern& inits, const TreePattern& type = any) {
+			return node(core::NT_InitExpr, single(type) << single(memExpr) << inits);
 		}
-
-		inline TreePattern unionExpr(const TreePattern& memberName, const TreePattern& member) {
-			return node(core::NT_UnionExpr, single(memberName) << single(member));
-		}
-
-		inline TreePattern markerExpr(const TreePattern& subExpression, const TreePattern& id) {
-			return node(core::NT_MarkerExpr, single(subExpression) << single(id));
+		
+		inline TreePattern markerExpr(const TreePattern& subExpression, const TreePattern& id, const TreePattern& type = any) {
+			return node(core::NT_MarkerExpr, single(type) << single(id) << single(subExpression));
 		}
 
 		inline TreePattern lambda(const TreePattern& type, const ListPattern& parameters, const TreePattern& body) {
 			return node(core::NT_Lambda, single(type) << single(node(core::NT_Parameters, parameters)) << wrapBody(body));
+		}
+
+		inline TreePattern lambdaExpr() {
+			return node(core::NT_LambdaExpr, single(any) << single(any) << single(any));
 		}
 
 		inline TreePattern lambdaExpr(const TreePattern& variable, const TreePattern& lambdaDef) {
@@ -282,12 +282,12 @@ namespace pattern {
 			return node(core::NT_SwitchStmt, single(expression) << cases << single(defaultCase));
 		}
 
-		inline TreePattern returnStmt(const TreePattern& returnExpression) {
-			return node(core::NT_ReturnStmt, single(returnExpression));
+		inline TreePattern returnStmt(const TreePattern& returnExpr) {
+			return node(core::NT_ReturnStmt, single(returnExpr) << any);
 		}
 
 		inline TreePattern markerStmt(const TreePattern& subExpr, const TreePattern& id) {
-			return node(core::NT_MarkerStmt, single(subExpr) << single(id));
+			return node(core::NT_MarkerStmt, single(id) << single(subExpr));
 		}
 
 		inline const TreePattern& continueStmt() {
@@ -362,8 +362,8 @@ namespace pattern {
 			                type);
 		}
 
-		inline TreePattern refVar(const TreePattern& expr = any) {
-			return callExpr(lazyAtom([](core::NodeManager& mgr) { return mgr.getLangExtension<lang::ReferenceExtension>().getRefVar(); }), expr);
+		inline TreePattern refTemp(const TreePattern& expr = any) {
+			return callExpr(lazyAtom([](core::NodeManager& mgr) { return mgr.getLangExtension<lang::ReferenceExtension>().getRefTemp(); }), expr);
 		}
 
 		inline TreePattern refNew(const TreePattern& expr = any) {

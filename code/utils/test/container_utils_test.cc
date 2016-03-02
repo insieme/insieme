@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -40,6 +40,7 @@
 #include <list>
 #include <vector>
 #include <map>
+#include <set>
 
 #include <iostream>
 
@@ -272,11 +273,26 @@ TEST(ContainerUtils, transform) {
 	static_assert(std::is_same<decltype(result7), vector<int>>::value, "Unexpected type from transform map -> vector");
 	EXPECT_TRUE(equals(listA, result7));
 
+	// changed container type (vector -> set)
+	auto result8 = transform<std::set>(result7, [](const int val) { return val; });
+	static_assert(std::is_same<decltype(result8), std::set<int>>::value, "Unexpected type from transform vector -> set");
+	EXPECT_TRUE(equals(listA, result8));
+
 	// maps
 	std::map<string, int> mapA{{"one", 1}, {"two", 2}, {"Jorg", 42}};
 	std::map<int, string> mapB{{1, "one"}, {2, "two"}, {42, "Jorg"}};
 	auto mapResult = transform(mapA, [](const pair<string, int>& p) { return std::make_pair(p.second, p.first); });
 	EXPECT_TRUE(equals(mapB, mapResult));
+}
+
+TEST(ContainerUtils, IsContainer) {
+	using AContainer = std::vector<int>;
+	using AlsoAContainer = std::map<char, string>;
+	using NotAContainer = struct bla { };
+
+	EXPECT_TRUE(is_container<AContainer>::value);
+	EXPECT_TRUE(is_container<AlsoAContainer>::value);
+	EXPECT_FALSE(is_container<NotAContainer>::value);
 }
 
 TEST(Tuple, RemoveHead) {
