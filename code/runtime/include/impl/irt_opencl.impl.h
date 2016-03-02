@@ -244,7 +244,7 @@ void _irt_opencl_execute(unsigned id, irt_opencl_ndrange_func ndrange,
     /* ... */
     for (unsigned opt = 0; opt < num_optionals; ++opt) {
         /* 
-         * in order to be compatible with C89 we enforce that an optional
+         * in order to be compatible with C99 we enforce that an optional
          * argument must have a size of at least uint8 and max uint64!
          * furthermore dealing with pointers would be broken per-se and complex
          * types can only be modeled using 'struct { vla }' which is _not_
@@ -264,10 +264,10 @@ void _irt_opencl_execute(unsigned id, irt_opencl_ndrange_func ndrange,
                 data = va_arg(optionals, uint64);
                 break;
         default:
-                IRT_ASSERT(false, IRT_ERR_OCL, "optional argument must fit in uint64");
+                IRT_ASSERT(false, IRT_ERR_OCL, "optional argument must fit in uint64, size %d", size);
                 break;
         }       
-        result = clSetKernelArg(impl_data->kernel, num_requirements + opt, sizeof(data), &data);
+        result = clSetKernelArg(impl_data->kernel, num_requirements + opt, size, &data);
         /* iff the latter fails, the generated code has flaws and thus cannot continue */
         IRT_ASSERT(result == CL_SUCCESS, IRT_ERR_OCL, "clSetKernelArg returned with %d", result);
     }
