@@ -63,6 +63,7 @@ namespace runtime {
 	    : converter(converter), typeTable(TypeTable::get(converter)), implTable(ImplementationTable::get(converter)), infoTable(MetaInfoTable::get(converter)) {
 		// add include to context definition and type and implementation table
 		addInclude("irt_all_impls.h");
+		addInclude("stddef.h");
 		addDependency(TypeTable::get(converter));
 		addDependency(ImplementationTable::get(converter));
 	}
