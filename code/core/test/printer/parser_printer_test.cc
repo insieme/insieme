@@ -357,6 +357,27 @@ namespace parser {
 			                           "    var ref<someoldname> y;"
 			                           "}"));
 
+		//test return statements containing variables
+		EXPECT_TRUE(test_statement(nm, "def struct A { a : int<4>; };"
+		                               "def foo1 = () -> A {"
+		                               "  return A::(ref_temp(type_lit(A)));" // this is actually using wrong semantics now
+		                               "};"
+		                               "def foo2 = () -> A {"
+		                               "  return var ref<A> v0 = A::(v0);" // this is the correct way to do it
+		                               "};"
+		                               "def foo3 = () -> int<4> {"
+		                               "  return 5;"
+		                               "};"
+		                               "def foo4 = () -> int<4> {"
+		                               "  var ref<int<4>> v = 5;"
+		                               "  return v;"
+		                               "};"
+		                               "{"
+		                               "  foo1();"
+		                               "  foo2();"
+		                               "  foo3();"
+		                               "  foo4();"
+		                               "}"));
 	}
 
 
