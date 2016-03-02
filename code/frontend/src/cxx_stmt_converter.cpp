@@ -36,6 +36,7 @@
 
 #include "insieme/frontend/stmt_converter.h"
 
+#include "insieme/frontend/utils/conversion_utils.h"
 #include "insieme/frontend/utils/debug.h"
 #include "insieme/frontend/utils/macros.h"
 #include "insieme/frontend/utils/source_locations.h"
@@ -116,7 +117,10 @@ namespace conversion {
 
 		// check if we have a return value
 		if(clang::Expr* expr = retStmt->getRetValue()) {
-			irRetStmt = builder.returnStmt(converter.convertCxxArgExpr(expr));
+			auto returnExpr = converter.convertCxxArgExpr(expr);
+			auto returnVar = builder.variable(returnExpr->getType());
+			returnExpr = utils::fixTempMemoryInInitExpression(returnVar, returnExpr);
+			irRetStmt = builder.returnStmt(returnExpr, returnVar);
 		}
 
 		retIr.push_back(irRetStmt);

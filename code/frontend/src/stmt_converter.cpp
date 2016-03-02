@@ -170,7 +170,10 @@ namespace conversion {
 
 		// check if we have a return value
 		if(clang::Expr* expr = retStmt->getRetValue()) {
-			irRetStmt = builder.returnStmt(converter.convertExpr(expr));
+			auto returnExpr = converter.convertExpr(expr);
+			auto returnVar = builder.variable(returnExpr->getType());
+			returnExpr = utils::fixTempMemoryInInitExpression(returnVar, returnExpr);
+			irRetStmt = builder.returnStmt(returnExpr, returnVar);
 		}
 
 		retIr.push_back(irRetStmt);

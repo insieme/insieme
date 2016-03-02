@@ -133,6 +133,39 @@ def IMP_z4 = function () -> ref<IMP_NonTrivial,t,f,cpp_rref> {
 };
 )"
 
+struct VarReturn { int i; int j; };
+VarReturn v;
+const VarReturn& v1() {
+	return VarReturn();
+}
+VarReturn* v2() {
+	return new VarReturn();
+}
+const VarReturn& v3() {
+	return VarReturn(v);
+}
+const VarReturn& v4() {
+	return VarReturn(VarReturn());
+}
+VarReturn* v5() {
+	return new VarReturn(v);
+}
+VarReturn* v6() {
+	return new VarReturn(VarReturn());
+}
+VarReturn&& v7() {
+	return (VarReturn){};
+}
+VarReturn&& v8() {
+	return (VarReturn){1};
+}
+VarReturn&& v9() {
+	return (VarReturn){1, 2};
+}
+VarReturn&& v10() {
+	return (VarReturn){{0}};
+}
+
 
 void intTest() {
 	#pragma test expect_ir(X_FUNS, R"({
@@ -280,8 +313,75 @@ void nonTrivialTest() {
 	}
 }
 
+void returnVariableTest() {
+
+	int magic; // DO NOT REMOVE ME
+
+	#pragma test expect_ir(R"(
+		def struct IMP_VarReturn {
+				i : int<4>;
+				j : int<4>;
+		};
+		def IMP_v1 = function () -> ref<IMP_VarReturn,t,f,cpp_ref> {
+				return var ref<IMP_VarReturn> v0 = IMP_VarReturn::(v0);
+		};
+		def IMP_v2 = function () -> ptr<IMP_VarReturn> {
+				return ptr_from_ref(IMP_VarReturn::(ref_new(type_lit(IMP_VarReturn))));
+		};
+		def IMP_v3 = function () -> ref<IMP_VarReturn,t,f,cpp_ref> {
+				return var ref<IMP_VarReturn> v0 = IMP_VarReturn::(v0, ref_kind_cast(lit("v":ref<IMP_VarReturn>), type_lit(cpp_ref)));
+		};
+		def IMP_v4 = function () -> ref<IMP_VarReturn,t,f,cpp_ref> {
+				return var ref<IMP_VarReturn> v0 = IMP_VarReturn::(v0, ref_kind_cast(IMP_VarReturn::(ref_temp(type_lit(IMP_VarReturn))), type_lit(cpp_rref)));
+		};
+		def IMP_v5 = function () -> ptr<IMP_VarReturn> {
+				return ptr_from_ref(IMP_VarReturn::(ref_new(type_lit(IMP_VarReturn)), ref_kind_cast(lit("v":ref<IMP_VarReturn>), type_lit(cpp_ref))));
+		};
+		def IMP_v6 = function () -> ptr<IMP_VarReturn> {
+				return ptr_from_ref(IMP_VarReturn::(ref_new(type_lit(IMP_VarReturn)), ref_kind_cast(IMP_VarReturn::(ref_temp(type_lit(IMP_VarReturn))), type_lit(cpp_rref))));
+		};
+		def IMP_v7 = function () -> ref<IMP_VarReturn,f,f,cpp_rref> {
+				return var ref<IMP_VarReturn> v0 = <ref<IMP_VarReturn,f,f,plain>>(v0) {0, 0};
+		};
+		def IMP_v8 = function () -> ref<IMP_VarReturn,f,f,cpp_rref> {
+				return var ref<IMP_VarReturn> v0 = <ref<IMP_VarReturn,f,f,plain>>(v0) {1, 0};
+		};
+		def IMP_v9 = function () -> ref<IMP_VarReturn,f,f,cpp_rref> {
+				return var ref<IMP_VarReturn> v0 = <ref<IMP_VarReturn,f,f,plain>>(v0) {1, 2};
+		};
+		def IMP_v10 = function () -> ref<IMP_VarReturn,f,f,cpp_rref> {
+				return var ref<IMP_VarReturn> v0 = <ref<IMP_VarReturn,f,f,plain>>(v0) {0, 0};
+		};
+		{
+				IMP_v1() materialize ;
+				IMP_v2();
+				IMP_v3() materialize ;
+				IMP_v4() materialize ;
+				IMP_v5();
+				IMP_v6();
+				IMP_v7() materialize ;
+				IMP_v8() materialize ;
+				IMP_v9() materialize ;
+				IMP_v10() materialize ;
+		}
+	)")
+	{
+		v1();
+		v2();
+		v3();
+		v4();
+		v5();
+		v6();
+		v7();
+		v8();
+		v9();
+		v10();
+	}
+}
+
 int main() {
 	intTest();
 	trivialTest();
 	nonTrivialTest();
+	returnVariableTest();
 }
