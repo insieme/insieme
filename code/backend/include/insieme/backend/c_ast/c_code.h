@@ -160,6 +160,11 @@ namespace backend {
 			 * to the Printable interface.
 			 */
 			virtual std::ostream& printTo(std::ostream& out) const;
+
+			/**
+			 * List of fragments which compose this code
+			 */
+			const vector<CodeFragmentPtr>& getFragments() const { return fragments; }
 		};
 
 		/**
