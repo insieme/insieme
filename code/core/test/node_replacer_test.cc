@@ -249,5 +249,106 @@ namespace core {
 		EXPECT_EQ("D<C<X,Y,Z>>", toString(*transform::replaceAll(nm, replacements)));
 	}
 
+	TEST(TransformBottomUp, Basic) {
+		NodeManager nm;
+		IRBuilder builder(nm);
+		auto& basic = builder.getLangBasic();
+
+		auto comp = builder.parseStmt(R"({
+			var int<4> a;
+			var int<4> b;
+			if(true) {
+				var int<4> c = a;
+			}
+		})");
+
+		auto res = checks::check(comp);
+		ASSERT_TRUE(res.empty()) << res;
+		ASSERT_TRUE(analysis::contains(comp, basic.getInt4()));
+		ASSERT_FALSE(analysis::contains(comp, basic.getReal4()));
+
+		comp = transform::transformBottomUpGen(comp, [&](const TypePtr& typePtr) {
+			if(basic.isInt4(typePtr)) {
+				return basic.getReal4();
+			}
+			return typePtr;
+		}, transform::globalReplacement);
+
+		res = checks::check(comp);
+		EXPECT_TRUE(res.empty()) << res;
+		EXPECT_FALSE(analysis::contains(comp, basic.getInt4()));
+		EXPECT_TRUE(analysis::contains(comp, basic.getReal4()));
+	}
+
+	TEST(TransformBottomUp, Limited) {
+		NodeManager nm;
+		IRBuilder builder(nm);
+		auto& basic = builder.getLangBasic();
+
+		auto comp = builder.parseAddressesStatement(R"(
+		def fun = () -> unit {
+			var int<4> c;
+			$c$;
+		};
+		{
+			var int<4> a;
+			$a$;
+			fun();
+		})");
+		ASSERT_TRUE(comp.size() == 2);
+
+		auto root = comp[0].getRootNode();
+		auto res = checks::check(root);
+		ASSERT_TRUE(res.empty()) << res;
+		ASSERT_EQ(basic.getInt4(), comp[0].as<ExpressionPtr>()->getType());
+		ASSERT_EQ(basic.getInt4(), comp[1].as<ExpressionPtr>()->getType());
+
+		root = transform::transformBottomUpGen(root, [&](const TypePtr& typePtr) {
+			if(basic.isInt4(typePtr)) {
+				return basic.getReal4();
+			}
+			return typePtr;
+		}, transform::localReplacement);
+
+		res = checks::check(root);
+
+		EXPECT_TRUE(res.empty()) << res;
+		EXPECT_EQ(basic.getReal4(), comp[0].switchRoot(root).as<ExpressionPtr>()->getType());
+		EXPECT_EQ(basic.getInt4(), comp[1].switchRoot(root).as<ExpressionPtr>()->getType());
+	}
+
+	TEST(TransformBottomUp, Nested) {
+		NodeManager nm;
+		IRBuilder builder(nm);
+
+		auto comp = builder.parseStmt(R"({
+			{
+				{ }
+				5;
+				{ 6; { } }
+				{ { {} } }
+				{ { { 5; { } } } }
+				{ }
+			}
+		})");
+
+		auto res = checks::check(comp);
+		ASSERT_TRUE(res.empty()) << res;
+		ASSERT_TRUE(analysis::contains(comp, builder.compoundStmt()));
+
+		comp = transform::transformBottomUpGen(comp, [&](const CompoundStmtPtr& compound) {
+			StatementList statements;
+			for(auto stmt: compound) {
+				auto compStmt = stmt.isa<CompoundStmtPtr>();
+				if(!compStmt || compStmt.size() > 0) statements.push_back(stmt);
+			}
+			return builder.compoundStmt(statements);
+		}, transform::globalReplacement);
+
+		res = checks::check(comp);
+		EXPECT_TRUE(res.empty()) << res;
+		EXPECT_FALSE(analysis::contains(comp, builder.compoundStmt()));
+	}
+
 } // end namespace core
 } // end namespace insieme
