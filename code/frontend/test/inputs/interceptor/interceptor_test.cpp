@@ -89,7 +89,7 @@ void intercept_memFunc2() {
 void intercept_fieldAccess() {
 	#pragma test expect_ir(R"({
 		var ref<IMP_ns_colon__colon_S,f,f,plain> v0 = lit("IMP_ns_colon__colon_S::ctor" : IMP_ns_colon__colon_S::())(v0);
-		cxx_style_assignment(ref_member_access(v0,lit("a"),type_lit(int<4>)), *ref_member_access(v0,lit("b"),type_lit(int<4>)));
+		ref_member_access(v0,lit("a"),type_lit(int<4>)) = *ref_member_access(v0,lit("b"),type_lit(int<4>));
 	})")
 	{
 		ns::S s2;

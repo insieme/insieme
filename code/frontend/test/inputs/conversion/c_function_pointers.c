@@ -36,7 +36,7 @@
 
 int foo(int a) { return a; }
 
-int main() {	
+int main() {
 
 	// TYPES //////////////////////////////////////////////////////////////
 
@@ -47,7 +47,7 @@ int main() {
 	void(*vvFuncPtr)(void);
 
 	// EXPRESSIONS //////////////////////////////////////////////////////////////
-	
+
 	#define FOO_FUN "alias foo_type = (int<4>) -> int<4>; def IMP_foo = (a: int<4>)->int<4> { return a; }; alias foo_ptr_type = ptr<foo_type,t,f>; "
 	{ }
 
@@ -56,32 +56,32 @@ int main() {
 		&foo;
 		1; // to make INSPIRE different from next case
 	}
-	
+
 	#pragma test expect_ir(FOO_FUN "{ ptr_of_function(IMP_foo); 2; }")
 	{
 		foo;
 		2; // to make INSPIRE different from previous case
 	}
-	
+
 	#pragma test expect_ir(FOO_FUN "{ var ref<foo_ptr_type,f,f> v0; !ptr_ne(*v0, ptr_null(type_lit(foo_type), type_lit(t), type_lit(f))); }")
 	{
 		int (*ptr)(int);
 		!ptr;
 	}
-	
+
 	#pragma test expect_ir(FOO_FUN "{ var ref<foo_ptr_type,f,f> v0; ptr_deref(*v0)(5); }")
 	{
 		int (*ptr)(int);
 		ptr(5);
 	}
-	
-	#pragma test expect_ir(FOO_FUN "{ var ref<foo_ptr_type,f,f> v0; c_style_assignment(v0, ptr_of_function(IMP_foo)); }")
+
+	#pragma test expect_ir(FOO_FUN "{ var ref<foo_ptr_type,f,f> v0; v0 = ptr_of_function(IMP_foo); }")
 	{
 		int (*ptr)(int);
 		ptr = foo;
 	}
-	
-	#pragma test expect_ir(FOO_FUN "{ var ref<foo_ptr_type,f,f> v0; c_style_assignment(v0, ptr_of_function(IMP_foo)); }")
+
+	#pragma test expect_ir(FOO_FUN "{ var ref<foo_ptr_type,f,f> v0; v0 = ptr_of_function(IMP_foo); }")
 	{
 		int (*ptr)(int);
 		ptr = &foo;
@@ -93,7 +93,7 @@ int main() {
 	}
 
 	// INIT EXPRESSIONS ///////////////////////////////////////////////////////////
-	
+
 	#pragma test expect_ir(FOO_FUN "{ var ref<foo_ptr_type,f,f> v0 = ptr_of_function(IMP_foo); }")
 	{
 		int (*ptr)(int) = foo;

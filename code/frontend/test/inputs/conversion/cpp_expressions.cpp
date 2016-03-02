@@ -262,61 +262,61 @@ int main() {
 
 	// COMPOUND //////////////////////////////////////////////////////////////
 
-	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = 1; cxx_style_assignment(v1, *v1+1); }")
+	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = 1; v1 = *v1+1; }")
 	{
 		int a = 1;
 		a += 1;
 	}
 
-	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = 1; cxx_style_assignment(v1, *v1-2); }")
+	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = 1; v1 = *v1-2; }")
 	{
 		int a = 1;
 		a -= 2;
 	}
 
-	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = 1; cxx_style_assignment(v1, *v1/1); }")
+	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = 1; v1 = *v1/1; }")
 	{
 		int a = 1;
 		a /= 1;
 	}
 
-	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = 1; cxx_style_assignment(v1, *v1*5); }")
+	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = 1; v1 = *v1*5; }")
 	{
 		int a = 1;
 		a *= 5;
 	}
 
-	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = 1; cxx_style_assignment(v1, *v1%5); }")
+	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = 1; v1 = *v1%5; }")
 	{
 		int a = 1;
 		a %= 5;
 	}
 
-	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = 1; cxx_style_assignment(v1, *v1&5); }")
+	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = 1; v1 = *v1&5; }")
 	{
 		int a = 1;
 		a &= 5;
 	}
 
-	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = 1; cxx_style_assignment(v1, *v1|5); }")
+	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = 1; v1 = *v1|5; }")
 	{
 		int a = 1;
 		a |= 5;
 	}
 
-	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = 1; cxx_style_assignment(v1, *v1 ^ 5); }")
+	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = 1; v1 = *v1 ^ 5; }")
 	{
 		int a = 1;
 		a ^= 5;
 	}
 
-	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = 1; cxx_style_assignment(v1, int_lshift(*v1, 5)); }")
+	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = 1; v1 = int_lshift(*v1, 5); }")
 	{
 		int a = 1;
 		a <<= 5;
 	}
 
-	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = 1; cxx_style_assignment(v1, int_rshift(*v1, 5)); }")
+	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = 1; v1 = int_rshift(*v1, 5); }")
 	{
 		int a = 1;
 		a >>= 5;
@@ -324,13 +324,13 @@ int main() {
 
 	// ASSIGNMENT //////////////////////////////////////////////////////////////
 
-	#pragma test expect_ir("{ var ref<int<4>,f,f> v1; cxx_style_assignment(v1, 5); }")
+	#pragma test expect_ir("{ var ref<int<4>,f,f> v1; v1 = 5; }")
 	{
 		int a;
 		a = 5;
 	}
 
-	#pragma test expect_ir("{ var ref<int<4>,f,f,plain> v0; var ref<int<4>,f,f,plain> v1; cxx_style_assignment(v0, *cxx_style_assignment(v1, 1)); }")
+	#pragma test expect_ir("{ var ref<int<4>,f,f,plain> v0; var ref<int<4>,f,f,plain> v1; v0 = *cxx_style_assignment(v1, 1); }")
 	{
 		int a, b;
 		a = b = 1;
@@ -343,14 +343,14 @@ int main() {
 
 	//===---------------------------------------------------------------------------------------------------------------------------------- MISCELLANEOUS ---===
 
-	#pragma test expect_ir("{ var ref<uint<8>,f,f,plain> v0 = sizeof(type_lit(real<8>)); cxx_style_assignment(v0, sizeof(type_lit(uint<8>))); }")
+	#pragma test expect_ir("{ var ref<uint<8>,f,f,plain> v0 = sizeof(type_lit(real<8>)); v0 = sizeof(type_lit(uint<8>)); }")
 	{
 		unsigned long i = sizeof(double);
 		i = sizeof(i);
 	}
 
 	// FIXME: unsuported
-	// #pr agma test expect_ir("{ var ref<uint<8>,f,f,plain> v0 = sizeof(type_lit(real<8>)); cxx_style_assignment(v0, sizeof(type_lit(uint<8>)));
+	// #pr agma test expect_ir("{ var ref<uint<8>,f,f,plain> v0 = sizeof(type_lit(real<8>)); v0 = sizeof(type_lit(uint<8>));
 	// }")
 	// {
 	//     unsigned long i = alignof(double);
@@ -367,7 +367,7 @@ int main() {
 	#pragma test expect_ir(R"(
 		def struct IMP_Trivial {};
 		var ref<array<IMP_Trivial,2>,f,f,plain> v0 = *<ref<array<IMP_Trivial,2>,f,f,plain>>(v0) {
-			ref_cast(IMP_Trivial::(ref_temp(type_lit(IMP_Trivial))), type_lit(f), type_lit(f), type_lit(cpp_rref)), 
+			ref_cast(IMP_Trivial::(ref_temp(type_lit(IMP_Trivial))), type_lit(f), type_lit(f), type_lit(cpp_rref)),
 			ref_cast(IMP_Trivial::(ref_temp(type_lit(IMP_Trivial))), type_lit(f), type_lit(f), type_lit(cpp_rref))
 		};)")
 	Trivial trivials[2] = {Trivial(), Trivial()};

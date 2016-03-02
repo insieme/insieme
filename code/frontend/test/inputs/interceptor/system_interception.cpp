@@ -72,7 +72,7 @@ int main() {
 	})")
 	{
 		std::cout << "Test";
-		//std::operator<<<std::char_traits<char>>(std::cout, "Test");
+		// BE output: std::operator<<<std::char_traits<char>>(std::cout, "Test");
 	}
 
 	#pragma test expect_ir(R"({
