@@ -39,7 +39,6 @@
 #include <boost/algorithm/string/predicate.hpp>
 
 #include "insieme/core/lang/extension.h"
-#include "insieme/core/lang/reference.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 
 namespace insieme {
@@ -55,32 +54,27 @@ namespace lang {
 		 */
 		friend class core::NodeManager;
 
-		// import data-path extension for defined literals
-		IMPORT_MODULE(ReferenceExtension);
-
 		/**
 		 * Creates a new instance based on the given node manager.
 		 */
 		EnumExtension(core::NodeManager& manager) : core::lang::Extension(manager) {}
 
 		LANG_EXT_DERIVED_WITH_NAME(EnumEquals, "enum_eq",
-			"(x : ('a, 'b), y : ('a, 'b)) -> bool {		"
-			"    return x.1 == y.1;				"
-			"}									"
+			"(x : (type<'a>, 'b), y : (type<'a>, 'b)) -> bool {	 "
+			"    return x.1 == y.1;                              "
+			"}                                                   "
 		);
 
-		LANG_EXT_DERIVED_WITH_NAME(IntToEnum, "int_to_enum",
-			"(t : type<('a, 'b)>, v : 'b) -> ('a, 'b) {	"
-			"	var ref<('a, 'b)> r;			"
-			"	r->1 = v;						"
-			"	return *r;						"
-			"}									"
+		LANG_EXT_DERIVED_WITH_NAME(EnumFromInt, "enum_from_int",
+			"(t : type<(type<'a>, 'b)>, v : 'b) -> (type<'a>, 'b) {  "
+			"    return (type_lit('a), v);                           "
+			"}                                                       "
 		);
 
 		LANG_EXT_DERIVED_WITH_NAME(EnumToInt, "enum_to_int",
-			"( e : ('a, 'b)) -> 'b {				"
-			"	return e.1;						"
-			"}									"
+			"( e : (type<'a>, 'b)) -> 'b {  "
+			"    return e.1;                "
+			"}                              "
 		);
 
 	};
@@ -124,14 +118,20 @@ namespace lang {
 			return value;
 		}
 
+		string getName() const {
+			return getEnumEntryName().as<core::GenericTypePtr>()->getName()->getValue();
+		}
+
 	};
 
 	class EnumDefinition {
 
 		GenericTypePtr enumName;
+		TypePtr intType;
 		std::vector<GenericTypePtr> domain;
 
-		EnumDefinition(const GenericTypePtr& name, const std::vector<GenericTypePtr>& entries) : enumName(name), domain(entries) { }
+		EnumDefinition(const GenericTypePtr& name, const TypePtr& intType, const std::vector<GenericTypePtr>& entries)
+			: enumName(name), intType(intType), domain(entries) {}
 
 	  public:
 		EnumDefinition(const NodePtr& node);
@@ -147,16 +147,20 @@ namespace lang {
 
 		static bool isEnumDefinition(const NodePtr& node);
 
-		static GenericTypePtr create(const GenericTypePtr& name, const std::vector<GenericTypePtr>& entries = {}) {
-			return static_cast<GenericTypePtr>(EnumDefinition(name, entries));
+		static GenericTypePtr create(const GenericTypePtr& name, const TypePtr& intType, const std::vector<GenericTypePtr>& entries = {}) {
+			return static_cast<GenericTypePtr>(EnumDefinition(name, intType, entries));
 		}
 
 		operator GenericTypePtr() const;
-		
+
 		// --- observers and mutators ---
 
 		const TypePtr getEnumName() const {
 			return enumName;
+		}
+
+		const TypePtr getIntType() const {
+			return intType;
 		}
 
 		unsigned getNumElements() const {
@@ -169,17 +173,24 @@ namespace lang {
 
 	};
 
-	bool isEnumType(const core::NodePtr& node);
+	/// Checks whether the given node is an enum type (a tuple with 2 elements the first of which is a enum definition type literal)
+	/// or an expression of enum type
+	bool isEnum(const NodePtr& node);
 
-	ExpressionPtr getEnumInit(const ExpressionPtr& initVal, const TupleTypePtr& enumType);
+	/// Builds an enum tuple type for the given enum definition
+	TupleTypePtr buildEnumType(const GenericTypePtr& enumDefinition);
+	/// Builds an instance of a value of the given enum definition
+	TupleExprPtr buildEnumValue(const GenericTypePtr& enumDefinition, const ExpressionPtr& value);
 
-	TupleTypePtr getEnumType(const TypePtr& valueType, const GenericTypePtr& enumDef);
+	/// Extracts the enum definition from a given enum (tuple) type
+	GenericTypePtr getEnumTypeDefinition(const TypePtr& enumType);
+	/// Extracts the integral type from a given enum (tuple) type
+	TypePtr getEnumIntType(const TypePtr& type);
+	/// Extracts the enum entry corresponding to a given value instance (tuple)
+	GenericTypePtr getEnumEntry(const ExpressionPtr& enumValue);
 
-	GenericTypePtr getEnumElement(const GenericTypePtr& name, const ExpressionPtr& val);
-
-	TypePtr getEnumElementType(const TypePtr& type);	
-	
-	GenericTypePtr getEnumDef(const GenericTypePtr& name, const std::vector<GenericTypePtr>& entries);	
+	ExpressionPtr buildEnumToInt(const ExpressionPtr& enumExpr);
+	ExpressionPtr buildEnumFromInt(const TypePtr& enumT, const ExpressionPtr& value);
 
 } // lang
 } // core

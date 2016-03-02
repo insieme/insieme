@@ -429,10 +429,15 @@ namespace backend {
 
 			// deref of an assigment, do not
 			if(core::analysis::isCallOf(ARG(0), LANG_EXT_REF.getRefAssign())) { return CONVERT_ARG(0); }
-			
+
 			// deref of init expression is implicit in C/++
 			if(ARG(0).isa<core::InitExprPtr>()) {
-				return CONVERT_ARG(0); 
+				return CONVERT_ARG(0);
+			}
+
+			// deref of a cpp ref is implicit
+			if(core::lang::isCppReference(ARG(0)) || core::lang::isCppRValueReference(ARG(0))) {
+				return CONVERT_ARG(0);
 			}
 
 			return c_ast::deref(CONVERT_ARG(0));
@@ -460,7 +465,7 @@ namespace backend {
 			auto allocaNode = c_ast::call(C_NODE_MANAGER->create("alloca"), size);
 			return c_ast::cast(cType, allocaNode);
 		};
-		
+
 		res[refExt.getRefTempInit()] = OP_CONVERTER {
 
 			// extract type
@@ -492,7 +497,7 @@ namespace backend {
 			return c_ast::init(c_ast::vec(valueTypeInfo.rValueType, 1), res);
 		};
 
-		res[refExt.getRefNew()] = OP_CONVERTER { 
+		res[refExt.getRefNew()] = OP_CONVERTER {
 			ADD_HEADER("stdlib.h"); // for 'malloc'
 			core::GenericTypePtr resType = call->getType().as<core::GenericTypePtr>();
 			c_ast::ExpressionPtr size = c_ast::sizeOf(CONVERT_TYPE(core::analysis::getReferencedType(resType)));
@@ -603,7 +608,7 @@ namespace backend {
 			c_ast::ExpressionPtr value = GET_TYPE_INFO(ARG(0)->getType()).externalize(C_NODE_MANAGER, CONVERT_ARG(0));
 			return GET_TYPE_INFO(call->getType()).internalize(C_NODE_MANAGER, c_ast::cast(type, value));
 		};
-		
+
 		res[refExt.getRefCast()] = OP_CONVERTER {
 
 			// in C, this should always be implicit
@@ -626,6 +631,16 @@ namespace backend {
 		};
 
 		res[refExt.getRefKindCast()] = OP_CONVERTER {
+			// get source and target reference kinds
+			auto srcRefKind = core::lang::getReferenceKind(ARG(0));
+			auto trgRefKind = core::lang::getReferenceKind(ARG(1));
+
+			if(srcRefKind == core::lang::ReferenceType::Kind::Plain) {
+				if(trgRefKind == core::lang::ReferenceType::Kind::CppReference) {
+					return c_ast::deref(CONVERT_ARG(0));
+				}
+			}
+
 			return CONVERT_ARG(0);
 		};
 
@@ -728,10 +743,10 @@ namespace backend {
 
 			assert_eq(ARG(1)->getNodeType(), core::NT_Literal);
 			c_ast::IdentifierPtr field = C_NODE_MANAGER->create(static_pointer_cast<const core::Literal>(ARG(1))->getStringValue());
-			
+
 			auto converted = CONVERT_ARG(0);
 			auto access = c_ast::access(c_ast::deref(converted), field);
-			
+
 			// handle inner initExpr
 			if(ARG(0).isa<core::InitExprPtr>()) {
 				access = c_ast::access(converted, field);
@@ -739,7 +754,7 @@ namespace backend {
 
 			// handle implicit C array / pointer duality
 			if(core::lang::isVariableSizedArray(core::analysis::getReferencedType(call->getType()))) { return access; }
-			
+
 			// access the type
 			return c_ast::ref(access);
 		};

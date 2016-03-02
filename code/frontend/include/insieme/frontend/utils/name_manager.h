@@ -111,6 +111,11 @@ namespace utils {
 	 */
 	std::pair<std::string,bool> getNameForTagDecl(const conversion::Converter& converter, const clang::TagDecl* tagDecl, bool cStyleName = false);
 
+	/**
+	 * Remove leading :: qualifier from name
+	 */
+	std::string stripLeadingGlobalNamespace(const std::string& name);
+
 } // End utils namespace
 } // End frontend namespace
 } // End insieme namespace

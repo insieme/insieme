@@ -1,0 +1,6 @@
+Standards for the insieme git repository
+----------------------------------------
+
+File and folder names should follow this format:
+folder/two_words/no_uppercase.txt
+

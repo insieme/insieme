@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -227,15 +227,15 @@ namespace c_ast {
 
 			PRINT(EnumType) {
 				out << "typedef enum " << print(node->name);
-				//class type should only be printed when using c++11 enum classes
-				//if(node->classTy) { out << " : " << print(node->classTy); }
-				out << " { " << 
-					join(", ", node->values, [&](std::ostream& out, const std::pair<IdentifierPtr,LiteralPtr>& cur) { 
+				// int type should only be printed when using c++11 enum int types
+				if(node->intType) { out << " : " << print(node->intType); }
+				out << " { " <<
+					join(", ", node->values, [&](std::ostream& out, const std::pair<IdentifierPtr,LiteralPtr>& cur) {
 						out << print(cur.first);
 						if(!cur.second->value.empty()) {
 							out << "=" << print(cur.second);
 						}
-				}); 
+				});
 				return out << " } " << print(node->name) << ";";
 			}
 
@@ -633,7 +633,7 @@ namespace c_ast {
 				// <virtual> <return type> <name> ( <parameter list > ) <const>;
 				auto fun = node->fun->function;
 				return out << (node->isVirtual ? "virtual " : "") << (boost::starts_with(fun->name->name, "operator ") ? "" : toC(fun->returnType) + " ")
-				           << print(fun->name) << "(" << printMemberParam(fun->parameter) << ")" 
+				           << print(fun->name) << "(" << printMemberParam(fun->parameter) << ")"
 						   << (node->fun->isConstant ? " const" : "")
 						   << (node->fun->isVolatile ? " volatile" : "")
 						   << node->flag

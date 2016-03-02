@@ -95,18 +95,20 @@ namespace utils {
 	core::ExpressionPtr buildEnumConstantExpression(conversion::Converter& converter, const clang::EnumConstantDecl* decl) {
 		auto& builder = converter.getIRBuilder();
 		const clang::EnumType* enumType = llvm::dyn_cast<clang::EnumType>(llvm::cast<clang::TypeDecl>(decl->getDeclContext())->getTypeForDecl());
-		auto enumDecl = enumType->getDecl();
-		auto enumClassType = converter.convertType(enumDecl->getIntegerType());
-		//get the init val of the enum constant decl
+
+		// determine target integral type
+		auto irEnumDef = core::lang::getEnumTypeDefinition(converter.convertType(clang::QualType(enumType, 0)));
+		auto enumIntType = core::lang::EnumDefinition(irEnumDef).getIntType();
+
+		// get the init val of the enum constant decl
 		core::ExpressionPtr val;
 		std::string value = decl->getInitVal().toString(10);
-		val = builder.literal(enumClassType, value);
-		if(val->getType() != enumClassType) {
-			val = builder.numericCast(val, enumClassType);
+		val = builder.literal(enumIntType, value);
+		if(val->getType() != enumIntType) {
+			val = builder.numericCast(val, enumIntType);
 		}
 
-		//convert and return the struct init expr
-		return builder.numericCast(val, builder.getLangBasic().getInt4());
+		return core::lang::buildEnumValue(irEnumDef, val);
 	}
 
 } // end namespace utils

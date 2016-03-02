@@ -35,9 +35,9 @@
  */
 
 int main() {
-	
+
 	// BASE TYPES //////////////////////////////////////////////////////////////
-	
+
 	#pragma test expect_ir("var ref<char,f,f> v0;")
 	char c;
 
@@ -45,12 +45,12 @@ int main() {
 	unsigned char uc;
 	#pragma test expect_ir("var ref<int<1>,f,f> v0;")
 	signed char sc;
-	
+
 	#pragma test expect_ir("var ref<int<2>,f,f> v0;")
 	short ss;
 	#pragma test expect_ir("var ref<uint<2>,f,f> v0;")
 	unsigned short us;
-	
+
 	#pragma test expect_ir("var ref<int<4>,f,f> v0;")
 	int m;
 	#pragma test expect_ir("var ref<int<4>,t,f> v0;")
@@ -59,7 +59,7 @@ int main() {
 	volatile int z;
 	#pragma test expect_ir("var ref<int<4>,t,t> v0;")
 	const volatile int q;
-	
+
 	#pragma test expect_ir("var ref<int<4>,t,f> v0;")
 	int const y2;
 	#pragma test expect_ir("var ref<int<4>,f,t> v0;")
@@ -71,20 +71,20 @@ int main() {
 	float f1;
 	#pragma test expect_ir("var ref<real<8>,f,f> v0;")
 	double f2;
-	
+
 	// BASE TYPE TYPEDEFS //////////////////////////////////////////////////////////////
-	
+
 	typedef float fluffy;
 	typedef volatile float fluffier;
-	
+
 	#pragma test expect_ir("var ref<real<4>,f,f> v0;")
 	fluffy fluff;
-	
+
 	#pragma test expect_ir("var ref<real<4>,f,t> v0;")
 	fluffier fluffer;
-	
+
 	// POINTER TYPES //////////////////////////////////////////////////////////////
-	
+
 	#pragma test expect_ir("var ref<ptr<int<4>,f,f>,f,f> v0;")
 	int* pi;
 
@@ -102,43 +102,43 @@ int main() {
 
 	#pragma test expect_ir("var ref<ptr<int<4>,t,t>,f,f> v0;")
 	const volatile int* pcvi;
-	
+
 	#pragma test expect_ir("var ref<ptr<int<4>,f,f>,t,f> v0;")
 	int *const cpi;
 
 	#pragma test expect_ir("var ref<ptr<int<4>,t,f>,t,f> v0;")
 	const int *const cpci;
-	
+
 	#pragma test expect_ir("var ref<ptr<ptr<int<4>,f,f>,f,f>,f,f> v0;")
 	int** ppi;
 	#pragma test expect_ir("var ref<ptr<ptr<ptr<int<4>,f,f>,f,f>,t,f>,f,f> v0;")
 	int * *const * ppcpi;
-	
+
 	// FIXED SIZE ARRAY TYPES //////////////////////////////////////////////////////////////
-	
+
 	#pragma test expect_ir("var ref<array<real<4>,2>,f,f> v0;")
 	float arrf[2];
 	#pragma test expect_ir("var ref<array<real<4>,2>,t,f> v0;")
 	const float arrcf[2];
 	#pragma test expect_ir("var ref<array<real<4>,2>,f,t> v0;")
 	volatile float arrvf[2];
-	
+
 	#pragma test expect_ir("var ref<array<array<real<4>,5>,2>,f,f> v0;")
 	float arrarrf[2][5];
 	#pragma test expect_ir("var ref<array<array<array<real<4>,3>,5>,2>,f,f> v0;")
 	float arrarrarrf[2][5][3];
-	
+
 	#pragma test expect_ir("var ref<array<ptr<real<4>,f,f>,2>,f,f> v0;")
 	float* arrpf[2];
 	#pragma test expect_ir("var ref<array<ptr<real<4>,t,f>,2>,f,f> v0;")
 	const float* arrpcf[2];
 	#pragma test expect_ir("var ref<array<ptr<real<4>,t,f>,2>,f,t> v0;")
 	const float *volatile arrvpcf[2];
-	
+
 	// ENUM TYPES //////////////////////////////////////////////////////////////
-		
+
 	typedef enum { Bla, Alb } enum_t;
-	#pragma test expect_ir("REGEX", R"(.*var ref<\(enum_def<IMP_enum_t_IMLOC.*,enum_entry<Bla.*,enum_entry<Alb.*uint<4>\),f,f,plain> v0 = v0.*)")
+	#pragma test expect_ir("REGEX", R"(.*var ref<\(type<enum_def<IMP_enum_t_IMLOC.*,int<4>,enum_entry<IMP_main_lparen__rparen__colon__colon__colon__colon_Bla,0>,enum_entry<IMP_main_lparen__rparen__colon__colon__colon__colon_Alb,1>>>, int<4>\),f,f,plain> v0 = v0.*)")
 	enum_t enu;
 	enum { XY, ZR } bla;
 
@@ -146,20 +146,20 @@ int main() {
 
 	#pragma test expect_ir("STRING", "var ref<struct {i : int<4>;\n},f,f,plain> v0 = v0")
 	struct { int i; } swi_anon;
-	
+
 	typedef struct swi_s { int i; } swi_t;
 	#pragma test expect_ir("REGEX", R"(.*ref<\w+swi_s\w+,f,f,plain> v0 = .*)")
 	swi_t swi_1;
 	#pragma test expect_ir("REGEX", R"(.*ref<\w+swi_s\w+,f,f,plain> v0 = .*)")
-	struct swi_s swi_2; 
-	
+	struct swi_s swi_2;
+
 	typedef union { int i; } union_t;
 	#pragma test expect_ir("REGEX", R"(.*ref<\w+union_t\w+,f,f,plain> v0 = .*)")
 	union_t uni;
 
 	#pragma test expect_ir("REGEX_S", R"(.*ref<union \{ \w+ : struct \{ a : int<4>; b : int<4>; \}; v : array<int<4>,2>; \},f,f,plain> v0.*)")
 	union { struct { int a; int b; }; int v[2]; } anonymous_inner;
-	
+
 	#pragma test expect_ir("REGEX", R"(.*\*v\d+\.\w+EMPTY\w+\.a.*)")
 	anonymous_inner.a;
 }

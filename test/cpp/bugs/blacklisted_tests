@@ -25,7 +25,6 @@ empty_pod
 error_handler
 expression_with_cleanups
 expr_with_cleanups
-ewc_capturing
 gettimeoftheday
 global_init
 global_intercepted
@@ -50,7 +49,6 @@ non_default_global
 non_default_static
 non_working
 options
-rec_struct
 reference_in_condition_expression
 ref_to_pointer
 return_overload

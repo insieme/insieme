@@ -42,6 +42,7 @@
 #include "insieme/core/lang/boolean_marker.h"
 #include "insieme/core/lang/pointer.h"
 #include "insieme/core/types/match.h"
+#include "insieme/core/analysis/ir_utils.h"
 
 namespace insieme {
 namespace core {
@@ -245,6 +246,15 @@ namespace lang {
 		return isReference(node) && ReferenceType(node).isCppRValueReference();
 	}
 
+	ReferenceType::Kind getReferenceKind(const TypePtr& typeLitType) {
+		if(core::analysis::isTypeLiteralType(typeLitType)) return parseKind(core::analysis::getRepresentedType(typeLitType));
+		return parseKind(typeLitType);
+	}
+	ReferenceType::Kind getReferenceKind(const ExpressionPtr& expression) {
+		if(isReference(expression)) return ReferenceType(expression).getKind();
+		return getReferenceKind(core::analysis::getRepresentedType(expression));
+	}
+
 	TypePtr buildRefType(const TypePtr& elementType, bool _const, bool _volatile, const ReferenceType::Kind& kind) {
 		return ReferenceType::create(elementType, _const, _volatile, kind);
 	}
@@ -278,7 +288,7 @@ namespace lang {
 			            bmExt.getMarkerTypeLiteral(referenceTy.isVolatile()),
 						builder.getTypeLiteral(lang::toType(refExpr->getNodeManager(), referenceTy.getKind())));
 	}
-	
+
 	ExpressionPtr buildRefKindCast(const ExpressionPtr& refExpr, ReferenceType::Kind newKind) {
 		assert_pred1(isReference, refExpr) << "Trying to build a ref kind cast from non-ref.";
 		auto rT = ReferenceType(refExpr);

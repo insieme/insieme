@@ -83,14 +83,14 @@ namespace backend {
 			typedef FunctionInfo type;
 		};
 		template<>
-		struct info_trait<core::PureVirtualMemberFunction> 
+		struct info_trait<core::PureVirtualMemberFunction>
 			: public info_trait<core::Literal> {};
 
 		template <>
 		struct info_trait<core::LambdaExpr> {
 			typedef LambdaInfo type;
 		};
-		
+
 		template<>
 		struct info_trait<core::MemberFunction>
 			: public info_trait<core::LambdaExpr> {};
@@ -120,13 +120,13 @@ namespace backend {
 			~FunctionInfoStore() {
 				// free all stored type information instances (may contain duplicates)
 				std::set<ElementInfo*> deleted;
-				for (const auto& cur : funInfos) 
-					if (deleted.insert(cur.second).second) 
+				for (const auto& cur : funInfos)
+					if (deleted.insert(cur.second).second)
 						delete cur.second;
 			}
 
 			template <
-				typename T, 
+				typename T,
 				typename result_type = typename info_trait<typename std::remove_const<typename T::element_type>::type>::type*
 			>
 			result_type resolve(const T& node) {
@@ -137,7 +137,7 @@ namespace backend {
 			}
 
 		  protected:
-			
+
 			ElementInfo* resolveInternal(const core::NodePtr& expression);
 
 			FunctionInfo* resolveLiteral(const core::LiteralPtr& literal);
@@ -613,7 +613,7 @@ namespace backend {
 	namespace detail {
 
 		core::FunctionTypePtr getFunctionType(const core::NodePtr& node) {
-			
+
 			// for expressions get the the type and interpret as a function type
 			if (auto expr = node.isa<core::ExpressionPtr>()) {
 				return expr->getType().as<core::FunctionTypePtr>();
@@ -756,7 +756,7 @@ namespace backend {
 			return resolve(builder.literal(pureVirtualMemberFun->getName(), pureVirtualMemberFun->getType()));
 
 		}
-		
+
 		LambdaInfo* FunctionInfoStore::resolveLambda(const core::LambdaExprPtr& lambda) {
 			// resolve lambda definitions
 			resolveLambdaDefinition(lambda->getDefinition());
@@ -789,7 +789,7 @@ namespace backend {
 				// delete definition by removing the prototypes requirement towards the definition
 				res->prototype->remRequirement(res->definition);
 			}
-			
+
 			// done
 			return res;
 		}

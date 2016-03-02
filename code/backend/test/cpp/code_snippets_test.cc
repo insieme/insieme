@@ -57,17 +57,17 @@ namespace backend {
 		// create a code fragment including some member functions
 		core::ProgramPtr program = builder.parseProgram(R"(
 				alias int = int<4>;
-				
-				def f = ( x : ref<int,f,f>, y : cpp_ref<int,f,f>, z : cpp_ref<int,t,f>, w : cpp_ref<int,t,t> ) -> int {
-					return *x + *y + *z + *w;
+
+				def f = ( x : int, y : cpp_ref<int,f,f>, z : cpp_ref<int,t,f>, w : cpp_ref<int,t,t> ) -> int {
+					return x + y + z + w;
 				};
-				
+
 				int main() {
 					var ref<int> i = 12;
 					var cpp_ref<int,f,f> j = ref_cast(i, type_lit(f), type_lit(f), type_lit(cpp_ref));
 					var cpp_ref<int,t,f> k = ref_cast(i, type_lit(t), type_lit(f), type_lit(cpp_ref));
 					var cpp_ref<int,t,t> l = ref_cast(i, type_lit(t), type_lit(t), type_lit(cpp_ref));
-					f(i,j,k,l);
+					f(*i,j,k,l);
 					return 0;
 				}
 		)");
@@ -94,13 +94,13 @@ namespace backend {
 		// create a code fragment including some member functions
 		core::ProgramPtr program = builder.parseProgram(R"(
 				alias int = int<4>;
-				
+
 				def g = () -> int { return 12; };
 
 				def f = ( y : cpp_rref<int,f,f>, z : cpp_rref<int,t,f>, w : cpp_rref<int,t,t> ) -> int {
-					return *y + *z + *w;
+					return y + z + w;
 				};
-				
+
 				int main() {
 					f(g(),g(),g());
 					return 0;
@@ -122,6 +122,103 @@ namespace backend {
 		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
 	}
 
+	TEST(CppSnippet, ReferenceParameter) {
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+
+		core::ProgramPtr program = builder.parseProgram(R"(
+				def IMP_test = function (v1 : ref<int<4>,f,f,cpp_ref>) -> unit { };
+				int<4> function IMP_main (){
+					var ref<int<4>,f,f,plain> bla = 2;
+					IMP_test(ref_kind_cast(bla, type_lit(cpp_ref)));
+					return 0;
+				}
+		)");
+
+		ASSERT_TRUE(program);
+		// std::cout << "Program: " << dumpColor(program) << std::endl;
+		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
+
+		// use sequential backend to convert into C++ code
+		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
+		ASSERT_TRUE((bool)converted);
+		// std::cout << "Converted: \n" << *converted << std::endl;
+
+		// check absence of relevant code
+		auto code = toString(*converted);
+		EXPECT_PRED2(notContainsSubString, code, "&bla");
+
+		// try compiling the code fragment
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+	}
+
+	TEST(CppSnippet, ReferenceVariableDeclaration) {
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+
+		core::ProgramPtr program = builder.parseProgram(R"(
+				int<4> function IMP_main () {
+					var ref<int<4>,f,f,plain> bla = 2;
+					var ref<int<4>,f,f,cpp_ref> alb = bla;
+					return 0;
+				}
+		)");
+
+		ASSERT_TRUE(program);
+		// std::cout << "Program: " << dumpColor(program) << std::endl;
+		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
+
+		// use sequential backend to convert into C++ code
+		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
+		ASSERT_TRUE((bool)converted);
+		// std::cout << "Converted: \n" << *converted << std::endl;
+
+		// check presence of relevant code
+		auto code = toString(*converted);
+		EXPECT_PRED2(containsSubString, code, "int32_t& alb = bla;");
+
+		// try compiling the code fragment
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+	}
+
+	TEST(CppSnippet, ReferenceVariableUse) {
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+
+		core::ProgramPtr program = builder.parseProgram(R"(
+				def IMP_test = function (v1 : ref<int<4>,f,f,cpp_ref>) -> unit { };
+				int<4> function IMP_main () {
+					var ref<int<4>,f,f,plain> bla = 2;
+					var ref<int<4>,f,f,cpp_ref> alb = bla;
+					IMP_test(alb);
+					bla + alb;
+					return 0;
+				}
+		)");
+
+		ASSERT_TRUE(program);
+		// std::cout << "Program: " << dumpColor(program) << std::endl;
+		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
+
+		// use sequential backend to convert into C++ code
+		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
+		ASSERT_TRUE((bool)converted);
+		// std::cout << "Converted: \n" << *converted << std::endl;
+
+		// check presence of relevant code
+		auto code = toString(*converted);
+		EXPECT_PRED2(containsSubString, code, "IMP_test(alb)");
+
+		// try compiling the code fragment
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+	}
+
 	TEST(CppSnippet, MemberFunctions) {
 		core::NodeManager manager;
 		core::IRBuilder builder(manager);
@@ -129,21 +226,21 @@ namespace backend {
 		// create a code fragment including some member functions
 		core::ProgramPtr program = builder.parseProgram(R"(
 				alias int = int<4>;
-				
+
 				def struct Math {
-				
+
 					lambda id = (a : int)->int {
 						return a;
 					}
-				
+
 					lambda sum = (a : int, b : int)->int {
 						return a + b;
 					}
 				};
-				
+
 				int main() {
 					var ref<Math> m;
-					
+
 					print("%d\n", m->id(12));
 					print("%d\n", m->sum(12, 14));
 					return 0;
@@ -172,9 +269,9 @@ namespace backend {
 		// create a code fragment including some member functions
 		core::ProgramPtr program = builder.parseProgram(R"(
 				alias int = int<4>;
-				
+
 				def struct A { };
-				
+
 				int main() {
 					var ref<A> a;
 					return 0;
@@ -211,9 +308,9 @@ namespace backend {
 		// create a code fragment including some member functions
 		core::ProgramPtr program = builder.parseProgram(R"(
 				alias int = int<4>;
-				
+
 				def struct A { x : ref<A>; };
-				
+
 				int main() {
 					var ref<A> a;
 					return 0;
@@ -250,13 +347,13 @@ namespace backend {
 		// create a code fragment including some member functions
 		core::ProgramPtr program = builder.parseProgram(R"(
 				alias int = int<4>;
-				
+
 				decl struct A;
 				decl struct B;
 
 				def struct A { x : ref<B>; };
 				def struct B { x : ref<A>; };
-				
+
 				int main() {
 					var ref<A> a;
 					return 0;
@@ -298,12 +395,12 @@ namespace backend {
 		// create a code fragment including some member functions
 		core::ProgramPtr program = builder.parseProgram(R"(
 				alias int = int<4>;
-				
+
 				def struct A {
-				    ctor( ) {} 
+				    ctor( ) {}
 				    ctor( x : int ) {}
 				};
-				
+
 				int main() {
 					var ref<A> a;
 					return 0;
@@ -348,13 +445,13 @@ namespace backend {
 		// create a code fragment including some member functions
 		core::ProgramPtr program = builder.parseProgram(R"(
 				alias int = int<4>;
-				
+
 				decl struct A;
 				decl struct B;
 
 				def struct A {
  					data : ref<B>;
- 					ctor( ) {} 
+ 					ctor( ) {}
 					ctor( x : int ) {}
 				};
 
@@ -363,7 +460,7 @@ namespace backend {
  					ctor( ) {}
 					ctor( x : int ) {}
 				};
-				
+
 				int main() {
 					var ref<A> a;
 					var ref<B> b;
@@ -416,10 +513,10 @@ namespace backend {
 					x : int;
 					ctor( ) {
 						this->x = 12;
-					} 
+					}
 					ctor( x : int ) {
 						this->x = x;
-					} 
+					}
 					ctor( x : int , y : int ) {
 						this->x = x + y;
 					}
@@ -428,7 +525,7 @@ namespace backend {
 				def f = A::( x : int, y : int, z : int ) {
 					this->x = x + y + z;
 				};
-*/				
+*/
 				int main() {
 					var ref<A> a;
 					// var ref<A> b = f(b);
@@ -560,7 +657,7 @@ namespace backend {
 					this->x = x + y + z;
 				};
 */
-				
+
 				int main() {
 					var ref<A> a;
 					// a.f9();
@@ -625,7 +722,7 @@ namespace backend {
 				decl struct A;
 				decl r : A::()->unit;
 				decl f : A::()->unit;
-				decl g : A::()->unit; 
+				decl g : A::()->unit;
 
 				def struct A {
 					x : int;
@@ -633,7 +730,7 @@ namespace backend {
 					lambda r = () -> unit { r(); }
 					lambda f = () -> unit { g(); }
 					lambda g = () -> unit { f(); }
-					
+
 				};
 
 				int main() {
@@ -687,7 +784,7 @@ namespace backend {
 					pure virtual const f2 : () -> unit
 					pure virtual const volatile f3 : () -> unit
 					pure virtual volatile f4 : () -> unit
-					
+
 				};
 
 				def struct B : [public A] {
@@ -696,7 +793,7 @@ namespace backend {
 					virtual const lambda f2 = () -> unit { }
 					virtual const volatile lambda f3 = () -> unit { }
 					virtual volatile lambda f4 = () -> unit { }
-					
+
 				};
 
 				int main() {
@@ -739,38 +836,38 @@ namespace backend {
 		core::ProgramPtr program = builder.parseProgram(
 		    R"(
 				alias int = int<4>;
-				
+
 				def struct Counter {
-				
+
 					value : int;
-					
+
 					lambda reset = ()->unit {
 						value = 0;
 					}
-					
+
 					lambda inc = ()->int {
 						value = value + 1;
 						return *value;
 					}
-					
+
 					lambda dec = ()->int {
 						value = value - 1;
 						return *value;
 					}
-					
+
 					lambda get = ()->int {
 						return *value;
 					}
-					
+
 					lambda set = (x : int)->unit {
 						value = x;
 					}
-					
+
 					lambda p = ()-> unit {
 						print("%d\n", get());
 					}
 				};
-				
+
 				int main() {
 					var ref<Counter> c;
 					c->reset();
@@ -802,6 +899,37 @@ namespace backend {
 		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
 	}
 
+	TEST(CppSnippet, Enum) {
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+
+		core::ProgramPtr program = builder.parseProgram(R"( using "ext.enum";
+				int<4> function IMP_main () {
+					var ref<(type<enum_def<IMP_Bla,uint<8>,enum_entry<IMP_Bla_colon__colon_A,0>>>, uint<8>),f,f,plain> v0 = (type_lit(enum_def<IMP_Bla,uint<8>,enum_entry<IMP_Bla_colon__colon_A,0>>), 0ul);
+					enum_to_int(*v0)==num_cast(5, type_lit(uint<8>));
+					return 0;
+				}
+		)");
+
+		ASSERT_TRUE(program);
+		// std::cout << "Program: " << dumpColor(program) << std::endl;
+		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
+
+		// use sequential backend to convert into C++ code
+		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
+		ASSERT_TRUE((bool)converted);
+		//std::cout << "Converted: \n" << *converted << std::endl;
+
+		// check presence of relevant code
+		auto code = toString(*converted);
+		EXPECT_PRED2(containsSubString, code, "enum Bla : uint64_t { BlaA=0 }");
+
+		// try compiling the code fragment
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+	}
+
 	TEST(CppSnippet, DISABLED_Inheritance) {
 		core::NodeManager manager;
 		core::IRBuilder builder(manager);
@@ -810,54 +938,54 @@ namespace backend {
 		core::ProgramPtr program = builder.parseProgram(
 		    R"(
 				alias int = int<4>;
-				
+
 				def struct A {
 					x : int;
 				};
-				
+
 				def struct B : [A] {
 					y : int;
 				};
-				
+
 				def struct C : [B] {
 					z : int;
 				};
-				
+
 				int main() {
-				
+
 					// -------- handle an instance of A --------
 					var ref<A> a;
 					a.x = 1;
-					
-					
+
+
 					// -------- handle an instance of B --------
 					var ref<B> b;
-					
+
 					// direct access
 					b.as(A).x = 1;
 					b.y = 2;
-					
+
 					// indirect access of A's x
 					auto bA = b.as(A);
 					bA.x = 3;
-					
-					
+
+
 					// -------- handle an instance of C --------
 					var ref<C> c;
-					
+
 					// access B's A's x
 					c.as(B).as(A).x = 1;
-				
+
 					// access B's y
 					c.as(B).y = 2;
-					
+
 					// access C's z
 					c.z = 3;
-					
+
 					print("x = %d\n", *(c.as(B).as(A).x));
 					print("y = %d\n", *(c.as(B).y));
 					print("z = %d\n", *c.z);
-					
+
 					return 0;
 				}
 				)");
@@ -1069,20 +1197,20 @@ namespace backend {
 		auto res = builder.parseProgram(
 		    R"(
 					alias int = int<4>;
-					
+
 					def struct A {
-					
+
 						x : int;
-						
+
 						ctor () {
 							x = 0;
 						}
-						
+
 						ctor (x : int) {
 							this.x = x;
 						}
 					};
-					
+
 					int main() {
 						// on stack
 						var ref<A> a1 = A::(a1);
@@ -1129,33 +1257,33 @@ namespace backend {
 		auto res = builder.parseProgram(
 		    R"(
 					alias int = int<4>;
-					
+
 					def struct A {
-					
+
 						x : int;
-						
+
 						ctor (x : int) {
 							this.x = x;
 							print("Creating: %d\n", x);
 						}
-						
+
 						dtor () {
 							print("Clearing: %d\n", *x);
 							x = 0;
 						}
 					};
-					
+
 					int main() {
-					
+
 						// create an un-initialized memory location
 						var ref<A> a = A::(a, 1);
-						
+
 						// init using in-place constructor
 						A::(a, 2);
-					
+
 						// invoke destructor
 						A::~(a);
-					
+
 						return 0;
 					}
 				)");

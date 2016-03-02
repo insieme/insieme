@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -249,7 +249,7 @@ namespace c_ast {
 			if(values[i].second != other.values[i].second)
 				return false;
 		}
-		return ((name == other.name) && (classTy == other.classTy));
+		return (name == other.name) && (intType == other.intType);
 	}
 
 	bool MemberFieldPointer::equals(const Node& node) const {

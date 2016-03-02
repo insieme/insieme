@@ -64,8 +64,8 @@ namespace checks {
 	namespace {
 		bool typeMatchesWithOptionalMaterialization(NodeManager& nm, const TypePtr& targetT, const TypePtr& valueT) {
 			// if the types are equivalent, everything is fine
-			if(types::isSubTypeOf(valueT, targetT)) { 
-				return true; 
+			if(types::isSubTypeOf(valueT, targetT)) {
+				return true;
 			}
 
 			// try to find a valid type variable instantiation
@@ -455,7 +455,7 @@ namespace checks {
 
 		return res;
 	}
-	
+
 	OptionalMessageList DuplicateMemberFieldCheck::visitFields(const FieldsAddress& address) {
 		OptionalMessageList res;
 
@@ -521,7 +521,7 @@ namespace checks {
 		TypePtr resType = analysis::normalize(address->getType());
 
 		if(typeMatchesWithOptionalMaterialization(manager, resType, retType)) return res;
-		
+
 		// FIXME: this should only be allowed if the actual return within the lambda generates a ref
 		if(lang::isPlainReference(resType)) {
 			if(analysis::equalTypes(analysis::getReferencedType(resType), retType)) return res;
@@ -674,7 +674,7 @@ namespace checks {
 		TypesPtr types = funTypeIs->getParameterTypes();
 		vector<TypePtr> paramTypes;
 		for(std::size_t i = 0; i < types.size(); ++i) {
-			
+
 			auto parameter = address->getParameterList()[i];
 			auto should = transform::materialize(types[i]);
 			auto is = parameter->getType();
@@ -682,7 +682,7 @@ namespace checks {
 			// materialized parameters of non-ref type are alowed to have arbitrary qualifiers
 			if(*should != *is && (!analysis::isRefType(types[i]) && !lang::doReferencesDifferOnlyInQualifiers(is, should))) {
 				add(res, Message(
-						parameter, EC_TYPE_INVALID_LAMBDA_TYPE, 
+						parameter, EC_TYPE_INVALID_LAMBDA_TYPE,
 						format("Invalid parameters type of %s - is: %s, should %s", *parameter, *is, *should),
 						Message::ERROR
 					)
@@ -692,16 +692,16 @@ namespace checks {
 
 		/*
 		FunctionTypePtr funTypeShould =
-		    builder.functionType(::transform(lambda->getLambda()->getParameterList(), [](const VariablePtr& cur)->TypePtr { 
-			auto argument = 
-			return (lang::isReference(cur->getType()) ? cur->getType() : 
-			return analysis::getReferencedType(cur->getType()); 
+		    builder.functionType(::transform(lambda->getLambda()->getParameterList(), [](const VariablePtr& cur)->TypePtr {
+			auto argument =
+			return (lang::isReference(cur->getType()) ? cur->getType() :
+			return analysis::getReferencedType(cur->getType());
 		}), funTypeIs->getReturnType(), funTypeIs->getKind());
-		
+
 		if(*funTypeIs != *funTypeShould) {
 			add(res, Message(address, EC_TYPE_INVALID_LAMBDA_TYPE, format("Invalid type of lambda definition for lambda reference %s - is: %s, should %s",
-			    toString(*lambda->getReference()), 
-				toString(*funTypeIs), 
+			    toString(*lambda->getReference()),
+				toString(*funTypeIs),
 				toString(*funTypeShould)),
 			    Message::ERROR)
 			);
@@ -792,7 +792,7 @@ namespace checks {
 		// arguments need to be arithmetic types or function types
 		for(auto arg : call) {
 			auto type = arg->getType();
-			if(!type.isa<TypeVariablePtr>() && !base.isScalarType(type) && !type.isa<FunctionTypePtr>() && !core::lang::isEnumType(type)) {
+			if(!type.isa<TypeVariablePtr>() && !base.isScalarType(type) && !type.isa<FunctionTypePtr>() && !core::lang::isEnum(type)) {
 				add(res, Message(address, EC_TYPE_INVALID_GENERIC_OPERATOR_APPLICATION,
 				                 format("Generic operators must only be applied on arithmetic types - found: %s", toString(*type)), Message::ERROR));
 			}
@@ -801,7 +801,7 @@ namespace checks {
 		// done
 		return res;
 	}
-	
+
 	OptionalMessageList DeclarationStmtTypeCheck::visitDeclarationStmt(const DeclarationStmtAddress& address) {
 		OptionalMessageList res;
 
@@ -956,7 +956,7 @@ namespace checks {
 				}
 				return res;
 			}
-			
+
 			// test unions
 			core::UnionPtr unionType = analysis::isUnion(tagT->peel());
 			if(unionType) {
@@ -1071,7 +1071,7 @@ namespace checks {
 			return checkMemberAccess(address, tagType->getRecord(), identifier, elementType, isRefVersion);
 		}
 
-		
+
 	}
 
 	OptionalMessageList MemberAccessElementTypeCheck::visitCallExpr(const CallExprAddress& address) {
@@ -1189,7 +1189,7 @@ namespace checks {
 
 			// compare should and is
 			auto record = address->getDefinitionOf(info.tag);
-			
+
 			// check access
 			addAll(res, checkMemberAccess(concat(address, call), record, info.identifier, info.type, true));
 		}
@@ -1447,7 +1447,7 @@ namespace checks {
 
 		// create a validity check for the argument types
 		auto isValidNumericType = [&](const TypePtr& type) {
-			return type.isa<TypeVariablePtr>() || basic.isNumeric(type) || core::lang::isEnumType(type);
+			return type.isa<TypeVariablePtr>() || basic.isNumeric(type) || core::lang::isEnum(type);
 		};
 
 		//check expression type

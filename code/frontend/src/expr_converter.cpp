@@ -562,7 +562,7 @@ namespace conversion {
             //      int4   uint4
             //       |   /   |
             //      int8 <- unit8    => (int4, uint8) should be int8
-            irOp = basic.getOperator(core::types::getBiggestCommonSubType( left->getType(), right->getType()), binOp);
+            irOp = basic.getOperator(core::types::getBiggestCommonSubType(left->getType(), right->getType()), binOp);
         }
         else {
 	    	irOp = basic.getOperator(exprTy, binOp);
@@ -701,7 +701,11 @@ namespace conversion {
 		}
 
 		if(const clang::EnumConstantDecl* decl = llvm::dyn_cast<clang::EnumConstantDecl>(declRef->getDecl())) {
-			return utils::buildEnumConstantExpression(converter, decl);
+			retIr = utils::buildEnumConstantExpression(converter, decl);
+			auto irT = converter.convertType(declRef->getType());
+			// in C, the target type of the decl ref expression is an int, so we cast here
+			// in C++, the target type is an enum type, so nothing will happen
+			return builder.numericCast(retIr, irT);
 		}
 
 		frontend_assert(false) << "DeclRefExpr not handled: " << dumpClang(declRef, converter.getSourceManager());

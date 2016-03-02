@@ -310,6 +310,13 @@ namespace utils {
 		return std::make_pair(insieme::utils::mangle(name, path.string(), line, column), canon->hasNameForLinkage());
 	}
 
+	std::string stripLeadingGlobalNamespace(const std::string& name) {
+		if(boost::starts_with(name, "::")) {
+			return name.substr(2);
+		}
+		return name;
+	}
+
 } // End utils namespace
 } // End frontend namespace
 } // End insieme namespace

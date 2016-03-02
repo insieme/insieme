@@ -376,6 +376,14 @@ namespace core {
 		Ptr<const Type> getTypeParameter(std::size_t index) const {
 			return getTypeParameter()->getElement(index);
 		}
+
+		/**
+		 * Obtains a list of types forming the parameter types of this function type.
+		 */
+		vector<Ptr<const Type>> getTypeParameterList() const {
+			return getTypeParameter()->getElements();
+		}
+
 	IR_NODE_END()
 
 	/**
@@ -854,7 +862,7 @@ namespace core {
 		}
 
 		/**
-		* Obtains a list of addresses pointing to recursive references to any of the tag types defined 
+		* Obtains a list of addresses pointing to recursive references to any of the tag types defined
 		* by this definition.
 		*
 		* @param reference the tag type reference to be searched for
@@ -919,7 +927,7 @@ namespace core {
 		 * @return the requested type instance managed by the given manager
 		 */
 		static TagTypeDefinitionPtr get(NodeManager& manager, const TagTypeBindingMap& bindings);
-		
+
 		/**
 		 * Obtains a list of addresses pointing to recursive references to any of the tag types defined
 		 * by this definition.
@@ -1125,7 +1133,7 @@ namespace core {
 	    TypePtr unpeel(NodeManager& mgr, const TypePtr& input) const {
 			return (*getDefinition()).unpeel(mgr, input);
 	    }
-		
+
 	    /*
 	     * Unpeels the given input type.
 	     * E.g. When called on BlaType: "(a : struct BlaType {...}) -> bool" turns into "(a : ^BlaType) -> bool"

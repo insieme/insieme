@@ -34,35 +34,17 @@
  * regarding third party software licenses.
  */
 
-#pragma once
 
-#include <string>
+enum Bla : unsigned long { A };
 
-namespace insieme {
-namespace utils {
-
-	/// Format string "name" to be usable as an identifier, and encode file, line and column information in it
-	///
-	std::string mangle(std::string name, std::string file, unsigned line, unsigned column);
-
-	/// Retrieve a mangled "name" for an anonymous identifier
-	///
-	std::string mangle(std::string file, unsigned line, unsigned column);
-
-	/// Format string "name" to be usable as an identifier
-	///
-	std::string mangle(std::string name);
-
-	/// Retrieve the original name from the mangled representation.
-	///
-	std::string demangle(std::string name, bool keepLocation = false);
-
-	/// Retrieve a valid C/CPP name from the mangled representation.
-	///
-	std::string demangleToIdentifier(std::string name, bool keepLocation = false);
-
-	/// Returns the mangled name for the assignment operator.
-	///
-	const std::string& getMangledOperatorAssignName();
-}
+int main() {
+	#pragma test expect_ir(R"(using "ext.enum"; {
+		var ref<(type<enum_def<IMP_Bla,uint<8>,enum_entry<IMP_Bla_colon__colon_A,0>>>, uint<8>),f,f,plain> v0 = (type_lit(enum_def<IMP_Bla,uint<8>,enum_entry<IMP_Bla_colon__colon_A,0>>), 0ul);
+		enum_to_int(*v0)==num_cast(5, type_lit(uint<8>));
+	})")
+	{
+		Bla b = A;
+		b == 5;
+	}
+	return 0;
 }
