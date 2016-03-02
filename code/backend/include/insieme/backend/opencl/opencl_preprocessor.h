@@ -43,10 +43,10 @@ namespace insieme {
 namespace backend {
 namespace opencl {
 
-	class OffloadSupport : public PreProcessor {
+	class OffloadSupportPre : public PreProcessor {
 	public:
-		OffloadSupport();
-		virtual core::NodePtr process(const backend::Converter& converter, const core::NodePtr& code);
+		OffloadSupportPre();
+		core::NodePtr process(const backend::Converter& converter, const core::NodePtr& code) override;
 	};
 
 } // end namespace opencl

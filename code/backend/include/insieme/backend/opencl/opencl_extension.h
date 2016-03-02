@@ -86,9 +86,9 @@ namespace opencl {
 		LANG_EXT_TYPE_WITH_NAME(MarkerPrivate, "opencl_private_marker", "opencl_private");
 
 		LANG_EXT_TYPE_WITH_NAME(GenType, "opencl_type_template", "opencl_type<'a, 'loc>");
-		TYPE_ALIAS("opencl_type<'a>", "opencl_type<'a, opencl_private>");
+		TYPE_ALIAS("opencl_type<'a, 'loc>", "'a");
 
-		LANG_EXT_LITERAL(Peel, "opencl_peel", "(opencl_type<'a, 'loc>)->'a");
+		LANG_EXT_LITERAL(Peel, "opencl_peel", "(ref<opencl_type<'a, 'loc>,'c,'v,plain))->'a");
 	};
 
 	class KernelType {
@@ -100,6 +100,15 @@ namespace opencl {
 
 		KernelType(const core::TypePtr& elementType, const core::TypePtr& locType);
 	public:
+		// tries to parse the given type into KernelType
+		KernelType(const core::NodePtr& node);
+
+		KernelType(const KernelType&) = default;
+		KernelType(KernelType&&) = default;
+
+		KernelType& operator=(const KernelType&) = default;
+		KernelType& operator=(KernelType&&) = default;
+
 		static core::GenericTypePtr create(const core::TypePtr& elementType, AddressSpace loc);
 		const core::TypePtr& getElementType() const;
 		void setElementType(const core::TypePtr& type);

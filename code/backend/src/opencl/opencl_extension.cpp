@@ -63,6 +63,19 @@ namespace opencl {
 	KernelType::KernelType(const core::TypePtr& elementType, const core::TypePtr& locType) :
 			elementType(elementType), locType(locType) { }
 
+	KernelType::KernelType(const core::NodePtr& node) {
+		// check given node type
+		assert_true(node) << "Given node is null!";
+		assert_true(isKernelType(node)) << "Given node " << *node << " is not a kernel type!";
+
+		// extract the type
+		core::GenericTypePtr type = node.isa<core::GenericTypePtr>();
+		if (auto expr = node.isa<core::ExpressionPtr>()) type = expr->getType().as<core::GenericTypePtr>();
+
+		// initialize the local instance
+		*this = KernelType(type->getTypeParameter(0), type->getTypeParameter(1));
+	}
+
 	core::GenericTypePtr KernelType::create(const core::TypePtr& elementType, AddressSpace loc) {
 		core::NodeManager& manager = elementType->getNodeManager();
 		// grab a reference to the extension itself
@@ -121,6 +134,8 @@ namespace opencl {
 		auto type = node.isa<core::GenericTypePtr>();
 		if (!type) return false;
 
+		// @TODO: implement this check!
+		#if 0
 		core::NodeManager& manager = node->getNodeManager();
 		// grab a reference to the extension itself
 		auto& oclExt = manager.getLangExtension<OpenCLExtension>();
@@ -131,6 +146,8 @@ namespace opencl {
 
 		// also check if memloc is the 2nd type parameter
 		return isAddressSpaceMarker((*sub).applyTo(manager, pattern->getTypeParameter(1)));
+		#endif // 0
+		return false;
 	}
 } // end namespace opencl
 } // end namespace backend

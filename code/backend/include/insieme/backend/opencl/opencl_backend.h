@@ -61,16 +61,16 @@ namespace opencl {
 		virtual Converter buildConverter(core::NodeManager& manager) const;
 	};
 
-	class OpenCLKernelBackend;
-	typedef std::shared_ptr<OpenCLKernelBackend> OpenCLKernelBackendPtr;
+	class KernelBackend;
+	typedef std::shared_ptr<KernelBackend> KernelBackendPtr;
 
 	/**
-	 * The purpose of this 'sub'-backend is to transform a given IR-node into OpenCL-Kernel target code
+	 * The purpose of this 'sub'-backend is to transform a given OclIR-node into OpenCL-Kernel target code
 	 */
-	class OpenCLKernelBackend : public Backend {
+	class KernelBackend : public Backend {
 	  public:
-		OpenCLKernelBackend(const BackendConfigPtr& config = std::make_shared<BackendConfig>());
-		static OpenCLKernelBackendPtr getDefault();
+		KernelBackend(const BackendConfigPtr& config = std::make_shared<BackendConfig>());
+		static KernelBackendPtr getDefault();
 
 	  protected:
 		virtual Converter buildConverter(core::NodeManager& manager) const;

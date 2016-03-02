@@ -53,7 +53,7 @@ namespace opencl {
 namespace analysis {
 	
 	using namespace insieme::annotations::opencl;
-	
+
 	namespace {
 		bool isPrimitive(const core::TypePtr& type) {
 			// return type->getNodeManager().getLangBasic().isPrimitive(type);
@@ -67,14 +67,14 @@ namespace analysis {
 			else
 				return node;
 		}
-		
+
 		core::TypePtr removePointer(const core::TypePtr& node) {
 			if (core::lang::isPointer(node))
 				return core::lang::PointerType(node).getElementType();
 			else
 				return node;
 		}
-		
+
 		bool isBuiltIn(const core::NodePtr& node) {
 			// represents a white-list of all IMP__fun which are allowed in the kernel
 			static std::unordered_set<std::string> builtins = {
@@ -93,9 +93,9 @@ namespace analysis {
 			const std::string& name = insieme::utils::demangle(node.as<core::LiteralPtr>()->getStringValue());
 			return builtins.find(name) != builtins.end();
 		}
-		
+
 		bool hasBuiltInLiterals(const core::NodePtr& node) {
-			bool result = true; 
+			bool result = true;
 			auto& refExt = node->getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
 			// check for invalid usage of global and externally declared literals
 			core::visitDepthFirstOnceInterruptible(node, [&](const core::LiteralPtr& literal) {
@@ -127,11 +127,11 @@ namespace analysis {
 			});
 			return result;
 		}
-		
+
 		bool hasMultipleIndirections(const core::NodePtr& node) {
 			/*
 			ref<ref<...>> is a ptr!
-			
+
 			bool checkDoublePointer(const VariablePtr& var) const {
 				// also check if the argument is not a pointer to a pointer
 				auto type = var->getType();
@@ -149,7 +149,7 @@ namespace analysis {
 			*/
 			return false;
 		}
-		
+
 		bool isTrivial(const core::TypePtr& type, bool isParameter = false) {
 			// @TODO: this case of ptr casting is currently not handeled
 			//
@@ -203,7 +203,7 @@ namespace analysis {
 			// the general triviality must be fulfilled as-well
 			return core::analysis::isTrivial(type);
 		}
-		
+
 		/*
 		bool checkCompoundStmt(const BaseAnnotationPtr& anno, const CompoundStmtPtr& compoundStmt) const {
 			LOG(DEBUG) << "OpenCL: checking compoundStmt:";
@@ -235,12 +235,12 @@ namespace analysis {
 			return true;
 		}
 		*/
-		
+
 		VariableRequirement::AccessMode tryDeduceAccessModeIntern(const core::TypePtr& type) {
 			// @TODO: this is not a real impl!
 			return VariableRequirement::AccessMode::RW;
 		}
-		
+
 		VariableRequirement::AccessMode tryDeduceAccessMode(const core::TypePtr& type) {
 			core::TypePtr ptr = type;
 			if (core::lang::isPlainReference(ptr))
@@ -254,10 +254,10 @@ namespace analysis {
 			// ok, hop into the recursion
 			return tryDeduceAccessModeIntern(type);
 		}
-		
+
 		VariableRequirementPtr tryDeduceVariableRequirement(core::NodeManager& manager, const core::CallExprPtr& callExpr, unsigned index) {
 			core::IRBuilder builder(manager);
-			
+
 			core::ExpressionPtr arg = callExpr->getArgument(index);
 			// the deduction is atm purely based on the type
 			core::TypePtr type = getReferencedType(arg->getType());
@@ -274,7 +274,7 @@ namespace analysis {
 				// element type must be primitive
 				if (!isPrimitive(arrayType.getElementType()))
 					return nullptr;
-				
+
 				unsigned numElements = arrayType.getNumElements();
 				// at this point we assume full-range
 				size = builder.uintLit(numElements);
@@ -287,11 +287,11 @@ namespace analysis {
 			// generate a temporary variable to hold the type inforation
 			return std::make_shared<VariableRequirement>(core::Variable::get(manager, arg->getType()), size, start, end, accessMode);
 		}
-		
+
 		// @TODO: an argument wih an incomplete type is not allowed!!!
 		// @TODO: while to for extension is a problem if produces e.g. ref<ref<'a>...>
 	}
-	
+
 	core::TypePtr getElementType(const core::TypePtr& type) {
 		if (core::lang::isReference(type))
 			return removeReference(type);
@@ -301,35 +301,36 @@ namespace analysis {
 			return type;
 		}
 	}
-	
+
 	core::TypePtr getReferencedType(const core::NodePtr& node) {
 		auto expr = node.isa<core::ExpressionPtr>();
 		assert_true(expr) << "node must be an expression";
 		return getReferencedType(expr->getType());
 	}
-	
+
 	core::TypePtr getReferencedType(const core::TypePtr& type) {
 		if (core::lang::isPointer(type) || core::lang::isReference(type))
 			return getReferencedType(getElementType(type));
 		else
 			return type;
 	}
-	
+
 	bool isOutlineAble(core::NodeManager& manager, const core::NodePtr& node) {
 		// if it is not a statement then we cannot outline it anyway
 		core::StatementPtr stmt = node.isa<core::StatementPtr>();
 		if (!stmt) return false;
-	
+
 		// however, we do not want expressions here
 		if (auto expr = node.isa<core::ExpressionPtr>()) return false;
-	
+
 		// if the generic check fails, we do not need to proceed any further
 		if (!core::analysis::isOutlineAble(stmt, false))
 			return false;
-		
+
 		// obtain a list for all & only free variables
-		const auto& free = core::analysis::getFreeVariables(manager.get(stmt));
-		const auto& vars = core::analysis::getAllVariables(manager.get(stmt));
+		core::VariableSet vars = core::analysis::getAllVariables(manager.get(stmt));
+		// this set can be ro as we do not need to modify it -- the latter does not hold for vars tho
+		const core::VariableList& free = core::analysis::getFreeVariables(manager.get(stmt));
 		for (const auto& cur : vars) {
 			bool isParameter = std::find(free.begin(), free.end(), cur) != free.end();
 			// parameters must meet additional constraints
@@ -339,22 +340,47 @@ namespace analysis {
 			}
 		}
 
-		/*
-		@TODO: this check needs to be enabled once the readOnly check is fixed
-		
+		// re-use the variable list
+		vars.clear();
 		// most expensive check is done at last
 		for (const auto& cur : free) {
-			LOG(DEBUG) << "isReadOnly called with: " << dumpColor(stmt) << " for arg: " << dumpColor(cur);
-		
-			if (!core::analysis::isReadOnlyWithinScope(stmt, cur)) {
-				LOG(DEBUG) << "not outlineable due to non-read-only of: " << dumpColor(cur);
+			core::TypePtr type = cur->getType();
+			LOG(DEBUG) << "checking " << dumpColor(cur) << " of type: " << dumpColor(type);
+			// in case is it non a refType it is readOnly anyway
+			if (!core::lang::isReference(type)) continue;
+			// take a look at the enclosed type
+			type = getElementType(type);
+			// iff it is an array, is is readOnly as well (modeled as 'a *const in backend)
+			if (core::lang::isArray(type)) continue;
+			// in case of a primitive, the standard check can be used
+			if (isPrimitive(type)) {
+				// fail if it is not!
+				if (core::analysis::isReadOnly(stmt, cur)) continue;
+				// whooops!
+				LOG(ERROR) << "not outlineable due to non-read-only of: " << dumpColor(cur);
 				return false;
 			}
+
+			// grab all alias names as we need to check them later on
+			auto names = core::analysis::getVariableNames(cur, stmt);
+			vars.insert(names.begin(), names.end());
+			vars.insert(cur);
 		}
-		*/
+		// in case vec is empty everything is fine already
+		if (vars.empty()) return true;
+		// in this case a more complicated check is required
+		bool dumpFragment = false;
+		for (const auto& cur : vars) {
+			// if it is read-only straight along we can skip further checks
+			if (core::analysis::isReadOnly(stmt, cur)) continue;
+
+			dumpFragment = true;
+			LOG(WARNING) << "optimistic read-only assumption of: " << dumpColor(cur) << " with type: " << dumpColor(cur->getType());
+		}
+		if (dumpFragment) { LOG(WARNING) << "offending IR fragment: " << dumpColor(stmt); }
 		return true;
 	}
-	
+
 	VariableRequirementList getVariableRequirements(core::NodeManager& manager, const core::CallExprPtr& callExpr) {
 		VariableRequirementList result;
 		VariableRequirementList candidates;

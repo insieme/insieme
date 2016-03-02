@@ -62,6 +62,30 @@ namespace opencl {
 			} else if(oclExt.isNDRange(type)) {
 				// use opencl definition of the work item type
 				return type_info_utils::createInfo(converter.getFragmentManager(), "irt_opencl_ndrange", "irt_opencl.h");
+			} else if(isKernelType(type)) {
+				KernelType kernelType(type);
+				// first of all we transform the element type
+				const auto& elementInfo = converter.getTypeManager().getTypeInfo(kernelType.getElementType());
+				// second step is to wrap the lvalue with an attributed type
+				std::string attribute;
+				switch (kernelType.getAddressSpace()) {
+				case KernelType::AddressSpace::Constant:	attribute = "__constant"; break;
+				case KernelType::AddressSpace::Global:		attribute = "__global"; break;
+				case KernelType::AddressSpace::Local:		attribute = "__local"; break;
+				case KernelType::AddressSpace::Private:
+				case KernelType::AddressSpace::Undefined:	/* as private is implicit! */ break;
+				}
+
+				TypeInfo* typeInfo = type_info_utils::createInfo(0);
+				// lValues of this type are now bound to their corresponding address space
+				typeInfo->lValueType = c_ast::attribute(attribute, elementInfo.lValueType);
+				typeInfo->rValueType = elementInfo.rValueType;
+				typeInfo->externalType = elementInfo.externalType;
+				typeInfo->externalize = elementInfo.externalize;
+				typeInfo->internalize = elementInfo.internalize;
+				typeInfo->declaration = elementInfo.declaration;
+				typeInfo->definition = elementInfo.definition;
+				return typeInfo;
 			}
 			// it is not a special opencl type => let somebody else try
 			return 0;

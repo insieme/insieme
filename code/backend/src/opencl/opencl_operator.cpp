@@ -48,8 +48,9 @@
 #include "insieme/backend/backend_config.h"
 
 #include "insieme/core/lang/array.h"
+#include "insieme/core/lang/pointer.h"
 #include "insieme/core/lang/reference.h"
-#include "insieme/core/lang/instrumentation_extension.h"
+#include "insieme/core/lang/varargs_extension.h"
 
 #include "insieme/core/transform/manipulation.h"
 
@@ -109,9 +110,10 @@ namespace opencl {
 			return c_ast::ExpressionPtr();
 		};
 		table[oclExt.getExecuteKernel()] = OP_CONVERTER {
+			auto& vaExt = call->getNodeManager().getLangExtension<core::lang::VarArgsExtension>();
 			/*
 			input:
-			opencl_execute_kernel(1u, fun018, [fun019,fun020,fun021], varlist_pack(()));
+			opencl_execute_kernel(1u, fun018, [fun019,fun020,fun021], varlist_pack((sizeof(int<4>), callExpr));
 			
 			output:
 			({
@@ -120,7 +122,8 @@ namespace opencl {
 					&__insieme_fun020,
 					&__insieme_fun021
 				;
-				irt_opencl_execute(1, &__insieme_fun018, 3, __irt_opencl_requirement_func_table, 0);
+				int32_t tmp0 = callExpr();
+				irt_opencl_execute(1, &__insieme_fun018, 3, __irt_opencl_requirement_func_table, 1, sizeof(int32_t), tmp0);
 			})
 			*/
 			auto manager = C_NODE_MANAGER;
@@ -129,20 +132,35 @@ namespace opencl {
 			auto id = CONVERT_ARG(0);
 			auto nd = CONVERT_ARG(1);
 			
-			auto reqs = core::encoder::toValue<core::ExpressionList, core::encoder::DirectExprListConverter>(ARG(2));
-			auto size =	CONVERT_EXPR(builder.uintLit(reqs.size()));
+			auto requirements = core::encoder::toValue<core::ExpressionList, core::encoder::DirectExprListConverter>(ARG(2));
 			// obtain the type of requirement function
-			auto var = c_ast::var(utils::vectorType(manager, "irt_opencl_data_requirement_func"),
+			auto requirementsTable = c_ast::var(utils::vectorType(manager, "irt_opencl_data_requirement_func"),
 								  "__irt_opencl_data_requirement_func_table");
 			// put together the init list for @var
 			std::vector<c_ast::NodePtr> init;			
-			for(const auto& req : reqs)
+			for(const auto& req : requirements)
 				init.push_back(CONVERT_EXPR(req));
+
+			auto va = call->getArgument(3);
+			assert_true(core::analysis::isCallOf(va, vaExt.getVarlistPack())) << "expected varlist_pack as argument";
+			// if core::IRBuilder was used -- which is the encouraged way of doing it -- it must be a tupleExpr
+			auto tupleExpr = core::analysis::getArgument(va, 0).isa<core::TupleExprPtr>();
+			assert_true(tupleExpr) << "expected a tupleExpr as argument of varlist_pack";
+
+			core::ExpressionList exprList = tupleExpr->getExpressions()->getElements();
+			assert_true((exprList.size() % 2) == 0) << "an optional argument must be modeled as tuple (size,value)";
 			
+			// @TODO: actually push the exprs into the compound
+
 			// finally we can substitute it with the actual IRT call
 			return utils::stmtExpr(manager, c_ast::compound(
-				utils::varDecl(manager, var, utils::initializer(manager, init)), // this models the func_table 
-				c_ast::call(manager->create("irt_opencl_execute"), id, nd, size, var, CONVERT_EXPR(builder.uintLit(0)))
+				utils::varDecl(manager, requirementsTable, utils::initializer(manager, init)), // this models the func_table 
+				c_ast::call(manager->create("irt_opencl_execute"),
+					id, // id of kernel to call
+					nd, // associated NDRange
+					CONVERT_EXPR(builder.uintLit(requirements.size())), // number of requirements stored in the table
+					requirementsTable, // c_ast variable pointing to the requirements table
+					CONVERT_EXPR(builder.uintLit(0)))
 			));
 		};
 		table[oclExt.getMakeDataRequirement()] = OP_CONVERTER {
@@ -156,6 +174,7 @@ namespace opencl {
 			auto type = requirement->getType();
 			if(lang::isReference(type)) type = lang::ReferenceType(type).getElementType();
 			if(lang::isArray(type)) type = lang::ArrayType(type).getElementType();
+			if(lang::isPointer(type)) type = lang::PointerType(type).getElementType();
 			// register it and put type_id into initializer
 			init.push_back(c_ast::lit(utils::uint32Type(manager), std::to_string(table->registerType(type))));
 			
@@ -199,6 +218,34 @@ namespace opencl {
 			init.push_back(addWorkSizes(ndrange->getLocalWorkSizes()));
 			
 			return utils::initializer(manager, utils::namedType(manager, "irt_opencl_ndrange"), init);
+		};
+		table[oclExt.getWorkDim()] = OP_CONVERTER {
+			auto manager = C_NODE_MANAGER;
+			return c_ast::call(manager->create("get_work_dim"));
+		};
+		table[oclExt.getGlobalSize()] = OP_CONVERTER {
+			auto manager = C_NODE_MANAGER;
+			return c_ast::call(manager->create("get_global_size"), CONVERT_ARG(0));
+		};
+		table[oclExt.getGlobalId()] = OP_CONVERTER {
+			auto manager = C_NODE_MANAGER;
+			return c_ast::call(manager->create("get_global_id"), CONVERT_ARG(0));
+		};
+		table[oclExt.getLocalSize()] = OP_CONVERTER {
+			auto manager = C_NODE_MANAGER;
+			return c_ast::call(manager->create("get_local_size"), CONVERT_ARG(0));
+		};
+		table[oclExt.getLocalId()] = OP_CONVERTER {
+			auto manager = C_NODE_MANAGER;
+			return c_ast::call(manager->create("get_local_id"), CONVERT_ARG(0));
+		};
+		table[oclExt.getNumGroups()] = OP_CONVERTER {
+			auto manager = C_NODE_MANAGER;
+			return c_ast::call(manager->create("get_num_groups"), CONVERT_ARG(0));
+		};
+		table[oclExt.getGroupId()] = OP_CONVERTER {
+			auto manager = C_NODE_MANAGER;
+			return c_ast::call(manager->create("get_group_id"), CONVERT_ARG(0));
 		};
 		#include "insieme/backend/operator_converter_end.inc"
 		return table;

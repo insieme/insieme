@@ -40,8 +40,6 @@
 
 #include "insieme/core/ir_node.h"
 
-#include "insieme/backend/preprocessor.h"
-#include "insieme/backend/postprocessor.h"
 #include "insieme/backend/converter.h"
 #include "insieme/backend/name_manager.h"
 #include "insieme/backend/variable_manager.h"
@@ -55,6 +53,7 @@
 
 #include "insieme/backend/opencl/opencl_backend.h"
 #include "insieme/backend/opencl/opencl_preprocessor.h"
+#include "insieme/backend/opencl/opencl_postprocessor.h"
 #include "insieme/backend/opencl/opencl_code_fragments.h"
 #include "insieme/backend/opencl/opencl_operator.h"
 #include "insieme/backend/opencl/opencl_type_handler.h"
@@ -98,15 +97,9 @@ namespace opencl {
 
 		auto res = std::make_shared<OpenCLBackend>(includeEffortEstimation, config);
 		res->addAddOn<addons::PointerType>();
-		res->addAddOn<addons::CppCastsAddon>();
-		res->addAddOn<addons::CppMembAddon>();
 		res->addAddOn<addons::ComplexType>();
 		res->addAddOn<addons::EnumType>();
-		res->addAddOn<addons::InputOutput>();
 		res->addAddOn<addons::LongLongType>();
-		res->addAddOn<addons::AsmStmt>();
-		res->addAddOn<addons::VarArgs>();
-		res->addAddOn<addons::StaticVariables>();
 		return res;
 	}
 
@@ -120,7 +113,7 @@ namespace opencl {
 		PreProcessorPtr preprocessor = makePreProcessor<PreProcessingSequence>(
 		    getBasicPreProcessorSequence(),
 		    makePreProcessor<runtime::InstrumentationSupport>(), // needs to be before the conversion to work-items
-		    makePreProcessor<opencl::OffloadSupport>(),
+		    makePreProcessor<OffloadSupportPre>(),
 		    makePreProcessor<runtime::WorkItemizer>(includeEffortEstimation), makePreProcessor<runtime::StandaloneWrapper>());
 		converter.setPreProcessor(preprocessor);
 
@@ -133,24 +126,33 @@ namespace opencl {
 		return converter;
 	}
 	
-	OpenCLKernelBackend::OpenCLKernelBackend(const BackendConfigPtr& config) :
+	KernelBackend::KernelBackend(const BackendConfigPtr& config) :
 		Backend(std::vector<AddOnPtr>(), config)
 	{ }
 	
-	OpenCLKernelBackendPtr OpenCLKernelBackend::getDefault() {
-		auto res = std::make_shared<OpenCLKernelBackend>(std::make_shared<BackendConfig>());
+	KernelBackendPtr KernelBackend::getDefault() {
+		auto res = std::make_shared<KernelBackend>(std::make_shared<BackendConfig>());
 		res->addAddOn<addons::PointerType>();
 		return res;
 	}
 
-	Converter OpenCLKernelBackend::buildConverter(core::NodeManager& manager) const {
+	Converter KernelBackend::buildConverter(core::NodeManager& manager) const {
 		Converter converter(manager, "OpenCLKernelBackend", getConfiguration());
 		
 		PreProcessorPtr preprocessor = makePreProcessor<PreProcessingSequence>(
 			makePreProcessor<sequential::Sequentializer>(),
 			getBasicPreProcessorSequence());
 		converter.setPreProcessor(preprocessor);
+
+		PostProcessorPtr postprocessor = makePostProcessor<PostProcessingSequence>(
+			makePostProcessor<OffloadSupportPost>());
+		converter.setPostProcessor(postprocessor);
+
+		TypeManager& typeManager = converter.getTypeManager();
+		typeManager.addTypeHandler(OpenCLTypeHandler);
 		
+		FunctionManager& functionManager = converter.getFunctionManager();
+		addOpenCLSpecificOps(manager, functionManager.getOperatorConverterTable(), getConfiguration());
 		return converter;
 	}
 	

@@ -43,43 +43,119 @@
 #include "insieme/backend/converter.h"
 #include "insieme/backend/preprocessor.h"
 #include "insieme/backend/opencl/opencl_entities.h"
+#include "insieme/backend/opencl/opencl_extension.h"
+
+#include "insieme/utils/graph_utils.h"
 
 namespace insieme {
 namespace backend {
 namespace opencl {
 namespace transform {
+
+	using namespace insieme::annotations::opencl;
+
+	class CallContext {
+		// ndrange associated with this call
+		NDRangePtr ndrange;
+		// concrete requirements -- if not empty, size must be the same as defaultRq!
+		// a processing step can use it to adjust the requirements for its needs
+		core::ExpressionList overrideRq;
+		// a list of optionals which shall be passed to irt_opencl_execute.
+		// right now the type must fit into an uint64 (limitation of IRT)
+		core::ExpressionList optionals;
+	public:
+		const NDRangePtr& getNDRange() const { return ndrange; }
+		void setNDRange(const NDRangePtr& ptr) { ndrange = ptr; }
+		const core::ExpressionList& getOverrideRequirements() const { return overrideRq; }
+		void setOverrideRequirements(const core::ExpressionList& lst) { overrideRq = lst; }
+		const core::ExpressionList& getOptionals() const { return optionals; }
+		void setOptionals(const core::ExpressionList& lst) { optionals = lst; }
+	};
+	typedef std::shared_ptr<CallContext> CallContextPtr;
+
+	class StepContext {
+		// represents the initial requirements -- a call context can overwrite it
+		VariableRequirementList defaultRq;
+		// each call context will lead to an invokation of irt_opencl_execute
+		utils::graph::Graph<CallContextPtr> graph;
+	public:
+		const VariableRequirementList& getDefaultRequirements() const { return defaultRq; }
+		void setDefaultRequirements(const VariableRequirementList& lst) { defaultRq = lst; }
+		utils::graph::Graph<CallContextPtr>& getCallGraph() { return graph; }
+		const utils::graph::Graph<CallContextPtr>& getCallGraph() const { return graph; }
+	};
+
+	class Step : public PreProcessor {
+	protected:
+		core::NodeManager& manager;
+		StepContext& context;
+	public:
+		Step(core::NodeManager& manager, StepContext& context) : PreProcessor(), manager(manager), context(context) {}
+		core::NodePtr process(const Converter& converter, const core::NodePtr& code) override { return code; }
+	};
+
 	/**
 	 * transform::outline may produces e.g. float ** (due to ref<ref<ptr<real<4>>>>) which is not
 	 * suitable for OpenCL kernel node arguments. This step flattens e.g. float ** to float *
 	 */
-	class FlattenVariableIndirectionStep : public PreProcessor {
-		core::NodeManager& manager;
+	class FlattenVariableIndirectionStep : public Step {
 	public:
-		FlattenVariableIndirectionStep(core::NodeManager& manager) : manager(manager) {}
+		using Step::Step;
 		core::NodePtr process(const Converter& converter, const core::NodePtr& code) override;
 	};
 
 	/**
 	 * tries to inline c/cpp_style_assignments produced by the frontend
 	 */
-	class InlineAssignmentsStep : public PreProcessor {
-		core::NodeManager& manager;
+	class InlineAssignmentsStep : public Step {
 	public:
-		InlineAssignmentsStep(core::NodeManager& manager) : manager(manager) {}
+		using Step::Step;
+		core::NodePtr process(const Converter& converter, const core::NodePtr& code) override;
+	};
+
+	/**
+	 * introduces the NDRange concept
+	 */
+	class CallIntroducerStep : public Step {
+	public:
+		using Step::Step;
+		core::NodePtr process(const Converter& converter, const core::NodePtr& code) override;
+	};
+
+	/**
+	 * introduces KernelType and applies 'local' transformations -- this shall be the last step in toOcl!
+	 */
+	class KernelTypeStep : public Step {
+	public:
+		using Step::Step;
+		core::NodePtr process(const Converter& converter, const core::NodePtr& code) override;
+	};
+
+	/**
+	 * checks the integrity of the IR
+	 */
+	class IntegrityCheckStep : public Step {
+	public:
+		using Step::Step;
 		core::NodePtr process(const Converter& converter, const core::NodePtr& code) override;
 	};
 
 	core::CallExprPtr outline(core::NodeManager& manager, const core::StatementPtr& stmt);
-	
+
 	core::CallExprPtr buildRegisterKernel(core::NodeManager& manager, unsigned int& id, const core::LambdaExprPtr& oclExpr);
-	
+
 	core::CallExprPtr buildExecuteKernel(core::NodeManager& manager, unsigned int id, const core::ExpressionPtr& ndrange,
 										 const core::ExpressionList& requirements, const core::ExpressionList& optionals);
-	
+
+
+	core::CallExprPtr buildExecuteKernel(core::NodeManager& manager, unsigned int id, const StepContext& sc, const CallContext& cc);
+
+	core::StatementList buildExecuteGraph(core::NodeManager& manager, unsigned int id, const StepContext& sc);
+
 	core::LambdaExprPtr toIR(core::NodeManager& manager, const NDRangePtr& ndrange);
-	
+
 	core::LambdaExprPtr toIR(core::NodeManager& manager, const annotations::opencl::VariableRequirementPtr& var);
-	
+
 	// note: callExpr shall be obtained by invoking outline() of above
 	core::LambdaExprPtr toOcl(const Converter& converter, core::NodeManager& manager, unsigned int& id, const core::CallExprPtr& callExpr);
 }

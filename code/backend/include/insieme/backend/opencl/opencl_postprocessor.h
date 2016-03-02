@@ -43,6 +43,12 @@ namespace insieme {
 namespace backend {
 namespace opencl {
 
+	class OffloadSupportPost : public PostProcessor {
+		bool compatWritten;
+	public:
+		OffloadSupportPost();
+		c_ast::NodePtr process(c_ast::CNodeManager& manager, const c_ast::NodePtr& code) override;
+	};
 
 } // end namespace opencl
 } // end namespace backend

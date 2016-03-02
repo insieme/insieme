@@ -39,7 +39,9 @@
 #include "insieme/backend/opencl/opencl_backend.h"
 #include "insieme/backend/opencl/opencl_code_fragments.h"
 #include "insieme/backend/opencl/opencl_analysis.h"
+#include "insieme/backend/opencl/opencl_extension.h"
 
+#include "insieme/core/checks/full_check.h"
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/transform/inline.h"
@@ -50,6 +52,7 @@
 #include "insieme/core/lang/array.h"
 #include "insieme/core/pattern/ir_pattern.h"
 #include "insieme/core/pattern/pattern_utils.h"
+#include "insieme/core/types/return_type_deduction.h"
 #include "insieme/core/ir_builder.h"
 
 #include "insieme/backend/runtime/runtime_extension.h"
@@ -68,10 +71,27 @@ namespace transform {
 		core::LiteralPtr toKernelLiteral(core::NodeManager& manager, const core::LambdaExprPtr& oclExpr) {
 			core::IRBuilder builder(manager);
 			// obtain the kernel backend which transforms oclExpr into a stringLit
-			OpenCLKernelBackendPtr backend = OpenCLKernelBackend::getDefault();
+			KernelBackendPtr backend = KernelBackend::getDefault();
 			TargetCodePtr target = backend->convert(oclExpr);
+
+			std::string str;
+			// in case it is CCode we print it differently -- this shall be the general case tho!
+			if (auto ccode = std::dynamic_pointer_cast<c_ast::CCode>(target)) {
+				std::stringstream ss;
+				for (const c_ast::CodeFragmentPtr& cur : ccode->getFragments()) { ss << *cur; }
+				str = ss.str();
+			} else {
+				str = toString(*target);
+			}
 			// dump the target code as string and put into IR lit
-			return builder.stringLit(toString(*target));
+			return builder.stringLit(str);
+		}
+
+		core::ExpressionPtr wrapLazy(core::NodeManager& manager, const core::ExpressionPtr& expr) {
+			if (expr->getNodeType() == core::NT_LambdaExpr) return expr.as<core::LambdaExprPtr>();
+			// in this case we take use of materialization to wrap it
+			core::IRBuilder builder(manager);
+			return builder.wrapLazy(expr);
 		}
 		
 		NDRangePtr makeDefaultNDRange(core::NodeManager& manager) {
@@ -110,16 +130,95 @@ namespace transform {
 
 	core::CallExprPtr buildExecuteKernel(core::NodeManager& manager, unsigned int id, const core::ExpressionPtr& ndrange,
 										 const core::ExpressionList& requirements, const core::ExpressionList& optionals) {
-		// paranoia checks
-		assert_true(ndrange->getNodeType() == core::NT_LambdaExpr) << "ndrange must be a lambdaExpr: " << dumpColor(ndrange);
-		// @TODO: ndrange must be LambdaExprPtr & requirements is the same
-		// @TODO: optionals must be basis types
 		core::IRBuilder builder(manager);
 		auto& oclExt = manager.getLangExtension<OpenCLExtension>();
 		// this call instructs the irt to execute the kernel @id
 		return builder.callExpr(manager.getLangBasic().getUnit(), oclExt.getExecuteKernel(), builder.uintLit(id), ndrange,
 								core::encoder::toIR<core::ExpressionList, core::encoder::DirectExprListConverter>(manager, requirements),
 								builder.pack(optionals));
+	}
+
+	core::CallExprPtr buildExecuteKernel(core::NodeManager& manager, unsigned int id, const StepContext& sc, const CallContext& cc) {
+		// a valid ndrange must be present, the rest is optional
+		assert_true(cc.getNDRange()) << "NDRange must not be null!";
+		// put together all requirements
+		core::ExpressionList requirements;
+		if (!cc.getOverrideRequirements().empty()) {
+			// a step has produced custom requirement functions, use them instead
+			requirements = cc.getOverrideRequirements();
+			assert_true(requirements.size() == sc.getDefaultRequirements().size())
+				<< "number of overridden requirements must match default ones!";
+
+			// @TODO: implement analysis to assure the signature of overrides is correct
+			//		  e.g. analysis::isValidRequirement()
+		} else {
+			// fallback are the default non-modified requirements, transform into IR and push
+			for (const auto& requirement : sc.getDefaultRequirements())
+				requirements.push_back(toIR(manager, requirement));
+		}
+		// put together all optionals
+		core::ExpressionList optionals;
+		if (!cc.getOptionals().empty()) {
+			core::IRBuilder builder(manager);
+			// each optional is represented as tuple (size,expr)
+			for (const auto& optional : cc.getOptionals()) {
+				// in case the optional is a function or a closure -- which must be in the form of
+				// (...) -> 'a -- the opconverter will take care to evaluate it in an eager manner
+				auto unit = manager.getLangBasic().getUnit();
+				auto type = unit;
+				switch (optional->getNodeType()) {
+				case core::NT_Literal:
+				case core::NT_Variable:
+						type = optional->getType();
+						break;
+				case core::NT_CallExpr:
+					{
+						auto callExpr = optional.as<core::CallExprPtr>();
+						// use returnType deduction for this purpose
+						type = core::types::deduceReturnType(callExpr->getFunctionExpr()->getType().as<core::FunctionTypePtr>(),
+							core::extractTypes(callExpr->getArguments()));
+						break;
+					}
+				case core::NT_BindExpr:
+					{
+						auto bindExpr = optional.as<core::BindExprPtr>();
+						assert_true(bindExpr->getParameters().empty())
+							<< "optional argument modeled as bindExpr must not expect additional parameters";
+						// also use returnType deduction but use bound parameters
+						auto callExpr = bindExpr->getCall();
+						type = core::types::deduceReturnType(callExpr->getFunctionExpr()->getType().as<core::FunctionTypePtr>(),
+							core::extractTypes(callExpr->getArguments()));
+						break;
+					}
+				default:
+						// fall through and trigger error handling
+						break;
+				}
+				assert_ne(type, unit) << "failed to deduce type of optional argument";
+				// at this point we can finally construct the tuple
+				optionals.push_back(builder.callExpr(manager.getLangBasic().getSizeof(),
+													 builder.getTypeLiteral(type)));
+				optionals.push_back(optional);
+			}
+		}
+		// done .. execute the helper one level deeper
+		return buildExecuteKernel(manager, id, toIR(manager, cc.getNDRange()), requirements, optionals);
+	}
+
+	core::StatementList buildExecuteGraph(core::NodeManager& manager, unsigned int id, const StepContext& sc) {
+		core::StatementList result;
+
+		const auto& graph = sc.getCallGraph();
+		assert_true(graph.getNumVertices() > 0) << "execution graph must consist of at least one vertex";
+		// right now: simple implementation which sequentially executes all calls
+		for (auto it = graph.vertexBegin(); it != graph.vertexEnd(); ++it) {
+			auto callExpr = buildExecuteKernel(manager, id, sc, **it);
+			// for the sake of debugging -- print IR of generated execute
+			LOG(INFO) << "generated execute call: " << dumpColor(callExpr);
+			result.push_back(callExpr);
+		}
+
+		return result;
 	}
 
 	core::LambdaExprPtr toIR(core::NodeManager& manager, const NDRangePtr& ndrange) {
@@ -180,7 +279,7 @@ namespace transform {
 		// encode the range (in this case 1D)
 		DataRangePtr range = DataRange::get(manager, var->getSize(), var->getStart(), var->getEnd());
 		body.push_back(builder.returnStmt(DataRange::encode(manager, range)));
-		// ok, now we can generate the "inner" lambda			
+		// ok, now we can generate the "inner" lambda
 		core::LambdaExprPtr rangeExpr = builder.lambdaExpr(oclExt.getDataRange(), params, builder.compoundStmt(body));
 
 		// prepare for the outer lamdba
@@ -235,62 +334,37 @@ namespace transform {
 		class InlineAssignmentsNodeMapping : public core::transform::CachedNodeMapping {
 			core::NodeManager& manager;
 			core::IRBuilder builder;
-			bool includeEffortEstimation;
-
+			core::pattern::TreePattern pattern;
 		public:
-			InlineAssignmentsNodeMapping(core::NodeManager& manager) : manager(manager), builder(manager) {}
-
-			const core::NodePtr resolveElement(const core::NodePtr& ptr) override {
-				#if 0
-				/*
-				 * the task of this function is to inline the following code:
-				 * LANG_EXT_DERIVED(CStyleAssignment, "(lhs : ref<'a,f,'b>, rhs : 'a) -> 'a { lhs = rhs; return *lhs; }")
-				 * LANG_EXT_DERIVED(CxxStyleAssignment, "(lhs : ref<'a,f,'b,'c>, rhs : 'a) -> ref<'a,f,'b,'c> { lhs = rhs; return lhs; }")
-				 */
-				auto var = core::pattern::irp::atom(builder.typeVariable("a"));
-				auto rhs = core::pattern::irp::variable(var);
-				auto lhs = core::pattern::irp::variable(core::pattern::irp::refType(var));
+			InlineAssignmentsNodeMapping(core::NodeManager& manager) : manager(manager), builder(manager) {
+				// build the irp beforehand as the resolveElement method will use it quite often
+				// auto var = core::pattern::irp::atom(builder.typeVariable("a"));
+				auto rhs = core::pattern::irp::variable(core::pattern::any);
+				auto lhs = core::pattern::irp::variable(core::pattern::irp::refType(core::pattern::any));
 				// now construct the lambda pattern which represents the actual c/cpp_style_assignment
-				auto pattern = core::pattern::irp::lambda(
+				pattern = core::pattern::irp::lambda(
 					core::pattern::any, 				// return type
-					core::pattern::anyList, 			// arguments
+					core::pattern::empty << lhs << rhs,	// arguments
 					core::pattern::aT( 					// body
 						core::pattern::irp::assignment(),
 						core::pattern::irp::returnStmt(core::pattern::any)
 						));
-				
-				core::NodeMap replacements;
-				// visit all call expressions within the node and try to replace them with inlined versions
-				core::visitDepthFirstOncePrunable(lambdaExpr->getBody(), [&](const core::CallExprPtr& callExpr) {
-					// simple case, the pattern matches right along
-					if (auto lambdaExpr = callExpr->getFunctionExpr().isa<core::LambdaExprPtr>()) {
-						if (pattern.match(lambdaExpr)) {
-							auto newNode = core::transform::inlineCode(manager, callExpr);
-							LOG(INFO) << "OpenCL::InlineAssignmentsStep@pattern:" << std::endl
-									  << "original: " << dumpColor(callExpr)
-									  << "inlined: " << dumpColor(newNode);
-							replacements[callExpr] = newNode;
-						}
-						
-						// let the visitor know that we do not want to visit children of this call
-						return true;
+			}
+
+			const core::NodePtr resolveElement(const core::NodePtr& node) override {
+				// do not touch types
+				if (node->getNodeCategory() == core::NC_Type) return node;
+				// this mapping is only interested in calls ...
+				if (node->getNodeType() != core::NT_CallExpr) return node->substitute(manager, *this);
+				core::CallExprPtr callExpr = node.as<core::CallExprPtr>();
+
+				if (auto lambdaExpr = callExpr->getFunctionExpr().isa<core::LambdaExprPtr>()) {
+					if (pattern.match(lambdaExpr->getLambda())) {
+						return builder.assign(callExpr->getArgument(0), callExpr->getArgument(1));
+						// return core::transform::inlineCode(manager, callExpr);
 					}
-					
-					return true;
-				});
-				// fast-path
-				if (replacements.empty()) return node;
-				auto newNode = builder.lambdaExpr(manager.getLangBasic().getUnit(), 
-					lambdaExpr->getParameterList(), core::transform::replaceAllGen(manager, lambdaExpr->getBody(), replacements));
-				
-				LOG(INFO) << "OpenCL::InlineAssignmentsStep:"
-						  << "input: " << dumpColor(node)
-						  << "output: " << dumpColor(newNode);
-				return newNode;
-				#endif
-				
-				// right now we do an identity mapping
-				return ptr;
+				}
+				return node;
 			}
 		};
 	}
@@ -298,35 +372,94 @@ namespace transform {
 	core::NodePtr InlineAssignmentsStep::process(const Converter& converter, const core::NodePtr& node) {		
 		core::LambdaExprPtr lambdaExpr = node.isa<LambdaExprPtr>();
 		if (!lambdaExpr) return node;
-	
+
 		InlineAssignmentsNodeMapping mapping(manager); 
-		return mapping.resolveElement(node);
+		core::NodePtr newBody = mapping.resolveElement(lambdaExpr->getBody());
+
+		core::IRBuilder builder(manager);
+		core::LambdaExprPtr newLambdaExpr= builder.lambdaExpr(
+			manager.getLangBasic().getUnit(), lambdaExpr->getParameterList(), newBody.as<core::StatementPtr>());
+		// migrate the annotations -- but no need to fixup as only hthe body has changed
+		core::transform::utils::migrateAnnotations(lambdaExpr, newLambdaExpr);
+		return newLambdaExpr;
+	}
+	
+	core::NodePtr CallIntroducerStep::process(const Converter& converter, const core::NodePtr& node) {
+		auto callContext = std::make_shared<CallContext>();
+		// introduce a single default clEnqueueTask call
+		callContext->setNDRange(makeDefaultNDRange(manager));
+
+		#if 0
+		// @FEKO for testing only!
+		core::IRBuilder builder(manager);
+		core::ExpressionList optionals;
+		optionals.push_back(builder.uintLit(7));
+		callContext->setOptionals(optionals);
+		#endif
+
+		context.getCallGraph().addVertex(callContext);
+		return node;
+	}
+
+	core::NodePtr KernelTypeStep::process(const Converter& converter, const core::NodePtr& code) {
+		#if 0
+		core::LambdaExprPtr lambdaExpr = code.isa<LambdaExprPtr>();
+		if (!lambdaExpr) return code;
+
+		core::IRBuilder builder(manager);
+		core::StatementList body;
+
+		for_each(lambdaExpr->getParameterList(), [&](const core::VariablePtr& cur) {
+			body.push_back(builder.markerExpr(cur, cur->getId()));
+		});
+
+		body.insert(body.end(), lambdaExpr->getBody().begin(), lambdaExpr->getBody().end());
+		core::LambdaExprPtr newLambdaExpr = builder.lambdaExpr(manager.getLangBasic().getUnit(), lambdaExpr->getParameterList(), builder.compoundStmt(body));
+
+		LOG(INFO) << "lambda with kernel types: " << dumpColor(newLambdaExpr);
+		#endif
+		return code;
+	}
+
+	core::NodePtr IntegrityCheckStep::process(const Converter& converter, const core::NodePtr& code) {
+		LOG(INFO) << "generated kernel code:";
+		LOG(INFO) << dumpColor(code);
+
+		core::checks::MessageList messages = core::checks::check(code);
+		if (!messages.empty()) {
+			std::stringstream ss;
+			messages.printTo(ss);
+			LOG(ERROR) << "integrity checks for OpenCL Kernel code has failed:";
+			LOG(ERROR) << ss.str();
+			
+			assert_fail() << "see messages above!";
+		}
+		return code;
 	}
 
 	core::LambdaExprPtr toOcl(const Converter& converter, core::NodeManager& manager, unsigned int& id, const core::CallExprPtr& callExpr) {
 		core::IRBuilder builder(manager);
 		// grab a ptr to the enclosed lamda -- right now no transformations applied
 		core::LambdaExprPtr lambdaExpr = callExpr->getFunctionExpr().as<core::LambdaExprPtr>();
-		// get the requirements which are encoded as annotations
-		const VariableRequirementList& requirements = analysis::getVariableRequirements(manager, callExpr);
-		// transform the requirements into functions
-		core::ExpressionList rq;
-		for (const auto& requirement : requirements)
-			rq.push_back(toIR(manager, requirement));
-		// transform the NDRange(s) into function(s)
-		core::ExpressionPtr nd = toIR(manager, makeDefaultNDRange(manager));
-		// empty list for the additional arguments
-		core::ExpressionList va;
-		
+		// context which is usable among all steps
+		StepContext context;
+		// grab and set the default requirements for all variables
+		context.setDefaultRequirements(analysis::getVariableRequirements(manager, callExpr));
 		// all modifications applied to the lambda (which will ultimately yield OlcIR) are modeled as preProcessors
 		auto processor = makePreProcessorSequence(
-			makePreProcessor<FlattenVariableIndirectionStep>(boost::ref(manager))/*,
-			makePreProcessor<InlineAssignmentsStep>(boost::ref(manager))*/);
-		
+			getBasicPreProcessorSequence(),
+			makePreProcessor<FlattenVariableIndirectionStep>(boost::ref(manager), boost::ref(context)),
+			makePreProcessor<InlineAssignmentsStep>(boost::ref(manager), boost::ref(context)),
+			makePreProcessor<CallIntroducerStep>(boost::ref(manager), boost::ref(context)),
+			makePreProcessor<KernelTypeStep>(boost::ref(manager), boost::ref(context)),
+			makePreProcessor<IntegrityCheckStep>(boost::ref(manager), boost::ref(context)));
+
 		core::StatementList body;
 		// first of all, we need to register the kernel itself
-		body.push_back(buildRegisterKernel(manager, id, processor->process(converter, lambdaExpr).as<LambdaExprPtr>()));
-		body.push_back(buildExecuteKernel(manager, id, nd, rq, va));
+		auto registerCall = buildRegisterKernel(manager, id, processor->process(converter, lambdaExpr).as<LambdaExprPtr>());
+		// as the processor has yield a callGraph build it now
+		body = buildExecuteGraph(manager, id, context);
+		body.push_back(registerCall);
 		// now the body is populated with all required IR constructs, build the wrapper
 		return builder.lambdaExpr(lambdaExpr->getFunctionType(), lambdaExpr->getParameterList(), builder.compoundStmt(body));
 	}

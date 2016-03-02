@@ -69,15 +69,15 @@
 namespace insieme {
 namespace backend {
 namespace opencl {
+
 	using namespace insieme::annotations::opencl;
 	using namespace insieme::annotations::opencl_ns;
-	using namespace insieme::utils::map;
-	
-	OffloadSupport::OffloadSupport() :
+
+	OffloadSupportPre::OffloadSupportPre() :
 		PreProcessor()
 	{ }
 
-	core::NodePtr OffloadSupport::process(const Converter& converter, const core::NodePtr& node) {
+	core::NodePtr OffloadSupportPre::process(const Converter& converter, const core::NodePtr& node) {
 		// node manager used by this extension
 		core::NodeManager& manager = converter.getNodeManager();
 		// instantiate a filter to guide the visitor
@@ -90,7 +90,7 @@ namespace opencl {
 		};
 		core::IRBuilder builder(manager);
 		// this map will be filled by the visitor
-		PointerMap<core::NodePtr, core::NodePtr> replacements;
+		core::NodeMap replacements;
 		// traverse through the tree and find nodes which are valid for offloading
 		core::visitDepthFirstOnce(node, core::makeLambdaVisitor(filter, [&](const NodePtr& node) {
 			// we outline the compound such that we can implement our pick between default & opencl kernel
