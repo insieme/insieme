@@ -110,21 +110,7 @@ namespace conversion {
 	//							RETURN STATEMENT
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitReturnStmt(clang::ReturnStmt* retStmt) {
-		stmtutils::StmtWrapper retIr;
-		LOG_STMT_CONVERSION(retStmt, retIr);
-
-		auto irRetStmt = builder.returnStmt();
-
-		// check if we have a return value
-		if(clang::Expr* expr = retStmt->getRetValue()) {
-			auto returnExpr = converter.convertCxxArgExpr(expr);
-			auto returnVar = builder.variable(returnExpr->getType());
-			returnExpr = utils::fixTempMemoryInInitExpression(returnVar, returnExpr);
-			irRetStmt = builder.returnStmt(returnExpr, returnVar);
-		}
-
-		retIr.push_back(irRetStmt);
-		return retIr;
+		return StmtConverter::VisitReturnStmt(retStmt);
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
