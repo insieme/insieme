@@ -61,11 +61,7 @@
 	#include "insieme/core/parser/detail/scanner.h"
 	#include "insieme/core/ir.h"
 
-	#include "insieme/core/annotations/naming.h"
-	#include "insieme/core/analysis/ir_utils.h"
 	#include "insieme/core/encoder/lists.h"
-
-	#include "insieme/core/lang/parallel.h"
 
 	#define INSPIRE_GUARD(l, n) \
 		if(!n) { driver.error(l, "unrecoverable error"); YYABORT; }
@@ -251,7 +247,7 @@
 
 
 %type <CompoundStmtPtr>                compound_statement compound_statement_no_scope
-%type <DeclarationStmtPtr>             variable_definition
+%type <DeclarationStmtPtr>             variable_definition typed_variable_definition
 %type <IfStmtPtr>                      if_statement
 %type <SwitchStmtPtr>                  switch_statement
 %type <WhileStmtPtr>                   while_statement
@@ -761,12 +757,13 @@ statement_list :                                                          { $$ =
 
 // -- variable declaration --
 
-variable_definition : "var" type "identifier" "="                         { INSPIRE_GUARD(@3, driver.genVariableDeclaration(@$, $2, $3)); }
-                                                  expression ";"          { $$ = driver.genDeclarationStmt(@$, $3, $6); }
-                    | "var" type "identifier" ";"                         { $$ = driver.genUndefinedDeclarationStmt(@$, $2, $3); }
+variable_definition : typed_variable_definition                           { $$ = $1; }
                     | "auto" "identifier" "=" expression ";"              { $$ = driver.genVariableDefinition(@$, driver.getScalar($4)->getType(), $2, $4); }
                     ;
 
+typed_variable_definition : "var" type "identifier" "="                   { INSPIRE_GUARD(@3, driver.genVariableDeclaration(@$, $2, $3)); }
+                                                        expression ";"    { $$ = driver.genDeclarationStmt(@$, $3, $6); }
+                          | "var" type "identifier" ";"                   { $$ = driver.genUndefinedDeclarationStmt(@$, $2, $3); }
 
 // -- if --
 
@@ -838,6 +835,7 @@ continue : "continue" ";"                                                 { $$ =
 // -- return --
 
 return : "return" expression ";"                                          { $$ = driver.builder.returnStmt(driver.getScalar($2)); }
+       | "return" typed_variable_definition                               { $$ = driver.builder.returnStmt($2->getInitialization(), $2->getVariable()); }
        | "return" ";"                                                     { $$ = driver.builder.returnStmt(); }
        ;
 

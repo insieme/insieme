@@ -41,6 +41,7 @@
 #include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_address.h"
+#include "insieme/core/lang/enum.h"
 #include "insieme/core/lang/reference.h"
 #include "insieme/core/transform/node_replacer.h"
 

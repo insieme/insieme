@@ -73,12 +73,12 @@ struct C {
 #define C_IR R"(
 def struct IMP_C {
 	x : uint<4>;
-	ctor() { cxx_style_assignment(x, 0u); }
-	ctor(y : uint<4>) { cxx_style_assignment(x, y); }
+	ctor() { x = 0u; }
+	ctor(y : uint<4>) { x = y; }
 };)"
 
 // check member use within struct member function
-struct D1 {	
+struct D1 {
 	void bla() {}
 	void test() {
 		bla();
@@ -86,7 +86,7 @@ struct D1 {
 };
 
 // check member use within struct member function, inverse order
-struct D2 {	
+struct D2 {
 	void test() {
 		bla();
 	}
@@ -125,7 +125,7 @@ int main() {
 		A b = a;
 		A c = A(a);
 	}
-	
+
 	// non-default implicit init
 	#pragma test expect_ir(VOL_CONSTR_IR, R"( {
 		var ref<IMP_VolatileConstructor,f,t,plain> v0 = IMP_VolatileConstructor::(ref_cast(v0, type_lit(f), type_lit(f), type_lit(plain)));
@@ -155,23 +155,23 @@ int main() {
 		A a, *b = &a;
 		b->f();
 	}
-	
+
 	#pragma test expect_ir(B_IR,R"( { var ref<IMP_B> b = IMP_B::(b); b.IMP_f(); } )")
-	{ 
+	{
 		B b;
 		b.f();
 	}
-	
+
 	#pragma test expect_ir(C_IR,R"( { var ref<IMP_C> c1 = IMP_C::(c1); } )")
 	{
 		C c1;
 	}
-	
+
 	#pragma test expect_ir(C_IR,R"( { var ref<IMP_C> c = IMP_C::(c, 6u); } )")
 	{
 		C c2(6u);
 	}
-	
+
 	{
 		D1 d1;
 	}

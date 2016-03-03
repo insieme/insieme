@@ -62,7 +62,8 @@ namespace core {
 		 */
 		enum class ReplaceAction { Process, Skip, Prune, Interrupt };
 
-		typedef std::function<ReplaceAction(const NodePtr&)> ReplaceLimiter;
+		using ReplaceLimiter = std::function<ReplaceAction(const NodePtr&)>;
+		using TransformFunc = std::function<NodePtr(const NodePtr&)>;
 
 		const static ReplaceLimiter globalReplacement = [](const NodePtr& cur) { return ReplaceAction::Process; };
 		const static ReplaceLimiter localReplacement = [](const NodePtr& cur) {
@@ -192,6 +193,35 @@ namespace core {
 		 * @return the address of the replacement node in the generated tree
 		 */
 		NodeAddress replaceAddress(NodeManager& manager, const NodeAddress& toReplace, const NodePtr& replacement);
+
+		namespace detail {
+			NodePtr transformBottomUpInternal(const NodePtr& root, const TransformFunc& transformFunc, const ReplaceLimiter& replaceLimiter);
+		}
+
+		/**
+		 * Applies the transformation function bottom up on the passed IR tree, pruning/skipping/interrupting as per the limiter.
+		 * NOTE: caches the transformation, do not depend on stateful mapping
+		 */
+		template<typename TransformLambda,
+			typename LambdaArgType = typename std::remove_const<typename std::remove_reference<typename lambda_traits<TransformLambda>::arg1_type>::type>::type>
+		NodePtr transformBottomUp(const NodePtr& root, TransformLambda transformFunc, const ReplaceLimiter& replaceLimiter = localReplacement) {
+			TransformFunc adjustedTransformFunc = [&transformFunc](const NodePtr& node) -> NodePtr {
+				if(!node.isa<LambdaArgType>()) return node;
+				return transformFunc(node.as<LambdaArgType>());
+			};
+
+			return detail::transformBottomUpInternal(root, adjustedTransformFunc, replaceLimiter);
+		}
+
+		/**
+		 * Applies the transformation function bottom up on the passed IR tree, pruning/skipping/interrupting as per the limiter.
+		 * NOTE: caches the transformation, do not depend on stateful mapping
+		 * Note: make sure you are not changing the type of the root node in the transformation
+		 */
+		template<typename NodeType, typename TransformLambda>
+		NodeType transformBottomUpGen(const NodeType& root, TransformLambda transformFunc, const ReplaceLimiter& replaceLimiter = localReplacement) {
+			return transformBottomUp(root, transformFunc, replaceLimiter).template as<NodeType>();
+		}
 
 	} // End transform namespace
 } // End core namespace

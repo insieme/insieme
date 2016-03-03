@@ -36,6 +36,7 @@
 
 #include "insieme/frontend/stmt_converter.h"
 
+#include "insieme/frontend/utils/conversion_utils.h"
 #include "insieme/frontend/utils/debug.h"
 #include "insieme/frontend/utils/macros.h"
 #include "insieme/frontend/utils/source_locations.h"
@@ -109,18 +110,7 @@ namespace conversion {
 	//							RETURN STATEMENT
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitReturnStmt(clang::ReturnStmt* retStmt) {
-		stmtutils::StmtWrapper retIr;
-		LOG_STMT_CONVERSION(retStmt, retIr);
-
-		auto irRetStmt = builder.returnStmt();
-
-		// check if we have a return value
-		if(clang::Expr* expr = retStmt->getRetValue()) {
-			irRetStmt = builder.returnStmt(converter.convertCxxArgExpr(expr));
-		}
-
-		retIr.push_back(irRetStmt);
-		return retIr;
+		return StmtConverter::VisitReturnStmt(retStmt);
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

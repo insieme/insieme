@@ -46,6 +46,7 @@ namespace core {
 
 	class IRBuilder;
 
+
 namespace lang {
 
 	class EnumExtension : public core::lang::Extension	{

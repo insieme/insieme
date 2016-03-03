@@ -139,7 +139,7 @@ namespace extensions {
 			return prog;
 		}
 
-		
+
 		//////////////////////////////////////////////////////////////////////////
 		// Find and replace zero inits of tag types (which can only occur for global inits)
 		// =======================================================================
@@ -161,7 +161,30 @@ namespace extensions {
 			return prog;
 		}
 
-		class TypeCanonicalizer : public core::transform::CachedNodeMapping {			
+		//////////////////////////////////////////////////////////////////////////
+		// Find and replace c and cpp style assignments if ret val not needed
+		// =======================================================================
+		ProgramPtr removeCAndCppStyleAssignments(ProgramPtr prog) {
+			auto& mgr = prog->getNodeManager();
+			core::IRBuilder builder(mgr);
+			auto& feExt = mgr.getLangExtension<utils::FrontendInspireModule>();
+
+			prog = core::transform::transformBottomUpGen(prog, [&](const core::CompoundStmtPtr& compound) {
+				StatementList newStmts;
+				for(auto stmt : compound.getStatements()) {
+					if(feExt.isCallOfCStyleAssignment(stmt) || feExt.isCallOfCxxStyleAssignment(stmt)) {
+						newStmts.push_back(builder.assign(core::analysis::getArgument(stmt,0), core::analysis::getArgument(stmt,1)));
+					} else {
+						newStmts.push_back(stmt);
+					}
+				}
+				return builder.compoundStmt(newStmts);
+			}, core::transform::globalReplacement);
+
+			return prog;
+		}
+
+		class TypeCanonicalizer : public core::transform::CachedNodeMapping {
 			virtual const NodePtr resolveElement(const NodePtr& ptr) override {
 				auto tt = ptr.isa<core::TagTypePtr>();
 				if(tt) {
@@ -170,7 +193,7 @@ namespace extensions {
 				return ptr->substitute(ptr->getNodeManager(), *this);
 			}
 		};
-		
+
 	}
 
 	boost::optional<std::string> FrontendCleanupExtension::isPrerequisiteMissing(ConversionSetup& setup) const {
@@ -191,6 +214,7 @@ namespace extensions {
 		prog = mainReturnCorrection(prog);
 		prog = removeSuperfluousBoolToInt(prog);
 		prog = replaceZeroStructInits(prog);
+		prog = removeCAndCppStyleAssignments(prog);
 
 		return prog;
 	}

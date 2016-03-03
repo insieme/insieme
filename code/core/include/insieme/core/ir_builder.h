@@ -55,8 +55,6 @@
 
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/reference.h"
-#include "insieme/core/lang/enum.h"
-#include "insieme/core/lang/channel.h"
 
 #include "insieme/core/types/subtyping.h"
 

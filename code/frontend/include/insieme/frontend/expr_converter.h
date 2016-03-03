@@ -43,7 +43,6 @@
 #include "insieme/frontend/utils/frontend_ir.h"
 
 #include "insieme/core/lang/basic.h"
-#include "insieme/core/lang/enum.h"
 
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"

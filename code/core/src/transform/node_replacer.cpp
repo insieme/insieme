@@ -74,9 +74,6 @@ namespace {
 		    : manager(manager), replacements(replacements), limiter(limiter) {}
 
 	  private:
-		/**
-		 * Performs the recursive clone operation on all nodes passed on to this visitor.
-		 */
 		virtual const NodePtr resolveElement(const NodePtr& ptr) {
 			// we shouldn't do anything if replacement was interrupted
 			if(interrupted) { return ptr; }
@@ -517,6 +514,63 @@ namespace transform {
 		return toReplace.switchRoot(newRoot);
 	}
 
+	namespace detail {
+		/**
+		 * Mapper which performs transformation on IR starting from a root node.
+		 */
+		class NodeTransformer : public CachedNodeMapping {
+			NodeManager& manager;
+			const TransformFunc& transformation;
+			const ReplaceLimiter limiter;
+			bool interrupted = false;
+
+		  public:
+			NodeTransformer(NodeManager& manager, const TransformFunc& transformation, const ReplaceLimiter limiter)
+				: manager(manager), transformation(transformation), limiter(limiter) {}
+
+		  private:
+			virtual const NodePtr resolveElement(const NodePtr& ptr) {
+				// we shouldn't do anything if replacement was interrupted
+				if(interrupted) { return ptr; }
+
+				// check which action to perform for this node
+				ReplaceAction repAction = limiter(ptr);
+
+				if(repAction == ReplaceAction::Interrupt) {
+					interrupted = true;
+					return ptr;
+				} else if(repAction == ReplaceAction::Prune) {
+					return ptr;
+				}
+
+				// recursive replacement has to be continued
+				NodePtr res = ptr->substitute(manager, *this);
+
+				if(repAction == ReplaceAction::Skip) {
+					return res;
+				}
+
+				res = transformation(res);
+
+				// check whether something has changed ...
+				if(res == ptr) {
+					// => nothing changed
+					return ptr;
+				}
+
+				// preserve annotations
+				utils::migrateAnnotations(ptr, res);
+
+				// done
+				return res;
+			}
+		};
+
+		NodePtr transformBottomUpInternal(const NodePtr& root, const TransformFunc& transformFunc, const ReplaceLimiter& replaceLimiter) {
+			NodeTransformer transformer(root.getNodeManager(), transformFunc, replaceLimiter);
+			return transformer.map(root);
+		}
+	}
 
 } // End transform namespace
 } // End core namespace
