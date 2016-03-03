@@ -39,6 +39,8 @@
 #include <algorithm>
 #include <string>
 
+#include <boost/algorithm/string.hpp>
+
 #include "insieme/core/ir.h"
 
 #include "insieme/core/transform/manipulation.h"

@@ -61,11 +61,7 @@
 	#include "insieme/core/parser/detail/scanner.h"
 	#include "insieme/core/ir.h"
 
-	#include "insieme/core/annotations/naming.h"
-	#include "insieme/core/analysis/ir_utils.h"
 	#include "insieme/core/encoder/lists.h"
-
-	#include "insieme/core/lang/parallel.h"
 
 	#define INSPIRE_GUARD(l, n) \
 		if(!n) { driver.error(l, "unrecoverable error"); YYABORT; }

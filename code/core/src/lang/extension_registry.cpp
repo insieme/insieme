@@ -40,6 +40,7 @@
 #include "insieme/core/lang/asm_extension.h"
 #include "insieme/core/lang/complex.h"
 #include "insieme/core/lang/datapath.h"
+#include "insieme/core/lang/enum.h"
 #include "insieme/core/lang/instrumentation_extension.h"
 #include "insieme/core/lang/io.h"
 #include "insieme/core/lang/parallel.h"
