@@ -271,7 +271,8 @@ namespace backend {
 				bool isOnHeap = core::analysis::isCallOf(call[0], refs.getRefNewInit());
 
 				// case c) create object in-place (placement new)
-				c_ast::ExpressionPtr loc = (!core::analysis::isCallOf(call[0], refs.getRefTempInit()) && !core::analysis::isCallOf(call[0], refs.getRefNewInit()))
+				c_ast::ExpressionPtr loc = (!core::analysis::isCallOf(call[0], refs.getRefTemp()) && !core::analysis::isCallOf(call[0], refs.getRefTempInit())
+				                            && !core::analysis::isCallOf(call[0], refs.getRefNewInit()))
 				                               ? location.as<c_ast::ExpressionPtr>()
 				                               : c_ast::ExpressionPtr();
 
@@ -392,7 +393,7 @@ namespace backend {
 
 
 	const c_ast::NodePtr FunctionManager::getCall(const core::CallExprPtr& in, ConversionContext& context) {
-		// conducte some cleanup (argument wrapping)
+		// conduct some cleanup (argument wrapping)
 		core::CallExprPtr call = wrapPlainFunctionArguments(in);
 
 		// extract target function
@@ -781,7 +782,7 @@ namespace backend {
 
 			// check for default members
 			auto classType = core::analysis::getObjectType(memberFun->getType()).as<core::TagTypePtr>();
-			if (core::analysis::isaDefaultMember(classType, memberFun)) {
+			if(core::analysis::isaDefaultMember(classType, memberFun)) {
 
 				// set declaration to default
 				decl->flag = c_ast::BodyFlag::Default;

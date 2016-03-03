@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -84,15 +84,15 @@ namespace analysis {
 	bool isTrivial(const TypePtr& type);
 
 	/**
-	 * Determines whether the given tag type has a constructor of the given type.
+	 * Determines whether the given tag type has a constructor of the given type, and optionally returns it.
 	 */
-	bool hasConstructorOfType(const TagTypePtr& type, const FunctionTypePtr& funType);
+	boost::optional<ExpressionPtr> hasConstructorOfType(const TagTypePtr& type, const FunctionTypePtr& funType);
 
 	/**
 	 * Determines whether the given tag type has a constructor accepting a single parameter
-	 * of the given type (in addition to the this reference).
+	 * of the given type (in addition to the this reference), and optionally returns it.
 	 */
-	bool hasConstructorAccepting(const TypePtr& type, const TypePtr& paramType);
+	boost::optional<ExpressionPtr> hasConstructorAccepting(const TypePtr& type, const TypePtr& paramType);
 
 	/**
 	* Determines whether the given tag type has a member function of the given name and type.

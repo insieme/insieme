@@ -49,15 +49,16 @@
 #include "insieme/backend/ir_extensions.h"
 #include "insieme/backend/variable_manager.h"
 
-#include "insieme/core/ir_builder.h"
-#include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"
+#include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/analysis/type_utils.h"
+#include "insieme/core/annotations/naming.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
-#include "insieme/core/types/subtyping.h"
+#include "insieme/core/ir_builder.h"
 #include "insieme/core/lang/array.h"
 #include "insieme/core/lang/pointer.h"
 #include "insieme/core/transform/node_replacer.h"
-#include "insieme/core/annotations/naming.h"
+#include "insieme/core/types/subtyping.h"
 
 #include "insieme/annotations/c/extern.h"
 #include "insieme/annotations/c/include.h"
@@ -456,8 +457,8 @@ namespace backend {
 
 		// decide storage location of variable
 		VariableInfo::MemoryLocation location = VariableInfo::NONE;
-		//assigning from the same type (not uninitialized) doesn't regard the location
-		if (plainType == init->getType() && !core::analysis::isUndefinedInitalization(ptr)) {
+		// assigning from the same type (not uninitialized) doesn't regard the location
+		if(plainType == init->getType() && !core::analysis::isUndefinedInitalization(ptr) && !core::analysis::isConstructorCall(init)) {
 			location = VariableInfo::INDIRECT;
 		} else if(core::lang::isReference(plainType)) {
 			if(toBeAllocatedOnStack(init)) {
@@ -479,7 +480,7 @@ namespace backend {
 			context.getDependencies().insert(context.getConverter().getTypeManager().getTypeInfo(elementType).definition);
 		}
 
-		c_ast::ExpressionPtr initValue = convertInitExpression(context, init);
+		c_ast::ExpressionPtr initValue = convertInitExpression(context, plainType, init);
 
 		// if LHS is cpp ref/rref, remove ref on RHS
 		if(core::lang::isCppReference(var) || core::lang::isCppRValueReference(var)) {
@@ -492,29 +493,31 @@ namespace backend {
 			initValue = c_ast::ExpressionPtr();
 		}
 
-		// check if we have an intercepted default ctor call (e.g., std::stringstream s;)
-		// the interceptor adds a zero initalization that would be converted into something like
-		// std::stringstream s = std::stringstream(). This is maybe wrong (e.g., private copy ctor)
-		// and therefore we need to avoid such copy initalizations.
-		if(init.isa<core::CallExprPtr>() && core::analysis::isRefType(init->getType()) && (init.as<core::CallExprPtr>()->getArguments().size() == 1)) {
-			core::TypePtr refType = core::analysis::getReferencedType(init->getType());
-			// only do this for intercepted types
-			if(annotations::c::hasIncludeAttached(refType) && !core::annotations::hasAttachedName(refType) && !builder.getLangBasic().isIRBuiltin(refType)) {
-				core::NodePtr arg = init.as<core::CallExprPtr>()->getArgument(0);
-				core::NodePtr zeroInit = builder.getZero(core::analysis::getReferencedType(init->getType()));
-				if(arg == zeroInit) { initValue = c_ast::ExpressionPtr(); }
-			}
-		}
-
 		return manager->create<c_ast::VarDecl>(info.var, initValue);
 	}
 
-	c_ast::ExpressionPtr StmtConverter::convertInitExpression(ConversionContext& context, const core::ExpressionPtr& init) {
+	c_ast::ExpressionPtr StmtConverter::convertInitExpression(ConversionContext& context, const core::TypePtr& targetType, const core::ExpressionPtr& init) {
 		auto& refExt = converter.getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
 
 		// TODO: handle initUndefine and init struct cases
 
 		core::ExpressionPtr initValue = init;
+
+		// implement implicit constructor call semantics
+		if(core::lang::isPlainReference(targetType)) { // only values get constructed
+			auto tagTy = core::analysis::getReferencedType(targetType).isa<core::TagTypePtr>();
+			if(tagTy) { // only records have constructors
+				if(auto constructorOpt = core::analysis::hasConstructorAccepting(tagTy, init->getType())) {
+					// build a temporary, unused call to the constructor in order to accomplish side effects
+					// (e.g. declaration/definition, dependencies)
+					auto constructor = tagTy.peel(constructorOpt.get());
+					core::IRBuilder builder(converter.getNodeManager());
+					auto temp = core::lang::buildRefTemp(targetType);
+					auto call = builder.callExpr(constructor->getType().as<core::FunctionTypePtr>().getReturnType(), constructor, temp, init);
+					converter.getFunctionManager().getCall(call, context);
+				}
+			}
+		}
 
 		// drop ref_temp ...
 		if(core::analysis::isCallOf(initValue, refExt.getRefTempInit())) { initValue = core::analysis::getArgument(initValue, 0); }

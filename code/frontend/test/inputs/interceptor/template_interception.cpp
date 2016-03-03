@@ -50,7 +50,7 @@ int main() {
 	templateFun<unsigned long>(4);
 
 
-		// Classes with templates //////////////////////////////////////////////////////////////
+	// Classes with templates //////////////////////////////////////////////////////////////
 
 	#pragma test expect_ir(R"(var ref<IMP_TemplateClass_int,f,f,plain> v0 = lit("IMP_TemplateClass_int::ctor" : IMP_TemplateClass_int::())(v0);)")
 	TemplateClass<int> intInstance;

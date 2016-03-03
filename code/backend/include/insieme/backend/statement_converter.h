@@ -94,7 +94,7 @@ namespace backend {
 			return convert<c_ast::Statement>(context, stmt);
 		}
 
-		c_ast::ExpressionPtr convertInitExpression(ConversionContext& context, const core::ExpressionPtr& initValue);
+		c_ast::ExpressionPtr convertInitExpression(ConversionContext& context, const core::TypePtr& targetType, const core::ExpressionPtr& initValue);
 
 	  protected:
 		////////////////////////////////////////////////////////////////////////// Basic Elements

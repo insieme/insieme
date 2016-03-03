@@ -39,9 +39,9 @@
 #include <functional>
 
 #include <gtest/gtest.h>
+#include <boost/regex.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string/replace.hpp>
-#include <boost/regex.hpp>
 
 #include "insieme/annotations/expected_ir_annotation.h"
 #include "insieme/core/annotations/source_location.h"
@@ -273,9 +273,8 @@ namespace frontend {
         // count number of occurrences of the pragma string
 		std::ifstream tf(fn);
 		std::string fileText((std::istreambuf_iterator<char>(tf)), std::istreambuf_iterator<char>());
-		// delete comments
-		boost::regex comments(R"((//.*?$)|(/\*.*?\*/))");
-		fileText = boost::regex_replace(fileText, comments, "");
+		fileText = insieme::utils::removeCppStyleComments(fileText);
+
 		// search pragmas
 		std::string searchString{"#pragma test expect_ir"};
 		string::size_type start = 0;

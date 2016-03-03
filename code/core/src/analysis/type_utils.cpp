@@ -213,7 +213,7 @@ namespace analysis {
 
 		bool trivialMoveAssignment = containsMemberFunction(builder.getDefaultMoveAssignOperator(thisType, parents, record->getFields()));
 		if (!trivialMoveAssignment) return false;
-		
+
 		// check for virtual member functions
 		for(auto memFun : record->getMemberFunctions()) {
 			if(memFun->getVirtualFlag().getValue()) return false;
@@ -245,20 +245,19 @@ namespace analysis {
 		return true;
 	}
 
-	bool hasConstructorOfType(const TagTypePtr& type, const FunctionTypePtr& funType) {
+	boost::optional<ExpressionPtr> hasConstructorOfType(const TagTypePtr& type, const FunctionTypePtr& funType) {
 		auto record = type->getRecord();
-		for (const auto& cur : record->getConstructors()) {
-
-			if (*cur->getType() == *funType) return true;
+		for(const auto& cur : record->getConstructors()) {
+			if(*cur->getType() == *funType) return cur;
 		}
-		return false;
+		return {};
 	}
 
-	bool hasConstructorAccepting(const TypePtr& type, const TypePtr& paramType) {
+	boost::optional<ExpressionPtr> hasConstructorAccepting(const TypePtr& type, const TypePtr& paramType) {
 
 		// check that the given type is a tag type
 		auto tagType = type.isa<TagTypePtr>();
-		if (!tagType) return false;
+		if(!tagType) return {};
 
 		// unpeel
 		auto canonicalTagType = analysis::getCanonicalType(type).as<TagTypePtr>();
