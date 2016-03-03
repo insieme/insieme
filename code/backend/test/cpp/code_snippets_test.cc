@@ -930,7 +930,7 @@ namespace backend {
 		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
 	}
 
-	TEST(CppSnippet, VariableInitialization) {
+	TEST(CppSnippet, ImplicitInitConstructorSemantics) {
 		core::NodeManager manager;
 		core::IRBuilder builder(manager);
 
@@ -964,6 +964,49 @@ namespace backend {
 		auto codeString = toString(*converted);
 		codeString = insieme::utils::removeCppStyleComments(codeString);
 		EXPECT_PRED2(notContainsSubString, codeString, "*");
+		EXPECT_PRED2(containsSubString, codeString, "IMP_A(const IMP_A& p2) = default");
+		EXPECT_PRED2(containsSubString, codeString, "IMP_A() = default");
+		EXPECT_PRED2(containsSubString, codeString, "IMP_A(IMP_A&& p2) = default");
+
+		// try compiling the code fragment
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+	}
+
+	TEST(CppSnippet, ImplicitCallArgConstructorSemantics) {
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+
+		core::ProgramPtr program = builder.parseProgram(R"(
+			def struct IMP_A {
+				i : int<4>;
+				lambda IMP_f = () -> real<4> { return lit("1.0E+0":real<4>); }
+			};
+			def consume = (a : IMP_A) -> unit { };
+			int<4> main() {
+				consume(ref_cast(IMP_A::(ref_temp(type_lit(IMP_A))), type_lit(t), type_lit(f), type_lit(cpp_ref)));
+				consume(ref_cast(IMP_A::(ref_temp(type_lit(IMP_A))), type_lit(f), type_lit(f), type_lit(cpp_rref)));
+				return 0;
+			}
+		)");
+
+		ASSERT_TRUE(program);
+		// std::cout << "Program: " << dumpColor(program) << std::endl;
+		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
+
+		// use sequential backend to convert into C++ code
+		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
+		ASSERT_TRUE((bool)converted);
+		//std::cout << "Converted: \n" << *converted << std::endl;
+
+		// check C++ code for absence of any pointers/derefs
+		auto codeString = toString(*converted);
+		codeString = insieme::utils::removeCppStyleComments(codeString);
+		EXPECT_PRED2(notContainsSubString, codeString, "*");
+		EXPECT_PRED2(containsSubString, codeString, "IMP_A(const IMP_A& p2) = default");
+		EXPECT_PRED2(containsSubString, codeString, "IMP_A() = default");
+		EXPECT_PRED2(containsSubString, codeString, "IMP_A(IMP_A&& p2) = default");
 
 		// try compiling the code fragment
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
