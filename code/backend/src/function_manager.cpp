@@ -47,20 +47,21 @@
 #include "insieme/backend/variable_manager.h"
 #include "insieme/backend/c_ast/c_ast_utils.h"
 
-#include "insieme/core/ir_expressions.h"
-#include "insieme/core/ir_builder.h"
-#include "insieme/core/ir_cached_visitor.h"
-#include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/attributes.h"
+#include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/normalize.h"
 #include "insieme/core/analysis/type_utils.h"
 #include "insieme/core/annotations/naming.h"
+#include "insieme/core/ir_builder.h"
+#include "insieme/core/ir_cached_visitor.h"
+#include "insieme/core/ir_expressions.h"
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/varargs_extension.h"
+#include "insieme/core/transform/instantiate.h"
 #include "insieme/core/transform/manipulation.h"
+#include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/transform/materialize.h"
 #include "insieme/core/transform/node_replacer.h"
-#include "insieme/core/transform/instantiate.h"
 #include "insieme/core/types/type_variable_deduction.h"
 
 #include "insieme/annotations/c/include.h"
@@ -406,13 +407,26 @@ namespace backend {
 	}
 
 	const c_ast::NodePtr FunctionManager::getCall(const core::CallExprPtr& in, ConversionContext& context) {
+		core::IRBuilder builder(context.getConverter().getNodeManager());
+
 		// conduct some cleanup (argument wrapping)
 		core::CallExprPtr call = wrapPlainFunctionArguments(in);
+
+		// handle template calls
+		if(core::analysis::isCallOf(call->getFunctionExpr(), builder.getLangBasic().getTypeInstantiation())) {
+			auto typeInstCall = call->getFunctionExpr();
+			auto innerLit = core::analysis::getArgument(typeInstCall, 1).isa<core::LiteralPtr>();
+			assert_true(innerLit) << "Non-intercepted template calls not implemented";
+			auto replacementLit = builder.literal(innerLit->getValue(), typeInstCall->getType());
+			core::transform::utils::migrateAnnotations(typeInstCall, replacementLit);
+			call = builder.callExpr(typeInstCall->getType().as<core::FunctionTypePtr>()->getReturnType(), replacementLit, call->getArgumentList());
+			std::cout << "replacement call:\n" << dumpColor(call);
+		}
 
 		// extract target function
 		core::ExpressionPtr fun = core::analysis::stripAttributes(call->getFunctionExpr());
 
-		fun = core::IRBuilder(context.getConverter().getNodeManager()).normalize(fun);
+		fun = builder.normalize(fun);
 
 		// 1) see whether call is call to a known operator
 		auto pos = operatorTable.find(fun);

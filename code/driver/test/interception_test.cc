@@ -60,7 +60,7 @@ namespace driver {
 
 		//std::cout << "Converting IR to C...\n";
 		auto converted = backend::sequential::SequentialBackend::getDefault()->convert(program);
-		//std::cout << "Printing converted code:\n" << *converted;
+		std::cout << "Printing converted code:\n" << *converted;
 
 		// check C code for absence of any pointers/derefs
 		auto codeString = toString(*converted);

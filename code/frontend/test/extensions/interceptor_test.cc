@@ -58,7 +58,7 @@ namespace frontend {
 		});
 	}
 
-	TEST(InterceptorTest, SystemInterception) {
+	TEST(InterceptorTest, DISABLED_SystemInterception) {
 		runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/interceptor/system_interception.cpp", [](ConversionJob& job) {
 			job.registerFrontendExtension<extensions::InterceptorExtension, extensions::TestPragmaExtension>();
 		});
@@ -127,7 +127,7 @@ namespace frontend {
 		checkForFunctionName(code, "IMP_ns_colon__colon_S::IMP_memberFunc", "memberFunc", "interceptor_header.h");
 	}
 
-	TEST(InterceptorTest, TrueTemplateInterception) {
+	TEST(InterceptorTest, DISABLED_TrueTemplateInterception) {
 		core::NodeManager manager;
 		ConversionJob job(FRONTEND_TEST_DIR + "/inputs/interceptor/template_interception.cpp");
 		job.addInterceptedHeaderDir(FRONTEND_TEST_DIR + "/inputs/interceptor");
@@ -167,7 +167,7 @@ namespace frontend {
 		checkForFunctionName(code, "IMP_variadicTemplateFun_int_pack_begin_int_pack_end_returns_int", "variadicTemplateFun<int,int>", "template_interception.h");
 	}
 
-	TEST(InterceptorTest, TrueSystemInterception) {
+	TEST(InterceptorTest, DISABLED_TrueSystemInterception) {
 		core::NodeManager manager;
 		ConversionJob job(FRONTEND_TEST_DIR + "/inputs/interceptor/system_interception.cpp");
 		job.registerFrontendExtension<extensions::InterceptorExtension>();

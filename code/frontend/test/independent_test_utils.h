@@ -166,9 +166,13 @@ namespace frontend {
 			auto actNN = actual;
 			expected = builder.normalize(expected);
 			actual = builder.normalize(actual);
+			auto print = [](const core::NodePtr& node) {
+				return core::printer::PrettyPrinter(node, core::printer::PrettyPrinter::OPTIONS_DEFAULT | core::printer::PrettyPrinter::USE_COLOR
+				                                              | core::printer::PrettyPrinter::PRINT_DEREFS | core::printer::PrettyPrinter::FULL_LITERAL_SYNTAX);
+			};
 			EXPECT_EQ(expected, actual) << "\tLocation     : " << locationOf(addr) << "\n"
-			                            << "\tActual Pretty: " << dumpColor(actual, std::cout) << "\n"
-			                            << "\tExpect Pretty: " << dumpColor(expected, std::cout) << "\n"
+			                            << "\tActual Pretty: " << print(actual) << "\n"
+			                            << "\tExpect Pretty: " << print(expected) << "\n"
 			                            //<< "\tActual Text: " << dumpText(actual) << "\n"
 			                            //<< "\tExpect Text: " << dumpText(expected) << "\n"
 			                            << "\tActual type  : " << (aIsExp ? toString(dumpColor(actual.as<ExpressionPtr>()->getType())) : toString("-")) << "\n"
@@ -209,7 +213,7 @@ namespace frontend {
 			if(node->hasAnnotation(ExpectedIRAnnotation::KEY)) {
 				const auto& ann = node->getAnnotation(ExpectedIRAnnotation::KEY);
 				const auto& ex = ann->getExpected();
-				ASSERT_FALSE(ex.empty()) << " Empty string in pragma @ " << locationOf(node);
+				ASSERT_FALSE(ex.empty()) << "!Empty string in pragma @ " << locationOf(node);
 
 				const string regexKey = "REGEX";
 				const string regexKeyS = "REGEX_S";

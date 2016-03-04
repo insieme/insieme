@@ -40,6 +40,8 @@
 #include <vector>
 #include <future>
 
+struct Trivial {};
+
 int main() {
 	// simple C function with struct param
 	#pragma test expect_ir(R"({
@@ -89,5 +91,15 @@ int main() {
 })")
 	{
 		std::launch::async == std::launch::deferred;
+	}
+
+	// non-intercepted type in intercepted template
+	#pragma test expect_ir(R"(
+	def struct IMP_Trivial {};
+	{
+		var ref<IMP_std_colon__colon_vector<IMP_Trivial>> vectorOfTrivial;
+	})")
+	{
+		std::vector<Trivial> vectorOfTrivial;
 	}
 }
