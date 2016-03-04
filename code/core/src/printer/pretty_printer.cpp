@@ -805,6 +805,10 @@ namespace printer {
 
 				auto printer = [&](std::ostream&, const TypeAddress& cur) { VISIT(cur); };
 
+				if(node->hasInstantiationTypes()) {
+					out << "<" << join(", ", node->getInstantiationTypeList(), printer) << ">";
+				}
+
 				if(node->isConstructor()) {
 					auto params = node->getParameterTypes();
 					out << "(" << join(", ", params.begin() + 1, params.end(), printer) << ")";

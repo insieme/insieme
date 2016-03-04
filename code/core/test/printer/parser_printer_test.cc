@@ -119,9 +119,12 @@ namespace parser {
 		EXPECT_TRUE(test_type(nm, "struct name { a: int<4>; b : int<5>;}"));
 		EXPECT_TRUE(test_type(nm, "struct { a : int<4>; b: int<5>;}"));
 
-		EXPECT_TRUE(test_type(nm, "( int<4> , ref<int<4>>) -> int<4>"));
-		EXPECT_TRUE(test_type(nm, "( int<4> , ref<int<4>>) => int<4>"));
+		// function
+		EXPECT_TRUE(test_type(nm, "(int<4> , ref<int<4>>) -> int<4>"));
+		EXPECT_TRUE(test_type(nm, "(int<4> , ref<int<4>>) => int<4>"));
 		EXPECT_TRUE(test_type(nm, "(array<'elem,'n>, vector<uint<8>,'n>) -> 'elem"));
+		EXPECT_TRUE(test_type(nm, "<'a,'b>('a , int<4>) -> 'b"));
+		EXPECT_TRUE(test_type(nm, "<'a,uint<4>>('a , int<4>) -> uint<4>"));
 
 		EXPECT_TRUE(test_type(nm, "struct C { field : int<4>; }"));
 		EXPECT_TRUE(test_type(nm, "alias papa = t<11>; alias mama = t<4>; struct name : [ papa, mama ] { a: int<4>; b : int<5>;}"));
