@@ -283,6 +283,53 @@ namespace checks {
 		EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(funType), EC_TYPE_ILLEGAL_DESTRUCTOR_RETURN_TYPE, "", Message::ERROR));
 	}
 
+	TEST(InvalidTypeInstantiationCheck, Basic) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		// Correct
+		{
+			auto test = builder.parseExpr(R"(
+				let fun = lit("fun" : <'a>()->'a) in
+				type_instantiation(type_lit(<int>()->int), fun)()
+			)");
+
+			auto res = checks::check(test);
+			EXPECT_TRUE(res.empty()) << res;
+		}
+		{
+			auto test = builder.parseExpr(R"(
+				let fun = lit("fun" : <'a, 'b>('b)->'a) in
+				type_instantiation(type_lit(<int<4>,uint<4>>(uint<4>)->int<4>), fun)(4u)
+			)");
+
+			auto res = checks::check(test);
+			EXPECT_TRUE(res.empty()) << res;
+		}
+
+		// Instantiation type list arity mismatch
+		{
+			auto test = builder.parseExpr(R"(
+				let fun = lit("fun" : <'a,'b>()->'a) in
+				type_instantiation(type_lit(<int>()->int), fun)
+			)");
+
+			auto res = checks::check(test);
+			EXPECT_PRED2(containsMSG, res, Message(NodeAddress(test), EC_TYPE_ILLEGAL_FUNCTION_INSTANTIATION, "", Message::ERROR));
+		}
+
+		// Not a function type
+		{
+			auto test = builder.parseExpr(R"(
+				type_instantiation(type_lit(int<4>), lit("not_fun" : 'a))
+			)");
+
+			auto res = checks::check(test);
+			EXPECT_PRED2(containsMSG, res, Message(NodeAddress(test), EC_TYPE_ILLEGAL_FUNCTION_INSTANTIATION, "", Message::ERROR));
+		}
+
+	}
+
 	TEST(ParentCheck, Basic) {
 		NodeManager manager;
 		IRBuilder builder(manager);
@@ -787,10 +834,10 @@ namespace checks {
 		auto x = pos[0].as<CallExprAddress>();
 
 		auto ok = x.getRootNode();
-		
+
 		CheckPtr typeCheck = makeVisitOnce(make_check<MemberAccessElementTypeInTagTypeCheck>());
 		EXPECT_TRUE(check(ok, typeCheck).empty()) << check(ok, typeCheck);
-		
+
 		// in the full-check context
 		EXPECT_TRUE(check(ok).empty()) << check(ok, typeCheck);
 	}
