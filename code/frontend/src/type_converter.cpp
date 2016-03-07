@@ -85,7 +85,9 @@ namespace conversion {
 			if(retTy) { break; }
 		}
 
-		if(!retTy) { retTy = convertInternal(type); }
+		if(!retTy) {
+			retTy = convertInternal(type);
+		}
 
 		// iterate FE extension clang post handler list and check if a handler wants to modify the type
 		for(auto extension : converter.getConversionSetup().getExtensions()) {

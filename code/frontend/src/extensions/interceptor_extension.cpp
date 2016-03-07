@@ -105,6 +105,8 @@ namespace extensions {
 								auto typeVar = builder.typeVariable(templateParamTypeDecl->getNameAsString());
 								templateTypeParmMapping[templateParamTypeDecl] = typeVar;
 								templateGenericParams.push_back(typeVar);
+							} else {
+								std::cout << "NOT ttpt\n";
 							}
 						}
 						// build list of concrete params for instantiation at this call
@@ -185,6 +187,12 @@ namespace extensions {
 
 	core::TypePtr InterceptorExtension::Visit(const clang::QualType& type, insieme::frontend::conversion::Converter& converter) {
 		VLOG(3) << "Intercepting Type\n";
+		// handle template parameters of intercepted template functions
+		if(auto ttpt = llvm::dyn_cast<clang::TemplateTypeParmType>(type.getUnqualifiedType())) {
+			auto decl = ttpt->getDecl();
+			assert_true(::containsKey(templateTypeParmMapping, decl)) << "Template type parameter encountered, but no mapping available";
+			return templateTypeParmMapping[decl];
+		}
 		// handle class, struct and union interception
 		if(auto tt = llvm::dyn_cast<clang::TagType>(type->getCanonicalTypeUnqualified())) {
 			// do not intercept enums, they are simple
@@ -207,12 +215,6 @@ namespace extensions {
 				VLOG(2) << "Interceptor: intercepted clang type\n" << dumpClang(decl) << " -> converted to generic type: " << *genType << "\n";
 				return genType;
 			}
-		}
-		// handle template parameters of intercepted template functions
-		if(auto ttpt = llvm::dyn_cast<clang::TemplateTypeParmType>(type.getUnqualifiedType())) {
-			auto decl = ttpt->getDecl();
-			assert_true(::containsKey(templateTypeParmMapping, decl)) << "Template type parameter encountered, but no mapping available";
-			return templateTypeParmMapping[decl];
 		}
 		return nullptr;
 	}
