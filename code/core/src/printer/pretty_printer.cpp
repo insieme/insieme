@@ -809,14 +809,17 @@ namespace printer {
 					out << "<" << join(", ", node->getInstantiationTypeList(), printer) << ">";
 				}
 
+				if(node->isMember()) {
+					out << getObjectName(node) << "::";
+				}
 				if(node->isConstructor()) {
 					auto params = node->getParameterTypes();
-					out << "(" << join(", ", params.begin() + 1, params.end(), printer) << ")";
+					out << "(" << join(", ", params.begin(), params.end(), printer) << ")";
 				} else if(node->isDestructor()) {
 					out << "()";
 				} else if(node->isMemberFunction() || node->isVirtualMemberFunction()) {
 					auto parameterTypes = node->getParameterTypes();
-					out << "(" << join(", ", parameterTypes.begin() + 1, parameterTypes.end(), printer) << ")"
+					out << "(" << join(", ", parameterTypes.begin(), parameterTypes.end(), printer) << ")"
 							<< (node->isMemberFunction() ? " -> " : " ~> ");
 					VISIT(node->getReturnType());
 				} else {

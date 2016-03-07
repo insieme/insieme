@@ -73,6 +73,8 @@ namespace conversion {
 
 	namespace {
 		core::TypePtr getThisType(Converter& converter, const clang::CXXMethodDecl* methDecl) {
+			std::cout << "getThisType\n";
+			converter.getCompiler().getASTContext().getRecordType(methDecl->getParent())->dump();
 			auto parentType = converter.convertType(converter.getCompiler().getASTContext().getRecordType(methDecl->getParent()));
 			auto refKind = core::lang::ReferenceType::Kind::Plain;
 			switch(methDecl->getRefQualifier()) {

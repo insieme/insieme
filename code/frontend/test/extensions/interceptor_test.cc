@@ -58,7 +58,7 @@ namespace frontend {
 		});
 	}
 
-	TEST(InterceptorTest, DISABLED_SystemInterception) {
+	TEST(InterceptorTest, SystemInterception) {
 		runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/interceptor/system_interception.cpp", [](ConversionJob& job) {
 			job.registerFrontendExtension<extensions::InterceptorExtension, extensions::TestPragmaExtension>();
 		});

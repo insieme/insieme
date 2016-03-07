@@ -53,6 +53,14 @@ C templateFun(C c) {
 	return c+c;
 }
 
+template<class T>
+struct TemplateWithMethod {
+	T get() {
+		T t;
+		return t;
+	}
+};
+
 //template<class D>
 //class TemplateClass {
 //public:
