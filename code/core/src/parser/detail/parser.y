@@ -1,6 +1,6 @@
 %skeleton "lalr1.cc" /* -*- C++ -*- */
-/* glr.cc does not support type variants, 
- * there is work in process to suport it, 
+/* glr.cc does not support type variants,
+ * there is work in process to suport it,
  * lets wait until 2016 and then we can use the $#%& ambigous grammar again
  */
 %require "3.0.0"
@@ -221,7 +221,7 @@
 
 %type <TypePtr>                        object_type qual_object_type generic_type abstract_type parallel_type
 %type <TypeVariablePtr>                type_variable
-%type <FunctionTypePtr>                function_type pure_function_type closure_type constructor_type destructor_type member_function_type virtual_function_type
+%type <FunctionTypePtr>                instantiated_function_type function_type pure_function_type closure_type constructor_type destructor_type member_function_type virtual_function_type
 %type <NumericTypePtr>                 numeric_type
 %type <TupleTypePtr>                   tuple_type
 %type <TagTypeReferencePtr>            tag_type_reference
@@ -317,7 +317,7 @@ main : type "identifier" "(" parameters                                     { dr
 
 record_definition : struct_or_union "identifier" parent_spec "{"            { driver.beginRecord(@$, $2); }
                                     fields                                  { driver.registerFields(@$, $6); }
-                                           constructors destructor member_functions pure_virtual_member_functions "}" 
+                                           constructors destructor member_functions pure_virtual_member_functions "}"
                                                                             { $$ = driver.genRecordType(@$, $1, $2, $3, $6, $8, $9.first, $9.second, $10, $11); driver.endRecord(); }
                   | struct_or_union "{" fields "}"                          { $$ = driver.genSimpleStructOrUnionType(@$, $1, $3); }
                   ;
@@ -409,7 +409,7 @@ type : plain_type                                                         { $$ =
      ;
 
 plain_type : object_type                                                  { $$ = $1; }
-           | function_type                                                { $$ = $1; }
+           | instantiated_function_type                                   { $$ = $1; }
            | numeric_type                                                 { $$ = $1; }
            | tuple_type                                                   { $$ = $1; }
            | parallel_type                                                { $$ = $1; }
@@ -471,6 +471,9 @@ access_specifier : "public"                                               { $$ =
 
 
 // -- function type --
+
+instantiated_function_type : "<" non_empty_types ">" function_type        { $$ = driver.builder.functionType($4->getParameterTypes(), $4->getReturnType(), $4->getKind(), driver.builder.types($2)); }
+                           | function_type                                { $$ = $1; }
 
 function_type : pure_function_type                                        { $$ = $1; }
               | closure_type                                              { $$ = $1; }

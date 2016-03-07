@@ -1509,27 +1509,63 @@ namespace checks {
 		auto& refExt = mgr.getLangExtension<lang::ReferenceExtension>();
 		auto& ptrExt = mgr.getLangExtension<lang::PointerExtension>();
 
-
 		// check if CallExpr is ref_of_func
-		if (!(refExt.isCallOfRefOfFunction(callExpr) || ptrExt.isCallOfPtrOfFunction(callExpr)))
+		if(!(refExt.isCallOfRefOfFunction(callExpr) || ptrExt.isCallOfPtrOfFunction(callExpr))) {
 			return res;
+		}
 
-		// type check will be performed somewhrere else
-		if  (callExpr->size() != 1)
+		// type check will be performed somewhere else
+		if(callExpr->size() != 1) {
 			return res;
+		}
 
 		auto argumentType = callExpr[0]->getType();
 
-		if (argumentType.isa<TypeVariablePtr>()) {
+		if(argumentType.isa<TypeVariablePtr>()) {
 			return res;		// this might still be a function
 		}
 
 		auto funType = argumentType.isa<FunctionTypePtr>();
-		if (!funType || !funType->isPlain()) {
+		if(!funType || !funType->isPlain()) {
 			add(res, Message(callExpr[0], EC_SEMANTIC_ILLEGAL_REF_TO_FUN_CAST,
 							 format("this is a illegal ref_to_fun() cast!"), Message::ERROR));
 			return res;
 		}
+
+		return res;
+	}
+
+	OptionalMessageList IllegalTypeInstantiationCheck::visitCallExpr(const CallExprAddress& callExpr) {
+		OptionalMessageList res;
+
+		auto& mgr = callExpr->getNodeManager();
+		auto& basic = mgr.getLangBasic();
+
+		if(!basic.isTypeInstantiation(callExpr->getFunctionExpr())) return res;
+
+		auto instantiatedFunType = callExpr->getType().isa<FunctionTypePtr>();
+		auto subFunType = core::analysis::getArgument(callExpr, 1)->getType().isa<FunctionTypePtr>();
+
+		// check that we are instantiating a function
+		if(!instantiatedFunType || !subFunType) {
+			add(res,
+				Message(callExpr, EC_TYPE_ILLEGAL_FUNCTION_INSTANTIATION, format("Instantiated and sub types must both be function types"), Message::ERROR));
+			return res;
+		}
+
+		// check that the type literal parameter matches the generated type
+		if(instantiatedFunType != core::analysis::getRepresentedType(core::analysis::getArgument(callExpr, 0))) {
+			add(res,
+				Message(callExpr, EC_TYPE_ILLEGAL_FUNCTION_INSTANTIATION, format("Instantiated type does not match type literal argument"), Message::ERROR));
+		}
+
+		// check that both instantiation parameter lists have the same arity
+		if(instantiatedFunType.getInstantiationTypeList().size() != subFunType.getInstantiationTypeList().size()) {
+			add(res, Message(callExpr, EC_TYPE_ILLEGAL_FUNCTION_INSTANTIATION, format("Instantiation type list arity mismatch"), Message::ERROR));
+		}
+
+		// check that instantiation is correct
+		// TODO
 
 		return res;
 	}

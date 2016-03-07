@@ -5,6 +5,7 @@ alignof
 async
 auto
 constexpr
+cpp11enums
 decltype
 declval
 function_type_template_arg
@@ -15,5 +16,6 @@ range_for
 rvalue
 sizeofpack
 stdinitlistexpr
+std_array
 variadic_templates
 

@@ -34,37 +34,48 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include "insieme/utils/string_utils.h"
 
-#include "insieme/frontend/extensions/frontend_extension.h"
-#include "insieme/frontend/clang.h"
-#include "insieme/frontend/converter.h"
-#include "insieme/frontend/utils/interceptor.h"
+#include <boost/regex.hpp>
+
+std::vector<string> split(const string& str) {
+	using namespace std;
+	vector<string> tokens;
+	istringstream iss(str);
+	copy(istream_iterator<string>(iss), istream_iterator<string>(), back_inserter<vector<string>>(tokens));
+	return tokens;
+}
+
+string commonPrefix(string a, string b) {
+	if(a.size() > b.size()) { std::swap(a, b); }
+	return string(a.begin(), std::mismatch(a.begin(), a.end(), b.begin()).first);
+}
+
+bool containsSubString(const string& str, const string& substr) {
+	return str.find(substr) != string::npos;
+}
+
+string camelcaseToUnderscore(const string input) {
+	string output;
+
+	for(char s : input) {
+		if(std::isupper(s)) {
+			if(!output.empty()) { output.push_back('_'); }
+			output.push_back((char)tolower(s));
+		} else {
+			output.push_back(s);
+		}
+	}
+
+	return output;
+}
 
 namespace insieme {
-namespace frontend {
-namespace extensions {
+namespace utils {
 
-	class InterceptorExtension : public insieme::frontend::extensions::FrontendExtension {
-
-		std::map<const clang::TemplateTypeParmDecl*, core::TypeVariablePtr> templateTypeParmMapping;
-
-	  public:
-		InterceptorExtension();
-
-		virtual FrontendExtension::flagHandler registerFlag(boost::program_options::options_description& options) override;
-
-		virtual boost::optional<std::string> isPrerequisiteMissing(ConversionSetup& setup) const override;
-
-		// Extension Hooks
-
-		virtual insieme::core::ExpressionPtr Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& converter) override;
-		virtual core::TypePtr Visit(const clang::QualType& type, insieme::frontend::conversion::Converter& converter) override;
-
-		virtual bool FuncDeclVisit(const clang::FunctionDecl* decl, insieme::frontend::conversion::Converter& converter) override;
-
-	};
-
-} // extensions
-} // frontend
-} // insieme
+	string removeCppStyleComments(const string& in) {
+		const static boost::regex comments(R"((//.*?$)|(/\*.*?\*/))");
+		return boost::regex_replace(in, comments, "");
+	}
+}
+}

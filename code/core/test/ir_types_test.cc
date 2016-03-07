@@ -260,6 +260,9 @@ namespace core {
 		FunctionTypePtr funTypeG = FunctionType::get(manager, toVector(obj, dummyA), resultA, FK_MEMBER_FUNCTION);
 		FunctionTypePtr funTypeH = FunctionType::get(manager, toVector(obj, dummyA), resultA, FK_VIRTUAL_MEMBER_FUNCTION);
 
+		FunctionTypePtr funTypeI = FunctionType::get(manager, Types::get(manager, toVector(obj, alpha, dummyB)), alpha, FK_PLAIN, Types::get(manager, toVector(alpha)));
+		FunctionTypePtr funTypeJ = FunctionType::get(manager, Types::get(manager, toVector(obj, dummyA, dummyB)), resultA, FK_PLAIN, Types::get(manager, toVector(resultA)));
+
 		EXPECT_EQ("((dummyA)->returnA)", toString(*funTypeA));
 		EXPECT_EQ("(('alpha)->returnB)", toString(*funTypeB));
 		EXPECT_EQ("(('alpha,dummyA)->returnB)", toString(*funTypeC));
@@ -269,6 +272,9 @@ namespace core {
 		EXPECT_EQ("(~C::())", toString(*funTypeF));
 		EXPECT_EQ("(C::(dummyA)->returnA)", toString(*funTypeG));
 		EXPECT_EQ("(C::(dummyA)~>returnA)", toString(*funTypeH));
+
+		EXPECT_EQ("<'alpha>((ref<C,f,f,plain>,'alpha,dummyB)->'alpha)", toString(*funTypeI));
+		EXPECT_EQ("<returnA>((ref<C,f,f,plain>,dummyA,dummyB)->returnA)", toString(*funTypeJ));
 
 		EXPECT_TRUE(funTypeA->isPlain());
 		EXPECT_TRUE(funTypeB->isPlain());
@@ -291,47 +297,71 @@ namespace core {
 		EXPECT_TRUE(funTypeG->isMemberFunction());
 		EXPECT_TRUE(funTypeH->isVirtualMemberFunction());
 
+		EXPECT_FALSE(funTypeA->hasInstantiationTypes());
+		EXPECT_TRUE(funTypeI->hasInstantiationTypes());
+		EXPECT_TRUE(funTypeJ->getInstantiationTypeList().size() > 0);
+
 		EXPECT_NE(funTypeA, funTypeD);
 
 		vector<NodePtr> subNodesA;
 		subNodesA.push_back(Types::get(manager, toVector(dummyA)));
 		subNodesA.push_back(resultA);
 		subNodesA.push_back(UIntValue::get(manager, FK_PLAIN));
+		subNodesA.push_back(Types::get(manager, TypeList()));
 
 		vector<NodePtr> subNodesB;
 		subNodesB.push_back(Types::get(manager, toVector(alpha)));
 		subNodesB.push_back(resultB);
 		subNodesB.push_back(UIntValue::get(manager, FK_PLAIN));
+		subNodesB.push_back(Types::get(manager, TypeList()));
 
 		vector<NodePtr> subNodesC;
 		subNodesC.push_back(Types::get(manager, toVector(alpha, dummyA)));
 		subNodesC.push_back(resultB);
 		subNodesC.push_back(UIntValue::get(manager, FK_PLAIN));
+		subNodesC.push_back(Types::get(manager, TypeList()));
 
 		vector<NodePtr> subNodesD;
 		subNodesD.push_back(Types::get(manager, toVector(dummyA)));
 		subNodesD.push_back(resultA);
 		subNodesD.push_back(UIntValue::get(manager, FK_CLOSURE));
+		subNodesD.push_back(Types::get(manager, TypeList()));
 
 		vector<NodePtr> subNodesE;
 		subNodesE.push_back(Types::get(manager, toVector(obj, dummyA)));
 		subNodesE.push_back(unit);
 		subNodesE.push_back(UIntValue::get(manager, FK_CONSTRUCTOR));
+		subNodesE.push_back(Types::get(manager, TypeList()));
 
 		vector<NodePtr> subNodesF;
 		subNodesF.push_back(Types::get(manager, toVector(obj)));
 		subNodesF.push_back(unit);
 		subNodesF.push_back(UIntValue::get(manager, FK_DESTRUCTOR));
+		subNodesF.push_back(Types::get(manager, TypeList()));
 
 		vector<NodePtr> subNodesG;
 		subNodesG.push_back(Types::get(manager, toVector(obj, dummyA)));
 		subNodesG.push_back(resultA);
 		subNodesG.push_back(UIntValue::get(manager, FK_MEMBER_FUNCTION));
+		subNodesG.push_back(Types::get(manager, TypeList()));
 
 		vector<NodePtr> subNodesH;
 		subNodesH.push_back(Types::get(manager, toVector(obj, dummyA)));
 		subNodesH.push_back(resultA);
 		subNodesH.push_back(UIntValue::get(manager, FK_VIRTUAL_MEMBER_FUNCTION));
+		subNodesH.push_back(Types::get(manager, TypeList()));
+
+		vector<NodePtr> subNodesI;
+		subNodesI.push_back(Types::get(manager, toVector(obj, alpha, dummyB)));
+		subNodesI.push_back(alpha);
+		subNodesI.push_back(UIntValue::get(manager, FK_PLAIN));
+		subNodesI.push_back(Types::get(manager, toVector(alpha)));
+
+		vector<NodePtr> subNodesJ;
+		subNodesJ.push_back(Types::get(manager, toVector(obj, dummyA, dummyB)));
+		subNodesJ.push_back(resultA);
+		subNodesJ.push_back(UIntValue::get(manager, FK_PLAIN));
+		subNodesJ.push_back(Types::get(manager, toVector(resultA)));
 
 		// perform basic type tests
 		basicTypeTests(funTypeA, true, toList(subNodesA));
@@ -342,6 +372,8 @@ namespace core {
 		basicTypeTests(funTypeF, true, toList(subNodesF));
 		basicTypeTests(funTypeG, true, toList(subNodesG));
 		basicTypeTests(funTypeH, true, toList(subNodesH));
+		basicTypeTests(funTypeI, true, toList(subNodesI));
+		basicTypeTests(funTypeJ, true, toList(subNodesJ));
 	}
 
 	TEST(TypeTest, TagTypeRecord) {
@@ -424,7 +456,7 @@ namespace core {
 		auto fixedDtor = tagType->peel(dtor);
 		EXPECT_TRUE(checks::check(fixedDtor).empty()) << checks::check(fixedDtor);
 	}
-	
+
 	TEST(TypeTest, TagTypeUnpeeling) {
 		// create a manager for this test
 		NodeManager manager;
@@ -433,7 +465,7 @@ namespace core {
 		auto aType = builder.parseType(R"(
 			def struct A {
 				lambda retA = () -> A { return *this; }
-			}; 
+			};
 			A
 		)").as<TagTypePtr>();
 
@@ -446,7 +478,7 @@ namespace core {
 		EXPECT_EQ(unpeeledT, originalT);
 	}
 
-	
+
 	TEST(TypeTest, TagTypeUnpeelingNotPeeled) {
 		// create a manager for this test
 		NodeManager manager;
@@ -455,10 +487,10 @@ namespace core {
 		auto aType = builder.parseType(R"(
 			def struct A {
 				lambda retA = () -> A { return *this; }
-			}; 
+			};
 			A
 		)").as<TagTypePtr>();
-		
+
 		// peel once, then unpeel -> should be the same
 		auto member = aType->getStruct()->getMemberFunctions().front();
 		auto originalT = member.getType();

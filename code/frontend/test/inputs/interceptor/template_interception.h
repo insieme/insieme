@@ -36,28 +36,40 @@
 
 #pragma once
 
+template<class R>
+R templateFunRet() {
+	R r;
+	return r;
+}
+
+template<class R, class P>
+R templateFunRetParam(P p) {
+	R r;
+	return r + p;
+}
+
 template<class C>
 C templateFun(C c) {
 	return c+c;
 }
 
-template<class D>
-class TemplateClass {
-public:
-	D field;
-};
-
-template <template <typename> class Container, typename T>
-void templateTemplateFun(Container<T>& container, const T value) {
-	container.field = value;
-}
-
-template<typename T>
-T variadicTemplateFun(T v) {
-  return v;
-}
-
-template<typename T, typename... Args>
-T variadicTemplateFun(T first, Args... args) {
-  return first + variadicTemplateFun(args...);
-}
+//template<class D>
+//class TemplateClass {
+//public:
+//	D field;
+//};
+//
+//template <template <typename> class Container, typename T>
+//void templateTemplateFun(Container<T>& container, const T value) {
+//	container.field = value;
+//}
+//
+//template<typename T>
+//T variadicTemplateFun(T v) {
+//  return v;
+//}
+//
+//template<typename T, typename... Args>
+//T variadicTemplateFun(T first, Args... args) {
+//  return first + variadicTemplateFun(args...);
+//}

@@ -39,9 +39,9 @@
 #include <functional>
 
 #include <gtest/gtest.h>
+#include <boost/regex.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string/replace.hpp>
-#include <boost/regex.hpp>
 
 #include "insieme/annotations/expected_ir_annotation.h"
 #include "insieme/core/annotations/source_location.h"
@@ -166,9 +166,13 @@ namespace frontend {
 			auto actNN = actual;
 			expected = builder.normalize(expected);
 			actual = builder.normalize(actual);
+			auto print = [](const core::NodePtr& node) {
+				return core::printer::PrettyPrinter(node, core::printer::PrettyPrinter::OPTIONS_DEFAULT | core::printer::PrettyPrinter::USE_COLOR
+				                                              | core::printer::PrettyPrinter::PRINT_DEREFS | core::printer::PrettyPrinter::FULL_LITERAL_SYNTAX);
+			};
 			EXPECT_EQ(expected, actual) << "\tLocation     : " << locationOf(addr) << "\n"
-			                            << "\tActual Pretty: " << dumpColor(actual, std::cout) << "\n"
-			                            << "\tExpect Pretty: " << dumpColor(expected, std::cout) << "\n"
+			                            << "\tActual Pretty: " << print(actual) << "\n"
+			                            << "\tExpect Pretty: " << print(expected) << "\n"
 			                            //<< "\tActual Text: " << dumpText(actual) << "\n"
 			                            //<< "\tExpect Text: " << dumpText(expected) << "\n"
 			                            << "\tActual type  : " << (aIsExp ? toString(dumpColor(actual.as<ExpressionPtr>()->getType())) : toString("-")) << "\n"
@@ -209,7 +213,7 @@ namespace frontend {
 			if(node->hasAnnotation(ExpectedIRAnnotation::KEY)) {
 				const auto& ann = node->getAnnotation(ExpectedIRAnnotation::KEY);
 				const auto& ex = ann->getExpected();
-				ASSERT_FALSE(ex.empty()) << " Empty string in pragma @ " << locationOf(node);
+				ASSERT_FALSE(ex.empty()) << "!Empty string in pragma @ " << locationOf(node);
 
 				const string regexKey = "REGEX";
 				const string regexKeyS = "REGEX_S";
@@ -273,9 +277,8 @@ namespace frontend {
         // count number of occurrences of the pragma string
 		std::ifstream tf(fn);
 		std::string fileText((std::istreambuf_iterator<char>(tf)), std::istreambuf_iterator<char>());
-		// delete comments
-		boost::regex comments(R"((//.*?$)|(/\*.*?\*/))");
-		fileText = boost::regex_replace(fileText, comments, "");
+		fileText = insieme::utils::removeCppStyleComments(fileText);
+
 		// search pragmas
 		std::string searchString{"#pragma test expect_ir"};
 		string::size_type start = 0;

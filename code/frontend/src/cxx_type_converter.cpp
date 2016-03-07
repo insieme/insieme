@@ -250,7 +250,7 @@ namespace conversion {
 			}
 		}
 
-		assert_true(templTy->isSugared()) << "no idea what to do with non sugar";
+		assert_true(templTy->isSugared()) << "no idea what to do with non sugar:\n";
 		return retTy = converter.convertType(templTy->desugar());
 	}
 

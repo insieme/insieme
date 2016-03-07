@@ -31,6 +31,7 @@ expr_with_cleanups
 friend
 globals_in_classes
 header
+helloStream
 identical_class_structure
 includes
 inherit
@@ -88,6 +89,7 @@ struct
 template1
 template2
 template3
+template_dependencies
 template_statics
 this
 try_catch

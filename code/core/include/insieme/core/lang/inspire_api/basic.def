@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -33,7 +33,6 @@
  * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
-
 
 // Types --------------------------------------------------------------------------------------------------------------
 TYPE(Unit, "unit")
@@ -288,6 +287,8 @@ LITERAL(TypeIsSubtype, "type_is_subtype", "(type<'a>, type<'b>)->bool")
 OPERATION(Type, Eq, "type_eq", "(type<'a>, type<'a>) -> bool")
 
 LITERAL(NumTypeToInt, "type_to_int", "(type<'a>)->int<8>")
+
+LITERAL(TypeInstantiation, "type_instantiation", "(type<'a>, 'b) -> 'a")
 
 GROUP(TypeCompOp, TypeEq)
 
