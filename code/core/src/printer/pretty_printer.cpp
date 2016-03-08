@@ -165,9 +165,9 @@ namespace printer {
 			return type;
 		}
 
-		const std::string& getObjectName(const core::TypePtr& ty) {
+		const std::string getObjectName(const core::TypePtr& ty) {
 			auto objTy = analysis::getObjectType(ty);
-			if(auto gt = objTy.isa<GenericTypePtr>()) return gt->getName()->getValue();
+			if(auto gt = objTy.isa<GenericTypePtr>()) return toString(*gt);
 			if(auto tt = objTy.isa<TagTypePtr>()) return tt->getName()->getValue();
 			assert_fail() << "could not retrieve object type name";
 			throw;
@@ -466,7 +466,8 @@ namespace printer {
 									continue;
 								}
 
-								if (auto ctor = constr.isa<LambdaExprPtr>()) {
+								if (auto ctorIn = constr.isa<LambdaExprPtr>()) {
+									auto ctor = tag->peel(ctorIn);
 									newLine();
 									out << "decl ctor:" << tagName << "::";
 									visit(NodeAddress(ctor->getType()));
@@ -476,7 +477,8 @@ namespace printer {
 
 							// print all memberFunctions declarations
 							auto memberFunctions = record->getMemberFunctions();
-							for (auto memberFun : memberFunctions) {
+							for (auto memberFunIn : memberFunctions) {
+								auto memberFun = tag->peel(memberFunIn);
 								if (!printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) &&
 									analysis::isaDefaultMember(tag, memberFun))
 									continue;
@@ -814,12 +816,12 @@ namespace printer {
 				}
 				if(node->isConstructor()) {
 					auto params = node->getParameterTypes();
-					out << "(" << join(", ", params.begin(), params.end(), printer) << ")";
+					out << "(" << join(", ", params.begin() + 1, params.end(), printer) << ")";
 				} else if(node->isDestructor()) {
 					out << "()";
 				} else if(node->isMemberFunction() || node->isVirtualMemberFunction()) {
 					auto parameterTypes = node->getParameterTypes();
-					out << "(" << join(", ", parameterTypes.begin(), parameterTypes.end(), printer) << ")"
+					out << "(" << join(", ", parameterTypes.begin() + 1, parameterTypes.end(), printer) << ")"
 							<< (node->isMemberFunction() ? " -> " : " ~> ");
 					VISIT(node->getReturnType());
 				} else {

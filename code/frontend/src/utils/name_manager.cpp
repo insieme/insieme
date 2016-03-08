@@ -228,8 +228,8 @@ namespace utils {
 		// build a suffix for template instantiations
 		std::stringstream suffix;
 
-		if(funcDecl->isFunctionTemplateSpecialization() && funcDecl->getTemplateSpecializationArgs()) {
-			suffix << buildNameSuffixForTemplate(*funcDecl->getTemplateSpecializationArgs(), funcDecl->getASTContext(), cStyleName);
+		if(!cStyleName && funcDecl->isFunctionTemplateSpecialization() && funcDecl->getTemplateSpecializationArgs()) {
+			suffix << buildNameSuffixForTemplate(*funcDecl->getTemplateSpecializationArgs(), funcDecl->getASTContext());
 		}
 
 		if(funcDecl->isTemplateInstantiation()) {
@@ -291,7 +291,7 @@ namespace utils {
 
 		// encode template parameters in name
 		auto tempSpec = llvm::dyn_cast<clang::ClassTemplateSpecializationDecl>(tagDecl);
-		if(tempSpec) {
+		if(tempSpec && !cStyleName) {
 			name = name + utils::buildNameSuffixForTemplate(tempSpec->getTemplateInstantiationArgs(), tempSpec->getASTContext(), cStyleName);
 		}
 

@@ -60,8 +60,7 @@ namespace utils {
 				// we replace the first parameter (which has been created as ref_temp) by the variable to initialize
 				return core::transform::replaceNode(
 					       initExpIn->getNodeManager(), call->getArgument(0),
-					      // core::lang::buildRefCast(variable, call->getFunctionExpr()->getType().as<core::FunctionTypePtr>()->getParameterType(0)))
-					      variable)
+					       core::lang::buildRefCast(variable, call->getFunctionExpr()->getType().as<core::FunctionTypePtr>()->getParameterType(0)))
 					.as<core::ExpressionPtr>();
 			}
 		}

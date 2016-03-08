@@ -43,6 +43,7 @@
 struct Trivial {};
 
 int main() {
+
 	// simple C function with struct param
 	#pragma test expect_ir(R"({
 		var ref<IMP_timeval> v0 = lit("IMP_timeval::ctor" : IMP_timeval::())(v0);
@@ -55,32 +56,37 @@ int main() {
 
 	// cpp type and member function
 	#pragma test expect_ir(R"({
-		var ref<IMP_std_colon__colon_vector_int_std_colon__colon_allocator_lt_int_gt_> v0 =
-			lit("IMP_std_colon__colon_vector_int_std_colon__colon_allocator_lt_int_gt_::ctor"
-				: IMP_std_colon__colon_vector_int_std_colon__colon_allocator_lt_int_gt_::())(v0);
-		lit("IMP_std_colon__colon_vector_int_std_colon__colon_allocator_lt_int_gt_::IMP_push_back" :
-			IMP_std_colon__colon_vector_int_std_colon__colon_allocator_lt_int_gt_::(ref<int<4>,f,f,cpp_rref>) -> unit) (v0, 0);
+		var ref<IMP_std_colon__colon_vector<int<4>,IMP_std_colon__colon_allocator<int<4>>>,f,f,plain> v0 = lit("IMP_std_colon__colon_vector::ctor" : IMP_std_colon__colon_vector<'_Tp,'_Alloc>::())(v0);
+		lit("IMP_std_colon__colon_vector::IMP_push_back" : IMP_std_colon__colon_vector<'_Tp,'_Alloc>::(ref<'_Tp,f,f,cpp_rref>) -> unit)(v0, 0);
+		var ref<IMP_std_colon__colon_vector<real<8>,IMP_std_colon__colon_allocator<real<8>>>,f,f,plain> v1 = lit("IMP_std_colon__colon_vector::ctor" : IMP_std_colon__colon_vector<'_Tp,'_Alloc>::())(v1);
+		lit("IMP_std_colon__colon_vector::IMP_push_back" : IMP_std_colon__colon_vector<'_Tp,'_Alloc>::(ref<'_Tp,f,f,cpp_rref>) -> unit)(v1, lit("1.0E+0":real<8>));
 	})")
 	{
-		std::vector<int> v;
-		v.push_back(0);
+		std::vector<int> v1;
+		v1.push_back(0);
+		std::vector<double> v2;
+		v2.push_back(1.0);
 	}
 
 	// cpp global and function
 	#pragma test expect_ir(R"({
-		lit("IMP_std_colon__colon__operator_lshift__struct_std_colon__colon_char_traits_lt_char_gt__returns_basic_ostream_lt_char_comma__struct_std_colon__colon_char_traits_lt_char_gt___gt___ampersand_" :
-			(ref<IMP_std_colon__colon_basic_ostream_char_struct_std_colon__colon_char_traits_lt_char_gt_,f,f,cpp_ref>, ptr<char,t,f>) -> ref<IMP_std_colon__colon_basic_ostream_char_struct_std_colon__colon_char_traits_lt_char_gt_,f,f,cpp_ref>) (
-				ref_kind_cast(lit("IMP_std_colon__colon_cout":ref<IMP_std_colon__colon_basic_ostream_char_struct_std_colon__colon_char_traits_lt_char_gt_>), type_lit(cpp_ref)), ptr_from_array("Test")) materialize;
+		type_instantiation(
+				type_lit(<IMP_std_colon__colon_char_traits<char>>(ref<IMP_std_colon__colon_basic_ostream<char,IMP_std_colon__colon_char_traits<char>>,f,f,cpp_ref>, ptr<char,t,f>)
+				         -> ref<IMP_std_colon__colon_basic_ostream<char,IMP_std_colon__colon_char_traits<char>>,f,f,cpp_ref>),
+				lit("IMP_std_colon__colon__operator_lshift_" : <'_Traits>(ref<IMP_basic_ostream<char,'_CharT>,f,f,cpp_ref>, ptr<char,t,f>)
+				         -> ref<IMP_basic_ostream<char,'_CharT>,f,f,cpp_ref>))
+				(ref_kind_cast(lit("IMP_std_colon__colon_cout" : ref<IMP_std_colon__colon_basic_ostream<char,IMP_std_colon__colon_char_traits<char>>,f,f,plain>), type_lit(cpp_ref)),
+				ptr_from_array(lit(""Test"" : ref<array<char,5>,t,f,plain>))) materialize ;
 	})")
 	{
 		std::cout << "Test";
-		// BE output: std::operator<<<std::char_traits<char>>(std::cout, "Test");
+		// BE code: std::operator<< <std::char_traits<char>>(std::cout, "Test");
 	}
 
 	#pragma test expect_ir(R"({
-		lit("IMP_std_colon__colon_basic_ostream_char_struct_std_colon__colon_char_traits_lt_char_gt_::IMP__operator_lshift_" :
-			IMP_std_colon__colon_basic_ostream_char_struct_std_colon__colon_char_traits_lt_char_gt_::(int<4>) -> ref<IMP_std_colon__colon_basic_ostream_char_struct_std_colon__colon_char_traits_lt_char_gt_,f,f,cpp_ref>)(
-				lit("IMP_std_colon__colon_cout":ref<IMP_std_colon__colon_basic_ostream_char_struct_std_colon__colon_char_traits_lt_char_gt_>), 1);
+		lit("IMP_std_colon__colon_basic_ostream::IMP__operator_lshift_"
+				: IMP_std_colon__colon_basic_ostream<'_CharT,'_Traits>::(int<4>) -> ref<IMP_std_colon__colon_basic_ostream<'_CharT,'_Traits>,f,f,cpp_ref>)
+				(lit("IMP_std_colon__colon_cout" : ref<IMP_std_colon__colon_basic_ostream<char,IMP_std_colon__colon_char_traits<char>>,f,f,plain>), 1);
 	})")
 	{
 		std::cout << 1;
@@ -88,17 +94,19 @@ int main() {
 
 	// cpp global enum
 	#pragma test expect_ir("STRING", R"({gen_eq(IMP_std_colon__colon_launch_colon__colon_async, IMP_std_colon__colon_launch_colon__colon_deferred);
-})")
+})") //keep this at the beginning of this line here
 	{
 		std::launch::async == std::launch::deferred;
 	}
 
 	// non-intercepted type in intercepted template
 	#pragma test expect_ir(R"(
-	def struct IMP_Trivial {};
-	{
-		var ref<IMP_std_colon__colon_vector<IMP_Trivial>> vectorOfTrivial;
-	})")
+		def struct IMP_Trivial {};
+		{
+			var ref<IMP_std_colon__colon_vector<IMP_Trivial,IMP_std_colon__colon_allocator<IMP_Trivial>>,f,f,plain> v0 =
+					lit("IMP_std_colon__colon_vector::ctor" : IMP_std_colon__colon_vector<'_Tp,'_Alloc>::())(v0);
+		}
+	)")
 	{
 		std::vector<Trivial> vectorOfTrivial;
 	}

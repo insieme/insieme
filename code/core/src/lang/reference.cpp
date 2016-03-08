@@ -42,6 +42,7 @@
 #include "insieme/core/lang/boolean_marker.h"
 #include "insieme/core/lang/pointer.h"
 #include "insieme/core/types/match.h"
+#include "insieme/core/types/type_variable_deduction.h"
 #include "insieme/core/analysis/ir_utils.h"
 
 namespace insieme {
@@ -260,6 +261,18 @@ namespace lang {
 	}
 
 
+	bool doReferenceQualifiersDiffer(const TypePtr& typeA, const TypePtr& typeB) {
+		assert_true(isReference(typeA)) << "Can only check qualifiers on references, not on " << dumpColor(typeA);
+		assert_true(isReference(typeB)) << "Can only check qualifiers on references, not on " << dumpColor(typeB);
+
+		ReferenceType rtA(typeA);
+		ReferenceType rtB(typeB);
+
+		return (rtA.isConst() != rtB.isConst())
+				|| (rtA.isVolatile() != rtB.isVolatile())
+				|| (rtA.getKind() != rtB.getKind());
+	}
+
 	bool doReferencesDifferOnlyInQualifiers(const TypePtr& typeA, const TypePtr& typeB) {
 		assert_true(isReference(typeA)) << "Can only check qualifiers on references, not on " << dumpColor(typeA);
 		assert_true(isReference(typeB)) << "Can only check qualifiers on references, not on " << dumpColor(typeB);
@@ -270,13 +283,21 @@ namespace lang {
 		auto gA = typeA.as<GenericTypePtr>();
 		auto gB = typeB.as<GenericTypePtr>();
 
-		return gA->getTypeParameter(0) == gB->getTypeParameter(0);
+		return gA->getTypeParameter(0) == gB->getTypeParameter(0)
+				|| types::getTypeVariableInstantiation(typeA->getNodeManager(), gA->getTypeParameter(0), gB->getTypeParameter(0))
+				|| types::getTypeVariableInstantiation(typeA->getNodeManager(), gB->getTypeParameter(0), gA->getTypeParameter(0));
 	}
 
 	ExpressionPtr buildRefCast(const ExpressionPtr& refExpr, const TypePtr& targetTy) {
 		assert_pred1(isReference, refExpr) << "Trying to build a ref cast from non-ref.";
 		assert_pred1(isReference, targetTy) << "Trying to build a ref cast to non-ref type.";
 		if(targetTy == refExpr->getType()) return refExpr;
+
+		//only create the cast if the types really do differ in their qualifiers
+		if (!doReferenceQualifiersDiffer(refExpr->getType(), targetTy)) {
+			return refExpr;
+		}
+
 		assert_true(doReferencesDifferOnlyInQualifiers(refExpr->getType(), targetTy)) << "Ref cast only allowed to cast between qualifiers,"
 			<< "trying to cast from\n" << dumpColor(refExpr->getType()) << " - to - \n" << dumpColor(targetTy);
 		IRBuilder builder(refExpr->getNodeManager());

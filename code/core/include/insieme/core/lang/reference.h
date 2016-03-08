@@ -452,6 +452,8 @@ namespace lang {
 	 */
 	TypePtr buildRefType(const TypePtr& elementType, bool _const = false, bool _volatile = false, const ReferenceType::Kind& kind = ReferenceType::Kind::Plain);
 
+	bool doReferenceQualifiersDiffer(const TypePtr& typeA, const TypePtr& typeB);
+
 	bool doReferencesDifferOnlyInQualifiers(const TypePtr& typeA, const TypePtr& typeB);
 
 	ExpressionPtr buildRefCast(const ExpressionPtr& refExpr, const TypePtr& targetTy);

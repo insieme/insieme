@@ -47,8 +47,8 @@ namespace extensions {
 
 	class InterceptorExtension : public insieme::frontend::extensions::FrontendExtension {
 	  public:
-		using SpecializationMap = std::map<const clang::TemplateSpecializationType*, core::TypePtr>;
-		using TemplateParmMap = std::map<const clang::TemplateTypeParmDecl*, core::TypeVariablePtr>;
+		using SpecializationMap = std::map<const clang::Type*, core::TypePtr>;
+		using TemplateParmMap = std::map<const clang::Type*, core::TypeVariablePtr>;
 
 	  private:
 		SpecializationMap templateSpecializationMapping;

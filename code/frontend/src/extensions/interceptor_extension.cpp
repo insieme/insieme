@@ -70,7 +70,7 @@ namespace extensions {
 			for(auto tempParam : *tempParamList) {
 				if(auto templateParamTypeDecl = llvm::dyn_cast<clang::TemplateTypeParmDecl>(tempParam)) {
 					auto typeVar = builder.typeVariable(templateParamTypeDecl->getNameAsString());
-					templateTypeParmMapping[templateParamTypeDecl] = typeVar;
+					templateTypeParmMapping[templateParamTypeDecl->getTypeForDecl()->getCanonicalTypeUnqualified().getTypePtr()] = typeVar;
 					if(templateGenericParams) templateGenericParams->push_back(typeVar);
 				} else {
 					assert_not_implemented() << "NOT ttpt\n";
@@ -99,7 +99,7 @@ namespace extensions {
 			core::ExpressionPtr lit = litConverter(funDecl);
 			auto retType = lit->getType().as<core::FunctionTypePtr>()->getReturnType();
 
-			// handle intercepted template functions
+			// handle non-templated functions
 			if(!funDecl->isTemplateInstantiation()) {
 				// if defaulted, fix this type to generic type
 				auto methDecl = llvm::dyn_cast<clang::CXXMethodDecl>(funDecl);
@@ -120,38 +120,40 @@ namespace extensions {
 					}
 				}
 				// return the concrete return type but potentially generic literal
+				converter.applyHeaderTagging(lit, decl);
 				return {lit, retType};
 			}
 
+
 			// first: handle generic template in order to generate generic function
-			auto templateDecl = funDecl->getPrimaryTemplate();
-
 			core::TypeList templateGenericParams, templateConcreteParams;
-			auto concreteFunctionType = lit->getType().as<core::FunctionTypePtr>();
-
+			auto templateDecl = funDecl->getPrimaryTemplate();
 			if(templateDecl) {
-				// build map for template parameters
+				// build map for generic template parameters
 				convertTemplateParameters(templateDecl->getTemplateParameters(), builder, templateTypeParmMapping, &templateGenericParams);
 
-				// build list of concrete params for instantiation at this call
+				// build list of concrete params for instantiation of this call
 				for(auto tempParam: funDecl->getTemplateSpecializationInfo()->TemplateArguments->asArray()) {
 					templateConcreteParams.push_back(converter.convertType(tempParam.getAsType()));
 				}
 			}
 			// translate uninstantiated pattern instead of instantiated version
 			auto pattern = funDecl->getTemplateInstantiationPattern();
-			std::cout << "Pattern:\n";
-			pattern->dumpColor();
 			auto genericFunLit = litConverter(pattern);
-			std::cout << "GenFunLit:\n" << dumpColor(genericFunLit) << " of type " << dumpColor(genericFunLit->getType());
 			auto genericFunType = genericFunLit->getType().as<core::FunctionTypePtr>();
 			genericFunType = builder.functionType(genericFunType->getParameterTypes(), genericFunType->getReturnType(), genericFunType->getKind(),
 													builder.types(templateGenericParams));
 			auto innerLit = builder.literal(genericFunLit->getValue(), genericFunType);
-
-			std::cout << "innerLit: " << dumpColor(innerLit) << " of type: " << dumpColor(innerLit->getType());
+			converter.applyHeaderTagging(innerLit, decl);
 
 			// cast to concrete type at call site
+			auto concreteFunctionType = lit->getType().as<core::FunctionTypePtr>();
+
+			//if we don't need to do any type instantiation
+			if(templateConcreteParams.empty()) {
+				return {innerLit, concreteFunctionType.getReturnType()};
+			}
+
 			concreteFunctionType = builder.functionType(concreteFunctionType->getParameterTypes(), concreteFunctionType->getReturnType(),
 				                                        concreteFunctionType->getKind(), builder.types(templateConcreteParams));
 			return {builder.callExpr(builder.getLangBasic().getTypeInstantiation(), builder.getTypeLiteral(concreteFunctionType), innerLit),
@@ -161,7 +163,6 @@ namespace extensions {
 		core::CallExprPtr interceptMethodCall(conversion::Converter& converter, const clang::Decl* decl,
 			                                  std::function<core::ExpressionPtr(const core::TypePtr&)> thisArgFactory, clang::CallExpr::arg_const_range args,
 			                                  InterceptorExtension::TemplateParmMap& templateTypeParmMapping) {
-			const core::IRBuilder& builder(converter.getIRBuilder());
 			if(converter.getHeaderTagger()->isIntercepted(decl)) {
 				auto methDecl = llvm::dyn_cast<clang::CXXMethodDecl>(decl);
 				if(methDecl) {
@@ -170,7 +171,6 @@ namespace extensions {
 					auto funType = convMethodLit->getType().as<core::FunctionTypePtr>();
 					auto retType = calleePair.second;
 					auto thisArg = thisArgFactory(retType);
-					converter.applyHeaderTagging(convMethodLit, decl);
 					VLOG(2) << "Interceptor: intercepted clang method/constructor call\n" << dumpClang(decl) << "\n";
 					auto retCall = utils::buildCxxMethodCall(converter, retType, convMethodLit, thisArg, args);
 					return retCall;
@@ -188,26 +188,25 @@ namespace extensions {
 			auto decl = dr->getDecl();
 			if(converter.getHeaderTagger()->isIntercepted(decl)) {
 				// translate functions
-				if(auto funDecl = llvm::dyn_cast<clang::FunctionDecl>(decl)) {
+				if(llvm::dyn_cast<clang::FunctionDecl>(decl)) {
 					core::ExpressionPtr lit = generateCallee(converter, decl, templateTypeParmMapping).first;
-					converter.applyHeaderTagging(lit, decl);
 					VLOG(2) << "Interceptor: intercepted clang fun\n" << dumpClang(decl) << " -> converted to literal: " << *lit << " of type "
 						    << *lit->getType() << "\n";
 					return lit;
 				}
 				// as well as global variables
-				if(auto varDecl = llvm::dyn_cast<clang::VarDecl>(decl)) {
-					auto lit = builder.literal(insieme::utils::mangle(varDecl->getQualifiedNameAsString()), converter.convertVarType(expr->getType()));
+				if(llvm::dyn_cast<clang::VarDecl>(decl)) {
+					auto lit = builder.literal(insieme::utils::mangle(decl->getQualifiedNameAsString()), converter.convertVarType(expr->getType()));
 					converter.applyHeaderTagging(lit, decl);
 					VLOG(2) << "Interceptor: intercepted clang lit\n" << dumpClang(decl) << " -> converted to literal: " << *lit << " of type "
 						    << *lit->getType() << "\n";
 					return lit;
 				}
 				// and enum constants
-				if(auto enumDecl = llvm::dyn_cast<clang::EnumConstantDecl>(decl)) {
+				if(llvm::dyn_cast<clang::EnumConstantDecl>(decl)) {
 					const clang::EnumType* enumType = llvm::dyn_cast<clang::EnumType>(llvm::cast<clang::TypeDecl>(decl->getDeclContext())->getTypeForDecl());
 					core::ExpressionPtr exp =
-						builder.literal(insieme::utils::mangle(enumDecl->getQualifiedNameAsString()), converter.convertType(clang::QualType(enumType, 0)));
+						builder.literal(insieme::utils::mangle(decl->getQualifiedNameAsString()), converter.convertType(clang::QualType(enumType, 0)));
 					converter.applyHeaderTagging(exp, decl);
 					exp = builder.numericCast(exp, converter.convertType(expr->getType()));
 					VLOG(2) << "Interceptor: intercepted clang enum\n" << dumpClang(decl) << " -> converted to expression: " << *exp << " of type "
@@ -249,39 +248,34 @@ namespace extensions {
 
 
 	core::TypePtr InterceptorExtension::Visit(const clang::QualType& typeIn, insieme::frontend::conversion::Converter& converter) {
-		VLOG(3) << "Intercepting Type\n";
-		std::cout << "INTERCEPT TYPE:\n";
-		typeIn->dump();
 		clang::QualType type = typeIn;
 		const core::IRBuilder& builder = converter.getIRBuilder();
 		// handle template parameters of intercepted tagtypes
 		if(auto injected = llvm::dyn_cast<clang::InjectedClassNameType>(type.getUnqualifiedType())) {
 			auto spec = injected->getInjectedSpecializationType()->getUnqualifiedDesugaredType();
 			if(auto tempSpecType = llvm::dyn_cast<clang::TemplateSpecializationType>(spec)) {
-				assert_true(::containsKey(templateSpecializationMapping, tempSpecType))
+				assert_true(::containsKey(templateSpecializationMapping, tempSpecType->getCanonicalTypeUnqualified().getTypePtr()))
 					<< "Template injected specialization type encountered, but no mapping available";
-				return templateSpecializationMapping[tempSpecType];
+				return templateSpecializationMapping[tempSpecType->getCanonicalTypeUnqualified().getTypePtr()];
 			}
 		}
 		// handle template parameters of intercepted template functions
 		if(auto ttpt = llvm::dyn_cast<clang::TemplateTypeParmType>(type.getUnqualifiedType())) {
 			auto decl = ttpt->getDecl();
-			assert_true(::containsKey(templateTypeParmMapping, decl)) << "Template type parameter encountered, but no mapping available";
-			return templateTypeParmMapping[decl];
+			assert_true(::containsKey(templateTypeParmMapping, decl->getTypeForDecl()->getCanonicalTypeUnqualified().getTypePtr()))
+					<< "Template type parameter encountered, but no mapping available";
+			return templateTypeParmMapping[decl->getTypeForDecl()->getCanonicalTypeUnqualified().getTypePtr()];
 		}
 		// handle class, struct and union interception
 		if(auto tt = llvm::dyn_cast<clang::TagType>(type->getCanonicalTypeUnqualified())) {
-			std::cout << "TT\n";
 			// do not intercept enums, they are simple
 			if(tt->isEnumeralType()) return nullptr;
 			auto decl = tt->getDecl();
 			if(converter.getHeaderTagger()->isIntercepted(decl)) {
-				std::cout << "INTER\n";
 				auto genType = converter.getIRBuilder().genericType(utils::getNameForTagDecl(converter, decl).first);
 
 				// for templates: convert template arguments to generic type parameters
 				if(auto templateDecl = llvm::dyn_cast<clang::ClassTemplateSpecializationDecl>(decl)) {
-					std::cout << "TEMPLATE\n";
 					auto genericDecl = templateDecl->getSpecializedTemplate();
 
 					// store class template template type parameters in map
@@ -292,7 +286,7 @@ namespace extensions {
 					// store injected class name in specialization map
 					auto injected = genericDecl->getInjectedClassNameSpecialization()->getUnqualifiedDesugaredType();
 					if(auto tempSpecType = llvm::dyn_cast<clang::TemplateSpecializationType>(injected)) {
-						templateSpecializationMapping[tempSpecType] = genericGenType;
+						templateSpecializationMapping[tempSpecType->getCanonicalTypeUnqualified().getTypePtr()] = genericGenType;
 					}
 
 					// build concrete genType
@@ -302,7 +296,6 @@ namespace extensions {
 						concreteTypeArguments.push_back(converter.convertType(arg.getAsType()));
 					}
 					genType = converter.getIRBuilder().genericType(insieme::utils::mangle(decl->getQualifiedNameAsString()), concreteTypeArguments);
-
 				}
 
 				converter.applyHeaderTagging(genType, decl);
