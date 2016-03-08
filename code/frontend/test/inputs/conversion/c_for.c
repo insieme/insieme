@@ -74,34 +74,34 @@ int main() {
 		for(int k = 2; k < 5; k+=1) { }
 	}
 
-	#pragma test expect_ir("{{ var ref<int<4>,f,f,plain> v0 =  2; while( *v0<5) { if( *v0==3) { c_style_assignment(v0,*v0+1); continue; }; c_style_assignment(v0,*v0+1); } }}")
+	#pragma test expect_ir("{{ var ref<int<4>,f,f,plain> v0 =  2; while( *v0<5) { if( *v0==3) { v0 = *v0+1; continue; }; v0 = *v0+1; } }}")
 	{
 		for(int k = 2; k < 5; k+=1) { if(k==3){ continue; } }
 	}
 
-	#pragma test expect_ir("{{ var ref<int<4>,f,f,plain> v0 =  2; while( *v0<5) { if( *v0==3) { break; }; c_style_assignment(v0,*v0+1); }; }; }")
+	#pragma test expect_ir("{{ var ref<int<4>,f,f,plain> v0 =  2; while( *v0<5) { if( *v0==3) { break; }; v0 = *v0+1; }; }; }")
 	{
 		for(int k = 2; k < 5; k+=1) { if(k==3) break; }
 	}
 
-	#pragma test expect_ir("{{ var ref<int<4>,f,f,plain> v0 =  2; while( *v0<5) { if( *v0==3) { return 0; }; c_style_assignment(v0,*v0+1); }; }; }")
+	#pragma test expect_ir("{{ var ref<int<4>,f,f,plain> v0 =  2; while( *v0<5) { if( *v0==3) { return 0; }; v0 = *v0+1; }; }; }")
 	{
 		for(int k = 2; k < 5; k+=1) { if(k==3) return 0; }
 	}
 
-	#pragma test expect_ir("{{ var ref<int<4>,f,f,plain> v0 =  2; while( *v0<5) { gen_post_inc(v0); c_style_assignment(v0,*v0+1); }; }; }")
+	#pragma test expect_ir("{{ var ref<int<4>,f,f,plain> v0 =  2; while( *v0<5) { gen_post_inc(v0); v0 = *v0+1; }; }; }")
 	{
 		for(int k = 2; k < 5; k+=1) { k++; }
 	}
 
 	// check that we are doing nothing wrong here
 	// (update once whileToFor is smarter!)
-	#pragma test expect_ir("{{ var ref<int<4>,f,f> v0 = 2; while(*v0>5) { c_style_assignment(v0, *v0+1); }; }}")
+	#pragma test expect_ir("{{ var ref<int<4>,f,f> v0 = 2; while(*v0>5) { v0 = *v0+1; }; }}")
 	{
 		for(int k = 2; k > 5; k+=1) { }
 	}
 
-	#pragma test expect_ir("{ var ref<int<4>,f,f,plain> v0; { c_style_assignment(v0, 0); for( int<4> v1 = 0 .. 5 : 1) { }; v0 = 5+((0-5)%1+1)%1; } { var ref<int<4>,f,f,plain> v1 = 0; for( int<4> v2 = 0 .. 5 : 1) { } } var ref<int<4>,f,f,plain> v3 = *v0; }")
+	#pragma test expect_ir("{ var ref<int<4>,f,f,plain> v0; { v0 = 0; for( int<4> v1 = 0 .. 5 : 1) { }; v0 = 5+((0-5)%1+1)%1; } { var ref<int<4>,f,f,plain> v1 = 0; for( int<4> v2 = 0 .. 5 : 1) { } } var ref<int<4>,f,f,plain> v3 = *v0; }")
 	{
 		int i;
 		for(i=0; i<5; i++) { }
@@ -155,7 +155,7 @@ int main() {
 	}
 
 	//for ( init-statement; ; ) statement
-	#pragma test expect_ir("{var ref<int<4>,f,f,plain> v0 = 0; { c_style_assignment(v0, 8); while(true) { gen_post_inc(v0); if(int_eq(ref_deref(v0), 10)) {break;} else {};};};}")
+	#pragma test expect_ir("{var ref<int<4>,f,f,plain> v0 = 0; { v0 = 8; while(true) { gen_post_inc(v0); if(int_eq(ref_deref(v0), 10)) {break;} else {};};};}")
 	{
 		int i=0;
 		for(i=8;;) {
@@ -183,7 +183,7 @@ int main() {
 	}
 
 	//for ( init-statement; ; iteration_expression ) statement
-	#pragma test expect_ir("{var ref<int<4>,f,f,plain> v0 = 0; { c_style_assignment(v0, 7); while(true) { if(int_eq(ref_deref(v0), 10)) {break;} else {}; gen_post_inc(v0); };};}")
+	#pragma test expect_ir("{var ref<int<4>,f,f,plain> v0 = 0; { v0 = 7; while(true) { if(int_eq(ref_deref(v0), 10)) {break;} else {}; gen_post_inc(v0); };};}")
 	{
 		int i=0;
 		for(i=7;;i++) {
@@ -192,7 +192,7 @@ int main() {
 	}
 
 	//for ( init-statement; condition ; ) statement
-	#pragma test expect_ir("{var ref<int<4>,f,f,plain> v0 = 0; { c_style_assignment(v0, 7); for( int<4> v1 = 7 .. 10 : 1) { }; v0 = 10+((7-10)%1+1)%1;};}")
+	#pragma test expect_ir("{var ref<int<4>,f,f,plain> v0 = 0; { v0 = 7; for( int<4> v1 = 7 .. 10 : 1) { }; v0 = 10+((7-10)%1+1)%1;};}")
 	{
 		int i=0;
 		for(i=7;i<10;) {
@@ -201,28 +201,28 @@ int main() {
 	}
 
 	//for ( ; condition ; iteration_expression ) statement
-	#pragma test expect_ir("{var ref<int<4>,f,f,plain> v0 = 8; { while(*v0<10) { c_style_assignment(v0, *v0); gen_pre_inc(v0);};};}")
+	#pragma test expect_ir("{var ref<int<4>,f,f,plain> v0 = 8; { while(*v0<10) { v0 = *v0; gen_pre_inc(v0);};};}")
 	{
 		int i=8;
 		for(;i<10;++i) { i=i; }
 	}
 
 	//for ( init-statement; condition ; iteration_expression ) statement
-	#pragma test expect_ir("{var ref<int<4>,f,f,plain> v0 = 8; { c_style_assignment(v0, 5); for( int<4> v1 = 5 .. 10 : 1) { var ref<int<4>,f,f,plain> v2 = v1;};v0 = 10+((5-10)%1+1)%1;};}")
+	#pragma test expect_ir("{var ref<int<4>,f,f,plain> v0 = 8; { v0 = 5; for( int<4> v1 = 5 .. 10 : 1) { var ref<int<4>,f,f,plain> v2 = v1;};v0 = 10+((5-10)%1+1)%1;};}")
 	{
 		int i=8;
 		for(i=5;i<10;++i) { int j=i; }
 	}
 
 	//for ( init-statement; condition ; iteration_expression ) statement
-	#pragma test expect_ir("{var ref<int<4>,f,f,plain> v0 = 8; { c_style_assignment(v0, 10); while(*v0>5) { var ref<int<4>,f,f,plain> v1 = *v0; gen_pre_dec(v0);};};}")
+	#pragma test expect_ir("{var ref<int<4>,f,f,plain> v0 = 8; { v0 = 10; while(*v0>5) { var ref<int<4>,f,f,plain> v1 = *v0; gen_pre_dec(v0);};};}")
 	{
 		int i=8;
 		for(i=10;i>5;--i) { int j=i; }
 	}
 
 	//for ( init-statement; condition ; iteration_expression ) statement
-	#pragma test expect_ir("{var ref<int<4>,f,f,plain> v0 = -10; { c_style_assignment(v0, 5);  while(*v0<20) { var ref<int<4>,f,f,plain> v1 = *v0; c_style_assignment(v0, *v0*2);};};}")
+	#pragma test expect_ir("{var ref<int<4>,f,f,plain> v0 = -10; { v0 = 5;  while(*v0<20) { var ref<int<4>,f,f,plain> v1 = *v0; v0 = *v0*2;};};}")
 	{
 		int i=-10;
 		for(i=5;i<20;i*=2) { int j=i; }

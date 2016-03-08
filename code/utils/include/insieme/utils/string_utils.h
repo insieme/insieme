@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -87,7 +87,7 @@ namespace detail {
 	template <> struct to_printable<float>  : public id<float> {};
 	template <> struct to_printable<double> : public id<double> {};
 
-	template <> struct to_printable<std::string> : public id<std::string> {};
+	template <> struct to_printable<string> : public id<string> {};
 
 	template <typename T>
 	struct to_printable<T&> : public to_printable<T> {};
@@ -102,8 +102,8 @@ namespace detail {
 	struct to_c_primitive : public id<T> {};
 
 	template<>
-	struct to_c_primitive<std::string> {
-		const char* operator()(const std::string& str) {
+	struct to_c_primitive<string> {
+		const char* operator()(const string& str) {
 			return str.c_str();
 		}
 	};
@@ -156,23 +156,14 @@ string format(const char* formatString, const Args&... args) {
  * @param str the string to be splitted
  * @return the vector of substrings
  */
-inline std::vector<string> split(const string& str) {
-	using namespace std;
-	vector<string> tokens;
-	istringstream iss(str);
-	copy(istream_iterator<string>(iss), istream_iterator<string>(), back_inserter<vector<string>>(tokens));
-	return tokens;
-}
+std::vector<string> split(const string& str);
 
 /**
  * A utility method to find the common prefix of two strings.
  *
  * @return a new string containing the prefix
  */
-inline std::string commonPrefix(std::string a, std::string b) {
-	if(a.size() > b.size()) { std::swap(a, b); }
-	return std::string(a.begin(), std::mismatch(a.begin(), a.end(), b.begin()).first);
-}
+string commonPrefix(string a, string b);
 
 /**
  * Tests whether the given string contains the given sub-string.
@@ -180,30 +171,26 @@ inline std::string commonPrefix(std::string a, std::string b) {
  * @param str the string searching in
  * @param substr the string searching for
  */
-inline bool containsSubString(const string& str, const string& substr) {
-	return str.find(substr) != string::npos;
-}
+bool containsSubString(const string& str, const string& substr);
 
 /**
  * Converts a string from camelcase to underscore style to. Mainly used to convert names in INSIEME programming style to IR style
  *
  * @param input the input string to be converted to underscore
  */
-inline string camelcaseToUnderscore(const string input) {
-	std::string output;
+string camelcaseToUnderscore(const string input);
 
-	for(char s : input) {
-		if(std::isupper(s)) {
-			if(!output.empty()) { output.push_back('_'); }
-			output.push_back((char)tolower(s));
-		} else {
-			output.push_back(s);
-		}
-	}
 
-	return output;
+namespace insieme {
+namespace utils {
+
+	/**
+	 * Removes C (/ *.. * /) and C++ (//..) style comments from the input string
+	 */
+	string removeCppStyleComments(const string& in);
+
 }
-
+}
 
 /**
  * This functor can be used to print elements to an output stream.

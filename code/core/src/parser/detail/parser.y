@@ -1,6 +1,6 @@
 %skeleton "lalr1.cc" /* -*- C++ -*- */
-/* glr.cc does not support type variants, 
- * there is work in process to suport it, 
+/* glr.cc does not support type variants,
+ * there is work in process to suport it,
  * lets wait until 2016 and then we can use the $#%& ambigous grammar again
  */
 %require "3.0.0"
@@ -61,11 +61,7 @@
 	#include "insieme/core/parser/detail/scanner.h"
 	#include "insieme/core/ir.h"
 
-	#include "insieme/core/annotations/naming.h"
-	#include "insieme/core/analysis/ir_utils.h"
 	#include "insieme/core/encoder/lists.h"
-
-	#include "insieme/core/lang/parallel.h"
 
 	#define INSPIRE_GUARD(l, n) \
 		if(!n) { driver.error(l, "unrecoverable error"); YYABORT; }
@@ -225,7 +221,7 @@
 
 %type <TypePtr>                        object_type qual_object_type generic_type abstract_type parallel_type
 %type <TypeVariablePtr>                type_variable
-%type <FunctionTypePtr>                function_type pure_function_type closure_type constructor_type destructor_type member_function_type virtual_function_type
+%type <FunctionTypePtr>                instantiated_function_type function_type pure_function_type closure_type constructor_type destructor_type member_function_type virtual_function_type
 %type <NumericTypePtr>                 numeric_type
 %type <TupleTypePtr>                   tuple_type
 %type <TagTypeReferencePtr>            tag_type_reference
@@ -251,7 +247,7 @@
 
 
 %type <CompoundStmtPtr>                compound_statement compound_statement_no_scope
-%type <DeclarationStmtPtr>             variable_definition
+%type <DeclarationStmtPtr>             variable_definition typed_variable_definition
 %type <IfStmtPtr>                      if_statement
 %type <SwitchStmtPtr>                  switch_statement
 %type <WhileStmtPtr>                   while_statement
@@ -321,7 +317,7 @@ main : type "identifier" "(" parameters                                     { dr
 
 record_definition : struct_or_union "identifier" parent_spec "{"            { driver.beginRecord(@$, $2); }
                                     fields                                  { driver.registerFields(@$, $6); }
-                                           constructors destructor member_functions pure_virtual_member_functions "}" 
+                                           constructors destructor member_functions pure_virtual_member_functions "}"
                                                                             { $$ = driver.genRecordType(@$, $1, $2, $3, $6, $8, $9.first, $9.second, $10, $11); driver.endRecord(); }
                   | struct_or_union "{" fields "}"                          { $$ = driver.genSimpleStructOrUnionType(@$, $1, $3); }
                   ;
@@ -413,7 +409,7 @@ type : plain_type                                                         { $$ =
      ;
 
 plain_type : object_type                                                  { $$ = $1; }
-           | function_type                                                { $$ = $1; }
+           | instantiated_function_type                                   { $$ = $1; }
            | numeric_type                                                 { $$ = $1; }
            | tuple_type                                                   { $$ = $1; }
            | parallel_type                                                { $$ = $1; }
@@ -475,6 +471,9 @@ access_specifier : "public"                                               { $$ =
 
 
 // -- function type --
+
+instantiated_function_type : "<" non_empty_types ">" function_type        { $$ = driver.builder.functionType($4->getParameterTypes(), $4->getReturnType(), $4->getKind(), driver.builder.types($2)); }
+                           | function_type                                { $$ = $1; }
 
 function_type : pure_function_type                                        { $$ = $1; }
               | closure_type                                              { $$ = $1; }
@@ -761,12 +760,13 @@ statement_list :                                                          { $$ =
 
 // -- variable declaration --
 
-variable_definition : "var" type "identifier" "="                         { INSPIRE_GUARD(@3, driver.genVariableDeclaration(@$, $2, $3)); }
-                                                  expression ";"          { $$ = driver.genDeclarationStmt(@$, $3, $6); }
-                    | "var" type "identifier" ";"                         { $$ = driver.genUndefinedDeclarationStmt(@$, $2, $3); }
+variable_definition : typed_variable_definition                           { $$ = $1; }
                     | "auto" "identifier" "=" expression ";"              { $$ = driver.genVariableDefinition(@$, driver.getScalar($4)->getType(), $2, $4); }
                     ;
 
+typed_variable_definition : "var" type "identifier" "="                   { INSPIRE_GUARD(@3, driver.genVariableDeclaration(@$, $2, $3)); }
+                                                        expression ";"    { $$ = driver.genDeclarationStmt(@$, $3, $6); }
+                          | "var" type "identifier" ";"                   { $$ = driver.genUndefinedDeclarationStmt(@$, $2, $3); }
 
 // -- if --
 
@@ -838,6 +838,7 @@ continue : "continue" ";"                                                 { $$ =
 // -- return --
 
 return : "return" expression ";"                                          { $$ = driver.builder.returnStmt(driver.getScalar($2)); }
+       | "return" typed_variable_definition                               { $$ = driver.builder.returnStmt($2->getInitialization(), $2->getVariable()); }
        | "return" ";"                                                     { $$ = driver.builder.returnStmt(); }
        ;
 

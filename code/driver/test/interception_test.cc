@@ -41,6 +41,8 @@
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/frontend/frontend.h"
 #include "insieme/utils/config.h"
+#include "insieme/utils/compiler/compiler.h"
+#include "insieme/utils/test/test_utils.h"
 
 namespace insieme {
 namespace driver {
@@ -56,15 +58,20 @@ namespace driver {
 
 		dumpColor(program);
 
-		std::cout << "Converting IR to C...\n";
+		//std::cout << "Converting IR to C...\n";
 		auto converted = backend::sequential::SequentialBackend::getDefault()->convert(program);
 		std::cout << "Printing converted code:\n" << *converted;
 
-//		std::ofstream out(iu::getInsiemeSourceRootDir() + "driver/test/inputs/hello_world.insieme.c");
-//		out << *converted;
-//		out.close();
-//
-//		LOG(INFO) << "Wrote source to " << iu::getInsiemeSourceRootDir() << "driver/test/inputs/hello_world.insieme.c" << std::endl;
+		// check C code for absence of any pointers/derefs
+		auto codeString = toString(*converted);
+		codeString = insieme::utils::removeCppStyleComments(codeString);
+		EXPECT_PRED2(notContainsSubString, codeString, "*");
+
+		// try compiling the code fragment
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-c"); // do not run the linker
+		compiler.addIncludeDir(utils::getInsiemeSourceRootDir() + "frontend/test/inputs/interceptor/");
+		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
 	}
 
 } // end namespace driver

@@ -63,6 +63,8 @@
 #include "insieme/core/analysis/type_utils.h"
 
 #include "insieme/core/lang/array.h"
+#include "insieme/core/lang/channel.h"
+#include "insieme/core/lang/enum.h"
 #include "insieme/core/lang/io.h"
 #include "insieme/core/lang/parallel.h"
 #include "insieme/core/lang/pointer.h"

@@ -805,6 +805,10 @@ namespace printer {
 
 				auto printer = [&](std::ostream&, const TypeAddress& cur) { VISIT(cur); };
 
+				if(node->hasInstantiationTypes()) {
+					out << "<" << join(", ", node->getInstantiationTypeList(), printer) << ">";
+				}
+
 				if(node->isConstructor()) {
 					auto params = node->getParameterTypes();
 					out << "(" << join(", ", params.begin() + 1, params.end(), printer) << ")";
@@ -959,7 +963,17 @@ namespace printer {
 
 			PRINT(ReturnStmt) {
 				out << "return ";
-				VISIT(node->getReturnExpr());
+				auto var = node->getReturnVar();
+				auto exp = node->getReturnExpr();
+				// if the return expr uses it's variable in it's expression, we have to print the declaration
+				if (analysis::countInstances(exp, var, true) > 0) {
+					out << "var ";
+					VISIT(var->getType());
+					out << " ";
+					VISIT(var);
+					out << " = ";
+				}
+				VISIT(exp);
 			}
 
 			PRINT(ThrowStmt) {
@@ -1118,6 +1132,14 @@ namespace printer {
 					return;
 				}
  				const string& str = node->getStringValue();
+				// decide whether to really do the full print
+				bool doFullSyntax = printer.hasOption(PrettyPrinter::FULL_LITERAL_SYNTAX);
+				if(doFullSyntax) {
+					if(core::lang::isBuiltIn(node) || core::lang::isBuiltIn(node->getType())) doFullSyntax = false;
+				}
+				if(doFullSyntax) {
+					out << "lit(\"";
+				}
 				if(printer.hasOption(PrettyPrinter::NAME_CONTRACTION) && str.size() > 9) {
 					out << str.substr(0, 3) << "..." << str.substr(str.size() - 3, str.size());
 				} else {
@@ -1137,11 +1159,14 @@ namespace printer {
 
 					if (basic.isInt8(type))     out << "l";
 					if (basic.isInt16(type))    out << "ll";
-
 				}
 
-				// add type if requested
-				if(printer.hasOption(PrettyPrinter::PRINT_LITERAL_TYPES)) {
+				if(doFullSyntax) {
+					out << "\" : ";
+					VISIT(node->getType());
+					out << ")";
+				}
+				else if(printer.hasOption(PrettyPrinter::PRINT_LITERAL_TYPES)) {
 					out << ":";
 					VISIT(node->getType());
 				}

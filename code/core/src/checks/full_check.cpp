@@ -74,6 +74,7 @@ namespace checks {
 			context_free_checks.push_back(make_check<RefCastCheck>());
 			context_free_checks.push_back(make_check<IllegalNumCastCheck>());
 			context_free_checks.push_back(make_check<IllegalNumTypeToIntCheck>());
+			context_free_checks.push_back(make_check<IllegalTypeInstantiationCheck>());
 			context_free_checks.push_back(make_check<CastCheck>());
 			context_free_checks.push_back(make_check<GenericZeroCheck>());
 			context_free_checks.push_back(make_check<ArrayTypeCheck>());

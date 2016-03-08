@@ -86,6 +86,7 @@ namespace checks {
 	SIMPLE_CHECK(IllegalNumCast, CallExpr, false);
 	SIMPLE_CHECK(IllegalNumTypeToInt, CallExpr, false);
 	SIMPLE_CHECK(RefOfFunCast, CallExpr, false);
+	SIMPLE_CHECK(IllegalTypeInstantiation, CallExpr, false);
 
 	SIMPLE_CHECK(Cast, CastExpr, false);
 

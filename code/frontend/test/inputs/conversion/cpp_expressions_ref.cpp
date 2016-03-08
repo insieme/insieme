@@ -58,7 +58,7 @@ int main() {
 		const int& b = a;
 		&b;
 	}
-	
+
 	#pragma test expect_ir(R"({
 		var ref<int<4>,f,f,plain> v0 = v0;
 		var ref<int<4>,f,f,cpp_ref> v1 = v0;
@@ -80,7 +80,7 @@ int main() {
 		const int& b = a;
 		-b;
 	}
-	
+
 	#pragma test expect_ir(R"({
 		var ref<int<4>,f,f,plain> v0 = v0;
 		var ref<int<4>,f,f,cpp_ref> v1 = v0;
@@ -91,7 +91,7 @@ int main() {
 		int& b = a;
 		++b;
 	}
-	
+
 	#pragma test expect_ir(R"({
 		var ref<int<4>,f,f,plain> v0 = v0;
 		var ref<int<4>,f,f,cpp_ref> v1 = v0;
@@ -102,7 +102,7 @@ int main() {
 		int& b = a;
 		b++;
 	}
-	
+
 	#pragma test expect_ir(R"({
 		var ref<int<4>,f,f,plain> v0 = v0;
 		var ref<int<4>,f,f,cpp_ref> v1 = v0;
@@ -113,7 +113,7 @@ int main() {
 		int& b = a;
 		--b;
 	}
-	
+
 	#pragma test expect_ir(R"({
 		var ref<int<4>,f,f,plain> v0 = v0;
 		var ref<int<4>,f,f,cpp_ref> v1 = v0;
@@ -128,7 +128,7 @@ int main() {
 	//===------------------------------------------------------------------------------------------------------------------------------- BINARY OPERATORS ---===
 
 	// MATH //////////////////////////////////////////////////////////////
-	
+
 	#pragma test expect_ir(R"({
 		var ref<int<4>,f,f,plain> v0 = v0;
 		var ref<int<4>,f,f,cpp_ref> v1 = v0;
@@ -150,7 +150,7 @@ int main() {
 		const int& b = a;
 		a + b;
 	}
-	
+
 	#pragma test expect_ir(R"({
 		var ref<int<4>,f,f,plain> v0 = v0;
 		var ref<int<4>,f,f,cpp_ref> v1 = v0;
@@ -174,7 +174,7 @@ int main() {
 		int& c = a;
 		b + c;
 	}
-	
+
 	// COMPARISON /////////////////////////////////////////////////////////
 
 	#pragma test expect_ir(R"({
@@ -187,7 +187,7 @@ int main() {
 		int& b = a;
 		a == b;
 	}
-	
+
 	#pragma test expect_ir(R"({
 		var ref<int<4>,f,f,plain> v0 = v0;
 		var ref<int<4>,f,f,cpp_ref> v1 = v0;
@@ -211,7 +211,7 @@ int main() {
 	}
 
 	// WITH DIFFERENT TYPES ///////////////////////////////////////////////////
-	
+
 	#pragma test expect_ir(R"({
 		var ref<int<4>,f,f,plain> v0 = v0;
 		var ref<real<4>,f,f,plain> v1 = v1;
@@ -242,7 +242,7 @@ int main() {
 		intPtr& b = a;
 		*b;
 	}
-	
+
 	#pragma test expect_ir(R"({
 		var ref<ptr<int<4>>,f,f,plain> v0 = v0;
 		var ref<ptr<int<4>>,t,f,cpp_ref> v1 = v0;
@@ -255,7 +255,7 @@ int main() {
 	}
 
 	typedef const int* constIntPtr;
-	
+
 	#pragma test expect_ir(R"({
 		var ref<ptr<int<4>,t,f>,f,f,plain> v0 = v0;
 		var ref<ptr<int<4>,t,f>,t,f,cpp_ref> v1 = v0;
@@ -266,12 +266,12 @@ int main() {
 		const constIntPtr& b = a;
 		*b;
 	}
-	
+
 	#pragma test expect_ir(R"({
 		var ref<int<4>,f,f,plain> v0 = v0;
 		var ref<ptr<int<4>>,f,f,plain> v1 = v1;
 		var ref<ptr<int<4>>,f,f,cpp_ref> v2 = v1;
-		cxx_style_assignment(v2, ptr_from_ref(v0));
+		v2 = ptr_from_ref(v0);
 	})")
 	{
 		int v;
@@ -279,7 +279,7 @@ int main() {
 		intPtr& b = a;
 		b = &v;
 	}
-	
+
 	#pragma test expect_ir(R"({
 		var ref<ptr<int<4>>,f,f,plain> v0 = v0;
 		var ref<ptr<int<4>>,f,f,cpp_ref> v1 = v0;
@@ -298,22 +298,22 @@ int main() {
 	}
 
 	// COMPOUND //////////////////////////////////////////////////////////////
-	
+
 	#pragma test expect_ir(R"({
 		var ref<int<4>,f,f,plain> v0 = v0;
 		var ref<int<4>,f,f,cpp_ref> v1 = v0;
-		cxx_style_assignment(v1, *v1+1);
+		v1 = *v1+1;
 	})")
 	{
 		int b;
 		int& a = b;
 		a += 1;
 	}
-	
+
 	#pragma test expect_ir(R"({
 		var ref<int<4>,f,f,plain> v0 = v0;
 		var ref<int<4>,f,f,cpp_ref> v1 = v0;
-		cxx_style_assignment(v1, *v1-1);
+		v1 = *v1-1;
 	})")
 	{
 		int b;
@@ -322,34 +322,34 @@ int main() {
 	}
 
 	// ASSIGNMENT //////////////////////////////////////////////////////////////
-	
+
 	#pragma test expect_ir(R"({
 		var ref<int<4>,f,f,plain> v0 = v0;
 		var ref<int<4>,f,f,cpp_ref> v1 = v0;
-		cxx_style_assignment(v1, *v0);
+		v1 = *v0;
 	})")
 	{
 		int b;
 		int& a = b;
 		a = b;
 	}
-	
+
 	#pragma test expect_ir(R"({
 		var ref<int<4>,f,f,plain> v0 = v0;
 		var ref<int<4>,f,f,cpp_ref> v1 = v0;
-		cxx_style_assignment(v1, 1);
+		v1 = 1;
 	})")
 	{
 		int b;
 		int& a = b;
 		a = 1;
 	}
-	
+
 	#pragma test expect_ir(R"({
 		var ref<int<4>,f,f,plain> v0 = v0;
 		var ref<int<4>,f,f,cpp_ref> v1 = v0;
 		var ref<int<4>,f,f,cpp_ref> v2 = v0;
-		cxx_style_assignment(v1, *v2);
+		v1 = *v2;
 	})")
 	{
 		int b;
@@ -357,12 +357,12 @@ int main() {
 		int& c = b;
 		a = c;
 	}
-	
+
 	#pragma test expect_ir(R"({
 		var ref<int<4>,f,f,plain> v0 = v0;
 		var ref<int<4>,f,f,cpp_ref> v1 = v0;
 		var ref<int<4>,f,f,cpp_ref> v2 = v0;
-		cxx_style_assignment(v0, *cxx_style_assignment(v1, *v2));
+		v0 = *cxx_style_assignment(v1, *v2);
 	})")
 	{
 		int b;
@@ -372,11 +372,11 @@ int main() {
 	}
 
 	//===----------------------------------------------------------------------------------------------------------------------------------------- SIZEOF ---===
-	
+
 	#pragma test expect_ir(R"({
 		var ref<int<4>,f,f,plain> v0 = v0;
 		var ref<int<4>,f,f,cpp_ref> v1 = v0;
-		cxx_style_assignment(v1, num_cast(sizeof(type_lit(int<4>)), type_lit(int<4>)));
+		v1 = num_cast(sizeof(type_lit(int<4>)), type_lit(int<4>));
 	})")
 	{
 		int a;

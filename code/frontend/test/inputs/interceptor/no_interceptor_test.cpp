@@ -88,7 +88,7 @@ void intercept_memFunc2() {
 void intercept_fieldAccess() {
 	#pragma test expect_ir(STRUCT_S, R"({
 		var ref<IMP_ns_colon__colon_S> v0 = IMP_ns_colon__colon_S::(v0);
-		cxx_style_assignment(v0.a, *v0.b);
+		v0.a = *v0.b;
 	})")
 	{
 		ns::S s2;

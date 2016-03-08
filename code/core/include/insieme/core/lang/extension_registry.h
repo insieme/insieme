@@ -45,20 +45,6 @@
 #include "insieme/core/ir_node.h"
 #include "insieme/core/lang/extension.h"
 
-#include "insieme/core/lang/array.h"
-#include "insieme/core/lang/asm_extension.h"
-#include "insieme/core/lang/complex.h"
-#include "insieme/core/lang/datapath.h"
-#include "insieme/core/lang/instrumentation_extension.h"
-#include "insieme/core/lang/io.h"
-#include "insieme/core/lang/parallel.h"
-#include "insieme/core/lang/pointer.h"
-#include "insieme/core/lang/reference.h"
-#include "insieme/core/lang/static_vars.h"
-#include "insieme/core/lang/varargs_extension.h"
-
-#include "insieme/utils/assert.h"
-
 
 namespace insieme {
 namespace core {
@@ -75,32 +61,12 @@ namespace lang {
 		std::map<const std::string, std::function<const Extension&(NodeManager&)>> extensionFactories;
 
 		// prevent external instantiation
-		ExtensionRegistry() {
-			// fill the map with named extensions in here
-			extensionFactories.insert(getExtensionFactory<ArrayExtension>("ext.array"));
-			extensionFactories.insert(getExtensionFactory<AsmStmtExtension>("ext.asm"));
-			extensionFactories.insert(getExtensionFactory<ComplexExtension>("ext.complex"));
-			extensionFactories.insert(getExtensionFactory<DatapathExtension>("ext.datapath"));
-			extensionFactories.insert(getExtensionFactory<EnumExtension>("ext.enum"));
-			extensionFactories.insert(getExtensionFactory<InputOutputExtension>("ext.io"));
-			extensionFactories.insert(getExtensionFactory<InstrumentationExtension>("ext.instrumentation"));
-			extensionFactories.insert(getExtensionFactory<ParallelExtension>("ext.parallel"));
-			extensionFactories.insert(getExtensionFactory<PointerExtension>("ext.pointer"));
-			extensionFactories.insert(getExtensionFactory<ReferenceExtension>("ext.reference"));
-			extensionFactories.insert(getExtensionFactory<StaticVariableExtension>("ext.static"));
-			extensionFactories.insert(getExtensionFactory<VarArgsExtension>("ext.varargs"));
-		}
+		ExtensionRegistry();
 
 		// prevent copies
 		ExtensionRegistry(ExtensionRegistry const&) = delete;
 
 		void operator=(ExtensionRegistry const&) = delete;
-
-		// returns a new std::pair which can be inserted into the map of extension factories
-		template <typename T>
-		std::pair<const std::string, std::function<const Extension&(NodeManager&)>> getExtensionFactory(const std::string& extensionName) {
-			return std::make_pair(extensionName, [](NodeManager& manager) -> const Extension& { return manager.getLangExtension<T>(); });
-		}
 
 	  public:
 		/*
@@ -119,15 +85,7 @@ namespace lang {
 		 * @param name the name of the extension to look up
 		 * @return a factory which can be used to create the extension, given a NodeManager
 		 */
-		const boost::optional<std::function<const Extension&(NodeManager&)>> lookupExtensionFactory(const std::string& extensionName) const {
-			auto pos = extensionFactories.find(extensionName);
-			if (pos != extensionFactories.end()) {
-				// return the factory
-				return pos->second;
-			}
-			// return failed result
-			return boost::optional<std::function<const Extension&(NodeManager&)>>();
-		}
+		const boost::optional<std::function<const Extension&(NodeManager&)>> lookupExtensionFactory(const std::string& extensionName) const;
 
 		/**
 		 * Returns all extension factories

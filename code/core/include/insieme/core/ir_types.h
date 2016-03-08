@@ -560,11 +560,13 @@ namespace core {
 	};
 
 	/**
-	 * The accessor associated to a function type. Each function type is composed of 3 sub-nodes.
-	 * The first is forming a list of parameters, the second the return type. The last node
-	 * determines the kind of function - according to the FunctionKind enumeration.
+	 * The accessor associated to a function type. Each function type is composed of 4 sub-nodes.
+	 * The first is forming a list of parameters, the second the return type. The third node
+	 * determines the kind of function - according to the FunctionKind enumeration, and the last
+	 * node optionally provides a list of instantiated or uninstantiated generic argument types.
+	 * (For generic type parameters which do not appear in the function type)
 	 */
-	IR_NODE_ACCESSOR(FunctionType, Type, Types, Type, UIntValue)
+	IR_NODE_ACCESSOR(FunctionType, Type, Types, Type, UIntValue, Types)
 		/**
 		 * Obtains the list of parameters required for invoking functions of this type.
 		 */
@@ -579,6 +581,11 @@ namespace core {
 		 * Obtains a pointer to the child node determining the kind of this function type.
 		 */
 		IR_NODE_PROPERTY(UIntValue, FunctionKind, 2);
+
+		/**
+		 * Obtains the (optional) list of instantiation types.
+		 */
+		IR_NODE_PROPERTY(Types, InstantiationTypes, 3);
 
 		/**
 		 * A utility function allowing to determine directly whether a function
@@ -658,6 +665,20 @@ namespace core {
 			return (FunctionKind)getFunctionKind()->getValue();
 		}
 
+		/**
+		 * Obtains a list of instantiation types of this function type.
+		 */
+		vector<Ptr<const Type>> getInstantiationTypeList() const {
+			return getInstantiationTypes()->getElements();
+		}
+
+		/**
+		 * Returns true if the list of instantiation types is non-empty.
+		 */
+		bool hasInstantiationTypes() const {
+			return getInstantiationTypes()->getTypes().size() != 0;
+		}
+
 	IR_NODE_END()
 
 	/**
@@ -672,19 +693,22 @@ namespace core {
 		virtual std::ostream& printTo(std::ostream & out) const;
 
 	  public:
-		/**
-		 * This method provides a static factory method for function types. It will return a pointer to
-		 * a function type instance representing the requested function type and being maintained
-		 * within the given manager.
-		 *
-		 * @param manager the manager to be used for handling the obtained type pointer
-		 * @param paramTypes the type of the single parameter accepted by the resulting function
-		 * @param returnType the type of value to be returned by the obtained function type
-		 * @param kind determining the kind of function type to be constructed
-		 * @return a pointer to a instance of the required type maintained by the given manager
-		 */
-		static FunctionTypePtr get(NodeManager& manager, const TypesPtr& paramType, const TypePtr& returnType, FunctionKind kind = FK_PLAIN) {
-			return manager.get(FunctionType(paramType, returnType, UIntValue::get(manager, kind)));
+	    /**
+	     * This method provides a static factory method for function types. It will return a pointer to
+	     * a function type instance representing the requested function type and being maintained
+	     * within the given manager.
+	     *
+	     * @param manager the manager to be used for handling the obtained type pointer
+	     * @param paramTypes the type of the single parameter accepted by the resulting function
+	     * @param returnType the type of value to be returned by the obtained function type
+	     * @param kind determining the kind of function type to be constructed
+	     * @param instantiationTypes determining the instantiation types of the function
+	     * @return a pointer to a instance of the required type maintained by the given manager
+	     */
+	    static FunctionTypePtr get(NodeManager& manager, const TypesPtr& paramType, const TypePtr& returnType, FunctionKind kind = FK_PLAIN,
+	                               TypesPtr instantiationTypes = TypesPtr()) {
+		    if(!instantiationTypes) instantiationTypes = Types::get(manager, TypeList());
+		    return manager.get(FunctionType(paramType, returnType, UIntValue::get(manager, kind), instantiationTypes));
 		}
 
 		/**
@@ -698,7 +722,7 @@ namespace core {
 		 * @return a pointer to a instance of the required type maintained by the given manager
 		 */
 		static FunctionTypePtr get(NodeManager& manager, const TypesPtr& paramType, FunctionKind kind = FK_PLAIN) {
-			return get(manager, paramType, GenericType::get(manager, "unit"), kind);
+		    return get(manager, paramType, GenericType::get(manager, "unit"), kind);
 		}
 
 		/**
@@ -1628,7 +1652,7 @@ namespace core {
 	};
 
 
-	#define IR_RECORD_ACCESSOR(NAME, ...)                                                                                                                  \
+    #define IR_RECORD_ACCESSOR(NAME, ...)                                                                                                                  \
 		IR_NODE_ACCESSOR(NAME, Record, StringValue, Fields, Expressions, Expression, BoolValue, MemberFunctions, PureVirtualMemberFunctions, ##__VA_ARGS__)
 
 

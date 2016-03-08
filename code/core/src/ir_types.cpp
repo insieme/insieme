@@ -85,6 +85,11 @@ namespace core {
 			}
 		}
 
+		// handle instantiation types
+		if(hasInstantiationTypes()) {
+			out << "<" << join(",", getInstantiationTypeList(), print<deref<NodePtr>>()) << ">";
+		}
+
 		// handle constructors
 		if(isConstructor()) {
 			auto paramBegin = getParameterTypes().begin() + 1;
@@ -279,7 +284,7 @@ namespace core {
 		}
 		std::sort(tagTypeBindings.begin(), tagTypeBindings.end(), [](const TagTypeBindingPtr& a, const TagTypeBindingPtr& b) {
 			return a->getTag()->getName()->getValue() < b->getTag()->getName()->getValue();
-		});	
+		});
 		return manager.get(TagTypeDefinition(convertList(tagTypeBindings)));
 	}
 
@@ -329,7 +334,7 @@ namespace core {
 		if (def->hasAttachedValue<reference_list>()) {
 			return def->getAttachedValue<reference_list>().list;
 		}
-		
+
 		// compute list
 		vector<TagTypeReferenceAddress> res;
 		for (const auto& cur : getRecursiveReferences()) {
