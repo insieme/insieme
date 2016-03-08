@@ -329,56 +329,46 @@ namespace transform {
 		core::transform::utils::migrateAnnotations(lambdaExpr, newLambdaExpr);
 		return core::transform::replaceVarsGen(manager, newLambdaExpr, annoReplacements);
 	}
-	
-	namespace {
-		class InlineAssignmentsNodeMapping : public core::transform::CachedNodeMapping {
-			core::NodeManager& manager;
-			core::IRBuilder builder;
-			core::pattern::TreePattern pattern;
-		public:
-			InlineAssignmentsNodeMapping(core::NodeManager& manager) : manager(manager), builder(manager) {
-				// build the irp beforehand as the resolveElement method will use it quite often
-				// auto var = core::pattern::irp::atom(builder.typeVariable("a"));
-				auto rhs = core::pattern::irp::variable(core::pattern::any);
-				auto lhs = core::pattern::irp::variable(core::pattern::irp::refType(core::pattern::any));
-				// now construct the lambda pattern which represents the actual c/cpp_style_assignment
-				pattern = core::pattern::irp::lambda(
-					core::pattern::any, 				// return type
-					core::pattern::empty << lhs << rhs,	// arguments
-					core::pattern::aT( 					// body
-						core::pattern::irp::assignment(),
-						core::pattern::irp::returnStmt(core::pattern::any)
-						));
-			}
 
-			const core::NodePtr resolveElement(const core::NodePtr& node) override {
-				// do not touch types
-				if (node->getNodeCategory() == core::NC_Type) return node;
-				// this mapping is only interested in calls ...
-				if (node->getNodeType() != core::NT_CallExpr) return node->substitute(manager, *this);
-				core::CallExprPtr callExpr = node.as<core::CallExprPtr>();
-
-				if (auto lambdaExpr = callExpr->getFunctionExpr().isa<core::LambdaExprPtr>()) {
-					if (pattern.match(lambdaExpr->getLambda())) {
-						return builder.assign(callExpr->getArgument(0), callExpr->getArgument(1));
-						// return core::transform::inlineCode(manager, callExpr);
-					}
-				}
-				return node;
-			}
-		};
-	}
-	
 	core::NodePtr InlineAssignmentsStep::process(const Converter& converter, const core::NodePtr& node) {		
 		core::LambdaExprPtr lambdaExpr = node.isa<LambdaExprPtr>();
 		if (!lambdaExpr) return node;
 
-		InlineAssignmentsNodeMapping mapping(manager); 
-		core::NodePtr newBody = mapping.resolveElement(lambdaExpr->getBody());
-
 		core::IRBuilder builder(manager);
-		core::LambdaExprPtr newLambdaExpr= builder.lambdaExpr(
-			manager.getLangBasic().getUnit(), lambdaExpr->getParameterList(), newBody.as<core::StatementPtr>());
+		// auto var = core::pattern::irp::atom(builder.typeVariable("a"));
+		auto rhs = core::pattern::irp::variable(core::pattern::any);
+		auto lhs = core::pattern::irp::variable(core::pattern::irp::refType(core::pattern::any));
+		// now construct the lambda pattern which represents the actual c/cpp_style_assignment
+		auto pattern = core::pattern::irp::lambda(
+			core::pattern::any, 				// return type
+			core::pattern::empty << lhs << rhs,	// arguments
+			core::pattern::aT( 					// body
+				core::pattern::irp::assignment(),
+				core::pattern::irp::returnStmt(core::pattern::any)
+				));
+
+		core::NodeMap replacements;
+		core::visitDepthFirstOnce(core::NodeAddress(lambdaExpr->getBody()), [&](const core::NodeAddress& addr) {
+			const core::NodePtr& target = addr.getAddressedNode();
+			// non-calls are not important
+			if (target->getNodeType() != core::NT_CallExpr) return;
+
+			auto callExpr = target.as<core::CallExprPtr>();
+			// if we call something else than a lambda we are not interested in it as well
+			if (auto callee = callExpr->getFunctionExpr().isa<core::LambdaExprPtr>()) {
+				// do not introduce a local var to hold the evaluated value -- only inline straight assignments
+				if (!addr.isRoot() && addr.getParentAddress().getAddressedNode()->getNodeType() == core::NT_CallExpr) return;
+				// if our parent is not a call & the pattern matches the replacement is valid
+				if (!pattern.match(callee->getLambda())) return;
+
+				replacements[target] = builder.assign(callExpr->getArgument(0), callExpr->getArgument(1));
+			}
+		});
+		// fast-path
+		if (replacements.empty()) return node;
+
+		core::LambdaExprPtr newLambdaExpr= builder.lambdaExpr(manager.getLangBasic().getUnit(),
+			lambdaExpr->getParameterList(), core::transform::replaceAllGen(manager, lambdaExpr->getBody(), replacements));
 		// migrate the annotations -- but no need to fixup as only hthe body has changed
 		core::transform::utils::migrateAnnotations(lambdaExpr, newLambdaExpr);
 		return newLambdaExpr;
@@ -388,15 +378,6 @@ namespace transform {
 		auto callContext = std::make_shared<CallContext>();
 		// introduce a single default clEnqueueTask call
 		callContext->setNDRange(makeDefaultNDRange(manager));
-
-		#if 0
-		// @FEKO for testing only!
-		core::IRBuilder builder(manager);
-		core::ExpressionList optionals;
-		optionals.push_back(builder.uintLit(7));
-		callContext->setOptionals(optionals);
-		#endif
-
 		context.getCallGraph().addVertex(callContext);
 		return node;
 	}

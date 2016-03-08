@@ -294,12 +294,23 @@ namespace analysis {
 
 	core::TypePtr getElementType(const core::TypePtr& type) {
 		if (core::lang::isReference(type))
-			return removeReference(type);
+			return core::lang::ReferenceType(type).getElementType();
 		else if (core::lang::isPointer(type))
-			return removePointer(type);
+			return core::lang::PointerType(type).getElementType();
+		else if (core::lang::isArray(type))
+			return core::lang::ArrayType(type).getElementType();
 		else {
 			return type;
 		}
+	}
+
+	core::TypePtr getUnderlyingType(const core::TypePtr& type) {
+		core::TypePtr newType = getElementType(type);
+		// if we point to the same memory location getElementType returned the identity
+		if (newType == type)
+			return newType;
+		else
+			return getUnderlyingType(newType);
 	}
 
 	core::TypePtr getReferencedType(const core::NodePtr& node) {

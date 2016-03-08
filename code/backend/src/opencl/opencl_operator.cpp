@@ -38,6 +38,7 @@
 #include "insieme/backend/opencl/opencl_operator.h"
 #include "insieme/backend/opencl/opencl_code_fragments.h"
 #include "insieme/backend/opencl/opencl_entities.h"
+#include "insieme/backend/opencl/opencl_analysis.h"
 #include "insieme/backend/runtime/runtime_code_fragments.h"
 #include "insieme/backend/converter.h"
 #include "insieme/backend/function_manager.h"
@@ -61,37 +62,50 @@ namespace backend {
 namespace opencl {
 
 	namespace utils {
-		c_ast::TypePtr namedType(c_ast::SharedCNodeManager manager, const std::string& name) {
-			return manager->create<c_ast::NamedType>(manager->create(name));
-		}
-		
-		c_ast::TypePtr vectorType(c_ast::SharedCNodeManager manager, const std::string& name) {
-			return manager->create<c_ast::VectorType>(namedType(manager, name));
-		}
-		
-		c_ast::VarDeclPtr varDecl(c_ast::SharedCNodeManager manager, const c_ast::VariablePtr& var, const c_ast::InitializerPtr& init) {
-			return manager->create<c_ast::VarDecl>(var, init);
-		}
-		
-		c_ast::InitializerPtr initializer(c_ast::SharedCNodeManager manager, const std::vector<c_ast::NodePtr>& expr) {
-			return manager->create<c_ast::Initializer>(expr);
-		}
-		
-		c_ast::InitializerPtr initializer(c_ast::SharedCNodeManager manager, const c_ast::TypePtr& type, const std::vector<c_ast::NodePtr>& expr) {
-			return manager->create<c_ast::Initializer>(type, expr);
-		}
-		
-		c_ast::StmtExprPtr stmtExpr(c_ast::SharedCNodeManager manager, const c_ast::CompoundPtr& compound) {
-			return manager->create<c_ast::StmtExpr>(compound);
-		}
-		
-		c_ast::StructTypePtr structType(c_ast::SharedCNodeManager manager, const std::string& name) {
-			return manager->create<c_ast::StructType>(manager->create(name));
-		}
-		
-		c_ast::TypePtr uint32Type(c_ast::SharedCNodeManager manager) {
-			return manager->create<c_ast::PrimitiveType>(c_ast::PrimitiveType::UInt32);
-		}
+		// used to model convinient shortcuts
+		class CBuilder {
+			c_ast::SharedCNodeManager manager;
+		public:
+			CBuilder(const c_ast::SharedCNodeManager& manager) : manager(manager) {}
+
+			c_ast::TypePtr namedType(const std::string& name) {
+				return manager->create<c_ast::NamedType>(manager->create(name));
+			}
+
+			c_ast::TypePtr vectorType(const std::string& name) {
+				return manager->create<c_ast::VectorType>(namedType(name));
+			}
+
+			c_ast::VarDeclPtr varDecl(const c_ast::VariablePtr& var, const c_ast::InitializerPtr& init) {
+				return manager->create<c_ast::VarDecl>(var, init);
+			}
+
+			c_ast::InitializerPtr initializer(const std::vector<c_ast::NodePtr>& expr) {
+				return manager->create<c_ast::Initializer>(expr);
+			}
+
+			c_ast::InitializerPtr initializer(const c_ast::TypePtr& type, const std::vector<c_ast::NodePtr>& expr) {
+				return manager->create<c_ast::Initializer>(type, expr);
+			}
+
+			c_ast::StructTypePtr structType(const std::string& name) {
+				return manager->create<c_ast::StructType>(manager->create(name));
+			}
+
+			c_ast::TypePtr uint32Type() {
+				return manager->create<c_ast::PrimitiveType>(c_ast::PrimitiveType::UInt32);
+			}
+
+			c_ast::StmtExprPtr stmtExpr(const std::vector<c_ast::NodePtr>& body) {
+				assert_false(body.empty()) << "a statement expression must consist of at least one node";
+
+				auto compound = c_ast::compound(body.front());
+				// copy over all the statements -- body.front() is required to obtain a ref to the manager
+				compound->statements = body;
+				// wrap the compound into an expression
+				return compound->getManager()->create<c_ast::StmtExpr>(compound);
+			}
+		};
 	}
 
 	OperatorConverterTable& addOpenCLSpecificOps(core::NodeManager& manager, OperatorConverterTable& table, const BackendConfig& config) {
@@ -128,13 +142,14 @@ namespace opencl {
 			*/
 			auto manager = C_NODE_MANAGER;
 			core::IRBuilder builder(call->getNodeManager());
-			
+			utils::CBuilder cb(manager);
+
 			auto id = CONVERT_ARG(0);
 			auto nd = CONVERT_ARG(1);
-			
+
 			auto requirements = core::encoder::toValue<core::ExpressionList, core::encoder::DirectExprListConverter>(ARG(2));
 			// obtain the type of requirement function
-			auto requirementsTable = c_ast::var(utils::vectorType(manager, "irt_opencl_data_requirement_func"),
+			auto requirementsTable = c_ast::var(cb.vectorType("irt_opencl_data_requirement_func"),
 								  "__irt_opencl_data_requirement_func_table");
 			// put together the init list for @var
 			std::vector<c_ast::NodePtr> init;			
@@ -146,38 +161,71 @@ namespace opencl {
 			// if core::IRBuilder was used -- which is the encouraged way of doing it -- it must be a tupleExpr
 			auto tupleExpr = core::analysis::getArgument(va, 0).isa<core::TupleExprPtr>();
 			assert_true(tupleExpr) << "expected a tupleExpr as argument of varlist_pack";
+			// acquire the list of packed expressions and make sure the number is sane
+			core::ExpressionList optionals = tupleExpr->getExpressions()->getElements();
+			assert_true((optionals.size() % 2) == 0) << "an optional argument must be modeled as tuple (size,value)";
 
-			core::ExpressionList exprList = tupleExpr->getExpressions()->getElements();
-			assert_true((exprList.size() % 2) == 0) << "an optional argument must be modeled as tuple (size,value)";
-			
-			// @TODO: actually push the exprs into the compound
+			std::vector<c_ast::NodePtr> args;
+			args.push_back(id);
+			args.push_back(nd);
+			args.push_back(CONVERT_EXPR(builder.uintLit(requirements.size())));
+			args.push_back(requirementsTable);
+			// inform the IRT about the number of optionals present
+			args.push_back(CONVERT_EXPR(builder.uintLit(optionals.size() / 2)));
+			if (!optionals.empty()) {
+				for (auto it = optionals.begin(); it != optionals.end(); ) {
+					// check if size is acceptable for IRT first
+					auto size = CONVERT_EXPR(*it++).isa<c_ast::UnaryOperationPtr>();
+					assert_true(size && size->operation == c_ast::UnaryOperation::SizeOf)
+						<< "an optional argument must be modeled as tuple (size,value)";
+					auto type = size->operand.isa<c_ast::PrimitiveTypePtr>();
+					assert_true(type) << "an optional argument must be of primitive type";
+					// check for further restrictions
+					switch (type->type) {
+					case c_ast::PrimitiveType::Void:
+					case c_ast::PrimitiveType::Int128:
+					case c_ast::PrimitiveType::UInt128:
+							// u/int128 is not allowed as IRT can only handle u/int64 in a
+							// portable and reliable manner! -- c99 va_arg actually.
+							assert_fail() << "invalid primitive type for optional argument";
+							break;
+					default:
+							// no-op fall through
+							break;
+					}
+					args.push_back(size);
+					// type is fine, proceed with value
+					auto value = *it++;
+					// in case we face a literal we need to convert the value on our own!
+					if (value->getNodeType() == core::NT_Literal)
+						args.push_back(CONVERT_EXPR(value));
+					else
+						// it might be a variable, call or bind
+						args.push_back(CONVERTER.getFunctionManager().getValue(value, context));
+				}
+			}
 
-			// finally we can substitute it with the actual IRT call
-			return utils::stmtExpr(manager, c_ast::compound(
-				utils::varDecl(manager, requirementsTable, utils::initializer(manager, init)), // this models the func_table 
-				c_ast::call(manager->create("irt_opencl_execute"),
-					id, // id of kernel to call
-					nd, // associated NDRange
-					CONVERT_EXPR(builder.uintLit(requirements.size())), // number of requirements stored in the table
-					requirementsTable, // c_ast variable pointing to the requirements table
-					CONVERT_EXPR(builder.uintLit(0)))
-			));
+			std::vector<c_ast::NodePtr> body;
+			// add the vardecl for the table
+			body.push_back(cb.varDecl(requirementsTable, cb.initializer(init)));
+			// finally construct the call
+			body.push_back(c_ast::call(manager->create("irt_opencl_execute"), args));
+			// as the op-converter must return an expression wrap it properly
+			return cb.stmtExpr(body);
 		};
 		table[oclExt.getMakeDataRequirement()] = OP_CONVERTER {
 			auto manager = C_NODE_MANAGER;
 			auto requirement = DataRequirement::decode(call);
-			
+			utils::CBuilder cb(manager);
+
 			std::vector<c_ast::NodePtr> init;
 			auto table = runtime::TypeTable::get(CONVERTER);
 			// this step is very important, we need to register the type this requirement references
 			// e.g ref<array<real<4>,1000>,f,f,plain> must register real<4>
-			auto type = requirement->getType();
-			if(lang::isReference(type)) type = lang::ReferenceType(type).getElementType();
-			if(lang::isArray(type)) type = lang::ArrayType(type).getElementType();
-			if(lang::isPointer(type)) type = lang::PointerType(type).getElementType();
+			auto type = analysis::getUnderlyingType(requirement->getType());
 			// register it and put type_id into initializer
-			init.push_back(c_ast::lit(utils::uint32Type(manager), std::to_string(table->registerType(type))));
-			
+			init.push_back(c_ast::lit(cb.uint32Type(), std::to_string(table->registerType(type))));
+
 			// map the AccessMode to IRT enums
 			switch (requirement->getAccessMode()) {
 			case DataRequirement::AccessMode::RO:	init.push_back(manager->create("IRT_OPENCL_DATA_MODE_READ_ONLY")); break;
@@ -187,23 +235,25 @@ namespace opencl {
 			// add the indirection to grab the ranges at runtime
 			init.push_back(CONVERT_EXPR(requirement->getNumRanges()));
 			init.push_back(CONVERT_EXPR(requirement->getRangeExpr()));
-			return utils::initializer(manager, utils::namedType(manager, "irt_opencl_data_requirement"), init);
+			return cb.initializer(cb.namedType("irt_opencl_data_requirement"), init);
 		};
 		table[oclExt.getMakeDataRange()] = OP_CONVERTER {
 			auto manager = C_NODE_MANAGER;
 			auto range = DataRange::decode(call);
-			
+			utils::CBuilder cb(manager);
+
 			std::vector<c_ast::NodePtr> init;
 			init.push_back(CONVERT_EXPR(range->getSize()));
 			init.push_back(CONVERT_EXPR(range->getStart()));
 			init.push_back(CONVERT_EXPR(range->getEnd()));
 			
-			return utils::initializer(manager, utils::namedType(manager, "irt_opencl_data_range"), init);
+			return cb.initializer(cb.namedType("irt_opencl_data_range"), init);
 		};
 		table[oclExt.getMakeNDRange()] = OP_CONVERTER {
 			auto manager = C_NODE_MANAGER;
 			auto ndrange = NDRange::decode(call);
-			
+			utils::CBuilder cb(manager);
+
 			std::vector<c_ast::NodePtr> init;
 			init.push_back(CONVERT_EXPR(ndrange->getWorkDim()));
 			auto addWorkSizes = [&](const ExpressionList& sizes) {
@@ -211,13 +261,13 @@ namespace opencl {
 				for (const ExpressionPtr& size : sizes)
 					lst.push_back(CONVERT_EXPR(size));
 				while (lst.size() < 3)
-					lst.push_back(c_ast::lit(utils::uint32Type(manager), "0"));
-				return utils::initializer(manager, lst);
+					lst.push_back(c_ast::lit(cb.uint32Type(), "0"));
+				return cb.initializer(lst);
 			};
 			init.push_back(addWorkSizes(ndrange->getGlobalWorkSizes()));
 			init.push_back(addWorkSizes(ndrange->getLocalWorkSizes()));
 			
-			return utils::initializer(manager, utils::namedType(manager, "irt_opencl_ndrange"), init);
+			return cb.initializer(cb.namedType("irt_opencl_ndrange"), init);
 		};
 		table[oclExt.getWorkDim()] = OP_CONVERTER {
 			auto manager = C_NODE_MANAGER;

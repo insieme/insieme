@@ -48,6 +48,11 @@ namespace analysis {
 	 */
 	core::TypePtr getElementType(const core::TypePtr& type);
 	/**
+     * Returns the underlying type of a given node:
+	 * eg: ref<ptr<array<int<4>>> yields int<4>
+	 */
+	core::TypePtr getUnderlyingType(const core::TypePtr& type);
+	/**
 	 * Removes any nested refs and ptrs until a non-indirect type is encountered.
 	 */
 	core::TypePtr getReferencedType(const core::NodePtr& node);

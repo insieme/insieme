@@ -231,7 +231,16 @@ namespace runtime {
 			Entry entry;
 			entry.kind = converter.getCNodeManager()->create(kind);
 			entry.type = type;
-			// not resolving target type of pointer because definition might not be available
+			switch (type->elementType->getNodeType()) {
+			case c_ast::NT_PointerType:
+			case c_ast::NT_PrimitiveType:
+					// if the element type is a pointer or a primitive type do it tho
+					entry.components.push_back(resolve(type->elementType).index);
+					break;
+			default:
+					// not resolving target type of pointer because definition might not be available
+					break;
+			}
 			return addEntry(entry);
 		}
 

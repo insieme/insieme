@@ -51,27 +51,13 @@ namespace insieme {
 namespace backend {
 namespace opencl {
 
-	using namespace core;
-	using namespace core::lang;
-	using namespace insieme::backend::opencl::analysis;
+	TEST(getUnderlyingType, Basic) {
+		core::NodeManager mgr;
+		core::IRBuilder builder(mgr);
 
-	TEST(isOutlineAble, Basic) {
-
-		NodeManager mgr;
-		IRBuilder builder(mgr);
-
-		// create a backend instance
-		Converter converter(mgr);
-		addons::PointerType().installOn(converter);
-
-		// get type manager
-		ConversionContext ctxt(converter);
-		EXPECT_FALSE(isOutlineAble(mgr, builder.uintLit(0)));
-		std::string output = toString(*converter.convert(builder.parseExpr("ref<ptr<real<8>>")));
-		EXPECT_EQ("(char*)0", output);
+		auto uintTy = mgr.getLangBasic().getUInt4();
+		EXPECT_EQ(toString(*uintTy), toString(*analysis::getUnderlyingType(builder.refType(builder.arrayType(uintTy)))));
 	}
-
-
 } // end namespace opencl
 } // end namespace backend
 } // end namespace insieme
