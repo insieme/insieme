@@ -217,7 +217,11 @@ void _irt_opencl_execute(unsigned id, irt_opencl_ndrange_func ndrange,
 		 * it can be detected by taking a look into num_components/components
 		 */
 		if (arg_type->num_components && irt_context->type_table[arg_type->components[0]].kind == IRT_T_POINTER) {
-			/* lets redirect 'data' once again */
+			/*
+			 * lets redirect 'data' once again, this is very _important_ as points to our data blob!
+			 * if the compiler generates meta-infos which are not a direct image of the actual case we will overwrite
+			 * our stack and the program will blow up!!!
+			 */
 			data = *((char **) data);
 		}
 		
