@@ -66,6 +66,10 @@ namespace analysis {
 	 * using opencl::transform::outline.
 	 */
 	annotations::opencl::VariableRequirementList getVariableRequirements(core::NodeManager& manager, const core::CallExprPtr& callExpr);
+	/**
+	 * Determine if a given for statement is independent and thus suitable for parallelization
+	 */
+	bool isIndependentStmt(const core::StatementPtr& stmt);
 }
 }
 }

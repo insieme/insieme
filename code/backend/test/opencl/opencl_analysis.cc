@@ -47,9 +47,27 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/lang/pointer.h"
 
+#include "insieme/annotations/opencl/opencl_annotations.h"
+
 namespace insieme {
 namespace backend {
 namespace opencl {
+
+	using namespace insieme::annotations::opencl;
+
+	namespace {
+		void addAnnotations(const core::NodePtr& node, BaseAnnotation::AnnotationList& annos) {
+			if(annos.empty()) return;
+			// get old annotation list and append our annotations
+			if(node->hasAnnotation(BaseAnnotation::KEY)) {
+				auto& lst = node->getAnnotation(BaseAnnotation::KEY)->getAnnotationList();
+				lst.insert(lst.end(), annos.begin(), annos.end());
+			} else {
+				// in this case we need to create a new one
+				node->addAnnotation(std::make_shared<BaseAnnotation>(annos));
+			}
+		}
+	}
 
 	TEST(getUnderlyingType, Basic) {
 		core::NodeManager mgr;
@@ -57,6 +75,26 @@ namespace opencl {
 
 		auto uintTy = mgr.getLangBasic().getUInt4();
 		EXPECT_EQ(toString(*uintTy), toString(*analysis::getUnderlyingType(builder.refType(builder.arrayType(uintTy)))));
+	}
+
+	TEST(isIndependentStmt, Basic) {
+		core::NodeManager mgr;
+		core::IRBuilder builder(mgr);
+
+		EXPECT_FALSE(analysis::isIndependentStmt(builder.getNoOp()));
+
+		auto intTy = mgr.getLangBasic().getInt4();
+		auto boolTy = mgr.getLangBasic().getBool();
+		auto intLit = builder.literal(intTy, "4");
+		auto intVar = builder.variable(intTy, 1);
+
+		auto forStmt = builder.forStmt(intVar, intLit, intLit, intLit, intLit);
+		EXPECT_FALSE(analysis::isIndependentStmt(forStmt));
+
+		BaseAnnotation::AnnotationList annos;
+		annos.push_back(std::make_shared<LoopAnnotation>(true));
+		addAnnotations(forStmt, annos);
+		EXPECT_TRUE(analysis::isIndependentStmt(forStmt));
 	}
 } // end namespace opencl
 } // end namespace backend

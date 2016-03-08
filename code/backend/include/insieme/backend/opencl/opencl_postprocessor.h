@@ -43,10 +43,12 @@ namespace insieme {
 namespace backend {
 namespace opencl {
 
+	namespace transform { class StepContext; }
 	class OffloadSupportPost : public PostProcessor {
 		bool compatWritten;
+		const transform::StepContext& sc;
 	public:
-		OffloadSupportPost();
+		OffloadSupportPost(const transform::StepContext& sc);
 		c_ast::NodePtr process(c_ast::CNodeManager& manager, const c_ast::NodePtr& code) override;
 	};
 

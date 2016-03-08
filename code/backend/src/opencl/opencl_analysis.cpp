@@ -397,12 +397,14 @@ namespace analysis {
 		VariableRequirementList candidates;
 		// all annotations are attached to the outlined lambda itself
 		core::LambdaExprPtr lambdaExpr = callExpr->getFunctionExpr().as<core::LambdaExprPtr>();
-		// grab all annotations which relate to OpenCL (and have been attached by FE)
-		const auto& annos = lambdaExpr->getAnnotation(BaseAnnotation::KEY)->getAnnotationList();
-		// loop through all of them and pick only those who correspond to variables
-		for (const auto& anno : annos) {
-			if (auto rq = std::dynamic_pointer_cast<VariableRequirement>(anno))
-				candidates.push_back(rq);
+		if (lambdaExpr->hasAnnotation(BaseAnnotation::KEY)) {
+			// grab all annotations which relate to OpenCL (and have been attached by FE)
+			const auto& annos = lambdaExpr->getAnnotation(BaseAnnotation::KEY)->getAnnotationList();
+			// loop through all of them and pick only those who correspond to variables
+			for (const auto& anno : annos) {
+				if (auto rq = std::dynamic_pointer_cast<VariableRequirement>(anno))
+					candidates.push_back(rq);
+			}
 		}
 		// map candidates to actual vars
 		for (unsigned index = 0; index < callExpr->getArgumentList().size(); ++index) {
@@ -429,6 +431,23 @@ namespace analysis {
 			result.push_back(req);
 		}
 		return result;
+	}
+
+	bool isIndependentStmt(const core::StatementPtr& stmt) {
+		// if it is not a for statement it is per-design not independent -- however this may be changed in the future!
+		if (stmt->getNodeType() != core::NT_ForStmt) return false;
+		// in case we face a not with no annotations we are done already
+		if (!stmt->hasAnnotation(BaseAnnotation::KEY)) return false;
+
+		const auto& annos = stmt->getAnnotation(BaseAnnotation::KEY)->getAnnotationList();
+		// the first annotation wins the rest is ignored
+		for (const auto& anno : annos) {
+			if (auto rq = std::dynamic_pointer_cast<LoopAnnotation>(anno)) {
+				return rq->getIndependent();
+			}
+		}
+
+		return false;
 	}
 }
 }

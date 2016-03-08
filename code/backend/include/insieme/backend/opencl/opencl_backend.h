@@ -67,10 +67,12 @@ namespace opencl {
 	/**
 	 * The purpose of this 'sub'-backend is to transform a given OclIR-node into OpenCL-Kernel target code
 	 */
+	namespace transform { class StepContext; }
 	class KernelBackend : public Backend {
-	  public:
-		KernelBackend(const BackendConfigPtr& config = std::make_shared<BackendConfig>());
-		static KernelBackendPtr getDefault();
+		const transform::StepContext& sc;
+	public:
+		KernelBackend(const transform::StepContext& sc, const BackendConfigPtr& config = std::make_shared<BackendConfig>());
+		static KernelBackendPtr getDefault(const transform::StepContext& sc);
 
 	  protected:
 		virtual Converter buildConverter(core::NodeManager& manager) const;

@@ -35,6 +35,7 @@
  */
 
 #include "insieme/backend/opencl/opencl_postprocessor.h"
+#include "insieme/backend/opencl/opencl_transform.h"
 #include "insieme/backend/c_ast/c_ast.h"
 #include "insieme/backend/c_ast/c_ast_utils.h"
 
@@ -42,8 +43,8 @@ namespace insieme {
 namespace backend {
 namespace opencl {
 
-	OffloadSupportPost::OffloadSupportPost() :
-		PostProcessor(), compatWritten(false)
+	OffloadSupportPost::OffloadSupportPost(const transform::StepContext& sc) :
+		PostProcessor(), compatWritten(false), sc(sc)
 	{ }
 
 	c_ast::NodePtr OffloadSupportPost::process(c_ast::CNodeManager& manager, const c_ast::NodePtr& node) {
@@ -52,24 +53,45 @@ namespace opencl {
 		// 2. insert extension pragmas
 		switch(node->getNodeType()) {
 		case c_ast::NT_Comment:
+			{
 				if (compatWritten) return manager.create<c_ast::OpaqueExpr>("");
 
+				// adjust the flag such that we do not do this twice
 				compatWritten = true;
-				return manager.create<c_ast::OpaqueExpr>("" \
-					"#pragma OPENCL EXTENSION cl_khr_fp64 : enable\n" \
-					"typedef char int8_t;\n" \
-					"typedef unsigned char uint8_t;\n" \
-					"typedef short int16_t;\n" \
-					"typedef unsigned short uint16_t;\n" \
-					"typedef int int32_t;\n" \
-					"typedef unsigned int uint32_t;\n" \
-					"typedef long int64_t;\n" \
-					"typedef unsigned long uint64_t;\n");
+
+				std::stringstream ss;
+				// put together the required pragma extensions
+				for (auto extension : sc.getExtensions()) {
+					std::string name;
+					switch (extension) {
+					case transform::StepContext::KhrExtension::Fp64:
+							name = "cl_khr_fp64"; break;
+							break;
+					case transform::StepContext::KhrExtension::ByteAddressableStore:
+							name = "cl_khr_byte_addressable_store";
+							break;
+					case transform::StepContext::KhrExtension::All:
+							name = "all";
+							break;
+					}
+					ss << ::format("#pragma OPENCL EXTENSION %s : enable\n", name);
+				}
+				// write out compat typedefs to map IR primitives to OCL primitives
+				ss << "typedef char int8_t;\n";
+				ss << "typedef unsigned char uint8_t;\n";
+				ss << "typedef short int16_t;\n";
+				ss << "typedef unsigned short uint16_t;\n";
+				ss << "typedef int int32_t;\n";
+				ss << "typedef unsigned int uint32_t;\n";
+				ss << "typedef long int64_t;\n";
+				ss << "typedef unsigned long uint64_t;\n";
+				return manager.create<c_ast::OpaqueExpr>(ss.str());
+			}
 		case c_ast::NT_Function:
 			{
 				// if the name of the function is __insieme_fun_0 we tag it as kernel
 				auto fun = node.as<c_ast::FunctionPtr>();
-				if (fun->name->name == "__insieme_fun_0") fun->flags |= c_ast::Function::OCL_KERNEL;
+				if (fun->name->name == sc.getKernelName()) fun->flags |= c_ast::Function::OCL_KERNEL;
 				return node;
 			}
 		case c_ast::NT_UnaryOperation:

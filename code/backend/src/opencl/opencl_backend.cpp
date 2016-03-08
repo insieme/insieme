@@ -57,6 +57,7 @@
 #include "insieme/backend/opencl/opencl_code_fragments.h"
 #include "insieme/backend/opencl/opencl_operator.h"
 #include "insieme/backend/opencl/opencl_type_handler.h"
+#include "insieme/backend/opencl/opencl_transform.h"
 
 #include "insieme/backend/runtime/runtime_operator.h"
 #include "insieme/backend/runtime/runtime_type_handler.h"
@@ -125,12 +126,12 @@ namespace opencl {
 		return converter;
 	}
 	
-	KernelBackend::KernelBackend(const BackendConfigPtr& config) :
-		Backend(std::vector<AddOnPtr>(), config)
+	KernelBackend::KernelBackend(const transform::StepContext& sc, const BackendConfigPtr& config) :
+		Backend(std::vector<AddOnPtr>(), config), sc(sc)
 	{ }
 	
-	KernelBackendPtr KernelBackend::getDefault() {
-		auto res = std::make_shared<KernelBackend>(std::make_shared<BackendConfig>());
+	KernelBackendPtr KernelBackend::getDefault(const transform::StepContext& sc) {
+		auto res = std::make_shared<KernelBackend>(sc, std::make_shared<BackendConfig>());
 		res->addAddOn<addons::PointerType>();
 		return res;
 	}
@@ -144,7 +145,7 @@ namespace opencl {
 		converter.setPreProcessor(preprocessor);
 
 		PostProcessorPtr postprocessor = makePostProcessor<PostProcessingSequence>(
-			makePostProcessor<OffloadSupportPost>());
+			makePostProcessor<OffloadSupportPost>(boost::ref(sc)));
 		converter.setPostProcessor(postprocessor);
 
 		TypeManager& typeManager = converter.getTypeManager();

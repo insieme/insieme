@@ -68,23 +68,21 @@ namespace transform {
 	using namespace insieme::annotations::opencl;
 	
 	namespace {
-		core::LiteralPtr toKernelLiteral(core::NodeManager& manager, const core::LambdaExprPtr& oclExpr) {
+		core::LiteralPtr toKernelLiteral(core::NodeManager& manager, const StepContext& sc, const core::LambdaExprPtr& oclExpr) {
 			core::IRBuilder builder(manager);
-			// obtain the kernel backend which transforms oclExpr into a stringLit
-			KernelBackendPtr backend = KernelBackend::getDefault();
+			// obtain the kernel backend which transforms oclExpr into a stringLit -- each call MUST allocate a fresh new backend!
+			KernelBackendPtr backend = KernelBackend::getDefault(sc);
 			TargetCodePtr target = backend->convert(oclExpr);
 
-			std::string str;
+			std::stringstream ss;
 			// in case it is CCode we print it differently -- this shall be the general case tho!
 			if (auto ccode = std::dynamic_pointer_cast<c_ast::CCode>(target)) {
-				std::stringstream ss;
 				for (const c_ast::CodeFragmentPtr& cur : ccode->getFragments()) { ss << *cur; }
-				str = ss.str();
 			} else {
-				str = toString(*target);
+				ss << toString(*target);
 			}
 			// dump the target code as string and put into IR lit
-			return builder.stringLit(str);
+			return builder.stringLit(ss.str());
 		}
 
 		core::ExpressionPtr wrapLazy(core::NodeManager& manager, const core::ExpressionPtr& expr) {
@@ -115,12 +113,12 @@ namespace transform {
 		return callExpr;
 	}
 
-	core::CallExprPtr buildRegisterKernel(core::NodeManager& manager, unsigned int& id, const core::LambdaExprPtr& oclExpr) {
+	core::CallExprPtr buildRegisterKernel(core::NodeManager& manager, unsigned int& id, const StepContext& sc, const core::LambdaExprPtr& oclExpr) {
 		core::IRBuilder builder(manager);
 		// grab a reference to the runtime & opencl extension
 		auto& oclExt = manager.getLangExtension<OpenCLExtension>();
 		// most important step here, transform the oclExpr into a literal
-		core::LiteralPtr literal = toKernelLiteral(manager, oclExpr);
+		core::LiteralPtr literal = toKernelLiteral(manager, sc, oclExpr);
 		// generate a new unique id for this kernel
 		id = KernelTable::getNextUnique();
 		// use the default IRBuilder to generate the callExpr
@@ -297,12 +295,12 @@ namespace transform {
 	core::NodePtr FlattenVariableIndirectionStep::process(const Converter& converter, const core::NodePtr& code) {
 		core::LambdaExprPtr lambdaExpr = code.isa<LambdaExprPtr>();
 		if (!lambdaExpr) return code;
-	
+
 		core::IRBuilder builder(manager);
 		// used to modify the body and header
 		core::NodeMap bodyReplacements;
 		core::VariableMap annoReplacements;
-		
+
 		core::VariableList parameter;
 		for_each(lambdaExpr->getParameterList(), [&](const core::VariablePtr& cur) {
 			// default param
@@ -313,7 +311,7 @@ namespace transform {
 			if (!core::lang::isReference(param->getType())) return;
 			// ok the element must be a pointer, otherwise we do not need to replace
 			if (!core::lang::isPointer(analysis::getElementType(param->getType()))) return;
-			
+
 			// excellent .. lets replace all derefs with the variable in question
 			bodyReplacements[builder.deref(cur)] = param;
 			parameter.back() = param;
@@ -379,26 +377,32 @@ namespace transform {
 		// introduce a single default clEnqueueTask call
 		callContext->setNDRange(makeDefaultNDRange(manager));
 		context.getCallGraph().addVertex(callContext);
+		// this kernel requires double precision
+		context.getExtensions().insert(StepContext::KhrExtension::Fp64);
+		// and name it such that we can mark it later as __kernel
+		context.setKernelName("__insieme_fun_0");
 		return node;
 	}
 
 	core::NodePtr KernelTypeStep::process(const Converter& converter, const core::NodePtr& code) {
-		#if 0
-		core::LambdaExprPtr lambdaExpr = code.isa<LambdaExprPtr>();
-		if (!lambdaExpr) return code;
+		core::visitDepthFirstOncePrunable(core::NodeAddress(code), [&](const core::NodeAddress& addr) {
+			// in case we hop into builtins return immediately
+			if (auto call = addr.isa<core::CallExprAddress>()) {
+				if (core::lang::isBuiltIn(call.as<core::CallExprPtr>()->getFunctionExpr())) return true;
+			}
 
-		core::IRBuilder builder(manager);
-		core::StatementList body;
+			core::NodePtr target = addr.getAddressedNode();
+			// if it is not a type do not prune but continue the traversal
+			if (target->getNodeCategory() != core::NC_Type) return false;
 
-		for_each(lambdaExpr->getParameterList(), [&](const core::VariablePtr& cur) {
-			body.push_back(builder.markerExpr(cur, cur->getId()));
-		});
-
-		body.insert(body.end(), lambdaExpr->getBody().begin(), lambdaExpr->getBody().end());
-		core::LambdaExprPtr newLambdaExpr = builder.lambdaExpr(manager.getLangBasic().getUnit(), lambdaExpr->getParameterList(), builder.compoundStmt(body));
-
-		LOG(INFO) << "lambda with kernel types: " << dumpColor(newLambdaExpr);
-		#endif
+			LOG(INFO) << "visit type: " << dumpColor(target);
+			// in case we hit an indirection traverse the visit
+			if (core::lang::isReference(target) || core::lang::isPointer(target)) {
+				LOG(INFO) << "would replace type: " << dumpColor(target);
+				return true;
+			}
+			return false;
+		}, true);
 		return code;
 	}
 
@@ -437,7 +441,7 @@ namespace transform {
 
 		core::StatementList body;
 		// first of all, we need to register the kernel itself
-		auto registerCall = buildRegisterKernel(manager, id, processor->process(converter, lambdaExpr).as<LambdaExprPtr>());
+		auto registerCall = buildRegisterKernel(manager, id, context, processor->process(converter, lambdaExpr).as<LambdaExprPtr>());
 		// as the processor has yield a callGraph build it now
 		body = buildExecuteGraph(manager, id, context);
 		body.push_back(registerCall);

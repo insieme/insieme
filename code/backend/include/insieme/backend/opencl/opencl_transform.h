@@ -74,15 +74,27 @@ namespace transform {
 	typedef std::shared_ptr<CallContext> CallContextPtr;
 
 	class StepContext {
+	public:
+		// represents the valid opencl extensions
+		enum class KhrExtension { All, Fp64, ByteAddressableStore };
+	private:
 		// represents the initial requirements -- a call context can overwrite it
 		VariableRequirementList defaultRq;
 		// each call context will lead to an invokation of irt_opencl_execute
 		utils::graph::Graph<CallContextPtr> graph;
+		// represents what extensions the kernel needs to function properly
+		std::set<KhrExtension> extensions;
+		// name of the kernel
+		std::string kernelName;
 	public:
 		const VariableRequirementList& getDefaultRequirements() const { return defaultRq; }
 		void setDefaultRequirements(const VariableRequirementList& lst) { defaultRq = lst; }
 		utils::graph::Graph<CallContextPtr>& getCallGraph() { return graph; }
 		const utils::graph::Graph<CallContextPtr>& getCallGraph() const { return graph; }
+		std::set<KhrExtension>& getExtensions() { return extensions; }
+		const std::set<KhrExtension>& getExtensions() const { return extensions; }
+		void setKernelName(const std::string& kernelName) { this->kernelName = kernelName; }
+		const std::string& getKernelName() const { return kernelName; }
 	};
 
 	class Step : public PreProcessor {
@@ -142,7 +154,8 @@ namespace transform {
 
 	core::CallExprPtr outline(core::NodeManager& manager, const core::StatementPtr& stmt);
 
-	core::CallExprPtr buildRegisterKernel(core::NodeManager& manager, unsigned int& id, const core::LambdaExprPtr& oclExpr);
+	core::CallExprPtr buildRegisterKernel(core::NodeManager& manager, unsigned int& id,
+										  const StepContext& sc, const core::LambdaExprPtr& oclExpr);
 
 	core::CallExprPtr buildExecuteKernel(core::NodeManager& manager, unsigned int id, const core::ExpressionPtr& ndrange,
 										 const core::ExpressionList& requirements, const core::ExpressionList& optionals);
