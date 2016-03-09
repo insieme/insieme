@@ -61,11 +61,15 @@ typedef struct _irt_opencl_ndrange irt_opencl_ndrange;
  */
 typedef irt_opencl_ndrange (*irt_opencl_ndrange_func)(
     irt_work_item *wi);
+/**
+ * this function is called to evaluate a given data_range element
+ */
+typedef unsigned (*irt_opencl_data_range_lazyeval_func)();
 
 struct _irt_opencl_data_range {
-    unsigned size;
-    unsigned start;
-    unsigned end;
+    irt_opencl_data_range_lazyeval_func size;
+    irt_opencl_data_range_lazyeval_func start;
+    irt_opencl_data_range_lazyeval_func end;
 };
 typedef struct _irt_opencl_data_range irt_opencl_data_range;
 /**

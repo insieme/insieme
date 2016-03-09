@@ -181,9 +181,9 @@ void _irt_opencl_execute(unsigned id, irt_opencl_ndrange_func ndrange,
 		for (unsigned dim = 0; dim < requirement.num_ranges; ++dim) {
 			ranges[dim] = requirement.range_func(wi, &nd, arg, dim);
 			IRT_DEBUG("range:\t%d\nsize:\t%d\nstart:\t%d\nend:\t%d\n",
-					  dim, ranges[dim].size, ranges[dim].start, ranges[dim].end);
+					  dim, ranges[dim].size(), ranges[dim].start(), ranges[dim].end());
 			/* sum up all sum sizes to compute the total object size */
-			num_of_elements += ranges[dim].size;
+			num_of_elements += ranges[dim].size();
 		}
 		
 		cl_mem_flags flags = 0;

@@ -65,7 +65,7 @@ namespace opencl {
 		// represents a data range within a DataRequirement
 		LANG_EXT_TYPE(DataRange, "opencl_data_range"/*, "struct { size : uint<4>; start : uint<4>; end : uint<4>; }"*/);
 		// constructor for the latter
-		LANG_EXT_LITERAL(MakeDataRange, "opencl_make_data_range", "(uint<4>, uint<4>, uint<4>)->opencl_data_range");
+		LANG_EXT_LITERAL(MakeDataRange, "opencl_make_data_range", "(()->uint<4>, ()->uint<4>, ()->uint<4>)->opencl_data_range");
 		// represents a DataRequirement entity
 		LANG_EXT_TYPE(DataRequirement, "opencl_data_requirement"/*, "struct { mode : uint<4>; num_ranges : uint<4>; ranges : array<opencl_data_range, 's>; }"*/);
 		// constructor for the latter

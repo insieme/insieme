@@ -324,7 +324,8 @@ namespace transform {
 
 		core::StatementList body;
 		// encode the range (in this case 1D)
-		DataRangePtr range = DataRange::get(manager, var->getSize(), var->getStart(), var->getEnd());
+		DataRangePtr range = DataRange::get(manager, wrapLazy(manager, var->getSize()),
+											wrapLazy(manager, var->getStart()), wrapLazy(manager, var->getEnd()));
 		body.push_back(builder.returnStmt(DataRange::encode(manager, range)));
 		// ok, now we can generate the "inner" lambda
 		core::LambdaExprPtr rangeExpr = builder.lambdaExpr(oclExt.getDataRange(), params, builder.compoundStmt(body));
