@@ -75,6 +75,18 @@ int main() {
 		b.get();
 	}
 
+	// Class with template method
+	#pragma test expect_ir(R"({
+		var ref<IMP_ClassWithTemplateMethod,f,f,plain> v0 = lit("IMP_ClassWithTemplateMethod::ctor" : IMP_ClassWithTemplateMethod::())(v0);
+		type_instantiation(type_lit(<int<4>>IMP_ClassWithTemplateMethod::() -> int<4>), lit("IMP_ClassWithTemplateMethod::IMP_get" : <'R>IMP_ClassWithTemplateMethod::() -> 'R))(v0);
+		type_instantiation(type_lit(<real<4>>IMP_ClassWithTemplateMethod::() -> real<4>), lit("IMP_ClassWithTemplateMethod::IMP_get" : <'R>IMP_ClassWithTemplateMethod::() -> 'R))(v0);
+	})")
+	{
+		ClassWithTemplateMethod a;
+		a.get<int>();
+		a.get<float>();
+	}
+
 
 	// Classes with templates //////////////////////////////////////////////////////////////
 

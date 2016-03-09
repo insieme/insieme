@@ -61,9 +61,18 @@ struct TemplateWithMethod {
 	}
 };
 
+class ClassWithTemplateMethod {
+  public:
+	template<class T>
+	T get() {
+		T t;
+		return t;
+	}
+};
+
 template<class D>
 class TemplateClass {
-public:
+  public:
 	D field;
 };
 

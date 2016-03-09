@@ -151,6 +151,7 @@ namespace frontend {
 		// check the attached name of the intercepted structs for correctness
 		auto code = job.execute(manager);
 		ASSERT_TRUE(code);
+		checkForTypeName(code, "IMP_ClassWithTemplateMethod", "ClassWithTemplateMethod", "template_interception.h");
 		checkForTypeName(code, "IMP_TemplateClass<int<4>>", "TemplateClass", "template_interception.h");
 		checkForTypeName(code, "IMP_TemplateClass<real<8>>", "TemplateClass", "template_interception.h");
 		checkForTypeName(code, "IMP_TemplateClass<bool>", "TemplateClass", "template_interception.h");
@@ -161,6 +162,7 @@ namespace frontend {
 		checkForFunctionName(code, "IMP_templateFunRetParam", "templateFunRetParam", "template_interception.h");
 		checkForFunctionName(code, "IMP_templateFun", "templateFun", "template_interception.h");
 		checkForFunctionName(code, "IMP_TemplateWithMethod::IMP_get", "get", "template_interception.h");
+		checkForFunctionName(code, "IMP_ClassWithTemplateMethod::IMP_get", "get", "template_interception.h");
 //		checkForFunctionName(code, "IMP_templateTemplateFun_TemplateClass_int_returns_void", "templateTemplateFun<TemplateClass,int>", "template_interception.h");
 //		checkForFunctionName(code, "IMP_templateTemplateFun_TemplateClass_TemplateClass_lt_int_gt__returns_void", "templateTemplateFun<TemplateClass,TemplateClass<int> >", "template_interception.h");
 //		checkForFunctionName(code, "IMP_variadicTemplateFun_int_returns_int", "variadicTemplateFun<int>", "template_interception.h");
