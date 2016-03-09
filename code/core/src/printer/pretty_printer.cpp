@@ -429,7 +429,7 @@ namespace printer {
 
 									lambdaNames[binding->getReference()] = splitstring[2];
 									newLine();
-									out << "decl " << splitstring[2] << ":" << tagname << "::";
+									out << "decl " << splitstring[2] << ":";
 									visit(NodeAddress(funType));
 									out << ";";
 								} else if (binding->getReference()->getType().isConstructor()) { // free constructors
@@ -469,7 +469,7 @@ namespace printer {
 								if (auto ctorIn = constr.isa<LambdaExprPtr>()) {
 									auto ctor = tag->peel(ctorIn);
 									newLine();
-									out << "decl ctor:" << tagName << "::";
+									out << "decl ctor:";
 									visit(NodeAddress(ctor->getType()));
 									out << ";";
 								}
@@ -484,8 +484,7 @@ namespace printer {
 									continue;
 								if (auto member = memberFun->getImplementation().isa<LambdaExprPtr>()) {
 									newLine();
-									out << "decl " << memberFun->getName()->getValue() << ":"
-									<< tagName << "::";
+									out << "decl " << memberFun->getName()->getValue() << ":";
 									visit(NodeAddress(member->getType()));
 									out << ";";
 								}
