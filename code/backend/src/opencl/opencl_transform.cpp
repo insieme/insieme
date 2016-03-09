@@ -113,6 +113,55 @@ namespace transform {
 		return callExpr;
 	}
 
+	core::CallExprPtr buildGetWorkDim(core::NodeManager& manager) {
+		core::IRBuilder builder(manager);
+		// grab a reference to the runtime & opencl extension
+		auto& oclExt = manager.getLangExtension<OpenCLExtension>();
+		return builder.callExpr(manager.getLangBasic().getUInt4(), oclExt.getWorkDim());
+	}
+
+	core::CallExprPtr buildGetGlobalId(core::NodeManager& manager, const core::ExpressionPtr& dim) {
+		core::IRBuilder builder(manager);
+		// grab a reference to the runtime & opencl extension
+		auto& oclExt = manager.getLangExtension<OpenCLExtension>();
+		return builder.callExpr(manager.getLangBasic().getUInt4(), oclExt.getGlobalId(), dim);
+	}
+
+	core::CallExprPtr buildGetGlobalSize(core::NodeManager& manager, const core::ExpressionPtr& dim) {
+		core::IRBuilder builder(manager);
+		// grab a reference to the runtime & opencl extension
+		auto& oclExt = manager.getLangExtension<OpenCLExtension>();
+		return builder.callExpr(manager.getLangBasic().getUInt4(), oclExt.getGlobalSize(), dim);
+	}
+
+	core::CallExprPtr buildGetLocalId(core::NodeManager& manager, const core::ExpressionPtr& dim) {
+		core::IRBuilder builder(manager);
+		// grab a reference to the runtime & opencl extension
+		auto& oclExt = manager.getLangExtension<OpenCLExtension>();
+		return builder.callExpr(manager.getLangBasic().getUInt4(), oclExt.getLocalId(), dim);
+	}
+
+	core::CallExprPtr buildGetLocalSize(core::NodeManager& manager, const core::ExpressionPtr& dim) {
+		core::IRBuilder builder(manager);
+		// grab a reference to the runtime & opencl extension
+		auto& oclExt = manager.getLangExtension<OpenCLExtension>();
+		return builder.callExpr(manager.getLangBasic().getUInt4(), oclExt.getLocalSize(), dim);
+	}
+
+	core::CallExprPtr buildGetNumGroups(core::NodeManager& manager, const core::ExpressionPtr& dim) {
+		core::IRBuilder builder(manager);
+		// grab a reference to the runtime & opencl extension
+		auto& oclExt = manager.getLangExtension<OpenCLExtension>();
+		return builder.callExpr(manager.getLangBasic().getUInt4(), oclExt.getNumGroups(), dim);
+	}
+
+	core::CallExprPtr buildGetGroupId(core::NodeManager& manager, const core::ExpressionPtr& dim) {
+		core::IRBuilder builder(manager);
+		// grab a reference to the runtime & opencl extension
+		auto& oclExt = manager.getLangExtension<OpenCLExtension>();
+		return builder.callExpr(manager.getLangBasic().getUInt4(), oclExt.getGroupId(), dim);
+	}
+
 	core::CallExprPtr buildRegisterKernel(core::NodeManager& manager, unsigned int& id, const StepContext& sc, const core::LambdaExprPtr& oclExpr) {
 		core::IRBuilder builder(manager);
 		// grab a reference to the runtime & opencl extension
@@ -373,6 +422,15 @@ namespace transform {
 	}
 	
 	core::NodePtr CallIntroducerStep::process(const Converter& converter, const core::NodePtr& node) {
+		core::LambdaExprPtr lambdaExpr = node.isa<LambdaExprPtr>();
+		if (!lambdaExpr) return node;
+
+		/*
+         * note:
+		 * you are not allowed to modify order or type of the original arguments!
+		 * however it is legal and possible to extend it with optional ones.
+		 */
+
 		auto callContext = std::make_shared<CallContext>();
 		// introduce a single default clEnqueueTask call
 		callContext->setNDRange(makeDefaultNDRange(manager));
@@ -381,6 +439,26 @@ namespace transform {
 		context.getExtensions().insert(StepContext::KhrExtension::Fp64);
 		// and name it such that we can mark it later as __kernel
 		context.setKernelName("__insieme_fun_0");
+
+		// @FEKO: this is a test impl
+		core::visitDepthFirstOncePrunable(lambdaExpr->getBody(), [&](const core::ForStmtPtr& forStmt) {
+			if (!analysis::isIndependentStmt(forStmt)) {
+				LOG(WARNING) << "optimistic independet assumption of: " << dumpColor(forStmt);
+
+				/*
+				for( int<4> v87 = 0 .. IMP_getLoopRange() : 1) {
+					ptr_subscript(*v308, v87) = IMP_add(*ptr_subscript(*v306, v87), *ptr_subscript(*v307, v87));
+				}
+
+				-->
+
+				int<4> v00 = cast_to_int(opencl_get_global_id()) % 1;
+				if (v00 < IMP_getLoopRange())
+					ptr_subscript(*v308, v00) = IMP_add(*ptr_subscript(*v306, v00), *ptr_subscript(*v307, v00));
+				*/
+			}
+			return true;
+		});
 		return node;
 	}
 

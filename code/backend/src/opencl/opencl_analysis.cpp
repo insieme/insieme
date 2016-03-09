@@ -41,6 +41,8 @@
 #include "insieme/core/lang/reference.h"
 #include "insieme/core/lang/pointer.h"
 #include "insieme/core/lang/array.h"
+#include "insieme/core/pattern/ir_pattern.h"
+#include "insieme/core/pattern/pattern_utils.h"
 #include "insieme/core/ir_expressions.h"
 #include "insieme/core/ir_builder.h"
 
@@ -60,7 +62,7 @@ namespace analysis {
 			auto& basic = type->getNodeManager().getLangBasic();
 			return basic.isChar(type) || basic.isBool(type) || basic.isScalarType(type);
 		}
-		// @TODO: removeReference/Pointer sauberer lösen
+
 		core::TypePtr removeReference(const core::TypePtr& node) {
 			if (core::lang::isReference(node))
 				return core::lang::ReferenceType(node).getElementType();
@@ -128,25 +130,17 @@ namespace analysis {
 			return result;
 		}
 
-		bool hasMultipleIndirections(const core::NodePtr& node) {
-			/*
-			ref<ref<...>> is a ptr!
-
-			bool checkDoublePointer(const VariablePtr& var) const {
-				// also check if the argument is not a pointer to a pointer
-				auto type = var->getType();
-				// if we hold a reference, get the element type instead
-				if(lang::isReference(type)) type = lang::ReferenceType(type).getElementType();
+		bool hasMultipleIndirections(core::TypePtr type) {
+			// if we hold a reference, get the element type instead
+			if (core::lang::isReference(type)) {
+				type = core::lang::ReferenceType(type).getElementType();
 				// if we hold a pointer, get the element type instead
-				if(lang::isPointer(type)) type = lang::PointerType(type).getElementType();
-				// at this point, it is not legal to hold a pointer (OpenCL does not support it!)
-				if(lang::isPointer(type)) {
-					LOG(WARNING) << "OpenCL: illegal pointer to pointer as argument " << dumpColor(var) << " of type: " << dumpColor(var->getType());
-					return false;
+				if (core::lang::isPointer(type)) {
+					type = core::lang::PointerType(type).getElementType();
+					// at this point, it is not legal to hold a pointer (OpenCL does not support it!)
+					if (core::lang::isPointer(type)) return true;
 				}
-				return true;
 			}
-			*/
 			return false;
 		}
 
@@ -204,40 +198,13 @@ namespace analysis {
 			return core::analysis::isTrivial(type);
 		}
 
-		/*
-		bool checkCompoundStmt(const BaseAnnotationPtr& anno, const CompoundStmtPtr& compoundStmt) const {
-			LOG(DEBUG) << "OpenCL: checking compoundStmt:";
-			LOG(DEBUG) << "OpenCL: " << dumpColor(compoundStmt);
-			// check if the compound is outlineAble, otherwise transform::outline will trigger an assertion			
-			if(!analysis::isOutlineAble(compoundStmt, false)) return false;
-			
-			auto callExpr = transform::outline(nodeMan, compoundStmt);
-			// @TODO: is is just a proof of concept
-			if(!checkLambdaExpr(anno, callExpr->getFunctionExpr().as<LambdaExprPtr>())) return false;
-			
-			DEBUG opencl_sema.cpp:317 - OpenCL: checking compoundStmt:
-			DEBUG opencl_sema.cpp:318 - OpenCL: {
-				var ref<int<4>,f,f,plain> v363 = ref_var_init(*ptr_to_ref(*v354));
-			}
-
-			DEBUG opencl_sema.cpp:289 - OpenCL: checking lambdaExpr:
-			DEBUG opencl_sema.cpp:290 - OpenCL: decl fun000 : (ref<ptr<int<4>>,f,f,plain>) -> unit;
-			def fun000 = function (v391 : ref<ref<ptr<int<4>>,f,f,plain>,f,f,plain>) -> unit {
-				var ref<int<4>,f,f,plain> v363 = ref_var_init(*ptr_to_ref(**v391));
-			};
-			fun000
-
-			WARN  opencl_sema.cpp:282 - OpenCL: illegal OpenCL annotated fragment: {
-				var ref<int<4>,f,f,plain> v363 = ref_var_init(*ptr_to_ref(**v391));
-			}
-			
-			LOG(DEBUG) << "OpenCL: compoundStmt passed check for offloading";
+		bool tryDeduceIndependence(const core::StatementPtr& stmt) {
+			LOG(WARNING) << "optimistic independence assumption of: " << dumpColor(stmt);
 			return true;
 		}
-		*/
 
 		VariableRequirement::AccessMode tryDeduceAccessModeIntern(const core::TypePtr& type) {
-			// @TODO: this is not a real impl!
+			LOG(WARNING) << "pessimistic access mode assumption of: " << dumpColor(type);
 			return VariableRequirement::AccessMode::RW;
 		}
 
@@ -443,11 +410,16 @@ namespace analysis {
 		// the first annotation wins the rest is ignored
 		for (const auto& anno : annos) {
 			if (auto rq = std::dynamic_pointer_cast<LoopAnnotation>(anno)) {
+				// in case we ignore other annos of the same type inform the user
+				if (annos.size() > 1) {
+					LOG(WARNING) << "multiple loop annotations attached to: " << dumpColor(stmt);
+				}
 				return rq->getIndependent();
 			}
 		}
-
-		return false;
+		// in this case we have to deduce it
+		LOG(DEBUG) << "trying to deduce independence of: " << dumpColor(stmt);
+		return tryDeduceIndependence(stmt);
 	}
 }
 }

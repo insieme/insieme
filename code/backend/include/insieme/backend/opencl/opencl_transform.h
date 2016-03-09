@@ -154,6 +154,14 @@ namespace transform {
 
 	core::CallExprPtr outline(core::NodeManager& manager, const core::StatementPtr& stmt);
 
+	core::CallExprPtr buildGetWorkDim(core::NodeManager& manager);
+	core::CallExprPtr buildGetGlobalId(core::NodeManager& manager, const core::ExpressionPtr& dim);
+	core::CallExprPtr buildGetGlobalSize(core::NodeManager& manager, const core::ExpressionPtr& dim);
+	core::CallExprPtr buildGetLocalId(core::NodeManager& manager, const core::ExpressionPtr& dim);
+	core::CallExprPtr buildGetLocalSize(core::NodeManager& manager, const core::ExpressionPtr& dim);
+	core::CallExprPtr buildGetNumGroups(core::NodeManager& manager, const core::ExpressionPtr& dim);
+	core::CallExprPtr buildGetGroupId(core::NodeManager& manager, const core::ExpressionPtr& dim);
+
 	core::CallExprPtr buildRegisterKernel(core::NodeManager& manager, unsigned int& id,
 										  const StepContext& sc, const core::LambdaExprPtr& oclExpr);
 
