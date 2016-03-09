@@ -59,10 +59,36 @@ void irt_opencl_execute_fallback(irt_work_item *wi);
 void _irt_opencl_execute(unsigned id, irt_opencl_ndrange_func ndrange,
                          unsigned num_requirements, irt_opencl_data_requirement_func *requirements,
                          unsigned num_optionals, va_list optionals);
+irt_work_item *irt_opencl_wi_get_current(unsigned id);
 
 irt_opencl_context *irt_opencl_get_context(irt_context *context)
 {
 	return &(context->opencl_context);
+}
+
+irt_work_item *irt_opencl_wi_get_current(unsigned id)
+{
+	irt_work_item *wi = irt_wi_get_current();
+	while (wi) {
+		irt_wi_implementation* wimpl = wi->impl;
+		for(uint32 i = 0; i < wimpl->num_variants; ++i) {
+			irt_wi_implementation_variant *variant = &wimpl->variants[i];
+			/* check if it has opencl support */
+			if(!irt_meta_info_is_opencl_available(variant->meta_info))
+				continue;
+
+			/* does it match with the requested id? */
+			opencl_info *info = irt_meta_info_get_opencl(variant->meta_info);
+			if (info->kernel_id == id)
+				/* wi is well formed return it */
+				return wi;
+		}
+		/* hop one level up .. try to find captured env there */
+		wi = wi->parent_id.cached;
+	}
+	/* oops! in this case the compiler has produced utter garbage */
+	IRT_ASSERT(wi != 0, IRT_ERR_OCL, "kernel %d not associated with wi %p", id, irt_wi_get_current());
+	return 0;
 }
 
 irt_opencl_kernel_implementation *irt_opencl_get_kernel_implementation(irt_context *context, uint32 index)
@@ -92,7 +118,7 @@ void _irt_opencl_execute(unsigned id, irt_opencl_ndrange_func ndrange,
                          unsigned num_requirements, irt_opencl_data_requirement_func *requirements,
                          unsigned num_optionals, va_list optionals)
 {    
-    irt_work_item *wi = irt_wi_get_current();
+    irt_work_item *wi = irt_opencl_wi_get_current(id);
 	/* grab the current context such that we have access to tables */
 	irt_context *irt_context = irt_context_get_current();
 	irt_opencl_context *ocl_context = irt_opencl_get_context(irt_context);
