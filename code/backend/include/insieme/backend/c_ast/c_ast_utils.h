@@ -175,6 +175,10 @@ namespace c_ast {
 		return vec(element, element->getManager()->create<Literal>(toString(size)).as<ExpressionPtr>());
 	}
 
+	inline AttributedTypePtr attribute(const string& attribute, const TypePtr& type) {
+		return type->getManager()->create<c_ast::AttributedType>(attribute, type);
+	}
+
 	inline TypePtr qualify(const TypePtr& type, bool isConst, bool isVolatile) {
 		if (auto prim = type.isa<c_ast::PrimitiveTypePtr>()) {
 			return type->getManager()->create<c_ast::PrimitiveType>(prim->type, isConst, isVolatile);
@@ -201,6 +205,9 @@ namespace c_ast {
 		if (auto vectorType = type.isa<c_ast::VectorTypePtr>()) {
 			return vec(qualify(vectorType->elementType, isConst, isVolatile), vectorType->size);
 		}
+		if (auto attributedType = type.isa<c_ast::AttributedTypePtr>()) {
+			return attribute(attributedType->attribute, qualify(attributedType->type, isConst, isVolatile));
+		}
 		assert_fail() << "Unsupported input type: " << type->getType() << "\n";
 		return type;
 	}
@@ -216,10 +223,6 @@ namespace c_ast {
 	template <typename... P>
 	inline FunctionTypePtr fun(const TypePtr& returnType, P... params) {
 		return fun(returnType, toVector<c_ast::TypePtr>(params...));
-	}
-
-	inline AttributedTypePtr attribute(const string& attribute, const TypePtr& type) {
-		return type->getManager()->create<c_ast::AttributedType>(attribute, type);
 	}
 
 	inline ComplexTypePtr complexType(const TypePtr& type) {
