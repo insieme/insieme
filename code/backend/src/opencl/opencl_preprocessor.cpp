@@ -80,19 +80,11 @@ namespace opencl {
 	core::NodePtr OffloadSupportPre::process(const Converter& converter, const core::NodePtr& node) {
 		// node manager used by this extension
 		core::NodeManager& manager = converter.getNodeManager();
-		// instantiate a filter to guide the visitor
-		auto filter = [&](const core::NodePtr& node) {
-			if(auto anno = node->getAnnotation(BaseAnnotation::KEY)) {
-				std::cout << "found node which has annotation converting OpenCL" << std::endl;;
-				return analysis::isOutlineAble(manager, node);
-			}
-			return false;
-		};
 		core::IRBuilder builder(manager);
 		// this map will be filled by the visitor
 		core::NodeMap replacements;
 		// traverse through the tree and find nodes which are valid for offloading
-		core::visitDepthFirstOnce(node, core::makeLambdaVisitor(filter, [&](const NodePtr& node) {
+		for_each(analysis::getOffloadAbleStmts(node), [&](const NodePtr& node) {
 			// we outline the compound such that we can implement our pick between default & opencl kernel
 			core::CallExprPtr callExpr = transform::outline(manager, node.as<core::StatementPtr>());
 			// grab the lambdaExpr as the pick stores "function-pointer"-like objects
@@ -115,8 +107,7 @@ namespace opencl {
 			core::CallExprPtr pickExpr = builder.pickVariant(variants);
 			// ...and call them -- runtime will decide which one
 			replacements.insert(std::make_pair(node, builder.callExpr(manager.getLangBasic().getUnit(), pickExpr, callExpr->getArguments())));
-		}));
-		
+		});
 		// fast-path
 		if(replacements.empty()) return node;
 		// slow-path

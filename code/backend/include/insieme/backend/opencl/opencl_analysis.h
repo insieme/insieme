@@ -60,7 +60,7 @@ namespace analysis {
 	/**
 	 * Tests whether the given node is outline-able or not.
 	 */
-	bool isOutlineAble(core::NodeManager& manager, const core::NodePtr& node);
+	bool isOffloadAble(core::NodeManager& manager, const core::NodePtr& node);
 	/**
 	 * Obtain all variable requirements for callExpr which must have been built
 	 * using opencl::transform::outline.
@@ -70,6 +70,10 @@ namespace analysis {
 	 * Determine if a given for statement is independent and thus suitable for parallelization
 	 */
 	bool isIndependentStmt(const core::StatementPtr& stmt);
+	/**
+     * Determine all offloadable statements within a given node
+     */
+	core::NodeList getOffloadAbleStmts(const core::NodePtr& node);
 }
 }
 }

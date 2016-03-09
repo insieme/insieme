@@ -104,7 +104,7 @@ namespace transform {
 	
 	core::CallExprPtr outline(core::NodeManager& manager, const core::StatementPtr& stmt) {
 		// check whether it is allowed
-		assert_true(opencl::analysis::isOutlineAble(manager, stmt)) << "cannot outline given code: " << dumpColor(stmt);
+		assert_true(opencl::analysis::isOffloadAble(manager, stmt)) << "cannot outline given code: " << dumpColor(stmt);
 		// invoke the standard outline procedure
 		core::CallExprPtr callExpr = core::transform::outline(manager, stmt);
 		core::LambdaExprPtr lambdaExpr = callExpr->getFunctionExpr().as<core::LambdaExprPtr>();

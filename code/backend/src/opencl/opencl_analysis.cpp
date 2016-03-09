@@ -293,7 +293,7 @@ namespace analysis {
 			return type;
 	}
 
-	bool isOutlineAble(core::NodeManager& manager, const core::NodePtr& node) {
+	bool isOffloadAble(core::NodeManager& manager, const core::NodePtr& node) {
 		// if it is not a statement then we cannot outline it anyway
 		core::StatementPtr stmt = node.isa<core::StatementPtr>();
 		if (!stmt) return false;
@@ -420,6 +420,23 @@ namespace analysis {
 		// in this case we have to deduce it
 		LOG(DEBUG) << "trying to deduce independence of: " << dumpColor(stmt);
 		return tryDeduceIndependence(stmt);
+	}
+
+	core::NodeList getOffloadAbleStmts(const core::NodePtr& node) {
+		core::NodeList result;
+		core::NodeManager& manager = node->getNodeManager();
+		// instantiate a filter to guide the visitor
+		auto filter = [&](const core::NodePtr& node) {
+			if (node->getNodeCategory() != core::NC_Statement) return false;
+
+			if (auto anno = node->getAnnotation(BaseAnnotation::KEY)) {
+				return analysis::isOffloadAble(manager, node);
+			}
+			return false;
+		};
+		// traverse through the tree and find nodes which are valid for offloading
+		core::visitDepthFirstOnce(node, core::makeLambdaVisitor(filter, [&](const core::NodePtr& node) { result.push_back(node); }));
+		return result;
 	}
 }
 }
