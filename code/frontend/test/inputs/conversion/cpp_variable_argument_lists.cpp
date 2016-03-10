@@ -34,29 +34,14 @@
  * regarding third party software licenses.
  */
 
-#include "independent_test_utils.h"
+#include <cstdio>
 
-#include "insieme/frontend/extensions/variable_argument_list_extension.h"
+int main() {
 
-namespace insieme {
-namespace frontend {
-	static inline void runVarargIndependentTestOn(const string& fn) {
-		runIndependentTestOn(fn, [&](ConversionJob& job) {
-			job.registerFrontendExtension<extensions::VariableArgumentListExtension>();
-		});
-	}
-	
-	TEST(VarargIndependentTest, Basic) {
-		runVarargIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_variable_argument_lists.c");
-	}
+	#pragma test expect_ir(R"(using "ext.varargs";
+		lit("IMP_printf" : (ptr<char,t,f>, var_list) -> int<4>)(ptr_from_array(lit(""%d, %d, %d\n"" : ref<array<char,12>,t,f,plain>)), varlist_pack((1, 2, 3)))
+	)")
+	printf("%d, %d, %d\n", 1, 2, 3);
 
-	TEST(VarargIndependentTest, HelloWorld) {
-		runVarargIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_hello_world.c");
-	}
-
-	TEST(VarargIndependentTest, Cpp) {
-		runVarargIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_variable_argument_lists.cpp");
-	}
-
-} // fe namespace
-} // insieme namespace
+	return 0;
+}
