@@ -120,4 +120,12 @@ int main() {
 		std::vector<int> a;
 		a.size();
 	}
+
+	// check partial template specialization
+	#pragma test expect_ir(R"({
+		var ref<IMP_std_colon__colon_vector<bool,IMP_std_colon__colon_allocator<bool>>,f,f,plain> v0 = lit("IMP_std_colon__colon_vector::ctor" : IMP_std_colon__colon_vector<'T_0_0,'T_0_1>::())(v0);
+	})")
+	{
+		std::vector<bool> b;
+	}
 }

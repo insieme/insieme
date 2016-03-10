@@ -69,7 +69,7 @@ namespace extensions {
 			return builder.typeVariable(format("T_%d_%d", parm->getDepth(), parm->getIndex()));
 		}
 
-		void convertTemplateParameters(clang::TemplateParameterList* tempParamList, const core::IRBuilder& builder,
+		void convertTemplateParameters(const clang::TemplateParameterList* tempParamList, const core::IRBuilder& builder,
 		                               core::TypeList& templateGenericParams) {
 			for(auto tempParam : *tempParamList) {
 				if(auto templateParamTypeDecl = llvm::dyn_cast<clang::TemplateTypeParmDecl>(tempParam)) {
@@ -254,6 +254,7 @@ namespace extensions {
 	core::TypePtr InterceptorExtension::Visit(const clang::QualType& typeIn, insieme::frontend::conversion::Converter& converter) {
 		clang::QualType type = typeIn;
 		const core::IRBuilder& builder = converter.getIRBuilder();
+
 		// handle template parameters of intercepted tagtypes
 		if(auto injected = llvm::dyn_cast<clang::InjectedClassNameType>(type.getUnqualifiedType())) {
 			auto spec = injected->getInjectedSpecializationType()->getUnqualifiedDesugaredType();
@@ -263,10 +264,12 @@ namespace extensions {
 				return templateSpecializationMapping[key];
 			}
 		}
+
 		// handle template parameters of intercepted template functions
 		if(auto ttpt = llvm::dyn_cast<clang::TemplateTypeParmType>(type.getUnqualifiedType())) {
 			return getTypeVarForTemplateTypeParmType(builder, ttpt);
 		}
+
 		// handle class, struct and union interception
 		if(auto tt = llvm::dyn_cast<clang::TagType>(type->getCanonicalTypeUnqualified())) {
 			// do not intercept enums, they are simple
@@ -284,11 +287,18 @@ namespace extensions {
 					convertTemplateParameters(genericDecl->getTemplateParameters(), builder, genericTypeParams);
 					auto genericGenType = converter.getIRBuilder().genericType(insieme::utils::mangle(decl->getQualifiedNameAsString()), genericTypeParams);
 
-					// store injected class name in specialization map
-					auto injected = genericDecl->getInjectedClassNameSpecialization()->getUnqualifiedDesugaredType();
-					if(auto tempSpecType = llvm::dyn_cast<clang::TemplateSpecializationType>(injected)) {
-						templateSpecializationMapping[tempSpecType->getCanonicalTypeUnqualified().getTypePtr()] = genericGenType;
+					// store injected class name in specialization map (take care to store correct key for partial specializations)
+					const clang::TemplateSpecializationType* tempSpecType = nullptr;
+					auto specOrPartial = templateDecl->getSpecializedTemplateOrPartial();
+					if(auto partialDecl = specOrPartial.dyn_cast<clang::ClassTemplatePartialSpecializationDecl*>()) {
+						tempSpecType =
+							llvm::dyn_cast<clang::TemplateSpecializationType>(partialDecl->getInjectedSpecializationType()->getUnqualifiedDesugaredType());
+					} else {
+						tempSpecType =
+							llvm::dyn_cast<clang::TemplateSpecializationType>(genericDecl->getInjectedClassNameSpecialization()->getUnqualifiedDesugaredType());
 					}
+					assert_false(tempSpecType == nullptr) << "Unexpected kind of template specialization\n";
+					templateSpecializationMapping[tempSpecType->getCanonicalTypeUnqualified().getTypePtr()] = genericGenType;
 
 					// build concrete genType
 					core::TypeList concreteTypeArguments;
