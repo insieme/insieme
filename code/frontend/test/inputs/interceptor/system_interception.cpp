@@ -73,8 +73,8 @@ int main() {
 		type_instantiation(
 				type_lit(<IMP_std_colon__colon_char_traits<char>>(ref<IMP_std_colon__colon_basic_ostream<char,IMP_std_colon__colon_char_traits<char>>,f,f,cpp_ref>, ptr<char,t,f>)
 				         -> ref<IMP_std_colon__colon_basic_ostream<char,IMP_std_colon__colon_char_traits<char>>,f,f,cpp_ref>),
-				lit("IMP_std_colon__colon__operator_lshift_" : <'_Traits>(ref<IMP_basic_ostream<char,'_CharT>,f,f,cpp_ref>, ptr<char,t,f>)
-				         -> ref<IMP_basic_ostream<char,'_CharT>,f,f,cpp_ref>))
+				lit("IMP_std_colon__colon__operator_lshift_" : <'_Tp>(ref<IMP_basic_ostream<char,'_Tp>,f,f,cpp_ref>, ptr<char,t,f>)
+				         -> ref<IMP_basic_ostream<char,'_Tp>,f,f,cpp_ref>))
 				(ref_kind_cast(lit("IMP_std_colon__colon_cout" : ref<IMP_std_colon__colon_basic_ostream<char,IMP_std_colon__colon_char_traits<char>>,f,f,plain>), type_lit(cpp_ref)),
 				ptr_from_array(lit(""Test"" : ref<array<char,5>,t,f,plain>))) materialize ;
 	})")
@@ -85,7 +85,7 @@ int main() {
 
 	#pragma test expect_ir(R"({
 		lit("IMP_std_colon__colon_basic_ostream::IMP__operator_lshift_"
-				: IMP_std_colon__colon_basic_ostream<'_CharT,'_Traits>::(int<4>) -> ref<IMP_std_colon__colon_basic_ostream<'_CharT,'_Traits>,f,f,cpp_ref>)
+				: IMP_std_colon__colon_basic_ostream<'_Tp,'_Alloc>::(int<4>) -> ref<IMP_std_colon__colon_basic_ostream<'_Tp,'_Alloc>,f,f,cpp_ref>)
 				(lit("IMP_std_colon__colon_cout" : ref<IMP_std_colon__colon_basic_ostream<char,IMP_std_colon__colon_char_traits<char>>,f,f,plain>), 1);
 	})")
 	{

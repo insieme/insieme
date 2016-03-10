@@ -70,7 +70,13 @@ namespace extensions {
 			for(auto tempParam : *tempParamList) {
 				if(auto templateParamTypeDecl = llvm::dyn_cast<clang::TemplateTypeParmDecl>(tempParam)) {
 					auto typeVar = builder.typeVariable(templateParamTypeDecl->getNameAsString());
-					templateTypeParmMapping[templateParamTypeDecl->getTypeForDecl()->getCanonicalTypeUnqualified().getTypePtr()] = typeVar;
+					auto key = templateParamTypeDecl->getTypeForDecl()->getCanonicalTypeUnqualified().getTypePtr();
+					//don't insert a new entry in the map if there already is one for this key
+					if (!::containsKey(templateTypeParmMapping, key)) {
+						templateTypeParmMapping[key] = typeVar;
+					} else {
+						typeVar = templateTypeParmMapping[key];
+					}
 					if(templateGenericParams) templateGenericParams->push_back(typeVar);
 				} else {
 					assert_not_implemented() << "NOT ttpt\n";
@@ -254,17 +260,17 @@ namespace extensions {
 		if(auto injected = llvm::dyn_cast<clang::InjectedClassNameType>(type.getUnqualifiedType())) {
 			auto spec = injected->getInjectedSpecializationType()->getUnqualifiedDesugaredType();
 			if(auto tempSpecType = llvm::dyn_cast<clang::TemplateSpecializationType>(spec)) {
-				assert_true(::containsKey(templateSpecializationMapping, tempSpecType->getCanonicalTypeUnqualified().getTypePtr()))
-					<< "Template injected specialization type encountered, but no mapping available";
-				return templateSpecializationMapping[tempSpecType->getCanonicalTypeUnqualified().getTypePtr()];
+				auto key = tempSpecType->getCanonicalTypeUnqualified().getTypePtr();
+				assert_true(::containsKey(templateSpecializationMapping, key)) << "Template injected specialization type encountered, but no mapping available";
+				return templateSpecializationMapping[key];
 			}
 		}
 		// handle template parameters of intercepted template functions
 		if(auto ttpt = llvm::dyn_cast<clang::TemplateTypeParmType>(type.getUnqualifiedType())) {
 			auto decl = ttpt->getDecl();
-			assert_true(::containsKey(templateTypeParmMapping, decl->getTypeForDecl()->getCanonicalTypeUnqualified().getTypePtr()))
-					<< "Template type parameter encountered, but no mapping available";
-			return templateTypeParmMapping[decl->getTypeForDecl()->getCanonicalTypeUnqualified().getTypePtr()];
+			auto key = decl->getTypeForDecl()->getCanonicalTypeUnqualified().getTypePtr();
+			assert_true(::containsKey(templateTypeParmMapping, key)) << "Template type parameter encountered, but no mapping available";
+			return templateTypeParmMapping[key];
 		}
 		// handle class, struct and union interception
 		if(auto tt = llvm::dyn_cast<clang::TagType>(type->getCanonicalTypeUnqualified())) {
