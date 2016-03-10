@@ -396,7 +396,7 @@ namespace backend {
 			return C_NODE_MANAGER->create<c_ast::Literal>(toString(*type->getTypeParameter(0)));
 		};
 
-		res[basic.getUnitConsume()] = OP_CONVERTER { return CONVERT_ARG(1); };
+		res[basic.getUnitConsume()] = OP_CONVERTER { return c_ast::cast(CONVERT_TYPE(LANG_BASIC.getUnit()), CONVERT_ARG(0)); };
 
 		// -- references --
 
