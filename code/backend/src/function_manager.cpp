@@ -322,7 +322,7 @@ namespace backend {
 				auto obj = c_ast::deref(args[0].as<c_ast::ExpressionPtr>());
 				args.erase(args.begin());
 
-				res = c_ast::memberCall(obj, c_call->function, args);
+				res = c_ast::memberCall(obj, c_call->function, args, c_call->instantiationTypes);
 			}
 
 			// --------------- virtual member function call -------------
@@ -441,7 +441,7 @@ namespace backend {
 			const FunctionInfo& info = getInfo(static_pointer_cast<const core::Literal>(fun));
 
 			// produce call to external literal
-			c_ast::CallPtr res = c_ast::call(info.function->name);
+			c_ast::CallPtr res = c_ast::call(info.function->name, info.instantiationTypes);
 			appendAsArguments(context, res, materializeTypeList(extractCallTypeList(call)), call->getArguments(), true);
 
 			// add dependencies
@@ -467,7 +467,7 @@ namespace backend {
 			// -------------- standard function call ------------
 
 			// produce call to internal lambda
-			c_ast::CallPtr c_call = c_ast::call(info.function->name);
+			c_ast::CallPtr c_call = c_ast::call(info.function->name, info.instantiationTypes);
 			appendAsArguments(context, c_call, materializeTypeList(extractCallTypeList(call)), call->getArguments(), false);
 
 			// handle potential member calls
@@ -489,6 +489,9 @@ namespace backend {
 		if(funType->isMemberFunction()) {
 			// add call to function pointer (which is the value)
 
+			// obtain lambda information
+			const LambdaInfo& info = getInfo(static_pointer_cast<const core::LambdaExpr>(fun));
+
 			// extract first parameter of the function, it is the target object
 			c_ast::ExpressionPtr trgObj = converter.getStmtConverter().convertExpression(context, call[0]);
 
@@ -496,7 +499,7 @@ namespace backend {
 			c_ast::ExpressionPtr funcExpr = c_ast::parentheses(c_ast::pointerToMember(trgObj, getValue(call->getFunctionExpr(), context)));
 
 			// the call is a call to the member function with the n-1 tail arguments
-			c_ast::CallPtr res = c_ast::call(funcExpr);
+			c_ast::CallPtr res = c_ast::call(funcExpr, info.instantiationTypes);
 			core::TypeList types = extractCallTypeList(call);
 			types.erase(types.begin());
 			core::ExpressionList args = call->getArguments();
@@ -725,6 +728,11 @@ namespace backend {
 			std::string name = insieme::utils::demangle(literal->getStringValue());
 			if (core::annotations::hasAttachedName(literal)) name = core::annotations::getAttachedName(literal);
 			FunctionCodeInfo fun = resolveFunction(manager->create(name), funType, core::LambdaPtr(), true);
+
+			// add instantiation types if they are there
+			for (auto instantiationType : funType->getInstantiationTypes()) {
+				res->instantiationTypes.push_back(typeManager.getTypeInfo(instantiationType).rValueType);
+			}
 
 			res->function = fun.function;
 

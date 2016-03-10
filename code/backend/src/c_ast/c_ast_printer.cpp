@@ -555,14 +555,20 @@ namespace c_ast {
 
 			PRINT(Call) {
 				// <function> ( <arguments> )
-				return out << print(node->function) << "(" << join(", ", node->arguments, [&](std::ostream& out, const NodePtr& cur) { out << print(cur); })
-				           << ")";
+				out << print(node->function);
+				if (!node->instantiationTypes.empty()) {
+					out << "<" << join(", ", node->instantiationTypes, [&](std::ostream& out, const TypePtr& cur) { out << print(cur); }) << ">";
+				}
+				return out << "(" << join(", ", node->arguments, [&](std::ostream& out, const NodePtr& cur) { out << print(cur); }) << ")";
 			}
 
 			PRINT(MemberCall) {
 				// <obj> . <function> ( <arguments> )
-				return out << print(node->object) << "." << print(node->memberFun) << "("
-				           << join(", ", node->arguments, [&](std::ostream& out, const NodePtr& cur) { out << print(cur); }) << ")";
+				out << print(node->object) << "." << print(node->memberFun);
+				if (!node->instantiationTypes.empty()) {
+					out << "<" << join(", ", node->instantiationTypes, [&](std::ostream& out, const TypePtr& cur) { out << print(cur); }) << ">";
+				}
+				return out << "(" << join(", ", node->arguments, [&](std::ostream& out, const NodePtr& cur) { out << print(cur); }) << ")";
 			}
 
 			PRINT(ConstructorCall) {
