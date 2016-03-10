@@ -34,60 +34,27 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/annotations/c/extern.h"
+#pragma once
 
-#include "insieme/core/ir_node_annotation.h"
-#include "insieme/core/dump/annotations.h"
-#include "insieme/core/encoder/encoder.h"
+#include <string>
+#include "insieme/core/forward_decls.h"
+
+/**
+ * A header file for marking builtins which the backend should instantiate
+ */
 
 namespace insieme {
 namespace annotations {
-namespace c {
-
-	using namespace insieme::core;
 
 	/**
-	 * The value annotation type to be attached to nodes to store
-	 * the actual name.
+	 * Checks whether the given node should be instantiated by the backend
 	 */
-	struct ExternTag : public core::value_annotation::copy_on_migration {
-		bool operator==(const ExternTag& other) const {
-			return true;
-		}
-	};
+	bool isBackendInstantiate(const insieme::core::NodePtr& node);
 
-	// ---------------- Support Dump ----------------------
+	/**
+	 * Updates the backend instantiation flag for the given node
+	 */
+	void markBackendInstantiate(const insieme::core::NodePtr& node, bool value = true);
 
-	VALUE_ANNOTATION_CONVERTER(ExternTag)
-
-	typedef core::value_node_annotation<ExternTag>::type annotation_type;
-
-	virtual ExpressionPtr toIR(NodeManager& manager, const NodeAnnotationPtr& annotation) const {
-		assert_true(dynamic_pointer_cast<annotation_type>(annotation)) << "Only extern annotations supported!";
-		return encoder::toIR(manager, string("extern"));
-	}
-
-	virtual NodeAnnotationPtr toAnnotation(const ExpressionPtr& node) const {
-		assert_true(encoder::isEncodingOf<string>(node.as<ExpressionPtr>())) << "Invalid encoding encountered!";
-		return std::make_shared<annotation_type>(ExternTag());
-	}
-};
-
-// ----------------------------------------------------
-
-
-bool isExtern(const insieme::core::LiteralPtr& literal) {
-	return literal->hasAttachedValue<ExternTag>();
-}
-
-void markExtern(const insieme::core::LiteralPtr& literal, bool value) {
-	if(value) {
-		literal->attachValue(ExternTag());
-	} else {
-		literal->detachValue<ExternTag>();
-	}
-}
-
-} // end namespace c
 } // end namespace annotations
 } // end namespace insieme

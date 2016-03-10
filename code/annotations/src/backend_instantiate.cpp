@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/annotations/c/extern.h"
+#include "insieme/annotations/backend_instantiate.h"
 
 #include "insieme/core/ir_node_annotation.h"
 #include "insieme/core/dump/annotations.h"
@@ -42,7 +42,6 @@
 
 namespace insieme {
 namespace annotations {
-namespace c {
 
 	using namespace insieme::core;
 
@@ -50,44 +49,43 @@ namespace c {
 	 * The value annotation type to be attached to nodes to store
 	 * the actual name.
 	 */
-	struct ExternTag : public core::value_annotation::copy_on_migration {
-		bool operator==(const ExternTag& other) const {
+	struct BackendInstantiateTag : public core::value_annotation::copy_on_migration {
+		bool operator==(const BackendInstantiateTag& other) const {
 			return true;
 		}
 	};
 
 	// ---------------- Support Dump ----------------------
 
-	VALUE_ANNOTATION_CONVERTER(ExternTag)
+	VALUE_ANNOTATION_CONVERTER(BackendInstantiateTag)
 
-	typedef core::value_node_annotation<ExternTag>::type annotation_type;
+	typedef core::value_node_annotation<BackendInstantiateTag>::type annotation_type;
 
 	virtual ExpressionPtr toIR(NodeManager& manager, const NodeAnnotationPtr& annotation) const {
-		assert_true(dynamic_pointer_cast<annotation_type>(annotation)) << "Only extern annotations supported!";
-		return encoder::toIR(manager, string("extern"));
+		assert_true(dynamic_pointer_cast<annotation_type>(annotation)) << "Only backend instantiate annotations supported!";
+		return encoder::toIR(manager, string("backend_instantiate"));
 	}
 
 	virtual NodeAnnotationPtr toAnnotation(const ExpressionPtr& node) const {
 		assert_true(encoder::isEncodingOf<string>(node.as<ExpressionPtr>())) << "Invalid encoding encountered!";
-		return std::make_shared<annotation_type>(ExternTag());
+		return std::make_shared<annotation_type>(BackendInstantiateTag());
 	}
 };
 
 // ----------------------------------------------------
 
 
-bool isExtern(const insieme::core::LiteralPtr& literal) {
-	return literal->hasAttachedValue<ExternTag>();
+bool isBackendInstantiate(const insieme::core::NodePtr& node) {
+	return node->hasAttachedValue<BackendInstantiateTag>();
 }
 
-void markExtern(const insieme::core::LiteralPtr& literal, bool value) {
+void markBackendInstantiate(const insieme::core::NodePtr& node, bool value) {
 	if(value) {
-		literal->attachValue(ExternTag());
+		node->attachValue(BackendInstantiateTag());
 	} else {
-		literal->detachValue<ExternTag>();
+		node->detachValue<BackendInstantiateTag>();
 	}
 }
 
-} // end namespace c
 } // end namespace annotations
 } // end namespace insieme
