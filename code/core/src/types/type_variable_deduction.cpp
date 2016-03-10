@@ -477,6 +477,20 @@ namespace types {
 						materializedArguments[i] = parameter[i];
 					}
 				}
+
+				// qualifier promotion
+				if(isRefArg && isRefParam) {
+					lang::ReferenceType argType(arguments[i]);
+					lang::ReferenceType paramType(parameter[i]);
+
+					if (paramType.isConst() && !argType.isConst()) {
+						argType.setConst(true);
+					}
+					if (paramType.isVolatile() && !argType.isVolatile()) {
+						argType.setVolatile(true);
+					}
+					materializedArguments[i] = argType.toType();
+				}
 			}
 
 			if (debug) { std::cout << "    Arguments: " << arguments << std::endl; }

@@ -484,6 +484,17 @@ namespace types {
 
 	}
 
+	TEST(ReturnTypeDeduction, QualifierPromotion) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		auto fun = builder.parseExpr("lit(\"fun\" : (ref<'a,t,f,plain>) -> int<4>)");
+		auto arg = builder.parseExpr("lit(\"arg\" : ref<int<4>,f,f,plain>)");
+		auto call = builder.callExpr(fun, arg);
+
+		EXPECT_EQ(builder.getLangBasic().getInt4(), call->getType());
+	}
+
 } // end namespace types
 } // end namespace core
 } // end namespace insieme
