@@ -490,15 +490,15 @@ namespace backend {
 			}
 
 			// if this is an intercepted type which also has template arguments
-			if (annotations::c::hasIncludeAttached(ptr)) {
+			if(annotations::c::hasIncludeAttached(ptr)) {
 				std::string name = insieme::utils::demangle(ptr->getName()->getValue());
-				if (core::annotations::hasAttachedName(ptr)) {
+				if(core::annotations::hasAttachedName(ptr)) {
 					name = core::annotations::getAttachedName(ptr);
 				}
 				c_ast::NamedTypePtr namedType = manager.create<c_ast::NamedType>(manager.create<c_ast::Identifier>(name));
 				c_ast::CodeFragmentPtr definition = c_ast::IncludeFragment::createNew(converter.getFragmentManager(), annotations::c::getAttachedInclude(ptr));
-				for (auto typeArg : ptr->getTypeParameterList()) {
-					namedType->parameters.push_back(resolveTypeInternal(typeArg)->rValueType);
+				for(auto typeArg : ptr->getTypeParameterList()) {
+					namedType->parameters.push_back(resolveType(typeArg)->rValueType);
 				}
 				return type_info_utils::createInfo(namedType, definition);
 			}
