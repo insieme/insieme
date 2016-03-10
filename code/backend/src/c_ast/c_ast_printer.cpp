@@ -557,7 +557,7 @@ namespace c_ast {
 				// <function> ( <arguments> )
 				out << print(node->function);
 				if (!node->instantiationTypes.empty()) {
-					out << "<" << join(", ", node->instantiationTypes, [&](std::ostream& out, const TypePtr& cur) { out << print(cur); }) << ">";
+					out << "<" << join(", ", node->instantiationTypes, [&](std::ostream& out, const TypePtr& cur) { out << print(cur); }) << " >";
 				}
 				return out << "(" << join(", ", node->arguments, [&](std::ostream& out, const NodePtr& cur) { out << print(cur); }) << ")";
 			}
@@ -566,7 +566,7 @@ namespace c_ast {
 				// <obj> . <function> ( <arguments> )
 				out << print(node->object) << "." << print(node->memberFun);
 				if (!node->instantiationTypes.empty()) {
-					out << "<" << join(", ", node->instantiationTypes, [&](std::ostream& out, const TypePtr& cur) { out << print(cur); }) << ">";
+					out << "<" << join(", ", node->instantiationTypes, [&](std::ostream& out, const TypePtr& cur) { out << print(cur); }) << " >";
 				}
 				return out << "(" << join(", ", node->arguments, [&](std::ostream& out, const NodePtr& cur) { out << print(cur); }) << ")";
 			}
