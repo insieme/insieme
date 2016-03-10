@@ -418,9 +418,8 @@ namespace backend {
 			auto innerLit = core::analysis::getArgument(typeInstCall, 1).isa<core::LiteralPtr>();
 			assert_true(innerLit) << "Non-intercepted template calls not implemented";
 			auto replacementLit = builder.literal(innerLit->getValue(), typeInstCall->getType());
-			core::transform::utils::migrateAnnotations(typeInstCall, replacementLit);
+			core::transform::utils::migrateAnnotations(innerLit, replacementLit);
 			call = builder.callExpr(typeInstCall->getType().as<core::FunctionTypePtr>()->getReturnType(), replacementLit, call->getArgumentList());
-			std::cout << "replacement call:\n" << dumpColor(call);
 		}
 
 		// extract target function
