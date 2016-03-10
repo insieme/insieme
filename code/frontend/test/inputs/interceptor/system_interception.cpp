@@ -36,6 +36,7 @@
 
 #include <sys/time.h>
 
+#include <string>
 #include <iostream>
 #include <vector>
 #include <future>
@@ -56,10 +57,10 @@ int main() {
 
 	// cpp type and member function
 	#pragma test expect_ir(R"({
-		var ref<IMP_std_colon__colon_vector<int<4>,IMP_std_colon__colon_allocator<int<4>>>,f,f,plain> v0 = lit("IMP_std_colon__colon_vector::ctor" : IMP_std_colon__colon_vector<'_Tp,'_Alloc>::())(v0);
-		lit("IMP_std_colon__colon_vector::IMP_push_back" : IMP_std_colon__colon_vector<'_Tp,'_Alloc>::(ref<'_Tp,f,f,cpp_rref>) -> unit)(v0, 0);
-		var ref<IMP_std_colon__colon_vector<real<8>,IMP_std_colon__colon_allocator<real<8>>>,f,f,plain> v1 = lit("IMP_std_colon__colon_vector::ctor" : IMP_std_colon__colon_vector<'_Tp,'_Alloc>::())(v1);
-		lit("IMP_std_colon__colon_vector::IMP_push_back" : IMP_std_colon__colon_vector<'_Tp,'_Alloc>::(ref<'_Tp,f,f,cpp_rref>) -> unit)(v1, lit("1.0E+0":real<8>));
+		var ref<IMP_std_colon__colon_vector<int<4>,IMP_std_colon__colon_allocator<int<4>>>,f,f,plain> v0 = lit("IMP_std_colon__colon_vector::ctor" : IMP_std_colon__colon_vector<'T_0_0,'T_0_1>::())(v0);
+		lit("IMP_std_colon__colon_vector::IMP_push_back" : IMP_std_colon__colon_vector<'T_0_0,'T_0_1>::(ref<'T_0_0,f,f,cpp_rref>) -> unit)(v0, 0);
+		var ref<IMP_std_colon__colon_vector<real<8>,IMP_std_colon__colon_allocator<real<8>>>,f,f,plain> v1 = lit("IMP_std_colon__colon_vector::ctor" : IMP_std_colon__colon_vector<'T_0_0,'T_0_1>::())(v1);
+		lit("IMP_std_colon__colon_vector::IMP_push_back" : IMP_std_colon__colon_vector<'T_0_0,'T_0_1>::(ref<'T_0_0,f,f,cpp_rref>) -> unit)(v1, lit("1.0E+0":real<8>));
 	})")
 	{
 		std::vector<int> v1;
@@ -73,8 +74,8 @@ int main() {
 		type_instantiation(
 				type_lit(<IMP_std_colon__colon_char_traits<char>>(ref<IMP_std_colon__colon_basic_ostream<char,IMP_std_colon__colon_char_traits<char>>,f,f,cpp_ref>, ptr<char,t,f>)
 				         -> ref<IMP_std_colon__colon_basic_ostream<char,IMP_std_colon__colon_char_traits<char>>,f,f,cpp_ref>),
-				lit("IMP_std_colon__colon__operator_lshift_" : <'_Tp>(ref<IMP_basic_ostream<char,'_Tp>,f,f,cpp_ref>, ptr<char,t,f>)
-				         -> ref<IMP_basic_ostream<char,'_Tp>,f,f,cpp_ref>))
+				lit("IMP_std_colon__colon__operator_lshift_" : <'T_0_0>(ref<IMP_basic_ostream<char,'T_0_0>,f,f,cpp_ref>, ptr<char,t,f>)
+				         -> ref<IMP_basic_ostream<char,'T_0_0>,f,f,cpp_ref>))
 				(ref_kind_cast(lit("IMP_std_colon__colon_cout" : ref<IMP_std_colon__colon_basic_ostream<char,IMP_std_colon__colon_char_traits<char>>,f,f,plain>), type_lit(cpp_ref)),
 				ptr_from_array(lit(""Test"" : ref<array<char,5>,t,f,plain>))) materialize ;
 	})")
@@ -85,7 +86,7 @@ int main() {
 
 	#pragma test expect_ir(R"({
 		lit("IMP_std_colon__colon_basic_ostream::IMP__operator_lshift_"
-				: IMP_std_colon__colon_basic_ostream<'_Tp,'_Alloc>::(int<4>) -> ref<IMP_std_colon__colon_basic_ostream<'_Tp,'_Alloc>,f,f,cpp_ref>)
+				: IMP_std_colon__colon_basic_ostream<'T_0_0,'T_0_1>::(int<4>) -> ref<IMP_std_colon__colon_basic_ostream<'T_0_0,'T_0_1>,f,f,cpp_ref>)
 				(lit("IMP_std_colon__colon_cout" : ref<IMP_std_colon__colon_basic_ostream<char,IMP_std_colon__colon_char_traits<char>>,f,f,plain>), 1);
 	})")
 	{
@@ -104,10 +105,21 @@ int main() {
 		def struct IMP_Trivial {};
 		{
 			var ref<IMP_std_colon__colon_vector<IMP_Trivial,IMP_std_colon__colon_allocator<IMP_Trivial>>,f,f,plain> v0 =
-					lit("IMP_std_colon__colon_vector::ctor" : IMP_std_colon__colon_vector<'_Tp,'_Alloc>::())(v0);
+					lit("IMP_std_colon__colon_vector::ctor" : IMP_std_colon__colon_vector<'T_0_0,'T_0_1>::())(v0);
 		}
 	)")
 	{
 		std::vector<Trivial> vectorOfTrivial;
+	}
+
+	// check c_str naming
+	#pragma test expect_ir(R"({
+		var ref<IMP_std_colon__colon___cxx11_colon__colon_basic_string<char,IMP_std_colon__colon_char_traits<char>,IMP_std_colon__colon_allocator<char>>,f,f,plain> v0 =
+				lit("IMP_std_colon__colon___cxx11_colon__colon_basic_string::ctor" : IMP_std_colon__colon___cxx11_colon__colon_basic_string<'T_0_0,'T_0_1,'T_0_2>::())(v0);
+		lit("IMP_std_colon__colon___cxx11_colon__colon_basic_string::IMP_c_str" : const IMP_std_colon__colon___cxx11_colon__colon_basic_string<'T_0_0,'T_0_1,'T_0_2>::() -> ptr<'T_0_0,t,f>)(v0);
+	})")
+	{
+		std::string a;
+		a.c_str();
 	}
 }
