@@ -203,7 +203,7 @@ namespace frontend {
 		checkForFunctionName(code, "IMP_std_colon__colon_basic_ostream::IMP__operator_lshift_", "operator<<", "iostream");
 		checkForFunctionName(code, "IMP_std_colon__colon_launch_colon__colon_async", "std::launch::async", "future");
 		checkForFunctionName(code, "IMP_std_colon__colon_launch_colon__colon_deferred", "std::launch::deferred", "future");
-		checkForFunctionName(code, "IMP_std_colon__colon___cxx11_colon__colon_basic_string::IMP_c_str", "c_str", "string");
+		checkForFunctionName(code, "IMP_std_colon__colon_vector::IMP_size", "size", "vector");
 	}
 
 } // fe namespace

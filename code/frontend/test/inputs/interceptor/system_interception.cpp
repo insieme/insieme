@@ -36,7 +36,6 @@
 
 #include <sys/time.h>
 
-#include <string>
 #include <iostream>
 #include <vector>
 #include <future>
@@ -112,14 +111,13 @@ int main() {
 		std::vector<Trivial> vectorOfTrivial;
 	}
 
-	// check c_str naming
+	// check naming of const method
 	#pragma test expect_ir(R"({
-		var ref<IMP_std_colon__colon___cxx11_colon__colon_basic_string<char,IMP_std_colon__colon_char_traits<char>,IMP_std_colon__colon_allocator<char>>,f,f,plain> v0 =
-				lit("IMP_std_colon__colon___cxx11_colon__colon_basic_string::ctor" : IMP_std_colon__colon___cxx11_colon__colon_basic_string<'T_0_0,'T_0_1,'T_0_2>::())(v0);
-		lit("IMP_std_colon__colon___cxx11_colon__colon_basic_string::IMP_c_str" : const IMP_std_colon__colon___cxx11_colon__colon_basic_string<'T_0_0,'T_0_1,'T_0_2>::() -> ptr<'T_0_0,t,f>)(v0);
+		var ref<IMP_std_colon__colon_vector<int<4>,IMP_std_colon__colon_allocator<int<4>>>,f,f,plain> v0 = lit("IMP_std_colon__colon_vector::ctor" : IMP_std_colon__colon_vector<'T_0_0,'T_0_1>::())(v0);
+		lit("IMP_std_colon__colon_vector::IMP_size" : const IMP_std_colon__colon_vector<'T_0_0,'T_0_1>::() -> uint<8>)(v0);
 	})")
 	{
-		std::string a;
-		a.c_str();
+		std::vector<int> a;
+		a.size();
 	}
 }
