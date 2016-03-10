@@ -335,18 +335,6 @@ namespace backend {
 			}
 
 
-			// - Header Annotation ------------------------------------------------------------------------
-
-			// if we have a struct or union type that is annotated
-			// with an include file => use the include file
-			const TypeInfo* t = NULL;
-			t = type_info_utils::headerAnnotatedTypeHandler(converter, type, [](std::string& s, const core::TypePtr& type) {
-				if(core::analysis::isStruct(type)) s = "struct " + s;
-				if(core::analysis::isUnion(type)) s = "union " + s;
-			});
-			if(t) { return t; }
-
-
 			// - Include Table ----------------------------------------------------------------------------
 
 			// lookup type within include table
@@ -499,6 +487,20 @@ namespace backend {
 				case annotations::c::DeclOnlyTag::Kind::Enum: return type_info_utils::createInfo(manager, "enum " + toString(*ptr));
 				case annotations::c::DeclOnlyTag::Kind::Union: return type_info_utils::createInfo(manager, "union " + toString(*ptr));
 				}
+			}
+
+			// if this is an intercepted type which also has template arguments
+			if (annotations::c::hasIncludeAttached(ptr)) {
+				std::string name = ptr->getName()->getValue();
+				if (core::annotations::hasAttachedName(ptr)) {
+					name = core::annotations::getAttachedName(ptr);
+				}
+				c_ast::NamedTypePtr namedType = manager.create<c_ast::NamedType>(manager.create<c_ast::Identifier>(name));
+				c_ast::CodeFragmentPtr definition = c_ast::IncludeFragment::createNew(converter.getFragmentManager(), annotations::c::getAttachedInclude(ptr));
+				for (auto typeArg : ptr->getTypeParameterList()) {
+					namedType->parameters.push_back(resolveTypeInternal(typeArg)->rValueType);
+				}
+				return type_info_utils::createInfo(namedType, definition);
 			}
 
 			// no match found => return unsupported type info
