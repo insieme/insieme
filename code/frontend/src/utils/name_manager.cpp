@@ -239,8 +239,6 @@ namespace utils {
 			}
 		}
 
-		if(llvm::isa<clang::CXXMethodDecl>(funcDecl) && llvm::cast<clang::CXXMethodDecl>(funcDecl)->isConst()) { suffix << "_c"; }
-
 		string suffixStr = suffix.str();
 		if (!cStyleName) {
 			boost::algorithm::replace_all(suffixStr, " ", "_");
