@@ -62,7 +62,7 @@ namespace utils {
 		/**
 		 * Creates a new instance based on the given node manager.
 		 */
-		FrontendInspireModule(core::NodeManager& manager) : core::lang::Extension(manager) {}
+		FrontendInspireModule(core::NodeManager& manager);
 
 	  public:		
 

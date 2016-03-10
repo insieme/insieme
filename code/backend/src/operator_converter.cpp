@@ -326,6 +326,8 @@ namespace backend {
 
 		res[basic.getNumericCast()] = OP_CONVERTER { return c_ast::cast(CONVERT_RES_TYPE, CONVERT_ARG(0)); };
 
+		res[basic.getTypeInstantiation()] = OP_CONVERTER { assert_fail() << "Type instantiation should be handled at call site"; return CONVERT_ARG(1); };
+
 		// -- reals --
 
 		res[basic.getRealAdd()] = OP_CONVERTER { return c_ast::add(CONVERT_ARG(0), CONVERT_ARG(1)); };

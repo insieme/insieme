@@ -36,6 +36,8 @@
 
 #include "insieme/backend/preprocessor.h"
 
+#include "insieme/annotations/backend_instantiate.h"
+
 #include "insieme/backend/ir_extensions.h"
 #include "insieme/backend/function_manager.h"
 
@@ -304,8 +306,10 @@ namespace backend {
 	}
 
 	core::NodePtr RecursiveLambdaInstantiator::process(const Converter& converter, const core::NodePtr& code) {
-		auto isCovered = [&](const core::NodePtr& node) { return converter.getFunctionManager().isBuiltIn(node); };
-		return core::transform::instantiateTypes(code, isCovered);
+		auto skipInstantiation = [&](const core::NodePtr& node) {
+			return !annotations::isBackendInstantiate(node) && converter.getFunctionManager().isBuiltIn(node);
+		};
+		return core::transform::instantiateTypes(code, skipInstantiation);
 	}
 
 } // end namespace backend
