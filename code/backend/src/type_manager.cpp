@@ -491,7 +491,7 @@ namespace backend {
 
 			// if this is an intercepted type which also has template arguments
 			if (annotations::c::hasIncludeAttached(ptr)) {
-				std::string name = ptr->getName()->getValue();
+				std::string name = insieme::utils::demangle(ptr->getName()->getValue());
 				if (core::annotations::hasAttachedName(ptr)) {
 					name = core::annotations::getAttachedName(ptr);
 				}
