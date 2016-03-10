@@ -191,7 +191,7 @@ namespace backend {
 
 	bool FunctionManager::isBuiltIn(const core::NodePtr& op) const {
 		if(op->getNodeCategory() != core::NC_Expression) { return false; }
-		return operatorTable.find(op.as<core::ExpressionPtr>()) != operatorTable.end() || annotations::c::hasIncludeAttached(op);
+		return operatorTable.find(op.as<core::ExpressionPtr>()) != operatorTable.end() || core::lang::isBuiltIn(op);
 	}
 
 	namespace {
@@ -686,7 +686,11 @@ namespace backend {
 			if (funType->isMember()) {
 				// make sure the object definition, ctors, dtors and member functions have already been resolved
 				// if this would not be the case, we could end up resolving e.g. a ctor while resolving the ctor itself
-				converter.getTypeManager().getTypeInfo(core::analysis::getObjectType(funType)); // ignore result
+
+				// we don't do this for intercepted types
+				if(!(fun.isa<core::LiteralPtr>() && annotations::c::hasIncludeAttached(fun))) {
+					converter.getTypeManager().getTypeInfo(core::analysis::getObjectType(funType)); // ignore result
+				}
 			}
 
 			// obtain function information
