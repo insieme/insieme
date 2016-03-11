@@ -1355,9 +1355,7 @@ namespace printer {
 				}
 
 				// print materialize if required
-				auto callType = node->getType().getAddressedNode();
-				auto funType = function->getType().as<FunctionTypePtr>()->getReturnType();
-				if(!analysis::equalTypes(callType, funType) && !types::getTypeVariableInstantiation(node->getNodeManager(), funType, callType)) {
+				if(core::analysis::isMaterializingCall(node)) {
 					out << " materialize ";
 				}
 			}

@@ -49,6 +49,7 @@
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/manipulation_utils.h"
+#include "insieme/core/types/type_variable_deduction.h"
 
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/reference.h"
@@ -110,6 +111,15 @@ namespace analysis {
 
 		// check invoked function
 		return isCallOf(candidate.isa<CallExprPtr>(), function);
+	}
+
+	bool isMaterializingCall(const NodePtr& candidate) {
+		auto call = candidate.isa<CallExprPtr>();
+		if(!call) return false;
+		auto callType = call->getType();
+		auto function = call->getFunctionExpr();
+		auto funType = function->getType().as<FunctionTypePtr>()->getReturnType();
+		return !analysis::equalTypes(callType, funType) && !types::getTypeVariableInstantiation(call->getNodeManager(), funType, callType);
 	}
 
 	bool isNoOp(const StatementPtr& candidate) {
@@ -428,7 +438,7 @@ namespace analysis {
 
 			void visitVariable(const Ptr<const Variable>& var, VariableSet& bound, ResultSet& free) {
 				if(bound.find(var) == bound.end()) { free.insert(var); }
-				
+
 				// continue visiting variable type
 				visitNode(var->getType(), bound, free);
 			}
@@ -886,7 +896,7 @@ namespace analysis {
 
 					// only interested in the given variable
 					if(*cur != *var) { return false; }
-					
+
 					// peeling of enclosing deref calls
 					int peeledLevels = 0;
 					for(int i=0; i<indirectionLevels; i++) {
@@ -970,7 +980,7 @@ namespace analysis {
 		}
 	}
 
-	
+
 	const std::set<TagTypeReferencePtr>& getFreeTagTypeReferences(const TagTypePtr& tagType) {
 
 		// TODO: cache
@@ -1052,7 +1062,7 @@ namespace analysis {
 			return foundFree || node.isa<TagTypePtr>() || node.isa<ExpressionPtr>();
 
 		}, true);
-		
+
 		// return result
 		return foundFree;
 	}
@@ -1172,7 +1182,7 @@ namespace analysis {
 			}
 
 			bool equalUnder(const NodeAddress& a, const NodeAddress& b, const EqualityClasses& classes, const std::map<NodeAddress, unsigned>& index, bool topLevel = true) {
-				
+
 				// if it is the same address, it is always the same
 				if (a == b) return true;
 
@@ -1331,7 +1341,7 @@ namespace analysis {
 
 			// function specific debugging flag
 			static const bool debug = false;
-			
+
 			// 1) get a list of all record types and tag type references in the given type
 			vector<RecordAddress> records;
 			visitDepthFirst(TypeAddress(type), [&](const RecordAddress& record) {
@@ -1696,7 +1706,7 @@ namespace analysis {
 			using reference_list_type = LambdaReferenceAddressList;
 
 			std::map<LambdaPtr, LambdaReferenceAddressList> index;
-			
+
 			free_reference_collector(const LambdaDefinitionPtr& def) : IRVisitor(true) {
 				for (const auto& cur : def) {
 					for (const auto& ref : def->getRecursiveCallsOf(cur->getReference())) {
@@ -1760,11 +1770,11 @@ namespace analysis {
 
 			// compute topological order -- there is a utility for this too
 			auto components = utils::graph::getTopologicalOrder(compGraph);
-			
+
 			// build up resulting map
 			NodeManager& mgr = def.getNodeManager();
 			std::map<Var, Pointer<const Construct>> res;
-			
+
 			// process in reverse order
 			for(auto it = components.rbegin(); it != components.rend(); ++it) {
 				auto& comp = *it;

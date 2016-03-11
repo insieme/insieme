@@ -156,7 +156,10 @@ namespace backend {
 
 	c_ast::NodePtr StmtConverter::visitCallExpr(const core::CallExprPtr& ptr, ConversionContext& context) {
 		// handled by the function manager
-		return converter.getFunctionManager().getCall(ptr, context);
+		auto cCall = converter.getFunctionManager().getCall(ptr, context);
+		// if materializing, transition to lvalue
+		if(core::analysis::isMaterializingCall(ptr)) return c_ast::ref(cCall.as<c_ast::ExpressionPtr>());
+		return cCall;
 	}
 
 	c_ast::NodePtr StmtConverter::visitBindExpr(const core::BindExprPtr& ptr, ConversionContext& context) {

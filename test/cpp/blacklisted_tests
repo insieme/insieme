@@ -16,7 +16,6 @@ class
 class_as_return_type_of_member_function_closing_rec_cycle
 class_def_and_decl_splitup
 const_pointer
-const_ref_arguments
 counter
 ctor
 ctor_inherit
@@ -31,7 +30,6 @@ expr_with_cleanups
 friend
 globals_in_classes
 header
-helloStream
 identical_class_structure
 includes
 inherit
@@ -42,7 +40,6 @@ inherit_single
 inherit_single_dynmem
 inherit_virtual
 initialization
-long_long
 materialize_with_bind_expr
 mem_alloc
 mem_alloc_ctor
@@ -58,10 +55,8 @@ nested_class
 new_string
 omp
 op_overl
-pairs
 performance
 pod_struct
-pod_struct_assignment
 pod_struct_bug
 rec_class
 rec_memberfunc

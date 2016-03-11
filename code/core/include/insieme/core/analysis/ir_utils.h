@@ -83,6 +83,11 @@ namespace analysis {
 	bool isCallOf(const NodePtr& candidate, const NodePtr& function);
 
 	/**
+	 * Tests whether the given call is materializing its result
+	 */
+	bool isMaterializingCall(const NodePtr& candidate);
+
+	/**
 	 * A utility function to extract an argument from the given call expression.
 	 *
 	 * @param call the call from which an argument should be extracted. The caller has to make
