@@ -46,10 +46,6 @@ datasharing
 privatized_global
 rec_global
 
-# Disabling tests because they fail with assertion:
-# Record types not correctly resolved
-qap2
-
 # Disabling tests because they fail to satisfy some semantic checks or errors
 critical
 functions
