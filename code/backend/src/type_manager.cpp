@@ -160,6 +160,7 @@ namespace backend {
 			const TypeInfo* resolveTypeInternal(const core::TypePtr& type);
 
 			const TypeInfo* resolveTypeVariable(const core::TypeVariablePtr& ptr);
+			const TypeInfo* resolveNumericType(const core::NumericTypePtr& ptr);
 			const TypeInfo* resolveGenericType(const core::GenericTypePtr& ptr);
 
 			const TagTypeInfo* resolveTagType(const core::TagTypePtr& ptr);
@@ -373,8 +374,9 @@ namespace backend {
 					break;
 				}
 				case core::NT_TagType:      info = resolveTagType(type.as<core::TagTypePtr>()); break;
-				case core::NT_TupleType:    info = resolveTupleType(static_pointer_cast<const core::TupleType>(type)); break;
-				case core::NT_FunctionType: info = resolveFunctionType(static_pointer_cast<const core::FunctionType>(type)); break;
+				case core::NT_TupleType:    info = resolveTupleType(type.as<core::TupleTypePtr>()); break;
+				case core::NT_FunctionType: info = resolveFunctionType(type.as<core::FunctionTypePtr>()); break;
+				case core::NT_NumericType:  info = resolveNumericType(type.as<core::NumericTypePtr>()); break;
 
 				//			case core::NT_ChannelType:
 				case core::NT_TypeVariable: info = resolveTypeVariable(static_pointer_cast<const core::TypeVariable>(type)); break;
@@ -393,6 +395,14 @@ namespace backend {
 		const TypeInfo* TypeInfoStore::resolveTypeVariable(const core::TypeVariablePtr& ptr) {
 			c_ast::CNodeManager& manager = *converter.getCNodeManager();
 			return type_info_utils::createUnsupportedInfo(manager, ptr);
+		}
+
+		const TypeInfo* TypeInfoStore::resolveNumericType(const core::NumericTypePtr& ptr) {
+			c_ast::CNodeManager& manager = *converter.getCNodeManager();
+			assert_eq(ptr->getValue()->getNodeType(), core::NT_Literal) << "Non-literal numeric types should not reach the backend";
+			auto ident = manager.create<c_ast::Identifier>(ptr->getValue().as<core::LiteralPtr>()->getStringValue());
+			c_ast::TypePtr numType = manager.create<c_ast::IntegralType>(ident);
+			return type_info_utils::createInfo(numType);
 		}
 
 		const TypeInfo* TypeInfoStore::resolveGenericType(const core::GenericTypePtr& ptr) {

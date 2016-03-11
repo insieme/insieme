@@ -141,6 +141,12 @@ namespace c_ast {
 		Type(NodeType type) : Node(type) {}
 	};
 
+	struct IntegralType : public Type {
+		IdentifierPtr value;
+		IntegralType(IdentifierPtr value) : Type(NT_IntegralType), value(value) {}
+		virtual bool equals(const Node& other) const;
+	};
+
 	struct CVQualifiedType : public Type {
 		bool mConst;
 		bool mVolatile;

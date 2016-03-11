@@ -97,6 +97,12 @@ int main() {
 	#pragma test expect_ir(R"(var ref<IMP_TemplateClass<bool>,f,f,plain> v0 = lit("IMP_TemplateClass::ctor" : IMP_TemplateClass<'T_0_0>::())(v0);)")
 	TemplateClass<bool> boolInstance;
 
+	// Integer template arguments /////////////////////////////////////////////////////////////////
+
+	#pragma test expect_ir(R"(var ref<IMP_IntTemplateClass<5>,f,f,plain> v0 = lit("IMP_IntTemplateClass::ctor" : IMP_IntTemplateClass<'T_0_0>::())(v0);)")
+	IntTemplateClass<5> fiveInstance;
+	#pragma test expect_ir(R"(var ref<IMP_IntTemplateClass<42>,f,f,plain> v0 = lit("IMP_IntTemplateClass::ctor" : IMP_IntTemplateClass<'T_0_0>::())(v0);)")
+	IntTemplateClass<42> answerInstance;
 
 	//// Template template arguments //////////////////////////////////////////////////////////////
 

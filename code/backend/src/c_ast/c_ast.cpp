@@ -153,6 +153,12 @@ namespace c_ast {
 		return code == static_cast<const OpaqueCode&>(other).code;
 	}
 
+	bool IntegralType::equals(const Node& node) const {
+		assert(dynamic_cast<const IntegralType*>(&node));
+		auto other = static_cast<const IntegralType&>(node);
+		return value == other.value;
+	}
+
 	bool CVQualifiedType::equals(const Node& node) const {
 		assert(dynamic_cast<const CVQualifiedType*>(&node));
 		auto other = static_cast<const CVQualifiedType&>(node);

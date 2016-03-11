@@ -76,6 +76,10 @@ class TemplateClass {
 	D field;
 };
 
+template<int I>
+class IntTemplateClass {
+};
+
 //template <template <typename> class Container, typename T>
 //void templateTemplateFun(Container<T>& container, const T value) {
 //	container.field = value;

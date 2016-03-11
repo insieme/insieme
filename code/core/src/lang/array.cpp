@@ -191,7 +191,7 @@ namespace lang {
 		IRBuilder builder(nm);
 
 		TypePtr num;
-		if (!size) {
+		if(!size) {
 			num = GenericType::get(nm, "inf");
 		} else if(auto lit = size.isa<LiteralPtr>()) {
 			assert_pred1(builder.getLangBasic().isUIntInf, lit->getType());

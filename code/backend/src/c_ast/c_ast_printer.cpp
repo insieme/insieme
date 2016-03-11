@@ -127,6 +127,10 @@ namespace c_ast {
 				return out << node->code;
 			}
 
+			PRINT(IntegralType) {
+				return out << print(node->value);
+			}
+
 			PRINT(PrimitiveType) {
 
 				// print qualifiers

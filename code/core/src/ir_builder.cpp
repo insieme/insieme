@@ -1280,6 +1280,10 @@ namespace core {
 		return genericType("type", toVector(type));
 	}
 
+	TypePtr IRBuilderBaseModule::numericType(int64_t value) const {
+		return numericType(literal(format("%d", value), getLangBasic().getUIntInf()));
+	}
+
 	LiteralPtr IRBuilderBaseModule::getTypeLiteral(const TypePtr& type) const {
 		auto literalType = getTypeLiteralType(type);
 		return literal(literalType, "type_literal");

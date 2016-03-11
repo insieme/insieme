@@ -65,21 +65,46 @@ namespace extensions {
 
 	namespace {
 
-		core::TypeVariablePtr getTypeVarForTemplateTypeParmType(const core::IRBuilder& builder, const clang::TemplateTypeParmType* parm) {
+		template<typename TemplateParm>
+		core::TypeVariablePtr getTypeVarForTemplateTypeParmType(const core::IRBuilder& builder, const TemplateParm* parm) {
 			return builder.typeVariable(format("T_%d_%d", parm->getDepth(), parm->getIndex()));
 		}
 
 		void convertTemplateParameters(const clang::TemplateParameterList* tempParamList, const core::IRBuilder& builder,
-		                               core::TypeList& templateGenericParams) {
+			                           core::TypeList& templateGenericParams) {
 			for(auto tempParam : *tempParamList) {
+				core::TypePtr typeVar;
 				if(auto templateParamTypeDecl = llvm::dyn_cast<clang::TemplateTypeParmDecl>(tempParam)) {
-					auto canonicalType = llvm::dyn_cast<clang::TemplateTypeParmType>(
-							templateParamTypeDecl->getTypeForDecl()->getCanonicalTypeUnqualified().getTypePtr());
-					auto typeVar = getTypeVarForTemplateTypeParmType(builder, canonicalType);
-					templateGenericParams.push_back(typeVar);
+					typeVar = getTypeVarForTemplateTypeParmType(builder, templateParamTypeDecl);
+				} else if(auto templateNonTypeParamDecl = llvm::dyn_cast<clang::NonTypeTemplateParmDecl>(tempParam)) {
+					typeVar = getTypeVarForTemplateTypeParmType(builder, templateNonTypeParamDecl);
 				} else {
-					assert_not_implemented() << "NOT ttpt\n";
+					tempParam->dump();
+					assert_not_implemented() << "Unexpected kind of template parameter\n";
 				}
+				templateGenericParams.push_back(typeVar);
+			}
+		}
+
+		core::TypePtr convertTemplateArgument(conversion::Converter& converter, const clang::TemplateArgument& arg) {
+			switch(arg.getKind()) {
+			case clang::TemplateArgument::Expression: return converter.convertType(arg.getAsExpr()->getType());
+			case clang::TemplateArgument::Type: return converter.convertType(arg.getAsType());
+			case clang::TemplateArgument::Integral: return converter.getIRBuilder().numericType(arg.getAsIntegral().getSExtValue());
+			case clang::TemplateArgument::Null:
+			case clang::TemplateArgument::Declaration:
+			case clang::TemplateArgument::NullPtr:
+			case clang::TemplateArgument::Template:
+			case clang::TemplateArgument::TemplateExpansion:
+			case clang::TemplateArgument::Pack: break;
+			}
+			assert_not_implemented() << "Unsupported template argument kind\n";
+			return {};
+		}
+
+		void convertTemplateArguments(const clang::TemplateArgumentList& tempArgList, conversion::Converter& converter, core::TypeList& templateArgsTypes) {
+			for(auto arg: tempArgList.asArray()) {
+				templateArgsTypes.push_back(convertTemplateArgument(converter, arg));
 			}
 		}
 
@@ -302,10 +327,7 @@ namespace extensions {
 
 					// build concrete genType
 					core::TypeList concreteTypeArguments;
-					for(auto arg: templateDecl->getTemplateArgs().asArray()) {
-						// TODO non-type
-						concreteTypeArguments.push_back(converter.convertType(arg.getAsType()));
-					}
+					convertTemplateArguments(templateDecl->getTemplateArgs(), converter, concreteTypeArguments);
 					genType = converter.getIRBuilder().genericType(insieme::utils::mangle(decl->getQualifiedNameAsString()), concreteTypeArguments);
 				}
 

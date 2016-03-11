@@ -16,6 +16,5 @@ range_for
 rvalue
 sizeofpack
 stdinitlistexpr
-std_array
 variadic_templates
 
