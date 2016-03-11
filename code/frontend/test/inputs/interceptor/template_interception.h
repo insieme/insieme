@@ -36,6 +36,8 @@
 
 #pragma once
 
+// functions ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 template<class R>
 R templateFunRet() {
 	R r;
@@ -52,6 +54,30 @@ template<class C>
 C templateFun(C c) {
 	return c+c;
 }
+
+struct Typer {
+	using Bla = int;
+};
+template<class T>
+void dependentNameFun(typename T::Bla param) { }
+
+//template <template <typename> class Container, typename T>
+//void templateTemplateFun(Container<T>& container, const T value) {
+//	container.field = value;
+//}
+//
+//template<typename T>
+//T variadicTemplateFun(T v) {
+//  return v;
+//}
+//
+//template<typename T, typename... Args>
+//T variadicTemplateFun(T first, Args... args) {
+//  return first + variadicTemplateFun(args...);
+//}
+
+
+// classes ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 template<class T>
 struct TemplateWithMethod {
@@ -79,18 +105,3 @@ class TemplateClass {
 template<int I>
 class IntTemplateClass {
 };
-
-//template <template <typename> class Container, typename T>
-//void templateTemplateFun(Container<T>& container, const T value) {
-//	container.field = value;
-//}
-//
-//template<typename T>
-//T variadicTemplateFun(T v) {
-//  return v;
-//}
-//
-//template<typename T, typename... Args>
-//T variadicTemplateFun(T first, Args... args) {
-//  return first + variadicTemplateFun(args...);
-//}

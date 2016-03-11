@@ -295,6 +295,11 @@ namespace extensions {
 			return getTypeVarForTemplateTypeParmType(builder, ttpt);
 		}
 
+		// handle dependent name types ("typename ...")
+		if(auto depName = llvm::dyn_cast<clang::DependentNameType>(type.getUnqualifiedType())) {
+			return builder.typeVariable(insieme::utils::mangle(utils::getNameForDependentNameType(depName)));
+		}
+
 		// handle class, struct and union interception
 		if(auto tt = llvm::dyn_cast<clang::TagType>(type->getCanonicalTypeUnqualified())) {
 			// do not intercept enums, they are simple

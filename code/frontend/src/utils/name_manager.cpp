@@ -315,6 +315,16 @@ namespace utils {
 		return name;
 	}
 
+	std::string getNameForDependentNameType(const clang::DependentNameType* depName) {
+		string name;
+		llvm::raw_string_ostream strstr(name);
+		strstr << clang::TypeWithKeyword::getKeywordName(depName->getKeyword());
+		if (depName->getKeyword() != clang::ETK_None) strstr << " ";
+		depName->getQualifier()->print(strstr, clang::PrintingPolicy(clang::LangOptions()));
+		strstr << depName->getIdentifier()->getName().str();
+		return strstr.str();
+	}
+
 } // End utils namespace
 } // End frontend namespace
 } // End insieme namespace

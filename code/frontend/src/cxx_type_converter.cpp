@@ -262,7 +262,15 @@ namespace conversion {
 		core::TypePtr retTy;
 		LOG_TYPE_CONVERSION(tempTy, retTy);
 
-		assert_fail() << "DependentTemplateSpecializationType should not be translated, only a complete spetialization can be turn into IR";
+		assert_fail() << "DependentTemplateSpecializationType should not be translated, only a complete specialization can be turned into IR";
+		return retTy;
+	}
+
+	core::TypePtr Converter::CXXTypeConverter::VisitDependentNameType(const clang::DependentNameType* depNameType) {
+		core::TypePtr retTy;
+		LOG_TYPE_CONVERSION(depNameType, retTy);
+
+		assert_fail() << "DependentNameType should not be translated, only a complete specialization can be turned into IR";
 		return retTy;
 	}
 

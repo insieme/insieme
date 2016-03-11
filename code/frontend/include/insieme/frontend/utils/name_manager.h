@@ -116,6 +116,11 @@ namespace utils {
 	 */
 	std::string stripLeadingGlobalNamespace(const std::string& name);
 
+	/**
+	 * Get full name for DependentNameType
+	 */
+	std::string getNameForDependentNameType(const clang::DependentNameType* depName);
+
 } // End utils namespace
 } // End frontend namespace
 } // End insieme namespace
