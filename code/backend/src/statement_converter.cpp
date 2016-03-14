@@ -158,7 +158,9 @@ namespace backend {
 		// handled by the function manager
 		auto cCall = converter.getFunctionManager().getCall(ptr, context);
 		// if materializing, transition to lvalue
-		if(core::analysis::isMaterializingCall(ptr)) return c_ast::ref(cCall.as<c_ast::ExpressionPtr>());
+		if(core::analysis::isMaterializingCall(ptr)) {
+			return c_ast::ref(cCall.as<c_ast::ExpressionPtr>());
+		}
 		return cCall;
 	}
 
