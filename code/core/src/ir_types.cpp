@@ -72,6 +72,21 @@ namespace core {
 		return out;
 	}
 
+	std::ostream& GenericTypeVariable::printTo(std::ostream& out) const {
+		// create output buffer
+		out << "'" << *getVarName();
+
+		// print parameters (or empty <> if none)
+		return out << '<' << join(",", getTypeParameter()->getChildList(), print<deref<NodePtr>>()) << '>';
+	}
+
+	std::ostream& VariadicGenericTypeVariable::printTo(std::ostream& out) const {
+		// create output buffer
+		out << "'" << *getVarName() << "...";
+
+		// print parameters (or empty <> if none)
+		return out << '<' << join(",", getTypeParameter()->getChildList(), print<deref<NodePtr>>()) << '>';
+	}
 
 	std::ostream& FunctionType::printTo(std::ostream& out) const {
 		// fetch object type if required

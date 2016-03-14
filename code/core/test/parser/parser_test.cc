@@ -84,6 +84,10 @@ namespace parser {
 		NodeManager nm;
 		EXPECT_TRUE(test_type(nm, "int<4>"));
 		EXPECT_TRUE(test_type(nm, "someweirdname<>"));
+		EXPECT_TRUE(test_type(nm, "'a"));
+		EXPECT_TRUE(test_type(nm, "'a..."));
+		EXPECT_TRUE(test_type(nm, "'a<>"));
+		EXPECT_TRUE(test_type(nm, "'a...<>"));
 		EXPECT_TRUE(test_type(nm, "vector<int<4>, 4>"));
 		EXPECT_TRUE(test_type(nm, "vector<'a, 4>"));
 		EXPECT_TRUE(test_type(nm, "ref<'a,f,f,plain>"));
@@ -216,6 +220,31 @@ namespace parser {
 		                          "  pure virtual h : () -> int<4>"
 		                          "}"));
 	}
+
+	TEST(IR_Parser, TypeVariables) {
+
+		NodeManager nm;
+		IRBuilder builder(nm);
+
+		EXPECT_TRUE(builder.parseType("'a").isa<TypeVariablePtr>());
+		EXPECT_TRUE(builder.parseType("'a...").isa<VariadicTypeVariablePtr>());
+		EXPECT_TRUE(builder.parseType("'a<>").isa<GenericTypeVariablePtr>());
+		EXPECT_TRUE(builder.parseType("'a...<>").isa<VariadicGenericTypeVariablePtr>());
+
+		EXPECT_TRUE(builder.parseType("'a<'b>").isa<GenericTypeVariablePtr>());
+		EXPECT_TRUE(builder.parseType("'a...<'b>").isa<VariadicGenericTypeVariablePtr>());
+
+
+		EXPECT_EQ("'a",      toString(*builder.parseType("'a")));
+		EXPECT_EQ("'a...",   toString(*builder.parseType("'a...")));
+		EXPECT_EQ("'a<>",    toString(*builder.parseType("'a<>")));
+		EXPECT_EQ("'a...<>", toString(*builder.parseType("'a...<>")));
+
+		EXPECT_EQ("'a<'b>",    toString(*builder.parseType("'a<'b>")));
+		EXPECT_EQ("'a...<'b>", toString(*builder.parseType("'a...<'b>")));
+		
+	}
+
 
 	bool test_expression(NodeManager& nm, const std::string& x) {
 		IRBuilder builder(nm);
