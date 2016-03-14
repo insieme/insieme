@@ -396,31 +396,32 @@ namespace types {
 		funType = builder.parseType("(A)->bool", symbols).as<FunctionTypePtr>();
 		EXPECT_EQ("bool",toString(*deduceReturnType(funType, {argType})));
 
-		
+
 		// different ref kinds are incompatible
 		argType = builder.parseType("ref<A>", symbols);
 		funType = builder.parseType("(ref<A,f,f,cpp_ref>)->bool", symbols).as<FunctionTypePtr>();
 		EXPECT_EQ("unit",toString(*deduceReturnType(funType, {argType})));
-		
+
 		argType = builder.parseType("ref<A>", symbols);
 		funType = builder.parseType("(ref<A,f,f,cpp_rref>)->bool", symbols).as<FunctionTypePtr>();
 		EXPECT_EQ("unit",toString(*deduceReturnType(funType, {argType})));
 
 		argType = builder.parseType("ref<A,f,f,cpp_ref>", symbols);
-		funType = builder.parseType("(ref<A>)->bool", symbols).as<FunctionTypePtr>();
-		EXPECT_EQ("unit",toString(*deduceReturnType(funType, {argType})));
-		
-		argType = builder.parseType("ref<A,f,f,cpp_rref>", symbols);
-		funType = builder.parseType("(ref<A>)->bool", symbols).as<FunctionTypePtr>();
-		EXPECT_EQ("unit",toString(*deduceReturnType(funType, {argType})));
-		
-		argType = builder.parseType("ref<A,f,f,cpp_ref>", symbols);
 		funType = builder.parseType("(ref<A,f,f,cpp_rref>)->bool", symbols).as<FunctionTypePtr>();
 		EXPECT_EQ("unit",toString(*deduceReturnType(funType, {argType})));
-		
+
 		argType = builder.parseType("ref<A,f,f,cpp_rref>", symbols);
 		funType = builder.parseType("(ref<A,f,f,cpp_ref>)->bool", symbols).as<FunctionTypePtr>();
 		EXPECT_EQ("unit",toString(*deduceReturnType(funType, {argType})));
+
+		// conversion to plain ref is ok (this)
+		argType = builder.parseType("ref<A,f,f,cpp_ref>", symbols);
+		funType = builder.parseType("(ref<A>)->bool", symbols).as<FunctionTypePtr>();
+		EXPECT_EQ("bool",toString(*deduceReturnType(funType, {argType})));
+
+		argType = builder.parseType("ref<A,f,f,cpp_rref>", symbols);
+		funType = builder.parseType("(ref<A>)->bool", symbols).as<FunctionTypePtr>();
+		EXPECT_EQ("bool",toString(*deduceReturnType(funType, {argType})));
 
 
 		// addition of flags is ok, subtraction not
