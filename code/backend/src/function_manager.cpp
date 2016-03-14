@@ -303,7 +303,8 @@ namespace backend {
 				// obtain object
 				vector<c_ast::NodePtr> args = c_call->arguments;
 				assert_eq(args.size(), 1u);
-				auto obj = c_ast::deref(args[0].as<c_ast::ExpressionPtr>());
+				auto obj = args[0].as<c_ast::ExpressionPtr>();
+				if(core::lang::isPlainReference(call->getArgument(0))) obj = c_ast::deref(obj);
 
 				// extract class type
 				auto classType = context.getConverter().getTypeManager().getTypeInfo(core::analysis::getObjectType(funType)).lValueType;
@@ -319,7 +320,8 @@ namespace backend {
 				vector<c_ast::NodePtr> args = c_call->arguments;
 				assert_false(args.empty());
 
-				auto obj = c_ast::deref(args[0].as<c_ast::ExpressionPtr>());
+				auto obj = args[0].as<c_ast::ExpressionPtr>();
+				if(core::lang::isPlainReference(call->getArgument(0))) obj = c_ast::deref(obj);
 				args.erase(args.begin());
 
 				res = c_ast::memberCall(obj, c_call->function, args, c_call->instantiationTypes);
