@@ -63,8 +63,6 @@ namespace conversion {
 		const core::IRBuilder& builder;
 		const core::lang::BasicGenerator& basic;
 
-		core::TypePtr convertExprType(const clang::Expr* expr);
-
         /**
          * stores conversion map between clang operators and Inspire (BINARY)
          */
@@ -187,6 +185,8 @@ namespace conversion {
 		// and transparently attach annotations to node which are annotated
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		virtual core::ExpressionPtr Visit(const clang::Expr* expr) = 0;
+
+		core::TypePtr convertExprType(const clang::Expr* expr);
 	};
 
 	#define CALL_BASE_EXPR_VISIT(Base, ExprTy)                                                                                                                 \

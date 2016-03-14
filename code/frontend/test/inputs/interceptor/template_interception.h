@@ -105,3 +105,26 @@ class TemplateClass {
 template<int I>
 class IntTemplateClass {
 };
+
+// function pointers ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+template<typename T, typename S>
+void templateFunPointerParam(T(*funPtr)(S)) {}
+
+void specificFunPointerParam(int(*funPtr)(float)) {}
+
+template<typename PT>
+void modifier(TemplateClass<PT>) {}
+
+template<typename T>
+void dependentFunPointerParam(void(*paramFun)(TemplateClass<T>)) {}
+
+template<class CharT> class basic_ostream {
+public:
+	basic_ostream& op(void (*func)(basic_ostream<CharT>&));
+};
+
+template<class CharT>
+void endl(basic_ostream<CharT>& os);
+
+using ostream = basic_ostream<char>;

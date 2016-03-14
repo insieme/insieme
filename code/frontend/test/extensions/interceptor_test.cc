@@ -89,7 +89,7 @@ namespace frontend {
 				checked = true;
 			}
 		}, true);
-		EXPECT_TRUE(checked);
+		EXPECT_TRUE(checked) << "checkForTypeName: " << typeNodeIrSpec;
 	}
 
 	void checkForFunctionName(const NodePtr& code, const std::string& functionLiteralName, const std::string& expectedAttachedName, const std::string& expectedHeaderName) {
@@ -103,7 +103,7 @@ namespace frontend {
 				checked = true;
 			}
 		}, true);
-		EXPECT_TRUE(checked);
+		EXPECT_TRUE(checked) << "checkForFunctionName: " << functionLiteralName;
 	}
 
 	TEST(InterceptorTest, TrueInterception) {

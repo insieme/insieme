@@ -48,3 +48,21 @@ namespace ns {
 		}
 	};
 }
+
+static int x;
+int& refFunTest() {
+	return x;
+}
+
+struct RefOpTest {
+	RefOpTest& operator+(const RefOpTest& rhs) {
+		return *this;
+	}
+};
+
+struct RefMethTest {
+	RefMethTest& meth() {
+		return *this;
+	}
+};
+

@@ -86,15 +86,14 @@ int main() {
 	#pragma test expect_ir(R"({
 		lit("IMP_std_colon__colon_basic_ostream::IMP__operator_lshift_"
 				: IMP_std_colon__colon_basic_ostream<'T_0_0,'T_0_1>::(int<4>) -> ref<IMP_std_colon__colon_basic_ostream<'T_0_0,'T_0_1>,f,f,cpp_ref>)
-				(lit("IMP_std_colon__colon_cout" : ref<IMP_std_colon__colon_basic_ostream<char,IMP_std_colon__colon_char_traits<char>>,f,f,plain>), 1);
+				(lit("IMP_std_colon__colon_cout" : ref<IMP_std_colon__colon_basic_ostream<char,IMP_std_colon__colon_char_traits<char>>,f,f,plain>), 1) materialize;
 	})")
 	{
 		std::cout << 1;
 	}
 
 	// cpp global enum
-	#pragma test expect_ir("STRING", R"({gen_eq(IMP_std_colon__colon_launch_colon__colon_async, IMP_std_colon__colon_launch_colon__colon_deferred);
-})") //keep this at the beginning of this line here
+	#pragma test expect_ir("REGEX_S", R"(.*gen_eq\(IMP_std_colon__colon_launch_colon__colon_async, IMP_std_colon__colon_launch_colon__colon_deferred\).*)")
 	{
 		std::launch::async == std::launch::deferred;
 	}

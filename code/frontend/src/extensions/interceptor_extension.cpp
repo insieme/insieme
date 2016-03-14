@@ -130,7 +130,7 @@ namespace extensions {
 
 			// handle non-templated functions
 			if(!funDecl->isTemplateInstantiation()) {
-				// if defaulted, fix this type to generic type
+				// if defaulted, fix "this" type to generic type
 				auto methDecl = llvm::dyn_cast<clang::CXXMethodDecl>(funDecl);
 				if(methDecl && methDecl->isDefaulted()) {
 					// check if method of class template specialization
@@ -152,7 +152,6 @@ namespace extensions {
 				converter.applyHeaderTagging(lit, decl);
 				return {lit, retType};
 			}
-
 
 			// first: handle generic template in order to generate generic function
 			core::TypeList templateGenericParams, templateConcreteParams;
@@ -178,13 +177,14 @@ namespace extensions {
 			// cast to concrete type at call site
 			auto concreteFunctionType = lit->getType().as<core::FunctionTypePtr>();
 
-			//if we don't need to do any type instantiation
+			// if we don't need to do any type instantiation
 			if(templateConcreteParams.empty()) {
 				return {innerLit, concreteFunctionType.getReturnType()};
 			}
 
 			concreteFunctionType = builder.functionType(concreteFunctionType->getParameterTypes(), concreteFunctionType->getReturnType(),
 				                                        concreteFunctionType->getKind(), builder.types(templateConcreteParams));
+
 			return {builder.callExpr(builder.getLangBasic().getTypeInstantiation(), builder.getTypeLiteral(concreteFunctionType), innerLit),
 				    concreteFunctionType->getReturnType()};
 		}
@@ -206,6 +206,14 @@ namespace extensions {
 				}
 			}
 			return nullptr;
+		}
+
+		core::CallExprPtr fixMaterializedReturnType(conversion::Converter& converter, const clang::CallExpr* clangCall, const core::CallExprPtr& call) {
+			if(!call) return call;
+			auto irRetType = converter.convertExprType(clangCall);
+			auto newCall = converter.getIRBuilder().callExpr(irRetType, call->getFunctionExpr(), call->getArguments());
+			core::transform::utils::migrateAnnotations(call, newCall);
+			return newCall;
 		}
 	}
 
@@ -258,7 +266,8 @@ namespace extensions {
 		}
 		if(auto memberCall = llvm::dyn_cast<clang::CXXMemberCallExpr>(expr)) {
 			auto thisFactory = [&](const core::TypePtr& retType){ return converter.convertExpr(memberCall->getImplicitObjectArgument()); };
-			return interceptMethodCall(converter, memberCall->getCalleeDecl(), thisFactory, memberCall->arguments());
+			return fixMaterializedReturnType(converter, memberCall,
+				                             interceptMethodCall(converter, memberCall->getCalleeDecl(), thisFactory, memberCall->arguments()));
 		}
 		if(auto operatorCall = llvm::dyn_cast<clang::CXXOperatorCallExpr>(expr)) {
 			auto decl = operatorCall->getCalleeDecl();
@@ -267,7 +276,7 @@ namespace extensions {
 					auto argList = operatorCall->arguments();
 					auto thisFactory = [&](const core::TypePtr& retType){ return converter.convertExpr(*argList.begin()); };
 					decltype(argList) remainder(argList.begin()+1, argList.end());
-					return interceptMethodCall(converter, decl, thisFactory, remainder);
+					return fixMaterializedReturnType(converter, operatorCall, interceptMethodCall(converter, decl, thisFactory, remainder));
 				}
 			}
 		}

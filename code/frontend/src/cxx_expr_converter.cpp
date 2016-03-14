@@ -248,7 +248,7 @@ namespace conversion {
 			}
 
 			// build call and we are done
-			auto retType = methodLambda->getType().as<core::FunctionTypePtr>()->getReturnType();
+			auto retType = convertExprType(callExpr);
 			ret = utils::buildCxxMethodCall(converter, retType, methodLambda, thisObj, callExpr->arguments());
 		}
 

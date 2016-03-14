@@ -78,7 +78,6 @@ int main() {
 		b.get();
 	}
 
-
 	// Class with template method
 
 	#pragma test expect_ir(R"({
@@ -173,4 +172,33 @@ int main() {
 
 	//#pragma test expect_ir(R"(lit("IMP_variadicTemplateFun_int_pack_begin_int_pack_end_returns_int" : (int<4>, int<4>) -> int<4>)(0, 1))")
 	//variadicTemplateFun(0, 1);
+
+	// Function pointer
+	#pragma test expect_ir(R"(type_instantiation(type_lit(<int<4>, real<4>>(ptr<(real<4>) -> int<4>,t,f>) -> unit),
+                              lit("IMP_templateFunPointerParam" : <'T_0_0, 'T_0_1>(ptr<('T_0_1) -> 'T_0_0,t,f>) -> unit))
+                              (ptr_of_function(type_instantiation(type_lit(<int<4>, real<4>>(real<4>) -> int<4>), lit("IMP_templateFunRetParam" : <'T_0_0, 'T_0_1>('T_0_1) -> 'T_0_0)))))")
+	templateFunPointerParam(templateFunRetParam<int,float>);
+
+	#pragma test expect_ir(R"(lit("IMP_specificFunPointerParam" : (ptr<(real<4>) -> int<4>,t,f>) -> unit)(
+                              ptr_of_function(type_instantiation(type_lit(<int<4>, real<4>>(real<4>) -> int<4>), lit("IMP_templateFunRetParam" : <'T_0_0, 'T_0_1>('T_0_1) -> 'T_0_0)))))")
+	specificFunPointerParam(templateFunRetParam);
+
+	#pragma test expect_ir(R"(type_instantiation(type_lit(<int<4>>(ptr<(IMP_TemplateClass<int<4>>) -> unit,t,f>) -> unit),
+                              lit("IMP_dependentFunPointerParam" : <'T_0_0>(ptr<(IMP_TemplateClass<'T_0_0>) -> unit,t,f>) -> unit))
+                              (ptr_of_function(type_instantiation(type_lit(<int<4>>(IMP_TemplateClass<int<4>>) -> unit), lit("IMP_modifier" : <'T_0_0>(IMP_TemplateClass<'T_0_0>) -> unit)))))")
+	dependentFunPointerParam<int>(modifier);
+
+	#pragma test expect_ir(R"({
+		var ref<IMP_basic_ostream<char>,f,f,plain> v0 = lit("IMP_basic_ostream::ctor" : IMP_basic_ostream<'T_0_0>::())(v0);
+		var ref<IMP_basic_ostream<char>,f,f,cpp_ref> v1 = v0;
+		lit("IMP_basic_ostream::IMP_op" : IMP_basic_ostream<'T_0_0>::(ptr<(ref<IMP_basic_ostream<'T_0_0>,f,f,cpp_ref>) -> unit,t,f>) -> ref<IMP_basic_ostream<'T_0_0>,f,f,cpp_ref>)(v0, ptr_of_function(type_instantiation(type_lit(<char>(ref<IMP_basic_ostream<char>,f,f,cpp_ref>) -> unit), lit("IMP_endl" : <'T_0_0>(ref<IMP_basic_ostream<'T_0_0>,f,f,cpp_ref>) -> unit)))) materialize ;
+		lit("IMP_basic_ostream::IMP_op" : IMP_basic_ostream<'T_0_0>::(ptr<(ref<IMP_basic_ostream<'T_0_0>,f,f,cpp_ref>) -> unit,t,f>) -> ref<IMP_basic_ostream<'T_0_0>,f,f,cpp_ref>)(v1, ptr_of_function(type_instantiation(type_lit(<char>(ref<IMP_basic_ostream<char>,f,f,cpp_ref>) -> unit), lit("IMP_endl" : <'T_0_0>(ref<IMP_basic_ostream<'T_0_0>,f,f,cpp_ref>) -> unit)))) materialize ;
+	})")
+	{
+		ostream os;
+		ostream& osr = os;
+		os.op(endl);
+		osr.op(endl);
+	}
+
 }

@@ -325,6 +325,10 @@ namespace conversion {
 		return typeConvPtr->convertVarType(type);
 	}
 
+	core::TypePtr Converter::convertExprType(const clang::Expr* expr) const {
+		return exprConvPtr->convertExprType(expr);
+	}
+
 } // End conversion namespace
 } // End frontend namespace
 } // End insieme namespace
