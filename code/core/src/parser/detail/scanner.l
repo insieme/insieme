@@ -123,6 +123,7 @@ blank         [ \t]
 
 ";"           return InspireParser::make_SEMIC(loc);
 ","           return InspireParser::make_COMA(loc);
+"..."         return InspireParser::make_ELLIPSIS(loc);
 ".."          return InspireParser::make_RANGE(loc);
 "."           return InspireParser::make_DOT(loc);
 "$"           return InspireParser::make_ADDRESS(loc);
