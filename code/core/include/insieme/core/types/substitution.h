@@ -53,23 +53,41 @@ namespace types {
 	//                                                    Substitution
 	// -------------------------------------------------------------------------------------------------------------------------
 
+
+	// forward declaration
+	class Substitution;
+
+	// define a simple name for an optional substitution - which will be the result of unification and matching algorithms.
+	typedef boost::optional<Substitution> SubstitutionOpt;
+
+
 	/**
 	 * This class represents a substitution for type variables within types.
 	 */
 	class Substitution : public utils::Printable {
 	  public:
+
 		/**
 		 * The definition of the data structure used to maintain type variable mappings.
 		 */
-		typedef utils::map::PointerMap<TypeVariablePtr, TypePtr> Mapping;
+		using VariableMapping = utils::map::PointerMap<TypeVariablePtr, TypePtr>;
+		
+		/**
+		 * The definition of the data structure used to maintain variadic type variable to type variable mappings.
+		 */
+		using VariadicTypeVariableMapping = utils::map::PointerMap<VariadicTypeVariablePtr, TypeVariableList>;
 
 	  private:
+
 		/**
 		 * The mapping this substitution is representing.
 		 */
-		Mapping mapping;
+		VariableMapping mapping;
+
+		VariadicTypeVariableMapping variadicVarMapping;
 
 	  public:
+
 		/**
 		 * Creates a new, empty substitution.
 		 */
@@ -147,6 +165,26 @@ namespace types {
 		}
 
 		/**
+		 * Obtains the (optional) type bound to the given type variable. 
+		 */
+		TypePtr operator[](const TypeVariablePtr& var) const {
+			auto pos = mapping.find(var);
+			return (pos == mapping.end()) ? TypePtr() : pos->second;
+		}
+
+		/**
+		 * Obtains the (optional) list of type variables the given variadic type variable
+		 * has been expanded into.
+		 * 
+		 * @param var the variadic type variable to be resolved
+		 * @return a list of type variables the variadic type has been expanded to or null, if not expanded.
+		 */
+		const TypeVariableList* operator[](const VariadicTypeVariablePtr& var) const {
+			auto pos = variadicVarMapping.find(var);
+			return (pos == variadicVarMapping.end()) ? nullptr : &pos->second;
+		}
+
+		/**
 		 * An overload for type variables for which the preservation of the node type
 		 * can not be guaranteed.
 		 */
@@ -164,6 +202,15 @@ namespace types {
 		void addMapping(const TypeVariablePtr& var, const TypePtr& type);
 
 		/**
+		 * Extends this substitution by the given mapping. If the same variable
+		 * is already mapped to some type, the current mapping will be replaced.
+		 *
+		 * @param the variadic variable which should be substituted.
+		 * @param the type variables the variadic variable should be substituted for.
+		 */
+		void addMapping(const VariadicTypeVariablePtr& var, const TypeVariableList& variables);
+
+		/**
 		 * Checks whether this substitution contains a mapping for the given variable.
 		 *
 		 * @param var the variable to be checked
@@ -173,25 +220,42 @@ namespace types {
 
 		/**
 		 * Removes the mapping stored for the given variable from this substitution.
-		 * @param var the variable which's entry should be removed
+		 * @param var the variable to be removed
 		 */
 		void remMappingOf(const TypeVariablePtr& var);
 
 		/**
-		 * Obtains a constant reference to the type variable mapping constituting this substitution.
-		 * @return a constant reference to the internally maintained type variable mapping
-		 */
-		Mapping& getMapping() {
-			return mapping;
-		}
+		* Removes all mappings associated to variables within the given variable set.
+		*
+		* @param variables the list of variables to be removed
+		*/
+		void removeMappings(const TypeVariableSet& variables);
 
 		/**
 		 * Obtains a constant reference to the type variable mapping constituting this substitution.
 		 * @return a constant reference to the internally maintained type variable mapping
 		 */
-		const Mapping& getMapping() const {
+		const VariableMapping& getVariableMapping() const {
 			return mapping;
 		}
+
+		/**
+		 * Creates a copy of this substitution only covering the variables covered by the given variable sets.
+		 *
+		 * @param variables the list of variables to be covered by retained
+		 * @param variadicVars the list of variadic variables to be covered by retained
+		 * @return a copy of this substitution restricted to the given variable sets
+		 */
+		Substitution restrictTo(const TypeVariableSet& variables, const VariadicTypeVariableSet& variadicVars) const;
+
+        /**
+         * Creates a copy of the given substitution where all referenced types are handled by the given manger.
+         *
+         * @param manager the manager to be managing the nodes referenced by the resulting substitution
+         * @param substitution the substitution to be copied
+         * @return a copy of the given substitution instance where all nodes are maintained by the given manager
+         */
+		Substitution copyTo(NodeManager& manager) const;
 
 		/**
 		 * Prints this substitution to the given output stream.
@@ -211,10 +275,8 @@ namespace types {
 		 * @return a substitution combining the given substitutions.
 		 */
 		static Substitution compose(NodeManager& manager, const Substitution& a, const Substitution& b);
-	};
 
-	// define a simple name for an optional substitution - which will be the result of unification and matching algorithms.
-	typedef boost::optional<Substitution> SubstitutionOpt;
+	};
 
 	/**
 	 * Creates a copy of the given substitution where all referenced types are handled by the given manger.
@@ -227,11 +289,8 @@ namespace types {
 		// check for early exit
 		if(!substitution) { return substitution; }
 
-		// copy the substitution
-		SubstitutionOpt res(boost::in_place<Substitution>());
-		for_each(substitution->getMapping(),
-		         [&](const std::pair<TypeVariablePtr, TypePtr>& cur) { res->addMapping(manager.get(cur.first), manager.get(cur.second)); });
-		return res;
+		// copy the substitute
+		return substitution->copyTo(manager);
 	}
 
 

@@ -60,9 +60,9 @@ namespace types {
 			NodeManager& manager;
 
 			/**
-			 * The type variable mapping constituting the substitution to be wrapped by this instance.
+			 * The substitution to be applied.
 			 */
-			const Substitution::Mapping& mapping;
+			const Substitution& substitution;
 
 			/**
 			 * The root node of the substitution. This one will always be effected, however,
@@ -78,7 +78,7 @@ namespace types {
 			 * @param substitution the substitution to be wrapped by the resulting instance.
 			 */
 			SubstitutionMapper(NodeManager& manager, const Substitution& substitution, const NodePtr& root)
-			    : manager(manager), mapping(substitution.getMapping()), root(root) {};
+			    : manager(manager), substitution(substitution), root(root) {};
 
 			/**
 			 * The procedure mapping a node to its substitution.
@@ -98,13 +98,10 @@ namespace types {
 					auto typeVars = analysis::getTypeVariablesBoundBy(element.as<ExpressionPtr>()->getType().as<FunctionTypePtr>());
 
 					// compute reduced type variable substitution
-					Substitution sub;
-					for(const auto& cur : mapping) {
-						if (!typeVars.contains(cur.first)) {
-							sub.addMapping(cur.first, cur.second);
-						}
-					}
-
+					Substitution sub = substitution;
+					sub.removeMappings(typeVars);
+					// TODO: remove other type variable mappings
+					
 					// run substitution recursively on reduced set
 					return sub(element);
 				}
@@ -117,7 +114,35 @@ namespace types {
 						<< "Instantiation of generic recursive functions not supported yet!"
 						<< "Function:\n" << dumpColor(element);
 
-				// quick check - only variables are substituted
+				// handle tuple types
+				if (TupleTypePtr tuple = element.isa<TupleTypePtr>()) {
+					// map tuple types to type lists, convert those, and move back
+					NodeManager& mgr = element->getNodeManager();
+					auto types = Types::get(mgr, tuple->getElementTypes());
+					auto newTypes = resolveElement(types).as<TypesPtr>();
+					return TupleType::get(mgr, newTypes->getTypes());
+				}
+
+				// check for variadic type variables
+				if (TypesPtr types = element.isa<TypesPtr>()) {
+					if (!types.empty()) {
+						if (auto vvar = types.back().isa<VariadicTypeVariablePtr>()) {
+							if (auto expanded = substitution[vvar]) {
+								TypeList list = types.getTypes();
+								list.pop_back();
+								for (const auto& cur : *expanded) {
+									list.push_back(cur);
+								}
+								return resolveElement(Types::get(element->getNodeManager(), list));
+							}
+						}
+
+						// TODO: deal with variadic generic type variables
+					}
+				}
+
+
+				// from here on, only variables are substituted
 				auto currentType = element->getNodeType();
 				if(currentType != NT_TypeVariable) {
 
@@ -135,12 +160,11 @@ namespace types {
 				assert_eq(NT_TypeVariable, currentType);
 
 				// lookup current variable within the mapping
-				auto pos = mapping.find(static_pointer_cast<const TypeVariable>(element));
-				if(pos != mapping.end()) {
+				if (TypePtr replacement = substitution[element.as<TypeVariablePtr>()]) {
 					// found! => replace
-					return (*pos).second;
+					return replacement;
 				}
-
+				
 				// not found => return current node
 				// (since nothing within a variable node may be substituted)
 				return element;
@@ -163,13 +187,11 @@ namespace types {
 	}
 
 	void Substitution::addMapping(const TypeVariablePtr& var, const TypePtr& type) {
-		auto element = std::make_pair(var, type);
-		auto res = mapping.insert(element);
-		if(!res.second) {
-			mapping.erase(var);
-			res = mapping.insert(element);
-			assert_true(res.second) << "Insert was not successful!";
-		}
+		mapping[var] = type;
+	}
+
+	void Substitution::addMapping(const VariadicTypeVariablePtr& var, const TypeVariableList& expanded) {
+		variadicVarMapping[var] = expanded;
 	}
 
 	bool Substitution::containsMappingFor(const TypeVariablePtr& var) const {
@@ -180,15 +202,21 @@ namespace types {
 		mapping.erase(var);
 	}
 
+	void Substitution::removeMappings(const TypeVariableSet& variables) {
+		for (const auto& cur : variables) {
+			remMappingOf(cur);
+		}
+	}
+
 	std::ostream& Substitution::printTo(std::ostream& out) const {
 		out << "{";
-		out << join(",", mapping, [](std::ostream& out, const Mapping::value_type& cur) { out << *cur.first << "->" << *cur.second; });
+		out << join(",", mapping, [](std::ostream& out, const VariableMapping::value_type& cur) { out << *cur.first << "->" << *cur.second; });
 		out << "}";
 		return out;
 	}
 
 	Substitution Substitution::compose(NodeManager& manager, const Substitution& a, const Substitution& b) {
-		typedef Substitution::Mapping::value_type Entry;
+		typedef Substitution::VariableMapping::value_type Entry;
 
 		// copy substitution a
 		Substitution res(a);
@@ -197,11 +225,60 @@ namespace types {
 		for_each(res.mapping, [&manager, &b](Entry& cur) { cur.second = b.applyTo(manager, cur.second); });
 
 		// add remaining mappings of b
-		Substitution::Mapping& resMapping = res.mapping;
+		Substitution::VariableMapping& resMapping = res.mapping;
 		for_each(b.mapping, [&resMapping](const Entry& cur) {
 			if(resMapping.find(cur.first) == resMapping.end()) { resMapping.insert(cur); }
 		});
 
+		return res;
+	}
+
+	Substitution Substitution::restrictTo(const TypeVariableSet& variables, const VariadicTypeVariableSet& variadicVars) const {
+		
+		// start with an empty substitution
+		Substitution res;
+
+		// add all variadic variable mappings
+		for (const auto& cur : variadicVarMapping) {
+			// copy variable expansion
+			res.variadicVarMapping[cur.first] = cur.second;
+			// and variable instantiations
+			for (const auto& var : cur.second) {
+				auto pos = mapping.find(var);
+				if (pos != mapping.end()) res.mapping[var] = pos->second;
+			}
+		}
+
+		// move requested variable mappings
+		for (const auto& var : variables) {
+			auto pos = mapping.find(var);
+			if (pos != mapping.end()) res.mapping[var] = pos->second;
+		}
+
+		// done
+		return res;
+	}
+
+	Substitution Substitution::copyTo(NodeManager& manager) const {
+
+		// copy the substitution
+		Substitution res = *this;
+
+		// copy variable mapping
+		for (auto& cur : res.mapping) {
+			const_cast<TypeVariablePtr&>(cur.first) = manager.get(cur.first);
+			cur.second = manager.get(cur.second);
+		}
+
+		// copy variadic variable mapping
+		for (auto& cur : res.variadicVarMapping) {
+			const_cast<VariadicTypeVariablePtr&>(cur.first) = manager.get(cur.first);
+			for (auto& var : cur.second) {
+				var = manager.get(var);
+			}
+		}
+
+		// done
 		return res;
 	}
 

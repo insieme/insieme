@@ -128,19 +128,75 @@ namespace types {
 		Substitution subB(varB, constType);
 
 
-		EXPECT_EQ("{AP('A)=AP(type<'A,'B>)}", toString(subA.getMapping()));
-		EXPECT_EQ("{AP('B)=AP(constType)}", toString(subB.getMapping()));
+		EXPECT_EQ("{AP('A)=AP(type<'A,'B>)}", toString(subA.getVariableMapping()));
+		EXPECT_EQ("{AP('B)=AP(constType)}", toString(subB.getVariableMapping()));
 
 		Substitution combinedAA = Substitution::compose(manager, subA, subA);
 		Substitution combinedAB = Substitution::compose(manager, subA, subB);
 		Substitution combinedBA = Substitution::compose(manager, subB, subA);
 		Substitution combinedBB = Substitution::compose(manager, subB, subB);
 
-		EXPECT_PRED2(containsSubString, toString(combinedAB.getMapping()), "AP('A)=AP(type<'A,constType>)");
-		EXPECT_PRED2(containsSubString, toString(combinedAB.getMapping()), "AP('B)=AP(constType)");
-		EXPECT_PRED2(containsSubString, toString(combinedBA.getMapping()), "AP('A)=AP(type<'A,'B>)");
-		EXPECT_PRED2(containsSubString, toString(combinedBA.getMapping()), "AP('B)=AP(constType)");
-		EXPECT_EQ("{AP('B)=AP(constType)}", toString(combinedBB.getMapping()));
+		EXPECT_PRED2(containsSubString, toString(combinedAB.getVariableMapping()), "AP('A)=AP(type<'A,constType>)");
+		EXPECT_PRED2(containsSubString, toString(combinedAB.getVariableMapping()), "AP('B)=AP(constType)");
+		EXPECT_PRED2(containsSubString, toString(combinedBA.getVariableMapping()), "AP('A)=AP(type<'A,'B>)");
+		EXPECT_PRED2(containsSubString, toString(combinedBA.getVariableMapping()), "AP('B)=AP(constType)");
+		EXPECT_EQ("{AP('B)=AP(constType)}", toString(combinedBB.getVariableMapping()));
+	}
+
+
+	TEST(Substitution, VariadicTypeVariables) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto type = [&](const std::string& code) {
+			return builder.parseType(code);
+		};
+		auto var = [&](const std::string& code) {
+			return type(code).as<TypeVariablePtr>();
+		};
+		auto vvar = [&](const std::string& code) {
+			return type(code).as<VariadicTypeVariablePtr>();
+		};
+
+		Substitution sub;
+		sub.addMapping(vvar("'a..."),toVector(var("'a1"),var("'a2")));
+		sub.addMapping(var("'a1"),type("A"));
+		sub.addMapping(var("'a2"), type("B"));
+
+		EXPECT_EQ(type("(A,B)"), sub(type("(A,B)")));
+		EXPECT_EQ(type("(A,B)"), sub(type("('a1,'a2)")));
+		EXPECT_EQ(type("(A,B)"), sub(type("('a...)")));
+
+
+		EXPECT_EQ(type("(A,B)->C"), sub(type("(A,B)->C")));
+		EXPECT_EQ(type("(A,B)->C"), sub(type("('a1,'a2)->C")));
+		EXPECT_EQ(type("(A,B)->C"), sub(type("('a...)->C")));
+
+		EXPECT_EQ(type("<A,B>(A,B)->C"), sub(type("<A,B>(A,B)->C")));
+		EXPECT_EQ(type("<A,B>(A,B)->C"), sub(type("<'a1,'a2>('a1,'a2)->C")));
+		EXPECT_EQ(type("<A,B>(A,B)->C"), sub(type("<'a...>('a...)->C")));
+
+
+		sub.addMapping(vvar("'b..."), toVector(var("'b1"), var("'b2"), var("'b3")));
+		sub.addMapping(var("'b1"), type("A"));
+		sub.addMapping(var("'b2"), type("B"));
+		sub.addMapping(var("'b3"), type("C"));
+
+		sub.addMapping(vvar("'c..."), TypeVariableList());
+		
+
+		EXPECT_EQ(type("(A,B)"),   sub(type("('a...)")));
+		EXPECT_EQ(type("(A,B,C)"), sub(type("('b...)")));
+		EXPECT_EQ(type("()"),      sub(type("('c...)")));
+
+		EXPECT_EQ(type("(A,B)->C"),   sub(type("('a...)->C")));
+		EXPECT_EQ(type("(A,B,C)->C"), sub(type("('b...)->C")));
+		EXPECT_EQ(type("()->C"),      sub(type("('c...)->C")));
+
+		EXPECT_EQ(type("<A,B>(A,B,C)->C"),   sub(type("<'a...>('b...)->C")));
+		EXPECT_EQ(type("<A,B,C>(A,B,C)->C"), sub(type("<'b...>('b...)->C")));
+		EXPECT_EQ(type("(A,B,C)->C"),        sub(type("<'c...>('b...)->C")));
+
 	}
 
 } // end namespace types

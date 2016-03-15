@@ -75,7 +75,7 @@ namespace types {
 		EXPECT_TRUE(isUnifyable(varA, varB));
 		auto res = unify(manager, varA, varB);
 		EXPECT_TRUE(res);
-		if(res) { EXPECT_FALSE(res->getMapping().empty()); }
+		if(res) { EXPECT_FALSE(res->empty()); }
 
 		Substitution sub = *res;
 		EXPECT_EQ("'B", toString(*sub.applyTo(manager, varA)));
