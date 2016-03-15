@@ -86,9 +86,9 @@ namespace opencl {
 		LANG_EXT_TYPE_WITH_NAME(MarkerPrivate, "opencl_private_marker", "opencl_private");
 
 		LANG_EXT_TYPE_WITH_NAME(GenType, "opencl_type_template", "opencl_type<'a, 'loc>");
-		TYPE_ALIAS("opencl_type<'a, 'loc>", "'a");
+		// TYPE_ALIAS("opencl_type<'a, 'loc>", "'a");
 
-		LANG_EXT_LITERAL(Peel, "opencl_peel", "(ref<opencl_type<'a, 'loc>,'c,'v,plain))->'a");
+		LANG_EXT_LITERAL(Peel, "opencl_peel", "(opencl_type<'a, 'loc>)->'a");
 	};
 
 	class KernelType {
@@ -118,6 +118,8 @@ namespace opencl {
 	};
 
 	bool isKernelType(const core::NodePtr& node);
+
+	core::TypePtr buildKernelType(const core::TypePtr& elementType, KernelType::AddressSpace addressSpace);
 } // end namespace opencl
 } // end namespace backend
 } // end namespace insieme

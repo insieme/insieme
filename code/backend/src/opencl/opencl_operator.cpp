@@ -297,6 +297,9 @@ namespace opencl {
 			auto manager = C_NODE_MANAGER;
 			return c_ast::call(manager->create("get_group_id"), CONVERT_ARG(0));
 		};
+		table[oclExt.getPeel()] = OP_CONVERTER {
+			return CONVERT_ARG(0);
+		};
 		#include "insieme/backend/operator_converter_end.inc"
 		return table;
 	}

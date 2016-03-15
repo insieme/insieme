@@ -101,8 +101,11 @@ namespace transform {
 	protected:
 		core::NodeManager& manager;
 		StepContext& context;
+		const OpenCLExtension& oclExt;
 	public:
-		Step(core::NodeManager& manager, StepContext& context) : PreProcessor(), manager(manager), context(context) {}
+		Step(core::NodeManager& manager, StepContext& context) :
+			PreProcessor(), manager(manager), context(context), oclExt(manager.getLangExtension<OpenCLExtension>())
+		{}
 		core::NodePtr process(const Converter& converter, const core::NodePtr& code) override { return code; }
 	};
 

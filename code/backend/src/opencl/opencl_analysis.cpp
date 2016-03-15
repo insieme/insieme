@@ -35,6 +35,7 @@
  */
 
 #include "insieme/backend/opencl/opencl_analysis.h"
+#include "insieme/backend/opencl/opencl_extension.h"
 
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/type_utils.h"
@@ -266,7 +267,9 @@ namespace analysis {
 			return core::lang::PointerType(type).getElementType();
 		else if (core::lang::isArray(type))
 			return core::lang::ArrayType(type).getElementType();
-		else {
+		else if (isKernelType(type)) {
+			return KernelType(type).getElementType();
+		} else {
 			return type;
 		}
 	}

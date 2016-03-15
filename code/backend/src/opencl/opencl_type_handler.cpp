@@ -38,9 +38,12 @@
 
 #include "insieme/backend/opencl/opencl_extension.h"
 #include "insieme/backend/opencl/opencl_type_handler.h"
+#include "insieme/backend/opencl/opencl_analysis.h"
 
 #include "insieme/backend/c_ast/c_code.h"
 #include "insieme/backend/c_ast/c_ast_utils.h"
+
+#include "insieme/core/lang/reference.h"
 
 namespace insieme {
 namespace backend {
@@ -65,7 +68,7 @@ namespace opencl {
 			} else if(isKernelType(type)) {
 				KernelType kernelType(type);
 				// first of all we transform the element type
-				const auto& elementInfo = converter.getTypeManager().getTypeInfo(kernelType.getElementType());
+				const auto& info = converter.getTypeManager().getTypeInfo(kernelType.getElementType());
 				// second step is to wrap the lvalue with an attributed type
 				std::string attribute;
 				switch (kernelType.getAddressSpace()) {
@@ -78,13 +81,13 @@ namespace opencl {
 
 				TypeInfo* typeInfo = type_info_utils::createInfo(0);
 				// lValues of this type are now bound to their corresponding address space
-				typeInfo->lValueType = c_ast::attribute(attribute, elementInfo.lValueType);
-				typeInfo->rValueType = elementInfo.rValueType;
-				typeInfo->externalType = elementInfo.externalType;
-				typeInfo->externalize = elementInfo.externalize;
-				typeInfo->internalize = elementInfo.internalize;
-				typeInfo->declaration = elementInfo.declaration;
-				typeInfo->definition = elementInfo.definition;
+				typeInfo->lValueType = c_ast::attribute(attribute, info.lValueType);
+				typeInfo->rValueType = c_ast::attribute(attribute, info.rValueType);
+				typeInfo->externalType = info.externalType;
+				typeInfo->externalize = info.externalize;
+				typeInfo->internalize = info.internalize;
+				typeInfo->declaration = info.declaration;
+				typeInfo->definition = info.definition;
 				return typeInfo;
 			}
 			// it is not a special opencl type => let somebody else try

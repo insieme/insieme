@@ -460,29 +460,48 @@ namespace transform {
 			}
 			return true;
 		});
+/*
+		core::ExpressionList optionals;
+		core::IRBuilder builder(manager);
+		optionals.push_back(builder.callExpr(manager.getLangBasic().getUInt4(), wrapLazy(manager, builder.uintLit(0))));
+		callContext->setOptionals(optionals);
+*/
 		return node;
 	}
 
 	core::NodePtr KernelTypeStep::process(const Converter& converter, const core::NodePtr& code) {
-		core::visitDepthFirstOncePrunable(core::NodeAddress(code), [&](const core::NodeAddress& addr) {
-			// in case we hop into builtins return immediately
-			if (auto call = addr.isa<core::CallExprAddress>()) {
-				if (core::lang::isBuiltIn(call.as<core::CallExprPtr>()->getFunctionExpr())) return true;
-			}
+		core::LambdaExprPtr lambdaExpr = code.isa<LambdaExprPtr>();
+		if (!lambdaExpr) return code;
 
-			core::NodePtr target = addr.getAddressedNode();
-			// if it is not a type do not prune but continue the traversal
-			if (target->getNodeCategory() != core::NC_Type) return false;
+		core::IRBuilder builder(manager);
+		// used to modify the body and header
+		core::NodeMap bodyReplacements;
+		core::VariableMap annoReplacements;
 
-			LOG(INFO) << "visit type: " << dumpColor(target);
-			// in case we hit an indirection traverse the visit
-			if (core::lang::isReference(target) || core::lang::isPointer(target)) {
-				LOG(INFO) << "would replace type: " << dumpColor(target);
-				return true;
-			}
-			return false;
-		}, true);
-		return code;
+		core::VariableList parameter;
+		for_each(lambdaExpr->getParameterList(), [&](const core::VariablePtr& cur) {
+			// ref<ref<>> oder ref<ptr<>> ersetzen .. wo ref_deref(var) -> opencl_deref(var)
+
+			parameter.push_back(cur);
+			auto type = cur->getType();
+			if (!core::lang::isReference(type)) return;
+			// check the element type
+			type = opencl::analysis::getElementType(type);
+			if (!core::lang::isPointer(type) && !core::lang::isReference(type)) return;
+
+			auto param = builder.variable(core::lang::buildRefType(buildKernelType(type, KernelType::AddressSpace::Global)));
+			parameter.back() = param;
+			bodyReplacements[builder.deref(cur)] = builder.callExpr(type, oclExt.getPeel(), builder.deref(param));
+			annoReplacements[cur] = param;
+		});
+		// fast-path?
+		if (bodyReplacements.empty()) return lambdaExpr;
+		// replace all usages in the original body
+		core::LambdaExprPtr newLambdaExpr = builder.lambdaExpr(manager.getLangBasic().getUnit(),
+			parameter, core::transform::replaceAllGen(manager, lambdaExpr->getBody(), bodyReplacements));
+		// in the end migrate the annotations and fix them up
+		core::transform::utils::migrateAnnotations(lambdaExpr, newLambdaExpr);
+		return newLambdaExpr;
 	}
 
 	core::NodePtr IntegrityCheckStep::process(const Converter& converter, const core::NodePtr& code) {
