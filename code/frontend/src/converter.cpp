@@ -266,9 +266,11 @@ namespace conversion {
 				// attach name for backend
 				if(auto tagDecl = llvm::dyn_cast<clang::TagDecl>(decl)) {
 					string name = insieme::utils::demangle(utils::getNameForTagDecl(*this, tagDecl, true).first);
-					if(tagDecl->isStruct()) name = "struct " + name;
-					else if(tagDecl->isUnion()) name = "union " + name;
-					else if(tagDecl->isEnum()) name = "enum " + name;
+					if(!getCompiler().isCXX()) {
+						if(tagDecl->isStruct()) name = "struct " + name;
+						else if(tagDecl->isUnion()) name = "union " + name;
+						else if(tagDecl->isEnum()) name = "enum " + name;
+					}
 					core::annotations::attachName(node, name);
 				}
 				else if(auto funDecl = llvm::dyn_cast<clang::FunctionDecl>(decl)) {

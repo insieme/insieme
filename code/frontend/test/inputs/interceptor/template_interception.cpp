@@ -210,4 +210,12 @@ int main() {
 	//{
 	//	VariadicClass<int, double> a;
 	//}
+
+	// Variadic template template //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+	#pragma test expect_ir(R"(type_instantiation(type_lit(<IMP_TemplateClass>() -> unit), lit("IMP_variadicTemplateTemplateFun" : <'V_T_T_0_0...<>>() -> unit))())")
+	variadicTemplateTemplateFun<TemplateClass>();
+
+	#pragma test expect_ir(R"(type_instantiation(type_lit(<IMP_TemplateWithMethod, IMP_TemplateClass>() -> unit), lit("IMP_variadicTemplateTemplateFun" : <'V_T_T_0_0...<>>() -> unit))())")
+	variadicTemplateTemplateFun<TemplateWithMethod, TemplateClass>();
 }
