@@ -75,13 +75,14 @@ namespace transform {
 
 	class StepContext {
 	public:
+		typedef utils::graph::Graph<CallContextPtr> CallGraph;
 		// represents the valid opencl extensions
 		enum class KhrExtension { All, Fp64, ByteAddressableStore };
 	private:
 		// represents the initial requirements -- a call context can overwrite it
 		VariableRequirementList defaultRq;
 		// each call context will lead to an invokation of irt_opencl_execute
-		utils::graph::Graph<CallContextPtr> graph;
+		CallGraph graph;
 		// represents what extensions the kernel needs to function properly
 		std::set<KhrExtension> extensions;
 		// name of the kernel
@@ -89,8 +90,8 @@ namespace transform {
 	public:
 		const VariableRequirementList& getDefaultRequirements() const { return defaultRq; }
 		void setDefaultRequirements(const VariableRequirementList& lst) { defaultRq = lst; }
-		utils::graph::Graph<CallContextPtr>& getCallGraph() { return graph; }
-		const utils::graph::Graph<CallContextPtr>& getCallGraph() const { return graph; }
+		CallGraph& getCallGraph() { return graph; }
+		const CallGraph& getCallGraph() const { return graph; }
 		std::set<KhrExtension>& getExtensions() { return extensions; }
 		const std::set<KhrExtension>& getExtensions() const { return extensions; }
 		void setKernelName(const std::string& kernelName) { this->kernelName = kernelName; }
