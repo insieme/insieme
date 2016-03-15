@@ -466,7 +466,7 @@ namespace conversion {
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	//							BINARY OPERATOR
+	//							UNARY EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     core::ExpressionPtr Converter::ExprConverter::createUnaryExpression(const core::TypePtr& exprTy, const core::ExpressionPtr& subExpr,
@@ -558,7 +558,7 @@ namespace conversion {
 
         // Comparisons will return a boolean (integer) but the operator requires different parameter types
         if(clangBinOp->isComparisonOp()) {
-            // find first super type commom to both types,
+            // find first super type common to both types,
             //      int4   uint4
             //       |   /   |
             //      int8 <- unit8    => (int4, uint8) should be int8
@@ -584,8 +584,15 @@ namespace conversion {
 
 		assert_true(core::lang::isReference(lhs->getType())) << "left side must be assignable";
 
-		retIr = createBinaryExpression(exprTy, builder.deref(lhs), rhs, compOp);
-		retIr = utils::buildCStyleAssignment(lhs, retIr);
+		// Normally, in C, char types are implicitly casted to int by clang - this is not the case 
+		// for the LHS of compound assignments, because there are no lvalue casts in C. Hence, we need to cast ourselves.
+		if(compOp->getType()->isCharType()) {
+			retIr = createBinaryExpression(rhs->getType(), builder.numericCast(builder.deref(lhs), rhs->getType()), rhs, compOp);
+			retIr = utils::buildCStyleAssignment(lhs, builder.numericCast(retIr, exprTy));
+		} else {
+			retIr = createBinaryExpression(exprTy, builder.deref(lhs), rhs, compOp);
+			retIr = utils::buildCStyleAssignment(lhs, retIr);
+		}
 
 		return retIr;
 	}
