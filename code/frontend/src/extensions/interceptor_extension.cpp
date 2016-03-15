@@ -69,10 +69,13 @@ namespace extensions {
 		string getTemplateTypeParmName(const TemplateParm* parm) {
 			return format("T_%d_%d", parm->getDepth(), parm->getIndex());
 		}
-
 		template<typename TemplateParm>
 		core::TypeVariablePtr getTypeVarForTemplateTypeParmType(const core::IRBuilder& builder, const TemplateParm* parm) {
 			return builder.typeVariable(getTemplateTypeParmName(parm));
+		}
+		template<typename TemplateParm>
+		core::VariadicTypeVariablePtr getTypeVarForVariadicTemplateTypeParmType(const core::IRBuilder& builder, const TemplateParm* parm) {
+			return builder.variadicTypeVariable("V_" + getTemplateTypeParmName(parm));
 		}
 
 		void convertTemplateParameters(const clang::TemplateParameterList* tempParamList, const core::IRBuilder& builder,
@@ -80,7 +83,13 @@ namespace extensions {
 			for(auto tempParam : *tempParamList) {
 				core::TypePtr typeVar;
 				if(auto templateParamTypeDecl = llvm::dyn_cast<clang::TemplateTypeParmDecl>(tempParam)) {
-					typeVar = getTypeVarForTemplateTypeParmType(builder, templateParamTypeDecl);
+					if(templateParamTypeDecl->isParameterPack()) {
+						templateGenericParams.push_back(getTypeVarForVariadicTemplateTypeParmType(builder, templateParamTypeDecl));
+						// we only need arguments up to the first top-level variadic, the rest can be deduced
+						break;
+					} else {
+						typeVar = getTypeVarForTemplateTypeParmType(builder, templateParamTypeDecl);
+					}
 				} else if(auto templateNonTypeParamDecl = llvm::dyn_cast<clang::NonTypeTemplateParmDecl>(tempParam)) {
 					typeVar = getTypeVarForTemplateTypeParmType(builder, templateNonTypeParamDecl);
 				} else if(auto templateTemplateParamDecl = llvm::dyn_cast<clang::TemplateTemplateParmDecl>(tempParam)) {
@@ -106,11 +115,12 @@ namespace extensions {
 				converter.applyHeaderTagging(genType, tempDecl);
 				return genType;
 			}
+			case clang::TemplateArgument::Pack: assert_not_implemented() << "Template parameter packs are handled in convertTemplateArguments\n";
 			case clang::TemplateArgument::Null:
 			case clang::TemplateArgument::Declaration:
 			case clang::TemplateArgument::NullPtr:
 			case clang::TemplateArgument::TemplateExpansion:
-			case clang::TemplateArgument::Pack: break;
+			break;
 			}
 			assert_not_implemented() << "Unsupported template argument kind\n";
 			return {};
@@ -118,7 +128,15 @@ namespace extensions {
 
 		void convertTemplateArguments(const clang::TemplateArgumentList& tempArgList, conversion::Converter& converter, core::TypeList& templateArgsTypes) {
 			for(auto arg: tempArgList.asArray()) {
-				templateArgsTypes.push_back(convertTemplateArgument(converter, arg));
+				if(arg.getKind() == clang::TemplateArgument::Pack) {
+					for(auto innerArg : arg.getPackAsArray()) {
+						templateArgsTypes.push_back(convertTemplateArgument(converter, innerArg));
+					}
+					// we only need arguments up to the first top-level variadic, the rest can be deduced
+					break;
+				} else {
+					templateArgsTypes.push_back(convertTemplateArgument(converter, arg));
+				}
 			}
 		}
 
@@ -316,9 +334,16 @@ namespace extensions {
 			return getTypeVarForTemplateTypeParmType(builder, ttpt);
 		}
 
-		// handle dependent name types ("typename ...")
+		// handle dependent name types ("typename t")
 		if(auto depName = llvm::dyn_cast<clang::DependentNameType>(type.getUnqualifiedType())) {
 			return builder.typeVariable(insieme::utils::mangle(utils::getNameForDependentNameType(depName)));
+		}
+
+		// handle pack expansion type ("Args...")
+		if(auto packExp = llvm::dyn_cast<clang::PackExpansionType>(type.getUnqualifiedType())) {
+			auto templateTypeParmType = llvm::dyn_cast<clang::TemplateTypeParmType>(packExp->getPattern().getTypePtr());
+			assert_true(templateTypeParmType) << "Unexpected template parameter pack type";
+			return getTypeVarForVariadicTemplateTypeParmType(builder, templateTypeParmType);
 		}
 
 		// handle class, struct and union interception

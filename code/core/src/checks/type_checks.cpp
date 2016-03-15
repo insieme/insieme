@@ -1559,9 +1559,15 @@ namespace checks {
 				Message(callExpr, EC_TYPE_ILLEGAL_FUNCTION_INSTANTIATION, format("Instantiated type does not match type literal argument"), Message::ERROR));
 		}
 
+		auto subFunList = subFunType->getInstantiationTypeList();
+		auto instFunList = instantiatedFunType->getInstantiationTypeList();
 		// check that both instantiation parameter lists have the same arity
-		if(instantiatedFunType.getInstantiationTypeList().size() != subFunType.getInstantiationTypeList().size()) {
-			add(res, Message(callExpr, EC_TYPE_ILLEGAL_FUNCTION_INSTANTIATION, format("Instantiation type list arity mismatch"), Message::ERROR));
+		if(instFunList.size() != subFunList.size()) {
+			// except if the instantiated one of them ends on a variadic type variable
+			if(subFunList.empty() || !(subFunList.back().isa<core::VariadicTypeVariablePtr>() || subFunList.back().isa<core::VariadicGenericTypeVariablePtr>())
+			   || instFunList.size() < subFunList.size()) {
+				add(res, Message(callExpr, EC_TYPE_ILLEGAL_FUNCTION_INSTANTIATION, format("Instantiation type list arity mismatch"), Message::ERROR));
+			}
 		}
 
 		// check that instantiation is correct

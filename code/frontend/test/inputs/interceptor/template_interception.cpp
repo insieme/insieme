@@ -94,12 +94,16 @@ int main() {
 
 	// Classes with templates //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-	#pragma test expect_ir(R"(var ref<IMP_TemplateClass<int<4>>,f,f,plain> v0 = lit("IMP_TemplateClass::ctor" : IMP_TemplateClass<'T_0_0>::())(v0);)")
-	TemplateClass<int> intInstance;
-	#pragma test expect_ir(R"(var ref<IMP_TemplateClass<real<8>>,f,f,plain> v0 = lit("IMP_TemplateClass::ctor" : IMP_TemplateClass<'T_0_0>::())(v0);)")
-	TemplateClass<double> doubleInstance;
-	#pragma test expect_ir(R"(var ref<IMP_TemplateClass<bool>,f,f,plain> v0 = lit("IMP_TemplateClass::ctor" : IMP_TemplateClass<'T_0_0>::())(v0);)")
-	TemplateClass<bool> boolInstance;
+	#pragma test expect_ir(R"({
+		var ref<IMP_TemplateClass<int<4>>,f,f,plain> v0 = lit("IMP_TemplateClass::ctor" : IMP_TemplateClass<'T_0_0>::())(v0);
+		var ref<IMP_TemplateClass<real<8>>,f,f,plain> v1 = lit("IMP_TemplateClass::ctor" : IMP_TemplateClass<'T_0_0>::())(v1);
+		var ref<IMP_TemplateClass<bool>,f,f,plain> v2 = lit("IMP_TemplateClass::ctor" : IMP_TemplateClass<'T_0_0>::())(v2);
+	})")
+	{
+		TemplateClass<int> intInstance;
+		TemplateClass<double> doubleInstance;
+		TemplateClass<bool> boolInstance;
+	}
 
 	// Integer template arguments //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -125,17 +129,16 @@ int main() {
 	// simple instantiation of template template (explicit - otherwise the same as above)
 
 	#pragma test expect_ir(R"({
-		var ref<IMP_TemplateClass<int<4>>,f,f,plain> v0 = lit("IMP_TemplateClass::ctor" : IMP_TemplateClass<'T_0_0>::())(v0);
+		1; var ref<IMP_TemplateClass<int<4>>,f,f,plain> v0 = lit("IMP_TemplateClass::ctor" : IMP_TemplateClass<'T_0_0>::())(v0);
 		type_instantiation(type_lit(<IMP_TemplateClass, int<4>>(ref<IMP_TemplateClass<int<4>>,f,f,cpp_ref>, int<4>) -> unit),
 			lit("IMP_templateTemplateFun" : <'T_T_0_0<'T_1_0>, 'T_0_1>(ref<IMP_Container<'T_0_1>,f,f,cpp_ref>, 'T_0_1) -> unit))(ref_kind_cast(v0, type_lit(cpp_ref)), 0);
 	})")
 	{
-		TemplateClass<int> c;
+		1; TemplateClass<int> c;
 		templateTemplateFun<TemplateClass, int>(c, 0);
 	}
 
 	// nested templated types for template template (implicit)
-
 	#pragma test expect_ir(R"({
 		var ref<IMP_TemplateClass<IMP_TemplateClass<int<4>>>,f,f,plain> v0 = lit("IMP_TemplateClass::ctor" : IMP_TemplateClass<'T_0_0>::())(v0);
 		var ref<IMP_TemplateClass<int<4>>,f,f,plain> v1 = lit("IMP_TemplateClass::ctor" : IMP_TemplateClass<'T_0_0>::())(v1);
@@ -149,28 +152,17 @@ int main() {
 	}
 
 	// nested templated types for template template (explicit - otherwise the same as above)
-
 	#pragma test expect_ir(R"({
-		var ref<IMP_TemplateClass<IMP_TemplateClass<int<4>>>,f,f,plain> v0 = lit("IMP_TemplateClass::ctor" : IMP_TemplateClass<'T_0_0>::())(v0);
+		1; var ref<IMP_TemplateClass<IMP_TemplateClass<int<4>>>,f,f,plain> v0 = lit("IMP_TemplateClass::ctor" : IMP_TemplateClass<'T_0_0>::())(v0);
 		var ref<IMP_TemplateClass<int<4>>,f,f,plain> v1 = lit("IMP_TemplateClass::ctor" : IMP_TemplateClass<'T_0_0>::())(v1);
 		type_instantiation(type_lit(<IMP_TemplateClass, IMP_TemplateClass<int<4>>>(ref<IMP_TemplateClass<IMP_TemplateClass<int<4>>>,f,f,cpp_ref>, IMP_TemplateClass<int<4>>) -> unit),
 			lit("IMP_templateTemplateFun" : <'T_T_0_0<'T_1_0>, 'T_0_1>(ref<IMP_Container<'T_0_1>,f,f,cpp_ref>, 'T_0_1) -> unit))(ref_kind_cast(v0, type_lit(cpp_ref)), ref_cast(v1, type_lit(t), type_lit(f), type_lit(cpp_ref)));
 	})")
 	{
-		TemplateClass<TemplateClass<int> > c;
+		1; TemplateClass<TemplateClass<int> > c;
 		TemplateClass<int> c1;
 		templateTemplateFun<TemplateClass, TemplateClass<int> >(c, c1);
 	}
-
-
-	//// Variadic templates ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-	//#pragma test expect_ir(R"(lit("IMP_variadicTemplateFun_int_returns_int" : (int<4>) -> int<4>)(0))")
-	//variadicTemplateFun(0);
-
-	//#pragma test expect_ir(R"(lit("IMP_variadicTemplateFun_int_pack_begin_int_pack_end_returns_int" : (int<4>, int<4>) -> int<4>)(0, 1))")
-	//variadicTemplateFun(0, 1);
-
 
 	// Function pointer ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -201,4 +193,21 @@ int main() {
 		osr.op(endl);
 	}
 
+	// Variadic templates //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+	#pragma test expect_ir(R"(type_instantiation(type_lit(<int<4>>(int<4>) -> int<4>), lit("IMP_variadicTemplateFun" : <'T_0_0>('T_0_0) -> 'T_0_0))(0))")
+	variadicTemplateFun(0);
+
+	#pragma test expect_ir(R"(type_instantiation(type_lit(<int<4>, int<4>>(int<4>, int<4>) -> int<4>), lit("IMP_variadicTemplateFun" : <'T_0_0, 'V_T_0_1...>('T_0_0, 'V_T_0_1...) -> 'T_0_0))(0, 1))")
+	variadicTemplateFun(0, 1);
+
+	#pragma test expect_ir(R"(type_instantiation(type_lit(<int<4>, int<4>, real<8>, uint<4>>(int<4>, int<4>, real<8>, uint<4>) -> int<4>), lit("IMP_variadicTemplateFun" : <'T_0_0, 'V_T_0_1...>('T_0_0, 'V_T_0_1...) -> 'T_0_0))(0, 1, lit("2.0E+0":real<8>), 90u))")
+	variadicTemplateFun(0, 1, 2.0, 90u);
+
+	//#pragma test expect_ir(R"({
+	//	var ref<IMP_VariadicClass<int<4>,real<8>>,f,f,plain> v0 = lit("IMP_VariadicClass::ctor" : IMP_VariadicClass<'V_T_0_0...>::())(v0) materialize ;
+	//})")
+	//{
+	//	VariadicClass<int, double> a;
+	//}
 }

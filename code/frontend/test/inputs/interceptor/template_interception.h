@@ -66,15 +66,21 @@ void templateTemplateFun(Container<T>& container, const T value) {
 	container.field = value;
 }
 
-//template<typename T>
-//T variadicTemplateFun(T v) {
-//  return v;
-//}
-//
-//template<typename T, typename... Args>
-//T variadicTemplateFun(T first, Args... args) {
-//  return first + variadicTemplateFun(args...);
-//}
+// variadic ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+template<typename T>
+T variadicTemplateFun(T v) {
+  return v;
+}
+
+template<typename T, typename... Args>
+T variadicTemplateFun(T first, Args... args) {
+  return first + variadicTemplateFun(args...);
+}
+
+template<typename... Args>
+class VariadicClass {
+};
 
 
 // classes ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
