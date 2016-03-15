@@ -61,11 +61,11 @@ struct Typer {
 template<class T>
 void dependentNameFun(typename T::Bla param) { }
 
-//template <template <typename> class Container, typename T>
-//void templateTemplateFun(Container<T>& container, const T value) {
-//	container.field = value;
-//}
-//
+template <template <typename> class Container, typename T>
+void templateTemplateFun(Container<T>& container, const T value) {
+	container.field = value;
+}
+
 //template<typename T>
 //T variadicTemplateFun(T v) {
 //  return v;

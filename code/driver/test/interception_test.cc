@@ -47,7 +47,7 @@
 namespace insieme {
 namespace driver {
 
-	TEST(DriverInterceptionTest, Basic) {
+	TEST(DriverInterceptionTest, Templates) {
 		core::NodeManager manager;
 
 		frontend::ConversionJob job(utils::getInsiemeSourceRootDir() + "frontend/test/inputs/interceptor/template_interception.cpp");
@@ -66,6 +66,7 @@ namespace driver {
 		auto codeString = toString(*converted);
 		codeString = insieme::utils::removeCppStyleComments(codeString);
 		EXPECT_PRED2(notContainsSubString, codeString, "*");
+		EXPECT_PRED2(containsSubString, codeString, "templateTemplateFun<TemplateClass,");
 
 		// try compiling the code fragment
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();

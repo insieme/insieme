@@ -66,8 +66,13 @@ namespace extensions {
 	namespace {
 
 		template<typename TemplateParm>
+		string getTemplateTypeParmName(const TemplateParm* parm) {
+			return format("T_%d_%d", parm->getDepth(), parm->getIndex());
+		}
+
+		template<typename TemplateParm>
 		core::TypeVariablePtr getTypeVarForTemplateTypeParmType(const core::IRBuilder& builder, const TemplateParm* parm) {
-			return builder.typeVariable(format("T_%d_%d", parm->getDepth(), parm->getIndex()));
+			return builder.typeVariable(getTemplateTypeParmName(parm));
 		}
 
 		void convertTemplateParameters(const clang::TemplateParameterList* tempParamList, const core::IRBuilder& builder,
@@ -78,6 +83,10 @@ namespace extensions {
 					typeVar = getTypeVarForTemplateTypeParmType(builder, templateParamTypeDecl);
 				} else if(auto templateNonTypeParamDecl = llvm::dyn_cast<clang::NonTypeTemplateParmDecl>(tempParam)) {
 					typeVar = getTypeVarForTemplateTypeParmType(builder, templateNonTypeParamDecl);
+				} else if(auto templateTemplateParamDecl = llvm::dyn_cast<clang::TemplateTemplateParmDecl>(tempParam)) {
+					core::TypeList paramTypeList;
+					convertTemplateParameters(templateTemplateParamDecl->getTemplateParameters(), builder, paramTypeList);
+					typeVar = builder.genericTypeVariable("T_" + getTemplateTypeParmName(templateTemplateParamDecl), paramTypeList);
 				} else {
 					tempParam->dump();
 					assert_not_implemented() << "Unexpected kind of template parameter\n";
@@ -91,10 +100,15 @@ namespace extensions {
 			case clang::TemplateArgument::Expression: return converter.convertType(arg.getAsExpr()->getType());
 			case clang::TemplateArgument::Type: return converter.convertType(arg.getAsType());
 			case clang::TemplateArgument::Integral: return converter.getIRBuilder().numericType(arg.getAsIntegral().getSExtValue());
+			case clang::TemplateArgument::Template: {
+				auto tempDecl = arg.getAsTemplate().getAsTemplateDecl()->getTemplatedDecl();
+				auto genType = converter.getIRBuilder().genericType(insieme::utils::mangle(tempDecl->getQualifiedNameAsString()));
+				converter.applyHeaderTagging(genType, tempDecl);
+				return genType;
+			}
 			case clang::TemplateArgument::Null:
 			case clang::TemplateArgument::Declaration:
 			case clang::TemplateArgument::NullPtr:
-			case clang::TemplateArgument::Template:
 			case clang::TemplateArgument::TemplateExpansion:
 			case clang::TemplateArgument::Pack: break;
 			}
@@ -161,9 +175,7 @@ namespace extensions {
 				convertTemplateParameters(templateDecl->getTemplateParameters(), builder, templateGenericParams);
 
 				// build list of concrete params for instantiation of this call
-				for(auto tempParam: funDecl->getTemplateSpecializationInfo()->TemplateArguments->asArray()) {
-					templateConcreteParams.push_back(converter.convertType(tempParam.getAsType()));
-				}
+				convertTemplateArguments(*(funDecl->getTemplateSpecializationInfo()->TemplateArguments), converter, templateConcreteParams);
 			}
 			// translate uninstantiated pattern instead of instantiated version
 			auto pattern = funDecl->getTemplateInstantiationPattern();

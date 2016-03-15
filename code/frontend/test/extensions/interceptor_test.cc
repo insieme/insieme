@@ -155,7 +155,7 @@ namespace frontend {
 		checkForTypeName(code, "IMP_TemplateClass<int<4>>", "TemplateClass", "template_interception.h");
 		checkForTypeName(code, "IMP_TemplateClass<real<8>>", "TemplateClass", "template_interception.h");
 		checkForTypeName(code, "IMP_TemplateClass<bool>", "TemplateClass", "template_interception.h");
-//		checkForTypeName(code, "IMP_TemplateClass_TemplateClass_lt_int_gt_", "TemplateClass<TemplateClass<int> >", "template_interception.h");
+		checkForTypeName(code, "IMP_TemplateClass", "TemplateClass", "template_interception.h"); // generic type as template template param
 
 		// check name of function/method literals
 		checkForFunctionName(code, "IMP_templateFunRet", "templateFunRet", "template_interception.h");
@@ -163,7 +163,7 @@ namespace frontend {
 		checkForFunctionName(code, "IMP_templateFun", "templateFun", "template_interception.h");
 		checkForFunctionName(code, "IMP_TemplateWithMethod::IMP_get", "get", "template_interception.h");
 		checkForFunctionName(code, "IMP_ClassWithTemplateMethod::IMP_get", "get", "template_interception.h");
-//		checkForFunctionName(code, "IMP_templateTemplateFun_TemplateClass_int_returns_void", "templateTemplateFun<TemplateClass,int>", "template_interception.h");
+		checkForFunctionName(code, "IMP_templateTemplateFun", "templateTemplateFun", "template_interception.h");
 //		checkForFunctionName(code, "IMP_templateTemplateFun_TemplateClass_TemplateClass_lt_int_gt__returns_void", "templateTemplateFun<TemplateClass,TemplateClass<int> >", "template_interception.h");
 //		checkForFunctionName(code, "IMP_variadicTemplateFun_int_returns_int", "variadicTemplateFun<int>", "template_interception.h");
 //		checkForFunctionName(code, "IMP_variadicTemplateFun_int_pack_begin_int_pack_end_returns_int", "variadicTemplateFun<int,int>", "template_interception.h");
