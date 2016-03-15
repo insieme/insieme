@@ -165,7 +165,9 @@ void _irt_opencl_execute(unsigned id, irt_opencl_ndrange_func ndrange,
 		size_t size;
 	} reverse_offload[num_requirements];
 
+	#ifdef IRT_VERBOSE
 	uint64 start_ns = irt_time_ns();
+	#endif // IRT_VERBOSE
 
     /* obtain the associated ndrange for this particular execution */
     irt_opencl_ndrange nd = ndrange(wi);
