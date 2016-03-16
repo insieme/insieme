@@ -18,7 +18,6 @@ ctor_base_ptr
 ctor_inherit
 ctor_ptr_overload
 def_initialization
-dowhile_this
 duplicatedCtor
 expression_with_cleanups
 expr_with_cleanups
