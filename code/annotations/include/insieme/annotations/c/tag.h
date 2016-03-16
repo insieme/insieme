@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -34,59 +34,33 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/annotations/c/include.h"
+#pragma once
 
-#include "insieme/core/ir_node_annotation.h"
-#include "insieme/core/dump/annotations.h"
-#include "insieme/core/encoder/encoder.h"
+#include <string>
+#include "insieme/core/forward_decls.h"
 
 namespace insieme {
 namespace annotations {
 namespace c {
 
-	using namespace insieme::core;
+	using std::string;
 
 	/**
-	 * The value annotation type to be attached to nodes to mark it as
-	 * something to be ignored by the name mangling (extern "C").
+	 * Checks whether a tag is attached to the given node.
 	 */
-	struct ExternCTag : public core::value_annotation::copy_on_migration {
-		bool operator==(const ExternCTag& other) const {
-			return true;
-		}
-	};
+	bool hasAttachedCTag(const core::NodePtr& node);
 
-	// ---------------- Support Dump ----------------------
+	/**
+	 * Obtains a reference to the C tag attached to the given node. If
+	 * no tag has been attached the result is undefined (an assertion
+	 * in debug mode).
+	 */
+	const string& getAttachedCTag(const core::NodePtr& node);
 
-	VALUE_ANNOTATION_CONVERTER(ExternCTag)
-
-	typedef core::value_node_annotation<ExternCTag>::type annotation_type;
-
-	virtual ExpressionPtr toIR(NodeManager& manager, const NodeAnnotationPtr& annotation) const {
-		assert_true(dynamic_pointer_cast<annotation_type>(annotation)) << "Only include annotations supported!";
-		return encoder::toIR(manager, string("externC"));
-	}
-
-	virtual NodeAnnotationPtr toAnnotation(const ExpressionPtr& node) const {
-		assert_true(encoder::isEncodingOf<string>(node.as<ExpressionPtr>())) << "Invalid encoding encountered!";
-		return std::make_shared<annotation_type>(ExternCTag());
-	}
-};
-
-// ----------------------------------------------------
-
-
-bool isExternC(const insieme::core::LiteralPtr& literal) {
-	return literal->hasAttachedValue<ExternCTag>();
-}
-
-void markAsExternC(const insieme::core::LiteralPtr& literal, bool value) {
-	if(value) {
-		literal->attachValue(ExternCTag());
-	} else {
-		literal->detachValue<ExternCTag>();
-	}
-}
+	/**
+	 * Attaches the given C tag to the given node.
+	 */
+	const core::NodePtr& attachCTag(const core::NodePtr& node, const string& tag);
 
 } // end namespace c
 } // end namespace annotations
