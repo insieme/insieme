@@ -434,9 +434,9 @@ non_empty_types : non_empty_types "," type                                { $1.p
 // -- type variable --
 
 type_variable : "type_var"                                                { $$ = driver.builder.typeVariable($1); }
-			  | "type_var" "<" types ">"                                  { $$ = driver.builder.genericTypeVariable($1,$3); }
-			  | "type_var" "..."                                          { $$ = driver.builder.variadicTypeVariable($1); }
-			  | "type_var" "..." "<" types ">"                            { $$ = driver.builder.variadicGenericTypeVariable($1,$4); }
+              | "type_var" "<" types ">"                                  { $$ = driver.builder.genericTypeVariable($1, $3); }
+              | "type_var" "..."                                          { $$ = driver.builder.variadicTypeVariable($1); }
+              | "type_var" "..." "<" types ">"                            { $$ = driver.builder.variadicGenericTypeVariable($1, $4); }
               ;
 
 // -- abstract type --
