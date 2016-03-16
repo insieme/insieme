@@ -101,11 +101,8 @@ irt_opencl_kernel_implementation *irt_opencl_get_kernel_implementation(irt_conte
 	IRT_ASSERT(index < max_index, IRT_ERR_OCL, "invalid kernel implementation index %d, maximum is %d", index, max_index);
 	/* try to initialize it (only required in lazy initialization) */
 	irt_opencl_kernel_implementation *impl = table[index];
-	if(!irt_opencl_init_kernel_implementation(opencl_context, impl)) {
-		/* @TODO: mark it in a safe manner as 'broken' */
-		impl->data->flags = 1;
+	if(!irt_opencl_init_kernel_implementation(opencl_context, impl))
 		return NULL;
-	}
 	return impl;
 }
 
@@ -130,7 +127,7 @@ void _irt_opencl_execute(unsigned id, irt_opencl_ndrange_func ndrange,
 
 	/* grab the current implementation */
 	irt_opencl_kernel_implementation *impl = irt_opencl_get_kernel_implementation(irt_context, id);
-	if (impl == NULL) {
+	if (impl == NULL || (impl->data->flags & IRT_OPENCL_KERNEL_DATA_FLAG_BROKEN)) {
 		irt_opencl_execute_fallback(wi);
 		return;
 	}
@@ -567,6 +564,8 @@ bool irt_opencl_init_kernel_implementation(irt_opencl_context *context, irt_open
 	memset(impl->data, 0, sizeof(*impl->data));
 	/* shortcut such that we have one less indirection */
 	irt_opencl_kernel_data *data = impl->data;
+	/* set it to broken per default .. fixup in the exit path */
+	data->flags |= IRT_OPENCL_KERNEL_DATA_FLAG_BROKEN;
 	
 	size_t len = strlen(impl->source);
 	data->program = clCreateProgramWithSource(context->context, 1, &impl->source, &len, &result);
@@ -600,6 +599,8 @@ bool irt_opencl_init_kernel_implementation(irt_opencl_context *context, irt_open
 		return false;
 	}
 	
+	/* remove the broken flag */
+	data->flags &= ~IRT_OPENCL_KERNEL_DATA_FLAG_BROKEN;
 	return true;
 }
 

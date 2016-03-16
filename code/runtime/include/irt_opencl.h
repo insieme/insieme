@@ -95,6 +95,10 @@ typedef struct _irt_opencl_data_requirement irt_opencl_data_requirement;
 typedef irt_opencl_data_requirement (*irt_opencl_data_requirement_func)(
     irt_work_item *wi, irt_opencl_ndrange *ndrange, unsigned arg);
 /**
+ * a set of possible flags allowed within kernel data
+ */
+#define IRT_OPENCL_KERNEL_DATA_FLAG_BROKEN (1 << 0)
+/**
  * models data associated with a kernel implementation. such data encapsulates
  * all OpenCL specific structures likes cl_kernel and others
  */
