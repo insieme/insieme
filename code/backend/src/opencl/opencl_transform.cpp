@@ -47,6 +47,7 @@
 #include "insieme/core/transform/inline.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/node_mapper_utils.h"
+#include "insieme/core/transform/simplify.h"
 #include "insieme/core/lang/reference.h"
 #include "insieme/core/lang/pointer.h"
 #include "insieme/core/lang/array.h"
@@ -379,7 +380,7 @@ namespace transform {
 		return core::transform::replaceVarsGen(manager, newLambdaExpr, annoReplacements);
 	}
 
-	core::NodePtr InlineAssignmentsStep::process(const Converter& converter, const core::NodePtr& node) {		
+	core::NodePtr SimplifierStep::process(const Converter& converter, const core::NodePtr& node) {
 		core::LambdaExprPtr lambdaExpr = node.isa<LambdaExprPtr>();
 		if (!lambdaExpr) return node;
 
@@ -416,8 +417,8 @@ namespace transform {
 		// fast-path
 		if (replacements.empty()) return node;
 
-		core::LambdaExprPtr newLambdaExpr= builder.lambdaExpr(manager.getLangBasic().getUnit(),
-			lambdaExpr->getParameterList(), core::transform::replaceAllGen(manager, lambdaExpr->getBody(), replacements));
+		core::LambdaExprPtr newLambdaExpr= builder.lambdaExpr(manager.getLangBasic().getUnit(), lambdaExpr->getParameterList(),
+			core::transform::simplify(manager, core::transform::replaceAllGen(manager, lambdaExpr->getBody(), replacements), true));
 		// migrate the annotations -- but no need to fixup as only hthe body has changed
 		core::transform::utils::migrateAnnotations(lambdaExpr, newLambdaExpr);
 		return newLambdaExpr;
@@ -559,7 +560,7 @@ namespace transform {
 		auto processor = makePreProcessorSequence(
 			getBasicPreProcessorSequence(),
 			makePreProcessor<FlattenVariableIndirectionStep>(boost::ref(manager), boost::ref(context)),
-			makePreProcessor<InlineAssignmentsStep>(boost::ref(manager), boost::ref(context)),
+			makePreProcessor<SimplifierStep>(boost::ref(manager), boost::ref(context)),
 			makePreProcessor<CallIntroducerStep>(boost::ref(manager), boost::ref(context)),
 			makePreProcessor<KernelTypeStep>(boost::ref(manager), boost::ref(context)),
 			makePreProcessor<IntegrityCheckStep>(boost::ref(manager), boost::ref(context)));

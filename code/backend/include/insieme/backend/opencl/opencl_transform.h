@@ -121,9 +121,9 @@ namespace transform {
 	};
 
 	/**
-	 * tries to inline c/cpp_style_assignments produced by the frontend
+	 * tries to simplify the given code
 	 */
-	class InlineAssignmentsStep : public Step {
+	class SimplifierStep : public Step {
 	public:
 		using Step::Step;
 		core::NodePtr process(const Converter& converter, const core::NodePtr& code) override;
