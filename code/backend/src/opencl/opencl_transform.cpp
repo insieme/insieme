@@ -257,6 +257,7 @@ namespace transform {
 
 		const auto& graph = sc.getCallGraph();
 		assert_true(graph.getNumVertices() > 0) << "execution graph must consist of at least one vertex";
+		assert_true(utils::graph::detectCycle(graph.asBoostGraph()).empty()) << "execution graph must be acyclic";
 		// right now: simple implementation which sequentially executes all calls
 		for (auto it = graph.vertexBegin(); it != graph.vertexEnd(); ++it) {
 			auto callExpr = buildExecuteKernel(manager, id, sc, **it);
@@ -426,6 +427,7 @@ namespace transform {
 		core::LambdaExprPtr lambdaExpr = node.isa<LambdaExprPtr>();
 		if (!lambdaExpr) return node;
 
+		core::IRBuilder builder(manager);
 		/*
          * note:
 		 * you are not allowed to modify order or type of the original arguments!
@@ -433,8 +435,6 @@ namespace transform {
 		 */
 
 		auto callContext = std::make_shared<CallContext>();
-		// introduce a single default clEnqueueTask call
-		callContext->setNDRange(makeDefaultNDRange(manager));
 		context.getCallGraph().addVertex(callContext);
 		// this kernel requires double precision
 		context.getExtensions().insert(StepContext::KhrExtension::Fp64);
@@ -442,31 +442,58 @@ namespace transform {
 		context.setKernelName("__insieme_fun_0");
 
 		// @FEKO: this is a test impl
+		core::NodeMap replacements;
 		core::visitDepthFirstOncePrunable(lambdaExpr->getBody(), [&](const core::ForStmtPtr& forStmt) {
 			if (!analysis::isIndependentStmt(forStmt)) {
 				LOG(WARNING) << "optimistic independet assumption of: " << dumpColor(forStmt);
-
-				/*
-				for( int<4> v87 = 0 .. IMP_getLoopRange() : 1) {
-					ptr_subscript(*v308, v87) = IMP_add(*ptr_subscript(*v306, v87), *ptr_subscript(*v307, v87));
-				}
-
-				-->
-
-				int<4> v00 = cast_to_int(opencl_get_global_id()) % 1;
-				if (v00 < IMP_getLoopRange())
-					ptr_subscript(*v308, v00) = IMP_add(*ptr_subscript(*v306, v00), *ptr_subscript(*v307, v00));
-				*/
 			}
+
+			core::StatementList stmts;
+			/*
+			for( int<4> v87 = 0 .. 1000 : 1) {
+				ptr_subscript(*v308, v87) = IMP_add(*ptr_subscript(*v306, v87), *ptr_subscript(*v307, v87));
+			}
+
+			-->
+
+			int<4> v00 = num_cast(opencl_get_global_id(), type_lit(int<4>));
+			if (v00 < 1000 && (v00 - start) % step == 0)
+				ptr_subscript(*v308, v00) = IMP_add(*ptr_subscript(*v306, v00), *ptr_subscript(*v307, v00));
+			*/
+			auto decl = forStmt->getDeclaration();
+			stmts.push_back(DeclarationStmt::get(manager, decl->getVariable(), builder.numericCast(buildGetGlobalId(manager, builder.uintLit(0)), decl->getVariable()->getType())));
+			stmts.push_back(builder.ifStmt(
+				builder.logicAnd(
+					builder.lt(decl->getVariable(), forStmt->getEnd()),
+					builder.eq(
+						builder.mod(
+							builder.sub(decl->getVariable(), decl->getInitialization()),
+							forStmt->getStep()),
+						builder.numericCast(builder.uintLit(0), forStmt->getStep()->getType()))),
+				forStmt->getBody()));
+			// register the replacement for later on
+			replacements[forStmt] = builder.compoundStmt(stmts);
+			// ... as well as a modified ndrange
+			auto ndrange = std::make_shared<NDRange>();
+			ndrange->setWorkDim(builder.uintLit(1));
+			ndrange->addGlobalWorkSize(builder.numericCast(forStmt->getEnd(), manager.getLangBasic().getUInt4()));
+			// inform the runtime to handle the split
+			ndrange->addLocalWorkSize(builder.uintLit(0));
+			callContext->setNDRange(ndrange);
 			return true;
 		});
-/*
-		core::ExpressionList optionals;
-		core::IRBuilder builder(manager);
-		optionals.push_back(builder.callExpr(manager.getLangBasic().getUInt4(), wrapLazy(manager, builder.uintLit(0))));
-		callContext->setOptionals(optionals);
-*/
-		return node;
+
+		// introduce a single default clEnqueueTask call if we replace nothing
+		if (replacements.empty()) {
+			callContext->setNDRange(makeDefaultNDRange(manager));
+			return node;
+		}
+
+		core::LambdaExprPtr newLambdaExpr= builder.lambdaExpr(manager.getLangBasic().getUnit(),
+			lambdaExpr->getParameterList(), core::transform::replaceAllGen(manager, lambdaExpr->getBody(), replacements));
+		// migrate the annotations -- but no need to fixup as only hthe body has changed
+		core::transform::utils::migrateAnnotations(lambdaExpr, newLambdaExpr);
+		return newLambdaExpr;
 	}
 
 	core::NodePtr KernelTypeStep::process(const Converter& converter, const core::NodePtr& code) {

@@ -253,14 +253,15 @@ void _irt_opencl_execute(unsigned id, irt_opencl_ndrange_func ndrange,
 			data = *((char **) data);
 		}
 		
+		IRT_DEBUG("clEnqueueWriteBuffer for requirement %d at %p\n", arg, data);
 		/* @TODO: only transfere the ranges not the whole data blob! https://www.khronos.org/registry/cl/sdk/1.1/docs/man/xhtml/clEnqueueWriteBufferRect.html */
-		result = clEnqueueWriteBuffer(device->queue, buffer[arg], CL_FALSE, 0, num_of_elements * size_of_element, data, 0, 0, 0);
+		result = clEnqueueWriteBuffer(device->queue, buffer[arg], CL_FALSE, 0, num_of_elements * size_of_element, data, 0, NULL, NULL);
 		if (result != CL_SUCCESS) {
 			/* @TODO: proper error handling !!!! */
 			IRT_ASSERT(result == CL_SUCCESS, IRT_ERR_OCL, "clEnqueueWriteBuffer returned with %d", result);
 			return;
 		}
-		
+
 		/* and hand it over to the kernel itself */
 		clSetKernelArg(impl_data->kernel, arg, sizeof(cl_mem), &buffer[arg]);
 		
@@ -306,9 +307,24 @@ void _irt_opencl_execute(unsigned id, irt_opencl_ndrange_func ndrange,
 	
     /* ... */
     clFinish(device->queue);
+	size_t *global_work_size = nd.global_work_size;
+	IRT_ASSERT(*global_work_size != 0, IRT_ERR_OCL, "global_work_size must be > 0");
+	#ifdef IRT_VERBOSE
+	for (unsigned i = 0; i < nd.work_dim; ++i)
+		IRT_DEBUG("global_work_size[%d] = %d\n", i, (unsigned) global_work_size[i]);
+	#endif // IRT_VERBOSE
+
+	size_t *local_work_size = nd.local_work_size;
+	/* special case if local size is 0, the implementation shall decide on how to split */
+	if (*local_work_size == 0) local_work_size = NULL;
+	#ifdef IRT_VERBOSE
+	for (unsigned i = 0; i < nd.work_dim && local_work_size; ++i)
+		IRT_DEBUG("local_work_size[%d] = %d\n", i, (unsigned) local_work_size[i]);
+	#endif // IRT_VERBOSE
+
     /* at this point we can finally execute the given kernel */
-    result = clEnqueueNDRangeKernel(device->queue, impl_data->kernel, nd.work_dim, nd.global_work_size,
-                                    nd.local_work_size, 0, 0, 0, NULL);
+    result = clEnqueueNDRangeKernel(device->queue, impl_data->kernel, nd.work_dim, NULL,
+		global_work_size, local_work_size, 0, NULL, NULL);
     /* check for error and see if it is correctable */
     switch (result) {
     case CL_SUCCESS:
@@ -335,8 +351,14 @@ void _irt_opencl_execute(unsigned id, irt_opencl_ndrange_func ndrange,
 	for (unsigned i = 0; i < num_requirements; ++i) {
 		if (reverse_offload[i].data == NULL)
 			continue;
-			
-		clEnqueueReadBuffer(device->queue, buffer[i], CL_FALSE, 0, reverse_offload[i].size, reverse_offload[i].data, 0, NULL, NULL);
+
+		IRT_DEBUG("clEnqueueReadBuffer for requirement %d at %p\n", i, reverse_offload[i].data);
+		result = clEnqueueReadBuffer(device->queue, buffer[i], CL_FALSE, 0, reverse_offload[i].size, reverse_offload[i].data, 0, NULL, NULL);
+		if (result != CL_SUCCESS) {
+			/* @TODO: proper error handling !!!! */
+			IRT_ASSERT(result == CL_SUCCESS, IRT_ERR_OCL, "clEnqueueReadBuffer returned with %d", result);
+			return;
+		}
 	}
 	clFinish(device->queue);
 	
