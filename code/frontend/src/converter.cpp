@@ -86,6 +86,7 @@
 #include "insieme/core/types/subtyping.h"
 
 #include "insieme/annotations/c/include.h"
+#include "insieme/annotations/c/tag.h"
 
 using namespace clang;
 using namespace insieme;
@@ -266,11 +267,9 @@ namespace conversion {
 				// attach name for backend
 				if(auto tagDecl = llvm::dyn_cast<clang::TagDecl>(decl)) {
 					string name = insieme::utils::demangle(utils::getNameForTagDecl(*this, tagDecl, true).first);
-					if(!getCompiler().isCXX()) {
-						if(tagDecl->isStruct()) name = "struct " + name;
-						else if(tagDecl->isUnion()) name = "union " + name;
-						else if(tagDecl->isEnum()) name = "enum " + name;
-					}
+					if(tagDecl->isStruct()) insieme::annotations::c::attachCTag(node, "struct");
+					else if(tagDecl->isUnion()) insieme::annotations::c::attachCTag(node, "union");
+					else if(tagDecl->isEnum()) insieme::annotations::c::attachCTag(node, "enum");
 					core::annotations::attachName(node, name);
 				}
 				else if(auto funDecl = llvm::dyn_cast<clang::FunctionDecl>(decl)) {

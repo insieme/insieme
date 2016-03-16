@@ -63,6 +63,7 @@
 
 #include "insieme/annotations/c/include.h"
 #include "insieme/annotations/c/decl_only.h"
+#include "insieme/annotations/c/tag.h"
 
 #include "insieme/utils/logging.h"
 #include "insieme/utils/name_mangling.h"
@@ -190,10 +191,11 @@ namespace backend {
 		};
 	}
 
-	TypeManager::TypeManager(const Converter& converter) : store(new detail::TypeInfoStore(converter, getBasicTypeIncludeTable(), TypeHandlerList())) {}
+	TypeManager::TypeManager(const Converter& converter)
+	    : converter(converter), store(new detail::TypeInfoStore(converter, getBasicTypeIncludeTable(), TypeHandlerList())) {}
 
 	TypeManager::TypeManager(const Converter& converter, const TypeIncludeTable& includeTable, const TypeHandlerList& handlers)
-	    : store(new detail::TypeInfoStore(converter, includeTable, handlers)) {}
+	    : converter(converter), store(new detail::TypeInfoStore(converter, includeTable, handlers)) {}
 
 	TypeManager::~TypeManager() {
 		delete store;
@@ -243,6 +245,19 @@ namespace backend {
 		return store->getDefinitionOf(type);
 	}
 
+	const c_ast::TypePtr TypeManager::getTemplateArgumentType(const core::TypePtr& type) {
+		// correctly handle intercepted template template arguments (do not resolve, only use name)
+		auto genType = type.isa<core::GenericTypePtr>();
+		if(genType && core::analysis::isGeneric(genType) && annotations::c::hasIncludeAttached(genType)) {
+			std::string templateParamName = insieme::utils::demangle(genType->getName()->getValue());
+			if(core::annotations::hasAttachedName(genType)) {
+				templateParamName = core::annotations::getAttachedName(genType);
+			}
+			return converter.getCNodeManager()->create<c_ast::NamedType>(converter.getCNodeManager()->create<c_ast::Identifier>(templateParamName));
+		} else {
+			return getTypeInfo(type).rValueType;
+		}
+	}
 
 	TypeIncludeTable& TypeManager::getTypeIncludeTable() {
 		return store->getTypeIncludeTable();
@@ -499,16 +514,20 @@ namespace backend {
 				}
 			}
 
-			// if this is an intercepted type which also has template arguments
+			// handle intercepted types
 			if(annotations::c::hasIncludeAttached(ptr)) {
 				std::string name = insieme::utils::demangle(ptr->getName()->getValue());
 				if(core::annotations::hasAttachedName(ptr)) {
 					name = core::annotations::getAttachedName(ptr);
+					if(annotations::c::hasAttachedCTag(ptr)) {
+						name = annotations::c::getAttachedCTag(ptr) + " " + name;
+					}
 				}
 				c_ast::NamedTypePtr namedType = manager.create<c_ast::NamedType>(manager.create<c_ast::Identifier>(name));
 				c_ast::CodeFragmentPtr definition = c_ast::IncludeFragment::createNew(converter.getFragmentManager(), annotations::c::getAttachedInclude(ptr));
+				// also handle optional template arguments
 				for(auto typeArg : ptr->getTypeParameterList()) {
-					namedType->parameters.push_back(resolveType(typeArg)->rValueType);
+					namedType->parameters.push_back(converter.getTypeManager().getTemplateArgumentType(typeArg));
 				}
 				return type_info_utils::createInfo(namedType, definition);
 			}
@@ -524,7 +543,7 @@ namespace backend {
 			// The resolution of a named composite type is based on 3 steps
 			//		- first, get a name for the resulting C struct / union
 			//		- create a code fragment including a declaration of the struct / union (no definition)
-			//		- create a code fragment including a defintion of the sturct / union
+			//		- create a code fragment including a definition of the struct / union
 			//		- the representation of the struct / union is the same internally and externally
 
 			bool isStruct = ptr.isa<core::StructPtr>();

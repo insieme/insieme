@@ -731,12 +731,12 @@ namespace backend {
 			// ------------------------ resolve function ---------------------
 
 			std::string name = insieme::utils::demangle(literal->getStringValue());
-			if (core::annotations::hasAttachedName(literal)) name = core::annotations::getAttachedName(literal);
+			if(core::annotations::hasAttachedName(literal)) name = core::annotations::getAttachedName(literal);
 			FunctionCodeInfo fun = resolveFunction(manager->create(name), funType, core::LambdaPtr(), true);
 
 			// add instantiation types if they are there
-			for (auto instantiationType : funType->getInstantiationTypes()) {
-				res->instantiationTypes.push_back(typeManager.getTypeInfo(instantiationType).rValueType);
+			for(auto instantiationType : funType->getInstantiationTypes()) {
+				res->instantiationTypes.push_back(typeManager.getTemplateArgumentType(instantiationType));
 			}
 
 			res->function = fun.function;

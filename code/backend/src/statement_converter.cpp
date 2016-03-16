@@ -197,7 +197,7 @@ namespace backend {
 		// convert literal
 		auto toLiteral = [&](const string& value) { return converter.getCNodeManager()->create<c_ast::Literal>(value); };
 		std::string name = ptr->getStringValue();
-		if (core::annotations::hasAttachedName(ptr)) name = core::annotations::getAttachedName(ptr);
+		if(core::annotations::hasAttachedName(ptr)) name = core::annotations::getAttachedName(ptr);
 		c_ast::ExpressionPtr res = toLiteral(name);
 
 		// handle primitive types

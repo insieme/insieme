@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -81,6 +81,7 @@ namespace backend {
 
 	class TypeManager : private boost::noncopyable {
 		detail::TypeInfoStore* store;
+		const Converter& converter;
 
 	  public:
 		TypeManager(const Converter& converter);
@@ -107,6 +108,9 @@ namespace backend {
 
 		// this one is only working for already resolved types
 		const c_ast::CodeFragmentPtr getDefinitionOf(const c_ast::TypePtr& type);
+
+		// get type for use in template argument list
+		const c_ast::TypePtr getTemplateArgumentType(const core::TypePtr& type);
 
 		// ----------------------- Management -----------------------
 

@@ -120,9 +120,11 @@ namespace extensions {
 			case clang::TemplateArgument::Type: return converter.convertType(arg.getAsType());
 			case clang::TemplateArgument::Integral: return converter.getIRBuilder().numericType(arg.getAsIntegral().getSExtValue());
 			case clang::TemplateArgument::Template: {
-				auto tempDecl = arg.getAsTemplate().getAsTemplateDecl()->getTemplatedDecl();
-				auto genType = converter.getIRBuilder().genericType(insieme::utils::mangle(tempDecl->getQualifiedNameAsString()));
-				converter.applyHeaderTagging(genType, tempDecl);
+				auto tempDecl = arg.getAsTemplate().getAsTemplateDecl();
+				core::TypeList paramTypes;
+				convertTemplateParameters(tempDecl->getTemplateParameters(), converter.getIRBuilder(), paramTypes);
+				auto genType = converter.getIRBuilder().genericType(insieme::utils::mangle(tempDecl->getQualifiedNameAsString()), paramTypes);
+				converter.applyHeaderTagging(genType, tempDecl->getTemplatedDecl());
 				return genType;
 			}
 			case clang::TemplateArgument::Pack: assert_not_implemented() << "Template parameter packs are handled in convertTemplateArguments\n";

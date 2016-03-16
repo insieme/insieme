@@ -155,7 +155,7 @@ namespace frontend {
 		checkForTypeName(code, "IMP_TemplateClass<int<4>>", "TemplateClass", "template_interception.h");
 		checkForTypeName(code, "IMP_TemplateClass<real<8>>", "TemplateClass", "template_interception.h");
 		checkForTypeName(code, "IMP_TemplateClass<bool>", "TemplateClass", "template_interception.h");
-		checkForTypeName(code, "IMP_TemplateClass", "TemplateClass", "template_interception.h"); // generic type as template template param
+		checkForTypeName(code, "IMP_TemplateClass<'T_0_0>", "TemplateClass", "template_interception.h"); // generic type as template template param
 
 		// check name of function/method literals
 		checkForFunctionName(code, "IMP_templateFunRet", "templateFunRet", "template_interception.h");

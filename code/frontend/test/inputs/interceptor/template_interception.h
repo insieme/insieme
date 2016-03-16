@@ -118,6 +118,11 @@ template<int I>
 class IntTemplateClass {
 };
 
+template<template <class> class TT, class X>
+class TemplateTemplateClass {
+	TT<X> x;
+};
+
 // function pointers ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 template<typename T, typename S>
