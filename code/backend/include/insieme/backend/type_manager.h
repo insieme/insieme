@@ -80,8 +80,8 @@ namespace backend {
 	}
 
 	class TypeManager : private boost::noncopyable {
-		detail::TypeInfoStore* store;
 		const Converter& converter;
+		detail::TypeInfoStore* store;
 
 	  public:
 		TypeManager(const Converter& converter);
