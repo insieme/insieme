@@ -408,15 +408,28 @@ int main(int argc, char** argv) {
 
 					std::cout << "#" << std::string(screenWidth - 2, '-') << "#\n";
 					int failedStringLength = to_string(failed.size()).length();
+					if(options.blacklistedOnly) {
+						failedStringLength = to_string(ok.size()).length();
+					}
 
 					if(success) {
 						std::cout << "#    SUCCESS -- " << boost::format("%-" + to_string(screenWidth - 36 - failedStringLength) + "s") % cur.getName();
-						if(failed.size() > 0) { std::cout << colorize.red(); }
-						std::cout << " (failed so far: " << failed.size() << ")";
-						std::cout << colorize.green() << " #\n";
+						if(!options.blacklistedOnly) {
+							if(failed.size() > 0) { std::cout << colorize.red(); }
+							std::cout << " (failed so far: " << failed.size() << ")";
+							std::cout << colorize.green() << " #\n";
+						} else {
+							std::cout << "     (ok so far: " << ok.size() << ") #\n";
+						}
 					} else {
-						std::cout << "#    FAILED  -- " << boost::format("%-" + to_string(screenWidth - 36 - failedStringLength) + "s") % cur.getName()
-						          << " (failed so far: " << failed.size() << ") #\n";
+						std::cout << "#    FAILED  -- " << boost::format("%-" + to_string(screenWidth - 36 - failedStringLength) + "s") % cur.getName();
+						if(!options.blacklistedOnly) {
+							std::cout << " (failed so far: " << failed.size() << ") #\n";
+						} else {
+							if(ok.size() > 0) { std::cout << colorize.green(); }
+							std::cout << "     (ok so far: " << ok.size() << ")";
+							std::cout << colorize.red() << " #\n";
+						}
 					}
 					std::cout << "#" << std::string(screenWidth - 2, '-') << "#\n";
 
