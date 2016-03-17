@@ -63,6 +63,7 @@
 #include "insieme/backend/addons/pointer_type.h"
 #include "insieme/backend/addons/cpp_casts.h"
 #include "insieme/backend/addons/complex_type.h"
+#include "insieme/backend/addons/compound_operators.h"
 #include "insieme/backend/addons/enum_type.h"
 #include "insieme/backend/addons/io.h"
 #include "insieme/backend/addons/longlong_type.h"
@@ -91,6 +92,7 @@ namespace runtime {
 		res->addAddOn<addons::PointerType>();
 		res->addAddOn<addons::CppCastsAddon>();
 		res->addAddOn<addons::ComplexType>();
+		res->addAddOn<addons::CompoundOps>();
 		res->addAddOn<addons::EnumType>();
 		res->addAddOn<addons::InputOutput>();
 		res->addAddOn<addons::LongLongType>();

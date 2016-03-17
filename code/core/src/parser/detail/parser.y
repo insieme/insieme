@@ -77,6 +77,7 @@
 	SLASH        "/"
 	PERCENT      "%"
 	HASH         "#"
+	LSHIFT       "<<"
 
 	LPAREN       "("
 	RPAREN       ")"
@@ -717,6 +718,8 @@ binary_op : expression "="  expression                                    { $$ =
           | expression ">=" expression                                    { $$ = driver.genBinaryExpression(@$, ">=", $1, $3); }
           | expression ">"  expression                                    { $$ = driver.genBinaryExpression(@$, ">",  $1, $3); }
           | expression "["  expression "]"                                { $$ = driver.genBinaryExpression(@$, "[",  $1, $3); }
+          | expression "<<" expression                                    { $$ = driver.genBinaryExpression(@$, "<<", $1, $3); }
+          | expression ">" ">" expression                                 { $$ = driver.genBinaryExpression(@$, ">>", $1, $4); }
           ;
 
 ternary_op : expression "?" expression ":" expression                     { $$ = driver.builder.ite(driver.getScalar($1), driver.builder.wrapLazy(driver.getScalar($3)), driver.builder.wrapLazy(driver.getScalar($5))); }
@@ -873,6 +876,7 @@ let_statement : "let" "identifier" "=" expression ";"                     {  dri
 %left     "&";
 %left     "==" "!=";
 %left     "<" "<=" ">" ">=";
+%left     "<<";
 %left     "+" "-";
 %left     "*" "/" "%";
 %right    UDEREF UNOT UMINUS CAST;

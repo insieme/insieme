@@ -91,6 +91,7 @@ blank         [ \t]
 "/"           return InspireParser::make_SLASH(loc);
 "%"           return InspireParser::make_PERCENT(loc);
 "#"           return InspireParser::make_HASH(loc);
+"<<"          return InspireParser::make_LSHIFT(loc);
 
 "("           return InspireParser::make_LPAREN(loc);
 ")"           return InspireParser::make_RPAREN(loc);

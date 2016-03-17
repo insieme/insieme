@@ -67,6 +67,7 @@
 #include "insieme/core/encoder/lists.h"
 #include "insieme/core/lang/array.h"
 #include "insieme/core/lang/basic.h"
+#include "insieme/core/lang/compound_operators.h"
 #include "insieme/core/lang/enum.h"
 #include "insieme/core/lang/pointer.h"
 #include "insieme/core/transform/manipulation.h"
@@ -579,19 +580,29 @@ namespace conversion {
 
 		core::ExpressionPtr lhs = converter.convertExpr(compOp->getLHS());
 		core::ExpressionPtr rhs = converter.convertExpr(compOp->getRHS());
-		core::TypePtr exprTy = converter.convertType(compOp->getType());
+
+		core::ExpressionPtr compAssignFunc;
+		auto& compOpExt = converter.getNodeManager().getLangExtension<core::lang::CompoundOpsExtension>();
 
 		assert_true(core::lang::isReference(lhs->getType())) << "left side must be assignable";
 
-		// Normally, in C, char types are implicitly casted to int by clang - this is not the case 
-		// for the LHS of compound assignments, because there are no lvalue casts in C. Hence, we need to cast ourselves.
-		if(compOp->getType()->isCharType()) {
-			retIr = createBinaryExpression(rhs->getType(), builder.numericCast(builder.deref(lhs), rhs->getType()), rhs, compOp);
-			retIr = utils::buildCStyleAssignment(lhs, builder.numericCast(retIr, exprTy));
-		} else {
-			retIr = createBinaryExpression(exprTy, builder.deref(lhs), rhs, compOp);
-			retIr = utils::buildCStyleAssignment(lhs, retIr);
+		// Get a function pointer to the appropriate compound operator
+		switch(compOp->getOpcode()) {
+		case clang::BO_AddAssign: compAssignFunc = compOpExt.getCompAssignAdd();        break;
+		case clang::BO_SubAssign: compAssignFunc = compOpExt.getCompAssignSubtract();   break;
+		case clang::BO_MulAssign: compAssignFunc = compOpExt.getCompAssignMultiply();   break;
+		case clang::BO_DivAssign: compAssignFunc = compOpExt.getCompAssignDivide();     break;
+		case clang::BO_RemAssign: compAssignFunc = compOpExt.getCompAssignModulo();     break;
+		case clang::BO_AndAssign: compAssignFunc = compOpExt.getCompAssignBitwiseAnd(); break;
+		case clang::BO_OrAssign : compAssignFunc = compOpExt.getCompAssignBitwiseOr();  break;
+		case clang::BO_XorAssign: compAssignFunc = compOpExt.getCompAssignBitwiseXor(); break;
+		case clang::BO_ShlAssign: compAssignFunc = compOpExt.getCompAssignLeftShift();  break;
+		case clang::BO_ShrAssign: compAssignFunc = compOpExt.getCompAssignRightShift(); break;
+		default: assert_fail() << "Found unkonwn compound operator (Opcode: " << compOp->getOpcode() << ")";
 		}
+
+		// Special case where LHS is a char is handled in compound operators extension.
+		retIr = builder.deref(builder.callExpr(compAssignFunc, lhs, rhs));
 
 		return retIr;
 	}
