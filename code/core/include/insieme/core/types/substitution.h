@@ -70,21 +70,44 @@ namespace types {
 		/**
 		 * The definition of the data structure used to maintain type variable mappings.
 		 */
-		using VariableMapping = utils::map::PointerMap<TypeVariablePtr, TypePtr>;
+		using TypeVariableMapping = utils::map::PointerMap<TypeVariablePtr, TypePtr>;
 		
 		/**
 		 * The definition of the data structure used to maintain variadic type variable to type variable mappings.
 		 */
-		using VariadicTypeVariableMapping = utils::map::PointerMap<VariadicTypeVariablePtr, TypeVariableList>;
+		using VariadicTypeVariableMapping = utils::map::PointerMap<StringValuePtr, TypeVariableList>;
+
+		/**
+		* The definition of the data structure used to maintain generic type variable mappings.
+		*/
+		using GenericTypeVariableMapping = utils::map::PointerMap<GenericTypeVariablePtr, TypePtr>;
+
+		/**
+		* The definition of the data structure used to maintain variadic generic type variable to generic type variable mappings.
+		*/
+		using VariadicGenericTypeVariableMapping = utils::map::PointerMap<StringValuePtr, GenericTypeVariableList>;
 
 	  private:
 
 		/**
 		 * The mapping this substitution is representing.
 		 */
-		VariableMapping mapping;
+		TypeVariableMapping typeVarMapping;
 
-		VariadicTypeVariableMapping variadicVarMapping;
+		/**
+		 * The values associated to variadic variable mappings.
+		 */
+		VariadicTypeVariableMapping variadicTypeVarMapping;
+
+		/**
+		 * The mapping this substitution is representing.
+		 */
+		GenericTypeVariableMapping genericTypeVarMapping;
+
+		/**
+		 * The values associated to variadic generic variable mappings.
+		 */
+		VariadicGenericTypeVariableMapping variadicGenericTypeVarMapping;
 
 	  public:
 
@@ -102,10 +125,18 @@ namespace types {
 		Substitution(const TypeVariablePtr& var, const TypePtr& type);
 
 		/**
+		* Creates a single-element mapping.
+		*
+		* @param var the generic type variable to be substituted
+		* @param type the generic type the variable should be substituted with
+		*/
+		Substitution(const GenericTypeVariablePtr& var, const TypePtr& type);
+
+		/**
 		 * Checks whether this substitution is actually mapping any variables to some type.
 		 */
 		bool empty() const {
-			return mapping.empty();
+			return typeVarMapping.empty() && genericTypeVarMapping.empty();
 		}
 
 		/**
@@ -165,11 +196,27 @@ namespace types {
 		}
 
 		/**
+		 * An overload for type variables for which the preservation of the node type
+		 * can not be guaranteed.
+		 */
+		TypePtr operator()(const TypeVariablePtr& var) const {
+			return applyTo(var);
+		}
+
+		/**
+		 * An overload for type variables for which the preservation of the node type
+		 * can not be guaranteed.
+		 */
+		TypePtr operator()(const GenericTypeVariablePtr& var) const {
+			return applyTo(var);
+		}
+
+		/**
 		 * Obtains the (optional) type bound to the given type variable. 
 		 */
 		TypePtr operator[](const TypeVariablePtr& var) const {
-			auto pos = mapping.find(var);
-			return (pos == mapping.end()) ? TypePtr() : pos->second;
+			auto pos = typeVarMapping.find(var);
+			return (pos == typeVarMapping.end()) ? TypePtr() : pos->second;
 		}
 
 		/**
@@ -180,17 +227,23 @@ namespace types {
 		 * @return a list of type variables the variadic type has been expanded to or null, if not expanded.
 		 */
 		const TypeVariableList* operator[](const VariadicTypeVariablePtr& var) const {
-			auto pos = variadicVarMapping.find(var);
-			return (pos == variadicVarMapping.end()) ? nullptr : &pos->second;
+			auto pos = variadicTypeVarMapping.find(var->getVarName());
+			return (pos == variadicTypeVarMapping.end()) ? nullptr : &pos->second;
 		}
 
 		/**
-		 * An overload for type variables for which the preservation of the node type
-		 * can not be guaranteed.
-		 */
-		TypePtr operator()(const TypeVariablePtr& var) const {
-			return applyTo(var);
-		}
+		* Obtains the (optional) type bound to the given generic type variable.
+		*/
+		TypePtr operator[](const GenericTypeVariablePtr& var) const;
+
+		/**
+		* Obtains the (optional) list of generic type variables the given variadic generic type variable
+		* has been expanded into.
+		*
+		* @param var the variadic generic type variable to be resolved
+		* @return a list of type variables the variadic type has been expanded to or null, if not expanded.
+		*/
+		const GenericTypeVariableList* operator[](const VariadicGenericTypeVariablePtr& var) const;
 
 		/**
 		 * Extends this substitution by the given mapping. If the same variable
@@ -211,18 +264,46 @@ namespace types {
 		void addMapping(const VariadicTypeVariablePtr& var, const TypeVariableList& variables);
 
 		/**
-		 * Checks whether this substitution contains a mapping for the given variable.
+		 * Extends this substitution by the given mapping. If the same variable
+		 * is already mapped to some type, the current mapping will be replaced.
 		 *
-		 * @param var the variable to be checked
-		 * @return true if so, false otherwise
+		 * @param the variable which should be substituted.
+		 * @param the type the variable should be substituted for.
 		 */
-		bool containsMappingFor(const TypeVariablePtr& var) const;
+		void addMapping(const GenericTypeVariablePtr& var, const TypePtr& type);
+
+		/**
+		 * Extends this substitution by the given mapping. If the same variable
+		 * is already mapped to some type, the current mapping will be replaced.
+		 *
+		 * @param the variadic variable which should be substituted.
+		 * @param the type variables the variadic variable should be substituted for.
+		 */
+		void addMapping(const VariadicGenericTypeVariablePtr& var, const GenericTypeVariableList& variables);
 
 		/**
 		 * Removes the mapping stored for the given variable from this substitution.
 		 * @param var the variable to be removed
 		 */
 		void remMappingOf(const TypeVariablePtr& var);
+
+		/**
+		* Removes the mapping stored for the given variable from this substitution.
+		* @param var the variable to be removed
+		*/
+		void remMappingOf(const VariadicTypeVariablePtr& var);
+
+		/**
+		* Removes the mapping stored for the given variable from this substitution.
+		* @param var the variable to be removed
+		*/
+		void remMappingOf(const GenericTypeVariablePtr& var);
+
+		/**
+		* Removes the mapping stored for the given variable from this substitution.
+		* @param var the variable to be removed
+		*/
+		void remMappingOf(const VariadicGenericTypeVariablePtr& var);
 
 		/**
 		* Removes all mappings associated to variables within the given variable set.
@@ -232,21 +313,41 @@ namespace types {
 		void removeMappings(const TypeVariableSet& variables);
 
 		/**
+		* Removes all mappings associated to variables within the given variable set.
+		*
+		* @param variables the list of variables to be removed
+		*/
+		void removeMappings(const VariadicTypeVariableSet& variables);
+
+		/**
+		* Removes all mappings associated to variables within the given variable set.
+		*
+		* @param variables the list of variables to be removed
+		*/
+		void removeMappings(const GenericTypeVariableSet& variables);
+
+		/**
+		* Removes all mappings associated to variables within the given variable set.
+		*
+		* @param variables the list of variables to be removed
+		*/
+		void removeMappings(const VariadicGenericTypeVariableSet& variables);
+
+		/**
 		 * Obtains a constant reference to the type variable mapping constituting this substitution.
 		 * @return a constant reference to the internally maintained type variable mapping
 		 */
-		const VariableMapping& getVariableMapping() const {
-			return mapping;
+		const TypeVariableMapping& getVariableMapping() const {
+			return typeVarMapping;
 		}
 
 		/**
-		 * Creates a copy of this substitution only covering the variables covered by the given variable sets.
-		 *
-		 * @param variables the list of variables to be covered by retained
-		 * @param variadicVars the list of variadic variables to be covered by retained
-		 * @return a copy of this substitution restricted to the given variable sets
-		 */
-		Substitution restrictTo(const TypeVariableSet& variables, const VariadicTypeVariableSet& variadicVars) const;
+		* Obtains a constant reference to the type variable mapping constituting this substitution.
+		* @return a constant reference to the internally maintained type variable mapping
+		*/
+		const GenericTypeVariableMapping& getGenericVariableMapping() const {
+			return genericTypeVarMapping;
+		}
 
         /**
          * Creates a copy of the given substitution where all referenced types are handled by the given manger.

@@ -253,6 +253,10 @@ namespace analysis {
 				return type->getTypeParameter()->getTypes();
 			}
 
+			TypeList visitGenericTypeVariable(const GenericTypeVariablePtr& type) override {
+				return type->getTypeParameter()->getTypes();
+			}
+
 			TypeList visitFunctionType(const FunctionTypePtr& type) override {
 				TypeList res;
 				for(const auto& cur : type->getParameterTypes()) res.push_back(cur);

@@ -475,7 +475,7 @@ access_specifier : "public"                                               { $$ =
 
 // -- function type --
 
-instantiated_function_type : "<" non_empty_types ">" function_type        { $$ = driver.builder.functionType($4->getParameterTypes(), $4->getReturnType(), $4->getKind(), driver.builder.types($2)); }
+instantiated_function_type : "<" types ">" function_type                  { $$ = driver.builder.functionType($4->getParameterTypes(), $4->getReturnType(), $4->getKind(), driver.builder.types($2)); }
                            | function_type                                { $$ = $1; }
 
 function_type : pure_function_type                                        { $$ = $1; }

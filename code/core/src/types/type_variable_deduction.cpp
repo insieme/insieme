@@ -585,7 +585,7 @@ namespace types {
 
 			// reverse variables from previously selected constant replacements (and bring back to correct node manager)
 			Substitution restored;
-			for (auto it = res->getMapping().begin(); it != res->getMapping().end(); ++it) {
+			for (auto it = res->getVariableMapping().begin(); it != res->getVariableMapping().end(); ++it) {
 				TypeVariablePtr var = static_pointer_cast<const TypeVariable>(parameterMapping.applyBackward(manager, it->first));
 				TypePtr substitute = argumentMapping.applyBackward(manager, it->second);
 

@@ -199,6 +199,151 @@ namespace types {
 
 	}
 
+	TEST(Substitution, GenericTypeVariables) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto type = [&](const std::string& code) {
+			return builder.parseType(code);
+		};
+		auto var = [&](const std::string& code) {
+			return type(code).as<GenericTypeVariablePtr>();
+		};
+
+
+		Substitution sub(var("'a<'b>"), type("T<_>"));
+		EXPECT_EQ("{'a<'_>->T}", toString(sub));
+
+		EXPECT_EQ(type("T<A>"), sub(type("'a<A>")));
+		EXPECT_EQ(type("T<X>"), sub(type("'a<X>")));
+		EXPECT_EQ(type("'a<X,Y>"), sub(type("'a<X,Y>")));
+
+
+		sub = Substitution(var("'a<'b,'c,'d<'e,'f>>"), type("T<A,B,C<D,E>>"));
+		EXPECT_EQ("{'a<'_,'_,'_<'_,'_>>->T}", toString(sub));
+
+		EXPECT_EQ(type("T<A,B,C<D,E>>"), sub(type("'a<A,B,C<D,E>>")));
+		EXPECT_EQ(type("T<X,Y,Z<U,V>>"), sub(type("'a<X,Y,Z<U,V>>")));
+
+		EXPECT_EQ(type("'a<X,Y,Z<U>>"), sub(type("'a<X,Y,Z<U>>")));
+		EXPECT_EQ(type("'a<X,Y,Z>"), sub(type("'a<X,Y,Z>")));
+
+
+		// chains
+		sub = Substitution();
+		sub.addMapping(var("'a<'b>"), type("T<'a>"));
+		sub.addMapping(var("'b<'a>"), var("'a<'a>"));
+		EXPECT_EQ("{'b<'_>->'a,'a<'_>->T}", toString(sub));
+
+		EXPECT_EQ(type("T<A>"), sub(type("'a<A>")));
+		EXPECT_EQ(type("T<A>"), sub(type("'b<A>")));
+		EXPECT_EQ(type("T<C>"), sub(type("'b<C>")));
+		EXPECT_EQ(type("'c<A>"), sub(type("'c<A>")));
+	}
+
+	TEST(Substitution, VariadicGenericTypeVariables) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto type = [&](const std::string& code) {
+			return builder.parseType(code);
+		};
+		auto var = [&](const std::string& code) {
+			return type(code).as<GenericTypeVariablePtr>();
+		};
+		auto vvar = [&](const std::string& code) {
+			return type(code).as<VariadicGenericTypeVariablePtr>();
+		};
+
+		Substitution sub;
+		sub.addMapping(vvar("'a...<'X>"), toVector(var("'a1<'X>"), var("'a2<'X>")));
+		sub.addMapping(var("'a1<'X>"), type("A<'X>"));
+		sub.addMapping(var("'a2<'X>"), type("B<'X>"));
+
+		EXPECT_EQ(type("(A,B)"), sub(type("(A,B)")));
+		EXPECT_EQ(type("(A<R>,B<S>)"), sub(type("('a1<R>,'a2<S>)")));
+		EXPECT_EQ(type("(A<R>,B<R>)"), sub(type("('a...<R>)")));
+
+
+		EXPECT_EQ(type("(A,B)->C"), sub(type("(A,B)->C")));
+		EXPECT_EQ(type("(A<R>,B<S>)->C"), sub(type("('a1<R>,'a2<S>)->C")));
+		EXPECT_EQ(type("(A<R>,B<R>)->C"), sub(type("('a...<R>)->C")));
+
+		EXPECT_EQ(type("<A,B>(A,B)->C"), sub(type("<A,B>(A,B)->C")));
+		EXPECT_EQ(type("<A<R>,B<S>>(A<R>,B<S>)->C"), sub(type("<'a1<R>,'a2<S>>('a1<R>,'a2<S>)->C")));
+		EXPECT_EQ(type("<A<T>,B<T>>(A<R>,B<R>)->C"), sub(type("<'a...<T>>('a...<R>)->C")));
+
+
+		sub.addMapping(vvar("'b...<'_>"), toVector(var("'b1<'_>"), var("'b2<'_>"), var("'b3<'_>")));
+		sub.addMapping(var("'b1<'_>"), type("A<'_>"));
+		sub.addMapping(var("'b2<'_>"), type("B<'_>"));
+		sub.addMapping(var("'b3<'_>"), type("C<'_>"));
+
+		sub.addMapping(vvar("'c...<'_>"), GenericTypeVariableList());
+
+
+		EXPECT_EQ(type("(A<T>,B<T>)"), sub(type("('a...<T>)")));
+		EXPECT_EQ(type("(A<T>,B<T>,C<T>)"), sub(type("('b...<T>)")));
+		EXPECT_EQ(type("()"), sub(type("('c...<T>)")));
+
+		EXPECT_EQ(type("(A<T>,B<T>)->C"), sub(type("('a...<T>)->C")));
+		EXPECT_EQ(type("(A<T>,B<T>,C<T>)->C"), sub(type("('b...<T>)->C")));
+		EXPECT_EQ(type("()->C"), sub(type("('c...<T>)->C")));
+
+		EXPECT_EQ(type("<A<T>,B<T>>(A<S>,B<S>,C<S>)->C"), sub(type("<'a...<T>>('b...<S>)->C")));
+		EXPECT_EQ(type("<A<T>,B<T>,C<T>>(A<S>,B<S>,C<S>)->C"), sub(type("<'b...<T>>('b...<S>)->C")));
+		EXPECT_EQ(type("(A<S>,B<S>,C<S>)->C"), sub(type("<'c...<T>>('b...<S>)->C")));
+
+	}
+
+	TEST(Substitution, Combined) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto type = [&](const std::string& code) {
+			return builder.parseType(code);
+		};
+		auto var = [&](const std::string& code) {
+			return type(code).as<TypeVariablePtr>();
+		};
+		auto vvar = [&](const std::string& code) {
+			return type(code).as<VariadicTypeVariablePtr>();
+		};
+		auto gvar = [&](const std::string& code) {
+			return type(code).as<GenericTypeVariablePtr>();
+		};
+		auto vgvar = [&](const std::string& code) {
+			return type(code).as<VariadicGenericTypeVariablePtr>();
+		};
+
+		Substitution sub;
+		
+		// some variables
+		sub.addMapping(var("'a"),type("A"));
+		sub.addMapping(var("'b"), type("B"));
+
+		// one variadic variable
+		sub.addMapping(var("'x1"), type("X1"));
+		sub.addMapping(var("'x2"), type("X2"));
+		sub.addMapping(vvar("'x..."), toVector( var("'x1"), var("'x2") ));
+
+		sub.addMapping(gvar("'c<'_>"), type("C<'_>"));
+		sub.addMapping(gvar("'d<'_>"), type("D<'_>"));
+
+		sub.addMapping(gvar("'y1<'_>"), type("Y1<'_>"));
+		sub.addMapping(gvar("'y2<'_>"), type("Y2<'_>"));
+		sub.addMapping(gvar("'y3<'_>"), type("Y3<'_>"));
+		sub.addMapping(vgvar("'y...<'_>"), toVector(gvar("'y1<'_>"), gvar("'y2<'_>"), gvar("'y3<'_>")));
+
+
+		EXPECT_EQ(type("A"), sub(type("'a")));
+
+		EXPECT_EQ(type("(Y1<T>,Y2<T>,Y3<T>)"), sub(type("('y...<T>)")));
+		EXPECT_EQ(type("(Y1<C<A>>,Y2<C<A>>,Y3<C<A>>)"), sub(type("('y...<'c<'a>>)")));
+		EXPECT_EQ(type("(Y1<C<X1,X2>>,Y2<C<X1,X2>>,Y3<C<X1,X2>>)"), sub(type("('y...<'c<'x...>>)")));
+	}
+
+
 } // end namespace types
 } // end namespace core
 } // end namespace insieme
