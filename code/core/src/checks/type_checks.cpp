@@ -1563,9 +1563,9 @@ namespace checks {
 		auto instFunList = instantiatedFunType->getInstantiationTypeList();
 		// check that both instantiation parameter lists have the same arity
 		if(instFunList.size() != subFunList.size()) {
-			// except if the instantiated one of them ends on a variadic type variable
-			if(subFunList.empty() || !(subFunList.back().isa<core::VariadicTypeVariablePtr>() || subFunList.back().isa<core::VariadicGenericTypeVariablePtr>())
-			   || instFunList.size() < subFunList.size()) {
+			// except if the instantiated one of them ends on a variadic type variable, and non-variadic number of arguments are instantiated
+			if(subFunList.empty() || !((subFunList.back().isa<core::VariadicTypeVariablePtr>() || subFunList.back().isa<core::VariadicGenericTypeVariablePtr>())
+			   && instFunList.size() >= subFunList.size()-1)) {
 				add(res, Message(callExpr, EC_TYPE_ILLEGAL_FUNCTION_INSTANTIATION, format("Instantiation type list arity mismatch"), Message::ERROR));
 			}
 		}

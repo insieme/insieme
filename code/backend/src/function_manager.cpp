@@ -733,12 +733,6 @@ namespace backend {
 			std::string name = insieme::utils::demangle(literal->getStringValue());
 			if(core::annotations::hasAttachedName(literal)) name = core::annotations::getAttachedName(literal);
 			FunctionCodeInfo fun = resolveFunction(manager->create(name), funType, core::LambdaPtr(), true);
-
-			// add instantiation types if they are there
-			for(auto instantiationType : funType->getInstantiationTypes()) {
-				res->instantiationTypes.push_back(typeManager.getTemplateArgumentType(instantiationType));
-			}
-
 			res->function = fun.function;
 
 			// ------------------------ add prototype -------------------------
@@ -789,6 +783,16 @@ namespace backend {
 			res->lambdaWrapper = wrapper.second;
 			res->lambdaWrapper->addDependencies(fun.prototypeDependencies);
 			res->lambdaWrapper->addDependency(res->prototype);
+
+			// -------------------------- add instantiation types if they are there --------------------------
+
+			for(auto instantiationType : funType->getInstantiationTypes()) {
+				auto typeArg = typeManager.getTemplateArgumentType(instantiationType);
+				res->instantiationTypes.push_back(typeArg);
+				// if argument type is not intercepted, add a dependency on its definition
+				auto tempParamTypeDef = typeManager.getDefinitionOf(typeArg);
+				if(tempParamTypeDef) res->prototype->addDependency(tempParamTypeDef);
+			}
 
 			// done
 			return res;

@@ -527,7 +527,11 @@ namespace backend {
 				c_ast::CodeFragmentPtr definition = c_ast::IncludeFragment::createNew(converter.getFragmentManager(), annotations::c::getAttachedInclude(ptr));
 				// also handle optional template arguments
 				for(auto typeArg : ptr->getTypeParameterList()) {
-					namedType->parameters.push_back(converter.getTypeManager().getTemplateArgumentType(typeArg));
+					auto tempParamType = converter.getTypeManager().getTemplateArgumentType(typeArg);
+					namedType->parameters.push_back(tempParamType);
+					// if argument type is not intercepted, add a dependency on its definition
+					auto tempParamTypeInfo = typeInfos.find(typeArg);
+					if(tempParamTypeInfo != typeInfos.end()) definition->addDependency(tempParamTypeInfo->second->definition);
 				}
 				return type_info_utils::createInfo(namedType, definition);
 			}

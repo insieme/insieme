@@ -41,6 +41,7 @@
 #include <future>
 
 struct Trivial {};
+struct OtherTrivial {}; // should ONLY be used once in the remaining test code
 
 int main() {
 
@@ -126,5 +127,18 @@ int main() {
 	})")
 	{
 		std::vector<bool> b;
+	}
+
+	// check backend definition dependency generation for user code struct
+	#pragma test expect_ir(R"(
+		def struct IMP_OtherTrivial {};
+		{
+			type_instantiation(
+				type_lit(<IMP_OtherTrivial>() -> IMP_std_colon__colon_shared_ptr<IMP_OtherTrivial>),
+				lit("IMP_std_colon__colon_make_shared" : <'T_0_0, 'V_T_0_1...>('V_T_0_1...) -> IMP_shared_ptr<'T_0_0>))();
+		}
+	)")
+	{
+		std::make_shared<OtherTrivial>();
 	}
 }

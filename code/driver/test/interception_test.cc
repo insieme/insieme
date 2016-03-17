@@ -88,7 +88,7 @@ namespace driver {
 		EXPECT_PRED2(containsSubString, codeString, "templateTemplateFun<TemplateClass,");
 	}
 
-	TEST(DriverInterceptionTest, DISABLED_System) {
+	TEST(DriverInterceptionTest, System) {
 		auto codeString = testCompilation("frontend/test/inputs/interceptor/system_interception.cpp");
 	}
 
