@@ -5,7 +5,6 @@ adv_op_overl
 alignof
 anonymous_struct
 assign_expr
-base_of
 big
 boost
 cast
@@ -15,7 +14,6 @@ cast_static
 class
 class_as_return_type_of_member_function_closing_rec_cycle
 class_def_and_decl_splitup
-const_pointer
 counter
 ctor
 ctor_inherit
@@ -25,13 +23,11 @@ curiously_recurring_template_pattern_2
 curiously_recurring_template_pattern_member_function
 dtor
 dtor_return
-enum
 expr_with_cleanups
 friend
 globals_in_classes
 header
 identical_class_structure
-includes
 inherit
 inherit_chained
 inherit_multiple
@@ -47,16 +43,13 @@ mem_alloc_ctor_inherit
 member_data_pointer
 member_function_vector
 memb_func_ptr
-metaFib
 multipleTU
 naive
-nameless_struct
 nested_class
 new_string
 omp
 op_overl
 performance
-pod_struct
 pod_struct_bug
 rec_class
 rec_memberfunc

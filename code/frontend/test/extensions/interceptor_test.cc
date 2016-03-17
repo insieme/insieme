@@ -89,7 +89,7 @@ namespace frontend {
 				checked = true;
 			}
 		}, true);
-		EXPECT_TRUE(checked);
+		EXPECT_TRUE(checked) << "checkForTypeName: " << typeNodeIrSpec;
 	}
 
 	void checkForFunctionName(const NodePtr& code, const std::string& functionLiteralName, const std::string& expectedAttachedName, const std::string& expectedHeaderName) {
@@ -103,7 +103,7 @@ namespace frontend {
 				checked = true;
 			}
 		}, true);
-		EXPECT_TRUE(checked);
+		EXPECT_TRUE(checked) << "checkForFunctionName: " << functionLiteralName;
 	}
 
 	TEST(InterceptorTest, TrueInterception) {
@@ -123,7 +123,7 @@ namespace frontend {
 
 		// check the attached name of the intercepted struct for correctness
 		auto code = job.execute(manager);
-		checkForTypeName(code, "IMP_ns_colon__colon_S", "struct ns::S", "interceptor_header.h");
+		checkForTypeName(code, "IMP_ns_colon__colon_S", "ns::S", "interceptor_header.h");
 
 		// check name of function/method literals
 		checkForFunctionName(code, "IMP_ns_colon__colon_simpleFunc", "ns::simpleFunc", "interceptor_header.h");
@@ -155,7 +155,7 @@ namespace frontend {
 		checkForTypeName(code, "IMP_TemplateClass<int<4>>", "TemplateClass", "template_interception.h");
 		checkForTypeName(code, "IMP_TemplateClass<real<8>>", "TemplateClass", "template_interception.h");
 		checkForTypeName(code, "IMP_TemplateClass<bool>", "TemplateClass", "template_interception.h");
-//		checkForTypeName(code, "IMP_TemplateClass_TemplateClass_lt_int_gt_", "TemplateClass<TemplateClass<int> >", "template_interception.h");
+		checkForTypeName(code, "IMP_TemplateClass<'T_0_0>", "TemplateClass", "template_interception.h"); // generic type as template template param
 
 		// check name of function/method literals
 		checkForFunctionName(code, "IMP_templateFunRet", "templateFunRet", "template_interception.h");
@@ -163,10 +163,9 @@ namespace frontend {
 		checkForFunctionName(code, "IMP_templateFun", "templateFun", "template_interception.h");
 		checkForFunctionName(code, "IMP_TemplateWithMethod::IMP_get", "get", "template_interception.h");
 		checkForFunctionName(code, "IMP_ClassWithTemplateMethod::IMP_get", "get", "template_interception.h");
-//		checkForFunctionName(code, "IMP_templateTemplateFun_TemplateClass_int_returns_void", "templateTemplateFun<TemplateClass,int>", "template_interception.h");
-//		checkForFunctionName(code, "IMP_templateTemplateFun_TemplateClass_TemplateClass_lt_int_gt__returns_void", "templateTemplateFun<TemplateClass,TemplateClass<int> >", "template_interception.h");
-//		checkForFunctionName(code, "IMP_variadicTemplateFun_int_returns_int", "variadicTemplateFun<int>", "template_interception.h");
-//		checkForFunctionName(code, "IMP_variadicTemplateFun_int_pack_begin_int_pack_end_returns_int", "variadicTemplateFun<int,int>", "template_interception.h");
+		checkForFunctionName(code, "IMP_templateTemplateFun", "templateTemplateFun", "template_interception.h");
+		checkForFunctionName(code, "IMP_variadicTemplateFun", "variadicTemplateFun", "template_interception.h");
+		checkForFunctionName(code, "IMP_variadicTemplateTemplateFun", "variadicTemplateTemplateFun", "template_interception.h");
 	}
 
 	TEST(InterceptorTest, TrueSystemInterception) {
@@ -184,13 +183,13 @@ namespace frontend {
 		checkForFunction(irTu, "IMP_std_colon__colon__operator_lshift_");
 		checkForFunction(irTu, "IMP_std_colon__colon_basic_ostream::IMP__operator_lshift_");
 
-		//only our own simple type IMP_Trivial should have been translated to a type
-		EXPECT_EQ(1, irTu.getTypes().size());
+		// only our own simple types IMP_Trivial and IMP_OtherTrivial should have been translated to a type
+		EXPECT_EQ(2, irTu.getTypes().size());
 
 		// check the attached name of the intercepted structs for correctness
 		auto code = job.execute(manager);
 		ASSERT_TRUE(code);
-		checkForTypeName(code, "IMP_timeval", "struct timeval", "sys/time.h");
+		checkForTypeName(code, "IMP_timeval", "timeval", "sys/time.h");
 		checkForTypeName(code, "IMP_std_colon__colon_vector<int<4>,IMP_std_colon__colon_allocator<int<4>>>", "std::vector", "vector");
 		checkForTypeName(code, "IMP_std_colon__colon_vector<real<8>,IMP_std_colon__colon_allocator<real<8>>>", "std::vector", "vector");
 		checkForTypeName(code, "def struct IMP_Trivial {}; IMP_std_colon__colon_vector<IMP_Trivial,IMP_std_colon__colon_allocator<IMP_Trivial>>", "std::vector", "vector");

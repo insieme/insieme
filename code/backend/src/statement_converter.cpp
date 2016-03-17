@@ -158,7 +158,9 @@ namespace backend {
 		// handled by the function manager
 		auto cCall = converter.getFunctionManager().getCall(ptr, context);
 		// if materializing, transition to lvalue
-		if(core::analysis::isMaterializingCall(ptr)) return c_ast::ref(cCall.as<c_ast::ExpressionPtr>());
+		if(core::analysis::isMaterializingCall(ptr)) {
+			return c_ast::ref(cCall.as<c_ast::ExpressionPtr>());
+		}
 		return cCall;
 	}
 
@@ -195,7 +197,7 @@ namespace backend {
 		// convert literal
 		auto toLiteral = [&](const string& value) { return converter.getCNodeManager()->create<c_ast::Literal>(value); };
 		std::string name = ptr->getStringValue();
-		if (core::annotations::hasAttachedName(ptr)) name = core::annotations::getAttachedName(ptr);
+		if(core::annotations::hasAttachedName(ptr)) name = core::annotations::getAttachedName(ptr);
 		c_ast::ExpressionPtr res = toLiteral(name);
 
 		// handle primitive types
@@ -440,7 +442,11 @@ namespace backend {
 			auto& refExt = initValue->getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
 
 			// if it is a call to a ref.new => put it on the heap
-			if (refExt.isCallOfRefNew(initValue) || refExt.isCallOfRefNewInit(initValue)) return false;
+			if(refExt.isCallOfRefNew(initValue) || refExt.isCallOfRefNewInit(initValue)) return false;
+			// if it is a constructor call on memory allocated on the heap, put it on the heap
+			if(core::analysis::isConstructorCall(initValue)) {
+				return toBeAllocatedOnStack(core::analysis::getArgument(initValue, 0));
+			}
 
 			// everything else is stack based
 			return true;

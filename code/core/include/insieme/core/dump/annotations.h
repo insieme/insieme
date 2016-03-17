@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -211,6 +211,8 @@ namespace dump {
 		REGISTER_ANNOTATION_CONVERTER(_VALUE_TYPE##AnnotationConverter, core::value_node_annotation<_VALUE_TYPE>::type);                                       \
 		struct _VALUE_TYPE##AnnotationConverter : public insieme::core::dump::AnnotationConverter {                                                            \
 			_VALUE_TYPE##AnnotationConverter() : insieme::core::dump::AnnotationConverter(#_VALUE_TYPE "AnnotationConverter"){};
+
+	#define VALUE_ANNOTATION_CONVERTER_END };
 
 } // end namespace dump
 } // end namespace core

@@ -61,20 +61,32 @@ struct Typer {
 template<class T>
 void dependentNameFun(typename T::Bla param) { }
 
-//template <template <typename> class Container, typename T>
-//void templateTemplateFun(Container<T>& container, const T value) {
-//	container.field = value;
-//}
-//
-//template<typename T>
-//T variadicTemplateFun(T v) {
-//  return v;
-//}
-//
-//template<typename T, typename... Args>
-//T variadicTemplateFun(T first, Args... args) {
-//  return first + variadicTemplateFun(args...);
-//}
+template <template <typename> class Container, typename T>
+void templateTemplateFun(Container<T>& container, const T value) {
+	container.field = value;
+}
+
+// variadic ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+template<typename T>
+T variadicTemplateFun(T v) {
+  return v;
+}
+
+template<typename T, typename... Args>
+T variadicTemplateFun(T first, Args... args) {
+  return first + variadicTemplateFun(args...);
+}
+
+template<typename... Args>
+class VariadicClass {
+};
+
+// variadic template template /////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+template<template<typename> class ... Name>
+void variadicTemplateTemplateFun() {
+}
 
 
 // classes ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -105,3 +117,31 @@ class TemplateClass {
 template<int I>
 class IntTemplateClass {
 };
+
+template<template <class> class TT, class X>
+class TemplateTemplateClass {
+	TT<X> x;
+};
+
+// function pointers ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+template<typename T, typename S>
+void templateFunPointerParam(T(*funPtr)(S)) {}
+
+void specificFunPointerParam(int(*funPtr)(float)) {}
+
+template<typename PT>
+void modifier(TemplateClass<PT>) {}
+
+template<typename T>
+void dependentFunPointerParam(void(*paramFun)(TemplateClass<T>)) {}
+
+template<class CharT> class basic_ostream {
+public:
+	basic_ostream& op(void (*func)(basic_ostream<CharT>&));
+};
+
+template<class CharT>
+void endl(basic_ostream<CharT>& os);
+
+using ostream = basic_ostream<char>;

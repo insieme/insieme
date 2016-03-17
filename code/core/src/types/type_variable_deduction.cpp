@@ -483,11 +483,15 @@ namespace types {
 					lang::ReferenceType argType(arguments[i]);
 					lang::ReferenceType paramType(parameter[i]);
 
-					if (paramType.isConst() && !argType.isConst()) {
+					if(paramType.isConst() && !argType.isConst()) {
 						argType.setConst(true);
 					}
-					if (paramType.isVolatile() && !argType.isVolatile()) {
+					if(paramType.isVolatile() && !argType.isVolatile()) {
 						argType.setVolatile(true);
+					}
+					// "this" implicit conversion
+					if(paramType.isPlain() && (argType.isCppReference() || argType.isCppRValueReference())) {
+						argType.setKind(lang::ReferenceType::Kind::Plain);
 					}
 					materializedArguments[i] = argType.toType();
 				}
@@ -607,9 +611,9 @@ namespace types {
 
 		struct ResultCache {
 			mutable std::map<std::pair<TypeList, TypeList>, SubstitutionOpt> results;
-			bool operator==(const ResultCache& other) const { 
+			bool operator==(const ResultCache& other) const {
 				assert_fail() << "Should never be reached!";
-				return false; 
+				return false;
 			};
 		};
 

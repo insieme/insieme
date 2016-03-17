@@ -66,8 +66,20 @@ namespace extensions {
 	namespace {
 
 		template<typename TemplateParm>
+		string getTemplateTypeParmName(const TemplateParm* parm) {
+			return format("T_%d_%d", parm->getDepth(), parm->getIndex());
+		}
+		template<typename TemplateParm>
 		core::TypeVariablePtr getTypeVarForTemplateTypeParmType(const core::IRBuilder& builder, const TemplateParm* parm) {
-			return builder.typeVariable(format("T_%d_%d", parm->getDepth(), parm->getIndex()));
+			return builder.typeVariable(getTemplateTypeParmName(parm));
+		}
+		template<typename TemplateParm>
+		core::VariadicTypeVariablePtr getTypeVarForVariadicTemplateTypeParmType(const core::IRBuilder& builder, const TemplateParm* parm) {
+			return builder.variadicTypeVariable("V_" + getTemplateTypeParmName(parm));
+		}
+		template<typename TemplateParm>
+		core::VariadicGenericTypeVariablePtr getTypeVarForVariadicTemplateTemplateTypeParmType(const core::IRBuilder& builder, const TemplateParm* parm) {
+			return builder.variadicGenericTypeVariable("V_T_" + getTemplateTypeParmName(parm));
 		}
 
 		void convertTemplateParameters(const clang::TemplateParameterList* tempParamList, const core::IRBuilder& builder,
@@ -75,9 +87,25 @@ namespace extensions {
 			for(auto tempParam : *tempParamList) {
 				core::TypePtr typeVar;
 				if(auto templateParamTypeDecl = llvm::dyn_cast<clang::TemplateTypeParmDecl>(tempParam)) {
-					typeVar = getTypeVarForTemplateTypeParmType(builder, templateParamTypeDecl);
+					if(templateParamTypeDecl->isParameterPack()) {
+						templateGenericParams.push_back(getTypeVarForVariadicTemplateTypeParmType(builder, templateParamTypeDecl));
+						// we only need arguments up to the first top-level variadic, the rest can be deduced
+						break;
+					} else {
+						typeVar = getTypeVarForTemplateTypeParmType(builder, templateParamTypeDecl);
+					}
 				} else if(auto templateNonTypeParamDecl = llvm::dyn_cast<clang::NonTypeTemplateParmDecl>(tempParam)) {
 					typeVar = getTypeVarForTemplateTypeParmType(builder, templateNonTypeParamDecl);
+				} else if(auto templateTemplateParamDecl = llvm::dyn_cast<clang::TemplateTemplateParmDecl>(tempParam)) {
+					if(templateTemplateParamDecl->isParameterPack()) {
+						templateGenericParams.push_back(getTypeVarForVariadicTemplateTemplateTypeParmType(builder, templateTemplateParamDecl));
+						// we only need arguments up to the first top-level variadic, the rest can be deduced
+						break;
+					} else {
+						core::TypeList paramTypeList;
+						convertTemplateParameters(templateTemplateParamDecl->getTemplateParameters(), builder, paramTypeList);
+						typeVar = builder.genericTypeVariable("T_" + getTemplateTypeParmName(templateTemplateParamDecl), paramTypeList);
+					}
 				} else {
 					tempParam->dump();
 					assert_not_implemented() << "Unexpected kind of template parameter\n";
@@ -91,12 +119,20 @@ namespace extensions {
 			case clang::TemplateArgument::Expression: return converter.convertType(arg.getAsExpr()->getType());
 			case clang::TemplateArgument::Type: return converter.convertType(arg.getAsType());
 			case clang::TemplateArgument::Integral: return converter.getIRBuilder().numericType(arg.getAsIntegral().getSExtValue());
+			case clang::TemplateArgument::Template: {
+				auto tempDecl = arg.getAsTemplate().getAsTemplateDecl();
+				core::TypeList paramTypes;
+				convertTemplateParameters(tempDecl->getTemplateParameters(), converter.getIRBuilder(), paramTypes);
+				auto genType = converter.getIRBuilder().genericType(insieme::utils::mangle(tempDecl->getQualifiedNameAsString()), paramTypes);
+				converter.applyHeaderTagging(genType, tempDecl->getTemplatedDecl());
+				return genType;
+			}
+			case clang::TemplateArgument::Pack: assert_not_implemented() << "Template parameter packs are handled in convertTemplateArguments\n";
 			case clang::TemplateArgument::Null:
 			case clang::TemplateArgument::Declaration:
 			case clang::TemplateArgument::NullPtr:
-			case clang::TemplateArgument::Template:
 			case clang::TemplateArgument::TemplateExpansion:
-			case clang::TemplateArgument::Pack: break;
+			break;
 			}
 			assert_not_implemented() << "Unsupported template argument kind\n";
 			return {};
@@ -104,7 +140,15 @@ namespace extensions {
 
 		void convertTemplateArguments(const clang::TemplateArgumentList& tempArgList, conversion::Converter& converter, core::TypeList& templateArgsTypes) {
 			for(auto arg: tempArgList.asArray()) {
-				templateArgsTypes.push_back(convertTemplateArgument(converter, arg));
+				if(arg.getKind() == clang::TemplateArgument::Pack) {
+					for(auto innerArg : arg.getPackAsArray()) {
+						templateArgsTypes.push_back(convertTemplateArgument(converter, innerArg));
+					}
+					// we only need arguments up to the first top-level variadic, the rest can be deduced
+					break;
+				} else {
+					templateArgsTypes.push_back(convertTemplateArgument(converter, arg));
+				}
 			}
 		}
 
@@ -130,7 +174,7 @@ namespace extensions {
 
 			// handle non-templated functions
 			if(!funDecl->isTemplateInstantiation()) {
-				// if defaulted, fix this type to generic type
+				// if defaulted, fix "this" type to generic type
 				auto methDecl = llvm::dyn_cast<clang::CXXMethodDecl>(funDecl);
 				if(methDecl && methDecl->isDefaulted()) {
 					// check if method of class template specialization
@@ -153,7 +197,6 @@ namespace extensions {
 				return {lit, retType};
 			}
 
-
 			// first: handle generic template in order to generate generic function
 			core::TypeList templateGenericParams, templateConcreteParams;
 			auto templateDecl = funDecl->getPrimaryTemplate();
@@ -162,9 +205,7 @@ namespace extensions {
 				convertTemplateParameters(templateDecl->getTemplateParameters(), builder, templateGenericParams);
 
 				// build list of concrete params for instantiation of this call
-				for(auto tempParam: funDecl->getTemplateSpecializationInfo()->TemplateArguments->asArray()) {
-					templateConcreteParams.push_back(converter.convertType(tempParam.getAsType()));
-				}
+				convertTemplateArguments(*(funDecl->getTemplateSpecializationInfo()->TemplateArguments), converter, templateConcreteParams);
 			}
 			// translate uninstantiated pattern instead of instantiated version
 			auto pattern = funDecl->getTemplateInstantiationPattern();
@@ -178,13 +219,14 @@ namespace extensions {
 			// cast to concrete type at call site
 			auto concreteFunctionType = lit->getType().as<core::FunctionTypePtr>();
 
-			//if we don't need to do any type instantiation
+			// if we don't need to do any type instantiation
 			if(templateConcreteParams.empty()) {
 				return {innerLit, concreteFunctionType.getReturnType()};
 			}
 
 			concreteFunctionType = builder.functionType(concreteFunctionType->getParameterTypes(), concreteFunctionType->getReturnType(),
 				                                        concreteFunctionType->getKind(), builder.types(templateConcreteParams));
+
 			return {builder.callExpr(builder.getLangBasic().getTypeInstantiation(), builder.getTypeLiteral(concreteFunctionType), innerLit),
 				    concreteFunctionType->getReturnType()};
 		}
@@ -206,6 +248,22 @@ namespace extensions {
 				}
 			}
 			return nullptr;
+		}
+
+		core::CallExprPtr fixMaterializedReturnType(conversion::Converter& converter, const clang::CallExpr* clangCall, const core::CallExprPtr& call) {
+			if(!call) return call;
+			auto irRetType = converter.convertExprType(clangCall);
+			auto newCall = converter.getIRBuilder().callExpr(irRetType, call->getFunctionExpr(), call->getArguments());
+			core::transform::utils::migrateAnnotations(call, newCall);
+			return newCall;
+		}
+
+		const clang::TemplateTypeParmType* getPotentiallyReferencedTemplateTypeParmType(const clang::Type* type) {
+			auto ret = llvm::dyn_cast<clang::TemplateTypeParmType>(type);
+			if(ret) return ret;
+			auto ref = llvm::dyn_cast<clang::ReferenceType>(type);
+			if(ref) return getPotentiallyReferencedTemplateTypeParmType(ref->getPointeeType().getTypePtr());
+			return {};
 		}
 	}
 
@@ -258,7 +316,8 @@ namespace extensions {
 		}
 		if(auto memberCall = llvm::dyn_cast<clang::CXXMemberCallExpr>(expr)) {
 			auto thisFactory = [&](const core::TypePtr& retType){ return converter.convertExpr(memberCall->getImplicitObjectArgument()); };
-			return interceptMethodCall(converter, memberCall->getCalleeDecl(), thisFactory, memberCall->arguments());
+			return fixMaterializedReturnType(converter, memberCall,
+				                             interceptMethodCall(converter, memberCall->getCalleeDecl(), thisFactory, memberCall->arguments()));
 		}
 		if(auto operatorCall = llvm::dyn_cast<clang::CXXOperatorCallExpr>(expr)) {
 			auto decl = operatorCall->getCalleeDecl();
@@ -267,7 +326,7 @@ namespace extensions {
 					auto argList = operatorCall->arguments();
 					auto thisFactory = [&](const core::TypePtr& retType){ return converter.convertExpr(*argList.begin()); };
 					decltype(argList) remainder(argList.begin()+1, argList.end());
-					return interceptMethodCall(converter, decl, thisFactory, remainder);
+					return fixMaterializedReturnType(converter, operatorCall, interceptMethodCall(converter, decl, thisFactory, remainder));
 				}
 			}
 		}
@@ -295,9 +354,16 @@ namespace extensions {
 			return getTypeVarForTemplateTypeParmType(builder, ttpt);
 		}
 
-		// handle dependent name types ("typename ...")
+		// handle dependent name types ("typename t")
 		if(auto depName = llvm::dyn_cast<clang::DependentNameType>(type.getUnqualifiedType())) {
 			return builder.typeVariable(insieme::utils::mangle(utils::getNameForDependentNameType(depName)));
+		}
+
+		// handle pack expansion type ("Args...")
+		if(auto packExp = llvm::dyn_cast<clang::PackExpansionType>(type.getUnqualifiedType())) {
+			auto templateTypeParmType = getPotentiallyReferencedTemplateTypeParmType(packExp->getPattern().getTypePtr());
+			assert_true(templateTypeParmType) << "Unexpected template parameter pack type";
+			return getTypeVarForVariadicTemplateTypeParmType(builder, templateTypeParmType);
 		}
 
 		// handle class, struct and union interception
