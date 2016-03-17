@@ -442,7 +442,11 @@ namespace backend {
 			auto& refExt = initValue->getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
 
 			// if it is a call to a ref.new => put it on the heap
-			if (refExt.isCallOfRefNew(initValue) || refExt.isCallOfRefNewInit(initValue)) return false;
+			if(refExt.isCallOfRefNew(initValue) || refExt.isCallOfRefNewInit(initValue)) return false;
+			// if it is a constructor call on memory allocated on the heap, put it on the heap
+			if(core::analysis::isConstructorCall(initValue)) {
+				return toBeAllocatedOnStack(core::analysis::getArgument(initValue, 0));
+			}
 
 			// everything else is stack based
 			return true;

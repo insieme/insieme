@@ -1308,8 +1308,7 @@ namespace backend {
 //		EXPECT_TRUE(utils::compiler::compile(*targetCode, compiler));
 //	}
 
-	//TODO this seems to hang in an endless loop
-	/*TEST(CppSnippet, ConstructorCall) {
+	TEST(CppSnippet, ConstructorCall) {
 		core::NodeManager mgr;
 		core::IRBuilder builder(mgr);
 
@@ -1337,8 +1336,12 @@ namespace backend {
 						var ref<A> a2 = A::(a2, 1);
 
 						// on heap
-						var ref<A> a3 = A::(ref_new(undefined(A)));
-						var ref<A> a4 = A::(ref_new(undefined(A)), 1);
+						var ref<A> a1r = A::(ref_new(type_lit(A)));
+						var ref<A> a2r = A::(ref_new(type_lit(A)), 1);
+
+						// on heap
+						var ptr<A> a3 = ptr_from_ref(A::(ref_new(type_lit(A))));
+						var ptr<A> a4 = ptr_from_ref(A::(ref_new(type_lit(A)), 1));
 
 						// in place
 						var ref<A> a5; A::(a5);
@@ -1359,6 +1362,8 @@ namespace backend {
 		auto code = toString(*targetCode);
 		EXPECT_PRED2(containsSubString, code, "A a1;");
 		EXPECT_PRED2(containsSubString, code, "A a2((1));");
+		EXPECT_PRED2(containsSubString, code, "A* a1r = new A();");
+		EXPECT_PRED2(containsSubString, code, "A* a2r = new A(1);");
 		EXPECT_PRED2(containsSubString, code, "A* a3 = new A();");
 		EXPECT_PRED2(containsSubString, code, "A* a4 = new A(1);");
 		EXPECT_PRED2(containsSubString, code, "new (&a5) A();");
@@ -1367,7 +1372,7 @@ namespace backend {
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
 		compiler.addFlag("-c"); // do not run the linker
 		EXPECT_TRUE(utils::compiler::compile(*targetCode, compiler));
-	}*/
+	}
 
 	//TODO this seems to hang in an endless loop
 	/*TEST(CppSnippet, DestructorCall) {

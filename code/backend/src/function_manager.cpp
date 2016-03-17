@@ -274,11 +274,11 @@ namespace backend {
 				// case a) create object on stack => default
 
 				// case b) create object on heap
-				bool isOnHeap = core::analysis::isCallOf(call[0], refs.getRefNewInit());
+				bool isOnHeap = core::analysis::isCallOf(call[0], refs.getRefNew());
 
 				// case c) create object in-place (placement new)
 				c_ast::ExpressionPtr loc = (!core::analysis::isCallOf(call[0], refs.getRefTemp()) && !core::analysis::isCallOf(call[0], refs.getRefTempInit())
-				                            && !core::analysis::isCallOf(call[0], refs.getRefNewInit()))
+				                            && !core::analysis::isCallOf(call[0], refs.getRefNew()))
 				                               ? location.as<c_ast::ExpressionPtr>()
 				                               : c_ast::ExpressionPtr();
 
