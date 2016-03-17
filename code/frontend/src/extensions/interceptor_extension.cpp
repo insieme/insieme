@@ -257,6 +257,14 @@ namespace extensions {
 			core::transform::utils::migrateAnnotations(call, newCall);
 			return newCall;
 		}
+
+		const clang::TemplateTypeParmType* getPotentiallyReferencedTemplateTypeParmType(const clang::Type* type) {
+			auto ret = llvm::dyn_cast<clang::TemplateTypeParmType>(type);
+			if(ret) return ret;
+			auto ref = llvm::dyn_cast<clang::ReferenceType>(type);
+			if(ref) return getPotentiallyReferencedTemplateTypeParmType(ref->getPointeeType().getTypePtr());
+			return {};
+		}
 	}
 
 	core::ExpressionPtr InterceptorExtension::Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& converter) {
@@ -353,7 +361,7 @@ namespace extensions {
 
 		// handle pack expansion type ("Args...")
 		if(auto packExp = llvm::dyn_cast<clang::PackExpansionType>(type.getUnqualifiedType())) {
-			auto templateTypeParmType = llvm::dyn_cast<clang::TemplateTypeParmType>(packExp->getPattern().getTypePtr());
+			auto templateTypeParmType = getPotentiallyReferencedTemplateTypeParmType(packExp->getPattern().getTypePtr());
 			assert_true(templateTypeParmType) << "Unexpected template parameter pack type";
 			return getTypeVarForVariadicTemplateTypeParmType(builder, templateTypeParmType);
 		}
