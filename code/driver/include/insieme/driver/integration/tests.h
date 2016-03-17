@@ -266,7 +266,7 @@ namespace integration {
 		 * any files that may be used as input sources for this test case.
 		 */
 		driver::cmd::Options getOptions() const;
-		
+
 		/**
 		 * Loads this test case.
 		 */
@@ -314,8 +314,8 @@ namespace integration {
 			gccFlags["standardFlags"] = "-fshow-column -Wall -lrt -pipe";
 			gccFlags["use_o3"] = "-O3";
 			gccFlags["use_c"] = "--std=c99";
-			gccFlags["use_cpp"] = "--std=c++03";
-			gccFlags["use_cpp11"] = "--std=c++0x";
+			gccFlags["use_cpp"] = "--std=c++11";
+			gccFlags["use_cpp11"] = "--std=c++11";
 			gccFlags["use_gnu99"] = "--std=gnu99";
 			gccFlags["use_gnu90"] = "--std=gnu90";
 
