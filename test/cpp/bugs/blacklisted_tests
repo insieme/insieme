@@ -64,3 +64,11 @@ vector_pointers
 vector_specialization
 vfunc
 zero_ptr
+
+
+####################################################################################
+# The following tests are not really blacklisted but take rather long to execute.  #
+# All test names preceded with a '+' will not be executed by default but only when #
+# the integration test driver is run with the option to run these long tests also. #
+####################################################################################
+
