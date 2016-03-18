@@ -59,6 +59,7 @@
 
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/printer/pretty_printer.h"
+#include "insieme/core/printer/error_printer.h"
 #include "insieme/core/annotations/naming.h"
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_address.h"
@@ -199,6 +200,8 @@ int checkSema(const core::NodePtr& program, core::checks::MessageList& list) {
 
 	// In the case of semantic errors, quit
 	if(!list.getErrors().empty()) {
+		dumpErrors(list, cerr);
+
 		cerr << "---- Semantic errors encountered!! ----\n";
 		retval = 1;
 	}

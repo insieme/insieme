@@ -95,7 +95,7 @@ namespace omp {
 		const lang::BasicGenerator& basic;
 		const lang::ParallelExtension& parExt;
 		us::PointerSet<CompoundStmtPtr> toFlatten; // set of compound statements to flatten one step further up
-		
+
 		// this stack is used to keep track of which variables are shared in enclosing constructs, to correctly parallelize
 		std::stack<VariableList> sharedVarStack;
 
@@ -176,7 +176,7 @@ namespace omp {
 				// check whether it is a struct-init expression of a lock
 				if(node->getNodeType() == NT_InitExpr && isLockStructType(node.as<ExpressionPtr>()->getType())) {
 					// replace with uninitialized lock
-					newNode = build.getZero(parExt.getLock());					
+					newNode = build.getZero(parExt.getLock());
 				} else {
 					// no changes required at this level, recurse
 					newNode = node->substitute(nodeMan, *this);
@@ -245,7 +245,7 @@ namespace omp {
 			// check stack integrity when leaving program
 			if(node.isa<ProgramPtr>()) { assert_eq(sharedVarStack.size(), 0) << "ending omp translation: shared var stack corrupted"; }
 		}
-		
+
 		// flattens generated compound statements if requested
 		// used to preserve the correct scope for variable declarations
 		NodePtr flattenCompounds(const NodePtr& newNode) {
@@ -313,8 +313,7 @@ namespace omp {
 					} else if(funName == "omp_get_num_threads") {
 						return build.getThreadGroupSize();
 					} else if(funName == "omp_get_max_threads") {
-						return build.intLit(65536); // The maximum number of threads shall be 65536.
-						                            // Thou shalt not count to 65537, and neither shalt thou count to 65535, unless swiftly proceeding to 65536.
+						return build.numericCast(build.getDefaultThreads(), basic.getInt4());
 					} else if(funName == "omp_get_wtime") {
 						return build.callExpr(build.literal("irt_get_wtime", build.functionType(TypeList(), basic.getDouble())));
 					} else if(funName == "omp_set_num_threads") {
@@ -369,7 +368,7 @@ namespace omp {
 			});
 			return inside;
 		}
-		
+
 		// beware! the darkness hath returned to prey upon innocent globals yet again
 		// will the frontend prevail?
 		// new and improved crazyness! does not directly implement accesses, replaces with variable
