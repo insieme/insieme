@@ -141,4 +141,16 @@ int main() {
 	{
 		std::make_shared<OtherTrivial>();
 	}
+
+	#pragma test expect_ir(R"({
+		var ref<IMP_std_colon__colon_vector<int<4>,IMP_std_colon__colon_allocator<int<4>>>,f,f,plain> v0 =
+			lit("IMP_std_colon__colon_vector::ctor" : IMP_std_colon__colon_vector<'T_0_0,'T_0_1>::())(v0);
+		var ref<IMP___gnu_cxx_colon__colon___normal_iterator<ptr<int<4>>,IMP_std_colon__colon_vector<int<4>,IMP_std_colon__colon_allocator<int<4>>>>,f,f,plain> v1 =
+			ref_cast(type_instantiation(type_lit(IMP_std_colon__colon_vector<int<4>,IMP_std_colon__colon_allocator<int<4>>>::() -> IMP___gnu_cxx_colon__colon___normal_iterator<ptr<int<4>>,IMP_std_colon__colon_vector<int<4>,IMP_std_colon__colon_allocator<int<4>>>>),
+				lit("IMP_std_colon__colon_vector::IMP_begin" : IMP_std_colon__colon_vector<'T_0_0,'T_0_1>::() -> IMP___normal_iterator<'IMP_typename_space__Base_colon__colon_pointer,IMP_std_colon__colon_vector<'T_0_0,'T_0_1>>))(v0) materialize , type_lit(f), type_lit(f), type_lit(cpp_rref));
+	})")
+	{
+		std::vector<int> a;
+		std::vector<int>::iterator it = a.begin();
+	}
 }
