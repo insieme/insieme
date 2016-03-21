@@ -345,6 +345,12 @@ int main() {
 		a |= 5;
 	}
 
+	#pragma test expect_ir("{ var ref<char,f,f> v1 = num_cast(0, type_lit(char)); v1 = num_cast(num_cast(*v1,type_lit(int<4>))|1, type_lit(char)); }")
+	{
+		char a = 0;
+		a |= 1;
+	}
+
 	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = 1; v1 = *v1 ^ 5; }")
 	{
 		int a = 1;
