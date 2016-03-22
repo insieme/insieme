@@ -1069,3 +1069,36 @@ TEST(PrettyPrinter, AutoEvaluatedFunctions) {
 	}
 
 }
+
+	TEST(PrettyPrinter, LiteralPrinting) {
+		NodeManager nm;
+		IRBuilder builder(nm);
+
+		std::string input = "{\n"
+		                    "    var ref<int<4>,f,f,plain> v0 = lit(\"foo\" : () -> int<4>)();\n"
+		                    "}";
+
+		auto ir = builder.normalize(builder.parseStmt(input));
+		PrettyPrinter printer(ir, PrettyPrinter::OPTIONS_DEFAULT);
+		EXPECT_EQ("decl foo : () -> int<4>;\n{\n    var ref<int<4>,f,f,plain> v0 = foo();\n}", toString(printer)) << printer;
+
+		PrettyPrinter printerLiterals(ir, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::FULL_LITERAL_SYNTAX);
+		EXPECT_EQ(input, toString(printerLiterals)) << printerLiterals;
+	}
+
+	TEST(PrettyPrinter, MethodQualifiers) {
+		NodeManager nm;
+		IRBuilder builder(nm);
+
+		//make sure the members get correctly prefixed with const and volatile
+		std::string input = "{\n"
+		                    "    var ref<S,f,f,plain> v0 = v0;\n"
+		                    "    lit(\"foo\" : const S::() -> unit)(v0);\n"
+		                    "    lit(\"bar\" : volatile S::() -> unit)(v0);\n"
+		                    "    lit(\"baz\" : const volatile S::() -> unit)(v0);\n"
+		                    "}";
+
+		auto ir = builder.normalize(builder.parseStmt(input));
+		PrettyPrinter printer(ir, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::FULL_LITERAL_SYNTAX);
+		EXPECT_EQ(input, toString(printer)) << printer;
+	}
