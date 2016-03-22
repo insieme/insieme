@@ -565,6 +565,8 @@ namespace parser {
 
 		EXPECT_TRUE(test_expression(nm, "1.0f"));
 		EXPECT_TRUE(test_expression(nm, "1.0"));
+		EXPECT_TRUE(test_expression(nm, "2.3E-5f"));
+		EXPECT_TRUE(test_expression(nm, "2.0E+0"));
 
 		EXPECT_TRUE(test_expression(nm, "1 + 3"));
 		EXPECT_TRUE(test_expression(nm, "1 - 0"));
