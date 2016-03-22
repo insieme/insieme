@@ -380,20 +380,22 @@ namespace printer {
 					}
 
 					// print all declarations for NOT-defined (but declared) functions
-					visitDepthFirstOnce(node, [&](const CallExprPtr& cur) {
-						auto literalExpr = cur->getFunctionExpr().isa<LiteralPtr>();
-						if (literalExpr && !lang::isBuiltIn(literalExpr)) {
-							if(!visitedLiterals.insert(literalExpr).second) {
-								return;
+					if (!printer.hasOption(PrettyPrinter::FULL_LITERAL_SYNTAX)) {
+						visitDepthFirstOnce(node, [&](const CallExprPtr& cur) {
+							auto literalExpr = cur->getFunctionExpr().isa<LiteralPtr>();
+							if (literalExpr && !lang::isBuiltIn(literalExpr)) {
+								if(!visitedLiterals.insert(literalExpr).second) {
+									return;
+								}
+								newLine();
+								out << "decl ";
+								visit(NodeAddress(literalExpr));
+								out << " : ";
+								visit(NodeAddress(literalExpr->getType()));
+								out << ";";
 							}
-							newLine();
-							out << "decl ";
-							visit(NodeAddress(literalExpr));
-							out << " : ";
-							visit(NodeAddress(literalExpr->getType()));
-							out << ";";
-						}
-					});
+						});
+					}
 
 					//second: print all function declarations
 					utils::set::PointerSet<LambdaBindingPtr> visitedBindings;
