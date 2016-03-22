@@ -46,20 +46,39 @@
 #include "irt_types.h"
 #include "impl/irt_context.impl.h"
 
+struct _irt_opencl_event_list {
+	unsigned max_events;
+	unsigned num_events;
+	cl_event *events;
+};
+typedef struct _irt_opencl_event_list irt_opencl_event_list;
+
 bool irt_opencl_init_devices(irt_opencl_context *context);
 void irt_opencl_cleanup_devices(irt_opencl_context *context);
 bool irt_opencl_init_kernel_table(irt_opencl_context *context, irt_opencl_kernel_implementation **kernel_table);
 irt_opencl_context *irt_opencl_get_context(irt_context *context);
+void irt_opencl_dump_build_log(irt_opencl_device *device, cl_program program);
 bool irt_opencl_init_device(cl_device_id device_id, cl_context context, irt_opencl_device *device);
 void irt_opencl_cleanup_device(irt_opencl_device *device);
+void irt_opencl_lock_device(irt_opencl_device *device);
+void irt_opencl_unlock_device(irt_opencl_device *device);
+bool irt_opencl_init_kernel_data(irt_opencl_device *device, cl_program program,
+								 const char *routine, irt_opencl_kernel_data *data);
+void irt_opencl_cleanup_kernel_data(irt_opencl_kernel_data *data);
 bool irt_opencl_init_kernel_implementation(irt_opencl_context *context, irt_opencl_kernel_implementation *impl);
 void irt_opencl_cleanup_kernel_implementation(irt_opencl_kernel_implementation *impl);
 irt_opencl_kernel_implementation *irt_opencl_get_kernel_implementation(irt_context *context, uint32 index);
+irt_opencl_kernel_data *irt_opencl_select_kernel_data(irt_opencl_context *context,
+													  irt_opencl_kernel_implementation *impl);
 void irt_opencl_execute_fallback(irt_work_item *wi);
 void _irt_opencl_execute(unsigned id, irt_opencl_ndrange_func ndrange,
                          unsigned num_requirements, irt_opencl_data_requirement_func *requirements,
                          unsigned num_optionals, va_list optionals);
 irt_work_item *irt_opencl_wi_get_current(unsigned id);
+size_t irt_opencl_round_up(size_t value, size_t multiple);
+irt_opencl_event_list *irt_opencl_event_list_create(unsigned max_events);
+void irt_opencl_event_list_wait_and_free(irt_opencl_event_list *list);
+cl_event *irt_opencl_event_list_advance(irt_opencl_event_list *list);
 
 irt_opencl_context *irt_opencl_get_context(irt_context *context)
 {
@@ -106,9 +125,66 @@ irt_opencl_kernel_implementation *irt_opencl_get_kernel_implementation(irt_conte
 	return impl;
 }
 
+irt_opencl_kernel_data *irt_opencl_select_kernel_data(irt_opencl_context *context,
+													  irt_opencl_kernel_implementation *impl)
+{
+	/* if we have no impl we have no data as well */
+	if (impl == NULL)
+		return NULL;
+
+	irt_opencl_kernel_data *data = impl->data;
+	/*
+	 * if this function is called with no devices available, the privor
+	 * safety checks have not noticed and not invokend the fallback!
+	 */
+	IRT_ASSERT(context->device != NULL, IRT_ERR_OCL, "no devices available");
+	while (data != NULL) {
+		/*
+		 * @TODO: implement a heuristic on which device to select. such
+		 * metric would take into account the data requirements of the
+		 * kernel as well as the current load
+		 */
+		if (!(data->flags & IRT_OPENCL_KERNEL_DATA_FLAG_BROKEN))
+			break;
+
+		/* hop to the next one */
+		data = data->next;
+	}
+	return data;
+}
+
 void irt_opencl_execute_fallback(irt_work_item *wi)
 {
 	wi->impl->variants[0].implementation(wi);
+}
+
+void irt_opencl_evaluate_ndrange(irt_opencl_ndrange *ndrange,
+								 size_t *global_offset_size, size_t *global_work_size)
+{
+	/*
+	 * the caller must allocate a buffer big enough for global_{offset,work}_size
+	 * to hold at least IRT_OPENCL_MAX_DIMS size_t values!
+	 */
+	for (unsigned i = 0; i < ndrange->work_dim; ++i) {
+		/* in case no local size is supplied we pick a default one */
+		if (ndrange->local_work_size[i] == 0)
+			ndrange->local_work_size[i] = 64;
+		/* offsets are the simple case, just eval and store */
+		if (ndrange->global_offset_size[i])
+			global_offset_size[i] = ndrange->global_offset_size[i]();
+		else
+			global_offset_size[i] = 0;
+		/* evaluate and round up to a multiple of the associated local */
+		if (ndrange->global_work_size[i]) {
+			global_work_size[i] = irt_opencl_round_up(ndrange->global_work_size[i](),
+													  ndrange->local_work_size[i]);
+		} else {
+			global_work_size[i] = 0;
+		}
+		/* and finally print some info */
+		IRT_DEBUG("ndrange[%d] %zu %zu %zu\n", i, global_offset_size[i],
+			global_work_size[i], ndrange->local_work_size[i]);
+	}
 }
 
 void _irt_opencl_execute(unsigned id, irt_opencl_ndrange_func ndrange,
@@ -132,23 +208,22 @@ void _irt_opencl_execute(unsigned id, irt_opencl_ndrange_func ndrange,
 		return;
 	}
 
-	irt_opencl_device *device = ocl_context->device;	
 	/* grab a pointer to the kernel impl data */
-	irt_opencl_kernel_data *impl_data = impl->data;
+	irt_opencl_kernel_data *impl_data = irt_opencl_select_kernel_data(ocl_context, impl);
+	if (impl_data == NULL) {
+		irt_opencl_execute_fallback(wi);
+		return;
+	}
+	irt_opencl_device *device = impl_data->device;
 	/* poiner to the captured environment */
 	irt_lw_data_item *capture = wi->parameters;
 	irt_type *capture_type = &irt_context->type_table[capture->type_id];
 	/* the captured environment must be bound within a struct! */
 	IRT_ASSERT(capture_type->kind == IRT_T_STRUCT, IRT_ERR_OCL, "expected captured environment of type %s but got %s\n",
 			   irt_type_kind_get_name(IRT_T_STRUCT), irt_type_kind_get_name(capture_type->kind));
-    /*
-     * things to do:
-     * o if irt_private has not yet been set-up, do it
-     * o if a previous execution of this kernel has yield an error, execute default impl!
-     * a command queue shall be present for each worker!
-     */    
     
-    /* ... */
+	/* this will be required to locally wait on events  related to I/O*/
+	irt_opencl_event_list *event_io = NULL;
     
     /* initialize opencl specific locals */
 	cl_int result;
@@ -166,6 +241,7 @@ void _irt_opencl_execute(unsigned id, irt_opencl_ndrange_func ndrange,
 	uint64 start_ns = irt_time_ns();
 	#endif // IRT_VERBOSE
 
+	event_io = irt_opencl_event_list_create(num_requirements);
     /* obtain the associated ndrange for this particular execution */
     irt_opencl_ndrange nd = ndrange(wi);
     for (unsigned arg = 0; arg < num_requirements; ++arg) {
@@ -179,7 +255,7 @@ void _irt_opencl_execute(unsigned id, irt_opencl_ndrange_func ndrange,
 		irt_opencl_data_range ranges[requirement.num_ranges];
 		for (unsigned dim = 0; dim < requirement.num_ranges; ++dim) {
 			ranges[dim] = requirement.range_func(wi, &nd, arg, dim);
-			IRT_DEBUG("range:\t%d\nsize:\t%d\nstart:\t%d\nend:\t%d\n",
+			IRT_DEBUG("range:\t%d\nsize:\t%zu\nstart:\t%zu\nend:\t%zu\n",
 					  dim, ranges[dim].size(), ranges[dim].start(), ranges[dim].end());
 			/* sum up all sum sizes to compute the total object size */
 			num_of_elements += ranges[dim].size();
@@ -251,8 +327,11 @@ void _irt_opencl_execute(unsigned id, irt_opencl_ndrange_func ndrange,
 		}
 		
 		IRT_DEBUG("clEnqueueWriteBuffer for requirement %d at %p\n", arg, data);
+		irt_opencl_lock_device(device);
 		/* @TODO: only transfere the ranges not the whole data blob! https://www.khronos.org/registry/cl/sdk/1.1/docs/man/xhtml/clEnqueueWriteBufferRect.html */
-		result = clEnqueueWriteBuffer(device->queue, buffer[arg], CL_FALSE, 0, num_of_elements * size_of_element, data, 0, NULL, NULL);
+		result = clEnqueueWriteBuffer(device->queue, buffer[arg], CL_FALSE, 0, num_of_elements * size_of_element,
+			data, 0, NULL, irt_opencl_event_list_advance(event_io));
+		irt_opencl_unlock_device(device);
 		if (result != CL_SUCCESS) {
 			/* @TODO: proper error handling !!!! */
 			IRT_ASSERT(result == CL_SUCCESS, IRT_ERR_OCL, "clEnqueueWriteBuffer returned with %d", result);
@@ -301,27 +380,20 @@ void _irt_opencl_execute(unsigned id, irt_opencl_ndrange_func ndrange,
         /* iff the latter fails, the generated code has flaws and thus cannot continue */
         IRT_ASSERT(result == CL_SUCCESS, IRT_ERR_OCL, "clSetKernelArg returned with %d", result);
     }
-	
-    /* ... */
-    clFinish(device->queue);
-	size_t *global_work_size = nd.global_work_size;
-	IRT_ASSERT(*global_work_size != 0, IRT_ERR_OCL, "global_work_size must be > 0");
-	#ifdef IRT_VERBOSE
-	for (unsigned i = 0; i < nd.work_dim; ++i)
-		IRT_DEBUG("global_work_size[%d] = %d\n", i, (unsigned) global_work_size[i]);
-	#endif // IRT_VERBOSE
+	/* copy to device has been set up .. wait for them to complete */
+    irt_opencl_event_list_wait_and_free(event_io);
+	event_io = NULL;
 
-	size_t *local_work_size = nd.local_work_size;
-	/* special case if local size is 0, the implementation shall decide on how to split */
-	if (*local_work_size == 0) local_work_size = NULL;
-	#ifdef IRT_VERBOSE
-	for (unsigned i = 0; i < nd.work_dim && local_work_size; ++i)
-		IRT_DEBUG("local_work_size[%d] = %d\n", i, (unsigned) local_work_size[i]);
-	#endif // IRT_VERBOSE
+	size_t global_offsets[IRT_OPENCL_MAX_DIMS];
+	size_t global_work_size[IRT_OPENCL_MAX_DIMS];
+	irt_opencl_evaluate_ndrange(&nd, global_offsets, global_work_size);
 
+	cl_event event_krnl;
     /* at this point we can finally execute the given kernel */
-    result = clEnqueueNDRangeKernel(device->queue, impl_data->kernel, nd.work_dim, NULL,
-		global_work_size, local_work_size, 0, NULL, NULL);
+	irt_opencl_lock_device(device);
+    result = clEnqueueNDRangeKernel(device->queue, impl_data->kernel, nd.work_dim, global_offsets,
+		global_work_size, nd.local_work_size, 0, NULL, &event_krnl);
+	irt_opencl_unlock_device(device);
     /* check for error and see if it is correctable */
     switch (result) {
     case CL_SUCCESS:
@@ -341,23 +413,28 @@ void _irt_opencl_execute(unsigned id, irt_opencl_ndrange_func ndrange,
     }
     
     /* wait until everythin is done */
-	clFinish(device->queue);
+	clWaitForEvents(1, &event_krnl);
 	IRT_DEBUG("kernel execution has finished\n");
 	
 	/* copy all required parts back */
+	event_io = irt_opencl_event_list_create(num_requirements);
 	for (unsigned i = 0; i < num_requirements; ++i) {
 		if (reverse_offload[i].data == NULL)
 			continue;
 
 		IRT_DEBUG("clEnqueueReadBuffer for requirement %d at %p\n", i, reverse_offload[i].data);
-		result = clEnqueueReadBuffer(device->queue, buffer[i], CL_FALSE, 0, reverse_offload[i].size, reverse_offload[i].data, 0, NULL, NULL);
+		irt_opencl_lock_device(device);
+		result = clEnqueueReadBuffer(device->queue, buffer[i], CL_FALSE, 0, reverse_offload[i].size,
+			reverse_offload[i].data, 0, NULL, irt_opencl_event_list_advance(event_io));
+		irt_opencl_unlock_device(device);
 		if (result != CL_SUCCESS) {
 			/* @TODO: proper error handling !!!! */
 			IRT_ASSERT(result == CL_SUCCESS, IRT_ERR_OCL, "clEnqueueReadBuffer returned with %d", result);
 			return;
 		}
 	}
-	clFinish(device->queue);
+	irt_opencl_event_list_wait_and_free(event_io);
+	event_io = NULL;
 	
 	IRT_DEBUG("read buffer has finished\n");
 	IRT_DEBUG("\ntotal time %" PRId64 " ns\n", irt_time_ns() - start_ns);
@@ -392,6 +469,7 @@ bool irt_opencl_init_device(cl_device_id device_id, cl_context context, irt_open
 		IRT_WARN("clCreateCommandQueue returned with %d\n", result);
 		goto error;
 	}
+	irt_spin_init(&device->lock);
 	
 	/* query all properties */
 	#define irt_opencl_get_device_info(param_name, param_value) \
@@ -448,6 +526,36 @@ bool irt_opencl_init_device(cl_device_id device_id, cl_context context, irt_open
 error:
 	irt_opencl_cleanup_device(device);
 	return false;
+}
+
+void irt_opencl_lock_device(irt_opencl_device *device)
+{
+	irt_spin_lock(&device->lock);
+}
+
+void irt_opencl_unlock_device(irt_opencl_device *device)
+{
+	irt_spin_unlock(&device->lock);
+}
+
+void irt_opencl_dump_build_log(irt_opencl_device *device, cl_program program)
+{
+	size_t len;
+	cl_int result;
+	/* obtain the length of the log */
+	result = clGetProgramBuildInfo(program, device->device_id, CL_PROGRAM_BUILD_LOG, 0, NULL, &len);
+	if (result != CL_SUCCESS)
+		return;
+
+	char *log = calloc(++len, sizeof(char));
+	result = clGetProgramBuildInfo(program, device->device_id, CL_PROGRAM_BUILD_LOG, len, log, NULL);
+	if (result != CL_SUCCESS) {
+		free(log);
+		return;
+	}
+	/* finally dump the issue */
+	IRT_WARN("%s\n\n", log);
+	free(log);
 }
 
 void irt_opencl_cleanup_device(irt_opencl_device *device)
@@ -552,55 +660,87 @@ void irt_opencl_cleanup_devices(irt_opencl_context *context)
 	}
 }
 
+bool irt_opencl_init_kernel_data(irt_opencl_device *device, cl_program program,
+								 const char *routine, irt_opencl_kernel_data *data)
+{
+	cl_int result;
+	/* if the device does not have compiler support fail-fast */
+	if (!device->compiler_available)
+		return false;
+
+	/* first of all clear the blob */
+	memset(data, 0, sizeof(*data));
+	data->device = device;
+	/* set it to broken per default .. fixup in the exit path */
+	data->flags |= IRT_OPENCL_KERNEL_DATA_FLAG_BROKEN;
+	/* try to build the program for the associated device */
+	result = clBuildProgram(program, 1, &device->device_id, "", NULL, NULL);
+	if (result != CL_SUCCESS) {
+        IRT_WARN("clBuildProgram returned with %d, build log follows:\n", result);
+		irt_opencl_dump_build_log(device, program);
+        return false;
+	}
+	/* associate the entry point */
+	data->kernel = clCreateKernel(program, routine, &result);
+	if (result != CL_SUCCESS) {
+		/* built program cannot be undone -- skip that */
+		IRT_WARN("clCreateKernel returned with %d\n", result);
+		return false;
+	}
+	/* retain a reference to the program and store locally */
+	clRetainProgram(program);
+	data->program = program;
+	/* remove the broken flag */
+	data->flags &= ~IRT_OPENCL_KERNEL_DATA_FLAG_BROKEN;
+	return true;
+}
+
+void irt_opencl_cleanup_kernel_data(irt_opencl_kernel_data *data)
+{
+	if (data->kernel != NULL)
+		clReleaseKernel(data->kernel);
+	
+	if (data->program != NULL)
+		clReleaseProgram(data->program);
+}
+
 bool irt_opencl_init_kernel_implementation(irt_opencl_context *context, irt_opencl_kernel_implementation *impl)
 {
 	cl_int result;
 	/* if irt_private is set .. this kernel has already been initiaized */
 	if (impl->data != NULL)
-		/* however handle the case where it might be broken */
-		return impl->data->flags == 0;
-
-	impl->data = malloc(sizeof(*impl->data));
-	memset(impl->data, 0, sizeof(*impl->data));
-	/* shortcut such that we have one less indirection */
-	irt_opencl_kernel_data *data = impl->data;
-	/* set it to broken per default .. fixup in the exit path */
-	data->flags |= IRT_OPENCL_KERNEL_DATA_FLAG_BROKEN;
-	
-	size_t len = strlen(impl->source);
-	data->program = clCreateProgramWithSource(context->context, 1, &impl->source, &len, &result);
+		return true;
+	/* create the program only once, all kernel_data structs only reference it */
+	cl_program program = clCreateProgramWithSource(context->context, 1, &impl->source, NULL, &result);
 	if (result != CL_SUCCESS) {
 		IRT_WARN("clCreateProgramWithSource returned with %d\n", result);
 		return false;
 	}
-	
-	/* we have the program object, build it! */
-	/* @TODO: this is a hack!!! */
-	result = clBuildProgram(data->program, 1, &context->device->device_id, "", NULL, NULL);
-	if (result != CL_SUCCESS) {
-        // check build log
-        size_t logSize;
-        clGetProgramBuildInfo(data->program, context->device->device_id, 
-                CL_PROGRAM_BUILD_LOG, 0, NULL, &logSize);
-        char *programLog = (char*) calloc (logSize+1, sizeof(char));
-        clGetProgramBuildInfo(data->program, context->device->device_id, 
-                CL_PROGRAM_BUILD_LOG, logSize+1, programLog, NULL);
-        IRT_WARN("Build Log:\n%s\n\n", programLog);
-        free(programLog);
-        IRT_WARN("clBuildProgram returned with %d\n", result);
-        return false;
+
+	irt_opencl_kernel_data *data = NULL;
+	irt_opencl_device *device = context->device;
+	/* iterate over all devices and build the program */
+	while (device != NULL) {
+		/* allocate a new kernel_data structure if we cannot reuse the latter one */
+		if (data == NULL)
+			data = malloc(sizeof(*data));
+
+		if (irt_opencl_init_kernel_data(device, program, impl->routine, data)) {
+			/* link in the data */
+			data->next = impl->data;
+			impl->data = data;
+			/* request a new blob for the next round */
+			data = NULL;
+		} else {
+			/* kernels which do not compile are never kept in the context */
+			IRT_WARN("failed to compile kernel on %s\n", device->name);
+		}
+		device = device->next;
 	}
-	
-	/* as we have the program now, build the kernel */
-	/* @TODO: this is a hack!!! */
-	data->kernel = clCreateKernel(data->program, "__insieme_fun_0", &result);
-	if (result != CL_SUCCESS) {
-		IRT_WARN("clCreateKernel returned with %d\n", result);
-		return false;
-	}
-	
-	/* remove the broken flag */
-	data->flags &= ~IRT_OPENCL_KERNEL_DATA_FLAG_BROKEN;
+	/* free data if there is a leftover */
+	if (data != NULL)
+		free(data);
+	clReleaseProgram(program);
 	return true;
 }
 
@@ -608,20 +748,15 @@ void irt_opencl_cleanup_kernel_implementation(irt_opencl_kernel_implementation *
 {
 	if (impl->data == NULL)
 		return;
-	/* shortcut such that we have one less indirection */
-	irt_opencl_kernel_data *data = impl->data;
-	
-	if (data->kernel != NULL) {
-		clReleaseKernel(data->kernel);
-		data->kernel = NULL;
+	/* free all kernel_data structures associated with this impl */
+	while (impl->data != NULL) {
+		irt_opencl_kernel_data *data = impl->data;
+		/* obtain pointer to next one before cleanup */
+		impl->data = data->next;
+
+		irt_opencl_cleanup_kernel_data(data);
+		free(data);
 	}
-	
-	if (data->program != NULL) {
-		clReleaseProgram(data->program);
-		data->program = NULL;
-	}
-	
-	free(data);
 }
 
 bool irt_opencl_init_kernel_table(irt_opencl_context *context, irt_opencl_kernel_implementation **kernel_table)
@@ -687,6 +822,55 @@ void irt_opencl_cleanup_context(irt_context *context)
 	irt_opencl_cleanup_devices(opencl_context);
 	
 	IRT_DEBUG("done!\n");
+}
+
+size_t irt_opencl_round_up(size_t value, size_t multiple)
+{
+    if (multiple == 0)
+        return value;
+
+    size_t remainder = value % multiple;
+    if (remainder == 0)
+        return value;
+
+    return value + multiple - remainder;
+}
+
+irt_opencl_event_list *irt_opencl_event_list_create(unsigned max_events)
+{
+	irt_opencl_event_list *list = malloc(sizeof(*list));
+	list->max_events = max_events;
+	list->num_events = 0;
+	if (max_events)
+		list->events = malloc(sizeof(cl_event) * max_events);
+	else
+		list->events = NULL;
+	return list;
+}
+
+void irt_opencl_event_list_wait_and_free(irt_opencl_event_list *list)
+{
+	if (list == NULL)
+		return;
+
+	if (list->num_events) {
+		clWaitForEvents(list->num_events, list->events);
+		for (unsigned i = 0; i < list->num_events; ++i)
+			clReleaseEvent(list->events[i]);
+	}
+	/* free(NULL) is never an error */
+	free(list->events);
+}
+
+cl_event *irt_opencl_event_list_advance(irt_opencl_event_list *list)
+{
+	/* in this case we have free space avail. */
+	IRT_ASSERT(list->num_events < list->max_events, IRT_ERR_OCL, "no event slots available");
+	/* in case assertions are disabled */
+	if (list->num_events >= list->max_events)
+		return NULL;
+
+	return &list->events[list->num_events++];
 }
 
 #endif // ifndef __GUARD_IMPL_OPENCL_IMPL_H
