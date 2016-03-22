@@ -331,7 +331,22 @@ namespace types {
 				out << "?";
 			}
 		});
+
+		// end here if there are no variadic entries
+		if (variadicTypeVarMapping.empty() && variadicGenericTypeVarMapping.empty()) return out << "}";
+
+		out << "|";
+
+		out << join(",", variadicTypeVarMapping, [](std::ostream& out, const VariadicTypeVariableMapping::value_type& cur) {
+			out << *cur.first << "->[" << join(",", cur.second, print<deref<TypeVariablePtr>>()) << "]";
+		});
 		
+		if (!variadicTypeVarMapping.empty() && !variadicGenericTypeVarMapping.empty()) out << ",";
+
+		out << join(",", variadicGenericTypeVarMapping, [](std::ostream& out, const VariadicGenericTypeVariableMapping::value_type& cur) {
+			out << *cur.first << "->[" << join(",", cur.second, print<deref<GenericTypeVariablePtr>>()) << "]";
+		});
+
 		return out << "}";
 	}
 

@@ -401,11 +401,33 @@ namespace types {
 
 	namespace {
 
-		SubstitutionOpt getTypeVariableInstantiationInternal(NodeManager& manager, const TypeList& parameter, const TypeList& arguments) {
+		SubstitutionOpt getTypeVariableInstantiationInternal(NodeManager& manager, TypeList parameter, const TypeList& arguments) {
 			const bool debug = false;
 
 			// the result to be returned upon failure
 			const static SubstitutionOpt fail;
+
+			// -------------------------------- Invalid Call By Value ---------------------------------------
+			//
+			// Support variadic type variables in parameter list.
+			//
+			// ----------------------------------------------------------------------------------------------
+
+			// adapt type parameter list for variadic function signature
+			Substitution res;
+			if (!parameter.empty()) {
+				if (auto vvar = parameter.back().isa<VariadicTypeVariablePtr>()) {
+					parameter.pop_back();
+					int counter = 0;
+					TypeVariableList expanded;
+					while (parameter.size() < arguments.size()) {
+						auto var = TypeVariable::get(manager, format("%s#%d", vvar->getVarName()->getValue(), ++counter));
+						parameter.push_back(var);
+						expanded.push_back(var);
+					}
+					res.addMapping(vvar, expanded);
+				}
+			}
 
 			// check length of parameter and arguments
 			if (parameter.size() != arguments.size()) { return fail; }
@@ -478,25 +500,30 @@ namespace types {
 					}
 				}
 
-				// qualifier promotion
+				// qualifier promotion and implicit plain-ref casting
 				if(isRefArg && isRefParam) {
 					lang::ReferenceType argType(arguments[i]);
 					lang::ReferenceType paramType(parameter[i]);
 
-					if(paramType.isConst() && !argType.isConst()) {
+					// promote qualifiers
+					if (paramType.isConst() && !argType.isConst()) {
 						argType.setConst(true);
 					}
-					if(paramType.isVolatile() && !argType.isVolatile()) {
+					if (paramType.isVolatile() && !argType.isVolatile()) {
 						argType.setVolatile(true);
 					}
-					// "this" implicit conversion
-					if(paramType.isPlain() && (argType.isCppReference() || argType.isCppRValueReference())) {
+
+					// convert implicitly to plain reference
+					if (paramType.isPlain() && (argType.isCppReference() || argType.isCppRValueReference())) {
 						argType.setKind(lang::ReferenceType::Kind::Plain);
 					}
+
+					// update argument
 					materializedArguments[i] = argType.toType();
 				}
 			}
 
+			if (debug) { std::cout << " Substitution: " << res << std::endl; }
 			if (debug) { std::cout << "    Arguments: " << arguments << std::endl; }
 			if (debug) { std::cout << " Materialized: " << materializedArguments << std::endl; }
 
@@ -569,27 +596,26 @@ namespace types {
 			// ---------------------------------- Solve Constraints -----------------------------------------
 
 			// solve constraints to obtain results
-			SubstitutionOpt&& res = constraints.solve(internalManager);
-			if (!res) {
+			SubstitutionOpt&& solution = constraints.solve(internalManager);
+			if (!solution) {
 				// if unsolvable => return this information
 				if (debug) { std::cout << " Terminated with no solution!" << std::endl << std::endl; }
-				return res;
+				return fail;
 			}
 
-			if (debug) { std::cout << " Solution: " << *res << std::endl; }
+			if (debug) { std::cout << " Solution: " << *solution << std::endl; }
 
 			// ----------------------------------- Revert Renaming ------------------------------------------
 			// (and produce a result within the correct node manager - internal manager will be thrown away)
 
 			// check for empty solution (to avoid unnecessary operations
-			if (res->empty()) {
-				if (debug) { std::cout << " Terminated with: " << *res << std::endl << std::endl; }
+			if (solution->empty()) {
+				if (debug) { std::cout << " Terminated with: " << res << std::endl << std::endl; }
 				return res;
 			}
 
 			// reverse variables from previously selected constant replacements (and bring back to correct node manager)
-			Substitution restored;
-			for (auto it = res->getVariableMapping().begin(); it != res->getVariableMapping().end(); ++it) {
+			for (auto it = solution->getVariableMapping().begin(); it != solution->getVariableMapping().end(); ++it) {
 				TypeVariablePtr var = static_pointer_cast<const TypeVariable>(parameterMapping.applyBackward(manager, it->first));
 				TypePtr substitute = argumentMapping.applyBackward(manager, it->second);
 
@@ -599,10 +625,10 @@ namespace types {
 					substitute = it2->applyBackward(manager, substitute);
 				}
 
-				restored.addMapping(manager.get(var), manager.get(substitute));
+				res.addMapping(manager.get(var), manager.get(substitute));
 			}
-			if (debug) { std::cout << " Terminated with: " << restored << std::endl << std::endl; }
-			return restored;
+			if (debug) { std::cout << " Terminated with: " << res << std::endl << std::endl; }
+			return res;
 		}
 
 	}
@@ -611,9 +637,9 @@ namespace types {
 
 		struct ResultCache {
 			mutable std::map<std::pair<TypeList, TypeList>, SubstitutionOpt> results;
-			bool operator==(const ResultCache& other) const {
+			bool operator==(const ResultCache& other) const { 
 				assert_fail() << "Should never be reached!";
-				return false;
+				return false; 
 			};
 		};
 

@@ -417,7 +417,7 @@ namespace types {
 		// conversion to plain ref is ok (this)
 		argType = builder.parseType("ref<A,f,f,cpp_ref>", symbols);
 		funType = builder.parseType("(ref<A>)->bool", symbols).as<FunctionTypePtr>();
-		EXPECT_EQ("bool",toString(*deduceReturnType(funType, {argType})));
+		EXPECT_EQ("bool",toString(*deduceReturnType(funType, {argType}))) << "FunType: " << *funType << "\nArgType: " << *argType;
 
 		argType = builder.parseType("ref<A,f,f,cpp_rref>", symbols);
 		funType = builder.parseType("(ref<A>)->bool", symbols).as<FunctionTypePtr>();
@@ -494,6 +494,39 @@ namespace types {
 		auto call = builder.callExpr(fun, arg);
 
 		EXPECT_EQ(builder.getLangBasic().getInt4(), call->getType());
+	}
+
+	TEST(ReturnTypeDeduction, VariadicTypeVariables) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		auto deduce = [&](const TypePtr& fun, const TypeList& args) {
+			return deduceReturnType(fun.as<FunctionTypePtr>(), args);
+		};
+
+		auto type = [&](const std::string& type) {
+			return builder.parseType(type);
+		};
+
+		// something simple to start with
+		EXPECT_EQ("B", toString(*deduce(type("(A)->B"), { type("A") })));
+		EXPECT_EQ("B", toString(*deduce(type("('a)->B"), { type("A") })));
+		EXPECT_EQ("A", toString(*deduce(type("('a)->'a"), { type("A") })));
+
+		EXPECT_EQ("A", toString(*deduce(type("('a,'a)->'a"), { type("A"), type("A") })));
+		EXPECT_EQ("B", toString(*deduce(type("('a,'a)->'a"), { type("B"), type("B") })));
+		EXPECT_EQ("unit", toString(*deduce(type("('a,'a)->'a"), { type("A"), type("B") })));
+
+		// now, let's try variadic arguments
+		EXPECT_EQ("A", toString(*deduce(type("('a...)->A"), {})));
+		EXPECT_EQ("A", toString(*deduce(type("('a...)->A"), { type("A") })));
+		EXPECT_EQ("A", toString(*deduce(type("('a...)->A"), { type("A"), type("B") })));
+
+		EXPECT_EQ("()", toString(*deduce(type("('a...)->('a...)"), { })));
+		EXPECT_EQ("(A)", toString(*deduce(type("('a...)->('a...)"), { type("A") })));
+		EXPECT_EQ("(A,B)", toString(*deduce(type("('a...)->('a...)"), { type("A"), type("B") })));
+		EXPECT_EQ("(A,B,C)", toString(*deduce(type("('a...)->('a...)"), { type("A"), type("B"), type("C") })));
+
 	}
 
 } // end namespace types
