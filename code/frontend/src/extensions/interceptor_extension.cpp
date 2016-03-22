@@ -73,8 +73,8 @@ namespace extensions {
 		string getTemplateTypeParmName(const TemplateParm* parm) {
 			return format("T_%d_%d", parm->getDepth(), parm->getIndex());
 		}
-		template<typename TemplateParm>
-		core::TypeVariablePtr getTypeVarForTemplateTypeParmType(const core::IRBuilder& builder, const TemplateParm* parm) {
+		template <typename TemplateParm>
+		core::TypePtr getTypeVarForTemplateTypeParmType(const core::IRBuilder& builder, const TemplateParm* parm) {
 			return builder.typeVariable(getTemplateTypeParmName(parm));
 		}
 		template<typename TemplateParm>
@@ -84,6 +84,13 @@ namespace extensions {
 		template<typename TemplateParm>
 		core::VariadicGenericTypeVariablePtr getTypeVarForVariadicTemplateTemplateTypeParmType(const core::IRBuilder& builder, const TemplateParm* parm) {
 			return builder.variadicGenericTypeVariable("V_T_" + getTemplateTypeParmName(parm));
+		}
+
+		template <typename TemplateParm>
+		core::TypePtr getGenericRefType(const core::IRBuilder &builder, const TemplateParm* parm) {
+			auto name = getTemplateTypeParmName(parm);
+			return builder.genericType("ref", toVector<core::TypePtr>(builder.typeVariable(name), builder.typeVariable(name + "_a"),
+				                                                      builder.typeVariable(name + "_b"), builder.typeVariable(name + "_c")));
 		}
 
 		void convertTemplateParameters(const clang::TemplateParameterList* tempParamList, const core::IRBuilder& builder,
@@ -96,7 +103,7 @@ namespace extensions {
 						// we only need arguments up to the first top-level variadic, the rest can be deduced
 						break;
 					} else {
-						typeVar = getTypeVarForTemplateTypeParmType(builder, templateParamTypeDecl);
+						typeVar = getGenericRefType(builder, templateParamTypeDecl);
 					}
 				} else if(auto templateNonTypeParamDecl = llvm::dyn_cast<clang::NonTypeTemplateParmDecl>(tempParam)) {
 					typeVar = getTypeVarForTemplateTypeParmType(builder, templateNonTypeParamDecl);
@@ -118,10 +125,17 @@ namespace extensions {
 			}
 		}
 
+		core::TypePtr adjustTemplateTypeReferenceQualifierKind(const core::TypePtr& type) {
+			if(!core::lang::isPlainReference(type)) return type;
+			auto refT = core::lang::ReferenceType(type);
+			refT.setKind(core::lang::ReferenceType::Kind::Qualified);
+			return refT.toType();
+		}
+
 		core::TypePtr convertTemplateArgument(conversion::Converter& converter, const clang::TemplateArgument& arg) {
 			switch(arg.getKind()) {
-			case clang::TemplateArgument::Expression: return converter.convertType(arg.getAsExpr()->getType());
-			case clang::TemplateArgument::Type: return converter.convertType(arg.getAsType());
+			case clang::TemplateArgument::Expression: return adjustTemplateTypeReferenceQualifierKind(converter.convertVarType(arg.getAsExpr()->getType()));
+			case clang::TemplateArgument::Type: return adjustTemplateTypeReferenceQualifierKind(converter.convertVarType(arg.getAsType()));
 			case clang::TemplateArgument::Integral: return converter.getIRBuilder().numericType(arg.getAsIntegral().getSExtValue());
 			case clang::TemplateArgument::Template: {
 				auto tempDecl = arg.getAsTemplate().getAsTemplateDecl();

@@ -975,8 +975,9 @@ namespace backend {
 			assert_pred1(core::lang::isReference, ptr) << "Can only convert reference types.";
 
 			// check that it is a plain, C++ or C++ R-Value reference
-			assert_true(core::lang::isPlainReference(ptr) || core::lang::isCppReference(ptr) || core::lang::isCppRValueReference(ptr))
-				<< "Unsupported reference type: " << *ptr;
+			assert_true(core::lang::isPlainReference(ptr) || core::lang::isCppReference(ptr) || core::lang::isCppRValueReference(ptr)
+			            || core::lang::isQualifiedReference(ptr))
+			    << "Unsupported reference type: " << *ptr;
 
 			auto manager = converter.getCNodeManager();
 
@@ -1033,6 +1034,16 @@ namespace backend {
 					res->lValueType = c_ast::rvalue_ref(subType->lValueType, ref.isConst(), ref.isVolatile());
 					res->rValueType = c_ast::rvalue_ref(subType->rValueType, ref.isConst(), ref.isVolatile());
 					res->externalType = c_ast::rvalue_ref(subType->externalType, ref.isConst(), ref.isVolatile());
+
+					break;
+				}
+
+				case core::lang::ReferenceType::Kind::Qualified: {
+
+					// local (l-value) values are simply qualified types, the rest is a pointer
+					res->lValueType = c_ast::qualify(subType->lValueType, ref.isConst(), ref.isVolatile());
+					res->rValueType = res->lValueType;
+					res->externalType = res->lValueType;
 
 					break;
 				}

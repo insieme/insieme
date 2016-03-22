@@ -55,17 +55,18 @@ namespace lang {
 			if (!type) return false;
 			if (type.isa<TypeVariablePtr>()) return true;
 			const ReferenceExtension& refExt = type->getNodeManager().getLangExtension<ReferenceExtension>();
-			return refExt.isMarkerPlain(type) || refExt.isMarkerCppReference(type) || refExt.isMarkerCppRValueReference(type);
+			return refExt.isMarkerPlain(type) || refExt.isMarkerCppReference(type) || refExt.isMarkerCppRValueReference(type) || refExt.isMarkerQualified(type);
 		}
 
 		ReferenceType::Kind parseKind(const TypePtr& type) {
 			assert_pred1(isRefMarker, type);
 
 			const ReferenceExtension& refExt = type->getNodeManager().getLangExtension<ReferenceExtension>();
-			if (refExt.isMarkerPlain(type)) return ReferenceType::Kind::Plain;
-			if (refExt.isMarkerCppReference(type)) return ReferenceType::Kind::CppReference;
-			if (refExt.isMarkerCppRValueReference(type)) return ReferenceType::Kind::CppRValueReference;
-			if (type.isa<TypeVariablePtr>()) return ReferenceType::Kind::Undefined;
+			if(refExt.isMarkerPlain(type)) return ReferenceType::Kind::Plain;
+			if(refExt.isMarkerCppReference(type)) return ReferenceType::Kind::CppReference;
+			if(refExt.isMarkerCppRValueReference(type)) return ReferenceType::Kind::CppRValueReference;
+			if(refExt.isMarkerQualified(type)) return ReferenceType::Kind::Qualified;
+			if(type.isa<TypeVariablePtr>()) return ReferenceType::Kind::Undefined;
 
 			// something went wrong
 		 	assert_fail() << "Unknown reference kind: " << type;
@@ -79,6 +80,7 @@ namespace lang {
 				case ReferenceType::Kind::Plain: 				return refExt.getMarkerPlain();
 				case ReferenceType::Kind::CppReference: 		return refExt.getMarkerCppReference();
 				case ReferenceType::Kind::CppRValueReference: 	return refExt.getMarkerCppRValueReference();
+				case ReferenceType::Kind::Qualified:			return refExt.getMarkerQualified();
 				case ReferenceType::Kind::Undefined:            return TypeVariable::get(mgr, "k");
 			}
 
@@ -159,6 +161,10 @@ namespace lang {
 
 	bool ReferenceType::isCppRValueReference() const {
 		return isRefMarker(kind) && getKind() == Kind::CppRValueReference;
+	}
+
+	bool ReferenceType::isQualified() const {
+		return isRefMarker(kind) && getKind() == Kind::Qualified;
 	}
 
 	namespace {
@@ -245,6 +251,10 @@ namespace lang {
 
 	bool isCppRValueReference(const NodePtr& node) {
 		return isReference(node) && ReferenceType(node).isCppRValueReference();
+	}
+
+	bool isQualifiedReference(const NodePtr& node) {
+		return isReference(node) && ReferenceType(node).isQualified();
 	}
 
 	ReferenceType::Kind getReferenceKind(const TypePtr& typeLitType) {
