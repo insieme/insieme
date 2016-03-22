@@ -108,7 +108,9 @@ namespace conversion {
 		}
 
 		// attach location from clang
-		for(auto s: retStmt) utils::attachLocationFromClang(s, converter.getSourceManager(), stmt->getLocStart(), stmt->getLocEnd());
+		for(auto s: retStmt) {
+			utils::attachLocationFromClang(s, converter.getSourceManager(), stmt->getLocStart(), stmt->getLocEnd());
+		}
 
 		return retStmt;
 	}
