@@ -71,6 +71,11 @@ namespace analysis {
 	VariadicTypeVariableSet getVariadicTypeVariablesBoundBy(const FunctionTypePtr& funType);
 
 	/**
+	* Checks whether the return type of the given function is generic, and if so, whether it is potentially deducible from its arguments.
+	*/
+	bool isReturnTypePotentiallyDeducible(const FunctionTypePtr& funType);
+
+	/**
 	 * Normalizes the given generic type variable instance.
 	 * For instance:
 	 *        'a<A,'b<C>>  => 'a<_,'_<_>>

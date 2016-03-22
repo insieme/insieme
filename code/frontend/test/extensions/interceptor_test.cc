@@ -59,6 +59,13 @@ namespace frontend {
 		});
 	}
 
+	TEST(InterceptorTest, QualifiedTemplates) {
+		runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/interceptor/qualified_template_interception.cpp", [](ConversionJob& job) {
+			job.addInterceptedHeaderDir(FRONTEND_TEST_DIR + "/inputs/interceptor");
+			job.registerFrontendExtension<extensions::InterceptorExtension, extensions::TestPragmaExtension>();
+		});
+	}
+
 	TEST(InterceptorTest, SystemInterception) {
 		runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/interceptor/system_interception.cpp", [](ConversionJob& job) {
 			job.registerFrontendExtension<extensions::InterceptorExtension, extensions::TestPragmaExtension>();
@@ -152,10 +159,11 @@ namespace frontend {
 		auto code = job.execute(manager);
 		ASSERT_TRUE(code);
 		checkForTypeName(code, "IMP_ClassWithTemplateMethod", "ClassWithTemplateMethod", "template_interception.h");
-		checkForTypeName(code, "IMP_TemplateClass<int<4>>", "TemplateClass", "template_interception.h");
-		checkForTypeName(code, "IMP_TemplateClass<real<8>>", "TemplateClass", "template_interception.h");
-		checkForTypeName(code, "IMP_TemplateClass<bool>", "TemplateClass", "template_interception.h");
-		checkForTypeName(code, "IMP_TemplateClass<'T_0_0>", "TemplateClass", "template_interception.h"); // generic type as template template param
+		checkForTypeName(code, "IMP_TemplateClass<ref<int<4>,f,f,qualified>>", "TemplateClass", "template_interception.h");
+		checkForTypeName(code, "IMP_TemplateClass<ref<real<8>,f,f,qualified>>", "TemplateClass", "template_interception.h");
+		checkForTypeName(code, "IMP_TemplateClass<ref<bool,f,f,qualified>>", "TemplateClass", "template_interception.h");
+		// generic type as template template param
+		checkForTypeName(code, "IMP_TemplateClass<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>", "TemplateClass", "template_interception.h");
 
 		// check name of function/method literals
 		checkForFunctionName(code, "IMP_templateFunRet", "templateFunRet", "template_interception.h");
@@ -190,9 +198,9 @@ namespace frontend {
 		auto code = job.execute(manager);
 		ASSERT_TRUE(code);
 		checkForTypeName(code, "IMP_timeval", "timeval", "sys/time.h");
-		checkForTypeName(code, "IMP_std_colon__colon_vector<int<4>,IMP_std_colon__colon_allocator<int<4>>>", "std::vector", "vector");
-		checkForTypeName(code, "IMP_std_colon__colon_vector<real<8>,IMP_std_colon__colon_allocator<real<8>>>", "std::vector", "vector");
-		checkForTypeName(code, "def struct IMP_Trivial {}; IMP_std_colon__colon_vector<IMP_Trivial,IMP_std_colon__colon_allocator<IMP_Trivial>>", "std::vector", "vector");
+		checkForTypeName(code, "IMP_std_colon__colon_vector<ref<int<4>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<int<4>,f,f,qualified>>,f,f,qualified>>", "std::vector", "vector");
+		checkForTypeName(code, "IMP_std_colon__colon_vector<ref<real<8>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<real<8>,f,f,qualified>>,f,f,qualified>>", "std::vector", "vector");
+		checkForTypeName(code, "def struct IMP_Trivial {}; IMP_std_colon__colon_vector<ref<IMP_Trivial,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<IMP_Trivial,f,f,qualified>>,f,f,qualified>>", "std::vector", "vector");
 
 		// check name of function/method literals as well as globals
 		checkForFunctionName(code, "IMP_gettimeofday", "gettimeofday", "sys/time.h");

@@ -1109,6 +1109,9 @@ namespace core {
 		if(!level) { level = uintLit(0); }
 		return callExpr(manager.getLangExtension<lang::ParallelExtension>().getGetThreadId(), level);
 	}
+	CallExprPtr IRBuilderBaseModule::getDefaultThreads() const {
+		return callExpr(manager.getLangExtension<lang::ParallelExtension>().getGetDefaultThreads());
+	}
 
 	CallExprPtr IRBuilderBaseModule::barrier(ExpressionPtr threadgroup) const {
 		if(!threadgroup) { threadgroup = getThreadGroup(); }

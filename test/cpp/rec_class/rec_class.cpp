@@ -1,3 +1,4 @@
+#include <iostream>
 
 /**
  * This test case ensures that recursive types with initializer
@@ -17,5 +18,7 @@ int main() {
 	A a;
 	A b(1);
 
+	std::cout << a.i << " | " << b.i << std::endl;
+	
 	return 0;
 }

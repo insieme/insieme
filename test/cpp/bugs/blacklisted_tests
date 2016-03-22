@@ -16,9 +16,8 @@ const_ref_init
 const_type_modifier
 ctor_base_ptr
 ctor_inherit
-ctor_ptr_overload
 def_initialization
-duplicatedCtor
+duplicated_ctor
 expression_with_cleanups
 expr_with_cleanups
 global_init
@@ -27,9 +26,7 @@ if_decl
 indirect_member_init
 intercepted_baseclass
 isstream
-just_decl_template
 malformed_logical_operator
-map_iterator
 mbstate
 mem_alloc_ctor
 member_function_as_field
@@ -58,9 +55,16 @@ template_integrals_intercept
 throw
 tr1_array
 try_catch
-typedefs
 unspecified_bool_type
 vector_pointers
 vector_specialization
 vfunc
 zero_ptr
+
+
+####################################################################################
+# The following tests are not really blacklisted but take rather long to execute.  #
+# All test names preceded with a '+' will not be executed by default but only when #
+# the integration test driver is run with the option to run these long tests also. #
+####################################################################################
+

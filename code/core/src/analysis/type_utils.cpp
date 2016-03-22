@@ -132,9 +132,9 @@ namespace analysis {
 
 		TypeList res = params->getTypes();
 		for (TypePtr& cur : res) {
-			
+
 			if (cur.isa<VariadicTypeVariablePtr>()) {
-				
+
 				cur = VariadicTypeVariable::get(mgr, blankName);
 
 			} else if (const GenericTypeVariablePtr& var = cur.isa<GenericTypeVariablePtr>()) {
@@ -156,6 +156,17 @@ namespace analysis {
 		return Types::get(mgr, res);
 	}
 
+	bool isReturnTypePotentiallyDeducible(const FunctionTypePtr& funType) {
+		auto retTypeVars = getFreeTypeVariables(funType->getReturnType());
+		if(retTypeVars.empty()) return true;
+		for(const auto& param : funType.getParameterTypeList()) {
+			auto paramTypeVars = getFreeTypeVariables(param);
+			for(const auto& t : paramTypeVars) {
+				retTypeVars.erase(t);
+			}
+		}
+		return retTypeVars.empty();
+	}
 
 	GenericTypeVariablePtr normalize(const GenericTypeVariablePtr& var) {
 		if (!var) return var;

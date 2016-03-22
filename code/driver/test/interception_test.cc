@@ -88,6 +88,14 @@ namespace driver {
 		EXPECT_PRED2(containsSubString, codeString, "templateTemplateFun<TemplateClass,");
 	}
 
+	TEST(DriverInterceptionTest, QualifiedTemplates) {
+		auto codeString = testCompilation("frontend/test/inputs/interceptor/qualified_template_interception.cpp");
+		EXPECT_PRED2(notContainsSubString, codeString, "*");
+		EXPECT_PRED2(containsSubString, codeString, "trivialTemplateFun<int32_t&");
+		EXPECT_PRED2(containsSubString, codeString, "trivialTemplateFun<const int32_t");
+		EXPECT_PRED2(containsSubString, codeString, "trivialTemplateFun<volatile int32_t&&");
+	}
+
 	TEST(DriverInterceptionTest, System) {
 		auto codeString = testCompilation("frontend/test/inputs/interceptor/system_interception.cpp");
 	}

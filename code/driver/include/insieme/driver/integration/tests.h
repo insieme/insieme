@@ -371,10 +371,13 @@ namespace integration {
 	// an optional type wrapping a test case
 	typedef boost::optional<IntegrationTestCase> IntegrationTestCaseOpt;
 
+	// an enum describing the different modes which test cases to load
+	enum LoadTestCaseMode { ENABLED_TESTS, ENABLED_AND_LONG_TESTS, BLACKLISTED_TESTS, ALL_TESTS };
+
 	/**
 	 * Obtains a full list of all test cases available within the system.
 	 */
-	const vector<IntegrationTestCase>& getAllCases(const bool blacklistedOnly = false);
+	const vector<IntegrationTestCase>& getAllCases(const LoadTestCaseMode loadTestCaseMode = ENABLED_TESTS);
 
 	/**
 	 * Obtains the test case matching the given name.

@@ -56,9 +56,18 @@ simple
 
 # Disabling tests because OMP doesn't seem to work at the moment
 gemm
-heatedPlate
+heated_plate
 nested_pfor_irregular
 reduction_all
 
 # Disabling tests because the volatile information seems to get lost, which results in the test having a race condition
 volatile
+
+
+####################################################################################
+# The following tests are not really blacklisted but take rather long to execute.  #
+# All test names preceded with a '+' will not be executed by default but only when #
+# the integration test driver is run with the option to run these long tests also. #
+####################################################################################
+
++integral_estimation

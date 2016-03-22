@@ -527,6 +527,7 @@ namespace core {
 		CallExprPtr getThreadGroup(ExpressionPtr level = ExpressionPtr()) const;
 		CallExprPtr getThreadGroupSize(ExpressionPtr level = ExpressionPtr()) const;
 		CallExprPtr getThreadId(ExpressionPtr level = ExpressionPtr()) const;
+		CallExprPtr getDefaultThreads() const;
 
 		// Direct call expression of barrier
 		CallExprPtr barrier(ExpressionPtr threadgroup = ExpressionPtr()) const;

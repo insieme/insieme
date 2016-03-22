@@ -427,7 +427,12 @@ namespace backend {
 		c_ast::CompoundPtr res = converter.getCNodeManager()->create<c_ast::Compound>();
 		for_each(ptr->getStatements(), [&](const core::StatementPtr& cur) {
 			c_ast::NodePtr stmt = this->visit(cur, context);
-			if(stmt) { res->statements.push_back(stmt); }
+			if(stmt) {
+				// strip no-op ref
+				auto unOp = stmt.isa<c_ast::UnaryOperationPtr>();
+				if(unOp && unOp->operation == c_ast::UnaryOperation::Reference) stmt = unOp->operand;
+				res->statements.push_back(stmt);
+			}
 		});
 		return res;
 	}

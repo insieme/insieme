@@ -380,20 +380,22 @@ namespace printer {
 					}
 
 					// print all declarations for NOT-defined (but declared) functions
-					visitDepthFirstOnce(node, [&](const CallExprPtr& cur) {
-						auto literalExpr = cur->getFunctionExpr().isa<LiteralPtr>();
-						if (literalExpr && !lang::isBuiltIn(literalExpr)) {
-							if(!visitedLiterals.insert(literalExpr).second) {
-								return;
+					if (!printer.hasOption(PrettyPrinter::FULL_LITERAL_SYNTAX)) {
+						visitDepthFirstOnce(node, [&](const CallExprPtr& cur) {
+							auto literalExpr = cur->getFunctionExpr().isa<LiteralPtr>();
+							if (literalExpr && !lang::isBuiltIn(literalExpr)) {
+								if(!visitedLiterals.insert(literalExpr).second) {
+									return;
+								}
+								newLine();
+								out << "decl ";
+								visit(NodeAddress(literalExpr));
+								out << " : ";
+								visit(NodeAddress(literalExpr->getType()));
+								out << ";";
 							}
-							newLine();
-							out << "decl ";
-							visit(NodeAddress(literalExpr));
-							out << " : ";
-							visit(NodeAddress(literalExpr->getType()));
-							out << ";";
-						}
-					});
+						});
+					}
 
 					//second: print all function declarations
 					utils::set::PointerSet<LambdaBindingPtr> visitedBindings;
@@ -811,6 +813,11 @@ namespace printer {
 				}
 
 				if(node->isMember()) {
+					auto thisParam = node->getParameterType(0);
+					assert_true(lang::isReference(thisParam)) << "This param has to be a reference type";
+					lang::ReferenceType refTy(thisParam);
+					if (refTy.isConst()) out << "const ";
+					if (refTy.isVolatile()) out << "volatile ";
 					out << getObjectName(node) << "::";
 				}
 				if(node->isConstructor()) {

@@ -4,6 +4,7 @@
 adv_op_overl
 alignof
 anonymous_struct
+argument_types
 assign_expr
 big
 boost
@@ -13,8 +14,6 @@ cast_reinterpret
 cast_static
 class
 class_as_return_type_of_member_function_closing_rec_cycle
-class_def_and_decl_splitup
-counter
 ctor
 ctor_inherit
 ctor_return
@@ -27,7 +26,6 @@ expr_with_cleanups
 friend
 globals_in_classes
 header
-identical_class_structure
 inherit
 inherit_chained
 inherit_multiple
@@ -43,10 +41,8 @@ mem_alloc_ctor_inherit
 member_data_pointer
 member_function_vector
 memb_func_ptr
-multipleTU
-naive
+multiple_tu
 nested_class
-new_string
 omp
 op_overl
 performance
@@ -58,6 +54,7 @@ refs
 refs_ctor
 refs_obj
 return
+return_types
 scope
 scoped_enum
 shadow_decl
@@ -68,27 +65,31 @@ static_data_member
 staticInitialization
 static_var_init
 static_var_updates
+std_distance
 stl_intercept
 stl_list_iterator
 stl_read_file
-stl_vector_iterator
 stmt_expr
 struct
 template1
 template2
 template3
-template_dependencies
 template_statics
 this
 try_catch
 try_catch_condOp
 typeinfo_struct
-union_member
 user_defined_cast
 vector_ctor
 vfunc_covariant_returnty
 vfunc_multiple_inherit
 vfunc_multiple_inherit_operators
 vfunc_single_inherit
-argument_types
-return_types
+
+
+####################################################################################
+# The following tests are not really blacklisted but take rather long to execute.  #
+# All test names preceded with a '+' will not be executed by default but only when #
+# the integration test driver is run with the option to run these long tests also. #
+####################################################################################
+

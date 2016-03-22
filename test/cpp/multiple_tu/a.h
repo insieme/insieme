@@ -2,7 +2,7 @@
 class Obj{
 	int x;
 public:
-	Obj (int x);
+	Obj(int i);
 	int f();
 };
 

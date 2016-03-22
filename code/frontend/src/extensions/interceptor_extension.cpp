@@ -34,15 +34,19 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/frontend/decl_converter.h"
 #include "insieme/frontend/extensions/interceptor_extension.h"
-#include "insieme/frontend/utils/name_manager.h"
+
+#include "insieme/frontend/decl_converter.h"
 #include "insieme/frontend/utils/conversion_utils.h"
+#include "insieme/frontend/utils/name_manager.h"
+
+#include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/analysis/type_utils.h"
 #include "insieme/core/lang/pointer.h"
 #include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/transform/node_replacer.h"
-#include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/types/return_type_deduction.h"
+
 #include "insieme/utils/name_mangling.h"
 
 #include <boost/program_options.hpp>
@@ -69,8 +73,8 @@ namespace extensions {
 		string getTemplateTypeParmName(const TemplateParm* parm) {
 			return format("T_%d_%d", parm->getDepth(), parm->getIndex());
 		}
-		template<typename TemplateParm>
-		core::TypeVariablePtr getTypeVarForTemplateTypeParmType(const core::IRBuilder& builder, const TemplateParm* parm) {
+		template <typename TemplateParm>
+		core::TypePtr getTypeVarForTemplateTypeParmType(const core::IRBuilder& builder, const TemplateParm* parm) {
 			return builder.typeVariable(getTemplateTypeParmName(parm));
 		}
 		template<typename TemplateParm>
@@ -80,6 +84,13 @@ namespace extensions {
 		template<typename TemplateParm>
 		core::VariadicGenericTypeVariablePtr getTypeVarForVariadicTemplateTemplateTypeParmType(const core::IRBuilder& builder, const TemplateParm* parm) {
 			return builder.variadicGenericTypeVariable("V_T_" + getTemplateTypeParmName(parm));
+		}
+
+		template <typename TemplateParm>
+		core::TypePtr getGenericRefType(const core::IRBuilder &builder, const TemplateParm* parm) {
+			auto name = getTemplateTypeParmName(parm);
+			return builder.genericType("ref", toVector<core::TypePtr>(builder.typeVariable(name), builder.typeVariable(name + "_a"),
+				                                                      builder.typeVariable(name + "_b"), builder.typeVariable(name + "_c")));
 		}
 
 		void convertTemplateParameters(const clang::TemplateParameterList* tempParamList, const core::IRBuilder& builder,
@@ -92,7 +103,7 @@ namespace extensions {
 						// we only need arguments up to the first top-level variadic, the rest can be deduced
 						break;
 					} else {
-						typeVar = getTypeVarForTemplateTypeParmType(builder, templateParamTypeDecl);
+						typeVar = getGenericRefType(builder, templateParamTypeDecl);
 					}
 				} else if(auto templateNonTypeParamDecl = llvm::dyn_cast<clang::NonTypeTemplateParmDecl>(tempParam)) {
 					typeVar = getTypeVarForTemplateTypeParmType(builder, templateNonTypeParamDecl);
@@ -114,10 +125,17 @@ namespace extensions {
 			}
 		}
 
+		core::TypePtr adjustTemplateTypeReferenceQualifierKind(const core::TypePtr& type) {
+			if(!core::lang::isPlainReference(type)) return type;
+			auto refT = core::lang::ReferenceType(type);
+			refT.setKind(core::lang::ReferenceType::Kind::Qualified);
+			return refT.toType();
+		}
+
 		core::TypePtr convertTemplateArgument(conversion::Converter& converter, const clang::TemplateArgument& arg) {
 			switch(arg.getKind()) {
-			case clang::TemplateArgument::Expression: return converter.convertType(arg.getAsExpr()->getType());
-			case clang::TemplateArgument::Type: return converter.convertType(arg.getAsType());
+			case clang::TemplateArgument::Expression: return adjustTemplateTypeReferenceQualifierKind(converter.convertVarType(arg.getAsExpr()->getType()));
+			case clang::TemplateArgument::Type: return adjustTemplateTypeReferenceQualifierKind(converter.convertVarType(arg.getAsType()));
 			case clang::TemplateArgument::Integral: return converter.getIRBuilder().numericType(arg.getAsIntegral().getSExtValue());
 			case clang::TemplateArgument::Template: {
 				auto tempDecl = arg.getAsTemplate().getAsTemplateDecl();
@@ -152,7 +170,8 @@ namespace extensions {
 			}
 		}
 
-		std::pair<core::ExpressionPtr, core::TypePtr> generateCallee(conversion::Converter& converter, const clang::Decl* decl) {
+		std::pair<core::ExpressionPtr, core::TypePtr> generateCallee(conversion::Converter& converter, const clang::Decl* decl,
+			                                                         const clang::Expr* clangExpr = nullptr) {
 			const core::IRBuilder& builder(converter.getIRBuilder());
 
 			auto funDecl = llvm::dyn_cast<clang::FunctionDecl>(decl);
@@ -174,13 +193,13 @@ namespace extensions {
 
 			// handle non-templated functions
 			if(!funDecl->isTemplateInstantiation()) {
+				auto funType = lit->getType().as<core::FunctionTypePtr>();
 				// if defaulted, fix "this" type to generic type
 				auto methDecl = llvm::dyn_cast<clang::CXXMethodDecl>(funDecl);
 				if(methDecl && methDecl->isDefaulted()) {
 					// check if method of class template specialization
 					auto recordDecl = methDecl->getParent();
 					if(auto specializedDecl = llvm::dyn_cast<clang::ClassTemplateSpecializationDecl>(recordDecl)) {
-						auto funType = lit->getType().as<core::FunctionTypePtr>();
 						auto paramTypes = funType->getParameterTypeList();
 						auto genericDecl = specializedDecl->getSpecializedTemplate();
 						core::TypeList genericTypeParams;
@@ -191,6 +210,12 @@ namespace extensions {
 						auto thisType = genericGenType;
 						lit = core::transform::replaceAllGen(converter.getNodeManager(), lit, prevThisType, thisType);
 					}
+				}
+				// if return type is type variable, and we have a target type, instantiate
+				if(clangExpr && core::analysis::isGeneric(retType)) {
+					retType = converter.convertExprType(clangExpr);
+					auto concreteFunType = builder.functionType(funType->getParameterTypes(), retType, funType->getKind());
+					lit = builder.callExpr(builder.getLangBasic().getTypeInstantiation(), builder.getTypeLiteral(concreteFunType), lit);
 				}
 				// return the concrete return type but potentially generic literal
 				converter.applyHeaderTagging(lit, decl);
@@ -220,7 +245,7 @@ namespace extensions {
 			auto concreteFunctionType = lit->getType().as<core::FunctionTypePtr>();
 
 			// if we don't need to do any type instantiation
-			if(templateConcreteParams.empty()) {
+			if(templateConcreteParams.empty() && core::analysis::isReturnTypePotentiallyDeducible(genericFunType)) {
 				return {innerLit, concreteFunctionType.getReturnType()};
 			}
 
@@ -233,11 +258,11 @@ namespace extensions {
 
 		core::CallExprPtr interceptMethodCall(conversion::Converter& converter, const clang::Decl* decl,
 			                                  std::function<core::ExpressionPtr(const core::TypePtr&)> thisArgFactory,
-			                                  clang::CallExpr::arg_const_range args) {
+			                                  clang::CallExpr::arg_const_range args, const clang::Expr* clangExpr = nullptr) {
 			if(converter.getHeaderTagger()->isIntercepted(decl)) {
 				auto methDecl = llvm::dyn_cast<clang::CXXMethodDecl>(decl);
 				if(methDecl) {
-					auto calleePair = generateCallee(converter, decl);
+					auto calleePair = generateCallee(converter, decl, clangExpr);
 					auto convMethodLit = calleePair.first;
 					auto funType = convMethodLit->getType().as<core::FunctionTypePtr>();
 					auto retType = calleePair.second;
@@ -276,7 +301,7 @@ namespace extensions {
 			if(converter.getHeaderTagger()->isIntercepted(decl)) {
 				// translate functions
 				if(llvm::dyn_cast<clang::FunctionDecl>(decl)) {
-					core::ExpressionPtr lit = generateCallee(converter, decl).first;
+					core::ExpressionPtr lit = generateCallee(converter, decl, nullptr).first;
 					VLOG(2) << "Interceptor: intercepted clang fun\n" << dumpClang(decl) << " -> converted to literal: " << *lit << " of type "
 						    << *lit->getType() << "\n";
 					return lit;
@@ -317,7 +342,7 @@ namespace extensions {
 		if(auto memberCall = llvm::dyn_cast<clang::CXXMemberCallExpr>(expr)) {
 			auto thisFactory = [&](const core::TypePtr& retType){ return converter.convertExpr(memberCall->getImplicitObjectArgument()); };
 			return fixMaterializedReturnType(converter, memberCall,
-				                             interceptMethodCall(converter, memberCall->getCalleeDecl(), thisFactory, memberCall->arguments()));
+				                             interceptMethodCall(converter, memberCall->getCalleeDecl(), thisFactory, memberCall->arguments(), memberCall));
 		}
 		if(auto operatorCall = llvm::dyn_cast<clang::CXXOperatorCallExpr>(expr)) {
 			auto decl = operatorCall->getCalleeDecl();
@@ -326,7 +351,7 @@ namespace extensions {
 					auto argList = operatorCall->arguments();
 					auto thisFactory = [&](const core::TypePtr& retType){ return converter.convertExpr(*argList.begin()); };
 					decltype(argList) remainder(argList.begin()+1, argList.end());
-					return fixMaterializedReturnType(converter, operatorCall, interceptMethodCall(converter, decl, thisFactory, remainder));
+					return fixMaterializedReturnType(converter, operatorCall, interceptMethodCall(converter, decl, thisFactory, remainder, operatorCall));
 				}
 			}
 		}
