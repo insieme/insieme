@@ -72,12 +72,7 @@ namespace insieme {
 namespace frontend {
 namespace conversion {
 
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	// Overwrite the basic visit method for expression in order to automatically
-	// and transparently attach annotations to node which are annotated
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	stmtutils::StmtWrapper Converter::CStmtConverter::Visit(clang::Stmt* stmt) {
-		VLOG(2) << "CStmtConverter";
+	stmtutils::StmtWrapper Converter::StmtConverter::BaseVisit(clang::Stmt* stmt, std::function<stmtutils::StmtWrapper(clang::Stmt*)> self) {
 
 		// iterate frontend extension list and check if a extension wants to convert the stmt
 		stmtutils::StmtWrapper retStmt;
@@ -87,7 +82,7 @@ namespace conversion {
 		}
 		if(retStmt.size() == 0) {
 			converter.trackSourceLocation(stmt);
-			retStmt = StmtVisitor<CStmtConverter, stmtutils::StmtWrapper>::Visit(stmt);
+			retStmt = self(stmt);
 			converter.untrackSourceLocation();
 		}
 
@@ -113,6 +108,11 @@ namespace conversion {
 		}
 
 		return retStmt;
+	}
+
+	stmtutils::StmtWrapper Converter::CStmtConverter::Visit(clang::Stmt* stmt) {
+		VLOG(2) << "CStmtConverter";
+		return BaseVisit(stmt, [&](clang::Stmt* stmt) { return StmtVisitor<CStmtConverter, stmtutils::StmtWrapper>::Visit(stmt); });
 	}
 
 	//---------------------------------------------------------------------------------------------------------------------

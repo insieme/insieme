@@ -49,7 +49,7 @@ namespace conversion {
 
 #define FORWARD_STMT_TO_EXPR_VISITOR_CALL(StmtTy)                                                                                                              \
 	stmtutils::StmtWrapper Visit##StmtTy(clang::StmtTy* stmt) {                                                                                                \
-		return stmtutils::StmtWrapper(converter.convertExpr(stmt));                                                                                             \
+		return stmtutils::StmtWrapper(converter.convertExpr(stmt));                                                                                            \
 	}
 
 #define CALL_BASE_STMT_VISIT(Base, StmtTy)                                                                                                                     \
@@ -66,6 +66,8 @@ namespace conversion {
 		core::NodeManager& mgr;
 		const core::IRBuilder& builder;
 		const core::lang::BasicGenerator& gen;
+
+		stmtutils::StmtWrapper BaseVisit(clang::Stmt* stmt, std::function<stmtutils::StmtWrapper(clang::Stmt*)> self);
 
 	  public:
 		StmtConverter(Converter& converter) : converter(converter), mgr(converter.mgr), builder(converter.builder), gen(converter.mgr.getLangBasic()) {}
@@ -156,8 +158,6 @@ namespace conversion {
 	//							C STMT CONVERTER -- takes care of C nodes
 	//---------------------------------------------------------------------------------------------------------------------
 	class Converter::CStmtConverter : public Converter::StmtConverter, public clang::StmtVisitor<Converter::CStmtConverter, stmtutils::StmtWrapper> {
-	  protected:
-		// Converter& converter;
 
 	  public:
 		CStmtConverter(Converter& converter) : StmtConverter(converter) {}
@@ -213,10 +213,9 @@ namespace conversion {
 	//							CXX STMT CONVERTER  -- takes care of CXX nodes and C nodes with CXX code mixed in
 	//---------------------------------------------------------------------------------------------------------------------
 	class Converter::CXXStmtConverter : public Converter::StmtConverter, public clang::StmtVisitor<Converter::CXXStmtConverter, stmtutils::StmtWrapper> {
-		Converter& ConvFact;
 
 	  public:
-		CXXStmtConverter(Converter& ConvFact) : StmtConverter(ConvFact), ConvFact(ConvFact) {}
+		CXXStmtConverter(Converter& ConvFact) : StmtConverter(ConvFact) {}
 		virtual ~CXXStmtConverter() {}
 
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
