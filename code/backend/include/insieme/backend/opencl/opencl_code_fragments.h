@@ -53,8 +53,15 @@ namespace opencl {
 	typedef Ptr<DataRequirementTable> DataRequirementTablePtr;
 
 	class KernelTable : public c_ast::CodeFragment {
+		struct Entry {
+			unsigned id;
+			std::string source;
+			std::string routine;
+		};
+		typedef std::shared_ptr<Entry> EntryPtr;
+
 		const Converter& converter;
-		std::map<unsigned, std::string> impls;
+		std::map<unsigned, EntryPtr> impls;
 		c_ast::CodeFragmentPtr declaration;
 		static unsigned unique;
 	public:
@@ -66,7 +73,7 @@ namespace opencl {
 		const c_ast::ExpressionPtr getTable() const;
 		unsigned size() const;
 		
-		unsigned registerKernel(const ExpressionPtr& id, const ExpressionPtr& source);		
+		unsigned registerKernel(const ExpressionPtr& id, const ExpressionPtr& source, const ExpressionPtr& routine);
 		std::ostream& printTo(std::ostream& out) const override;
 	};	
 } // end namespace opencl

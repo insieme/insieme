@@ -122,25 +122,26 @@ namespace opencl {
 	public:
 		const ExpressionPtr& getWorkDim() const { return workDim; }
 		void setWorkDim(const ExpressionPtr& workDim) { this->workDim = workDim; }
+		const ExpressionList& getGlobalOffsets() const { return globalOffsets; }
+		void setGlobalOffsets(const ExpressionList& lst) { globalOffsets = lst; }
 		const ExpressionList& getGlobalWorkSizes() const { return globalWorkSize; }
-		void addGlobalWorkSize(const ExpressionPtr& sz) { globalWorkSize.push_back(sz); }
+		void setGlobalWorkSize(const ExpressionList& lst) { globalWorkSize = lst; }
 		const ExpressionList& getLocalWorkSizes() const { return localWorkSize; }
-		void addLocalWorkSize(const ExpressionPtr& sz) { localWorkSize.push_back(sz); }
-		
+		void setLocalWorkSize(const ExpressionList& lst) { localWorkSize = lst; }
+
 		bool operator==(const NDRange& other) const {
-			return workDim == other.workDim && globalWorkSize == other.globalWorkSize &&
-				   localWorkSize == other.localWorkSize;
+			return workDim == other.workDim && globalOffsets == other.globalOffsets &&
+				   globalWorkSize == other.globalWorkSize && localWorkSize == other.localWorkSize;
 		}
-		
 		static NDRangePtr decode(const ExpressionPtr& expr) {
 			return std::make_shared<NDRange>(encoder::toValue<NDRange>(expr));
 		}
-		
 		static ExpressionPtr encode(NodeManager& manager, const NDRangePtr& value) {
 			return encoder::toIR<NDRange>(manager, *value);
 		}
 	private:
 		ExpressionPtr workDim;
+		ExpressionList globalOffsets;
 		ExpressionList globalWorkSize;
 		ExpressionList localWorkSize;
 	};
@@ -258,8 +259,8 @@ namespace encoder {
 			IRBuilder builder(manager);
 			auto& oclExt = manager.getLangExtension<opencl::OpenCLExtension>();
 			// use the default IRBuilder to generate the callExpr
-			return builder.callExpr(oclExt.getNDRange(), oclExt.getMakeNDRange(),
-									value.getWorkDim(),
+			return builder.callExpr(oclExt.getNDRange(), oclExt.getMakeNDRange(), value.getWorkDim(),
+									toIR<ExpressionList, DirectExprListConverter>(manager, value.getGlobalOffsets()),
 									toIR<ExpressionList, DirectExprListConverter>(manager, value.getGlobalWorkSizes()),
 									toIR<ExpressionList, DirectExprListConverter>(manager, value.getLocalWorkSizes()));
 		}
@@ -272,20 +273,17 @@ namespace encoder {
 			if (!isEncodingOf<opencl::NDRange>(expr)) throw InvalidExpression(expr);
 			// prepare an empty requirement such that we can fill it up
 			opencl::NDRange ndrange;
-
 			// extract the enclosed workDim
 			ndrange.setWorkDim(analysis::getArgument(expr, 0));
-
-			ExpressionList globalWorkSizes = toValue<ExpressionList, DirectExprListConverter>(analysis::getArgument(expr, 1));
-			for (const auto& sz: globalWorkSizes) ndrange.addGlobalWorkSize(sz);
-			
-			ExpressionList localWorkSizes = toValue<ExpressionList, DirectExprListConverter>(analysis::getArgument(expr, 2));
-			for (const auto& sz: localWorkSizes) ndrange.addLocalWorkSize(sz);
+			// extract the associated expression lists
+			ndrange.setGlobalOffsets(toValue<ExpressionList, DirectExprListConverter>(analysis::getArgument(expr, 1)));
+			ndrange.setGlobalWorkSize(toValue<ExpressionList, DirectExprListConverter>(analysis::getArgument(expr, 2)));
+			ndrange.setLocalWorkSize(toValue<ExpressionList, DirectExprListConverter>(analysis::getArgument(expr, 3)));
 			// ndrange is ready to return it to the user who requested the conversion
 			return ndrange;
 		}
 	};
-	
+
 	template <>
 	struct is_encoding_of<opencl::NDRange> {
 		bool operator()(const core::ExpressionPtr& expr) const {

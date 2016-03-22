@@ -116,7 +116,7 @@ namespace opencl {
 			// just register new kernel impl
 			auto table = KernelTable::get(CONVERTER);
 			// register the kernel within the table
-			table->registerKernel(ARG(0), ARG(1));
+			table->registerKernel(ARG(0), ARG(1), ARG(2));
 			context.addDependency(table);
 			context.getIncludes().insert("stddef.h");
 			context.getIncludes().insert("irt_opencl.h");
@@ -264,9 +264,10 @@ namespace opencl {
 					lst.push_back(c_ast::lit(cb.uint32Type(), "0"));
 				return cb.initializer(lst);
 			};
+			init.push_back(addWorkSizes(ndrange->getGlobalOffsets()));
 			init.push_back(addWorkSizes(ndrange->getGlobalWorkSizes()));
 			init.push_back(addWorkSizes(ndrange->getLocalWorkSizes()));
-			
+
 			return cb.initializer(cb.namedType("irt_opencl_ndrange"), init);
 		};
 		table[oclExt.getWorkDim()] = OP_CONVERTER {

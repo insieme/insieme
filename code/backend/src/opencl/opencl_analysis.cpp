@@ -49,6 +49,9 @@
 
 #include "insieme/utils/name_mangling.h"
 #include "insieme/utils/logging.h"
+#include "insieme/utils/iterator_utils.h"
+
+#include <set>
 
 namespace insieme {
 namespace backend {
@@ -256,6 +259,26 @@ namespace analysis {
 			return std::make_shared<VariableRequirement>(core::Variable::get(manager, arg->getType()), size, start, end, accessMode);
 		}
 
+		bool isOffloadWorth(const core::NodePtr& node) {
+			// if it is not a statement then we cannot outline it anyway
+			if (node->getNodeCategory() != core::NC_Statement) return false;
+
+			std::vector<core::NodeAddress> candidates;
+			core::visitBreadthFirst(core::NodeAddress(node), [&](const core::StatementAddress& addr) {
+				// assure that we do not face an expression
+				auto stmt = addr.getAddressedNode();
+				if (stmt->getNodeCategory() != core::NC_Statement) return;
+
+				// now check of independence
+				if (!isIndependentStmt(stmt)) return;
+				// excellent note for later analysis if required
+				candidates.push_back(addr);
+			});
+
+			// @TODO: implement e.g. heuristic if the independent stmts are worth it
+			return candidates.size() > 0;
+		}
+
 		// @TODO: an argument wih an incomplete type is not allowed!!!
 		// @TODO: while to for extension is a problem if produces e.g. ref<ref<'a>...>
 	}
@@ -433,13 +456,109 @@ namespace analysis {
 			if (node->getNodeCategory() != core::NC_Statement) return false;
 
 			if (auto anno = node->getAnnotation(BaseAnnotation::KEY)) {
-				return analysis::isOffloadAble(manager, node);
+				// first of all it must meet the requirements of OpenCL
+				if (!isOffloadAble(manager, node)) return false;
+				// secondly it must be worth it
+				return isOffloadWorth(node);
 			}
 			return false;
 		};
 		// traverse through the tree and find nodes which are valid for offloading
 		core::visitDepthFirstOnce(node, core::makeLambdaVisitor(filter, [&](const core::NodePtr& node) { result.push_back(node); }));
 		return result;
+	}
+
+	namespace {
+		class DependencyGraphBuilder {
+			core::NodePtr root;
+			DependencyGraph& graph;
+			std::set<core::NodeAddress> all;
+			const core::lang::ReferenceExtension& refExt;
+		public:
+			DependencyGraphBuilder(const core::NodePtr& root, DependencyGraph& graph) :
+				root(root), graph(graph), all(),
+				refExt(root->getNodeManager().getLangExtension<core::lang::ReferenceExtension>())
+			{ }
+
+			void visit(const core::NodePtr& node) {
+				static bool debug = true;
+
+				// find all addresses using bfs
+				auto addrs = core::Address<const core::Node>::findAll(node, root, false);
+				if (debug) std::cout << "found " << addrs.size() << " addresses referencing: " << dumpColor(node);
+				// iterate over each occurance of the given variable within the stmt
+				for (const core::NodeAddress& addr : addrs) {
+					// explicitly add the source
+					graph.addVertex(addr.getAddressedNode());
+
+					if (debug) std::cout << "visit vertex: " << dumpColor(addr.getAddressedNode());
+
+					core::NodeAddress source = addr;
+					core::visitPathBottomUpInterruptible(addr.getParentAddress(), [&](const core::NodeAddress& sink) {
+						if (!all.insert(sink).second) return true;
+						if (debug) std::cout << "visit sink: " << dumpColor(sink.getAddressedNode());
+
+						auto node = sink.getAddressedNode();
+						if (node->getNodeType() != core::NT_CallExpr) return true;
+
+						auto call = node.as<core::CallExprPtr>();
+						if (core::analysis::isCallOf(call, refExt.getRefAssign())) {
+							// add a dependency to the variable and recurse
+							auto arg = core::analysis::getArgument(call, 0);
+							graph.addEdge(source, arg);
+
+							if (debug) std::cout << "ref_assign: " << dumpColor(arg);
+
+							// remove all derefs
+							while (core::analysis::isCallOf(arg, refExt.getRefDeref()))
+								arg = core::analysis::getArgument(arg, 0);
+
+							// hop into the recursion
+							visit(arg);
+							return true;
+						} else if (core::analysis::isCallOf(call, refExt.getRefDeref())) {
+							if (debug) std::cout << "ref_deref: " << dumpColor(call);
+
+							// in this case we ignore it as *v3 is the same dependency as v3
+							// return false;
+						}
+						// add a general dependency iff source and sink differ
+						if (source != sink) {
+							if (debug) std::cout << "add edge" << std::endl;
+							graph.addEdge(source.getAddressedNode(), sink.getAddressedNode());
+						}
+						// setup the source for the next round
+						source = sink;
+						return false;
+					});
+				}
+			}
+		};
+	}
+
+	DependencyGraph& getDependencyGraph(const core::StatementPtr& stmt, const core::VariableSet& vars, DependencyGraph& base) {
+		DependencyGraphBuilder builder(stmt, base);
+		for (const core::VariablePtr& var : vars) builder.visit(var);
+		return base;
+	}
+
+	DependencyGraph& getDependencyGraph(const core::CallExprPtr& callExpr, core::NodeMap& mapping, DependencyGraph& base) {
+		// 1. map input vars to actual parameters
+		auto lambdaExpr = callExpr->getFunctionExpr().isa<core::LambdaExprPtr>();
+		if (!lambdaExpr) return base;
+
+		core::VariableSet vars;
+		for_each(make_paired_range(callExpr->getArguments(), lambdaExpr->getLambda()->getParameters()),
+		[&](const std::pair<const core::ExpressionPtr, const core::VariablePtr>& pair) {
+			// note vars for later
+			vars.insert(pair.second);
+			// generic mapping from input args to output args
+			mapping[pair.first] = pair.second;
+		});
+		// nothing more we can do here .. we ignore internals
+		if (core::lang::isBuiltIn(callExpr) || core::lang::isDerived(callExpr)) return base;
+		// 2. foreach parameter build the dependency subgraph
+		return getDependencyGraph(lambdaExpr->getBody(), vars, base);
 	}
 }
 }

@@ -38,6 +38,7 @@
 
 #include "insieme/core/lang/extension.h"
 #include "insieme/core/lang/reference.h"
+#include "insieme/core/lang/pointer.h"
 #include "insieme/core/lang/varargs_extension.h"
 #include "insieme/core/forward_decls.h"
 
@@ -49,36 +50,38 @@ namespace opencl {
 		friend class core::NodeManager;
 		OpenCLExtension(core::NodeManager& manager);
 	  public:
-		// import reference extension to utilize aliases
+		// import reference & ptr extension to utilize aliases
 		IMPORT_MODULE(core::lang::ReferenceExtension);
+
+		TYPE_ALIAS("opencl_ndrange_fun", "(ref<irt_wi>)->opencl_ndrange");
+		TYPE_ALIAS("opencl_data_requirement_fun", "(ref<irt_wi>, ref<opencl_ndrange>, uint<4>)->opencl_data_requirement");
+		TYPE_ALIAS("opencl_data_range_fun", "(ref<irt_wi>, ref<opencl_ndrange>, uint<4>, uint<4>)->opencl_data_range");
+
+		TYPE_ALIAS("opencl_kernel_id", "uint<4>");
+		TYPE_ALIAS("opencl_size_type", "uint<8>");
+
 		// used to register a kernel source under the given id (which is an index within the global kernel table)
-		LANG_EXT_LITERAL(RegisterKernel, "opencl_register_kernel", "(uint<4>, (ref<array<char,inf>,t,f,plain>,int<8>))->unit");
+		LANG_EXT_LITERAL(RegisterKernel, "opencl_register_kernel", "(opencl_kernel_id, 'source, 'routine)->unit");
 		// used to run a given kernel
-		LANG_EXT_LITERAL(ExecuteKernel, "opencl_execute_kernel", "(uint<4>, (ref<irt_wi>)->opencl_ndrange, list<(ref<irt_wi>, ref<opencl_ndrange>, uint<4>)->opencl_data_requirement>, var_list)->unit");
-		// represents an nd-range
-		LANG_EXT_TYPE(NDRange, "opencl_ndrange"/*, "struct { work_dim : uint<4>; global_work_size : array<uint<4>, 3>; local_work_size : array<uint<4>, 3>; }"*/);
-		// used to make an ndrange for a given kernel
-		// 1st arg: work_dim
-		// 2nd arg: global_work_size
-		// 3rd arg: local_work_size
-		LANG_EXT_LITERAL(MakeNDRange, "opencl_make_ndrange", "(uint<4>, list<uint<4>>, list<uint<4>>)->opencl_ndrange");
-		// represents a data range within a DataRequirement
-		LANG_EXT_TYPE(DataRange, "opencl_data_range"/*, "struct { size : uint<4>; start : uint<4>; end : uint<4>; }"*/);
-		// constructor for the latter
-		LANG_EXT_LITERAL(MakeDataRange, "opencl_make_data_range", "(()->uint<4>, ()->uint<4>, ()->uint<4>)->opencl_data_range");
-		// represents a DataRequirement entity
-		LANG_EXT_TYPE(DataRequirement, "opencl_data_requirement"/*, "struct { mode : uint<4>; num_ranges : uint<4>; ranges : array<opencl_data_range, 's>; }"*/);
-		// constructor for the latter
-		LANG_EXT_LITERAL(MakeDataRequirement, "opencl_make_data_requirement", "(type<'a>, uint<4>, (ref<irt_wi>, ref<opencl_ndrange>, uint<4>, uint<4>)->opencl_data_range, uint<4>)->opencl_data_requirement");
+		LANG_EXT_LITERAL(ExecuteKernel, "opencl_execute_kernel", "(opencl_kernel_id, opencl_ndrange_fun, list<opencl_data_requirement_fun>, var_list)->unit");
+
+		LANG_EXT_TYPE(NDRange, "opencl_ndrange");
+		LANG_EXT_LITERAL(MakeNDRange, "opencl_make_ndrange", "(uint<4>, list<'goffset>, list<'gsize>, list<'lsize>>)->opencl_ndrange");
+
+		LANG_EXT_TYPE(DataRange, "opencl_data_range");
+		LANG_EXT_LITERAL(MakeDataRange, "opencl_make_data_range", "('size, 'start, 'end)->opencl_data_range");
+
+		LANG_EXT_TYPE(DataRequirement, "opencl_data_requirement");
+		LANG_EXT_LITERAL(MakeDataRequirement, "opencl_make_data_requirement", "(type<'a>, uint<4>, opencl_data_range_fun, uint<4>)->opencl_data_requirement");
 
 		// extensions for the opencl kernel code
 		LANG_EXT_LITERAL(WorkDim, "opencl_get_work_dim", "()->uint<4>");
-		LANG_EXT_LITERAL(GlobalSize, "opencl_get_global_size", "(uint<4>)->uint<4>");
-		LANG_EXT_LITERAL(GlobalId, "opencl_get_global_id", "(uint<4>)->uint<4>");
-		LANG_EXT_LITERAL(LocalSize, "opencl_get_local_size", "(uint<4>)->uint<4>");
-		LANG_EXT_LITERAL(LocalId, "opencl_get_local_id", "(uint<4>)->uint<4>");
-		LANG_EXT_LITERAL(NumGroups, "opencl_get_num_groups", "(uint<4>)->uint<4>");
-		LANG_EXT_LITERAL(GroupId, "opencl_get_group_id", "(uint<4>)->uint<4>");
+		LANG_EXT_LITERAL(GlobalSize, "opencl_get_global_size", "(uint<4>)->opencl_size_type");
+		LANG_EXT_LITERAL(GlobalId, "opencl_get_global_id", "(uint<4>)->opencl_size_type");
+		LANG_EXT_LITERAL(LocalSize, "opencl_get_local_size", "(uint<4>)->opencl_size_type");
+		LANG_EXT_LITERAL(LocalId, "opencl_get_local_id", "(uint<4>)->opencl_size_type");
+		LANG_EXT_LITERAL(NumGroups, "opencl_get_num_groups", "(uint<4>)->opencl_size_type");
+		LANG_EXT_LITERAL(GroupId, "opencl_get_group_id", "(uint<4>)->opencl_size_type");
 
 		LANG_EXT_TYPE_WITH_NAME(MarkerGlobal, "opencl_global_marker", "opencl_global");
 		LANG_EXT_TYPE_WITH_NAME(MarkerConstant, "opencl_constant_marker", "opencl_constant");
@@ -86,8 +89,6 @@ namespace opencl {
 		LANG_EXT_TYPE_WITH_NAME(MarkerPrivate, "opencl_private_marker", "opencl_private");
 
 		LANG_EXT_TYPE_WITH_NAME(GenType, "opencl_type_template", "opencl_type<'a, 'loc>");
-		// TYPE_ALIAS("opencl_type<'a, 'loc>", "'a");
-
 		LANG_EXT_LITERAL(Peel, "opencl_peel", "(opencl_type<'a, 'loc>)->'a");
 	};
 

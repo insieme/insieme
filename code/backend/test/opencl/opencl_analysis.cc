@@ -46,6 +46,7 @@
 
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/lang/pointer.h"
+#include "insieme/core/analysis/ir_utils.h"
 
 #include "insieme/annotations/opencl/opencl_annotations.h"
 
@@ -95,6 +96,39 @@ namespace opencl {
 		annos.push_back(std::make_shared<LoopAnnotation>(true));
 		addAnnotations(forStmt, annos);
 		EXPECT_TRUE(analysis::isIndependentStmt(forStmt));
+	}
+
+	TEST(getDependencyGraph, Basic) {
+		core::NodeManager mgr;
+		core::IRBuilder builder(mgr);
+
+		core::IRBuilder::EagerDefinitionMap symbols;
+		symbols["fun0"] = builder.parseExpr("(lhs : ref<'a,f,'b>, rhs : 'a) -> 'a { lhs = rhs; return *lhs; }");
+
+		auto stmt = builder.parseStmt("{ var ref<int<4>,f,f> v1 = ref_temp_init(1); fun0(v1, *v1+1); }", symbols);
+
+		analysis::DependencyGraph graph;
+		std::cout << dumpColor(stmt);
+
+		auto vars = core::analysis::getAllVariablesInScope(stmt);
+		analysis::getDependencyGraph(stmt, vars, graph);
+
+		for (const core::VariablePtr& var : vars) {
+			std::cout << "tree starting at root: " << dumpColor(var);
+			analysis::visitDepthFirstOnce(graph, [&](const core::NodePtr& vertex) {
+				std::cout << "vertex: " << dumpColor(vertex);
+				if (vertex->getNodeType() == core::NT_CallExpr) {
+					// yeah expand here
+					analysis::DependencyGraph child;
+					core::NodeMap mapping;
+
+					analysis::getDependencyGraph(vertex.as<core::CallExprPtr>(), mapping, child);
+					for (const auto& pair : mapping) {
+						std::cout << dumpColor(pair.first) << " --> " << dumpColor(pair.second);
+					}
+				}
+			});
+		}
 	}
 } // end namespace opencl
 } // end namespace backend

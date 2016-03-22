@@ -36,13 +36,21 @@
 
 #pragma once
 
+#include <boost/graph/breadth_first_search.hpp>
+
 #include "insieme/core/forward_decls.h"
+#include "insieme/core/ir_node.h"
 #include "insieme/annotations/opencl/opencl_annotations.h"
+#include "insieme/utils/graph_utils.h"
 
 namespace insieme {
 namespace backend {
 namespace opencl {
 namespace analysis {
+	/**
+	 * Represents a dependencygraph within the context of opencl
+	 */
+	typedef utils::graph::PointerGraph<core::NodePtr, utils::graph::unlabeled, boost::directedS> DependencyGraph;
 	/**
 	 * Shortcut for eg. core::lang::PointerType(node).getElementType() & friends
 	 */
@@ -74,6 +82,80 @@ namespace analysis {
      * Determine all offloadable statements within a given node
      */
 	core::NodeList getOffloadAbleStmts(const core::NodePtr& node);
+
+	DependencyGraph& getDependencyGraph(const core::StatementPtr& stmt, const core::VariableSet& vars, DependencyGraph& base);
+
+	DependencyGraph& getDependencyGraph(const core::CallExprPtr& callExpr, core::NodeMap& mapping, DependencyGraph& base);
+
+	namespace {
+		template<typename Lambda>
+		struct DependencyGraphVisitor : public boost::default_dfs_visitor {
+			Lambda lambda;
+			const DependencyGraph& graph;
+		public:
+			DependencyGraphVisitor(const DependencyGraph& graph, Lambda& lambda) :
+				lambda(lambda), graph(graph)
+			{ }
+
+			template <typename Vertex, typename Graph>
+			void initialize_vertex(const Vertex& v, const Graph& g) { }
+
+			template <typename Vertex, typename Graph>
+			void start_vertex(const Vertex& v, const Graph& g) { }
+
+			template <typename Vertex, typename Graph>
+			void discover_vertex(const Vertex& v, const Graph& g) {
+				// at this point we can invoke the lambda
+				lambda(graph.getVertexFromDescriptor(v));
+			}
+
+			template <typename Edge, typename Graph>
+			void examine_edge(const Edge& e, const Graph& g) { }
+
+			template <typename Edge, typename Graph>
+			void tree_edge(const Edge& e, const Graph& g) { }
+
+			template <typename Edge, typename Graph>
+			void back_edge(const Edge& e, const Graph& g) { }
+
+			template <typename Edge, typename Graph>
+			void forward_or_cross_edge(const Edge& e, const Graph& g) { }
+
+			template <typename Edge, typename Graph>
+			void finish_edge(const Edge& e, const Graph& g) { }
+
+			template <typename Vertex, typename Graph>
+			void finish_vertex(const Vertex& v, const Graph& g) { }
+		};
+	}
+
+	template<typename Lambda, typename Enable = typename std::enable_if<!std::is_polymorphic<Lambda>::value, void>::type>
+	void visitDepthFirstOnce(const DependencyGraph& graph, Lambda lambda) {
+		DependencyGraphVisitor<Lambda> visitor(graph, lambda);
+		boost::depth_first_search(graph.asBoostGraph(), boost::visitor(visitor));
+	}
+
+	template <typename GraphType, typename VertexType = typename boost::vertex_bundle_type<GraphType>::type>
+	std::vector<std::set<typename GraphType::vertex_descriptore>> getTopologicalSets(const GraphType& graph) {
+		std::vector<typename boost::graph_traits<GraphType>::vertices_size_type> d(boost::num_vertices(graph));
+		std::fill(d.begin(), d.end(), 0);
+
+		// in case the ordering returns an empty set we are done already
+		auto ordered = utils::graph::getTopologicalOrder(graph);
+		if (ordered.empty())
+			return {};
+
+		// let boost compute the distances for each vertex for us
+		boost::breadth_first_search(graph, ordered.front(), boost::visitor(
+			boost::make_bfs_visitor(boost::record_distances(d.begin(), boost::on_tree_edge{}))));
+		// allocate enough storage for all required sets
+		std::vector<std::set<typename GraphType::vertex_descriptore>> result(*std::max_element(d.begin(), d.end()));
+		// obtain all unordered vertixes as this is the ordering of d
+		auto unordered = boost::vertices(graph);
+		for (unsigned i = 0; i < d.size(); ++i)
+			result[d[i]].insert(unordered[i]);
+		return result;
+	}
 }
 }
 }

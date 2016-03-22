@@ -54,7 +54,6 @@ namespace backend {
 namespace opencl {
 
 	#define KERNEL_TABLE_NAME "g_insieme_opencl_kernel_table"
-	#define DATA_REQUIREMENT_TABLE_NAME "g_insieme_opencl_data_requirement_table"
 
 	unsigned KernelTable::unique = 0;
 
@@ -101,13 +100,18 @@ namespace opencl {
 		return impls.size();
 	}
 
-	unsigned KernelTable::registerKernel(const core::ExpressionPtr& id, const core::ExpressionPtr& source) {
+	unsigned KernelTable::registerKernel(const core::ExpressionPtr& id, const core::ExpressionPtr& source, const core::ExpressionPtr& routine) {
 		// grab the kernelId for this source
 		unsigned int kernelId = core::encoder::toValue<unsigned int>(id);
 		// check if it is already present, if it is .. oops the codegeneration has a bug!
 		assert_true(impls.find(kernelId) == impls.end()) << "kernel with id " << kernelId << " has already been registered!";
+
+		auto entry = std::make_shared<Entry>();
+		entry->id = kernelId;
+		entry->source = analysis::getArgument(source, 0).as<core::LiteralPtr>()->getStringValue();
+		entry->routine = analysis::getArgument(routine, 0).as<core::LiteralPtr>()->getStringValue();
 		// now it is safe to insert it into our registration map
-		impls.insert(std::make_pair(kernelId, analysis::getArgument(source, 0).as<core::LiteralPtr>()->getStringValue()));
+		impls.insert(std::make_pair(kernelId, entry));
 		return kernelId;
 	}
 
@@ -115,14 +119,15 @@ namespace opencl {
 		out << "// --- opencl kernel implementations ---\n";
 		// first of all, we generate a struct for each single kernel
 		for (const auto& arg : impls) {
+			auto entry = arg.second;
 			// first member must be '0' as it points to irt_private
-			out << "irt_opencl_kernel_implementation g_insieme_opencl_kernel_" << arg.first << "_implementation = {0,\n";
+			out << "irt_opencl_kernel_implementation g_insieme_opencl_kernel_" << entry->id << "_implementation = {0,\n";
 			// second arg is the printed kernel in an appropriate format
-			for (auto it = arg.second.begin(); it != arg.second.end(); ++it) {
+			for (auto it = entry->source.begin(); it != entry->source.end(); ++it) {
 				if (*it == '\n') out << "\\n\"\n\"";
 				else			 out << *it;
 			}
-			out << "};\n\n";
+			out << ",\n" << entry->routine << "};\n\n";
 		};
 
 		out << "// --- opencl kernel table ---\n";

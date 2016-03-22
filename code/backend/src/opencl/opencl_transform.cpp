@@ -92,13 +92,24 @@ namespace transform {
 			core::IRBuilder builder(manager);
 			return builder.wrapLazy(expr);
 		}
-		
+
+		core::ExpressionPtr identity(const core::ExpressionPtr& expr) {
+			return expr;
+		}
+
+		template<typename... P>
+		core::ExpressionList makeExpressionList(P... args) {
+			return toVector(identity(args)...);
+		}
+
 		NDRangePtr makeDefaultNDRange(core::NodeManager& manager) {
 			core::IRBuilder builder(manager);
 			NDRangePtr ndrange = std::make_shared<NDRange>();
 			ndrange->setWorkDim(builder.uintLit(1));
-			ndrange->addGlobalWorkSize(builder.uintLit(1));
-			ndrange->addLocalWorkSize(builder.uintLit(1));
+
+			core::ExpressionList workSize = makeExpressionList(builder.uintLit(1));
+			ndrange->setGlobalWorkSize(workSize);
+			ndrange->setLocalWorkSize(workSize);
 			return ndrange;
 		}
 	}
@@ -125,42 +136,42 @@ namespace transform {
 		core::IRBuilder builder(manager);
 		// grab a reference to the runtime & opencl extension
 		auto& oclExt = manager.getLangExtension<OpenCLExtension>();
-		return builder.callExpr(manager.getLangBasic().getUInt4(), oclExt.getGlobalId(), dim);
+		return builder.callExpr(manager.getLangBasic().getUInt8(), oclExt.getGlobalId(), dim);
 	}
 
 	core::CallExprPtr buildGetGlobalSize(core::NodeManager& manager, const core::ExpressionPtr& dim) {
 		core::IRBuilder builder(manager);
 		// grab a reference to the runtime & opencl extension
 		auto& oclExt = manager.getLangExtension<OpenCLExtension>();
-		return builder.callExpr(manager.getLangBasic().getUInt4(), oclExt.getGlobalSize(), dim);
+		return builder.callExpr(manager.getLangBasic().getUInt8(), oclExt.getGlobalSize(), dim);
 	}
 
 	core::CallExprPtr buildGetLocalId(core::NodeManager& manager, const core::ExpressionPtr& dim) {
 		core::IRBuilder builder(manager);
 		// grab a reference to the runtime & opencl extension
 		auto& oclExt = manager.getLangExtension<OpenCLExtension>();
-		return builder.callExpr(manager.getLangBasic().getUInt4(), oclExt.getLocalId(), dim);
+		return builder.callExpr(manager.getLangBasic().getUInt8(), oclExt.getLocalId(), dim);
 	}
 
 	core::CallExprPtr buildGetLocalSize(core::NodeManager& manager, const core::ExpressionPtr& dim) {
 		core::IRBuilder builder(manager);
 		// grab a reference to the runtime & opencl extension
 		auto& oclExt = manager.getLangExtension<OpenCLExtension>();
-		return builder.callExpr(manager.getLangBasic().getUInt4(), oclExt.getLocalSize(), dim);
+		return builder.callExpr(manager.getLangBasic().getUInt8(), oclExt.getLocalSize(), dim);
 	}
 
 	core::CallExprPtr buildGetNumGroups(core::NodeManager& manager, const core::ExpressionPtr& dim) {
 		core::IRBuilder builder(manager);
 		// grab a reference to the runtime & opencl extension
 		auto& oclExt = manager.getLangExtension<OpenCLExtension>();
-		return builder.callExpr(manager.getLangBasic().getUInt4(), oclExt.getNumGroups(), dim);
+		return builder.callExpr(manager.getLangBasic().getUInt8(), oclExt.getNumGroups(), dim);
 	}
 
 	core::CallExprPtr buildGetGroupId(core::NodeManager& manager, const core::ExpressionPtr& dim) {
 		core::IRBuilder builder(manager);
 		// grab a reference to the runtime & opencl extension
 		auto& oclExt = manager.getLangExtension<OpenCLExtension>();
-		return builder.callExpr(manager.getLangBasic().getUInt4(), oclExt.getGroupId(), dim);
+		return builder.callExpr(manager.getLangBasic().getUInt8(), oclExt.getGroupId(), dim);
 	}
 
 	core::CallExprPtr buildRegisterKernel(core::NodeManager& manager, unsigned int& id, const StepContext& sc, const core::LambdaExprPtr& oclExpr) {
@@ -173,7 +184,8 @@ namespace transform {
 		id = KernelTable::getNextUnique();
 		// use the default IRBuilder to generate the callExpr
 		return builder.callExpr(manager.getLangBasic().getUnit(), oclExt.getRegisterKernel(),
-								builder.uintLit(id), lang::buildPtrFromArray(literal));
+								builder.uintLit(id), core::lang::buildPtrFromArray(literal),
+								core::lang::buildPtrFromArray(builder.stringLit(sc.getKernelName())));
 	}
 
 	core::CallExprPtr buildExecuteKernel(core::NodeManager& manager, unsigned int id, const core::ExpressionPtr& ndrange,
@@ -477,9 +489,7 @@ namespace transform {
 			// ... as well as a modified ndrange
 			auto ndrange = std::make_shared<NDRange>();
 			ndrange->setWorkDim(builder.uintLit(1));
-			ndrange->addGlobalWorkSize(builder.numericCast(forStmt->getEnd(), manager.getLangBasic().getUInt4()));
-			// inform the runtime to handle the split
-			ndrange->addLocalWorkSize(builder.uintLit(0));
+			ndrange->setGlobalWorkSize(makeExpressionList(builder.numericCast(forStmt->getEnd(), manager.getLangBasic().getUInt4())));
 			callContext->setNDRange(ndrange);
 			return true;
 		});
@@ -561,8 +571,8 @@ namespace transform {
 			getBasicPreProcessorSequence(),
 			makePreProcessor<FlattenVariableIndirectionStep>(boost::ref(manager), boost::ref(context)),
 			makePreProcessor<SimplifierStep>(boost::ref(manager), boost::ref(context)),
-			makePreProcessor<CallIntroducerStep>(boost::ref(manager), boost::ref(context)),
 			makePreProcessor<KernelTypeStep>(boost::ref(manager), boost::ref(context)),
+			makePreProcessor<CallIntroducerStep>(boost::ref(manager), boost::ref(context)),
 			makePreProcessor<IntegrityCheckStep>(boost::ref(manager), boost::ref(context)));
 
 		core::StatementList body;
