@@ -63,6 +63,7 @@
 
 #include "insieme/annotations/c/include.h"
 #include "insieme/annotations/c/decl_only.h"
+#include "insieme/annotations/c/tag.h"
 
 #include "insieme/utils/logging.h"
 #include "insieme/utils/name_mangling.h"
@@ -160,6 +161,7 @@ namespace backend {
 			const TypeInfo* resolveTypeInternal(const core::TypePtr& type);
 
 			const TypeInfo* resolveTypeVariable(const core::TypeVariablePtr& ptr);
+			const TypeInfo* resolveNumericType(const core::NumericTypePtr& ptr);
 			const TypeInfo* resolveGenericType(const core::GenericTypePtr& ptr);
 
 			const TagTypeInfo* resolveTagType(const core::TagTypePtr& ptr);
@@ -189,10 +191,11 @@ namespace backend {
 		};
 	}
 
-	TypeManager::TypeManager(const Converter& converter) : store(new detail::TypeInfoStore(converter, getBasicTypeIncludeTable(), TypeHandlerList())) {}
+	TypeManager::TypeManager(const Converter& converter)
+	    : converter(converter), store(new detail::TypeInfoStore(converter, getBasicTypeIncludeTable(), TypeHandlerList())) {}
 
 	TypeManager::TypeManager(const Converter& converter, const TypeIncludeTable& includeTable, const TypeHandlerList& handlers)
-	    : store(new detail::TypeInfoStore(converter, includeTable, handlers)) {}
+	    : converter(converter), store(new detail::TypeInfoStore(converter, includeTable, handlers)) {}
 
 	TypeManager::~TypeManager() {
 		delete store;
@@ -242,6 +245,19 @@ namespace backend {
 		return store->getDefinitionOf(type);
 	}
 
+	const c_ast::TypePtr TypeManager::getTemplateArgumentType(const core::TypePtr& type) {
+		// correctly handle intercepted template template arguments (do not resolve, only use name)
+		auto genType = type.isa<core::GenericTypePtr>();
+		if(genType && core::analysis::isGeneric(genType) && annotations::c::hasIncludeAttached(genType)) {
+			std::string templateParamName = insieme::utils::demangle(genType->getName()->getValue());
+			if(core::annotations::hasAttachedName(genType)) {
+				templateParamName = core::annotations::getAttachedName(genType);
+			}
+			return converter.getCNodeManager()->create<c_ast::NamedType>(converter.getCNodeManager()->create<c_ast::Identifier>(templateParamName));
+		} else {
+			return getTypeInfo(type).rValueType;
+		}
+	}
 
 	TypeIncludeTable& TypeManager::getTypeIncludeTable() {
 		return store->getTypeIncludeTable();
@@ -335,18 +351,6 @@ namespace backend {
 			}
 
 
-			// - Header Annotation ------------------------------------------------------------------------
-
-			// if we have a struct or union type that is annotated
-			// with an include file => use the include file
-			const TypeInfo* t = NULL;
-			t = type_info_utils::headerAnnotatedTypeHandler(converter, type, [](std::string& s, const core::TypePtr& type) {
-				if(core::analysis::isStruct(type)) s = "struct " + s;
-				if(core::analysis::isUnion(type)) s = "union " + s;
-			});
-			if(t) { return t; }
-
-
 			// - Include Table ----------------------------------------------------------------------------
 
 			// lookup type within include table
@@ -385,8 +389,9 @@ namespace backend {
 					break;
 				}
 				case core::NT_TagType:      info = resolveTagType(type.as<core::TagTypePtr>()); break;
-				case core::NT_TupleType:    info = resolveTupleType(static_pointer_cast<const core::TupleType>(type)); break;
-				case core::NT_FunctionType: info = resolveFunctionType(static_pointer_cast<const core::FunctionType>(type)); break;
+				case core::NT_TupleType:    info = resolveTupleType(type.as<core::TupleTypePtr>()); break;
+				case core::NT_FunctionType: info = resolveFunctionType(type.as<core::FunctionTypePtr>()); break;
+				case core::NT_NumericType:  info = resolveNumericType(type.as<core::NumericTypePtr>()); break;
 
 				//			case core::NT_ChannelType:
 				case core::NT_TypeVariable: info = resolveTypeVariable(static_pointer_cast<const core::TypeVariable>(type)); break;
@@ -405,6 +410,14 @@ namespace backend {
 		const TypeInfo* TypeInfoStore::resolveTypeVariable(const core::TypeVariablePtr& ptr) {
 			c_ast::CNodeManager& manager = *converter.getCNodeManager();
 			return type_info_utils::createUnsupportedInfo(manager, ptr);
+		}
+
+		const TypeInfo* TypeInfoStore::resolveNumericType(const core::NumericTypePtr& ptr) {
+			c_ast::CNodeManager& manager = *converter.getCNodeManager();
+			assert_eq(ptr->getValue()->getNodeType(), core::NT_Literal) << "Non-literal numeric types should not reach the backend";
+			auto ident = manager.create<c_ast::Identifier>(ptr->getValue().as<core::LiteralPtr>()->getStringValue());
+			c_ast::TypePtr numType = manager.create<c_ast::IntegralType>(ident);
+			return type_info_utils::createInfo(numType);
 		}
 
 		const TypeInfo* TypeInfoStore::resolveGenericType(const core::GenericTypePtr& ptr) {
@@ -501,6 +514,28 @@ namespace backend {
 				}
 			}
 
+			// handle intercepted types
+			if(annotations::c::hasIncludeAttached(ptr)) {
+				std::string name = insieme::utils::demangle(ptr->getName()->getValue());
+				if(core::annotations::hasAttachedName(ptr)) {
+					name = core::annotations::getAttachedName(ptr);
+					if(annotations::c::hasAttachedCTag(ptr)) {
+						name = annotations::c::getAttachedCTag(ptr) + " " + name;
+					}
+				}
+				c_ast::NamedTypePtr namedType = manager.create<c_ast::NamedType>(manager.create<c_ast::Identifier>(name));
+				c_ast::CodeFragmentPtr definition = c_ast::IncludeFragment::createNew(converter.getFragmentManager(), annotations::c::getAttachedInclude(ptr));
+				// also handle optional template arguments
+				for(auto typeArg : ptr->getTypeParameterList()) {
+					auto tempParamType = converter.getTypeManager().getTemplateArgumentType(typeArg);
+					namedType->parameters.push_back(tempParamType);
+					// if argument type is not intercepted, add a dependency on its definition
+					auto tempParamTypeInfo = typeInfos.find(typeArg);
+					if(tempParamTypeInfo != typeInfos.end()) definition->addDependency(tempParamTypeInfo->second->definition);
+				}
+				return type_info_utils::createInfo(namedType, definition);
+			}
+
 			// no match found => return unsupported type info
 			LOG(FATAL) << "Unsupported type: " << *ptr;
 			return type_info_utils::createUnsupportedInfo(manager, ptr);
@@ -512,7 +547,7 @@ namespace backend {
 			// The resolution of a named composite type is based on 3 steps
 			//		- first, get a name for the resulting C struct / union
 			//		- create a code fragment including a declaration of the struct / union (no definition)
-			//		- create a code fragment including a defintion of the sturct / union
+			//		- create a code fragment including a definition of the struct / union
 			//		- the representation of the struct / union is the same internally and externally
 
 			bool isStruct = ptr.isa<core::StructPtr>();
@@ -940,8 +975,9 @@ namespace backend {
 			assert_pred1(core::lang::isReference, ptr) << "Can only convert reference types.";
 
 			// check that it is a plain, C++ or C++ R-Value reference
-			assert_true(core::lang::isPlainReference(ptr) || core::lang::isCppReference(ptr) || core::lang::isCppRValueReference(ptr))
-				<< "Unsupported reference type: " << *ptr;
+			assert_true(core::lang::isPlainReference(ptr) || core::lang::isCppReference(ptr) || core::lang::isCppRValueReference(ptr)
+			            || core::lang::isQualifiedReference(ptr))
+			    << "Unsupported reference type: " << *ptr;
 
 			auto manager = converter.getCNodeManager();
 
@@ -998,6 +1034,16 @@ namespace backend {
 					res->lValueType = c_ast::rvalue_ref(subType->lValueType, ref.isConst(), ref.isVolatile());
 					res->rValueType = c_ast::rvalue_ref(subType->rValueType, ref.isConst(), ref.isVolatile());
 					res->externalType = c_ast::rvalue_ref(subType->externalType, ref.isConst(), ref.isVolatile());
+
+					break;
+				}
+
+				case core::lang::ReferenceType::Kind::Qualified: {
+
+					// local (l-value) values are simply qualified types, the rest is a pointer
+					res->lValueType = c_ast::qualify(subType->lValueType, ref.isConst(), ref.isVolatile());
+					res->rValueType = res->lValueType;
+					res->externalType = res->lValueType;
 
 					break;
 				}

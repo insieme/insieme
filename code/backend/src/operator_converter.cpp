@@ -62,6 +62,7 @@
 #include "insieme/core/encoder/encoder.h"
 #include "insieme/core/encoder/lists.h"
 #include "insieme/core/transform/manipulation.h"
+#include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/transform/simplify.h"
 #include "insieme/core/analysis/attributes.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
@@ -325,6 +326,14 @@ namespace backend {
 		// -- casts --
 
 		res[basic.getNumericCast()] = OP_CONVERTER { return c_ast::cast(CONVERT_RES_TYPE, CONVERT_ARG(0)); };
+		res[basic.getTypeInstantiation()] = OP_CONVERTER {
+			auto lit = ARG(1).as<core::LiteralPtr>();
+			if(!lit) assert_fail() << "type instantiation should either be handled at call site or apply to function pointer literal";
+			auto replacementLit = core::IRBuilder(NODE_MANAGER).literal(lit->getValue(), call->getType());
+			core::transform::utils::migrateAnnotations(lit, replacementLit);
+			// TODO: add explicit instantiation arguments for function pointers
+			return CONVERT_EXPR(replacementLit);
+		};
 
 		// -- reals --
 
@@ -394,6 +403,8 @@ namespace backend {
 			assert_true(type) << "Invalid result type: " << *type;
 			return C_NODE_MANAGER->create<c_ast::Literal>(toString(*type->getTypeParameter(0)));
 		};
+
+		res[basic.getUnitConsume()] = OP_CONVERTER { return c_ast::cast(CONVERT_TYPE(LANG_BASIC.getUnit()), CONVERT_ARG(0)); };
 
 		// -- references --
 

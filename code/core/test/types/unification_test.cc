@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -75,7 +75,7 @@ namespace types {
 		EXPECT_TRUE(isUnifyable(varA, varB));
 		auto res = unify(manager, varA, varB);
 		EXPECT_TRUE(res);
-		if(res) { EXPECT_FALSE(res->getMapping().empty()); }
+		if(res) { EXPECT_FALSE(res->empty()); }
 
 		Substitution sub = *res;
 		EXPECT_EQ("'B", toString(*sub.applyTo(manager, varA)));

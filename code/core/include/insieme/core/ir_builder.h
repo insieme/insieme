@@ -420,9 +420,14 @@ namespace core {
 		LiteralPtr getIdentifierLiteral(const StringValuePtr& value) const;
 
 		/**
-		 * build type tokens (metatypes.... one of those => type<'a>  when 'a is a bounded to an specific type)
+		 * Build type tokens (metatypes.... one of those => type<'a>  when 'a is a bounded to an specific type)
 		 */
 		TypePtr getTypeLiteralType(const TypePtr& type) const;
+
+		/**
+		 * Build a numeric Type from a number.
+		 */
+		TypePtr numericType(int64_t value) const;
 
 		/**
 		 * A factory method for a type literals.
@@ -522,6 +527,7 @@ namespace core {
 		CallExprPtr getThreadGroup(ExpressionPtr level = ExpressionPtr()) const;
 		CallExprPtr getThreadGroupSize(ExpressionPtr level = ExpressionPtr()) const;
 		CallExprPtr getThreadId(ExpressionPtr level = ExpressionPtr()) const;
+		CallExprPtr getDefaultThreads() const;
 
 		// Direct call expression of barrier
 		CallExprPtr barrier(ExpressionPtr threadgroup = ExpressionPtr()) const;

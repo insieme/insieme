@@ -13,11 +13,11 @@ struct B {};
 typedef B C;
 
 int main() {
-//	A a;
+	A a;
 
 	vector<A> as;
 	vector<B> bs;
-//	vector<C> as;
+	vector<C> cs;
 
 	return 0;
 }

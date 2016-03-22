@@ -39,6 +39,7 @@
 #include "insieme/frontend/extensions/interceptor_extension.h"
 
 #include "insieme/annotations/c/include.h"
+#include "insieme/core/ir_builder.h"
 #include "insieme/core/annotations/naming.h"
 
 namespace insieme {
@@ -58,7 +59,14 @@ namespace frontend {
 		});
 	}
 
-	TEST(InterceptorTest, DISABLED_SystemInterception) {
+	TEST(InterceptorTest, QualifiedTemplates) {
+		runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/interceptor/qualified_template_interception.cpp", [](ConversionJob& job) {
+			job.addInterceptedHeaderDir(FRONTEND_TEST_DIR + "/inputs/interceptor");
+			job.registerFrontendExtension<extensions::InterceptorExtension, extensions::TestPragmaExtension>();
+		});
+	}
+
+	TEST(InterceptorTest, SystemInterception) {
 		runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/interceptor/system_interception.cpp", [](ConversionJob& job) {
 			job.registerFrontendExtension<extensions::InterceptorExtension, extensions::TestPragmaExtension>();
 		});
@@ -75,10 +83,12 @@ namespace frontend {
 		EXPECT_FALSE(any(funs, [&](decltype(funs)::value_type val) { return val.first->getStringValue() == name; })) << "Function " << name << " has not intercepted!";
 	}
 
-	void checkForTypeName(const NodePtr& code, const std::string& typeNodeName, const std::string& expectedAttachedName, const std::string& expectedHeaderName) {
+	void checkForTypeName(const NodePtr& code, const std::string& typeNodeIrSpec, const std::string& expectedAttachedName, const std::string& expectedHeaderName) {
 		bool checked = false;
+		IRBuilder builder(code->getNodeManager());
+		auto targetType = builder.parseType(typeNodeIrSpec).as<core::GenericTypePtr>();
 		visitDepthFirstOnce(code, [&](const core::GenericTypePtr& genType) {
-			if(genType->getName()->getValue() == typeNodeName) {
+			if(genType == targetType) {
 				ASSERT_TRUE(core::annotations::hasAttachedName(genType));
 				EXPECT_EQ(expectedAttachedName, core::annotations::getAttachedName(genType));
 				ASSERT_TRUE(insieme::annotations::c::hasIncludeAttached(genType));
@@ -86,7 +96,7 @@ namespace frontend {
 				checked = true;
 			}
 		}, true);
-		EXPECT_TRUE(checked);
+		EXPECT_TRUE(checked) << "checkForTypeName: " << typeNodeIrSpec;
 	}
 
 	void checkForFunctionName(const NodePtr& code, const std::string& functionLiteralName, const std::string& expectedAttachedName, const std::string& expectedHeaderName) {
@@ -100,7 +110,7 @@ namespace frontend {
 				checked = true;
 			}
 		}, true);
-		EXPECT_TRUE(checked);
+		EXPECT_TRUE(checked) << "checkForFunctionName: " << functionLiteralName;
 	}
 
 	TEST(InterceptorTest, TrueInterception) {
@@ -120,14 +130,14 @@ namespace frontend {
 
 		// check the attached name of the intercepted struct for correctness
 		auto code = job.execute(manager);
-		checkForTypeName(code, "IMP_ns_colon__colon_S", "struct ns::S", "interceptor_header.h");
+		checkForTypeName(code, "IMP_ns_colon__colon_S", "ns::S", "interceptor_header.h");
 
 		// check name of function/method literals
 		checkForFunctionName(code, "IMP_ns_colon__colon_simpleFunc", "ns::simpleFunc", "interceptor_header.h");
 		checkForFunctionName(code, "IMP_ns_colon__colon_S::IMP_memberFunc", "memberFunc", "interceptor_header.h");
 	}
 
-	TEST(InterceptorTest, DISABLED_TrueTemplateInterception) {
+	TEST(InterceptorTest, TrueTemplateInterception) {
 		core::NodeManager manager;
 		ConversionJob job(FRONTEND_TEST_DIR + "/inputs/interceptor/template_interception.cpp");
 		job.addInterceptedHeaderDir(FRONTEND_TEST_DIR + "/inputs/interceptor");
@@ -137,13 +147,10 @@ namespace frontend {
 		auto irTu = job.toIRTranslationUnit(manager);
 
 		//check that functions/methods have been intercepted
-		checkForFunction(irTu, "IMP_templateFun_int_returns_int");
-		checkForFunction(irTu, "IMP_templateFun_double_returns_double");
-		checkForFunction(irTu, "IMP_templateFun_unsigned_long_long_returns_unsigned_long_long");
-		checkForFunction(irTu, "IMP_templateTemplateFun_TemplateClass_int_returns_void");
-		checkForFunction(irTu, "IMP_templateTemplateFun_TemplateClass_TemplateClass_lt_int_gt__returns_void");
-		checkForFunction(irTu, "IMP_variadicTemplateFun_int_returns_int");
-		checkForFunction(irTu, "IMP_variadicTemplateFun_int_pack_begin_int_pack_end_returns_int");
+		checkForFunction(irTu, "IMP_templateFunRet");
+		checkForFunction(irTu, "IMP_templateFunRetParam");
+		checkForFunction(irTu, "IMP_templateFun");
+		checkForFunction(irTu, "IMP_TemplateWithMethod");
 
 		//no types should have been translated
 		EXPECT_TRUE(irTu.getTypes().empty());
@@ -151,23 +158,25 @@ namespace frontend {
 		// check the attached name of the intercepted structs for correctness
 		auto code = job.execute(manager);
 		ASSERT_TRUE(code);
-		checkForTypeName(code, "IMP_TemplateClass_int", "TemplateClass<int>", "template_interception.h");
-		checkForTypeName(code, "IMP_TemplateClass_double", "TemplateClass<double>", "template_interception.h");
-		checkForTypeName(code, "IMP_TemplateClass_bool", "TemplateClass<bool>", "template_interception.h");
-		checkForTypeName(code, "IMP_TemplateClass_TemplateClass_lt_int_gt_", "TemplateClass<TemplateClass<int> >", "template_interception.h");
+		checkForTypeName(code, "IMP_ClassWithTemplateMethod", "ClassWithTemplateMethod", "template_interception.h");
+		checkForTypeName(code, "IMP_TemplateClass<ref<int<4>,f,f,qualified>>", "TemplateClass", "template_interception.h");
+		checkForTypeName(code, "IMP_TemplateClass<ref<real<8>,f,f,qualified>>", "TemplateClass", "template_interception.h");
+		checkForTypeName(code, "IMP_TemplateClass<ref<bool,f,f,qualified>>", "TemplateClass", "template_interception.h");
+		// generic type as template template param
+		checkForTypeName(code, "IMP_TemplateClass<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>", "TemplateClass", "template_interception.h");
 
 		// check name of function/method literals
-		checkForFunctionName(code, "IMP_templateFun_int_returns_int", "templateFun<int>", "template_interception.h");
-		checkForFunctionName(code, "IMP_templateFun_double_returns_double", "templateFun<double>", "template_interception.h");
-		checkForFunctionName(code, "IMP_templateFun_unsigned_long_long_returns_unsigned_long_long", "templateFun<unsigned long long>", "template_interception.h");
-		checkForFunctionName(code, "IMP_templateFun_unsigned_long_returns_unsigned_long", "templateFun<unsigned long>", "template_interception.h");
-		checkForFunctionName(code, "IMP_templateTemplateFun_TemplateClass_int_returns_void", "templateTemplateFun<TemplateClass,int>", "template_interception.h");
-		checkForFunctionName(code, "IMP_templateTemplateFun_TemplateClass_TemplateClass_lt_int_gt__returns_void", "templateTemplateFun<TemplateClass,TemplateClass<int> >", "template_interception.h");
-		checkForFunctionName(code, "IMP_variadicTemplateFun_int_returns_int", "variadicTemplateFun<int>", "template_interception.h");
-		checkForFunctionName(code, "IMP_variadicTemplateFun_int_pack_begin_int_pack_end_returns_int", "variadicTemplateFun<int,int>", "template_interception.h");
+		checkForFunctionName(code, "IMP_templateFunRet", "templateFunRet", "template_interception.h");
+		checkForFunctionName(code, "IMP_templateFunRetParam", "templateFunRetParam", "template_interception.h");
+		checkForFunctionName(code, "IMP_templateFun", "templateFun", "template_interception.h");
+		checkForFunctionName(code, "IMP_TemplateWithMethod::IMP_get", "get", "template_interception.h");
+		checkForFunctionName(code, "IMP_ClassWithTemplateMethod::IMP_get", "get", "template_interception.h");
+		checkForFunctionName(code, "IMP_templateTemplateFun", "templateTemplateFun", "template_interception.h");
+		checkForFunctionName(code, "IMP_variadicTemplateFun", "variadicTemplateFun", "template_interception.h");
+		checkForFunctionName(code, "IMP_variadicTemplateTemplateFun", "variadicTemplateTemplateFun", "template_interception.h");
 	}
 
-	TEST(InterceptorTest, DISABLED_TrueSystemInterception) {
+	TEST(InterceptorTest, TrueSystemInterception) {
 		core::NodeManager manager;
 		ConversionJob job(FRONTEND_TEST_DIR + "/inputs/interceptor/system_interception.cpp");
 		job.registerFrontendExtension<extensions::InterceptorExtension>();
@@ -178,27 +187,30 @@ namespace frontend {
 
 		//check that functions/methods have been intercepted
 		checkForFunction(irTu, "IMP_gettimeofday");
-		checkForFunction(irTu, "IMP_std_colon__colon_vector_int_std_colon__colon_allocator_lt_int_gt_::IMP_push_back");
-		checkForFunction(irTu, "IMP_std_colon__colon__operator_lshift__struct_std_colon__colon_char_traits_lt_char_gt__returns_basic_ostream_lt_char_comma__struct_std_colon__colon_char_traits_lt_char_gt___gt___ampersand_");
-		checkForFunction(irTu, "IMP_std_colon__colon_basic_ostream_char_struct_std_colon__colon_char_traits_lt_char_gt_::IMP__operator_lshift_");
+		checkForFunction(irTu, "IMP_std_colon__colon_vector::IMP_push_back");
+		checkForFunction(irTu, "IMP_std_colon__colon__operator_lshift_");
+		checkForFunction(irTu, "IMP_std_colon__colon_basic_ostream::IMP__operator_lshift_");
 
-		//no types should have been translated
-		EXPECT_TRUE(irTu.getTypes().empty());
+		// only our own simple types IMP_Trivial and IMP_OtherTrivial should have been translated to a type
+		EXPECT_EQ(2, irTu.getTypes().size());
 
 		// check the attached name of the intercepted structs for correctness
 		auto code = job.execute(manager);
 		ASSERT_TRUE(code);
-		checkForTypeName(code, "IMP_timeval", "struct timeval", "sys/time.h");
-		checkForTypeName(code, "IMP_std_colon__colon_vector_int_std_colon__colon_allocator_lt_int_gt_", "std::vector<int,std::allocator<int> >", "vector");
+		checkForTypeName(code, "IMP_timeval", "timeval", "sys/time.h");
+		checkForTypeName(code, "IMP_std_colon__colon_vector<ref<int<4>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<int<4>,f,f,qualified>>,f,f,qualified>>", "std::vector", "vector");
+		checkForTypeName(code, "IMP_std_colon__colon_vector<ref<real<8>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<real<8>,f,f,qualified>>,f,f,qualified>>", "std::vector", "vector");
+		checkForTypeName(code, "def struct IMP_Trivial {}; IMP_std_colon__colon_vector<ref<IMP_Trivial,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<IMP_Trivial,f,f,qualified>>,f,f,qualified>>", "std::vector", "vector");
 
 		// check name of function/method literals as well as globals
 		checkForFunctionName(code, "IMP_gettimeofday", "gettimeofday", "sys/time.h");
-		checkForFunctionName(code, "IMP_std_colon__colon_vector_int_std_colon__colon_allocator_lt_int_gt_::IMP_push_back", "push_back", "vector");
-		checkForFunctionName(code, "IMP_std_colon__colon__operator_lshift__struct_std_colon__colon_char_traits_lt_char_gt__returns_basic_ostream_lt_char_comma__struct_std_colon__colon_char_traits_lt_char_gt___gt___ampersand_", "std::operator<<<struct std::char_traits<char> >", "iostream");
+		checkForFunctionName(code, "IMP_std_colon__colon_vector::IMP_push_back", "push_back", "vector");
+		checkForFunctionName(code, "IMP_std_colon__colon__operator_lshift_", "std::operator<<", "iostream");
 		checkForFunctionName(code, "IMP_std_colon__colon_cout", "std::cout", "iostream");
-		checkForFunctionName(code, "IMP_std_colon__colon_basic_ostream_char_struct_std_colon__colon_char_traits_lt_char_gt_::IMP__operator_lshift_", "operator<<", "iostream");
+		checkForFunctionName(code, "IMP_std_colon__colon_basic_ostream::IMP__operator_lshift_", "operator<<", "iostream");
 		checkForFunctionName(code, "IMP_std_colon__colon_launch_colon__colon_async", "std::launch::async", "future");
 		checkForFunctionName(code, "IMP_std_colon__colon_launch_colon__colon_deferred", "std::launch::deferred", "future");
+		checkForFunctionName(code, "IMP_std_colon__colon_vector::IMP_size", "size", "vector");
 	}
 
 } // fe namespace

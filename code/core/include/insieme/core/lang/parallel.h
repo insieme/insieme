@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -314,144 +314,14 @@ namespace lang {
 		// An extension representing a busy waiting loop
 		LANG_EXT_DERIVED(BusyLoop, "(condition : ()=>bool) -> unit { while(condition()) { } }");
 
-//
-//		GROUP(ParallelOp, Parallel, ParallelDetached)
-//
-//		LITERAL(Parallel, "parallel", "(job) -> threadgroup")
-//		LITERAL(ParallelDetached, "parallel&", "(job) -> unit")
-//
-//		GROUP(MergeOp, Merge, MergeAll)
-//
-//		LITERAL(Merge, "merge", "(threadgroup) -> unit")
-//		LITERAL(MergeAll, "mergeAll", "() -> unit")
-//
-//
-//		GROUP(ThreadOp, GetThreadGroup, GetThreadId)
-//
-//		LITERAL(GetThreadGroup, "getThreadGroup", "(uint<#a>) -> threadgroup")
-//		LITERAL(GetThreadId, "getThreadID", "(uint<#a>) -> int<4>")
-//		LITERAL(GetGroupSize, "getGroupSize", "(uint<#a>) -> int<4>")
-//
-//		// the work-sharing construct
-//		DERIVED(PFor, "pfor", "(threadgroup g, int<#a> a, int<#a> b, int<#a> c, (int<#a>, int<#a>, int<#a>)=>'a f)->unit { f(a,b,c); }")
-//
-//		// the data-sharing construct
-//		LITERAL(Redistribute, "redistribute", "(threadgroup, 'a, (ref<array<'a,1>>, uint<8>, uint<8>)=>'b )->'b")
-//
-//		// some derivades
-//		DERIVED(Barrier, "barrier", "(threadgroup g)->unit { redistribute(g, 0, (ref<array<int<4>,1>> _, uint<8> _, uint<8> _)->unit { return; }); }")
-//		DERIVED(PReduce, "preduce", "(threadgroup g, 'a v, ('b,'a)->'b op, 'b init)->'b { "
-//		                            "   return redistribute(g, v, "
-//		                            "              (ref<array<'a,1>> data, uint<8> size, uint<8> pid)=> array_reduce(data, size, op, init) );"
-//		                            "}")
-//
-//		// Channels -----------------------------------------------------------------------------------------------------------
-//
-//		LITERAL(ChannelCreate, "channel_create", "(type<'a>, intTypeParam<#n>) -> channel<'a,#n>")
-//		LITERAL(ChannelRelease, "channel_release", "(channel<'a,#n>) -> unit")
-//
-//		LITERAL(ChannelSend, "channel_send", "(channel<'a,#n>, 'a) -> unit")
-//		LITERAL(ChannelRecv, "channel_recv", "(channel<'a,#n>) -> 'a")
-//		LITERAL(ChannelProbe, "channel_probe", "(channel<'a,#n>) -> bool")
-//
-//		// Atomics ------------------------------------------------------------------------------------------------------------
-//
-//		DERIVED(Atomic, "atomic", "(ref<'a> v, ('a)=>bool p, ('a)=>'a f)->'a { "
-//		                          "	decl auto res = *v; "
-//		                          "	if (p(*v)) { "
-//		                          "		v = f(*v); "
-//		                          "	} "
-//		                          "	return res; "
-//		                          "} ")
-//
-//		// arithmetic
-//
-//		DERIVED(AtomicFetchAndAdd, "atomic_fetch_and_add", "(ref<'a> v, 'a exp) -> 'a { "
-//		                                                   "	let test = (_ : 'a)=>true; "
-//		                                                   "	let apply = (x : 'a)=>x+exp; "
-//		                                                   "	return atomic(v, test, apply); "
-//		                                                   "}  ")
-//
-//		DERIVED(AtomicAddAndFetch, "atomic_add_and_fetch", "(ref<'a> v, 'a exp) -> 'a { "
-//		                                                   "	return atomic_fetch_and_add(v, exp) + exp; "
-//		                                                   "}  ")
-//
-//		DERIVED(AtomicFetchAndSub, "atomic_fetch_and_sub", "(ref<'a> v, 'a exp) -> 'a { "
-//		                                                   "	let test = (_ : 'a)=>true; "
-//		                                                   "	let apply = (x : 'a)=>x-exp; "
-//		                                                   "	return atomic(v, test, apply); "
-//		                                                   "}  ")
-//
-//		DERIVED(AtomicSubAndFetch, "atomic_sub_and_fetch", "(ref<'a> v, 'a exp) -> 'a { "
-//		                                                   "	return atomic_fetch_and_sub(v, exp) - exp; "
-//		                                                   "}  ")
-//
-//		// bitwise
-//
-//		DERIVED(AtomicFetchAndAnd, "atomic_fetch_and_and", "(ref<'a> v, 'a exp) -> 'a { "
-//		                                                   "	let test = (_ : 'a) => true; "
-//		                                                   "	let apply = (x : 'a) => x & exp; "
-//		                                                   "	return atomic(v, test, apply); "
-//		                                                   "}  ")
-//
-//		DERIVED(AtomicAndAndFetch, "atomic_and_and_fetch", "(ref<'a> v, 'a exp) -> 'a { "
-//		                                                   "	return atomic_fetch_and_and(v, exp) & exp; "
-//		                                                   "}  ")
-//
-//		DERIVED(AtomicFetchAndOr, "atomic_fetch_and_or", "(ref<'a> v, 'a exp) -> 'a { "
-//		                                                 "	let test = (_ : 'a) => true; "
-//		                                                 "	let apply = (x : 'a) => x | exp; "
-//		                                                 "	return atomic(v, test, apply); "
-//		                                                 "}  ")
-//
-//		DERIVED(AtomicOrAndFetch, "atomic_or_and_fetch", "(ref<'a> v, 'a exp) -> 'a { "
-//		                                                 "	return atomic_fetch_and_or(v, exp) | exp; "
-//		                                                 "}  ")
-//
-//		DERIVED(AtomicFetchAndXor, "atomic_fetch_and_xor", "(ref<'a> v, 'a exp) -> 'a { "
-//		                                                   "	let test = (_ : 'a) => true; "
-//		                                                   "	let apply = (x : 'a) => x ^ exp; "
-//		                                                   "	return atomic(v, test, apply); "
-//		                                                   "}  ")
-//
-//		DERIVED(AtomicXorAndFetch, "atomic_xor_and_fetch", "(ref<'a> v, 'a exp) -> 'a { "
-//		                                                   "	return atomic_fetch_and_xor(v, exp) ^ exp; "
-//		                                                   "}  ")
-//
-//		// test and set
-//
-//		DERIVED(AtomicValCompareAndSwap, "atomic_val_compare_and_swap", "(ref<'a> v, 'a _old, 'a _new) -> 'a { "
-//		                                                                "	let test = (x : 'a) => x == _old; "
-//		                                                                "	let apply = (_ : 'a) => _new; "
-//		                                                                "	return atomic(v, test, apply); "
-//		                                                                "}  ")
-//
-//		DERIVED(AtomicBoolCompareAndSwap, "atomic_bool_compare_and_swap", "(ref<'a> v, 'a _old, 'a _new) -> bool { "
-//		                                                                  "	let test = (x : 'a) => x == _old; "
-//		                                                                  "	let apply = (_ : 'a) => _new; "
-//		                                                                  "	return atomic(v, test, apply) == _new; "
-//		                                                                  "}  ")
-//
-//
-//		// Range Handling -----------------------------------------------------------------------------------------------------
-//
-//		TYPE(JobRange, "JobRange")
-//
-//		LITERAL(CreateMinRange, "MinRange", "(uint<8>)->JobRange")                             // lower boundery only
-//		LITERAL(CreateBoundRange, "BoundRange", "(uint<8>, uint<8>)->JobRange")                // lower and upper bound
-//		LITERAL(CreateBoundRangeMod, "BoundRangeMod", "(uint<8>, uint<8>, uint<8>)->JobRange") // lower, upper and modula bound
-//
-//
-//		// Locks -----------------------------------------------------------
-//
-//		TYPE(Lock, "lock")
-//
-//		LITERAL(LockAcquire, "lock_acquire", "(ref<lock>)->unit")
-//		LITERAL(LockRelease, "lock_release", "(ref<lock>)->unit")
-//		LITERAL(LockInit, "lock_init", "(ref<lock>)->unit")
-//
-//		// --------------------------------------------------------------------------------------------------------------------
 
+		// Derived helpers
+
+		LANG_EXT_DERIVED(GetDefaultThreads, "() -> uint<4> {"
+			"    var ref<uint<4>> nt = 0u;"
+			"    merge(parallel(job { if(getThreadID(0u)==0u) { nt = getGroupSize(0u); } }));"
+			"    return *nt;"
+			"}")
 
 	};
 

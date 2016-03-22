@@ -158,12 +158,17 @@ AST_NODE(Type, Node)
 ABSTRACT(Type)
 
 // and type constructors ...
-AST_TERMINAL(TypeVariable, Type)
 AST_TERMINAL(FunctionType, Type)
 AST_TERMINAL(TupleType, Type)
 
 // + generic type
 AST_TERMINAL(GenericType, Type)
+
+// + type variables
+AST_TERMINAL(TypeVariable, Type)
+AST_TERMINAL(VariadicTypeVariable, Type)
+AST_TERMINAL(GenericTypeVariable, Type)
+AST_TERMINAL(VariadicGenericTypeVariable, Type)
 
 // + numeric types
 AST_TERMINAL(NumericType, Type)

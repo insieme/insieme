@@ -109,6 +109,11 @@ namespace lang {
 		 */
 		LANG_EXT_TYPE_WITH_NAME(MarkerCppRValueReference, "rvalue_reference_marker", "cpp_rref");
 
+		/**
+		 * The marker for qualified IR non-references.
+		 */
+		LANG_EXT_TYPE_WITH_NAME(MarkerQualified, "qualified_marker", "qualified");
+
 
 		// -------------------- references ---------------------------
 
@@ -322,7 +327,7 @@ namespace lang {
 		 * An enumeration of the supported reference types.
 		 */
 		enum class Kind {
-			Plain, CppReference, CppRValueReference, Undefined
+			Plain, CppReference, CppRValueReference, Qualified, Undefined
 		};
 
 	private:
@@ -412,6 +417,8 @@ namespace lang {
 
 		bool isCppRValueReference() const;
 
+		bool isQualified() const;
+
 		GenericTypePtr toType() const;
 
 	};
@@ -442,6 +449,11 @@ namespace lang {
 	bool isCppRValueReference(const NodePtr& node);
 
 	/**
+	 * Determines whether a given node is a qualified type or an expression of a qualified type.
+	 */
+	bool isQualifiedReference(const NodePtr& node);
+
+	/**
 	 * Determines the reference kind represented by the given input type literal
 	 */
 	ReferenceType::Kind getReferenceKind(const TypePtr& typeLitType);
@@ -451,6 +463,8 @@ namespace lang {
 	 * A factory function creating a reference type utilizing the given element type and flag combination.
 	 */
 	TypePtr buildRefType(const TypePtr& elementType, bool _const = false, bool _volatile = false, const ReferenceType::Kind& kind = ReferenceType::Kind::Plain);
+
+	bool doReferenceQualifiersDiffer(const TypePtr& typeA, const TypePtr& typeB);
 
 	bool doReferencesDifferOnlyInQualifiers(const TypePtr& typeA, const TypePtr& typeB);
 

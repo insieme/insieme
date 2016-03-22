@@ -191,7 +191,7 @@ namespace backend {
 
 	bool FunctionManager::isBuiltIn(const core::NodePtr& op) const {
 		if(op->getNodeCategory() != core::NC_Expression) { return false; }
-		return operatorTable.find(op.as<core::ExpressionPtr>()) != operatorTable.end() || annotations::c::hasIncludeAttached(op);
+		return operatorTable.find(op.as<core::ExpressionPtr>()) != operatorTable.end() || core::lang::isBuiltIn(op);
 	}
 
 	namespace {
@@ -274,11 +274,11 @@ namespace backend {
 				// case a) create object on stack => default
 
 				// case b) create object on heap
-				bool isOnHeap = core::analysis::isCallOf(call[0], refs.getRefNewInit());
+				bool isOnHeap = core::analysis::isCallOf(call[0], refs.getRefNew());
 
 				// case c) create object in-place (placement new)
 				c_ast::ExpressionPtr loc = (!core::analysis::isCallOf(call[0], refs.getRefTemp()) && !core::analysis::isCallOf(call[0], refs.getRefTempInit())
-				                            && !core::analysis::isCallOf(call[0], refs.getRefNewInit()))
+				                            && !core::analysis::isCallOf(call[0], refs.getRefNew()))
 				                               ? location.as<c_ast::ExpressionPtr>()
 				                               : c_ast::ExpressionPtr();
 
@@ -303,7 +303,8 @@ namespace backend {
 				// obtain object
 				vector<c_ast::NodePtr> args = c_call->arguments;
 				assert_eq(args.size(), 1u);
-				auto obj = c_ast::deref(args[0].as<c_ast::ExpressionPtr>());
+				auto obj = args[0].as<c_ast::ExpressionPtr>();
+				if(core::lang::isPlainReference(call->getArgument(0))) obj = c_ast::deref(obj);
 
 				// extract class type
 				auto classType = context.getConverter().getTypeManager().getTypeInfo(core::analysis::getObjectType(funType)).lValueType;
@@ -319,10 +320,11 @@ namespace backend {
 				vector<c_ast::NodePtr> args = c_call->arguments;
 				assert_false(args.empty());
 
-				auto obj = c_ast::deref(args[0].as<c_ast::ExpressionPtr>());
+				auto obj = args[0].as<c_ast::ExpressionPtr>();
+				if(core::lang::isPlainReference(call->getArgument(0))) obj = c_ast::deref(obj);
 				args.erase(args.begin());
 
-				res = c_ast::memberCall(obj, c_call->function, args);
+				res = c_ast::memberCall(obj, c_call->function, args, c_call->instantiationTypes);
 			}
 
 			// --------------- virtual member function call -------------
@@ -418,9 +420,8 @@ namespace backend {
 			auto innerLit = core::analysis::getArgument(typeInstCall, 1).isa<core::LiteralPtr>();
 			assert_true(innerLit) << "Non-intercepted template calls not implemented";
 			auto replacementLit = builder.literal(innerLit->getValue(), typeInstCall->getType());
-			core::transform::utils::migrateAnnotations(typeInstCall, replacementLit);
+			core::transform::utils::migrateAnnotations(innerLit, replacementLit);
 			call = builder.callExpr(typeInstCall->getType().as<core::FunctionTypePtr>()->getReturnType(), replacementLit, call->getArgumentList());
-			std::cout << "replacement call:\n" << dumpColor(call);
 		}
 
 		// extract target function
@@ -441,7 +442,7 @@ namespace backend {
 			const FunctionInfo& info = getInfo(static_pointer_cast<const core::Literal>(fun));
 
 			// produce call to external literal
-			c_ast::CallPtr res = c_ast::call(info.function->name);
+			c_ast::CallPtr res = c_ast::call(info.function->name, info.instantiationTypes);
 			appendAsArguments(context, res, materializeTypeList(extractCallTypeList(call)), call->getArguments(), true);
 
 			// add dependencies
@@ -467,7 +468,7 @@ namespace backend {
 			// -------------- standard function call ------------
 
 			// produce call to internal lambda
-			c_ast::CallPtr c_call = c_ast::call(info.function->name);
+			c_ast::CallPtr c_call = c_ast::call(info.function->name, info.instantiationTypes);
 			appendAsArguments(context, c_call, materializeTypeList(extractCallTypeList(call)), call->getArguments(), false);
 
 			// handle potential member calls
@@ -489,6 +490,9 @@ namespace backend {
 		if(funType->isMemberFunction()) {
 			// add call to function pointer (which is the value)
 
+			// obtain lambda information
+			const LambdaInfo& info = getInfo(static_pointer_cast<const core::LambdaExpr>(fun));
+
 			// extract first parameter of the function, it is the target object
 			c_ast::ExpressionPtr trgObj = converter.getStmtConverter().convertExpression(context, call[0]);
 
@@ -496,7 +500,7 @@ namespace backend {
 			c_ast::ExpressionPtr funcExpr = c_ast::parentheses(c_ast::pointerToMember(trgObj, getValue(call->getFunctionExpr(), context)));
 
 			// the call is a call to the member function with the n-1 tail arguments
-			c_ast::CallPtr res = c_ast::call(funcExpr);
+			c_ast::CallPtr res = c_ast::call(funcExpr, info.instantiationTypes);
 			core::TypeList types = extractCallTypeList(call);
 			types.erase(types.begin());
 			core::ExpressionList args = call->getArguments();
@@ -684,7 +688,11 @@ namespace backend {
 			if (funType->isMember()) {
 				// make sure the object definition, ctors, dtors and member functions have already been resolved
 				// if this would not be the case, we could end up resolving e.g. a ctor while resolving the ctor itself
-				converter.getTypeManager().getTypeInfo(core::analysis::getObjectType(funType)); // ignore result
+
+				// we don't do this for intercepted types
+				if(!(fun.isa<core::LiteralPtr>() && annotations::c::hasIncludeAttached(fun))) {
+					converter.getTypeManager().getTypeInfo(core::analysis::getObjectType(funType)); // ignore result
+				}
 			}
 
 			// obtain function information
@@ -723,9 +731,8 @@ namespace backend {
 			// ------------------------ resolve function ---------------------
 
 			std::string name = insieme::utils::demangle(literal->getStringValue());
-			if (core::annotations::hasAttachedName(literal)) name = core::annotations::getAttachedName(literal);
+			if(core::annotations::hasAttachedName(literal)) name = core::annotations::getAttachedName(literal);
 			FunctionCodeInfo fun = resolveFunction(manager->create(name), funType, core::LambdaPtr(), true);
-
 			res->function = fun.function;
 
 			// ------------------------ add prototype -------------------------
@@ -776,6 +783,16 @@ namespace backend {
 			res->lambdaWrapper = wrapper.second;
 			res->lambdaWrapper->addDependencies(fun.prototypeDependencies);
 			res->lambdaWrapper->addDependency(res->prototype);
+
+			// -------------------------- add instantiation types if they are there --------------------------
+
+			for(auto instantiationType : funType->getInstantiationTypes()) {
+				auto typeArg = typeManager.getTemplateArgumentType(instantiationType);
+				res->instantiationTypes.push_back(typeArg);
+				// if argument type is not intercepted, add a dependency on its definition
+				auto tempParamTypeDef = typeManager.getDefinitionOf(typeArg);
+				if(tempParamTypeDef) res->prototype->addDependency(tempParamTypeDef);
+			}
 
 			// done
 			return res;

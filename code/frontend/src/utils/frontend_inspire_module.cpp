@@ -36,6 +36,8 @@
 
 #include "insieme/frontend/utils/frontend_inspire_module.h"
 
+#include "insieme/annotations/backend_instantiate.h"
+
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/analysis/ir_utils.h"
 
@@ -44,6 +46,13 @@ namespace frontend {
 namespace utils {
 
 	using namespace core;
+
+	FrontendInspireModule::FrontendInspireModule(core::NodeManager& manager) : core::lang::Extension(manager) {
+		annotations::markBackendInstantiate(getCStyleAssignment());
+		annotations::markBackendInstantiate(getCxxStyleAssignment());
+		annotations::markBackendInstantiate(getCommaOperator());
+		annotations::markBackendInstantiate(getBoolToInt());
+	}
 
 	ExpressionPtr buildCStyleAssignment(const ExpressionPtr& lhs, const ExpressionPtr& rhs) {
 		NodeManager& mgr = lhs->getNodeManager();

@@ -106,10 +106,38 @@ void intercept_new() {
 	}
 }
 
+void intercept_materialize() {
+
+	#pragma test expect_ir(R"(lit("IMP_refFunTest" : () -> ref<int<4>,f,f,cpp_ref>)() materialize)")
+	refFunTest();
+
+	#pragma test expect_ir(R"( {
+		var ref<IMP_RefOpTest,f,f,plain> v0 = lit("IMP_RefOpTest::ctor" : IMP_RefOpTest::())(v0);
+		var ref<IMP_RefOpTest,f,f,plain> v1 = lit("IMP_RefOpTest::ctor" : IMP_RefOpTest::())(v1);
+		lit("IMP_RefOpTest::IMP__operator_plus_" : IMP_RefOpTest::(ref<IMP_RefOpTest,t,f,cpp_ref>) -> ref<IMP_RefOpTest,f,f,cpp_ref>)
+			(lit("IMP_RefOpTest::IMP__operator_plus_" : IMP_RefOpTest::(ref<IMP_RefOpTest,t,f,cpp_ref>) -> ref<IMP_RefOpTest,f,f,cpp_ref>)
+				(v0, ref_kind_cast(v1, type_lit(cpp_ref))) materialize , ref_kind_cast(v1, type_lit(cpp_ref))) materialize ;
+	} )")
+	{
+		RefOpTest a, b;
+		a + b + b;
+	}
+
+	#pragma test expect_ir(R"( {
+		var ref<IMP_RefMethTest,f,f,plain> v0 = lit("IMP_RefMethTest::ctor" : IMP_RefMethTest::())(v0);
+		lit("IMP_RefMethTest::IMP_meth" : IMP_RefMethTest::() -> ref<IMP_RefMethTest,f,f,cpp_ref>)(v0) materialize ;
+	} )")
+	{
+		RefMethTest a;
+		a.meth();
+	}
+}
+
 int main() {
 	intercept_simpleFunc();
 	intercept_memFunc();
 	intercept_memFunc2();
 	intercept_fieldAccess();
 	intercept_new();
+	intercept_materialize();
 };

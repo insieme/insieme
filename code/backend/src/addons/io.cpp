@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -97,11 +97,13 @@ namespace addons {
 			res[ext.getScan()] =  OP_CONVERTER {
 				core::IRBuilder builder(call->getNodeManager());
 				const auto& inputOutputExt = call->getNodeManager().getLangExtension<InputOutputExtension>();
+				ADD_HEADER("stdio.h");
 				return CONVERT_EXPR(builder.callExpr(call->getType(), inputOutputExt.getScan(), call[0], call[1]));
 			};
 			res[ext.getPrint()] = OP_CONVERTER {
 				core::IRBuilder builder(call->getNodeManager());
 				const auto& inputOutputExt = call->getNodeManager().getLangExtension<InputOutputExtension>();
+				ADD_HEADER("stdio.h");
 				return CONVERT_EXPR(builder.callExpr(call->getType(), inputOutputExt.getPrint(), call[0], call[1]));
 			};
 

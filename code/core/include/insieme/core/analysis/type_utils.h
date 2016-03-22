@@ -66,6 +66,30 @@ namespace analysis {
 	TypeVariableSet getTypeVariablesBoundBy(const FunctionTypePtr& funType);
 
 	/**
+	* Obtains the set of variadic type variables bound by the given function type.
+	*/
+	VariadicTypeVariableSet getVariadicTypeVariablesBoundBy(const FunctionTypePtr& funType);
+
+	/**
+	* Checks whether the return type of the given function is generic, and if so, whether it is potentially deducible from its arguments.
+	*/
+	bool isReturnTypePotentiallyDeducible(const FunctionTypePtr& funType);
+
+	/**
+	 * Normalizes the given generic type variable instance.
+	 * For instance:
+	 *        'a<A,'b<C>>  => 'a<_,'_<_>>
+	 */
+	GenericTypeVariablePtr normalize(const GenericTypeVariablePtr& var);
+
+	/**
+	 * Normalizes the given variadic generic type variable instance.
+	 * For instance:
+	 *        'a...<A,'b<C>>  => 'a...<_,'_<_>>
+	 */
+	VariadicGenericTypeVariablePtr normalize(const VariadicGenericTypeVariablePtr& var);
+
+	/**
 	 * Determines the return type of a function based on its return statements.
 	 *
 	 * @param nodeMan NodeManager used to generate required types if necessary

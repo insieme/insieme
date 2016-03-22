@@ -47,31 +47,57 @@
 namespace insieme {
 namespace driver {
 
+	namespace {
+		string testCompilation(const string& filename) {
+			core::NodeManager manager;
+
+			frontend::ConversionJob job(utils::getInsiemeSourceRootDir() + filename);
+			job.addInterceptedHeaderDir(utils::getInsiemeSourceRootDir() + "frontend/test/inputs/interceptor/");
+			job.registerDefaultExtensions();
+			job.setStandard(frontend::ConversionSetup::Standard::Cxx11);
+			core::ProgramPtr program = job.execute(manager);
+
+			//dumpColor(program);
+
+			//std::cout << "Converting IR to C...\n";
+			auto converted = backend::sequential::SequentialBackend::getDefault()->convert(program);
+			//std::cout << "Printing converted code:\n" << *converted;
+
+			// check C code for absence of any pointers/derefs
+			auto codeString = toString(*converted);
+			codeString = insieme::utils::removeCppStyleComments(codeString);
+
+			// try compiling the code fragment
+			utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+			compiler.addFlag("-c"); // do not run the linker
+			compiler.addIncludeDir(utils::getInsiemeSourceRootDir() + "frontend/test/inputs/interceptor/");
+			EXPECT_TRUE(utils::compiler::compile(*converted, compiler)) << "in " << filename;
+
+			return codeString;
+		}
+	}
+
 	TEST(DriverInterceptionTest, Basic) {
-		core::NodeManager manager;
-
-		frontend::ConversionJob job(utils::getInsiemeSourceRootDir() + "frontend/test/inputs/interceptor/template_interception.cpp");
-		job.addInterceptedHeaderDir(utils::getInsiemeSourceRootDir() + "frontend/test/inputs/interceptor/");
-		job.registerDefaultExtensions();
-		job.setStandard(frontend::ConversionSetup::Standard::Cxx11);
-		core::ProgramPtr program = job.execute(manager);
-
-		dumpColor(program);
-
-		//std::cout << "Converting IR to C...\n";
-		auto converted = backend::sequential::SequentialBackend::getDefault()->convert(program);
-		std::cout << "Printing converted code:\n" << *converted;
-
-		// check C code for absence of any pointers/derefs
-		auto codeString = toString(*converted);
-		codeString = insieme::utils::removeCppStyleComments(codeString);
+		auto codeString = testCompilation("frontend/test/inputs/interceptor/interceptor_test.cpp");
 		EXPECT_PRED2(notContainsSubString, codeString, "*");
+	}
 
-		// try compiling the code fragment
-		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
-		compiler.addFlag("-c"); // do not run the linker
-		compiler.addIncludeDir(utils::getInsiemeSourceRootDir() + "frontend/test/inputs/interceptor/");
-		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+	TEST(DriverInterceptionTest, Templates) {
+		auto codeString = testCompilation("frontend/test/inputs/interceptor/template_interception.cpp");
+		EXPECT_PRED2(notContainsSubString, codeString, "*");
+		EXPECT_PRED2(containsSubString, codeString, "templateTemplateFun<TemplateClass,");
+	}
+
+	TEST(DriverInterceptionTest, QualifiedTemplates) {
+		auto codeString = testCompilation("frontend/test/inputs/interceptor/qualified_template_interception.cpp");
+		EXPECT_PRED2(notContainsSubString, codeString, "*");
+		EXPECT_PRED2(containsSubString, codeString, "trivialTemplateFun<int32_t&");
+		EXPECT_PRED2(containsSubString, codeString, "trivialTemplateFun<const int32_t");
+		EXPECT_PRED2(containsSubString, codeString, "trivialTemplateFun<volatile int32_t&&");
+	}
+
+	TEST(DriverInterceptionTest, System) {
+		auto codeString = testCompilation("frontend/test/inputs/interceptor/system_interception.cpp");
 	}
 
 } // end namespace driver

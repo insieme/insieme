@@ -165,9 +165,9 @@ namespace printer {
 			return type;
 		}
 
-		const std::string& getObjectName(const core::TypePtr& ty) {
+		const std::string getObjectName(const core::TypePtr& ty) {
 			auto objTy = analysis::getObjectType(ty);
-			if(auto gt = objTy.isa<GenericTypePtr>()) return gt->getName()->getValue();
+			if(auto gt = objTy.isa<GenericTypePtr>()) return toString(*gt);
 			if(auto tt = objTy.isa<TagTypePtr>()) return tt->getName()->getValue();
 			assert_fail() << "could not retrieve object type name";
 			throw;
@@ -380,20 +380,22 @@ namespace printer {
 					}
 
 					// print all declarations for NOT-defined (but declared) functions
-					visitDepthFirstOnce(node, [&](const CallExprPtr& cur) {
-						auto literalExpr = cur->getFunctionExpr().isa<LiteralPtr>();
-						if (literalExpr && !lang::isBuiltIn(literalExpr)) {
-							if(!visitedLiterals.insert(literalExpr).second) {
-								return;
+					if (!printer.hasOption(PrettyPrinter::FULL_LITERAL_SYNTAX)) {
+						visitDepthFirstOnce(node, [&](const CallExprPtr& cur) {
+							auto literalExpr = cur->getFunctionExpr().isa<LiteralPtr>();
+							if (literalExpr && !lang::isBuiltIn(literalExpr)) {
+								if(!visitedLiterals.insert(literalExpr).second) {
+									return;
+								}
+								newLine();
+								out << "decl ";
+								visit(NodeAddress(literalExpr));
+								out << " : ";
+								visit(NodeAddress(literalExpr->getType()));
+								out << ";";
 							}
-							newLine();
-							out << "decl ";
-							visit(NodeAddress(literalExpr));
-							out << " : ";
-							visit(NodeAddress(literalExpr->getType()));
-							out << ";";
-						}
-					});
+						});
+					}
 
 					//second: print all function declarations
 					utils::set::PointerSet<LambdaBindingPtr> visitedBindings;
@@ -429,7 +431,7 @@ namespace printer {
 
 									lambdaNames[binding->getReference()] = splitstring[2];
 									newLine();
-									out << "decl " << splitstring[2] << ":" << tagname << "::";
+									out << "decl " << splitstring[2] << ":";
 									visit(NodeAddress(funType));
 									out << ";";
 								} else if (binding->getReference()->getType().isConstructor()) { // free constructors
@@ -466,9 +468,10 @@ namespace printer {
 									continue;
 								}
 
-								if (auto ctor = constr.isa<LambdaExprPtr>()) {
+								if (auto ctorIn = constr.isa<LambdaExprPtr>()) {
+									auto ctor = tag->peel(ctorIn);
 									newLine();
-									out << "decl ctor:" << tagName << "::";
+									out << "decl ctor:";
 									visit(NodeAddress(ctor->getType()));
 									out << ";";
 								}
@@ -476,14 +479,14 @@ namespace printer {
 
 							// print all memberFunctions declarations
 							auto memberFunctions = record->getMemberFunctions();
-							for (auto memberFun : memberFunctions) {
+							for (auto memberFunIn : memberFunctions) {
+								auto memberFun = tag->peel(memberFunIn);
 								if (!printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) &&
 									analysis::isaDefaultMember(tag, memberFun))
 									continue;
 								if (auto member = memberFun->getImplementation().isa<LambdaExprPtr>()) {
 									newLine();
-									out << "decl " << memberFun->getName()->getValue() << ":"
-									<< tagName << "::";
+									out << "decl " << memberFun->getName()->getValue() << ":";
 									visit(NodeAddress(member->getType()));
 									out << ";";
 								}
@@ -809,6 +812,14 @@ namespace printer {
 					out << "<" << join(", ", node->getInstantiationTypeList(), printer) << ">";
 				}
 
+				if(node->isMember()) {
+					auto thisParam = node->getParameterType(0);
+					assert_true(lang::isReference(thisParam)) << "This param has to be a reference type";
+					lang::ReferenceType refTy(thisParam);
+					if (refTy.isConst()) out << "const ";
+					if (refTy.isVolatile()) out << "volatile ";
+					out << getObjectName(node) << "::";
+				}
 				if(node->isConstructor()) {
 					auto params = node->getParameterTypes();
 					out << "(" << join(", ", params.begin() + 1, params.end(), printer) << ")";
@@ -1351,9 +1362,7 @@ namespace printer {
 				}
 
 				// print materialize if required
-				auto callType = node->getType().getAddressedNode();
-				auto funType = function->getType().as<FunctionTypePtr>()->getReturnType();
-				if(!analysis::equalTypes(callType, funType) && !types::getTypeVariableInstantiation(node->getNodeManager(), funType, callType)) {
+				if(core::analysis::isMaterializingCall(node)) {
 					out << " materialize ";
 				}
 			}

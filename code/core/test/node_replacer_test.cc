@@ -317,6 +317,48 @@ namespace core {
 		EXPECT_EQ(basic.getInt4(), comp[1].switchRoot(root).as<ExpressionPtr>()->getType());
 	}
 
+	TEST(TransformBottomUp, Pruning) {
+		NodeManager nm;
+		IRBuilder builder(nm);
+		auto& basic = builder.getLangBasic();
+
+		auto fun = builder.parseExpr("lit(\"fun\" : ('t) -> unit)");
+
+
+		auto comp = builder.parseAddressesStatement(R"(
+		{
+			var int<4> a;
+			$a$;
+			fun($a$);
+		})", IRBuilderBaseModule::EagerDefinitionMap { {"fun", fun} });
+		ASSERT_TRUE(comp.size() == 2);
+
+		auto root = comp[0].getRootNode();
+		auto res = checks::check(root);
+		ASSERT_TRUE(res.empty()) << res;
+		ASSERT_EQ(basic.getInt4(), comp[0].as<ExpressionPtr>()->getType());
+		ASSERT_EQ(basic.getInt4(), comp[1].as<ExpressionPtr>()->getType());
+
+		root = transform::transformBottomUpGen(root, [&](const TypePtr& typePtr) {
+			if(basic.isInt4(typePtr)) {
+				return basic.getReal4();
+			}
+			return typePtr;
+		}, [&fun](const core::NodePtr& cur) {
+			//calls to our type_instantiation literal are pruned
+			if(cur->getNodeType() == core::NT_CallExpr && core::analysis::isCallOf(cur, fun)) {
+				return core::transform::ReplaceAction::Prune;
+			}
+			return core::transform::ReplaceAction::Process;
+		});
+
+		res = checks::check(root);
+
+		EXPECT_TRUE(res.empty()) << res;
+		EXPECT_EQ(basic.getReal4(), comp[0].switchRoot(root).as<ExpressionPtr>()->getType());
+		EXPECT_EQ(basic.getInt4(), comp[1].switchRoot(root).as<ExpressionPtr>()->getType());
+	}
+
 	TEST(TransformBottomUp, Nested) {
 		NodeManager nm;
 		IRBuilder builder(nm);

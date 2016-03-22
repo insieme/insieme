@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -105,7 +105,7 @@ namespace utils {
 			if(l.isMacroID()) {
 				// FIXME: what do we do here? Somehow clang fails
                 std::cerr << "WARNING: we are not quite confident with source locations in expanded macros.\n" <<
-                             " please take note of the current source file to improve expanded macros source location retrieval" << 
+                             " please take note of the current source file to improve expanded macros source location retrieval" <<
                              std::endl;
 				/*
 				std::cout << "SLoc isMacroID\n";

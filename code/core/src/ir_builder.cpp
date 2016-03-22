@@ -1109,6 +1109,9 @@ namespace core {
 		if(!level) { level = uintLit(0); }
 		return callExpr(manager.getLangExtension<lang::ParallelExtension>().getGetThreadId(), level);
 	}
+	CallExprPtr IRBuilderBaseModule::getDefaultThreads() const {
+		return callExpr(manager.getLangExtension<lang::ParallelExtension>().getGetDefaultThreads());
+	}
 
 	CallExprPtr IRBuilderBaseModule::barrier(ExpressionPtr threadgroup) const {
 		if(!threadgroup) { threadgroup = getThreadGroup(); }
@@ -1278,6 +1281,10 @@ namespace core {
 
 	TypePtr IRBuilderBaseModule::getTypeLiteralType(const TypePtr& type) const {
 		return genericType("type", toVector(type));
+	}
+
+	TypePtr IRBuilderBaseModule::numericType(int64_t value) const {
+		return numericType(literal(format("%d", value), getLangBasic().getUIntInf()));
 	}
 
 	LiteralPtr IRBuilderBaseModule::getTypeLiteral(const TypePtr& type) const {
