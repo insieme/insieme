@@ -15,3 +15,8 @@ uts
 # the integration test driver is run with the option to run these long tests also. #
 ####################################################################################
 
++alignment
++alignment_for
++fft
++health
++strassen

@@ -7,9 +7,9 @@
  * in two different translation units
  */
 
-Obj::Obj(int i)
-	: x(i)
-{ }
+Obj::Obj(int i) { 
+	x = i; 
+}
 
 int Obj::f(){
 	return 0;

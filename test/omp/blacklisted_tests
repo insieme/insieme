@@ -56,7 +56,7 @@ simple
 
 # Disabling tests because OMP doesn't seem to work at the moment
 gemm
-heatedPlate
+heated_plate
 nested_pfor_irregular
 reduction_all
 
@@ -70,3 +70,4 @@ volatile
 # the integration test driver is run with the option to run these long tests also. #
 ####################################################################################
 
++integral_estimation
