@@ -161,5 +161,56 @@ namespace utils {
 	}
 
 
+	TEST(DifferenceConstraints, FixedValues_1) {
+
+		DifferenceConstraints<std::string> c;
+		c.addConstraint("X",5);
+		EXPECT_EQ("{X=5}",toString(c));
+		EXPECT_TRUE(c.solve()) << c;
+		EXPECT_EQ("{X=5}",toString(c.solve()));
+
+		c.addConstraint("Y",7);
+		EXPECT_EQ("{X=5,Y=7}",toString(c));
+		EXPECT_TRUE(c.solve()) << c;
+		EXPECT_EQ("{X=5,Y=7}",toString(c.solve()));
+
+		c.addConstraint("Y","X",2);
+		c.addConstraint("Z","Y",1);
+		EXPECT_TRUE(c.solve()) << c;
+		EXPECT_EQ("{X=5,Y=7,Z=8}",toString(c.solve()));
+
+		c.addConstraint("X","Y",1);
+		EXPECT_FALSE(c.solve()) << c;
+
+	}
+
+
+	TEST(DifferenceConstraints, FixedValues_2) {
+
+		DifferenceConstraints<std::string> c;
+		c.addConstraint("X",5);
+		c.addConstraint("Y",7);
+		EXPECT_EQ("{X=5,Y=7}",toString(c));
+		EXPECT_TRUE(c.solve()) << c;
+		EXPECT_EQ("{X=5,Y=7}",toString(c.solve()));
+
+		c.addConstraint("X","Y",1);
+		EXPECT_FALSE(c.solve()) << c << " => " << c.solve();
+
+	}
+
+
+	TEST(DifferenceConstraints, FixedValues_3) {
+
+		DifferenceConstraints<std::string> c;
+		c.addConstraint("X",5);
+		c.addConstraint("X","Y",1);
+		c.addConstraint("Y","Z",1);
+		c.addConstraint("Z",5);
+		EXPECT_EQ("{X=5,Z=5,X-Y=1,Y-Z=1}",toString(c));
+		EXPECT_FALSE(c.solve()) << c;
+
+	}
+
 } // end namespace utils
 } // end namespace insieme

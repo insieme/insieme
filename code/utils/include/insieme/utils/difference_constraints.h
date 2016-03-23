@@ -50,6 +50,8 @@ namespace utils {
 	 * A Difference-Constraint Problem is given by a set of constraints of the form
 	 *
 	 * 								X - Y = c
+	 * and
+	 * 									X = c
 	 *
 	 * where X and Y may be arbitrary variables and c is a (positive) integer constant.
 	 * The problem is to obtain an assignment associating each variable in the list
@@ -80,7 +82,7 @@ namespace utils {
 		bool valid;
 
 		// the solution to be represented, if valid
-		std::map<Variable,unsigned> solution;
+		std::map<Variable,int> solution;
 
 	public:
 
@@ -110,7 +112,7 @@ namespace utils {
 		 * @param cur the variable to be looking for
 		 * @return the value assigned to it
 		 */
-		unsigned operator[](const Variable& cur) const {
+		int operator[](const Variable& cur) const {
 			assert_true(isValid());
 			auto pos = solution.find(cur);
 			return (pos != solution.end()) ? pos->second : 0;
@@ -131,7 +133,7 @@ namespace utils {
 		/**
 		 * Constructs a valid solution based on the given assignment map.
 		 */
-		DifferenceConstraintSolution(std::map<Variable,unsigned>&& solution)
+		DifferenceConstraintSolution(std::map<Variable,int>&& solution)
 			: valid(true), solution(std::move(solution)) {}
 
 	};
@@ -153,11 +155,24 @@ namespace utils {
 		};
 
 		/**
+		 * The Value to b
+		 */
+		struct FixedValue {
+			Variable a;
+			int value;
+		};
+
+		/**
 		 * A flag indicating whether the stated constraints are still satisfiable.
 		 * This is an under-approximation and an optimization.
 		 * It may be that the constraints covered are not satisfiable, but the flag states otherwise.
 		 */
 		bool satisfiable;
+
+		/**
+		 * Fixed-value constraints.
+		 */
+		std::vector<FixedValue> fixed;
 
 		/**
 		 * The constraints to be covered.
@@ -177,8 +192,43 @@ namespace utils {
 		 */
 		void markUnsatisfiable() {
 			satisfiable = false;
+			fixed.clear();
 			constraints.clear();
 		}
+
+		/**
+		 * Determines whether the current constraints are unsatisfiable or not.
+		 * The result is a under-approximation and may only be utilized for optimizations.
+		 * The method may return true while the solve may still determine that the
+		 * constraints are not satisfiable.
+		 */
+		bool isUnsatisfiable() const {
+			return !satisfiable;
+		}
+
+		/**
+		 * Add the a fixed value
+		 *
+		 * 			a = value
+		 *
+		 * to the set of constraints.
+		 */
+		void addConstraint(const Variable& a, int value) {
+			if (!satisfiable) return;
+
+			// check whether this variable is already bound
+			for(const auto& cur : fixed) {
+				if (cur.a == a) {
+					if (cur.value != value) {
+						markUnsatisfiable();
+					}
+					return;
+				}
+			}
+
+			fixed.push_back(FixedValue{a,value});
+		}
+
 
 		/**
 		 * Add the constraint
@@ -221,15 +271,72 @@ namespace utils {
 			if (!satisfiable) return fail;
 
 			// initializer solution
-			std::map<Variable,unsigned> solution;
+			std::map<Variable,int> solution;
 
 			// marks bound variables
 			std::map<Variable,bool> bound;
 
-			// initialize bound variable list
+			// mark all variables within constraints as unbound
 			for(const auto& cur : constraints) {
 				bound[cur.a] = false;
 				bound[cur.b] = false;
+			}
+
+			// fill in constant values
+			for(const auto& cur : fixed) {
+
+				// check whether already covered by propagation
+				if (bound[cur.a]) {
+					if (solution[cur.a] != cur.value) return fail;
+					continue;
+				}
+
+				// update solution
+				solution[cur.a] = cur.value;
+				bound[cur.a] = true;
+
+				// propagate to connected variables
+				bool change = true;
+				while(change) {
+					change = false;
+
+					// search through all constraints to deduce more information
+					for(const auto& cur : constraints) {
+
+						if (bound[cur.a] && bound[cur.b]) {
+
+							if (solution[cur.a] - solution[cur.b] != (int)cur.difference) {
+								return fail;
+							}
+
+						} else if (bound[cur.a] && !bound[cur.b]) {
+
+							// fix value of b
+							int value = solution[cur.a] - cur.difference;
+							solution[cur.b] = value;
+
+							// mark as fixed
+							bound[cur.b] = true;
+
+							// remember the change
+							change = true;
+
+						} else if (!bound[cur.a] && bound[cur.b]) {
+
+
+							// fix value of a
+							int value = cur.difference + solution[cur.b];
+							solution[cur.a] = value;
+
+							// mark as fixed
+							bound[cur.a] = true;
+
+							// remember the change
+							change = true;
+
+						}
+					}
+				}
 			}
 
 			// while there are unbound variables
@@ -283,7 +390,7 @@ namespace utils {
 
 
 							// fix value of a
-							int value = cur.difference - localSolution[cur.b];
+							int value = cur.difference + localSolution[cur.b];
 							localSolution[cur.a] = value;
 
 							// keep track of the minimum
@@ -321,9 +428,16 @@ namespace utils {
 			if (!cur.satisfiable) {
 				return out << "-unsatisfiable-";
 			}
-			return out << "{" << join(",",cur.constraints,[](std::ostream& out, const Constraint& cur) {
+			out << "{";
+			out << join(",",cur.fixed,[](std::ostream& out, const FixedValue& cur) {
+				out << cur.a << "=" << cur.value;
+			});
+			if (!cur.fixed.empty() && !cur.constraints.empty()) out << ",";
+			out << join(",",cur.constraints,[](std::ostream& out, const Constraint& cur) {
 				out << cur.a << "-" << cur.b << "=" << cur.difference;
-			}) << "}";
+			});
+			out << "}";
+			return out;
 		}
 
 	};
