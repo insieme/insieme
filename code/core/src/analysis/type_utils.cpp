@@ -109,6 +109,77 @@ namespace analysis {
 		return res;
 	}
 
+	VariadicTypeVariableSet getVariadicTypeVariablesBoundBy(const FunctionTypePtr& funType) {
+		// collect all free type variables int he parameters
+		VariadicTypeVariableSet res;
+
+		// collect all type variables
+		for (const auto& paramType : funType->getParameterTypes()) {
+			visitDepthFirstOnce(paramType, [&](const VariadicTypeVariablePtr& var) {
+				res.insert(var);
+			});
+		}
+
+		// done
+		return res;
+	}
+
+	TypesPtr normalizeGenericTypeVarialbeParameters(const TypesPtr& params) {
+		// some preparation
+		NodeManager& mgr = params->getNodeManager();
+		auto blankName = StringValue::get(mgr, "_");
+		auto blankType = TypeVariable::get(mgr, blankName);
+
+		TypeList res = params->getTypes();
+		for (TypePtr& cur : res) {
+
+			if (cur.isa<VariadicTypeVariablePtr>()) {
+
+				cur = VariadicTypeVariable::get(mgr, blankName);
+
+			} else if (const GenericTypeVariablePtr& var = cur.isa<GenericTypeVariablePtr>()) {
+
+				auto tmp = normalize(var);
+				cur = GenericTypeVariable::get(mgr, blankName, tmp->getTypeParameter());
+
+			} else if (const VariadicGenericTypeVariablePtr& var = cur.isa<VariadicGenericTypeVariablePtr>()) {
+
+				auto tmp = normalize(var);
+				cur = VariadicGenericTypeVariable::get(mgr, blankName, tmp->getTypeParameter());
+
+			} else {
+				cur = blankType;
+			}
+		}
+
+		// build normalized type list
+		return Types::get(mgr, res);
+	}
+
+	bool isReturnTypePotentiallyDeducible(const FunctionTypePtr& funType) {
+		auto retTypeVars = getFreeTypeVariables(funType->getReturnType());
+		if(retTypeVars.empty()) return true;
+		for(const auto& param : funType.getParameterTypeList()) {
+			auto paramTypeVars = getFreeTypeVariables(param);
+			for(const auto& t : paramTypeVars) {
+				retTypeVars.erase(t);
+			}
+		}
+		return retTypeVars.empty();
+	}
+
+	GenericTypeVariablePtr normalize(const GenericTypeVariablePtr& var) {
+		if (!var) return var;
+		return GenericTypeVariable::get(var->getNodeManager(), var->getVarName(), normalizeGenericTypeVarialbeParameters(var->getTypeParameter()));
+	}
+
+	VariadicGenericTypeVariablePtr normalize(const VariadicGenericTypeVariablePtr& var) {
+		if (!var) return var;
+		return VariadicGenericTypeVariable::get(var->getNodeManager(), var->getVarName(), normalizeGenericTypeVarialbeParameters(var->getTypeParameter()));
+	}
+
+
+
 	insieme::core::TypePtr autoReturnType(NodeManager& nodeMan, const CompoundStmtPtr& body) {
 		auto debug = false;
 		if(debug) { std::cout << "{{{{{{ autoReturnType ----\n"; }

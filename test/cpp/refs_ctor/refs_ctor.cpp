@@ -1,3 +1,5 @@
+#include <iostream>
+
 class Obj{
 public:
 	int a;
@@ -13,4 +15,6 @@ public:
 int main(){
 	Obj a(4);
 	Obj b(a);
+	
+	std::cout << b.a << std::endl;
 }

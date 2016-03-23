@@ -212,6 +212,16 @@ namespace insieme {
 namespace core {
 namespace transform {
 
+	std::ostream& operator<<(std::ostream& out, const ReplaceAction& action) {
+		switch(action) {
+			case ReplaceAction::Interrupt : return out << "ReplaceAction::Interrupt";
+			case ReplaceAction::Process : return out << "ReplaceAction::Process";
+			case ReplaceAction::Prune : return out << "ReplaceAction::Prune";
+			case ReplaceAction::Skip : return out << "ReplaceAction::Skip";
+		}
+		return out;
+	}
+
 	NodePtr applyReplacer(NodeManager& mgr, const NodePtr& root, SimpleNodeMapping& mapper) {
 		NodePtr res = NodePtr(NULL);
 		if(!root) { return res; }

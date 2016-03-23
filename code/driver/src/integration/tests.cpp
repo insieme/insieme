@@ -272,12 +272,6 @@ namespace integration {
 		}
 
 
-		namespace {
-
-			enum LoadTestCaseMode { ENABLED_TESTS, BLACKLISTED_TESTS, ALL_TESTS };
-
-		}
-
 		vector<IntegrationTestCase> loadAllCases(const std::string& testDirStr, const LoadTestCaseMode loadMode = ENABLED_TESTS) {
 			// create a new result vector
 			vector<IntegrationTestCase> res;
@@ -301,6 +295,7 @@ namespace integration {
 			// get all blacklisted test cases
 			fs::ifstream blacklistedTestsFile;
 			set<string> blacklistedTestCases;
+			set<string> longTestCases;
 			blacklistedTestsFile.open(blacklistedTestsPath);
 			if(!blacklistedTestsFile.is_open()) {
 				LOG(WARNING) << "Unable to open blacklisted_tests file!";
@@ -318,12 +313,26 @@ namespace integration {
 				testCase = boost::algorithm::trim_copy(testCase);
 
 				if(!testCase.empty()) {
+					//strip leading '+' for long test cases and store this as a flag
+					bool isLongTest = false;
+					if (testCase[0] == '+') {
+						testCase = testCase.substr(1);
+						isLongTest = true;
+					}
+
 					if(!fs::is_directory(testDir / testCase)) {
 						LOG(WARNING) << "Blacklisted test case \"" << testCase << "\" does not exist.";
 
-						//insert all existing directory names into the list of blacklisted tests
+						//insert all existing directory names
 					} else {
-						blacklistedTestCases.insert(testCase);
+						//if it is a long running test case
+						if (isLongTest) {
+							longTestCases.insert(testCase);
+
+							// otherwise it is a blacklisted one
+						} else {
+							blacklistedTestCases.insert(testCase);
+						}
 					}
 				}
 			}
@@ -335,9 +344,14 @@ namespace integration {
 				if(fs::is_directory(testCaseDir)) {
 					string testCaseName = testCaseDir.filename().string();
 					bool testIsBlacklisted = blacklistedTestCases.find(testCaseName) != blacklistedTestCases.end();
+					bool testIsLong = longTestCases.find(testCaseName) != longTestCases.end();
 
 					//if this test is blacklisted and we should run only enabled tests, we don't add it
-					if (testIsBlacklisted && loadMode == ENABLED_TESTS) {
+					if (testIsBlacklisted && (loadMode == ENABLED_TESTS || loadMode == ENABLED_AND_LONG_TESTS)) {
+						continue;
+					}
+					//if this test is a long one and we should run only the short ones
+					if (testIsLong && loadMode == ENABLED_TESTS) {
 						continue;
 					}
 
@@ -355,7 +369,8 @@ namespace integration {
 					//load the current test case according to the load mode we are supposed to apply
 					if (loadMode == ALL_TESTS
 							|| (loadMode == BLACKLISTED_TESTS && testIsBlacklisted)
-							|| (loadMode == ENABLED_TESTS && !testIsBlacklisted)) {
+							|| (loadMode == ENABLED_AND_LONG_TESTS && !testIsBlacklisted)
+							|| (loadMode == ENABLED_TESTS && !testIsBlacklisted && !testIsLong)) {
 						// load individual test case
 						auto testCase = loadTestCase(fs::canonical(fs::absolute(testDir / testCaseName)).string());
 						if(testCase) { res.push_back(*testCase); }
@@ -370,10 +385,10 @@ namespace integration {
 	// a global variable containing the list of test cases after they have been loaded the first time
 	boost::optional<vector<IntegrationTestCase>> TEST_CASES = boost::none;
 
-	const vector<IntegrationTestCase>& getAllCases(const bool blacklistedOnly) {
+	const vector<IntegrationTestCase>& getAllCases(const LoadTestCaseMode loadTestCaseMode) {
 		// check whether cases have been loaded before
 		if(!TEST_CASES) {
-			TEST_CASES = boost::optional<vector<IntegrationTestCase>>(loadAllCases(utils::getInsiemeSourceRootDir() + "../test", blacklistedOnly ? BLACKLISTED_TESTS : ENABLED_TESTS));
+			TEST_CASES = boost::optional<vector<IntegrationTestCase>>(loadAllCases(utils::getInsiemeSourceRootDir() + "../test", loadTestCaseMode));
 			std::sort(TEST_CASES->begin(), TEST_CASES->end());
 		}
 		return *TEST_CASES;

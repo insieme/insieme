@@ -156,7 +156,12 @@ namespace backend {
 
 	c_ast::NodePtr StmtConverter::visitCallExpr(const core::CallExprPtr& ptr, ConversionContext& context) {
 		// handled by the function manager
-		return converter.getFunctionManager().getCall(ptr, context);
+		auto cCall = converter.getFunctionManager().getCall(ptr, context);
+		// if materializing, transition to lvalue
+		if(core::analysis::isMaterializingCall(ptr)) {
+			return c_ast::ref(cCall.as<c_ast::ExpressionPtr>());
+		}
+		return cCall;
 	}
 
 	c_ast::NodePtr StmtConverter::visitBindExpr(const core::BindExprPtr& ptr, ConversionContext& context) {
@@ -192,7 +197,7 @@ namespace backend {
 		// convert literal
 		auto toLiteral = [&](const string& value) { return converter.getCNodeManager()->create<c_ast::Literal>(value); };
 		std::string name = ptr->getStringValue();
-		if (core::annotations::hasAttachedName(ptr)) name = core::annotations::getAttachedName(ptr);
+		if(core::annotations::hasAttachedName(ptr)) name = core::annotations::getAttachedName(ptr);
 		c_ast::ExpressionPtr res = toLiteral(name);
 
 		// handle primitive types
@@ -422,7 +427,12 @@ namespace backend {
 		c_ast::CompoundPtr res = converter.getCNodeManager()->create<c_ast::Compound>();
 		for_each(ptr->getStatements(), [&](const core::StatementPtr& cur) {
 			c_ast::NodePtr stmt = this->visit(cur, context);
-			if(stmt) { res->statements.push_back(stmt); }
+			if(stmt) {
+				// strip no-op ref
+				auto unOp = stmt.isa<c_ast::UnaryOperationPtr>();
+				if(unOp && unOp->operation == c_ast::UnaryOperation::Reference) stmt = unOp->operand;
+				res->statements.push_back(stmt);
+			}
 		});
 		return res;
 	}
@@ -437,7 +447,11 @@ namespace backend {
 			auto& refExt = initValue->getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
 
 			// if it is a call to a ref.new => put it on the heap
-			if (refExt.isCallOfRefNew(initValue) || refExt.isCallOfRefNewInit(initValue)) return false;
+			if(refExt.isCallOfRefNew(initValue) || refExt.isCallOfRefNewInit(initValue)) return false;
+			// if it is a constructor call on memory allocated on the heap, put it on the heap
+			if(core::analysis::isConstructorCall(initValue)) {
+				return toBeAllocatedOnStack(core::analysis::getArgument(initValue, 0));
+			}
 
 			// everything else is stack based
 			return true;

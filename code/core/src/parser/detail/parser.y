@@ -111,6 +111,7 @@
 
 	SEMIC        ";"
 	COMA         ","
+	ELLIPSIS     "..."
 	RANGE        ".."
 	DOT          "."
 	ADDRESS      "$"
@@ -219,8 +220,7 @@
 %type <PureVirtualMemberFunctionPtr>   pure_virtual_member_function
 %type <PureVirtualMemberFunctionList>  pure_virtual_member_functions
 
-%type <TypePtr>                        object_type qual_object_type generic_type abstract_type parallel_type
-%type <TypeVariablePtr>                type_variable
+%type <TypePtr>                        object_type qual_object_type generic_type abstract_type parallel_type type_variable
 %type <FunctionTypePtr>                instantiated_function_type function_type pure_function_type closure_type constructor_type destructor_type member_function_type virtual_function_type
 %type <NumericTypePtr>                 numeric_type
 %type <TupleTypePtr>                   tuple_type
@@ -434,6 +434,9 @@ non_empty_types : non_empty_types "," type                                { $1.p
 // -- type variable --
 
 type_variable : "type_var"                                                { $$ = driver.builder.typeVariable($1); }
+              | "type_var" "<" types ">"                                  { $$ = driver.builder.genericTypeVariable($1, $3); }
+              | "type_var" "..."                                          { $$ = driver.builder.variadicTypeVariable($1); }
+              | "type_var" "..." "<" types ">"                            { $$ = driver.builder.variadicGenericTypeVariable($1, $4); }
               ;
 
 // -- abstract type --
@@ -472,7 +475,7 @@ access_specifier : "public"                                               { $$ =
 
 // -- function type --
 
-instantiated_function_type : "<" non_empty_types ">" function_type        { $$ = driver.builder.functionType($4->getParameterTypes(), $4->getReturnType(), $4->getKind(), driver.builder.types($2)); }
+instantiated_function_type : "<" types ">" function_type                  { $$ = driver.builder.functionType($4->getParameterTypes(), $4->getReturnType(), $4->getKind(), driver.builder.types($2)); }
                            | function_type                                { $$ = $1; }
 
 function_type : pure_function_type                                        { $$ = $1; }

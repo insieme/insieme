@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -74,6 +74,7 @@ namespace testFramework {
 		vector<string> steps;
 		vector<string> outputFormats;
 		bool blacklistedOnly;
+		bool runLongTestsAlso;
 		bool preprocessingOnly;
 		bool postprocessingOnly;
 
@@ -86,13 +87,13 @@ namespace testFramework {
 
 		Options(bool valid = true)
 		    : valid(valid), mockrun(false), num_threads(1), num_repetitions(1), use_median(false), statistics(false), scheduling(false), print_configs(false),
-		      panic_mode(false), list_only(false), no_clean(false), color(true), overwrite(false), blacklistedOnly(false), preprocessingOnly(false),
+		      panic_mode(false), list_only(false), no_clean(false), color(true), overwrite(false), blacklistedOnly(false), runLongTestsAlso(false), preprocessingOnly(false),
 		      postprocessingOnly(false), perf(false), load_miss(""), store_miss(""), flops("") {}
 
 		bool operator==(Options a) const {
 			return a.mockrun == mockrun && a.num_threads == num_threads && a.num_repetitions == num_repetitions && a.use_median == use_median
 			       && a.statistics == statistics && a.scheduling == scheduling && a.statThreads == statThreads && a.cases == cases && a.blacklistedOnly == blacklistedOnly
-			       && a.preprocessingOnly == preprocessingOnly && a.postprocessingOnly == postprocessingOnly && a.perf == perf && a.load_miss == load_miss
+			       && a.runLongTestsAlso == runLongTestsAlso && a.preprocessingOnly == preprocessingOnly && a.postprocessingOnly == postprocessingOnly && a.perf == perf && a.load_miss == load_miss
 			       && a.store_miss == store_miss && a.flops == flops && a.perf_metrics == perf_metrics && a.steps == steps;
 		}
 
@@ -115,6 +116,7 @@ namespace testFramework {
 			ar& perf_metrics;
 			ar& steps;
 			ar& blacklistedOnly;
+			ar& runLongTestsAlso;
 			ar& preprocessingOnly;
 			ar& postprocessingOnly;
 		}
@@ -186,7 +188,7 @@ namespace testFramework {
 
 	vector<TestCase> loadCases(const Options& options) {
 		// if no test is specified explicitly load all of them
-		if(options.cases.empty()) { return itc::getAllCases(options.blacklistedOnly); }
+		if(options.cases.empty()) { return itc::getAllCases(options.blacklistedOnly ? BLACKLISTED_TESTS : (options.runLongTestsAlso ? ENABLED_AND_LONG_TESTS : ENABLED_TESTS)); }
 
 		// load selected test cases
 		vector<TestCase> cases;

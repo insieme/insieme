@@ -39,6 +39,8 @@ int producer() {
 }
 void consumer(int&& i) {}
 
+int foo() { return true; }
+
 using philipp = int;
 using driver = philipp;
 
@@ -86,6 +88,14 @@ int main() {
 
 	#pragma test expect_ir("ptr_null(type_lit(int<4>), type_lit(f), type_lit(f))")
 	(int*)(nullptr);
+
+	#pragma test expect_ir(R"(
+		def IMP_foo = function () -> int<4> {
+			return bool_to_int(true);
+		};
+		IMP_foo()
+	)")
+	foo();
 
 	return 0;
 }

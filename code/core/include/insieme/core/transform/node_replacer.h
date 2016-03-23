@@ -62,6 +62,8 @@ namespace core {
 		 */
 		enum class ReplaceAction { Process, Skip, Prune, Interrupt };
 
+		std::ostream& operator<<(std::ostream& out, const ReplaceAction& action);
+
 		using ReplaceLimiter = std::function<ReplaceAction(const NodePtr&)>;
 		using TransformFunc = std::function<NodePtr(const NodePtr&)>;
 

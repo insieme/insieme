@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -544,6 +544,33 @@ namespace analysis {
 	}
 	*/
 
+	TEST(GenericTypeVariable, Normalize) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto type = [&](const std::string& code) {
+			return builder.parseType(code);
+		};
+		auto var = [&](const std::string& code) {
+			return type(code).as<GenericTypeVariablePtr>();
+		};
+
+		EXPECT_EQ(type("'a<>"), normalize(var("'a<>")));
+		EXPECT_EQ(type("'a<'_>"), normalize(var("'a<'b>")));
+		EXPECT_EQ(type("'a<'_,'_>"), normalize(var("'a<'b,'c>")));
+		EXPECT_EQ(type("'a<'_,'_,'_>"), normalize(var("'a<'b,'c,'d>")));
+
+		EXPECT_EQ(type("'a<'_,'_>"), normalize(var("'a<A,B>")));
+		EXPECT_EQ(type("'a<'_,'_>"), normalize(var("'a<A,B<C,D>>")));
+
+		EXPECT_EQ(type("'a<'_,'_...>"), normalize(var("'a<A,'b...>")));
+
+		EXPECT_EQ(type("'a<'_,'_<'_,'_>>"), normalize(var("'a<A,'b<'c,'d>>")));
+		EXPECT_EQ(type("'a<'_,'_...<'_,'_>>"), normalize(var("'a<A,'b...<'c,'d>>")));
+
+		EXPECT_EQ(type("'a<'_,'_...<'_,'_<'_>>>"), normalize(var("'a<A,'b...<'c,'d<'e>>>")));
+
+	}
 
 } // end namespace analysis
 } // end namespace core

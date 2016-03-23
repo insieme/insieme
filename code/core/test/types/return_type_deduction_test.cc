@@ -396,31 +396,32 @@ namespace types {
 		funType = builder.parseType("(A)->bool", symbols).as<FunctionTypePtr>();
 		EXPECT_EQ("bool",toString(*deduceReturnType(funType, {argType})));
 
-		
+
 		// different ref kinds are incompatible
 		argType = builder.parseType("ref<A>", symbols);
 		funType = builder.parseType("(ref<A,f,f,cpp_ref>)->bool", symbols).as<FunctionTypePtr>();
 		EXPECT_EQ("unit",toString(*deduceReturnType(funType, {argType})));
-		
+
 		argType = builder.parseType("ref<A>", symbols);
 		funType = builder.parseType("(ref<A,f,f,cpp_rref>)->bool", symbols).as<FunctionTypePtr>();
 		EXPECT_EQ("unit",toString(*deduceReturnType(funType, {argType})));
 
 		argType = builder.parseType("ref<A,f,f,cpp_ref>", symbols);
-		funType = builder.parseType("(ref<A>)->bool", symbols).as<FunctionTypePtr>();
-		EXPECT_EQ("unit",toString(*deduceReturnType(funType, {argType})));
-		
-		argType = builder.parseType("ref<A,f,f,cpp_rref>", symbols);
-		funType = builder.parseType("(ref<A>)->bool", symbols).as<FunctionTypePtr>();
-		EXPECT_EQ("unit",toString(*deduceReturnType(funType, {argType})));
-		
-		argType = builder.parseType("ref<A,f,f,cpp_ref>", symbols);
 		funType = builder.parseType("(ref<A,f,f,cpp_rref>)->bool", symbols).as<FunctionTypePtr>();
 		EXPECT_EQ("unit",toString(*deduceReturnType(funType, {argType})));
-		
+
 		argType = builder.parseType("ref<A,f,f,cpp_rref>", symbols);
 		funType = builder.parseType("(ref<A,f,f,cpp_ref>)->bool", symbols).as<FunctionTypePtr>();
 		EXPECT_EQ("unit",toString(*deduceReturnType(funType, {argType})));
+
+		// conversion to plain ref is ok (this)
+		argType = builder.parseType("ref<A,f,f,cpp_ref>", symbols);
+		funType = builder.parseType("(ref<A>)->bool", symbols).as<FunctionTypePtr>();
+		EXPECT_EQ("bool",toString(*deduceReturnType(funType, {argType})));
+
+		argType = builder.parseType("ref<A,f,f,cpp_rref>", symbols);
+		funType = builder.parseType("(ref<A>)->bool", symbols).as<FunctionTypePtr>();
+		EXPECT_EQ("bool",toString(*deduceReturnType(funType, {argType})));
 
 
 		// addition of flags is ok, subtraction not
@@ -482,6 +483,17 @@ namespace types {
 		funType = builder.parseType("(int<4>)->bool").as<FunctionTypePtr>();
 		EXPECT_EQ("bool", toString(*deduceReturnType(funType, { argType })));
 
+	}
+
+	TEST(ReturnTypeDeduction, QualifierPromotion) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		auto fun = builder.parseExpr("lit(\"fun\" : (ref<'a,t,f,plain>) -> int<4>)");
+		auto arg = builder.parseExpr("lit(\"arg\" : ref<int<4>,f,f,plain>)");
+		auto call = builder.callExpr(fun, arg);
+
+		EXPECT_EQ(builder.getLangBasic().getInt4(), call->getType());
 	}
 
 } // end namespace types

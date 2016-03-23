@@ -37,6 +37,7 @@
 #include "insieme/frontend/clang.h"
 #include "insieme/frontend/converter.h"
 #include "insieme/frontend/utils/debug.h"
+#include "insieme/frontend/utils/frontend_inspire_module.h"
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/macros.h"
 #include "insieme/frontend/utils/expr_to_bool.h"
@@ -121,6 +122,9 @@ namespace utils {
 		// Numerical value type conversions
 		// handled by IR numeric_cast
 		case clang::CK_IntegralCast:
+			if(builder.getLangBasic().isBool(expr->getType())) {
+				expr = utils::buildBoolToInt(expr);
+			}
 		case clang::CK_IntegralToFloating:
 		case clang::CK_FloatingToIntegral:
 		case clang::CK_FloatingCast:

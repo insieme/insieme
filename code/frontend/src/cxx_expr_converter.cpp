@@ -65,9 +65,10 @@
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/datapath/datapath.h"
 #include "insieme/core/encoder/lists.h"
+#include "insieme/core/lang/array.h"
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/pointer.h"
-#include "insieme/core/lang/array.h"
+#include "insieme/core/lang/varargs_extension.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/materialize.h"
 
@@ -150,12 +151,26 @@ namespace conversion {
 
 		auto funExp = irCall->getFunctionExpr();
 		auto funType = funExp->getType().as<core::FunctionTypePtr>();
+		auto paramTypeList = funType->getParameterTypeList();
+		unsigned clangArgCount = callExpr->arg_end() - callExpr->arg_begin();
+
+		// fix variadic argument type list
+		auto& vaExt = converter.getNodeManager().getLangExtension<core::lang::VarArgsExtension>();
+		if(!paramTypeList.empty() && paramTypeList.back() == vaExt.getVarList()) {
+			paramTypeList.pop_back();
+			while (paramTypeList.size() < clangArgCount) {
+				paramTypeList.push_back(core::TypePtr());
+			}
+		}
+
+		assert_eq(paramTypeList.size(), clangArgCount) << "Argument counts don't match for funType "
+				<< *funType << " and clang call expr " << dumpClang(callExpr, converter.getCompiler().getSourceManager());
 
 		// in Inspire 2.0, copy and move constructor calls are implicit on function calls
 		ExpressionList newArgs;
 		size_t i = 0;
 		std::transform(callExpr->arg_begin(), callExpr->arg_end(), std::back_inserter(newArgs), [&](const clang::Expr* clangArgExpr) {
-			return convertCxxArgExpr(clangArgExpr, funType->getParameterType(i++));
+			return convertCxxArgExpr(clangArgExpr, paramTypeList[i++]);
 		});
 
 		return builder.callExpr(convertExprType(callExpr), funExp, newArgs);
@@ -233,7 +248,7 @@ namespace conversion {
 			}
 
 			// build call and we are done
-			auto retType = methodLambda->getType().as<core::FunctionTypePtr>()->getReturnType();
+			auto retType = convertExprType(callExpr);
 			ret = utils::buildCxxMethodCall(converter, retType, methodLambda, thisObj, callExpr->arguments());
 		}
 

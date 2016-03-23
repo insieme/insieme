@@ -41,8 +41,8 @@ tag_ref       [\^][a-zA-Z0-9_]*
  * string literals (which are real strings - not real values or so) and also pass on the enclosing quotes to the builder.
  */
 string        \"(\\.|[^"])*\"|\"(\"(\\.|[^"])*\")\"
-float         [0-9]+"."[0-9]+f
-double        [0-9]+"."[0-9]+
+float         [0-9]+"."[0-9]+([eE][+\-]?[0-9]+)?f
+double        [0-9]+"."[0-9]+([eE][+\-]?[0-9]+)?
 ulong         [0-9]+ul
 long          [0-9]+l
 longlong      [0-9]+ll
@@ -123,6 +123,7 @@ blank         [ \t]
 
 ";"           return InspireParser::make_SEMIC(loc);
 ","           return InspireParser::make_COMA(loc);
+"..."         return InspireParser::make_ELLIPSIS(loc);
 ".."          return InspireParser::make_RANGE(loc);
 "."           return InspireParser::make_DOT(loc);
 "$"           return InspireParser::make_ADDRESS(loc);

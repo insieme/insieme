@@ -445,6 +445,7 @@ namespace types {
 					lang::ReferenceType refParam(parameter[i]);
 					switch (refParam.getKind()) {
 					case lang::ReferenceType::Kind::Undefined: return fail;
+					case lang::ReferenceType::Kind::Qualified: return fail;
 					case lang::ReferenceType::Kind::Plain: return fail;
 					case lang::ReferenceType::Kind::CppReference: {
 						/* the cpp reference must be const */
@@ -476,6 +477,24 @@ namespace types {
 					else if (analysis::hasConstructorAccepting(parameter[i], arguments[i])) {
 						materializedArguments[i] = parameter[i];
 					}
+				}
+
+				// qualifier promotion
+				if(isRefArg && isRefParam) {
+					lang::ReferenceType argType(arguments[i]);
+					lang::ReferenceType paramType(parameter[i]);
+
+					if(paramType.isConst() && !argType.isConst()) {
+						argType.setConst(true);
+					}
+					if(paramType.isVolatile() && !argType.isVolatile()) {
+						argType.setVolatile(true);
+					}
+					// "this" implicit conversion
+					if(paramType.isPlain() && (argType.isCppReference() || argType.isCppRValueReference())) {
+						argType.setKind(lang::ReferenceType::Kind::Plain);
+					}
+					materializedArguments[i] = argType.toType();
 				}
 			}
 
@@ -571,7 +590,7 @@ namespace types {
 
 			// reverse variables from previously selected constant replacements (and bring back to correct node manager)
 			Substitution restored;
-			for (auto it = res->getMapping().begin(); it != res->getMapping().end(); ++it) {
+			for (auto it = res->getVariableMapping().begin(); it != res->getVariableMapping().end(); ++it) {
 				TypeVariablePtr var = static_pointer_cast<const TypeVariable>(parameterMapping.applyBackward(manager, it->first));
 				TypePtr substitute = argumentMapping.applyBackward(manager, it->second);
 
@@ -593,9 +612,9 @@ namespace types {
 
 		struct ResultCache {
 			mutable std::map<std::pair<TypeList, TypeList>, SubstitutionOpt> results;
-			bool operator==(const ResultCache& other) const { 
+			bool operator==(const ResultCache& other) const {
 				assert_fail() << "Should never be reached!";
-				return false; 
+				return false;
 			};
 		};
 
