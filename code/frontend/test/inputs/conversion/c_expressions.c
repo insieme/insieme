@@ -213,6 +213,12 @@ int main() {
 		int a[5];
 		a[1];
 	}
+	
+	#pragma test expect_ir("{ var ref<array<int<4>,5>,f,f> v0; ref_deref(ptr_subscript(ptr_from_array(v0), num_cast(1ull, type_lit(int<8>)))); }")
+	{
+		int a[5ull];
+		a[1ull];
+	}
 
 	#pragma test expect_ir("{ var ref<array<int<4>,5>,f,f> v0; ref_deref(ptr_subscript(ptr_from_array(v0), -1)); }")
 	{
@@ -248,6 +254,12 @@ int main() {
 	{
 		void* a;
 		a+5;
+	}
+	
+	#pragma test expect_ir("{ var ref<ptr<unit,f,f>,f,f> v0; ptr_add(*v0, num_cast(5ull, type_lit(int<8>))); }")
+	{
+		void* a;
+		a+5ull;
 	}
 
 	#pragma test expect_ir("{ var ref<ptr<unit,f,f>,f,f> v0; ptr_add(*v0, 5); }")
