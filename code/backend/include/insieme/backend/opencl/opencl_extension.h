@@ -66,7 +66,7 @@ namespace opencl {
 		LANG_EXT_LITERAL(ExecuteKernel, "opencl_execute_kernel", "(opencl_kernel_id, opencl_ndrange_fun, list<opencl_data_requirement_fun>, var_list)->unit");
 
 		LANG_EXT_TYPE(NDRange, "opencl_ndrange");
-		LANG_EXT_LITERAL(MakeNDRange, "opencl_make_ndrange", "(uint<4>, list<'goffset>, list<'gsize>, list<'lsize>>)->opencl_ndrange");
+		LANG_EXT_LITERAL(MakeNDRange, "opencl_make_ndrange", "(uint<4>, list<'goffset>, list<'gsize>, list<'lsize>)->opencl_ndrange");
 
 		LANG_EXT_TYPE(DataRange, "opencl_data_range");
 		LANG_EXT_LITERAL(MakeDataRange, "opencl_make_data_range", "('size, 'start, 'end)->opencl_data_range");
