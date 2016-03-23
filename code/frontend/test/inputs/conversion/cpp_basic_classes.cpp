@@ -34,6 +34,8 @@
  * regarding third party software licenses.
  */
 
+#include "cpp_basic_classes.h"
+
 struct A {
 	int i;
 	float f();
@@ -107,6 +109,9 @@ def struct IMP_VolatileConstructor {
 	ctor(v : ref<IMP_VolatileConstructor,t,t,cpp_ref>) { }
 };)"
 
+void InHeader::f(int i) {
+	i = 0;
+}
 
 int main() {
 	; // this is required because of the clang compound source location bug
@@ -178,6 +183,25 @@ int main() {
 
 	{
 		D2 d2;
+	}
+
+	#pragma test expect_ir(R"(
+	decl struct IMP_InHeader;
+	decl IMP_f:IMP_InHeader::(int<4>) -> unit;
+	def struct IMP_InHeader {
+		function IMP_f = (v1 : ref<int<4>,f,f,plain>) -> unit {
+			v1 = 0;
+		}
+	};
+	{
+		var ref<int<4>,f,f,plain> v0 = v0;
+		var ref<IMP_InHeader,f,f,plain> v1 = IMP_InHeader::(v1);
+		v1.IMP_f(*v0);
+	})")
+	{
+		int x;
+		InHeader a;
+		a.f(x);
 	}
 
 	return 0;

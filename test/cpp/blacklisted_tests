@@ -41,14 +41,12 @@ mem_alloc_ctor_inherit
 member_data_pointer
 member_function_vector
 memb_func_ptr
-multiple_tu
 nested_class
 omp
 op_overl
 performance
 pod_struct_bug
 rec_class
-rec_memberfunc
 rec_memberfunc_pointer
 refs
 refs_ctor

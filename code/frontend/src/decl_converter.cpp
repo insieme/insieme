@@ -115,6 +115,8 @@ namespace conversion {
 
 		core::LambdaExprPtr convertFunMethodInternal(Converter& converter, const core::FunctionTypePtr& funType,
 			                                         const clang::FunctionDecl* funcDecl, const string& name) {
+			// switch to the declaration containing the body (if there is one)
+			funcDecl->hasBody(funcDecl); // yes, right, this one has the side effect of updating funcDecl!!
 			const clang::CXXMethodDecl* methDecl = llvm::dyn_cast<clang::CXXMethodDecl>(funcDecl);
 			if(funcDecl->hasBody()) {
 				converter.getVarMan()->pushScope(false);
