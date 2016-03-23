@@ -58,6 +58,8 @@ namespace opencl {
 		TYPE_ALIAS("opencl_data_range_fun", "(ref<irt_wi>, ref<opencl_ndrange>, uint<4>, uint<4>)->opencl_data_range");
 
 		TYPE_ALIAS("opencl_kernel_id", "uint<4>");
+
+		LANG_EXT_TYPE(SizeType, "opencl_size_type");
 		TYPE_ALIAS("opencl_size_type", "uint<8>");
 
 		// used to register a kernel source under the given id (which is an index within the global kernel table)

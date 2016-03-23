@@ -56,7 +56,9 @@ namespace opencl {
 		const TypeInfo* handleType(const Converter& converter, const TypePtr& type) {
 			auto& oclExt = converter.getNodeManager().getLangExtension<OpenCLExtension>();
 			
-			if(oclExt.isDataRequirement(type)) {
+			if (oclExt.isSizeType(type)) {
+				return type_info_utils::createInfo(converter.getFragmentManager(), "size_t", "stdio.h");
+			} else if(oclExt.isDataRequirement(type)) {
 				// use opencl definition of the context
 				return type_info_utils::createInfo(converter.getFragmentManager(), "irt_opencl_data_requirement", "irt_opencl.h");
 			} else if(oclExt.isDataRange(type)) {

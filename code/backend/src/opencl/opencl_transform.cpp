@@ -90,7 +90,8 @@ namespace transform {
 			if (expr->getNodeType() == core::NT_LambdaExpr) return expr.as<core::LambdaExprPtr>();
 			// in this case we take use of materialization to wrap it
 			core::IRBuilder builder(manager);
-			return builder.wrapLazy(expr);
+			auto& oclExt = manager.getLangExtension<OpenCLExtension>();
+			return builder.wrapLazy(builder.numericCast(expr, oclExt.getSizeType()));
 		}
 
 		core::ExpressionPtr identity(const core::ExpressionPtr& expr) {
@@ -136,42 +137,42 @@ namespace transform {
 		core::IRBuilder builder(manager);
 		// grab a reference to the runtime & opencl extension
 		auto& oclExt = manager.getLangExtension<OpenCLExtension>();
-		return builder.callExpr(manager.getLangBasic().getUInt8(), oclExt.getGlobalId(), dim);
+		return builder.callExpr(oclExt.getSizeType(), oclExt.getGlobalId(), dim);
 	}
 
 	core::CallExprPtr buildGetGlobalSize(core::NodeManager& manager, const core::ExpressionPtr& dim) {
 		core::IRBuilder builder(manager);
 		// grab a reference to the runtime & opencl extension
 		auto& oclExt = manager.getLangExtension<OpenCLExtension>();
-		return builder.callExpr(manager.getLangBasic().getUInt8(), oclExt.getGlobalSize(), dim);
+		return builder.callExpr(oclExt.getSizeType(), oclExt.getGlobalSize(), dim);
 	}
 
 	core::CallExprPtr buildGetLocalId(core::NodeManager& manager, const core::ExpressionPtr& dim) {
 		core::IRBuilder builder(manager);
 		// grab a reference to the runtime & opencl extension
 		auto& oclExt = manager.getLangExtension<OpenCLExtension>();
-		return builder.callExpr(manager.getLangBasic().getUInt8(), oclExt.getLocalId(), dim);
+		return builder.callExpr(oclExt.getSizeType(), oclExt.getLocalId(), dim);
 	}
 
 	core::CallExprPtr buildGetLocalSize(core::NodeManager& manager, const core::ExpressionPtr& dim) {
 		core::IRBuilder builder(manager);
 		// grab a reference to the runtime & opencl extension
 		auto& oclExt = manager.getLangExtension<OpenCLExtension>();
-		return builder.callExpr(manager.getLangBasic().getUInt8(), oclExt.getLocalSize(), dim);
+		return builder.callExpr(oclExt.getSizeType(), oclExt.getLocalSize(), dim);
 	}
 
 	core::CallExprPtr buildGetNumGroups(core::NodeManager& manager, const core::ExpressionPtr& dim) {
 		core::IRBuilder builder(manager);
 		// grab a reference to the runtime & opencl extension
 		auto& oclExt = manager.getLangExtension<OpenCLExtension>();
-		return builder.callExpr(manager.getLangBasic().getUInt8(), oclExt.getNumGroups(), dim);
+		return builder.callExpr(oclExt.getSizeType(), oclExt.getNumGroups(), dim);
 	}
 
 	core::CallExprPtr buildGetGroupId(core::NodeManager& manager, const core::ExpressionPtr& dim) {
 		core::IRBuilder builder(manager);
 		// grab a reference to the runtime & opencl extension
 		auto& oclExt = manager.getLangExtension<OpenCLExtension>();
-		return builder.callExpr(manager.getLangBasic().getUInt8(), oclExt.getGroupId(), dim);
+		return builder.callExpr(oclExt.getSizeType(), oclExt.getGroupId(), dim);
 	}
 
 	core::CallExprPtr buildRegisterKernel(core::NodeManager& manager, unsigned int& id, const StepContext& sc, const core::LambdaExprPtr& oclExpr) {
@@ -489,7 +490,7 @@ namespace transform {
 			// ... as well as a modified ndrange
 			auto ndrange = std::make_shared<NDRange>();
 			ndrange->setWorkDim(builder.uintLit(1));
-			ndrange->setGlobalWorkSize(makeExpressionList(builder.numericCast(forStmt->getEnd(), manager.getLangBasic().getUInt4())));
+			ndrange->setGlobalWorkSize(makeExpressionList(wrapLazy(manager, forStmt->getEnd())));
 			callContext->setNDRange(ndrange);
 			return true;
 		});
