@@ -44,6 +44,12 @@
 namespace insieme {
 namespace core {
 
+	namespace detail {
+		/// Used to sort node lists in types, to enable equivalent representation of semantically equivalent types
+		/// (e.g. class method and constructor order is irrelevant)
+		bool semanticNodeLessThan(const core::NodePtr& a, const core::NodePtr& b);
+	}
+
 
 	// ---------------------------------------- An abstract base type ------------------------------
 
@@ -1613,10 +1619,9 @@ namespace core {
 		 * @param members the members to be included within the resulting member function list
 		 * @return the requested member function list instance managed by the given manager
 		 */
-		static MemberFunctionsPtr get(NodeManager& manager, const MemberFunctionList& fields = MemberFunctionList()) {
-			MemberFunctionList sorted = fields;
-		    std::stable_sort(sorted.begin(), sorted.end(),
-		              [](const MemberFunctionPtr& a, const MemberFunctionPtr& b) { return a.getNameAsString() < b.getNameAsString(); });
+	    static MemberFunctionsPtr get(NodeManager& manager, const MemberFunctionList& fields = MemberFunctionList()) {
+		    MemberFunctionList sorted = fields;
+		    std::stable_sort(sorted.begin(), sorted.end(), detail::semanticNodeLessThan);
 		    return manager.get(MemberFunctions(convertList(sorted)));
 	    }
 
@@ -1902,7 +1907,9 @@ namespace core {
 		static StructPtr get(NodeManager& manager, const StringValuePtr& name, const ParentsPtr& parents, const FieldsPtr& fields,
 		                     const ExpressionsPtr& ctors, const ExpressionPtr& dtor, const BoolValuePtr& dtorIsVirtual,
 		                     const MemberFunctionsPtr& mfuns, const PureVirtualMemberFunctionsPtr& pvfuns) {
-			return manager.get(Struct(name, fields, ctors, dtor, dtorIsVirtual, mfuns, pvfuns, parents));
+			ExpressionList sortedCtors = ctors.getExpressions();
+		    std::stable_sort(sortedCtors.begin(), sortedCtors.end(), detail::semanticNodeLessThan);
+			return manager.get(Struct(name, fields, Expressions::get(manager, sortedCtors), dtor, dtorIsVirtual, mfuns, pvfuns, parents));
 		}
 
 		/**
@@ -2036,7 +2043,9 @@ namespace core {
 		static UnionPtr get(NodeManager& manager, const StringValuePtr& name, const FieldsPtr& fields,
 		                    const ExpressionsPtr& ctors, const ExpressionPtr& dtor, const BoolValuePtr& dtorIsVirtual,
 		                    const MemberFunctionsPtr& mfuns, const PureVirtualMemberFunctionsPtr& pvfuns) {
-			return manager.get(Union(name, fields, ctors, dtor, dtorIsVirtual, mfuns, pvfuns));
+			ExpressionList sortedCtors = ctors.getExpressions();
+		    std::stable_sort(sortedCtors.begin(), sortedCtors.end(), detail::semanticNodeLessThan);
+			return manager.get(Union(name, fields, Expressions::get(manager, sortedCtors), dtor, dtorIsVirtual, mfuns, pvfuns));
 		}
 
 		/**
