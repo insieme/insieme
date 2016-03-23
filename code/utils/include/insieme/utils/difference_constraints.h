@@ -224,7 +224,7 @@ namespace utils {
 					for(const auto& cur : constraints) {
 						if (localBound[cur.a] && localBound[cur.b]) {
 
-							if (localSolution[cur.a] - localSolution[cur.b] != cur.difference) {
+							if (localSolution[cur.a] - localSolution[cur.b] != (int)cur.difference) {
 								return fail;
 							}
 
