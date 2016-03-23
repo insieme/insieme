@@ -743,10 +743,8 @@ namespace core {
 		return callExpr(refType(type), refExt.getRefNew(), getTypeLiteral(type));
 	}
 
-	CallExprPtr IRBuilderBaseModule::deref(const ExpressionPtr& subExpr) const {
-		assert_pred1(analysis::isRefType, subExpr->getType());
-		auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
-		return callExpr(analysis::getReferencedType(subExpr->getType()), refExt.getRefDeref(), subExpr);
+	ExpressionPtr IRBuilderBaseModule::deref(const ExpressionPtr& subExpr) const {
+		return lang::buildRefDeref(subExpr);
 	}
 
 	ExpressionPtr IRBuilderBaseModule::tryDeref(const ExpressionPtr& subExpr) const {

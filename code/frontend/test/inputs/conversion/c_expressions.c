@@ -483,4 +483,17 @@ int main() {
 	// bool to int conversion
 	#pragma test expect_ir("{ bool_to_int(1<5)+17; }")
 	{ (1 < 5) + 17; }
+	
+	// GNU statement expressions
+	#pragma test expect_ir("REGEX_S", R"(decl .* : \(\) -> int<4>; def .* = function \(\) -> int<4> \{ var ref<int<4>,f,f,plain> v0 = 1; return \*v0; \}; .*\(\))")
+	({ int x = 1; x; });
+	
+	#pragma test expect_ir("REGEX_S", R"(decl .* : \(\) -> int<8>; def .* = function \(\) -> int<8> \{ var ref<int<8>,f,f,plain> v0 = 5l; var ref<int<8>,f,f,plain> v1 = 2l; return \*v0\+\*v1; \}; .*\(\))")
+	({ long x = 5l; long y = 2l; x+y; });
+	
+	#pragma test expect_ir("REGEX_S", R"(decl .* : \(int<4>\) -> int<4>; def .* = function \(v0 : ref<int<4>,f,f,plain>\) -> int<4> \{ var ref<int<4>,f,f,plain> v1 = 2; return \*v0\+\*v1; \}; \{ var ref<int<4>,f,f,plain> v0 = 5; .*\(\*v0\); \})") 
+	{
+		int x = 5;
+		({ int y = 2; x+y; });
+	}
 }

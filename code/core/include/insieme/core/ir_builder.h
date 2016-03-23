@@ -439,7 +439,7 @@ namespace core {
 		ExpressionPtr getZero(const TypePtr& type) const;
 
 		// Referencing
-		CallExprPtr deref(const ExpressionPtr& subExpr) const;
+		ExpressionPtr deref(const ExpressionPtr& subExpr) const;
 		CallExprPtr refTemp(const ExpressionPtr& subExpr) const;
 		CallExprPtr refNew(const ExpressionPtr& subExpr) const;
 		CallExprPtr refDelete(const ExpressionPtr& subExpr) const;

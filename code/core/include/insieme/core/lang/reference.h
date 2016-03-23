@@ -454,6 +454,7 @@ namespace lang {
 
 	bool doReferencesDifferOnlyInQualifiers(const TypePtr& typeA, const TypePtr& typeB);
 
+	ExpressionPtr buildRefDeref(const ExpressionPtr& refExpr);
 	ExpressionPtr buildRefCast(const ExpressionPtr& refExpr, const TypePtr& targetTy);
 	ExpressionPtr buildRefKindCast(const ExpressionPtr& refExpr, ReferenceType::Kind newKind);
 
