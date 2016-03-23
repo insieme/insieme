@@ -159,7 +159,7 @@ namespace parser {
 					error(l, format("left side on assignment must be a reference and is %s", toString(left.getType())));
 					return nullptr;
 				} else if(analysis::getReferencedType(left.getType()) != right->getType()) {
-					error(l, format("right side expression of type %s can not be assingend to type %s", toString(right.getType()), toString(left.getType())));
+					error(l, format("right side expression of type %s can not be assigned to type %s", toString(right.getType()), toString(left.getType())));
 					return nullptr;
 				}
 
