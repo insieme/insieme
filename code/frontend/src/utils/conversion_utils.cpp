@@ -37,8 +37,10 @@
 #include "insieme/frontend/utils/conversion_utils.h"
 
 #include "insieme/frontend/converter.h"
-#include "insieme/core/analysis/ir_utils.h"
+#include "insieme/frontend/state/function_manager.h"
+
 #include "insieme/core/analysis/ir++_utils.h"
+#include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_address.h"
 #include "insieme/core/lang/enum.h"
@@ -110,6 +112,22 @@ namespace utils {
 		}
 
 		return core::lang::buildEnumValue(irEnumDef, val);
+	}
+
+	core::ExpressionPtr convertConstructExpr(conversion::Converter& converter, const clang::CXXConstructExpr* constructExpr,
+		                                     const core::ExpressionPtr& memLoc) {
+		auto& builder = converter.getIRBuilder();
+		core::TypePtr resType = converter.convertType(constructExpr->getType());
+
+		VLOG(2) << "convertConstructExpr - ResType: \n" << dumpDetailColored(resType) << " recType:\n"
+			    << (*converter.getIRTranslationUnit().getTypes().find(resType.as<core::GenericTypePtr>())).second << "\n";
+
+		// get constructor lambda
+		auto constructorLambda = converter.getFunMan()->lookup(constructExpr->getConstructor());
+
+		// return call
+		auto retType = constructorLambda->getType().as<core::FunctionTypePtr>()->getReturnType();
+		return utils::buildCxxMethodCall(converter, retType, constructorLambda, memLoc, constructExpr->arguments());
 	}
 
 } // end namespace utils

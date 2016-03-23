@@ -39,13 +39,36 @@ class TrivialConstructorExpr {
 	int a;
 	float b;
 	unsigned c = 1u;
+	const int d;
 public:
-	TrivialConstructorExpr() : a(5) {
+	TrivialConstructorExpr() : a(5), d(42) {
+		c = 7u;
 	}
 
-	TrivialConstructorExpr(int x) : a(x), b(3.0f) {
+	TrivialConstructorExpr(int x) : a(x), b(3.0f), d(23) {
 	}
 };
+
+#define TRIVIAL_CONSTRUCTOR_EXPR_IR R"(
+def struct IMP_TrivialConstructorExpr {
+    a : int<4>;
+    b : real<4>;
+    c : uint<4>;
+    d : int<4>;
+    ctor function () {
+        <ref<int<4>,f,f,plain>>(this.a) {5};
+        <ref<uint<4>,f,f,plain>>(this.c) {1u};
+        <ref<int<4>,f,f,plain>>(this.d) {42};
+        (this).c = 7u;
+    }
+    ctor function (v1 : ref<int<4>,f,f,plain>) {
+        <ref<int<4>,f,f,plain>>(this.a) {*v1};
+        <ref<real<4>,f,f,plain>>(this.b) {3.0E+0f};
+        <ref<uint<4>,f,f,plain>>(this.c) {1u};
+        <ref<int<4>,f,f,plain>>(this.d) {23};
+    }
+};
+)"
 
 struct NonTrivial {
 	int a;
@@ -62,17 +85,47 @@ public:
 	NonTrivialConstructorExpr(int i) : x(i) {}
 };
 
-// TODO constructor chaining
+#define NONTRIVIAL_CONSTRUCTOR_EXPR_IR R"(
+def struct IMP_NonTrivial {
+    a : int<4>;
+    ctor function () { }
+    ctor function (v1 : ref<int<4>,f,f,plain>) {
+        <ref<int<4>,f,f,plain>>((this).a) {*v1};
+    }
+    dtor virtual function () {
+        42;
+    }
+};
+def struct IMP_NonTrivialConstructorExpr {
+    x : IMP_NonTrivial;
+    y : IMP_NonTrivial;
+    ctor function () {
+        IMP_NonTrivial::((this).x);
+        IMP_NonTrivial::((this).y, 7);
+    }
+    ctor function (v1 : ref<int<4>,f,f,plain>) {
+        IMP_NonTrivial::((this).x, *v1);
+        IMP_NonTrivial::((this).y, 7);
+    }
+};
+)"
 
-#define S_IR R"()"
+// TODO constructor chaining
 
 int main() {
 
-	#pragma test expect_ir(R"( {} )")
+	#pragma test expect_ir(TRIVIAL_CONSTRUCTOR_EXPR_IR,R"(var ref<IMP_TrivialConstructorExpr,f,f,plain> v0 = IMP_TrivialConstructorExpr::(v0);)")
 	TrivialConstructorExpr default_constructed;
 
-	#pragma test expect_ir(R"( {} )")
+	#pragma test expect_ir(TRIVIAL_CONSTRUCTOR_EXPR_IR,R"(var ref<IMP_TrivialConstructorExpr,f,f,plain> v0 = IMP_TrivialConstructorExpr::(v0, 19);)")
 	TrivialConstructorExpr nondefault_constructed(19);
+
+
+	#pragma test expect_ir(NONTRIVIAL_CONSTRUCTOR_EXPR_IR, R"(var ref<IMP_NonTrivialConstructorExpr,f,f,plain> v0 = IMP_NonTrivialConstructorExpr::(v0);)")
+	NonTrivialConstructorExpr nt_default_constructed;
+
+	#pragma test expect_ir(NONTRIVIAL_CONSTRUCTOR_EXPR_IR, R"(var ref<IMP_NonTrivialConstructorExpr,f,f,plain> v0 = IMP_NonTrivialConstructorExpr::(v0, 28);)")
+	NonTrivialConstructorExpr nt_nondefault_constructed(28);
 
 	return 0;
 }

@@ -6,6 +6,7 @@ alignof
 anonymous_struct
 argument_types
 assign_expr
+base_of
 big
 boost
 cast
