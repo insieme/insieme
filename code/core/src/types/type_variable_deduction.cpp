@@ -52,6 +52,7 @@
 #include "insieme/core/ir_expressions.h"
 
 #include "insieme/utils/logging.h"
+#include "insieme/utils/difference_constraints.h"
 
 namespace insieme {
 namespace core {
@@ -90,9 +91,287 @@ namespace types {
 		 */
 		void addTypeConstraints(SubTypeConstraints& constraints, const TypePtr& paramType, const TypePtr& argType, Direction direction);
 
+		/**
+		 * Expands variadic type parameters in the given params type list to fit the structure of the given argument type. The
+		 * necessary un-pack substitution will be returned as a result.
+		 * 
+		 * @param manager the manager to be used for creating entries within the resulting substitution
+		 * @param params the list of parameters to be expanded
+		 * @param arguments the list of arguments to be matched against
+		 * @return the substitution applied on the params type list
+		 */
+		SubstitutionOpt expandVariadicTypeVariables(NodeManager& manager, const TypeList& params, const TypeList& arguments);
+
 
 		// -------------------------------------------------------- Implementation ----------------------------------------------
 
+		// the kind of constraints collected for computing the lenght of parameter expansions
+		using PackLengthConstraints = utils::DifferenceConstraints<TypePtr>;
+
+		namespace {
+
+			// A utility class to collect pack-length constraints
+			class PackLengthConstraintsCollector : public IRVisitor<void,Pointer,const NodePtr&> {
+
+				using super = IRVisitor<void,Pointer,const NodePtr&>;
+
+				PackLengthConstraints& result;
+
+			public:
+
+				PackLengthConstraintsCollector(PackLengthConstraints& result)
+					: super(true), result(result) {}
+
+				void visit(const NodePtr& node, const NodePtr& other) override {
+
+					// check whether result is unsatisfiable
+					if (result.isUnsatisfiable()) return;
+
+					// general rules for all pairs
+					if (other.isa<TypeVariablePtr>()) return;
+					if (other.isa<VariadicTypeVariablePtr>()) return;
+
+					// dispatch to individual nodes
+					super::visit(node,other);
+				}
+
+				void visitGenericType(const GenericTypePtr& genType, const NodePtr& other) override {
+
+					// if other side is a generic type ...
+					if (auto otherGen = other.isa<GenericTypePtr>()) {
+						collectFromLists(genType->getTypeParameterList(), otherGen->getTypeParameterList());
+					} else if (auto otherGenVar = other.isa<GenericTypeVariablePtr>()) {
+						collectFromLists(genType->getTypeParameterList(), otherGenVar->getTypeParameter());
+					}
+
+				}
+
+				void visitTupleType(const TupleTypePtr& tuple, const NodePtr& other) override {
+
+					// the other side has to be of the tuple type
+					auto otherTuple = other.isa<TupleTypePtr>();
+					if (!otherTuple) {
+						result.markUnsatisfiable();
+						return;
+					}
+
+					// check which of the two tuples are ending with a variadic variable
+					const auto& listA = tuple->getElementTypes();
+					const auto& listB = otherTuple->getElementTypes();
+					collectFromLists(listA, listB);
+				}
+
+				void visitFunctionType(const FunctionTypePtr& function, const NodePtr& other) override {
+
+					// the other side has to be of the tuple type
+					auto otherFunction = other.isa<FunctionTypePtr>();
+					if (!otherFunction) {
+						result.markUnsatisfiable();
+						return;
+					}
+
+					// process various sub-lists
+					collectFromLists(function->getInstantiationTypeList(), otherFunction->getInstantiationTypeList());
+					collectFromLists(function->getParameterTypeList(), otherFunction->getParameterTypeList());
+					visit(function->getReturnType(), otherFunction->getReturnType());
+				}
+
+				void visitTagType(const TagTypePtr& tag, const NodePtr& other) override {
+
+					auto otherTag = other.isa<TagTypePtr>();
+					if (!otherTag) {
+						result.markUnsatisfiable();
+						return;
+					}
+
+					// check argument type
+					if (
+						tag->getRecord()->getNodeType() != otherTag->getRecord()->getNodeType() ||
+						tag->getFields().size() != otherTag->getFields().size()
+					) {
+						result.markUnsatisfiable();
+						return;
+					}
+
+					// use peeled version
+					auto peeledA = tag->peel();
+					auto peeledB = otherTag->peel();
+
+					// check fields
+					for (const auto& cur : peeledA->getFields()) {
+						auto otherType = peeledB->getFieldType(cur->getName());
+						if (!otherType) {
+							result.markUnsatisfiable();
+							return;
+						}
+						visit(cur->getType(), otherType);
+					}
+				}
+
+				void visitNode(const NodePtr& a, const NodePtr&) override {
+					assert_not_implemented() << "No support for node type: " << a->getNodeType() << "\n";
+				}
+
+			private:
+
+				void collectFromLists(const TypeList& listA, const TypeList& listB) {
+
+					// extract tailing variadic types
+					auto varA = endsWithVariadic(listA);
+					auto varB = endsWithVariadic(listB);
+
+					// get size without variadic
+					auto sizeA = listA.size() - ((varA) ? 1 : 0);
+					auto sizeB = listB.size() - ((varB) ? 1 : 0);
+
+
+					// process non-variadic part
+					for(size_t i=0; i<std::min(sizeA,sizeB); ++i) {
+						visit(listA[i],listB[i]);
+					}
+
+
+					// if size does not fit => fail
+					if (!varA && !varB && sizeA != sizeB) {
+						result.markUnsatisfiable();
+						return;
+					}
+
+					if (varA && !varB) {
+						if (sizeA <= sizeB) {
+							// fix size of v variables A...
+							result.addConstraint(varA,sizeB-sizeA);
+						} else {
+							// unsatisfiable
+							result.markUnsatisfiable();
+							return;
+						}
+					}
+
+					if (!varA && varB) {
+						// unsatisfiable
+						result.markUnsatisfiable();
+						return;
+					}
+
+					if (varA && varB) {
+						result.addConstraint(varA,varB,sizeB-sizeA+1);
+					}
+
+				}
+
+				TypePtr endsWithVariadic(const TypeList& types) {
+					// check for an empty list
+					if (types.empty()) return TypePtr();
+
+					// check whether the last is a variadic type variable
+					if (types.back().template isa<VariadicTypeVariablePtr>()) {
+						return types.back();
+					}
+
+					// check whether the last is a variadic generic type variable
+					if (types.back().template isa<VariadicGenericTypeVariablePtr>()) {
+						return types.back();
+					}
+
+					// no variadic type
+					return TypePtr();
+				}
+
+			};
+
+		}
+
+		PackLengthConstraints collectPackLengthConstraints(const TypePtr& a, const TypePtr& b) {
+
+			// collect constraints using visitor
+			PackLengthConstraints res;
+			PackLengthConstraintsCollector(res).visit(a,b);
+			return res;
+
+		}
+
+		SubstitutionOpt expandVariadicTypeVariables(NodeManager& manager, const TypeList& params, const TypeList& arguments) {
+			static const bool debug = false;
+			static const SubstitutionOpt fail;
+
+			// initialize result
+			Substitution res;
+
+			// wrap inputs in a tuple type
+			auto paramTuple = TupleType::get(manager, params);
+			auto argsTuple = TupleType::get(manager, arguments);
+			if (debug) std::cout << "\nParameter: " << *paramTuple << "\n";
+			if (debug) std::cout << "Argument:  " << *argsTuple << "\n";
+
+
+			// 1) collect all variadic type variables
+			std::vector<VariadicTypeVariablePtr> vvars;
+			std::vector<VariadicGenericTypeVariablePtr> vgvars;
+			//visitDepthFirstPrunable(TupleType::get(manager, TypeList{ paramTuple, argsTuple }), [&](const NodePtr& cur) {
+			visitDepthFirstPrunable(paramTuple, [&](const NodePtr& cur) {
+
+				// stop descent for expressions and statements
+				if (cur.isa<ExpressionPtr>() || cur.isa<StatementPtr>()) return Action::Prune;
+
+				// collect variadic type variables
+				if (auto var = cur.isa<VariadicTypeVariablePtr>()) {
+					vvars.push_back(var);
+					return Action::Prune;
+				}
+
+				// collect variadic generic type variables
+				if (auto var = cur.isa<VariadicGenericTypeVariablePtr>()) {
+					vgvars.push_back(var);
+				}
+
+				// all others have to be further investigated
+				return Action::Descent;
+			}, true);
+
+			if (debug) std::cout << "Variadic Type Parameters: " << vvars << "\n";
+			if (debug) std::cout << "Variadic Generic Type Parameters:  " << vgvars << "\n";
+
+			// if there are no variadic parameters => done
+			if (vvars.empty() && vgvars.empty()) return res;
+
+			// 2) Determine length of parameter pack expansions using difference constraints
+
+			// extract constraints
+			PackLengthConstraints constraints = collectPackLengthConstraints(paramTuple,argsTuple);
+			if (debug) std::cout << "Constraints: " << constraints << "\n";
+
+			// solve constraints
+			auto solution = constraints.solve();
+			if (debug) std::cout << "Solution: " << solution << "\n";
+			if (!solution) return fail;
+
+			// 3) expand parameters
+
+			// create expanding substitution
+			for(const auto& cur : vvars) {
+				TypeVariableList vars;
+				if (solution[cur] < 0) return fail;
+				for(int i=0; i<solution[cur]; i++) {
+					vars.push_back(TypeVariable::get(manager,format("%s#%d",*cur->getVarName(), i+1)));
+				}
+				res.addMapping(cur,vars);
+			}
+			for(const auto& cur : vgvars) {
+				GenericTypeVariableList vars;
+				if (solution[cur] < 0) return fail;
+				for(int i=0; i<solution[cur]; i++) {
+					vars.push_back(GenericTypeVariable::get(manager,format("%s#%d",*cur->getVarName(), i+1), cur->getTypeParameter()));
+				}
+				res.addMapping(cur,vars);
+			}
+
+			if (debug) std::cout << "Substitution: " << res << "\n";
+
+			// return substitution
+			return res;
+
+		}
 
 		void addEqualityConstraints(SubTypeConstraints& constraints, const TypePtr& typeA, const TypePtr& typeB) {
 			// check constraint status
@@ -259,7 +538,7 @@ namespace types {
 			}
 		}
 
-		void addTypeConstraints(SubTypeConstraints& constraints, const TypePtr& paramType, const TypePtr& argType, Direction direction) {
+		void addTypeConstraints(SubTypeConstraints& constraints, Substitution& substitution, const TypePtr& paramType, const TypePtr& argType, Direction direction) {
 			// check constraint status
 			if(!constraints.isSatisfiable()) { return; }
 
@@ -317,11 +596,11 @@ namespace types {
 				auto begin = make_paired_iterator(paramParams.begin(), argParams.begin());
 				auto end = make_paired_iterator(paramParams.end(), argParams.end());
 				for(auto it = begin; constraints.isSatisfiable() && it != end; ++it) {
-					addTypeConstraints(constraints, it->first, it->second, inverse(direction));
+					addTypeConstraints(constraints, substitution, it->first, it->second, inverse(direction));
 				}
 
 				// ... and the return type
-				addTypeConstraints(constraints, funParamType->getReturnType(), funArgType->getReturnType(), direction);
+				addTypeConstraints(constraints, substitution, funParamType->getReturnType(), funArgType->getReturnType(), direction);
 				return;
 			}
 
@@ -342,7 +621,7 @@ namespace types {
 				auto begin = make_paired_iterator(paramList.begin(), argumentList.begin());
 				auto end = make_paired_iterator(paramList.end(), argumentList.end());
 				for(auto it = begin; constraints.isSatisfiable() && it != end; ++it) {
-					addTypeConstraints(constraints, it->first, it->second, direction);
+					addTypeConstraints(constraints, substitution, it->first, it->second, direction);
 				}
 				return;
 			}
@@ -401,7 +680,7 @@ namespace types {
 
 	namespace {
 
-		SubstitutionOpt getTypeVariableInstantiationInternal(NodeManager& manager, TypeList parameter, const TypeList& arguments) {
+		SubstitutionOpt getTypeVariableInstantiationInternal(NodeManager& manager, TypeList parameter, TypeList arguments) {
 			const bool debug = false;
 
 			// the result to be returned upon failure
@@ -414,26 +693,24 @@ namespace types {
 			// ----------------------------------------------------------------------------------------------
 
 			// adapt type parameter list for variadic function signature
-			Substitution res;
-			if (!parameter.empty()) {
-				if (auto vvar = parameter.back().isa<VariadicTypeVariablePtr>()) {
-					parameter.pop_back();
-					int counter = 0;
-					TypeVariableList expanded;
-					while (parameter.size() < arguments.size()) {
-						auto var = TypeVariable::get(manager, format("%s#%d", vvar->getVarName()->getValue(), ++counter));
-						parameter.push_back(var);
-						expanded.push_back(var);
-					}
-					res.addMapping(vvar, expanded);
-				}
-			}
+			auto expansion = expandVariadicTypeVariables(manager, parameter, arguments);
+			if (!expansion) return fail;
+
+			// initialize result with variadic variable expansion
+			Substitution res(std::move(*expansion));
+
+			// use private node manager for computing temporary results
+			NodeManager internalManager(manager);
+
+			// apply substitution to parameter types
+			parameter = res(TupleType::get(internalManager,parameter))->getElementTypes();
+
+			if (debug) { std::cout << "Variadic argument expansion: " << res << "\n"; }
+			if (debug) { std::cout << "Expanded Parameters: " << parameter << "\n"; }
+			if (debug) { std::cout << "Expanded Arguments: " << arguments << "\n"; }
 
 			// check length of parameter and arguments
 			if (parameter.size() != arguments.size()) { return fail; }
-
-			// use private node manager for computing results
-			NodeManager internalManager(manager);
 
 
 			// -------------------------------- Invalid Call By Value ---------------------------------------
@@ -467,8 +744,8 @@ namespace types {
 					lang::ReferenceType refParam(parameter[i]);
 					switch (refParam.getKind()) {
 					case lang::ReferenceType::Kind::Undefined: return fail;
-					case lang::ReferenceType::Kind::Qualified: return fail;
 					case lang::ReferenceType::Kind::Plain: return fail;
+					case lang::ReferenceType::Kind::Qualified: return fail;
 					case lang::ReferenceType::Kind::CppReference: {
 						/* the cpp reference must be const */
 						if (!refParam.isConst()) return fail;
@@ -588,7 +865,7 @@ namespace types {
 			auto end = make_paired_iterator(renamedParameter.end(), renamedArguments.end());
 			for (auto it = begin; constraints.isSatisfiable() && it != end; ++it) {
 				// add constraints to ensure current parameter is a super-type of the arguments
-				addTypeConstraints(constraints, it->first, it->second, Direction::SUPER_TYPE);
+				addTypeConstraints(constraints, res, it->first, it->second, Direction::SUPER_TYPE);
 			}
 
 
