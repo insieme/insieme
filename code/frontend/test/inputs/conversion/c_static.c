@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -40,7 +40,7 @@ int f() {
 	return x;
 }
 
-#pragma test expect_ir("REGEX",".*x_static_local_.*c_static_dot_c_38_2 = 5;.*return.*")
+#pragma test expect_ir("REGEX",R"(.*x_static_local_.*c_static_dot_c_38_2.*\{5\};.*return.*)")
 int main() {
 	return f();
 }
