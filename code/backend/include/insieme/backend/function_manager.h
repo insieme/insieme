@@ -48,9 +48,9 @@ namespace backend {
 
 	class Converter;
 	class ConversionContext;
-	class FunctionInfo;
-	class LambdaInfo;
-	class BindInfo;
+	struct FunctionInfo;
+	struct LambdaInfo;
+	struct BindInfo;
 
 
 	/**

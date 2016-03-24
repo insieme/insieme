@@ -84,18 +84,10 @@ namespace runtime {
 	}
 
 
-	RuntimeBackendPtr RuntimeBackend::getDefault(bool includeEffortEstimation, bool isGemsclaim) {
+	RuntimeBackendPtr RuntimeBackend::getDefault() {
 		BackendConfigPtr config = std::make_shared<BackendConfig>();
 
-		if(isGemsclaim) {
-			config->mainFunctionName = "insieme_main";
-			config->additionalHeaderFiles.push_back("input_file.h");
-			// Jan fixed the issue but let's keep the code for a while
-			// config->areShiftOpsSupported = false;
-			config->instrumentMainFunction = true;
-		}
-
-		auto res = std::make_shared<RuntimeBackend>(includeEffortEstimation, config);
+		auto res = std::make_shared<RuntimeBackend>(config);
 		res->addAddOn<addons::PointerType>();
 		res->addAddOn<addons::CppCastsAddon>();
 		res->addAddOn<addons::ComplexType>();
@@ -116,7 +108,8 @@ namespace runtime {
 		PreProcessorPtr preprocessor = makePreProcessor<PreProcessingSequence>(
 		    getBasicPreProcessorSequence(),
 		    makePreProcessor<runtime::InstrumentationSupport>(), // needs to be before the conversion to work-items
-		    makePreProcessor<runtime::WorkItemizer>(includeEffortEstimation), makePreProcessor<runtime::StandaloneWrapper>());
+		    makePreProcessor<runtime::WorkItemizer>(),
+			makePreProcessor<runtime::StandaloneWrapper>());
 		converter.setPreProcessor(preprocessor);
 
 		// Prepare managers

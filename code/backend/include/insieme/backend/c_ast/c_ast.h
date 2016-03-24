@@ -62,7 +62,8 @@ namespace c_ast {
 
 	// -- Basic ----------------------------------
 
-	class Node {
+	struct Node {
+	private:
 		const NodeType type;
 		CNodeManager* manager;
 

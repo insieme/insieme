@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -44,6 +44,10 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #pragma GCC diagnostic ignored "-Wuninitialized"
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wredundant-move"
+
 #include <clang/Frontend/ASTUnit.h>
 #include <clang/Frontend/CompilerInstance.h>
 #include <clang/Frontend/CompilerInvocation.h>
@@ -83,6 +87,8 @@
 #include <llvm/Support/Casting.h>
 #include <clang/Frontend/Utils.h>
 #include <clang/Lex/HeaderSearch.h>
+
+#pragma clang diagnostic pop
 #pragma GCC diagnostic pop
 
 template <typename ClangType>

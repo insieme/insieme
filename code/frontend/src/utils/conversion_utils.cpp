@@ -116,7 +116,6 @@ namespace utils {
 
 	core::ExpressionPtr convertConstructExpr(conversion::Converter& converter, const clang::CXXConstructExpr* constructExpr,
 		                                     const core::ExpressionPtr& memLoc) {
-		auto& builder = converter.getIRBuilder();
 		core::TypePtr resType = converter.convertType(constructExpr->getType());
 
 		VLOG(2) << "convertConstructExpr - ResType: \n" << dumpDetailColored(resType) << " recType:\n"

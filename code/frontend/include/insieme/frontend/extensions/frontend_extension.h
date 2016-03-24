@@ -59,7 +59,7 @@ namespace tu {
 namespace frontend {
 
 namespace stmtutils {
-	class StmtWrapper;
+	struct StmtWrapper;
 }
 
 namespace pragma {

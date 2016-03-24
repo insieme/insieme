@@ -972,20 +972,6 @@ namespace core {
 			return res;
 		}
 
-		/**
-		 * Checks whether the given result type is matching the type expected when using automatic type inference.
-		 */
-		inline bool checkType(const TypePtr& resultType, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments) {
-			// check types
-			if(*resultType != *deduceReturnTypeForCall(functionExpr, arguments)) {
-				// print a warning if they are not matching
-				LOG(WARNING) << "Potentially invalid return type for call specified - function type: " << toString(*functionExpr->getType())
-				             << ", arguments: " << join(", ", arguments, print<deref<ExpressionPtr>>());
-			}
-			return true;
-		}
-
-
 		CallExprPtr createCall(const IRBuilderBaseModule& builder, const TypePtr& resultType, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments) {
 			// check user-specified return type - only when compiled in debug mode
 			// NOTE: the check returns true in any case, hence this assertion will never fail - its just a warning!

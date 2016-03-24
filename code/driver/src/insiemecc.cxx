@@ -216,7 +216,7 @@ int checkSema(const core::NodePtr& program, core::checks::MessageList& list) {
 insieme::backend::BackendPtr getBackend(const core::ProgramPtr& program, const cmd::Options& options) {
 	if(options.backendHint == cmd::BackendEnum::Sequential) { return be::sequential::SequentialBackend::getDefault(); }
 
-	return be::runtime::RuntimeBackend::getDefault(options.settings.estimateEffort, false);
+	return be::runtime::RuntimeBackend::getDefault();
 }
 
 int main(int argc, char** argv) {

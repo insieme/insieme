@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -41,7 +41,7 @@
 #include <cassert>
 #include <stdexcept>
 #include <iostream>
- 
+
 #ifdef _MSC_VER
  // enables text syntax for operators
 #include <iso646.h>
@@ -503,7 +503,7 @@ namespace utils {
 	namespace {
 
 		template <class... All>
-		class __combiner;
+		struct __combiner;
 
 		/**************************************************************************************************
 		 * Combiner class takes a list of constraints and assembles them together either in a conjunction or

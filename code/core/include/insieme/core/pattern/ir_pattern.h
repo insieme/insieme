@@ -215,7 +215,7 @@ namespace pattern {
 		inline TreePattern initExpr(const TreePattern& memExpr, const ListPattern& inits, const TreePattern& type = any) {
 			return node(core::NT_InitExpr, single(type) << single(memExpr) << inits);
 		}
-		
+
 		inline TreePattern markerExpr(const TreePattern& subExpression, const TreePattern& id, const TreePattern& type = any) {
 			return node(core::NT_MarkerExpr, single(type) << single(id) << single(subExpression));
 		}
@@ -298,10 +298,6 @@ namespace pattern {
 		inline const TreePattern& breakStmt() {
 			static const TreePattern res = node(core::NT_BreakStmt);
 			return res;
-		}
-
-		inline TreePattern jobExpr(const TreePattern& threadNumRange, const TreePattern& body) {
-			return jobExpr(threadNumRange, body);
 		}
 
 		inline TreePattern pfor(const TreePattern& group = any, const TreePattern& start = any, const TreePattern& end = any, const TreePattern& step = any,

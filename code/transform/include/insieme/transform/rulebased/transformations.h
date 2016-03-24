@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -98,7 +98,8 @@ namespace rulebased {
 	 * A simple example transformation based on rules. This transformation is eliminating
 	 * superfluous brackets / compound statement nodes.
 	 */
-	struct CompoundElimination : public RuleBasedTransformation {
+	class CompoundElimination : public RuleBasedTransformation {
+	  public:
 		CompoundElimination(const parameter::Value& value);
 
 		/**
@@ -115,7 +116,8 @@ namespace rulebased {
 
 	// -- Loop Unrolling --
 
-	struct LoopUnrolling : public RuleBasedTransformation {
+	class LoopUnrolling : public RuleBasedTransformation {
+	  public:
 		LoopUnrolling(const parameter::Value& params);
 
 		virtual std::ostream& printTo(std::ostream& out, const Indent& indent) const {
@@ -143,7 +145,8 @@ namespace rulebased {
 	 * Total loop unrolling tries to replace a loop with a fixed number of iterations with
 	 * the corresponding unrolled program code.
 	 */
-	struct TotalLoopUnrolling : public RuleBasedTransformation {
+	class TotalLoopUnrolling : public RuleBasedTransformation {
+	  public:
 		TotalLoopUnrolling(const parameter::Value& params = parameter::emptyValue);
 
 		virtual std::ostream& printTo(std::ostream& out, const Indent& indent) const {
@@ -167,7 +170,8 @@ namespace rulebased {
 	/**
 	 * A simple non-checked implementation of loop tiling.
 	 */
-	struct SimpleLoopTiling2D : public RuleBasedTransformation {
+	class SimpleLoopTiling2D : public RuleBasedTransformation {
+	  public:
 		SimpleLoopTiling2D(const parameter::Value& params);
 
 		virtual std::ostream& printTo(std::ostream& out, const Indent& indent) const {
@@ -190,7 +194,8 @@ namespace rulebased {
 	/**
 	 * A simple non-checked implementation of loop tiling.
 	 */
-	struct SimpleLoopTiling3D : public RuleBasedTransformation {
+	class SimpleLoopTiling3D : public RuleBasedTransformation {
+	  public:
 		SimpleLoopTiling3D(const parameter::Value& params);
 
 		virtual std::ostream& printTo(std::ostream& out, const Indent& indent) const {

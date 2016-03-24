@@ -22,6 +22,9 @@
 #ifdef __clang__
 # pragma clang diagnostic ignored "-Wdeprecated-register"
 #endif
+
+#undef YY_DECL
+#define YY_DECL InspireParser::symbol_type InspireScanner::yylex(insieme::core::parser::detail::InspireDriver& driver)
 %}
 
 

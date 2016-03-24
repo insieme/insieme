@@ -53,13 +53,13 @@ namespace backend {
 
 	class Converter;
 
-	class TypeInfo;
-	class FunctionTypeInfo;
-	class TagTypeInfo;
-	class RefTypeInfo;
-	class ArrayTypeInfo;
-	class VectorTypeInfo;
-	class ChannelTypeInfo;
+	struct TypeInfo;
+	struct FunctionTypeInfo;
+	struct TagTypeInfo;
+	struct RefTypeInfo;
+	struct ArrayTypeInfo;
+	struct VectorTypeInfo;
+	struct ChannelTypeInfo;
 
 	typedef TypeInfo* TypeInfoPtr;
 

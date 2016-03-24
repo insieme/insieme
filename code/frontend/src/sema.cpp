@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -150,7 +150,7 @@ namespace frontend {
 		// we parse the original code segment, within the original locations
 		StmtResult&& ret = Sema::ActOnCompoundStmt(L, R, std::move(Elts), isStmtExpr);
 		clang::CompoundStmt* CS = cast<clang::CompoundStmt>(ret.get());
-		
+
 		// This is still buggy with Clang 3.6.2:
 		// when pragmas are just after the beginning of a compound stmt, example:
 		// {
@@ -160,10 +160,10 @@ namespace frontend {
 		// the location of the opening bracket is wrong because of a bug in the clang parser.
 		//
         // FIXME: THIS IS A DIRTY HACK AND SHOLD BE ADDRESSED
-        // the problem is not clang as was always blamed, our plagma matcher leaves the 
+        // the problem is not clang as was always blamed, our plagma matcher leaves the
         // lexer in an unstable state. Lexer Tokens are used by reference and each lookahead alter
         // the Lexer state. Once pragma has been consumed, the lexer is not returned to the rightfull
-        // position. 
+        // position.
         // Looking for the the brackets here is error prone. There is a need to deal with macro expansions and
         // wold require of a more sofisticated infrastructure. Like the one already provided by clang preprocessor.
         // Therefore here we sould assert that the source locations(L and R) point EXACTLY to { and } respectively,
@@ -184,7 +184,7 @@ namespace frontend {
 			}
 		}
 
-		// For the right bracket, we start at the final statement in the compound 
+		// For the right bracket, we start at the final statement in the compound
 		//   (or its start if it is empty) and search forward until we find the first "}"
 		// Otherwise, cases such as this:
 		//
@@ -212,7 +212,7 @@ namespace frontend {
 				R = rightBracketLoc.getLocWithOffset(rBracePos - strData);
 			}
 		}
-		
+
 		// the source range we inspect is defined by the new source locations,
 		// this fix the problem with boundaries jumping to the beginning of the file in
 		// the macro expansions:
@@ -321,7 +321,7 @@ namespace frontend {
 		}
 
 		EraseMatchedPragmas(pimpl->pending_pragma, matched);
-		return std::move(ret);
+		return ret;
 	}
 
 	clang::StmtResult InsiemeSema::ActOnForStmt(clang::SourceLocation ForLoc, clang::SourceLocation LParenLoc, clang::Stmt* First,
@@ -336,7 +336,7 @@ namespace frontend {
 		EraseMatchedPragmas(pimpl->pending_pragma, matched);
 		matched.clear();
 
-		return std::move(ret);
+		return ret;
 	}
 
 	clang::Decl* InsiemeSema::ActOnStartOfFunctionDef(clang::Scope* FnBodyScope, clang::Declarator& D) {
@@ -355,7 +355,7 @@ namespace frontend {
 		// We are sure all the pragmas inside the function body have been matched
 
 		FunctionDecl* FD = dyn_cast<FunctionDecl>(ret);
-		
+
 		if(!FD) { return ret; }
 
 		PragmaList matched;
