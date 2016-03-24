@@ -167,7 +167,7 @@ namespace frontend {
 			expected = builder.normalize(expected);
 			actual = builder.normalize(actual);
 			auto print = [](const core::NodePtr& node) {
-				return core::printer::PrettyPrinter(node, core::printer::PrettyPrinter::OPTIONS_DEFAULT | core::printer::PrettyPrinter::USE_COLOR
+				return core::printer::PrettyPrinter(node, core::printer::PrettyPrinter::OPTIONS_DEFAULT | core::printer::PrettyPrinter::USE_COLOR | core::printer::PrettyPrinter::PRINT_DEFAULT_MEMBERS
 				                                              | core::printer::PrettyPrinter::PRINT_DEREFS | core::printer::PrettyPrinter::FULL_LITERAL_SYNTAX);
 			};
 			EXPECT_EQ(expected, actual) << "\tLocation     : " << locationOf(addr) << "\n"

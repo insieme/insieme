@@ -271,24 +271,14 @@ namespace conversion {
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//						CXX CONSTRUCTOR CALL EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 	namespace {
 		/// Convert a ConstructExpr to an IR constructor call, allocating the required memory either on the stack (default) or on the heap
 		core::ExpressionPtr convertConstructExprInternal(Converter& converter, const clang::CXXConstructExpr* constructExpr, bool onStack) {
-			auto& builder = converter.getIRBuilder();
 			core::TypePtr resType = converter.convertType(constructExpr->getType());
-
-			VLOG(2) << "convertConstructExprInternal - ResType: \n" << dumpDetailColored(resType) << " recType:\n"
-				    << (*converter.getIRTranslationUnit().getTypes().find(resType.as<core::GenericTypePtr>())).second << "\n";
-
 			// first constructor argument is the object memory location -- we need to build this either on the stack or heap
-			auto irMemLoc = onStack ? core::lang::buildRefTemp(resType) : builder.undefinedNew(resType);
-
-			// get constructor lambda
-			auto constructorLambda = converter.getFunMan()->lookup(constructExpr->getConstructor());
-
-			// return call
-			auto retType = constructorLambda->getType().as<core::FunctionTypePtr>()->getReturnType();
-			return utils::buildCxxMethodCall(converter, retType, constructorLambda, irMemLoc, constructExpr->arguments());
+			auto irMemLoc = onStack ? core::lang::buildRefTemp(resType) : converter.getIRBuilder().undefinedNew(resType);
+			return utils::convertConstructExpr(converter, constructExpr, irMemLoc);
 		}
 	}
 

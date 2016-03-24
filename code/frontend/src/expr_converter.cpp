@@ -39,24 +39,23 @@
 #include "insieme/frontend/expr_converter.h"
 
 #include "insieme/frontend/decl_converter.h"
+#include "insieme/frontend/state/function_manager.h"
+#include "insieme/frontend/state/record_manager.h"
+#include "insieme/frontend/state/variable_manager.h"
 #include "insieme/frontend/utils/clang_cast.h"
 #include "insieme/frontend/utils/conversion_utils.h"
 #include "insieme/frontend/utils/expr_to_bool.h"
 #include "insieme/frontend/utils/frontend_inspire_module.h"
-#include "insieme/frontend/state/function_manager.h"
 #include "insieme/frontend/utils/macros.h"
 #include "insieme/frontend/utils/memalloc.h"
 #include "insieme/frontend/utils/name_manager.h"
 #include "insieme/frontend/utils/source_locations.h"
-#include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/stmt_wrapper.h"
-#include "insieme/frontend/state/record_manager.h"
-#include "insieme/frontend/state/variable_manager.h"
 
 #include "insieme/utils/container_utils.h"
+#include "insieme/utils/functional_utils.h"
 #include "insieme/utils/logging.h"
 #include "insieme/utils/numeric_cast.h"
-#include "insieme/utils/functional_utils.h"
 
 #include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/analysis/ir_utils.h"
@@ -466,7 +465,7 @@ namespace conversion {
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	//							BINARY OPERATOR
+	//							UNARY EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     core::ExpressionPtr Converter::ExprConverter::createUnaryExpression(const core::TypePtr& exprTy, const core::ExpressionPtr& subExpr,
@@ -558,7 +557,7 @@ namespace conversion {
 
         // Comparisons will return a boolean (integer) but the operator requires different parameter types
         if(clangBinOp->isComparisonOp()) {
-            // find first super type commom to both types,
+            // find first super type common to both types,
             //      int4   uint4
             //       |   /   |
             //      int8 <- unit8    => (int4, uint8) should be int8
@@ -584,8 +583,15 @@ namespace conversion {
 
 		assert_true(core::lang::isReference(lhs->getType())) << "left side must be assignable";
 
-		retIr = createBinaryExpression(exprTy, builder.deref(lhs), rhs, compOp);
-		retIr = utils::buildCStyleAssignment(lhs, retIr);
+		// Normally, in C, char types are implicitly casted to int by clang - this is not the case 
+		// for the LHS of compound assignments, because there are no lvalue casts in C. Hence, we need to cast ourselves.
+		if(compOp->getType()->isCharType()) {
+			retIr = createBinaryExpression(rhs->getType(), builder.numericCast(builder.deref(lhs), rhs->getType()), rhs, compOp);
+			retIr = utils::buildCStyleAssignment(lhs, builder.numericCast(retIr, exprTy));
+		} else {
+			retIr = createBinaryExpression(exprTy, builder.deref(lhs), rhs, compOp);
+			retIr = utils::buildCStyleAssignment(lhs, retIr);
+		}
 
 		return retIr;
 	}
@@ -818,52 +824,43 @@ namespace conversion {
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//                  StmtExpr EXPRESSION
+	// Statement Expressions (a GNU C extension) allow statements to appear as 
+	// an expression by enclosing them in parentheses, e.g.:
+	//		({ int x = 5; x+3; })
+	// The last entry should be an expression terminated by a semicolon and 
+	// represents the return type and value, otherwise (last entry == statement) 
+	// the entire construct has type void
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr Converter::ExprConverter::VisitStmtExpr(const clang::StmtExpr* stmtExpr) {
 		core::ExpressionPtr retIr;
 		LOG_EXPR_CONVERSION(stmtExpr, retIr);
 
-		//// get compound stmt and convert to ir
-		//const clang::CompoundStmt* inner = stmtExpr->getSubStmt();
-		//core::StatementPtr subStmtIr = converter.convertStmt(inner);
+		frontend_assert(stmtExpr->getSubStmt()->size() > 0) << "Empty Statement Expression encountered";
 
-		//// FIXME: aggregateStmts in stmt_wrapper _removes_ compoundStmt if compoundStmt contains only one stmt
-		//core::CompoundStmtPtr innerIr = (subStmtIr.isa<core::CompoundStmtPtr>()) ? subStmtIr.as<core::CompoundStmtPtr>() : builder.compoundStmt(subStmtIr);
+		// get compound stmt and convert to IR
+		core::StatementPtr subStmtIr = converter.convertStmt(stmtExpr->getSubStmt());
+		core::CompoundStmtPtr bodyIr = (subStmtIr.isa<core::CompoundStmtPtr>()) ? subStmtIr.as<core::CompoundStmtPtr>() : builder.compoundStmt(subStmtIr);
 
-		//// create new body with <returnStmt <expr>> instead of <expr> as last stmt
-		//core::StatementList newBody;
-		//for(auto it = innerIr->getStatements().begin(); it != innerIr->getStatements().end() - 1; ++it) {
-		//	newBody.push_back(*it);
-		//}
+		// create new body with <returnStmt <expr>> instead of <expr> as last stmt
+		core::StatementList newBody(bodyIr->getStatements());
+		frontend_assert(newBody.back().isa<core::ExpressionPtr>()) << "Last entry in Statement Expression must be an expression";
+		newBody.back() = converter.builder.returnStmt(newBody.back().as<core::ExpressionPtr>());
 
-		//core::TypePtr lambdaRetType = converter.convertType(stmtExpr->getType());
-		//core::ExpressionPtr exprToReturn = (innerIr->getStatements().end() - 1)->as<core::ExpressionPtr>();
+		// build the lambda and its parameters
+		core::TypePtr lambdaRetType = converter.convertType(stmtExpr->getType());
+		core::StatementPtr lambdaBody = converter.builder.compoundStmt(newBody);
+		vector<core::VariablePtr> lambdaParams = core::analysis::getFreeVariables(lambdaBody);
+		std::string lambdaName = utils::getLocationAsString(stmtExpr->getLocStart(), converter.getSourceManager());
+		
+		core::LambdaExprPtr lambda = converter.builder.lambdaExpr(lambdaRetType, lambdaParams, lambdaBody, lambdaName);
 
-		//// fix type
-		//if(exprToReturn->getType() != lambdaRetType) {
-		//	if(auto refty = exprToReturn->getType().isa<core::RefTypePtr>()) {
-		//		if(converter.lookupTypeDetails(refty->getElementType()) == converter.lookupTypeDetails(lambdaRetType)) {
-		//			exprToReturn = builder.deref(exprToReturn);
-		//		}
-		//	} else if(converter.lookupTypeDetails(exprToReturn->getType()) != converter.lookupTypeDetails(lambdaRetType)) {
-		//		exprToReturn = core::types::smartCast(exprToReturn, lambdaRetType);
-		//	}
-		//}
-		//core::StatementPtr retExpr = converter.builder.returnStmt(exprToReturn);
-		//newBody.push_back(retExpr);
+		// build the lambda call and its arguments
+		
+		vector<core::ExpressionPtr> lambdaArgs = ::transform(lambdaParams, [](core::VariablePtr varPtr) { 
+			return core::lang::buildRefDeref(varPtr.as<core::ExpressionPtr>()); 
+		});
+		retIr = builder.callExpr(lambdaRetType, lambda, lambdaArgs);
 
-		//// build the lambda and its parameters
-		//core::StatementPtr&& lambdaBody = converter.builder.compoundStmt(newBody);
-		//vector<core::VariablePtr> params = core::analysis::getFreeVariables(lambdaBody);
-		//core::LambdaExprPtr lambda = converter.builder.lambdaExpr(lambdaRetType, lambdaBody, params);
-
-		//// build the lambda call and its arguments
-		//vector<core::ExpressionPtr> packedArgs;
-		//std::for_each(params.begin(), params.end(), [&packedArgs](core::VariablePtr varPtr) { packedArgs.push_back(varPtr); });
-
-		//return retIr = builder.callExpr(lambdaRetType, lambda, packedArgs);
-
-		frontend_assert(false) << "GNU C statement expressions not implemented.";
 		return retIr;
 	}
 

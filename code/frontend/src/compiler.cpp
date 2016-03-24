@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -143,7 +143,7 @@ namespace frontend {
 		ClangCompilerImpl() : clang(), TO(new TargetOptions()), m_isCXX(false) {}
 	};
 
-	ClangCompiler::ClangCompiler(const ConversionSetup& config, const path& file) : pimpl(new ClangCompilerImpl), config(config) {
+	ClangCompiler::ClangCompiler(const ConversionSetup& config, const path& file) : pimpl(new ClangCompilerImpl) {
 		// assert_false(is_obj);
 		// NOTE: the TextDiagnosticPrinter within the set DiagnosticClient takes over ownership of the diagOpts object!
 		setDiagnosticClient(pimpl->clang, config.hasOption(ConversionJob::PrintDiag));

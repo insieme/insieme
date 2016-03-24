@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -53,17 +53,13 @@ namespace runtime {
 	 * the Insieme Runtime environment.
 	 */
 	class RuntimeBackend : public Backend {
-		/**
-		 * A flag enabling the inclusion of effort estimations within work-item tables.
-		 */
-		bool includeEffortEstimation;
 
 	  public:
 		/**
 		 * A constructor of this kind of backend accepting an operator table extender.
 		 */
-		RuntimeBackend(bool includeEffortEstimation, const BackendConfigPtr& config = std::make_shared<BackendConfig>())
-		    : Backend(std::vector<AddOnPtr>(), config), includeEffortEstimation(includeEffortEstimation) {}
+		RuntimeBackend(const BackendConfigPtr& config = std::make_shared<BackendConfig>())
+		    : Backend(std::vector<AddOnPtr>(), config) {}
 
 
 		/**
@@ -72,7 +68,7 @@ namespace runtime {
 		 *
 		 * @return a smart pointer to a fresh instance of the runtime backend
 		 */
-		static RuntimeBackendPtr getDefault(bool includeEffortEstimation = false, bool isGemsclaim = false);
+		static RuntimeBackendPtr getDefault();
 
 
 	  protected:

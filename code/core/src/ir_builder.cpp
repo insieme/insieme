@@ -743,10 +743,8 @@ namespace core {
 		return callExpr(refType(type), refExt.getRefNew(), getTypeLiteral(type));
 	}
 
-	CallExprPtr IRBuilderBaseModule::deref(const ExpressionPtr& subExpr) const {
-		assert_pred1(analysis::isRefType, subExpr->getType());
-		auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
-		return callExpr(analysis::getReferencedType(subExpr->getType()), refExt.getRefDeref(), subExpr);
+	ExpressionPtr IRBuilderBaseModule::deref(const ExpressionPtr& subExpr) const {
+		return lang::buildRefDeref(subExpr);
 	}
 
 	ExpressionPtr IRBuilderBaseModule::tryDeref(const ExpressionPtr& subExpr) const {
@@ -973,20 +971,6 @@ namespace core {
 
 			return res;
 		}
-
-		/**
-		 * Checks whether the given result type is matching the type expected when using automatic type inference.
-		 */
-		inline bool checkType(const TypePtr& resultType, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments) {
-			// check types
-			if(*resultType != *deduceReturnTypeForCall(functionExpr, arguments)) {
-				// print a warning if they are not matching
-				LOG(WARNING) << "Potentially invalid return type for call specified - function type: " << toString(*functionExpr->getType())
-				             << ", arguments: " << join(", ", arguments, print<deref<ExpressionPtr>>());
-			}
-			return true;
-		}
-
 
 		CallExprPtr createCall(const IRBuilderBaseModule& builder, const TypePtr& resultType, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments) {
 			// check user-specified return type - only when compiled in debug mode

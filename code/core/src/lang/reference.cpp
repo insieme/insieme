@@ -298,6 +298,13 @@ namespace lang {
 				|| types::getTypeVariableInstantiation(typeA->getNodeManager(), gB->getTypeParameter(0), gA->getTypeParameter(0));
 	}
 
+	ExpressionPtr buildRefDeref(const ExpressionPtr& refExpr) {
+		assert_pred1(isReference, refExpr->getType());
+		auto& rExt = refExpr->getNodeManager().getLangExtension<lang::ReferenceExtension>();
+		IRBuilder builder(refExpr->getNodeManager());
+		return builder.callExpr(analysis::getReferencedType(refExpr->getType()), rExt.getRefDeref(), refExpr);
+	}
+
 	ExpressionPtr buildRefCast(const ExpressionPtr& refExpr, const TypePtr& targetTy) {
 		assert_pred1(isReference, refExpr) << "Trying to build a ref cast from non-ref.";
 		assert_pred1(isReference, targetTy) << "Trying to build a ref cast to non-ref type.";

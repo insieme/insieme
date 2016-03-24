@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -417,13 +417,6 @@ namespace arithmetic {
 		size_t acc = 0;
 		for_each(factors, [&](const Factor& cur) { acc += cur.second; });
 		return acc;
-	}
-
-
-	namespace {
-		inline vector<Formula::Term> getSingle(const Product& product, const Rational& coefficient) {
-			return toVector(std::make_pair(product, coefficient));
-		}
 	}
 
 	Formula::Formula(int value) : terms((value == 0) ? vector<Term>() : toVector(Term(Product(), Rational(value)))){};

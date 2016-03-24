@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -257,12 +257,25 @@ namespace lang {
 		return builder.callExpr(pExt.getPtrDeref(), ptrExpr);
 	}
 
+	namespace {
+
+		ExpressionPtr buildInt8Cast(const ExpressionPtr& exp) {
+			auto& basic = exp->getNodeManager().getLangBasic();
+			IRBuilder builder(exp->getNodeManager());
+
+			if(!core::types::isSubTypeOf(exp->getType(), basic.getInt8())) {
+				return builder.numericCast(exp, basic.getInt8());
+			}
+			return exp;
+		}
+	}
+
 	ExpressionPtr buildPtrSubscript(const ExpressionPtr& ptrExpr, const ExpressionPtr& subscriptExpr) {
 		assert_pred1(isPointer, ptrExpr) << "Trying to build a ptr subscript from non-ptr.";
 		assert_pred1(ptrExpr->getNodeManager().getLangBasic().isInt, subscriptExpr->getType()) << "Trying to build a ptr subscript with non-integral subscript.";
 		IRBuilder builder(ptrExpr->getNodeManager());
 		auto& pExt = ptrExpr->getNodeManager().getLangExtension<PointerExtension>();
-		return builder.callExpr(pExt.getPtrSubscript(), ptrExpr, subscriptExpr);
+		return builder.callExpr(pExt.getPtrSubscript(), ptrExpr, buildInt8Cast(subscriptExpr));
 	}
 
 	ExpressionPtr buildPtrOperation(BasicGenerator::Operator op, const ExpressionPtr& lhs, const ExpressionPtr& rhs) {
@@ -281,12 +294,6 @@ namespace lang {
 				<< "\n lhs: " << *lhs << "\n  - of type: " << *lhs->getType() 
 				<< "\n rhs: " << *rhs << "\n  - of type: " << *rhs->getType()
 				<< "\n op: " << op;
-		};
-		auto buildInt8Cast = [&](const ExpressionPtr& exp) {
-			if(!core::types::isSubTypeOf(exp->getType(), basic.getInt8())) {
-				return builder.numericCast(exp, basic.getInt8());
-			}
-			return exp;
 		};
 
 		// arithmetic operations

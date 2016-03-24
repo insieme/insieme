@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -57,10 +57,10 @@ namespace impl {
 
 	// --- forward declarations (pimpl) ---
 
-	class TreePattern;
+	struct TreePattern;
 	typedef std::shared_ptr<TreePattern> TreePatternPtr;
 
-	class ListPattern;
+	struct ListPattern;
 	typedef std::shared_ptr<ListPattern> ListPatternPtr;
 }
 

@@ -113,16 +113,50 @@ namespace conversion {
 			return newFunType;
 		}
 
+		StatementList getConstructorInitExpressions(Converter& converter, const clang::FunctionDecl* funcDecl) {
+			const clang::CXXConstructorDecl* constrDecl = llvm::dyn_cast<clang::CXXConstructorDecl>(funcDecl);
+			if(!constrDecl) return {};
+
+			core::IRBuilder builder(converter.getNodeManager());
+			core::StatementList retStmts;
+			for(const auto& init: constrDecl->inits()) {
+				// access IR field
+				auto fieldDecl = init->getMember();
+				auto access = converter.getNodeManager().getLangExtension<core::lang::ReferenceExtension>().getRefMemberAccess();
+				auto retType = converter.convertVarType(fieldDecl->getType().getUnqualifiedType());
+				auto irMember = builder.callExpr(retType, access, builder.deref(converter.getVarMan()->getThis()), builder.getIdentifierLiteral(fieldDecl->getNameAsString()),
+					                             builder.getTypeLiteral(core::lang::ReferenceType(retType).getElementType()));
+				// handle CXXDefaultInitExpr
+				auto clangInitExpr = init->getInit();
+				if(auto defaultInitExpr = llvm::dyn_cast<clang::CXXDefaultInitExpr>(clangInitExpr)) {
+					clangInitExpr = defaultInitExpr->getExpr();
+				}
+				// handle ConstructExprs
+				if(auto constructExpr = llvm::dyn_cast<clang::CXXConstructExpr>(clangInitExpr)) {
+					retStmts.push_back(utils::convertConstructExpr(converter, constructExpr, irMember));
+					continue;
+				}
+
+				// build init expression
+				retStmts.push_back(builder.initExpr(irMember, converter.convertCxxArgExpr(clangInitExpr)));
+			}
+			return retStmts;
+		}
+
 		core::LambdaExprPtr convertFunMethodInternal(Converter& converter, const core::FunctionTypePtr& funType,
 			                                         const clang::FunctionDecl* funcDecl, const string& name) {
+			const core::IRBuilder& builder = converter.getIRBuilder();
+			// switch to the declaration containing the body (if there is one)
+			funcDecl->hasBody(funcDecl); // yes, right, this one has the side effect of updating funcDecl!!
 			const clang::CXXMethodDecl* methDecl = llvm::dyn_cast<clang::CXXMethodDecl>(funcDecl);
 			if(funcDecl->hasBody()) {
 				converter.getVarMan()->pushScope(false);
 				core::VariableList params;
+				core::StatementList bodyStmts;
 				// handle implicit "this" for methods
 				if(methDecl) {
 					auto thisType = getThisType(converter, methDecl);
-					auto thisVar = converter.getIRBuilder().variable(converter.getIRBuilder().refType(thisType));
+					auto thisVar = builder.variable(builder.refType(thisType));
 					params.push_back(thisVar);
 					converter.getVarMan()->setThis(thisVar);
 				}
@@ -132,11 +166,14 @@ namespace conversion {
 					params.push_back(irParam.first);
 					converter.getVarMan()->insert(param, irParam.first);
 				}
-				// convert body and build full expression
-				auto body = converter.convertStmt(funcDecl->getBody());
+				// convert body and build full expression (must be within scope!)
+				auto bodyRange = builder.wrapBody(converter.convertStmt(funcDecl->getBody())).getStatements();
+				// handle constructor init expressions (must be within scope!)
+				bodyStmts = getConstructorInitExpressions(converter, funcDecl);
+				std::copy(bodyRange.cbegin(), bodyRange.cend(), std::back_inserter(bodyStmts));
 				converter.getVarMan()->popScope();
-				auto lambda = converter.getIRBuilder().lambda(funType, params, body);
-				auto funExp = converter.getIRBuilder().lambdaExpr(lambda, name);
+				auto lambda = builder.lambda(funType, params, builder.compoundStmt(bodyStmts));
+				auto funExp = builder.lambdaExpr(lambda, name);
 				return funExp;
 			} else {
 				return core::LambdaExprPtr();
