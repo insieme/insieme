@@ -90,7 +90,7 @@ namespace frontend {
 		/**
 		 * A list of supported standards.
 		 */
-		enum Standard { Auto, C99, Cxx98, Cxx03, Cxx11 };
+		enum Standard { Auto, C99, Cxx98, Cxx03, Cxx11, Cxx14 };
 
 		/**
 		 * The default frontend configuration.
