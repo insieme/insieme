@@ -212,7 +212,7 @@ namespace types {
 
 		// check structure of individual parameters
 		for (const auto& cur : make_paired_range(valueParams, patternParams)) {
-			if (cur.second.isa<TypeVariablePtr>()) {
+			if (cur.first.isa<TypeVariablePtr>() || cur.second.isa<TypeVariablePtr>()) {
 				// all fine
 			} else if (auto var = cur.second.isa<GenericTypeVariablePtr>()) {
 				if (!isMatchingStructure(cur.first, var)) return false;

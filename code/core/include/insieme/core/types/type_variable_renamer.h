@@ -255,13 +255,22 @@ namespace types {
 			auto visitor = makeLambdaVisitor([&](const NodePtr& node) {
 				NodeType type = node->getNodeType();
 				if(type == NT_TypeVariable) {
-					const TypeVariablePtr& var = static_pointer_cast<const TypeVariable>(node);
+					const TypeVariablePtr& var = node.as<TypeVariablePtr>();
 					if(base.containsMappingFor(var)) {
 						res.addMapping(var, base.applyForward(manager, var));
 					} else if(!res.containsMappingFor(var)) {
 						res.addMapping(var, getFreshVariable(manager));
 					}
 				}
+				if(type == NT_GenericTypeVariable) {
+					const GenericTypeVariablePtr& var = node.as<GenericTypeVariablePtr>();
+					if(base.containsMappingFor(var)) {
+						res.addMapping(var, base.applyForward(manager, var));
+					} else if(!res.containsMappingFor(var)) {
+						res.addMapping(var, getFreshGenericVariable(manager, var));
+					}
+				}
+
 			}, true);
 
 			// use a visitor to meet all variables and variable int parameters
@@ -283,6 +292,10 @@ namespace types {
 
 		TypeVariablePtr getFreshVariable(NodeManager& manager) {
 			return TypeVariable::get(manager, format("v%d", (++varCounter)));
+		}
+
+		GenericTypeVariablePtr getFreshGenericVariable(NodeManager& manager, const GenericTypeVariablePtr& var) {
+			return GenericTypeVariable::get(manager, format("v%d", (++varCounter)), var->getTypeParameter());
 		}
 	};
 

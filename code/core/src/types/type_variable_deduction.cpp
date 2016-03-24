@@ -552,6 +552,8 @@ namespace types {
 			NodeType nodeTypeA = paramType->getNodeType();
 			NodeType nodeTypeB = argType->getNodeType();
 
+			// --------------------------------------------- Type Variables --------------------------------------------
+
 			// handle variables
 			if(nodeTypeA == NT_TypeVariable) {
 				// add corresponding constraint to this variable
@@ -560,6 +562,45 @@ namespace types {
 				} else {
 					constraints.addSubtypeConstraint(argType, paramType);
 				}
+				return;
+			}
+
+			// ------------------------------------------- Generic Type Variables --------------------------------------
+
+			// handle variables
+			if(nodeTypeA == NT_GenericTypeVariable) {
+
+				// check for matching type on the other side
+				if (nodeTypeB != NT_GenericTypeVariable && nodeTypeB != NT_GenericType) {
+					constraints.makeUnsatisfiable();
+					return;
+				}
+
+				// add corresponding constraint to this variable
+				if(direction == Direction::SUB_TYPE) {
+					constraints.addSubtypeConstraint(paramType, argType);
+				} else {
+					constraints.addSubtypeConstraint(argType, paramType);
+				}
+
+				// get parameter types
+				const TypeList& paramParams = paramType.as<GenericTypeVariablePtr>()->getTypeParameterList();
+				const TypeList& argParams = (nodeTypeB == NT_GenericTypeVariable)
+					? argType.as<GenericTypeVariablePtr>()->getTypeParameterList()
+					: argType.as<GenericTypePtr>()->getTypeParameterList();
+
+				// check number of type parameters
+				if(paramParams.size() != argParams.size()) {
+					// different number of arguments => unsatisfiable
+					constraints.makeUnsatisfiable();
+					return;
+				}
+
+				// process parameters
+				for(const auto& cur : make_paired_range(paramParams, argParams)) {
+					addTypeConstraints(constraints, substitution, cur.first, cur.second, direction);
+				}
+
 				return;
 			}
 
@@ -874,7 +915,7 @@ namespace types {
 			// ---------------------------------- Solve Constraints -----------------------------------------
 
 			// solve constraints to obtain results
-			SubstitutionOpt&& solution = constraints.solve(internalManager);
+			SubstitutionOpt solution = constraints.solve(internalManager);
 			if (!solution) {
 				// if unsolvable => return this information
 				if (debug) { std::cout << " Terminated with no solution!" << std::endl << std::endl; }
@@ -888,23 +929,38 @@ namespace types {
 
 			// check for empty solution (to avoid unnecessary operations
 			if (solution->empty()) {
-				if (debug) { std::cout << " Terminated with: " << res << std::endl << std::endl; }
+				if (debug) { std::cout << " Terminated before revert-renaming with: " << res << std::endl << std::endl; }
 				return res;
 			}
 
 			// reverse variables from previously selected constant replacements (and bring back to correct node manager)
-			for (auto it = solution->getVariableMapping().begin(); it != solution->getVariableMapping().end(); ++it) {
-				TypeVariablePtr var = static_pointer_cast<const TypeVariable>(parameterMapping.applyBackward(manager, it->first));
-				TypePtr substitute = argumentMapping.applyBackward(manager, it->second);
+			for (const auto& cur : solution->getVariableMapping()) {
+				TypeVariablePtr var = static_pointer_cast<const TypeVariable>(parameterMapping.applyBackward(manager, cur.first));
+				TypePtr substitute = argumentMapping.applyBackward(manager, cur.second);
 
 				// also apply argument renaming backwards ..
-				for (auto it2 = argumentRenaming.begin(); it2 != argumentRenaming.end(); ++it2) {
-					var = it2->applyBackward(manager, var).as<TypeVariablePtr>();
-					substitute = it2->applyBackward(manager, substitute);
+				for(const auto& cur : argumentRenaming) {
+					var = cur.applyBackward(manager, var).as<TypeVariablePtr>();
+					substitute = cur.applyBackward(manager, substitute);
 				}
 
 				res.addMapping(manager.get(var), manager.get(substitute));
 			}
+
+			// also for generic type variables
+			for (const auto& cur : solution->getGenericVariableMapping()) {
+				GenericTypeVariablePtr var = parameterMapping.applyBackward(manager, cur.first).as<GenericTypeVariablePtr>();
+				TypePtr substitute = argumentMapping.applyBackward(manager, cur.second);
+
+				// also apply argument renaming backwards ..
+				for(const auto& cur : argumentRenaming) {
+					var = cur.applyBackward(manager, var).as<GenericTypeVariablePtr>();
+					substitute = cur.applyBackward(manager, substitute);
+				}
+
+				res.addMapping(manager.get(var), manager.get(substitute));
+			}
+
 			if (debug) { std::cout << " Terminated with: " << res << std::endl << std::endl; }
 			return res;
 		}
