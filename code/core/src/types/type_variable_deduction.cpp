@@ -81,17 +81,6 @@ namespace types {
 		void addEqualityConstraints(SubTypeConstraints& constraints, const TypePtr& typeA, const TypePtr& typeB);
 
 		/**
-		 * Adds additional constraints to the given constraint collection such that the type variables used within the
-		 * parameter type are limited to values representing super- / sub-types of the given argument type.
-		 *
-		 *  @param constraints the set of constraints to be extended
-		 *  @param paramType the type on the parameter side (function side)
-		 *  @param argType the type on the argument side (argument passed by call expression)
-		 *  @param direction the direction to be ensured - sub- or supertype
-		 */
-		void addTypeConstraints(SubTypeConstraints& constraints, const TypePtr& paramType, const TypePtr& argType, Direction direction);
-
-		/**
 		 * Expands variadic type parameters in the given params type list to fit the structure of the given argument type. The
 		 * necessary un-pack substitution will be returned as a result.
 		 * 
