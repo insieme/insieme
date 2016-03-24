@@ -13,7 +13,6 @@ cast
 cast_dynamic
 cast_reinterpret
 cast_static
-class
 class_as_return_type_of_member_function_closing_rec_cycle
 ctor
 ctor_inherit
@@ -21,12 +20,9 @@ ctor_return
 curiously_recurring_template_pattern
 curiously_recurring_template_pattern_2
 curiously_recurring_template_pattern_member_function
-dtor
 dtor_return
 expr_with_cleanups
 friend
-globals_in_classes
-header
 inherit
 inherit_chained
 inherit_multiple
@@ -42,12 +38,10 @@ mem_alloc_ctor_inherit
 member_data_pointer
 member_function_vector
 memb_func_ptr
-nested_class
 omp
 op_overl
 performance
 pod_struct_bug
-rec_class
 rec_memberfunc_pointer
 refs
 refs_ctor
@@ -68,7 +62,6 @@ std_distance
 stl_intercept
 stl_list_iterator
 stl_read_file
-stmt_expr
 struct
 template1
 template2

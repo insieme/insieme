@@ -7,9 +7,6 @@ mpi
 vectors
 vivid
 
-# Disabling cpp test cases for the time being
-interceptor
-
 # Disabling tests because they fail with assertion:
 # Goto not implemented
 label_goto

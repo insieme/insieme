@@ -1,3 +1,0 @@
-files="interceptor.cpp"
-includes="./"
-excludeSteps="*_c_*", "*_ocl_*"
