@@ -214,12 +214,12 @@ int main() {
 	#pragma test expect_ir(R"(type_instantiation(type_lit(<ref<int<4>,f,f,qualified>, ref<int<4>,f,f,qualified>, ref<real<8>,f,f,qualified>, ref<uint<4>,f,f,qualified>>(int<4>, int<4>, real<8>, uint<4>) -> int<4>), lit("IMP_variadicTemplateFun" : <ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>, 'V_T_0_1...>('T_0_0, 'V_T_0_1...) -> 'T_0_0))(0, 1, 2.0E+0, 90u))")
 	variadicTemplateFun(0, 1, 2.0, 90u);
 
-	//#pragma test expect_ir(R"({
-	//	var ref<IMP_VariadicClass<int<4>,real<8>>,f,f,plain> v0 = lit("IMP_VariadicClass::ctor" : IMP_VariadicClass<'V_T_0_0...>::())(v0) materialize ;
-	//})")
-	//{
-	//	VariadicClass<int, double> a;
-	//}
+	#pragma test expect_ir(R"({
+	var ref<IMP_VariadicClass<ref<int<4>,f,f,qualified>,ref<real<8>,f,f,qualified>>,f,f,plain> v0 = lit("IMP_VariadicClass::ctor" : IMP_VariadicClass<'V_T_0_0...>::())(v0) materialize ;
+	})")
+	{
+		VariadicClass<int, double> a;
+	}
 
 	// Variadic template template //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
