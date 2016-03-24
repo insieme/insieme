@@ -846,20 +846,8 @@ namespace conversion {
 		frontend_assert(newBody.back().isa<core::ExpressionPtr>()) << "Last entry in Statement Expression must be an expression";
 		newBody.back() = converter.builder.returnStmt(newBody.back().as<core::ExpressionPtr>());
 
-		// build the lambda and its parameters
-		core::TypePtr lambdaRetType = converter.convertType(stmtExpr->getType());
-		core::StatementPtr lambdaBody = converter.builder.compoundStmt(newBody);
-		vector<core::VariablePtr> lambdaParams = core::analysis::getFreeVariables(lambdaBody);
-		std::string lambdaName = utils::getLocationAsString(stmtExpr->getLocStart(), converter.getSourceManager());
-		
-		core::LambdaExprPtr lambda = converter.builder.lambdaExpr(lambdaRetType, lambdaParams, lambdaBody, lambdaName);
-
-		// build the lambda call and its arguments
-		
-		vector<core::ExpressionPtr> lambdaArgs = ::transform(lambdaParams, [](core::VariablePtr varPtr) { 
-			return core::lang::buildRefDeref(varPtr.as<core::ExpressionPtr>()); 
-		});
-		retIr = builder.callExpr(lambdaRetType, lambda, lambdaArgs);
+		// create call to lambda with new body
+		retIr = core::transform::outline(bodyIr->getNodeManager(), converter.builder.compoundStmt(newBody), true);
 
 		return retIr;
 	}

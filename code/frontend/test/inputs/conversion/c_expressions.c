@@ -489,9 +489,9 @@ int main() {
 	({ int x = 1; x; });
 	
 	#pragma test expect_ir("REGEX_S", R"(decl .* : \(\) -> int<8>; def .* = function \(\) -> int<8> \{ var ref<int<8>,f,f,plain> v0 = 5l; var ref<int<8>,f,f,plain> v1 = 2l; return \*v0\+\*v1; \}; .*\(\))")
-	({ long x = 5l; long y = 2l; x+y; });
+	({ long x = 5L; long y = 2L; x+y; });
 	
-	#pragma test expect_ir("REGEX_S", R"(decl .* : \(int<4>\) -> int<4>; def .* = function \(v0 : ref<int<4>,f,f,plain>\) -> int<4> \{ var ref<int<4>,f,f,plain> v1 = 2; return \*v0\+\*v1; \}; \{ var ref<int<4>,f,f,plain> v0 = 5; .*\(\*v0\); \})") 
+	#pragma test expect_ir("REGEX_S", R"(decl .* : \(ref<int<4>,f,f,plain>\) -> int<4>; def .* = function \(v0 : ref<ref<int<4>,f,f,plain>,f,f,plain>\) -> int<4> \{ var ref<int<4>,f,f,plain> v1 = 2; return \*\*v0\+\*v1; \}; \{ var ref<int<4>,f,f,plain> v0 = 5; .*\(v0\); \})") 
 	{
 		int x = 5;
 		({ int y = 2; x+y; });
