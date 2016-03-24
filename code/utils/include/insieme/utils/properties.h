@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -592,44 +592,44 @@ namespace properties {
 	}
 
 
-	namespace {
+	namespace detail {
 
 		// predefined list of names for well known types ...
 		template <typename T>
-		const char* getName();
+		inline const char* getName();
 
 		template <>
-		const char* getName<bool>() {
+		inline const char* getName<bool>() {
 			return "bool";
 		};
 		template <>
-		const char* getName<int>() {
+		inline const char* getName<int>() {
 			return "int";
 		};
 		template <>
-		const char* getName<unsigned>() {
+		inline const char* getName<unsigned>() {
 			return "unsigned";
 		};
 		template <>
-		const char* getName<float>() {
+		inline const char* getName<float>() {
 			return "float";
 		};
 		template <>
-		const char* getName<double>() {
+		inline const char* getName<double>() {
 			return "double";
 		};
 
 		template <>
-		const char* getName<string>() {
+		inline const char* getName<string>() {
 			return "string";
 		};
 
 		template <>
-		const char* getName<uint64_t>() {
+		inline const char* getName<uint64_t>() {
 			return "uint64";
 		};
 		template <>
-		const char* getName<int64_t>() {
+		inline const char* getName<int64_t>() {
 			return "int64";
 		};
 	}
@@ -643,7 +643,7 @@ namespace properties {
 	 * @return the requested parameter
 	 */
 	template <typename Value, typename AtomicType>
-	inline typename AtomicProperty<Value, AtomicType>::ptr atom(const string& desc = "", const char* typeName = getName<AtomicType>()) {
+	inline typename AtomicProperty<Value, AtomicType>::ptr atom(const string& desc = "", const char* typeName = detail::getName<AtomicType>()) {
 		return std::make_shared<AtomicProperty<Value, AtomicType>>(typeName, desc);
 	}
 

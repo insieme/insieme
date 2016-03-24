@@ -104,8 +104,8 @@ namespace integration {
 		driver::cmd::Options options = driver::cmd::Options::parse(args);
 		return options;
 	}
-	
-	
+
+
 	core::ProgramPtr IntegrationTestCase::load(core::NodeManager& manager) const {
 		return toJob(*this).execute(manager);
 	}
@@ -416,24 +416,6 @@ namespace integration {
 
 		// try loading test case directly (e.g if blacklisted)
 		return loadTestCase(name);
-	}
-
-	namespace {
-
-		bool isParentOf(const fs::path& parent, const fs::path& child) {
-			assert_true(parent.is_absolute());
-			// assertion fails if child is empty
-			// assert_true(child.is_absolute());
-
-			// if it is the same => done
-			if(parent == child) { return true; }
-
-			// if child is empty => terminate
-			if(child.empty()) { return false; }
-
-			// go one more step
-			return isParentOf(parent, child.parent_path());
-		}
 	}
 
 	vector<IntegrationTestCase> getTestSuite(const string& path) {

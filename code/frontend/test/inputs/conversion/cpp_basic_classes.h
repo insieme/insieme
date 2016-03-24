@@ -34,37 +34,6 @@
  * regarding third party software licenses.
  */
 
-#pragma once
-
-#include "insieme/core/forward_decls.h"
-#include "insieme/frontend/clang.h"
-
-namespace insieme {
-namespace frontend {
-
-namespace conversion {
-	class Converter;
-}
-
-namespace utils {
-
-	/// Replace RefTemps in outer constructor calls with variable itself
-	///
-	core::ExpressionPtr fixTempMemoryInInitExpression(const core::ExpressionPtr& variable, const core::ExpressionPtr& initExp);
-
-	/// Build a Cxx method call from its components
-	///
-	core::CallExprPtr buildCxxMethodCall(conversion::Converter& converter, const core::TypePtr& retType, const core::ExpressionPtr& callee,
-		                                 const core::ExpressionPtr& thisArgument, clang::CallExpr::arg_const_range argumentRange);
-
-	/// Creates an expression corresponding to a clang EnumConstantDecl
-	///
-	core::ExpressionPtr buildEnumConstantExpression(conversion::Converter& converter, const clang::EnumConstantDecl* decl);
-
-	/// Convert a CXXConstructExpr to construct the object at a given ir memory location
-	///
-	core::ExpressionPtr convertConstructExpr(conversion::Converter& converter, const clang::CXXConstructExpr* constructExpr, const core::ExpressionPtr& memLoc);
-
-} // end namespace utils
-} // end namespace frontend
-} // end namespace insieme
+struct InHeader {
+	void f(int i);
+};

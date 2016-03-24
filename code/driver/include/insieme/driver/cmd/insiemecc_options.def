@@ -62,7 +62,6 @@ FLAG("win-cross-compile", winCrossCompile, "set cross compilation for a Windows 
 FLAG("print-clang-ast", printClangAST, "print the clang AST")
 FLAG("fnodefaultextensions", noDefaultExtensions, "disables all frontend extensions that are enabled by default")
 
-FLAG("estimate-effort", estimateEffort, "enables generation of the effort estimation function")
 FLAG("task-granularity-tuning", taskGranularityTuning, "enables multiverisoning of parallel tasks")
 
 PARAMETER("backend", backend, std::string, "runtime", "backend selection")

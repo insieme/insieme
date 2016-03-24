@@ -102,15 +102,11 @@ namespace omp {
 		// literal markers for "ordered" implementation
 		const LiteralPtr orderedCountLit, orderedItLit, orderedIncLit;
 
-		// To generate per-objective-clause param id (OMP+)
-		unsigned int paramCounter;
-
 	  public:
 		OMPSemaMapper(NodeManager& nodeMan)
 			: nodeMan(nodeMan), build(nodeMan), basic(nodeMan.getLangBasic()), parExt(nodeMan.getLangExtension<lang::ParallelExtension>()), toFlatten(),
 			  orderedCountLit(build.literal("ordered_counter", build.refType(basic.getInt8(), false, true))),
-			  orderedItLit(build.literal("ordered_loop_it", basic.getInt8())), orderedIncLit(build.literal("ordered_loop_inc", basic.getInt8())),
-			  paramCounter(0) {}
+			  orderedItLit(build.literal("ordered_loop_it", basic.getInt8())), orderedIncLit(build.literal("ordered_loop_inc", basic.getInt8())) {}
 
 	  protected:
 		// Identifies omp annotations and uses the correct methods to deal with them

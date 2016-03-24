@@ -164,44 +164,44 @@ namespace analysis {
 			/**
 			 * When encountering a variable, check whether it is bound.
 			 */
-			bool visitTypeVariable(const TypeVariablePtr& var) {
+			bool visitTypeVariable(const TypeVariablePtr& var) override {
 				return true; // there is a free generic variable
 			}
 
-			bool visitFunctionType(const FunctionTypePtr& funType) {
+			bool visitFunctionType(const FunctionTypePtr& funType) override {
 				return any(funType->getParameterTypes(), [&](const TypePtr& type) { return this->visit(type); })
 				       || this->visit(funType->getReturnType());
 			}
 
-			bool visitTupleType(const TupleTypePtr& tuple) {
+			bool visitTupleType(const TupleTypePtr& tuple) override {
 				return any(tuple->getElements(), [&](const TypePtr& type) { return this->visit(type); });
 			}
 
-			bool visitGenericType(const GenericTypePtr& type) {
+			bool visitGenericType(const GenericTypePtr& type) override {
 				// generic type is generic if one of its parameters is
 				return any(type->getTypeParameter()->getTypes(), [&](const TypePtr& type) { return this->visit(type); });
 			}
 
-			bool visitNumericType(const NumericTypePtr&) {
+			bool visitNumericType(const NumericTypePtr&) override {
 				// numeric types are never generic
 				return false;
 			}
 
-			bool visitTagType(const TagTypePtr& tagType) {
+			bool visitTagType(const TagTypePtr& tagType) override {
 				// check types within recursive bindings
 				return any(tagType->getDefinition(), [&](const TagTypeBindingPtr& binding) { return this->visit(binding->getRecord()); });
 			}
 
-			bool visitTagTypeReference(const TagTypeReferencePtr& tagType) {
+			bool visitTagTypeReference(const TagTypeReferencePtr& tagType) override {
 				// nothing generic here
 				return false;
 			}
 
-			bool visitRecord(const RecordPtr& record) {
+			bool visitRecord(const RecordPtr& record) override {
 				return any(record->getFields(), [&](const FieldPtr& field) { return this->visit(field->getType()); });
 			}
 
-			bool visitType(const TypePtr& type) {
+			bool visitType(const TypePtr& type) override {
 				return any(type->getChildList(), [&](const NodePtr& node) { return this->visit(node); });
 			}
 
@@ -210,7 +210,7 @@ namespace analysis {
 			 * never be reached since all cases need to be covered within specialized
 			 * visit members.
 			 */
-			bool visitNode(const NodePtr& node, TypeVariableSet& boundVars) {
+			bool visitNode(const NodePtr& node) override {
 				LOG(FATAL) << "Reaching " << *node << " of type " << node->getNodeType() << " within IsGeneric visitor!";
 				assert_fail() << "Should not be reached!";
 				return false;
@@ -276,12 +276,8 @@ namespace analysis {
 				return res;
 			}
 
-			TypeList visitNumericType(const NumericTypePtr& type) override {
-				return TypeList();
-			}
-
 			TypeList visitType(const TypePtr& type) override {
-				assert_fail() << "Unsupported type encountered: " << *type << " of kind " << type->getNodeType() << "\n";
+				assert_fail() << "Unsupported type encountered: " << *type << "\n";
 				return TypeList();
 			}
 		};
