@@ -74,7 +74,7 @@ namespace types {
 		/**
 		 *  Adds the necessary constraints on the instantiation of the type variables used within the given type parameter.
 		 *
-		 *  @param constraints the set of constraints to be extendeded
+		 *  @param constraints the set of constraints to be extended
 		 *  @param paramType the type on the parameter side (function side)
 		 *  @param argType the type on the argument side (argument passed by call expression)
 		 */
@@ -94,7 +94,7 @@ namespace types {
 
 		// -------------------------------------------------------- Implementation ----------------------------------------------
 
-		// the kind of constraints collected for computing the lenght of parameter expansions
+		// the kind of constraints collected for computing the length of parameter expansions
 		using PackLengthConstraints = utils::DifferenceConstraints<TypePtr>;
 
 		namespace {
