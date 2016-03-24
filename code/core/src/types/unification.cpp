@@ -95,6 +95,8 @@ namespace types {
 				// 1) if (a == b) ignore pair ..
 				if(*a == *b) { continue; }
 
+				// ------------------------------------ Type Variables -----------------------------------------------
+
 				// 2) test whether on the B side there is a variable
 				if(typeOfA != NT_TypeVariable && typeOfB == NT_TypeVariable) {
 					// unification: no problem => swap sides
@@ -103,7 +105,7 @@ namespace types {
 					continue;
 				}
 
-				// 2c) make sure the smaller variable is on the left side
+				// 2b) make sure the smaller variable is on the left side
 				if(typeOfA == NT_TypeVariable && typeOfB == NT_TypeVariable) {
 					// make sure the smaller variable is in front
 					// (this does not really matter for the unification but
@@ -133,7 +135,74 @@ namespace types {
 					continue;
 				}
 
-				// 4) function types / generic types / tuples / structs / unions / recursive types
+				// --------------------------------- Generic Type Variables --------------------------------------------
+
+				// 4) test whether on the B side there is a variable
+				if(typeOfA != NT_GenericTypeVariable && typeOfB == NT_GenericTypeVariable) {
+					// unification: no problem => swap sides
+					// add swapped pair to front of list
+					list.push_front(std::make_pair(b, a));
+					continue;
+				}
+
+				// 4b) make sure the smaller variable is on the left side
+				if(typeOfA == NT_GenericTypeVariable && typeOfB == NT_GenericTypeVariable) {
+					// make sure the smaller variable is in front
+					// (this does not really matter for the unification but
+					//  ensures parameter variables to be on the left side
+					//  for the return type deduction)
+					if (a.as<GenericTypeVariablePtr>()->getVarName()->getValue() > b.as<GenericTypeVariablePtr>()->getVarName()->getValue()) {
+						list.push_front(std::make_pair(b,a));
+						continue;
+					}
+				}
+
+				// 5) handle variables on left hand side ...
+				if(typeOfA == NT_GenericTypeVariable) {
+					if(analysis::contains(a, b)) {
+						// not unifiable (e.g. X = type<X> cannot be unified)
+						return ununifiable;
+					}
+
+					// check whether the other side is a generic type or a generic variable
+					if (typeOfB != NT_GenericTypeVariable && typeOfB != NT_GenericType) {
+						// => structural mismatch
+						return ununifiable;
+					}
+
+					// check length of parameters
+					const auto& aParams = a.as<GenericTypeVariablePtr>()->getTypeParameterList();
+					const auto& bParams = (typeOfB == NT_GenericTypeVariable)
+							? b.as<GenericTypeVariablePtr>()->getTypeParameterList()
+							: b.as<GenericTypePtr>()->getTypeParameterList();
+
+					if (aParams.size() != bParams.size()) {
+						// => structural mismatch
+						return ununifiable;
+					}
+
+					// convert current pair into substitution
+					Substitution mapping(a.as<GenericTypeVariablePtr>(), b);
+
+					// apply substitution to remaining pairs
+					applySubstitutionToList(manager, mapping, list);
+
+					// combine current mapping with overall result
+					res = Substitution::compose(manager, res, mapping);
+
+					// add parameters to list of types to be unified
+					for(const auto& cur : make_paired_range(aParams, bParams)) {
+						list.push_back(cur);
+					}
+
+					// keep processing
+					continue;
+				}
+
+
+				// ------------------------------------- Other Types ----------------------------------------------
+
+				// 6) function types / generic types / tuples / structs / unions / recursive types
 				if(typeOfA != typeOfB) {
 					// => not unifiable
 					return ununifiable;
