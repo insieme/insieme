@@ -184,6 +184,7 @@
 
     /* Literals */
 %token <std::string> STRING            "string"
+%token <std::string> CHAR              "char"
 %token <std::string> IDENTIFIER        "identifier"
 %token <std::string> TYPE_VAR          "type_var"
 %token <std::string> TAG_REF           "tag_ref"
@@ -603,6 +604,7 @@ literal : "true"                                                          { $$ =
         | "ulonglong"                                                     { $$ = driver.genNumericLiteral(@$, driver.mgr.getLangBasic().getUInt16(), $1); }
         | "float"                                                         { $$ = driver.genNumericLiteral(@$, driver.mgr.getLangBasic().getReal4(), $1); }
         | "double"                                                        { $$ = driver.genNumericLiteral(@$, driver.mgr.getLangBasic().getReal8(), $1); }
+		| "char"                                                          { $$ = driver.builder.literal(driver.mgr.getLangBasic().getChar(), $1); }
         | "string"                                                        { $$ = driver.builder.stringLit($1); }
         | "lit" "(" "string" ")"                                          { $$ = driver.builder.getIdentifierLiteral($3.substr(1, $3.size() - 2)); }
         | "lit" "(" "string" ":" type ")"                                 { $$ = driver.builder.literal($5, $3.substr(1, $3.size() - 2)); }
