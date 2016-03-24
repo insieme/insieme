@@ -76,12 +76,16 @@ namespace parser {
 			}
 
 			// workaround since generated code is difficult to adjust
+			#ifdef __clang__
 			#pragma clang diagnostic push
 			#pragma clang diagnostic ignored "-Woverloaded-virtual"
+			#endif
 
 			InspireParser::symbol_type yylex(InspireDriver& driver);
 
+			#ifdef __clang__
 			#pragma clang diagnostic pop
+			#endif
 
 			void setStartProgram() {
 				startToken = &programToken;

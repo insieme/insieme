@@ -45,8 +45,10 @@
 #pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #pragma GCC diagnostic ignored "-Wuninitialized"
 
+#ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wredundant-move"
+#endif
 
 #include <clang/Frontend/ASTUnit.h>
 #include <clang/Frontend/CompilerInstance.h>
@@ -88,7 +90,9 @@
 #include <clang/Frontend/Utils.h>
 #include <clang/Lex/HeaderSearch.h>
 
+#ifdef __clang__
 #pragma clang diagnostic pop
+#endif
 #pragma GCC diagnostic pop
 
 template <typename ClangType>
