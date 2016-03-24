@@ -66,7 +66,6 @@ namespace integration {
 
 		frontend::ConversionJob toJob(const IntegrationTestCase& testCase) {
 			driver::cmd::Options options = testCase.getOptions();
-			options.job.setOption(insieme::frontend::ConversionSetup::ProgressBar);
 			for(auto file : testCase.getFiles()) {
 				options.job.addFile(file.string());
 			}

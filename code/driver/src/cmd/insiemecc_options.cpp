@@ -197,7 +197,6 @@ namespace cmd {
 
 
 			// --------------- Job Settings ---------------
-			res.job.setOption(fe::ConversionJob::ProgressBar, res.settings.progress);
 			res.job.setOption(fe::ConversionJob::NoWarnings, res.settings.noWarnings);
 			res.job.setOption(fe::ConversionJob::WinCrossCompile, res.settings.winCrossCompile);
 			res.job.setOption(fe::ConversionJob::NoDefaultExtensions, res.settings.noDefaultExtensions);

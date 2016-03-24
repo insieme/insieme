@@ -81,10 +81,9 @@ namespace frontend {
 			PrintDiag = 1 << 0,
 			WinCrossCompile = 1 << 1,
 			TAG_MPI = 1 << 2,
-			ProgressBar = 1 << 3,
-			NoWarnings = 1 << 4,
-			NoDefaultExtensions = 1 << 5,
-			DumpClangAST = 1 << 6,
+			NoWarnings = 1 << 3,
+			NoDefaultExtensions = 1 << 4,
+			DumpClangAST = 1 << 5,
 		};
 
 		/**

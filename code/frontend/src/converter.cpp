@@ -66,7 +66,6 @@
 #include "insieme/utils/timer.h"
 #include "insieme/utils/assert.h"
 #include "insieme/utils/functional_utils.h"
-#include "insieme/utils/progress_bar.h"
 #include "insieme/utils/name_mangling.h"
 
 #include "insieme/core/analysis/ir_utils.h"
