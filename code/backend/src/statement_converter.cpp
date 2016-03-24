@@ -323,67 +323,71 @@ namespace backend {
 		return res;
 	}
 
-	c_ast::NodePtr StmtConverter::visitInitExpr(const core::InitExprPtr& ptr, ConversionContext& context) {
-		// to be created: an initialization of the corresponding struct
-		//     (<type>){<list of members>}
+	namespace {
+		c_ast::ExpressionPtr visitInitExprInternal(const Converter& converter, const core::InitExprPtr& ptr, ConversionContext& context) {
+			// to be created: an initialization of the corresponding struct
+			//     (<type>){<list of members>}
 
-		auto innerType = core::analysis::getReferencedType(ptr->getType());
-		auto typeInfo = converter.getTypeManager().getTypeInfo(innerType);
-		context.addDependency(typeInfo.definition);
+			auto innerType = core::analysis::getReferencedType(ptr->getType());
+			auto typeInfo = converter.getTypeManager().getTypeInfo(innerType);
+			context.addDependency(typeInfo.definition);
 
-		// get type
-		c_ast::TypePtr type = typeInfo.rValueType;
+			// get type
+			c_ast::TypePtr type = typeInfo.rValueType;
 
-		// special case.. empty struct: instead (<type>)(<members>) we use *((<type>*)(0))
-		if(auto stp = core::analysis::isStruct(innerType)) {
-			if(!stp->getFields().size()) {
+			// special case.. empty struct: instead (<type>)(<members>) we use *((<type>*)(0))
+			if(auto stp = core::analysis::isStruct(innerType)) {
+				if(!stp->getFields().size()) {
+					auto cmgr = context.getConverter().getCNodeManager();
+					auto zero = cmgr->create("0");
+					return c_ast::deref(c_ast::cast(c_ast::ptr(type), zero));
+				}
+			}
+
+			// handle unions
+			if(core::analysis::isUnion(innerType)) {
 				auto cmgr = context.getConverter().getCNodeManager();
-				auto zero = cmgr->create("0");
-				return c_ast::deref(c_ast::cast(c_ast::ptr(type), zero));
-			}
-		}
+				auto initExp = ptr->getInitExprList().back();
+				// special handling for vector initialization (should not be turned into a struct)
+				auto value = converter.getStmtConverter().convertExpression(context, initExp);
+				auto& refExt = innerType->getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
+				if(refExt.isCallOfRefDeref(initExp)) initExp = core::analysis::getArgument(initExp, 0);
+				if(initExp.isa<core::InitExprPtr>()) {
+					auto initValue = value.isa<c_ast::InitializerPtr>();
+					assert_true(initValue);
+					initValue->type = nullptr;
+				}
 
-		// handle unions
-		if(core::analysis::isUnion(innerType)) {
-			auto cmgr = context.getConverter().getCNodeManager();
-			auto initExp = ptr->getInitExprList().back();
-			// special handling for vector initialization (should not be turned into a struct)
-			auto value = convertExpression(context, initExp);
-			auto& refExt = innerType->getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
-			if(refExt.isCallOfRefDeref(initExp)) initExp = core::analysis::getArgument(initExp, 0);
-			if(initExp.isa<core::InitExprPtr>()) {
-				auto initValue = value.isa<c_ast::InitializerPtr>();
-				assert_true(initValue);
-				initValue->type = nullptr;
+				return c_ast::init(type, value);
 			}
 
-			return c_ast::init(type, value);
-		}
+			// create init expression
+			c_ast::InitializerPtr init = c_ast::init(type);
 
-		// create init expression
-		c_ast::InitializerPtr init = c_ast::init(type);
+			// append initialization values
+			::transform(ptr->getInitExprList(), std::back_inserter(init->values),
+			            [&](const core::ExpressionPtr& cur) { return converter.getStmtConverter().convertExpression(context, cur); });
 
-		// append initialization values
-		::transform(ptr->getInitExprList(), std::back_inserter(init->values), [&](const core::ExpressionPtr& cur) {
-			return convertExpression(context, cur);
-		});
+			// support empty initialization
+			if(init->values.empty()) { return init; }
 
-		// support empty initialization
-		if(init->values.empty()) {
+			// remove last element if it is a variable sized struct
+			if(core::lang::isUnknownSizedArray(ptr->getInitExprList().back())) {
+				assert_false(init->values.empty());
+				init->values.pop_back();
+			}
+
+			// if array, initialize inner data member
+			if(core::lang::isFixedSizedArray(innerType)) init = c_ast::init(type, c_ast::init(init->values));
+
+			// return completed
 			return init;
 		}
+	}
 
-		// remove last element if it is a variable sized struct
-		if(core::lang::isUnknownSizedArray(ptr->getInitExprList().back())) {
-			assert_false(init->values.empty());
-			init->values.pop_back();
-		}
-
-		// if array, initialize inner data member
-		if(core::lang::isFixedSizedArray(innerType)) init = c_ast::init(type, c_ast::init(init->values));
-
-		// return completed
-		return init;
+	c_ast::NodePtr StmtConverter::visitInitExpr(const core::InitExprPtr& ptr, ConversionContext& context) {
+		assert_fail() << "InitExpr at unexpected location, should have been handled by declarationStmt or constructor";
+		return {};
 	}
 
 	c_ast::NodePtr StmtConverter::visitTupleExpr(const core::TupleExprPtr& ptr, ConversionContext& context) {
@@ -536,6 +540,8 @@ namespace backend {
 		// drop ref_temp ...
 		if(core::analysis::isCallOf(initValue, refExt.getRefTempInit())) { initValue = core::analysis::getArgument(initValue, 0); }
 
+		auto coreInitExpr = initValue.isa<core::InitExprPtr>();
+		if(coreInitExpr) return visitInitExprInternal(converter, coreInitExpr, context);
 		return convertExpression(context, initValue);
 	}
 
