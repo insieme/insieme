@@ -232,7 +232,7 @@ namespace conversion {
 		} else if(llvm::APFloat::semanticsPrecision(sema) == llvm::APFloat::semanticsPrecision(llvm::APFloat::IEEEdouble)) {
 			retExpr = builder.literal(strVal, basic.getReal8());
 		} else if(llvm::APFloat::semanticsPrecision(sema) == llvm::APFloat::semanticsPrecision(llvm::APFloat::x87DoubleExtended)) {
-			frontend_assert(false) << "Unsupported floating point literal type encountered, possibly a \"long double\".";
+			retExpr = builder.literal(strVal, basic.getReal16());
 		} else {
 			frontend_assert(false) << "Unsupported floating point literal type encountered.";
 		}
