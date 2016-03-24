@@ -237,6 +237,9 @@ int main(int argc, char** argv) {
 	vector<fe::path> libs;
 	vector<fe::path> extLibs;
 
+	set<string> cExtensions = { ".c", ".i", ".h" };
+	set<string> cplusplusExtensions = { ".C", ".cc", ".cp", ".cpp", ".CPP", ".cxx", ".c++", ".ii", ".H", ".hh", ".hp", ".hxx", ".hpp", ".HPP", ".h++", ".tcc" };
+
 	for(const fe::path& cur : options.job.getFiles()) {
 		auto ext = fs::extension(cur);
 		if(ext == ".o" || ext == ".so") {
@@ -245,8 +248,11 @@ int main(int argc, char** argv) {
 			} else {
 				extLibs.push_back(cur);
 			}
-		} else {
+		} else if (cExtensions.count(ext) || cplusplusExtensions.count(ext)) {
 			inputs.push_back(cur);
+		} else {
+			LOG(ERROR) << "Unrecognized file format: " << cur << "\n";
+			return 1;
 		}
 	}
 	// indicates that a shared object file should be created
