@@ -279,7 +279,6 @@ namespace lang {
 	}
 
 	ExpressionPtr buildPtrOperation(BasicGenerator::Operator op, const ExpressionPtr& lhs, const ExpressionPtr& rhs) {
-		auto& basic = lhs->getNodeManager().getLangBasic();
 		auto& pExt = lhs->getNodeManager().getLangExtension<PointerExtension>();
 		IRBuilder builder(lhs->getNodeManager());
 
@@ -290,7 +289,7 @@ namespace lang {
 				<< "\n op: " << op;
 		};
 		auto assertInt = [&](const ExpressionPtr& exp) {
-			assert_pred1(basic.isInt, exp->getType()) << "Trying to build a ptr add/sub with non-int"
+			assert_pred1(builder.getLangBasic().isInt, exp->getType()) << "Trying to build a ptr add/sub with non-int"
 				<< "\n lhs: " << *lhs << "\n  - of type: " << *lhs->getType() 
 				<< "\n rhs: " << *rhs << "\n  - of type: " << *rhs->getType()
 				<< "\n op: " << op;
