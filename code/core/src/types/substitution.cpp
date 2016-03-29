@@ -212,7 +212,7 @@ namespace types {
 
 		// check structure of individual parameters
 		for (const auto& cur : make_paired_range(valueParams, patternParams)) {
-			if (cur.second.isa<TypeVariablePtr>()) {
+			if (cur.first.isa<TypeVariablePtr>() || cur.second.isa<TypeVariablePtr>()) {
 				// all fine
 			} else if (auto var = cur.second.isa<GenericTypeVariablePtr>()) {
 				if (!isMatchingStructure(cur.first, var)) return false;
@@ -331,7 +331,22 @@ namespace types {
 				out << "?";
 			}
 		});
+
+		// end here if there are no variadic entries
+		if (variadicTypeVarMapping.empty() && variadicGenericTypeVarMapping.empty()) return out << "}";
+
+		out << "|";
+
+		out << join(",", variadicTypeVarMapping, [](std::ostream& out, const VariadicTypeVariableMapping::value_type& cur) {
+			out << *cur.first << "->[" << join(",", cur.second, print<deref<TypeVariablePtr>>()) << "]";
+		});
 		
+		if (!variadicTypeVarMapping.empty() && !variadicGenericTypeVarMapping.empty()) out << ",";
+
+		out << join(",", variadicGenericTypeVarMapping, [](std::ostream& out, const VariadicGenericTypeVariableMapping::value_type& cur) {
+			out << *cur.first << "->[" << join(",", cur.second, print<deref<GenericTypeVariablePtr>>()) << "]";
+		});
+
 		return out << "}";
 	}
 

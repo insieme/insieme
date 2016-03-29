@@ -71,6 +71,8 @@ int main() {
 	float f1;
 	#pragma test expect_ir("var ref<real<8>,f,f> v0;")
 	double f2;
+	#pragma test expect_ir("var ref<real<16>,f,f> v0;")
+	long double f3;
 
 	// BASE TYPE TYPEDEFS //////////////////////////////////////////////////////////////
 

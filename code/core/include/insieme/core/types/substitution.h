@@ -136,7 +136,7 @@ namespace types {
 		 * Checks whether this substitution is actually mapping any variables to some type.
 		 */
 		bool empty() const {
-			return typeVarMapping.empty() && genericTypeVarMapping.empty();
+			return typeVarMapping.empty() && genericTypeVarMapping.empty() && variadicTypeVarMapping.empty() && genericTypeVarMapping.empty();
 		}
 
 		/**
