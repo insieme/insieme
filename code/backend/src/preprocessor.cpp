@@ -72,7 +72,6 @@ namespace backend {
 	PreProcessorPtr getBasicPreProcessorSequence(BasicPreprocessorFlags options) {
 		vector<PreProcessorPtr> steps;
 		if(!(options & SKIP_POINTWISE_EXPANSION)) { steps.push_back(makePreProcessor<InlinePointwise>()); }
-		steps.push_back(makePreProcessor<InitGlobals>());
 		// steps.push_back(makePreProcessor<RedundancyElimination>());		// optional - disabled for performance reasons
 		steps.push_back(makePreProcessor<CorrectRecVariableUsage>());
 		steps.push_back(makePreProcessor<RecursiveLambdaInstantiator>());
@@ -181,116 +180,6 @@ namespace backend {
 		// the converter does the magic
 		return PointwiseReplacer(converter.getNodeManager()).map(code);
 	}
-
-
-	// --------------------------------------------------------------------------------------------------------------
-	//      Restore Globals
-	// --------------------------------------------------------------------------------------------------------------
-
-	namespace {
-
-		core::CompoundStmtAddress getMainBody(const core::NodePtr& code) {
-			static const core::CompoundStmtAddress fail;
-
-			// check for the program - only works on the global level
-			if(code->getNodeType() != core::NT_Program) { return fail; }
-
-			// check whether it is a main program ...
-			core::NodeAddress root(code);
-			const core::ProgramAddress& program = core::static_address_cast<const core::Program>(root);
-			if(!(program->getEntryPoints().size() == static_cast<std::size_t>(1))) { return fail; }
-
-			// extract body of main
-			const core::ExpressionAddress& mainExpr = program->getEntryPoints()[0];
-			if(mainExpr->getNodeType() != core::NT_LambdaExpr) { return fail; }
-			const core::LambdaExprAddress& main = core::static_address_cast<const core::LambdaExpr>(mainExpr);
-			const core::StatementAddress& bodyStmt = main->getBody();
-			if(bodyStmt->getNodeType() != core::NT_CompoundStmt) { return fail; }
-			return core::static_address_cast<const core::CompoundStmt>(bodyStmt);
-		}
-	}
-
-
-	// --------------------------------------------------------------------------------------------------------------
-	//      Turn initial assignments of global variables into values to be assigned to init values.
-	// --------------------------------------------------------------------------------------------------------------
-
-	core::NodePtr InitGlobals::process(const Converter& converter, const core::NodePtr& code) {
-		// get body of main
-		auto body = getMainBody(code);
-		if(!body) {
-			return code; // nothing to do if this is not a full program
-		}
-
-		auto& mgr = code->getNodeManager();
-		const auto& refExt = mgr.getLangExtension<core::lang::ReferenceExtension>();
-
-		// search for globals initialized in main body
-		bool stop = false;
-		std::map<core::LiteralPtr, core::CallExprAddress> inits;
-		core::visitDepthFirstOncePrunable(body, [&](const core::StatementAddress& stmt) -> bool {
-			// check out
-			if(auto call = stmt.isa<core::CallExprAddress>()) {
-				// check if the function call is not a builtin.
-				// this is done because a function call can cause
-				// a modification of the global variable
-				if(stop) { return true; }
-				if(!core::lang::isBuiltIn(call.as<core::CallExprPtr>()->getFunctionExpr())) { stop = true; }
-				// check whether it is an assignment
-				if(core::analysis::isCallOf(call.as<core::CallExprPtr>(), refExt.getRefAssign())) {
-					// check whether target is a literal
-					if(auto trg = call[0].isa<core::LiteralPtr>()) {
-						// check whether literal is already known
-						auto pos = inits.find(trg);
-						if(pos == inits.end()) {
-							// found a new one
-							inits[trg] = call;
-						}
-					}
-				}
-			}
-
-			// decent into nested compound statements
-			if(stmt.isa<core::CompoundStmtAddress>()) { return false; }
-
-			// but nothing else
-			return true;
-
-		});
-
-		// check if anything has been found
-		if(inits.empty()) { return code; }
-
-		// prepare a utility to check whether some expression is depending on globals
-		auto isDependingOnGlobals = [&](const core::ExpressionPtr& expr) {
-			return core::visitDepthFirstOnceInterruptible(expr, [&](const core::LiteralPtr& lit) -> bool {
-				// every global variable is a literal of a ref-type ... that's how we identify those
-				return core::lang::isReference(lit);
-			});
-		};
-
-		// build up replacement map
-		const auto& ext = mgr.getLangExtension<IRExtensions>();
-		core::IRBuilder builder(mgr);
-		std::map<core::NodeAddress, core::NodePtr> replacements;
-		for(const auto& cur : inits) {
-			// no free variables shell be moved to the global space
-			if(core::analysis::hasFreeVariables(cur.second[1])) { continue; }
-
-			// skip initialization expressions if they are depending on globals
-			if(isDependingOnGlobals(cur.second[1])) { continue; }
-
-			replacements[cur.second] = builder.callExpr(ext.getInitGlobal(), cur.second[0], cur.second[1]);
-		}
-
-		// if there is nothing to do => done
-		if(replacements.empty()) { return code; }
-
-		// conduct replacements
-		return core::transform::replaceAll(mgr, replacements);
-	}
-
-
 
 	core::NodePtr CorrectRecVariableUsage::process(const Converter& converter, const core::NodePtr& code) {
 		core::NodeManager& manager = converter.getNodeManager();

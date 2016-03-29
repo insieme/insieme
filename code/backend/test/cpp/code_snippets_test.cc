@@ -602,6 +602,48 @@ namespace backend {
 	}
 
 
+	TEST(CppSnippet, Globals) {
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+
+		core::ProgramPtr program = builder.parseProgram(R"(
+			def struct A {
+				x : int<4>;
+				ctor function (v1 : ref<int<4>,f,f,plain>) {
+					x = *v1;
+				}
+			};
+			def struct Trivial {};
+			int<4> main() {
+				Trivial::(lit("x" : ref<Trivial,f,f,plain>));
+				A::(lit("a" : ref<A,f,f,plain>), 5);
+				lit("x" : ref<Trivial,f,f,plain>);
+				lit("a" : ref<A,f,f,plain>);
+				return 0;
+			}
+		)");
+
+		ASSERT_TRUE(program);
+		//std::cout << "Program: " << dumpColor(program) << std::endl;
+		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
+
+		// use sequential backend to convert into C++ code
+		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
+		ASSERT_TRUE((bool)converted);
+		//std::cout << "Converted: \n" << *converted << std::endl;
+
+		// check presence of relevant code
+		auto code = toString(*converted);
+		EXPECT_PRED2(notContainsSubString, code, "new"); // no heap mem allocation in this program
+		EXPECT_PRED2(containsSubString, code, "A a(5);");
+
+		// try compiling the code fragment
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+	}
+
+
 	TEST(CppSnippet, Destructor) {
 		core::NodeManager manager;
 		core::IRBuilder builder(manager);

@@ -172,6 +172,21 @@ namespace extensions {
 			}
 		};
 
+		//////////////////////////////////////////////////////////////////////////
+		// Find and replace zero inits of tag types (which can only occur for global inits)
+		// =======================================================================
+		ProgramPtr replaceZeroStructInits(ProgramPtr prog) {
+			auto& mgr = prog->getNodeManager();
+			core::IRBuilder builder(mgr);
+			prog = irp::replaceAllAddr(irp::callExpr(mgr.getLangBasic().getZero(), icp::anyList), prog, [&](const NodeAddress& matchingAddress) -> NodePtr {
+					   auto call = matchingAddress.getAddressedNode().as<CallExprPtr>();
+					   auto t = core::analysis::getRepresentedType(call->getArgument(0));
+					   if(t.isa<core::TagTypePtr>()) { return builder.getZero(t); }
+					   // else keep call
+					   return call;
+				   }).as<ProgramPtr>();
+			return prog;
+		}
 	}
 
 	boost::optional<std::string> FrontendCleanupExtension::isPrerequisiteMissing(ConversionSetup& setup) const {
@@ -192,6 +207,7 @@ namespace extensions {
 		prog = mainReturnCorrection(prog);
 		prog = removeSuperfluousBoolToInt(prog);
 		prog = removeCAndCppStyleAssignments(prog);
+		prog = replaceZeroStructInits(prog);
 
 		return prog;
 	}

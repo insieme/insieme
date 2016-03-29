@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -71,16 +71,6 @@ namespace backend {
 		// import reference definitions
 		IMPORT_MODULE(core::lang::ReferenceExtension);
 
-		/**
-		 * A special literal representing a function causing the initialization of the global variables.
-		 */
-		LANG_EXT_LITERAL(RegisterGlobal, "be_registerGlobal", "(identifier, type<'a>)->unit");
-
-		/**
-		 * An operator marking the initial initialization of global values - those will be turned into
-		 * initial values at the definition of global variables.
-		 */
-		LANG_EXT_DERIVED(InitGlobal, "(g : ref<'a,f,'v>, v : 'a)->unit { g=v; }");
 	};
 
 

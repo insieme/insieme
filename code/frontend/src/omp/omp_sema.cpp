@@ -865,7 +865,7 @@ namespace omp {
 		}
 
 		// ... the globals ...
-		IRBuilder builder(mgr);
+		auto& parExt = mgr.getLangExtension<core::lang::ParallelExtension>();
 		for(auto& cur : unit.getGlobals()) {
 			ExpressionPtr newGlobal = semaMapper.map(cur.first.as<ExpressionPtr>());
 
@@ -875,6 +875,11 @@ namespace omp {
 			//	newGlobal = call[0]; // take first argument
 			//}
 
+			// global locks are initialized by calls, should not have initializers here
+			if(parExt.isLock(core::analysis::getReferencedType(newGlobal))) {
+				res.addGlobal(newGlobal.as<LiteralPtr>());
+				continue;
+			}
 			res.addGlobal(newGlobal.as<LiteralPtr>(), (cur.second) ? semaMapper.map(cur.second) : cur.second);
 		}
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -153,16 +153,6 @@ namespace backend {
 	 * on disabling the pre-processing (according to the null-pattern).
 	 */
 	class NoPreProcessing : public PreProcessor {
-	  public:
-		virtual core::NodePtr process(const Converter& converter, const core::NodePtr& code);
-	};
-
-	/**
-	 * This pre-processor is capturing initial values for globals such that those are encoded as initial
-	 * values at the global definition instead of an assignment in the main. Initial assignments will be
-	 * dropped.
-	 */
-	class InitGlobals : public PreProcessor {
 	  public:
 		virtual core::NodePtr process(const Converter& converter, const core::NodePtr& code);
 	};

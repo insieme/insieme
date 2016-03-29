@@ -1003,6 +1003,50 @@ namespace backend {
 		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
 	}
 
+	TEST(Initialization, Globals) {
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+
+		core::ProgramPtr program = builder.parseProgram(R"(
+			def struct S { x: int<4>; y: uint<4>; };
+			int<4> main() {
+				<ref<int<4>,f,f,plain>>(lit("initedGlobal" : ref<int<4>,f,f,plain>)) {5};
+				<ref<S,f,f,plain>>(lit("y" : ref<S,f,f,plain>)) {1, 5u};
+				<ref<array<S,3>,f,f,plain>>(lit("klaus_test" : ref<array<S,3>,t,f,plain>)) {*<ref<S,f,f,plain>>(ref_temp(type_lit(S))) {1, 2u}, *<ref<S,f,f,plain>>(ref_temp(type_lit(S))) {3, 4u}, *<ref<S,f,f,plain>>(ref_temp(type_lit(S))) {5, 6u}};
+				<ref<array<char,255>,f,f,plain>>(lit("char_arr" : ref<array<char,255>,f,f,plain>)) {'\0'};
+				<ref<array<int<4>,2>,f,f,plain>>(lit("arr" : ref<array<int<4>,2>,f,f,plain>)) {42, 43};
+
+				*lit("initedGlobal":ref<int<4>>);
+				*lit("y":ref<S>);
+				ptr_from_array(lit("klaus_test":ref<array<S,3>,t,f>));
+				ptr_from_array(lit("char_arr":ref<array<char,255>,f,f>));
+				ptr_from_array(lit("arr":ref<array<int<4>,2>,f,f>));
+				return 0;
+			}
+		)");
+
+		ASSERT_TRUE(program);
+
+		// check for semantic errors
+		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
+
+		// create backend instance
+		auto be = sequential::SequentialBackend::getDefault();
+
+		auto converted = be->convert(program);
+		//std::cout << "Printing converted code: " << *converted;
+
+		string code = toString(*converted);
+
+		EXPECT_PRED2(containsSubString, code, "{{1, 2u}, {3, 4u}, {5, 6u}}");
+
+		// try compiling the code fragment
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-lm");
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+	}
+
 	TEST(Enum, Simple) {
 		core::NodeManager manager;
 		core::IRBuilder builder(manager);

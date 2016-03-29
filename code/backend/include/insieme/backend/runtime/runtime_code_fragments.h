@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -36,11 +36,10 @@
 
 #pragma once
 
-#include <insieme/backend/runtime/runtime_extension.h>
 #include "insieme/backend/c_ast/c_code.h"
-
 #include "insieme/backend/converter.h"
 #include "insieme/backend/runtime/runtime_entities.h"
+#include "insieme/backend/runtime/runtime_extension.h"
 
 namespace insieme {
 namespace backend {
