@@ -77,6 +77,7 @@
 	SLASH        "/"
 	PERCENT      "%"
 	HASH         "#"
+	LSHIFT       "<<"
 
 	LPAREN       "("
 	RPAREN       ")"
@@ -604,7 +605,7 @@ literal : "true"                                                          { $$ =
         | "ulonglong"                                                     { $$ = driver.genNumericLiteral(@$, driver.mgr.getLangBasic().getUInt16(), $1); }
         | "float"                                                         { $$ = driver.genNumericLiteral(@$, driver.mgr.getLangBasic().getReal4(), $1); }
         | "double"                                                        { $$ = driver.genNumericLiteral(@$, driver.mgr.getLangBasic().getReal8(), $1); }
-		| "char"                                                          { $$ = driver.builder.literal(driver.mgr.getLangBasic().getChar(), $1); }
+        | "char"                                                          { $$ = driver.builder.literal(driver.mgr.getLangBasic().getChar(), $1); }
         | "string"                                                        { $$ = driver.builder.stringLit($1); }
         | "lit" "(" "string" ")"                                          { $$ = driver.builder.getIdentifierLiteral($3.substr(1, $3.size() - 2)); }
         | "lit" "(" "string" ":" type ")"                                 { $$ = driver.builder.literal($5, $3.substr(1, $3.size() - 2)); }
@@ -717,6 +718,8 @@ binary_op : expression "="  expression                                    { $$ =
           | expression ">=" expression                                    { $$ = driver.genBinaryExpression(@$, ">=", $1, $3); }
           | expression ">"  expression                                    { $$ = driver.genBinaryExpression(@$, ">",  $1, $3); }
           | expression "["  expression "]"                                { $$ = driver.genBinaryExpression(@$, "[",  $1, $3); }
+          | expression "<<" expression                                    { $$ = driver.genBinaryExpression(@$, "<<", $1, $3); }
+          | expression ">" ">" expression                                 { $$ = driver.genBinaryExpression(@$, ">>", $1, $4); }
           ;
 
 ternary_op : expression "?" expression ":" expression                     { $$ = driver.builder.ite(driver.getScalar($1), driver.builder.wrapLazy(driver.getScalar($3)), driver.builder.wrapLazy(driver.getScalar($5))); }
@@ -873,6 +876,7 @@ let_statement : "let" "identifier" "=" expression ";"                     {  dri
 %left     "&";
 %left     "==" "!=";
 %left     "<" "<=" ">" ">=";
+%left     "<<";
 %left     "+" "-";
 %left     "*" "/" "%";
 %right    UDEREF UNOT UMINUS CAST;

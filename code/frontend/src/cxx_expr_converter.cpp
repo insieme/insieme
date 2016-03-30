@@ -586,14 +586,10 @@ namespace conversion {
 		core::ExpressionPtr retIr;
 		LOG_EXPR_CONVERSION(compOp, retIr);
 
-		core::ExpressionPtr lhs = Visit(compOp->getLHS());
-		core::ExpressionPtr rhs = Visit(compOp->getRHS());
-		core::TypePtr exprTy = converter.convertType(compOp->getType());
+		retIr = ExprConverter::VisitCompoundAssignOperator(compOp);
 
-		assert_true(core::lang::isReference(lhs->getType())) << "left side must be assignable";
-
-		retIr = createBinaryExpression(exprTy, builder.deref(lhs), rhs, compOp);
-		retIr = frontend::utils::buildCxxStyleAssignment(lhs, retIr);
+		// Remove surrounding deref that we need in C code: CompOps are lvalues in C++
+		retIr = core::analysis::getArgument(retIr, 0);
 
 		return retIr;
 	}

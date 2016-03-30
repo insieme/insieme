@@ -299,10 +299,12 @@ int main() {
 
 	// COMPOUND //////////////////////////////////////////////////////////////
 
-	#pragma test expect_ir(R"({
+	#pragma test expect_ir(R"(
+		using "ext.compound_ops";
+	{
 		var ref<int<4>,f,f,plain> v0 = v0;
 		var ref<int<4>,f,f,cpp_ref> v1 = v0;
-		v1 = *v1+1;
+		comp_assign_add(v1, 1);
 	})")
 	{
 		int b;
@@ -310,10 +312,12 @@ int main() {
 		a += 1;
 	}
 
-	#pragma test expect_ir(R"({
+	#pragma test expect_ir(R"(
+		using "ext.compound_ops";
+	{
 		var ref<int<4>,f,f,plain> v0 = v0;
 		var ref<int<4>,f,f,cpp_ref> v1 = v0;
-		v1 = *v1-1;
+		comp_assign_subtract(v1, 1);
 	})")
 	{
 		int b;

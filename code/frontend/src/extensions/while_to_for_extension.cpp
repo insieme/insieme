@@ -47,6 +47,8 @@
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_address.h"
 #include "insieme/core/ir_visitor.h"
+#include "insieme/core/lang/compound_operators.h"
+#include "insieme/core/lang/reference.h"
 #include "insieme/core/pattern/ir_pattern.h"
 #include "insieme/core/pattern/pattern_utils.h"
 #include "insieme/core/transform/manipulation.h"
@@ -88,25 +90,15 @@ namespace extensions {
 
 			auto& mgr = operation->getNodeManager();
 			core::IRBuilder builder(mgr);
-			auto& basic = mgr.getLangBasic();
 			auto& rMod = mgr.getLangExtension<core::lang::ReferenceExtension>();
+			auto& compOpExt = mgr.getLangExtension<core::lang::CompoundOpsExtension>();
 
 			auto call = operation.isa<core::CallExprPtr>();
 			if(!call) return invalid;
 			auto callee = call->getFunctionExpr();
 
-			if(isCStyleAssignment(operation)) {
-				// we could be smarter here, for now only handle the simplest case
-				auto lhs = call->getArgument(0);
-				auto rhsCall = call->getArgument(1).isa<core::CallExprPtr>();
-				if(!rhsCall) return invalid;
-				if(rhsCall->getArgument(0) != builder.deref(lhs)) return invalid;
-				auto rhsCallee = rhsCall->getFunctionExpr();
-				if(basic.isSignedIntAdd(rhsCallee) || basic.isUnsignedIntAdd(rhsCallee) || basic.isCharAdd(rhsCallee)) {
-					return std::make_pair(false, rhsCall->getArgument(1));
-				} else if(basic.isSignedIntSub(rhsCallee) || basic.isUnsignedIntSub(rhsCallee) || basic.isCharSub(rhsCallee)) {
-					return std::make_pair(false, builder.minus(rhsCall->getArgument(1)));
-				}
+			if(callee == compOpExt.getCompAssignAdd() || callee == compOpExt.getCompAssignSubtract()) {
+				return std::make_pair(false, core::analysis::getArgument(operation, 1));
 			} else if(rMod.isGenPreInc(callee) || rMod.isGenPostInc(callee)) {
 				return std::make_pair(false, builder.literal("1", call->getType()));
 			} else if(rMod.isGenPreDec(callee) || rMod.isGenPostDec(callee)) {
@@ -216,6 +208,7 @@ namespace extensions {
 			auto& mgr = lambdaExpr->getNodeManager();
 			core::IRBuilder builder(mgr);
 			auto& basic = mgr.getLangBasic();
+			auto& refExt = mgr.getLangExtension<core::lang::ReferenceExtension>();
 
 			auto innerWhilePat = pattern::var("while", irp::whileStmt());
 			auto markerNestedWhile = pattern::rT(innerWhilePat | irp::markerStmt(pattern::recurse, pattern::any));
@@ -284,14 +277,24 @@ namespace extensions {
 					auto var = varA.getAddressedNode().isa<core::VariablePtr>();
 					if(var == cvar) {
 						// check if it's a write
-						auto convertedPair = mapToStep(varA.getParentNode());
+						auto varParent = varA.getParentNode();
+						auto convertedPair = mapToStep(varParent);
 						if(convertedPair.second && !convertedPair.first) {
 							writeStepExprs.push_back(convertedPair.second);
-							toRemoveFromBody.push_back(varA.getParentNode());
-				// additionally check if the condition var write
-				// occurs at the end of the while body, otherwise
-				// return original code.
-				if(body->getStatements().back() != varA.getParentNode()) cvar_is_last_statement = false;
+							auto parentParent = varA.getParentAddress(2);
+							core::NodePtr parentNode;
+							// compound assignment operations are enclosed in an additional refDeref. We have to consider this here
+							if (refExt.isCallOfRefDeref(parentParent)) {
+								toRemoveFromBody.push_back(parentParent);
+								parentNode = parentParent.getAddressedNode();
+							} else {
+								toRemoveFromBody.push_back(varParent);
+								parentNode = varA.getParentNode();
+							}
+							// additionally check if the condition var write
+							// occurs at the end of the while body, otherwise
+							// return original code.
+							if(body->getStatements().back() != parentNode) cvar_is_last_statement = false;
 						}
 					}
 					if(varA.isa<core::LambdaExprAddress>()) return true;
