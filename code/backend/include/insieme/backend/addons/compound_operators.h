@@ -34,13 +34,24 @@
  * regarding third party software licenses.
  */
 
-int f() {
-	static int x = 5;
-	#pragma test expect_ir("REGEX",R"(return\s*\*x_static_local_.*c_static_dot_c_38_2)")
-	return x;
-}
+#pragma once
 
-#pragma test expect_ir("REGEX",R"(.*x_static_local_.*c_static_dot_c_38_2.*\{5\};.*return.*)")
-int main() {
-	return f();
-}
+#include "insieme/backend/addon.h"
+
+namespace insieme {
+namespace backend {
+namespace addons {
+
+	/**
+	 * Make the backend support the compound operators extension from the core
+	 */
+	struct CompoundOps : public AddOn {
+		/**
+		 * Installs this Add-On within the given converter
+		 */
+		virtual void installOn(Converter& converter) const;
+	};
+
+} // end namespace addons
+} // end namespace backend
+} // end namespace insieme

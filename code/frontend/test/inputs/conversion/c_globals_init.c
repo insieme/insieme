@@ -52,12 +52,12 @@ int arr[2] = { 42, 43 };
 #pragma test expect_ir(R"INSPIRE(
 def struct IMP_S { x: int<4>; y: uint<4>; };
 def IMP_main = ()->int<4> {
-	lit("initedGlobal":ref<int<4>>) = 5;
-	lit("y":ref<IMP_S>) = *<ref<IMP_S>>(lit("y":ref<IMP_S>)){1, 5u};
-	ref_cast(lit("klaus_test":ref<array<IMP_S,3>,t,f>), type_lit(f), type_lit(f), type_lit(plain)) =
-		*<ref<array<IMP_S,3>,f,f,plain>>(lit("klaus_test":ref<array<IMP_S,3>,t,f>)){ *<ref<IMP_S>>{1,2u}, *<ref<IMP_S>>{3,4u}, *<ref<IMP_S>>{5,6u} };
-	lit("char_arr":ref<array<char,255>,f,f>) = *<ref<array<char,255>,f,f,plain>>(lit("char_arr":ref<array<char,255>,f,f>)) {lit("'\0'":char)};
-	lit("arr":ref<array<int<4>,2>,f,f>) = *<ref<array<int<4>,2>,f,f,plain>>(lit("arr":ref<array<int<4>,2>,f,f>)) {42, 43};
+    <ref<int<4>,f,f,plain>>(lit("initedGlobal" : ref<int<4>,f,f,plain>)) {5};
+    <ref<IMP_S,f,f,plain>>(lit("y" : ref<IMP_S,f,f,plain>)) {1, 5u};
+    <ref<array<IMP_S,3>,f,f,plain>>(lit("klaus_test" : ref<array<IMP_S,3>,t,f,plain>)) {*<ref<IMP_S,f,f,plain>>(ref_temp(type_lit(IMP_S))) {1, 2u}, *<ref<IMP_S,f,f,plain>>(ref_temp(type_lit(IMP_S))) {3, 4u}, *<ref<IMP_S,f,f,plain>>(ref_temp(type_lit(IMP_S))) {5, 6u}};
+    <ref<array<char,255>,f,f,plain>>(lit("char_arr" : ref<array<char,255>,f,f,plain>)) {'\0'};
+    <ref<array<int<4>,2>,f,f,plain>>(lit("arr" : ref<array<int<4>,2>,f,f,plain>)) {42, 43};
+
 	*lit("initedGlobal":ref<int<4>>);
 	*lit("y":ref<IMP_S>);
 	ptr_from_array(lit("klaus_test":ref<array<IMP_S,3>,t,f>));

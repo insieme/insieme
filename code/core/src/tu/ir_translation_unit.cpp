@@ -591,7 +591,7 @@ namespace tu {
 				// check if the initialization of any literal specifies the array type more accurately than the literal (e.g. inf -> fixed size)
 				// if so, replace the literal type
 				auto globalRefT = core::analysis::getReferencedType(newLit);
-				
+
 				auto lit = newLit;
 				if(core::lang::isArray(globalRefT) && core::lang::isArray(cur.second)) {
 					auto litArrT = core::lang::ArrayType(globalRefT);
@@ -608,17 +608,19 @@ namespace tu {
 					}
 				}
 
-				core::lang::ReferenceType refType(lit->getType());
-				refType.setConst(false);
-				core::GenericTypePtr mutableType = refType;
+				// translate init exprs and constructor calls directly, generate init calls for scalars
+				// also correctly handle dereffed values and calls to basic.getZero
 				auto initExp = resolver.apply(cur.second);
-				// constructor calls are standalone, no need for assignment
-				if(core::analysis::isConstructorCall(initExp)) {
+				if(core::analysis::isCallOf(initExp, initExp.getNodeManager().getLangBasic().getZero())) {
+					initExp = builder.getZero(core::analysis::getRepresentedType(core::analysis::getArgument(initExp, 0)));
+				}
+				if(initExp.getNodeManager().getLangExtension<lang::ReferenceExtension>().isCallOfRefDeref(initExp)) {
+					initExp = core::analysis::getArgument(initExp, 0);
+				}
+				if(core::analysis::isConstructorCall(initExp) || initExp.isa<core::InitExprPtr>()) {
 					inits.push_back(initExp);
-				} else { // else build assignment (ignoring const)
-					auto castedLit = core::lang::buildRefCast(lit, mutableType);
-					if(castedLit != lit) { VLOG(2) << "Global Literal: casting ref from\n" << dumpPretty(lit->getType()) << " to \n" << castedLit->getType(); }
-					inits.push_back(builder.assign(castedLit, initExp));
+				} else { // else build init expr
+					inits.push_back(builder.initExpr(lit, initExp));
 				}
 			}
 
@@ -632,7 +634,7 @@ namespace tu {
 				// add creation statement
 				inits.push_back(builder.createStaticVariable(lit));
 			}
-			
+
 			// build resulting lambda
 			internalMainFunc = core::transform::insert(internalMainFunc->getNodeManager(), core::LambdaExprAddress(internalMainFunc)->getBody(), inits, 0)
 			    .as<core::LambdaExprPtr>();

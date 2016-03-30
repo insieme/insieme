@@ -34,13 +34,21 @@
  * regarding third party software licenses.
  */
 
-int f() {
-	static int x = 5;
-	#pragma test expect_ir("REGEX",R"(return\s*\*x_static_local_.*c_static_dot_c_38_2)")
-	return x;
-}
+#include <gtest/gtest.h>
 
-#pragma test expect_ir("REGEX",R"(.*x_static_local_.*c_static_dot_c_38_2.*\{5\};.*return.*)")
-int main() {
-	return f();
-}
+#include "insieme/core/lang/compound_operators.h"
+#include "insieme/core/test/test_utils.h"
+
+namespace insieme {
+namespace core {
+namespace lang {
+
+	TEST(CompoundOps, SemanticChecks) {
+		NodeManager nm;
+		auto &ext = nm.getLangExtension<CompoundOpsExtension>();
+		semanticCheckSecond(ext.getDefinedSymbols());
+	}
+
+} // end namespace lang
+} // end namespace core
+} // end namespace insieme

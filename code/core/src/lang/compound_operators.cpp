@@ -34,13 +34,29 @@
  * regarding third party software licenses.
  */
 
-int f() {
-	static int x = 5;
-	#pragma test expect_ir("REGEX",R"(return\s*\*x_static_local_.*c_static_dot_c_38_2)")
-	return x;
-}
+#include "insieme/core/lang/compound_operators.h"
 
-#pragma test expect_ir("REGEX",R"(.*x_static_local_.*c_static_dot_c_38_2.*\{5\};.*return.*)")
-int main() {
-	return f();
-}
+#include "insieme/core/analysis/ir_utils.h"
+
+namespace insieme {
+namespace core {
+namespace lang {
+
+	bool isCompoundAssignmentOperation(const core::NodePtr& node) {
+		const auto& compOpExt = node->getNodeManager().getLangExtension<CompoundOpsExtension>();
+
+		return compOpExt.isCallOfCompAssignAdd(node)        ||
+		       compOpExt.isCallOfCompAssignSubtract(node)   ||
+		       compOpExt.isCallOfCompAssignMultiply(node)   ||
+		       compOpExt.isCallOfCompAssignDivide(node)     ||
+		       compOpExt.isCallOfCompAssignModulo(node)     ||
+		       compOpExt.isCallOfCompAssignBitwiseAnd(node) ||
+		       compOpExt.isCallOfCompAssignBitwiseOr(node)  ||
+		       compOpExt.isCallOfCompAssignBitwiseXor(node) ||
+		       compOpExt.isCallOfCompAssignLeftShift(node)  ||
+		       compOpExt.isCallOfCompAssignRightShift(node);
+	}
+
+} // end namespace lang
+} // end namespace core
+} // end namespace insieme

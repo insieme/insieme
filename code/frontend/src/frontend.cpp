@@ -209,7 +209,7 @@ namespace frontend {
 	}
 
 	bool ConversionJob::isCxx() const {
-		if(getStandard() == Standard::Cxx03 || getStandard() == Cxx98 || getStandard() == Standard::Cxx11) { return true; }
+		if(getStandard() == Standard::Cxx03 || getStandard() == Standard::Cxx98 || getStandard() == Standard::Cxx11 || getStandard() == Standard::Cxx14) { return true; }
 		if(getStandard() == Standard::C99) { return false; }
 
 		bool cppFile = any(files, [&](const path& cur) { return static_cast<const ConversionSetup&>(*this).isCxx(cur); });

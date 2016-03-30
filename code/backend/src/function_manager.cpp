@@ -239,16 +239,6 @@ namespace backend {
 			}
 		}
 
-		core::TagTypePtr getClassType(const core::FunctionTypePtr& funType) {
-			core::TypePtr type = core::analysis::getObjectType(funType);
-			if (auto tagType = type.isa<core::TagTypePtr>()) {
-				if (tagType->isRecursive()) {
-					type = tagType->peel();
-				}
-			}
-			return type.as<core::TagTypePtr>();
-		}
-
 		c_ast::NodePtr handleMemberCall(const core::CallExprPtr& call, c_ast::CallPtr c_call, ConversionContext& context) {
 			// by default, do nothing
 			c_ast::ExpressionPtr res = c_call;
@@ -1399,120 +1389,50 @@ namespace backend {
 				}
 			};
 
-			c_ast::IdentifierPtr getIdentifierFor(const Converter& converter, const core::NodePtr& node) {
-				auto mgr = converter.getCNodeManager();
-				switch(node->getNodeType()) {
-				case core::NT_TagType:
-				case core::NT_GenericType: {
-					auto type = converter.getTypeManager().getTypeInfo(node.as<core::TypePtr>());
-					if(auto structType = type.lValueType.isa<c_ast::StructTypePtr>()) {
-						return mgr->create(toString(*structType));
-					} else if(auto namedType = type.lValueType.isa<c_ast::NamedTypePtr>()) {
-						return mgr->create(toString(*namedType));
-					}
-					return mgr->create(converter.getNameManager().getName(node));
-				}
-				case core::NT_Parent: {
-					auto type = converter.getTypeManager().getTypeInfo(node.as<core::ParentPtr>()->getType());
-					if(auto structType = type.lValueType.isa<c_ast::StructTypePtr>()) {
-						return mgr->create(toString(*structType));
-					} else if(auto namedType = type.lValueType.isa<c_ast::NamedTypePtr>()) {
-						return mgr->create(toString(*namedType));
-					}
-					return mgr->create(converter.getNameManager().getName(node.as<core::ParentPtr>()->getType()));
-				}
-				case core::NT_Field: return mgr->create(node.as<core::FieldPtr>()->getName()->getValue());
-				case core::NT_Literal:
-					assert(node->getNodeManager().getLangBasic().isIdentifier(node.as<core::ExpressionPtr>()->getType()));
-					return mgr->create(node.as<core::LiteralPtr>()->getStringValue());
-				default: {}
-				}
-
-				std::cerr << "\n\n --------------------- ASSERTION ERROR -------------------\n";
-				std::cerr << "Node of type " << node->getNodeType() << " should not be reachable!\n";
-				assert_fail() << "Must not be reached!";
-				return c_ast::IdentifierPtr();
-			}
-
 			std::pair<c_ast::Constructor::InitializationList, core::CompoundStmtPtr> extractInitializer(const Converter& converter, const core::LambdaPtr& ctor,
 			                                                                                            ConversionContext& context) {
-				auto mgr = converter.getCNodeManager();
+				auto& mgr = converter.getNodeManager();
+				core::IRBuilder builder(mgr);
+				auto cmgr = converter.getCNodeManager();
+				c_ast::Constructor::InitializationList initializers;
+				auto& rExt = mgr.getLangExtension<core::lang::ReferenceExtension>();
 
-				// collect first assignments to fields from body
-				c_ast::Constructor::InitializationList initializer;
+				auto body = ctor->getBody();
 
-				// obtain class type
-				core::TagTypePtr classType = getClassType(ctor->getType());
+				// determine "this" parameter for ref member
+				auto thisVar = ctor->getParameterList()[0];
+				auto thisExp = builder.deref(thisVar);
 
-				// obtain list of parameters
-				core::VariableList params(ctor->getParameters().begin() + 1, ctor->getParameters().end());
+				// set of identifiers already initialized
+				core::NodeSet initedFields;
 
-				// get list of all parents and fields
-				std::vector<c_ast::IdentifierPtr> all;
-				if (classType->isStruct()) {
-					for(const core::ParentPtr& cur : classType->getStruct()->getParents()) {
-						all.push_back(getIdentifierFor(converter, cur));
-					}
-				}
-				for(const core::FieldPtr& cur : classType->getFields()) {
-					all.push_back(getIdentifierFor(converter, cur));
-				}
-
-				// collect all first write operations only depending on parameters
-				auto thisVar = ctor->getParameters()[0];
-				core::CompoundStmtAddress oldBody(ctor->getBody());
-				auto firstWriteOps = FirstWriteCollector().collect(thisVar, params, oldBody);
-
-				// stop here if there is nothing to do
-				if(firstWriteOps.empty()) { return std::make_pair(initializer, oldBody); }
-
-				// remove assignments from body
-				core::CompoundStmtPtr newBody = core::transform::remove(ctor->getNodeManager(), firstWriteOps).as<core::CompoundStmtPtr>();
-
-				// assemble initializer list in correct order
-				const auto& refExt = thisVar->getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
-				for(const c_ast::IdentifierPtr& cur : all) {
-					for(const auto& write : firstWriteOps) {
-						// check whether write target is current identifier
-						core::CallExprPtr call = write.as<core::CallExprPtr>();
-						if(cur == getIdentifierFor(converter, getAccessedField(thisVar, call))) {
-							// add filed assignment
-							if(core::analysis::isCallOf(call, refExt.getRefAssign())) {
-								// avoid default inits, those will be done anyway
-								if(core::analysis::isCallOf(call[1], call->getNodeManager().getLangBasic().getZero())) {
+				core::StatementList newBody;
+				for(const auto& stmt : body) {
+					auto initExpr = stmt.isa<core::InitExprPtr>();
+					if(initExpr) {
+						auto init = initExpr->getInitExprList();
+						assert_eq(init.size(), 1) << "Unexpected init expression list in constructor, expected exactly one expression\n" << init;
+						auto memLoc = initExpr->getMemoryExpr();
+						// check if memloc is field of this
+						if(rExt.isCallOfRefMemberAccess(memLoc)) {
+							auto structExp = core::analysis::getArgument(memLoc, 0);
+							if(structExp == thisExp) {
+								auto field = core::analysis::getArgument(memLoc, 1).as<core::LiteralPtr>();
+								if(!::contains(initedFields, field)) {
+									initedFields.insert(field);
+									auto cInitExpr = converter.getStmtConverter().convertExpression(context, init[0]);
+									initializers.push_back(
+									    std::make_pair(cmgr->create<c_ast::Identifier>(field->getStringValue()), toVector<c_ast::NodePtr>(cInitExpr)));
 									continue;
 								}
-
-								c_ast::NodePtr value = converter.getStmtConverter().convertExpression(context, call[1]);
-								initializer.push_back(c_ast::Constructor::InitializerListEntry(cur, toVector(value)));
-							} else {
-								// otherwise it needs to be a constructor
-								assert(call->getFunctionExpr()->getType().as<core::FunctionTypePtr>()->isConstructor());
-
-								// avoid default inits, those will be done anyway
-								if(core::analysis::isCallOf(call, call->getNodeManager().getLangBasic().getZero())) {
-									continue;
-								}
-
-								c_ast::ExpressionPtr initCall = converter.getStmtConverter().convertExpression(context, call);
-
-								if(initCall->getNodeType() != c_ast::NT_ConstructorCall) {
-									assert_eq(initCall->getNodeType(), c_ast::NT_UnaryOperation);
-									initCall = initCall.as<c_ast::UnaryOperationPtr>()->operand.as<decltype(initCall)>();
-								}
-
-								// convert constructor call as if it would be an in-place constructor (resolves dependencies!)
-								assert_eq(initCall->getNodeType(), c_ast::NT_ConstructorCall);
-								auto ctorCall = initCall.as<c_ast::ConstructorCallPtr>();
-								// add constructor call to initializer list
-								initializer.push_back(c_ast::Constructor::InitializerListEntry(cur, ctorCall->arguments));
 							}
 						}
 					}
+					newBody.push_back(stmt);
 				}
 
 				// return result
-				return std::make_pair(initializer, newBody);
+				return std::make_pair(initializers, builder.compoundStmt(newBody));
 			}
 
 
@@ -1594,7 +1514,7 @@ namespace backend {
 
 				// extract initializer list
 				if(funType->isConstructor()) {
-					// collect initializer values + remove assignments from body
+					// collect initializer values + remove from body
 					std::tie(initializer, body) = extractInitializer(converter, lambda, context);
 				}
 

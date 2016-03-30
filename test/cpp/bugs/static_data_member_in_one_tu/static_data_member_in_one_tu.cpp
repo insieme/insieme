@@ -2,10 +2,8 @@
 
 struct Obj {
 	static int STATIC;
-	Obj() : a(10) {}
-	//std::cout needs global
-	~Obj() { std::cout << "~Obj() " << this->a << " " << std::endl; }
-	int a;
+	Obj() {}
+	~Obj() { std::cout << "~Obj() " << STATIC << " " << std::endl; }
 };
 
 int Obj::STATIC = 16;

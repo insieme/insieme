@@ -39,6 +39,7 @@
 #include "insieme/core/lang/array.h"
 #include "insieme/core/lang/asm_extension.h"
 #include "insieme/core/lang/complex.h"
+#include "insieme/core/lang/compound_operators.h"
 #include "insieme/core/lang/datapath.h"
 #include "insieme/core/lang/enum.h"
 #include "insieme/core/lang/instrumentation_extension.h"
@@ -69,6 +70,7 @@ namespace lang {
 		extensionFactories.insert(getExtensionFactory<ArrayExtension>("ext.array"));
 		extensionFactories.insert(getExtensionFactory<AsmStmtExtension>("ext.asm"));
 		extensionFactories.insert(getExtensionFactory<ComplexExtension>("ext.complex"));
+		extensionFactories.insert(getExtensionFactory<CompoundOpsExtension>("ext.compound_ops"));
 		extensionFactories.insert(getExtensionFactory<DatapathExtension>("ext.datapath"));
 		extensionFactories.insert(getExtensionFactory<EnumExtension>("ext.enum"));
 		extensionFactories.insert(getExtensionFactory<InputOutputExtension>("ext.io"));

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -34,25 +34,21 @@
  * regarding third party software licenses.
  */
 
-#include <insieme/backend/runtime/runtime_extension.h>
 #include "insieme/backend/runtime/runtime_operator.h"
 
+#include "insieme/backend/backend_config.h"
+#include "insieme/backend/c_ast/c_ast_utils.h"
+#include "insieme/backend/c_ast/c_code.h"
 #include "insieme/backend/converter.h"
 #include "insieme/backend/function_manager.h"
-
+#include "insieme/backend/runtime/runtime_code_fragments.h"
+#include "insieme/backend/runtime/runtime_extension.h"
 #include "insieme/backend/statement_converter.h"
 #include "insieme/backend/type_manager.h"
 
-#include "insieme/backend/runtime/runtime_code_fragments.h"
-
-#include "insieme/backend/c_ast/c_code.h"
-#include "insieme/backend/c_ast/c_ast_utils.h"
-
-#include "insieme/core/lang/parallel.h"
 #include "insieme/core/lang/instrumentation_extension.h"
-
+#include "insieme/core/lang/parallel.h"
 #include "insieme/core/transform/manipulation.h"
-#include "insieme/backend/backend_config.h"
 
 namespace insieme {
 namespace backend {

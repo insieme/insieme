@@ -44,6 +44,7 @@ tag_ref       [\^][a-zA-Z0-9_]*
  * string literals (which are real strings - not real values or so) and also pass on the enclosing quotes to the builder.
  */
 string        \"(\\.|[^"])*\"|\"(\"(\\.|[^"])*\")\"
+char          [\'][\\a-zA-Z0-9_][a-zA-Z0-9_]?[\']
 float         [0-9]+"."[0-9]+([eE][+\-]?[0-9]+)?f
 double        [0-9]+"."[0-9]+([eE][+\-]?[0-9]+)?
 ulong         [0-9]+ul
@@ -90,6 +91,7 @@ blank         [ \t]
 "/"           return InspireParser::make_SLASH(loc);
 "%"           return InspireParser::make_PERCENT(loc);
 "#"           return InspireParser::make_HASH(loc);
+"<<"          return InspireParser::make_LSHIFT(loc);
 
 "("           return InspireParser::make_LPAREN(loc);
 ")"           return InspireParser::make_RPAREN(loc);
@@ -188,6 +190,7 @@ blank         [ \t]
 	std::string tmp(yytext);
 	return InspireParser::make_STRING(tmp, loc);
 }
+{char}        return InspireParser::make_CHAR(yytext, loc);
 {int}         return InspireParser::make_INT(yytext, loc);
 {uint}        return InspireParser::make_UINT(yytext, loc);
 {long}        return InspireParser::make_LONG(yytext, loc);

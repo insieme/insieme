@@ -548,23 +548,23 @@ namespace backend {
 				def struct A {
 					x : int;
 					ctor( ) {
-						this->x = 12;
+						<ref<int>>(this.x){12};
 					}
 					ctor( x : int ) {
-						this->x = x;
+						<ref<int>>(this.x){x};
 					}
 					ctor( x : int , y : int ) {
-						this->x = x + y;
+						<ref<int>>(this.x){x + y};
 					}
 				};
-/*
-				def f = A::( x : int, y : int, z : int ) {
-					this->x = x + y + z;
+
+				def A::ctor f = ( x : int, y : int, z : int ) {
+					<ref<int>>(this.x){x + y + z};
 				};
-*/
+
 				int main() {
 					var ref<A> a;
-					// var ref<A> b = f(b);
+					var ref<A> b = f(b, 1, 2, 3);
 					return 0;
 				}
 		)");
@@ -576,14 +576,13 @@ namespace backend {
 		// use sequential backend to convert into C++ code
 		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
 		ASSERT_TRUE((bool)converted);
-		// std::cout << "Converted: \n" << *converted << std::endl;
+		//std::cout << "Converted: \n" << *converted << std::endl;
 
 		// check presence of relevant code
 		auto code = toString(*converted);
 		EXPECT_PRED2(containsSubString, code, "struct A");		// struct definition
 		EXPECT_PRED2(containsSubString, code, "A a;");			// variable definition
 
-		// check definition of six essential functions
 		EXPECT_PRED2(containsSubString, code, "A();");
 		EXPECT_PRED2(containsSubString, code, "A::A() : x(12) { }");
 
@@ -593,6 +592,50 @@ namespace backend {
 		EXPECT_PRED2(containsSubString, code, "A(int32_t p2, int32_t p3);");
 		EXPECT_PRED2(containsSubString, code, "A::A(int32_t x, int32_t y) : x(x + y) { }");
 
+		EXPECT_PRED2(containsSubString, code, "A(int32_t p2, int32_t p3, int32_t p4);");
+		EXPECT_PRED2(containsSubString, code, "A::A(int32_t x, int32_t y, int32_t z) : x(x + y + z) { }");
+
+		// try compiling the code fragment
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+	}
+
+
+	TEST(CppSnippet, Globals) {
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+
+		core::ProgramPtr program = builder.parseProgram(R"(
+			def struct A {
+				x : int<4>;
+				ctor function (v1 : ref<int<4>,f,f,plain>) {
+					x = *v1;
+				}
+			};
+			def struct Trivial {};
+			int<4> main() {
+				Trivial::(lit("x" : ref<Trivial,f,f,plain>));
+				A::(lit("a" : ref<A,f,f,plain>), 5);
+				lit("x" : ref<Trivial,f,f,plain>);
+				lit("a" : ref<A,f,f,plain>);
+				return 0;
+			}
+		)");
+
+		ASSERT_TRUE(program);
+		//std::cout << "Program: " << dumpColor(program) << std::endl;
+		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
+
+		// use sequential backend to convert into C++ code
+		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
+		ASSERT_TRUE((bool)converted);
+		//std::cout << "Converted: \n" << *converted << std::endl;
+
+		// check presence of relevant code
+		auto code = toString(*converted);
+		EXPECT_PRED2(notContainsSubString, code, "new"); // no heap mem allocation in this program
+		EXPECT_PRED2(containsSubString, code, "A a(5);");
 
 		// try compiling the code fragment
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
@@ -1565,8 +1608,7 @@ namespace backend {
 //		EXPECT_TRUE(utils::compiler::compile(*targetCode, compiler));
 //	}
 
-	//TODO asserts in a semantic check
-	/*TEST(CppSnippet, InitializerList) {
+	TEST(CppSnippet, DISABLED_InitializerList) {
 		core::NodeManager mgr;
 		core::IRBuilder builder(mgr);
 
@@ -1621,8 +1663,7 @@ namespace backend {
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
 		compiler.addFlag("-c"); // do not run the linker
 		EXPECT_TRUE(utils::compiler::compile(*targetCode, compiler));
-	}*/
-
+	}
 
 	TEST(CppSnippet, DISABLED_InitializerList2) {
 		// something including a super-constructor call
