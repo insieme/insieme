@@ -49,6 +49,7 @@
 
 #include "insieme/core/analysis/attributes.h"
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/analysis/normalize.h"
 #include "insieme/core/analysis/type_utils.h"
 #include "insieme/core/annotations/naming.h"
@@ -1408,8 +1409,7 @@ namespace backend {
 
 				core::StatementList newBody;
 				for(const auto& stmt : body) {
-					auto initExpr = stmt.isa<core::InitExprPtr>();
-					if(initExpr) {
+					if(auto initExpr = stmt.isa<core::InitExprPtr>()) {
 						auto init = initExpr->getInitExprList();
 						assert_eq(init.size(), 1) << "Unexpected init expression list in constructor, expected exactly one expression\n" << init;
 						auto memLoc = initExpr->getMemoryExpr();
@@ -1424,6 +1424,30 @@ namespace backend {
 									initializers.push_back(
 									    std::make_pair(cmgr->create<c_ast::Identifier>(field->getStringValue()), toVector<c_ast::NodePtr>(cInitExpr)));
 									continue;
+								}
+							}
+						}
+					}
+					if(auto memCtor = stmt.isa<core::CallExprPtr>()) {
+						if(core::analysis::isConstructorCall(memCtor)) {
+							auto memLoc = core::analysis::getArgument(memCtor, 0);
+							// check if memloc is field of this
+							if(rExt.isCallOfRefMemberAccess(memLoc)) {
+								auto structExp = core::analysis::getArgument(memLoc, 0);
+								if(structExp == thisExp) {
+									auto field = core::analysis::getArgument(memLoc, 1).as<core::LiteralPtr>();
+									if(!::contains(initedFields, field)) {
+										initedFields.insert(field);
+										// build a replacement constructor to easily translate and migrate the translated arguments to the init list
+										auto replacementArgs = memCtor->getArgumentList();
+										replacementArgs[0] = core::lang::buildRefTemp(replacementArgs[0]->getType());
+										auto replacementCall = builder.callExpr(memCtor->getType(), memCtor->getFunctionExpr(), replacementArgs);
+										auto cCall = converter.getStmtConverter().convertExpression(context, replacementCall);
+										assert_eq(cCall->getNodeType(), c_ast::NT_UnaryOperation) << "Expected constructor to translate to ref operation";
+										auto cCtor = cCall.as<c_ast::UnaryOperationPtr>()->operand.as<c_ast::ConstructorCallPtr>();
+										initializers.push_back(std::make_pair(cmgr->create<c_ast::Identifier>(field->getStringValue()), cCtor->arguments));
+										continue;
+									}
 								}
 							}
 						}
