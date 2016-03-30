@@ -74,6 +74,7 @@ void irt_opencl_execute_fallback(irt_work_item *wi);
 void _irt_opencl_execute(unsigned id, irt_opencl_ndrange_func ndrange,
                          unsigned num_requirements, irt_opencl_data_requirement_func *requirements,
                          unsigned num_optionals, va_list optionals);
+void irt_opencl_evaluate_ndrange(irt_opencl_ndrange *ndrange);
 irt_work_item *irt_opencl_wi_get_current(unsigned id);
 size_t irt_opencl_round_up(size_t value, size_t multiple);
 irt_opencl_event_list *irt_opencl_event_list_create(unsigned max_events);
@@ -158,32 +159,20 @@ void irt_opencl_execute_fallback(irt_work_item *wi)
 	wi->impl->variants[0].implementation(wi);
 }
 
-void irt_opencl_evaluate_ndrange(irt_opencl_ndrange *ndrange,
-								 size_t *global_offset_size, size_t *global_work_size)
+void irt_opencl_evaluate_ndrange(irt_opencl_ndrange *ndrange)
 {
-	/*
-	 * the caller must allocate a buffer big enough for global_{offset,work}_size
-	 * to hold at least IRT_OPENCL_MAX_DIMS size_t values!
-	 */
 	for (unsigned i = 0; i < ndrange->work_dim; ++i) {
 		/* in case no local size is supplied we pick a default one */
 		if (ndrange->local_work_size[i] == 0)
 			ndrange->local_work_size[i] = 64;
-		/* offsets are the simple case, just eval and store */
-		if (ndrange->global_offset_size[i])
-			global_offset_size[i] = ndrange->global_offset_size[i]();
-		else
-			global_offset_size[i] = 0;
 		/* evaluate and round up to a multiple of the associated local */
 		if (ndrange->global_work_size[i]) {
-			global_work_size[i] = irt_opencl_round_up(ndrange->global_work_size[i](),
-													  ndrange->local_work_size[i]);
-		} else {
-			global_work_size[i] = 0;
+			ndrange->global_work_size[i] = irt_opencl_round_up(ndrange->global_work_size[i],
+															   ndrange->local_work_size[i]);
 		}
 		/* and finally print some info */
-		IRT_DEBUG("ndrange[%d] %zu %zu %zu\n", i, global_offset_size[i],
-			global_work_size[i], ndrange->local_work_size[i]);
+		IRT_DEBUG("ndrange[%d] %zu %zu %zu\n", i, ndrange->global_offset_size[i],
+			ndrange->global_work_size[i], ndrange->local_work_size[i]);
 	}
 }
 
@@ -256,9 +245,9 @@ void _irt_opencl_execute(unsigned id, irt_opencl_ndrange_func ndrange,
 		for (unsigned dim = 0; dim < requirement.num_ranges; ++dim) {
 			ranges[dim] = requirement.range_func(wi, &nd, arg, dim);
 			IRT_DEBUG("range:\t%d\nsize:\t%zu\nstart:\t%zu\nend:\t%zu\n",
-					  dim, ranges[dim].size(), ranges[dim].start(), ranges[dim].end());
+					  dim, ranges[dim].size, ranges[dim].start, ranges[dim].end);
 			/* sum up all sum sizes to compute the total object size */
-			num_of_elements += ranges[dim].size();
+			num_of_elements += ranges[dim].size;
 		}
 		
 		cl_mem_flags flags = 0;
@@ -384,15 +373,14 @@ void _irt_opencl_execute(unsigned id, irt_opencl_ndrange_func ndrange,
     irt_opencl_event_list_wait_and_free(event_io);
 	event_io = NULL;
 
-	size_t global_offsets[IRT_OPENCL_MAX_DIMS];
-	size_t global_work_size[IRT_OPENCL_MAX_DIMS];
-	irt_opencl_evaluate_ndrange(&nd, global_offsets, global_work_size);
+	/* make sure everything is set up properly */
+	irt_opencl_evaluate_ndrange(&nd);
 
 	cl_event event_krnl;
     /* at this point we can finally execute the given kernel */
 	irt_opencl_lock_device(device);
-    result = clEnqueueNDRangeKernel(device->queue, impl_data->kernel, nd.work_dim, global_offsets,
-		global_work_size, nd.local_work_size, 0, NULL, &event_krnl);
+    result = clEnqueueNDRangeKernel(device->queue, impl_data->kernel, nd.work_dim, nd.global_offset_size,
+		nd.global_work_size, nd.local_work_size, 0, NULL, &event_krnl);
 	irt_opencl_unlock_device(device);
     /* check for error and see if it is correctable */
     switch (result) {

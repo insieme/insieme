@@ -54,13 +54,10 @@ typedef enum _irt_opencl_data_mode irt_opencl_data_mode;
 /**
  * this function is called to evaluate a given size_t
  */
-typedef size_t (*irt_opencl_lazy_size_func)();
 struct _irt_opencl_ndrange {
     cl_uint work_dim;
-    /* only known safely at runtime */
-    irt_opencl_lazy_size_func global_offset_size[IRT_OPENCL_MAX_DIMS];
-    irt_opencl_lazy_size_func global_work_size[IRT_OPENCL_MAX_DIMS];
-    /* known at compile time */
+    size_t global_offset_size[IRT_OPENCL_MAX_DIMS];
+    size_t global_work_size[IRT_OPENCL_MAX_DIMS];
     size_t local_work_size[IRT_OPENCL_MAX_DIMS];
 };
 typedef struct _irt_opencl_ndrange irt_opencl_ndrange;
@@ -71,9 +68,9 @@ typedef irt_opencl_ndrange (*irt_opencl_ndrange_func)(
     irt_work_item *wi);
 
 struct _irt_opencl_data_range {
-    irt_opencl_lazy_size_func size;
-    irt_opencl_lazy_size_func start;
-    irt_opencl_lazy_size_func end;
+    size_t size;
+    size_t start;
+    size_t end;
 };
 typedef struct _irt_opencl_data_range irt_opencl_data_range;
 /**
@@ -105,6 +102,9 @@ struct _irt_opencl_device {
 	cl_device_id device_id;
 	cl_context context;
 	cl_command_queue queue;
+
+	/* logical device nr */
+	unsigned device_nr;
 
 	/* lock to protect e.g. the queue from concurrent access */
 	irt_spinlock lock;
