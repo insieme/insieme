@@ -1417,6 +1417,8 @@ namespace backend {
 								return cmgr->create<c_ast::Identifier>(field->getStringValue());
 							}
 						}
+					} else if(memLoc == thisExp) {
+						return cmgr->create<c_ast::Identifier>(core::analysis::getTypeName(core::analysis::getReferencedType(thisExp)));
 					}
 					return c_ast::IdentifierPtr();
 				};

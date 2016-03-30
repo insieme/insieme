@@ -120,12 +120,18 @@ namespace conversion {
 			core::IRBuilder builder(converter.getNodeManager());
 			core::StatementList retStmts;
 			for(const auto& init: constrDecl->inits()) {
-				// access IR field
+				auto irThis = builder.deref(converter.getVarMan()->getThis());
+				auto irMember = irThis;
+
+				// check if field or delegating initialization
 				auto fieldDecl = init->getMember();
-				auto access = converter.getNodeManager().getLangExtension<core::lang::ReferenceExtension>().getRefMemberAccess();
-				auto retType = converter.convertVarType(fieldDecl->getType().getUnqualifiedType());
-				auto irMember = builder.callExpr(retType, access, builder.deref(converter.getVarMan()->getThis()), builder.getIdentifierLiteral(fieldDecl->getNameAsString()),
-					                             builder.getTypeLiteral(core::lang::ReferenceType(retType).getElementType()));
+				if(fieldDecl) {
+					// access IR field
+					auto access = converter.getNodeManager().getLangExtension<core::lang::ReferenceExtension>().getRefMemberAccess();
+					auto retType = converter.convertVarType(fieldDecl->getType().getUnqualifiedType());
+					irMember = builder.callExpr(retType, access, irThis, builder.getIdentifierLiteral(fieldDecl->getNameAsString()),
+													 builder.getTypeLiteral(core::lang::ReferenceType(retType).getElementType()));
+				}
 				// handle CXXDefaultInitExpr
 				auto clangInitExpr = init->getInit();
 				if(auto defaultInitExpr = llvm::dyn_cast<clang::CXXDefaultInitExpr>(clangInitExpr)) {

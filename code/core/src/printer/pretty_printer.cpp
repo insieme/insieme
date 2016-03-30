@@ -167,9 +167,7 @@ namespace printer {
 
 		const std::string getObjectName(const core::TypePtr& ty) {
 			auto objTy = analysis::getObjectType(ty);
-			if(auto gt = objTy.isa<GenericTypePtr>()) return toString(*gt);
-			if(auto tt = objTy.isa<TagTypePtr>()) return tt->getName()->getValue();
-			assert_fail() << "could not retrieve object type name";
+			return analysis::getTypeName(objTy);
 			throw;
 		}
 

@@ -476,6 +476,14 @@ namespace analysis {
 		return false;
 	}
 
+	std::string getTypeName(const TypePtr& objTy) {
+		if(auto gt = objTy.isa<GenericTypePtr>()) return toString(*gt);
+		if(auto tt = objTy.isa<TagTypePtr>()) return tt->getName()->getValue();
+		if(auto tt = objTy.isa<TagTypeReferencePtr>()) return tt->getName()->getValue();
+		assert_fail() << "Could not retrieve object type name for:\n" << *objTy;
+		return "NEVERMORE";
+	}
+
 } // end namespace analysis
 } // end namespace core
 } // end namespace insieme

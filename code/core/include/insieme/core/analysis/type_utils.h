@@ -191,6 +191,7 @@ namespace analysis {
 		return funType->getParameterType(0).template as<Ptr<const GenericType>>()->getTypeParameter(0);
 	}
 
+	std::string getTypeName(const TypePtr& objTy);
 
 } // end namespace analysis
 } // end namespace core

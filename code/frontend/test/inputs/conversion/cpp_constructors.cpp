@@ -110,7 +110,30 @@ def struct IMP_NonTrivialConstructorExpr {
 };
 )"
 
-// TODO constructor chaining
+class ChainedConstructor {
+	int a;
+	float b;
+public:
+	ChainedConstructor(int a) : a(a), b(2.0f) {
+	}
+
+	ChainedConstructor() : ChainedConstructor(5) {
+	}
+};
+
+#define CHAINED_CONSTRUCTOR_EXPR_IR R"(
+decl ctor:IMP_ChainedConstructor::(int<4>);
+def struct IMP_ChainedConstructor {
+    a : int<4>;
+    b : real<4>;
+    ctor function () {
+        IMP_ChainedConstructor::(this, 5);
+    }
+    ctor function (v1 : ref<int<4>,f,f,plain>) {
+        <ref<int<4>,f,f,plain>>((this).a) {*v1};
+        <ref<real<4>,f,f,plain>>((this).b) {2.0E+0f};
+    }
+};)"
 
 int main() {
 
@@ -126,6 +149,10 @@ int main() {
 
 	#pragma test expect_ir(NONTRIVIAL_CONSTRUCTOR_EXPR_IR, R"(var ref<IMP_NonTrivialConstructorExpr,f,f,plain> v0 = IMP_NonTrivialConstructorExpr::(v0, 28);)")
 	NonTrivialConstructorExpr nt_nondefault_constructed(28);
+
+
+	#pragma test expect_ir(CHAINED_CONSTRUCTOR_EXPR_IR, R"(var ref<IMP_ChainedConstructor,f,f,plain> v0 = IMP_ChainedConstructor::(v0);)")
+	ChainedConstructor chained_constructed;
 
 	return 0;
 }

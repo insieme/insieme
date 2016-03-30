@@ -605,33 +605,32 @@ namespace backend {
 		core::NodeManager mgr;
 		core::IRBuilder builder(mgr);
 
-		auto res = builder.normalize(builder.parseProgram(
-		    R"(
-					alias int = int<4>;
+		auto res = builder.normalize(builder.parseProgram(R"(
+			alias int = int<4>;
 
-					def struct B { };
-					def struct A {
-						b : B;
-						ctor () {
-							B::(b);
-						}
-					};
-					def struct C {
-						ctor(a : int) {}
-					};
-					def struct D {
-						c : C;
-						ctor () {
-							C::(c, 43);
-						}
-					};
+			def struct B { };
+			def struct A {
+				b : B;
+				ctor () {
+					B::(b);
+				}
+			};
+			def struct C {
+				ctor(a : int) {}
+			};
+			def struct D {
+				c : C;
+				ctor () {
+					C::(c, 43);
+				}
+			};
 
-					int main() {
-						var ref<A> a = A::(a);
-						var ref<D> d = D::(d);
-						return 0;
-					}
-				)"));
+			int main() {
+				var ref<A> a = A::(a);
+				var ref<D> d = D::(d);
+				return 0;
+			}
+		)"));
 
 		ASSERT_TRUE(res);
 		EXPECT_TRUE(core::checks::check(res).empty()) << core::checks::check(res);
@@ -645,6 +644,50 @@ namespace backend {
 		EXPECT_PRED2(containsSubString, code, "A::A() : b() { }");
 		EXPECT_PRED2(containsSubString, code, "D::D() : c(43) { }");
 		EXPECT_PRED2(notContainsSubString, utils::removeCppStyleComments(code), "*");
+		EXPECT_PRED2(notContainsSubString, code, "new ");
+
+		// check whether code is compiling
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*targetCode, compiler));
+	}
+
+	TEST(CppSnippet, ConstructorsChained) {
+		core::NodeManager mgr;
+		core::IRBuilder builder(mgr);
+
+		auto res = builder.normalize(builder.parseProgram(R"(
+			decl ctor:ChainedConstructor::(int<4>);
+			def struct ChainedConstructor {
+				a : int<4>;
+				b : real<4>;
+				ctor function () {
+					ChainedConstructor::(this, 5);
+				}
+				ctor function (v1 : ref<int<4>,f,f,plain>) {
+					<ref<int<4>,f,f,plain>>((this).a) {*v1};
+					<ref<real<4>,f,f,plain>>((this).b) {2.0E+0f};
+				}
+			};
+
+			int<4> main() {
+				var ref<ChainedConstructor,f,f,plain> v0 = ChainedConstructor::(v0);
+				return 0;
+			}
+		)"));
+
+		ASSERT_TRUE(res);
+		EXPECT_TRUE(core::checks::check(res).empty()) << core::checks::check(res);
+
+		auto targetCode = sequential::SequentialBackend::getDefault()->convert(res);
+		ASSERT_TRUE((bool)targetCode);
+		//std::cout << *targetCode;
+
+		// check generated code
+		auto code = toString(*targetCode);
+		EXPECT_PRED2(containsSubString, code, "ChainedConstructor::ChainedConstructor() : ChainedConstructor(5) { }");
+		EXPECT_PRED2(notContainsSubString, utils::removeCppStyleComments(code), "*");
+		EXPECT_PRED2(notContainsSubString, code, "new ");
 
 		// check whether code is compiling
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
