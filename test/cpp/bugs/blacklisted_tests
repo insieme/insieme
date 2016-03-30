@@ -28,7 +28,6 @@ mem_alloc_ctor
 member_function_as_field
 member_function_ptr_init
 merge_bugs
-non_default_global
 non_default_static
 non_working
 options
