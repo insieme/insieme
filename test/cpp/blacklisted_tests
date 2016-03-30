@@ -6,7 +6,6 @@ alignof
 anonymous_struct
 argument_types
 assign_expr
-base_of
 big
 boost
 cast
@@ -31,7 +30,6 @@ inherit_single
 inherit_single_dynmem
 inherit_virtual
 initialization
-materialize_with_bind_expr
 mem_alloc
 mem_alloc_ctor
 mem_alloc_ctor_inherit

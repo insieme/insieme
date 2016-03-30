@@ -695,6 +695,47 @@ namespace backend {
 		EXPECT_TRUE(utils::compiler::compile(*targetCode, compiler));
 	}
 
+	TEST(CppSnippet, ConstructorsBase) {
+		core::NodeManager mgr;
+		core::IRBuilder builder(mgr);
+
+		auto res = builder.normalize(builder.parseProgram(R"(
+			def struct Base {
+				a : int<4>;
+				ctor function (v1 : ref<int<4>,f,f,plain>) {
+					<ref<int<4>,f,f,plain>>((this).a) {*v1};
+				}
+			};
+			def struct Derived: [ public Base ] {
+				ctor function () {
+					Base::(ref_parent_cast(this, type_lit(Base)), 5);
+				}
+			};
+
+			int<4> main() {
+				var ref<Derived,f,f,plain> v0 = Derived::(v0);
+				return 0;
+			}
+		)"));
+
+		ASSERT_TRUE(res);
+		EXPECT_TRUE(core::checks::check(res).empty()) << core::checks::check(res);
+
+		auto targetCode = sequential::SequentialBackend::getDefault()->convert(res);
+		ASSERT_TRUE((bool)targetCode);
+		//std::cout << *targetCode;
+
+		// check generated code
+		auto code = toString(*targetCode);
+		EXPECT_PRED2(containsSubString, code, "Derived::Derived() : Base(5) { }");
+		EXPECT_PRED2(notContainsSubString, utils::removeCppStyleComments(code), "*");
+		EXPECT_PRED2(notContainsSubString, code, "new ");
+
+		// check whether code is compiling
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*targetCode, compiler));
+	}
 
 	TEST(CppSnippet, Globals) {
 		core::NodeManager manager;
