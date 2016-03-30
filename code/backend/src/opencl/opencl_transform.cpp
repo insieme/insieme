@@ -168,10 +168,12 @@ namespace transform {
 		core::VariableList parameter;
 		// build all parameters and replacements
 		core::IRBuilder builder(manager);
-		core::VarExprMap replacements;
+		core::VariableMap replacements;
 		for (const auto& cur : free) {
-			auto param = builder.variable(builder.refType(cur->getType()));
-			replacements[cur] = builder.deref(param);
+			// due to opencl restrictions, outline only allocates new vars
+			// if we would generate ref/deref pairs kernel needs to strip anyway!
+			auto param = builder.variable(cur->getType());
+			replacements[cur] = param;
 			parameter.push_back(param);
 		}
 		// replace everything in the original stmt
@@ -182,9 +184,7 @@ namespace transform {
 			auto var = cur->getVar();
 			// find the new variable if present
 			auto it = replacements.find(var);
-			if (it != replacements.end()) {
-				var = core::analysis::getArgument(it->second, 0).as<core::VariablePtr>();
-			}
+			if (it != replacements.end()) var = it->second;
 			newRequirements.push_back(std::make_shared<VariableRequirement>(
 				var,
 				core::transform::replaceVarsGen(manager, cur->getSize(), replacements),
@@ -193,13 +193,15 @@ namespace transform {
 				cur->getAccessMode()));
 		}
 		requirements = newRequirements;
-		auto retType = manager.getLangBasic().getUnit();
 		// create lambda accepting all free variables as arguments
-		auto funType = builder.functionType(extractTypes(free), retType);
-		auto lambdaExpr = builder.lambdaExpr(funType, parameter, body);
+		auto lambdaExpr = builder.lambdaExpr(manager.getLangBasic().getUnit(), parameter, body);
 		// migrate the annotations from stmt to lambda
 		core::transform::utils::migrateAnnotations(stmt, lambdaExpr);
-		return builder.callExpr(retType, lambdaExpr, convertList<Expression>(free));
+
+		// generate the call for previously outlined code
+		core::ExpressionList args;
+		for (const auto& cur : free) args.push_back(builder.deref(cur));
+		return builder.callExpr(manager.getLangBasic().getUnit(), lambdaExpr, args);
 	}
 
 	core::CallExprPtr buildGetWorkDim(core::NodeManager& manager) {
@@ -452,40 +454,23 @@ namespace transform {
 		auto lambdaExpr = code.isa<LambdaExprPtr>();
 		if (!lambdaExpr) return code;
 
-		// used to modify the body and header
-		core::NodeMap bodyReplacements;
-		core::VariableMap annoReplacements;
-
+		// used to hold the trimmed parameters
 		core::VariableList parameter;
 		auto params = lambdaExpr->getParameterList();
-		auto range  = utils::make_range(params.begin(), params.end())
+		auto range = utils::make_range(params.begin(), params.end())
 			.subrange(0, context.getDefaultRequirements().size());
+		// fast-path?
+		if (std::distance(params.begin(), params.end()) ==
+			std::distance(range.begin(), range.end())) return code;
 		// this will implicitly remove all additionally captured vars from the kernel
 		// and thus will flatten them to 'unit'
-		for_each(range, [&](const core::VariablePtr& cur) {
-			// default param
-			parameter.push_back(cur);
-			if (!core::lang::isReference(cur->getType())) return;
-			// grab the inner type as this would be our replacements
-			auto param = builder.variable(analysis::getElementType(cur->getType()));
-			if (!core::lang::isReference(param->getType())) return;
-			// ok the element must be a pointer, otherwise we do not need to replace
-			if (!core::lang::isPointer(analysis::getElementType(param->getType()))) return;
-
-			// excellent .. lets replace all derefs with the variable in question
-			bodyReplacements[builder.deref(cur)] = param;
-			parameter.back() = param;
-			// this is required to fix up the migrated annotations
-			annoReplacements[cur] = param;
-		});
-		// fast-path?
-		if (bodyReplacements.empty()) return lambdaExpr;
+		for_each(range, [&](const core::VariablePtr& cur) {	parameter.push_back(cur); });
 		// replace all usages in the original body
 		auto newLambdaExpr = builder.lambdaExpr(manager.getLangBasic().getUnit(),
-			parameter, core::transform::replaceAllGen(manager, lambdaExpr->getBody(), bodyReplacements));
+			parameter, lambdaExpr->getBody());
 		// in the end migrate the annotations and fix them up
 		core::transform::utils::migrateAnnotations(lambdaExpr, newLambdaExpr);
-		return Step::process(converter, core::transform::replaceVarsGen(manager, newLambdaExpr, annoReplacements));
+		return Step::process(converter, newLambdaExpr);
 	}
 
 	core::NodePtr StmtOptimizerStep::process(const Converter& converter, const core::NodePtr& node) {
@@ -551,6 +536,12 @@ namespace transform {
 		 * at this point no kernel types are present, thus allowing to apply loop
 		 * transformations which are independent of the target address space. the
 		 * TypeOptimizer may further enhance the optimization by local prefetching etc.
+		 *
+		 * note4:
+		 * keep in mind that is you write things like:
+		 * 'ndrange->setGlobalWorkSize(makeExpressionList(forStmt->getEnd()));'
+		 * that toWiExpr must be able to make all free variables of the expression
+		 * to captured args (thus all free vars must be reachable via getArg!!!)
 		 */
 
 		auto callContext = std::make_shared<CallContext>();
