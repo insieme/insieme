@@ -87,6 +87,18 @@ namespace extensions {
 		auto requirement = l_paren >> var[keywords::requirement] >> comma >> range >> comma >> (kwd(keywords::ro) | kwd(keywords::wo) | kwd(keywords::rw))[keywords::access] >> r_paren;
 	}
 
+	namespace {
+		core::ExpressionPtr toRV(const core::ExpressionPtr& expr) {
+			if (expr->getNodeType() != core::NT_Variable) return expr;
+			
+			auto var = expr.as<core::VariablePtr>();
+			if (!core::lang::isReference(var->getType())) return expr;
+			
+			core::IRBuilder builder(expr->getNodeManager());
+			return builder.deref(var);
+		}
+	}
+
 	DevicePtr handleDeviceClause(const MatchObject& object) {
 		const std::string& value = object.getString(keywords::type);
 		// now try to map the value to an internal representation
@@ -134,7 +146,7 @@ namespace extensions {
 		} else {
 			assert_fail() << "OpenCL: unsupported access type: " << value;
 		}
-		return std::make_shared<VariableRequirement>(var[0], ranges[0], ranges[1], ranges[2], accessMode);
+		return std::make_shared<VariableRequirement>(var[0], toRV(ranges[0]), toRV(ranges[1]), toRV(ranges[2]), accessMode);
     }
 
 	void addAnnotations(core::NodePtr& node, BaseAnnotation::AnnotationList& annos) {
