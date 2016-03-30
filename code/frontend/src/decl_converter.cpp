@@ -42,11 +42,12 @@
 #include "insieme/frontend/utils/conversion_utils.h"
 #include "insieme/frontend/utils/name_manager.h"
 
+#include "insieme/core/analysis/type_utils.h"
+#include "insieme/core/annotations/naming.h"
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_builder.h"
-#include "insieme/core/lang/pointer.h"
 #include "insieme/core/lang/array.h"
-#include "insieme/core/annotations/naming.h"
+#include "insieme/core/lang/pointer.h"
 
 #include "insieme/annotations/c/extern.h"
 #include "insieme/annotations/c/extern_c.h"
@@ -139,7 +140,13 @@ namespace conversion {
 				}
 				// handle ConstructExprs
 				if(auto constructExpr = llvm::dyn_cast<clang::CXXConstructExpr>(clangInitExpr)) {
-					retStmts.push_back(utils::convertConstructExpr(converter, constructExpr, irMember));
+					auto converted = utils::convertConstructExpr(converter, constructExpr, irMember).as<core::CallExprPtr>();
+					// cast "this" as required for base constructor calls
+					auto targetObjType = core::analysis::getObjectType(converted->getFunctionExpr()->getType());
+					auto adjustedArgs = converted->getArgumentList();
+					adjustedArgs[0] = core::lang::buildRefParentCast(adjustedArgs[0], targetObjType);
+					converted = builder.callExpr(converted->getType(), converted->getFunctionExpr(), adjustedArgs);
+					retStmts.push_back(converted);
 					continue;
 				}
 

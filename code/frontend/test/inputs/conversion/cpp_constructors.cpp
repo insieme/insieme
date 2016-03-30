@@ -135,6 +135,31 @@ def struct IMP_ChainedConstructor {
     }
 };)"
 
+
+
+struct Base {
+	int a;
+	Base(int a) : a(a) {}
+};
+
+struct Derived : public Base {
+	Derived() : Base(5) {}
+};
+
+#define BASE_CONSTRUCTOR_EXPR_IR R"(
+def struct IMP_Base {
+    a : int<4>;
+    ctor function (v1 : ref<int<4>,f,f,plain>) {
+        <ref<int<4>,f,f,plain>>((this).a) {*v1};
+    }
+};
+def struct IMP_Derived: [ public IMP_Base ] {
+    ctor function () {
+        IMP_Base::(ref_parent_cast(this, type_lit(IMP_Base)), 5);
+    }
+};)"
+
+
 int main() {
 
 	#pragma test expect_ir(TRIVIAL_CONSTRUCTOR_EXPR_IR,R"(var ref<IMP_TrivialConstructorExpr,f,f,plain> v0 = IMP_TrivialConstructorExpr::(v0);)")
@@ -153,6 +178,10 @@ int main() {
 
 	#pragma test expect_ir(CHAINED_CONSTRUCTOR_EXPR_IR, R"(var ref<IMP_ChainedConstructor,f,f,plain> v0 = IMP_ChainedConstructor::(v0);)")
 	ChainedConstructor chained_constructed;
+
+
+	#pragma test expect_ir(BASE_CONSTRUCTOR_EXPR_IR, R"(var ref<IMP_Derived,f,f,plain> v0 = IMP_Derived::(v0);)")
+	Derived derived_constructed;
 
 	return 0;
 }
