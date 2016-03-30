@@ -41,6 +41,9 @@
 #include "insieme/backend/opencl/opencl_analysis.h"
 #include "insieme/backend/opencl/opencl_extension.h"
 
+#include "insieme/annotations/meta_info/meta_infos.h"
+#include "insieme/annotations/opencl/opencl_annotations.h"
+
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/manipulation_utils.h"
@@ -59,6 +62,7 @@
 #include "insieme/backend/runtime/runtime_extension.h"
 
 #include "insieme/utils/functional_utils.h"
+#include "insieme/utils/range.h"
 #include "insieme/utils/logging.h"
 
 namespace insieme {
@@ -67,6 +71,7 @@ namespace opencl {
 namespace transform {
 	
 	using namespace insieme::annotations::opencl;
+	using namespace insieme::annotations::opencl_ns;
 	
 	namespace {
 		core::LiteralPtr toKernelLiteral(core::NodeManager& manager, const StepContext& sc, const core::LambdaExprPtr& oclExpr) {
@@ -88,10 +93,10 @@ namespace transform {
 
 		core::ExpressionPtr wrapLazy(core::NodeManager& manager, const core::ExpressionPtr& expr) {
 			if (expr->getNodeType() == core::NT_LambdaExpr) return expr.as<core::LambdaExprPtr>();
-			// in this case we take use of materialization to wrap it
-			core::IRBuilder builder(manager);
-			auto& oclExt = manager.getLangExtension<OpenCLExtension>();
-			return builder.wrapLazy(builder.numericCast(expr, oclExt.getSizeType()));
+				// in this case we take use of materialization to wrap it
+				core::IRBuilder builder(manager);
+				auto& oclExt = manager.getLangExtension<OpenCLExtension>();
+				return builder.wrapLazy(builder.numericCast(expr, oclExt.getSizeType()));
 		}
 
 		core::ExpressionPtr identity(const core::ExpressionPtr& expr) {
@@ -113,17 +118,88 @@ namespace transform {
 			ndrange->setLocalWorkSize(workSize);
 			return ndrange;
 		}
+
+		core::ExpressionPtr toWiExpr(core::NodeManager& manager, const StepContext& sc, const core::VariablePtr& wi, const core::ExpressionPtr& expr) {
+			core::IRBuilder builder(manager);
+			// the problem is the following:
+			// if expr is a literal everything is fine, just return it and we are done.
+			// however, if expr contains variables (which must be captured by wi/lwdata_item)
+			// we need to adjust the access to use getArg of runtime extension
+			core::VariableList free = core::analysis::getFreeVariables(manager.get(expr));
+			if (free.empty()) return expr;
+			LOG(INFO) << "toWiExpr input: " << dumpColor(expr);
+			// get the runtime extension
+			auto& runExt = manager.getLangExtension<runtime::RuntimeExtension>();
+			// transform the lwdata_item type into a type_lit
+			core::NodeMap replacements;
+			auto lwdType = builder.getTypeLiteral(sc.getDefaultLWDataItemType());
+			// shortcut for certain child-nodes we will need
+			auto params = sc.getDefaultLambdaExpr()->getParameterList();
+			auto paramTypes = sc.getDefaultLambdaExpr()->getType().as<core::FunctionTypePtr>()->getParameterTypes();
+			for (const auto& cur : free) {
+				// determine the index of 'cur' within the lwdata_item
+				auto it = std::find_if(params.begin(), params.end(),
+					[&](const core::VariablePtr& var) {
+						return *var == *cur;
+					});
+				// if we were not able to find it ... well then lucky you! :P
+				assert_true(it != params.end()) << "failed to resolve variable in lwdata_item: " << dumpColor(cur);
+				unsigned index = std::distance(params.begin(), it);
+				// now replace the variable with a reference to the lwdata_item one
+				auto varType = paramTypes->getElements()[index];
+				replacements[builder.deref(cur)] = builder.callExpr(varType, runExt.getGetWorkItemArgument(),
+					toVector<core::ExpressionPtr>(builder.deref(wi),
+					core::encoder::toIR(manager, index), lwdType, builder.getTypeLiteral(varType)));
+			}
+			// paranioa check
+			assert_true(free.size() == replacements.size()) << "failed to build replacements for at least one free var";
+			auto newExpr = core::transform::replaceAllGen(manager, expr, replacements);
+			LOG(INFO) << "toWiExpr output: " << dumpColor(newExpr);
+			return newExpr;
+		}
 	}
 	
-	core::CallExprPtr outline(core::NodeManager& manager, const core::StatementPtr& stmt) {
+	core::CallExprPtr outline(core::NodeManager& manager, const core::StatementPtr& stmt, VariableRequirementList& requirements) {
 		// check whether it is allowed
 		assert_true(opencl::analysis::isOffloadAble(manager, stmt)) << "cannot outline given code: " << dumpColor(stmt);
-		// invoke the standard outline procedure
-		core::CallExprPtr callExpr = core::transform::outline(manager, stmt);
-		core::LambdaExprPtr lambdaExpr = callExpr->getFunctionExpr().as<core::LambdaExprPtr>();
+		// obtain a list of all required variables
+		core::VariableList free = opencl::analysis::getFreeVariables(manager, stmt, requirements);
+		// parameter for new lambda
+		core::VariableList parameter;
+		// build all parameters and replacements
+		core::IRBuilder builder(manager);
+		core::VarExprMap replacements;
+		for (const auto& cur : free) {
+			auto param = builder.variable(builder.refType(cur->getType()));
+			replacements[cur] = builder.deref(param);
+			parameter.push_back(param);
+		}
+		// replace everything in the original stmt
+		core::StatementPtr body = core::transform::replaceVarsGen(manager, stmt, replacements);
+		// replace everything in the supplied requirements
+		VariableRequirementList newRequirements;
+		for (const auto& cur : requirements) {
+			auto var = cur->getVar();
+			// find the new variable if present
+			auto it = replacements.find(var);
+			if (it != replacements.end()) {
+				var = core::analysis::getArgument(it->second, 0).as<core::VariablePtr>();
+			}
+			newRequirements.push_back(std::make_shared<VariableRequirement>(
+				var,
+				core::transform::replaceVarsGen(manager, cur->getSize(), replacements),
+				core::transform::replaceVarsGen(manager, cur->getStart(), replacements),
+				core::transform::replaceVarsGen(manager, cur->getEnd(), replacements),
+				cur->getAccessMode()));
+		}
+		requirements = newRequirements;
+		auto retType = manager.getLangBasic().getUnit();
+		// create lambda accepting all free variables as arguments
+		auto funType = builder.functionType(extractTypes(free), retType);
+		auto lambdaExpr = builder.lambdaExpr(funType, parameter, body);
 		// migrate the annotations from stmt to lambda
 		core::transform::utils::migrateAnnotations(stmt, lambdaExpr);
-		return callExpr;
+		return builder.callExpr(retType, lambdaExpr, convertList<Expression>(free));
 	}
 
 	core::CallExprPtr buildGetWorkDim(core::NodeManager& manager) {
@@ -215,7 +291,7 @@ namespace transform {
 		} else {
 			// fallback are the default non-modified requirements, transform into IR and push
 			for (const auto& requirement : sc.getDefaultRequirements())
-				requirements.push_back(toIR(manager, requirement));
+				requirements.push_back(toIR(manager, sc, requirement));
 		}
 		// put together all optionals
 		core::ExpressionList optionals;
@@ -263,42 +339,56 @@ namespace transform {
 			}
 		}
 		// done .. execute the helper one level deeper
-		return buildExecuteKernel(manager, id, toIR(manager, cc.getNDRange()), requirements, optionals);
+		return buildExecuteKernel(manager, id, toIR(manager, sc, cc.getNDRange()), requirements, optionals);
 	}
 
 	core::StatementList buildExecuteGraph(core::NodeManager& manager, unsigned int id, const StepContext& sc) {
+		core::IRBuilder builder(manager);
 		core::StatementList result;
 
 		const auto& graph = sc.getCallGraph();
-		assert_true(graph.getNumVertices() > 0) << "execution graph must consist of at least one vertex";
-		assert_true(utils::graph::detectCycle(graph.asBoostGraph()).empty()) << "execution graph must be acyclic";
-		// right now: simple implementation which sequentially executes all calls
-		for (auto it = graph.vertexBegin(); it != graph.vertexEnd(); ++it) {
-			auto callExpr = buildExecuteKernel(manager, id, sc, **it);
-			// for the sake of debugging -- print IR of generated execute
-			LOG(INFO) << "generated execute call: " << dumpColor(callExpr);
-			result.push_back(callExpr);
-		}
+		// determine all topological sets within the call graph
+		auto sets = analysis::getTopologicalSets(graph.asBoostGraph());
+		for (const auto& set : sets) {
+			if (set.size() == 1) {
+				// a single call will not result in parallel jobs -- sync call
+				auto callExpr = buildExecuteKernel(manager, id, sc, **(std::begin(set)));
+				// for the sake of debugging -- print IR of generated execute
+				LOG(INFO) << "generated single execute call: " << dumpColor(callExpr);
+				result.push_back(callExpr);
+				continue;
+			}
 
+			for (const auto& descriptor : set) {
+				// build a parallel execution
+				auto callExpr = buildExecuteKernel(manager, id, sc, *descriptor);
+				// for the sake of debugging -- print IR of generated execute
+				LOG(INFO) << "generated parallel execute call: " << dumpColor(callExpr);
+				result.push_back(callExpr);
+			}
+			// and merge to enforce a sync point
+			result.push_back(builder.mergeAll());
+		}
 		return result;
 	}
 
-	core::LambdaExprPtr toIR(core::NodeManager& manager, const NDRangePtr& ndrange) {
+	core::LambdaExprPtr toIR(core::NodeManager& manager, const StepContext& sc, const NDRangePtr& ndrange) {
 		core::IRBuilder builder(manager);
 		// grab a reference to the runtime & opencl extension
 		auto& oclExt = manager.getLangExtension<OpenCLExtension>();
 		auto& runExt = manager.getLangExtension<runtime::RuntimeExtension>();
 		
 		core::VariableList params;
-		params.push_back(core::Variable::get(manager, core::lang::buildRefType(runExt.getWorkItemType())));
+		auto wi = builder.variable(core::lang::buildRefType(core::lang::buildRefType(runExt.getWorkItemType())));
+		params.push_back(wi);
 		// body is simply a ref_new_init
 		core::StatementList body;
-		body.push_back(builder.returnStmt(NDRange::encode(manager, ndrange)));
+		body.push_back(builder.returnStmt(toWiExpr(manager, sc, wi, NDRange::encode(manager, ndrange))));
 		// and finally ... THE lambda ladies and gentleman
-		return builder.lambdaExpr(builder.functionType(core::extractTypes(params), oclExt.getNDRange(), core::FK_PLAIN), params, builder.compoundStmt(body));
+		return builder.lambdaExpr(oclExt.getNDRange(), params, builder.compoundStmt(body));
 	}
 	
-	core::LambdaExprPtr toIR(core::NodeManager& manager, const VariableRequirementPtr& var) {
+	core::LambdaExprPtr toIR(core::NodeManager& manager, const StepContext& sc, const VariableRequirementPtr& var) {
 		/*
 		the requirement is transformed into the following 'lambda'
 		fun001 = function (wi: ref<irt_wi>, nd: ref<opencl_ndrange>, arg: ref<uint<4>>) -> opencl_data_requirement {
@@ -332,18 +422,19 @@ namespace transform {
 		requirement->setType(var->getVar()->getType());
 
 		core::VariableList params;
-		params.push_back(core::Variable::get(manager, core::lang::buildRefType(core::lang::buildRefType(runExt.getWorkItemType()))));
-		params.push_back(core::Variable::get(manager, core::lang::buildRefType(core::lang::buildRefType(oclExt.getNDRange()))));
-		params.push_back(core::Variable::get(manager, core::lang::buildRefType(manager.getLangBasic().getUInt4())));
-		params.push_back(core::Variable::get(manager, core::lang::buildRefType(manager.getLangBasic().getUInt4())));
+		auto wi = builder.variable(core::lang::buildRefType(core::lang::buildRefType(runExt.getWorkItemType())));
+		params.push_back(wi);
+		params.push_back(builder.variable(core::lang::buildRefType(core::lang::buildRefType(oclExt.getNDRange()))));
+		params.push_back(builder.variable(core::lang::buildRefType(manager.getLangBasic().getUInt4())));
+		params.push_back(builder.variable(core::lang::buildRefType(manager.getLangBasic().getUInt4())));
 
 		core::StatementList body;
 		// encode the range (in this case 1D)
-		DataRangePtr range = DataRange::get(manager, wrapLazy(manager, var->getSize()),
-											wrapLazy(manager, var->getStart()), wrapLazy(manager, var->getEnd()));
+		DataRangePtr range = DataRange::get(manager, toWiExpr(manager, sc, wi, var->getSize()),
+			toWiExpr(manager, sc, wi, var->getStart()), toWiExpr(manager, sc, wi, var->getEnd()));
 		body.push_back(builder.returnStmt(DataRange::encode(manager, range)));
 		// ok, now we can generate the "inner" lambda
-		core::LambdaExprPtr rangeExpr = builder.lambdaExpr(oclExt.getDataRange(), params, builder.compoundStmt(body));
+		auto rangeExpr = builder.lambdaExpr(oclExt.getDataRange(), params, builder.compoundStmt(body));
 
 		// prepare for the outer lamdba
 		body.pop_back();
@@ -357,17 +448,21 @@ namespace transform {
 		return builder.lambdaExpr(oclExt.getDataRequirement(), params, builder.compoundStmt(body));
 	}
 	
-	core::NodePtr FlattenVariableIndirectionStep::process(const Converter& converter, const core::NodePtr& code) {
-		core::LambdaExprPtr lambdaExpr = code.isa<LambdaExprPtr>();
+	core::NodePtr FixParametersStep::process(const Converter& converter, const core::NodePtr& code) {
+		auto lambdaExpr = code.isa<LambdaExprPtr>();
 		if (!lambdaExpr) return code;
 
-		core::IRBuilder builder(manager);
 		// used to modify the body and header
 		core::NodeMap bodyReplacements;
 		core::VariableMap annoReplacements;
 
 		core::VariableList parameter;
-		for_each(lambdaExpr->getParameterList(), [&](const core::VariablePtr& cur) {
+		auto params = lambdaExpr->getParameterList();
+		auto range  = utils::make_range(params.begin(), params.end())
+			.subrange(0, context.getDefaultRequirements().size());
+		// this will implicitly remove all additionally captured vars from the kernel
+		// and thus will flatten them to 'unit'
+		for_each(range, [&](const core::VariablePtr& cur) {
 			// default param
 			parameter.push_back(cur);
 			if (!core::lang::isReference(cur->getType())) return;
@@ -386,18 +481,17 @@ namespace transform {
 		// fast-path?
 		if (bodyReplacements.empty()) return lambdaExpr;
 		// replace all usages in the original body
-		core::LambdaExprPtr newLambdaExpr = builder.lambdaExpr(manager.getLangBasic().getUnit(), 
+		auto newLambdaExpr = builder.lambdaExpr(manager.getLangBasic().getUnit(),
 			parameter, core::transform::replaceAllGen(manager, lambdaExpr->getBody(), bodyReplacements));
 		// in the end migrate the annotations and fix them up
 		core::transform::utils::migrateAnnotations(lambdaExpr, newLambdaExpr);
-		return core::transform::replaceVarsGen(manager, newLambdaExpr, annoReplacements);
+		return Step::process(converter, core::transform::replaceVarsGen(manager, newLambdaExpr, annoReplacements));
 	}
 
-	core::NodePtr SimplifierStep::process(const Converter& converter, const core::NodePtr& node) {
-		core::LambdaExprPtr lambdaExpr = node.isa<LambdaExprPtr>();
+	core::NodePtr StmtOptimizerStep::process(const Converter& converter, const core::NodePtr& node) {
+		auto lambdaExpr = node.isa<LambdaExprPtr>();
 		if (!lambdaExpr) return node;
 
-		core::IRBuilder builder(manager);
 		// auto var = core::pattern::irp::atom(builder.typeVariable("a"));
 		auto rhs = core::pattern::irp::variable(core::pattern::any);
 		auto lhs = core::pattern::irp::variable(core::pattern::irp::refType(core::pattern::any));
@@ -430,37 +524,42 @@ namespace transform {
 		// fast-path
 		if (replacements.empty()) return node;
 
-		core::LambdaExprPtr newLambdaExpr= builder.lambdaExpr(manager.getLangBasic().getUnit(), lambdaExpr->getParameterList(),
+		auto newLambdaExpr= builder.lambdaExpr(manager.getLangBasic().getUnit(), lambdaExpr->getParameterList(),
 			core::transform::simplify(manager, core::transform::replaceAllGen(manager, lambdaExpr->getBody(), replacements), true));
 		// migrate the annotations -- but no need to fixup as only hthe body has changed
 		core::transform::utils::migrateAnnotations(lambdaExpr, newLambdaExpr);
-		return newLambdaExpr;
+		return Step::process(converter, newLambdaExpr);
 	}
 	
-	core::NodePtr CallIntroducerStep::process(const Converter& converter, const core::NodePtr& node) {
-		core::LambdaExprPtr lambdaExpr = node.isa<LambdaExprPtr>();
+	core::NodePtr LoopOptimizerStep::process(const Converter& converter, const core::NodePtr& node) {
+		auto lambdaExpr = node.isa<LambdaExprPtr>();
 		if (!lambdaExpr) return node;
 
-		core::IRBuilder builder(manager);
+		assert_true(context.getCallGraph().getNumVertices() == 0) << "execution graph must not exist prior loop optimizer";
 		/*
-         * note:
+         * note1:
 		 * you are not allowed to modify order or type of the original arguments!
-		 * however it is legal and possible to extend it with optional ones.
+		 * however, it is legal and possible to extend it with 'optionals'. this might
+		 * help to implement dynamic loop tiling if required.
+		 *
+		 * note2:
+		 * the loop optimizer must generate at least one vertex in the call graph
+		 * as the applied transformations influence the NDRange! the CallOptimizer
+		 * is later on permitted to may split to into e.g. a z-order graph
+		 *
+		 * note3:
+		 * at this point no kernel types are present, thus allowing to apply loop
+		 * transformations which are independent of the target address space. the
+		 * TypeOptimizer may further enhance the optimization by local prefetching etc.
 		 */
 
 		auto callContext = std::make_shared<CallContext>();
 		context.getCallGraph().addVertex(callContext);
-		// this kernel requires double precision
-		context.getExtensions().insert(StepContext::KhrExtension::Fp64);
-		// and name it such that we can mark it later as __kernel
-		context.setKernelName("__insieme_fun_0");
 
-		// @FEKO: this is a test impl
+		// replace the first independent stmt with a loop
 		core::NodeMap replacements;
 		core::visitDepthFirstOncePrunable(lambdaExpr->getBody(), [&](const core::ForStmtPtr& forStmt) {
-			if (!analysis::isIndependentStmt(forStmt)) {
-				LOG(WARNING) << "optimistic independet assumption of: " << dumpColor(forStmt);
-			}
+			if (!analysis::isIndependentStmt(forStmt)) return false;
 
 			core::StatementList stmts;
 			/*
@@ -490,37 +589,34 @@ namespace transform {
 			// ... as well as a modified ndrange
 			auto ndrange = std::make_shared<NDRange>();
 			ndrange->setWorkDim(builder.uintLit(1));
-			ndrange->setGlobalWorkSize(makeExpressionList(wrapLazy(manager, forStmt->getEnd())));
+			ndrange->setGlobalWorkSize(makeExpressionList(forStmt->getEnd()));
 			callContext->setNDRange(ndrange);
 			return true;
 		});
 
+		assert_true(context.getCallGraph().getNumVertices() > 0) << "execution graph must exist prior loop optimizer";
 		// introduce a single default clEnqueueTask call if we replace nothing
 		if (replacements.empty()) {
 			callContext->setNDRange(makeDefaultNDRange(manager));
 			return node;
 		}
-
-		core::LambdaExprPtr newLambdaExpr= builder.lambdaExpr(manager.getLangBasic().getUnit(),
+		auto newLambdaExpr= builder.lambdaExpr(manager.getLangBasic().getUnit(),
 			lambdaExpr->getParameterList(), core::transform::replaceAllGen(manager, lambdaExpr->getBody(), replacements));
 		// migrate the annotations -- but no need to fixup as only hthe body has changed
 		core::transform::utils::migrateAnnotations(lambdaExpr, newLambdaExpr);
-		return newLambdaExpr;
+		return Step::process(converter, newLambdaExpr);
 	}
 
-	core::NodePtr KernelTypeStep::process(const Converter& converter, const core::NodePtr& code) {
-		core::LambdaExprPtr lambdaExpr = code.isa<LambdaExprPtr>();
+	core::NodePtr TypeOptimizerStep::process(const Converter& converter, const core::NodePtr& code) {
+		auto lambdaExpr = code.isa<LambdaExprPtr>();
 		if (!lambdaExpr) return code;
 
-		core::IRBuilder builder(manager);
 		// used to modify the body and header
 		core::NodeMap bodyReplacements;
 		core::VariableMap annoReplacements;
 
 		core::VariableList parameter;
 		for_each(lambdaExpr->getParameterList(), [&](const core::VariablePtr& cur) {
-			// ref<ref<>> oder ref<ptr<>> ersetzen .. wo ref_deref(var) -> opencl_deref(var)
-
 			parameter.push_back(cur);
 			auto type = cur->getType();
 			if (!core::lang::isReference(type)) return;
@@ -536,11 +632,19 @@ namespace transform {
 		// fast-path?
 		if (bodyReplacements.empty()) return lambdaExpr;
 		// replace all usages in the original body
-		core::LambdaExprPtr newLambdaExpr = builder.lambdaExpr(manager.getLangBasic().getUnit(),
+		auto newLambdaExpr = builder.lambdaExpr(manager.getLangBasic().getUnit(),
 			parameter, core::transform::replaceAllGen(manager, lambdaExpr->getBody(), bodyReplacements));
 		// in the end migrate the annotations and fix them up
 		core::transform::utils::migrateAnnotations(lambdaExpr, newLambdaExpr);
-		return newLambdaExpr;
+		return Step::process(converter, newLambdaExpr);
+	}
+
+	core::NodePtr CallOptimizerStep::process(const Converter& converter, const core::NodePtr& code) {
+		// this kernel requires double precision
+		context.getExtensions().insert(StepContext::KhrExtension::Fp64);
+		// and name it such that we can mark it later as __kernel
+		context.setKernelName("__insieme_fun_0");
+		return Step::process(converter, code);
 	}
 
 	core::NodePtr IntegrityCheckStep::process(const Converter& converter, const core::NodePtr& code) {
@@ -556,34 +660,62 @@ namespace transform {
 			
 			assert_fail() << "see messages above!";
 		}
+
+		// also assure that the callGraph is sane
+		assert_true(context.getCallGraph().getNumVertices() > 0) << "execution graph must consist of at least one vertex";
+		assert_true(utils::graph::detectCycle(context.getCallGraph().asBoostGraph()).empty()) << "execution graph must be acyclic";
 		return code;
 	}
 
-	core::LambdaExprPtr toOcl(const Converter& converter, core::NodeManager& manager, unsigned int& id, const core::CallExprPtr& callExpr) {
+	std::vector<core::LambdaExprPtr> toOcl(const Converter& converter, core::NodeManager& manager,
+										   const core::NodePtr& code, const core::CallExprPtr& callExpr,
+										   const VariableRequirementList& requirements) {
+		// even though the interface supports it, only one variant is generated
 		core::IRBuilder builder(manager);
-		// grab a ptr to the enclosed lamda -- right now no transformations applied
-		core::LambdaExprPtr lambdaExpr = callExpr->getFunctionExpr().as<core::LambdaExprPtr>();
+		std::vector<core::LambdaExprPtr> variants;
+
+		auto lambdaExpr = callExpr->getFunctionExpr().as<core::LambdaExprPtr>();
+		// log what we got as input to quickly check if outline worked right
+		LOG(INFO) << "trying to generate kernel for: " << dumpColor(lambdaExpr);
 		// context which is usable among all steps
 		StepContext context;
-		// grab and set the default requirements for all variables
-		context.setDefaultRequirements(analysis::getVariableRequirements(manager, callExpr));
+		context.setDefaultLambdaExpr(lambdaExpr);
+		context.setDefaultLWDataItemType(analysis::getLWDataItemType(lambdaExpr));
+		context.setDefaultRequirements(requirements);
 		// all modifications applied to the lambda (which will ultimately yield OlcIR) are modeled as preProcessors
 		auto processor = makePreProcessorSequence(
 			getBasicPreProcessorSequence(),
-			makePreProcessor<FlattenVariableIndirectionStep>(boost::ref(manager), boost::ref(context)),
-			makePreProcessor<SimplifierStep>(boost::ref(manager), boost::ref(context)),
-			makePreProcessor<KernelTypeStep>(boost::ref(manager), boost::ref(context)),
-			makePreProcessor<CallIntroducerStep>(boost::ref(manager), boost::ref(context)),
+			makePreProcessor<FixParametersStep>(boost::ref(manager), boost::ref(context)),
+			makePreProcessor<StmtOptimizerStep>(boost::ref(manager), boost::ref(context)),
+			makePreProcessor<LoopOptimizerStep>(boost::ref(manager), boost::ref(context)),
+			makePreProcessor<TypeOptimizerStep>(boost::ref(manager), boost::ref(context)),
+			makePreProcessor<CallOptimizerStep>(boost::ref(manager), boost::ref(context)),
+			// this is very important as otherwise we have generated a faulty kernel
 			makePreProcessor<IntegrityCheckStep>(boost::ref(manager), boost::ref(context)));
 
+		unsigned id;
 		core::StatementList body;
+		// run the extracted lambda through the pipeline
+		auto kernelExpr = processor->process(converter, lambdaExpr).as<LambdaExprPtr>();
 		// first of all, we need to register the kernel itself
-		auto registerCall = buildRegisterKernel(manager, id, context, processor->process(converter, lambdaExpr).as<LambdaExprPtr>());
+		auto registerExpr = buildRegisterKernel(manager, id, context, kernelExpr);
 		// as the processor has yield a callGraph build it now
 		body = buildExecuteGraph(manager, id, context);
-		body.push_back(registerCall);
-		// now the body is populated with all required IR constructs, build the wrapper
-		return builder.lambdaExpr(lambdaExpr->getFunctionType(), lambdaExpr->getParameterList(), builder.compoundStmt(body));
+		body.push_back(registerExpr);
+		// now the body is populated with all required IR constructs, build the variant
+		// which encapsultes the whole execution plan
+		lambdaExpr = builder.lambdaExpr(lambdaExpr->getFunctionType(), lambdaExpr->getParameterList(),
+			builder.compoundStmt(body));
+		// very important step:
+		// first of all, mark this variant as opencl capable.
+		// secondly, we take note which kernel this meta_info is about for future extendability
+		info_type meta_data;
+		meta_data.opencl    = true;
+		meta_data.kernel_id = id;
+		lambdaExpr->attachValue(meta_data);
+		// add the generated variant to the result set
+		variants.push_back(lambdaExpr);
+		return variants;
 	}
 }
 }

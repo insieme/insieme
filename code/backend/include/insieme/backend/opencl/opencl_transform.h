@@ -79,6 +79,10 @@ namespace transform {
 		// represents the valid opencl extensions
 		enum class KhrExtension { All, Fp64, ByteAddressableStore };
 	private:
+		// represents the initial lambdaExpr passed to toOcl without modifications
+		core::LambdaExprPtr defaultLe;
+		// represents the LWDataItemType associated with defaultLe
+		core::TypePtr defaultTy;
 		// represents the initial requirements -- a call context can overwrite it
 		VariableRequirementList defaultRq;
 		// each call context will lead to an invokation of irt_opencl_execute
@@ -88,6 +92,10 @@ namespace transform {
 		// name of the kernel
 		std::string kernelName;
 	public:
+		void setDefaultLambdaExpr(const core::LambdaExprPtr& lambdaExpr) { defaultLe = lambdaExpr; }
+		const core::LambdaExprPtr& getDefaultLambdaExpr() const { return defaultLe; }
+		void setDefaultLWDataItemType(const core::TypePtr& type) { defaultTy = type; }
+		const core::TypePtr& getDefaultLWDataItemType() const { return defaultTy; }
 		const VariableRequirementList& getDefaultRequirements() const { return defaultRq; }
 		void setDefaultRequirements(const VariableRequirementList& lst) { defaultRq = lst; }
 		CallGraph& getCallGraph() { return graph; }
@@ -101,11 +109,13 @@ namespace transform {
 	class Step : public PreProcessor {
 	protected:
 		core::NodeManager& manager;
+		core::IRBuilder builder;
 		StepContext& context;
 		const OpenCLExtension& oclExt;
 	public:
 		Step(core::NodeManager& manager, StepContext& context) :
-			PreProcessor(), manager(manager), context(context), oclExt(manager.getLangExtension<OpenCLExtension>())
+			PreProcessor(), manager(manager), builder(manager),
+			context(context), oclExt(manager.getLangExtension<OpenCLExtension>())
 		{}
 		core::NodePtr process(const Converter& converter, const core::NodePtr& code) override { return code; }
 	};
@@ -114,7 +124,7 @@ namespace transform {
 	 * transform::outline may produces e.g. float ** (due to ref<ref<ptr<real<4>>>>) which is not
 	 * suitable for OpenCL kernel node arguments. This step flattens e.g. float ** to float *
 	 */
-	class FlattenVariableIndirectionStep : public Step {
+	class FixParametersStep : public Step {
 	public:
 		using Step::Step;
 		core::NodePtr process(const Converter& converter, const core::NodePtr& code) override;
@@ -123,25 +133,34 @@ namespace transform {
 	/**
 	 * tries to simplify the given code
 	 */
-	class SimplifierStep : public Step {
+	class StmtOptimizerStep : public Step {
 	public:
 		using Step::Step;
 		core::NodePtr process(const Converter& converter, const core::NodePtr& code) override;
 	};
 
 	/**
-	 * introduces the NDRange concept
+	 * optimizes loops and generates a vertex in the call graph
 	 */
-	class CallIntroducerStep : public Step {
+	class LoopOptimizerStep : public Step {
 	public:
 		using Step::Step;
 		core::NodePtr process(const Converter& converter, const core::NodePtr& code) override;
 	};
 
 	/**
-	 * introduces KernelType and applies 'local' transformations -- this shall be the last step in toOcl!
+	 * introduces KernelType and applies 'local' transformations
 	 */
-	class KernelTypeStep : public Step {
+	class TypeOptimizerStep : public Step {
+	public:
+		using Step::Step;
+		core::NodePtr process(const Converter& converter, const core::NodePtr& code) override;
+	};
+
+	/**
+	 * tries to optimize the call-graph
+	 */
+	class CallOptimizerStep : public Step {
 	public:
 		using Step::Step;
 		core::NodePtr process(const Converter& converter, const core::NodePtr& code) override;
@@ -156,7 +175,11 @@ namespace transform {
 		core::NodePtr process(const Converter& converter, const core::NodePtr& code) override;
 	};
 
-	core::CallExprPtr outline(core::NodeManager& manager, const core::StatementPtr& stmt);
+	/**
+     * outlines the given stmt and captures anything additionally required by the requirements
+     */
+	core::CallExprPtr outline(core::NodeManager& manager, const core::StatementPtr& stmt,
+							  VariableRequirementList& requirements);
 
 	core::CallExprPtr buildGetWorkDim(core::NodeManager& manager);
 	core::CallExprPtr buildGetGlobalId(core::NodeManager& manager, const core::ExpressionPtr& dim);
@@ -172,17 +195,18 @@ namespace transform {
 	core::CallExprPtr buildExecuteKernel(core::NodeManager& manager, unsigned int id, const core::ExpressionPtr& ndrange,
 										 const core::ExpressionList& requirements, const core::ExpressionList& optionals);
 
-
 	core::CallExprPtr buildExecuteKernel(core::NodeManager& manager, unsigned int id, const StepContext& sc, const CallContext& cc);
 
 	core::StatementList buildExecuteGraph(core::NodeManager& manager, unsigned int id, const StepContext& sc);
 
-	core::LambdaExprPtr toIR(core::NodeManager& manager, const NDRangePtr& ndrange);
+	core::LambdaExprPtr toIR(core::NodeManager& manager, const StepContext& sc, const NDRangePtr& ndrange);
 
-	core::LambdaExprPtr toIR(core::NodeManager& manager, const annotations::opencl::VariableRequirementPtr& var);
+	core::LambdaExprPtr toIR(core::NodeManager& manager, const StepContext& sc, const VariableRequirementPtr& var);
 
-	// note: callExpr shall be obtained by invoking outline() of above
-	core::LambdaExprPtr toOcl(const Converter& converter, core::NodeManager& manager, unsigned int& id, const core::CallExprPtr& callExpr);
+	// callExpr must have been obtained via outline() of above!
+	std::vector<core::LambdaExprPtr> toOcl(const Converter& converter, core::NodeManager& manager,
+										   const core::NodePtr& code, const core::CallExprPtr& callExpr,
+										   const VariableRequirementList& requirements);
 }
 }
 }

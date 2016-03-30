@@ -37,8 +37,11 @@
 #include "insieme/backend/opencl/opencl_analysis.h"
 #include "insieme/backend/opencl/opencl_extension.h"
 
+#include "insieme/backend/runtime/runtime_entities.h"
+
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/type_utils.h"
+#include "insieme/core/transform/manipulation.h"
 #include "insieme/core/lang/reference.h"
 #include "insieme/core/lang/pointer.h"
 #include "insieme/core/lang/array.h"
@@ -226,17 +229,50 @@ namespace analysis {
 			return tryDeduceAccessModeIntern(type);
 		}
 
-		VariableRequirementPtr tryDeduceVariableRequirement(core::NodeManager& manager, const core::CallExprPtr& callExpr, unsigned index) {
+		VariableRequirementPtr tryDeduceVariableRequirement(core::NodeManager& manager, const core::NodePtr& code,
+															const core::VariablePtr& var) {
 			core::IRBuilder builder(manager);
 
-			core::ExpressionPtr arg = callExpr->getArgument(index);
 			// the deduction is atm purely based on the type
-			core::TypePtr type = getReferencedType(arg->getType());
+			auto type = getReferencedType(var->getType());
 			// at this point we try to deduce the correct requirement
 			core::ExpressionPtr size;
 			core::ExpressionPtr start;
 			core::ExpressionPtr end;
-			if (isPrimitive(type)) {
+			if (core::lang::isPlainReference(var->getType()) && core::lang::isPointer(getElementType(var->getType()))) {
+				// build the literal which represents malloc only once
+				auto declMalloc = builder.literal(insieme::utils::mangle("malloc"), builder.parseType("(uint<8>) -> ptr<unit>"));
+
+				bool success = false;
+				auto& ptrExt = manager.getLangExtension<core::lang::PointerExtension>();
+				// in this we try to find the following:
+				// var ref<ptr<real<4>>,f,f,plain> v66 = ptr_reinterpret(IMP_malloc(
+				//     sizeof(type_lit(real<4>))*num_cast(*v55, type_lit(uint<8>))), type_lit(real<4>));
+				core::visitDepthFirstOnceInterruptible(code, [&](const core::DeclarationStmtPtr& declStmt) {
+					// if this is not the variable we are seraching for continue at another level
+					if (*(declStmt->getVariable()) != *var) return false;
+
+					core::ExpressionPtr init = declStmt->getInitialization();
+					if (!core::analysis::isCallOf(init, ptrExt.getPtrReinterpret())) return true;
+
+					// obtain the first argument of the cast
+					auto castee = core::analysis::getArgument(init, 0);
+					if (!core::analysis::isCallOf(castee, declMalloc)) return true;
+
+					// transform::outline will use our analysis module to pass any
+					// required variables into the lambda later on!
+					size  = builder.div(core::analysis::getArgument(castee, 0),
+										builder.callExpr(manager.getLangBasic().getSizeof(),
+														 builder.getTypeLiteral(getUnderlyingType(type))));
+					start = builder.uintLit(0);
+					end   = size;
+					// mark this as success
+					success = true;
+					return true;
+				});
+
+				if (!success) return nullptr;
+			} else if (isPrimitive(type)) {
 				size = builder.uintLit(1);
 				start = builder.uintLit(0);
 				end = size;
@@ -254,9 +290,9 @@ namespace analysis {
 			} else
 				return nullptr;
 			// right now the access mode is determined solely using the type
-			VariableRequirement::AccessMode accessMode = tryDeduceAccessMode(arg->getType());
+			auto accessMode = tryDeduceAccessMode(var->getType());
 			// generate a temporary variable to hold the type inforation
-			return std::make_shared<VariableRequirement>(core::Variable::get(manager, arg->getType()), size, start, end, accessMode);
+			return std::make_shared<VariableRequirement>(builder.variable(var->getType()), size, start, end, accessMode);
 		}
 
 		bool isOffloadWorth(const core::NodePtr& node) {
@@ -271,12 +307,22 @@ namespace analysis {
 
 				// now check of independence
 				if (!isIndependentStmt(stmt)) return;
-				// excellent note for later analysis if required
+				// @TODO: implement e.g. heuristic if the independent stmts are worth it
 				candidates.push_back(addr);
 			});
-
-			// @TODO: implement e.g. heuristic if the independent stmts are worth it
 			return candidates.size() > 0;
+		}
+
+		core::VariableList getFreeVariables(core::NodeManager& manager, const VariableRequirementPtr& requirement) {
+			// allocate a derived instance manager as we do not want to pollute the original one!
+			core::NodeManager derived(manager);
+			core::IRBuilder builder(derived);
+			// use a little trick to skip the merge of lists
+			core::StatementList body;
+			body.push_back(requirement->getSize());
+			body.push_back(requirement->getStart());
+			body.push_back(requirement->getEnd());
+			return core::analysis::getFreeVariables(derived.get(builder.compoundStmt(body)));
 		}
 
 		// @TODO: an argument wih an incomplete type is not allowed!!!
@@ -385,38 +431,37 @@ namespace analysis {
 		return true;
 	}
 
-	VariableRequirementList getVariableRequirements(core::NodeManager& manager, const core::CallExprPtr& callExpr) {
+	VariableRequirementList getVariableRequirements(core::NodeManager& manager, const core::NodePtr& code,
+													const core::StatementPtr& stmt) {
 		VariableRequirementList result;
 		VariableRequirementList candidates;
-		// all annotations are attached to the outlined lambda itself
-		core::LambdaExprPtr lambdaExpr = callExpr->getFunctionExpr().as<core::LambdaExprPtr>();
-		if (lambdaExpr->hasAnnotation(BaseAnnotation::KEY)) {
+		// all annotations, if present, must be attached to the given stmt
+		if (stmt->hasAnnotation(BaseAnnotation::KEY)) {
 			// grab all annotations which relate to OpenCL (and have been attached by FE)
-			const auto& annos = lambdaExpr->getAnnotation(BaseAnnotation::KEY)->getAnnotationList();
+			const auto& annos = stmt->getAnnotation(BaseAnnotation::KEY)->getAnnotationList();
 			// loop through all of them and pick only those who correspond to variables
 			for (const auto& anno : annos) {
 				if (auto rq = std::dynamic_pointer_cast<VariableRequirement>(anno))
 					candidates.push_back(rq);
 			}
 		}
-		// map candidates to actual vars
-		for (unsigned index = 0; index < callExpr->getArgumentList().size(); ++index) {
-			auto iter = candidates.end();
-			core::ExpressionPtr arg = callExpr->getArgument(index);
-			// check if argument is a variable in the first place
-			if (arg->getNodeType() == core::NT_Variable)
-				// excellent, we can try to locate the corresponding one in the annos
-				iter = std::find_if(candidates.begin(), candidates.end(), [&](const VariableRequirementPtr& var) { return *var->getVar() == *arg; });
+
+		core::VariableList free = core::analysis::getFreeVariables(manager.get(stmt));
+		for (const auto& cur : free) {
+			auto iter = std::find_if(candidates.begin(), candidates.end(),
+				[&](const VariableRequirementPtr& var) {
+					return *var->getVar() == *cur;
+				});
 			// were we able to locate a user supplied anno?
 			if (iter != candidates.end()) {
 				result.push_back(*iter);
 				continue;
 			}
-			LOG(DEBUG) << "trying to deduce requirements for: " << dumpColor(arg);
+			LOG(DEBUG) << "trying to deduce requirements for: " << dumpColor(cur);
 			// user did not supply any hints .. try to deduce them on our own
-			auto req = tryDeduceVariableRequirement(manager, callExpr, index);
+			auto req = tryDeduceVariableRequirement(manager, code, cur);
 			if (!req) {
-				assert_fail() << "cannot deduce requirement for: " << dumpColor(arg);
+				assert_fail() << "cannot deduce requirement for: " << dumpColor(cur);
 				// in case the assertion is a no-op return an empty result and our caller
 				// can handle the error properly
 				return {};
@@ -426,21 +471,43 @@ namespace analysis {
 		return result;
 	}
 
+	core::VariableList getFreeVariables(core::NodeManager& manager, const core::StatementPtr& stmt,
+										const VariableRequirementList& requirements) {
+			// obtain a list of free variables within stmt
+			core::VariableList free = core::analysis::getFreeVariables(manager.get(stmt));
+			// sort to obtain stable results for the essential requirements
+			std::sort(free.begin(), free.end(), compare_target<core::VariablePtr>());
+			// interate over all requirements to check what else we might need
+			for (const auto& cur : requirements) {
+				auto vars = getFreeVariables(manager, cur);
+				// unite them with the essentials
+				std::copy_if(vars.begin(), vars.end(), std::back_inserter(free),
+					[&](const core::VariablePtr& candidate) {
+						auto it = std::find_if(free.begin(), free.end(),
+							[&](const core::VariablePtr& element) {
+								return *element == *candidate;
+							});
+						return it == free.end();
+					});
+			}
+			return free;
+		}
+
 	bool isIndependentStmt(const core::StatementPtr& stmt) {
 		// if it is not a for statement it is per-design not independent -- however this may be changed in the future!
 		if (stmt->getNodeType() != core::NT_ForStmt) return false;
-		// in case we face a not with no annotations we are done already
-		if (!stmt->hasAnnotation(BaseAnnotation::KEY)) return false;
-
-		const auto& annos = stmt->getAnnotation(BaseAnnotation::KEY)->getAnnotationList();
-		// the first annotation wins the rest is ignored
-		for (const auto& anno : annos) {
-			if (auto rq = std::dynamic_pointer_cast<LoopAnnotation>(anno)) {
-				// in case we ignore other annos of the same type inform the user
-				if (annos.size() > 1) {
-					LOG(WARNING) << "multiple loop annotations attached to: " << dumpColor(stmt);
+		// if annotations are attached check them first
+		if (stmt->hasAnnotation(BaseAnnotation::KEY)) {
+			const auto& annos = stmt->getAnnotation(BaseAnnotation::KEY)->getAnnotationList();
+			// the first annotation wins the rest is ignored
+			for (const auto& anno : annos) {
+				if (auto rq = std::dynamic_pointer_cast<LoopAnnotation>(anno)) {
+					// in case we ignore other annos of the same type inform the user
+					if (annos.size() > 1) {
+						LOG(WARNING) << "multiple loop annotations attached to: " << dumpColor(stmt);
+					}
+					return rq->getIndependent();
 				}
-				return rq->getIndependent();
 			}
 		}
 		// in this case we have to deduce it
@@ -466,6 +533,11 @@ namespace analysis {
 		// traverse through the tree and find nodes which are valid for offloading
 		core::visitDepthFirstOnce(node, core::makeLambdaVisitor(filter, [&](const core::NodePtr& node) { result.push_back(node); }));
 		return result;
+	}
+
+	core::TypePtr getLWDataItemType(const core::LambdaExprPtr& lambdaExpr) {
+		core::IRBuilder builder(lambdaExpr->getNodeManager());
+		return runtime::DataItem::toLWDataItemType(builder.tupleType(lambdaExpr->getType().as<core::FunctionTypePtr>().getParameterTypeList()));
 	}
 
 	namespace {

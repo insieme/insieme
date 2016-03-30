@@ -47,6 +47,8 @@ namespace insieme {
 namespace backend {
 namespace opencl {
 namespace analysis {
+
+	using namespace annotations::opencl;
 	/**
 	 * Represents a dependencygraph within the context of opencl
 	 */
@@ -73,7 +75,13 @@ namespace analysis {
 	 * Obtain all variable requirements for callExpr which must have been built
 	 * using opencl::transform::outline.
 	 */
-	annotations::opencl::VariableRequirementList getVariableRequirements(core::NodeManager& manager, const core::CallExprPtr& callExpr);
+	VariableRequirementList getVariableRequirements(core::NodeManager& manager, const core::NodePtr& code,
+																		 const core::StatementPtr& stmt);
+	/**
+     * Determines all free variables within stmt by taking into account the given requirements
+	 */
+	core::VariableList getFreeVariables(core::NodeManager& manager, const core::StatementPtr& stmt,
+										const VariableRequirementList& requirements);
 	/**
 	 * Determine if a given for statement is independent and thus suitable for parallelization
 	 */
@@ -82,6 +90,10 @@ namespace analysis {
      * Determine all offloadable statements within a given node
      */
 	core::NodeList getOffloadAbleStmts(const core::NodePtr& node);
+	/**
+     * Determine the LWDataItemType for a given lambda
+     */
+	core::TypePtr getLWDataItemType(const core::LambdaExprPtr& lambdaExpr);
 
 	DependencyGraph& getDependencyGraph(const core::StatementPtr& stmt, const core::VariableSet& vars, DependencyGraph& base);
 
@@ -136,9 +148,10 @@ namespace analysis {
 	}
 
 	template <typename GraphType, typename VertexType = typename boost::vertex_bundle_type<GraphType>::type>
-	std::vector<std::set<typename GraphType::vertex_descriptore>> getTopologicalSets(const GraphType& graph) {
-		std::vector<typename boost::graph_traits<GraphType>::vertices_size_type> d(boost::num_vertices(graph));
-		std::fill(d.begin(), d.end(), 0);
+	std::vector<std::set<VertexType>> getTopologicalSets(const GraphType& graph) {
+		auto N = boost::num_vertices(graph);
+		typename boost::graph_traits<GraphType>::vertices_size_type d[N];
+		std::fill(d, d+N, 0);
 
 		// in case the ordering returns an empty set we are done already
 		auto ordered = utils::graph::getTopologicalOrder(graph);
@@ -147,13 +160,14 @@ namespace analysis {
 
 		// let boost compute the distances for each vertex for us
 		boost::breadth_first_search(graph, ordered.front(), boost::visitor(
-			boost::make_bfs_visitor(boost::record_distances(d.begin(), boost::on_tree_edge{}))));
+			boost::make_bfs_visitor(boost::record_distances(d, boost::on_tree_edge{}))));
 		// allocate enough storage for all required sets
-		std::vector<std::set<typename GraphType::vertex_descriptore>> result(*std::max_element(d.begin(), d.end()));
-		// obtain all unordered vertixes as this is the ordering of d
-		auto unordered = boost::vertices(graph);
-		for (unsigned i = 0; i < d.size(); ++i)
-			result[d[i]].insert(unordered[i]);
+		std::vector<std::set<VertexType>> result(*std::max_element(d, d+N)+1);
+		for (unsigned i = 0; i < result.capacity(); ++i)
+			result[i] = std::set<VertexType>();
+		// finally put everything into sets
+		for (unsigned i = 0; i < N; ++i)
+			result[d[i]].insert(graph[i]);
 		return result;
 	}
 }

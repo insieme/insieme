@@ -51,9 +51,6 @@
 #include "insieme/core/lang/list.h"
 #include "insieme/core/pattern/ir_pattern.h"
 
-#include "insieme/annotations/meta_info/meta_infos.h"
-#include "insieme/annotations/opencl/opencl_annotations.h"
-
 #include "insieme/backend/opencl/opencl_backend.h"
 #include "insieme/backend/opencl/opencl_preprocessor.h"
 #include "insieme/backend/opencl/opencl_code_fragments.h"
@@ -77,41 +74,34 @@ namespace opencl {
 		PreProcessor()
 	{ }
 
-	core::NodePtr OffloadSupportPre::process(const Converter& converter, const core::NodePtr& node) {
+	core::NodePtr OffloadSupportPre::process(const Converter& converter, const core::NodePtr& code) {
 		// node manager used by this extension
 		core::NodeManager& manager = converter.getNodeManager();
 		core::IRBuilder builder(manager);
 		// this map will be filled by the visitor
 		core::NodeMap replacements;
 		// traverse through the tree and find nodes which are valid for offloading
-		for_each(analysis::getOffloadAbleStmts(node), [&](const NodePtr& node) {
+		for_each(analysis::getOffloadAbleStmts(code), [&](const NodePtr& node) {
+			auto requirements = analysis::getVariableRequirements(manager, code, node.as<core::StatementPtr>());
 			// we outline the compound such that we can implement our pick between default & opencl kernel
-			core::CallExprPtr callExpr = transform::outline(manager, node.as<core::StatementPtr>());
-			// grab the lambdaExpr as the pick stores "function-pointer"-like objects
-			core::LambdaExprPtr dftImpl = callExpr->getFunctionExpr().as<core::LambdaExprPtr>();
-			// put together the variants used by the pick -- first one in the fallback which will run on cpu
+			auto callExpr = transform::outline(manager, node.as<core::StatementPtr>(), requirements);
+			auto fallback = callExpr->getFunctionExpr().as<core::LambdaExprPtr>();
+			// put together the variants used by the pick -- first one is the fallback which will run on cpu
 			core::ExpressionList variants;
-			variants.push_back(dftImpl);
+			variants.push_back(fallback);
 
-			unsigned int id;
-			// call the actual transformation which will produce a lambda we can call and takes out the
-			// opencl-ified work on an compute unit -- call is sync!
-			core::LambdaExprPtr oclImpl = transform::toOcl(converter, manager, id, callExpr);
-			variants.push_back(oclImpl);
-			// tag this lambda as OpenCL capable -- this is runtime specific therefore not done in transform!
-			info_type meta_data;
-			meta_data.opencl = true;
-			meta_data.kernel_id = id;
-			oclImpl->attachValue(meta_data);
+			auto generated = transform::toOcl(converter, manager, code, callExpr, requirements);
+			std::copy(generated.begin(), generated.end(), std::back_inserter(variants));
+
 			// build a pick for the generated variants
-			core::CallExprPtr pickExpr = builder.pickVariant(variants);
+			auto pickExpr = builder.pickVariant(variants);
 			// ...and call them -- runtime will decide which one
 			replacements.insert(std::make_pair(node, builder.callExpr(manager.getLangBasic().getUnit(), pickExpr, callExpr->getArguments())));
 		});
 		// fast-path
-		if(replacements.empty()) return node;
+		if(replacements.empty()) return code;
 		// slow-path
-		return core::transform::replaceAll(manager, node, replacements, core::transform::globalReplacement);
+		return core::transform::replaceAll(manager, code, replacements, core::transform::globalReplacement);
 	}
 
 } // end namespace opencl
