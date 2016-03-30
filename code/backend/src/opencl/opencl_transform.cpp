@@ -127,7 +127,6 @@ namespace transform {
 			// we need to adjust the access to use getArg of runtime extension
 			core::VariableList free = core::analysis::getFreeVariables(manager.get(expr));
 			if (free.empty()) return expr;
-			LOG(INFO) << "toWiExpr input: " << dumpColor(expr);
 			// get the runtime extension
 			auto& runExt = manager.getLangExtension<runtime::RuntimeExtension>();
 			// transform the lwdata_item type into a type_lit
@@ -154,7 +153,6 @@ namespace transform {
 			// paranioa check
 			assert_true(free.size() == replacements.size()) << "failed to build replacements for at least one free var";
 			auto newExpr = core::transform::replaceAllGen(manager, expr, replacements);
-			LOG(INFO) << "toWiExpr output: " << dumpColor(newExpr);
 			return newExpr;
 		}
 	}
@@ -166,15 +164,30 @@ namespace transform {
 		core::VariableList free = opencl::analysis::getFreeVariables(manager, stmt, requirements);
 		// parameter for new lambda
 		core::VariableList parameter;
+		// arguments for the call to the new lambda
+		core::ExpressionList args;
 		// build all parameters and replacements
 		core::IRBuilder builder(manager);
-		core::VariableMap replacements;
+		core::VarExprMap replacements;
 		for (const auto& cur : free) {
-			// due to opencl restrictions, outline only allocates new vars
-			// if we would generate ref/deref pairs kernel needs to strip anyway!
-			auto param = builder.variable(cur->getType());
-			replacements[cur] = param;
-			parameter.push_back(param);
+			// default case, just pass it in -- however a fixed size array must be wrapped
+			// example of invalid kernel arg if not ptr: struct __insieme_type_1 { float data[1000];; }
+			if (core::lang::isReference(cur->getType()) &&
+				!core::lang::isFixedSizedArray(opencl::analysis::getElementType(cur->getType()))) {
+				// due to opencl restrictions, outline only allocates new vars
+				// if we would generate ref/deref pairs kernel needs to strip anyway!
+				auto param = builder.variable(cur->getType());
+				replacements[cur] = param;
+				parameter.push_back(param);
+				// and add it correctly to the call args
+				args.push_back(builder.deref(cur));
+			} else {
+				auto param = builder.variable(core::lang::buildRefType(cur->getType()));
+				replacements[cur] = builder.deref(param);
+				parameter.push_back(param);
+				// and also pass it to the call
+				args.push_back(cur);
+			}
 		}
 		// replace everything in the original stmt
 		core::StatementPtr body = core::transform::replaceVarsGen(manager, stmt, replacements);
@@ -184,7 +197,12 @@ namespace transform {
 			auto var = cur->getVar();
 			// find the new variable if present
 			auto it = replacements.find(var);
-			if (it != replacements.end()) var = it->second;
+			if (it != replacements.end()) {
+				// the variable is now either hidden within a deref or avail right along
+				auto expr = it->second;
+				if (expr->getNodeType() == core::NT_CallExpr) expr = core::analysis::getArgument(expr, 0);
+				var = expr.as<core::VariablePtr>();
+			}
 			newRequirements.push_back(std::make_shared<VariableRequirement>(
 				var,
 				core::transform::replaceVarsGen(manager, cur->getSize(), replacements),
@@ -197,10 +215,6 @@ namespace transform {
 		auto lambdaExpr = builder.lambdaExpr(manager.getLangBasic().getUnit(), parameter, body);
 		// migrate the annotations from stmt to lambda
 		core::transform::utils::migrateAnnotations(stmt, lambdaExpr);
-
-		// generate the call for previously outlined code
-		core::ExpressionList args;
-		for (const auto& cur : free) args.push_back(builder.deref(cur));
 		return builder.callExpr(manager.getLangBasic().getUnit(), lambdaExpr, args);
 	}
 
