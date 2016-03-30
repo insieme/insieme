@@ -283,8 +283,16 @@ void _irt_opencl_execute(unsigned id, irt_opencl_ndrange_func ndrange,
 		 * thus the index of the first argument is 'arg + 1'
 		 */
 		char *data = (char *) capture + capture_type->components_offset[arg + 1];
-		/* check if we face a pointer, at this level it must be! */
 		irt_type *arg_type = &irt_context->type_table[capture_type->components[arg + 1]];
+		/* in case it is a scalar set the argument just right away */
+		if (arg_type->kind >= IRT_T_BOOL && arg_type->kind <= IRT_T_REAL64) {
+			clSetKernelArg(impl_data->kernel, arg, size_of_element, data);
+			/* mark the buffer as RO and thus do not transfere it back! */
+			reverse_offload[arg].data = NULL;
+			continue;
+		}
+
+		/* check if we face a pointer, at this level it must be! */
 		IRT_ASSERT(arg_type->kind == IRT_T_POINTER, IRT_ERR_OCL, "expected captured indirection of type %s but got %s\n",
 					irt_type_kind_get_name(IRT_T_POINTER), irt_type_kind_get_name(arg_type->kind));
 		/*
