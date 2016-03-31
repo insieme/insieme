@@ -73,6 +73,12 @@ namespace conversion {
 	}
 
 	namespace {
+		bool isIrMethod(const clang::FunctionDecl* funDecl) {
+			if(!funDecl) return false;
+			auto meth = llvm::dyn_cast<clang::CXXMethodDecl>(funDecl);
+			return meth && !meth->isStatic();
+		}
+
 		core::TypePtr getThisType(Converter& converter, const clang::CXXMethodDecl* methDecl) {
 			auto parentType = converter.convertType(converter.getCompiler().getASTContext().getRecordType(methDecl->getParent()));
 			auto refKind = core::lang::ReferenceType::Kind::Plain;
@@ -89,7 +95,7 @@ namespace conversion {
 			auto funType = converter.convertType(funDecl->getType()).as<core::FunctionTypePtr>();
 			// is this a method? if not, we are done
 			const clang::CXXMethodDecl* methDecl = llvm::dyn_cast<clang::CXXMethodDecl>(funDecl);
-			if(methDecl == nullptr) return funType;
+			if(!isIrMethod(methDecl)) return funType;
 			// now build "this" type
 			auto thisType = getThisType(converter, methDecl);
 			// add "this" parameter to param list
@@ -167,7 +173,7 @@ namespace conversion {
 				core::VariableList params;
 				core::StatementList bodyStmts;
 				// handle implicit "this" for methods
-				if(methDecl) {
+				if(isIrMethod(funcDecl)) {
 					auto thisType = getThisType(converter, methDecl);
 					auto thisVar = builder.variable(builder.refType(thisType));
 					params.push_back(thisVar);

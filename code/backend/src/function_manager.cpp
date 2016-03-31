@@ -1408,7 +1408,8 @@ namespace backend {
 				core::NodeSet initedFields;
 
 				auto isFieldInit = [&](const core::ExpressionPtr& memLoc) {
-					if(rExt.isCallOfRefMemberAccess(memLoc)) { // field initializers
+					if(rExt.isCallOfRefMemberAccess(memLoc)) {
+						// field initializers
 						auto structExp = core::analysis::getArgument(memLoc, 0);
 						if(structExp == thisExp) {
 							auto field = core::analysis::getArgument(memLoc, 1).as<core::LiteralPtr>();
@@ -1417,9 +1418,11 @@ namespace backend {
 								return cmgr->create<c_ast::Identifier>(field->getStringValue());
 							}
 						}
-					} else if(memLoc == thisExp) { // delegating constructors
+					} else if(memLoc == thisExp) {
+						// delegating constructors
 						return cmgr->create<c_ast::Identifier>(core::analysis::getTypeName(core::analysis::getReferencedType(thisExp)));
-					} else if(rExt.isCallOfRefParentCast(memLoc)) { // base constructors
+					} else if(rExt.isCallOfRefParentCast(memLoc)) {
+						// base constructors
 						return cmgr->create<c_ast::Identifier>(
 						    core::analysis::getTypeName(core::analysis::getRepresentedType(core::analysis::getArgument(memLoc, 1))));
 					}

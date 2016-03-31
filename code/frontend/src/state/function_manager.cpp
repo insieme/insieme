@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -57,6 +57,7 @@ namespace state {
 
 	void FunctionManager::insert(const clang::FunctionDecl* funDecl, const core::LiteralPtr& fun) {
 		auto canonicalDecl = funDecl->getCanonicalDecl();
+		frontend_assert(fun) << "Function manager: inserting nullptr";
 		frontend_assert(!::containsKey(functions, canonicalDecl)) << "Trying to insert previously declared function: " << dumpClang(canonicalDecl);
 		functions[canonicalDecl] = fun;
 	}

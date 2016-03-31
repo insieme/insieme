@@ -115,6 +115,12 @@ namespace conversion {
 
 		// add symbols for all methods to function manager before conversion
 		for(auto mem : classDecl->methods()) {
+			mem = mem->getCanonicalDecl();
+			// deal with static methods as functions
+			if(mem->isStatic()) {
+				converter.getDeclConverter()->VisitFunctionDecl(mem);
+				continue;
+			}
 			auto convDecl = converter.getDeclConverter()->convertMethodDecl(mem, irParents, recordTy->getFields(), true);
 		}
 
@@ -126,6 +132,12 @@ namespace conversion {
 		bool destructorVirtual = false;
 		for(auto mem : classDecl->methods()) {
 			mem = mem->getCanonicalDecl();
+			// deal with static methods as functions
+			if(mem->isStatic()) {
+				converter.getDeclConverter()->VisitFunctionDecl(mem);
+				continue;
+			}
+			// actual methods
 			auto convDecl = converter.getDeclConverter()->convertMethodDecl(mem, irParents, recordTy->getFields());
 			if(convDecl.lambda) {
 				VLOG(2) << "adding method lambda literal " << *convDecl.lit << " of type " << dumpColor(convDecl.lit->getType()) << "to IRTU";
