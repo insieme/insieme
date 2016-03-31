@@ -62,7 +62,6 @@
 #include "insieme/core/lang/reference.h"
 
 #include "insieme/annotations/c/include.h"
-#include "insieme/annotations/c/decl_only.h"
 #include "insieme/annotations/c/tag.h"
 
 #include "insieme/utils/logging.h"
@@ -494,24 +493,6 @@ namespace backend {
 				c_ast::CodeFragmentPtr definition = c_ast::IncludeFragment::createNew(converter.getFragmentManager(), "stdbool.h");
 
 				return type_info_utils::createInfo(boolType, definition);
-			}
-
-
-			if(annotations::c::isDeclOnly(ptr)) {
-				// if a genericType has a DeclOnlyAnnotation determine Kind and only declare the type
-				switch(annotations::c::getDeclOnlyKind(ptr)) {
-				case annotations::c::DeclOnlyTag::Kind::Struct:
-				case annotations::c::DeclOnlyTag::Kind::Class: {
-					auto name = manager.create(toString(*ptr));
-					auto type = manager.create<c_ast::StructType>(name);
-					auto forwardDecl = manager.create<c_ast::TypeDeclaration>(type);
-					auto decl = c_ast::CCodeFragment::createNew(converter.getFragmentManager());
-					decl->appendCode(forwardDecl);
-					return type_info_utils::createInfo(type, decl);
-				}
-				case annotations::c::DeclOnlyTag::Kind::Enum: return type_info_utils::createInfo(manager, "enum " + toString(*ptr));
-				case annotations::c::DeclOnlyTag::Kind::Union: return type_info_utils::createInfo(manager, "union " + toString(*ptr));
-				}
 			}
 
 			// handle intercepted types

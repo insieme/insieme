@@ -51,7 +51,6 @@
 #include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/transform/node_replacer.h"
 
-#include "insieme/annotations/c/decl_only.h"
 #include "insieme/annotations/c/include.h"
 #include "insieme/annotations/data_annotations.h"
 
