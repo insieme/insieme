@@ -472,10 +472,7 @@ namespace conversion {
 		core::ExpressionPtr retIr;
 		LOG_EXPR_CONVERSION(scalarValueInit, retIr);
 
-		//core::TypePtr elemType = converter.convertType(scalarValueInit->getTypeSourceInfo()->getType());
-		//retIr = converter.defaultInitVal(elemType);
-
-		assert_not_implemented();
+		retIr = builder.getZero(converter.convertType(scalarValueInit->getType()));
 
 		return retIr;
 	}

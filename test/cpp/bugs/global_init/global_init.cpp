@@ -1,7 +1,6 @@
 
 
 #include <iostream>
-//#include <vector>
 
 
 
@@ -21,17 +20,9 @@ public:
 	}
 };
 
-//std::vector<unsigned> input;
 
 Obj  obj;
 int main(){
-
-
-//	input.push_back(0);
 	obj.method();
-
-//	std::cout << "vector[0]:" << input[0] << std::endl;
-	
-
 	return 0;
 }

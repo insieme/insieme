@@ -372,4 +372,11 @@ int main() {
 		};)")
 	Trivial trivials[2] = {Trivial(), Trivial()};
 
+	// scalar value init expression
+	#pragma test expect_ir(R"({
+
+	})")
+	{
+		int i = int();
+	}
 }
