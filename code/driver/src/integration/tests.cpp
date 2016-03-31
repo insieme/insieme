@@ -345,12 +345,12 @@ namespace integration {
 					bool testIsBlacklisted = blacklistedTestCases.find(testCaseName) != blacklistedTestCases.end();
 					bool testIsLong = longTestCases.find(testCaseName) != longTestCases.end();
 
-					//if this test is blacklisted and we should run only enabled tests, we don't add it
-					if (testIsBlacklisted && (loadMode == ENABLED_TESTS || loadMode == ENABLED_AND_LONG_TESTS)) {
+					//if this test is blacklisted and we should not run them now, we don't add it
+					if (testIsBlacklisted && loadMode != BLACKLISTED_TESTS && loadMode != ALL_TESTS) {
 						continue;
 					}
-					//if this test is a long one and we should run only the short ones
-					if (testIsLong && loadMode == ENABLED_TESTS) {
+					//if this test is a long one and we should not run them now
+					if (testIsLong && loadMode != LONG_TESTS && loadMode != ENABLED_AND_LONG_TESTS && loadMode != ALL_TESTS) {
 						continue;
 					}
 
@@ -369,6 +369,7 @@ namespace integration {
 					if (loadMode == ALL_TESTS
 							|| (loadMode == BLACKLISTED_TESTS && testIsBlacklisted)
 							|| (loadMode == ENABLED_AND_LONG_TESTS && !testIsBlacklisted)
+							|| (loadMode == LONG_TESTS && testIsLong)
 							|| (loadMode == ENABLED_TESTS && !testIsBlacklisted && !testIsLong)) {
 						// load individual test case
 						auto testCase = loadTestCase(fs::canonical(fs::absolute(testDir / testCaseName)).string());

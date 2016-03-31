@@ -100,8 +100,9 @@ namespace {
 		    ("repeat,r",            bpo::value<int>()->default_value(1), "the number of times the tests shell be repeated")
 		    ("no-clean",            "keep all output files")
 		    ("no-color",            "no highlighting of output")
-		    ("blacklisted-only"   , "only run the blacklisted test cases")
-		    ("run-long-tests-also", "also run test cases which take long to execute")
+		    ("blacklisted-only",    "only run the blacklisted test cases")
+		    ("long-tests-only",     "only run test cases which take long to execute")
+		    ("long-tests-also",     "also run test cases which take long to execute")
 		    ("preprocessing",       "perform all pre-processing steps")
 		    ("postprocessing",      "perform all post-processing steps");
 		// clang-format on
@@ -156,7 +157,8 @@ namespace {
 		if(map.count("step")) { res.steps.push_back(map["step"].as<string>()); }
 
 		res.blacklistedOnly = map.count("blacklisted-only");
-		res.runLongTestsAlso = map.count("run-long-tests-also");
+		res.longTestsOnly = map.count("long-tests-only");
+		res.longTestsAlso = map.count("long-tests-also");
 
 		res.preprocessingOnly = map.count("preprocessing");
 		res.postprocessingOnly = map.count("postprocessing");
