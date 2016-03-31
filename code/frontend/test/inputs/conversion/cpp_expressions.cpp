@@ -374,7 +374,7 @@ int main() {
 
 	// scalar value init expression
 	#pragma test expect_ir(R"({
-
+		var ref<int<4>,f,f,plain> v0 = 0;
 	})")
 	{
 		int i = int();
