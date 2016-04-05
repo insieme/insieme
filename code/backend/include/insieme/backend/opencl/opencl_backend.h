@@ -49,13 +49,9 @@ namespace opencl {
 	 * The purpose of this backend is to produce OpenCL powered code target code which can be run by IRT
 	 */
 	class OpenCLBackend : public runtime::RuntimeBackend {
-		/**
-		 * A flag enabling the inclusion of effort estimations within work-item tables.
-		 */
-		bool includeEffortEstimation;
 	public:
-		OpenCLBackend(bool includeEffortEstimation, const BackendConfigPtr& config = std::make_shared<BackendConfig>());
-		static OpenCLBackendPtr getDefault(bool includeEffortEstimation = false, bool isGemsclaim = false);
+		OpenCLBackend(const BackendConfigPtr& config = std::make_shared<BackendConfig>());
+		static OpenCLBackendPtr getDefault();
 
 	protected:
 		virtual Converter buildConverter(core::NodeManager& manager) const;

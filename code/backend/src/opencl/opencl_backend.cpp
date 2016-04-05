@@ -75,31 +75,30 @@
 #include "insieme/backend/addons/asm_stmt.h"
 #include "insieme/backend/addons/varargs.h"
 #include "insieme/backend/addons/static_variables.h"
+#include "insieme/backend/addons/compound_operators.h"
 
 namespace insieme {
 namespace backend {
 namespace opencl {
 
-	OpenCLBackend::OpenCLBackend(bool includeEffortEstimation, const BackendConfigPtr& config ) :
-		RuntimeBackend(includeEffortEstimation, config), includeEffortEstimation(includeEffortEstimation)
+	OpenCLBackend::OpenCLBackend(const BackendConfigPtr& config) :
+		RuntimeBackend(config)
 	{ }
 
-	OpenCLBackendPtr OpenCLBackend::getDefault(bool includeEffortEstimation, bool isGemsclaim) {
-		BackendConfigPtr config = std::make_shared<BackendConfig>();
+	OpenCLBackendPtr OpenCLBackend::getDefault() {
+		auto config = std::make_shared<BackendConfig>();
 
-		if(isGemsclaim) {
-			config->mainFunctionName = "insieme_main";
-			config->additionalHeaderFiles.push_back("input_file.h");
-			// Jan fixed the issue but let's keep the code for a while
-			// config->areShiftOpsSupported = false;
-			config->instrumentMainFunction = true;
-		}
-
-		auto res = std::make_shared<OpenCLBackend>(includeEffortEstimation, config);
+		auto res = std::make_shared<OpenCLBackend>(config);
 		res->addAddOn<addons::PointerType>();
+		res->addAddOn<addons::CppCastsAddon>();
 		res->addAddOn<addons::ComplexType>();
+		res->addAddOn<addons::CompoundOps>();
 		res->addAddOn<addons::EnumType>();
+		res->addAddOn<addons::InputOutput>();
 		res->addAddOn<addons::LongLongType>();
+		res->addAddOn<addons::AsmStmt>();
+		res->addAddOn<addons::VarArgs>();
+		res->addAddOn<addons::StaticVariables>();
 		return res;
 	}
 
@@ -114,7 +113,8 @@ namespace opencl {
 		    getBasicPreProcessorSequence(),
 		    makePreProcessor<runtime::InstrumentationSupport>(), // needs to be before the conversion to work-items
 		    makePreProcessor<OffloadSupportPre>(),
-		    makePreProcessor<runtime::WorkItemizer>(includeEffortEstimation), makePreProcessor<runtime::StandaloneWrapper>());
+		    makePreProcessor<runtime::WorkItemizer>(),
+			makePreProcessor<runtime::StandaloneWrapper>());
 		converter.setPreProcessor(preprocessor);
 
 		TypeManager& typeManager = converter.getTypeManager();
