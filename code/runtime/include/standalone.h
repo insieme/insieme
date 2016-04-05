@@ -361,13 +361,14 @@ irt_context* irt_runtime_start_in_context(uint32 worker_count, init_context_fun*
 
 	irt_context* context = irt_context_create_standalone(init_fun, cleanup_fun);
 	irt_runtime_start(IRT_RT_STANDALONE, worker_count, handle_signals);
-	irt_context_initialize(context);
 	irt_tls_set(irt_g_worker_key, irt_g_workers[0]); // slightly hacky
 
 	for(uint32 i = 0; i < irt_g_worker_count; ++i) {
 		irt_g_workers[i]->cur_context = context->id;
 	}
 
+	// if initialized after irt_get_current_context() already works in init
+	irt_context_initialize(context);
 	return context;
 }
 
