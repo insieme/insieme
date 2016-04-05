@@ -262,61 +262,61 @@ int main() {
 
 	// COMPOUND //////////////////////////////////////////////////////////////
 
-	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = 1; v1 = *v1+1; }")
+	#pragma test expect_ir("using \"ext.compound_ops\"; { var ref<int<4>,f,f> v1 = 1; comp_assign_add(v1, 1); }")
 	{
 		int a = 1;
 		a += 1;
 	}
 
-	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = 1; v1 = *v1-2; }")
+	#pragma test expect_ir("using \"ext.compound_ops\"; { var ref<int<4>,f,f> v1 = 1; comp_assign_subtract(v1, 2); }")
 	{
 		int a = 1;
 		a -= 2;
 	}
 
-	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = 1; v1 = *v1/1; }")
+	#pragma test expect_ir("using \"ext.compound_ops\"; { var ref<int<4>,f,f> v1 = 1; comp_assign_divide(v1, 1); }")
 	{
 		int a = 1;
 		a /= 1;
 	}
 
-	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = 1; v1 = *v1*5; }")
+	#pragma test expect_ir("using \"ext.compound_ops\"; { var ref<int<4>,f,f> v1 = 1; comp_assign_multiply(v1, 5); }")
 	{
 		int a = 1;
 		a *= 5;
 	}
 
-	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = 1; v1 = *v1%5; }")
+	#pragma test expect_ir("using \"ext.compound_ops\"; { var ref<int<4>,f,f> v1 = 1; comp_assign_modulo(v1, 5); }")
 	{
 		int a = 1;
 		a %= 5;
 	}
 
-	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = 1; v1 = *v1&5; }")
+	#pragma test expect_ir("using \"ext.compound_ops\"; { var ref<int<4>,f,f> v1 = 1; comp_assign_bitwise_and(v1, 5); }")
 	{
 		int a = 1;
 		a &= 5;
 	}
 
-	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = 1; v1 = *v1|5; }")
+	#pragma test expect_ir("using \"ext.compound_ops\"; { var ref<int<4>,f,f> v1 = 1; comp_assign_bitwise_or(v1, 5); }")
 	{
 		int a = 1;
 		a |= 5;
 	}
 
-	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = 1; v1 = *v1 ^ 5; }")
+	#pragma test expect_ir("using \"ext.compound_ops\"; { var ref<int<4>,f,f> v1 = 1; comp_assign_bitwise_xor(v1, 5); }")
 	{
 		int a = 1;
 		a ^= 5;
 	}
 
-	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = 1; v1 = int_lshift(*v1, 5); }")
+	#pragma test expect_ir("using \"ext.compound_ops\"; { var ref<int<4>,f,f> v1 = 1; comp_assign_left_shift(v1, 5); }")
 	{
 		int a = 1;
 		a <<= 5;
 	}
 
-	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = 1; v1 = int_rshift(*v1, 5); }")
+	#pragma test expect_ir("using \"ext.compound_ops\"; { var ref<int<4>,f,f> v1 = 1; comp_assign_right_shift(v1, 5); }")
 	{
 		int a = 1;
 		a >>= 5;
@@ -372,4 +372,11 @@ int main() {
 		};)")
 	Trivial trivials[2] = {Trivial(), Trivial()};
 
+	// scalar value init expression
+	#pragma test expect_ir(R"({
+		var ref<int<4>,f,f,plain> v0 = 0;
+	})")
+	{
+		int i = int();
+	}
 }

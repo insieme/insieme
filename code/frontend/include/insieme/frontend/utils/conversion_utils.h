@@ -61,6 +61,10 @@ namespace utils {
 	///
 	core::ExpressionPtr buildEnumConstantExpression(conversion::Converter& converter, const clang::EnumConstantDecl* decl);
 
+	/// Convert a CXXConstructExpr to construct the object at a given ir memory location
+	///
+	core::ExpressionPtr convertConstructExpr(conversion::Converter& converter, const clang::CXXConstructExpr* constructExpr, const core::ExpressionPtr& memLoc);
+
 } // end namespace utils
 } // end namespace frontend
 } // end namespace insieme

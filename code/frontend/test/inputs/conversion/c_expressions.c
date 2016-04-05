@@ -213,6 +213,12 @@ int main() {
 		int a[5];
 		a[1];
 	}
+	
+	#pragma test expect_ir("{ var ref<array<int<4>,5>,f,f> v0; ref_deref(ptr_subscript(ptr_from_array(v0), num_cast(1ull, type_lit(int<8>)))); }")
+	{
+		int a[5ull];
+		a[1ull];
+	}
 
 	#pragma test expect_ir("{ var ref<array<int<4>,5>,f,f> v0; ref_deref(ptr_subscript(ptr_from_array(v0), -1)); }")
 	{
@@ -248,6 +254,12 @@ int main() {
 	{
 		void* a;
 		a+5;
+	}
+	
+	#pragma test expect_ir("{ var ref<ptr<unit,f,f>,f,f> v0; ptr_add(*v0, num_cast(5ull, type_lit(int<8>))); }")
+	{
+		void* a;
+		a+5ull;
 	}
 
 	#pragma test expect_ir("{ var ref<ptr<unit,f,f>,f,f> v0; ptr_add(*v0, 5); }")
@@ -303,61 +315,67 @@ int main() {
 
 	// COMPOUND //////////////////////////////////////////////////////////////
 
-	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = 1; v1 = *v1+1; }")
+	#pragma test expect_ir("using \"ext.compound_ops\"; { var ref<int<4>,f,f> v1 = 1; *comp_assign_add(v1, 1); }")
 	{
 		int a = 1;
 		a += 1;
 	}
 
-	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = 1; v1 = *v1-2; }")
+	#pragma test expect_ir("using \"ext.compound_ops\"; { var ref<int<4>,f,f> v1 = 1; *comp_assign_subtract(v1, 2); }")
 	{
 		int a = 1;
 		a -= 2;
 	}
 
-	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = 1; v1 = *v1/1; }")
+	#pragma test expect_ir("using \"ext.compound_ops\"; { var ref<int<4>,f,f> v1 = 1; *comp_assign_divide(v1, 1); }")
 	{
 		int a = 1;
 		a /= 1;
 	}
 
-	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = 1; v1 = *v1*5; }")
+	#pragma test expect_ir("using \"ext.compound_ops\"; { var ref<int<4>,f,f> v1 = 1; *comp_assign_multiply(v1, 5); }")
 	{
 		int a = 1;
 		a *= 5;
 	}
 
-	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = 1; v1 = *v1%5; }")
+	#pragma test expect_ir("using \"ext.compound_ops\"; { var ref<int<4>,f,f> v1 = 1; *comp_assign_modulo(v1, 5); }")
 	{
 		int a = 1;
 		a %= 5;
 	}
 
-	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = 1; v1 = *v1&5; }")
+	#pragma test expect_ir("using \"ext.compound_ops\"; { var ref<int<4>,f,f> v1 = 1; *comp_assign_bitwise_and(v1, 5); }")
 	{
 		int a = 1;
 		a &= 5;
 	}
 
-	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = 1; v1 = *v1|5; }")
+	#pragma test expect_ir("using \"ext.compound_ops\"; { var ref<int<4>,f,f> v1 = 1; *comp_assign_bitwise_or(v1, 5); }")
 	{
 		int a = 1;
 		a |= 5;
 	}
 
-	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = 1; v1 = *v1 ^ 5; }")
+	#pragma test expect_ir("using \"ext.compound_ops\"; { var ref<char,f,f> v1 = num_cast(0, type_lit(char)); *comp_assign_bitwise_or(v1, 1); }")
+	{
+		char a = 0;
+		a |= 1;
+	}
+
+	#pragma test expect_ir("using \"ext.compound_ops\"; { var ref<int<4>,f,f> v1 = 1; *comp_assign_bitwise_xor(v1, 5); }")
 	{
 		int a = 1;
 		a ^= 5;
 	}
 
-	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = 1; v1 = int_lshift(*v1, 5); }")
+	#pragma test expect_ir("using \"ext.compound_ops\"; { var ref<int<4>,f,f> v1 = 1; *comp_assign_left_shift(v1, 5); }")
 	{
 		int a = 1;
 		a <<= 5;
 	}
 
-	#pragma test expect_ir("{ var ref<int<4>,f,f> v1 = 1; v1 = int_rshift(*v1, 5); }")
+	#pragma test expect_ir("using \"ext.compound_ops\"; { var ref<int<4>,f,f> v1 = 1; *comp_assign_right_shift(v1, 5); }")
 	{
 		int a = 1;
 		a >>= 5;
@@ -393,7 +411,7 @@ int main() {
 	}
 
 	#pragma test expect_ir("REGEX_S", R"(.*var ref<union \{ i : int<4>; \},f,f,plain> v0 =.*)")
- 	{
+	{
 		union {
 			int i;
 		} tu;
@@ -465,4 +483,17 @@ int main() {
 	// bool to int conversion
 	#pragma test expect_ir("{ bool_to_int(1<5)+17; }")
 	{ (1 < 5) + 17; }
+	
+	// GNU statement expressions
+	#pragma test expect_ir("REGEX_S", R"(decl .* : \(\) -> int<4>; def .* = function \(\) -> int<4> \{ var ref<int<4>,f,f,plain> v0 = 1; return \*v0; \}; .*\(\))")
+	({ int x = 1; x; });
+	
+	#pragma test expect_ir("REGEX_S", R"(decl .* : \(\) -> int<8>; def .* = function \(\) -> int<8> \{ var ref<int<8>,f,f,plain> v0 = 5l; var ref<int<8>,f,f,plain> v1 = 2l; return \*v0\+\*v1; \}; .*\(\))")
+	({ long x = 5L; long y = 2L; x+y; });
+	
+	#pragma test expect_ir("REGEX_S", R"(decl .* : \(ref<int<4>,f,f,plain>\) -> int<4>; def .* = function \(v0 : ref<ref<int<4>,f,f,plain>,f,f,plain>\) -> int<4> \{ var ref<int<4>,f,f,plain> v1 = 2; return \*\*v0\+\*v1; \}; \{ var ref<int<4>,f,f,plain> v0 = 5; .*\(v0\); \})") 
+	{
+		int x = 5;
+		({ int y = 2; x+y; });
+	}
 }

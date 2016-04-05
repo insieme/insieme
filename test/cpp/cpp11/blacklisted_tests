@@ -3,19 +3,20 @@
 
 alignof
 async
-auto
-constexpr
-cpp11enums
 decltype
-declval
 function_type_template_arg
 init_list
 lambda
 lambda_to_funptr
 range_for
 rvalue
-sizeofpack
 stdinitlistexpr
-std_array
-variadic_templates
+
+
+
+####################################################################################
+# The following tests are not really blacklisted but take rather long to execute.  #
+# All test names preceded with a '+' will not be executed by default but only when #
+# the integration test driver is run with the option to run these long tests also. #
+####################################################################################
 

@@ -89,20 +89,22 @@ namespace {
 		bpo::options_description desc("Supported Parameters");
 		// clang-format off
 		desc.add_options()
-		    ("help,h",           "produce help message")
-		    ("config,c",         "print the configuration of the selected test cases")
-		    ("mock,m",           "make it a mock run just printing commands not really executing those")
-		    ("panic,p",          "panic on first sign of trouble and stop execution")
-		    ("list,l",           "just list the targeted test cases")
-		    ("worker,w",         bpo::value<int>()->default_value(1), "the number of parallel workers to be utilized")
-		    ("cases",            bpo::value<vector<string>>(),        "the list of test cases to be executed")
-		    ("step,s",           bpo::value<string>(),                "the test step to be applied")
-		    ("repeat,r",         bpo::value<int>()->default_value(1), "the number of times the tests shell be repeated")
-		    ("no-clean",         "keep all output files")
-		    ("no-color",         "no highlighting of output")
-		    ("blacklisted-only", "only run the blacklisted test cases")
-		    ("preprocessing",    "perform all pre-processing steps")
-		    ("postprocessing",   "perform all post-processing steps");
+		    ("help,h",              "produce help message")
+		    ("config,c",            "print the configuration of the selected test cases")
+		    ("mock,m",              "make it a mock run just printing commands not really executing those")
+		    ("panic,p",             "panic on first sign of trouble and stop execution")
+		    ("list,l",              "just list the targeted test cases")
+		    ("worker,w",            bpo::value<int>()->default_value(1), "the number of parallel workers to be utilized")
+		    ("cases",               bpo::value<vector<string>>(),        "the list of test cases to be executed")
+		    ("step,s",              bpo::value<string>(),                "the test step to be applied")
+		    ("repeat,r",            bpo::value<int>()->default_value(1), "the number of times the tests shell be repeated")
+		    ("no-clean",            "keep all output files")
+		    ("no-color",            "no highlighting of output")
+		    ("blacklisted-only",    "only run the blacklisted test cases")
+		    ("long-tests-only",     "only run test cases which take long to execute")
+		    ("long-tests-also",     "also run test cases which take long to execute")
+		    ("preprocessing",       "perform all pre-processing steps")
+		    ("postprocessing",      "perform all post-processing steps");
 		// clang-format on
 
 		// define positional options (all options not being named)
@@ -155,6 +157,8 @@ namespace {
 		if(map.count("step")) { res.steps.push_back(map["step"].as<string>()); }
 
 		res.blacklistedOnly = map.count("blacklisted-only");
+		res.longTestsOnly = map.count("long-tests-only");
+		res.longTestsAlso = map.count("long-tests-also");
 
 		res.preprocessingOnly = map.count("preprocessing");
 		res.postprocessingOnly = map.count("postprocessing");
@@ -408,15 +412,28 @@ int main(int argc, char** argv) {
 
 					std::cout << "#" << std::string(screenWidth - 2, '-') << "#\n";
 					int failedStringLength = to_string(failed.size()).length();
+					if(options.blacklistedOnly) {
+						failedStringLength = to_string(ok.size()).length();
+					}
 
 					if(success) {
 						std::cout << "#    SUCCESS -- " << boost::format("%-" + to_string(screenWidth - 36 - failedStringLength) + "s") % cur.getName();
-						if(failed.size() > 0) { std::cout << colorize.red(); }
-						std::cout << " (failed so far: " << failed.size() << ")";
-						std::cout << colorize.green() << " #\n";
+						if(!options.blacklistedOnly) {
+							if(failed.size() > 0) { std::cout << colorize.red(); }
+							std::cout << " (failed so far: " << failed.size() << ")";
+							std::cout << colorize.green() << " #\n";
+						} else {
+							std::cout << "     (ok so far: " << ok.size() << ") #\n";
+						}
 					} else {
-						std::cout << "#    FAILED  -- " << boost::format("%-" + to_string(screenWidth - 36 - failedStringLength) + "s") % cur.getName()
-						          << " (failed so far: " << failed.size() << ") #\n";
+						std::cout << "#    FAILED  -- " << boost::format("%-" + to_string(screenWidth - 36 - failedStringLength) + "s") % cur.getName();
+						if(!options.blacklistedOnly) {
+							std::cout << " (failed so far: " << failed.size() << ") #\n";
+						} else {
+							if(ok.size() > 0) { std::cout << colorize.green(); }
+							std::cout << "     (ok so far: " << ok.size() << ")";
+							std::cout << colorize.red() << " #\n";
+						}
 					}
 					std::cout << "#" << std::string(screenWidth - 2, '-') << "#\n";
 

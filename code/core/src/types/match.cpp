@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -45,156 +45,431 @@ namespace types {
 	namespace {
 
 		/**
-		 * This method implements the actual algorithm for matching types.
+		 * Determines whether the structure of the value type matches the structure of the pattern type.
+		 * The pattern type may only be a combination of type variables.
 		 *
-		 * @param manager the node manager to be used for creating temporal results and the mappings within the resulting substitution
-		 * @param list the list of pairs of types to be matched. The list will be altered during the computation.
-		 * @return the resulting matching or an uninitialized value if the types couldn't be matched.
+		 * @param value the value to be tested
+		 * @param pattern the pattern to fit
 		 */
-		SubstitutionOpt computeMapping(NodeManager& manager, std::list<std::pair<TypePtr, TypePtr>>& list) {
-			typedef std::pair<TypePtr, TypePtr> Pair;
+		bool hasMatchingStructure(const TypePtr& value, const TypePtr& pattern) {
 
-			// create result
-			Substitution res;
-			boost::optional<Substitution> unmatchable;
+			// the simple cases first
+			if (pattern.isa<TypeVariablePtr>()) return true;		// everything matches this
 
-			while(!list.empty()) {
-				// get current element
-				Pair cur = list.front();
-				list.pop_front();
+			// the other case is a generic type variable 
+			if (auto pattern_var = pattern.isa<GenericTypeVariablePtr>()) {
 
-				TypePtr a = cur.first;  // the value
-				TypePtr b = cur.second; // the pattern
+				// the value needs to be a type or a matching variable
+				auto type = value.isa<GenericTypePtr>();
+				auto var = value.isa<GenericTypeVariablePtr>();
+				if (!type && !var) return false;
 
-				const NodeType typeOfA = a->getNodeType();
-				const NodeType typeOfB = b->getNodeType();
+				// compare parameters
+				TypeList paramsA = (type) ? type->getTypeParameterList() : var->getTypeParameterList();
+				TypeList paramsB = pattern_var->getTypeParameterList();
 
-				// 1) if (a == b) ignore pair ..
-				if(*a == *b) { continue; }
+				// -- handle variadic types --
 
-				// 2) test whether on the B side there is a variable
-				if(typeOfB == NT_TypeVariable) {
-					// matching: map variable to value
-
-					// convert current pair into substitution
-					Substitution mapping(b.as<TypeVariablePtr>(), a);
-
-					// combine current mapping with overall result
-					res = Substitution::compose(manager, res, mapping);
-					continue;
+				// remove those from the value
+				if (!paramsA.empty() && (paramsA.back().isa<VariadicTypeVariablePtr>() || paramsA.back().isa<VariadicGenericTypeVariablePtr>())) {
+					paramsA.pop_back();
 				}
 
-				// 3) handle variables on left hand side ...
-				if(typeOfA == NT_TypeVariable) {
-					// generic part in value => not matchable
-					return unmatchable;
+				// and expand them in the pattern
+				if (!paramsB.empty()) {
+					if (paramsB.back().isa<VariadicTypeVariablePtr>()) {
+						paramsB.pop_back();
+						TypeVariablePtr var = TypeVariable::get(value->getNodeManager(), "_");
+						while (paramsB.size() < paramsA.size()) paramsB.push_back(var);
+					} else if (auto vvar = paramsB.back().isa<VariadicGenericTypeVariablePtr>()) {
+						paramsB.pop_back();
+						GenericTypeVariablePtr var = GenericTypeVariable::get(value->getNodeManager(), "_", vvar->getTypeParameter());
+						while (paramsB.size() < paramsA.size()) paramsB.push_back(var);
+					}
 				}
 
-				// 4) function types / generic types / tuples / structs / unions / recursive types
-				if(typeOfA != typeOfB) {
-					// => not matchable
-					return unmatchable;
-				}
-
-				// handle recursive types (special treatment)
-				if(typeOfA == NT_TagType) {
-
-					// peel recursive types until no longer recursive
-					TagTypePtr ta = a.as<TagTypePtr>();
-					TagTypePtr tb = b.as<TagTypePtr>();
-
-					if (ta.isRecursive()) {
-						list.push_back({ta.peel(), b});
-						continue;
-					}
-
-					if (tb.isRecursive()) {
-						list.push_back({a, tb.peel()});
-						continue;
-					}
-
-					// check for same kind of record
-					if (ta->getRecord()->getNodeType() != tb->getRecord()->getNodeType()) {
-						// e.g. structs and unions can not be matched
-						return unmatchable;
-					}
-
-					// add pairs of field types to matched
-					FieldsPtr fa = ta->getFields();
-					FieldsPtr fb = tb->getFields();
-
-					// check number of fields
-					if (fa.size() != fb.size()) {
-						return unmatchable;
-					}
-
-					// for all pairs of fields ...
-					for(const auto& cur : make_paired_range(fa,fb)) {
-						// check name equivalence
-						if (*cur.first->getName() != *cur.second->getName()) {
-							return unmatchable;
-						}
-						// unify field types
-						list.push_back({cur.first->getType(), cur.second->getType()});
-					}
-
-					// also consider parent types
-					if (ta->isStruct()) {
-						ParentsPtr pa = ta->getStruct()->getParents();
-						ParentsPtr pb = tb->getStruct()->getParents();
-
-						if (pa.size() != pb.size()) return unmatchable;
-
-						// for all pairs of parents ...
-						for(const auto& cur : make_paired_range(pa,pb)) {
-							// check type of inheritance
-							if (cur.first->isVirtual() != cur.second->isVirtual()) return unmatchable;
-							if (cur.first->getAccessSpecifier() != cur.second->getAccessSpecifier()) return unmatchable;
-							// unify parent types
-							list.push_back({cur.first->getType(), cur.second->getType()});
-						}
-					}
-
-					// that's it
-					continue;
-				}
-
-				// => check family of generic type
-				if(typeOfA == NT_GenericType) {
-					const GenericTypePtr& genericTypeA = static_pointer_cast<const GenericType>(a);
-					const GenericTypePtr& genericTypeB = static_pointer_cast<const GenericType>(b);
-
-					// check family names
-					if(*genericTypeA->getName() != *genericTypeB->getName()) { return unmatchable; }
-
-					// check same number of type parameters
-					if(genericTypeA->getTypeParameter().size() != genericTypeB->getTypeParameter().size()) { return unmatchable; }
-				}
-
-				// => check all child nodes
-				auto typeParamsA = analysis::getElementTypes(a);
-				auto typeParamsB = analysis::getElementTypes(b);
-				if(typeParamsA.size() != typeParamsB.size()) {
-					// => not matchable
-					return unmatchable;
-				}
-
-				// add pairs of children to list to be processed
-				list.insert(list.end(), make_paired_iterator(typeParamsA.begin(), typeParamsB.begin()),
-				            make_paired_iterator(typeParamsA.end(), typeParamsB.end()));
+				// check equivalent structure
+				return paramsA.size() == paramsB.size() && all(make_paired_range(paramsA, paramsB), [](const std::pair<TypePtr,TypePtr>& cur) {
+					return hasMatchingStructure(cur.first, cur.second);
+				});
 			}
 
-			// done
-			return boost::optional<Substitution>(res);
+			// for concrete types, check the structure
+			if (auto genPattern = pattern.isa<GenericTypePtr>()) {
+				if (auto genValue = value.isa<GenericTypePtr>()) {
+					return 
+						genValue->getName() == genPattern->getName() && 
+						genValue->getTypeParameter().size() == genPattern->getTypeParameter().size() &&
+						all(make_paired_range(genValue->getTypeParameter(), genPattern->getTypeParameter()), [](const std::pair<TypePtr,TypePtr>& cur) {
+							return hasMatchingStructure(cur.first, cur.second);
+						});
+				}
+			}
+			
+			// everything else is not a valid pattern, and thus not fitting
+			return false;
 		}
 
-	} // end namespace
+
+		bool matchTypes(NodeManager& manager, const TypePtr& type, const TypePtr& pattern, Substitution& cur);
+
+		bool matchParameters(NodeManager& manager, const TypePtr& a, const TypePtr& b, Substitution& solution);
+
+		bool matchTypes(NodeManager& manager, const TypesPtr& a, const TypesPtr& b, Substitution& solution);
+		
+		bool matchTypes(NodeManager& manager, const TypeList& a, const TypeList& b, Substitution& solution);
+
+
+		bool matchParameters(NodeManager& manager, const TypePtr& a, const TypePtr& b, Substitution& solution) {
+			// => check all child nodes
+			return matchTypes(manager, analysis::getElementTypes(a), analysis::getElementTypes(b), solution);
+		}
+
+		bool matchTypes(NodeManager& manager, const TypesPtr& a, const TypesPtr& b, Substitution& solution) {
+			return matchTypes(manager, a->getTypes(), b->getTypes(), solution);
+		}
+
+		bool matchTypes(NodeManager& manager, const TypeList& a, const TypeList& b, Substitution& solution) {
+			bool OK = true;
+			bool unmatchable = false;
+
+			// get a mutable copy 
+			TypeList typeParamsA = a;
+			TypeList typeParamsB = b;
+
+			// -- variadic type variables --
+
+			// remove tailing variadic type variable pointer from target parameters
+			if (!typeParamsA.empty() && typeParamsA.back().isa<VariadicTypeVariablePtr>()) {
+				typeParamsA.pop_back();
+			}
+
+			// adapt pattern parameter lists when facing variadic type variables
+			if (!typeParamsB.empty() && typeParamsB.back().isa<VariadicTypeVariablePtr>()) {
+				// drop variadic variable
+				auto var = typeParamsB.back().as<VariadicTypeVariablePtr>();
+				typeParamsB.pop_back();
+
+				// check whether variadic variable has been resolved before
+				TypeVariableList newExpansion;
+				const TypeVariableList* expansion = solution[var];
+				if (!expansion) {
+					// create a new list
+					int freshTypeVariableCounter = 0;
+
+					// replace with fresh variables until size fits
+					while (typeParamsA.size() > typeParamsB.size()) {
+						// add fresh type variables at the end
+						auto element = TypeVariable::get(manager, format("%s#%d", var->getVarName(), ++freshTypeVariableCounter));
+						typeParamsB.push_back(element);
+						newExpansion.push_back(element);
+					}
+
+					// remember expansion
+					solution.addMapping(var, newExpansion);
+
+				}
+				else {
+
+					// use previous list
+					for (const auto& cur : *expansion) {
+						typeParamsB.push_back(cur);
+					}
+
+				}
+
+			}
+
+			// -----------------------------
+
+			// -- variadic generic type variables --
+
+			// remove tailing variadic type variable pointer from target parameters
+			if (!typeParamsA.empty() && typeParamsA.back().isa<VariadicGenericTypeVariablePtr>()) {
+				typeParamsA.pop_back();
+			}
+
+			// adapt pattern parameter lists when facing variadic type variables
+			if (!typeParamsB.empty() && typeParamsB.back().isa<VariadicGenericTypeVariablePtr>()) {
+				// drop variadic variable
+				auto var = typeParamsB.back().as<VariadicGenericTypeVariablePtr>();
+				typeParamsB.pop_back();
+
+				// check whether variadic variable has been resolved before
+				GenericTypeVariableList newExpansion;
+				const GenericTypeVariableList* expansion = solution[var];
+				if (!expansion) {
+					// create a new list
+					int freshTypeVariableCounter = 0;
+
+					// replace with fresh variables until size fits
+					while (typeParamsA.size() > typeParamsB.size()) {
+						// add fresh type variables at the end
+						auto element = GenericTypeVariable::get(manager, format("%s#%d", var->getVarName(), ++freshTypeVariableCounter), var->getTypeParameter());
+						typeParamsB.push_back(element);
+						newExpansion.push_back(element);
+					}
+
+					// remember expansion
+					solution.addMapping(var, newExpansion);
+
+				}
+				else {
+
+					// use previous list
+					for (const auto& cur : *expansion) {
+						typeParamsB.push_back(cur);
+					}
+
+				}
+
+			}
+
+			// -----------------------------
+
+
+			// check fitting parameter length
+			if (typeParamsA.size() != typeParamsB.size()) {
+				// => not matchable
+				return unmatchable;
+			}
+
+			// match all parameters
+			for (const auto& cur : make_paired_range(typeParamsA, typeParamsB)) {
+				// of some step fails => matching fails
+				if (!matchTypes(manager, cur.first, cur.second, solution)) return unmatchable;
+			}
+
+			// processing was successful
+			return OK;
+		}
+
+		bool matchStructure(NodeManager& manager, const TypePtr& type, const TypePtr& pattern, const Substitution& res) {
+
+			TypePtr a = type;
+			TypePtr b = pattern;
+
+			if (b.isa<TypeVariablePtr>()) b = res(b);
+
+			if (auto genPattern = b.isa<GenericTypeVariablePtr>()) {
+				b = res(b);
+				if (auto genType = b.isa<GenericTypePtr>()) {
+					b = GenericType::get(manager, genType->getName(), genPattern->getTypeParameter());
+				}
+			}
+
+			return hasMatchingStructure(a, b);
+		}
+
+
+		bool matchTypes(NodeManager& manager, const TypePtr& type, const TypePtr& pattern, Substitution& res) {
+			static const bool DEBUG = false;
+			
+			bool OK = true;
+			bool unmatchable = false;
+
+			if (DEBUG) std::cout << "\nMatching " << *type << " with " << *pattern << ", current substitution: " << res << "\n";
+			
+			TypePtr a = type;  // the value
+			TypePtr b = res.applyTo(pattern); // the pattern
+									  
+			if (DEBUG) std::cout << "Matching " << *a << " with " << *b << "\n";
+
+
+			const NodeType typeOfA = a->getNodeType();
+			const NodeType typeOfB = b->getNodeType();
+
+			// 1) if (a == b) ignore pair ..
+			if (*a == *b) { return OK; }
+
+			// 2) test whether on the B side there is a variable
+			if (typeOfB == NT_TypeVariable) {
+				// matching: map variable to value
+				auto var = b.as<TypeVariablePtr>();
+				
+				// convert current pair into substitution
+				Substitution mapping(var, a);
+
+				// combine current mapping with overall result
+				res = Substitution::compose(manager, res, mapping);
+				return OK;
+			}
+			if (typeOfB == NT_GenericTypeVariable) {
+
+				// matching: map variable to value
+				auto asType = a.isa<GenericTypePtr>();
+				auto asVar = a.isa<GenericTypeVariablePtr>();
+				if (!asType && !asVar) return unmatchable;
+
+				// check whether variable should be skipped
+				auto var = b.as<GenericTypeVariablePtr>();
+				
+				// convert current pair into substitution
+				Substitution mapping(var, a);
+
+				// combine current mapping with overall result
+				res = Substitution::compose(manager, res, mapping);
+
+				// process parameters
+				return matchParameters(manager, a, b, res);
+			}
+
+			// 3) handle variables on left hand side ...
+			if (typeOfA == NT_TypeVariable || typeOfA == NT_GenericTypeVariable) {
+				// generic part in value => not matchable
+				return unmatchable;
+			}
+
+			// 4) unlimited variadic variables
+			if (typeOfA == NT_VariadicTypeVariable || typeOfB == NT_VariadicTypeVariable ||
+				typeOfA == NT_VariadicGenericTypeVariable || typeOfB == NT_VariadicGenericTypeVariable) {
+				// unbounded type variables => not matchable
+				return unmatchable;
+			}
+
+			// 5) function types / generic types / tuples / structs / unions / recursive types
+			if (typeOfA != typeOfB) {
+				// => not matchable
+				return unmatchable;
+			}
+
+			// handle recursive types (special treatment)
+			if (typeOfA == NT_TagType) {
+
+				// peel recursive types until no longer recursive
+				TagTypePtr ta = a.as<TagTypePtr>();
+				TagTypePtr tb = b.as<TagTypePtr>();
+
+				if (ta.isRecursive()) {
+					return matchTypes(manager, ta.peel(), b, res);
+				}
+
+				if (tb.isRecursive()) {
+					return matchTypes(manager, a, tb.peel(), res);
+				}
+
+				// check for same kind of record
+				if (ta->getRecord()->getNodeType() != tb->getRecord()->getNodeType()) {
+					// e.g. structs and unions can not be matched
+					return unmatchable;
+				}
+
+				// add pairs of field types to matched
+				FieldsPtr fa = ta->getFields();
+				FieldsPtr fb = tb->getFields();
+
+				// check number of fields
+				if (fa.size() != fb.size()) {
+					return unmatchable;
+				}
+
+				// for all pairs of fields ...
+				for (const auto& cur : make_paired_range(fa, fb)) {
+					// check name equivalence
+					if (*cur.first->getName() != *cur.second->getName()) {
+						return unmatchable;
+					}
+					// match field types
+					if (!matchTypes(manager, cur.first->getType(), cur.second->getType(), res)) return unmatchable;
+				}
+
+				// also consider parent types
+				if (ta->isStruct()) {
+					ParentsPtr pa = ta->getStruct()->getParents();
+					ParentsPtr pb = tb->getStruct()->getParents();
+
+					if (pa.size() != pb.size()) return unmatchable;
+
+					// for all pairs of parents ...
+					for (const auto& cur : make_paired_range(pa, pb)) {
+						// check type of inheritance
+						if (cur.first->isVirtual() != cur.second->isVirtual()) return unmatchable;
+						if (cur.first->getAccessSpecifier() != cur.second->getAccessSpecifier()) return unmatchable;
+						// match parent types
+						if (!matchTypes(manager, cur.first->getType(), cur.second->getType(), res)) return unmatchable;
+					}
+				}
+
+				// that's it
+				return OK;
+			}
+
+			// => check family of generic type
+			if (typeOfA == NT_GenericType) {
+				const GenericTypePtr& genericTypeA = static_pointer_cast<const GenericType>(a);
+				const GenericTypePtr& genericTypeB = static_pointer_cast<const GenericType>(b);
+
+				// check family names
+				if (*genericTypeA->getName() != *genericTypeB->getName()) { return unmatchable; }
+			}
+
+			// => check function kind and instantiation types
+			if (typeOfA == NT_FunctionType) {
+				const FunctionTypePtr& funTypeA = a.as<FunctionTypePtr>();
+				const FunctionTypePtr& funTypeB = b.as<FunctionTypePtr>();
+
+				// check function kind
+				if (funTypeA->getKind() != funTypeB->getKind()) return unmatchable;
+
+				// process parameter first
+				if (!matchTypes(manager, funTypeA->getParameterTypes(), funTypeB->getParameterTypes(), res)) return unmatchable;
+				
+				// then return type
+				if (!matchTypes(manager, funTypeA->getReturnType(), funTypeB->getReturnType(), res)) return unmatchable;
+
+				// handle instantiation types
+				TypeList listA = funTypeA->getInstantiationTypeList();
+				TypeList listB = funTypeB->getInstantiationTypeList();
+
+				// remove variadic type variables those from the value side
+				if (!listA.empty() && (listA.back().isa<VariadicTypeVariablePtr>() || listA.back().isa<VariadicGenericTypeVariablePtr>())) {
+					listA.pop_back();
+				}
+
+				// and expand them in the pattern
+				if (!listB.empty()) {
+					if (auto vvar = listB.back().isa<VariadicTypeVariablePtr>()) {
+						listB.pop_back();
+						if (auto expanded = res[vvar]) {
+							for (const auto& cur : *expanded) {
+								listB.push_back(cur);
+							}
+						} else {
+							TypeVariablePtr var = TypeVariable::get(manager, "_");
+							while (listB.size() < listA.size()) listB.push_back(var);
+						}
+					} else if (auto vvar = listB.back().isa<VariadicGenericTypeVariablePtr>()) {
+						listB.pop_back();
+						GenericTypeVariablePtr var = GenericTypeVariable::get(manager, "_", vvar->getTypeParameter());
+						if (auto expanded = res[vvar]) {
+							for (const auto& cur : *expanded) {
+								listB.push_back(cur);
+							}
+						} else {
+							while (listB.size() < listA.size()) listB.push_back(var);
+						}
+					}
+				}
+
+				// check whether the initializer lists are matching
+				return listA.size() == listB.size() && all(make_paired_range(listA, listB), [&](const std::pair<TypePtr, TypePtr>& cur) {
+					return matchStructure(manager, cur.first, cur.second, res);
+				});
+			}
+
+			// for the rest: process type parameters
+			return matchParameters(manager, a, b, res);
+		}
+
+
+	} // end namespace 
+
 
 
 	SubstitutionOpt match(NodeManager& manager, const TypePtr& type, const TypePtr& pattern) {
-		std::list<std::pair<TypePtr, TypePtr>> list;
-		list.push_back(std::make_pair(type, pattern));
-		return computeMapping(manager, list);
+		Substitution solution;
+		auto match = matchTypes(manager, type, pattern, solution);
+		return match ? boost::optional<Substitution>(solution) : boost::optional<Substitution>();
 	}
 
 	bool isMatchable(const TypePtr& type, const TypePtr& pattern) {

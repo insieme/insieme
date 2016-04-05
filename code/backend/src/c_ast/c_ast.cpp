@@ -153,6 +153,12 @@ namespace c_ast {
 		return code == static_cast<const OpaqueCode&>(other).code;
 	}
 
+	bool IntegralType::equals(const Node& node) const {
+		assert(dynamic_cast<const IntegralType*>(&node));
+		auto other = static_cast<const IntegralType&>(node);
+		return value == other.value;
+	}
+
 	bool CVQualifiedType::equals(const Node& node) const {
 		assert(dynamic_cast<const CVQualifiedType*>(&node));
 		auto other = static_cast<const CVQualifiedType&>(node);
@@ -391,13 +397,15 @@ namespace c_ast {
 	bool Call::equals(const Node& node) const {
 		assert(dynamic_cast<const Call*>(&node));
 		auto other = static_cast<const Call&>(node);
-		return *function == *other.function && ::equals(arguments, other.arguments, equal_target<NodePtr>());
+		return *function == *other.function && ::equals(arguments, other.arguments, equal_target<NodePtr>())
+				&& ::equals(instantiationTypes, other.instantiationTypes, equal_target<TypePtr>());
 	}
 
 	bool MemberCall::equals(const Node& node) const {
 		assert(dynamic_cast<const MemberCall*>(&node));
 		auto other = static_cast<const MemberCall&>(node);
-		return *memberFun == *other.memberFun && *object == *other.object && ::equals(arguments, other.arguments, equal_target<NodePtr>());
+		return *memberFun == *other.memberFun && *object == *other.object && ::equals(arguments, other.arguments, equal_target<NodePtr>())
+				&& ::equals(instantiationTypes, other.instantiationTypes, equal_target<TypePtr>());
 	}
 
 	bool ConstructorCall::equals(const Node& node) const {

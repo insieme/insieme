@@ -60,42 +60,9 @@ namespace conversion {
 	//							CXX STMT CONVERTER -- takes care of CXX nodes and C nodes with CXX code mixed in
 	//---------------------------------------------------------------------------------------------------------------------
 
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	// Overwrite the basic visit method for expression in order to automatically
-	// and transparently attach annotations to node which are annotated
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	stmtutils::StmtWrapper Converter::CXXStmtConverter::Visit(clang::Stmt* stmt) {
 		VLOG(2) << "CXXStmtConverter";
-
-		// iterate clang handler list and check if a handler wants to convert the stmt
-		stmtutils::StmtWrapper retStmt;
-		for(auto extension : converter.getConversionSetup().getExtensions()) {
-			retStmt = extension->Visit(stmt, converter);
-			if(retStmt.size()) { break; }
-		}
-		if(retStmt.size() == 0) {
-			converter.trackSourceLocation(stmt);
-			retStmt = StmtVisitor<CXXStmtConverter, stmtutils::StmtWrapper>::Visit(stmt);
-			converter.untrackSourceLocation();
-		}
-
-		// print diagnosis messages
-		converter.printDiagnosis(stmt->getLocStart());
-
-		// Deal with transformation pragmas
-		core::NodeList list(retStmt.begin(), retStmt.end());
-		list = pragma::handlePragmas(list, stmt, converter);
-		retStmt.clear();
-		for(const auto& e : list) {
-			retStmt.push_back(e.as<core::StatementPtr>());
-		}
-
-		// call frontend extension post visitors
-		for(auto extension : converter.getConversionSetup().getExtensions()) {
-			retStmt = extension->PostVisit(stmt, retStmt, converter);
-		}
-
-		return retStmt;
+		return BaseVisit(stmt, [&](clang::Stmt* stmt) { return StmtVisitor<CXXStmtConverter, stmtutils::StmtWrapper>::Visit(stmt); });
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

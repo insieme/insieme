@@ -51,7 +51,6 @@
 #include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/transform/node_replacer.h"
 
-#include "insieme/annotations/c/decl_only.h"
 #include "insieme/annotations/c/include.h"
 #include "insieme/annotations/data_annotations.h"
 
@@ -139,28 +138,6 @@ namespace extensions {
 			return prog;
 		}
 
-
-		//////////////////////////////////////////////////////////////////////////
-		// Find and replace zero inits of tag types (which can only occur for global inits)
-		// =======================================================================
-		ProgramPtr replaceZeroStructInits(ProgramPtr prog) {
-			auto& mgr = prog->getNodeManager();
-			core::IRBuilder builder(mgr);
-
-			prog = irp::replaceAllAddr(irp::callExpr(mgr.getLangBasic().getZero(), icp::anyList), prog, [&](const NodeAddress& matchingAddress) -> NodePtr {
-				auto call = matchingAddress.getAddressedNode().as<CallExprPtr>();
-				auto arg0 = call->getArgument(0);
-				auto t = arg0->getType().as<core::GenericTypePtr>()->getTypeParameter(0);
-				if(t.isa<core::TagTypePtr>()) {
-					return builder.getZero(t);
-				}
-				// else keep call
-				return call;
-			}).as<ProgramPtr>();
-
-			return prog;
-		}
-
 		//////////////////////////////////////////////////////////////////////////
 		// Find and replace c and cpp style assignments if ret val not needed
 		// =======================================================================
@@ -194,6 +171,21 @@ namespace extensions {
 			}
 		};
 
+		//////////////////////////////////////////////////////////////////////////
+		// Find and replace zero inits of tag types (which can only occur for global inits)
+		// =======================================================================
+		ProgramPtr replaceZeroStructInits(ProgramPtr prog) {
+			auto& mgr = prog->getNodeManager();
+			core::IRBuilder builder(mgr);
+			prog = irp::replaceAllAddr(irp::callExpr(mgr.getLangBasic().getZero(), icp::anyList), prog, [&](const NodeAddress& matchingAddress) -> NodePtr {
+					   auto call = matchingAddress.getAddressedNode().as<CallExprPtr>();
+					   auto t = core::analysis::getRepresentedType(call->getArgument(0));
+					   if(t.isa<core::TagTypePtr>()) { return builder.getZero(t); }
+					   // else keep call
+					   return call;
+				   }).as<ProgramPtr>();
+			return prog;
+		}
 	}
 
 	boost::optional<std::string> FrontendCleanupExtension::isPrerequisiteMissing(ConversionSetup& setup) const {
@@ -213,8 +205,8 @@ namespace extensions {
 		prog = TypeCanonicalizer().map(prog);
 		prog = mainReturnCorrection(prog);
 		prog = removeSuperfluousBoolToInt(prog);
-		prog = replaceZeroStructInits(prog);
 		prog = removeCAndCppStyleAssignments(prog);
+		prog = replaceZeroStructInits(prog);
 
 		return prog;
 	}

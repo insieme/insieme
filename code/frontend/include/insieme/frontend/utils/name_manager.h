@@ -56,14 +56,19 @@ namespace utils {
 	std::string removeSymbols(std::string str);
 
 	/**
+	* Create a string representation of a clang SourceLocation
+	*/
+	std::string getLocationAsString(const clang::SourceLocation sl, const clang::SourceManager& sm);
+
+	/**
 	 * Create a name for an anonymous object (encodes location)
 	 */
 	std::string createNameForAnon(const std::string& prefix, const clang::Decl* decl, const clang::SourceManager& sm);
 
 	/**
 	 * we build a complete name for the class,
-	 * qualified name does not have the specific types of the spetialization
-	 * the record provides que qualified name, the type the spetialization for the type
+	 * qualified name does not have the specific types of the specialization
+	 * the record provides the qualified name, the type the specialization for the type
 	 * we merge both strings in a safe string for the output
 	 */
 	std::string getNameForRecord(const clang::NamedDecl* decl, const clang::Type* type, const clang::SourceManager& sm);
@@ -115,6 +120,11 @@ namespace utils {
 	 * Remove leading :: qualifier from name
 	 */
 	std::string stripLeadingGlobalNamespace(const std::string& name);
+
+	/**
+	 * Get full name for DependentNameType
+	 */
+	std::string getNameForDependentNameType(const clang::DependentNameType* depName);
 
 } // End utils namespace
 } // End frontend namespace

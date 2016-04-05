@@ -57,7 +57,6 @@
 #include "insieme/core/transform/node_replacer.h"
 
 #include "insieme/annotations/c/include.h"
-#include "insieme/annotations/c/decl_only.h"
 
 using namespace clang;
 using namespace insieme;
@@ -78,20 +77,23 @@ namespace conversion {
 
 	core::TypePtr Converter::TypeConverter::convert(const clang::QualType& type) {
 		core::TypePtr retTy;
-
 		// iterate FE extension clang pre handler list and check if a handler wants to convert the type
 		for(auto extension : converter.getConversionSetup().getExtensions()) {
 			retTy = extension->Visit(type, converter);
 			if(retTy) { break; }
 		}
 
-		if(!retTy) { retTy = convertInternal(type); }
+		if(!retTy) {
+			retTy = convertInternal(type);
+		}
 
 		// iterate FE extension clang post handler list and check if a handler wants to modify the type
 		for(auto extension : converter.getConversionSetup().getExtensions()) {
 			retTy = extension->PostVisit(type, retTy, converter);
 		}
 
+		if(!retTy) type->dump();
+		assert_true(retTy) << "^^^^^^^^^^^^^^^^^ Type conversion to null\n";
 		return retTy;
 	}
 

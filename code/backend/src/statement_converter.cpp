@@ -77,6 +77,102 @@ namespace backend {
 			fragment->addDependencies(context.getDependencies());
 			return fragment;
 		}
+
+		c_ast::ExpressionPtr visitInitExprInternal(const Converter& converter, const core::InitExprPtr& ptr, ConversionContext& context) {
+			// to be created: an initialization of the corresponding struct
+			//     (<type>){<list of members>}
+
+			auto innerType = core::analysis::getReferencedType(ptr->getType());
+			auto typeInfo = converter.getTypeManager().getTypeInfo(innerType);
+			context.addDependency(typeInfo.definition);
+
+			// get type
+			c_ast::TypePtr type = typeInfo.rValueType;
+
+			// special case.. empty struct: instead (<type>)(<members>) we use *((<type>*)(0))
+			if(auto stp = core::analysis::isStruct(innerType)) {
+				if(!stp->getFields().size()) {
+					auto cmgr = context.getConverter().getCNodeManager();
+					auto zero = cmgr->create("0");
+					return c_ast::deref(c_ast::cast(c_ast::ptr(type), zero));
+				}
+			}
+
+			// handle unions
+			if(core::analysis::isUnion(innerType)) {
+				auto cmgr = context.getConverter().getCNodeManager();
+				auto initExp = ptr->getInitExprList().back();
+				// special handling for vector initialization (should not be turned into a struct)
+				auto value = converter.getStmtConverter().convertExpression(context, initExp);
+				auto& refExt = innerType->getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
+				if(refExt.isCallOfRefDeref(initExp)) initExp = core::analysis::getArgument(initExp, 0);
+				if(initExp.isa<core::InitExprPtr>()) {
+					auto initValue = value.isa<c_ast::InitializerPtr>();
+					assert_true(initValue);
+					initValue->type = nullptr;
+				}
+
+				return c_ast::init(type, value);
+			}
+
+			// create init expression
+			c_ast::InitializerPtr init = c_ast::init(type);
+
+			// append initialization values
+			::transform(ptr->getInitExprList(), std::back_inserter(init->values),
+			            [&](const core::ExpressionPtr& cur) { return converter.getStmtConverter().convertExpression(context, cur); });
+
+			// support empty initialization
+			if(init->values.empty()) { return init; }
+
+			// remove last element if it is a variable sized struct
+			if(core::lang::isUnknownSizedArray(ptr->getInitExprList().back())) {
+				assert_false(init->values.empty());
+				init->values.pop_back();
+			}
+
+			// if array, initialize inner data member
+			if(core::lang::isFixedSizedArray(innerType)) init = c_ast::init(type, c_ast::init(init->values));
+
+			// return completed
+			return init;
+		}
+
+		void convertGlobalInit(ConversionContext& context, const core::LiteralPtr& lit, const core::ExpressionPtr& initExpr) {
+			// generate fragment for global if it doesn't exist yet
+			context.getConverter().getStmtConverter().convertExpression(context, lit);
+
+			auto& converter = context.getConverter();
+			auto fragmentManager = converter.getFragmentManager();
+			string fragmentName = "global:" + lit->getStringValue();
+			auto fragment = fragmentManager->getFragment(fragmentName);
+			assert_true(fragment) << "Global Literal fragment not generated";
+			auto cFragment = fragment.as<c_ast::CCodeFragmentPtr>();
+			auto decl = cFragment->getCode()[1].as<c_ast::GlobalVarDeclPtr>();
+			assert_true(decl) << "Global Literal has no decl";
+
+			ConversionContext innerContext(converter, context.getEntryPoint());
+			auto irInitExpr = initExpr.isa<core::InitExprPtr>();
+			if(irInitExpr) { // it's either an init expr, or...
+				decl->init = visitInitExprInternal(innerContext.getConverter(), irInitExpr, innerContext);
+			} else { // it has to be a constructor call
+				assert_true(core::analysis::isConstructorCall(initExpr));
+				// change constructor mem loc to ref temp and translate normally
+				auto constrCall = initExpr.as<core::CallExprPtr>();
+				auto args = constrCall.getArgumentList();
+				args[0] = core::lang::buildRefTemp(args[0].getType());
+				core::IRBuilder builder(converter.getNodeManager());
+				auto adjustedCall = builder.callExpr(constrCall.getType(), constrCall.getFunctionExpr(), args);
+				decl->init = c_ast::deref(converter.getStmtConverter().convertExpression(innerContext, adjustedCall));
+			}
+
+			// move dependencies to global var-decl fragment
+			fragment->addDependencies(innerContext.getDependencies());
+			fragment->addRequirements(innerContext.getRequirements());
+			fragment->addIncludes(innerContext.getIncludes());
+
+			context.addDependency(fragment);
+		}
 	}
 
 
@@ -155,8 +251,18 @@ namespace backend {
 	////////////////////////////////////////////////////////////////////////// Expressions
 
 	c_ast::NodePtr StmtConverter::visitCallExpr(const core::CallExprPtr& ptr, ConversionContext& context) {
-		// handled by the function manager
-		return converter.getFunctionManager().getCall(ptr, context);
+		// special handling for global variable initialization
+		if(core::analysis::isConstructorCall(ptr) && core::analysis::getArgument(ptr, 0).isa<core::LiteralPtr>()) {
+			convertGlobalInit(context, core::analysis::getArgument(ptr, 0).as<core::LiteralPtr>(), ptr);
+			return {};
+		}
+		// everything else is handled by the function manager
+		auto cCall = converter.getFunctionManager().getCall(ptr, context);
+		// if materializing, transition to lvalue
+		if(core::analysis::isMaterializingCall(ptr)) {
+			return c_ast::ref(cCall.as<c_ast::ExpressionPtr>());
+		}
+		return cCall;
 	}
 
 	c_ast::NodePtr StmtConverter::visitBindExpr(const core::BindExprPtr& ptr, ConversionContext& context) {
@@ -192,7 +298,7 @@ namespace backend {
 		// convert literal
 		auto toLiteral = [&](const string& value) { return converter.getCNodeManager()->create<c_ast::Literal>(value); };
 		std::string name = ptr->getStringValue();
-		if (core::annotations::hasAttachedName(ptr)) name = core::annotations::getAttachedName(ptr);
+		if(core::annotations::hasAttachedName(ptr)) name = core::annotations::getAttachedName(ptr);
 		c_ast::ExpressionPtr res = toLiteral(name);
 
 		// handle primitive types
@@ -225,17 +331,6 @@ namespace backend {
 			auto info = converter.getTypeManager().getTypeInfo(type);
 			context.addDependency(info.definition);
 			return c_ast::cast(info.rValueType, res);
-		}
-
-		// special handling for the global struct
-		if(!ptr->getStringValue().compare(0, IRExtensions::GLOBAL_ID.size(), IRExtensions::GLOBAL_ID)) {
-			if(core::lang::isReference(ptr)) { res = c_ast::ref(res); }
-
-			// add code dependency to global struct
-			auto fragment = converter.getFragmentManager()->getFragment(IRExtensions::GLOBAL_ID);
-			assert_true(fragment) << "Global Fragment not yet initialized!";
-			context.getDependencies().insert(fragment);
-			return res;
 		}
 
 		// special handling for type literals (fall-back solution)
@@ -319,66 +414,15 @@ namespace backend {
 	}
 
 	c_ast::NodePtr StmtConverter::visitInitExpr(const core::InitExprPtr& ptr, ConversionContext& context) {
-		// to be created: an initialization of the corresponding struct
-		//     (<type>){<list of members>}
-
-		auto innerType = core::analysis::getReferencedType(ptr->getType());
-		auto typeInfo = converter.getTypeManager().getTypeInfo(innerType);
-		context.addDependency(typeInfo.definition);
-
-		// get type
-		c_ast::TypePtr type = typeInfo.rValueType;
-
-		// special case.. empty struct: instead (<type>)(<members>) we use *((<type>*)(0))
-		if(auto stp = core::analysis::isStruct(innerType)) {
-			if(!stp->getFields().size()) {
-				auto cmgr = context.getConverter().getCNodeManager();
-				auto zero = cmgr->create("0");
-				return c_ast::deref(c_ast::cast(c_ast::ptr(type), zero));
-			}
+		// check if it is a global initialization
+		auto memExp = ptr->getMemoryExpr();
+		if(auto lit = memExp.isa<core::LiteralPtr>()) {
+			convertGlobalInit(context, lit, ptr);
+			return {};
 		}
 
-		// handle unions
-		if(core::analysis::isUnion(innerType)) {
-			auto cmgr = context.getConverter().getCNodeManager();
-			auto initExp = ptr->getInitExprList().back();
-			// special handling for vector initialization (should not be turned into a struct)
-			auto value = convertExpression(context, initExp);
-			auto& refExt = innerType->getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
-			if(refExt.isCallOfRefDeref(initExp)) initExp = core::analysis::getArgument(initExp, 0);
-			if(initExp.isa<core::InitExprPtr>()) {
-				auto initValue = value.isa<c_ast::InitializerPtr>();
-				assert_true(initValue);
-				initValue->type = nullptr;
-			}
-
-			return c_ast::init(type, value);
-		}
-
-		// create init expression
-		c_ast::InitializerPtr init = c_ast::init(type);
-
-		// append initialization values
-		::transform(ptr->getInitExprList(), std::back_inserter(init->values), [&](const core::ExpressionPtr& cur) {
-			return convertExpression(context, cur);
-		});
-
-		// support empty initialization
-		if(init->values.empty()) {
-			return init;
-		}
-
-		// remove last element if it is a variable sized struct
-		if(core::lang::isUnknownSizedArray(ptr->getInitExprList().back())) {
-			assert_false(init->values.empty());
-			init->values.pop_back();
-		}
-
-		// if array, initialize inner data member
-		if(core::lang::isFixedSizedArray(innerType)) init = c_ast::init(type, c_ast::init(init->values));
-
-		// return completed
-		return init;
+		// otherwise it's the default case
+		return visitInitExprInternal(converter, ptr, context);
 	}
 
 	c_ast::NodePtr StmtConverter::visitTupleExpr(const core::TupleExprPtr& ptr, ConversionContext& context) {
@@ -422,7 +466,12 @@ namespace backend {
 		c_ast::CompoundPtr res = converter.getCNodeManager()->create<c_ast::Compound>();
 		for_each(ptr->getStatements(), [&](const core::StatementPtr& cur) {
 			c_ast::NodePtr stmt = this->visit(cur, context);
-			if(stmt) { res->statements.push_back(stmt); }
+			if(stmt) {
+				// strip no-op ref
+				auto unOp = stmt.isa<c_ast::UnaryOperationPtr>();
+				if(unOp && unOp->operation == c_ast::UnaryOperation::Reference) stmt = unOp->operand;
+				res->statements.push_back(stmt);
+			}
 		});
 		return res;
 	}
@@ -437,7 +486,11 @@ namespace backend {
 			auto& refExt = initValue->getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
 
 			// if it is a call to a ref.new => put it on the heap
-			if (refExt.isCallOfRefNew(initValue) || refExt.isCallOfRefNewInit(initValue)) return false;
+			if(refExt.isCallOfRefNew(initValue) || refExt.isCallOfRefNewInit(initValue)) return false;
+			// if it is a constructor call on memory allocated on the heap, put it on the heap
+			if(core::analysis::isConstructorCall(initValue)) {
+				return toBeAllocatedOnStack(core::analysis::getArgument(initValue, 0));
+			}
 
 			// everything else is stack based
 			return true;
@@ -522,6 +575,8 @@ namespace backend {
 		// drop ref_temp ...
 		if(core::analysis::isCallOf(initValue, refExt.getRefTempInit())) { initValue = core::analysis::getArgument(initValue, 0); }
 
+		auto coreInitExpr = initValue.isa<core::InitExprPtr>();
+		if(coreInitExpr) return visitInitExprInternal(converter, coreInitExpr, context);
 		return convertExpression(context, initValue);
 	}
 

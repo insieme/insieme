@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -55,10 +55,10 @@ namespace impl {
 
 	// --- forward declarations (pimpl) ---
 
-	class TreeGenerator;
+	struct TreeGenerator;
 	typedef std::shared_ptr<TreeGenerator> TreeGeneratorPtr;
 
-	class ListGenerator;
+	struct ListGenerator;
 	typedef std::shared_ptr<ListGenerator> ListGeneratorPtr;
 
 } // end namespace impl

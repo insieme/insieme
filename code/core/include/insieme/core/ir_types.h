@@ -44,6 +44,12 @@
 namespace insieme {
 namespace core {
 
+	namespace detail {
+		/// Used to sort node lists in types, to enable equivalent representation of semantically equivalent types
+		/// (e.g. class method and constructor order is irrelevant)
+		bool semanticNodeLessThan(const core::NodePtr& a, const core::NodePtr& b);
+	}
+
 
 	// ---------------------------------------- An abstract base type ------------------------------
 
@@ -508,6 +514,204 @@ namespace core {
 		}
 	IR_NODE_END()
 
+
+	// ------------------------------------ A class representing variadic type variables  ------------------------------
+
+	/**
+	 * The accessor associated to a variadic type variable. Each variadic type variable has a single child node - a string value representing
+	 * the name of the variable.
+	 */
+	IR_NODE_ACCESSOR(VariadicTypeVariable, Type, StringValue)
+		/**
+		 * Obtains the name of this variadic type variable.
+		 */
+		IR_NODE_PROPERTY(StringValue, VarName, 0);
+	IR_NODE_END()
+
+	/**
+	 * A node type representing concrete type variables.
+	 */
+	IR_NODE(VariadicTypeVariable, Type)
+	protected:
+		/**
+		 * Prints a string representation of this node to the given output stream.
+		 */
+		virtual std::ostream& printTo(std::ostream & out) const {
+			return out << "'" << *getVarName() << "...";
+		}
+
+	public:
+		/**
+		 * This static factory method allows to construct a variadic type variable based on a string value (its identifier).
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @param name the identifier defining the name of the resulting type variable
+		 * @return the requested type instance managed by the given manager
+		 */
+		static VariadicTypeVariablePtr get(NodeManager& manager, const StringValuePtr& name) {
+			return manager.get(VariadicTypeVariable(name));
+		}
+
+		/**
+		 * This method provides a static factory method for this type of node. It will return
+		 * a variadic type variable pointer pointing toward a variable with the given name maintained by the
+		 * given manager.
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @param name the identifier defining the name of the resulting type variable
+		 * @return the requested type instance managed by the given manager
+		 */
+		static VariadicTypeVariablePtr get(NodeManager& manager, const string& name) {
+			return get(manager, StringValue::get(manager, name));
+		}
+	IR_NODE_END()
+
+
+	// ------------------------------------ A class representing generic type variables  ------------------------------
+
+	/**
+	 * The accessor associated to generic types variable.
+	 */
+	IR_NODE_ACCESSOR(GenericTypeVariable, Type, StringValue, Types)
+		/**
+		 * Obtains the name of this generic type variable.
+		 */
+		IR_NODE_PROPERTY(StringValue, VarName, 0);
+
+		/**
+		 * Obtains the list of variable type parameters of this generic type variable.
+		 */
+		IR_NODE_PROPERTY(Types, TypeParameter, 1);
+
+		/**
+		 * Obtains a reference to the type parameter with the given index.
+		 */
+		Ptr<const Type> getTypeParameter(std::size_t index) const {
+			return getTypeParameter()->getElement(index);
+		}
+
+		/**
+		 * Obtains a list of types forming the parameter types of this function type.
+		 */
+		vector<Ptr<const Type>> getTypeParameterList() const {
+			return getTypeParameter()->getElements();
+		}
+
+	IR_NODE_END()
+
+	/**
+	 * This type represents a generic type variable which can be used to represent placeholders for arbitrary user defined
+	 * or derived types.
+	 */
+	IR_NODE(GenericTypeVariable, Type)
+	protected:
+		/**
+		 * Prints a string representation of this node to the given output stream.
+		 */
+		virtual std::ostream& printTo(std::ostream & out) const;
+
+	public:
+
+		/**
+		 * This method provides a static factory method for this type of node. It will return
+		 * a generic type variable pointer pointing toward a variable with the given name, and type
+		 * parameters which is maintained by the given manager.
+		 *
+		 * @param manager		the manager to be used for creating the node (memory management)
+		 * @param name 			the name of the new type (only the prefix)
+		 * @param typeParams	the type parameters of this type, concrete or variable
+		 */
+		static GenericTypeVariablePtr get(NodeManager& manager, const StringValuePtr& name, const TypesPtr& typeParams) {
+			return manager.get(GenericTypeVariable(name, typeParams));
+		}
+
+		/**
+		 * This method provides a static factory method for this type of node. It will return
+		 * a generic type variable pointer pointing toward a variable with the given properties maintained by the
+		 * given manager.
+		 *
+		 * @param manager		the manager to be used for creating the node (memory management)
+		 * @param name 			the name of the new type (only the prefix)
+		 * @param typeParams	the type parameters of this type, concrete or variable
+		 */
+		static GenericTypeVariablePtr get(NodeManager& manager, const string& name, const TypeList& typeParams = TypeList()) {
+			return get(manager, StringValue::get(manager, name), Types::get(manager, typeParams));
+		}
+
+	IR_NODE_END()
+
+
+	// ------------------------------------ A class representing variadic generic type variables  ------------------------------
+
+	/**
+	* The accessor associated to variadic generic types variable.
+	*/
+	IR_NODE_ACCESSOR(VariadicGenericTypeVariable, Type, StringValue, Types)
+		/**
+		* Obtains the name of this generic type variable.
+		*/
+		IR_NODE_PROPERTY(StringValue, VarName, 0);
+
+		/**
+		* Obtains the list of variable type parameters of this generic type variable.
+		*/
+		IR_NODE_PROPERTY(Types, TypeParameter, 1);
+
+		/**
+		* Obtains a reference to the type parameter with the given index.
+		*/
+		Ptr<const Type> getTypeParameter(std::size_t index) const {
+			return getTypeParameter()->getElement(index);
+		}
+
+		/**
+		* Obtains a list of types forming the parameter types of this function type.
+		*/
+		vector<Ptr<const Type>> getTypeParameterList() const {
+			return getTypeParameter()->getElements();
+		}
+
+	IR_NODE_END()
+
+	/**
+	 * This type represents a variadic generic type variable.
+	 */
+	IR_NODE(VariadicGenericTypeVariable, Type)
+	protected:
+		/**
+		* Prints a string representation of this node to the given output stream.
+		*/
+		virtual std::ostream& printTo(std::ostream & out) const;
+
+	public:
+
+		/**
+		 * This method provides a static factory method for this type of node. It will return
+		 * a variadic generic type variable pointer pointing toward a variable with the given name, and type
+		 * parameters which is maintained by the given manager.
+		 *
+		 * @param manager		the manager to be used for creating the node (memory management)
+		 * @param name 			the name of the new type (only the prefix)
+		 * @param typeParams	the type parameters of this type, concrete or variable
+		 */
+		static VariadicGenericTypeVariablePtr get(NodeManager& manager, const StringValuePtr& name, const TypesPtr& typeParams) {
+			return manager.get(VariadicGenericTypeVariable(name, typeParams));
+		}
+
+		/**
+		 * This method provides a static factory method for this type of node. It will return
+		 * a variadic generic type variable pointer pointing toward a variable with the given properties maintained by the
+		 * given manager.
+		 *
+		 * @param manager		the manager to be used for creating the node (memory management)
+		 * @param name 			the name of the new type (only the prefix)
+		 * @param typeParams	the type parameters of this type, concrete or variable
+		 */
+		static VariadicGenericTypeVariablePtr get(NodeManager& manager, const string& name, const TypeList& typeParams = TypeList()) {
+			return get(manager, StringValue::get(manager, name), Types::get(manager, typeParams));
+		}
+
+	IR_NODE_END()
 
 	// ---------------------------------------- A tuple type ------------------------------
 
@@ -1415,10 +1619,9 @@ namespace core {
 		 * @param members the members to be included within the resulting member function list
 		 * @return the requested member function list instance managed by the given manager
 		 */
-		static MemberFunctionsPtr get(NodeManager& manager, const MemberFunctionList& fields = MemberFunctionList()) {
-			MemberFunctionList sorted = fields;
-		    std::stable_sort(sorted.begin(), sorted.end(),
-		              [](const MemberFunctionPtr& a, const MemberFunctionPtr& b) { return a.getNameAsString() < b.getNameAsString(); });
+	    static MemberFunctionsPtr get(NodeManager& manager, const MemberFunctionList& fields = MemberFunctionList()) {
+		    MemberFunctionList sorted = fields;
+		    std::stable_sort(sorted.begin(), sorted.end(), detail::semanticNodeLessThan);
 		    return manager.get(MemberFunctions(convertList(sorted)));
 	    }
 
@@ -1704,7 +1907,9 @@ namespace core {
 		static StructPtr get(NodeManager& manager, const StringValuePtr& name, const ParentsPtr& parents, const FieldsPtr& fields,
 		                     const ExpressionsPtr& ctors, const ExpressionPtr& dtor, const BoolValuePtr& dtorIsVirtual,
 		                     const MemberFunctionsPtr& mfuns, const PureVirtualMemberFunctionsPtr& pvfuns) {
-			return manager.get(Struct(name, fields, ctors, dtor, dtorIsVirtual, mfuns, pvfuns, parents));
+			ExpressionList sortedCtors = ctors.getExpressions();
+		    std::stable_sort(sortedCtors.begin(), sortedCtors.end(), detail::semanticNodeLessThan);
+			return manager.get(Struct(name, fields, Expressions::get(manager, sortedCtors), dtor, dtorIsVirtual, mfuns, pvfuns, parents));
 		}
 
 		/**
@@ -1838,7 +2043,9 @@ namespace core {
 		static UnionPtr get(NodeManager& manager, const StringValuePtr& name, const FieldsPtr& fields,
 		                    const ExpressionsPtr& ctors, const ExpressionPtr& dtor, const BoolValuePtr& dtorIsVirtual,
 		                    const MemberFunctionsPtr& mfuns, const PureVirtualMemberFunctionsPtr& pvfuns) {
-			return manager.get(Union(name, fields, ctors, dtor, dtorIsVirtual, mfuns, pvfuns));
+			ExpressionList sortedCtors = ctors.getExpressions();
+		    std::stable_sort(sortedCtors.begin(), sortedCtors.end(), detail::semanticNodeLessThan);
+			return manager.get(Union(name, fields, Expressions::get(manager, sortedCtors), dtor, dtorIsVirtual, mfuns, pvfuns));
 		}
 
 		/**

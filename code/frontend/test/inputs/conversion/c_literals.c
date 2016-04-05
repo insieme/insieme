@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -68,6 +68,9 @@ int main() {
 
 	#pragma test expect_ir("lit(\"1.0E+0\":real<8>)")
 	1.0;
+
+	#pragma test expect_ir("lit(\"1.0E+0\":real<16>)")
+	1.0L;
 
 	#pragma test expect_ir("lit(\"3.0E+1\":real<8>)")
 	3.0e+1;

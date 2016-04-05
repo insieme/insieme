@@ -38,33 +38,29 @@
 
 #include <functional>
 
+#include "insieme/backend/addons/cpp_casts.h"
+#include "insieme/backend/c_ast/c_ast_printer.h"
+#include "insieme/backend/c_ast/c_ast_utils.h"
 #include "insieme/backend/converter.h"
+#include "insieme/backend/function_manager.h"
 #include "insieme/backend/statement_converter.h"
 #include "insieme/backend/type_manager.h"
-#include "insieme/backend/function_manager.h"
-#include "insieme/backend/ir_extensions.h"
 
-#include "insieme/backend/addons/cpp_casts.h"
-
-#include "insieme/backend/c_ast/c_ast_utils.h"
-#include "insieme/backend/c_ast/c_ast_printer.h"
-
-#include "insieme/core/ir_builder.h"
-
-#include "insieme/core/lang/basic.h"
-#include "insieme/core/lang/array.h"
-#include "insieme/core/lang/reference.h"
-#include "insieme/core/lang/complex.h"
-#include "insieme/core/lang/io.h"
-
-#include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/analysis/attributes.h"
 #include "insieme/core/analysis/ir++_utils.h"
+#include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/encoder/encoder.h"
 #include "insieme/core/encoder/lists.h"
+#include "insieme/core/ir_builder.h"
+#include "insieme/core/lang/array.h"
+#include "insieme/core/lang/basic.h"
+#include "insieme/core/lang/complex.h"
+#include "insieme/core/lang/io.h"
+#include "insieme/core/lang/reference.h"
 #include "insieme/core/transform/manipulation.h"
+#include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/transform/simplify.h"
-#include "insieme/core/analysis/attributes.h"
-#include "insieme/core/arithmetic/arithmetic_utils.h"
 
 #include "insieme/utils/logging.h"
 
@@ -325,6 +321,14 @@ namespace backend {
 		// -- casts --
 
 		res[basic.getNumericCast()] = OP_CONVERTER { return c_ast::cast(CONVERT_RES_TYPE, CONVERT_ARG(0)); };
+		res[basic.getTypeInstantiation()] = OP_CONVERTER {
+			auto lit = ARG(1).as<core::LiteralPtr>();
+			if(!lit) assert_fail() << "type instantiation should either be handled at call site or apply to function pointer literal";
+			auto replacementLit = core::IRBuilder(NODE_MANAGER).literal(lit->getValue(), call->getType());
+			core::transform::utils::migrateAnnotations(lit, replacementLit);
+			// TODO: add explicit instantiation arguments for function pointers
+			return CONVERT_EXPR(replacementLit);
+		};
 
 		// -- reals --
 
@@ -394,6 +398,8 @@ namespace backend {
 			assert_true(type) << "Invalid result type: " << *type;
 			return C_NODE_MANAGER->create<c_ast::Literal>(toString(*type->getTypeParameter(0)));
 		};
+
+		res[basic.getUnitConsume()] = OP_CONVERTER { return c_ast::cast(CONVERT_TYPE(LANG_BASIC.getUnit()), CONVERT_ARG(0)); };
 
 		// -- references --
 
@@ -831,76 +837,6 @@ namespace backend {
 
 			// return size-of operator call
 			return c_ast::sizeOf(CONVERT_TYPE(target));
-		};
-
-		// -- IR extensions --
-
-		auto& ext = manager.getLangExtension<IRExtensions>();
-
-		res[ext.getInitGlobal()] = OP_CONVERTER {
-			static const c_ast::ExpressionPtr none;
-
-			auto global = call[0].as<core::LiteralPtr>();
-
-			// resolve the global
-			CONVERT_EXPR(global);
-
-			// now there should be a code fragment for the global
-			string fragmentName = "global:" + global->getStringValue();
-			auto fragment = dynamic_pointer_cast<c_ast::CCodeFragment>(FRAGMENT_MANAGER->getFragment(fragmentName));
-
-			// if there is no fragment defining it there is no point for initializing it
-			if(!fragment) { return none; }
-
-			// get the declaration code fragment
-			auto decl = fragment->getCode()[1].as<c_ast::GlobalVarDeclPtr>();
-			assert_false(decl->external) << "Can not initialize external declaration!";
-
-			// avoid zero inits, those are implicit
-			if(core::analysis::isCallOf(call[1], call->getNodeManager().getLangBasic().getZero())) {
-				return none;
-			}
-
-			// convert init-value in fresh context,
-			ConversionContext innerContext(context.getConverter(), context.getEntryPoint());
-			decl->init = context.getConverter().getStmtConverter().convertExpression(innerContext, call[1]);
-
-			// move dependencies to global var-decl fragment
-			fragment->addDependencies(innerContext.getDependencies());
-			fragment->addRequirements(innerContext.getRequirements());
-			fragment->addIncludes(innerContext.getIncludes());
-
-			// no actual code needs to be generated for this operator
-			return none;
-		};
-
-		res[ext.getRegisterGlobal()] = OP_CONVERTER {
-
-			// obtain access to global fragment
-			c_ast::CCodeFragmentPtr globals = static_pointer_cast<c_ast::CCodeFragment>(FRAGMENT_MANAGER->getFragment(IRExtensions::GLOBAL_ID));
-			if(!globals) {
-				// create and bind a new global fragment
-				globals = c_ast::CCodeFragment::createNew(FRAGMENT_MANAGER);
-				FRAGMENT_MANAGER->bindFragment(IRExtensions::GLOBAL_ID, globals);
-			}
-
-			string name = static_pointer_cast<core::LiteralPtr>(ARG(0))->getStringValue();
-			core::TypePtr globalType = core::analysis::getRepresentedType(ARG(1)->getType());
-			if(core::lang::isReference(globalType)) { globalType = core::analysis::getReferencedType(globalType); }
-
-			// get type of global struct
-			const TypeInfo& info = GET_TYPE_INFO(globalType);
-
-			// append new declaration to global struct
-			c_ast::NodePtr decl = C_NODE_MANAGER->create<c_ast::VarDecl>(c_ast::var(info.lValueType, name));
-			globals->getCode().push_back(decl);
-
-			// add dependencies
-			globals->addDependency(info.definition);
-			context.getDependencies().insert(globals);
-
-			// => no actual expression required her ...
-			return c_ast::ExpressionPtr();
 		};
 
 		res[basic.getSelect()] = OP_CONVERTER {

@@ -62,7 +62,8 @@ namespace c_ast {
 
 	// -- Basic ----------------------------------
 
-	class Node {
+	struct Node {
+	private:
 		const NodeType type;
 		CNodeManager* manager;
 
@@ -139,6 +140,12 @@ namespace c_ast {
 
 	struct Type : public Node {
 		Type(NodeType type) : Node(type) {}
+	};
+
+	struct IntegralType : public Type {
+		IdentifierPtr value;
+		IntegralType(IdentifierPtr value) : Type(NT_IntegralType), value(value) {}
+		virtual bool equals(const Node& other) const;
 	};
 
 	struct CVQualifiedType : public Type {
@@ -533,10 +540,17 @@ namespace c_ast {
 	struct Call : public Expression {
 		NodePtr function;
 		vector<NodePtr> arguments;
+		vector<TypePtr> instantiationTypes;
 
 		Call(NodePtr function) : Expression(NT_Call), function(function) {}
 
+		Call(NodePtr function, const vector<TypePtr>& instantiationTypes)
+				: Expression(NT_Call), function(function), instantiationTypes(instantiationTypes) {}
+
 		Call(NodePtr function, const vector<NodePtr>& args) : Expression(NT_Call), function(function), arguments(args) {}
+
+		Call(NodePtr function, const vector<NodePtr>& args, const vector<TypePtr>& instantiationTypes)
+				: Expression(NT_Call), function(function), arguments(args), instantiationTypes(instantiationTypes) {}
 
 		template <typename... E>
 		Call(NodePtr function, E... args)
@@ -549,9 +563,13 @@ namespace c_ast {
 		NodePtr memberFun;
 		NodePtr object;
 		vector<NodePtr> arguments;
+		vector<TypePtr> instantiationTypes;
 
 		MemberCall(NodePtr memberFun, NodePtr object, const vector<NodePtr>& args)
 		    : Expression(NT_MemberCall), memberFun(memberFun), object(object), arguments(args) {}
+
+		MemberCall(NodePtr memberFun, NodePtr object, const vector<NodePtr>& args, const vector<TypePtr>& instantiationTypes)
+		    : Expression(NT_MemberCall), memberFun(memberFun), object(object), arguments(args), instantiationTypes(instantiationTypes) {}
 
 		virtual bool equals(const Node& node) const;
 	};

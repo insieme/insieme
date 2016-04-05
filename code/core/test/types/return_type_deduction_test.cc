@@ -396,31 +396,32 @@ namespace types {
 		funType = builder.parseType("(A)->bool", symbols).as<FunctionTypePtr>();
 		EXPECT_EQ("bool",toString(*deduceReturnType(funType, {argType})));
 
-		
+
 		// different ref kinds are incompatible
 		argType = builder.parseType("ref<A>", symbols);
 		funType = builder.parseType("(ref<A,f,f,cpp_ref>)->bool", symbols).as<FunctionTypePtr>();
 		EXPECT_EQ("unit",toString(*deduceReturnType(funType, {argType})));
-		
+
 		argType = builder.parseType("ref<A>", symbols);
 		funType = builder.parseType("(ref<A,f,f,cpp_rref>)->bool", symbols).as<FunctionTypePtr>();
 		EXPECT_EQ("unit",toString(*deduceReturnType(funType, {argType})));
 
 		argType = builder.parseType("ref<A,f,f,cpp_ref>", symbols);
-		funType = builder.parseType("(ref<A>)->bool", symbols).as<FunctionTypePtr>();
-		EXPECT_EQ("unit",toString(*deduceReturnType(funType, {argType})));
-		
-		argType = builder.parseType("ref<A,f,f,cpp_rref>", symbols);
-		funType = builder.parseType("(ref<A>)->bool", symbols).as<FunctionTypePtr>();
-		EXPECT_EQ("unit",toString(*deduceReturnType(funType, {argType})));
-		
-		argType = builder.parseType("ref<A,f,f,cpp_ref>", symbols);
 		funType = builder.parseType("(ref<A,f,f,cpp_rref>)->bool", symbols).as<FunctionTypePtr>();
 		EXPECT_EQ("unit",toString(*deduceReturnType(funType, {argType})));
-		
+
 		argType = builder.parseType("ref<A,f,f,cpp_rref>", symbols);
 		funType = builder.parseType("(ref<A,f,f,cpp_ref>)->bool", symbols).as<FunctionTypePtr>();
 		EXPECT_EQ("unit",toString(*deduceReturnType(funType, {argType})));
+
+		// conversion to plain ref is ok (this)
+		argType = builder.parseType("ref<A,f,f,cpp_ref>", symbols);
+		funType = builder.parseType("(ref<A>)->bool", symbols).as<FunctionTypePtr>();
+		EXPECT_EQ("bool",toString(*deduceReturnType(funType, {argType}))) << "FunType: " << *funType << "\nArgType: " << *argType;
+
+		argType = builder.parseType("ref<A,f,f,cpp_rref>", symbols);
+		funType = builder.parseType("(ref<A>)->bool", symbols).as<FunctionTypePtr>();
+		EXPECT_EQ("bool",toString(*deduceReturnType(funType, {argType})));
 
 
 		// addition of flags is ok, subtraction not
@@ -481,6 +482,141 @@ namespace types {
 		argType = builder.parseType("ref<int<4>,f,f,cpp_rref>");
 		funType = builder.parseType("(int<4>)->bool").as<FunctionTypePtr>();
 		EXPECT_EQ("bool", toString(*deduceReturnType(funType, { argType })));
+
+	}
+
+	TEST(ReturnTypeDeduction, QualifierPromotion) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		auto fun = builder.parseExpr("lit(\"fun\" : (ref<'a,t,f,plain>) -> int<4>)");
+		auto arg = builder.parseExpr("lit(\"arg\" : ref<int<4>,f,f,plain>)");
+		auto call = builder.callExpr(fun, arg);
+
+		EXPECT_EQ(builder.getLangBasic().getInt4(), call->getType());
+	}
+
+	TEST(ReturnTypeDeduction, VariadicTypeVariables) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		auto deduce = [&](const TypePtr& fun, const TypeList& args) {
+			return deduceReturnType(fun.as<FunctionTypePtr>(), args);
+		};
+
+		auto type = [&](const std::string& type) {
+			return builder.parseType(type);
+		};
+
+		// something simple to start with
+		EXPECT_EQ("B", toString(*deduce(type("(A)->B"), { type("A") })));
+		EXPECT_EQ("B", toString(*deduce(type("('a)->B"), { type("A") })));
+		EXPECT_EQ("A", toString(*deduce(type("('a)->'a"), { type("A") })));
+
+		EXPECT_EQ("A", toString(*deduce(type("('a,'a)->'a"), { type("A"), type("A") })));
+		EXPECT_EQ("B", toString(*deduce(type("('a,'a)->'a"), { type("B"), type("B") })));
+		EXPECT_EQ("unit", toString(*deduce(type("('a,'a)->'a"), { type("A"), type("B") })));
+
+		// now, let's try variadic arguments
+		EXPECT_EQ("A", toString(*deduce(type("('a...)->A"), {})));
+		EXPECT_EQ("A", toString(*deduce(type("('a...)->A"), { type("A") })));
+		EXPECT_EQ("A", toString(*deduce(type("('a...)->A"), { type("A"), type("B") })));
+
+		EXPECT_EQ("()", toString(*deduce(type("('a...)->('a...)"), { })));
+		EXPECT_EQ("(A)", toString(*deduce(type("('a...)->('a...)"), { type("A") })));
+		EXPECT_EQ("(A,B)", toString(*deduce(type("('a...)->('a...)"), { type("A"), type("B") })));
+		EXPECT_EQ("(A,B,C)", toString(*deduce(type("('a...)->('a...)"), { type("A"), type("B"), type("C") })));
+
+		// test with nested tuple
+		EXPECT_EQ("()", toString(*deduce(type("(('a...))->('a...)"), { type("()") })));
+		EXPECT_EQ("(A)", toString(*deduce(type("(('a...))->('a...)"), { type("(A)") })));
+		EXPECT_EQ("(A,B)", toString(*deduce(type("(('a...))->('a...)"), { type("(A,B)") })));
+		EXPECT_EQ("(A,B,C)", toString(*deduce(type("(('a...))->('a...)"), { type("(A,B,C)") })));
+
+		EXPECT_EQ("unit", toString(*deduce(type("(('a...))->('a...)"), {})));
+		EXPECT_EQ("unit", toString(*deduce(type("(('a...))->('a...)"), { type("A"), type("B") })));
+
+		// more complex case
+		EXPECT_EQ("()", toString(*deduce(type("(('a...),('a...))->('a...)"), { type("()"), type("()") })));
+		EXPECT_EQ("(A)", toString(*deduce(type("(('a...),('a...))->('a...)"), { type("(A)"), type("(A)") })));
+		EXPECT_EQ("(A,B)", toString(*deduce(type("(('a...),('a...))->('a...)"), { type("(A,B)"), type("(A,B)") })));
+		EXPECT_EQ("(A,B,C)", toString(*deduce(type("(('a...),('a...))->('a...)"), { type("(A,B,C)"), type("(A,B,C)") })));
+
+		EXPECT_EQ("unit", toString(*deduce(type("(('a...),('a...))->('a...)"), { type("(A)"), type("(B)") })));
+
+		// something more challenging
+		EXPECT_EQ("(B)", toString(*deduce(type("(A,'a...)->('a...)"), { type("A"), type("B") })));
+		EXPECT_EQ("(B,C)", toString(*deduce(type("(A,'a...)->('a...)"), { type("A"), type("B"), type("C") })));
+
+		// even more complex
+		EXPECT_EQ("('b...)", toString(*deduce(type("(('a...))->('a...)"), { type("('b...)") })));
+		EXPECT_EQ("(A,'b...)", toString(*deduce(type("(('a...))->('a...)"), { type("(A,'b...)") })));
+
+
+		EXPECT_EQ("((A,'c...),(B,'c...))", toString(*deduce(type("(('a...),('b...))->(('a...),('b...))"), { type("(A,'c...)"), type("(B,'c...)") })));
+		EXPECT_EQ("unit", toString(*deduce(type("(('a...),('a...))->(('a...),('a...))"), { type("(A,B)"), type("('c...)") })));
+
+		// and one more step
+		EXPECT_EQ("unit", toString(*deduce(type("((A,'a...),(A,'a...))->('a...)"), { type("('c...)"), type("('c...)") })));
+		EXPECT_EQ("unit", toString(*deduce(type("((A,'a...),(B,'a...))->('a...)"), { type("('c...)"), type("('c...)") })));
+		EXPECT_EQ("unit", toString(*deduce(type("((A,'a...),(B,'a...))->('a...)"), { type("('c...)"), type("('d...)") })));
+
+
+		// nested functions
+		EXPECT_EQ("()", toString(*deduce(type("(('a...),('a...)->('b...))->('b...)"), { type("()"), type("()->()") })));
+		EXPECT_EQ("(B)", toString(*deduce(type("(('a...),('a...)->('b...))->('b...)"), { type("(A)"), type("(A)->(B)") })));
+		EXPECT_EQ("(B,C)", toString(*deduce(type("(('a...),('a...)->('b...))->('b...)"), { type("(A)"), type("(A)->(B,C)") })));
+
+		EXPECT_EQ("unit", toString(*deduce(type("(('a...),('a...)->('b...))->('b...)"), { type("(A)"), type("(B)->(C)") })));
+
+		// test structs
+		EXPECT_EQ("struct {a:(A,B),", toString(*deduce(type("(('a...))->struct { a : ('a...); }"), { type("(A,B)") })).substr(0,16));
+		EXPECT_EQ("(A,B)", toString(*deduce(type("(struct { a : ('a...); })->('a...)"), { type("struct { a : (A,B); }") })));
+
+		EXPECT_EQ("struct {a:(A,B),b:(C)", toString(*deduce(type("(('a...),('b...))->struct { a : ('a...);  b: ('b...); }"), { type("(A,B)"), type("(C)") })).substr(0, 21));
+		EXPECT_EQ("((A,B),(C))", toString(*deduce(type("(struct { a : ('a...); b:('b...); })->(('a...),('b...))"), { type("struct { a : (A,B); b:(C); }") })));
+
+	}
+
+	TEST(ReturnTypeDeduction, GenericTypeVariables) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		auto deduce = [&](const TypePtr& fun, const TypeList& args) {
+			return deduceReturnType(fun.as<FunctionTypePtr>(), args);
+		};
+
+		auto type = [&](const std::string& type) {
+			return builder.parseType(type);
+		};
+
+		// something simple to start with
+		EXPECT_EQ("B", toString(*deduce(type("(A)->B"), { type("A") })));
+		EXPECT_EQ("B", toString(*deduce(type("('a<>)->B"), { type("A") })));
+		EXPECT_EQ("A", toString(*deduce(type("('a<>)->'a<>"), { type("A") })));
+
+		// check consistency constraints
+		EXPECT_EQ("A", toString(*deduce(type("('a<>,'a<>)->'a<>"), { type("A"), type("A") })));
+		EXPECT_EQ("A", toString(*deduce(type("('a<>,'b<>)->'a<>"), { type("A"), type("A") })));
+		EXPECT_EQ("A", toString(*deduce(type("('a<>,'b<>)->'a<>"), { type("A"), type("B") })));
+		EXPECT_EQ("B", toString(*deduce(type("('a<>,'b<>)->'b<>"), { type("A"), type("B") })));
+
+		EXPECT_EQ("unit", toString(*deduce(type("('a<>,'a<>)->'a<>"), { type("A"), type("B") })));
+
+
+//		EXPECT_EQ("A", toString(*deduce(type("('a,'a)->'a"), { type("A"), type("A") })));
+//		EXPECT_EQ("B", toString(*deduce(type("('a,'a)->'a"), { type("B"), type("B") })));
+//		EXPECT_EQ("unit", toString(*deduce(type("('a,'a)->'a"), { type("A"), type("B") })));
+//
+//		// now, let's try variadic arguments
+//		EXPECT_EQ("A", toString(*deduce(type("('a...)->A"), {})));
+//		EXPECT_EQ("A", toString(*deduce(type("('a...)->A"), { type("A") })));
+//		EXPECT_EQ("A", toString(*deduce(type("('a...)->A"), { type("A"), type("B") })));
+//
+//		EXPECT_EQ("()", toString(*deduce(type("('a...)->('a...)"), {})));
+//		EXPECT_EQ("(A)", toString(*deduce(type("('a...)->('a...)"), { type("A") })));
+//		EXPECT_EQ("(A,B)", toString(*deduce(type("('a...)->('a...)"), { type("A"), type("B") })));
+//		EXPECT_EQ("(A,B,C)", toString(*deduce(type("('a...)->('a...)"), { type("A"), type("B"), type("C") })));
 
 	}
 

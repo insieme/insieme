@@ -40,16 +40,32 @@ struct Trivial {
 
 Trivial x;
 
+struct A {
+	int x;
+	A(int y) { x = y; };
+};
+
+A a(5);
+
 #pragma test expect_ir(R"INSPIRE(
-def struct IMP_Trivial { };
-def IMP_main = ()->int<4> {
-	IMP_Trivial::(lit("x":ref<IMP_Trivial>));
-	lit("x":ref<IMP_Trivial>);
-	return 0;
+def struct IMP_A {
+    x : int<4>;
+    ctor function (v1 : ref<int<4>,f,f,plain>) {
+        x = *v1;
+    }
+};
+def struct IMP_Trivial {};
+def IMP_main = function () -> int<4> {
+    IMP_Trivial::(lit("x" : ref<IMP_Trivial,f,f,plain>));
+    IMP_A::(lit("a" : ref<IMP_A,f,f,plain>), 5);
+    lit("x" : ref<IMP_Trivial,f,f,plain>);
+    lit("a" : ref<IMP_A,f,f,plain>);
+    return 0;
 };
 IMP_main
 )INSPIRE")
 int main() {
 	x;
+	a;
 	return 0;
 }

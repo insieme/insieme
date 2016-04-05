@@ -743,10 +743,8 @@ namespace core {
 		return callExpr(refType(type), refExt.getRefNew(), getTypeLiteral(type));
 	}
 
-	CallExprPtr IRBuilderBaseModule::deref(const ExpressionPtr& subExpr) const {
-		assert_pred1(analysis::isRefType, subExpr->getType());
-		auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
-		return callExpr(analysis::getReferencedType(subExpr->getType()), refExt.getRefDeref(), subExpr);
+	ExpressionPtr IRBuilderBaseModule::deref(const ExpressionPtr& subExpr) const {
+		return lang::buildRefDeref(subExpr);
 	}
 
 	ExpressionPtr IRBuilderBaseModule::tryDeref(const ExpressionPtr& subExpr) const {
@@ -974,20 +972,6 @@ namespace core {
 			return res;
 		}
 
-		/**
-		 * Checks whether the given result type is matching the type expected when using automatic type inference.
-		 */
-		inline bool checkType(const TypePtr& resultType, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments) {
-			// check types
-			if(*resultType != *deduceReturnTypeForCall(functionExpr, arguments)) {
-				// print a warning if they are not matching
-				LOG(WARNING) << "Potentially invalid return type for call specified - function type: " << toString(*functionExpr->getType())
-				             << ", arguments: " << join(", ", arguments, print<deref<ExpressionPtr>>());
-			}
-			return true;
-		}
-
-
 		CallExprPtr createCall(const IRBuilderBaseModule& builder, const TypePtr& resultType, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments) {
 			// check user-specified return type - only when compiled in debug mode
 			// NOTE: the check returns true in any case, hence this assertion will never fail - its just a warning!
@@ -1108,6 +1092,9 @@ namespace core {
 	CallExprPtr IRBuilderBaseModule::getThreadId(ExpressionPtr level) const {
 		if(!level) { level = uintLit(0); }
 		return callExpr(manager.getLangExtension<lang::ParallelExtension>().getGetThreadId(), level);
+	}
+	CallExprPtr IRBuilderBaseModule::getDefaultThreads() const {
+		return callExpr(manager.getLangExtension<lang::ParallelExtension>().getGetDefaultThreads());
 	}
 
 	CallExprPtr IRBuilderBaseModule::barrier(ExpressionPtr threadgroup) const {
@@ -1278,6 +1265,10 @@ namespace core {
 
 	TypePtr IRBuilderBaseModule::getTypeLiteralType(const TypePtr& type) const {
 		return genericType("type", toVector(type));
+	}
+
+	TypePtr IRBuilderBaseModule::numericType(int64_t value) const {
+		return numericType(literal(format("%d", value), getLangBasic().getUIntInf()));
 	}
 
 	LiteralPtr IRBuilderBaseModule::getTypeLiteral(const TypePtr& type) const {

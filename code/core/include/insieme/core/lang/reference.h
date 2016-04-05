@@ -109,6 +109,11 @@ namespace lang {
 		 */
 		LANG_EXT_TYPE_WITH_NAME(MarkerCppRValueReference, "rvalue_reference_marker", "cpp_rref");
 
+		/**
+		 * The marker for qualified IR non-references.
+		 */
+		LANG_EXT_TYPE_WITH_NAME(MarkerQualified, "qualified_marker", "qualified");
+
 
 		// -------------------- references ---------------------------
 
@@ -202,6 +207,11 @@ namespace lang {
 		 */
 		LANG_EXT_LITERAL(RefCast, "ref_cast", "(ref<'a,'c,'v,'k>, type<'new_const>, type<'new_volatile>, type<'new_kind>) -> ref<'a,'new_const,'new_volatile,'new_kind>")
 
+		/**
+		 * A cast to navigate to a parent struct.
+		 */
+		LANG_EXT_DERIVED(RefParentCast, "(r: ref<'a,'c,'v,'k>, t: type<'b>) -> ref<'b,'c,'v,'k> { return ref_narrow(r, dp_parent(dp_root(type_lit('a)), t)); }")
+
 
 		/**
 		 * A specialization of the ref_cast operator for modeling const casts.
@@ -233,7 +243,6 @@ namespace lang {
 		 * The expand operation is the inverse operation of the narrow operation.
 		 */
 		LANG_EXT_LITERAL(RefExpand, "ref_expand", "(ref<'b,'c,'v,'k>, datapath<'a,'b>) -> ref<'a,'c,'v,'k>")
-
 
 		/**
 		 * A derived operator providing access to an element in an array.
@@ -322,7 +331,7 @@ namespace lang {
 		 * An enumeration of the supported reference types.
 		 */
 		enum class Kind {
-			Plain, CppReference, CppRValueReference, Undefined
+			Plain, CppReference, CppRValueReference, Qualified, Undefined
 		};
 
 	private:
@@ -412,6 +421,8 @@ namespace lang {
 
 		bool isCppRValueReference() const;
 
+		bool isQualified() const;
+
 		GenericTypePtr toType() const;
 
 	};
@@ -442,6 +453,11 @@ namespace lang {
 	bool isCppRValueReference(const NodePtr& node);
 
 	/**
+	 * Determines whether a given node is a qualified type or an expression of a qualified type.
+	 */
+	bool isQualifiedReference(const NodePtr& node);
+
+	/**
 	 * Determines the reference kind represented by the given input type literal
 	 */
 	ReferenceType::Kind getReferenceKind(const TypePtr& typeLitType);
@@ -452,10 +468,16 @@ namespace lang {
 	 */
 	TypePtr buildRefType(const TypePtr& elementType, bool _const = false, bool _volatile = false, const ReferenceType::Kind& kind = ReferenceType::Kind::Plain);
 
+	bool doReferenceQualifiersDiffer(const TypePtr& typeA, const TypePtr& typeB);
+
 	bool doReferencesDifferOnlyInQualifiers(const TypePtr& typeA, const TypePtr& typeB);
+
+	ExpressionPtr buildRefDeref(const ExpressionPtr& refExpr);
 
 	ExpressionPtr buildRefCast(const ExpressionPtr& refExpr, const TypePtr& targetTy);
 	ExpressionPtr buildRefKindCast(const ExpressionPtr& refExpr, ReferenceType::Kind newKind);
+	ExpressionPtr buildRefParentCast(const ExpressionPtr& refExpr, const TypePtr& targetTy);
+	ExpressionPtr buildRefReinterpret(const ExpressionPtr& refExpr, const TypePtr& targetTy);
 
 	ExpressionPtr buildRefTemp(const TypePtr& type);
 	ExpressionPtr buildRefNull(const TypePtr& type);

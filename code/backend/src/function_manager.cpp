@@ -49,6 +49,7 @@
 
 #include "insieme/core/analysis/attributes.h"
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/analysis/normalize.h"
 #include "insieme/core/analysis/type_utils.h"
 #include "insieme/core/annotations/naming.h"
@@ -191,7 +192,7 @@ namespace backend {
 
 	bool FunctionManager::isBuiltIn(const core::NodePtr& op) const {
 		if(op->getNodeCategory() != core::NC_Expression) { return false; }
-		return operatorTable.find(op.as<core::ExpressionPtr>()) != operatorTable.end() || annotations::c::hasIncludeAttached(op);
+		return operatorTable.find(op.as<core::ExpressionPtr>()) != operatorTable.end() || core::lang::isBuiltIn(op);
 	}
 
 	namespace {
@@ -239,16 +240,6 @@ namespace backend {
 			}
 		}
 
-		core::TagTypePtr getClassType(const core::FunctionTypePtr& funType) {
-			core::TypePtr type = core::analysis::getObjectType(funType);
-			if (auto tagType = type.isa<core::TagTypePtr>()) {
-				if (tagType->isRecursive()) {
-					type = tagType->peel();
-				}
-			}
-			return type.as<core::TagTypePtr>();
-		}
-
 		c_ast::NodePtr handleMemberCall(const core::CallExprPtr& call, c_ast::CallPtr c_call, ConversionContext& context) {
 			// by default, do nothing
 			c_ast::ExpressionPtr res = c_call;
@@ -274,11 +265,11 @@ namespace backend {
 				// case a) create object on stack => default
 
 				// case b) create object on heap
-				bool isOnHeap = core::analysis::isCallOf(call[0], refs.getRefNewInit());
+				bool isOnHeap = core::analysis::isCallOf(call[0], refs.getRefNew());
 
 				// case c) create object in-place (placement new)
 				c_ast::ExpressionPtr loc = (!core::analysis::isCallOf(call[0], refs.getRefTemp()) && !core::analysis::isCallOf(call[0], refs.getRefTempInit())
-				                            && !core::analysis::isCallOf(call[0], refs.getRefNewInit()))
+				                            && !core::analysis::isCallOf(call[0], refs.getRefNew()))
 				                               ? location.as<c_ast::ExpressionPtr>()
 				                               : c_ast::ExpressionPtr();
 
@@ -303,7 +294,8 @@ namespace backend {
 				// obtain object
 				vector<c_ast::NodePtr> args = c_call->arguments;
 				assert_eq(args.size(), 1u);
-				auto obj = c_ast::deref(args[0].as<c_ast::ExpressionPtr>());
+				auto obj = args[0].as<c_ast::ExpressionPtr>();
+				if(core::lang::isPlainReference(call->getArgument(0))) obj = c_ast::deref(obj);
 
 				// extract class type
 				auto classType = context.getConverter().getTypeManager().getTypeInfo(core::analysis::getObjectType(funType)).lValueType;
@@ -319,10 +311,11 @@ namespace backend {
 				vector<c_ast::NodePtr> args = c_call->arguments;
 				assert_false(args.empty());
 
-				auto obj = c_ast::deref(args[0].as<c_ast::ExpressionPtr>());
+				auto obj = args[0].as<c_ast::ExpressionPtr>();
+				if(core::lang::isPlainReference(call->getArgument(0))) obj = c_ast::deref(obj);
 				args.erase(args.begin());
 
-				res = c_ast::memberCall(obj, c_call->function, args);
+				res = c_ast::memberCall(obj, c_call->function, args, c_call->instantiationTypes);
 			}
 
 			// --------------- virtual member function call -------------
@@ -418,9 +411,8 @@ namespace backend {
 			auto innerLit = core::analysis::getArgument(typeInstCall, 1).isa<core::LiteralPtr>();
 			assert_true(innerLit) << "Non-intercepted template calls not implemented";
 			auto replacementLit = builder.literal(innerLit->getValue(), typeInstCall->getType());
-			core::transform::utils::migrateAnnotations(typeInstCall, replacementLit);
+			core::transform::utils::migrateAnnotations(innerLit, replacementLit);
 			call = builder.callExpr(typeInstCall->getType().as<core::FunctionTypePtr>()->getReturnType(), replacementLit, call->getArgumentList());
-			std::cout << "replacement call:\n" << dumpColor(call);
 		}
 
 		// extract target function
@@ -441,7 +433,7 @@ namespace backend {
 			const FunctionInfo& info = getInfo(static_pointer_cast<const core::Literal>(fun));
 
 			// produce call to external literal
-			c_ast::CallPtr res = c_ast::call(info.function->name);
+			c_ast::CallPtr res = c_ast::call(info.function->name, info.instantiationTypes);
 			appendAsArguments(context, res, materializeTypeList(extractCallTypeList(call)), call->getArguments(), true);
 
 			// add dependencies
@@ -467,7 +459,7 @@ namespace backend {
 			// -------------- standard function call ------------
 
 			// produce call to internal lambda
-			c_ast::CallPtr c_call = c_ast::call(info.function->name);
+			c_ast::CallPtr c_call = c_ast::call(info.function->name, info.instantiationTypes);
 			appendAsArguments(context, c_call, materializeTypeList(extractCallTypeList(call)), call->getArguments(), false);
 
 			// handle potential member calls
@@ -489,6 +481,9 @@ namespace backend {
 		if(funType->isMemberFunction()) {
 			// add call to function pointer (which is the value)
 
+			// obtain lambda information
+			const LambdaInfo& info = getInfo(static_pointer_cast<const core::LambdaExpr>(fun));
+
 			// extract first parameter of the function, it is the target object
 			c_ast::ExpressionPtr trgObj = converter.getStmtConverter().convertExpression(context, call[0]);
 
@@ -496,7 +491,7 @@ namespace backend {
 			c_ast::ExpressionPtr funcExpr = c_ast::parentheses(c_ast::pointerToMember(trgObj, getValue(call->getFunctionExpr(), context)));
 
 			// the call is a call to the member function with the n-1 tail arguments
-			c_ast::CallPtr res = c_ast::call(funcExpr);
+			c_ast::CallPtr res = c_ast::call(funcExpr, info.instantiationTypes);
 			core::TypeList types = extractCallTypeList(call);
 			types.erase(types.begin());
 			core::ExpressionList args = call->getArguments();
@@ -684,7 +679,11 @@ namespace backend {
 			if (funType->isMember()) {
 				// make sure the object definition, ctors, dtors and member functions have already been resolved
 				// if this would not be the case, we could end up resolving e.g. a ctor while resolving the ctor itself
-				converter.getTypeManager().getTypeInfo(core::analysis::getObjectType(funType)); // ignore result
+
+				// we don't do this for intercepted types
+				if(!(fun.isa<core::LiteralPtr>() && annotations::c::hasIncludeAttached(fun))) {
+					converter.getTypeManager().getTypeInfo(core::analysis::getObjectType(funType)); // ignore result
+				}
 			}
 
 			// obtain function information
@@ -723,9 +722,8 @@ namespace backend {
 			// ------------------------ resolve function ---------------------
 
 			std::string name = insieme::utils::demangle(literal->getStringValue());
-			if (core::annotations::hasAttachedName(literal)) name = core::annotations::getAttachedName(literal);
+			if(core::annotations::hasAttachedName(literal)) name = core::annotations::getAttachedName(literal);
 			FunctionCodeInfo fun = resolveFunction(manager->create(name), funType, core::LambdaPtr(), true);
-
 			res->function = fun.function;
 
 			// ------------------------ add prototype -------------------------
@@ -776,6 +774,16 @@ namespace backend {
 			res->lambdaWrapper = wrapper.second;
 			res->lambdaWrapper->addDependencies(fun.prototypeDependencies);
 			res->lambdaWrapper->addDependency(res->prototype);
+
+			// -------------------------- add instantiation types if they are there --------------------------
+
+			for(auto instantiationType : funType->getInstantiationTypes()) {
+				auto typeArg = typeManager.getTemplateArgumentType(instantiationType);
+				res->instantiationTypes.push_back(typeArg);
+				// if argument type is not intercepted, add a dependency on its definition
+				auto tempParamTypeDef = typeManager.getDefinitionOf(typeArg);
+				if(tempParamTypeDef) res->prototype->addDependency(tempParamTypeDef);
+			}
 
 			// done
 			return res;
@@ -1382,120 +1390,77 @@ namespace backend {
 				}
 			};
 
-			c_ast::IdentifierPtr getIdentifierFor(const Converter& converter, const core::NodePtr& node) {
-				auto mgr = converter.getCNodeManager();
-				switch(node->getNodeType()) {
-				case core::NT_TagType:
-				case core::NT_GenericType: {
-					auto type = converter.getTypeManager().getTypeInfo(node.as<core::TypePtr>());
-					if(auto structType = type.lValueType.isa<c_ast::StructTypePtr>()) {
-						return mgr->create(toString(*structType));
-					} else if(auto namedType = type.lValueType.isa<c_ast::NamedTypePtr>()) {
-						return mgr->create(toString(*namedType));
-					}
-					return mgr->create(converter.getNameManager().getName(node));
-				}
-				case core::NT_Parent: {
-					auto type = converter.getTypeManager().getTypeInfo(node.as<core::ParentPtr>()->getType());
-					if(auto structType = type.lValueType.isa<c_ast::StructTypePtr>()) {
-						return mgr->create(toString(*structType));
-					} else if(auto namedType = type.lValueType.isa<c_ast::NamedTypePtr>()) {
-						return mgr->create(toString(*namedType));
-					}
-					return mgr->create(converter.getNameManager().getName(node.as<core::ParentPtr>()->getType()));
-				}
-				case core::NT_Field: return mgr->create(node.as<core::FieldPtr>()->getName()->getValue());
-				case core::NT_Literal:
-					assert(node->getNodeManager().getLangBasic().isIdentifier(node.as<core::ExpressionPtr>()->getType()));
-					return mgr->create(node.as<core::LiteralPtr>()->getStringValue());
-				default: {}
-				}
-
-				std::cerr << "\n\n --------------------- ASSERTION ERROR -------------------\n";
-				std::cerr << "Node of type " << node->getNodeType() << " should not be reachable!\n";
-				assert_fail() << "Must not be reached!";
-				return c_ast::IdentifierPtr();
-			}
-
 			std::pair<c_ast::Constructor::InitializationList, core::CompoundStmtPtr> extractInitializer(const Converter& converter, const core::LambdaPtr& ctor,
 			                                                                                            ConversionContext& context) {
-				auto mgr = converter.getCNodeManager();
+				auto& mgr = converter.getNodeManager();
+				core::IRBuilder builder(mgr);
+				auto cmgr = converter.getCNodeManager();
+				c_ast::Constructor::InitializationList initializers;
+				auto& rExt = mgr.getLangExtension<core::lang::ReferenceExtension>();
 
-				// collect first assignments to fields from body
-				c_ast::Constructor::InitializationList initializer;
+				auto body = ctor->getBody();
 
-				// obtain class type
-				core::TagTypePtr classType = getClassType(ctor->getType());
+				// determine "this" parameter for ref member
+				auto thisVar = ctor->getParameterList()[0];
+				auto thisExp = builder.deref(thisVar);
 
-				// obtain list of parameters
-				core::VariableList params(ctor->getParameters().begin() + 1, ctor->getParameters().end());
+				// set of identifiers already initialized
+				core::NodeSet initedFields;
 
-				// get list of all parents and fields
-				std::vector<c_ast::IdentifierPtr> all;
-				if (classType->isStruct()) {
-					for(const core::ParentPtr& cur : classType->getStruct()->getParents()) {
-						all.push_back(getIdentifierFor(converter, cur));
+				auto isFieldInit = [&](const core::ExpressionPtr& memLoc) {
+					if(rExt.isCallOfRefMemberAccess(memLoc)) {
+						// field initializers
+						auto structExp = core::analysis::getArgument(memLoc, 0);
+						if(structExp == thisExp) {
+							auto field = core::analysis::getArgument(memLoc, 1).as<core::LiteralPtr>();
+							if(!::contains(initedFields, field)) {
+								initedFields.insert(field);
+								return cmgr->create<c_ast::Identifier>(field->getStringValue());
+							}
+						}
+					} else if(memLoc == thisExp) {
+						// delegating constructors
+						return cmgr->create<c_ast::Identifier>(core::analysis::getTypeName(core::analysis::getReferencedType(thisExp)));
+					} else if(rExt.isCallOfRefParentCast(memLoc)) {
+						// base constructors
+						return cmgr->create<c_ast::Identifier>(
+						    core::analysis::getTypeName(core::analysis::getRepresentedType(core::analysis::getArgument(memLoc, 1))));
 					}
-				}
-				for(const core::FieldPtr& cur : classType->getFields()) {
-					all.push_back(getIdentifierFor(converter, cur));
-				}
+					return c_ast::IdentifierPtr();
+				};
 
-				// collect all first write operations only depending on parameters
-				auto thisVar = ctor->getParameters()[0];
-				core::CompoundStmtAddress oldBody(ctor->getBody());
-				auto firstWriteOps = FirstWriteCollector().collect(thisVar, params, oldBody);
-
-				// stop here if there is nothing to do
-				if(firstWriteOps.empty()) { return std::make_pair(initializer, oldBody); }
-
-				// remove assignments from body
-				core::CompoundStmtPtr newBody = core::transform::remove(ctor->getNodeManager(), firstWriteOps).as<core::CompoundStmtPtr>();
-
-				// assemble initializer list in correct order
-				const auto& refExt = thisVar->getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
-				for(const c_ast::IdentifierPtr& cur : all) {
-					for(const auto& write : firstWriteOps) {
-						// check whether write target is current identifier
-						core::CallExprPtr call = write.as<core::CallExprPtr>();
-						if(cur == getIdentifierFor(converter, getAccessedField(thisVar, call))) {
-							// add filed assignment
-							if(core::analysis::isCallOf(call, refExt.getRefAssign())) {
-								// avoid default inits, those will be done anyway
-								if(core::analysis::isCallOf(call[1], call->getNodeManager().getLangBasic().getZero())) {
-									continue;
-								}
-
-								c_ast::NodePtr value = converter.getStmtConverter().convertExpression(context, call[1]);
-								initializer.push_back(c_ast::Constructor::InitializerListEntry(cur, toVector(value)));
-							} else {
-								// otherwise it needs to be a constructor
-								assert(call->getFunctionExpr()->getType().as<core::FunctionTypePtr>()->isConstructor());
-
-								// avoid default inits, those will be done anyway
-								if(core::analysis::isCallOf(call, call->getNodeManager().getLangBasic().getZero())) {
-									continue;
-								}
-
-								c_ast::ExpressionPtr initCall = converter.getStmtConverter().convertExpression(context, call);
-
-								if(initCall->getNodeType() != c_ast::NT_ConstructorCall) {
-									assert_eq(initCall->getNodeType(), c_ast::NT_UnaryOperation);
-									initCall = initCall.as<c_ast::UnaryOperationPtr>()->operand.as<decltype(initCall)>();
-								}
-
-								// convert constructor call as if it would be an in-place constructor (resolves dependencies!)
-								assert_eq(initCall->getNodeType(), c_ast::NT_ConstructorCall);
-								auto ctorCall = initCall.as<c_ast::ConstructorCallPtr>();
-								// add constructor call to initializer list
-								initializer.push_back(c_ast::Constructor::InitializerListEntry(cur, ctorCall->arguments));
+				core::StatementList newBody;
+				for(const auto& stmt : body) {
+					if(auto initExpr = stmt.isa<core::InitExprPtr>()) {
+						auto init = initExpr->getInitExprList();
+						assert_eq(init.size(), 1) << "Unexpected init expression list in constructor, expected exactly one expression\n" << init;
+						auto memLoc = initExpr->getMemoryExpr();
+						if(auto fieldId = isFieldInit(initExpr->getMemoryExpr())) {
+							auto cInitExpr = converter.getStmtConverter().convertExpression(context, init[0]);
+							initializers.push_back( { fieldId, toVector<c_ast::NodePtr>(cInitExpr) } );
+							continue;
+						}
+					}
+					if(auto memCtor = stmt.isa<core::CallExprPtr>()) {
+						if(core::analysis::isConstructorCall(memCtor)) {
+							if(auto fieldId = isFieldInit(core::analysis::getArgument(memCtor, 0))) {
+								// build a replacement constructor to easily translate and migrate the translated arguments to the init list
+								auto replacementArgs = memCtor->getArgumentList();
+								replacementArgs[0] = core::lang::buildRefTemp(replacementArgs[0]->getType());
+								auto replacementCall = builder.callExpr(memCtor->getType(), memCtor->getFunctionExpr(), replacementArgs);
+								auto cCall = converter.getStmtConverter().convertExpression(context, replacementCall);
+								assert_eq(cCall->getNodeType(), c_ast::NT_UnaryOperation) << "Expected constructor to translate to ref operation";
+								auto cCtor = cCall.as<c_ast::UnaryOperationPtr>()->operand.as<c_ast::ConstructorCallPtr>();
+								initializers.push_back( { fieldId, cCtor->arguments } );
+								continue;
 							}
 						}
 					}
+					newBody.push_back(stmt);
 				}
 
 				// return result
-				return std::make_pair(initializer, newBody);
+				return std::make_pair(initializers, builder.compoundStmt(newBody));
 			}
 
 
@@ -1577,7 +1542,7 @@ namespace backend {
 
 				// extract initializer list
 				if(funType->isConstructor()) {
-					// collect initializer values + remove assignments from body
+					// collect initializer values + remove from body
 					std::tie(initializer, body) = extractInitializer(converter, lambda, context);
 				}
 

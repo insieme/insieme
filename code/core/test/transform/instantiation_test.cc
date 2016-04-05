@@ -128,6 +128,25 @@ namespace transform {
 		EXPECT_EQ(builder.normalize(builder.parseStmt("var vector<int<4>, 8> res;")), builder.normalize(newAddr.getAddressedNode()));
 	}
 
+	TEST(TypeInstantiation, Constructor) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto addresses = builder.parseAddressesStatement(R"raw(
+		{
+			var ref<IMP_TemplateWithMethod<int<4>>,f,f,plain> v0 = $lit("IMP_TemplateWithMethod::ctor" : IMP_TemplateWithMethod<'T>::())$(v0);
+		}
+	)raw");
+
+		EXPECT_EQ(addresses.size(), 1);
+
+		auto result = instantiateTypes(addresses[0].getRootNode());
+
+		auto newAddr = addresses[0].switchRoot(result);
+
+		EXPECT_EQ(builder.parseType("IMP_TemplateWithMethod<'T>::()"), addresses[0].getAddressedNode().as<LiteralPtr>()->getType());
+		EXPECT_EQ(builder.parseType("IMP_TemplateWithMethod<int<4>>::()"), newAddr.getAddressedNode().as<LiteralPtr>()->getType());
+	}
 
 	TEST(TypeInstantiation, NameAnnotations) {
 		NodeManager mgr;

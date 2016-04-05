@@ -42,6 +42,7 @@
 #include "insieme/core/lang/boolean_marker.h"
 #include "insieme/core/lang/pointer.h"
 #include "insieme/core/types/match.h"
+#include "insieme/core/types/type_variable_deduction.h"
 #include "insieme/core/analysis/ir_utils.h"
 
 namespace insieme {
@@ -54,17 +55,18 @@ namespace lang {
 			if (!type) return false;
 			if (type.isa<TypeVariablePtr>()) return true;
 			const ReferenceExtension& refExt = type->getNodeManager().getLangExtension<ReferenceExtension>();
-			return refExt.isMarkerPlain(type) || refExt.isMarkerCppReference(type) || refExt.isMarkerCppRValueReference(type);
+			return refExt.isMarkerPlain(type) || refExt.isMarkerCppReference(type) || refExt.isMarkerCppRValueReference(type) || refExt.isMarkerQualified(type);
 		}
 
 		ReferenceType::Kind parseKind(const TypePtr& type) {
 			assert_pred1(isRefMarker, type);
 
 			const ReferenceExtension& refExt = type->getNodeManager().getLangExtension<ReferenceExtension>();
-			if (refExt.isMarkerPlain(type)) return ReferenceType::Kind::Plain;
-			if (refExt.isMarkerCppReference(type)) return ReferenceType::Kind::CppReference;
-			if (refExt.isMarkerCppRValueReference(type)) return ReferenceType::Kind::CppRValueReference;
-			if (type.isa<TypeVariablePtr>()) return ReferenceType::Kind::Undefined;
+			if(refExt.isMarkerPlain(type)) return ReferenceType::Kind::Plain;
+			if(refExt.isMarkerCppReference(type)) return ReferenceType::Kind::CppReference;
+			if(refExt.isMarkerCppRValueReference(type)) return ReferenceType::Kind::CppRValueReference;
+			if(refExt.isMarkerQualified(type)) return ReferenceType::Kind::Qualified;
+			if(type.isa<TypeVariablePtr>()) return ReferenceType::Kind::Undefined;
 
 			// something went wrong
 		 	assert_fail() << "Unknown reference kind: " << type;
@@ -78,6 +80,7 @@ namespace lang {
 				case ReferenceType::Kind::Plain: 				return refExt.getMarkerPlain();
 				case ReferenceType::Kind::CppReference: 		return refExt.getMarkerCppReference();
 				case ReferenceType::Kind::CppRValueReference: 	return refExt.getMarkerCppRValueReference();
+				case ReferenceType::Kind::Qualified:			return refExt.getMarkerQualified();
 				case ReferenceType::Kind::Undefined:            return TypeVariable::get(mgr, "k");
 			}
 
@@ -158,6 +161,10 @@ namespace lang {
 
 	bool ReferenceType::isCppRValueReference() const {
 		return isRefMarker(kind) && getKind() == Kind::CppRValueReference;
+	}
+
+	bool ReferenceType::isQualified() const {
+		return isRefMarker(kind) && getKind() == Kind::Qualified;
 	}
 
 	namespace {
@@ -246,6 +253,10 @@ namespace lang {
 		return isReference(node) && ReferenceType(node).isCppRValueReference();
 	}
 
+	bool isQualifiedReference(const NodePtr& node) {
+		return isReference(node) && ReferenceType(node).isQualified();
+	}
+
 	ReferenceType::Kind getReferenceKind(const TypePtr& typeLitType) {
 		if(core::analysis::isTypeLiteralType(typeLitType)) return parseKind(core::analysis::getRepresentedType(typeLitType));
 		return parseKind(typeLitType);
@@ -260,6 +271,18 @@ namespace lang {
 	}
 
 
+	bool doReferenceQualifiersDiffer(const TypePtr& typeA, const TypePtr& typeB) {
+		assert_true(isReference(typeA)) << "Can only check qualifiers on references, not on " << dumpColor(typeA);
+		assert_true(isReference(typeB)) << "Can only check qualifiers on references, not on " << dumpColor(typeB);
+
+		ReferenceType rtA(typeA);
+		ReferenceType rtB(typeB);
+
+		return (rtA.isConst() != rtB.isConst())
+				|| (rtA.isVolatile() != rtB.isVolatile())
+				|| (rtA.getKind() != rtB.getKind());
+	}
+
 	bool doReferencesDifferOnlyInQualifiers(const TypePtr& typeA, const TypePtr& typeB) {
 		assert_true(isReference(typeA)) << "Can only check qualifiers on references, not on " << dumpColor(typeA);
 		assert_true(isReference(typeB)) << "Can only check qualifiers on references, not on " << dumpColor(typeB);
@@ -270,13 +293,28 @@ namespace lang {
 		auto gA = typeA.as<GenericTypePtr>();
 		auto gB = typeB.as<GenericTypePtr>();
 
-		return gA->getTypeParameter(0) == gB->getTypeParameter(0);
+		return gA->getTypeParameter(0) == gB->getTypeParameter(0)
+				|| types::getTypeVariableInstantiation(typeA->getNodeManager(), gA->getTypeParameter(0), gB->getTypeParameter(0))
+				|| types::getTypeVariableInstantiation(typeA->getNodeManager(), gB->getTypeParameter(0), gA->getTypeParameter(0));
+	}
+
+	ExpressionPtr buildRefDeref(const ExpressionPtr& refExpr) {
+		assert_pred1(isReference, refExpr->getType());
+		auto& rExt = refExpr->getNodeManager().getLangExtension<lang::ReferenceExtension>();
+		IRBuilder builder(refExpr->getNodeManager());
+		return builder.callExpr(analysis::getReferencedType(refExpr->getType()), rExt.getRefDeref(), refExpr);
 	}
 
 	ExpressionPtr buildRefCast(const ExpressionPtr& refExpr, const TypePtr& targetTy) {
 		assert_pred1(isReference, refExpr) << "Trying to build a ref cast from non-ref.";
 		assert_pred1(isReference, targetTy) << "Trying to build a ref cast to non-ref type.";
 		if(targetTy == refExpr->getType()) return refExpr;
+
+		//only create the cast if the types really do differ in their qualifiers
+		if (!doReferenceQualifiersDiffer(refExpr->getType(), targetTy)) {
+			return refExpr;
+		}
+
 		assert_true(doReferencesDifferOnlyInQualifiers(refExpr->getType(), targetTy)) << "Ref cast only allowed to cast between qualifiers,"
 			<< "trying to cast from\n" << dumpColor(refExpr->getType()) << " - to - \n" << dumpColor(targetTy);
 		IRBuilder builder(refExpr->getNodeManager());
@@ -296,6 +334,24 @@ namespace lang {
 		IRBuilder builder(refExpr->getNodeManager());
 		auto& rExt = refExpr->getNodeManager().getLangExtension<ReferenceExtension>();
 		return builder.callExpr(rExt.getRefKindCast(), refExpr, builder.getTypeLiteral(lang::toType(refExpr->getNodeManager(), newKind)));
+	}
+
+	ExpressionPtr buildRefParentCast(const ExpressionPtr& refExpr, const TypePtr& targetTy) {
+		assert_pred1(isReference, refExpr) << "Trying to build a ref parent cast from non-ref.";
+		auto rT = ReferenceType(refExpr);
+		if(rT.getElementType() == targetTy) return refExpr;
+		IRBuilder builder(refExpr->getNodeManager());
+		auto& rExt = refExpr->getNodeManager().getLangExtension<ReferenceExtension>();
+		return builder.callExpr(rExt.getRefParentCast(), refExpr, builder.getTypeLiteral(targetTy));
+	}
+
+	ExpressionPtr buildRefReinterpret(const ExpressionPtr& refExpr, const TypePtr& targetTy) {
+		assert_pred1(isReference, refExpr) << "Trying to build a ref reinterpret cast from non-ref.";
+		auto rT = ReferenceType(refExpr);
+		if(rT.getElementType() == targetTy) return refExpr;
+		IRBuilder builder(refExpr->getNodeManager());
+		auto& rExt = refExpr->getNodeManager().getLangExtension<ReferenceExtension>();
+		return builder.callExpr(rExt.getRefReinterpret(), refExpr, builder.getTypeLiteral(targetTy));
 	}
 
 	ExpressionPtr buildRefTemp(const TypePtr& type) {

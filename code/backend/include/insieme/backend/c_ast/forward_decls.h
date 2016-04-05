@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -50,7 +50,7 @@ namespace c_ast {
  * type a type definition for a corresponding annotated pointer is added.
  */
 #define NODE(NAME)                                                                                                                                             \
-	class NAME;                                                                                                                                                \
+	struct NAME;                                                                                                                                                \
 	typedef Ptr<NAME> NAME##Ptr;                                                                                                                               \
 // take all nodes from within the definition file
 #include "insieme/backend/c_ast/c_nodes.def"

@@ -22,6 +22,9 @@
 #ifdef __clang__
 # pragma clang diagnostic ignored "-Wdeprecated-register"
 #endif
+
+#undef YY_DECL
+#define YY_DECL InspireParser::symbol_type InspireScanner::yylex(insieme::core::parser::detail::InspireDriver& driver)
 %}
 
 
@@ -41,8 +44,9 @@ tag_ref       [\^][a-zA-Z0-9_]*
  * string literals (which are real strings - not real values or so) and also pass on the enclosing quotes to the builder.
  */
 string        \"(\\.|[^"])*\"|\"(\"(\\.|[^"])*\")\"
-float         [0-9]+"."[0-9]+f
-double        [0-9]+"."[0-9]+
+char          [\'][\\a-zA-Z0-9_][a-zA-Z0-9_]?[\']
+float         [0-9]+"."[0-9]+([eE][+\-]?[0-9]+)?f
+double        [0-9]+"."[0-9]+([eE][+\-]?[0-9]+)?
 ulong         [0-9]+ul
 long          [0-9]+l
 longlong      [0-9]+ll
@@ -87,6 +91,7 @@ blank         [ \t]
 "/"           return InspireParser::make_SLASH(loc);
 "%"           return InspireParser::make_PERCENT(loc);
 "#"           return InspireParser::make_HASH(loc);
+"<<"          return InspireParser::make_LSHIFT(loc);
 
 "("           return InspireParser::make_LPAREN(loc);
 ")"           return InspireParser::make_RPAREN(loc);
@@ -123,6 +128,7 @@ blank         [ \t]
 
 ";"           return InspireParser::make_SEMIC(loc);
 ","           return InspireParser::make_COMA(loc);
+"..."         return InspireParser::make_ELLIPSIS(loc);
 ".."          return InspireParser::make_RANGE(loc);
 "."           return InspireParser::make_DOT(loc);
 "$"           return InspireParser::make_ADDRESS(loc);
@@ -184,6 +190,7 @@ blank         [ \t]
 	std::string tmp(yytext);
 	return InspireParser::make_STRING(tmp, loc);
 }
+{char}        return InspireParser::make_CHAR(yytext, loc);
 {int}         return InspireParser::make_INT(yytext, loc);
 {uint}        return InspireParser::make_UINT(yytext, loc);
 {long}        return InspireParser::make_LONG(yytext, loc);

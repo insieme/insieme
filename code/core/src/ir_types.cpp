@@ -52,6 +52,59 @@
 namespace insieme {
 namespace core {
 
+	bool detail::semanticNodeLessThan(const core::NodePtr& a, const core::NodePtr& b) {
+		if(a->getNodeType() == NT_MemberFunction && b->getNodeType() == NT_MemberFunction) {
+			auto aMem = a.as<MemberFunctionPtr>();
+			auto bMem = b.as<MemberFunctionPtr>();
+			if(aMem->getNameAsString() == bMem->getNameAsString()) {
+				return semanticNodeLessThan(aMem->getImplementation(), bMem->getImplementation());
+			}
+			return aMem.getNameAsString() < bMem.getNameAsString();
+		}
+
+		TypePtr aT, bT;
+		if(a->getNodeCategory() == NC_Expression && b->getNodeCategory() == NC_Expression) {
+			aT = a.as<ExpressionPtr>()->getType();
+			bT = b.as<ExpressionPtr>()->getType();
+		}
+		if(a->getNodeCategory() == NC_Type && b->getNodeCategory() == NC_Type) {
+			aT = a.as<TypePtr>();
+			bT = b.as<TypePtr>();
+		}
+
+		if(aT && bT && aT->getNodeType() == NT_FunctionType && bT->getNodeType() == NT_FunctionType) {
+			auto aFT = aT.as<FunctionTypePtr>();
+			auto bFT = bT.as<FunctionTypePtr>();
+			auto aParams = aFT.getParameterTypeList();
+			auto bParams = bFT.getParameterTypeList();
+			if(aParams.size() != bParams.size()) return aParams.size() < bParams.size();
+			for(const auto& pair : make_paired_range(aParams, bParams)) {
+				if(*pair.first != *pair.second) return semanticNodeLessThan(pair.first, pair.second);
+			}
+		}
+
+		if(aT && bT && aT->getNodeType() == NT_GenericType && bT->getNodeType() == NT_GenericType) {
+			if(lang::isReference(aT) && lang::isReference(bT)) {
+				auto aRefT = lang::ReferenceType(aT);
+				auto bRefT = lang::ReferenceType(bT);
+				if(aRefT.getElementType() != bRefT.getElementType()) return semanticNodeLessThan(aRefT.getElementType(), bRefT.getElementType());
+				if(aRefT.getKind() != bRefT.getKind()) return aRefT.getKind() < bRefT.getKind();
+			}
+			auto aGT = aT.as<GenericTypePtr>();
+			auto bGT = bT.as<GenericTypePtr>();
+			if(aGT->getName() != bGT->getName()) return aGT.getName()->getValue() < bGT.getName()->getValue();
+			auto aTypeParameters = aGT->getTypeParameterList();
+			auto bTypeParameters = bGT->getTypeParameterList();
+			if(aTypeParameters.size() != bTypeParameters.size()) return aTypeParameters.size() < bTypeParameters.size();
+			for(const auto& pair : make_paired_range(aTypeParameters, bTypeParameters)) {
+				if(*pair.first != *pair.second) return semanticNodeLessThan(pair.first, pair.second);
+			}
+		}
+
+		// fallback
+		return !(*a < *b);
+	}
+
 
 	std::ostream& GenericType::printTo(std::ostream& out) const {
 		// create output buffer
@@ -72,6 +125,21 @@ namespace core {
 		return out;
 	}
 
+	std::ostream& GenericTypeVariable::printTo(std::ostream& out) const {
+		// create output buffer
+		out << "'" << *getVarName();
+
+		// print parameters (or empty <> if none)
+		return out << '<' << join(",", getTypeParameter()->getChildList(), print<deref<NodePtr>>()) << '>';
+	}
+
+	std::ostream& VariadicGenericTypeVariable::printTo(std::ostream& out) const {
+		// create output buffer
+		out << "'" << *getVarName() << "...";
+
+		// print parameters (or empty <> if none)
+		return out << '<' << join(",", getTypeParameter()->getChildList(), print<deref<NodePtr>>()) << '>';
+	}
 
 	std::ostream& FunctionType::printTo(std::ostream& out) const {
 		// fetch object type if required

@@ -575,23 +575,34 @@ namespace core {
 	};
 
 	/**
+	 * The options for visitors passed to the pruning visitor wrapper to decide
+	 * whether the visitor should decent into the subtree or prune the subtree from the visiting
+	 * process.
+	 */
+	enum class Action {
+		Prune = true,
+		Descent = false
+	};
+
+	/**
 	 * The DepthFirstPrunableIRVisitor provides a wrapper around an ordinary visitor which
 	 * will be iterated depth first, pre-order through every visited node.
 	 * Within every node, the sub-visitor's visit method will be invoked. The result of the
 	 * visit will be used to determine whether its child nodes should be visited.
 	 */
-	template <template <class Target> class Ptr = Pointer, typename... P>
+	template <typename Action, template <class Target> class Ptr = Pointer, typename... P>
 	class DepthFirstPrunableIRVisitor : public IRVisitor<void, Ptr, P...> {
+
 		/**
 		 * The sub-visitor visiting all nodes DepthFirstly.
 		 */
-		IRVisitor<bool, Ptr, P...>& subVisitor;
+		IRVisitor<Action, Ptr, P...>& subVisitor;
 
 	  public:
 		/**
 		 * Create a new visitor based on the given sub-visitor.
 		 */
-		DepthFirstPrunableIRVisitor(IRVisitor<bool, Ptr, P...>& subVisitor)
+		DepthFirstPrunableIRVisitor(IRVisitor<Action, Ptr, P...>& subVisitor)
 		    : IRVisitor<void, Ptr, P...>(subVisitor.isVisitingTypes()), subVisitor(subVisitor){};
 
 		/**
@@ -600,7 +611,7 @@ namespace core {
 		 */
 		void visitNode(const Ptr<const Node>& node, P... context) {
 			// visit current node
-			if(subVisitor.visit(node, context...)) {
+			if((bool)subVisitor.visit(node, context...)) {
 				// => visiting sub-nodes is not required
 				return;
 			}
@@ -917,9 +928,9 @@ namespace core {
 	 * @param visitor the visitor to be based on
 	 * @return a DepthFirst visitor encapsulating the given visitor
 	 */
-	template <template <class Target> class Ptr, typename... P>
-	DepthFirstPrunableIRVisitor<Ptr, P...> makeDepthFirstPrunableVisitor(IRVisitor<bool, Ptr, P...>& visitor) {
-		return DepthFirstPrunableIRVisitor<Ptr, P...>(visitor);
+	template <typename Action, template <class Target> class Ptr, typename... P>
+	DepthFirstPrunableIRVisitor<Action, Ptr, P...> makeDepthFirstPrunableVisitor(IRVisitor<Action, Ptr, P...>& visitor) {
+		return DepthFirstPrunableIRVisitor<Action, Ptr, P...>(visitor);
 	}
 
 	/**
@@ -1051,14 +1062,14 @@ namespace core {
 	 * @param root the root not to start the visiting from
 	 * @param visitor the visitor to be visiting all the nodes
 	 */
-	template <typename Node, template <class Target> class Ptr, typename... P>
-	inline void visitDepthFirstPrunable(const Ptr<Node>& root, IRVisitor<bool, Ptr, P...>&& visitor) {
+	template <typename Node, typename Action, template <class Target> class Ptr, typename... P>
+	inline void visitDepthFirstPrunable(const Ptr<Node>& root, IRVisitor<Action, Ptr, P...>&& visitor) {
 		makeDepthFirstPrunableVisitor(visitor).visit(root);
 	}
 
 	// same as above, however it is accepting visitors by reference
-	template <typename Node, template <class Target> class Ptr, typename... P>
-	inline void visitDepthFirstPrunable(const Ptr<Node>& root, IRVisitor<bool, Ptr, P...>& visitor) {
+	template <typename Node, typename Action, template <class Target> class Ptr, typename... P>
+	inline void visitDepthFirstPrunable(const Ptr<Node>& root, IRVisitor<Action, Ptr, P...>& visitor) {
 		makeDepthFirstPrunableVisitor(visitor).visit(root);
 	}
 

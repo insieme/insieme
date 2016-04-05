@@ -253,6 +253,13 @@ namespace conversion {
 		 */
 		core::TypePtr convertVarType(const clang::QualType& type) const;
 
+		/**
+		 * Entry point for converting clang expression types into IR types (with correct lvalue/rvalue handling)
+		 * @param expr is a clang expression
+		 * @return the corresponding IR type
+		 */
+		core::TypePtr convertExprType(const clang::Expr* expr) const;
+
 
 		/**
 		 * Tag symbols from std libs with the appropriate header information

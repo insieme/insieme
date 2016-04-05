@@ -1,9 +1,10 @@
+#include <iostream>
+
 struct A {
 	struct {
 		int a;
 		float b;
 	};
-public:
 	A(int val) 
 		: a(val)
 	{
@@ -11,6 +12,7 @@ public:
 };
 
 int main(){
-	A x(1);
+	A x(42);
+	std::cout << x.a << std::endl;
 	return 0;
 }

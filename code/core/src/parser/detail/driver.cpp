@@ -159,7 +159,7 @@ namespace parser {
 					error(l, format("left side on assignment must be a reference and is %s", toString(left.getType())));
 					return nullptr;
 				} else if(analysis::getReferencedType(left.getType()) != right->getType()) {
-					error(l, format("right side expression of type %s can not be assingend to type %s", toString(right.getType()), toString(left.getType())));
+					error(l, format("right side expression of type %s can not be assigned to type %s", toString(right.getType()), toString(left.getType())));
 					return nullptr;
 				}
 
@@ -204,6 +204,10 @@ namespace parser {
 			if(op == "&") { return builder.bitwiseAnd(a, b); }
 			if(op == "|") { return builder.bitwiseOr(a, b); }
 			if(op == "^") { return builder.bitwiseXor(a, b); }
+
+			// shift operations
+			if(op == "<<") { return builder.leftShift(a, b); }
+			if(op == ">>") { return builder.rightShift(a, b); }
 
 			// logic
 			if(op == "||") { return builder.logicOr(a, b); }
@@ -990,11 +994,11 @@ namespace parser {
 			}
 			return exp;
 		}
-		
+
 		ExpressionPtr InspireDriver::genInitializerExprTemp(const location& l, const TypePtr& type, const ExpressionList& list) {
 			return genInitializerExpr(l, type, lang::buildRefTemp(type), list);
 		}
-		
+
 		ExpressionPtr InspireDriver::genInitializerExpr(const location& l, const TypePtr& type, const ExpressionPtr& memExpr, const ExpressionList& list) {
 			if(!lang::isReference(type)) {
 				error(l, format("type for initialization must be a reference type (is %s)", *type));

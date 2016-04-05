@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -60,7 +60,7 @@ namespace conversion {
 		core::NodeManager& mgr;
 		const core::IRBuilder& builder;
 		const core::lang::BasicGenerator& basic;
-		
+
 	  public:
 		TypeConverter(Converter& fact);
 
@@ -83,14 +83,14 @@ namespace conversion {
 		DECLARE_TYPE_VISIT(TypeConverter, PointerType)
 		DECLARE_TYPE_VISIT(TypeConverter, DecayedType)
 		DECLARE_TYPE_VISIT(TypeConverter, AtomicType)
-		
+
 		// main entry point
 		core::TypePtr convert(const clang::QualType& type);
 		// main entry point for variables
 		core::TypePtr convertVarType(const clang::QualType& type);
 
 	  protected:
-		virtual core::TypePtr convertInternal(const clang::QualType& type) = 0;		
+		virtual core::TypePtr convertInternal(const clang::QualType& type) = 0;
 	};
 
 
@@ -135,7 +135,7 @@ namespace conversion {
 		CXXTypeConverter(Converter& fact) : TypeConverter(fact) {}
 
 		virtual ~CXXTypeConverter(){};
-		
+
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		//  COMMON TYPES
 		CALL_BASE_TYPE_VISIT(TypeConverter, BuiltinType)
@@ -162,6 +162,7 @@ namespace conversion {
 		core::TypePtr VisitReferenceType(const clang::ReferenceType* refTy);
 		core::TypePtr VisitTemplateSpecializationType(const clang::TemplateSpecializationType* templTy);
 		core::TypePtr VisitDependentTemplateSpecializationType(const clang::DependentTemplateSpecializationType* tempTy);
+		core::TypePtr VisitDependentNameType(const clang::DependentNameType* depNameType);
 		core::TypePtr VisitInjectedClassNameType(const clang::InjectedClassNameType* tempTy);
 		core::TypePtr VisitSubstTemplateTypeParmType(const clang::SubstTemplateTypeParmType* substTy);
 		core::TypePtr VisitTemplateTypeParmType(const clang::TemplateTypeParmType* templParamTy);

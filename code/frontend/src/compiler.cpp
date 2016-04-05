@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -143,7 +143,7 @@ namespace frontend {
 		ClangCompilerImpl() : clang(), TO(new TargetOptions()), m_isCXX(false) {}
 	};
 
-	ClangCompiler::ClangCompiler(const ConversionSetup& config, const path& file) : pimpl(new ClangCompilerImpl), config(config) {
+	ClangCompiler::ClangCompiler(const ConversionSetup& config, const path& file) : pimpl(new ClangCompilerImpl) {
 		// assert_false(is_obj);
 		// NOTE: the TextDiagnosticPrinter within the set DiagnosticClient takes over ownership of the diagOpts object!
 		setDiagnosticClient(pimpl->clang, config.hasOption(ConversionJob::PrintDiag));
@@ -241,13 +241,18 @@ namespace frontend {
 		}
 
 		if(config.getStandard() == ConversionSetup::Auto && config.isCxx(file)) { pimpl->m_isCXX = true; }
-		if(config.getStandard() == ConversionSetup::Cxx03 || config.getStandard() == ConversionSetup::Cxx98 || config.getStandard() == ConversionSetup::Cxx11) {
+		if(config.getStandard() == ConversionSetup::Cxx03 ||
+				config.getStandard() == ConversionSetup::Cxx98 ||
+				config.getStandard() == ConversionSetup::Cxx11 ||
+				config.getStandard() == ConversionSetup::Cxx14) {
 			pimpl->m_isCXX = true;
 		}
 
 		if(pimpl->m_isCXX) {
 			// set cxx standard to c++98
-			if(config.getStandard() == ConversionSetup::Cxx11) {
+			if(config.getStandard() == ConversionSetup::Cxx14) {
+				CompilerInvocation::setLangDefaults(LO, clang::IK_CXX, clang::LangStandard::lang_cxx14);
+			} else if(config.getStandard() == ConversionSetup::Cxx11) {
 				CompilerInvocation::setLangDefaults(LO, clang::IK_CXX, clang::LangStandard::lang_cxx11);
 			} else if(config.getStandard() == ConversionSetup::Cxx98) {
 				CompilerInvocation::setLangDefaults(LO, clang::IK_CXX, clang::LangStandard::lang_cxx98);

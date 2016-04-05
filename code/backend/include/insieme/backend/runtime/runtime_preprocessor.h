@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -62,10 +62,8 @@ namespace runtime {
 	 * Yes, the name is a working title ...
 	 */
 	class WorkItemizer : public PreProcessor {
-		bool includeEffortEstimation;
-
 	  public:
-		WorkItemizer(bool includeEffortEstimation = false) : includeEffortEstimation(includeEffortEstimation) {}
+		WorkItemizer() {}
 		virtual core::NodePtr process(const backend::Converter& converter, const core::NodePtr& code);
 	};
 

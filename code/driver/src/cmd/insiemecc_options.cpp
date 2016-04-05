@@ -197,7 +197,6 @@ namespace cmd {
 
 
 			// --------------- Job Settings ---------------
-			res.job.setOption(fe::ConversionJob::ProgressBar, res.settings.progress);
 			res.job.setOption(fe::ConversionJob::NoWarnings, res.settings.noWarnings);
 			res.job.setOption(fe::ConversionJob::WinCrossCompile, res.settings.winCrossCompile);
 			res.job.setOption(fe::ConversionJob::NoDefaultExtensions, res.settings.noDefaultExtensions);
@@ -257,6 +256,9 @@ namespace cmd {
 				assert_true(res.job.isCxx());
 			} else if(std == "c++11") {
 				res.job.setStandard(frontend::ConversionSetup::Cxx11);
+				assert_true(res.job.isCxx());
+			} else if(std == "c++14") {
+				res.job.setStandard(frontend::ConversionSetup::Cxx14);
 				assert_true(res.job.isCxx());
 			} else {
 				std::cerr << "Error: Unsupported standard: " << std << " - supported: auto, c99, c++98, c++03, c++11\n";

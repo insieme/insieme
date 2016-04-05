@@ -7,9 +7,6 @@ mpi
 vectors
 vivid
 
-# Disabling cpp test cases for the time being
-interceptor
-
 # Disabling tests because they fail with assertion:
 # Goto not implemented
 label_goto
@@ -26,3 +23,11 @@ variadic_functions
 variable_arrays
 pointer_arith_vla
 
+
+####################################################################################
+# The following tests are not really blacklisted but take rather long to execute.  #
+# All test names preceded with a '+' will not be executed by default but only when #
+# the integration test driver is run with the option to run these long tests also. #
+####################################################################################
+
++mqap

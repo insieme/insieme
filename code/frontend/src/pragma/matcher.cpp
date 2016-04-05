@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -39,10 +39,10 @@
 //   (without having to physically patch the compiled clang library) -- Don't think too hard about this.
 // This is required in order to implement cpp_string_lit_p
 //---------------------------------------------------------------------------------------------------------------------
-namespace insieme { namespace frontend { namespace pragma { class cpp_string_lit_p; } } }
+namespace insieme { namespace frontend { namespace pragma { struct cpp_string_lit_p; } } }
 #define Ident__has_declspec \
 Ident__has_declspec;\
-friend class insieme::frontend::pragma::cpp_string_lit_p
+friend struct insieme::frontend::pragma::cpp_string_lit_p
 #include <clang/Lex/Preprocessor.h>
 #undef Ident__has_declspec
 //------------------------------------------------------- Hack over ---------------------------------------------------
@@ -80,7 +80,7 @@ namespace {
 namespace insieme {
 namespace frontend {
 namespace pragma {
-	
+
 	// ------------------------------------ ValueUnion ---------------------------
 	ValueUnion::~ValueUnion() {
 		if(ptrOwner && is<clang::Stmt*>()) {
@@ -310,7 +310,7 @@ namespace pragma {
 	std::ostream& expr_p::printTo(std::ostream& out) const {
 		return out << "expr_p[" << getMapName() << "]";
 	}
-	
+
 	std::ostream& cpp_string_lit_p::printTo(std::ostream& out) const {
 		return out << "cpp_string_lit_p[" << getMapName() << "]";
 	}
@@ -373,7 +373,7 @@ namespace pragma {
 	bool expr_p::match(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const {
 		PP.EnableBacktrackAtThisPos();
         clang::Expr* result = ParserProxy::get().ParseExpression(PP);
-		
+
 		if(result) {
 			PP.CommitBacktrackedTokens();
 			ParserProxy::get().EnterTokenStream(PP);
@@ -387,10 +387,10 @@ namespace pragma {
 		errStack.addExpected(recID, ParserStack::Error("expr", ParserProxy::get().CurrentToken().getLocation()));
 		return false;
 	}
-	
+
 	bool cpp_string_lit_p::match(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const {
 		// Big picture: we temporarily change the lexer to C++11 standard, lex the string literal, then revert everything
-		PP.EnableBacktrackAtThisPos();	
+		PP.EnableBacktrackAtThisPos();
 		// Exit caching and recompute lexer kind necessary to obtain a valid lexer pointer in order to enable c++11 language options
 		PP.ExitCachingLexMode();
 		PP.recomputeCurLexerKind();
@@ -398,10 +398,10 @@ namespace pragma {
 		bool prev = lex->getLangOpts().CPlusPlus11;
 		const_cast<clang::LangOptions&>(lex->getLangOpts()).CPlusPlus11 = true;
 		PP.EnterCachingLexMode();
-		FinalActions restore([&]{ 
+		FinalActions restore([&]{
 			const_cast<clang::LangOptions&>(lex->getLangOpts()).CPlusPlus11 = prev;
 		});
-		
+
 		clang::Token token;
 		std::string l;
 		bool ret = PP.LexStringLiteral(token, l, "cpp_string_lit", true);

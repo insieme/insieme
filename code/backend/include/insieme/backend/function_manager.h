@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -48,9 +48,9 @@ namespace backend {
 
 	class Converter;
 	class ConversionContext;
-	class FunctionInfo;
-	class LambdaInfo;
-	class BindInfo;
+	struct FunctionInfo;
+	struct LambdaInfo;
+	struct BindInfo;
 
 
 	/**
@@ -129,6 +129,8 @@ namespace backend {
 		c_ast::NodePtr declaration;
 
 		c_ast::FunctionPtr function;
+
+		std::vector<c_ast::TypePtr> instantiationTypes;
 
 		c_ast::CodeFragmentPtr prototype;
 

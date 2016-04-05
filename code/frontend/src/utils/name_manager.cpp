@@ -71,21 +71,26 @@ namespace utils {
 		return str;
 	}
 
+	std::string getLocationAsString(const clang::SourceLocation sl, const clang::SourceManager& sm) {
+		std::stringstream ss;
+
+		std::string filename = sm.getFilename(sl).str();
+		// canonicalize filename in case we refer to it from different relative locations
+		boost::filesystem::path path(filename);
+		path = boost::filesystem::canonical(path); 
+		
+		ss << path.string();
+		ss << "_" << sm.getExpansionLineNumber(sl);
+		ss << "_" << sm.getExpansionColumnNumber(sl);
+
+		return removeSymbols(ss.str());
+	}
+
 	std::string createNameForAnon(const std::string& prefix, const clang::Decl* decl, const clang::SourceManager& sm) {
 		std::stringstream ss;
 		ss << prefix;
-
-		// canonicalize filename in case we refer to it from different relative locations
-		std::string filename = sm.getFilename(decl->getLocStart()).str();
-		boost::filesystem::path path(filename);
-		path = boost::filesystem::canonical(path);
-
-		ss << path.string();
-		ss << "_" << sm.getExpansionLineNumber(decl->getLocStart());
-		ss << "_" << sm.getExpansionColumnNumber(decl->getLocStart());
-
-		std::string name = removeSymbols(ss.str());
-		return name;
+		ss << getLocationAsString(decl->getLocStart(), sm);
+		return removeSymbols(ss.str());
 	}
 
 	/* we build a complete name for the class,
@@ -127,11 +132,11 @@ namespace utils {
 		}
 	}
 
-	std::string buildNameSuffixForTemplate(const clang::TemplateArgumentList& tempArgs, clang::ASTContext& astContext, bool cStyleName) {
+
+	std::string buildNameSuffixForTemplateInternal(const llvm::ArrayRef<clang::TemplateArgument>& tempArgs, clang::ASTContext& astContext, bool cStyleName) {
 		std::string separator = cStyleName ? "," : "_";
 		std::stringstream suffix;
-		for(unsigned i = 0; i < tempArgs.size(); ++i) {
-			auto arg = tempArgs.get(i);
+		for(auto arg : tempArgs) {
 			switch(arg.getKind()) {
 			case clang::TemplateArgument::Expression: {
 				suffix << separator << arg.getAsExpr()->getType().getAsString();
@@ -175,14 +180,11 @@ namespace utils {
 				break;
 			}
 			case clang::TemplateArgument::Pack: {
-				if (!cStyleName) {
+				if(!cStyleName) {
 					suffix << separator << "pack_begin";
 				}
-				for(clang::TemplateArgument::pack_iterator it = arg.pack_begin(), end = arg.pack_end(); it != end; it++) {
-					const clang::QualType& argType = (*it).getAsType();
-					suffix << separator << getTypeString(argType, cStyleName);
-				}
-				if (!cStyleName) {
+				suffix << buildNameSuffixForTemplateInternal(arg.getPackAsArray(), astContext, cStyleName);
+				if(!cStyleName) {
 					suffix << separator << "pack_end";
 				}
 				break;
@@ -209,6 +211,10 @@ namespace utils {
 		return suffix.str();
 	}
 
+	std::string buildNameSuffixForTemplate(const clang::TemplateArgumentList& tempArgs, clang::ASTContext& astContext, bool cStyleName) {
+		return buildNameSuffixForTemplateInternal(tempArgs.asArray(), astContext, cStyleName);
+	}
+
 	std::string buildNameForFunction(const clang::FunctionDecl* funcDecl, bool cStyleName) {
 		std::string name = funcDecl->getQualifiedNameAsString();
 		if(const clang::CXXMethodDecl* method = llvm::dyn_cast<clang::CXXMethodDecl>(funcDecl)) {
@@ -228,8 +234,8 @@ namespace utils {
 		// build a suffix for template instantiations
 		std::stringstream suffix;
 
-		if(funcDecl->isFunctionTemplateSpecialization() && funcDecl->getTemplateSpecializationArgs()) {
-			suffix << buildNameSuffixForTemplate(*funcDecl->getTemplateSpecializationArgs(), funcDecl->getASTContext(), cStyleName);
+		if(!cStyleName && funcDecl->isFunctionTemplateSpecialization() && funcDecl->getTemplateSpecializationArgs()) {
+			suffix << buildNameSuffixForTemplate(*funcDecl->getTemplateSpecializationArgs(), funcDecl->getASTContext());
 		}
 
 		if(funcDecl->isTemplateInstantiation()) {
@@ -238,8 +244,6 @@ namespace utils {
 				suffix << "_returns_" << returnType;
 			}
 		}
-
-		if(llvm::isa<clang::CXXMethodDecl>(funcDecl) && llvm::cast<clang::CXXMethodDecl>(funcDecl)->isConst()) { suffix << "_c"; }
 
 		string suffixStr = suffix.str();
 		if (!cStyleName) {
@@ -291,7 +295,7 @@ namespace utils {
 
 		// encode template parameters in name
 		auto tempSpec = llvm::dyn_cast<clang::ClassTemplateSpecializationDecl>(tagDecl);
-		if(tempSpec) {
+		if(tempSpec && !cStyleName) {
 			name = name + utils::buildNameSuffixForTemplate(tempSpec->getTemplateInstantiationArgs(), tempSpec->getASTContext(), cStyleName);
 		}
 
@@ -315,6 +319,16 @@ namespace utils {
 			return name.substr(2);
 		}
 		return name;
+	}
+
+	std::string getNameForDependentNameType(const clang::DependentNameType* depName) {
+		string name;
+		llvm::raw_string_ostream strstr(name);
+		strstr << clang::TypeWithKeyword::getKeywordName(depName->getKeyword());
+		if (depName->getKeyword() != clang::ETK_None) strstr << " ";
+		depName->getQualifier()->print(strstr, clang::PrintingPolicy(clang::LangOptions()));
+		strstr << depName->getIdentifier()->getName().str();
+		return strstr.str();
 	}
 
 } // End utils namespace

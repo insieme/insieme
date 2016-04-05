@@ -65,9 +65,10 @@
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/datapath/datapath.h"
 #include "insieme/core/encoder/lists.h"
+#include "insieme/core/lang/array.h"
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/pointer.h"
-#include "insieme/core/lang/array.h"
+#include "insieme/core/lang/varargs_extension.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/materialize.h"
 
@@ -150,12 +151,26 @@ namespace conversion {
 
 		auto funExp = irCall->getFunctionExpr();
 		auto funType = funExp->getType().as<core::FunctionTypePtr>();
+		auto paramTypeList = funType->getParameterTypeList();
+		unsigned clangArgCount = callExpr->arg_end() - callExpr->arg_begin();
+
+		// fix variadic argument type list
+		auto& vaExt = converter.getNodeManager().getLangExtension<core::lang::VarArgsExtension>();
+		if(!paramTypeList.empty() && paramTypeList.back() == vaExt.getVarList()) {
+			paramTypeList.pop_back();
+			while (paramTypeList.size() < clangArgCount) {
+				paramTypeList.push_back(core::TypePtr());
+			}
+		}
+
+		assert_eq(paramTypeList.size(), clangArgCount) << "Argument counts don't match for funType "
+				<< *funType << " and clang call expr " << dumpClang(callExpr, converter.getCompiler().getSourceManager());
 
 		// in Inspire 2.0, copy and move constructor calls are implicit on function calls
 		ExpressionList newArgs;
 		size_t i = 0;
 		std::transform(callExpr->arg_begin(), callExpr->arg_end(), std::back_inserter(newArgs), [&](const clang::Expr* clangArgExpr) {
-			return convertCxxArgExpr(clangArgExpr, funType->getParameterType(i++));
+			return convertCxxArgExpr(clangArgExpr, paramTypeList[i++]);
 		});
 
 		return builder.callExpr(convertExprType(callExpr), funExp, newArgs);
@@ -233,7 +248,7 @@ namespace conversion {
 			}
 
 			// build call and we are done
-			auto retType = methodLambda->getType().as<core::FunctionTypePtr>()->getReturnType();
+			auto retType = convertExprType(callExpr);
 			ret = utils::buildCxxMethodCall(converter, retType, methodLambda, thisObj, callExpr->arguments());
 		}
 
@@ -256,24 +271,14 @@ namespace conversion {
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//						CXX CONSTRUCTOR CALL EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 	namespace {
 		/// Convert a ConstructExpr to an IR constructor call, allocating the required memory either on the stack (default) or on the heap
 		core::ExpressionPtr convertConstructExprInternal(Converter& converter, const clang::CXXConstructExpr* constructExpr, bool onStack) {
-			auto& builder = converter.getIRBuilder();
 			core::TypePtr resType = converter.convertType(constructExpr->getType());
-
-			VLOG(2) << "convertConstructExprInternal - ResType: \n" << dumpDetailColored(resType) << " recType:\n"
-				    << (*converter.getIRTranslationUnit().getTypes().find(resType.as<core::GenericTypePtr>())).second << "\n";
-
 			// first constructor argument is the object memory location -- we need to build this either on the stack or heap
-			auto irMemLoc = onStack ? core::lang::buildRefTemp(resType) : builder.undefinedNew(resType);
-
-			// get constructor lambda
-			auto constructorLambda = converter.getFunMan()->lookup(constructExpr->getConstructor());
-
-			// return call
-			auto retType = constructorLambda->getType().as<core::FunctionTypePtr>()->getReturnType();
-			return utils::buildCxxMethodCall(converter, retType, constructorLambda, irMemLoc, constructExpr->arguments());
+			auto irMemLoc = onStack ? core::lang::buildRefTemp(resType) : converter.getIRBuilder().undefinedNew(resType);
+			return utils::convertConstructExpr(converter, constructExpr, irMemLoc);
 		}
 	}
 
@@ -467,10 +472,7 @@ namespace conversion {
 		core::ExpressionPtr retIr;
 		LOG_EXPR_CONVERSION(scalarValueInit, retIr);
 
-		//core::TypePtr elemType = converter.convertType(scalarValueInit->getTypeSourceInfo()->getType());
-		//retIr = converter.defaultInitVal(elemType);
-
-		assert_not_implemented();
+		retIr = builder.getZero(converter.convertType(scalarValueInit->getType()));
 
 		return retIr;
 	}
@@ -581,14 +583,10 @@ namespace conversion {
 		core::ExpressionPtr retIr;
 		LOG_EXPR_CONVERSION(compOp, retIr);
 
-		core::ExpressionPtr lhs = Visit(compOp->getLHS());
-		core::ExpressionPtr rhs = Visit(compOp->getRHS());
-		core::TypePtr exprTy = converter.convertType(compOp->getType());
+		retIr = ExprConverter::VisitCompoundAssignOperator(compOp);
 
-		assert_true(core::lang::isReference(lhs->getType())) << "left side must be assignable";
-
-		retIr = createBinaryExpression(exprTy, builder.deref(lhs), rhs, compOp);
-		retIr = frontend::utils::buildCxxStyleAssignment(lhs, retIr);
+		// Remove surrounding deref that we need in C code: CompOps are lvalues in C++
+		retIr = core::analysis::getArgument(retIr, 0);
 
 		return retIr;
 	}

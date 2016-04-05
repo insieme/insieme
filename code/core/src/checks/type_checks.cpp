@@ -1004,9 +1004,17 @@ namespace checks {
 			return res;
 		}
 
-		// this means it's not a struct, union or array
-		add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
-			             format("Initialization may only initialize structs, unions and array (trying to initialize %s)", *type), Message::ERROR));
+		// assume we are trying a scalar
+		if(initExprs.size() != 1) {
+			add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
+				             format("Too many initialization expressions (%d expressions for scalar, expected 1)", initExprs.size()), Message::ERROR));
+			return res;
+		}
+		if(!typeMatchesWithOptionalMaterialization(mgr, refType, initExprs.front()->getType())) {
+			add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
+				             format("Invalid type of scalar initialization - expected type: \n%s, actual: \n%s", *refType, *initExprs.front()->getType()),
+				             Message::ERROR));
+		}
 
 		return res;
 	}
@@ -1559,9 +1567,15 @@ namespace checks {
 				Message(callExpr, EC_TYPE_ILLEGAL_FUNCTION_INSTANTIATION, format("Instantiated type does not match type literal argument"), Message::ERROR));
 		}
 
+		auto subFunList = subFunType->getInstantiationTypeList();
+		auto instFunList = instantiatedFunType->getInstantiationTypeList();
 		// check that both instantiation parameter lists have the same arity
-		if(instantiatedFunType.getInstantiationTypeList().size() != subFunType.getInstantiationTypeList().size()) {
-			add(res, Message(callExpr, EC_TYPE_ILLEGAL_FUNCTION_INSTANTIATION, format("Instantiation type list arity mismatch"), Message::ERROR));
+		if(instFunList.size() != subFunList.size()) {
+			// except if the instantiated one of them ends on a variadic type variable, and non-variadic number of arguments are instantiated
+			if(subFunList.empty() || !((subFunList.back().isa<core::VariadicTypeVariablePtr>() || subFunList.back().isa<core::VariadicGenericTypeVariablePtr>())
+			   && instFunList.size() >= subFunList.size()-1)) {
+				add(res, Message(callExpr, EC_TYPE_ILLEGAL_FUNCTION_INSTANTIATION, format("Instantiation type list arity mismatch"), Message::ERROR));
+			}
 		}
 
 		// check that instantiation is correct

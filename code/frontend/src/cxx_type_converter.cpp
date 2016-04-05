@@ -43,6 +43,7 @@
 #include "insieme/frontend/state/record_manager.h"
 #include "insieme/frontend/state/function_manager.h"
 
+#include "insieme/utils/name_mangling.h"
 #include "insieme/utils/numeric_cast.h"
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/logging.h"
@@ -114,6 +115,12 @@ namespace conversion {
 
 		// add symbols for all methods to function manager before conversion
 		for(auto mem : classDecl->methods()) {
+			mem = mem->getCanonicalDecl();
+			// deal with static methods as functions
+			if(mem->isStatic()) {
+				converter.getDeclConverter()->VisitFunctionDecl(mem);
+				continue;
+			}
 			auto convDecl = converter.getDeclConverter()->convertMethodDecl(mem, irParents, recordTy->getFields(), true);
 		}
 
@@ -125,6 +132,12 @@ namespace conversion {
 		bool destructorVirtual = false;
 		for(auto mem : classDecl->methods()) {
 			mem = mem->getCanonicalDecl();
+			// deal with static methods as functions
+			if(mem->isStatic()) {
+				converter.getDeclConverter()->VisitFunctionDecl(mem);
+				continue;
+			}
+			// actual methods
 			auto convDecl = converter.getDeclConverter()->convertMethodDecl(mem, irParents, recordTy->getFields());
 			if(convDecl.lambda) {
 				VLOG(2) << "adding method lambda literal " << *convDecl.lit << " of type " << dumpColor(convDecl.lit->getType()) << "to IRTU";
@@ -193,24 +206,21 @@ namespace conversion {
 
 		VLOG(2) << "TemplateName: " << templTy->getTemplateName().getAsTemplateDecl()->getNameAsString();
 		VLOG(2) << "numTemplateArg: " << templTy->getNumArgs();
+		core::TypeList templateTypes;
 		for(size_t argId = 0, end = templTy->getNumArgs(); argId < end; argId++) {
-			// we trigger the conversion of the inner type,
-			// so we don't use the converted type/expr directly
 			switch(templTy->getArg(argId).getKind()) {
 			case clang::TemplateArgument::Expression: {
 				VLOG(2) << "arg: expression";
-				converter.convertType(templTy->getArg(argId).getAsExpr()->getType());
+				templateTypes.push_back(converter.convertType(templTy->getArg(argId).getAsExpr()->getType()));
 				break;
 			}
 			case clang::TemplateArgument::Type: {
 				VLOG(2) << "arg: TYPE";
-				converter.convertType(templTy->getArg(argId).getAsType());
+				templateTypes.push_back(converter.convertType(templTy->getArg(argId).getAsType()));
 				break;
 			}
 			// -------------------   NON IMPLEMENTED ONES ------------------------
 			case clang::TemplateArgument::Integral: {
-				// templated parameters are values wich spetialize the template, because of their value nature,
-				// they should be encapsulated as types to fit in the typing of the parent type
 				VLOG(2) << "arg: integral";
 				assert_fail();
 				break;
@@ -232,9 +242,7 @@ namespace conversion {
 			}
 			case clang::TemplateArgument::Template: {
 				VLOG(2) << "arg: template";
-				// no need to do anything
-				// templTy->getArg(argId).getAsTemplate().dump();
-
+				assert_fail();
 				break;
 			}
 			case clang::TemplateArgument::TemplateExpansion: {
@@ -250,8 +258,13 @@ namespace conversion {
 			}
 		}
 
-		assert_true(templTy->isSugared()) << "no idea what to do with non sugar:\n";
-		return retTy = converter.convertType(templTy->desugar());
+		if(templTy->isSugared()) {
+			retTy = converter.convertType(templTy->desugar());
+		} else {
+			// intercepted template
+			retTy = builder.genericType(insieme::utils::mangle(templTy->getTemplateName().getAsTemplateDecl()->getNameAsString()), templateTypes);
+		}
+		return retTy;
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -261,7 +274,15 @@ namespace conversion {
 		core::TypePtr retTy;
 		LOG_TYPE_CONVERSION(tempTy, retTy);
 
-		assert_fail() << "DependentTemplateSpecializationType should not be translated, only a complete spetialization can be turn into IR";
+		assert_fail() << "DependentTemplateSpecializationType should not be translated, only a complete specialization can be turned into IR";
+		return retTy;
+	}
+
+	core::TypePtr Converter::CXXTypeConverter::VisitDependentNameType(const clang::DependentNameType* depNameType) {
+		core::TypePtr retTy;
+		LOG_TYPE_CONVERSION(depNameType, retTy);
+
+		assert_fail() << "DependentNameType should not be translated, only a complete specialization can be turned into IR";
 		return retTy;
 	}
 

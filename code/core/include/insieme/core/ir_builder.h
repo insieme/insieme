@@ -420,9 +420,14 @@ namespace core {
 		LiteralPtr getIdentifierLiteral(const StringValuePtr& value) const;
 
 		/**
-		 * build type tokens (metatypes.... one of those => type<'a>  when 'a is a bounded to an specific type)
+		 * Build type tokens (metatypes.... one of those => type<'a>  when 'a is a bounded to an specific type)
 		 */
 		TypePtr getTypeLiteralType(const TypePtr& type) const;
+
+		/**
+		 * Build a numeric Type from a number.
+		 */
+		TypePtr numericType(int64_t value) const;
 
 		/**
 		 * A factory method for a type literals.
@@ -439,7 +444,7 @@ namespace core {
 		ExpressionPtr getZero(const TypePtr& type) const;
 
 		// Referencing
-		CallExprPtr deref(const ExpressionPtr& subExpr) const;
+		ExpressionPtr deref(const ExpressionPtr& subExpr) const;
 		CallExprPtr refTemp(const ExpressionPtr& subExpr) const;
 		CallExprPtr refNew(const ExpressionPtr& subExpr) const;
 		CallExprPtr refDelete(const ExpressionPtr& subExpr) const;
@@ -522,6 +527,7 @@ namespace core {
 		CallExprPtr getThreadGroup(ExpressionPtr level = ExpressionPtr()) const;
 		CallExprPtr getThreadGroupSize(ExpressionPtr level = ExpressionPtr()) const;
 		CallExprPtr getThreadId(ExpressionPtr level = ExpressionPtr()) const;
+		CallExprPtr getDefaultThreads() const;
 
 		// Direct call expression of barrier
 		CallExprPtr barrier(ExpressionPtr threadgroup = ExpressionPtr()) const;
@@ -736,6 +742,15 @@ namespace core {
 
 		inline CallExprPtr bitwiseXor(const ExpressionPtr& a, const ExpressionPtr& b) const {
 			return binaryOp(getOperator(lang::BasicGenerator::Xor, a->getType(), b->getType()), a, b);
+		}
+
+
+		inline CallExprPtr leftShift(const ExpressionPtr& a, const ExpressionPtr& b) const {
+			return binaryOp(getOperator(lang::BasicGenerator::LShift, a->getType(), b->getType()), a, b);
+		}
+
+		inline CallExprPtr rightShift(const ExpressionPtr& a, const ExpressionPtr& b) const {
+			return binaryOp(getOperator(lang::BasicGenerator::RShift, a->getType(), b->getType()), a, b);
 		}
 
 

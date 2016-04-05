@@ -330,8 +330,8 @@ TEST(PrettyPrinter, Declarations) {
 		"decl struct A;\n"
 		"decl f:A::() -> unit;\n"
 		"decl g:A::(int<4>) -> unit;\n"
-		"decl h:A::(ref<int<4>,f,f,plain>, int<8>) -> unit;\n"
-		"decl i:A::(int<4>) -> int<4>;\n"
+		"decl h:const A::(ref<int<4>,f,f,plain>, int<8>) -> unit;\n"
+		"decl i:volatile A::(int<4>) -> int<4>;\n"
 		"def struct A {\n"
 		"    function f = () -> unit { }\n"
 		"    virtual function g = (v1 : ref<int<4>,f,f,plain>) -> unit { }\n"
@@ -360,8 +360,8 @@ TEST(PrettyPrinter, Declarations) {
 		"decl struct A;\n"
 		"decl f:A::() -> unit;\n"
 		"decl g:A::(int<4>) -> unit;\n"
-		"decl h:A::(int<4>, int<8>) -> unit;\n"
-		"decl i:A::(int<4>) -> int<4>;\n"
+		"decl h:const A::(int<4>, int<8>) -> unit;\n"
+		"decl i:volatile A::(int<4>) -> int<4>;\n"
 		"decl j:A::() -> unit;\n"
 		"def struct A {\n"
 		"    function f = () -> unit { }\n"
@@ -1068,4 +1068,78 @@ TEST(PrettyPrinter, AutoEvaluatedFunctions) {
 		EXPECT_EQ(input, toString(printer)) << printer;
 	}
 
+}
+
+TEST(PrettyPrinter, MarkerTest) {
+	NodeManager nm;
+	IRBuilder builder(nm);
+
+	{
+		std::string input = "{"
+				            "  $1;$"
+				            "}";
+
+		std::string res = "{\n"
+				          "    <m id=1>1</m>;\n"
+				          "}";
+
+		auto ir = builder.normalize(builder.parseStmt(input));
+		PrettyPrinter printer(ir, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::PRINT_CASTS
+								  | PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_ATTRIBUTES
+		                          | PrettyPrinter::PRINT_MARKERS);
+
+		EXPECT_EQ(res, toString(printer)) << printer;
+	}
+
+	{
+		std::string input = "{"
+				            "  $1;$"
+				            "  $var int<4> a = $5$;$"
+				            "}";
+
+		std::string res = "{\n"
+				          "    <m id=41>1</m>;\n"
+				          "    <m id=44>var int<4> v0 = <m id=43>5</m></m>;\n"
+				          "}";
+
+		auto ir = builder.normalize(builder.parseStmt(input));
+		PrettyPrinter printer(ir, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::PRINT_CASTS
+								  | PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_ATTRIBUTES
+								  | PrettyPrinter::PRINT_MARKERS);
+
+		EXPECT_EQ(res, toString(printer)) << printer;
+	}
+}
+
+TEST(PrettyPrinter, LiteralPrinting) {
+	NodeManager nm;
+	IRBuilder builder(nm);
+
+	std::string input = "{\n"
+						"    var ref<int<4>,f,f,plain> v0 = lit(\"foo\" : () -> int<4>)();\n"
+						"}";
+
+	auto ir = builder.normalize(builder.parseStmt(input));
+	PrettyPrinter printer(ir, PrettyPrinter::OPTIONS_DEFAULT);
+	EXPECT_EQ("decl foo : () -> int<4>;\n{\n    var ref<int<4>,f,f,plain> v0 = foo();\n}", toString(printer)) << printer;
+
+	PrettyPrinter printerLiterals(ir, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::FULL_LITERAL_SYNTAX);
+	EXPECT_EQ(input, toString(printerLiterals)) << printerLiterals;
+}
+
+TEST(PrettyPrinter, MethodQualifiers) {
+	NodeManager nm;
+	IRBuilder builder(nm);
+
+	//make sure the members get correctly prefixed with const and volatile
+	std::string input = "{\n"
+						"    var ref<S,f,f,plain> v0 = v0;\n"
+						"    lit(\"foo\" : const S::() -> unit)(v0);\n"
+						"    lit(\"bar\" : volatile S::() -> unit)(v0);\n"
+						"    lit(\"baz\" : const volatile S::() -> unit)(v0);\n"
+						"}";
+
+	auto ir = builder.normalize(builder.parseStmt(input));
+	PrettyPrinter printer(ir, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::FULL_LITERAL_SYNTAX);
+	EXPECT_EQ(input, toString(printer)) << printer;
 }

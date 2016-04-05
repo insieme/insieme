@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -289,9 +289,9 @@ namespace c_ast {
 		return fun->getManager()->create<c_ast::Call>(fun, args);
 	}
 
-	inline MemberCallPtr memberCall(NodePtr obj, NodePtr fun, const vector<NodePtr>& args = vector<NodePtr>()) {
+	inline MemberCallPtr memberCall(NodePtr obj, NodePtr fun, const vector<NodePtr>& args = vector<NodePtr>(), const vector<TypePtr>& instantiationTypes = vector<TypePtr>()) {
 		if(getPriority(obj) < 15) { obj = parentheses(obj); }
-		return fun->getManager()->create<c_ast::MemberCall>(fun, obj, args);
+		return fun->getManager()->create<c_ast::MemberCall>(fun, obj, args, instantiationTypes);
 	}
 
 	inline ConstructorCallPtr ctorCall(TypePtr classType, const vector<NodePtr>& args = vector<NodePtr>(), ExpressionPtr location = ExpressionPtr()) {

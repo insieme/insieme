@@ -1,20 +1,3 @@
-//
-//
-//
-//
-//
-//
-//
-// currently not supported 
-// would need some changes in frontend/backend
-// example: add flag for union/struct to c_ast::structtype 
-//
-//
-//
-//
-//
-//
-//
 #include <stdio.h>
 #include <iostream>
 

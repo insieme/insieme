@@ -160,7 +160,7 @@ namespace runtime {
 			// add value for storing return value of function if necessary
 			TypePtr resultType = entryType->getReturnType();
 			if (!basic.isUnit(resultType)) {
-				dataItemEntries.push_back(builder.refType(resultType));	
+				dataItemEntries.push_back(builder.refType(resultType));
 			}
 
 			// build light-weight data item for main work-item call
@@ -233,11 +233,11 @@ namespace runtime {
 			// ----------------- Create Variable for Return Value  -------------------
 
 			core::VariablePtr var;
-			
+
 			// ------------------- Start standalone runtime  -------------------------
 
 			// create call to standalone runtime
-			if(!workItemImpls.empty()) { 
+			if(!workItemImpls.empty()) {
 
 				// get result type
 				auto resultType = program->getEntryPoints()[0]->getType().as<FunctionTypePtr>()->getReturnType();
@@ -256,13 +256,13 @@ namespace runtime {
 				core::TupleTypePtr tupleType = static_pointer_cast<const core::TupleType>(expr->getType());
 				expr = builder.callExpr(DataItem::toLWDataItemType(tupleType), extensions.getWrapLWData(), toVector(expr));
 
-				stmts.push_back(builder.callExpr(unit, extensions.getRunStandalone(), workItemImpls[0], expr)); 
+				stmts.push_back(builder.callExpr(unit, extensions.getRunStandalone(), workItemImpls[0], expr));
 			}
 
 			// ------------------- Add return   -------------------------
 
-			stmts.push_back(builder.returnStmt((var) 
-					? builder.deref(var).as<ExpressionPtr>() 
+			stmts.push_back(builder.returnStmt((var)
+					? builder.deref(var).as<ExpressionPtr>()
 					: builder.intLit(0).as<ExpressionPtr>()
 				));
 
@@ -541,13 +541,11 @@ namespace runtime {
 		const core::lang::ParallelExtension& parExt;
 		const RuntimeExtension& ext;
 		core::IRBuilder builder;
-		bool includeEffortEstimation;
 
 	  public:
-		WorkItemIntroducer(core::NodeManager& manager, bool includeEffortEstimation)
+		WorkItemIntroducer(core::NodeManager& manager)
 		    : manager(manager), basic(manager.getLangBasic()), parExt(manager.getLangExtension<lang::ParallelExtension>()),
-			  ext(manager.getLangExtension<RuntimeExtension>()), builder(manager),
-		      includeEffortEstimation(includeEffortEstimation) {}
+			  ext(manager.getLangExtension<RuntimeExtension>()), builder(manager) {}
 
 		virtual const core::NodePtr resolveElement(const core::NodePtr& ptr) {
 
@@ -599,7 +597,7 @@ namespace runtime {
 
 				// handle pfor calls
 				if(parExt.isPFor(fun)) {
-					return convertPfor(call).as<core::CallExprPtr>(); 
+					return convertPfor(call).as<core::CallExprPtr>();
 				}
 			}
 
@@ -877,7 +875,7 @@ namespace runtime {
 
 
 	core::NodePtr WorkItemizer::process(const backend::Converter& converter, const core::NodePtr& node) {
-		WorkItemIntroducer wiIntroducer(converter.getNodeManager(), includeEffortEstimation);
+		WorkItemIntroducer wiIntroducer(converter.getNodeManager());
 		return wiIntroducer.resolveElement(node);
 	}
 

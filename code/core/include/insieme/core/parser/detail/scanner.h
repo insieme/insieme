@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -75,9 +75,17 @@ namespace parser {
 				loc.initialize();
 			}
 
-			#undef YY_DECL
-			#define YY_DECL InspireParser::symbol_type InspireScanner::yylex(InspireDriver& driver)
+			// workaround since generated code is difficult to adjust
+			#ifdef __clang__
+			#pragma clang diagnostic push
+			#pragma clang diagnostic ignored "-Woverloaded-virtual"
+			#endif
+
 			InspireParser::symbol_type yylex(InspireDriver& driver);
+
+			#ifdef __clang__
+			#pragma clang diagnostic pop
+			#endif
 
 			void setStartProgram() {
 				startToken = &programToken;

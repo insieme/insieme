@@ -60,6 +60,7 @@
 
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/printer/pretty_printer.h"
+#include "insieme/core/printer/error_printer.h"
 #include "insieme/core/annotations/naming.h"
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_address.h"
@@ -200,6 +201,8 @@ int checkSema(const core::NodePtr& program, core::checks::MessageList& list) {
 
 	// In the case of semantic errors, quit
 	if(!list.getErrors().empty()) {
+		dumpErrors(list, cerr);
+
 		cerr << "---- Semantic errors encountered!! ----\n";
 		retval = 1;
 	}
@@ -215,7 +218,7 @@ insieme::backend::BackendPtr getBackend(const core::ProgramPtr& program, const c
 	if(options.backendHint == cmd::BackendEnum::Sequential) { return be::sequential::SequentialBackend::getDefault(); }
 	if(options.backendHint == cmd::BackendEnum::OpenCL) { return be::opencl::OpenCLBackend::getDefault(); }
 
-	return be::runtime::RuntimeBackend::getDefault(options.settings.estimateEffort, false);
+	return be::runtime::RuntimeBackend::getDefault();
 }
 
 int main(int argc, char** argv) {
@@ -236,6 +239,9 @@ int main(int argc, char** argv) {
 	vector<fe::path> libs;
 	vector<fe::path> extLibs;
 
+	set<string> cExtensions = { ".c", ".i", ".h" };
+	set<string> cplusplusExtensions = { ".C", ".cc", ".cp", ".cpp", ".CPP", ".cxx", ".c++", ".ii", ".H", ".hh", ".hp", ".hxx", ".hpp", ".HPP", ".h++", ".tcc" };
+
 	for(const fe::path& cur : options.job.getFiles()) {
 		auto ext = fs::extension(cur);
 		if(ext == ".o" || ext == ".so") {
@@ -244,8 +250,11 @@ int main(int argc, char** argv) {
 			} else {
 				extLibs.push_back(cur);
 			}
-		} else {
+		} else if (cExtensions.count(ext) || cplusplusExtensions.count(ext)) {
 			inputs.push_back(cur);
+		} else {
+			LOG(ERROR) << "Unrecognized file format: " << cur << "\n";
+			return 1;
 		}
 	}
 	// indicates that a shared object file should be created

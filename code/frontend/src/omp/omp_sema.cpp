@@ -95,22 +95,18 @@ namespace omp {
 		const lang::BasicGenerator& basic;
 		const lang::ParallelExtension& parExt;
 		us::PointerSet<CompoundStmtPtr> toFlatten; // set of compound statements to flatten one step further up
-		
+
 		// this stack is used to keep track of which variables are shared in enclosing constructs, to correctly parallelize
 		std::stack<VariableList> sharedVarStack;
 
 		// literal markers for "ordered" implementation
 		const LiteralPtr orderedCountLit, orderedItLit, orderedIncLit;
 
-		// To generate per-objective-clause param id (OMP+)
-		unsigned int paramCounter;
-
 	  public:
 		OMPSemaMapper(NodeManager& nodeMan)
 			: nodeMan(nodeMan), build(nodeMan), basic(nodeMan.getLangBasic()), parExt(nodeMan.getLangExtension<lang::ParallelExtension>()), toFlatten(),
 			  orderedCountLit(build.literal("ordered_counter", build.refType(basic.getInt8(), false, true))),
-			  orderedItLit(build.literal("ordered_loop_it", basic.getInt8())), orderedIncLit(build.literal("ordered_loop_inc", basic.getInt8())),
-			  paramCounter(0) {}
+			  orderedItLit(build.literal("ordered_loop_it", basic.getInt8())), orderedIncLit(build.literal("ordered_loop_inc", basic.getInt8())) {}
 
 	  protected:
 		// Identifies omp annotations and uses the correct methods to deal with them
@@ -176,7 +172,7 @@ namespace omp {
 				// check whether it is a struct-init expression of a lock
 				if(node->getNodeType() == NT_InitExpr && isLockStructType(node.as<ExpressionPtr>()->getType())) {
 					// replace with uninitialized lock
-					newNode = build.getZero(parExt.getLock());					
+					newNode = build.getZero(parExt.getLock());
 				} else {
 					// no changes required at this level, recurse
 					newNode = node->substitute(nodeMan, *this);
@@ -245,7 +241,7 @@ namespace omp {
 			// check stack integrity when leaving program
 			if(node.isa<ProgramPtr>()) { assert_eq(sharedVarStack.size(), 0) << "ending omp translation: shared var stack corrupted"; }
 		}
-		
+
 		// flattens generated compound statements if requested
 		// used to preserve the correct scope for variable declarations
 		NodePtr flattenCompounds(const NodePtr& newNode) {
@@ -313,8 +309,7 @@ namespace omp {
 					} else if(funName == "omp_get_num_threads") {
 						return build.getThreadGroupSize();
 					} else if(funName == "omp_get_max_threads") {
-						return build.intLit(65536); // The maximum number of threads shall be 65536.
-						                            // Thou shalt not count to 65537, and neither shalt thou count to 65535, unless swiftly proceeding to 65536.
+						return build.numericCast(build.getDefaultThreads(), basic.getInt4());
 					} else if(funName == "omp_get_wtime") {
 						return build.callExpr(build.literal("irt_get_wtime", build.functionType(TypeList(), basic.getDouble())));
 					} else if(funName == "omp_set_num_threads") {
@@ -369,7 +364,7 @@ namespace omp {
 			});
 			return inside;
 		}
-		
+
 		// beware! the darkness hath returned to prey upon innocent globals yet again
 		// will the frontend prevail?
 		// new and improved crazyness! does not directly implement accesses, replaces with variable
@@ -870,7 +865,7 @@ namespace omp {
 		}
 
 		// ... the globals ...
-		IRBuilder builder(mgr);
+		auto& parExt = mgr.getLangExtension<core::lang::ParallelExtension>();
 		for(auto& cur : unit.getGlobals()) {
 			ExpressionPtr newGlobal = semaMapper.map(cur.first.as<ExpressionPtr>());
 
@@ -880,6 +875,11 @@ namespace omp {
 			//	newGlobal = call[0]; // take first argument
 			//}
 
+			// global locks are initialized by calls, should not have initializers here
+			if(parExt.isLock(core::analysis::getReferencedType(newGlobal))) {
+				res.addGlobal(newGlobal.as<LiteralPtr>());
+				continue;
+			}
 			res.addGlobal(newGlobal.as<LiteralPtr>(), (cur.second) ? semaMapper.map(cur.second) : cur.second);
 		}
 

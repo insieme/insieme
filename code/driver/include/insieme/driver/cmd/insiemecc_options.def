@@ -54,7 +54,6 @@ FLAG("debug-information,g", debug, "produce debug information")
 FLAG("help,h", help, "produce help message")
 FLAG("mark-scop", markScop, "mark SCoPs (Static COntrol Parts) in the IR (analysis only")
 FLAG("no-warnings", noWarnings, "inhibit all warnings")
-FLAG("progress", progress, "show progress bar for frontend conversion process")
 FLAG("show-stats", showStatistics, "computes statistics regarding the composition of the IR")
 FLAG("use-pm", usePM, "perform code transformations using the Polyhedral Model")
 FLAG("version,v", version, "print full version string")
@@ -63,7 +62,6 @@ FLAG("win-cross-compile", winCrossCompile, "set cross compilation for a Windows 
 FLAG("print-clang-ast", printClangAST, "print the clang AST")
 FLAG("fnodefaultextensions", noDefaultExtensions, "disables all frontend extensions that are enabled by default")
 
-FLAG("estimate-effort", estimateEffort, "enables generation of the effort estimation function")
 FLAG("task-granularity-tuning", taskGranularityTuning, "enables multiverisoning of parallel tasks")
 
 PARAMETER("backend", backend, std::string, "runtime", "backend selection")

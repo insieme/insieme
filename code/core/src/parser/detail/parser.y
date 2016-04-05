@@ -77,6 +77,7 @@
 	SLASH        "/"
 	PERCENT      "%"
 	HASH         "#"
+	LSHIFT       "<<"
 
 	LPAREN       "("
 	RPAREN       ")"
@@ -111,6 +112,7 @@
 
 	SEMIC        ";"
 	COMA         ","
+	ELLIPSIS     "..."
 	RANGE        ".."
 	DOT          "."
 	ADDRESS      "$"
@@ -183,6 +185,7 @@
 
     /* Literals */
 %token <std::string> STRING            "string"
+%token <std::string> CHAR              "char"
 %token <std::string> IDENTIFIER        "identifier"
 %token <std::string> TYPE_VAR          "type_var"
 %token <std::string> TAG_REF           "tag_ref"
@@ -219,8 +222,7 @@
 %type <PureVirtualMemberFunctionPtr>   pure_virtual_member_function
 %type <PureVirtualMemberFunctionList>  pure_virtual_member_functions
 
-%type <TypePtr>                        object_type qual_object_type generic_type abstract_type parallel_type
-%type <TypeVariablePtr>                type_variable
+%type <TypePtr>                        object_type qual_object_type generic_type abstract_type parallel_type type_variable
 %type <FunctionTypePtr>                instantiated_function_type function_type pure_function_type closure_type constructor_type destructor_type member_function_type virtual_function_type
 %type <NumericTypePtr>                 numeric_type
 %type <TupleTypePtr>                   tuple_type
@@ -434,6 +436,9 @@ non_empty_types : non_empty_types "," type                                { $1.p
 // -- type variable --
 
 type_variable : "type_var"                                                { $$ = driver.builder.typeVariable($1); }
+              | "type_var" "<" types ">"                                  { $$ = driver.builder.genericTypeVariable($1, $3); }
+              | "type_var" "..."                                          { $$ = driver.builder.variadicTypeVariable($1); }
+              | "type_var" "..." "<" types ">"                            { $$ = driver.builder.variadicGenericTypeVariable($1, $4); }
               ;
 
 // -- abstract type --
@@ -472,7 +477,7 @@ access_specifier : "public"                                               { $$ =
 
 // -- function type --
 
-instantiated_function_type : "<" non_empty_types ">" function_type        { $$ = driver.builder.functionType($4->getParameterTypes(), $4->getReturnType(), $4->getKind(), driver.builder.types($2)); }
+instantiated_function_type : "<" types ">" function_type                  { $$ = driver.builder.functionType($4->getParameterTypes(), $4->getReturnType(), $4->getKind(), driver.builder.types($2)); }
                            | function_type                                { $$ = $1; }
 
 function_type : pure_function_type                                        { $$ = $1; }
@@ -600,6 +605,7 @@ literal : "true"                                                          { $$ =
         | "ulonglong"                                                     { $$ = driver.genNumericLiteral(@$, driver.mgr.getLangBasic().getUInt16(), $1); }
         | "float"                                                         { $$ = driver.genNumericLiteral(@$, driver.mgr.getLangBasic().getReal4(), $1); }
         | "double"                                                        { $$ = driver.genNumericLiteral(@$, driver.mgr.getLangBasic().getReal8(), $1); }
+        | "char"                                                          { $$ = driver.builder.literal(driver.mgr.getLangBasic().getChar(), $1); }
         | "string"                                                        { $$ = driver.builder.stringLit($1); }
         | "lit" "(" "string" ")"                                          { $$ = driver.builder.getIdentifierLiteral($3.substr(1, $3.size() - 2)); }
         | "lit" "(" "string" ":" type ")"                                 { $$ = driver.builder.literal($5, $3.substr(1, $3.size() - 2)); }
@@ -712,6 +718,8 @@ binary_op : expression "="  expression                                    { $$ =
           | expression ">=" expression                                    { $$ = driver.genBinaryExpression(@$, ">=", $1, $3); }
           | expression ">"  expression                                    { $$ = driver.genBinaryExpression(@$, ">",  $1, $3); }
           | expression "["  expression "]"                                { $$ = driver.genBinaryExpression(@$, "[",  $1, $3); }
+          | expression "<<" expression                                    { $$ = driver.genBinaryExpression(@$, "<<", $1, $3); }
+          | expression ">" ">" expression                                 { $$ = driver.genBinaryExpression(@$, ">>", $1, $4); }
           ;
 
 ternary_op : expression "?" expression ":" expression                     { $$ = driver.builder.ite(driver.getScalar($1), driver.builder.wrapLazy(driver.getScalar($3)), driver.builder.wrapLazy(driver.getScalar($5))); }
@@ -868,6 +876,7 @@ let_statement : "let" "identifier" "=" expression ";"                     {  dri
 %left     "&";
 %left     "==" "!=";
 %left     "<" "<=" ">" ">=";
+%left     "<<";
 %left     "+" "-";
 %left     "*" "/" "%";
 %right    UDEREF UNOT UMINUS CAST;

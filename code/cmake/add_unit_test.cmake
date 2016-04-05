@@ -118,8 +118,8 @@ macro ( add_unit_test case_name ut_prefix )
 		
 		# add normal test
 		# parallelize integration tests
-		if(${case_name} MATCHES ".*driver_integration.*")
-		add_test(NAME ${case_name} 
+		if(${case_name} MATCHES ".*driver_integration.*" OR ${case_name} MATCHES ".*snippets.*")
+			add_test(NAME ${case_name} 
 			COMMAND ${insieme_root_dir}/code/gtest-parallel.rb 
 				-w ${NB_PROCESSOR_PART}
 				${CMAKE_CURRENT_BINARY_DIR}/${case_name}
@@ -128,7 +128,7 @@ macro ( add_unit_test case_name ut_prefix )
 			)
 		else()
 			add_test(${case_name} ${case_name})
-		endif(${case_name} MATCHES ".*driver_integration.*")
+		endif()
 
 		# + valgrind as a custom target (only if not explicitly prohibited)
 		if ((NOT MSVC))

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -43,11 +43,11 @@ namespace insieme {
 namespace core {
 namespace types {
 
-	bool unifyable(const TypePtr& typeA, const TypePtr& typeB) {
+	bool unifiable(const TypePtr& typeA, const TypePtr& typeB) {
 		return isUnifyable(typeA, typeB);
 	}
 
-	bool notUnifable(const TypePtr& typeA, const TypePtr& typeB) {
+	bool notUnifiable(const TypePtr& typeA, const TypePtr& typeB) {
 		return !isUnifyable(typeA, typeB);
 	}
 
@@ -75,7 +75,7 @@ namespace types {
 		EXPECT_TRUE(isUnifyable(varA, varB));
 		auto res = unify(manager, varA, varB);
 		EXPECT_TRUE(res);
-		if(res) { EXPECT_FALSE(res->getMapping().empty()); }
+		if(res) { EXPECT_FALSE(res->empty()); }
 
 		Substitution sub = *res;
 		EXPECT_EQ("'B", toString(*sub.applyTo(manager, varA)));
@@ -99,7 +99,7 @@ namespace types {
 			EXPECT_EQ("f<'x,g<'y>,'x>", toString(*termA));
 			EXPECT_EQ("f<'z,g<'u>,h<'u>>", toString(*termB));
 
-			ASSERT_PRED2(unifyable, termA, termB);
+			ASSERT_PRED2(unifiable, termA, termB);
 
 			auto unifyingMap = *unify(manager, termA, termB);
 			EXPECT_EQ("f<h<'y>,g<'y>,h<'y>>", toString(*unifyingMap.applyTo(manager, termA))) << unifyingMap;
@@ -118,12 +118,41 @@ namespace types {
 			EXPECT_EQ("('x,array<'y>,'x)", toString(*termA));
 			EXPECT_EQ("('z,array<'u>,vector<'u>)", toString(*termB));
 
-			EXPECT_PRED2(unifyable, termA, termB);
+			EXPECT_PRED2(unifiable, termA, termB);
 			auto unifyingMap = *unify(manager, termA, termB);
 			EXPECT_EQ("(vector<'y>,array<'y>,vector<'y>)", toString(*unifyingMap.applyTo(manager, termA)));
 			EXPECT_EQ("(vector<'y>,array<'y>,vector<'y>)", toString(*unifyingMap.applyTo(manager, termB)));
 			EXPECT_EQ(unifyingMap.applyTo(manager, termA), unifyingMap.applyTo(manager, termB));
 		}
+	}
+
+	TEST(Unification, GenericTypeVariables) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		auto type = [&](const std::string& code) {
+			return builder.parseType(code);
+		};
+
+		EXPECT_PRED2(unifiable, type("A"), type("A"));
+		EXPECT_PRED2(unifiable, type("A"), type("'a"));
+		EXPECT_PRED2(unifiable, type("A"), type("'a<>"));
+
+		EXPECT_PRED2(unifiable, type("A<B>"), type("'a<B>"));
+		EXPECT_PRED2(unifiable, type("A<B>"), type("'a<'b>"));
+
+		EXPECT_PRED2(notUnifiable, type("A<C>"), type("'a<B>"));
+		EXPECT_PRED2(notUnifiable, type("A"), type("'a<'b>"));
+		EXPECT_PRED2(notUnifiable, type("A"), type("'a<'b,'c>"));
+
+		auto sub = unify(manager, type("A<B,C>"), type("'a<'b,'c<>>"));
+		ASSERT_TRUE(sub);
+		EXPECT_EQ("{'b->B,'c<>->C,'a<'_,'_<>>->A}",toString(*sub));
+		EXPECT_EQ("A<B,C>",toString(*(*sub)(type("'a<'b,'c<>>"))));
+		EXPECT_EQ("B",toString(*(*sub)(type("'b"))));
+		EXPECT_EQ("C",toString(*(*sub)(type("'c<>"))));
+		EXPECT_EQ("A<B,B>",toString(*(*sub)(type("'a<'b,'b>"))));
+
 	}
 
 
@@ -135,8 +164,8 @@ namespace types {
 		TypePtr typeA3 = builder.parseType("a<3>");
 		TypePtr typeA4 = builder.parseType("a<4>");
 
-		EXPECT_PRED2(unifyable, typeA3, typeAx);
-		EXPECT_PRED2(notUnifable, typeA3, typeA4);
+		EXPECT_PRED2(unifiable, typeA3, typeAx);
+		EXPECT_PRED2(notUnifiable, typeA3, typeA4);
 
 		Substitution res = *unify(manager, typeA3, typeAx);
 		EXPECT_EQ(*res.applyTo(manager, typeA3), *res.applyTo(manager, typeAx));

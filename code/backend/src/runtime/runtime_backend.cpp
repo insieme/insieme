@@ -63,6 +63,7 @@
 #include "insieme/backend/addons/pointer_type.h"
 #include "insieme/backend/addons/cpp_casts.h"
 #include "insieme/backend/addons/complex_type.h"
+#include "insieme/backend/addons/compound_operators.h"
 #include "insieme/backend/addons/enum_type.h"
 #include "insieme/backend/addons/io.h"
 #include "insieme/backend/addons/longlong_type.h"
@@ -84,21 +85,14 @@ namespace runtime {
 	}
 
 
-	RuntimeBackendPtr RuntimeBackend::getDefault(bool includeEffortEstimation, bool isGemsclaim) {
+	RuntimeBackendPtr RuntimeBackend::getDefault() {
 		BackendConfigPtr config = std::make_shared<BackendConfig>();
 
-		if(isGemsclaim) {
-			config->mainFunctionName = "insieme_main";
-			config->additionalHeaderFiles.push_back("input_file.h");
-			// Jan fixed the issue but let's keep the code for a while
-			// config->areShiftOpsSupported = false;
-			config->instrumentMainFunction = true;
-		}
-
-		auto res = std::make_shared<RuntimeBackend>(includeEffortEstimation, config);
+		auto res = std::make_shared<RuntimeBackend>(config);
 		res->addAddOn<addons::PointerType>();
 		res->addAddOn<addons::CppCastsAddon>();
 		res->addAddOn<addons::ComplexType>();
+		res->addAddOn<addons::CompoundOps>();
 		res->addAddOn<addons::EnumType>();
 		res->addAddOn<addons::InputOutput>();
 		res->addAddOn<addons::LongLongType>();
@@ -116,7 +110,8 @@ namespace runtime {
 		PreProcessorPtr preprocessor = makePreProcessor<PreProcessingSequence>(
 		    getBasicPreProcessorSequence(),
 		    makePreProcessor<runtime::InstrumentationSupport>(), // needs to be before the conversion to work-items
-		    makePreProcessor<runtime::WorkItemizer>(includeEffortEstimation), makePreProcessor<runtime::StandaloneWrapper>());
+		    makePreProcessor<runtime::WorkItemizer>(),
+			makePreProcessor<runtime::StandaloneWrapper>());
 		converter.setPreProcessor(preprocessor);
 
 		// Prepare managers
