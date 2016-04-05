@@ -43,6 +43,19 @@
  
 #include <CL/cl.h>
  
+enum irt_opencl_log_level {
+	IRT_OPENCL_LOG_LEVEL_DEBUG = 0,
+	IRT_OPENCL_LOG_LEVEL_INFO  = 1,
+	IRT_OPENCL_LOG_LEVEL_WARN  = 2,
+	IRT_OPENCL_LOG_LEVEL_ERROR = 3
+};
+
+extern void irt_opencl_printf(enum irt_opencl_log_level level, const char *format, ...);
+#define OCL_DEBUG(format, ...) irt_opencl_printf(IRT_OPENCL_LOG_LEVEL_DEBUG, format, ##__VA_ARGS__)
+#define OCL_INFO(format, ...)  irt_opencl_printf(IRT_OPENCL_LOG_LEVEL_INFO, format, ##__VA_ARGS__)
+#define OCL_WARN(format, ...)  irt_opencl_printf(IRT_OPENCL_LOG_LEVEL_WARN, format, ##__VA_ARGS__)
+#define OCL_ERROR(format, ...) irt_opencl_printf(IRT_OPENCL_LOG_LEVEL_ERROR, format, ##__VA_ARGS__)
+
 enum _irt_opencl_data_mode { 
     IRT_OPENCL_DATA_MODE_READ_ONLY,
     IRT_OPENCL_DATA_MODE_WRITE_ONLY,
@@ -96,6 +109,14 @@ typedef struct _irt_opencl_data_requirement irt_opencl_data_requirement;
 typedef irt_opencl_data_requirement (*irt_opencl_data_requirement_func)(
     irt_work_item *wi, irt_opencl_ndrange *ndrange, unsigned arg);
 /**
+ * represents a logical location of a device
+ */
+struct _irt_opencl_location {
+	cl_uint platform;
+	cl_uint device;
+};
+typedef struct _irt_opencl_location irt_opencl_location;
+/**
  * represents an OpenCL capable device including its properties
  */
 struct _irt_opencl_device {
@@ -104,7 +125,7 @@ struct _irt_opencl_device {
 	cl_command_queue queue;
 
 	/* logical device nr */
-	unsigned device_nr;
+	irt_opencl_location location;
 
 	/* lock to protect e.g. the queue from concurrent access */
 	irt_spinlock lock;
@@ -176,11 +197,19 @@ typedef struct _irt_opencl_kernel_implementation irt_opencl_kernel_implementatio
 struct _irt_opencl_context {
 	/* context which holds all devices of any type */
 	cl_context context;
+	unsigned num_platforms;
+	unsigned num_devices;
 	/* points to the first discovered device */
 	irt_opencl_device *device;
-
-    unsigned kernel_table_size;
+	/* table which holds all kernels */
+	unsigned kernel_table_size;
     irt_opencl_kernel_implementation** kernel_table;
+	struct {
+		irt_opencl_location location;
+		irt_opencl_kernel_data *(*select_kernel_data)(
+			struct _irt_opencl_context *, irt_opencl_kernel_implementation *);
+		enum irt_opencl_log_level log_level;
+	} policy;
 };
 typedef struct _irt_opencl_context irt_opencl_context;
  

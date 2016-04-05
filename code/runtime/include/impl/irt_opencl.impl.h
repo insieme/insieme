@@ -55,10 +55,11 @@ typedef struct _irt_opencl_event_list irt_opencl_event_list;
 
 bool irt_opencl_init_devices(irt_opencl_context *context);
 void irt_opencl_cleanup_devices(irt_opencl_context *context);
+bool irt_opencl_init_policy(irt_opencl_context *context);
 bool irt_opencl_init_kernel_table(irt_opencl_context *context, irt_opencl_kernel_implementation **kernel_table);
 irt_opencl_context *irt_opencl_get_context(irt_context *context);
 void irt_opencl_dump_build_log(irt_opencl_device *device, cl_program program);
-bool irt_opencl_init_device(cl_device_id device_id, cl_context context, irt_opencl_device *device);
+bool irt_opencl_init_device(cl_device_id device_id, cl_context context, irt_opencl_location location, irt_opencl_device *device);
 void irt_opencl_cleanup_device(irt_opencl_device *device);
 void irt_opencl_lock_device(irt_opencl_device *device);
 void irt_opencl_unlock_device(irt_opencl_device *device);
@@ -68,6 +69,10 @@ void irt_opencl_cleanup_kernel_data(irt_opencl_kernel_data *data);
 bool irt_opencl_init_kernel_implementation(irt_opencl_context *context, irt_opencl_kernel_implementation *impl);
 void irt_opencl_cleanup_kernel_implementation(irt_opencl_kernel_implementation *impl);
 irt_opencl_kernel_implementation *irt_opencl_get_kernel_implementation(irt_context *context, uint32 index);
+irt_opencl_kernel_data *irt_opencl_select_kernel_data_random(irt_opencl_context *context,
+															 irt_opencl_kernel_implementation *impl);
+irt_opencl_kernel_data *irt_opencl_select_kernel_data_user_defined(irt_opencl_context *context,
+															   irt_opencl_kernel_implementation *impl);
 irt_opencl_kernel_data *irt_opencl_select_kernel_data(irt_opencl_context *context,
 													  irt_opencl_kernel_implementation *impl);
 void irt_opencl_execute_fallback(irt_work_item *wi);
@@ -80,6 +85,25 @@ size_t irt_opencl_round_up(size_t value, size_t multiple);
 irt_opencl_event_list *irt_opencl_event_list_create(unsigned max_events);
 void irt_opencl_event_list_wait_and_free(irt_opencl_event_list *list);
 cl_event *irt_opencl_event_list_advance(irt_opencl_event_list *list);
+bool irt_opencl_location_is_equal(irt_opencl_location *fst, irt_opencl_location *snd);
+
+void irt_opencl_printf(enum irt_opencl_log_level level, const char *format, ...)
+{
+	irt_opencl_context *context = irt_opencl_get_context(irt_context_get_current());
+	/* as we have no globals, consult the context */
+	if (context->policy.log_level > level) return;
+
+	va_list args;
+	va_start(args, format);
+	vfprintf(stdout, format, args);
+	va_end(args);
+	fflush(stdout);
+}
+
+bool irt_opencl_location_is_equal(irt_opencl_location *fst, irt_opencl_location *snd)
+{
+	return fst->platform == snd->platform && fst->device == snd->device;
+}
 
 irt_opencl_context *irt_opencl_get_context(irt_context *context)
 {
@@ -126,32 +150,43 @@ irt_opencl_kernel_implementation *irt_opencl_get_kernel_implementation(irt_conte
 	return impl;
 }
 
+irt_opencl_kernel_data *irt_opencl_select_kernel_data_random(irt_opencl_context *context,
+															 irt_opencl_kernel_implementation *impl)
+{
+	irt_opencl_kernel_data *data = impl->data;
+	for (unsigned i = 0, m = rand() % context->num_devices; i < m && data; ++i)
+		data = data->next;
+
+	if (!data)
+		return impl->data;
+	else
+		return data;
+}
+
+irt_opencl_kernel_data *irt_opencl_select_kernel_data_user_defined(irt_opencl_context *context,
+																   irt_opencl_kernel_implementation *impl)
+{
+	irt_opencl_kernel_data *data = impl->data;
+	while (data != NULL) {
+		if (irt_opencl_location_is_equal(&data->device->location, &context->policy.location))
+			break;
+		data = data->next;
+	}
+	return data;
+}
+
 irt_opencl_kernel_data *irt_opencl_select_kernel_data(irt_opencl_context *context,
 													  irt_opencl_kernel_implementation *impl)
 {
 	/* if we have no impl we have no data as well */
 	if (impl == NULL)
 		return NULL;
-
-	irt_opencl_kernel_data *data = impl->data;
 	/*
 	 * if this function is called with no devices available, the privor
 	 * safety checks have not noticed and not invokend the fallback!
 	 */
 	IRT_ASSERT(context->device != NULL, IRT_ERR_OCL, "no devices available");
-	while (data != NULL) {
-		/*
-		 * @TODO: implement a heuristic on which device to select. such
-		 * metric would take into account the data requirements of the
-		 * kernel as well as the current load
-		 */
-		if (!(data->flags & IRT_OPENCL_KERNEL_DATA_FLAG_BROKEN))
-			break;
-
-		/* hop to the next one */
-		data = data->next;
-	}
-	return data;
+	return context->policy.select_kernel_data(context, impl);
 }
 
 void irt_opencl_execute_fallback(irt_work_item *wi)
@@ -171,7 +206,7 @@ void irt_opencl_evaluate_ndrange(irt_opencl_ndrange *ndrange)
 															   ndrange->local_work_size[i]);
 		}
 		/* and finally print some info */
-		IRT_DEBUG("ndrange[%d] %zu %zu %zu\n", i, ndrange->global_offset_size[i],
+		OCL_DEBUG("ndrange[%d] %zu %zu %zu\n", i, ndrange->global_offset_size[i],
 			ndrange->global_work_size[i], ndrange->local_work_size[i]);
 	}
 }
@@ -226,17 +261,14 @@ void _irt_opencl_execute(unsigned id, irt_opencl_ndrange_func ndrange,
 		size_t size;
 	} reverse_offload[num_requirements];
 
-	#ifdef IRT_VERBOSE
 	uint64 start_ns = irt_time_ns();
-	#endif // IRT_VERBOSE
-
 	event_io = irt_opencl_event_list_create(num_requirements);
     /* obtain the associated ndrange for this particular execution */
     irt_opencl_ndrange nd = ndrange(wi);
     for (unsigned arg = 0; arg < num_requirements; ++arg) {
         irt_opencl_data_requirement requirement = requirements[arg](wi, &nd, arg);
         /* create the buffer and offload to device memory */
-        IRT_DEBUG("element_type_id:\t%d\nmode:\t%d\nnum_ranges:\t%d\nrange_func:\t%p\n",
+        OCL_DEBUG("element_type_id:\t%d\nmode:\t%d\nnum_ranges:\t%d\nrange_func:\t%p\n",
 				  requirement.element_type_id, requirement.mode, requirement.num_ranges, requirement.range_func);
 
 		/* obtain all ranges which are associated with this requirement */
@@ -244,7 +276,7 @@ void _irt_opencl_execute(unsigned id, irt_opencl_ndrange_func ndrange,
 		irt_opencl_data_range ranges[requirement.num_ranges];
 		for (unsigned dim = 0; dim < requirement.num_ranges; ++dim) {
 			ranges[dim] = requirement.range_func(wi, &nd, arg, dim);
-			IRT_DEBUG("range:\t%d\nsize:\t%zu\nstart:\t%zu\nend:\t%zu\n",
+			OCL_DEBUG("range:\t%d\nsize:\t%zu\nstart:\t%zu\nend:\t%zu\n",
 					  dim, ranges[dim].size, ranges[dim].start, ranges[dim].end);
 			/* sum up all sum sizes to compute the total object size */
 			num_of_elements += ranges[dim].size;
@@ -266,7 +298,7 @@ void _irt_opencl_execute(unsigned id, irt_opencl_ndrange_func ndrange,
 		}
 		/* compute the total size of the buffer */
 		size_t size_of_element = irt_context->type_table[requirement.element_type_id].bytes;
-		IRT_DEBUG("buffer size:\t%zu\n", num_of_elements * size_of_element);
+		OCL_DEBUG("buffer size:\t%zu\n", num_of_elements * size_of_element);
 		/* allocate the buffers on the device */
 		buffer[arg] = clCreateBuffer(ocl_context->context, flags, num_of_elements * size_of_element, 0, &result);
 		if (result != CL_SUCCESS) {
@@ -323,7 +355,7 @@ void _irt_opencl_execute(unsigned id, irt_opencl_ndrange_func ndrange,
 			data = *((char **) data);
 		}
 		
-		IRT_DEBUG("clEnqueueWriteBuffer for requirement %d at %p\n", arg, data);
+		OCL_DEBUG("clEnqueueWriteBuffer for requirement %d at %p\n", arg, data);
 		irt_opencl_lock_device(device);
 		/* @TODO: only transfere the ranges not the whole data blob! https://www.khronos.org/registry/cl/sdk/1.1/docs/man/xhtml/clEnqueueWriteBufferRect.html */
 		result = clEnqueueWriteBuffer(device->queue, buffer[arg], CL_FALSE, 0, num_of_elements * size_of_element,
@@ -393,24 +425,24 @@ void _irt_opencl_execute(unsigned id, irt_opencl_ndrange_func ndrange,
     /* check for error and see if it is correctable */
     switch (result) {
     case CL_SUCCESS:
-			IRT_DEBUG("kernel execution has been scheduled\n");
+			OCL_DEBUG("kernel execution has been scheduled\n");
 			break;
     case CL_OUT_OF_HOST_MEMORY:
     case CL_OUT_OF_RESOURCES:
     case CL_MEM_OBJECT_ALLOCATION_FAILURE:
             /* cleanup and execute the fallback routine (sequential impl) */
             /* @TODO: print error */
-            IRT_WARN("clEnqueueNDRangeKernel returned with %d\n", result);
+            OCL_WARN("clEnqueueNDRangeKernel returned with %d\n", result);
             return;
     default:
             /* error is not correctable... oops! */
-            IRT_WARN("clEnqueueNDRangeKernel returned with %d\n", result);
+            OCL_WARN("clEnqueueNDRangeKernel returned with %d\n", result);
             return;
     }
     
     /* wait until everythin is done */
 	clWaitForEvents(1, &event_krnl);
-	IRT_DEBUG("kernel execution has finished\n");
+	OCL_DEBUG("kernel execution has finished\n");
 	
 	/* copy all required parts back */
 	event_io = irt_opencl_event_list_create(num_requirements);
@@ -418,7 +450,7 @@ void _irt_opencl_execute(unsigned id, irt_opencl_ndrange_func ndrange,
 		if (reverse_offload[i].data == NULL)
 			continue;
 
-		IRT_DEBUG("clEnqueueReadBuffer for requirement %d at %p\n", i, reverse_offload[i].data);
+		OCL_DEBUG("clEnqueueReadBuffer for requirement %d at %p\n", i, reverse_offload[i].data);
 		irt_opencl_lock_device(device);
 		result = clEnqueueReadBuffer(device->queue, buffer[i], CL_FALSE, 0, reverse_offload[i].size,
 			reverse_offload[i].data, 0, NULL, irt_opencl_event_list_advance(event_io));
@@ -432,8 +464,8 @@ void _irt_opencl_execute(unsigned id, irt_opencl_ndrange_func ndrange,
 	irt_opencl_event_list_wait_and_free(event_io);
 	event_io = NULL;
 	
-	IRT_DEBUG("read buffer has finished\n");
-	IRT_DEBUG("\ntotal time %" PRId64 " ns\n", irt_time_ns() - start_ns);
+	OCL_DEBUG("read buffer has finished\n");
+	OCL_DEBUG("\ntotal time %" PRId64 " ns\n", irt_time_ns() - start_ns);
 	/* everything done .. release all buffers */
 	for (unsigned i = 0; i < num_requirements; ++i)
 		clReleaseMemObject(buffer[i]);
@@ -450,19 +482,20 @@ void irt_opencl_execute(unsigned id, irt_opencl_ndrange_func ndrange,
     va_end(optionals);
 }
 
-bool irt_opencl_init_device(cl_device_id device_id, cl_context context, irt_opencl_device *device)
+bool irt_opencl_init_device(cl_device_id device_id, cl_context context, irt_opencl_location location, irt_opencl_device *device)
 {
 	cl_int result;
 	/* clear off anything in the target structure we want to initialize */
 	memset(device, 0, sizeof(*device));
 	device->device_id = device_id;
+	device->location = location;
 	/* retain the context as this device uses it as well */
 	device->context = context;
 	clRetainContext(context);
 	/* create a command queue for this device */
 	device->queue = clCreateCommandQueue(context, device_id, 0, &result);
 	if (result != CL_SUCCESS) {
-		IRT_WARN("clCreateCommandQueue returned with %d\n", result);
+		OCL_WARN("clCreateCommandQueue returned with %d\n", result);
 		goto error;
 	}
 	irt_spin_init(&device->lock);
@@ -516,7 +549,7 @@ bool irt_opencl_init_device(cl_device_id device_id, cl_context context, irt_open
 	clGetDeviceInfo(device_id, CL_DEVICE_NAME, size, device->name, 0);
 	
 	/* print out the name that we have feedback in the log */
-	IRT_DEBUG("initialized device %s\n", device->name);
+	OCL_INFO("initialized device %s at %u:%u\n", device->name, location.platform, location.device);
 	return true;
 
 error:
@@ -550,7 +583,7 @@ void irt_opencl_dump_build_log(irt_opencl_device *device, cl_program program)
 		return;
 	}
 	/* finally dump the issue */
-	IRT_WARN("%s\n\n", log);
+	OCL_WARN("%s\n\n", log);
 	free(log);
 }
 
@@ -611,11 +644,14 @@ bool irt_opencl_init_devices(irt_opencl_context *context)
 	
 	context->context = clCreateContextFromType(properties, CL_DEVICE_TYPE_ALL, NULL, NULL, &result);
 	if (result != CL_SUCCESS) {
-		IRT_WARN("clCreateContextFromType returned with %d\n", result);
+		OCL_WARN("clCreateContextFromType returned with %d\n", result);
 		return false;
 	}
+
+	context->num_platforms = num_platforms;
+	context->num_devices = 0;
 	
-	IRT_DEBUG("found %d platforms\n", num_platforms);
+	OCL_DEBUG("found %d platforms\n", num_platforms);
 	/* setup the devices for each platform */
 	for (cl_uint i = 0; i < num_platforms; ++i) {
 		cl_uint num_devices;
@@ -631,7 +667,8 @@ bool irt_opencl_init_devices(irt_opencl_context *context)
 		/* excellent, now we can initialize the specific device */
 		for (cl_uint j = 0; j < num_devices; ++j) {
 			irt_opencl_device *device = malloc(sizeof(*device));
-			if (!irt_opencl_init_device(devices[j], context->context, device)) {
+			irt_opencl_location location = {i, j};
+			if (!irt_opencl_init_device(devices[j], context->context, location, device)) {
 				free(device);
 				continue;
 			}
@@ -639,10 +676,11 @@ bool irt_opencl_init_devices(irt_opencl_context *context)
 			*next = device;
 			next = &device->next;
 		}
+		context->num_devices += num_devices;
 	}
 	
 	if (context->device == NULL)
-		IRT_WARN("no OpenCL capable devices found!\n");
+		OCL_WARN("no OpenCL capable devices found!\n");
 	return true;
 }
 
@@ -672,7 +710,7 @@ bool irt_opencl_init_kernel_data(irt_opencl_device *device, cl_program program,
 	/* try to build the program for the associated device */
 	result = clBuildProgram(program, 1, &device->device_id, "", NULL, NULL);
 	if (result != CL_SUCCESS) {
-        IRT_WARN("clBuildProgram returned with %d, build log follows:\n", result);
+        OCL_WARN("clBuildProgram returned with %d, build log follows:\n", result);
 		irt_opencl_dump_build_log(device, program);
         return false;
 	}
@@ -680,7 +718,7 @@ bool irt_opencl_init_kernel_data(irt_opencl_device *device, cl_program program,
 	data->kernel = clCreateKernel(program, routine, &result);
 	if (result != CL_SUCCESS) {
 		/* built program cannot be undone -- skip that */
-		IRT_WARN("clCreateKernel returned with %d\n", result);
+		OCL_WARN("clCreateKernel returned with %d\n", result);
 		return false;
 	}
 	/* retain a reference to the program and store locally */
@@ -709,7 +747,7 @@ bool irt_opencl_init_kernel_implementation(irt_opencl_context *context, irt_open
 	/* create the program only once, all kernel_data structs only reference it */
 	cl_program program = clCreateProgramWithSource(context->context, 1, &impl->source, NULL, &result);
 	if (result != CL_SUCCESS) {
-		IRT_WARN("clCreateProgramWithSource returned with %d\n", result);
+		OCL_WARN("clCreateProgramWithSource returned with %d\n", result);
 		return false;
 	}
 
@@ -729,7 +767,7 @@ bool irt_opencl_init_kernel_implementation(irt_opencl_context *context, irt_open
 			data = NULL;
 		} else {
 			/* kernels which do not compile are never kept in the context */
-			IRT_WARN("failed to compile kernel on %s\n", device->name);
+			OCL_WARN("failed to compile kernel on %s\n", device->name);
 		}
 		device = device->next;
 	}
@@ -767,7 +805,7 @@ bool irt_opencl_init_kernel_table(irt_opencl_context *context, irt_opencl_kernel
 		if (impl == 0)
 			break;
 			
-		IRT_DEBUG("registering kernel %d at %p\n", index, impl);
+		OCL_DEBUG("registering kernel %d at %p\n", index, impl);
 		irt_opencl_init_kernel_implementation(context, impl);
 		// right now, we only increase the total count
 		context->kernel_table_size += 1;
@@ -781,43 +819,94 @@ void irt_opencl_cleanup_kernel_table(irt_opencl_context *context)
 		irt_opencl_cleanup_kernel_implementation(context->kernel_table[i]);
 }
 
+bool irt_opencl_init_policy(irt_opencl_context *context)
+{
+	char *value = NULL;
+	/* predefine to location to use the first one */
+	context->policy.location.platform  = 0;
+	context->policy.location.device = 0;
+	context->policy.select_kernel_data = &irt_opencl_select_kernel_data_random;
+	/* obtain the user defined selection from the environment */
+	if ((value = getenv("IRT_OPENCL_DEVICE_LOCATION")) != NULL) {
+		bool fail = true;
+		irt_opencl_location location;
+		/* parse the tuple (platform,device) */
+		if (sscanf(value, "%u:%u", &location.platform, &location.device) == 2) {
+			/* check for validity */
+			fail = !(location.platform < context->num_platforms &&
+					 location.device < context->num_devices);
+		}
+
+		if (fail) {
+			OCL_WARN("invalid device location supplied: %s", value);
+		} else {
+			context->policy.location = location;
+			context->policy.select_kernel_data = &irt_opencl_select_kernel_data_user_defined;
+		}
+	}
+	/* check for loglevel related manners */
+	if ((value = getenv("IRT_OPENCL_LOG_LEVEL")) != NULL) {
+		bool fail = true;
+		unsigned log_level;
+		/* parse the log_level from the supplied string */
+		if (sscanf(value, "%u", &log_level) == 1) {
+			/* check for validity */
+			fail = !(IRT_OPENCL_LOG_LEVEL_DEBUG <= log_level &&
+					 IRT_OPENCL_LOG_LEVEL_ERROR >= log_level);
+		}
+
+		if (fail) {
+			OCL_WARN("invalid log_level supplied: %s", value);
+		} else {
+			context->policy.log_level = (enum irt_opencl_log_level) log_level;
+		}
+	}
+	return true;
+}
+
 void irt_opencl_init_context(irt_context *context, irt_opencl_kernel_implementation **kernel_table)
 {
 	bool result;
-	IRT_DEBUG("initializing...\n");
 	irt_opencl_context *opencl_context = irt_opencl_get_context(context);
+	/* this is the default logging level */
+	opencl_context->policy.log_level = IRT_OPENCL_LOG_LEVEL_WARN;
+	result = irt_opencl_init_policy(opencl_context);
+	if (!result) {
+		OCL_WARN("failed to initialize policy");
+		return;
+	}
 	
-	IRT_DEBUG("initializing devices...\n");
+	OCL_DEBUG("initializing devices...\n");
 	/* device discovery phase is the first step within our impl */
 	result = irt_opencl_init_devices(opencl_context);
 	if (!result) {
-		IRT_WARN("failed to initialize devices");
+		OCL_WARN("failed to initialize devices");
 		return;
 	}
 	
-	IRT_DEBUG("initializing kernels...\n");
+	OCL_DEBUG("initializing kernels...\n");
 	/* device discovery is done, initialize the kernel table */
 	result = irt_opencl_init_kernel_table(opencl_context, kernel_table);
 	if (!result) {
-		IRT_WARN("failed to initialize kernels");
+		OCL_WARN("failed to initialize kernels");
 		return;
 	}
 		
-	IRT_DEBUG("done!\n");
+	OCL_DEBUG("done!\n");
 }
 
 void irt_opencl_cleanup_context(irt_context *context)
 {
-	IRT_DEBUG("cleanup...\n");
+	OCL_DEBUG("cleanup...\n");
 	irt_opencl_context *opencl_context = irt_opencl_get_context(context);
 	
-	IRT_DEBUG("cleanup kernels...\n");
+	OCL_DEBUG("cleanup kernels...\n");
 	irt_opencl_cleanup_kernel_table(opencl_context);
 	
-	IRT_DEBUG("cleanup devices...\n");
+	OCL_DEBUG("cleanup devices...\n");
 	irt_opencl_cleanup_devices(opencl_context);
 	
-	IRT_DEBUG("done!\n");
+	OCL_DEBUG("done!\n");
 }
 
 size_t irt_opencl_round_up(size_t value, size_t multiple)
