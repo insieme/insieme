@@ -126,11 +126,11 @@ namespace extensions {
 		auto var = object.getVars(keywords::requirement);
 		assert_eq(var.size(), 1) << "OpenCL: requirement clause must contain a variable";
 		// extract the supplied ranges
-		auto ranges = object.getExprs(keywords::range);
-		assert_eq(ranges.size(), 3) << "OpenCL: requirement clause must contain a range with three exprs";
+		auto exprs = object.getExprs(keywords::range);
+		assert_eq(exprs.size(), 3) << "OpenCL: requirement clause must contain a range with three exprs";
 		// check if the ranges are integer based expressions!
 		#if 0
-		assert_true(::all(ranges, [&](const core::ExpressionPtr& expr) { 
+		assert_true(::all(exprs, [&](const core::ExpressionPtr& expr) {
 				return core::types::isMatchable(expr->getType(), var[0]->getNodeManager().getLangBasic().getUIntGen());
 			})) << "OpenCL: ranges clause must contain uints";
 		#endif
@@ -146,7 +146,10 @@ namespace extensions {
 		} else {
 			assert_fail() << "OpenCL: unsupported access type: " << value;
 		}
-		return std::make_shared<VariableRequirement>(var[0], toRV(ranges[0]), toRV(ranges[1]), toRV(ranges[2]), accessMode);
+		// put together the range for this variable -- currently 1D
+		VariableRangeList ranges;
+		ranges.push_back(std::make_shared<VariableRange>(toRV(exprs[0]), toRV(exprs[1]), toRV(exprs[2])));
+		return std::make_shared<VariableRequirement>(var[0], accessMode, ranges);
     }
 
 	void addAnnotations(core::NodePtr& node, BaseAnnotation::AnnotationList& annos) {

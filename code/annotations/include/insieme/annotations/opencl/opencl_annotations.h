@@ -56,18 +56,15 @@ namespace opencl {
 	class Annotation : public utils::VirtualPrintable {
 	  public:
 		virtual ~Annotation() { }
-		virtual std::ostream& printTo(std::ostream & out) const {
-			return out;
-		}
-		virtual void replaceUsage(const core::NodeMap& map) {
-			// default annotation references no IR nodes
-		}
+		virtual void replaceVars(const core::VarExprMap& map) {}
+		virtual std::ostream& printTo(std::ostream& out) const { return out; }
 	};
 	typedef std::shared_ptr<Annotation> AnnotationPtr;
 	DEFINE_TYPE(BaseAnnotation);
 	DEFINE_TYPE(Device);
 	DEFINE_TYPE(DeviceAnnotation);
 	DEFINE_TYPE(LoopAnnotation);
+	DEFINE_TYPE(VariableRange);
 	DEFINE_TYPE(VariableRequirement);
 
 	/**
@@ -83,24 +80,23 @@ namespace opencl {
 		const std::string& getAnnotationName() const;
 
 		const std::string toString() const;
-		virtual std::ostream& printTo(std::ostream& out) const;
-
 		virtual bool migrate(const core::NodeAnnotationPtr& ptr, const core::NodePtr& before, const core::NodePtr& after) const;
-		void replaceUsage(const core::ExpressionPtr& old, const core::ExpressionPtr& replacement);
-		void replaceUsage(const core::NodeMap& map);
+
+		void replaceVars(const core::VarExprMap& map);
+		std::ostream& printTo(std::ostream& out) const;
 	};
 	
-	class Device : public utils::VirtualPrintable {
+	class Device : public Annotation {
 	public:
 		enum Type { CPU, GPU, ACCELERATOR, DEFAULT = CPU };
 
 		Device(Type type);
 		Type getType() const;
 		
-		virtual std::ostream& printTo(std::ostream & out) const;
-		virtual void replaceUsage(const core::NodeMap& map);
-
 		static std::string toString(Type type);
+
+		void replaceVars(const core::VarExprMap& map) override;
+		std::ostream& printTo(std::ostream& out) const override;
 	private:
 		const Type type;
 	};
@@ -110,9 +106,9 @@ namespace opencl {
 	public:
 		DeviceAnnotation(const DevicePtr& device);
 		DevicePtr getDevice() const;
-		
-		virtual std::ostream& printTo(std::ostream & out) const;
-		virtual void replaceUsage(const core::NodeMap& map); 
+
+		void replaceVars(const core::VarExprMap& map) override;
+		std::ostream& printTo(std::ostream& out) const override;
 	};
 	
 	class LoopAnnotation : public Annotation {
@@ -120,31 +116,43 @@ namespace opencl {
 	public:
 		LoopAnnotation(bool independent);
 		bool getIndependent() const;
-		
-		virtual std::ostream& printTo(std::ostream& out) const;
-		virtual void replaceUsage(const core::NodeMap& map);
+
+		void replaceVars(const core::VarExprMap& map) override;
+		std::ostream& printTo(std::ostream& out) const override;
 	};
 	
-	class VariableRequirement : public Annotation {
+	class VariableRange : public Annotation {
 	public:
-		enum AccessMode { RO = 0, WO = 1, RW = 2 };
-	
-		VariableRequirement(const core::VariablePtr& var, const core::ExpressionPtr& size,
-							const core::ExpressionPtr& start, const core::ExpressionPtr& end,
-							AccessMode accessMode);
-		const core::VariablePtr& getVar() const;
+		VariableRange(const core::ExpressionPtr& size, const core::ExpressionPtr& start,
+					  const core::ExpressionPtr& end);
 		const core::ExpressionPtr& getSize() const;
 		const core::ExpressionPtr& getStart() const;
 		const core::ExpressionPtr& getEnd() const;
-		AccessMode getAccessMode() const;
-		
+
+		void replaceVars(const core::VarExprMap& map) override;
 		std::ostream& printTo(std::ostream& out) const override;
 	private:
-		core::VariablePtr var;
 		core::ExpressionPtr size;
 		core::ExpressionPtr start;
 		core::ExpressionPtr end;
+	};
+	typedef std::vector<VariableRangePtr> VariableRangeList;
+
+	class VariableRequirement : public Annotation {
+	public:
+		enum AccessMode { RO = 0, WO = 1, RW = 2 };
+
+		VariableRequirement(const core::VariablePtr& var, AccessMode accessMode, const VariableRangeList& ranges);
+		const core::VariablePtr& getVar() const;
+		AccessMode getAccessMode() const;
+		const VariableRangeList& getRanges() const;
+
+		void replaceVars(const core::VarExprMap& map) override;
+		std::ostream& printTo(std::ostream& out) const override;
+	private:
+		core::VariablePtr var;
 		AccessMode accessMode;
+		VariableRangeList ranges;
 	};
 	typedef std::vector<VariableRequirementPtr> VariableRequirementList;
 } // End opencl namespace

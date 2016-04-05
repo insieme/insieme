@@ -35,7 +35,10 @@
  */
 
 #include "insieme/annotations/opencl/opencl_annotations.h"
+
+#include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/ir_builder.h"
+
 #include <memory>
 
 namespace insieme {
@@ -45,23 +48,17 @@ namespace opencl {
 	const string BaseAnnotation::NAME = "OpenCLAnnotation";
 	const utils::StringKey<BaseAnnotation> BaseAnnotation::KEY("OpenCL");
 
-	// little helper function to build the correct uint<4> exprs which are required by the backend
-	core::ExpressionPtr toUInt4(const core::ExpressionPtr& expr) {
-		// check for literals
-		core::LiteralPtr size = expr.isa<core::LiteralPtr>();
-		if (!size) {
-			return expr;
-		}
+	namespace {
+		core::ExpressionPtr toUInt(const core::ExpressionPtr& expr) {
+			if (expr->getNodeType() != core::NT_Literal) return expr;
 
-		// fix literal type
-		auto& mgr = size->getNodeManager();
-		auto& basic = mgr.getLangBasic();
-		if (basic.isUInt4(size->getType())) {
-			return size;	// take size at it is
-		}
+			auto& manager = expr->getNodeManager();
+			if (manager.getLangBasic().isUInt4(expr->getType())) return expr;
 
-		// fix the size
-		return core::Literal::get(mgr, basic.getUInt4(), size->getValue());
+			// build a new literal and omit the cast -- as tight==false it defaults to uint4
+			core::IRBuilder builder(manager);
+			return builder.uintLit(expr.as<core::LiteralPtr>()->getValue());
+		}
 	}
 
 	BaseAnnotation::BaseAnnotation(const insieme::utils::CompoundAnnotation<opencl::Annotation>::AnnotationList& annotationList) :
@@ -96,17 +93,8 @@ namespace opencl {
 		return true;
 	}
 
-	void BaseAnnotation::replaceUsage(const core::ExpressionPtr& old, const core::ExpressionPtr& replacement) {
-		core::NodeMap map;
-		map[old] = replacement;
-		replaceUsage(map);
-	}
-
-	void BaseAnnotation::replaceUsage(const core::NodeMap& map) {
-		// for each annotation in the list
-		for(auto cur : getAnnotationList()) {
-			cur->replaceUsage(map);
-		}
+	void BaseAnnotation::replaceVars(const core::VarExprMap& map) {
+		for(auto cur : getAnnotationList()) cur->replaceVars(map);
 	}
 
 	Device::Device(Type type) :
@@ -122,9 +110,7 @@ namespace opencl {
 		return out;
 	}
 	
-	void Device::replaceUsage(const core::NodeMap& map) {
-		// if(vars) { replaceVars(vars, map); }
-	}
+	void Device::replaceVars(const core::VarExprMap& map) { }
 	
 	std::string Device::toString(Type type) {
 		switch(type) {
@@ -148,8 +134,8 @@ namespace opencl {
 		return device->printTo(out);
 	}
 	
-	void DeviceAnnotation::replaceUsage(const core::NodeMap& map) {
-		device->replaceUsage(map);
+	void DeviceAnnotation::replaceVars(const core::VarExprMap& map) {
+		device->replaceVars(map);
 	}
 
 	LoopAnnotation::LoopAnnotation(bool independent) :
@@ -166,38 +152,65 @@ namespace opencl {
 		return out;
 	}
 	
-	void LoopAnnotation::replaceUsage(const core::NodeMap& map) {
-		return;
-	}
+	void LoopAnnotation::replaceVars(const core::VarExprMap& map) { }
 	
-	VariableRequirement::VariableRequirement(const core::VariablePtr& var, const core::ExpressionPtr& size,
-											 const core::ExpressionPtr& start, const core::ExpressionPtr& end,
-											 AccessMode accessMode) :
-		var(var), size(toUInt4(size)), start(toUInt4(start)), end(toUInt4(end)), accessMode(accessMode)
+	VariableRange::VariableRange(const core::ExpressionPtr& size, const core::ExpressionPtr& start,
+								 const core::ExpressionPtr& end) :
+		size(size), start(start), end(end)
 	{ }
-		
+
+	const core::ExpressionPtr& VariableRange::getSize() const {
+		return size;
+	}
+
+	const core::ExpressionPtr& VariableRange::getStart() const {
+		return start;
+	}
+
+	const core::ExpressionPtr& VariableRange::getEnd() const {
+		return end;
+	}
+
+	void VariableRange::replaceVars(const core::VarExprMap& map) {
+		if (map.empty()) return;
+
+		auto& manager = size->getNodeManager();
+		size  = core::transform::replaceVarsGen(manager, size, map);
+		start = core::transform::replaceVarsGen(manager, start, map);
+		end   = core::transform::replaceVarsGen(manager, end, map);
+	}
+
+	std::ostream& VariableRange::printTo(std::ostream& out) const {
+		return out << "{" << toString(*size) << "," << toString(*start) << "," << toString(*end) << "}";
+	}
+
+	VariableRequirement::VariableRequirement(const core::VariablePtr& var, AccessMode accessMode, const VariableRangeList& ranges) :
+		var(var), accessMode(accessMode), ranges(ranges)
+	{ }
+
 	const core::VariablePtr& VariableRequirement::getVar() const {
 		return var;
 	}
-	
-	const core::ExpressionPtr& VariableRequirement::getSize() const {
-		return size;
-	}
-	
-	const core::ExpressionPtr& VariableRequirement::getStart() const {
-		return start;
-	}
-	
-	const core::ExpressionPtr& VariableRequirement::getEnd() const {
-		return end;
-	}
-	
+
 	VariableRequirement::AccessMode VariableRequirement::getAccessMode() const {
 		return accessMode;
 	}
-	
+
+	const VariableRangeList& VariableRequirement::getRanges() const {
+		return ranges;
+	}
+
+	void VariableRequirement::replaceVars(const core::VarExprMap& map) {
+		if (map.empty()) return;
+
+		var = core::transform::replaceVarsGen(var->getNodeManager(), var, map);
+		for (auto range : ranges) range->replaceVars(map);
+	}
+
 	std::ostream& VariableRequirement::printTo(std::ostream& out) const {
-		out << "requirement";
+		out << "{" << toString(*var) << "," << static_cast<int>(accessMode) << ",{";
+		for (const auto& range: ranges) range->printTo(out);
+		out << "}}";
 		return out;
 	}
 } // End opencl namespace

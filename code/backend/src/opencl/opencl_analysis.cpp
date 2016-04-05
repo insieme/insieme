@@ -292,7 +292,9 @@ namespace analysis {
 			// right now the access mode is determined solely using the type
 			auto accessMode = tryDeduceAccessMode(var->getType());
 			// generate a temporary variable to hold the type inforation
-			return std::make_shared<VariableRequirement>(builder.variable(var->getType()), size, start, end, accessMode);
+			VariableRangeList ranges;
+			ranges.push_back(std::make_shared<VariableRange>(size, start, end));
+			return std::make_shared<VariableRequirement>(builder.variable(var->getType()), accessMode, ranges);
 		}
 
 		bool isOffloadWorth(const core::NodePtr& node) {
@@ -319,9 +321,11 @@ namespace analysis {
 			core::IRBuilder builder(derived);
 			// use a little trick to skip the merge of lists
 			core::StatementList body;
-			body.push_back(requirement->getSize());
-			body.push_back(requirement->getStart());
-			body.push_back(requirement->getEnd());
+			for (const auto& range : requirement->getRanges()) {
+				body.push_back(range->getSize());
+				body.push_back(range->getStart());
+				body.push_back(range->getEnd());
+			}
 			return core::analysis::getFreeVariables(derived.get(builder.compoundStmt(body)));
 		}
 

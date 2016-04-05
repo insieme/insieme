@@ -170,6 +170,7 @@ namespace transform {
 		core::IRBuilder builder(manager);
 		core::VarExprMap replacements;
 		for (const auto& cur : free) {
+			std::cout << "arg " << dumpColor(cur) << " of type: " << dumpColor(cur->getType());
 			// default case, just pass it in -- however a fixed size array must be wrapped
 			// example of invalid kernel arg if not ptr: struct __insieme_type_1 { float data[1000];; }
 			if (core::lang::isReference(cur->getType()) &&
@@ -203,12 +204,11 @@ namespace transform {
 				if (expr->getNodeType() == core::NT_CallExpr) expr = core::analysis::getArgument(expr, 0);
 				var = expr.as<core::VariablePtr>();
 			}
-			newRequirements.push_back(std::make_shared<VariableRequirement>(
-				var,
-				core::transform::replaceVarsGen(manager, cur->getSize(), replacements),
-				core::transform::replaceVarsGen(manager, cur->getStart(), replacements),
-				core::transform::replaceVarsGen(manager, cur->getEnd(), replacements),
-				cur->getAccessMode()));
+			auto ranges = cur->getRanges();
+			std::transform(ranges.begin(), ranges.end(), ranges.begin(),
+				[&](VariableRangePtr range) { range->replaceVars(replacements); return range; });
+			// construct the updated requirement
+			newRequirements.push_back(std::make_shared<VariableRequirement>(var, cur->getAccessMode(), ranges));
 		}
 		requirements = newRequirements;
 		// create lambda accepting all free variables as arguments
@@ -442,13 +442,23 @@ namespace transform {
 		params.push_back(wi);
 		params.push_back(builder.variable(core::lang::buildRefType(core::lang::buildRefType(oclExt.getNDRange()))));
 		params.push_back(builder.variable(core::lang::buildRefType(manager.getLangBasic().getUInt4())));
-		params.push_back(builder.variable(core::lang::buildRefType(manager.getLangBasic().getUInt4())));
+
+		auto dim = builder.variable(core::lang::buildRefType(manager.getLangBasic().getUInt4()));
+		params.push_back(dim);
 
 		core::StatementList body;
-		// encode the range (in this case 1D)
-		DataRangePtr range = DataRange::get(manager, toWiExpr(manager, sc, wi, var->getSize()),
-			toWiExpr(manager, sc, wi, var->getStart()), toWiExpr(manager, sc, wi, var->getEnd()));
-		body.push_back(builder.returnStmt(DataRange::encode(manager, range)));
+		// build a case for each dimension
+		std::vector<std::pair<core::ExpressionPtr, core::StatementPtr>> cases;
+		for (const auto& range : var->getRanges()) {
+			auto stmt = builder.returnStmt(DataRange::encode(manager, DataRange::get(manager,
+				toWiExpr(manager, sc, wi, range->getSize()),
+				toWiExpr(manager, sc, wi, range->getStart()),
+				toWiExpr(manager, sc, wi, range->getEnd()))));
+			auto expr = builder.uintLit(cases.size());
+			cases.push_back(std::make_pair(expr, stmt));
+		}
+		assert_true(cases.size() > 0) << "variable requirement must consist of data ranges";
+		body.push_back(builder.switchStmt(builder.deref(dim), cases, cases[0].second));
 		// ok, now we can generate the "inner" lambda
 		auto rangeExpr = builder.lambdaExpr(oclExt.getDataRange(), params, builder.compoundStmt(body));
 
