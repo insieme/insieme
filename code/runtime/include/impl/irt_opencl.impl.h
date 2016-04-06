@@ -199,7 +199,7 @@ void irt_opencl_evaluate_ndrange(irt_opencl_ndrange *ndrange)
 	for (unsigned i = 0; i < ndrange->work_dim; ++i) {
 		/* in case no local size is supplied we pick a default one */
 		if (ndrange->local_work_size[i] == 0)
-			ndrange->local_work_size[i] = 64;
+			ndrange->local_work_size[i] = 32;
 		/* evaluate and round up to a multiple of the associated local */
 		if (ndrange->global_work_size[i]) {
 			ndrange->global_work_size[i] = irt_opencl_round_up(ndrange->global_work_size[i],
@@ -268,7 +268,7 @@ void _irt_opencl_execute(unsigned id, irt_opencl_ndrange_func ndrange,
     for (unsigned arg = 0; arg < num_requirements; ++arg) {
         irt_opencl_data_requirement requirement = requirements[arg](wi, &nd, arg);
         /* create the buffer and offload to device memory */
-        OCL_DEBUG("element_type_id:\t%d\nmode:\t%d\nnum_ranges:\t%d\nrange_func:\t%p\n",
+        OCL_DEBUG("element_type_id: %d\nmode: %d\nnum_ranges: %d\nrange_func: %p\n",
 				  requirement.element_type_id, requirement.mode, requirement.num_ranges, requirement.range_func);
 
 		/* obtain all ranges which are associated with this requirement */
@@ -276,7 +276,7 @@ void _irt_opencl_execute(unsigned id, irt_opencl_ndrange_func ndrange,
 		irt_opencl_data_range ranges[requirement.num_ranges];
 		for (unsigned dim = 0; dim < requirement.num_ranges; ++dim) {
 			ranges[dim] = requirement.range_func(wi, &nd, arg, dim);
-			OCL_DEBUG("range:\t%d\nsize:\t%zu\nstart:\t%zu\nend:\t%zu\n",
+			OCL_DEBUG("range: %d\nsize: %zu\nstart: %zu\nend: %zu\n",
 					  dim, ranges[dim].size, ranges[dim].start, ranges[dim].end);
 			/* sum up all sum sizes to compute the total object size */
 			num_of_elements += ranges[dim].size;
@@ -298,7 +298,7 @@ void _irt_opencl_execute(unsigned id, irt_opencl_ndrange_func ndrange,
 		}
 		/* compute the total size of the buffer */
 		size_t size_of_element = irt_context->type_table[requirement.element_type_id].bytes;
-		OCL_DEBUG("buffer size:\t%zu\n", num_of_elements * size_of_element);
+		OCL_DEBUG("buffer size: %zu\n", num_of_elements * size_of_element);
 		/* allocate the buffers on the device */
 		buffer[arg] = clCreateBuffer(ocl_context->context, flags, num_of_elements * size_of_element, 0, &result);
 		if (result != CL_SUCCESS) {
