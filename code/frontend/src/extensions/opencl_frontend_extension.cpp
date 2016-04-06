@@ -41,6 +41,8 @@
 #include "insieme/core/tu/ir_translation_unit.h"
 #include "insieme/core/lang/reference.h"
 #include "insieme/core/lang/parallel.h"
+#include "insieme/core/pattern/ir_pattern.h"
+#include "insieme/core/pattern/pattern_utils.h"
 
 #include "insieme/annotations/opencl/opencl_annotations.h"
 
@@ -97,70 +99,83 @@ namespace extensions {
 			core::IRBuilder builder(expr->getNodeManager());
 			return builder.deref(var);
 		}
-	}
 
-	DevicePtr handleDeviceClause(const MatchObject& object) {
-		const std::string& value = object.getString(keywords::type);
-		// now try to map the value to an internal representation
-		Device::Type type;
-		if(value == keywords::accelerator) {
-			type = Device::ACCELERATOR;
-		} else if(value == keywords::cpu) {
-			type = Device::CPU;
-		} else if(value == keywords::defaulted) {
-			type = Device::DEFAULT;
-		} else if(value == keywords::gpu) {
-			type = Device::GPU;
-		} else {
-			assert_fail() << "OpenCL: unsupported device type: " << value;
+		DevicePtr handleDeviceClause(const MatchObject& object) {
+			const std::string& value = object.getString(keywords::type);
+			// now try to map the value to an internal representation
+			Device::Type type;
+			if(value == keywords::accelerator) {
+				type = Device::ACCELERATOR;
+			} else if(value == keywords::cpu) {
+				type = Device::CPU;
+			} else if(value == keywords::defaulted) {
+				type = Device::DEFAULT;
+			} else if(value == keywords::gpu) {
+				type = Device::GPU;
+			} else {
+				assert_fail() << "OpenCL: unsupported device type: " << value;
+			}
+			return std::make_shared<Device>(type);
 		}
-		return std::make_shared<Device>(type);
-	}
 
-	bool handleIndependentClause(const MatchObject& object) {
-		const std::string& value = object.getString(keywords::independent);
-		return value == keywords::yes;
-	}
-	
-	VariableRequirementPtr handleRequirementClause(const MatchObject& object) {
-		auto var = object.getVars(keywords::requirement);
-		assert_eq(var.size(), 1) << "OpenCL: requirement clause must contain a variable";
-		// extract the supplied ranges
-		auto exprs = object.getExprs(keywords::range);
-		assert_eq(exprs.size(), 3) << "OpenCL: requirement clause must contain a range with three exprs";
-		// check if the ranges are integer based expressions!
-		#if 0
-		assert_true(::all(exprs, [&](const core::ExpressionPtr& expr) {
-				return core::types::isMatchable(expr->getType(), var[0]->getNodeManager().getLangBasic().getUIntGen());
-			})) << "OpenCL: ranges clause must contain uints";
-		#endif
-		// last but not least, grab the access mode
-		const std::string& value = object.getString(keywords::access);
-		VariableRequirement::AccessMode accessMode;
-		if(value == keywords::ro) {
-			accessMode = VariableRequirement::AccessMode::RO;
-		} else if(value == keywords::wo) {
-			accessMode = VariableRequirement::AccessMode::WO;
-		} else if(value == keywords::rw) {
-			accessMode = VariableRequirement::AccessMode::RW;
-		} else {
-			assert_fail() << "OpenCL: unsupported access type: " << value;
+		bool handleIndependentClause(const MatchObject& object) {
+			const std::string& value = object.getString(keywords::independent);
+			return value == keywords::yes;
 		}
-		// put together the range for this variable -- currently 1D
-		VariableRangeList ranges;
-		ranges.push_back(std::make_shared<VariableRange>(toRV(exprs[0]), toRV(exprs[1]), toRV(exprs[2])));
-		return std::make_shared<VariableRequirement>(var[0], accessMode, ranges);
-    }
 
-	void addAnnotations(core::NodePtr& node, BaseAnnotation::AnnotationList& annos) {
-		if(annos.empty()) return;
-		// get old annotation list and append our annotations
-		if(node->hasAnnotation(BaseAnnotation::KEY)) {
-			auto& lst = node->getAnnotation(BaseAnnotation::KEY)->getAnnotationList();
-			lst.insert(lst.end(), annos.begin(), annos.end());
-		} else {
-			// in this case we need to create a new one
-			node->addAnnotation(std::make_shared<BaseAnnotation>(annos));
+		VariableRequirementPtr handleRequirementClause(const MatchObject& object) {
+			auto var = object.getVars(keywords::requirement);
+			assert_eq(var.size(), 1) << "OpenCL: requirement clause must contain a variable";
+			// extract the supplied ranges
+			auto exprs = object.getExprs(keywords::range);
+			assert_eq(exprs.size(), 3) << "OpenCL: requirement clause must contain a range with three exprs";
+			// check if the ranges are integer based expressions!
+			#if 0
+			assert_true(::all(exprs, [&](const core::ExpressionPtr& expr) {
+					return core::types::isMatchable(expr->getType(), var[0]->getNodeManager().getLangBasic().getUIntGen());
+				})) << "OpenCL: ranges clause must contain uints";
+			#endif
+			// last but not least, grab the access mode
+			const std::string& value = object.getString(keywords::access);
+			VariableRequirement::AccessMode accessMode;
+			if(value == keywords::ro) {
+				accessMode = VariableRequirement::AccessMode::RO;
+			} else if(value == keywords::wo) {
+				accessMode = VariableRequirement::AccessMode::WO;
+			} else if(value == keywords::rw) {
+				accessMode = VariableRequirement::AccessMode::RW;
+			} else {
+				assert_fail() << "OpenCL: unsupported access type: " << value;
+			}
+			// put together the range for this variable -- currently 1D
+			VariableRangeList ranges;
+			ranges.push_back(std::make_shared<VariableRange>(toRV(exprs[0]), toRV(exprs[1]), toRV(exprs[2])));
+			return std::make_shared<VariableRequirement>(var[0], accessMode, ranges);
+		}
+
+		void addAnnotations(const core::NodePtr& node, BaseAnnotation::AnnotationList& annos) {
+			if(annos.empty()) return;
+
+			auto innerWhilePat = core::pattern::var("while", core::pattern::irp::whileStmt());
+			auto markerNestedWhile = core::pattern::rT(innerWhilePat | core::pattern::irp::markerStmt(core::pattern::recurse, core::pattern::any));
+			auto whilePat = core::pattern::irp::compoundStmt(core::pattern::anyList
+				<< core::pattern::var("predecessor", (core::pattern::irp::declarationStmt() | core::pattern::irp::callExpr(core::pattern::any)))
+				<< markerNestedWhile << core::pattern::anyList);
+			auto match = whilePat.matchPointer(node);
+			if (!match) return;
+
+			// in order for the while_to_for_extension to pick up our annotations
+			// we need to attach them onto the while stmt!
+			auto stmt = (*match)["while"].getFlattened().front().as<core::WhileStmtPtr>();
+
+			// get old annotation list and append our annotations
+			if(stmt->hasAnnotation(BaseAnnotation::KEY)) {
+				auto& lst = stmt->getAnnotation(BaseAnnotation::KEY)->getAnnotationList();
+				lst.insert(lst.end(), annos.begin(), annos.end());
+			} else {
+				// in this case we need to create a new one
+				stmt->addAnnotation(std::make_shared<BaseAnnotation>(annos));
+			}
 		}
 	}
 
@@ -178,17 +193,7 @@ namespace extensions {
 			    BaseAnnotation::AnnotationList deviceAnnos;
 			    deviceAnnos.push_back(std::make_shared<DeviceAnnotation>(deviceClause));
 
-			    for (auto& node : nodes) {
-					if (node->getNodeType() == core::NT_CompoundStmt) {
-						LOG(DEBUG) << "OpenCL: annotationg compound with device";
-						// now mark the compoundStmt with the annotation such that the OpenCLTransformer
-						// will process i tlater on (e.g. checks and so forth)
-						addAnnotations(node, deviceAnnos);
-					} else {
-						// in any other case, the #pragma is simply ignored (we do not want to assert here)
-						LOG(WARNING) << "OpenCL: attached pragma  will be ignored";
-					}
-				}
+			    for (auto& node : nodes) addAnnotations(node, deviceAnnos);
 			    return nodes;
 			})));
 		// Add a handler for pragma opencl loop [independent]
@@ -201,17 +206,7 @@ namespace extensions {
 			    BaseAnnotation::AnnotationList loopAnnos;
 			    loopAnnos.push_back(std::make_shared<LoopAnnotation>(independent));
 
-			    for (auto& node : nodes) {
-					if (node->getNodeType() == core::NT_CompoundStmt) {
-						LOG(DEBUG) << "OpenCL: annotationg compound with loop";
-						// now mark the compoundStmt with the annotation such that the OpenCLTransformer
-						// will process i tlater on (e.g. checks and so forth)
-						addAnnotations(node, loopAnnos);
-					} else {
-						// in any other case, the #pragma is simply ignored (we do not want to assert here)
-						LOG(WARNING) << "OpenCL: attached pragma will be ignored";
-					}
-				}
+			    for (auto& node : nodes) addAnnotations(node, loopAnnos);
 			    return nodes;
 			})));
 		// Add a handler for pragma opencl requirement
@@ -221,16 +216,7 @@ namespace extensions {
 				// create the annotation and put it into the BaseAnnotation list
 				BaseAnnotation::AnnotationList reqAnnos;
 				reqAnnos.push_back(handleRequirementClause(object));
-				for (auto& node : nodes) {
-					if (node->getNodeType() == core::NT_CompoundStmt) {
-						LOG(DEBUG) << "OpenCL: annotation compound with requirement";
-						// now mark the compountStmt
-						addAnnotations(node, reqAnnos);
-					} else {
-						// in any other case, the #pragma will simply be ignored
-						LOG(WARNING) << "OpenCL: attached pragma will be ignored";
-					}
-				}
+				for (auto& node : nodes) addAnnotations(node, reqAnnos);
 				return nodes;
 			})));
 	}
