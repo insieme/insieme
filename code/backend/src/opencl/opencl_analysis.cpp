@@ -206,8 +206,8 @@ namespace analysis {
 		}
 
 		bool tryDeduceIndependence(const core::StatementPtr& stmt) {
-			LOG(WARNING) << "optimistic independence assumption of: " << dumpColor(stmt);
-			return true;
+			LOG(WARNING) << "pessimistic independence assumption of: " << dumpColor(stmt);
+			return false;
 		}
 
 		VariableRequirement::AccessMode tryDeduceAccessModeIntern(const core::TypePtr& type) {
@@ -389,7 +389,7 @@ namespace analysis {
 			bool isParameter = std::find(free.begin(), free.end(), cur) != free.end();
 			// parameters must meet additional constraints
 			if (!isTrivial(cur->getType(), isParameter)) {
-				LOG(DEBUG) << "not outlineable due to non triviality of " << (isParameter ? "parameter: " : ": ") << dumpColor(cur->getType());
+				LOG(ERROR) << "not outlineable due to non triviality of " << (isParameter ? "parameter: " : ": ") << dumpColor(cur->getType());
 				return false;
 			}
 		}
@@ -423,15 +423,15 @@ namespace analysis {
 		// in case vec is empty everything is fine already
 		if (vars.empty()) return true;
 		// in this case a more complicated check is required
-		bool dumpFragment = false;
+		bool fail = false;
 		for (const auto& cur : vars) {
 			// if it is read-only straight along we can skip further checks
 			if (core::analysis::isReadOnly(stmt, cur)) continue;
 
-			dumpFragment = true;
-			LOG(WARNING) << "optimistic read-only assumption of: " << dumpColor(cur) << " with type: " << dumpColor(cur->getType());
+			fail = true;
+			LOG(WARNING) << "pessimistic read-only assumption of: " << dumpColor(cur) << " with type: " << dumpColor(cur->getType());
 		}
-		if (dumpFragment) { LOG(WARNING) << "offending IR fragment: " << dumpColor(stmt); }
+		if (fail) { LOG(DEBUG) << "offending IR fragment: " << dumpColor(stmt); return false; }
 		return true;
 	}
 
@@ -505,13 +505,8 @@ namespace analysis {
 			const auto& annos = stmt->getAnnotation(BaseAnnotation::KEY)->getAnnotationList();
 			// the first annotation wins the rest is ignored
 			for (const auto& anno : annos) {
-				if (auto rq = std::dynamic_pointer_cast<LoopAnnotation>(anno)) {
-					// in case we ignore other annos of the same type inform the user
-					if (annos.size() > 1) {
-						LOG(WARNING) << "multiple loop annotations attached to: " << dumpColor(stmt);
-					}
+				if (auto rq = std::dynamic_pointer_cast<LoopAnnotation>(anno))
 					return rq->getIndependent();
-				}
 			}
 		}
 		// in this case we have to deduce it
@@ -535,7 +530,7 @@ namespace analysis {
 			return false;
 		};
 		// traverse through the tree and find nodes which are valid for offloading
-		core::visitDepthFirstOnce(node, core::makeLambdaVisitor(filter, [&](const core::NodePtr& node) { result.push_back(node); }));
+		core::visitDepthFirstOncePrunable(node, core::makeLambdaVisitor(filter, [&](const core::NodePtr& node) { result.push_back(node); return true; }));
 		return result;
 	}
 

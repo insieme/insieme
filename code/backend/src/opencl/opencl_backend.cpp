@@ -133,6 +133,7 @@ namespace opencl {
 	KernelBackendPtr KernelBackend::getDefault(const transform::StepContext& sc) {
 		auto res = std::make_shared<KernelBackend>(sc, std::make_shared<BackendConfig>());
 		res->addAddOn<addons::PointerType>();
+		res->addAddOn<addons::CompoundOps>();
 		return res;
 	}
 

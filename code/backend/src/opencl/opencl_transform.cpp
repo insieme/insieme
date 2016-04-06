@@ -170,7 +170,6 @@ namespace transform {
 		core::IRBuilder builder(manager);
 		core::VarExprMap replacements;
 		for (const auto& cur : free) {
-			std::cout << "arg " << dumpColor(cur) << " of type: " << dumpColor(cur->getType());
 			// default case, just pass it in -- however a fixed size array must be wrapped
 			// example of invalid kernel arg if not ptr: struct __insieme_type_1 { float data[1000];; }
 			if (core::lang::isReference(cur->getType()) &&
@@ -572,11 +571,20 @@ namespace transform {
 		context.getCallGraph().addVertex(callContext);
 
 		// replace the first independent stmt with a loop
-		core::NodeMap replacements;
-		core::visitDepthFirstOncePrunable(lambdaExpr->getBody(), [&](const core::ForStmtPtr& forStmt) {
-			if (!analysis::isIndependentStmt(forStmt)) return false;
+		core::ExpressionList globalWorkSizes;
+		std::vector<core::NodeMap> replacements;
+		core::visitDepthFirstOncePrunable(lambdaExpr->getBody(), [&](const core::StatementPtr& stmt) {
+			// if we have already exhausted all dimensions -- skip
+			if (globalWorkSizes.size() == 3) return true;
+			// do not visit child calls
+			if (stmt->getNodeType() == core::NT_CallExpr) return true;
+			// skip visit of non for-stmts
+			if (stmt->getNodeType() != core::NT_ForStmt) return false;
+			// do nothing if it is not independent
+			if (!analysis::isIndependentStmt(stmt)) return false;
 
 			core::StatementList stmts;
+			auto forStmt = stmt.as<core::ForStmtPtr>();
 			/*
 			for( int<4> v87 = 0 .. 1000 : 1) {
 				ptr_subscript(*v308, v87) = IMP_add(*ptr_subscript(*v306, v87), *ptr_subscript(*v307, v87));
@@ -589,7 +597,8 @@ namespace transform {
 				ptr_subscript(*v308, v00) = IMP_add(*ptr_subscript(*v306, v00), *ptr_subscript(*v307, v00));
 			*/
 			auto decl = forStmt->getDeclaration();
-			stmts.push_back(DeclarationStmt::get(manager, decl->getVariable(), builder.numericCast(buildGetGlobalId(manager, builder.uintLit(0)), decl->getVariable()->getType())));
+			stmts.push_back(DeclarationStmt::get(manager, decl->getVariable(), builder.numericCast(
+				buildGetGlobalId(manager, builder.uintLit(globalWorkSizes.size())), decl->getVariable()->getType())));
 			stmts.push_back(builder.ifStmt(
 				builder.logicAnd(
 					builder.lt(decl->getVariable(), forStmt->getEnd()),
@@ -600,23 +609,28 @@ namespace transform {
 						builder.numericCast(builder.uintLit(0), forStmt->getStep()->getType()))),
 				forStmt->getBody()));
 			// register the replacement for later on
-			replacements[forStmt] = builder.compoundStmt(stmts);
-			// ... as well as a modified ndrange
-			auto ndrange = std::make_shared<NDRange>();
-			ndrange->setWorkDim(builder.uintLit(1));
-			ndrange->setGlobalWorkSize(makeExpressionList(forStmt->getEnd()));
-			callContext->setNDRange(ndrange);
-			return true;
+			core::NodeMap nm;
+			nm[forStmt] = builder.compoundStmt(stmts);
+			replacements.push_back(nm);
+			globalWorkSizes.push_back(forStmt->getEnd());
+			return false;
 		});
-
-		assert_true(context.getCallGraph().getNumVertices() > 0) << "execution graph must exist prior loop optimizer";
 		// introduce a single default clEnqueueTask call if we replace nothing
 		if (replacements.empty()) {
 			callContext->setNDRange(makeDefaultNDRange(manager));
 			return node;
 		}
-		auto newLambdaExpr= builder.lambdaExpr(manager.getLangBasic().getUnit(),
-			lambdaExpr->getParameterList(), core::transform::replaceAllGen(manager, lambdaExpr->getBody(), replacements));
+		// apply ndranges impicitly computed by optimizer
+		auto ndrange = std::make_shared<NDRange>();
+		ndrange->setWorkDim(builder.uintLit(globalWorkSizes.size()));
+		ndrange->setGlobalWorkSize(globalWorkSizes);
+		callContext->setNDRange(ndrange);
+		// for the sake of sanity!
+		assert_true(context.getCallGraph().getNumVertices() > 0) << "execution graph must exist prior loop optimizer";
+		auto body = lambdaExpr->getBody();
+		for (const auto& replacement : replacements)
+			body = core::transform::replaceAllGen(manager, body, replacement);
+		auto newLambdaExpr= builder.lambdaExpr(manager.getLangBasic().getUnit(), lambdaExpr->getParameterList(), body);
 		// migrate the annotations -- but no need to fixup as only hthe body has changed
 		core::transform::utils::migrateAnnotations(lambdaExpr, newLambdaExpr);
 		return Step::process(converter, newLambdaExpr);

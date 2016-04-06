@@ -70,38 +70,50 @@ namespace opencl {
 	using namespace insieme::annotations::opencl;
 	using namespace insieme::annotations::opencl_ns;
 
+	namespace {
+		class OffloadReplacer : public core::transform::CachedNodeMapping {
+			const Converter& converter;
+			core::NodeManager& manager;
+			core::IRBuilder builder;
+			core::NodePtr root;
+			core::NodeList candidates;
+		public:
+			OffloadReplacer(const Converter& converter, const core::NodePtr& root) :
+				converter(converter), manager(converter.getNodeManager()), builder(manager),
+				root(root), candidates(analysis::getOffloadAbleStmts(root))
+			{ }
+
+			const core::NodePtr resolveElement(const core::NodePtr& node) {
+				// non-statements are not of interest
+				if (node->getNodeCategory() != core::NC_Statement) return node->substitute(manager, *this);
+				// is it in the list of to-be-processed nodes?
+				auto it = std::find_if(candidates.begin(), candidates.end(), [&](const core::NodePtr& e) { return *e == *node; });
+				if (it == candidates.end()) return node->substitute(manager, *this);
+
+				auto requirements = analysis::getVariableRequirements(manager, root, node.as<core::StatementPtr>());
+				// we outline the compound such that we can implement our pick between default & opencl kernel
+				auto callExpr = transform::outline(manager, node.as<core::StatementPtr>(), requirements);
+				auto fallback = callExpr->getFunctionExpr().as<core::LambdaExprPtr>();
+				// put together the variants used by the pick -- first one is the fallback which will run on cpu
+				core::ExpressionList variants;
+				variants.push_back(fallback);
+
+				auto generated = transform::toOcl(converter, manager, root, callExpr, requirements);
+				std::copy(generated.begin(), generated.end(), std::back_inserter(variants));
+				// build a pick for the generated variants
+				auto pickExpr = builder.pickVariant(variants);
+				// finally wrap it into a call wrapped by a compound
+				return builder.compoundStmt(builder.callExpr(manager.getLangBasic().getUnit(), pickExpr, callExpr->getArguments()));
+			}
+		};
+	}
+
 	OffloadSupportPre::OffloadSupportPre() :
 		PreProcessor()
 	{ }
 
 	core::NodePtr OffloadSupportPre::process(const Converter& converter, const core::NodePtr& code) {
-		// node manager used by this extension
-		core::NodeManager& manager = converter.getNodeManager();
-		core::IRBuilder builder(manager);
-		// this map will be filled by the visitor
-		core::NodeMap replacements;
-		// traverse through the tree and find nodes which are valid for offloading
-		for_each(analysis::getOffloadAbleStmts(code), [&](const NodePtr& node) {
-			auto requirements = analysis::getVariableRequirements(manager, code, node.as<core::StatementPtr>());
-			// we outline the compound such that we can implement our pick between default & opencl kernel
-			auto callExpr = transform::outline(manager, node.as<core::StatementPtr>(), requirements);
-			auto fallback = callExpr->getFunctionExpr().as<core::LambdaExprPtr>();
-			// put together the variants used by the pick -- first one is the fallback which will run on cpu
-			core::ExpressionList variants;
-			variants.push_back(fallback);
-
-			auto generated = transform::toOcl(converter, manager, code, callExpr, requirements);
-			std::copy(generated.begin(), generated.end(), std::back_inserter(variants));
-
-			// build a pick for the generated variants
-			auto pickExpr = builder.pickVariant(variants);
-			// ...and call them -- runtime will decide which one
-			replacements.insert(std::make_pair(node, builder.callExpr(manager.getLangBasic().getUnit(), pickExpr, callExpr->getArguments())));
-		});
-		// fast-path
-		if(replacements.empty()) return code;
-		// slow-path
-		return core::transform::replaceAll(manager, code, replacements, core::transform::globalReplacement);
+		return OffloadReplacer(converter, code).map(code);
 	}
 
 } // end namespace opencl
